@@ -7,6 +7,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
 using UnityEngine.ResourceManagement.AsyncOperations;
+using FlatWorld.WorldModel;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -942,7 +943,35 @@ public static class ItemDefinitionCatalogLoader
             isActor,
             material,
             stateSprites,
-            dto.GroundCover);
+            dto.GroundCover,
+            ResolveWorldGridOccupancy(dto.WorldGridOccupancy, id));
+    }
+
+    /// <summary>校验并转换配置中的整数占格，禁止空格、重复格或无效条目进入运行时定义。</summary>
+    private static GridCellOffset[] ResolveWorldGridOccupancy(WorldGridOccupancyData occupancy, string itemId)
+    {
+        if (occupancy == null)
+            return Array.Empty<GridCellOffset>();
+
+        if (occupancy.Cells == null || occupancy.Cells.Count == 0)
+            throw new InvalidDataException($"物品 {itemId} 声明了 worldGridOccupancy，但 cells 为空。");
+
+        var offsets = new GridCellOffset[occupancy.Cells.Count];
+        var uniqueOffsets = new HashSet<GridCellOffset>();
+        for (int i = 0; i < occupancy.Cells.Count; i++)
+        {
+            WorldGridOccupancyCellData cell = occupancy.Cells[i];
+            if (cell == null)
+                throw new InvalidDataException($"物品 {itemId} 的 worldGridOccupancy.cells[{i}] 为空。");
+
+            GridCellOffset offset = new(cell.X, cell.Y);
+            if (!uniqueOffsets.Add(offset))
+                throw new InvalidDataException(
+                    $"物品 {itemId} 的 worldGridOccupancy 重复声明格偏移 ({cell.X}, {cell.Y})。");
+            offsets[i] = offset;
+        }
+
+        return offsets;
     }
 
     /// <summary>解析并固化额外视觉状态 Sprite，运行时模块只按状态名读取，不再重复发资源请求。</summary>

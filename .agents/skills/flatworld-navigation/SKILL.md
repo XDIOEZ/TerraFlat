@@ -8,6 +8,7 @@ description: "Use when: 定位或修改 FlatWorld 的稀疏网格寻路、16×16
 ## 入口
 
 - 网格/请求：`Assets/5_Scripts/5-3_GamePlay/World/PathFinding/WorldNavigationManager.cs`
+- 玩家外部智能体移动：`Assets/5_Scripts/5-3_GamePlay/Entities/Item/Modules/Player/Mod_GameMCP_LLM.cs`，用导航请求产生路点并通过 `GameController` 租约和 `Mover` 执行。
 - ECS 网格适配：同目录 `WorldNavigationManager.SharedFlow.cs`；纯数据共享缓存、导向图与 Job 在 `Assets/5_Scripts/Shared/Navigation/`。
 - ECS 查表/移动：`Entities/AIECS/Navigation/AiecsFlowAgent.cs`；真实游戏网格的显式开发入口在 `Entities/AIECS/Gameplay/AiecsNavigationCrowd.cs`。
 - 动态占地：`World/Building/BuildingOccupancyRegistry.cs`
@@ -26,7 +27,9 @@ description: "Use when: 定位或修改 FlatWorld 的稀疏网格寻路、16×16
 - `WorldNavigationAgent.DestinationResult` 是当前目的地请求的权威结果；上层必须消费 `RejectedByPathCost`，不能通过速度为零或是否持有路径反推拒绝原因。
 - 追击总代价上限必须随 `RequestPath` 传入共享搜索；Dijkstra 前沿代价达到某个请求上限时，只结束该请求并返回明确的代价拒绝，不能等完整搜索结束才判断，也不能取消同目标其它成员的请求。拒绝、成功、取消和失败都须清理起点等待链与上限索引；缓存路径只能使用已结算起点的代价，不能把尚未收敛的暂定代价当成超限依据。
 - 运行时只用项目内置导航，不恢复 Aron Granberg A*，也不把 Physics2D 扫描当权威。
+- 玩家目标移动模块 `Mod_GameMCP_LLM` 复用 `WorldNavigationManager` 的路径与修订号，并通过外部控制租约注入 `GameController` 输入；它不拥有第二套网格、刚体驱动或寻路服务，编辑器 GameMCP 只是该运行时接口的一个调用方。
 - 动态可交互建筑的导航占地与放置占用共用 `BuildingOccupancyRegistry` 的离散世界格记录；实体 Collider 的尺寸/接触状态不能改变导航占格，避免相邻建筑因物理接触污染逻辑层。
+- 世界物品的离散占格写在定义的 `worldGridOccupancy.cells` 中，纯 DTO `WorldGridOccupancyData` 与校验后的 `GridCellOffset` 位于 `noEngineReferences` 的 WorldModel 程序集，可供非 Unity 模拟直接读取。普通 C# 生命周期桥接器只在实时适配边界读取 Transform 格锚点并消费 Item 注册、注销、移动事件；导航占格不得由 Collider bounds 推算，避免 Mono 组件和物理形状成为数据层依赖。
 - 移除覆盖层后恢复基础层权重；建筑不改 TileData。
 - 失败/未表现完成的 Chunk 不注册导航；View 入池或销毁前先 Unbind。
 - 本地导航窗口只跟随 owned 玩家；远程副本不移动它。

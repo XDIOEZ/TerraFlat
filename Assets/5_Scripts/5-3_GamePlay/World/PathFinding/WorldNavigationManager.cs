@@ -92,6 +92,7 @@ public sealed partial class WorldNavigationManager : SingletonAutoMono<WorldNavi
     private readonly List<int> requestIdBuffer = new(128);
     private readonly List<Vector2Int> gridChangeBuffer = new(256);
     private readonly Stopwatch pathStopwatch = new();
+    private readonly WorldNavigationItemFootprintBridge itemFootprintBridge = new();
 
     private int nextRequestId = 1;
     private int observedGridRevision;
@@ -138,12 +139,14 @@ public sealed partial class WorldNavigationManager : SingletonAutoMono<WorldNavi
         {
             CaptureActiveWorldKey();
             RegisterActiveMaps();
+            itemFootprintBridge.Bind(this);
         }
     }
 
     /// <summary>停止导航后端并释放事件订阅、共享快照及地图注册。</summary>
     protected override void OnDestroy()
     {
+        itemFootprintBridge.Unbind();
         DisposeSharedNavigation();
         if (ExistingInstance == this)
             ExistingInstance = null;
@@ -192,11 +195,13 @@ public sealed partial class WorldNavigationManager : SingletonAutoMono<WorldNavi
         enabled = true;
         CaptureActiveWorldKey();
         RegisterActiveMaps();
+        itemFootprintBridge.Bind(this);
     }
 
     /// <summary>离开游戏世界时清空两个导航后端和当前窗口。</summary>
     private void OnGameWorldExit()
     {
+        itemFootprintBridge.Unbind();
         DisposeSharedNavigation();
         Init = false;
         FailAllRequests();

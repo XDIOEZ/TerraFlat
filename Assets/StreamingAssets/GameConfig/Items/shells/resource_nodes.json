@@ -108,6 +108,11 @@
         "35",
         "Tree"
       ],
+      "worldGridOccupancy": {
+        "cells": [
+          { "x": 0, "y": 0 }
+        ]
+      },
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Plants/Tree/tree-set1/64x64/trees-set1-64_6.png[trees-set1-64_6]",
         "rendererLocalPosition": {
@@ -426,6 +431,11 @@
       "tags": [
         "Tree"
       ],
+      "worldGridOccupancy": {
+        "cells": [
+          { "x": 0, "y": 0 }
+        ]
+      },
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/CoconutTree/FruitlessCoconutTree.png",
         "rendererLocalPosition": {
@@ -1791,6 +1801,11 @@
       "tags": [
         "Tree"
       ],
+      "worldGridOccupancy": {
+        "cells": [
+          { "x": 0, "y": 0 }
+        ]
+      },
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/PineTree/PineTree_Idle.png",
         "rendererLocalPosition": {

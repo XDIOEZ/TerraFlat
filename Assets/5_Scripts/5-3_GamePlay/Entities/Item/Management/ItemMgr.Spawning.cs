@@ -204,6 +204,7 @@ public partial class ItemMgr
         }
 
         RefreshRuntimeItemIndexes(item);
+        RuntimeItemMoved?.Invoke(item);
     }
 
     /// <summary>

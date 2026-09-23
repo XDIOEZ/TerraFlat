@@ -4,6 +4,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
 using FlatWorld.Localization;
+using FlatWorld.WorldModel;
 
 /// <summary>游戏本体 JSON 物品目录；文件可按玩法类别拆分。</summary>
 [Serializable]
@@ -108,6 +109,10 @@ public sealed class ItemDefinitionDto
     /// <summary>自然生成时由地表植被图层绘制，采集后才实例化为普通物品。</summary>
     [JsonProperty("groundCover")]
     public bool GroundCover;
+
+    /// <summary>不依赖 Collider 的确定性世界格占地；偏移相对物品根节点所在格。</summary>
+    [JsonProperty("worldGridOccupancy", NullValueHandling = NullValueHandling.Ignore)]
+    public WorldGridOccupancyData WorldGridOccupancy;
 
     /// <summary>掉落物最终落入水体时，可选转换成另一物品 ID；数量保持不变。</summary>
     [JsonProperty("waterEntryTransformItemId", NullValueHandling = NullValueHandling.Ignore)]
@@ -325,6 +330,9 @@ public sealed class RuntimeItemDefinition
     /// <summary>该定义的自然生成点是否使用无 Item、无碰撞体的植被图层。</summary>
     public bool IsGroundCover { get; }
 
+    /// <summary>纯整数世界格偏移；不读取或保留 Unity Collider/Transform。</summary>
+    public IReadOnlyList<GridCellOffset> WorldGridOccupancy { get; }
+
     /// <summary>名称在 String Table 中的稳定 key。</summary>
     public string LabelKey { get; }
 
@@ -358,7 +366,8 @@ public sealed class RuntimeItemDefinition
         bool isActor = false,
         Material material = null,
         Dictionary<string, Sprite> stateSprites = null,
-        bool isGroundCover = false)
+        bool isGroundCover = false,
+        IReadOnlyList<GridCellOffset> worldGridOccupancy = null)
     {
         Id = id;
         ShellPrefabId = shellPrefabId;
@@ -376,6 +385,15 @@ public sealed class RuntimeItemDefinition
         IsActor = isActor;
         ActorPerceptionShapes = isActor ? ActorPerceptionShapeCompiler.Compile(shellPrefab, visual?.Collider) : null;
         IsGroundCover = isGroundCover;
+        var occupancyCells = worldGridOccupancy == null
+            ? Array.Empty<GridCellOffset>()
+            : new GridCellOffset[worldGridOccupancy.Count];
+        if (worldGridOccupancy != null)
+        {
+            for (int i = 0; i < worldGridOccupancy.Count; i++)
+                occupancyCells[i] = worldGridOccupancy[i];
+        }
+        WorldGridOccupancy = Array.AsReadOnly(occupancyCells);
         LabelKey = string.IsNullOrWhiteSpace(labelKey)
             ? FlatWorldLocalizationService.GetItemLabelKey(id)
             : labelKey.Trim();
