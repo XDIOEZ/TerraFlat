@@ -6,7 +6,8 @@ Shader "FlatWorld/2D/AIECS Blob Shadow"
     }
     SubShader
     {
-        Tags { "Queue"="Transparent" "RenderType"="Transparent" "RenderPipeline"="UniversalPipeline" }
+        // Default/0 队列 2991：太阳长投影之后，Blocking(2992)和草(2993)之前。
+        Tags { "Queue"="Transparent-9" "RenderType"="Transparent" "RenderPipeline"="UniversalPipeline" }
         Blend SrcAlpha OneMinusSrcAlpha
         ZWrite Off
         Cull Off

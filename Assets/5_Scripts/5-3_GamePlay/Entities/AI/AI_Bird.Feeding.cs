@@ -69,7 +69,8 @@ public sealed partial class AI_Bird
         }
         if (state.Phase == BirdFlightPhase.Flying)
         {
-            if (distance <= peckRange) BeginLanding();
+            // 食物所在格可落地不代表鸟当前脚下也可落地，先飞到可落脚的位置再收起翅膀。
+            if (distance <= peckRange && CanLand(body.position)) BeginLanding();
             else FlyTowards(target, deltaTime);
             return true;
         }

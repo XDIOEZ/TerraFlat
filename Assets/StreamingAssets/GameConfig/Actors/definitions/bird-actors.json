@@ -55,7 +55,7 @@
             "fleeTriggerDistance": 12.0,
             "fleeSafeDistance": 20.0,
             "additionalForageTags": ["Berry", "Fruit"],
-            "flightHeight": 1.5,
+            "flightHeight": 2.0,
             "groundDuration": 8.0,
             "flightDuration": 100.0,
             "transitionDuration": 0.75,

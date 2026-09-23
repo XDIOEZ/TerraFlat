@@ -14,12 +14,14 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
     #region 配置与运行状态
 
     public const string MaterialResource = "SunShadows/SunShadowProjection";
-    private const int SortingOrder = 3; // Tilemap 的地面覆雪同序号，材质队列稍后；Blocking/4 在投影上方。
+    private const int SortingOrder = 0; // 与 BRG 地形同属 Default，材质队列 2990 位于地形与 Blocking 之间。
     private const int MaxPooledRenderers = 128;
     private const float OffscreenInterval = 0.25f;
     private static readonly int CasterId = Shader.PropertyToID("_SunShadowCaster");
     private static readonly int MainTextureId = Shader.PropertyToID("_MainTex");
     private static readonly int BatchedId = Shader.PropertyToID("_SunShadowBatched");
+    private static readonly int TexelSizeId = Shader.PropertyToID("_SunShadowTexelSize");
+    private static readonly int UvBoundsId = Shader.PropertyToID("_SunShadowUvBounds");
     private static readonly int AlphaTextureId = Shader.PropertyToID("_AlphaTex");
     private static readonly int ExternalAlphaId = Shader.PropertyToID("_EnableExternalAlpha");
 
@@ -33,6 +35,7 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
     private readonly Dictionary<Item, Binding> bindings = new();
     private readonly Dictionary<int, Transform> roots = new();
     private readonly Dictionary<Sprite, Bounds> spriteBounds = new();
+    private readonly Dictionary<Sprite, Vector4> spriteUvBounds = new();
     private readonly List<Vector2> shapePoints = new();
     private readonly List<Item> staleItems = new();
     private readonly Stack<SpriteRenderer> pool = new();
@@ -55,6 +58,7 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
         public SpriteRenderer Proxy;
         public SunShadowCaster Authoring;
         public Mod_Building Building;
+        public IVisualGroundOffset GroundOffsetProvider;
         public float NextCheck;
     }
 
@@ -171,7 +175,14 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
         SpriteRenderer source = authoring != null && authoring.Source != null ? authoring.Source : item.Sprite;
         if (source == null) source = item.GetComponentInChildren<SpriteRenderer>(true);
         if (source == null) return;
-        bindings.Add(item, new Binding { Owner = item, Source = source, Authoring = authoring, Building = building });
+        bindings.Add(item, new Binding
+        {
+            Owner = item,
+            Source = source,
+            Authoring = authoring,
+            Building = building,
+            GroundOffsetProvider = VisualGroundOffsetResolver.FindProvider(item)
+        });
     }
 
     /// <summary>回池、死亡和远程纯表现注销共用同一解绑入口。</summary>
@@ -212,6 +223,7 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
         foreach (Transform root in roots.Values) if (root != null) Destroy(root.gameObject);
         roots.Clear();
         spriteBounds.Clear();
+        spriteUvBounds.Clear();
         CurrentParameters = default;
         VisibleCount = 0;
         hidden = true;
@@ -260,7 +272,7 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
         proxy.transform.SetParent(root, false);
         proxy.gameObject.layer = binding.Source.gameObject.layer;
         proxy.sharedMaterial = material;
-        proxy.sortingLayerName = "Tilemap";
+        proxy.sortingLayerName = "Default";
         proxy.sortingOrder = SortingOrder;
         proxy.shadowCastingMode = ShadowCastingMode.Off;
         proxy.receiveShadows = false;
@@ -291,16 +303,19 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
             return;
         }
 
+        Vector3 visualOffset = VisualGroundOffsetResolver.Resolve(binding.GroundOffsetProvider, source.transform);
         Bounds footprint = MeasureVisibleBounds(source);
-        float footY = footprint.min.y + (authoring != null ? authoring.FootOffset : 0f);
-        float height = Mathf.Max(0.01f, source.bounds.max.y - footY);
+        float footY = ResolveFootY(source, footprint, authoring) - visualOffset.y;
+        Bounds sourceBounds = source.bounds;
+        sourceBounds.center -= visualOffset;
+        float height = Mathf.Max(0.01f, sourceBounds.max.y - footY);
         Vector2 displacement = CurrentParameters.ShadowDirection * Mathf.Min(CurrentParameters.MaximumDistance,
             height * heightScale * CurrentParameters.LengthMultiplier);
         Bounds projected = new Bounds();
-        projected.SetMinMax(new Vector3(source.bounds.min.x + Mathf.Min(0f, displacement.x),
-                footY + Mathf.Min(0f, displacement.y), source.bounds.min.z - 0.1f),
-            new Vector3(source.bounds.max.x + Mathf.Max(0f, displacement.x),
-                footY + Mathf.Max(0f, displacement.y) + 0.02f, source.bounds.max.z + 0.1f));
+        projected.SetMinMax(new Vector3(sourceBounds.min.x + Mathf.Min(0f, displacement.x),
+                footY + Mathf.Min(0f, displacement.y), sourceBounds.min.z - 0.1f),
+            new Vector3(sourceBounds.max.x + Mathf.Max(0f, displacement.x),
+                footY + Mathf.Max(0f, displacement.y) + 0.02f, sourceBounds.max.z + 0.1f));
         if (!IsInView(projected, source.gameObject.layer))
         {
             ReleaseProxy(binding);
@@ -310,7 +325,7 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
 
         if (binding.Proxy == null) binding.Proxy = AcquireProxy(binding);
         SpriteRenderer proxy = binding.Proxy;
-        proxy.transform.SetPositionAndRotation(source.transform.position, source.transform.rotation);
+        proxy.transform.SetPositionAndRotation(source.transform.position - visualOffset, source.transform.rotation);
         proxy.transform.localScale = source.transform.lossyScale;
         proxy.sprite = source.sprite;
         proxy.flipX = source.flipX;
@@ -319,7 +334,10 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
         proxy.size = source.size;
         proxy.color = new Color(1f, 1f, 1f, source.color.a);
         properties.Clear();
-        properties.SetTexture(MainTextureId, source.sprite.texture);
+        Texture2D texture = source.sprite.texture;
+        properties.SetTexture(MainTextureId, texture);
+        properties.SetVector(TexelSizeId, new Vector4(1f / texture.width, 1f / texture.height, 0f, 0f));
+        properties.SetVector(UvBoundsId, GetSpriteUvBounds(source.sprite));
         properties.SetVector(CasterId, new Vector4(footY, heightScale, height, 1f));
         properties.SetFloat(BatchedId, 0f);
         Texture2D alphaTexture = source.sprite.associatedAlphaSplitTexture;
@@ -378,6 +396,37 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
             if (i == 0) world = new Bounds(point, Vector3.zero); else world.Encapsulate(point);
         }
         return world;
+    }
+
+    /// <summary>底部枢轴的高物体把投影起点收入根部，避免透明留白沿日照方向拉成断缝。</summary>
+    private static float ResolveFootY(SpriteRenderer source, Bounds footprint, SunShadowCaster authoring)
+    {
+        float footY = footprint.min.y;
+        Sprite sprite = source.sprite;
+        if (sprite.pivot.y <= sprite.rect.height * 0.15f && footprint.size.y > 1f)
+        {
+            footY = Mathf.Max(footY, source.transform.position.y);
+            footY += Mathf.Min(0.3f, footprint.size.y * 0.08f);
+        }
+        return footY + (authoring != null ? authoring.FootOffset : 0f);
+    }
+
+    /// <summary>每张 Sprite 只读取一次图集 UV，模糊采样限定在本帧贴图区域内。</summary>
+    private Vector4 GetSpriteUvBounds(Sprite sprite)
+    {
+        if (spriteUvBounds.TryGetValue(sprite, out Vector4 bounds)) return bounds;
+        Vector2[] uv = sprite.uv;
+        bounds = new Vector4(float.PositiveInfinity, float.PositiveInfinity,
+            float.NegativeInfinity, float.NegativeInfinity);
+        for (int i = 0; i < uv.Length; i++)
+        {
+            bounds.x = Mathf.Min(bounds.x, uv[i].x);
+            bounds.y = Mathf.Min(bounds.y, uv[i].y);
+            bounds.z = Mathf.Max(bounds.z, uv[i].x);
+            bounds.w = Mathf.Max(bounds.w, uv[i].y);
+        }
+        spriteUvBounds.Add(sprite, bounds);
+        return bounds;
     }
 
     /// <summary>夜间和相机不可见时不保留上一帧可见状态。</summary>

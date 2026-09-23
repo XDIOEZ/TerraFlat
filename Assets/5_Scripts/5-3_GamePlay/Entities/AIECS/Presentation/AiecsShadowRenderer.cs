@@ -11,7 +11,7 @@ namespace FlatWorld.AIECS
     /// <summary>
     /// 只读脚底假阴影：每只使用四个顶点、两个三角形，每 4096 只共用一个动态网格。
     /// 固定索引只上传一次；顶点缓冲复用，不创建逐实体对象、碰撞体、法线或真实投影。
-    /// 使用 Tilemap/1000 与旧 ActorShadowManager 一致；仅绘制调用方筛选出的可见陆地实体。
+    /// 使用 Default/0 与 ActorShadowManager 一致；仅绘制调用方筛选出的可见陆地实体。
     /// </summary>
     public sealed class AiecsShadowRenderer : IDisposable
     {
@@ -143,8 +143,8 @@ namespace FlatWorld.AIECS
                 root.AddComponent<MeshFilter>().sharedMesh = mesh;
                 renderer = root.AddComponent<MeshRenderer>();
                 renderer.sharedMaterial = material;
-                renderer.sortingLayerName = "Tilemap";
-                renderer.sortingOrder = 1000;
+                renderer.sortingLayerName = "Default";
+                renderer.sortingOrder = 0;
                 renderer.shadowCastingMode = ShadowCastingMode.Off;
                 renderer.receiveShadows = false;
                 renderer.lightProbeUsage = LightProbeUsage.Off;

@@ -69,6 +69,53 @@ public static partial class RuntimeUIPrefabBuilder
         sunShadows.isOn = SunShadowSettings.DefaultEnabled;
         CreateSettingsHint(content, "随太阳方向投射长阴影。低配设备可关闭以减少渲染开销。", 60f);
 
+        GameObject blurRow = CreateRow("阴影柔化行", content, 72f);
+        TextMeshProUGUI blurLabel = CreateText("阴影柔化标签", blurRow.transform, "阴影柔化", 22f, Cream);
+        blurLabel.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+        Toggle blurShadows = CreateToggle("阴影柔化开关", blurRow.transform);
+        LayoutElement blurLayout = blurShadows.GetComponent<LayoutElement>();
+        blurLayout.minHeight = 60f;
+        blurLayout.preferredHeight = 64f;
+        blurLayout.minWidth = 88f;
+        blurShadows.isOn = SunShadowSettings.DefaultBlurEnabled;
+
+        GameObject blurStrengthRow = CreateRow("模糊程度行", content, 72f);
+        TextMeshProUGUI blurStrengthLabel = CreateText("模糊程度标签", blurStrengthRow.transform,
+            "模糊程度", 22f, Cream);
+        blurStrengthLabel.gameObject.AddComponent<LayoutElement>().preferredWidth = 150f;
+        Slider blurStrength = CreateSlider("模糊程度滑块", blurStrengthRow.transform);
+        blurStrength.minValue = SunShadowSettings.MinBlurStrength;
+        blurStrength.maxValue = SunShadowSettings.MaxBlurStrength;
+        blurStrength.value = SunShadowSettings.DefaultBlurStrength;
+        TextMeshProUGUI blurStrengthValue = CreateText("模糊程度数值", blurStrengthRow.transform,
+            "30%", 18f, Amber);
+        blurStrengthValue.alignment = TextAlignmentOptions.MidlineRight;
+        blurStrengthValue.gameObject.AddComponent<LayoutElement>().preferredWidth = 65f;
+
+        GameObject elevationRow = CreateRow("地面层级阴影行", content, 72f);
+        TextMeshProUGUI elevationLabel = CreateText("地面层级阴影标签", elevationRow.transform,
+            "地面层级阴影", 22f, Cream);
+        elevationLabel.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+        Toggle elevationShadows = CreateToggle("地面层级阴影开关", elevationRow.transform);
+        LayoutElement elevationLayout = elevationShadows.GetComponent<LayoutElement>();
+        elevationLayout.minHeight = 60f;
+        elevationLayout.preferredHeight = 64f;
+        elevationLayout.minWidth = 88f;
+        elevationShadows.isOn = GroundElevationShadowSettings.DefaultEnabled;
+
+        GameObject elevationWidthRow = CreateRow("阴影宽度行", content, 72f);
+        TextMeshProUGUI elevationWidthLabel = CreateText("阴影宽度标签", elevationWidthRow.transform,
+            "阴影宽度", 22f, Cream);
+        elevationWidthLabel.gameObject.AddComponent<LayoutElement>().preferredWidth = 150f;
+        Slider elevationWidth = CreateSlider("阴影宽度滑块", elevationWidthRow.transform);
+        elevationWidth.minValue = GroundElevationShadowSettings.MinWidth;
+        elevationWidth.maxValue = GroundElevationShadowSettings.MaxWidth;
+        elevationWidth.value = GroundElevationShadowSettings.DefaultWidth;
+        TextMeshProUGUI elevationWidthValue = CreateText("阴影宽度数值", elevationWidthRow.transform,
+            "20%", 18f, Amber);
+        elevationWidthValue.alignment = TextAlignmentOptions.MidlineRight;
+        elevationWidthValue.gameObject.AddComponent<LayoutElement>().preferredWidth = 65f;
+
         TextMeshProUGUI label = CreateText("水体风格标签", content, "水体风格", 22f, Cream);
         label.gameObject.AddComponent<LayoutElement>().preferredHeight = 36f;
         GameObject row = CreateRow("水体风格行", content, 72f);
@@ -89,6 +136,12 @@ public static partial class RuntimeUIPrefabBuilder
         serialized.FindProperty("resetButton").objectReferenceValue = reset;
         serialized.FindProperty("occlusionToggle").objectReferenceValue = occlusion;
         serialized.FindProperty("sunShadowToggle").objectReferenceValue = sunShadows;
+        serialized.FindProperty("sunShadowBlurToggle").objectReferenceValue = blurShadows;
+        serialized.FindProperty("sunShadowBlurSlider").objectReferenceValue = blurStrength;
+        serialized.FindProperty("sunShadowBlurValueText").objectReferenceValue = blurStrengthValue;
+        serialized.FindProperty("groundElevationToggle").objectReferenceValue = elevationShadows;
+        serialized.FindProperty("groundElevationWidthSlider").objectReferenceValue = elevationWidth;
+        serialized.FindProperty("groundElevationWidthValueText").objectReferenceValue = elevationWidthValue;
         serialized.ApplyModifiedPropertiesWithoutUndo();
         return root;
     }

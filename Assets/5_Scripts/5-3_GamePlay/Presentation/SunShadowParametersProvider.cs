@@ -37,6 +37,7 @@ public static class SunShadowParametersProvider
     public const string ShaderVectorName = "_WorldSunShadow";
     private static readonly int ParametersId = Shader.PropertyToID(ShaderVectorName);
     private static readonly int ColorId = Shader.PropertyToID("_WorldSunShadowColor");
+    private static readonly int BlurId = Shader.PropertyToID("_WorldSunShadowBlur"); // 共用柔化全局参数。
 
     /// <summary>统一的太阳采样入口，允许 Harmony/MOD 替换轨迹或特殊维度规则。</summary>
     public static SunShadowParameters Evaluate(string worldKey, float minimumLength, float maximumLength,
@@ -79,15 +80,20 @@ public static class SunShadowParametersProvider
 
     #region Shader 全局参数
 
-    /// <summary>普通 Sprite 和 ECS 网格共用同一组太阳参数与颜色。</summary>
+    /// <summary>普通 Sprite 和 ECS 网格共用太阳参数、颜色与本机柔化强度。</summary>
     public static void Publish(SunShadowParameters parameters, Color color)
     {
         Shader.SetGlobalVector(ParametersId, parameters.ShaderVector);
         Shader.SetGlobalColor(ColorId, color);
+        Shader.SetGlobalFloat(BlurId, SunShadowSettings.EffectiveBlurStrength);
     }
 
     /// <summary>禁用、退出世界和域重载时立即清零。</summary>
-    public static void ClearGlobals() => Shader.SetGlobalVector(ParametersId, Vector4.zero);
+    public static void ClearGlobals()
+    {
+        Shader.SetGlobalVector(ParametersId, Vector4.zero);
+        Shader.SetGlobalFloat(BlurId, 0f);
+    }
 
     #endregion
 }

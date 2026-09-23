@@ -8,13 +8,19 @@ public enum BirdFlightPhase { Ground, TakingOff, Flying, Landing }
 
 /// <summary>
 /// GameObject 鸟与海鸥共用模块。地面 0.5 格/秒、空中 6.3 格/秒，飞行受独立耐力约束。
-/// Item 和刚体始终保存地面映射坐标；独立 LiftRoot 仅提升表现与受击盒 1.5 单位。
+/// Item 和刚体始终保存地面映射坐标；独立 LiftRoot 在飞行时提升表现与受击盒 2 单位。
 /// 状态、阶段计时与目的地随模块存档，回收时释放地块抑制并归零表现高度。
 /// </summary>
 public sealed partial class AI_Bird : Module, IAIActor, IItemModuleDependencyBinder,
-    IIncomingDamageRule, IIncomingDamageContextRule, ICombatAirborneTarget
+    IIncomingDamageRule, IIncomingDamageContextRule, ICombatAirborneTarget, IVisualGroundOffset
 {
     #region 配置与独立存档
+    private static readonly int GroundAnimationHash = Animator.StringToHash("Base Layer.Ground");
+    private static readonly int WalkAnimationHash = Animator.StringToHash("Base Layer.Walk");
+    private static readonly int TakingOffAnimationHash = Animator.StringToHash("Base Layer.TakingOff");
+    private static readonly int FlyingAnimationHash = Animator.StringToHash("Base Layer.Flying");
+    private static readonly int LandingAnimationHash = Animator.StringToHash("Base Layer.Landing");
+
     [Serializable]
     public sealed class FlightState
     {
@@ -36,7 +42,7 @@ public sealed partial class AI_Bird : Module, IAIActor, IItemModuleDependencyBin
     public override ModuleTickMode TickMode => ModuleTickMode.EveryFrame;
     public float groundSpeed = 0.5f;
     public float flightSpeed = 6.3f;
-    public float flightHeight = 1.5f;
+    public float flightHeight = 2f;
     public float groundDuration = 8f;
     public float flightDuration = 100f;
     public float transitionDuration = 0.75f;
@@ -57,7 +63,6 @@ public sealed partial class AI_Bird : Module, IAIActor, IItemModuleDependencyBin
     private bool loaded;
     private bool stoppedForDeath;
     private Vector3 liftOrigin;
-    private string currentAnimation;
     private bool restoreGroundDestination;
     private BirdFlightStaminaBar staminaDisplay;
     public Item ActorItem => item;
@@ -77,7 +82,7 @@ public sealed partial class AI_Bird : Module, IAIActor, IItemModuleDependencyBin
         health = modules.RequireSingleModById<DamageReceiver>(ModText.Hp);
         food = modules.RequireSingleModById<Mod_Food>(ModText.Food);
         threatDetector = modules.RequireSingleModById<Mod_ItemDetector>(ModText.Detector);
-        if (liftRoot == null || birdAnimator == null)
+        if (liftRoot == null || liftRoot.parent == null || birdAnimator == null)
             throw new InvalidOperationException("鸟外壳缺少 LiftRoot、Animator 或根刚体，请运行鸟资源定向构建菜单。");
         liftOrigin = liftRoot.localPosition;
     }
@@ -99,7 +104,6 @@ public sealed partial class AI_Bird : Module, IAIActor, IItemModuleDependencyBin
         threatDetector.DetectionRadius = Mathf.Max(fleeTriggerDistance, fleeSafeDistance);
         loaded = true;
         stoppedForDeath = false;
-        currentAnimation = null;
         ResetForaging();
         health.OnDamageReceived -= HandleBirdDamage;
         health.OnDamageReceived += HandleBirdDamage;
@@ -121,7 +125,6 @@ public sealed partial class AI_Bird : Module, IAIActor, IItemModuleDependencyBin
         mover?.StopMovement();
         if (body != null)
             body.velocity = Vector2.zero;
-        currentAnimation = null;
         staminaDisplay?.SetVisible(false);
     }
     #endregion
@@ -242,17 +245,40 @@ public sealed partial class AI_Bird : Module, IAIActor, IItemModuleDependencyBin
     private void ApplyFlightPresentation()
     {
         liftRoot.localPosition = liftOrigin + Vector3.up * CurrentFlightHeight;
-        // 对象池先 Load 后激活；保留待播状态，激活后的首个 Tick 才交给 Animator。
+        // 对象池先 Load 后激活；激活后以 Animator 的真实状态为准，避免重绑或外部播放造成飞行时残留步行动画。
         if (!birdAnimator.isActiveAndEnabled)
+            return;
+
+        int animationHash = ResolveAnimationStateHash();
+        if (!birdAnimator.IsInTransition(0) &&
+            birdAnimator.GetCurrentAnimatorStateInfo(0).fullPathHash == animationHash)
+            return;
+        if (!birdAnimator.HasState(0, animationHash))
+            throw new InvalidOperationException($"鸟外壳的 Animator 缺少 {state.Phase} 阶段动画。");
+        birdAnimator.Play(animationHash, 0, 0f);
+    }
+
+    /// <summary>仅向阴影提供随 LiftRoot 升高的视觉位移，根部地面坐标仍由 Item 持有。</summary>
+    public bool TryGetVisualGroundOffset(Transform visual, out Vector3 worldOffset)
+    {
+        worldOffset = Vector3.zero;
+        if (visual == null || liftRoot == null || !visual.IsChildOf(liftRoot))
+            return false;
+        worldOffset = liftRoot.position - liftRoot.parent.TransformPoint(liftOrigin);
+        return true;
+    }
+
+    /// <summary>地面按实际步行状态选动画，空中直接以飞行阶段为权威。</summary>
+    private int ResolveAnimationStateHash()
+    {
+        return state.Phase switch
         {
-            currentAnimation = null;
-            return;
-        }
-        string animation = IsAirborne ? state.Phase.ToString() : mover.IsActuallyMoving ? "Walk" : "Ground";
-        if (currentAnimation == animation)
-            return;
-        currentAnimation = animation;
-        birdAnimator.Play(animation);
+            BirdFlightPhase.Ground => mover.IsActuallyMoving ? WalkAnimationHash : GroundAnimationHash,
+            BirdFlightPhase.TakingOff => TakingOffAnimationHash,
+            BirdFlightPhase.Flying => FlyingAnimationHash,
+            BirdFlightPhase.Landing => LandingAnimationHash,
+            _ => throw new InvalidOperationException($"未知鸟类飞行阶段：{state.Phase}")
+        };
     }
 
     /// <summary>受伤打断起降时从当前真实高度过渡，避免落地中重新起飞先瞬移到地面。</summary>

@@ -2543,6 +2543,22 @@ MonoBehaviour:
     m_Localized: Make trees partially transparent where they obscure the player.
     m_Metadata:
       m_Items: []
+  - m_Id: 16113686958563331
+    m_Localized: Ground Elevation Shadows
+    m_Metadata:
+      m_Items: []
+  - m_Id: 16113686958563332
+    m_Localized: Shadow Width
+    m_Metadata:
+      m_Items: []
+  - m_Id: 16649622951813120
+    m_Localized: Shadow Softening
+    m_Metadata:
+      m_Items: []
+  - m_Id: 16649623023116288
+    m_Localized: Blur Strength
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

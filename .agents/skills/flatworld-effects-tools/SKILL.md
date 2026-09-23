@@ -10,7 +10,9 @@ description: "Use when: 定位或修改 FlatWorld 的运行时特效、粒子、
 - 项目自有 Shader 资源统一放在 `Assets/9_Shaders/`：Shader 源文件放 `Shader/`，材质放 `Material/`，Volume 配置放 `Volume/`；必须依赖 `Resources.Load` 的 Shader/材质放在 `Assets/9_Shaders/Resources/` 下并保持原逻辑资源路径。不要再创建 `Assets/Shaders`、`Assets/Resources/Shaders` 或其它散落的项目自有 Shader 资源目录；第三方插件资源保持原目录不移动。
 - 运行时视觉：`Assets/5_Scripts/5-3_GamePlay/Presentation/Effects/Management/VisualEffectManager.cs`、`Assets/5_Scripts/5-3_GamePlay/Presentation/Effects/Runtime/`
 - 角色渲染：`Assets/5_Scripts/5-3_GamePlay/Presentation/{ActorRenderEffectController,ActorRenderColorEffect,WaterImmersionRenderEffect}.cs`
-- 实体脚底阴影：`Assets/5_Scripts/5-3_GamePlay/Presentation/ActorShadowManager.cs` 与 `Assets/2_Prefabs/Gameplay/Modules/Rendering/ActorShadow.prefab`；旧对象阴影使用场景级 `ActorShadows` 根节点和 `Tilemap/1000` 排序，确保高于地面 Tilemap、低于 Default 世界精灵与角色，不挂到实体或 `RuntimeEntities` 下；ECS 使用下述独立批次，不注册逐实体对象。
+- 实体脚底阴影：`Assets/5_Scripts/5-3_GamePlay/Presentation/ActorShadowManager.cs` 与 `Assets/2_Prefabs/Gameplay/Modules/Rendering/ActorShadow.prefab`；旧对象阴影使用场景级 `ActorShadows` 根节点和 `Default/0 + Queue 2991` 排序，不挂到实体或 `RuntimeEntities` 下；ECS 使用下述独立批次，不注册逐实体对象。
+- 根植植物复用 `ActorShadowManager` 的接触阴影：不可拾取且未被持有的树按 `Tree/Plant` 标签、作物按 `IPlantableCrop` 模块注册；以根部 Collider 定位，并用可见 Sprite 宽度限制阴影大小，成长时更新尺寸。草饰批次没有 Item，不进入该注册链。
+- 源贴图被飞行等表现抬升时，`ActorShadowManager` 与 `WorldShadowProjectionManager` 共用 `IVisualGroundOffset` 将阴影定位折算回地面；提供者按当前实际视觉 Transform 计算世界位移，回池或死亡归零后不能继续用飞行状态值抵扣。
 - 太阳长投影由 `Presentation/WorldShadowProjectionManager.cs` 独立持有，偏好由 `SunShadowSettings` 保存；代理监听完整 `RuntimeItemRegistered/Unregistered`，不复用脚底阴影的水体显隐。`SunShadowCaster` 允许 Prefab 覆盖主体、视觉高度与落地点。
 - 编辑器工具：`Assets/Editor/FlatWorld/`、`Assets/Editor/FlatWorld/ProjectTools/`；内容工坊入口为菜单 `FlatWorld/内容配置/内容工坊`
 - 调试：`Assets/5_Scripts/5-3_GamePlay/Development/Debug/`、`Development/Diagnostics/{GameDebugManager,GameLogManager}.cs`
@@ -27,9 +29,12 @@ description: "Use when: 定位或修改 FlatWorld 的运行时特效、粒子、
 - 伤害数字的最终颜色由 `DamageTextEffect` 样式或调用数据覆盖，不能只改 TMP 的 Prefab 字色；数值到显示倍率的映射也由该表现组件负责，战斗结算只传递实际伤害值与样式。
 - 角色颜色等共享 Shader 参数通过现有 MPB 控制器提交，避免多个组件互相覆盖。
 - Unity 2D 使用 URP/Light2D；修改 Shader 前核对材质实际 Shader 与 Pass。
-- 太阳投影使用 `Tilemap/3 + Transparent+10`，排在地面覆雪之后、`Blocking/4` 及实体之前；不能直接复用脚底阴影的 `Default/-1000`，否则长投影会覆盖 Tilemap 墙体。Shader 位移后的 CPU 包围盒必须同步扩大，屏幕外投影源仍可能把阴影投进视口；逐 Renderer MPB 必须显式恢复 `_MainTex` 及 Android 分离 Alpha。
+- 正式 BRG 地形占用 `Default/0` 的 Queue 2987~2992，其中 Ground/Water 为 2988/2989、Blocking 为 2992，草为 2993；太阳投影使用 `Default/0 + Queue 2990`，脚底阴影使用 Queue 2991，保证两者位于地面之上、Blocking 和草与实体之下。Tilemap 排序层会整体落在 BRG 地形之后，不能再用旧 `Tilemap/3` 或 `Tilemap/1000` 绘制这两种阴影。Shader 位移后的 CPU 包围盒必须同步扩大，屏幕外投影源仍可能把阴影投进视口；逐 Renderer MPB 必须显式恢复 `_MainTex` 及 Android 分离 Alpha。
+- 太阳长投影对低枢轴高 Sprite 的落点需收入可见根部，透明底边经长距离投影会被放大成树干与阴影之间的断缝；特殊对象仍用 `SunShadowCaster.FootOffset` 校正。共享投影 Shader 柔化采样时，普通 Sprite 通过 MPB 传贴图 texel 与当前 Sprite UV 边界，AIECS 则由图集材质和逐顶点 UV 边界提供同一契约，避免采到邻近帧。
+- 太阳长投影的柔化强度由 `SunShadowSettings` 本机偏好驱动，在 `SunShadowParametersProvider.Publish` 写入全局 `_WorldSunShadowBlur`；Shader 不得把该全局参数声明在 `Properties` 中，否则材质默认值会遮蔽运行时设置。模糊采样超出当前 Sprite UV 时应返回透明，并让 UV 边界渐隐，否则图集邻帧渗色或几何边缘仍会硬切。
 - `AiecsSunShadowRenderer` 通过 `_WorldSunShadow` 全局契约消费太阳状态，每 4096 只合批并复用当前动画图集，不反向引用 GamePlay。设置关闭/夜晚/相机丢失必须停止投影顶点上传并隐藏旧批次；普通实体管理器关闭时取消注册、清空绑定并停用更新，开启时只补扫 ItemMgr 权威表。
 - 地表高度分层在 `Chunk-BRG-Contact-Lit` 的共享 HLSL 中处理，两条 Pass 共用 `UnityPerMaterial` 布局和公式，且先分层着色、再接触阴影、最后进入 Light2D。按世界格坐标与四邻离散层差画边，同层无边、低侧暗边优先、拐角取最大强度；`_ElevationStrength=0` 必须完全旁路高度 Tone/暗边/亮边，不能连带关闭 Contact 或改变水面 Shader。
+- 地表高度阴影的本机开关与宽度由 `GroundElevationShadowSettings` 提供。BRG 地面运行时材质先复制源 Tilemap 材质，再覆盖高度阴影偏好；现存批次监听偏好变化只改材质参数，不重建区块实例。高度阴影的 Shader 默认值与 BRG 模板材质要同步。
 - 局部 `Light2D` 如果开启 `volumeIntensityEnabled`，同时要开启 `volumetricShadowsEnabled` 并设置有效 `shadowVolumeIntensity`；否则 `ShadowCaster2D` 只会阻挡普通光照，体积光晕仍会穿过石墙、矿洞岩壁等 Blocking Tile，看起来像“光穿墙”。新版区块的静态墙体遮挡统一复用 `ChunkLightOccluderRenderer`，不要再给每块玩家墙单独创建常驻 ShadowCaster。
 - `ChunkLightOccluderRenderer` 的 Blocking Tile 阴影体必须开启 `selfShadows`，否则墙体虽然会向背光侧投影，墙面自身仍会被 Point Light 整块照亮；通用世界 `Mod_LightSource` 的 Point Light 使用满强度普通阴影，保证实体墙移除该局部光，同时保留昼夜全局光和墙体朝光侧的窄外沿。
 - `selfShadows=true` 的 Blocking Tile 阴影体会通过 URP 2D 阴影模板影响任何与墙体占地区域重叠的 Lit Sprite，而不只影响墙体自身；火把等自发光物体应使用独立 Unlit/Emissive 覆盖层，可按玩法需要只覆盖发光区域或整个源 Sprite。覆盖层使用 Max 混合给发光体提供不被阴影压暗的颜色下限，同时保留原 Lit Sprite 更亮的受光结果；禁止为了让发光体不变黑而关闭墙体 `selfShadows`，否则会重新出现整块墙面被局部光照亮的问题。
@@ -75,7 +80,7 @@ description: "Use when: 定位或修改 FlatWorld 的运行时特效、粒子、
 
 ## AIECS 渲染原型
 
-- ECS 脚底阴影由 `AiecsShadowRenderer` 独立合批：每批最多 4096 只、固定 16 位索引、24 字节顶点，复用主体可见列表与 Display 水态，不创建逐实体 GameObject，也不额外查询地形。它和旧 `ActorShadowManager` 使用实际 `Tilemap/1000` 排序与 `GetShadowOpacity(scene)` 昼夜入口；主体批次数与阴影批次数必须分开统计。相机缺失、空帧、关闭阴影、释放世界都必须隐藏/回收旧批次。
+- ECS 脚底阴影由 `AiecsShadowRenderer` 独立合批：每批最多 4096 只、固定 16 位索引、24 字节顶点，复用主体可见列表与 Display 水态，不创建逐实体 GameObject，也不额外查询地形。它和旧 `ActorShadowManager` 使用实际 `Default/0 + Queue 2991` 排序与 `GetShadowOpacity(scene)` 昼夜入口；主体批次数与阴影批次数必须分开统计。相机缺失、空帧、关闭阴影、释放世界都必须隐藏/回收旧批次。
 - 阴影脚底使用待机帧的固定非透明 `VisibleRect`，不能使用含大面积留白的完整帧矩形，也不能跟随攻击/奔跑逐帧伸缩。导出器从已解包像素记录边界；既有图集可用 `FlatWorld/AIECS/阴影 更新非透明边界` 只补目录数据，不重导图集、不改源贴图。`阴影 验证批次与生命周期` 的离线验证不等于真实世界、截图或设备性能验收。
 
 - 表现代码在独立 `AIECS/Presentation` 程序集，正式 `AiecsWorldRenderer` 只读模拟提交后的 Display，不复用 AiecsPrototypeMotion 作为行为。共享动画目录、图集及移动脚本的 GUID 必须保留；开发显示的有限 Y 行批次和血条便于手测，不等于旧世界精确透明混排、实际水深或 GPU 性能门槛通过。

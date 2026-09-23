@@ -84,6 +84,7 @@ namespace FlatWorld.AIECS
             public Color32 Color; // 主体淡出透明度。
             public Vector2 UV; // 当前帧图集 UV。
             public Vector4 Caster; // 脚底 Y、高度倍率、最大高度、透明度。
+            public Vector4 UvBounds; // 当前帧图集边界，供软边采样限幅。
         }
 
         private sealed class Batch : IDisposable
@@ -109,7 +110,8 @@ namespace FlatWorld.AIECS
                     new VertexAttributeDescriptor(VertexAttribute.Position, VertexAttributeFormat.Float32, 3),
                     new VertexAttributeDescriptor(VertexAttribute.Color, VertexAttributeFormat.UNorm8, 4),
                     new VertexAttributeDescriptor(VertexAttribute.TexCoord0, VertexAttributeFormat.Float32, 2),
-                    new VertexAttributeDescriptor(VertexAttribute.TexCoord1, VertexAttributeFormat.Float32, 4));
+                    new VertexAttributeDescriptor(VertexAttribute.TexCoord1, VertexAttributeFormat.Float32, 4),
+                    new VertexAttributeDescriptor(VertexAttribute.TexCoord2, VertexAttributeFormat.Float32, 4));
                 ushort[] indices = new ushort[MaxSprites * 6];
                 for (int i = 0; i < MaxSprites; i++)
                 {
@@ -123,8 +125,8 @@ namespace FlatWorld.AIECS
                 root.AddComponent<MeshFilter>().sharedMesh = mesh;
                 renderer = root.AddComponent<MeshRenderer>();
                 renderer.sharedMaterial = material;
-                renderer.sortingLayerName = "Tilemap";
-                renderer.sortingOrder = 3;
+                renderer.sortingLayerName = "Default";
+                renderer.sortingOrder = 0;
                 renderer.shadowCastingMode = ShadowCastingMode.Off;
                 renderer.receiveShadows = false;
                 renderer.lightProbeUsage = LightProbeUsage.Off;
@@ -132,6 +134,7 @@ namespace FlatWorld.AIECS
                 var properties = new MaterialPropertyBlock();
                 properties.SetTexture("_MainTex", atlas);
                 properties.SetFloat("_SunShadowBatched", 1f);
+                properties.SetVector("_SunShadowTexelSize", new Vector4(1f / atlas.width, 1f / atlas.height, 0f, 0f));
                 renderer.SetPropertyBlock(properties);
                 renderer.enabled = false;
             }
@@ -151,6 +154,8 @@ namespace FlatWorld.AIECS
                 int offset = count * 4;
                 float height = 0.01f;
                 Color32 color = new Color32(255, 255, 255, (byte)Mathf.RoundToInt(Mathf.Clamp01(alpha) * 255f));
+                Rect rect = sprite.AtlasRect;
+                Vector4 uvBounds = new Vector4(rect.xMin, rect.yMin, rect.xMax, rect.yMax);
                 for (int corner = 0; corner < 4; corner++)
                 {
                     bool right = corner == 1 || corner == 2, top = corner >= 2;
@@ -160,7 +165,8 @@ namespace FlatWorld.AIECS
                     height = Mathf.Max(height, point.y - footY);
                     vertices[offset + corner] = new Vertex { Position = point, Color = color,
                         UV = new Vector2(right ? sprite.AtlasRect.xMax : sprite.AtlasRect.xMin,
-                            top ? sprite.AtlasRect.yMax : sprite.AtlasRect.yMin) };
+                            top ? sprite.AtlasRect.yMax : sprite.AtlasRect.yMin),
+                        UvBounds = uvBounds };
                 }
                 Vector4 caster = new Vector4(footY, scale, height, 1f);
                 Vector2 displacement = new Vector2(sun.x, sun.y) * scale;

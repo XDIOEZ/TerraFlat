@@ -2463,6 +2463,22 @@ MonoBehaviour:
     m_Key: ui.text.2AA212D2
     m_Metadata:
       m_Items: []
+  - m_Id: 16113686958563331
+    m_Key: ui.text.47F262EF
+    m_Metadata:
+      m_Items: []
+  - m_Id: 16113686958563332
+    m_Key: ui.text.F3F877F5
+    m_Metadata:
+      m_Items: []
+  - m_Id: 16649622951813120
+    m_Key: ui.text.0B7DE810
+    m_Metadata:
+      m_Items: []
+  - m_Id: 16649623023116288
+    m_Key: ui.text.93416707
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:

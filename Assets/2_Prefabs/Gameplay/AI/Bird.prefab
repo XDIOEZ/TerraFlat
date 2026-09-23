@@ -271,7 +271,7 @@ MonoBehaviour:
     BitData: 
   groundSpeed: 0.5
   flightSpeed: 6.3
-  flightHeight: 1.5
+  flightHeight: 2
   groundDuration: 8
   flightDuration: 100
   flightStaminaMax: 100

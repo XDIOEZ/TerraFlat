@@ -11,10 +11,11 @@ Shader "FlatWorld/2D/Chunk BRG Contact Lit"
         _ElevationStrength("Elevation Strength", Range(0, 1)) = 1
         _ElevationLevelCount("Elevation Level Count", Range(2, 64)) = 20
         _ElevationToneStrength("Elevation Tone Strength", Range(0, 0.2)) = 0.04
-        _ElevationShadowStrength("Elevation Shadow Strength", Range(0, 1)) = 0.45
+        _ElevationShadowStrength("Elevation Shadow Strength", Range(0, 1)) = 0.72
+        _ElevationShadowColor("Elevation Shadow Color", Color) = (0.12, 0.09, 0.045, 1)
         _ElevationHighlightStrength("Elevation Highlight Strength", Range(0, 1)) = 0.12
-        _ElevationEdgeWidth("Elevation Edge Width", Range(0.01, 0.25)) = 0.12
-        _ElevationDeltaForMaxStrength("Elevation Delta For Max Strength", Range(1, 10)) = 3
+        _ElevationEdgeWidth("Elevation Edge Width", Range(0.01, 0.45)) = 0.2
+        _ElevationDeltaForMaxStrength("Elevation Delta For Max Strength", Range(1, 10)) = 2
         [HideInInspector] _Color("Tint", Color) = (1,1,1,1)
         [HideInInspector] _RendererColor("Renderer Color", Color) = (1,1,1,1)
     }
@@ -66,6 +67,7 @@ Shader "FlatWorld/2D/Chunk BRG Contact Lit"
             float _ElevationLevelCount;
             float _ElevationToneStrength;
             float _ElevationShadowStrength;
+            float4 _ElevationShadowColor;
             float _ElevationHighlightStrength;
             float _ElevationEdgeWidth;
             float _ElevationDeltaForMaxStrength;
@@ -83,6 +85,7 @@ Shader "FlatWorld/2D/Chunk BRG Contact Lit"
             UNITY_DOTS_INSTANCED_PROP(float, _ElevationLevelCount)
             UNITY_DOTS_INSTANCED_PROP(float, _ElevationToneStrength)
             UNITY_DOTS_INSTANCED_PROP(float, _ElevationShadowStrength)
+            UNITY_DOTS_INSTANCED_PROP(float4, _ElevationShadowColor)
             UNITY_DOTS_INSTANCED_PROP(float, _ElevationHighlightStrength)
             UNITY_DOTS_INSTANCED_PROP(float, _ElevationEdgeWidth)
             UNITY_DOTS_INSTANCED_PROP(float, _ElevationDeltaForMaxStrength)
@@ -97,6 +100,7 @@ Shader "FlatWorld/2D/Chunk BRG Contact Lit"
         #define _ElevationLevelCount UNITY_ACCESS_DOTS_INSTANCED_PROP_WITH_DEFAULT(float, _ElevationLevelCount)
         #define _ElevationToneStrength UNITY_ACCESS_DOTS_INSTANCED_PROP_WITH_DEFAULT(float, _ElevationToneStrength)
         #define _ElevationShadowStrength UNITY_ACCESS_DOTS_INSTANCED_PROP_WITH_DEFAULT(float, _ElevationShadowStrength)
+        #define _ElevationShadowColor UNITY_ACCESS_DOTS_INSTANCED_PROP_WITH_DEFAULT(float4, _ElevationShadowColor)
         #define _ElevationHighlightStrength UNITY_ACCESS_DOTS_INSTANCED_PROP_WITH_DEFAULT(float, _ElevationHighlightStrength)
         #define _ElevationEdgeWidth UNITY_ACCESS_DOTS_INSTANCED_PROP_WITH_DEFAULT(float, _ElevationEdgeWidth)
         #define _ElevationDeltaForMaxStrength UNITY_ACCESS_DOTS_INSTANCED_PROP_WITH_DEFAULT(float, _ElevationDeltaForMaxStrength)
@@ -148,7 +152,8 @@ Shader "FlatWorld/2D/Chunk BRG Contact Lit"
 
             // 默认整体明暗最多偏移 2%，保留雪地接近纯白；暗边优先于弱亮边。
             color *= 1.0h + (level - 0.5h) * _ElevationToneStrength * strength;
-            color *= 1.0h - saturate(shadow * _ElevationShadowStrength * strength);
+            color = lerp(color, _ElevationShadowColor.rgb,
+                saturate(shadow * _ElevationShadowStrength * _ElevationShadowColor.a * strength));
             return lerp(color, half3(1, 1, 1),
                 saturate(highlight * _ElevationHighlightStrength * strength) * (1.0h - shadow));
         }
