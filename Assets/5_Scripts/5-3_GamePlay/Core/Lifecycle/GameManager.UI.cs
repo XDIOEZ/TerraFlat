@@ -101,6 +101,8 @@ public partial class GameManager
     private const string ContextMenuPanelKey = "ContextMenu";
 
     public const string WorldLoadingTitleKey = "加载标题";
+    /// <summary>加载卡片节点名，也是独立透明度控制的绑定键。</summary>
+    public const string WorldLoadingContentKey = "加载内容";
     public const string WorldLoadingStatusKey = "加载状态";
     public const string WorldLoadingProgressKey = "加载进度";
     public const string WorldLoadingProgressTextKey = "加载进度文本";
@@ -116,6 +118,10 @@ public partial class GameManager
     public const string DimensionLoadingProgressFillKey = "维度进度填充";
 
     private const float WorldLoadingEllipsisFrameSeconds = 0.35f;
+    /// <summary>黑幕淡入和淡出的持续秒数。</summary>
+    private const float WorldLoadingCurtainFadeSeconds = 0.22f;
+    /// <summary>加载卡片淡入和淡出的持续秒数。</summary>
+    private const float WorldLoadingContentFadeSeconds = 0.14f;
 
     private GameDifficultyId pendingNewWorldDifficulty = GameDifficultyId.Simple;
     private GameDifficultyRuleValues pendingCustomDifficultyRules = new GameDifficultyRuleValues();
@@ -124,11 +130,17 @@ public partial class GameManager
     private GameObject worldLoadingView;
     private Canvas worldLoadingCanvas;
     private CanvasGroup worldLoadingCanvasGroup;
+    /// <summary>独立控制加载卡片显隐的透明度组件。</summary>
+    private CanvasGroup worldLoadingContentGroup;
     private TextMeshProUGUI worldLoadingTitle;
     private TextMeshProUGUI worldLoadingStatus;
     private TextMeshProUGUI worldLoadingProgressText;
     private Slider worldLoadingProgress;
     private Coroutine worldLoadingHideCoroutine;
+    /// <summary>当前正在执行的黑幕入场协程。</summary>
+    private Coroutine worldLoadingShowCoroutine;
+    /// <summary>仅新建和继续世界的完整进入流程使用双段黑幕切换。</summary>
+    private bool worldLoadingUsesCurtain;
     private Coroutine worldLoadingStatusAnimationCoroutine;
     private string worldLoadingAnimatedStatusSource = string.Empty;
     private string worldLoadingStatusBase = string.Empty;
@@ -154,6 +166,13 @@ public partial class GameManager
         dimensionLoadingView.activeInHierarchy &&
         dimensionLoadingCanvasGroup != null &&
         dimensionLoadingCanvasGroup.alpha >= 0.99f;
+
+    /// <summary>世界加载黑幕完全覆盖画面后，才允许更换世界数据和场景。</summary>
+    private bool IsWorldLoadingCurtainOpaque =>
+        worldLoadingView != null &&
+        worldLoadingView.activeInHierarchy &&
+        worldLoadingCanvasGroup != null &&
+        worldLoadingCanvasGroup.alpha >= 0.99f;
 
     public string ActiveDimensionLoadingTargetId => activeDimensionLoadingTargetId;
 
@@ -244,16 +263,67 @@ public partial class GameManager
         }
 
         UpdateWorldLoadingView(progress.Title, progress.Status, progress.Progress);
-        worldLoadingCanvasGroup.alpha = 1f;
-        worldLoadingCanvasGroup.interactable = true;
-        worldLoadingCanvasGroup.blocksRaycasts = true;
-        worldLoadingView.SetActive(true);
-        worldLoadingCanvas.sortingOrder = UIManager.GlobalOverlaySortingOrder;
+        if (!worldLoadingView.activeSelf)
+            ShowWorldLoadingView();
 
         if (progress.State == WorldEntryProgressState.Completed)
+        {
+            if (worldLoadingUsesCurtain)
+                FinishWorldLoadingEntrance();
             worldLoadingHideCoroutine = StartCoroutine(FadeWorldLoadingView(0f));
+        }
         else if (progress.State == WorldEntryProgressState.Failed)
+        {
+            if (worldLoadingUsesCurtain)
+                FinishWorldLoadingEntrance();
             worldLoadingHideCoroutine = StartCoroutine(FadeWorldLoadingView(1.5f));
+        }
+    }
+
+    /// <summary>先让全屏黑底覆盖旧画面，再显现加载内容。</summary>
+    private void ShowWorldLoadingView()
+    {
+        worldLoadingUsesCurtain = isWorldEntryInProgress;
+        worldLoadingCanvasGroup.alpha = worldLoadingUsesCurtain ? 0f : 1f;
+        worldLoadingCanvasGroup.interactable = false;
+        worldLoadingCanvasGroup.blocksRaycasts = true;
+        worldLoadingContentGroup.alpha = worldLoadingUsesCurtain ? 0f : 1f;
+        worldLoadingView.SetActive(true);
+        worldLoadingCanvas.sortingOrder = UIManager.GlobalOverlaySortingOrder;
+        if (worldLoadingUsesCurtain)
+            worldLoadingShowCoroutine = StartCoroutine(FadeInWorldLoadingView());
+    }
+
+    /// <summary>在黑幕盖住主菜单后显示原有的进度与状态。</summary>
+    private IEnumerator FadeInWorldLoadingView()
+    {
+        yield return FadeLoadingGroup(worldLoadingCanvasGroup, 1f, WorldLoadingCurtainFadeSeconds);
+        yield return FadeLoadingGroup(worldLoadingContentGroup, 1f, WorldLoadingContentFadeSeconds);
+        worldLoadingShowCoroutine = null;
+    }
+
+    /// <summary>完成或失败时终止淡入，保证最后状态可以完整显示。</summary>
+    private void FinishWorldLoadingEntrance()
+    {
+        if (worldLoadingShowCoroutine != null)
+            StopCoroutine(worldLoadingShowCoroutine);
+        worldLoadingShowCoroutine = null;
+        if (worldLoadingCanvasGroup != null)
+            worldLoadingCanvasGroup.alpha = 1f;
+        if (worldLoadingContentGroup != null)
+            worldLoadingContentGroup.alpha = 1f;
+    }
+
+    /// <summary>等待黑幕完成一帧绘制，避免旧场景在初始化时闪现。</summary>
+    private IEnumerator WaitForWorldLoadingCurtain()
+    {
+        while (worldLoadingView != null && worldLoadingView.activeInHierarchy &&
+               !IsWorldLoadingCurtainOpaque)
+        {
+            yield return null;
+        }
+
+        yield return new WaitForEndOfFrame();
     }
 
     private void PresentDimensionLoading(WorldEntryProgressInfo progress)
@@ -424,6 +494,8 @@ public partial class GameManager
 
         worldLoadingCanvas = worldLoadingView.GetComponent<Canvas>();
         worldLoadingCanvasGroup = worldLoadingView.GetComponent<CanvasGroup>();
+        worldLoadingContentGroup = FindChildRecursive(worldLoadingView.transform, WorldLoadingContentKey)
+            ?.GetComponent<CanvasGroup>();
         worldLoadingTitle = FindChildRecursive(worldLoadingView.transform, WorldLoadingTitleKey)
             ?.GetComponent<TextMeshProUGUI>();
         worldLoadingStatus = FindChildRecursive(worldLoadingView.transform, WorldLoadingStatusKey)
@@ -433,7 +505,7 @@ public partial class GameManager
         worldLoadingProgress = FindChildRecursive(worldLoadingView.transform, WorldLoadingProgressKey)
             ?.GetComponent<Slider>();
 
-        if (worldLoadingCanvas == null || worldLoadingCanvasGroup == null ||
+        if (worldLoadingCanvas == null || worldLoadingCanvasGroup == null || worldLoadingContentGroup == null ||
             worldLoadingTitle == null || worldLoadingStatus == null ||
             worldLoadingProgressText == null || worldLoadingProgress == null)
         {
@@ -444,6 +516,7 @@ public partial class GameManager
         }
 
         DontDestroyOnLoad(worldLoadingView);
+        worldLoadingView.SetActive(false);
         return true;
     }
 
@@ -565,27 +638,53 @@ public partial class GameManager
         worldLoadingStatusDotCount = 0;
     }
 
-    /// <summary>区块窗口完成后复用维度加载页的淡出节奏，再展示游戏画面。</summary>
+    /// <summary>区块就绪后先退掉加载内容，再让黑幕淡出到游戏画面。</summary>
     private IEnumerator FadeWorldLoadingView(float delaySeconds)
     {
         if (delaySeconds > 0f)
             yield return new WaitForSecondsRealtime(delaySeconds);
 
-        const float duration = 0.15f;
-        float elapsed = 0f;
-        while (worldLoadingCanvasGroup != null && elapsed < duration)
+        if (worldLoadingUsesCurtain)
         {
-            elapsed += Time.unscaledDeltaTime;
-            worldLoadingCanvasGroup.alpha = 1f - Mathf.Clamp01(elapsed / duration);
-            yield return null;
+            yield return FadeLoadingGroup(worldLoadingContentGroup, 0f, WorldLoadingContentFadeSeconds);
+            yield return FadeLoadingGroup(worldLoadingCanvasGroup, 0f, WorldLoadingCurtainFadeSeconds);
+        }
+        else
+        {
+            // 同场景重生维持原有的单段淡出节奏。
+            yield return FadeLoadingGroup(worldLoadingCanvasGroup, 0f, 0.15f);
         }
 
+        worldLoadingHideCoroutine = null;
         HideWorldLoadingView();
         NotifyWorldLoadingPresentationHidden();
     }
 
+    /// <summary>使用真实时间平滑调整加载界面透明度，不受游戏暂停影响。</summary>
+    private static IEnumerator FadeLoadingGroup(CanvasGroup group, float targetAlpha, float duration)
+    {
+        if (group == null)
+            yield break;
+
+        float initialAlpha = group.alpha;
+        float elapsed = 0f;
+        while (group != null && elapsed < duration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            float easedProgress = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(elapsed / duration));
+            group.alpha = Mathf.Lerp(initialAlpha, targetAlpha, easedProgress);
+            yield return null;
+        }
+
+        if (group != null)
+            group.alpha = targetAlpha;
+    }
+
     private void HideWorldLoadingView()
     {
+        if (worldLoadingShowCoroutine != null)
+            StopCoroutine(worldLoadingShowCoroutine);
+        worldLoadingShowCoroutine = null;
         if (worldLoadingHideCoroutine != null)
             StopCoroutine(worldLoadingHideCoroutine);
         worldLoadingHideCoroutine = null;
@@ -598,8 +697,12 @@ public partial class GameManager
             worldLoadingCanvasGroup.blocksRaycasts = false;
         }
 
+        if (worldLoadingContentGroup != null)
+            worldLoadingContentGroup.alpha = 1f;
+
         if (worldLoadingView != null)
             worldLoadingView.SetActive(false);
+        worldLoadingUsesCurtain = false;
     }
 
     #endregion

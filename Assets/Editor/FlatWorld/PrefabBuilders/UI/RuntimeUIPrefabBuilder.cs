@@ -1412,10 +1412,13 @@ public static partial class RuntimeUIPrefabBuilder
 
         Image overlay = root.GetComponent<Image>();
         // 世界加载期间完全遮挡玩法 UI，避免快捷栏、摇杆和按钮透出。
-        overlay.color = new Color(0.012f, 0.022f, 0.028f, 1f);
+        overlay.color = new Color(0.012f, 0.012f, 0.014f, 1f);
         overlay.raycastTarget = true;
 
-        GameObject card = CreateUIObject("加载内容", root.transform, typeof(Image), typeof(Shadow));
+        GameObject card = CreateUIObject(GameManager.WorldLoadingContentKey, root.transform, typeof(Image), typeof(Shadow));
+        CanvasGroup cardGroup = card.AddComponent<CanvasGroup>();
+        cardGroup.interactable = false;
+        cardGroup.blocksRaycasts = false;
         SetCentered(card.GetComponent<RectTransform>(), Vector2.zero, new Vector2(660f, 270f));
         Image cardImage = card.GetComponent<Image>();
         cardImage.color = Canvas;

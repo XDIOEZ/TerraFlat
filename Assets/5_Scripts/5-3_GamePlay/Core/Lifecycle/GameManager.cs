@@ -339,8 +339,8 @@ public partial class GameManager : SingletonAutoMono<GameManager>
         SaveDataMgr saveDataMgr,
         NewWorldCreationRequest request)
     {
-        // 先让加载 Prefab 完成一帧渲染，再执行存档和世界初始化。
-        yield return null;
+        // 黑幕盖住主菜单后再执行存档和世界初始化。
+        yield return WaitForWorldLoadingCurtain();
 
         bool contentReady = false;
         yield return WaitForContentReadyBeforeWorld(
@@ -509,8 +509,8 @@ public partial class GameManager : SingletonAutoMono<GameManager>
 
     private IEnumerator ContinueGameCoroutine(string playerName)
     {
-        // 确保玩家至少看到一帧加载面板，避免同步准备阶段表现为卡死。
-        yield return null;
+        // 黑幕盖住主菜单后再读取存档和切换场景。
+        yield return WaitForWorldLoadingCurtain();
 
         bool contentReady = false;
         yield return WaitForContentReadyBeforeWorld(

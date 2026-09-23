@@ -109,7 +109,7 @@ description: "Use when: 定位或修改 FlatWorld 的 UIManager、BasePanel、�
 - `UI_FuelInteraction` 只绑定通用 `Mod_FuelInteraction`，标题从当前物品定义读取；面板、控制器和文案逻辑不得按火把、油灯、火盆等具体物品 ID 分支。
 - Prefab 是视觉真相；`BasePanel` 不在初始化时重写结构。运行时只用稳定键加载正式 Prefab。 编辑器构建器组装带 Awake 的视图时，应先停用根节点，完成所有序列化引用后再激活；新增必需视图引用必须同步生成正式 Prefab 并核对引用，不能只提交脚本。
 - `GameRes` 的启动资源加载面板属于引导 UI：可以登记 Addressables，但运行时必须由 `WorldManager.prefab` 直接引用，不能依赖尚未初始化的资源字典。
-- `UI_WorldLoading` 的根 `Image` 是进入世界阶段的硬遮挡层，最终 Alpha 必须保持 `1`；统一主题、迁移器和 Prefab 重建流程都不能把它降成普通面板的半透明 Canvas，否则玩法 HUD 会在加载期间透出。
+- `UI_WorldLoading` 的根 `Image` 是不透明黑幕，`加载内容` 子节点有独立 `CanvasGroup`。新建/继续世界前须等黑幕完全覆盖并绘制一帧；区块表现真正就绪后先淡出内容、再淡出黑幕，最后释放玩法输入。同场景重生仍使用原有单段淡出。统一主题、迁移器和 Prefab 重建流程不得把根图改成半透明，也不得移除内容透明度控制。
 - 同一 `PanelRoot` 下的面板置顶/置底必须使用 `SetAsLastSibling`/`SetAsFirstSibling`；全局层级序号只能用于独立 Canvas 的 `sortingOrder`，不能直接当作兄弟索引。
 - 不经过 `UIManager`/`BasePanel` 打开流程的独立 Canvas，Prefab 根节点必须显式固化 `localScale = Vector3.one`；不能依赖面板动画在运行时恢复可见缩放。
 - 槽位内的选中框、背景和装饰必须按槽内兄弟顺序分层；选中框切换时必须跟随当前槽位，不得留在旧槽位后再用世界坐标跨槽移动。

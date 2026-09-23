@@ -396,10 +396,9 @@ public static class FlatWorldUITheme
                 image.sprite = null;
                 image.type = Image.Type.Simple;
                 image.preserveAspect = false;
-                // 世界加载页是玩法画面的硬遮挡层，根图必须保持完全不透明，
-                // 否则统一主题的半透明 Canvas 会让快捷栏、摇杆等在加载阶段透出来。
+                // 世界加载页是黑幕硬遮挡层，根图必须保持完全不透明。
                 image.color = IsOpaqueLoadingRoot(root)
-                    ? new Color(Canvas.r, Canvas.g, Canvas.b, 1f)
+                    ? new Color(0.012f, 0.012f, 0.014f, 1f)
                     : Canvas;
                 AddOutline(image, Border);
                 continue;
