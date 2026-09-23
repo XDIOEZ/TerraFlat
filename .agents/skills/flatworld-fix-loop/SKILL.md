@@ -1,149 +1,37 @@
 ---
 name: flatworld-fix-loop
-description: "Use when: 用户明确要求“循环FIX”“循环修复”“循环DEBUG”“反复修到好”，或给出一个具体 FlatWorld Bug 并要求通过 Play Mode、GamePlayMCP、截图和 Console 反复复现验证，直到原问题消失。发现目标异常后先暂停 Unity Play Mode 并保留现场，再诊断修复。只处理已知问题的定向闭环；开放式主动找新 Bug 使用 flatworld-gameplay-bug-hunt。关键词：循环FIX、循环修复、循环DEBUG、复现、暂停现场、截图验证、Console 验证。"
+description: "Use when 用户要求针对已知 FlatWorld Bug 循环 DEBUG/FIX：真实 Play Mode 复现、修复、复测直到解决；发现异常先暂停 Unity 并保留现场。开放式探索用 flatworld-gameplay-bug-hunt。"
 ---
 
 # FlatWorld 循环 FIX
 
-## 目标
+针对用户指出的单个 Bug，通过真实 Play Mode 复现、修复和复测直到解决。主动探索未知 Bug 使用 `flatworld-gameplay-bug-hunt`；用户明确不要运行时复测时，遵从其要求。
 
-针对调用者已经指出的一个具体问题，持续执行：
+## 开始与基线
 
-`建立复现基线 → 修复问题 → 添加定向 Debug → 启动实机测试 → 触发原 Bug → 截图 + Console/Debug 判断 → 继续修复或结束`
+- 读取 `AGENTS.md`、`flatworld-gameplay-mcp` 和 Bug 所属领域 Skill；检查 Git 状态并保留已有修改。默认用隔离存档。
+- 复现条件不清时先运行并记录基线；步骤明确时可先定位修复。记录步骤、最后动作及参数、关键状态、相关 Console；视觉问题保存截图。
+- 只改根因和必要观测。Debug 只用于观察，避免刷屏；复用现有诊断接口。不得用测试专用作弊绕过正式玩法链，也不直接写 Transform、血量、库存或私有字段来伪造结果。
 
-核心不是“改完代码”，而是让调用者描述的原问题在真实复现路径上不再出现。
+## 发现异常：先暂停现场
 
-## 使用边界
+复现或复测中出现目标相关的新 Error、Exception、Assert、Warning，或状态/画面结果不符时：
 
-- 本 Skill 用于已知 Bug 的定向修复。
-- 如果任务是“自己玩、自己找问题、发现一个修一个并继续找”，使用 `flatworld-gameplay-bug-hunt`。
-- 如果用户只要求静态修改且明确不要 Play Mode 复测，则服从当前用户要求，不强行进入循环。
+1. 若仍在 Play Mode，先读 `mcpforunity://instances`，用 `set_active_instance` 选中本任务的 `Name@hash`，调用 `manage_editor(action="pause")`，再读 `mcpforunity://editor/state` 确认仍在 Play Mode 且已暂停。MCP 失败时用该实例工具栏的 Pause 并确认；不要向未确认的实例发命令。
+2. 暂停前不发 `gameplay_act(action="stop")`；暂停后不调用会推进或改变现场的动作、UI、等待、恢复或退出操作。
+3. 在暂停状态收集只读证据：Console 条目/堆栈、可读取的 `gameplay_observe`、最后动作参数；视觉异常补截图。暂停时读不到的信息如实记录，不为此恢复游戏。不要清 Console，也不要把运行态写进正式场景或存档。
+4. 先取证再改代码。`Script Changes While Playing` 设置会影响重编译时是否继续、延后或停止 Play Mode；重编译也可能重置非序列化状态。不得假定暂停现场能跨编译保留。若设置延后编译，取证后再有序退出以应用修复；编译后检查 Editor 状态和 Console。
+5. Edit Mode 或编译阶段的错误无法冻结 Play Mode：保留当前编辑器状态和日志，不为暂停而启动游戏。若 Unity 自动恢复运行，发现后立即暂停。
 
-## 前置规则
+本冻结顺序优先于 GamePlayMCP 通用流程的“先 stop”。完成取证并准备复测后，才按当前能力清理遗留输入。
 
-1. 先读取项目 `AGENTS.md`、`flatworld-gameplay-mcp`，再读取 Bug 所属领域 Skill。
-2. 先检查 Git 状态，不覆盖或回退用户已有修改。
-3. 默认使用隔离存档进行复现。
-4. 只修改与根因、观测或最小复现直接相关的代码。
-5. Debug 必须用于观察真实状态，不得通过 Debug 代码改变玩法结果来“证明修好了”。
-6. 不通过直接改 Transform、血量、库存、私有字段或任意反射绕过正式玩法链。
+## 修复与复测
 
-## 第 0 步：建立复现基线
+1. 根据证据找根因并做最小修复；仅在必要时添加低噪声、可判定的 Debug。移除一次性日志，保留有长期价值的诊断。
+2. 按 `flatworld-gameplay-mcp` 的当前能力进入真实 Play Mode：`capabilities → session(status) → continue_save(isolated=true，必要时) → control(acquire) → observe`。短动作执行，每个关键动作后重新观察，严格重放原步骤。UI 操作走 `gameplay_ui`，截图只用于视觉判断。
+3. 编译与 Console 是实机前的门禁，不单独代表验收。脚本重编译、Domain Reload 或重新进入世界后，重新执行 `status → acquire → observe`。
+4. 每轮检查原问题、权威状态、相关 Debug/Console；视觉问题看截图。仍有问题就更新假设再循环，证据未变时不重复同一修改。首次通过后完整重放一次，并检查相邻状态。
 
-原始文本同时出现了“先启动游戏”和“先修复问题”两种顺序。统一按以下规则执行：
+## 完成标准与汇报
 
-- Bug 的现场、触发条件或失败现象不够确定时，先启动游戏复现一次，保存基线证据。
-- Bug 已有稳定、明确且足够具体的最小复现步骤时，可以先定位并修复，再进入复测。
-
-基线至少记录：
-
-- 复现步骤。
-- 关键输入或参数。
-- 异常前后结构化状态。
-- 相关 Console 日志。
-- 视觉问题的截图。
-
-如果当前环境暂时无法复现，不凭猜测宣布修复成功；先根据已有证据做最小修复，再在后续循环中验证。
-
-## 发现异常后的现场冻结（强制）
-
-初次复现和每轮复测期间，只要出现与目标问题相关的新 Error、Exception、Assert、Warning，或观察到预期状态/画面没有发生、发生错误变化，必须先冻结现场，再开始诊断：
-
-1. Unity 仍在 Play Mode 时，先通过 `mcpforunity://instances` 确认并选中本次任务对应的 Unity 实例，再立即调用 Unity MCP `manage_editor(action="pause")` 暂停编辑器。读取 `mcpforunity://editor/state` 确认编辑器仍处于 Play Mode 且暂停已生效。如果 MCP 暂停失败，使用该实例的 Unity 工具栏 Pause，并再次确认状态；不要向未确认的 Unity 实例发送控制命令，也不要继续推进游戏。
-2. 暂停前不要先调用 `gameplay_act(action="stop")`；暂停后也不要调用任何会推进游戏或改变现场的 `gameplay_act`、`gameplay_ui`、`wait`、继续游戏或退出 Play Mode 操作。暂停保持当前 Play Mode 的内存现场，供检查对象、层级、Inspector 和错误发生位置。
-3. 在保持暂停的情况下收集只读证据：相关 Console 条目与堆栈、可读取时的 `gameplay_observe` 状态、最后一次动作及参数；视觉问题补充截图。某项信息在暂停时不可读取，就记录为不可读取，不要为此恢复游戏。先记录证据，再分析和修改代码。不要清空 Console，也不要为了保存现场而把运行时状态写回正式场景或存档。
-4. 代码编辑可能触发脚本重编译或 Domain Reload，导致 Play Mode 退出/重启或非序列化运行时状态丢失。因此，修改代码前必须先完成现场证据记录；不得承诺暂停现场能跨重编译保留。编译后重新检查编辑器状态和 Console，再依照会话规则建立复测。
-5. 若异常是在 Edit Mode 或编译阶段发现，无法暂停 Play Mode 时保留当前编辑器/Console 状态并记录错误，不要为了制造暂停而启动游戏。若编译或其它操作使编辑器自动恢复运行，发现后立即再次暂停。
-
-本现场冻结步骤优先于 GamePlayMCP 通用 Bug 闭环中“发现异常后先停止角色输入”的顺序。只有完成现场证据记录、准备恢复受控复测时，才按当时可用的 MCP 能力清理遗留输入并继续。
-
-## 循环步骤
-
-### 1. 修复问题
-
-- 根据当前证据定位真实根因。
-- 优先修架构或状态流错误，不做一次性兜底。
-- 不为了绕过复现路径而改测试工具。
-- 修改范围保持最小，并清理因本次修复变得无效的旧逻辑。
-
-### 2. 创建或优化 Debug
-
-为当前假设添加最小、定向、可判定的观测：
-
-- 记录关键状态转换、关键参数和失败分支。
-- 避免每帧刷屏。
-- 能复用现有结构化观察、`GameLogManager` 或已有诊断接口时，不新造重复系统。
-- Debug 输出必须让下一轮能够回答“问题还在不在、卡在哪一步”。
-
-修复成立后，删除一次性噪声日志；只有可长期复用、维护价值明确的诊断能力才保留并整理。
-
-### 3. 启动真实 Play Mode 并复现
-
-按 `flatworld-gameplay-mcp` 的当前协议进入真实游戏环境：
-
-`gameplay_capabilities → gameplay_session(status) → 必要时 continue_save(isolated=true) → gameplay_control(acquire) → gameplay_observe`
-
-然后严格重放原始最小复现步骤。
-
-长流程拆成多个短动作，每个关键动作后重新 `observe`；不要靠长时间 `wait` 赌结果。
-
-### 4. 截图 + Console/Debug 验证
-
-每轮复现后同时检查：
-
-- 原异常是否仍出现。
-- 结构化状态是否符合预期。
-- 定向 Debug 是否显示正确状态流。
-- Console 是否出现新的 Error / Exception / Assert / 相关 Warning。
-- 视觉类问题是否在截图中真正消失。
-
-截图只用于视觉证据，不通过截图猜 UI 坐标；UI 操作仍走 `gameplay_ui`。
-
-### 5. 判断
-
-**问题仍存在：**
-
-- 保存本轮新证据。
-- 更新根因假设。
-- 回到步骤 1。
-- 不在证据没有变化时机械重复同一个修改。
-
-**问题已消失：**
-
-- 再按原最小复现步骤完整跑一遍。
-- 检查相关 Console。
-- 对直接相邻状态做一次轻量回归。
-- 清理或收敛临时 Debug。
-- 结束循环。
-
-## 修复成立标准
-
-只有同时满足以下条件，才可以结束：
-
-- 原始复现步骤不再触发 Bug。
-- 相关状态变化符合预期。
-- 视觉问题已通过截图确认。
-- 本轮没有由修复引入的相关 Error / Warning。
-- 一次性 Debug 已清理或优化为可长期维护的诊断能力。
-
-“代码看起来对”“编译通过”“Console 暂时没报错”都不能单独作为循环结束依据。
-
-## Domain Reload 与会话
-
-脚本重编译、Domain Reload、退出世界或重新进入 Play Mode 后，不假定旧 GamePlayMCP 控制权仍有效。
-
-重新执行：
-
-`status → acquire → observe`
-
-必要时重新进入隔离世界，再重放最小复现步骤。
-
-## 汇报
-
-结束时只汇报：
-
-- 根因。
-- 实际修改。
-- 用什么步骤复现/复测。
-- 截图和 Console/Debug 的最终结果。
-- 是否还有未解决问题。
+原复现步骤不再触发、关键状态正确、相关 Console 无新错误；视觉问题有截图证据；临时 Debug 已清理或整理为长期诊断。结束时汇报根因、实际修改、复测步骤及结果、截图/Console 证据和遗留问题。
