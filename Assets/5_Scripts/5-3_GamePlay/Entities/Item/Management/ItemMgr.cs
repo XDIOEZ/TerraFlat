@@ -167,8 +167,7 @@ public partial class ItemMgr : SingletonMono<ItemMgr>
                 continue;
             }
 
-            var pooled = item.GetComponent<PooledItemMarker>();
-            if (pooled != null && pooled.InPool)
+            if (item.PoolMarker.InPool)
             {
                 continue;
             }

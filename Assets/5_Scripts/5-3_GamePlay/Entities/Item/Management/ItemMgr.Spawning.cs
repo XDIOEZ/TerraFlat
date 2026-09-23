@@ -50,16 +50,12 @@ public partial class ItemMgr
 
         GameObject itemObj = AcquireItemObject(itemData.IDName);
         Item item = itemObj.GetComponent<Item>();
-        if (item == null)
-        {
-            Destroy(itemObj);
-            throw new InvalidOperationException($"Prefab 缺少 Item 组件: {itemData.IDName}");
-        }
-
         item.BindData(itemData);
         item.PrepareForPoolReuse();
         if (GameRes.Instance.TryGetItemDefinition(itemData.IDName, out RuntimeItemDefinition definition))
             ItemDefinitionRuntime.ConfigureInstance(GameRes.Instance, definition, item, itemData);
+        // JSON 模块装配完成后才固定池内层级；首次外壳结构并不是可复用的最终结构。
+        item.PoolMarker.CaptureBaseline();
         itemObj.name = itemData.IDName;
         itemObj.transform.position = position;
         itemObj.transform.rotation = rotation;
@@ -95,7 +91,7 @@ public partial class ItemMgr
         UnregisterRuntimeItem(item);
 
         item.PrepareForDespawn(saveData);
-        if (saveData && TryReturnItemToPool(item))
+        if (TryReturnItemToPool(item))
             return;
 
         Destroy(item.gameObject);

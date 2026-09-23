@@ -639,48 +639,6 @@
       "actions": []
     },
     {
-      "id": "core:木桶_树脂",
-      "displayName": "木桶（树脂）",
-      "recipeType": "crafting",
-      "inputRule": "unordered",
-      "gridWidth": 3,
-      "gridHeight": 1,
-      "allowMirror": false,
-      "temperature": 0.0,
-      "maxTemperature": 2000.0,
-      "inputs": [
-        {
-          "slot": 0,
-          "match": "exact_item",
-          "itemId": "Plank",
-          "tag": "",
-          "amount": 8
-        },
-        {
-          "slot": 1,
-          "match": "exact_item",
-          "itemId": "Rope",
-          "tag": "",
-          "amount": 4
-        },
-        {
-          "slot": 2,
-          "match": "exact_item",
-          "itemId": "Resin",
-          "tag": "",
-          "amount": 4
-        }
-      ],
-      "outputs": [
-        {
-          "itemId": "WoodBarrel",
-          "amount": 1,
-          "durabilityMultiplier": 1.0
-        }
-      ],
-      "actions": []
-    },
-    {
       "id": "core:钻孔原木",
       "displayName": "钻孔原木",
       "recipeType": "crafting",

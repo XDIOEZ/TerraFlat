@@ -483,13 +483,12 @@ public partial class GameRes : SingletonAutoMono<GameRes>
 
     public void ApplyItemModuleConfiguration(string itemId, string moduleName, Module module, ModuleData data)
     {
-        if (!TryGetItemDefinition(itemId, out RuntimeItemDefinition definition) ||
-            !definition.TryGetModuleParameters(moduleName, out string json))
+        if (!TryGetItemDefinition(itemId, out RuntimeItemDefinition definition))
         {
             return;
         }
 
-        ModuleJsonConfigurator.Apply(module, itemId, moduleName, data?.ID, json);
+        definition.ApplyModuleConfiguration(module, moduleName, data?.ID);
     }
 
     public void RegisterBuff(BuffDefinition definition)
@@ -591,7 +590,12 @@ public partial class GameRes : SingletonAutoMono<GameRes>
             throw new System.IO.InvalidDataException($"配方 {recipe.Id} 缺少输入定义");
 
         string inputKey = null;
-        if (recipe.inputs.recipeType != RecipeType.Crafting)
+        // 旧 recipeDict 只服务没有工作站语义的遗留熔炼入口。
+        // 带 RequiredStation 的新配方必须只进入目录，否则坩埚会覆盖普通熔炉的同材料签名。
+        bool useLegacySignature =
+            recipe.inputs.recipeType != RecipeType.Crafting &&
+            string.IsNullOrWhiteSpace(recipe.RequiredStation);
+        if (useLegacySignature)
         {
             inputKey = recipe.inputs.ToString();
             if (string.IsNullOrWhiteSpace(inputKey))

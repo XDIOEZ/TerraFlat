@@ -10,6 +10,8 @@ using UnityEngine;
 /// <summary>把 ItemDefinition 中的参数应用到模块实例。</summary>
 public static class ModuleJsonConfigurator
 {
+    #region 运行时配置计划
+
     private static readonly HashSet<string> ReservedNames = new(StringComparer.OrdinalIgnoreCase)
     {
         "_Data", "ModSaveData", "MemoryPackableData", "item", "Item_Data",
@@ -34,19 +36,83 @@ public static class ModuleJsonConfigurator
         if (module == null || string.IsNullOrWhiteSpace(json))
             return;
 
-        JObject parameters = ParseParameters(itemId, moduleName, moduleId, json);
+        Prepare(module, itemId, moduleName, moduleId, json).Apply(module);
+    }
 
+    /// <summary>
+    /// 模块定义的只读配置计划。解析、严格校验与特殊字段拆分只执行一次，
+    /// 每次出生仍向模块实例重新写入当前配置，避免复用对象保留上一次的玩法字段。
+    /// </summary>
+    public sealed class PreparedParameters
+    {
+        private readonly Type moduleType;
+        private readonly string itemId;
+        private readonly string moduleName;
+        private readonly string moduleId;
+        private readonly JObject regular;
+        private readonly JObject transform;
+        private readonly JObject collider;
+        private readonly JsonSerializer serializer;
+
+        internal PreparedParameters(Type moduleType, string itemId, string moduleName, string moduleId,
+            JObject regular, JObject transform, JObject collider)
+        {
+            this.moduleType = moduleType;
+            this.itemId = itemId;
+            this.moduleName = moduleName;
+            this.moduleId = moduleId;
+            this.regular = regular;
+            this.transform = transform;
+            this.collider = collider;
+            serializer = JsonSerializer.Create(Settings);
+        }
+
+        /// <summary>将已校验参数应用到同类型模块，不重复解析和生成 JSON 字符串。</summary>
+        public void Apply(Module module)
+        {
+            if (module == null || module.GetType() != moduleType)
+                throw new InvalidOperationException($"物品 {itemId} 的模块 {moduleName} 类型与已编译配置不一致。");
+
+            try
+            {
+                ApplySpecialParameters(module, transform, collider);
+                if (!regular.HasValues)
+                    return;
+
+                using JsonReader reader = regular.CreateReader();
+                serializer.Populate(reader, module);
+            }
+            catch (Exception exception)
+            {
+                throw new InvalidOperationException(
+                    $"无法把 JSON 参数应用到物品 {itemId} 的模块 {moduleName}({moduleId})", exception);
+            }
+        }
+    }
+
+    /// <summary>根据当前模块结构解析并校验一次不可变配置。</summary>
+    public static PreparedParameters Prepare(Module module, string itemId, string moduleName,
+        string moduleId, string json)
+    {
+        JObject parameters = ParseParameters(itemId, moduleName, moduleId, json);
         try
         {
             ValidateParameters(module, moduleName, parameters);
-            ApplySpecialParameters(module, parameters);
-            JsonConvert.PopulateObject(parameters.ToString(Formatting.None), module, Settings);
+            JObject transform = parameters["$transform"] as JObject;
+            JObject collider = parameters["$collider2D"] as JObject;
+            parameters.Remove("$transform");
+            parameters.Remove("$collider2D");
+            return new PreparedParameters(module.GetType(), itemId, moduleName, moduleId,
+                parameters, transform, collider);
         }
         catch (Exception exception)
         {
-            throw new InvalidOperationException($"无法把 JSON 参数应用到物品 {itemId} 的模块 {moduleName}({moduleId})", exception);
+            throw new InvalidOperationException(
+                $"物品 {itemId} 的模块 {moduleName}({moduleId}) JSON 参数无效", exception);
         }
     }
+
+    #endregion
 
     /// <summary>按运行时同一套严格契约只读校验模块参数，不修改 Prefab 或运行时实例。</summary>
     public static void Validate(Module module, string itemId, string moduleName, string moduleId, string json)
@@ -172,9 +238,9 @@ public static class ModuleJsonConfigurator
         }
     }
 
-    private static void ApplySpecialParameters(Module module, JObject parameters)
+    private static void ApplySpecialParameters(Module module, JObject transformObject, JObject colliderObject)
     {
-        if (parameters["$transform"] is JObject transformObject)
+        if (transformObject != null)
         {
             Transform transform = module.transform;
             if (transformObject["localPosition"] != null)
@@ -183,14 +249,10 @@ public static class ModuleJsonConfigurator
                 transform.localEulerAngles = transformObject["localEulerAngles"].ToObject<Vector3>();
             if (transformObject["localScale"] != null)
                 transform.localScale = transformObject["localScale"].ToObject<Vector3>();
-            parameters.Remove("$transform");
         }
 
-        if (parameters["$collider2D"] is JObject colliderObject)
-        {
+        if (colliderObject != null)
             ApplyCollider(module, colliderObject);
-            parameters.Remove("$collider2D");
-        }
     }
 
     /// <summary>把 JSON 整数或字符串安全转换为 Unity LayerMask。</summary>

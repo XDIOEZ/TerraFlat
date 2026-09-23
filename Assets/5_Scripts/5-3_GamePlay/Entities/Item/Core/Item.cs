@@ -2,7 +2,6 @@ using UnityEngine;
 using UltEvents;
 using System.Collections.Generic;
 using Sirenix.OdinInspector;
-using System.Linq;
 using System;
 using FastCloner.Code;
 
@@ -141,6 +140,17 @@ public abstract class Item : MonoBehaviour
     private bool isInitialized = false;
     private bool destructionHandled = false;
     private bool modulesLoaded = false;
+    // 回池身份需在编辑器脚本重载后保留，层级快照仍只在当前实例的运行期缓存。
+    [SerializeField, HideInInspector] private string poolKey;
+    [SerializeField, HideInInspector] private bool isInPool;
+    [SerializeField, HideInInspector] private bool poolingDisabled;
+    [NonSerialized] private PooledItemMarker poolMarker;
+
+    /// <summary>对象池状态随 Item 实例保存，不额外向新物品添加组件。</summary>
+    internal PooledItemMarker PoolMarker => poolMarker ??= new PooledItemMarker(this);
+    internal string PoolKey { get => poolKey; set => poolKey = value; }
+    internal bool IsInPool { get => isInPool; set => isInPool = value; }
+    internal bool PoolingDisabled { get => poolingDisabled; set => poolingDisabled = value; }
 
     public bool IsInitialized => isInitialized;
     public bool DestructionHandled => destructionHandled;
@@ -412,7 +422,7 @@ public abstract class Item : MonoBehaviour
         bool firstStart = itemData.ModuleDataDic.Count == 0;
 
         // 模板数据会收集停用模块，加载时也必须使用同一范围，避免矿物等 Prefab 被误判为缺失模块。
-        var modules = GetComponentsInChildren<Module>(true).ToList();
+        Module[] modules = GetComponentsInChildren<Module>(true);
 
         if (firstStart)//第一次启动
         {
@@ -580,10 +590,14 @@ public abstract class Item : MonoBehaviour
         if (candidates == null || candidates.Length == 0)
             return null;
 
-        Module matched = candidates.FirstOrDefault(candidate =>
-            candidate != null &&
-            (candidate.MatchesPersistedId(persistedId) || candidate.MatchesPersistedId(prefabId)));
-        return matched ?? (candidates.Length == 1 ? candidates[0] : null);
+        for (int i = 0; i < candidates.Length; i++)
+        {
+            Module candidate = candidates[i];
+            if (candidate != null &&
+                (candidate.MatchesPersistedId(persistedId) || candidate.MatchesPersistedId(prefabId)))
+                return candidate;
+        }
+        return candidates.Length == 1 ? candidates[0] : null;
     }
 
     /// <summary>仅在模块数据缺少 ID 时使用组件的规范 ID 补全。</summary>

@@ -67,6 +67,9 @@ MonoBehaviour:
   OnAct:
     _PersistentCalls: []
   Sprite: {fileID: 0}
+  poolKey: ""
+  isInPool: 0
+  poolingDisabled: 0
   OnInit_Env:
     _PersistentCalls: []
   OnDurabilityModified:

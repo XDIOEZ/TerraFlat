@@ -8,10 +8,20 @@ using UnityEngine;
 /// </summary>
 internal sealed class ItemObjectPool
 {
+    #region 池状态
+
     public Dictionary<string, Queue<Item>> Pools { get; } = new();
     public int TotalCount { get; private set; }
 
     private Transform poolRoot;
+    // 回收时复用组件查询缓冲，避免每个对象生成 MonoBehaviour 数组。
+    private readonly List<MonoBehaviour> poolComponents = new(32);
+    // 类型的生命周期能力固定，只需反射一次。
+    private static readonly Dictionary<Type, bool> PoolSafeTypes = new();
+
+    #endregion
+
+    #region 取还与清理
 
     /// <summary>重载目录前清空旧实例，防止复用旧模块结构和已释放的外观资源。</summary>
     public void Clear()
@@ -41,12 +51,9 @@ internal sealed class ItemObjectPool
                     continue;
                 }
 
-                PooledItemMarker marker = pooledItem.GetComponent<PooledItemMarker>();
-                if (marker != null)
-                {
-                    marker.InPool = false;
-                    marker.RestoreBaseline();
-                }
+                PooledItemMarker pooledMarker = pooledItem.PoolMarker;
+                pooledMarker.InPool = false;
+                pooledMarker.RestoreBaseline();
 
                 pooledItem.transform.SetParent(null, false);
                 return pooledItem.gameObject;
@@ -54,23 +61,23 @@ internal sealed class ItemObjectPool
         }
 
         GameObject itemObject = spawn(itemId);
-        PooledItemMarker newMarker = itemObject.GetComponent<PooledItemMarker>();
-        if (newMarker == null)
+        Item newItem = itemObject.GetComponent<Item>();
+        if (newItem == null)
         {
-            newMarker = itemObject.AddComponent<PooledItemMarker>();
+            UnityEngine.Object.Destroy(itemObject);
+            throw new InvalidOperationException($"Prefab 缺少 Item 组件: {itemId}");
         }
-
-        newMarker.PoolKey = itemId;
-        newMarker.InPool = false;
-        newMarker.PoolingDisabled = !CanPool(itemObject.GetComponent<Item>());
-        newMarker.CaptureBaseline();
+        PooledItemMarker marker = newItem.PoolMarker;
+        marker.PoolKey = itemId;
+        marker.InPool = false;
+        marker.PoolingDisabled = false;
         return itemObject;
     }
 
     public bool TryReturn(Item item, Transform owner, int maxPerItem, int maxTotal)
     {
-        PooledItemMarker marker = item.GetComponent<PooledItemMarker>();
-        if (marker == null || marker.InPool || marker.PoolingDisabled ||
+        PooledItemMarker marker = item.PoolMarker;
+        if (marker.InPool || marker.PoolingDisabled ||
             !marker.HasOriginalHierarchy() || !CanPool(item))
         {
             return false;
@@ -102,36 +109,55 @@ internal sealed class ItemObjectPool
         return true;
     }
 
-    private static bool CanPool(Item item)
+    private bool CanPool(Item item)
     {
         if (item == null || item is Player || item is Map)
         {
             return false;
         }
 
-        MonoBehaviour[] behaviours = item.GetComponentsInChildren<MonoBehaviour>(true);
-        for (int i = 0; i < behaviours.Length; i++)
+        item.GetComponentsInChildren(true, poolComponents);
+        for (int i = 0; i < poolComponents.Count; i++)
         {
-            MonoBehaviour behaviour = behaviours[i];
-            if (behaviour == null || behaviour == item || behaviour is PooledItemMarker ||
-                behaviour is IItemPoolLifecycle)
+            MonoBehaviour behaviour = poolComponents[i];
+            if (behaviour == null || behaviour == item || behaviour is IItemPoolLifecycle)
             {
                 continue;
             }
 
             Type type = behaviour.GetType();
-            const BindingFlags flags = BindingFlags.Instance |
-                                       BindingFlags.Public |
-                                       BindingFlags.NonPublic |
-                                       BindingFlags.DeclaredOnly;
-
-            if (type.GetMethod("OnDestroy", flags) != null && type.GetMethod("OnDisable", flags) == null)
+            if (!IsPoolSafe(type))
             {
+                poolComponents.Clear();
                 return false;
             }
         }
 
+        poolComponents.Clear();
         return true;
+    }
+
+    /// <summary>带销毁回调的模块必须在标准 Unload 阶段完成同等清理，才允许复用。</summary>
+    private static bool IsPoolSafe(Type type)
+    {
+        if (PoolSafeTypes.TryGetValue(type, out bool safe))
+            return safe;
+
+        const BindingFlags lifecycleFlags = BindingFlags.Instance |
+                                            BindingFlags.Public |
+                                            BindingFlags.NonPublic |
+                                            BindingFlags.DeclaredOnly;
+        bool hasDestroy = type.GetMethod("OnDestroy", lifecycleFlags) != null;
+        bool hasDisable = type.GetMethod("OnDisable", lifecycleFlags) != null;
+        safe = !hasDestroy || hasDisable;
+        if (!safe && typeof(Module).IsAssignableFrom(type))
+        {
+            MethodInfo unload = type.GetMethod(nameof(Module.Unload), BindingFlags.Instance | BindingFlags.Public);
+            safe = unload != null && unload.DeclaringType != typeof(Module);
+        }
+
+        PoolSafeTypes.Add(type, safe);
+        return safe;
     }
 
     private Transform GetPoolRoot(Transform owner)
@@ -146,4 +172,6 @@ internal sealed class ItemObjectPool
         poolRoot = root.transform;
         return poolRoot;
     }
+
+    #endregion
 }

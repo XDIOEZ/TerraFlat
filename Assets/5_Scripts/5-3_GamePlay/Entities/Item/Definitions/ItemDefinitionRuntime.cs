@@ -235,8 +235,16 @@ public static class ItemDefinitionRuntime
         }
         if (needsRenderer)
         {
-            renderer ??= item.GetComponentsInChildren<SpriteRenderer>(true)
-                .FirstOrDefault(candidate => candidate.sprite != null);
+            if (renderer == null)
+            {
+                SpriteRenderer[] candidates = item.GetComponentsInChildren<SpriteRenderer>(true);
+                for (int i = 0; i < candidates.Length; i++)
+                {
+                    if (candidates[i].sprite == null) continue;
+                    renderer = candidates[i];
+                    break;
+                }
+            }
             renderer ??= item.GetComponentInChildren<SpriteRenderer>(true);
             if (renderer == null)
                 throw new MissingComponentException($"物品 {definition.Id} 的外壳缺少 SpriteRenderer");
@@ -387,12 +395,16 @@ public static class ItemDefinitionRuntime
         Item item,
         ItemData itemData)
     {
-        List<Module> available = item.GetComponentsInChildren<Module>(true)
-            .Where(module => module != null)
-            .ToList();
+        Module[] components = item.GetComponentsInChildren<Module>(true);
+        var available = new List<Module>(components.Length);
+        for (int i = 0; i < components.Length; i++)
+            if (components[i] != null)
+                available.Add(components[i]);
 
-        foreach (KeyValuePair<string, ModuleData> pair in
-                 itemData.ModuleDataDic ?? new Dictionary<string, ModuleData>())
+        if (itemData.ModuleDataDic == null)
+            throw new InvalidDataException($"物品 {itemData.IDName} 缺少模块数据字典。");
+
+        foreach (KeyValuePair<string, ModuleData> pair in itemData.ModuleDataDic)
         {
             string stableName = pair.Key;
             ModuleData moduleData = pair.Value;
@@ -400,9 +412,16 @@ public static class ItemDefinitionRuntime
                 continue;
 
             string prefabId = definition.GetModulePrefabId(stableName, moduleData.ID);
-            int embeddedIndex = available.FindIndex(module =>
-                module.MatchesPersistedId(moduleData.ID) ||
-                module.MatchesPersistedId(prefabId));
+            int embeddedIndex = -1;
+            for (int i = 0; i < available.Count; i++)
+            {
+                Module candidate = available[i];
+                if (!candidate.MatchesPersistedId(moduleData.ID) &&
+                    !candidate.MatchesPersistedId(prefabId))
+                    continue;
+                embeddedIndex = i;
+                break;
+            }
             if (embeddedIndex >= 0)
             {
                 available.RemoveAt(embeddedIndex);

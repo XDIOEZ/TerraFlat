@@ -422,6 +422,30 @@ public sealed class RuntimeItemDefinition
         return FastCloner.FastCloner.DeepClone(templateData);
     }
 
+    #region 模块配置计划
+
+    // 同一定义中的 JSON 与模块类型固定；配置计划随资源定义一起释放。
+    private readonly Dictionary<(string Name, Type ModuleType), ModuleJsonConfigurator.PreparedParameters>
+        preparedModuleParameters = new();
+
+    /// <summary>一次资源定义内复用模块参数计划；资源重载会换用新的定义实例。</summary>
+    public void ApplyModuleConfiguration(Module module, string moduleName, string moduleId)
+    {
+        if (module == null || !TryGetModuleParameters(moduleName, out string json) ||
+            string.IsNullOrWhiteSpace(json))
+            return;
+
+        var key = (moduleName ?? string.Empty, module.GetType());
+        if (!preparedModuleParameters.TryGetValue(key, out ModuleJsonConfigurator.PreparedParameters prepared))
+        {
+            prepared = ModuleJsonConfigurator.Prepare(module, Id, moduleName, moduleId, json);
+            preparedModuleParameters.Add(key, prepared);
+        }
+        prepared.Apply(module);
+    }
+
+    #endregion
+
     public bool TryGetModuleParameters(string stableModuleName, out string json)
     {
         return moduleParameters.TryGetValue(stableModuleName ?? string.Empty, out json);

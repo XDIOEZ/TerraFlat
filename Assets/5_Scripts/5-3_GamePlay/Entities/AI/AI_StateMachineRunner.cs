@@ -244,6 +244,16 @@ public sealed class AIStateMachine<TState> where TState : struct, Enum
         _currentNode.Enter();
     }
 
+    /// <summary>结束本轮实体运行态，保留只绑定当前 AI 实例的节点与委托供回池后复用。</summary>
+    public void Reset()
+    {
+        if (IsInitialized)
+            _currentNode?.Exit();
+        _currentNode = null;
+        CurrentState = default;
+        IsInitialized = false;
+    }
+
     /// <summary>
     /// 状态退出与进入之间执行切换回调，保证宿主先完成状态字段和资源清理，
     /// 新节点再开始工作。

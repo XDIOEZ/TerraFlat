@@ -27,7 +27,10 @@ description: "Use when: 定位或修改 FlatWorld 的 Item/Module 组合架构�
 - 世界内 F5 经 `ItemDefinitionRuntime.RefreshLiveConfiguration` 只更新现有模块的已改变显式参数，以及仍由原定义控制的 Sprite/材质；不替换 ItemData、模块集合或调用 Load。外壳/模块结构变化与删除参数后的 Prefab 默认值由后续新实例应用，不能把旧实例伪装为已完整迁移。
 - 模块通过具名 `ApplyResourceConfiguration` 保留配置对象内部的运行态，通过 `OnResourcesReloaded` 更新派生缓存；禁止用重新 Load 代替配置刷新。生产模块更换规则列表时按产物身份保留累计时间、次数与初始化标记。
 - 原位更新发布时清空闲置物品池，并把现有活跃实例的 `PooledItemMarker.PoolingDisabled` 置为 true；只清闲置池会让旧外壳稍后回池，再污染新定义实例。
+- 对象池身份由 `Item` 的序列化字段持有，`PooledItemMarker` 是纯运行时层级快照，不再作为 MonoBehaviour 动态添加到每个新物品；装配 JSON 模块后才抓取层级基线。改回池逻辑时须同时检查脚本重载后的身份保留与回池前的层级校验。
 - 注册/注销、保存/销毁各执行一次；`PrepareForDespawn` 与 `OnDestroy` 不得被外部重复调用。
+- Item 回池资格独立于 `saveData`；JSON 模块装配完成后才记录层级基线，回池时按子节点身份核验。模块若用 `OnDestroy` 清理订阅或资源，必须在 `Unload` 提供同等清理，池复用才安全。
+- 模块 JSON 配置计划属于当前 `RuntimeItemDefinition`：解析和严格校验只做一次，实体每次 Load 仍重新应用字段；资源重载通过替换定义实例自然丢弃旧计划。
 - 远程网络副本不进入本地 Tick、感知和存档索引。
 - 感知后端在注册和 `Item.RuntimeStructureChanged` 边界选择：Actor 使用当前 `RuntimeItemDefinition` 的共享根级纯几何，旧对象才缓存 Collider Bridge；移动通知仅更新位置索引，不能重新扫描组件。注销必须移除后端映射，重建索引前完成并丢弃旧 Job；每次重新注册/结构变化递增代际以拒绝对象池复用前的结果。正式 Actor 的物理 Collider 尺寸不是运行时感知配置权威，新增动态体型应提供纯数据输入。
 - `ItemMgr.NotifyRuntimeItemMoved` 完成位置索引刷新后发布通用 `RuntimeItemMoved` 适配事件；移动订阅方只维护显式声明需要跟随的状态，并按网格根格变化去重，避免轮询或给普通 Item 增加每帧扫描。

@@ -220,8 +220,7 @@ public partial class GameRes
         foreach (Item item in items)
         {
             // 旧活跃实例可能在稍后才回池，禁止其旧外壳/模块基线再次用于新目录的生成。
-            PooledItemMarker marker = item.GetComponent<PooledItemMarker>();
-            if (marker != null) marker.PoolingDisabled = true;
+            item.PoolMarker.PoolingDisabled = true;
             if (!previousItems.TryGetValue(item.itemData?.IDName ?? string.Empty, out RuntimeItemDefinition previous) ||
                 !TryGetItemDefinition(item.itemData.IDName, out RuntimeItemDefinition current)) continue;
             try { ItemDefinitionRuntime.RefreshLiveConfiguration(item, previous, current); }
