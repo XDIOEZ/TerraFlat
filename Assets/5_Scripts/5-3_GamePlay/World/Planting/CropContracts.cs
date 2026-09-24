@@ -25,6 +25,12 @@ public interface IPlantableCrop
     void InitializePlantedCrop(Vector2Int tilePosition);
 }
 
+/// <summary>已恢复的种植作物按当前世界时间补算离区期间的成长。</summary>
+public interface IWorldTimePlant
+{
+    void CatchUpToWorldTime();
+}
+
 /// <summary>成熟农作物交互后执行的可注册动作。</summary>
 public interface ICropHarvestAction
 {

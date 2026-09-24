@@ -44,15 +44,16 @@ public sealed class Mod_PlantClimate : Module, IPlantEnvironmentCondition, IPlan
     [Min(0.01f)] public float fatalExposureHours = 6f; // 可承受游戏小时。
     [Min(0f)] public float recoveryRate = 0.5f; // 安全温度下恢复速度。
     public bool autonomous; // 树木独立驱动；Mod_Crop 组合时保持关闭以免重复结算。
+    private bool externallyDriven; // 耕地成长模块接管时停用自身时钟，避免气候结算两次。
     private IPlantEnvironmentCondition[] self; // 复用通用时间补算接口。
     private float fatalSeconds = 360f; // 当前日长折算后的阈值。
     private float lastGrowthMultiplier; // 最近一次环境结算给出的成长倍率。
     public float GrowthMultiplier => CanHarvest ? lastGrowthMultiplier : 0f;
-    public bool CanHarvest => !Data.Dead && (!autonomous ||
+    public bool CanHarvest => !Data.Dead && (externallyDriven || !autonomous ||
         (Data.ClockInitialized && DayTimeSystem.Instance.TryGetActiveTimeData(out TimeData clock) &&
         Math.Abs(clock.TotalDays * (double)clock.DayLength + clock.CurrentTime - Data.LastSimulationTime) <= 1.25d));
     public override string CanonicalModuleId => "Mod_PlantClimate";
-    public override ModuleTickMode TickMode => autonomous ? ModuleTickMode.FixedInterval : ModuleTickMode.Disabled;
+    public override ModuleTickMode TickMode => autonomous && !externallyDriven ? ModuleTickMode.FixedInterval : ModuleTickMode.Disabled;
     public override float FixedTickInterval => 1f;
     public bool IsDead => Data.Dead;
     public float Stress => Mathf.Clamp01(Mathf.Max(Data.ColdSeconds, Data.HeatSeconds) / fatalSeconds);
@@ -77,6 +78,9 @@ public sealed class Mod_PlantClimate : Module, IPlantEnvironmentCondition, IPlan
     /// <summary>写入冷热暴露和死亡状态，卸载区块不会清空受害进度。</summary>
     public override void Save() => ModData.WriteData(Data);
 
+    /// <summary>由耕地成长模块统一推进气候与生长，并保留独立的冷热暴露存档。</summary>
+    public void SetExternalDriver(bool enabled) => externallyDriven = enabled;
+
     /// <summary>播种创建全新的耐候状态。</summary>
     public void ResetEnvironment() => Data = new PlantClimateState();
 
@@ -91,7 +95,7 @@ public sealed class Mod_PlantClimate : Module, IPlantEnvironmentCondition, IPlan
     /// <summary>非作物成长器的植物共用补算器，气候死亡不触发伐木战利品。</summary>
     public override void ModUpdate(float deltaTime)
     {
-        if (!autonomous || !FlatWorld.Networking.GameNetwork.HasStateAuthority ||
+        if (!autonomous || externallyDriven || !FlatWorld.Networking.GameNetwork.HasStateAuthority ||
             !DayTimeSystem.Instance.TryGetActiveTimeData(out TimeData clock)) return;
         double now = clock.TotalDays * (double)clock.DayLength + clock.CurrentTime;
         if (!Data.ClockInitialized || now < Data.LastSimulationTime)

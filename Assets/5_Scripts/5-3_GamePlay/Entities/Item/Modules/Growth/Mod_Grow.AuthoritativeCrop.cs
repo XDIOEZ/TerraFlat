@@ -120,6 +120,7 @@ public partial class Mod_Grow
         Data.GrowProgress = Mathf.Clamp(Data.GrowProgress, 0f, Data.MaxGrowProgress);
         Data.isMature = Data.isMature || Data.GrowProgress >= Data.MaxGrowProgress || Data.growState == GrowState.成熟;
         Data.isHarvested = Data.isHarvested && Data.isMature;
+        ConfigureCultivatedClimateDrive();
 
         item.OnInit_Env -= AdjustByEnvironment;
         item.OnInit_Env += AdjustByEnvironment;
@@ -167,6 +168,9 @@ public partial class Mod_Grow
         Data.isHarvested = false;
         Data.environmentInitialized = true;
         Data.environmentGrowthMultiplier = 1f;
+        ConfigureCultivatedClimateDrive();
+        Data.simulationInitialized = TryReadCultivatedWorldClock(out _, out double now);
+        Data.lastSimulatedTime = now;
         Data.growState = GrowState.幼苗;
         SetGrowthStatus(Data.isMature ? GrowthStatus.Mature : GrowthStatus.Growing, false);
         UpdateVisualAndBehavior();
@@ -192,7 +196,61 @@ public partial class Mod_Grow
 
 #region 权威成长结算
 
-    private void UpdateAuthoritativeGrowth(float deltaTime)
+    /// <summary>在区块恢复时按已存档世界秒补算；退出游戏和暂停期间时钟不前进。</summary>
+    public void CatchUpToWorldTime()
+    {
+        if (!FlatWorld.Networking.GameNetwork.HasStateAuthority || Data == null ||
+            !Data.isCultivatedCrop || Data.isHarvested ||
+            !TryReadCultivatedWorldClock(out TimeData clock, out double now))
+            return;
+
+        if (!Data.simulationInitialized || now < Data.lastSimulatedTime)
+        {
+            Data.simulationInitialized = true;
+            Data.lastSimulatedTime = now;
+        }
+        if (!PlantClimateTimeline.Advance(item, clock, now, ref Data.lastSimulatedTime,
+                environmentConditions, AdvanceCultivatedGrowth, out _))
+            item.DestroySelf();
+    }
+
+    /// <summary>只读活动维度的绝对游戏秒，避免现实时间影响农业。</summary>
+    private static bool TryReadCultivatedWorldClock(out TimeData clock, out double now)
+    {
+        clock = null;
+        now = 0d;
+        if (DayTimeSystem.Instance == null || !DayTimeSystem.Instance.TryGetActiveTimeData(out clock))
+            return false;
+        now = clock.TotalDays * (double)clock.DayLength + clock.CurrentTime;
+        return true;
+    }
+
+    /// <summary>气候和其它独立成长限制各结算一次。</summary>
+    private void AdvanceCultivatedGrowth(float seconds, float environmentMultiplier, bool historical)
+    {
+        float multiplier = environmentMultiplier;
+        foreach (IPlantGrowthConstraint constraint in growthConstraints)
+            multiplier *= constraint.GrowthMultiplier;
+        if (multiplier > 0f)
+            UpdateAuthoritativeGrowth(seconds * multiplier, historical);
+    }
+
+    /// <summary>已种植的树木由成长模块统一驱动气候，避免独立模块重复推进时间。</summary>
+    private void ConfigureCultivatedClimateDrive()
+    {
+        if (!Data.isCultivatedCrop)
+            return;
+        foreach (IPlantEnvironmentCondition condition in environmentConditions)
+            if (condition is Mod_PlantClimate climate)
+                climate.SetExternalDriver(true);
+    }
+
+    /// <summary>历史补算完成前不开放耕地植株收获。</summary>
+    private bool HasPendingCultivatedGrowth() =>
+        TryReadCultivatedWorldClock(out _, out double now) &&
+        (!Data.simulationInitialized || now - Data.lastSimulatedTime > 1d);
+
+    private void UpdateAuthoritativeGrowth(float deltaTime, bool historical)
     {
         ApplyStageHealth();
 
@@ -208,8 +266,12 @@ public partial class Mod_Grow
             return;
         }
 
+        // 首次识别旧耕地植株时从当前世界时间建立游标，下一次 Tick 再按世界钟推进。
+        if (!Data.isCultivatedCrop && TryAdoptFarmlandAsLegacyCrop())
+            return;
+
         float growthDelta;
-        if (Data.isCultivatedCrop || TryAdoptFarmlandAsLegacyCrop())
+        if (Data.isCultivatedCrop)
         {
             if (!TryResolveFarmland(out TileData_Farmland farmlandData))
             {
@@ -217,7 +279,8 @@ public partial class Mod_Grow
                 return;
             }
 
-            ApplyRainWater(farmlandData, deltaTime);
+            if (!historical)
+                ApplyRainWater(farmlandData, deltaTime);
             farmlandData.NormalizeValues();
             FarmlandSystem.CommitSoil(farmlandData);
 
@@ -237,7 +300,7 @@ public partial class Mod_Grow
                 farmlandData,
                 minimumWaterGrowthMultiplier,
                 minimumFertilityGrowthMultiplier);
-            float weatherMultiplier = ResolveWeatherGrowthMultiplier();
+            float weatherMultiplier = historical ? 1f : ResolveWeatherGrowthMultiplier();
             float difficultyMultiplier = GameDifficultyService.Current.Production.CropGrowthMultiplier;
             growthDelta = CalculateGrowthDelta(
                 Data.GrowSpeed,
@@ -255,7 +318,7 @@ public partial class Mod_Grow
         }
         else
         {
-            float weatherMultiplier = ResolveWeatherGrowthMultiplier();
+            float weatherMultiplier = historical ? 1f : ResolveWeatherGrowthMultiplier();
             float difficultyMultiplier = GameDifficultyService.Current.Production.CropGrowthMultiplier;
             growthDelta = CalculateGrowthDelta(
                 Data.GrowSpeed,
@@ -325,6 +388,9 @@ public partial class Mod_Grow
         Data.isCultivatedCrop = true;
         Data.environmentInitialized = true;
         Data.environmentGrowthMultiplier = 1f;
+        ConfigureCultivatedClimateDrive();
+        Data.simulationInitialized = TryReadCultivatedWorldClock(out _, out double now);
+        Data.lastSimulatedTime = now;
         Debug.Log($"[Mod_Grow] 已将旧存档植物迁移为耕地作物，地块={tilePos}", item);
         return true;
     }

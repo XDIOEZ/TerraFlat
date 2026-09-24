@@ -23,22 +23,31 @@ public partial class GrowData
 
     [Header("生长速度 (每秒增加多少进度点数)")]
     public float GrowSpeed = 5f;
+
+    public bool simulationInitialized; // 耕地作物是否建立世界时间游标。
+    public double lastSimulatedTime; // 耕地作物最后结算的绝对游戏秒。
 }
 
 
-public partial class Mod_Grow : Module, IInteractable, IPlantableCrop, INaturalRenewalPolicy,
+public partial class Mod_Grow : Module, IInteractable, IPlantableCrop, IWorldTimePlant, INaturalRenewalPolicy,
     IItemModuleDependencyBinder, INaturalCompanionHostCondition
 {
     private readonly List<IPlantGrowthConstraint> growthConstraints = new(); // 独立环境模块提供的成长和采集限制。
+    private readonly List<IPlantEnvironmentCondition> environmentConditions = new(); // 耕地离区补算时逐段推进的气候条件。
     private const GrowState MinimumNaturalCompanionHostState = GrowState.发育; // 树冠进入完整尺寸后才承载自然伴生物。
 
-    /// <summary>树木只读取环境限制，冷热暴露仍由独立模块推进。</summary>
+    /// <summary>自然树木保留自主气候；耕地植株从相同条件逐段补算。</summary>
     public void BindModuleDependencies(ItemMods modules)
     {
         growthConstraints.Clear();
+        environmentConditions.Clear();
         foreach (Module module in modules.Mods.Values)
-            if (module is IPlantGrowthConstraint constraint)
+        {
+            if (module is IPlantEnvironmentCondition condition)
+                environmentConditions.Add(condition);
+            if (module is IPlantGrowthConstraint constraint && module is not IPlantEnvironmentCondition)
                 growthConstraints.Add(constraint);
+        }
     }
 
     /// <summary>幼苗和小树不承载蜂巢等自然伴生物，达到配置阶段后再开放。</summary>
@@ -50,6 +59,10 @@ public partial class Mod_Grow : Module, IInteractable, IPlantableCrop, INaturalR
     /// <summary>区块卸载与对象回池时解除环境依赖和事件。</summary>
     public override void Unload()
     {
+        foreach (IPlantEnvironmentCondition condition in environmentConditions)
+            if (condition is Mod_PlantClimate climate)
+                climate.SetExternalDriver(false);
+        environmentConditions.Clear();
         growthConstraints.Clear();
         if (item != null) item.OnInit_Env -= AdjustByEnvironment;
     }
@@ -57,6 +70,10 @@ public partial class Mod_Grow : Module, IInteractable, IPlantableCrop, INaturalR
     /// <summary>环境补算完成前和死亡后均不可采集。</summary>
     private bool CanHarvestInEnvironment()
     {
+        if (Data.isCultivatedCrop && HasPendingCultivatedGrowth())
+            return false;
+        foreach (IPlantEnvironmentCondition condition in environmentConditions)
+            if (condition.IsDead) return false;
         foreach (IPlantGrowthConstraint constraint in growthConstraints)
             if (!constraint.CanHarvest) return false;
         return true;
@@ -181,13 +198,21 @@ private void UpdateVisualAndBehavior()
         ModData.WriteData(Data);
     }
 
-    /// <summary>读取环境成长倍率后推进树木生长，不重复结算冷热暴露。</summary>
+    /// <summary>耕地作物按世界时钟补算；自然树木保留原有成长节奏。</summary>
     public override void ModUpdate(float deltaTime)
     {
+        if (Data.isCultivatedCrop)
+        {
+            CatchUpToWorldTime();
+            return;
+        }
         float multiplier = 1f;
+        foreach (IPlantEnvironmentCondition condition in environmentConditions)
+            if (condition is IPlantGrowthConstraint constraint)
+                multiplier *= constraint.GrowthMultiplier;
         foreach (IPlantGrowthConstraint constraint in growthConstraints)
             multiplier *= constraint.GrowthMultiplier;
-        if (multiplier > 0f) UpdateAuthoritativeGrowth(deltaTime * multiplier);
+        if (multiplier > 0f) UpdateAuthoritativeGrowth(deltaTime * multiplier, false);
     }
 
 private void ApplyStageHealth(bool force = false)

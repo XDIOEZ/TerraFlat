@@ -10,17 +10,21 @@ public static class PlantClimateTimeline
         IReadOnlyList<IPlantEnvironmentCondition> conditions, Action<float, float, bool> grow, out float stress)
     {
         stress = 0f;
-        TemperatureMgr manager = TemperatureMgr.Instance;
-        if (manager == null || !manager.TryGetClimateBaseline(item.transform.position, out float baseline)) return true;
+        bool needsTemperature = conditions != null && conditions.Count > 0;
+        TemperatureMgr manager = needsTemperature ? TemperatureMgr.Instance : null;
+        float baseline = 0f;
+        if (needsTemperature && (manager == null ||
+            !manager.TryGetClimateBaseline(item.transform.position, out baseline))) return true;
         bool historical = now - cursor > 1d;
         bool seasonal = DimensionManager.ExistingInstance?.ActiveDefinition?.SuppressWeather != true;
-        if (!manager.TryGetAmbientTemperature(item.transform.position, out float current)) return true;
+        float current = 0f;
+        if (needsTemperature && !manager.TryGetAmbientTemperature(item.transform.position, out current)) return true;
         double maxStep = Math.Min(30d, clock.DayLength / 96d);
         for (int segment = 0; segment < 2048 && now - cursor > 0.00001d; segment++)
         {
             float seconds = (float)Math.Min(maxStep, now - cursor);
             double midpoint = (cursor + seconds * 0.5d) / clock.DayLength;
-            float temperature = historical ? baseline + (seasonal
+            float temperature = !needsTemperature ? 0f : historical ? baseline + (seasonal
                 ? SeasonCalendar.SampleHistorical(clock, midpoint).TemperatureOffset : 0f) : current;
             float growth = 1f;
             stress = 0f;

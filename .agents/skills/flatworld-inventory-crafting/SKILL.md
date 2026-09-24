@@ -66,6 +66,7 @@ description: "Use when: 定位或修改 FlatWorld 的背包、槽位、快捷栏
 - 同一物品同时挂 `Mod_Plantable` 与 `Mod_Food` 时，右键动作按目标上下文仲裁：有效耕地由种植优先，无效种植目标则静默让给食用，不能一次动作同时播种和进食，也不能在正常进食时刷种植警告。
 - 新版农业统一通过 `FarmlandSystem` 查询 `ChunkTerrainData`，禁止返回旧 `Chunk.Map`；锄地进度属于地格而非锄头实例。水肥计算使用临时 `TileData_Farmland` 快照，成长或施肥后必须 `CommitSoil`，否则数据修改不会进入权威环境层。
 - 玩家播种作物由 `ChunkAgricultureRenderer` 管理，保存到独立的 `ChunkSaveRecord.AgricultureCells`；不得登记为 `ChunkNaturalItemRenderer` 的临时掉落物，否则区块解绑会回收且不保存。`ChunkView` 的同步/分帧保存入口均须抓取农业状态，退出世界不能当成收获删除快照。
+- 耕地植株保存已结算的绝对游戏秒，由 `IWorldTimePlant` 在区块恢复后按 `DayTimeSystem` 的时钟补算；退出游戏和暂停期间不补现实时间，历史段不能沿用重载时的短时天气。`Mod_Grow` 与 `Mod_PlantClimate` 组合时由成长模块统一推进气候，避免冷热暴露重复结算；`GrowData` 的 MemoryPack 成员只能在末尾追加，不能调换既有字段顺序。
 - 普通农作物使用 `CropShell + Mod_Crop + Mod_CropYield + Mod_CropVisual`：`Mod_Crop` 只保存两阶段权威状态并调度 `ICropHarvestAction`，产物表和其他收获副作用必须拆成独立动作模块。
 - `BerryCrop` 继续让野外生态与耕地播种复用同一 `CropShell` Item 定义，但持续采果不能走一次性 `Mod_CropYield`：由 `Mod_Collectable` 同时实现 `ICropHarvestAction/ICropHarvestPolicy` 保存果实库存并保留成熟植株，单次交互严格消费 1 份库存并掉落 1 个果实，不使用全局掉落数量倍率放大单次采摘；`Mod_Production` 只在成熟且库存未满时周期补果，果实提示跟随库存显隐；继承得到的 `Mod_CropYield` 必须禁用，避免一次采摘销毁植株或额外掉落种子。普通一次性作物仍保持 `Mod_Crop + Mod_CropYield + Mod_CropVisual`。药草、狗尾草等一次性小型作物不要直接继承这套持续采果行为。
 - 野外自然生成、允许玩家用武器清除的小型作物统一继承 `WildCrop_Base`；该抽象定义负责成熟自然初态、通用 `DamageReceiver`、植被受击材质和独立 DamageReceiver Trigger，具体作物只按外形/耐久覆盖 HP 与伤害碰撞尺寸。仅种植链使用的萝卜、水稻不因该规则自动获得生命模块；具体死亡掉落仍由各物品顶层 `lootTableId` 定义，禁止把通用掉落塞进 `WildCrop_Base`。

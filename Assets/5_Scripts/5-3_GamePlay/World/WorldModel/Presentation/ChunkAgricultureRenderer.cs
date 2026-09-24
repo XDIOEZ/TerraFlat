@@ -71,6 +71,14 @@ public sealed class ChunkAgricultureRenderer : MonoBehaviour, IChunkViewRenderer
                 new Vector3(worldCell.x + 0.5f, worldCell.y + 0.5f), parent: gameObject);
             crop.Load();
             RegisterCrop(saved.LocalPosition + Origin, crop);
+            // 作物已登记销毁回调，补算期间枯萎也会清除对应农业快照。
+            foreach (Module module in crop.Mods.Values)
+            {
+                if (crop.DestructionHandled)
+                    break;
+                if (module is IWorldTimePlant plant)
+                    plant.CatchUpToWorldTime();
+            }
         }
     }
 

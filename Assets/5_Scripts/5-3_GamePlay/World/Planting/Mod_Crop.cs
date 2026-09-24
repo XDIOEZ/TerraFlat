@@ -35,7 +35,7 @@ public partial class CropRuntimeData
     public double lastSimulatedTime; // 最后完成结算的绝对游戏秒。
 }
 
-public sealed class Mod_Crop : Module, IInteractable, IPlantableCrop, IItemModuleDependencyBinder, INaturalResourceInitializer, INaturalRenewalPolicy
+public sealed class Mod_Crop : Module, IInteractable, IPlantableCrop, IWorldTimePlant, IItemModuleDependencyBinder, INaturalResourceInitializer, INaturalRenewalPolicy
 {
     private readonly List<IPlantEnvironmentCondition> environmentConditions = new(); // 独立植物环境能力。
     public float ClimateStress { get; private set; } // 表现读取的最严重受害比例。
@@ -203,8 +203,11 @@ public sealed class Mod_Crop : Module, IInteractable, IPlantableCrop, IItemModul
 
     public override void ModUpdate(float deltaTime)
     {
-        AdvanceWorldState();
+        CatchUpToWorldTime();
     }
+
+    /// <summary>区块重新绑定和常规 Tick 共用世界时间补算入口。</summary>
+    public void CatchUpToWorldTime() => AdvanceWorldState();
 
     #endregion
 
