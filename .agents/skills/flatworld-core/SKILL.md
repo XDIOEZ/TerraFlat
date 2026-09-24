@@ -38,6 +38,7 @@ description: "Use when: 定位或修改 FlatWorld 的游戏启动、新建世界
 - 停止播放/关闭程序的对象销毁顺序不能承担业务依赖：清理使用绑定时保存的管理器和事件源引用，禁止重新查找单例或创建场景/池根节点；整个 Chunk 窗口关闭时直接销毁 View，正常流送才入池。表现清理必须可重复调用，终止时取消后台生成并保证纯运行时最终释放；应用退出不能记成自然物被采集。
 - 创建/网络提升/远程副本都显式设置 Player ProfileContext，玩家事件只触发一次。
 - 新玩家由 `ItemMgr` 在 `Player.Load()` 前应用 `PlayerCreationTemplateCatalogService` 解析的 JSON 模板；内建目录位于 `GameConfig/Players`，MOD 在同一资源就绪阶段注册，已有存档和跨维度重建不重新覆盖创建参数。
+- 标准世界进入中，全新玩家的主世界出生点由 `GameManager` 在确认最终安全陆地后写入；`Mod_PlayerDeathState.Load()` 不得提前重复搜索。联机直接创建玩家及旧档缺失出生点仍走补写路径。新世界后台预搜索只处理冻结的纯生成输入，不注册临时 Chunk，并与正式流送共用生成器、Profile、种子、拓扑和世界纪元以复用水文缓存；退出或失败必须取消搜索任务。
 - UI 逻辑留在 `GameManager.UI.cs`；加载视觉来自 Prefab，不在运行时拼装。
 - 标准新建/继续游戏的加载页只能在玩家脚下区块与完整可见 `ChunkView` 窗口完成表现绑定、物理同步收尾后发布 `Completed` 并淡出；后台生成队列清空不等于可展示，诊断超时只能告警，不能提前放行。
 - 世界/资源/玩家/UI 契约变化时只加载实际命中的 Data、Dimension、Item、Networking 或 UI Skill。

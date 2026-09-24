@@ -292,24 +292,7 @@ public partial class ChunkMgr
             Mathf.Max(resolvedPrefetch.x, destroyDistance.x),
             Mathf.Max(resolvedPrefetch.y, destroyDistance.y));
         string dimensionId = ResolveCurrentDimensionId();
-        ChunkGenerationProfileSO profileAsset = DimensionManager.Instance?.GetActiveGenerationProfile();
-        ChunkGenerationProfileSnapshot profile = profileAsset != null
-            ? profileAsset.CreateSnapshot()
-            : defaultGenerationSnapshot;
-        profile = ApplyWorldCoordinateScale(profile);
-        profile = WorldGenerationRuntimeHooks.ApplyBeforeWorldModelGeneration(profile);
-        // 玩家可建造 Tile 属于当前内容目录，不应被旧存档冻结的世界生成参数锁死。
-        // 先保留当前版本映射，再恢复冻结生成配置；这样老世界也能使用后来新增的地板/建筑 Tile。
-        runtimeTileCatalogSnapshot = profile;
-        profile = ApplyPersistedEcologyConfiguration(profile);
-        int baseSeed = SaveDataMgr.Instance?.SaveData?.Seed ?? 1;
-        if (baseSeed == 0)
-            baseSeed = 1;
-        // 地表入口与矿洞出口必须共享同一份门户随机种子，不能使用各自维度派生种子。
-        profile = profile.WithNumericParameter("cave.portal.baseSeed", baseSeed);
-        // 矿洞额外带入地表冻结 Profile，后台才能独立复算入口候选与地表高度。
-        profile = AttachCavePortalPairing(profile, baseSeed);
-        activeGenerationSnapshot = profile;
+        ChunkGenerationProfileSnapshot profile = PrepareActiveGenerationSnapshot(out int baseSeed);
         ChunkGenerationTopologySnapshot topology = ResolveActiveGenerationTopology();
         int stepX = profile.Width;
         int stepY = profile.Height;
@@ -370,6 +353,28 @@ public partial class ChunkMgr
         RepairRuntimeWindowPresentationBackends();
         RebuildRuntimePrefetchQueue(centerOrigin, dimensionId, resolvedPresentation,
             resolvedPrefetch, stepX, stepY, profile, seed, topology);
+    }
+
+    /// <summary>统一准备出生搜索与区块流送的生成快照，保证二者共享水文缓存键。</summary>
+    private ChunkGenerationProfileSnapshot PrepareActiveGenerationSnapshot(out int baseSeed)
+    {
+        ChunkGenerationProfileSO profileAsset = DimensionManager.Instance?.GetActiveGenerationProfile();
+        ChunkGenerationProfileSnapshot profile = profileAsset != null
+            ? profileAsset.CreateSnapshot()
+            : defaultGenerationSnapshot;
+        profile = ApplyWorldCoordinateScale(profile);
+        profile = WorldGenerationRuntimeHooks.ApplyBeforeWorldModelGeneration(profile);
+        // 玩家可建造 Tile 属于当前内容目录，不应被旧存档冻结的世界生成参数锁死。
+        runtimeTileCatalogSnapshot = profile;
+        profile = ApplyPersistedEcologyConfiguration(profile);
+        baseSeed = SaveDataMgr.Instance?.SaveData?.Seed ?? 1;
+        if (baseSeed == 0)
+            baseSeed = 1;
+        // 地表入口与矿洞出口共享门户随机种子；矿洞还需配对冻结后的地表 Profile。
+        profile = profile.WithNumericParameter("cave.portal.baseSeed", baseSeed);
+        profile = AttachCavePortalPairing(profile, baseSeed);
+        activeGenerationSnapshot = profile;
+        return profile;
     }
 
     #endregion

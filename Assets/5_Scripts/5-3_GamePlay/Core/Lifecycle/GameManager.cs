@@ -2,6 +2,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using FlatWorld.Gameplay.Quests;
 using UltEvents;
@@ -60,6 +61,14 @@ public partial class GameManager : SingletonAutoMono<GameManager>
     [SerializeField, Min(1)] private int spawnLandMaxSearchRadius = 256;
     [SerializeField, Min(1)] private int spawnTerrainSampleBudget = 4096;
     [SerializeField, Min(0)] private int spawnSeedAnchorRange = 256;
+
+    #region 新世界出生点预计算
+    private bool startNewWorldSpawnSearchOnActivation;
+    private Task<FlatWorld.WorldModel.Int2?> pendingNewWorldSpawnSearch;
+    private CancellationTokenSource pendingNewWorldSpawnCancellation;
+    private Vector2Int pendingNewWorldSpawnAnchor;
+    private float pendingNewWorldSpawnStartedAt;
+    #endregion
 
     #region 生命周期方法
     protected override void Awake()
@@ -400,7 +409,8 @@ public partial class GameManager : SingletonAutoMono<GameManager>
 
             Debug.Log($"[GameManager] 已创建新世界存档：{createdSaveName}");
             ReportWorldEntryProgress("正在创建新世界", "存档已创建，正在进入世界…", 0.55f);
-            ContinueGameInternal(request.PlayerName, request.PlanetData.Name);
+            ContinueGameInternal(request.PlayerName, request.PlanetData.Name,
+                prepareNewWorldSpawn: true);
         }
         catch (Exception exception)
         {
@@ -524,7 +534,8 @@ public partial class GameManager : SingletonAutoMono<GameManager>
         ContinueGameInternal(playerName);
     }
 
-    private void ContinueGameInternal(string playerName, string fallbackPlanetName = null)
+    private void ContinueGameInternal(string playerName, string fallbackPlanetName = null,
+        bool prepareNewWorldSpawn = false)
     {
         try
         {
@@ -552,10 +563,13 @@ public partial class GameManager : SingletonAutoMono<GameManager>
             ReportWorldEntryProgress("正在进入存档", $"正在加载星球：{planetName}", 0.38f);
 
             // 根据用户当前控制的玩家名称加载玩家。
+            float sceneTransitionStartedAt = Time.realtimeSinceStartup;
+            startNewWorldSpawnSearchOnActivation = prepareNewWorldSpawn;
             RunWorld(NewScenename: planetName, () =>
             {
                 try
                 {
+                    Debug.Log($"[GameManager] 世界场景切换耗时 {Time.realtimeSinceStartup - sceneTransitionStartedAt:0.00} 秒。");
                     ReportWorldEntryProgress("正在进入存档", "正在创建玩家并准备出生区域…", 0.66f);
                     LoadPlayer(playerName: playerName);
                 }
@@ -568,6 +582,10 @@ public partial class GameManager : SingletonAutoMono<GameManager>
         catch (Exception exception)
         {
             FailWorldEntry("进入存档时发生错误。", exception);
+        }
+        finally
+        {
+            startNewWorldSpawnSearchOnActivation = false;
         }
     }
 
@@ -633,6 +651,13 @@ public partial class GameManager : SingletonAutoMono<GameManager>
 
         // 通知所有订阅者：游戏世界已进入
         Event_GameWorldEnter?.Invoke();
+
+        // 订阅者完成世界配置后启动纯生成，和旧场景卸载并行推进。
+        if (startNewWorldSpawnSearchOnActivation && isWorldEntryInProgress)
+        {
+            startNewWorldSpawnSearchOnActivation = false;
+            BeginNewWorldSpawnSearch();
+        }
 
         // 3. 准备卸载旧场景（如有）
         Scene startScene = SceneManager.GetSceneByName(OldSceneName);
@@ -939,7 +964,51 @@ public partial class GameManager : SingletonAutoMono<GameManager>
 
         // 读取已加载的 MapCore Prefab 配置做纯采样，不实例化 Map 或 Chunk。
         // 玩家位置设置完成后才触发 Event_PlayerEnterWorld，由 Mod_ChunkLoader 正常流送周围区块。
-        if (!TryFindNearestLand(seedAnchor, out Vector2Int landPosition, out string failureReason))
+        bool landFound;
+        Vector2Int landPosition;
+        string failureReason;
+        if (pendingNewWorldSpawnSearch != null && pendingNewWorldSpawnAnchor == seedAnchor)
+        {
+            Task<FlatWorld.WorldModel.Int2?> search = pendingNewWorldSpawnSearch;
+            float spawnWaitStartedAt = Time.realtimeSinceStartup;
+            while (!search.IsCompleted)
+            {
+                if (!isWorldEntryInProgress)
+                    yield break;
+                yield return null;
+            }
+
+            if (search.IsCanceled)
+            {
+                ClearPendingNewWorldSpawnSearch(cancel: false);
+                FailWorldEntry("新世界出生点搜索已取消。");
+                yield break;
+            }
+            if (search.IsFaulted)
+            {
+                Exception exception = search.Exception?.GetBaseException();
+                ClearPendingNewWorldSpawnSearch(cancel: false);
+                FailWorldEntry("新世界出生点搜索失败。", exception);
+                yield break;
+            }
+
+            FlatWorld.WorldModel.Int2? found = search.Result;
+            Debug.Log($"[GameManager] 出生点预搜索从发起到取用经过 {Time.realtimeSinceStartup - pendingNewWorldSpawnStartedAt:0.00} 秒，玩家加载后额外等待 {Time.realtimeSinceStartup - spawnWaitStartedAt:0.00} 秒。");
+            ClearPendingNewWorldSpawnSearch(cancel: false);
+            landFound = found.HasValue;
+            landPosition = landFound
+                ? new Vector2Int(found.Value.X, found.Value.Y)
+                : seedAnchor;
+            failureReason = "未能在出生范围内采样到非水且可行走的陆地。";
+        }
+        else
+        {
+            if (pendingNewWorldSpawnSearch != null)
+                ClearPendingNewWorldSpawnSearch(cancel: true);
+            landFound = TryFindNearestLand(seedAnchor, out landPosition, out failureReason);
+        }
+
+        if (!landFound)
         {
             FailWorldEntry(
                 $"{failureReason} seed={worldSeed}, anchor={seedAnchor}。请检查世界噪声缩放和生物群系配置。");
@@ -956,6 +1025,60 @@ public partial class GameManager : SingletonAutoMono<GameManager>
             spawnPosition);
         Debug.Log($"[GameManager] 新玩家出生点已按种子定位到安全陆地：seed={worldSeed}, anchor={seedAnchor}, spawn={spawnPosition}");
         Event_PlayerEnterWorld?.Invoke(player);
+    }
+
+    /// <summary>仅冻结主线程生成输入；后台任务只运行纯 C# 地形搜索。</summary>
+    private void BeginNewWorldSpawnSearch()
+    {
+        ClearPendingNewWorldSpawnSearch(cancel: true);
+        ChunkMgr chunkManager = ChunkMgr.ExistingInstance;
+        if (chunkManager == null)
+            return;
+
+        pendingNewWorldSpawnAnchor = GetSeedAnchorPosition();
+        pendingNewWorldSpawnCancellation = new CancellationTokenSource();
+        try
+        {
+            pendingNewWorldSpawnSearch = chunkManager.FindSurfaceSpawnAsync(
+                new FlatWorld.WorldModel.Int2(pendingNewWorldSpawnAnchor.x,
+                    pendingNewWorldSpawnAnchor.y),
+                Mathf.Max(1, spawnLandMaxSearchRadius),
+                Mathf.Max(1, spawnTerrainSampleBudget),
+                pendingNewWorldSpawnCancellation.Token);
+            pendingNewWorldSpawnStartedAt = Time.realtimeSinceStartup;
+        }
+        catch (Exception exception)
+        {
+            ClearPendingNewWorldSpawnSearch(cancel: true);
+            Debug.LogWarning($"[GameManager] 无法提前计算出生点，回退到原搜索路径：{exception.Message}");
+        }
+    }
+
+    /// <summary>离开世界或完成搜索后清理后台任务，取消时等任务结束再释放令牌。</summary>
+    private void ClearPendingNewWorldSpawnSearch(bool cancel)
+    {
+        Task<FlatWorld.WorldModel.Int2?> task = pendingNewWorldSpawnSearch;
+        CancellationTokenSource source = pendingNewWorldSpawnCancellation;
+        pendingNewWorldSpawnSearch = null;
+        pendingNewWorldSpawnCancellation = null;
+        if (source == null)
+            return;
+        if (cancel)
+            source.Cancel();
+        if (task == null || task.IsCompleted)
+        {
+            if (task != null && task.IsFaulted)
+                _ = task.Exception;
+            source.Dispose();
+            return;
+        }
+
+        _ = task.ContinueWith(completed =>
+        {
+            if (completed.IsFaulted)
+                _ = completed.Exception;
+            source.Dispose();
+        }, TaskScheduler.Default);
     }
 
     /// <summary>

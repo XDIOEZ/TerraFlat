@@ -21,6 +21,7 @@ public partial class ChunkMgr
     [SerializeField] private bool authoritativeSimulation = true;
 
     private RuntimeChunkMgr runtimeChunkManager;
+    private DeterministicChunkGenerator runtimeGenerator;
     private ChunkGenerationProfileSnapshot defaultGenerationSnapshot;
     private ChunkGenerationProfileSnapshot runtimeTileCatalogSnapshot;
     private ChunkGenerationProfileSnapshot activeGenerationSnapshot;
@@ -84,6 +85,25 @@ public partial class ChunkMgr
         EnsureWorldRuntime();
         return runtimeChunkManager.RequestChunkDataAsync(address, worldSeed,
             profile ?? defaultGenerationSnapshot, cancellationToken, topology);
+    }
+
+    /// <summary>以正式生成配置和同一生成器在后台寻找出生陆地；不注册搜索用区块。</summary>
+    public Task<Int2?> FindSurfaceSpawnAsync(Int2 anchor, int maxRadius,
+        int sampleBudget, CancellationToken cancellationToken = default)
+    {
+        EnsureWorldRuntime();
+        ChunkGenerationProfileSnapshot profile = PrepareActiveGenerationSnapshot(out int baseSeed);
+        ChunkGenerationTopologySnapshot topology = ResolveActiveGenerationTopology();
+        string dimensionId = ResolveCurrentDimensionId();
+        int seed = DimensionManager.Instance != null
+            ? DimensionManager.Instance.GetActiveGenerationSeed(baseSeed)
+            : baseSeed;
+        long epoch = runtimeChunkManager.World.Epoch;
+        DeterministicChunkGenerator generator = runtimeGenerator;
+        return Task.Run(() => generator.TryFindWalkableSurfaceNear(
+                dimensionId, seed, profile, topology, anchor, maxRadius,
+                sampleBudget, out Int2 found, cancellationToken, epoch)
+            ? (Int2?)found : null, cancellationToken);
     }
 
     /// <summary>尝试从当前运行时缓存中找到指定地址的区块。</summary>
@@ -192,7 +212,8 @@ public partial class ChunkMgr
         if (string.IsNullOrWhiteSpace(worldId))
             worldId = "world";
         var world = new WorldRuntime(worldId, runtimeEpoch);
-        runtimeChunkManager = new RuntimeChunkMgr(world, new DeterministicChunkGenerator(GameRes.ExistingInstance?.LiquidTypes),
+        runtimeGenerator = new DeterministicChunkGenerator(GameRes.ExistingInstance?.LiquidTypes);
+        runtimeChunkManager = new RuntimeChunkMgr(world, runtimeGenerator,
             EffectiveBackgroundGenerationConcurrency, new UnityWorldAddressNormalizer());
     }
 
@@ -232,6 +253,7 @@ public partial class ChunkMgr
             // 表现清理发生异常时，后台任务与纯数据仍必须释放，原始异常继续上报。
             RuntimeChunkMgr manager = runtimeChunkManager;
             runtimeChunkManager = null;
+            runtimeGenerator = null;
             activeGenerationSnapshot = null;
             runtimeTileCatalogSnapshot = null;
             if (manager != null)

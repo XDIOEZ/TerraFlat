@@ -62,8 +62,15 @@ public partial class GameManager
     private Coroutine worldEntryCompletionCoroutine;
     private bool isRespawnLoadingPresentationActive;
     private bool isGameplayReady;
+    private float worldEntryStartedAt;
 
     public bool IsWorldEntryInProgress => isWorldEntryInProgress;
+
+    /// <summary>标准世界进入会在新玩家落位后统一记录出生点。</summary>
+    public bool ShouldDeferInitialSpawnPlacement =>
+        isWorldEntryInProgress &&
+        worldEntryPresentationMode == WorldEntryPresentationMode.Standard &&
+        worldEntryCompletesOnPlayerReady;
 
     /// <summary>
     /// 加载页完全隐藏前，禁止 Item/Module Tick、生态生成和玩家玩法输入。
@@ -115,6 +122,7 @@ public partial class GameManager
         }
 
         isWorldEntryInProgress = true;
+        worldEntryStartedAt = Time.realtimeSinceStartup;
         SetGameplayReady(false);
         worldEntryCompletesOnPlayerReady = completeOnPlayerReady;
         worldEntryPresentationMode = presentationMode;
@@ -245,6 +253,7 @@ public partial class GameManager
         }
 
         bool centerWarningLogged = false;
+        float centerStartedAt = Time.realtimeSinceStartup;
         float centerWarningAt = Time.realtimeSinceStartup + 12f;
         float displayedProgress = 0.82f;
         while (!chunkManager.IsRuntimeEntityPresentationReady(playerPosition))
@@ -264,6 +273,8 @@ public partial class GameManager
             yield return null;
         }
 
+        Debug.Log($"[GameManager] 玩家脚下区块就绪耗时 {Time.realtimeSinceStartup - centerStartedAt:0.00} 秒。");
+
         // 首屏可玩区已经准备好，再展开真实相机窗口。这样重生成任务不会在进入世界最关键的
         // 几秒内让外围区块与玩家脚下区块竞争后台 CPU，同时不降低正常流送阶段的总吞吐。
         if (chunkLoader != null)
@@ -281,6 +292,7 @@ public partial class GameManager
         }
 
         bool windowWarningLogged = false;
+        float windowStartedAt = Time.realtimeSinceStartup;
         float windowWarningAt = Time.realtimeSinceStartup + 12f;
         while (!chunkManager.AreRuntimeWindowPresentationsReady)
         {
@@ -299,6 +311,8 @@ public partial class GameManager
 
             yield return null;
         }
+
+        Debug.Log($"[GameManager] 完整可见窗口就绪耗时 {Time.realtimeSinceStartup - windowStartedAt:0.00} 秒。");
 
         // 碰撞体变更需要在加载页淡出前同步，并等待一次固定帧完成物理收尾。
         Physics2D.SyncTransforms();
@@ -322,6 +336,7 @@ public partial class GameManager
         if (!isWorldEntryInProgress)
             return;
 
+        ClearPendingNewWorldSpawnSearch(cancel: true);
         Event_PlayerEnterWorld -= OnWorldEntryPlayerReady;
         if (worldEntryCompletionCoroutine != null)
         {
@@ -330,12 +345,14 @@ public partial class GameManager
         }
 
         isWorldEntryInProgress = false;
+        Debug.Log($"[GameManager] 世界进入总耗时 {Time.realtimeSinceStartup - worldEntryStartedAt:0.00} 秒。");
         PublishCurrentWorldEntryProgress(title, status, 1f, WorldEntryProgressState.Completed);
         ResetCurrentWorldEntryContext();
     }
 
     private void FailWorldEntry(string message, Exception exception = null)
     {
+        ClearPendingNewWorldSpawnSearch(cancel: true);
         Event_PlayerEnterWorld -= OnWorldEntryPlayerReady;
         if (worldEntryCompletionCoroutine != null)
         {
@@ -416,6 +433,8 @@ public partial class GameManager
 
     private void ResetWorldEntryLifecycle()
     {
+        startNewWorldSpawnSearchOnActivation = false;
+        ClearPendingNewWorldSpawnSearch(cancel: true);
         Event_PlayerEnterWorld -= OnWorldEntryPlayerReady;
         if (worldEntryCompletionCoroutine != null)
         {

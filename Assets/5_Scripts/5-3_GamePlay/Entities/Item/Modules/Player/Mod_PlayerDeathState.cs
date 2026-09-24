@@ -121,7 +121,7 @@ public partial class Mod_PlayerDeathState : Module
         _rb = item.GetComponent<Rigidbody2D>();
         _adminController = _player.GetComponentInChildren<PlayerAdminController>(true);
 
-        // 新玩家和旧存档都在首次加载时补齐主世界出生点，后续不再依赖当前坐标。
+        // 标准世界进入期间的新玩家由 GameManager 确认最终陆地后写入；其它路径仍需补齐。
         EnsureMainWorldSpawnPoint();
 
         _damageReceiver.OnDead -= OnPlayerDead;
@@ -476,15 +476,17 @@ public partial class Mod_PlayerDeathState : Module
     private void EnsureMainWorldSpawnPoint()
     {
         WorldAddress activeAddress = ResolveActiveWorldAddress();
+        GameManager gameManager = GameManager.Instance;
         if (_player?.Data == null ||
             !activeAddress.IsSurface ||
             PlayerMainWorldSpawnStore.TryGetMainWorldSpawn(_player.Data, out _, out _) ||
-            GameManager.Instance == null)
+            gameManager == null ||
+            (_player.IsNewProfile && gameManager.ShouldDeferInitialSpawnPlacement))
         {
             return;
         }
 
-        if (!GameManager.Instance.TryGetDefaultPlayerSpawnPosition(out Vector3 defaultSpawnPos))
+        if (!gameManager.TryGetDefaultPlayerSpawnPosition(out Vector3 defaultSpawnPos))
             return;
 
         if (PlayerMainWorldSpawnStore.SetMainWorldSpawn(
