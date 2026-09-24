@@ -24,12 +24,30 @@ public sealed class CraftingCapabilities
 {
     public RecipeType RecipeType = RecipeType.Crafting;
     public string StationId = string.Empty;
+    public IReadOnlyList<string> CompatibleStationIds; // 同类制作入口可额外接受的工作站标识。
     public int InputSlotLimit;
     public int MaxRecipeWidth;
     public int MaxRecipeHeight;
     public bool AllowCompactGrid;
     public bool AllowOutputIntoInput;
     public bool ApplyDifficultyOutputMultiplier = true; // 固定物料转换可关闭普通合成的难度增产。
+
+    /// <summary>空标识对所有普通制作入口开放；额外标识仅由工作站显式声明。</summary>
+    public bool SupportsStation(string requiredStation)
+    {
+        if (string.IsNullOrWhiteSpace(requiredStation) ||
+            string.Equals(requiredStation, StationId, StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        if (CompatibleStationIds == null)
+            return false;
+
+        for (int index = 0; index < CompatibleStationIds.Count; index++)
+            if (string.Equals(requiredStation, CompatibleStationIds[index], StringComparison.OrdinalIgnoreCase))
+                return true;
+
+        return false;
+    }
 }
 
 /// <summary>

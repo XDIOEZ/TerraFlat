@@ -2,6 +2,10 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
+/// <summary>
+/// 世界建筑工作台：接受普通合成与随身手工配方，在固定五格输入中制作。
+/// 按与手工入口相同的点击基准计算七成需求，保留原有工作台等级调整。
+/// </summary>
 public class Mod_MakeTable : Module, IInventory, IInstanceUI, IInteractable
 {
     #region 基础参数
@@ -97,7 +101,7 @@ public class Mod_MakeTable : Module, IInventory, IInstanceUI, IInteractable
     public Button workButton;
     [Tooltip("工作台等级，等级越高需要点击次数越少")]
     public int workbenchLevel = 1;
-    [Tooltip("1级工作台每次合成需要的基础点击次数")]
+    [Tooltip("与手工制作相同的基准点击次数；世界工作台在结算后减少30%")]
     public int baseClickCount = 6;
     [Tooltip("每升1级减少的点击次数")]
     public int clickReductionPerLevel = 1;
@@ -109,11 +113,18 @@ public class Mod_MakeTable : Module, IInventory, IInstanceUI, IInteractable
     {
         RecipeType = RecipeType.Crafting,
         StationId = "workbench",
+        CompatibleStationIds = new[] { "handcraft" },
         InputSlotLimit = InputSlotCount,
         AllowOutputIntoInput = false
     };
 
-    private int RequiredClickCount => Mathf.Max(minClickCount, baseClickCount - (Mathf.Max(1, workbenchLevel) - 1) * clickReductionPerLevel);
+    /// <summary>世界工作台按手工基准的七成取最近整数，至少保留一次点击。</summary>
+    public int GetRequiredClickCount()
+    {
+        int manualClicks = Mathf.Max(1, Mathf.Max(minClickCount,
+            baseClickCount - (Mathf.Max(1, workbenchLevel) - 1) * clickReductionPerLevel));
+        return Mathf.Max(1, Mathf.RoundToInt(manualClicks * 0.7f));
+    }
 
     public void OnValidate()
     {
@@ -223,7 +234,7 @@ public class Mod_MakeTable : Module, IInventory, IInstanceUI, IInteractable
             inputInventory,
             outputInventory,
             Capabilities,
-            () => RequiredClickCount,
+            GetRequiredClickCount,
             ResolveCraftActor);
 
         // 初始化UI显示

@@ -8,7 +8,7 @@ using UnityEngine.UI;
 
 /// <summary>
 /// 合成站共享交互控制器：以输入库存为唯一候选来源，维护候选配方、当前选择、点击进度、
-/// 双输出预览与原子提交。手工台和世界工作台只负责各自槽位及面板生命周期，不再各存一份合成状态。
+/// 输出槽预览与原子提交。手工台和世界工作台只负责各自槽位及面板生命周期，不再各存一份合成状态。
 /// 候选按钮复用正式 Prefab 中的隐藏模板，条目高度由 Prefab 保证不低于 60 逻辑像素。
 /// </summary>
 public sealed class CraftingStationController : IDisposable
@@ -299,6 +299,17 @@ public sealed class CraftingStationController : IDisposable
             if (preview != null)
                 outputPreviews.Add(preview);
         }
+    }
+
+    /// <summary>输出库存扩容后接入新槽位的预览层，并保持当前配方选择。</summary>
+    public void RefreshOutputSlotBindings()
+    {
+        if (disposed)
+            return;
+
+        ClearOutputPreviews();
+        BindOutputPreviews();
+        RefreshSelectedRecipe();
     }
 
     private void RefreshSelectedRecipe()

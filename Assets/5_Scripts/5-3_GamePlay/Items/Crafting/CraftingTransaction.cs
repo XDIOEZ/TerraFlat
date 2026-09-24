@@ -270,10 +270,12 @@ public sealed class CraftingTransaction
     {
         private readonly List<ItemData> originalItems = new List<ItemData>();
         private readonly List<ItemData> workingItems = new List<ItemData>();
+        private readonly int originalSlotCount;
 
         public InventoryState(Inventory inventory, bool captureOriginalState)
         {
             Inventory = inventory;
+            originalSlotCount = inventory.Data.itemSlots.Count;
             foreach (ItemSlot slot in inventory.Data.itemSlots)
             {
                 ItemData snapshot = Clone(slot?.itemData);
@@ -293,7 +295,7 @@ public sealed class CraftingTransaction
 
         public bool IsCurrentShapeValid()
         {
-            return Inventory?.Data?.itemSlots != null && Inventory.Data.itemSlots.Count == workingItems.Count;
+            return Inventory?.Data?.itemSlots != null && Inventory.Data.itemSlots.Count == originalSlotCount;
         }
 
         public bool TryConsume(int slotIndex, float amount)
@@ -353,7 +355,7 @@ public sealed class CraftingTransaction
 
                 float amountCapacity = Inventory.Data.HasUnlimitedStackSize
                     ? remaining
-                    : Mathf.Max(0f, Inventory.Data.itemSlots[i].SlotMaxVolume - target.Stack.Amount);
+                    : Mathf.Max(0f, GetWorkingSlotCapacity(i, 0f) - target.Stack.Amount);
                 float amountToAdd = Mathf.Min(remaining, amountCapacity);
                 if (amountToAdd <= 0f)
                     continue;
@@ -361,14 +363,14 @@ public sealed class CraftingTransaction
                 remaining -= amountToAdd;
             }
 
-            for (int i = 0; i < workingItems.Count && remaining > CraftingIngredientMatcher.AmountEpsilon; i++)
+            for (int i = 0; remaining > CraftingIngredientMatcher.AmountEpsilon; i++)
             {
+                if (!EnsureWorkingSlot(i))
+                    break;
                 if (workingItems[i] != null)
                     continue;
 
-                float amountCapacity = Inventory.Data.HasUnlimitedStackSize
-                    ? remaining
-                    : Mathf.Max(0f, Inventory.Data.itemSlots[i].SlotMaxVolume);
+                float amountCapacity = GetWorkingSlotCapacity(i, remaining);
                 float amountToAdd = Mathf.Min(remaining, amountCapacity);
                 if (amountToAdd <= 0f)
                     continue;
@@ -390,8 +392,10 @@ public sealed class CraftingTransaction
             if (unitCount <= 0 || Mathf.Abs(amount - unitCount) > CraftingIngredientMatcher.AmountEpsilon)
                 return false;
 
-            for (int i = 0; i < workingItems.Count && unitCount > 0; i++)
+            for (int i = 0; unitCount > 0; i++)
             {
+                if (!EnsureWorkingSlot(i))
+                    break;
                 if (workingItems[i] != null)
                     continue;
 
@@ -403,6 +407,28 @@ public sealed class CraftingTransaction
             }
 
             return unitCount == 0;
+        }
+
+        /// <summary>无限槽位只在事务快照中扩容，预检不会改动真实库存。</summary>
+        private bool EnsureWorkingSlot(int index)
+        {
+            if (index < workingItems.Count)
+                return true;
+            if (index != workingItems.Count || !Inventory.Data.HasUnlimitedSlots)
+                return false;
+
+            workingItems.Add(null);
+            return true;
+        }
+
+        /// <summary>新增槽位沿用库存的单格堆叠规则。</summary>
+        private float GetWorkingSlotCapacity(int index, float requested)
+        {
+            if (Inventory.Data.HasUnlimitedStackSize)
+                return requested;
+            return index < Inventory.Data.itemSlots.Count
+                ? Mathf.Max(0f, Inventory.Data.itemSlots[index].SlotMaxVolume)
+                : Inventory_Data.DefaultSlotVolume;
         }
 
         /// <summary>按事务工作快照计算整包占用，确保扣料后释放的容量能立即用于本次产物。</summary>
@@ -429,6 +455,10 @@ public sealed class CraftingTransaction
         public void RestoreOriginalState()
         {
             Apply(originalItems);
+            List<ItemSlot> slots = Inventory.Data.itemSlots;
+            for (int index = slots.Count - 1; index >= originalSlotCount; index--)
+                slots.RemoveAt(index);
+            Inventory.Data.EnsureSpareSlot();
         }
 
         public void NotifyChanged()
@@ -445,12 +475,23 @@ public sealed class CraftingTransaction
 
         private void Apply(IReadOnlyList<ItemData> source)
         {
+            List<ItemSlot> slots = Inventory.Data.itemSlots;
+            while (slots.Count < source.Count)
+                slots.Add(new ItemSlot(slots.Count)
+                {
+                    SlotMaxVolume = Inventory.Data.HasUnlimitedStackSize
+                        ? float.MaxValue
+                        : Inventory_Data.DefaultSlotVolume
+                });
+
             for (int i = 0; i < source.Count; i++)
             {
-                ItemSlot slot = Inventory.Data.itemSlots[i];
+                ItemSlot slot = slots[i];
                 Inventory.Data.Event_OnBeforeDataChanged?.Invoke(slot);
                 slot.itemData = Clone(source[i]);
             }
+
+            Inventory.Data.EnsureSpareSlot();
         }
 
         private static bool CanStack(ItemData target, ItemData source)

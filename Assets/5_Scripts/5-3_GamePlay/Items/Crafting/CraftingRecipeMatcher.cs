@@ -172,8 +172,7 @@ public static class CraftingRecipeMatcher
             return false;
         if (recipe.inputs.recipeType != capabilities.RecipeType)
             return false;
-        if (!string.IsNullOrWhiteSpace(recipe.RequiredStation) &&
-            !string.Equals(recipe.RequiredStation, capabilities.StationId, StringComparison.OrdinalIgnoreCase))
+        if (!capabilities.SupportsStation(recipe.RequiredStation))
         {
             return false;
         }

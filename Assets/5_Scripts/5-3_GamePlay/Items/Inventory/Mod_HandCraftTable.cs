@@ -5,6 +5,10 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
+/// <summary>
+/// 玩家随身制作入口：读取与世界工作台相同的普通合成配方，按手工点击基准完成制作。
+/// 输入和输出库存均保留末尾空槽，正式面板根据库存槽位数量扩展滚动网格。
+/// </summary>
 public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
 {
 #region 基础参数
@@ -18,9 +22,9 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
 
     [SerializeReference]
     public List<string> RawData = new List<string>();
-    [Tooltip("手工制作输入容器（输入_1~输入_4）")]
+    [Tooltip("手工制作输入容器；末格占用后自动增加空槽")]
     public Inventory inputInventory;
-    [Tooltip("手工制作输出容器（输出_1~输出_2）")]
+    [Tooltip("手工制作输出容器；末格占用后自动增加空槽")]
     public Inventory outputInventory;
     public BasePanel basePanel;
     public GameObject InventoryPanel_Prefab;
@@ -34,7 +38,7 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
     public string ToggleActionName = "H";
     [Tooltip("工作台等级，等级越高需要点击次数越少")]
     public int workbenchLevel = 1;
-    [Tooltip("1级工作台每次合成需要的基础点击次数")]
+    [Tooltip("徒手制作的基础点击次数；世界工作台按此基准减少30%")]
     public int baseClickCount = 6;
     [Tooltip("每升1级减少的点击次数")]
     public int clickReductionPerLevel = 1;
@@ -45,18 +49,21 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
     private GameController _inputController;
     private InputAction _toggleAction;
     private Action<InputAction.CallbackContext> _toggleCallback;
+    private Inventory_Data observedInputData;
+    private Inventory_Data observedOutputData;
     private static readonly CraftingCapabilities Capabilities = new CraftingCapabilities
     {
         RecipeType = RecipeType.Crafting,
         StationId = "handcraft",
-        InputSlotLimit = InputSlotCount,
+        CompatibleStationIds = new[] { "workbench" },
+        InputSlotLimit = 0,
         AllowOutputIntoInput = false
     };
 
-    private int RequiredClickCount => Mathf.Max(minClickCount, baseClickCount - (Mathf.Max(1, workbenchLevel) - 1) * clickReductionPerLevel);
+    /// <summary>手工制作点击基准，供制作控制器与 MOD 扩展读取。</summary>
+    public int GetRequiredClickCount() => Mathf.Max(1, Mathf.Max(minClickCount,
+        baseClickCount - (Mathf.Max(1, workbenchLevel) - 1) * clickReductionPerLevel));
 
-    private const int InputSlotCount = 4;
-    private const int OutputSlotCount = 2;
     private const string InputInventorySaveKey = "handcraft.input";
     private const string OutputInventorySaveKey = "handcraft.output";
     [Header("调试")]
@@ -251,6 +258,7 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
     {
         _craftingController?.Dispose();
         _craftingController = null;
+        UnbindDynamicSlotEvents();
         inputInventory?.UnbindSlotDataEvents();
         outputInventory?.UnbindSlotDataEvents();
 
@@ -281,8 +289,11 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
     public void InitData()
     {
         ValidateInventoryConfig();
+        inputInventory.Data.SetUnlimitedSlots(true);
+        outputInventory.Data.SetUnlimitedSlots(true);
         InitializeInventoryData(inputInventory, nameof(inputInventory));
         InitializeInventoryData(outputInventory, nameof(outputInventory));
+        BindDynamicSlotEvents();
     }
 
     public void InitUI()
@@ -306,7 +317,7 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
             inputInventory,
             outputInventory,
             Capabilities,
-            () => RequiredClickCount,
+            GetRequiredClickCount,
             ResolveCraftActor,
             LogCraftDebug);
         LogCraftDebug(
@@ -320,37 +331,84 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
 
     private void BindInputSlots()
     {
-        inputInventory.itemSlot_UI.Clear();
-
-        for (int i = 1; i <= InputSlotCount; i++)
-        {
-            var button = basePanel.GetButton($"输入_{i}");
-            if (button == null)
-                throw new System.NullReferenceException($"[Mod_HandCraftTable] 未找到输入按钮 输入_{i}");
-
-            var slotUI = button.GetComponent<ItemSlot_UI>();
-            if (slotUI == null)
-                throw new System.NullReferenceException($"[Mod_HandCraftTable] 输入_{i} 缺少 ItemSlot_UI");
-
-            inputInventory.BindSlotUI(slotUI, i - 1);
-        }
+        BindSlots(inputInventory, "输入", "输入槽内容");
     }
 
     private void BindOutputSlots()
     {
-        outputInventory.itemSlot_UI.Clear();
-        for (int i = 1; i <= OutputSlotCount; i++)
+        BindSlots(outputInventory, "输出", "输出槽内容");
+    }
+
+    /// <summary>正式面板保留原始槽作为模板，库存增长时只克隆所需数量。</summary>
+    private void BindSlots(Inventory inventory, string prefix, string contentName)
+    {
+        RectTransform content = FindSlotContent(contentName);
+        ItemSlot_UI[] slots = content.GetComponentsInChildren<ItemSlot_UI>(true);
+        if (slots.Length == 0)
+            throw new InvalidOperationException($"[Mod_HandCraftTable] {contentName} 缺少初始槽位模板");
+
+        inventory.itemSlot_UI.Clear();
+        int count = inventory.Data.itemSlots.Count;
+        ItemSlot_UI template = slots[0];
+        for (int index = 0; index < count; index++)
         {
-            Button button = basePanel.GetButton($"输出_{i}");
-            if (button == null)
-                throw new System.NullReferenceException($"[Mod_HandCraftTable] 未找到输出按钮 输出_{i}");
-
-            ItemSlot_UI slotUI = button.GetComponent<ItemSlot_UI>();
-            if (slotUI == null)
-                throw new System.NullReferenceException($"[Mod_HandCraftTable] 输出_{i} 缺少 ItemSlot_UI");
-
-            outputInventory.BindSlotUI(slotUI, i - 1);
+            ItemSlot_UI slotUI = index < slots.Length
+                ? slots[index]
+                : Instantiate(template, content, false);
+            slotUI.name = $"{prefix}_{index + 1}";
+            slotUI.gameObject.SetActive(true);
+            inventory.BindSlotUI(slotUI, index);
         }
+
+        for (int index = count; index < slots.Length; index++)
+            slots[index].gameObject.SetActive(false);
+    }
+
+    /// <summary>仅从正式 Prefab 的槽位内容节点读取布局，不在运行时拼装滚动视图。</summary>
+    private RectTransform FindSlotContent(string contentName)
+    {
+        foreach (RectTransform rect in basePanel.GetComponentsInChildren<RectTransform>(true))
+            if (string.Equals(rect.name, contentName, StringComparison.Ordinal))
+                return rect;
+
+        throw new InvalidOperationException($"[Mod_HandCraftTable] 面板缺少 {contentName}");
+    }
+
+    /// <summary>库存数据先补空格，再同步新增 UI 与输出预览绑定。</summary>
+    private void SyncDynamicSlotUI(Inventory inventory, string prefix, string contentName)
+    {
+        if (basePanel == null || inventory?.Data?.itemSlots == null ||
+            inventory.itemSlot_UI.Count == inventory.Data.itemSlots.Count)
+            return;
+
+        BindSlots(inventory, prefix, contentName);
+        inventory.SyncData();
+        basePanel.RefreshUIComponents();
+        if (ReferenceEquals(inventory, outputInventory))
+            _craftingController?.RefreshOutputSlotBindings();
+    }
+
+    private void OnInputInventoryChanged(ItemSlot _) => SyncDynamicSlotUI(inputInventory, "输入", "输入槽内容");
+    private void OnOutputInventoryChanged(ItemSlot _) => SyncDynamicSlotUI(outputInventory, "输出", "输出槽内容");
+
+    /// <summary>存档恢复可能替换库存数据引用，因此订阅始终跟随当前数据实例。</summary>
+    private void BindDynamicSlotEvents()
+    {
+        UnbindDynamicSlotEvents();
+        observedInputData = inputInventory.Data;
+        observedOutputData = outputInventory.Data;
+        observedInputData.Event_OnDataChanged += OnInputInventoryChanged;
+        observedOutputData.Event_OnDataChanged += OnOutputInventoryChanged;
+    }
+
+    private void UnbindDynamicSlotEvents()
+    {
+        if (observedInputData != null)
+            observedInputData.Event_OnDataChanged -= OnInputInventoryChanged;
+        if (observedOutputData != null)
+            observedOutputData.Event_OnDataChanged -= OnOutputInventoryChanged;
+        observedInputData = null;
+        observedOutputData = null;
     }
 
     private Inventory GetPlayerHandInventory()
@@ -386,11 +444,11 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
         if (outputInventory == null || outputInventory.Data == null)
             throw new System.NullReferenceException("[Mod_HandCraftTable] outputInventory 未配置");
 
-        if (inputInventory.Data.itemSlots.Count != InputSlotCount)
-            throw new System.InvalidOperationException($"[Mod_HandCraftTable] 输入槽位必须为 {InputSlotCount} 个");
+        if (inputInventory.Data.itemSlots == null)
+            throw new System.InvalidOperationException("[Mod_HandCraftTable] 输入库存缺少槽位列表");
 
-        if (outputInventory.Data.itemSlots.Count != OutputSlotCount)
-            throw new System.InvalidOperationException($"[Mod_HandCraftTable] 输出槽位必须为 {OutputSlotCount} 个");
+        if (outputInventory.Data.itemSlots == null)
+            throw new System.InvalidOperationException("[Mod_HandCraftTable] 输出库存缺少槽位列表");
     }
 
     public Inventory GetDefaultTargetInventory()
