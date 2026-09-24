@@ -240,6 +240,7 @@ GameObject:
   - component: {fileID: 7214272185260838998}
   - component: {fileID: 8464517787712211967}
   - component: {fileID: 429351819624872123}
+  - component: {fileID: 4386486291132470963}
   m_Layer: 5
   m_Name: UI_MainMenu
   m_TagString: Untagged
@@ -301,6 +302,21 @@ MonoBehaviour:
   PanelName: UI_MainMenu
   isOpen: 0
   blocksGameplayInput: 1
+--- !u!114 &4386486291132470963
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1507728778053711830}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a2daeddc9b6140cbac0969d4d69c35b0, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  brand: {fileID: 2341624107663127809}
+  menuCard: {fileID: 9175485690957600334}
+  settingsButton: {fileID: 3731773910476603439}
 --- !u!1 &1832686358411049556
 GameObject:
   m_ObjectHideFlags: 0
@@ -697,7 +713,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
   m_AnchoredPosition: {x: 76, y: -60}
-  m_SizeDelta: {x: 720, y: 270}
+  m_SizeDelta: {x: 720, y: 190}
   m_Pivot: {x: 0, y: 1}
 --- !u!1 &2780597356654799089
 GameObject:

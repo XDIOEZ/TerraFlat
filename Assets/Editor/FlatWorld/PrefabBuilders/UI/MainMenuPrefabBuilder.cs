@@ -130,6 +130,7 @@ public static class MainMenuPrefabBuilder
             BuildBrand(root.transform, font);
             BuildMenuCard(root.transform, font);
             BuildSettingsButton(root.transform, font);
+            ConfigureResponsiveLayout(root);
 
             EditorUtility.SetDirty(root);
             PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
@@ -233,7 +234,7 @@ public static class MainMenuPrefabBuilder
         brand.anchorMax = new Vector2(0f, 1f);
         brand.pivot = new Vector2(0f, 1f);
         brand.anchoredPosition = new Vector2(76f, -60f);
-        brand.sizeDelta = new Vector2(720f, 270f);
+        brand.sizeDelta = new Vector2(720f, 190f);
 
         TMP_Text shadow = CreateText("标题阴影", brand, "平坦世界", font, 100f, TitleShadow, FontStyles.Bold, TextAlignmentOptions.Left);
         SetRect(shadow.rectTransform, new Vector2(7f, -48f), new Vector2(700f, 122f), new Vector2(0f, 1f));
@@ -342,6 +343,19 @@ public static class MainMenuPrefabBuilder
             FontStyles.Bold,
             TextAlignmentOptions.Center);
         SetRect(arrow.rectTransform, new Vector2(-19f, 0f), new Vector2(24f, 30f), Vector2.one * 0.5f);
+    }
+
+    /// <summary>重建主菜单时保留标题、旅程按钮与设置入口的屏幕适配引用。</summary>
+    private static void ConfigureResponsiveLayout(GameObject root)
+    {
+        MainMenuResponsiveLayout layout = root.GetComponent<MainMenuResponsiveLayout>();
+        if (layout == null)
+            layout = root.AddComponent<MainMenuResponsiveLayout>();
+
+        layout.Configure(
+            RequireComponent<RectTransform>(root, "品牌区"),
+            RequireComponent<RectTransform>(root, "旅程菜单卡"),
+            RequireComponent<RectTransform>(root, GameManager.MainMenuSettingsButtonKey));
     }
 
     private static void CreateMenuButton(

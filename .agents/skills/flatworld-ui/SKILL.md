@@ -136,7 +136,8 @@ description: "Use when: 定位或修改 FlatWorld 的 UIManager、BasePanel、�
 - GM 分页枚举数值由 `ActivePageIndex` 保存；新页追加枚举项，显示顺序由 `BuildTabBar` 决定。页签横向内容宽度由布局计算，禁止恢复手写总宽而截断末尾分页。世界观察层独立于 GM 窗口显隐，关闭窗口只收起操作界面，不能顺带关闭观察层。
 - 宣传片录制模式由 `UIManager` 统一管理：裸 F1 只临时停用全部已加载 `Canvas` 与 `GraphicRaycaster`，必须保存并恢复原 `enabled` 状态，不能通过 Close/ShowAll 改变业务面板开关；录制期间新建 Canvas 要在渲染前继续纳入隐藏。
 - 主菜单控件名集中在 `GameManager.UI.cs`；定向构建 Prefab，避免无关重写。
-- 主菜单仍保留柔焦世界背景和专属排版，但它是全局灰阶主题的视觉源：灰按钮、近白文字、淡金点缀必须与 `FlatWorldUITheme` 保持一致。只换主菜单布局/背景时使用 `MainMenuPrefabBuilder.ApplyReferenceStyle` 原位更新正式 Prefab，不调用清空子节点的完整重建入口。
+- 主菜单仍保留柔焦世界背景和专属排版，但它是全局灰阶主题的视觉源：灰按钮、近白文字、淡金点缀必须与 `FlatWorldUITheme` 保持一致。只换背景或配色时使用 `MainMenuPrefabBuilder.ApplyReferenceStyle` 原位更新正式 Prefab；调整布局时手动修改 `UI_MainMenu.prefab` 并同步 `MainMenuPrefabBuilder`，不调用清空子节点的完整重建入口。
+- 主菜单 `MainMenuResponsiveLayout` 以安全区内面板尺寸和 Prefab 的原始位置为基准，让品牌区、三按钮菜单卡与右上设置入口共同限幅；品牌区矩形只包住标题内容。改动三者尺寸、锚点或基准边距时要同步其引用与布局计算，不能为此修改全局 `CanvasScaler`，用户 UI 缩放默认值会使固定上下锚点布局相交。
 - 玩家行囊 `UI_Bag` 不再使用独立的 Modular Inventory 彩色槽位皮肤；动态槽位直接沿用通用 `UI_Slot.prefab` 的灰阶简约样式，避免同类库存界面出现两套视觉语言。`InventorySlotVisualProfile` 仅保留为未来明确需要局部皮肤时的可选机制，不默认挂载。
 - `SafeAreaRoot` 只约束交互内容；挂在其下的全屏背景使用 `FullScreenRectController` 反向扩展到根 Canvas，背景图用 `AspectRatioFitter.EnvelopeParent` 等比裁切。`CanvasScaler` 不再乘安全区比例，避免与 `SafeAreaRectController` 双重缩小 UI。
 - 固定参考尺寸的主菜单模态卡片如果会因用户 UI 缩放或手机安全区高度不足而越界，应在面板根使用 `SafeAreaScaleGroup` 对卡片及其投影做统一“只缩不放”限幅；不要为了单个模态页去修改全局 `CanvasScaler`，否则 HUD 与其它面板会被连带缩小。
