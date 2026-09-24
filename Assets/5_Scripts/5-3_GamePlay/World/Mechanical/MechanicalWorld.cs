@@ -254,7 +254,8 @@ public static class MechanicalWorld
             int a = vertical ? 1 : 0;
             var first = graph.At(cell + MechanicalNetworkGraph.Directions[a], 0);
             var second = graph.At(cell + MechanicalNetworkGraph.Directions[a + 2], 0);
-            if (first == null || second == null || !first.HasPort(a + 2) || !second.HasPort(a))
+            if (first == null || second == null || !first.CanConnectTo(definition, a + 2) ||
+                !second.CanConnectTo(definition, a))
             { reason = "跨轴器两端需要朝向匹配的下层机械接口"; return false; }
         }
         if (definition.Source == "water" && !HasWaterNeighbor(cell))

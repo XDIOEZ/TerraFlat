@@ -1648,22 +1648,6 @@ MonoBehaviour:
     m_Localized: Windmill
     m_Metadata:
       m_Items: []
-  - m_Id: 15838801115996167
-    m_Localized: Large Water Wheel
-    m_Metadata:
-      m_Items: []
-  - m_Id: 15838801115996168
-    m_Localized: Large Water Wheel
-    m_Metadata:
-      m_Items: []
-  - m_Id: 15838801115996169
-    m_Localized: Large Windmill
-    m_Metadata:
-      m_Items: []
-  - m_Id: 15838801115996170
-    m_Localized: Large Windmill
-    m_Metadata:
-      m_Items: []
   - m_Id: 15838801115996171
     m_Localized: Wooden Shaft
     m_Metadata:

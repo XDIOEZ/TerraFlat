@@ -285,7 +285,10 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/MechanicalWorld/Windmill_Tower.png",
+        "spriteStates": {
+          "rotor": "Assets/6_Art/Generated/MechanicalWorld/Windmill_Rotor.png"
+        }
       },
       "health": {
         "hasHp": true,
@@ -331,7 +334,8 @@
             "Type": 0
           },
           "parameters": {
-            "DefinitionId": "Windmill"
+            "DefinitionId": "Windmill",
+            "RotorLocalPosition": { "x": 0, "y": 1.1953125, "z": 0 }
           }
         }
       }
@@ -352,7 +356,10 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/MechanicalWorld/Windmill_Building.png",
+        "spriteStates": {
+          "rotor": "Assets/6_Art/Generated/MechanicalWorld/Windmill_Rotor.png"
+        }
       },
       "health": {
         "hasHp": true,
@@ -398,275 +405,8 @@
             "Type": 0
           },
           "parameters": {
-            "DefinitionId": "Windmill"
-          }
-        }
-      }
-    },
-    {
-      "id": "LargeWaterWheel",
-      "parent": "BuildingBody_Base",
-      "gameName": "大水车-建筑",
-      "description": "大水车-建筑，用于首版机械动力系统试玩。",
-      "durability": 1,
-      "maxDurability": 1,
-      "amount": 1,
-      "weight": 60,
-      "volume": 90,
-      "stackable": false,
-      "canBePickedUp": false,
-      "tags": [
-        "35"
-      ],
-      "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/ItemPlaceholder/素材占位符.png[素材占位符]"
-      },
-      "health": {
-        "hasHp": true,
-        "hp": 180,
-        "maxHp": 180,
-        "defense": {
-          "cutting": 8,
-          "piercing": 8,
-          "chopping": 8,
-          "blunt": 8
-        },
-        "collider": {
-          "type": "BoxCollider2D",
-          "enabled": true,
-          "isTrigger": true,
-          "offset": {
-            "x": 0,
-            "y": 0
-          },
-          "size": {
-            "x": 1,
-            "y": 1
-          },
-          "edgeRadius": 0
-        }
-      },
-      "modules": {
-        "建筑模块": {
-          "prefab": "Module_Building",
-          "id": "建筑模块",
-          "enabled": true,
-          "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"LargeWaterWheel\",\"SummonerPrefabId\":\"LargeWaterWheel_Summoner\"}",
-            "Type": 0
-          }
-        },
-        "机械动力模块": {
-          "prefab": "Module_MechanicalNode",
-          "id": "机械动力模块",
-          "enabled": true,
-          "data": {
-            "BitData": [],
-            "Type": 0
-          },
-          "parameters": {
-            "DefinitionId": "LargeWaterWheel"
-          }
-        }
-      }
-    },
-    {
-      "id": "LargeWaterWheel_Summoner",
-      "parent": "BuildingSummoner_Base",
-      "gameName": "大水车",
-      "description": "大水车，用于首版机械动力系统试玩。",
-      "durability": 1,
-      "maxDurability": 1,
-      "amount": 1,
-      "weight": 18,
-      "volume": 36,
-      "stackable": false,
-      "canBePickedUp": true,
-      "tags": [
-        "35"
-      ],
-      "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/ItemPlaceholder/素材占位符.png[素材占位符]"
-      },
-      "health": {
-        "hasHp": true,
-        "hp": 180,
-        "maxHp": 180,
-        "defense": {
-          "cutting": 8,
-          "piercing": 8,
-          "chopping": 8,
-          "blunt": 8
-        },
-        "collider": {
-          "type": "BoxCollider2D",
-          "enabled": true,
-          "isTrigger": true,
-          "offset": {
-            "x": 0,
-            "y": 0
-          },
-          "size": {
-            "x": 1,
-            "y": 1
-          },
-          "edgeRadius": 0
-        }
-      },
-      "modules": {
-        "建筑模块": {
-          "prefab": "Module_Building",
-          "id": "建筑模块",
-          "enabled": true,
-          "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"LargeWaterWheel\",\"SummonerPrefabId\":\"LargeWaterWheel_Summoner\"}",
-            "Type": 0
-          }
-        },
-        "机械动力模块": {
-          "prefab": "Module_MechanicalNode",
-          "id": "机械动力模块",
-          "enabled": true,
-          "data": {
-            "BitData": [],
-            "Type": 0
-          },
-          "parameters": {
-            "DefinitionId": "LargeWaterWheel"
-          }
-        }
-      }
-    },
-    {
-      "id": "LargeWindmill",
-      "parent": "BuildingBody_Base",
-      "gameName": "大风车-建筑",
-      "description": "大风车-建筑，用于首版机械动力系统试玩。",
-      "durability": 1,
-      "maxDurability": 1,
-      "amount": 1,
-      "weight": 60,
-      "volume": 90,
-      "stackable": false,
-      "canBePickedUp": false,
-      "tags": [
-        "35"
-      ],
-      "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/ItemPlaceholder/素材占位符.png[素材占位符]"
-      },
-      "health": {
-        "hasHp": true,
-        "hp": 180,
-        "maxHp": 180,
-        "defense": {
-          "cutting": 8,
-          "piercing": 8,
-          "chopping": 8,
-          "blunt": 8
-        },
-        "collider": {
-          "type": "BoxCollider2D",
-          "enabled": true,
-          "isTrigger": true,
-          "offset": {
-            "x": 0,
-            "y": 0
-          },
-          "size": {
-            "x": 1,
-            "y": 1
-          },
-          "edgeRadius": 0
-        }
-      },
-      "modules": {
-        "建筑模块": {
-          "prefab": "Module_Building",
-          "id": "建筑模块",
-          "enabled": true,
-          "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"LargeWindmill\",\"SummonerPrefabId\":\"LargeWindmill_Summoner\"}",
-            "Type": 0
-          }
-        },
-        "机械动力模块": {
-          "prefab": "Module_MechanicalNode",
-          "id": "机械动力模块",
-          "enabled": true,
-          "data": {
-            "BitData": [],
-            "Type": 0
-          },
-          "parameters": {
-            "DefinitionId": "LargeWindmill"
-          }
-        }
-      }
-    },
-    {
-      "id": "LargeWindmill_Summoner",
-      "parent": "BuildingSummoner_Base",
-      "gameName": "大风车",
-      "description": "大风车，用于首版机械动力系统试玩。",
-      "durability": 1,
-      "maxDurability": 1,
-      "amount": 1,
-      "weight": 18,
-      "volume": 36,
-      "stackable": false,
-      "canBePickedUp": true,
-      "tags": [
-        "35"
-      ],
-      "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/ItemPlaceholder/素材占位符.png[素材占位符]"
-      },
-      "health": {
-        "hasHp": true,
-        "hp": 180,
-        "maxHp": 180,
-        "defense": {
-          "cutting": 8,
-          "piercing": 8,
-          "chopping": 8,
-          "blunt": 8
-        },
-        "collider": {
-          "type": "BoxCollider2D",
-          "enabled": true,
-          "isTrigger": true,
-          "offset": {
-            "x": 0,
-            "y": 0
-          },
-          "size": {
-            "x": 1,
-            "y": 1
-          },
-          "edgeRadius": 0
-        }
-      },
-      "modules": {
-        "建筑模块": {
-          "prefab": "Module_Building",
-          "id": "建筑模块",
-          "enabled": true,
-          "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"LargeWindmill\",\"SummonerPrefabId\":\"LargeWindmill_Summoner\"}",
-            "Type": 0
-          }
-        },
-        "机械动力模块": {
-          "prefab": "Module_MechanicalNode",
-          "id": "机械动力模块",
-          "enabled": true,
-          "data": {
-            "BitData": [],
-            "Type": 0
-          },
-          "parameters": {
-            "DefinitionId": "LargeWindmill"
+            "DefinitionId": "Windmill",
+            "RotorLocalPosition": { "x": 0, "y": 1.1953125, "z": 0 }
           }
         }
       }
@@ -687,7 +427,7 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/MechanicalWorld/Transmission/World_Shaft_Wood.png"
+        "spriteAddress": "Assets/6_Art/Generated/MechanicalWorld/Transmission/World_Shaft_Wood_Linked.png"
       },
       "health": {
         "hasHp": true,
@@ -754,7 +494,7 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/MechanicalWorld/Transmission/World_Shaft_Wood.png"
+        "spriteAddress": "Assets/6_Art/Generated/MechanicalWorld/Transmission/World_Shaft_Wood_Linked.png"
       },
       "health": {
         "hasHp": true,
@@ -809,7 +549,7 @@
       "id": "Gear_Wood",
       "parent": "BuildingBody_Base",
       "gameName": "木制齿轮-建筑",
-      "description": "木制齿轮-建筑，用于首版机械动力系统试玩。",
+      "description": "仅左侧短轴接通传动杆；齿牙可与相邻齿轮啮合。",
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,
@@ -821,7 +561,10 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/MechanicalWorld/Transmission/World_Gear_Wood.png",
+        "spriteStates": {
+          "inputShaft": "Assets/6_Art/Generated/MechanicalWorld/Transmission/World_Gear_Wood_InputShaft.png"
+        }
       },
       "health": {
         "hasHp": true,
@@ -867,7 +610,8 @@
             "Type": 0
           },
           "parameters": {
-            "DefinitionId": "Gear_Wood"
+            "DefinitionId": "Gear_Wood",
+            "InputShaftOffsetX": -0.45
           }
         }
       }
@@ -876,7 +620,7 @@
       "id": "Gear_Wood_Summoner",
       "parent": "BuildingSummoner_Base",
       "gameName": "木制齿轮",
-      "description": "木制齿轮，用于首版机械动力系统试玩。",
+      "description": "放置后仅左侧短轴接通传动杆；齿牙可与相邻齿轮啮合。",
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,
@@ -888,7 +632,10 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/MechanicalWorld/Transmission/World_Gear_Wood.png",
+        "spriteStates": {
+          "inputShaft": "Assets/6_Art/Generated/MechanicalWorld/Transmission/World_Gear_Wood_InputShaft.png"
+        }
       },
       "health": {
         "hasHp": true,
@@ -934,7 +681,8 @@
             "Type": 0
           },
           "parameters": {
-            "DefinitionId": "Gear_Wood"
+            "DefinitionId": "Gear_Wood",
+            "InputShaftOffsetX": -0.45
           }
         }
       }

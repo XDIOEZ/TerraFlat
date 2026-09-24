@@ -143,8 +143,44 @@ MonoBehaviour:
     m_SerializedLabels:
     - ItemMaterial
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 08617ac51d6146a39bd6ad480e8973f1
-    m_Address: Assets/6_Art/Generated/MechanicalWorld/Transmission/World_Shaft_Wood.png
+  - m_GUID: 883137757c43fa349ab6e73e45e36960
+    m_Address: Assets/6_Art/Generated/MechanicalWorld/Transmission/World_Shaft_Wood_Linked.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 91523b89bca33bf4a88f86f63a74ecf1
+    m_Address: Assets/6_Art/Generated/GrassBed/GrassBed.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 9c5b28c80319a2343aa7ba34d9dad9d8
+    m_Address: Assets/6_Art/Generated/MechanicalWorld/Windmill_Building.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 521c7d2ba6f995d48bf33c22d655e409
+    m_Address: Assets/6_Art/Generated/MechanicalWorld/Windmill_Tower.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: cf4ac39fcbea2364fa40a553f3c7ab5e
+    m_Address: Assets/6_Art/Generated/MechanicalWorld/Windmill_Rotor.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 4474f46a23ce4c14696db676ae1b07f6
+    m_Address: Assets/6_Art/Generated/MechanicalWorld/Transmission/World_Gear_Wood.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 2f35489c4a7f9034681593486b0cccab
+    m_Address: Assets/6_Art/Generated/MechanicalWorld/Transmission/World_Gear_Wood_InputShaft.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
@@ -2626,6 +2662,12 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: e2cb4edbc3684c10af988c8359ca0b90
     m_Address: Assets/6_Art/Generated/Clay/Clay_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: ea580b54dbd223a46aecea564b8a90bd
+    m_Address: Assets/6_Art/Generated/Peat/Peat_Icon.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite

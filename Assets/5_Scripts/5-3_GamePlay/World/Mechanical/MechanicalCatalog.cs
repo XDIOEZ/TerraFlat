@@ -109,6 +109,7 @@ public sealed class MechanicalDefinition
     public string Id;
     public string Kind = "shaft"; // shaft/gear/gearbox/clutch/bridge/source/consumer
     public string Ports = "axis"; // axis 为朝向两端，all 为四向
+    public string[] AxlePorts; // 齿轮与非齿轮节点相接的方向；未声明时兼容原有四向连接。
     public string Source = ""; // manual/water/wind 或 MOD 条件
     public string Station = "";
     public float Capacity = 64f; // 整网保守传动容量
@@ -118,6 +119,16 @@ public sealed class MechanicalDefinition
     public float[] Ratios = { 0.5f, 1f, 2f };
     public int Layer => Kind == "bridge" ? 1 : 0;
     public bool Rotatable => Ports == "axis";
+    /// <summary>齿轮轴接头允许的世界方向；齿牙啮合仍由普通端口决定。</summary>
+    public bool HasAxlePort(int direction)
+    {
+        if (AxlePorts == null) return true;
+        string name = direction switch { 0 => "right", 1 => "up", 2 => "left", 3 => "down", _ => null };
+        if (name == null) return false;
+        foreach (string port in AxlePorts)
+            if (string.Equals(port, name, StringComparison.Ordinal)) return true;
+        return false;
+    }
     public void Validate()
     {
         if (string.IsNullOrWhiteSpace(Id) || (Ports != "axis" && Ports != "all") ||
@@ -125,6 +136,10 @@ public sealed class MechanicalDefinition
             Ratios == null || Ratios.Length == 0)
             throw new ArgumentException("机械节点参数无效：" + Id);
         foreach (float ratio in Ratios) if (!Positive(ratio)) throw new ArgumentException("变速比必须为正数。");
+        if (AxlePorts != null)
+            foreach (string port in AxlePorts)
+                if (port != "right" && port != "up" && port != "left" && port != "down")
+                    throw new ArgumentException("齿轮轴接口方向无效：" + Id);
     }
     internal static bool Positive(float value) => value > 0 && !float.IsInfinity(value) && !float.IsNaN(value);
     internal static bool NonNegative(float value) => value >= 0 && !float.IsInfinity(value) && !float.IsNaN(value);

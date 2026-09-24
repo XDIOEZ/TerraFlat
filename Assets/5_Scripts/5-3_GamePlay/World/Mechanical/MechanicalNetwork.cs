@@ -25,6 +25,12 @@ public sealed class MechanicalNode
         if (Definition.Kind == "clutch" && !Engaged) return false;
         return Definition.Ports == "all" || (Vertical ? direction % 2 == 1 : direction % 2 == 0);
     }
+    /// <summary>齿轮与非齿轮节点只经可见轴接头相连；齿轮之间仍按齿牙端口啮合。</summary>
+    public bool CanConnectTo(MechanicalDefinition other, int direction)
+    {
+        if (other == null || !HasPort(direction)) return false;
+        return Definition.Kind != "gear" || other.Kind == "gear" || Definition.HasAxlePort(direction);
+    }
     public float PortRatio(int direction)
     {
         if (Definition.Kind != "gearbox" || direction >= 2) return 1f;
@@ -115,7 +121,8 @@ public sealed class MechanicalNetworkGraph
     private static int CompareNodes(MechanicalNode a, MechanicalNode b) => a.Id.CompareTo(b.Id);
     private static void Link(MechanicalNode from, MechanicalNode to, int direction, MechanicalNetwork network, Queue<MechanicalNode> queue)
     {
-        if (to == null || !to.HasPort((direction + 2) % 4)) return;
+        if (to == null || !from.CanConnectTo(to.Definition, direction) ||
+            !to.CanConnectTo(from.Definition, (direction + 2) % 4)) return;
         float expected = from.SpeedRatio * from.PortRatio(direction) / to.PortRatio((direction + 2) % 4);
         if (!MechanicalDefinition.Positive(expected) || expected > 10000 || expected < 0.0001f)
         { network.RatioConflict = true; expected = 1; }

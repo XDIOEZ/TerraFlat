@@ -72,6 +72,35 @@ public class BuildingShadow : MonoBehaviour
         ApplyVisualState();
     }
 
+    /// <summary>为双层建筑预览补充一个固定图层；重复调用时复用已有对象。</summary>
+    public SpriteRenderer EnsureOverlay(string overlayName, Sprite sprite, Vector3 localPosition, Material material)
+    {
+        if (ShadowRenderer == null || string.IsNullOrWhiteSpace(overlayName) || sprite == null)
+            return null;
+
+        Transform overlayTransform = transform.Find(overlayName);
+        bool created = overlayTransform == null;
+        if (overlayTransform == null)
+        {
+            var overlayObject = new GameObject(overlayName);
+            overlayTransform = overlayObject.transform;
+            overlayTransform.SetParent(transform, false);
+        }
+        overlayTransform.gameObject.layer = gameObject.layer;
+        SpriteRenderer overlay = overlayTransform.GetComponent<SpriteRenderer>();
+        if (overlay == null) overlay = overlayTransform.gameObject.AddComponent<SpriteRenderer>();
+        overlayTransform.localPosition = localPosition;
+        overlay.sprite = sprite;
+        overlay.sharedMaterial = material != null ? material : ShadowRenderer.sharedMaterial;
+        overlay.sortingLayerID = ShadowRenderer.sortingLayerID;
+        overlay.sortingOrder = ShadowRenderer.sortingOrder - 1;
+        overlay.spriteSortPoint = SpriteSortPoint.Pivot;
+        overlay.maskInteraction = ShadowRenderer.maskInteraction;
+        overlay.enabled = true;
+        if (created) ApplyVisualState();
+        return overlay;
+    }
+
     public void UpdateAlpha(float alpha)
     {
         if (ShadowRenderer == null)
@@ -106,6 +135,7 @@ public class BuildingShadow : MonoBehaviour
 
         Color color = isBlocked ? WarringColor : ShadowColor;
         color.a *= visibility;
-        ShadowRenderer.color = color;
+        foreach (SpriteRenderer renderer in GetComponentsInChildren<SpriteRenderer>(true))
+            renderer.color = color;
     }
 }

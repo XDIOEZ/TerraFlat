@@ -1615,22 +1615,6 @@ MonoBehaviour:
     m_Key: item.Windmill_Summoner.name
     m_Metadata:
       m_Items: []
-  - m_Id: 15838801115996167
-    m_Key: item.LargeWaterWheel.name
-    m_Metadata:
-      m_Items: []
-  - m_Id: 15838801115996168
-    m_Key: item.LargeWaterWheel_Summoner.name
-    m_Metadata:
-      m_Items: []
-  - m_Id: 15838801115996169
-    m_Key: item.LargeWindmill.name
-    m_Metadata:
-      m_Items: []
-  - m_Id: 15838801115996170
-    m_Key: item.LargeWindmill_Summoner.name
-    m_Metadata:
-      m_Items: []
   - m_Id: 15838801115996171
     m_Key: item.Shaft_Wood.name
     m_Metadata:

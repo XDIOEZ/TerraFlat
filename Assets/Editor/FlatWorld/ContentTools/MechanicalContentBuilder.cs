@@ -145,8 +145,8 @@ public static class MechanicalContentBuilder
         string path = "Assets/Localization/ItemNames.en.json";
         JObject document = JObject.Parse(File.ReadAllText(path));
         JObject names = (JObject)document["names"];
-        string[] ids = { "HandCrank", "WaterWheel", "Windmill", "LargeWaterWheel", "LargeWindmill", "Shaft_Wood", "Gear_Wood", "Gearbox_Wood", "Clutch", "Shaft_Copper", "Gear_Copper", "Gearbox_Copper", "Shaft_Iron", "Gear_Iron", "Gearbox_Iron", "CrossShaft", "Millstone", "MechanicalBellows", "Sawmill", "MechanicalHammer", "HandDrill" };
-        string[] english = { "Hand Crank", "Water Wheel", "Windmill", "Large Water Wheel", "Large Windmill", "Wooden Shaft", "Wooden Gear", "Wooden Gearbox", "Clutch", "Copper Shaft", "Copper Gear", "Copper Gearbox", "Iron Shaft", "Iron Gear", "Iron Gearbox", "Shaft Bridge", "Millstone", "Mechanical Bellows", "Sawmill", "Mechanical Hammer", "Hand Drill" };
+        string[] ids = { "HandCrank", "WaterWheel", "Windmill", "Shaft_Wood", "Gear_Wood", "Gearbox_Wood", "Clutch", "Shaft_Copper", "Gear_Copper", "Gearbox_Copper", "Shaft_Iron", "Gear_Iron", "Gearbox_Iron", "CrossShaft", "Millstone", "MechanicalBellows", "Sawmill", "MechanicalHammer", "HandDrill" };
+        string[] english = { "Hand Crank", "Water Wheel", "Windmill", "Wooden Shaft", "Wooden Gear", "Wooden Gearbox", "Clutch", "Copper Shaft", "Copper Gear", "Copper Gearbox", "Iron Shaft", "Iron Gear", "Iron Gearbox", "Shaft Bridge", "Millstone", "Mechanical Bellows", "Sawmill", "Mechanical Hammer", "Hand Drill" };
         for (int i = 0; i < ids.Length; i++) { names[ids[i]] = english[i]; names[ids[i] + "_Summoner"] = english[i]; }
         names["DrilledStoneSlab"] = "Drilled Stone Slab"; names["DrilledStone"] = "Drilled Stone";
         File.WriteAllText(path, document.ToString() + "\n", new System.Text.UTF8Encoding(false));
