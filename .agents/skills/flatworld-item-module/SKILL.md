@@ -19,11 +19,12 @@ description: "Use when: 定位或修改 FlatWorld 的 Item/Module 组合架构�
 
 - `Item.RuntimeGeneration` 是每次 Load 更新的运行态代际，不进存档；纯数据战斗 Bridge 将其与持久 UID、world/dimension 一起构成外部身份。对象池复用、读档重载后即使 UID 相同，也不能接收上一代事件；它与 ItemMgr 感知索引自身的注册代际不是同一个生命周期。
 
-- 新建物品尚无正式美术、明确需要占位贴图时，优先复用 `Assets/6_Art/Generated/ItemPlaceholder/素材占位符.png`，禁止借用其他具体物品的贴图充当通用占位。JSON `visual.spriteAddress` 使用 `Assets/6_Art/Generated/ItemPlaceholder/素材占位符.png[素材占位符]`，资源标签为 `ItemSprite`。内容工坊图标留空时由 `ContentWorkshopRepository.ResolveItemIcon` 统一提供预览与保存图标；手选正式素材优先，不能将现有物品的加载错误静默改成占位图。
+- 新建物品尚无正式美术、明确需要占位贴图时，优先复用 `Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png`，禁止借用其他具体物品的贴图充当通用占位。JSON `visual.spriteAddress` 使用 `Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]`，资源标签为 `ItemSprite`。内容工坊图标留空时由 `ContentWorkshopRepository.ResolveItemIcon` 统一提供预览与保存图标；手选正式素材优先，不能将现有物品的加载错误静默改成占位图。
 
 `ItemMaker/ItemMgr → ItemData → ItemMods → ModuleInit/Load → ItemMgr 分级 Tick → Save/Despawn/Pool`
 
 - Module 明确选择 EveryFrame、FixedInterval 或 Disabled；增删模块、配置变化和池复用必须使调度缓存失效。
+- 距离模拟档只限制 `ItemMgr` 驱动的玩法 Tick 频率，不改变模块自身更慢的 FixedInterval；以同场景最近玩家和循环世界最短距离判定，玩家、地图、手持物保持完整更新。`Owner` 不能作为免降频条件，因为在飞投射物也会保留发射者引用。范围外暂停时重置调度时钟，停用根刚体并回调 `ISimulationRangeAware` 模块释放导航运行态；重入时先恢复原 `Rigidbody2D.simulated` 值再重提目标，不能补算休眠期间的 Tick。对象池或模块卸载也须恢复刚体开关；不要把摄像机缩放当模拟距离。
 - 世界内 F5 经 `ItemDefinitionRuntime.RefreshLiveConfiguration` 只更新现有模块的已改变显式参数，以及仍由原定义控制的 Sprite/材质；不替换 ItemData、模块集合或调用 Load。外壳/模块结构变化与删除参数后的 Prefab 默认值由后续新实例应用，不能把旧实例伪装为已完整迁移。
 - 模块通过具名 `ApplyResourceConfiguration` 保留配置对象内部的运行态，通过 `OnResourcesReloaded` 更新派生缓存；禁止用重新 Load 代替配置刷新。生产模块更换规则列表时按产物身份保留累计时间、次数与初始化标记。
 - 原位更新发布时清空闲置物品池，并把现有活跃实例的 `PooledItemMarker.PoolingDisabled` 置为 true；只清闲置池会让旧外壳稍后回池，再污染新定义实例。

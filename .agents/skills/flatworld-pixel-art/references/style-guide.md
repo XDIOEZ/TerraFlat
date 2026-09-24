@@ -4,7 +4,7 @@
 
 从高到低使用以下参考；冲突时服从更高优先级：
 
-1. 与目标同类别、且实际已在游戏中使用的项目素材：这是所有运行时资产的第一参考，优先约束视角、世界尺度、轮廓、像素簇、描边观感、配色、明暗与材质表达。物品优先参考现有物品，工具参考工具，树木参考树木/植被，建筑参考建筑，不得拿跨类别素材强行统一尺寸。
+1. `Assets/6_Art/Generated/<System>/` 中与目标同类别、且实际已在游戏中使用的项目素材：绘制前打开具体贴图查看，优先约束视角、世界尺度、轮廓、像素簇、描边观感、配色、明暗与材质表达。系统目录内不足时再参考项目其他目录的同类别素材；物品参考物品，工具参考工具，树木参考树木/植被，建筑参考建筑，不得拿跨类别素材强行统一尺寸。
 2. `.agents/skills/flatworld-pixel-art/assets/merchant-style-anchor.png`：仅用于角色类素材理解角色比例、服装大形、配色关系与身份配件。
 3. `.agents/skills/flatworld-pixel-art/assets/merchant-game-sprite-anchor.png`：仅用于角色类小尺寸可读性、像素簇和对齐参考，不再作为固定 `16×16` 或统一像素密度的硬约束。
 4. `Assets/6_Art/Characters/Hana Caraka - Base Character sample/idle.png`：玩家的大头短身比例、点眼与底部 Pivot 参考。

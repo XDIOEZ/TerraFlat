@@ -76,7 +76,7 @@ description: "Use when: 定位或修改 FlatWorld 的纯 WorldModel、Chunk 运�
 - `SetLiquidBatch` 要求索引唯一递增，跨 Chunk 先全部写回再 `PublishLiquidBatch`；批次仅发 `LiquidBatchChanged`，不会逐格发 `Changed`。借用的变化索引只能在同步回调内读取；新消费方必须显式订阅批事件。BRG 在帧末合并邻块脏格，Navigation 与植被也消费批事件。
 - 实验流动从外部修改或显式唤醒开始；模拟内部只能在已开放的有限区域传播，不能通过再次扩大区域绕过海洋保护。等待邻区、停用、异常和换世界都必须结束批次并归还租约；存档差量与建筑恢复完成前不能计算流量。四邻格共享松弛预算，并同时限制整格总流入/总流出，避免透支、溢出与棋盘振荡。
 
-- `World/Mechanical/MechanicalWorld` 的模拟权威独立于 `ChunkView`：真实端口连通网络整组唤醒、先全量恢复再 Tick、先全量快照再休眠；不可因可见 Chunk 卸载而删除节点或冻结一半动力源。
+- `World/Mechanical/MechanicalWorld` 的模拟权威独立于 `ChunkView`：真实端口连通网络整组唤醒、先全量恢复再 Tick、先全量快照再休眠；不可因可见 Chunk 卸载而删除节点或冻结一半扭矩源。
 - 机械距离只查询缓存的 Chunk `BoundsInt`，含滞回和冷却；拓扑变化时重算单区块属性和循环世界最短包围跨度。表现层只查询已存在的 ChunkView，不为传动网络申请整条地图加载。
 
 - 只补充可复用的易错点、隐含约束和必要注意事项，不记录近期改动流水账。

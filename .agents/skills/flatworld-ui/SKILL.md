@@ -147,6 +147,7 @@ description: "Use when: 定位或修改 FlatWorld 的 UIManager、BasePanel、�
 - 通用契约位于 `Assets/5_Scripts/5-1_Data/Settings/SettingsContracts.cs`，由 `Data` 程序集提供；它只描述设置元数据和读写能力，不引用 `UnityEngine.UI`、TMP 或具体 Prefab。
 - 功能管理器要出现在设置中时实现 `ISettingsProvider`，按需提供 `ISettingsToggleProvider`、`ISettingsSliderProvider`、`ISettingsDropdownProvider`、`ISettingsSwitchProvider`；四类控件分别对应开关、滑动条、下拉列表和按钮式互斥切换。
 - `ProviderId` 与设置 `Key` 必须稳定且按功能命名；运行时在管理器自身生命周期中通过 `SettingsProviderRegistry.Register/Unregister` 注册，UI 通过 Provider 和 Key 查找，不直接调用管理器的业务字段或 `AudioBus` 等实现细节。
+- 模拟范围是设备级 PlayerPrefs 偏好；三个半径在流送性能页整组提交并校验严格递增，游戏中的 Item 与 AIECS 读取同一配置。页内滑块沿用公共 `UI_SliderControl` Prefab，缩放镜头不得改写模拟距离。
 - `ISettingsDropdown`/`ISettingsSwitch` 的选项使用稳定 `SettingOption.Id`，写入通过 `TrySetSelectedIndex` 返回错误；需要“应用/取消”或自定义输入的页面保留专用 View 状态，最终提交仍调用 Provider，不能把校验逻辑塞回 `BasePanel`。
 - 现有静态偏好类通过 `SettingsProvider` 兼容入口注册；新增实例型系统优先让管理器直接实现接口。Provider 不负责创建 Prefab，正式布局仍由专用 Launcher 和 Prefab 管理。
 - `UI_VisualEffectsSettings` 同时嵌套在游戏内与主菜单设置中；太阳长投影与柔化开关、模糊程度滑块绑定 `SunShadowSettings` Provider，关闭太阳投影必须停止对应渲染工作，柔化关闭只把有效强度置零。地面层级阴影开关和宽度滑块绑定 `GroundElevationShadowSettings` Provider。新增必需控件时同步源 Prefab、控制器和 `RuntimeUIPrefabBuilder.VisualEffects`，并核对两个嵌套使用处的真实引用。

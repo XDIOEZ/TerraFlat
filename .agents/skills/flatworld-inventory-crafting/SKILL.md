@@ -28,6 +28,7 @@ description: "Use when: 定位或修改 FlatWorld 的背包、槽位、快捷栏
 - 内容工坊的普通合成使用不限长度的滚动材料清单，保存为连续的一维输入；载入旧网格配方时按材料身份归并数量，并保留 `amount=0` 的不消耗工具。只有热加工继续使用 3×3 位置画布。保存前必须使用运行时配方工厂校验整份启用目录，并保留已有配方的未知顶层字段。
 - 所有制作入口调用 `CraftingService`；匹配由 `CraftingRecipeMatcher`，扣料/产出由 `CraftingTransaction` 原子提交。
 - `Mod_Mortar` 每次有效加工手势执行一份单原料、多产物配方；加工手势包括“提起后下压到接触线”的捣击，以及石棒贴近碗底累计横移达到配置阈值的研磨步进，两者统一发布同一加工意图。输入与输出共享动态 `Inventory`，统一由 `CraftingService` 原子扣料和写入，禁止整堆改 ID。提交前按全部产物预留空槽；事务优先合并可堆叠产物，剩余原料独立保留。事务通知期间合并刷新，避免槽位变化取消正在拖动的石棒；动态容量策略在 Load 恢复，槽位和内容独立持久化。
+- 储物库存可在序列化 `Inventory` 实例上配置 `StorageMaxWeightKg` 与 `StorageMaxVolumeCubicMeters` 两个正值；`Inventory.InitData` 将立方米按 `LitersPerCubicMeter` 转为库存内部 L 后应用容量策略。`Mod_Inventory.Load` 恢复 `Inventory_Data` 后须重新应用容量策略，动态槽位与物品内容仍由 `Inventory_Data.itemSlots` 持久化。受限非玩家库存的重量/体积 UI 读自身 `Inventory_Data`，玩家行囊继续通过 `PlayerCarryCapacityUtility` 合并统计快捷栏；体积在逻辑与存档中沿用 L，UI 转为 m³ 显示。
 - 石臼面板使用正式透明槽位模板动态克隆，数量增加不等于创建新槽；同类满堆或不同产物才占新格。空槽使用碗内轮廓投料，已有物品的整个槽位随重力移动，确保命中区与图标一致。可见物品分页，关闭面板只复位视觉，不清空库存；父节点失活期间 `OnDisable` 只能清理手势、协程和临时投料表现，禁止调用 `SetSiblingIndex/SetAsLastSibling` 等层级排序，完整槽位布局复位应由层级稳定时的显式开关流程执行。`ItemSlot_UI.ItemAddedAtPointer` 只在点击/拖放事务实际增加物品后发布位置反馈；石臼数量、种类或槽位扩容不能重排已有物品，合并投料只用无射线的图标表现下落，停稳保留落点。透明槽位通过 `ItemSlot_UI.selectionGraphic` 把选择/拖入描边指定到图标，不能对透明背景使用忽略 Alpha 的 Outline，否则会出现整块黄色方形。
 
 - 玩家手工台 `Mod_HandCraftTable` 与世界工作台 `Mod_MakeTable` 均使用 `RecipeType.Crafting`，并通过 `CraftingCapabilities.CompatibleStationIds` 互认 `handcraft`/`workbench` 配方；留空的 `requiredStation` 仍对普通制作入口开放，其它工作站 ID 保持精确匹配，MOD 可声明兼容标识而不按配方 ID 硬编码。世界工作台按相同手工基准的 70% 计算点击次数，取最近整数且至少一次。手工台以 4 输入/2 输出为初始布局，输入和输出均随库存增长并保持末尾空格；世界工作台仍固定 5 输入/2 输出。普通合成匹配器对动态输入读取全部槽位，不设全局材料种类上限；动态输出在制作预检中只扩展事务快照，提交时补真实槽位，失败回滚时清除新增产物。
@@ -112,6 +113,8 @@ description: "Use when: 定位或修改 FlatWorld 的背包、槽位、快捷栏
 
 - `Mod_HandDrill` 使用独立二进制 `MechanicalProcessingState` 与 `UI_HandDrill`；手持/建筑通过 `SharedModuleIds=["手钻模块"]` 迁移同一库存和进度，不再使用 amount=0 工具配方。加工表位于 `Resources/Config/Mechanical/mechanical-catalog.json`，MOD 注册入口为 `MechanicalCatalog.RegisterProcess`。
 - `MechanicalProcessor` 的输入过滤覆盖统一库存转移入口；预览与提交均走 `CraftingService`，输出满时不扣料、不清空已有进度。固定物料转换必须设置 `ApplyDifficultyOutputMultiplier=false`，避免难度增产倍率破坏 1:1 钻孔。
+- 容器禁止放入状态统一保存在 `Inventory_Data.IsDepositBlocked`；物品新增与跨库存转入必须在数据事务入口检查该标识，阻止放入时仍允许取出与同库存整理，自动运输入口也应沿用同一标识。
+- 玩家超重减速由主背包和快捷栏的 `Inventory_Data.Event_OnDataChanged` 事件驱动；库存 `InitData` 绑定、模块卸载解绑，玩家全部模块加载完成后做一次状态校准。不要在 `Mod_Inventory.ModUpdate` 中轮询重量。
 
 - 只补充后续维护可复用的易错点、隐含约束和必要注意事项。
 - 不记录修改日期、近期变更或仅描述本次改动内容的流水账。
