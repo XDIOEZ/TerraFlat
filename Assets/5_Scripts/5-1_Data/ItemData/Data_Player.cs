@@ -45,10 +45,10 @@ public partial class Data_Player : ItemData
     public Dictionary<string, Inventory_Data> _inventoryData = new Dictionary<string, Inventory_Data>();
 
     [Tooltip("玩家总携带重量上限（kg）")]
-    public float MaxCarryWeight = 60f;
+    public float MaxCarryWeight = 100f;
 
     [Tooltip("玩家总携带体积上限（L）")]
-    public float MaxCarryVolume = 90f;
+    public float MaxCarryVolume = 100f;
     #endregion
 
    [ShowNonSerializedField]

@@ -57,6 +57,24 @@
       ]
     },
     {
+      "id": "背包超重",
+      "displayName": "负重过高",
+      "description": "玩家随身物品总重量超过基础上限时，移动速度降低 50%；重量回到上限内后自动解除。",
+      "durationSeconds": null,
+      "effects": [
+        {
+          "phase": "start",
+          "typeId": "core:move_speed_multiplier",
+          "value": 0.5
+        },
+        {
+          "phase": "stop",
+          "typeId": "core:move_speed_multiplier",
+          "value": 2.0
+        }
+      ]
+    },
+    {
       "id": "潮湿",
       "displayName": "潮湿",
       "description": "每秒浸水增加1层，最高10层；水深1/10、2/10、3/10、4/10以上分别最多3、6、9、10层。同层或更弱的燃烧被熄灭，强火会蒸发潮湿。离水后30秒干燥，潮湿期间降温速度翻倍。",

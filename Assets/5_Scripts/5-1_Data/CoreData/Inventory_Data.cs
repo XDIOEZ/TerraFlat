@@ -180,6 +180,10 @@ public partial class Inventory_Data
         var localData = localSlot.itemData;
         var inputData = inputSlotHand.itemData;
 
+        // 禁止放入状态只拦截进入库存的物品；取出已有物品仍然允许。
+        if (IsDepositBlocked && inputData != null)
+            return;
+
         // 情况1：两个都为空
         if (localData == null && inputData == null) return;
 
@@ -505,7 +509,8 @@ public partial class Inventory_Data
     public bool TryAddItem(ItemData inputItemData, bool doAdd, out float addedAmount)
     {
         addedAmount = 0f;
-        if (inputItemData?.Stack == null || inputItemData.Stack.Amount <= 0f) return false;
+        if (IsDepositBlocked || inputItemData?.Stack == null || inputItemData.Stack.Amount <= 0f)
+            return false;
 
         if (inputItemData.Stack.Weight < 0f || inputItemData.Stack.Volume < 0f)
             return false;
@@ -659,6 +664,9 @@ public partial class Inventory_Data
         if (ReferenceEquals(this, targetInventory))
             return TransferItemQuantity(slotFrom, slotTo, upToCount);
 
+        if (targetInventory.IsDepositBlocked)
+            return false;
+
         EnsureRuntimeEvents();
         targetInventory.EnsureRuntimeEvents();
 
@@ -689,6 +697,9 @@ public partial class Inventory_Data
         int upToCount)
     {
         if (slotFrom == null || targetInventory == null || slotTo == null || slotFrom == slotTo || upToCount <= 0)
+            return false;
+
+        if (!ReferenceEquals(this, targetInventory) && targetInventory.IsDepositBlocked)
             return false;
 
         var dataFrom = slotFrom.itemData;
@@ -1095,6 +1106,10 @@ public partial class Inventory_Data
             return float.MaxValue;
         return Mathf.Max(0f, slot.SlotMaxVolume - itemData.Stack.Amount);
     }
+
+    /// <summary>禁止外部向该库存放入物品；供容器与后续运输网络统一判断。保持在序列化成员末尾。</summary>
+    [Tooltip("开启后禁止向该库存放入物品；仍可取出和在库存内部整理。")]
+    public bool IsDepositBlocked;
 
     #endregion
 

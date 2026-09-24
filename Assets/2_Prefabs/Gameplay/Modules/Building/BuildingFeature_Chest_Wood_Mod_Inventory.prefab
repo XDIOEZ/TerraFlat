@@ -66,6 +66,8 @@ MonoBehaviour:
         item: {fileID: 0}
         InventoryPanel_Prefab: {fileID: 5019330763773049737, guid: 6dad61aac020ddd4a802165922117e55, type: 3}
         basePanel: {fileID: 0}
+        StorageMaxWeightKg: 500
+        StorageMaxVolumeCubicMeters: 0.5
         Data:
           Name: "\u80CC\u5305\u6A21\u5757"
           itemSlots:

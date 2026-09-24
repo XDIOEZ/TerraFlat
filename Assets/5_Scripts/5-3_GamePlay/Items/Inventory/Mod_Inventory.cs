@@ -162,6 +162,9 @@ public class Mod_Inventory : Module, IInventory, IInstanceUI, IInteractable
     {
         UnbindInteractionReceiver();
 
+        if (item is Player player)
+            PlayerCarryCapacityUtility.ClearOverweightSlowdown(player);
+
         // 所有 Inventory 都持有所属 Item 与输入监听；卸载开始后立即解除，
         // 防止面板 OnDisable/延迟 UI 回调继续访问已经进入销毁流程的 Player。
         foreach (Inventory currentInventory in InventoryRefDic.Values)
@@ -169,6 +172,7 @@ public class Mod_Inventory : Module, IInventory, IInstanceUI, IInteractable
             if (currentInventory == null)
                 continue;
 
+            currentInventory.UnbindPlayerCarryWeightEvents();
             currentInventory.UnbindController();
             currentInventory.item = null;
         }

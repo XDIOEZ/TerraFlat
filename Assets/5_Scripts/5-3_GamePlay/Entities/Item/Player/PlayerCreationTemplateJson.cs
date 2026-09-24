@@ -54,8 +54,8 @@ public sealed class PlayerCreationTemplateConfig
         [JsonProperty("initialStamina")] public float InitialStamina = 100f;
         [JsonProperty("maxStamina")] public float MaxStamina = 100f;
         [JsonProperty("staminaRecoverySpeed")] public float StaminaRecoverySpeed = 10f;
-        [JsonProperty("maxCarryWeight")] public float MaxCarryWeight = 60f;
-        [JsonProperty("maxCarryVolume")] public float MaxCarryVolume = 90f;
+        [JsonProperty("maxCarryWeight")] public float MaxCarryWeight = 100f;
+        [JsonProperty("maxCarryVolume")] public float MaxCarryVolume = 100f;
     }
 
     [Serializable]

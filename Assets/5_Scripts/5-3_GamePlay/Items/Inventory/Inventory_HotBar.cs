@@ -235,6 +235,12 @@ public class Inventory_HotBar : Module, IInventory, IRemoteNetworkModule
             item.itemData.ModuleDataDic[_Data.Name] = ModSaveData;
     }
 
+    /// <summary>快捷栏模块卸载时解除背包重量事件监听。</summary>
+    public override void Unload()
+    {
+        RuntimeInventory?.UnbindPlayerCarryWeightEvents();
+    }
+
     public override void ApplyNetworkData(ModuleData data)
     {
         if (data is not Ex_ModData_MemoryPackable networkData)
@@ -295,6 +301,7 @@ public class Inventory_HotBar : Module, IInventory, IRemoteNetworkModule
     {
         UIUserSettings.HotbarLayoutChanged -= HandleHotbarLayoutChanged;
         UnbindHotbarInput();
+        RuntimeInventory?.UnbindPlayerCarryWeightEvents();
         RuntimeInventory?.UnbindController();
         HeldItemChanged?.Invoke(null);
         HeldItemChanged = null;

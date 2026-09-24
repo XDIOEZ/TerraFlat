@@ -11,11 +11,17 @@ public partial class Inventory_Data
     /// <summary>普通库存单格默认最多 100 件；字段名沿用旧 SlotMaxVolume 以避免破坏现有 Prefab。</summary>
     public const float DefaultSlotVolume = 100f;
 
+    /// <summary>一立方米对应的升数；物品库存内部体积单位为 L。</summary>
+    public const float LitersPerCubicMeter = 1000f;
+
     /// <summary>玩家普通主背包的基础重量上限，单位 kg。</summary>
-    public const float DefaultPlayerBagMaxWeight = 60f;
+    public const float DefaultPlayerBagMaxWeight = 100f;
 
     /// <summary>玩家普通主背包的基础体积上限，单位 L。</summary>
-    public const float DefaultPlayerBagMaxVolume = 90f;
+    public const float DefaultPlayerBagMaxVolume = 100f;
+
+    /// <summary>玩家背包重量可超过常规上限的比例；体积上限不允许超出，储物容器不使用该宽限。</summary>
+    public const float PlayerBagCarryOverageMultiplier = 1.5f;
 
     /// <summary>玩家主背包的基础槽位数；自动收缩时不会低于该数量。</summary>
     public const int DefaultPlayerBagSlotCount = 27;
@@ -48,6 +54,14 @@ public partial class Inventory_Data
     [MemoryPackIgnore, FastClonerIgnore, JsonIgnore]
     public float MaxCarryVolume { get; private set; } = float.PositiveInfinity;
 
+    /// <summary>考虑玩家额外承载宽限后的重量硬上限。</summary>
+    [MemoryPackIgnore, FastClonerIgnore, JsonIgnore]
+    public float MaxAllowedCarryWeight => MaxCarryWeight * CarryCapacityOverageMultiplier;
+
+    /// <summary>仅玩家随身库存使用额外承载宽限；普通容器保持配置上限。</summary>
+    [MemoryPackIgnore, FastClonerIgnore, JsonIgnore]
+    private float CarryCapacityOverageMultiplier { get; set; } = 1f;
+
     /// <summary>只有玩家主背包启用“27 格基线 + 3 个预留空格”的动态收缩策略。</summary>
     [MemoryPackIgnore, FastClonerIgnore, JsonIgnore]
     private bool UsesPlayerBagDynamicSlotPolicy { get; set; }
@@ -60,12 +74,23 @@ public partial class Inventory_Data
     [MemoryPackIgnore, FastClonerIgnore, JsonIgnore]
     public float CurrentCarryVolume => CalculateCarryVolume();
 
-    /// <summary>配置普通玩家主背包：格子自动扩容、可堆叠物单格无限，但总携带量受重量与体积双上限约束。</summary>
+    /// <summary>配置普通玩家主背包：格子自动扩容、可堆叠物单格无限；重量允许有限超载，体积严格受限。</summary>
     public void ConfigurePlayerBagCapacity(float maxWeight, float maxVolume)
     {
         UsesPlayerBagDynamicSlotPolicy = true;
+        CarryCapacityOverageMultiplier = PlayerBagCarryOverageMultiplier;
         SetUnlimitedSlots(true);
         SetUnlimitedStackSize(true);
+        SetCarryCapacity(maxWeight, maxVolume);
+    }
+
+    /// <summary>配置储物容器：重量上限使用 kg、体积上限使用 L；槽位按需增长，单格遵守普通堆叠规则。</summary>
+    public void ConfigureStorageContainerCapacity(float maxWeight, float maxVolume)
+    {
+        UsesPlayerBagDynamicSlotPolicy = false;
+        CarryCapacityOverageMultiplier = 1f;
+        SetUnlimitedSlots(true);
+        SetUnlimitedStackSize(false);
         SetCarryCapacity(maxWeight, maxVolume);
     }
 
@@ -74,6 +99,7 @@ public partial class Inventory_Data
     {
         HasCarryCapacity = false;
         HasUnlimitedCarryCapacity = false;
+        CarryCapacityOverageMultiplier = 1f;
         MaxCarryWeight = float.PositiveInfinity;
         MaxCarryVolume = float.PositiveInfinity;
     }
@@ -241,7 +267,7 @@ public partial class Inventory_Data
         float unitVolume = Mathf.Max(0f, itemData.Stack.Volume);
         float weightAmount = unitWeight <= 0.0001f
             ? float.PositiveInfinity
-            : Mathf.Max(0f, MaxCarryWeight - currentWeight) / unitWeight;
+            : Mathf.Max(0f, MaxAllowedCarryWeight - currentWeight) / unitWeight;
         float volumeAmount = unitVolume <= 0.0001f
             ? float.PositiveInfinity
             : Mathf.Max(0f, MaxCarryVolume - currentVolume) / unitVolume;
@@ -259,12 +285,16 @@ public partial class Inventory_Data
     /// <summary>跨库存交换前检查移出旧堆并放入新堆后的总容量是否仍合法。</summary>
     public bool CanReplaceItem(ItemData removing, ItemData adding)
     {
+        if (IsDepositBlocked && adding != null)
+            return false;
+
         if (!HasCarryCapacity || HasUnlimitedCarryCapacity)
             return true;
 
         float weight = CalculateCarryWeight() - GetWeight(removing) + GetWeight(adding);
         float volume = CalculateCarryVolume() - GetVolume(removing) + GetVolume(adding);
-        return weight <= MaxCarryWeight + 0.0001f && volume <= MaxCarryVolume + 0.0001f;
+        return weight <= MaxAllowedCarryWeight + 0.0001f &&
+               volume <= MaxCarryVolume + 0.0001f;
     }
 
     private float CalculateCarryWeight()

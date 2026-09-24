@@ -133,6 +133,14 @@ public class Inventory
     [FoldoutGroup("数据"), LabelText("默认交互库存")]
     public Inventory DefaultTarget_Inventory;
 
+    [FoldoutGroup("数据"), LabelText("容器质量上限 (kg)"), MinValue(0f),
+     Tooltip("与容器体积上限都大于 0 时启用容量限制；0 表示未配置。")]
+    public float StorageMaxWeightKg; // 储物容器可存放物品的总质量上限。
+
+    [FoldoutGroup("数据"), LabelText("容器体积上限 (m³)"), MinValue(0f),
+     Tooltip("按立方米配置；运行时会转换为库存内部使用的升。")]
+    public float StorageMaxVolumeCubicMeters; // 储物容器可存放物品的总体积上限。
+
     [FoldoutGroup("数据"), ShowInInspector, ReadOnly, LabelText("UI开关按键"), Tooltip("UI面板开关Action名称，对应InputSystem中的Action Name")]
     public string ToggleActionName => Data?.ToggleActionName;
 
@@ -145,10 +153,11 @@ public class Inventory
     GameObject ItemSlot_Prefab;
     Transform ItemSlot_Parent;
 
-    // 玩家行囊容量显示；正式节点由 UI_Bag Prefab 提供，运行时只更新数值。
+    // 玩家行囊或受限容器的容量显示节点；正式节点由 UI_Bag Prefab 提供。
     private TextMeshProUGUI _carryWeightValueText;
     private TextMeshProUGUI _carryVolumeValueText;
     private Inventory_Data _linkedCarryUsageData;
+    private Inventory_Data _overweightObservedData; // 当前绑定超重监听的数据源，用于安全解绑旧引用。
 
     // 输入绑定缓存，便于之后解除绑定
     private GameController _boundController;
@@ -540,6 +549,17 @@ public class Inventory
             Data.ConfigurePlayerBagCapacity(
                 player.Data?.MaxCarryWeight ?? Inventory_Data.DefaultPlayerBagMaxWeight,
                 player.Data?.MaxCarryVolume ?? Inventory_Data.DefaultPlayerBagMaxVolume);
+        else if (StorageMaxWeightKg > 0f &&
+                 StorageMaxVolumeCubicMeters > 0f &&
+                 !float.IsNaN(StorageMaxWeightKg) &&
+                 !float.IsInfinity(StorageMaxWeightKg) &&
+                 !float.IsNaN(StorageMaxVolumeCubicMeters) &&
+                 !float.IsInfinity(StorageMaxVolumeCubicMeters))
+        {
+            Data.ConfigureStorageContainerCapacity(
+                StorageMaxWeightKg,
+                StorageMaxVolumeCubicMeters * Inventory_Data.LitersPerCubicMeter);
+        }
         else
         {
             // 玩家手部槽与快捷栏只是主背包物品的临时/快捷承载入口，
@@ -569,6 +589,8 @@ public class Inventory
         Data.Event_RefreshUI = new();
         Data.Event_RefreshUI.Clear();
         Data.Event_RefreshUI += RefreshUI;
+
+        BindPlayerCarryWeightEvents();
     }
 
     /// <summary>
@@ -921,14 +943,50 @@ public class Inventory
         RefreshCarryCapacityUI();
     }
 
-    #region 玩家行囊容量显示
+    #region 玩家背包超重事件
 
-    /// <summary>绑定正式 UI_Bag Footer 中的重量/体积数值节点，并监听快捷栏占用变化。</summary>
+    /// <summary>主背包和快捷栏通过库存数据事件维护超重减速，不依赖库存 Tick 轮询。</summary>
+    private void BindPlayerCarryWeightEvents()
+    {
+        UnbindPlayerCarryWeightEvents();
+        if (item is not Player player || Data == null ||
+            (!IsPlayerBagInventory() && this is not Inventory_HotBar.HotBarRuntimeInventory))
+            return;
+
+        _overweightObservedData = Data;
+        _overweightObservedData.Event_OnDataChanged += HandlePlayerCarryWeightDataChanged;
+
+        // 重载或网络恢复可能直接替换整份库存数据，没有逐槽位变更事件；绑定时做一次状态校准。
+        PlayerCarryCapacityUtility.RefreshOverweightSlowdown(player);
+    }
+
+    /// <summary>库存或所属物品卸载时解除超重监听，避免保留旧玩家引用。</summary>
+    public void UnbindPlayerCarryWeightEvents()
+    {
+        if (_overweightObservedData == null)
+            return;
+
+        _overweightObservedData.Event_OnDataChanged -= HandlePlayerCarryWeightDataChanged;
+        _overweightObservedData = null;
+    }
+
+    /// <summary>背包物品输入、输出或数量变化后，按玩家当前随身总重量更新超重状态。</summary>
+    private void HandlePlayerCarryWeightDataChanged(ItemSlot _)
+    {
+        if (item is Player player)
+            PlayerCarryCapacityUtility.RefreshOverweightSlowdown(player);
+    }
+
+    #endregion
+
+    #region 库存重量与体积容量显示
+
+    /// <summary>绑定库存面板中的重量/体积数值节点；玩家行囊额外监听快捷栏占用变化。</summary>
     private void BindCarryCapacityUI()
     {
         _carryWeightValueText = null;
         _carryVolumeValueText = null;
-        if (!IsPlayerBagInventory() || basePanel == null)
+        if ((!IsPlayerBagInventory() && Data?.HasCarryCapacity != true) || basePanel == null)
             return;
 
         basePanel.TryGetText("FWUI_CarryWeightValue", out _carryWeightValueText);
@@ -974,24 +1032,45 @@ public class Inventory
         RefreshCarryCapacityUI();
     }
 
-    /// <summary>刷新“当前 / 上限”的玩家随身重量与体积；创造背包使用 ASCII INF 显示无上限，避免 TMP 字体缺少无穷符号。</summary>
+    /// <summary>刷新“当前 / 上限”的重量与体积；玩家行囊显示合并快捷栏后的值，容器显示自身库存值。</summary>
     private void RefreshCarryCapacityUI()
     {
-        if ((_carryWeightValueText == null && _carryVolumeValueText == null) ||
-            item == null ||
-            item is not Player player ||
-            !PlayerCarryCapacityUtility.TryGetSnapshot(player, out PlayerCarryCapacitySnapshot snapshot))
+        if (_carryWeightValueText == null && _carryVolumeValueText == null)
         {
             return;
         }
 
-        string maxWeight = snapshot.IsUnlimited ? "INF" : snapshot.MaxWeight.ToString("0.##");
-        string maxVolume = snapshot.IsUnlimited ? "INF" : snapshot.MaxVolume.ToString("0.##");
+        float currentWeight;
+        float currentVolume;
+        string maxWeight;
+        string maxVolume;
+
+        if (IsPlayerBagInventory() && item is Player player &&
+            PlayerCarryCapacityUtility.TryGetSnapshot(player, out PlayerCarryCapacitySnapshot snapshot))
+        {
+            currentWeight = snapshot.CurrentWeight;
+            currentVolume = snapshot.CurrentVolume / Inventory_Data.LitersPerCubicMeter;
+            maxWeight = snapshot.IsUnlimited ? "INF" : snapshot.MaxWeight.ToString("0.##");
+            maxVolume = snapshot.IsUnlimited
+                ? "INF"
+                : (snapshot.MaxVolume / Inventory_Data.LitersPerCubicMeter).ToString("0.######");
+        }
+        else if (Data?.HasCarryCapacity == true)
+        {
+            currentWeight = Data.CurrentCarryWeight;
+            currentVolume = Data.CurrentCarryVolume / Inventory_Data.LitersPerCubicMeter;
+            maxWeight = Data.MaxCarryWeight.ToString("0.##");
+            maxVolume = (Data.MaxCarryVolume / Inventory_Data.LitersPerCubicMeter).ToString("0.######");
+        }
+        else
+        {
+            return;
+        }
 
         if (_carryWeightValueText != null)
-            _carryWeightValueText.text = $"{snapshot.CurrentWeight:0.##} / {maxWeight} kg";
+            _carryWeightValueText.text = $"{currentWeight:0.##} / {maxWeight} kg";
         if (_carryVolumeValueText != null)
-            _carryVolumeValueText.text = $"{snapshot.CurrentVolume:0.##} / {maxVolume} L";
+            _carryVolumeValueText.text = $"{currentVolume:0.######} / {maxVolume} m³";
     }
 
     #endregion
@@ -1288,6 +1367,9 @@ public class Inventory
         if (!IsCurrentDragSource(sourceSlot, draggedItem) ||
             !IsValidQuickTransferTarget(targetInventory) ||
             targetIndex < 0 || targetIndex >= targetInventory.Data.itemSlots.Count)
+            return false;
+
+        if (!ReferenceEquals(this, targetInventory) && targetInventory.Data.IsDepositBlocked)
             return false;
 
         targetIndex = targetInventory.ResolveIncomingSlotIndex(sourceSlot, targetIndex);
@@ -1694,6 +1776,9 @@ public class Inventory
         ItemSlot targetSlot,
         int transferCount)
     {
+        if (!ReferenceEquals(this, targetInventory) && targetInventory?.Data?.IsDepositBlocked == true)
+            return false;
+
         if (!targetInventory.CanAcceptQuickTransfer(sourceSlot, targetSlot))
             return false;
 
@@ -1712,6 +1797,10 @@ public class Inventory
     {
         ItemData sourceItem = sourceSlot?.itemData;
         if (sourceItem == null || targetSlot == null)
+            return false;
+
+        if (Data?.IsDepositBlocked == true &&
+            (Data.itemSlots == null || !Data.itemSlots.Contains(sourceSlot)))
             return false;
 
         if (targetSlot.CanAcceptTags == null || targetSlot.CanAcceptTags.Count == 0)

@@ -790,8 +790,8 @@ MonoBehaviour:
     stamina: 100
     staminaMax: 100
     staminaRecoverySpeed: 10
-    MaxCarryWeight: 60
-    MaxCarryVolume: 90
+    MaxCarryWeight: 100
+    MaxCarryVolume: 100
     Name_User: "\u7BA1\u7406\u5458"
     PlayerPov: 10
     PerceptionRadiusMultiplier: 1

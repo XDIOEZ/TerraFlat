@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -22,8 +21,10 @@ public readonly struct PlayerCarryCapacitySnapshot
     public float CurrentVolume { get; }
     public float MaxWeight => BagData?.MaxCarryWeight ?? float.PositiveInfinity;
     public float MaxVolume => BagData?.MaxCarryVolume ?? float.PositiveInfinity;
+    public float MaxAllowedWeight => BagData?.MaxAllowedCarryWeight ?? float.PositiveInfinity;
     public bool HasLimit => BagData != null && BagData.HasCarryCapacity;
     public bool IsUnlimited => !HasLimit || BagData.HasUnlimitedCarryCapacity;
+    public bool IsOverNormalWeight => !IsUnlimited && CurrentWeight > MaxWeight + 0.0001f;
 
     /// <summary>按主背包上限和全部随身库存当前占用计算本次最多还能新增多少件。</summary>
     public float GetCapacityLimitedAmount(ItemData itemData, float requestedAmount)
@@ -45,7 +46,7 @@ public readonly struct PlayerCarryCapacitySnapshot
             return false;
 
         float unitWeight = Mathf.Max(0f, itemData.Stack.Weight);
-        return unitWeight > 0.0001f && CurrentWeight + unitWeight > MaxWeight + 0.0001f;
+        return unitWeight > 0.0001f && CurrentWeight + unitWeight > MaxAllowedWeight + 0.0001f;
     }
 
     /// <summary>至少再加入一件时是否会先触发体积上限。</summary>
@@ -64,11 +65,14 @@ public readonly struct PlayerCarryCapacitySnapshot
 /// </summary>
 public static class PlayerCarryCapacityUtility
 {
+    private const string OverweightBuffId = "背包超重";
+    private const string OverweightBuffSource = "inventory.overweight";
+
     /// <summary>读取玩家当前随身重量、体积和主背包上限。</summary>
     public static bool TryGetSnapshot(Player player, out PlayerCarryCapacitySnapshot snapshot)
     {
         snapshot = default;
-        if (player?.itemMods == null)
+        if (player == null || player.itemMods == null)
             return false;
 
         Mod_Inventory bagModule = player.itemMods.GetMod_ByID<Mod_Inventory>(ModText.Bag);
@@ -77,28 +81,48 @@ public static class PlayerCarryCapacityUtility
         if (bagData == null)
             return false;
 
-        float totalWeight = 0f;
-        float totalVolume = 0f;
-        var counted = new HashSet<Inventory_Data>();
-        AddInventoryUsage(bagData, counted, ref totalWeight, ref totalVolume);
+        float totalWeight = bagData.CurrentCarryWeight;
+        float totalVolume = bagData.CurrentCarryVolume;
 
         Inventory_HotBar hotbarModule = player.itemMods.GetMod_ByID<Inventory_HotBar>(ModText.Hotbar);
-        AddInventoryUsage(hotbarModule?.RuntimeInventory?.Data, counted, ref totalWeight, ref totalVolume);
+        Inventory_Data hotbarData = hotbarModule?.RuntimeInventory?.Data;
+        if (hotbarData != null && !ReferenceEquals(hotbarData, bagData))
+        {
+            totalWeight += hotbarData.CurrentCarryWeight;
+            totalVolume += hotbarData.CurrentCarryVolume;
+        }
 
         snapshot = new PlayerCarryCapacitySnapshot(bagData, totalWeight, totalVolume);
         return true;
     }
 
-    private static void AddInventoryUsage(
-        Inventory_Data data,
-        ISet<Inventory_Data> counted,
-        ref float totalWeight,
-        ref float totalVolume)
+    /// <summary>依据玩家背包与快捷栏总重量维护来源型超重 Buff；体积超限不触发减速。</summary>
+    public static void RefreshOverweightSlowdown(Player player)
     {
-        if (data == null || counted == null || !counted.Add(data))
+        if (player == null || player.itemMods == null)
             return;
 
-        totalWeight += data.CurrentCarryWeight;
-        totalVolume += data.CurrentCarryVolume;
+        BuffManager buffManager = player.itemMods.GetMod_ByID<BuffManager>(ModText.BuffManager);
+        if (buffManager == null)
+            return;
+
+        if (TryGetSnapshot(player, out PlayerCarryCapacitySnapshot snapshot) &&
+            snapshot.IsOverNormalWeight)
+        {
+            buffManager.EnsureSourceBuff(OverweightBuffId, OverweightBuffSource);
+            return;
+        }
+
+        buffManager.RemoveSourceBuff(OverweightBuffSource);
+    }
+
+    /// <summary>玩家背包模块卸载时清除本库存来源的超重减速。</summary>
+    public static void ClearOverweightSlowdown(Player player)
+    {
+        if (player == null || player.itemMods == null)
+            return;
+
+        BuffManager buffManager = player.itemMods.GetMod_ByID<BuffManager>(ModText.BuffManager);
+        buffManager?.RemoveSourceBuff(OverweightBuffSource);
     }
 }
