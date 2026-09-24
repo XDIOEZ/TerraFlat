@@ -38,6 +38,13 @@ public interface IItemModuleDependencyBinder
     void BindModuleDependencies(ItemMods modules);
 }
 
+/// <summary>世界 Item 越出或重入模拟范围时的模块回调；供导航等运行态释放与恢复。</summary>
+public interface ISimulationRangeAware
+{
+    void OnSimulationRangePaused();
+    void OnSimulationRangeResumed();
+}
+
 /// <summary>接收同一物品上的通用燃烧状态；光源、命中效果等可按需响应，不反向依赖具体物品类型。</summary>
 public interface ICombustionStateReceiver
 {

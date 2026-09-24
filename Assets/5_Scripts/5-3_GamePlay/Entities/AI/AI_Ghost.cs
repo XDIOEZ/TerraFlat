@@ -25,7 +25,7 @@ public partial class GhostAISaveData
 /// 幽灵自身所在位置的亮度严格大于 0.5 时持续添加“光耀” Buff，亮度小于等于 0.5 时移除；视觉子节点以低幅度正弦曲线上下浮动，
 /// 浮动只作用于 Sprite，不改变根物体、碰撞体、寻路位置和伤害判定。
 /// </summary>
-public class AI_Ghost : Module, IAIActor
+public class AI_Ghost : Module, IAIActor, ISimulationRangeAware
 {
     private const string ModuleId = "AI_Ghost";
     private const string RadianceBuffId = "光耀";
@@ -347,6 +347,23 @@ public class AI_Ghost : Module, IAIActor
     {
         _pathAgent?.Stop();
     }
+
+    #region 模拟范围休眠
+
+    /// <summary>由 ItemMgr 越界回调撤销旧路径和物理速度。</summary>
+    public void OnSimulationRangePaused()
+    {
+        _pathAgent?.Stop();
+        if (_rigidbody != null) _rigidbody.velocity = Vector2.zero;
+    }
+
+    /// <summary>下一次 ModUpdate 会按当前状态重新提交追击或巡游目标。</summary>
+    public void OnSimulationRangeResumed()
+    {
+        _decisionTimer = 0f;
+    }
+
+    #endregion
 
     #region 玩家目标解析
 

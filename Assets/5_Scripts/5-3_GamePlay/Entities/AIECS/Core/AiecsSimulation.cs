@@ -237,34 +237,41 @@ namespace FlatWorld.AIECS
         private NativeArray<AiecsEngagementClaim> claims;
         private NativeArray<AiecsEngagementSlot> slots;
         private JobHandle pending;
-        public NativeArray<AiecsEngagementSlot> Slots => slots;
+        private int activeCount;
+        public NativeArray<AiecsEngagementSlot> Slots => slots.IsCreated
+            ? slots.GetSubArray(0, activeCount) : default;
 
         public JobHandle Schedule(AiecsJobSchedulerSystem scheduler, EntityQuery query, AiecsSpatialView spatial,
             double time, JobHandle dependency)
         {
             pending.Complete();
             int count = query.CalculateEntityCount();
-            if (!slots.IsCreated || slots.Length != count)
+            if (!slots.IsCreated || slots.Length < count)
             {
                 if (claims.IsCreated) claims.Dispose();
                 if (slots.IsCreated) slots.Dispose();
-                claims = new NativeArray<AiecsEngagementClaim>(count, Allocator.Persistent);
-                slots = new NativeArray<AiecsEngagementSlot>(count, Allocator.Persistent);
+                int capacity = 1;
+                while (capacity < count) capacity *= 2;
+                claims = new NativeArray<AiecsEngagementClaim>(capacity, Allocator.Persistent);
+                slots = new NativeArray<AiecsEngagementSlot>(capacity, Allocator.Persistent);
             }
+            activeCount = count;
             if (count == 0) return dependency;
 
+            NativeArray<AiecsEngagementClaim> currentClaims = claims.GetSubArray(0, count);
+            NativeArray<AiecsEngagementSlot> currentSlots = Slots;
             pending = scheduler.ScheduleParallel(new AiecsGatherEngagementClaimsJob
             {
                 Spatial = spatial,
-                Previous = slots,
-                Claims = claims,
+                Previous = currentSlots,
+                Claims = currentClaims,
                 Time = time
             }, query, dependency);
-            pending = claims.SortJob().Schedule(pending);
+            pending = currentClaims.SortJob().Schedule(pending);
             pending = new AiecsResolveEngagementSlotsJob
             {
-                Claims = claims,
-                Slots = slots,
+                Claims = currentClaims,
+                Slots = currentSlots,
                 MaxSlots = AiecsEngagementSlots.DefaultCount
             }.Schedule(pending);
             return pending;
@@ -289,7 +296,8 @@ namespace FlatWorld.AIECS
         private readonly World world;
         private readonly AiecsJobSchedulerSystem scheduler;
         private readonly EntityArchetype archetype;
-        private readonly EntityQuery query;
+        private readonly EntityQuery allQuery;
+        private readonly EntityQuery activeQuery;
         private readonly AiecsSpatialIndex perceptionSpatial = new AiecsSpatialIndex();
         private readonly AiecsSpatialIndex combatSpatial = new AiecsSpatialIndex();
         private readonly AiecsFlowCrowdScheduler movement = new AiecsFlowCrowdScheduler();
@@ -343,8 +351,15 @@ namespace FlatWorld.AIECS
             var types = new ComponentType[] { typeof(AiecsIdentity), typeof(AiecsBody), typeof(AiecsVital), typeof(AiecsDefense),
                 typeof(AiecsAnatomy), typeof(AiecsBrain), typeof(AiecsBehaviorProposal), typeof(AiecsBehaviorIntent),
                 typeof(AiecsLocalMotion), typeof(AiecsAttackState), typeof(AiecsStatus), typeof(AiecsWorkCounters),
-                typeof(AiecsFlowAgent), typeof(AiecsBuff), typeof(AiecsPeriodicHit) };
-            archetype = Entities.CreateArchetype(types); query = Entities.CreateEntityQuery(types);
+                typeof(AiecsFlowAgent), typeof(AiecsBuff), typeof(AiecsPeriodicHit),
+                typeof(AiecsSimulationPulse) };
+            archetype = Entities.CreateArchetype(types);
+            activeQuery = Entities.CreateEntityQuery(types);
+            allQuery = Entities.CreateEntityQuery(new EntityQueryDesc
+            {
+                All = types,
+                Options = EntityQueryOptions.IgnoreComponentEnabledState
+            });
             definitions = new NativeArray<AiecsDefinition>(actorDefinitions, Allocator.Persistent);
             buffs = new NativeArray<AiecsBuffDefinition>(buffDefinitions, Allocator.Persistent);
             factions = new NativeArray<FixedString128Bytes>(factionIds, Allocator.Persistent);
@@ -395,6 +410,7 @@ namespace FlatWorld.AIECS
                 BehaviorUntil = Clock.Time + definition.IdleSeconds * random.NextFloat(0.2f, 1f), EnteredAt = Clock.Time });
             Entities.SetComponentData(entity, new AiecsFlowAgent { Position = position, Radius = template.Body.Radius,
                 Speed = definition.MoveSpeed, StopDistance = 0.15f, Mode = AiecsMoveMode.Hold });
+            Entities.SetComponentData(entity, new AiecsSimulationPulse { LastTickTime = Clock.Time });
             return entity;
         }
 
@@ -456,10 +472,22 @@ namespace FlatWorld.AIECS
 
         #region 批次执行
         /// <summary>调度完整垂直切片；仅在阶段需要发布/重建空间表或交给 Bridge 时同步。</summary>
-        public void Step(FlowNavigationCache navigation, AiecsLosView los, float deltaTime, double time)
+        public void Step(FlowNavigationCache navigation, AiecsLosView los, float deltaTime, double time,
+            AiecsSimulationRange range = default)
         {
             Complete(); Clock = new CombatClock { Tick = Clock.Tick + 1, Time = time, DeltaTime = deltaTime };
-            int count = query.CalculateEntityCount(); Resize(count);
+            FlowNavigationSnapshot view = navigation.Read();
+            scheduler.ScheduleParallel(new AiecsSelectSimulationPulseJob
+            {
+                Range = range,
+                Domain = view.Domain,
+                Time = time,
+                BaseDeltaTime = deltaTime,
+                Tick = Clock.Tick
+            }, allQuery, default).Complete();
+            int totalCount = allQuery.CalculateEntityCount();
+            int activeCount = activeQuery.CalculateEntityCount();
+            Resize(totalCount);
             inputs.Clear();
             for (int i = pendingInputs.Length - 1; i >= 0; i--)
             {
@@ -467,42 +495,42 @@ namespace FlatWorld.AIECS
                 var input = pendingInputs[i]; input.Context.Clock.Tick = Clock.Tick; input.Context.Clock.DeltaTime = deltaTime;
                 inputs.Add(input); pendingInputs.RemoveAtSwapBack(i);
             }
-            int capacity = math.max(16, count * 2 + inputs.Length);
+            int capacity = math.max(16, activeCount * 2 + inputs.Length);
             if (hits.Capacity < capacity) hits.Capacity = capacity;
             if (results.Capacity < capacity) results.Capacity = capacity;
             if (externalHits.Capacity < capacity) externalHits.Capacity = capacity;
             if (hitRanges.Capacity < capacity) hitRanges.Capacity = capacity;
             results.Clear(); externalHits.Clear(); deaths.Clear();
-            FlowNavigationSnapshot view = navigation.Read();
-            pending = perceptionSpatial.Build(scheduler, query, view.Domain, relations, factions.Length, maximumBodyExtent);
+            pending = perceptionSpatial.Build(scheduler, activeQuery, view.Domain, relations, factions.Length, maximumBodyExtent);
             var frame = new AiecsFrame { Clock = Clock, Spatial = perceptionSpatial.View, Los = los, Navigation = view, Definitions = definitions,
                 Factions = factions, HitEvents = abilityHits.AsParallelWriter() };
             pending = scheduler.ScheduleParallel(new AiecsPerceptionSystem { Definitions = definitions, Spatial = frame.Spatial,
-                Los = los, Time = time, Tick = (uint)Clock.Tick }, query, pending);
+                Los = los, Time = time, Tick = (uint)Clock.Tick }, activeQuery, pending);
             pending = ScheduleStages(AiecsStagePhase.BeforeDecision, frame, pending);
-            pending = engagement.Schedule(scheduler, query, frame.Spatial, time, pending);
+            pending = engagement.Schedule(scheduler, activeQuery, frame.Spatial, time, pending);
             pending = scheduler.ScheduleParallel(new AiecsDecisionSystem { Definitions = definitions, Spatial = frame.Spatial,
-                EngagementSlots = engagement.Slots, Time = time }, query, pending);
+                EngagementSlots = engagement.Slots, Time = time }, activeQuery, pending);
             pending = scheduler.ScheduleParallel(new AiecsBehaviorSystem { Definitions = definitions, Spatial = frame.Spatial,
-                Navigation = view, GroupGoals = goals, EngagementSlots = engagement.Slots, Time = time }, query, pending);
+                Navigation = view, GroupGoals = goals, EngagementSlots = engagement.Slots, Time = time }, activeQuery, pending);
             pending = ScheduleStages(AiecsStagePhase.BeforeMovement, frame, pending);
             perceptionSpatial.RegisterReader(pending); navigation.RegisterReader(pending);
-            pending = movement.Schedule(scheduler, query, navigation, deltaTime,
+            pending = movement.Schedule(scheduler, activeQuery, navigation, deltaTime,
                 neighbourLimit: 12,
                 separationWeight: LocalAvoidanceEnabled ? 1f : 0f,
                 densityWeight: LocalAvoidanceEnabled ? 0.45f : 0f,
                 dependency: pending);
             // 命中必须读取本 Tick 移动后的坐标，不能使用感知开始前的旧目标位置。
             // 使用独立战斗索引沿依赖链异步重建，避免清空感知索引时强制等待整个移动阶段。
-            pending = combatSpatial.Build(scheduler, query, view.Domain, relations, factions.Length, maximumBodyExtent, pending);
+            pending = combatSpatial.Build(scheduler, activeQuery, view.Domain, relations, factions.Length, maximumBodyExtent, pending);
             frame.Spatial = combatSpatial.View;
             pending = ScheduleStages(AiecsStagePhase.BeforeAttack, frame, pending);
             pending = scheduler.ScheduleParallel(new AiecsAttackSystem { Definitions = definitions, Factions = factions,
-                Spatial = frame.Spatial, Los = los, EngagementSlots = engagement.Slots, Clock = Clock, Hits = attacks }, query, pending);
+                Spatial = frame.Spatial, Los = los, EngagementSlots = engagement.Slots, Clock = Clock, Hits = attacks }, activeQuery, pending);
             pending = scheduler.ScheduleParallel(new AiecsBuffSystem { Definitions = buffs, Clock = Clock,
-                HitCounts = periodicCounts }, query, pending);
+                HitCounts = periodicCounts }, activeQuery, pending);
             pending = ScheduleStages(AiecsStagePhase.BeforeSettlement, frame, pending);
-            pending = new AiecsRouteHitsJob { Attacks = attacks, PeriodicCounts = periodicCounts, TotalCount = totalHitCount,
+            pending = new AiecsRouteHitsJob { Attacks = attacks.GetSubArray(0, activeCount),
+                PeriodicCounts = periodicCounts.GetSubArray(0, activeCount), TotalCount = totalHitCount,
                 External = inputs.AsArray(), Abilities = abilityHits, Hits = hits, Ranges = hitRanges }.Schedule(pending);
             // 按实际命中量预留并行输出容量；新增 Buff 不需要给每个 AI 预留最大 Buff 数的事件数组。
             pending.Complete();
@@ -510,11 +538,11 @@ namespace FlatWorld.AIECS
             if (externalHits.Capacity < hits.Length) externalHits.Capacity = hits.Length;
             pending = scheduler.ScheduleParallel(new AiecsDamageSettlementSystem { Hits = hits.AsArray(), Ranges = hitRanges,
                 Factions = factions, Definitions = definitions, BuffDefinitions = buffs, Spatial = frame.Spatial, Difficulty = Difficulty,
-                Results = results.AsParallelWriter(), ExternalHits = externalHits.AsParallelWriter() }, query, pending);
+                Results = results.AsParallelWriter(), ExternalHits = externalHits.AsParallelWriter() }, activeQuery, pending);
             pending = ScheduleStages(AiecsStagePhase.AfterDamage, frame, pending);
-            pending = scheduler.ScheduleParallel(new AiecsDeathSystem { Clock = Clock, Events = deaths.AsParallelWriter() }, query, pending);
+            pending = scheduler.ScheduleParallel(new AiecsDeathSystem { Clock = Clock, Events = deaths.AsParallelWriter() }, activeQuery, pending);
             pending = scheduler.ScheduleParallel(new AiecsCaptureStateJob { Definitions = definitions, Clock = Clock,
-                Display = display, Work = work }, query, pending);
+                Display = display, Work = work }, allQuery, pending);
             pending = new AiecsStatisticsJob { Display = display, Work = work, Statistics = statistics, Groups = groups,
                 Anchors = groupAnchors, Nearest = groupNearest, Navigation = view, Density = density, Domain = view.Domain }.Schedule(pending);
             combatSpatial.RegisterReader(pending); navigation.RegisterReader(pending);
@@ -524,7 +552,7 @@ namespace FlatWorld.AIECS
         /// <summary>依次接入少量能力系统，保留调用方的依赖链。</summary>
         private JobHandle ScheduleStages(AiecsStagePhase phase, AiecsFrame frame, JobHandle dependency)
         {
-            for (int i = 0; i < stages.Count; i++) if (stages[i].Phase == phase) dependency = stages[i].Schedule(Entities, query, frame, dependency);
+            for (int i = 0; i < stages.Count; i++) if (stages[i].Phase == phase) dependency = stages[i].Schedule(Entities, activeQuery, frame, dependency);
             return dependency;
         }
 
@@ -558,7 +586,7 @@ namespace FlatWorld.AIECS
             // Unity.Entities' destroyed query registry. Native resources below are owned by this simulation and still
             // need deterministic cleanup regardless of the World state.
             bool disposeWorld = world != null && world.IsCreated;
-            if (disposeWorld) query.Dispose();
+            if (disposeWorld) { allQuery.Dispose(); activeQuery.Dispose(); }
             definitions.Dispose(); buffs.Dispose(); factions.Dispose(); relations.Dispose(); goals.Dispose();
             groups.Dispose(); groupAnchors.Dispose(); groupNearest.Dispose(); statistics.Dispose(); totalHitCount.Dispose();
             if (attacks.IsCreated) attacks.Dispose(); if (periodicCounts.IsCreated) periodicCounts.Dispose();

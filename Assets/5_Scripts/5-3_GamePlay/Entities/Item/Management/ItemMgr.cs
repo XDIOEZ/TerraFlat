@@ -53,6 +53,7 @@ public partial class ItemMgr : SingletonMono<ItemMgr>
     #region 分级更新调度
 
     private readonly ItemTickScheduler _tickScheduler = new();
+    private readonly List<Transform> _simulationPlayers = new(4);
     private bool _itemTickSuspended;
 
     [ShowInInspector, Sirenix.OdinInspector.ReadOnly] private int EveryFrameItemCount => _tickScheduler.EveryFrameCount;
@@ -231,7 +232,9 @@ public partial class ItemMgr : SingletonMono<ItemMgr>
             return;
         }
 
-        _tickScheduler.Update(RuntimeItems, Time.deltaTime, RefreshRuntimeItemIndexes);
+        RefreshSimulationPlayers();
+        _tickScheduler.Update(RuntimeItems, Time.deltaTime, RefreshRuntimeItemIndexes,
+            _simulationPlayers, WorldTopologyRuntime.GetActiveDomain());
         WorldItemWaterSystem.ProcessPendingSpawnChecks();
         DroppedItemService.Tick(Time.deltaTime);
     }
@@ -252,6 +255,21 @@ public partial class ItemMgr : SingletonMono<ItemMgr>
         return gameManager != null &&
                gameManager.IsInGameWorld &&
                gameManager.IsGameplayReady;
+    }
+
+    /// <summary>复用本帧活动玩家引用；按最近玩家位置选择实体距离档。</summary>
+    private void RefreshSimulationPlayers()
+    {
+        _simulationPlayers.Clear();
+        foreach (Player player in Player_DIC.Values)
+        {
+            if (player != null && player.gameObject.activeInHierarchy &&
+                !_simulationPlayers.Contains(player.transform))
+                _simulationPlayers.Add(player.transform);
+        }
+
+        if (_simulationPlayers.Count == 0 && UserPlayerTransform != null)
+            _simulationPlayers.Add(UserPlayerTransform);
     }
 
     #endregion

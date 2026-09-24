@@ -18,6 +18,9 @@ public partial class Map : Item
 
     public Data_TileMap Data => data;
 
+    /// <summary>地图作为世界管理实体始终运行，区块生命周期独立于距离档。</summary>
+    public override bool ShouldUseSimulationRange() => false;
+
     [Header("Tilemap 组件")]
     [SerializeField]
     public Tilemap tileMap;

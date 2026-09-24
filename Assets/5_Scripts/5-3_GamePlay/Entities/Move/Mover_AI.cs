@@ -4,7 +4,7 @@ using UnityEngine;
 /// <summary>
 /// AI 公共移动模块。对上层保持原有目标、停止和到达接口，内部使用无限地图导航。
 /// </summary>
-public class Mover_AI : Mover
+public class Mover_AI : Mover, ISimulationRangeAware
 {
     private const float MinimumDestinationChangeDistance = 0.5f;
 
@@ -159,6 +159,26 @@ public class Mover_AI : Mover
         HasReachedTarget = true;
         NavigationAgent?.Stop();
     }
+
+    #region 模拟范围休眠
+
+    /// <summary>由 ItemMgr 越界回调取消寻路与残余速度，保留原移动意图。</summary>
+    public void OnSimulationRangePaused()
+    {
+        NavigationAgent?.Stop();
+        if (rb != null) rb.velocity = Vector2.zero;
+    }
+
+    /// <summary>重入范围后按旧目标重新申请路径，不补走暂停期间的位移。</summary>
+    public void OnSimulationRangeResumed()
+    {
+        if (!CanMove || !hasDestination || NavigationAgent == null)
+            return;
+        NavigationAgent.SetDestination(lastSubmittedDestination, forceRepath: true);
+        HasReachedTarget = false;
+    }
+
+    #endregion
 
     public void ForceRepath()
     {

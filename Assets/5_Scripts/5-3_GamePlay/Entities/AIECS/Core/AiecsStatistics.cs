@@ -23,8 +23,10 @@ namespace FlatWorld.AIECS
 
         /// <summary>按查询索引写出一致状态供渲染、界面和组中心归约消费。</summary>
         private void Execute([EntityIndexInQuery] int index, in AiecsIdentity identity, in AiecsFlowAgent actor,
-            in AiecsBody body, in AiecsVital vital, in AiecsBrain brain, in AiecsAttackState attack, in AiecsWorkCounters counters)
+            in AiecsBody body, in AiecsVital vital, in AiecsBrain brain, in AiecsAttackState attack,
+            in AiecsSimulationPulse pulse, in AiecsWorkCounters counters)
         {
+            double displayTime = pulse.Tier == 0 ? pulse.PausedAt : Clock.Time;
             double actionStarted = vital.Dead != 0 ? vital.DeathTime : brain.EnteredAt;
             if (vital.Dead == 0 && identity.External == 0 && (uint)identity.Definition < (uint)Definitions.Length)
             {
@@ -46,7 +48,7 @@ namespace FlatWorld.AIECS
             Display[index] = new AiecsDisplayRecord { Key = identity.Key, Position = actor.Position, Facing = body.Facing,
                 Hp = vital.Hp, MaxHp = vital.MaxHp, Definition = identity.Definition, Group = identity.Group, Behavior = brain.Behavior,
                 AttackPhase = attack.Phase, Dead = vital.Dead, External = identity.External,
-                ActionElapsed = math.max(0f, (float)(Clock.Time - actionStarted)),
+                ActionElapsed = math.max(0f, (float)(displayTime - actionStarted)),
                 LiquidDepth = actor.LiquidDepth, WaterBlend = actor.WaterBlend,
                 HasTarget = (byte)(brain.Target != Entity.Null ? 1 : 0) };
             Work[index] = counters;

@@ -11,12 +11,19 @@ namespace FlatWorld.AIECS
     [DisableAutoCreation]
     public partial class AiecsJobSchedulerSystem : SystemBase
     {
+        /// <summary>正式生态读取每实体距离档，开发群体未挂载该组件时使用原帧间隔。</summary>
+        internal ComponentLookup<AiecsSimulationPulse> GetPulseLookup() =>
+            GetComponentLookup<AiecsSimulationPulse>(true);
+
         protected override void OnUpdate()
         {
             // 本系统不加入更新组，只作为私有 AIECS World 的显式调度入口。
         }
 
         internal JobHandle ScheduleParallel(AiecsBuildSpatialJob job, EntityQuery query, JobHandle dependency) =>
+            job.ScheduleParallel(query, dependency);
+
+        internal JobHandle ScheduleParallel(AiecsSelectSimulationPulseJob job, EntityQuery query, JobHandle dependency) =>
             job.ScheduleParallel(query, dependency);
 
         internal JobHandle ScheduleParallel(AiecsPerceptionSystem job, EntityQuery query, JobHandle dependency) =>

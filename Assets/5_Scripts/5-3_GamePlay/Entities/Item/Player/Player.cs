@@ -19,6 +19,9 @@ public class Player : Item
     /// <summary>玩家被其他实体感知时的范围倍率，直接由可存档玩家数据驱动。</summary>
     public override float PerceptionRadiusMultiplier => data?.PerceptionRadiusMultiplier ?? 1f;
 
+    /// <summary>玩家输入与状态不受自身世界坐标的模拟距离限制。</summary>
+    public override bool ShouldUseSimulationRange() => false;
+
     [NonSerialized]
     private bool isLocalProfile;
 
@@ -96,6 +99,8 @@ public class Player : Item
         transform.rotation = itemData.transform.rotation;
         transform.localScale = itemData.transform.scale;
         base.Load();
+        // 所有模块加载完成后校准一次，覆盖初始背包数据早于 BuffManager 加载的情况。
+        PlayerCarryCapacityUtility.RefreshOverweightSlowdown(this);
         EnsureLowHealthPostProcessEffect();
     }
 

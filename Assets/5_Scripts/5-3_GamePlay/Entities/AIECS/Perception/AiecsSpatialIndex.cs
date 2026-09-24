@@ -156,18 +156,21 @@ namespace FlatWorld.AIECS
             // 只等待本索引上一轮的读取者；当前批次 dependency 由 Build Job 自身承接，不能在主线程提前 Complete。
             readers.Complete();
             int count = query.CalculateEntityCount();
-            if (!samples.IsCreated || samples.Length != count)
+            if (!samples.IsCreated || samples.Length < count)
             {
                 Dispose();
-                samples = new NativeArray<AiecsTargetSample>(count, Allocator.Persistent);
-                lookup = new NativeParallelHashMap<Entity, int>(math.max(1, count), Allocator.Persistent);
-                buckets = new NativeParallelMultiHashMap<int3, int>(math.max(1, count), Allocator.Persistent);
+                int capacity = 1;
+                while (capacity < count) capacity *= 2;
+                samples = new NativeArray<AiecsTargetSample>(capacity, Allocator.Persistent);
+                lookup = new NativeParallelHashMap<Entity, int>(capacity, Allocator.Persistent);
+                buckets = new NativeParallelMultiHashMap<int3, int>(capacity, Allocator.Persistent);
             }
             lookup.Clear(); buckets.Clear();
-            View = new AiecsSpatialView { Domain = domain, Samples = samples, Lookup = lookup, Buckets = buckets,
+            NativeArray<AiecsTargetSample> currentSamples = samples.GetSubArray(0, count);
+            View = new AiecsSpatialView { Domain = domain, Samples = currentSamples, Lookup = lookup, Buckets = buckets,
                 Hostile = relations, FactionCount = factionCount, MaximumBodyExtent = maximumBodyExtent };
             // Build Job 只携带数学字段，不能同时把同一容器作为只读 View 和 Writer 传入。
-            readers = scheduler.ScheduleParallel(new AiecsBuildSpatialJob { Domain = domain, Output = samples,
+            readers = scheduler.ScheduleParallel(new AiecsBuildSpatialJob { Domain = domain, Output = currentSamples,
                 Lookup = lookup.AsParallelWriter(), Buckets = buckets.AsParallelWriter() }, query, dependency);
             return readers;
         }

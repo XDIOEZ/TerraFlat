@@ -17,11 +17,11 @@ namespace FlatWorld.AIECS.Gameplay
     {
         #region 配置与记录
 
-        private const int MaxSimulationStepsPerFrame = 2; // 15 FPS 仍可维持 30Hz；更低帧率时优先保护渲染帧不被追帧拖垮。
+        private const int BaseSimulationHz = 60; // 一级范围的权威模拟频率。
+        private const int MaxSimulationStepsPerFrame = 2; // 低帧率时只有限追帧，优先保护渲染帧。
         private const int MaxBacklogSteps = 3; // 只保留少量时间债务，避免一次卡顿演变成连续多帧追赶尖峰。
         private static AiecsEcologyRuntimeHost active;
         [SerializeField] private AiecsAnimationCatalog _catalog;
-        [SerializeField, Range(10, 60)] private int _simulationHz = 30;
 
         private sealed class EcologyActor
         {
@@ -96,7 +96,7 @@ namespace FlatWorld.AIECS.Gameplay
                 return;
             }
 
-            float step = 1f / Mathf.Max(1, _simulationHz);
+            float step = 1f / BaseSimulationHz;
             double now = Time.timeAsDouble;
             double maxBacklog = step * MaxBacklogSteps;
             if (now - _simulationTime > maxBacklog)
@@ -109,7 +109,18 @@ namespace FlatWorld.AIECS.Gameplay
                 while (_simulationTime + step <= now && budget-- > 0)
                 {
                     _simulationTime += step;
-                    _bridge.Step(step, _simulationTime);
+                    Vector3 playerPosition = _player.transform.position;
+                    int near = SimulationRangePreferences.NearRadius;
+                    int middle = SimulationRangePreferences.MiddleRadius;
+                    int far = SimulationRangePreferences.FarRadius;
+                    _bridge.Step(step, _simulationTime, new AiecsSimulationRange
+                    {
+                        Enabled = 1,
+                        PlayerPosition = new float2(playerPosition.x, playerPosition.y),
+                        NearSquared = near * near,
+                        MiddleSquared = middle * middle,
+                        FarSquared = far * far
+                    });
                 }
 
                 PruneDestroyedActors();

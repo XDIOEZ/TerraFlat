@@ -144,6 +144,7 @@ public sealed partial class AI_Bird : Module, IAIActor, IItemModuleDependencyBin
                 tileReceiver.SetEffectsSuppressed(this, false);
                 liftRoot.localPosition = liftOrigin;
             }
+            staminaDisplay?.SetVisible(false);
             return;
         }
         if (GameNetwork.HasStateAuthority)
@@ -245,6 +246,7 @@ public sealed partial class AI_Bird : Module, IAIActor, IItemModuleDependencyBin
     private void ApplyFlightPresentation()
     {
         liftRoot.localPosition = liftOrigin + Vector3.up * CurrentFlightHeight;
+        staminaDisplay?.Refresh();
         // 对象池先 Load 后激活；激活后以 Animator 的真实状态为准，避免重绑或外部播放造成飞行时残留步行动画。
         if (!birdAnimator.isActiveAndEnabled)
             return;

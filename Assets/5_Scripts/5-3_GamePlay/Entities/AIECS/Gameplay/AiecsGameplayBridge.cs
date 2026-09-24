@@ -196,7 +196,7 @@ namespace FlatWorld.AIECS.Gameplay
         }
 
         /// <summary>每个模拟 Tick 同步外部代理、少量战略中心、地图版本和事件，不逐个读取 AI GameObject。</summary>
-        public void Step(float deltaTime, double time)
+        public void Step(float deltaTime, double time, AiecsSimulationRange range = default)
         {
             Simulation.Complete();
             for (int i = proxies.Count - 1; i >= 0; i--)
@@ -215,7 +215,7 @@ namespace FlatWorld.AIECS.Gameplay
             var centers = Simulation.GroupPositions;
             for (int i = 0; i < Templates.Length; i++) if (centers[i].z > 0f) Navigation.UpdateGoal(goals[i], centers[i].xy);
             losView = los.Read(Navigation.Read()); Simulation.Difficulty = GameplayCombatBridge.Difficulty();
-            Simulation.Step(Navigation, losView, deltaTime, time);
+            Simulation.Step(Navigation, losView, deltaTime, time, range);
             Publish();
             PublishDrops(64);
             expiredCorpses.Clear();

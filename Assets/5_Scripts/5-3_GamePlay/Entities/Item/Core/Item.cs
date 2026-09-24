@@ -175,6 +175,11 @@ public abstract class Item : MonoBehaviour
     private bool moduleScheduleDirty = true;
     private ItemTickTier tickTier = ItemTickTier.Dormant;
     private float lastScheduledTickTime = -1f;
+    private float nextSimulationTickTime = -1f; // 每帧模块的目标时钟，避免高帧率下频率向下取整。
+    private float lastSimulationInterval;
+    private bool simulationRangePaused;
+    private Rigidbody2D pausedSimulationBody;
+    private bool pausedBodyWasSimulated;
     #endregion
 
     #region 生命周期方法
@@ -827,6 +832,90 @@ public abstract class Item : MonoBehaviour
     internal void ResetScheduledTickClock(float currentTime)
     {
         lastScheduledTickTime = currentTime;
+        nextSimulationTickTime = -1f;
+        lastSimulationInterval = 0f;
+    }
+
+    /// <summary>回到模拟范围后立即恢复，暂停期间不补算游戏时间。</summary>
+    internal void TickEveryFrameAt(float currentTime, float minimumInterval)
+    {
+        if (lastScheduledTickTime < 0f ||
+            !Mathf.Approximately(lastSimulationInterval, minimumInterval))
+        {
+            lastScheduledTickTime = currentTime;
+            nextSimulationTickTime = currentTime + minimumInterval;
+            lastSimulationInterval = minimumInterval;
+            Tick(Mathf.Min(Time.deltaTime, 0.1f));
+            return;
+        }
+
+        float elapsed = Mathf.Max(0f, currentTime - lastScheduledTickTime);
+        if (currentTime + 0.0005f < nextSimulationTickTime)
+            return;
+
+        lastScheduledTickTime = currentTime;
+        nextSimulationTickTime += minimumInterval;
+        if (nextSimulationTickTime <= currentTime)
+            nextSimulationTickTime = currentTime + minimumInterval;
+        Tick(Mathf.Min(elapsed, 0.1f));
+    }
+
+    /// <summary>玩家、全局管理实体或 MOD 可覆写此入口以保持完整更新。</summary>
+    public virtual bool ShouldUseSimulationRange()
+    {
+        return itemData != null && !InHand;
+    }
+
+    /// <summary>只在跨越三级边界时切换模块和根刚体，范围外不保留物理速度。</summary>
+    internal void SetSimulationRangePaused(bool paused)
+    {
+        if (simulationRangePaused == paused)
+            return;
+
+        simulationRangePaused = paused;
+        if (paused)
+        {
+            foreach (Module module in Mods.Values)
+                if (module is ISimulationRangeAware aware)
+                    aware.OnSimulationRangePaused();
+
+            pausedSimulationBody = GetComponent<Rigidbody2D>();
+            if (pausedSimulationBody == null) return;
+            pausedBodyWasSimulated = pausedSimulationBody.simulated;
+            pausedSimulationBody.velocity = Vector2.zero;
+            pausedSimulationBody.angularVelocity = 0f;
+            pausedSimulationBody.simulated = false;
+            return;
+        }
+
+        RestoreSimulationBody();
+        foreach (Module module in Mods.Values)
+            if (module is ISimulationRangeAware aware)
+                aware.OnSimulationRangeResumed();
+    }
+
+    /// <summary>对象池与模块卸载时恢复原刚体开关，不向已卸载模块派发恢复回调。</summary>
+    private void RestoreSimulationBody()
+    {
+        if (pausedSimulationBody != null)
+            pausedSimulationBody.simulated = pausedBodyWasSimulated;
+        pausedSimulationBody = null;
+        pausedBodyWasSimulated = false;
+    }
+
+    /// <summary>固定间隔模块也受距离档的最高更新频率约束。</summary>
+    internal bool IsScheduledTickDue(float currentTime, float minimumInterval)
+    {
+        return lastScheduledTickTime < 0f ||
+               currentTime - lastScheduledTickTime + 0.0005f >= minimumInterval;
+    }
+
+    /// <summary>每帧模块使用目标时钟错开取整误差，每帧最多执行一次。</summary>
+    internal bool IsEveryFrameTickDue(float currentTime, float minimumInterval)
+    {
+        return lastScheduledTickTime < 0f ||
+               !Mathf.Approximately(lastSimulationInterval, minimumInterval) ||
+               currentTime + 0.0005f >= nextSimulationTickTime;
     }
 
     public void MarkModuleScheduleDirty()
@@ -946,10 +1035,14 @@ public abstract class Item : MonoBehaviour
 
     private void ClearModuleSchedule()
     {
+        RestoreSimulationBody();
+        simulationRangePaused = false;
         everyFrameModules.Clear();
         scheduledModules.Clear();
         tickTier = ItemTickTier.Dormant;
         lastScheduledTickTime = -1f;
+        nextSimulationTickTime = -1f;
+        lastSimulationInterval = 0f;
         moduleScheduleDirty = true;
     }
 

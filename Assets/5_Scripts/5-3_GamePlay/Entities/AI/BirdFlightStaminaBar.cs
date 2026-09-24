@@ -22,7 +22,8 @@ public sealed class BirdFlightStaminaBar : MonoBehaviour
         SetVisible(false);
     }
 
-    private void LateUpdate()
+    /// <summary>随鸟的 ItemMgr 模块 Tick 刷新耐力表现，不独立进入 Unity 帧循环。</summary>
+    public void Refresh()
     {
         bool visible = bird != null && bird.isActiveAndEnabled && bird.IsAlive && anchor != null &&
             (bird.IsAirborne || bird.FlightStamina < bird.flightStaminaMax);

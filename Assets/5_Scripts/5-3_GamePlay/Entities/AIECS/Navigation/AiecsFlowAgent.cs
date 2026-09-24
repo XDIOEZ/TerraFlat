@@ -138,6 +138,7 @@ namespace FlatWorld.AIECS
         [ReadOnly] public NativeArray<AiecsCrowdSample> Samples;
         [ReadOnly] public NativeParallelHashMap<int2, int2> Ranges;
         [ReadOnly] public NativeParallelHashMap<int2, int> Density;
+        [ReadOnly] public ComponentLookup<AiecsSimulationPulse> Pulses;
         public float DeltaTime;
         public int NeighbourLimit; // 单位级 Steering 的固定总预算，不随人群密度平方增长。
         public float SeparationWeight;
@@ -145,10 +146,12 @@ namespace FlatWorld.AIECS
 
         private void Execute(Entity entity, ref AiecsFlowAgent actor)
         {
-            float waterSpeedMultiplier = UpdateWaterState(ref actor);
+            float deltaTime = Pulses.TryGetComponent(entity, out AiecsSimulationPulse pulse)
+                ? pulse.DeltaTime : DeltaTime;
+            float waterSpeedMultiplier = UpdateWaterState(ref actor, deltaTime);
             FlowSample sample = Sample(actor);
             actor.Status = sample.Status;
-            if (sample.Status != FlowSampleStatus.Moving || DeltaTime <= 0f)
+            if (sample.Status != FlowSampleStatus.Moving || deltaTime <= 0f)
             {
                 actor.Velocity = float2.zero;
                 return;
@@ -169,7 +172,7 @@ namespace FlatWorld.AIECS
                 direction += math.normalizesafe(actor.Velocity) * 0.15f;
             direction = math.normalizesafe(direction, desired);
 
-            float moveLength = math.min(actor.Speed * waterSpeedMultiplier * densitySpeed * DeltaTime, distance);
+            float moveLength = math.min(actor.Speed * waterSpeedMultiplier * densitySpeed * deltaTime, distance);
             float2 movement = direction * moveLength;
             int steps = math.max(1, (int)math.ceil(moveLength / 0.2f));
             float2 step = movement / steps;
@@ -202,16 +205,16 @@ namespace FlatWorld.AIECS
                 actor.Position = Navigation.Domain.Normalize(next);
             }
 
-            actor.Velocity = Navigation.Domain.ShortestDelta(start, actor.Position) / DeltaTime;
+            actor.Velocity = Navigation.Domain.ShortestDelta(start, actor.Position) / deltaTime;
         }
 
         /// <summary>从共享导航的有效表面读取水态；水上平台不会被标记为水体。</summary>
-        private float UpdateWaterState(ref AiecsFlowAgent actor)
+        private float UpdateWaterState(ref AiecsFlowAgent actor, float deltaTime)
         {
             bool inWater = Navigation.TryGetWater(actor.Position, out float targetDepth);
             float targetBlend = inWater ? 1f : 0f;
-            float smoothing = DeltaTime > 0f
-                ? 1f - math.exp(-DeltaTime / WaterTransitionSeconds)
+            float smoothing = deltaTime > 0f
+                ? 1f - math.exp(-deltaTime / WaterTransitionSeconds)
                 : 1f;
             actor.LiquidDepth = math.lerp(actor.LiquidDepth, inWater ? targetDepth : 0f, smoothing);
             actor.WaterBlend = math.lerp(actor.WaterBlend, targetBlend, smoothing);
@@ -334,7 +337,8 @@ namespace FlatWorld.AIECS
         private NativeParallelHashMap<int2, int2> ranges;
         private NativeParallelHashMap<int2, int> density;
         private JobHandle pending;
-        public int SampleCount => samples.IsCreated ? samples.Length : 0;
+        private int activeCount;
+        public int SampleCount => activeCount;
 
         public JobHandle Schedule(AiecsJobSchedulerSystem scheduler, EntityQuery query, FlowNavigationCache cache,
             float deltaTime, int neighbourLimit = 12, float separationWeight = 1f, float densityWeight = 0.45f,
@@ -342,28 +346,33 @@ namespace FlatWorld.AIECS
         {
             pending.Complete();
             int count = query.CalculateEntityCount();
-            if (!samples.IsCreated || samples.Length != count)
+            activeCount = count;
+            if (!samples.IsCreated || samples.Length < count)
             {
                 if (samples.IsCreated) samples.Dispose();
                 if (ranges.IsCreated) ranges.Dispose();
                 if (density.IsCreated) density.Dispose();
-                samples = new NativeArray<AiecsCrowdSample>(count, Allocator.Persistent);
-                ranges = new NativeParallelHashMap<int2, int2>(math.max(1, count), Allocator.Persistent);
-                density = new NativeParallelHashMap<int2, int>(math.max(1, count), Allocator.Persistent);
+                int capacity = 1;
+                while (capacity < count) capacity *= 2;
+                samples = new NativeArray<AiecsCrowdSample>(capacity, Allocator.Persistent);
+                ranges = new NativeParallelHashMap<int2, int2>(capacity, Allocator.Persistent);
+                density = new NativeParallelHashMap<int2, int>(capacity, Allocator.Persistent);
             }
             if (count == 0) return dependency;
 
             FlowNavigationSnapshot view = cache.Read();
-            pending = scheduler.ScheduleParallel(new AiecsGatherCrowdJob { Domain = view.Domain, Samples = samples }, query, dependency);
-            pending = samples.SortJob().Schedule(pending);
-            pending = new AiecsCrowdRangesJob { Samples = samples, Ranges = ranges }.Schedule(pending);
-            pending = new AiecsCrowdDensityJob { Domain = view.Domain, Samples = samples, Density = density }.Schedule(pending);
+            NativeArray<AiecsCrowdSample> currentSamples = samples.GetSubArray(0, count);
+            pending = scheduler.ScheduleParallel(new AiecsGatherCrowdJob { Domain = view.Domain, Samples = currentSamples }, query, dependency);
+            pending = currentSamples.SortJob().Schedule(pending);
+            pending = new AiecsCrowdRangesJob { Samples = currentSamples, Ranges = ranges }.Schedule(pending);
+            pending = new AiecsCrowdDensityJob { Domain = view.Domain, Samples = currentSamples, Density = density }.Schedule(pending);
             pending = scheduler.ScheduleParallel(new AiecsFlowMoveJob
             {
                 Navigation = view,
-                Samples = samples,
+                Samples = currentSamples,
                 Ranges = ranges,
                 Density = density,
+                Pulses = scheduler.GetPulseLookup(),
                 DeltaTime = deltaTime,
                 NeighbourLimit = math.max(1, neighbourLimit),
                 SeparationWeight = math.max(0f, separationWeight),
@@ -379,6 +388,7 @@ namespace FlatWorld.AIECS
         public void Dispose()
         {
             pending.Complete();
+            activeCount = 0;
             if (samples.IsCreated) samples.Dispose();
             if (ranges.IsCreated) ranges.Dispose();
             if (density.IsCreated) density.Dispose();
