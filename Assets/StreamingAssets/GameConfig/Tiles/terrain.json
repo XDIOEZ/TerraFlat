@@ -93,6 +93,22 @@
       "behaviours": [ { "type": "snow", "parameters": { "moveSpeedMultiplier": 0.9, "footprintLifetime": 60 } } ]
     },
     {
+      "id": "Tile_Peat",
+      "runtimeTileId": 28,
+      "displayName": "泥炭地块",
+      "tileAsset": "Tile_Peat",
+      "data": {
+        "type": "universal",
+        "parameters": { "tileTag": "Bog", "demolitionTime": 0, "penalty": 1000, "isWalkable": true }
+      },
+      "behaviours": [],
+      "groundHarvest": {
+        "requiredTool": "Shovel", "minimumTier": 1, "reach": 2,
+        "itemId": "Peat", "amount": 1, "replacementTileId": "Tile_Grass",
+        "baseUsesPerTile": 4, "minimumUsesPerTile": 2, "useInterval": 0.2
+      }
+    },
+    {
       "id": "Tile_Farmland",
       "runtimeTileId": 14,
       "displayName": "耕地",

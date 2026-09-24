@@ -5757,6 +5757,27 @@
       }
     },
     {
+      "id": "Peat",
+      "parent": "Charcoal",
+      "gameName": "泥炭",
+      "description": "从湿地挖出的可燃有机土，可作为低温燃料。",
+      "weight": 0.6,
+      "volume": 0.8,
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Peat/Peat_Icon.png",
+        "color": { "r": 1, "g": 1, "b": 1, "a": 1 }
+      },
+      "modules": {
+        "燃料模块": {
+          "parameters": {
+            "Data": { "Fuel": { "x": 50, "y": 50 }, "MaxTemperature": 800 },
+            "burnSpeedMultiplier": 1,
+            "igniteWhileHeld": false
+          }
+        }
+      }
+    },
+    {
       "id": "Glue",
       "parent": "BasicItem_Base",
       "gameName": "树脂胶水",

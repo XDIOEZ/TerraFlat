@@ -46,6 +46,7 @@ public sealed class TileDefinitionDto
     [JsonProperty("behaviours")] public List<TileComponentDefinitionDto> Behaviours = new();
     [JsonProperty("damageProfile")] public TileBuildingDamageProfile DamageProfile = new();
     [JsonProperty("groundPlacement")] public GroundTilePlacementRule GroundPlacement;
+    [JsonProperty("groundHarvest")] public GroundTileHarvestRule GroundHarvest;
     #endregion
 }
 

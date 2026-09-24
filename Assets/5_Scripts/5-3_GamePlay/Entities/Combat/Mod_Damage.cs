@@ -12,6 +12,9 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
     public ResourceToolKind HarvestKind => harvestKind;
     public int HarvestTier => harvestTier;
     public float HarvestEfficiency => harvestEfficiency;
+    private float nextGroundHarvestUseTime; // 右键采挖的最早再次使用时间。
+    private WorldTileTargetOutline groundHarvestOutline; // 当前铲子指向的地格提示。
+    private GroundHarvestCrackOverlay groundHarvestCracks; // 当前地格的累积裂纹。
     #endregion
 
     #region 伤害相关数据
@@ -230,6 +233,69 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
         lastColliderEnabled = damageCollider != null && damageCollider.enabled;
         tileDamageAppliedThisWindow = false;
         nonDamageableImpactAppliedThisWindow = false;
+        nextGroundHarvestUseTime = 0f;
+        if (item != null && harvestKind != ResourceToolKind.None)
+        {
+            item.OnAct -= HandleGroundHarvestAct;
+            item.OnAct += HandleGroundHarvestAct;
+        }
+    }
+
+    /// <summary>回池或卸载时解绑右键采挖，避免物品重用后重复工作。</summary>
+    public override void Unload()
+    {
+        if (item != null) item.OnAct -= HandleGroundHarvestAct;
+        ReleaseGroundHarvestOutline();
+    }
+
+    private void OnDisable() => ReleaseGroundHarvestOutline();
+    private void OnDestroy() => Unload();
+
+    /// <summary>铲子右键每次只提交一次挖掘工作量，并播放泥土反馈。</summary>
+    private void HandleGroundHarvestAct()
+    {
+        if (harvestKind == ResourceToolKind.None || Time.time < nextGroundHarvestUseTime ||
+            !GroundTileHarvestSystem.TryWork(this, out _, out Vector2Int worldCell, out float interval))
+            return;
+
+        nextGroundHarvestUseTime = Time.time + interval;
+        item.itemMods.GetMod_ByID<Mod_Weapon_AnimationAction>("Module_Weapon_AnimationAction")?.RequestAttack();
+        HoeTillingFeedback.PlayDigging(item, worldCell);
+        UpdateGroundHarvestOutline();
+    }
+
+    /// <summary>预览真实可采挖地格，按已保存工作量显示分级裂纹。</summary>
+    private void UpdateGroundHarvestOutline()
+    {
+        if (harvestKind == ResourceToolKind.None ||
+            !GroundTileHarvestSystem.TryResolveTarget(this, out RuntimeTerrainTileSample sample,
+                out _, out _))
+        {
+            groundHarvestOutline?.Hide();
+            groundHarvestCracks?.Hide();
+            return;
+        }
+
+        groundHarvestOutline ??= WorldTileTargetOutline.Create("Shovel Ground Target Outline");
+        groundHarvestOutline.Show(sample.WorldCell);
+        float progress = GroundTileHarvestSystem.ReadProgress(sample);
+        if (progress <= 0f)
+        {
+            groundHarvestCracks?.Hide();
+            return;
+        }
+
+        groundHarvestCracks ??= GroundHarvestCrackOverlay.Create();
+        groundHarvestCracks.Show(sample.WorldCell, progress);
+    }
+
+    /// <summary>物品卸载或禁用时清理临时表现对象。</summary>
+    private void ReleaseGroundHarvestOutline()
+    {
+        if (groundHarvestOutline != null) Destroy(groundHarvestOutline.gameObject);
+        if (groundHarvestCracks != null) Destroy(groundHarvestCracks.gameObject);
+        groundHarvestOutline = null;
+        groundHarvestCracks = null;
     }
 
     public override void Save()
@@ -241,6 +307,7 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
     private void LateUpdate()
     {
         SyncBoundWeaponHitbox();
+        UpdateGroundHarvestOutline();
         // 动画开启的一次窗口会移动：每帧检测新进入 OBB 的 ECS 目标，窗口集合仍保证每目标只受击一次。
         if (!explicitProjectileSweep && EnableOnTriggerEnterDamage && DamageInterval < 0f &&
             damageCollider != null && damageCollider.enabled)

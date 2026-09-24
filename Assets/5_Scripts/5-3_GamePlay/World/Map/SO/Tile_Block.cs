@@ -64,6 +64,7 @@ public class Tile_Block : ScriptableObject
     public TileData tileDataTemplate => Definition.TileDataTemplate;
     public TileBase TileBase => Definition.TileBase;
     public GroundTilePlacementRule groundPlacement => Definition.GroundPlacement;
+    public GroundTileHarvestRule groundHarvest => Definition.GroundHarvest;
     public TileBuildingDamageProfile damageProfile => Definition.DamageProfile;
     public IReadOnlyList<TileBlockBehaviour> behaviours => Definition.Behaviours;
 

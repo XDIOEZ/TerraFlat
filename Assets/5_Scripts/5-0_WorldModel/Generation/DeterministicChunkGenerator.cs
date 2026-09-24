@@ -137,8 +137,28 @@ namespace FlatWorld.WorldModel
             out Int2 worldCell,
             CancellationToken cancellationToken = default)
         {
+            return TryFindWalkableSurfaceNear(dimensionId, worldSeed, profile,
+                topology, anchor, maxRadius, sampleBudget, out worldCell,
+                cancellationToken, 1);
+        }
+
+        /// <summary>指定正式世界纪元，允许出生搜索与随后的区块生成复用同一水文区域缓存。</summary>
+        public bool TryFindWalkableSurfaceNear(
+            string dimensionId,
+            int worldSeed,
+            ChunkGenerationProfileSnapshot profile,
+            ChunkGenerationTopologySnapshot topology,
+            Int2 anchor,
+            int maxRadius,
+            int sampleBudget,
+            out Int2 worldCell,
+            CancellationToken cancellationToken,
+            long worldEpoch)
+        {
             if (profile == null)
                 throw new ArgumentNullException(nameof(profile));
+            if (worldEpoch <= 0)
+                throw new ArgumentOutOfRangeException(nameof(worldEpoch));
             if (profile.Settings.Mode != ChunkGenerationMode.Surface)
             {
                 worldCell = anchor;
@@ -162,7 +182,7 @@ namespace FlatWorld.WorldModel
                     if (!requests.TryGetValue(origin, out ChunkGenerationRequest request))
                     {
                         request = new ChunkGenerationRequest(
-                            1,
+                            worldEpoch,
                             new WorldAddress(dimensionId, origin),
                             worldSeed == 0 ? 1 : worldSeed,
                             1,
@@ -421,6 +441,19 @@ namespace FlatWorld.WorldModel
             {
                 biomeId = (int)biome;
                 groundTileId = settings.SandTileId;
+                flags = TerrainCellFlags.Walkable;
+            }
+            else if (settings.PeatTileId > 0 &&
+                     (biome is SurfaceBiomeKind.Grassland or SurfaceBiomeKind.Forest) &&
+                     moisture >= settings.PeatMinimumMoisture &&
+                     height <= settings.PeatMaximumHeight &&
+                     Fractal(CreateSeed(request, 0x4c7de19bu), worldX, worldY,
+                         settings.PeatPatchScale, 2, 2d, 0.5d, request.Topology) >=
+                     settings.PeatPatchThreshold)
+            {
+                // 潮湿低地形成连续小片泥炭；使用拓扑感知噪声，跨区块和循环接缝保持一致。
+                biomeId = (int)biome;
+                groundTileId = settings.PeatTileId;
                 flags = TerrainCellFlags.Walkable;
             }
             else if (alluvial)

@@ -20,6 +20,7 @@ public sealed class RuntimeTileDefinition
     public IReadOnlyList<TileBlockBehaviour> Behaviours { get; }
     public TileBuildingDamageProfile DamageProfile { get; }
     public GroundTilePlacementRule GroundPlacement { get; }
+    public GroundTileHarvestRule GroundHarvest { get; }
     private readonly JObject source;
 
     internal RuntimeTileDefinition(TileDefinitionDto dto, TileBase tile, TileData template,
@@ -34,6 +35,7 @@ public sealed class RuntimeTileDefinition
         Behaviours = behaviours.AsReadOnly();
         DamageProfile = dto.DamageProfile;
         GroundPlacement = dto.GroundPlacement;
+        GroundHarvest = dto.GroundHarvest;
         this.source = (JObject)source.DeepClone();
     }
 
@@ -51,6 +53,7 @@ public sealed class RuntimeTileDefinition
     public IReadOnlyList<TileBlockBehaviour> behaviours => Behaviours;
     public TileBuildingDamageProfile damageProfile => DamageProfile;
     public GroundTilePlacementRule groundPlacement => GroundPlacement;
+    public GroundTileHarvestRule groundHarvest => GroundHarvest;
     public TileBase GetTileBaseAsset() => TileBase;
     #endregion
 

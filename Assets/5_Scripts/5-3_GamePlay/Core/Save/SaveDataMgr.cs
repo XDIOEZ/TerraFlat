@@ -1236,9 +1236,10 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
 
             terrain.SetCell(x, y, cell.ToTerrainCell());
 
-            float accumulatedDamage = cell.BlockingTileId == 0
-                ? 0f
-                : Mathf.Max(0f, cell.AccumulatedDamage);
+            // 同一格的建筑损伤与裸露泥炭采挖互斥；保留后者的部分进度以便读档续挖。
+            float accumulatedDamage = cell.BlockingTileId != 0 ||
+                GroundTileHarvestSystem.IsHarvestableGround(cell.GroundTileId)
+                ? Mathf.Max(0f, cell.AccumulatedDamage) : 0f;
             WriteRuntimeBuildingDamage(terrain, x, y, accumulatedDamage);
         }
         RestoreAgricultureTerrain(chunk, delta);
@@ -1325,7 +1326,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         runtimeTerrainDirtyChunks.Clear();
     }
 
-    /// <summary>为当前运行时区块建立一次完整核心地形与建筑损伤基线。</summary>
+    /// <summary>为当前运行时区块建立完整地形与互斥的建筑损伤、地表采挖进度基线。</summary>
     private bool TryEnsureRuntimeChunkBaseline(
         string key,
         ChunkRuntime chunk,
@@ -1368,7 +1369,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         return true;
     }
 
-    /// <summary>更新一格完整核心地形与累计建筑损伤的最小差量。</summary>
+    /// <summary>更新一格完整地形及其累计工作量的最小差量。</summary>
     private void SetRuntimeTileDelta(
         string key,
         string planetName,
@@ -1442,7 +1443,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         chunkDeltas[key] = delta;
     }
 
-    /// <summary>读取新版区块中一格建筑已累计的损伤；缺少专用环境层时视为未受损。</summary>
+    /// <summary>读取一格建筑损伤或裸露资源采挖进度；两者在同一格互斥。</summary>
     private static float ReadRuntimeBuildingDamage(ChunkTerrainData terrain, int x, int y)
     {
         return terrain != null &&
@@ -1455,7 +1456,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
             : 0f;
     }
 
-    /// <summary>恢复一格建筑损伤，并避免为了写入默认零值额外创建整张环境层数组。</summary>
+    /// <summary>恢复一格累计工作量，默认零值不额外创建整张环境层数组。</summary>
     private static void WriteRuntimeBuildingDamage(
         ChunkTerrainData terrain,
         int x,

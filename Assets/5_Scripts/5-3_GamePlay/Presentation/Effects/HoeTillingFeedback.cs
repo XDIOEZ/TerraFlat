@@ -2,7 +2,8 @@ using FlatWorld.Audio;
 using UnityEngine;
 
 /// <summary>
-/// 锄地的本地表现层：复用一个随锄头存在的世界空间粒子系统，并通过稳定 Cue 播放泥土声。
+/// 锄地和铲子采挖共用的本地泥土反馈：复用一个随工具存在的世界空间粒子系统，
+/// 每次有效操作喷出土屑并播放泥土声。
 /// 不参与耕地进度、伤害或网络权威判定。
 /// </summary>
 public sealed class HoeTillingFeedback : MonoBehaviour
@@ -14,6 +15,8 @@ public sealed class HoeTillingFeedback : MonoBehaviour
 
     private static readonly Color SoilDark = new(0.24f, 0.12f, 0.055f, 0.92f);
     private static readonly Color SoilLight = new(0.54f, 0.31f, 0.13f, 0.9f);
+    private static readonly Color PeatDark = new(0.14f, 0.09f, 0.065f, 0.94f);
+    private static readonly Color PeatLight = new(0.39f, 0.26f, 0.16f, 0.92f);
 
     private Item hoe;
     private ParticleSystem particles;
@@ -29,10 +32,21 @@ public sealed class HoeTillingFeedback : MonoBehaviour
             feedback = sourceHoe.gameObject.AddComponent<HoeTillingFeedback>();
 
         feedback.hoe = sourceHoe;
-        feedback.Emit(worldCell);
+        feedback.Emit(worldCell, false);
     }
 
-    private void Emit(Vector2Int worldCell)
+    /// <summary>铲子采挖泥炭时喷出深色土屑。</summary>
+    public static void PlayDigging(Item sourceShovel, Vector2Int worldCell)
+    {
+        if (sourceShovel == null) return;
+        HoeTillingFeedback feedback = sourceShovel.GetComponent<HoeTillingFeedback>();
+        if (feedback == null)
+            feedback = sourceShovel.gameObject.AddComponent<HoeTillingFeedback>();
+        feedback.hoe = sourceShovel;
+        feedback.Emit(worldCell, true);
+    }
+
+    private void Emit(Vector2Int worldCell, bool peat)
     {
         EnsureParticles();
         if (particles == null)
@@ -48,7 +62,8 @@ public sealed class HoeTillingFeedback : MonoBehaviour
             {
                 position = center + new Vector3(Random.Range(-0.24f, 0.24f), Random.Range(-0.06f, 0.1f), 0f),
                 velocity = new Vector3(horizontal, Random.Range(0.38f, 0.92f), 0f),
-                startColor = Color.Lerp(SoilDark, SoilLight, Random.value),
+                startColor = Color.Lerp(peat ? PeatDark : SoilDark,
+                    peat ? PeatLight : SoilLight, Random.value),
                 startLifetime = Random.Range(0.28f, 0.48f),
                 startSize = Random.Range(0.055f, 0.115f)
             };

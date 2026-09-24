@@ -537,7 +537,7 @@
       "id": "Shovel_Stone",
       "parent": "Pickaxe_Stone",
       "gameName": "石铲",
-      "description": "挖掘河岸可见的黏土点；不用于开采矿石。",
+      "description": "右键挖掘泥炭地块需4次，也可挖取河岸黏土点；不用于开采矿石。",
       "weight": 2.5,
       "volume": 3.5,
       "stackable": false,

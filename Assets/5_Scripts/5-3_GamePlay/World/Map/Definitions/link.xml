@@ -16,6 +16,7 @@
     <type fullname="TileComponentDefinitionDto" preserve="all" />
     <type fullname="TileBuildingDamageProfile" preserve="all" />
     <type fullname="GroundTilePlacementRule" preserve="all" />
+    <type fullname="GroundTileHarvestRule" preserve="all" />
     <type fullname="Tile_Universal" preserve="all" />
     <type fullname="Tile_Grass" preserve="all" />
     <type fullname="Tile_Farmland" preserve="all" />

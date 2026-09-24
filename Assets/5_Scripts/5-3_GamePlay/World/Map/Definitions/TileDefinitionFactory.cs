@@ -47,6 +47,7 @@ public static class TileDefinitionFactory
         ValidateTemplate(dto.Id, template);
         ValidateDamage(dto.Id, dto.DamageProfile);
         ValidateGroundPlacement(dto.Id, dto.GroundPlacement);
+        ValidateGroundHarvest(dto.Id, dto.GroundHarvest);
 
         var behaviours = new List<TileBlockBehaviour>(dto.Behaviours.Count);
         foreach (TileComponentDefinitionDto entry in dto.Behaviours)
@@ -118,6 +119,21 @@ public static class TileDefinitionFactory
         if (!Enum.IsDefined(typeof(GroundPlacementLiquidRequirement), rule.LiquidRequirement))
             throw new InvalidDataException($"地块 {id} 的液体铺设约束无效。");
         ValidateId(rule.RefundItemId, id + ".groundPlacement.refundItemId");
+    }
+
+    /// <summary>采挖规则在资源发布前校验，防止挖空后找不到产物或地表。</summary>
+    private static void ValidateGroundHarvest(string id, GroundTileHarvestRule rule)
+    {
+        if (rule == null) return;
+        TileDefinitionJson.ValidateFields(rule, id + ".groundHarvest");
+        if (rule.RequiredTool == ResourceToolKind.None || rule.MinimumTier < 1 ||
+            rule.Amount < 1 || rule.Amount > 1024 || rule.Reach <= 0f ||
+            rule.Reach > 16f || rule.BaseUsesPerTile < 2 || rule.BaseUsesPerTile > 100 ||
+            rule.MinimumUsesPerTile < 2 || rule.MinimumUsesPerTile > rule.BaseUsesPerTile ||
+            rule.UseInterval < 0f || rule.UseInterval > 10f || rule.ReplacementTileId == id)
+            throw new InvalidDataException($"地块 {id} 的采挖工具、数量、距离或替换地表无效。");
+        ValidateId(rule.ItemId, id + ".groundHarvest.itemId");
+        ValidateId(rule.ReplacementTileId, id + ".groundHarvest.replacementTileId");
     }
     #endregion
 }

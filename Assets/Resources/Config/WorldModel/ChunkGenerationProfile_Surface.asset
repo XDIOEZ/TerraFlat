@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: ChunkGenerationProfile_Surface
   m_EditorClassIdentifier: 
   profileId: surface.default
-  generationSignature: 44
+  generationSignature: 45
   chunkWidth: 16
   chunkHeight: 16
   numericParameters:
@@ -33,6 +33,16 @@ MonoBehaviour:
     Value: 5
   - Id: terrain.iceTileId
     Value: 9
+  - Id: terrain.peatTileId
+    Value: 28
+  - Id: biome.peat.minimumMoisture
+    Value: 0.62
+  - Id: biome.peat.maximumHeight
+    Value: 0.62
+  - Id: biome.peat.patchThreshold
+    Value: 0.64
+  - Id: biome.peat.patchScale
+    Value: 0.09
   - Id: terrain.seaLevel
     Value: 0.5
   - Id: terrain.beachLevel
@@ -294,6 +304,8 @@ MonoBehaviour:
     Value: Tile_Floor_Iron
   - Id: tile.block.27
     Value: Tile_Floor_Bronze
+  - Id: tile.block.28
+    Value: Tile_Peat
   ecologyGlobalMultiplier: 1
   ecologyRules:
   - RuleId: surface.forest.appleTree
