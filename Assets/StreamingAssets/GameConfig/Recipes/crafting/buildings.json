@@ -2,6 +2,23 @@
   "schemaVersion": 1,
   "recipes": [
     {
+      "id": "core:草床",
+      "displayName": "草床",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "gridWidth": 2,
+      "gridHeight": 1,
+      "allowMirror": false,
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        { "slot": 0, "match": "exact_item", "itemId": "Straw", "tag": "", "amount": 6 },
+        { "slot": 1, "match": "exact_item", "itemId": "Rope", "tag": "", "amount": 1 }
+      ],
+      "outputs": [{ "itemId": "GrassBed_Summoner", "amount": 1 }],
+      "actions": []
+    },
+    {
       "id": "core:石门",
       "displayName": "石门",
       "recipeType": "crafting",

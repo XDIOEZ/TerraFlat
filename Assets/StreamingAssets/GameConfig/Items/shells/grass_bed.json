@@ -1,0 +1,88 @@
+{
+  "schemaVersion": 1,
+  "items": [
+    {
+      "id": "GrassBed_Summoner",
+      "parent": "Tent_Summoner",
+      "sourcePrefab": "",
+      "gameName": "草床",
+      "description": "用干草和绳子扎成的简易床，放在地上后可以睡觉。",
+      "labelKey": "item.GrassBed_Summoner.name",
+      "descriptionKey": "item.GrassBed_Summoner.description",
+      "weight": 4,
+      "volume": 8,
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/GrassBed/GrassBed.png[GrassBed]",
+        "rendererLocalPosition": { "x": 0, "y": 0, "z": 0 },
+        "rendererLocalScale": { "x": 1, "y": 1, "z": 1 },
+        "color": { "r": 1, "g": 1, "b": 1, "a": 1 },
+        "collider": { "type": "BoxCollider2D", "size": { "x": 0.99, "y": 0.7 } }
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": false,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"GrassBed\",\"SummonerPrefabId\":\"GrassBed_Summoner\",\"FootprintWidth\":2,\"FootprintHeight\":1}",
+            "Type": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "GrassBed",
+      "parent": "Tent",
+      "sourcePrefab": "",
+      "gameName": "草床-建筑",
+      "description": "占用相邻两格的草床，可以像帐篷一样睡觉。",
+      "labelKey": "item.GrassBed.name",
+      "descriptionKey": "item.GrassBed.description",
+      "weight": 12,
+      "volume": 16,
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/GrassBed/GrassBed.png[GrassBed]",
+        "rendererLocalPosition": { "x": 0.5, "y": 0, "z": 0 },
+        "rendererLocalScale": { "x": 1, "y": 1, "z": 1 },
+        "color": { "r": 1, "g": 1, "b": 1, "a": 1 },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": false,
+          "offset": { "x": 0.5, "y": 0 },
+          "size": { "x": 1.9, "y": 0.7 }
+        }
+      },
+      "health": {
+        "hasHp": true,
+        "hp": 60,
+        "maxHp": 60,
+        "defense": { "cutting": 2, "piercing": 2, "chopping": 2, "blunt": 2 },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": { "x": 0.5, "y": 0 },
+          "size": { "x": 1.9, "y": 0.7 }
+        }
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": false,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"GrassBed\",\"SummonerPrefabId\":\"GrassBed_Summoner\",\"FootprintWidth\":2,\"FootprintHeight\":1}",
+            "Type": 0
+          }
+        },
+        "帐篷模块": {
+          "prefab": "BuildingFeature_Tent_Mod_Tent",
+          "id": "帐篷模块",
+          "enabled": true,
+          "data": { "BitData": null, "Type": 0 }
+        }
+      }
+    }
+  ]
+}

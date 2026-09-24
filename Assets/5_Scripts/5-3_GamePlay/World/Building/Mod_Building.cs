@@ -62,6 +62,11 @@ public partial class Mod_Building : Module, IIncomingDamageRule
         public string[] SharedModuleIds;
         [Newtonsoft.Json.JsonProperty(NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public string TileBlockId;
+        // 以锚点格为左下角的离散矩形占地；缺省零值由读取端按一格处理。
+        [Newtonsoft.Json.JsonProperty(DefaultValueHandling = Newtonsoft.Json.DefaultValueHandling.Ignore)]
+        public int FootprintWidth;
+        [Newtonsoft.Json.JsonProperty(DefaultValueHandling = Newtonsoft.Json.DefaultValueHandling.Ignore)]
+        public int FootprintHeight;
     }
 
     public Building_Data Data = new();
@@ -901,7 +906,10 @@ public partial class Mod_Building : Module, IIncomingDamageRule
         Save();
         if (ConsumeOneSourceItem())
         {
-            RuntimeGrassClearing.ClearAt(building.transform.position);
+            Mod_Building placedModule = building.itemMods?.GetMod_ByID<Mod_Building>(ModText.Building);
+            if (placedModule != null)
+                foreach (Vector2Int cell in placedModule.GetFootprintCells(GetPlacementCell(building.transform.position)))
+                    RuntimeGrassClearing.ClearAt(new Vector3(cell.x + 0.5f, cell.y + 0.5f));
             BuildingPlacementLifecycle.NotifyCommitted(building);
             GameplayProgressEvents.PublishBuildingPlaced(
                 _placementActor,
@@ -1058,13 +1066,14 @@ public partial class Mod_Building : Module, IIncomingDamageRule
                 return true;
         }
 
-        // 动态可交互建筑与墙体统一按离散格层判断占用；物理 Collider 不再参与放置合法性。
-        if (!BuildingOccupancyRegistry.CanPlace(placementCell, this, out reason))
+        // 预览与真实提交逐格使用相同矩形占地，不能仅检查锚点格。
+        foreach (Vector2Int cell in GetFootprintCells(placementCell))
         {
-            return false;
+            if (!BuildingOccupancyRegistry.CanPlace(cell, this, out reason) ||
+                !CheckTilePenalties(cell, out reason))
+                return false;
         }
-
-        return CheckTilePenalties(placementCell, out reason);
+        return true;
     }
 
     private bool CheckTilePenalties(Vector2Int worldCell, out string reason)
@@ -1781,16 +1790,30 @@ public partial class Mod_Building : Module, IIncomingDamageRule
             return;
         }
 
-        BuildingOccupancyRegistry.Register(this, GetPlacementCell(item.transform.position));
+        BuildingOccupancyRegistry.Register(this, GetFootprintCells(GetPlacementCell(item.transform.position)));
         Mod_Door door = item.itemMods?.GetMod_ByID<Mod_Door>("Door");
         if (door != null) BuildingOccupancyRegistry.SetPassable(this, door.Data.IsOpen);
     }
 
-    /// <summary>动态可交互建筑与格子墙统一以吸附后的单个世界格作为放置槽。</summary>
+    #region 离散建筑占地
+
+    /// <summary>枚举建筑实际占用的世界格，所有格均按世界拓扑独立归一化。</summary>
+    private IEnumerable<Vector2Int> GetFootprintCells(Vector2Int anchorCell)
+    {
+        int width = Mathf.Clamp(Data?.FootprintWidth ?? 1, 1, 8);
+        int height = Mathf.Clamp(Data?.FootprintHeight ?? 1, 1, 8);
+        for (int y = 0; y < height; y++)
+            for (int x = 0; x < width; x++)
+                yield return WorldTopologyRuntime.NormalizeCell(new Vector2Int(anchorCell.x + x, anchorCell.y + y));
+    }
+
+    /// <summary>吸附后的格心是建筑占地的左下锚点。</summary>
     private static Vector2Int GetPlacementCell(Vector3 position)
         => WorldTopologyRuntime.NormalizeCell(new Vector2Int(
             Mathf.FloorToInt(position.x),
             Mathf.FloorToInt(position.y)));
+
+    #endregion
 
     /// <summary>Editor tooling uses this to stamp a prefab as the world body or its matching summoner.</summary>
     public void ConfigurePrefabRole(BuildingRole role, string buildingPrefabId, string summonerPrefabId)

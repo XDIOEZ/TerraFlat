@@ -82,6 +82,11 @@
       "enabled": true
     },
     {
+      "id": "grass_bed",
+      "path": "shells/grass_bed.json",
+      "enabled": true
+    },
+    {
       "id": "dimension_portals",
       "path": "shells/dimension_portals.json",
       "enabled": true

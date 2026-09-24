@@ -32,6 +32,7 @@ description: "Use when: 定位或修改 FlatWorld 的建筑放置预览、安装
 - 通用建筑本体只提供 `Item + SpriteRenderer + BoxCollider2D`；伤害由 JSON `health` 注入，门、容器、工作台等反馈由独立 `IInteractable` Module 提供，不再依赖通用 `Mod_InteractReciver` 转发。
 - 火把的手持职责与落地建筑本体保持分离：落地后统一使用 `Torch_Building`，`Torch_Summoner` 只能指向后者；攻击、武器动作、燃料、燃烧、光源、燃烧视觉、局部温度、命中 Buff、投料交互与建筑能力全部由 JSON 组合通用模块，运行时代码不得保留 `Mod_Torch` 或其它火把专用玩法聚合器。手持/落地之间只通过 `SharedModuleIds` 转移确需持续的燃料与燃烧状态。
 - 动态建筑保持 GameObject + Collider，但 Collider 只服务交互、受击等运行时物理；放置冲突、导航占地以及 AI 视线遮挡统一读取 `BuildingOccupancyRegistry` 的离散世界格层，不得写入地形 `TileData`，也不得用 Physics2D Overlap/Collider Bounds 推导这些逻辑结果。
+- 动态建筑的多格占地由建筑模块 `Building_Data.FootprintWidth/FootprintHeight` 声明，吸附格为左下锚点，缺省零值按 1×1 兼容旧数据；预览与提交必须逐格校验地形和占用，落地及读档逐格注册，拆除、禁用和失败回滚统一注销。视觉与物理碰撞体可覆盖多格，但不能代替离散格校验；跨世界边界的每格分别按拓扑归一化。
 - 建筑占地的 Revision/CellChanged 同时服务 Native LOS 脏块桥，不能只依赖导航最终可走值的变化来刷新视线（例如原本不可走但不遮挡的格）。通知只标脏，复制前完成旧 Job；退出世界注销订阅，避免每个 AI 注册占地事件。
 - `Module_Building` 不得再携带独立物理 Collider；其 `boxCollider2D` 运行时统一绑定所属 Item 根节点由 `visual.collider` 定义的碰撞体，避免模块默认框与建筑实体框叠加后产生额外阻挡或错误光照遮挡。`BuildingBodyShell` 的根碰撞体必须保持启用、非 Trigger，并位于 `Collider` Layer；召唤器查询碰撞体仍按召唤器规则处理。
 - 动态建筑的局部光阴影配置集中在 `Mod_Building.LightOcclusion.cs`：`LightOcclusionMode=Automatic` 只在自身有效 `Module_LightSource` 的光源进入真实轮廓或边缘间隙时，裁去光源以上的遮挡，熄灭后恢复完整轮廓；读取真实 Light2D 启用状态以兼容燃料模块直接熄灯。默认间隙 `OwnLightClearance=0.0625` 世界单位，`FullSilhouette` 保留封闭外壳，`None` 适合纯火焰/透明物。参数属于 Prefab/JSON `parameters` 配置，不写入建筑快照；MOD 改接收层后调用 `RefreshLightOcclusion()`。裁剪作用于该建筑对全部局部光的轮廓，是 2D 近似，不代表按光源高度逐灯排除自身。
