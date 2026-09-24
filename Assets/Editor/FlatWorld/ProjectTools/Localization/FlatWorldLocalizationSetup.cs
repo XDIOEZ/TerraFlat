@@ -119,7 +119,7 @@ namespace FlatWorld.Localization.Editor
             new Dictionary<string, string>(StringComparer.Ordinal)
             {
                 { "手钻", "Hand Drill" },
-                { "机械动力", "Mechanical Power" },
+                { "机械扭矩", "Mechanical Torque" },
                 { "钻孔", "Drill" },
                 { "摇动", "Crank" },
                 { "断开", "Disengage" },
@@ -127,9 +127,12 @@ namespace FlatWorld.Localization.Editor
                 { "切换传动比", "Change Ratio" },
                 { "旋转建筑", "Rotate Building" },
                 { "加工进度 {0:0}%", "Progress {0:0}%" },
-                { "{0} · 转速 {1:0} · 动力 {2:0.#}/{3:0.#}", "{0} · RPM {1:0} · Power {2:0.#}/{3:0.#}" },
+                { "{0} · 转速 {1:0} · 扭矩 {2:0.#}/{3:0.#}", "{0} · RPM {1:0} · Torque {2:0.#}/{3:0.#}" },
                 { " · 传动比 {0:0.##}", " · Ratio {0:0.##}" },
-                { "无动力", "No Power" },
+                { " · 工作效率 {0:0.#}%（需求 {1:0} RPM）", " · Efficiency {0:0.#}% (required {1:0} RPM)" },
+                { " · 转速倍率 {0:0.##} · 扭矩倍率 {1:0.##}", " · Speed x{0:0.##} · Torque x{1:0.##}" },
+                { "无扭矩", "No Torque" },
+                { "机械卡死", "Mechanism Jammed" },
                 { "过载", "Overloaded" },
                 { "运行中", "Running" },
                 { "传动比冲突", "Ratio Conflict" },

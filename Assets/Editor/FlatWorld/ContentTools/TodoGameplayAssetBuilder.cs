@@ -19,7 +19,7 @@ public static class TodoGameplayAssetBuilder
     #region 定向资源入口
 
     public const string Menu = "FlatWorld/待办/装配医疗与树果资源";
-    public const string FruitlessPath = "Assets/6_Art/Generated/CoconutTree/FruitlessCoconutTree.png";
+    public const string FruitlessPath = "Assets/6_Art/Generated/Farming/CoconutTree/FruitlessCoconutTree.png";
     private const string PalmSourcePath = "Assets/6_Art/Env/椰子树.png";
     private const string ModulesDirectory = "Assets/2_Prefabs/Gameplay/Modules/World";
     private const string PlayerPath = "Assets/2_Prefabs/Gameplay/Player/Player.prefab";

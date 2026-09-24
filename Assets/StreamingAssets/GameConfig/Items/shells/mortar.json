@@ -21,7 +21,7 @@
         "maxHp": 120
       },
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/StoneMortar/StoneMortar_Icon.png",
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/StoneMortar/StoneMortar_Icon.png",
         "rendererLocalScale": {
           "x": 1,
           "y": 1,

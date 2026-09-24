@@ -904,7 +904,7 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Scarecrow/Scarecrow_Idle.png",
+        "spriteAddress": "Assets/6_Art/Generated/Building/Scarecrow/Scarecrow_Idle.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -2032,7 +2032,7 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/WaterPlatform/WaterPlatform_Tile.png"
+        "spriteAddress": "Assets/6_Art/Generated/Building/WaterPlatform/WaterPlatform_Tile.png"
       },
       "health": {
         "hasHp": true,

@@ -20,7 +20,7 @@
         "maxHp": 500,
         "defense": { "cutting": 3, "piercing": 10, "chopping": 1, "blunt": 3 }
       },
-      "visual": { "spriteAddress": "Assets/6_Art/Generated/Boat/Boat_Carrier.png" },
+      "visual": { "spriteAddress": "Assets/6_Art/Generated/Vehicles/Boat/Boat_Carrier.png" },
       "modules": {
         "建筑模块": {
           "prefab": "Module_Building",
@@ -62,7 +62,7 @@
         }
       },
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Boat/Boat_Carrier.png",
+        "spriteAddress": "Assets/6_Art/Generated/Vehicles/Boat/Boat_Carrier.png",
         "rendererLocalScale": { "x": 2, "y": 2, "z": 1 },
         "collider": {
           "type": "BoxCollider2D",

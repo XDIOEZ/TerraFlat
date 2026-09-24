@@ -4,11 +4,11 @@ using FlatWorld.Networking;
 using UnityEngine;
 using UnityEngine.Rendering;
 
-/// <summary>机械节点的 Item 表现与交互桥。齿轮旋转主 Sprite 并保留固定输入杆；风车等动力源可用独立叶轮图层按节点 RPM 转动，塔体保持静止。世界状态由 MechanicalWorld 整网管理。</summary>
+/// <summary>机械节点的 Item 表现与交互桥。齿轮旋转主 Sprite 并保留固定输入杆；风车等扭矩源可用独立叶轮图层按节点 RPM 转动，塔体保持静止。世界状态由 MechanicalWorld 整网管理。</summary>
 public sealed class Mod_MechanicalNode : Module, IInteractable, IBuildingPlacementCommitted, IBuildingPlacementExtension
 {
     #region 配置与状态
-    public const string ModuleId = "机械动力模块";
+    public const string ModuleId = "机械扭矩模块";
     private const string InputShaftState = "inputShaft";
     private const string InputShaftObjectName = "MechanicalInputShaft";
     private const string RotorState = "rotor";
@@ -337,23 +337,32 @@ public sealed class Mod_MechanicalNode : Module, IInteractable, IBuildingPlaceme
     public string GetActionLabel()
     {
         if (Definition.Kind == "clutch") return LocalState.Engaged ? "断开" : "接合";
-        if (Definition.Kind == "gearbox") return "切换传动比";
+        if (Definition.Kind == "gearbox" && Definition.Ratios.Length > 1) return "切换传动比";
         return string.Empty;
     }
     private void PerformOperation(Player actor)
     {
         if (!GameNetwork.HasStateAuthority || Node?.State == null) return;
         if (Definition.Kind == "clutch") { LocalState.Engaged = !LocalState.Engaged; MechanicalWorld.TopologyChanged(Node); }
-        else if (Definition.Kind == "gearbox") { LocalState.RatioIndex = (LocalState.RatioIndex + 1) % Definition.Ratios.Length; MechanicalWorld.TopologyChanged(Node); }
+        else if (Definition.Kind == "gearbox" && Definition.Ratios.Length > 1)
+        { LocalState.RatioIndex = (LocalState.RatioIndex + 1) % Definition.Ratios.Length; MechanicalWorld.TopologyChanged(Node); }
         Save(); panel?.Refresh();
     }
     private string GetStatus()
     {
         string state = FlatWorldLocalizationService.GetUiText(Node?.Network?.Status ?? "停止");
-        string status = FlatWorldLocalizationService.GetUiFormat("{0} · 转速 {1:0} · 动力 {2:0.#}/{3:0.#}", state,
-            Node?.Rpm ?? 0, Node?.Network?.Supply ?? 0, Node?.Network?.Demand ?? 0);
-        if (Definition.Kind == "gearbox")
-            status += FlatWorldLocalizationService.GetUiFormat(" · 传动比 {0:0.##}", Definition.Ratios[Mathf.Clamp(LocalState.RatioIndex, 0, Definition.Ratios.Length - 1)]);
+        string status = FlatWorldLocalizationService.GetUiFormat("{0} · 转速 {1:0} · 扭矩 {2:0.#}/{3:0.#}", state,
+            Node?.Rpm ?? 0, Node?.Network?.TorqueSupply ?? 0, Node?.Network?.TorqueDemand ?? 0);
+        if (Definition.Kind == "consumer" || Definition.Kind == "bellows")
+            status += FlatWorldLocalizationService.GetUiFormat(" · 工作效率 {0:0.#}%（需求 {1:0} RPM）",
+                MechanicalWorld.GetWorkEfficiency(Node) * 100f, Definition.RequiredRpm);
+        if (Definition.Kind == "gearbox" && Node != null && Node.FlowVisited && Node.EntryDirection >= 0)
+        {
+            Definition.GetTransmission(Node.EntryDirection < 2, LocalState.RatioIndex,
+                out float speedRatio, out float torqueRatio);
+            status += FlatWorldLocalizationService.GetUiFormat(" · 转速倍率 {0:0.##} · 扭矩倍率 {1:0.##}",
+                speedRatio, torqueRatio);
+        }
         return status;
     }
     #endregion

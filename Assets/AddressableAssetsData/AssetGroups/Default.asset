@@ -18,7 +18,7 @@ MonoBehaviour:
   m_GUID: 47b73bec22f621a498a1748af8eb38da
   m_SerializeEntries:
   - m_GUID: 0017c78e6bdddaae8e0096d70189ceed
-    m_Address: Assets/6_Art/Generated/HerbSeed/HerbSeed_Icon.png
+    m_Address: Assets/6_Art/Generated/Farming/HerbSeed/HerbSeed_Icon.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
@@ -42,7 +42,7 @@ MonoBehaviour:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 01a9304d3ad266244b7df528f1428837
-    m_Address: Assets/6_Art/Generated/DrilledLog/DrilledLog_Idle.png
+    m_Address: Assets/6_Art/Generated/Mechanical/Items/DrilledLog_Idle.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
@@ -60,7 +60,7 @@ MonoBehaviour:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 022b08e9b2017c94e9223192e076622d
-    m_Address: Assets/6_Art/Generated/Chili/ChiliTree_Mature.png
+    m_Address: Assets/6_Art/Generated/Farming/Chili/ChiliTree_Mature.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
@@ -108,7 +108,7 @@ MonoBehaviour:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 04dff00073e8d61412c91281eda84d7c
-    m_Address: Assets/6_Art/Generated/WillowTree/WillowTree_Idle.png
+    m_Address: Assets/6_Art/Generated/Farming/WillowTree/WillowTree_Idle.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
@@ -120,7 +120,7 @@ MonoBehaviour:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 056389816b4d4928a41f75c679ca206f
-    m_Address: Assets/6_Art/Generated/Orange/Orange_Idle.png
+    m_Address: Assets/6_Art/Generated/Farming/Orange/Orange_Idle.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
@@ -132,7 +132,7 @@ MonoBehaviour:
     - ActorVisual
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 0694072e92f676145b728f4417449224
-    m_Address: Assets/6_Art/Generated/IceBlock/IceBlock_Icon.png
+    m_Address: Assets/6_Art/Generated/InventoryCrafting/IceBlock/IceBlock_Icon.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
@@ -144,43 +144,43 @@ MonoBehaviour:
     - ItemMaterial
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 883137757c43fa349ab6e73e45e36960
-    m_Address: Assets/6_Art/Generated/MechanicalWorld/Transmission/World_Shaft_Wood_Linked.png
+    m_Address: Assets/6_Art/Generated/Mechanical/World/Transmission/World_Shaft_Wood_Linked.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 91523b89bca33bf4a88f86f63a74ecf1
-    m_Address: Assets/6_Art/Generated/GrassBed/GrassBed.png
+    m_Address: Assets/6_Art/Generated/Building/GrassBed/GrassBed.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 9c5b28c80319a2343aa7ba34d9dad9d8
-    m_Address: Assets/6_Art/Generated/MechanicalWorld/Windmill_Building.png
+    m_Address: Assets/6_Art/Generated/Mechanical/World/Windmill_Building.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 521c7d2ba6f995d48bf33c22d655e409
-    m_Address: Assets/6_Art/Generated/MechanicalWorld/Windmill_Tower.png
+    m_Address: Assets/6_Art/Generated/Mechanical/World/Windmill_Tower.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: cf4ac39fcbea2364fa40a553f3c7ab5e
-    m_Address: Assets/6_Art/Generated/MechanicalWorld/Windmill_Rotor.png
+    m_Address: Assets/6_Art/Generated/Mechanical/World/Windmill_Rotor.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 4474f46a23ce4c14696db676ae1b07f6
-    m_Address: Assets/6_Art/Generated/MechanicalWorld/Transmission/World_Gear_Wood.png
+    m_Address: Assets/6_Art/Generated/Mechanical/World/Transmission/World_Gear_Wood.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 2f35489c4a7f9034681593486b0cccab
-    m_Address: Assets/6_Art/Generated/MechanicalWorld/Transmission/World_Gear_Wood_InputShaft.png
+    m_Address: Assets/6_Art/Generated/Mechanical/World/Transmission/World_Gear_Wood_InputShaft.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
@@ -318,7 +318,7 @@ MonoBehaviour:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 13a4d1fa90f74e109609e515a7aefc8f
-    m_Address: Assets/6_Art/Generated/FoxtailGrass/FoxtailGrass_Seedling.png
+    m_Address: Assets/6_Art/Generated/Farming/FoxtailGrass/FoxtailGrass_Seedling.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
@@ -336,7 +336,7 @@ MonoBehaviour:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 170f30f3a26ddb752acdd2c42a13c331
-    m_Address: Assets/6_Art/Generated/RadishSeed/RadishSeed_Icon.png
+    m_Address: Assets/6_Art/Generated/Farming/RadishSeed/RadishSeed_Icon.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
@@ -372,19 +372,19 @@ MonoBehaviour:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 1acc6061aad140b48a8411caa3774196
-    m_Address: Assets/6_Art/Generated/WaterPlatform/WaterPlatform_Tile.png
+    m_Address: Assets/6_Art/Generated/Building/WaterPlatform/WaterPlatform_Tile.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 1afd533283c14058bb4fd26ccd41c1ac
-    m_Address: Assets/6_Art/Generated/ClayJar/ClayJar_Dirty.png
+    m_Address: Assets/6_Art/Generated/WaterVessel/ClayJar/ClayJar_Dirty.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 1b00a80c1db4e5e4393e1f3fb30a4ba8
-    m_Address: Assets/6_Art/Generated/Straw/Straw_Icon.png
+    m_Address: Assets/6_Art/Generated/InventoryCrafting/Straw/Straw_Icon.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
@@ -438,7 +438,7 @@ MonoBehaviour:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 1ff417421e1173141bae88614aca6a22
-    m_Address: Assets/6_Art/Generated/Chili/ChiliTree_Growing.png
+    m_Address: Assets/6_Art/Generated/Farming/Chili/ChiliTree_Growing.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
@@ -510,7 +510,7 @@ MonoBehaviour:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 26ef607c55e8dea4ca0ffdbf873c22e9
-    m_Address: Assets/6_Art/Generated/Rice/Rice_Icon.png
+    m_Address: Assets/6_Art/Generated/Farming/Rice/Rice_Icon.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
@@ -534,7 +534,7 @@ MonoBehaviour:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 28b90fa43e08750428294c7d4ec6f545
-    m_Address: Assets/6_Art/Generated/Rice/RiceCrop_Seedling.png
+    m_Address: Assets/6_Art/Generated/Farming/Rice/RiceCrop_Seedling.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
@@ -588,7 +588,7 @@ MonoBehaviour:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 2e1970801c1dd2b45a096e6ebf2be981
-    m_Address: Assets/6_Art/Generated/Peach/Peach_Idle.png
+    m_Address: Assets/6_Art/Generated/Farming/Peach/Peach_Idle.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
@@ -600,13 +600,13 @@ MonoBehaviour:
     - TileBlock
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 2eaf0ea6f10249fcb4327055eb47f226
-    m_Address: Assets/6_Art/Generated/Boat/Boat_Carrier.png
+    m_Address: Assets/6_Art/Generated/Vehicles/Boat/Boat_Carrier.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 2ede27bbfd3cd8d4091b0184b9807686
-    m_Address: Assets/6_Art/Generated/Mushroom/Item_Mushroom.png
+    m_Address: Assets/6_Art/Generated/Farming/Mushroom/Item_Mushroom.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
@@ -630,7 +630,7 @@ MonoBehaviour:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 30ac1884b639b284aae63618e0f548ee
-    m_Address: Assets/6_Art/Generated/WoodHammer/WoodHammer_Icon.png
+    m_Address: Assets/6_Art/Generated/InventoryCrafting/WoodHammer/WoodHammer_Icon.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
@@ -666,7 +666,7 @@ MonoBehaviour:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 342e344225bf45639e0c256f3160191c
-    m_Address: Assets/6_Art/Generated/OrangeTree/OrangeTree_Idle.png
+    m_Address: Assets/6_Art/Generated/Farming/OrangeTree/OrangeTree_Idle.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
@@ -756,7 +756,7 @@ MonoBehaviour:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 3dd2f7c7c0b0400b9257283f045be322
-    m_Address: Assets/6_Art/Generated/Herb/Herb_Icon.png
+    m_Address: Assets/6_Art/Generated/Farming/Herb/Herb_Icon.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
@@ -774,7 +774,7 @@ MonoBehaviour:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 3f13d3a89b9477ffd54e89d432742c41
-    m_Address: Assets/6_Art/Generated/StoneHammer/StoneHammer_Icon.png
+    m_Address: Assets/6_Art/Generated/InventoryCrafting/StoneHammer/StoneHammer_Icon.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
@@ -798,7 +798,7 @@ MonoBehaviour:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 428ec8a514cc430c8f090e8a5e65951d
-    m_Address: Assets/6_Art/Generated/FoxtailEar/FoxtailEar_SeedHead_Icon.png
+    m_Address: Assets/6_Art/Generated/Farming/FoxtailEar/FoxtailEar_SeedHead_Icon.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
@@ -878,7 +878,7 @@ MonoBehaviour:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 48480798b43ff4342b289d840991d67f
-    m_Address: Assets/6_Art/Generated/FoxtailEar/FoxtailEar_Icon.png
+    m_Address: Assets/6_Art/Generated/Farming/FoxtailEar/FoxtailEar_Icon.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
@@ -962,7 +962,7 @@ MonoBehaviour:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 523194f84719495a9fd3ee0bd8322f1c
-    m_Address: Assets/6_Art/Generated/AppleSeed/AppleSeed_Icon.png
+    m_Address: Assets/6_Art/Generated/Farming/AppleSeed/AppleSeed_Icon.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
@@ -1010,7 +1010,7 @@ MonoBehaviour:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 5712a19fbac535840803f6efdce3f650
-    m_Address: Assets/6_Art/Generated/Rice/RiceCrop_Growing.png
+    m_Address: Assets/6_Art/Generated/Farming/Rice/RiceCrop_Growing.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
@@ -1064,7 +1064,7 @@ MonoBehaviour:
     - TileBlock
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 5b8aedc1d2ec8b34799e888e2fbaf632
-    m_Address: Assets/6_Art/Generated/Rice/RiceGrain_Icon.png
+    m_Address: Assets/6_Art/Generated/Farming/Rice/RiceGrain_Icon.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
@@ -1094,7 +1094,7 @@ MonoBehaviour:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 5df34798b64bbb447961dd7d6c665129
-    m_Address: Assets/6_Art/Generated/Archery/Arrow_Wood_Icon.png
+    m_Address: Assets/6_Art/Generated/Combat/Archery/Arrow_Wood_Icon.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
@@ -1118,7 +1118,7 @@ MonoBehaviour:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 5f229fd895224d588ef8cd61724e2ee6
-    m_Address: Assets/6_Art/Generated/Archery/RecurveBow_Icon.png
+    m_Address: Assets/6_Art/Generated/Combat/Archery/RecurveBow_Icon.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
@@ -1154,7 +1154,7 @@ MonoBehaviour:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 60a7857771b1a481ea669d25c0c2e911
-    m_Address: Assets/6_Art/Generated/FoxtailSeed/FoxtailSeed_Icon.png
+    m_Address: Assets/6_Art/Generated/Farming/FoxtailSeed/FoxtailSeed_Icon.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
@@ -1172,7 +1172,7 @@ MonoBehaviour:
     - ActorVisual
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 6234249e6e988e5111b44d5da2565029
-    m_Address: Assets/6_Art/Generated/WillowBranch/WillowBranch_Icon.png
+    m_Address: Assets/6_Art/Generated/Farming/WillowBranch/WillowBranch_Icon.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
@@ -1209,7 +1209,7 @@ MonoBehaviour:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 647e6092ebb3cc8458d1a7cb22f7df84
-    m_Address: "Assets/6_Art/Generated/ItemPlaceholder/\u7D20\u6750\u5360\u4F4D\u7B26.png"
+    m_Address: "Assets/6_Art/Generated/Shared/ItemPlaceholder/\u7D20\u6750\u5360\u4F4D\u7B26.png"
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
@@ -1233,7 +1233,7 @@ MonoBehaviour:
     - TileBlock
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 65a146c3ad866a44d8c9dcf0bbeabc25
-    m_Address: Assets/6_Art/Generated/Archery/Arrow_Iron_Icon.png
+    m_Address: Assets/6_Art/Generated/Combat/Archery/Arrow_Iron_Icon.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
@@ -1257,7 +1257,7 @@ MonoBehaviour:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 6703c64685ba4281b85788c794107a5d
-    m_Address: Assets/6_Art/Generated/HerbPoultice/Item_HerbPoultice.png
+    m_Address: Assets/6_Art/Generated/Medical/HerbPoultice/Item_HerbPoultice.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
@@ -1269,7 +1269,7 @@ MonoBehaviour:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 68090fdf4cb11374298a1c6b95f972aa
-    m_Address: Assets/6_Art/Generated/Fiber/Fiber_Icon.png
+    m_Address: Assets/6_Art/Generated/InventoryCrafting/Fiber/Fiber_Icon.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
@@ -1305,7 +1305,7 @@ MonoBehaviour:
     - ActorVisual
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 6acd77b7260baa04491cf92c6c54368e
-    m_Address: Assets/6_Art/Generated/Mine_Niter/Mine_Niter_Idle.png
+    m_Address: Assets/6_Art/Generated/Environment/Mine_Niter/Mine_Niter_Idle.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
@@ -1347,7 +1347,7 @@ MonoBehaviour:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 6ca396415d99195c7e6fcf80f6f75fde
-    m_Address: Assets/6_Art/Generated/Flour/Flour_Icon.png
+    m_Address: Assets/6_Art/Generated/InventoryCrafting/Flour/Flour_Icon.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
@@ -1407,7 +1407,7 @@ MonoBehaviour:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 6f329e83ff294aa1aa75ca1afc4179b3
-    m_Address: Assets/6_Art/Generated/WallMetal/Wall_Copper_Medium.png
+    m_Address: Assets/6_Art/Generated/Building/WallMetal/Wall_Copper_Medium.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
@@ -1425,7 +1425,7 @@ MonoBehaviour:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 71e7014c314745d4ea8ce16c7cd267e2
-    m_Address: Assets/6_Art/Generated/PineTree/PineTree_Idle.png
+    m_Address: Assets/6_Art/Generated/Environment/PineTree/PineTree_Idle.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
@@ -1437,13 +1437,13 @@ MonoBehaviour:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 724de3ebf9534715bef60c4437f86a3f
-    m_Address: Assets/6_Art/Generated/Charcoal/Charcoal_Icon.png
+    m_Address: Assets/6_Art/Generated/InventoryCrafting/Charcoal/Charcoal_Icon.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 7427d5e4674549c3b902e3e844334fba
-    m_Address: Assets/6_Art/Generated/FoxtailGrass/FoxtailGrass_Growing.png
+    m_Address: Assets/6_Art/Generated/Farming/FoxtailGrass/FoxtailGrass_Growing.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
@@ -1484,7 +1484,7 @@ MonoBehaviour:
     - ActorVisual
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 7856bc97968cca247b00ffea91486404
-    m_Address: Assets/6_Art/Generated/StoneMortar/StoneMortar_Icon.png
+    m_Address: Assets/6_Art/Generated/InventoryCrafting/StoneMortar/StoneMortar_Icon.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
@@ -1526,7 +1526,7 @@ MonoBehaviour:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 7d6df6f2a3fed54da135205b898a25ee
-    m_Address: Assets/6_Art/Generated/WillowSeed/WillowSeed_Icon.png
+    m_Address: Assets/6_Art/Generated/Farming/WillowSeed/WillowSeed_Icon.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
@@ -1586,7 +1586,7 @@ MonoBehaviour:
     - TileBlock
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 8390c4191207400fa1450b402e5bb870
-    m_Address: Assets/6_Art/Generated/Herb/HerbCrop_Mature.png
+    m_Address: Assets/6_Art/Generated/Farming/Herb/HerbCrop_Mature.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
@@ -1609,7 +1609,7 @@ MonoBehaviour:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 85328d2effb540b591284de6d0f77828
-    m_Address: Assets/6_Art/Generated/FoxtailGrass/FoxtailGrass_Mature.png
+    m_Address: Assets/6_Art/Generated/Farming/FoxtailGrass/FoxtailGrass_Mature.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
@@ -1639,13 +1639,13 @@ MonoBehaviour:
     - ActorVisual
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 877cf282663109243952565edb137b36
-    m_Address: Assets/6_Art/Generated/Archery/Arrow_Copper_Icon.png
+    m_Address: Assets/6_Art/Generated/Combat/Archery/Arrow_Copper_Icon.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 87f773944fc46c2e258a731494417908
-    m_Address: Assets/6_Art/Generated/BerrySeed/BerrySeed_Icon.png
+    m_Address: Assets/6_Art/Generated/Farming/BerrySeed/BerrySeed_Icon.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
@@ -1663,7 +1663,7 @@ MonoBehaviour:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 89bef44cdb92408c936c2006f3f0df42
-    m_Address: Assets/6_Art/Generated/WallMetal/Wall_Iron_Medium.png
+    m_Address: Assets/6_Art/Generated/Building/WallMetal/Wall_Iron_Medium.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
@@ -1759,7 +1759,7 @@ MonoBehaviour:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 9103545e7e6d8108de063e503f4011f6
-    m_Address: Assets/6_Art/Generated/Scissors/Scissors_Icon.png
+    m_Address: Assets/6_Art/Generated/InventoryCrafting/Scissors/Scissors_Icon.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
@@ -1952,7 +1952,7 @@ MonoBehaviour:
     - ActorVisual
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: a1425257ed90d7e45bb1a9eb6f7e89b7
-    m_Address: Assets/6_Art/Generated/ClayJarBlank/ClayJarBlank_Icon.png
+    m_Address: Assets/6_Art/Generated/WaterVessel/ClayJarBlank/ClayJarBlank_Icon.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
@@ -1970,7 +1970,7 @@ MonoBehaviour:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: a2577fd38089bda38e87a049715c610e
-    m_Address: Assets/6_Art/Generated/Mushroom/Item_MushroomSpores.png
+    m_Address: Assets/6_Art/Generated/Farming/Mushroom/Item_MushroomSpores.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
@@ -1988,7 +1988,7 @@ MonoBehaviour:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: a3f088204b0a27542838f566d87b8a55
-    m_Address: Assets/6_Art/Generated/Chili/Chili_Icon.png
+    m_Address: Assets/6_Art/Generated/Farming/Chili/Chili_Icon.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
@@ -2000,7 +2000,7 @@ MonoBehaviour:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: a4b197668c680b141b2912606f2aaf9e
-    m_Address: Assets/6_Art/Generated/Items/StoneSlab.png
+    m_Address: Assets/6_Art/Generated/InventoryCrafting/StoneSlab.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
@@ -2012,7 +2012,7 @@ MonoBehaviour:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: a5732d1324140c40b598f12d14fbbad2
-    m_Address: Assets/6_Art/Generated/MinersNote/MinersNote_Icon.png
+    m_Address: Assets/6_Art/Generated/Quest/MinersNote/MinersNote_Icon.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
@@ -2036,7 +2036,7 @@ MonoBehaviour:
     - ActorVisual
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: a73b4de11c99b12479c8bcfea3af7759
-    m_Address: Assets/6_Art/Generated/Mushroom/Plant_Mushroom.png
+    m_Address: Assets/6_Art/Generated/Farming/Mushroom/Plant_Mushroom.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
@@ -2066,7 +2066,7 @@ MonoBehaviour:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: a9a36fbedc8d09047b08323781bf7f47
-    m_Address: Assets/6_Art/Generated/Archery/Arrow_Stone_Icon.png
+    m_Address: Assets/6_Art/Generated/Combat/Archery/Arrow_Stone_Icon.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
@@ -2151,7 +2151,7 @@ MonoBehaviour:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: b1237bc62a1542e2ad3b3afdb1ff88c0
-    m_Address: Assets/6_Art/Generated/WaterPlatform/WaterPlatform_Copper_Tile.png
+    m_Address: Assets/6_Art/Generated/Building/WaterPlatform/WaterPlatform_Copper_Tile.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
@@ -2181,7 +2181,7 @@ MonoBehaviour:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: b4806a56d8c892148add45ca6c765561
-    m_Address: Assets/6_Art/Generated/CuredMeat/CuredMeat_Icon.png
+    m_Address: Assets/6_Art/Generated/InventoryCrafting/CuredMeat/CuredMeat_Icon.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
@@ -2235,19 +2235,19 @@ MonoBehaviour:
     - TileBlock
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: b8b3886b2f4c7434b8a2a1599659ef70
-    m_Address: Assets/6_Art/Generated/Rice/RiceCrop_Mature.png
+    m_Address: Assets/6_Art/Generated/Farming/Rice/RiceCrop_Mature.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: b8f520dfd3aec2440bdb9e1a036477a6
-    m_Address: Assets/6_Art/Generated/Ore_Niter/Ore_Niter_Idle.png
+    m_Address: Assets/6_Art/Generated/Environment/Ore_Niter/Ore_Niter_Idle.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: b92fbd666bec40daac149abfba48b3e7
-    m_Address: Assets/6_Art/Generated/WaterPlatform/WaterPlatform_Iron_Tile.png
+    m_Address: Assets/6_Art/Generated/Building/WaterPlatform/WaterPlatform_Iron_Tile.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
@@ -2402,7 +2402,7 @@ MonoBehaviour:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: c9cc158b386e4044b39926f51c643261
-    m_Address: Assets/6_Art/Generated/ClayJar/ClayJar_Sea.png
+    m_Address: Assets/6_Art/Generated/WaterVessel/ClayJar/ClayJar_Sea.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
@@ -2564,7 +2564,7 @@ MonoBehaviour:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: dac097067e7d437eab8bd687be90502c
-    m_Address: Assets/6_Art/Generated/Scarecrow/Scarecrow_Idle.png
+    m_Address: Assets/6_Art/Generated/Building/Scarecrow/Scarecrow_Idle.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
@@ -2601,13 +2601,13 @@ MonoBehaviour:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: de315b489b0d40f2abd764e9910c2d18
-    m_Address: Assets/6_Art/Generated/WaterPlatform/WaterPlatform_Stone_Tile.png
+    m_Address: Assets/6_Art/Generated/Building/WaterPlatform/WaterPlatform_Stone_Tile.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: dea9fb99d4fe46f43b72ab76fe049ec4
-    m_Address: Assets/6_Art/Generated/WillowBark/WillowBark_Idle.png
+    m_Address: Assets/6_Art/Generated/Farming/WillowBark/WillowBark_Idle.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
@@ -2619,7 +2619,7 @@ MonoBehaviour:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: dedf355ddf8a2ee46a9451bdb26f8c52
-    m_Address: Assets/6_Art/Generated/ClayDeposit/ClayDeposit_Idle.png
+    m_Address: Assets/6_Art/Generated/Environment/ClayDeposit/ClayDeposit_Idle.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
@@ -2637,7 +2637,7 @@ MonoBehaviour:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: e037bfae795a4a2b9d0c44d8ad834e6c
-    m_Address: Assets/6_Art/Generated/WallMetal/Wall_Bronze_Medium.png
+    m_Address: Assets/6_Art/Generated/Building/WallMetal/Wall_Bronze_Medium.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
@@ -2661,13 +2661,13 @@ MonoBehaviour:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: e2cb4edbc3684c10af988c8359ca0b90
-    m_Address: Assets/6_Art/Generated/Clay/Clay_Icon.png
+    m_Address: Assets/6_Art/Generated/InventoryCrafting/Clay/Clay_Icon.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: ea580b54dbd223a46aecea564b8a90bd
-    m_Address: Assets/6_Art/Generated/Peat/Peat_Icon.png
+    m_Address: Assets/6_Art/Generated/Environment/Peat/Peat_Icon.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
@@ -2709,7 +2709,7 @@ MonoBehaviour:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: e7c829501b614b045bfdb2861abed935
-    m_Address: Assets/6_Art/Generated/CookedRice/CookedRice_Icon.png
+    m_Address: Assets/6_Art/Generated/InventoryCrafting/CookedRice/CookedRice_Icon.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
@@ -2751,7 +2751,7 @@ MonoBehaviour:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: ea723336336767e46bbd91ed35a20635
-    m_Address: Assets/6_Art/Generated/Archery/WoodBow_Icon.png
+    m_Address: Assets/6_Art/Generated/Combat/Archery/WoodBow_Icon.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
@@ -2775,7 +2775,7 @@ MonoBehaviour:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: eedab32e33cc679428f24bd9cc8e0ee9
-    m_Address: Assets/6_Art/Generated/Iceberg/Iceberg_Idle.png
+    m_Address: Assets/6_Art/Generated/Environment/Iceberg/Iceberg_Idle.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
@@ -2793,7 +2793,7 @@ MonoBehaviour:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: f06ac029ccc14b4fa263ef65564120b6
-    m_Address: Assets/6_Art/Generated/WaterPlatform/WaterPlatform_Bronze_Tile.png
+    m_Address: Assets/6_Art/Generated/Building/WaterPlatform/WaterPlatform_Bronze_Tile.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
@@ -2805,7 +2805,7 @@ MonoBehaviour:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: f09c0ca5b54b49e3a886b29e57c01514
-    m_Address: Assets/6_Art/Generated/ClayJar/ClayJar_Filled.png
+    m_Address: Assets/6_Art/Generated/WaterVessel/ClayJar/ClayJar_Filled.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
@@ -2835,7 +2835,7 @@ MonoBehaviour:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: f4a0bf8415b541c4a9ab416158853162
-    m_Address: Assets/6_Art/Generated/PeachTree/PeachTree_Idle.png
+    m_Address: Assets/6_Art/Generated/Farming/PeachTree/PeachTree_Idle.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
@@ -2889,7 +2889,7 @@ MonoBehaviour:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: f6c015b268204e9593391045af665d42
-    m_Address: Assets/6_Art/Generated/ClayJar/ClayJar_Drinkable.png
+    m_Address: Assets/6_Art/Generated/WaterVessel/ClayJar/ClayJar_Drinkable.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
@@ -2931,7 +2931,7 @@ MonoBehaviour:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: fad052ca14f469d459bed8046c121ee6
-    m_Address: Assets/6_Art/Generated/ResinGlue/ResinGlue_Idle.png
+    m_Address: Assets/6_Art/Generated/InventoryCrafting/ResinGlue/ResinGlue_Idle.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
@@ -2949,13 +2949,13 @@ MonoBehaviour:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: fbcaf9031e37ce84b8ef2b53b48427ba
-    m_Address: Assets/6_Art/Generated/CoconutTree/FruitlessCoconutTree.png
+    m_Address: Assets/6_Art/Generated/Farming/CoconutTree/FruitlessCoconutTree.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - Sprite
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: fbe63fe746cdb6f4c1ebc536e4364de3
-    m_Address: Assets/6_Art/Generated/StoneShovel/StoneShovel_Icon.png
+    m_Address: Assets/6_Art/Generated/InventoryCrafting/StoneShovel/StoneShovel_Icon.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
@@ -2973,7 +2973,7 @@ MonoBehaviour:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: fcc1fc6afdc05604d9368aa332bc00fc
-    m_Address: Assets/6_Art/Generated/ClayJar/ClayJar_Icon.png
+    m_Address: Assets/6_Art/Generated/WaterVessel/ClayJar/ClayJar_Icon.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
@@ -3003,7 +3003,7 @@ MonoBehaviour:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: ff8bd4b9d465da04fa604a649df27157
-    m_Address: Assets/6_Art/Generated/Chili/ChiliTree_Seedling.png
+    m_Address: Assets/6_Art/Generated/Farming/Chili/ChiliTree_Seedling.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite

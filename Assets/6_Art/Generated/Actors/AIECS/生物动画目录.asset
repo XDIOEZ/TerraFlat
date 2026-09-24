@@ -433,7 +433,7 @@ MonoBehaviour:
       y: 0.84375
       width: 0.03125
       height: 0.0625
-  - Source: Assets/6_Art/Generated/Ghost/Ghost_Idle_Sheet.png[Ghost_Idle_0]
+  - Source: Assets/6_Art/Generated/Actors/Ghost/Ghost_Idle_Sheet.png[Ghost_Idle_0]
     LocalRect:
       serializedVersion: 2
       x: -1
@@ -452,7 +452,7 @@ MonoBehaviour:
       y: 0.515625
       width: 0.125
       height: 0.25
-  - Source: Assets/6_Art/Generated/Ghost/Ghost_Idle_Sheet.png[Ghost_Idle_1]
+  - Source: Assets/6_Art/Generated/Actors/Ghost/Ghost_Idle_Sheet.png[Ghost_Idle_1]
     LocalRect:
       serializedVersion: 2
       x: -1
@@ -471,7 +471,7 @@ MonoBehaviour:
       y: 0.2578125
       width: 0.125
       height: 0.25
-  - Source: Assets/6_Art/Generated/Ghost/Ghost_Idle_Sheet.png[Ghost_Idle_2]
+  - Source: Assets/6_Art/Generated/Actors/Ghost/Ghost_Idle_Sheet.png[Ghost_Idle_2]
     LocalRect:
       serializedVersion: 2
       x: -1
@@ -490,7 +490,7 @@ MonoBehaviour:
       y: 0
       width: 0.125
       height: 0.25
-  - Source: Assets/6_Art/Generated/Ghost/Ghost_Idle_Sheet.png[Ghost_Idle_3]
+  - Source: Assets/6_Art/Generated/Actors/Ghost/Ghost_Idle_Sheet.png[Ghost_Idle_3]
     LocalRect:
       serializedVersion: 2
       x: -1
@@ -509,7 +509,7 @@ MonoBehaviour:
       y: 0
       width: 0.125
       height: 0.25
-  - Source: Assets/6_Art/Generated/Ghost/Ghost_Idle_Sheet.png[Ghost_Idle_4]
+  - Source: Assets/6_Art/Generated/Actors/Ghost/Ghost_Idle_Sheet.png[Ghost_Idle_4]
     LocalRect:
       serializedVersion: 2
       x: -1
@@ -528,7 +528,7 @@ MonoBehaviour:
       y: 0.2578125
       width: 0.125
       height: 0.25
-  - Source: Assets/6_Art/Generated/Ghost/Ghost_Idle_Sheet.png[Ghost_Idle_5]
+  - Source: Assets/6_Art/Generated/Actors/Ghost/Ghost_Idle_Sheet.png[Ghost_Idle_5]
     LocalRect:
       serializedVersion: 2
       x: -1
@@ -547,7 +547,7 @@ MonoBehaviour:
       y: 0.515625
       width: 0.125
       height: 0.25
-  - Source: Assets/6_Art/Generated/Ghost/Ghost_Idle_Sheet.png[Ghost_Idle_6]
+  - Source: Assets/6_Art/Generated/Actors/Ghost/Ghost_Idle_Sheet.png[Ghost_Idle_6]
     LocalRect:
       serializedVersion: 2
       x: -1
@@ -566,7 +566,7 @@ MonoBehaviour:
       y: 0
       width: 0.125
       height: 0.25
-  - Source: Assets/6_Art/Generated/Ghost/Ghost_Idle_Sheet.png[Ghost_Idle_7]
+  - Source: Assets/6_Art/Generated/Actors/Ghost/Ghost_Idle_Sheet.png[Ghost_Idle_7]
     LocalRect:
       serializedVersion: 2
       x: -1
@@ -1877,7 +1877,7 @@ MonoBehaviour:
       y: 0.375
       width: 0.03125
       height: 0.0625
-  - Source: Assets/6_Art/Generated/Zombie/Character_Zombie_Walk_LR_Sheet.png[Character_Zombie_Walk_Right_0]
+  - Source: Assets/6_Art/Generated/Actors/Zombie/Character_Zombie_Walk_LR_Sheet.png[Character_Zombie_Walk_Right_0]
     LocalRect:
       serializedVersion: 2
       x: -0.5
@@ -1896,7 +1896,7 @@ MonoBehaviour:
       y: 0
       width: 0.0625
       height: 0.125
-  - Source: Assets/6_Art/Generated/Zombie/Character_Zombie_Walk_LR_Sheet.png[Character_Zombie_Walk_Right_1]
+  - Source: Assets/6_Art/Generated/Actors/Zombie/Character_Zombie_Walk_LR_Sheet.png[Character_Zombie_Walk_Right_1]
     LocalRect:
       serializedVersion: 2
       x: -0.5
@@ -1915,7 +1915,7 @@ MonoBehaviour:
       y: 0
       width: 0.0625
       height: 0.125
-  - Source: Assets/6_Art/Generated/Zombie/Character_Zombie_Walk_LR_Sheet.png[Character_Zombie_Walk_Right_2]
+  - Source: Assets/6_Art/Generated/Actors/Zombie/Character_Zombie_Walk_LR_Sheet.png[Character_Zombie_Walk_Right_2]
     LocalRect:
       serializedVersion: 2
       x: -0.5
@@ -1934,7 +1934,7 @@ MonoBehaviour:
       y: 0.1640625
       width: 0.0625
       height: 0.125
-  - Source: Assets/6_Art/Generated/Zombie/Character_Zombie_Walk_LR_Sheet.png[Character_Zombie_Walk_Right_3]
+  - Source: Assets/6_Art/Generated/Actors/Zombie/Character_Zombie_Walk_LR_Sheet.png[Character_Zombie_Walk_Right_3]
     LocalRect:
       serializedVersion: 2
       x: -0.5
@@ -1953,7 +1953,7 @@ MonoBehaviour:
       y: 0.296875
       width: 0.0625
       height: 0.125
-  - Source: Assets/6_Art/Generated/Zombie/Character_Zombie_Idle_LR_Sheet.png[Character_Zombie_Idle_Right]
+  - Source: Assets/6_Art/Generated/Actors/Zombie/Character_Zombie_Idle_LR_Sheet.png[Character_Zombie_Idle_Right]
     LocalRect:
       serializedVersion: 2
       x: -0.5

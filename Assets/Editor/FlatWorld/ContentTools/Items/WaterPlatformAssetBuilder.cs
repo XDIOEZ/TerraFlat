@@ -15,7 +15,7 @@ public static class WaterPlatformAssetBuilder
 
     private const int RuntimeTileId = 13;
     private const string TileBlockId = "Tile_WaterPlatform";
-    private const string TexturePath = "Assets/6_Art/Generated/WaterPlatform/WaterPlatform_Tile.png";
+    private const string TexturePath = "Assets/6_Art/Generated/Building/WaterPlatform/WaterPlatform_Tile.png";
     private const string TilePath = "Assets/7_Tiles/Base/Tile_WaterPlatform.asset";
     private const string BlockPath = "Assets/4_ScriptObjects/World/Tiles/Tile_WaterPlatform.asset";
     private const string PalettePath = "Assets/Resources/Config/WorldModel/ChunkTilePalette_Default.asset";

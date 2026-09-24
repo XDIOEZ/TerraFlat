@@ -12,7 +12,7 @@ using UnityEngine.UI;
 public static class MechanicalContentValidation
 {
     #region 内容与视图验证
-    [MenuItem("FlatWorld/机械动力/验证内容与面板")]
+    [MenuItem("FlatWorld/机械扭矩/验证内容与面板")]
     public static void ValidateAndRender()
     {
         MechanicalContentBuilder.Build();
@@ -56,7 +56,7 @@ public static class MechanicalContentValidation
             var view = panel.GetComponent<MechanicalPanelView>();
             view.SetProcessingVisible(processing);
             view.Title.text = id == "UI_HandDrill" ? "手钻" : processing ? "锯木机" : "手摇轮";
-            view.Status.text = id == "UI_HandDrill" ? "加工进度 50%" : "运行中 · 转速 60 · 动力 24/12";
+            view.Status.text = id == "UI_HandDrill" ? "加工进度 50%" : "运行中 · 转速 60 · 扭矩 24/12";
             view.ActionButton.gameObject.SetActive(id == "UI_HandDrill" || !processing);
             view.ActionButton.GetComponentInChildren<TMPro.TMP_Text>(true).text = id == "UI_HandDrill" ? "钻孔" : "摇动";
             Canvas.ForceUpdateCanvases();

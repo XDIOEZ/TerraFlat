@@ -941,7 +941,7 @@
       "canBePickedUp": true,
       "tags": [],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Fiber/Fiber_Icon.png",
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Fiber/Fiber_Icon.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -2159,7 +2159,7 @@
       "volume": 0.25,
       "stackable": true,
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Peach/Peach_Idle.png"
+        "spriteAddress": "Assets/6_Art/Generated/Farming/Peach/Peach_Idle.png"
       },
       "modules": {
         "food": {
@@ -2209,7 +2209,7 @@
       "volume": 0.3,
       "stackable": true,
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Orange/Orange_Idle.png"
+        "spriteAddress": "Assets/6_Art/Generated/Farming/Orange/Orange_Idle.png"
       },
       "modules": {
         "food": {
@@ -2264,7 +2264,7 @@
       "canBePickedUp": true,
       "tags": [],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Rice/RiceGrain_Icon.png",
+        "spriteAddress": "Assets/6_Art/Generated/Farming/Rice/RiceGrain_Icon.png",
         "rendererLocalScale": {
           "x": 1.0,
           "y": 1.0,
@@ -2310,7 +2310,7 @@
       "volume": 0.15,
       "stackable": true,
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Rice/Rice_Icon.png",
+        "spriteAddress": "Assets/6_Art/Generated/Farming/Rice/Rice_Icon.png",
         "rendererLocalScale": {
           "x": 1.0,
           "y": 1.0,
@@ -2378,7 +2378,7 @@
       "volume": 0.35,
       "stackable": true,
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/CookedRice/CookedRice_Icon.png",
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/CookedRice/CookedRice_Icon.png",
         "rendererLocalScale": {
           "x": 1.0,
           "y": 1.0,
@@ -2705,7 +2705,7 @@
       "volume": 0.12,
       "stackable": true,
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Mushroom/Item_Mushroom.png",
+        "spriteAddress": "Assets/6_Art/Generated/Farming/Mushroom/Item_Mushroom.png",
         "collider": {
           "type": "BoxCollider2D",
           "enabled": true,
@@ -5479,7 +5479,7 @@
         "47"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/IceBlock/IceBlock_Icon.png"
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/IceBlock/IceBlock_Icon.png"
       },
       "modules": {
         "heldFood": {
@@ -5668,7 +5668,7 @@
       "description": "从较大的石矿或矿洞入口开采出的厚重石板。",
       "weight": 12.0, "volume": 7.0, "stackable": true,
       "tags": ["Stone", "Mineral"],
-      "visual": {"spriteAddress": "Assets/6_Art/Generated/Items/StoneSlab.png"}
+      "visual": {"spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/StoneSlab.png"}
     },
     {
       "id": "Resin",
@@ -5716,7 +5716,7 @@
       "canBePickedUp": true,
       "tags": [],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Charcoal/Charcoal_Icon.png",
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Charcoal/Charcoal_Icon.png",
         "collider": {
           "type": "BoxCollider2D",
           "enabled": true,
@@ -5764,7 +5764,7 @@
       "weight": 0.6,
       "volume": 0.8,
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Peat/Peat_Icon.png",
+        "spriteAddress": "Assets/6_Art/Generated/Environment/Peat/Peat_Icon.png",
         "color": { "r": 1, "g": 1, "b": 1, "a": 1 }
       },
       "modules": {
@@ -5791,7 +5791,7 @@
       "canBePickedUp": true,
       "tags": [],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/ResinGlue/ResinGlue_Idle.png",
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/ResinGlue/ResinGlue_Idle.png",
         "collider": {
           "type": "BoxCollider2D",
           "enabled": true,
@@ -5823,7 +5823,7 @@
       "canBePickedUp": true,
       "tags": [],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/DrilledLog/DrilledLog_Idle.png"
+        "spriteAddress": "Assets/6_Art/Generated/Mechanical/Items/DrilledLog_Idle.png"
       },
       "modules": {}
     },
@@ -5831,7 +5831,7 @@
       "id": "DrilledPlank",
       "parent": "BasicItem_Base",
       "gameName": "钻孔木板",
-      "description": "在木板上加工出贯穿孔的机械木料，主要用于机械动力装置的结构与连接。",
+      "description": "在木板上加工出贯穿孔的机械木料，主要用于机械扭矩装置的结构与连接。",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
@@ -5841,7 +5841,7 @@
       "canBePickedUp": true,
       "tags": [],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
       },
       "modules": {}
     },
@@ -5849,7 +5849,7 @@
       "id": "DrilledStoneSlab",
       "parent": "BasicItem_Base",
       "gameName": "钻孔石板",
-      "description": "在石板上加工出贯穿孔的机械石料，主要用于机械动力装置的结构与连接。",
+      "description": "在石板上加工出贯穿孔的机械石料，主要用于机械扭矩装置的结构与连接。",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
@@ -5862,7 +5862,7 @@
         "Mineral"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
       },
       "modules": {}
     },
@@ -5870,7 +5870,7 @@
       "id": "DrilledStone",
       "parent": "BasicItem_Base",
       "gameName": "钻孔石头",
-      "description": "在石头上加工出贯穿孔的机械石料，可用于机械动力装置。",
+      "description": "在石头上加工出贯穿孔的机械石料，可用于机械扭矩装置。",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
@@ -5883,7 +5883,7 @@
         "Mineral"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
       },
       "modules": {}
     }
@@ -5898,7 +5898,7 @@
       "tags": ["Material", "Fiber"],
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Materials/Material.prefab",
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
       }
     },
     {
@@ -5912,7 +5912,7 @@
       "canBePickedUp": true,
       "tags": ["Material"],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
       },
       "modules": {}
     },
@@ -5927,7 +5927,7 @@
       "canBePickedUp": true,
       "tags": ["Material"],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
       },
       "modules": {}
     }

@@ -10,7 +10,7 @@
       "volume": 0.06,
       "stackable": true,
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Chili/Chili_Icon.png",
+        "spriteAddress": "Assets/6_Art/Generated/Farming/Chili/Chili_Icon.png",
         "collider": {
           "size": {
             "x": 0.6,
@@ -85,11 +85,11 @@
       "canBePickedUp": false,
       "tags": [],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Chili/ChiliTree_Seedling.png",
+        "spriteAddress": "Assets/6_Art/Generated/Farming/Chili/ChiliTree_Seedling.png",
         "spriteStates": {
-          "seedling": "Assets/6_Art/Generated/Chili/ChiliTree_Seedling.png",
-          "growing": "Assets/6_Art/Generated/Chili/ChiliTree_Growing.png",
-          "mature": "Assets/6_Art/Generated/Chili/ChiliTree_Mature.png"
+          "seedling": "Assets/6_Art/Generated/Farming/Chili/ChiliTree_Seedling.png",
+          "growing": "Assets/6_Art/Generated/Farming/Chili/ChiliTree_Growing.png",
+          "mature": "Assets/6_Art/Generated/Farming/Chili/ChiliTree_Mature.png"
         },
         "rendererLocalPosition": {
           "x": 0.0,

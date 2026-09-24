@@ -79,8 +79,8 @@ public static partial class RuntimeUIPrefabBuilder
             new WaterVesselPanel.VesselAppearance
             {
                 ItemId = "Coconut_Shell",
-                Cutaway = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/6_Art/Generated/CoconutShellUI/CoconutShell_Cutaway.png"),
-                Interior = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/6_Art/Generated/CoconutShellUI/CoconutShell_Interior.png"),
+                Cutaway = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/6_Art/Generated/WaterVessel/CoconutShellUI/CoconutShell_Cutaway.png"),
+                Interior = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/6_Art/Generated/WaterVessel/CoconutShellUI/CoconutShell_Interior.png"),
                 FillRange = new Vector2(44f / 128f, 88f / 128f),
                 LeftOutlet = new Vector2(14f / 128f, 84f / 128f),
                 RightOutlet = new Vector2(114f / 128f, 84f / 128f)

@@ -373,7 +373,7 @@
       "volume": 1200.0,
       "stackable": false,
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/PeachTree/PeachTree_Idle.png"
+        "spriteAddress": "Assets/6_Art/Generated/Farming/PeachTree/PeachTree_Idle.png"
       },
       "lootTableId": "Tree_Peach",
       "modules": {
@@ -394,7 +394,7 @@
       "volume": 1200.0,
       "stackable": false,
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/OrangeTree/OrangeTree_Idle.png"
+        "spriteAddress": "Assets/6_Art/Generated/Farming/OrangeTree/OrangeTree_Idle.png"
       },
       "lootTableId": "Tree_Orange",
       "modules": {
@@ -437,7 +437,7 @@
         ]
       },
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/CoconutTree/FruitlessCoconutTree.png",
+        "spriteAddress": "Assets/6_Art/Generated/Farming/CoconutTree/FruitlessCoconutTree.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -1626,7 +1626,7 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Iceberg/Iceberg_Idle.png",
+        "spriteAddress": "Assets/6_Art/Generated/Environment/Iceberg/Iceberg_Idle.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -1807,7 +1807,7 @@
         ]
       },
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/PineTree/PineTree_Idle.png",
+        "spriteAddress": "Assets/6_Art/Generated/Environment/PineTree/PineTree_Idle.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,

@@ -46,7 +46,7 @@
       "canBePickedUp": true,
       "tags": ["Seed", "Food"],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/AppleSeed/AppleSeed_Icon.png",
+        "spriteAddress": "Assets/6_Art/Generated/Farming/AppleSeed/AppleSeed_Icon.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -153,7 +153,7 @@
       "volume": 0.05,
       "stackable": true,
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/RadishSeed/RadishSeed_Icon.png",
+        "spriteAddress": "Assets/6_Art/Generated/Farming/RadishSeed/RadishSeed_Icon.png",
         "color": {
           "r": 1.0,
           "g": 1.0,
@@ -178,7 +178,7 @@
       "volume": 0.05,
       "stackable": true,
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Mushroom/Item_MushroomSpores.png",
+        "spriteAddress": "Assets/6_Art/Generated/Farming/Mushroom/Item_MushroomSpores.png",
         "color": {
           "r": 1.0,
           "g": 1.0,
@@ -204,7 +204,7 @@
       "volume": 0.05,
       "stackable": true,
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/BerrySeed/BerrySeed_Icon.png",
+        "spriteAddress": "Assets/6_Art/Generated/Farming/BerrySeed/BerrySeed_Icon.png",
         "color": {
           "r": 1.0,
           "g": 1.0,

@@ -10,7 +10,7 @@
       "volume": 30.0,
       "stackable": true,
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/WaterPlatform/WaterPlatform_Tile.png"
+        "spriteAddress": "Assets/6_Art/Generated/Building/WaterPlatform/WaterPlatform_Tile.png"
       },
       "modules": {
         "建筑模块": {
@@ -33,7 +33,7 @@
       "volume": 30.0,
       "stackable": true,
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/WaterPlatform/WaterPlatform_Stone_Tile.png"
+        "spriteAddress": "Assets/6_Art/Generated/Building/WaterPlatform/WaterPlatform_Stone_Tile.png"
       },
       "modules": {
         "建筑模块": {
@@ -56,7 +56,7 @@
       "volume": 30.0,
       "stackable": true,
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/WaterPlatform/WaterPlatform_Copper_Tile.png"
+        "spriteAddress": "Assets/6_Art/Generated/Building/WaterPlatform/WaterPlatform_Copper_Tile.png"
       },
       "modules": {
         "建筑模块": {
@@ -79,7 +79,7 @@
       "volume": 30.0,
       "stackable": true,
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/WaterPlatform/WaterPlatform_Iron_Tile.png"
+        "spriteAddress": "Assets/6_Art/Generated/Building/WaterPlatform/WaterPlatform_Iron_Tile.png"
       },
       "modules": {
         "建筑模块": {
@@ -102,7 +102,7 @@
       "volume": 30.0,
       "stackable": true,
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/WaterPlatform/WaterPlatform_Bronze_Tile.png"
+        "spriteAddress": "Assets/6_Art/Generated/Building/WaterPlatform/WaterPlatform_Bronze_Tile.png"
       },
       "modules": {
         "建筑模块": {

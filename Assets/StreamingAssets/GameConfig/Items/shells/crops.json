@@ -311,7 +311,7 @@
       "volume": 1.0,
       "stackable": true,
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Mushroom/Plant_Mushroom.png",
+        "spriteAddress": "Assets/6_Art/Generated/Farming/Mushroom/Plant_Mushroom.png",
         "collider": {
           "type": "BoxCollider2D",
           "enabled": true,
@@ -684,11 +684,11 @@
       "canBePickedUp": false,
       "tags": [],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Rice/RiceCrop_Seedling.png",
+        "spriteAddress": "Assets/6_Art/Generated/Farming/Rice/RiceCrop_Seedling.png",
         "spriteStates": {
-          "seedling": "Assets/6_Art/Generated/Rice/RiceCrop_Seedling.png",
-          "growing": "Assets/6_Art/Generated/Rice/RiceCrop_Growing.png",
-          "mature": "Assets/6_Art/Generated/Rice/RiceCrop_Mature.png"
+          "seedling": "Assets/6_Art/Generated/Farming/Rice/RiceCrop_Seedling.png",
+          "growing": "Assets/6_Art/Generated/Farming/Rice/RiceCrop_Growing.png",
+          "mature": "Assets/6_Art/Generated/Farming/Rice/RiceCrop_Mature.png"
         },
         "rendererLocalPosition": {
           "x": 0.0,

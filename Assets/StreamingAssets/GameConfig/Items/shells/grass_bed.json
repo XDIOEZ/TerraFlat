@@ -12,7 +12,7 @@
       "weight": 4,
       "volume": 8,
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/GrassBed/GrassBed.png[GrassBed]",
+        "spriteAddress": "Assets/6_Art/Generated/Building/GrassBed/GrassBed.png[GrassBed]",
         "rendererLocalPosition": { "x": 0, "y": 0, "z": 0 },
         "rendererLocalScale": { "x": 1, "y": 1, "z": 1 },
         "color": { "r": 1, "g": 1, "b": 1, "a": 1 },
@@ -41,7 +41,7 @@
       "weight": 12,
       "volume": 16,
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/GrassBed/GrassBed.png[GrassBed]",
+        "spriteAddress": "Assets/6_Art/Generated/Building/GrassBed/GrassBed.png[GrassBed]",
         "rendererLocalPosition": { "x": 0.5, "y": 0, "z": 0 },
         "rendererLocalScale": { "x": 1, "y": 1, "z": 1 },
         "color": { "r": 1, "g": 1, "b": 1, "a": 1 },

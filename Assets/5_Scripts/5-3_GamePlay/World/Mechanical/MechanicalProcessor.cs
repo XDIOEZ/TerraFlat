@@ -37,7 +37,7 @@ public sealed class MechanicalProcessor : IDisposable
             ? CraftingService.PreviewRecipe(Input, Output, capabilities, process.Recipe)
             : CraftingResult.Failed(CraftingFailureReason.RecipeNotFound, "当前材料没有加工配方");
 
-    /// <summary>有动力且完整产物可接收时推进工作量；提交成功之后才清空当前加工进度。</summary>
+    /// <summary>有扭矩且完整产物可接收时推进工作量；提交成功之后才清空当前加工进度。</summary>
     public bool Advance(float workSeconds, Player actor = null)
     {
         if (!MechanicalDefinition.Positive(workSeconds)) return false;

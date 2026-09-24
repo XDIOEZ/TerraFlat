@@ -35,7 +35,7 @@
           "parameters": {}
         }
       },
-      "visual": { "spriteAddress": "Assets/6_Art/Generated/ItemPlaceholder/素材占位符.png[素材占位符]" }
+      "visual": { "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]" }
     },
     {
       "id": "WoodenBarrel_Building",
@@ -67,7 +67,7 @@
           "parameters": {}
         }
       },
-      "visual": { "spriteAddress": "Assets/6_Art/Generated/ItemPlaceholder/素材占位符.png[素材占位符]" }
+      "visual": { "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]" }
     }
   ]
 }

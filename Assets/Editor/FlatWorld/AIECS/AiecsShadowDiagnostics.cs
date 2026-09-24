@@ -15,7 +15,7 @@ namespace FlatWorld.AIECS.Editor
     public static class AiecsShadowDiagnostics
     {
         #region 非透明边界维护
-        private const string CatalogPath = "Assets/6_Art/Generated/AIECS/生物动画目录.asset";
+        private const string CatalogPath = "Assets/6_Art/Generated/Actors/AIECS/生物动画目录.asset";
 
         /// <summary>从已生成图集补齐脚底边界，保留现有动画、图集和 GUID。</summary>
         [MenuItem("FlatWorld/AIECS/阴影 更新非透明边界")]

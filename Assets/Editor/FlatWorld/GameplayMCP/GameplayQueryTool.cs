@@ -249,8 +249,8 @@ namespace FlatWorld.GameplayMCP
                 ["attached"] = node != null,
                 ["rpm"] = Round(node?.Rpm ?? 0f),
                 ["networkStatus"] = network?.Status ?? string.Empty,
-                ["supply"] = Round(network?.Supply ?? 0f),
-                ["demand"] = Round(network?.Demand ?? 0f),
+                ["torqueSupply"] = Round(network?.TorqueSupply ?? 0f),
+                ["torqueDemand"] = Round(network?.TorqueDemand ?? 0f),
                 ["manualSeconds"] = Round(state?.ManualSeconds ?? 0f),
                 ["processor"] = processor == null
                     ? JValue.CreateNull()

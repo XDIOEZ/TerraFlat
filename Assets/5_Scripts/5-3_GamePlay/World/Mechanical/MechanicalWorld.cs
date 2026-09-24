@@ -29,10 +29,10 @@ public static class MechanicalWorld
         graph = null; owner = null; worldKey = null; dirty = false; suppressRemoval = false; elapsed = viewElapsed = 0;
     }
 
-    /// <summary>MOD 动力条件返回 0..1 可用比例，条件必须独立于 GameObject 与 ChunkView。</summary>
+    /// <summary>MOD 扭矩条件返回 0..1 可用比例，条件必须独立于 GameObject 与 ChunkView。</summary>
     public static void RegisterSource(string id, Func<MechanicalNode, float> provider)
     {
-        if (string.IsNullOrWhiteSpace(id) || provider == null) throw new ArgumentException("动力来源注册无效。");
+        if (string.IsNullOrWhiteSpace(id) || provider == null) throw new ArgumentException("扭矩来源注册无效。");
         sourceProviders[id] = provider;
     }
     public static void ClearSourceProviders() => sourceProviders.Clear();
@@ -180,13 +180,20 @@ public static class MechanicalWorld
         if (node.Definition.Source == "manual")
             node.State.ManualSeconds = Mathf.Max(0, node.State.ManualSeconds - step);
         if (node.Rpm > 0)
-            node.Processor?.Advance(step * node.Rpm / MechanicalCatalog.Settings.ReferenceRpm);
+            node.Processor?.Advance(step * GetWorkEfficiency(node));
         node.View?.RefreshPanel();
+    }
+
+    /// <summary>用力器效率严格按需求转速线性计算；允许超过 100%，不得截断或重复除以基准转速。</summary>
+    public static float GetWorkEfficiency(MechanicalNode node)
+    {
+        if (node?.Definition == null || node.Rpm <= 0) return 0;
+        return node.Rpm / node.Definition.RequiredRpm;
     }
 
     private static float GetSourceFactor(MechanicalNode node)
     {
-        if (node.State == null || node.Definition.Power <= 0) return 0;
+        if (node.State == null || node.Definition.Torque <= 0) return 0;
         string source = node.Definition.Source;
         if (sourceProviders.TryGetValue(source, out var provider)) return Mathf.Clamp01(provider(node));
         if (source == "manual") return node.State.ManualSeconds > 0 ? 1 : 0;
@@ -276,7 +283,7 @@ public static class MechanicalWorld
         return false;
     }
 
-    /// <summary>机械风箱只增强邻格正在燃烧的熔炉；无动力立即归零，多个风箱取最强值。</summary>
+    /// <summary>机械风箱只增强邻格正在燃烧的熔炉；无扭矩立即归零，多个风箱取最强值。</summary>
     public static float GetBellowsBoost(Vector3 position)
     {
         if (graph == null) return 0;
@@ -286,7 +293,7 @@ public static class MechanicalWorld
         {
             var node = graph.At(cell + offset, 0);
             if (node?.Definition.Kind == "bellows" && node.Network?.Active == true)
-                boost = Mathf.Max(boost, Mathf.Clamp01(node.Rpm / MechanicalCatalog.Settings.ReferenceRpm));
+                boost = Mathf.Max(boost, GetWorkEfficiency(node));
         }
         return boost;
     }

@@ -15,7 +15,7 @@ namespace FlatWorld.AIECS.Editor
     {
         public const string ScenePath = "Assets/3_Scenes/Development/AIECS实战入口.unity";
         public const string PrefabPath = "Assets/2_Prefabs/Development/AIECS实战开发入口.prefab";
-        public const string CatalogPath = "Assets/6_Art/Generated/AIECS/生物动画目录.asset";
+        public const string CatalogPath = "Assets/6_Art/Generated/Actors/AIECS/生物动画目录.asset";
         private const string UiCanvasName = "AIECS开发UI";
 
         /// <summary>用户显式打开开发入口；已有场景的未保存修改由 Unity 的标准场景保存流程处理。</summary>

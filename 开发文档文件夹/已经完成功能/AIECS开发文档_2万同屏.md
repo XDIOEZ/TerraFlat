@@ -688,7 +688,7 @@ P06 是文档创建时的旧链路证据；本次实现已删除 `PassesCollider
 | 共享动画与真实 Entity 位置 | [AIECS 运行时代码](../../Assets/5_Scripts/5-3_GamePlay/Entities/AIECS/)：动作/帧/标记目录、独立 ECS World、Burst 轨迹与输出快照；没有每 AI 的 GameObject/Animator/Collider |
 | 原生排序及光照 | 同目录的排序作用域和连续网格批次；[AiecsSpriteLit.shader](../../Assets/9_Shaders/Shader/AiecsSpriteLit.shader) 走原生 Universal2D/NormalsRendering；[ActorWaterCommon.hlsl](../../Assets/9_Shaders/Shader/ActorWaterCommon.hlsl) 与旧 Shader 共用水体公式 |
 | 内容导出与开发入口 | [AIECS 编辑器代码](../../Assets/Editor/FlatWorld/AIECS/)：复用正式 Manifest/Addressables、覆盖控制器、Sprite 实际 UV/三角形；保留原始尺寸/Pivot/PPU，图集禁止静默缩小 |
-| 生成目录与图集 | [生物动画目录.asset](../../Assets/6_Art/Generated/AIECS/生物动画目录.asset)、[生物动画目录_图集.png](../../Assets/6_Art/Generated/AIECS/生物动画目录_图集.png)、[生物动画目录_导出记录.md](../../Assets/6_Art/Generated/AIECS/生物动画目录_导出记录.md)：6 物种、22 动作、78 张去重 Sprite，256×512 图集 |
+| 生成目录与图集 | [生物动画目录.asset](../../Assets/6_Art/Generated/Actors/AIECS/生物动画目录.asset)、[生物动画目录_图集.png](../../Assets/6_Art/Generated/Actors/AIECS/生物动画目录_图集.png)、[生物动画目录_导出记录.md](../../Assets/6_Art/Generated/Actors/AIECS/生物动画目录_导出记录.md)：6 物种、22 动作、78 张去重 Sprite，256×512 图集 |
 | 独立开发场景 | [AIECS渲染原型.unity](../../Assets/3_Scenes/Development/AIECS渲染原型.unity)：默认 48 个实体，实际玩家 Sprite、树木/建筑静态参照，全局光与两种局部 Light2D；[生物批量光照.mat](../../Assets/9_Shaders/Material/AIECS/生物批量光照.mat) 为共用材质 |
 
 - 非循环动作终点键帧与姿态已补齐并重导；当前各物种时间轴帧数为 15/8/20/32/168/26，详见导出记录。攻击标记保留原始曲线，但不执行命中或伤害。

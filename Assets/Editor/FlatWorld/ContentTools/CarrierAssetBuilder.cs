@@ -9,7 +9,7 @@ public static class CarrierAssetBuilder
     #region 显式构建
     public const string ModulePath = "Assets/2_Prefabs/Gameplay/Modules/Module_Carrier.prefab";
     public const string ShellPath = "Assets/2_Prefabs/Gameplay/Items/Common/CarrierBodyShell.prefab";
-    public const string SpritePath = "Assets/6_Art/Generated/Boat/Boat_Carrier.png";
+    public const string SpritePath = "Assets/6_Art/Generated/Vehicles/Boat/Boat_Carrier.png";
 
     [MenuItem("FlatWorld/载具/构建船模块与外壳")]
     public static void BuildBoatAssets()

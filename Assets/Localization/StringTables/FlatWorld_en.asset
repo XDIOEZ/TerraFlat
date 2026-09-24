@@ -1665,11 +1665,11 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 15838801115996175
-    m_Localized: Wooden Gearbox
+    m_Localized: Gearbox
     m_Metadata:
       m_Items: []
   - m_Id: 15838801115996176
-    m_Localized: Wooden Gearbox
+    m_Localized: Gearbox
     m_Metadata:
       m_Items: []
   - m_Id: 15838801115996177
@@ -1697,11 +1697,11 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 15838801115996183
-    m_Localized: Copper Gearbox
+    m_Localized: Gearbox
     m_Metadata:
       m_Items: []
   - m_Id: 15838801115996184
-    m_Localized: Copper Gearbox
+    m_Localized: Gearbox
     m_Metadata:
       m_Items: []
   - m_Id: 15838801115996185
@@ -1721,11 +1721,11 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 15838801115996189
-    m_Localized: Iron Gearbox
+    m_Localized: Gearbox
     m_Metadata:
       m_Items: []
   - m_Id: 15838801115996190
-    m_Localized: Iron Gearbox
+    m_Localized: Gearbox
     m_Metadata:
       m_Items: []
   - m_Id: 15838801115996191

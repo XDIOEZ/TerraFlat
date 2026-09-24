@@ -678,8 +678,8 @@ namespace FlatWorld.GameplayMCP
                     ["manualSeconds"] = state == null ? 0f : Round(state.ManualSeconds),
                     ["networkActive"] = network?.Active ?? false,
                     ["status"] = network?.Status ?? string.Empty,
-                    ["supply"] = network == null ? 0f : Round(network.Supply),
-                    ["demand"] = network == null ? 0f : Round(network.Demand),
+                    ["torqueSupply"] = network == null ? 0f : Round(network.TorqueSupply),
+                    ["torqueDemand"] = network == null ? 0f : Round(network.TorqueDemand),
                     ["networkNodes"] = network?.Nodes?.Count ?? 0
                 };
             }

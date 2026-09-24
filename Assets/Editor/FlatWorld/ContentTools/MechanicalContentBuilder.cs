@@ -19,14 +19,14 @@ public static class MechanicalContentBuilder
     #region 资源构建
     private const string ModuleFolder = "Assets/2_Prefabs/Gameplay/Modules/Mechanical";
     private const string UiFolder = "Assets/2_Prefabs/2-1_UI/Gameplay/Crafting";
-    [MenuItem("FlatWorld/机械动力/构建首版资源")]
+    [MenuItem("FlatWorld/机械扭矩/构建首版资源")]
     public static void Build()
     {
         Directory.CreateDirectory(ModuleFolder);
         CreateModule<Mod_HandDrill>("Module_HandDrill");
         CreateModule<Mod_MechanicalNode>("Module_MechanicalNode");
         CreatePanel("UI_HandDrill", "手钻", "钻孔");
-        CreatePanel("UI_Mechanical", "机械动力", "摇动");
+        CreatePanel("UI_Mechanical", "机械扭矩", "摇动");
         SyncNames();
         foreach (var pair in Texts) SyncText(pair[0], pair[1]);
         AssetDatabase.SaveAssets();
@@ -103,7 +103,7 @@ public static class MechanicalContentBuilder
         EditorUtility.SetDirty(entry.parentGroup); EditorUtility.SetDirty(settings);
     }
 
-    [MenuItem("FlatWorld/机械动力/校验首版资源")]
+    [MenuItem("FlatWorld/机械扭矩/校验首版资源")]
     public static void ValidateAssets()
     {
         foreach (string id in new[] { "Module_HandDrill", "Module_MechanicalNode" })
@@ -128,13 +128,14 @@ public static class MechanicalContentBuilder
     #region 定向双语条目
     private static readonly string[][] Texts =
     {
-        new[] { "手钻", "Hand Drill" }, new[] { "机械动力", "Mechanical Power" }, new[] { "钻孔", "Drill" },
+        new[] { "手钻", "Hand Drill" }, new[] { "机械扭矩", "Mechanical Torque" }, new[] { "钻孔", "Drill" },
         new[] { "摇动", "Crank" }, new[] { "断开", "Disengage" }, new[] { "接合", "Engage" },
         new[] { "切换传动比", "Change Ratio" }, new[] { "旋转建筑", "Rotate Building" },
         new[] { "加工进度 {0:0}%", "Progress {0:0}%" },
-        new[] { "{0} · 转速 {1:0} · 动力 {2:0.#}/{3:0.#}", "{0} · RPM {1:0} · Power {2:0.#}/{3:0.#}" },
+        new[] { "{0} · 转速 {1:0} · 扭矩 {2:0.#}/{3:0.#}", "{0} · RPM {1:0} · Torque {2:0.#}/{3:0.#}" },
         new[] { " · 传动比 {0:0.##}", " · Ratio {0:0.##}" },
-        new[] { "无动力", "No Power" }, new[] { "过载", "Overloaded" }, new[] { "运行中", "Running" },
+        new[] { " · 工作效率 {0:0.#}%（需求 {1:0} RPM）", " · Efficiency {0:0.#}% (required {1:0} RPM)" },
+        new[] { "无扭矩", "No Torque" }, new[] { "过载", "Overloaded" }, new[] { "运行中", "Running" },
         new[] { "传动比冲突", "Ratio Conflict" }, new[] { "休眠", "Sleeping" }, new[] { "停止", "Stopped" }
     };
     private static void SyncText(string chinese, string english)
@@ -146,7 +147,7 @@ public static class MechanicalContentBuilder
         JObject document = JObject.Parse(File.ReadAllText(path));
         JObject names = (JObject)document["names"];
         string[] ids = { "HandCrank", "WaterWheel", "Windmill", "Shaft_Wood", "Gear_Wood", "Gearbox_Wood", "Clutch", "Shaft_Copper", "Gear_Copper", "Gearbox_Copper", "Shaft_Iron", "Gear_Iron", "Gearbox_Iron", "CrossShaft", "Millstone", "MechanicalBellows", "Sawmill", "MechanicalHammer", "HandDrill" };
-        string[] english = { "Hand Crank", "Water Wheel", "Windmill", "Wooden Shaft", "Wooden Gear", "Wooden Gearbox", "Clutch", "Copper Shaft", "Copper Gear", "Copper Gearbox", "Iron Shaft", "Iron Gear", "Iron Gearbox", "Shaft Bridge", "Millstone", "Mechanical Bellows", "Sawmill", "Mechanical Hammer", "Hand Drill" };
+        string[] english = { "Hand Crank", "Water Wheel", "Windmill", "Wooden Shaft", "Wooden Gear", "Gearbox", "Clutch", "Copper Shaft", "Copper Gear", "Gearbox", "Iron Shaft", "Iron Gear", "Gearbox", "Shaft Bridge", "Millstone", "Mechanical Bellows", "Sawmill", "Mechanical Hammer", "Hand Drill" };
         for (int i = 0; i < ids.Length; i++) { names[ids[i]] = english[i]; names[ids[i] + "_Summoner"] = english[i]; }
         names["DrilledStoneSlab"] = "Drilled Stone Slab"; names["DrilledStone"] = "Drilled Stone";
         File.WriteAllText(path, document.ToString() + "\n", new System.Text.UTF8Encoding(false));

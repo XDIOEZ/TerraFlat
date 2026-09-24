@@ -18,7 +18,7 @@ namespace FlatWorld.AIECS.Editor
     internal sealed class AiecsAnimationExporter
     {
         // 导出路径和发现缓存，原型资源独立于正式 Actor 目录。
-        internal const string OutputRoot = "Assets/6_Art/Generated/AIECS";
+        internal const string OutputRoot = "Assets/6_Art/Generated/Actors/AIECS";
         private readonly List<AddressableAssetEntry> addresses = new();
         private readonly List<Sprite> sprites = new();
         private readonly Dictionary<Sprite, int> spriteIndices = new();

@@ -30,13 +30,13 @@
         }
       },
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/ClayJar/ClayJar_Icon.png",
+        "spriteAddress": "Assets/6_Art/Generated/WaterVessel/ClayJar/ClayJar_Icon.png",
         "spriteStates": {
-          "empty": "Assets/6_Art/Generated/ClayJar/ClayJar_Icon.png",
-          "filled": "Assets/6_Art/Generated/ClayJar/ClayJar_Filled.png",
-          "dirty": "Assets/6_Art/Generated/ClayJar/ClayJar_Dirty.png",
-          "drinkable": "Assets/6_Art/Generated/ClayJar/ClayJar_Drinkable.png",
-          "sea": "Assets/6_Art/Generated/ClayJar/ClayJar_Sea.png"
+          "empty": "Assets/6_Art/Generated/WaterVessel/ClayJar/ClayJar_Icon.png",
+          "filled": "Assets/6_Art/Generated/WaterVessel/ClayJar/ClayJar_Filled.png",
+          "dirty": "Assets/6_Art/Generated/WaterVessel/ClayJar/ClayJar_Dirty.png",
+          "drinkable": "Assets/6_Art/Generated/WaterVessel/ClayJar/ClayJar_Drinkable.png",
+          "sea": "Assets/6_Art/Generated/WaterVessel/ClayJar/ClayJar_Sea.png"
         },
         "collider": {
           "size": {
@@ -93,7 +93,7 @@
         }
       },
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/StoneMortar/StoneMortar_Icon.png",
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/StoneMortar/StoneMortar_Icon.png",
         "collider": {
           "size": {
             "x": 0.85,

@@ -15,7 +15,7 @@
       "canBePickedUp": true,
       "tags": [],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Scissors/Scissors_Icon.png"
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Scissors/Scissors_Icon.png"
       },
       "modules": {
         "damage": {
@@ -227,7 +227,7 @@
       "id": "DrilledStick",
       "parent": "WoodTool_Base",
       "gameName": "钻孔木棍",
-      "description": "在木棍上加工出贯穿孔的机械木料，主要用于机械动力装置的轴心与连接。",
+      "description": "在木棍上加工出贯穿孔的机械木料，主要用于机械扭矩装置的轴心与连接。",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
@@ -237,7 +237,7 @@
       "canBePickedUp": true,
       "tags": [],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
       },
       "modules": {}
     },
@@ -2732,7 +2732,7 @@
       "canBePickedUp": true,
       "tags": [],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/WoodHammer/WoodHammer_Icon.png"
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/WoodHammer/WoodHammer_Icon.png"
       },
       "modules": {
         "damage": {
@@ -2759,7 +2759,7 @@
       "weight": 2.8,
       "volume": 2.8,
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/StoneHammer/StoneHammer_Icon.png",
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/StoneHammer/StoneHammer_Icon.png",
         "color": {
           "r": 1.0,
           "g": 1.0,

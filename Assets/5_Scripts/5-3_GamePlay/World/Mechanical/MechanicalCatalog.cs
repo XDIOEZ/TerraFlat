@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using Newtonsoft.Json;
 using UnityEngine;
 
-/// <summary>机械配置目录；首版数值集中在 Resources/Config/Mechanical/mechanical-catalog，MOD 可注册节点、动力条件和加工配方。</summary>
+/// <summary>机械扭矩配置目录；首版数值集中在 Resources/Config/Mechanical/mechanical-catalog，MOD 可注册节点、扭矩条件和加工配方。</summary>
 public static class MechanicalCatalog
 {
     #region 目录与扩展
@@ -13,7 +13,7 @@ public static class MechanicalCatalog
     public static MechanicalSettings Settings { get; private set; } = new(); // 整网调度参数
     public static IEnumerable<MechanicalProcessDefinition> Processes { get { EnsureLoaded(); return processes.Values; } }
 
-    /// <summary>热更新只替换机械定义，不清除当前机械网络或 MOD 动力源注册。</summary>
+    /// <summary>热更新只替换机械定义，不清除当前机械网络或 MOD 扭矩源注册。</summary>
     internal static void ConfigureResourceReload(ResourceReloadContext context)
     {
         context.AddDictionary(() => definitions, value => definitions = value);
@@ -33,7 +33,7 @@ public static class MechanicalCatalog
     {
         if (loaded) return;
         TextAsset asset = Resources.Load<TextAsset>("Config/Mechanical/mechanical-catalog");
-        if (asset == null) throw new InvalidOperationException("缺少机械动力配置目录。");
+        if (asset == null) throw new InvalidOperationException("缺少机械扭矩配置目录。");
         MechanicalCatalogDocument document = JsonConvert.DeserializeObject<MechanicalCatalogDocument>(asset.text);
         if (document == null || document.Version != 1) throw new InvalidOperationException("机械目录版本无效。");
         if (document.Settings == null || document.Nodes == null || document.Processes == null)
@@ -101,7 +101,7 @@ public sealed class MechanicalSettings
     #endregion
 }
 
-/// <summary>节点只声明端口、动力和负载；Source 使用注册条件名，Station 使用可扩展字符串身份。</summary>
+/// <summary>机械节点声明端口流向、扭矩和负载扭矩。普通传动件可反向传动；变速箱按实际输入侧选择转速与扭矩倍率。</summary>
 [Serializable]
 public sealed class MechanicalDefinition
 {
@@ -109,16 +109,35 @@ public sealed class MechanicalDefinition
     public string Id;
     public string Kind = "shaft"; // shaft/gear/gearbox/clutch/bridge/source/consumer
     public string Ports = "axis"; // axis 为朝向两端，all 为四向
+    public string PortMode = "auto"; // auto/input/output/relay；MOD 可显式覆盖默认端口流向。
     public string[] AxlePorts; // 齿轮与非齿轮节点相接的方向；未声明时兼容原有四向连接。
     public string Source = ""; // manual/water/wind 或 MOD 条件
     public string Station = "";
-    public float Capacity = 64f; // 整网保守传动容量
-    public float Power;
+    public float TorqueCapacity = 64f; // 整网保守扭矩传动容量。
+    public float Torque;
     public float Rpm = 60f;
-    public float Load;
+    public float RequiredRpm = 60f; // 用力器达到 100% 工作效率所需的转速。
+    public float TorqueLoad;
     public float[] Ratios = { 0.5f, 1f, 2f };
+    public float ReverseSpeedRatio; // 0 表示兼容旧配置，逆向采用正向速比的倒数。
+    public float ForwardTorqueRatio = 1f; // 从左/下侧输入时输出侧的扭矩倍率。
+    public float ReverseTorqueRatio = 1f; // 从右/上侧输入时输出侧的扭矩倍率。
     public int Layer => Kind == "bridge" ? 1 : 0;
     public bool Rotatable => Ports == "axis";
+    /// <summary>扭矩源为输出端，用力器为输入终点，其余节点按驱动方向传递；MOD 可以显式声明。</summary>
+    public string GetPortMode()
+    {
+        if (PortMode != "auto") return PortMode;
+        if (Kind == "consumer" || Kind == "bellows" || !string.IsNullOrEmpty(Station)) return "input";
+        return Kind == "source" || Torque > 0 ? "output" : "relay";
+    }
+    /// <summary>从左/下侧输入为正向；从右/上侧输入为逆向，倍率由配置提供。</summary>
+    public void GetTransmission(bool highSideInput, int ratioIndex, out float speedRatio, out float torqueRatio)
+    {
+        float forward = Ratios[Mathf.Clamp(ratioIndex, 0, Ratios.Length - 1)];
+        speedRatio = highSideInput ? (ReverseSpeedRatio > 0 ? ReverseSpeedRatio : 1f / forward) : forward;
+        torqueRatio = highSideInput ? ReverseTorqueRatio : ForwardTorqueRatio;
+    }
     /// <summary>齿轮轴接头允许的世界方向；齿牙啮合仍由普通端口决定。</summary>
     public bool HasAxlePort(int direction)
     {
@@ -132,8 +151,11 @@ public sealed class MechanicalDefinition
     public void Validate()
     {
         if (string.IsNullOrWhiteSpace(Id) || (Ports != "axis" && Ports != "all") ||
-            !Positive(Capacity) || !NonNegative(Power) || !Positive(Rpm) || !NonNegative(Load) ||
-            Ratios == null || Ratios.Length == 0)
+            (PortMode != "auto" && PortMode != "input" && PortMode != "output" && PortMode != "relay") ||
+            !Positive(TorqueCapacity) || !NonNegative(Torque) || !Positive(Rpm) || !Positive(RequiredRpm) || !NonNegative(TorqueLoad) ||
+            Ratios == null || Ratios.Length == 0 ||
+            (ReverseSpeedRatio != 0 && !Positive(ReverseSpeedRatio)) ||
+            !Positive(ForwardTorqueRatio) || !Positive(ReverseTorqueRatio))
             throw new ArgumentException("机械节点参数无效：" + Id);
         foreach (float ratio in Ratios) if (!Positive(ratio)) throw new ArgumentException("变速比必须为正数。");
         if (AxlePorts != null)
@@ -155,7 +177,7 @@ public sealed class MechanicalProcessDefinition
     public string Input;
     public int InputAmount = 1;
     public List<RuntimeRecipeResult> Outputs = new();
-    public float WorkSeconds = 4f;
+    public float WorkSeconds = 4f; // 设备达到 RequiredRpm 时的满效率工作时间。
     [JsonIgnore] private RuntimeRecipe recipe;
     public RuntimeRecipe Recipe => recipe ??= new RuntimeRecipe
     {

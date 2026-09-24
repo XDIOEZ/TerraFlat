@@ -31,7 +31,7 @@ namespace FlatWorld.Editor.ContentWorkshop
         private const string BackupRoot = "Library/FlatWorldContentWorkshop/Backups";
         private const string ItemSpriteLabel = "ItemSprite";
         /// <summary>新物品尚无正式美术时使用的共享占位资源。</summary>
-        private const string ItemPlaceholderAssetPath = "Assets/6_Art/Generated/ItemPlaceholder/素材占位符.png";
+        private const string ItemPlaceholderAssetPath = "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png";
 
         private static readonly string[] KnownRecipeProperties =
         {

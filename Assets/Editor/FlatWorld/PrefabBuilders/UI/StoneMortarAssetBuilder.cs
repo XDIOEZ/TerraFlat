@@ -15,7 +15,7 @@ using UnityEngine.UI;
 /// <summary>石臼正式资源装配：导入像素精灵、构建可拖动捣棒面板和通用加工模块，并注册 Addressables。</summary>
 public static class StoneMortarAssetBuilder
 {
-    private const string Art = "Assets/6_Art/Generated/StoneMortar/";
+    private const string Art = "Assets/6_Art/Generated/InventoryCrafting/StoneMortar/";
     private const string PanelPath = "Assets/2_Prefabs/2-1_UI/Gameplay/Crafting/UI_StoneMortar.prefab";
     private const string ModulePath = "Assets/2_Prefabs/Gameplay/Modules/Building/Module_Mortar.prefab";
     private const string SlotPath = "Assets/2_Prefabs/2-1_UI/Gameplay/Inventory/Components/UI_Slot.prefab";
@@ -86,13 +86,13 @@ public static class StoneMortarAssetBuilder
             MortarInteractionView previewView = panel.GetComponentInChildren<MortarInteractionView>(true);
             ItemSlot_UI previewSlot = panel.GetComponentInChildren<ItemSlot_UI>(true);
             previewSlot.gameObject.SetActive(true);
-            previewSlot.image.sprite = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/6_Art/Generated/Rice/RiceGrain_Icon.png");
+            previewSlot.image.sprite = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/6_Art/Generated/Farming/Rice/RiceGrain_Icon.png");
             previewSlot.image.gameObject.SetActive(true);
             previewSlot.text.text = "7";
             ((RectTransform)previewSlot.transform).anchoredPosition = new Vector2(-42, previewView.FloorAt(-42) + 26);
             ItemSlot_UI riceSlot = UnityEngine.Object.Instantiate(previewSlot, previewSlot.transform.parent);
             ((RectTransform)riceSlot.transform).anchoredPosition = new Vector2(42, previewView.FloorAt(42) + 26);
-            riceSlot.image.sprite = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/6_Art/Generated/Rice/Rice_Icon.png");
+            riceSlot.image.sprite = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/6_Art/Generated/Farming/Rice/Rice_Icon.png");
             riceSlot.text.text = "3";
             // 静态预览与运行时相同的图标描边，不修改玩家输入模式。
             Outline selected = riceSlot.selectionGraphic.gameObject.AddComponent<Outline>();

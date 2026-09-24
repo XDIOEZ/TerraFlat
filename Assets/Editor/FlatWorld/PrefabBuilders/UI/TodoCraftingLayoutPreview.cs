@@ -167,8 +167,8 @@ public static class TodoCraftingLayoutPreview
         RectTransform content = FindPreviewRect(root, CraftingStationController.CandidateContentName);
         RectTransform template = FindPreviewRect(root, CraftingStationController.CandidateTemplateName);
         Require(content != null && template != null, "制作预览缺少正式候选模板。");
-        AddRecipePreview(content, template, "石臼", "Assets/6_Art/Generated/StoneMortar/StoneMortar_Icon.png",
-            new[] { "Assets/6_Art/Generated/Items/StoneSlab.png", "Assets/6_Art/Items/Tools/Item_Tool_404.png" },
+        AddRecipePreview(content, template, "石臼", "Assets/6_Art/Generated/InventoryCrafting/StoneMortar/StoneMortar_Icon.png",
+            new[] { "Assets/6_Art/Generated/InventoryCrafting/StoneSlab.png", "Assets/6_Art/Items/Tools/Item_Tool_404.png" },
             new[] { 1, 1 });
         AddRecipePreview(content, template, "石墙", "Assets/6_Art/Building/Wall_Stone_Medium.png",
             new[] { "Assets/6_Art/Items/Tools/Item_Tool_404.png" }, new[] { 4 });

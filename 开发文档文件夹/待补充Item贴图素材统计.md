@@ -19,14 +19,14 @@
 
 | 优先级 | Item ID | 显示名 | 当前状态 | 建议素材目录 / 文件名 | 美术要点 |
 | --- | --- | --- | --- | --- | --- |
-| P0 | `Scissors` | 剪刀 | 明确使用统一素材占位符 | `Generated/Scissors/Scissors_Icon.png` | 工具类；主体应明确表现剪刀轮廓，透明背景，与现有手持工具像素风统一。若作为手持物显示，接入前核对握持 Pivot。 |
-| P0 | `Seed_Foxtail` | 狗尾草籽 | 明确使用统一素材占位符 | `Generated/FoxtailSeed/FoxtailSeed_Icon.png` | 种子类；需要和狗尾草穗明显区分，表现为少量细小草籽，不要画成完整草穗。 |
-| P0 | `Flour` | 面粉 | 明确使用统一素材占位符 | `Generated/Flour/Flour_Icon.png` | 食材类；表现面粉本体，避免做成已经烹饪完成的面包等产物。 |
-| P0 | `Honey` | 蜂蜜 | 明确使用统一素材占位符，当前额外乘金黄色 | `Generated/Honey/Honey_Icon.png` | 食材/液体原料；表现蜂蜜本体而非水容器。正式成图后应重新检查现有 `visual.color`，通常独立成图应改回白色乘色。 |
+| P0 | `Scissors` | 剪刀 | 明确使用统一素材占位符 | `Generated/InventoryCrafting/Scissors/Scissors_Icon.png` | 工具类；主体应明确表现剪刀轮廓，透明背景，与现有手持工具像素风统一。若作为手持物显示，接入前核对握持 Pivot。 |
+| P0 | `Seed_Foxtail` | 狗尾草籽 | 明确使用统一素材占位符 | `Generated/Farming/FoxtailSeed/FoxtailSeed_Icon.png` | 种子类；需要和狗尾草穗明显区分，表现为少量细小草籽，不要画成完整草穗。 |
+| P0 | `Flour` | 面粉 | 明确使用统一素材占位符 | `Generated/InventoryCrafting/Flour/Flour_Icon.png` | 食材类；表现面粉本体，避免做成已经烹饪完成的面包等产物。 |
+| P0 | `Honey` | 蜂蜜 | 明确使用统一素材占位符，当前额外乘金黄色 | `Generated/InventoryCrafting/Honey/Honey_Icon.png` | 食材/液体原料；表现蜂蜜本体而非水容器。正式成图后应重新检查现有 `visual.color`，通常独立成图应改回白色乘色。 |
 
 当前统一占位引用：
 
-`Assets/6_Art/Generated/ItemPlaceholder/素材占位符.png[素材占位符]`
+`Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]`
 
 ## 二、建议补独立贴图：10 个
 
@@ -58,7 +58,7 @@
 
 - 运行时物品素材优先参考项目内同类别 Item 的视角、轮廓、像素簇、描边、配色和世界尺度，不强制固定 16×16。
 - 普通物品使用透明 PNG、硬边缘像素风、Point Filter、无 Mipmap、无纹理压缩；图标通常中心 Pivot，手持工具必须按实际握柄核对 Pivot。
-- 正式素材建议保存到 `Assets/6_Art/Generated/<ItemName>/`，不要覆盖统一占位图。
+- 正式素材建议保存到 `Assets/6_Art/Generated/<System>/<ItemName>/`，不要覆盖统一占位图。
 - 完成 PNG 后，为具体 Item 更新 `visual.spriteAddress`；如果正式 Sprite 不再依赖染色，同时检查并清理继承或现有的 `visual.color`。
 - Sprite 注册到现有 Item Sprite Addressables 链路后，再运行 `FlatWorld/内容配置/校验全部本体内容`。
 - 替换贴图时不要修改 Item ID、配方、玩法模块或数值；本任务只处理美术表现及其资源引用。

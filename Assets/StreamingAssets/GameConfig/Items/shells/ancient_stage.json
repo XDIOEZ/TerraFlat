@@ -10,7 +10,7 @@
       "volume": 0.1,
       "stackable": true,
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Herb/Herb_Icon.png",
+        "spriteAddress": "Assets/6_Art/Generated/Farming/Herb/Herb_Icon.png",
         "color": {
           "r": 1,
           "g": 1,
@@ -28,7 +28,7 @@
       "volume": 0.8,
       "stackable": true,
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Straw/Straw_Icon.png",
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Straw/Straw_Icon.png",
         "color": {
           "r": 1,
           "g": 1,
@@ -46,7 +46,7 @@
       "volume": 0.15,
       "stackable": true,
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/FoxtailEar/FoxtailEar_SeedHead_Icon.png",
+        "spriteAddress": "Assets/6_Art/Generated/Farming/FoxtailEar/FoxtailEar_SeedHead_Icon.png",
         "color": {
           "r": 1,
           "g": 1,
@@ -84,7 +84,7 @@
       "volume": 0.8,
       "stackable": true,
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/WillowBranch/WillowBranch_Icon.png",
+        "spriteAddress": "Assets/6_Art/Generated/Farming/WillowBranch/WillowBranch_Icon.png",
         "color": {
           "r": 1.0,
           "g": 1.0,
@@ -102,7 +102,7 @@
       "volume": 0.4,
       "stackable": true,
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/WillowBark/WillowBark_Idle.png",
+        "spriteAddress": "Assets/6_Art/Generated/Farming/WillowBark/WillowBark_Idle.png",
         "color": {
           "r": 1.0,
           "g": 1.0,
@@ -120,7 +120,7 @@
       "volume": 0.7,
       "stackable": true,
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Clay/Clay_Icon.png",
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Clay/Clay_Icon.png",
         "color": {
           "r": 1.0,
           "g": 1.0,
@@ -138,7 +138,7 @@
       "volume": 0.55,
       "stackable": true,
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Ore_Niter/Ore_Niter_Idle.png",
+        "spriteAddress": "Assets/6_Art/Generated/Environment/Ore_Niter/Ore_Niter_Idle.png",
         "color": {
           "r": 1,
           "g": 1,
@@ -156,7 +156,7 @@
       "volume": 1.5,
       "stackable": true,
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Herb/HerbCrop_Mature.png",
+        "spriteAddress": "Assets/6_Art/Generated/Farming/Herb/HerbCrop_Mature.png",
         "color": {
           "r": 1,
           "g": 1,
@@ -204,11 +204,11 @@
       "volume": 2.0,
       "stackable": true,
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/FoxtailGrass/FoxtailGrass_Seedling.png",
+        "spriteAddress": "Assets/6_Art/Generated/Farming/FoxtailGrass/FoxtailGrass_Seedling.png",
         "spriteStates": {
-          "seedling": "Assets/6_Art/Generated/FoxtailGrass/FoxtailGrass_Seedling.png",
-          "growing": "Assets/6_Art/Generated/FoxtailGrass/FoxtailGrass_Growing.png",
-          "mature": "Assets/6_Art/Generated/FoxtailGrass/FoxtailGrass_Mature.png"
+          "seedling": "Assets/6_Art/Generated/Farming/FoxtailGrass/FoxtailGrass_Seedling.png",
+          "growing": "Assets/6_Art/Generated/Farming/FoxtailGrass/FoxtailGrass_Growing.png",
+          "mature": "Assets/6_Art/Generated/Farming/FoxtailGrass/FoxtailGrass_Mature.png"
         },
         "color": {
           "r": 1,
@@ -251,7 +251,7 @@
       "volume": 0.05,
       "stackable": true,
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/FoxtailSeed/FoxtailSeed_Icon.png",
+        "spriteAddress": "Assets/6_Art/Generated/Farming/FoxtailSeed/FoxtailSeed_Icon.png",
         "color": {
           "r": 1.0,
           "g": 1.0,
@@ -315,7 +315,7 @@
       "volume": 0.15,
       "stackable": true,
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Flour/Flour_Icon.png",
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Flour/Flour_Icon.png",
         "color": {
           "r": 1.0,
           "g": 1.0,
@@ -354,7 +354,7 @@
       "volume": 0.03,
       "stackable": true,
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/HerbSeed/HerbSeed_Icon.png",
+        "spriteAddress": "Assets/6_Art/Generated/Farming/HerbSeed/HerbSeed_Icon.png",
         "color": {
           "r": 1.0,
           "g": 1.0,
@@ -379,7 +379,7 @@
       "volume": 0.05,
       "stackable": true,
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/WillowSeed/WillowSeed_Icon.png",
+        "spriteAddress": "Assets/6_Art/Generated/Farming/WillowSeed/WillowSeed_Icon.png",
         "color": {
           "r": 1.0,
           "g": 1.0,
@@ -404,7 +404,7 @@
       "volume": 0.25,
       "stackable": true,
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/HerbPoultice/Item_HerbPoultice.png",
+        "spriteAddress": "Assets/6_Art/Generated/Medical/HerbPoultice/Item_HerbPoultice.png",
         "color": {
           "r": 1.0,
           "g": 1.0,
@@ -474,7 +474,7 @@
       "volume": 800.0,
       "stackable": false,
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Mine_Niter/Mine_Niter_Idle.png",
+        "spriteAddress": "Assets/6_Art/Generated/Environment/Mine_Niter/Mine_Niter_Idle.png",
         "color": {
           "r": 1,
           "g": 1,
@@ -515,7 +515,7 @@
       "volume": 1200.0,
       "stackable": false,
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/WillowTree/WillowTree_Idle.png",
+        "spriteAddress": "Assets/6_Art/Generated/Farming/WillowTree/WillowTree_Idle.png",
         "color": {
           "r": 1.0,
           "g": 1.0,
@@ -542,7 +542,7 @@
       "volume": 3.5,
       "stackable": false,
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/StoneShovel/StoneShovel_Icon.png",
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/StoneShovel/StoneShovel_Icon.png",
         "color": {
           "r": 1.0,
           "g": 1.0,
@@ -570,7 +570,7 @@
       "volume": 30.0,
       "stackable": true,
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/WaterPlatform/WaterPlatform_Stone_Tile.png",
+        "spriteAddress": "Assets/6_Art/Generated/Building/WaterPlatform/WaterPlatform_Stone_Tile.png",
         "color": {
           "r": 1.0,
           "g": 1.0,
@@ -599,7 +599,7 @@
       "volume": 30.0,
       "stackable": true,
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/WaterPlatform/WaterPlatform_Copper_Tile.png",
+        "spriteAddress": "Assets/6_Art/Generated/Building/WaterPlatform/WaterPlatform_Copper_Tile.png",
         "color": {
           "r": 1.0,
           "g": 1.0,
@@ -628,7 +628,7 @@
       "volume": 32.0,
       "stackable": true,
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/WallMetal/Wall_Copper_Medium.png[Wall_Copper_Medium]",
+        "spriteAddress": "Assets/6_Art/Generated/Building/WallMetal/Wall_Copper_Medium.png[Wall_Copper_Medium]",
         "color": {
           "r": 1.0,
           "g": 1.0,
@@ -657,7 +657,7 @@
       "volume": 30.0,
       "stackable": true,
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/WaterPlatform/WaterPlatform_Iron_Tile.png",
+        "spriteAddress": "Assets/6_Art/Generated/Building/WaterPlatform/WaterPlatform_Iron_Tile.png",
         "color": {
           "r": 1.0,
           "g": 1.0,
@@ -686,7 +686,7 @@
       "volume": 32.0,
       "stackable": true,
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/WallMetal/Wall_Iron_Medium.png[Wall_Iron_Medium]",
+        "spriteAddress": "Assets/6_Art/Generated/Building/WallMetal/Wall_Iron_Medium.png[Wall_Iron_Medium]",
         "color": {
           "r": 1.0,
           "g": 1.0,
@@ -715,7 +715,7 @@
       "volume": 30.0,
       "stackable": true,
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/WaterPlatform/WaterPlatform_Bronze_Tile.png",
+        "spriteAddress": "Assets/6_Art/Generated/Building/WaterPlatform/WaterPlatform_Bronze_Tile.png",
         "color": {
           "r": 1.0,
           "g": 1.0,
@@ -744,7 +744,7 @@
       "volume": 32.0,
       "stackable": true,
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/WallMetal/Wall_Bronze_Medium.png[Wall_Bronze_Medium]",
+        "spriteAddress": "Assets/6_Art/Generated/Building/WallMetal/Wall_Bronze_Medium.png[Wall_Bronze_Medium]",
         "color": {
           "r": 1.0,
           "g": 1.0,
@@ -773,7 +773,7 @@
       "volume": 6.0,
       "stackable": true,
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/ClayJarBlank/ClayJarBlank_Icon.png",
+        "spriteAddress": "Assets/6_Art/Generated/WaterVessel/ClayJarBlank/ClayJarBlank_Icon.png",
         "color": {
           "r": 1,
           "g": 1,
@@ -819,13 +819,13 @@
         }
       },
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/ClayJar/ClayJar_Icon.png",
+        "spriteAddress": "Assets/6_Art/Generated/WaterVessel/ClayJar/ClayJar_Icon.png",
         "spriteStates": {
-          "empty": "Assets/6_Art/Generated/ClayJar/ClayJar_Icon.png",
-          "filled": "Assets/6_Art/Generated/ClayJar/ClayJar_Filled.png",
-          "dirty": "Assets/6_Art/Generated/ClayJar/ClayJar_Dirty.png",
-          "drinkable": "Assets/6_Art/Generated/ClayJar/ClayJar_Drinkable.png",
-          "sea": "Assets/6_Art/Generated/ClayJar/ClayJar_Sea.png"
+          "empty": "Assets/6_Art/Generated/WaterVessel/ClayJar/ClayJar_Icon.png",
+          "filled": "Assets/6_Art/Generated/WaterVessel/ClayJar/ClayJar_Filled.png",
+          "dirty": "Assets/6_Art/Generated/WaterVessel/ClayJar/ClayJar_Dirty.png",
+          "drinkable": "Assets/6_Art/Generated/WaterVessel/ClayJar/ClayJar_Drinkable.png",
+          "sea": "Assets/6_Art/Generated/WaterVessel/ClayJar/ClayJar_Sea.png"
         },
         "color": {
           "r": 1,
@@ -1076,7 +1076,7 @@
         }
       },
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/CuredMeat/CuredMeat_Icon.png",
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/CuredMeat/CuredMeat_Icon.png",
         "color": {
           "r": 1,
           "g": 1,
@@ -1116,7 +1116,7 @@
       "volume": 0.2,
       "stackable": true,
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/MinersNote/MinersNote_Icon.png",
+        "spriteAddress": "Assets/6_Art/Generated/Quest/MinersNote/MinersNote_Icon.png",
         "color": {
           "r": 1.0,
           "g": 1.0,

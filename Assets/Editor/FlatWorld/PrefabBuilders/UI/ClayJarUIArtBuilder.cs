@@ -5,7 +5,7 @@ using UnityEngine;
 /// <summary>把生成的陶罐概念稿机械转换成 128 像素透明精灵，并提取腹部内壁供水层裁剪。</summary>
 public static class ClayJarUIArtBuilder
 {
-    public const string Root = "Assets/6_Art/Generated/ClayJarUI/";
+    public const string Root = "Assets/6_Art/Generated/WaterVessel/ClayJarUI/";
     public static void Build()
     {
         var source = new Texture2D(2, 2);

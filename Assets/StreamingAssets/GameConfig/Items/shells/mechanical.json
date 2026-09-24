@@ -5,7 +5,7 @@
       "id": "HandCrank",
       "parent": "BuildingBody_Base",
       "gameName": "手摇轮-建筑",
-      "description": "手摇轮-建筑，用于首版机械动力系统试玩。",
+      "description": "手摇轮-建筑，用于首版机械扭矩系统试玩。",
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,
@@ -17,7 +17,7 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
       },
       "health": {
         "hasHp": true,
@@ -54,9 +54,9 @@
             "Type": 0
           }
         },
-        "机械动力模块": {
+        "机械扭矩模块": {
           "prefab": "Module_MechanicalNode",
-          "id": "机械动力模块",
+          "id": "机械扭矩模块",
           "enabled": true,
           "data": {
             "BitData": [],
@@ -72,7 +72,7 @@
       "id": "HandCrank_Summoner",
       "parent": "BuildingSummoner_Base",
       "gameName": "手摇轮",
-      "description": "手摇轮，用于首版机械动力系统试玩。",
+      "description": "手摇轮，用于首版机械扭矩系统试玩。",
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,
@@ -84,7 +84,7 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
       },
       "health": {
         "hasHp": true,
@@ -121,9 +121,9 @@
             "Type": 0
           }
         },
-        "机械动力模块": {
+        "机械扭矩模块": {
           "prefab": "Module_MechanicalNode",
-          "id": "机械动力模块",
+          "id": "机械扭矩模块",
           "enabled": true,
           "data": {
             "BitData": [],
@@ -139,7 +139,7 @@
       "id": "WaterWheel",
       "parent": "BuildingBody_Base",
       "gameName": "水车-建筑",
-      "description": "水车-建筑，用于首版机械动力系统试玩。",
+      "description": "水车-建筑，用于首版机械扭矩系统试玩。",
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,
@@ -151,7 +151,7 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
       },
       "health": {
         "hasHp": true,
@@ -188,9 +188,9 @@
             "Type": 0
           }
         },
-        "机械动力模块": {
+        "机械扭矩模块": {
           "prefab": "Module_MechanicalNode",
-          "id": "机械动力模块",
+          "id": "机械扭矩模块",
           "enabled": true,
           "data": {
             "BitData": [],
@@ -206,7 +206,7 @@
       "id": "WaterWheel_Summoner",
       "parent": "BuildingSummoner_Base",
       "gameName": "水车",
-      "description": "水车，用于首版机械动力系统试玩。",
+      "description": "水车，用于首版机械扭矩系统试玩。",
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,
@@ -218,7 +218,7 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
       },
       "health": {
         "hasHp": true,
@@ -255,9 +255,9 @@
             "Type": 0
           }
         },
-        "机械动力模块": {
+        "机械扭矩模块": {
           "prefab": "Module_MechanicalNode",
-          "id": "机械动力模块",
+          "id": "机械扭矩模块",
           "enabled": true,
           "data": {
             "BitData": [],
@@ -273,7 +273,7 @@
       "id": "Windmill",
       "parent": "BuildingBody_Base",
       "gameName": "风车-建筑",
-      "description": "风车-建筑，用于首版机械动力系统试玩。",
+      "description": "风车-建筑，用于首版机械扭矩系统试玩。",
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,
@@ -285,9 +285,9 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/MechanicalWorld/Windmill_Tower.png",
+        "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/Windmill_Tower.png",
         "spriteStates": {
-          "rotor": "Assets/6_Art/Generated/MechanicalWorld/Windmill_Rotor.png"
+          "rotor": "Assets/6_Art/Generated/Mechanical/World/Windmill_Rotor.png"
         }
       },
       "health": {
@@ -325,9 +325,9 @@
             "Type": 0
           }
         },
-        "机械动力模块": {
+        "机械扭矩模块": {
           "prefab": "Module_MechanicalNode",
-          "id": "机械动力模块",
+          "id": "机械扭矩模块",
           "enabled": true,
           "data": {
             "BitData": [],
@@ -344,7 +344,7 @@
       "id": "Windmill_Summoner",
       "parent": "BuildingSummoner_Base",
       "gameName": "风车",
-      "description": "风车，用于首版机械动力系统试玩。",
+      "description": "风车，用于首版机械扭矩系统试玩。",
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,
@@ -356,9 +356,9 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/MechanicalWorld/Windmill_Building.png",
+        "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/Windmill_Building.png",
         "spriteStates": {
-          "rotor": "Assets/6_Art/Generated/MechanicalWorld/Windmill_Rotor.png"
+          "rotor": "Assets/6_Art/Generated/Mechanical/World/Windmill_Rotor.png"
         }
       },
       "health": {
@@ -396,9 +396,9 @@
             "Type": 0
           }
         },
-        "机械动力模块": {
+        "机械扭矩模块": {
           "prefab": "Module_MechanicalNode",
-          "id": "机械动力模块",
+          "id": "机械扭矩模块",
           "enabled": true,
           "data": {
             "BitData": [],
@@ -415,7 +415,7 @@
       "id": "Shaft_Wood",
       "parent": "BuildingBody_Base",
       "gameName": "木制传动轴-建筑",
-      "description": "木制传动轴-建筑，用于首版机械动力系统试玩。",
+      "description": "木制传动轴-建筑，用于首版机械扭矩系统试玩。",
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,
@@ -427,7 +427,7 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/MechanicalWorld/Transmission/World_Shaft_Wood_Linked.png"
+        "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Shaft_Wood_Linked.png"
       },
       "health": {
         "hasHp": true,
@@ -464,9 +464,9 @@
             "Type": 0
           }
         },
-        "机械动力模块": {
+        "机械扭矩模块": {
           "prefab": "Module_MechanicalNode",
-          "id": "机械动力模块",
+          "id": "机械扭矩模块",
           "enabled": true,
           "data": {
             "BitData": [],
@@ -482,7 +482,7 @@
       "id": "Shaft_Wood_Summoner",
       "parent": "BuildingSummoner_Base",
       "gameName": "木制传动轴",
-      "description": "木制传动轴，用于首版机械动力系统试玩。",
+      "description": "木制传动轴，用于首版机械扭矩系统试玩。",
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,
@@ -494,7 +494,7 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/MechanicalWorld/Transmission/World_Shaft_Wood_Linked.png"
+        "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Shaft_Wood_Linked.png"
       },
       "health": {
         "hasHp": true,
@@ -531,9 +531,9 @@
             "Type": 0
           }
         },
-        "机械动力模块": {
+        "机械扭矩模块": {
           "prefab": "Module_MechanicalNode",
-          "id": "机械动力模块",
+          "id": "机械扭矩模块",
           "enabled": true,
           "data": {
             "BitData": [],
@@ -561,9 +561,9 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/MechanicalWorld/Transmission/World_Gear_Wood.png",
+        "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Gear_Wood.png",
         "spriteStates": {
-          "inputShaft": "Assets/6_Art/Generated/MechanicalWorld/Transmission/World_Gear_Wood_InputShaft.png"
+          "inputShaft": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Gear_Wood_InputShaft.png"
         }
       },
       "health": {
@@ -601,9 +601,9 @@
             "Type": 0
           }
         },
-        "机械动力模块": {
+        "机械扭矩模块": {
           "prefab": "Module_MechanicalNode",
-          "id": "机械动力模块",
+          "id": "机械扭矩模块",
           "enabled": true,
           "data": {
             "BitData": [],
@@ -632,9 +632,9 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/MechanicalWorld/Transmission/World_Gear_Wood.png",
+        "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Gear_Wood.png",
         "spriteStates": {
-          "inputShaft": "Assets/6_Art/Generated/MechanicalWorld/Transmission/World_Gear_Wood_InputShaft.png"
+          "inputShaft": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Gear_Wood_InputShaft.png"
         }
       },
       "health": {
@@ -672,9 +672,9 @@
             "Type": 0
           }
         },
-        "机械动力模块": {
+        "机械扭矩模块": {
           "prefab": "Module_MechanicalNode",
-          "id": "机械动力模块",
+          "id": "机械扭矩模块",
           "enabled": true,
           "data": {
             "BitData": [],
@@ -691,7 +691,7 @@
       "id": "Gearbox_Wood",
       "parent": "BuildingBody_Base",
       "gameName": "变速箱-建筑",
-      "description": "变速箱-建筑，用于首版机械动力系统试玩。",
+      "description": "变速箱-建筑；左/下侧输入时转速增加50%、动力减少50%；右/上侧输入时转速减少50%、动力增加50%。",
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,
@@ -703,7 +703,7 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
       },
       "health": {
         "hasHp": true,
@@ -740,9 +740,9 @@
             "Type": 0
           }
         },
-        "机械动力模块": {
+        "机械扭矩模块": {
           "prefab": "Module_MechanicalNode",
-          "id": "机械动力模块",
+          "id": "机械扭矩模块",
           "enabled": true,
           "data": {
             "BitData": [],
@@ -758,7 +758,7 @@
       "id": "Gearbox_Wood_Summoner",
       "parent": "BuildingSummoner_Base",
       "gameName": "变速箱",
-      "description": "变速箱，用于首版机械动力系统试玩。",
+      "description": "左/下侧输入时转速增加50%、动力减少50%；右/上侧输入时转速减少50%、动力增加50%。",
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,
@@ -770,7 +770,7 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
       },
       "health": {
         "hasHp": true,
@@ -807,9 +807,9 @@
             "Type": 0
           }
         },
-        "机械动力模块": {
+        "机械扭矩模块": {
           "prefab": "Module_MechanicalNode",
-          "id": "机械动力模块",
+          "id": "机械扭矩模块",
           "enabled": true,
           "data": {
             "BitData": [],
@@ -825,7 +825,7 @@
       "id": "Clutch",
       "parent": "BuildingBody_Base",
       "gameName": "离合器-建筑",
-      "description": "离合器-建筑，用于首版机械动力系统试玩。",
+      "description": "离合器-建筑，用于首版机械扭矩系统试玩。",
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,
@@ -837,7 +837,7 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
       },
       "health": {
         "hasHp": true,
@@ -874,9 +874,9 @@
             "Type": 0
           }
         },
-        "机械动力模块": {
+        "机械扭矩模块": {
           "prefab": "Module_MechanicalNode",
-          "id": "机械动力模块",
+          "id": "机械扭矩模块",
           "enabled": true,
           "data": {
             "BitData": [],
@@ -892,7 +892,7 @@
       "id": "Clutch_Summoner",
       "parent": "BuildingSummoner_Base",
       "gameName": "离合器",
-      "description": "离合器，用于首版机械动力系统试玩。",
+      "description": "离合器，用于首版机械扭矩系统试玩。",
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,
@@ -904,7 +904,7 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
       },
       "health": {
         "hasHp": true,
@@ -941,9 +941,9 @@
             "Type": 0
           }
         },
-        "机械动力模块": {
+        "机械扭矩模块": {
           "prefab": "Module_MechanicalNode",
-          "id": "机械动力模块",
+          "id": "机械扭矩模块",
           "enabled": true,
           "data": {
             "BitData": [],
@@ -959,7 +959,7 @@
       "id": "Shaft_Copper",
       "parent": "BuildingBody_Base",
       "gameName": "铜制传动轴-建筑",
-      "description": "铜制传动轴-建筑，用于首版机械动力系统试玩。",
+      "description": "铜制传动轴-建筑，用于首版机械扭矩系统试玩。",
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,
@@ -971,7 +971,7 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
       },
       "health": {
         "hasHp": true,
@@ -1008,9 +1008,9 @@
             "Type": 0
           }
         },
-        "机械动力模块": {
+        "机械扭矩模块": {
           "prefab": "Module_MechanicalNode",
-          "id": "机械动力模块",
+          "id": "机械扭矩模块",
           "enabled": true,
           "data": {
             "BitData": [],
@@ -1026,7 +1026,7 @@
       "id": "Shaft_Copper_Summoner",
       "parent": "BuildingSummoner_Base",
       "gameName": "铜制传动轴",
-      "description": "铜制传动轴，用于首版机械动力系统试玩。",
+      "description": "铜制传动轴，用于首版机械扭矩系统试玩。",
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,
@@ -1038,7 +1038,7 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
       },
       "health": {
         "hasHp": true,
@@ -1075,9 +1075,9 @@
             "Type": 0
           }
         },
-        "机械动力模块": {
+        "机械扭矩模块": {
           "prefab": "Module_MechanicalNode",
-          "id": "机械动力模块",
+          "id": "机械扭矩模块",
           "enabled": true,
           "data": {
             "BitData": [],
@@ -1093,7 +1093,7 @@
       "id": "Gear_Copper",
       "parent": "BuildingBody_Base",
       "gameName": "铜制齿轮-建筑",
-      "description": "铜制齿轮-建筑，用于首版机械动力系统试玩。",
+      "description": "铜制齿轮-建筑，用于首版机械扭矩系统试玩。",
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,
@@ -1105,7 +1105,7 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
       },
       "health": {
         "hasHp": true,
@@ -1142,9 +1142,9 @@
             "Type": 0
           }
         },
-        "机械动力模块": {
+        "机械扭矩模块": {
           "prefab": "Module_MechanicalNode",
-          "id": "机械动力模块",
+          "id": "机械扭矩模块",
           "enabled": true,
           "data": {
             "BitData": [],
@@ -1160,7 +1160,7 @@
       "id": "Gear_Copper_Summoner",
       "parent": "BuildingSummoner_Base",
       "gameName": "铜制齿轮",
-      "description": "铜制齿轮，用于首版机械动力系统试玩。",
+      "description": "铜制齿轮，用于首版机械扭矩系统试玩。",
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,
@@ -1172,7 +1172,7 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
       },
       "health": {
         "hasHp": true,
@@ -1209,9 +1209,9 @@
             "Type": 0
           }
         },
-        "机械动力模块": {
+        "机械扭矩模块": {
           "prefab": "Module_MechanicalNode",
-          "id": "机械动力模块",
+          "id": "机械扭矩模块",
           "enabled": true,
           "data": {
             "BitData": [],
@@ -1226,8 +1226,8 @@
     {
       "id": "Gearbox_Copper",
       "parent": "BuildingBody_Base",
-      "gameName": "铜制变速箱-建筑",
-      "description": "铜制变速箱-建筑，用于首版机械动力系统试玩。",
+      "gameName": "变速箱-建筑",
+      "description": "变速箱-建筑；左/下侧输入时转速增加50%、动力减少50%；右/上侧输入时转速减少50%、动力增加50%。",
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,
@@ -1239,7 +1239,7 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
       },
       "health": {
         "hasHp": true,
@@ -1276,9 +1276,9 @@
             "Type": 0
           }
         },
-        "机械动力模块": {
+        "机械扭矩模块": {
           "prefab": "Module_MechanicalNode",
-          "id": "机械动力模块",
+          "id": "机械扭矩模块",
           "enabled": true,
           "data": {
             "BitData": [],
@@ -1293,8 +1293,8 @@
     {
       "id": "Gearbox_Copper_Summoner",
       "parent": "BuildingSummoner_Base",
-      "gameName": "铜制变速箱",
-      "description": "铜制变速箱，用于首版机械动力系统试玩。",
+      "gameName": "变速箱",
+      "description": "左/下侧输入时转速增加50%、动力减少50%；右/上侧输入时转速减少50%、动力增加50%。",
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,
@@ -1306,7 +1306,7 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
       },
       "health": {
         "hasHp": true,
@@ -1343,9 +1343,9 @@
             "Type": 0
           }
         },
-        "机械动力模块": {
+        "机械扭矩模块": {
           "prefab": "Module_MechanicalNode",
-          "id": "机械动力模块",
+          "id": "机械扭矩模块",
           "enabled": true,
           "data": {
             "BitData": [],
@@ -1361,7 +1361,7 @@
       "id": "Shaft_Iron",
       "parent": "BuildingBody_Base",
       "gameName": "铁制传动轴-建筑",
-      "description": "铁制传动轴-建筑，用于首版机械动力系统试玩。",
+      "description": "铁制传动轴-建筑，用于首版机械扭矩系统试玩。",
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,
@@ -1373,7 +1373,7 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
       },
       "health": {
         "hasHp": true,
@@ -1410,9 +1410,9 @@
             "Type": 0
           }
         },
-        "机械动力模块": {
+        "机械扭矩模块": {
           "prefab": "Module_MechanicalNode",
-          "id": "机械动力模块",
+          "id": "机械扭矩模块",
           "enabled": true,
           "data": {
             "BitData": [],
@@ -1428,7 +1428,7 @@
       "id": "Shaft_Iron_Summoner",
       "parent": "BuildingSummoner_Base",
       "gameName": "铁制传动轴",
-      "description": "铁制传动轴，用于首版机械动力系统试玩。",
+      "description": "铁制传动轴，用于首版机械扭矩系统试玩。",
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,
@@ -1440,7 +1440,7 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
       },
       "health": {
         "hasHp": true,
@@ -1477,9 +1477,9 @@
             "Type": 0
           }
         },
-        "机械动力模块": {
+        "机械扭矩模块": {
           "prefab": "Module_MechanicalNode",
-          "id": "机械动力模块",
+          "id": "机械扭矩模块",
           "enabled": true,
           "data": {
             "BitData": [],
@@ -1495,7 +1495,7 @@
       "id": "Gear_Iron",
       "parent": "BuildingBody_Base",
       "gameName": "铁制齿轮-建筑",
-      "description": "铁制齿轮-建筑，用于首版机械动力系统试玩。",
+      "description": "铁制齿轮-建筑，用于首版机械扭矩系统试玩。",
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,
@@ -1507,7 +1507,7 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
       },
       "health": {
         "hasHp": true,
@@ -1544,9 +1544,9 @@
             "Type": 0
           }
         },
-        "机械动力模块": {
+        "机械扭矩模块": {
           "prefab": "Module_MechanicalNode",
-          "id": "机械动力模块",
+          "id": "机械扭矩模块",
           "enabled": true,
           "data": {
             "BitData": [],
@@ -1562,7 +1562,7 @@
       "id": "Gear_Iron_Summoner",
       "parent": "BuildingSummoner_Base",
       "gameName": "铁制齿轮",
-      "description": "铁制齿轮，用于首版机械动力系统试玩。",
+      "description": "铁制齿轮，用于首版机械扭矩系统试玩。",
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,
@@ -1574,7 +1574,7 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
       },
       "health": {
         "hasHp": true,
@@ -1611,9 +1611,9 @@
             "Type": 0
           }
         },
-        "机械动力模块": {
+        "机械扭矩模块": {
           "prefab": "Module_MechanicalNode",
-          "id": "机械动力模块",
+          "id": "机械扭矩模块",
           "enabled": true,
           "data": {
             "BitData": [],
@@ -1628,8 +1628,8 @@
     {
       "id": "Gearbox_Iron",
       "parent": "BuildingBody_Base",
-      "gameName": "铁制变速箱-建筑",
-      "description": "铁制变速箱-建筑，用于首版机械动力系统试玩。",
+      "gameName": "变速箱-建筑",
+      "description": "变速箱-建筑；左/下侧输入时转速增加50%、动力减少50%；右/上侧输入时转速减少50%、动力增加50%。",
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,
@@ -1641,7 +1641,7 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
       },
       "health": {
         "hasHp": true,
@@ -1678,9 +1678,9 @@
             "Type": 0
           }
         },
-        "机械动力模块": {
+        "机械扭矩模块": {
           "prefab": "Module_MechanicalNode",
-          "id": "机械动力模块",
+          "id": "机械扭矩模块",
           "enabled": true,
           "data": {
             "BitData": [],
@@ -1695,8 +1695,8 @@
     {
       "id": "Gearbox_Iron_Summoner",
       "parent": "BuildingSummoner_Base",
-      "gameName": "铁制变速箱",
-      "description": "铁制变速箱，用于首版机械动力系统试玩。",
+      "gameName": "变速箱",
+      "description": "左/下侧输入时转速增加50%、动力减少50%；右/上侧输入时转速减少50%、动力增加50%。",
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,
@@ -1708,7 +1708,7 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
       },
       "health": {
         "hasHp": true,
@@ -1745,9 +1745,9 @@
             "Type": 0
           }
         },
-        "机械动力模块": {
+        "机械扭矩模块": {
           "prefab": "Module_MechanicalNode",
-          "id": "机械动力模块",
+          "id": "机械扭矩模块",
           "enabled": true,
           "data": {
             "BitData": [],
@@ -1763,7 +1763,7 @@
       "id": "CrossShaft",
       "parent": "BuildingBody_Base",
       "gameName": "跨轴器-建筑",
-      "description": "跨轴器-建筑，用于首版机械动力系统试玩。",
+      "description": "跨轴器-建筑，用于首版机械扭矩系统试玩。",
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,
@@ -1775,7 +1775,7 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
       },
       "health": {
         "hasHp": true,
@@ -1812,9 +1812,9 @@
             "Type": 0
           }
         },
-        "机械动力模块": {
+        "机械扭矩模块": {
           "prefab": "Module_MechanicalNode",
-          "id": "机械动力模块",
+          "id": "机械扭矩模块",
           "enabled": true,
           "data": {
             "BitData": [],
@@ -1830,7 +1830,7 @@
       "id": "CrossShaft_Summoner",
       "parent": "BuildingSummoner_Base",
       "gameName": "跨轴器",
-      "description": "跨轴器，用于首版机械动力系统试玩。",
+      "description": "跨轴器，用于首版机械扭矩系统试玩。",
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,
@@ -1842,7 +1842,7 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
       },
       "health": {
         "hasHp": true,
@@ -1879,9 +1879,9 @@
             "Type": 0
           }
         },
-        "机械动力模块": {
+        "机械扭矩模块": {
           "prefab": "Module_MechanicalNode",
-          "id": "机械动力模块",
+          "id": "机械扭矩模块",
           "enabled": true,
           "data": {
             "BitData": [],
@@ -1897,7 +1897,7 @@
       "id": "Millstone",
       "parent": "BuildingBody_Base",
       "gameName": "石磨-建筑",
-      "description": "石磨-建筑，用于首版机械动力系统试玩。",
+      "description": "石磨-建筑，用于首版机械扭矩系统试玩。",
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,
@@ -1909,7 +1909,7 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
       },
       "health": {
         "hasHp": true,
@@ -1946,9 +1946,9 @@
             "Type": 0
           }
         },
-        "机械动力模块": {
+        "机械扭矩模块": {
           "prefab": "Module_MechanicalNode",
-          "id": "机械动力模块",
+          "id": "机械扭矩模块",
           "enabled": true,
           "data": {
             "BitData": [],
@@ -1964,7 +1964,7 @@
       "id": "Millstone_Summoner",
       "parent": "BuildingSummoner_Base",
       "gameName": "石磨",
-      "description": "石磨，用于首版机械动力系统试玩。",
+      "description": "石磨，用于首版机械扭矩系统试玩。",
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,
@@ -1976,7 +1976,7 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
       },
       "health": {
         "hasHp": true,
@@ -2013,9 +2013,9 @@
             "Type": 0
           }
         },
-        "机械动力模块": {
+        "机械扭矩模块": {
           "prefab": "Module_MechanicalNode",
-          "id": "机械动力模块",
+          "id": "机械扭矩模块",
           "enabled": true,
           "data": {
             "BitData": [],
@@ -2031,7 +2031,7 @@
       "id": "MechanicalBellows",
       "parent": "BuildingBody_Base",
       "gameName": "机械风箱-建筑",
-      "description": "机械风箱-建筑，用于首版机械动力系统试玩。",
+      "description": "机械风箱-建筑，用于首版机械扭矩系统试玩。",
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,
@@ -2043,7 +2043,7 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
       },
       "health": {
         "hasHp": true,
@@ -2080,9 +2080,9 @@
             "Type": 0
           }
         },
-        "机械动力模块": {
+        "机械扭矩模块": {
           "prefab": "Module_MechanicalNode",
-          "id": "机械动力模块",
+          "id": "机械扭矩模块",
           "enabled": true,
           "data": {
             "BitData": [],
@@ -2098,7 +2098,7 @@
       "id": "MechanicalBellows_Summoner",
       "parent": "BuildingSummoner_Base",
       "gameName": "机械风箱",
-      "description": "机械风箱，用于首版机械动力系统试玩。",
+      "description": "机械风箱，用于首版机械扭矩系统试玩。",
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,
@@ -2110,7 +2110,7 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
       },
       "health": {
         "hasHp": true,
@@ -2147,9 +2147,9 @@
             "Type": 0
           }
         },
-        "机械动力模块": {
+        "机械扭矩模块": {
           "prefab": "Module_MechanicalNode",
-          "id": "机械动力模块",
+          "id": "机械扭矩模块",
           "enabled": true,
           "data": {
             "BitData": [],
@@ -2165,7 +2165,7 @@
       "id": "Sawmill",
       "parent": "BuildingBody_Base",
       "gameName": "锯木机-建筑",
-      "description": "锯木机-建筑，用于首版机械动力系统试玩。",
+      "description": "锯木机-建筑，用于首版机械扭矩系统试玩。",
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,
@@ -2177,7 +2177,7 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
       },
       "health": {
         "hasHp": true,
@@ -2214,9 +2214,9 @@
             "Type": 0
           }
         },
-        "机械动力模块": {
+        "机械扭矩模块": {
           "prefab": "Module_MechanicalNode",
-          "id": "机械动力模块",
+          "id": "机械扭矩模块",
           "enabled": true,
           "data": {
             "BitData": [],
@@ -2232,7 +2232,7 @@
       "id": "Sawmill_Summoner",
       "parent": "BuildingSummoner_Base",
       "gameName": "锯木机",
-      "description": "锯木机，用于首版机械动力系统试玩。",
+      "description": "锯木机，用于首版机械扭矩系统试玩。",
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,
@@ -2244,7 +2244,7 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
       },
       "health": {
         "hasHp": true,
@@ -2281,9 +2281,9 @@
             "Type": 0
           }
         },
-        "机械动力模块": {
+        "机械扭矩模块": {
           "prefab": "Module_MechanicalNode",
-          "id": "机械动力模块",
+          "id": "机械扭矩模块",
           "enabled": true,
           "data": {
             "BitData": [],
@@ -2299,7 +2299,7 @@
       "id": "MechanicalHammer",
       "parent": "BuildingBody_Base",
       "gameName": "机械锻锤-建筑",
-      "description": "机械锻锤-建筑，用于首版机械动力系统试玩。",
+      "description": "机械锻锤-建筑，用于首版机械扭矩系统试玩。",
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,
@@ -2311,7 +2311,7 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
       },
       "health": {
         "hasHp": true,
@@ -2348,9 +2348,9 @@
             "Type": 0
           }
         },
-        "机械动力模块": {
+        "机械扭矩模块": {
           "prefab": "Module_MechanicalNode",
-          "id": "机械动力模块",
+          "id": "机械扭矩模块",
           "enabled": true,
           "data": {
             "BitData": [],
@@ -2366,7 +2366,7 @@
       "id": "MechanicalHammer_Summoner",
       "parent": "BuildingSummoner_Base",
       "gameName": "机械锻锤",
-      "description": "机械锻锤，用于首版机械动力系统试玩。",
+      "description": "机械锻锤，用于首版机械扭矩系统试玩。",
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,
@@ -2378,7 +2378,7 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
       },
       "health": {
         "hasHp": true,
@@ -2415,9 +2415,9 @@
             "Type": 0
           }
         },
-        "机械动力模块": {
+        "机械扭矩模块": {
           "prefab": "Module_MechanicalNode",
-          "id": "机械动力模块",
+          "id": "机械扭矩模块",
           "enabled": true,
           "data": {
             "BitData": [],
