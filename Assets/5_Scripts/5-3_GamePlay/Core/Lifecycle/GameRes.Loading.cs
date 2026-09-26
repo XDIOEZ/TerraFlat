@@ -20,6 +20,8 @@ public partial class GameRes
     [Sirenix.OdinInspector.ShowInInspector] public ResourceLoadState LoadState { get; private set; }
     /// <summary>主菜单交互所需的最小资源是否已经就绪；完整世界资源仍可能在后台加载。</summary>
     [Sirenix.OdinInspector.ShowInInspector] public bool IsStartupReady { get; private set; }
+    /// <summary>启动阶段所需资源已加载，供早于资源目录启动的运行时工具延后绑定依赖 Prefab。</summary>
+    public static event Action<GameRes> StartupResourcesReady;
     /// <summary>完整资源会话的当前总进度，供世界加载页在抢跑进入时复用。</summary>
     public float LoadProgress => loadingProgress;
     /// <summary>完整资源会话的当前阶段文案。</summary>
@@ -44,6 +46,7 @@ public partial class GameRes
     /// </summary>
     private static readonly string[] StartupPrefabKeys =
     {
+        RuntimeUIPrefabKeys.SliderControl,
         RuntimeUIPrefabKeys.MainMenuSettings,
         RuntimeUIPrefabKeys.MainMenuExitConfirmation,
         RuntimeUIPrefabKeys.InputBindingRow,
@@ -376,6 +379,7 @@ public partial class GameRes
         if (preparingInPlaceReload) return;
         showLoadingGUI = false;
         Debug.Log("[GameRes] 启动必要资源已就绪，主菜单开放；剩余游戏资源继续后台加载。");
+        StartupResourcesReady?.Invoke(this);
     }
 
     /// <summary>开放主菜单后至少让出一帧，避免紧接着的后台目录工作阻塞首次可交互画面。</summary>

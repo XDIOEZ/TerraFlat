@@ -460,6 +460,20 @@ public partial class GameRes : SingletonAutoMono<GameRes>
         return true;
     }
 
+    /// <summary>解析具体 ItemData 的通用显示 Sprite；状态变化由对应模块注册的解析器负责。</summary>
+    public bool TryGetItemPresentation(ItemData itemData, out string displayName, out Sprite sprite)
+    {
+        displayName = string.Empty;
+        sprite = null;
+        if (itemData == null || !TryGetItemPresentation(itemData.IDName, out displayName, out sprite))
+            return false;
+
+        if (ItemDataPresentationResolverRegistry.TryResolve(itemData, out Sprite stateSprite))
+            sprite = stateSprite;
+
+        return sprite != null;
+    }
+
     /// <summary>按物品 ID 创建数据；JSON 目录是唯一权威来源。</summary>
     public ItemData CreateItemData(string itemId)
     {

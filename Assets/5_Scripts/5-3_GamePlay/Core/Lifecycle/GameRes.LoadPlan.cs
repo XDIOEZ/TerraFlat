@@ -12,10 +12,18 @@ public partial class GameRes
     #region 加载计划
 
     /// <summary>权重表示阶段工作占比，只有最后的引用校验结束后才发布目录。</summary>
-    private ResourceLoadPipeline CreateResourceLoadPlan()
+    private ResourceLoadPipeline CreateResourceLoadPlan(
+        ActorDefinitionCatalogLoader.ReloadSnapshot actorSnapshot = null)
     {
         var plan = new ResourceLoadPipeline((title, progress) =>
         {
+            if (resourceReloadInProgress)
+            {
+                resourceReloadProgress = Mathf.Max(resourceReloadProgress, Mathf.Clamp(progress, 0, 0.99f));
+                reloadWorldOwner?.UpdateResourceReloadStatus(resourceReloadProgress);
+                return;
+            }
+
             loadingText = title;
             loadingProgress = Mathf.Max(loadingProgress, Mathf.Clamp(progress, 0, 0.99f));
         });
@@ -45,7 +53,8 @@ public partial class GameRes
             () => LoadCatalog<int>((done, fail) => ItemDefinitionCatalogLoader.LoadBuiltInAsync(this, done, fail, plan.Report, itemSources), _ => { }),
             "prefabs", "loot", "tile-blocks");
         plan.Add("actors", "构建生物定义", 15,
-            () => LoadCatalog<int>((done, fail) => ActorDefinitionCatalogLoader.LoadBuiltInAsync(this, done, fail, plan.Report), _ => { }), "items");
+            () => LoadCatalog<int>((done, fail) => ActorDefinitionCatalogLoader.LoadBuiltInAsync(
+                this, done, fail, plan.Report, actorSnapshot), _ => { }), "items");
         plan.Add("animal-skills", "加载动物技能", 1,
             () => LoadCatalog<AnimalSkillCatalog>(AnimalSkillCatalogLoader.LoadBuiltInAsync, AnimalSkillCatalogService.Replace), "actors");
         plan.Add("spawners", "加载生物生成配置", 1,

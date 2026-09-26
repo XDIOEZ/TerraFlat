@@ -56,7 +56,11 @@ internal static class RuntimeAiEntityUtility
             }
         }
 
-        return MonsterManager.IsRegisteredSpeciesId(data.IDName);
+        // 存档采集可能发生在生态目录注销之后；Actor 定义仍能识别休眠快照。
+        return MonsterManager.IsRegisteredSpeciesId(data.IDName) ||
+               (GameRes.Instance != null &&
+                GameRes.Instance.TryGetItemDefinition(data.IDName, out RuntimeItemDefinition definition) &&
+                definition.IsActor);
     }
 
     private static bool IsAiModuleId(string value)

@@ -7,6 +7,12 @@ using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
 using UnityEngine;
 
+/// <summary>模块需要在普通字段校验外验证嵌套 JSON 结构时实现此契约。</summary>
+public interface IModuleJsonParameterValidator
+{
+    void ValidateJsonParameters(JObject parameters);
+}
+
 /// <summary>把 ItemDefinition 中的参数应用到模块实例。</summary>
 public static class ModuleJsonConfigurator
 {
@@ -178,6 +184,9 @@ public static class ModuleJsonConfigurator
 
             property.Value.ToObject(target.PropertyType, serializer);
         }
+
+        if (module is IModuleJsonParameterValidator parameterValidator)
+            parameterValidator.ValidateJsonParameters(parameters);
     }
 
     /// <summary>校验 Transform 特殊参数的字段和类型。</summary>

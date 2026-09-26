@@ -464,9 +464,16 @@ public static class ItemDefinitionCatalogLoader
         concreteItemIds.UnionWith(gameRes.ItemDefinitions.Keys);
 
         foreach (ItemDefinitionDto definition in definitions)
+            ValidateLootTableItemIds(gameRes, definition, concreteItemIds);
+    }
+
+    /// <summary>逐个校验定义的掉落引用，供世界内 F5 隔离单个无效 Actor 使用。</summary>
+    internal static void ValidateLootTableItemIds(
+        GameRes gameRes, ItemDefinitionDto definition, ISet<string> concreteItemIds)
+    {
+        if (definition == null) return;
+        if (definition.Modules != null)
         {
-            if (definition?.Modules == null)
-                continue;
             foreach (KeyValuePair<string, ItemModuleDefinitionDto> module in definition.Modules)
             {
                 if (module.Value?.Parameters == null)
@@ -487,13 +494,11 @@ public static class ItemDefinitionCatalogLoader
             }
         }
 
-        foreach (string tableId in definitions
-                     .Select(definition => definition?.LootTableId?.Trim())
-                     .Where(id => !string.IsNullOrWhiteSpace(id))
-                     .Distinct(StringComparer.OrdinalIgnoreCase))
+        string tableId = definition.LootTableId?.Trim();
+        if (!string.IsNullOrWhiteSpace(tableId))
         {
             if (!gameRes.TryGetLootTable(tableId, out RuntimeLootTable table))
-                throw new InvalidDataException($"物品定义引用了不存在的战利品表：{tableId}");
+                throw new InvalidDataException($"物品 {definition.Id} 引用了不存在的战利品表：{tableId}");
 
             foreach (RuntimeLootTableEntry entry in table.Entries)
             {
@@ -799,6 +804,7 @@ public static class ItemDefinitionCatalogLoader
             throw new InvalidDataException("物品定义 ID 为空");
         if (string.IsNullOrWhiteSpace(shellId))
             throw new InvalidDataException($"物品 {id} 缺少 shellPrefab");
+        dto.Visual?.LiquidSurface?.Validate(id);
 
         RuntimeLootTable lootTable = null;
         if (!string.IsNullOrWhiteSpace(dto.LootTableId) &&
@@ -914,6 +920,8 @@ public static class ItemDefinitionCatalogLoader
         Sprite sprite = isActor
             ? null
             : ResolveSprite(gameRes, dto.Visual?.SpriteAddress, id, preloadedSprites);
+        if (dto.Visual?.LiquidSurface != null && (sprite == null || sprite.texture == null || !sprite.texture.isReadable))
+            throw new InvalidDataException($"物品 {id} 配置了 visual.liquidSurface，但基础 Sprite 没有启用 Read/Write。");
         Dictionary<string, Sprite> stateSprites = isActor
             ? new Dictionary<string, Sprite>(StringComparer.OrdinalIgnoreCase)
             : ResolveVisualStateSprites(gameRes, dto.Visual?.SpriteStates, id, preloadedSprites);
