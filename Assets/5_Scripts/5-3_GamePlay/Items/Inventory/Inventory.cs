@@ -2239,28 +2239,46 @@ public class Inventory
     #endregion
 }
 
-/// <summary>统一管理背包与制作面板首次打开时的左右布局，避免两个大面板默认重叠。</summary>
+/// <summary>统一管理背包与制作面板首次打开时的默认布局。</summary>
 public static class InventoryPanelLayout
 {
     public const float PanelMargin = 18f;
     private const float DefaultBagWidth = 920f;
-    private const float DefaultCraftingWidth = 1344f;
     private const float FullScreenCraftingThreshold = 0.65f;
 
-    /// <summary>把背包放到画布左侧，并保留统一的小边距。</summary>
+    /// <summary>把背包左边、上边直接贴齐画布，固定占据左上角。</summary>
     public static void ApplyDefaultBagPosition(RectTransform panel)
     {
-        SetSidePosition(panel, left: true);
+        if (panel == null)
+            return;
+
+        RectTransform parent = panel.parent as RectTransform;
+        if (parent == null)
+            return;
+
+        Canvas.ForceUpdateCanvases();
+
+        Rect parentRect = parent.rect;
+        Vector2 panelSize = panel.rect.size;
+        Vector2 anchorReferenceNormalized = new Vector2(
+            Mathf.Lerp(panel.anchorMin.x, panel.anchorMax.x, panel.pivot.x),
+            Mathf.Lerp(panel.anchorMin.y, panel.anchorMax.y, panel.pivot.y));
+        Vector2 anchorReference = parentRect.min + Vector2.Scale(parentRect.size, anchorReferenceNormalized);
+        Vector2 targetPivot = new Vector2(
+            parentRect.xMin + panelSize.x * panel.pivot.x,
+            parentRect.yMax - panelSize.y * (1f - panel.pivot.y));
+
+        panel.anchoredPosition = targetPivot - anchorReference;
     }
 
     /// <summary>把制作面板放到画布右侧，与背包保持统一间距。</summary>
     public static void ApplyDefaultCraftingPosition(RectTransform panel)
     {
-        SetSidePosition(panel, left: false);
+        SetCraftingPosition(panel);
     }
 
-    /// <summary>按背包与制作面板的组合宽度计算相邻位置，窄屏时回退到各自屏幕侧边。</summary>
-    private static void SetSidePosition(RectTransform panel, bool left)
+    /// <summary>按背包与制作面板的组合宽度计算制作面板位置，窄屏时回退到屏幕右侧。</summary>
+    private static void SetCraftingPosition(RectTransform panel)
     {
         if (panel == null)
             return;
@@ -2272,28 +2290,26 @@ public static class InventoryPanelLayout
         Canvas.ForceUpdateCanvases();
         float canvasWidth = parent.rect.width > 0f ? parent.rect.width : Screen.width;
         float panelWidth = panel.rect.width > 0f ? panel.rect.width : panel.sizeDelta.x;
-        if (!left && panelWidth >= canvasWidth * FullScreenCraftingThreshold)
+        if (panelWidth >= canvasWidth * FullScreenCraftingThreshold)
         {
             panel.anchoredPosition = new Vector2(0f, panel.anchoredPosition.y);
             return;
         }
 
-        float bagWidth = left ? panelWidth : DefaultBagWidth;
-        float craftingWidth = left ? DefaultCraftingWidth : panelWidth;
+        float bagWidth = DefaultBagWidth;
+        float craftingWidth = panelWidth;
         float pairWidth = bagWidth + PanelMargin + craftingWidth;
         float availableWidth = Mathf.Max(0f, canvasWidth - PanelMargin * 2f);
         float x;
         if (pairWidth <= availableWidth)
         {
             float pairLeft = -pairWidth * 0.5f;
-            x = left
-                ? pairLeft + bagWidth * 0.5f
-                : pairLeft + bagWidth + PanelMargin + craftingWidth * 0.5f;
+            x = pairLeft + bagWidth + PanelMargin + craftingWidth * 0.5f;
         }
         else
         {
             float halfWidth = Mathf.Max(0f, canvasWidth * 0.5f - PanelMargin - panelWidth * 0.5f);
-            x = left ? -halfWidth : halfWidth;
+            x = halfWidth;
         }
 
         panel.anchoredPosition = new Vector2(x, panel.anchoredPosition.y);
