@@ -4,6 +4,7 @@
     "references": [
         "GamePlay",
         "Data",
+        "FlatWorld.Networking.Core",
         "FlatWorld.AIECS.Gameplay",
         "FlatWorld.Navigation",
         "FlatWorld.WorldTopology",

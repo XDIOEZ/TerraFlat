@@ -371,7 +371,7 @@ public partial class WeatherMgr
     {
         DeactivateWindFeedback();
         if (snowEffect != null) snowEffect.SetActive(false);
-        lastSnowing = false;
+        SetSnowingState(false);
 
         if (_rainEffectInstance != null)
             _rainEffectInstance.SetActive(false);

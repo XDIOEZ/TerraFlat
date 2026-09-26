@@ -147,6 +147,32 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         if (FindObjectOfType<GMReflectionConsole>() != null)
             return;
 
+        GameRes resources = GameRes.ExistingInstance;
+        if (resources == null || !resources.IsStartupReady)
+        {
+            GameRes.StartupResourcesReady -= BootstrapAfterStartupResourcesReady;
+            GameRes.StartupResourcesReady += BootstrapAfterStartupResourcesReady;
+            resources = GameRes.ExistingInstance;
+            if (resources == null || !resources.IsStartupReady)
+                return;
+        }
+
+        CreateBootstrapConsole();
+    }
+
+    /// <summary>资源管理器发布启动资源后再创建依赖公共控件的 GM 界面。</summary>
+    private static void BootstrapAfterStartupResourcesReady(GameRes resources)
+    {
+        GameRes.StartupResourcesReady -= BootstrapAfterStartupResourcesReady;
+        if (FindObjectOfType<GMReflectionConsole>() != null)
+            return;
+
+        CreateBootstrapConsole();
+    }
+
+    /// <summary>创建唯一的运行时 GM 控制台。</summary>
+    private static void CreateBootstrapConsole()
+    {
         GameObject root = new GameObject("[GM Reflection Console]");
         root.AddComponent<GMReflectionConsole>();
     }
@@ -1377,6 +1403,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         RefreshAdminInvincibilityButton();
         RefreshPlayerMoveSpeedButton();
         RefreshChunkLoadSpeedControl();
+        RefreshWorldWindControl();
         RefreshNavigationPathButton();
         RefreshAnimalDebugOverlayButton();
         RefreshItemIds();

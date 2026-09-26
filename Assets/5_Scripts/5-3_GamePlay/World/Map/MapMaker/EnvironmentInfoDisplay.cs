@@ -1,11 +1,12 @@
-// 新建文件：EnvironmentInfoDisplay.cs
-
+using System;
+using System.Collections.Generic;
+using FlatWorld.WorldModel;
 using UnityEngine;
 using UnityEngine.InputSystem;
-using UnityEngine.Tilemaps;
 
 /// <summary>
-/// 环境信息显示类，用于实时显示鼠标悬停位置的环境参数
+/// F3 环境监测面板：直接读取当前 WorldModel 已加载区块的权威地形数据，
+/// 跟随鼠标显示格子、气候、水文、液体、农业状态以及全部原始环境层。
 /// </summary>
 public class EnvironmentInfoDisplay : MonoBehaviour
 {
@@ -30,53 +31,46 @@ public class EnvironmentInfoDisplay : MonoBehaviour
 
     #endregion
 
-    #region 字段和属性
-    
+    #region 显示设置
+
     [Header("显示设置")]
     public KeyCode toggleKey = KeyCode.F3;
-    public Vector2 panelSize = new Vector2(300, 150);
-    public Vector2 offset = new Vector2(20, 20);
-    
+    public Vector2 panelSize = new(430f, 180f);
+    public Vector2 offset = new(20f, 20f);
+
     [Header("悬停指示器设置")]
     public Color hoverIndicatorColor = Color.white;
     public float hoverIndicatorThickness = 2f;
-    
+
     [Header("样式设置")]
-    public Color backgroundColor = new Color(0, 0, 0, 0.7f);
+    public Color backgroundColor = new(0f, 0f, 0f, 0.78f);
     public Color textColor = Color.white;
     public int fontSize = 12;
-    
-    // 引用
-    private Camera mainCamera;
-    private Grid mapGrid;
-    private Tilemap targetTilemap;
-    private Map map;
-    [SerializeField]
-    private bool showBiomeOverlay;
-    
-    // 显示控制
-    private bool isVisible = true;
-    private Vector3 mouseWorldPos = Vector3.zero;
-    private Vector2 mouseScreenPos = Vector2.zero;
-    private Vector2Int hoveredGridPos = Vector2Int.zero;
-    private Vector2Int hoveredLocalPos = Vector2Int.zero;
-    private string hoveredBiomeName = "未知";
-    private TileData hoveredTileData = null;
-    private bool isValidPosition = false;
 
-    // 翻页控制
-    private int currentPage = 0; // 0: 环境信息页, 1: 瓦片信息页
-    
-    // GUI样式
+    #endregion
+
+    #region 运行时状态
+
+    private readonly List<string> environmentLayerIds = new(24);
+    private Camera mainCamera;
+    private RuntimeTerrainTileSample hoveredSample;
+    private Vector2 mouseScreenPos;
+    private Vector3 mouseWorldPos;
+    private Vector2Int hoveredVisualGridPos;
+    private string hoveredBiomeName = "未知";
+    private bool isVisible;
+    private bool isValidPosition;
+    private int currentPage;
+
     private GUIStyle boxStyle;
     private GUIStyle labelStyle;
     private Texture2D backgroundTexture;
-    private bool stylesCreated = false;
-    private const int BiomeOverlayMaxSamples = 12000;
-    
+    private bool stylesCreated;
+    private static Texture2D overlayPixelTexture;
+
     #endregion
 
-    #region Unity生命周期
+    #region Unity 生命周期
 
     private void Awake()
     {
@@ -87,11 +81,7 @@ public class EnvironmentInfoDisplay : MonoBehaviour
         }
 
         Instance = this;
-
         DontDestroyOnLoad(gameObject);
-
-        RefreshMapContextFromCurrentMap();
-        
         isVisible = false;
     }
 
@@ -104,183 +94,406 @@ public class EnvironmentInfoDisplay : MonoBehaviour
             return;
         }
 
-        // 更新 Input System 当前指针屏幕位置。
         mouseScreenPos = pointer.position.ReadValue();
-        
-        // 更新鼠标位置信息
         UpdateMouseInfo();
-        
-        // 翻页：面板可见时可切换页面；数据使用最近一次有效悬停结果
-        if (isVisible)
+
+        if (!isVisible)
+            return;
+
+        int maxPage = isValidPosition ? 1 : 0;
+        Keyboard keyboard = Keyboard.current;
+        if (keyboard?.upArrowKey.wasPressedThisFrame == true)
         {
-            int maxPage = (hoveredTileData != null) ? 1 : 0; // 0 或 1
-
-            Keyboard keyboard = Keyboard.current;
-            if (keyboard?.upArrowKey.wasPressedThisFrame == true)
-            {
-                currentPage--;
-                if (currentPage < 0) currentPage = maxPage;
-            }
-            else if (keyboard?.downArrowKey.wasPressedThisFrame == true)
-            {
-                currentPage++;
-                if (currentPage > maxPage) currentPage = 0;
-            }
-
-            // 防御性约束，避免 hoveredTileData 变为 null 时页码越界
-            if (currentPage > maxPage) currentPage = maxPage;
+            currentPage--;
+            if (currentPage < 0)
+                currentPage = maxPage;
         }
+        else if (keyboard?.downArrowKey.wasPressedThisFrame == true)
+        {
+            currentPage++;
+            if (currentPage > maxPage)
+                currentPage = 0;
+        }
+
+        currentPage = Mathf.Clamp(currentPage, 0, maxPage);
     }
 
     private void OnGUI()
     {
-        if (!Application.isPlaying) return;
+        if (!Application.isPlaying || !isVisible)
+            return;
 
-        if (!isVisible) return;
-
-        // 仅在显示面板时绘制调试覆盖，避免大地图 OnGUI 过载
-        DrawBiomeOverlay();
-
-        DrawHoverIndicatorGUI();
-        
-        // 确保GUI样式已创建
         if (!stylesCreated)
         {
             CreateGUIStyles();
             stylesCreated = true;
         }
-        
+
+        DrawHoverIndicatorGUI();
         DrawInfoPanel();
     }
 
-    private void OnDrawGizmos()
+    private void OnDestroy()
     {
-        // 不再使用OnDrawGizmos，改用Prefab实例
+        if (Instance == this)
+            Instance = null;
+
+        if (backgroundTexture != null)
+            Destroy(backgroundTexture);
     }
 
     #endregion
 
-    #region 核心功能
+    #region 鼠标采样
 
-    /// <summary>
-    /// 绘制生物群系颜色覆盖层（基于 EnvFactorsGrid + Biomes 现算颜色）
-    /// </summary>
-    private void DrawBiomeOverlay()
+    /// <summary>把当前指针投影到世界 Z=0 平面，并读取新版区块的权威单格数据。</summary>
+    private void UpdateMouseInfo()
     {
-        if (!showBiomeOverlay)
-            return;
-
-        ChunkGenerator_Land landGenerator = map?.LandGenerator;
-        if (map == null || map.Data == null || landGenerator?.biomes == null || landGenerator.biomes.Count == 0)
-            return;
-
-        if (!TryGetEnvironmentGridSize(out int width, out int height))
-            return;
-
-        // 需要摄像机和Tilemap来进行坐标转换
         Camera cam = GetMainCamera();
-        if (cam == null)
-            return;
-
-        Texture2D tex = GetOverlayPixelTexture();
-        if (tex == null)
-            return;
-
-        const float size = 6f; // 颜色块尺寸（像素）
-        int totalCellCount = width * height;
-        int step = 1;
-        if (totalCellCount > BiomeOverlayMaxSamples)
+        ChunkMgr chunkManager = ChunkMgr.ExistingInstance;
+        if (cam == null || chunkManager == null)
         {
-            step = Mathf.CeilToInt(Mathf.Sqrt((float)totalCellCount / BiomeOverlayMaxSamples));
-            step = Mathf.Max(1, step);
+            isValidPosition = false;
+            return;
         }
 
-        Vector2Int mapOrigin = map.Data.position;
-
-        for (int xIndex = 0; xIndex < width; xIndex += step)
+        Ray ray = cam.ScreenPointToRay(mouseScreenPos);
+        var worldPlane = new Plane(Vector3.forward, Vector3.zero);
+        if (!worldPlane.Raycast(ray, out float distance))
         {
-            for (int yIndex = 0; yIndex < height; yIndex += step)
-            {
-                if (!TryGetEnvironmentAtLocal(xIndex, yIndex))
-                    continue;
-
-                // 根据环境匹配生物群系，获取预览颜色
-                Vector2Int worldPosition = mapOrigin + new Vector2Int(xIndex, yIndex);
-                if (!landGenerator.TryGetBiomeAtWorld(worldPosition, out BiomeData resolvedBiome))
-                    continue;
-                Color color = resolvedBiome.PreviewColor;
-
-                int worldX = mapOrigin.x + xIndex;
-                int worldY = mapOrigin.y + yIndex;
-
-                // 如果有 Tilemap，则可选地检查是否有实际 Tile
-                if (targetTilemap != null)
-                {
-                    Vector3Int cellPos = new Vector3Int(worldX, worldY, 0);
-                    if (!targetTilemap.HasTile(cellPos))
-                        continue;
-                }
-
-                // 将格子中心转换为屏幕坐标
-                Vector3 worldPos = new Vector3(worldX + 0.5f, worldY + 0.5f,
-                    targetTilemap != null ? targetTilemap.transform.position.z : 0f);
-                Vector3 screenPos = cam.WorldToScreenPoint(worldPos);
-
-                // 在相机视锥外则跳过
-                if (screenPos.z < 0f)
-                    continue;
-
-                float guiX = screenPos.x - size * 0.5f;
-                float guiY = Screen.height - screenPos.y - size * 0.5f; // OnGUI 的 Y 轴与屏幕坐标相反
-
-                Rect rect = new Rect(guiX, guiY, size, size);
-
-                Color oldColor = GUI.color;
-                GUI.color = color;
-                GUI.DrawTexture(rect, tex);
-                GUI.color = oldColor;
-            }
+            isValidPosition = false;
+            return;
         }
+
+        mouseWorldPos = ray.GetPoint(distance);
+        mouseWorldPos.z = 0f;
+        hoveredVisualGridPos = new Vector2Int(
+            Mathf.FloorToInt(mouseWorldPos.x),
+            Mathf.FloorToInt(mouseWorldPos.y));
+
+        if (!chunkManager.TryGetRuntimeTerrainTile(mouseWorldPos, out RuntimeTerrainTileSample sample))
+        {
+            isValidPosition = false;
+            return;
+        }
+
+        hoveredSample = sample;
+        hoveredBiomeName = chunkManager.TryGetRuntimeBiomeName(mouseWorldPos, out string biomeName)
+            ? biomeName
+            : $"Biome#{sample.Cell.BiomeId}";
+        isValidPosition = true;
     }
 
-    private void RefreshMapContextFromCurrentMap()
+    /// <summary>确认 Update 与 OnGUI 之间区块没有被卸载。</summary>
+    private bool TryGetValidHoveredSample(out RuntimeTerrainTileSample sample)
     {
-        if (map == null)
-            return;
+        sample = hoveredSample;
+        if (!isValidPosition || sample.Terrain == null || sample.Terrain.IsDisposed)
+            return false;
 
-        targetTilemap = map.tileMap;
-        if (targetTilemap == null)
-        {
-            targetTilemap = map.GetComponentInChildren<Tilemap>(includeInactive: true);
-        }
-
-        mapGrid = map.GetComponentInChildren<Grid>(includeInactive: true);
-
-        var landGen = map.LandGenerator;
+        Vector2Int local = sample.LocalCell;
+        return (uint)local.x < (uint)sample.Terrain.Width &&
+               (uint)local.y < (uint)sample.Terrain.Height;
     }
 
-    /// <summary>
-    /// 使用 OnGUI 在悬停格子上绘制边框指示器
-    /// </summary>
+    private Camera GetMainCamera()
+    {
+        if (mainCamera != null)
+            return mainCamera;
+
+        mainCamera = Camera.main;
+        if (mainCamera != null)
+            return mainCamera;
+
+        GameObject taggedCamera = GameObject.FindGameObjectWithTag("MainCamera");
+        if (taggedCamera != null)
+            mainCamera = taggedCamera.GetComponent<Camera>();
+
+        if (mainCamera == null)
+        {
+            Camera[] cameras = FindObjectsOfType<Camera>();
+            if (cameras.Length > 0)
+                mainCamera = cameras[0];
+        }
+
+        return mainCamera;
+    }
+
+    #endregion
+
+    #region 面板绘制
+
+    /// <summary>绘制跟随鼠标的调试面板；默认位于指针右下方，靠近屏幕边缘时自动收回屏内。</summary>
+    private void DrawInfoPanel()
+    {
+        bool hasSample = TryGetValidHoveredSample(out RuntimeTerrainTileSample sample);
+        int totalPages = hasSample ? 2 : 1;
+        currentPage = Mathf.Clamp(currentPage, 0, totalPages - 1);
+
+        int lineCount;
+        if (!hasSample)
+        {
+            lineCount = 5;
+        }
+        else if (currentPage == 0)
+        {
+            lineCount = EstimateOverviewLineCount(sample);
+        }
+        else
+        {
+            RefreshEnvironmentLayerIds(sample);
+            lineCount = 11 + sample.Terrain.GetTileLayerCount(sample.LocalCell.x, sample.LocalCell.y) +
+                        environmentLayerIds.Count;
+        }
+
+        float panelWidth = Mathf.Min(Mathf.Max(320f, panelSize.x), Mathf.Max(1f, Screen.width));
+        float lineHeight = Mathf.Max(fontSize + 4f, 16f);
+        float wantedHeight = Mathf.Max(panelSize.y, lineCount * lineHeight + 12f);
+        float panelHeight = Mathf.Min(wantedHeight, Mathf.Max(1f, Screen.height - 4f));
+
+        float desiredX = mouseScreenPos.x + offset.x;
+        float desiredY = Screen.height - mouseScreenPos.y + offset.y;
+        float guiX = Mathf.Clamp(desiredX, 0f, Mathf.Max(0f, Screen.width - panelWidth));
+        float guiY = Mathf.Clamp(desiredY, 0f, Mathf.Max(0f, Screen.height - panelHeight));
+
+        GUILayout.BeginArea(new Rect(guiX, guiY, panelWidth, panelHeight), boxStyle);
+
+        if (!hasSample)
+        {
+            GUILayout.Label("<b>环境监测</b>", labelStyle);
+            GUILayout.Label($"鼠标世界坐标: ({mouseWorldPos.x:F2}, {mouseWorldPos.y:F2})", labelStyle);
+            GUILayout.Label("当前指向位置没有已加载的 WorldModel 地块数据。", labelStyle);
+            GUILayout.Label("移动鼠标到已加载地形上即可查看。", labelStyle);
+            GUILayout.Label($"按 {toggleKey} 关闭", labelStyle);
+            GUILayout.EndArea();
+            return;
+        }
+
+        if (currentPage == 0)
+            DrawOverviewPage(sample);
+        else
+            DrawRawDataPage(sample);
+
+        GUILayout.Label($"按 {toggleKey} 关闭  |  第 {currentPage + 1}/{totalPages} 页（↑↓ 翻页）", labelStyle);
+        GUILayout.EndArea();
+    }
+
+    /// <summary>第一页显示开发时最常用的地块、气候、水文和农业信息。</summary>
+    private void DrawOverviewPage(RuntimeTerrainTileSample sample)
+    {
+        ChunkTerrainData terrain = sample.Terrain;
+        Vector2Int local = sample.LocalCell;
+        TerrainCell cell = sample.Cell;
+
+        GUILayout.Label("<b>环境监测 / 地块总览</b>", labelStyle);
+        GUILayout.Label(
+            $"世界格: ({sample.WorldCell.x}, {sample.WorldCell.y})  局部格: ({local.x}, {local.y})",
+            labelStyle);
+        GUILayout.Label(
+            $"鼠标世界: ({mouseWorldPos.x:F2}, {mouseWorldPos.y:F2})  维度: {sample.Address.DimensionId}",
+            labelStyle);
+        GUILayout.Label(
+            $"区块原点: ({sample.Address.ChunkOrigin.X}, {sample.Address.ChunkOrigin.Y})  Revision: {terrain.Revision}",
+            labelStyle);
+
+        GUILayout.Label($"地块: {FormatTile(sample.TopTileId)}", labelStyle);
+        GUILayout.Label($"群系: {hoveredBiomeName}  (ID {cell.BiomeId})", labelStyle);
+        GUILayout.Label(
+            $"可行走: {terrain.IsWalkable(local.x, local.y)}  导航代价: {cell.NavigationCost}  Flags: {cell.Flags}",
+            labelStyle);
+        GUILayout.Label(
+            $"地块层数: {terrain.GetTileLayerCount(local.x, local.y)}  草层: {FormatGrass(terrain.GetGrass(local.x, local.y))}",
+            labelStyle);
+
+        int supportTileId = TerrainSupportLayer.GetTileId(terrain, local.x, local.y);
+        if (supportTileId != 0)
+            GUILayout.Label($"支撑表面: {FormatTile(supportTileId)}", labelStyle);
+
+        DrawClimateSummary(sample);
+        DrawLiquidSummary(sample);
+        DrawAgricultureSummary(sample);
+        DrawTileTemplateSummary(sample.TopTileId);
+    }
+
+    /// <summary>第二页枚举地块完整叠层与该格当前存在的全部环境层，便于排查生成和运行时差量。</summary>
+    private void DrawRawDataPage(RuntimeTerrainTileSample sample)
+    {
+        ChunkTerrainData terrain = sample.Terrain;
+        Vector2Int local = sample.LocalCell;
+
+        GUILayout.Label("<b>原始地形 / 环境层</b>", labelStyle);
+        GUILayout.Label(
+            $"世界格: ({sample.WorldCell.x}, {sample.WorldCell.y})  Chunk: ({sample.Address.ChunkOrigin.X}, {sample.Address.ChunkOrigin.Y})",
+            labelStyle);
+        GUILayout.Label($"Ground: {FormatTile(sample.Cell.GroundTileId)}", labelStyle);
+        GUILayout.Label($"Back: {FormatTile(sample.Cell.BackTileId)}", labelStyle);
+        GUILayout.Label($"Blocking: {FormatTile(sample.Cell.BlockingTileId)}", labelStyle);
+        GUILayout.Label($"EffectiveTop: {FormatTile(sample.TopTileId)}", labelStyle);
+
+        int layerCount = terrain.GetTileLayerCount(local.x, local.y);
+        for (int i = 0; i < layerCount; i++)
+            GUILayout.Label($"TileStack[{i}]: {FormatTile(terrain.GetTileIdAt(local.x, local.y, i))}", labelStyle);
+
+        GUILayout.Label(
+            $"Liquid: id={sample.LiquidId ?? "none"}  type={sample.LiquidTypeIndex}  depth={sample.LiquidDepth:F4}",
+            labelStyle);
+        GUILayout.Label($"环境层数量: {environmentLayerIds.Count}", labelStyle);
+
+        for (int i = 0; i < environmentLayerIds.Count; i++)
+        {
+            string layerId = environmentLayerIds[i];
+            if (terrain.TryGetEnvironmentValue(layerId, local.x, local.y, out float value))
+                GUILayout.Label($"{layerId}: {value:G7}", labelStyle);
+        }
+    }
+
+    /// <summary>显示生成气候与最终环境温度；不存在的层不伪造数值。</summary>
+    private void DrawClimateSummary(RuntimeTerrainTileSample sample)
+    {
+        ChunkTerrainData terrain = sample.Terrain;
+        Vector2Int local = sample.LocalCell;
+
+        bool hasGeneratedCelsius = terrain.TryGetEnvironmentValue(
+            "temperature.celsius", local.x, local.y, out float generatedCelsius);
+        bool hasNormalizedTemperature = terrain.TryGetEnvironmentValue(
+            "temperature", local.x, local.y, out float normalizedTemperature);
+
+        if (TemperatureMgr.Instance.TryGetAmbientTemperature(
+                new Vector2(sample.WorldCell.x + 0.5f, sample.WorldCell.y + 0.5f),
+                out float ambientTemperature))
+        {
+            string generated = hasGeneratedCelsius ? $"{generatedCelsius:F2}℃" : "无";
+            GUILayout.Label($"温度: 环境 {ambientTemperature:F2}℃  生成基温 {generated}", labelStyle);
+        }
+        else if (hasGeneratedCelsius)
+        {
+            GUILayout.Label($"温度: 生成基温 {generatedCelsius:F2}℃", labelStyle);
+        }
+
+        if (hasNormalizedTemperature)
+            GUILayout.Label($"温度归一值: {normalizedTemperature:F4}", labelStyle);
+
+        DrawEnvironmentValue(terrain, local, "moisture", "湿度");
+        DrawEnvironmentValue(terrain, local, "precipitation", "降水");
+        DrawEnvironmentValue(terrain, local, "fertility", "土壤肥力");
+        DrawEnvironmentValue(terrain, local, "height", "高度");
+
+        bool hasWindX = terrain.TryGetEnvironmentValue("windX", local.x, local.y, out float windX);
+        bool hasWindY = terrain.TryGetEnvironmentValue("windY", local.x, local.y, out float windY);
+        if (hasWindX || hasWindY)
+        {
+            var wind = new Vector2(windX, windY);
+            float angle = wind.sqrMagnitude > 0.000001f
+                ? Mathf.Atan2(wind.y, wind.x) * Mathf.Rad2Deg
+                : 0f;
+            GUILayout.Label($"风场: ({wind.x:F3}, {wind.y:F3})  角度 {angle:F1}°", labelStyle);
+        }
+
+        bool hasRiverKind = terrain.TryGetEnvironmentValue("riverKind", local.x, local.y, out float riverKind);
+        bool hasRiverFlow = terrain.TryGetEnvironmentValue("riverFlow", local.x, local.y, out float riverFlow);
+        bool hasRiverDepth = terrain.TryGetEnvironmentValue("riverDepth", local.x, local.y, out float riverDepth);
+        if (hasRiverKind || hasRiverFlow || hasRiverDepth)
+        {
+            GUILayout.Label(
+                $"水文: kind={riverKind:G4}  flow={riverFlow:F4}  riverDepth={riverDepth:F4}",
+                labelStyle);
+        }
+    }
+
+    /// <summary>显示独立 Liquid 层与当前表面流向。</summary>
+    private void DrawLiquidSummary(RuntimeTerrainTileSample sample)
+    {
+        GUILayout.Label(
+            $"液体: {(string.IsNullOrWhiteSpace(sample.LiquidId) ? "无" : sample.LiquidId)}  深度 {sample.LiquidDepth:F4}  类型索引 {sample.LiquidTypeIndex}",
+            labelStyle);
+
+        ChunkMgr chunkManager = ChunkMgr.ExistingInstance;
+        if (chunkManager != null &&
+            chunkManager.TryGetRuntimeWaterCurrent(
+                new Vector2(sample.WorldCell.x + 0.5f, sample.WorldCell.y + 0.5f),
+                out RuntimeWaterCurrentSample current))
+        {
+            GUILayout.Label(
+                $"水流: {current.Kind}  方向 ({current.Direction.x:F3}, {current.Direction.y:F3})  流量 {current.Flow:F4}",
+                labelStyle);
+        }
+    }
+
+    /// <summary>耕地或已有农业状态时显示真实水分、肥力和耕作进度。</summary>
+    private void DrawAgricultureSummary(RuntimeTerrainTileSample sample)
+    {
+        ChunkTerrainData terrain = sample.Terrain;
+        Vector2Int local = sample.LocalCell;
+        float sourceTileId = FarmlandSystem.Read(terrain, local, FarmlandSystem.SourceLayer);
+        bool hasAgricultureState = sourceTileId > 0f;
+        bool isFarmland = FarmlandSystem.IsFarmland(sample.Cell);
+        if (!isFarmland && !hasAgricultureState)
+            return;
+
+        TileData_Farmland soil = FarmlandSystem.ReadSoilSnapshot(sample);
+        float progress = FarmlandSystem.Read(terrain, local, FarmlandSystem.ProgressLayer);
+        float waterPercent = soil.maxWater > 0f ? soil.waterValue / soil.maxWater * 100f : 0f;
+        float fertilityPercent = soil.maxFertility > 0f ? soil.Fertility / soil.maxFertility * 100f : 0f;
+
+        GUILayout.Label("<b>农业状态</b>", labelStyle);
+        GUILayout.Label(
+            $"耕地: {isFarmland}  耕作进度: {progress * 100f:F1}%  原地表ID: {Mathf.RoundToInt(sourceTileId)}",
+            labelStyle);
+        GUILayout.Label(
+            $"水分: {soil.waterValue:F2}/{soil.maxWater:F2} ({waterPercent:F1}%)",
+            labelStyle);
+        GUILayout.Label(
+            $"肥力: {soil.Fertility:F4}/{soil.maxFertility:F4} ({fertilityPercent:F1}%)",
+            labelStyle);
+    }
+
+    /// <summary>显示当前有效地块定义中的模板信息，辅助排查配置与运行时状态差异。</summary>
+    private void DrawTileTemplateSummary(int tileId)
+    {
+        if (!TryGetTileDefinition(tileId, out RuntimeTileDefinition definition) ||
+            definition.TileDataTemplate == null)
+            return;
+
+        TileData template = definition.TileDataTemplate;
+        GUILayout.Label(
+            $"定义: {definition.Id}  显示名: {definition.DisplayName}  TileAsset: {definition.TileAssetId}",
+            labelStyle);
+        GUILayout.Label(
+            $"模板: tag={template.TileTag}  penalty={template.Penalty}  walkable={template.IsWalkable}  demolition={template.DemolitionTime:F2}",
+            labelStyle);
+    }
+
+    private int EstimateOverviewLineCount(RuntimeTerrainTileSample sample)
+    {
+        int count = 21;
+        if (TerrainSupportLayer.GetTileId(sample.Terrain, sample.LocalCell.x, sample.LocalCell.y) != 0)
+            count++;
+
+        float source = FarmlandSystem.Read(sample.Terrain, sample.LocalCell, FarmlandSystem.SourceLayer);
+        if (FarmlandSystem.IsFarmland(sample.Cell) || source > 0f)
+            count += 4;
+
+        return count;
+    }
+
+    #endregion
+
+    #region 悬停框
+
+    /// <summary>直接按 1×1 世界格绘制悬停框，不再依赖旧 Map/Tilemap 对象。</summary>
     private void DrawHoverIndicatorGUI()
     {
-        if (!isVisible || !isValidPosition)
-            return;
-
-        if (mapGrid == null || targetTilemap == null)
+        if (!TryGetValidHoveredSample(out _))
             return;
 
         Camera cam = GetMainCamera();
         if (cam == null)
             return;
 
-        Vector3Int cellPos = new Vector3Int(hoveredGridPos.x, hoveredGridPos.y, 0);
-        Vector3 cellWorldPos = mapGrid.CellToWorld(cellPos);
-        Vector3 cellSize = mapGrid.cellSize;
-
-        Vector3 screenMin = cam.WorldToScreenPoint(new Vector3(cellWorldPos.x, cellWorldPos.y, 0f));
-        Vector3 screenMax = cam.WorldToScreenPoint(new Vector3(cellWorldPos.x + cellSize.x, cellWorldPos.y + cellSize.y, 0f));
-
+        Vector3 minWorld = new(hoveredVisualGridPos.x, hoveredVisualGridPos.y, 0f);
+        Vector3 maxWorld = new(hoveredVisualGridPos.x + 1f, hoveredVisualGridPos.y + 1f, 0f);
+        Vector3 screenMin = cam.WorldToScreenPoint(minWorld);
+        Vector3 screenMax = cam.WorldToScreenPoint(maxWorld);
         if (screenMin.z < 0f || screenMax.z < 0f)
             return;
 
@@ -288,408 +501,133 @@ public class EnvironmentInfoDisplay : MonoBehaviour
         float y = Mathf.Min(Screen.height - screenMin.y, Screen.height - screenMax.y);
         float width = Mathf.Abs(screenMax.x - screenMin.x);
         float height = Mathf.Abs(screenMax.y - screenMin.y);
-
         if (width <= 0f || height <= 0f)
             return;
 
         Texture2D tex = GetOverlayPixelTexture();
         Color oldColor = GUI.color;
         GUI.color = hoverIndicatorColor;
-
         float line = Mathf.Max(1f, hoverIndicatorThickness);
-        GUI.DrawTexture(new Rect(x, y, width, line), tex); // 上
-        GUI.DrawTexture(new Rect(x, y + height - line, width, line), tex); // 下
-        GUI.DrawTexture(new Rect(x, y, line, height), tex); // 左
-        GUI.DrawTexture(new Rect(x + width - line, y, line, height), tex); // 右
-
+        GUI.DrawTexture(new Rect(x, y, width, line), tex);
+        GUI.DrawTexture(new Rect(x, y + height - line, width, line), tex);
+        GUI.DrawTexture(new Rect(x, y, line, height), tex);
+        GUI.DrawTexture(new Rect(x + width - line, y, line, height), tex);
         GUI.color = oldColor;
     }
 
-    private static Texture2D overlayPixelTexture;
-
     private static Texture2D GetOverlayPixelTexture()
     {
-        if (overlayPixelTexture == null)
+        if (overlayPixelTexture != null)
+            return overlayPixelTexture;
+
+        overlayPixelTexture = new Texture2D(1, 1)
         {
-            overlayPixelTexture = new Texture2D(1, 1);
-            overlayPixelTexture.hideFlags = HideFlags.HideAndDontSave;
-            overlayPixelTexture.SetPixel(0, 0, Color.white);
-            overlayPixelTexture.Apply();
-        }
+            hideFlags = HideFlags.HideAndDontSave
+        };
+        overlayPixelTexture.SetPixel(0, 0, Color.white);
+        overlayPixelTexture.Apply();
         return overlayPixelTexture;
-    }
-
-/// <summary>
-/// 获取主摄像机
-/// </summary>
-private Camera GetMainCamera()
-{
-    if (mainCamera == null)
-    {
-        mainCamera = Camera.main;
-        if (mainCamera == null)
-        {
-            mainCamera = GameObject.FindGameObjectWithTag("MainCamera")?.GetComponent<Camera>();
-        }
-        if (mainCamera == null)
-        {
-            // 如果还找不到，尝试从子对象获取
-            Camera[] childCameras = GetComponentsInChildren<Camera>(true);
-            if (childCameras != null && childCameras.Length > 0)
-            {
-                mainCamera = childCameras[0];
-            }
-        }
-        if (mainCamera == null)
-        {
-            // 最后尝试查找场景中所有的摄像机
-            Camera[] cameras = FindObjectsOfType<Camera>();
-            if (cameras.Length > 0)
-            {
-                mainCamera = cameras[0];
-            }
-        }
-    }
-    return mainCamera;
-}
-
-/// <summary>
-/// 更新鼠标位置的环境信息
-/// </summary>
-private void UpdateMouseInfo()
-{
-    // 获取摄像机
-    Camera cam = GetMainCamera();
-
-    // 前置检查
-    if (cam == null)
-    {
-        isValidPosition = false;
-        return;
-    }
-
-    // 1. 鼠标屏幕坐标 → 世界坐标
-    Vector3 mouseScreenPos3D = new Vector3(mouseScreenPos.x, mouseScreenPos.y, 0);
-    mouseScreenPos3D.z = Mathf.Abs(cam.transform.position.z);
-    mouseWorldPos = cam.ScreenToWorldPoint(mouseScreenPos3D);
-    mouseWorldPos.z = 0;
-
-    // 2. 世界坐标 → 网格整数坐标（全局）
-    Vector2Int gridPos = new Vector2Int(Mathf.FloorToInt(mouseWorldPos.x), Mathf.FloorToInt(mouseWorldPos.y));
-
-    // 3. 通过全局 Chunk 接口获取当前地图
-    if (ChunkMgr.Instance == null)
-    {
-        isValidPosition = false;
-        return;
-    }
-
-    ChunkMgr.Instance.GetChunkBy_ItemPosition(gridPos, out Chunk chunk);
-    if (chunk == null || chunk.Map == null)
-    {
-        isValidPosition = false;
-        return;
-    }
-
-    if (map != chunk.Map)
-    {
-        map = chunk.Map;
-        RefreshMapContextFromCurrentMap();
-    }
-
-    if (map == null || map.Data == null)
-    {
-        isValidPosition = false;
-        return;
-    }
-
-    // 如果有Tilemap，补一层视觉存在性检查
-    if (targetTilemap != null)
-    {
-        Vector3Int cellPos = new Vector3Int(gridPos.x, gridPos.y, 0);
-        if (!targetTilemap.HasTile(cellPos))
-        {
-            isValidPosition = false;
-            return;
-        }
-    }
-
-    // 4. 计算本地坐标
-    Vector2Int localGridPos = gridPos - map.Data.position;
-
-    // 5. 检测是否在有效范围内
-
-    if (!TryGetEnvironmentGridSize(out int width, out int height) ||
-        localGridPos.x < 0 || localGridPos.x >= width ||
-        localGridPos.y < 0 || localGridPos.y >= height)
-    {
-        isValidPosition = false;
-        return;
-    }
-
-    // 6. 获取环境信息
-    isValidPosition = true;
-    hoveredGridPos = gridPos;
-    if (!TryGetEnvironmentAtLocal(localGridPos.x, localGridPos.y))
-    {
-        isValidPosition = false;
-        return;
-    }
-
-    hoveredLocalPos = localGridPos;
-    hoveredTileData = map.GetTile(gridPos);
-    
-    // 匹配生物群系
-    hoveredBiomeName = "未知";
-    if (map.LandGenerator != null && map.LandGenerator.TryGetBiomeAtWorld(gridPos, out BiomeData resolvedBiome))
-        hoveredBiomeName = resolvedBiome.BiomeName;
-}
-
-    /// <summary>
-    /// 绘制信息面板
-    /// </summary>
-    private void DrawInfoPanel()
-    {
-        bool hasEnvironmentData = TryGetHoveredEnvironment(out EnvironmentLayers environmentLayers);
-        int totalPages = (hasEnvironmentData && hoveredTileData != null) ? 2 : 1;
-        currentPage = Mathf.Clamp(currentPage, 0, totalPages - 1);
-
-        // 预估需要的行数（用于动态计算高度），不同页内容不同
-        int lineCount = 0;
-        if (currentPage == 0)
-        {
-            // 标题、坐标、群系、温度、基础/最终降雨、风场、高度与水文
-            lineCount += hasEnvironmentData ? 9 : 2;
-        }
-        else
-        {
-            // 标题、坐标、瓦片名、移动权重
-            lineCount += (hoveredTileData != null) ? 4 : 2;
-        }
-
-        // 底部统一添加：切换显示提示 + 页码提示
-        lineCount += 2;
-
-        float lineHeight = fontSize + 4;
-        float panelHeight = Mathf.Max(panelSize.y, lineCount * lineHeight + 10);
-        
-        // 计算GUI位置（跟随鼠标，但保持在屏幕内）
-        // 注意：GUI的Y轴是从上到下的，而鼠标坐标的Y轴是从下到上的
-        float guiX = Mathf.Clamp(mouseScreenPos.x + offset.x, 0, Screen.width - panelSize.x);
-        // 转换Y坐标：Screen.height - mouseScreenPos.y 将鼠标Y坐标转换为GUI坐标系
-        float guiY = Mathf.Clamp(Screen.height - mouseScreenPos.y - panelHeight - offset.y, 0, Screen.height - panelHeight);
-        
-        // 绘制信息面板
-        GUILayout.BeginArea(new Rect(guiX, guiY, panelSize.x, panelHeight), boxStyle);
-
-        if (!hasEnvironmentData)
-        {
-            GUILayout.Label("<b>环境信息</b>", labelStyle);
-            GUILayout.Label("鼠标位置暂无有效环境数据", labelStyle);
-            GUILayout.Label($"按 {toggleKey} 键切换显示", labelStyle);
-            GUILayout.EndArea();
-            return;
-        }
-
-        if (currentPage == 0)
-        {
-            // 第 1 页：环境因素
-            float displayTempCelsius = environmentLayers.TemperatureCelsius[hoveredLocalPos.x, hoveredLocalPos.y];
-            float temperature = environmentLayers.Temperature[hoveredLocalPos.x, hoveredLocalPos.y];
-            float precipitation = environmentLayers.Precipitation[hoveredLocalPos.x, hoveredLocalPos.y];
-            float height = environmentLayers.Height[hoveredLocalPos.x, hoveredLocalPos.y];
-            Vector2 wind = environmentLayers.GetWind(hoveredLocalPos.x, hoveredLocalPos.y);
-            float basePrecipitation = precipitation;
-            int baseSeed = SaveDataMgr.Instance?.SaveData?.Seed ?? 1;
-            DimensionManager dimensionManager = DimensionManager.Instance;
-            int worldSeed = dimensionManager != null
-                ? dimensionManager.GetActiveGenerationSeed(baseSeed)
-                : baseSeed;
-            if (map.LandGenerator != null)
-            {
-                ClimateSample climate = map.LandGenerator.SampleClimateAtWorld(
-                    hoveredGridPos,
-                    worldSeed,
-                    SaveDataMgr.Instance?.GetCurrentPlanetData());
-                basePrecipitation = climate.BasePrecipitation;
-            }
-
-            HydrologyCellSample hydrology = default;
-            map.GetGenerator<ChunkGenerator_River>()?.TrySampleHydrologyCell(
-                hoveredGridPos,
-                worldSeed,
-                out hydrology);
-            float windAngle = Mathf.Atan2(wind.y, wind.x) * Mathf.Rad2Deg;
-
-            GUILayout.Label($"<b>环境信息</b>", labelStyle);
-            GUILayout.Label($"坐标: ({hoveredGridPos.x}, {hoveredGridPos.y})", labelStyle);
-            GUILayout.Label($"生物群系: {hoveredBiomeName}", labelStyle);
-            GUILayout.Label($"温度: {temperature:F2} ({displayTempCelsius:F1}℃)", labelStyle);
-            GUILayout.Label($"基础降水: {basePrecipitation:F2}", labelStyle);
-            GUILayout.Label($"最终降雨: {precipitation:F2}", labelStyle);
-            GUILayout.Label($"风向: ({wind.x:F2}, {wind.y:F2}) {windAngle:F0}°", labelStyle);
-            GUILayout.Label($"高度: {height:F2}", labelStyle);
-            GUILayout.Label(
-                $"水文: {hydrology.WaterKind}  汇流 {hydrology.Flow:F2}  水深 {hydrology.Depth:F2}",
-                labelStyle);
-        }
-        else
-        {
-            // 第 2 页：瓦片信息
-            GUILayout.Label($"<b>瓦片信息</b>", labelStyle);
-            GUILayout.Label($"坐标: ({hoveredGridPos.x}, {hoveredGridPos.y})", labelStyle);
-
-            if (hoveredTileData != null)
-            {
-                GUILayout.Label($"瓦片: {hoveredTileData.Name}", labelStyle);
-                GUILayout.Label($"移动权重: {hoveredTileData.Penalty}", labelStyle);
-            }
-        }
-
-        // 底部通用提示
-        GUILayout.Label($"按 {toggleKey} 键切换显示", labelStyle);
-        if (totalPages > 1)
-        {
-            GUILayout.Label($"第 {currentPage + 1}/{totalPages} 页（↑↓ 翻页）", labelStyle);
-        }
-        
-        GUILayout.EndArea();
-    }
-
-    /// <summary>
-    /// 获取当前悬停格子的完整环境层，避免地图切换或区块卸载期间读取失效引用。
-    /// </summary>
-    private bool TryGetHoveredEnvironment(out EnvironmentLayers environmentLayers)
-    {
-        environmentLayers = null;
-        if (!isValidPosition || map == null || map.Data == null)
-            return false;
-
-        EnvironmentLayers layers = map.Data.EnvironmentLayers;
-        if (layers == null || !layers.Contains(hoveredLocalPos.x, hoveredLocalPos.y))
-            return false;
-
-        int width = layers.Width;
-        int height = layers.GridHeight;
-        if (!layers.IsValidSize(width, height))
-            return false;
-
-        environmentLayers = layers;
-        return true;
-    }
-
-    /// <summary>
-    /// 创建GUI样式
-    /// </summary>
-    private void CreateGUIStyles()
-    {
-        // 创建背景纹理
-        backgroundTexture = new Texture2D(2, 2);
-        Color[] colors = new Color[4];
-        for (int i = 0; i < colors.Length; i++)
-        {
-            colors[i] = backgroundColor;
-        }
-        backgroundTexture.SetPixels(colors);
-        backgroundTexture.Apply();
-        
-        // 创建Box样式
-        boxStyle = new GUIStyle(GUI.skin.box);
-        boxStyle.normal.background = backgroundTexture;
-        
-        // 创建Label样式
-        labelStyle = new GUIStyle(GUI.skin.label);
-        labelStyle.normal.textColor = textColor;
-        labelStyle.fontSize = fontSize;
-        labelStyle.richText = true;
     }
 
     #endregion
 
-    #region 公共方法
+    #region 数据格式化
 
-    /// <summary>
-    /// 显示信息面板
-    /// </summary>
+    private void RefreshEnvironmentLayerIds(RuntimeTerrainTileSample sample)
+    {
+        environmentLayerIds.Clear();
+        foreach (string layerId in sample.Terrain.EnvironmentLayerIds)
+        {
+            if (!string.IsNullOrWhiteSpace(layerId))
+                environmentLayerIds.Add(layerId);
+        }
+
+        environmentLayerIds.Sort(StringComparer.Ordinal);
+    }
+
+    private void DrawEnvironmentValue(
+        ChunkTerrainData terrain,
+        Vector2Int local,
+        string layerId,
+        string displayName)
+    {
+        if (terrain.TryGetEnvironmentValue(layerId, local.x, local.y, out float value))
+            GUILayout.Label($"{displayName}: {value:F4}", labelStyle);
+    }
+
+    private static string FormatGrass(byte value)
+    {
+        return value == ChunkTerrainData.GrassPresent ? $"有 ({value})" : $"无 ({value})";
+    }
+
+    private static string FormatTile(int tileId)
+    {
+        if (tileId == 0)
+            return "无 (#0)";
+
+        if (TryGetTileDefinition(tileId, out RuntimeTileDefinition definition))
+            return $"{definition.DisplayName} [{definition.Id}] #{tileId}";
+
+        return $"未知地块 #{tileId}";
+    }
+
+    private static bool TryGetTileDefinition(int tileId, out RuntimeTileDefinition definition)
+    {
+        definition = null;
+        GameRes resources = GameRes.ExistingInstance;
+        return tileId > 0 && resources != null && resources.TryGetTileDefinition(tileId, out definition);
+    }
+
+    #endregion
+
+    #region GUI 样式
+
+    private void CreateGUIStyles()
+    {
+        backgroundTexture = new Texture2D(2, 2)
+        {
+            hideFlags = HideFlags.HideAndDontSave
+        };
+        var colors = new Color[4];
+        for (int i = 0; i < colors.Length; i++)
+            colors[i] = backgroundColor;
+        backgroundTexture.SetPixels(colors);
+        backgroundTexture.Apply();
+
+        boxStyle = new GUIStyle(GUI.skin.box);
+        boxStyle.normal.background = backgroundTexture;
+        boxStyle.padding = new RectOffset(8, 8, 6, 6);
+
+        labelStyle = new GUIStyle(GUI.skin.label);
+        labelStyle.normal.textColor = textColor;
+        labelStyle.fontSize = fontSize;
+        labelStyle.richText = true;
+        labelStyle.wordWrap = false;
+    }
+
+    #endregion
+
+    #region 公共接口
+
     public void Show()
     {
         isVisible = true;
     }
 
-    /// <summary>
-    /// 隐藏信息面板
-    /// </summary>
     public void Hide()
     {
         isVisible = false;
     }
 
-    /// <summary>
-    /// 切换显示状态
-    /// </summary>
     public void Toggle()
     {
         isVisible = !isVisible;
     }
 
-    /// <summary>
-    /// 设置切换键
-    /// </summary>
     public void SetToggleKey(KeyCode key)
     {
         toggleKey = key;
     }
 
     #endregion
-
-    #region 清理
-
-private void OnDestroy()
-{
-    if (Instance == this)
-    {
-        Instance = null;
-    }
-
-    if (backgroundTexture != null)
-    {
-        Destroy(backgroundTexture);
-    }
-    
-    // 销毁GUI样式
-    if (boxStyle != null && boxStyle.normal.background != null)
-    {
-        Destroy(boxStyle.normal.background);
-    }
-}
-
-    #endregion
-
-private bool TryGetEnvironmentGridSize(out int width, out int height)
-{
-    width = 0;
-    height = 0;
-
-    if (map == null || map.Data == null)
-        return false;
-
-    EnvironmentLayers layers = map.Data.EnvironmentLayers;
-    if (layers != null && layers.Width > 0 && layers.GridHeight > 0)
-    {
-        width = layers.Width;
-        height = layers.GridHeight;
-        return true;
-    }
-
-    return false;
-}
-
-private bool TryGetEnvironmentAtLocal(int x, int y)
-{
-    if (map == null || map.Data == null)
-        return false;
-
-    return map.Data.IsEnvironmentLocalValid(x, y);
-}
-
 }

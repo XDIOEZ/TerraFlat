@@ -505,10 +505,12 @@ public sealed partial class GMReflectionConsole
             "AI 路线提示：关",
             "AI 导航 路线 path navmesh",
             ToggleNavigationPathHints);
+        CreateWorldWindControl(page.Content);
 
         RefreshNavigationPathButton();
         RefreshAnimalDebugOverlayButton();
         RefreshChunkLoadSpeedControl();
+        RefreshWorldWindControl();
     }
 
     #region AIECS 实战分页
@@ -1031,6 +1033,8 @@ public sealed partial class GMReflectionConsole
 
         Canvas.ForceUpdateCanvases();
         ResizeResponsiveGrids();
+        if (pageId == GmPageId.World)
+            RefreshWorldWindControl();
         if (pageId == GmPageId.Aiecs)
             RefreshAiecsPage();
         if (selected.Content != null)
