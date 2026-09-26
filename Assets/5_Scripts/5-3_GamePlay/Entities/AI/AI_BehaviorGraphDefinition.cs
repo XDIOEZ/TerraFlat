@@ -287,7 +287,9 @@ public static class AIBehaviorCapability
     public const string Mover = "mover";
     public const string Detector = "detector";
     public const string Health = "health";
+    public const string Food = "food";
     public const string Animator = "animator";
+    public const string Damage = "damage";
 }
 
 #endregion
@@ -373,6 +375,7 @@ public sealed class AIBehaviorGraphRuntime
 
         _decisionTimer = 0f;
         _context.StateElapsed = 0f;
+        _context.BeginState();
         _stateMachine.Initialize(stateToEnter);
         _isInitialized = true;
         PlayStateAnimation(stateToEnter);
@@ -385,6 +388,7 @@ public sealed class AIBehaviorGraphRuntime
             return;
 
         float step = Mathf.Max(0f, deltaTime);
+        _context.Tick(step);
         _context.StateElapsed += step;
         _decisionTimer -= step;
         if (_decisionInterval <= 0f || _decisionTimer <= 0f)
@@ -451,7 +455,11 @@ public sealed class AIBehaviorGraphRuntime
         if (string.Equals(previousState, nextState, StringComparison.Ordinal))
             return;
 
-        _stateMachine.TransitionTo(nextState, () => _context.StateElapsed = 0f);
+        _stateMachine.TransitionTo(nextState, () =>
+        {
+            _context.StateElapsed = 0f;
+            _context.BeginState();
+        });
         _decisionTimer = _decisionInterval;
         PlayStateAnimation(nextState);
         _onStateChanged?.Invoke(previousState, nextState);

@@ -135,13 +135,12 @@ public class AIStateNode<TState>
 }
 
 /// <summary>
-/// 动物共用的逃离状态节点。进入状态时锁定水体安全目标，之后只在威胁方向明显改变或到达目标时重规划，
-/// 避免每帧移动目标，同时让逃离方向跟随追击者调整。
+/// 动物共用的逃离状态节点。进入状态时锁定水体安全目标，到达当前路段前接续下一段；
+/// 新伤害可显式重规划，避免威胁位置抖动导致反复请求路径和短暂停车。
 /// </summary>
 public sealed class AIFleeStateNode<TState> : AIStateNode<TState>
 {
-    private const float DirectionRetargetCheckInterval = 0.15f; // 方向变化检查间隔，不依赖感知器重扫频率。
-    private const float MinimumDirectionRetargetAngle = 15f; // 方向至少改变该角度才重规划。
+    private const float NextSegmentDistance = 0.35f; // 大于到达阈值，且小于最短逃离段，避免到点停车。
 
     private readonly Func<Vector3?> _resolveThreatPosition; // 当前威胁位置解析器。
     private readonly Func<Vector3, float, Vector3?> _resolveDestination; // 可达的水体安全逃离目标解析器。
@@ -156,9 +155,6 @@ public sealed class AIFleeStateNode<TState> : AIStateNode<TState>
     private readonly Action _onExit; // 节点退出时的物种扩展回调。
     private Vector3 _escapeDestination; // 本次逃离锁定的目标。
     private bool _hasEscapeDestination; // 当前目标是否有效。
-    private Vector2 _lastAwayDirection; // 上次规划时的远离方向。
-    private bool _hasLastAwayDirection; // 是否记录过有效远离方向。
-    private float _directionRetargetTimer; // 下次方向检查前剩余时间。
 
     public AIFleeStateNode(
         TState state,
@@ -192,8 +188,6 @@ public sealed class AIFleeStateNode<TState> : AIStateNode<TState>
     {
         base.Enter();
         _hasEscapeDestination = false;
-        _hasLastAwayDirection = false;
-        _directionRetargetTimer = 0f;
         _onEnter?.Invoke();
         Retarget();
     }
@@ -201,19 +195,13 @@ public sealed class AIFleeStateNode<TState> : AIStateNode<TState>
     public override void Tick(float deltaTime)
     {
         ReportNavigationFailure();
-        _directionRetargetTimer = Mathf.Max(
-            0f,
-            _directionRetargetTimer - Mathf.Max(0f, deltaTime));
-        if (_directionRetargetTimer <= 0f)
+        // 一段逃离过程中不因威胁角度抖动反复重算；受击仍可显式 Retarget。
+        if (!_hasEscapeDestination || _hasReachedDestination() ||
+            WorldTopologyRuntime.SqrDistance(_getCurrentPosition(), _escapeDestination) <=
+            NextSegmentDistance * NextSegmentDistance)
         {
-            // 目标到达后续规划下一段；追击角度变化时更新方向；存档恢复缺威胁时继续尝试获取。
-            if (!_hasEscapeDestination || _hasReachedDestination() || HasThreatDirectionChanged())
-            {
-                Retarget();
-                return;
-            }
-
-            _directionRetargetTimer = DirectionRetargetCheckInterval;
+            Retarget();
+            return;
         }
 
         if (!_hasEscapeDestination)
@@ -254,21 +242,14 @@ public sealed class AIFleeStateNode<TState> : AIStateNode<TState>
     /// <summary>新伤害来源出现时重新按当前威胁规划一次逃离目标。</summary>
     public void Retarget()
     {
-        _directionRetargetTimer = DirectionRetargetCheckInterval;
         Vector3? threatPosition = _resolveThreatPosition();
         if (!threatPosition.HasValue || !IsFinite(threatPosition.Value))
         {
             _hasEscapeDestination = false;
-            _hasLastAwayDirection = false;
             ClearError();
             _stopMovement();
             return;
         }
-
-        Vector2 awayDirection = ResolveAwayDirection(threatPosition.Value);
-        _hasLastAwayDirection = awayDirection.sqrMagnitude > 0.0001f;
-        if (_hasLastAwayDirection)
-            _lastAwayDirection = awayDirection;
 
         float runDistance = Mathf.Max(0.1f, _getRunDistance());
         Vector3? destination = _resolveDestination(threatPosition.Value, runDistance);
@@ -283,30 +264,6 @@ public sealed class AIFleeStateNode<TState> : AIStateNode<TState>
         }
         else
             _stopMovement();
-    }
-
-    private bool HasThreatDirectionChanged()
-    {
-        Vector3? threatPosition = _resolveThreatPosition();
-        if (!threatPosition.HasValue || !IsFinite(threatPosition.Value))
-            return false;
-
-        Vector2 currentAwayDirection = ResolveAwayDirection(threatPosition.Value);
-        if (currentAwayDirection.sqrMagnitude <= 0.0001f)
-            return false;
-
-        if (!_hasLastAwayDirection)
-            return true;
-
-        float minimumDirectionDot = Mathf.Cos(MinimumDirectionRetargetAngle * Mathf.Deg2Rad);
-        return Vector2.Dot(_lastAwayDirection, currentAwayDirection) <= minimumDirectionDot;
-    }
-
-    private Vector2 ResolveAwayDirection(Vector3 threatPosition)
-    {
-        Vector3 currentPosition = _getCurrentPosition();
-        Vector2 direction = WorldTopologyRuntime.ShortestDelta(threatPosition, currentPosition);
-        return direction.sqrMagnitude > 0.0001f ? direction.normalized : Vector2.zero;
     }
 
     private static bool IsFinite(Vector3 value)
