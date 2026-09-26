@@ -26,7 +26,7 @@ description: "Use when: 定位或修改 FlatWorld 的 Item/Module 组合架构�
 - Module 明确选择 EveryFrame、FixedInterval 或 Disabled；增删模块、配置变化和池复用必须使调度缓存失效。
 - 距离模拟档只限制 `ItemMgr` 驱动的玩法 Tick 频率，不改变模块自身更慢的 FixedInterval；以同场景最近玩家和循环世界最短距离判定，玩家、地图、手持物保持完整更新。`Owner` 不能作为免降频条件，因为在飞投射物也会保留发射者引用。范围外暂停时重置调度时钟，停用根刚体并回调 `ISimulationRangeAware` 模块释放导航运行态；重入时先恢复原 `Rigidbody2D.simulated` 值再重提目标，不能补算休眠期间的 Tick。对象池或模块卸载也须恢复刚体开关；不要把摄像机缩放当模拟距离。
 - 世界内 F5 经 `ItemDefinitionRuntime.RefreshLiveConfiguration` 只更新现有模块的已改变显式参数，以及仍由原定义控制的 Sprite/材质；不替换 ItemData、模块集合或调用 Load。外壳/模块结构变化与删除参数后的 Prefab 默认值由后续新实例应用，不能把旧实例伪装为已完整迁移。
-- 模块通过具名 `ApplyResourceConfiguration` 保留配置对象内部的运行态，通过 `OnResourcesReloaded` 更新派生缓存；禁止用重新 Load 代替配置刷新。生产模块更换规则列表时按产物身份保留累计时间、次数与初始化标记。
+- 模块通过具名 `ApplyResourceConfiguration` 保留配置对象内部的运行态，通过 `OnResourcesReloaded` 更新派生缓存；依赖 JSON 能力字段的事件订阅也须在该回调中按当前配置解绑、重绑，不能只在 `Load` 订阅。禁止用重新 Load 代替配置刷新。生产模块更换规则列表时按产物身份保留累计时间、次数与初始化标记。
 - 原位更新发布时清空闲置物品池，并把现有活跃实例的 `PooledItemMarker.PoolingDisabled` 置为 true；只清闲置池会让旧外壳稍后回池，再污染新定义实例。
 - 对象池身份由 `Item` 的序列化字段持有，`PooledItemMarker` 是纯运行时层级快照，不再作为 MonoBehaviour 动态添加到每个新物品；装配 JSON 模块后才抓取层级基线。改回池逻辑时须同时检查脚本重载后的身份保留与回池前的层级校验。
 - 注册/注销、保存/销毁各执行一次；`PrepareForDespawn` 与 `OnDestroy` 不得被外部重复调用。
@@ -59,6 +59,7 @@ description: "Use when: 定位或修改 FlatWorld 的 Item/Module 组合架构�
 - 内容工坊创建物品时只写继承差异：父定义和参考模块必须来自启用分包，Sprite 先生成稳定 Addressables 地址，JSON 写入前校验继承、重复 ID、文件指纹与分包外壳边界。
 - `RuntimeItemDefinition.IsActor` 只表示复用通用管线；Actor 还必须登记到 `GameRes.ActorDefinitions` 且外壳包含 `IAIActor`。
 - 存档恢复不能把历史 `ItemData/ModuleDataDic` 当配置真源；必须先按当前 `RuntimeItemDefinition` 重建静态数据和模块集合，再恢复匹配稳定模块名的运行态。这样 F5 资源重载或版本更新后的 JSON 配置会覆盖旧档配置，已删除模块也不会被旧档复活。
+- `Ex_ModData_MemoryPackable` 若序列化了带 `ItemData` 的内嵌 `Inventory_Data`，`ItemDefinitionRuntime` 不会自动遍历这段二进制负载；模块读取状态后应逐槽调用 `RebasePersistedData(GameRes.Instance, itemData)`，再绑定库存 UI，确保内嵌物品按当前定义恢复。
 - 制作材料赋予的实例耐久使用 `ItemData.CraftedDurabilityMultiplier` 持久化；定义重建后以当前定义的基础耐久重新应用倍率，不能直接沿用旧 `MaxDurability`。堆叠身份必须包含该倍率，避免不同品质实例合并后丢失品质。
 - 堆叠身份统一由 `ItemData` 判定，空与 null 特殊数据按现有规范处理。
 - 模块 Prefab 的 `ModuleData.Name/ID` 可能未序列化；进入 `ItemMods`、`ModuleInit` 或网络更新前必须统一建立非空身份，禁止直接把空值写入字典。

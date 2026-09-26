@@ -11,7 +11,7 @@ description: "Use when: 定位或修改 FlatWorld 的玩家实体、输入系统
 - 输入：`Player/Controller/{GameController,InputBindingService}.cs`
 - 交互：同目录 `{Mod_InteractSender,Mod_InteractReciver}.cs`
 - 管理员：`PlayerAdminController.cs`；移动/相机/焦点：`Entities/Move/`
-- `PlayerAdminController` 的 Ctrl+F1 用于启用管理员身份；裸 F1 由 `UIManager` 专用于宣传片录制 UI 隐藏。F2 是本地开发用创造背包一键入口：不依赖管理员身份，按下后复用 `Mod_PlayerTraits.InitializeCreativeInventoryForAdmin` 初始化/补充物品，并确保玩家主背包面板打开；管理员专属的其它快捷键仍保持原有权限门槛。
+- `PlayerAdminController` 的 Ctrl+F1 用于启用管理员身份；裸 F1 由 `UIManager` 专用于宣传片录制 UI 隐藏。F2 是本地开发用创造背包一键入口：不依赖管理员身份，按下后复用 `Mod_PlayerTraits.InitializeCreativeInventoryForAdmin` 初始化/补充物品，并确保玩家主背包面板打开；已打开的玩家主背包输入锁不能拦截 F2，其它模态输入锁与世界加载仍须拦截，管理员专属的其它快捷键仍保持原有权限门槛。
 - GM 传送由唯一的 `Development/Debug/GMReflectionConsole.Teleport.cs` 消费 Ctrl+T 和点选入口；不能放回 `PlayerAdminController.Update`，因为玩家外壳与 Module_Player 均可能挂载管理员模块，且 GM 传送不依赖角色显示名。落点统一交给 `Mod_PlayerTraits.TryTeleportToScreenPosition` 同步刚体、玩家位置和区块加载。
 - 游戏镜头由 `Mod_Cam` 实例化 `Assets/2_Prefabs/Gameplay/Modules/Camera/Main Camera.prefab`；2D 跟随使用 Cinemachine 2.x `Framing Transposer`，跟随手感优先在该 Prefab 的 Lookahead 与 XY Damping 调整。
 - `Mod_Cam` 与 `Mod_ChunkLoader` 是玩家下的兄弟模块；镜头缩放需要刷新区块窗口时必须经玩家根节点/ItemMods 解析区块加载器，不能只用 `GetComponentInParent<Mod_ChunkLoader>()`，否则大视野变化只能等加载模块下一次 Tick 才被动追上。
@@ -19,10 +19,13 @@ description: "Use when: 定位或修改 FlatWorld 的玩家实体、输入系统
 ## 不变量
 
 - 玩家主动速度与环境速度必须分开：`Mover.DrivenVelocity` 决定步行动画，水流和承载只写 `ExternalVelocity`；不能把上一帧总刚体速度重新当作主动移动的缓动起点。
+- 玩家脚下动态建筑造成的移速惩罚由 `BuildingOccupancyRegistry.GetPlayerMoveSpeedMultiplier` 按离散格读取，并只乘入 `Mover` 的主动目标速度；不要把这类地块惩罚写进永久 `Speed.MultiplicativeModifier`，否则进出地块时容易与 Buff、奔跑倍率互相污染。
 - `WorldMotionSystem` 用作者矩形占地与扫掠统一处理推动，载具通过 `IWorldPushTarget` 注册来源；船的水流、划行与推动先合成，再由 `ICarrierMotionSource` 传递给乘员。禁止乘员反推自身载具或用物理冲量代替游戏速度规则。
 - 载具的按键、鼠标和白色描边必须共用光标落点查询；指向可触及水面才允许喝水长按，指向载具优先交互。远海登船也合法，恢复位置优先附近安全陆地，否则保留真实登船坐标，不凭空传送到陆地。
 
 - 输入链为 Input System → `GameController` → 玩家模块；不要让 UI、物理输入和玩法模块各自维护冲突状态。
+- `GameController` 挂在玩家根对象，模块 ID 必须是 `ModText.Controller`；若留空会退化为根对象名 `Player`，按 ID 获取控制器的地块交互将静默失败。
+- 组合键冲突由 `GameController` 暴露语义状态统一仲裁：按住丢弃快捷键期间，`Ctrl+滚轮` 镜头缩放必须让位，但普通滚轮快捷栏切换继续工作，便于玩家在 `Ctrl+F` 整组丢弃准备态中换槽位。
 - Editor Agent、自动化或其它非物理输入源接管本地主角时统一使用 `GameController` 的唯一 External Gameplay Control 租约；租约期间真实设备退出玩法输入仲裁，移动/瞄准/攻击继续注入现有生产链。打包游戏的 AI/LLM 适配器通过玩家运行时模块 `Mod_GameMCP_LLM` 提交和查询导航意图；该模块复用同一租约与 Mover 输入链，不依赖 Editor 或 GamePlayMCP。禁止为自动化直接改玩家 `Rigidbody2D`、Transform 或另建平行输入状态。
 - `InputBindingService` 的覆盖存档按 binding GUID 关联输入资产；输入资产删改绑定后，加载前必须过滤当前资产不存在的 GUID 并重存清理后的配置，因为 Unity 内置加载器会直接输出警告而不会抛出异常。
 - 输入重绑定冲突检测必须按物理修饰键语义统一 `<Keyboard>/shift` 与左右 Shift、`ctrl` 与左右 Ctrl、`alt` 与左右 Alt；历史冲突覆盖加载时应自动清理，避免镜头缩放等组合输入被静默改绑到已有玩法键。
@@ -30,7 +33,8 @@ description: "Use when: 定位或修改 FlatWorld 的玩家实体、输入系统
 - `Move_Player` 的二维幅度同时表达模拟移动速度比例：手机虚拟摇杆与手柄左摇杆必须保留 0～1 幅度，玩家移动路径不得提前归一化；键盘满幅输入与目标寻路接口保持原有语义。
 - 玩家乘坐载具统一经 `ICarrierMotionSource` 与 `Mover.TryAttachCarrier` 仲裁：载具源拥有位移积分、速度和力，乘员不改 Transform 父级，只在租约期间关闭自身 Rigidbody2D 模拟并跟随座位；乘员引用和瞬时速度不进存档，恢复位置使用登船时取得的作用域租约。无 Collider 载具交互使用 `SpatialInteractionRegistry`，不要为了点选重新添加物理碰撞体。
 - 环境交互输入只转发按下/持续/松开；具体环境提供 `IEnvironmentActionDefinition` 或 `IEnvironmentEffectDefinition`，角色侧 `EnvironmentInteractionRunner` 每次创建独立实例，禁止把玩家长按或被动效果状态存进共享地块配置。
-- 世界实体的持续交互统一走 `IInteractable.OnInteractUpdate`：`Mod_InteractSender` 只在交互键从按下到松开的保持期间向本次按键命中的目标转发 Update；鼠标单击和外部单次 `TryInteractTarget` 不自动进入持续通道，业务模块不得自行读取 E 键状态。
+- 世界实体持续交互统一走 `IInteractable.OnInteractStart/OnInteractUpdate/OnInteractEnd`：`Mod_InteractSender` 只在交互键按住期间转发 Update，正常松开时转发 End；鼠标与外部单次交互只触发 Start→End，不进入持续通道；目标取消或失效走 `OnInteractCancel`，业务模块不得自行读取 E 键状态。
+- 需要只能由交互键打开的设施面板时，让目标实现 `IInteractable.CanPointerInteract` 并返回 `false`；发送器的左键点选遵守该策略，而近距离 E 键仍可按原有选取规则交互，避免在发送器内硬编码具体设施类型。
 - 本地档案由 `Player.IsLocalProfile`/ProfileContext 判定；远程副本不得持久化、跑本地教程或玩家语音。
 - 玩家存档与 `Player_DIC` 必须使用 `Player.ProfileName` 稳定档案键；`Data_Player.Name_User` 可能被显示名、旧存档或管理员身份临时改写，禁止用它决定保存、卸载或跨维度重建的角色槽位。
 - 手柄焦点只能停留在顶层导航面板；虚拟光标/虚拟键盘按现有模式接管。

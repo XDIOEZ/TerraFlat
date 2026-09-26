@@ -10,10 +10,12 @@ description: "Use when: 定位或修改 FlatWorld 的运行时特效、粒子、
 - 项目自有 Shader 资源统一放在 `Assets/9_Shaders/`：Shader 源文件放 `Shader/`，材质放 `Material/`，Volume 配置放 `Volume/`；必须依赖 `Resources.Load` 的 Shader/材质放在 `Assets/9_Shaders/Resources/` 下并保持原逻辑资源路径。不要再创建 `Assets/Shaders`、`Assets/Resources/Shaders` 或其它散落的项目自有 Shader 资源目录；第三方插件资源保持原目录不移动。
 - 运行时视觉：`Assets/5_Scripts/5-3_GamePlay/Presentation/Effects/Management/VisualEffectManager.cs`、`Assets/5_Scripts/5-3_GamePlay/Presentation/Effects/Runtime/`
 - 角色渲染：`Assets/5_Scripts/5-3_GamePlay/Presentation/{ActorRenderEffectController,ActorRenderColorEffect,WaterImmersionRenderEffect}.cs`
+- 世界 Sprite 排序：`Presentation/{WorldSortingManager,WorldSortingMember}.cs`，管理器挂在 `WorldManager.prefab`；`Resources/GameConfig/WorldSorting/` 每类独立 JSON 定义 Sorting Layer 与 Order，管理器声明按 Y 排序的类别。动态类别必须共用同一层和 Order；建筑主体有 `SortingGroup` 时改组的外层排序，不能只改子 SpriteRenderer。地形 BRG 的 2988～2993 队列独立保留。
 - 实体脚底阴影：`Assets/5_Scripts/5-3_GamePlay/Presentation/ActorShadowManager.cs` 与 `Assets/2_Prefabs/Gameplay/Modules/Rendering/ActorShadow.prefab`；旧对象阴影使用场景级 `ActorShadows` 根节点和 `Default/0 + Queue 2991` 排序，不挂到实体或 `RuntimeEntities` 下；ECS 使用下述独立批次，不注册逐实体对象。
 - 根植植物复用 `ActorShadowManager` 的接触阴影：不可拾取且未被持有的树按 `Tree/Plant` 标签、作物按 `IPlantableCrop` 模块注册；以根部 Collider 定位，并用可见 Sprite 宽度限制阴影大小，成长时更新尺寸。草饰批次没有 Item，不进入该注册链。
 - 源贴图被飞行等表现抬升时，`ActorShadowManager` 与 `WorldShadowProjectionManager` 共用 `IVisualGroundOffset` 将阴影定位折算回地面；提供者按当前实际视觉 Transform 计算世界位移，回池或死亡归零后不能继续用飞行状态值抵扣。
 - 太阳长投影由 `Presentation/WorldShadowProjectionManager.cs` 独立持有，偏好由 `SunShadowSettings` 保存；代理监听完整 `RuntimeItemRegistered/Unregistered`，不复用脚底阴影的水体显隐。`SunShadowCaster` 允许 Prefab 覆盖主体、视觉高度与落地点。
+- 使用共享外壳的世界物品通过 JSON `visual.shadows.contactWidth` 显式接入场景级圆形底座阴影，`visual.shadows.footLocalPosition` 作为底座和太阳投影共用的物品根节点局部落地点；只声明落地点可单独校正太阳投影。尺寸与锚点属于具体物品定义，不得写到共享 Shell 或按物品 ID 硬编码。
 - 编辑器工具：`Assets/Editor/FlatWorld/`、`Assets/Editor/FlatWorld/ProjectTools/`；内容工坊入口为菜单 `FlatWorld/内容配置/内容工坊`
 - 调试：`Assets/5_Scripts/5-3_GamePlay/Development/Debug/`、`Development/Diagnostics/{GameDebugManager,GameLogManager}.cs`
 
@@ -29,7 +31,7 @@ description: "Use when: 定位或修改 FlatWorld 的运行时特效、粒子、
 - 伤害数字的最终颜色由 `DamageTextEffect` 样式或调用数据覆盖，不能只改 TMP 的 Prefab 字色；数值到显示倍率的映射也由该表现组件负责，战斗结算只传递实际伤害值与样式。
 - 角色颜色等共享 Shader 参数通过现有 MPB 控制器提交，避免多个组件互相覆盖。
 - Unity 2D 使用 URP/Light2D；修改 Shader 前核对材质实际 Shader 与 Pass。
-- 正式 BRG 地形占用 `Default/0` 的 Queue 2987~2992，其中 Ground/Water 为 2988/2989、Blocking 为 2992，草为 2993；太阳投影使用 `Default/0 + Queue 2990`，脚底阴影使用 Queue 2991，保证两者位于地面之上、Blocking 和草与实体之下。Tilemap 排序层会整体落在 BRG 地形之后，不能再用旧 `Tilemap/3` 或 `Tilemap/1000` 绘制这两种阴影。Shader 位移后的 CPU 包围盒必须同步扩大，屏幕外投影源仍可能把阴影投进视口；逐 Renderer MPB 必须显式恢复 `_MainTex` 及 Android 分离 Alpha。
+- 正式 BRG 地形占用 `Default/0` 的 Queue 2987~2992，其中 Ground/Water 为 2988/2989、Blocking 为 2992，草为 2993；太阳投影使用 `Default/0 + Queue 2990`，脚底阴影使用 Queue 2991，保证两者位于地面之上、Blocking 和草与实体之下。玩家等动态世界实体由 `WorldSorting` JSON 统一放在更靠前的 `Player` 排序层，同层按 Y 轴互相遮挡；仅在 Default 层提高 Order，仍可能被 BRG 地形覆盖。Tilemap 排序层会整体落在 BRG 地形之后，不能再用旧 `Tilemap/3` 或 `Tilemap/1000` 绘制这两种阴影。Shader 位移后的 CPU 包围盒必须同步扩大，屏幕外投影源仍可能把阴影投进视口；逐 Renderer MPB 必须显式恢复 `_MainTex` 及 Android 分离 Alpha。
 - 太阳长投影对低枢轴高 Sprite 的落点需收入可见根部，透明底边经长距离投影会被放大成树干与阴影之间的断缝；特殊对象仍用 `SunShadowCaster.FootOffset` 校正。共享投影 Shader 柔化采样时，普通 Sprite 通过 MPB 传贴图 texel 与当前 Sprite UV 边界，AIECS 则由图集材质和逐顶点 UV 边界提供同一契约，避免采到邻近帧。
 - 太阳长投影的柔化强度由 `SunShadowSettings` 本机偏好驱动，在 `SunShadowParametersProvider.Publish` 写入全局 `_WorldSunShadowBlur`；Shader 不得把该全局参数声明在 `Properties` 中，否则材质默认值会遮蔽运行时设置。模糊采样超出当前 Sprite UV 时应返回透明，并让 UV 边界渐隐，否则图集邻帧渗色或几何边缘仍会硬切。
 - `AiecsSunShadowRenderer` 通过 `_WorldSunShadow` 全局契约消费太阳状态，每 4096 只合批并复用当前动画图集，不反向引用 GamePlay。设置关闭/夜晚/相机丢失必须停止投影顶点上传并隐藏旧批次；普通实体管理器关闭时取消注册、清空绑定并停用更新，开启时只补扫 ItemMgr 权威表。
@@ -48,7 +50,7 @@ description: "Use when: 定位或修改 FlatWorld 的运行时特效、粒子、
 - 写实水面的风浪传播与潮流平移必须分开：波相位随游戏时间连续推进，潮汐只平移水面坐标，避免潮流换向时整片海面停住；波面法线与太阳高光共用解析波斜率，缩小时通过屏幕导数衰减细浪并拓宽高光，不量化写实水面的世界坐标。风格化水面按其独立算法保留像素采样与浪纹。
 - 水体风格由 `WaterVisualSettings` 保存本地偏好，`ChunkView` 的 Water/CaveWater 均通过 `WaterVisualStyleBinding` 在激活和设置变化时替换共享材质，不重建地形、不改写水深 MPB。风格化材质显式启用 `FLATWORLD_WATER_STYLIZED` 本地关键字，两种正式材质都必须被 Prefab 引用，确保构建保留 Shader 变体；两种算法共用 `WaterSurfaceCommon.hlsl` 的水深、岸线与月光契约。
 - 运行时动态创建、用于展示世界物品图标的 `SpriteRenderer` 不得依赖 `AddComponent` 默认材质；应复用 `RuntimeItemDefinition.Material` 的物品材质与外壳回退，确保提示表现和真实物品一致接收 Light2D。
-- 草木风摆由 `WeatherMgr` 写入 `_GlobalWindStrength` Shader 全局参数；材质只保存自身基础幅度。Tilemap 使用单元锚点弯曲，底部 Pivot 的独立 Sprite 使用对象根部弯曲，且所有 URP 2D 活跃 Pass 必须复用同一顶点位移。
+- 草木风摆由 `WeatherMgr` 写入 `_GlobalWindStrength` Shader 全局参数，草 Shader 与支持积雪、水体等通道的 `Sprite-Lit-Master` 共用 `VegetationSway.hlsl` 顶点位移。`Sprite-Lit-Master` 只对启用 `FLATWORLD_VEGETATION_SWAY` 材质关键字的物品执行风摆，避免普通物品承担顶点计算。Tilemap 使用单元锚点弯曲；树等底部 Pivot 的独立 Sprite 使用对象根部弯曲，按图片 PPU/Pivot 标定 `_GrassSpriteHeight`，用 `_GrassBendStart` 固定树干。JSON 世界物品通过 `visual.materialAddress` 引用带 `ItemMaterial` 标签的共享材质；所有 URP 2D 活跃 Pass 必须复用同一顶点位移。
 - 屏幕后处理依赖当前 `QualitySettings` 的 `customRenderPipeline`；不能只检查编辑器当前质量档位，所有可选档位都必须引用项目内实际存在的 URP 资源，否则 Scene 视图可能可见而 Game/Android 画面不可见。
 - 世界常态后处理由 `WorldManager/Global Volume` 引用 `Assets/9_Shaders/Volume/Global Volume Profile.asset`；`WorldManager` 跨场景常驻，因此 `WorldPostProcessQuality` 必须绑定同一 Prefab 内 `GameManager` 的进出世界事件，只在世界内启用 Volume，退出时释放克隆的 Profile 和所有 VolumeComponent。调色保持在该资产内，画质只调整泛光采样；状态警示继续由优先级 100 的 `ScreenPostProcessManager` 独立合成。URP 14 的 `Volume.profile` 自动克隆所有子组件，但 `Volume` 本身不负责销毁克隆，必须由持有者清理。
 - 屏幕后处理脚本按最低支持质量只实现一个档位标记接口：Low 可在所有档位运行，Medium 需中/高档，High 仅高档；未标记效果保持旧行为。
@@ -66,17 +68,19 @@ description: "Use when: 定位或修改 FlatWorld 的运行时特效、粒子、
 - `Assets/2_Prefabs/Gameplay/Modules/Rendering/Shadow.prefab` 是 URP `ShadowCaster2D` 投影组件，不是实体脚底贴图；实体可视阴影应复用 `ActorShadowManager` 的独立注册和水体显隐入口。
 - `Presentation/Effects/Runtime/` 受独立 `Effect.asmdef` 隔离，不能反向引用主 `GamePlay` 程序集中的 `VisualEffectManager`；需要名称池管理器的角色表现控制器应放在 `Presentation/` 主程序集，或先抽取无环依赖的公共契约。
 - Editor 脚本留在 Editor 程序集/目录；生产程序集不得反向引用 `FlatWorld.Gameplay.Debug`。
+- `Development/Debug` 使用独立的 `FlatWorld.Gameplay.Debug.asmdef`；GM 调试脚本直接使用 `GameNetwork` 时，需在该 asmdef 显式引用 `FlatWorld.Networking.Core`，引用 `GamePlay` 不会传递其程序集依赖。
 - Editor Play 的 Render Streaming 使用项目自有 `RenderStreamingSettings` 资产并先确认官方 WebApp 已在选定端口可访问；不得把会话信令地址写回不可变的 PackageCache 默认资产，也不得假定 TCP 80 可用。`VideoStreamSource.Screen` 会在每帧结束执行整屏捕获与纹理转换，因此普通 Play/Profiler 压测默认关闭 Automatic Streaming，只能通过显式开发者开关或“启动手机浏览器测试服务器”入口启用；该启动入口必须同步保存自动串流偏好，避免下一次进入 Play 又被性能模式关闭。端口被系统或其它程序占用时从项目约定端口段选择空闲端口，并让信令 URL、WebApp 启动参数和展示给开发者的访问 URL 始终保持一致。工具自己启动的 WebApp 要保存 PID 以跨 Domain Reload 回收，但停止前必须核对进程可执行文件确实是当前项目缓存的 `webserver.exe`，防止 PID 复用误杀其它程序。开发期速度优先编码应优先选择本机可用的 H.264 Constrained Baseline（通常对应硬件编码），不可用时保持 WebRTC 默认协商，不得强制一个目标浏览器不支持的编码器。
 - 运行时世界由 `SceneManager.CreateScene` 动态创建，不会触发 `SceneManager.sceneLoaded`；监听运行时 Hierarchy 的 Editor 工具必须同时处理旧场景卸载与后续 `hierarchyChanged`，且不能用无界切换标记长期屏蔽用户操作。`hierarchyChanged` 热路径必须从少量已保存记录定向解析对象，禁止组合 `Resources.FindObjectsOfTypeAll` 与 `GlobalObjectId.GetGlobalObjectIdSlow` 全场景扫描，否则跨场景引用会制造警告并造成 `EditorLoop` 尖峰；调用 `GlobalObjectIdentifierToObjectSlow` 前必须确认 ID 所属场景已加载，场景切换空窗直接跳过，否则 Unity 原生层会触发 `manager != NULL` 断言。
 - `SceneInteractionStatePersistence` 只持久化已保存场景中具有稳定 `GlobalObjectId` 的 Scene Visibility（小眼睛）与 Scene Picking（禁止点击）状态；采集必须由开发者在非 Play Mode 下通过菜单显式触发。运行时动态场景/UI/临时对象没有跨会话稳定身份，不得写入数据库，也不得通过 `hierarchyChanged` 高频恢复；Play Mode 只在场景/播放状态切换时做有限恢复。
 - 内容工坊保持在 `Assets/Editor/FlatWorld/ContentTools/ContentWorkshop/`，只把可验证的差异写回 JSON，不在运行时程序集引入编辑器依赖。
 - 业务日志用 `GameLogManager` 的 `[WORK]` 接口；不要制造每帧重复警告。
 - `GMReflectionConsole` 独占 F4 作为 GM 调试面板开关；管理员手持物品加量由面板按钮调用，`GameDebugManager` 的晴天快捷键必须在脚本默认值与 `WorldManager.prefab` 序列化值中都使用 F6，禁止运行时反射改键。
+- F3 环境监测由 `GameDebugManager` 切换；`EnvironmentInfoDisplay` 必须通过 `ChunkMgr.TryGetRuntimeTerrainTile` 读取当前 WorldModel 权威格子，并从 `ChunkTerrainData.EnvironmentLayerIds` 枚举原始环境层，禁止重新依赖旧 `Chunk.Map/Map.Data.EnvironmentLayers`。耕地水肥读取 `FarmlandSystem` 的农业层，最终环境温度使用 `TemperatureMgr.TryGetAmbientTemperature`。
 - GM 世界观察层属于 `Development/Debug/GMWorldLayerOverlay`，温度与污染共用一张低分辨率点采样纹理并互斥切换；纹理必须与整数世界格对齐，采样按相机视口和每帧预算分批完成后统一上传，换世界时丢弃旧批次，未加载格透明。污染总览读取全部已注册污染定义（含 MOD）的最高归一化负荷；禁止每格创建 Renderer、为可视化租住区块或向地形回写颜色。Shader 用 Resources 引用保证构建保留，关闭观察层停止采样。
 - GM 导航模式与热力图互斥，共用四边形但方向纹理必须使用线性色彩空间、Point 过滤和“一真实格一 texel”，不能沿用热力图的远景降采样。箭头读取后端真实玩家流场；采样 Job 向导航缓存登记读取依赖，上传、换模式、释放前完成任务。自有输出可跨帧，借用的 Native 表不可在后端重新发布后继续访问；目标格、不可达格与未知/阻挡格分别显示蓝点、红叉和透明，不得用直指玩家的箭头伪装寻路结果。
 
 - 季节覆雪通过统一 MPB 效果模块的 `_SnowCoverage` 通道叠加；实际物品基础材质必须支持该属性，仅给默认 Sprite 材质设置 MPB 不会显示雪。保持风、水、受击和溶解等既有通道。
-- `ChunkSnowCoverRenderer`、`ChunkSupportSurfaceRenderer` 只读权威状态并绘制专用 Tilemap，卸载仅清理自身图层；禁止为了融雪或解绑改写原始地形。`ChunkSupportSurfaceRenderer` 使用 Tile Color RGBA 编码左、右、下、上四个外露平台边缘，并读取相邻 Chunk 的 `TerrainSupportLayer`；相连支撑面之间对应通道必须为 0，只允许整体外围产生接触阴影。角色和动物不装配静止物件雪效。
+- `ChunkSnowCoverRenderer`、`ChunkSupportSurfaceRenderer` 只读权威状态并提交专用 BRG 图层，卸载仅清理自身实例槽；禁止为了融雪或解绑改写原始地形。`ChunkSupportSurfaceRenderer` 使用 BRG 实例 Data0 RGBA 编码左、右、下、上四个外露平台边缘，并读取相邻 Chunk 的 `TerrainSupportLayer`；相连支撑面之间对应通道必须为 0，只允许整体外围产生接触阴影。角色和动物不装配静止物件雪效。
 
 ## AIECS 渲染原型
 
@@ -92,7 +96,7 @@ description: "Use when: 定位或修改 FlatWorld 的运行时特效、粒子、
 ## 验证
 
 - 掉落物沉没包含入水和完全浸没后的远离两段。ECS 的 `SubmergedProgress` 只乘表现矩阵，原始 Scale/质量/体积不变；保存延续同一 WaterElapsed，拾取、离水和旧 Item 回池时都恢复原始视觉尺寸。销毁在远离阶段结束后，由权威层提交。
-- 花与草必须同属 Default/Order 0 地表排序域，靠地表材质队列与角色混排，不能把整张花 Tilemap 提到 Order 1；同时修改 `GroundCoverAssetBuilder`，避免重建恢复错误顺序。
+- 草与花的 BRG 图层共用 Default/0 与 Queue 2993；花批次排序在草之后，两者都早于 Queue 3000 的普通 Sprite。GroundCoverAssetBuilder 必须引用草的共用材质并清除旧 Flowers Tilemap，不能重新装回 Tilemap 或抬高 Order。
 - 静止/深湖仍保留独立时钟的细波和微弱天空反光；湖泊物理流速为零不能再把所有光学强度乘成零。河口的反射波速度只属于 `Chunk-BRG-Water-Lit`，海洋仍单独使用风浪/潮汐时钟，保持真实日夜光照。
 
 - `DroppedItemPresentation` 按有限空间行、贴图和排序层增量合并掉落物真实 Sprite 三角形/UV；静止批次不重复上传，视野外释放显示节点。该兼容渲染桥不等于已验证与所有旧 Item 的精确透明混排或设备性能指标。

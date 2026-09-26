@@ -63,6 +63,7 @@ description: "Use when: 定位或修改 FlatWorld 的背包、槽位、快捷栏
 - 与背包并行打开的专用制作面板创建后必须调用 `InventoryPanelLayout.ApplyDefaultCraftingPosition`；只让背包靠左会在窄屏、安全区或 UI 缩放后由置顶背包覆盖左侧输入槽射线。
 - 手机端已经拿起物品后的轻点/长按丢弃由 `MobileHeldItemDropSurface` 统一转发到 `Module_DiscardItem.TryDropHeldItemAtScreenPosition`，仅操作手部携带槽，空手不得取快捷栏选中物；中间空白触控面只在 `Inventory_Hand` 有物品时参与射线，`ItemSlot_UI` 的拖拽射线必须继续把该组件视为世界落点。
 - `Inventory` 持有的 `item` 是 `UnityEngine.Object`；生命周期边界禁止用 `item?.GetComponent...` 判断存活，因为 C# 空条件运算符不会触发 Unity 的“已销毁对象视为 null”语义。玩家/容器卸载时必须先解除库存输入监听并清空所属 `item`，`Mod_Hand.Unload` 同时清理 `Inventory_Hand.PlayerHand`，避免槽位 `OnDisable` 或延迟 UI 回调访问上一轮玩家。
+- `Inventory.BindController/UnbindController` 只管理输入绑定，不能顺带解除 `Inventory_Data.Event_RefreshUI` 或槽位 `onSlotDataChanged`；这些数据/UI 监听只在库存真正退出运行时生命周期时通过 `UnbindRuntimeDataEvents` 清理。否则快捷栏在控制器重绑后会失去滚轮转移等事务的自动刷新，只在切换选中槽时才重画图标。
 - `Mod_Plantable` 只通过 `IPlantableCrop` 初始化幼苗并判断地块占用；作物定义只配置 `cropItemId`，统一 `PlantingSummoner` 负责预览，禁止写死依赖某个成长模块或复用 `Mod_Building` 链路。
 - 同一物品同时挂 `Mod_Plantable` 与 `Mod_Food` 时，右键动作按目标上下文仲裁：有效耕地由种植优先，无效种植目标则静默让给食用，不能一次动作同时播种和进食，也不能在正常进食时刷种植警告。
 - 新版农业统一通过 `FarmlandSystem` 查询 `ChunkTerrainData`，禁止返回旧 `Chunk.Map`；锄地进度属于地格而非锄头实例。水肥计算使用临时 `TileData_Farmland` 快照，成长或施肥后必须 `CommitSoil`，否则数据修改不会进入权威环境层。
@@ -88,9 +89,9 @@ description: "Use when: 定位或修改 FlatWorld 的背包、槽位、快捷栏
 - 通用液体容器由 `Mod_WaterVessel` 承载，但状态只保存稳定 `LiquidId + Amount + ProcessingSeconds`，其中 `Amount` 是可持久化的浮点“份数”，用于表达连续液体余量；液体语义统一来自 `GameRes.LiquidDefinitions`。容器通过显式 `Stackable=false` 禁止堆叠，不同液体不能自动混装，部分转移保持数量守恒。新增本体或 MOD 液体不得复制容器 Item 变体，应该注册新的 `LiquidDefinition` 并复用同一容器模块。
 - 液体容器的“饮水”按钮只按 `LiquidDefinition.Drinkable` 与剩余量决定是否可点，不得用当前补水收益或角色水分已满来阻止玩家主动饮用；`Mod_Food.DrinkWater` 即使实际补水量为 0 也要发布一次完整饮水结果。感染、脱水等饮用后果统一声明在 `LiquidDefinition.drinkEffects`，世界水源与容器都通过 `LiquidDrinkEffectProcessor` 结算，禁止在水地块或具体容器里按液体 ID 再写一套后果逻辑。
 - 世界液体来源由 `WorldLiquidSourceResolver` 直接读取 Chunk 独立 Liquid 层，使用稳定 LiquidId 解析同一 LiquidDefinition；容器不得按水 Tile 名称或盐度猜身份。准心高亮与实际装液复用同一 WorldCell 入口；世界液深与容器份数不能隐式互换，世界抽水统一走 `WorldLiquidSystem.TryPump`。
-- 液体容器在背包/快捷栏中的图标同样由容器模块状态驱动：优先使用液体 `visualState` 对应的 `visual.spriteStates`，缺少专用状态时统一回退容器的 `filled` 状态，空容器使用 `empty`；禁止按水种类或容器 Item ID 写死 UI 分支。容器模块原地修改 `ModuleData` 后必须通过 `Inventory_Data.NotifyItemStateChanged` 通知真实所属库存；该入口必须同时发布槽位刷新与库存级 `Event_RefreshUI`，否则快捷栏等专用库存可能保留旧图标。
+- 液体容器图标由 `Mod_WaterVessel` 从 `ItemData` 状态重绘 Sprite：`visual.liquidSurface.bounds` 标出内腔区域，液体颜色读取 `LiquidDefinition.primaryColor`，填充行数按容器容量量化；木桶、陶罐启用的基础贴图必须打开 Read/Write。展示端通过 `GameRes.TryGetItemPresentation(ItemData, ...)` 与 `ItemDataPresentationResolverRegistry` 获取最终 Sprite，槽位和掉落物展示代码不得直接引用具体玩法模块或叠加液面 Graphic。
 - 快捷栏当前手持实例会把 `Item.OnUIRefresh` 绑定到 `Inventory_HotBar.RefreshUI`；手持物模块只修改内部状态而不替换 `ItemData` 引用时，除了通知真实所属库存，还必须发布 `Item.OnUIRefresh`，使当前快捷栏槽立即重画状态型图标，不能只刷新世界中的手持 Sprite。
-- `UI_WaterVessel` 的拖拽倾倒只消费现有 `Mod_WaterVessel.RemoveLiquidAmount`，不保存独立手势状态。绝对倾角定义当前姿态的最大保液量：直立 0°=100%，水平 90°=50%，倒扣 180°=0%，按浮点份数连续结算；实际余量只允许下降，扶正不能恢复已倒出的液体。空容器仍允许完整拖动和自动回正，只提供交互反馈、不产生液体扣减。手势必须按独立 `pointerId` 持有触点，并在不随罐体旋转的父级坐标系计算：外圈拖拽优先按绕罐体中心的极角变化解释，因此左右、上下、斜向及半圆轨迹均可倾倒；中心起手才退化为二维线性位移。方向契约固定为屏幕右侧手势产生负 Z（顺时针、朝右倒），屏幕左侧手势产生正 Z（逆时针、朝左倒），圆弧与线性回退必须一致。来回改变倾角只驱动 `WaterVesselLiquidGraphic` 的短时波动，真实流失量仍由容器状态决定；罐口外液流由独立 `WaterVesselPourGraphic` 读取本次真实移除量做表现，禁止用视觉帧反向扣减玩法数据。
+- `UI_WaterVessel` 的拖拽倾倒只消费现有 `Mod_WaterVessel.PourToGround`，不保存独立玩法手势状态。倾角决定最大可倒出量：绝对倾角越大，允许保留的液量上限越低；达到 `VesselAppearance.FullEmptyTiltDegrees` 时允许倒空。实际流速不随角度或容量变化，只按基准份数流速乘以容器开口宽度相对默认容器开口的比例持续结算，并在面板内累积到 `AmountStep` 后再提交，扶正不会恢复已倒出的液体。普通液体容器共用同一流速模型；正式外观通过 `VesselAppearance.MouthWidth` 声明相对剖面宽度的实际开口比例，开口越宽固定流速越快；木桶的完全倒空倾角设为 90°。空容器仍允许完整拖动和自动回正，只提供交互反馈、不产生液体扣减。手势必须按独立 `pointerId` 持有触点，并在不随罐体旋转的父级坐标系计算：外圈拖拽优先按绕罐体中心的极角变化解释，因此左右、上下、斜向及半圆轨迹均可倾倒；中心起手才退化为二维线性位移。方向契约固定为屏幕右侧手势产生负 Z（顺时针、朝右倒），屏幕左侧手势产生正 Z（逆时针、朝左倒），圆弧与线性回退必须一致。罐内液面由容器真实余量驱动，罐口外液流由独立 `WaterVesselPourGraphic` 只在真实移除液体后表现，禁止用视觉帧反向扣减玩法数据。
 - 食物机制除了目录注册，也组合消费物本身实现 `IFoodMechanic` 的模块；药品使用守卫与消费完成观察者应接入这条链，不在按钮响应时直接回血。
 - `CraftingOutputRules` 在预检和真实提交共用；防腐加工的新鲜度必须来自匹配计划实际消耗的原料，保留最差剩余比例，不能读取整份输入库存或重建全新寿命。
 - 植物环境通过 `IPlantEnvironmentCondition` 与 `PlantClimateTimeline` 结算；自主耐候树木只向成长器提供 `IPlantGrowthConstraint`，不能被两个模块重复推进。补算游标未追上当前时钟时禁止抢先收获。
@@ -113,7 +114,10 @@ description: "Use when: 定位或修改 FlatWorld 的背包、槽位、快捷栏
 
 - `Mod_HandDrill` 使用独立二进制 `MechanicalProcessingState` 与 `UI_HandDrill`；手持/建筑通过 `SharedModuleIds=["手钻模块"]` 迁移同一库存和进度，不再使用 amount=0 工具配方。加工表位于 `Resources/Config/Mechanical/mechanical-catalog.json`，MOD 注册入口为 `MechanicalCatalog.RegisterProcess`。
 - `MechanicalProcessor` 的输入过滤覆盖统一库存转移入口；预览与提交均走 `CraftingService`，输出满时不扣料、不清空已有进度。固定物料转换必须设置 `ApplyDifficultyOutputMultiplier=false`，避免难度增产倍率破坏 1:1 钻孔。
+- 机械加工的手动推进通过 `MechanicalProcessor.AdvanceManually` 复用同一进度与 `CraftingService` 事务；节点配置 `ManualWorkSecondsPerPress` 决定是否显示按钮及每次推进量，不能直接改库存或绕过产物预检。
+- `Mod_ManualProcessor` 用 `Station + WorkPerClick` 配置可复用的手动加工台，按对应 `MechanicalCatalog` 站点读取配方并调用 `MechanicalProcessor.AdvanceManually`；可放置设备的便携物/建筑本体须用 `SharedModuleIds` 保持加工库存与进度连续。
 - 容器禁止放入状态统一保存在 `Inventory_Data.IsDepositBlocked`；物品新增与跨库存转入必须在数据事务入口检查该标识，阻止放入时仍允许取出与同库存整理，自动运输入口也应沿用同一标识。
+- 熔炉燃料消费统一使用 `Inventory_Data.TryConsumeFromSlot`，不能直接扣 `Stack.Amount`；燃料副产物按配置规则 ID 保存累计进度与待交付数量，目标库存满时保留待交付量，库存释放后再提交。点火时可检查当前手持物的 `Mod_Combustion.IsActivelyBurning`，不能仅凭物品 ID 或燃料模块判断它正在燃烧。
 - 玩家超重减速由主背包和快捷栏的 `Inventory_Data.Event_OnDataChanged` 事件驱动；库存 `InitData` 绑定、模块卸载解绑，玩家全部模块加载完成后做一次状态校准。不要在 `Mod_Inventory.ModUpdate` 中轮询重量。
 
 - 只补充后续维护可复用的易错点、隐含约束和必要注意事项。

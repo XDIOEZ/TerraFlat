@@ -24,7 +24,7 @@ description: "Use when: 定位或修改 FlatWorld 的稀疏网格寻路、16×16
 - `WorldNavigationAgent` 接收路径后的路点跳过也必须沿用同一代价限制；只用几何 LOS 会把已经绕开的高代价地形重新拉直穿过。
 - `WorldNavigationGrid.SetCell` 的可走格代价发生变化时必须使旧路径失效，否则运行中的 AI 会继续执行按旧权重生成的路线。
 - 限制移动总代价时读取 `WorldNavigationPathResult.TotalCost`；异步新路径超限不能覆盖当前已接受路径，导航代理应让旧路径走完并停止自动续算，只有目标再次明显移动才重新评估。
-- `WorldNavigationAgent.DestinationResult` 是当前目的地请求的权威结果；上层必须消费 `RejectedByPathCost`，不能通过速度为零或是否持有路径反推拒绝原因。
+- `WorldNavigationAgent.DestinationResult` 是当前目的地请求的权威结果；上层必须消费 `RejectedByPathCost`，不能通过速度为零或是否持有路径反推拒绝原因。同一目标连续四次无路径时公布 `Failed`，后续自动重试期间保持该结果；目标改变、导航网格修订或成功得到路径时才解除失败状态，供 AI 节点一次性报错。
 - 追击总代价上限必须随 `RequestPath` 传入共享搜索；Dijkstra 前沿代价达到某个请求上限时，只结束该请求并返回明确的代价拒绝，不能等完整搜索结束才判断，也不能取消同目标其它成员的请求。拒绝、成功、取消和失败都须清理起点等待链与上限索引；缓存路径只能使用已结算起点的代价，不能把尚未收敛的暂定代价当成超限依据。
 - 运行时只用项目内置导航，不恢复 Aron Granberg A*，也不把 Physics2D 扫描当权威。
 - 玩家目标移动模块 `Mod_GameMCP_LLM` 复用 `WorldNavigationManager` 的路径与修订号，并通过外部控制租约注入 `GameController` 输入；它不拥有第二套网格、刚体驱动或寻路服务，编辑器 GameMCP 只是该运行时接口的一个调用方。

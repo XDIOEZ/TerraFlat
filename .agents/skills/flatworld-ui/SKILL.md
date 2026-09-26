@@ -72,8 +72,6 @@ description: "Use when: 定位或修改 FlatWorld 的 UIManager、BasePanel、�
 `UI_NewGame.prefab` - 新建世界面板
 `UI_PlayerChatInput.prefab` - 玩家聊天输入面板
 `UI_PlayerWorldCoordinate.prefab` - 玩家世界坐标 HUD
-`UI_QuestTracker.prefab` - 任务追踪面板
-`UI_QuestTrackerItem.prefab` - 任务追踪条目模板
 `UI_ResourceLoading.prefab` - 资源加载面板
 `UI_RuntimeDebugOverlay.prefab` - 运行时调试覆盖层
 `UI_SaveContextMenu.prefab` - 存档上下文菜单
@@ -95,14 +93,16 @@ description: "Use when: 定位或修改 FlatWorld 的 UIManager、BasePanel、�
 
 - 面板动画位于 `Common/Animation/`，依赖固定为 `BasePanel → BaseUIAnimation → UIAnimationManager → JSON`：BasePanel 直接调用同物体 BUA，BUA 禁止反向引用或监听 BasePanel；`Opened/Closed` 继续保持同步业务事件，无动画组件时维持即时开关。
 - 每个 BasePanel 同物体最多一个 `BaseUIAnimation` 或子类，稳定 `AnimationId` 匹配 `Resources/Config/UIAnimations.json`。JSON 只保存 Duration、相对 Offset、Scale、Ease 等结果参数，不保存移动/开关速度，也不按 `Screen.width/height` 二次换算；分辨率适配交给现有 CanvasScaler。
+- 正式可开关面板统一使用 `ScaleUIAnimation` 与 `panel.scale`，开关期间保持目标透明度，仅按 MotionRoot 可见图形边界中心缩放；手工维护 Prefab 与对应构建器必须同步配置，常驻 HUD 只有在显式开关时才播放。
 - `UIAnimationManager` 缓存校验后的配置并管理已注册动画的统一运行时播放倍率；倍率只作用于本系统根 Tween，不修改 DOTween/Unity 全局时间。热重载不得改正在播放行程的几何/时长快照。
-- 滑动/缩放使用独立 MotionRoot，避免与安全区、LayoutGroup、拖拽器争写同一 RectTransform；反向开关保留当前进度，结束/禁用恢复姿态。正式接入需同步 Prefab 与构建器，禁止启动时自动批量迁移加载遮挡层/HUD。
+- 滑动/普通缩放使用独立 MotionRoot，避免与安全区、LayoutGroup、拖拽器争写同一 RectTransform；SafeAreaScaleGroup 管理目标缩放时，ScaleUIAnimation 通过其动画倍率与安全区比例合成。反向开关保留当前进度，结束/禁用恢复姿态；正式接入需同步 Prefab 与构建器，禁止启动时自动批量迁移加载遮挡层/HUD。
 
 - 液体视觉黏稠度使用 `LiquidStyle.Viscosity`，与浑浊度独立；液面和罐口液流必须共用该参数，不能按蜂蜜等具体液体 ID 分支。默认值 0 保持水的表现。新增样式通过 `FlatWorld/UI/Sync Water Vessel Liquid Styles` 定向写入现有 Prefab，避免为了新增液体重建容器外形或覆盖已有外观配置；完整重建和定向同步共用样式工厂。
 
 - 水容器外形通过正式面板的 `WaterVesselPanel.Appearances` 按物品 ID 配置，运行时不按具体容器写分支；一套外观必须同时提供剖面、同画布内腔遮罩、归一化水位区间及左右出口。未匹配的容器恢复 Awake 捕获的默认外观，避免共用面板从椰子壳切回陶罐后残留遮罩或出口；正式 Prefab 与构建器必须同步维护。PNG 的 Y 从顶部向下，水位及出口归一化 Y 从底部向上。
 
-- 水容器剖面通过 `WaterVesselLiquidGraphic` 和独立内腔 Mask 呈现；视觉配置按 `LiquidDefinition.VisualState` 匹配，不在 UI 重建水质枚举。`LiquidStyle` 的 `Murkiness/Sediment/SurfaceDebris/SuspendedParticles` 负责通用浑浊、沉淀、污膜和悬浮颗粒表现，罐口液流读取同一套颜色与浑浊度参数，禁止按具体液体 ID 单独硬编码。罐口倾倒液流使用正式 Prefab 中位于 `陶罐剖面`、但处于内腔 Mask 之外的 `倾倒液流/WaterVesselPourGraphic`；出水位置必须来自挂在 `陶罐切面` 下的左右罐口出口锚点，并按倾角选择下侧嘴沿，禁止再用“罐体中心 + 固定半径”猜测。当前陶罐嘴沿较厚，液流节点必须排在 `陶罐切面` 子树之后绘制，并用一段窄的前景液桥从嘴沿向罐内延伸连接罐腹水体；外部主水柱从嘴沿开始并与液桥重叠，禁止再把整条液流放到罐体后方，否则厚嘴沿会把根部完全遮断。新增表现状态需同步正式 Prefab 的 Styles；自定义 Graphic 必须显式声明 CanvasRenderer 依赖，避免预制体有脚本却不渲染。
+- 水容器剖面通过 `WaterVesselLiquidGraphic` 和独立内腔 Mask 呈现；视觉配置按 `LiquidDefinition.VisualState` 匹配，不在 UI 重建水质枚举。`LiquidStyle` 的 `Murkiness/Sediment/SurfaceDebris/SuspendedParticles` 负责通用浑浊、沉淀、污膜和悬浮颗粒表现，罐口液流读取同一套颜色与浑浊度参数，禁止按具体液体 ID 单独硬编码。罐口倾倒液流使用正式 Prefab 中位于 `陶罐剖面`、但处于内腔 Mask 之外的 `倾倒液流/WaterVesselPourGraphic`；出水位置必须来自挂在 `陶罐切面` 下的左右罐口出口锚点，并按倾角选择下侧嘴沿，禁止再用“罐体中心 + 固定半径”猜测。倾角决定最大可倒出量，达到 `VesselAppearance.FullEmptyTiltDegrees` 时允许倒空；持续时间按基准份数流速和 `VesselAppearance.MouthWidth` 相对默认开口的宽度比例累计真实流量，开口越宽固定流速越快，不能让倾角或容量参与速度计算。木桶完全倒空倾角配置为 90°，其他容器按各自开口形状配置。当前陶罐嘴沿较厚，液流节点必须排在 `陶罐切面` 子树之后绘制，并用一段窄的前景液桥从嘴沿向罐内延伸连接罐腹水体；外部主水柱从嘴沿开始并与液桥重叠，禁止再把整条液流放到罐体后方，否则厚嘴沿会把根部完全遮断。新增表现状态需同步正式 Prefab 的 Styles；自定义 Graphic 必须显式声明 CanvasRenderer 依赖，避免预制体有脚本却不渲染。
+- 水容器左右出水锚点必须贴合内腔 Mask 的嘴沿交界，并对照剖面像素校准到开口内缘；不要把整张剖面图叠到液面上遮缝，否则会盖住容器液体。
 - `UI_WaterVessel` 采用与石臼一致的无底板玩法面板：根 `Image` 与 `设置对话框/Image` 只保留透明射线阻挡，不绘制灰色背景或描边；统一主题不得把这两层重新着色，按钮仍按通用主题单独显示。
 
 - 领域控制器创建/持有正式 Prefab，`UIManager` 管生命周期；控件节点名是绑定契约。正式 UI 不用 `new GameObject/AddComponent` 拼视觉。
@@ -114,8 +114,10 @@ description: "Use when: 定位或修改 FlatWorld 的 UIManager、BasePanel、�
 - 不经过 `UIManager`/`BasePanel` 打开流程的独立 Canvas，Prefab 根节点必须显式固化 `localScale = Vector3.one`；不能依赖面板动画在运行时恢复可见缩放。
 - 槽位内的选中框、背景和装饰必须按槽内兄弟顺序分层；选中框切换时必须跟随当前槽位，不得留在旧槽位后再用世界坐标跨槽移动。
 - 快捷栏的附属提示随 `UI_HotBar` 缩放和安全区移动，必须用 `LayoutElement.ignoreLayout` 排除在九格布局外，并保持图形与 CanvasGroup 输入透明；`Inventory.InitUI` 按实际 `ItemSlot_UI` 统计和管理槽位，不能按容器全部子节点计数。手持名称读取实际装备的快捷栏物品，不能与 `Inventory_Hand` 的拖拽携带物混用。
+- `UI_HotBar` 根 Canvas 固定启用 `overrideSorting` 并使用 `UIManager.HotbarModalSortingOrder`，高于默认排序的玩法面板、低于设置和全局覆盖层；该优先级由正式 Prefab 与快捷栏构建器共同维护，不能交由手机 HUD 按设备状态临时切换。
 - 设置类模态页（主设置及其子页）需要独立高层 Canvas 与 `GraphicRaycaster`；非交互对话气泡在玩法模态打开时隐藏，避免首帧或跨 Canvas 绘制顺序造成遮挡。
 - 常驻 HUD 不拦截输入，Graphic 关闭 raycastTarget；若 HUD 提供展开/收起功能，只允许开关按钮接收 raycast，内容和装饰元素仍必须输入透明；模态面板才获取输入锁和顶层手柄焦点，关闭/失败路径释放。
+- 后续任务与教程内容通过书籍物品及 `UI_ReadableBook` 提供；不要在玩家 Prefab 上重新挂载常驻任务追踪面板。
 - 跟随角色的世界空间状态条若需要在水面上方可见，Canvas 的 Sorting Layer 必须高于项目 `Water` 层；`sortingOrder` 只能解决同一 Sorting Layer 内的前后关系。RectTransform 直接挂到普通 Transform 下时，实际偏移以 `anchoredPosition` 为准，不能只改序列化的 `localPosition`。
 - 手机 HUD 的菜单/返回入口必须独立于可隐藏的玩法控制层；模态玩法面板打开时保留该入口并允许背包/制作等面板并行打开，Android 返回键或 Escape 优先关闭最上层可取消面板，避免移动端失去退出路径。
 - 手机左侧“奔跑”是 `UI_MobileControls.prefab` 的状态按钮，但两态颜色会由 `PlayerMobileControlsHUD.RefreshRunButtonVisual` 在运行时重写；统一主题时不能只改 Prefab。关闭态保持灰黑表面与低对比边界，开启态仍用灰阶底，只允许暖黄描边/状态标记作为少量状态强调。
@@ -124,12 +126,14 @@ description: "Use when: 定位或修改 FlatWorld 的 UIManager、BasePanel、�
 - 左上角 `PlayerWorldCoordinateHUD` 的环境温度必须从玩家当前位置调用统一逐格温度查询，不读取角色体温或星球全局温度；环境采样不能绑定到“坐标改变”条件，玩家静止时天气和冷热源仍会改变读数，只按最终显示精度去重文本刷新。
 - 角色参数 HUD 由 FoodUIModule 随模块生命周期创建/释放，只为已设定 IsLocalProfile 的本地 Player 创建；Food 模块也用于动物和静态食物，不能按模块存在或保存的 UI 显隐状态决定是否创建 HUD。
 - 常驻组件事件驱动；禁止等待绑定或比较静态状态的 Update/LateUpdate 和逐帧 `GetComponent*`。
+- 面板切换紧凑/完整布局时，必须同步缩放内容底板、状态区和底栏控件；只缩小根 RectTransform 会让固定坐标的按钮或背景溢出面板，动态尺寸应在视图的统一布局切换入口内成组调整。
 - 动态列表复用条目；结构变化才局部 MarkLayoutForRebuild，数值/颜色更新不强制布局。热路径禁止 ForceUpdateCanvases/ForceRebuild。
 - 动态列表的通用节点名（如 `Content`）不得在整个面板全局查找；必须从所属 `ScrollRect` 或业务容器取引用，避免与 Dropdown 模板等同名节点串容器。
 - EventSystem 反馈保持唯一非缩放 Tween，重入先 Kill，失活/销毁清理。
 - 手机准线是 `UI_MobileControls.prefab` 的非交互 Graphic，由 `PlayerMobileControlsHUD` 按统一屏幕指针定位；不得让准线 Graphic 参与射线或手柄焦点。
 - 旧缓存 Prefab 缺少手机准线节点时允许由 HUD 做一次性兼容补齐，不能把该兜底扩展成运行时拼装整套手机 UI。
 - GM 调试面板由 `GMReflectionConsole` 运行时动态构建，不通过正式 UI Prefab；可持久化的调试开关统一放入 `GMConsolePreferences`，按钮状态需在场景切换和面板刷新时同步。图层页的世界观察模式由 `GMWorldLayerOverlay` 统一承载，同一时刻只显示一种热力图，避免温度与污染颜色叠加失真。
+- `GMReflectionConsole` 在启动场景加载后很早创建；依赖公共控件 Prefab 的 GM 构建必须等 `GameRes.StartupResourcesReady`，并将对应稳定键加入 `StartupPrefabKeys`，避免异步资源目录尚未装入 `AllPrefabs` 时查询失败。
 - GM 动态按钮的 `Selectable.ColorBlock` 是乘在深灰 `Image` 底色上的状态 Tint；禁用态应保持接近白色且不降低 Alpha，只通过轻微乘色降低一级明度。禁止使用半透明中灰作为 `disabledColor`，否则统一灰阶主题会把禁用按钮乘成近黑色，误导为视觉故障。
 - 层级显示中的导航模式也走统一观察模式与透明度偏好；新增 `GmWorldLayerMode` 只追加枚举数值，不能重排已保存的模式。导航按钮保持独立行，避免挤压原有温度/污染按钮及透明度滑轨；箭头表示朝本地玩家的共享寻路场，不代表每只怪物当前都在追击。
 - 日志页的 GM 入口广播 `RuntimeDebugOverlay.GmPanelOpenRequested`，由 `GMReflectionConsole` 订阅；日志属于 GamePlay，而 GM 属于依赖 GamePlay 的 `FlatWorld.Gameplay.Debug`，禁止反向直接引用。日志 Canvas 排序高于 GM，打开 GM 前先收起日志页。GM 点选传送层仅在主动选点时启用，持有独立触点和玩法输入锁；关闭、失焦和换场景必须释放。
@@ -149,6 +153,7 @@ description: "Use when: 定位或修改 FlatWorld 的 UIManager、BasePanel、�
 - `ProviderId` 与设置 `Key` 必须稳定且按功能命名；运行时在管理器自身生命周期中通过 `SettingsProviderRegistry.Register/Unregister` 注册，UI 通过 Provider 和 Key 查找，不直接调用管理器的业务字段或 `AudioBus` 等实现细节。
 - 模拟范围是设备级 PlayerPrefs 偏好；三个半径在流送性能页整组提交并校验严格递增，游戏中的 Item 与 AIECS 读取同一配置。页内滑块沿用公共 `UI_SliderControl` Prefab，缩放镜头不得改写模拟距离。
 - `ISettingsDropdown`/`ISettingsSwitch` 的选项使用稳定 `SettingOption.Id`，写入通过 `TrySetSelectedIndex` 返回错误；需要“应用/取消”或自定义输入的页面保留专用 View 状态，最终提交仍调用 Provider，不能把校验逻辑塞回 `BasePanel`。
+- 主菜单设置由 `SettingsEditSessionController` 管理保存基线；新增 Provider 时把可编辑值放进控件契约，非控件偏好实现 `ISettingsEditSessionParticipant` 快照与还原。按键绑定通过 `InputBindingService` 单独开始、提交和放弃编辑会话。
 - 现有静态偏好类通过 `SettingsProvider` 兼容入口注册；新增实例型系统优先让管理器直接实现接口。Provider 不负责创建 Prefab，正式布局仍由专用 Launcher 和 Prefab 管理。
 - `UI_VisualEffectsSettings` 同时嵌套在游戏内与主菜单设置中；太阳长投影与柔化开关、模糊程度滑块绑定 `SunShadowSettings` Provider，关闭太阳投影必须停止对应渲染工作，柔化关闭只把有效强度置零。地面层级阴影开关和宽度滑块绑定 `GroundElevationShadowSettings` Provider。新增必需控件时同步源 Prefab、控制器和 `RuntimeUIPrefabBuilder.VisualEffects`，并核对两个嵌套使用处的真实引用。
 - 游戏内设置页签由 `SettingsActionListPagination` 的页面名、入口名、页签映射和首个焦点控件共同定义；新增分页时同步正式 `UI_ActionList` 嵌套 Prefab 与完整/定向构建入口。直接挂在子页 Prefab 的控制器会由分页器收集 `ISettingsPageLifecycle`，不必再向 `SettingCanvas` 添加专用初始化分支。
