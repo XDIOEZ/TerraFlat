@@ -61,6 +61,7 @@ public class UIManager : MonoBehaviour
     public GameObject panelRootPrefab;
     public GameObject[] panelPrefabs;
     public const int GameplayHudSortingOrder = 0;
+    /// <summary>快捷栏固定使用的交互层级，高于普通玩法面板且低于设置与全局覆盖层。</summary>
     public const int HotbarModalSortingOrder = 1000;
     /// <summary>指针手持物是纯视觉拖拽层，固定占用 Canvas 排序上限，始终高于其它游戏 UI。</summary>
     public const int HeldItemSortingOrder = 32767;

@@ -1409,6 +1409,7 @@ GameObject:
   - component: {fileID: 2115922731168733653}
   - component: {fileID: 3684666542604703617}
   - component: {fileID: 7330125324000114542}
+  - component: {fileID: 7000000000000000000}
   m_Layer: 5
   m_Name: UI_Bonfire
   m_TagString: Untagged
@@ -5042,3 +5043,17 @@ MonoBehaviour:
   m_EffectColor: {r: 1, g: 1, b: 1, a: 0.13}
   m_EffectDistance: {x: 2, y: -2}
   m_UseGraphicAlpha: 1
+--- !u!114 &7000000000000000000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2639614329428065687}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a770e3391c6fbbc4c931ac2c40acd1f7, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  animationId: panel.scale
+  motionRoot: {fileID: 8543295809523781137}

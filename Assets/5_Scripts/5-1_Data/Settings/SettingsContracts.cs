@@ -116,6 +116,13 @@ namespace FlatWorld.Settings
         void ResetToDefaults();
     }
 
+    /// <summary>为设置控件以外的偏好数据补充设置会话快照。</summary>
+    public interface ISettingsEditSessionParticipant
+    {
+        object CaptureSettingsEditSessionState();
+        void RestoreSettingsEditSessionState(object state);
+    }
+
     /// <summary>提供 Toggle 设置的能力接口。</summary>
     public interface ISettingsToggleProvider
     {
@@ -262,6 +269,35 @@ namespace FlatWorld.Settings
         private static readonly Dictionary<string, ISettingsProvider> providers =
             new Dictionary<string, ISettingsProvider>(StringComparer.OrdinalIgnoreCase);
 
+        #region 编辑会话快照
+
+        /// <summary>当前未保存会话的 Provider 基线；空值表示没有活动会话。</summary>
+        private static List<ProviderEditSessionSnapshot> editSessionSnapshots;
+
+        private sealed class SettingRestoreAction
+        {
+            /// <summary>用于报告恢复失败的稳定设置键。</summary>
+            public string Key;
+
+            /// <summary>恢复值并在失败时返回可读原因。</summary>
+            public Func<string> Restore;
+        }
+
+        private sealed class ProviderEditSessionSnapshot
+        {
+            /// <summary>创建快照时注册的设置提供者。</summary>
+            public ISettingsProvider Provider;
+
+            /// <summary>控件类型对应的值恢复动作。</summary>
+            public readonly List<SettingRestoreAction> Settings =
+                new List<SettingRestoreAction>();
+
+            /// <summary>由 Provider 扩展契约提供的额外偏好状态。</summary>
+            public object ParticipantState;
+        }
+
+        #endregion
+
         public static IReadOnlyCollection<ISettingsProvider> Providers => providers.Values;
 
         public static void Register(ISettingsProvider provider)
@@ -271,7 +307,13 @@ namespace FlatWorld.Settings
             if (string.IsNullOrWhiteSpace(provider.ProviderId))
                 throw new ArgumentException("设置提供者 ProviderId 不能为空。", nameof(provider));
 
+            bool isSameProvider = providers.TryGetValue(
+                provider.ProviderId,
+                out ISettingsProvider previous) && ReferenceEquals(previous, provider);
             providers[provider.ProviderId] = provider;
+
+            if (editSessionSnapshots != null && !isSameProvider)
+                ReplaceEditSessionSnapshot(provider);
         }
 
         public static void Unregister(ISettingsProvider provider)
@@ -283,8 +325,221 @@ namespace FlatWorld.Settings
                 ReferenceEquals(current, provider))
             {
                 providers.Remove(provider.ProviderId);
+                RemoveEditSessionSnapshot(provider);
             }
         }
+
+        #region 编辑会话管理
+
+        /// <summary>开始设置编辑会话，记录所有已注册 Provider 的当前值。</summary>
+        public static bool BeginEditSession()
+        {
+            if (editSessionSnapshots != null)
+                return false;
+
+            editSessionSnapshots = new List<ProviderEditSessionSnapshot>();
+            CaptureRegisteredProviders();
+            return true;
+        }
+
+        /// <summary>把当前值设为新的会话基线，供连续保存时放弃之后的修改。</summary>
+        public static int CommitEditSession()
+        {
+            if (editSessionSnapshots == null)
+                return 0;
+
+            editSessionSnapshots.Clear();
+            CaptureRegisteredProviders();
+            return editSessionSnapshots.Count;
+        }
+
+        /// <summary>恢复会话基线并收集无法还原的设置项错误。</summary>
+        public static bool DiscardEditSession(out string error)
+        {
+            if (editSessionSnapshots == null)
+            {
+                error = null;
+                return true;
+            }
+
+            List<ProviderEditSessionSnapshot> snapshots = editSessionSnapshots;
+            editSessionSnapshots = null;
+            List<string> errors = new List<string>();
+            for (int index = 0; index < snapshots.Count; index++)
+                RestoreProviderSnapshot(snapshots[index], errors);
+
+            error = errors.Count == 0 ? null : string.Join("\n", errors);
+            return errors.Count == 0;
+        }
+
+        /// <summary>采集新注册 Provider，避免它在会话期间失去关闭还原能力。</summary>
+        private static void ReplaceEditSessionSnapshot(ISettingsProvider provider)
+        {
+            for (int index = editSessionSnapshots.Count - 1; index >= 0; index--)
+            {
+                if (string.Equals(
+                    editSessionSnapshots[index].Provider.ProviderId,
+                    provider.ProviderId,
+                    StringComparison.OrdinalIgnoreCase))
+                {
+                    editSessionSnapshots.RemoveAt(index);
+                }
+            }
+
+            editSessionSnapshots.Add(CaptureProviderSnapshot(provider));
+        }
+
+        /// <summary>移除已注销 Provider 的会话引用。</summary>
+        private static void RemoveEditSessionSnapshot(ISettingsProvider provider)
+        {
+            if (editSessionSnapshots == null)
+                return;
+
+            for (int index = editSessionSnapshots.Count - 1; index >= 0; index--)
+            {
+                if (ReferenceEquals(editSessionSnapshots[index].Provider, provider))
+                    editSessionSnapshots.RemoveAt(index);
+            }
+        }
+
+        /// <summary>记录当前所有注册 Provider 的控件值和补充状态。</summary>
+        private static void CaptureRegisteredProviders()
+        {
+            var snapshot = new List<ISettingsProvider>(providers.Values);
+            snapshot.Sort((left, right) =>
+            {
+                int order = left.Order.CompareTo(right.Order);
+                return order != 0
+                    ? order
+                    : StringComparer.OrdinalIgnoreCase.Compare(
+                        left.ProviderId,
+                        right.ProviderId);
+            });
+
+            for (int index = 0; index < snapshot.Count; index++)
+                editSessionSnapshots.Add(CaptureProviderSnapshot(snapshot[index]));
+        }
+
+        /// <summary>为单个 Provider 建立类型安全的控件还原动作。</summary>
+        private static ProviderEditSessionSnapshot CaptureProviderSnapshot(
+            ISettingsProvider provider)
+        {
+            var snapshot = new ProviderEditSessionSnapshot { Provider = provider };
+            IReadOnlyList<ISettingsToggle> toggles = provider.ToggleSettings;
+            for (int index = 0; index < toggles.Count; index++)
+            {
+                ISettingsToggle setting = toggles[index];
+                if (setting == null)
+                    continue;
+
+                bool value = setting.Value;
+                snapshot.Settings.Add(new SettingRestoreAction
+                {
+                    Key = setting.Descriptor.Key,
+                    Restore = () =>
+                    {
+                        setting.SetValue(value);
+                        return null;
+                    }
+                });
+            }
+
+            IReadOnlyList<ISettingsSlider> sliders = provider.SliderSettings;
+            for (int index = 0; index < sliders.Count; index++)
+            {
+                ISettingsSlider setting = sliders[index];
+                if (setting == null)
+                    continue;
+
+                float value = setting.Value;
+                snapshot.Settings.Add(new SettingRestoreAction
+                {
+                    Key = setting.Descriptor.Key,
+                    Restore = () =>
+                    {
+                        setting.SetValue(value);
+                        return null;
+                    }
+                });
+            }
+
+            IReadOnlyList<ISettingsDropdown> dropdowns = provider.DropdownSettings;
+            for (int index = 0; index < dropdowns.Count; index++)
+            {
+                ISettingsDropdown setting = dropdowns[index];
+                if (setting == null)
+                    continue;
+
+                int selectedIndex = setting.SelectedIndex;
+                snapshot.Settings.Add(new SettingRestoreAction
+                {
+                    Key = setting.Descriptor.Key,
+                    Restore = () => setting.TrySetSelectedIndex(selectedIndex, out string error)
+                        ? null
+                        : error
+                });
+            }
+
+            IReadOnlyList<ISettingsSwitch> switches = provider.SwitchSettings;
+            for (int index = 0; index < switches.Count; index++)
+            {
+                ISettingsSwitch setting = switches[index];
+                if (setting == null)
+                    continue;
+
+                int selectedIndex = setting.SelectedIndex;
+                snapshot.Settings.Add(new SettingRestoreAction
+                {
+                    Key = setting.Descriptor.Key,
+                    Restore = () => setting.TrySetSelectedIndex(selectedIndex, out string error)
+                        ? null
+                        : error
+                });
+            }
+
+            if (provider is ISettingsEditSessionParticipant participant)
+                snapshot.ParticipantState = participant.CaptureSettingsEditSessionState();
+            return snapshot;
+        }
+
+        /// <summary>恢复一个 Provider 的全部控件和补充状态，同时继续处理后续字段。</summary>
+        private static void RestoreProviderSnapshot(
+            ProviderEditSessionSnapshot snapshot,
+            List<string> errors)
+        {
+            for (int index = 0; index < snapshot.Settings.Count; index++)
+            {
+                SettingRestoreAction setting = snapshot.Settings[index];
+                try
+                {
+                    string error = setting.Restore();
+                    if (!string.IsNullOrEmpty(error))
+                        errors.Add($"{snapshot.Provider.ProviderId}/{setting.Key}: {error}");
+                }
+                catch (Exception exception)
+                {
+                    errors.Add(
+                        $"{snapshot.Provider.ProviderId}/{setting.Key}: {exception.Message}");
+                }
+            }
+
+            if (snapshot.ParticipantState == null ||
+                !(snapshot.Provider is ISettingsEditSessionParticipant participant))
+            {
+                return;
+            }
+
+            try
+            {
+                participant.RestoreSettingsEditSessionState(snapshot.ParticipantState);
+            }
+            catch (Exception exception)
+            {
+                errors.Add($"{snapshot.Provider.ProviderId}: {exception.Message}");
+            }
+        }
+
+        #endregion
 
         public static bool TryGet(string providerId, out ISettingsProvider provider)
         {

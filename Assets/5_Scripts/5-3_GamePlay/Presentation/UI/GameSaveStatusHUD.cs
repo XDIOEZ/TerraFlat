@@ -17,6 +17,8 @@ public sealed class GameSaveStatusHUD : MonoBehaviour
     private const string StatusTextNodeName = "保存状态文本";
     private const float SuccessMinimumVisibleSeconds = 0.35f;
     private const float FailureVisibleSeconds = 2f;
+    private const float ResourceReloadSuccessVisibleSeconds = 1.5f;
+    private const float ResourceReloadFailureVisibleSeconds = 3f;
 
     private GameObject viewObject;
     private RectTransform viewRect;
@@ -26,8 +28,12 @@ public sealed class GameSaveStatusHUD : MonoBehaviour
     private float shownAt;
     private bool saveInProgress;
     private bool saveFailed;
+    private bool resourceReloadInProgress;
+    private float resourceReloadProgress;
     private bool transientMessageActive;
     private string transientMessage;
+    private string queuedResourceReloadMessage;
+    private float queuedResourceReloadVisibleSeconds;
     private bool missingPrefabLogged;
 
     #endregion
@@ -102,6 +108,13 @@ public sealed class GameSaveStatusHUD : MonoBehaviour
     {
         saveInProgress = false;
         saveFailed = !succeeded;
+
+        if (succeeded && !string.IsNullOrWhiteSpace(queuedResourceReloadMessage))
+        {
+            ShowQueuedResourceReloadMessage();
+            return;
+        }
+
         transientMessageActive = false;
         transientMessage = null;
         BeginViewIfReady();
@@ -117,7 +130,75 @@ public sealed class GameSaveStatusHUD : MonoBehaviour
             return;
         }
 
+        if (resourceReloadInProgress)
+        {
+            ShowResourceReloadStatus();
+            return;
+        }
+
         ScheduleHide(SuccessMinimumVisibleSeconds);
+    }
+
+    /// <summary>开始显示非阻塞的游戏内资源更新状态。</summary>
+    public void BeginResourceReload()
+    {
+        resourceReloadInProgress = true;
+        resourceReloadProgress = 0f;
+        queuedResourceReloadMessage = null;
+        queuedResourceReloadVisibleSeconds = 0f;
+        transientMessageActive = false;
+        transientMessage = null;
+        saveFailed = false;
+        CancelHideCoroutine();
+        BeginViewIfReady();
+        if (!saveInProgress)
+            ShowResourceReloadStatus();
+    }
+
+    /// <summary>按已完成比例更新资源提示；保存提示优先显示。</summary>
+    public void UpdateResourceReloadProgress(float progress)
+    {
+        if (!resourceReloadInProgress)
+            return;
+
+        resourceReloadProgress = Mathf.Clamp01(progress);
+        if (saveInProgress || saveFailed)
+            return;
+
+        BeginViewIfReady();
+        ShowResourceReloadStatus();
+    }
+
+    /// <summary>显示热更新成功或失败结果；若保存提示正在显示则排队到保存提示结束后。</summary>
+    public void EndResourceReload(bool succeeded)
+    {
+        resourceReloadInProgress = false;
+        resourceReloadProgress = succeeded ? 1f : resourceReloadProgress;
+        string message = succeeded ? "资源更新完成" : "更新失败，仍使用旧资源";
+        float visibleSeconds = succeeded
+            ? ResourceReloadSuccessVisibleSeconds
+            : ResourceReloadFailureVisibleSeconds;
+
+        if (saveInProgress)
+        {
+            queuedResourceReloadMessage = message;
+            queuedResourceReloadVisibleSeconds = visibleSeconds;
+            return;
+        }
+
+        ShowTransientMessage(message, visibleSeconds);
+    }
+
+    /// <summary>取消热更新提示；退出世界时不留下错误消息或拦截界面。</summary>
+    public void CancelResourceReload()
+    {
+        resourceReloadInProgress = false;
+        resourceReloadProgress = 0f;
+        queuedResourceReloadMessage = null;
+        queuedResourceReloadVisibleSeconds = 0f;
+        CancelHideCoroutine();
+        if (!saveInProgress)
+            SetViewVisible(false);
     }
 
     private void HandleLanguageChanged(string _)
@@ -127,6 +208,8 @@ public sealed class GameSaveStatusHUD : MonoBehaviour
 
         if (saveInProgress)
             statusText.text = FlatWorldLocalizationService.GetUiText("正在保存…");
+        else if (resourceReloadInProgress)
+            statusText.text = GetResourceReloadStatusText();
         else if (transientMessageActive)
             statusText.text = FlatWorldLocalizationService.GetUiText(transientMessage);
         else if (saveFailed)
@@ -136,9 +219,10 @@ public sealed class GameSaveStatusHUD : MonoBehaviour
     /// <summary>显示一条复用现有状态文本的短暂玩法提示，避免新增单句提示预制体。</summary>
     public void ShowTransientMessage(string message, float visibleSeconds = 2f)
     {
-        if (string.IsNullOrWhiteSpace(message) || saveInProgress)
+        if (string.IsNullOrWhiteSpace(message) || saveInProgress || resourceReloadInProgress)
             return;
 
+        saveFailed = false;
         CancelHideCoroutine();
         BeginViewIfReady();
         if (statusText == null)
@@ -161,12 +245,49 @@ public sealed class GameSaveStatusHUD : MonoBehaviour
         if (!EnsureView())
             return;
 
-        if (saveInProgress && statusText != null && !viewObject.activeSelf)
+        if (statusText != null && !viewObject.activeSelf)
         {
-            statusText.text = FlatWorldLocalizationService.GetUiText("正在保存…");
-            shownAt = Time.unscaledTime;
-            SetViewVisible(true);
+            if (saveInProgress)
+            {
+                statusText.text = FlatWorldLocalizationService.GetUiText("正在保存…");
+                shownAt = Time.unscaledTime;
+                SetViewVisible(true);
+            }
+            else if (resourceReloadInProgress)
+            {
+                ShowResourceReloadStatus();
+            }
         }
+    }
+
+    /// <summary>显示当前资源更新百分比，不接收射线也不改变世界输入状态。</summary>
+    private void ShowResourceReloadStatus()
+    {
+        if (!resourceReloadInProgress || saveInProgress || statusText == null)
+            return;
+
+        string message = GetResourceReloadStatusText();
+        if (!string.Equals(statusText.text, message, System.StringComparison.Ordinal))
+            statusText.text = message;
+        shownAt = Time.unscaledTime;
+        SetViewVisible(true);
+    }
+
+    private string GetResourceReloadStatusText()
+    {
+        return FlatWorldLocalizationService.GetUiFormat(
+            "资源更新中 {0:0}%",
+            resourceReloadProgress * 100f);
+    }
+
+    private void ShowQueuedResourceReloadMessage()
+    {
+        string message = queuedResourceReloadMessage;
+        float visibleSeconds = queuedResourceReloadVisibleSeconds;
+        queuedResourceReloadMessage = null;
+        queuedResourceReloadVisibleSeconds = 0f;
+        saveFailed = false;
+        ShowTransientMessage(message, visibleSeconds);
     }
 
     private bool EnsureView()
@@ -248,8 +369,22 @@ public sealed class GameSaveStatusHUD : MonoBehaviour
         if (saveInProgress)
             yield break;
 
+        if (resourceReloadInProgress)
+        {
+            saveFailed = false;
+            ShowResourceReloadStatus();
+            yield break;
+        }
+
+        if (!string.IsNullOrWhiteSpace(queuedResourceReloadMessage))
+        {
+            ShowQueuedResourceReloadMessage();
+            yield break;
+        }
+
         transientMessageActive = false;
         transientMessage = null;
+        saveFailed = false;
         SetViewVisible(false);
     }
 

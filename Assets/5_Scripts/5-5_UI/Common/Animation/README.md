@@ -39,7 +39,7 @@
 
 - `BaseUIAnimation`：淡入淡出基类。
 - `SlideUIAnimation`：淡入淡出 + 相对位移。
-- `ScaleUIAnimation`：淡入淡出 + 相对缩放。
+- `ScaleUIAnimation`：只做相对缩放，保持目标透明度；缩放中心取 MotionRoot 下可见 UI 图形的整体边界中心。
 - 滑动/缩放优先指定独立 `MotionRoot`，避免与 Layout、SafeArea、拖拽器争写同一 RectTransform。
 - 快速 Open/Close 反向时从当前进度继续，旧 Tween 回调不能覆盖最新状态。
 

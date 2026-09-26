@@ -25,6 +25,9 @@ public sealed class SafeAreaScaleGroup : MonoBehaviour
     [SerializeField, Range(0.1f, 1f), Tooltip("在安全区适配后再应用的表现比例，不影响其它面板。")]
     private float presentationScale = 1f;
 
+    /// <summary>与面板开合动画合成，避免多个系统直接写同一缩放值。</summary>
+    private float animationScale = 1f;
+
     #endregion
 
     #region 运行时状态
@@ -53,6 +56,16 @@ public sealed class SafeAreaScaleGroup : MonoBehaviour
             ApplyScale();
         }
     }
+
+    /// <summary>设置面板开合比例，并与安全区限幅结果共同写入缩放目标。</summary>
+    internal void SetAnimationScale(float scale)
+    {
+        animationScale = Mathf.Max(0f, scale);
+        ApplyScale();
+    }
+
+    /// <summary>供同物体的缩放动画判断该组是否接管了目标缩放。</summary>
+    internal bool HasScaleTargets => scaledTargets != null && scaledTargets.Length > 0;
 
     #endregion
 
@@ -147,7 +160,7 @@ public sealed class SafeAreaScaleGroup : MonoBehaviour
             usableSize.x / boundsSize.x,
             usableSize.y / boundsSize.y);
         fitScale = Mathf.Clamp(fitScale, 0.01f, allowedMaxScale);
-        fitScale *= presentationScale;
+        fitScale *= presentationScale * animationScale;
 
         isApplying = true;
         try

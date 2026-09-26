@@ -5020,6 +5020,7 @@ GameObject:
   - component: {fileID: 2847488938921537205}
   - component: {fileID: 6130558656531760574}
   - component: {fileID: 3403387865938182287}
+  - component: {fileID: 7000000000000000000}
   m_Layer: 5
   m_Name: UI_SaveSelectionPanel
   m_TagString: Untagged
@@ -7045,3 +7046,17 @@ RectTransform:
   m_CorrespondingSourceObject: {fileID: 6390369830965629589, guid: 92c26ca78f387f246803a706b73bbfe9, type: 3}
   m_PrefabInstance: {fileID: 1247385144361737472}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &7000000000000000000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7361205072839321340}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a770e3391c6fbbc4c931ac2c40acd1f7, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  animationId: panel.scale
+  motionRoot: {fileID: 4242902097882175367}

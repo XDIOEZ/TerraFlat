@@ -1116,6 +1116,7 @@ GameObject:
   - component: {fileID: 8509918733089672743}
   - component: {fileID: 9093030333110724190}
   - component: {fileID: 2722478120596566922}
+  - component: {fileID: 7000000000000000000}
   m_Layer: 5
   m_Name: UI_WaterVessel
   m_TagString: Untagged
@@ -1248,6 +1249,16 @@ MonoBehaviour:
     FillRange: {x: 0.34375, y: 0.6875}
     LeftOutlet: {x: 0.109375, y: 0.65625}
     RightOutlet: {x: 0.890625, y: 0.65625}
+    MouthWidth: 0.78125
+    FullEmptyTiltDegrees: 180
+  - ItemId: WoodenBarrel
+    Cutaway: {fileID: 21300000, guid: 5c3f130d06ddc5745bcfba674fb71703, type: 3}
+    Interior: {fileID: 21300000, guid: 817ff71e6b51771449f833345470b981, type: 3}
+    FillRange: {x: 0.109375, y: 0.78125}
+    LeftOutlet: {x: 0.25, y: 0.8125}
+    RightOutlet: {x: 0.75, y: 0.8125}
+    MouthWidth: 0.625
+    FullEmptyTiltDegrees: 90
 --- !u!1 &8077230647050648011
 GameObject:
   m_ObjectHideFlags: 0
@@ -1977,3 +1988,17 @@ RectTransform:
   m_CorrespondingSourceObject: {fileID: 44358415694853317, guid: 8c3e275eabc48b04c828e6162cc59129, type: 3}
   m_PrefabInstance: {fileID: 5939772260120733314}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &7000000000000000000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7635845824747382361}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a770e3391c6fbbc4c931ac2c40acd1f7, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  animationId: panel.scale
+  motionRoot: {fileID: 3513116280332369564}

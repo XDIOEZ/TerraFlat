@@ -54,12 +54,9 @@ public static class NetworkModePrefabBuilder
             typeof(RectTransform),
             typeof(Canvas),
             typeof(CanvasGroup),
-            typeof(CanvasRenderer),
-            typeof(Image),
             typeof(GraphicRaycaster),
             typeof(BasePanel));
         root.layer = LayerMask.NameToLayer("UI");
-        root.AddComponent<FullScreenRectController>();
 
         RectTransform rect = root.GetComponent<RectTransform>();
         Stretch(rect);
@@ -74,14 +71,11 @@ public static class NetworkModePrefabBuilder
         canvasGroup.interactable = true;
         canvasGroup.blocksRaycasts = true;
 
-        Image scrim = root.GetComponent<Image>();
-        scrim.color = new Color(0.006f, 0.016f, 0.024f, 0.68f);
-        scrim.raycastTarget = true;
-
         BasePanel panel = root.GetComponent<BasePanel>();
         panel.PanelName = NetworkModeUIController.NetworkPanelKey;
         panel.canvasGroup = canvasGroup;
         panel.rectTransform = rect;
+        RuntimeUIPrefabBuilder.ConfigureScaleAnimation(panel);
         return root;
     }
 
@@ -91,6 +85,11 @@ public static class NetworkModePrefabBuilder
 
     private static void BuildVisualTree(Transform root, TMP_FontAsset font)
     {
+        Image scrim = CreateImage("联机界面遮罩", root, new Color(0.006f, 0.016f, 0.024f, 0.76f));
+        Stretch(scrim.rectTransform);
+        scrim.gameObject.AddComponent<FullScreenRectController>();
+        scrim.raycastTarget = true;
+
         Image shadow = CreateImage("面板投影", root, new Color(0f, 0f, 0f, 0.38f));
         SetRect(shadow.rectTransform, new Vector2(12f, -14f), FlatWorldUIPanelMetrics.SharedModalCardSize, new Vector2(0.5f, 0.5f));
         shadow.raycastTarget = false;

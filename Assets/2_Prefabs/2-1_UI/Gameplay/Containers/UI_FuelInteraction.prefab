@@ -1645,6 +1645,7 @@ GameObject:
   - component: {fileID: 6167015008749563555}
   - component: {fileID: 7421799514988741416}
   - component: {fileID: 6729752886161751969}
+  - component: {fileID: 7000000000000000000}
   m_Layer: 5
   m_Name: UI_FuelInteraction
   m_TagString: Untagged
@@ -1994,3 +1995,17 @@ RectTransform:
   m_CorrespondingSourceObject: {fileID: 301218182527049489, guid: ea550192a53dad841a260370c15a6e94, type: 3}
   m_PrefabInstance: {fileID: 4940123230374350288}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &7000000000000000000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8013901652625771369}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a770e3391c6fbbc4c931ac2c40acd1f7, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  animationId: panel.scale
+  motionRoot: {fileID: 511281329814580310}

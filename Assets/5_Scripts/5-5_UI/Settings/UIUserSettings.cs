@@ -18,6 +18,7 @@ public static class UIUserSettings
     private const string ScaleKey = "FlatWorld.UI.Scale";
     private const string AnimationSpeedKey = "FlatWorld.UI.AnimationSpeed";
     private const string HotbarBottomSpacingKey = "FlatWorld.UI.HotbarBottomSpacing";
+    private const string ScrollRowsPerWheelTickKey = "FlatWorld.UI.ScrollRowsPerWheelTick";
     private const string RespectSafeAreaKey = "FlatWorld.UI.RespectSafeArea";
     private const string FloatingMoveJoystickKey = "FlatWorld.Mobile.FloatingMoveJoystick";
     private const string TouchControlsOpacityKey = "FlatWorld.Mobile.TouchControlsOpacity";
@@ -66,6 +67,10 @@ public static class UIUserSettings
     public const float MinimumHotbarBottomSpacing = -128f;
     public const float MaximumHotbarBottomSpacing = 128f;
     public const float HotbarBottomSpacingStep = 1f;
+    public const int DefaultScrollRowsPerWheelTick = 1;
+    public const int MinimumScrollRowsPerWheelTick = 1;
+    public const int MaximumScrollRowsPerWheelTick = 10;
+    public const int ScrollRowsPerWheelTickStep = 1;
     public const float DefaultLeftControlZoneRatio = 0.33f;
     public const float DefaultRightControlZoneRatio = 0.33f;
     public const float MinimumControlZoneRatio = 0.2f;
@@ -84,6 +89,7 @@ public static class UIUserSettings
     public const string ScaleSettingKey = "ui.scale";
     public const string AnimationSpeedSettingKey = "ui.animationSpeed";
     public const string HotbarBottomSpacingSettingKey = "ui.hotbarBottomSpacing";
+    public const string ScrollRowsPerWheelTickSettingKey = "ui.scrollRowsPerWheelTick";
     public const string RespectSafeAreaSettingKey = "ui.respectSafeArea";
     public const string FloatingMoveJoystickSettingKey = "ui.floatingMoveJoystick";
     public const string TouchControlsOpacitySettingKey = "ui.touchControlsOpacity";
@@ -99,6 +105,7 @@ public static class UIUserSettings
     private static float cachedScale = DefaultScale;
     private static float cachedAnimationSpeed = DefaultAnimationSpeed;
     private static float cachedHotbarBottomSpacing = DefaultHotbarBottomSpacing;
+    private static int cachedScrollRowsPerWheelTick = DefaultScrollRowsPerWheelTick;
     private static bool cachedRespectSafeArea = true;
     private static bool cachedFloatingMoveJoystick = true;
     private static float cachedTouchControlsOpacityPercent = DefaultTouchControlsOpacityPercent;
@@ -120,6 +127,12 @@ public static class UIUserSettings
 
     /// <summary>触屏玩法控件的自定义位置改变时广播，HUD 立即按安全区重新投影。</summary>
     public static event Action MobileControlLayoutChanged;
+
+    /// <summary>通知手机控件布局偏好已恢复。</summary>
+    private static void NotifyMobileControlLayoutChanged()
+    {
+        MobileControlLayoutChanged?.Invoke();
+    }
 
     private static readonly ISettingsProvider settingsProvider =
         CreateSettingsProvider();
@@ -153,6 +166,16 @@ public static class UIUserSettings
         {
             EnsureInitialized();
             return cachedHotbarBottomSpacing;
+        }
+    }
+
+    /// <summary>每个滚轮刻度带动所有列表移动的条目行数。</summary>
+    public static int ScrollRowsPerWheelTick
+    {
+        get
+        {
+            EnsureInitialized();
+            return cachedScrollRowsPerWheelTick;
         }
     }
 
@@ -275,6 +298,20 @@ public static class UIUserSettings
         PlayerPrefs.SetFloat(HotbarBottomSpacingKey, sanitized);
         PlayerPrefs.Save();
         HotbarLayoutChanged?.Invoke();
+        return sanitized;
+    }
+
+    /// <summary>保存每个滚轮刻度对应的列表行数。</summary>
+    public static int SetScrollRowsPerWheelTick(float value)
+    {
+        EnsureInitialized();
+        int sanitized = SanitizeScrollRowsPerWheelTick(value);
+        if (cachedScrollRowsPerWheelTick == sanitized)
+            return cachedScrollRowsPerWheelTick;
+
+        cachedScrollRowsPerWheelTick = sanitized;
+        PlayerPrefs.SetInt(ScrollRowsPerWheelTickKey, sanitized);
+        PlayerPrefs.Save();
         return sanitized;
     }
 
@@ -479,6 +516,7 @@ public static class UIUserSettings
         bool hotbarLayoutChanged = !Mathf.Approximately(
             cachedHotbarBottomSpacing,
             DefaultHotbarBottomSpacing);
+        bool scrollRowsChanged = cachedScrollRowsPerWheelTick != DefaultScrollRowsPerWheelTick;
         bool touchOpacityChanged = !Mathf.Approximately(
             cachedTouchControlsOpacityPercent,
             DefaultTouchControlsOpacityPercent);
@@ -489,13 +527,14 @@ public static class UIUserSettings
                              !Mathf.Approximately(
                                  cachedRightControlZoneRatio,
                                  DefaultRightControlZoneRatio);
-        if (!visualChanged && !animationSpeedChanged && !hotbarLayoutChanged && !mobileChanged &&
-            !touchOpacityChanged && !mobileLayoutChanged)
+        if (!visualChanged && !animationSpeedChanged && !hotbarLayoutChanged && !scrollRowsChanged &&
+            !mobileChanged && !touchOpacityChanged && !mobileLayoutChanged)
             return;
 
         cachedScale = DefaultScale;
         cachedAnimationSpeed = DefaultAnimationSpeed;
         cachedHotbarBottomSpacing = DefaultHotbarBottomSpacing;
+        cachedScrollRowsPerWheelTick = DefaultScrollRowsPerWheelTick;
         cachedRespectSafeArea = true;
         cachedFloatingMoveJoystick = true;
         cachedTouchControlsOpacityPercent = DefaultTouchControlsOpacityPercent;
@@ -504,6 +543,7 @@ public static class UIUserSettings
         PlayerPrefs.SetFloat(ScaleKey, DefaultScale);
         PlayerPrefs.SetFloat(AnimationSpeedKey, DefaultAnimationSpeed);
         PlayerPrefs.SetFloat(HotbarBottomSpacingKey, DefaultHotbarBottomSpacing);
+        PlayerPrefs.SetInt(ScrollRowsPerWheelTickKey, DefaultScrollRowsPerWheelTick);
         PlayerPrefs.SetInt(RespectSafeAreaKey, 1);
         PlayerPrefs.SetInt(FloatingMoveJoystickKey, 1);
         PlayerPrefs.SetFloat(TouchControlsOpacityKey, DefaultTouchControlsOpacityPercent);
@@ -538,6 +578,7 @@ public static class UIUserSettings
         bool changed = !Mathf.Approximately(cachedScale, DefaultScale) ||
                        !Mathf.Approximately(cachedAnimationSpeed, DefaultAnimationSpeed) ||
                        !Mathf.Approximately(cachedHotbarBottomSpacing, DefaultHotbarBottomSpacing) ||
+                       cachedScrollRowsPerWheelTick != DefaultScrollRowsPerWheelTick ||
                        !cachedRespectSafeArea ||
                        !cachedFloatingMoveJoystick ||
                        !Mathf.Approximately(
@@ -565,6 +606,7 @@ public static class UIUserSettings
             cachedHotbarBottomSpacing,
             DefaultHotbarBottomSpacing);
         cachedHotbarBottomSpacing = DefaultHotbarBottomSpacing;
+        cachedScrollRowsPerWheelTick = DefaultScrollRowsPerWheelTick;
         cachedRespectSafeArea = true;
         bool mobileControlsChanged = !cachedFloatingMoveJoystick ||
                                      !Mathf.Approximately(
@@ -584,6 +626,7 @@ public static class UIUserSettings
         PlayerPrefs.SetFloat(ScaleKey, DefaultScale);
         PlayerPrefs.SetFloat(AnimationSpeedKey, DefaultAnimationSpeed);
         PlayerPrefs.SetFloat(HotbarBottomSpacingKey, DefaultHotbarBottomSpacing);
+        PlayerPrefs.SetInt(ScrollRowsPerWheelTickKey, DefaultScrollRowsPerWheelTick);
         PlayerPrefs.SetInt(RespectSafeAreaKey, 1);
         PlayerPrefs.SetInt(FloatingMoveJoystickKey, 1);
         PlayerPrefs.SetFloat(TouchControlsOpacityKey, DefaultTouchControlsOpacityPercent);
@@ -617,6 +660,7 @@ public static class UIUserSettings
         cachedScale = DefaultScale;
         cachedAnimationSpeed = DefaultAnimationSpeed;
         cachedHotbarBottomSpacing = DefaultHotbarBottomSpacing;
+        cachedScrollRowsPerWheelTick = DefaultScrollRowsPerWheelTick;
         cachedRespectSafeArea = true;
         cachedFloatingMoveJoystick = true;
         cachedTouchControlsOpacityPercent = DefaultTouchControlsOpacityPercent;
@@ -657,10 +701,34 @@ public static class UIUserSettings
         return new UISettingsProvider();
     }
 
-    private sealed class UISettingsProvider : ISettingsProvider
+    private sealed class UISettingsProvider : ISettingsProvider, ISettingsEditSessionParticipant
     {
         private readonly IReadOnlyList<ISettingsToggle> toggles;
         private readonly IReadOnlyList<ISettingsSlider> sliders;
+
+        private sealed class MobileControlLayoutState
+        {
+            /// <summary>手机 HUD 控件的稳定 ID。</summary>
+            public string ControlId;
+
+            /// <summary>快照时 X 坐标是否有自定义值。</summary>
+            public bool HasX;
+
+            /// <summary>快照时保存的 X 坐标。</summary>
+            public float X;
+
+            /// <summary>快照时 Y 坐标是否有自定义值。</summary>
+            public bool HasY;
+
+            /// <summary>快照时保存的 Y 坐标。</summary>
+            public float Y;
+
+            /// <summary>快照时控件尺寸是否有自定义值。</summary>
+            public bool HasSize;
+
+            /// <summary>快照时保存的尺寸倍率。</summary>
+            public float Size;
+        }
 
         public UISettingsProvider()
         {
@@ -702,6 +770,18 @@ public static class UIUserSettings
                     HotbarBottomSpacingStep,
                     () => HotbarBottomSpacing,
                     value => SetHotbarBottomSpacing(value)),
+                new SettingsSlider(
+                    new SettingDescriptor(
+                        ScrollRowsPerWheelTickSettingKey,
+                        "滚轮每次翻动行数",
+                        SettingControlType.Slider,
+                        "ui",
+                        order: 3),
+                    MinimumScrollRowsPerWheelTick,
+                    MaximumScrollRowsPerWheelTick,
+                    ScrollRowsPerWheelTickStep,
+                    () => ScrollRowsPerWheelTick,
+                    value => SetScrollRowsPerWheelTick(value)),
                 new SettingsSlider(
                     new SettingDescriptor(
                         TouchControlsOpacitySettingKey,
@@ -785,6 +865,58 @@ public static class UIUserSettings
             Array.Empty<ISettingsSwitch>();
 
         public void ResetToDefaults() => UIUserSettings.ResetToDefaults();
+
+        /// <summary>快照未通过通用控件契约暴露的手机控件位置与尺寸。</summary>
+        public object CaptureSettingsEditSessionState()
+        {
+            var states = new List<MobileControlLayoutState>(BuiltInMobileControlIds.Length);
+            for (int index = 0; index < BuiltInMobileControlIds.Length; index++)
+            {
+                string controlId = BuiltInMobileControlIds[index];
+                string xKey = GetMobileControlLayoutKey(controlId, "X");
+                string yKey = GetMobileControlLayoutKey(controlId, "Y");
+                string sizeKey = GetMobileControlLayoutKey(controlId, "Size");
+                states.Add(new MobileControlLayoutState
+                {
+                    ControlId = controlId,
+                    HasX = PlayerPrefs.HasKey(xKey),
+                    X = PlayerPrefs.GetFloat(xKey),
+                    HasY = PlayerPrefs.HasKey(yKey),
+                    Y = PlayerPrefs.GetFloat(yKey),
+                    HasSize = PlayerPrefs.HasKey(sizeKey),
+                    Size = PlayerPrefs.GetFloat(sizeKey)
+                });
+            }
+
+            return states;
+        }
+
+        /// <summary>恢复全部内置手机控件布局，并通知运行时 HUD 重新投影。</summary>
+        public void RestoreSettingsEditSessionState(object state)
+        {
+            if (!(state is List<MobileControlLayoutState> states))
+                return;
+
+            for (int index = 0; index < states.Count; index++)
+            {
+                MobileControlLayoutState layout = states[index];
+                string xKey = GetMobileControlLayoutKey(layout.ControlId, "X");
+                string yKey = GetMobileControlLayoutKey(layout.ControlId, "Y");
+                string sizeKey = GetMobileControlLayoutKey(layout.ControlId, "Size");
+                PlayerPrefs.DeleteKey(xKey);
+                PlayerPrefs.DeleteKey(yKey);
+                PlayerPrefs.DeleteKey(sizeKey);
+                if (layout.HasX)
+                    PlayerPrefs.SetFloat(xKey, layout.X);
+                if (layout.HasY)
+                    PlayerPrefs.SetFloat(yKey, layout.Y);
+                if (layout.HasSize)
+                    PlayerPrefs.SetFloat(sizeKey, layout.Size);
+            }
+
+            PlayerPrefs.Save();
+            NotifyMobileControlLayoutChanged();
+        }
     }
 
     #endregion
@@ -799,6 +931,8 @@ public static class UIUserSettings
             PlayerPrefs.GetFloat(AnimationSpeedKey, DefaultAnimationSpeed));
         cachedHotbarBottomSpacing = SanitizeHotbarBottomSpacing(
             PlayerPrefs.GetFloat(HotbarBottomSpacingKey, DefaultHotbarBottomSpacing));
+        cachedScrollRowsPerWheelTick = SanitizeScrollRowsPerWheelTick(
+            PlayerPrefs.GetInt(ScrollRowsPerWheelTickKey, DefaultScrollRowsPerWheelTick));
         cachedRespectSafeArea = PlayerPrefs.GetInt(RespectSafeAreaKey, 1) != 0;
         cachedFloatingMoveJoystick = PlayerPrefs.GetInt(FloatingMoveJoystickKey, 1) != 0;
         cachedTouchControlsOpacityPercent = SanitizeTouchControlsOpacityPercent(
@@ -842,6 +976,18 @@ public static class UIUserSettings
             MinimumHotbarBottomSpacing,
             MaximumHotbarBottomSpacing);
         return Mathf.Round(clamped / HotbarBottomSpacingStep) * HotbarBottomSpacingStep;
+    }
+
+    /// <summary>把滚轮行数限制在设置页提供的整数范围。</summary>
+    private static int SanitizeScrollRowsPerWheelTick(float value)
+    {
+        if (float.IsNaN(value) || float.IsInfinity(value))
+            value = DefaultScrollRowsPerWheelTick;
+
+        return Mathf.Clamp(
+            Mathf.RoundToInt(value),
+            MinimumScrollRowsPerWheelTick,
+            MaximumScrollRowsPerWheelTick);
     }
 
     /// <summary>把双指缩放灵敏度限制为设置页显示的整数范围。</summary>

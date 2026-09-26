@@ -147,6 +147,7 @@ public static class StoneMortarAssetBuilder
         panel.PanelName = "石臼";
         panel.rectTransform = root;
         panel.canvasGroup = root.GetComponent<CanvasGroup>();
+        RuntimeUIPrefabBuilder.ConfigureScaleAnimation(panel);
         Text("标题", root, "石臼", new Vector2(480, 50), new Vector2(-40, 300), 30);
         RectTransform close = Rect("关闭", root, new Vector2(64, 60), new Vector2(290, 300));
         Image closeImage = close.gameObject.AddComponent<Image>();

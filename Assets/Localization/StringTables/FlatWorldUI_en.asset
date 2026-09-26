@@ -2560,7 +2560,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 16649623023116289
-    m_Localized: " · Efficiency {0:0.#}% (required {1:0} RPM)"
+    m_Localized: " \xB7 Efficiency {0:0.#}% (required {1:0} RPM)"
     m_Metadata:
       m_Items: []
   - m_Id: 16649623023116290
@@ -2568,7 +2568,75 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 16649623023116291
-    m_Localized: " · Speed x{0:0.##} · Torque x{1:0.##}"
+    m_Localized: " \xB7 Speed x{0:0.##} \xB7 Torque x{1:0.##}"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17027010122473472
+    m_Localized: Rows per mouse-wheel step
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17027010181193728
+    m_Localized: '{0} rows'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740032
+    m_Localized: Writing Material
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740033
+    m_Localized: Paper
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740034
+    m_Localized: Add Page
+    m_Metadata:
+      m_Items: []
+  - m_Id: -9223372035866248469
+    m_Localized: Updating resources {0:0}%
+    m_Metadata:
+      m_Items: []
+  - m_Id: -9223372035964569759
+    m_Localized: Resources updated
+    m_Metadata:
+      m_Items: []
+  - m_Id: -9223372034884455312
+    m_Localized: Update failed; old assets kept
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12589890265088
+    m_Localized: Sort
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740035
+    m_Localized: Push Mill
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740036
+    m_Localized: "Language changes apply immediately. Click Save to keep them."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740037
+    m_Localized: "These settings do not depend on the current world. Click Save to keep changes."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740038
+    m_Localized: "Unsaved changes are discarded when you close the settings."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740039
+    m_Localized: "Settings changes saved."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740040
+    m_Localized: "Current: {0}. Select an action and enter a control; conflicts are blocked. Click Save to keep the change."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740041
+    m_Localized: "Graphics settings changed. Click Save to keep them."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740042
+    m_Localized: "Effects quality changed. Click Save to keep it."
     m_Metadata:
       m_Items: []
   references:

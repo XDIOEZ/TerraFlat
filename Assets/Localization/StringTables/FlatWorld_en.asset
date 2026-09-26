@@ -1680,54 +1680,6 @@ MonoBehaviour:
     m_Localized: Clutch
     m_Metadata:
       m_Items: []
-  - m_Id: 15838801115996179
-    m_Localized: Copper Shaft
-    m_Metadata:
-      m_Items: []
-  - m_Id: 15838801115996180
-    m_Localized: Copper Shaft
-    m_Metadata:
-      m_Items: []
-  - m_Id: 15838801115996181
-    m_Localized: Copper Gear
-    m_Metadata:
-      m_Items: []
-  - m_Id: 15838801115996182
-    m_Localized: Copper Gear
-    m_Metadata:
-      m_Items: []
-  - m_Id: 15838801115996183
-    m_Localized: Gearbox
-    m_Metadata:
-      m_Items: []
-  - m_Id: 15838801115996184
-    m_Localized: Gearbox
-    m_Metadata:
-      m_Items: []
-  - m_Id: 15838801115996185
-    m_Localized: Iron Shaft
-    m_Metadata:
-      m_Items: []
-  - m_Id: 15838801115996186
-    m_Localized: Iron Shaft
-    m_Metadata:
-      m_Items: []
-  - m_Id: 15838801115996187
-    m_Localized: Iron Gear
-    m_Metadata:
-      m_Items: []
-  - m_Id: 15838801115996188
-    m_Localized: Iron Gear
-    m_Metadata:
-      m_Items: []
-  - m_Id: 15838801115996189
-    m_Localized: Gearbox
-    m_Metadata:
-      m_Items: []
-  - m_Id: 15838801115996190
-    m_Localized: Gearbox
-    m_Metadata:
-      m_Items: []
   - m_Id: 15838801115996191
     m_Localized: Shaft Bridge
     m_Metadata:
@@ -1774,6 +1726,14 @@ MonoBehaviour:
       m_Items: []
   - m_Id: 15838801120190467
     m_Localized: Hand Drill
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17079721790529536
+    m_Localized: Paper
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17079721790529537
+    m_Localized: Sand
     m_Metadata:
       m_Items: []
   references:

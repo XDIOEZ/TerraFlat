@@ -687,12 +687,12 @@ public static class GameUIPrefabRebuilder
 
     /// <summary>
     /// 构建灰阶简约行囊版式。
-    /// 保留现有 800×640 窗口和七列滚动布局，只清理旧彩色装饰并统一内容区层级。
+    /// 保留现有 920×560 窗口和九列滚动布局，只清理旧彩色装饰并统一内容区层级。
     /// </summary>
     private static void BuildModularInventoryBagPreview(GameObject root)
     {
-        const float width = 800f;
-        const float height = 640f;
+        const float width = 920f;
+        const float height = 560f;
 
         RectTransform chrome = PrepareWindow(root, width, height, "行囊", string.Empty, string.Empty);
 
@@ -720,7 +720,7 @@ public static class GameUIPrefabRebuilder
         RectTransform innerField = FindRect(chrome, "FWUI_InnerField");
         if (innerField != null)
         {
-            SetTopLeft(innerField, 24f, 92f, width - 48f, 484f);
+            SetTopLeft(innerField, 24f, 92f, width - 48f, height - 156f);
             Image fieldImage = innerField.GetComponent<Image>();
             if (fieldImage != null)
             {
@@ -735,7 +735,7 @@ public static class GameUIPrefabRebuilder
         RectTransform scroll = FindRect(root.transform, "Scroll View");
         if (scroll != null)
         {
-            SetTopLeft(scroll, 48f, 112f, width - 96f, 448f);
+            SetTopLeft(scroll, 48f, 112f, width - 96f, height - 192f);
             Image scrollImage = scroll.GetComponent<Image>();
             if (scrollImage != null)
             {
@@ -749,7 +749,7 @@ public static class GameUIPrefabRebuilder
         if (grid != null)
         {
             grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-            grid.constraintCount = 7;
+            grid.constraintCount = 9;
             grid.cellSize = new Vector2(80f, 80f);
             grid.spacing = new Vector2(4f, 4f);
             grid.padding = new RectOffset(8, 8, 8, 8);
@@ -1367,6 +1367,13 @@ public static class GameUIPrefabRebuilder
         RectTransform rect = root.GetComponent<RectTransform>();
         if (rect == null)
             return;
+
+        // 快捷栏 Canvas 固定高于普通玩法面板，容器等面板的全屏透明底图不能挡住槽位点击。
+        Canvas canvas = root.GetComponent<Canvas>();
+        if (canvas == null)
+            throw new InvalidOperationException("UI_HotBar 缺少独立 Canvas，无法保证面板打开时快捷栏可交互。");
+        canvas.overrideSorting = true;
+        canvas.sortingOrder = UIManager.HotbarModalSortingOrder;
 
         rect.anchorMin = new Vector2(0.5f, 0f);
         rect.anchorMax = new Vector2(0.5f, 0f);

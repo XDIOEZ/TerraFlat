@@ -1342,7 +1342,7 @@ public static class FlatWorldUITheme
 
         return ContainsAny(
             rootName,
-            "HUD", "PlayerWorldCoordinate", "SaveStatus", "BuffStatus", "QuestTracker",
+            "HUD", "PlayerWorldCoordinate", "SaveStatus", "BuffStatus",
             "SpeechBubble", "PlayerChatInput", "MobileControls", "RuntimeDebugOverlay",
             "世界面板", "WorldUI");
     }

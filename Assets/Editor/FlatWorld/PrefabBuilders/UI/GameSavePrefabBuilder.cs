@@ -104,6 +104,7 @@ public static class GameSavePrefabBuilder
         panel.canvasGroup = group;
         panel.rectTransform = rect;
         panel.PanelName = GameManager.GameSavePanelKey;
+        RuntimeUIPrefabBuilder.ConfigureScaleAnimation(panel);
     }
 
     private static void BuildScrim(Transform root)

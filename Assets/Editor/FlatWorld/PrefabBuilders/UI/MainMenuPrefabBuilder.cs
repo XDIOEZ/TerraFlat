@@ -204,6 +204,7 @@ public static class MainMenuPrefabBuilder
         panel.canvasGroup = group;
         panel.rectTransform = rect;
         panel.PanelName = GameManager.MainMenuPanelKey;
+        RuntimeUIPrefabBuilder.ConfigureScaleAnimation(panel);
     }
 
     private static void BuildBackground(Transform root, Sprite sprite)

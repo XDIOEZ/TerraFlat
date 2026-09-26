@@ -36,7 +36,9 @@
       "data": {
         "openDuration": 0.2,
         "closeDuration": 0.15,
-        "closedScale": 0.94,
+        "offsetX": 0.0,
+        "offsetY": 0.0,
+        "closedScale": 0.82,
         "openEase": "OutCubic",
         "closeEase": "InCubic"
       }

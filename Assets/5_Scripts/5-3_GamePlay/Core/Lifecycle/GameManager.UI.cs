@@ -199,6 +199,7 @@ public partial class GameManager
     partial void DisposeWorldEntryPresentation()
     {
         WorldEntryProgressChanged -= OnWorldEntryProgressChanged;
+        saveStatusHUD?.CancelResourceReload();
         activeSaveOperationCount = 0;
         saveOperationFailed = false;
         saveStatusHUD = null;
@@ -235,6 +236,33 @@ public partial class GameManager
 
         saveStatusHUD?.EndSave(!saveOperationFailed);
         saveOperationFailed = false;
+    }
+
+    /// <summary>开始显示游戏内 F5 资源更新进度。</summary>
+    internal void BeginResourceReloadStatus()
+    {
+        saveStatusHUD ??= GameSaveStatusHUD.Ensure(this);
+        saveStatusHUD?.BeginResourceReload();
+    }
+
+    /// <summary>把资源加载计划的总进度交给常驻状态 HUD。</summary>
+    internal void UpdateResourceReloadStatus(float progress)
+    {
+        saveStatusHUD ??= GameSaveStatusHUD.Ensure(this);
+        saveStatusHUD?.UpdateResourceReloadProgress(progress);
+    }
+
+    /// <summary>显示 F5 热更新结果。</summary>
+    internal void EndResourceReloadStatus(bool succeeded)
+    {
+        saveStatusHUD ??= GameSaveStatusHUD.Ensure(this);
+        saveStatusHUD?.EndResourceReload(succeeded);
+    }
+
+    /// <summary>世界退出或热更新取消时收起进度提示。</summary>
+    internal void CancelResourceReloadStatus()
+    {
+        saveStatusHUD?.CancelResourceReload();
     }
 
     #endregion
@@ -864,6 +892,7 @@ public partial class GameManager
             null);
         BindMainMenuSettingsQuality(panel);
         BindMainMenuSettingsLanguage(panel);
+        SettingsEditSessionController.Ensure(panel);
         panel.RefreshUIComponents();
         pagination?.RefreshPageLifecycles();
         panel.PrepareForGamepadNavigation(MainMenuSettingsPreferredControlKey);
@@ -931,7 +960,9 @@ public partial class GameManager
         }
 
         RefreshMainMenuSettingsQuality(panel);
-        SetMainMenuSettingsStatus(panel, "画质设置已保存");
+        SetMainMenuSettingsStatus(
+            panel,
+            FlatWorldLocalizationService.GetUiText("画质设置已修改，请点击保存"));
     }
 
     /// <summary>应用主菜单的后处理特效质量。</summary>
@@ -948,7 +979,9 @@ public partial class GameManager
         }
 
         RefreshMainMenuSettingsQuality(panel);
-        SetMainMenuSettingsStatus(panel, "特效质量设置已保存");
+        SetMainMenuSettingsStatus(
+            panel,
+            FlatWorldLocalizationService.GetUiText("特效质量设置已修改，请点击保存"));
     }
 
     /// <summary>恢复主菜单当前已注册的全部设置默认值。</summary>

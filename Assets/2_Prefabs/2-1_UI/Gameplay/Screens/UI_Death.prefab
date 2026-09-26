@@ -355,6 +355,7 @@ GameObject:
   - component: {fileID: 1359344631300528648}
   - component: {fileID: 1488680035631547101}
   - component: {fileID: 7509096894359410181}
+  - component: {fileID: 7000000000000000000}
   m_Layer: 5
   m_Name: UI_Death
   m_TagString: Untagged
@@ -1031,3 +1032,17 @@ RectTransform:
   m_CorrespondingSourceObject: {fileID: 44358415694853317, guid: 8c3e275eabc48b04c828e6162cc59129, type: 3}
   m_PrefabInstance: {fileID: 8352519516115799137}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &7000000000000000000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5019330763773049737}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a770e3391c6fbbc4c931ac2c40acd1f7, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  animationId: panel.scale
+  motionRoot: {fileID: 1019407897883900610}

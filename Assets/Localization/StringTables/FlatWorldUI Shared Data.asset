@@ -2491,14 +2491,70 @@ MonoBehaviour:
     m_Key: ui.text.47C02999
     m_Metadata:
       m_Items: []
+  - m_Id: 17027010122473472
+    m_Key: ui.text.51D8F5E6
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17027010181193728
+    m_Key: ui.text.96021815
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740032
+    m_Key: ui.text.124C124B
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740033
+    m_Key: ui.text.2E7751A5
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740034
+    m_Key: ui.text.02AC6394
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740035
+    m_Key: ui.text.41D3AFA3
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12589890265088
+    m_Key: ui.text.318B340E
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740036
+    m_Key: ui.text.456CE651
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740037
+    m_Key: ui.text.0CDC1B71
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740038
+    m_Key: ui.text.376D5A83
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740039
+    m_Key: ui.text.ABC9789B
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740040
+    m_Key: ui.text.0E9344E2
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740041
+    m_Key: ui.text.41F1AA95
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740042
+    m_Key: ui.text.B51F9CA8
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:
-    rid: 1500752182028533824
+    rid: 443753568374358017
   references:
     version: 2
     RefIds:
-    - rid: 1500752182028533824
+    - rid: 443753568374358017
       type: {class: DistributedUIDGenerator, ns: UnityEngine.Localization.Tables, asm: Unity.Localization}
       data:
-        m_CustomEpoch: 1786211281261
+        m_CustomEpoch: 1790309974475

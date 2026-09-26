@@ -3,6 +3,13 @@
 /// </summary>
 public static class RuntimeUIPrefabKeys
 {
+    #region 公共控件
+
+    /// <summary>全局可交互滑动条控件。</summary>
+    public const string SliderControl = "UI_SliderControl";
+
+    #endregion
+
     #region 设置面板
 
     public const string AudioSettings = "UI_AudioSettings";
@@ -29,8 +36,6 @@ public static class RuntimeUIPrefabKeys
     public const string SaveStatus = "UI_SaveStatus";
     public const string BuffStatus = "UI_BuffStatus";
     public const string BuffStatusItem = "UI_BuffStatusItem";
-    public const string QuestTracker = "UI_QuestTracker";
-    public const string QuestTrackerItem = "UI_QuestTrackerItem";
     public const string MobileControls = "UI_MobileControls";
     public const string MobileControlLayoutEditor = "UI_MobileControlLayoutEditor";
     /// <summary>手持可阅读物品打开的双页书籍面板。</summary>

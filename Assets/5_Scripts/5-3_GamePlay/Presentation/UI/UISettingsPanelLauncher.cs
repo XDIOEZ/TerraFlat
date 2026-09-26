@@ -12,6 +12,7 @@ public sealed class UISettingsPanelLauncher : MonoBehaviour, ISettingsPageLifecy
     private Slider scaleSlider;
     private Slider animationSpeedSlider;
     private Slider hotbarBottomSpacingSlider;
+    private Slider scrollRowsPerWheelTickSlider;
     private Slider touchControlsOpacitySlider;
     private Slider leftControlZoneSlider;
     private Slider rightControlZoneSlider;
@@ -20,6 +21,7 @@ public sealed class UISettingsPanelLauncher : MonoBehaviour, ISettingsPageLifecy
     private TextMeshProUGUI scaleValueText;
     private TextMeshProUGUI animationSpeedValueText;
     private TextMeshProUGUI hotbarBottomSpacingValueText;
+    private TextMeshProUGUI scrollRowsPerWheelTickValueText;
     private TextMeshProUGUI touchControlsOpacityValueText;
     private TextMeshProUGUI leftControlZoneValueText;
     private TextMeshProUGUI rightControlZoneValueText;
@@ -29,6 +31,7 @@ public sealed class UISettingsPanelLauncher : MonoBehaviour, ISettingsPageLifecy
     private ISettingsSlider scaleSetting;
     private ISettingsSlider animationSpeedSetting;
     private ISettingsSlider hotbarBottomSpacingSetting;
+    private ISettingsSlider scrollRowsPerWheelTickSetting;
     private ISettingsSlider touchControlsOpacitySetting;
     private ISettingsSlider leftControlZoneSetting;
     private ISettingsSlider rightControlZoneSetting;
@@ -60,6 +63,8 @@ public sealed class UISettingsPanelLauncher : MonoBehaviour, ISettingsPageLifecy
         animationSpeedSetting = provider.GetSlider(UIUserSettings.AnimationSpeedSettingKey);
         hotbarBottomSpacingSetting =
             provider.GetSlider(UIUserSettings.HotbarBottomSpacingSettingKey);
+        scrollRowsPerWheelTickSetting =
+            provider.GetSlider(UIUserSettings.ScrollRowsPerWheelTickSettingKey);
         touchControlsOpacitySetting =
             provider.GetSlider(UIUserSettings.TouchControlsOpacitySettingKey);
         leftControlZoneSetting =
@@ -73,6 +78,7 @@ public sealed class UISettingsPanelLauncher : MonoBehaviour, ISettingsPageLifecy
         scaleSlider = FindComponent<Slider>(transform, "界面缩放");
         animationSpeedSlider = FindComponent<Slider>(transform, "UI动画速度");
         hotbarBottomSpacingSlider = FindComponent<Slider>(transform, "快捷栏底部间距");
+        scrollRowsPerWheelTickSlider = FindComponent<Slider>(transform, "滚轮每次翻动行数");
         touchControlsOpacitySlider = FindComponent<Slider>(transform, "触屏控件透明度");
         leftControlZoneSlider = FindComponent<Slider>(transform, "左侧触控区比例");
         rightControlZoneSlider = FindComponent<Slider>(transform, "右侧触控区比例");
@@ -82,6 +88,8 @@ public sealed class UISettingsPanelLauncher : MonoBehaviour, ISettingsPageLifecy
         animationSpeedValueText = FindComponent<TextMeshProUGUI>(transform, "UI动画速度数值");
         hotbarBottomSpacingValueText =
             FindComponent<TextMeshProUGUI>(transform, "快捷栏底部间距数值");
+        scrollRowsPerWheelTickValueText =
+            FindComponent<TextMeshProUGUI>(transform, "滚轮每次翻动行数数值");
         touchControlsOpacityValueText =
             FindComponent<TextMeshProUGUI>(transform, "触屏控件透明度数值");
         leftControlZoneValueText = FindComponent<TextMeshProUGUI>(transform, "左侧触控区数值");
@@ -95,6 +103,9 @@ public sealed class UISettingsPanelLauncher : MonoBehaviour, ISettingsPageLifecy
         ConfigureSlider(hotbarBottomSpacingSlider, hotbarBottomSpacingSetting);
         if (hotbarBottomSpacingSlider != null)
             hotbarBottomSpacingSlider.wholeNumbers = true;
+        ConfigureSlider(scrollRowsPerWheelTickSlider, scrollRowsPerWheelTickSetting);
+        if (scrollRowsPerWheelTickSlider != null)
+            scrollRowsPerWheelTickSlider.wholeNumbers = true;
         ConfigureSlider(touchControlsOpacitySlider, touchControlsOpacitySetting);
         if (touchControlsOpacitySlider != null)
             touchControlsOpacitySlider.wholeNumbers = true;
@@ -103,6 +114,7 @@ public sealed class UISettingsPanelLauncher : MonoBehaviour, ISettingsPageLifecy
         scaleSlider?.onValueChanged.AddListener(OnScaleChanged);
         animationSpeedSlider?.onValueChanged.AddListener(OnAnimationSpeedChanged);
         hotbarBottomSpacingSlider?.onValueChanged.AddListener(OnHotbarBottomSpacingChanged);
+        scrollRowsPerWheelTickSlider?.onValueChanged.AddListener(OnScrollRowsPerWheelTickChanged);
         touchControlsOpacitySlider?.onValueChanged.AddListener(OnTouchControlsOpacityChanged);
         leftControlZoneSlider?.onValueChanged.AddListener(OnLeftControlZoneChanged);
         rightControlZoneSlider?.onValueChanged.AddListener(OnRightControlZoneChanged);
@@ -112,12 +124,14 @@ public sealed class UISettingsPanelLauncher : MonoBehaviour, ISettingsPageLifecy
         initialized = true;
 
         if (scaleSlider == null || animationSpeedSlider == null || hotbarBottomSpacingSlider == null ||
+            scrollRowsPerWheelTickSlider == null ||
             touchControlsOpacitySlider == null ||
             leftControlZoneSlider == null ||
             rightControlZoneSlider == null || safeAreaToggle == null ||
             floatingMoveJoystickToggle == null || scaleValueText == null ||
             animationSpeedValueText == null ||
             hotbarBottomSpacingValueText == null ||
+            scrollRowsPerWheelTickValueText == null ||
             touchControlsOpacityValueText == null ||
             leftControlZoneValueText == null || rightControlZoneValueText == null ||
             controlZoneStatusText == null || statusText == null || resetButton == null)
@@ -161,6 +175,15 @@ public sealed class UISettingsPanelLauncher : MonoBehaviour, ISettingsPageLifecy
         hotbarBottomSpacingSetting?.SetValue(value);
         hotbarBottomSpacingSlider?.SetValueWithoutNotify(
             hotbarBottomSpacingSetting?.Value ?? value);
+        RefreshStatus();
+    }
+
+    /// <summary>保存每次滚轮对应的条目行数。</summary>
+    private void OnScrollRowsPerWheelTickChanged(float value)
+    {
+        scrollRowsPerWheelTickSetting?.SetValue(value);
+        scrollRowsPerWheelTickSlider?.SetValueWithoutNotify(
+            scrollRowsPerWheelTickSetting?.Value ?? value);
         RefreshStatus();
     }
 
@@ -218,6 +241,8 @@ public sealed class UISettingsPanelLauncher : MonoBehaviour, ISettingsPageLifecy
             animationSpeedSlider.SetValueWithoutNotify(animationSpeedSetting.Value);
         if (hotbarBottomSpacingSlider != null && hotbarBottomSpacingSetting != null)
             hotbarBottomSpacingSlider.SetValueWithoutNotify(hotbarBottomSpacingSetting.Value);
+        if (scrollRowsPerWheelTickSlider != null && scrollRowsPerWheelTickSetting != null)
+            scrollRowsPerWheelTickSlider.SetValueWithoutNotify(scrollRowsPerWheelTickSetting.Value);
         if (touchControlsOpacitySlider != null && touchControlsOpacitySetting != null)
             touchControlsOpacitySlider.SetValueWithoutNotify(touchControlsOpacitySetting.Value);
         if (leftControlZoneSlider != null && leftControlZoneSetting != null)
@@ -237,9 +262,15 @@ public sealed class UISettingsPanelLauncher : MonoBehaviour, ISettingsPageLifecy
         if (scaleValueText != null && scaleSetting != null)
             scaleValueText.text = ToPercent(scaleSetting.Value);
         if (animationSpeedValueText != null && animationSpeedSetting != null)
-            animationSpeedValueText.text = $"{animationSpeedSetting.Value:0.##}×";
+            animationSpeedValueText.text = $"{animationSpeedSetting.Value:0.00}×";
         if (hotbarBottomSpacingValueText != null && hotbarBottomSpacingSetting != null)
             hotbarBottomSpacingValueText.text = $"{Mathf.RoundToInt(hotbarBottomSpacingSetting.Value)} px";
+        if (scrollRowsPerWheelTickValueText != null && scrollRowsPerWheelTickSetting != null)
+        {
+            scrollRowsPerWheelTickValueText.text = FlatWorldLocalizationService.GetUiFormat(
+                "{0} 行",
+                Mathf.RoundToInt(scrollRowsPerWheelTickSetting.Value));
+        }
         if (touchControlsOpacityValueText != null && touchControlsOpacitySetting != null)
             touchControlsOpacityValueText.text = ToWholePercent(touchControlsOpacitySetting.Value);
         if (leftControlZoneValueText != null && leftControlZoneSetting != null)
@@ -280,6 +311,7 @@ public sealed class UISettingsPanelLauncher : MonoBehaviour, ISettingsPageLifecy
         scaleSlider?.onValueChanged.RemoveListener(OnScaleChanged);
         animationSpeedSlider?.onValueChanged.RemoveListener(OnAnimationSpeedChanged);
         hotbarBottomSpacingSlider?.onValueChanged.RemoveListener(OnHotbarBottomSpacingChanged);
+        scrollRowsPerWheelTickSlider?.onValueChanged.RemoveListener(OnScrollRowsPerWheelTickChanged);
         touchControlsOpacitySlider?.onValueChanged.RemoveListener(OnTouchControlsOpacityChanged);
         leftControlZoneSlider?.onValueChanged.RemoveListener(OnLeftControlZoneChanged);
         rightControlZoneSlider?.onValueChanged.RemoveListener(OnRightControlZoneChanged);
