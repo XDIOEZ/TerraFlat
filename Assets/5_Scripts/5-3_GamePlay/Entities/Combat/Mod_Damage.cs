@@ -1,5 +1,6 @@
 // 伤害模块应该管理的内容
 using System.Collections.Generic;
+using FlatWorld.WorldModel;
 using UnityEngine;
 
 [RequireComponent(typeof(BoxCollider2D))]
@@ -234,11 +235,19 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
         tileDamageAppliedThisWindow = false;
         nonDamageableImpactAppliedThisWindow = false;
         nextGroundHarvestUseTime = 0f;
-        if (item != null && harvestKind != ResourceToolKind.None)
-        {
-            item.OnAct -= HandleGroundHarvestAct;
+        SynchronizeGroundHarvestAct();
+    }
+
+    /// <summary>资源参数热更新后同步右键采挖订阅，无需重置攻击运行状态。</summary>
+    public override void OnResourcesReloaded() => SynchronizeGroundHarvestAct();
+
+    /// <summary>按当前工具类别重建右键采挖订阅，避免配置变化后仍使用旧能力。</summary>
+    private void SynchronizeGroundHarvestAct()
+    {
+        if (item == null) return;
+        item.OnAct -= HandleGroundHarvestAct;
+        if (harvestKind != ResourceToolKind.None)
             item.OnAct += HandleGroundHarvestAct;
-        }
     }
 
     /// <summary>回池或卸载时解绑右键采挖，避免物品重用后重复工作。</summary>
@@ -254,22 +263,36 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
     /// <summary>铲子右键每次只提交一次挖掘工作量，并播放泥土反馈。</summary>
     private void HandleGroundHarvestAct()
     {
-        if (harvestKind == ResourceToolKind.None || Time.time < nextGroundHarvestUseTime ||
-            !GroundTileHarvestSystem.TryWork(this, out _, out Vector2Int worldCell, out float interval))
+        if (harvestKind == ResourceToolKind.None || Time.time < nextGroundHarvestUseTime)
             return;
+
+        if (!GroundTileHarvestSystem.TryWork(this, out bool completed, out Vector2Int worldCell,
+                out float interval, out string failureReason))
+        {
+            if (!string.IsNullOrEmpty(failureReason))
+                ItemActionFeedback.Show(item.Owner, failureReason);
+            return;
+        }
 
         nextGroundHarvestUseTime = Time.time + interval;
         item.itemMods.GetMod_ByID<Mod_Weapon_AnimationAction>("Module_Weapon_AnimationAction")?.RequestAttack();
         HoeTillingFeedback.PlayDigging(item, worldCell);
         UpdateGroundHarvestOutline();
+
+        // 部分工作明确显示次数，避免玩家把累计采挖误认为右键无效。
+        if (!completed && GroundTileHarvestSystem.TryResolveTarget(this, out RuntimeTerrainTileSample sample,
+                out _, out GroundTileHarvestRule rule))
+        {
+            int requiredUses = GroundTileHarvestSystem.ResolveRequiredUses(this, rule);
+            int completedUses = Mathf.CeilToInt(GroundTileHarvestSystem.ReadProgress(sample) * requiredUses);
+            ItemActionFeedback.Show(item.Owner, $"挖掘进度：{completedUses}/{requiredUses}");
+        }
     }
 
-    /// <summary>预览真实可采挖地格，按已保存工作量显示分级裂纹。</summary>
+    /// <summary>指向任意地表时显示选格框，仅对可采挖地格显示进度裂纹。</summary>
     private void UpdateGroundHarvestOutline()
     {
-        if (harvestKind == ResourceToolKind.None ||
-            !GroundTileHarvestSystem.TryResolveTarget(this, out RuntimeTerrainTileSample sample,
-                out _, out _))
+        if (!GroundTileHarvestSystem.TryResolvePreview(this, out RuntimeTerrainTileSample sample))
         {
             groundHarvestOutline?.Hide();
             groundHarvestCracks?.Hide();
@@ -278,6 +301,11 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
 
         groundHarvestOutline ??= WorldTileTargetOutline.Create("Shovel Ground Target Outline");
         groundHarvestOutline.Show(sample.WorldCell);
+        if (!GroundTileHarvestSystem.IsHarvestableGround(sample.Cell.GroundTileId))
+        {
+            groundHarvestCracks?.Hide();
+            return;
+        }
         float progress = GroundTileHarvestSystem.ReadProgress(sample);
         if (progress <= 0f)
         {

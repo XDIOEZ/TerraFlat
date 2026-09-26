@@ -14,7 +14,7 @@ public sealed class GroundTileHarvestRule
     public string ItemId; // 产物定义 ID。
     public int Amount = 1; // 一格产物数量。
     public string ReplacementTileId; // 挖尽后保留的地表定义 ID。
-    public int BaseUsesPerTile = 4; // 一级铲子需要的使用次数。
+    public int BaseUsesPerTile = 6; // 一级铲子需要的使用次数。
     public int MinimumUsesPerTile = 2; // 高品质工具至少需要的使用次数。
     public float UseInterval = 0.2f; // 两次右键之间的最短间隔。
     #endregion

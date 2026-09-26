@@ -13,35 +13,89 @@ public static class GroundTileHarvestSystem
     /// <summary>按地块定义校验手持工具、光标、距离及未被占用的裸露地表。</summary>
     public static bool TryResolveTarget(Mod_Damage tool, out RuntimeTerrainTileSample sample,
         out RuntimeTileDefinition definition, out GroundTileHarvestRule rule)
+        => TryResolveTarget(tool, out sample, out definition, out rule, out _);
+
+    /// <summary>返回采挖被拒绝的具体原因，供右键反馈使用。</summary>
+    public static bool TryResolveTarget(Mod_Damage tool, out RuntimeTerrainTileSample sample,
+        out RuntimeTileDefinition definition, out GroundTileHarvestRule rule, out string reason)
     {
         sample = default;
         definition = null;
         rule = null;
+        reason = null;
         if (!GameNetwork.HasStateAuthority || tool?.item == null ||
             tool.HarvestKind == ResourceToolKind.None || !tool.item.InHand ||
             tool.item.DestructionHandled || tool.item.Owner is not Player actor ||
             !actor.IsLocalProfile || actor.DestructionHandled ||
             !(actor.itemMods.GetMod_ByID<DamageReceiver>(ModText.Hp)?.Hp > 0f))
+        {
+            reason = "当前无法使用铲子。";
             return false;
+        }
 
         GameController controller = actor.itemMods.GetMod_ByID<GameController>(ModText.Controller);
         if (controller == null || controller.IsGameplayInputLocked ||
             (!controller.IsUsingMobile && controller.IsPointerOverUI()))
+        {
+            reason = "当前无法指向世界地块。";
             return false;
+        }
 
         ChunkMgr manager = ChunkMgr.ExistingInstance;
         GameRes resources = GameRes.ExistingInstance;
         if (manager == null || resources == null || SaveDataMgr.Instance?.SaveData == null ||
-            !manager.TryGetRuntimeTerrainTile(controller.GetMouseWorldPosition(), out sample) ||
-            !FarmlandSystem.IsOpen(sample) ||
-            !resources.TryGetTileDefinition(sample.Cell.GroundTileId, out definition))
+            !manager.TryGetRuntimeTerrainTile(controller.GetMouseWorldPosition(), out sample))
+        {
+            reason = "目标地块尚未加载。";
             return false;
+        }
+
+        if (!resources.TryGetTileDefinition(sample.Cell.GroundTileId, out definition))
+        {
+            reason = "这里没有可挖掘的地表。";
+            return false;
+        }
 
         rule = definition.GroundHarvest;
-        return rule != null && tool.HarvestKind == rule.RequiredTool &&
-               tool.HarvestTier >= rule.MinimumTier &&
-               FarmlandSystem.IsWithinReach(actor.transform.position, sample.WorldCell, rule.Reach) &&
-               !FarmlandSystem.HasWorldPlant(sample.WorldCell);
+        if (rule == null || tool.HarvestKind != rule.RequiredTool)
+        {
+            reason = "这块地不能用当前工具挖掘。";
+            return false;
+        }
+        if (tool.HarvestTier < rule.MinimumTier)
+        {
+            reason = "铲子等级不足。";
+            return false;
+        }
+        if (!FarmlandSystem.IsWithinReach(actor.transform.position, sample.WorldCell, rule.Reach))
+        {
+            reason = "距离地块太远。";
+            return false;
+        }
+        if (!FarmlandSystem.IsOpen(sample) || FarmlandSystem.HasWorldPlant(sample.WorldCell))
+        {
+            reason = "地块被占用，无法挖掘。";
+            return false;
+        }
+        return true;
+    }
+
+    /// <summary>预览铲子指向的地表；采挖资格只影响实际操作，不隐藏所选地块。</summary>
+    public static bool TryResolvePreview(Mod_Damage tool, out RuntimeTerrainTileSample sample)
+    {
+        sample = default;
+        if (tool?.item == null || tool.HarvestKind == ResourceToolKind.None ||
+            !tool.item.InHand || tool.item.Owner is not Player actor || !actor.IsLocalProfile)
+            return false;
+
+        GameController controller = actor.itemMods.GetMod_ByID<GameController>(ModText.Controller);
+        ChunkMgr manager = ChunkMgr.ExistingInstance;
+        if (controller == null || controller.IsGameplayInputLocked ||
+            (!controller.IsUsingMobile && controller.IsPointerOverUI()) || manager == null ||
+            !manager.TryGetRuntimeTerrainTile(controller.GetMouseWorldPosition(), out sample))
+            return false;
+
+        return sample.Cell.GroundTileId > 0;
     }
     #endregion
 
@@ -56,7 +110,7 @@ public static class GroundTileHarvestSystem
     }
 
     /// <summary>工具品质提高单次工作量，同时保证任意铲子至少要操作两次。</summary>
-    private static int ResolveRequiredUses(Mod_Damage tool, GroundTileHarvestRule rule)
+    internal static int ResolveRequiredUses(Mod_Damage tool, GroundTileHarvestRule rule)
     {
         float quality = Mathf.Max(tool.HarvestEfficiency, 1f + 0.5f * (tool.HarvestTier - 1));
         return Mathf.Max(rule.MinimumUsesPerTile,
@@ -74,12 +128,17 @@ public static class GroundTileHarvestSystem
     /// <summary>一次右键只增加一次工作量；完成时才产出物品并替换地块。</summary>
     public static bool TryWork(Mod_Damage tool, out bool completed, out Vector2Int worldCell,
         out float useInterval)
+        => TryWork(tool, out completed, out worldCell, out useInterval, out _);
+
+    /// <summary>返回一次采挖的结果和拒绝原因，供工具向玩家显示。</summary>
+    public static bool TryWork(Mod_Damage tool, out bool completed, out Vector2Int worldCell,
+        out float useInterval, out string failureReason)
     {
         completed = false;
         worldCell = default;
         useInterval = 0f;
         if (!TryResolveTarget(tool, out RuntimeTerrainTileSample sample,
-                out RuntimeTileDefinition definition, out GroundTileHarvestRule rule))
+                out RuntimeTileDefinition definition, out GroundTileHarvestRule rule, out failureReason))
             return false;
 
         GameRes resources = GameRes.ExistingInstance;
@@ -111,6 +170,7 @@ public static class GroundTileHarvestSystem
                 sample.Terrain.SetEnvironmentValue(TileBuildingSystem.RuntimeDamageLayerId,
                     local.x, local.y, previousProgress);
                 Debug.LogError($"[地表采挖] {definition.Id} 进度保存失败：{exception}");
+                failureReason = "挖掘进度保存失败。";
                 return false;
             }
 
@@ -122,6 +182,7 @@ public static class GroundTileHarvestSystem
         if (!drop.IsValid)
         {
             completed = false;
+            failureReason = "掉落物生成失败。";
             return false;
         }
 
@@ -144,8 +205,13 @@ public static class GroundTileHarvestSystem
             DroppedItemService.Remove(drop);
             Debug.LogError($"[地表采挖] {definition.Id} 提交失败：{exception}");
             completed = false;
+            failureReason = "地块更新失败。";
             return false;
         }
+
+        // 地面已变更后同步移除独立草层，避免石地仍显示原来的草，并保存草层差量。
+        if (sample.Terrain.GetGrass(local.x, local.y) != 0)
+            RuntimeGrassClearing.Clear(sample);
 
         ItemActionFeedback.Show(tool.item.Owner, $"挖掘完成，获得{product.DisplayName} ×{rule.Amount}。");
         return true;

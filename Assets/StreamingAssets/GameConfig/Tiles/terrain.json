@@ -24,7 +24,12 @@
           "fertileValue": { "baseValue": 1, "baseAdditive": 0, "additiveModifier": 0, "multiplicativeModifier": 1, "finalAdditive": 0 }
         }
       },
-      "behaviours": [ { "type": "grass", "parameters": { "buffInfo": [] } } ]
+      "behaviours": [ { "type": "grass", "parameters": { "buffInfo": [] } } ],
+      "groundHarvest": {
+        "requiredTool": "Shovel", "minimumTier": 1, "reach": 2,
+        "itemId": "Earth", "amount": 1, "replacementTileId": "Tile_Stone",
+        "baseUsesPerTile": 6, "minimumUsesPerTile": 2, "useInterval": 0.2
+      }
     },
     {
       "id": "Tile_Sand",
@@ -35,7 +40,12 @@
         "type": "universal",
         "parameters": { "tileTag": "", "demolitionTime": 0, "penalty": 1000, "isWalkable": true }
       },
-      "behaviours": []
+      "behaviours": [],
+      "groundHarvest": {
+        "requiredTool": "Shovel", "minimumTier": 1, "reach": 2,
+        "itemId": "Sand", "amount": 1, "replacementTileId": "Tile_Stone",
+        "baseUsesPerTile": 6, "minimumUsesPerTile": 2, "useInterval": 0.2
+      }
     },
     {
       "id": "Tile_Stone",
@@ -105,7 +115,7 @@
       "groundHarvest": {
         "requiredTool": "Shovel", "minimumTier": 1, "reach": 2,
         "itemId": "Peat", "amount": 1, "replacementTileId": "Tile_Grass",
-        "baseUsesPerTile": 4, "minimumUsesPerTile": 2, "useInterval": 0.2
+        "baseUsesPerTile": 6, "minimumUsesPerTile": 2, "useInterval": 0.2
       }
     },
     {

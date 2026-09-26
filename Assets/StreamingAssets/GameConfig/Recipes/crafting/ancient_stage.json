@@ -29,6 +29,24 @@
       "actions": []
     },
     {
+      "id": "core:木铲",
+      "displayName": "木铲",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "gridWidth": 3,
+      "gridHeight": 1,
+      "allowMirror": false,
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        { "slot": 0, "match": "exact_item", "itemId": "Plank", "tag": "", "amount": 2 },
+        { "slot": 1, "match": "exact_item", "itemId": "Stick_Wood", "tag": "", "amount": 2 },
+        { "slot": 2, "match": "exact_item", "itemId": "Rope", "tag": "", "amount": 1 }
+      ],
+      "outputs": [ { "itemId": "Shovel_Wood", "amount": 1 } ],
+      "actions": []
+    },
+    {
       "id": "core:石铲",
       "displayName": "石铲",
       "recipeType": "crafting",
@@ -67,6 +85,78 @@
           "amount": 1
         }
       ],
+      "actions": []
+    },
+    {
+      "id": "core:铜铲",
+      "displayName": "铜铲",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "gridWidth": 3,
+      "gridHeight": 1,
+      "allowMirror": false,
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        { "slot": 0, "match": "exact_item", "itemId": "Ingot_Copper", "tag": "", "amount": 2 },
+        { "slot": 1, "match": "exact_item", "itemId": "Stick_Wood", "tag": "", "amount": 2 },
+        { "slot": 2, "match": "exact_item", "itemId": "Rope", "tag": "", "amount": 1 }
+      ],
+      "outputs": [ { "itemId": "Shovel_Copper", "amount": 1 } ],
+      "actions": []
+    },
+    {
+      "id": "core:粗铁铲",
+      "displayName": "粗铁铲",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "gridWidth": 3,
+      "gridHeight": 1,
+      "allowMirror": false,
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        { "slot": 0, "match": "exact_item", "itemId": "Ingot_RawIron", "tag": "", "amount": 2 },
+        { "slot": 1, "match": "exact_item", "itemId": "Stick_Wood", "tag": "", "amount": 2 },
+        { "slot": 2, "match": "exact_item", "itemId": "Rope", "tag": "", "amount": 1 }
+      ],
+      "outputs": [ { "itemId": "Shovel_RawIron", "amount": 1 } ],
+      "actions": []
+    },
+    {
+      "id": "core:青铜铲",
+      "displayName": "青铜铲",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "gridWidth": 3,
+      "gridHeight": 1,
+      "allowMirror": false,
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        { "slot": 0, "match": "exact_item", "itemId": "Ingot_Bronze", "tag": "", "amount": 2 },
+        { "slot": 1, "match": "exact_item", "itemId": "Stick_Wood", "tag": "", "amount": 2 },
+        { "slot": 2, "match": "exact_item", "itemId": "Rope", "tag": "", "amount": 1 }
+      ],
+      "outputs": [ { "itemId": "Shovel_Bronze", "amount": 1 } ],
+      "actions": []
+    },
+    {
+      "id": "core:铁铲",
+      "displayName": "铁铲",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "gridWidth": 3,
+      "gridHeight": 1,
+      "allowMirror": false,
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        { "slot": 0, "match": "exact_item", "itemId": "Ingot_WroughtIron", "tag": "", "amount": 2 },
+        { "slot": 1, "match": "exact_item", "itemId": "Stick_Wood", "tag": "", "amount": 2 },
+        { "slot": 2, "match": "exact_item", "itemId": "Rope", "tag": "", "amount": 1 }
+      ],
+      "outputs": [ { "itemId": "Shovel_Iron", "amount": 1 } ],
       "actions": []
     },
     {

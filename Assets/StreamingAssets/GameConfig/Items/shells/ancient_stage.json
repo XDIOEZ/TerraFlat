@@ -534,15 +534,57 @@
       }
     },
     {
-      "id": "Shovel_Stone",
+      "id": "Shovel_Base",
       "parent": "Pickaxe_Stone",
+      "abstract": true,
+      "sourcePrefab": null,
+      "tags": [ "Shovel" ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/StoneShovel/StoneShovel_Icon.png"
+      },
+      "modules": {
+        "damage": {
+          "parameters": {
+            "harvestKind": 2,
+            "tileDamageToolKind": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "Shovel_Wood",
+      "parent": "Shovel_Base",
+      "gameName": "木铲",
+      "description": "右键挖掘草地、沙地或泥炭地块需6次；也可挖取河岸黏土点。",
+      "durability": 80.0,
+      "maxDurability": 80.0,
+      "weight": 1.7,
+      "volume": 3.0,
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/WoodShovel/WoodShovel_Icon.png",
+        "color": { "r": 1.0, "g": 1.0, "b": 1.0, "a": 1.0 }
+      },
+      "modules": {
+        "damage": {
+          "parameters": {
+            "DamageValues": { "Cutting": 0.0, "Piercing": 4.0, "Chopping": 0.0, "Blunt": 2.0 },
+            "harvestTier": 1,
+            "harvestEfficiency": 1.0
+          }
+        }
+      }
+    },
+    {
+      "id": "Shovel_Stone",
+      "parent": "Shovel_Base",
       "gameName": "石铲",
-      "description": "右键挖掘泥炭地块需4次，也可挖取河岸黏土点；不用于开采矿石。",
+      "description": "右键挖掘草地、沙地或泥炭地块需4次；也可挖取河岸黏土点。",
+      "durability": 120.0,
+      "maxDurability": 120.0,
       "weight": 2.5,
       "volume": 3.5,
       "stackable": false,
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/StoneShovel/StoneShovel_Icon.png",
         "color": {
           "r": 1.0,
           "g": 1.0,
@@ -553,10 +595,100 @@
       "modules": {
         "damage": {
           "parameters": {
-            "harvestKind": 2,
-            "harvestTier": 1,
-            "harvestEfficiency": 1,
-            "tileDamageToolKind": 0
+            "harvestTier": 2,
+            "harvestEfficiency": 1.5
+          }
+        }
+      }
+    },
+    {
+      "id": "Shovel_Copper",
+      "parent": "Shovel_Base",
+      "gameName": "铜铲",
+      "description": "右键挖掘草地、沙地或泥炭地块需3次；也可挖取河岸黏土点。",
+      "durability": 160.0,
+      "maxDurability": 160.0,
+      "weight": 3.0,
+      "volume": 3.4,
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/CopperShovel/CopperShovel_Icon.png",
+        "color": { "r": 1.0, "g": 1.0, "b": 1.0, "a": 1.0 }
+      },
+      "modules": {
+        "damage": {
+          "parameters": {
+            "DamageValues": { "Cutting": 0.0, "Piercing": 12.0, "Chopping": 0.0, "Blunt": 5.0 },
+            "harvestTier": 3,
+            "harvestEfficiency": 2.0
+          }
+        }
+      }
+    },
+    {
+      "id": "Shovel_RawIron",
+      "parent": "Shovel_Base",
+      "gameName": "粗铁铲",
+      "description": "粗铁制成的过渡铲，掘土比铜铲更快，但金属未经充分除杂。",
+      "durability": 200.0,
+      "maxDurability": 200.0,
+      "weight": 3.3,
+      "volume": 3.5,
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/RawIronShovel/RawIronShovel_Icon.png",
+        "color": { "r": 1.0, "g": 1.0, "b": 1.0, "a": 1.0 }
+      },
+      "modules": {
+        "damage": {
+          "parameters": {
+            "DamageValues": { "Cutting": 0.0, "Piercing": 16.0, "Chopping": 0.0, "Blunt": 6.5 },
+            "harvestTier": 3,
+            "harvestEfficiency": 2.25
+          }
+        }
+      }
+    },
+    {
+      "id": "Shovel_Bronze",
+      "parent": "Shovel_Base",
+      "gameName": "青铜铲",
+      "description": "坚韧的青铜铲，能更快挖掘草地、沙地、泥炭与河岸黏土。",
+      "durability": 240.0,
+      "maxDurability": 240.0,
+      "weight": 3.2,
+      "volume": 3.4,
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/BronzeShovel/BronzeShovel_Icon.png",
+        "color": { "r": 1.0, "g": 1.0, "b": 1.0, "a": 1.0 }
+      },
+      "modules": {
+        "damage": {
+          "parameters": {
+            "DamageValues": { "Cutting": 0.0, "Piercing": 18.0, "Chopping": 0.0, "Blunt": 7.0 },
+            "harvestTier": 4,
+            "harvestEfficiency": 2.7
+          }
+        }
+      }
+    },
+    {
+      "id": "Shovel_Iron",
+      "parent": "Shovel_Base",
+      "gameName": "铁铲",
+      "description": "熟铁锻成的铁铲，耐久较高，适合持续掘土与采集黏土。",
+      "durability": 260.0,
+      "maxDurability": 260.0,
+      "weight": 3.4,
+      "volume": 3.4,
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/IronShovel/IronShovel_Icon.png",
+        "color": { "r": 1.0, "g": 1.0, "b": 1.0, "a": 1.0 }
+      },
+      "modules": {
+        "damage": {
+          "parameters": {
+            "DamageValues": { "Cutting": 0.0, "Piercing": 25.0, "Chopping": 0.0, "Blunt": 9.0 },
+            "harvestTier": 4,
+            "harvestEfficiency": 2.5
           }
         }
       }
@@ -820,13 +952,7 @@
       },
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/WaterVessel/ClayJar/ClayJar_Icon.png",
-        "spriteStates": {
-          "empty": "Assets/6_Art/Generated/WaterVessel/ClayJar/ClayJar_Icon.png",
-          "filled": "Assets/6_Art/Generated/WaterVessel/ClayJar/ClayJar_Filled.png",
-          "dirty": "Assets/6_Art/Generated/WaterVessel/ClayJar/ClayJar_Dirty.png",
-          "drinkable": "Assets/6_Art/Generated/WaterVessel/ClayJar/ClayJar_Drinkable.png",
-          "sea": "Assets/6_Art/Generated/WaterVessel/ClayJar/ClayJar_Sea.png"
-        },
+        "liquidSurface": { "bounds": { "x": 0.375, "y": 0.796875, "width": 0.25, "height": 0.078125 } },
         "color": {
           "r": 1,
           "g": 1,
@@ -1114,7 +1240,7 @@
       "description": "铁矿先用石镐采铜、再用铜镐开采。粗铁加木柄与绳子可制粗铁铁镐；铜锡按九比一冶炼青铜。备足陶罐饮水和食物，再去洞穴寻找更深的矿脉。",
       "weight": 0.1,
       "volume": 0.2,
-      "stackable": true,
+      "stackable": false,
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Quest/MinersNote/MinersNote_Icon.png",
         "color": {
@@ -1130,6 +1256,10 @@
           "id": "Mod_ReadableBook",
           "enabled": true,
           "parameters": {
+            "allowHandwriting": true,
+            "allowPageExpansion": true,
+            "writingMaterialTag": "readable.writing.ink",
+            "paperTag": "readable.paper",
             "pages": [
               {
                 "key": "item.MinersNote.page.1",
