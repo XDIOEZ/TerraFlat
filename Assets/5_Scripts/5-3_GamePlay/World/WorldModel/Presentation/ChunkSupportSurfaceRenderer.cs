@@ -2,11 +2,10 @@ using System;
 using System.Collections.Generic;
 using FlatWorld.WorldModel;
 using UnityEngine;
-using UnityEngine.Tilemaps;
 
 /// <summary>
-/// 地表覆盖独立 Tilemap 表现；只读取权威层，不改写底层地形数据。
-/// 平台/地板接触阴影通过 Tile Color RGBA 编码左、右、下、上四个外露方向，
+/// 地表覆盖经共享 BRG Owner 表现；只读取权威层，不改写底层地形数据。
+/// 平台/地板接触阴影通过实例 Data0 RGBA 编码左、右、下、上四个外露方向，
 /// 相邻覆盖面之间不再绘制内部阴影，并支持跨 Chunk 连续铺设。
 /// </summary>
 public sealed class ChunkSupportSurfaceRenderer : MonoBehaviour, IChunkViewRenderer, IWorldAwareChunkViewRenderer
@@ -14,11 +13,12 @@ public sealed class ChunkSupportSurfaceRenderer : MonoBehaviour, IChunkViewRende
     #region 配置与状态
 
     [SerializeField] private ChunkTilePaletteSO palette; // 材料到地块的映射。
-    [SerializeField] private Tilemap tilemap; // 原始地形上方的平台/地板图层。
+    [SerializeField] private Material material; // 平台专用接触阴影材质。
 
     private readonly List<NeighbourTerrainSubscription> neighbourTerrainSubscriptions = new(4);
     private WorldRuntime boundWorld;
     private ChunkRuntime chunk;
+    private ChunkTilemapRenderer owner;
     private IDisposable chunkCommittedSubscription;
 
     #endregion
@@ -48,8 +48,10 @@ public sealed class ChunkSupportSurfaceRenderer : MonoBehaviour, IChunkViewRende
             throw new InvalidOperationException("Cannot bind support rendering before terrain data is ready.");
 
         Unbind();
+        owner = GetComponent<ChunkTilemapRenderer>();
         chunk = value;
         chunk.Terrain.Changed += HandleChanged;
+        owner.BatchPresentationRebuilt += HandleBatchPresentationRebuilt;
         RefreshNeighbourTerrainSubscriptions();
         RefreshAll();
     }
@@ -60,9 +62,15 @@ public sealed class ChunkSupportSurfaceRenderer : MonoBehaviour, IChunkViewRende
         if (chunk?.Terrain != null)
             chunk.Terrain.Changed -= HandleChanged;
         ClearNeighbourTerrainSubscriptions();
+        if (owner != null)
+        {
+            owner.BatchPresentationRebuilt -= HandleBatchPresentationRebuilt;
+            if (chunk?.Terrain != null && owner.IsBatchPresentationRegistered)
+                for (int y = 0; y < chunk.Terrain.Height; y++)
+                for (int x = 0; x < chunk.Terrain.Width; x++)
+                    owner.ClearLayerVisual(ChunkBatchRendererGroupService.VisualLayer.Support, x, y);
+        }
         chunk = null;
-        if (tilemap != null)
-            tilemap.ClearAllTiles();
     }
 
     private void OnDestroy()
@@ -76,6 +84,9 @@ public sealed class ChunkSupportSurfaceRenderer : MonoBehaviour, IChunkViewRende
     #endregion
 
     #region 覆盖面绘制
+
+    /// <summary>BRG Owner 重建后补回平台覆盖。</summary>
+    private void HandleBatchPresentationRebuilt() => RefreshAll();
 
     /// <summary>支撑层改变时同步自身和四邻格的外轮廓。</summary>
     private void HandleChanged(ChunkTerrainChanged change)
@@ -106,22 +117,26 @@ public sealed class ChunkSupportSurfaceRenderer : MonoBehaviour, IChunkViewRende
     /// <summary>按稳定地块 ID 选择覆盖外观，并只保留整体外围的接触阴影。</summary>
     private void Refresh(int x, int y)
     {
-        if (chunk?.Terrain == null || tilemap == null ||
+        if (chunk?.Terrain == null ||
             x < 0 || x >= chunk.Terrain.Width || y < 0 || y >= chunk.Terrain.Height)
         {
             return;
         }
 
         int id = TerrainSupportLayer.GetTileId(chunk.Terrain, x, y);
-        palette.TryGetTile(id, out TileBase tile);
-        Vector3Int position = new(x, y, 0);
-        tilemap.SetTile(position, tile);
-        if (id == 0 || tile == null)
+        if (id == 0 || !palette.TryGetVisual(id, out Sprite sprite, out Color color,
+                out Matrix4x4 tileTransform))
+        {
+            owner.ClearLayerVisual(ChunkBatchRendererGroupService.VisualLayer.Support, x, y);
             return;
+        }
 
-        // Tile 默认锁定颜色；解除后用 RGBA 分别控制左、右、下、上的接触阴影。
-        tilemap.SetTileFlags(position, TileFlags.None);
-        tilemap.SetColor(position, BuildPerimeterMask(chunk.Terrain, x, y));
+        Int2 origin = chunk.Address.ChunkOrigin;
+        Matrix4x4 matrix = Matrix4x4.Translate(new Vector3(origin.X + x + 0.5f,
+            origin.Y + y + 0.5f)) * tileTransform;
+        Color mask = BuildPerimeterMask(chunk.Terrain, x, y);
+        owner.SetLayerVisual(ChunkBatchRendererGroupService.VisualLayer.Support, x, y,
+            sprite, material, matrix, color, new Vector4(mask.r, mask.g, mask.b, mask.a), Vector4.zero);
     }
 
     /// <summary>RGBA 分别表示左、右、下、上是否属于平台整体的外露边缘。</summary>

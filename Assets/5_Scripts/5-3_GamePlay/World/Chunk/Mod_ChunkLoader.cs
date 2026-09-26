@@ -159,13 +159,16 @@ public class Mod_ChunkLoader : Module
             return;
 
         AutoAdjustDistance();
+        // 每帧更新玩家中心；只有中心区块或视距变化才裁剪旧表现任务。
+        ChunkMgr.ExistingInstance?.RetargetRuntimePresentationQueue(
+            transform.position, EffectiveLoadDistance);
         DetectChunkChange();
 
         if (needsChunkUpdate && Time.unscaledTime - _lastChunkUpdateTime >= chunkUpdateMinInterval)
         {
             needsChunkUpdate = false;
             _lastChunkUpdateTime = Time.unscaledTime;
-            UpdateChunks(lastChunkPos);
+            UpdateChunks();
         }
     }
 
@@ -196,7 +199,7 @@ public class Mod_ChunkLoader : Module
             return;
         }
 
-        UpdateChunks(currentChunkPos);
+        UpdateChunks();
     }
 
     /// <summary>Immediately refreshes the canonical window after a local world wrap.</summary>
@@ -238,7 +241,7 @@ public class Mod_ChunkLoader : Module
         }
 
         ChunkMgr.Instance.RefreshRuntimeWindow(
-            currentChunkPos,
+            transform.position,
             activeDistance: 1,
             destroyDistance: 1,
             includeLocalPresentation: true,
@@ -348,12 +351,12 @@ public class Mod_ChunkLoader : Module
         return true;
     }
 
-    private void UpdateChunks(Vector2 chunkPos)
+    private void UpdateChunks()
     {
         if (ChunkMgr.Instance == null) return;
 
         ChunkMgr.Instance.RefreshRuntimeWindow(
-            chunkPos,
+            transform.position,
             EffectiveLoadDistance,
             EffectiveDestroyDistance,
             includeLocalPresentation: true,

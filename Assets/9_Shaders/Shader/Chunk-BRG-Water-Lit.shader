@@ -1,3 +1,4 @@
+// 与机械 Sprite 共用 ChunkBRGInstance.hlsl 的实例布局。
 Shader "FlatWorld/2D/Chunk BRG Water Lit"
 {
     Properties

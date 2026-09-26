@@ -12,7 +12,7 @@ namespace FlatWorld.WorldModel
     public sealed class DeterministicChunkGenerator : IChunkPureGenerator
     {
         /// <summary>纯区块生成规则版本；气候、群系、河流或生态空间分布规则改变时递增。</summary>
-        public const int CurrentGenerationSignature = 44;
+        public const int CurrentGenerationSignature = 45;
 
         private readonly LiquidTypeCatalog liquidTypes;
         /// <summary>资源就绪后注入会话液体表；离线纯算法测试可以使用本体最小目录。</summary>
@@ -52,23 +52,9 @@ namespace FlatWorld.WorldModel
                 bool cave = settings.Mode == ChunkGenerationMode.Cave ||
                             request.Address.DimensionId.IndexOf("cave",
                                 StringComparison.OrdinalIgnoreCase) >= 0;
-                GeneratedHydrologyMap riverMap = null;
-                if (!cave && settings.RiverEnabled)
-                {
-                    riverMap = settings.RiverAlgorithm == RiverGenerationAlgorithm.Legacy
-                        ? legacyHydrologyKernel.Build(
-                            request,
-                            settings,
-                            position => SampleHeight(
-                                request, settings, position.X, position.Y),
-                            position => SamplePrecipitation(
-                                request, settings, position.X, position.Y),
-                            cancellationToken)
-                        : BuildHeightDrivenRiverMap(request, settings, cancellationToken);
-                }
-                if (!cave && settings.LargeLakeEnabled)
-                    riverMap = LargeFreshwaterLakeKernel.Build(request, settings, riverMap,
-                        position => SampleHeight(request, settings, position.X, position.Y), cancellationToken);
+                GeneratedHydrologyMap riverMap = cave
+                    ? null
+                    : BuildSurfaceHydrologyMap(request, settings, cancellationToken);
                 for (int y = 0; y < profile.Height; y++)
                 {
                     for (int x = 0; x < profile.Width; x++)
@@ -123,8 +109,8 @@ namespace FlatWorld.WorldModel
         #region 地表位置查询
 
         /// <summary>
-        /// 使用与正式区块完全相同的 Profile、气候、Biome、河流和结构结果寻找可走陆地。
-        /// 搜索只创建临时纯数据，不注册运行时 Chunk；先按高度跳过海洋，再按需生成候选区块。
+        /// 使用与正式区块相同的 Profile、水文和单格地形规则寻找可走陆地。
+        /// 结构不修改液体和可走标记，生态只生成物品放置记录，因此无需生成完整区块。
         /// </summary>
         public bool TryFindWalkableSurfaceNear(
             string dimensionId,
@@ -172,63 +158,53 @@ namespace FlatWorld.WorldModel
             IReadOnlyList<Int2> candidates = BuildSurfaceSearchCandidates(
                 anchor, topology, maxRadius, sampleBudget);
             var requests = new Dictionary<Int2, ChunkGenerationRequest>();
-            var generatedTerrain = new Dictionary<Int2, ChunkTerrainData>();
-            try
+            var hydrologyMaps = new Dictionary<Int2, GeneratedHydrologyMap>();
+            using var sampledCell = new ChunkTerrainBuffer(1, 1, liquidTypes);
+            foreach (Int2 candidate in candidates)
             {
-                foreach (Int2 candidate in candidates)
+                cancellationToken.ThrowIfCancellationRequested();
+                Int2 origin = ResolveSearchChunkOrigin(candidate, profile, topology);
+                int localX = candidate.X - origin.X;
+                int localY = candidate.Y - origin.Y;
+                if ((uint)localX >= (uint)profile.Width ||
+                    (uint)localY >= (uint)profile.Height)
+                    continue;
+
+                if (!requests.TryGetValue(origin, out ChunkGenerationRequest request))
                 {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    Int2 origin = ResolveSearchChunkOrigin(candidate, profile, topology);
-                    if (!requests.TryGetValue(origin, out ChunkGenerationRequest request))
-                    {
-                        request = new ChunkGenerationRequest(
-                            worldEpoch,
-                            new WorldAddress(dimensionId, origin),
-                            worldSeed == 0 ? 1 : worldSeed,
-                            1,
-                            profile,
-                            topology);
-                        requests.Add(origin, request);
-                    }
-
-                    if (SampleHeight(request, profile.Settings, candidate.X, candidate.Y) <
-                        profile.Settings.SeaLevel)
-                    {
-                        continue;
-                    }
-
-                    if (!generatedTerrain.TryGetValue(origin, out ChunkTerrainData terrain))
-                    {
-                        using ChunkGenerationResult result = Generate(request, cancellationToken);
-                        terrain = result.ConsumeTerrain();
-                        generatedTerrain.Add(origin, terrain);
-                    }
-
-                    int localX = candidate.X - origin.X;
-                    int localY = candidate.Y - origin.Y;
-                    if ((uint)localX >= (uint)terrain.Width ||
-                        (uint)localY >= (uint)terrain.Height)
-                    {
-                        continue;
-                    }
-
-                    if (terrain.GetLiquidDepth(localX, localY) > 0f ||
-                        !terrain.IsWalkable(localX, localY))
-                    {
-                        continue;
-                    }
-
-                    worldCell = candidate;
-                    return true;
+                    request = new ChunkGenerationRequest(
+                        worldEpoch,
+                        new WorldAddress(dimensionId, origin),
+                        worldSeed == 0 ? 1 : worldSeed,
+                        1,
+                        profile,
+                        topology);
+                    requests.Add(origin, request);
                 }
 
-                return false;
+                if (SampleHeight(request, profile.Settings, candidate.X, candidate.Y) <
+                    profile.Settings.SeaLevel)
+                    continue;
+
+                if (!hydrologyMaps.TryGetValue(origin, out GeneratedHydrologyMap riverMap))
+                {
+                    riverMap = BuildSurfaceHydrologyMap(request, profile.Settings,
+                        cancellationToken);
+                    hydrologyMaps.Add(origin, riverMap);
+                }
+
+                // 单格沿用正式地形生成入口，避免为出生查询重复实现气候、结冰与液体规则。
+                GenerateSurfaceCell(request, profile.Settings, sampledCell, riverMap,
+                    0, 0, candidate.X, candidate.Y);
+                if (sampledCell.GetLiquidDepth(0, 0) > 0f ||
+                    !sampledCell.GetCell(0, 0).IsWalkable)
+                    continue;
+
+                worldCell = candidate;
+                return true;
             }
-            finally
-            {
-                foreach (ChunkTerrainData terrain in generatedTerrain.Values)
-                    terrain.Dispose();
-            }
+
+            return false;
         }
 
         /// <summary>
@@ -325,6 +301,32 @@ namespace FlatWorld.WorldModel
         #endregion
 
         #region 地表与高度图采样
+
+        /// <summary>正式区块与出生查询共用河网、大湖及其缓存键。</summary>
+        private GeneratedHydrologyMap BuildSurfaceHydrologyMap(
+            ChunkGenerationRequest request,
+            ChunkGenerationSettingsSnapshot settings,
+            CancellationToken cancellationToken)
+        {
+            GeneratedHydrologyMap riverMap = null;
+            if (settings.RiverEnabled)
+            {
+                riverMap = settings.RiverAlgorithm == RiverGenerationAlgorithm.Legacy
+                    ? legacyHydrologyKernel.Build(
+                        request,
+                        settings,
+                        position => SampleHeight(request, settings, position.X, position.Y),
+                        position => SamplePrecipitation(request, settings, position.X, position.Y),
+                        cancellationToken)
+                    : BuildHeightDrivenRiverMap(request, settings, cancellationToken);
+            }
+
+            if (settings.LargeLakeEnabled)
+                riverMap = LargeFreshwaterLakeKernel.Build(request, settings, riverMap,
+                    position => SampleHeight(request, settings, position.X, position.Y),
+                    cancellationToken);
+            return riverMap;
+        }
 
         /// <summary>根据高度、温度、降水和河流结果，生成一个地表格子的完整数据。</summary>
         private static void GenerateSurfaceCell(
@@ -443,15 +445,10 @@ namespace FlatWorld.WorldModel
                 groundTileId = settings.SandTileId;
                 flags = TerrainCellFlags.Walkable;
             }
-            else if (settings.PeatTileId > 0 &&
-                     (biome is SurfaceBiomeKind.Grassland or SurfaceBiomeKind.Forest) &&
-                     moisture >= settings.PeatMinimumMoisture &&
-                     height <= settings.PeatMaximumHeight &&
-                     Fractal(CreateSeed(request, 0x4c7de19bu), worldX, worldY,
-                         settings.PeatPatchScale, 2, 2d, 0.5d, request.Topology) >=
-                     settings.PeatPatchThreshold)
+            else if (ShouldGeneratePeat(
+                         request, settings, biome, floodplain, worldX, worldY))
             {
-                // 潮湿低地形成连续小片泥炭；使用拓扑感知噪声，跨区块和循环接缝保持一致。
+                // 泥炭只铺在草原一侧的石地交界带，不再跟随河谷湿度向河岸扩张。
                 biomeId = (int)biome;
                 groundTileId = settings.PeatTileId;
                 flags = TerrainCellFlags.Walkable;
@@ -539,6 +536,75 @@ namespace FlatWorld.WorldModel
             terrain.SetEnvironmentValue("grass", x, y, grass ? 1f : 0f);
         }
 
+        /// <summary>判定泥炭斑块：草原石地交界、远离河漫滩，并按斑块区域概率稀疏生成。</summary>
+        private static bool ShouldGeneratePeat(
+            ChunkGenerationRequest request,
+            ChunkGenerationSettingsSnapshot settings,
+            SurfaceBiomeKind biome,
+            double floodplain,
+            int worldX,
+            int worldY)
+        {
+            if (settings.PeatTileId <= 0 ||
+                settings.PeatSpawnChance <= 0d ||
+                biome != SurfaceBiomeKind.Grassland ||
+                floodplain > 0.000001d)
+            {
+                return false;
+            }
+
+            // 概率按整个泥炭斑块区域抽取，避免把连续泥炭打散成零星单格。
+            int patchRegionSize = Math.Max(1, (int)Math.Round(
+                1d / settings.PeatPatchScale, MidpointRounding.AwayFromZero));
+            int patchRegionX = FloorDiv(worldX - request.Topology.Min.X, patchRegionSize);
+            int patchRegionY = FloorDiv(worldY - request.Topology.Min.Y, patchRegionSize);
+            if (settings.PeatSpawnChance < 1d &&
+                Hash01(CreateSeed(request, 0x3f84d5b5u), patchRegionX, patchRegionY) >=
+                settings.PeatSpawnChance)
+            {
+                return false;
+            }
+
+            if (Fractal(CreateSeed(request, 0x4c7de19bu), worldX, worldY,
+                    settings.PeatPatchScale, 2, 2d, 0.5d, request.Topology) <
+                settings.PeatPatchThreshold)
+            {
+                return false;
+            }
+
+            return IsGrasslandStoneBoundary(request, settings, worldX, worldY);
+        }
+
+        /// <summary>只接受草原侧指定半径内能直接采样到石地的过渡格。</summary>
+        private static bool IsGrasslandStoneBoundary(
+            ChunkGenerationRequest request,
+            ChunkGenerationSettingsSnapshot settings,
+            int worldX,
+            int worldY)
+        {
+            int radius = settings.PeatStoneBoundaryRadius;
+            for (int offsetY = -radius; offsetY <= radius; offsetY++)
+            {
+                for (int offsetX = -radius; offsetX <= radius; offsetX++)
+                {
+                    if (offsetX == 0 && offsetY == 0)
+                        continue;
+
+                    SurfaceBiomeKind nearbyBiome = SampleBaseSurfaceBiome(
+                        request,
+                        settings,
+                        worldX + offsetX,
+                        worldY + offsetY,
+                        out _,
+                        out _);
+                    if (nearbyBiome == SurfaceBiomeKind.Stone)
+                        return true;
+                }
+            }
+
+            return false;
+        }
+
         /// <summary>按冻结参数采样不含河流覆盖的基础地表群系，并同时返回同格高度与最终降水。</summary>
         internal static SurfaceBiomeKind SampleBaseSurfaceBiome(
             ChunkGenerationRequest request,
@@ -606,12 +672,13 @@ namespace FlatWorld.WorldModel
             ChunkGenerationRequest request,
             ChunkGenerationSettingsSnapshot settings,
             int worldX,
-            int worldY)
+            int worldY,
+            double? sampledHeight = null)
         {
             if (settings.SurfaceClimateAlgorithm == SurfaceClimateAlgorithm.LegacyLand)
             {
                 return LegacyTerrainClimateKernel.SamplePrecipitation(
-                    request, settings, worldX, worldY);
+                    request, settings, worldX, worldY, sampledHeight);
             }
             worldX = request.Topology.NormalizeX(worldX);
             worldY = request.Topology.NormalizeY(worldY);
@@ -1480,11 +1547,12 @@ namespace FlatWorld.WorldModel
                         sourceOrigin.X + localX,
                         sourceOrigin.Y + localY));
                     double height = sampling.Height(position);
-                    double precipitation = sampling.Precipitation(position);
                     sampleCount++;
                     if (height <= settings.SeaLevel)
                         continue;
 
+                    // 海洋格仍计入径流单元采样数，但不会贡献径流，无需计算昂贵的地形降水。
+                    double precipitation = sampling.Precipitation(position, height);
                     double runoff = Clamp01(
                         (precipitation - settings.RiverInfiltrationFloor) /
                         Math.Max(0.0001d, 1d - settings.RiverInfiltrationFloor));
@@ -2519,13 +2587,14 @@ namespace FlatWorld.WorldModel
                 return value;
             }
 
-            /// <summary>读取坐标降水量；第一次读取后缓存结果。</summary>
-            public double Precipitation(Int2 position)
+            /// <summary>复用已采样高度计算降水量；第一次读取后缓存结果。</summary>
+            public double Precipitation(Int2 position, double sampledHeight)
             {
                 position = Normalize(position);
                 if (!precipitationCache.TryGetValue(position, out double value))
                 {
-                    value = SamplePrecipitation(Request, Settings, position.X, position.Y);
+                    value = SamplePrecipitation(Request, Settings, position.X, position.Y,
+                        sampledHeight);
                     precipitationCache.Add(position, value);
                 }
                 return value;

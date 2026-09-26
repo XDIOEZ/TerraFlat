@@ -40,6 +40,19 @@ Shader "Game/2D/Sprite-Lit-Master"
 
         [HideInInspector] _PlayerOccluder ("Player Occluder", Range(0,1)) = 0
 
+        [Header(Vegetation Sway)]
+        [Toggle(FLATWORLD_VEGETATION_SWAY)] _GrassSwayEnabled("启用植被摆动", Float) = 0
+        _GrassSwayAmplitude("摆动幅度", Range(0, 0.2)) = 0.035
+        _GrassSwaySpeed("摆动速度", Range(0, 5)) = 1.2
+        _GrassSwayFrequency("风场频率", Range(0, 10)) = 1.5
+        _GrassBendPower("弯曲曲线", Range(0.5, 4)) = 1.8
+        _GrassSecondaryStrength("次级摆动", Range(0, 1)) = 0.35
+        _GrassSpriteHeight("精灵根部以上高度", Range(0.01, 16)) = 0.5
+        _GrassBendStart("根部以上起摆高度", Range(0, 16)) = 0
+        _GrassTileAnchor("Tile 锚点 Y", Range(0, 1)) = 0.5
+        [Toggle] _GrassUseObjectRoot("使用对象根部弯曲", Float) = 0
+        _GrassDirection("风向", Vector) = (1, 0, 0, 0)
+
         // Legacy properties，保持与官方 Sprite-Lit-Default 一致，方便管线处理
         _SnowCoverage("Seasonal Snow", Range(0,1)) = 0
         [HideInInspector] _Color("Tint", Color) = (1,1,1,1)
@@ -99,6 +112,7 @@ Shader "Game/2D/Sprite-Lit-Master"
             HLSLPROGRAM
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/Shaders/2D/Include/Core2D.hlsl"
+            #include "VegetationSway.hlsl"
 
             #pragma vertex CombinedShapeLightVertex
             #pragma fragment CombinedShapeLightFragment
@@ -110,6 +124,7 @@ Shader "Game/2D/Sprite-Lit-Master"
             #pragma multi_compile USE_SHAPE_LIGHT_TYPE_2 __
             #pragma multi_compile USE_SHAPE_LIGHT_TYPE_3 __
             #pragma multi_compile _ DEBUG_DISPLAY
+            #pragma shader_feature_local _ FLATWORLD_VEGETATION_SWAY
 
             // 自定义功能开关
             #pragma shader_feature _ DISSOLVE_ON
@@ -199,8 +214,12 @@ Shader "Game/2D/Sprite-Lit-Master"
 #ifdef UNITY_INSTANCING_ENABLED
                 v.positionOS = UnityFlipSprite(v.positionOS, unity_SpriteFlip);
 #endif
-                o.positionCS = TransformObjectToHClip(v.positionOS);
-                o.positionWS = TransformObjectToWorld(v.positionOS);
+                float3 swayedPositionOS = v.positionOS;
+                #if defined(FLATWORLD_VEGETATION_SWAY)
+                swayedPositionOS = ApplyGrassSway(v.positionOS);
+                #endif
+                o.positionCS = TransformObjectToHClip(swayedPositionOS);
+                o.positionWS = TransformObjectToWorld(swayedPositionOS);
                 o.objectRootY = TransformObjectToWorld(float3(0, 0, 0)).y;
                 o.uv.xy = TRANSFORM_TEX(v.uv, _MainTex);
                 o.uv.z = v.positionOS.y;
@@ -277,12 +296,14 @@ Shader "Game/2D/Sprite-Lit-Master"
             HLSLPROGRAM
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/Shaders/2D/Include/Core2D.hlsl"
+            #include "VegetationSway.hlsl"
 
             #pragma vertex NormalsRenderingVertex
             #pragma fragment NormalsRenderingFragment
 
             // GPU Instancing
             #pragma multi_compile_instancing
+            #pragma shader_feature_local _ FLATWORLD_VEGETATION_SWAY
 
             struct Attributes
             {
@@ -343,7 +364,11 @@ Shader "Game/2D/Sprite-Lit-Master"
 #ifdef UNITY_INSTANCING_ENABLED
                 attributes.positionOS = UnityFlipSprite(attributes.positionOS, unity_SpriteFlip);
 #endif
-                o.positionCS = TransformObjectToHClip(attributes.positionOS);
+                float3 swayedPositionOS = attributes.positionOS;
+                #if defined(FLATWORLD_VEGETATION_SWAY)
+                swayedPositionOS = ApplyGrassSway(attributes.positionOS);
+                #endif
+                o.positionCS = TransformObjectToHClip(swayedPositionOS);
                 o.uv = TRANSFORM_TEX(attributes.uv, _NormalMap);
                 o.color = attributes.color;
                 o.normalWS = -GetViewForwardDir();
@@ -351,7 +376,7 @@ Shader "Game/2D/Sprite-Lit-Master"
                 o.bitangentWS = cross(o.normalWS, o.tangentWS) * attributes.tangent.w;
                 o.localY = attributes.positionOS.y;
                 o.localX = attributes.positionOS.x;
-                o.positionWS = TransformObjectToWorld(attributes.positionOS).xy;
+                o.positionWS = TransformObjectToWorld(swayedPositionOS).xy;
                 o.objectRootY = TransformObjectToWorld(float3(0, 0, 0)).y;
 #ifdef UNITY_INSTANCING_ENABLED
                 o.color *= unity_SpriteColor;
@@ -405,12 +430,14 @@ Shader "Game/2D/Sprite-Lit-Master"
             HLSLPROGRAM
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/Shaders/2D/Include/Core2D.hlsl"
+            #include "VegetationSway.hlsl"
 
             #pragma vertex UnlitVertex
             #pragma fragment UnlitFragment
 
             // GPU Instancing
             #pragma multi_compile_instancing
+            #pragma shader_feature_local _ FLATWORLD_VEGETATION_SWAY
 
             struct Attributes
             {
@@ -472,8 +499,12 @@ Shader "Game/2D/Sprite-Lit-Master"
 #ifdef UNITY_INSTANCING_ENABLED
                 attributes.positionOS = UnityFlipSprite(attributes.positionOS, unity_SpriteFlip);
 #endif
-                o.positionCS = TransformObjectToHClip(attributes.positionOS);
-                o.positionWS = TransformObjectToWorld(attributes.positionOS);
+                float3 swayedPositionOS = attributes.positionOS;
+                #if defined(FLATWORLD_VEGETATION_SWAY)
+                swayedPositionOS = ApplyGrassSway(attributes.positionOS);
+                #endif
+                o.positionCS = TransformObjectToHClip(swayedPositionOS);
+                o.positionWS = TransformObjectToWorld(swayedPositionOS);
                 o.objectRootY = TransformObjectToWorld(float3(0, 0, 0)).y;
                 o.uv = TRANSFORM_TEX(attributes.uv, _MainTex);
                 o.localY = attributes.positionOS.y;

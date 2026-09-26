@@ -35,6 +35,8 @@ public partial class ChunkMgr
         runtimeChunkManager?.Chunks ?? EmptyChunkRuntimeDictionary.Instance;
     public bool HasPendingChunkDataLoads => runtimeChunkManager?.HasPendingChunkLoads == true;
     public RuntimeChunkMgr RuntimeChunks => runtimeChunkManager;
+    /// <summary>每帧允许提交的后台生成结果数，供流送诊断读取实际 Prefab 配置。</summary>
+    public int RuntimeChunkCommitBudget => Mathf.Max(1, maxChunkCommitsPerFrame);
     /// <summary>当前世界实际提交给后台区块生成器的完整参数快照。</summary>
     public ChunkGenerationProfileSnapshot ActiveGenerationProfile =>
         activeGenerationSnapshot ?? defaultGenerationSnapshot;

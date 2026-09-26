@@ -5,6 +5,10 @@ using FlatWorld.WorldModel;
 using UnityEngine;
 using Unity.Profiling;
 
+/// <summary>
+/// 单个 ChunkRuntime 的 Unity 表现容器，按基础地形、环境与实体顺序绑定表现器。
+/// 昂贵表现器可通过增量契约继续拆分，所有步骤由 ChunkMgr 的帧预算统一推进。
+/// </summary>
 public sealed class ChunkView : MonoBehaviour
 {
     private static readonly ProfilerMarker RendererBindMarker =
@@ -57,7 +61,7 @@ public sealed class ChunkView : MonoBehaviour
         }
 
         registered = ChunkBatchRendererGroupService.IsOwnerRegistered(tilemapRenderer);
-        visualCount = ChunkBatchRendererGroupService.GetOwnerVisualCount(tilemapRenderer);
+        visualCount = ChunkBatchRendererGroupService.GetOwnerTerrainVisualCount(tilemapRenderer);
         return true;
     }
 
@@ -107,7 +111,9 @@ public sealed class ChunkView : MonoBehaviour
         PresentationChanged?.Invoke(chunk.Address);
     }
 
-    /// <summary>把同一区块的表现组件拆到多帧绑定；地面优先，草地和导航最后。</summary>
+    #region 分帧绑定
+
+    /// <summary>把同一区块的表现组件拆到多帧绑定；耗时表现器还可把自身拆成多个步骤。</summary>
     public IEnumerator BindIncremental(WorldRuntime worldRuntime, ChunkRuntime chunkRuntime,
         bool includeNavigation = true, int renderersPerFrame = 1)
     {
@@ -130,8 +136,33 @@ public sealed class ChunkView : MonoBehaviour
             if (!navigationEnabled && renderers[i] is ChunkNavigationBinder)
                 continue;
 
-            using (RendererBindMarker.Auto())
-                renderers[i].Bind(chunk);
+            if (renderers[i] is IIncrementalChunkViewRenderer incrementalRenderer)
+            {
+                IEnumerator steps = incrementalRenderer.BindIncremental(chunk);
+                try
+                {
+                    while (version == bindVersion && ReferenceEquals(chunk, chunkRuntime))
+                    {
+                        bool hasNext;
+                        using (RendererBindMarker.Auto())
+                            hasNext = steps.MoveNext();
+                        if (!hasNext)
+                            break;
+                        yield return null;
+                    }
+                }
+                finally
+                {
+                    (steps as IDisposable)?.Dispose();
+                }
+                if (version != bindVersion || !ReferenceEquals(chunk, chunkRuntime))
+                    yield break;
+            }
+            else
+            {
+                using (RendererBindMarker.Auto())
+                    renderers[i].Bind(chunk);
+            }
             frameCount++;
             if (frameCount >= Math.Max(1, renderersPerFrame) && i + 1 < renderers.Count)
             {
@@ -147,6 +178,8 @@ public sealed class ChunkView : MonoBehaviour
             PresentationChanged?.Invoke(chunk.Address);
         }
     }
+
+    #endregion
 
     /// <summary>先终止绑定与事件回调，再解除表现；重复禁用、销毁不再次清理。</summary>
     public void Unbind()
@@ -287,7 +320,7 @@ public sealed class ChunkView : MonoBehaviour
     {
         if (renderer is ChunkTilemapRenderer)
             return 0;
-        if (renderer is ChunkEnvironmentTilemapRenderer)
+        if (renderer is ChunkEnvironmentRenderer)
             return 1;
         if (renderer is ChunkCollisionRenderer)
             return 2;
@@ -295,12 +328,14 @@ public sealed class ChunkView : MonoBehaviour
             return 3;
         if (renderer is ChunkGrassRenderer)
             return 4;
-        if (renderer is ChunkNavigationBinder)
+        if (renderer is ChunkGroundCoverRenderer)
             return 5;
-        if (renderer is ChunkNaturalItemRenderer)
+        if (renderer is ChunkNavigationBinder)
             return 6;
-        if (renderer is ChunkAgricultureRenderer)
+        if (renderer is ChunkNaturalItemRenderer)
             return 7;
+        if (renderer is ChunkAgricultureRenderer)
+            return 8;
         return 2;
     }
 }

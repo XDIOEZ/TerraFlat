@@ -114,6 +114,26 @@ public class BuildingShadow : MonoBehaviour
         ApplyVisualState();
     }
 
+    /// <summary>按所有可见预览图层的世界包围盒判断触点，不给放置虚影增加物理碰撞体。</summary>
+    public bool ContainsWorldPoint(Vector3 worldPosition)
+    {
+        if (!isActiveAndEnabled || visibility <= 0f)
+            return false;
+
+        foreach (SpriteRenderer renderer in GetComponentsInChildren<SpriteRenderer>())
+        {
+            if (!renderer.enabled || renderer.sprite == null)
+                continue;
+
+            Bounds bounds = renderer.bounds;
+            worldPosition.z = bounds.center.z;
+            if (bounds.Contains(worldPosition))
+                return true;
+        }
+
+        return false;
+    }
+
     public void SmoothMove(Vector3 targetPosition)
     {
         transform.DOKill();

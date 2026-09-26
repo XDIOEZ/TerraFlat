@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
@@ -154,6 +155,10 @@ public sealed class ItemVisualDefinitionDto
     [JsonProperty("spriteStates", NullValueHandling = NullValueHandling.Ignore)]
     public Dictionary<string, string> SpriteStates;
 
+    /// <summary>液体容器 Sprite 开口内腔的归一化矩形；液面像素由容器模块按 LiquidDefinition 主色重绘。</summary>
+    [JsonProperty("liquidSurface", NullValueHandling = NullValueHandling.Ignore)]
+    public LiquidSurfaceDefinition LiquidSurface;
+
     /// <summary>世界 SpriteRenderer 使用的共享材质 Addressable 地址。</summary>
     [JsonProperty("materialAddress", NullValueHandling = NullValueHandling.Ignore)]
     public string MaterialAddress;
@@ -208,8 +213,54 @@ public sealed class ItemVisualDefinitionDto
     [JsonProperty("sortingOrder")]
     public int? SortingOrder;
 
+    /// <summary>世界阴影的可选视觉配置；未声明时沿用实体默认规则。</summary>
+    [JsonProperty("shadows", NullValueHandling = NullValueHandling.Ignore)]
+    public ItemShadowVisualDefinitionDto Shadows;
+
     [JsonProperty("collider")]
     public ItemColliderDefinitionDto Collider;
+}
+
+/// <summary>程序化液面在 0～1 Sprite UV 中的位置；矩形应覆盖容器开口的内侧并避开外沿。</summary>
+[Serializable]
+public sealed class LiquidSurfaceDefinition
+{
+    [JsonProperty("bounds", Required = Required.Always)]
+    public Rect Bounds;
+
+    /// <summary>校验开口矩形，防止 UI 液面绘制到物品图标外。</summary>
+    public void Validate(string itemId)
+    {
+        if (float.IsNaN(Bounds.x) || float.IsInfinity(Bounds.x) ||
+            float.IsNaN(Bounds.y) || float.IsInfinity(Bounds.y) ||
+            float.IsNaN(Bounds.width) || float.IsInfinity(Bounds.width) ||
+            float.IsNaN(Bounds.height) || float.IsInfinity(Bounds.height) ||
+            Bounds.width <= 0f || Bounds.height <= 0f ||
+            Bounds.xMin < 0f || Bounds.yMin < 0f || Bounds.xMax > 1f || Bounds.yMax > 1f)
+        {
+            throw new InvalidDataException($"物品 {itemId} 的 liquidSurface.bounds 必须是 0～1 范围内的非空矩形");
+        }
+    }
+}
+
+/// <summary>
+/// 物品世界阴影的静态视觉参数：落地点使用物品根节点的局部坐标，
+/// 圆形底座阴影宽度以世界格为单位；只填写落地点时仍可单独校正太阳投影。
+/// </summary>
+[Serializable]
+public sealed class ItemShadowVisualDefinitionDto
+{
+    #region 落地点与底座尺寸
+
+    /// <summary>圆形底座阴影宽度；未填写时不额外注册底座阴影。</summary>
+    [JsonProperty("contactWidth", NullValueHandling = NullValueHandling.Ignore)]
+    public float? ContactWidth;
+
+    /// <summary>底座和太阳投影共用的物品局部落地点。</summary>
+    [JsonProperty("footLocalPosition", NullValueHandling = NullValueHandling.Ignore)]
+    public Vector2? FootLocalPosition;
+
+    #endregion
 }
 
 [Serializable]

@@ -177,8 +177,9 @@ namespace FlatWorld.WorldModel
             SnowTileId = GetInt(numbers, "terrain.snowTileId", GroundTileId);
             IceTileId = GetInt(numbers, "terrain.iceTileId", SnowTileId);
             PeatTileId = GetInt(numbers, "terrain.peatTileId", 0);
-            PeatMinimumMoisture = Clamp01(GetDouble(numbers, "biome.peat.minimumMoisture", 0.62d));
-            PeatMaximumHeight = Clamp01(GetDouble(numbers, "biome.peat.maximumHeight", 0.62d));
+            PeatSpawnChance = Clamp01(GetDouble(numbers, "biome.peat.spawnChance", 0.1d));
+            PeatStoneBoundaryRadius = Math.Min(8, Math.Max(1,
+                GetInt(numbers, "biome.peat.stoneBoundaryRadius", 2)));
             PeatPatchThreshold = Clamp01(GetDouble(numbers, "biome.peat.patchThreshold", 0.64d));
             PeatPatchScale = Clamp(GetDouble(numbers, "biome.peat.patchScale", 0.09d), 0.001d, 1d);
             CaveFloorTileId = GetInt(numbers, "cave.floorTileId", StoneTileId);
@@ -479,7 +480,7 @@ namespace FlatWorld.WorldModel
         public int StoneTileId { get; }
         public int SnowTileId { get; }
         public int IceTileId { get; }
-        public int PeatTileId { get; } // 旧冻结 Profile 缺失时保持关闭。
+        public int PeatTileId { get; }
         public int CaveFloorTileId { get; }
         public int CaveWallTileId { get; }
         /// <summary>高度低于这个数时生成海洋。</summary>
@@ -496,8 +497,8 @@ namespace FlatWorld.WorldModel
         public double SnowIceLakeChance { get; }
         /// <summary>雪地草地相对于普通草地的生成密度倍率。</summary>
         public double SnowGrassDensityMultiplier { get; }
-        public double PeatMinimumMoisture { get; } // 泥炭形成的最低湿度。
-        public double PeatMaximumHeight { get; } // 泥炭低地的最高地表高度。
+        public double PeatSpawnChance { get; } // 每个泥炭斑块区域被保留的概率。
+        public int PeatStoneBoundaryRadius { get; } // 草原格搜索石地边界的半径。
         public double PeatPatchThreshold { get; } // 连续噪声斑块阈值。
         public double PeatPatchScale { get; } // 斑块空间尺度。
         /// <summary>旧版有序群系判定中沙漠允许的最低高度和最高降水。</summary>

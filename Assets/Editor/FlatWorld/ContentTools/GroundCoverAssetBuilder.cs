@@ -3,10 +3,9 @@ using UnityEditor;
 using UnityEditor.AddressableAssets;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEngine;
-using UnityEngine.Tilemaps;
 
 /// <summary>
-/// 地表植被采集的正式资源装配入口。通过 Unity 序列化创建通用采集模块、绑定 ChunkView 花层，
+/// 地表植被采集的正式资源装配入口。通过 Unity 序列化创建通用采集模块并绑定 ChunkView BRG 花层，
 /// 不生成美术、不重建其他世界图层、不改变场景或玩家存档。
 /// </summary>
 public static class GroundCoverAssetBuilder
@@ -17,7 +16,7 @@ public static class GroundCoverAssetBuilder
     private const string ChunkPath = "Assets/2_Prefabs/World/WorldModel/ChunkView.prefab";
     private const string ModuleAddress = "Module_GroundCoverHarvest";
 
-    /// <summary>只装配采集模块与无碰撞体的花层，并保存实际 Addressables 分组。</summary>
+    /// <summary>只装配采集模块与无 Tilemap/碰撞体的 BRG 花层，并保存实际 Addressables 分组。</summary>
     [MenuItem("FlatWorld/内容配置/装配地表植被采集资源")]
     public static void Build()
     {
@@ -26,7 +25,7 @@ public static class GroundCoverAssetBuilder
         BuildModule();
         BindChunkLayer();
         RegisterModule();
-        Debug.Log("[GroundCoverAssets] 采集模块、Flowers Tilemap 与 Addressables 已装配；花层没有 Item 或 Collider2D。");
+        Debug.Log("[GroundCoverAssets] 采集模块、Flowers BRG 图层与 Addressables 已装配；花层没有 Tilemap、Item 或 Collider2D。");
     }
 
     #endregion
@@ -48,56 +47,23 @@ public static class GroundCoverAssetBuilder
         finally { UnityEngine.Object.DestroyImmediate(root); }
     }
 
-    /// <summary>在现有 Grid 下添加花层，复用草层的排序、单元锚点和风摆材质。</summary>
+    /// <summary>绑定无 Tilemap 的花表现器，复用草层材质与 Default/0 BRG 排序域。</summary>
     private static void BindChunkLayer()
     {
         GameObject root = PrefabUtility.LoadPrefabContents(ChunkPath);
         try
         {
             ChunkGrassRenderer grass = root.GetComponent<ChunkGrassRenderer>();
-            if (grass == null || root.GetComponent<Grid>() == null)
-                throw new InvalidOperationException("ChunkView 缺少现有草层或 Grid。");
-            SerializedObject grassData = new(grass);
-            Tilemap grassTilemap = grassData.FindProperty("tilemap").objectReferenceValue as Tilemap;
-            Material material = grassData.FindProperty("grassMaterial").objectReferenceValue as Material;
-            if (grassTilemap == null || material == null)
-                throw new InvalidOperationException("现有草层 Tilemap 或材质未配置。");
+            Material material = grass != null ? grass.GrassMaterial : null;
+            if (material == null)
+                throw new InvalidOperationException("ChunkView 缺少现有草层或 BRG 材质。");
 
-            Transform flowers = root.transform.Find("Flowers");
-            GameObject layer;
-            Tilemap tilemap;
-            TilemapRenderer renderer;
-            if (flowers == null)
-            {
-                // Tilemap/Renderer 一次性随对象创建，避免 Prefab Stage 中逐个 AddComponent 后拿到失效引用。
-                layer = new GameObject("Flowers", typeof(Tilemap), typeof(TilemapRenderer));
-                layer.transform.SetParent(root.transform, false);
-                tilemap = layer.GetComponent<Tilemap>();
-                renderer = layer.GetComponent<TilemapRenderer>();
-            }
-            else
-            {
-                layer = flowers.gameObject;
-                tilemap = layer.GetComponent<Tilemap>();
-                if (tilemap == null) tilemap = layer.AddComponent<Tilemap>();
-                renderer = layer.GetComponent<TilemapRenderer>();
-                if (renderer == null) renderer = layer.AddComponent<TilemapRenderer>();
-            }
-            if (tilemap == null || renderer == null)
-                throw new InvalidOperationException("Flowers 图层无法创建 Tilemap 或 TilemapRenderer。");
-            TilemapRenderer sourceRenderer = grassTilemap.GetComponent<TilemapRenderer>();
-            if (sourceRenderer == null)
-                throw new InvalidOperationException("现有草层缺少 TilemapRenderer。");
-            tilemap.tileAnchor = grassTilemap.tileAnchor;
-            renderer.sharedMaterial = material;
-            // 草层会在绑定时切换到 BRG 共用的 Default；不能复制 Prefab 内遗留的 Tilemap 层。
-            renderer.sortingLayerName = "Default";
-            renderer.sortingOrder = 0;
-            renderer.mode = TilemapRenderer.Mode.Chunk;
-
+            Transform legacyFlowers = root.transform.Find("Flowers");
+            if (legacyFlowers != null)
+                UnityEngine.Object.DestroyImmediate(legacyFlowers.gameObject);
             ChunkGroundCoverRenderer cover = root.GetComponent<ChunkGroundCoverRenderer>() ?? root.AddComponent<ChunkGroundCoverRenderer>();
             SerializedObject coverData = new(cover);
-            coverData.FindProperty("tilemap").objectReferenceValue = tilemap;
+            coverData.FindProperty("groundCoverMaterial").objectReferenceValue = material;
             coverData.ApplyModifiedPropertiesWithoutUndo();
             PrefabUtility.SaveAsPrefabAsset(root, ChunkPath);
         }

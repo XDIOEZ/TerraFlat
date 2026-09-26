@@ -14,13 +14,14 @@ Shader "FlatWorld/2D/Grass Sway Lit"
         [HideInInspector] _EnableExternalAlpha("Enable External Alpha", Float) = 0
 
         [Header(Grass Sway)]
-        [Toggle] _GrassSwayEnabled("启用草地摆动", Float) = 1
+        [Toggle] _GrassSwayEnabled("启用植被摆动", Float) = 1
         _GrassSwayAmplitude("摆动幅度", Range(0, 0.2)) = 0.035
         _GrassSwaySpeed("摆动速度", Range(0, 5)) = 1.2
         _GrassSwayFrequency("风场频率", Range(0, 10)) = 1.5
         _GrassBendPower("弯曲曲线", Range(0.5, 4)) = 1.8
         _GrassSecondaryStrength("次级摆动", Range(0, 1)) = 0.35
-        _GrassSpriteHeight("草地精灵高度", Range(0.01, 2)) = 0.5
+        _GrassSpriteHeight("精灵根部以上高度", Range(0.01, 16)) = 0.5
+        _GrassBendStart("根部以上起摆高度", Range(0, 16)) = 0
         _GrassTileAnchor("Tile 锚点 Y", Range(0, 1)) = 0.5
         [Toggle] _GrassUseObjectRoot("使用对象根部弯曲", Float) = 0
         _GrassDirection("风向", Vector) = (1, 0, 0, 0)
@@ -29,6 +30,7 @@ Shader "FlatWorld/2D/Grass Sway Lit"
     HLSLINCLUDE
         #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
         #include "Packages/com.unity.render-pipelines.universal/Shaders/2D/Include/Core2D.hlsl"
+        #include "VegetationSway.hlsl"
 
         TEXTURE2D(_MainTex);
         SAMPLER(sampler_MainTex);
@@ -41,63 +43,6 @@ Shader "FlatWorld/2D/Grass Sway Lit"
         half4 _NormalMap_ST;
         float4 _Color;
         half4 _RendererColor;
-        float _GrassSwayEnabled;
-        float _GrassSwayAmplitude;
-        float _GrassSwaySpeed;
-        float _GrassSwayFrequency;
-        float _GrassBendPower;
-        float _GrassSecondaryStrength;
-        float _GrassSpriteHeight;
-        float _GrassTileAnchor;
-        float _GrassUseObjectRoot;
-        float4 _GrassDirection;
-        float _GlobalWindStrength;
-
-        // Tilemap 按单元锚点取局部高度，独立 Sprite 则直接以对象原点固定根部。
-        float GrassBendWeight(float3 positionOS)
-        {
-            if (_GrassUseObjectRoot > 0.5)
-            {
-                float objectHeight = saturate(positionOS.y / max(_GrassSpriteHeight, 0.001));
-                return pow(objectHeight, max(_GrassBendPower, 0.01));
-            }
-
-            float localY = frac(positionOS.y) - _GrassTileAnchor;
-            if (localY > 0.5)
-                localY -= 1.0;
-            else if (localY < -0.5)
-                localY += 1.0;
-
-            float normalizedY = saturate(
-                (localY + _GrassSpriteHeight * 0.5) / max(_GrassSpriteHeight, 0.001));
-            return pow(normalizedY, max(_GrassBendPower, 0.01));
-        }
-
-        // 在 GPU 顶点阶段计算连续风场，所有草地 Tilemap 共用一份材质参数。
-        float3 ApplyGrassSway(float3 positionOS)
-        {
-            float windStrength = saturate(_GlobalWindStrength);
-            if (_GrassSwayEnabled < 0.5 || _GrassSwayAmplitude <= 0.0001 || windStrength <= 0.0001)
-                return positionOS;
-
-            float2 direction = _GrassDirection.xy;
-            direction /= max(length(direction), 0.001);
-
-            float2 worldPosition = TransformObjectToWorld(positionOS).xy;
-            float phase = sin(dot(worldPosition, float2(12.9898, 78.233))) * 1.7;
-            float time = _Time.y * _GrassSwaySpeed;
-            float primary = sin(
-                time + phase + dot(worldPosition, direction) * _GrassSwayFrequency);
-            float secondary = sin(
-                time * 0.63 + phase * 1.71 + worldPosition.y * _GrassSwayFrequency * 0.73);
-            float sway = (primary + secondary * _GrassSecondaryStrength)
-                * _GrassSwayAmplitude
-                * windStrength
-                * GrassBendWeight(positionOS);
-
-            positionOS.xy += direction * sway;
-            return positionOS;
-        }
     ENDHLSL
 
     SubShader

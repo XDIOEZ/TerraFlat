@@ -9,15 +9,18 @@ using RuntimeWorldAddress = FlatWorld.WorldModel.WorldAddress;
 namespace FlatWorld.GameplayMCP
 {
     /// <summary>
-    /// 只读核对当前相机可见区块窗口、WorldModel 数据、ChunkView 与基础地形 BRG 登记。
-    /// 用于定位“区块已生成但没有渲染”和“区块尚未生成”两类问题，不修改任何游戏状态。
+    /// 只读核对区块窗口的数据生成、主线程提交、ChunkView 绑定与基础地形 BRG 登记。
+    /// 同时报告各队列积压和实际分帧预算，用于定位黑块停在哪一段；不修改游戏状态。
     /// </summary>
     [McpForUnityTool(
         "gameplay_chunk_render_debug",
-        Description = "Read-only audit of the current streamed chunk window: camera size, load distance, data readiness, ChunkView binding and terrain BRG registration.",
+        Description = "Read-only audit of streamed chunks and bottlenecks: generation queue, commit queue, presentation queue, data readiness and terrain BRG registration.",
         Group = "core")]
     public static class GameplayChunkRenderDebugTool
     {
+        #region 诊断采样
+
+        /// <summary>每类异常最多返回的地址数，避免高视距产生过大的 MCP 响应。</summary>
         private const int MaxSamplesPerCategory = 32;
 
         public static object HandleCommand(JObject parameters)
@@ -54,13 +57,21 @@ namespace FlatWorld.GameplayMCP
             var visited = new HashSet<RuntimeWorldAddress>();
             var missingData = new JArray();
             var missingViews = new JArray();
+            var readyDataMissingViews = new JArray();
+            var pendingBaseTerrain = new JArray();
             var missingBrgOwner = new JArray();
             var zeroBrgVisuals = new JArray();
             int dataReady = 0;
+            int failedData = 0;
             int viewsStarted = 0;
             int viewsReady = 0;
+            int readyDataWithoutView = 0;
+            int baseTerrainPresented = 0;
+            int viewsWaitingBaseTerrain = 0;
             int brgRegistered = 0;
             int brgWithVisuals = 0;
+            int brgOwnerMissing = 0;
+            int brgZeroVisuals = 0;
 
             for (int dx = -radiusX; dx <= radiusX; dx++)
             {
@@ -73,35 +84,57 @@ namespace FlatWorld.GameplayMCP
                     if (!visited.Add(address))
                         continue;
 
-                    if (chunkManager.TryGetChunkRuntime(address, out ChunkRuntime chunk) &&
-                        chunk != null &&
-                        chunk.DataStatus == ChunkDataStatus.Ready &&
-                        chunk.Terrain != null)
+                    bool hasChunk = chunkManager.TryGetChunkRuntime(address, out ChunkRuntime chunk) &&
+                                    chunk != null;
+                    bool hasReadyData = hasChunk &&
+                                        chunk.DataStatus == ChunkDataStatus.Ready &&
+                                        chunk.Terrain != null;
+                    if (hasReadyData)
                     {
                         dataReady++;
                     }
                     else
                     {
-                        AddAddressSample(missingData, address);
+                        if (hasChunk && chunk.DataStatus == ChunkDataStatus.Failed)
+                            failedData++;
+                        AddAddressSample(missingData, address,
+                            hasChunk ? chunk.DataStatus.ToString() : "no_chunk", null,
+                            hasChunk ? chunk.FailureReason : null);
                     }
 
                     if (!chunkManager.TryGetRuntimeChunkPresentationView(address, out ChunkView view) || view == null)
                     {
                         AddAddressSample(missingViews, address);
+                        if (hasReadyData)
+                        {
+                            readyDataWithoutView++;
+                            AddAddressSample(readyDataMissingViews, address);
+                        }
                         continue;
                     }
 
                     viewsStarted++;
                     if (view.IsBound)
                         viewsReady++;
+                    if (!view.IsBaseTerrainPresented)
+                    {
+                        viewsWaitingBaseTerrain++;
+                        AddAddressSample(pendingBaseTerrain, address,
+                            view.IsBinding ? "binding" : "not_binding");
+                        continue;
+                    }
+
+                    baseTerrainPresented++;
                     if (!view.TryGetTerrainBatchDebugState(out bool registered, out int visualCount))
                     {
+                        brgOwnerMissing++;
                         AddAddressSample(missingBrgOwner, address, "renderer_missing", visualCount);
                         continue;
                     }
 
                     if (!registered)
                     {
+                        brgOwnerMissing++;
                         AddAddressSample(missingBrgOwner, address, "owner_not_registered", visualCount);
                         continue;
                     }
@@ -109,6 +142,7 @@ namespace FlatWorld.GameplayMCP
                     brgRegistered++;
                     if (visualCount <= 0)
                     {
+                        brgZeroVisuals++;
                         AddAddressSample(zeroBrgVisuals, address, "zero_visuals", visualCount);
                         continue;
                     }
@@ -131,15 +165,32 @@ namespace FlatWorld.GameplayMCP
                 ["destroyDistance"] = new JArray(destroyDistance.x, destroyDistance.y),
                 ["targetCount"] = targetCount,
                 ["dataReady"] = dataReady,
+                ["dataNotReady"] = targetCount - dataReady,
+                ["dataFailed"] = failedData,
                 ["viewsStarted"] = viewsStarted,
                 ["viewsReady"] = viewsReady,
+                ["readyDataWithoutView"] = readyDataWithoutView,
+                ["baseTerrainPresented"] = baseTerrainPresented,
+                ["viewsWaitingBaseTerrain"] = viewsWaitingBaseTerrain,
                 ["brgRegistered"] = brgRegistered,
                 ["brgWithVisuals"] = brgWithVisuals,
+                ["brgOwnerMissing"] = brgOwnerMissing,
+                ["brgZeroVisuals"] = brgZeroVisuals,
+                ["generationConcurrency"] = chunkManager.RuntimeChunks?.MaxGenerationConcurrency ?? 0,
+                ["generationQueued"] = chunkManager.RuntimeChunks?.QueuedGenerationCount ?? 0,
+                ["generationActive"] = chunkManager.RuntimeChunks?.ActiveGenerationCount ?? 0,
+                ["pendingCommits"] = chunkManager.RuntimeChunks?.PendingCommitCount ?? 0,
+                ["commitsPerFrame"] = chunkManager.RuntimeChunkCommitBudget,
+                ["presentationStartsPerFrame"] = chunkManager.RuntimeChunkPresentationStartBudget,
+                ["presentationContinuationStepsPerFrame"] =
+                    chunkManager.RuntimeChunkPresentationContinuationBudget,
                 ["pendingPresentations"] = chunkManager.PendingRuntimeChunkPresentationCount,
                 ["pendingPrefetch"] = chunkManager.PendingRuntimeChunkPrefetchCount,
                 ["windowPresentationsReady"] = chunkManager.AreRuntimeWindowPresentationsReady,
                 ["missingData"] = missingData,
                 ["missingViews"] = missingViews,
+                ["readyDataMissingViews"] = readyDataMissingViews,
+                ["pendingBaseTerrain"] = pendingBaseTerrain,
                 ["missingBrgOwner"] = missingBrgOwner,
                 ["zeroBrgVisuals"] = zeroBrgVisuals
             };
@@ -152,7 +203,8 @@ namespace FlatWorld.GameplayMCP
             JArray target,
             RuntimeWorldAddress address,
             string reason = null,
-            int visualCount = 0)
+            int? visualCount = null,
+            string detail = null)
         {
             if (target.Count >= MaxSamplesPerCategory)
                 return;
@@ -163,11 +215,14 @@ namespace FlatWorld.GameplayMCP
                 ["origin"] = new JArray(address.ChunkOrigin.X, address.ChunkOrigin.Y)
             };
             if (!string.IsNullOrEmpty(reason))
-            {
                 sample["reason"] = reason;
-                sample["visualCount"] = visualCount;
-            }
+            if (visualCount.HasValue)
+                sample["visualCount"] = visualCount.Value;
+            if (!string.IsNullOrEmpty(detail))
+                sample["detail"] = detail;
             target.Add(sample);
         }
+
+        #endregion
     }
 }

@@ -159,6 +159,9 @@ namespace FlatWorld.WorldModel
         public short NavigationCost { get; }
         /// <summary>这个 Ground 格子的“可走、障碍、已占用”等标记；液体状态只存在于独立 Liquid 层。</summary>
         public TerrainCellFlags Flags { get; }
+        /// <summary>地形格是否允许行走；液体由调用方单独判断。</summary>
+        public bool IsWalkable => (Flags & TerrainCellFlags.Walkable) != 0 &&
+                                  (Flags & (TerrainCellFlags.Blocking | TerrainCellFlags.Occupied)) == 0;
 
         public bool Equals(TerrainCell other) =>
             GroundTileId == other.GroundTileId && BackTileId == other.BackTileId &&

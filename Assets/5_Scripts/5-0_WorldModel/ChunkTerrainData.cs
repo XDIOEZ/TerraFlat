@@ -282,9 +282,7 @@ namespace FlatWorld.WorldModel
         /// </summary>
         public bool IsWalkable(int x, int y)
         {
-            TerrainCell cell = GetCell(x, y);
-            return (cell.Flags & TerrainCellFlags.Walkable) != 0 &&
-                   (cell.Flags & (TerrainCellFlags.Blocking | TerrainCellFlags.Occupied)) == 0;
+            return GetCell(x, y).IsWalkable;
         }
 
         /// <summary>看看这个格子从下到上一共叠了几层非空地块。</summary>

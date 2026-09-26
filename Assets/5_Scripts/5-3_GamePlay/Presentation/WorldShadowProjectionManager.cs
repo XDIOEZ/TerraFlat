@@ -7,6 +7,7 @@ using UnityEngine.SceneManagement;
 /// 场景级太阳长投影：监听完整 Item 注册链，独立代理只复制主体 Sprite，不进入实体 SortingGroup。
 /// 共用一个材质；视口外每 0.25 秒复查，最多缓存 128 个代理，最大长度 8 个世界单位。
 /// 太阳参数在动画后的 LateUpdate 发布并同步主体；关闭设置会停用本组件并释放全部绑定。
+/// 物品视觉定义可提供与圆形底座阴影共用的局部落地点，Prefab 的 SunShadowCaster 仍可叠加高度和脚点修正。
 /// </summary>
 [DefaultExecutionOrder(-100)]
 public sealed class WorldShadowProjectionManager : MonoBehaviour
@@ -57,6 +58,7 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
         public SpriteRenderer Source;
         public SpriteRenderer Proxy;
         public SunShadowCaster Authoring;
+        public ItemShadowVisualDefinitionDto ShadowVisual;
         public Mod_Building Building;
         public IVisualGroundOffset GroundOffsetProvider;
         public float NextCheck;
@@ -167,6 +169,11 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
     {
         if (!isActiveAndEnabled || item == null || item is Map || item.itemData == null || bindings.ContainsKey(item)) return;
         SunShadowCaster authoring = item.GetComponent<SunShadowCaster>();
+        ItemShadowVisualDefinitionDto shadowVisual = null;
+        GameRes resources = GameRes.Instance;
+        if (resources != null &&
+            resources.TryGetItemDefinition(item.itemData.IDName, out RuntimeItemDefinition definition))
+            shadowVisual = definition.Visual?.Shadows;
         Mod_Building building = item.GetComponentInChildren<Mod_Building>(true);
         bool actor = item is Player || RuntimeAiEntityUtility.IsAiEntity(item);
         if (authoring == null && !actor && building == null &&
@@ -180,6 +187,7 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
             Owner = item,
             Source = source,
             Authoring = authoring,
+            ShadowVisual = shadowVisual,
             Building = building,
             GroundOffsetProvider = VisualGroundOffsetResolver.FindProvider(item)
         });
@@ -296,7 +304,7 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
         if (!owner.gameObject.activeInHierarchy || owner.InHand || source == null || source.sprite == null ||
             !source.enabled || source.forceRenderingOff || !source.gameObject.activeInHierarchy ||
             (authoring != null && !authoring.CastShadow) || heightScale <= 0f ||
-            (binding.Building != null && !binding.Building.IsInstalled()))
+            (binding.Building != null && (!binding.Building.IsInstalled() || !binding.Building.CastSunShadow)))
         {
             ReleaseProxy(binding);
             binding.NextCheck = Time.unscaledTime + OffscreenInterval;
@@ -305,7 +313,9 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
 
         Vector3 visualOffset = VisualGroundOffsetResolver.Resolve(binding.GroundOffsetProvider, source.transform);
         Bounds footprint = MeasureVisibleBounds(source);
-        float footY = ResolveFootY(source, footprint, authoring) - visualOffset.y;
+        float footY = ResolveFootY(owner, source, footprint, authoring, binding.ShadowVisual);
+        if (binding.ShadowVisual == null || !binding.ShadowVisual.FootLocalPosition.HasValue)
+            footY -= visualOffset.y;
         Bounds sourceBounds = source.bounds;
         sourceBounds.center -= visualOffset;
         float height = Mathf.Max(0.01f, sourceBounds.max.y - footY);
@@ -398,15 +408,25 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
         return world;
     }
 
-    /// <summary>底部枢轴的高物体把投影起点收入根部，避免透明留白沿日照方向拉成断缝。</summary>
-    private static float ResolveFootY(SpriteRenderer source, Bounds footprint, SunShadowCaster authoring)
+    /// <summary>优先使用物品配置的落地点，其余物体沿用可见轮廓和底部枢轴规则。</summary>
+    private static float ResolveFootY(Item owner, SpriteRenderer source, Bounds footprint,
+        SunShadowCaster authoring, ItemShadowVisualDefinitionDto shadowVisual)
     {
-        float footY = footprint.min.y;
-        Sprite sprite = source.sprite;
-        if (sprite.pivot.y <= sprite.rect.height * 0.15f && footprint.size.y > 1f)
+        float footY;
+        if (shadowVisual != null && shadowVisual.FootLocalPosition.HasValue)
         {
-            footY = Mathf.Max(footY, source.transform.position.y);
-            footY += Mathf.Min(0.3f, footprint.size.y * 0.08f);
+            Vector2 localFoot = shadowVisual.FootLocalPosition.Value;
+            footY = owner.transform.TransformPoint(new Vector3(localFoot.x, localFoot.y, 0f)).y;
+        }
+        else
+        {
+            footY = footprint.min.y;
+            Sprite sprite = source.sprite;
+            if (sprite.pivot.y <= sprite.rect.height * 0.15f && footprint.size.y > 1f)
+            {
+                footY = Mathf.Max(footY, source.transform.position.y);
+                footY += Mathf.Min(0.3f, footprint.size.y * 0.08f);
+            }
         }
         return footY + (authoring != null ? authoring.FootOffset : 0f);
     }

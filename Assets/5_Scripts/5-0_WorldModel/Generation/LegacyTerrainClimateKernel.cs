@@ -54,9 +54,18 @@ namespace FlatWorld.WorldModel
 
         /// <summary>采样旧版基础降水，再按区域风向和逆风地形计算最终降水。</summary>
         internal static double SamplePrecipitation(ChunkGenerationRequest request,
-            ChunkGenerationSettingsSnapshot settings, int worldX, int worldY)
+            ChunkGenerationSettingsSnapshot settings, int worldX, int worldY,
+            double? sampledHeight = null)
         {
-            return SampleClimate(request, settings, worldX, worldY).Precipitation;
+            NormalizeWorldCell(request, ref worldX, ref worldY);
+            float height = sampledHeight.HasValue
+                ? (float)sampledHeight.Value
+                : SampleHeightAt(request, settings, worldX, worldY);
+            float basePrecipitation = SampleChannel(request, settings,
+                settings.PrecipitationNoise, PrecipitationChannelId, worldX, worldY);
+            SampleWind(request, settings, worldX, worldY, out float windX, out float windY);
+            return SampleOrographicPrecipitation(request, settings, worldX, worldY,
+                height, basePrecipitation, windX, windY);
         }
 
         /// <summary>一次返回地表格需要的高度、基础/地形降水和风向。</summary>
@@ -78,7 +87,23 @@ namespace FlatWorld.WorldModel
                 settings.PrecipitationNoise,
                 PrecipitationChannelId, worldX, worldY);
             SampleWind(request, settings, worldX, worldY, out float windX, out float windY);
+            float precipitation = SampleOrographicPrecipitation(request, settings,
+                worldX, worldY, height, basePrecipitation, windX, windY);
+            return new LegacyClimateSample(height, temperature, temperatureCelsius,
+                basePrecipitation, precipitation, windX, windY);
+        }
 
+        /// <summary>地形降水的共同计算步骤，径流采样无需附带计算温度。</summary>
+        private static float SampleOrographicPrecipitation(
+            ChunkGenerationRequest request,
+            ChunkGenerationSettingsSnapshot settings,
+            int worldX,
+            int worldY,
+            float height,
+            float basePrecipitation,
+            float windX,
+            float windY)
+        {
             int sampleCount = settings.OrographicSampleCount;
             float sampleDistance = (float)settings.OrographicSampleDistance;
             float meanUpwindHeight = 0f;
@@ -102,8 +127,7 @@ namespace FlatWorld.WorldModel
                 maxUpwindHeight,
                 (float)settings.WindwardRainGain,
                 (float)settings.LeewardRainLoss);
-            return new LegacyClimateSample(height, temperature, temperatureCelsius,
-                basePrecipitation, precipitation, windX, windY);
+            return precipitation;
         }
 
         #endregion

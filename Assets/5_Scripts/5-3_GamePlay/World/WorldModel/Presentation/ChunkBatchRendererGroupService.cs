@@ -26,7 +26,21 @@ internal static class ChunkBatchRendererGroupService
         Back,
         Ground,
         Water,
-        Blocking
+        Support,
+        Environment,
+        Snow,
+        Blocking,
+        SnowWall,
+        Grass,
+        GroundCover,
+        MechanicalLowerBase,
+        MechanicalLowerMotionA,
+        MechanicalLowerMotionB,
+        MechanicalLowerFront,
+        MechanicalUpperBase,
+        MechanicalUpperMotionA,
+        MechanicalUpperMotionB,
+        MechanicalUpperFront
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -119,10 +133,10 @@ internal static class ChunkBatchRendererGroupService
         return owner != null && backend?.IsOwnerRegistered(owner) == true;
     }
 
-    /// <summary>读取当前 Owner 实际登记到 BRG 的实例数，用于判断“数据存在但表现提交缺失”。</summary>
-    internal static int GetOwnerVisualCount(ChunkTilemapRenderer owner)
+    /// <summary>只统计基础地形图层，避免同 Owner 的草花扩展实例污染地形对账。</summary>
+    internal static int GetOwnerTerrainVisualCount(ChunkTilemapRenderer owner)
     {
-        return owner != null && backend != null ? backend.GetOwnerVisualCount(owner) : 0;
+        return owner != null && backend != null ? backend.GetOwnerTerrainVisualCount(owner) : 0;
     }
 
     /// <summary>构造当前 BRG 后端快照，供运行时日志和 Inspector ContextMenu 定向排查。</summary>
@@ -156,9 +170,12 @@ internal static class ChunkBatchRendererGroupService
         private const int ZeroPrefixBytes = InstanceStride;
         private const uint InstanceMetadataAddress = ZeroPrefixBytes;
         private const int TerrainQueueBase = 2988;
+        private const string MechanicalKeyword = "_CHUNK_MECHANICAL";
         private static readonly int InstanceDataId = Shader.PropertyToID("_ChunkInstanceData");
         private static readonly int ElevationStrengthId = Shader.PropertyToID("_ElevationStrength");
         private static readonly int ElevationEdgeWidthId = Shader.PropertyToID("_ElevationEdgeWidth");
+        private static readonly int GrassSwayEnabledId = Shader.PropertyToID("_GrassSwayEnabled");
+        private const string GrassSwayKeyword = "_CHUNK_GRASS_SWAY";
 
         private readonly object syncRoot = new();
         private readonly BatchRendererGroup rendererGroup;
@@ -217,12 +234,22 @@ internal static class ChunkBatchRendererGroupService
                 return owner != null && ownerHandles.ContainsKey(owner);
         }
 
-        public int GetOwnerVisualCount(ChunkTilemapRenderer owner)
+        public int GetOwnerTerrainVisualCount(ChunkTilemapRenderer owner)
         {
             lock (syncRoot)
-                return owner != null && ownerHandles.TryGetValue(owner, out Dictionary<int, InstanceHandle> handles)
-                    ? handles.Count
-                    : 0;
+            {
+                if (owner == null || !ownerHandles.TryGetValue(owner, out Dictionary<int, InstanceHandle> handles))
+                    return 0;
+
+                int count = 0;
+                foreach (InstanceHandle handle in handles.Values)
+                {
+                    VisualLayer layer = handle.Batch.Key.Layer;
+                    if (layer is VisualLayer.Back or VisualLayer.Ground or VisualLayer.Water or VisualLayer.Blocking)
+                        count++;
+                }
+                return count;
+            }
         }
 
         public string BuildDebugSummary(ChunkTilemapRenderer owner = null)
@@ -352,8 +379,15 @@ internal static class ChunkBatchRendererGroupService
                 InitialCapacity);
             batches.Add(key, batch);
             orderedBatches.Add(batch);
-            orderedBatches.Sort((left, right) => left.Priority.CompareTo(right.Priority));
+            orderedBatches.Sort(CompareBatchOrder);
             return batch;
+        }
+
+        /// <summary>保持同队列的草与花按图层稳定排序，花批次始终绘制在草批次上方。</summary>
+        private static int CompareBatchOrder(TileBatch left, TileBatch right)
+        {
+            int priority = left.Priority.CompareTo(right.Priority);
+            return priority != 0 ? priority : left.Key.Layer.CompareTo(right.Key.Layer);
         }
 
         private MeshRegistration GetOrCreateMesh(Sprite sprite)
@@ -375,13 +409,13 @@ internal static class ChunkBatchRendererGroupService
         {
             Material template = layer switch
             {
-                VisualLayer.Ground => contactTemplate,
+                VisualLayer.Ground or VisualLayer.Support => contactTemplate,
                 VisualLayer.Water => waterTemplate,
                 _ => spriteTemplate
             };
-            int priority = ResolvePriority(layer);
+            int queuePriority = ResolveRenderQueuePriority(layer);
             var key = new MaterialKey(template.GetInstanceID(), sourceMaterial.GetInstanceID(),
-                texture != null ? texture.GetInstanceID() : 0, priority);
+                texture != null ? texture.GetInstanceID() : 0, queuePriority);
             if (materials.TryGetValue(key, out MaterialRegistration registration))
                 return registration;
 
@@ -390,15 +424,20 @@ internal static class ChunkBatchRendererGroupService
                 name = $"ChunkBRG_{layer}_{sourceMaterial.name}_{texture?.name}",
                 hideFlags = HideFlags.HideAndDontSave,
                 enableInstancing = true,
-                // BRG 没有 SpriteRenderer/TilemapRenderer 的 Sorting Layer 字段，实际会与普通世界渲染共用默认排序域。
-                // 地形批次固定占用 2987~2992；草等 BRG 上层表现需使用 Default Sorting Layer，
-                // 并把 Render Queue 放在 2992 之后、普通世界 Sprite 3000 之前。
-                renderQueue = TerrainQueueBase + priority
+                // BRG 没有 SpriteRenderer/TilemapRenderer 的 Sorting Layer 字段；草花共用 Default/0 与 2993 队列。
+                renderQueue = TerrainQueueBase + queuePriority
             };
             runtimeMaterial.CopyPropertiesFromMaterial(sourceMaterial);
             runtimeMaterial.shaderKeywords = sourceMaterial.shaderKeywords;
             runtimeMaterial.SetTexture("_MainTex", texture);
-            runtimeMaterial.renderQueue = TerrainQueueBase + priority;
+            runtimeMaterial.renderQueue = TerrainQueueBase + queuePriority;
+            if (sourceMaterial.HasProperty(GrassSwayEnabledId) &&
+                sourceMaterial.GetFloat(GrassSwayEnabledId) > 0.5f)
+                runtimeMaterial.EnableKeyword(GrassSwayKeyword);
+            else
+                runtimeMaterial.DisableKeyword(GrassSwayKeyword);
+            if (IsMechanicalLayer(layer)) runtimeMaterial.EnableKeyword(MechanicalKeyword);
+            else runtimeMaterial.DisableKeyword(MechanicalKeyword);
             if (layer == VisualLayer.Ground)
                 ApplyGroundElevationPreference(runtimeMaterial);
             BatchMaterialID id = rendererGroup.RegisterMaterial(runtimeMaterial);
@@ -626,9 +665,39 @@ internal static class ChunkBatchRendererGroupService
             VisualLayer.Back => -1,
             VisualLayer.Ground => 0,
             VisualLayer.Water => 1,
+            VisualLayer.Support or VisualLayer.Environment => 2,
+            VisualLayer.Snow => 3,
             VisualLayer.Blocking => 4,
+            VisualLayer.SnowWall => 5,
+            VisualLayer.Grass => 5,
+            VisualLayer.GroundCover => 6,
+            VisualLayer.MechanicalLowerBase => 7,
+            VisualLayer.MechanicalLowerMotionA => 8,
+            VisualLayer.MechanicalLowerMotionB => 9,
+            VisualLayer.MechanicalLowerFront => 10,
+            VisualLayer.MechanicalUpperBase => 11,
+            VisualLayer.MechanicalUpperMotionA => 12,
+            VisualLayer.MechanicalUpperMotionB => 13,
+            VisualLayer.MechanicalUpperFront => 14,
             _ => 0
         };
+
+        /// <summary>花与草共享 Queue 2993；区分图层的批次顺序只用于稳定透明绘制顺序。</summary>
+        private static int ResolveRenderQueuePriority(VisualLayer layer) => layer switch
+        {
+            VisualLayer.SnowWall or VisualLayer.Grass or VisualLayer.GroundCover => 5,
+            VisualLayer.MechanicalLowerBase => 6,
+            VisualLayer.MechanicalLowerMotionA or VisualLayer.MechanicalLowerMotionB => 7,
+            VisualLayer.MechanicalLowerFront => 8,
+            VisualLayer.MechanicalUpperBase => 9,
+            VisualLayer.MechanicalUpperMotionA or VisualLayer.MechanicalUpperMotionB => 10,
+            VisualLayer.MechanicalUpperFront => 11,
+            _ => ResolvePriority(layer)
+        };
+
+        /// <summary>机械实例使用同一 BRG 后端，但启用专属 GPU 动画变体。</summary>
+        private static bool IsMechanicalLayer(VisualLayer layer)
+            => layer >= VisualLayer.MechanicalLowerBase && layer <= VisualLayer.MechanicalUpperFront;
 
         private static void DestroyRuntimeObject(UnityEngine.Object target)
         {

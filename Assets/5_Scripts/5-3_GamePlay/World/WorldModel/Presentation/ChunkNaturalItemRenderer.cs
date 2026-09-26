@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using FlatWorld.Networking;
 using FlatWorld.WorldModel;
 using UnityEngine;
+using Unity.Profiling;
 using RuntimeWorldAddress = FlatWorld.WorldModel.WorldAddress;
 
 /// <summary>
@@ -11,14 +12,17 @@ using RuntimeWorldAddress = FlatWorld.WorldModel.WorldAddress;
 /// 后台只返回 NaturalItemPlacement；本组件在主线程通过 ItemMgr 创建现有 Item，显式挂在
 /// NaturalItems 子节点，并在区块卸载前把权威状态写回 PlanetData 的生态差量存档。
 /// 应用退出不保存生态差量；已有管理器仍存活时正常注销物品，依赖引用仅在绑定和登记时获取。
+/// 初次分帧绑定每步最多尝试创建一个实体，宿主全部处理完后才处理伴生物。
 /// </summary>
-public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IChunkViewRenderer
+public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IIncrementalChunkViewRenderer
 {
     #region 字段
 
     private const float AutoSaveFrameBudgetSeconds = 0.0025f;
     private const string LegacyNaturalPortalItemId = "CaveExit";
     private const string NaturalSurfacePortalItemId = "NaturalMineEntrance";
+    private static readonly ProfilerMarker NaturalItemSpawnMarker =
+        new("FlatWorld.ChunkStreaming.SpawnNaturalItem");
 
     private readonly Dictionary<int, Item> spawnedItems = new();
     private readonly HashSet<Item> transientItems = new();
@@ -31,6 +35,7 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IChunkViewRenderer
     private ChunkMgr chunkManager;
     private bool applicationQuitting;
     private bool unbinding;
+    private bool initialBindingInProgress;
     private float nextRenewalCheck; // 春季低频分批补位。
     private int renewalCursor; // 每次最多检查四个自然生成点。
     private float nextCompanionReadinessCheck; // 小树长大后低频补生成伴生物。
@@ -77,55 +82,86 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IChunkViewRenderer
 
     #region 绑定生命周期
 
-    /// <summary>按纯生成结果实例化当前区块的自然物品。</summary>
+    /// <summary>同步入口沿用同一套绑定步骤，供即时重绑场景调用。</summary>
     public void Bind(ChunkRuntime chunk)
+    {
+        IEnumerator steps = BindIncremental(chunk);
+        try
+        {
+            while (steps.MoveNext()) { }
+        }
+        finally
+        {
+            (steps as IDisposable)?.Dispose();
+        }
+    }
+
+    /// <summary>先创建宿主再创建伴生物，每步最多实例化一个自然实体。</summary>
+    public IEnumerator BindIncremental(ChunkRuntime chunk)
     {
         if (chunk == null)
             throw new ArgumentNullException(nameof(chunk));
         if (chunk.Terrain == null)
             throw new InvalidOperationException("Cannot bind natural items before terrain is ready.");
         if (ReferenceEquals(boundChunk, chunk))
-            return;
+            yield break;
 
         Unbind();
         itemManager = ItemMgr.GetInstance();
         chunkManager = ChunkMgr.ExistingInstance;
         boundChunk = chunk;
-        environmentLayers = BuildEnvironmentLayers(chunk.Terrain);
+        initialBindingInProgress = true;
 
-        IReadOnlyList<NaturalItemPlacement> placements = chunk.Ecology?.Placements;
-        if (placements == null || placements.Count == 0)
-            return;
-        if (itemManager == null || chunkManager == null)
-            throw new InvalidOperationException("绑定自然物需要有效的 ItemMgr 和 ChunkMgr。");
-
-        // 先生成全部宿主，再处理伴生物，避免依赖生态规则序列化顺序。
-        for (int i = 0; i < placements.Count; i++)
+        try
         {
-            NaturalItemPlacement placement = placements[i];
-            if (!placement.IsCompanion)
-                SpawnPlacement(placement);
-        }
+            environmentLayers = BuildEnvironmentLayers(chunk.Terrain);
+            IReadOnlyList<NaturalItemPlacement> placements = chunk.Ecology?.Placements;
+            if (placements == null || placements.Count == 0)
+                yield break;
+            if (itemManager == null || chunkManager == null)
+                throw new InvalidOperationException("绑定自然物需要有效的 ItemMgr 和 ChunkMgr。");
 
-        for (int i = 0; i < placements.Count; i++)
-        {
-            NaturalItemPlacement placement = placements[i];
-            if (!placement.IsCompanion)
-                continue;
-
-            if (!CanSpawnCompanionForHost(placement))
+            // 宿主必须先完成生成，伴生物才能按宿主状态决定是否出现。
+            for (int i = 0; i < placements.Count; i++)
             {
-                if (!chunkManager.IsNaturalItemRemoved(chunk.Address, placement.Guid))
-                    deferredCompanionPlacements.Add(placement);
-                continue;
+                NaturalItemPlacement placement = placements[i];
+                if (!placement.IsCompanion && SpawnInitialPlacement(placement))
+                    yield return null;
             }
 
-            SpawnPlacement(placement);
-        }
+            for (int i = 0; i < placements.Count; i++)
+            {
+                NaturalItemPlacement placement = placements[i];
+                if (!placement.IsCompanion)
+                    continue;
 
-        // 传送门可能和玩家在同一帧生成；立即同步一次物理变换，避免首个交互帧拿到旧碰撞位置。
-        if (generatedPortalGuids.Count > 0)
+                if (!CanSpawnCompanionForHost(placement))
+                {
+                    if (!chunkManager.IsNaturalItemRemoved(chunk.Address, placement.Guid))
+                        deferredCompanionPlacements.Add(placement);
+                    continue;
+                }
+
+                if (SpawnInitialPlacement(placement))
+                    yield return null;
+            }
+        }
+        finally
+        {
+            initialBindingInProgress = false;
+        }
+    }
+
+    /// <summary>传送门创建后立即同步碰撞体，分帧等待期间也能正常交互。</summary>
+    private bool SpawnInitialPlacement(NaturalItemPlacement placement)
+    {
+        int portalCount = generatedPortalGuids.Count;
+        bool spawned;
+        using (NaturalItemSpawnMarker.Auto())
+            spawned = SpawnPlacement(placement);
+        if (generatedPortalGuids.Count > portalCount)
             Physics2D.SyncTransforms();
+        return spawned;
     }
 
     /// <summary>正常解绑时保存并注销物品；管理器已销毁时只解除登记，由场景销毁子对象。</summary>
@@ -164,6 +200,7 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IChunkViewRenderer
             deferredCompanionPlacements.Clear();
             companionReadinessCursor = 0;
             nextCompanionReadinessCheck = 0f;
+            initialBindingInProgress = false;
             environmentLayers = null;
             boundChunk = null;
             itemManager = null;
@@ -258,25 +295,25 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IChunkViewRenderer
 
     #region 物品实例化
 
-    /// <summary>应用删除/状态覆盖后实例化一个自然物。</summary>
-    private void SpawnPlacement(NaturalItemPlacement placement)
+    /// <summary>应用删除/状态覆盖后实例化一个自然物；返回本次是否尝试创建实体。</summary>
+    private bool SpawnPlacement(NaturalItemPlacement placement)
     {
         if (boundChunk == null || itemManager == null || placement.Guid == 0 ||
             string.IsNullOrWhiteSpace(placement.ItemId))
         {
-            return;
+            return false;
         }
         if (!CanSpawnCompanionForHost(placement))
-            return;
+            return false;
 
         RuntimeWorldAddress address = boundChunk.Address;
         string runtimeItemId = ResolveRuntimeItemId(address, placement);
         // 地表植被保留纯生成点和删除差量，但由专用 Tilemap 绘制，不创建常驻 Item。
         if (GameRes.ExistingInstance.TryGetItemDefinition(runtimeItemId, out RuntimeItemDefinition definition) &&
             definition.IsGroundCover)
-            return;
+            return false;
         bool renewing = chunkManager.IsNaturalItemRemoved(address, placement.Guid);
-        if (renewing && (!chunkManager.IsNaturalRenewalDue(address, placement.Guid) || !CanRenewAt(placement))) return;
+        if (renewing && (!chunkManager.IsNaturalRenewalDue(address, placement.Guid) || !CanRenewAt(placement))) return false;
 
         Vector3 position = new Vector3(
             address.ChunkOrigin.X + placement.LocalX + 0.5f + placement.OffsetX,
@@ -312,7 +349,7 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IChunkViewRenderer
                         scale: scale, rotation: rotation.eulerAngles.z);
                     try { chunkManager.MarkNaturalItemRemoved(address, placement.Guid); }
                     catch { DroppedItemService.Remove(handle); throw; }
-                    return;
+                    return true;
                 }
             }
 
@@ -339,7 +376,7 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IChunkViewRenderer
             }
 
             if (item == null)
-                return;
+                return true;
 
             item.Load();
             if (placement.IsDimensionPortal)
@@ -363,6 +400,7 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IChunkViewRenderer
             item.OnItemDestroy += HandleNaturalItemDestroy;
             spawnedItems[placement.Guid] = item;
             if (renewing) chunkManager.CompleteNaturalRenewal(address, placement.Guid);
+            return true;
         }
         catch (Exception exception)
         {
@@ -371,6 +409,7 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IChunkViewRenderer
             Debug.LogWarning(
                 $"[ChunkNaturalItemRenderer] 自然物实例化失败：{placement.ItemId}，规则={placement.RuleId}，{exception.Message}",
                 this);
+            return true;
         }
     }
 
@@ -414,6 +453,8 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IChunkViewRenderer
     /// <summary>低频检查等待宿主长大的伴生物；达到宿主门槛后只尝试生成一次。</summary>
     private void Update()
     {
+        if (initialBindingInProgress)
+            return;
         ProcessDeferredCompanionSpawns();
         ProcessNaturalRenewal();
     }

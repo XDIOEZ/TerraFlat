@@ -28,6 +28,13 @@
       "tags": [],
       "visual": {
         "spriteAddress": "Assets/6_Art/Env/Dimension/CaveEntrance_Natural.png",
+        "shadows": {
+          "contactWidth": 1.55,
+          "footLocalPosition": {
+            "x": 0.0,
+            "y": -0.5625
+          }
+        },
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,

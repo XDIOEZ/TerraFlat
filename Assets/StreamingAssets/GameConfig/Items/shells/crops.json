@@ -500,6 +500,13 @@
       "lootTableId": "BerryCrop_Default",
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Plants/TX Plant.png[GrassLand_6]",
+        "shadows": {
+          "contactWidth": 0.85,
+          "footLocalPosition": {
+            "x": 0.0,
+            "y": 0.0
+          }
+        },
         "collider": {
           "size": {
             "x": 0.8,
@@ -766,14 +773,31 @@
     }
     ,{
       "id": "CottonCrop",
-      "parent": "Crop_Base",
+      "parent": "WildCrop_Base",
       "gameName": "棉花",
       "description": "成熟后可以采集棉花纤维。",
       "weight": 0.7,
       "volume": 2.5,
       "stackable": true,
       "canBePickedUp": false,
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Farming/CottonCrop/CottonCrop_Seedling.png",
+        "spriteStates": {
+          "seedling": "Assets/6_Art/Generated/Farming/CottonCrop/CottonCrop_Seedling.png",
+          "growing": "Assets/6_Art/Generated/Farming/CottonCrop/CottonCrop_Growing.png",
+          "mature": "Assets/6_Art/Generated/Farming/CottonCrop/CottonCrop_Mature.png"
+        },
+        "color": { "r": 1.0, "g": 1.0, "b": 1.0, "a": 1.0 }
+      },
       "modules": {
+        "cropVisual": {
+          "parameters": {
+            "buriedClip": 0.0,
+            "seedlingScale": 1.0,
+            "matureScale": 1.0,
+            "growingVisualThreshold": 0.35
+          }
+        },
         "cropYield": {
           "parameters": {
             "outputs": [

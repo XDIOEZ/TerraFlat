@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: ChunkGenerationProfile_Surface
   m_EditorClassIdentifier: 
   profileId: surface.default
-  generationSignature: 45
+  generationSignature: 46
   chunkWidth: 16
   chunkHeight: 16
   numericParameters:
@@ -35,10 +35,10 @@ MonoBehaviour:
     Value: 9
   - Id: terrain.peatTileId
     Value: 28
-  - Id: biome.peat.minimumMoisture
-    Value: 0.62
-  - Id: biome.peat.maximumHeight
-    Value: 0.62
+  - Id: biome.peat.spawnChance
+    Value: 0.1
+  - Id: biome.peat.stoneBoundaryRadius
+    Value: 2
   - Id: biome.peat.patchThreshold
     Value: 0.64
   - Id: biome.peat.patchScale
@@ -933,6 +933,31 @@ MonoBehaviour:
     ProvidedTags: []
     CompanionOnly: 0
     CompanionHostTag: 
+    CompanionSpawnChance: 0
+    CompanionOffsetX: 0
+    CompanionOffsetY: 0
+    CompanionMinRadius: 0
+    CompanionMaxRadius: 0
+  - RuleId: surface.ancient.cotton
+    ItemId: CottonCrop
+    ItemCount: 1
+    SpawnChance: 0.001
+    SpawnChanceMultiplier: 1
+    DistributionMode: 0
+    PatchSpacing: 24
+    PatchRadius: 2.5
+    PatchChance: 1
+    BiomeMask: 48
+    MinTemperature: 0
+    MaxTemperature: 1
+    MinPrecipitation: 0
+    MaxPrecipitation: 1
+    MinHeight: 0
+    MaxHeight: 1
+    MinRiverFloodplainStrength: 0
+    ProvidedTags: []
+    CompanionOnly: 0
+    CompanionHostTag:
     CompanionSpawnChance: 0
     CompanionOffsetX: 0
     CompanionOffsetY: 0

@@ -27,6 +27,9 @@ public partial class Mod_Building
     [Tooltip("自动：自身光源位于轮廓内时保留光源下方的实体遮挡；完整：封闭轮廓；无：不遮挡局部光。")]
     public BuildingLightOcclusionMode LightOcclusionMode = BuildingLightOcclusionMode.Automatic;
 
+    [Tooltip("落地建筑是否参与场景太阳长投影；小型平面传动件可在物品定义中关闭。")]
+    public bool CastSunShadow = true;
+
     [Min(0.001f), Tooltip("自身光源与实体遮挡之间的世界单位间隙，默认 0.0625；不移动真实光源。")]
     public float OwnLightClearance = 0.0625f;
 

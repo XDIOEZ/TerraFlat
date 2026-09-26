@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 
 /// <summary>
-/// 统一管理玩家、生物与落地植物根部的接触阴影。
+/// 统一管理玩家、生物、落地植物与显式配置的世界物品的接触阴影。
 /// 阴影实例全部放在场景级 ActorShadows 根节点下，以 Default/0、Queue 2991
 /// 在 BRG 地形之后、草与实体之前绘制；漏注册的实体每 0.5 秒补扫一次。
 /// 不依附于 Item 或 RuntimeEntities 层级；阴影透明度随 DayTimeSystem 的有效光照强度变化，
@@ -82,6 +82,8 @@ public sealed class ActorShadowManager : SingletonMono<ActorShadowManager>
         ItemMgr.RuntimeItemInstantiated += RegisterActor;
         ItemMgr.RuntimeItemDespawning -= UnregisterActor;
         ItemMgr.RuntimeItemDespawning += UnregisterActor;
+        Item.RuntimeStructureChanged -= RefreshActor;
+        Item.RuntimeStructureChanged += RefreshActor;
 
         if (shadowRoot != null)
             shadowRoot.gameObject.SetActive(true);
@@ -134,6 +136,7 @@ public sealed class ActorShadowManager : SingletonMono<ActorShadowManager>
     {
         ItemMgr.RuntimeItemInstantiated -= RegisterActor;
         ItemMgr.RuntimeItemDespawning -= UnregisterActor;
+        Item.RuntimeStructureChanged -= RefreshActor;
 
         ClearBindings();
         if (shadowMaterial != null)
@@ -150,6 +153,7 @@ public sealed class ActorShadowManager : SingletonMono<ActorShadowManager>
     {
         ItemMgr.RuntimeItemInstantiated -= RegisterActor;
         ItemMgr.RuntimeItemDespawning -= UnregisterActor;
+        Item.RuntimeStructureChanged -= RefreshActor;
 
         if (shadowRoot != null)
             shadowRoot.gameObject.SetActive(false);
@@ -159,14 +163,15 @@ public sealed class ActorShadowManager : SingletonMono<ActorShadowManager>
 
     #region 对外生命周期接口
 
-    /// <summary>为符合条件的角色或落地植物创建独立阴影。</summary>
+    /// <summary>为符合条件的角色、落地植物或世界物品创建独立阴影。</summary>
     public void RegisterActor(Item item)
     {
         if (this == null)
             return;
 
         if (item == null || bindings.ContainsKey(item) ||
-            !TryClassifyShadowCaster(item, out bool isRootedPlant))
+            !TryClassifyShadowCaster(item, out bool isRootedPlant,
+                out ItemShadowVisualDefinitionDto shadowVisual))
             return;
 
         if (actorShadowPrefab == null)
@@ -208,7 +213,8 @@ public sealed class ActorShadowManager : SingletonMono<ActorShadowManager>
         shadowRenderer.sharedMaterial = shadowMaterial;
         shadowRenderer.enabled = false;
         bindings.Add(item, new ShadowBinding(shadowObject, shadowRenderer,
-            isRootedPlant ? null : VisualGroundOffsetResolver.FindProvider(item), isRootedPlant));
+            isRootedPlant ? null : VisualGroundOffsetResolver.FindProvider(item),
+            isRootedPlant, shadowVisual));
     }
 
     /// <summary>移除实体对应的阴影实例。</summary>
@@ -258,6 +264,13 @@ public sealed class ActorShadowManager : SingletonMono<ActorShadowManager>
             return;
         }
 
+        float contactWidth = binding.ShadowVisual?.ContactWidth ?? 0f;
+        if (contactWidth > 0f && (item.InHand || item.Owner != null))
+        {
+            binding.Renderer.enabled = false;
+            return;
+        }
+
         float alpha = GetShadowOpacity(item.gameObject.scene);
 
         if (binding.InWater || alpha <= 0.001f)
@@ -269,7 +282,17 @@ public sealed class ActorShadowManager : SingletonMono<ActorShadowManager>
         Bounds sourceBounds = sourceRenderer.bounds;
         ResolveSourceFootprint(sourceRenderer, sourceBounds, out Vector3 footprintAnchor,
             out float footprintWidth, out float footprintHeight);
-        if (binding.IsRootedPlant)
+        if (contactWidth > 0f)
+        {
+            if (binding.ShadowVisual.FootLocalPosition.HasValue)
+            {
+                Vector2 localFoot = binding.ShadowVisual.FootLocalPosition.Value;
+                footprintAnchor = item.transform.TransformPoint(new Vector3(localFoot.x, localFoot.y, 0f));
+            }
+            binding.ShadowWidth = Mathf.Clamp(contactWidth * Mathf.Abs(item.transform.lossyScale.x),
+                minShadowWidth, Mathf.Max(minShadowWidth, maxShadowWidth));
+        }
+        else if (binding.IsRootedPlant)
         {
             ResolveRootedPlantFootprint(item, footprintAnchor, footprintWidth,
                 out Vector3 rootAnchor, out float rootedPlantWidth);
@@ -277,7 +300,7 @@ public sealed class ActorShadowManager : SingletonMono<ActorShadowManager>
             binding.ShadowWidth = Mathf.Clamp(rootedPlantWidth,
                 minShadowWidth, Mathf.Max(minShadowWidth, maxShadowWidth));
         }
-        else
+        if (!binding.IsRootedPlant)
         {
             footprintAnchor -= VisualGroundOffsetResolver.Resolve(binding.GroundOffsetProvider,
                 sourceRenderer.transform);
@@ -516,14 +539,36 @@ public sealed class ActorShadowManager : SingletonMono<ActorShadowManager>
             RegisterActor(item);
     }
 
-    /// <summary>识别角色或根植植物，并记录两种阴影的尺寸规则。</summary>
-    private static bool TryClassifyShadowCaster(Item item, out bool isRootedPlant)
+    /// <summary>物品视觉定义刷新后重建对应阴影绑定。</summary>
+    private void RefreshActor(Item item)
+    {
+        ItemMgr itemMgr = ItemMgr.GetInstance();
+        if (item == null || item.itemData == null || itemMgr == null ||
+            !itemMgr.WorldRunTimeItems.TryGetValue(item.itemData.Guid, out Item registered) || registered != item)
+            return;
+
+        UnregisterActor(item);
+        RegisterActor(item);
+    }
+
+    /// <summary>识别角色、根植植物或显式声明底座阴影的世界物品。</summary>
+    private static bool TryClassifyShadowCaster(Item item, out bool isRootedPlant,
+        out ItemShadowVisualDefinitionDto shadowVisual)
     {
         isRootedPlant = false;
+        shadowVisual = null;
         if (item == null || !item.gameObject.activeInHierarchy || IsItemInPool(item))
             return false;
 
+        GameRes resources = GameRes.Instance;
+        if (resources != null && item.itemData != null &&
+            resources.TryGetItemDefinition(item.itemData.IDName, out RuntimeItemDefinition definition))
+            shadowVisual = definition.Visual?.Shadows;
+
         if (item is Player || RuntimeAiEntityUtility.IsAiEntity(item))
+            return true;
+
+        if ((shadowVisual?.ContactWidth ?? 0f) > 0f && item.Owner == null && !item.InHand)
             return true;
 
         bool groundedPlant = IsGroundedStaticPlant(item);
@@ -608,18 +653,21 @@ public sealed class ActorShadowManager : SingletonMono<ActorShadowManager>
         public readonly Color BaseColor;
         public readonly IVisualGroundOffset GroundOffsetProvider;
         public readonly bool IsRootedPlant;
+        public readonly ItemShadowVisualDefinitionDto ShadowVisual;
         public SpriteRenderer SourceRenderer;
         public float ShadowWidth;
         public bool InWater;
 
         public ShadowBinding(GameObject shadowObject, SpriteRenderer renderer,
-            IVisualGroundOffset groundOffsetProvider, bool isRootedPlant)
+            IVisualGroundOffset groundOffsetProvider, bool isRootedPlant,
+            ItemShadowVisualDefinitionDto shadowVisual)
         {
             ShadowObject = shadowObject;
             Renderer = renderer;
             BaseColor = renderer.color;
             GroundOffsetProvider = groundOffsetProvider;
             IsRootedPlant = isRootedPlant;
+            ShadowVisual = shadowVisual;
         }
     }
 
