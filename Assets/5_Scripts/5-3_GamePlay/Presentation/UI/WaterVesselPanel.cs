@@ -9,7 +9,8 @@ using UnityEngine.UI;
 public sealed class WaterVesselPanel : MonoBehaviour, IPointerDownHandler, IDragHandler, IPointerUpHandler, IEndDragHandler, IInventoryDragDropTarget
 {
     private const float FullPourDragWidthRatio = 0.72f; // 中心附近起手时的二维线性回退距离。
-    private const float MaxPourTiltDegrees = 180f; // 手势最大绝对倾角，用于按容器配置归一化保液上限。
+    private const float MaxPourTiltDegrees = 180f; // 手势允许的最大绝对倾角。
+    private const float FullEmptyTiltDegrees = 90f; // 所有液体容器统一在 90° 时完全清空。
     private const float BasePourAmountPerSecond = 2.8f; // 默认开口宽度容器每秒流出 2.8 份，与倾角和容量无关。
     private const float PourFollowDegreesPerSecond = 540f; // 手势目标再快也只能以该角速度追随，强制保留可见倾倒过程。
     private const float PourReturnDegreesPerSecond = 180f; // 松手后恢复直立的速度。
@@ -24,7 +25,7 @@ public sealed class WaterVesselPanel : MonoBehaviour, IPointerDownHandler, IDrag
 
     #region 容器外观配置
 
-    /// <summary>单种容器的 UI 外观：剖面、内腔、水位区间、出口、开口宽度和完全倒空角度一起切换。</summary>
+    /// <summary>单种容器的 UI 外观：剖面、内腔、水位区间、出口和开口宽度一起切换。</summary>
     [Serializable]
     public struct VesselAppearance
     {
@@ -33,14 +34,12 @@ public sealed class WaterVesselPanel : MonoBehaviour, IPointerDownHandler, IDrag
         public Vector2 FillRange; // 水位下限、上限，按底部为零归一化。
         public Vector2 LeftOutlet, RightOutlet; // 左右嘴沿的归一化位置。
         public float MouthWidth; // 开口宽度占容器剖面宽度的比例；越宽，固定流速越快。
-        public float FullEmptyTiltDegrees; // 达到此绝对倾角后，最大可倒出量达到容器当前全部液量。
     }
 
     public VesselAppearance[] Appearances = Array.Empty<VesselAppearance>(); // 特定容器的外观覆盖，未匹配时恢复 Prefab 默认外观。
     private VesselAppearance defaultAppearance; // 首次绑定时保存的默认外观。
     private Image vesselImage, interiorImage; // 已绑定的剖面和内腔图像。
     private float activeMouthWidthMultiplier = 1f; // 当前开口相对默认容器开口的宽度倍率。
-    private float activeFullEmptyTiltDegrees = MaxPourTiltDegrees; // 当前容器完全倒空所需的绝对倾角。
     private float pourAmountAccumulator; // 累计不足 0.1 份的流量，避免逐帧结算时被数量精度吞掉。
 
     /// <summary>切换容器时一次性应用完整外观，避免复用面板残留上一个容器的遮罩或出水位置。</summary>
@@ -58,10 +57,7 @@ public sealed class WaterVesselPanel : MonoBehaviour, IPointerDownHandler, IDrag
         Liquid.FillRange = appearance.FillRange;
         if (appearance.MouthWidth <= 0f || defaultAppearance.MouthWidth <= 0f)
             throw new InvalidOperationException($"水容器外观 {itemId} 未配置有效罐口宽度。");
-        if (appearance.FullEmptyTiltDegrees <= 0f || appearance.FullEmptyTiltDegrees > MaxPourTiltDegrees)
-            throw new InvalidOperationException($"水容器外观 {itemId} 未配置有效完全倒空倾角。");
         activeMouthWidthMultiplier = appearance.MouthWidth / defaultAppearance.MouthWidth;
-        activeFullEmptyTiltDegrees = appearance.FullEmptyTiltDegrees;
         Rect rect = vesselArt.rect;
         LeftPourOutlet.localPosition = rect.min + Vector2.Scale(rect.size, appearance.LeftOutlet);
         RightPourOutlet.localPosition = rect.min + Vector2.Scale(rect.size, appearance.RightOutlet);
@@ -153,8 +149,7 @@ public sealed class WaterVesselPanel : MonoBehaviour, IPointerDownHandler, IDrag
             FillRange = Liquid.FillRange,
             LeftOutlet = Rect.PointToNormalized(artRect, LeftPourOutlet.localPosition),
             RightOutlet = Rect.PointToNormalized(artRect, RightPourOutlet.localPosition),
-            MouthWidth = Mathf.Abs(LeftPourOutlet.localPosition.x - RightPourOutlet.localPosition.x) / artRect.width,
-            FullEmptyTiltDegrees = MaxPourTiltDegrees
+            MouthWidth = Mathf.Abs(LeftPourOutlet.localPosition.x - RightPourOutlet.localPosition.x) / artRect.width
         };
         drink.onClick.AddListener(Drink);
         panel.GetButton("关闭按钮").onClick.AddListener(Close);
@@ -275,7 +270,7 @@ public sealed class WaterVesselPanel : MonoBehaviour, IPointerDownHandler, IDrag
     }
 
     /// <summary>
-    /// 直立 0° 可保留 100% 容量，水平 90° 可保留 50%，完全倒扣 180° 可保留 0%。
+    /// 直立 0° 可保留 100% 容量，45° 可保留 50%，达到 90° 时完全清空。
     /// 实际液体只允许减少，不会因为玩家把罐子扶正而重新出现。
     /// </summary>
     private void UpdatePourGestureTarget(PointerEventData eventData)
@@ -362,7 +357,8 @@ public sealed class WaterVesselPanel : MonoBehaviour, IPointerDownHandler, IDrag
         }
 
         float physicalTilt = Mathf.Abs(Mathf.DeltaAngle(0f, vesselTiltDegrees));
-        float retainedFraction = Mathf.Clamp01(1f - physicalTilt / activeFullEmptyTiltDegrees);
+        bool mustEmpty = physicalTilt >= FullEmptyTiltDegrees;
+        float retainedFraction = Mathf.Clamp01(1f - physicalTilt / FullEmptyTiltDegrees);
         float maxRetainedAmount = vessel.Capacity * retainedFraction;
         float maximumSpillAmount = Mathf.Max(0f, vessel.Data.Amount - maxRetainedAmount);
         if (maximumSpillAmount <= Mod_WaterVessel.AmountEpsilon || activeMouthWidthMultiplier <= 0f)
@@ -372,10 +368,10 @@ public sealed class WaterVesselPanel : MonoBehaviour, IPointerDownHandler, IDrag
         }
 
         float amountPerSecond = BasePourAmountPerSecond * activeMouthWidthMultiplier;
-        pourAmountAccumulator = Mathf.Min(
-            maximumSpillAmount,
-            pourAmountAccumulator + amountPerSecond * deltaTime);
-        if (pourAmountAccumulator + Mod_WaterVessel.AmountEpsilon < Mod_WaterVessel.AmountStep)
+        pourAmountAccumulator = mustEmpty
+            ? maximumSpillAmount
+            : Mathf.Min(maximumSpillAmount, pourAmountAccumulator + amountPerSecond * deltaTime);
+        if (!mustEmpty && pourAmountAccumulator + Mod_WaterVessel.AmountEpsilon < Mod_WaterVessel.AmountStep)
             return;
 
         float removed = vessel.PourToGround(actor, pourAmountAccumulator);

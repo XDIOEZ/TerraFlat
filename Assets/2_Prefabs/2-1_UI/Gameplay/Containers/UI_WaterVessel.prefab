@@ -1250,7 +1250,6 @@ MonoBehaviour:
     LeftOutlet: {x: 0.109375, y: 0.65625}
     RightOutlet: {x: 0.890625, y: 0.65625}
     MouthWidth: 0.78125
-    FullEmptyTiltDegrees: 180
   - ItemId: WoodenBarrel
     Cutaway: {fileID: 21300000, guid: 5c3f130d06ddc5745bcfba674fb71703, type: 3}
     Interior: {fileID: 21300000, guid: 817ff71e6b51771449f833345470b981, type: 3}
@@ -1258,7 +1257,6 @@ MonoBehaviour:
     LeftOutlet: {x: 0.25, y: 0.8125}
     RightOutlet: {x: 0.75, y: 0.8125}
     MouthWidth: 0.625
-    FullEmptyTiltDegrees: 90
 --- !u!1 &8077230647050648011
 GameObject:
   m_ObjectHideFlags: 0

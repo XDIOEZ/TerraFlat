@@ -37,7 +37,7 @@
       },
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/WaterVessel/WoodenBarrel/WoodenBarrel_Icon.png",
-        "liquidSurface": { "bounds": { "x": 0.34375, "y": 0.796875, "width": 0.3125, "height": 0.09375 } }
+        "liquidSurface": { "bounds": { "x": 0.21875, "y": 0.71875, "width": 0.5625, "height": 0.15625 }, "maxSourceChannel": 100 }
       }
     },
     {
@@ -72,7 +72,7 @@
       },
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/WaterVessel/WoodenBarrel/WoodenBarrel_Icon.png",
-        "liquidSurface": { "bounds": { "x": 0.34375, "y": 0.796875, "width": 0.3125, "height": 0.09375 } }
+        "liquidSurface": { "bounds": { "x": 0.21875, "y": 0.71875, "width": 0.5625, "height": 0.15625 }, "maxSourceChannel": 100 }
       }
     }
   ]

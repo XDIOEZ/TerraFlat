@@ -952,7 +952,7 @@
       },
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/WaterVessel/ClayJar/ClayJar_Icon.png",
-        "liquidSurface": { "bounds": { "x": 0.375, "y": 0.796875, "width": 0.25, "height": 0.078125 } },
+        "liquidSurface": { "bounds": { "x": 0.3125, "y": 0.71875, "width": 0.375, "height": 0.125 }, "maxSourceChannel": 100 },
         "color": {
           "r": 1,
           "g": 1,

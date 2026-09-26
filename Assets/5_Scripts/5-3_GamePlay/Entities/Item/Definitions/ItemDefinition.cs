@@ -221,12 +221,15 @@ public sealed class ItemVisualDefinitionDto
     public ItemColliderDefinitionDto Collider;
 }
 
-/// <summary>程序化液面在 0～1 Sprite UV 中的位置；矩形应覆盖容器开口的内侧并避开外沿。</summary>
+/// <summary>程序化液面的 0～1 Sprite UV 开口范围与源像素亮度上限；亮度默认 165，容器可按内腔配色覆盖以保护外沿。</summary>
 [Serializable]
 public sealed class LiquidSurfaceDefinition
 {
     [JsonProperty("bounds", Required = Required.Always)]
     public Rect Bounds;
+
+    [JsonProperty("maxSourceChannel")]
+    public int MaxSourceChannel = 165; // 内腔源像素的最大亮度，由贴图自身配色决定。
 
     /// <summary>校验开口矩形，防止 UI 液面绘制到物品图标外。</summary>
     public void Validate(string itemId)
@@ -236,9 +239,10 @@ public sealed class LiquidSurfaceDefinition
             float.IsNaN(Bounds.width) || float.IsInfinity(Bounds.width) ||
             float.IsNaN(Bounds.height) || float.IsInfinity(Bounds.height) ||
             Bounds.width <= 0f || Bounds.height <= 0f ||
-            Bounds.xMin < 0f || Bounds.yMin < 0f || Bounds.xMax > 1f || Bounds.yMax > 1f)
+            Bounds.xMin < 0f || Bounds.yMin < 0f || Bounds.xMax > 1f || Bounds.yMax > 1f ||
+            MaxSourceChannel < 1 || MaxSourceChannel > 255)
         {
-            throw new InvalidDataException($"物品 {itemId} 的 liquidSurface.bounds 必须是 0～1 范围内的非空矩形");
+            throw new InvalidDataException($"物品 {itemId} 的 liquidSurface 必须声明 0～1 范围内的非空矩形与 1～255 的源像素亮度上限");
         }
     }
 }

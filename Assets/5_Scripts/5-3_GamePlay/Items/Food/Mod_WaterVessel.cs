@@ -524,10 +524,8 @@ public sealed class Mod_WaterVessel : Module, IInteractable
 
     #region 容器液面 Sprite 重绘
 
-    private const float LiquidSurfaceInset = 0.86f; // 缩进开口边缘，避免液面覆盖桶沿或罐口描边。
     private const float LiquidSurfaceShadowBlend = 0.22f; // 水面下层混入阴影色的比例。
     private const float LiquidSurfaceHighlightBlend = 0.24f; // 水面顶边混入高光色的比例。
-    private const int LiquidSurfaceMaxSourceChannel = 165; // 只改写开口内的暗色像素，保留木沿与釉面亮部。
 
     private readonly struct VesselSpriteCacheKey : IEquatable<VesselSpriteCacheKey>
     {
@@ -537,9 +535,10 @@ public sealed class Mod_WaterVessel : Module, IInteractable
         public readonly int Width; // 内腔像素区像素宽度。
         public readonly int Height; // 内腔像素区像素高度。
         public readonly int FillRows; // 按容器余量量化后的液面高度。
+        public readonly int MaxSourceChannel; // 当前贴图内腔源像素的亮度上限。
         public readonly Color32 LiquidColor; // 液体定义提供的主色。
 
-        public VesselSpriteCacheKey(Sprite source, RectInt bounds, int fillRows, Color32 liquidColor)
+        public VesselSpriteCacheKey(Sprite source, RectInt bounds, int fillRows, int maxSourceChannel, Color32 liquidColor)
         {
             SourceSpriteId = source.GetInstanceID();
             X = bounds.x;
@@ -547,18 +546,20 @@ public sealed class Mod_WaterVessel : Module, IInteractable
             Width = bounds.width;
             Height = bounds.height;
             FillRows = fillRows;
+            MaxSourceChannel = maxSourceChannel;
             LiquidColor = liquidColor;
         }
 
         public bool Equals(VesselSpriteCacheKey other) =>
             SourceSpriteId == other.SourceSpriteId && X == other.X && Y == other.Y &&
             Width == other.Width && Height == other.Height && FillRows == other.FillRows &&
+            MaxSourceChannel == other.MaxSourceChannel &&
             LiquidColor.Equals(other.LiquidColor);
 
         public override bool Equals(object obj) => obj is VesselSpriteCacheKey other && Equals(other);
 
         public override int GetHashCode() => HashCode.Combine(
-            SourceSpriteId, X, Y, Width, Height, FillRows, LiquidColor);
+            SourceSpriteId, X, Y, Width, Height, FillRows, MaxSourceChannel, LiquidColor);
     }
 
     private static readonly Dictionary<VesselSpriteCacheKey, Sprite> GeneratedVesselSprites = new(); // 按源 Sprite、颜色和像素液面复用运行时贴图。
@@ -622,7 +623,7 @@ public sealed class Mod_WaterVessel : Module, IInteractable
 
         Color32 liquidColor = primaryColor;
         int fillRows = Mathf.Clamp(Mathf.CeilToInt(Mathf.Clamp01(fillRatio) * bounds.height), 1, bounds.height);
-        var key = new VesselSpriteCacheKey(sourceSprite, bounds, fillRows, liquidColor);
+        var key = new VesselSpriteCacheKey(sourceSprite, bounds, fillRows, surface.MaxSourceChannel, liquidColor);
         if (GeneratedVesselSprites.TryGetValue(key, out Sprite cachedSprite) && cachedSprite != null)
             return cachedSprite;
 
@@ -636,8 +637,8 @@ public sealed class Mod_WaterVessel : Module, IInteractable
         int liquidTop = bounds.yMin + fillRows - 1;
         float centerX = bounds.xMin + bounds.width * 0.5f;
         float centerY = bounds.yMin + bounds.height * 0.5f;
-        float radiusX = bounds.width * 0.5f * LiquidSurfaceInset;
-        float radiusY = bounds.height * 0.5f * LiquidSurfaceInset;
+        float radiusX = bounds.width * 0.5f;
+        float radiusY = bounds.height * 0.5f;
 
         for (int y = bounds.yMin; y <= liquidTop; y++)
         {
@@ -651,7 +652,7 @@ public sealed class Mod_WaterVessel : Module, IInteractable
                 int pixelIndex = y * width + x;
                 Color32 sourcePixel = spritePixels[pixelIndex];
                 if (sourcePixel.a == 0 ||
-                    Mathf.Max(Mathf.Max(sourcePixel.r, sourcePixel.g), sourcePixel.b) > LiquidSurfaceMaxSourceChannel)
+                    Mathf.Max(Mathf.Max(sourcePixel.r, sourcePixel.g), sourcePixel.b) > surface.MaxSourceChannel)
                     continue;
 
                 spritePixels[pixelIndex] = y == liquidTop ? highlightColor : shadowColor;
