@@ -91,6 +91,8 @@ description: "Use when: 定位或修改 FlatWorld 的 UIManager、BasePanel、�
 
 ## 架构与运行时约束
 
+- 快捷栏选中外观由 `Common/Controls/UI_SelectBox.prefab` 持有，`Inventory_HotBar.SelectBoxPrefab` 在玩家和热栏模块 Prefab 中引用它；`UI_HotBar.prefab` 只承载槽位与栏位布局。修改选中框贴图时应更新 `UI_SelectBox` 的 Image 引用，不能只替换 PNG。
+
 - 面板动画位于 `Common/Animation/`，依赖固定为 `BasePanel → BaseUIAnimation → UIAnimationManager → JSON`：BasePanel 直接调用同物体 BUA，BUA 禁止反向引用或监听 BasePanel；`Opened/Closed` 继续保持同步业务事件，无动画组件时维持即时开关。
 - 每个 BasePanel 同物体最多一个 `BaseUIAnimation` 或子类，稳定 `AnimationId` 匹配 `Resources/Config/UIAnimations.json`。JSON 只保存 Duration、相对 Offset、Scale、Ease 等结果参数，不保存移动/开关速度，也不按 `Screen.width/height` 二次换算；分辨率适配交给现有 CanvasScaler。
 - 正式可开关面板统一使用 `ScaleUIAnimation` 与 `panel.scale`，开关期间保持目标透明度，仅按 MotionRoot 可见图形边界中心缩放；手工维护 Prefab 与对应构建器必须同步配置，常驻 HUD 只有在显式开关时才播放。
