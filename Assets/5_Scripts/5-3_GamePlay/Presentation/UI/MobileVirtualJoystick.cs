@@ -39,6 +39,7 @@ public sealed class MobileVirtualJoystick : MonoBehaviour,
     private Vector2 fixedBasePosition;
 
     public bool HasPointerOwnership => pointerId != int.MinValue;
+    public JoystickRole Role => role; // 供其他触控手势判断当前命中的控制区。
 
     #endregion
 

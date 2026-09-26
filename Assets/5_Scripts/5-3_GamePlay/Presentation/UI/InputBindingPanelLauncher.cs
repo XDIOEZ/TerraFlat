@@ -541,6 +541,27 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour, ISettingsPageLife
         SetStatus(FlatWorldLocalizationService.GetUiText("全部按键绑定已恢复默认值。"));
     }
 
+    /// <summary>由设置主面板开始按键修改会话。</summary>
+    public void BeginSettingsEditSession()
+    {
+        bindingService?.BeginSettingsEditSession();
+        RefreshRows();
+        SetStatus(GetDevicePageHint());
+    }
+
+    /// <summary>由设置主面板保存并更新按键修改基线。</summary>
+    public void CommitSettingsEditSession()
+    {
+        bindingService?.CommitSettingsEditSession();
+        SetStatus(GetDevicePageHint());
+    }
+
+    /// <summary>由设置主面板关闭时放弃未保存的按键修改。</summary>
+    public void DiscardSettingsEditSession()
+    {
+        bindingService?.DiscardSettingsEditSession();
+    }
+
     /// <summary>刷新所有已显示行的绑定文本。</summary>
     private void RefreshRows()
     {
@@ -596,7 +617,9 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour, ISettingsPageLife
     private string GetDevicePageHint()
     {
         return FlatWorldLocalizationService.GetUiFormat(
-            "当前：{0}。选择一项后输入新控制；冲突会被拦截并自动保存。",
+            bindingService != null && bindingService.IsSettingsEditSessionActive
+                ? "当前：{0}。选择一项后输入新控制；冲突会被拦截，点击保存后保留修改。"
+                : "当前：{0}。选择一项后输入新控制；冲突会被拦截并自动保存。",
             FlatWorldLocalizationService.GetUiText(GetDevicePageName()));
     }
 
@@ -615,6 +638,12 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour, ISettingsPageLife
     /// <summary>解除页面事件，并保证销毁时没有残留重绑操作。</summary>
     private void OnDestroy()
     {
+        if (standaloneBindingService != null &&
+            standaloneBindingService.IsSettingsEditSessionActive)
+        {
+            standaloneBindingService.DiscardSettingsEditSession();
+        }
+
         if (bindingService != null)
         {
             bindingService.BindingsChanged -= RefreshRows;

@@ -562,7 +562,6 @@ GameObject:
   - component: {fileID: 8512309475123094754}
   - component: {fileID: 3014530349160003128}
   - component: {fileID: 7771519609891206622}
-  - component: {fileID: 5448549703196689227}
   - component: {fileID: 6173150566168055718}
   - component: {fileID: 3000418337859302239}
   - component: {fileID: 6829314751203845612}
@@ -716,9 +715,9 @@ MonoBehaviour:
   RightClickUp:
     _PersistentCalls: []
   _modData:
-    Name: 
-    ID: 
-    isRunning: 0
+    Name: "Controller模块"
+    ID: "Controller模块"
+    isRunning: 1
     Type: 0
     BitData: 
 --- !u!114 &6883143605326503467
@@ -1040,18 +1039,6 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e77a3372dd15b484c8046d1db5b282e2, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
---- !u!114 &5448549703196689227
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4678875130974218576}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 4bb50fe15ee5ef146a02371125734152, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
 --- !u!114 &6173150566168055718

@@ -160,10 +160,15 @@ public class PlayerAdminController : Module
 
         if (gameController == null)
             gameController = GetComponentInParent<GameController>();
-        if (gameController != null && gameController.IsGameplayInputLocked)
-            return;
 
         Keyboard keyboard = Keyboard.current;
+
+        // F2 允许穿过当前玩家主背包的输入锁，其它模态面板和世界加载仍阻止该快捷键。
+        if (keyboard?.f2Key.wasPressedThisFrame == true && CanOpenCreativeInventoryShortcut())
+            OpenCreativeInventoryShortcut();
+
+        if (gameController != null && gameController.IsGameplayInputLocked)
+            return;
 
         // Ctrl+F1：切换管理员权限；裸 F1 由 UIManager 用于宣传片录制模式。
         if (keyboard?.f1Key.wasPressedThisFrame == true &&
@@ -171,12 +176,6 @@ public class PlayerAdminController : Module
         {
             Debug.Log("Ctrl+F1 被按下，切换管理员身份");
             TryEnableAdministrator();
-        }
-
-        // F2：一键启用创造背包并自动打开玩家行囊；该开发入口不要求先切换管理员显示名。
-        if (keyboard?.f2Key.wasPressedThisFrame == true)
-        {
-            OpenCreativeInventoryShortcut();
         }
 
         // 非管理员不执行后续逻辑
@@ -270,6 +269,19 @@ public class PlayerAdminController : Module
         {
             IncreaseAdminChunkLoadDistance();
         }
+    }
+
+    /// <summary>只允许 F2 穿过当前玩家已打开主背包持有的玩法输入锁。</summary>
+    private bool CanOpenCreativeInventoryShortcut()
+    {
+        if (gameController == null || !gameController.IsGameplayInputLocked)
+            return true;
+
+        Inventory bag = player.itemMods?.GetMod_ByID<Mod_Inventory>(ModText.Bag)?.inventory;
+        if (bag?.basePanel == null || !bag.basePanel.IsOpen())
+            return false;
+
+        return !gameController.HasBlockingGameplayInputLock(owner => ReferenceEquals(owner, bag));
     }
 
     /// <summary>F2 一次完成创造背包初始化，并确保玩家主背包面板处于打开状态。</summary>

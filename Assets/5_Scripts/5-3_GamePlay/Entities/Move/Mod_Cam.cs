@@ -239,7 +239,8 @@ public class Mod_Cam : Module
     /// <param name="context"></param>
     public void PovValueChanged(InputAction.CallbackContext context)
     {
-        if (GameController != null && GameController.IsGameplayInputLocked)
+        if (GameController != null &&
+            (GameController.IsGameplayInputLocked || GameController.IsDropShortcutHeld))
         {
             return;
         }

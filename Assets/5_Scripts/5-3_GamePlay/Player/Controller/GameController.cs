@@ -10,6 +10,11 @@ using FlatWorld.Mobile;
 [RequireComponent(typeof(Item))]
 public partial class GameController : Module
 {
+    #region 模块身份
+    /// <summary>玩家根对象上的控制器必须使用稳定模块 ID，供所有地块交互统一定位。</summary>
+    public override string CanonicalModuleId => ModText.Controller;
+    #endregion
+
     private const string PreferredInputDeviceKey = "FlatWorld.Input.PreferredDevice";
     private const float MoveInputEpsilonSqr = 0.0001f;
 
@@ -27,6 +32,8 @@ public partial class GameController : Module
     public InputBindingService InputBindings { get; private set; }
     public Camera _mainCamera; // 主相机引用
     public bool CtrlIsDown; // Ctrl状态（保留原字段）
+    /// <summary>丢弃快捷键是否正在按住；供其它输入功能处理组合键优先级。</summary>
+    public bool IsDropShortcutHeld => _inputActions?.Win10.F.IsPressed() == true;
     public InputDeviceType CurrentInputDevice => _currentInputDevice; // 当前活跃输入设备
     public bool IsUsingGamepad => _currentInputDevice == InputDeviceType.Gamepad;
     // Mobile 是玩家选择的触屏方案，键盘只作为非冲突的补充输入。
@@ -596,6 +603,39 @@ public partial class GameController : Module
         if (!context.performed || !IsGameplayInputAllowed(context) || IsGameplayInputLocked ||
             IsPointerOverUI() || EventSystemGuard.IsGamepadUISelectionActive) return;
         BuildingRotationRequested?.Invoke();
+    }
+
+    /// <summary>手机轻点预览时只命中当前快捷栏手持建筑的可旋转虚影。</summary>
+    public bool CanRotateBuildingPreviewAt(Vector2 screenPosition)
+        => TryGetBuildingPreviewRotation(screenPosition, out _);
+
+    /// <summary>手机轻点与 R 共用建筑模块的旋转入口，避免输入层维护另一份朝向。</summary>
+    public bool TryRotateBuildingPreviewAt(Vector2 screenPosition)
+    {
+        if (!TryGetBuildingPreviewRotation(screenPosition, out IBuildingPreviewRotation rotation))
+            return false;
+
+        rotation.RotatePlacement();
+        return true;
+    }
+
+    /// <summary>从真实手持建筑读取可旋转预览，并用触点屏幕位置进行无物理命中判断。</summary>
+    private bool TryGetBuildingPreviewRotation(Vector2 screenPosition, out IBuildingPreviewRotation rotation)
+    {
+        rotation = null;
+        if (_preferredInputDevice != InputDeviceType.Mobile || IsGameplayInputLocked ||
+            !IsGameplayInputAllowed(Touchscreen.current) || EventSystemGuard.IsGamepadUISelectionActive)
+            return false;
+
+        if (_playerHotBar == null && item != null)
+            _playerHotBar = item.GetComponentInChildren<Inventory_HotBar>(true);
+
+        Item heldItem = _playerHotBar?.CurentSelectItem;
+        Mod_Building building = heldItem?.itemMods?.GetMod_ByID<Mod_Building>(ModText.Building);
+        rotation = BuildingPlacementLifecycle.GetExtension(heldItem) as IBuildingPreviewRotation;
+        return building != null && building.IsPlacementActionAvailable &&
+               building.GhostShadow != null && rotation?.CanRotatePlacement == true &&
+               building.GhostShadow.ContainsWorldPoint(GetMouseWorldPosition(screenPosition));
     }
 
     /// <summary>切换并保存玩家选择的玩法控制方案；UI 指针动作不受玩法绑定遮罩影响。</summary>
