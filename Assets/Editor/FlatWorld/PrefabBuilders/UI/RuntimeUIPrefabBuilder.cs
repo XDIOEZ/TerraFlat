@@ -964,10 +964,10 @@ public static partial class RuntimeUIPrefabBuilder
         GameObject safeArea = CreateUIObject("调试安全区", root.transform, typeof(SafeAreaRectController));
         Stretch(safeArea.GetComponent<RectTransform>());
 
-        Button toggleButton = CreateButton("调试悬浮按钮", safeArea.transform, "日志  0", 150f, 62f, false);
-        SetTopRight(toggleButton.GetComponent<RectTransform>(), 22f, 22f, 150f, 62f);
+        Button toggleButton = CreateButton("调试悬浮按钮", safeArea.transform, "日志  0", 75f, 31f, false);
+        SetTopRight(toggleButton.GetComponent<RectTransform>(), 22f, 22f, 75f, 31f);
         toggleButton.GetComponent<Image>().color = new Color(0.12f, 0.22f, 0.25f, 0.98f);
-        SetButtonLabelSize(toggleButton, 18f);
+        SetButtonLabelSize(toggleButton, 14f);
         TextMeshProUGUI toggleLabel = toggleButton.GetComponentInChildren<TextMeshProUGUI>(true);
         toggleLabel.gameObject.name = "悬浮日志数量";
 
