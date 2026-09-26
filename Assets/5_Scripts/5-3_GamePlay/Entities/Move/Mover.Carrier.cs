@@ -59,7 +59,27 @@ public partial class Mover
         if (!ValidateCarrierLease()) return true;
         bool locked = inputController == null || inputController.IsGameplayInputLocked || IsLock;
         Vector2 input = locked ? Vector2.zero : inputController.ReadMoveInput(moveAction);
-        CarrierSource.AdvanceMotion(this, input, deltaTime, locked);
+        bool hasMoveInput = input.sqrMagnitude > InputMoveThresholdSqr;
+        // 载具消费玩家已经仲裁过的长按奔跑语义，避免自己再次轮询 InputAction 导致 Shift 状态丢失。
+        bool boostRequested = !locked && hasMoveInput && holdRunInputActive;
+        bool boostActive = boostRequested && stamina != null && stamina.CurrentValue >= RunStaminaThreshold;
+
+        if (boostActive)
+        {
+            stamina.ConsumeStaminaPerSecond(
+                StaminaConsumptionSources.CarrierBoost,
+                RunStaminaConsume,
+                deltaTime);
+
+            // 与奔跑规则一致：本帧完成消费后跌破阈值，立即退出奔跑/加速状态。
+            if (stamina.CurrentValue < RunStaminaThreshold)
+            {
+                boostActive = false;
+                SetRunState(false);
+            }
+        }
+
+        CarrierSource.AdvanceMotion(this, input, deltaTime, locked, boostActive);
         if (CarrierSource != null)
         {
             ExternalVelocity = CarrierSource.CurrentVelocity;

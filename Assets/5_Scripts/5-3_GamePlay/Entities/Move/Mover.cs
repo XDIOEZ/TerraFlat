@@ -72,6 +72,7 @@ public partial class Mover : Module
     private InputAction moveAction;
     private InputAction holdRunAction;
     private InputAction toggleRunAction;
+    private bool holdRunInputActive; // 长按奔跑输入的语义状态；载具等玩法只消费这里，不重复轮询物理按键。
     private GameController inputController;
     public Rigidbody2D rb;
 
@@ -264,7 +265,10 @@ public partial class Mover : Module
             if (stamina != null)
             {
                 float consumePerSecond = IsRunning ? RunStaminaConsume : MoveStaminaConsume;
-                stamina.AddStamina(-deltaTime * consumePerSecond);
+                string sourceId = IsRunning
+                    ? StaminaConsumptionSources.MovementRun
+                    : StaminaConsumptionSources.MovementWalk;
+                stamina.ConsumeStaminaPerSecond(sourceId, consumePerSecond, deltaTime);
 
                 // 自动中断奔跑
                 if (IsRunning && stamina.CurrentValue < RunStaminaThreshold)
@@ -498,6 +502,7 @@ public partial class Mover : Module
         UnbindRunActions();
         holdRunAction = holdAction;
         toggleRunAction = toggleAction;
+        holdRunInputActive = false;
 
         if (holdRunAction != null)
         {
@@ -511,6 +516,7 @@ public partial class Mover : Module
 
     private void UnbindRunActions()
     {
+        holdRunInputActive = false;
         if (holdRunAction != null)
         {
             holdRunAction.started -= OnHoldRunActionStarted;
@@ -527,6 +533,8 @@ public partial class Mover : Module
 
     private void OnHoldRunActionStarted(InputAction.CallbackContext context)
     {
+        // 即使按下瞬间正被 UI 锁住，也记录真实长按状态；玩法解锁后可继续正确识别仍按住的 Shift。
+        holdRunInputActive = true;
         if (inputController != null && !inputController.IsGameplayInputAllowed(context))
             return;
 
@@ -535,6 +543,7 @@ public partial class Mover : Module
 
     private void OnHoldRunActionCanceled(InputAction.CallbackContext context)
     {
+        holdRunInputActive = false;
         if (inputController != null && !inputController.IsGameplayInputAllowed(context))
             return;
 

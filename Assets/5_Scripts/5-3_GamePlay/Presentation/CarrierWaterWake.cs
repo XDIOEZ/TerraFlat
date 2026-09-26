@@ -10,14 +10,19 @@ public sealed class CarrierWaterWake : MonoBehaviour
 {
     #region 状态和生命周期
     private Mod_Carrier source;
+    private SpriteRenderer sourceRenderer;
     private ParticleSystem particles;
+    private ParticleSystemRenderer particleRenderer;
     private Vector2 lastPosition;
     private float distanceRemainder;
     private const float EmitDistance = 0.22f;
 
-    public void Bind(Mod_Carrier carrier)
+    public void Bind(Mod_Carrier carrier, SpriteRenderer carrierRenderer)
     {
-        source = carrier;
+        source = carrier != null ? carrier : throw new System.ArgumentNullException(nameof(carrier));
+        sourceRenderer = carrierRenderer != null
+            ? carrierRenderer
+            : throw new System.ArgumentNullException(nameof(carrierRenderer));
         lastPosition = transform.position;
         Clear();
     }
@@ -62,8 +67,13 @@ public sealed class CarrierWaterWake : MonoBehaviour
     /// <summary>独立场景根节点，仅首次产生尾波时创建，不给每一圈水纹创建对象。</summary>
     private void EnsureEmitter()
     {
-        if (particles != null && particles.gameObject.scene == gameObject.scene) return;
+        if (particles != null && particles.gameObject.scene == gameObject.scene)
+        {
+            SyncSorting();
+            return;
+        }
         if (particles != null) Destroy(particles.gameObject);
+        particleRenderer = null;
         Material material = Resources.Load<Material>("Weather/Materials/RainGroundSplash");
         if (material == null) throw new System.InvalidOperationException("载具尾波缺少 RainGroundSplash 环形材质。");
         GameObject emitter = new("Carrier Water Wake");
@@ -89,10 +99,17 @@ public sealed class CarrierWaterWake : MonoBehaviour
         gradient.SetKeys(new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(Color.white, 1f) },
             new[] { new GradientAlphaKey(0.55f, 0f), new GradientAlphaKey(0f, 1f) });
         color.color = gradient;
-        var renderer = particles.GetComponent<ParticleSystemRenderer>();
-        renderer.sharedMaterial = material;
-        renderer.sortingLayerName = "Default";
-        renderer.sortingOrder = 40;
+        particleRenderer = particles.GetComponent<ParticleSystemRenderer>();
+        particleRenderer.sharedMaterial = material;
+        SyncSorting();
+    }
+
+    /// <summary>尾波跟随载具主体排序层，并固定在主体后一层，保证位于地形水面之上且不会覆盖船体。</summary>
+    private void SyncSorting()
+    {
+        if (particleRenderer == null || sourceRenderer == null) return;
+        particleRenderer.sortingLayerID = sourceRenderer.sortingLayerID;
+        particleRenderer.sortingOrder = sourceRenderer.sortingOrder - 1;
     }
 
     /// <summary>后缘可能越过岸边，因此每个尾波落点也必须仍在有效水面。</summary>

@@ -342,7 +342,7 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
         {
             IInteractable pointedReceiver = FindReceiverAtPointer(pointer);
             if (pointedReceiver != null) return pointedReceiver;
-            // 光标落在水面时只允许环境长按，不因附近存在木筏而把喝水变成登船。
+            // 水面交互严格服从光标落点；未命中木筏时交给喝水等环境动作。
             if (IsPointerOverWater(pointer)) return null;
         }
 

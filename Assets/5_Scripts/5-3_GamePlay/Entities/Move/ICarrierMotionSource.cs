@@ -9,7 +9,7 @@ public interface ICarrierMotionSource
     Vector2 CurrentVelocity { get; }
     Vector2 CurrentForce { get; }
     bool IsAvailable { get; }
-    void AdvanceMotion(Mover rider, Vector2 input, float deltaTime, bool controlsLocked);
+    void AdvanceMotion(Mover rider, Vector2 input, float deltaTime, bool controlsLocked, bool boostRequested);
     void ReleaseRider(Mover rider);
     #endregion
 }

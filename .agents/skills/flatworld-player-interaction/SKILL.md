@@ -20,8 +20,8 @@ description: "Use when: 定位或修改 FlatWorld 的玩家实体、输入系统
 
 - 玩家主动速度与环境速度必须分开：`Mover.DrivenVelocity` 决定步行动画，水流和承载只写 `ExternalVelocity`；不能把上一帧总刚体速度重新当作主动移动的缓动起点。
 - 玩家脚下动态建筑造成的移速惩罚由 `BuildingOccupancyRegistry.GetPlayerMoveSpeedMultiplier` 按离散格读取，并只乘入 `Mover` 的主动目标速度；不要把这类地块惩罚写进永久 `Speed.MultiplicativeModifier`，否则进出地块时容易与 Buff、奔跑倍率互相污染。
-- `WorldMotionSystem` 用作者矩形占地与扫掠统一处理推动，载具通过 `IWorldPushTarget` 注册来源；船的水流、划行与推动先合成，再由 `ICarrierMotionSource` 传递给乘员。禁止乘员反推自身载具或用物理冲量代替游戏速度规则。
-- 载具的按键、鼠标和白色描边必须共用光标落点查询；指向可触及水面才允许喝水长按，指向载具优先交互。远海登船也合法，恢复位置优先附近安全陆地，否则保留真实登船坐标，不凭空传送到陆地。
+- `WorldMotionSystem` 用作者矩形占地与扫掠统一处理推动，载具通过 `IWorldPushTarget` 注册来源；船的水流、划行与推动先合成，航向限制必须作用于合成后的最终速度，再由 `ICarrierMotionSource` 传递给乘员。转向上限允许按运动上下文配置，例如海上/普通航向与陆地玩家推动使用独立角速度，但不能让任一来源绕过统一航向；禁止乘员反推自身载具或用物理冲量代替游戏速度规则。
+- 载具的按键、鼠标点选和白色描边必须共用光标落点查询；上船与下船都要求光标实际命中载具，禁止因“当前已乘坐”或“靠近船体”绕过光标选择。光标指向可触及水面且未命中载具时，交互键交给喝水等环境动作。远海登船与下船都合法：登船恢复位置优先附近安全陆地，否则保留真实登船坐标；下船优先附近安全陆地，没有陆地时落到船体外侧安全水面。
 
 - 输入链为 Input System → `GameController` → 玩家模块；不要让 UI、物理输入和玩法模块各自维护冲突状态。
 - `GameController` 挂在玩家根对象，模块 ID 必须是 `ModText.Controller`；若留空会退化为根对象名 `Player`，按 ID 获取控制器的地块交互将静默失败。
@@ -48,7 +48,8 @@ description: "Use when: 定位或修改 FlatWorld 的玩家实体、输入系统
 - 玩家交互发送器必须是纯 Physics2D 查询通道，不得拥有或临时启用 Trigger；`Module_Hand` 禁止挂载 Collider2D。交互查询必须跳过 `DamageSender`/`DamageReciver` 专用 Collider，避免交互与伤害系统产生接触回调或互相解析。
 - 手机准线的有效距离不能固定写在输入层；空手和普通物品应跟随交互发送器距离，手持建筑应跟随建筑模块的放置距离。
 - 玩家跑步模式与视觉状态分离：`Run` 只表示逻辑奔跑模式，`Move=false` 时 `Player.controller` 必须切换到 `Idle`；进入 `Run` 必须直接播放，不添加播放倍率渐起或 Animator 混合延迟，禁止修改全局 `Animator.speed`，否则会连带暂停攻击等其他动画。
-- 管理员身份拥有无限体力：权限统一读取 `PlayerAdminController.IsAdministrator`，所有体力消耗继续汇入 `Mod_Stamina.AddStamina` / `TryConsumeStamina` 由体力权威模块统一拦截；禁止在移动、武器、游泳、高温等消费方分别添加管理员特判。
+- 管理员身份拥有无限体力：权限统一读取 `PlayerAdminController.IsAdministrator`，所有体力消耗继续汇入 `Mod_Stamina` 的统一消费 API，由体力权威模块统一拦截；禁止在移动、武器、游泳、高温等消费方分别添加管理员特判。
+- 内置体力消费必须使用 `Mod_Stamina.ConsumeStamina*` / 带来源的 `TryConsumeStamina(sourceId, amount)` 并声明稳定来源 ID；普通划船不耗体力，乘员按住奔跑键且存在移动输入时才启用载具加速，并按玩家 `RunStaminaConsume` 频率记为 `flatworld.carrier.boost`。长按奔跑状态由 `Mover` 的输入回调显式维护，载具禁止再次用 `InputAction.IsPressed()` 轮询物理键。不同来源同帧独立累加，禁止玩法模块直接改 `CurrentStamina`。
 - `Mod_Cam` 的管理员“无限视野”属于运行时权限状态，不得把 `MaxPovValue` 改成 `float.MaxValue`；`MaxPovValue` 仍是普通玩法、UI 滑条和镜头预判的有限配置上限，只有最终镜头尺寸约束在无限模式下跳过该上限。
 - Escape/Android 返回遵循“最上层可取消面板 → 手机抽屉 → 设置面板”的统一顺序；不要在尝试关闭顶部面板之前用 Gameplay Input Lock 拦截，否则持锁面板会让返回键表现为完全失效。
 - `Mover_SaveData.isRunning` 是玩家奔跑开关的持久字段；输入锁定只停止位移，不清空该字段，跨维度重建后须在解锁输入后恢复。

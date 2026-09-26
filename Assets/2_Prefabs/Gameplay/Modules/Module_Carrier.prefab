@@ -52,8 +52,11 @@ MonoBehaviour:
     Type: 0
     BitData: '{"Version":1}'
   MaxSpeed: 5
+  BoostSpeedMultiplier: 1.5
   Acceleration: 3
   Braking: 6
+  FacingTurnSpeed: 30
+  LandPushTurnSpeed: 15
   Mass: 60
   Radius: 0.35
   SeatOffset: {x: 0, y: 0.25}
