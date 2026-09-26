@@ -723,8 +723,9 @@ MonoBehaviour:
   alertKeepDuration: 2
   fleeTriggerHpRate: 0.22
   fleeSafeHpRate: 0.45
-  avoidRunDistance: 9
-  fleeRunDistance: 12
+  avoidRunDistance: 30
+  avoidSafeDistance: 30
+  fleeRunDistance: 30
   enableWander: 1
   idleMinDuration: 0.8
   idleMaxDuration: 2.2

@@ -17,7 +17,7 @@ using RuntimeWorldAddress = FlatWorld.WorldModel.WorldAddress;
 /// </summary>
 public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
 {
-    private const int CompactSaveVersion = 20; // Ground/Liquid 独立存档，不恢复旧水地块或农业水深。
+    private const int CompactSaveVersion = 21; // 生态进度使用当前布局；旧版本在解析核心数据前拒绝。
     private const int ModdedSaveVersion = 10;
     private const float AutoSaveFrameBudgetSeconds = 0.0025f;
     private const string TemporarySaveSuffix = ".tmp";
@@ -233,19 +233,27 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
             yield break;
         }
 
-        Exception captureFailure = null;
-        IEnumerator captureRoutine = PrepareLoadedChunksForAutoSaveCoroutine(
-            exception => captureFailure = exception);
-        while (captureRoutine.MoveNext())
-            yield return captureRoutine.Current;
-
-        if (captureFailure != null)
+        ecologySnapshotReaders++;
+        try
         {
-            onWriteQueued?.Invoke(Task.FromException<bool>(captureFailure));
-            yield break;
-        }
+            Exception captureFailure = null;
+            IEnumerator captureRoutine = PrepareLoadedChunksForAutoSaveCoroutine(
+                exception => captureFailure = exception);
+            while (captureRoutine.MoveNext())
+                yield return captureRoutine.Current;
 
-        onWriteQueued?.Invoke(QueueCurrentSaveWriteInBackground());
+            if (captureFailure != null)
+            {
+                onWriteQueued?.Invoke(Task.FromException<bool>(captureFailure));
+                yield break;
+            }
+
+            onWriteQueued?.Invoke(QueueCurrentSaveWriteInBackground());
+        }
+        finally
+        {
+            ecologySnapshotReaders--;
+        }
     }
 
     /// <summary>在主线程构建完整字节快照，并返回不访问 Unity API 的后台文件写入任务。</summary>
@@ -1522,6 +1530,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         runtimeBuildingDirtyChunks.Clear();
         runtimeBuildingDirtyAddresses.Clear();
         restoredRuntimeAiChunks.Clear();
+        ClearParkedRuntimeAi();
         restoredRuntimeAiWorld = null;
         restoredRuntimeAiEpoch = long.MinValue;
         restoredRuntimeBuildingChunks.Clear();
@@ -2130,6 +2139,14 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
                 continue;
             }
 
+            // 运行中进入新区块时先登记休眠快照，由生态调度器在镜头外分帧恢复。
+            if (GameManager.Instance != null && GameManager.Instance.IsGameplayReady &&
+                MonsterManager.IsRegisteredSpeciesId(savedData.IDName))
+            {
+                AddParkedRuntimeAi(address, CloneItemData(savedData));
+                continue;
+            }
+
             try
             {
                 ItemData runtimeData = CloneAndRebaseItemData(savedData);
@@ -2169,6 +2186,10 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
 
         record.ChangedItems ??= new List<ItemData>();
         record.ChangedItems.RemoveAll(RuntimeAiEntityUtility.IsAiData);
+        // 休眠实体已经卸载 GameObject，保存活动实体时仍须保留同一区块中的休眠快照。
+        if (parkedRuntimeAiByAddress.TryGetValue(address, out List<ItemData> parkedItems))
+            for (int i = 0; i < parkedItems.Count; i++)
+                record.ChangedItems.Add(parkedItems[i]);
         for (int i = 0; i < savedItems.Count; i++)
             record.ChangedItems.Add(savedItems[i]);
         record.ChangedItems.Sort((left, right) => (left?.Guid ?? 0).CompareTo(right?.Guid ?? 0));
@@ -2198,6 +2219,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
             return;
 
         restoredRuntimeAiChunks.Clear();
+        ClearParkedRuntimeAi();
         restoredRuntimeAiWorld = world;
         restoredRuntimeAiEpoch = epoch;
     }

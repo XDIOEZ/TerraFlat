@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "config": {
+    "id": "ghost_milestone_growth",
+    "scheduleMode": "dayMilestoneGrowth",
+    "ecologyGroup": "nightEnemies",
+    "requireGlobalDarkness": true,
+    "spawnTriggerTime": 0.0,
+    "spawnsPerDay": 1,
+    "minSpawnDistance": 15.0,
+    "maxSpawnDistance": 50.0,
+    "playerVisibilityExclusionDistance": 24.0,
+    "playerPopulationRadius": 70.0,
+    "perPlayerAliveLimit": 0,
+    "spawnSearchRetryCount": 16,
+    "spawnCount": 1,
+    "spawnChance": 1.0,
+    "daysBetweenSpawns": 1,
+    "groupAliveLimit": 6,
+    "maxEcologyBudget": 6,
+    "dailyBudgetRecovery": 1,
+    "recoveryTargetPopulation": 0,
+    "recoveryCheckInterval": 10.0,
+    "growthIntervalDays": 1,
+    "maxLifetimeSpawnCount": 64,
+    "asyncSpawnInterval": 0.0,
+    "unboundedDailyGrowth": true,
+    "ignorePopulationLimits": false,
+    "requireCompletelyDarkTile": true,
+    "maxAllowedTileLight": 0.0,
+    "allowedBiomeNames": [
+      "森林",
+      "石地",
+      "沙漠"
+    ],
+    "recycleDistance": 130.0,
+    "recycleGraceSeconds": 30.0,
+    "spawnEntries": [
+      {
+        "prefabName": "Ghost",
+        "runtimeBackend": "gameObject",
+        "probability": 1.0,
+        "ecologyCost": 1,
+        "speciesAliveLimit": 0
+      }
+    ],
+    "treeHabitat": {
+      "enabled": false,
+      "treesPerActor": 4,
+      "spawnRadius": 3.0
+    }
+  }
+}

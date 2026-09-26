@@ -5,13 +5,15 @@ using System.IO;
 using Newtonsoft.Json;
 using UnityEngine;
 
+/// <summary>只在资源加载阶段读取 Resources JSON；独立规则文件自动发现，游玩帧内只使用已校验目录。</summary>
 public static class SpawnerConfigCatalogLoader
 {
+    #region 文件加载
+
     public const int SupportedSchemaVersion = 1;
-    public const string RelativeSpawnerRoot = "GameConfig/Spawners";
-    public const string ConfigFileName = "spawner-manifest.json";
-    public const string RelativeConfigPath = RelativeSpawnerRoot + "/" + ConfigFileName;
-    public const long MaximumConfigBytes = 1024 * 1024;
+    public const string SettingsResourcePath = "GameConfig/Spawners/spawner-settings";
+    public const string RuleResourcePath = "GameConfig/Spawners/Rules";
+    public const int MaximumConfigCharacters = 256 * 1024;
 
     private static readonly JsonSerializerSettings StrictJsonSettings = new JsonSerializerSettings
     {
@@ -19,54 +21,91 @@ public static class SpawnerConfigCatalogLoader
         DateParseHandling = DateParseHandling.None
     };
 
-    public static string BuiltInConfigPath =>
-        StreamingAssetsTextLoader.CombinePath(Application.streamingAssetsPath, RelativeConfigPath);
-
     public static SpawnerConfigCatalog LoadBuiltIn()
     {
-        return Deserialize(StreamingAssetsTextLoader.ReadAllText(BuiltInConfigPath));
+        TextAsset settingsAsset = Resources.Load<TextAsset>(SettingsResourcePath);
+        if (settingsAsset == null)
+            throw new FileNotFoundException($"找不到生物生成全局设置：Resources/{SettingsResourcePath}.json");
+
+        TextAsset[] ruleAssets = Resources.LoadAll<TextAsset>(RuleResourcePath);
+        if (ruleAssets.Length == 0)
+            throw new InvalidDataException($"生物生成规则目录为空：Resources/{RuleResourcePath}");
+
+        Array.Sort(ruleAssets, CompareRuleAssets);
+        var catalog = new SpawnerConfigCatalog
+        {
+            SchemaVersion = SupportedSchemaVersion,
+            Settings = DeserializeSettings(settingsAsset.text)
+        };
+        foreach (TextAsset ruleAsset in ruleAssets)
+            catalog.Configs.Add(DeserializeRule(ruleAsset.text, ruleAsset.name));
+
+        Validate(catalog);
+        return catalog;
     }
 
     public static IEnumerator LoadBuiltInAsync(
         Action<SpawnerConfigCatalog> onCompleted,
         Action<Exception> onFailed)
     {
-        string json = null;
-        Exception readError = null;
-        yield return StreamingAssetsTextLoader.ReadAllTextAsync(
-            BuiltInConfigPath,
-            text => json = text,
-            exception => readError = exception);
-
-        if (readError != null)
-        {
-            onFailed?.Invoke(readError);
-            yield break;
-        }
-
         try
         {
-            onCompleted?.Invoke(Deserialize(json));
+            onCompleted?.Invoke(LoadBuiltIn());
         }
         catch (Exception exception)
         {
             onFailed?.Invoke(exception);
         }
+
+        yield break;
     }
 
-    public static SpawnerConfigCatalog Deserialize(string json)
+    /// <summary>解析一份独立规则；文件名只用于报错，身份由 JSON 的 id 决定。</summary>
+    public static SpawnerConfigDefinition DeserializeRule(string json, string sourceName)
+    {
+        ValidateText(json, sourceName);
+        try
+        {
+            SpawnerConfigFile file = JsonConvert.DeserializeObject<SpawnerConfigFile>(json, StrictJsonSettings);
+            if (file == null || file.SchemaVersion != SupportedSchemaVersion || file.Config == null)
+                throw new InvalidDataException($"生物生成规则 {sourceName} 缺少配置或 schemaVersion 不受支持");
+            return file.Config;
+        }
+        catch (JsonException exception)
+        {
+            throw new InvalidDataException($"生物生成规则 {sourceName} 的 JSON 无效：{exception.Message}", exception);
+        }
+    }
+
+    /// <summary>解析全局调度和容量设置。</summary>
+    public static SpawnerRuntimeSettings DeserializeSettings(string json)
+    {
+        ValidateText(json, "spawner-settings");
+        try
+        {
+            return JsonConvert.DeserializeObject<SpawnerRuntimeSettings>(json, StrictJsonSettings)
+                ?? throw new InvalidDataException("生物生成全局设置为空");
+        }
+        catch (JsonException exception)
+        {
+            throw new InvalidDataException($"生物生成全局设置 JSON 无效：{exception.Message}", exception);
+        }
+    }
+
+    private static void ValidateText(string json, string sourceName)
     {
         if (string.IsNullOrWhiteSpace(json))
-            throw new InvalidDataException("生物生成 JSON 为空");
-        if (json.Length > MaximumConfigBytes)
-            throw new InvalidDataException($"生物生成 JSON 超过大小限制：{json.Length} bytes");
-
-        SpawnerConfigCatalog catalog = JsonConvert.DeserializeObject<SpawnerConfigCatalog>(
-            json,
-            StrictJsonSettings);
-        Validate(catalog);
-        return catalog;
+            throw new InvalidDataException($"生物生成 JSON 为空：{sourceName}");
+        if (json.Length > MaximumConfigCharacters)
+            throw new InvalidDataException($"生物生成 JSON 超过字符限制：{sourceName}");
     }
+
+    private static int CompareRuleAssets(TextAsset left, TextAsset right) =>
+        StringComparer.Ordinal.Compare(left.name, right.name);
+
+    #endregion
+
+    #region 配置校验
 
     public static void Validate(SpawnerConfigCatalog catalog)
     {
@@ -74,6 +113,7 @@ public static class SpawnerConfigCatalogLoader
             throw new InvalidDataException("生物生成 JSON 根对象为空");
         if (catalog.SchemaVersion != SupportedSchemaVersion)
             throw new InvalidDataException($"不支持的生物生成 schemaVersion：{catalog.SchemaVersion}");
+        ValidateSettings(catalog.Settings);
         if (catalog.Configs == null || catalog.Configs.Count == 0)
             throw new InvalidDataException("生物生成配置至少需要一个 config");
 
@@ -82,6 +122,20 @@ public static class SpawnerConfigCatalogLoader
         {
             SpawnerConfigDefinition config = catalog.Configs[index];
             ValidateConfig(config, index, ids);
+        }
+    }
+
+    private static void ValidateSettings(SpawnerRuntimeSettings settings)
+    {
+        if (settings == null || settings.SchemaVersion != SupportedSchemaVersion)
+            throw new InvalidDataException("生物生成全局设置缺失或 schemaVersion 不受支持");
+        if (settings.GlobalAliveLimit < 1 ||
+            !IsFinite(settings.SpawnRetryInterval) || settings.SpawnRetryInterval <= 0f ||
+            !IsFinite(settings.EcologyTickInterval) || settings.EcologyTickInterval < 0.1f ||
+            settings.MaxLoadedGameObjectActors < 1 || settings.MaxLoadedEntityActors < 1 ||
+            settings.ResidentChecksPerTick < 1)
+        {
+            throw new InvalidDataException("生物生成全局调度或装载上限无效");
         }
     }
 
@@ -109,8 +163,21 @@ public static class SpawnerConfigCatalogLoader
             throw new InvalidDataException($"生物生成配置 {config.Id} 的 spawnChance 无效：{config.SpawnChance}");
         if (config.SpawnsPerDay < 1 || config.SpawnCount < 1 || config.SpawnSearchRetryCount < 1)
             throw new InvalidDataException($"生物生成配置 {config.Id} 的数量或重试参数无效");
-        if (config.MinSpawnDistance < 0f || config.MaxSpawnDistance < config.MinSpawnDistance)
+        if (!IsFinite(config.MinSpawnDistance) || !IsFinite(config.MaxSpawnDistance) ||
+            config.MinSpawnDistance < 0f || config.MaxSpawnDistance < config.MinSpawnDistance)
             throw new InvalidDataException($"生物生成配置 {config.Id} 的生成距离无效");
+        if (!IsFinite(config.SpawnTriggerTime) || config.SpawnTriggerTime < 0f ||
+            !IsFinite(config.PlayerVisibilityExclusionDistance) || config.PlayerVisibilityExclusionDistance < 0f ||
+            !IsFinite(config.PlayerPopulationRadius) || config.PlayerPopulationRadius <= 0f ||
+            config.PerPlayerAliveLimit < 0 || config.DaysBetweenSpawns < 1 ||
+            config.DailyBudgetRecovery < 0 || config.RecoveryTargetPopulation < 0 ||
+            !IsFinite(config.RecoveryCheckInterval) || config.RecoveryCheckInterval <= 0f ||
+            config.GrowthIntervalDays < 1 || config.MaxLifetimeSpawnCount < 1 ||
+            !IsFinite(config.AsyncSpawnInterval) || config.AsyncSpawnInterval < 0f ||
+            !IsFinite(config.MaxAllowedTileLight) || config.MaxAllowedTileLight < 0f || config.MaxAllowedTileLight > 1f ||
+            !IsFinite(config.RecycleDistance) || config.RecycleDistance < 0f ||
+            !IsFinite(config.RecycleGraceSeconds) || config.RecycleGraceSeconds < 0f)
+            throw new InvalidDataException($"生物生成配置 {config.Id} 的时间、光照或生态数值无效");
         if (config.GroupAliveLimit < 1 || config.MaxEcologyBudget < 1)
             throw new InvalidDataException($"生物生成配置 {config.Id} 的生态上限无效");
 
@@ -150,7 +217,8 @@ public static class SpawnerConfigCatalogLoader
             return;
         if (!IsFinite(nutrition.MinFoodRate) || !IsFinite(nutrition.MaxFoodRate) ||
             nutrition.MinFoodRate < 0f || nutrition.MinFoodRate > 1f ||
-            nutrition.MaxFoodRate < 0f || nutrition.MaxFoodRate > 1f)
+            nutrition.MaxFoodRate < 0f || nutrition.MaxFoodRate > 1f ||
+            nutrition.MinFoodRate > nutrition.MaxFoodRate)
         {
             throw new InvalidDataException($"物种 {entry.PrefabName} 的出生饱食度范围无效");
         }
@@ -176,8 +244,7 @@ public static class SpawnerConfigCatalogLoader
 
     private static bool IsSupportedRuntimeBackend(string value)
     {
-        return string.IsNullOrWhiteSpace(value) ||
-               string.Equals(value, "gameObject", StringComparison.OrdinalIgnoreCase) ||
+        return string.Equals(value, "gameObject", StringComparison.OrdinalIgnoreCase) ||
                string.Equals(value, nameof(AiRuntimeBackendKind.GameObject), StringComparison.OrdinalIgnoreCase) ||
                string.Equals(value, "entities", StringComparison.OrdinalIgnoreCase) ||
                string.Equals(value, nameof(AiRuntimeBackendKind.Entities), StringComparison.OrdinalIgnoreCase);
@@ -187,4 +254,6 @@ public static class SpawnerConfigCatalogLoader
     {
         return !float.IsNaN(value) && !float.IsInfinity(value);
     }
+
+    #endregion
 }

@@ -150,9 +150,9 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 	[FoldoutGroup("逃跑参数"), PropertyOrder(55), LabelText("逃跑触发距离"), SuffixLabel("米", true), MinValue(0.1f)]
 	public float fleeTriggerDistance = 6f;
 	[FoldoutGroup("逃跑参数"), PropertyOrder(56), LabelText("逃跑安全距离"), SuffixLabel("米", true), MinValue(0.1f)]
-	public float fleeSafeDistance = 10f;
+	public float fleeSafeDistance = 36f;
 	[FoldoutGroup("逃跑参数"), PropertyOrder(57), LabelText("逃跑偏移距离"), SuffixLabel("米", true), MinValue(1f)]
-	public float fleeRunDistance = 8f;
+	public float fleeRunDistance = 36f;
 	[FoldoutGroup("逃跑参数"), PropertyOrder(58), LabelText("受击威胁记忆"), SuffixLabel("秒", true), MinValue(0.1f)]
 	public float damageFleeDuration = 5f;
 	[FoldoutGroup("逃跑参数"), PropertyOrder(58), LabelText("威胁TypeTag列表")]
@@ -246,20 +246,18 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 
 	protected override void OnDamageThreatUpdated(DamageReceiverDamageInfo damageInfo)
 	{
-		if (!TryGetRecentDamageThreat(out Item threat, out Vector3 sourcePosition))
+		if (!TryGetRecentDamageThreat(out Item threat, out _))
 			return;
 
 		_currentThreat = threat;
 
-		if (_isReady &&
-			_stateMachine != null &&
-			_stateMachine.IsInitialized &&
-			_currentState != ChickenState.Flee)
-		{
-			SwitchState(ChickenState.Flee);
-		}
+		if (!_isReady || _stateMachine == null || !_stateMachine.IsInitialized)
+			return;
 
-		MoveAwayFrom(sourcePosition, fleeRunDistance);
+		if (_currentState == ChickenState.Flee)
+			RetargetCurrentFleeNode();
+		else
+			SwitchState(ChickenState.Flee);
 	}
 
 	/// <summary>小鸡受到有效伤害后获得短时速度1，不要求伤害必须来自可识别攻击者。</summary>
@@ -383,7 +381,10 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 		stateMachine.Register(CreateStoppedStateNode(ChickenState.Sleep, TickSleep));
 		stateMachine.Register(CreateStoppedStateNode(ChickenState.Mate, _ => TickMate()));
 		stateMachine.Register(CreateStoppedStateNode(ChickenState.LayEgg, _ => TickLayEgg()));
-		stateMachine.Register(CreateMovingStateNode(ChickenState.Flee, _ => TickFlee()));
+		stateMachine.Register(CreateFleeStateNode(
+			ChickenState.Flee,
+			ResolveFleeSourcePosition,
+			() => fleeRunDistance));
 	}
 	#endregion
 
@@ -459,17 +460,15 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 		_layEggTriggered = true;
 	}
 
-	private void TickFlee()
+	private Vector3? ResolveFleeSourcePosition()
 	{
 		if (TryGetRecentDamageThreat(out Item damageThreat, out Vector3 damageSource))
 		{
 			_currentThreat = damageThreat;
-			MoveAwayFrom(damageSource, fleeRunDistance);
-			return;
+			return damageSource;
 		}
 
-		if (_currentThreat == null) { StopMove(); return; }
-		MoveAwayFrom(_currentThreat.transform.position, fleeRunDistance);
+		return _currentThreat != null ? _currentThreat.transform.position : (Vector3?)null;
 	}
 	#endregion
 
@@ -489,11 +488,11 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 		{
 			if (threat == null) return false;
 			_currentThreat = threat;
-			return IsWithinEffectivePerceptionRange(threat, fleeSafeDistance);
+			return IsWithinFleeDistance(threat, true, fleeTriggerDistance, fleeSafeDistance);
 		}
 
 		if (threat == null) return false;
-		if (!IsWithinEffectivePerceptionRange(threat, fleeTriggerDistance)) return false;
+		if (!IsWithinFleeDistance(threat, false, fleeTriggerDistance, fleeSafeDistance)) return false;
 
 		_currentThreat = threat;
 		return true;
@@ -578,30 +577,10 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 	#region Helpers - Chicken 特有
 	private Item FindClosestThreat()
 	{
-		Item closestThreat = _detector.FindClosestItemByTags(threatTags, transform.position);
-		float closestDistanceSqr = closestThreat != null
-			? WorldTopologyRuntime.SqrDistance(transform.position, closestThreat.transform.position)
-			: float.MaxValue;
-
-		if (!fleeFromPlayer)
-			return closestThreat;
-
-		List<Item> detectedItems = _detector.CurrentItemsInArea;
-		for (int i = 0; i < detectedItems.Count; i++)
-		{
-			Item detectedItem = detectedItems[i];
-			if (!(detectedItem is Player))
-				continue;
-
-			float distanceSqr = WorldTopologyRuntime.SqrDistance(transform.position, detectedItem.transform.position);
-			if (distanceSqr >= closestDistanceSqr)
-				continue;
-
-			closestThreat = detectedItem;
-			closestDistanceSqr = distanceSqr;
-		}
-
-		return closestThreat;
+		return _detector.FindClosestItemByTags(
+			threatTags,
+			transform.position,
+			includeUnityPlayerTag: fleeFromPlayer);
 	}
 
 	private Item FindClosestEdibleItem()

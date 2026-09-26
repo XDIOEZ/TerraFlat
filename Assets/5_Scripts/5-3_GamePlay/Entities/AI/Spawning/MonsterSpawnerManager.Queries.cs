@@ -42,6 +42,8 @@ public partial class MonsterSpawnerManager
         for (int i = 0; i < _playerPositions.Count; i++)
         {
             int count = _monsterManager?.CountGroupWithinRadius(config, _playerPositions[i], radius * radius) ?? 0;
+            count += SaveDataMgr.Instance?.CountParkedRuntimeAiWithinRadius(
+                config, _playerPositions[i], radius * radius) ?? 0;
             if (UsesEntityPopulation(config))
                 count += AiRuntimeBackendService.Ecology?.CountGroupWithinRadius(config, _playerPositions[i], radius * radius) ?? 0;
             _nearbyGroupCounts.Add(count);

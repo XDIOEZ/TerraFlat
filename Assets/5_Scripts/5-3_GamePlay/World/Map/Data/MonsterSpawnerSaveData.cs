@@ -14,9 +14,7 @@ public partial class MonsterSpawnerSaveData
 public partial class SpawnerProgressSaveData
 {
     public float LastProcessedTotalTime = -1f;
-    public int LastCheckedDay = -1;
     public int LastSpawnDay = -999;
-    public List<int> TriggeredWindowIndices = new();
 
     public int AvailableBudget = -1;
     public int LastBudgetRecoveryDay = -1;

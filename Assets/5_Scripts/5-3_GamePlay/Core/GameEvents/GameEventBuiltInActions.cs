@@ -243,9 +243,6 @@ namespace FlatWorld.Gameplay.Events
         [JsonProperty("playerVisibilityExclusionDistance")]
         public float PlayerVisibilityExclusionDistance = 12f;
 
-        [JsonProperty("requireOutsidePlayerView")]
-        public bool RequireOutsidePlayerView = true;
-
         [JsonProperty("searchAttemptsPerCreature")]
         public int SearchAttemptsPerCreature = 24;
 
@@ -351,7 +348,6 @@ namespace FlatWorld.Gameplay.Events
                 MinDistance = value.MinDistance,
                 MaxDistance = value.MaxDistance,
                 PlayerVisibilityExclusionDistance = value.PlayerVisibilityExclusionDistance,
-                RequireOutsidePlayerView = value.RequireOutsidePlayerView,
                 UseSpawnAnchor = true,
                 SpawnAnchor = targetPosition,
                 SearchAttemptsPerCreature = Mathf.Max(1, value.SearchAttemptsPerCreature),

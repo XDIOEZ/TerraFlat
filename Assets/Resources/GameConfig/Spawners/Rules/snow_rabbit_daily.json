@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "config": {
+    "id": "snow_rabbit_daily",
+    "scheduleMode": "timedWindows",
+    "ecologyGroup": "animals",
+    "requireGlobalDarkness": false,
+    "spawnTriggerTime": 720.0,
+    "spawnsPerDay": 1,
+    "minSpawnDistance": 15.0,
+    "maxSpawnDistance": 50.0,
+    "playerVisibilityExclusionDistance": 20.0,
+    "playerPopulationRadius": 60.0,
+    "perPlayerAliveLimit": 1,
+    "spawnSearchRetryCount": 8,
+    "spawnCount": 1,
+    "spawnChance": 1.0,
+    "daysBetweenSpawns": 1,
+    "groupAliveLimit": 1,
+    "maxEcologyBudget": 1,
+    "dailyBudgetRecovery": 1,
+    "recoveryTargetPopulation": 1,
+    "recoveryCheckInterval": 8.0,
+    "growthIntervalDays": 1,
+    "maxLifetimeSpawnCount": 64,
+    "asyncSpawnInterval": 0.0,
+    "unboundedDailyGrowth": false,
+    "ignorePopulationLimits": false,
+    "requireCompletelyDarkTile": false,
+    "maxAllowedTileLight": 1.0,
+    "allowedBiomeNames": [
+      "雪地"
+    ],
+    "recycleDistance": 110.0,
+    "recycleGraceSeconds": 20.0,
+    "spawnEntries": [
+      {
+        "prefabName": "Rabbit",
+        "runtimeBackend": "gameObject",
+        "probability": 1.0,
+        "ecologyCost": 1,
+        "speciesAliveLimit": 1
+      }
+    ],
+    "treeHabitat": {
+      "enabled": false,
+      "treesPerActor": 4,
+      "spawnRadius": 3.0
+    }
+  }
+}

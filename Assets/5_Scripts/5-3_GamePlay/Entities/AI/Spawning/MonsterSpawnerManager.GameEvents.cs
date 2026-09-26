@@ -7,9 +7,12 @@ using UnityEngine.SceneManagement;
 
 public partial class MonsterSpawnerManager
 {
+    #region 事件生成与位置
+
     /// <summary>事件候选重试共用相机缓冲；相机数量增加时完整扩容，不截断视野查询。</summary>
     private Camera[] _eventCameras = Array.Empty<Camera>();
     private readonly List<MonoBehaviour> _eventActorBehaviours = new(16);
+    private float _nextEventSearchTime;
 
     public int GetEventSpawnPlayerCount(string worldKey)
     {
@@ -21,8 +24,7 @@ public partial class MonsterSpawnerManager
     }
 
     /// <summary>
-    /// Plain-data spawn bridge for configured game events. Event spawns intentionally do not
-    /// consume the natural ecology budget; their own JSON count is the controlling limit.
+    /// 事件出生不消耗自然生态预算，但与自然出生共用创建节流；未成功的数量由事件状态保留。
     /// </summary>
     public int SpawnEventCreatures(GameEventCreatureSpawnRequest request)
     {
@@ -37,6 +39,7 @@ public partial class MonsterSpawnerManager
             request == null ||
             request.Count <= 0 ||
             string.IsNullOrWhiteSpace(request.PrefabId) ||
+            _gameManager == null || !_gameManager.IsGameplayReady ||
             _itemManager == null ||
             DimensionManager.Instance?.ActiveDefinition?.EnableMonsterSpawning == false)
         {
@@ -61,20 +64,18 @@ public partial class MonsterSpawnerManager
             return 0;
         }
 
-        int spawned = 0;
-        for (int i = 0; i < request.Count; i++)
-        {
-            if (!TryGetEventSpawnPosition(request, out Vector3 position))
-                continue;
+        float now = Time.unscaledTime;
+        if (now < _nextEventSearchTime || now < _nextCreatureBirthTime)
+            return 0;
+        _nextEventSearchTime = now + Mathf.Max(0.1f, _settings.EcologyTickInterval);
+        if (!TryGetEventSpawnPosition(request, out Vector3 position))
+            return 0;
 
-            if (TrySpawnEventCreature(request.PrefabId, position, out Item spawnedItem))
-            {
-                spawnedItems?.Add(spawnedItem);
-                spawned++;
-            }
-        }
-
-        return spawned;
+        _nextCreatureBirthTime = now + Mathf.Max(0.1f, _settings.EcologyTickInterval);
+        if (!TrySpawnEventCreature(request.PrefabId, position, out Item spawnedItem))
+            return 0;
+        spawnedItems?.Add(spawnedItem);
+        return 1;
     }
 
     private bool TryGetEventSpawnPosition(
@@ -82,7 +83,7 @@ public partial class MonsterSpawnerManager
         out Vector3 spawnPosition)
     {
         spawnPosition = default;
-        int retries = Mathf.Max(1, request.SearchAttemptsPerCreature);
+        int retries = Mathf.Clamp(request.SearchAttemptsPerCreature, 1, 8);
         float minDistance = Mathf.Max(0f, request.MinDistance);
         float maxDistance = Mathf.Max(minDistance, request.MaxDistance);
         float exclusionDistance = Mathf.Max(minDistance, request.PlayerVisibilityExclusionDistance);
@@ -98,11 +99,13 @@ public partial class MonsterSpawnerManager
                 Mathf.Cos(angle) * distance,
                 Mathf.Sin(angle) * distance,
                 0f);
+            candidate = WorldTopologyRuntime.NormalizePosition(candidate);
             candidate.x = Mathf.Floor(candidate.x) + 0.5f;
             candidate.y = Mathf.Floor(candidate.y) + 0.5f;
 
             if (IsNearAnyPlayer(candidate, exclusionDistance) ||
-                (request.RequireOutsidePlayerView && IsVisibleByAnyActiveCamera(candidate)) ||
+                IsVisibleByAnyActiveCamera(candidate, 0.15f) ||
+                !_chunkManager.IsRuntimeEntityPresentationReady(candidate) ||
                 !IsRuntimeTerrainReady(candidate) ||
                 !IsWalkableSpawnPosition(candidate) ||
                 (!request.IgnoreEnvironmentalRestrictions &&
@@ -120,7 +123,8 @@ public partial class MonsterSpawnerManager
         return false;
     }
 
-    private bool IsVisibleByAnyActiveCamera(Vector3 worldPosition)
+    /// <summary>按所有活动相机与循环世界最近镜像判断视野，padding 为额外视口边距。</summary>
+    private bool IsVisibleByAnyActiveCamera(Vector3 worldPosition, float padding = 0.05f)
     {
         int required = Camera.allCamerasCount;
         if (_eventCameras.Length < required)
@@ -132,10 +136,12 @@ public partial class MonsterSpawnerManager
             if (camera == null || !camera.isActiveAndEnabled)
                 continue;
 
-            Vector3 viewport = camera.WorldToViewportPoint(worldPosition);
+            Vector2 nearest = WorldTopologyRuntime.NearestImagePosition(
+                camera.transform.position, worldPosition);
+            Vector3 viewport = camera.WorldToViewportPoint(new Vector3(nearest.x, nearest.y, worldPosition.z));
             if (viewport.z > 0f &&
-                viewport.x >= -0.05f && viewport.x <= 1.05f &&
-                viewport.y >= -0.05f && viewport.y <= 1.05f)
+                viewport.x >= -padding && viewport.x <= 1f + padding &&
+                viewport.y >= -padding && viewport.y <= 1f + padding)
             {
                 return true;
             }
@@ -179,6 +185,8 @@ public partial class MonsterSpawnerManager
         return lightLevel <= maximum + 0.0001f;
     }
 
+    #endregion
+
     #region 事件生物初始化校验
 
     private bool TrySpawnEventCreature(
@@ -196,8 +204,14 @@ public partial class MonsterSpawnerManager
                 return false;
             }
 
+            if (backend.ResidentCount >= Mathf.Max(1, _settings.MaxLoadedEntityActors))
+                return false;
+
             return backend.TrySpawnEvent(prefabId, position);
         }
+
+        if (_monsterManager == null || _monsterManager.Count >= Mathf.Max(1, _settings.MaxLoadedGameObjectActors))
+            return false;
 
         try
         {

@@ -23,9 +23,9 @@ public interface IAiEcologyBackend
     bool TrySpawnEvent(string speciesId, Vector3 position);
     int GetGroupCount(SpawnerConfig config);
     int GetSpeciesCount(string speciesId);
+    int ResidentCount { get; }
     int PopulationLimitedCount { get; }
     int CountGroupWithinRadius(SpawnerConfig config, Vector3 center, float radiusSqr);
-    void RecycleDistantPopulation(IReadOnlyList<Vector3> playerPositions, float now);
 }
 
 /// <summary>

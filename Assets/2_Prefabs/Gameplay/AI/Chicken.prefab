@@ -314,8 +314,8 @@ MonoBehaviour:
   layEggIntervalDays: 2
   layEggDuration: 2
   fleeTriggerDistance: 6
-  fleeSafeDistance: 10
-  fleeRunDistance: 8
+  fleeSafeDistance: 36
+  fleeRunDistance: 36
   damageFleeDuration: 5
   threatTags:
   - Predator

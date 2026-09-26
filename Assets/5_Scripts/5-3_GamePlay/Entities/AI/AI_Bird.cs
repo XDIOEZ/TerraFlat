@@ -3,13 +3,13 @@ using FlatWorld.Combat;
 using FlatWorld.Networking;
 using UnityEngine;
 
-/// <summary>鸟的四段状态；下降期间仍为空中目标，接触地面后才恢复近战和地块效果。</summary>
-public enum BirdFlightPhase { Ground, TakingOff, Flying, Landing }
+/// <summary>鸟的地面、助跑与飞行阶段；助跑仍接触地面，离地后才屏蔽近战和地块效果。</summary>
+public enum BirdFlightPhase { Ground, RunUp, TakingOff, Flying, Landing }
 
 /// <summary>
-/// GameObject 鸟与海鸥共用模块。地面 0.5 格/秒、空中 6.3 格/秒，飞行受独立耐力约束。
+/// GameObject 鸟与海鸥共用模块。地面 0.5 格/秒、助跑 2.6 格/秒、空中 6.3 格/秒，飞行受独立耐力约束。
 /// Item 和刚体始终保存地面映射坐标；独立 LiftRoot 在飞行时提升表现与受击盒 2 单位。
-/// 状态、阶段计时与目的地随模块存档，回收时释放地块抑制并归零表现高度。
+/// 助跑沿可走地面累计 1.2 格前进，再沿当前运动方向边加速边抬升；状态与目的地随模块存档。
 /// </summary>
 public sealed partial class AI_Bird : Module, IAIActor, IItemModuleDependencyBinder,
     IIncomingDamageRule, IIncomingDamageContextRule, ICombatAirborneTarget, IVisualGroundOffset
@@ -20,6 +20,11 @@ public sealed partial class AI_Bird : Module, IAIActor, IItemModuleDependencyBin
     private static readonly int TakingOffAnimationHash = Animator.StringToHash("Base Layer.TakingOff");
     private static readonly int FlyingAnimationHash = Animator.StringToHash("Base Layer.Flying");
     private static readonly int LandingAnimationHash = Animator.StringToHash("Base Layer.Landing");
+    private static readonly float[] RunUpDirectionOffsets = { 0f, 45f, -45f, 90f, -90f, 135f, -135f, 180f };
+    private const float RunUpSampleSpacing = 0.25f;
+    private const float RunUpStallSeconds = 1.5f;
+    private const float FatigueLandingScanInterval = 0.4f;
+    private const float FatigueLandingArrivalDistance = 0.3f;
 
     [Serializable]
     public sealed class FlightState
@@ -34,6 +39,12 @@ public sealed partial class AI_Bird : Module, IAIActor, IItemModuleDependencyBin
         public bool HasTransitionStartHeight;
         public float Stamina = 100f;
         public bool MustRecoverStamina;
+        /// <summary>离地时延续的水平前进方向 X。</summary>
+        public float TakeoffDirectionX;
+        /// <summary>离地时延续的水平前进方向 Y。</summary>
+        public float TakeoffDirectionY;
+        /// <summary>本次助跑已经完成的前进距离。</summary>
+        public float RunUpDistance;
     }
 
     public Ex_ModData Data = new();
@@ -41,6 +52,8 @@ public sealed partial class AI_Bird : Module, IAIActor, IItemModuleDependencyBin
     public override string CanonicalModuleId => "AI_Bird";
     public override ModuleTickMode TickMode => ModuleTickMode.EveryFrame;
     public float groundSpeed = 0.5f;
+    [Tooltip("离地前在地面助跑的速度。"), Min(0.1f)] public float takeoffRunSpeed = 2.6f;
+    [Tooltip("实际向前跑满此距离后才允许离地。"), Min(0.1f)] public float takeoffRunDistance = 1.2f;
     public float flightSpeed = 6.3f;
     public float flightHeight = 2f;
     public float groundDuration = 8f;
@@ -51,6 +64,10 @@ public sealed partial class AI_Bird : Module, IAIActor, IItemModuleDependencyBin
     [Min(0.01f)] public float flightStaminaMax = 100f;
     [Min(0f)] public float flightStaminaDrainRate = 1f;
     [Min(0f)] public float flightStaminaRecoveryRate = 10f;
+    [Tooltip("飞行耐力降到这个比例后，鸟开始等待无危险的安全落点。"), Range(0f, 1f)]
+    public float fatigueLandingStaminaRatio = 0.5f;
+    [Tooltip("疲劳降落时，每次在鸟周围搜索可站立地块的半径。"), Min(0f)]
+    public float fatigueLandingSearchRadius = 4f;
     public BirdFlightNavigationProfile flightNavigation = new();
     public Transform liftRoot;
     public Animator birdAnimator;
@@ -63,12 +80,20 @@ public sealed partial class AI_Bird : Module, IAIActor, IItemModuleDependencyBin
     private bool loaded;
     private bool stoppedForDeath;
     private Vector3 liftOrigin;
+    private Vector2 runUpLastPosition; // 上次助跑位移采样位置。
+    private float runUpStallElapsed; // 助跑连续未前进的时间。
+    private Vector2 fatigueLandingTarget;
+    private Vector2 fatigueThreatOrigin;
+    private float fatigueLandingScanRemaining;
+    private bool hasFatigueLandingTarget;
+    private bool fatigueAreaSafe;
+    private long fatigueSafetyVersion = -1;
     private bool restoreGroundDestination;
     private BirdFlightStaminaBar staminaDisplay;
     public Item ActorItem => item;
     public bool IsAlive => health != null && health.Hp > 0f;
     public BirdFlightPhase Phase => state.Phase;
-    public bool IsAirborne => state.Phase != BirdFlightPhase.Ground;
+    public bool IsAirborne => state.Phase != BirdFlightPhase.Ground && state.Phase != BirdFlightPhase.RunUp;
     public float FlightStamina => state.Stamina;
     public bool IsRecoveringFlightStamina => state.MustRecoverStamina;
     #endregion
@@ -105,10 +130,17 @@ public sealed partial class AI_Bird : Module, IAIActor, IItemModuleDependencyBin
         loaded = true;
         stoppedForDeath = false;
         ResetForaging();
+        ResetFatigueLanding();
         health.OnDamageReceived -= HandleBirdDamage;
         health.OnDamageReceived += HandleBirdDamage;
-        restoreGroundDestination = state.HasTarget && !IsAirborne;
+        restoreGroundDestination = state.Phase == BirdFlightPhase.Ground && state.HasTarget;
         ApplyFlightContact();
+        if (state.Phase == BirdFlightPhase.RunUp)
+        {
+            runUpLastPosition = body.position;
+            runUpStallElapsed = 0f;
+            SetRunUpDestination();
+        }
         ApplyFlightPresentation();
     }
 
@@ -119,6 +151,7 @@ public sealed partial class AI_Bird : Module, IAIActor, IItemModuleDependencyBin
         loaded = false;
         if (health != null) health.OnDamageReceived -= HandleBirdDamage;
         ResetForaging();
+        ResetFatigueLanding();
         if (liftRoot != null)
             liftRoot.localPosition = liftOrigin;
         tileReceiver?.SetEffectsSuppressed(this, false);
@@ -152,10 +185,18 @@ public sealed partial class AI_Bird : Module, IAIActor, IItemModuleDependencyBin
             float step = Mathf.Max(0f, deltaTime);
             state.Elapsed += step;
             bool exhausted = AdvanceFlightStamina(state, step, flightStaminaMax, flightStaminaDrainRate, flightStaminaRecoveryRate);
+            TickVigilance(step);
+            // 耗尽后仍把降落放在逃跑/觅食之前，但不允许在不可站立地块上硬降落。
+            // 若脚下没有安全地块，就继续飞到检测到安全落点为止。
             if (exhausted && (state.Phase == BirdFlightPhase.Flying || state.Phase == BirdFlightPhase.TakingOff))
             {
                 escapeRemaining = 0f;
-                BeginLanding();
+                if (state.Phase == BirdFlightPhase.TakingOff)
+                    TickTakeoff(step);
+                else
+                    TickFatigueLanding(step, forceLanding: true);
+                ApplyFlightPresentation();
+                return;
             }
             // 强制降落必须先于逃跑和觅食，避免零耐力后仍被逃跑分支继续当作飞机移动。
             if (state.Phase == BirdFlightPhase.Landing && state.MustRecoverStamina)
@@ -165,8 +206,7 @@ public sealed partial class AI_Bird : Module, IAIActor, IItemModuleDependencyBin
                 ApplyFlightPresentation();
                 return;
             }
-            TickVigilance(step);
-            if (TickEscape(step) || TickForaging(step))
+            if (TickEscape(step) || TickFatigueLanding(step, forceLanding: false) || TickForaging(step))
             {
                 ApplyFlightPresentation();
                 return;
@@ -177,9 +217,11 @@ public sealed partial class AI_Bird : Module, IAIActor, IItemModuleDependencyBin
                     TickGroundWander(step);
                     if (state.Elapsed >= groundDuration) BeginTakeoff();
                     break;
+                case BirdFlightPhase.RunUp:
+                    TickRunUp(step);
+                    break;
                 case BirdFlightPhase.TakingOff:
-                    mover.StopMovement();
-                    if (state.Elapsed >= transitionDuration) EnterPhase(BirdFlightPhase.Flying);
+                    TickTakeoff(step);
                     break;
                 case BirdFlightPhase.Flying:
                     TickFlightWander(step);
@@ -194,11 +236,35 @@ public sealed partial class AI_Bird : Module, IAIActor, IItemModuleDependencyBin
         ApplyFlightPresentation();
     }
 
-    /// <summary>起飞入口先撤销地块效果，再移动受击盒；同一 Tick 即拒绝近战。</summary>
+    /// <summary>地面起飞先选可走助跑线；从降落中受惊则沿现有高度直接重新加速。</summary>
     public void BeginTakeoff()
     {
-        if (state.Stamina <= 0f || state.MustRecoverStamina || state.Phase == BirdFlightPhase.TakingOff) return;
+        if (state.Stamina <= 0f || state.MustRecoverStamina ||
+            (state.Phase != BirdFlightPhase.Ground && state.Phase != BirdFlightPhase.Landing)) return;
+        if (state.Phase == BirdFlightPhase.Ground)
+        {
+            if (!TryChooseRunUpDirection(out Vector2 direction))
+            {
+                state.Elapsed = 0f;
+                return;
+            }
+            EnterPhase(BirdFlightPhase.RunUp);
+            state.TakeoffDirectionX = direction.x;
+            state.TakeoffDirectionY = direction.y;
+            state.RunUpDistance = 0f;
+            runUpStallElapsed = 0f;
+            runUpLastPosition = body.position;
+            SetRunUpDestination();
+            return;
+        }
+        Vector2 airborneDirection = escapeRemaining > 0f
+            ? escapeDirection
+            : new Vector2(state.TakeoffDirectionX, state.TakeoffDirectionY);
+        if (airborneDirection.sqrMagnitude < 0.0001f) airborneDirection = UnityEngine.Random.insideUnitCircle;
+        airborneDirection = airborneDirection.sqrMagnitude > 0.0001f ? airborneDirection.normalized : Vector2.right;
         EnterPhase(BirdFlightPhase.TakingOff);
+        state.TakeoffDirectionX = airborneDirection.x;
+        state.TakeoffDirectionY = airborneDirection.y;
     }
     public void BeginLanding() => EnterPhase(BirdFlightPhase.Landing);
     public void CompleteLanding() => EnterPhase(BirdFlightPhase.Ground);
@@ -208,7 +274,7 @@ public sealed partial class AI_Bird : Module, IAIActor, IItemModuleDependencyBin
     {
         float step = Mathf.Max(0f, deltaTime);
         maximum = Mathf.Max(0.01f, maximum);
-        if (state.Phase == BirdFlightPhase.Ground)
+        if (state.Phase == BirdFlightPhase.Ground || state.Phase == BirdFlightPhase.RunUp)
         {
             state.Stamina = Mathf.Min(maximum, state.Stamina + Mathf.Max(0f, recovery) * step);
             if (state.Stamina >= maximum) state.MustRecoverStamina = false;
@@ -232,6 +298,8 @@ public sealed partial class AI_Bird : Module, IAIActor, IItemModuleDependencyBin
         state.Elapsed = 0f;
         state.HasTarget = false;
         state.PauseRemaining = 0f;
+        if (phase != BirdFlightPhase.Flying)
+            ResetFatigueLanding();
         ApplyFlightContact();
         ApplyFlightPresentation();
     }
@@ -239,7 +307,7 @@ public sealed partial class AI_Bird : Module, IAIActor, IItemModuleDependencyBin
     private void ApplyFlightContact()
     {
         tileReceiver.SetEffectsSuppressed(this, IsAirborne);
-        mover.Speed.BaseValue = groundSpeed;
+        mover.Speed.BaseValue = state.Phase == BirdFlightPhase.RunUp ? takeoffRunSpeed : groundSpeed;
         if (IsAirborne) mover.StopMovement();
     }
 
@@ -276,6 +344,7 @@ public sealed partial class AI_Bird : Module, IAIActor, IItemModuleDependencyBin
         return state.Phase switch
         {
             BirdFlightPhase.Ground => mover.IsActuallyMoving ? WalkAnimationHash : GroundAnimationHash,
+            BirdFlightPhase.RunUp => WalkAnimationHash,
             BirdFlightPhase.TakingOff => TakingOffAnimationHash,
             BirdFlightPhase.Flying => FlyingAnimationHash,
             BirdFlightPhase.Landing => LandingAnimationHash,
@@ -289,16 +358,105 @@ public sealed partial class AI_Bird : Module, IAIActor, IItemModuleDependencyBin
             Mathf.Clamp01(state.Elapsed / Mathf.Max(0.001f, transitionDuration)))
         : ResolveHeight(state.Phase, state.Elapsed, transitionDuration, flightHeight);
 
-    /// <summary>纯函数：起飞升高、巡航恒高、落地归零，永不改写 Item 坐标。</summary>
+    /// <summary>纯函数：助跑保持地面高度，离地后升高，落地归零。</summary>
     public static float ResolveHeight(BirdFlightPhase phase, float elapsed, float duration, float height)
     {
         float progress = Mathf.Clamp01(elapsed / Mathf.Max(0.001f, duration));
-        return phase == BirdFlightPhase.Ground ? 0f : phase == BirdFlightPhase.TakingOff
+        return phase == BirdFlightPhase.Ground || phase == BirdFlightPhase.RunUp ? 0f : phase == BirdFlightPhase.TakingOff
             ? height * progress : phase == BirdFlightPhase.Landing ? height * (1f - progress) : height;
     }
     #endregion
 
     #region 地面与飞行寻路
+    /// <summary>沿现有步行方向或逃离方向选出连续可走的助跑线。</summary>
+    private bool TryChooseRunUpDirection(out Vector2 direction)
+    {
+        Vector2 preferred = escapeRemaining > 0f ? escapeDirection : mover.NavigationAgent.Velocity;
+        if (preferred.sqrMagnitude < 0.0001f && state.HasTarget)
+            preferred = WorldTopologyRuntime.ShortestDelta(body.position, new Vector2(state.TargetX, state.TargetY));
+        if (preferred.sqrMagnitude < 0.0001f) preferred = UnityEngine.Random.insideUnitCircle;
+        preferred = preferred.sqrMagnitude > 0.0001f ? preferred.normalized : Vector2.right;
+
+        float runwayLength = takeoffRunDistance + mover.stopDistance + 0.5f;
+        for (int index = 0; index < RunUpDirectionOffsets.Length; index++)
+        {
+            Vector2 candidate = Quaternion.Euler(0f, 0f, RunUpDirectionOffsets[index]) * preferred;
+            if (!IsRunwayClear(candidate, runwayLength)) continue;
+            direction = candidate;
+            return true;
+        }
+        direction = Vector2.zero;
+        return false;
+    }
+
+    /// <summary>助跑只经过导航认可的地面格。</summary>
+    private bool IsRunwayClear(Vector2 direction, float length)
+    {
+        int samples = Mathf.CeilToInt(length / RunUpSampleSpacing);
+        for (int index = 1; index <= samples; index++)
+        {
+            Vector2 sample = WorldTopologyRuntime.NormalizePosition(body.position + direction * (length * index / samples));
+            if (!CanLand(sample)) return false;
+        }
+        float takeoffTravel = 0.5f * (takeoffRunSpeed + flightSpeed) * transitionDuration;
+        return flightNavigation.CanTraverse(body.position,
+            WorldTopologyRuntime.NormalizePosition(body.position + direction * (takeoffRunDistance + takeoffTravel)));
+    }
+
+    /// <summary>由地面导航驱动助跑，只有真实前进到足够距离才进入离地动画。</summary>
+    private void TickRunUp(float deltaTime)
+    {
+        Vector2 movement = WorldTopologyRuntime.ShortestDelta(runUpLastPosition, body.position);
+        runUpLastPosition = body.position;
+        Vector2 direction = new(state.TakeoffDirectionX, state.TakeoffDirectionY);
+        float forward = Vector2.Dot(movement, direction);
+        if (forward > 0.001f)
+        {
+            state.RunUpDistance += forward;
+            runUpStallElapsed = 0f;
+        }
+        else runUpStallElapsed += deltaTime;
+
+        if (state.RunUpDistance >= takeoffRunDistance)
+        {
+            Vector2 actualDirection = mover.NavigationAgent.Velocity;
+            if (actualDirection.sqrMagnitude > 0.0001f)
+            {
+                actualDirection.Normalize();
+                state.TakeoffDirectionX = actualDirection.x;
+                state.TakeoffDirectionY = actualDirection.y;
+            }
+            EnterPhase(BirdFlightPhase.TakingOff);
+            return;
+        }
+        if (mover.HasReachedTarget || runUpStallElapsed >= RunUpStallSeconds)
+            EnterPhase(BirdFlightPhase.Ground);
+    }
+
+    /// <summary>离地期间延续助跑方向，水平速度逐渐接近巡航速度。</summary>
+    private void TickTakeoff(float deltaTime)
+    {
+        Vector2 direction = new(state.TakeoffDirectionX, state.TakeoffDirectionY);
+        float progress = Mathf.Clamp01(state.Elapsed / Mathf.Max(0.001f, transitionDuration));
+        float speed = Mathf.Lerp(takeoffRunSpeed, flightSpeed, progress);
+        if (!MoveFlightStep(direction * (speed * deltaTime), speed, deltaTime))
+        {
+            BeginLanding();
+            return;
+        }
+        if (state.Elapsed >= transitionDuration) EnterPhase(BirdFlightPhase.Flying);
+    }
+
+    /// <summary>加载助跑状态时恢复导航目的地，不从保存位置额外累计位移。</summary>
+    private void SetRunUpDestination()
+    {
+        Vector2 direction = new(state.TakeoffDirectionX, state.TakeoffDirectionY);
+        float remaining = Mathf.Max(0f, takeoffRunDistance - state.RunUpDistance);
+        Vector2 destination = WorldTopologyRuntime.NormalizePosition(
+            body.position + direction * (remaining + mover.stopDistance + 0.5f));
+        mover.SetDestination(destination);
+    }
+
     private void TickGroundWander(float deltaTime)
     {
         mover.Speed.BaseValue = groundSpeed;
@@ -338,14 +496,177 @@ public sealed partial class AI_Bird : Module, IAIActor, IItemModuleDependencyBin
             SetWanderTarget(destination);
             delta = WorldTopologyRuntime.ShortestDelta(position, destination);
         }
-        Vector2 next = WorldTopologyRuntime.NormalizePosition(position + Vector2.ClampMagnitude(delta, flightSpeed * deltaTime));
-        if (!flightNavigation.CanTraverse(position, next))
+        if (!MoveFlightStep(delta, flightSpeed, deltaTime))
         {
             state.HasTarget = false;
-            return;
         }
+    }
+
+    /// <summary>
+    /// 耐力降到阈值后进入“寻找安全落点”模式。危险、感知结果尚未刷新或附近无可站立地块时继续飞行；
+    /// 找到落点后先飞到该地块，只有当前位置本身可站立时才真正开始下降。
+    /// </summary>
+    private bool TickFatigueLanding(float deltaTime, bool forceLanding)
+    {
+        if (state.Phase != BirdFlightPhase.Flying)
+            return false;
+
+        float threshold = Mathf.Max(0.01f, flightStaminaMax) * Mathf.Clamp01(fatigueLandingStaminaRatio);
+        if (!forceLanding && state.Stamina > threshold)
+        {
+            ResetFatigueLanding();
+            return false;
+        }
+
+        // 感知请求未应用时保持空中，不能拿旧结果判断“安全”。
+        if (threatDetector.RequestedVersion > threatDetector.AppliedVersion)
+        {
+            ContinueFatiguedFlight(deltaTime);
+            return true;
+        }
+
+        // 只在新的感知快照应用时重算危险 LOS，避免疲劳阶段逐帧重复扫描。
+        if (fatigueSafetyVersion != threatDetector.AppliedVersion)
+        {
+            fatigueSafetyVersion = threatDetector.AppliedVersion;
+            fatigueAreaSafe = !TryGetNearbyThreat(fleeSafeDistance, out Item landingThreat);
+            if (!fatigueAreaSafe && landingThreat != null)
+                fatigueThreatOrigin = landingThreat.transform.position;
+        }
+
+        // 疲劳降落采用更保守的安全距离；存在威胁就继续飞离威胁，不进入觅食降落。
+        if (!fatigueAreaSafe)
+        {
+            hasFatigueLandingTarget = false;
+            fatigueLandingScanRemaining = 0f;
+            FlyAwayFromFatigueThreat(deltaTime);
+            return true;
+        }
+
+        if (CanLand(body.position))
+        {
+            BeginLanding();
+            return true;
+        }
+
+        if (hasFatigueLandingTarget)
+        {
+            if (!CanLand(fatigueLandingTarget) || !flightNavigation.CanTraverse(body.position, fatigueLandingTarget))
+            {
+                hasFatigueLandingTarget = false;
+                fatigueLandingScanRemaining = 0f;
+            }
+            else
+            {
+                FlyTowards(fatigueLandingTarget, deltaTime);
+                float distanceSqr = WorldTopologyRuntime.SqrDistance(body.position, fatigueLandingTarget);
+                if (distanceSqr <= FatigueLandingArrivalDistance * FatigueLandingArrivalDistance && CanLand(body.position))
+                    BeginLanding();
+                return true;
+            }
+        }
+
+        fatigueLandingScanRemaining -= Mathf.Max(0f, deltaTime);
+        if (fatigueLandingScanRemaining <= 0f)
+        {
+            fatigueLandingScanRemaining = FatigueLandingScanInterval;
+            if (TryFindFatigueLandingPoint(body.position, out fatigueLandingTarget))
+            {
+                hasFatigueLandingTarget = true;
+                FlyTowards(fatigueLandingTarget, deltaTime);
+                return true;
+            }
+        }
+
+        ContinueFatiguedFlight(deltaTime);
+        return true;
+    }
+
+    private void ContinueFatiguedFlight(float deltaTime)
+    {
+        if (hasFatigueLandingTarget)
+            FlyTowards(fatigueLandingTarget, deltaTime);
+        else
+            TickFlightWander(deltaTime);
+    }
+
+    private void FlyAwayFromFatigueThreat(float deltaTime)
+    {
+        Vector2 away = WorldTopologyRuntime.ShortestDelta(fatigueThreatOrigin, body.position);
+        if (away.sqrMagnitude < 0.0001f)
+            away = UnityEngine.Random.insideUnitCircle;
+        away = away.sqrMagnitude > 0.0001f ? away.normalized : Vector2.right;
+        FlyTowards(WorldTopologyRuntime.NormalizePosition(body.position + away * flightWanderRadius), deltaTime);
+    }
+
+    /// <summary>无分配地按由近到远的方形环搜索附近可站立格，并确认飞行路径所需地形已经加载。</summary>
+    private bool TryFindFatigueLandingPoint(Vector2 origin, out Vector2 landingPoint)
+    {
+        landingPoint = default;
+        float radius = Mathf.Max(0f, fatigueLandingSearchRadius);
+        if (radius <= 0f)
+            return false;
+
+        Vector2Int originCell = WorldTopologyRuntime.NormalizeCell(new Vector2Int(
+            Mathf.FloorToInt(origin.x), Mathf.FloorToInt(origin.y)));
+        int maxRing = Mathf.Max(1, Mathf.CeilToInt(radius));
+        float radiusSqr = radius * radius;
+
+        for (int ring = 1; ring <= maxRing; ring++)
+        {
+            bool found = false;
+            float bestDistanceSqr = float.PositiveInfinity;
+            Vector2 best = default;
+            for (int y = -ring; y <= ring; y++)
+            {
+                for (int x = -ring; x <= ring; x++)
+                {
+                    if (Mathf.Abs(x) != ring && Mathf.Abs(y) != ring)
+                        continue;
+
+                    Vector2Int cell = WorldTopologyRuntime.NormalizeCell(originCell + new Vector2Int(x, y));
+                    Vector2 candidate = WorldTopologyRuntime.NormalizePosition(new Vector2(cell.x + 0.5f, cell.y + 0.5f));
+                    float distanceSqr = WorldTopologyRuntime.SqrDistance(origin, candidate);
+                    if (distanceSqr > radiusSqr || distanceSqr >= bestDistanceSqr || !CanLand(candidate))
+                        continue;
+                    if (!flightNavigation.CanTraverse(origin, candidate))
+                        continue;
+
+                    bestDistanceSqr = distanceSqr;
+                    best = candidate;
+                    found = true;
+                }
+            }
+
+            if (!found)
+                continue;
+            landingPoint = best;
+            return true;
+        }
+
+        return false;
+    }
+
+    private void ResetFatigueLanding()
+    {
+        hasFatigueLandingTarget = false;
+        fatigueLandingTarget = default;
+        fatigueThreatOrigin = default;
+        fatigueLandingScanRemaining = 0f;
+        fatigueAreaSafe = false;
+        fatigueSafetyVersion = -1;
+    }
+
+    /// <summary>飞行与离地共用同一段通行检查和位置通知。</summary>
+    private bool MoveFlightStep(Vector2 direction, float speed, float deltaTime)
+    {
+        Vector2 position = body.position;
+        Vector2 next = WorldTopologyRuntime.NormalizePosition(
+            position + Vector2.ClampMagnitude(direction, speed * deltaTime));
+        if (!flightNavigation.CanTraverse(position, next)) return false;
         body.position = next;
         ItemMgr.Instance?.NotifyRuntimeItemMoved(item);
+        return true;
     }
 
     private void SetWanderTarget(Vector2 position)
@@ -371,6 +692,7 @@ public sealed partial class AI_Bird : Module, IAIActor, IItemModuleDependencyBin
 
     /// <summary>近战穿刺不等于投射物；可扩展能力允许 MOD 远程技能显式命中空中目标。</summary>
     public static bool AllowsDamage(BirdFlightPhase phase, CombatDeliveryCapabilities capabilities) =>
-        phase == BirdFlightPhase.Ground || (capabilities & CombatDeliveryCapabilities.AirborneTargets) != 0;
+        phase == BirdFlightPhase.Ground || phase == BirdFlightPhase.RunUp ||
+        (capabilities & CombatDeliveryCapabilities.AirborneTargets) != 0;
     #endregion
 }

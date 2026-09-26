@@ -8,7 +8,8 @@ public enum WorldNavigationDestinationResult
     Pending,
     Accepted,
     Reached,
-    RejectedByPathCost
+    RejectedByPathCost,
+    Failed
 }
 
 /// <summary>
@@ -18,6 +19,7 @@ public enum WorldNavigationDestinationResult
 [DisallowMultipleComponent]
 public sealed class WorldNavigationAgent : MonoBehaviour
 {
+    public const int PathFailureErrorThreshold = 4; // 同一目标连续失败达到此次数后公布错误结果。
     private const float MinimumWaypointDistance = 0.3f;
     private const float MinimumDestinationChangeDistance = 0.5f;
     private static readonly System.Collections.Generic.List<WorldNavigationAgent> ActiveAgentRegistry = new();
@@ -183,6 +185,7 @@ public sealed class WorldNavigationAgent : MonoBehaviour
             destinationPathCostLimitExclusive = maximumPathCostExclusive;
             CancelPendingRequest();
             InvalidateCurrentPath();
+            consecutiveFailures = 0;
             DestinationResult = WorldNavigationDestinationResult.Pending;
             nextRequestTime = 0f;
         }
@@ -220,7 +223,8 @@ public sealed class WorldNavigationAgent : MonoBehaviour
         {
             CancelPendingRequest();
             InvalidateCurrentPath();
-            DestinationResult = WorldNavigationDestinationResult.Pending;
+            if (DestinationResult != WorldNavigationDestinationResult.Failed)
+                DestinationResult = WorldNavigationDestinationResult.Pending;
             nextRequestTime = 0f;
         }
     }
@@ -258,7 +262,8 @@ public sealed class WorldNavigationAgent : MonoBehaviour
 
         CancelPendingRequest();
         InvalidateCurrentPath();
-        DestinationResult = WorldNavigationDestinationResult.Pending;
+        if (DestinationResult != WorldNavigationDestinationResult.Failed)
+            DestinationResult = WorldNavigationDestinationResult.Pending;
         destinationDirty = true;
         nextRequestTime = 0f;
     }
@@ -298,6 +303,7 @@ public sealed class WorldNavigationAgent : MonoBehaviour
             lastFailureRevision != navigation.GridRevision)
         {
             consecutiveFailures = 0;
+            DestinationResult = WorldNavigationDestinationResult.Pending;
             lastFailureRevision = navigation.GridRevision;
             nextRequestTime = Time.unscaledTime;
         }
@@ -374,7 +380,8 @@ public sealed class WorldNavigationAgent : MonoBehaviour
         navigationManager = navigation;
         submittedDestination = destination;
         submittedPathCostLimitExclusive = destinationPathCostLimitExclusive;
-        DestinationResult = WorldNavigationDestinationResult.Pending;
+        if (DestinationResult != WorldNavigationDestinationResult.Failed)
+            DestinationResult = WorldNavigationDestinationResult.Pending;
         destinationDirty = false;
         nextRequestTime = Time.unscaledTime + Mathf.Max(0.05f, repathInterval);
         requestId = navigation.RequestPath(current, submittedDestination, OnPathCompleted,
@@ -397,6 +404,8 @@ public sealed class WorldNavigationAgent : MonoBehaviour
                 ApplyVelocity(Vector2.zero, Time.deltaTime);
             destinationDirty = true;
             consecutiveFailures = Mathf.Min(consecutiveFailures + 1, 8);
+            if (consecutiveFailures >= PathFailureErrorThreshold)
+                DestinationResult = WorldNavigationDestinationResult.Failed;
             lastFailureRevision = result.GridRevision;
             float retryDelay = Mathf.Min(
                 Mathf.Max(repathInterval, 0.05f) * Mathf.Pow(2f, Mathf.Min(consecutiveFailures, 4)),

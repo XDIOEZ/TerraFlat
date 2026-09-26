@@ -151,6 +151,8 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 
 	[TabGroup("配置", "行为"), BoxGroup("配置/行为/避让"), LabelText("玩家避让距离"), SuffixLabel("米", true), MinValue(0.1f)]
 	public float playerAvoidDistance = 8f; // 进入玩家感知范围后的避让半径。
+	[TabGroup("配置", "行为"), BoxGroup("配置/行为/避让"), LabelText("玩家避让安全距离"), SuffixLabel("米", true), MinValue(0.1f)]
+	public float playerAvoidSafeDistance = 30f; // 玩家进入此距离后结束本轮避让。
 
 	[TabGroup("配置", "行为"), BoxGroup("配置/行为/反击"), HorizontalGroup("配置/行为/反击/Hr1"), LabelText("受伤反击阈值"), Range(0f, 1f)]
 	public float retaliationDamageThresholdRate = 0.2f; // 玩家累计实伤占野猪最大生命值的比例。
@@ -193,7 +195,7 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 	public float fleeSafeHpRate = 0.4f;
 
 	[TabGroup("配置", "战斗"), BoxGroup("配置/战斗/逃跑"), LabelText("逃离距离"), SuffixLabel("米", true), MinValue(1f)]
-	public float fleeRunDistance = 10f;
+	public float fleeRunDistance = 30f;
 
 	[TabGroup("配置", "动画"), BoxGroup("配置/动画/生存"), HorizontalGroup("配置/动画/生存/Hr1"), LabelText("待机")]
 	public string animIdle = "Stand";
@@ -291,8 +293,10 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 		InitializeGrassSustenance();
 		if (_detector != null)
 		{
-			// 感知半径至少覆盖玩家避让距离。
-			_detector.DetectionRadius = Mathf.Max(_detector.DetectionRadius, playerAvoidDistance);
+			// 感知半径同时覆盖避让触发距离和持续逃离的安全距离。
+			_detector.DetectionRadius = Mathf.Max(
+				_detector.DetectionRadius,
+				Mathf.Max(playerAvoidDistance, playerAvoidSafeDistance));
 		}
 		_attack.Bind(item);
 	}
@@ -437,7 +441,10 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 			TickSkill,
 			EnterSkill,
 			ExitSkill));
-		stateMachine.Register(CreateMovingStateNode(WildBoarState.Flee, _ => TickFlee()));
+		stateMachine.Register(CreateFleeStateNode(
+			WildBoarState.Flee,
+			ResolveFleeSourcePosition,
+			() => fleeRunDistance));
 	}
 	#endregion
 
@@ -573,15 +580,14 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 		_animalSkills.CancelAll();
 	}
 
-	private void TickFlee()
+	private Vector3? ResolveFleeSourcePosition()
 	{
-		if (_currentThreat == null) { StopMove(); return; }
-		MoveAwayFrom(_currentThreat.transform.position, fleeRunDistance);
+		return _currentThreat != null ? _currentThreat.transform.position : (Vector3?)null;
 	}
 	#endregion
 
 	#region Conditions
-	/// <summary>野猪平时避让视野内的玩家，低血量时持续逃跑；反击计时内不被逃跑打断。</summary>
+	/// <summary>野猪在玩家靠近时短暂避让，低血量时逃跑；反击计时内不被逃跑打断。</summary>
 	private bool ShouldFlee()
 	{
 		if (IsRetaliating)
@@ -593,8 +599,13 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 		if (hpRate < fleeTriggerHpRate)
 			return true;
 
+		bool alreadyAvoidingPlayer = _currentState == WildBoarState.Flee && IsPlayerThreat(_currentThreat);
 		return IsPlayerThreat(_currentThreat) &&
-			IsWithinEffectivePerceptionRange(_currentThreat, playerAvoidDistance);
+			IsWithinFleeDistance(
+				_currentThreat,
+				alreadyAvoidingPlayer,
+				playerAvoidDistance,
+				playerAvoidSafeDistance);
 	}
 
 	/// <summary>攻击条件：攻击锁定阶段必须完成，且只有冷却结束后才能从追击进入攻击。</summary>
@@ -833,8 +844,11 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 		}
 
 		// 感知快照暂时没有新目标时，仅保留仍处于避让距离内的玩家。
+		float threatRetentionDistance = _currentState == WildBoarState.Flee && IsPlayerThreat(_currentThreat)
+			? playerAvoidSafeDistance
+			: playerAvoidDistance;
 		if (_currentThreat != null &&
-			!IsWithinEffectivePerceptionRange(_currentThreat, playerAvoidDistance))
+			!IsWithinEffectivePerceptionRange(_currentThreat, threatRetentionDistance))
 		{
 			_currentThreat = null;
 			ClearAttackPosition();

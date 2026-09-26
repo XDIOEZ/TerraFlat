@@ -1,6 +1,7 @@
 using UnityEngine;
 using System;
 using System.Collections.Generic;
+using Newtonsoft.Json;
 using Sirenix.OdinInspector;
 
 public enum SpawnerScheduleMode
@@ -17,6 +18,7 @@ public enum SpawnerEcologyGroup
 }
 
 /// <summary>树木生态扩展配置；默认关闭，不改变其他物种的生成和后端。</summary>
+[JsonObject(ItemRequired = Required.Always)]
 [Serializable]
 public sealed class SpawnerTreeHabitat
 {
@@ -26,9 +28,8 @@ public sealed class SpawnerTreeHabitat
 }
 
 /// <summary>
-/// 怪物生成系统配置类 - 包含所有生成相关的常数和配置
+/// 生成规则的世界运行时快照；只由已校验的 JSON 定义创建，不作为编辑器资源维护。
 /// </summary>
-[CreateAssetMenu(fileName = "SpawnerConfig", menuName = "FlatWorld/SpawnerConfig")]
 public class SpawnerConfig : ScriptableObject
 {
     public SpawnerTreeHabitat TreeHabitat = new();
@@ -42,7 +43,7 @@ public class SpawnerConfig : ScriptableObject
     {
         [LabelText("怪物预制体名称")]
         [Tooltip("生成时使用的预制体/物品标识，需与项目里的名称完全一致")]
-        public string PrefabName = "Chicken"; // 生成的怪物预制体名称，需与物品/预制体标识一致
+        public string PrefabName; // 生成的怪物预制体名称，需与物品/预制体标识一致
 
         [LabelText("AI 运行后端")]
         [Tooltip("普通动物使用 GameObject；尸潮、虫灾等超大规模单位显式选择 Entities。")]
@@ -67,6 +68,7 @@ public class SpawnerConfig : ScriptableObject
         public SpawnerSpawnInitialization Initialization = new();
     }
 
+    [JsonObject(ItemRequired = Required.Always)]
     [Serializable]
     public class SpawnerSpawnInitialization
     {
@@ -74,6 +76,7 @@ public class SpawnerConfig : ScriptableObject
         public SpawnerNutritionInitialization Nutrition = new();
     }
 
+    [JsonObject(ItemRequired = Required.Always)]
     [Serializable]
     public class SpawnerNutritionInitialization
     {
@@ -94,17 +97,12 @@ public class SpawnerConfig : ScriptableObject
 #region 生成概率配置
 
     /// <summary>
-    /// 怪物生成权重列表
-    /// 可在检查器中直接增删条目、修改怪物名称和概率
+    /// 怪物生成权重列表，由 JSON 规则在世界进入时构建。
     /// </summary>
     [LabelText("怪物生成列表")]
     [TableList(AlwaysExpanded = true, ShowIndexLabels = true)]
-    [Tooltip("可直接在检查器中添加、删除和调整每种怪物的生成权重")]
-    public List<SpawnEntry> SpawnEntries = new List<SpawnEntry>
-    {
-        new SpawnEntry { PrefabName = "Chicken", Probability = 0.5f },
-        new SpawnEntry { PrefabName = "WildBoar", Probability = 0.2f }
-    }; // 生成表（支持在检查器动态配置）
+    [Tooltip("通过独立的生物生成 JSON 配置每种怪物的生成权重")]
+    public List<SpawnEntry> SpawnEntries = new();
 
 #endregion
 
@@ -131,14 +129,6 @@ public class SpawnerConfig : ScriptableObject
     [LabelText("生成触发时间")]
     [Tooltip("一天中触发怪物生成的时间点，单位为游戏秒，默认是中午12点")]
     public float SpawnTriggerTime = 720f; // 每天触发生成的时间点（游戏秒）
-
-    /// <summary>
-    /// 生成检查的时间容差范围（秒）
-    /// 用于防止浮点精度导致的重复触发或遗漏
-    /// </summary>
-    [LabelText("时间容差")]
-    [Tooltip("允许的触发误差范围，避免浮点误差导致漏刷或重复刷怪")]
-    public float SpawnTimeTolerance = 1f; // 触发窗口容差
 
     [LabelText("每日生成次数")]
     [Tooltip("每天均匀分布多少个生成窗口。1 表示每天一次，2 表示刷新频率翻倍")]
@@ -265,13 +255,13 @@ public class SpawnerConfig : ScriptableObject
     [Tooltip("填写 BiomeName 或资源名；为空时允许所有群系")]
     public List<string> AllowedBiomeNames = new();
 
-    [LabelText("远距离回收距离")]
-    [Tooltip("生物距离全部玩家均超过该值时允许回收；0 表示不回收")]
+    [LabelText("远距离休眠距离")]
+    [Tooltip("生物距离全部玩家均超过该值时序列化休眠；0 表示保持装载")]
     [MinValue(0f)]
     public float RecycleDistance = 110f;
 
-    [LabelText("远距离回收宽限")]
-    [Tooltip("持续远离全部玩家达到该真实秒数后才回收")]
+    [LabelText("远距离休眠宽限")]
+    [Tooltip("持续远离全部玩家达到该真实秒数后才休眠")]
     [MinValue(0f)]
     public float RecycleGraceSeconds = 20f;
 

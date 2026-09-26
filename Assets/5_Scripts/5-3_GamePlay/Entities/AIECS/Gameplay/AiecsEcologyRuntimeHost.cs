@@ -9,7 +9,8 @@ namespace FlatWorld.AIECS.Gameplay
 {
     /// <summary>
     /// 正式世界 AIECS 生态宿主：把既有 MonsterSpawnerManager 的生成请求转换为纯 Entity，
-    /// 统一驱动 30Hz 模拟、批量表现、数量查询和远距离回收。该组件不重新实现生态调度规则。
+    /// 统一驱动 60Hz 模拟、批量表现和增量数量统计；每帧最多检查 256 个死亡居民。
+    /// 该组件不重新实现生态调度规则。
     /// </summary>
     [DisallowMultipleComponent]
     [AddComponentMenu("FlatWorld/AIECS/正式生态宿主")]
@@ -20,6 +21,7 @@ namespace FlatWorld.AIECS.Gameplay
         private const int BaseSimulationHz = 60; // 一级范围的权威模拟频率。
         private const int MaxSimulationStepsPerFrame = 2; // 低帧率时只有限追帧，优先保护渲染帧。
         private const int MaxBacklogSteps = 3; // 只保留少量时间债务，避免一次卡顿演变成连续多帧追赶尖峰。
+        private const int MaxActorSweepPerFrame = 256; // 死亡清理每帧最多检查的 ECS 居民数。
         private static AiecsEcologyRuntimeHost active;
         [SerializeField] private AiecsAnimationCatalog _catalog;
 
@@ -29,13 +31,17 @@ namespace FlatWorld.AIECS.Gameplay
             public CombatIdentity Identity;
             public SpawnerConfig Config;
             public string SpeciesId;
-            public float FarSince = -1f;
+            public bool CountedAlive;
         }
 
         private readonly Dictionary<string, int> _templateBySpecies = new(StringComparer.Ordinal);
         private readonly Dictionary<string, SpawnerConfig> _configBySpecies = new(StringComparer.Ordinal);
         private readonly Dictionary<CombatIdentity, EcologyActor> _actors = new();
-        private readonly List<CombatIdentity> _cleanup = new(64);
+        private readonly Dictionary<SpawnerConfig, int> _aliveByGroup = new();
+        private readonly Dictionary<string, int> _aliveBySpecies = new(StringComparer.Ordinal);
+        private int _populationLimitedCount;
+        private readonly List<EcologyActor> _actorSweep = new(256);
+        private int _actorSweepCursor;
         private readonly List<string> _actorIds = new();
         private readonly List<string> _actorFactions = new();
         private readonly List<bool> _fleeFromHostiles = new();
@@ -280,6 +286,11 @@ namespace FlatWorld.AIECS.Gameplay
             _bridge?.Dispose();
             _bridge = null;
             _actors.Clear();
+            _actorSweep.Clear();
+            _actorSweepCursor = 0;
+            _aliveByGroup.Clear();
+            _aliveBySpecies.Clear();
+            _populationLimitedCount = 0;
         }
 
         /// <summary>为正常 GameStart 世界提供惰性 GM 调试入口；只创建宿主，不立即创建第二套 ECS 模拟。</summary>
@@ -334,49 +345,22 @@ namespace FlatWorld.AIECS.Gameplay
 
         public int GetGroupCount(SpawnerConfig config)
         {
-            if (config == null || !PrepareRead())
+            if (config == null)
                 return 0;
-
-            int count = 0;
-            foreach (EcologyActor actor in _actors.Values)
-            {
-                if (ReferenceEquals(actor.Config, config) && IsAlive(actor, out _))
-                    count++;
-            }
-            return count;
+            return _aliveByGroup.TryGetValue(config, out int count) ? count : 0;
         }
+
+        /// <summary>当前装载的 ECS 居民数量；出生硬预算读取不触发全表扫描。</summary>
+        public int ResidentCount => _actors.Count;
 
         public int GetSpeciesCount(string speciesId)
         {
-            if (string.IsNullOrWhiteSpace(speciesId) || !PrepareRead())
+            if (string.IsNullOrWhiteSpace(speciesId))
                 return 0;
-
-            int count = 0;
-            foreach (EcologyActor actor in _actors.Values)
-            {
-                if (string.Equals(actor.SpeciesId, speciesId, StringComparison.Ordinal) && IsAlive(actor, out _))
-                    count++;
-            }
-            return count;
+            return _aliveBySpecies.TryGetValue(speciesId, out int count) ? count : 0;
         }
 
-        public int PopulationLimitedCount
-        {
-            get
-            {
-                if (!PrepareRead())
-                    return 0;
-
-                int count = 0;
-                foreach (EcologyActor actor in _actors.Values)
-                {
-                    SpawnerConfig config = actor.Config;
-                    if (config != null && !config.UnboundedDailyGrowth && !config.IgnorePopulationLimits && IsAlive(actor, out _))
-                        count++;
-                }
-                return count;
-            }
-        }
+        public int PopulationLimitedCount => _populationLimitedCount;
 
         public int CountGroupWithinRadius(SpawnerConfig config, Vector3 center, float radiusSqr)
         {
@@ -395,50 +379,6 @@ namespace FlatWorld.AIECS.Gameplay
             return count;
         }
 
-        /// <summary>远距离回收仍由生态配置决定，只把销毁操作改为 Entity 结构删除。</summary>
-        public void RecycleDistantPopulation(IReadOnlyList<Vector3> playerPositions, float now)
-        {
-            if (playerPositions == null || playerPositions.Count == 0 || !PrepareRead())
-                return;
-
-            _cleanup.Clear();
-            foreach (EcologyActor actor in _actors.Values)
-            {
-                SpawnerConfig config = actor.Config;
-                if (config == null || config.RecycleDistance <= 0f || !IsAlive(actor, out float2 position))
-                    continue;
-
-                bool nearPlayer = false;
-                float radiusSqr = config.RecycleDistance * config.RecycleDistance;
-                Vector3 world = new Vector3(position.x, position.y);
-                for (int i = 0; i < playerPositions.Count; i++)
-                {
-                    if (WorldTopologyRuntime.SqrDistance(world, playerPositions[i]) > radiusSqr)
-                        continue;
-                    nearPlayer = true;
-                    break;
-                }
-
-                if (nearPlayer)
-                {
-                    actor.FarSince = -1f;
-                    continue;
-                }
-
-                if (actor.FarSince < 0f)
-                {
-                    actor.FarSince = now;
-                    continue;
-                }
-
-                if (now - actor.FarSince >= Mathf.Max(0f, config.RecycleGraceSeconds))
-                    _cleanup.Add(actor.Identity);
-            }
-
-            for (int i = 0; i < _cleanup.Count; i++)
-                Despawn(_cleanup[i]);
-            _cleanup.Clear();
-        }
 
         #endregion
 
@@ -454,13 +394,17 @@ namespace FlatWorld.AIECS.Gameplay
             if (!_bridge.Spawn(templateIndex, (Vector2)position, 1f, out Entity entity, out CombatIdentity identity))
                 return false;
 
-            _actors[identity] = new EcologyActor
+            var actor = new EcologyActor
             {
                 Entity = entity,
                 Identity = identity,
                 Config = config,
-                SpeciesId = speciesId
+                SpeciesId = speciesId,
+                CountedAlive = true
             };
+            _actors[identity] = actor;
+            _actorSweep.Add(actor);
+            AdjustAliveCounts(config, speciesId, 1);
             return true;
         }
 
@@ -486,30 +430,46 @@ namespace FlatWorld.AIECS.Gameplay
             return true;
         }
 
-        private void Despawn(CombatIdentity identity)
-        {
-            if (!_actors.TryGetValue(identity, out EcologyActor actor))
-                return;
-
-            if (_bridge?.Simulation != null && _bridge.Simulation.Entities.Exists(actor.Entity))
-                _bridge.Simulation.Despawn(actor.Entity);
-            _actors.Remove(identity);
-        }
-
         private void PruneDestroyedActors()
         {
-            if (!PrepareRead() || _actors.Count == 0)
+            if (_actorSweep.Count == 0 || !PrepareRead())
                 return;
 
-            _cleanup.Clear();
-            foreach (KeyValuePair<CombatIdentity, EcologyActor> pair in _actors)
+            int checks = Mathf.Min(MaxActorSweepPerFrame, _actorSweep.Count);
+            for (int i = 0; i < checks && _actorSweep.Count > 0; i++)
             {
-                if (!_bridge.Simulation.Entities.Exists(pair.Value.Entity))
-                    _cleanup.Add(pair.Key);
+                if (_actorSweepCursor >= _actorSweep.Count)
+                    _actorSweepCursor = 0;
+                EcologyActor actor = _actorSweep[_actorSweepCursor];
+                if (!_bridge.Simulation.Entities.Exists(actor.Entity))
+                {
+                    if (actor.CountedAlive)
+                        AdjustAliveCounts(actor.Config, actor.SpeciesId, -1);
+                    _actors.Remove(actor.Identity);
+                    int lastIndex = _actorSweep.Count - 1;
+                    _actorSweep[_actorSweepCursor] = _actorSweep[lastIndex];
+                    _actorSweep.RemoveAt(lastIndex);
+                    continue;
+                }
+                if (actor.CountedAlive &&
+                    _bridge.Simulation.Entities.GetComponentData<AiecsVital>(actor.Entity).Dead != 0)
+                {
+                    actor.CountedAlive = false;
+                    AdjustAliveCounts(actor.Config, actor.SpeciesId, -1);
+                }
+                _actorSweepCursor++;
             }
-            for (int i = 0; i < _cleanup.Count; i++)
-                _actors.Remove(_cleanup[i]);
-            _cleanup.Clear();
+        }
+
+        /// <summary>出生和死亡在同一注册表维护数量，生态查询不再完成 Job 后重扫全体 Entity。</summary>
+        private void AdjustAliveCounts(SpawnerConfig config, string speciesId, int delta)
+        {
+            _aliveByGroup.TryGetValue(config, out int groupCount);
+            _aliveByGroup[config] = groupCount + delta;
+            _aliveBySpecies.TryGetValue(speciesId, out int speciesCount);
+            _aliveBySpecies[speciesId] = speciesCount + delta;
+            if (!config.UnboundedDailyGrowth && !config.IgnorePopulationLimits)
+                _populationLimitedCount += delta;
         }
 
         private bool CatalogContains(string speciesId)

@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "config": {
+    "id": "snow_leopard_daily",
+    "scheduleMode": "timedWindows",
+    "ecologyGroup": "commonEnemies",
+    "requireGlobalDarkness": false,
+    "spawnTriggerTime": 1200.0,
+    "spawnsPerDay": 1,
+    "minSpawnDistance": 24.0,
+    "maxSpawnDistance": 55.0,
+    "playerVisibilityExclusionDistance": 24.0,
+    "playerPopulationRadius": 70.0,
+    "perPlayerAliveLimit": 1,
+    "spawnSearchRetryCount": 10,
+    "spawnCount": 1,
+    "spawnChance": 1.0,
+    "daysBetweenSpawns": 1,
+    "groupAliveLimit": 1,
+    "maxEcologyBudget": 2,
+    "dailyBudgetRecovery": 1,
+    "recoveryTargetPopulation": 1,
+    "recoveryCheckInterval": 10.0,
+    "growthIntervalDays": 1,
+    "maxLifetimeSpawnCount": 64,
+    "asyncSpawnInterval": 0.0,
+    "unboundedDailyGrowth": false,
+    "ignorePopulationLimits": false,
+    "requireCompletelyDarkTile": false,
+    "maxAllowedTileLight": 1.0,
+    "allowedBiomeNames": [
+      "雪地"
+    ],
+    "recycleDistance": 120.0,
+    "recycleGraceSeconds": 25.0,
+    "spawnEntries": [
+      {
+        "prefabName": "SnowLeopard",
+        "runtimeBackend": "gameObject",
+        "probability": 1.0,
+        "ecologyCost": 2,
+        "speciesAliveLimit": 1
+      }
+    ],
+    "treeHabitat": {
+      "enabled": false,
+      "treesPerActor": 4,
+      "spawnRadius": 3.0
+    }
+  }
+}

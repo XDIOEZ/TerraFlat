@@ -10,7 +10,8 @@ public sealed partial class AI_Bird
     public string forageTag = "Seed";
     public string[] additionalForageTags = { "Berry", "Fruit" };
     [Min(0f)] public float fleeTriggerDistance = 12f; // 原谨慎型鸟类 6 格的两倍。
-    [Min(0f)] public float fleeSafeDistance = 20f; // 原安全距离 10 格的两倍。
+    [Min(0f)] public float fleeSafeDistance = 30f;
+    [Tooltip("每次逃离时选择的单次移动目标距离。"), Min(0.1f)] public float fleeRunDistance = 30f;
     [Min(0.1f)] public float forageRadius = 8f;
     [Min(0.1f)] public float peckRange = 0.55f;
     [Min(0.1f)] public float peckSeconds = 0.8f;
@@ -19,23 +20,30 @@ public sealed partial class AI_Bird
     private Mod_ItemDetector threatDetector;
     private readonly System.Collections.Generic.List<string> threatTags = new() { "Predator", "Wolf" };
     private float vigilanceRemaining;
+    private long lastVigilanceVersion; // 上次已处理的感知结果版本。
     private DroppedItemHandle forageTarget;
     private string forageTargetTag;
     private float forageScanRemaining, peckRemaining, escapeRemaining;
     private Vector2 escapeDirection;
+    private Vector2 escapeDestination; // 当前受惊周期锁定的单次逃离目标。
+    private Item escapeThreat; // 当前逃离周期对应的感知威胁。
 
     private void ResetForaging()
     {
         forageTarget = default;
         forageTargetTag = null;
         vigilanceRemaining = 0f;
+        lastVigilanceVersion = threatDetector?.AppliedVersion ?? 0;
         forageScanRemaining = peckRemaining = escapeRemaining = 0f;
         escapeDirection = Vector2.zero;
+        escapeDestination = Vector2.zero;
+        escapeThreat = null;
     }
 
     /// <summary>逃跑优先于食物；未吃饱时，附近种子优先于随机巡航和地面漫游。</summary>
     private bool TickForaging(float deltaTime)
     {
+        if (state.Phase == BirdFlightPhase.RunUp) return false;
         if (food?.Data?.nutrition == null || food.Data.nutrition.GetFoodRate() >= 0.9999f)
         {
             forageTarget = default;
@@ -64,7 +72,7 @@ public sealed partial class AI_Bird
         }
         if (state.Phase == BirdFlightPhase.TakingOff)
         {
-            if (state.Elapsed >= transitionDuration) EnterPhase(BirdFlightPhase.Flying);
+            TickTakeoff(deltaTime);
             return true;
         }
         if (state.Phase == BirdFlightPhase.Flying)
@@ -114,19 +122,66 @@ public sealed partial class AI_Bird
         forageTargetTag = tag;
     }
 
-    /// <summary>复用空间检测队列与目标感知倍率，每 0.4 秒更新一次，避免全场逐鸟逐帧扫描。</summary>
+    /// <summary>每 0.4 秒提交感知，结果一应用就评估玩家威胁并打断当前行为。</summary>
     private void TickVigilance(float deltaTime)
     {
         vigilanceRemaining -= deltaTime;
-        if (vigilanceRemaining > 0f) return;
-        vigilanceRemaining = 0.4f;
-        threatDetector.RequestDetectorUpdate();
-        Item threat = threatDetector.FindClosestItemByTags(threatTags, body.position, includeUnityPlayerTag: true);
-        if (threat == null || threat == item || !threatDetector.HasLineOfSight(threat)) return;
-        float radius = Mod_ItemDetector.CalculateEffectiveDetectionRadius(
-            escapeRemaining > 0f ? fleeSafeDistance : fleeTriggerDistance, threat);
-        if (WorldTopologyRuntime.SqrDistance(body.position, threat.transform.position) > radius * radius) return;
-        StartEscape(threat.transform.position);
+        if (vigilanceRemaining <= 0f)
+        {
+            vigilanceRemaining = 0.4f;
+            threatDetector.RequestDetectorUpdate();
+        }
+        long appliedVersion = threatDetector.AppliedVersion;
+        if (appliedVersion <= lastVigilanceVersion) return;
+        lastVigilanceVersion = appliedVersion;
+        if (!TryGetNearbyThreat(escapeRemaining > 0f ? fleeSafeDistance : fleeTriggerDistance, out Item threat)) return;
+        StartEscape(threat);
+    }
+
+    /// <summary>
+    /// 从检测器已经应用的快照里寻找真实可见威胁。逐个检查而不是只取“最近标签项”，
+    /// 避免最近目标被墙挡住时漏掉稍远但可见的玩家或捕食者。
+    /// </summary>
+    private bool TryGetNearbyThreat(float baseRadius, out Item threat)
+    {
+        threat = null;
+        float closestDistanceSqr = float.PositiveInfinity;
+        System.Collections.Generic.List<Item> detected = threatDetector.CurrentItemsInArea;
+        for (int itemIndex = 0; itemIndex < detected.Count; itemIndex++)
+        {
+            Item candidate = detected[itemIndex];
+            if (candidate == null || candidate == item || !IsBirdThreat(candidate))
+                continue;
+
+            if (!AIFleeUtility.IsWithinEscapeRange(body.position, candidate, threatDetector, baseRadius))
+                continue;
+
+            float distanceSqr = WorldTopologyRuntime.SqrDistance(body.position, candidate.transform.position);
+            if (distanceSqr >= closestDistanceSqr)
+                continue;
+
+            closestDistanceSqr = distanceSqr;
+            threat = candidate;
+        }
+        return threat != null;
+    }
+
+    private bool IsBirdThreat(Item candidate)
+    {
+        if (candidate is Player || candidate.CompareTag("Player"))
+            return true;
+        if (candidate.itemData?.Tags == null)
+            return false;
+
+        System.Collections.Generic.List<string> tags = candidate.itemData.Tags;
+        for (int threatIndex = 0; threatIndex < threatTags.Count; threatIndex++)
+        {
+            string threatTag = threatTags[threatIndex];
+            for (int tagIndex = 0; tagIndex < tags.Count; tagIndex++)
+                if (tags[tagIndex] == threatTag)
+                    return true;
+        }
+        return false;
     }
 
     private void HandleBirdDamage(DamageReceiverDamageInfo info)
@@ -137,16 +192,46 @@ public sealed partial class AI_Bird
     }
 
     /// <summary>感知威胁与受击共用逃离入口，休息锁定时只能在地面行走。</summary>
+    private void StartEscape(Item threat)
+    {
+        if (threat == null)
+            return;
+
+        if (escapeRemaining > 0f && escapeThreat == threat)
+        {
+            escapeRemaining = hurtEscapeSeconds;
+            return;
+        }
+
+        StartEscape(threat.transform.position, threat);
+    }
+
     private void StartEscape(Vector2 origin)
     {
-        Vector2 away = WorldTopologyRuntime.ShortestDelta(origin, body.position);
-        if (away.sqrMagnitude < 0.0001f) away = UnityEngine.Random.insideUnitCircle;
-        escapeDirection = away.sqrMagnitude > 0.0001f ? away.normalized : Vector2.right;
+        StartEscape(origin, null);
+    }
+
+    private void StartEscape(Vector2 origin, Item threat)
+    {
+        bool wasEscaping = escapeRemaining > 0f;
+        ResetFatigueLanding();
+        if (state.Phase == BirdFlightPhase.Ground && !wasEscaping)
+            mover.StopMovement();
+
+        escapeThreat = threat;
         escapeRemaining = hurtEscapeSeconds;
+        Vector3 target = AIFleeUtility.ResolveEscapeDestination(
+            body.position,
+            origin,
+            fleeRunDistance,
+            UnityEngine.Random.insideUnitCircle);
+        escapeDestination = target;
+        Vector2 away = WorldTopologyRuntime.ShortestDelta(body.position, escapeDestination);
+        escapeDirection = away.sqrMagnitude > 0.0001f ? away.normalized : Vector2.right;
         forageTarget = default;
         // 已在巡航也重新选择逃离方向，不继续沿受击前的随机目的地飞行。
         if (state.Phase == BirdFlightPhase.Ground || state.Phase == BirdFlightPhase.Landing) BeginTakeoff();
-        SetWanderTarget(WorldTopologyRuntime.NormalizePosition(body.position + escapeDirection * flightWanderRadius));
+        SetWanderTarget(escapeDestination);
     }
 
     private bool TickEscape(float deltaTime)
@@ -155,8 +240,12 @@ public sealed partial class AI_Bird
         escapeRemaining = Mathf.Max(0f, escapeRemaining - deltaTime);
         if (state.Phase == BirdFlightPhase.Ground)
         {
-            Vector2 destination = WorldTopologyRuntime.NormalizePosition(body.position + escapeDirection * groundWanderRadius);
-            if (CanLand(destination)) mover.SetDestination(destination);
+            if (CanLand(escapeDestination)) mover.SetDestination(escapeDestination);
+            return true;
+        }
+        if (state.Phase == BirdFlightPhase.RunUp)
+        {
+            TickRunUp(deltaTime);
             return true;
         }
         if (state.Phase == BirdFlightPhase.Landing)
@@ -164,9 +253,12 @@ public sealed partial class AI_Bird
             if (state.Elapsed >= transitionDuration) CompleteLanding();
             return true;
         }
-        if (state.Phase == BirdFlightPhase.TakingOff && state.Elapsed >= transitionDuration)
-            EnterPhase(BirdFlightPhase.Flying);
-        FlyTowards(WorldTopologyRuntime.NormalizePosition(body.position + escapeDirection * flightWanderRadius), deltaTime);
+        if (state.Phase == BirdFlightPhase.TakingOff)
+        {
+            TickTakeoff(deltaTime);
+            return true;
+        }
+        FlyTowards(escapeDestination, deltaTime);
         return true;
     }
 
@@ -175,10 +267,7 @@ public sealed partial class AI_Bird
         mover.StopMovement();
         body.velocity = Vector2.zero;
         Vector2 displacement = WorldTopologyRuntime.ShortestDelta(body.position, target);
-        Vector2 next = WorldTopologyRuntime.NormalizePosition(body.position + Vector2.ClampMagnitude(displacement, flightSpeed * deltaTime));
-        if (!flightNavigation.CanTraverse(body.position, next)) return;
-        body.position = next;
-        ItemMgr.Instance?.NotifyRuntimeItemMoved(item);
+        MoveFlightStep(displacement, flightSpeed, deltaTime);
     }
 
     #endregion

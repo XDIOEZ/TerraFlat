@@ -19,6 +19,7 @@ public static class ResourceCatalogValidation
     private static readonly SortedDictionary<string, IResourceCatalogValidator> validators = new(StringComparer.Ordinal)
     {
         ["items"] = new ItemResourceCatalogValidator(),
+        ["spawners"] = new SpawnerResourceCatalogValidator(),
         ["buildings"] = new BuildingResourceCatalogValidator(),
         ["tiles"] = new TileDefinitionCatalogValidator(),
         ["mechanical"] = new MechanicalResourceCatalogValidator()

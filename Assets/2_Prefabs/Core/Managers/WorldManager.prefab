@@ -46,15 +46,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 818a288dde5ed484ebb221ca065c59f9, type: 3}
   m_Name:
   m_EditorClassIdentifier:
-  _spawnerConfigs:
-  - {fileID: 11400000, guid: 3728acca7d2bf834aa32d083b7c9a9c1, type: 2}
-  - {fileID: 11400001, guid: d761520c2ce00864abbe419e138f92c7, type: 2}
-  - {fileID: 11400000, guid: b14e9d6f8c0a2b3d5e7f9a1c4d6b8e0f, type: 2}
-  _useAiecsBackend: 1
-  _globalAliveLimit: 40
-  _spawnRetryInterval: 0.5
-  _populationMaintenanceInterval: 2
-  _recycleCheckInterval: 2
 --- !u!114 &621153831357500893
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -348,6 +339,7 @@ GameObject:
   - component: {fileID: 2693940703275175513}
   - component: {fileID: 4939125256281199578}
   - component: {fileID: 6188641116391193677}
+  - component: {fileID: 8897026105265421041}
   m_Layer: 0
   m_Name: WorldManager
   m_TagString: Untagged
@@ -355,6 +347,23 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
+--- !u!114 &8897026105265421041
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4565539948505994440}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 44ea79331a8b4ad49fd9ec5f19f1e8dc, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  dynamicCategories:
+  - player
+  - creature
+  - building
+  - world-item
 --- !u!4 &891121404665747283
 Transform:
   m_ObjectHideFlags: 0
@@ -725,8 +734,10 @@ MonoBehaviour:
   maxPooledChunkCount: 32
   chunkLoadSpeedMultiplier: 1
   unlimitedChunkLoadSpeed: 0
-  maxChunkPresentationsPerFrame: 1
+  maxChunkPresentationsPerFrame: 4
+  maxChunkPresentationStartMillisecondsPerFrame: 4
   maxChunkPresentationContinuationStepsPerFrame: 6
+  maxChunkPresentationContinuationMillisecondsPerFrame: 3
   defaultGenerationProfile: {fileID: 0}
   backgroundGenerationConcurrency: 2
   maxChunkCommitsPerFrame: 1

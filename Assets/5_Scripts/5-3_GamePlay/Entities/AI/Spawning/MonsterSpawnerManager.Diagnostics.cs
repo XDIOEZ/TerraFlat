@@ -18,6 +18,8 @@ public partial class MonsterSpawnerManager
 
     private void Update()
     {
+        if (Time.unscaledTime < _nextEcologyTickTime)
+            return;
         using (TickMarker.Auto())
         {
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
@@ -186,7 +188,10 @@ public partial class MonsterSpawnerManager
         {
             ready = _gameManager != null && _gameManager.IsGameplayReady,
             enabled, registered = registrations.Count, active, expectedLimited, invalid, mismatches,
-            dormant = _chunkDormantItems.Count, farAwayTimers = _farAwaySince.Count,
+            dormant = _chunkDormantItems.Count,
+            parked = SaveDataMgr.Instance?.ParkedRuntimeAiCount ?? 0,
+            maxLoaded = _settings.MaxLoadedGameObjectActors,
+            farAwayTimers = _farAwaySince.Count,
             retryTimers = _nextSpawnRetryTime.Count, recoveryTimers = _nextRecoveryCheckTime.Count,
             runtimeStates = _runtimeStates.Count, configs
         };

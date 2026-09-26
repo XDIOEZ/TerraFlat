@@ -340,6 +340,7 @@ public class Mod_ItemDetector : Module
         return result;
     }
 
+    /// <summary>按物品标签寻找最近目标；启用玩家选项时同时识别 Player 实体、Unity 标签和 ItemData 标签。</summary>
     public Item FindClosestItemByTags(List<string> tags, Vector3 origin, bool includeUnityPlayerTag = false)
     {
         Item closestItem = null;
@@ -348,12 +349,14 @@ public class Mod_ItemDetector : Module
         for (int i = 0; i < CurrentItemsInArea.Count; i++)
         {
             Item detectedItem = CurrentItemsInArea[i];
-            if (detectedItem == null || detectedItem.itemData == null)
+            if (detectedItem == null)
                 continue;
 
-            bool matches = HasAnyTag(detectedItem.itemData.Tags, tags);
+            bool matches = detectedItem.itemData != null && HasAnyTag(detectedItem.itemData.Tags, tags);
             if (!matches && includeUnityPlayerTag)
-                matches = detectedItem.CompareTag("Player");
+                matches = detectedItem is Player ||
+                          detectedItem.CompareTag("Player") ||
+                          detectedItem.itemData?.Tags?.Contains("Player") == true;
             if (!matches)
                 continue;
 
