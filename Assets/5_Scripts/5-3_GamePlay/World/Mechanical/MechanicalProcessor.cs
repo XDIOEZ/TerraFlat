@@ -11,6 +11,7 @@ public sealed class MechanicalProcessor : IDisposable
     public string Station { get; }
     private readonly CraftingCapabilities capabilities;
     public event Action Changed;
+    public event Action<MechanicalProcessor> StateChanged; // 世界快照增量同步入口。
     private bool committing;
 
     public MechanicalProcessor(string station, MechanicalProcessingState state)
@@ -37,7 +38,7 @@ public sealed class MechanicalProcessor : IDisposable
             ? CraftingService.PreviewRecipe(Input, Output, capabilities, process.Recipe)
             : CraftingResult.Failed(CraftingFailureReason.RecipeNotFound, "当前材料没有加工配方");
 
-    /// <summary>有扭矩且完整产物可接收时推进工作量；提交成功之后才清空当前加工进度。</summary>
+    /// <summary>按有效工作时间推进加工；提交成功之后才清空当前加工进度。</summary>
     public bool Advance(float workSeconds, Player actor = null)
     {
         if (!MechanicalDefinition.Positive(workSeconds)) return false;
@@ -56,13 +57,18 @@ public sealed class MechanicalProcessor : IDisposable
             finally { committing = false; }
             ReconcileRecipe();
         }
-        Changed?.Invoke();
+        Changed?.Invoke(); StateChanged?.Invoke(this);
         return success;
     }
 
+    /// <summary>手动推动石磨时沿用自动加工的预检、进度和 CraftingService 原子提交。</summary>
+    public bool AdvanceManually(float workSeconds, Player actor = null) => Advance(workSeconds, actor);
+
     public float Progress01 => TryGetProcess(out var process) ? Mathf.Clamp01(State.Progress / process.WorkSeconds) : 0f;
-    private void OnInputChanged(ItemSlot slot) { if (!committing) { ReconcileRecipe(); Changed?.Invoke(); } }
-    private void OnOutputChanged(ItemSlot slot) { if (!committing) Changed?.Invoke(); }
+    private void OnInputChanged(ItemSlot slot)
+    { if (!committing) { ReconcileRecipe(); Changed?.Invoke(); StateChanged?.Invoke(this); } }
+    private void OnOutputChanged(ItemSlot slot)
+    { if (!committing) { Changed?.Invoke(); StateChanged?.Invoke(this); } }
     private void ReconcileRecipe()
     {
         string id = TryGetProcess(out var process) ? process.Recipe.Id : string.Empty;
@@ -83,6 +89,7 @@ public sealed class MechanicalProcessor : IDisposable
         Input.Data.Event_OnDataChanged -= OnInputChanged;
         Output.Data.Event_OnDataChanged -= OnOutputChanged;
         Input.UnbindController(); Output.UnbindController();
+        Input.UnbindRuntimeDataEvents(); Output.UnbindRuntimeDataEvents();
         Input.item = null; Output.item = null;
     }
     #endregion

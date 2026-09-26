@@ -18,6 +18,7 @@ public static class ItemNetworkStateSerialization
     public static Func<ItemPicker, Item, bool> TryBeginNetworkPickup;
     public static Func<Mod_Building, Vector3, bool> TryBeginNetworkBuilding;
     public static Func<Mod_Building, bool> TryBeginNetworkBuildingDismantle;
+    public static Func<MechanicalNode, bool> TryBeginNetworkMechanicalDismantle;
 
     public static void NotifyRuntimeStateChanged(Item item)
     {
@@ -36,6 +37,10 @@ public static class ItemNetworkStateSerialization
 
     public static bool BeginNetworkBuildingDismantle(Mod_Building building)
         => TryBeginNetworkBuildingDismantle?.Invoke(building) == true;
+
+    /// <summary>纯数据机械的拆除请求交由联机协调器发送。</summary>
+    public static bool BeginNetworkMechanicalDismantle(MechanicalNode node)
+        => TryBeginNetworkMechanicalDismantle?.Invoke(node) == true;
 
     public static byte[] Capture(Item item, bool ignoreTransform)
     {

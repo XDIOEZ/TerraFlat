@@ -32,6 +32,7 @@ public static class SpatialInteractionRegistry
                 : WorldTopologyRuntime.Distance(pointer.Value, target.transform.position) > entry.Value)) continue;
             if (!results.Contains(interaction)) results.Add(interaction);
         }
+        MechanicalWorld.QueryInteractionTargets(actor, radius, pointer, results);
     }
     #endregion
 }

@@ -60,7 +60,11 @@ public static class MechanicalContentBuilder
             var view = root.GetComponent<MechanicalPanelView>() ?? root.AddComponent<MechanicalPanelView>();
             view.Title = Find<TMP_Text>(root, "FWUI_标题");
             view.Status = Find<TMP_Text>(root, "FWUI_FooterHint");
+            view.InnerField = Find<RectTransform>(root, "FWUI_InnerField");
             view.ActionButton = Find<Button>(root, "合成按钮");
+            var buildingActions = root.GetComponent<BuildingPanelActions>()
+                ?? throw new InvalidOperationException(name + " 缺少建筑操作组件。");
+            view.DismantleButton = buildingActions.DismantleButton;
             view.CloseButton = Find<Button>(root, "关闭");
             view.InputSlot = Find<ItemSlot_UI>(root, "输入_1");
             view.OutputSlot = Find<ItemSlot_UI>(root, "输出_1");
@@ -78,8 +82,31 @@ public static class MechanicalContentBuilder
             view.Title.text = title; view.Status.text = ""; view.Status.fontSize = 16;
             view.Status.enableAutoSizing = true; view.Status.fontSizeMin = 10; view.Status.fontSizeMax = 16;
             view.ActionButton.GetComponentInChildren<TMP_Text>(true).text = caption;
+
+            var panelRect = (RectTransform)root.transform;
+            panelRect.sizeDelta = new Vector2(panelRect.sizeDelta.x, 480);
+            view.InnerField.sizeDelta = new Vector2(view.InnerField.sizeDelta.x, 280);
+
+            RectTransform statusRect = view.Status.rectTransform;
+            statusRect.anchorMin = statusRect.anchorMax = new Vector2(0, 0);
+            statusRect.pivot = new Vector2(0, 0.5f);
+            statusRect.anchoredPosition = new Vector2(24, 83);
+            statusRect.sizeDelta = new Vector2(598, 42);
+            view.Status.enableWordWrapping = true;
+            view.Status.overflowMode = TextOverflowModes.Truncate;
+
             var actionRect = (RectTransform)view.ActionButton.transform;
-            actionRect.sizeDelta = new Vector2(actionRect.sizeDelta.x, 60);
+            actionRect.anchorMin = actionRect.anchorMax = new Vector2(1, 0);
+            actionRect.pivot = new Vector2(1, 0.5f);
+            actionRect.anchoredPosition = new Vector2(-24, 29);
+            actionRect.sizeDelta = new Vector2(160, 46);
+
+            var dismantleRect = (RectTransform)view.DismantleButton.transform;
+            dismantleRect.anchorMin = dismantleRect.anchorMax = new Vector2(1, 0);
+            dismantleRect.pivot = new Vector2(1, 0.5f);
+            dismantleRect.anchoredPosition = new Vector2(-196, 29);
+            dismantleRect.sizeDelta = new Vector2(160, 46);
+
             // 清理模板中不属于钻孔/机械操作的装饰说明。
             foreach (var text in root.GetComponentsInChildren<TMP_Text>(true))
                 if (text.name == "FWUI_眉题" || text.name.StartsWith("FWUI_SectionEyebrow", StringComparison.Ordinal))
@@ -115,7 +142,8 @@ public static class MechanicalContentBuilder
         {
             var asset = AssetDatabase.LoadAssetAtPath<GameObject>(UiFolder + "/" + id + ".prefab");
             var view = asset.GetComponent<MechanicalPanelView>();
-            if (view == null || view.Title == null || view.Status == null || view.ActionButton == null ||
+            if (view == null || view.Title == null || view.Status == null || view.InnerField == null || view.ActionButton == null ||
+                view.DismantleButton == null ||
                 view.CloseButton == null || view.InputSlot == null || view.OutputSlot == null ||
                 view.ProcessingVisuals == null || view.ProcessingVisuals.Length != 11 || view.ProcessingVisuals.Any(value => value == null) ||
                 asset.GetComponent<BuildingPanelActions>() == null) throw new InvalidOperationException(id + " 引用不完整。");
@@ -146,8 +174,8 @@ public static class MechanicalContentBuilder
         string path = "Assets/Localization/ItemNames.en.json";
         JObject document = JObject.Parse(File.ReadAllText(path));
         JObject names = (JObject)document["names"];
-        string[] ids = { "HandCrank", "WaterWheel", "Windmill", "Shaft_Wood", "Gear_Wood", "Gearbox_Wood", "Clutch", "Shaft_Copper", "Gear_Copper", "Gearbox_Copper", "Shaft_Iron", "Gear_Iron", "Gearbox_Iron", "CrossShaft", "Millstone", "MechanicalBellows", "Sawmill", "MechanicalHammer", "HandDrill" };
-        string[] english = { "Hand Crank", "Water Wheel", "Windmill", "Wooden Shaft", "Wooden Gear", "Gearbox", "Clutch", "Copper Shaft", "Copper Gear", "Gearbox", "Iron Shaft", "Iron Gear", "Gearbox", "Shaft Bridge", "Millstone", "Mechanical Bellows", "Sawmill", "Mechanical Hammer", "Hand Drill" };
+        string[] ids = { "HandCrank", "WaterWheel", "Windmill", "Shaft_Wood", "Gear_Wood", "Gearbox_Wood", "Clutch", "CrossShaft", "Millstone", "MechanicalBellows", "Sawmill", "MechanicalHammer", "HandDrill" };
+        string[] english = { "Hand Crank", "Water Wheel", "Windmill", "Wooden Shaft", "Wooden Gear", "Gearbox", "Clutch", "Shaft Bridge", "Millstone", "Mechanical Bellows", "Sawmill", "Mechanical Hammer", "Hand Drill" };
         for (int i = 0; i < ids.Length; i++) { names[ids[i]] = english[i]; names[ids[i] + "_Summoner"] = english[i]; }
         names["DrilledStoneSlab"] = "Drilled Stone Slab"; names["DrilledStone"] = "Drilled Stone";
         File.WriteAllText(path, document.ToString() + "\n", new System.Text.UTF8Encoding(false));

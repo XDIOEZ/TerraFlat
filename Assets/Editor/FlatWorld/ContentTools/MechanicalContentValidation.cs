@@ -57,7 +57,7 @@ public static class MechanicalContentValidation
             view.SetProcessingVisible(processing);
             view.Title.text = id == "UI_HandDrill" ? "手钻" : processing ? "锯木机" : "手摇轮";
             view.Status.text = id == "UI_HandDrill" ? "加工进度 50%" : "运行中 · 转速 60 · 扭矩 24/12";
-            view.ActionButton.gameObject.SetActive(id == "UI_HandDrill" || !processing);
+            view.SetActionVisible(id == "UI_HandDrill" || !processing);
             view.ActionButton.GetComponentInChildren<TMPro.TMP_Text>(true).text = id == "UI_HandDrill" ? "钻孔" : "摇动";
             Canvas.ForceUpdateCanvases();
             LayoutRebuilder.ForceRebuildLayoutImmediate(rect);

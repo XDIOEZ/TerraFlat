@@ -74,7 +74,34 @@ public static class WorldMotionSystem
             if (inwardSpeed > allowedInward)
                 totalVelocity += outwardNormal * (inwardSpeed - allowedInward);
         }
-        return totalVelocity;
+        return ResolveMechanicalContactVelocity(actor, position, totalVelocity, deltaTime);
+    }
+
+    /// <summary>纯数据机械以占地格参与角色扫掠，保留原有滑边运动而不创建逐建筑碰撞体。</summary>
+    private static Vector2 ResolveMechanicalContactVelocity(
+        Mover actor, Vector2 position, Vector2 velocity, float deltaTime)
+    {
+        if (actor == null || velocity.sqrMagnitude <= 0f || deltaTime <= 0f) return velocity;
+        Vector2 travel = velocity * deltaTime;
+        float margin = .5f + actor.pushContactRadius;
+        int minX = Mathf.FloorToInt(Mathf.Min(position.x, position.x + travel.x) - margin);
+        int maxX = Mathf.FloorToInt(Mathf.Max(position.x, position.x + travel.x) + margin);
+        int minY = Mathf.FloorToInt(Mathf.Min(position.y, position.y + travel.y) - margin);
+        int maxY = Mathf.FloorToInt(Mathf.Max(position.y, position.y + travel.y) + margin);
+        for (int y = minY; y <= maxY; y++)
+        for (int x = minX; x <= maxX; x++)
+        {
+            MechanicalNode node = MechanicalWorld.GetAtCurrentWorld(new Vector2Int(x, y), 0);
+            if (node?.Definition.BlocksMovement != true) continue;
+            Vector2 origin = WorldTopologyRuntime.ShortestDelta(
+                node.Snapshot.transform.position, position);
+            if (!TrySweepBox(origin, velocity * deltaTime,
+                    Vector2.one * margin, out Vector2 normal, out float fraction)) continue;
+            float inwardSpeed = -Vector2.Dot(velocity, normal);
+            if (inwardSpeed > 0f)
+                velocity += normal * (inwardSpeed * (1f - fraction));
+        }
+        return velocity;
     }
 
     /// <summary>点扫掠膨胀矩形，返回入射面法线；已贴边时只约束继续向内的运动。</summary>

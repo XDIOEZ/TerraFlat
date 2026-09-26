@@ -342,12 +342,14 @@ public partial class Mover : Module
         }
 
         Vector2 delta = WorldTopologyRuntime.ShortestDelta(rb.position, targetPosition);
+        float moveSpeed = Speed.Value * ResolveBuildingMoveSpeedMultiplier();
         Vector2 targetVelocity = delta.sqrMagnitude < ArriveThreshold * ArriveThreshold
             ? Vector2.zero
-            : delta.normalized * Speed.Value;
+            : delta.normalized * moveSpeed;
         DrivenVelocity = SmoothSurfaceVelocity(DrivenVelocity, targetVelocity, deltaTime);
         ExternalVelocity = Vector2.zero;
-        rb.velocity = DrivenVelocity;
+        rb.velocity = WorldMotionSystem.ResolveContactVelocity(this, rb.position,
+            DrivenVelocity, DrivenVelocity, Mathf.Max(deltaTime, Time.fixedDeltaTime));
         UpdateMovementState();
     }
 
@@ -365,8 +367,9 @@ public partial class Mover : Module
 
         Vector2 clampedInput = Vector2.ClampMagnitude(input, 1f);
         RequestedMoveInput = clampedInput;
+        float moveSpeed = Speed.Value * ResolveBuildingMoveSpeedMultiplier();
         Vector2 targetVelocity = clampedInput.sqrMagnitude > InputMoveThresholdSqr
-            ? clampedInput * Speed.Value
+            ? clampedInput * moveSpeed
             : Vector2.zero;
         // 主动速度独立缓动，不能把上帧水流当作下帧主动移动的初速度。
         DrivenVelocity = SmoothSurfaceVelocity(DrivenVelocity, targetVelocity, deltaTime);
@@ -382,6 +385,14 @@ public partial class Mover : Module
         return item is Player && rb != null
             ? WorldMotionSystem.SampleWaterVelocity(rb.position, waterCurrentPushSpeed)
             : Vector2.zero;
+    }
+
+    /// <summary>玩家站在可通行建筑格时读取地块惩罚；动物和其它 Mover 不受玩家铺线规则影响。</summary>
+    private float ResolveBuildingMoveSpeedMultiplier()
+    {
+        return item is Player && rb != null
+            ? BuildingOccupancyRegistry.GetPlayerMoveSpeedMultiplier(rb.position)
+            : 1f;
     }
 
     /// <summary>将实际速度按当前移动表面的响应平滑到目标速度。</summary>

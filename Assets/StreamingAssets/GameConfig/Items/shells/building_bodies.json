@@ -128,6 +128,9 @@
           "data": {
             "BitData": [],
             "Type": 0
+          },
+          "parameters": {
+            "acceptsMechanicalBellows": true
           }
         },
         "vesselHeating": {
@@ -254,6 +257,18 @@
           "data": {
             "BitData": [],
             "Type": 0
+          },
+          "parameters": {
+            "fuelByproductRules": [
+              {
+                "id": "wood-ash",
+                "inputTags": [
+                  "Wood"
+                ],
+                "itemsPerOutput": 3,
+                "outputItemId": "WoodAsh"
+              }
+            ]
           }
         },
         "燃料模块": {
@@ -1162,6 +1177,9 @@
           "data": {
             "BitData": [],
             "Type": 0
+          },
+          "parameters": {
+            "acceptsMechanicalBellows": true
           }
         },
         "燃料模块": {

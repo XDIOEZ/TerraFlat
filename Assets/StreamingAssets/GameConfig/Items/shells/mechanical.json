@@ -17,7 +17,11 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/HandCrank/HandCrank_Body.png",
+        "spriteStates": {
+          "rotor": "Assets/6_Art/Generated/Mechanical/World/HandCrank/HandCrank_Rotor.png",
+          "axisPorts": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Shaft_Wood_Linked_EndRings.png"
+        }
       },
       "health": {
         "hasHp": true,
@@ -52,6 +56,10 @@
           "data": {
             "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"HandCrank\",\"SummonerPrefabId\":\"HandCrank_Summoner\"}",
             "Type": 0
+          },
+          "parameters": {
+            "LightOcclusionMode": "None",
+            "CastSunShadow": false
           }
         },
         "机械扭矩模块": {
@@ -63,7 +71,10 @@
             "Type": 0
           },
           "parameters": {
-            "DefinitionId": "HandCrank"
+            "DefinitionId": "HandCrank",
+            "AxisPortLayout": "centeredShaftRings",
+            "AxisPortDrawOnTop": true,
+            "RotorLocalPosition": { "x": 0, "y": 0.3046875, "z": 0 }
           }
         }
       }
@@ -84,7 +95,11 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/HandCrank/HandCrank_Building.png",
+        "spriteStates": {
+          "rotor": "Assets/6_Art/Generated/Mechanical/World/HandCrank/HandCrank_Rotor.png",
+          "axisPorts": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Shaft_Wood_Linked_EndRings.png"
+        }
       },
       "health": {
         "hasHp": true,
@@ -130,7 +145,10 @@
             "Type": 0
           },
           "parameters": {
-            "DefinitionId": "HandCrank"
+            "DefinitionId": "HandCrank",
+            "AxisPortLayout": "centeredShaftRings",
+            "AxisPortDrawOnTop": true,
+            "RotorLocalPosition": { "x": 0, "y": 0.3046875, "z": 0 }
           }
         }
       }
@@ -151,7 +169,15 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/WaterWheel/WaterWheel_Body.png",
+        "spriteStates": {
+          "rotor": "Assets/6_Art/Generated/Mechanical/World/WaterWheel/WaterWheel_Rotor.png"
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "offset": { "x": 0, "y": 0.02 },
+          "size": { "x": 0.72, "y": 0.42 }
+        }
       },
       "health": {
         "hasHp": true,
@@ -197,7 +223,8 @@
             "Type": 0
           },
           "parameters": {
-            "DefinitionId": "WaterWheel"
+            "DefinitionId": "WaterWheel",
+            "RotorLocalPosition": { "x": 0, "y": 1.0, "z": 0 }
           }
         }
       }
@@ -218,7 +245,10 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/WaterWheel/WaterWheel_Building.png",
+        "spriteStates": {
+          "rotor": "Assets/6_Art/Generated/Mechanical/World/WaterWheel/WaterWheel_Rotor.png"
+        }
       },
       "health": {
         "hasHp": true,
@@ -264,7 +294,8 @@
             "Type": 0
           },
           "parameters": {
-            "DefinitionId": "WaterWheel"
+            "DefinitionId": "WaterWheel",
+            "RotorLocalPosition": { "x": 0, "y": 1.0, "z": 0 }
           }
         }
       }
@@ -335,7 +366,7 @@
           },
           "parameters": {
             "DefinitionId": "Windmill",
-            "RotorLocalPosition": { "x": 0, "y": 1.1953125, "z": 0 }
+            "RotorLocalPosition": { "x": 0, "y": 1.3828125, "z": 0 }
           }
         }
       }
@@ -406,7 +437,7 @@
           },
           "parameters": {
             "DefinitionId": "Windmill",
-            "RotorLocalPosition": { "x": 0, "y": 1.1953125, "z": 0 }
+            "RotorLocalPosition": { "x": 0, "y": 1.3828125, "z": 0 }
           }
         }
       }
@@ -427,7 +458,11 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Shaft_Wood_Linked.png"
+        "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Shaft_Wood_Linked.png",
+        "spriteStates": {
+          "shaftRollingCore": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Shaft_Wood_Linked_RollingCore.png",
+          "shaftEndRings": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Shaft_Wood_Linked_EndRings.png"
+        }
       },
       "health": {
         "hasHp": true,
@@ -462,6 +497,10 @@
           "data": {
             "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Shaft_Wood\",\"SummonerPrefabId\":\"Shaft_Wood_Summoner\"}",
             "Type": 0
+          },
+          "parameters": {
+            "LightOcclusionMode": "None",
+            "CastSunShadow": false
           }
         },
         "机械扭矩模块": {
@@ -494,7 +533,11 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Shaft_Wood_Linked.png"
+        "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Shaft_Wood_Linked.png",
+        "spriteStates": {
+          "shaftRollingCore": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Shaft_Wood_Linked_RollingCore.png",
+          "shaftEndRings": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Shaft_Wood_Linked_EndRings.png"
+        }
       },
       "health": {
         "hasHp": true,
@@ -599,6 +642,10 @@
           "data": {
             "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Gear_Wood\",\"SummonerPrefabId\":\"Gear_Wood_Summoner\"}",
             "Type": 0
+          },
+          "parameters": {
+            "LightOcclusionMode": "None",
+            "CastSunShadow": false
           }
         },
         "机械扭矩模块": {
@@ -691,7 +738,7 @@
       "id": "Gearbox_Wood",
       "parent": "BuildingBody_Base",
       "gameName": "变速箱-建筑",
-      "description": "变速箱-建筑；左/下侧输入时转速增加50%、动力减少50%；右/上侧输入时转速减少50%、动力增加50%。",
+      "description": "变速箱-建筑；从大齿轮端输入时输出转速×2、扭矩×0.5；从小齿轮端输入时输出转速×0.5、扭矩×2。",
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,
@@ -703,7 +750,11 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Gearbox_Wood_Housing.png",
+        "spriteStates": {
+          "axisPorts": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Shaft_Wood_Linked_EndRings.png",
+          "gearboxGear": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Gearbox_Wood_Gear.png"
+        }
       },
       "health": {
         "hasHp": true,
@@ -738,6 +789,10 @@
           "data": {
             "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Gearbox_Wood\",\"SummonerPrefabId\":\"Gearbox_Wood_Summoner\"}",
             "Type": 0
+          },
+          "parameters": {
+            "LightOcclusionMode": "None",
+            "CastSunShadow": false
           }
         },
         "机械扭矩模块": {
@@ -749,7 +804,12 @@
             "Type": 0
           },
           "parameters": {
-            "DefinitionId": "Gearbox_Wood"
+            "DefinitionId": "Gearbox_Wood",
+            "AxisPortLayout": "centeredShaftRings",
+            "GearboxLargeGearLocalPosition": { "x": -0.09375, "y": 0, "z": 0 },
+            "GearboxSmallGearLocalPosition": { "x": 0.1875, "y": 0, "z": 0 },
+            "GearboxLargeGearScale": 0.875,
+            "GearboxSmallGearScale": 0.4375
           }
         }
       }
@@ -758,7 +818,7 @@
       "id": "Gearbox_Wood_Summoner",
       "parent": "BuildingSummoner_Base",
       "gameName": "变速箱",
-      "description": "左/下侧输入时转速增加50%、动力减少50%；右/上侧输入时转速减少50%、动力增加50%。",
+      "description": "从大齿轮端输入时输出转速×2、扭矩×0.5；从小齿轮端输入时输出转速×0.5、扭矩×2。",
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,
@@ -770,7 +830,11 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Gearbox_Wood_Housing.png",
+        "spriteStates": {
+          "axisPorts": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Shaft_Wood_Linked_EndRings.png",
+          "gearboxGear": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Gearbox_Wood_Gear.png"
+        }
       },
       "health": {
         "hasHp": true,
@@ -816,7 +880,12 @@
             "Type": 0
           },
           "parameters": {
-            "DefinitionId": "Gearbox_Wood"
+            "DefinitionId": "Gearbox_Wood",
+            "AxisPortLayout": "centeredShaftRings",
+            "GearboxLargeGearLocalPosition": { "x": -0.09375, "y": 0, "z": 0 },
+            "GearboxSmallGearLocalPosition": { "x": 0.1875, "y": 0, "z": 0 },
+            "GearboxLargeGearScale": 0.875,
+            "GearboxSmallGearScale": 0.4375
           }
         }
       }
@@ -872,6 +941,10 @@
           "data": {
             "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Clutch\",\"SummonerPrefabId\":\"Clutch_Summoner\"}",
             "Type": 0
+          },
+          "parameters": {
+            "LightOcclusionMode": "None",
+            "CastSunShadow": false
           }
         },
         "机械扭矩模块": {
@@ -956,810 +1029,6 @@
       }
     },
     {
-      "id": "Shaft_Copper",
-      "parent": "BuildingBody_Base",
-      "gameName": "铜制传动轴-建筑",
-      "description": "铜制传动轴-建筑，用于首版机械扭矩系统试玩。",
-      "durability": 1,
-      "maxDurability": 1,
-      "amount": 1,
-      "weight": 8,
-      "volume": 12,
-      "stackable": true,
-      "canBePickedUp": false,
-      "tags": [
-        "35"
-      ],
-      "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
-      },
-      "health": {
-        "hasHp": true,
-        "hp": 180,
-        "maxHp": 180,
-        "defense": {
-          "cutting": 8,
-          "piercing": 8,
-          "chopping": 8,
-          "blunt": 8
-        },
-        "collider": {
-          "type": "BoxCollider2D",
-          "enabled": true,
-          "isTrigger": true,
-          "offset": {
-            "x": 0,
-            "y": 0
-          },
-          "size": {
-            "x": 1,
-            "y": 1
-          },
-          "edgeRadius": 0
-        }
-      },
-      "modules": {
-        "建筑模块": {
-          "prefab": "Module_Building",
-          "id": "建筑模块",
-          "enabled": true,
-          "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Shaft_Copper\",\"SummonerPrefabId\":\"Shaft_Copper_Summoner\"}",
-            "Type": 0
-          }
-        },
-        "机械扭矩模块": {
-          "prefab": "Module_MechanicalNode",
-          "id": "机械扭矩模块",
-          "enabled": true,
-          "data": {
-            "BitData": [],
-            "Type": 0
-          },
-          "parameters": {
-            "DefinitionId": "Shaft_Copper"
-          }
-        }
-      }
-    },
-    {
-      "id": "Shaft_Copper_Summoner",
-      "parent": "BuildingSummoner_Base",
-      "gameName": "铜制传动轴",
-      "description": "铜制传动轴，用于首版机械扭矩系统试玩。",
-      "durability": 1,
-      "maxDurability": 1,
-      "amount": 1,
-      "weight": 2,
-      "volume": 5,
-      "stackable": true,
-      "canBePickedUp": true,
-      "tags": [
-        "35"
-      ],
-      "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
-      },
-      "health": {
-        "hasHp": true,
-        "hp": 180,
-        "maxHp": 180,
-        "defense": {
-          "cutting": 8,
-          "piercing": 8,
-          "chopping": 8,
-          "blunt": 8
-        },
-        "collider": {
-          "type": "BoxCollider2D",
-          "enabled": true,
-          "isTrigger": true,
-          "offset": {
-            "x": 0,
-            "y": 0
-          },
-          "size": {
-            "x": 1,
-            "y": 1
-          },
-          "edgeRadius": 0
-        }
-      },
-      "modules": {
-        "建筑模块": {
-          "prefab": "Module_Building",
-          "id": "建筑模块",
-          "enabled": true,
-          "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Shaft_Copper\",\"SummonerPrefabId\":\"Shaft_Copper_Summoner\"}",
-            "Type": 0
-          }
-        },
-        "机械扭矩模块": {
-          "prefab": "Module_MechanicalNode",
-          "id": "机械扭矩模块",
-          "enabled": true,
-          "data": {
-            "BitData": [],
-            "Type": 0
-          },
-          "parameters": {
-            "DefinitionId": "Shaft_Copper"
-          }
-        }
-      }
-    },
-    {
-      "id": "Gear_Copper",
-      "parent": "BuildingBody_Base",
-      "gameName": "铜制齿轮-建筑",
-      "description": "铜制齿轮-建筑，用于首版机械扭矩系统试玩。",
-      "durability": 1,
-      "maxDurability": 1,
-      "amount": 1,
-      "weight": 8,
-      "volume": 12,
-      "stackable": true,
-      "canBePickedUp": false,
-      "tags": [
-        "35"
-      ],
-      "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
-      },
-      "health": {
-        "hasHp": true,
-        "hp": 180,
-        "maxHp": 180,
-        "defense": {
-          "cutting": 8,
-          "piercing": 8,
-          "chopping": 8,
-          "blunt": 8
-        },
-        "collider": {
-          "type": "BoxCollider2D",
-          "enabled": true,
-          "isTrigger": true,
-          "offset": {
-            "x": 0,
-            "y": 0
-          },
-          "size": {
-            "x": 1,
-            "y": 1
-          },
-          "edgeRadius": 0
-        }
-      },
-      "modules": {
-        "建筑模块": {
-          "prefab": "Module_Building",
-          "id": "建筑模块",
-          "enabled": true,
-          "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Gear_Copper\",\"SummonerPrefabId\":\"Gear_Copper_Summoner\"}",
-            "Type": 0
-          }
-        },
-        "机械扭矩模块": {
-          "prefab": "Module_MechanicalNode",
-          "id": "机械扭矩模块",
-          "enabled": true,
-          "data": {
-            "BitData": [],
-            "Type": 0
-          },
-          "parameters": {
-            "DefinitionId": "Gear_Copper"
-          }
-        }
-      }
-    },
-    {
-      "id": "Gear_Copper_Summoner",
-      "parent": "BuildingSummoner_Base",
-      "gameName": "铜制齿轮",
-      "description": "铜制齿轮，用于首版机械扭矩系统试玩。",
-      "durability": 1,
-      "maxDurability": 1,
-      "amount": 1,
-      "weight": 2,
-      "volume": 5,
-      "stackable": true,
-      "canBePickedUp": true,
-      "tags": [
-        "35"
-      ],
-      "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
-      },
-      "health": {
-        "hasHp": true,
-        "hp": 180,
-        "maxHp": 180,
-        "defense": {
-          "cutting": 8,
-          "piercing": 8,
-          "chopping": 8,
-          "blunt": 8
-        },
-        "collider": {
-          "type": "BoxCollider2D",
-          "enabled": true,
-          "isTrigger": true,
-          "offset": {
-            "x": 0,
-            "y": 0
-          },
-          "size": {
-            "x": 1,
-            "y": 1
-          },
-          "edgeRadius": 0
-        }
-      },
-      "modules": {
-        "建筑模块": {
-          "prefab": "Module_Building",
-          "id": "建筑模块",
-          "enabled": true,
-          "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Gear_Copper\",\"SummonerPrefabId\":\"Gear_Copper_Summoner\"}",
-            "Type": 0
-          }
-        },
-        "机械扭矩模块": {
-          "prefab": "Module_MechanicalNode",
-          "id": "机械扭矩模块",
-          "enabled": true,
-          "data": {
-            "BitData": [],
-            "Type": 0
-          },
-          "parameters": {
-            "DefinitionId": "Gear_Copper"
-          }
-        }
-      }
-    },
-    {
-      "id": "Gearbox_Copper",
-      "parent": "BuildingBody_Base",
-      "gameName": "变速箱-建筑",
-      "description": "变速箱-建筑；左/下侧输入时转速增加50%、动力减少50%；右/上侧输入时转速减少50%、动力增加50%。",
-      "durability": 1,
-      "maxDurability": 1,
-      "amount": 1,
-      "weight": 8,
-      "volume": 12,
-      "stackable": true,
-      "canBePickedUp": false,
-      "tags": [
-        "35"
-      ],
-      "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
-      },
-      "health": {
-        "hasHp": true,
-        "hp": 180,
-        "maxHp": 180,
-        "defense": {
-          "cutting": 8,
-          "piercing": 8,
-          "chopping": 8,
-          "blunt": 8
-        },
-        "collider": {
-          "type": "BoxCollider2D",
-          "enabled": true,
-          "isTrigger": true,
-          "offset": {
-            "x": 0,
-            "y": 0
-          },
-          "size": {
-            "x": 1,
-            "y": 1
-          },
-          "edgeRadius": 0
-        }
-      },
-      "modules": {
-        "建筑模块": {
-          "prefab": "Module_Building",
-          "id": "建筑模块",
-          "enabled": true,
-          "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Gearbox_Copper\",\"SummonerPrefabId\":\"Gearbox_Copper_Summoner\"}",
-            "Type": 0
-          }
-        },
-        "机械扭矩模块": {
-          "prefab": "Module_MechanicalNode",
-          "id": "机械扭矩模块",
-          "enabled": true,
-          "data": {
-            "BitData": [],
-            "Type": 0
-          },
-          "parameters": {
-            "DefinitionId": "Gearbox_Copper"
-          }
-        }
-      }
-    },
-    {
-      "id": "Gearbox_Copper_Summoner",
-      "parent": "BuildingSummoner_Base",
-      "gameName": "变速箱",
-      "description": "左/下侧输入时转速增加50%、动力减少50%；右/上侧输入时转速减少50%、动力增加50%。",
-      "durability": 1,
-      "maxDurability": 1,
-      "amount": 1,
-      "weight": 2,
-      "volume": 5,
-      "stackable": true,
-      "canBePickedUp": true,
-      "tags": [
-        "35"
-      ],
-      "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
-      },
-      "health": {
-        "hasHp": true,
-        "hp": 180,
-        "maxHp": 180,
-        "defense": {
-          "cutting": 8,
-          "piercing": 8,
-          "chopping": 8,
-          "blunt": 8
-        },
-        "collider": {
-          "type": "BoxCollider2D",
-          "enabled": true,
-          "isTrigger": true,
-          "offset": {
-            "x": 0,
-            "y": 0
-          },
-          "size": {
-            "x": 1,
-            "y": 1
-          },
-          "edgeRadius": 0
-        }
-      },
-      "modules": {
-        "建筑模块": {
-          "prefab": "Module_Building",
-          "id": "建筑模块",
-          "enabled": true,
-          "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Gearbox_Copper\",\"SummonerPrefabId\":\"Gearbox_Copper_Summoner\"}",
-            "Type": 0
-          }
-        },
-        "机械扭矩模块": {
-          "prefab": "Module_MechanicalNode",
-          "id": "机械扭矩模块",
-          "enabled": true,
-          "data": {
-            "BitData": [],
-            "Type": 0
-          },
-          "parameters": {
-            "DefinitionId": "Gearbox_Copper"
-          }
-        }
-      }
-    },
-    {
-      "id": "Shaft_Iron",
-      "parent": "BuildingBody_Base",
-      "gameName": "铁制传动轴-建筑",
-      "description": "铁制传动轴-建筑，用于首版机械扭矩系统试玩。",
-      "durability": 1,
-      "maxDurability": 1,
-      "amount": 1,
-      "weight": 8,
-      "volume": 12,
-      "stackable": true,
-      "canBePickedUp": false,
-      "tags": [
-        "35"
-      ],
-      "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
-      },
-      "health": {
-        "hasHp": true,
-        "hp": 180,
-        "maxHp": 180,
-        "defense": {
-          "cutting": 8,
-          "piercing": 8,
-          "chopping": 8,
-          "blunt": 8
-        },
-        "collider": {
-          "type": "BoxCollider2D",
-          "enabled": true,
-          "isTrigger": true,
-          "offset": {
-            "x": 0,
-            "y": 0
-          },
-          "size": {
-            "x": 1,
-            "y": 1
-          },
-          "edgeRadius": 0
-        }
-      },
-      "modules": {
-        "建筑模块": {
-          "prefab": "Module_Building",
-          "id": "建筑模块",
-          "enabled": true,
-          "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Shaft_Iron\",\"SummonerPrefabId\":\"Shaft_Iron_Summoner\"}",
-            "Type": 0
-          }
-        },
-        "机械扭矩模块": {
-          "prefab": "Module_MechanicalNode",
-          "id": "机械扭矩模块",
-          "enabled": true,
-          "data": {
-            "BitData": [],
-            "Type": 0
-          },
-          "parameters": {
-            "DefinitionId": "Shaft_Iron"
-          }
-        }
-      }
-    },
-    {
-      "id": "Shaft_Iron_Summoner",
-      "parent": "BuildingSummoner_Base",
-      "gameName": "铁制传动轴",
-      "description": "铁制传动轴，用于首版机械扭矩系统试玩。",
-      "durability": 1,
-      "maxDurability": 1,
-      "amount": 1,
-      "weight": 2,
-      "volume": 5,
-      "stackable": true,
-      "canBePickedUp": true,
-      "tags": [
-        "35"
-      ],
-      "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
-      },
-      "health": {
-        "hasHp": true,
-        "hp": 180,
-        "maxHp": 180,
-        "defense": {
-          "cutting": 8,
-          "piercing": 8,
-          "chopping": 8,
-          "blunt": 8
-        },
-        "collider": {
-          "type": "BoxCollider2D",
-          "enabled": true,
-          "isTrigger": true,
-          "offset": {
-            "x": 0,
-            "y": 0
-          },
-          "size": {
-            "x": 1,
-            "y": 1
-          },
-          "edgeRadius": 0
-        }
-      },
-      "modules": {
-        "建筑模块": {
-          "prefab": "Module_Building",
-          "id": "建筑模块",
-          "enabled": true,
-          "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Shaft_Iron\",\"SummonerPrefabId\":\"Shaft_Iron_Summoner\"}",
-            "Type": 0
-          }
-        },
-        "机械扭矩模块": {
-          "prefab": "Module_MechanicalNode",
-          "id": "机械扭矩模块",
-          "enabled": true,
-          "data": {
-            "BitData": [],
-            "Type": 0
-          },
-          "parameters": {
-            "DefinitionId": "Shaft_Iron"
-          }
-        }
-      }
-    },
-    {
-      "id": "Gear_Iron",
-      "parent": "BuildingBody_Base",
-      "gameName": "铁制齿轮-建筑",
-      "description": "铁制齿轮-建筑，用于首版机械扭矩系统试玩。",
-      "durability": 1,
-      "maxDurability": 1,
-      "amount": 1,
-      "weight": 8,
-      "volume": 12,
-      "stackable": true,
-      "canBePickedUp": false,
-      "tags": [
-        "35"
-      ],
-      "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
-      },
-      "health": {
-        "hasHp": true,
-        "hp": 180,
-        "maxHp": 180,
-        "defense": {
-          "cutting": 8,
-          "piercing": 8,
-          "chopping": 8,
-          "blunt": 8
-        },
-        "collider": {
-          "type": "BoxCollider2D",
-          "enabled": true,
-          "isTrigger": true,
-          "offset": {
-            "x": 0,
-            "y": 0
-          },
-          "size": {
-            "x": 1,
-            "y": 1
-          },
-          "edgeRadius": 0
-        }
-      },
-      "modules": {
-        "建筑模块": {
-          "prefab": "Module_Building",
-          "id": "建筑模块",
-          "enabled": true,
-          "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Gear_Iron\",\"SummonerPrefabId\":\"Gear_Iron_Summoner\"}",
-            "Type": 0
-          }
-        },
-        "机械扭矩模块": {
-          "prefab": "Module_MechanicalNode",
-          "id": "机械扭矩模块",
-          "enabled": true,
-          "data": {
-            "BitData": [],
-            "Type": 0
-          },
-          "parameters": {
-            "DefinitionId": "Gear_Iron"
-          }
-        }
-      }
-    },
-    {
-      "id": "Gear_Iron_Summoner",
-      "parent": "BuildingSummoner_Base",
-      "gameName": "铁制齿轮",
-      "description": "铁制齿轮，用于首版机械扭矩系统试玩。",
-      "durability": 1,
-      "maxDurability": 1,
-      "amount": 1,
-      "weight": 2,
-      "volume": 5,
-      "stackable": true,
-      "canBePickedUp": true,
-      "tags": [
-        "35"
-      ],
-      "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
-      },
-      "health": {
-        "hasHp": true,
-        "hp": 180,
-        "maxHp": 180,
-        "defense": {
-          "cutting": 8,
-          "piercing": 8,
-          "chopping": 8,
-          "blunt": 8
-        },
-        "collider": {
-          "type": "BoxCollider2D",
-          "enabled": true,
-          "isTrigger": true,
-          "offset": {
-            "x": 0,
-            "y": 0
-          },
-          "size": {
-            "x": 1,
-            "y": 1
-          },
-          "edgeRadius": 0
-        }
-      },
-      "modules": {
-        "建筑模块": {
-          "prefab": "Module_Building",
-          "id": "建筑模块",
-          "enabled": true,
-          "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Gear_Iron\",\"SummonerPrefabId\":\"Gear_Iron_Summoner\"}",
-            "Type": 0
-          }
-        },
-        "机械扭矩模块": {
-          "prefab": "Module_MechanicalNode",
-          "id": "机械扭矩模块",
-          "enabled": true,
-          "data": {
-            "BitData": [],
-            "Type": 0
-          },
-          "parameters": {
-            "DefinitionId": "Gear_Iron"
-          }
-        }
-      }
-    },
-    {
-      "id": "Gearbox_Iron",
-      "parent": "BuildingBody_Base",
-      "gameName": "变速箱-建筑",
-      "description": "变速箱-建筑；左/下侧输入时转速增加50%、动力减少50%；右/上侧输入时转速减少50%、动力增加50%。",
-      "durability": 1,
-      "maxDurability": 1,
-      "amount": 1,
-      "weight": 8,
-      "volume": 12,
-      "stackable": true,
-      "canBePickedUp": false,
-      "tags": [
-        "35"
-      ],
-      "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
-      },
-      "health": {
-        "hasHp": true,
-        "hp": 180,
-        "maxHp": 180,
-        "defense": {
-          "cutting": 8,
-          "piercing": 8,
-          "chopping": 8,
-          "blunt": 8
-        },
-        "collider": {
-          "type": "BoxCollider2D",
-          "enabled": true,
-          "isTrigger": true,
-          "offset": {
-            "x": 0,
-            "y": 0
-          },
-          "size": {
-            "x": 1,
-            "y": 1
-          },
-          "edgeRadius": 0
-        }
-      },
-      "modules": {
-        "建筑模块": {
-          "prefab": "Module_Building",
-          "id": "建筑模块",
-          "enabled": true,
-          "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Gearbox_Iron\",\"SummonerPrefabId\":\"Gearbox_Iron_Summoner\"}",
-            "Type": 0
-          }
-        },
-        "机械扭矩模块": {
-          "prefab": "Module_MechanicalNode",
-          "id": "机械扭矩模块",
-          "enabled": true,
-          "data": {
-            "BitData": [],
-            "Type": 0
-          },
-          "parameters": {
-            "DefinitionId": "Gearbox_Iron"
-          }
-        }
-      }
-    },
-    {
-      "id": "Gearbox_Iron_Summoner",
-      "parent": "BuildingSummoner_Base",
-      "gameName": "变速箱",
-      "description": "左/下侧输入时转速增加50%、动力减少50%；右/上侧输入时转速减少50%、动力增加50%。",
-      "durability": 1,
-      "maxDurability": 1,
-      "amount": 1,
-      "weight": 2,
-      "volume": 5,
-      "stackable": true,
-      "canBePickedUp": true,
-      "tags": [
-        "35"
-      ],
-      "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
-      },
-      "health": {
-        "hasHp": true,
-        "hp": 180,
-        "maxHp": 180,
-        "defense": {
-          "cutting": 8,
-          "piercing": 8,
-          "chopping": 8,
-          "blunt": 8
-        },
-        "collider": {
-          "type": "BoxCollider2D",
-          "enabled": true,
-          "isTrigger": true,
-          "offset": {
-            "x": 0,
-            "y": 0
-          },
-          "size": {
-            "x": 1,
-            "y": 1
-          },
-          "edgeRadius": 0
-        }
-      },
-      "modules": {
-        "建筑模块": {
-          "prefab": "Module_Building",
-          "id": "建筑模块",
-          "enabled": true,
-          "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Gearbox_Iron\",\"SummonerPrefabId\":\"Gearbox_Iron_Summoner\"}",
-            "Type": 0
-          }
-        },
-        "机械扭矩模块": {
-          "prefab": "Module_MechanicalNode",
-          "id": "机械扭矩模块",
-          "enabled": true,
-          "data": {
-            "BitData": [],
-            "Type": 0
-          },
-          "parameters": {
-            "DefinitionId": "Gearbox_Iron"
-          }
-        }
-      }
-    },
-    {
       "id": "CrossShaft",
       "parent": "BuildingBody_Base",
       "gameName": "跨轴器-建筑",
@@ -1775,7 +1044,11 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_CrossShaft_Frame.png",
+        "spriteStates": {
+          "shaftRollingCore": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Shaft_Wood_Linked_RollingCore.png",
+          "shaftEndRings": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Shaft_Wood_Linked_EndRings.png"
+        }
       },
       "health": {
         "hasHp": true,
@@ -1810,6 +1083,10 @@
           "data": {
             "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"CrossShaft\",\"SummonerPrefabId\":\"CrossShaft_Summoner\"}",
             "Type": 0
+          },
+          "parameters": {
+            "LightOcclusionMode": "None",
+            "CastSunShadow": false
           }
         },
         "机械扭矩模块": {
@@ -1842,7 +1119,7 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_CrossShaft_Horizontal.png"
       },
       "health": {
         "hasHp": true,
@@ -1909,7 +1186,11 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/Millstone_Idle.png",
+        "spriteStates": {
+          "rotor": "Assets/6_Art/Generated/Mechanical/World/Millstone_Rotor.png",
+          "axisPorts": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Shaft_Wood_Linked.png"
+        }
       },
       "health": {
         "hasHp": true,
@@ -1955,7 +1236,10 @@
             "Type": 0
           },
           "parameters": {
-            "DefinitionId": "Millstone"
+            "DefinitionId": "Millstone",
+            "AxisPortLayout": "centeredShaftRings",
+            "AxisPortOffsetY": 0,
+            "RotorLocalPosition": { "x": 0, "y": 0, "z": 0 }
           }
         }
       }
@@ -1976,7 +1260,11 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/Millstone_Idle.png",
+        "spriteStates": {
+          "rotor": "Assets/6_Art/Generated/Mechanical/World/Millstone_Rotor.png",
+          "axisPorts": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Shaft_Wood_Linked.png"
+        }
       },
       "health": {
         "hasHp": true,
@@ -2022,7 +1310,10 @@
             "Type": 0
           },
           "parameters": {
-            "DefinitionId": "Millstone"
+            "DefinitionId": "Millstone",
+            "AxisPortLayout": "centeredShaftRings",
+            "AxisPortOffsetY": 0,
+            "RotorLocalPosition": { "x": 0, "y": 0, "z": 0 }
           }
         }
       }
@@ -2031,7 +1322,7 @@
       "id": "MechanicalBellows",
       "parent": "BuildingBody_Base",
       "gameName": "机械风箱-建筑",
-      "description": "机械风箱-建筑，用于首版机械扭矩系统试玩。",
+      "description": "出风口朝向相邻熔炉或高炉时，按转速提升其温度上限；60 RPM 时最高增加 500℃。",
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,
@@ -2043,7 +1334,10 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Mechanical/Items/Item_MechanicalBellows.png",
+        "spriteStates": {
+          "inputShaft": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Gear_Wood_InputShaft.png"
+        }
       },
       "health": {
         "hasHp": true,
@@ -2089,7 +1383,8 @@
             "Type": 0
           },
           "parameters": {
-            "DefinitionId": "MechanicalBellows"
+            "DefinitionId": "MechanicalBellows",
+            "InputShaftLocalPosition": { "x": -0.28125, "y": 0, "z": 0 }
           }
         }
       }
@@ -2098,7 +1393,7 @@
       "id": "MechanicalBellows_Summoner",
       "parent": "BuildingSummoner_Base",
       "gameName": "机械风箱",
-      "description": "机械风箱，用于首版机械扭矩系统试玩。",
+      "description": "出风口朝向相邻熔炉或高炉时，按转速提升其温度上限；60 RPM 时最高增加 500℃。",
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,
@@ -2110,7 +1405,10 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Mechanical/Items/Item_MechanicalBellows.png",
+        "spriteStates": {
+          "inputShaft": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Gear_Wood_InputShaft.png"
+        }
       },
       "health": {
         "hasHp": true,
@@ -2156,7 +1454,8 @@
             "Type": 0
           },
           "parameters": {
-            "DefinitionId": "MechanicalBellows"
+            "DefinitionId": "MechanicalBellows",
+            "InputShaftLocalPosition": { "x": -0.28125, "y": 0, "z": 0 }
           }
         }
       }
@@ -2177,7 +1476,7 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/Sawmill.png"
       },
       "health": {
         "hasHp": true,
@@ -2244,7 +1543,7 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/Sawmill.png"
       },
       "health": {
         "hasHp": true,
@@ -2299,7 +1598,7 @@
       "id": "MechanicalHammer",
       "parent": "BuildingBody_Base",
       "gameName": "机械锻锤-建筑",
-      "description": "机械锻锤-建筑，用于首版机械扭矩系统试玩。",
+      "description": "由机械动力驱动，将生铁锤炼为熟铁，并把熟铁、铜、青铜、锡和钢锭锻打成对应金属板。",
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,
@@ -2311,7 +1610,10 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/MechanicalHammer_Building.png",
+        "spriteStates": {
+          "axisPorts": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Shaft_Wood_Linked_EndRings.png"
+        }
       },
       "health": {
         "hasHp": true,
@@ -2357,7 +1659,9 @@
             "Type": 0
           },
           "parameters": {
-            "DefinitionId": "MechanicalHammer"
+            "DefinitionId": "MechanicalHammer",
+            "AxisPortLayout": "centeredShaftRings",
+            "AxisPortDrawOnTop": true
           }
         }
       }
@@ -2366,7 +1670,7 @@
       "id": "MechanicalHammer_Summoner",
       "parent": "BuildingSummoner_Base",
       "gameName": "机械锻锤",
-      "description": "机械锻锤，用于首版机械扭矩系统试玩。",
+      "description": "机械锻锤，可接入传动轴自动处理生铁、熟铁、铜、青铜、锡和钢锭。",
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,
@@ -2378,7 +1682,10 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/MechanicalHammer_Building.png",
+        "spriteStates": {
+          "axisPorts": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Shaft_Wood_Linked_EndRings.png"
+        }
       },
       "health": {
         "hasHp": true,
@@ -2424,8 +1731,110 @@
             "Type": 0
           },
           "parameters": {
-            "DefinitionId": "MechanicalHammer"
+            "DefinitionId": "MechanicalHammer",
+            "AxisPortLayout": "centeredShaftRings",
+            "AxisPortDrawOnTop": true
           }
+        }
+      }
+    },
+    {
+      "id": "CopperAnvil",
+      "parent": "BuildingBody_Base",
+      "gameName": "铜砧-建筑",
+      "description": "铜砧可手动锻打各类金属锭；每次锻打推进 0.7 工作秒。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 45,
+      "volume": 60,
+      "stackable": false,
+      "canBePickedUp": false,
+      "tags": ["35", "ManualForge"],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Building/Anvils/CopperAnvil_World.png"
+      },
+      "health": {
+        "hasHp": true,
+        "hp": 180,
+        "maxHp": 180,
+        "defense": { "cutting": 8, "piercing": 8, "chopping": 8, "blunt": 8 },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": { "x": 0, "y": 0 },
+          "size": { "x": 1, "y": 1 },
+          "edgeRadius": 0
+        }
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"CopperAnvil\",\"SummonerPrefabId\":\"CopperAnvil_Summoner\",\"SharedModuleIds\":[\"手动加工模块\"]}",
+            "Type": 0
+          },
+          "parameters": { "RequiresPlacementRequest": true }
+        },
+        "手动加工模块": {
+          "prefab": "Module_ManualProcessor",
+          "id": "手动加工模块",
+          "enabled": true,
+          "data": { "BitData": [], "Type": 0 },
+          "parameters": { "Station": "hand_forge", "WorkPerClick": 0.7 }
+        }
+      }
+    },
+    {
+      "id": "CopperAnvil_Summoner",
+      "parent": "BuildingSummoner_Base",
+      "gameName": "铜砧",
+      "description": "铜砧可手动锻打各类金属锭；每次锻打推进 0.7 工作秒。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 18,
+      "volume": 24,
+      "stackable": false,
+      "canBePickedUp": true,
+      "tags": ["35", "ManualForge"],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Building/Anvils/CopperAnvil_World.png"
+      },
+      "health": {
+        "hasHp": true,
+        "hp": 180,
+        "maxHp": 180,
+        "defense": { "cutting": 8, "piercing": 8, "chopping": 8, "blunt": 8 },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": { "x": 0, "y": 0 },
+          "size": { "x": 1, "y": 1 },
+          "edgeRadius": 0
+        }
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"CopperAnvil\",\"SummonerPrefabId\":\"CopperAnvil_Summoner\",\"SharedModuleIds\":[\"手动加工模块\"]}",
+            "Type": 0
+          },
+          "parameters": { "RequiresPlacementRequest": true }
+        },
+        "手动加工模块": {
+          "prefab": "Module_ManualProcessor",
+          "id": "手动加工模块",
+          "enabled": true,
+          "data": { "BitData": [], "Type": 0 },
+          "parameters": { "Station": "hand_forge", "WorkPerClick": 0.7 }
         }
       }
     }

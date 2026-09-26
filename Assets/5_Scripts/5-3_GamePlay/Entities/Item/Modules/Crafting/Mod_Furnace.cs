@@ -46,6 +46,10 @@ public class Mod_Furnace : Module, IInteractable, IItemModuleDependencyBinder
     [Tooltip("燃料容器，用于存放熔炉所需的燃料物品")]
     public Inventory FuelInventory;
     public Mod_Fuel mod_Fuel; // 燃料模块
+    [Tooltip("是否接受相邻机械风箱的定向鼓风增温，由物品定义配置。")]
+    public bool acceptsMechanicalBellows;
+    [Tooltip("按已消耗燃料标签累计并放入燃料栏的副产物规则，可由物品定义配置。")]
+    public List<FurnaceFuelByproductRule> fuelByproductRules = new();
     public List<string> ignitionItemIds = new List<string> { "FireSeed" }; // 可用于点火的火种ID
     public List<string> ignitionTags = new List<string> { "火种" }; // 可用于点火的火种标签
     public float ignitionFuelValueOverride = 8f; // 火种有效燃料值（较小）
@@ -69,6 +73,11 @@ public class Mod_Furnace : Module, IInteractable, IItemModuleDependencyBinder
         mod_Fuel = item.GetComponentInChildren<Mod_Fuel>();
         localTemperatureSource = GetComponent<LocalTemperatureSource>();
         RestoreSavedState();
+        Data ??= new ModSmeltingData();
+        Data.FuelByproductProgress ??= new Dictionary<string, int>();
+        Data.PendingFuelByproductCount ??= new Dictionary<string, int>();
+        fuelByproductRules ??= new List<FurnaceFuelByproductRule>();
+        FurnaceFuelByproductProcessor.ValidateRules(fuelByproductRules);
         InputInventory.InitData();
         OutputInventory.InitData();
         FuelInventory.InitData();
@@ -245,24 +254,17 @@ public class Mod_Furnace : Module, IInteractable, IItemModuleDependencyBinder
                 {
                     // 从物品转化为燃料值
                     ItemSlot slot = FuelInventory.Data.GetItemSlotByModuleID(fuelItem.ID);
-                    if (slot != null && slot.itemData != null && slot.itemData.Stack.Amount > 0)
+                    Ex_ModData_MemoryPackable fuelData = fuelItem as Ex_ModData_MemoryPackable;
+                    if (slot != null && TryConsumeFuel(slot, fuelData, out ItemData consumedFuel, out FuelData fuel))
                     {
-                        slot.itemData.Stack.Amount -= 1; // 扣 1 个燃料物品
-                        slot.RefreshUI();
+                        ResolveFuelParams(consumedFuel, fuel, out float fuelValue, out float maxTemperature);
+                        mod_Fuel.AddFuel(fuelValue);
 
-                        Ex_ModData_MemoryPackable fuelData = fuelItem as Ex_ModData_MemoryPackable;
-                        if (fuelData != null)
-                        {
-                            fuelData.OutData(out FuelData fuel);
-                            ResolveFuelParams(slot.itemData, fuel, out float fuelValue, out float maxTemperature);
-                            mod_Fuel.AddFuel(fuelValue);
+                        // 点燃燃料
+                        mod_Fuel.SetIgnited(true);
 
-                            // 点燃燃料
-                            mod_Fuel.SetIgnited(true);
-
-                            // 温度上限取决于燃料
-                            Data.MaxTemperature = maxTemperature;
-                        }
+                        // 温度上限取决于燃料
+                        Data.MaxTemperature = maxTemperature;
 
                         SmeltingProcess(deltaTime); // 继续熔炼
                     }
@@ -295,6 +297,10 @@ public class Mod_Furnace : Module, IInteractable, IItemModuleDependencyBinder
         }
 
         RefreshLocalTemperatureSource();
+
+        if (FurnaceFuelByproductProcessor.TryFlushPendingOutputs(
+                FuelInventory?.Data, fuelByproductRules, Data, GameRes.Instance))
+            Save();
 
         // 同步所有UI
         UpdateUI();
@@ -378,6 +384,15 @@ public class Mod_Furnace : Module, IInteractable, IItemModuleDependencyBinder
 
 
     #region 熔炼核心逻辑
+    /// <summary>按原燃料与炉体上限计算基础温度，再叠加机械风箱的转速增温。</summary>
+    private float ResolveEffectiveMaxTemperature(float bellowsBoost)
+    {
+        float baseMaxTemperature = Data.MaxTemperature > 0f
+            ? Mathf.Min(Data.MaxTemperature, Data.MaxTemperatureLimit)
+            : Data.MaxTemperatureLimit;
+        return baseMaxTemperature + bellowsBoost * MechanicalCatalog.Settings.BellowsHeatBonus;
+    }
+
     private void SmeltingProcess(float deltaTime)
     {
         // 检查输入槽是否有物品
@@ -394,16 +409,16 @@ public class Mod_Furnace : Module, IInteractable, IItemModuleDependencyBinder
             }
         }
 
-        // 计算实际的最大温度（受限于熔炉本身的最大温度限制）
-        float actualMaxTemp = Data.MaxTemperature > 0 ? Mathf.Min(Data.MaxTemperature, Data.MaxTemperatureLimit) : Data.MaxTemperatureLimit;
-        float bellows = MechanicalWorld.GetBellowsBoost(item.transform.position);
-        actualMaxTemp = Mathf.Min(Data.MaxTemperatureLimit, actualMaxTemp + bellows * MechanicalCatalog.Settings.BellowsHeatBonus);
+        float bellows = acceptsMechanicalBellows
+            ? MechanicalWorld.GetBellowsBoost(item.transform.position)
+            : 0f;
+        float actualMaxTemp = ResolveEffectiveMaxTemperature(bellows);
 
         // 如果没有物品 → 进度归零（表示干烧）
         if (!hasInputItem)
         {
             Data.SmeltingProgress = 0f;
-            // 温度仍然会上升到燃料允许的上限，但不超过熔炉限制
+            // 温度仍然会上升到当前燃料与风箱共同决定的有效上限
             Data.Temperature = Mathf.Min(Data.Temperature + Data.TemperatureUpSpeed * (1f + bellows) * 2f * deltaTime, actualMaxTemp);
             // 继续消耗燃料
             mod_Fuel?.ConsumeFuel(deltaTime);
@@ -412,7 +427,7 @@ public class Mod_Furnace : Module, IInteractable, IItemModuleDependencyBinder
 
         // ===== 以下是正常熔炼逻辑 =====
 
-        // 温度随时间上升，但不超过熔炉限制
+        // 温度随时间上升，但不超过当前有效上限
         Data.Temperature = Mathf.Min(Data.Temperature + Data.TemperatureUpSpeed * (1f + bellows) * deltaTime, actualMaxTemp);
 
         // 根据温度计算当前熔炼速度
@@ -552,7 +567,7 @@ public class Mod_Furnace : Module, IInteractable, IItemModuleDependencyBinder
         }
 
         ItemSlot fuelSlot = FuelInventory.Data.GetItemSlotByModuleID(fuelItem.ID);
-        if (fuelSlot == null || fuelSlot.itemData == null || fuelSlot.itemData.Stack.Amount <= 0)
+        if (fuelSlot?.itemData?.Stack == null || fuelSlot.itemData.Stack.Amount <= 0)
         {
             Debug.LogWarning("无法点火：燃料数量不足！");
             return;
@@ -565,17 +580,19 @@ public class Mod_Furnace : Module, IInteractable, IItemModuleDependencyBinder
             return;
         }
 
-        if (!IsIgnitionFuel(fuelSlot.itemData))
+        if (!IsIgnitionFuel(fuelSlot.itemData) && !HasActivelyBurningHeldIgnitionSource())
         {
-            Debug.LogWarning($"无法点火：首个点火燃料必须为火种。当前={fuelSlot.itemData.IDName}");
+            Debug.LogWarning($"无法点火：需要火种或手持燃烧中的火把。当前燃料={fuelSlot.itemData.IDName}");
             return;
         }
 
-        fuelData.OutData(out FuelData fuel);
-        fuelSlot.itemData.Stack.Amount -= 1;
-        fuelSlot.RefreshUI();
+        if (!TryConsumeFuel(fuelSlot, fuelData, out ItemData consumedFuel, out FuelData fuel))
+        {
+            Debug.LogWarning("无法点火：燃料数量不足！");
+            return;
+        }
 
-        ResolveFuelParams(fuelSlot.itemData, fuel, out float fuelValue, out float maxTemperature);
+        ResolveFuelParams(consumedFuel, fuel, out float fuelValue, out float maxTemperature);
         mod_Fuel.AddFuel(fuelValue);
 
         // 温度上限取决于当前消耗的燃料
@@ -609,6 +626,48 @@ public class Mod_Furnace : Module, IInteractable, IItemModuleDependencyBinder
             return false;
 
         return itemData.Tags.ContainsAnyTag(ignitionTags);
+    }
+
+    /// <summary>读取玩家当前手持物的燃烧模块，熄灭或无燃料时不允许作为点火源。</summary>
+    private bool HasActivelyBurningHeldIgnitionSource()
+    {
+        if (currentInteractingPlayer == null)
+            return false;
+
+        Inventory_HotBar hotBar = currentInteractingPlayer.itemMods?.GetMod_ByID<Inventory_HotBar>(ModText.Hotbar);
+        Item heldItem = hotBar?.CurentSelectItem;
+        if (heldItem == null || !heldItem.InHand || heldItem.Owner != currentInteractingPlayer)
+            return false;
+
+        Mod_Combustion combustion = heldItem.itemMods?.GetMod_ByID<Mod_Combustion>(Mod_Combustion.ModuleId);
+        return combustion?.IsActivelyBurning == true;
+    }
+
+    /// <summary>通过库存事务消费一件燃料，并登记其标签对应的副产物进度。</summary>
+    private bool TryConsumeFuel(
+        ItemSlot sourceSlot,
+        Ex_ModData_MemoryPackable fuelModuleData,
+        out ItemData consumedFuel,
+        out FuelData fuel)
+    {
+        consumedFuel = null;
+        fuel = default;
+        if (FuelInventory?.Data == null || sourceSlot?.itemData?.Stack == null ||
+            sourceSlot.itemData.Stack.Amount <= 0f || fuelModuleData == null)
+            return false;
+
+        fuelModuleData.OutData(out fuel);
+        if (!FuelInventory.Data.TryConsumeFromSlot(sourceSlot, 1, out consumedFuel))
+            return false;
+
+        bool stateChanged = FurnaceFuelByproductProcessor.RecordConsumedFuel(
+            consumedFuel, fuelByproductRules, Data);
+        stateChanged |= FurnaceFuelByproductProcessor.TryFlushPendingOutputs(
+            FuelInventory.Data, fuelByproductRules, Data, GameRes.Instance);
+        if (stateChanged)
+            Save();
+
+        return true;
     }
 
     private void ResolveFuelParams(ItemData itemData, FuelData rawFuelData, out float fuelValue, out float maxTemperature)

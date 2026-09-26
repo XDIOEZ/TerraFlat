@@ -303,146 +303,6 @@
       "actions": []
     },
     {
-      "id": "core:mechanical_Shaft_Copper",
-      "displayName": "铜制传动轴",
-      "recipeType": "crafting",
-      "inputRule": "unordered",
-      "gridWidth": 2,
-      "gridHeight": 1,
-      "allowMirror": false,
-      "requiredStation": "workbench",
-      "temperature": 0,
-      "maxTemperature": 2000,
-      "inputs": [
-        {
-          "slot": 0,
-          "match": "exact_item",
-          "itemId": "Shaft_Wood_Summoner",
-          "tag": "",
-          "amount": 2
-        },
-        {
-          "slot": 1,
-          "match": "exact_item",
-          "itemId": "Ingot_Copper",
-          "tag": "",
-          "amount": 1
-        }
-      ],
-      "outputs": [
-        {
-          "itemId": "Shaft_Copper_Summoner",
-          "amount": 2
-        }
-      ],
-      "actions": []
-    },
-    {
-      "id": "core:mechanical_Gear_Copper",
-      "displayName": "铜制齿轮",
-      "recipeType": "crafting",
-      "inputRule": "unordered",
-      "gridWidth": 2,
-      "gridHeight": 1,
-      "allowMirror": false,
-      "requiredStation": "workbench",
-      "temperature": 0,
-      "maxTemperature": 2000,
-      "inputs": [
-        {
-          "slot": 0,
-          "match": "exact_item",
-          "itemId": "Gear_Wood_Summoner",
-          "tag": "",
-          "amount": 1
-        },
-        {
-          "slot": 1,
-          "match": "exact_item",
-          "itemId": "Ingot_Copper",
-          "tag": "",
-          "amount": 1
-        }
-      ],
-      "outputs": [
-        {
-          "itemId": "Gear_Copper_Summoner",
-          "amount": 1
-        }
-      ],
-      "actions": []
-    },
-    {
-      "id": "core:mechanical_Shaft_Iron",
-      "displayName": "铁制传动轴",
-      "recipeType": "crafting",
-      "inputRule": "unordered",
-      "gridWidth": 2,
-      "gridHeight": 1,
-      "allowMirror": false,
-      "requiredStation": "workbench",
-      "temperature": 0,
-      "maxTemperature": 2000,
-      "inputs": [
-        {
-          "slot": 0,
-          "match": "exact_item",
-          "itemId": "Shaft_Wood_Summoner",
-          "tag": "",
-          "amount": 2
-        },
-        {
-          "slot": 1,
-          "match": "exact_item",
-          "itemId": "Ingot_WroughtIron",
-          "tag": "",
-          "amount": 1
-        }
-      ],
-      "outputs": [
-        {
-          "itemId": "Shaft_Iron_Summoner",
-          "amount": 2
-        }
-      ],
-      "actions": []
-    },
-    {
-      "id": "core:mechanical_Gear_Iron",
-      "displayName": "铁制齿轮",
-      "recipeType": "crafting",
-      "inputRule": "unordered",
-      "gridWidth": 2,
-      "gridHeight": 1,
-      "allowMirror": false,
-      "requiredStation": "workbench",
-      "temperature": 0,
-      "maxTemperature": 2000,
-      "inputs": [
-        {
-          "slot": 0,
-          "match": "exact_item",
-          "itemId": "Gear_Wood_Summoner",
-          "tag": "",
-          "amount": 1
-        },
-        {
-          "slot": 1,
-          "match": "exact_item",
-          "itemId": "Ingot_WroughtIron",
-          "tag": "",
-          "amount": 1
-        }
-      ],
-      "outputs": [
-        {
-          "itemId": "Gear_Iron_Summoner",
-          "amount": 1
-        }
-      ],
-      "actions": []
-    },
-    {
       "id": "core:mechanical_CrossShaft",
       "displayName": "跨轴器",
       "recipeType": "crafting",
@@ -705,6 +565,26 @@
           "itemId": "MechanicalHammer_Summoner",
           "amount": 1
         }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:mechanical_CopperAnvil",
+      "displayName": "铜砧",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "gridWidth": 2,
+      "gridHeight": 1,
+      "allowMirror": false,
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        { "slot": 0, "match": "exact_item", "itemId": "Ingot_Copper", "tag": "", "amount": 4 },
+        { "slot": 1, "match": "exact_item", "itemId": "Plank", "tag": "", "amount": 2 }
+      ],
+      "outputs": [
+        { "itemId": "CopperAnvil_Summoner", "amount": 1 }
       ],
       "actions": []
     }

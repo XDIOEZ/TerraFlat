@@ -13,7 +13,7 @@ public sealed class MechanicalResourceCatalogValidator : IResourceCatalogValidat
             foreach (var output in process.Outputs)
                 if (!resources.ItemDefinitions.ContainsKey(output.ItemName)) errors.Add("机械加工产物未注册：" + output.ItemName);
         }
-        foreach (string id in new[] { "Module_HandDrill", "Module_MechanicalNode", "UI_HandDrill", "UI_Mechanical" })
+        foreach (string id in new[] { "Module_HandDrill", "Module_ManualProcessor", "Module_MechanicalNode", "UI_HandDrill", "UI_Mechanical" })
             if (resources.GetPrefab(id, false) == null) errors.Add("机械资源未注册：" + id);
     }
     #endregion

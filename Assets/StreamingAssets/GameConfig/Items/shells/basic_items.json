@@ -1529,7 +1529,7 @@
       "volume": 1.1,
       "stackable": true,
       "canBePickedUp": true,
-      "tags": [],
+      "tags": ["readable.writing.ink"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Tools/Item_Tool_229.png",
         "rendererLocalPosition": {
@@ -5714,7 +5714,7 @@
       "volume": 0.45,
       "stackable": true,
       "canBePickedUp": true,
-      "tags": [],
+      "tags": ["readable.writing.ink"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Charcoal/Charcoal_Icon.png",
         "collider": {
@@ -5841,7 +5841,7 @@
       "canBePickedUp": true,
       "tags": [],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Mechanical/Items/DrilledPlank_Idle.png"
       },
       "modules": {}
     },
@@ -5862,7 +5862,7 @@
         "Mineral"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Mechanical/Items/DrilledStoneSlab_Idle.png"
       },
       "modules": {}
     },
@@ -5898,7 +5898,7 @@
       "tags": ["Material", "Fiber"],
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Materials/Material.prefab",
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Cotton/Cotton_Icon.png"
       }
     },
     {
@@ -5912,7 +5912,22 @@
       "canBePickedUp": true,
       "tags": ["Material"],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/WoodAsh/WoodAsh_Icon.png"
+      },
+      "modules": {}
+    },
+    {
+      "id": "Paper",
+      "parent": "BasicItem_Base",
+      "gameName": "纸张",
+      "description": "可用于扩充可阅读笔记的页数。",
+      "weight": 0.02,
+      "volume": 0.02,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": ["readable.paper"],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Paper/Paper_Icon.png"
       },
       "modules": {}
     },
@@ -5929,6 +5944,187 @@
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
       },
+      "modules": {}
+    },
+    {
+      "id": "IronPlate",
+      "parent": "BasicItem_Base",
+      "gameName": "铁板",
+      "description": "由熟铁锭锻打制成的铁板，可用于后续金属制作。",
+      "weight": 2.5,
+      "volume": 0.2,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": ["Metal", "Iron", "WroughtIron", "IronPlate"],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/IronPlate/IronPlate_Icon.png"
+      },
+      "modules": {}
+    },
+    {
+      "id": "RawIronPlate",
+      "parent": "BasicItem_Base",
+      "gameName": "生铁板",
+      "description": "由生铁锭手工锻打制成的板材。",
+      "weight": 2.4,
+      "volume": 0.2,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": ["Metal", "Iron", "RawIron", "RawIronPlate"],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/MetalPlates/RawIronPlate_Icon.png"
+      },
+      "modules": {}
+    },
+    {
+      "id": "CopperPlate",
+      "parent": "BasicItem_Base",
+      "gameName": "铜板",
+      "description": "由铜锭锻打制成的板材。",
+      "weight": 2.0,
+      "volume": 0.2,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": ["Metal", "Copper", "CopperPlate"],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/MetalPlates/CopperPlate_Icon.png"
+      },
+      "modules": {}
+    },
+    {
+      "id": "BronzePlate",
+      "parent": "BasicItem_Base",
+      "gameName": "青铜板",
+      "description": "由青铜锭锻打制成的板材。",
+      "weight": 2.2,
+      "volume": 0.2,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": ["Metal", "Bronze", "BronzePlate"],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/MetalPlates/BronzePlate_Icon.png"
+      },
+      "modules": {}
+    },
+    {
+      "id": "TinPlate",
+      "parent": "BasicItem_Base",
+      "gameName": "锡板",
+      "description": "由锡锭锻打制成的板材。",
+      "weight": 1.7,
+      "volume": 0.2,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": ["Metal", "Tin", "TinPlate"],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/MetalPlates/TinPlate_Icon.png"
+      },
+      "modules": {}
+    },
+    {
+      "id": "SteelPlate",
+      "parent": "BasicItem_Base",
+      "gameName": "钢板",
+      "description": "由钢锭锻打制成的板材。",
+      "weight": 2.6,
+      "volume": 0.2,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": ["Metal", "Steel", "SteelPlate"],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/MetalPlates/SteelPlate_Icon.png"
+      },
+      "modules": {}
+    },
+    {
+      "id": "OrePowder_Coal",
+      "parent": "BasicItem_Base",
+      "gameName": "煤粉",
+      "description": "石磨研磨煤矿石得到的细煤粉，可用于后续材料加工。",
+      "weight": 1,
+      "volume": 1.1,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": ["Material", "Powder"],
+      "visual": { "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Powders/OrePowder_Coal.png" },
+      "modules": {}
+    },
+    {
+      "id": "OrePowder_Copper",
+      "parent": "BasicItem_Base",
+      "gameName": "孔雀石粉",
+      "description": "石磨研磨孔雀石得到的矿粉，可用于后续材料加工。",
+      "weight": 2.2,
+      "volume": 0.75,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": ["Material", "Powder"],
+      "visual": { "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Powders/OrePowder_Copper.png" },
+      "modules": {}
+    },
+    {
+      "id": "OrePowder_Flint",
+      "parent": "BasicItem_Base",
+      "gameName": "燧石粉",
+      "description": "石磨研磨燧石得到的细粉，可用于后续材料加工。",
+      "weight": 0.35,
+      "volume": 0.18,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": ["Material", "Powder"],
+      "visual": { "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Powders/OrePowder_Flint.png" },
+      "modules": {}
+    },
+    {
+      "id": "OrePowder_Iron",
+      "parent": "BasicItem_Base",
+      "gameName": "铁矿粉",
+      "description": "石磨研磨铁矿石得到的铁矿粉，可用于后续材料加工。",
+      "weight": 2.5,
+      "volume": 0.75,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": ["Material", "Powder"],
+      "visual": { "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Powders/OrePowder_Iron.png" },
+      "modules": {}
+    },
+    {
+      "id": "OrePowder_Tin",
+      "parent": "BasicItem_Base",
+      "gameName": "锡矿粉",
+      "description": "石磨研磨锡矿石得到的锡矿粉，可用于后续材料加工。",
+      "weight": 1.8,
+      "volume": 0.7,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": ["Material", "Powder"],
+      "visual": { "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Powders/OrePowder_Tin.png" },
+      "modules": {}
+    },
+    {
+      "id": "OrePowder_Stone",
+      "parent": "BasicItem_Base",
+      "gameName": "石粉",
+      "description": "石磨研磨石头得到的石粉，可用于后续材料加工。",
+      "weight": 1.5,
+      "volume": 0.7,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": ["Material", "Powder"],
+      "visual": { "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Powders/OrePowder_Stone.png" },
+      "modules": {}
+    },
+    {
+      "id": "OrePowder_Niter",
+      "parent": "BasicItem_Base",
+      "gameName": "硝石粉",
+      "description": "石磨研磨硝石得到的细粉，可用于制作肥料。",
+      "weight": 1,
+      "volume": 0.55,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": ["Material", "Powder"],
+      "visual": { "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Powders/OrePowder_Niter.png" },
       "modules": {}
     }
   ]

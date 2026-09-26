@@ -10,6 +10,7 @@ public sealed class MechanicalPanelSession : IDisposable
     private readonly BasePanel panel;
     private readonly MechanicalPanelView view;
     private readonly Item owner;
+    private readonly MechanicalNode mechanicalOwner; // 已安装机械的纯数据目标。
     private readonly MechanicalProcessor processor;
     private readonly Action<Player> action;
     private readonly Func<string> status;
@@ -23,10 +24,10 @@ public sealed class MechanicalPanelSession : IDisposable
         this.owner = owner; this.processor = processor; this.action = action; this.status = status; this.actionLabel = actionLabel;
         panel = UIManager.Instance.CreatePanelFromGameObject(GameRes.Instance.GetPrefab(prefabId));
         view = panel.GetComponent<MechanicalPanelView>() ?? throw new InvalidOperationException(prefabId + " 缺少正式视图绑定。");
+        view.SetProcessingVisible(processor != null);
         InventoryPanelLayout.ApplyDefaultCraftingPosition(panel.Dragger != null ? panel.Dragger.rectTransform : panel.rectTransform);
         view.ActionButton.onClick.AddListener(OnAction);
         view.CloseButton.onClick.AddListener(Close);
-        view.SetProcessingVisible(processor != null);
         if (processor != null)
         {
             processor.Input.item = processor.Output.item = owner;
@@ -38,13 +39,23 @@ public sealed class MechanicalPanelSession : IDisposable
         }
         panel.Close();
     }
+
+    /// <summary>纯数据机械节点使用相同面板，不需要对应世界 Item。</summary>
+    public MechanicalPanelSession(string prefabId, MechanicalNode owner, MechanicalProcessor processor,
+        Action<Player> action, Func<string> status, Func<string> actionLabel)
+        : this(prefabId, (Item)null, processor, action, status, actionLabel)
+    {
+        mechanicalOwner = owner;
+    }
     public void Toggle(Item playerItem)
     {
         if (panel.IsOpen()) { Close(); return; }
         actor = playerItem as Player ?? playerItem?.GetComponentInParent<Player>();
         var hand = playerItem?.GetComponentInChildren<Mod_Hand>()?.HandInventory;
         if (hand == null) throw new InvalidOperationException("加工面板缺少玩家手部库存。");
-        panel.GetComponent<BuildingPanelActions>().Bind(owner);
+        BuildingPanelActions buildingActions = panel.GetComponent<BuildingPanelActions>();
+        if (mechanicalOwner != null) buildingActions.BindMechanical(mechanicalOwner);
+        else buildingActions.Bind(owner);
         if (processor != null)
         {
             processor.Input.DefaultTarget_Inventory = processor.Output.DefaultTarget_Inventory = hand;
@@ -56,10 +67,12 @@ public sealed class MechanicalPanelSession : IDisposable
     public void Refresh()
     {
         if (panel == null || !panel.IsOpen()) return;
-        if (GameRes.Instance.TryGetItemDefinition(owner.itemData.IDName, out var definition)) view.Title.text = definition.DisplayName;
+        string itemId = mechanicalOwner?.Definition.Id ?? owner?.itemData?.IDName;
+        if (itemId != null && GameRes.Instance.TryGetItemDefinition(itemId, out var definition))
+            view.Title.text = definition.DisplayName;
         view.Status.text = status?.Invoke() ?? string.Empty;
         string caption = actionLabel?.Invoke() ?? string.Empty;
-        view.ActionButton.gameObject.SetActive(!string.IsNullOrWhiteSpace(caption));
+        view.SetActionVisible(!string.IsNullOrWhiteSpace(caption));
         view.ActionButton.GetComponentInChildren<TMP_Text>(true).text = FlatWorldLocalizationService.GetUiText(caption);
         if (processor == null) return;
         var result = processor.Preview();

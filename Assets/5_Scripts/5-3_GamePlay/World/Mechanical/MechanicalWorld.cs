@@ -8,25 +8,42 @@ using UnityEngine.SceneManagement;
 /// <summary>由 ItemMgr 调度的机械世界。权威模拟独立于地图表现；只有拓扑变化重构图，整网先恢复再 Tick，休眠时保存库存并释放加工器。</summary>
 public static class MechanicalWorld
 {
+    /// <summary>区块显示格与规范化机械节点的配对，循环接缝处两套坐标不能混用。</summary>
+    public readonly struct MechanicalRenderCell
+    {
+        public readonly MechanicalNode Node;
+        public readonly Vector2Int DisplayCell;
+        public MechanicalRenderCell(MechanicalNode node, Vector2Int displayCell)
+        { Node = node; DisplayCell = displayCell; }
+    }
+
     #region 会话与扩展
     private static readonly Dictionary<int, MechanicalNode> nodes = new();
+    private static readonly Dictionary<int, MechanicalInteractionTarget> interactions = new();
+    private static readonly Dictionary<MechanicalProcessor, MechanicalNode> processorOwners = new();
     private static readonly Dictionary<string, Func<MechanicalNode, float>> sourceProviders = new(StringComparer.Ordinal);
+    private static readonly Dictionary<string, Func<MechanicalNode, float>> sourceRpmProviders = new(StringComparer.Ordinal);
     private static readonly List<Vector2Int> players = new();
-    private static readonly List<MechanicalNode> presentation = new();
     private static MechanicalNetworkGraph graph;
     private static GameSaveData owner;
     private static string worldKey;
     private static bool dirty;
     private static bool suppressRemoval;
     private static float elapsed;
-    private static float viewElapsed;
     public static IReadOnlyList<MechanicalNetwork> Networks => graph?.Networks;
+    /// <summary>机械数据格变化时通知区块表现与导航，不依赖世界物品实例。</summary>
+    public static event Action<Vector2Int> CellChanged;
+    public static event Action<MechanicalNode> NodeStateChanged; // 联机只在数据变化时采集节点快照。
+    public static event Action<int> NodeRemoved; // 权威节点删除通知。
+    public static event Action<MechanicalNode> VisualSpeedChanged; // 只传输转速，不传重复库存快照。
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void Reset()
     {
-        nodes.Clear(); sourceProviders.Clear(); players.Clear(); presentation.Clear();
-        graph = null; owner = null; worldKey = null; dirty = false; suppressRemoval = false; elapsed = viewElapsed = 0;
+        nodes.Clear(); interactions.Clear(); processorOwners.Clear(); sourceProviders.Clear(); sourceRpmProviders.Clear(); players.Clear();
+        graph = null; owner = null; worldKey = null; dirty = false; suppressRemoval = false; elapsed = 0;
+        CellChanged = null;
+        NodeStateChanged = null; NodeRemoved = null; VisualSpeedChanged = null;
     }
 
     /// <summary>MOD 扭矩条件返回 0..1 可用比例，条件必须独立于 GameObject 与 ChunkView。</summary>
@@ -35,7 +52,13 @@ public static class MechanicalWorld
         if (string.IsNullOrWhiteSpace(id) || provider == null) throw new ArgumentException("扭矩来源注册无效。");
         sourceProviders[id] = provider;
     }
-    public static void ClearSourceProviders() => sourceProviders.Clear();
+    /// <summary>MOD 为动态动力源注册实际 RPM；不注册时使用定义固定转速。</summary>
+    public static void RegisterSourceRpm(string id, Func<MechanicalNode, float> provider)
+    {
+        if (string.IsNullOrWhiteSpace(id) || provider == null) throw new ArgumentException("动力源转速注册无效。");
+        sourceRpmProviders[id] = provider;
+    }
+    public static void ClearSourceProviders() { sourceProviders.Clear(); sourceRpmProviders.Clear(); }
 
     private static void EnsureScope()
     {
@@ -52,6 +75,7 @@ public static class MechanicalWorld
         if (WorldTopologyRuntime.TryGetActiveBounds(out var bounds))
             period = new Vector2Int(bounds.Span.x / chunkSize.x, bounds.Span.y / chunkSize.y);
         graph = new MechanicalNetworkGraph(chunkSize, period, WorldTopologyRuntime.NormalizeCell);
+        GameplayCombatBridge.Register(MechanicalCombatBridge.Instance);
         if (save?.Mechanical?.Worlds != null && save.Mechanical.Worlds.TryGetValue(key, out var snapshots))
             foreach (var data in snapshots) RestoreDescriptor(data);
         dirty = true;
@@ -64,10 +88,11 @@ public static class MechanicalWorld
         // 缺失 MOD 内容不丢弃存档，恢复目录后仍能重新载入。
         if (definition == null) return;
         var state = data.GetData<MechanicalNodeState>() ?? new MechanicalNodeState();
+        if (state.Hp < 0f) state.Hp = ResolveMaximumHp(definition.Id);
         nodes.Add(snapshot.Guid, new MechanicalNode
         {
             Id = snapshot.Guid, Cell = CellOf(snapshot.transform.position), Definition = definition, Snapshot = snapshot,
-            Vertical = state.Vertical, Engaged = state.Engaged, RatioIndex = state.RatioIndex
+            RotationQuarterTurns = state.RotationQuarterTurns, Engaged = state.Engaged, RatioIndex = state.RatioIndex
         });
     }
 
@@ -90,13 +115,265 @@ public static class MechanicalWorld
         return node;
     }
 
+    /// <summary>把已校验的机械建筑快照直接提交为世界节点，落地过程不创建 Item 或 GameObject。</summary>
+    public static MechanicalNode Place(ItemData snapshot)
+    {
+        if (!GameNetwork.HasStateAuthority || snapshot == null || !OwnsWorldItem(snapshot))
+            throw new InvalidOperationException("机械建筑数据无效或当前实例无世界写入权限。");
+        EnsureScope();
+        MechanicalDefinition definition = MechanicalCatalog.Get(snapshot.IDName)
+            ?? throw new InvalidOperationException("机械定义不存在：" + snapshot.IDName);
+        Vector2Int cell = CellOf(snapshot.transform.position);
+        if (!ValidatePlacement(definition, cell, false, out string reason))
+            throw new InvalidOperationException(reason);
+        if (nodes.ContainsKey(snapshot.Guid))
+            throw new InvalidOperationException("机械节点 GUID 重复：" + snapshot.Guid);
+        if (!TryGetModuleData(snapshot, out Ex_ModData_MemoryPackable module))
+            throw new InvalidOperationException("机械建筑缺少状态模块：" + snapshot.IDName);
+
+        MechanicalNodeState state = module.GetData<MechanicalNodeState>() ?? new MechanicalNodeState();
+        if (state.Hp < 0f) state.Hp = ResolveMaximumHp(definition.Id);
+        var node = new MechanicalNode
+        {
+            Id = snapshot.Guid,
+            Cell = cell,
+            Definition = definition,
+            Snapshot = FastCloner.FastCloner.DeepClone(snapshot),
+            State = state
+        };
+        CopyTopology(node);
+        EnsureProcessor(node);
+        nodes.Add(node.Id, node);
+        dirty = true;
+        BuildingOccupancyRegistry.NotifyMechanicalChanged(cell);
+        CellChanged?.Invoke(cell);
+        NodeStateChanged?.Invoke(node);
+        return node;
+    }
+
+    /// <summary>按稳定身份移除机械数据节点，并在释放加工器前捕获完整状态。</summary>
+    public static ItemData Remove(int id)
+    {
+        EnsureScope();
+        if (!GameNetwork.HasStateAuthority || !nodes.TryGetValue(id, out MechanicalNode node))
+            return null;
+        CaptureNode(node);
+        ItemData snapshot = FastCloner.FastCloner.DeepClone(node.Snapshot);
+        DisposeProcessor(node);
+        if (interactions.Remove(id, out MechanicalInteractionTarget interaction)) interaction.Dispose();
+        nodes.Remove(id);
+        dirty = true;
+        BuildingOccupancyRegistry.NotifyMechanicalChanged(node.Cell);
+        CellChanged?.Invoke(node.Cell);
+        NodeRemoved?.Invoke(id);
+        return snapshot;
+    }
+
+    /// <summary>拆除事务先捕获纯数据节点的加工库存和朝向，不改变世界占地。</summary>
+    public static ItemData CaptureSnapshot(MechanicalNode node)
+    {
+        EnsureScope();
+        if (node == null || !nodes.TryGetValue(node.Id, out MechanicalNode current) ||
+            !ReferenceEquals(node, current)) return null;
+        CaptureNode(node);
+        return FastCloner.FastCloner.DeepClone(node.Snapshot);
+    }
+
+    /// <summary>初次加入联机世界时枚举全部权威节点。</summary>
+    public static void CollectNodes(List<MechanicalNode> result)
+    {
+        EnsureScope();
+        result.Clear();
+        result.AddRange(nodes.Values);
+    }
+
+    /// <summary>客户端应用服务端权威快照，不参与机械模拟。</summary>
+    public static void ApplyRemoteReset()
+    {
+        EnsureScope();
+        var changedCells = new List<Vector2Int>(nodes.Count);
+        foreach (MechanicalNode node in nodes.Values) changedCells.Add(node.Cell);
+        foreach (MechanicalInteractionTarget interaction in interactions.Values) interaction.Dispose();
+        interactions.Clear();
+        foreach (MechanicalNode node in nodes.Values) DisposeProcessor(node);
+        nodes.Clear();
+        dirty = true;
+        foreach (Vector2Int cell in changedCells)
+        {
+            BuildingOccupancyRegistry.NotifyMechanicalChanged(cell);
+            CellChanged?.Invoke(cell);
+        }
+    }
+
+    /// <summary>客户端应用服务端权威快照，不参与机械模拟。</summary>
+    public static void ApplyRemoteSnapshot(ItemData snapshot, float rpm, int entryDirection)
+    {
+        if (snapshot == null || !OwnsWorldItem(snapshot))
+            throw new InvalidOperationException("联机机械快照无效");
+        EnsureScope();
+        MechanicalDefinition definition = MechanicalCatalog.Get(snapshot.IDName) ??
+            throw new InvalidOperationException("联机机械定义缺失：" + snapshot.IDName);
+        Vector2Int previousCell = default;
+        bool moved = false;
+        if (!nodes.TryGetValue(snapshot.Guid, out MechanicalNode node))
+        {
+            node = new MechanicalNode { Id = snapshot.Guid };
+            nodes.Add(node.Id, node);
+        }
+        else
+        {
+            previousCell = node.Cell;
+            moved = previousCell != CellOf(snapshot.transform.position);
+        }
+        node.Cell = CellOf(snapshot.transform.position);
+        node.Definition = definition;
+        node.Snapshot = FastCloner.FastCloner.DeepClone(snapshot);
+        if (!TryGetModuleData(node.Snapshot, out Ex_ModData_MemoryPackable module))
+            throw new InvalidOperationException("联机机械节点模块缺失");
+        node.State = module.GetData<MechanicalNodeState>() ?? new MechanicalNodeState();
+        CopyTopology(node);
+        node.Rpm = rpm;
+        node.EntryDirection = entryDirection;
+        dirty = true;
+        UpdateVisualSpeed(node);
+        if (moved)
+        {
+            BuildingOccupancyRegistry.NotifyMechanicalChanged(previousCell);
+            CellChanged?.Invoke(previousCell);
+        }
+        BuildingOccupancyRegistry.NotifyMechanicalChanged(node.Cell);
+        CellChanged?.Invoke(node.Cell);
+    }
+
+    /// <summary>客户端以数据身份删除机械节点。</summary>
+    public static void ApplyRemoteRemoval(int id)
+    {
+        EnsureScope();
+        if (!nodes.TryGetValue(id, out MechanicalNode node)) return;
+        if (interactions.Remove(id, out MechanicalInteractionTarget interaction)) interaction.Dispose();
+        DisposeProcessor(node);
+        nodes.Remove(id);
+        dirty = true;
+        BuildingOccupancyRegistry.NotifyMechanicalChanged(node.Cell);
+        CellChanged?.Invoke(node.Cell);
+    }
+
+    /// <summary>客户端更新 GPU 动画速度，不重传加工库存。</summary>
+    public static void ApplyRemoteSpeed(int id, float rpm, int entryDirection)
+    {
+        EnsureScope();
+        if (!nodes.TryGetValue(id, out MechanicalNode node)) return;
+        node.Rpm = rpm;
+        node.EntryDirection = entryDirection;
+        UpdateVisualSpeed(node);
+    }
+
+    /// <summary>战斗和 MOD 修改机械状态后的显式增量通知。</summary>
+    public static void StateChanged(MechanicalNode node)
+    {
+        if (Contains(node)) NodeStateChanged?.Invoke(node);
+    }
+
+    /// <summary>直接按世界格和占地层查询机械数据节点。</summary>
+    public static MechanicalNode GetAt(Vector2Int cell, int layer)
+    {
+        EnsureScope();
+        if (dirty) { graph.Rebuild(nodes.Values); dirty = false; }
+        return graph.At(cell, layer);
+    }
+
+    /// <summary>联机增量按节点身份查找当前世界的机械数据。</summary>
+    public static MechanicalNode GetById(int id)
+    {
+        EnsureScope();
+        return nodes.TryGetValue(id, out MechanicalNode node) ? node : null;
+    }
+
+    /// <summary>导航等高频查询只读取当前已建立的机械世界，不触发场景或存档作用域切换。</summary>
+    public static MechanicalNode GetAtCurrentWorld(Vector2Int cell, int layer)
+    {
+        if (graph == null) return null;
+        if (dirty) { graph.Rebuild(nodes.Values); dirty = false; }
+        return graph.At(cell, layer);
+    }
+
+    /// <summary>交互半径内按数据格索引机械目标，查询量与玩家附近格数相关。</summary>
+    public static void QueryInteractionTargets(Item actor, float radius, Vector2? pointer, List<IInteractable> result)
+    {
+        if (actor == null || result == null) return;
+        EnsureScope();
+        if (actor.gameObject.scene.name != worldKey) return;
+        if (dirty) { graph.Rebuild(nodes.Values); dirty = false; }
+        Vector3 position = actor.transform.position;
+        int extent = Mathf.CeilToInt(radius) + 1;
+        Vector2Int center = CellOf(position);
+        for (int dy = -extent; dy <= extent; dy++)
+        for (int dx = -extent; dx <= extent; dx++)
+        {
+            Vector2Int cell = WorldTopologyRuntime.NormalizeCell(center + new Vector2Int(dx, dy));
+            for (int layer = 0; layer < 2; layer++)
+            {
+                MechanicalNode node = graph.At(cell, layer);
+                if (node == null || WorldTopologyRuntime.Distance(position, node.Snapshot.transform.position) > radius ||
+                    pointer.HasValue && WorldTopologyRuntime.Distance(pointer.Value, node.Snapshot.transform.position) > .65f)
+                    continue;
+                if (!interactions.TryGetValue(node.Id, out MechanicalInteractionTarget target))
+                {
+                    target = new MechanicalInteractionTarget(node);
+                    interactions.Add(node.Id, target);
+                }
+                if (!result.Contains(target)) result.Add(target);
+            }
+        }
+    }
+
+    /// <summary>数据交互目标检查节点是否仍属于当前世界。</summary>
+    public static bool Contains(MechanicalNode node)
+        => node != null && nodes.TryGetValue(node.Id, out MechanicalNode current) &&
+           ReferenceEquals(node, current);
+
+    /// <summary>休眠节点由交互唤醒加工器，随后正常交给网络 Tick 管理。</summary>
+    public static void WakeForInteraction(MechanicalNode node)
+    {
+        if (!Contains(node)) return;
+        if (node.State == null) WakeNode(node);
+    }
+
+    /// <summary>建造耐久来自可替换的物品定义，与运行时碰撞体无关。</summary>
+    public static float ResolveMaximumHp(string itemId)
+    {
+        if (GameRes.ExistingInstance == null ||
+            !GameRes.ExistingInstance.TryGetItemDefinition(itemId, out RuntimeItemDefinition definition) ||
+            definition.Health?.HasHp != true || definition.Health.Hp <= 0f)
+            throw new InvalidOperationException("机械耐久定义缺失：" + itemId);
+        return definition.Health.Hp;
+    }
+
+    /// <summary>按区块边界枚举节点，供 BRG 表现绑定使用。</summary>
+    public static void CollectInBounds(BoundsInt bounds, List<MechanicalRenderCell> result)
+    {
+        if (result == null) throw new ArgumentNullException(nameof(result));
+        EnsureScope();
+        result.Clear();
+        if (dirty) { graph.Rebuild(nodes.Values); dirty = false; }
+        for (int y = bounds.yMin; y < bounds.yMax; y++)
+        for (int x = bounds.xMin; x < bounds.xMax; x++)
+        for (int layer = 0; layer < 2; layer++)
+        {
+            MechanicalNode node = graph.At(new Vector2Int(x, y), layer);
+            if (node != null) result.Add(new MechanicalRenderCell(node, new Vector2Int(x, y)));
+        }
+    }
+
     public static void TopologyChanged(MechanicalNode node)
     {
         if (node == null) return;
         CopyTopology(node); dirty = true;
+        CellChanged?.Invoke(node.Cell);
+        StateChanged(node);
     }
     private static void CopyTopology(MechanicalNode node)
-    { node.Vertical = node.State.Vertical; node.Engaged = node.State.Engaged; node.RatioIndex = node.State.RatioIndex; }
+    { node.RotationQuarterTurns = node.State.RotationQuarterTurns; node.Engaged = node.State.Engaged; node.RatioIndex = node.State.RatioIndex; }
 
     /// <summary>真实销毁/拆除删除拓扑；表现回收和退出世界由独立抑制范围保留权威记录。</summary>
     public static void BeforeDespawn(Item item)
@@ -118,7 +395,7 @@ public static class MechanicalWorld
     {
         if (!GameNetwork.HasStateAuthority) return;
         EnsureScope();
-        elapsed += Mathf.Max(0, deltaTime); viewElapsed += Mathf.Max(0, deltaTime);
+        elapsed += Mathf.Max(0, deltaTime);
         if (elapsed < MechanicalCatalog.Settings.TickSeconds) return;
         // 不补算长期停顿，远离与恢复都不执行离线生产。
         float step = Mathf.Min(elapsed, MechanicalCatalog.Settings.TickSeconds * 2);
@@ -136,10 +413,13 @@ public static class MechanicalWorld
             // 拓扑合并可能包含冷节点，全部恢复成功后才运行任何一个节点。
             foreach (var node in network.Nodes) if (node.State == null) WakeNode(node);
             network.Active = true;
-            MechanicalNetworkGraph.Solve(network, GetSourceFactor, MechanicalCatalog.Settings.ReferenceRpm);
-            foreach (var node in network.Nodes) SimulateNode(node, step);
+            MechanicalNetworkGraph.Solve(network, GetSourceFactor, GetSourceRpm, MechanicalCatalog.Settings.ReferenceRpm);
+            foreach (var node in network.Nodes)
+            {
+                UpdateVisualSpeed(node);
+                SimulateNode(node, step);
+            }
         }
-        if (viewElapsed >= .5f) { viewElapsed = 0; RefreshPresentation(); }
     }
 
     private static void CollectPlayerChunks()
@@ -155,12 +435,33 @@ public static class MechanicalWorld
     {
         if (!TryGetModuleData(node.Snapshot, out var module)) throw new InvalidOperationException("机械快照缺少节点模块。");
         node.State = module.GetData<MechanicalNodeState>() ?? new MechanicalNodeState();
+        if (node.State.Hp < 0f) node.State.Hp = ResolveMaximumHp(node.Definition.Id);
         EnsureProcessor(node);
     }
     private static void EnsureProcessor(MechanicalNode node)
     {
         if (node.Processor == null && !string.IsNullOrWhiteSpace(node.Definition.Station))
+        {
             node.Processor = new MechanicalProcessor(node.Definition.Station, node.State.Processing);
+            node.Processor.StateChanged += OnProcessorChanged;
+            processorOwners[node.Processor] = node;
+        }
+    }
+
+    /// <summary>加工库存与进度变化进入可节流的节点快照队列。</summary>
+    private static void OnProcessorChanged(MechanicalProcessor processor)
+    {
+        if (processorOwners.TryGetValue(processor, out MechanicalNode node)) StateChanged(node);
+    }
+
+    /// <summary>释放加工器时解除节点映射，避免唤醒后旧库存回调污染新状态。</summary>
+    private static void DisposeProcessor(MechanicalNode node)
+    {
+        if (node.Processor == null) return;
+        node.Processor.StateChanged -= OnProcessorChanged;
+        processorOwners.Remove(node.Processor);
+        node.Processor.Dispose();
+        node.Processor = null;
     }
     private static void SleepNetwork(MechanicalNetwork network)
     {
@@ -169,7 +470,8 @@ public static class MechanicalWorld
         foreach (var node in network.Nodes)
         {
             RemoveView(node);
-            node.Processor?.Dispose(); node.Processor = null; node.State = null; node.Rpm = 0;
+            DisposeProcessor(node); node.State = null; node.Rpm = 0;
+            UpdateVisualSpeed(node);
         }
         network.Active = false; network.Status = "休眠";
     }
@@ -181,7 +483,8 @@ public static class MechanicalWorld
             node.State.ManualSeconds = Mathf.Max(0, node.State.ManualSeconds - step);
         if (node.Rpm > 0)
             node.Processor?.Advance(step * GetWorkEfficiency(node));
-        node.View?.RefreshPanel();
+        if (interactions.TryGetValue(node.Id, out MechanicalInteractionTarget interaction))
+            interaction.RefreshPanel();
     }
 
     /// <summary>用力器效率严格按需求转速线性计算；允许超过 100%，不得截断或重复除以基准转速。</summary>
@@ -198,40 +501,89 @@ public static class MechanicalWorld
         if (sourceProviders.TryGetValue(source, out var provider)) return Mathf.Clamp01(provider(node));
         if (source == "manual") return node.State.ManualSeconds > 0 ? 1 : 0;
         if (source == "wind") return WeatherMgr.Instance != null ? WeatherMgr.Instance.GetCurrentWindStrength() : 0;
-        // 首版水车为沿岸水力：安装时记录水体资格；不消耗水，不依赖远端 ChunkView。
-        if (source == "water") return node.State.WaterSupported ? 1 : 0;
+        if (source == "water") return GetWaterSourceFactor(node);
         return 0;
+    }
+
+    /// <summary>固定转速沿用机械定义；水车和 MOD 动力源可按实际环境速度提供 RPM。</summary>
+    private static float GetSourceRpm(MechanicalNode node)
+    {
+        if (node?.Definition == null) return 0f;
+        string source = node.Definition.Source;
+        if (sourceRpmProviders.TryGetValue(source, out var provider)) return provider(node);
+        if (source == "water") return GetWaterSourceRpm(node);
+        return node.Definition.Rpm;
+    }
+
+    /// <summary>水车扭矩随自身水格的实际表层流速变化；湖泊和无流河段不供能。</summary>
+    private static float GetWaterSourceFactor(MechanicalNode node)
+    {
+        if (!TryGetWaterCurrentSpeed(node, out float speed)) return 0f;
+        return Mathf.Clamp01(speed / WorldItemWaterRules.RiverDriftSpeed);
+    }
+
+    /// <summary>水车每分钟转数由线速度除以叶轮周长换算，轮半径来自机械定义。</summary>
+    private static float GetWaterSourceRpm(MechanicalNode node)
+    {
+        if (!TryGetWaterCurrentSpeed(node, out float speed)) return 0f;
+        float circumference = 2f * Mathf.PI * node.Definition.SourceRadius;
+        return speed / circumference * 60f;
+    }
+
+    /// <summary>读取水车占用水格的当前流速，不从岸边或其它邻格借用水流。</summary>
+    private static bool TryGetWaterCurrentSpeed(MechanicalNode node, out float speed)
+    {
+        speed = 0f;
+        ChunkMgr manager = ChunkMgr.ExistingInstance;
+        if (manager == null || node == null || !IsWaterCell(node.Cell)) return false;
+        Vector2 samplePosition = new(node.Cell.x + .5f, node.Cell.y + .5f);
+        if (!manager.TryGetRuntimeWaterCurrent(samplePosition, out RuntimeWaterCurrentSample current)) return false;
+        speed = WorldItemWaterRules.ResolveDriftSpeed(current.Kind, current.Flow);
+        return speed > 0f;
     }
     #endregion
 
     #region 表现与占地
-    private static void RefreshPresentation()
+    /// <summary>仅在解算转速变化时更新相位锚点，连续动画由 BRG Shader 在 GPU 上执行。</summary>
+    private static void UpdateVisualSpeed(MechanicalNode node)
     {
-        if (ItemMgr.Instance == null || ChunkMgr.ExistingInstance == null) return;
-        presentation.Clear(); presentation.AddRange(nodes.Values);
-        foreach (var node in presentation)
+        float now = Time.time;
+        bool changed = false;
+        if (Mathf.Abs(node.VisualRpm - node.Rpm) >= .01f)
         {
-            Vector2 center = new(node.Cell.x + .5f, node.Cell.y + .5f);
-            bool visible = node.Network?.Active == true && ChunkMgr.ExistingInstance.TryGetRuntimeChunkView(center, out _);
-            if (!visible) { if (node.View != null) { CaptureNode(node); RemoveView(node); } continue; }
-            if (node.View != null) continue;
-            CaptureNode(node);
-            var data = ItemDefinitionRuntime.RebasePersistedData(GameRes.Instance, FastCloner.FastCloner.DeepClone(node.Snapshot));
-            Item view = null;
-            try
-            {
-                view = ItemMgr.Instance.InstantiateItem(data, data.transform.position, Quaternion.identity, Vector3.one);
-                view.Load();
-            }
-            catch
-            {
-                suppressRemoval = true;
-                try { if (view != null) ItemMgr.Instance.DespawnItem(view, false); }
-                finally { suppressRemoval = false; }
-                throw;
-            }
+            node.VisualPhase = Mathf.Repeat(node.VisualPhase +
+                (now - node.VisualTime) * node.VisualRpm * Mathf.PI * 2f / 60f, Mathf.PI * 2f);
+            node.VisualTime = now;
+            node.VisualRpm = node.Rpm;
+            changed = true;
         }
+        if (node.Definition.Kind == "gearbox")
+        {
+            int input = (node.EntryDirection - node.RotationQuarterTurns + 4) & 3;
+            float large = input == 2 ? 1f : input == 0 ? -.5f : 0f;
+            float small = input == 2 ? -2f : input == 0 ? 1f : 0f;
+            float radians = node.Rpm * Mathf.PI * 2f / 60f;
+            changed |= UpdateGearboxTrack(ref node.GearboxLargePhase, ref node.GearboxLargeSpeed,
+                ref node.GearboxLargeTime, radians * large, now);
+            changed |= UpdateGearboxTrack(ref node.GearboxSmallPhase, ref node.GearboxSmallSpeed,
+                ref node.GearboxSmallTime, radians * small, now);
+        }
+        if (!changed) return;
+        CellChanged?.Invoke(node.Cell);
+        VisualSpeedChanged?.Invoke(node);
     }
+
+    /// <summary>输入方向或传动比改变时先积分旧角速度，使箱内齿轮不断帧跳相。</summary>
+    private static bool UpdateGearboxTrack(ref float phase, ref float speed,
+        ref float sampleTime, float nextSpeed, float now)
+    {
+        if (Mathf.Abs(speed - nextSpeed) < .001f) return false;
+        phase = Mathf.Repeat(phase + (now - sampleTime) * speed, Mathf.PI * 2f);
+        sampleTime = now;
+        speed = nextSpeed;
+        return true;
+    }
+
     private static void RemoveView(MechanicalNode node)
     {
         if (node.View == null) return;
@@ -256,44 +608,50 @@ public static class MechanicalWorld
         EnsureScope();
         reason = null;
         if (IsOccupied(cell, definition.Layer)) { reason = "当前机械层已占用"; return false; }
+        if (BuildingOccupancyRegistry.IsOccupied(cell, layer: definition.Layer))
+        { reason = "当前建筑层已占用"; return false; }
         if (definition.Kind == "bridge")
         {
-            int a = vertical ? 1 : 0;
-            var first = graph.At(cell + MechanicalNetworkGraph.Directions[a], 0);
-            var second = graph.At(cell + MechanicalNetworkGraph.Directions[a + 2], 0);
-            if (first == null || second == null || !first.CanConnectTo(definition, a + 2) ||
-                !second.CanConnectTo(definition, a))
-            { reason = "跨轴器两端需要朝向匹配的下层机械接口"; return false; }
+            if (graph.At(cell, 0) == null)
+            { reason = "跨轴器需要放置在下层机械线路上方"; return false; }
         }
-        if (definition.Source == "water" && !HasWaterNeighbor(cell))
-        { reason = "水车需要放在水边"; return false; }
+        if (definition.Source == "water" && !IsWaterCell(cell))
+        { reason = "水车只能放在水格中"; return false; }
         return true;
     }
 
-    public static bool HasWaterNeighbor(Vector2Int cell)
+    /// <summary>水车占用格必须本身属于带水体行为的液面，邻接岸边不满足放置条件。</summary>
+    public static bool IsWaterCell(Vector2Int cell)
     {
-        var manager = ChunkMgr.ExistingInstance;
-        if (manager == null) return false;
-        foreach (var offset in MechanicalNetworkGraph.Directions)
-        {
-            Vector2Int adjacent = WorldTopologyRuntime.NormalizeCell(cell + offset);
-            if (manager.TryGetRuntimeTerrainTile(new Vector2(adjacent.x + .5f, adjacent.y + .5f), out var sample) &&
-                sample.LiquidDepth > 0f) return true;
-        }
-        return false;
+        ChunkMgr manager = ChunkMgr.ExistingInstance;
+        GameRes resources = GameRes.Instance;
+        Vector2 samplePosition = new(cell.x + .5f, cell.y + .5f);
+        return manager != null && resources != null &&
+               manager.TryGetRuntimeTerrainTile(samplePosition, out RuntimeTerrainTileSample sample) &&
+               sample.LiquidDepth > 0f &&
+               resources.TryGetLiquidDefinition(sample.LiquidId, out LiquidDefinition liquid) &&
+               liquid.WorldWater != null;
     }
 
-    /// <summary>机械风箱只增强邻格正在燃烧的熔炉；无扭矩立即归零，多个风箱取最强值。</summary>
+    /// <summary>机械风箱只增强出风口正对的相邻炉体；60 RPM 对应满增温，多个风箱取最高倍率。</summary>
     public static float GetBellowsBoost(Vector3 position)
     {
         if (graph == null) return 0;
+        if (dirty) { graph.Rebuild(nodes.Values); dirty = false; }
         Vector2Int cell = CellOf(position);
         float boost = 0;
         foreach (var offset in MechanicalNetworkGraph.Directions)
         {
-            var node = graph.At(cell + offset, 0);
-            if (node?.Definition.Kind == "bellows" && node.Network?.Active == true)
-                boost = Mathf.Max(boost, GetWorkEfficiency(node));
+            var node = graph.At(WorldTopologyRuntime.NormalizeCell(cell + offset), 0);
+            if (node?.Definition.Kind != "bellows" || node.Network?.Active != true)
+                continue;
+
+            Vector2Int outlet = WorldTopologyRuntime.NormalizeCell(
+                node.Cell + MechanicalNetworkGraph.Directions[node.RotationQuarterTurns & 3]);
+            if (outlet != cell)
+                continue;
+
+            boost = Mathf.Max(boost, Mathf.Clamp01(GetWorkEfficiency(node)));
         }
         return boost;
     }
@@ -351,8 +709,12 @@ public static class MechanicalWorld
     }
     private static void ReleaseRuntime()
     {
-        foreach (var node in nodes.Values) { node.Processor?.Dispose(); }
-        nodes.Clear(); elapsed = viewElapsed = 0;
+        GameplayCombatBridge.Unregister(MechanicalCombatBridge.Instance);
+        foreach (MechanicalInteractionTarget interaction in interactions.Values) interaction.Dispose();
+        interactions.Clear();
+        foreach (var node in nodes.Values) DisposeProcessor(node);
+        processorOwners.Clear();
+        nodes.Clear(); elapsed = 0;
     }
     #endregion
 }

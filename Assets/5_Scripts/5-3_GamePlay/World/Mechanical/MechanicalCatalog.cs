@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Newtonsoft.Json;
 using UnityEngine;
 
@@ -9,6 +10,10 @@ public static class MechanicalCatalog
     #region 目录与扩展
     private static Dictionary<string, MechanicalDefinition> definitions = new(StringComparer.Ordinal);
     private static Dictionary<string, MechanicalProcessDefinition> processes = new(StringComparer.Ordinal);
+    /// <summary>仅供当前世界恢复旧节点用的临时身份集合。</summary>
+    private static HashSet<string> retiredDefinitionIds = new(StringComparer.Ordinal);
+    /// <summary>仅供当前世界继续处理旧机械配方的临时键集合。</summary>
+    private static HashSet<string> retiredProcessKeys = new(StringComparer.Ordinal);
     private static bool loaded;
     public static MechanicalSettings Settings { get; private set; } = new(); // 整网调度参数
     public static IEnumerable<MechanicalProcessDefinition> Processes { get { EnsureLoaded(); return processes.Values; } }
@@ -18,12 +23,77 @@ public static class MechanicalCatalog
     {
         context.AddDictionary(() => definitions, value => definitions = value);
         context.AddDictionary(() => processes, value => processes = value);
+        context.AddSet(() => retiredDefinitionIds, value => retiredDefinitionIds = value);
+        context.AddSet(() => retiredProcessKeys, value => retiredProcessKeys = value);
         context.Add(() => loaded, value => loaded = value, false);
         context.Add(() => Settings, value => Settings = value, new MechanicalSettings());
     }
 
+    /// <summary>隔离加载前的机械目录快照；用于让当前世界保留已被重命名的节点与配方。</summary>
+    internal sealed class ReloadSnapshot
+    {
+        /// <summary>上一个正式资源会话的机械节点目录。</summary>
+        public KeyValuePair<string, MechanicalDefinition>[] Definitions { get; }
+        /// <summary>上一个正式资源会话的机械加工目录。</summary>
+        public KeyValuePair<string, MechanicalProcessDefinition>[] Processes { get; }
+
+        public ReloadSnapshot(
+            KeyValuePair<string, MechanicalDefinition>[] definitions,
+            KeyValuePair<string, MechanicalProcessDefinition>[] processes)
+        {
+            Definitions = definitions;
+            Processes = processes;
+        }
+    }
+
+    /// <summary>复制正式机械目录，避免后续候选会话替换静态字典时丢失旧世界定义。</summary>
+    internal static ReloadSnapshot CaptureReloadSnapshot()
+    {
+        EnsureLoaded();
+        return new ReloadSnapshot(definitions.ToArray(), processes.ToArray());
+    }
+
+    /// <summary>候选校验结束后承接被移除的机械身份，当前世界结束时统一移除。</summary>
+    internal static string[] RetainMissingEntries(ReloadSnapshot previous)
+    {
+        if (previous == null) throw new ArgumentNullException(nameof(previous));
+        var retained = new List<string>();
+        foreach (KeyValuePair<string, MechanicalDefinition> pair in previous.Definitions)
+        {
+            if (definitions.ContainsKey(pair.Key)) continue;
+            definitions.Add(pair.Key, pair.Value);
+            retiredDefinitionIds.Add(pair.Key);
+            retained.Add("节点 " + pair.Key);
+        }
+        foreach (KeyValuePair<string, MechanicalProcessDefinition> pair in previous.Processes)
+        {
+            if (processes.ContainsKey(pair.Key)) continue;
+            processes.Add(pair.Key, pair.Value);
+            retiredProcessKeys.Add(pair.Key);
+            retained.Add("配方 " + pair.Value.Station + "/" + pair.Value.Input);
+        }
+        return retained.ToArray();
+    }
+
+    /// <summary>世界退出并保存完毕后移除仅供该世界使用的旧机械身份。</summary>
+    internal static void ReleaseRetiredEntries()
+    {
+        foreach (string id in retiredDefinitionIds) definitions.Remove(id);
+        foreach (string key in retiredProcessKeys) processes.Remove(key);
+        retiredDefinitionIds.Clear();
+        retiredProcessKeys.Clear();
+    }
+
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void Reset() { loaded = false; definitions.Clear(); processes.Clear(); Settings = new(); }
+    private static void Reset()
+    {
+        loaded = false;
+        definitions.Clear();
+        processes.Clear();
+        retiredDefinitionIds.Clear();
+        retiredProcessKeys.Clear();
+        Settings = new();
+    }
 
     /// <summary>资源会话结束后清除目录，F5 下次加载读取当前配置。</summary>
     public static void Clear() { Reset(); MechanicalWorld.ClearSourceProviders(); }
@@ -87,14 +157,16 @@ public sealed class MechanicalSettings
     public int DeactivationChunks = 2;
     public float UnloadDelaySeconds = 5f;
     public float ReferenceRpm = 60f;
+    public float ManualHoldThresholdSeconds = 0.25f; // 手摇轮按住达到此时间后开始供能，短按用于打开面板。
     public float ManualPulseSeconds = 0.2f; // 按住交互时维持的最小动力缓冲。
     public float ManualReserveSeconds = 0.2f; // 松开后允许残留的最大动力缓冲。
-    public float BellowsHeatBonus = 250f;
+    public float BellowsHeatBonus = 500f; // 风箱在额定转速下给予炉体温度上限的最高增量。
     public void Validate()
     {
         if (!MechanicalDefinition.Positive(TickSeconds) || TickSeconds > 1 || ActivationChunks < 0 ||
             DeactivationChunks <= ActivationChunks || !MechanicalDefinition.Positive(UnloadDelaySeconds) ||
-            !MechanicalDefinition.Positive(ReferenceRpm) || !MechanicalDefinition.Positive(ManualPulseSeconds) ||
+            !MechanicalDefinition.Positive(ReferenceRpm) || !MechanicalDefinition.Positive(ManualHoldThresholdSeconds) ||
+            !MechanicalDefinition.Positive(ManualPulseSeconds) ||
             !MechanicalDefinition.Positive(ManualReserveSeconds) || !MechanicalDefinition.NonNegative(BellowsHeatBonus))
             throw new ArgumentException("机械调度参数无效。");
     }
@@ -107,23 +179,27 @@ public sealed class MechanicalDefinition
 {
     #region 参数
     public string Id;
-    public string Kind = "shaft"; // shaft/gear/gearbox/clutch/bridge/source/consumer
+    public string Kind = "shaft"; // shaft/gear/gearbox/clutch/bridge/source/consumer/bellows
     public string Ports = "axis"; // axis 为朝向两端，all 为四向
     public string PortMode = "auto"; // auto/input/output/relay；MOD 可显式覆盖默认端口流向。
-    public string[] AxlePorts; // 齿轮与非齿轮节点相接的方向；未声明时兼容原有四向连接。
+    public string[] AxlePorts; // 与非齿轮节点直连的局部传动轴方向；未声明时四向均可连接。
     public string Source = ""; // manual/water/wind 或 MOD 条件
+    public float SourceRadius; // 由水流线速度换算转速时使用的动力轮半径，单位为世界格。
     public string Station = "";
     public float TorqueCapacity = 64f; // 整网保守扭矩传动容量。
     public float Torque;
     public float Rpm = 60f;
     public float RequiredRpm = 60f; // 用力器达到 100% 工作效率所需的转速。
     public float TorqueLoad;
+    public float ManualWorkSecondsPerPress; // 面板一次手动推动贡献的加工时间；0 表示不开放手动推进。
     public float[] Ratios = { 0.5f, 1f, 2f };
     public float ReverseSpeedRatio; // 0 表示兼容旧配置，逆向采用正向速比的倒数。
     public float ForwardTorqueRatio = 1f; // 从左/下侧输入时输出侧的扭矩倍率。
     public float ReverseTorqueRatio = 1f; // 从右/上侧输入时输出侧的扭矩倍率。
+    public bool BlocksMovement = true; // 是否作为实体障碍阻挡角色与导航。
+    public float PlayerMoveSpeedMultiplier = 1f; // 可通行机械占格对玩家主动移速的倍率。
     public int Layer => Kind == "bridge" ? 1 : 0;
-    public bool Rotatable => Ports == "axis";
+    public bool Rotatable => Ports == "axis" || Kind == "bellows" || (Kind == "gear" && AxlePorts?.Length > 0);
     /// <summary>扭矩源为输出端，用力器为输入终点，其余节点按驱动方向传递；MOD 可以显式声明。</summary>
     public string GetPortMode()
     {
@@ -138,7 +214,7 @@ public sealed class MechanicalDefinition
         speedRatio = highSideInput ? (ReverseSpeedRatio > 0 ? ReverseSpeedRatio : 1f / forward) : forward;
         torqueRatio = highSideInput ? ReverseTorqueRatio : ForwardTorqueRatio;
     }
-    /// <summary>齿轮轴接头允许的世界方向；齿牙啮合仍由普通端口决定。</summary>
+    /// <summary>传动轴直连允许的未旋转局部方向；齿轮间啮合仍由普通端口决定。</summary>
     public bool HasAxlePort(int direction)
     {
         if (AxlePorts == null) return true;
@@ -153,6 +229,8 @@ public sealed class MechanicalDefinition
         if (string.IsNullOrWhiteSpace(Id) || (Ports != "axis" && Ports != "all") ||
             (PortMode != "auto" && PortMode != "input" && PortMode != "output" && PortMode != "relay") ||
             !Positive(TorqueCapacity) || !NonNegative(Torque) || !Positive(Rpm) || !Positive(RequiredRpm) || !NonNegative(TorqueLoad) ||
+            (Source == "water" && !Positive(SourceRadius)) ||
+            !Positive(PlayerMoveSpeedMultiplier) || PlayerMoveSpeedMultiplier > 1f || !NonNegative(ManualWorkSecondsPerPress) ||
             Ratios == null || Ratios.Length == 0 ||
             (ReverseSpeedRatio != 0 && !Positive(ReverseSpeedRatio)) ||
             !Positive(ForwardTorqueRatio) || !Positive(ReverseTorqueRatio))
@@ -161,7 +239,7 @@ public sealed class MechanicalDefinition
         if (AxlePorts != null)
             foreach (string port in AxlePorts)
                 if (port != "right" && port != "up" && port != "left" && port != "down")
-                    throw new ArgumentException("齿轮轴接口方向无效：" + Id);
+                    throw new ArgumentException("传动轴接口方向无效：" + Id);
     }
     internal static bool Positive(float value) => value > 0 && !float.IsInfinity(value) && !float.IsNaN(value);
     internal static bool NonNegative(float value) => value >= 0 && !float.IsInfinity(value) && !float.IsNaN(value);

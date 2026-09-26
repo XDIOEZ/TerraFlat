@@ -20,7 +20,7 @@ TagManager:
   - 
   - Player
   - AIECSRuntime
-  - 
+  - MechanicalShaft
   - 
   - 
   - 
@@ -46,6 +46,9 @@ TagManager:
     locked: 0
   - name: Default
     uniqueID: 0
+    locked: 0
+  - name: MechanicalShaft
+    uniqueID: 1743682901
     locked: 0
   - name: Shadow
     uniqueID: 3566478867

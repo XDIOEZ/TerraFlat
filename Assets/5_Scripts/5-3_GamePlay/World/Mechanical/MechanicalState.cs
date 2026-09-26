@@ -14,16 +14,16 @@ public partial class MechanicalProcessingState
     #endregion
 }
 
-/// <summary>已放置机械节点的状态；Vertical 只在世界本体写入，背包朝向永远使用临时字段。</summary>
+/// <summary>已放置机械节点的状态；RotationQuarterTurns 为逆时针九十度步数，只在世界本体写入，背包朝向使用临时字段。</summary>
 [Serializable, MemoryPackable]
 public partial class MechanicalNodeState
 {
     #region 节点状态
-    public bool Vertical;
+    public int RotationQuarterTurns;
     public bool Engaged = true;
     public int RatioIndex = 1;
     public float ManualSeconds;
-    public bool WaterSupported;
+    public float Hp = -1f; // -1 表示按物品定义初始化建造耐久。
     public MechanicalProcessingState Processing = new();
     #endregion
 }

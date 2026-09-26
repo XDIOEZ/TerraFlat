@@ -25,8 +25,11 @@ public static class BuildingOccupancyRegistry
     public static bool IsOccupied(Vector2Int cell, Mod_Building except = null, int layer = -1)
     {
         cell = WorldTopologyRuntime.NormalizeCell(cell);
+        bool mechanicalOccupied = layer < 0
+            ? MechanicalWorld.IsOccupied(cell, 0) || MechanicalWorld.IsOccupied(cell, 1)
+            : MechanicalWorld.IsOccupied(cell, layer);
         if (!OccupantsByCell.TryGetValue(cell, out HashSet<Mod_Building> occupants))
-            return false;
+            return mechanicalOccupied;
 
         occupants.RemoveWhere(building => building == null || !building.isActiveAndEnabled || !building.IsInstalled());
         foreach (Mod_Building building in occupants)
@@ -37,7 +40,7 @@ public static class BuildingOccupancyRegistry
 
         if (occupants.Count == 0)
             OccupantsByCell.Remove(cell);
-        return false;
+        return mechanicalOccupied;
     }
 
     /// <summary>检查指定放置格是否空闲；这是动态建筑放置冲突的权威入口。</summary>
@@ -45,7 +48,7 @@ public static class BuildingOccupancyRegistry
     {
         cell = WorldTopologyRuntime.NormalizeCell(cell);
         int layer = except == null ? 0 : GetPlacementLayer(except);
-        if (!IsOccupied(cell, except, layer) && !MechanicalWorld.IsOccupied(cell, layer, except?.item?.itemData?.Guid ?? 0))
+        if (!IsOccupied(cell, except, layer))
         {
             reason = null;
             return true;
@@ -59,12 +62,42 @@ public static class BuildingOccupancyRegistry
     {
         if (!terrainWalkable) return false;
         cell = WorldTopologyRuntime.NormalizeCell(cell);
-        if (!OccupantsByCell.TryGetValue(cell, out HashSet<Mod_Building> occupants)) return true;
-        foreach (Mod_Building building in occupants)
-            if (building != null && building.isActiveAndEnabled && building.IsInstalled() && GetPlacementLayer(building) == 0 && !PassableBuildings.Contains(building))
-                return false;
+        MechanicalNode mechanical = MechanicalWorld.GetAtCurrentWorld(cell, 0);
+        if (mechanical?.Definition.BlocksMovement == true) return false;
+        if (OccupantsByCell.TryGetValue(cell, out HashSet<Mod_Building> occupants))
+            foreach (Mod_Building building in occupants)
+                if (building != null && building.isActiveAndEnabled && building.IsInstalled() &&
+                    GetPlacementLayer(building) == 0 && !PassableBuildings.Contains(building) &&
+                    IsMovementBlocking(building))
+                    return false;
         return true;
     }
+
+    /// <summary>读取玩家当前格的建筑移速倍率；同格多来源取最强惩罚，避免多层机械重复叠乘。</summary>
+    public static float GetPlayerMoveSpeedMultiplier(Vector2 position)
+    {
+        Vector2Int cell = WorldTopologyRuntime.NormalizeCell(
+            new Vector2Int(Mathf.FloorToInt(position.x), Mathf.FloorToInt(position.y)));
+        float multiplier = MechanicalWorld.GetAtCurrentWorld(cell, 0)?.Definition.PlayerMoveSpeedMultiplier ?? 1f;
+        if (!OccupantsByCell.TryGetValue(cell, out HashSet<Mod_Building> occupants))
+            return multiplier;
+        occupants.RemoveWhere(building => building == null || !building.isActiveAndEnabled || !building.IsInstalled());
+        foreach (Mod_Building building in occupants)
+        {
+            IBuildingTraversalPolicy policy = BuildingPlacementLifecycle.GetTraversalPolicy(building.item);
+            if (policy == null)
+                continue;
+
+            multiplier = Mathf.Min(multiplier, Mathf.Clamp(policy.PlayerMoveSpeedMultiplier, 0.01f, 1f));
+        }
+
+        if (occupants.Count == 0)
+            OccupantsByCell.Remove(cell);
+        return multiplier;
+    }
+
+    /// <summary>纯数据机械占地变化沿用建筑格的导航与视线失效通知。</summary>
+    public static void NotifyMechanicalChanged(Vector2Int cell) => RefreshCell(WorldTopologyRuntime.NormalizeCell(cell));
 
     /// <summary>门状态的正式导航入口；同一建筑的放置占格保持不变。</summary>
     public static void SetPassable(Mod_Building building, bool passable)
@@ -78,6 +111,10 @@ public static class BuildingOccupancyRegistry
     /// <summary>普通建筑仍占 Layer0，上层桥式传动只在自己的层内互斥。</summary>
     public static int GetPlacementLayer(Mod_Building building)
         => BuildingPlacementLifecycle.GetExtension(building?.item)?.OccupancyLayer ?? 0;
+
+    /// <summary>未声明通行策略的建筑继续按实体障碍处理。</summary>
+    private static bool IsMovementBlocking(Mod_Building building)
+        => BuildingPlacementLifecycle.GetTraversalPolicy(building?.item)?.BlocksMovement ?? true;
 
     public static void Register(Mod_Building building, IEnumerable<Vector2Int> cells)
     {
