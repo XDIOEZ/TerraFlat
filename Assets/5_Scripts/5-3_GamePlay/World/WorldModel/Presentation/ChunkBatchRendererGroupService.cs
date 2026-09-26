@@ -51,8 +51,8 @@ internal static class ChunkBatchRendererGroupService
         public Vector4 Data0;
         public Vector4 Data1;
         public Vector4 Tint;
-        public Vector4 FlowX; // 四个共享格角的下游速度 X
-        public Vector4 FlowY; // 四个共享格角的下游速度 Y
+        public Vector4 FlowX; // 河流为四格角速度，海洋为当前格风场单位方向 X。
+        public Vector4 FlowY; // 河流为四格角速度，海洋为当前格风场单位方向 Y。
 
         public static InstanceData Create(Matrix4x4 localToWorld, Vector4 data0, Vector4 data1, Color tint)
         {

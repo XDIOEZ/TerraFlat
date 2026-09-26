@@ -63,14 +63,10 @@ float4 _LiquidDepthUvScaleOffset;
 half _GlobalMoonlightIntensity;
 half _GlobalMoonAppearance;
 
-/// <summary>读取材质定义的潮流轴；潮汐只沿该轴往返，不再让整片水面持续绕圈。</summary>
-float2 ResolveWaterFlowAxis()
+/// <summary>归一化世界水流数据；潮汐和浪纹共用该轴。</summary>
+float2 ResolveWaterFlowAxis(float2 flowDirection)
 {
-    float2 baseDirection = _FlowDirection.xy;
-    float baseLengthSq = dot(baseDirection, baseDirection);
-    return baseLengthSq > 0.0001
-        ? baseDirection * rsqrt(baseLengthSq)
-        : float2(1.0, 0.0);
+    return flowDirection * rsqrt(max(dot(flowDirection, flowDirection), 0.000001));
 }
 
 /// <summary>用半日潮的积分相位驱动往返流动；相位到达峰谷时流速自然降为零后反向。</summary>

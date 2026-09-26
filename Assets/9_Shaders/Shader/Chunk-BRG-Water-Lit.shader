@@ -11,11 +11,10 @@ Shader "FlatWorld/2D/Chunk BRG Water Lit"
         _SurfaceTint("海水染色强度", Range(0, 1)) = 1
         _SwellScale("涌浪尺度", Range(0.05, 4)) = 0.74
         _DetailScale("细浪尺度", Range(0.5, 12)) = 4.6
-        _WaveSpeed("海流速度", Range(-3, 3)) = 0.42
+        _WaveSpeed("海浪速度", Range(0, 3)) = 0.42
         _WaveDistortion("海流扭曲", Range(0, 4)) = 0.8
         _NormalStrength("表面起伏", Range(0, 0.8)) = 0.44
         _PixelDensity("风格化采样密度", Range(1, 128)) = 64
-        _FlowDirection("流动方向", Vector) = (1, 0.35, 0, 0)
         _TideCyclesPerDay("每日潮汐循环次数", Range(1, 4)) = 2.0
         _RippleColor("浪脊颜色", Color) = (0.3, 0.53, 0.53, 1)
         _RippleStrength("浪脊强度", Range(0, 1)) = 0.12
@@ -68,7 +67,6 @@ Shader "FlatWorld/2D/Chunk BRG Water Lit"
             float4 _RippleColor;
             float4 _MoonReflectionColor;
             float4 _ShoreColor;
-            float4 _FlowDirection;
             float4 _ReflectionDirection;
             float4 _SunDirection;
             float4 _MoonReflectionPosition;
@@ -113,7 +111,6 @@ Shader "FlatWorld/2D/Chunk BRG Water Lit"
             UNITY_DOTS_INSTANCED_PROP(float4, _RippleColor)
             UNITY_DOTS_INSTANCED_PROP(float4, _MoonReflectionColor)
             UNITY_DOTS_INSTANCED_PROP(float4, _ShoreColor)
-            UNITY_DOTS_INSTANCED_PROP(float4, _FlowDirection)
             UNITY_DOTS_INSTANCED_PROP(float4, _ReflectionDirection)
             UNITY_DOTS_INSTANCED_PROP(float4, _SunDirection)
             UNITY_DOTS_INSTANCED_PROP(float4, _MoonReflectionPosition)
@@ -156,7 +153,6 @@ Shader "FlatWorld/2D/Chunk BRG Water Lit"
         #define _RippleColor UNITY_ACCESS_DOTS_INSTANCED_PROP_WITH_DEFAULT(float4, _RippleColor)
         #define _MoonReflectionColor UNITY_ACCESS_DOTS_INSTANCED_PROP_WITH_DEFAULT(float4, _MoonReflectionColor)
         #define _ShoreColor UNITY_ACCESS_DOTS_INSTANCED_PROP_WITH_DEFAULT(float4, _ShoreColor)
-        #define _FlowDirection UNITY_ACCESS_DOTS_INSTANCED_PROP_WITH_DEFAULT(float4, _FlowDirection)
         #define _ReflectionDirection UNITY_ACCESS_DOTS_INSTANCED_PROP_WITH_DEFAULT(float4, _ReflectionDirection)
         #define _SunDirection UNITY_ACCESS_DOTS_INSTANCED_PROP_WITH_DEFAULT(float4, _SunDirection)
         #define _MoonReflectionPosition UNITY_ACCESS_DOTS_INSTANCED_PROP_WITH_DEFAULT(float4, _MoonReflectionPosition)
@@ -217,12 +213,18 @@ Shader "FlatWorld/2D/Chunk BRG Water Lit"
                     lerp(data.flowY.z, data.flowY.w, cellUV.x), cellUV.y));
         }
 
+        // 海洋使用世界风场写入的逐格流向，材质不再拥有独立方向。
+        float2 ResolveOceanFlowAxis(ChunkBRGInstanceData data)
+        {
+            return ResolveWaterFlowAxis(float2(data.flowX.x, data.flowY.x));
+        }
+
         // 静水也有表面细波；物理流速为零不代表视觉冻结。河口反射波只影响渲染。
         WaterSurfaceData CalculateChunkWaterSurface(float2 positionWS, float2 screenUV, half depth)
         {
             ChunkBRGInstanceData data = LoadChunkBRGInstanceData();
             if (data.transform0.w > 1.5)
-                return CalculateWaterSurface(positionWS, screenUV, depth);
+                return CalculateWaterSurface(positionWS, screenUV, depth, ResolveOceanFlowAxis(data));
             float2 velocity = ResolveRiverVelocity(positionWS, data);
             float strength = saturate(length(velocity) / 0.45);
             float lake = 1.0 - step(0.5, data.transform0.w);
@@ -254,7 +256,7 @@ Shader "FlatWorld/2D/Chunk BRG Water Lit"
         {
             ChunkBRGInstanceData data = LoadChunkBRGInstanceData();
             if (data.transform0.w > 1.5)
-                return ApplyShore(sourceColor, recess, positionWS);
+                return ApplyShore(sourceColor, recess, positionWS, ResolveOceanFlowAxis(data));
             half band = saturate(recess * (1.0h - recess) * 4.0h);
             float2 velocity = ResolveRiverVelocity(positionWS, data);
             float lake = 1.0 - step(0.5, data.transform0.w);

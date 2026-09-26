@@ -887,7 +887,14 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRend
         {
             Vector2 worldCell = new(boundChunk.Address.ChunkOrigin.X + x, boundChunk.Address.ChunkOrigin.Y + y);
             if (ChunkMgr.ExistingInstance == null || !ChunkMgr.ExistingInstance.TryGetExperimentalLiquidFlow(worldCell, out _))
+            {
+                terrain.TryGetEnvironmentValue("windX", x, y, out float windX);
+                terrain.TryGetEnvironmentValue("windY", x, y, out float windY);
+                Vector2 direction = WaterEnvironmentRules.ResolveOceanCurrentDirection(new Vector2(windX, windY));
+                instanceData.FlowX = new Vector4(direction.x, direction.x, direction.x, direction.x);
+                instanceData.FlowY = new Vector4(direction.y, direction.y, direction.y, direction.y);
                 return;
+            }
             instanceData.Transform0.w = (float)RuntimeWaterCurrentKind.River;
         }
 

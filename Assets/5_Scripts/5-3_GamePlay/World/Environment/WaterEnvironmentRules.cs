@@ -39,6 +39,10 @@ public static class WaterEnvironmentRules
         return 2f * (positiveFlow / (1f + positiveFlow));
     }
 
+    /// <summary>海洋表层流向由世界风场决定，物理和水面表现共用此单位方向。</summary>
+    public static Vector2 ResolveOceanCurrentDirection(Vector2 windDirection) =>
+        windDirection.sqrMagnitude > 0.000001f ? windDirection.normalized : Vector2.zero;
+
     /// <summary>风力只控制海浪速度、振幅和白沫，不参与潮汐相位。</summary>
     public static Vector3 ResolveOceanWaveFactors(float windStrength)
     {

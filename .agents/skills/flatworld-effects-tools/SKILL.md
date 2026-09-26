@@ -98,6 +98,7 @@ description: "Use when: 定位或修改 FlatWorld 的运行时特效、粒子、
 - 掉落物沉没包含入水和完全浸没后的远离两段。ECS 的 `SubmergedProgress` 只乘表现矩阵，原始 Scale/质量/体积不变；保存延续同一 WaterElapsed，拾取、离水和旧 Item 回池时都恢复原始视觉尺寸。销毁在远离阶段结束后，由权威层提交。
 - 草与花的 BRG 图层共用 Default/0 与 Queue 2993；花批次排序在草之后，两者都早于 Queue 3000 的普通 Sprite。GroundCoverAssetBuilder 必须引用草的共用材质并清除旧 Flowers Tilemap，不能重新装回 Tilemap 或抬高 Order。
 - 静止/深湖仍保留独立时钟的细波和微弱天空反光；湖泊物理流速为零不能再把所有光学强度乘成零。河口的反射波速度只属于 `Chunk-BRG-Water-Lit`，海洋仍单独使用风浪/潮汐时钟，保持真实日夜光照。
+- 正式 BRG 海面通过实例 `FlowX/FlowY` 读取环境层 `windX/windY` 派生的单位方向；水面材质只控制非负浪速，不决定流向。写实与风格化主浪脊相位都须沿该方向前进，避免与玩家漂移反向。
 
 - `DroppedItemPresentation` 按有限空间行、贴图和排序层增量合并掉落物真实 Sprite 三角形/UV；静止批次不重复上传，视野外释放显示节点。该兼容渲染桥不等于已验证与所有旧 Item 的精确透明混排或设备性能指标。
 - 掉落共享材质放在 `Assets/9_Shaders/Resources/DroppedItems`，复用原生 Universal2D/NormalsRendering Shader。批次水线使用规范世界坐标，循环镜像通过 `_WaterLineOffset` MPB 补偿；默认值必须为 0，不能改变原 AIECS 材质语义。
@@ -107,7 +108,7 @@ description: "Use when: 定位或修改 FlatWorld 的运行时特效、粒子、
 
 ## Skill 维护原则
 
-- 载具尾波只消费实际水面位移，使用限额世界空间粒子复用共享环形材质；每个发射点也需确认水面，不能由按键输入决定发射或把尾波挂在船体层级随船一起平移。停用、回池和换世界必须清理发射器。
+- 载具尾波只消费实际水面位移，使用限额世界空间粒子复用共享环形材质；每个发射点也需确认水面，不能由按键输入决定发射或把尾波挂在船体层级随船一起平移。尾波排序必须跟随载具主体 Sorting Layer，并使用主体 Order 的后一层，禁止硬编码 `Default` 固定层级，否则动态实体切到 `Player` 层后尾波可能被水面遮住。停用、回池和换世界必须清理发射器。
 
 - 只补充后续维护可复用的易错点、隐含约束和必要注意事项。
 - 不记录修改日期、近期变更或仅描述本次改动内容的流水账。

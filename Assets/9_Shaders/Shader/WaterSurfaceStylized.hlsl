@@ -17,14 +17,15 @@ float2 QuantizeWaterPosition(float2 positionWS)
 WaterSurfaceData CalculateWaterSurface(
     float2 positionWS,
     float2 screenUV,
-    half liquidDepth)
+    half liquidDepth,
+    float2 direction)
 {
     WaterSurfaceData surface = (WaterSurfaceData)0;
-    float2 direction = ResolveWaterFlowAxis();
     float2 lateral = float2(-direction.y, direction.x);
     float2 pixelPosition = QuantizeWaterPosition(positionWS);
-    float time = _OceanWaveTime * _WaveSpeed;
-    pixelPosition -= direction * ResolveTideFlowPhase(_WaveSpeed) * 0.045;
+    float waveSpeed = max(_WaveSpeed, 0.0);
+    float time = _OceanWaveTime * waveSpeed;
+    pixelPosition -= direction * ResolveTideFlowPhase(waveSpeed) * 0.045;
 
     float2 drift = direction * time * 0.018
         - lateral * time * 0.006;
@@ -44,7 +45,7 @@ WaterSurfaceData CalculateWaterSurface(
     float2 detailDirectionB = -direction * 0.18 + lateral * 0.98;
     detailDirectionB *= rsqrt(max(dot(detailDirectionB, detailDirectionB), 0.001));
 
-    float swellPhaseA = dot(warpedPosition, direction) * _SwellScale + time * 0.55;
+    float swellPhaseA = dot(warpedPosition, direction) * _SwellScale - time * 0.55;
     float swellPhaseB = dot(warpedPosition, swellDirection) * _SwellScale * 1.72
         - time * 0.38
         + macroB * 1.4;
@@ -81,7 +82,7 @@ WaterSurfaceData CalculateWaterSurface(
         + float2(-time * 0.045, time * 0.032)
         + float2(16.8, 7.4)) - 0.5;
     float ripplePhaseA = dot(warpedPosition, direction) * _RippleScale
-        + time * 0.82
+        - time * 0.82
         + (macroB - 0.5) * 2.6
         + (macroA - 0.5) * 0.9
         + rippleWarp * 3.2;
@@ -263,11 +264,10 @@ half3 ApplyWaterSurface(half3 sourceColor, WaterSurfaceData surface)
 }
 
 /// <summary>在岸线内侧叠加亮边与流动泡沫。</summary>
-half3 ApplyShore(half3 sourceColor, half recess, float2 positionWS)
+half3 ApplyShore(half3 sourceColor, half recess, float2 positionWS, float2 flowDirection)
 {
     half shoreBand = saturate(recess * (1.0h - recess) * 4.0h);
     float foamTime = ResolveTideFlowPhase(_FoamSpeed);
-    float2 flowDirection = ResolveWaterFlowAxis();
     float2 flowLateral = float2(-flowDirection.y, flowDirection.x);
     float foamNoise = WaterNoise(
         positionWS * 0.58

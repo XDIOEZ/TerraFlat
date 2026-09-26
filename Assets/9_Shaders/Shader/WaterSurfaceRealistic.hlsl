@@ -38,13 +38,14 @@ float2 WaterNoiseSlope(float2 position)
 WaterSurfaceData CalculateWaterSurface(
     float2 positionWS,
     float2 screenUV,
-    half liquidDepth)
+    half liquidDepth,
+    float2 direction)
 {
     WaterSurfaceData surface = (WaterSurfaceData)0;
-    float2 direction = ResolveWaterFlowAxis();
     float2 lateral = float2(-direction.y, direction.x);
-    float time = _OceanWaveTime * _WaveSpeed;
-    float tide = ResolveTideFlowPhase(_WaveSpeed);
+    float waveSpeed = max(_WaveSpeed, 0.0);
+    float time = _OceanWaveTime * waveSpeed;
+    float tide = ResolveTideFlowPhase(waveSpeed);
     float2 waterPosition = positionWS - direction * tide * 0.045;
     float2 drift = direction * time * 0.08;
     float macroA = WaterNoise(waterPosition * 0.075 - drift * 0.1);
@@ -156,9 +157,8 @@ half3 ApplyWaterSurface(half3 sourceColor, WaterSurfaceData surface)
 }
 
 /// <summary>岸边只留断续的薄泡沫，沿游戏时间起落，避免描出连续的方格亮边。</summary>
-half3 ApplyShore(half3 sourceColor, half recess, float2 positionWS)
+half3 ApplyShore(half3 sourceColor, half recess, float2 positionWS, float2 direction)
 {
-    float2 direction = ResolveWaterFlowAxis();
     float tide = ResolveTideFlowPhase(_FoamSpeed);
     float time = _GlobalGameDay * 180.0 * _FoamSpeed;
     float2 foamPosition = positionWS - direction * tide * 0.04;
