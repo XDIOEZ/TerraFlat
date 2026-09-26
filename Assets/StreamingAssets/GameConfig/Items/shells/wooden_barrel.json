@@ -35,7 +35,10 @@
           "parameters": {}
         }
       },
-      "visual": { "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]" }
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/WaterVessel/WoodenBarrel/WoodenBarrel_Icon.png",
+        "liquidSurface": { "bounds": { "x": 0.34375, "y": 0.796875, "width": 0.3125, "height": 0.09375 } }
+      }
     },
     {
       "id": "WoodenBarrel_Building",
@@ -67,7 +70,10 @@
           "parameters": {}
         }
       },
-      "visual": { "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]" }
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/WaterVessel/WoodenBarrel/WoodenBarrel_Icon.png",
+        "liquidSurface": { "bounds": { "x": 0.34375, "y": 0.796875, "width": 0.3125, "height": 0.09375 } }
+      }
     }
   ]
 }

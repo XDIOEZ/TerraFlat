@@ -120,6 +120,7 @@ public partial class EquipmentInstance_Bag : EquipmentInstance
             BagInventory.Data = CloneInventoryData(BagData);
 
         BagInventory.UnbindController();
+        BagInventory.UnbindRuntimeDataEvents();
         if (BagInventory.basePanel != null)
         {
             BagInventory.basePanel.Destroy();

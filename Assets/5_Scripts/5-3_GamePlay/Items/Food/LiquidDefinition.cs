@@ -71,6 +71,7 @@ public sealed class LiquidDefinition
         string description,
         string category,
         string visualState,
+        Color primaryColor,
         bool drinkable,
         float hydrationPerServing,
         IReadOnlyList<LiquidDrinkEffect> drinkEffects,
@@ -85,6 +86,7 @@ public sealed class LiquidDefinition
         Description = description;
         Category = category;
         VisualState = visualState;
+        PrimaryColor = primaryColor;
         Drinkable = drinkable;
         HydrationPerServing = hydrationPerServing;
         DrinkEffects = drinkEffects ?? Array.Empty<LiquidDrinkEffect>();
@@ -101,6 +103,8 @@ public sealed class LiquidDefinition
     public string Description { get; }
     public string Category { get; }
     public string VisualState { get; }
+    /// <summary>液体容器 Sprite 的程序化液面使用此主色；容器不再为每种液体绑定贴图。</summary>
+    public Color PrimaryColor { get; }
     public bool Drinkable { get; }
     public float HydrationPerServing { get; }
     public IReadOnlyList<LiquidDrinkEffect> DrinkEffects { get; }
@@ -145,6 +149,9 @@ public sealed class LiquidDefinitionDto
 
     [JsonProperty("visualState")]
     public string VisualState = "filled";
+
+    [JsonProperty("primaryColor", Required = Required.Always)]
+    public Color? PrimaryColor;
 
     [JsonProperty("worldWater")]
     public WorldLiquidSettings WorldWater;
@@ -245,7 +252,7 @@ public sealed class LiquidCatalogDto
 /// <summary>液体定义的严格解析、校验和运行时构建入口。</summary>
 public static class LiquidDefinitionFactory
 {
-    public const int SupportedSchemaVersion = 1;
+    public const int SupportedSchemaVersion = 2;
 
     private static readonly JsonSerializerSettings StrictJsonSettings = new()
     {
@@ -283,6 +290,8 @@ public static class LiquidDefinitionFactory
         string displayName = NormalizeRequired(dto.DisplayName, $"液体 {id} displayName");
         string category = string.IsNullOrWhiteSpace(dto.Category) ? "generic" : dto.Category.Trim().ToLowerInvariant();
         string visualState = string.IsNullOrWhiteSpace(dto.VisualState) ? "filled" : dto.VisualState.Trim();
+        Color primaryColor = dto.PrimaryColor ?? throw new InvalidDataException($"液体 {id} 缺少 primaryColor");
+        ValidateColor(primaryColor, id);
         ValidateFinite(dto.HydrationPerServing, id, nameof(dto.HydrationPerServing));
         if (dto.HydrationPerServing < 0f)
             throw new InvalidDataException($"液体 {id} hydrationPerServing 不能小于 0");
@@ -308,6 +317,7 @@ public static class LiquidDefinitionFactory
             dto.Description?.Trim() ?? string.Empty,
             category,
             visualState,
+            primaryColor,
             dto.Drinkable,
             dto.HydrationPerServing,
             drinkEffects,
@@ -470,6 +480,18 @@ public static class LiquidDefinitionFactory
     {
         if (float.IsNaN(value) || float.IsInfinity(value))
             throw new InvalidDataException($"液体 {id} 的 {field} 必须是有限数值");
+    }
+
+    /// <summary>主色各通道使用 0～1 的线性范围，阻止无效色值进入 UI 网格。</summary>
+    private static void ValidateColor(Color color, string id)
+    {
+        ValidateFinite(color.r, id, "primaryColor.r");
+        ValidateFinite(color.g, id, "primaryColor.g");
+        ValidateFinite(color.b, id, "primaryColor.b");
+        ValidateFinite(color.a, id, "primaryColor.a");
+        if (color.r < 0f || color.r > 1f || color.g < 0f || color.g > 1f ||
+            color.b < 0f || color.b > 1f || color.a <= 0f || color.a > 1f)
+            throw new InvalidDataException($"液体 {id} 的 primaryColor 通道必须在 0～1 范围内且 alpha 大于 0");
     }
 
     private static bool ContainsWhitespaceOrControl(string value)

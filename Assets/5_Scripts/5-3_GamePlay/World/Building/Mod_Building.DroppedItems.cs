@@ -70,7 +70,7 @@ public partial class Mod_Building
             carrier.inHand = false;
             carrier.Stack.Amount = 1f;
             carrier.Stack.CanBePickedUp = true;
-            carrier.ItemSpecialData = StatefulSummonerPrefix + carrier.Guid;
+            carrier.ItemSpecialData = CreateStatefulSummonerIdentity(snapshotBase64);
             BuildingModuleStateTransfer.Copy(item.itemData, carrier, Data.SharedModuleIds);
             CopySharedDurability(item.itemData, carrier, Data.SharedModuleIds);
             if (!WriteBuildingData(carrier, state =>

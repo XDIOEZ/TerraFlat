@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "liquids": [
     {
       "id": "core:honey",
@@ -7,6 +7,7 @@
       "description": "金黄色的黏稠蜂蜜，只作为液体存在，可储存在液体容器中。",
       "category": "syrup",
       "visualState": "honey",
+      "primaryColor": { "r": 0.84, "g": 0.55, "b": 0.09, "a": 1.0 },
       "drinkable": false,
       "hydrationPerServing": 0.0
     },
@@ -16,6 +17,7 @@
       "description": "未经处理的淡水，可以直接饮用，也可以烧开处理。",
       "category": "water",
       "visualState": "dirty",
+      "primaryColor": { "r": 0.42, "g": 0.37, "b": 0.22, "a": 1.0 },
       "drinkable": true,
       "hydrationPerServing": 25.0,
       "drinkEffects": [
@@ -49,6 +51,7 @@
       "description": "已经处理过的干净淡水。",
       "category": "water",
       "visualState": "drinkable",
+      "primaryColor": { "r": 0.22, "g": 0.55, "b": 0.73, "a": 1.0 },
       "drinkable": true,
       "hydrationPerServing": 25.0
     },
@@ -58,6 +61,7 @@
       "description": "含盐量很高的海水，可通过加热蒸发获得盐。",
       "category": "water",
       "visualState": "sea",
+      "primaryColor": { "r": 0.14, "g": 0.47, "b": 0.55, "a": 1.0 },
       "buoyancyThresholdMultiplier": 1.5,
       "drinkable": true,
       "hydrationPerServing": 10.0,
@@ -95,6 +99,7 @@
       "description": "砂子在坩埚中达到熔化温度后形成的高温玻璃液体。",
       "category": "molten",
       "visualState": "molten_glass",
+      "primaryColor": { "r": 0.92, "g": 0.64, "b": 0.24, "a": 1.0 },
       "drinkable": false,
       "hydrationPerServing": 0.0,
       "solidification": {
@@ -109,6 +114,7 @@
       "description": "孔雀石在坩埚中熔化后的高温铜液。",
       "category": "molten",
       "visualState": "molten_copper",
+      "primaryColor": { "r": 0.82, "g": 0.28, "b": 0.10, "a": 1.0 },
       "drinkable": false,
       "hydrationPerServing": 0.0,
       "solidification": {
@@ -123,6 +129,7 @@
       "description": "锡矿石在坩埚中熔化后的高温锡液。",
       "category": "molten",
       "visualState": "molten_tin",
+      "primaryColor": { "r": 0.68, "g": 0.72, "b": 0.70, "a": 1.0 },
       "drinkable": false,
       "hydrationPerServing": 0.0,
       "solidification": {
@@ -137,6 +144,7 @@
       "description": "铁矿石在坩埚中熔化后的高温铁液。",
       "category": "molten",
       "visualState": "molten_iron",
+      "primaryColor": { "r": 0.72, "g": 0.24, "b": 0.10, "a": 1.0 },
       "drinkable": false,
       "hydrationPerServing": 0.0,
       "solidification": {

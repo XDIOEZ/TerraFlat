@@ -24,9 +24,8 @@ internal sealed class DroppedItemVisual
     public static Sprite ResolveSprite(ItemData data)
     {
         GameRes resources = GameRes.ExistingInstance;
-        if (resources == null || !resources.TryGetItemPresentation(data.IDName, out _, out Sprite sprite) || sprite == null)
+        if (resources == null || !resources.TryGetItemPresentation(data, out _, out Sprite sprite) || sprite == null)
             throw new InvalidOperationException($"掉落物缺少显示贴图：{data.IDName}");
-        if (Mod_WaterVessel.TryResolvePresentationSprite(data, out Sprite vesselSprite)) sprite = vesselSprite;
         return sprite;
     }
 

@@ -303,6 +303,7 @@ public class Inventory_HotBar : Module, IInventory, IRemoteNetworkModule
         UnbindHotbarInput();
         RuntimeInventory?.UnbindPlayerCarryWeightEvents();
         RuntimeInventory?.UnbindController();
+        RuntimeInventory?.UnbindRuntimeDataEvents();
         HeldItemChanged?.Invoke(null);
         HeldItemChanged = null;
     }

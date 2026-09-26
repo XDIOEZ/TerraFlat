@@ -333,12 +333,11 @@ public class Inventory
     }
 
     /// <summary>
-    /// 解除通过 BindController 建立的输入绑定
+    /// 解除通过 BindController 建立的输入绑定。
+    /// 库存数据/UI 事件拥有独立生命周期，不能在这里解绑，否则重新绑定控制器会让槽位停止自动刷新。
     /// </summary>
     public void UnbindController()
     {
-        Data.Event_RefreshUI -= RefreshUI;
-        UnbindSlotDataEvents();
         UnbindCarryCapacityLinkedInventory();
         _boundController?.ReleaseGameplayInputLock(this);
 
@@ -350,6 +349,15 @@ public class Inventory
         _boundController = null;
         _boundToggleAction = null;
         _toggleCallback = null;
+    }
+
+    /// <summary>库存真正退出运行时生命周期时，解除数据层到 UI 的刷新监听。</summary>
+    public void UnbindRuntimeDataEvents()
+    {
+        if (Data != null)
+            Data.Event_RefreshUI -= RefreshUI;
+
+        UnbindSlotDataEvents();
     }
 
     /// <summary>解除当前库存所有槽位的 UI 监听，避免场景/玩家销毁后继续回调旧界面。</summary>
@@ -2235,7 +2243,7 @@ public class Inventory
 public static class InventoryPanelLayout
 {
     public const float PanelMargin = 18f;
-    private const float DefaultBagWidth = 706f;
+    private const float DefaultBagWidth = 920f;
     private const float DefaultCraftingWidth = 1344f;
     private const float FullScreenCraftingThreshold = 0.65f;
 

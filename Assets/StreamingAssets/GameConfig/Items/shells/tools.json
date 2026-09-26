@@ -254,7 +254,9 @@
       "volume": 12.0,
       "stackable": true,
       "canBePickedUp": true,
-      "tags": [],
+      "tags": [
+        "Wood"
+      ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Plants/Tree/item296.png",
         "rendererLocalPosition": {

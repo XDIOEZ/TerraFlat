@@ -115,6 +115,7 @@
       },
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Plants/Tree/tree-set1/64x64/trees-set1-64_6.png[trees-set1-64_6]",
+        "materialAddress": "Assets/9_Shaders/Material/Tree-Broadleaf-Sway-Lit.mat",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -438,6 +439,7 @@
       },
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Farming/CoconutTree/FruitlessCoconutTree.png",
+        "materialAddress": "Assets/9_Shaders/Material/Tree-Palm-Sway-Lit.mat",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -1808,6 +1810,7 @@
       },
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Environment/PineTree/PineTree_Idle.png",
+        "materialAddress": "Assets/9_Shaders/Material/Tree-Pine-Sway-Lit.mat",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,

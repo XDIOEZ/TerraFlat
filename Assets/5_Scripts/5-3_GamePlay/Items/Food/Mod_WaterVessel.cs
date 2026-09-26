@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using FlatWorld.Networking;
 using MemoryPack;
 using Newtonsoft.Json.Linq;
@@ -18,7 +19,7 @@ public partial class LiquidContainerState
 
 /// <summary>
 /// 可装任意已注册液体的复用容器模块。历史类名仍由现有模块 Prefab 使用，但运行时语义已经是通用液体容器；
-/// 液体属性全部来自 LiquidDefinition，新增 MOD 液体无需新增容器 Item 或修改本模块。
+/// 液体属性全部来自 LiquidDefinition，新增 MOD 液体无需新增容器 Item；声明 liquidSurface 的容器 Sprite 由本模块按主色重绘。
 /// </summary>
 public sealed class Mod_WaterVessel : Module, IInteractable
 {
@@ -476,10 +477,7 @@ public sealed class Mod_WaterVessel : Module, IInteractable
         return true;
     }
 
-    /// <summary>
-    /// 根据容器快照与液体定义解析库存/快捷栏图标。液体可声明专用 visualState；
-    /// 容器没有该状态图时统一回退到 filled，因此新增 MOD 液体不需要修改 UI 代码。
-    /// </summary>
+    /// <summary>按 ItemData 状态在容器模块内重绘液面 Sprite；其他展示端只读取解析后的通用 Sprite。</summary>
     public static bool TryResolvePresentationSprite(ItemData itemData, out Sprite sprite)
     {
         sprite = null;
@@ -490,22 +488,207 @@ public sealed class Mod_WaterVessel : Module, IInteractable
             return false;
         }
 
-        string stateName = IsEmptyAmount(state.Amount)
-            ? "empty"
-            : ResolveLiquidDefinition(state.LiquidId, false)?.VisualState;
-
-        if (!string.IsNullOrWhiteSpace(stateName) &&
-            definition.TryGetVisualStateSprite(stateName, out sprite))
+        if (IsEmptyAmount(state.Amount))
         {
+            if (definition.TryGetVisualStateSprite("empty", out sprite))
+                return true;
+
+            sprite = definition.Sprite;
+            return sprite != null;
+        }
+
+        LiquidDefinition liquid = ResolveLiquidDefinition(state.LiquidId, false);
+        if (liquid == null)
+            return false;
+
+        if (definition.Visual?.LiquidSurface != null)
+        {
+            sprite = GenerateLiquidSurfaceSprite(
+                itemData,
+                definition.Sprite,
+                definition.Visual.LiquidSurface,
+                liquid.PrimaryColor,
+                Mathf.Clamp01(state.Amount / ResolveContainerCapacity(itemData)));
             return true;
         }
 
-        if (!IsEmptyAmount(state.Amount) && definition.TryGetVisualStateSprite("filled", out sprite))
+        if (definition.TryGetVisualStateSprite(liquid.VisualState, out sprite))
+            return true;
+
+        if (definition.TryGetVisualStateSprite("filled", out sprite))
             return true;
 
         sprite = definition.Sprite;
         return sprite != null;
     }
+
+    #region 容器液面 Sprite 重绘
+
+    private const float LiquidSurfaceInset = 0.86f; // 缩进开口边缘，避免液面覆盖桶沿或罐口描边。
+    private const float LiquidSurfaceShadowBlend = 0.22f; // 水面下层混入阴影色的比例。
+    private const float LiquidSurfaceHighlightBlend = 0.24f; // 水面顶边混入高光色的比例。
+    private const int LiquidSurfaceMaxSourceChannel = 165; // 只改写开口内的暗色像素，保留木沿与釉面亮部。
+
+    private readonly struct VesselSpriteCacheKey : IEquatable<VesselSpriteCacheKey>
+    {
+        public readonly int SourceSpriteId; // 原始物品 Sprite 实例。
+        public readonly int X; // 内腔像素区左下角 X。
+        public readonly int Y; // 内腔像素区左下角 Y。
+        public readonly int Width; // 内腔像素区像素宽度。
+        public readonly int Height; // 内腔像素区像素高度。
+        public readonly int FillRows; // 按容器余量量化后的液面高度。
+        public readonly Color32 LiquidColor; // 液体定义提供的主色。
+
+        public VesselSpriteCacheKey(Sprite source, RectInt bounds, int fillRows, Color32 liquidColor)
+        {
+            SourceSpriteId = source.GetInstanceID();
+            X = bounds.x;
+            Y = bounds.y;
+            Width = bounds.width;
+            Height = bounds.height;
+            FillRows = fillRows;
+            LiquidColor = liquidColor;
+        }
+
+        public bool Equals(VesselSpriteCacheKey other) =>
+            SourceSpriteId == other.SourceSpriteId && X == other.X && Y == other.Y &&
+            Width == other.Width && Height == other.Height && FillRows == other.FillRows &&
+            LiquidColor.Equals(other.LiquidColor);
+
+        public override bool Equals(object obj) => obj is VesselSpriteCacheKey other && Equals(other);
+
+        public override int GetHashCode() => HashCode.Combine(
+            SourceSpriteId, X, Y, Width, Height, FillRows, LiquidColor);
+    }
+
+    private static readonly Dictionary<VesselSpriteCacheKey, Sprite> GeneratedVesselSprites = new(); // 按源 Sprite、颜色和像素液面复用运行时贴图。
+
+    /// <summary>每次进入运行时清理上个会话创建的纹理对象，避免反复进出 Play Mode 累积。</summary>
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ClearGeneratedVesselSprites()
+    {
+        foreach (Sprite generatedSprite in GeneratedVesselSprites.Values)
+        {
+            if (generatedSprite == null)
+                continue;
+
+            Texture2D generatedTexture = generatedSprite.texture;
+            if (Application.isPlaying)
+            {
+                UnityEngine.Object.Destroy(generatedSprite);
+                if (generatedTexture != null)
+                    UnityEngine.Object.Destroy(generatedTexture);
+            }
+            else
+            {
+                UnityEngine.Object.DestroyImmediate(generatedSprite);
+                if (generatedTexture != null)
+                    UnityEngine.Object.DestroyImmediate(generatedTexture);
+            }
+        }
+
+        GeneratedVesselSprites.Clear();
+    }
+
+    /// <summary>按开口配置、主色和可见液面行数复用程序生成的容器 Sprite。</summary>
+    private static Sprite GenerateLiquidSurfaceSprite(
+        ItemData itemData,
+        Sprite sourceSprite,
+        LiquidSurfaceDefinition surface,
+        Color primaryColor,
+        float fillRatio)
+    {
+        if (sourceSprite == null || sourceSprite.texture == null)
+            throw new InvalidOperationException($"液体容器 {itemData.IDName} 缺少可重绘的基础 Sprite。");
+
+        Texture2D sourceTexture = sourceSprite.texture;
+        if (!sourceTexture.isReadable)
+            throw new InvalidOperationException(
+                $"液体容器 {itemData.IDName} 的贴图 {sourceTexture.name} 必须启用 Read/Write，才能程序化重绘液面。");
+
+        int width = Mathf.RoundToInt(sourceSprite.rect.width);
+        int height = Mathf.RoundToInt(sourceSprite.rect.height);
+        int sourceX = Mathf.RoundToInt(sourceSprite.rect.x);
+        int sourceY = Mathf.RoundToInt(sourceSprite.rect.y);
+        Rect bounds01 = surface.Bounds;
+        int xMin = Mathf.Clamp(Mathf.FloorToInt(bounds01.xMin * width), 0, width);
+        int yMin = Mathf.Clamp(Mathf.FloorToInt(bounds01.yMin * height), 0, height);
+        int xMax = Mathf.Clamp(Mathf.CeilToInt(bounds01.xMax * width), 0, width);
+        int yMax = Mathf.Clamp(Mathf.CeilToInt(bounds01.yMax * height), 0, height);
+        RectInt bounds = new RectInt(xMin, yMin, xMax - xMin, yMax - yMin);
+        if (width <= 0 || height <= 0 || bounds.width <= 0 || bounds.height <= 0 ||
+            sourceX < 0 || sourceY < 0 || sourceX + width > sourceTexture.width || sourceY + height > sourceTexture.height)
+            throw new InvalidOperationException($"液体容器 {itemData.IDName} 的液面开口配置超出了基础 Sprite。");
+
+        Color32 liquidColor = primaryColor;
+        int fillRows = Mathf.Clamp(Mathf.CeilToInt(Mathf.Clamp01(fillRatio) * bounds.height), 1, bounds.height);
+        var key = new VesselSpriteCacheKey(sourceSprite, bounds, fillRows, liquidColor);
+        if (GeneratedVesselSprites.TryGetValue(key, out Sprite cachedSprite) && cachedSprite != null)
+            return cachedSprite;
+
+        Color32[] texturePixels = sourceTexture.GetPixels32();
+        Color32[] spritePixels = new Color32[width * height];
+        for (int y = 0; y < height; y++)
+            Array.Copy(texturePixels, (sourceY + y) * sourceTexture.width + sourceX, spritePixels, y * width, width);
+
+        Color32 shadowColor = (Color32)Color.Lerp((Color)liquidColor, new Color(0.03f, 0.06f, 0.08f, 1f), LiquidSurfaceShadowBlend);
+        Color32 highlightColor = (Color32)Color.Lerp((Color)liquidColor, Color.white, LiquidSurfaceHighlightBlend);
+        int liquidTop = bounds.yMin + fillRows - 1;
+        float centerX = bounds.xMin + bounds.width * 0.5f;
+        float centerY = bounds.yMin + bounds.height * 0.5f;
+        float radiusX = bounds.width * 0.5f * LiquidSurfaceInset;
+        float radiusY = bounds.height * 0.5f * LiquidSurfaceInset;
+
+        for (int y = bounds.yMin; y <= liquidTop; y++)
+        {
+            for (int x = bounds.xMin; x < bounds.xMax; x++)
+            {
+                float normalizedX = (x + 0.5f - centerX) / radiusX;
+                float normalizedY = (y + 0.5f - centerY) / radiusY;
+                if (normalizedX * normalizedX + normalizedY * normalizedY > 1f)
+                    continue;
+
+                int pixelIndex = y * width + x;
+                Color32 sourcePixel = spritePixels[pixelIndex];
+                if (sourcePixel.a == 0 ||
+                    Mathf.Max(Mathf.Max(sourcePixel.r, sourcePixel.g), sourcePixel.b) > LiquidSurfaceMaxSourceChannel)
+                    continue;
+
+                spritePixels[pixelIndex] = y == liquidTop ? highlightColor : shadowColor;
+            }
+        }
+
+        var generatedTexture = new Texture2D(width, height, TextureFormat.RGBA32, false)
+        {
+            name = $"{sourceSprite.name}_Liquid_{ColorUtility.ToHtmlStringRGBA(liquidColor)}_{fillRows}",
+            filterMode = sourceTexture.filterMode,
+            wrapMode = TextureWrapMode.Clamp
+        };
+        generatedTexture.SetPixels32(spritePixels);
+        generatedTexture.Apply(false, false);
+
+        Vector2 pivot = new Vector2(sourceSprite.pivot.x / width, sourceSprite.pivot.y / height);
+        Sprite generatedSprite = Sprite.Create(
+            generatedTexture,
+            new Rect(0f, 0f, width, height),
+            pivot,
+            sourceSprite.pixelsPerUnit,
+            0,
+            SpriteMeshType.Tight,
+            sourceSprite.border,
+            false);
+        generatedTexture.Apply(false, true);
+        generatedSprite.name = generatedTexture.name;
+        GeneratedVesselSprites.Add(key, generatedSprite);
+        return generatedSprite;
+    }
+
+    /// <summary>装水容器加入通用 ItemData 图标解析注册表，不让任意 UI 知道容器模块类型。</summary>
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+    private static void RegisterPresentationResolver() =>
+        ItemDataPresentationResolverRegistry.Register(ModuleId, TryResolvePresentationSprite);
+
+    #endregion
 
     /// <summary>库存中的模块没有运行时组件，容量从正式物品定义的模块参数读取。</summary>
     private static int ResolveConfiguredCapacity(ItemData itemData, string stableModuleName)

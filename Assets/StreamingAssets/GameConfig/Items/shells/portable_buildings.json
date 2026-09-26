@@ -31,13 +31,7 @@
       },
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/WaterVessel/ClayJar/ClayJar_Icon.png",
-        "spriteStates": {
-          "empty": "Assets/6_Art/Generated/WaterVessel/ClayJar/ClayJar_Icon.png",
-          "filled": "Assets/6_Art/Generated/WaterVessel/ClayJar/ClayJar_Filled.png",
-          "dirty": "Assets/6_Art/Generated/WaterVessel/ClayJar/ClayJar_Dirty.png",
-          "drinkable": "Assets/6_Art/Generated/WaterVessel/ClayJar/ClayJar_Drinkable.png",
-          "sea": "Assets/6_Art/Generated/WaterVessel/ClayJar/ClayJar_Sea.png"
-        },
+        "liquidSurface": { "bounds": { "x": 0.375, "y": 0.796875, "width": 0.25, "height": 0.078125 } },
         "collider": {
           "size": {
             "x": 0.65,

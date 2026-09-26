@@ -1301,7 +1301,7 @@ public class ItemSlot_UI : MonoBehaviour,
         }
 
         if (!GameRes.Instance.TryGetItemPresentation(
-                slotData.itemData.IDName,
+                slotData.itemData,
                 out _,
                 out Sprite sprite) ||
             sprite == null)
@@ -1310,10 +1310,6 @@ public class ItemSlot_UI : MonoBehaviour,
             image.gameObject.SetActive(false);
             return;
         }
-
-        // 状态型液体容器的 Item ID 不变；图标必须从当前 ItemData 模块状态解析，而不是按 ID 写死水罐变体。
-        if (Mod_WaterVessel.TryResolvePresentationSprite(slotData.itemData, out Sprite stateSprite))
-            sprite = stateSprite;
 
         image.sprite = sprite;
         image.gameObject.SetActive(true);
