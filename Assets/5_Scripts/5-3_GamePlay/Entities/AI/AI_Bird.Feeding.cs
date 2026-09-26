@@ -79,6 +79,11 @@ public sealed partial class AI_Bird
         {
             // 食物所在格可落地不代表鸟当前脚下也可落地，先飞到可落脚的位置再收起翅膀。
             if (distance <= peckRange && CanLand(body.position)) BeginLanding();
+            else if (distance <= peckRange)
+            {
+                Vector2Int targetCell = new(Mathf.FloorToInt(target.x), Mathf.FloorToInt(target.y));
+                FlyTowards(WorldTopologyRuntime.NormalizePosition(new Vector2(targetCell.x + 0.5f, targetCell.y + 0.5f)), deltaTime);
+            }
             else FlyTowards(target, deltaTime);
             return true;
         }
@@ -258,6 +263,12 @@ public sealed partial class AI_Bird
             TickTakeoff(deltaTime);
             return true;
         }
+        if (WorldTopologyRuntime.SqrDistance(body.position, escapeDestination) <=
+            FlightTargetArrivalDistance * FlightTargetArrivalDistance)
+        {
+            escapeRemaining = 0f;
+            return false;
+        }
         FlyTowards(escapeDestination, deltaTime);
         return true;
     }
@@ -267,7 +278,7 @@ public sealed partial class AI_Bird
         mover.StopMovement();
         body.velocity = Vector2.zero;
         Vector2 displacement = WorldTopologyRuntime.ShortestDelta(body.position, target);
-        MoveFlightStep(displacement, flightSpeed, deltaTime);
+        MoveCruiseStep(displacement, deltaTime);
     }
 
     #endregion

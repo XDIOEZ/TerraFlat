@@ -21,8 +21,10 @@ public sealed partial class AI_Bird : Module, IAIActor, IItemModuleDependencyBin
     private static readonly int FlyingAnimationHash = Animator.StringToHash("Base Layer.Flying");
     private static readonly int LandingAnimationHash = Animator.StringToHash("Base Layer.Landing");
     private static readonly float[] RunUpDirectionOffsets = { 0f, 45f, -45f, 90f, -90f, 135f, -135f, 180f };
+    private static readonly float[] FlightTurnOffsets = { 45f, -45f, 90f, -90f, 135f, -135f, 180f }; // 巡航直线受阻后的转向顺序。
     private const float RunUpSampleSpacing = 0.25f;
     private const float RunUpStallSeconds = 1.5f;
+    private const float FlightTargetArrivalDistance = 0.2f; // 到达目标后须立即接续下一段飞行。
     private const float FatigueLandingScanInterval = 0.4f;
     private const float FatigueLandingArrivalDistance = 0.3f;
 
@@ -490,13 +492,16 @@ public sealed partial class AI_Bird : Module, IAIActor, IItemModuleDependencyBin
         Vector2 position = body.position;
         Vector2 destination = new(state.TargetX, state.TargetY);
         Vector2 delta = WorldTopologyRuntime.ShortestDelta(position, destination);
-        if (!state.HasTarget || delta.sqrMagnitude < 0.04f)
+        if (!state.HasTarget || delta.sqrMagnitude <= FlightTargetArrivalDistance * FlightTargetArrivalDistance)
         {
-            destination = WorldTopologyRuntime.NormalizePosition(position + UnityEngine.Random.insideUnitCircle * flightWanderRadius);
+            float angle = UnityEngine.Random.value * Mathf.PI * 2f;
+            float distance = UnityEngine.Random.Range(1f, Mathf.Max(1f, flightWanderRadius));
+            Vector2 direction = new(Mathf.Cos(angle), Mathf.Sin(angle));
+            destination = WorldTopologyRuntime.NormalizePosition(position + direction * distance);
             SetWanderTarget(destination);
             delta = WorldTopologyRuntime.ShortestDelta(position, destination);
         }
-        if (!MoveFlightStep(delta, flightSpeed, deltaTime))
+        if (!MoveCruiseStep(delta, deltaTime))
         {
             state.HasTarget = false;
         }
@@ -655,6 +660,23 @@ public sealed partial class AI_Bird : Module, IAIActor, IItemModuleDependencyBin
         fatigueLandingScanRemaining = 0f;
         fatigueAreaSafe = false;
         fatigueSafetyVersion = -1;
+    }
+
+    /// <summary>巡航直线受阻时沿已加载地形转向；没有空中出口但可落脚时结束飞行。</summary>
+    private bool MoveCruiseStep(Vector2 desiredDisplacement, float deltaTime)
+    {
+        if (desiredDisplacement.sqrMagnitude <= 0.0001f) return false;
+        if (MoveFlightStep(desiredDisplacement, flightSpeed, deltaTime)) return true;
+
+        Vector2 forward = desiredDisplacement.normalized;
+        for (int index = 0; index < FlightTurnOffsets.Length; index++)
+        {
+            Vector2 direction = Quaternion.Euler(0f, 0f, FlightTurnOffsets[index]) * forward;
+            if (MoveFlightStep(direction * (flightSpeed * deltaTime), flightSpeed, deltaTime)) return true;
+        }
+
+        if (CanLand(body.position)) BeginLanding();
+        return false;
     }
 
     /// <summary>飞行与离地共用同一段通行检查和位置通知。</summary>
