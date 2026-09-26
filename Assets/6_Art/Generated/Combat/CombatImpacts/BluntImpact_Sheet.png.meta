@@ -126,7 +126,7 @@ TextureImporter:
       name: BluntImpact_0
       rect:
         serializedVersion: 2
-        x: 0.0
+        x: 0
         y: 443.5
         width: 443.5
         height: 443.5
@@ -140,7 +140,7 @@ TextureImporter:
       spriteID: 2e3121e39dd747c29230f038b719882d
       internalID: 21300000
       vertices: []
-      indices:
+      indices: 
       edges: []
       weights: []
     - serializedVersion: 2
@@ -161,14 +161,14 @@ TextureImporter:
       spriteID: 13e763753ba940bb9d5f4bd11511f240
       internalID: 21300001
       vertices: []
-      indices:
+      indices: 
       edges: []
       weights: []
     - serializedVersion: 2
       name: BluntImpact_2
       rect:
         serializedVersion: 2
-        x: 887.0
+        x: 887
         y: 443.5
         width: 443.5
         height: 443.5
@@ -182,7 +182,7 @@ TextureImporter:
       spriteID: 0dafe462d33444d68ed6bdb1bd29acf9
       internalID: 21300002
       vertices: []
-      indices:
+      indices: 
       edges: []
       weights: []
     - serializedVersion: 2
@@ -203,15 +203,15 @@ TextureImporter:
       spriteID: 91b94e7d99124655a040ae9bffdd465f
       internalID: 21300003
       vertices: []
-      indices:
+      indices: 
       edges: []
       weights: []
     - serializedVersion: 2
       name: BluntImpact_4
       rect:
         serializedVersion: 2
-        x: 0.0
-        y: 0.0
+        x: 0
+        y: 0
         width: 443.5
         height: 443.5
       alignment: 0
@@ -224,7 +224,7 @@ TextureImporter:
       spriteID: 1cc39855d0324fd1b5719a7a83c72033
       internalID: 21300004
       vertices: []
-      indices:
+      indices: 
       edges: []
       weights: []
     - serializedVersion: 2
@@ -232,7 +232,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 443.5
-        y: 0.0
+        y: 0
         width: 443.5
         height: 443.5
       alignment: 0
@@ -245,15 +245,15 @@ TextureImporter:
       spriteID: 61e9689c4e6745d1869d9ae976e93adf
       internalID: 21300005
       vertices: []
-      indices:
+      indices: 
       edges: []
       weights: []
     - serializedVersion: 2
       name: BluntImpact_6
       rect:
         serializedVersion: 2
-        x: 887.0
-        y: 0.0
+        x: 887
+        y: 0
         width: 443.5
         height: 443.5
       alignment: 0
@@ -266,7 +266,7 @@ TextureImporter:
       spriteID: e9131b89aa2b4d72966638d292714b73
       internalID: 21300006
       vertices: []
-      indices:
+      indices: 
       edges: []
       weights: []
     - serializedVersion: 2
@@ -274,7 +274,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 1330.5
-        y: 0.0
+        y: 0
         width: 443.5
         height: 443.5
       alignment: 0
@@ -287,7 +287,7 @@ TextureImporter:
       spriteID: ec5d0073e6d24a009a404987b4f4444d
       internalID: 21300007
       vertices: []
-      indices:
+      indices: 
       edges: []
       weights: []
     outline: []
@@ -296,7 +296,7 @@ TextureImporter:
     spriteID: d6e4eaedafb1470f8449dfba8ec387b8
     internalID: 0
     vertices: []
-    indices:
+    indices: 
     edges: []
     weights: []
     secondaryTextures: []
@@ -309,8 +309,8 @@ TextureImporter:
       BluntImpact_5: 21300005
       BluntImpact_6: 21300006
       BluntImpact_7: 21300007
-  mipmapLimitGroupName:
+  mipmapLimitGroupName: 
   pSDRemoveMatte: 0
-  userData:
-  assetBundleName:
-  assetBundleVariant:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

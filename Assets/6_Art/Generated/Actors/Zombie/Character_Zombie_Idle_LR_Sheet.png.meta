@@ -140,7 +140,7 @@ TextureImporter:
       spriteID: b080a570fc8c4e088ea82736f8d95539
       internalID: 100000001
       vertices: []
-      indices:
+      indices: 
       edges: []
       weights: []
     - serializedVersion: 2
@@ -161,7 +161,7 @@ TextureImporter:
       spriteID: 7d12575739f14af08920b541fd4d1f7d
       internalID: 100000002
       vertices: []
-      indices:
+      indices: 
       edges: []
       weights: []
     outline: []

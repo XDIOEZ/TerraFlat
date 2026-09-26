@@ -153,7 +153,7 @@ TextureImporter:
       spriteID: 5d90fb241d7f47f5a2bdd9d96b25672e
       internalID: 100000001
       vertices: []
-      indices:
+      indices: 
       edges: []
       weights: []
     - serializedVersion: 2
@@ -174,7 +174,7 @@ TextureImporter:
       spriteID: 02700d4b960a46208d0e3f2447ed82d8
       internalID: 100000002
       vertices: []
-      indices:
+      indices: 
       edges: []
       weights: []
     - serializedVersion: 2
@@ -195,7 +195,7 @@ TextureImporter:
       spriteID: 29f71c9eb15f4089a63772db6307a6a6
       internalID: 100000003
       vertices: []
-      indices:
+      indices: 
       edges: []
       weights: []
     - serializedVersion: 2
@@ -216,7 +216,7 @@ TextureImporter:
       spriteID: 12682633cddd4239aa946a0a595af9e6
       internalID: 100000004
       vertices: []
-      indices:
+      indices: 
       edges: []
       weights: []
     - serializedVersion: 2
@@ -237,7 +237,7 @@ TextureImporter:
       spriteID: b1c0c8bbc11c4979ac775645677fe6f4
       internalID: 100000005
       vertices: []
-      indices:
+      indices: 
       edges: []
       weights: []
     - serializedVersion: 2
@@ -258,7 +258,7 @@ TextureImporter:
       spriteID: 1f3dfe935716446ea12485f78f8a15dd
       internalID: 100000006
       vertices: []
-      indices:
+      indices: 
       edges: []
       weights: []
     - serializedVersion: 2
@@ -279,7 +279,7 @@ TextureImporter:
       spriteID: 9735d687cf7f40bdad0f67d66d326383
       internalID: 100000007
       vertices: []
-      indices:
+      indices: 
       edges: []
       weights: []
     - serializedVersion: 2
@@ -300,7 +300,7 @@ TextureImporter:
       spriteID: 4e4a74c592ff4414bf88797155555bb5
       internalID: 100000008
       vertices: []
-      indices:
+      indices: 
       edges: []
       weights: []
     outline: []
@@ -309,7 +309,7 @@ TextureImporter:
     spriteID: 5e97eb03825dee720800000000000000
     internalID: 0
     vertices: []
-    indices:
+    indices: 
     edges: []
     weights: []
     secondaryTextures: []
@@ -322,8 +322,8 @@ TextureImporter:
       Ghost_Idle_5: 100000006
       Ghost_Idle_6: 100000007
       Ghost_Idle_7: 100000008
-  mipmapLimitGroupName:
+  mipmapLimitGroupName: 
   pSDRemoveMatte: 0
-  userData:
-  assetBundleName:
-  assetBundleVariant:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
