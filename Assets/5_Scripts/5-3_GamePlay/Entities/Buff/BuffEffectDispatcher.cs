@@ -202,7 +202,13 @@ public static class BuffEffectDispatcher
     {
         Item receiver = GetReceiver(runtime);
         Mod_Stamina stamina = receiver?.itemMods.GetMod_ByID(ModText.Stamina) as Mod_Stamina;
-        stamina?.AddStamina(effect.Value);
+        if (stamina == null)
+            return;
+
+        if (effect.Value < 0f)
+            stamina.ConsumeStamina(StaminaConsumptionSources.BuffEffect, -effect.Value);
+        else
+            stamina.AddStamina(effect.Value);
     }
 
     private static void ApplyNutritionChange(BuffEffectDefinition effect, BuffInstance runtime)

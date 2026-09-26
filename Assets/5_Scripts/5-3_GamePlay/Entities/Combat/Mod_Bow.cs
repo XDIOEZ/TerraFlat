@@ -100,7 +100,10 @@ public sealed class Mod_Bow : Module
 
         float safeDeltaTime = Mathf.Max(0f, deltaTime);
         if (_ownerStamina != null && StaminaConsumePerSecond > 0f)
-            _ownerStamina.AddStamina(-StaminaConsumePerSecond * safeDeltaTime);
+            _ownerStamina.ConsumeStaminaPerSecond(
+                StaminaConsumptionSources.BowCharge,
+                StaminaConsumePerSecond,
+                safeDeltaTime);
 
         _chargeSeconds += safeDeltaTime;
         UpdateNockedArrowVisual(GetCharge01());

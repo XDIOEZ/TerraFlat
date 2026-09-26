@@ -422,7 +422,10 @@ public partial class TileEffectReceiver : Module
 
         if (waterStamina != null)
         {
-            waterStamina.AddStamina(-consumePerSecond * deltaTime);
+            waterStamina.ConsumeStaminaPerSecond(
+                StaminaConsumptionSources.Swimming,
+                consumePerSecond,
+                deltaTime);
             return;
         }
 

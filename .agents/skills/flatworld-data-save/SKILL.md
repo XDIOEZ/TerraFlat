@@ -34,6 +34,7 @@ description: "Use when: 定位或修改 FlatWorld 的数据模型、MemoryPack �
 - 运行时 GameObject AI 远距休眠时先保存完整 `ItemData` 到区块 `ChangedItems`，再从 `ItemMgr` 卸载；自动保存跨帧采集期间暂停生态出生、休眠和唤醒。活动 AI 快照合并时须保留同区块的休眠居民，成功唤醒后才移除旧记录与休眠索引。
 - 自动/手动保存可分帧采集，但后台只处理不可变快照；旧任务不得覆盖更新的手动/退出保存。
 - `IRuntimeDataLifecycle.Save()` 只抓取持久化快照，禁止解绑事件、停止行为或释放资源；Item 退出、移除模块与回池统一调用 `Unload()`，重新加载前也必须先卸载旧运行态。
+- 玩家体力存档只保存 `Mod_Stamina.StaminaData.CurrentStamina/MaxStamina` 的已结算权威值；划船加速、拉弓、奔跑、游泳等消费来源和按键状态均属于瞬时运行态，不进入存档。自动存档允许在这些动作持续期间抓取当前值，禁止为了存档暂停操作或序列化“正在消耗”状态。
 - 地表 `WorldKey=PlanetId`；非地表用 `PlanetId__dimension__DimensionId`。`TopologyMode` 的当前默认值为 `Infinite=0`，世界字段按当前版本统一读写。
 - 任务 `flatworld.quests` 等未来版本必须拒绝写回；未知 MOD 记录应保留。
 - 玩家创建 JSON 位于 `StreamingAssets/GameConfig/Players`，不进入 MemoryPack 存档；只在无存档创建阶段注入，并在模块加载前同步到 `Data_Player.ModuleDataDic`；已有玩家存档始终优先于模板。

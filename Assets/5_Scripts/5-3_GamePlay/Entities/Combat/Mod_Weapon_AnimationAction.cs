@@ -308,7 +308,8 @@ public class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyBinder
     /// <summary>每一段实际挥动只结算一次体力；不足时拒绝启动该段攻击。</summary>
     private bool TryConsumeAttackStamina()
     {
-        return ownerStamina == null || ownerStamina.TryConsumeStamina(staminaCostPerAttack);
+        return ownerStamina == null ||
+               ownerStamina.TryConsumeStamina(StaminaConsumptionSources.WeaponAttack, staminaCostPerAttack);
     }
 
     [InfoBox("检查并尝试衔接下一段连击")]
