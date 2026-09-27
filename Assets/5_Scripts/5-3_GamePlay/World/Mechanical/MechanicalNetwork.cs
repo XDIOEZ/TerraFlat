@@ -130,13 +130,13 @@ public sealed class MechanicalNetworkGraph
     public static readonly Vector2Int[] Directions = { Vector2Int.right, Vector2Int.up, Vector2Int.left, Vector2Int.down };
     private readonly Dictionary<Vector3Int, MechanicalNode> cells = new();
     public readonly List<MechanicalNetwork> Networks = new();
-    private readonly Func<Vector2Int, Vector2Int> normalize;
-    private readonly WorldTopologyDomain topology;
-    private readonly bool hasTopologySnapshot;
+    private readonly Func<Vector2Int, Vector2Int> normalize; // 旧 MOD 构图入口的坐标归一化委托。
+    private readonly WorldTopologyDomain topology; // 核心机械世界的纯坐标域快照。
+    private readonly bool hasTopologySnapshot; // 区分核心快照与旧委托入口。
     private readonly Vector2Int chunkSize;
     private readonly Vector2Int chunkPeriod;
-    private readonly InteractionWindow pointerWindow = new();
-    private readonly InteractionWindow nearbyWindow = new();
+    private readonly InteractionWindow pointerWindow = new(); // 光标查询候选窗口。
+    private readonly InteractionWindow nearbyWindow = new(); // 近距离按键查询候选窗口。
 
     public MechanicalNetworkGraph(Vector2Int chunkSize, Vector2Int chunkPeriod, Func<Vector2Int, Vector2Int> normalize)
     {
@@ -158,6 +158,7 @@ public sealed class MechanicalNetworkGraph
         => hasTopologySnapshot
             ? new Vector2Int(topology.NormalizeX(cell.x), topology.NormalizeY(cell.y))
             : normalize(cell);
+    /// <summary>交互距离使用与机械格索引相同的世界坐标域。</summary>
     internal WorldTopologyDomain Topology => topology;
     public Vector2Int ChunkOf(Vector2Int cell) => new(Mathf.FloorToInt((float)cell.x / chunkSize.x), Mathf.FloorToInt((float)cell.y / chunkSize.y));
     public MechanicalNode At(Vector2Int cell, int layer)
@@ -197,11 +198,12 @@ public sealed class MechanicalNetworkGraph
     /// <summary>拓扑索引拥有候选窗口及去重集合，重构时整体失效。</summary>
     private sealed class InteractionWindow
     {
-        public bool Valid;
-        public Vector2Int Center;
-        public int Extent;
-        public readonly List<MechanicalNode> Nodes = new();
-        public readonly HashSet<MechanicalNode> Seen = new();
+        public bool Valid; // 当前窗口是否已建立。
+        public Vector2Int Center; // 查询中心世界格。
+        public int Extent; // 格半径。
+        public readonly List<MechanicalNode> Nodes = new(); // 已收集的候选节点。
+        public readonly HashSet<MechanicalNode> Seen = new(); // 循环世界接缝去重。
+        /// <summary>清除拓扑变化前的候选节点。</summary>
         public void Reset() { Valid = false; Nodes.Clear(); Seen.Clear(); }
     }
 
