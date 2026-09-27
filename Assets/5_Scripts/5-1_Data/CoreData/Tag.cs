@@ -5,6 +5,8 @@ using UnityEngine;
 public static class Tag
 {
     public const string Player = "Player";
+    public const string CombustionTinder = "Combustion.Tinder";
+    public const string InventoryGroupMechanicalPower = "InventoryGroup.MechanicalPower";
 
     [Tooltip("装备")]
     public const string Equipment = "Equipment";

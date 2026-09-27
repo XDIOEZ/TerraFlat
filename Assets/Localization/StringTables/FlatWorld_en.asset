@@ -1233,10 +1233,6 @@ MonoBehaviour:
     m_Localized: Herb.
     m_Metadata:
       m_Items: []
-  - m_Id: 13292200447172611
-    m_Localized: Bottled Jam
-    m_Metadata:
-      m_Items: []
   - m_Id: 11141662607663104
     m_Localized: Straw.
     m_Metadata:

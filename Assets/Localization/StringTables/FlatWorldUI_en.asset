@@ -2639,6 +2639,22 @@ MonoBehaviour:
     m_Localized: "Effects quality changed. Click Save to keep it."
     m_Metadata:
       m_Items: []
+  - m_Id: 17033120237740043
+    m_Localized: Grind by Hand
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740044
+    m_Localized: Search name or tag
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740045
+    m_Localized: Precise Interaction
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740046
+    m_Localized: Precise Interaction (Point at Target)
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

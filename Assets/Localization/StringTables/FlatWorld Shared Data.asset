@@ -1579,10 +1579,6 @@ MonoBehaviour:
     m_Key: item.Honey.name
     m_Metadata:
       m_Items: []
-  - m_Id: 13292200447172611
-    m_Key: item.BottledJam.name
-    m_Metadata:
-      m_Items: []
   - m_Id: 15838801002749952
     m_Key: item.DrilledStoneSlab.name
     m_Metadata:

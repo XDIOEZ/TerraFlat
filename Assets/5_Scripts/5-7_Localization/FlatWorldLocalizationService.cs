@@ -247,6 +247,27 @@ namespace FlatWorld.Localization
             return string.IsNullOrWhiteSpace(fallback) ? key : fallback;
         }
 
+        /// <summary>按指定语言读取同一名称键，供跨语言搜索等不依赖当前界面语言的场景使用。</summary>
+        public static string GetInLocale(string key, string localeCode, string tableName = DefaultTable)
+        {
+            if (string.IsNullOrWhiteSpace(key) || string.IsNullOrWhiteSpace(localeCode) ||
+                !LocalizationSettings.HasSettings)
+                return string.Empty;
+
+            Initialize();
+            Locale locale = LocalizationSettings.AvailableLocales?.GetLocale(localeCode);
+            if (locale == null)
+                return string.Empty;
+
+            string localized = LocalizationSettings.StringDatabase.GetLocalizedString(
+                tableName, key, locale, FallbackBehavior.DontUseFallback);
+            return string.IsNullOrWhiteSpace(localized) ||
+                   string.Equals(localized, key, StringComparison.Ordinal) ||
+                   localized.StartsWith("No translation found for", StringComparison.OrdinalIgnoreCase)
+                ? string.Empty
+                : localized;
+        }
+
         /// <summary>阻断旧迁移误写进 String Table 的 ItemData.ToString 调试文本。</summary>
         private static bool IsLegacyItemDebugText(string value)
         {
@@ -268,6 +289,12 @@ namespace FlatWorld.Localization
         public static string GetItemDescriptionKey(string itemId)
         {
             return $"item.{itemId?.Trim()}.description";
+        }
+
+        /// <summary>生成物品语义 Tag 的稳定 String Table key；Tag 本身仍只保存语言无关 ID。</summary>
+        public static string GetItemTagLabelKey(string tagId)
+        {
+            return $"tag.{tagId?.Trim()}.name";
         }
 
         /// <summary>为 UI 原始文本生成稳定 key，避免把中文长句直接当作表格主键。</summary>

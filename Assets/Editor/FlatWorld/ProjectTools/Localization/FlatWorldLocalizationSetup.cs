@@ -118,6 +118,7 @@ namespace FlatWorld.Localization.Editor
         private static readonly Dictionary<string, string> EnglishUiOverrides =
             new Dictionary<string, string>(StringComparer.Ordinal)
             {
+                { "搜索名称或标签", "Search name or tag" },
                 { "书写材料", "Writing Material" },
                 { "纸张", "Paper" },
                 { "扩充一页", "Add Page" },
@@ -131,6 +132,7 @@ namespace FlatWorld.Localization.Editor
                 { "接合", "Engage" },
                 { "切换传动比", "Change Ratio" },
                 { "手动推进", "Push Mill" },
+                { "手动研磨", "Grind by Hand" },
                 { "旋转建筑", "Rotate Building" },
                 { "加工进度 {0:0}%", "Progress {0:0}%" },
                 { "{0} · 转速 {1:0} · 扭矩 {2:0.#}/{3:0.#}", "{0} · RPM {1:0} · Torque {2:0.#}/{3:0.#}" },
@@ -238,6 +240,13 @@ namespace FlatWorld.Localization.Editor
                 { "生成新世界", "Generate World" },
                 { "选择存档", "Select Save" },
                 { "载入存档", "Load Save" },
+                { "修改名称", "Rename" },
+                { "修改存档名称", "Rename Save" },
+                { "修改角色名称", "Rename Character" },
+                { "请输入新名称", "Enter a new name" },
+                { "名称不能为空", "Name cannot be empty" },
+                { "存档改名失败，请检查名称或磁盘状态", "Could not rename the save. Check the name or disk status." },
+                { "角色改名失败，请检查名称或磁盘状态", "Could not rename the character. Check the name or disk status." },
                 { "保存时间：--", "Save time: --" },
                 { "保存时间：{0}", "Save time: {0}" },
                 { "冻结世界生成规则", "Freeze World Generation Rules" },
@@ -448,6 +457,8 @@ namespace FlatWorld.Localization.Editor
                 { "游戏难度", "Game Difficulty" },
                 { "按键绑定", "Key Bindings" },
                 { "控制方式", "Control Method" },
+                { "精确交互", "Precise Interaction" },
+                { "精确交互（需光标命中）", "Precise Interaction (Point at Target)" },
                 { "电脑键鼠控制", "Keyboard & Mouse" },
                 { "手柄控制", "Gamepad" },
                 { "手机触屏控制", "Mobile Touch" },

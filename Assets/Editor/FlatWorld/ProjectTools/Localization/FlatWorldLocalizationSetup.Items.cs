@@ -43,7 +43,7 @@ namespace FlatWorld.Localization.Editor
             AssetDatabase.SaveAssetIfDirty(chinese);
             AssetDatabase.SaveAssetIfDirty(english);
             AssetDatabase.SaveAssetIfDirty(collection.SharedData);
-            Debug.Log($"[FlatWorld Localization] 已同步 {count} 种物品的中文名和英文名，ID 与显示名独立。");
+            Debug.Log($"[FlatWorld Localization] 已同步 {count} 种物品名称及物品 Tag 多语言条目，业务 ID 与显示文本独立。");
         }
 
         /// <summary>按正式 Manifest 解析后的物品定义同步名称，说明仍沿用独立同步规则。</summary>
@@ -115,7 +115,91 @@ namespace FlatWorld.Localization.Editor
                     sourceDescription, definition.Id);
             }
 
+            SyncItemTagEntries(collection, chineseTable, englishTable);
+
             return count;
+        }
+
+        /// <summary>把稳定 Tag ID 的语言目录同步到 FlatWorld 内容表，运行时只按 key 查询显示文本。</summary>
+        private static int SyncItemTagEntries(
+            StringTableCollection collection,
+            StringTable chineseTable,
+            StringTable englishTable)
+        {
+            TextAsset source = AssetDatabase.LoadAssetAtPath<TextAsset>(ItemTagLocalizationCatalog.EditorAssetPath);
+            if (source == null)
+                throw new FileNotFoundException("缺少物品 Tag 本地化目录。", ItemTagLocalizationCatalog.EditorAssetPath);
+
+            ItemTagLocalizationCatalog.CatalogData catalog =
+                JsonUtility.FromJson<ItemTagLocalizationCatalog.CatalogData>(source.text);
+            if (catalog == null || catalog.schemaVersion != 1 || catalog.tags == null)
+                throw new InvalidDataException($"物品 Tag 本地化目录格式无效：{ItemTagLocalizationCatalog.EditorAssetPath}");
+
+            var expectedKeys = new HashSet<string>(StringComparer.Ordinal);
+            var seenIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            int count = 0;
+            foreach (ItemTagLocalizationCatalog.TagEntryData tag in catalog.tags)
+            {
+                string tagId = tag?.id?.Trim();
+                if (!ItemTagLocalizationCatalog.IsStableId(tagId))
+                    throw new InvalidDataException($"物品 Tag 必须使用稳定 ASCII ID：{tag?.id}");
+                if (!seenIds.Add(tagId))
+                    throw new InvalidDataException($"物品 Tag 本地化目录存在重复 ID：{tagId}");
+
+                string chinese = FindTagLabel(tag, "zh-CN");
+                string english = FindTagLabel(tag, "en");
+                if (string.IsNullOrWhiteSpace(chinese) || !ContainsChinese(chinese))
+                    throw new InvalidDataException($"物品 Tag {tagId} 缺少有效中文标签。");
+                if (string.IsNullOrWhiteSpace(english) || ContainsChinese(english))
+                    throw new InvalidDataException($"物品 Tag {tagId} 缺少有效英文标签。");
+
+                string key = FlatWorldLocalizationService.GetItemTagLabelKey(tagId);
+                expectedKeys.Add(key);
+                chineseTable.AddEntry(key, chinese);
+                englishTable.AddEntry(key, english);
+                count++;
+            }
+
+            RemoveStaleGeneratedItemTagEntries(collection, expectedKeys);
+            return count;
+        }
+
+        /// <summary>按 Locale Code 读取 Tag 目录中的明确译文。</summary>
+        private static string FindTagLabel(ItemTagLocalizationCatalog.TagEntryData tag, string localeCode)
+        {
+            if (tag?.labels == null)
+                return null;
+
+            for (int index = 0; index < tag.labels.Length; index++)
+            {
+                ItemTagLocalizationCatalog.LocalizedLabelData label = tag.labels[index];
+                if (label != null && string.Equals(label.locale?.Trim(), localeCode, StringComparison.OrdinalIgnoreCase))
+                    return label.text?.Trim();
+            }
+
+            return null;
+        }
+
+        /// <summary>移除目录已删除的生成 Tag key，避免 String Table 积累死条目。</summary>
+        private static void RemoveStaleGeneratedItemTagEntries(
+            StringTableCollection collection,
+            ISet<string> expectedKeys)
+        {
+            var staleKeys = new List<string>();
+            foreach (SharedTableData.SharedTableEntry entry in collection.SharedData.Entries)
+            {
+                string key = entry.Key;
+                if (string.IsNullOrWhiteSpace(key) ||
+                    !key.StartsWith("tag.", StringComparison.Ordinal) ||
+                    !key.EndsWith(".name", StringComparison.Ordinal) ||
+                    expectedKeys.Contains(key))
+                    continue;
+
+                staleKeys.Add(key);
+            }
+
+            foreach (string staleKey in staleKeys)
+                collection.RemoveEntry(staleKey);
         }
 
         /// <summary>移除 Manifest 已不存在物品遗留的默认名称/说明键，避免生成表持续积累死条目。</summary>
