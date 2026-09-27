@@ -309,22 +309,10 @@ public partial class Mod_Building : Module, IIncomingDamageRule
         if (item == null || item.DestructionHandled || _placementPending || !IsItemInInventory || !IsPlacementModeActive)
             return;
 
-        // 越界时虚影已被销毁，必须先用当前准线判定范围，不能提前返回“预览尚未就绪”。
-        Vector3 pointedPlacement = NormalizePlacement(GetPointerWorldPosition());
-        if (!IsWithinPlacementDistance(GetAuthorityPosition(), pointedPlacement, GetMaxPlacementDistance()))
-        {
-            BuildingPlacementFeedbackEvents.PublishPlacementRejected(
-                ResolvePlacementActor(), BuildingPlacementFailureReason.OutOfRange);
-            return;
-        }
-
-        if (!TryGetGhostPlacementPosition(out Vector3 placement))
-        {
-            Debug.LogWarning("[建筑安装] 放置预览尚未就绪", item);
-            return;
-        }
-
-        if (!ValidatePlacement(placement, GetAuthorityPosition(), true, out string reason, out BuildingPlacementFailureReason failureReason))
+        // 提交以当前准线为准；虚影只是表现，不参与安装资格判定。
+        Vector3 placement = NormalizePlacement(GetPointerWorldPosition());
+        if (!ValidatePlacement(placement, GetAuthorityPosition(), out string reason,
+                out BuildingPlacementFailureReason failureReason))
         {
             BuildingPlacementFeedbackEvents.PublishPlacementRejected(
                 ResolvePlacementActor(), failureReason);
@@ -460,15 +448,16 @@ public partial class Mod_Building : Module, IIncomingDamageRule
             return false;
         }
         Vector2Int cell = MechanicalWorld.CellOf(placedData.transform.position);
+        int requiredGroundSupport = GetRequiredGroundSupport(placedData.IDName);
         return MechanicalWorld.ValidatePlacement(definition, cell, false, out reason) &&
-            CheckTilePenalties(cell, out reason);
+            CheckTilePenalties(cell, requiredGroundSupport, out reason);
     }
 
     /// <summary>服务端在候选建筑生成后调用，不依赖客户端预览。</summary>
     public bool ValidateAuthoritativePlacement(Vector3 authorityPosition, out string reason)
     {
         Vector3 position = item != null ? item.transform.position : transform.position;
-        return ValidatePlacement(position, authorityPosition, false, out reason);
+        return ValidatePlacement(position, authorityPosition, out reason);
     }
 
     public void CompleteNetworkPlacement(float authoritativeRemainingAmount)
@@ -1226,11 +1215,10 @@ public partial class Mod_Building : Module, IIncomingDamageRule
     private bool ValidatePlacement(
         Vector3 position,
         Vector3 authorityPosition,
-        bool requireGhostClear,
         out string reason)
-        => ValidatePlacement(position, authorityPosition, requireGhostClear, out reason, out _);
+        => ValidatePlacement(position, authorityPosition, out reason, out _);
 
-    private bool ValidatePlacement(Vector3 position, Vector3 authorityPosition, bool requireGhostClear,
+    private bool ValidatePlacement(Vector3 position, Vector3 authorityPosition,
         out string reason, out BuildingPlacementFailureReason failureReason)
     {
         reason = null;
@@ -1257,12 +1245,6 @@ public partial class Mod_Building : Module, IIncomingDamageRule
             return false;
         }
 
-        if (requireGhostClear && GhostShadow == null)
-        {
-            reason = "放置预览尚未就绪";
-            return false;
-        }
-
         Vector2Int placementCell = GetPlacementCell(position);
         IBuildingPlacementExtension placementExtension = BuildingPlacementLifecycle.GetExtension(item);
         if (placementExtension != null && !placementExtension.ValidatePlacement(placementCell, out reason))
@@ -1274,20 +1256,56 @@ public partial class Mod_Building : Module, IIncomingDamageRule
                 return false;
             // 地表铺设独立校验来源格与占用，不能再用水格的原通行代价否决平台。
             if (TileBuildingSystem.IsGroundPlacement(Data.TileBlockId))
-                return true;
+                return CheckGroundLoadCapacity(placementCell,
+                    GetRequiredGroundSupport(item?.itemData?.IDName), out reason);
         }
 
         // 预览与真实提交逐格使用相同矩形占地，不能仅检查锚点格。
+        int requiredGroundSupport = GetRequiredGroundSupport(item?.itemData?.IDName);
         foreach (Vector2Int cell in GetFootprintCells(placementCell))
         {
             if (!BuildingOccupancyRegistry.CanPlace(cell, this, out reason) ||
-                !CheckTilePenalties(cell, out reason))
+                !CheckTilePenalties(cell, requiredGroundSupport, out reason))
                 return false;
         }
         return true;
     }
 
-    private static bool CheckTilePenalties(Vector2Int worldCell, out string reason)
+    #region 地表承重
+
+    /// <summary>放置门槛来自当前物品定义；旧存档中的建筑模块状态不能覆盖它。</summary>
+    private static int GetRequiredGroundSupport(string itemId)
+    {
+        return GameRes.ExistingInstance != null &&
+               GameRes.ExistingInstance.TryGetItemDefinition(itemId, out RuntimeItemDefinition definition)
+            ? definition.RequiredGroundSupport
+            : 0;
+    }
+
+    /// <summary>地板和水上平台只检查来源表面的承重，保留各自独立的液体与占用规则。</summary>
+    private static bool CheckGroundLoadCapacity(Vector2Int worldCell, int requiredGroundSupport,
+        out string reason)
+    {
+        worldCell = WorldTopologyRuntime.NormalizeCell(worldCell);
+        Vector2 center = new(worldCell.x + 0.5f, worldCell.y + 0.5f);
+        ChunkMgr manager = ChunkMgr.ExistingInstance;
+        if (manager == null)
+        {
+            reason = "区块管理器尚未就绪";
+            return false;
+        }
+        if (manager.TryGetRuntimeTerrainTile(center, out RuntimeTerrainTileSample runtimeTile))
+            return CheckRuntimeTileLoadCapacity(runtimeTile, requiredGroundSupport, out reason);
+        manager.GetChunkBy_ItemPosition(center, out Chunk chunk);
+        TileData topTile = chunk?.Map?.Data?.GetTopTile(worldCell);
+        if (topTile != null)
+            return CheckLegacyTileLoadCapacity(chunk.Map, worldCell, topTile, requiredGroundSupport, out reason);
+        reason = $"地块 ({worldCell.x},{worldCell.y}) 尚未加载";
+        return false;
+    }
+
+    /// <summary>每个占地格独立校验有效表面；液面、平台和干地均读取自己的承重定义。</summary>
+    private static bool CheckTilePenalties(Vector2Int worldCell, int requiredGroundSupport, out string reason)
     {
         reason = null;
         ChunkMgr chunkManager = ChunkMgr.Instance;
@@ -1307,6 +1325,9 @@ public partial class Mod_Building : Module, IIncomingDamageRule
                 reason = $"地块 ({worldCell.x},{worldCell.y}) 不可建造";
                 return false;
             }
+
+            if (!CheckRuntimeTileLoadCapacity(runtimeTile, requiredGroundSupport, out reason))
+                return false;
 
             if (!runtimeTile.Terrain.IsWalkable(
                     runtimeTile.LocalCell.x, runtimeTile.LocalCell.y) ||
@@ -1333,6 +1354,9 @@ public partial class Mod_Building : Module, IIncomingDamageRule
                 return false;
             }
 
+            if (!CheckLegacyTileLoadCapacity(chunk.Map, worldCell, topTile, requiredGroundSupport, out reason))
+                return false;
+
             if (!topTile.IsWalkable || topTile.Penalty > BlockedTilePenalty)
             {
                 reason = $"地块 ({worldCell.x},{worldCell.y}) 不可通行";
@@ -1342,6 +1366,66 @@ public partial class Mod_Building : Module, IIncomingDamageRule
 
         return true;
     }
+
+    /// <summary>世界液面遮盖底土，独立覆盖面则使用平台自身的地块承重。</summary>
+    private static bool CheckRuntimeTileLoadCapacity(RuntimeTerrainTileSample tile,
+        int requiredGroundSupport, out string reason)
+    {
+        if (tile.LiquidDepth > 0f)
+        {
+            if (!WorldLiquidSystem.TryGetDefinition(tile, out LiquidDefinition liquid))
+            {
+                reason = $"地块 ({tile.WorldCell.x},{tile.WorldCell.y}) 的液体定义缺失";
+                return false;
+            }
+            return CheckLoadCapacity(tile.WorldCell, liquid.WorldWater.LoadCapacity, requiredGroundSupport, out reason);
+        }
+
+        if (GameRes.ExistingInstance == null ||
+            !GameRes.ExistingInstance.TryGetTileDefinition(tile.TopTileId, out RuntimeTileDefinition definition))
+        {
+            reason = $"地块 ({tile.WorldCell.x},{tile.WorldCell.y}) 的承重定义缺失";
+            return false;
+        }
+        return CheckLoadCapacity(tile.WorldCell, definition.LoadCapacity, requiredGroundSupport, out reason);
+    }
+
+    /// <summary>旧 Map 的生成期液体也按液面承重，干地从当前地块目录读取配置。</summary>
+    private static bool CheckLegacyTileLoadCapacity(Map map, Vector2Int worldCell, TileData tile,
+        int requiredGroundSupport, out string reason)
+    {
+        if (map.GetGeneratedLiquidDepth(worldCell) > 0f)
+        {
+            string liquidId = map.GetGeneratedLiquidId(worldCell);
+            if (GameRes.ExistingInstance == null ||
+                !GameRes.ExistingInstance.TryGetLiquidDefinition(liquidId, out LiquidDefinition liquid) ||
+                liquid.WorldWater == null)
+            {
+                reason = $"地块 ({worldCell.x},{worldCell.y}) 的液体定义缺失";
+                return false;
+            }
+            return CheckLoadCapacity(worldCell, liquid.WorldWater.LoadCapacity, requiredGroundSupport, out reason);
+        }
+
+        if (GameRes.ExistingInstance == null ||
+            !GameRes.ExistingInstance.TryGetTileDefinition(tile.ID, out RuntimeTileDefinition definition))
+        {
+            reason = $"地块 ({worldCell.x},{worldCell.y}) 的承重定义缺失";
+            return false;
+        }
+        return CheckLoadCapacity(worldCell, definition.LoadCapacity, requiredGroundSupport, out reason);
+    }
+
+    /// <summary>建筑需求超过地表承重时拒绝放置，等值允许。</summary>
+    private static bool CheckLoadCapacity(Vector2Int worldCell, int available, int required, out string reason)
+    {
+        reason = available >= required
+            ? null
+            : $"地块 ({worldCell.x},{worldCell.y}) 承重 {available}，建筑需要 {required}";
+        return reason == null;
+    }
+
+    #endregion
 
     private void EnsureRuntimeReferences()
     {
@@ -1665,7 +1749,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule
         GhostShadow.transform.position = mouse;
         GhostShadow.UpdateAlpha(1f);
         BuildingPlacementLifecycle.GetExtension(item)?.ApplyPreview(GhostShadow);
-        GhostShadow.UpdateColor(!withinReach || !ValidatePlacement(mouse, authorityPosition, false, out _));
+        GhostShadow.UpdateColor(!ValidatePlacement(mouse, authorityPosition, out _));
     }
 
     /// <summary>按目标格子的最近边缘校验距离，保留每轴半格的格心吸附余量。</summary>
@@ -1714,16 +1798,6 @@ public partial class Mod_Building : Module, IIncomingDamageRule
             GhostShadow = null;
             Debug.LogError($"[建筑预览] 创建失败：{exception.Message}", item);
         }
-    }
-
-    private bool TryGetGhostPlacementPosition(out Vector3 position)
-    {
-        position = default;
-        if (GhostShadow == null)
-            return false;
-
-        position = NormalizePlacement(GhostShadow.transform.position);
-        return true;
     }
 
     private Vector3 GetPointerWorldPosition()

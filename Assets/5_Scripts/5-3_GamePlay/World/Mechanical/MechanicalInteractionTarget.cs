@@ -121,10 +121,11 @@ public sealed class MechanicalInteractionTarget : IWorldInteractionTarget, IDisp
     /// <summary>状态文本仅读取权威网络解算结果，不保存第二份面板状态。</summary>
     private string GetStatus()
     {
-        string state = FlatWorldLocalizationService.GetUiText(node.Network?.Status ?? "停止");
+        string state = FlatWorldLocalizationService.GetUiText(node.GetOperatingStatus());
+        node.GetLocalTorque(out float torqueSupply, out float torqueDemand);
         string status = FlatWorldLocalizationService.GetUiFormat(
             "{0} · 转速 {1:0} · 扭矩 {2:0.#}/{3:0.#}",
-            state, node.Rpm, node.Network?.TorqueSupply ?? 0, node.Network?.TorqueDemand ?? 0);
+            state, node.Rpm, torqueSupply, torqueDemand);
         if (node.Definition.Kind == "consumer" || node.Definition.Kind == "bellows")
             status += FlatWorldLocalizationService.GetUiFormat(
                 " · 工作效率 {0:0.#}%（需求 {1:0} RPM）",

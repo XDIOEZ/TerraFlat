@@ -44,7 +44,10 @@ public sealed class Mod_MechanicalNode : Module, IInteractable, IBuildingPlaceme
     public float AxisPortOffsetY; // 轴端口相对主体锚点的纵向偏移。
     public bool AxisPortDrawOnTop; // 外露轴环安装在支架表面时，绘制在主体前方。
     public Vector3 InputShaftLocalPosition = new Vector3(-0.55f, 0f, 0f); // 风箱轴口坐标，按风车独立图层方式贴合主体轴心。
+    public float BellowsCompression = 0.32f; // 风囊皮革相对展开高度的最大收缩比例，和机械相位同步。
     public Vector3 RotorLocalPosition; // 叶轮中心相对主体轴心锚点的位置，由物品配置提供。
+    public bool RotorBehindBody; // 嵌入式转子放在机身后方，由前沿遮住下部。
+    public float ReciprocatingStroke; // 往复件行程由机械图层读取，同时作为 JSON 模块参数严格校验的字段。
     public Vector3 GearboxLargeGearLocalPosition = new Vector3(-12f / 128f, 0f, 0f); // 左侧大齿轮中心，按 128 像素格配置。
     public Vector3 GearboxSmallGearLocalPosition = new Vector3(24f / 128f, 0f, 0f); // 右侧小齿轮中心，按 128 像素格配置。
     public float GearboxLargeGearScale = 0.875f; // 大齿轮尺寸，和齿轮半径共同决定传动比。
@@ -253,11 +256,12 @@ public sealed class Mod_MechanicalNode : Module, IInteractable, IBuildingPlaceme
     #endregion
 
     #region 放置朝向
-    /// <summary>轴类切换横竖，齿轮切换轴接口方向，风箱切换四个出风方向。</summary>
+    /// <summary>轴类切换横竖；齿轮、变速箱和风箱逐次切换四个方向。</summary>
     public void RotatePlacement()
     {
         if (!CanRotatePlacement) return;
-        int rotationSteps = Definition.Kind == "gear" || Definition.Kind == "bellows" ? 4 : 2;
+        int rotationSteps = Definition.Kind == "gear" || Definition.Kind == "gearbox" ||
+                            Definition.Kind == "bellows" ? 4 : 2;
         PlacementQuarterTurns = (PlacementQuarterTurns + 1) % rotationSteps;
         var building = item.itemMods.GetMod_ByID<Mod_Building>(ModText.Building);
         ApplyPreview(building?.GhostShadow);
@@ -289,7 +293,7 @@ public sealed class Mod_MechanicalNode : Module, IInteractable, IBuildingPlaceme
             if (previewRotor != null)
             {
                 previewRotor.transform.localRotation = placementRotation;
-                previewRotor.sortingOrder = shadow.ShadowRenderer.sortingOrder + 1;
+                previewRotor.sortingOrder = shadow.ShadowRenderer.sortingOrder + (RotorBehindBody ? -1 : 1);
             }
         }
         ApplyGearboxPreview(shadow, placementRotation);
@@ -505,7 +509,7 @@ public sealed class Mod_MechanicalNode : Module, IInteractable, IBuildingPlaceme
         rotorRenderer.transform.localPosition = RotorLocalPosition;
         rotorRenderer.transform.localRotation = Quaternion.Euler(0f, 0f, rotorAngleDegrees);
         rotorRenderer.sortingLayerID = spriteRenderer.sortingLayerID;
-        rotorRenderer.sortingOrder = 1;
+        rotorRenderer.sortingOrder = RotorBehindBody ? -1 : 1;
         // 把塔与叶轮当作同一个世界实体排序，叶轮只在组内盖过塔体。
         rotorSortingGroup.sortingLayerID = spriteRenderer.sortingLayerID;
         rotorSortingGroup.sortingOrder = originalSortingOrder;
@@ -1171,15 +1175,17 @@ public sealed class Mod_MechanicalNode : Module, IInteractable, IBuildingPlaceme
     }
     private string GetStatus()
     {
-        string state = FlatWorldLocalizationService.GetUiText(Node?.Network?.Status ?? "停止");
+        string state = FlatWorldLocalizationService.GetUiText(Node?.GetOperatingStatus() ?? "停止");
+        float torqueSupply = 0f, torqueDemand = 0f;
+        if (Node != null) Node.GetLocalTorque(out torqueSupply, out torqueDemand);
         string status = FlatWorldLocalizationService.GetUiFormat("{0} · 转速 {1:0} · 扭矩 {2:0.#}/{3:0.#}", state,
-            Node?.Rpm ?? 0, Node?.Network?.TorqueSupply ?? 0, Node?.Network?.TorqueDemand ?? 0);
+            Node?.Rpm ?? 0, torqueSupply, torqueDemand);
         if (Definition.Kind == "consumer" || Definition.Kind == "bellows")
             status += FlatWorldLocalizationService.GetUiFormat(" · 工作效率 {0:0.#}%（需求 {1:0} RPM）",
                 MechanicalWorld.GetWorkEfficiency(Node) * 100f, Definition.RequiredRpm);
         if (Definition.Kind == "gearbox" && Node != null && Node.FlowVisited && Node.EntryDirection >= 0)
         {
-            Definition.GetTransmission(Node.EntryDirection < 2, LocalState.RatioIndex,
+            Definition.GetTransmission(Node.IsGearboxSmallGearInput(), LocalState.RatioIndex,
                 out float speedRatio, out float torqueRatio);
             status += FlatWorldLocalizationService.GetUiFormat(" · 转速倍率 {0:0.##} · 扭矩倍率 {1:0.##}",
                 speedRatio, torqueRatio);

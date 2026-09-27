@@ -492,9 +492,9 @@ public class Mod_FlintStrike : Module, IInteractable
             throw new InvalidOperationException($"[Mod_FlintStrike] 无法创建物品数据: {FireSeedItemID}");
         fireSeedData.Stack.Amount = 1;
         fireSeedData.Tags ??= new List<string>();
-        if (!fireSeedData.Tags.Contains("火种"))
+        if (!fireSeedData.Tags.Contains(Tag.CombustionTinder))
         {
-            fireSeedData.Tags.Add("火种");
+            fireSeedData.Tags.Add(Tag.CombustionTinder);
         }
 
         return fireSeedData;

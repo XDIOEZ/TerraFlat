@@ -23,7 +23,7 @@ public sealed class Mod_FuelInteraction : Module, IInteractable, IItemModuleDepe
     public string[] ignitionItemIds = { "FireSeed" };
 
     [Tooltip("可以重新点燃对象的物品 Tag。")]
-    public string[] ignitionTags = { "火种" };
+    public string[] ignitionTags = { Tag.CombustionTinder };
 
     [Tooltip("燃料为零时，火种最多提供多少燃料用于起燃。")]
     public float ignitionFuelValueOverride = 8f;

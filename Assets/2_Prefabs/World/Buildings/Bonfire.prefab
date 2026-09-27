@@ -449,7 +449,7 @@ MonoBehaviour:
   ignitionItemIds:
   - FireSeed
   ignitionTags:
-  - "\u706B\u79CD"
+  - Combustion.Tinder
   ignitionFuelValueOverride: 8
   ignitionMaxTemperatureOverride: 180
   basePanel: {fileID: 0}

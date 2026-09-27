@@ -51,7 +51,7 @@ public class Mod_Furnace : Module, IInteractable, IItemModuleDependencyBinder
     [Tooltip("按已消耗燃料标签累计并放入燃料栏的副产物规则，可由物品定义配置。")]
     public List<FurnaceFuelByproductRule> fuelByproductRules = new();
     public List<string> ignitionItemIds = new List<string> { "FireSeed" }; // 可用于点火的火种ID
-    public List<string> ignitionTags = new List<string> { "火种" }; // 可用于点火的火种标签
+    public List<string> ignitionTags = new List<string> { Tag.CombustionTinder }; // 可用于点火的火种稳定标签 ID
     public float ignitionFuelValueOverride = 8f; // 火种有效燃料值（较小）
     public float ignitionMaxTemperatureOverride = 180f; // 火种点火时提供的温度上限（较低）
     public BasePanel basePanel; // 熔炉面板

@@ -156,7 +156,7 @@ public sealed class MechanicalSettings
     public int ActivationChunks = 1;
     public int DeactivationChunks = 2;
     public float UnloadDelaySeconds = 5f;
-    public float ReferenceRpm = 60f;
+    public float ReferenceRpm = 20f;
     public float ManualHoldThresholdSeconds = 0.25f; // 手摇轮按住达到此时间后开始供能，短按用于打开面板。
     public float ManualPulseSeconds = 0.2f; // 按住交互时维持的最小动力缓冲。
     public float ManualReserveSeconds = 0.2f; // 松开后允许残留的最大动力缓冲。
@@ -186,10 +186,10 @@ public sealed class MechanicalDefinition
     public string Source = ""; // manual/water/wind 或 MOD 条件
     public float SourceRadius; // 由水流线速度换算转速时使用的动力轮半径，单位为世界格。
     public string Station = "";
-    public float TorqueCapacity = 64f; // 整网保守扭矩传动容量。
+    public float TorqueCapacity = 60f; // 旧目录兼容字段；传动件现只传递扭矩，不以容量限制运行。
     public float Torque;
-    public float Rpm = 60f;
-    public float RequiredRpm = 60f; // 用力器达到 100% 工作效率所需的转速。
+    public float Rpm = 20f;
+    public float RequiredRpm = 20f; // 用力器达到 100% 工作效率所需的转速。
     public float TorqueLoad;
     public float ManualWorkSecondsPerPress; // 面板一次手动推动贡献的加工时间；0 表示不开放手动推进。
     public float ManualDriveTorque; // 手推时向机械网络输出的扭矩；0 表示不能手推供能。
@@ -201,8 +201,14 @@ public sealed class MechanicalDefinition
     public float ReverseTorqueRatio = 1f; // 从右/上侧输入时输出侧的扭矩倍率。
     public bool BlocksMovement = true; // 是否作为实体障碍阻挡角色与导航。
     public float PlayerMoveSpeedMultiplier = 1f; // 可通行机械占格对玩家主动移速的倍率。
+    public string RenderSorting = "ground"; // 默认贴地；dynamicY 与玩家按建造锚点 Y 排序。
+    public bool? CastVisualShadows; // MOD 可覆盖用力器与发力器的默认两类世界阴影。
     public int Layer => Kind == "bridge" ? 1 : 0;
     public bool Rotatable => Ports == "axis" || Kind == "bellows" || (Kind == "gear" && AxlePorts?.Length > 0);
+    /// <summary>动力源、加工设备与机械风箱默认投影；传动件保持原有无影表现。</summary>
+    public bool ShouldCastVisualShadows()
+        => CastVisualShadows ?? (Kind == "source" || Kind == "consumer" || Kind == "bellows" ||
+            !string.IsNullOrEmpty(Source) || !string.IsNullOrEmpty(Station));
     /// <summary>扭矩源为输出端，用力器为输入终点，其余节点按驱动方向传递；MOD 可以显式声明。</summary>
     public string GetPortMode()
     {
@@ -231,8 +237,9 @@ public sealed class MechanicalDefinition
     public void Validate()
     {
         if (string.IsNullOrWhiteSpace(Id) || (Ports != "axis" && Ports != "all") ||
+            (RenderSorting != "dynamicY" && RenderSorting != "ground") ||
             (PortMode != "auto" && PortMode != "input" && PortMode != "output" && PortMode != "relay") ||
-            !Positive(TorqueCapacity) || !NonNegative(Torque) || !Positive(Rpm) || !Positive(RequiredRpm) || !NonNegative(TorqueLoad) ||
+            !NonNegative(Torque) || !Positive(Rpm) || !Positive(RequiredRpm) || !NonNegative(TorqueLoad) ||
             (Source == "water" && !Positive(SourceRadius)) ||
             !Positive(PlayerMoveSpeedMultiplier) || PlayerMoveSpeedMultiplier > 1f || !NonNegative(ManualWorkSecondsPerPress) ||
             !NonNegative(ManualDriveTorque) || !NonNegative(ManualDriveRpm) || !NonNegative(ManualDriveSecondsPerPress) ||

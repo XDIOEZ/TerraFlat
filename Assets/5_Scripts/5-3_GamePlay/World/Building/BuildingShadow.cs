@@ -8,9 +8,6 @@ using UnityEngine;
 /// </summary>
 public class BuildingShadow : MonoBehaviour
 {
-    private const string PreviewSortingLayer = "Shadow";
-    // 预览必须压过 Default 世界精灵，但保持在 Player 等角色层之下。
-    private const int PreviewSortingOrder = 1000;
 
     public SpriteRenderer ShadowRenderer;
     public Color ShadowColor = new(1f, 1f, 1f, 0.7f);
@@ -49,11 +46,7 @@ public class BuildingShadow : MonoBehaviour
         if (ShadowRenderer.sharedMaterial == null)
             throw new MissingComponentException("BuildingShadow 缺少可用 Sprite 材质");
 
-        int previewLayerId = SortingLayer.NameToID(PreviewSortingLayer);
-        ShadowRenderer.sortingLayerID = previewLayerId != 0
-            ? previewLayerId
-            : sourceRenderer.sortingLayerID;
-        ShadowRenderer.sortingOrder = PreviewSortingOrder;
+        WorldSortingManager.GetInstance().ApplyRenderer(ShadowRenderer, WorldSortingManager.GroundPreviewCategory);
         ShadowRenderer.flipX = sourceRenderer.flipX;
         ShadowRenderer.flipY = sourceRenderer.flipY;
         ShadowRenderer.drawMode = sourceRenderer.drawMode;

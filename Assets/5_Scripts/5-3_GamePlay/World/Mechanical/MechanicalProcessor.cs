@@ -42,6 +42,8 @@ public sealed class MechanicalProcessor : IDisposable
     public bool Advance(float workSeconds, Player actor = null)
     {
         if (!MechanicalDefinition.Positive(workSeconds)) return false;
+        // 玩家正在拖动加工槽时保留当前物品，避免高速生产在松手前消费或替换来源堆。
+        if (Input.IsSlotBeingDragged(0) || Output.IsSlotBeingDragged(0)) return false;
         ReconcileRecipe();
         if (!TryGetProcess(out var process) || !Preview().Success) return false;
         State.Progress = Mathf.Min(process.WorkSeconds, State.Progress + workSeconds);

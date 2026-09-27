@@ -474,8 +474,8 @@ public class Mod_FireDrill : Module, IInteractable
             throw new InvalidOperationException($"[Mod_FireDrill] 无法创建物品数据: {FireSeedItemID}");
         fireSeedData.Stack.Amount = 1;
         fireSeedData.Tags ??= new List<string>();
-        if (!fireSeedData.Tags.Contains("火种"))
-            fireSeedData.Tags.Add("火种");
+        if (!fireSeedData.Tags.Contains(Tag.CombustionTinder))
+            fireSeedData.Tags.Add(Tag.CombustionTinder);
 
         return fireSeedData;
     }

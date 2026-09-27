@@ -50,7 +50,7 @@ public sealed class BuildingResourceCatalogValidator : IResourceCatalogValidator
         foreach (ChunkGenerationProfileSO profile in profiles)
         {
             var seen = new HashSet<string>(StringComparer.Ordinal);
-            foreach (KeyValuePair<string, string> entry in profile.CreateSnapshot().TextParameters)
+            foreach (KeyValuePair<string, string> entry in profile.CreateTextParametersSnapshot())
             {
                 const string prefix = "tile.block.";
                 if (!entry.Key.StartsWith(prefix, StringComparison.Ordinal)) continue;

@@ -83,7 +83,7 @@ public sealed class MechanicalPanelSession : IDisposable
         view.ActionButton.GetComponentInChildren<TMP_Text>(true).text = FlatWorldLocalizationService.GetUiText(caption);
         if (processor == null) return;
         var result = processor.Preview();
-        if (result.Success) preview?.Show(result.PrimaryOutput, processor.Progress01); else preview?.Clear();
+        if (result.Success) preview?.ShowOverOccupiedSlot(result.PrimaryOutput, processor.Progress01); else preview?.Clear();
     }
     public void Close()
     {

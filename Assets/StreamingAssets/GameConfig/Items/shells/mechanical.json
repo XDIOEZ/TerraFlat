@@ -14,7 +14,8 @@
       "stackable": false,
       "canBePickedUp": false,
       "tags": [
-        "35"
+        "35",
+        "InventoryGroup.MechanicalPower"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/HandCrank/HandCrank_Body.png",
@@ -59,7 +60,7 @@
           },
           "parameters": {
             "LightOcclusionMode": "None",
-            "CastSunShadow": false
+            "CastSunShadow": true
           }
         },
         "机械扭矩模块": {
@@ -92,7 +93,8 @@
       "stackable": false,
       "canBePickedUp": true,
       "tags": [
-        "35"
+        "35",
+        "InventoryGroup.MechanicalPower"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/HandCrank/HandCrank_Building.png",
@@ -166,7 +168,8 @@
       "stackable": false,
       "canBePickedUp": false,
       "tags": [
-        "35"
+        "35",
+        "InventoryGroup.MechanicalPower"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/WaterWheel/WaterWheel_Body.png",
@@ -175,8 +178,8 @@
         },
         "collider": {
           "type": "BoxCollider2D",
-          "offset": { "x": 0, "y": 0.02 },
-          "size": { "x": 0.72, "y": 0.42 }
+          "offset": { "x": 0, "y": 0.24 },
+          "size": { "x": 0.65, "y": 0.38 }
         }
       },
       "health": {
@@ -242,7 +245,8 @@
       "stackable": false,
       "canBePickedUp": true,
       "tags": [
-        "35"
+        "35",
+        "InventoryGroup.MechanicalPower"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/WaterWheel/WaterWheel_Building.png",
@@ -303,6 +307,7 @@
     {
       "id": "Windmill",
       "parent": "BuildingBody_Base",
+      "requiredGroundSupport": 7,
       "gameName": "风车-建筑",
       "description": "风车-建筑，用于首版机械扭矩系统试玩。",
       "durability": 1,
@@ -313,12 +318,18 @@
       "stackable": false,
       "canBePickedUp": false,
       "tags": [
-        "35"
+        "35",
+        "InventoryGroup.MechanicalPower"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/Windmill_Tower.png",
         "spriteStates": {
           "rotor": "Assets/6_Art/Generated/Mechanical/World/Windmill_Rotor.png"
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "offset": { "x": 0, "y": 0.24 },
+          "size": { "x": 0.65, "y": 0.38 }
         }
       },
       "health": {
@@ -374,6 +385,7 @@
     {
       "id": "Windmill_Summoner",
       "parent": "BuildingSummoner_Base",
+      "requiredGroundSupport": 7,
       "gameName": "风车",
       "description": "风车，用于首版机械扭矩系统试玩。",
       "durability": 1,
@@ -384,7 +396,8 @@
       "stackable": false,
       "canBePickedUp": true,
       "tags": [
-        "35"
+        "35",
+        "InventoryGroup.MechanicalPower"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/Windmill_Building.png",
@@ -455,7 +468,8 @@
       "stackable": true,
       "canBePickedUp": false,
       "tags": [
-        "35"
+        "35",
+        "InventoryGroup.MechanicalPower"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Shaft_Wood_Linked.png",
@@ -530,7 +544,8 @@
       "stackable": true,
       "canBePickedUp": true,
       "tags": [
-        "35"
+        "35",
+        "InventoryGroup.MechanicalPower"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Shaft_Wood_Linked.png",
@@ -601,7 +616,8 @@
       "stackable": true,
       "canBePickedUp": false,
       "tags": [
-        "35"
+        "35",
+        "InventoryGroup.MechanicalPower"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Gear_Wood.png",
@@ -676,7 +692,8 @@
       "stackable": true,
       "canBePickedUp": true,
       "tags": [
-        "35"
+        "35",
+        "InventoryGroup.MechanicalPower"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Gear_Wood.png",
@@ -747,12 +764,13 @@
       "stackable": true,
       "canBePickedUp": false,
       "tags": [
-        "35"
+        "35",
+        "InventoryGroup.MechanicalPower"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Gearbox_Wood_Housing.png",
         "spriteStates": {
-          "axisPorts": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Shaft_Wood_Linked_EndRings.png",
+          "axisPorts": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Shaft_Wood_Linked.png",
           "gearboxGear": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Gearbox_Wood_Gear.png"
         }
       },
@@ -827,12 +845,14 @@
       "stackable": true,
       "canBePickedUp": true,
       "tags": [
-        "35"
+        "35",
+        "InventoryGroup.MechanicalPower"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Gearbox_Wood_Housing.png",
         "spriteStates": {
-          "axisPorts": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Shaft_Wood_Linked_EndRings.png",
+          "inventoryIcon": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Gearbox_Wood.png",
+          "axisPorts": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Shaft_Wood_Linked.png",
           "gearboxGear": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Gearbox_Wood_Gear.png"
         }
       },
@@ -903,10 +923,15 @@
       "stackable": true,
       "canBePickedUp": false,
       "tags": [
-        "35"
+        "35",
+        "InventoryGroup.MechanicalPower"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/Clutch/Clutch_Engaged.png",
+        "spriteStates": {
+          "clutchEngaged": "Assets/6_Art/Generated/Mechanical/World/Clutch/Clutch_Engaged.png",
+          "clutchDisengaged": "Assets/6_Art/Generated/Mechanical/World/Clutch/Clutch_Disengaged.png"
+        }
       },
       "health": {
         "hasHp": true,
@@ -974,10 +999,15 @@
       "stackable": true,
       "canBePickedUp": true,
       "tags": [
-        "35"
+        "35",
+        "InventoryGroup.MechanicalPower"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/Clutch/Clutch_Engaged.png",
+        "spriteStates": {
+          "clutchEngaged": "Assets/6_Art/Generated/Mechanical/World/Clutch/Clutch_Engaged.png",
+          "clutchDisengaged": "Assets/6_Art/Generated/Mechanical/World/Clutch/Clutch_Disengaged.png"
+        }
       },
       "health": {
         "hasHp": true,
@@ -1041,7 +1071,8 @@
       "stackable": true,
       "canBePickedUp": false,
       "tags": [
-        "35"
+        "35",
+        "InventoryGroup.MechanicalPower"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_CrossShaft_Frame.png",
@@ -1116,7 +1147,8 @@
       "stackable": true,
       "canBePickedUp": true,
       "tags": [
-        "35"
+        "35",
+        "InventoryGroup.MechanicalPower"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_CrossShaft_Horizontal.png"
@@ -1183,7 +1215,8 @@
       "stackable": false,
       "canBePickedUp": false,
       "tags": [
-        "35"
+        "35",
+        "InventoryGroup.MechanicalPower"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/Millstone_Idle.png",
@@ -1257,7 +1290,8 @@
       "stackable": false,
       "canBePickedUp": true,
       "tags": [
-        "35"
+        "35",
+        "InventoryGroup.MechanicalPower"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/Millstone_Idle.png",
@@ -1322,7 +1356,7 @@
       "id": "MechanicalBellows",
       "parent": "BuildingBody_Base",
       "gameName": "机械风箱-建筑",
-      "description": "出风口朝向相邻熔炉或高炉时，按转速提升其温度上限；60 RPM 时最高增加 500℃。",
+      "description": "出风口朝向相邻熔炉或高炉时，按转速提升其温度上限；20 RPM 时最高增加 500℃。",
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,
@@ -1331,12 +1365,14 @@
       "stackable": false,
       "canBePickedUp": false,
       "tags": [
-        "35"
+        "35",
+        "InventoryGroup.MechanicalPower"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Mechanical/Items/Item_MechanicalBellows.png",
+        "spriteAddress": "Assets/6_Art/Generated/Mechanical/Items/MechanicalBellows/MechanicalBellows_Frame.png",
         "spriteStates": {
-          "inputShaft": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Gear_Wood_InputShaft.png"
+          "inputShaft": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Gear_Wood_InputShaft.png",
+          "bellowsLeather": "Assets/6_Art/Generated/Mechanical/Items/MechanicalBellows/MechanicalBellows_Leather.png"
         }
       },
       "health": {
@@ -1384,7 +1420,8 @@
           },
           "parameters": {
             "DefinitionId": "MechanicalBellows",
-            "InputShaftLocalPosition": { "x": -0.28125, "y": 0, "z": 0 }
+            "InputShaftLocalPosition": { "x": -0.28125, "y": 0, "z": 0 },
+            "BellowsCompression": 0.32
           }
         }
       }
@@ -1393,7 +1430,7 @@
       "id": "MechanicalBellows_Summoner",
       "parent": "BuildingSummoner_Base",
       "gameName": "机械风箱",
-      "description": "出风口朝向相邻熔炉或高炉时，按转速提升其温度上限；60 RPM 时最高增加 500℃。",
+      "description": "出风口朝向相邻熔炉或高炉时，按转速提升其温度上限；20 RPM 时最高增加 500℃。",
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,
@@ -1402,10 +1439,11 @@
       "stackable": false,
       "canBePickedUp": true,
       "tags": [
-        "35"
+        "35",
+        "InventoryGroup.MechanicalPower"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Mechanical/Items/Item_MechanicalBellows.png",
+        "spriteAddress": "Assets/6_Art/Generated/Mechanical/Items/MechanicalBellows/MechanicalBellows_Static.png",
         "spriteStates": {
           "inputShaft": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Gear_Wood_InputShaft.png"
         }
@@ -1473,10 +1511,14 @@
       "stackable": false,
       "canBePickedUp": false,
       "tags": [
-        "35"
+        "35",
+        "InventoryGroup.MechanicalPower"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/Sawmill.png"
+        "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/Sawmill_Body.png",
+        "spriteStates": {
+          "rotor": "Assets/6_Art/Generated/Mechanical/World/Sawmill_Rotor.png"
+        }
       },
       "health": {
         "hasHp": true,
@@ -1522,7 +1564,9 @@
             "Type": 0
           },
           "parameters": {
-            "DefinitionId": "Sawmill"
+            "DefinitionId": "Sawmill",
+            "RotorBehindBody": true,
+            "RotorLocalPosition": { "x": 0, "y": 0.3984375, "z": 0 }
           }
         }
       }
@@ -1540,10 +1584,14 @@
       "stackable": false,
       "canBePickedUp": true,
       "tags": [
-        "35"
+        "35",
+        "InventoryGroup.MechanicalPower"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/Sawmill.png"
+        "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/Sawmill.png",
+        "spriteStates": {
+          "rotor": "Assets/6_Art/Generated/Mechanical/World/Sawmill_Rotor.png"
+        }
       },
       "health": {
         "hasHp": true,
@@ -1589,7 +1637,9 @@
             "Type": 0
           },
           "parameters": {
-            "DefinitionId": "Sawmill"
+            "DefinitionId": "Sawmill",
+            "RotorBehindBody": true,
+            "RotorLocalPosition": { "x": 0, "y": 0.3984375, "z": 0 }
           }
         }
       }
@@ -1607,12 +1657,14 @@
       "stackable": false,
       "canBePickedUp": false,
       "tags": [
-        "35"
+        "35",
+        "InventoryGroup.MechanicalPower"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/MechanicalHammer_Building.png",
+        "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/MechanicalHammer_Body.png",
         "spriteStates": {
-          "axisPorts": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Shaft_Wood_Linked_EndRings.png"
+          "axisPorts": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Shaft_Wood_Linked_EndRings.png",
+          "reciprocating": "Assets/6_Art/Generated/Mechanical/World/MechanicalHammer_Ram.png"
         }
       },
       "health": {
@@ -1661,7 +1713,8 @@
           "parameters": {
             "DefinitionId": "MechanicalHammer",
             "AxisPortLayout": "centeredShaftRings",
-            "AxisPortDrawOnTop": true
+            "AxisPortDrawOnTop": true,
+            "ReciprocatingStroke": 0.15625
           }
         }
       }
@@ -1679,7 +1732,8 @@
       "stackable": false,
       "canBePickedUp": true,
       "tags": [
-        "35"
+        "35",
+        "InventoryGroup.MechanicalPower"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/MechanicalHammer_Building.png",

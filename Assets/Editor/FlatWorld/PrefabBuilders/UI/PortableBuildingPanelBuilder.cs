@@ -74,11 +74,15 @@ public static class PortableBuildingPanelBuilder
         => Configure(root, FindButton(root, "关闭"), root.transform,
             new Vector2(160f, 46f), new Vector2(-220f, -184f));
 
-    /// <summary>燃料交互面板底部横向排列关闭与建筑操作，只显示当前载体能执行的放置或拆回。</summary>
+    /// <summary>燃料交互面板底部排列建筑操作，透明底板不拦快捷栏射线。</summary>
     public static void ConfigureFuelInteraction(GameObject root)
-        => Configure(root, FindButton(root, "关闭按钮"),
+    {
+        Configure(root, FindButton(root, "关闭按钮"),
             root.transform.Find("设置对话框/操作列表"),
             new Vector2(180f, 64f), null);
+        root.GetComponent<Image>().raycastTarget = false;
+        root.transform.Find("设置对话框").GetComponent<Image>().raycastTarget = false;
+    }
 
     private static void ConfigureAsset(string path, Action<GameObject> configure)
     {

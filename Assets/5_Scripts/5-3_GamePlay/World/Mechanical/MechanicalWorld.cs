@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using FlatWorld.Networking;
 using MemoryPack;
+using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -24,6 +25,7 @@ public static class MechanicalWorld
     private static readonly Dictionary<string, Func<MechanicalNode, float>> sourceProviders = new(StringComparer.Ordinal);
     private static readonly Dictionary<string, Func<MechanicalNode, float>> sourceRpmProviders = new(StringComparer.Ordinal);
     private static readonly List<Vector2Int> players = new();
+    private const float PointerInteractionRadius = .65f; // 机械数据目标的准线命中半径，必须与查询格范围同步。
     private static MechanicalNetworkGraph graph;
     private static GameSaveData owner;
     private static string worldKey;
@@ -71,10 +73,11 @@ public static class MechanicalWorld
         MechanicalCatalog.EnsureLoaded();
         Vector2 size = ChunkMgr.ExistingInstance != null ? ChunkMgr.GetChunkSize() : new Vector2(16, 16);
         var chunkSize = new Vector2Int(Mathf.Max(1, Mathf.RoundToInt(size.x)), Mathf.Max(1, Mathf.RoundToInt(size.y)));
-        Vector2Int period = Vector2Int.zero;
-        if (WorldTopologyRuntime.TryGetActiveBounds(out var bounds))
-            period = new Vector2Int(bounds.Span.x / chunkSize.x, bounds.Span.y / chunkSize.y);
-        graph = new MechanicalNetworkGraph(chunkSize, period, WorldTopologyRuntime.NormalizeCell);
+        WorldTopologyDomain topology = WorldTopologyRuntime.GetActiveDomain();
+        Vector2Int period = topology.IsWrapped
+            ? new Vector2Int(topology.Span.x / chunkSize.x, topology.Span.y / chunkSize.y)
+            : Vector2Int.zero;
+        graph = new MechanicalNetworkGraph(chunkSize, period, topology);
         GameplayCombatBridge.Register(MechanicalCombatBridge.Instance);
         if (save?.Mechanical?.Worlds != null && save.Mechanical.Worlds.TryGetValue(key, out var snapshots))
             foreach (var data in snapshots) RestoreDescriptor(data);
@@ -304,26 +307,31 @@ public static class MechanicalWorld
         EnsureScope();
         if (actor.gameObject.scene.name != worldKey) return;
         if (dirty) { graph.Rebuild(nodes.Values); dirty = false; }
+        if (!graph.HasNodes) return;
         Vector3 position = actor.transform.position;
-        int extent = Mathf.CeilToInt(radius) + 1;
-        Vector2Int center = CellOf(position);
-        for (int dy = -extent; dy <= extent; dy++)
-        for (int dx = -extent; dx <= extent; dx++)
+        // 命中点与机械锚点的格坐标差不会超过距离的向上取整，无需多扫外围一圈。
+        int extent = Mathf.CeilToInt(pointer.HasValue ? PointerInteractionRadius : radius);
+        Vector2 queryCenter = pointer ?? (Vector2)position;
+        Vector2Int center = new Vector2Int(Mathf.FloorToInt(queryCenter.x), Mathf.FloorToInt(queryCenter.y));
+        IReadOnlyList<MechanicalNode> candidates = graph.GetInteractionCandidates(center, extent, pointer.HasValue);
+        WorldTopologyDomain topology = graph.Topology;
+        float2 actorPosition = new float2(position.x, position.y);
+        Vector2 pointerPosition = pointer.GetValueOrDefault();
+        float2 pointerPoint = new float2(pointerPosition.x, pointerPosition.y);
+        for (int i = 0; i < candidates.Count; i++)
         {
-            Vector2Int cell = WorldTopologyRuntime.NormalizeCell(center + new Vector2Int(dx, dy));
-            for (int layer = 0; layer < 2; layer++)
+            MechanicalNode node = candidates[i];
+            Vector3 targetPosition = node.Snapshot.transform.position;
+            float2 targetPoint = new float2(targetPosition.x, targetPosition.y);
+            if (topology.Distance(actorPosition, targetPoint) > radius ||
+                pointer.HasValue && topology.Distance(pointerPoint, targetPoint) > PointerInteractionRadius)
+                continue;
+            if (!interactions.TryGetValue(node.Id, out MechanicalInteractionTarget target))
             {
-                MechanicalNode node = graph.At(cell, layer);
-                if (node == null || WorldTopologyRuntime.Distance(position, node.Snapshot.transform.position) > radius ||
-                    pointer.HasValue && WorldTopologyRuntime.Distance(pointer.Value, node.Snapshot.transform.position) > .65f)
-                    continue;
-                if (!interactions.TryGetValue(node.Id, out MechanicalInteractionTarget target))
-                {
-                    target = new MechanicalInteractionTarget(node);
-                    interactions.Add(node.Id, target);
-                }
-                if (!result.Contains(target)) result.Add(target);
+                target = new MechanicalInteractionTarget(node);
+                interactions.Add(node.Id, target);
             }
+            if (!result.Contains(target)) result.Add(target);
         }
     }
 
@@ -680,20 +688,20 @@ public static class MechanicalWorld
                liquid.WorldWater != null;
     }
 
-    /// <summary>机械风箱只增强出风口正对的相邻炉体；60 RPM 对应满增温，多个风箱取最高倍率。</summary>
+    /// <summary>机械风箱只增强出风口正对的相邻炉体；20 RPM 对应满增温，多个风箱取最高倍率。</summary>
     public static float GetBellowsBoost(Vector3 position)
     {
         if (graph == null) return 0;
         if (dirty) { graph.Rebuild(nodes.Values); dirty = false; }
-        Vector2Int cell = CellOf(position);
+        Vector2Int cell = graph.NormalizeCell(new Vector2Int(Mathf.FloorToInt(position.x), Mathf.FloorToInt(position.y)));
         float boost = 0;
         foreach (var offset in MechanicalNetworkGraph.Directions)
         {
-            var node = graph.At(WorldTopologyRuntime.NormalizeCell(cell + offset), 0);
+            var node = graph.At(cell + offset, 0);
             if (node?.Definition.Kind != "bellows" || node.Network?.Active != true)
                 continue;
 
-            Vector2Int outlet = WorldTopologyRuntime.NormalizeCell(
+            Vector2Int outlet = graph.NormalizeCell(
                 node.Cell + MechanicalNetworkGraph.Directions[node.RotationQuarterTurns & 3]);
             if (outlet != cell)
                 continue;

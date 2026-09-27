@@ -24,6 +24,10 @@ public sealed class MechanicalNode
     public int EntryDirection = -1;
     public int GearboxCrossings;
     public bool FlowVisited;
+    public int SourceDistance; // 距最近可达动力源的传动距离。
+    public bool LoadSatisfied; // 当前用力器是否取得全部固定需求。
+    public float AvailableTorque; // 当前节点在本次分配时可取得的本地扭矩。
+    public float RemainingSourceTorque; // 按根侧单位记录尚未分配的动力源扭矩。
     public float Rpm;
     public float VisualRpm; // 上次提交给 BRG 的转速。
     public float VisualPhase; // 上次转速变化时的连续动画相位，单位弧度。
@@ -63,6 +67,28 @@ public sealed class MechanicalNode
         if (other == null || !HasPort(direction)) return false;
         if (Definition.Kind == "gear" && other.Kind == "gear") return true;
         return Definition.HasAxlePort((direction - RotationQuarterTurns + 4) % 4);
+    }
+    /// <summary>按箱体朝向把世界输入方向换回局部方向，右侧小齿轮输入时使用逆向传动比。</summary>
+    public bool IsGearboxSmallGearInput()
+        => EntryDirection >= 0 && ((EntryDirection - RotationQuarterTurns + 4) & 3) == 0;
+    /// <summary>供给显示为沿传动路径实际可取得的扭矩；用力器始终显示自身固定需求。</summary>
+    public void GetLocalTorque(out float supply, out float demand)
+    {
+        demand = MechanicalNetworkGraph.RoundLoadTorqueToTens(Definition.TorqueLoad);
+        if (!FlowVisited || Network == null)
+        {
+            supply = 0f;
+            return;
+        }
+        supply = Definition.TorqueLoad > 0f
+            ? AvailableTorque
+            : MechanicalNetworkGraph.GetRemainingLocalTorque(this);
+    }
+    /// <summary>局部负载不足只停止本用力器，传动冲突仍服从整网状态。</summary>
+    public string GetOperatingStatus()
+    {
+        string status = Network?.Status ?? "停止";
+        return status == "运行中" && Definition.TorqueLoad > 0f && !LoadSatisfied ? "过载" : status;
     }
     /// <summary>旧 MOD 使用的正向端口速比入口；实际双向传动由 GetTransmission 求解。</summary>
     public float PortRatio(int direction)
@@ -105,8 +131,12 @@ public sealed class MechanicalNetworkGraph
     private readonly Dictionary<Vector3Int, MechanicalNode> cells = new();
     public readonly List<MechanicalNetwork> Networks = new();
     private readonly Func<Vector2Int, Vector2Int> normalize;
+    private readonly WorldTopologyDomain topology;
+    private readonly bool hasTopologySnapshot;
     private readonly Vector2Int chunkSize;
     private readonly Vector2Int chunkPeriod;
+    private readonly InteractionWindow pointerWindow = new();
+    private readonly InteractionWindow nearbyWindow = new();
 
     public MechanicalNetworkGraph(Vector2Int chunkSize, Vector2Int chunkPeriod, Func<Vector2Int, Vector2Int> normalize)
     {
@@ -114,20 +144,77 @@ public sealed class MechanicalNetworkGraph
         this.chunkPeriod = chunkPeriod;
         this.normalize = normalize ?? Identity;
     }
+    /// <summary>机械世界在作用域建立时冻结纯坐标域，热路径不再通过委托回查存档。</summary>
+    public MechanicalNetworkGraph(Vector2Int chunkSize, Vector2Int chunkPeriod, WorldTopologyDomain topology)
+    {
+        this.chunkSize = new Vector2Int(Mathf.Max(1, chunkSize.x), Mathf.Max(1, chunkSize.y));
+        this.chunkPeriod = chunkPeriod;
+        this.topology = topology;
+        hasTopologySnapshot = true;
+    }
     private static Vector2Int Identity(Vector2Int value) => value;
+    /// <summary>核心机械世界使用冻结坐标域；旧 MOD 构图入口继续使用原有归一化委托。</summary>
+    internal Vector2Int NormalizeCell(Vector2Int cell)
+        => hasTopologySnapshot
+            ? new Vector2Int(topology.NormalizeX(cell.x), topology.NormalizeY(cell.y))
+            : normalize(cell);
+    internal WorldTopologyDomain Topology => topology;
     public Vector2Int ChunkOf(Vector2Int cell) => new(Mathf.FloorToInt((float)cell.x / chunkSize.x), Mathf.FloorToInt((float)cell.y / chunkSize.y));
     public MechanicalNode At(Vector2Int cell, int layer)
-        => cells.TryGetValue(new Vector3Int(normalize(cell).x, normalize(cell).y, layer), out var node) ? node : null;
+        => AtNormalized(NormalizeCell(cell), layer);
+
+    /// <summary>调用方已将世界格归一化时直接查索引，避免邻格或交互扫描重复读取世界拓扑。</summary>
+    internal MechanicalNode AtNormalized(Vector2Int cell, int layer)
+        => cells.TryGetValue(new Vector3Int(cell.x, cell.y, layer), out var node) ? node : null;
+
+    /// <summary>空机械世界跳过逐帧交互格扫描。</summary>
+    internal bool HasNodes => cells.Count > 0;
+
+    /// <summary>同格内光标和玩家移动复用候选节点；拓扑变化时随索引一起失效。</summary>
+    internal IReadOnlyList<MechanicalNode> GetInteractionCandidates(Vector2Int center, int extent, bool pointed)
+    {
+        InteractionWindow window = pointed ? pointerWindow : nearbyWindow;
+        if (window.Valid && window.Center == center && window.Extent == extent)
+            return window.Nodes;
+
+        window.Reset();
+        window.Center = center;
+        window.Extent = extent;
+        for (int dy = -extent; dy <= extent; dy++)
+        for (int dx = -extent; dx <= extent; dx++)
+        {
+            Vector2Int cell = NormalizeCell(center + new Vector2Int(dx, dy));
+            for (int layer = 0; layer < 2; layer++)
+            {
+                MechanicalNode node = AtNormalized(cell, layer);
+                if (node != null && window.Seen.Add(node)) window.Nodes.Add(node);
+            }
+        }
+        window.Valid = true;
+        return window.Nodes;
+    }
+
+    /// <summary>拓扑索引拥有候选窗口及去重集合，重构时整体失效。</summary>
+    private sealed class InteractionWindow
+    {
+        public bool Valid;
+        public Vector2Int Center;
+        public int Extent;
+        public readonly List<MechanicalNode> Nodes = new();
+        public readonly HashSet<MechanicalNode> Seen = new();
+        public void Reset() { Valid = false; Nodes.Clear(); Seen.Clear(); }
+    }
 
     /// <summary>仅放置、拆除、离合器和变速操作调用；恢复时先构建完整网络，再允许任意节点模拟。</summary>
     public void Rebuild(IEnumerable<MechanicalNode> nodes)
     {
+        pointerWindow.Reset(); nearbyWindow.Reset();
         cells.Clear(); Networks.Clear();
         var sorted = new List<MechanicalNode>(nodes);
         sorted.Sort(CompareNodes);
         foreach (var node in sorted)
         {
-            node.Cell = normalize(node.Cell);
+            node.Cell = NormalizeCell(node.Cell);
             var key = new Vector3Int(node.Cell.x, node.Cell.y, node.Definition.Layer);
             if (cells.ContainsKey(key)) throw new InvalidOperationException("机械格重复占用：" + key);
             cells.Add(key, node);
@@ -151,11 +238,11 @@ public sealed class MechanicalNetworkGraph
                 for (int direction = 0; direction < 4; direction++)
                 {
                     if (!node.HasPort(direction)) continue;
-                    Vector2Int neighborCell = normalize(node.Cell + Directions[direction]);
+                    Vector2Int neighborCell = NormalizeCell(node.Cell + Directions[direction]);
                     // Layer1 只接两侧 Layer0 端点；绝不连接同格下层或另一座跨轴器。
-                    Link(node, At(neighborCell, 0), direction, network, queue);
+                    Link(node, AtNormalized(neighborCell, 0), direction, network, queue);
                     if (node.Definition.Layer == 0)
-                        Link(node, At(neighborCell, 1), direction, network, queue);
+                        Link(node, AtNormalized(neighborCell, 1), direction, network, queue);
                 }
             }
             network.Bounds = CalculateBounds(network.Nodes);
@@ -244,7 +331,7 @@ public sealed class MechanicalNetworkGraph
     #endregion
 
     #region 扭矩求解
-    /// <summary>同速扭矩源合并供给；输入端不转送扭矩，扭矩源转速冲突、闭环倍率冲突或过载时整网停转。</summary>
+    /// <summary>同速扭矩源沿连接合流；输入端不转送扭矩，转速或闭环倍率冲突时整网停转。</summary>
     public static void Solve(MechanicalNetwork network, Func<MechanicalNode, float> sourceFactor, float referenceRpm)
         => Solve(network, sourceFactor, node => node?.Definition?.Rpm ?? 0f, referenceRpm);
 
@@ -252,6 +339,7 @@ public sealed class MechanicalNetworkGraph
     public static void Solve(MechanicalNetwork network, Func<MechanicalNode, float> sourceFactor,
         Func<MechanicalNode, float> sourceRpm, float referenceRpm)
     {
+        // 保留 referenceRpm 公开参数供旧 MOD 调用；固定扭矩需求不再依赖基准转速。
         network.TorqueSupply = 0; network.TorqueDemand = 0;
         network.RatioConflict = false; network.OutputConflict = false;
         MechanicalNode root = null;
@@ -260,10 +348,15 @@ public sealed class MechanicalNetworkGraph
             node.Rpm = 0;
             node.SpeedRatio = 1f; node.TorqueRatio = 1f;
             node.EntryDirection = -1; node.GearboxCrossings = 0; node.FlowVisited = false;
+            node.SourceDistance = int.MaxValue;
+            node.LoadSatisfied = false; node.AvailableTorque = 0f;
+            node.RemainingSourceTorque = 0f;
             node.SourceFactor = node.SourceTorque > 0 ? Mathf.Clamp01(sourceFactor(node)) : 0f;
             float suppliedRpm = node.SourceFactor > 0f ? sourceRpm(node) : 0f;
             node.SourceRpm = MechanicalDefinition.Positive(suppliedRpm) ? suppliedRpm : 0f;
-            if (node.SourceRpm <= 0f) node.SourceFactor = 0f;
+            // 不足半档的环境动力不参与同速源冲突，也不阻止手推石磨接管。
+            if (node.SourceRpm <= 0f || RoundTorqueToTens(node.SourceTorque * node.SourceFactor) <= 0f)
+            { node.SourceFactor = 0f; node.SourceRpm = 0f; }
             if (root == null && node.SourceFactor > 0 && node.SourceTorque > 0) root = node;
         }
         if (root == null) { network.Status = "无扭矩"; return; }
@@ -282,25 +375,47 @@ public sealed class MechanicalNetworkGraph
         if (network.OutputConflict) { network.Status = "机械卡死"; return; }
         if (network.RatioConflict) { network.Status = "传动比冲突"; return; }
         float rootRpm = root.SourceRpm;
-        float torqueCapacity = float.PositiveInfinity;
+        var consumers = new List<MechanicalNode>();
         foreach (var node in network.Nodes)
         {
             if (!node.FlowVisited) continue; // 用力器输入端以外的断开支路不吃动力。
-            torqueCapacity = Mathf.Min(torqueCapacity, node.Definition.TorqueCapacity / node.TorqueRatio);
             if (node.SourceFactor > 0 && node.SourceTorque > 0)
-                network.TorqueSupply += node.SourceTorque * node.SourceFactor / node.TorqueRatio;
+            {
+                node.RemainingSourceTorque = RoundTorqueToTens(node.SourceTorque * node.SourceFactor) / node.TorqueRatio;
+                network.TorqueSupply += node.RemainingSourceTorque;
+            }
+            if (node.Definition.TorqueLoad > 0f)
+            {
+                network.TorqueDemand += GetRootSideLoad(node);
+                consumers.Add(node);
+            }
         }
+        if (network.TorqueSupply <= 0f) { network.Status = "无扭矩"; return; }
+        var sourceRoutes = new Dictionary<MechanicalNode, List<SourceRoute>>(consumers.Count);
+        foreach (var consumer in consumers)
+        {
+            List<SourceRoute> routes = CollectSourceRoutes(consumer);
+            sourceRoutes.Add(consumer, routes);
+            if (routes.Count > 0) consumer.SourceDistance = routes[0].Distance;
+        }
+        consumers.Sort(CompareConsumers);
+        foreach (var consumer in consumers)
+        {
+            float required = GetRootSideLoad(consumer);
+            List<SourceRoute> routes = sourceRoutes[consumer];
+            float available = RouteTorque(routes, float.PositiveInfinity, false);
+            consumer.AvailableTorque = available * consumer.TorqueRatio;
+            if (available + .001f < required) continue;
+            RouteTorque(routes, required, true);
+            consumer.LoadSatisfied = true;
+        }
+        network.Status = "运行中";
         foreach (var node in network.Nodes)
         {
             if (!node.FlowVisited) continue;
-            float localTorqueLoad = node.Definition.TorqueLoad * node.SpeedRatio * rootRpm / referenceRpm;
-            network.TorqueDemand += localTorqueLoad / node.TorqueRatio;
+            if (node.Definition.TorqueLoad <= 0f || node.LoadSatisfied)
+                node.Rpm = node.SpeedRatio * rootRpm;
         }
-        if (network.TorqueDemand > network.TorqueSupply + .001f || network.TorqueDemand > torqueCapacity + .001f)
-        { network.Status = "过载"; return; }
-        network.Status = "运行中";
-        foreach (var node in network.Nodes)
-            if (node.FlowVisited) node.Rpm = node.SpeedRatio * rootRpm;
     }
 
     /// <summary>传动箱从输入侧到另一侧才换算倍率；多个方向到同一节点时核对速度与扭矩，防止闭环无端增益。</summary>
@@ -324,7 +439,7 @@ public sealed class MechanicalNetworkGraph
                 int crossings = from.GearboxCrossings;
                 if (from.Definition.Kind == "gearbox" && from.EntryDirection >= 0 && link.Direction != from.EntryDirection)
                 {
-                    from.Definition.GetTransmission(from.EntryDirection < 2, from.RatioIndex,
+                    from.Definition.GetTransmission(from.IsGearboxSmallGearInput(), from.RatioIndex,
                         out float speedStep, out float torqueStep);
                     speed *= speedStep; torque *= torqueStep; crossings++;
                 }
@@ -359,5 +474,87 @@ public sealed class MechanicalNetworkGraph
 
     private static bool SameSpeed(float left, float right)
         => Mathf.Abs(left - right) <= Mathf.Max(.001f, Mathf.Max(Mathf.Abs(left), Mathf.Abs(right)) * .0001f);
+
+    /// <summary>较近的用力器先取力，同距离按稳定节点 ID 排序。</summary>
+    private static int CompareConsumers(MechanicalNode left, MechanicalNode right)
+    {
+        int distance = left.SourceDistance.CompareTo(right.SourceDistance);
+        return distance != 0 ? distance : left.Id.CompareTo(right.Id);
+    }
+
+    /// <summary>用力器需求固定为配置值，仅为上游分配换算到根侧单位。</summary>
+    private static float GetRootSideLoad(MechanicalNode node)
+        => RoundLoadTorqueToTens(node.Definition.TorqueLoad) / node.TorqueRatio;
+
+    /// <summary>从用力器沿实际连接查找可达动力源，输入终点不能作为其它节点的传动通道。</summary>
+    private static List<SourceRoute> CollectSourceRoutes(MechanicalNode destination)
+    {
+        var routes = new List<SourceRoute>();
+        var visited = new HashSet<MechanicalNode> { destination };
+        var queue = new Queue<SourceRoute>();
+        queue.Enqueue(new SourceRoute(destination, 0));
+        while (queue.Count > 0)
+        {
+            SourceRoute current = queue.Dequeue();
+            MechanicalNode node = current.Node;
+            if (node.SourceFactor > 0f && node.SourceTorque > 0f)
+                routes.Add(current);
+            if (!ReferenceEquals(node, destination) && node.SourceFactor <= 0f &&
+                (node.Definition.GetPortMode() == "input" || node.Definition.ManualDriveTorque > 0f)) continue;
+            foreach (MechanicalLink link in node.Links)
+            {
+                if (!link.Target.FlowVisited || !visited.Add(link.Target)) continue;
+                queue.Enqueue(new SourceRoute(link.Target, current.Distance + 1));
+            }
+        }
+        routes.Sort(CompareSourceRoutes);
+        return routes;
+    }
+
+    /// <summary>同距离的动力源按稳定节点 ID 补入扭矩。</summary>
+    private static int CompareSourceRoutes(SourceRoute left, SourceRoute right)
+    {
+        int distance = left.Distance.CompareTo(right.Distance);
+        return distance != 0 ? distance : left.Node.Id.CompareTo(right.Node.Id);
+    }
+
+    /// <summary>依距离顺序预留扭矩；轴与齿轮只传递，不限制通过量。</summary>
+    private static float RouteTorque(List<SourceRoute> routes, float target, bool commit)
+    {
+        float delivered = 0f;
+        foreach (SourceRoute route in routes)
+        {
+            float draw = Mathf.Min(route.Node.RemainingSourceTorque, target - delivered);
+            if (draw <= 0f) continue;
+            delivered += draw;
+            if (commit) route.Node.RemainingSourceTorque -= draw;
+            if (delivered + .001f >= target) break;
+        }
+        return delivered;
+    }
+
+    /// <summary>传动件面板按需读取已完成用力器分配后的剩余本地扭矩。</summary>
+    public static float GetRemainingLocalTorque(MechanicalNode node)
+        => node == null || !node.FlowVisited ? 0f
+            : RouteTorque(CollectSourceRoutes(node), float.PositiveInfinity, false) * node.TorqueRatio;
+
+    /// <summary>动力源及其到目标的最短传动距离。</summary>
+    private readonly struct SourceRoute
+    {
+        public readonly MechanicalNode Node;
+        public readonly int Distance;
+        public SourceRoute(MechanicalNode node, int distance) { Node = node; Distance = distance; }
+    }
+
+    /// <summary>动力源先在自身所在侧取最近十位档，再沿变速箱倍率换算。</summary>
+    public static float RoundTorqueToTens(float torque)
+    {
+        if (torque <= 0f) return 0f;
+        return Mathf.Floor(torque / 10f + .5f) * 10f;
+    }
+
+    /// <summary>非零用力器至少消耗一档；需求只由自身配置决定，不随转速变化。</summary>
+    public static float RoundLoadTorqueToTens(float torque)
+        => torque > 0f ? Mathf.Max(10f, RoundTorqueToTens(torque)) : 0f;
     #endregion
 }
