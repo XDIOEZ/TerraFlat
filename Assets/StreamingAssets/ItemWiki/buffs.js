@@ -12,6 +12,7 @@
         ["结算间隔（秒）", "tickIntervalSeconds", 0],
         ["叠加方式", "stackMode", "ignore"],
         ["最大层数", "maxStacks", 1],
+        ["到期逐层脱落", "decayStacksOnExpiry", false],
         ["第一层特效倍率", "visualBaseScale", 1],
         ["每层特效倍率增量", "visualScalePerStack", 0],
         ["入水叠层周期（秒）", "waterStackIntervalSeconds", 0],
@@ -63,6 +64,8 @@
             refresh_duration: "重复施加刷新时间", add_stacks: "重复施加增加层数并刷新时间" }[source.stackMode || "ignore"];
         const lines = [`${mode}；最多 ${maximum} 层。`, source.durationSeconds == null
             ? "持续时间：永久，直到玩法规则移除。" : `持续时间：${source.durationSeconds} 秒；叠层不会重置周期结算时钟。`];
+        if (source.decayStacksOnExpiry)
+            lines.push(`每次持续时间结束脱落 1 层并重新计时，最后一层结束后移除 BUFF。`);
         const tick = source.tickIntervalSeconds || 0;
         for (const effect of source.effects || []) {
             const phase = { start: "获得时", tick: "每次周期结算", stop: "移除时" }[effect.phase] || effect.phase;

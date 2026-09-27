@@ -102,19 +102,38 @@ public partial class BuffInstance
             return IsExpired;
 
         EnsureStarted();
-        if (IsExpired)
-            return true;
+        float remainingDelta = deltaTime;
+        while (remainingDelta > 0f)
+        {
+            if (IsExpired && !TryDecayExpiredStack())
+                return true;
 
-        float activeDelta = Definition.IsPermanent
-            ? deltaTime
-            : Mathf.Min(deltaTime, RemainingDurationSeconds);
+            float activeDelta = Definition.IsPermanent
+                ? remainingDelta
+                : Mathf.Min(remainingDelta, RemainingDurationSeconds);
+            if (!Definition.IsPermanent)
+                RemainingDurationSeconds -= activeDelta;
 
-        if (!Definition.IsPermanent)
-            RemainingDurationSeconds -= activeDelta;
+            TickElapsedSeconds += activeDelta;
+            ExecuteTicks();
+            remainingDelta -= activeDelta;
 
-        TickElapsedSeconds += activeDelta;
-        ExecuteTicks();
+            if (IsExpired && !TryDecayExpiredStack())
+                return true;
+        }
+
         return IsExpired;
+    }
+
+    /// <summary>限时叠层到期时脱落一层；只有最后一层才进入 Stop 与移除流程。</summary>
+    private bool TryDecayExpiredStack()
+    {
+        if (Definition?.DecayStacksOnExpiry != true || StackCount <= 1)
+            return false;
+
+        SetStackCount(StackCount - 1);
+        RemainingDurationSeconds = Definition.DurationSeconds.Value;
+        return true;
     }
 
     public void Start()

@@ -3,7 +3,7 @@
 import math
 
 
-FIELDS = set("id displayName category description labelKey descriptionKey durationSeconds tickIntervalSeconds stackMode maxStacks visualBaseScale visualScalePerStack waterStackIntervalSeconds waterStacksPerDepthLevel drinkDurationExtensionSeconds effects".split())
+FIELDS = set("id displayName category description labelKey descriptionKey durationSeconds tickIntervalSeconds stackMode maxStacks decayStacksOnExpiry visualBaseScale visualScalePerStack waterStackIntervalSeconds waterStacksPerDepthLevel drinkDurationExtensionSeconds effects".split())
 EFFECT_FIELDS = set("phase typeId targetId requiredTag value upperLimit scaleWithStacks".split())
 MULTIPLIERS = {f"core:{name}" for name in ("move_speed_multiplier", "food_consume_speed_multiplier", "water_consume_speed_multiplier", "temperature_cooling_multiplier", "damage_taken_multiplier")}
 TRAUMA = {f"core:trauma_{name}" for name in ("move", "attack", "confusion", "blur")}
@@ -53,6 +53,11 @@ def validate_definition(source):
     if mode == "add_stacks" and duration == 0:
         raise ValueError("叠层 BUFF 持续时间必须为正数或 null")
     maximum = number(source.get("maxStacks", 1), "maxStacks", 1, 1000, integer=True)
+    decay_stacks = source.get("decayStacksOnExpiry", False)
+    if type(decay_stacks) is not bool:
+        raise ValueError("decayStacksOnExpiry 必须是布尔值")
+    if decay_stacks and (mode != "add_stacks" or duration is None or duration <= 0):
+        raise ValueError("逐层脱落必须使用 add_stacks 和正持续时间")
     base = number(source.get("visualBaseScale", 1), "visualBaseScale", 0)
     step = number(source.get("visualScalePerStack", 0), "visualScalePerStack", 0)
     if base <= 0:

@@ -86,6 +86,7 @@ public static class BuffDefinitionFactory
             TickIntervalSeconds = dto.TickIntervalSeconds,
             StackMode = ParseStackMode(dto.StackMode, id),
             MaxStacks = dto.MaxStacks,
+            DecayStacksOnExpiry = dto.DecayStacksOnExpiry,
             VisualBaseScale = dto.VisualBaseScale,
             VisualScalePerStack = dto.VisualScalePerStack,
             WaterStackIntervalSeconds = dto.WaterStackIntervalSeconds,
@@ -104,6 +105,10 @@ public static class BuffDefinitionFactory
             throw new InvalidDataException($"Buff {id} 是永久 Buff，不能配置饮水延时");
         if (definition.StackMode == BuffStackMode.AddStacks && definition.DurationSeconds == 0f)
             throw new InvalidDataException($"Buff {id} 叠层持续时间必须为正数或 null");
+        if (definition.DecayStacksOnExpiry &&
+            (definition.StackMode != BuffStackMode.AddStacks ||
+             !definition.DurationSeconds.HasValue || definition.DurationSeconds.Value <= 0f))
+            throw new InvalidDataException($"Buff {id} 逐层脱落必须使用 add_stacks 和正持续时间");
 
         var all = new List<BuffEffectDefinition>();
         var start = new List<BuffEffectDefinition>();

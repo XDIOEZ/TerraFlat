@@ -16,6 +16,8 @@ public sealed class BuffDefinition
     public BuffStackMode StackMode { get; internal set; }
     /// <summary>同一实例的层数上限；默认 1 保持非叠层 Buff 的行为。</summary>
     public int MaxStacks { get; internal set; } = 1;
+    /// <summary>每次持续时间结束时只移除一层，并为剩余层数重新计时。</summary>
+    public bool DecayStacksOnExpiry { get; internal set; }
     public float VisualBaseScale { get; internal set; } = 1f; // 第一层特效倍率。
     public float VisualScalePerStack { get; internal set; } // 每增加一层的特效倍率增量。
     public float WaterStackIntervalSeconds { get; internal set; } // 入水叠层周期；0 表示不从水体叠加。

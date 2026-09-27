@@ -72,6 +72,9 @@ public sealed class BuffDefinitionDto
     [JsonProperty("maxStacks")]
     public int MaxStacks = 1;
 
+    [JsonProperty("decayStacksOnExpiry")]
+    public bool DecayStacksOnExpiry;
+
     [JsonProperty("visualBaseScale")]
     public float VisualBaseScale = 1f;
 

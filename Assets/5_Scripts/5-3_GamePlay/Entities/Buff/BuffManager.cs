@@ -496,10 +496,17 @@ public partial class BuffManager : Module
             int previousDisplaySeconds = countdownChanged != null
                 ? GetCountdownDisplaySeconds(runtime)
                 : -1;
+            int previousStackCount = runtime.StackCount;
             if (runtime.Tick(deltaTime))
             {
                 expiredIds.Add(buffId);
                 continue;
+            }
+
+            if (runtime.StackCount != previousStackCount)
+            {
+                BuffStacksChanged?.Invoke(runtime);
+                BuffDurationChanged?.Invoke(runtime);
             }
 
             if (countdownChanged != null)
