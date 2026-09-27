@@ -74,6 +74,7 @@ public partial class Mover : Module
     private InputAction toggleRunAction;
     private bool holdRunInputActive; // 长按奔跑输入的语义状态；载具等玩法只消费这里，不重复轮询物理按键。
     private GameController inputController;
+    private readonly List<IWaterCurrentExposure> waterCurrentExposures = new(); // 离地模块控制表层水流接触。
     public Rigidbody2D rb;
 
     // 输入判定、到达判定与过渡时间的稳定下限。
@@ -98,6 +99,11 @@ public partial class Mover : Module
 
     /// <summary>奔跑状态真实变化时通知 HUD；体力不足等自动停止路径也会同步表现。</summary>
     public event System.Action<bool> RunStateChanged;
+    /// <summary>实体实际进入新的 1×1 世界单位格时通知依赖位置变化的系统。</summary>
+    public event System.Action<Vector2Int> WorldUnitChanged;
+
+    private Vector2Int _lastWorldUnit;
+    private bool _hasTrackedWorldUnit;
 
     #endregion
 
@@ -191,6 +197,11 @@ public partial class Mover : Module
         rb = GetComponentInParent<Rigidbody2D>();
         DrivenVelocity = ExternalVelocity = RequestedMoveInput = Vector2.zero;
         _wasMoving = IsMoving = false;
+        ResetWorldUnitTracking();
+        waterCurrentExposures.Clear();
+        foreach (Module module in item.itemMods.Mods.Values)
+            if (module is IWaterCurrentExposure exposure)
+                waterCurrentExposures.Add(exposure);
 
         hungerAction ??= new MovementHungerActionDefinition();
         hungerActionInstance = hungerAction.CreateInstance(item);
@@ -225,6 +236,46 @@ public partial class Mover : Module
 
 
     private bool _wasMoving = false;
+
+    /// <summary>物理结算后检测实际世界单位格变化；无订阅者时不做位置换算。</summary>
+    private void FixedUpdate()
+    {
+        if (WorldUnitChanged == null || rb == null)
+            return;
+
+        Vector2 position = WorldTopologyRuntime.NormalizePosition(rb.position);
+        var currentWorldUnit = new Vector2Int(
+            Mathf.FloorToInt(position.x),
+            Mathf.FloorToInt(position.y));
+        if (!_hasTrackedWorldUnit)
+        {
+            _lastWorldUnit = currentWorldUnit;
+            _hasTrackedWorldUnit = true;
+            return;
+        }
+
+        if (currentWorldUnit == _lastWorldUnit)
+            return;
+
+        _lastWorldUnit = currentWorldUnit;
+        WorldUnitChanged?.Invoke(currentWorldUnit);
+    }
+
+    /// <summary>重置世界单位格基线，避免加载或重建时把初始位置误判为移动事件。</summary>
+    private void ResetWorldUnitTracking()
+    {
+        if (rb == null)
+        {
+            _hasTrackedWorldUnit = false;
+            return;
+        }
+
+        Vector2 position = WorldTopologyRuntime.NormalizePosition(rb.position);
+        _lastWorldUnit = new Vector2Int(
+            Mathf.FloorToInt(position.x),
+            Mathf.FloorToInt(position.y));
+        _hasTrackedWorldUnit = true;
+    }
 
     public override void ModUpdate(float deltaTime)
     {
@@ -351,15 +402,13 @@ public partial class Mover : Module
             ? Vector2.zero
             : delta.normalized * moveSpeed;
         DrivenVelocity = SmoothSurfaceVelocity(DrivenVelocity, targetVelocity, deltaTime);
-        ExternalVelocity = Vector2.zero;
+        ExternalVelocity = ResolveWaterCurrentVelocity();
         rb.velocity = WorldMotionSystem.ResolveContactVelocity(this, rb.position,
-            DrivenVelocity, DrivenVelocity, Mathf.Max(deltaTime, Time.fixedDeltaTime));
+            DrivenVelocity, DrivenVelocity + ExternalVelocity, Mathf.Max(deltaTime, Time.fixedDeltaTime));
         UpdateMovementState();
     }
 
-    [Min(0f)] public float waterCurrentPushSpeed = 0.18f;
-
-    /// <summary>按二维输入幅度驱动玩家移动；水流是额外的表层漂移，不计作主动奔跑或体力消耗。</summary>
+    /// <summary>按二维输入幅度驱动移动；水流是额外的表层漂移，不计作主动奔跑或体力消耗。</summary>
     public void MoveByInput(Vector2 input, float deltaTime)
     {
         if (CarrierSource != null) return;
@@ -383,11 +432,36 @@ public partial class Mover : Module
         UpdateMovementState();
     }
 
-    /// <summary>统一读取有效地表流向：河流顺流、海洋随表层风场，平台和静水不会推动玩家。</summary>
+    /// <summary>导航移动与水流分别结算，动物静止时也会被推动而不会播放行走动画。</summary>
+    public void ApplyNavigationVelocity(Vector2 targetVelocity, float deltaTime)
+    {
+        if (CarrierSource != null) return;
+        if (rb == null)
+            throw new System.InvalidOperationException($"{name}: 导航移动缺少 Rigidbody2D。");
+        if (deltaTime <= 0f)
+        {
+            rb.velocity = Vector2.zero;
+            DrivenVelocity = ExternalVelocity = Vector2.zero;
+            UpdateMovementState();
+            return;
+        }
+
+        DrivenVelocity = SmoothSurfaceVelocity(DrivenVelocity, targetVelocity, deltaTime);
+        ExternalVelocity = ResolveWaterCurrentVelocity();
+        rb.velocity = WorldMotionSystem.ResolveContactVelocity(this, rb.position,
+            DrivenVelocity, DrivenVelocity + ExternalVelocity, deltaTime);
+        UpdateMovementState();
+    }
+
+    /// <summary>统一读取有效地表流向与 JSON 推动速度，平台和静水不推动角色。</summary>
     public Vector2 ResolveWaterCurrentVelocity()
     {
-        return item is Player && rb != null
-            ? WorldMotionSystem.SampleWaterVelocity(rb.position, waterCurrentPushSpeed)
+        foreach (IWaterCurrentExposure exposure in waterCurrentExposures)
+            if (!exposure.ReceivesWaterCurrent)
+                return Vector2.zero;
+        return item != null && rb != null
+            ? WorldMotionSystem.SampleWaterVelocity(rb.position,
+                WaterCurrentPushConfigService.ResolvePushSpeed(item))
             : Vector2.zero;
     }
 

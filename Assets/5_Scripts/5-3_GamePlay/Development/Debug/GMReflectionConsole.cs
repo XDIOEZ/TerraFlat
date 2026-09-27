@@ -81,6 +81,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
     private Button chunkLoadSpeedUnlimitedButton;
     private Button navigationPathButton;
     private Button animalDebugOverlayButton;
+    private Button hiveDebugOverlayButton;
     private Transform commandGrid;
     private Transform airdropItemGrid;
     private Transform aiCreatureGrid;
@@ -214,6 +215,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         UpdateBuffTargetListIfNeeded();
         RefreshResponsiveLayoutIfCanvasChanged();
         RefreshAiecsPageIfNeeded();
+        RefreshDayTimeControlIfNeeded();
         HandleTeleportInput();
 
         if (Keyboard.current?.f4Key.wasPressedThisFrame != true)
@@ -227,6 +229,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
 
     private void OnActiveSceneChanged(Scene previous, Scene next)
     {
+        CancelPendingDayTimeJump();
         CancelTeleportTargeting();
         HandleBuffTargetingSceneChanged();
         HandleQuestPageSceneChanged();
@@ -253,6 +256,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
             GMConsolePreferences.NavigationPathVisible);
 
         AI_DebugOverlay.SetVisible(GMConsolePreferences.AnimalDebugOverlayVisible);
+        HiveColonyDebugOverlay.SetVisible(GMConsolePreferences.HiveDebugOverlayVisible);
         worldLayerOverlay.SetMode(GMConsolePreferences.WorldLayerOverlayMode);
         RefreshWorldLayerOverlayButtons();
     }
@@ -314,7 +318,10 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
 
         windowRoot.SetActive(visible);
         if (!visible)
+        {
+            CancelPendingDayTimeJump();
             return;
+        }
 
         ClampTabbedWindowToCanvas();
         RefreshRuntimeData();
@@ -459,7 +466,6 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         CreateButton(quickGrid.transform, "背包 +100", () => InvokeByTypeName("PlayerAdminController", "AddAmountToAllBagItems", 100f), 0f, 32f);
         CreateButton(quickGrid.transform, "时间 -0.5", () => InvokeByTypeName("PlayerAdminController", "TryUpdateTimeScale", -0.5f), 0f, 32f);
         CreateButton(quickGrid.transform, "时间重置", () => InvokeByTypeName("PlayerAdminController", "ResetTimeScale"), 0f, 32f);
-        CreateButton(quickGrid.transform, "区块距离 +1", () => InvokeByTypeName("PlayerAdminController", "IncreaseAdminChunkLoadDistance"), 0f, 32f);
 
         GameObject commandBox = CreateDesktopGroup(mainColumns.transform, "反射调试命令");
         LayoutElement commandBoxLayout = commandBox.AddComponent<LayoutElement>();
@@ -589,7 +595,6 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         CreateButton(quickGrid.transform, "背包 +100", () => InvokeByTypeName("PlayerAdminController", "AddAmountToAllBagItems", 100f), 0f, 35f);
         CreateButton(quickGrid.transform, "时间 -0.5", () => InvokeByTypeName("PlayerAdminController", "TryUpdateTimeScale", -0.5f), 0f, 35f);
         CreateButton(quickGrid.transform, "时间重置", () => InvokeByTypeName("PlayerAdminController", "ResetTimeScale"), 0f, 35f);
-        CreateButton(quickGrid.transform, "区块距离 +1", () => InvokeByTypeName("PlayerAdminController", "IncreaseAdminChunkLoadDistance"), 0f, 35f);
         navigationPathButton = CreateButton(quickGrid.transform, "AI 路线提示：关", ToggleNavigationPathHints, 0f, 35f);
         RefreshNavigationPathButton();
 
@@ -1403,6 +1408,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         RefreshAdminInvincibilityButton();
         RefreshPlayerMoveSpeedButton();
         RefreshChunkLoadSpeedControl();
+        RefreshWorldRangeControls();
         RefreshWorldWindControl();
         RefreshNavigationPathButton();
         RefreshAnimalDebugOverlayButton();
@@ -1506,36 +1512,6 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
             statusButton,
             multiplier > 1f ? GmSelection : GmSurfaceRaised,
             multiplier > 1f);
-    }
-
-    /// <summary>按当前正交视距乘倍率，并通过正式相机 API 同步刷新区块窗口。</summary>
-    private void MultiplyCameraView(float multiplier)
-    {
-        if (float.IsNaN(multiplier) || float.IsInfinity(multiplier) || multiplier <= 0f)
-        {
-            SetStatus("视距倍率必须是大于 0 的有限数值。", Color.yellow);
-            return;
-        }
-
-        Mod_Cam cameraModule = FindFirstComponent("Mod_Cam") as Mod_Cam;
-        if (cameraModule == null)
-        {
-            SetStatus("未找到玩家相机模块，无法调整视距。", Color.yellow);
-            return;
-        }
-
-        float previousSize = cameraModule.CurrentOrthographicSize;
-        if (previousSize <= 0f)
-        {
-            SetStatus("当前相机视距无效，无法应用倍率。", Color.yellow);
-            return;
-        }
-
-        cameraModule.EnableUnlimitedView();
-        cameraModule.SetOrthographicSize(previousSize * multiplier);
-        SetStatus(
-            $"相机视距已从 {previousSize:0.##} 调整为 {cameraModule.CurrentOrthographicSize:0.##}（{multiplier:0.##}x）。",
-            GmAccentHover);
     }
 
     private void ApplyChunkLoadSpeedInput()
@@ -1769,6 +1745,32 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
             visible);
     }
 
+    private void ToggleHiveDebugOverlay()
+    {
+        bool visible = HiveColonyDebugOverlay.Toggle();
+        GMConsolePreferences.SetHiveDebugOverlayVisible(visible);
+        RefreshHiveDebugOverlayButton();
+        SetStatus(
+            visible ? "蜂巢头顶参数已开启。" : "蜂巢头顶参数已关闭。",
+            visible ? GmAccentHover : GmTextSecondary);
+    }
+
+    private void RefreshHiveDebugOverlayButton()
+    {
+        if (hiveDebugOverlayButton == null)
+            return;
+
+        bool visible = HiveColonyDebugOverlay.Visible;
+        TextMeshProUGUI label = hiveDebugOverlayButton.GetComponentInChildren<TextMeshProUGUI>(true);
+        if (label != null)
+            label.text = visible ? "蜂巢参数：开" : "蜂巢参数：关";
+
+        SetGmButtonVisual(
+            hiveDebugOverlayButton,
+            visible ? GmSelection : GmSurfaceRaised,
+            visible);
+    }
+
     private void RefreshNavigationPathButton()
     {
         if (navigationPathButton == null)
@@ -1792,9 +1794,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         AddNamedCommand("环境", "晴天", "GameDebugManager", "SetClearWeather");
         AddNamedCommand("环境", "下雨", "GameDebugManager", "SetRainWeather");
         AddNamedCommand("环境", "环境信息", "GameDebugManager", "ToggleEnvironmentInfo");
-        AddNamedCommand("管理员", "视野无限", "Mod_Cam", "EnableUnlimitedView");
         AddNamedCommand("管理员", "刷新区块", "Mod_ChunkLoader", "RefreshChunksAroundPlayer");
-        AddNamedCommand("管理员", "区块距离 +1", "PlayerAdminController", "IncreaseAdminChunkLoadDistance");
         AddNamedCommand("管理员", "手持 +9999", "PlayerAdminController", "AddAmountToCurrentHandItem", 9999f);
         AddNamedCommand("管理员", "背包 +100", "PlayerAdminController", "AddAmountToAllBagItems", 100f);
         AddNamedCommand("管理员", "时间恢复", "PlayerAdminController", "ResetTimeScale");
@@ -1872,8 +1872,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
                name == "SetRainWeatherDebug" ||
                name == "ToggleDebugPanel" ||
                name == "RefreshChunksAroundPlayer" ||
-               name == "RefreshChunksForCameraView" ||
-               name == "EnableUnlimitedView" ||
+               name == "RefreshConfiguredChunkWindow" ||
                name == "InitializeCreativeInventoryForAdmin" ||
                name == "TeleportToMousePosition" ||
                name == "CleanupNullItems" ||
@@ -2701,7 +2700,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         SpriteRenderer renderer = marker.AddComponent<SpriteRenderer>();
         renderer.sprite = dropMarkerSprite;
         renderer.color = new Color(1f, 0.65f, 0.2f, 0.92f);
-        renderer.sortingOrder = short.MaxValue;
+        WorldSortingManager.GetInstance().ApplyRenderer(renderer, WorldSortingManager.WorldEffectCategory, short.MaxValue);
         return marker;
     }
 

@@ -41,9 +41,6 @@ public class PlayerAdminController : Module
     [Tooltip("体力模块（管理员身份拥有无限体力）")]
     public Mod_Stamina staminaMod;
 
-    public Mod_Cam adminCamera;
-    public Mod_ChunkLoader chunkLoader;
-
     [Header("时间控制")]
     [Tooltip("时间流逝速度")]
     public float timeScale = 1.0f;
@@ -66,7 +63,6 @@ public class PlayerAdminController : Module
     private float timeScaleHintTimer = 0f;
     private bool showTimeScaleHint = false;
     private float initialUnityTimeScale = 1.0f;
-    private bool adminRuntimeSettingsApplied = false;
     private GameController gameController;
     private Mover playerMover;
     private Mover adminMoveSpeedTarget;
@@ -132,12 +128,6 @@ public class PlayerAdminController : Module
             if (staminaMod == null)
                 staminaMod = player.itemMods.GetMod_ByID<Mod_Stamina>(ModText.Stamina);
 
-            if (adminCamera == null)
-                adminCamera = player.itemMods.GetMod_ByID<Mod_Cam>(ModText.Camera);
-
-            if (chunkLoader == null)
-                chunkLoader = player.itemMods.GetMod_ByID<Mod_ChunkLoader>(ModText.ChunkLoader);
-
             if (playerMover == null)
                 playerMover = player.itemMods.GetMod_ByID<Mover>(ModText.Mover);
         }
@@ -182,9 +172,7 @@ public class PlayerAdminController : Module
         if (!IsAdmin()) return;
 
         KeepAdminStaminaFull();
-        ApplyAdminRuntimeSettings();
         KeepAdminAlive();
-        HandleAdminInput(keyboard);
         HandleTimeScaleControl(keyboard);
     }
 
@@ -260,17 +248,6 @@ public class PlayerAdminController : Module
         return TrySetAdminInvincibilityEnabled(enabled);
     }
 
-    private void HandleAdminInput(Keyboard keyboard)
-    {
-        if (keyboard == null)
-            return;
-
-        if (keyboard.f8Key.wasPressedThisFrame)
-        {
-            IncreaseAdminChunkLoadDistance();
-        }
-    }
-
     /// <summary>只允许 F2 穿过当前玩家已打开主背包持有的玩法输入锁。</summary>
     private bool CanOpenCreativeInventoryShortcut()
     {
@@ -319,43 +296,10 @@ public class PlayerAdminController : Module
         return TeleportToMouseShortcutEnabled;
     }
 
-    private void ApplyAdminRuntimeSettings()
-    {
-        if (adminRuntimeSettingsApplied)
-            return;
-
-        ResolveAdminRuntimeReferences();
-
-        if (adminCamera != null)
-        {
-            adminCamera.EnableUnlimitedView();
-        }
-
-        adminRuntimeSettingsApplied = adminCamera != null;
-    }
-
     private void ResolveAdminRuntimeReferences()
     {
         if (player == null)
             player = GetComponentInParent<Player>();
-
-        if (adminCamera == null)
-        {
-            if (player?.itemMods != null && player.itemMods.ContainsKey_ID(ModText.Camera))
-                adminCamera = player.itemMods.GetMod_ByID<Mod_Cam>(ModText.Camera);
-
-            if (adminCamera == null)
-                adminCamera = GetComponentInParent<Mod_Cam>();
-        }
-
-        if (chunkLoader == null)
-        {
-            if (player?.itemMods != null && player.itemMods.ContainsKey_ID(ModText.ChunkLoader))
-                chunkLoader = player.itemMods.GetMod_ByID<Mod_ChunkLoader>(ModText.ChunkLoader);
-
-            if (chunkLoader == null)
-                chunkLoader = GetComponentInParent<Mod_ChunkLoader>();
-        }
 
         if (playerMover == null)
         {
@@ -442,20 +386,6 @@ public class PlayerAdminController : Module
         appliedMultiplier = multiplier;
         Debug.Log($"[Admin] Player move speed multiplier set to {multiplier:0.##}x.");
         return true;
-    }
-
-    private void IncreaseAdminChunkLoadDistance()
-    {
-        ResolveAdminRuntimeReferences();
-
-        if (chunkLoader == null)
-        {
-            Debug.LogWarning("[Admin] Increase chunk load distance failed: Mod_ChunkLoader not found.");
-            return;
-        }
-
-        int currentDistance = chunkLoader.IncreaseLoadDistanceForAdmin(1);
-        Debug.Log($"[Admin] Chunk load distance increased to {currentDistance}.");
     }
 
     private void KeepAdminAlive()
@@ -625,10 +555,20 @@ public class PlayerAdminController : Module
         Debug.Log(timeScaleHintText);
     }
 
+    /// <summary>按当前值增减时间流速，供管理员快捷键和旧命令调用。</summary>
     private bool TryUpdateTimeScale(float delta)
     {
-        float newScale = Mathf.Clamp(timeScale + delta, minTimeScale, maxTimeScale);
-        
+        return TrySetTimeScale(timeScale + delta);
+    }
+
+    /// <summary>将时间流速设为指定倍率，并限制在当前管理员配置范围内。</summary>
+    public bool TrySetTimeScale(float requestedScale)
+    {
+        if (float.IsNaN(requestedScale) || float.IsInfinity(requestedScale))
+            return false;
+
+        float newScale = Mathf.Clamp(requestedScale, minTimeScale, maxTimeScale);
+
         // 如果变化极小，忽略
         if (Mathf.Approximately(newScale, timeScale)) return false;
 

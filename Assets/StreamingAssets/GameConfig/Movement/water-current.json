@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 2,
+  "weightRule": {
+    "maxPushSpeed": 1.08,
+    "halfSpeedWeightKg": 70.0
+  },
+  "actors": [
+    { "id": "Chicken", "pushSpeed": 0.54 },
+    { "id": "Wolf", "pushSpeed": 0.54 }
+  ]
+}

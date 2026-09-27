@@ -13,6 +13,7 @@ public class Mod_Cam : Module
     private class CameraFollowSaveData
     {
         public float PovValue = DefaultPovValue;
+        public bool UnlimitedViewEnabled;
     }
 
     #region 字段声明
@@ -32,7 +33,6 @@ public class Mod_Cam : Module
     public Item CameraFollowItem;
     public Player Player;
     public GameController GameController;
-    private Mod_ChunkLoader _chunkLoader;
     private WrappedWorldCameraRenderer _wrappedWorldRenderer;
     private CinemachineFramingTransposer _framingTransposer;
     private float _baseXDamping;
@@ -51,11 +51,14 @@ public class Mod_Cam : Module
     
     [Header("视野限制")]
     public float MaxPovValue = 20f; // 视野最大拉伸值
-    public float MinPovValue = 5f;  // 视野最小缩放值
+    public float MinPovValue = 1f;  // 视野最小缩放值，保持正交相机尺寸大于零
     private bool _unlimitedViewEnabled; // 管理员无限视野只放开运行时上限，不污染普通视野配置。
 
     /// <summary>当前是否启用了管理员无限视野。</summary>
     public bool IsUnlimitedViewEnabled => _unlimitedViewEnabled;
+
+    /// <summary>相机模块是否已完成虚拟相机初始化，供外部系统判断可用状态而不暴露 Cinemachine 类型依赖。</summary>
+    public bool IsCameraReady => vcam != null;
 
     /// <summary>
     /// 获取虚拟相机组件
@@ -101,7 +104,6 @@ public class Mod_Cam : Module
         // 获取跟随对象
         CameraFollowItem = GetComponentInParent<Item>();
         Player = CameraFollowItem as Player;
-        ResolveChunkLoader();
     
         // 直接在当前位置实例化相机预制体
         if (CamPrefab != null)
@@ -140,6 +142,7 @@ public class Mod_Cam : Module
         {
             CacheCameraFollowDefaults();
             LoadPovValue();
+            povValue = ClampPovValue(povValue);
             Vcam.m_Lens.OrthographicSize = povValue;
             if (ControllerCamera != null)
                 ControllerCamera.orthographicSize = povValue;
@@ -259,20 +262,10 @@ public class Mod_Cam : Module
     public void ChangeCameraView(float delta)
     {
         if (Vcam == null) return;
-
-        povValue += delta;
-        povValue = ClampPovValue(povValue);
-        Vcam.m_Lens.OrthographicSize = povValue;
-        if (ControllerCamera != null)
-            ControllerCamera.orthographicSize = povValue;
-        ApplyCameraFollowSettings();
-
-        ResolveChunkLoader()?.RefreshChunksForCameraView();
-
-        // Debug.Log($"视野范围修改为：{Vcam.m_Lens.OrthographicSize}");
+        SetOrthographicSize(povValue + delta);
     }
 
-    /// <summary>Sets an absolute gameplay view size and refreshes the streamed Chunk window.</summary>
+    /// <summary>设置相机正交视野；区块加载窗口由区块配置独立控制。</summary>
     public void SetOrthographicSize(float value)
     {
         if (Vcam == null)
@@ -282,7 +275,6 @@ public class Mod_Cam : Module
         if (ControllerCamera != null)
             ControllerCamera.orthographicSize = povValue;
         ApplyCameraFollowSettings();
-        ResolveChunkLoader()?.RefreshChunksForCameraView();
     }
 
     /// <summary>按双指间距变化调整正交视野；两指分开时镜头拉近，合拢时镜头拉远。</summary>
@@ -298,21 +290,11 @@ public class Mod_Cam : Module
         SetOrthographicSize(CurrentOrthographicSize - screenDistanceDelta * safeSensitivity);
     }
 
-    public void EnableUnlimitedView()
+    /// <summary>原子设置视野上限模式和正交尺寸，供 GM 滑条的普通档与无限档共用。</summary>
+    public void SetViewLimitAndSize(float value, bool unlimited)
     {
-        _unlimitedViewEnabled = true;
-    }
-
-    /// <summary>相机与区块加载器是玩家下的兄弟模块，通过玩家根节点解析而不是只查父级。</summary>
-    private Mod_ChunkLoader ResolveChunkLoader()
-    {
-        if (_chunkLoader != null)
-            return _chunkLoader;
-
-        Item owner = CameraFollowItem != null ? CameraFollowItem : GetComponentInParent<Item>();
-        if (owner != null)
-            _chunkLoader = owner.GetComponentInChildren<Mod_ChunkLoader>(true);
-        return _chunkLoader;
+        _unlimitedViewEnabled = unlimited;
+        SetOrthographicSize(value);
     }
 
     /// <summary>按普通玩法上限或管理员无限权限约束镜头正交尺寸。</summary>
@@ -330,6 +312,7 @@ public class Mod_Cam : Module
             if (saved != null)
             {
                 povValue = saved.PovValue;
+                _unlimitedViewEnabled = saved.UnlimitedViewEnabled;
                 return;
             }
         }
@@ -343,6 +326,10 @@ public class Mod_Cam : Module
     private void SavePovValue()
     {
         if (ModData == null) return;
-        ModData.WriteData(new CameraFollowSaveData { PovValue = povValue });
+        ModData.WriteData(new CameraFollowSaveData
+        {
+            PovValue = povValue,
+            UnlimitedViewEnabled = _unlimitedViewEnabled
+        });
     }
 }

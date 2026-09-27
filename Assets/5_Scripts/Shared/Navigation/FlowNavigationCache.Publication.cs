@@ -13,6 +13,7 @@ namespace FlatWorld.Navigation
         private NativeArray<int> nativeCells;
         private NativeArray<byte> nativeWater;
         private NativeArray<float> nativeLiquidDepth;
+        private NativeArray<float2> nativeWaterCurrent;
         private NativeArray<FlowPortal> nativePortals;
         private NativeArray<int> nativeExitCosts;
         private NativeArray<byte> nativeExitDirections;
@@ -23,7 +24,7 @@ namespace FlatWorld.Navigation
         private NativeArray<int> nativeSelectedExits;
         private readonly List<int> routeSlots = new();
 
-        /// <summary>只在块数据变化时重新排列 Native 表，直接复制未变局部图而不重新搜索。</summary>
+        /// <summary>只在块数据变化时重新排列 Native 表，整段复制未变局部图而不重新搜索。</summary>
         private void PublishChunks()
         {
             DisposeChunks();
@@ -36,6 +37,7 @@ namespace FlatWorld.Navigation
             nativeCells = new NativeArray<int>(coordinates.Count * 256, Allocator.Persistent);
             nativeWater = new NativeArray<byte>(coordinates.Count * 256, Allocator.Persistent);
             nativeLiquidDepth = new NativeArray<float>(coordinates.Count * 256, Allocator.Persistent);
+            nativeWaterCurrent = new NativeArray<float2>(coordinates.Count * 256, Allocator.Persistent);
             nativePortals = new NativeArray<FlowPortal>(portalCount, Allocator.Persistent);
             nativeExitCosts = new NativeArray<int>(portalCount * 256, Allocator.Persistent);
             nativeExitDirections = new NativeArray<byte>(portalCount * 256, Allocator.Persistent);
@@ -45,20 +47,19 @@ namespace FlatWorld.Navigation
                 CachedChunk chunk = chunks[coordinates[index]];
                 nativeChunkLookup.Add(chunk.Coordinate, index);
                 nativeChunks[index] = new FlowChunkHeader { Coordinate = chunk.Coordinate, PortalStart = nextPortal, PortalCount = chunk.Portals.Count };
-                for (int cell = 0; cell < 256; cell++)
-                {
-                    int target = index * 256 + cell;
-                    nativeCells[target] = chunk.Cells[cell];
-                    nativeWater[target] = chunk.Water[cell];
-                    nativeLiquidDepth[target] = chunk.LiquidDepth[cell];
-                }
+                int cellStart = index * 256;
+                NativeArray<int>.Copy(chunk.Cells, 0, nativeCells, cellStart, 256);
+                NativeArray<byte>.Copy(chunk.Water, 0, nativeWater, cellStart, 256);
+                NativeArray<float>.Copy(chunk.LiquidDepth, 0, nativeLiquidDepth, cellStart, 256);
+                NativeArray<float2>.Copy(chunk.WaterCurrent, 0, nativeWaterCurrent, cellStart, 256);
                 foreach (FlowPortal item in chunk.Portals)
                 {
                     FlowPortal portal = item; portal.Chunk = index;
                     nativePortals[nextPortal] = portal;
                     LocalField field = chunk.Fields[portal.Anchor];
-                    for (int cell = 0; cell < 256; cell++)
-                    { nativeExitCosts[nextPortal * 256 + cell] = field.Costs[cell]; nativeExitDirections[nextPortal * 256 + cell] = field.Directions[cell]; }
+                    int exitStart = nextPortal * 256;
+                    NativeArray<int>.Copy(field.Costs, 0, nativeExitCosts, exitStart, 256);
+                    NativeArray<byte>.Copy(field.Directions, 0, nativeExitDirections, exitStart, 256);
                     nextPortal++;
                 }
             }
@@ -103,8 +104,11 @@ namespace FlatWorld.Navigation
                 nativeGoals[slot] = new FlowGoalData { Chunk = chunkIndex, Cell = FlowNavigationMath.LocalIndex(goal.Cell, domain),
                     Position = goal.Position, Generation = goal.Generation, Epoch = Epoch };
                 if (goal.TargetDirty || resized)
-                    for (int cell = 0; cell < 256; cell++)
-                    { nativeTargetCosts[slot * 256 + cell] = goal.Field.Costs[cell]; nativeTargetDirections[slot * 256 + cell] = goal.Field.Directions[cell]; }
+                {
+                    int targetStart = slot * 256;
+                    NativeArray<int>.Copy(goal.Field.Costs, 0, nativeTargetCosts, targetStart, 256);
+                    NativeArray<byte>.Copy(goal.Field.Directions, 0, nativeTargetDirections, targetStart, 256);
+                }
 
                 ulong mask = 0;
                 if (chunkIndex >= 0)
@@ -141,6 +145,7 @@ namespace FlatWorld.Navigation
         {
             Domain = domain, Epoch = Epoch, ChunkLookup = nativeChunkLookup, Chunks = nativeChunks,
             Cells = nativeCells, Water = nativeWater, LiquidDepth = nativeLiquidDepth,
+            WaterCurrent = nativeWaterCurrent,
             Portals = nativePortals, ExitDirections = nativeExitDirections, Goals = nativeGoals,
             TargetCosts = nativeTargetCosts, TargetDirections = nativeTargetDirections, SelectedExits = nativeSelectedExits
         };
@@ -153,6 +158,7 @@ namespace FlatWorld.Navigation
             if (nativeCells.IsCreated) nativeCells.Dispose();
             if (nativeWater.IsCreated) nativeWater.Dispose();
             if (nativeLiquidDepth.IsCreated) nativeLiquidDepth.Dispose();
+            if (nativeWaterCurrent.IsCreated) nativeWaterCurrent.Dispose();
             if (nativePortals.IsCreated) nativePortals.Dispose();
             if (nativeExitCosts.IsCreated) nativeExitCosts.Dispose();
             if (nativeExitDirections.IsCreated) nativeExitDirections.Dispose();

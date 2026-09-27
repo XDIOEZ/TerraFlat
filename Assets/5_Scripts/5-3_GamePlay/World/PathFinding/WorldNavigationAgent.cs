@@ -34,6 +34,7 @@ public sealed class WorldNavigationAgent : MonoBehaviour
 
     private Rigidbody2D body;
     private Mover surfaceMover;
+    private Item waterActor; // 无 Mover 生物的水流配置身份。
     private WorldNavigationManager navigationManager;
     private Vector2[] waypoints = Array.Empty<Vector2>();
     private Vector2 destination;
@@ -121,8 +122,21 @@ public sealed class WorldNavigationAgent : MonoBehaviour
 
     public void Bind(Rigidbody2D rigidbody2D, WorldNavigationManager manager)
     {
+        Bind(rigidbody2D, manager, null);
+    }
+
+    /// <summary>AI 模块位于子物体，显式绑定其 Mover 才能让导航速度与水流共用刚体出口。</summary>
+    public void Bind(Rigidbody2D rigidbody2D, WorldNavigationManager manager, Mover mover)
+    {
+        Bind(rigidbody2D, manager, mover, null);
+    }
+
+    /// <summary>无 Mover 的生物仍以 Actor 身份读取统一水流配置；有 Mover 时由其结算主动和被动速度。</summary>
+    public void Bind(Rigidbody2D rigidbody2D, WorldNavigationManager manager, Mover mover, Item actor)
+    {
         body = rigidbody2D != null ? rigidbody2D : GetComponent<Rigidbody2D>();
-        surfaceMover = body != null ? body.GetComponentInParent<Mover>() : null;
+        surfaceMover = mover;
+        waterActor = actor;
         if (manager != null)
             navigationManager = manager;
         lastProgressPosition = CurrentPosition;
@@ -643,16 +657,22 @@ public sealed class WorldNavigationAgent : MonoBehaviour
         fallbackVelocity = velocity;
         if (body != null)
         {
+            if (surfaceMover != null)
+            {
+                surfaceMover.ApplyNavigationVelocity(velocity, deltaTime);
+                return;
+            }
+
             if (deltaTime <= 0f)
             {
                 body.velocity = Vector2.zero;
                 return;
             }
 
-            surfaceMover ??= body.GetComponentInParent<Mover>();
-            body.velocity = surfaceMover == null
-                ? velocity
-                : surfaceMover.SmoothSurfaceVelocity(body.velocity, velocity, deltaTime);
+            body.velocity = waterActor != null
+                ? velocity + WorldMotionSystem.SampleWaterVelocity(body.position,
+                    WaterCurrentPushConfigService.ResolvePushSpeed(waterActor))
+                : velocity;
             return;
         }
 

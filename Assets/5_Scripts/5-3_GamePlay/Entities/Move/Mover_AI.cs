@@ -56,7 +56,7 @@ public class Mover_AI : Mover, ISimulationRangeAware
         hasDestination &&
         !HasReachedTarget &&
         NavigationAgent != null &&
-        NavigationAgent.Velocity.sqrMagnitude >
+        DrivenVelocity.sqrMagnitude >
         animationMoveSpeedThreshold * animationMoveSpeedThreshold;
 
     public override void Load()
@@ -68,7 +68,7 @@ public class Mover_AI : Mover, ISimulationRangeAware
         if (NavigationAgent == null)
             NavigationAgent = agentObject.AddComponent<WorldNavigationAgent>();
 
-        NavigationAgent.Bind(rb);
+        NavigationAgent.Bind(rb, null, this);
         NavigationAgent.Configure(
             stopDistance,
             EffectiveDestinationChangeDistance,

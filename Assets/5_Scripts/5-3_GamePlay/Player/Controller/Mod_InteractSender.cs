@@ -346,6 +346,10 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
             if (IsPointerOverWater(pointer)) return null;
         }
 
+        // 精确交互只认光标落点；默认模式保留朝向和距离兜底，方便手机操作。
+        if (InteractionUserSettings.PreciseInteraction)
+            return null;
+
         Physics2D.SyncTransforms();
         int count = Physics2D.OverlapCircleNonAlloc(
             item.transform.position,

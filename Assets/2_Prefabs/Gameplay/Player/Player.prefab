@@ -405,7 +405,6 @@ MonoBehaviour:
   Data:
     CurrentTemperature: 36.5
     AmbientTemperature: 20
-    ChangeSpeed: 0.013888889
     Insulation: 0
     ColdDamageStart: 5
     HotDamageStart: 60
@@ -426,6 +425,7 @@ GameObject:
   m_Component:
   - component: {fileID: 6639265349670268636}
   - component: {fileID: 2343211853481933686}
+  - component: {fileID: 9100000000000000202}
   m_Layer: 0
   m_Name: Module_Hotbar
   m_TagString: Untagged
@@ -448,6 +448,18 @@ Transform:
   m_Children: []
   m_Father: {fileID: 7343432311901774332}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!210 &9100000000000000202
+SortingGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4411885219965820198}
+  m_Enabled: 1
+  m_SortingLayerID: 0
+  m_SortingLayer: 0
+  m_SortingOrder: 1
+  m_SortAtRoot: 0
 --- !u!114 &2343211853481933686
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -566,6 +578,7 @@ GameObject:
   - component: {fileID: 3000418337859302239}
   - component: {fileID: 6829314751203845612}
   - component: {fileID: 9162598698088840726}
+  - component: {fileID: 9100000000000000201}
   m_Layer: 10
   m_Name: Player
   m_TagString: Untagged
@@ -611,6 +624,18 @@ Transform:
   - {fileID: 9100000000000000101}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!210 &9100000000000000201
+SortingGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4678875130974218576}
+  m_Enabled: 1
+  m_SortingLayerID: 0
+  m_SortingLayer: 0
+  m_SortingOrder: 0
+  m_SortAtRoot: 0
 --- !u!50 &8862278864143937418
 Rigidbody2D:
   serializedVersion: 4
@@ -758,7 +783,7 @@ MonoBehaviour:
       Amount: 1
       Volume: 500
       CanBePickedUp: 0
-      Weight: 1
+      Weight: 70
       Stackable: 1
     transform:
       position: {x: 0, y: 0, z: 0}

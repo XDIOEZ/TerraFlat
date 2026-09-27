@@ -21,6 +21,7 @@ namespace FlatWorld.Navigation
         private readonly Dictionary<int2, bool> dirty = new();
         private readonly List<Goal> goals = new();
         private readonly List<int2> coordinates = new();
+        private readonly List<int2> changedCoordinates = new();
         private readonly List<FieldBuild> builds = new();
         private JobHandle readers;
         private bool resetPending, goalsChanged, disposed;
@@ -130,9 +131,16 @@ namespace FlatWorld.Navigation
             if (resetPending) ResetWorld();
             if (dirty.Count == 0 && !goalsChanged && nativeChunks.IsCreated) return Snapshot();
             readers.Complete(); readers = default;
-            bool changed = !nativeChunks.IsCreated;
+            bool graphChanged = !nativeChunks.IsCreated;
+            changedCoordinates.Clear();
             builds.Clear();
-            foreach (var entry in dirty) changed |= RefreshChunk(entry.Key, entry.Value);
+            foreach (var entry in dirty)
+            {
+                ChunkRefreshResult result = RefreshChunk(entry.Key, entry.Value);
+                if (result == ChunkRefreshResult.None) continue;
+                changedCoordinates.Add(entry.Key);
+                graphChanged |= result == ChunkRefreshResult.Graph;
+            }
             if (builds.Count > 0) { BuildFields(); ExitFieldBuilds += builds.Count; }
             dirty.Clear();
 
@@ -147,8 +155,8 @@ namespace FlatWorld.Navigation
                 else goal.Field.Clear();
             }
             if (builds.Count > 0) { BuildFields(); TargetFieldBuilds += builds.Count; }
-            if (changed) PublishChunks();
-            PublishGoals(changed);
+            if (changedCoordinates.Count > 0 || !nativeChunks.IsCreated) PublishChunks(changedCoordinates);
+            if (graphChanged || goalsChanged) PublishGoals(graphChanged);
             goalsChanged = false;
             return Snapshot();
         }
@@ -173,7 +181,7 @@ namespace FlatWorld.Navigation
         private void ResetWorld()
         {
             readers.Complete(); readers = default; DisposeNative();
-            chunks.Clear(); dirty.Clear(); goals.Clear();
+            chunks.Clear(); dirty.Clear(); goals.Clear(); changedCoordinates.Clear();
             domain = source.Domain;
             if (domain.IsWrapped && (math.any(domain.Span <= 0) || math.any(domain.Span % 16 != 0)))
                 throw new InvalidOperationException("16×16 分层导航要求循环世界跨度由完整 Chunk 组成。");
@@ -182,12 +190,16 @@ namespace FlatWorld.Navigation
             foreach (int2 coordinate in coordinates) MarkChunk(coordinate, true);
         }
 
-        /// <summary>冻结受影响块的权重，并只为变化后的出口种子生成缺失图。</summary>
-        private bool RefreshChunk(int2 coordinate, bool contentDirty)
+        /// <summary>区分表层数据变化与代价/出口图变化，避免液体表现刷新触发路线重建。</summary>
+        private enum ChunkRefreshResult : byte { None, Surface, Graph }
+
+        /// <summary>冻结受影响块的权重，并只为代价或出口变化生成缺失图。</summary>
+        private ChunkRefreshResult RefreshChunk(int2 coordinate, bool contentDirty)
         {
             bool exists = chunks.TryGetValue(coordinate, out CachedChunk chunk);
             if (!exists) chunk = new CachedChunk(coordinate);
-            bool contentChanged = !exists;
+            bool costChanged = !exists;
+            bool surfaceChanged = !exists;
             int registered = 0;
             int2 origin = FlowNavigationMath.Origin(coordinate, domain);
             if (contentDirty || !exists)
@@ -199,23 +211,28 @@ namespace FlatWorld.Navigation
                     int cost = loaded && data.Penalty > 0 ? FlowNavigationMath.TerrainCost(data.Penalty) : -1;
                     byte water = loaded && data.Penalty > 0 ? data.Water : (byte)0;
                     float liquidDepth = water != 0 ? math.saturate(data.LiquidDepth) : 0f;
-                    contentChanged |= chunk.Cells[cell] != cost || chunk.Water[cell] != water ||
-                                      !chunk.LiquidDepth[cell].Equals(liquidDepth);
+                    float2 waterCurrent = water != 0 ? data.WaterCurrent : float2.zero;
+                    costChanged |= chunk.Cells[cell] != cost;
+                    surfaceChanged |= chunk.Water[cell] != water ||
+                                      !chunk.LiquidDepth[cell].Equals(liquidDepth) ||
+                                      !chunk.WaterCurrent[cell].Equals(waterCurrent);
                     chunk.Cells[cell] = cost;
                     chunk.Water[cell] = water;
                     chunk.LiquidDepth[cell] = liquidDepth;
+                    chunk.WaterCurrent[cell] = waterCurrent;
                 }
                 if (registered == 0)
                 {
-                    if (!exists) return false;
-                    chunks.Remove(coordinate); MarkTargetChunkChanged(coordinate); return true;
+                    if (!exists) return ChunkRefreshResult.None;
+                    chunks.Remove(coordinate); MarkTargetChunkChanged(coordinate); return ChunkRefreshResult.Graph;
                 }
             }
             List<FlowPortal> portals = DiscoverPortals(chunk);
             bool portalsChanged = !SamePortals(chunk.Portals, portals);
-            if (!contentChanged && !portalsChanged) return false;
+            if (!costChanged && !surfaceChanged && !portalsChanged) return ChunkRefreshResult.None;
             chunks[coordinate] = chunk;
-            if (contentChanged) { ChunkContentBuilds++; MarkTargetChunkChanged(coordinate); }
+            if (costChanged || surfaceChanged) ChunkContentBuilds++;
+            if (costChanged) MarkTargetChunkChanged(coordinate);
             if (portalsChanged) PortalConnectionBuilds++;
             chunk.Portals = portals;
             var retained = new HashSet<int>();
@@ -224,12 +241,12 @@ namespace FlatWorld.Navigation
                 if (!retained.Add(portal.Anchor)) continue;
                 bool cached = chunk.Fields.TryGetValue(portal.Anchor, out LocalField field);
                 if (!cached) { field = new LocalField(); chunk.Fields.Add(portal.Anchor, field); }
-                if (contentChanged || !cached) builds.Add(new FieldBuild(chunk.Cells, portal.Anchor, field));
+                if (costChanged || !cached) builds.Add(new FieldBuild(chunk.Cells, portal.Anchor, field));
             }
             var obsolete = new List<int>();
             foreach (int seed in chunk.Fields.Keys) if (!retained.Contains(seed)) obsolete.Add(seed);
             foreach (int seed in obsolete) chunk.Fields.Remove(seed);
-            return true;
+            return costChanged || portalsChanged ? ChunkRefreshResult.Graph : ChunkRefreshResult.Surface;
         }
 
         /// <summary>从双方均可通行的连续边缘格生成缺口，一侧可以有多个出口。</summary>
@@ -292,13 +309,15 @@ namespace FlatWorld.Navigation
             {
                 FieldBuild build = builds[i];
                 inputRequests[i] = new FlowIntegrationRequest { CellStart = i * 256, Seed = build.Seed };
-                for (int cell = 0; cell < 256; cell++) inputCells[i * 256 + cell] = build.Cells[cell];
+                NativeArray<int>.Copy(build.Cells, 0, inputCells, i * 256, 256);
             }
             new FlowIntegrationJob { Cells = cells, Requests = requests, Costs = costs, Directions = directions,
                 HeapNodes = nodes, HeapPositions = positions }.Schedule(count, 1).Complete();
             for (int i = 0; i < count; i++)
-                for (int cell = 0; cell < 256; cell++)
-                { builds[i].Field.Costs[cell] = costs[i * 256 + cell]; builds[i].Field.Directions[cell] = directions[i * 256 + cell]; }
+            {
+                NativeArray<int>.Copy(costs, i * 256, builds[i].Field.Costs, 0, 256);
+                NativeArray<byte>.Copy(directions, i * 256, builds[i].Field.Directions, 0, 256);
+            }
         }
 
         /// <summary>一张可复用的本地反向积分图。</summary>
@@ -319,6 +338,7 @@ namespace FlatWorld.Navigation
             internal readonly int[] Cells = new int[256];
             internal readonly byte[] Water = new byte[256];
             internal readonly float[] LiquidDepth = new float[256];
+            internal readonly float2[] WaterCurrent = new float2[256];
             internal readonly Dictionary<int, LocalField> Fields = new();
             internal List<FlowPortal> Portals = new();
             /// <summary>记录块坐标，权重将在读取源快照时填充。</summary>

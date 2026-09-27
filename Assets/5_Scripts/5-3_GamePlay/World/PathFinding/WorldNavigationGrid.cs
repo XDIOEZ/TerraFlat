@@ -185,8 +185,12 @@ public sealed class WorldNavigationGrid
     }
 
     public bool TryGetCell(Vector2Int position, out WorldNavigationCell cell)
+        => TryGetCanonicalCell(NormalizeCell(position), out cell);
+
+    #region 共享流场规范坐标读取
+    /// <summary>调用方已用当前世界 Domain 规范化坐标时，直接读取最终格状态。</summary>
+    internal bool TryGetCanonicalCell(Vector2Int position, out WorldNavigationCell cell)
     {
-        position = NormalizeCell(position);
         if (!cells.TryGetValue(position, out WorldNavigationCell terrain))
         {
             cell = default;
@@ -201,6 +205,7 @@ public sealed class WorldNavigationGrid
             terrain.LiquidDepth);
         return true;
     }
+    #endregion
 
     public bool IsWalkable(Vector2Int position)
         => TryGetCell(position, out WorldNavigationCell cell) && cell.Walkable;

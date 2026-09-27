@@ -14,6 +14,12 @@ public interface IWorldPushTarget
     #endregion
 }
 
+/// <summary>实体模块声明是否实际接触水面；飞行等离地阶段不接受表层水流。</summary>
+public interface IWaterCurrentExposure
+{
+    bool ReceivesWaterCurrent { get; }
+}
+
 /// <summary>
 /// 游戏推动与环境带动的公共入口。主动速度用于动画/体力，水流与承载速度只改变世界位移。
 /// 推动物使用作者定义的矩形占地做连续扫掠；不创建碰撞体、不施加物理冲量、不触发区块生成。
@@ -30,14 +36,18 @@ public static class WorldMotionSystem
     public static void Register(IWorldPushTarget target) => PushTargets.Add(target);
     public static void Unregister(IWorldPushTarget target) => PushTargets.Remove(target);
 
-    /// <summary>角色和载具共用有效表面流场；平台与静水自然返回零速度。</summary>
+    /// <summary>角色和载具共用有效表面流场；河流按权威流量区分快慢，平台与静水返回零速度。</summary>
     public static Vector2 SampleWaterVelocity(Vector2 position, float speed)
     {
+        if (speed <= 0f) return Vector2.zero;
         ChunkMgr manager = ChunkMgr.ExistingInstance;
-        return speed > 0f && manager != null &&
-               manager.TryGetRuntimeWaterCurrent(position, out RuntimeWaterCurrentSample current)
-            ? current.Direction * (speed * Mathf.Clamp01(current.Flow))
-            : Vector2.zero;
+        if (manager == null || !manager.TryGetRuntimeWaterCurrent(position, out RuntimeWaterCurrentSample current))
+            return Vector2.zero;
+
+        float strength = current.Kind == RuntimeWaterCurrentKind.River
+            ? WaterEnvironmentRules.ResolveRiverStrength(current.Flow)
+            : Mathf.Clamp01(current.Flow);
+        return current.Direction * (speed * strength);
     }
     #endregion
 
@@ -77,12 +87,13 @@ public static class WorldMotionSystem
         return ResolveMechanicalContactVelocity(actor, position, totalVelocity, deltaTime);
     }
 
-    /// <summary>纯数据机械以占地格参与角色扫掠，保留原有滑边运动而不创建逐建筑碰撞体。</summary>
+    /// <summary>纯数据机械按视觉底座矩形阻挡角色，保留滑边运动而不创建逐建筑碰撞体。</summary>
     private static Vector2 ResolveMechanicalContactVelocity(
         Mover actor, Vector2 position, Vector2 velocity, float deltaTime)
     {
         if (actor == null || velocity.sqrMagnitude <= 0f || deltaTime <= 0f) return velocity;
         Vector2 travel = velocity * deltaTime;
+        // 视觉阻挡框留在所属格内，先用格索引圈出候选节点，避免逐节点遍历。
         float margin = .5f + actor.pushContactRadius;
         int minX = Mathf.FloorToInt(Mathf.Min(position.x, position.x + travel.x) - margin);
         int maxX = Mathf.FloorToInt(Mathf.Max(position.x, position.x + travel.x) + margin);
@@ -93,10 +104,13 @@ public static class WorldMotionSystem
         {
             MechanicalNode node = MechanicalWorld.GetAtCurrentWorld(new Vector2Int(x, y), 0);
             if (node?.Definition.BlocksMovement != true) continue;
+            MechanicalCollisionBounds.ResolveWorldBox(node, out Vector2 boxCenter,
+                out Vector2 boxHalfExtents);
             Vector2 origin = WorldTopologyRuntime.ShortestDelta(
-                node.Snapshot.transform.position, position);
+                boxCenter, position);
             if (!TrySweepBox(origin, velocity * deltaTime,
-                    Vector2.one * margin, out Vector2 normal, out float fraction)) continue;
+                    boxHalfExtents + Vector2.one * actor.pushContactRadius,
+                    out Vector2 normal, out float fraction)) continue;
             float inwardSpeed = -Vector2.Dot(velocity, normal);
             if (inwardSpeed > 0f)
                 velocity += normal * (inwardSpeed * (1f - fraction));

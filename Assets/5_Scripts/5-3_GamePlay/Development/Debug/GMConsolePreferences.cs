@@ -13,6 +13,7 @@ internal static class GMConsolePreferences
     private const string TeleportShortcutKey = KeyPrefix + "TeleportShortcut";
     private const string NavigationPathKey = KeyPrefix + "NavigationPath";
     private const string AnimalDebugOverlayKey = KeyPrefix + "AnimalDebugOverlay";
+    private const string HiveDebugOverlayKey = KeyPrefix + "HiveDebugOverlay";
     private const string ActivePageKey = KeyPrefix + "ActivePage";
     private const string TemperatureOverlayKey = KeyPrefix + "TemperatureOverlay";
     private const string TemperatureOverlayTransparencyKey = KeyPrefix + "TemperatureOverlayTransparency";
@@ -37,6 +38,9 @@ internal static class GMConsolePreferences
 
     public static bool AnimalDebugOverlayVisible =>
         PlayerPrefs.GetInt(AnimalDebugOverlayKey, 0) != 0;
+
+    public static bool HiveDebugOverlayVisible =>
+        PlayerPrefs.GetInt(HiveDebugOverlayKey, 0) != 0;
 
     public static int ActivePageIndex => PlayerPrefs.GetInt(ActivePageKey, 0);
 
@@ -97,6 +101,12 @@ internal static class GMConsolePreferences
     public static void SetAnimalDebugOverlayVisible(bool visible)
     {
         PlayerPrefs.SetInt(AnimalDebugOverlayKey, visible ? 1 : 0);
+        PlayerPrefs.Save();
+    }
+
+    public static void SetHiveDebugOverlayVisible(bool visible)
+    {
+        PlayerPrefs.SetInt(HiveDebugOverlayKey, visible ? 1 : 0);
         PlayerPrefs.Save();
     }
 

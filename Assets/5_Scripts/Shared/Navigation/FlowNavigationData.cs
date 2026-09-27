@@ -12,6 +12,7 @@ namespace FlatWorld.Navigation
         public uint Penalty; // 零表示阻挡。
         public float LiquidDepth; // 有效水面的 0~1 水深。
         public byte Water; // 水上平台等支撑面为 0。
+        public float2 WaterCurrent; // 有效水面的单位配置速度流向，静水为零。
     }
 
     /// <summary>主线程权威网格快照入口；不向 Job 暴露业务对象。</summary>
@@ -19,7 +20,7 @@ namespace FlatWorld.Navigation
     {
         // 当前世界的坐标数学规则。
         WorldTopologyDomain Domain { get; }
-        /// <summary>读取已注册格的最终权重与有效表面；阻挡 penalty=0，未加载返回 false。</summary>
+        /// <summary>读取已按 Domain 规范化的格的最终权重与有效表面；阻挡 penalty=0，未加载返回 false。</summary>
         bool TryGetCell(int2 cell, out FlowNavigationCellData data);
         /// <summary>首次绑定时列出已加载导航 Chunk，后续更新由脏格驱动。</summary>
         void CollectChunks(List<int2> chunks);
@@ -151,6 +152,7 @@ namespace FlatWorld.Navigation
         [ReadOnly] public NativeArray<int> Cells;
         [ReadOnly] public NativeArray<byte> Water;
         [ReadOnly] public NativeArray<float> LiquidDepth;
+        [ReadOnly] public NativeArray<float2> WaterCurrent;
         [ReadOnly] public NativeArray<FlowPortal> Portals;
         [ReadOnly] public NativeArray<byte> ExitDirections;
         [ReadOnly] public NativeArray<FlowGoalData> Goals;
@@ -238,6 +240,16 @@ namespace FlatWorld.Navigation
                 return false;
             depth = LiquidDepth.IsCreated ? math.saturate(LiquidDepth[index]) : 0f;
             return true;
+        }
+
+        /// <summary>读取当前位置的表层水流；水上平台、静水及未加载格均返回零。</summary>
+        public float2 CurrentAt(float2 position)
+        {
+            int2 cell = Domain.Normalize((int2)math.floor(position));
+            if (!ChunkLookup.TryGetValue(FlowNavigationMath.ChunkOf(cell, Domain), out int chunk))
+                return float2.zero;
+            int index = chunk * 256 + FlowNavigationMath.LocalIndex(cell, Domain);
+            return Cells[index] >= 0 && Water[index] != 0 ? WaterCurrent[index] : float2.zero;
         }
 
         /// <summary>查询冻结网格的可走性；未知 Chunk 始终视为阻挡。</summary>
