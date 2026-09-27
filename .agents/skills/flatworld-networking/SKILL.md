@@ -12,7 +12,7 @@ description: "Use when: 定位或修改 FlatWorld 的 Mirror/KCP 联机启动、
 - 会话入口：`Core/GameNetwork.cs`
 - 同步：`Gameplay/Network{ChunkStreaming,ItemState,WeatherState}Coordinator.cs`
 - 快照：`SaveDataMgr.CreateCompressedNetworkSnapshot/ApplyCompressedNetworkSnapshot`
-- UI：`Gameplay/NetworkModeUIController*.cs` 与 `Assets/2_Prefabs/2-1_UI/Menu_UI/UI_NetworkMode.prefab`
+- UI：`Gameplay/NetworkModeUIController*.cs` 与 `Assets/2_Prefabs/2-1_UI/MainMenu/WorldSetup/UI_NetworkMode.prefab`
 
 ## 权威边界
 
@@ -24,6 +24,7 @@ description: "Use when: 定位或修改 FlatWorld 的 Mirror/KCP 联机启动、
 - 机械建筑以 `MechanicalWorld` 节点快照、删除消息与转速增量同步，不进入普通世界 Item 出生/状态流；完整重同步先清空客户端旧节点再下发当前节点，避免旧存档快照残留。服务端放置直接提交数据，拆除先发布召唤器再删除节点，客户端只应用权威机械表现。
 - 网络 UI 从正式 Prefab 实例化，不运行时构造；网络玩家名称节点预制在 `Assets/Resources/Networking/FlatWorldNetworkPlayer.prefab`。
 - `NetworkModeUIController` 常驻于 `NetworkGameBootstrap`，但联机面板和主菜单入口属于场景 UI；必须按 `GameStartScene` 加载与 `UIManager.InteractionSurfaceChanged` 幂等重建/重绑，不能只在 `Initialize` 中缓存一次引用。
+- `UI_NetworkMode` 在完整资源就绪后实例化；Prefab 根 `CanvasGroup` 的 Alpha 保持 1 供 Prefab Mode 编辑，交互与射线默认关闭；运行时在注册面板前调用 `BasePanel.InitClosed()` 无动画地隐藏，不能靠带动画的 `Close()` 初始化。
 - 维度切换当前仅离线；完成服务器权威迁移协议前不得解除。
 
 ## 验证

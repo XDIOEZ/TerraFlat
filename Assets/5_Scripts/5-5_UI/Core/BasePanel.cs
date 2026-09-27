@@ -155,6 +155,18 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
 
     }
 
+    /// <summary>新建面板无动画地初始化为关闭状态，保留 Prefab 在编辑器中的可见外观。</summary>
+    public void InitClosed()
+    {
+        EnsureRuntimeReferences();
+        canvasGroup.alpha = 0f;
+        canvasGroup.interactable = false;
+        canvasGroup.blocksRaycasts = false;
+        isOpen = false;
+        runtimeStateInitialized = true;
+        Init();
+    }
+
     public void SetPanelName(string name)
     {
         PanelName = name;

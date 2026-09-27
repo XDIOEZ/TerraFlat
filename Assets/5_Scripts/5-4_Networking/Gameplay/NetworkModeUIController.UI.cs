@@ -159,7 +159,6 @@ namespace FlatWorld.Networking.Gameplay
 
             SetStatus("离线：可创建主机，或粘贴好友提供的 UDP 穿透地址");
             RefreshInteractableState();
-            panel.Close();
         }
 
         /// <summary>按当前主菜单实例幂等绑定联机入口，主菜单重建后自动切换引用。</summary>

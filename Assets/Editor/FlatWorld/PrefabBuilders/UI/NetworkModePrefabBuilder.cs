@@ -67,9 +67,10 @@ public static class NetworkModePrefabBuilder
         canvas.sortingOrder = 500;
 
         CanvasGroup canvasGroup = root.GetComponent<CanvasGroup>();
+        // Prefab 模式保留完整外观；运行时由 BasePanel.InitClosed 设为初始隐藏。
         canvasGroup.alpha = 1f;
-        canvasGroup.interactable = true;
-        canvasGroup.blocksRaycasts = true;
+        canvasGroup.interactable = false;
+        canvasGroup.blocksRaycasts = false;
 
         BasePanel panel = root.GetComponent<BasePanel>();
         panel.PanelName = NetworkModeUIController.NetworkPanelKey;
