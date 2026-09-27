@@ -39,6 +39,7 @@ public class RainEffectController : MonoBehaviour
     private void Awake()
     {
         EnsureParticleSystemCache();
+        ApplyWorldSorting();
         ApplyParticleByIntensity();
         SyncToMainCamera();
     }
@@ -261,6 +262,23 @@ public class RainEffectController : MonoBehaviour
             _baseRateOverDistanceMultipliers[i] = emission.rateOverDistanceMultiplier;
             _baseMaxParticles[i] = Mathf.Max(1, main.maxParticles);
             _lastAppliedLifetimes[i] = -1f;
+        }
+    }
+
+    /// <summary>雨雪粒子统一使用世界特效类别，覆盖 Prefab 中遗留的地形层排序。</summary>
+    private void ApplyWorldSorting()
+    {
+        if (_runtimeParticleSystems == null)
+            return;
+
+        WorldSortingManager sorting = WorldSortingManager.GetInstance();
+        foreach (ParticleSystem particles in _runtimeParticleSystems)
+        {
+            if (particles == null)
+                continue;
+            ParticleSystemRenderer renderer = particles.GetComponent<ParticleSystemRenderer>();
+            if (renderer != null)
+                sorting.ApplyRenderer(renderer, WorldSortingManager.WorldEffectCategory);
         }
     }
 

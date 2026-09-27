@@ -13,8 +13,6 @@ public sealed class ChunkAgricultureRenderer : MonoBehaviour, IChunkViewRenderer
 
     [SerializeField] private Sprite farmlandSprite; // 与最终地块一致的耕地精灵
     [SerializeField] private Material progressMaterial; // 支持 SpriteRenderer 透明度的耕地渐显材质
-    [SerializeField] private string sortingLayerName = "Default"; // 与地表一致的排序层
-    [SerializeField] private int sortingOrder; // 位于地表之上
     [SerializeField, Min(0.01f)] private float tillingFadeDuration = 0.18f;
     [SerializeField, Range(0f, 1f)] private float minimumProgressAlpha = 0.12f;
     [SerializeField, Range(0f, 1f)] private float maximumProgressAlpha = 0.9f;
@@ -215,8 +213,7 @@ public sealed class ChunkAgricultureRenderer : MonoBehaviour, IChunkViewRenderer
             SpriteRenderer renderer = root.AddComponent<SpriteRenderer>();
             renderer.sprite = farmlandSprite;
             renderer.sharedMaterial = progressMaterial;
-            renderer.sortingLayerName = sortingLayerName;
-            renderer.sortingOrder = sortingOrder;
+            WorldSortingManager.GetInstance().ApplyRenderer(renderer, WorldSortingManager.GroundMarkCategory);
             renderer.spriteSortPoint = SpriteSortPoint.Center;
             renderer.color = new Color(1f, 1f, 1f, bindingInitialState ? targetAlpha : 0f);
             overlay = new TillingOverlay { Renderer = renderer, TargetAlpha = targetAlpha };

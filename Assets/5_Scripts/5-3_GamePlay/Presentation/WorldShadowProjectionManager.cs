@@ -5,9 +5,9 @@ using UnityEngine.SceneManagement;
 
 /// <summary>
 /// 场景级太阳长投影：监听完整 Item 注册链，独立代理只复制主体 Sprite，不进入实体 SortingGroup。
-/// 共用一个材质；视口外每 0.25 秒复查，最多缓存 128 个代理，最大长度 8 个世界单位。
+/// 共用一个材质；视口外每 0.25 秒复查，最多缓存 128 个代理，投影外观从世界渲染 JSON 读取。
 /// 太阳参数在动画后的 LateUpdate 发布并同步主体；关闭设置会停用本组件并释放全部绑定。
-/// 物品视觉定义可提供与圆形底座阴影共用的局部落地点，Prefab 的 SunShadowCaster 仍可叠加高度和脚点修正。
+/// 物品视觉定义可提供与椭圆底座阴影共用的局部落地点，Prefab 的 SunShadowCaster 仍可叠加高度和脚点修正。
 /// </summary>
 [DefaultExecutionOrder(-100)]
 public sealed class WorldShadowProjectionManager : MonoBehaviour
@@ -15,7 +15,6 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
     #region 配置与运行状态
 
     public const string MaterialResource = "SunShadows/SunShadowProjection";
-    private const int SortingOrder = 0; // 与 BRG 地形同属 Default，材质队列 2990 位于地形与 Blocking 之间。
     private const int MaxPooledRenderers = 128;
     private const float OffscreenInterval = 0.25f;
     private static readonly int CasterId = Shader.PropertyToID("_SunShadowCaster");
@@ -26,18 +25,13 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
     private static readonly int AlphaTextureId = Shader.PropertyToID("_AlphaTex");
     private static readonly int ExternalAlphaId = Shader.PropertyToID("_EnableExternalAlpha");
 
-    [Min(0.05f), SerializeField] private float minimumLength = 0.35f; // 正午长度倍率。
-    [Min(0.1f), SerializeField] private float maximumLength = 2.8f; // 早晚长度倍率。
-    [Min(0.1f), SerializeField] private float maximumDistance = 8f; // 世界长度硬上限。
-    [Range(0f, 1f), SerializeField] private float opacity = 0.34f; // 正午最大不透明度。
-    [SerializeField] private Color shadowColor = new Color(0.12f, 0.14f, 0.20f, 1f);
-    [Min(1f), SerializeField] private float maximumVisibleDistance = 80f; // 源与相机的最大距离。
+    private static WorldRenderingConfig.RenderingShadows Defaults => WorldRenderingConfigCatalog.Default.shadows;
 
     private readonly Dictionary<Item, Binding> bindings = new();
+    private readonly Dictionary<MechanicalShadowRegistry.Part, MechanicalBinding> mechanicalBindings = new(); // 数据机械子层代理。
+    private readonly List<MechanicalShadowRegistry.Part> staleMechanicalParts = new(); // 区块卸载后的清理缓存。
     private readonly Dictionary<int, Transform> roots = new();
-    private readonly Dictionary<Sprite, Bounds> spriteBounds = new();
     private readonly Dictionary<Sprite, Vector4> spriteUvBounds = new();
-    private readonly List<Vector2> shapePoints = new();
     private readonly List<Item> staleItems = new();
     private readonly Stack<SpriteRenderer> pool = new();
     private MaterialPropertyBlock properties; // 原生资源必须在主线程 Awake 创建。
@@ -62,6 +56,15 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
         public Mod_Building Building;
         public IVisualGroundOffset GroundOffsetProvider;
         public float NextCheck;
+    }
+
+    /// <summary>机械子层只保存视觉代理，不创建 Item 或独立玩法对象。</summary>
+    private sealed class MechanicalBinding
+    {
+        public SpriteRenderer Proxy;
+        public float NextCheck;
+        public bool Seen;
+        public int Revision = -1; // 未变化的静态 Sprite 不重复设置 MPB。
     }
 
     #endregion
@@ -105,9 +108,9 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
     {
         CurrentParameters = gameManager != null && gameManager.IsInGameWorld
             ? SunShadowParametersProvider.Evaluate(SceneManager.GetActiveScene().name,
-                minimumLength, maximumLength, maximumDistance, opacity)
+                Defaults.minimumLength, Defaults.maximumLength, Defaults.maximumDistance)
             : default;
-        SunShadowParametersProvider.Publish(CurrentParameters, shadowColor);
+        SunShadowParametersProvider.Publish(CurrentParameters, Defaults.color);
     }
 
     /// <summary>动画和移动结束后更新可见代理；夜晚仅在切入隐藏状态时处理一次。</summary>
@@ -132,6 +135,7 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
             if (binding.Proxy != null && binding.Proxy.enabled) VisibleCount++;
         }
         foreach (Item item in staleItems) UnregisterCaster(item);
+        UpdateMechanicalCasters();
     }
 
     /// <summary>禁用时释放注册、GPU 状态与代理；不会改动脚底或局部灯光阴影。</summary>
@@ -228,9 +232,12 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
     {
         foreach (Binding binding in bindings.Values) ReleaseProxy(binding, allowPooling);
         bindings.Clear();
+        foreach (MechanicalBinding binding in mechanicalBindings.Values)
+            ReleaseMechanicalProxy(binding, allowPooling);
+        mechanicalBindings.Clear();
+        staleMechanicalParts.Clear();
         foreach (Transform root in roots.Values) if (root != null) Destroy(root.gameObject);
         roots.Clear();
-        spriteBounds.Clear();
         spriteUvBounds.Clear();
         CurrentParameters = default;
         VisibleCount = 0;
@@ -263,10 +270,13 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
 
     /// <summary>按源世界创建独立根节点；共享 Resources 材质保证构建不会剥离 Shader。</summary>
     private SpriteRenderer AcquireProxy(Binding binding)
+        => AcquireProxy(binding.Owner.gameObject.scene, binding.Source.gameObject.layer);
+
+    /// <summary>物品和机械复用同一共享材质、场景根节点与有上限的代理池。</summary>
+    private SpriteRenderer AcquireProxy(Scene scene, int layer)
     {
         if (material == null) material = Resources.Load<Material>(MaterialResource);
         if (material == null) throw new MissingReferenceException("缺少太阳长投影共享材质：" + MaterialResource);
-        Scene scene = binding.Owner.gameObject.scene;
         if (!roots.TryGetValue(scene.handle, out Transform root) || root == null)
         {
             GameObject rootObject = new GameObject("WorldSunShadows");
@@ -278,10 +288,9 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
         while (pool.Count > 0 && proxy == null) proxy = pool.Pop();
         if (proxy == null) proxy = new GameObject("SunShadow").AddComponent<SpriteRenderer>();
         proxy.transform.SetParent(root, false);
-        proxy.gameObject.layer = binding.Source.gameObject.layer;
+        proxy.gameObject.layer = layer;
         proxy.sharedMaterial = material;
-        proxy.sortingLayerName = "Default";
-        proxy.sortingOrder = SortingOrder;
+        WorldSortingManager.GetInstance().ApplyRenderer(proxy, WorldSortingManager.GroundShadowCategory);
         proxy.shadowCastingMode = ShadowCastingMode.Off;
         proxy.receiveShadows = false;
         proxy.gameObject.SetActive(true);
@@ -291,6 +300,114 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
     #endregion
 
     #region 可见性与 Sprite 同步
+
+    /// <summary>只遍历已显示区块的机械子层，夜间入口已在上层直接跳过。</summary>
+    private void UpdateMechanicalCasters()
+    {
+        foreach (MechanicalBinding binding in mechanicalBindings.Values) binding.Seen = false;
+        foreach (MechanicalShadowRegistry.Entry entry in MechanicalShadowRegistry.Entries)
+        {
+            if (!entry.Active || !entry.Scene.IsValid() || !entry.Scene.isLoaded) continue;
+            foreach (MechanicalShadowRegistry.Part part in entry.Parts)
+            {
+                if (part == null || !part.Active || part.Sprite == null) continue;
+                if (!mechanicalBindings.TryGetValue(part, out MechanicalBinding binding))
+                {
+                    binding = new MechanicalBinding();
+                    mechanicalBindings.Add(part, binding);
+                }
+                binding.Seen = true;
+                if (Time.unscaledTime >= binding.NextCheck)
+                    SynchronizeMechanicalCaster(part, binding);
+                if (binding.Proxy != null && binding.Proxy.enabled) VisibleCount++;
+            }
+        }
+        staleMechanicalParts.Clear();
+        foreach (KeyValuePair<MechanicalShadowRegistry.Part, MechanicalBinding> pair in mechanicalBindings)
+            if (!pair.Value.Seen) staleMechanicalParts.Add(pair.Key);
+        foreach (MechanicalShadowRegistry.Part part in staleMechanicalParts)
+        {
+            ReleaseMechanicalProxy(mechanicalBindings[part], true);
+            mechanicalBindings.Remove(part);
+        }
+    }
+
+    /// <summary>同一 Sprite 投影 Shader 处理机械静态主体和旋转部件，视口外不租用代理。</summary>
+    private void SynchronizeMechanicalCaster(MechanicalShadowRegistry.Part part, MechanicalBinding binding)
+    {
+        part.ResolveTransform(out Vector3 position, out Quaternion rotation);
+        Matrix4x4 matrix = Matrix4x4.TRS(position, rotation, part.Scale);
+        Bounds sourceBounds = ShadowFootprintResolver.MeasureVisibleWorldBounds(part.Sprite, matrix);
+        float footY = part.Owner.Foot.y;
+        float height = Mathf.Max(0.01f, sourceBounds.max.y - footY);
+        Vector2 displacement = CurrentParameters.ShadowDirection * Mathf.Min(
+            CurrentParameters.MaximumDistance, height * CurrentParameters.LengthMultiplier);
+        Bounds projected = new Bounds();
+        projected.SetMinMax(new Vector3(sourceBounds.min.x + Mathf.Min(0f, displacement.x),
+                footY + Mathf.Min(0f, displacement.y), sourceBounds.min.z - 0.1f),
+            new Vector3(sourceBounds.max.x + Mathf.Max(0f, displacement.x),
+                footY + Mathf.Max(0f, displacement.y) + 0.02f, sourceBounds.max.z + 0.1f));
+        if (!IsInView(projected, part.Owner.Layer))
+        {
+            ReleaseMechanicalProxy(binding, true);
+            binding.NextCheck = Time.unscaledTime + OffscreenInterval;
+            return;
+        }
+
+        if (binding.Proxy == null)
+            binding.Proxy = AcquireProxy(part.Owner.Scene, part.Owner.Layer);
+        SpriteRenderer proxy = binding.Proxy;
+        if (!part.Animated && binding.Revision == part.Revision)
+        {
+            proxy.bounds = projected;
+            proxy.enabled = true;
+            binding.NextCheck = 0f;
+            return;
+        }
+        proxy.transform.SetPositionAndRotation(position, rotation);
+        proxy.transform.localScale = part.Scale;
+        proxy.sprite = part.Sprite;
+        proxy.flipX = false;
+        proxy.flipY = false;
+        proxy.drawMode = SpriteDrawMode.Simple;
+        proxy.color = Color.white;
+        properties.Clear();
+        Texture2D texture = part.Sprite.texture;
+        properties.SetTexture(MainTextureId, texture);
+        properties.SetVector(TexelSizeId, new Vector4(1f / texture.width, 1f / texture.height, 0f, 0f));
+        properties.SetVector(UvBoundsId, GetSpriteUvBounds(part.Sprite));
+        properties.SetVector(CasterId, new Vector4(footY, 1f, height, 1f));
+        properties.SetFloat(BatchedId, 0f);
+        Texture2D alphaTexture = part.Sprite.associatedAlphaSplitTexture;
+        properties.SetFloat(ExternalAlphaId, alphaTexture != null ? 1f : 0f);
+        if (alphaTexture != null) properties.SetTexture(AlphaTextureId, alphaTexture);
+        proxy.SetPropertyBlock(properties);
+        proxy.bounds = projected;
+        proxy.enabled = true;
+        binding.Revision = part.Revision;
+        binding.NextCheck = 0f;
+    }
+
+    /// <summary>回收单个机械代理，卸载世界时遵守父节点停用时序。</summary>
+    private void ReleaseMechanicalProxy(MechanicalBinding binding, bool allowPooling)
+    {
+        SpriteRenderer proxy = binding.Proxy;
+        binding.Proxy = null;
+        binding.Revision = -1;
+        if (proxy == null) return;
+        proxy.enabled = false;
+        proxy.gameObject.SetActive(false);
+        proxy.sprite = null;
+        proxy.SetPropertyBlock(null);
+        proxy.ResetBounds();
+        if (!allowPooling) return;
+        if (pool.Count < MaxPooledRenderers)
+        {
+            proxy.transform.SetParent(transform, false);
+            pool.Push(proxy);
+        }
+        else Destroy(proxy.gameObject);
+    }
 
     /// <summary>同步当前主体帧、翻转、尺寸及逐 Renderer 贴图，不创建材质实例。</summary>
     private void SynchronizeCaster(Binding binding)
@@ -312,10 +429,9 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
         }
 
         Vector3 visualOffset = VisualGroundOffsetResolver.Resolve(binding.GroundOffsetProvider, source.transform);
-        Bounds footprint = MeasureVisibleBounds(source);
-        float footY = ResolveFootY(owner, source, footprint, authoring, binding.ShadowVisual);
-        if (binding.ShadowVisual == null || !binding.ShadowVisual.FootLocalPosition.HasValue)
-            footY -= visualOffset.y;
+        Bounds footprint = ShadowFootprintResolver.MeasureVisibleWorldBounds(source);
+        footprint.center -= visualOffset;
+        float footY = ResolveFootY(owner, footprint, authoring, binding.ShadowVisual);
         Bounds sourceBounds = source.bounds;
         sourceBounds.center -= visualOffset;
         float height = Mathf.Max(0.01f, sourceBounds.max.y - footY);
@@ -369,66 +485,18 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
             if (camera == null || !camera.isActiveAndEnabled || camera.cameraType != CameraType.Game ||
                 (camera.cullingMask & (1 << layer)) == 0) continue;
             Vector2 delta = (Vector2)bounds.center - (Vector2)camera.transform.position;
-            if (delta.sqrMagnitude > maximumVisibleDistance * maximumVisibleDistance) continue;
+            if (delta.sqrMagnitude > Defaults.maximumVisibleDistance * Defaults.maximumVisibleDistance) continue;
             if (GeometryUtility.TestPlanesAABB(cameraFrustums[i], bounds)) return true;
         }
         return false;
     }
 
-    /// <summary>使用导入的轮廓几何排除透明留白；每张 Sprite 只在首次遇到时读取。</summary>
-    private Bounds MeasureVisibleBounds(SpriteRenderer source)
-    {
-        Sprite sprite = source.sprite;
-        if (source.drawMode != SpriteDrawMode.Simple) return source.bounds;
-        if (!spriteBounds.TryGetValue(sprite, out Bounds local))
-        {
-            local = sprite.bounds;
-            bool first = true;
-            for (int shape = 0; shape < sprite.GetPhysicsShapeCount(); shape++)
-            {
-                sprite.GetPhysicsShape(shape, shapePoints);
-                foreach (Vector2 point in shapePoints)
-                {
-                    if (first) { local = new Bounds(point, Vector3.zero); first = false; }
-                    else local.Encapsulate(point);
-                }
-            }
-            spriteBounds[sprite] = local;
-        }
-        Bounds world = new Bounds();
-        for (int i = 0; i < 4; i++)
-        {
-            Vector3 point = new Vector3((i & 1) == 0 ? local.min.x : local.max.x,
-                i < 2 ? local.min.y : local.max.y, 0f);
-            if (source.flipX) point.x = -point.x;
-            if (source.flipY) point.y = -point.y;
-            point = source.transform.TransformPoint(point);
-            if (i == 0) world = new Bounds(point, Vector3.zero); else world.Encapsulate(point);
-        }
-        return world;
-    }
-
-    /// <summary>优先使用物品配置的落地点，其余物体沿用可见轮廓和底部枢轴规则。</summary>
-    private static float ResolveFootY(Item owner, SpriteRenderer source, Bounds footprint,
+    /// <summary>所有物品都从可见轮廓求脚点；显式偏移不能把阴影推离贴图底边。</summary>
+    private static float ResolveFootY(Item owner, Bounds footprint,
         SunShadowCaster authoring, ItemShadowVisualDefinitionDto shadowVisual)
     {
-        float footY;
-        if (shadowVisual != null && shadowVisual.FootLocalPosition.HasValue)
-        {
-            Vector2 localFoot = shadowVisual.FootLocalPosition.Value;
-            footY = owner.transform.TransformPoint(new Vector3(localFoot.x, localFoot.y, 0f)).y;
-        }
-        else
-        {
-            footY = footprint.min.y;
-            Sprite sprite = source.sprite;
-            if (sprite.pivot.y <= sprite.rect.height * 0.15f && footprint.size.y > 1f)
-            {
-                footY = Mathf.Max(footY, source.transform.position.y);
-                footY += Mathf.Min(0.3f, footprint.size.y * 0.08f);
-            }
-        }
-        return footY + (authoring != null ? authoring.FootOffset : 0f);
+        return ShadowFootprintResolver.ResolveFoot(owner, footprint,
+            shadowVisual?.FootLocalPosition, authoring != null ? authoring.FootOffset : 0f).y;
     }
 
     /// <summary>每张 Sprite 只读取一次图集 UV，模糊采样限定在本帧贴图区域内。</summary>
@@ -452,14 +520,36 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
     /// <summary>夜间和相机不可见时不保留上一帧可见状态。</summary>
     private void HideAll()
     {
+        PruneInactiveMechanicalCasters();
         if (hidden) return;
         foreach (Binding binding in bindings.Values)
         {
             if (binding.Proxy != null) binding.Proxy.enabled = false;
             binding.NextCheck = 0f;
         }
+        foreach (MechanicalBinding binding in mechanicalBindings.Values)
+        {
+            if (binding.Proxy != null) binding.Proxy.enabled = false;
+            binding.NextCheck = 0f;
+        }
         VisibleCount = 0;
         hidden = true;
+    }
+
+    /// <summary>夜间区块仍会卸载，及时回收它们的隐藏代理和 Sprite 引用。</summary>
+    private void PruneInactiveMechanicalCasters()
+    {
+        if (mechanicalBindings.Count == 0) return;
+        staleMechanicalParts.Clear();
+        foreach (KeyValuePair<MechanicalShadowRegistry.Part, MechanicalBinding> pair in mechanicalBindings)
+            if (!pair.Key.Active || !pair.Key.Owner.Active ||
+                !pair.Key.Owner.Scene.IsValid() || !pair.Key.Owner.Scene.isLoaded)
+                staleMechanicalParts.Add(pair.Key);
+        foreach (MechanicalShadowRegistry.Part part in staleMechanicalParts)
+        {
+            ReleaseMechanicalProxy(mechanicalBindings[part], true);
+            mechanicalBindings.Remove(part);
+        }
     }
 
     #endregion

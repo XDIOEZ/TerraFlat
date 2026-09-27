@@ -5,6 +5,23 @@ using UnityEngine;
 
 namespace FlatWorld.AIECS
 {
+    /// <summary>由世界排序管理器注入的生物主体及地表阴影排序键，不读取导出资源中的旧层级。</summary>
+    public readonly struct AiecsWorldSortingKeys
+    {
+        public readonly int ActorLayer;
+        public readonly int ActorOrder;
+        public readonly int ShadowLayer;
+        public readonly int ShadowOrder;
+
+        public AiecsWorldSortingKeys(int actorLayer, int actorOrder, int shadowLayer, int shadowOrder)
+        {
+            ActorLayer = actorLayer;
+            ActorOrder = actorOrder;
+            ShadowLayer = shadowLayer;
+            ShadowOrder = shadowOrder;
+        }
+    }
+
     /// <summary>
     /// 正式模拟的只读批量表现；复用 P1 图集/网格，不使用原型运动，不为每个单位创建对象。
     /// 开发显示按相机高度分为 24 行批次，行内按 Y 稳定排序；与旧透明对象的逐像素交错属于后续正式排序接入。
@@ -36,6 +53,7 @@ namespace FlatWorld.AIECS
         private readonly UnityEngine.SceneManagement.Scene scene;
         private readonly AiecsShadowRenderer shadows;
         private readonly AiecsSunShadowRenderer sunShadows;
+        private readonly AiecsWorldSortingKeys sortingKeys;
         private readonly float[] sunShadowHeights; // 每物种高度覆盖，0 关闭；不进入模拟或存档。
         private readonly Vector4[] shadowFootprints;
         public bool ShadowsEnabled { get; set; } = true; // 表现开关，不影响模拟。
@@ -48,9 +66,10 @@ namespace FlatWorld.AIECS
         public int BatchCount { get; private set; }
 
         /// <summary>一次匹配当前定义与实际导出动画；缺少动画目录时明确报告，不回退为每只生物 SpriteRenderer。</summary>
-        public AiecsWorldRenderer(AiecsAnimationCatalog catalog, string[] actorIds, UnityEngine.SceneManagement.Scene scene)
+        public AiecsWorldRenderer(AiecsAnimationCatalog catalog, string[] actorIds,
+            UnityEngine.SceneManagement.Scene scene, AiecsWorldSortingKeys sortingKeys)
         {
-            this.catalog = catalog; this.scene = scene;
+            this.catalog = catalog; this.scene = scene; this.sortingKeys = sortingKeys;
             if (catalog == null || catalog.Material == null) throw new InvalidOperationException("请先导出 AIECS 动画目录。");
             visuals = new int[actorIds.Length]; clips = new int[actorIds.Length, 4];
             shadowFootprints = new Vector4[actorIds.Length];
@@ -68,8 +87,9 @@ namespace FlatWorld.AIECS
                 var idle = definition.Clips[clips[i, 0]].Sample(0f);
                 shadowFootprints[i] = AiecsShadowRenderer.MeasureFootprint(definition, catalog.Sprites[idle.Sprite], idle);
             }
-            shadows = new AiecsShadowRenderer(scene);
-            sunShadows = new AiecsSunShadowRenderer(scene, catalog.Material.mainTexture);
+            shadows = new AiecsShadowRenderer(scene, sortingKeys.ShadowLayer, sortingKeys.ShadowOrder);
+            sunShadows = new AiecsSunShadowRenderer(scene, catalog.Material.mainTexture,
+                sortingKeys.ShadowLayer, sortingKeys.ShadowOrder);
         }
 
         /// <summary>MOD 可按当前定义索引调整太阳投影高度，0 表示关闭该物种投影。</summary>
@@ -114,10 +134,10 @@ namespace FlatWorld.AIECS
                 // 屏外主体的长投影仍可能落入视口，开启时扩展候选范围。
                 float margin = 2f + sunShadows.CullingMargin;
                 if (math.abs(delta.x) > halfWidth + margin || math.abs(delta.y) > halfHeight + margin) continue;
-                int visual = visuals[record.Definition]; var definition = catalog.Actors[visual];
+                int visual = visuals[record.Definition];
                 int row = math.clamp((int)((delta.y + halfHeight) / math.max(0.01f, halfHeight * 2f) * 24), 0, 23);
                 visible.Add(new DrawItem { Index = i, Visual = visual, Row = row, Y = delta.y,
-                    Layer = definition.SortingLayerId, Order = definition.SortingOrder });
+                    Layer = sortingKeys.ActorLayer, Order = sortingKeys.ActorOrder });
             }
             visible.Sort(DrawComparer.Instance); BatchCount = 0;
             int start = 0;

@@ -32,8 +32,6 @@ public partial class TemperatureMgr : SingletonAutoMono<TemperatureMgr>
             throw new ArgumentNullException(nameof(data));
         }
 
-        data.ChangeSpeed = Mathf.Max(0f, data.ChangeSpeed);
-
         data.HotDamagePerSecond = Mathf.Max(0f, data.HotDamagePerSecond);
         data.ColdDamagePerTick = Mathf.Max(0f, data.ColdDamagePerTick);
 
@@ -47,6 +45,7 @@ public partial class TemperatureMgr : SingletonAutoMono<TemperatureMgr>
     /// <summary>推进体温并结算温度伤害；返回本次是否实际造成了低温伤害。</summary>
     public bool ProcessTemperature(
         Mod_Temperature.TemperatureData data,
+        float heatConductionRate,
         DamageReceiver damageReceiver,
         float deltaTime,
         Action<float> onTemperatureChanged,
@@ -64,7 +63,7 @@ public partial class TemperatureMgr : SingletonAutoMono<TemperatureMgr>
             throw new ArgumentNullException(nameof(onTemperatureChanged));
         }
 
-        float nextTemperature = EvaluateNextTemperature(data, deltaTime, naturalTemperature);
+        float nextTemperature = EvaluateNextTemperature(data, heatConductionRate, deltaTime, naturalTemperature);
         onTemperatureChanged(nextTemperature);
 
         if (damageReceiver == null)
@@ -122,7 +121,7 @@ public partial class TemperatureMgr : SingletonAutoMono<TemperatureMgr>
         return coldDamageApplied;
     }
 
-    public float EvaluateNextTemperature(Mod_Temperature.TemperatureData data, float deltaTime,
+    public float EvaluateNextTemperature(Mod_Temperature.TemperatureData data, float heatConductionRate, float deltaTime,
         float? naturalTemperature = null)
     {
         if (data == null)
@@ -134,7 +133,7 @@ public partial class TemperatureMgr : SingletonAutoMono<TemperatureMgr>
             data.AmbientTemperature + data.Insulation + data.RuntimeAmbientOffset;
         // 临时 Buff 增温不参与环境趋近计算，伤害仍读取回调提交后的有效体温。
         float currentTemperature = naturalTemperature ?? data.CurrentTemperature;
-        float changeSpeed = data.ChangeSpeed * Mathf.Max(0f, data.RuntimeChangeSpeedMultiplier);
+        float changeSpeed = heatConductionRate * Mathf.Max(0f, data.RuntimeChangeSpeedMultiplier);
         if (targetTemperature < currentTemperature)
             changeSpeed *= Mathf.Max(0f, data.RuntimeCoolingSpeedMultiplier);
 

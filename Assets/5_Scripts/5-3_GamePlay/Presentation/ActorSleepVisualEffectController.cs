@@ -67,7 +67,12 @@ public sealed class ActorSleepVisualEffectController : MonoBehaviour
 
         GameObject effectObject = _effectManager.GetOwnerEffect(_actorRoot, effectName);
         if (effectObject != null)
+        {
+            WorldSortingManager sorting = WorldSortingManager.GetInstance();
+            foreach (ParticleSystemRenderer renderer in effectObject.GetComponentsInChildren<ParticleSystemRenderer>(true))
+                sorting.ApplyRenderer(renderer, WorldSortingManager.WorldEffectCategory, 10);
             SynchronizeTransform(effectObject.transform);
+        }
     }
 
     /// <summary>角色休眠、回收或销毁时同步清掉仍绑定的粒子。</summary>

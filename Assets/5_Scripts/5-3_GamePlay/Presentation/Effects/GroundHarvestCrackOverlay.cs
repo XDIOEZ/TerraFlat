@@ -86,7 +86,7 @@ public sealed class GroundHarvestCrackOverlay : MonoBehaviour
             line.startColor = new Color(0.87f, 0.64f, 0.37f, 0.96f);
             line.endColor = new Color(0.69f, 0.44f, 0.22f, 0.96f);
             line.numCornerVertices = 1;
-            line.sortingOrder = 31999;
+            WorldSortingManager.GetInstance().ApplyRenderer(line, WorldSortingManager.GroundMarkCategory, 1);
             line.enabled = false;
             lines[i] = line;
         }

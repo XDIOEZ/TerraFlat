@@ -125,9 +125,6 @@ MonoBehaviour:
   textureColumns: 6
   spriteSizePixels: 16
   pixelsPerUnit: 32
-  positionJitter: 0.22
-  scaleRange: {x: 0.85, y: 1.15}
-  accentVariantChance: 0.2
   grassMaterial: {fileID: 2100000, guid: 14e44684465b403baf074b99152e2ff3, type: 2}
 --- !u!114 &2009
 MonoBehaviour:
@@ -172,7 +169,6 @@ MonoBehaviour:
   minimumScale: 0.45
   maximumScale: 1.05
   minimumAlpha: 0.68
-  sortingOrderOffset: 1
 --- !u!114 &4320546925661977997
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -187,8 +183,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   farmlandSprite: {fileID: 21300000, guid: 6f494990827b10848bc420bb9a8fa6bb, type: 3}
   progressMaterial: {fileID: 2100000, guid: 06dc2608a1031034698c137f9f6cfbc8, type: 2}
-  sortingLayerName: Tilemap
-  sortingOrder: 1
 --- !u!114 &4930781637069307147
 MonoBehaviour:
   m_ObjectHideFlags: 0

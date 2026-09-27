@@ -20,6 +20,8 @@ namespace FlatWorld.AIECS
         private readonly List<Batch> batches = new();
         private readonly Scene scene;
         private readonly Texture atlas;
+        private readonly int sortingLayerId;
+        private readonly int sortingOrder;
         private Material material;
         private Vector4 sunlight;
         public int ShadowCount { get; private set; }
@@ -28,7 +30,13 @@ namespace FlatWorld.AIECS
         public float CullingMargin => Active ? sunlight.z : 0f;
 
         /// <summary>只保存共享资源引用；关闭功能时不创建网格或 Renderer。</summary>
-        public AiecsSunShadowRenderer(Scene scene, Texture atlas) { this.scene = scene; this.atlas = atlas; }
+        public AiecsSunShadowRenderer(Scene scene, Texture atlas, int sortingLayerId, int sortingOrder)
+        {
+            this.scene = scene;
+            this.atlas = atlas;
+            this.sortingLayerId = sortingLayerId;
+            this.sortingOrder = sortingOrder;
+        }
 
         /// <summary>每次 Draw 只读一次太阳全局参数，保持与普通实体同一时间和偏好。</summary>
         public void Begin()
@@ -48,7 +56,7 @@ namespace FlatWorld.AIECS
             {
                 if (material == null) material = Resources.Load<Material>("SunShadows/SunShadowProjection");
                 if (material == null) throw new MissingReferenceException("缺少 SunShadows/SunShadowProjection 材质。");
-                batches.Add(new Batch(scene, material, atlas));
+                batches.Add(new Batch(scene, material, atlas, sortingLayerId, sortingOrder));
             }
             Batch batch = batches[index];
             if (ShadowCount % MaxSprites == 0) { batch.Begin(); BatchCount++; }
@@ -98,7 +106,7 @@ namespace FlatWorld.AIECS
             private const MeshUpdateFlags Flags = MeshUpdateFlags.DontRecalculateBounds;
 
             /// <summary>分配固定索引和复用顶点缓冲，所有批次共用普通实体的太阳材质。</summary>
-            public Batch(Scene scene, Material material, Texture atlas)
+            public Batch(Scene scene, Material material, Texture atlas, int sortingLayerId, int sortingOrder)
             {
                 int layer = LayerMask.NameToLayer("AIECSRuntime");
                 if (layer < 0) throw new InvalidOperationException("缺少 AIECSRuntime Layer。");
@@ -125,8 +133,8 @@ namespace FlatWorld.AIECS
                 root.AddComponent<MeshFilter>().sharedMesh = mesh;
                 renderer = root.AddComponent<MeshRenderer>();
                 renderer.sharedMaterial = material;
-                renderer.sortingLayerName = "Default";
-                renderer.sortingOrder = 0;
+                renderer.sortingLayerID = sortingLayerId;
+                renderer.sortingOrder = sortingOrder;
                 renderer.shadowCastingMode = ShadowCastingMode.Off;
                 renderer.receiveShadows = false;
                 renderer.lightProbeUsage = LightProbeUsage.Off;

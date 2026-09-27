@@ -1,0 +1,121 @@
+{
+  "schemaVersion": 1,
+  "preferences": {
+    "graphicsPreset": 0,
+    "postProcessQuality": 0,
+    "waterStyle": 1,
+    "playerOcclusion": false
+  },
+  "shadows": {
+    "sunEnabled": true,
+    "blurEnabled": true,
+    "blurStrength": 0.3,
+    "minimumBlurStrength": 0.0,
+    "maximumBlurStrength": 1.0,
+    "maximumOpacity": 0.34,
+    "minimumSunlight": 0.02,
+    "minimumLength": 0.35,
+    "maximumLength": 2.8,
+    "maximumDistance": 8.0,
+    "maximumVisibleDistance": 80.0,
+    "color": { "r": 0.12, "g": 0.14, "b": 0.2, "a": 1.0 },
+    "contact": {
+      "widthRatio": 0.9,
+      "heightToWidthRatio": 0.9,
+      "minimumWidth": 0.18,
+      "maximumWidth": 2.5,
+      "groundOffset": 0.01,
+      "heightRatio": 0.34,
+      "footOverlapRatio": 0.12,
+      "maximumFootOverlap": 0.18,
+      "rootedPlantBodyWidthRatio": 1.5,
+      "rootedPlantVisualWidthLimit": 0.6
+    },
+    "ecsContact": {
+      "widthRatio": 0.9,
+      "heightToWidthRatio": 0.55,
+      "minimumWidth": 0.18,
+      "maximumWidth": 2.5,
+      "groundOffset": 0.02,
+      "heightRatio": 0.34
+    },
+    "groundElevation": {
+      "enabled": true,
+      "width": 0.2,
+      "minimumWidth": 0.04,
+      "maximumWidth": 0.45
+    }
+  },
+  "occlusion": {
+    "maskRadius": 1.1,
+    "maskFeather": 0.14,
+    "occluderAlpha": 0.18,
+    "playerCenterOffsetY": 0.18,
+    "behindVerticalPadding": 0.04
+  },
+  "postProcess": {
+    "worldVolume": {
+      "bloom": {
+        "enabled": true,
+        "threshold": 1.05,
+        "intensity": 0.3,
+        "scatter": 0.55,
+        "clamp": 8.0,
+        "highQualityFiltering": true,
+        "downscale": 0,
+        "maxIterations": 5
+      },
+      "colorGrading": { "postExposure": 0.05, "contrast": 8.0, "saturation": 6.0 },
+      "whiteBalance": { "temperature": 3.0, "tint": 1.0 },
+      "splitToning": {
+        "shadows": { "r": 0.48, "g": 0.495, "b": 0.52, "a": 1.0 },
+        "highlights": { "r": 0.53, "g": 0.515, "b": 0.485, "a": 1.0 },
+        "balance": 0.0
+      },
+      "tonemappingMode": 1,
+      "vignette": {
+        "color": { "r": 0.025, "g": 0.035, "b": 0.055, "a": 1.0 },
+        "center": { "x": 0.5, "y": 0.5 },
+        "intensity": 0.14,
+        "smoothness": 0.65,
+        "rounded": false
+      },
+      "mediumBloomIntensityScale": 0.75,
+      "mediumBloomMaxIterations": 4
+    },
+    "transitionSeconds": 0.12,
+    "minimumActiveIntensity": 0.0005,
+    "defaultVignetteSmoothness": 0.82,
+    "defaultVignetteColor": { "r": 0.9, "g": 0.015, "b": 0.02, "a": 1.0 },
+    "pulseFrequency": 4.5,
+    "mediumIntensityScale": 0.88,
+    "lowIntensityScale": 0.78,
+    "mediumSmoothnessScale": 0.94,
+    "lowSmoothnessScale": 0.88,
+    "mediumPulseScale": 0.55,
+    "lowPulseScale": 0.0
+  },
+  "grass": {
+    "positionJitter": 0.22,
+    "scaleRange": { "x": 0.85, "y": 1.15 },
+    "accentVariantChance": 0.2,
+    "sortingOrderOffset": 1,
+    "tintRange": { "x": 0.9, "y": 1.0 }
+  },
+  "sorting": {
+    "terrainSortingLayer": "Default",
+    "dynamicCategories": ["player", "creature", "building", "world-item"],
+    "transparencySortAxis": { "x": 0.0, "y": 1.0, "z": 0.0 },
+    "profiles": [
+      { "category": "player", "sortingLayer": "Player", "order": 100 },
+      { "category": "creature", "sortingLayer": "Player", "order": 100 },
+      { "category": "building", "sortingLayer": "Player", "order": 100 },
+      { "category": "world-item", "sortingLayer": "Player", "order": 100 },
+      { "category": "ground-shadow", "sortingLayer": "Shadow", "order": 0 },
+      { "category": "ground-mark", "sortingLayer": "Shadow", "order": 1 },
+      { "category": "ground-splash", "sortingLayer": "Shadow", "order": 40 },
+      { "category": "ground-preview", "sortingLayer": "Shadow", "order": 1000 },
+      { "category": "world-effect", "sortingLayer": "Paticle", "order": 0 }
+    ]
+  }
+}

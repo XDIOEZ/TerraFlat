@@ -15,7 +15,7 @@ Shader "FlatWorld/2D/Sun Shadow Projection"
     }
     SubShader
     {
-        // Default/0 队列 2990：BRG 地形与水体之后，Blocking(2992)、草(2993)和实体之前。
+        // Shadow/0 队列 2990：地表排序层由 Renderer 决定，队列只确定太阳投影早于接触阴影。
         Tags { "Queue"="Transparent-10" "RenderType"="Transparent" "RenderPipeline"="UniversalPipeline" "CanUseSpriteAtlas"="True" "DisableBatching"="True" }
         Blend SrcAlpha OneMinusSrcAlpha
         ZWrite Off
@@ -62,9 +62,7 @@ Shader "FlatWorld/2D/Sun Shadow Projection"
                 float4 positionCS : SV_POSITION;
                 float2 uv : TEXCOORD0;
                 half alpha : COLOR;
-                float2 worldXY : TEXCOORD1;
                 float4 uvBounds : TEXCOORD2;
-                half distanceFromFoot : TEXCOORD3;
                 UNITY_VERTEX_OUTPUT_STEREO
             };
 
@@ -90,9 +88,7 @@ Shader "FlatWorld/2D/Sun Shadow Projection"
                 world.xy = float2(world.x, caster.x) + displacement * h;
                 output.positionCS = TransformWorldToHClip(world);
                 output.uv = input.uv;
-                output.worldXY = world.xy;
                 output.uvBounds = _SunShadowBatched > 0.5 ? input.uvBounds : _SunShadowUvBounds;
-                output.distanceFromFoot = saturate(h / max(0.0001, caster.z));
                 output.alpha = alpha * caster.w * _WorldSunShadow.w * _WorldSunShadowColor.a;
                 return output;
             }
@@ -113,10 +109,9 @@ Shader "FlatWorld/2D/Sun Shadow Projection"
             // 强度同时扩大轮廓采样半径和边缘渐隐，最大值会消解树叶细节成为柔和色块。
             half4 Frag(Varyings input) : SV_Target
             {
-                half distanceFade = lerp(1.0, 0.78, input.distanceFromFoot);
                 half center = SampleShadowAlpha(input.uv, input.uvBounds);
                 if (_WorldSunShadowBlur <= 0.001)
-                    return half4(_WorldSunShadowColor.rgb, center * distanceFade * input.alpha);
+                    return half4(_WorldSunShadowColor.rgb, center * input.alpha);
 
                 float2 nearStep = _SunShadowTexelSize.xy * (_WorldSunShadowBlur * 5.0);
                 float2 farStep = _SunShadowTexelSize.xy * (_WorldSunShadowBlur * 7.0);
@@ -134,13 +129,9 @@ Shader "FlatWorld/2D/Sun Shadow Projection"
                     input.uvBounds.zw - input.uv) / _SunShadowTexelSize.xy;
                 half edgeFade = saturate(min(edgePixels.x, edgePixels.y) /
                     max(0.5, _WorldSunShadowBlur * 4.0));
-                float2 cell = floor(input.worldXY * 8.0);
-                half grain = frac(sin(dot(cell, float2(127.1, 311.7))) * 43758.5453);
-                half grainAmount = lerp(0.14, 0.015, _WorldSunShadowBlur);
-                half softCoverage = saturate((coverage - 0.025 + (grain - 0.5) * grainAmount) * 1.08);
-                half interior = lerp(lerp(0.82, 1.0, grain), 1.0, _WorldSunShadowBlur);
+                half softCoverage = saturate(coverage);
                 return half4(_WorldSunShadowColor.rgb,
-                    softCoverage * edgeFade * interior * distanceFade * input.alpha);
+                    softCoverage * edgeFade * input.alpha);
             }
             ENDHLSL
         }

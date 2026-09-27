@@ -108,8 +108,9 @@ public sealed class CarrierWaterWake : MonoBehaviour
     private void SyncSorting()
     {
         if (particleRenderer == null || sourceRenderer == null) return;
-        particleRenderer.sortingLayerID = sourceRenderer.sortingLayerID;
-        particleRenderer.sortingOrder = sourceRenderer.sortingOrder - 1;
+        WorldSortingManager.ReadExternalRendererKey(sourceRenderer, out int layerId, out int order);
+        particleRenderer.sortingLayerID = layerId;
+        particleRenderer.sortingOrder = order - 1;
     }
 
     /// <summary>后缘可能越过岸边，因此每个尾波落点也必须仍在有效水面。</summary>

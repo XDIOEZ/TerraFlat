@@ -70,17 +70,34 @@ internal static class ChunkBatchRendererGroupService
     internal readonly struct Visual
     {
         public Visual(VisualLayer layer, Sprite sprite, Material sourceMaterial, InstanceData data)
+            : this(layer, sprite, sourceMaterial, data, false, default)
+        {
+        }
+
+        /// <summary>需要透明深度排序的实例额外携带稳定世界锚点；机械建筑用它按 Y 轴排序整组子图层。</summary>
+        public Visual(VisualLayer layer, Sprite sprite, Material sourceMaterial, InstanceData data,
+            Vector3 sortingPosition)
+            : this(layer, sprite, sourceMaterial, data, true, sortingPosition)
+        {
+        }
+
+        private Visual(VisualLayer layer, Sprite sprite, Material sourceMaterial, InstanceData data,
+            bool depthSorted, Vector3 sortingPosition)
         {
             Layer = layer;
             Sprite = sprite;
             SourceMaterial = sourceMaterial;
             Data = data;
+            DepthSorted = depthSorted;
+            SortingPosition = sortingPosition;
         }
 
         public VisualLayer Layer { get; }
         public Sprite Sprite { get; }
         public Material SourceMaterial { get; }
         public InstanceData Data { get; }
+        public bool DepthSorted { get; }
+        public Vector3 SortingPosition { get; }
     }
 
     private static Backend backend;
@@ -180,9 +197,11 @@ internal static class ChunkBatchRendererGroupService
         private readonly object syncRoot = new();
         private readonly BatchRendererGroup rendererGroup;
         private readonly Dictionary<ChunkTilemapRenderer, Dictionary<int, InstanceHandle>> ownerHandles = new();
-        private readonly Dictionary<ChunkTilemapRenderer, Bounds> ownerBounds = new();
-        private readonly Dictionary<ChunkTilemapRenderer, bool> ownerVisibility = new();
-        private readonly List<int> batchVisibleCounts = new();
+        /// <summary>剔除回调使用整数身份，避免逐实例比较 Unity 对象。</summary>
+        private readonly Dictionary<int, Bounds> ownerBounds = new();
+        private readonly Dictionary<int, bool> ownerVisibility = new();
+        /// <summary>每个批次复用本次剔除的可见实例索引。</summary>
+        private readonly List<List<int>> batchVisibleInstances = new();
         private readonly Dictionary<VisualKey, TileBatch> batches = new();
         private readonly List<TileBatch> orderedBatches = new();
         private readonly Dictionary<int, MeshRegistration> meshes = new();
@@ -223,8 +242,9 @@ internal static class ChunkBatchRendererGroupService
             {
                 if (!ownerHandles.ContainsKey(owner))
                     ownerHandles.Add(owner, new Dictionary<int, InstanceHandle>());
-                ownerBounds[owner] = worldBounds;
-                warnedMissingOwnerIds.Remove(owner.GetInstanceID());
+                int ownerId = owner.GetInstanceID();
+                ownerBounds[ownerId] = worldBounds;
+                warnedMissingOwnerIds.Remove(ownerId);
             }
         }
 
@@ -297,7 +317,7 @@ internal static class ChunkBatchRendererGroupService
                 }
 
                 ownerHandles.Remove(owner);
-                ownerBounds.Remove(owner);
+                ownerBounds.Remove(owner.GetInstanceID());
             }
         }
 
@@ -327,7 +347,7 @@ internal static class ChunkBatchRendererGroupService
                 {
                     if (current.Batch.Key.Equals(key))
                     {
-                        current.Batch.Update(current.Index, visual.Data);
+                        current.Batch.Update(current.Index, visual.Data, visual.SortingPosition);
                         return;
                     }
 
@@ -335,7 +355,7 @@ internal static class ChunkBatchRendererGroupService
                 }
 
                 TileBatch batch = GetOrCreateBatch(key, visual);
-                int index = batch.Add(owner, slotKey, visual.Data);
+                int index = batch.Add(owner, slotKey, visual.Data, visual.SortingPosition);
                 handles[slotKey] = new InstanceHandle(batch, index);
             }
         }
@@ -376,7 +396,7 @@ internal static class ChunkBatchRendererGroupService
             MaterialRegistration material = GetOrCreateMaterial(visual.Layer, visual.Sprite.texture,
                 visual.SourceMaterial);
             var batch = new TileBatch(this, key, mesh.Id, material.Id, ResolvePriority(visual.Layer),
-                InitialCapacity);
+                visual.DepthSorted, InitialCapacity);
             batches.Add(key, batch);
             orderedBatches.Add(batch);
             orderedBatches.Sort(CompareBatchOrder);
@@ -493,23 +513,27 @@ internal static class ChunkBatchRendererGroupService
                 cullingCallbackCount++;
                 int commandCount = 0;
                 int visibleCount = 0;
+                int sortedVisibleCount = 0;
                 int submittedCount = 0;
                 ownerVisibility.Clear();
-                batchVisibleCounts.Clear();
                 for (int i = 0; i < orderedBatches.Count; i++)
                 {
                     TileBatch batch = orderedBatches[i];
                     submittedCount += batch.Count;
-                    int batchVisible = 0;
+                    if (i == batchVisibleInstances.Count)
+                        batchVisibleInstances.Add(new List<int>(64));
+                    List<int> visibleInstances = batchVisibleInstances[i];
+                    visibleInstances.Clear();
                     for (int instance = 0; instance < batch.Count; instance++)
                     {
-                        if (IsOwnerVisible(batch.GetOwner(instance), context.cullingPlanes))
-                            batchVisible++;
+                        if (IsOwnerVisible(batch.GetOwnerId(instance), context.cullingPlanes))
+                            visibleInstances.Add(instance);
                     }
-                    batchVisibleCounts.Add(batchVisible);
+                    int batchVisible = visibleInstances.Count;
                     if (batchVisible <= 0)
                         continue;
-                    commandCount++;
+                    commandCount += batch.DepthSorted ? batchVisible : 1;
+                    if (batch.DepthSorted) sortedVisibleCount += batchVisible;
                     visibleCount += batchVisible;
                 }
                 lastCullingCommandCount = commandCount;
@@ -526,8 +550,11 @@ internal static class ChunkBatchRendererGroupService
                 BatchCullingOutputDrawCommands* commands =
                     (BatchCullingOutputDrawCommands*)output.drawCommands.GetUnsafePtr();
                 commands->drawCommandPickingInstanceIDs = null;
-                commands->instanceSortingPositions = null;
-                commands->instanceSortingPositionFloatCount = 0;
+                commands->instanceSortingPositions = sortedVisibleCount > 0
+                    ? (float*)UnsafeUtility.Malloc(sizeof(float) * sortedVisibleCount * 3,
+                        UnsafeUtility.AlignOf<float>(), Allocator.TempJob)
+                    : null;
+                commands->instanceSortingPositionFloatCount = sortedVisibleCount * 3;
                 commands->drawCommandCount = commandCount;
                 commands->drawRangeCount = commandCount;
                 commands->visibleInstanceCount = visibleCount;
@@ -550,12 +577,53 @@ internal static class ChunkBatchRendererGroupService
 
                 int commandIndex = 0;
                 int visibleOffset = 0;
+                int sortingFloatOffset = 0;
                 for (int i = 0; i < orderedBatches.Count; i++)
                 {
                     TileBatch batch = orderedBatches[i];
-                    int batchVisible = batchVisibleCounts[i];
+                    List<int> visibleInstances = batchVisibleInstances[i];
+                    int batchVisible = visibleInstances.Count;
                     if (batchVisible <= 0)
                         continue;
+
+                    if (batch.DepthSorted)
+                    {
+                        for (int visibleIndex = 0; visibleIndex < batchVisible; visibleIndex++)
+                        {
+                            int instance = visibleInstances[visibleIndex];
+
+                            BatchDrawCommand* sortedDraw = commands->drawCommands + commandIndex;
+                            sortedDraw->visibleOffset = (uint)visibleOffset;
+                            sortedDraw->visibleCount = 1;
+                            sortedDraw->batchID = batch.BatchId;
+                            sortedDraw->materialID = batch.MaterialId;
+                            sortedDraw->meshID = batch.MeshId;
+                            sortedDraw->submeshIndex = 0;
+                            sortedDraw->splitVisibilityMask = 0xff;
+                            sortedDraw->flags = BatchDrawCommandFlags.HasSortingPosition;
+                            sortedDraw->sortingPosition = sortingFloatOffset;
+
+                            Vector3 position = batch.GetSortingPosition(instance);
+                            commands->instanceSortingPositions[sortingFloatOffset] = position.x;
+                            commands->instanceSortingPositions[sortingFloatOffset + 1] = position.y;
+                            commands->instanceSortingPositions[sortingFloatOffset + 2] = position.z;
+                            commands->visibleInstances[visibleOffset] = instance;
+
+                            BatchDrawRange* sortedRange = commands->drawRanges + commandIndex;
+                            sortedRange->drawCommandsBegin = (uint)commandIndex;
+                            sortedRange->drawCommandsCount = 1;
+                            sortedRange->filterSettings = new BatchFilterSettings
+                            {
+                                renderingLayerMask = uint.MaxValue,
+                                allDepthSorted = true
+                            };
+
+                            sortingFloatOffset += 3;
+                            visibleOffset++;
+                            commandIndex++;
+                        }
+                        continue;
+                    }
 
                     BatchDrawCommand* draw = commands->drawCommands + commandIndex;
                     draw->visibleOffset = (uint)visibleOffset;
@@ -566,22 +634,19 @@ internal static class ChunkBatchRendererGroupService
                     draw->submeshIndex = 0;
                     draw->splitVisibilityMask = 0xff;
                     draw->flags = 0;
-                    draw->sortingPosition = batch.Priority;
+                    draw->sortingPosition = 0;
 
                     BatchDrawRange* range = commands->drawRanges + commandIndex;
                     range->drawCommandsBegin = (uint)commandIndex;
                     range->drawCommandsCount = 1;
                     range->filterSettings = new BatchFilterSettings
                     {
-                        renderingLayerMask = uint.MaxValue
+                        renderingLayerMask = uint.MaxValue,
+                        allDepthSorted = false
                     };
 
-                    int visibleIndex = 0;
-                    for (int instance = 0; instance < batch.Count; instance++)
-                    {
-                        if (ownerVisibility[batch.GetOwner(instance)])
-                            commands->visibleInstances[visibleOffset + visibleIndex++] = instance;
-                    }
+                    for (int visibleIndex = 0; visibleIndex < batchVisible; visibleIndex++)
+                        commands->visibleInstances[visibleOffset + visibleIndex] = visibleInstances[visibleIndex];
 
                     visibleOffset += batchVisible;
                     commandIndex++;
@@ -592,12 +657,12 @@ internal static class ChunkBatchRendererGroupService
         }
 
         /// <summary>按区块边界与当前相机裁剪面判断，预加载区块靠近镜头时无需重新绑定 BRG。</summary>
-        private bool IsOwnerVisible(ChunkTilemapRenderer owner, NativeArray<Plane> planes)
+        private bool IsOwnerVisible(int ownerId, NativeArray<Plane> planes)
         {
-            if (ownerVisibility.TryGetValue(owner, out bool visible))
+            if (ownerVisibility.TryGetValue(ownerId, out bool visible))
                 return visible;
 
-            Bounds bounds = ownerBounds[owner];
+            Bounds bounds = ownerBounds[ownerId];
             Vector3 center = bounds.center;
             Vector3 extents = bounds.extents;
             visible = true;
@@ -614,7 +679,7 @@ internal static class ChunkBatchRendererGroupService
                 break;
             }
 
-            ownerVisibility.Add(owner, visible);
+            ownerVisibility.Add(ownerId, visible);
             return visible;
         }
 
@@ -634,7 +699,7 @@ internal static class ChunkBatchRendererGroupService
                 ownerHandles.Clear();
                 ownerBounds.Clear();
                 ownerVisibility.Clear();
-                batchVisibleCounts.Clear();
+                batchVisibleInstances.Clear();
 
                 foreach (MaterialRegistration registration in materials.Values)
                 {
@@ -682,16 +747,14 @@ internal static class ChunkBatchRendererGroupService
             _ => 0
         };
 
-        /// <summary>花与草共享 Queue 2993；区分图层的批次顺序只用于稳定透明绘制顺序。</summary>
+        /// <summary>机械所有子层共享一个透明队列，真正的前后关系交给节点 Y 锚点；草花仍保持既有固定队列。</summary>
         private static int ResolveRenderQueuePriority(VisualLayer layer) => layer switch
         {
             VisualLayer.SnowWall or VisualLayer.Grass or VisualLayer.GroundCover => 5,
-            VisualLayer.MechanicalLowerBase => 6,
-            VisualLayer.MechanicalLowerMotionA or VisualLayer.MechanicalLowerMotionB => 7,
-            VisualLayer.MechanicalLowerFront => 8,
-            VisualLayer.MechanicalUpperBase => 9,
-            VisualLayer.MechanicalUpperMotionA or VisualLayer.MechanicalUpperMotionB => 10,
-            VisualLayer.MechanicalUpperFront => 11,
+            VisualLayer.MechanicalLowerBase or VisualLayer.MechanicalLowerMotionA or
+                VisualLayer.MechanicalLowerMotionB or VisualLayer.MechanicalLowerFront or
+                VisualLayer.MechanicalUpperBase or VisualLayer.MechanicalUpperMotionA or
+                VisualLayer.MechanicalUpperMotionB or VisualLayer.MechanicalUpperFront => 6,
             _ => ResolvePriority(layer)
         };
 
@@ -714,18 +777,20 @@ internal static class ChunkBatchRendererGroupService
             private readonly Backend backend;
             private readonly List<InstanceData> gpuData = new();
             private readonly List<InstanceOwner> owners = new();
+            private readonly List<Vector3> sortingPositions = new();
             private readonly InstanceData[] scratch = new InstanceData[1];
             private GraphicsBuffer buffer;
             private int capacity;
 
             public TileBatch(Backend backend, VisualKey key, BatchMeshID meshId,
-                BatchMaterialID materialId, int priority, int capacity)
+                BatchMaterialID materialId, int priority, bool depthSorted, int capacity)
             {
                 this.backend = backend;
                 Key = key;
                 MeshId = meshId;
                 MaterialId = materialId;
                 Priority = priority;
+                DepthSorted = depthSorted;
                 Resize(capacity);
             }
 
@@ -733,26 +798,31 @@ internal static class ChunkBatchRendererGroupService
             public BatchMeshID MeshId { get; }
             public BatchMaterialID MaterialId { get; }
             public int Priority { get; }
+            public bool DepthSorted { get; }
             public BatchID BatchId { get; private set; }
             public int Count => gpuData.Count;
-            public ChunkTilemapRenderer GetOwner(int index) => owners[index].Owner;
+            /// <summary>返回登记时缓存的 Owner 身份。</summary>
+            public int GetOwnerId(int index) => owners[index].OwnerId;
+            public Vector3 GetSortingPosition(int index) => sortingPositions[index];
 
-            public int Add(ChunkTilemapRenderer owner, int slotKey, InstanceData data)
+            public int Add(ChunkTilemapRenderer owner, int slotKey, InstanceData data, Vector3 sortingPosition)
             {
                 if (gpuData.Count >= capacity)
                     Resize(capacity * 2);
                 int index = gpuData.Count;
                 gpuData.Add(data);
                 owners.Add(new InstanceOwner(owner, slotKey));
+                sortingPositions.Add(sortingPosition);
                 Upload(index, data);
                 return index;
             }
 
-            public void Update(int index, InstanceData data)
+            public void Update(int index, InstanceData data, Vector3 sortingPosition)
             {
                 if ((uint)index >= (uint)gpuData.Count)
                     return;
                 gpuData[index] = data;
+                sortingPositions[index] = sortingPosition;
                 Upload(index, data);
             }
 
@@ -768,11 +838,13 @@ internal static class ChunkBatchRendererGroupService
                 {
                     gpuData[index] = gpuData[last];
                     owners[index] = owners[last];
+                    sortingPositions[index] = sortingPositions[last];
                     movedOwner = owners[index];
                     Upload(index, gpuData[index]);
                 }
                 gpuData.RemoveAt(last);
                 owners.RemoveAt(last);
+                sortingPositions.RemoveAt(last);
                 return moved;
             }
 
@@ -817,6 +889,7 @@ internal static class ChunkBatchRendererGroupService
                 buffer = null;
                 gpuData.Clear();
                 owners.Clear();
+                sortingPositions.Clear();
             }
         }
 
@@ -837,10 +910,13 @@ internal static class ChunkBatchRendererGroupService
             public InstanceOwner(ChunkTilemapRenderer owner, int slotKey)
             {
                 Owner = owner;
+                OwnerId = owner.GetInstanceID();
                 SlotKey = slotKey;
             }
 
             public ChunkTilemapRenderer Owner { get; }
+            /// <summary>剔除回调使用的稳定运行时身份。</summary>
+            public int OwnerId { get; }
             public int SlotKey { get; }
         }
 

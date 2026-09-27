@@ -21,7 +21,8 @@ public static class WaterVisualSettings
     private const string PreferenceKey = "FlatWorld.VisualEffects.WaterStyle";
     public const string ProviderId = "water-visuals";
     public const string StyleSettingKey = "waterVisuals.style";
-    public const WaterVisualStyle DefaultStyle = WaterVisualStyle.Realistic;
+    public static WaterVisualStyle DefaultStyle =>
+        (WaterVisualStyle)WorldRenderingConfigCatalog.Default.preferences.waterStyle;
 
     private static bool initialized;
     private static WaterVisualStyle currentStyle;

@@ -23,7 +23,8 @@ public static class ScreenPostProcessSettings
 
     private const string QualityKey = "FlatWorld.Graphics.PostProcessQuality";
 
-    public const ScreenPostProcessQuality DefaultQuality = ScreenPostProcessQuality.High;
+    public static ScreenPostProcessQuality DefaultQuality =>
+        (ScreenPostProcessQuality)WorldRenderingConfigCatalog.Default.preferences.postProcessQuality;
 
     public const string SettingsProviderId = "screen-effects";
     public const string QualitySettingKey = "screenEffects.quality";
@@ -33,7 +34,7 @@ public static class ScreenPostProcessSettings
     #region 缓存与事件
 
     private static bool initialized;
-    private static ScreenPostProcessQuality cachedQuality = DefaultQuality;
+    private static ScreenPostProcessQuality cachedQuality;
 
     /// <summary>后处理质量实际改变后触发。</summary>
     public static event Action Changed;
@@ -96,7 +97,7 @@ public static class ScreenPostProcessSettings
     {
         SettingsProviderRegistry.Unregister(settingsProvider);
         initialized = false;
-        cachedQuality = DefaultQuality;
+        cachedQuality = default;
         Changed = null;
     }
 

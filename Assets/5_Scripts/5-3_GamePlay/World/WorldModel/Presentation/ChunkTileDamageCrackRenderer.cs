@@ -19,7 +19,6 @@ public sealed class ChunkTileDamageCrackRenderer : MonoBehaviour, IChunkViewRend
     [SerializeField, Range(0.1f, 1f)] private float minimumScale = 0.45f;
     [SerializeField, Range(0.5f, 1.5f)] private float maximumScale = 1.05f;
     [SerializeField, Range(0f, 1f)] private float minimumAlpha = 0.68f;
-    [SerializeField, Min(0)] private int sortingOrderOffset = 1;
 
     #endregion
 
@@ -160,8 +159,7 @@ public sealed class ChunkTileDamageCrackRenderer : MonoBehaviour, IChunkViewRend
     {
         renderer.sprite = crackSprite;
         renderer.sharedMaterial = tilemapRenderer.BlockingMaterial;
-        renderer.sortingLayerName = "Default";
-        renderer.sortingOrder = sortingOrderOffset;
+        WorldSortingManager.GetInstance().ApplyRenderer(renderer, WorldSortingManager.GroundMarkCategory);
     }
 
     private void HideCrack(Vector2Int localCell)

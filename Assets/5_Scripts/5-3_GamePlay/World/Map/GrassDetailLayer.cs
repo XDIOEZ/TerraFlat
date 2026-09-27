@@ -10,6 +10,7 @@ public sealed class GrassDetailLayer : MonoBehaviour
 {
     private const string DetailObjectName = "GrassDetails";
     private const int CommonVariantCount = 24;
+    private static WorldRenderingConfig.RenderingGrass Defaults => WorldRenderingConfigCatalog.Default.grass;
 
     [Header("草地资源")]
     [SerializeField] private Texture2D sourceTexture;
@@ -22,12 +23,7 @@ public sealed class GrassDetailLayer : MonoBehaviour
     [Header("分布")]
     [SerializeField, Range(0f, 0.8f)] private float density = 0.22f;
     [SerializeField] private bool varyDensityWithPrecipitation = true;
-    [SerializeField, Range(0f, 0.45f)] private float positionJitter = 0.22f;
-    [SerializeField] private Vector2 scaleRange = new(0.85f, 1.15f);
-    [SerializeField, Range(0f, 1f)] private float accentVariantChance = 0.2f;
-
     [Header("渲染")]
-    [SerializeField] private int sortingOrderOffset = 1;
     [SerializeField] private Material grassMaterial;
 
     private readonly List<Sprite> runtimeSprites = new();
@@ -186,11 +182,11 @@ public sealed class GrassDetailLayer : MonoBehaviour
         int variantIndex = SelectVariant(ref state);
         detailTilemap.SetTile(cell, runtimeTiles[variantIndex]);
 
-        float offsetX = Mathf.Lerp(-positionJitter, positionJitter, Next01(ref state));
-        float offsetY = Mathf.Lerp(-positionJitter, positionJitter, Next01(ref state));
+        float offsetX = Mathf.Lerp(-Defaults.positionJitter, Defaults.positionJitter, Next01(ref state));
+        float offsetY = Mathf.Lerp(-Defaults.positionJitter, Defaults.positionJitter, Next01(ref state));
         float scale = Mathf.Lerp(
-            Mathf.Min(scaleRange.x, scaleRange.y),
-            Mathf.Max(scaleRange.x, scaleRange.y),
+            Mathf.Min(Defaults.scaleRange.x, Defaults.scaleRange.y),
+            Mathf.Max(Defaults.scaleRange.x, Defaults.scaleRange.y),
             Next01(ref state));
         float flipX = Next01(ref state) < 0.5f ? -1f : 1f;
         Matrix4x4 matrix = Matrix4x4.TRS(
@@ -199,7 +195,7 @@ public sealed class GrassDetailLayer : MonoBehaviour
             new Vector3(scale * flipX, scale, 1f));
         detailTilemap.SetTransformMatrix(cell, matrix);
 
-        float tint = Mathf.Lerp(0.9f, 1f, Next01(ref state));
+        float tint = Mathf.Lerp(Defaults.tintRange.x, Defaults.tintRange.y, Next01(ref state));
         detailTilemap.SetColor(cell, new Color(tint, tint, tint, 1f));
     }
 
@@ -218,7 +214,7 @@ public sealed class GrassDetailLayer : MonoBehaviour
     {
         int count = runtimeTiles.Count;
         int commonCount = Mathf.Min(CommonVariantCount, count);
-        if (count > commonCount && Next01(ref state) < accentVariantChance)
+        if (count > commonCount && Next01(ref state) < Defaults.accentVariantChance)
             return commonCount + (int)(Next(ref state) % (uint)(count - commonCount));
 
         return (int)(Next(ref state) % (uint)commonCount);
@@ -274,7 +270,7 @@ public sealed class GrassDetailLayer : MonoBehaviour
         if (groundRenderer != null)
         {
             detailRenderer.sortingLayerID = groundRenderer.sortingLayerID;
-            detailRenderer.sortingOrder = groundRenderer.sortingOrder + sortingOrderOffset;
+            detailRenderer.sortingOrder = groundRenderer.sortingOrder + Defaults.sortingOrderOffset;
         }
 
         if (grassMaterial != null)

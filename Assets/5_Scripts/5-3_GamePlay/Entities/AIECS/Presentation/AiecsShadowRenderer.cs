@@ -11,7 +11,7 @@ namespace FlatWorld.AIECS
     /// <summary>
     /// 只读脚底假阴影：每只使用四个顶点、两个三角形，每 4096 只共用一个动态网格。
     /// 固定索引只上传一次；顶点缓冲复用，不创建逐实体对象、碰撞体、法线或真实投影。
-    /// 使用 Default/0 与 ActorShadowManager 一致；仅绘制调用方筛选出的可见陆地实体。
+    /// 使用调用方注入的 ground-shadow 排序键；仅绘制调用方筛选出的可见陆地实体。
     /// </summary>
     public sealed class AiecsShadowRenderer : IDisposable
     {
@@ -21,13 +21,17 @@ namespace FlatWorld.AIECS
         private readonly List<Batch> batches = new List<Batch>();
         private readonly Scene scene;
         private readonly Material material;
+        private readonly int sortingLayerId;
+        private readonly int sortingOrder;
         public int ShadowCount { get; private set; } // 本帧真正提交的阴影数。
         public int BatchCount { get; private set; } // 本帧阴影批次，不与主体批次混淆。
 
         /// <summary>加载构建中保留的共享材质，不实例化每物种材质。</summary>
-        public AiecsShadowRenderer(Scene scene)
+        public AiecsShadowRenderer(Scene scene, int sortingLayerId, int sortingOrder)
         {
             this.scene = scene;
+            this.sortingLayerId = sortingLayerId;
+            this.sortingOrder = sortingOrder;
             material = Resources.Load<Material>("AIECS/ActorBlobShadow");
             if (material == null || material.shader == null)
                 throw new InvalidOperationException("缺少 AIECS/ActorBlobShadow 阴影材质。");
@@ -41,7 +45,7 @@ namespace FlatWorld.AIECS
         {
             if (opacity <= 0.001f || footprint.z <= 0f || footprint.w <= 0f) return;
             int index = ShadowCount / MaxShadowsPerBatch;
-            if (index == batches.Count) batches.Add(new Batch(scene, material));
+            if (index == batches.Count) batches.Add(new Batch(scene, material, sortingLayerId, sortingOrder));
             Batch batch = batches[index];
             if (ShadowCount % MaxShadowsPerBatch == 0) { batch.Begin(); BatchCount++; }
             position += new Vector2(mirror ? -footprint.x : footprint.x, footprint.y);
@@ -93,8 +97,14 @@ namespace FlatWorld.AIECS
                 Vector2 point = AiecsRenderBatch.TransformPoint(local, default, definition, frame);
                 min = Vector2.Min(min, point); max = Vector2.Max(max, point);
             }
-            float width = Mathf.Clamp(Mathf.Max((max.x - min.x) * 0.9f, (max.y - min.y) * 0.55f), 0.18f, 2.5f);
-            return new Vector4((min.x + max.x) * 0.5f, min.y + 0.02f, width, width * 0.34f);
+            WorldRenderingConfig.EcsContactShadow settings = WorldRenderingConfigCatalog.Default.shadows.ecsContact;
+            WorldRenderingConfig.ContactShadow contact = WorldRenderingConfigCatalog.Default.shadows.contact;
+            float width = Mathf.Clamp(Mathf.Max((max.x - min.x) * settings.widthRatio,
+                (max.y - min.y) * settings.heightToWidthRatio), settings.minimumWidth, settings.maximumWidth);
+            float overlap = Mathf.Min(contact.maximumFootOverlap,
+                (max.y - min.y) * contact.footOverlapRatio);
+            return new Vector4((min.x + max.x) * 0.5f, min.y + overlap + settings.groundOffset,
+                width, width * settings.heightRatio);
         }
         #endregion
 
@@ -118,7 +128,7 @@ namespace FlatWorld.AIECS
             private const MeshUpdateFlags UpdateFlags = MeshUpdateFlags.DontRecalculateBounds;
 
             /// <summary>一次分配顶点和固定索引；以后只上传当前使用的顶点区间。</summary>
-            public Batch(Scene scene, Material material)
+            public Batch(Scene scene, Material material, int sortingLayerId, int sortingOrder)
             {
                 int layer = LayerMask.NameToLayer("AIECSRuntime");
                 if (layer < 0) throw new InvalidOperationException("缺少 AIECSRuntime Layer。");
@@ -143,8 +153,8 @@ namespace FlatWorld.AIECS
                 root.AddComponent<MeshFilter>().sharedMesh = mesh;
                 renderer = root.AddComponent<MeshRenderer>();
                 renderer.sharedMaterial = material;
-                renderer.sortingLayerName = "Default";
-                renderer.sortingOrder = 0;
+                renderer.sortingLayerID = sortingLayerId;
+                renderer.sortingOrder = sortingOrder;
                 renderer.shadowCastingMode = ShadowCastingMode.Off;
                 renderer.receiveShadows = false;
                 renderer.lightProbeUsage = LightProbeUsage.Off;

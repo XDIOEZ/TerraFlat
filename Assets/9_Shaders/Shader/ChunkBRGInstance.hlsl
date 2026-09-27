@@ -62,6 +62,13 @@ float ChunkMechanicalPhase(ChunkBRGInstanceData data)
 
 float3 AnimateChunkMechanicalVertex(float3 positionOS, ChunkBRGInstanceData data)
 {
+    // 模式 4 仅压缩独立皮革层，木框与喷嘴保留原始顶点。
+    if (data.data0.x > 3.5 && data.data0.x < 4.5)
+    {
+        float compression = (1.0 - cos(ChunkMechanicalPhase(data))) * 0.5 * saturate(data.data0.w);
+        positionOS.y *= 1.0 - compression;
+        return positionOS;
+    }
     if (data.data0.x < 0.5 || data.data0.x > 1.5) return positionOS;
     float angle = ChunkMechanicalPhase(data);
     float sine, cosine;

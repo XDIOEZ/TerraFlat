@@ -608,6 +608,13 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRend
     internal void SetLayerVisual(ChunkBatchRendererGroupService.VisualLayer layer, int x, int y,
         Sprite sprite, Material sourceMaterial, Matrix4x4 localToWorld, Color tint,
         Vector4 animation, Vector4 textureRegion)
+        => SetLayerVisual(layer, x, y, sprite, sourceMaterial, localToWorld, tint,
+            animation, textureRegion, null);
+
+    /// <summary>带透明深度排序锚点的扩展表现；用于需要按世界 Y 轴动态排序的 BRG 实例。</summary>
+    internal void SetLayerVisual(ChunkBatchRendererGroupService.VisualLayer layer, int x, int y,
+        Sprite sprite, Material sourceMaterial, Matrix4x4 localToWorld, Color tint,
+        Vector4 animation, Vector4 textureRegion, Vector3? sortingPosition)
     {
         ChunkTerrainData terrain = boundChunk?.Terrain;
         if (terrain == null)
@@ -616,8 +623,12 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRend
         var instanceData = ChunkBatchRendererGroupService.InstanceData.Create(
             localToWorld, animation, textureRegion, tint);
         instanceData.Transform0.w = -1f;
+        var visual = sortingPosition.HasValue
+            ? new ChunkBatchRendererGroupService.Visual(layer, sprite, sourceMaterial, instanceData,
+                sortingPosition.Value)
+            : new ChunkBatchRendererGroupService.Visual(layer, sprite, sourceMaterial, instanceData);
         ChunkBatchRendererGroupService.SetVisual(this, GetBatchSlotKey(terrain, x, y, layer),
-            new ChunkBatchRendererGroupService.Visual(layer, sprite, sourceMaterial, instanceData));
+            visual);
     }
 
     /// <summary>清除指定扩展图层的单格实例。</summary>

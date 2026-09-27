@@ -43,6 +43,11 @@ internal sealed class DroppedItemVisual
         Vector3 scale = visual?.RendererLocalScale ?? (shellRenderer != null ? shellRenderer.localScale : Vector3.one);
         if (visual?.FlipX ?? (source != null && source.flipX)) scale.x *= -1f;
         if (visual?.FlipY ?? (source != null && source.flipY)) scale.y *= -1f;
+        WorldSortingManager sorting = WorldSortingManager.GetInstance();
+        if (sorting == null)
+            throw new InvalidOperationException("掉落物缺少世界排序管理器。");
+        sorting.GetSortingKey(WorldSortingManager.WorldItemCategory,
+            out int sortingLayerId, out int sortingOrder);
         return new DroppedItemVisual
         {
             Sprite = sprite, Vertices = sprite.vertices, Uvs = sprite.uv, Triangles = sprite.triangles,
@@ -51,9 +56,7 @@ internal sealed class DroppedItemVisual
             LocalPosition = position, LocalRotation = rotation, LocalScale = scale,
             LocalMatrix = Matrix4x4.TRS(position, rotation, scale),
             Color = visual?.Color ?? (source != null ? source.color : Color.white),
-            Layer = !string.IsNullOrWhiteSpace(visual?.SortingLayerName)
-                ? SortingLayer.NameToID(visual.SortingLayerName) : source != null ? source.sortingLayerID : 0,
-            Order = visual?.SortingOrder ?? (source != null ? source.sortingOrder : 0)
+            Layer = sortingLayerId, Order = sortingOrder
         };
     }
 }

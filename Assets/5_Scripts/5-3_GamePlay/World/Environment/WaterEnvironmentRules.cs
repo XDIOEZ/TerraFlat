@@ -32,7 +32,7 @@ public static class WaterEnvironmentRules
         riverKind == 2 ? RuntimeWaterCurrentKind.None :
         oceanBiome ? RuntimeWaterCurrentKind.Ocean : RuntimeWaterCurrentKind.None;
 
-    /// <summary>流量 0 静止、1 对应原 0.45 格/秒，极大流量渐近两倍速度。</summary>
+    /// <summary>河流流量 0 静止、1 为基准倍率，极大流量渐近两倍；实际速度由玩法配置提供。</summary>
     public static float ResolveRiverStrength(float flow)
     {
         float positiveFlow = Mathf.Max(0f, flow);

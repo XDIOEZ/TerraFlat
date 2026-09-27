@@ -12,11 +12,7 @@ public static class PlayerOcclusionShaderGlobals
 {
     #region Configuration
 
-    private const float MaskRadius = 1.10f;
-    private const float MaskFeather = 0.14f;
-    private const float OccluderAlpha = 0.18f;
-    private const float PlayerCenterOffsetY = 0.18f;
-    private const float BehindVerticalPadding = 0.04f;
+    private static WorldRenderingConfig.RenderingOcclusion Defaults => WorldRenderingConfigCatalog.Default.occlusion;
     private const string PreferenceKey = "FlatWorld.Visual.PlayerOcclusion";
     public const string EnabledSettingKey = "player-occlusion";
     private static bool initialized;
@@ -39,7 +35,8 @@ public static class PlayerOcclusionShaderGlobals
         {
             if (!initialized)
             {
-                enabled = PlayerPrefs.GetInt(PreferenceKey, 0) != 0;
+                enabled = PlayerPrefs.GetInt(PreferenceKey,
+                    WorldRenderingConfigCatalog.Default.preferences.playerOcclusion ? 1 : 0) != 0;
                 initialized = true;
             }
             return enabled;
@@ -72,7 +69,8 @@ public static class PlayerOcclusionShaderGlobals
         public IReadOnlyList<ISettingsSlider> SliderSettings => Array.Empty<ISettingsSlider>();
         public IReadOnlyList<ISettingsDropdown> DropdownSettings => Array.Empty<ISettingsDropdown>();
         public IReadOnlyList<ISettingsSwitch> SwitchSettings => Array.Empty<ISettingsSwitch>();
-        public void ResetToDefaults() => SetEnabled(false);
+        public void ResetToDefaults() =>
+            SetEnabled(WorldRenderingConfigCatalog.Default.preferences.playerOcclusion);
     }
 
     #endregion
@@ -96,6 +94,7 @@ public static class PlayerOcclusionShaderGlobals
     {
         RenderPipelineManager.beginCameraRendering -= HandleBeginCameraRendering;
         GameManager.Event_PlayerEnterWorld -= HandlePlayerEnteredWorld;
+        GameManager.Event_LocalPlayerRuntimeReloaded -= HandlePlayerEnteredWorld;
         localPlayer = null;
         SettingsProviderRegistry.Unregister(settingsProvider);
         initialized = false;
@@ -112,11 +111,13 @@ public static class PlayerOcclusionShaderGlobals
         RenderPipelineManager.beginCameraRendering += HandleBeginCameraRendering;
         GameManager.Event_PlayerEnterWorld -= HandlePlayerEnteredWorld;
         GameManager.Event_PlayerEnterWorld += HandlePlayerEnteredWorld;
+        GameManager.Event_LocalPlayerRuntimeReloaded -= HandlePlayerEnteredWorld;
+        GameManager.Event_LocalPlayerRuntimeReloaded += HandlePlayerEnteredWorld;
 
-        Shader.SetGlobalFloat(RadiusId, MaskRadius);
-        Shader.SetGlobalFloat(FeatherId, MaskFeather);
-        Shader.SetGlobalFloat(AlphaId, OccluderAlpha);
-        Shader.SetGlobalFloat(VerticalPaddingId, BehindVerticalPadding);
+        Shader.SetGlobalFloat(RadiusId, Defaults.maskRadius);
+        Shader.SetGlobalFloat(FeatherId, Defaults.maskFeather);
+        Shader.SetGlobalFloat(AlphaId, Defaults.occluderAlpha);
+        Shader.SetGlobalFloat(VerticalPaddingId, Defaults.behindVerticalPadding);
     }
 
     #endregion
@@ -144,7 +145,7 @@ public static class PlayerOcclusionShaderGlobals
             CenterId,
             new Vector4(
                 playerPosition.x,
-                playerPosition.y + PlayerCenterOffsetY,
+                playerPosition.y + Defaults.playerCenterOffsetY,
                 playerPosition.y,
                 0f));
         Shader.SetGlobalFloat(EnabledId, 1f);

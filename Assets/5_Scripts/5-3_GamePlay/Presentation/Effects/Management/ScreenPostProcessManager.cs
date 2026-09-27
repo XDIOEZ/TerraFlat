@@ -57,9 +57,9 @@ public sealed class ScreenPostProcessFrame
     {
         BlurStrength = 0f;
         VignetteIntensity = 0f;
-        VignetteSmoothness = 0.82f;
+        VignetteSmoothness = WorldRenderingConfigCatalog.Default.postProcess.defaultVignetteSmoothness;
         VignettePulseAmount = 0f;
-        VignetteColor = new Color(0.9f, 0.015f, 0.02f, 1f);
+        VignetteColor = WorldRenderingConfigCatalog.Default.postProcess.defaultVignetteColor;
     }
 
     /// <summary>按强度叠加一个屏幕边缘警示请求，避免多个效果互相覆盖。</summary>
@@ -98,8 +98,7 @@ public sealed class ScreenPostProcessManager : SingletonAutoMono<ScreenPostProce
 {
     #region 配置常量
 
-    private const float TransitionSeconds = 0.12f;
-    private const float MinimumActiveIntensity = 0.0005f;
+    private static WorldRenderingConfig.RenderingPostProcess Defaults => WorldRenderingConfigCatalog.Default.postProcess;
 
     #endregion
 
@@ -130,7 +129,8 @@ public sealed class ScreenPostProcessManager : SingletonAutoMono<ScreenPostProce
 
         DontDestroyOnLoad(gameObject);
         TraumaBlurRendererFeature.SetStrength(0f);
-        LowHealthRedEdgeRendererFeature.SetState(Color.red, 0f, 0.82f);
+        LowHealthRedEdgeRendererFeature.SetState(Defaults.defaultVignetteColor, 0f,
+            Defaults.defaultVignetteSmoothness);
     }
 
     private void LateUpdate()
@@ -163,7 +163,8 @@ public sealed class ScreenPostProcessManager : SingletonAutoMono<ScreenPostProce
     {
         effects.Clear();
         TraumaBlurRendererFeature.SetStrength(0f);
-        LowHealthRedEdgeRendererFeature.SetState(Color.red, 0f, 0.82f);
+        LowHealthRedEdgeRendererFeature.SetState(Defaults.defaultVignetteColor, 0f,
+            Defaults.defaultVignetteSmoothness);
         base.OnDestroy();
     }
 
@@ -213,14 +214,14 @@ public sealed class ScreenPostProcessManager : SingletonAutoMono<ScreenPostProce
             currentVignetteIntensity,
             targetIntensity,
             ref vignetteIntensityVelocity,
-            TransitionSeconds,
+            Defaults.transitionSeconds,
             Mathf.Infinity,
             deltaTime);
 
         float pulseAmount = GetQualityPulseScale() * nextFrame.VignettePulseAmount;
-        if (currentVignetteIntensity > MinimumActiveIntensity && pulseAmount > 0f)
+        if (currentVignetteIntensity > Defaults.minimumActiveIntensity && pulseAmount > 0f)
         {
-            float pulse = 1f + Mathf.Sin(Time.unscaledTime * 4.5f) * pulseAmount;
+            float pulse = 1f + Mathf.Sin(Time.unscaledTime * Defaults.pulseFrequency) * pulseAmount;
             currentVignetteIntensity = Mathf.Clamp01(currentVignetteIntensity * pulse);
         }
 
@@ -249,9 +250,9 @@ public sealed class ScreenPostProcessManager : SingletonAutoMono<ScreenPostProce
         switch (ScreenPostProcessSettings.Quality)
         {
             case ScreenPostProcessQuality.Medium:
-                return 0.88f;
+                return Defaults.mediumIntensityScale;
             case ScreenPostProcessQuality.Low:
-                return 0.78f;
+                return Defaults.lowIntensityScale;
             default:
                 return 1f;
         }
@@ -262,9 +263,9 @@ public sealed class ScreenPostProcessManager : SingletonAutoMono<ScreenPostProce
         switch (ScreenPostProcessSettings.Quality)
         {
             case ScreenPostProcessQuality.Medium:
-                return 0.94f;
+                return Defaults.mediumSmoothnessScale;
             case ScreenPostProcessQuality.Low:
-                return 0.88f;
+                return Defaults.lowSmoothnessScale;
             default:
                 return 1f;
         }
@@ -275,9 +276,9 @@ public sealed class ScreenPostProcessManager : SingletonAutoMono<ScreenPostProce
         switch (ScreenPostProcessSettings.Quality)
         {
             case ScreenPostProcessQuality.Medium:
-                return 0.55f;
+                return Defaults.mediumPulseScale;
             case ScreenPostProcessQuality.Low:
-                return 0f;
+                return Defaults.lowPulseScale;
             default:
                 return 1f;
         }

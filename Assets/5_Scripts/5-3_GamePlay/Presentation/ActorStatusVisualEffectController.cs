@@ -1053,8 +1053,9 @@ public sealed class ActorStatusVisualEffectController : MonoBehaviour
         if (visual.Renderers == null)
             visual.Renderers = visual.EffectObject.GetComponentsInChildren<ParticleSystemRenderer>(true);
 
-        int sortingLayerId = sourceRenderer != null ? sourceRenderer.sortingLayerID : 0;
-        int sortingOrder = sourceRenderer != null ? sourceRenderer.sortingOrder : 0;
+        if (sourceRenderer == null)
+            return;
+        WorldSortingManager.ReadExternalRendererKey(sourceRenderer, out int sortingLayerId, out int sortingOrder);
         for (int i = 0; i < visual.Renderers.Length; i++)
         {
             ParticleSystemRenderer renderer = visual.Renderers[i];

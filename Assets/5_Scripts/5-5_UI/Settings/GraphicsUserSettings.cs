@@ -23,7 +23,8 @@ public static class GraphicsUserSettings
 
     private const string PresetKey = "FlatWorld.Graphics.Preset";
 
-    public const GraphicsPreset DefaultPreset = GraphicsPreset.High;
+    public static GraphicsPreset DefaultPreset =>
+        (GraphicsPreset)WorldRenderingConfigCatalog.Default.preferences.graphicsPreset;
 
     public const string SettingsProviderId = "graphics";
     public const string PresetSettingKey = "graphics.preset";
@@ -32,7 +33,7 @@ public static class GraphicsUserSettings
     #region 缓存与事件
 
     private static bool initialized;
-    private static GraphicsPreset cachedPreset = DefaultPreset;
+    private static GraphicsPreset cachedPreset;
 
     /// <summary>画质预设实际改变后触发。</summary>
     public static event Action Changed;
@@ -112,7 +113,7 @@ public static class GraphicsUserSettings
     {
         SettingsProviderRegistry.Unregister(settingsProvider);
         initialized = false;
-        cachedPreset = DefaultPreset;
+        cachedPreset = default;
         Changed = null;
     }
 

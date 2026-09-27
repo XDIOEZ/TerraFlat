@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// 视觉特效分页的表现控制器：正式 Prefab 提供水体、透视、太阳投影柔化和地面高度阴影控件。
+/// 视觉特效分页的表现控制器：正式 Prefab 提供水体、透视、两种实体阴影柔化和地面高度阴影控件。
 /// 控件只通过 Provider 提交偏好；当前选中状态跟随设置事件刷新，不持有渲染业务。
 /// </summary>
 [DisallowMultipleComponent]
@@ -138,9 +138,9 @@ public sealed class VisualEffectsSettingsPanelLauncher : MonoBehaviour, ISetting
         occlusionToggle.SetIsOnWithoutNotify(PlayerOcclusionShaderGlobals.Enabled);
         sunShadowToggle.SetIsOnWithoutNotify(SunShadowSettings.Enabled);
         sunShadowBlurToggle.SetIsOnWithoutNotify(SunShadowSettings.BlurEnabled);
-        sunShadowBlurToggle.interactable = SunShadowSettings.Enabled;
+        sunShadowBlurToggle.interactable = true;
         sunShadowBlurSlider.SetValueWithoutNotify(SunShadowSettings.BlurStrength);
-        sunShadowBlurSlider.interactable = SunShadowSettings.Enabled && SunShadowSettings.BlurEnabled;
+        sunShadowBlurSlider.interactable = SunShadowSettings.BlurEnabled;
         sunShadowBlurValueText.text = $"{Mathf.RoundToInt(SunShadowSettings.BlurStrength * 100f)}%";
         groundElevationToggle.SetIsOnWithoutNotify(GroundElevationShadowSettings.Enabled);
         groundElevationWidthSlider.SetValueWithoutNotify(GroundElevationShadowSettings.Width);

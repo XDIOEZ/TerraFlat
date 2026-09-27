@@ -239,7 +239,7 @@ MonoBehaviour:
   priority: 0
   blendDistance: 0
   weight: 1
-  sharedProfile: {fileID: 11400000, guid: ec205a5e3ef5d6b49ba00791799edcc5, type: 2}
+  sharedProfile: {fileID: 0}
 --- !u!114 &5837248620173946120
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -359,11 +359,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 44ea79331a8b4ad49fd9ec5f19f1e8dc, type: 3}
   m_Name:
   m_EditorClassIdentifier:
-  dynamicCategories:
-  - player
-  - creature
-  - building
-  - world-item
 --- !u!4 &891121404665747283
 Transform:
   m_ObjectHideFlags: 0
@@ -547,12 +542,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f352f64487f7ede4b8069e0d3a2c9513, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  minimumLength: 0.35
-  maximumLength: 2.8
-  maximumDistance: 8
-  opacity: 0.34
-  shadowColor: {r: 0.12, g: 0.14, b: 0.2, a: 1}
-  maximumVisibleDistance: 80
 --- !u!1 &5482967027949208378
 GameObject:
   m_ObjectHideFlags: 0
@@ -613,15 +602,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4b1e6c3d7a904ef0a9a2b86f1d4c5e70, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  actorShadowPrefab: {fileID: 4309152267431885310, guid: 6d2a7f4c9e3148b3a5c0d7e1f2a6b8c9, type: 3}
-  maxShadowAlpha: 0.55
-  minSunlightToShow: 0.02
-  sunlightResponsePower: 1
-  shadowWidthRatio: 0.9
-  shadowHeightToWidthRatio: 0.9
-  minShadowWidth: 0.18
-  maxShadowWidth: 2.5
-  shadowGroundOffset: 0.01
 --- !u!1 &8923630362666243623
 GameObject:
   m_ObjectHideFlags: 0
