@@ -276,6 +276,7 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
     #region 序列化状态
 
     [SerializeField] private ChunkGenerationProfileSO profileAsset;
+    private NaturalGenerationRuleCatalog previewNaturalRules;
     [SerializeField] private int worldSeed = -329089282;
     [SerializeField] private int centerX;
     [SerializeField] private int centerY;
@@ -346,6 +347,9 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
             ResetParametersFromProfile();
         EditorApplication.update += PollGeneration;
     }
+
+    /// <summary>重新聚焦时读取可能被外部修改的自然物 JSON。</summary>
+    private void OnFocus() => previewNaturalRules = null;
 
     private void OnDisable()
     {
@@ -698,7 +702,7 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
 
         try
         {
-            ChunkGenerationProfileSnapshot snapshot = profileAsset.CreateSnapshot();
+            ChunkGenerationProfileSnapshot snapshot = ReadProfileSnapshot(profileAsset);
             bool cave = snapshot.Settings.Mode == ChunkGenerationMode.Cave;
             EditorGUILayout.LabelField(cave ? "矿脉规则数量" : "生态规则数量",
                 cave ? snapshot.CaveResourceRules.Count.ToString() :
@@ -752,7 +756,7 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
 
             EditorGUILayout.HelpBox(
                 "预览会复用正式 ChunkEcologyGenerator；这里只显示点位和统计，不实例化 Prefab，" +
-                "不会写入世界存档。规则概率和环境范围请在 Profile SO 中配置。",
+                "不会写入世界存档。规则概率和环境范围请在自然物 JSON 中配置。",
                 MessageType.Info);
         }
         catch (Exception exception)
@@ -925,16 +929,24 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
 
     #region 参数操作
 
+    /// <summary>预览显式读取自然物 JSON；窗口重新聚焦或重新读取时刷新目录。</summary>
+    private ChunkGenerationProfileSnapshot ReadProfileSnapshot(ChunkGenerationProfileSO profile)
+    {
+        previewNaturalRules ??= NaturalGenerationRuleCatalogLoader.LoadBuiltIn();
+        return profile.CreateSnapshot(previewNaturalRules);
+    }
+
     /// <summary>把 Profile 参数复制为窗口私有值，并补上运行时星球才提供的世界坐标缩放。</summary>
     private void ResetParametersFromProfile()
     {
+        previewNaturalRules = null;
         numericParameters.Clear();
         if (profileAsset == null)
             return;
 
         try
         {
-            ChunkGenerationProfileSnapshot snapshot = profileAsset.CreateSnapshot();
+            ChunkGenerationProfileSnapshot snapshot = ReadProfileSnapshot(profileAsset);
             foreach (KeyValuePair<string, double> pair in snapshot.NumericParameters
                          .OrderBy(pair => pair.Key, StringComparer.Ordinal))
             {
@@ -1191,7 +1203,7 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
             AddFingerprint(ref hash, profileAsset.ChunkHeight);
             try
             {
-                ChunkGenerationProfileSnapshot snapshot = profileAsset.CreateSnapshot();
+                ChunkGenerationProfileSnapshot snapshot = ReadProfileSnapshot(profileAsset);
                 AddFingerprint(ref hash, unchecked((long)snapshot.GenerationFingerprint));
                 AddFingerprint(ref hash, unchecked((long)snapshot.EcologyFingerprint));
             }
@@ -1345,7 +1357,7 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
         int height = Mathf.Clamp(previewHeight, MinimumPreviewSize, MaximumPreviewSize);
         int originX = checked(centerX - width / 2);
         int originY = checked(centerY - height / 2);
-        ChunkGenerationProfileSnapshot source = profileAsset.CreateSnapshot();
+        ChunkGenerationProfileSnapshot source = ReadProfileSnapshot(profileAsset);
 
         Dictionary<string, double> numbers = source.NumericParameters.ToDictionary(
             pair => pair.Key,
@@ -1454,7 +1466,7 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
     /// 只复制当前预览修改过的 cave.portal 参数，地表高度/水文仍保留地表 Profile 自身的配置，
     /// 这样预览中的蓝色出口数量和坐标会与实际地表入口一致。
     /// </summary>
-    private static CavePortalPairingSnapshot CreatePreviewCavePortalPairing(
+    private CavePortalPairingSnapshot CreatePreviewCavePortalPairing(
         ChunkGenerationProfileSnapshot caveProfile, int seed,
         ChunkGenerationTopologySnapshot topology, bool fastPreview)
     {
@@ -1466,7 +1478,7 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
         if (surfaceAsset == null)
             return null;
 
-        ChunkGenerationProfileSnapshot source = surfaceAsset.CreateSnapshot();
+        ChunkGenerationProfileSnapshot source = ReadProfileSnapshot(surfaceAsset);
         var numbers = source.NumericParameters.ToDictionary(pair => pair.Key, pair => pair.Value,
             StringComparer.Ordinal);
         foreach (KeyValuePair<string, double> parameter in caveProfile.NumericParameters)

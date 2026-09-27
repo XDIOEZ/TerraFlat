@@ -39,6 +39,7 @@ namespace FlatWorld.WorldModel
             IEnumerable<string> providedTags = null,
             bool companionOnly = false,
             string companionHostTag = null,
+            string requiredChunkTag = null,
             double companionSpawnChance = 0d,
             double companionOffsetX = 0d,
             double companionOffsetY = 0d,
@@ -48,7 +49,8 @@ namespace FlatWorld.WorldModel
             EcologyDistributionMode distributionMode = EcologyDistributionMode.Uniform,
             int patchSpacing = 24,
             double patchRadius = 2.5d,
-            double patchChance = 1d)
+            double patchChance = 1d,
+            int requiredTagChunkRadius = 0)
         {
             if (string.IsNullOrWhiteSpace(ruleId))
                 throw new ArgumentException("Ecology rule id is required.", nameof(ruleId));
@@ -56,6 +58,12 @@ namespace FlatWorld.WorldModel
                 throw new ArgumentException("Ecology item id is required.", nameof(itemId));
             if (!Enum.IsDefined(typeof(EcologyDistributionMode), distributionMode))
                 throw new ArgumentOutOfRangeException(nameof(distributionMode));
+            if (!companionOnly && !string.IsNullOrWhiteSpace(requiredChunkTag))
+                throw new ArgumentException("Chunk tag requirements only apply to companions.",
+                    nameof(requiredChunkTag));
+            if (requiredTagChunkRadius < 0 || requiredTagChunkRadius > 1 ||
+                (requiredTagChunkRadius > 0 && string.IsNullOrWhiteSpace(requiredChunkTag)))
+                throw new ArgumentOutOfRangeException(nameof(requiredTagChunkRadius));
 
             RuleId = ruleId.Trim();
             ItemId = itemId.Trim();
@@ -72,6 +80,8 @@ namespace FlatWorld.WorldModel
             ProvidedTags = new ReadOnlyCollection<string>(NormalizeTags(providedTags));
             CompanionOnly = companionOnly;
             CompanionHostTag = companionHostTag?.Trim() ?? string.Empty;
+            RequiredChunkTag = requiredChunkTag?.Trim() ?? string.Empty;
+            RequiredTagChunkRadius = requiredTagChunkRadius;
             CompanionSpawnChance = Clamp01(companionSpawnChance);
             CompanionOffsetX = Finite(companionOffsetX, 0d);
             CompanionOffsetY = Finite(companionOffsetY, 0d);
@@ -101,6 +111,10 @@ namespace FlatWorld.WorldModel
         public IReadOnlyList<string> ProvidedTags { get; }
         public bool CompanionOnly { get; }
         public string CompanionHostTag { get; }
+        /// <summary>伴生物所需的自然物标签，由配置半径内实际生成的宿主规则提供。</summary>
+        public string RequiredChunkTag { get; }
+        /// <summary>标签搜索半径：0 为当前区块，1 为包含当前区块的九宫格。</summary>
+        public int RequiredTagChunkRadius { get; }
         public double CompanionSpawnChance { get; }
         public double CompanionOffsetX { get; }
         public double CompanionOffsetY { get; }
@@ -237,6 +251,13 @@ namespace FlatWorld.WorldModel
         #endregion
     }
 
+    /// <summary>按同一世界种子与生成快照查询相邻区块的天然宿主标签。</summary>
+    public interface IChunkEcologyNeighborhoodTagResolver
+    {
+        bool HasHostTagInChunk(ChunkGenerationRequest request, string tag,
+            CancellationToken cancellationToken);
+    }
+
     /// <summary>
     /// 在已完成的纯地形上执行可配置生态阶段。
     /// 宿主和伴生物都由规则声明，不读取 Prefab 标签，因此后台生成可以完全无头运行。
@@ -254,12 +275,35 @@ namespace FlatWorld.WorldModel
 
         #region 生成入口
 
+        /// <summary>等待宿主生成完毕后，再确认邻域标签的伴生物候选。</summary>
+        private readonly struct PendingCompanion
+        {
+            public PendingCompanion(EcologySpawnRuleSnapshot rule, int localX, int localY,
+                int worldX, int worldY, int hostGuid)
+            {
+                Rule = rule;
+                LocalX = localX;
+                LocalY = localY;
+                WorldX = worldX;
+                WorldY = worldY;
+                HostGuid = hostGuid;
+            }
+
+            public EcologySpawnRuleSnapshot Rule { get; }
+            public int LocalX { get; }
+            public int LocalY { get; }
+            public int WorldX { get; }
+            public int WorldY { get; }
+            public int HostGuid { get; }
+        }
+
         public static ChunkEcologyData Generate(
             ChunkGenerationRequest request,
             ChunkTerrainBuffer terrain,
             double globalMultiplier,
             IReadOnlyList<EcologySpawnRuleSnapshot> rules,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken,
+            IChunkEcologyNeighborhoodTagResolver neighborhoodTagResolver = null)
         {
             if (terrain == null)
                 throw new ArgumentNullException(nameof(terrain));
@@ -270,6 +314,8 @@ namespace FlatWorld.WorldModel
 
             var placements = new List<NaturalItemPlacement>();
             var claimedGuids = new HashSet<int>();
+            var chunkTags = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var pendingCompanions = new List<PendingCompanion>();
             // 每个格子只需要当前格的宿主关系；复用字典避免为每个可走格分配一次 Dictionary。
             var hosts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
             var hostRules = new List<EcologySpawnRuleSnapshot>();
@@ -334,6 +380,7 @@ namespace FlatWorld.WorldModel
                             for (int tagIndex = 0; tagIndex < rule.ProvidedTags.Count; tagIndex++)
                             {
                                 string tag = rule.ProvidedTags[tagIndex];
+                                chunkTags.Add(tag);
                                 if (!hosts.TryGetValue(tag, out int currentHostGuid) ||
                                     guid < currentHostGuid)
                                 {
@@ -365,25 +412,183 @@ namespace FlatWorld.WorldModel
                             continue;
                         }
 
-                        for (int itemIndex = 0; itemIndex < rule.ItemCount; itemIndex++)
+                        if (!string.IsNullOrEmpty(rule.RequiredChunkTag))
                         {
-                            int guid = CreateGuid(request, worldX, worldY,
-                                rule, itemIndex, hostGuid, claimedGuids);
-                            ResolveCompanionOffset(request, worldX, worldY, rule,
-                                itemIndex, out float offsetX, out float offsetY);
-                            placements.Add(new NaturalItemPlacement(guid, rule.ItemId, x, y,
-                                offsetX, offsetY, rule.RuleId, hostGuid));
+                            pendingCompanions.Add(new PendingCompanion(rule, x, y,
+                                worldX, worldY, hostGuid));
+                            continue;
                         }
+
+                        AddCompanionPlacements(request, rule, x, y, worldX, worldY,
+                            hostGuid, claimedGuids, placements);
                     }
                 }
+            }
+
+            var neighborhoodTags = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
+            for (int i = 0; i < pendingCompanions.Count; i++)
+            {
+                if ((i & 63) == 0)
+                    cancellationToken.ThrowIfCancellationRequested();
+                PendingCompanion pending = pendingCompanions[i];
+                if (!HasRequiredTag(request, rules, chunkTags, neighborhoodTags,
+                        pending.Rule, neighborhoodTagResolver, cancellationToken))
+                    continue;
+
+                AddCompanionPlacements(request, pending.Rule, pending.LocalX,
+                    pending.LocalY, pending.WorldX, pending.WorldY, pending.HostGuid,
+                    claimedGuids, placements);
             }
 
             return placements.Count == 0 ? ChunkEcologyData.Empty : new ChunkEcologyData(placements);
         }
 
+        /// <summary>当前区块优先；仅本区块无标签且规则允许时查询周围八个区块。</summary>
+        private static bool HasRequiredTag(ChunkGenerationRequest request,
+            IReadOnlyList<EcologySpawnRuleSnapshot> rules, ISet<string> chunkTags,
+            IDictionary<string, bool> neighborhoodTags, EcologySpawnRuleSnapshot rule,
+            IChunkEcologyNeighborhoodTagResolver resolver, CancellationToken cancellationToken)
+        {
+            string tag = rule.RequiredChunkTag;
+            if (chunkTags.Contains(tag)) return true;
+            if (rule.RequiredTagChunkRadius == 0) return false;
+            if (neighborhoodTags.TryGetValue(tag, out bool found)) return found;
+            if (resolver == null)
+                throw new InvalidOperationException("邻区自然物标签查询器未提供。");
+
+            found = HasHostRuleProvidingTag(rules, tag) &&
+                HasTagInNeighborChunks(request, tag, resolver, cancellationToken);
+            neighborhoodTags[tag] = found;
+            return found;
+        }
+
+        /// <summary>只认天然宿主规则提供的标签，不用尚未生成的伴生物充当花朵。</summary>
+        private static bool HasHostRuleProvidingTag(
+            IReadOnlyList<EcologySpawnRuleSnapshot> rules, string tag)
+        {
+            for (int i = 0; i < rules.Count; i++)
+            {
+                EcologySpawnRuleSnapshot rule = rules[i];
+                if (rule != null && !rule.CompanionOnly && RuleProvidesTag(rule, tag))
+                    return true;
+            }
+            return false;
+        }
+
+        /// <summary>按固定坐标顺序查询八邻区，Wrapped 世界跳过绕回后的重复区块。</summary>
+        private static bool HasTagInNeighborChunks(ChunkGenerationRequest request, string tag,
+            IChunkEcologyNeighborhoodTagResolver resolver, CancellationToken cancellationToken)
+        {
+            Int2 origin = request.Address.ChunkOrigin;
+            int width = request.Profile.Width;
+            int height = request.Profile.Height;
+            var seen = new HashSet<Int2>
+            {
+                new Int2(request.Topology.NormalizeX(origin.X),
+                    request.Topology.NormalizeY(origin.Y))
+            };
+            for (int offsetY = -1; offsetY <= 1; offsetY++)
+            for (int offsetX = -1; offsetX <= 1; offsetX++)
+            {
+                if (offsetX == 0 && offsetY == 0) continue;
+                cancellationToken.ThrowIfCancellationRequested();
+                long rawX = (long)origin.X + (long)offsetX * width;
+                long rawY = (long)origin.Y + (long)offsetY * height;
+                if (rawX < int.MinValue || rawX > int.MaxValue ||
+                    rawY < int.MinValue || rawY > int.MaxValue)
+                    continue;
+                Int2 neighborOrigin = new(
+                    request.Topology.NormalizeX((int)rawX),
+                    request.Topology.NormalizeY((int)rawY));
+                if (!seen.Add(neighborOrigin)) continue;
+                var neighborRequest = new ChunkGenerationRequest(
+                    request.WorldEpoch,
+                    new WorldAddress(request.Address.DimensionId, neighborOrigin),
+                    request.WorldSeed, request.RequestVersion, request.Profile, request.Topology);
+                if (resolver.HasHostTagInChunk(neighborRequest, tag, cancellationToken))
+                    return true;
+            }
+            return false;
+        }
+
+        /// <summary>对邻区复用正式宿主判定，找到第一朵天然花后立即停止扫描。</summary>
+        public static bool HasHostTagInChunk(ChunkGenerationRequest request,
+            ChunkTerrainBuffer terrain, double globalMultiplier,
+            IReadOnlyList<EcologySpawnRuleSnapshot> rules, string tag,
+            CancellationToken cancellationToken)
+        {
+            if (terrain == null) throw new ArgumentNullException(nameof(terrain));
+            if (globalMultiplier <= 0d || rules == null)
+                return false;
+
+            var taggedRules = new List<EcologySpawnRuleSnapshot>();
+            for (int i = 0; i < rules.Count; i++)
+            {
+                EcologySpawnRuleSnapshot rule = rules[i];
+                if (rule != null && !rule.CompanionOnly && RuleProvidesTag(rule, tag))
+                    taggedRules.Add(rule);
+            }
+            if (taggedRules.Count == 0) return false;
+
+            int startX = request.Address.ChunkOrigin.X;
+            int startY = request.Address.ChunkOrigin.Y;
+            for (int y = 0; y < terrain.Height; y++)
+            for (int x = 0; x < terrain.Width; x++)
+            {
+                if (((y * terrain.Width + x) & 63) == 0)
+                    cancellationToken.ThrowIfCancellationRequested();
+                TerrainCell cell = terrain.GetCell(x, y);
+                if (!IsValidNaturalCell(cell, terrain, x, y)) continue;
+                double temperature = ReadEnvironment(terrain, "temperature", x, y);
+                double precipitation = ReadEnvironment(terrain, "precipitation", x, y);
+                double height = ReadEnvironment(terrain, "height", x, y);
+                double riverFloodplain = ReadEnvironment(terrain, "riverFloodplain", x, y);
+                int worldX = request.Topology.NormalizeX(startX + x);
+                int worldY = request.Topology.NormalizeY(startY + y);
+                for (int ruleIndex = 0; ruleIndex < taggedRules.Count; ruleIndex++)
+                {
+                    EcologySpawnRuleSnapshot rule = taggedRules[ruleIndex];
+                    if (!rule.Matches(cell.BiomeId, temperature, precipitation, height,
+                            riverFloodplain) ||
+                        !MatchesDistribution(request, worldX, worldY, rule))
+                        continue;
+                    double chance = Clamp01(globalMultiplier * rule.SpawnChance *
+                        rule.SpawnChanceMultiplier);
+                    if (PassesChance(request, worldX, worldY, rule, chance, PlacementSalt))
+                        return true;
+                }
+            }
+            return false;
+        }
+
+        /// <summary>判断一条宿主规则是否提供指定标签。</summary>
+        private static bool RuleProvidesTag(EcologySpawnRuleSnapshot rule, string tag)
+        {
+            for (int i = 0; i < rule.ProvidedTags.Count; i++)
+                if (string.Equals(rule.ProvidedTags[i], tag, StringComparison.OrdinalIgnoreCase))
+                    return true;
+            return false;
+        }
+
         #endregion
 
         #region 生成辅助
+
+        /// <summary>按已确认的宿主生成伴生物，并保留宿主 GUID 供加载时核验。</summary>
+        private static void AddCompanionPlacements(ChunkGenerationRequest request,
+            EcologySpawnRuleSnapshot rule, int localX, int localY, int worldX, int worldY,
+            int hostGuid, HashSet<int> claimedGuids, List<NaturalItemPlacement> placements)
+        {
+            for (int itemIndex = 0; itemIndex < rule.ItemCount; itemIndex++)
+            {
+                int guid = CreateGuid(request, worldX, worldY,
+                    rule, itemIndex, hostGuid, claimedGuids);
+                ResolveCompanionOffset(request, worldX, worldY, rule,
+                    itemIndex, out float offsetX, out float offsetY);
+                placements.Add(new NaturalItemPlacement(guid, rule.ItemId, localX, localY,
+                    offsetX, offsetY, rule.RuleId, hostGuid));
+            }
+        }
 
         private static bool IsValidNaturalCell(TerrainCell cell, ChunkTerrainBuffer terrain,
             int x, int y)

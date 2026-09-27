@@ -14,7 +14,7 @@ public partial class EcologyWorldSaveData
 {
     #region 世界配置
 
-    public const int CurrentDataVersion = 5;
+    public const int CurrentDataVersion = 7;
     private const string RetiredWeedItemId = "Weed";
     private const string RetiredWeedRuleId = "surface.grassland.weed";
 
@@ -483,6 +483,9 @@ public partial class EcologyRuleSaveData
     public double CompanionMaxRadius;
     // 当前规则的河流泛滥平原限制。
     public double MinRiverFloodplainStrength;
+    // 伴生物所需的自然物标签及区块搜索半径。
+    public string RequiredChunkTag;
+    public int RequiredTagChunkRadius;
 
     #endregion
 
@@ -512,6 +515,8 @@ public partial class EcologyRuleSaveData
             MinRiverFloodplainStrength = snapshot.MinRiverFloodplainStrength,
             CompanionOnly = snapshot.CompanionOnly,
             CompanionHostTag = snapshot.CompanionHostTag,
+            RequiredChunkTag = snapshot.RequiredChunkTag,
+            RequiredTagChunkRadius = snapshot.RequiredTagChunkRadius,
             CompanionSpawnChance = snapshot.CompanionSpawnChance,
             CompanionOffsetX = snapshot.CompanionOffsetX,
             CompanionOffsetY = snapshot.CompanionOffsetY,
@@ -543,6 +548,7 @@ public partial class EcologyRuleSaveData
             ProvidedTags,
             CompanionOnly,
             CompanionHostTag,
+            RequiredChunkTag,
             CompanionSpawnChance,
             CompanionOffsetX,
             CompanionOffsetY,
@@ -552,7 +558,8 @@ public partial class EcologyRuleSaveData
             DistributionMode,
             PatchSpacing,
             PatchRadius,
-            PatchChance);
+            PatchChance,
+            RequiredTagChunkRadius);
     }
 
     #endregion

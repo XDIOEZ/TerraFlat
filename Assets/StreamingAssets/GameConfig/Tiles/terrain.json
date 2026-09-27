@@ -4,6 +4,7 @@
     {
       "id": "TileBase_Stone",
       "runtimeTileId": 0,
+      "loadCapacity": 10,
       "displayName": "矿洞石地",
       "tileAsset": "TileBase_Stone",
       "data": {
@@ -15,6 +16,7 @@
     {
       "id": "Tile_Grass",
       "runtimeTileId": 1,
+      "loadCapacity": 8,
       "displayName": "Tile_Grass",
       "tileAsset": "Tile_Grass",
       "data": {
@@ -34,6 +36,7 @@
     {
       "id": "Tile_Sand",
       "runtimeTileId": 3,
+      "loadCapacity": 5,
       "displayName": "Tile_Sand",
       "tileAsset": "Tile_Sand",
       "data": {
@@ -50,6 +53,7 @@
     {
       "id": "Tile_Stone",
       "runtimeTileId": 4,
+      "loadCapacity": 10,
       "displayName": "Tile_Stone",
       "tileAsset": "Tile_Stone",
       "data": {
@@ -61,6 +65,7 @@
     {
       "id": "Tile_Snow",
       "runtimeTileId": 5,
+      "loadCapacity": 8,
       "displayName": "Tile_Snow",
       "tileAsset": "TileBase_Snow",
       "data": {
@@ -72,6 +77,7 @@
     {
       "id": "Tile_Ice",
       "runtimeTileId": 9,
+      "loadCapacity": 8,
       "displayName": "Tile_Ice",
       "tileAsset": "TileBase_Ice",
       "data": {
@@ -83,6 +89,7 @@
     {
       "id": "Tile_Snow_Variant2",
       "runtimeTileId": 10,
+      "loadCapacity": 8,
       "displayName": "Tile_Snow_Variant2",
       "tileAsset": "Winter_1",
       "data": {
@@ -94,6 +101,7 @@
     {
       "id": "Tile_Snow_Variant3",
       "runtimeTileId": 11,
+      "loadCapacity": 8,
       "displayName": "Tile_Snow_Variant3",
       "tileAsset": "Winter_3",
       "data": {
@@ -105,6 +113,7 @@
     {
       "id": "Tile_Peat",
       "runtimeTileId": 28,
+      "loadCapacity": 8,
       "displayName": "泥炭地块",
       "tileAsset": "Tile_Peat",
       "data": {
@@ -121,6 +130,7 @@
     {
       "id": "Tile_Farmland",
       "runtimeTileId": 14,
+      "loadCapacity": 8,
       "displayName": "耕地",
       "tileAsset": "Tile_Farmland",
       "data": {

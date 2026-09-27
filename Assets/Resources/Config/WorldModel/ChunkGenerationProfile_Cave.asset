@@ -149,60 +149,13 @@ MonoBehaviour:
   - Id: tile.block.27
     Value: Tile_Floor_Bronze
   ecologyGlobalMultiplier: 1
-  ecologyRules:
-  - RuleId: cave.flora.mushroom
-    ItemId: MushroomCrop
-    ItemCount: 1
-    SpawnChance: 0.42
-    SpawnChanceMultiplier: 1
-    DistributionMode: 1
-    PatchSpacing: 12
-    PatchRadius: 2.5
-    PatchChance: 0.04
-    BiomeMask: 0
-    MinTemperature: 0
-    MaxTemperature: 1
-    MinPrecipitation: 0
-    MaxPrecipitation: 1
-    MinHeight: 0
-    MaxHeight: 1
-    MinRiverFloodplainStrength: 0
-    ProvidedTags: []
-    CompanionOnly: 0
-    CompanionHostTag: 
-    CompanionSpawnChance: 0
-    CompanionOffsetX: 0
-    CompanionOffsetY: 0
-    CompanionMinRadius: 0
-    CompanionMaxRadius: 0
-  caveResourceRules:
-  - RuleId: cave.resource.niter
-    ItemId: Mine_Niter
-    VeinThreshold: 0.88
-    VeinScale: 0.03
-    NoiseOffset: 6607
-  - RuleId: cave.resource.tin
-    ItemId: Mine_Tin
-    VeinThreshold: 0.82
-    VeinScale: 0.032
-    NoiseOffset: 2207
-  - RuleId: cave.resource.iron
-    ItemId: Mine_Iron
-    VeinThreshold: 0.77
-    VeinScale: 0.036
-    NoiseOffset: 1103
-  - RuleId: cave.resource.copper
-    ItemId: Mine_Copper
-    VeinThreshold: 0.7
-    VeinScale: 0.044
-    NoiseOffset: 3301
-  - RuleId: cave.resource.coal
-    ItemId: Mine_Coal
-    VeinThreshold: 0.61
-    VeinScale: 0.052
-    NoiseOffset: 4409
-  - RuleId: cave.resource.stone
-    ItemId: Mine_Stone
-    VeinThreshold: 0
-    VeinScale: 0.06
-    NoiseOffset: 5501
+  ecologyRuleIds:
+  - cave.flora.mushroom
+  caveResourceRuleIds:
+  - cave.resource.gold
+  - cave.resource.niter
+  - cave.resource.tin
+  - cave.resource.iron
+  - cave.resource.copper
+  - cave.resource.coal
+  - cave.resource.stone

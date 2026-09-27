@@ -17,6 +17,7 @@ namespace FlatWorld.Networking.Gameplay
         private readonly List<Vector3> observerPositions = new List<Vector3>();
         private int lastObserverSignature;
         private Vector2Int lastNavigationAnchorChunk = new Vector2Int(int.MinValue, int.MinValue);
+        private int lastNavigationLoadDistance = -1;
         private float nextRefreshTime;
 
         [SerializeField, Min(1)] private int loadDistance = 2;
@@ -108,22 +109,50 @@ namespace FlatWorld.Networking.Gameplay
             if (observerPositions.Count == 0)
                 return;
 
+            int activeDistance = ResolveLocalLoadDistance();
+            int prefetchDistance = activeDistance + Mathf.Max(1, inactiveDistance - loadDistance);
+            int retainedDistance = prefetchDistance + Mathf.Max(1, destroyDistance - inactiveDistance);
+            unchecked
+            {
+                signature = signature * 31 + activeDistance;
+            }
+
             if (signature == lastObserverSignature)
                 return;
 
             lastObserverSignature = signature;
             ChunkMgr.Instance.RefreshChunksAroundObservers(
                 observerPositions,
-                loadDistance,
-                inactiveDistance,
-                destroyDistance);
+                activeDistance,
+                prefetchDistance,
+                retainedDistance);
 
-            RefreshLocalNavigationAnchor();
+            RefreshLocalNavigationAnchor(activeDistance);
 
             Debug.Log($"[联机区块] 已按 {observerPositions.Count} 个玩家刷新区块窗口");
         }
 
-        private void RefreshLocalNavigationAnchor()
+        /// <summary>联机流送窗口读取本机玩家的区块距离，其他观察者复用该客户端的配置。</summary>
+        private int ResolveLocalLoadDistance()
+        {
+            for (int i = 0; i < observers.Count; i++)
+            {
+                Transform observer = observers[i];
+                NetworkIdentity identity = observer != null ? observer.GetComponent<NetworkIdentity>() : null;
+                if (identity == null || !identity.isOwned)
+                    continue;
+
+                NetworkWorldPlayer networkPlayer = observer.GetComponent<NetworkWorldPlayer>();
+                Mod_ChunkLoader loader = networkPlayer?.CorePlayer?.GetComponentInChildren<Mod_ChunkLoader>(true);
+                if (loader != null)
+                    return loader.CurrentLoadChunkDistance;
+            }
+
+            return loadDistance;
+        }
+
+        /// <summary>本地导航窗口与联机区块加载距离保持一致。</summary>
+        private void RefreshLocalNavigationAnchor(int activeDistance)
         {
             Transform anchor = null;
             for (int i = 0; i < observers.Count; i++)
@@ -142,11 +171,12 @@ namespace FlatWorld.Networking.Gameplay
                 return;
 
             Vector2Int anchorChunk = ChunkMgr.NormalizeChunkPosition(Chunk.GetChunkPosition(anchor.position));
-            if (anchorChunk == lastNavigationAnchorChunk)
+            if (anchorChunk == lastNavigationAnchorChunk && activeDistance == lastNavigationLoadDistance)
                 return;
 
             lastNavigationAnchorChunk = anchorChunk;
-            WorldNavigationManager.Instance?.RefreshLoadedRegion(anchorChunk, loadDistance);
+            lastNavigationLoadDistance = activeDistance;
+            WorldNavigationManager.Instance?.RefreshLoadedRegion(anchorChunk, activeDistance);
         }
 
         private static bool IsValidObserverPosition(Vector3 position)

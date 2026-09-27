@@ -15,6 +15,8 @@ public sealed class RuntimeTileDefinition
     public int RuntimeTileId { get; }
     public string DisplayName { get; }
     public string TileAssetId { get; }
+    /// <summary>当前地表允许放置的最低承重需求上限。</summary>
+    public int LoadCapacity { get; }
     public TileBase TileBase { get; }
     public TileData TileDataTemplate { get; }
     public IReadOnlyList<TileBlockBehaviour> Behaviours { get; }
@@ -30,6 +32,7 @@ public sealed class RuntimeTileDefinition
         RuntimeTileId = dto.RuntimeTileId;
         DisplayName = string.IsNullOrWhiteSpace(dto.DisplayName) ? dto.Id : dto.DisplayName;
         TileAssetId = dto.TileAsset;
+        LoadCapacity = dto.LoadCapacity;
         TileBase = tile;
         TileDataTemplate = template;
         Behaviours = behaviours.AsReadOnly();

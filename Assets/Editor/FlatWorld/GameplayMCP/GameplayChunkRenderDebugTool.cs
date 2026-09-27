@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using FlatWorld.WorldModel;
 using MCPForUnity.Editor.Helpers;
 using MCPForUnity.Editor.Tools;
@@ -14,7 +15,7 @@ namespace FlatWorld.GameplayMCP
     /// </summary>
     [McpForUnityTool(
         "gameplay_chunk_render_debug",
-        Description = "Read-only audit of streamed chunks and bottlenecks: generation queue, commit queue, presentation queue, data readiness and terrain BRG registration.",
+        Description = "Read-only chunk loading diagnosis. status: queues, driver heartbeat, per-stage timings, oldest requests and BRG registration. sample: observe 1-20 real seconds without moving/resuming the game; report throughput, budget hits and save JSON.",
         Group = "core")]
     public static class GameplayChunkRenderDebugTool
     {
@@ -23,7 +24,24 @@ namespace FlatWorld.GameplayMCP
         /// <summary>每类异常最多返回的地址数，避免高视距产生过大的 MCP 响应。</summary>
         private const int MaxSamplesPerCategory = 32;
 
-        public static object HandleCommand(JObject parameters)
+        public sealed class Parameters
+        {
+            [ToolParameter("status or sample", Required = false, DefaultValue = "status")]
+            public string action { get; set; }
+            [ToolParameter("Real-time sample duration, 1-20 seconds", Required = false, DefaultValue = "10")]
+            public float seconds { get; set; }
+        }
+
+        public static async Task<object> HandleCommand(JObject parameters)
+        {
+            string action = parameters?["action"]?.ToString()?.Trim().ToLowerInvariant() ?? "status";
+            if (action == "sample")
+                return await GameplayChunkStreamingDiagnostics.Sample(parameters?["seconds"]?.Value<float>() ?? 10f);
+            if (action != "status") return new ErrorResponse("Use status or sample.");
+            return ReadStatus();
+        }
+
+        internal static object ReadStatus()
         {
             if (!GameplayMcpRuntime.TryGetPlayerContext(
                     out Player player,
@@ -194,6 +212,7 @@ namespace FlatWorld.GameplayMCP
                 ["missingBrgOwner"] = missingBrgOwner,
                 ["zeroBrgVisuals"] = zeroBrgVisuals
             };
+            data["streamingDiagnostics"] = GameplayChunkStreamingDiagnostics.Capture(chunkManager);
 
             return new SuccessResponse("FlatWorld chunk render audit.", data);
         }

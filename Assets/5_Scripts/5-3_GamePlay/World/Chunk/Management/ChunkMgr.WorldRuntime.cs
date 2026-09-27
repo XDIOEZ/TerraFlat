@@ -183,6 +183,7 @@ public partial class ChunkMgr
         if (IsWorldRuntimeShuttingDown)
             return;
 
+        RecordStreamingAdvance();
         using (WorldRuntimeAdvanceMarker.Auto())
         {
             runtimeChunkManager?.Advance(deltaSeconds, authoritativeSimulation,
@@ -214,6 +215,11 @@ public partial class ChunkMgr
         if (string.IsNullOrWhiteSpace(worldId))
             worldId = "world";
         var world = new WorldRuntime(worldId, runtimeEpoch);
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        slowChunkLogCount = 0;
+        slowChunkLogWindowStart = Time.realtimeSinceStartup;
+        world.StreamingDiagnostics.SlowGenerationCompleted += LogSlowChunkGeneration;
+#endif
         runtimeGenerator = new DeterministicChunkGenerator(GameRes.ExistingInstance?.LiquidTypes);
         runtimeChunkManager = new RuntimeChunkMgr(world, runtimeGenerator,
             EffectiveBackgroundGenerationConcurrency, new UnityWorldAddressNormalizer());
@@ -232,6 +238,10 @@ public partial class ChunkMgr
         runtimeChunkManager.CommitCompleted();
         runtimeEpoch++;
         runtimeChunkManager.World.BeginNewEpoch(runtimeEpoch);
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        slowChunkLogCount = 0;
+        slowChunkLogWindowStart = Time.realtimeSinceStartup;
+#endif
     }
 
     /// <summary>彻底关闭世界运行时，释放区块、任务和事件资源。</summary>
@@ -263,6 +273,9 @@ public partial class ChunkMgr
                 WorldRuntime world = manager.World;
                 try
                 {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                    world.StreamingDiagnostics.SlowGenerationCompleted -= LogSlowChunkGeneration;
+#endif
                     manager.Dispose();
                 }
                 finally

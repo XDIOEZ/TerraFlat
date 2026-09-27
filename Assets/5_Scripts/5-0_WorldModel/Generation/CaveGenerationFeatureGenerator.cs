@@ -78,7 +78,8 @@ namespace FlatWorld.WorldModel
 
         /// <summary>生成洞穴矿脉、散矿与返回地表的出口。</summary>
         public static ChunkEcologyData GenerateCave(ChunkGenerationRequest request,
-            ChunkTerrainBuffer terrain, CancellationToken cancellationToken)
+            ChunkTerrainBuffer terrain, CancellationToken cancellationToken,
+            IChunkEcologyNeighborhoodTagResolver neighborhoodTagResolver)
         {
             if (terrain == null)
                 throw new ArgumentNullException(nameof(terrain));
@@ -91,7 +92,7 @@ namespace FlatWorld.WorldModel
                 cancellationToken);
             var occupiedCells = new HashSet<int>(portalCells);
             AddConfiguredCaveFlora(request, terrain, settings, placements, claimedGuids,
-                occupiedCells, cancellationToken);
+                occupiedCells, cancellationToken, neighborhoodTagResolver);
 
             IReadOnlyList<CaveResourceRuleSnapshot> resourceRules =
                 request.Profile.CaveResourceRules;
@@ -670,14 +671,16 @@ namespace FlatWorld.WorldModel
         private static void AddConfiguredCaveFlora(ChunkGenerationRequest request,
             ChunkTerrainBuffer terrain, ChunkGenerationSettingsSnapshot settings,
             List<NaturalItemPlacement> placements, HashSet<int> claimedGuids,
-            HashSet<int> occupiedCells, CancellationToken cancellationToken)
+            HashSet<int> occupiedCells, CancellationToken cancellationToken,
+            IChunkEcologyNeighborhoodTagResolver neighborhoodTagResolver)
         {
             ChunkEcologyData flora = ChunkEcologyGenerator.Generate(
                 request,
                 terrain,
                 request.Profile.EcologyGlobalMultiplier,
                 request.Profile.EcologyRules,
-                cancellationToken);
+                cancellationToken,
+                neighborhoodTagResolver);
             IReadOnlyList<NaturalItemPlacement> floraPlacements = flora.Placements;
             for (int i = 0; i < floraPlacements.Count; i++)
             {

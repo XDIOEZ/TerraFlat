@@ -698,7 +698,7 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
         if (chunkLoader != null)
         {
             // 复用玩家自己的动态视距、预取距离和性能配置，避免切维度时只保留中心区块。
-            chunkLoader.RefreshChunksForCameraView();
+            chunkLoader.RefreshConfiguredChunkWindow();
         }
         else
         {

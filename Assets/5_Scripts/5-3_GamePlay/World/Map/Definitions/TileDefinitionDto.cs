@@ -42,6 +42,8 @@ public sealed class TileDefinitionDto
     [JsonProperty("runtimeTileId")] public int RuntimeTileId;
     [JsonProperty("displayName")] public string DisplayName;
     [JsonProperty("tileAsset", Required = Required.Always)] public string TileAsset;
+    // 地表可承受的建筑等级；旧 MOD 地块未配置时按普通泥土的 8 点处理。
+    [JsonProperty("loadCapacity")] public int LoadCapacity = 8;
     [JsonProperty("data", Required = Required.Always)] public TileComponentDefinitionDto Data;
     [JsonProperty("behaviours")] public List<TileComponentDefinitionDto> Behaviours = new();
     [JsonProperty("damageProfile")] public TileBuildingDamageProfile DamageProfile = new();

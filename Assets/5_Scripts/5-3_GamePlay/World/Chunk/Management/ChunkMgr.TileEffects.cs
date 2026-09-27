@@ -290,7 +290,9 @@ public partial class ChunkMgr
 
             if (!TryGetRuntimeTerrainTile(candidateCenter, out RuntimeTerrainTileSample candidate) ||
                 candidate.Terrain.GetGrass(candidate.LocalCell.x, candidate.LocalCell.y) !=
-                ChunkTerrainData.GrassPresent)
+                ChunkTerrainData.GrassPresent ||
+                candidate.LiquidDepth > 0f ||
+                !candidate.Terrain.IsWalkable(candidate.LocalCell.x, candidate.LocalCell.y))
                 continue;
 
             sample = candidate;

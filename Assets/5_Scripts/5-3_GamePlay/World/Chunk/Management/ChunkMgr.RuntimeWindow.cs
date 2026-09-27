@@ -23,6 +23,10 @@ public partial class ChunkMgr
         public bool PresentationQueued;
         public bool PresentationInProgress;
         public IEnumerator PresentationRoutine;
+        // 诊断时间线：不影响排序或帧预算，重复窗口检查不能重置队龄。
+        public long DiagnosticQueuedAt;
+        public int DiagnosticPauseRevision;
+        public bool DiagnosticBaseReported;
     }
 
     /// <summary>记录 ChunkView 的入池时刻与资源裁剪状态。</summary>
@@ -293,6 +297,8 @@ public partial class ChunkMgr
         Vector2Int? prefetchDistance = null, Vector2Int? presentationDistance = null)
     {
         EnsureWorldRuntime();
+        using var windowTiming = WorldRuntime.StreamingDiagnostics.Measure("window.refresh");
+        WorldRuntime.StreamingDiagnostics.Count("window.refreshes");
         runtimeWindowUsesLocalPresentation = includeLocalPresentation;
         activeDistance = new Vector2Int(
             Mathf.Max(1, activeDistance.x),
@@ -527,10 +533,10 @@ public partial class ChunkMgr
         runtimePrefetchCoroutine = null;
     }
 
-    /// <summary>可见区块的数据或基础地面仍未就绪时，暂停外圈预取。</summary>
+    /// <summary>活动圈的数据或基础地面仍未就绪时，暂停外圈预取；画面预加载圈可继续轮转。</summary>
     private bool HasUrgentRuntimeChunkWork()
     {
-        foreach (RuntimeWorldAddress address in runtimeWindowTargets)
+        foreach (RuntimeWorldAddress address in runtimeReadyTargets)
         {
             if (!TryGetChunkRuntime(address, out ChunkRuntime chunk) ||
                 chunk.DataStatus != ChunkDataStatus.Ready || chunk.Terrain == null)
@@ -591,6 +597,9 @@ public partial class ChunkMgr
         if (!binding.PresentationQueued)
         {
             binding.PresentationQueued = true;
+            binding.DiagnosticQueuedAt = Stopwatch.GetTimestamp();
+            binding.DiagnosticPauseRevision = WorldRuntime.StreamingDiagnostics.PauseRevision;
+            binding.DiagnosticBaseReported = false;
             runtimePresentationQueue.Add(address);
         }
 
@@ -621,6 +630,11 @@ public partial class ChunkMgr
             }
 
             int continuationBudget = Mathf.Max(1, maxChunkPresentationContinuationStepsPerFrame);
+            if (runtimePresentationQueue.Count > 0)
+            {
+                if (startBudget <= 0) WorldRuntime.StreamingDiagnostics.Count("view.start_count_limit_hits");
+                if (Stopwatch.GetTimestamp() >= startDeadline) WorldRuntime.StreamingDiagnostics.Count("view.start_time_limit_hits");
+            }
             long continuationDeadline = Stopwatch.GetTimestamp() + (long)(
                 Stopwatch.Frequency * (double)Mathf.Max(0.1f,
                     maxChunkPresentationContinuationMillisecondsPerFrame) / 1000d);
@@ -643,6 +657,11 @@ public partial class ChunkMgr
             runtimePresentationRescheduleBuffer.Clear();
 
             // 即使本轮刚好清空也保留到下一帧，防止同帧晚到结果重新启动协程绕过预算。
+            if (runtimePresentationContinuationQueue.Count > 0)
+            {
+                if (continuationBudget <= 0) WorldRuntime.StreamingDiagnostics.Count("view.step_count_limit_hits");
+                if (Stopwatch.GetTimestamp() >= continuationDeadline) WorldRuntime.StreamingDiagnostics.Count("view.step_time_limit_hits");
+            }
             yield return null;
         }
 
@@ -706,12 +725,21 @@ public partial class ChunkMgr
         if (binding.View != null && binding.View.IsBound && ReferenceEquals(binding.View.Model, current))
             return;
 
+        using var startTiming = WorldRuntime.StreamingDiagnostics.Measure("view.start");
+        if (binding.DiagnosticPauseRevision == WorldRuntime.StreamingDiagnostics.PauseRevision)
+            WorldRuntime.StreamingDiagnostics.Record("view.queue_wait",
+                ChunkStreamingDiagnostics.ElapsedMs(binding.DiagnosticQueuedAt));
         RecycleRuntimeChunkView(binding);
         ChunkView prefab = DimensionManager.Instance?.GetActiveChunkViewPrefab();
         if (prefab == null)
+        {
+            WorldRuntime.StreamingDiagnostics.Count("view.missing_prefab");
             return;
+        }
 
-        ChunkView view = AcquireChunkView(prefab);
+        ChunkView view;
+        using (WorldRuntime.StreamingDiagnostics.Measure("view.acquire"))
+            view = AcquireChunkView(prefab);
         binding.View = view;
         try
         {
@@ -719,6 +747,7 @@ public partial class ChunkMgr
         }
         catch (Exception exception)
         {
+            WorldRuntime.StreamingDiagnostics.Count("view.failed");
             RecycleRuntimeChunkView(binding);
             Debug.LogError($"[ChunkMgr] 区块主线程表现绑定失败 {address}: {exception}", this);
             return;
@@ -728,6 +757,7 @@ public partial class ChunkMgr
             WorldRuntime, current, includeNavigation: true, renderersPerFrame: 1);
         binding.PresentationInProgress = true;
         runtimePresentationInProgressCount++;
+        WorldRuntime.StreamingDiagnostics.Count("view.started");
 
         // 第一次 MoveNext 会完成最高优先级的基础地形绑定后才 yield。
         // 后续表现器按玩家实时距离继续推进，避免旧位置任务占住预算。
@@ -750,11 +780,23 @@ public partial class ChunkMgr
 
         try
         {
-            if (binding.PresentationRoutine.MoveNext())
+            bool hasNext;
+            using (WorldRuntime.StreamingDiagnostics.Measure("view.step"))
+                hasNext = binding.PresentationRoutine.MoveNext();
+            if (!binding.DiagnosticBaseReported && binding.View != null && binding.View.IsBaseTerrainPresented)
+            {
+                binding.DiagnosticBaseReported = true;
+                WorldRuntime.StreamingDiagnostics.Count("view.base_ready");
+                if (binding.DiagnosticPauseRevision == WorldRuntime.StreamingDiagnostics.PauseRevision)
+                    WorldRuntime.StreamingDiagnostics.Record("view.base_latency",
+                        ChunkStreamingDiagnostics.ElapsedMs(binding.DiagnosticQueuedAt));
+            }
+            if (hasNext)
                 return true;
         }
         catch (Exception exception)
         {
+            WorldRuntime.StreamingDiagnostics.Count("view.failed");
             FinishRuntimeChunkPresentation(binding);
             RecycleRuntimeChunkView(binding);
             Debug.LogError($"[ChunkMgr] 区块主线程分帧绑定失败 {address}: {exception}", this);
@@ -821,6 +863,12 @@ public partial class ChunkMgr
             return;
 
         binding.PresentationInProgress = false;
+        bool completed = binding.View != null && binding.View.IsBound;
+        WorldRuntime?.StreamingDiagnostics.Count(completed ? "view.completed" : "view.cancelled");
+        if (completed && WorldRuntime != null &&
+            binding.DiagnosticPauseRevision == WorldRuntime.StreamingDiagnostics.PauseRevision)
+            WorldRuntime.StreamingDiagnostics.Record("view.ready_latency",
+                ChunkStreamingDiagnostics.ElapsedMs(binding.DiagnosticQueuedAt));
         runtimePresentationInProgressCount = Mathf.Max(0, runtimePresentationInProgressCount - 1);
     }
 
@@ -873,6 +921,8 @@ public partial class ChunkMgr
     /// <summary>后台生成完成后修复画面绑定，处理旧任务晚到或区块被回收的情况。</summary>
     private void ReconcileRuntimeWindowBindings()
     {
+        using var reconcileTiming = WorldRuntime != null
+            ? WorldRuntime.StreamingDiagnostics.Measure("window.reconcile") : default;
         MaintainRuntimeChunkViewPool();
         if (runtimeChunkManager == null || activeRuntimeBindings.Count == 0)
             return;
@@ -892,6 +942,7 @@ public partial class ChunkMgr
             }
             catch (Exception exception)
             {
+                WorldRuntime.StreamingDiagnostics.Count("restore.failed");
                 // 单个存档区块异常不能中断其它区块的主线程提交和表现。
                 binding.FailedRestoreChunk = current;
                 Debug.LogError($"[ChunkMgr] 区块状态恢复失败 {pair.Key}: {exception}", this);
@@ -924,14 +975,17 @@ public partial class ChunkMgr
 
         if (!ReferenceEquals(binding.RestoredTerrainChunk, chunk))
         {
-            saveData.RestoreRuntimeTerrainForChunk(address, chunk);
+            using (WorldRuntime.StreamingDiagnostics.Measure("restore.terrain"))
+                saveData.RestoreRuntimeTerrainForChunk(address, chunk);
             binding.RestoredTerrainChunk = chunk;
         }
 
         if (!ReferenceEquals(binding.RestoredEntitiesChunk, chunk) && ItemMgr.Instance != null)
         {
-            saveData.RestoreRuntimeBuildingsForChunk(address);
-            saveData.RestoreRuntimeAiEntitiesForChunk(address);
+            using (WorldRuntime.StreamingDiagnostics.Measure("restore.buildings"))
+                saveData.RestoreRuntimeBuildingsForChunk(address);
+            using (WorldRuntime.StreamingDiagnostics.Measure("restore.entities"))
+                saveData.RestoreRuntimeAiEntitiesForChunk(address);
             binding.RestoredEntitiesChunk = chunk;
         }
 

@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "ecologyRules": [],
+  "caveResourceRules": [
+    {
+      "ruleId": "cave.resource.gold",
+      "itemId": "Mine_Gold",
+      "veinThreshold": 0.92,
+      "veinScale": 0.03,
+      "noiseOffset": 7703
+    },
+    {
+      "ruleId": "cave.resource.niter",
+      "itemId": "Mine_Niter",
+      "veinThreshold": 0.88,
+      "veinScale": 0.03,
+      "noiseOffset": 6607
+    },
+    {
+      "ruleId": "cave.resource.tin",
+      "itemId": "Mine_Tin",
+      "veinThreshold": 0.82,
+      "veinScale": 0.032,
+      "noiseOffset": 2207
+    },
+    {
+      "ruleId": "cave.resource.iron",
+      "itemId": "Mine_Iron",
+      "veinThreshold": 0.77,
+      "veinScale": 0.036,
+      "noiseOffset": 1103
+    },
+    {
+      "ruleId": "cave.resource.copper",
+      "itemId": "Mine_Copper",
+      "veinThreshold": 0.7,
+      "veinScale": 0.044,
+      "noiseOffset": 3301
+    },
+    {
+      "ruleId": "cave.resource.coal",
+      "itemId": "Mine_Coal",
+      "veinThreshold": 0.61,
+      "veinScale": 0.052,
+      "noiseOffset": 4409
+    },
+    {
+      "ruleId": "cave.resource.stone",
+      "itemId": "Mine_Stone",
+      "veinThreshold": 0,
+      "veinScale": 0.06,
+      "noiseOffset": 5501
+    }
+  ]
+}

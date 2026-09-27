@@ -1,4 +1,3 @@
-using System;
 using Sirenix.OdinInspector;
 using UnityEngine;
 
@@ -15,7 +14,7 @@ public class Mod_ChunkLoader : Module
     [System.Serializable]
     public struct ChunkDistanceConfig
     {
-        [Tooltip("可见圈外只预生成区块数据，不创建画面或运行模拟")]
+        [Tooltip("预取外圈距离；邻近一圈提前绑定画面，其余只预生成数据，不运行模拟")]
         public int UnActiveDistance;
 
         [Tooltip("区块销毁距离（超过此距离的区块将被销毁）")]
@@ -45,42 +44,28 @@ public class Mod_ChunkLoader : Module
     [SerializeField]
     private ChunkDistanceConfig distanceConfig = new ChunkDistanceConfig(3, 4, 1);
 
-    [Header("动态视距同步")]
-    [Tooltip("是否跟随相机视口自动调整加载范围")]
-    [SerializeField] private bool syncWithCamera = true;
-    [Tooltip("在视口范围外额外加载的Chunk圈数以防止穿帮")]
-    [SerializeField] private int chunkBuffer = 1;
-    [Tooltip("普通玩法自动视距允许的最大Chunk圈数；管理员无限视野会按真实视口需求继续扩展")]
-    [SerializeField, Min(1)] private int maxAutoLoadDistance = 6;
-
     [Header("性能节流")]
-    [Tooltip("区块更新最小间隔（秒），防止高速移动时连续触发重计算")]
+    [Tooltip("滑条调整区块范围后的窗口更新最小间隔（秒）；玩家跨区块时立即刷新")]
     [SerializeField, Min(0.01f)] private float chunkUpdateMinInterval = 0.08f;
     #endregion
 
     #region 运行时字段
-    [Header("区块加载器运行时字段")]
-    [ShowInInspector]
-    private Vector2 lastChunkPos;
-
     /// <summary>
     /// 是否需要更新区块
     /// </summary>
     private bool needsChunkUpdate = false;
     private float _lastChunkUpdateTime = -999f;
     
-    // 动态视距引用
-    private Camera _boundCamera;
-    private Mod_Cam _cameraFollowManager;
-    /// <summary>管理员手动提高的最低加载距离；只作为下限，不关闭相机自动视距同步。</summary>
-    private int _adminMinimumLoadDistance;
-    /// <summary>当前真正用于流送的横纵加载距离；相机宽高比只影响运行时，不写回存档。</summary>
+    /// <summary>当前用于流送的对称加载距离，由持久化区块配置直接决定。</summary>
     private Vector2Int _effectiveLoadDistance;
     private Vector2Int _effectivePrefetchDistance;
     private Vector2Int _effectiveDestroyDistance;
     private bool _effectiveDistancesInitialized;
     private bool _externalStreamingManaged;
-    private bool _hasTrackedChunkPosition;
+    private Mover _movementSource;
+    /// <summary>上次提交给区块窗口的中心；同一区块内移动只更新表现优先级。</summary>
+    private Vector2Int _streamedChunkOrigin;
+    private bool _hasStreamedChunkOrigin;
     #endregion
 
     #region 属性访问器
@@ -122,8 +107,18 @@ public class Mod_ChunkLoader : Module
 
     #region 生命周期方法
 
-    private void OnEnable() => GameManager.Event_PlayerEnterWorld += OnPlayerEnterWorld;
-    private void OnDisable() => GameManager.Event_PlayerEnterWorld -= OnPlayerEnterWorld;
+    private void OnEnable()
+    {
+        GameManager.Event_PlayerEnterWorld += OnPlayerEnterWorld;
+        BindMovementEvent();
+    }
+
+    private void OnDisable()
+    {
+        GameManager.Event_PlayerEnterWorld -= OnPlayerEnterWorld;
+        UnbindMovementEvent();
+        _hasStreamedChunkOrigin = false;
+    }
 
     private void OnPlayerEnterWorld(Player player)
     {
@@ -146,9 +141,8 @@ public class Mod_ChunkLoader : Module
         ModData.ReadData(ref distanceConfig);
         NormalizeDistanceConfig();
         ResetEffectiveDistancesFromConfig();
-        lastChunkPos = ResolveChunkOrigin(transform.position);
-        _hasTrackedChunkPosition = true;
-        ResolveCameraReferences();
+        _hasStreamedChunkOrigin = false;
+        BindMovementEvent();
     }
 
     public override void Save() => ModData.WriteData(distanceConfig);
@@ -158,12 +152,11 @@ public class Mod_ChunkLoader : Module
         if (_externalStreamingManaged)
             return;
 
-        AutoAdjustDistance();
-        // 每帧更新玩家中心；只有中心区块或视距变化才裁剪旧表现任务。
+        // 完整窗口刷新由 Mover 的跨区块事件驱动；圈内移动只更新表现队列的精确距离优先级。
         ChunkMgr.ExistingInstance?.RetargetRuntimePresentationQueue(
-            transform.position, EffectiveLoadDistance);
-        DetectChunkChange();
+            transform.position, GetPresentationPreloadDistance());
 
+        // 滑条连续修改区块距离时轻量节流，避免每一档都立即重建窗口。
         if (needsChunkUpdate && Time.unscaledTime - _lastChunkUpdateTime >= chunkUpdateMinInterval)
         {
             needsChunkUpdate = false;
@@ -183,14 +176,12 @@ public class Mod_ChunkLoader : Module
     {
         _externalStreamingManaged = managed;
         needsChunkUpdate = false;
+        _hasStreamedChunkOrigin = false;
     }
 
     [Button("刷新周围区块")]
     public void RefreshChunksAroundPlayer()
     {
-        AutoAdjustDistance();
-        Vector2 currentChunkPos = ResolveChunkOrigin(transform.position);
-        TrackChunkPosition(currentChunkPos);
         needsChunkUpdate = false;
 
         if (ChunkMgr.Instance == null)
@@ -212,26 +203,22 @@ public class Mod_ChunkLoader : Module
     }
 
     /// <summary>
-    /// 相机视野变化后立即刷新区块
+    /// 世界进入后按配置扩展区块窗口；相机缩放不改变加载距离。
     /// </summary>
-    public void RefreshChunksForCameraView()
+    public void RefreshConfiguredChunkWindow()
     {
-        AutoAdjustDistance();
         RefreshChunksAroundPlayer();
     }
 
     /// <summary>
     /// 世界进入首阶段只请求玩家脚下区块，避免高并发地形生成让中心区块与外围区块争抢 CPU。
-    /// GameManager 会在中心区块完整可用后再调用 RefreshChunksForCameraView 扩展到真实视口。
+    /// GameManager 会在中心区块完整可用后再调用 RefreshConfiguredChunkWindow 扩展到配置范围。
     /// </summary>
     public void PrimeCenterChunkForWorldEntry()
     {
         if (_externalStreamingManaged)
             return;
 
-        AutoAdjustDistance();
-        Vector2 currentChunkPos = ResolveChunkOrigin(transform.position);
-        TrackChunkPosition(currentChunkPos);
         needsChunkUpdate = false;
 
         if (ChunkMgr.Instance == null)
@@ -248,120 +235,78 @@ public class Mod_ChunkLoader : Module
             prefetchDistance: 1);
     }
 
-    public int IncreaseLoadDistanceForAdmin(int amount = 1)
-    {
-        int increase = Mathf.Max(1, amount);
-        _adminMinimumLoadDistance = Mathf.Max(_adminMinimumLoadDistance, LoadChunkDistance) + increase;
-        if (LoadChunkDistance < _adminMinimumLoadDistance)
-            AdjustLoadDistance(_adminMinimumLoadDistance - LoadChunkDistance);
-        RefreshChunksAroundPlayer();
-        return LoadChunkDistance;
-    }
-
-    #endregion
-
-    #region 动态视距逻辑
-
-    private void AutoAdjustDistance()
-    {
-        if (!syncWithCamera) return;
-
-        ResolveCameraReferences();
-        if (_boundCamera == null || !_boundCamera.orthographic) return;
-
-        // 关键修复：使用 Mod_Cam 的目标 lens size，避免 Cinemachine 同步延迟导致读取到旧的 orthographicSize
-        float camSize = _cameraFollowManager?.CurrentOrthographicSize ?? _boundCamera.orthographicSize;
-        if (camSize <= 0f) return;
-
-        Vector2 chunkSize = ChunkMgr.GetChunkSize();
-        if (chunkSize.x <= 0.1f || chunkSize.y <= 0.1f) return;
-
-        int cameraRequiredDistanceX = Mathf.Max(
-            1,
-            Mathf.CeilToInt(camSize * _boundCamera.aspect / chunkSize.x) + chunkBuffer);
-        int cameraRequiredDistanceY = Mathf.Max(
-            1,
-            Mathf.CeilToInt(camSize / chunkSize.y) + chunkBuffer);
-        bool unlimitedView = _cameraFollowManager?.IsUnlimitedViewEnabled == true;
-        int automaticDistanceX = unlimitedView
-            ? cameraRequiredDistanceX
-            : Mathf.Min(cameraRequiredDistanceX, Mathf.Max(1, maxAutoLoadDistance));
-        int automaticDistanceY = unlimitedView
-            ? cameraRequiredDistanceY
-            : Mathf.Min(cameraRequiredDistanceY, Mathf.Max(1, maxAutoLoadDistance));
-        int minimumDistance = Mathf.Max(LoadChunkDistance, _adminMinimumLoadDistance);
-        var targetLoad = new Vector2Int(
-            Mathf.Max(automaticDistanceX, minimumDistance),
-            Mathf.Max(automaticDistanceY, minimumDistance));
-
-        int prefetchMargin = Mathf.Max(2, UnActiveDistance - LoadChunkDistance);
-        int destroyMargin = Mathf.Max(1, DestroyChunkDistance - UnActiveDistance);
-        var targetPrefetch = new Vector2Int(
-            targetLoad.x + prefetchMargin,
-            targetLoad.y + prefetchMargin);
-        var targetDestroy = new Vector2Int(
-            targetPrefetch.x + destroyMargin,
-            targetPrefetch.y + destroyMargin);
-        ApplyEffectiveDistances(targetLoad, targetPrefetch, targetDestroy);
-    }
-
-    /// <summary>运行时重新解析相机模块与真实 Camera，避免跨维度或模块加载顺序造成旧引用。</summary>
-    private void ResolveCameraReferences()
-    {
-        if (_cameraFollowManager == null)
-        {
-            _cameraFollowManager = item != null
-                ? item.GetComponentInChildren<Mod_Cam>(true)
-                : GetComponentInParent<Player>()?.GetComponentInChildren<Mod_Cam>(true);
-        }
-
-        Camera controllerCamera = _cameraFollowManager?.ControllerCamera;
-        if (controllerCamera != null)
-            _boundCamera = controllerCamera;
-        else if (_boundCamera == null)
-            _boundCamera = Camera.main;
-    }
-
     #endregion
 
     #region 区块检测与更新
 
-    private void DetectChunkChange()
+    /// <summary>绑定玩家唯一移动权威事件，避免区块加载器自己轮询或累计移动距离。</summary>
+    private void BindMovementEvent()
     {
-        Vector2 currentChunkPos = ResolveChunkOrigin(transform.position);
-        if (TrackChunkPosition(currentChunkPos))
-        {
-            needsChunkUpdate = true;
-        }
+        Mover resolved = item?.itemMods?.GetMod_ByID<Mover>(ModText.Mover);
+        if (ReferenceEquals(_movementSource, resolved))
+            return;
+
+        UnbindMovementEvent();
+        _movementSource = resolved;
+        if (_movementSource != null)
+            _movementSource.WorldUnitChanged += HandleWorldUnitChanged;
     }
 
-    /// <summary>记录最近区块位置，只在真正跨区块时触发窗口刷新。</summary>
-    private bool TrackChunkPosition(Vector2 currentChunkPos)
+    /// <summary>解除移动事件，避免玩家运行时重建后保留旧模块订阅。</summary>
+    private void UnbindMovementEvent()
     {
-        if (!_hasTrackedChunkPosition)
-        {
-            lastChunkPos = currentChunkPos;
-            _hasTrackedChunkPosition = true;
-            return true;
-        }
-        if (currentChunkPos == lastChunkPos)
-            return false;
-
-        lastChunkPos = currentChunkPos;
-        return true;
+        if (_movementSource == null)
+            return;
+        _movementSource.WorldUnitChanged -= HandleWorldUnitChanged;
+        _movementSource = null;
     }
 
-    private void UpdateChunks()
+    /// <summary>玩家跨入新区块时立即刷新窗口；同一区块内只需逐帧更新画面任务的距离。</summary>
+    private void HandleWorldUnitChanged(Vector2Int worldUnit)
     {
-        if (ChunkMgr.Instance == null) return;
+        if (_externalStreamingManaged)
+            return;
 
-        ChunkMgr.Instance.RefreshRuntimeWindow(
-            transform.position,
+        ChunkMgr chunkManager = ChunkMgr.ExistingInstance;
+        if (chunkManager == null)
+            return;
+        Vector2Int currentOrigin = chunkManager.ResolveRuntimeChunkOrigin(
+            new Vector2(worldUnit.x, worldUnit.y));
+        if (_hasStreamedChunkOrigin && currentOrigin == _streamedChunkOrigin &&
+            !needsChunkUpdate)
+            return;
+
+        needsChunkUpdate = false;
+        _lastChunkUpdateTime = Time.unscaledTime;
+        UpdateChunks(new Vector2(worldUnit.x + 0.5f, worldUnit.y + 0.5f));
+    }
+
+    /// <summary>可见圈外再提前绑定一圈画面；余下的一圈继续只预取数据。</summary>
+    private Vector2Int GetPresentationPreloadDistance()
+    {
+        Vector2Int load = EffectiveLoadDistance;
+        Vector2Int prefetch = EffectivePrefetchDistance;
+        return new Vector2Int(
+            Mathf.Min(load.x + 1, prefetch.x),
+            Mathf.Min(load.y + 1, prefetch.y));
+    }
+
+    /// <summary>移动事件可传入权威坐标，避免物理插值中的 Transform 晚一帧跨区块。</summary>
+    private void UpdateChunks(Vector2? eventCenter = null)
+    {
+        ChunkMgr chunkManager = ChunkMgr.Instance;
+        if (chunkManager == null) return;
+        Vector2 center = eventCenter ?? transform.position;
+
+        chunkManager.RefreshRuntimeWindow(
+            center,
             EffectiveLoadDistance,
             EffectiveDestroyDistance,
             includeLocalPresentation: true,
             prefetchDistance: EffectivePrefetchDistance,
-            presentationDistance: EffectiveLoadDistance);
+            presentationDistance: GetPresentationPreloadDistance());
+        _streamedChunkOrigin = chunkManager.ResolveRuntimeChunkOrigin(center);
+        _hasStreamedChunkOrigin = true;
     }
 
     #endregion
@@ -371,38 +316,32 @@ public class Mod_ChunkLoader : Module
     [Button("调整加载距离")]
     public void AdjustLoadDistance(int adjustment)
     {
-        distanceConfig.UnActiveDistance = Mathf.Max(1, distanceConfig.UnActiveDistance + adjustment);
-        distanceConfig.DestroyChunkDistance = Mathf.Max(1, distanceConfig.DestroyChunkDistance + adjustment);
-        distanceConfig.LoadChunkDistance = Mathf.Max(1, distanceConfig.LoadChunkDistance + adjustment);
-        NormalizeDistanceConfig();
+        SetLoadChunkDistance(LoadChunkDistance + adjustment);
+    }
+
+    /// <summary>设置玩家周围实际激活的区块圈数，预取与销毁圈保持原有间距。</summary>
+    public void SetLoadChunkDistance(int distance)
+    {
+        int target = Mathf.Max(1, distance);
+        if (target == LoadChunkDistance)
+            return;
+
+        int prefetchMargin = Mathf.Max(2, UnActiveDistance - LoadChunkDistance);
+        int destroyMargin = Mathf.Max(1, DestroyChunkDistance - UnActiveDistance);
+        LoadChunkDistance = target;
+        UnActiveDistance = target + prefetchMargin;
+        DestroyChunkDistance = UnActiveDistance + destroyMargin;
         ResetEffectiveDistancesFromConfig();
-        AutoAdjustDistance();
         needsChunkUpdate = true;
     }
 
-    /// <summary>用持久化配置初始化对称窗口；随后相机可在每个轴上独立扩大。</summary>
+    /// <summary>从持久化配置初始化对称流送窗口。</summary>
     private void ResetEffectiveDistancesFromConfig()
     {
         _effectiveLoadDistance = new Vector2Int(LoadChunkDistance, LoadChunkDistance);
         _effectivePrefetchDistance = new Vector2Int(UnActiveDistance, UnActiveDistance);
         _effectiveDestroyDistance = new Vector2Int(DestroyChunkDistance, DestroyChunkDistance);
         _effectiveDistancesInitialized = true;
-    }
-
-    /// <summary>应用相机推导出的矩形流送窗口，并仅在尺寸变化时请求刷新。</summary>
-    private void ApplyEffectiveDistances(Vector2Int load, Vector2Int prefetch, Vector2Int destroy)
-    {
-        if (_effectiveDistancesInitialized &&
-            _effectiveLoadDistance == load &&
-            _effectivePrefetchDistance == prefetch &&
-            _effectiveDestroyDistance == destroy)
-            return;
-
-        _effectiveLoadDistance = load;
-        _effectivePrefetchDistance = prefetch;
-        _effectiveDestroyDistance = destroy;
-        _effectiveDistancesInitialized = true;
-        needsChunkUpdate = true;
     }
 
     /// <summary>保证可见、数据预取、保留三圈按顺序递增，并至少保留两圈数据预取。</summary>
@@ -415,25 +354,6 @@ public class Mod_ChunkLoader : Module
         distanceConfig.DestroyChunkDistance = Mathf.Max(
             distanceConfig.UnActiveDistance + 1,
             distanceConfig.DestroyChunkDistance);
-    }
-
-    private bool GetAutoGenerateMapSetting()
-    {
-        const bool defaultAutoGenerate = true;
-        if (SaveDataMgr.Instance?.SaveData?.CurrentPlanetData == null)
-        {
-            Debug.LogWarning("[区块加载器] SaveDataMgr 未初始化，使用默认设置");
-            return defaultAutoGenerate;
-        }
-        return SaveDataMgr.Instance.SaveData.CurrentPlanetData.AutoGenerateMap;
-    }
-
-    private static Vector2 ResolveChunkOrigin(Vector2 worldPosition)
-    {
-        if (ChunkMgr.Instance == null)
-            return worldPosition;
-        Vector2Int origin = ChunkMgr.Instance.ResolveRuntimeChunkOrigin(worldPosition);
-        return origin;
     }
 
     #endregion

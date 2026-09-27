@@ -4,103 +4,12 @@ using FlatWorld.WorldModel;
 using Sirenix.OdinInspector;
 using UnityEngine;
 
-/// <summary>
-/// Unity 侧的生态规则配置；负责声明物品、环境过滤、空间分布与伴生关系，
-/// 并在开始后台生成前一次性转换为不引用 Unity 对象的只读快照。
-/// </summary>
-[Serializable]
-public sealed class EcologySpawnRuleConfig
-{
-    [LabelText("规则标识")] public string RuleId = "ecology.rule";
-    [LabelText("物品 ID")] public string ItemId;
-    [LabelText("生成数量"), Min(1)] public int ItemCount = 1;
-    [LabelText("基础概率"), Range(0f, 1f)] public float SpawnChance;
-    [LabelText("概率倍率"), Min(0f)] public float SpawnChanceMultiplier = 1f;
-    [LabelText("空间分布")] public EcologyDistributionMode DistributionMode;
-    [LabelText("聚落候选间距"), Min(2), Tooltip("每个方形候选网格最多形成一个聚落。")]
-    public int PatchSpacing = 24;
-    [LabelText("聚落半径"), Min(0.5f), Tooltip("只用于 Patch 分布，最大按候选间距的一半计算。")]
-    public float PatchRadius = 2.5f;
-    [LabelText("聚落形成概率"), Range(0f, 1f), Tooltip("每个候选网格实际形成聚落的概率。")]
-    public float PatchChance = 1f;
-    [LabelText("群系位掩码"), Tooltip("0 表示全部地表群系；1<<SurfaceBiomeKind 表示指定群系。")] public int BiomeMask;
-    [LabelText("最低温度"), Range(0f, 1f)] public float MinTemperature;
-    [LabelText("最高温度"), Range(0f, 1f)] public float MaxTemperature = 1f;
-    [LabelText("最低降水"), Range(0f, 1f)] public float MinPrecipitation;
-    [LabelText("最高降水"), Range(0f, 1f)] public float MaxPrecipitation = 1f;
-    [LabelText("最低高度"), Range(0f, 1f)] public float MinHeight;
-    [LabelText("最高高度"), Range(0f, 1f)] public float MaxHeight = 1f;
-    [LabelText("最低河岸影响"), Range(0f, 1f), Tooltip("大于 0 时只在河流冲积影响带内生成。")]
-    public float MinRiverFloodplainStrength;
-    [LabelText("提供宿主标签")] public List<string> ProvidedTags = new();
-    [LabelText("仅伴生物")] public bool CompanionOnly;
-    [LabelText("宿主标签")] public string CompanionHostTag;
-    [LabelText("伴生概率"), Range(0f, 1f)] public float CompanionSpawnChance;
-    [LabelText("伴生固定偏移 X")] public float CompanionOffsetX;
-    [LabelText("伴生固定偏移 Y")] public float CompanionOffsetY;
-    [LabelText("伴生最小半径"), Min(0f)] public float CompanionMinRadius;
-    [LabelText("伴生最大半径"), Min(0f)] public float CompanionMaxRadius;
-
-    /// <summary>把 Unity 配置转换成后台线程可安全读取的纯数据。</summary>
-    internal EcologySpawnRuleSnapshot CreateSnapshot()
-    {
-        return new EcologySpawnRuleSnapshot(
-            RuleId,
-            ItemId,
-            ItemCount,
-            SpawnChance,
-            SpawnChanceMultiplier,
-            BiomeMask,
-            MinTemperature,
-            MaxTemperature,
-            MinPrecipitation,
-            MaxPrecipitation,
-            MinHeight,
-            MaxHeight,
-            ProvidedTags,
-            CompanionOnly,
-            CompanionHostTag,
-            CompanionSpawnChance,
-            CompanionOffsetX,
-            CompanionOffsetY,
-            CompanionMinRadius,
-            CompanionMaxRadius,
-            MinRiverFloodplainStrength,
-            DistributionMode,
-            PatchSpacing,
-            PatchRadius,
-            PatchChance);
-    }
-}
-
-/// <summary>
-/// 洞穴矿脉的 SO 配置。顺序代表旧版矿脉筛选优先级：稀有矿在前，石矿作为最后回退。
-/// 只保存字符串和数字，生成线程可安全转换成纯数据快照。
-/// </summary>
-[Serializable]
-public sealed class CaveResourceRuleConfig
-{
-    [LabelText("规则标识")] public string RuleId = "cave.resource";
-    [LabelText("物品 ID")] public string ItemId;
-    [LabelText("矿脉阈值"), Range(0f, 1f)] public float VeinThreshold;
-    [LabelText("矿脉尺度"), Min(0.0001f)] public float VeinScale = 0.04f;
-    [LabelText("噪声偏移")] public int NoiseOffset;
-
-    /// <summary>把 Unity 配置转换成后台线程可安全读取的纯数据。</summary>
-    internal CaveResourceRuleSnapshot CreateSnapshot()
-    {
-        return new CaveResourceRuleSnapshot(
-            RuleId,
-            ItemId,
-            VeinThreshold,
-            VeinScale,
-            NoiseOffset);
-    }
-}
-
+/// <summary>世界生成预设；自然物和矿脉只引用 JSON 规则 ID。</summary>
 [CreateAssetMenu(fileName = "ChunkGenerationProfile", menuName = "FlatWorld/World/Chunk Generation Profile")]
 public sealed class ChunkGenerationProfileSO : ScriptableObject
 {
+    #region 地形参数
+
 #pragma warning disable CS0649 // 这些字段由 Unity 序列化面板赋值。
     [Serializable]
     private struct NumericParameter
@@ -131,25 +40,30 @@ public sealed class ChunkGenerationProfileSO : ScriptableObject
     [SerializeField, LabelText("数值参数列表")] private List<NumericParameter> numericParameters = new();
     [SerializeField, LabelText("文本参数列表")] private List<TextParameter> textParameters = new();
     [SerializeField, LabelText("生态全局倍率"), Min(0f)] private float ecologyGlobalMultiplier = 1f;
-    [SerializeField, LabelText("生态物品生成规则")] private List<EcologySpawnRuleConfig> ecologyRules = new();
-    [SerializeField, LabelText("洞穴矿脉规则"), Tooltip("顺序即稀有度优先级；最后一条通常是石矿回退。")]
-    private List<CaveResourceRuleConfig> caveResourceRules = new();
+    [SerializeField, LabelText("生态物品规则 ID")] private List<string> ecologyRuleIds = new();
+    [SerializeField, LabelText("洞穴矿脉规则 ID"), Tooltip("顺序代表稀有度优先级；最后通常为石矿。")]
+    private List<string> caveResourceRuleIds = new();
 
     public string ProfileId => profileId;
     public int GenerationSignature => generationSignature;
     public int ChunkWidth => chunkWidth;
     public int ChunkHeight => chunkHeight;
     public float EcologyGlobalMultiplier => ecologyGlobalMultiplier;
-    public IReadOnlyList<EcologySpawnRuleConfig> EcologyRules => ecologyRules;
-    public IReadOnlyList<CaveResourceRuleConfig> CaveResourceRules => caveResourceRules;
+    public IReadOnlyList<string> EcologyRuleIds => ecologyRuleIds;
+    public IReadOnlyList<string> CaveResourceRuleIds => caveResourceRuleIds;
 
-    /// <summary>把 Unity 资源中的参数复制成后台线程可以安全读取的配置快照。</summary>
-    public ChunkGenerationProfileSnapshot CreateSnapshot()
+    #endregion
+
+    #region 快照构建
+
+    /// <summary>从已发布的 JSON 目录解析规则，复制成后台线程可安全读取的配置快照。</summary>
+    public ChunkGenerationProfileSnapshot CreateSnapshot() =>
+        CreateSnapshot(NaturalGenerationRuleCatalogService.RequireCatalog());
+
+    /// <summary>显式目录入口供编辑器预览使用；运行时由资源加载阶段提供目录。</summary>
+    public ChunkGenerationProfileSnapshot CreateSnapshot(NaturalGenerationRuleCatalog rules)
     {
-        numericParameters ??= new List<NumericParameter>();
-        textParameters ??= new List<TextParameter>();
-        ecologyRules ??= new List<EcologySpawnRuleConfig>();
-        caveResourceRules ??= new List<CaveResourceRuleConfig>();
+        if (rules == null) throw new ArgumentNullException(nameof(rules));
         var numbers = new Dictionary<string, double>(StringComparer.Ordinal);
         for (int i = 0; i < numericParameters.Count; i++)
         {
@@ -160,6 +74,36 @@ public sealed class ChunkGenerationProfileSO : ScriptableObject
                 throw new InvalidOperationException($"Duplicate numeric generation parameter: {parameter.Id}");
         }
 
+        Dictionary<string, string> texts = CreateTextParametersSnapshot();
+
+        var ecologySnapshots = new List<EcologySpawnRuleSnapshot>(ecologyRuleIds.Count);
+        var ruleIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        for (int i = 0; i < ecologyRuleIds.Count; i++)
+        {
+            string ruleId = ecologyRuleIds[i];
+            if (!ruleIds.Add(ruleId ?? string.Empty))
+                throw new InvalidOperationException($"Profile {profileId} 包含重复的生态规则 ID：{ruleId}");
+            ecologySnapshots.Add(rules.GetEcologyRule(ruleId));
+        }
+
+        var caveResourceSnapshots = new List<CaveResourceRuleSnapshot>(caveResourceRuleIds.Count);
+        var caveRuleIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        for (int i = 0; i < caveResourceRuleIds.Count; i++)
+        {
+            string ruleId = caveResourceRuleIds[i];
+            if (!caveRuleIds.Add(ruleId ?? string.Empty))
+                throw new InvalidOperationException($"Profile {profileId} 包含重复的矿脉规则 ID：{ruleId}");
+            caveResourceSnapshots.Add(rules.GetCaveResourceRule(ruleId));
+        }
+
+        return new ChunkGenerationProfileSnapshot(
+            profileId, generationSignature, chunkWidth, chunkHeight, numbers, texts,
+            ecologyGlobalMultiplier, ecologySnapshots, caveResourceSnapshots);
+    }
+
+    /// <summary>独立读取地块 ID 等文本参数，供编辑器校验使用且不依赖自然物目录。</summary>
+    public Dictionary<string, string> CreateTextParametersSnapshot()
+    {
         var texts = new Dictionary<string, string>(StringComparer.Ordinal);
         for (int i = 0; i < textParameters.Count; i++)
         {
@@ -169,35 +113,8 @@ public sealed class ChunkGenerationProfileSO : ScriptableObject
             if (!texts.TryAdd(parameter.Id, parameter.Value ?? string.Empty))
                 throw new InvalidOperationException($"Duplicate text generation parameter: {parameter.Id}");
         }
-
-        var ecologySnapshots = new List<EcologySpawnRuleSnapshot>(ecologyRules.Count);
-        var ruleIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        for (int i = 0; i < ecologyRules.Count; i++)
-        {
-            EcologySpawnRuleConfig rule = ecologyRules[i];
-            if (rule == null || string.IsNullOrWhiteSpace(rule.ItemId))
-                continue;
-            EcologySpawnRuleSnapshot snapshot = rule.CreateSnapshot();
-            if (!ruleIds.Add(snapshot.RuleId))
-                throw new InvalidOperationException($"Duplicate ecology rule id: {snapshot.RuleId}");
-            ecologySnapshots.Add(snapshot);
-        }
-
-        var caveResourceSnapshots = new List<CaveResourceRuleSnapshot>(caveResourceRules.Count);
-        var caveRuleIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        for (int i = 0; i < caveResourceRules.Count; i++)
-        {
-            CaveResourceRuleConfig rule = caveResourceRules[i];
-            if (rule == null || string.IsNullOrWhiteSpace(rule.ItemId))
-                continue;
-            CaveResourceRuleSnapshot snapshot = rule.CreateSnapshot();
-            if (!caveRuleIds.Add(snapshot.RuleId))
-                throw new InvalidOperationException($"Duplicate cave resource rule id: {snapshot.RuleId}");
-            caveResourceSnapshots.Add(snapshot);
-        }
-
-        return new ChunkGenerationProfileSnapshot(
-            profileId, generationSignature, chunkWidth, chunkHeight, numbers, texts,
-            ecologyGlobalMultiplier, ecologySnapshots, caveResourceSnapshots);
+        return texts;
     }
+
+    #endregion
 }

@@ -435,6 +435,8 @@ namespace FlatWorld.WorldModel
                     rule.MinRiverFloodplainStrength));
                 AddLong(ref hash, rule.CompanionOnly ? 1 : 0);
                 AddString(ref hash, rule.CompanionHostTag);
+                AddString(ref hash, rule.RequiredChunkTag);
+                AddLong(ref hash, rule.RequiredTagChunkRadius);
                 AddLong(ref hash, BitConverter.DoubleToInt64Bits(rule.CompanionSpawnChance));
                 AddLong(ref hash, BitConverter.DoubleToInt64Bits(rule.CompanionOffsetX));
                 AddLong(ref hash, BitConverter.DoubleToInt64Bits(rule.CompanionOffsetY));
@@ -588,6 +590,10 @@ namespace FlatWorld.WorldModel
     /// <summary>所有后台区块生成器都必须提供的 Generate 方法。</summary>
     public interface IChunkPureGenerator
     {
-        ChunkGenerationResult Generate(ChunkGenerationRequest request, CancellationToken cancellationToken);
+        ChunkGenerationResult Generate(ChunkGenerationRequest request, CancellationToken cancellationToken,
+            ChunkGenerationTiming timing = null);
+
+        /// <summary>返回仍需独占准备的共享生成资源；资源已就绪或没有共享资源时返回 null。</summary>
+        object GetPendingGenerationGroupKey(ChunkGenerationRequest request);
     }
 }
