@@ -9,10 +9,11 @@ using UnityEngine;
 /// <summary>背包整理完成后的循环排序规则。</summary>
 public enum InventorySortMode
 {
-    Definition = 0,
-    AmountDescending = 1,
-    WeightDescending = 2,
-    VolumeDescending = 3
+    Id = 0,
+    Category = 1,
+    AmountDescending = 2,
+    WeightDescending = 3,
+    VolumeDescending = 4
 }
 
 [Serializable]
@@ -875,6 +876,9 @@ public partial class Inventory_Data
 
     #region 背包整理与排序
 
+    // 物品定义可通过 InventoryGroup.<类别> 标签声明背包排序分组，MOD 无需修改排序代码。
+    private const string InventoryGroupTagPrefix = "InventoryGroup.";
+
     /// <summary>判断当前物品是否已经连续排列在前方，且不存在还能继续合并的堆叠。</summary>
     public bool IsOrganized()
     {
@@ -922,10 +926,27 @@ public partial class Inventory_Data
         return RepackItems((left, right) => CompareItemsForSort(left, right, mode));
     }
 
-    /// <summary>保留旧调用语义：按稳定物品定义顺序整理并排序。</summary>
+    /// <summary>按指定规则排序，并把符合优先条件的物品整体排在其它物品之前。</summary>
+    public bool Sort(InventorySortMode mode, Predicate<ItemData> priorityFilter)
+    {
+        if (priorityFilter == null)
+            return Sort(mode);
+
+        return RepackItems((left, right) =>
+        {
+            bool leftPreferred = priorityFilter(left);
+            bool rightPreferred = priorityFilter(right);
+            if (leftPreferred != rightPreferred)
+                return leftPreferred ? -1 : 1;
+
+            return CompareItemsForSort(left, right, mode);
+        });
+    }
+
+    /// <summary>按稳定物品 ID 整理并排序。</summary>
     public bool SortDefault()
     {
-        return Sort(InventorySortMode.Definition);
+        return Sort(InventorySortMode.Id);
     }
 
     /// <summary>按当前顺序或指定比较器重新打包库存。</summary>
@@ -1024,6 +1045,11 @@ public partial class Inventory_Data
         int result;
         switch (mode)
         {
+            case InventorySortMode.Id:
+                return CompareItemsForDefaultSort(left, right);
+            case InventorySortMode.Category:
+                result = CompareInventoryGroups(left, right);
+                break;
             case InventorySortMode.AmountDescending:
                 result = CompareFloatDescending(GetStackAmount(left), GetStackAmount(right));
                 break;
@@ -1039,6 +1065,42 @@ public partial class Inventory_Data
         }
 
         return result != 0 ? result : CompareItemsForDefaultSort(left, right);
+    }
+
+    /// <summary>有分组标签的物品按组相邻排列，同组内继续使用当前排序规则。</summary>
+    private static int CompareInventoryGroups(ItemData left, ItemData right)
+    {
+        string leftGroup = GetInventoryGroup(left);
+        string rightGroup = GetInventoryGroup(right);
+        if (leftGroup == null)
+            return rightGroup == null ? 0 : 1;
+        if (rightGroup == null)
+            return -1;
+
+        return StringComparer.OrdinalIgnoreCase.Compare(leftGroup, rightGroup);
+    }
+
+    /// <summary>同一物品声明多个分组时，固定使用字典序最前的分组。</summary>
+    private static string GetInventoryGroup(ItemData itemData)
+    {
+        List<string> tags = itemData?.Tags;
+        if (tags == null)
+            return null;
+
+        string group = null;
+        for (int i = 0; i < tags.Count; i++)
+        {
+            string tag = tags[i];
+            if (string.IsNullOrEmpty(tag) ||
+                tag.Length <= InventoryGroupTagPrefix.Length ||
+                !tag.StartsWith(InventoryGroupTagPrefix, StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            if (group == null || StringComparer.OrdinalIgnoreCase.Compare(tag, group) < 0)
+                group = tag;
+        }
+
+        return group;
     }
 
     private static int CompareFloatDescending(float left, float right)

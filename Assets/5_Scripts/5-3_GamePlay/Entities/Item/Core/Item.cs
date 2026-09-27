@@ -836,7 +836,7 @@ public abstract class Item : MonoBehaviour
         lastSimulationInterval = 0f;
     }
 
-    /// <summary>回到模拟范围后立即恢复，暂停期间不补算游戏时间。</summary>
+    /// <summary>回到模拟范围后立即恢复，暂停期间不补算游戏时间；单次 Tick 使用完整累计 delta，不截断模拟时间。</summary>
     internal void TickEveryFrameAt(float currentTime, float minimumInterval)
     {
         if (lastScheduledTickTime < 0f ||
@@ -845,7 +845,7 @@ public abstract class Item : MonoBehaviour
             lastScheduledTickTime = currentTime;
             nextSimulationTickTime = currentTime + minimumInterval;
             lastSimulationInterval = minimumInterval;
-            Tick(Mathf.Min(Time.deltaTime, 0.1f));
+            Tick(Mathf.Max(0f, Time.deltaTime));
             return;
         }
 
@@ -857,7 +857,7 @@ public abstract class Item : MonoBehaviour
         nextSimulationTickTime += minimumInterval;
         if (nextSimulationTickTime <= currentTime)
             nextSimulationTickTime = currentTime + minimumInterval;
-        Tick(Mathf.Min(elapsed, 0.1f));
+        Tick(elapsed);
     }
 
     /// <summary>玩家、全局管理实体或 MOD 可覆写此入口以保持完整更新。</summary>

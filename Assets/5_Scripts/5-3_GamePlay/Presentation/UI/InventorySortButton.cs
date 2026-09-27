@@ -1,10 +1,12 @@
 using System;
+using FlatWorld.Localization;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
 /// 将 UI_Bag 的排序和整理操作绑定到各自按钮。
-/// 排序按物品定义、堆叠数量、重量、体积循环；整理只合并堆叠并压紧空槽。
+/// 排序按稳定 ID、分类、堆叠数量、重量、体积循环；搜索激活时命中项优先；整理只合并堆叠并压紧空槽。
 /// </summary>
 public sealed class InventorySortButton : MonoBehaviour
 {
@@ -16,15 +18,19 @@ public sealed class InventorySortButton : MonoBehaviour
 
     private static readonly InventorySortMode[] SortModes =
     {
-        InventorySortMode.Definition,
+        InventorySortMode.Id,
+        InventorySortMode.Category,
         InventorySortMode.AmountDescending,
         InventorySortMode.WeightDescending,
         InventorySortMode.VolumeDescending
     };
 
     private Inventory inventory;
+    private InventoryBagSearch bagSearch;
     private Button sortButton;
     private Button organizeButton;
+    private TMP_Text sortButtonLabel;
+    private int currentSortModeIndex;
     private int nextSortModeIndex;
 
     #endregion
@@ -63,19 +69,26 @@ public sealed class InventorySortButton : MonoBehaviour
     private void Bind(Inventory targetInventory, Button targetSortButton, Button targetOrganizeButton)
     {
         if (!ReferenceEquals(inventory, targetInventory))
+        {
+            currentSortModeIndex = 0;
             nextSortModeIndex = 0;
+        }
 
         sortButton?.onClick.RemoveListener(HandleSort);
         organizeButton?.onClick.RemoveListener(HandleOrganize);
 
         inventory = targetInventory;
+        bagSearch = targetInventory.basePanel.GetComponent<InventoryBagSearch>();
         sortButton = targetSortButton;
         organizeButton = targetOrganizeButton;
+        sortButtonLabel = sortButton.GetComponentInChildren<TMP_Text>(true);
 
         sortButton.onClick.RemoveListener(HandleSort);
         sortButton.onClick.AddListener(HandleSort);
         organizeButton.onClick.RemoveListener(HandleOrganize);
         organizeButton.onClick.AddListener(HandleOrganize);
+
+        RefreshSortButtonLabel(SortModes[currentSortModeIndex]);
     }
 
     /// <summary>按名称查找面板内的按钮。</summary>
@@ -102,10 +115,41 @@ public sealed class InventorySortButton : MonoBehaviour
             return;
 
         InventorySortMode mode = SortModes[nextSortModeIndex];
+        currentSortModeIndex = nextSortModeIndex;
         nextSortModeIndex = (nextSortModeIndex + 1) % SortModes.Length;
 
-        if (inventory.Data.Sort(mode))
+        bool changed = bagSearch != null && bagSearch.HasActiveQuery
+            ? inventory.Data.Sort(mode, bagSearch.MatchesCurrentQuery)
+            : inventory.Data.Sort(mode);
+        if (changed)
             RefreshInventory();
+
+        RefreshSortButtonLabel(mode);
+    }
+
+    /// <summary>让按钮括号始终显示最近一次使用的排序规则。</summary>
+    private void RefreshSortButtonLabel(InventorySortMode mode)
+    {
+        if (sortButtonLabel == null)
+            return;
+
+        string sortText = FlatWorldLocalizationService.GetUiText("排序");
+        string modeText = FlatWorldLocalizationService.GetUiText(GetSortModeName(mode));
+        sortButtonLabel.text = $"{sortText}（{modeText}）";
+    }
+
+    /// <summary>返回排序规则的玩家可见名称。</summary>
+    private static string GetSortModeName(InventorySortMode mode)
+    {
+        return mode switch
+        {
+            InventorySortMode.Id => "ID",
+            InventorySortMode.Category => "分类",
+            InventorySortMode.AmountDescending => "数量",
+            InventorySortMode.WeightDescending => "重量",
+            InventorySortMode.VolumeDescending => "体积",
+            _ => "ID"
+        };
     }
 
     /// <summary>只合并可堆叠物品并压紧空槽，不选择新的排序规则。</summary>

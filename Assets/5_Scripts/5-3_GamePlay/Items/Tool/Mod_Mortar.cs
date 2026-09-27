@@ -123,7 +123,6 @@ public sealed class Mod_Mortar : Module, IInteractable, IInventory
             panel = UIManager.Instance.CreatePanelFromGameObject(PanelPrefab);
             view = panel.GetComponentInChildren<MortarInteractionView>(true);
             if (view == null) throw new InvalidOperationException($"{ContainerLabel}面板缺少容器视图。");
-            bowl.basePanel = panel;
             bowl.itemSlot_UI.Clear();
             view.SyncSlots(bowl);
             panel.PrepareForGamepadNavigation("关闭");

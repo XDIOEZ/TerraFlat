@@ -71,6 +71,16 @@ public abstract partial class ItemData
     [Tooltip("制作材料赋予的耐久倍率；1 表示使用物品定义中的基础耐久")]
     public float CraftedDurabilityMultiplier = 1f;
 
+    #region 热量传导
+
+    public const float DefaultHeatConductionRate = 1f; // 未在 JSON 配置时的基础热量传导速率(℃/s)
+
+    [HideInInspector, JsonProperty("heatConductionRate")]
+    [Tooltip("热量传导速率（℃/s）；由物品或玩家 JSON 配置，温差决定升温或降温方向")]
+    public float HeatConductionRate = DefaultHeatConductionRate; // 实体自身的基础热量传导速率
+
+    #endregion
+
     //重写ToString方法，用于在控制台输出物品信息
     public override string ToString()
     {

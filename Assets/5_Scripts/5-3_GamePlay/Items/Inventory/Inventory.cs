@@ -17,6 +17,7 @@ public sealed class InventoryDragTransaction
     private readonly Func<bool> _prepareFallbackHandler;
     private readonly Func<Inventory, int, bool> _fallbackDropHandler;
     private readonly Func<ItemData> _sourceItemProvider;
+    private Action _onCompleted;
     private bool _fallbackPrepared;
     private bool _completed;
 
@@ -34,13 +35,15 @@ public sealed class InventoryDragTransaction
         Func<Inventory, int, bool> fallbackDropHandler,
         bool hideSourceVisual,
         bool fallbackPrepared = false,
-        Func<ItemData> sourceItemProvider = null)
+        Func<ItemData> sourceItemProvider = null,
+        Action onCompleted = null)
     {
         DraggedAmount = draggedAmount;
         _dropHandler = dropHandler;
         _prepareFallbackHandler = prepareFallbackHandler;
         _fallbackDropHandler = fallbackDropHandler;
         _sourceItemProvider = sourceItemProvider;
+        _onCompleted = onCompleted;
         HideSourceVisual = hideSourceVisual;
         _fallbackPrepared = fallbackPrepared;
     }
@@ -55,6 +58,7 @@ public sealed class InventoryDragTransaction
             return false;
 
         _completed = true;
+        ReleaseSourceDrag();
         return true;
     }
 
@@ -71,6 +75,7 @@ public sealed class InventoryDragTransaction
             return false;
 
         _completed = true;
+        ReleaseSourceDrag();
         return true;
     }
 
@@ -91,6 +96,7 @@ public sealed class InventoryDragTransaction
 
         _fallbackPrepared = true;
         HideSourceVisual = false;
+        ReleaseSourceDrag();
         return true;
     }
 
@@ -98,18 +104,25 @@ public sealed class InventoryDragTransaction
     public void Resolve()
     {
         _completed = true;
+        ReleaseSourceDrag();
     }
 
     /// <summary>结束拖拽；仅在未命中槽位时按要求准备手部携带回退。</summary>
     public void Complete(bool prepareFallback)
     {
-        if (_completed)
-            return;
-
-        if (prepareFallback)
+        if (!_completed && prepareFallback)
             PrepareFallback();
 
         _completed = true;
+        ReleaseSourceDrag();
+    }
+
+    /// <summary>来源槽占用只释放一次，支持目标提交、转入手部及取消三种结束方式。</summary>
+    private void ReleaseSourceDrag()
+    {
+        Action onCompleted = _onCompleted;
+        _onCompleted = null;
+        onCompleted?.Invoke();
     }
 }
 
@@ -148,6 +161,12 @@ public class Inventory
     public List<ItemSlot_UI> itemSlot_UI = new List<ItemSlot_UI>();
 
     public static Inventory LastOpenedContainer;
+
+    // 快捷转移只用所属面板判断容器是否开放，不参与库存槽位 UI 的创建。
+    private BasePanel _quickTransferOwnerPanel;
+
+    // 拖拽期间保留来源槽；加工器可据此暂缓消费正在被玩家移动的物品。
+    [NonSerialized] private Dictionary<ItemSlot, int> _activeDragSourceCounts;
 
     // 运行时赋值，不序列化
     GameObject ItemSlot_Prefab;
@@ -612,13 +631,10 @@ public class Inventory
             Debug.LogError("Prefab_BasePanel 未设置,请在Inspector中的Mod_Inventory中设置对应Inventory的面板预制体");
             return;
         }
-        ItemSlot_Parent = basePanel.transform.GetComponentInChildren<UI_Content>().transform;
-
-        if (ItemSlot_Parent == null)
-        {
-            Debug.LogError("ItemSlot_Parent 未设置");
-            return;
-        }
+        UI_Content content = basePanel.GetComponentInChildren<UI_Content>(true);
+        if (content == null)
+            throw new InvalidOperationException($"库存面板 {basePanel.name} 缺少 UI_Content 槽位容器。");
+        ItemSlot_Parent = content.transform;
 
         // 加载Slot UI预制体
         ItemSlot_Prefab = GameRes.Instance.GetPrefab("UI_Slot");
@@ -665,6 +681,7 @@ public class Inventory
         RefreshUI();
 
         InventorySortButton.EnsureFor(this);
+        basePanel.GetComponent<InventoryBagSearch>()?.Bind(this);
 
         // 槽位是运行时动态创建的，必须在创建完成后重新收集组件并补齐导航图。
         Canvas.ForceUpdateCanvases();
@@ -1342,6 +1359,8 @@ public class Inventory
         ItemSlot fallbackSlot = null;
         ItemData fallbackItem = null;
 
+        BeginSlotDrag(sourceSlot);
+
         return new InventoryDragTransaction(
             draggedItem.Stack.Amount,
             (targetInventory, targetIndex) =>
@@ -1356,7 +1375,33 @@ public class Inventory
                 fallbackInventory != null &&
                 fallbackInventory.TryDropSlotTo(fallbackSlot, fallbackItem, targetInventory, targetIndex),
             true,
-            sourceItemProvider: () => IsCurrentDragSource(sourceSlot, draggedItem) ? draggedItem : null);
+            sourceItemProvider: () => ResolveCurrentDragSource(sourceSlot, draggedItem),
+            onCompleted: () => EndSlotDrag(sourceSlot));
+    }
+
+    /// <summary>判断指定来源槽是否正被拖拽，供持续加工在用户操作期间暂缓消费。</summary>
+    public bool IsSlotBeingDragged(int index)
+    {
+        return Data?.itemSlots != null && index >= 0 && index < Data.itemSlots.Count &&
+               _activeDragSourceCounts != null &&
+               _activeDragSourceCounts.ContainsKey(Data.itemSlots[index]);
+    }
+
+    /// <summary>登记一次来源槽拖拽，支持多指同时起手。</summary>
+    private void BeginSlotDrag(ItemSlot slot)
+    {
+        _activeDragSourceCounts ??= new Dictionary<ItemSlot, int>();
+        _activeDragSourceCounts.TryGetValue(slot, out int count);
+        _activeDragSourceCounts[slot] = count + 1;
+    }
+
+    /// <summary>结束一次来源槽拖拽，避免面板关闭后留下加工暂停状态。</summary>
+    private void EndSlotDrag(ItemSlot slot)
+    {
+        if (_activeDragSourceCounts == null || !_activeDragSourceCounts.TryGetValue(slot, out int count))
+            return;
+        if (count <= 1) _activeDragSourceCounts.Remove(slot);
+        else _activeDragSourceCounts[slot] = count - 1;
     }
 
     /// <summary>让目标槽提交来源拖拽事务。</summary>
@@ -1372,7 +1417,8 @@ public class Inventory
         Inventory targetInventory,
         int targetIndex)
     {
-        if (!IsCurrentDragSource(sourceSlot, draggedItem) ||
+        ItemData sourceItem = ResolveCurrentDragSource(sourceSlot, draggedItem);
+        if (sourceItem == null ||
             !IsValidQuickTransferTarget(targetInventory) ||
             targetIndex < 0 || targetIndex >= targetInventory.Data.itemSlots.Count)
             return false;
@@ -1395,10 +1441,10 @@ public class Inventory
             return false;
 
         ItemData targetItem = targetSlot.itemData;
-        bool swapsDifferentItems = targetItem != null && !targetItem.CanStackWith(draggedItem);
+        bool swapsDifferentItems = targetItem != null && !targetItem.CanStackWith(sourceItem);
         if (swapsDifferentItems &&
             (!CanAcceptQuickTransfer(targetSlot, sourceSlot) ||
-             !targetInventory.CanHoldWholeStack(targetSlot, draggedItem) ||
+             !targetInventory.CanHoldWholeStack(targetSlot, sourceItem) ||
              !CanHoldWholeStack(sourceSlot, targetItem)))
             return false;
 
@@ -1443,7 +1489,7 @@ public class Inventory
         handInventory = GetPlayerHandInventory();
         handSlot = null;
         handItem = null;
-        if (!IsCurrentDragSource(sourceSlot, draggedItem) ||
+        if (ResolveCurrentDragSource(sourceSlot, draggedItem) == null ||
             !IsValidQuickTransferTarget(handInventory) ||
             ReferenceEquals(this, handInventory))
             return false;
@@ -1459,14 +1505,23 @@ public class Inventory
         return handItem?.Stack != null;
     }
 
-    /// <summary>确认拖拽期间来源槽仍持有创建事务时的同一物品实例。</summary>
-    private bool IsCurrentDragSource(ItemSlot sourceSlot, ItemData draggedItem)
+    /// <summary>识别同一来源物品；制作事务可替换对象引用，但会保留实例标识与定义 ID。</summary>
+    private ItemData ResolveCurrentDragSource(ItemSlot sourceSlot, ItemData draggedItem)
     {
-        return Data?.itemSlots != null &&
-               sourceSlot != null &&
-               draggedItem?.Stack != null &&
-               Data.itemSlots.Contains(sourceSlot) &&
-               ReferenceEquals(sourceSlot.itemData, draggedItem);
+        if (Data?.itemSlots == null || sourceSlot == null || draggedItem?.Stack == null ||
+            !Data.itemSlots.Contains(sourceSlot))
+            return null;
+
+        ItemData current = sourceSlot.itemData;
+        if (current?.Stack == null)
+            return null;
+        if (ReferenceEquals(current, draggedItem))
+            return current;
+
+        return draggedItem.Guid != 0 && current.Guid == draggedItem.Guid &&
+               string.Equals(draggedItem.IDName, current.IDName, StringComparison.Ordinal)
+            ? current
+            : null;
     }
 
     /// <summary>判断一个槽位能否完整容纳指定物品堆，供异类交换使用。</summary>
@@ -1867,7 +1922,8 @@ public class Inventory
         if (LastOpenedContainer == null || LastOpenedContainer == this)
             return null;
 
-        if (LastOpenedContainer.basePanel == null || !LastOpenedContainer.basePanel.IsOpen())
+        if (LastOpenedContainer._quickTransferOwnerPanel == null ||
+            !LastOpenedContainer._quickTransferOwnerPanel.IsOpen())
         {
             LastOpenedContainer = null;
             return null;
@@ -1882,13 +1938,12 @@ public class Inventory
     /// </summary>
     public void SyncQuickTransferTarget(BasePanel ownerPanel = null)
     {
-        if (ownerPanel != null)
-            basePanel = ownerPanel;
+        _quickTransferOwnerPanel = ownerPanel != null ? ownerPanel : basePanel;
 
         if (IsHotBarInventory() || IsHandInventory())
             return;
 
-        if (basePanel != null && basePanel.IsOpen())
+        if (_quickTransferOwnerPanel != null && _quickTransferOwnerPanel.IsOpen())
         {
             LastOpenedContainer = this;
             return;

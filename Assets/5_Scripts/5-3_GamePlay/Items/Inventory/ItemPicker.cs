@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using FlatWorld.Audio;
 using FlatWorld.Gameplay.Progress;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 /// <summary>
 /// 物品拾取器组件，用于自动收集可拾取物品
@@ -522,6 +523,7 @@ public class ItemPicker : Module
 
     #endregion
 
+    /// <summary>保留世界物品外层排序组，使离体拾取动画沿用主体的真实世界层级。</summary>
     private static GameObject CreatePickupVisualSnapshot(
         Item worldItem,
         SpriteRenderer[] sourceRenderers)
@@ -533,6 +535,13 @@ public class ItemPicker : Module
         visualRoot.layer = worldItem.gameObject.layer;
         visualRoot.transform.SetPositionAndRotation(worldItem.transform.position, Quaternion.identity);
         visualRoot.transform.localScale = Vector3.one;
+        SortingGroup sourceGroup = worldItem.GetComponent<SortingGroup>();
+        if (sourceGroup != null && sourceGroup.enabled)
+        {
+            SortingGroup snapshotGroup = visualRoot.AddComponent<SortingGroup>();
+            snapshotGroup.sortingLayerID = sourceGroup.sortingLayerID;
+            snapshotGroup.sortingOrder = sourceGroup.sortingOrder;
+        }
 
         int copiedRendererCount = 0;
         for (int i = 0; i < sourceRenderers.Length; i++)
