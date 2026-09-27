@@ -18,9 +18,11 @@ description: "Use when: 定位或修改 FlatWorld 的世界时间、昼夜、天
 
 - 低温、过热与缺氧必须使用独立伤害时钟；解除对应危险、死亡或回收时清除该来源的时间债务。低温和缺氧用固定每次伤害，不以温差或累计秒数放大成一次大额伤害；高温保留独立规则。
 - 玩家显式重生统一调用 `Mod_Temperature.RestoreOnRespawn` 恢复正常基础体温，并清除上一条生命的入水降温目标与冷热伤计时；死亡/重生模块不得直接改写 `TemperatureData.CurrentTemperature`。
+- 体温向环境温度变化的基础速率读取宿主 `ItemData.HeatConductionRate`（℃/s），默认值在代码中；玩家由当前玩家 JSON 配置，物品、动物和建筑由定义的 `itemData.heatConductionRate` 覆盖，不能放在体温模块或外壳 Prefab。冷热方向由温差决定，运行时倍率独立叠加。
 - `TemperatureData` 的 MemoryPack 字段顺序属于存档布局，改冷伤语义不能删掉中间 float 槽位。规则参数在加载旧存档后恢复当前内容配置，运行态体温仍由存档恢复。
 
 - 当前跨场景时间与存档主入口是 `DayTimeSystem`；季节改动前确认场景是否使用 `DayNightTimeManager`。
+- GM 当天时刻滑条应解析活动场景实际引用的时钟，按当前 `DayLength` 映射 00:00～23:59；拖动期间只预览，松开后由状态权威端调用 `JumpToTime` 一次，避免每个刻度都触发时间事件和天气调度。GM 面板在主菜单也会创建，此时先确认已进入世界，再用 `DayTimeSystem.GetInstance()` 无报错地探测时钟；不要在非世界场景用会打印缺失错误的 `Instance`。
 - 天气权威状态保存在 `PlanetData`；阶段边界使用绝对世界时间，跳时交给 Scheduler 跨越全部边界。
 - `PlanetData.WindStrength` 是独立于降雨强度的星球级权威状态；修改必须经 `WeatherMgr.SetWindStrength` 发布天气快照，Client 只应用复制值，离开世界或 `SuppressWeather` 维度时清零 Shader 全局表现但不改存档值。
 - 静态降水层影响地形/生态，不等于动态天气强度。
@@ -31,7 +33,7 @@ description: "Use when: 定位或修改 FlatWorld 的世界时间、昼夜、天
 - 设备组件 `LocalTemperatureSource` 的强度表示中心摄氏度增量（负值制冷），不是功率或绝对目标温度；恒温器应由设备控制器根据当前地块温度计算有效强度。当前影响层不保存热惯性，撤销源会立即撤销其环境增量；需要蓄热/热传导时应引入独立状态层，不能悄悄改变来源参数语义。
 - 污染指标统一注册为 `ContaminationDefinition`，权威值保存在 `ChunkTerrainData` 的 `flatworld.contamination.<definitionId>` 环境层；运行时修改必须走 `ContaminationSystem`，禁止直接 `SetEnvironmentValue`，否则会绕过服务器权威、污染差量存档和变化通知。脏污度与具体病原负荷是同一系统内不同指标，不能合并成单一“越脏就拥有所有疾病”的数值。
 - 维度 `FixedLighting` 是光照上限；SuppressWeather 会关闭天气与雨效。
-- 太阳长投影只读取 `DayTimeSystem` 已解析的游戏时间及有效光照，轨迹由 `SunShadowParametersProvider` 统一发布；夜间太阳淡出与月相无关，不得因月光非零继续显示太阳投影。维度 `SunShadows=Automatic` 仅允许非固定光照地表，显式 Enabled/Disabled 可覆盖；退出世界与关闭偏好清零 Shader 全局参数。
+- 太阳长投影只读取 `DayTimeSystem` 已解析的游戏时间及有效光照，轨迹由 `SunShadowParametersProvider` 统一发布；太阳长投影和脚底接触阴影共用晨昏透明度，5～6 点渐显、18～19 点渐隐，不得因月光非零在夜间保留太阳阴影。维度 `SunShadows=Automatic` 仅允许非固定光照地表，显式 Enabled/Disabled 可覆盖；退出世界与关闭偏好清零 Shader 全局参数。
 - 运行时全局光由 `TimeSystem.prefab` 中的 `DayTimeSystem + Light2D` 持有；`GameStartScene` 不得再注入独立 `DayTimeSystem`，否则会抢占单例并使带光源的运行时 Prefab 被销毁。
 - 月相应基于 `TimeData.TotalDays + CurrentTime / DayLength` 计算，不能只使用日内时间；月光先作为昼夜曲线的夜间下限，再经过采光率与维度固定光照上限。
 - 向 Shader 发布月光表现值时应保留 `GetLighting` 已应用的场景采光率与维度上限，并在系统禁用或退出世界时清零全局参数，避免关闭域重载后残留上一局状态。`_GlobalMoonlightIntensity` 只表达月相/场景后的最终亮度，黄昏到夜晚的出现进度由独立 `_GlobalMoonAppearance` 发布，避免把月相强度误当成尺寸动画进度。

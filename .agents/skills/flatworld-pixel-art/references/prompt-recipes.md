@@ -38,7 +38,7 @@ Asset type: FlatWorld pixel-art <inventory icon / tool / tree / vegetation / bui
 Input images: Image 1 is the closest same-category project asset and is the primary authority for viewpoint, world scale, silhouette, pixel-cluster size, outline treatment, palette structure, and material rendering; additional same-category project assets may be used to confirm the shared style. Do not use the merchant anchor to override item, tool, tree, vegetation, or building style.
 Primary request: create one <物品名称>.
 Style/medium: FlatWorld pixel art matching the closest same-category runtime asset; strong compact silhouette; hard grouped pixels; limited material color groups; hard edges; limited palette; subtle top-left highlight. Logical pixel density may be higher than older assets, but the result must not become smoother, more realistic, more detailed, or visually denser than the established style language.
-Composition/framing: one centered object, complete silhouette, readable at the target runtime size and world scale. Do not force a 16x16 canvas unless the actual consumer requires it; choose canvas size and PPU so the object remains proportionally consistent with existing same-category assets.
+Composition/framing: one centered object, complete silhouette, readable at the target runtime size and world scale. Choose canvas size and PPU from the consumer requirements so the object remains proportionally consistent with existing same-category assets.
 Scene/backdrop: perfectly flat chroma-key background.
 Constraints: no card background; no frame; no label; no shadow unless same-category references contain one; no watermark; no extra objects. For trees, vegetation, large props, and buildings, preserve the existing project's leaf/shape clustering, trunk or structural massing, outline weight, light direction, saturation, and top-down viewpoint even when using a higher pixel density.
 ```
@@ -56,4 +56,4 @@ Constraints: preserve head shape, face, proportions, outfit construction, access
 
 - 一次只修正一个可观察问题，例如“让眼睛在目标运行时尺寸下保留”或“让描边在与现有素材相同世界尺度下保持一致的视觉粗细”。
 - 每轮重复身份、同类项目参考、调色板、比例、背景、目标画布、世界尺度和对齐约束，不因进入迭代而省略硬规则；其中画风一致性优先于机械复刻某个固定像素尺寸。
-- ImageGen 结果只有在本地缩小、量化、清边并通过静态和人工像素检查后，才称为运行时 Sprite。
+- ImageGen 结果需检查消费方尺寸、画风、透明度和导入设置；仅在实际需要时缩放、量化或清边，用户指定原图直用时保留文件内容。

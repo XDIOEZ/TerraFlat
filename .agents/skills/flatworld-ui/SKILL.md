@@ -75,6 +75,7 @@ description: "Use when: 定位或修改 FlatWorld 的 UIManager、BasePanel、�
 `UI_ResourceLoading.prefab` - 资源加载面板
 `UI_RuntimeDebugOverlay.prefab` - 运行时调试覆盖层
 `UI_SaveContextMenu.prefab` - 存档上下文菜单
+`UI_SaveRenameDialog.prefab` - 存档与角色共用的独立改名弹窗
 `UI_SaveSelectionButton.prefab` - 存档选择按钮组件
 `UI_SaveSelectionPanel.prefab` - 存档选择面板
 `UI_SaveStatus.prefab` - 存档状态提示 HUD
@@ -103,20 +104,23 @@ description: "Use when: 定位或修改 FlatWorld 的 UIManager、BasePanel、�
 
 - 水容器外形通过正式面板的 `WaterVesselPanel.Appearances` 按物品 ID 配置，运行时不按具体容器写分支；一套外观必须同时提供剖面、同画布内腔遮罩、归一化水位区间及左右出口。未匹配的容器恢复 Awake 捕获的默认外观，避免共用面板从椰子壳切回陶罐后残留遮罩或出口；正式 Prefab 与构建器必须同步维护。PNG 的 Y 从顶部向下，水位及出口归一化 Y 从底部向上。
 
-- 水容器剖面通过 `WaterVesselLiquidGraphic` 和独立内腔 Mask 呈现；视觉配置按 `LiquidDefinition.VisualState` 匹配，不在 UI 重建水质枚举。`LiquidStyle` 的 `Murkiness/Sediment/SurfaceDebris/SuspendedParticles` 负责通用浑浊、沉淀、污膜和悬浮颗粒表现，罐口液流读取同一套颜色与浑浊度参数，禁止按具体液体 ID 单独硬编码。罐口倾倒液流使用正式 Prefab 中位于 `陶罐剖面`、但处于内腔 Mask 之外的 `倾倒液流/WaterVesselPourGraphic`；出水位置必须来自挂在 `陶罐切面` 下的左右罐口出口锚点，并按倾角选择下侧嘴沿，禁止再用“罐体中心 + 固定半径”猜测。倾角决定最大可倒出量，达到 `VesselAppearance.FullEmptyTiltDegrees` 时允许倒空；持续时间按基准份数流速和 `VesselAppearance.MouthWidth` 相对默认开口的宽度比例累计真实流量，开口越宽固定流速越快，不能让倾角或容量参与速度计算。木桶完全倒空倾角配置为 90°，其他容器按各自开口形状配置。当前陶罐嘴沿较厚，液流节点必须排在 `陶罐切面` 子树之后绘制，并用一段窄的前景液桥从嘴沿向罐内延伸连接罐腹水体；外部主水柱从嘴沿开始并与液桥重叠，禁止再把整条液流放到罐体后方，否则厚嘴沿会把根部完全遮断。新增表现状态需同步正式 Prefab 的 Styles；自定义 Graphic 必须显式声明 CanvasRenderer 依赖，避免预制体有脚本却不渲染。
+- 水容器剖面通过 `WaterVesselLiquidGraphic` 和独立内腔 Mask 呈现；视觉配置按 `LiquidDefinition.VisualState` 匹配，不在 UI 重建水质枚举。`LiquidStyle` 的 `Murkiness/Sediment/SurfaceDebris/SuspendedParticles` 负责通用浑浊、沉淀、污膜和悬浮颗粒表现，罐口液流读取同一套颜色与浑浊度参数，禁止按具体液体 ID 单独硬编码。罐口倾倒液流使用正式 Prefab 中位于 `陶罐剖面`、但处于内腔 Mask 之外的 `倾倒液流/WaterVesselPourGraphic`；出水位置必须来自挂在 `陶罐切面` 下的左右罐口出口锚点，并按倾角选择下侧嘴沿，禁止再用“罐体中心 + 固定半径”猜测。绝对倾角达到统一 90° 时取消保留量上限，但真实液量仍按逐帧流速递减；持续流速由基准份数流速、`VesselAppearance.MouthWidth` 相对默认开口的宽度比例和倾角倍率共同决定，接近水平时加速，容量不参与速度计算。液层保持世界水平，并按旋转内腔遮罩的包围范围扩展绘制网格，避免慢速倾倒时露出竖直边。当前陶罐嘴沿较厚，液流节点必须排在 `陶罐切面` 子树之后绘制，并用一段窄的前景液桥从嘴沿向罐内延伸连接罐腹水体；外部主水柱从嘴沿开始并与液桥重叠，禁止再把整条液流放到罐体后方，否则厚嘴沿会把根部完全遮断。新增表现状态需同步正式 Prefab 的 Styles；自定义 Graphic 必须显式声明 CanvasRenderer 依赖，避免预制体有脚本却不渲染。
 - 水容器左右出水锚点必须贴合内腔 Mask 的嘴沿交界，并对照剖面像素校准到开口内缘；不要把整张剖面图叠到液面上遮缝，否则会盖住容器液体。
-- `UI_WaterVessel` 采用与石臼一致的无底板玩法面板：根 `Image` 与 `设置对话框/Image` 只保留透明射线阻挡，不绘制灰色背景或描边；统一主题不得把这两层重新着色，按钮仍按通用主题单独显示。
+- `UI_WaterVessel` 采用与石臼一致的无底板玩法面板：根与 `设置对话框` 的透明 `Image` 都不接收射线，罐体切面接收倾倒手势和库存拖放，按钮各自接收点击；统一主题不得把透明底板重新着色。
+- 木桶内物品由 `VesselContentsView` 在正式 `UI_WaterVessel` 的内腔 Mask 下克隆 `UI_Slot`：每个可见物体绑定一个真实库存槽，唯一空槽覆盖投放区域并放在占用槽下层。局部重力、碰撞和水中阻尼只改变 UI 姿态；关窗销毁槽位克隆但不改库存。液体容器拖放若被固体槽拒绝，仍须继续命中原有 `IInventoryDragDropTarget` 转液入口。
 
 - 领域控制器创建/持有正式 Prefab，`UIManager` 管生命周期；控件节点名是绑定契约。正式 UI 不用 `new GameObject/AddComponent` 拼视觉。
 - `UI_FuelInteraction` 只绑定通用 `Mod_FuelInteraction`，标题从当前物品定义读取；面板、控制器和文案逻辑不得按火把、油灯、火盆等具体物品 ID 分支。
 - Prefab 是视觉真相；`BasePanel` 不在初始化时重写结构。运行时只用稳定键加载正式 Prefab。 编辑器构建器组装带 Awake 的视图时，应先停用根节点，完成所有序列化引用后再激活；新增必需视图引用必须同步生成正式 Prefab 并核对引用，不能只提交脚本。
+- 单机世界 F5 成功发布资源后，`UIManager.DestroyRuntimeUiInstancesForResourceReload` 必须清空 SafeAreaRoot / 根 Canvas 下的运行时 UI 与面板注册缓存，但保留 UIRoot、SafeAreaRoot 自身；随后由最新 Player Prefab 的模块和全局 HUD 从当前 `GameRes` 重新实例化，禁止继续持有上一代资源会话中的 UI 实例或 Prefab 缓存。
+- 需要在 Prefab Mode 可见、运行时初始关闭的面板，应保持 Prefab 根 `CanvasGroup.alpha = 1`，由实例化方在注册前调用 `BasePanel.InitClosed()`；不要把 Prefab 保存为透明，也不要调用带动画的 `Close()` 初始化。
 - `GameRes` 的启动资源加载面板属于引导 UI：可以登记 Addressables，但运行时必须由 `WorldManager.prefab` 直接引用，不能依赖尚未初始化的资源字典。
 - `UI_WorldLoading` 的根 `Image` 是不透明黑幕，`加载内容` 子节点有独立 `CanvasGroup`。新建/继续世界前须等黑幕完全覆盖并绘制一帧；区块表现真正就绪后先淡出内容、再淡出黑幕，最后释放玩法输入。同场景重生仍使用原有单段淡出。统一主题、迁移器和 Prefab 重建流程不得把根图改成半透明，也不得移除内容透明度控制。
 - 同一 `PanelRoot` 下的面板置顶/置底必须使用 `SetAsLastSibling`/`SetAsFirstSibling`；全局层级序号只能用于独立 Canvas 的 `sortingOrder`，不能直接当作兄弟索引。
 - 不经过 `UIManager`/`BasePanel` 打开流程的独立 Canvas，Prefab 根节点必须显式固化 `localScale = Vector3.one`；不能依赖面板动画在运行时恢复可见缩放。
 - 槽位内的选中框、背景和装饰必须按槽内兄弟顺序分层；选中框切换时必须跟随当前槽位，不得留在旧槽位后再用世界坐标跨槽移动。
 - 快捷栏的附属提示随 `UI_HotBar` 缩放和安全区移动，必须用 `LayoutElement.ignoreLayout` 排除在九格布局外，并保持图形与 CanvasGroup 输入透明；`Inventory.InitUI` 按实际 `ItemSlot_UI` 统计和管理槽位，不能按容器全部子节点计数。手持名称读取实际装备的快捷栏物品，不能与 `Inventory_Hand` 的拖拽携带物混用。
-- `UI_HotBar` 根 Canvas 固定启用 `overrideSorting` 并使用 `UIManager.HotbarModalSortingOrder`，高于默认排序的玩法面板、低于设置和全局覆盖层；该优先级由正式 Prefab 与快捷栏构建器共同维护，不能交由手机 HUD 按设备状态临时切换。
+- `UI_HotBar` 根 Canvas 不覆盖排序，跟随 `PanelRoot` 的兄弟顺序，确保后打开的物品面板盖住快捷栏。需要从快捷栏取放物品的库存、加工、容器面板，其根背景和纯装饰卡片 `Image.raycastTarget` 必须关闭，只让槽位、按钮和明确的拖放或手势区域接收射线；可拖动窗口通过独立的 `UIWindowDragSurface` 只命中标题栏与窄边框，全屏安全区外壳的命中矩形必须指向实际内容卡片。不需要快捷栏参与的模态面板保持背景拦截。正式 Prefab 与对应构建器的配置必须一致。
 - 设置类模态页（主设置及其子页）需要独立高层 Canvas 与 `GraphicRaycaster`；非交互对话气泡在玩法模态打开时隐藏，避免首帧或跨 Canvas 绘制顺序造成遮挡。
 - 常驻 HUD 不拦截输入，Graphic 关闭 raycastTarget；若 HUD 提供展开/收起功能，只允许开关按钮接收 raycast，内容和装饰元素仍必须输入透明；模态面板才获取输入锁和顶层手柄焦点，关闭/失败路径释放。
 - 后续任务与教程内容通过书籍物品及 `UI_ReadableBook` 提供；不要在玩家 Prefab 上重新挂载常驻任务追踪面板。
@@ -157,9 +161,10 @@ description: "Use when: 定位或修改 FlatWorld 的 UIManager、BasePanel、�
 - `ISettingsDropdown`/`ISettingsSwitch` 的选项使用稳定 `SettingOption.Id`，写入通过 `TrySetSelectedIndex` 返回错误；需要“应用/取消”或自定义输入的页面保留专用 View 状态，最终提交仍调用 Provider，不能把校验逻辑塞回 `BasePanel`。
 - 主菜单设置由 `SettingsEditSessionController` 管理保存基线；新增 Provider 时把可编辑值放进控件契约，非控件偏好实现 `ISettingsEditSessionParticipant` 快照与还原。按键绑定通过 `InputBindingService` 单独开始、提交和放弃编辑会话。
 - 现有静态偏好类通过 `SettingsProvider` 兼容入口注册；新增实例型系统优先让管理器直接实现接口。Provider 不负责创建 Prefab，正式布局仍由专用 Launcher 和 Prefab 管理。
-- `UI_VisualEffectsSettings` 同时嵌套在游戏内与主菜单设置中；太阳长投影与柔化开关、模糊程度滑块绑定 `SunShadowSettings` Provider，关闭太阳投影必须停止对应渲染工作，柔化关闭只把有效强度置零。地面层级阴影开关和宽度滑块绑定 `GroundElevationShadowSettings` Provider。新增必需控件时同步源 Prefab、控制器和 `RuntimeUIPrefabBuilder.VisualEffects`，并核对两个嵌套使用处的真实引用。
+- `UI_VisualEffectsSettings` 同时嵌套在游戏内与主菜单设置中；太阳长投影开关与共用的阴影柔化开关、模糊程度滑块绑定 `SunShadowSettings` Provider。关闭太阳投影必须停止对应渲染工作，但脚底阴影仍由柔化开关与滑块控制；柔化关闭只把有效强度置零。地面层级阴影开关和宽度滑块绑定 `GroundElevationShadowSettings` Provider。所有初始值、范围与恢复默认值读取 `Resources/GameConfig/Rendering/default-rendering.json`，玩家更改仍保存在 PlayerPrefs。新增必需控件时同步源 Prefab、控制器和 `RuntimeUIPrefabBuilder.VisualEffects`，并核对两个嵌套使用处的真实引用。
 - 游戏内设置页签由 `SettingsActionListPagination` 的页面名、入口名、页签映射和首个焦点控件共同定义；新增分页时同步正式 `UI_ActionList` 嵌套 Prefab 与完整/定向构建入口。直接挂在子页 Prefab 的控制器会由分页器收集 `ISettingsPageLifecycle`，不必再向 `SettingCanvas` 添加专用初始化分支。
 - 调整界面缩放范围或默认值时，以 `UIUserSettings` 常量为权威，同时检查 Provider/写入校验、`UIScaleController` 的实际应用下限，并同步 `UI_InterfaceSettings.prefab` 与 `RuntimeUIPrefabBuilder`；`PlayerPrefs` 默认参数只服务无旧键的新配置，不得覆盖已有玩家值。
+- `UIRoot.prefab` 的根 Canvas 显式持有独立同名脚本 `UIScaleController.cs` 与 1920×1080 基准分辨率，背包等普通面板继承该根缩放；识别已受控 Canvas 时不能再次用已被缩放改写的参考分辨率作门槛。
 
 ## Prefab 与目录约束
 

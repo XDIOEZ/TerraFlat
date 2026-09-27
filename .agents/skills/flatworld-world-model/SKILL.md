@@ -40,7 +40,15 @@ description: "Use when: 定位或修改 FlatWorld 的纯 WorldModel、Chunk 运�
 - 高视距会一次产生大量已 Ready 的 ChunkView 表现任务；调度必须跨 Chunk 优先完成基础地形 BRG，再补齐草地、碰撞、导航、自然物等后续表现。启动和后续表现每次取队都按玩家当前位置重选，跨区块时应在完整窗口节流前撤销旧视野任务；禁止让单个 Chunk 的全部表现器串行完成后才开始下一个 Chunk，否则会出现“数据已经生成但视野大片长期空白”的表现饥饿。
 - 单个表现器会批量实例化实体时实现 `IIncrementalChunkViewRenderer`，让 `ChunkView` 按步骤推进；基础地形启动与后续表现分别受主线程时间预算约束，后续队列同一区块每帧最多执行一步。自然物必须先生成宿主、后生成伴生物，初始绑定完成前暂停季节补位与延迟伴生物检查；同步入口复用相同步骤。
 - `WorldManager.prefab` 的序列化分帧预算会覆盖 `ChunkMgr` 字段默认值；排查黑块时先用 `gameplay_chunk_render_debug` 对照 `generationQueued/Active`、`pendingCommits`、`readyDataWithoutView`、`pendingBaseTerrain` 与实际 `presentationStartsPerFrame`，不要仅凭源码默认值判断表现吞吐。
+- 流送性能由 `WorldRuntime.StreamingDiagnostics` 在阶段边界记账：生成排队/执行、提交排队/处理、差量恢复、各 `renderer.*` 同步步骤与表现等待分开；仅 Editor/Development 启用，有界缓存且不逐格刷日志。诊断必须同时检查 `WorldRuntimeHost` 现有 owner 和 Update/Advance 心跳，禁止在读取时自动重绑、提交或补生成。未测 GPU 不可凭 BRG 登记正常断言 GPU 没瓶颈。
+- 慢区块日志由纯模型记录分段耗时、主线程限频输出；河网 `Lazy.Value` 可能由任意等待线程执行，`river.region_compute` 必须归实际执行线程，`river.region_get` 才代表包含共享等待的总耗时。只有 `region_get` 很慢而没有 `region_compute` 的区块是在等同一区域计算，不能误判为各区块重复计算。
+- 高度河网区域未就绪时，生成调度按与水文缓存相同的区域键只运行一个同组任务，其余任务留在优先队列，空闲名额先计算其它区域；区域缓存就绪后同组区块恢复并行。稀疏源头和单主路径限制计算格数，选路只查相邻八格真实高度；严格下坡的最大堆出队顺序已保证无需额外 `processed` 集合。
+- 共享河网区域的计算不能绑定到单个区块的取消：当前区块离开窗口时，只要队列仍有同区域有效请求就继续算完并复用缓存；该区域所有请求都取消或世界关闭时才停止。原区块结果仍须丢弃，不能把已取消区块提交回世界；判断剩余需求要沿用与河网缓存相同的区域键。
+- `river.route_network` 若仍占主耗时，慢日志区分邻格选择与原始高度噪声，并列出出队格数与高度缓存未命中次数；这些阶段存在嵌套，子阶段毫秒数不能直接相加。采样计时只在诊断开启且缓存未命中时执行，避免逐格 Unity 日志。
+- 耗时为单调墙钟而非 CPU 使用率；Editor 暂停跨越的请求单独标记并排除等待汇总，不能把暂停后的完成通知积压当作运行时算力证据。父子阶段有重叠，累计时长不能相加；采样差值只统计本段结束的阶段，不冒充仅落在时间窗口内的 CPU 时间。
 - 以空间换显示延迟时，纯模型窗口需分别维护模拟圈、完整表现预加载圈和数据保留圈；本地 ChunkView 在预加载圈提前绑定并持有表现租约，进入活动圈不应重新绑定。世界进入就绪判定只检查活动圈，关闭窗口必须释放全部预加载表现需求。BRG 按 Owner 区块边界与相机裁剪面筛选实例，离屏 Owner 保留已提交数据，靠近时由 Culling 直接显示。
+- BRG 剔除热路径不可对每个实例反复以 UnityEngine.Object 为字典键查询 Owner：注册时缓存整数身份，单次回调按 Owner 计算可见性，并保留每批可见实例索引供绘制命令复用；交换删除实例时仍须同步维护其 Owner 身份和索引。
+- `Mod_ChunkLoader` 的窗口刷新与逐帧 `RetargetRuntimePresentationQueue` 必须使用相同的表现预加载距离，否则下一帧会撤销外圈 ChunkView；同一 Chunk 内的移动只更新任务优先级，跨 Chunk 或视距变化才重建窗口。
 - 外圈数据预取只须等待可见窗口的数据与基础地形 BRG 完成；草地、导航、自然物等后续表现继续轮转时不应长期占住后台生成的空闲时机。存档地形差量必须先于基础地形绑定恢复，同一 ChunkRuntime 实例不能因窗口刷新重复恢复。
 - BRG 的单格 `SetVisual` 不得在 Owner 丢失时隐式重新注册 Owner；否则脚本热重载或后端重建后的第一次脏格刷新只会恢复局部实例，却让后续校验误判整块已登记。增量刷新发现 Owner 丢失时必须先从权威 Terrain 全量重建，再恢复单格增量路径。
 - `ChunkTilemapRenderer.Bind` 激活水层 GameObject 时会同步触发 `WaterVisualStyleBinding.OnEnable`；绑定期允许它先更新共享材质，但必须抑制 `NotifyWaterVisualStyleChanged` 的增量 BRG 修复，因为紧随其后的全量提交会直接读取最新材质。不要把这个正常激活时序误判成 Owner 丢失。
@@ -82,6 +90,7 @@ description: "Use when: 定位或修改 FlatWorld 的纯 WorldModel、Chunk 运�
 - 实验流动从外部修改或显式唤醒开始；模拟内部只能在已开放的有限区域传播，不能通过再次扩大区域绕过海洋保护。等待邻区、停用、异常和换世界都必须结束批次并归还租约；存档差量与建筑恢复完成前不能计算流量。四邻格共享松弛预算，并同时限制整格总流入/总流出，避免透支、溢出与棋盘振荡。
 
 - `World/Mechanical/MechanicalWorld` 的模拟权威独立于 `ChunkView`：真实端口连通网络整组唤醒、先全量恢复再 Tick、先全量快照再休眠；不可因可见 Chunk 卸载而删除节点或冻结一半扭矩源。
+- 机械图在世界作用域建立时冻结 `WorldTopologyDomain` 值副本，构图、查格和交互候选窗口必须使用同一坐标域；换世界重建图，节点增删、移位或拓扑变化置脏并由 `Rebuild` 清空候选窗口。窗口只缓存节点集合，最终交互距离仍按玩家和光标的实时位置判断；旧 MOD 的归一化委托构造入口保留。
 - 机械 Sprite 按区块 BRG Owner 分层提交；节点格或转速变化只更新对应实例槽，Owner 全量重建后从机械数据网重提。连续转动和轴纹滚动用实例速度/相位在 GPU 计算，轴纹 `frac` 必须在片元阶段执行并限制在 Sprite UV 区间，避免顶点跨接缝插值撕裂；循环世界显示坐标取当前区块格，节点规范化坐标仅作数据身份。不能恢复逐节点 `Update`、SpriteRenderer 或重建地形批次。
 - 机械距离只查询缓存的 Chunk `BoundsInt`，含滞回和冷却；拓扑变化时重算单区块属性和循环世界最短包围跨度。表现层只查询已存在的 ChunkView，不为传动网络申请整条地图加载。
 

@@ -18,7 +18,9 @@ description: "Use when: 定位或修改 FlatWorld 的玩家实体、输入系统
 
 ## 不变量
 
-- 玩家主动速度与环境速度必须分开：`Mover.DrivenVelocity` 决定步行动画，水流和承载只写 `ExternalVelocity`；不能把上一帧总刚体速度重新当作主动移动的缓动起点。
+- 单机世界内 F5 成功发布资源后会保存当前本地玩家 Data，注销旧 Player 运行时外壳，清空旧运行时 UI 实例，并从最新资源目录的 Player Prefab 重新实例化同一档案；世界、区块和存档会话不重建。外部系统需要重新绑定玩家引用时订阅 `GameManager.Event_LocalPlayerRuntimeReloaded`，禁止复用 `Event_PlayerEnterWorld` 制造重复世界进入语义。
+- 玩家主动速度与环境速度必须分开：`Mover.DrivenVelocity` 决定步行动画，水流和承载只写 `ExternalVelocity`；不能把上一帧总刚体速度重新当作主动移动的缓动起点。玩家和 GameObject 生物的推动速度统一读取 `StreamingAssets/GameConfig/Movement/water-current.json`：已列 Actor 用指定速度，未列实体按 `ItemData.Stack.Weight` 与 `weightRule` 换算；河流推动读取权威 `Flow` 并经 `WaterEnvironmentRules.ResolveRiverStrength` 换算，不能用 `Clamp01(Flow)` 抹平大流量河段的速度差。
+- 依赖玩家离散位置变化的系统统一订阅 `Mover.WorldUnitChanged`；该事件按拓扑规范化后的 `Rigidbody2D` 实际位置进入新的 1×1 世界单位格时触发，消费方禁止各自累计移动距离或重复轮询坐标。
 - 玩家脚下动态建筑造成的移速惩罚由 `BuildingOccupancyRegistry.GetPlayerMoveSpeedMultiplier` 按离散格读取，并只乘入 `Mover` 的主动目标速度；不要把这类地块惩罚写进永久 `Speed.MultiplicativeModifier`，否则进出地块时容易与 Buff、奔跑倍率互相污染。
 - `WorldMotionSystem` 用作者矩形占地与扫掠统一处理推动，载具通过 `IWorldPushTarget` 注册来源；船的水流、划行与推动先合成，航向限制必须作用于合成后的最终速度，再由 `ICarrierMotionSource` 传递给乘员。转向上限允许按运动上下文配置，例如海上/普通航向与陆地玩家推动使用独立角速度，但不能让任一来源绕过统一航向；禁止乘员反推自身载具或用物理冲量代替游戏速度规则。
 - 载具的按键、鼠标点选和白色描边必须共用光标落点查询；上船与下船都要求光标实际命中载具，禁止因“当前已乘坐”或“靠近船体”绕过光标选择。光标指向可触及水面且未命中载具时，交互键交给喝水等环境动作。远海登船与下船都合法：登船恢复位置优先附近安全陆地，否则保留真实登船坐标；下船优先附近安全陆地，没有陆地时落到船体外侧安全水面。
@@ -34,16 +36,16 @@ description: "Use when: 定位或修改 FlatWorld 的玩家实体、输入系统
 - 玩家乘坐载具统一经 `ICarrierMotionSource` 与 `Mover.TryAttachCarrier` 仲裁：载具源拥有位移积分、速度和力，乘员不改 Transform 父级，只在租约期间关闭自身 Rigidbody2D 模拟并跟随座位；乘员引用和瞬时速度不进存档，恢复位置使用登船时取得的作用域租约。无 Collider 载具交互使用 `SpatialInteractionRegistry`，不要为了点选重新添加物理碰撞体。
 - 环境交互输入只转发按下/持续/松开；具体环境提供 `IEnvironmentActionDefinition` 或 `IEnvironmentEffectDefinition`，角色侧 `EnvironmentInteractionRunner` 每次创建独立实例，禁止把玩家长按或被动效果状态存进共享地块配置。
 - 世界实体持续交互统一走 `IInteractable.OnInteractStart/OnInteractUpdate/OnInteractEnd`：`Mod_InteractSender` 只在交互键按住期间转发 Update，正常松开时转发 End；鼠标与外部单次交互只触发 Start→End，不进入持续通道；目标取消或失效走 `OnInteractCancel`，业务模块不得自行读取 E 键状态。
-- 需要只能由交互键打开的设施面板时，让目标实现 `IInteractable.CanPointerInteract` 并返回 `false`；发送器的左键点选遵守该策略，而近距离 E 键仍可按原有选取规则交互，避免在发送器内硬编码具体设施类型。
+- 需要只能由交互键打开的设施面板时，让目标实现 `IInteractable.CanPointerInteract` 并返回 `false`；发送器的左键点选遵守该策略，交互键仍须满足范围与目标有效性，避免在发送器内硬编码具体设施类型。
 - 本地档案由 `Player.IsLocalProfile`/ProfileContext 判定；远程副本不得持久化、跑本地教程或玩家语音。
-- 玩家存档与 `Player_DIC` 必须使用 `Player.ProfileName` 稳定档案键；`Data_Player.Name_User` 可能被显示名、旧存档或管理员身份临时改写，禁止用它决定保存、卸载或跨维度重建的角色槽位。
+- 玩家存档与 `Player_DIC` 必须使用 `Player.ProfileName`/`ProfileId` 稳定角色 ID；旧档原字典键继续作为 ID，新角色分配独立 ID。`Data_Player.Name_User` 仅用于显示，也可能被管理员身份临时改写，禁止用它决定保存、卸载或跨维度重建的角色槽位。
 - 手柄焦点只能停留在顶层导航面板；虚拟光标/虚拟键盘按现有模式接管。
 - 当前玩法控制偏好由设置页手动选择并持久化为键鼠、手柄或手机；禁止按最近输入自动切换 HUD。输入资产、玩法 ActionMap 和 UI ActionMap 不得用 binding mask 互斥键鼠、手柄和手机输入；设置页/手柄焦点的设备状态也不能清空手机触摸。
 - 手机方案下 Shift 等键盘修饰键不参与设备切换；真实鼠标/Touchscreen 点击可退出手柄 UI/虚拟光标模式，硬件鼠标位置优先用于 UI 命中，但不能因此切走手机 HUD 或改变手机触控语义。
 - 切回键鼠模式时必须清空非输入框的 `EventSystem.currentSelectedGameObject`，且选中描边只在真实手柄模式显示，避免鼠标点击后残留手柄焦点框。
 - 交互描边脚本只能保留在 `GamePlay` 程序集源目录，禁止在 `Assets/5-3_GamePlay` 与 `Assets/5_Scripts/5-3_GamePlay` 同时放置同名类型，否则会触发 CS0436。
 - 同时需要左右翻身与上下瞄准的 Transform 只能由 `Mod_FocusPoint` 写最终旋转；`Mod_TurnBack` 只提供 `CurrentTurnAngleY`，禁止把同一 Transform 再加入其方向控制列表，否则 Y 翻转会被 Z 瞄准覆盖。
-- 手机/手柄交互优先选择普通指向前方的可交互目标，前方没有目标时才按距离兜底；鼠标点击仍按落点精确选择。
+- `InteractionUserSettings.PreciseInteraction` 是交互键与描边预览共用的本机偏好，默认关闭：先按光标命中选择，未命中时按朝向、距离选择附近目标，方便手机与手柄；开启后交互键只认光标落点，不得回退到其它目标。两种模式都服从 `maxInteractDistance`；鼠标左键点选始终精确命中且遵守 `CanPointerInteract`。
 - 手持建筑处于正式放置模式时，世界交互发送器必须整体让位：停止当前交互、隐藏普通交互描边，并拒绝按键、鼠标和外部控制源对附近 `IInteractable` 的触发；建筑仍由手持物“使用”动作提交，避免同一输入阶段既放置又打开旁边设施。
 - 玩家交互发送器必须是纯 Physics2D 查询通道，不得拥有或临时启用 Trigger；`Module_Hand` 禁止挂载 Collider2D。交互查询必须跳过 `DamageSender`/`DamageReciver` 专用 Collider，避免交互与伤害系统产生接触回调或互相解析。
 - 手机准线的有效距离不能固定写在输入层；空手和普通物品应跟随交互发送器距离，手持建筑应跟随建筑模块的放置距离。

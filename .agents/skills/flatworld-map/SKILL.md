@@ -11,10 +11,12 @@ description: "Use when: 定位或修改 FlatWorld 的地图内容、Tilemap、�
 - Chunk 加载与物品归属：`Assets/5_Scripts/5-3_GamePlay/World/Chunk/`
 - 地图数据与存档：`Assets/5_Scripts/5-3_GamePlay/World/Map/Data/`
 - 地块配置唯一真源：`Assets/StreamingAssets/GameConfig/Tiles/tile-manifest.json` 及其显式分包；构建入口为 `World/Map/Definitions/`。`Assets/7_Tiles/` 保存 Unity 外观资源；`Assets/4_ScriptObjects/World/Tiles/` 的 `Tile_Block` SO 仅保留稳定 ID 和原 GUID，供旧群系/结构/Prefab 引用，不再保存数值、Behaviour 或 TileBase 配置。
-- 当前地表自然物密度以 `Assets/Resources/Config/WorldModel/ChunkGenerationProfile_Surface.asset` 的 `ecologyRules` 为权威；`BiomeData.TerrainConfig.ItemSpawn_NoSO` 属于旧生成链，不用于调整 WorldModel 生态数量。存档默认冻结首次使用时的生成 Profile；玩家可在存档管理页关闭“冻结世界生成规则”以显式跟随当前版本。关闭时只丢弃冻结 Profile，保留生态区块的删除 GUID、状态覆盖和恢复年份；重新开启后在下一次进入世界时冻结当时的当前配置。
-- 草和可采集地表植被分别由 `ChunkGrassRenderer` 与 `ChunkGroundCoverRenderer` 批量绘制。`ecologyRules` 继续生成确定性数据点；物品定义声明 `groundCover: true` 时跳过自然 Item 实例化，采集才生成普通 Item。选格和图层共用 `GroundCoverSystem`，采集持久化复用生态删除 GUID；不得用草层消费状态记录花朵，也不得在图层解绑时把生成点标记为已采集。
-- 洞穴可配置植物同样使用 `Assets/Resources/Config/WorldModel/ChunkGenerationProfile_Cave.asset` 的 `ecologyRules`；洞穴生成按“入口 → 配置植物 → 藤蔓/矿物”占格，出生安全区不生成配置植物。
+- 自然物及洞穴矿脉规则的唯一真源是 `Assets/StreamingAssets/GameConfig/WorldGeneration/NaturalItems/natural-item-manifest.json` 及其分包；地表/洞穴 `ChunkGenerationProfile_*.asset` 只保存 `ecologyRuleIds`、`caveResourceRuleIds` 与全局倍率，矿脉 ID 顺序仍代表筛选优先级。新增规则先加入 JSON 分包和清单，再由 SO 引用 ID；缺失、重复或无效规则阻止资源发布。`BiomeData.TerrainConfig.ItemSpawn_NoSO` 属于旧生成链，不用于调整 WorldModel 生态数量。存档默认冻结首次使用时的生成 Profile；玩家可在存档管理页关闭“冻结世界生成规则”以显式跟随当前版本。关闭时只丢弃冻结 Profile，保留生态区块的删除 GUID、状态覆盖和恢复年份；重新开启后在下一次进入世界时冻结当时的当前配置。
+- 草和可采集地表植被分别由 `ChunkGrassRenderer` 与 `ChunkGroundCoverRenderer` 批量绘制。JSON 生态规则继续生成确定性数据点；物品定义声明 `groundCover: true` 时跳过自然 Item 实例化，采集才生成普通 Item。选格和图层共用 `GroundCoverSystem`，采集持久化复用生态删除 GUID；不得用草层消费状态记录花朵，也不得在图层解绑时把生成点标记为已采集。
+- 生态伴生物的 `CompanionHostTag` 要求同格实际生成的宿主；`RequiredChunkTag` 与 `RequiredTagChunkRadius` 联合查询天然宿主标签，半径 0 只看本区块，半径 1 看含本区块的九宫格。邻区标签须用相同种子、Profile 和地形规则独立计算，不依赖区块加载顺序；同步生态快照、冻结存档与配置指纹。
+- 洞穴可配置植物由 Cave SO 的 `ecologyRuleIds` 选择 JSON 规则；洞穴生成按“入口 → 配置植物 → 藤蔓/矿物”占格，出生安全区不生成配置植物。
 - Chunk 运行时、生成调度和表现绑定改用 `flatworld-world-model`。
+- 动物刷新的群系筛选和真实脚下地块筛选分别由 `SpawnerConfig.AllowedBiomeNames` 与 `AllowedGroundTileIds` 控制；石块 Blocking Tile 的遮挡检查不能代替 Ground Tile 过滤。
 
 ## 主链
 
@@ -27,7 +29,7 @@ description: "Use when: 定位或修改 FlatWorld 的地图内容、Tilemap、�
 - Ground 永远保存真实底部地块，海洋、河流、湖泊、地下水的初始液体在生成阶段另外写入 `ChunkTerrainData`。修改地面不会自动改液体；抽水只走 `WorldLiquidSystem.TryPump/TrySet`，禁止抽水时生成底部或修改 Ground。平台通过 `TerrainSupportLayer` 遮断表面接触，底部液体仍保留。
 - 世界液体来源统一由 `WorldLiquidSourceResolver` 读取权威 Liquid 层的深度与稳定 `LiquidId`，再解析 `LiquidDefinition`；不能按 Ground Tile、TerrainCellFlags、盐度或 Collider 猜身份。容器份数与世界液深是不同单位，不能未经规则换算直接互相扣减。液体接触直接使用 `WorldLiquidSourceTarget`，不继承 TileData，不注册地块 water 数据/行为或 MemoryPack Union。
 - 河流生成把真实下游单位方向保存到 `riverFlowX/riverFlowY` 环境层；运行时水流玩法统一通过 `ChunkMgr.TryGetRuntimeWaterCurrent` 读取，禁止在物品、角色等消费方重复按邻格高度猜河道方向。海洋暂无独立洋流层时使用生成环境层的 `windX/windY` 作为表层漂移方向，正式水面也消费同一方向，湖泊保持静止。
-- `heightDriven` 地表河网必须保持“区域级累计 + 最多双接收 D∞ + 连续中心线重建”拓扑：三角坡面负责真实下坡主方向，低坡区可用确定性平滑旋度场增加曲率；可见河槽须经地形感知曲率松弛、Chaikin 圆角和亚格采样重新栅格化，避免直接把 D8 格子链当最终水体；真实接收格仍必须严格更低，不要退回单接收 D8/D∞，也不要把流量分给全部下坡邻格形成扇形水片。
+- `heightDriven` 地表河网以固定世界坐标分组挑选稀疏源头，同源跨区域选择必须一致；每格只看八邻格原始高度并选一条严格下坡主路径，不再做逐格 D∞ 坡面、谷底前视或曲流噪声计算。可见河槽仍经曲率松弛、Chaikin 圆角和亚格采样重建，不能直接把格子链当最终水体；修改源头采样、选路或小湖规则需递增生成签名。
 - 生成保持固定种子、稳定 BiomeId/顺序和统一噪声、气候、水文规则。
 - 修改算法时考虑生成签名、旧存档、联机指纹和 Wrapped 坐标。
 - 雪山地表固定使用纯白 `Tile_Snow`，禁止按随机噪声混入雪地变体；若未来恢复变体，只能按温度区间确定。
@@ -40,6 +42,7 @@ description: "Use when: 定位或修改 FlatWorld 的地图内容、Tilemap、�
 - `Ground` 地块替换不会自动清除独立的草层；采挖完成后要经 `RuntimeGrassClearing.Clear` 同步草层视觉和 `GrassDeltas`，不要只写新的 `TerrainCell`。
 - 资源加载时由 JSON 构建 `RuntimeTileDefinition` 和每种定义自己的共享 Behaviour 集合；`type` 经 `TileBehaviourRegistry` 的显式工厂解析，禁止 CLR `$type` 或移动时反序列化。参数使用现有配置字段的 camelCase，私有 `[SerializeField]` 参数也须迁移；未知字段和无效数值必须失败，不得静默忽略。
 - `TileData.ID/Name` 由定义 ID 注入，位置和工作进度不进入 JSON；单格读取使用 `CreateTileData/Clone`，不得修改共享模板。液体配置只来自 LiquidDefinition.worldWater，水体降温读取当前 C# 规则。
+- 地块承重是 Tile JSON 的 `loadCapacity`，由 `RuntimeTileDefinition` 按稳定 ID 查询，不写入每格 `TileData` 存档；世界液面承重来自液体定义的 `worldWater.loadCapacity`，地表覆盖会遮断液面并改用覆盖地块值。
 - 编辑器通过 `TileDefinitionEditorCatalog` 解析 ID 壳并显式保存 JSON，不可恢复 SO 与 JSON 双写。`GameRes.GetTileBlock` 返回 `RuntimeTileDefinition`；原 Behaviour 类和生命周期方法继续使用。
 
 - 自然植物恢复资格由 `INaturalRenewalPolicy` 记录到生态存档的 `RenewalYears`；只有生成成功才清除移除标记和补位计划。玩家种植不参加自然补位，建筑、耕地及平台所在格不补野生植物。

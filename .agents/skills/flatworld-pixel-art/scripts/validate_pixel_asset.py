@@ -62,7 +62,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("images", nargs="+", type=Path, help="需要检查的 PNG/WebP 图片。")
-    parser.add_argument("--exact-size", type=parse_size, help="要求精确尺寸，例如 16x16。")
+    parser.add_argument("--exact-size", type=parse_size, help="按消费方契约要求精确尺寸，例如 32x48。")
     parser.add_argument("--max-size", type=parse_size, help="允许的最大尺寸，例如 64x64。")
     parser.add_argument("--max-visible-colors", type=int, help="不含完全透明像素的最大颜色数。")
     parser.add_argument("--require-alpha", action="store_true", help="要求源图片实际包含 Alpha 通道。")

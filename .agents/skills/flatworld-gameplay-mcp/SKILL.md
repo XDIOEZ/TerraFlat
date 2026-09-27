@@ -171,6 +171,7 @@ GM 使用独立的 `gameplay_gm` 白名单：
 - TerraFlat 功能验收统一使用真实 Play Mode / GamePlayMCP 运行链；项目不再维护 `Assets/GameTest`、Unity Test Runner、冒烟测试或一次性 `*_test` Gameplay 动作。需要补能力时只能增加可复用的真实玩法动作、GM 能力或只读观察，不新增为了“让测试通过”的测试后门。
 
 - `gameplay_aiecs_debug(status/sample)` 只读当前 GM 开发模拟；sample 在 1～20 秒内记录真实帧时、Burst、隔离会话、错误、Tick、实际实体与占格状态。单位生成/清理与数量调整仍通过 GM 的正式 UI 按钮，不通过诊断工具修改游戏数据。
+- `gameplay_chunk_render_debug` 的 `status` 支持冻结现场，附带分阶段耗时、最老请求、有效/取消/过期提交通知及驱动心跳；`sample(seconds=1~20)` 只观察真实运行，不移动、不解除暂停、不改预算。暂停/换世界/编译时中断并标记无效，结束仅输出一条日志与 `Library/FlatWorldGameplayMCP/ChunkDiagnostics/` JSON。Editor 菜单为 `FlatWorld/调试/区块加载`；无埋点历史不能补造耗时，GPU 时间未采集时明确标为未测。
 - 用户要求截图循环时，每轮应在真实操作后抓取 Game View，并实际打开返回的 PNG；把截图检查与结构化状态/整轮 Console 对照。截图只报告已保存路径不等于看过画面，也不能仅以一个无错误的短采样窗口代替整个运行周期检查。
 
 - GamePlayMCP：负责开放式、自主、探索式游玩和发现未知问题。

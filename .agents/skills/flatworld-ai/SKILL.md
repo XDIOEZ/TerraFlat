@@ -17,6 +17,9 @@ description: "Use when: 定位或修改 FlatWorld 的动物/怪物 AI、状态�
 
 - `AI_Bird` 的起飞入口必须统一执行飞行耐力门禁；耗尽后的强制降落先于逃跑/觅食，落地回满才能解锁，不能让受击逃跑在地面仍调用空中位移。耐力与恢复锁写入独立模块快照，`LiftRoot` 已包含飞行高度，头顶条不能重复叠加。
 - `AI_Bird` 的 Flying 阶段不能把“已到固定目标”或“直线路径进入未加载地形”留给 `MoveFlightStep` 原地返回：逃跑到点须结束该目标，巡航目标保持最短前进距离，空中追逐与漫游共用转向通行逻辑；周围无可通行空路而脚下可落地时转入降落。
+- 共用 `AIFleeStateNode` 在当前逃离段接近终点时接续下一段，导航确认失败时重选段；普通威胁位置抖动不应触发重新寻路，新伤害仍可显式 `Retarget`。
+- 常驻飞行 Actor 使用 `AI_Bird.permanentFlight`，默认保持 Flying 且不进入普通鸟耐力/觅食降落循环；物种行为经 `IBirdFlightPilot` 注册，明确的地面行为可通过 Pilot 临时切到 Ground，后续 `FlyTo/WanderAroundHome` 会恢复 Flying。`Mod_HiveColony` 只在新巢首次创建初始成员，之后死亡成员须按繁殖规则补充；蜂巢持有成员 GUID 与独立行为快照，成员的 `AI_Bird.HomeHiveGuid` 标记归属，并通过 `IRuntimeAiPersistencePolicy` 排除独立 AI 快照。蜂巢领地共享警戒只作用于同时位于领地内的成员，Scene Gizmo 与蜜蜂随机巡逻必须复用同一套整格领地判定；普通巡逻使用 `PatrolFlightSpeedMultiplier` 缩放基础飞行速度，追击、返巢和采蜜赶路不得继承该减速。
+- 蜂群夜间睡眠由蜂巢统一调度：日落后清醒成员真实飞回巢位，到达后保存 `BeeState` 并卸载 GameObject；睡眠饱食按 `ModUpdate` 的缩放时间以清醒速率的一半直接推进快照，日出恢复同一 GUID。普通领地警戒不能唤醒睡蜂，蜂巢 `DamageReceiver` 的有效受击必须唤醒全巢并把武器/投射物 `Owner` 解析为最高优先级攻击目标；蜂巢死亡时解除 `HomeHiveGuid` 并保留蜜蜂实体继续复仇，不能随蜂巢 `Unload` 一起回收。
 - 鸟类动画以 `AI_Bird` 飞行阶段为权威：切换时核对 Animator 当前状态，不能只缓存上次请求的动画名；觅食降落还须确认鸟当前位置可落脚，食物目标格可走不代表脚下可落地。
 - 鸟从地面起飞须先经 `RunUp` 走地面导航、累计真实向前位移，再沿助跑方向水平移动并抬升 `BirdLift`；助跑仍受地块和近战影响，离地后才屏蔽。起飞速度与助跑距离的默认值、鸟/海鸥 Prefab、Actor JSON 运行时参数应同步。
 - 鸟与海鸥的飞行高度以 Actor JSON 的 `modules.ai.parameters.flightHeight` 为运行时配置，`AI_Bird` 默认值和两个外壳 Prefab 须与之同步；海鸥继承鸟的 Actor 参数。`BirdLift` 同时包含贴图和受击盒，飞行表现只移动该节点，不改写 Item/刚体的地面坐标；独立阴影通过 `IVisualGroundOffset` 扣除视觉抬升。
@@ -37,7 +40,7 @@ description: "Use when: 定位或修改 FlatWorld 的动物/怪物 AI、状态�
 - Actor 与 Item 分批注册，死亡掉落可引用同批 Actor（如极低概率掉落 Chicken）；校验必须合并当前批次的具体定义 ID 与已注册 Item ID，不能只查询尚未完成的运行时注册表。死亡掉落继承使用顶层 `lootTableId`，子 Actor 替换表时不得残留内联 `Data.LootTable`。
 - 世界内 F5 的 Actor 候选须逐定义校验并按最终发布的 ID 集复核引用；单项失败保留旧运行时定义、外壳别名与已解析来源，新增无效定义不发布，避免污染其他 Actor 与 MOD 继承链。
 - 动物被动回血统一由 `Mod_Food.HealthState` 依据蛋白质驱动；`AI_Base` 不管理回血，长间隔回血使用 `HealthState.HealInterval/HealAmount` 配置。
-- `AI_Chicken` 的产蛋周期使用当前世界 `TimeData.DayLength * layEggIntervalDays`，进度由 `DayTimeSystem.TimeAdvanced` 的权威游戏时间推进量累计，只在 `isAdult && enableEggLaying && eggItemId` 有效时生效；Rabbit 复用鸡 AI 时必须显式 `enableEggLaying=false`，禁止再用超大秒数伪禁用产蛋。
+- `AI_Chicken` 的产蛋周期使用当前世界 `TimeData.DayLength * layEggIntervalDays`，进度由 `DayTimeSystem.TimeAdvanced` 的权威游戏时间推进量累计，只在 `isAdult && enableEggLaying && eggItemId` 有效时生效；产蛋与交配保持鸡的独立机制，不作为普通动物节点默认继承。
 - Actor 外壳、AnimatorController 使用 `flatworld.actor.*` Addressables 地址；Actor 的 SpriteRenderer 由动画状态机驱动，运行时不得读取 Actor 的 Sprite 子资源或 `sourcePrefab`。
 - 复用动物状态机但更换整套动作素材时，使用 `AnimatorOverrideController` 覆盖所有被引用的动作，并同步外壳与 Actor JSON 的控制器 Addressables 地址；禁止通过 `LateUpdate` 写入静态 Sprite 覆盖 Animator，否则会冻结动画，误绑未切片图集时还会把全部帧同时显示。
 - Actor 外壳中的 `Mod_AnimatorController_Receiver`、`Mod_TurnBack` 属于结构组件，不一定进入 JSON `itemMods` 字典；绑定时必须从 Item 层级查找，禁止按模块 ID 查询并误报缺失。
@@ -55,15 +58,20 @@ description: "Use when: 定位或修改 FlatWorld 的动物/怪物 AI、状态�
 - 休眠快照与活动 AI 共用 `ChunkSaveRecord.ChangedItems`：自动保存采集期间暂停生态出生/休眠/唤醒，合并活动快照时保留同区块休眠记录；唤醒成功才移除旧记录。运行中区块恢复先入休眠索引，镜头外分帧实体化；进入世界加载阶段仍可随加载恢复。
 - `gameplay_spawner_debug` 提供真实注册表审计、有限时间采样及 `profile_frames` 原始 Profiler 读取；Unity Mono 的 `GC.GetAllocatedBytesForCurrentThread` 可能恒为零，必须以自检和标记子树中的 `GC.Alloc` 元数据确认，不能把不支持的计数器当成零分配。
 - 动物头顶调试 HUD 由全局 `AI_DebugOverlay.Visible` 控制，GM 面板通过 `GMConsolePreferences` 持久化开关；动物自身的 `debugLog` 只负责日志，不要重新用它控制 HUD 显示。
+- 不继承 `AI_Base` 的独立动物行为模块（如蜜蜂）若需要头顶调试参数，也必须直接复用 `AI_DebugOverlay.Visible`，保持与 GM 的“动物参数”总开关一致。
+- 蜂巢自身参数使用独立 `HiveColonyDebugOverlay.Visible`，由 GM 的“蜂巢参数”开关与 `GMConsolePreferences` 持久化控制，不与蜜蜂/动物参数总开关绑定。
 - 动物头顶调试 HUD 在 `AI_Base` 统一显示当前 `BuffManager.ActiveBuffs` 的名称与剩余时间；只读读取 Buff，不在 HUD 层修改 Buff 生命周期。
 - 现代动物的睡眠可被有效伤害打断：`AI_Base` 在睡眠中收到正伤害时锁存一次 `SleepInterruptedByDamage`，具体动物的睡眠条件必须优先退出当前睡眠；真正离开睡眠后再清除锁存，并继续使用动物自己的睡醒冷却控制重新入睡。
 - 本体生态生成规则位于 `Assets/Resources/GameConfig/Spawners/Rules/*.json`，每文件一组 `schemaVersion + config`，新增规则直接添加独立 JSON；全局调度间隔、扫描预算和两种后端装载上限位于同目录的 `spawner-settings.json`。`SpawnerConfigCatalogLoader` 只在资源加载阶段自动发现、严格校验和排序，游戏帧内只读取内存目录；`config.id` 是存档身份，不得随意改名，`spawnEntries[].prefabName` 必须引用已注册 Actor，JSON 只能配置现有调度算法。`MonsterSpawnerManager` 在生态生成的 `Load` 后应用条目出生初始化，AI 组件只负责运行时行为，普通 `ItemMgr.InstantiateItem`、事件生成和存档恢复不得自动套用生态出生随机。
 - 需要短时保持 GameObject 生物装载时使用 `MonsterManager.AcquireEcologyRecycleProtection` 作用域租约；它阻止远距序列化休眠，但不阻止区块表现显隐或调用方的正式 `DespawnItem`，须在清理路径释放。
 - 移动/可走性改动联动 `flatworld-navigation`；伤害联动 `flatworld-combat`；注册/存档联动 Item/Data Skill。
+- 生物水流推动速度统一读取 `StreamingAssets/GameConfig/Movement/water-current.json`：表中 Actor 用指定速度，其余按 Actor 定义的 `weight`/运行时 `ItemData.Stack.Weight` 与 `weightRule` 换算；新增物种不能长期沿用壳 Prefab 的默认 1 kg。`Mover_AI` 经导航代理显式绑定 Mover，纯 ECS 经共享导航快照，独立幽灵的寻路与直追入口都须叠加水流；`AI_Bird` 只在地面/助跑接收水流，离地阶段按 `IWaterCurrentExposure` 屏蔽。
 - 追击路径代价限制统一通过 `AI_Base.MoveToChaseTarget` 提交；具体动物只配置自身上限，闲逛、逃跑和外部推进仍使用不受限的普通移动入口。
 - 地面动物逃离统一注册 `AI_Base.CreateFleeStateNode`，共享 `AIFleeStateNode` 在进入时锁定目标，之后按威胁方向变化或目标到达节流重规划；威胁引用是运行时状态，存档恢复到 Flee 时若进入节点尚无威胁必须继续尝试获取，不能永久停住。物种只提供威胁位置与 Actor JSON 距离，目标规划仍须经过 `AIFleeUtility` 和 `AI_WanderUtility` 的水体策略；远距逃离拆成可直达的局部路段，不能只凭终点可走就提交不连通的长距离导航目标。导航连续四次无路径后逃离节点进入 `Error` 并只报一次带实体与目标坐标的 Console 错误；改换目标、新路径被接受或退出节点时清除错误。
 - 通用 AI 可将 `Module_AI_BehaviorGraph` 加入 Actor JSON 模块，并在 `parameters.behaviorGraph` 配置初始状态、节点参数及有序转换；转换条件使用已注册类型，支持 `all`/`any` 组合，错误节点、条件、状态键和参数在 Actor 定义预检时报错。节点和条件逻辑由 C# 注册，物种行为数值与状态流转留在 JSON，所需移动/感知/生命能力由 Actor 壳与模块提供。
 - `AI_BehaviorGraph` 是可独立使用的通用 AI 执行模块；现有 Chicken、WildBoar、Wolf、Bird 等专用 AI 迁移前不可与它同时驱动同一个 Actor 的移动或状态。
+- `AI_BehaviorGraph` 的标准节点已覆盖 `wander/flee/sleep/forage/attack`：共享 Context 负责可存档命名计时器、受击记忆、Food/Health/Detector/Mover 能力与跨状态攻击冷却；`forage` 同时支持 Tag 食物和运行时草层，并用世界天数维护草食营养维持期。Sheep 是第一份正式 JSON 模板，新增普通动物优先复制该图结构后按需求删减，而不是再复制 `AI_Chicken` 状态机。
+- BehaviorGraph Actor 的外壳仍需内嵌且仅内嵌一个 `IAIActor` 以通过 Actor 目录预检；JSON 模块表不会阻止 `Item.ModuleLoad` 注册外壳内已有的专用 AI/生产组件。迁移动物时同时清理外壳里的旧驱动器和物种生产模块，并用 `removeModules` 删除父 JSON 继承的专用模块；运行态由 Blackboard/感知服务持有，计时器与受击坐标按标量字段存档。
 - 状态 `transitions` 数组按顺序决定优先级；每条转换的 `conditionMode` 是 `all`/`any`，条件通过 `{ "type": "threatWithinDistance", "parameters": { "distance": 12, "includePlayers": true, "threatTags": [] } }` 引用注册条件。逃离节点配置 `distance`（一次移动目标距离）与 `threatDistance`（持续检测威胁距离），退出条件的感知范围必须覆盖持续逃离范围。
 - 鸟类保留助跑、起飞、耐力和降落阶段执行，但逃离距离判断与单次目标规划复用 `AIFleeUtility`；不要把鸟的空中位移替换成地面逃离节点。
 - 玩家避让的触发距离与持续逃离安全距离必须分开配置；`Mod_ItemDetector.DetectionRadius` 和当前目标保留范围覆盖安全距离，否则动物会在还没退出逃离状态前丢失威胁。
@@ -78,12 +86,13 @@ description: "Use when: 定位或修改 FlatWorld 的动物/怪物 AI、状态�
 
 - `Entities/AIECS/FlatWorld.AIECS.asmdef` 只承载 Core、Perception、Decision、Navigation、Combat；不引用 GamePlay、Item、Collider 或 MonoBehaviour。表现和早期轨迹原型在独立 `Presentation` 程序集，旧内容编译、玩家和死亡产物适配在独立 `Gameplay` 程序集。不能把旧原型的 Slot、运动轨迹、视觉水参数当正式身份、行为或环境状态。
 - 正式世界的 AI 后端由 `AiRuntimeBackendService` 单向路由：`MonsterSpawnerManager` 持有生成时间、群系、光照、预算和种群规则，`AiecsEcologyRuntimeHost` 接管 Entity 创建、模拟、批量表现和增量计数；ECS 远距模拟由距离脉冲冻结，不做生成器定时销毁。GamePlay 不得反向引用 `FlatWorld.AIECS.Gameplay`；新增 ECS 接入能力继续通过 GamePlay 侧契约实现。
+- F5 会卸载旧 Player 并隔帧重建本地主角；生态后端须在玩家卸载前解除旧外部代理，暂停无玩家期间的模拟，随后绑定新玩家，同时保留本世界已有 ECS 居民。
 - 正式生态允许 GameObject AI 与 AIECS 并行：`SpawnerConfig.SpawnEntry.RuntimeBackend` 是物种后端的权威选择，默认 `GameObject`，只有显式 `Entities` 的大规模物种交给 AIECS。`AI_Base` 与独立旧实现只要被实例化就必须正常 Tick；生成、事件、Actor 掉落和数量统计必须按物种路由，不能用全局开关关闭全部 GameObject AI。同一物种在同一世界只能归属一个后端；AIECS 临时停用或不支持该物种时不得静默回退 GameObject，也不得在世界进入时全表清除旧实体。开发 `AiecsPlayground` 与正式生态宿主仍不得同时驱动两个 AIECS World。
 - 旧 GameObject AI 的行为只通过 `ItemMgr -> Item.Tick -> Module.ModUpdate` 推进，包括动物状态机、鸟与幽灵；AI 本体及其附属表现组件不要自设 `Update/LateUpdate` 行为时钟。距离模拟档在 Item 调度器选择，鸟耐力条跟随 `AI_Bird.ApplyFlightPresentation` 刷新；生态生成器的全局维护 Tick 与单体 AI 行为分开。
 - 正式生态目录中“单个 Actor 尚未迁移”属于预期能力边界：`PrepareWorld` 必须只记录一次普通诊断日志并从 AIECS 生成候选中排除，不能污染正常 `GameStartScene` 的 Warning 基线；只有后端未注册、目录完全无可运行 Actor、初始化异常等真正阻断正式 AIECS 的情况才使用 Error/Exception。
 - 正常 `GameStartScene` 世界的 GM AIECS 分页通过正式 `AiecsEcologyRuntimeHost` 惰性取得一个空闲 `AiecsPlayground` 调试入口；空闲入口不得阻断正式生态，只有真正启动开发场景时才先同步释放正式模拟，清理开发场景后正式宿主再自动恢复，任何时刻禁止两套 AIECS World 同时推进。
 - `AiecsSimulation` 持有独立 World 与批次资源，`AiecsDefinitionCompiler` 在冷路径读取当前合并 Actor/MOD 定义。生命、记忆、攻击阶段属于每实体运行态，定义、阵营矩阵与战略 Goal 共享；不得通过实例化旧 AI 获得模板，也不得用 P0 能力报告充当运行时配置。
-- 正式 AIECS 的水体环境态从共享导航快照单向进入 `AiecsFlowAgent.WaterDepth/WaterBlend`：移动层按同一水深做减速，`AiecsDisplayRecord` 再把它交给批量水体 Shader。禁止为每只 Entity 创建 `TileEffectReceiver` 或反向查询 `ChunkMgr`；水体是否需要绕行仍由导航高代价决定，而不是由水态表现硬阻挡。
+- 正式 AIECS 的水深和单位流速从共享导航快照单向进入 `AiecsFlowAgent`：水深决定主动减速，JSON 按 Actor ID 配置的推动速度再乘水流，待机也参与漂流；F5 重新发布配置时由 Bridge 一次性同步现有居民。禁止为每只 Entity 创建 `TileEffectReceiver` 或反向查询 `ChunkMgr`；水体是否需要绕行仍由导航高代价决定，而不是由水态表现硬阻挡。
 - 原生感知直接从 ECS 位置、身份、体型、生命构建稀疏桶，桶键包含阵营以避免同阵营占满候选预算。锁定目标只做有效性与低频追击规则复核，失效才错峰搜桶；不可达目标按配置延迟重试。形状偏移和外部玩家缩放必须纳入粗筛扩张上限，循环桶去重与最近镜像必须一起使用。
 - LOS 独立复制 TerrainCell 的 Blocking 和建筑占地，不能把导航不可走当作遮挡。移动前快照用于感知，移动后重建快照用于命中；所有 Native 借用必须进入依赖链，重建和释放前完成旧读取者。武器 Pulse 在模拟批次之外发生时须重新借用当前导航索引，不能跨 Update 缓存可能已被导航发布替换的 LOS 视图。
 - 正式 `AiecsSimulation` 使用两套空间索引：`perceptionSpatial` 冻结移动前感知/决策快照，`combatSpatial` 沿移动 Job 依赖链异步建立移动后攻击/伤害快照；`AiecsSpatialIndex.Build` 只同步该索引上一轮读取者，当前 dependency 必须继续交给 Build Job，禁止重新复用单索引并在 Tick 中途 `Complete` 整条移动链。正式生态宿主 60Hz 基础时钟单帧最多执行 2 个 Tick、最多保留 3 个 Tick 时间债务，避免卡顿后形成追帧尖峰；低于 30 FPS 时实际 Tick 会进一步下降。
