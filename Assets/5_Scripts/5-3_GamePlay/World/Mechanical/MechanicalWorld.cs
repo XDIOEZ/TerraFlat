@@ -339,6 +339,20 @@ public static class MechanicalWorld
         if (node.State == null) WakeNode(node);
     }
 
+    /// <summary>外部动力已传入时禁止手推；面板据此保留按钮但禁用点击。</summary>
+    public static bool CanManualDrive(MechanicalNode node)
+        => GameNetwork.HasStateAuthority && Contains(node) && node.State != null &&
+           node.Definition.ManualDriveTorque > 0 && !node.IncomingPower;
+
+    /// <summary>单次手推向节点补入短时动力，实际转速和扭矩仍由整网解算。</summary>
+    public static bool TryManualDrive(MechanicalNode node)
+    {
+        if (!CanManualDrive(node)) return false;
+        node.State.ManualSeconds = Mathf.Max(node.State.ManualSeconds, node.Definition.ManualDriveSecondsPerPress);
+        StateChanged(node);
+        return true;
+    }
+
     /// <summary>建造耐久来自可替换的物品定义，与运行时碰撞体无关。</summary>
     public static float ResolveMaximumHp(string itemId)
     {
@@ -413,7 +427,7 @@ public static class MechanicalWorld
             // 拓扑合并可能包含冷节点，全部恢复成功后才运行任何一个节点。
             foreach (var node in network.Nodes) if (node.State == null) WakeNode(node);
             network.Active = true;
-            MechanicalNetworkGraph.Solve(network, GetSourceFactor, GetSourceRpm, MechanicalCatalog.Settings.ReferenceRpm);
+            SolveNetwork(network);
             foreach (var node in network.Nodes)
             {
                 UpdateVisualSpeed(node);
@@ -421,6 +435,35 @@ public static class MechanicalWorld
             }
         }
     }
+
+    /// <summary>先排除手推源检查整网外部动力，再让无外部动力的手推石磨作为动力源入网。</summary>
+    private static void SolveNetwork(MechanicalNetwork network)
+    {
+        float referenceRpm = MechanicalCatalog.Settings.ReferenceRpm;
+        MechanicalNetworkGraph.Solve(network, GetExternalSourceFactor, GetSourceRpm, referenceRpm);
+        bool hasExternalSource = false;
+        foreach (MechanicalNode node in network.Nodes)
+            if (node.Definition.ManualDriveTorque <= 0 && node.SourceFactor > 0)
+                hasExternalSource = true;
+        bool manualDriveActive = false;
+        foreach (MechanicalNode node in network.Nodes)
+        {
+            if (node.Definition.ManualDriveTorque <= 0) continue;
+            node.IncomingPower = hasExternalSource;
+            manualDriveActive |= !node.IncomingPower && node.State.ManualSeconds > 0;
+        }
+        if (manualDriveActive)
+        {
+            MechanicalNetworkGraph.Solve(network, GetSourceFactor, GetSourceRpm, referenceRpm);
+            foreach (MechanicalNode node in network.Nodes)
+                if (node.Definition.ManualDriveTorque > 0 && node.FlowVisited && node.EntryDirection >= 0)
+                    node.IncomingPower = true;
+        }
+    }
+
+    /// <summary>外部动力探测不计入手推石磨自身，避免按钮状态依赖上一次解算顺序。</summary>
+    private static float GetExternalSourceFactor(MechanicalNode node)
+        => node.Definition.ManualDriveTorque > 0 ? 0f : GetSourceFactor(node);
 
     private static void CollectPlayerChunks()
     {
@@ -470,7 +513,7 @@ public static class MechanicalWorld
         foreach (var node in network.Nodes)
         {
             RemoveView(node);
-            DisposeProcessor(node); node.State = null; node.Rpm = 0;
+            DisposeProcessor(node); node.State = null; node.Rpm = 0; node.IncomingPower = false;
             UpdateVisualSpeed(node);
         }
         network.Active = false; network.Status = "休眠";
@@ -479,8 +522,9 @@ public static class MechanicalWorld
     private static void SimulateNode(MechanicalNode node, float step)
     {
         if (node.State == null) return;
-        if (node.Definition.Source == "manual")
+        if (node.Definition.Source == "manual" || node.Definition.ManualDriveTorque > 0)
             node.State.ManualSeconds = Mathf.Max(0, node.State.ManualSeconds - step);
+        // 手推石磨虽临时向外供能，仍按自身解算后的转速执行研磨。
         if (node.Rpm > 0)
             node.Processor?.Advance(step * GetWorkEfficiency(node));
         if (interactions.TryGetValue(node.Id, out MechanicalInteractionTarget interaction))
@@ -496,7 +540,9 @@ public static class MechanicalWorld
 
     private static float GetSourceFactor(MechanicalNode node)
     {
-        if (node.State == null || node.Definition.Torque <= 0) return 0;
+        if (node.State == null || node.SourceTorque <= 0) return 0;
+        if (node.Definition.ManualDriveTorque > 0)
+            return !node.IncomingPower && node.State.ManualSeconds > 0 ? 1 : 0;
         string source = node.Definition.Source;
         if (sourceProviders.TryGetValue(source, out var provider)) return Mathf.Clamp01(provider(node));
         if (source == "manual") return node.State.ManualSeconds > 0 ? 1 : 0;
@@ -509,6 +555,7 @@ public static class MechanicalWorld
     private static float GetSourceRpm(MechanicalNode node)
     {
         if (node?.Definition == null) return 0f;
+        if (node.Definition.ManualDriveTorque > 0) return node.Definition.ManualDriveRpm;
         string source = node.Definition.Source;
         if (sourceRpmProviders.TryGetValue(source, out var provider)) return provider(node);
         if (source == "water") return GetWaterSourceRpm(node);

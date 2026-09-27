@@ -15,13 +15,15 @@ public sealed class MechanicalPanelSession : IDisposable
     private readonly Action<Player> action;
     private readonly Func<string> status;
     private readonly Func<string> actionLabel;
+    private readonly Func<bool> actionAvailable; // 操作资格由机械域判断，面板只呈现按钮禁用态。
     private readonly CraftingOutputPreview preview;
     private Player actor;
 
     public MechanicalPanelSession(string prefabId, Item owner, MechanicalProcessor processor, Action<Player> action,
-        Func<string> status, Func<string> actionLabel)
+        Func<string> status, Func<string> actionLabel, Func<bool> actionAvailable = null)
     {
-        this.owner = owner; this.processor = processor; this.action = action; this.status = status; this.actionLabel = actionLabel;
+        this.owner = owner; this.processor = processor; this.action = action; this.status = status;
+        this.actionLabel = actionLabel; this.actionAvailable = actionAvailable;
         panel = UIManager.Instance.CreatePanelFromGameObject(GameRes.Instance.GetPrefab(prefabId));
         view = panel.GetComponent<MechanicalPanelView>() ?? throw new InvalidOperationException(prefabId + " 缺少正式视图绑定。");
         view.SetProcessingVisible(processor != null);
@@ -42,8 +44,8 @@ public sealed class MechanicalPanelSession : IDisposable
 
     /// <summary>纯数据机械节点使用相同面板，不需要对应世界 Item。</summary>
     public MechanicalPanelSession(string prefabId, MechanicalNode owner, MechanicalProcessor processor,
-        Action<Player> action, Func<string> status, Func<string> actionLabel)
-        : this(prefabId, (Item)null, processor, action, status, actionLabel)
+        Action<Player> action, Func<string> status, Func<string> actionLabel, Func<bool> actionAvailable = null)
+        : this(prefabId, (Item)null, processor, action, status, actionLabel, actionAvailable)
     {
         mechanicalOwner = owner;
     }
@@ -63,7 +65,11 @@ public sealed class MechanicalPanelSession : IDisposable
         }
         panel.Toggle(); processor?.Input.SyncQuickTransferTarget(panel); Refresh();
     }
-    private void OnAction() { action?.Invoke(actor); Refresh(); }
+    private void OnAction()
+    {
+        if (actionAvailable?.Invoke() != false) action?.Invoke(actor);
+        Refresh();
+    }
     public void Refresh()
     {
         if (panel == null || !panel.IsOpen()) return;
@@ -73,6 +79,7 @@ public sealed class MechanicalPanelSession : IDisposable
         view.Status.text = status?.Invoke() ?? string.Empty;
         string caption = actionLabel?.Invoke() ?? string.Empty;
         view.SetActionVisible(!string.IsNullOrWhiteSpace(caption));
+        view.ActionButton.interactable = !string.IsNullOrWhiteSpace(caption) && actionAvailable?.Invoke() != false;
         view.ActionButton.GetComponentInChildren<TMP_Text>(true).text = FlatWorldLocalizationService.GetUiText(caption);
         if (processor == null) return;
         var result = processor.Preview();

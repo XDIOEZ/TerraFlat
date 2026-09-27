@@ -1140,7 +1140,8 @@ public sealed class Mod_MechanicalNode : Module, IInteractable, IBuildingPlaceme
     /// <summary>创建并切换到通用机械面板。</summary>
     private void ToggleMechanicalPanel(Item actor)
     {
-        panel ??= new MechanicalPanelSession("UI_Mechanical", item, Node.Processor, PerformOperation, GetStatus, GetActionLabel);
+        panel ??= new MechanicalPanelSession("UI_Mechanical", item, Node.Processor,
+            PerformOperation, GetStatus, GetActionLabel, CanPerformOperation);
         panel.Toggle(actor);
     }
     public void RefreshPanel() => panel?.Refresh();
@@ -1148,16 +1149,22 @@ public sealed class Mod_MechanicalNode : Module, IInteractable, IBuildingPlaceme
     {
         if (Definition.Kind == "clutch") return LocalState.Engaged ? "断开" : "接合";
         if (Definition.Kind == "gearbox" && Definition.Ratios.Length > 1) return "切换传动比";
+        if (Definition.ManualDriveTorque > 0) return "手动研磨";
         if (MechanicalDefinition.Positive(Definition.ManualWorkSecondsPerPress) && Node?.Processor?.Preview().Success == true)
             return "手动推进";
         return string.Empty;
     }
+    /// <summary>手推按钮是否可用由机械世界的输入动力状态决定。</summary>
+    private bool CanPerformOperation()
+        => Definition.ManualDriveTorque <= 0 || MechanicalWorld.CanManualDrive(Node);
     private void PerformOperation(Player actor)
     {
         if (!GameNetwork.HasStateAuthority || Node?.State == null) return;
         if (Definition.Kind == "clutch") { LocalState.Engaged = !LocalState.Engaged; MechanicalWorld.TopologyChanged(Node); }
         else if (Definition.Kind == "gearbox" && Definition.Ratios.Length > 1)
         { LocalState.RatioIndex = (LocalState.RatioIndex + 1) % Definition.Ratios.Length; MechanicalWorld.TopologyChanged(Node); }
+        else if (Definition.ManualDriveTorque > 0)
+            MechanicalWorld.TryManualDrive(Node);
         else if (MechanicalDefinition.Positive(Definition.ManualWorkSecondsPerPress) && Node.Processor?.Preview().Success == true)
             Node.Processor.AdvanceManually(Definition.ManualWorkSecondsPerPress, actor);
         Save(); panel?.Refresh();

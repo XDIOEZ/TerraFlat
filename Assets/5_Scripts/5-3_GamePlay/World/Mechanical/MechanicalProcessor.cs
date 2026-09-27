@@ -61,7 +61,7 @@ public sealed class MechanicalProcessor : IDisposable
         return success;
     }
 
-    /// <summary>手动推动石磨时沿用自动加工的预检、进度和 CraftingService 原子提交。</summary>
+    /// <summary>直接手动推进加工时沿用自动加工的预检、进度和原子提交。</summary>
     public bool AdvanceManually(float workSeconds, Player actor = null) => Advance(workSeconds, actor);
 
     public float Progress01 => TryGetProcess(out var process) ? Mathf.Clamp01(State.Progress / process.WorkSeconds) : 0f;

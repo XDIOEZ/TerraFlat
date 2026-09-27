@@ -73,7 +73,7 @@ public sealed class MechanicalInteractionTarget : IWorldInteractionTarget, IDisp
     {
         panel ??= new MechanicalPanelSession("UI_Mechanical", node,
             GameNetwork.HasStateAuthority ? node.Processor : null,
-            PerformOperation, GetStatus, GetActionLabel);
+            PerformOperation, GetStatus, GetActionLabel, CanPerformOperation);
         panel.Toggle(actor);
     }
 
@@ -87,9 +87,14 @@ public sealed class MechanicalInteractionTarget : IWorldInteractionTarget, IDisp
         if (node.State == null) return string.Empty;
         if (node.Definition.Kind == "clutch") return node.State.Engaged ? "断开" : "接合";
         if (node.Definition.Kind == "gearbox" && node.Definition.Ratios.Length > 1) return "切换传动比";
+        if (node.Definition.ManualDriveTorque > 0) return "手动研磨";
         return MechanicalDefinition.Positive(node.Definition.ManualWorkSecondsPerPress) &&
             node.Processor?.Preview().Success == true ? "手动推进" : string.Empty;
     }
+
+    /// <summary>手推石磨的操作资格随外部输入动力实时更新。</summary>
+    private bool CanPerformOperation()
+        => node.Definition.ManualDriveTorque <= 0 || MechanicalWorld.CanManualDrive(node);
 
     /// <summary>面板操作直接修改权威节点，拓扑变更在下一次机械 Tick 重构。</summary>
     private void PerformOperation(Player actor)
@@ -105,6 +110,8 @@ public sealed class MechanicalInteractionTarget : IWorldInteractionTarget, IDisp
             node.State.RatioIndex = (node.State.RatioIndex + 1) % node.Definition.Ratios.Length;
             MechanicalWorld.TopologyChanged(node);
         }
+        else if (node.Definition.ManualDriveTorque > 0)
+            MechanicalWorld.TryManualDrive(node);
         else if (MechanicalDefinition.Positive(node.Definition.ManualWorkSecondsPerPress) &&
                  node.Processor?.Preview().Success == true)
             node.Processor.AdvanceManually(node.Definition.ManualWorkSecondsPerPress, actor);

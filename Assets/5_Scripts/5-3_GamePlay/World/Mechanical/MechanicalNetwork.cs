@@ -20,6 +20,7 @@ public sealed class MechanicalNode
     public float TorqueRatio = 1f;
     public float SourceFactor;
     public float SourceRpm; // 当前动力源按其环境输入计算出的实际转速。
+    public bool IncomingPower; // 所在机械网已接入其他有效动力源，手推按钮据此置灰。
     public int EntryDirection = -1;
     public int GearboxCrossings;
     public bool FlowVisited;
@@ -41,6 +42,11 @@ public sealed class MechanicalNode
     public string GetPortMode(int direction)
     {
         if (!HasPort(direction)) return "closed";
+        if (Definition.ManualDriveTorque > 0)
+        {
+            if (SourceFactor <= 0) return "input";
+            return FlowVisited && EntryDirection == direction ? "input" : "output";
+        }
         string mode = Definition.GetPortMode();
         if (mode == "output" && Definition.Torque > 0 && FlowVisited && EntryDirection >= 0)
             return direction == EntryDirection ? "input" : "output";
@@ -49,6 +55,8 @@ public sealed class MechanicalNode
         if (EntryDirection >= 0) return direction == EntryDirection ? "input" : "output";
         return SourceFactor > 0 && Definition.Torque > 0 ? "output" : "relay";
     }
+    /// <summary>手推用力器在供能期间临时成为出力器，其余节点沿用定义扭矩。</summary>
+    public float SourceTorque => Definition.ManualDriveTorque > 0 ? Definition.ManualDriveTorque : Definition.Torque;
     /// <summary>齿轮彼此仍按齿牙端口啮合；其他节点按配置的局部传动轴接口连通。</summary>
     public bool CanConnectTo(MechanicalDefinition other, int direction)
     {
@@ -252,24 +260,24 @@ public sealed class MechanicalNetworkGraph
             node.Rpm = 0;
             node.SpeedRatio = 1f; node.TorqueRatio = 1f;
             node.EntryDirection = -1; node.GearboxCrossings = 0; node.FlowVisited = false;
-            node.SourceFactor = node.Definition.Torque > 0 ? Mathf.Clamp01(sourceFactor(node)) : 0f;
+            node.SourceFactor = node.SourceTorque > 0 ? Mathf.Clamp01(sourceFactor(node)) : 0f;
             float suppliedRpm = node.SourceFactor > 0f ? sourceRpm(node) : 0f;
             node.SourceRpm = MechanicalDefinition.Positive(suppliedRpm) ? suppliedRpm : 0f;
             if (node.SourceRpm <= 0f) node.SourceFactor = 0f;
-            if (root == null && node.SourceFactor > 0 && node.Definition.Torque > 0) root = node;
+            if (root == null && node.SourceFactor > 0 && node.SourceTorque > 0) root = node;
         }
         if (root == null) { network.Status = "无扭矩"; return; }
         PropagateTransmission(network, root, root);
         // 输入终点不转送转速；另一侧若有同速扭矩源，仍从自己的输出侧传播。
         foreach (var node in network.Nodes)
         {
-            if (node.SourceFactor <= 0 || node.Definition.Torque <= 0 || node.FlowVisited) continue;
+            if (node.SourceFactor <= 0 || node.SourceTorque <= 0 || node.FlowVisited) continue;
             if (!SameSpeed(node.SourceRpm, root.SourceRpm))
             { network.OutputConflict = true; continue; }
             PropagateTransmission(network, root, node);
         }
         foreach (var node in network.Nodes)
-            if (node.SourceFactor > 0 && node.Definition.Torque > 0 && !node.FlowVisited)
+            if (node.SourceFactor > 0 && node.SourceTorque > 0 && !node.FlowVisited)
                 network.OutputConflict = true;
         if (network.OutputConflict) { network.Status = "机械卡死"; return; }
         if (network.RatioConflict) { network.Status = "传动比冲突"; return; }
@@ -279,8 +287,8 @@ public sealed class MechanicalNetworkGraph
         {
             if (!node.FlowVisited) continue; // 用力器输入端以外的断开支路不吃动力。
             torqueCapacity = Mathf.Min(torqueCapacity, node.Definition.TorqueCapacity / node.TorqueRatio);
-            if (node.SourceFactor > 0 && node.Definition.Torque > 0)
-                network.TorqueSupply += node.Definition.Torque * node.SourceFactor / node.TorqueRatio;
+            if (node.SourceFactor > 0 && node.SourceTorque > 0)
+                network.TorqueSupply += node.SourceTorque * node.SourceFactor / node.TorqueRatio;
         }
         foreach (var node in network.Nodes)
         {
@@ -323,10 +331,10 @@ public sealed class MechanicalNetworkGraph
                 if (!MechanicalDefinition.Positive(speed) || !MechanicalDefinition.Positive(torque) ||
                     speed > 10000f || speed < .0001f || torque > 10000f || torque < .0001f)
                 { network.RatioConflict = true; continue; }
-                if (to.GetPortMode(entry) == "output" && to.Definition.Torque <= 0)
+                if (to.GetPortMode(entry) == "output" && to.SourceTorque <= 0)
                 { network.OutputConflict = true; continue; }
                 // 扭矩源既能受同网带动，也能叠加扭矩；必须与根源及到达自身的实际转速一致。
-                if (to.SourceFactor > 0 && to.Definition.Torque > 0 &&
+                if (to.SourceFactor > 0 && to.SourceTorque > 0 &&
                     (!SameSpeed(to.SourceRpm, referenceSource.SourceRpm) ||
                      !SameSpeed(to.SourceRpm, referenceSource.SourceRpm * speed)))
                 { network.OutputConflict = true; continue; }

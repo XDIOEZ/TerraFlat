@@ -192,6 +192,9 @@ public sealed class MechanicalDefinition
     public float RequiredRpm = 60f; // 用力器达到 100% 工作效率所需的转速。
     public float TorqueLoad;
     public float ManualWorkSecondsPerPress; // 面板一次手动推动贡献的加工时间；0 表示不开放手动推进。
+    public float ManualDriveTorque; // 手推时向机械网络输出的扭矩；0 表示不能手推供能。
+    public float ManualDriveRpm; // 手推时的低速转速，单位 RPM。
+    public float ManualDriveSecondsPerPress; // 每次点击维持手推供能的秒数。
     public float[] Ratios = { 0.5f, 1f, 2f };
     public float ReverseSpeedRatio; // 0 表示兼容旧配置，逆向采用正向速比的倒数。
     public float ForwardTorqueRatio = 1f; // 从左/下侧输入时输出侧的扭矩倍率。
@@ -204,6 +207,7 @@ public sealed class MechanicalDefinition
     public string GetPortMode()
     {
         if (PortMode != "auto") return PortMode;
+        if (ManualDriveTorque > 0) return "relay"; // 建图允许接入，实际输入/输出由节点当前动力状态决定。
         if (Kind == "consumer" || Kind == "bellows" || !string.IsNullOrEmpty(Station)) return "input";
         return Kind == "source" || Torque > 0 ? "output" : "relay";
     }
@@ -231,10 +235,17 @@ public sealed class MechanicalDefinition
             !Positive(TorqueCapacity) || !NonNegative(Torque) || !Positive(Rpm) || !Positive(RequiredRpm) || !NonNegative(TorqueLoad) ||
             (Source == "water" && !Positive(SourceRadius)) ||
             !Positive(PlayerMoveSpeedMultiplier) || PlayerMoveSpeedMultiplier > 1f || !NonNegative(ManualWorkSecondsPerPress) ||
+            !NonNegative(ManualDriveTorque) || !NonNegative(ManualDriveRpm) || !NonNegative(ManualDriveSecondsPerPress) ||
             Ratios == null || Ratios.Length == 0 ||
             (ReverseSpeedRatio != 0 && !Positive(ReverseSpeedRatio)) ||
             !Positive(ForwardTorqueRatio) || !Positive(ReverseTorqueRatio))
             throw new ArgumentException("机械节点参数无效：" + Id);
+        if (ManualDriveTorque > 0 && (Kind != "consumer" || PortMode != "auto" || Torque > 0 ||
+            ManualWorkSecondsPerPress > 0 ||
+            !string.IsNullOrEmpty(Source) || !Positive(ManualDriveRpm) || !Positive(ManualDriveSecondsPerPress)))
+            throw new ArgumentException("手推供能参数无效：" + Id);
+        if (ManualDriveTorque == 0 && (ManualDriveRpm != 0 || ManualDriveSecondsPerPress != 0))
+            throw new ArgumentException("手推供能参数不完整：" + Id);
         foreach (float ratio in Ratios) if (!Positive(ratio)) throw new ArgumentException("变速比必须为正数。");
         if (AxlePorts != null)
             foreach (string port in AxlePorts)

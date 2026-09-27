@@ -20,7 +20,7 @@
     { "Id": "Gearbox_Wood", "Kind": "gearbox", "Ports": "axis", "TorqueCapacity": 32, "Ratios": [2], "ReverseSpeedRatio": 0.5, "ForwardTorqueRatio": 0.5, "ReverseTorqueRatio": 2 },
     { "Id": "Clutch", "Kind": "clutch", "Ports": "axis", "TorqueCapacity": 256 },
     { "Id": "CrossShaft", "Kind": "bridge", "Ports": "axis", "TorqueCapacity": 256 },
-    { "Id": "Millstone", "Kind": "consumer", "Ports": "axis", "Station": "millstone", "RequiredRpm": 60, "TorqueLoad": 8, "TorqueCapacity": 256, "ManualWorkSecondsPerPress": 0.2 },
+    { "Id": "Millstone", "Kind": "consumer", "Ports": "axis", "Station": "millstone", "RequiredRpm": 60, "TorqueLoad": 8, "TorqueCapacity": 256, "ManualDriveTorque": 64, "ManualDriveRpm": 6, "ManualDriveSecondsPerPress": 3 },
     { "Id": "MechanicalBellows", "Kind": "bellows", "Ports": "all", "AxlePorts": ["left"], "RequiredRpm": 60, "TorqueLoad": 8, "TorqueCapacity": 256 },
     { "Id": "Sawmill", "Kind": "consumer", "Ports": "all", "Station": "sawmill", "RequiredRpm": 120, "TorqueLoad": 12, "TorqueCapacity": 256 },
     { "Id": "MechanicalHammer", "Kind": "consumer", "Ports": "axis", "Station": "mechanical_hammer", "RequiredRpm": 180, "TorqueLoad": 16, "TorqueCapacity": 256 }
@@ -38,7 +38,6 @@
     { "Station": "millstone", "Input": "Ore_Stone", "Outputs": [{ "ItemName": "OrePowder_Stone", "amount": 1 }], "WorkSeconds": 4 },
     { "Station": "millstone", "Input": "Ore_Coal", "Outputs": [{ "ItemName": "OrePowder_Coal", "amount": 1 }], "WorkSeconds": 4 },
     { "Station": "millstone", "Input": "Ore_Copper", "Outputs": [{ "ItemName": "OrePowder_Copper", "amount": 1 }], "WorkSeconds": 4 },
-    { "Station": "millstone", "Input": "Ore_Flint", "Outputs": [{ "ItemName": "OrePowder_Flint", "amount": 1 }], "WorkSeconds": 4 },
     { "Station": "millstone", "Input": "Ore_Iron", "Outputs": [{ "ItemName": "OrePowder_Iron", "amount": 1 }], "WorkSeconds": 4 },
     { "Station": "millstone", "Input": "Ore_Tin", "Outputs": [{ "ItemName": "OrePowder_Tin", "amount": 1 }], "WorkSeconds": 4 },
     { "Station": "millstone", "Input": "Ore_Niter", "Outputs": [{ "ItemName": "OrePowder_Niter", "amount": 1 }], "WorkSeconds": 4 },
