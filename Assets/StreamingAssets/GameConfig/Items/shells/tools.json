@@ -237,7 +237,7 @@
       "canBePickedUp": true,
       "tags": [],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Mechanical/Items/DrilledStick_Idle.png"
       },
       "modules": {}
     },
@@ -472,7 +472,7 @@
       "stackable": true,
       "canBePickedUp": true,
       "tags": [
-        "火种"
+        "Combustion.Tinder"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Plants/火种.png[火种]",

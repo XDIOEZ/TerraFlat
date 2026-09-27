@@ -32,6 +32,11 @@
       "enabled": true
     },
     {
+      "id": "gold",
+      "path": "shells/gold.json",
+      "enabled": true
+    },
+    {
       "id": "resource_nodes",
       "path": "shells/resource_nodes.json",
       "enabled": true

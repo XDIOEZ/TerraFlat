@@ -1192,7 +1192,7 @@
               "FireSeed"
             ],
             "ignitionTags": [
-              "火种"
+              "Combustion.Tinder"
             ],
             "ignitionFuelValueOverride": 8.0
           }
@@ -1298,6 +1298,43 @@
         "bow": {
           "parameters": {
             "ProjectileDamageMultiplier": 1.5
+          }
+        }
+      }
+    },
+    {
+      "id": "Blowgun_Wood",
+      "parent": "Bow_Wood",
+      "gameName": "吹箭",
+      "description": "手持吹箭筒。按住攻击键蓄力并对麦克风吹气，松开后消耗同一库存中的一支箭；吹气越响，箭矢飞得越快并额外造成最多 100% 伤害。",
+      "weight": 0.5,
+      "volume": 2.0,
+      "tags": [
+        "Blowgun",
+        "RangedWeapon",
+        "Wood"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Combat/Archery/Blowgun_Wood_Icon.png",
+        "flipX": false
+      },
+      "modules": {
+        "bow": {
+          "parameters": {
+            "ShowNockedAmmo": false
+          }
+        },
+        "microphoneCharge": {
+          "prefab": "Mod_MicrophoneCharge",
+          "id": "Mod_MicrophoneCharge",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "NoiseFloorRms": 0.015,
+            "FullBonusRms": 0.15
           }
         }
       }

@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "items": [
+    {
+      "id": "Ingot_Gold",
+      "parent": "BasicItem_Base",
+      "gameName": "金锭",
+      "description": "由黄金铸成的金属锭，可作为制作材料。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 3.6,
+      "volume": 0.3,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": ["Ingot"],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/GoldIngot/GoldIngot_Icon.png",
+        "color": { "r": 1, "g": 1, "b": 1, "a": 1 },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": { "x": 0, "y": 0 },
+          "size": { "x": 0.7, "y": 0.63 }
+        }
+      },
+      "modules": {}
+    },
+    {
+      "id": "Ore_Gold",
+      "parent": "BasicItem_Base",
+      "gameName": "金矿石",
+      "description": "含金的矿石，可冶炼为金锭。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 3,
+      "volume": 0.75,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": ["Ore", "Gold"],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Environment/Ore_Gold/Ore_Gold_Idle.png",
+        "color": { "r": 1, "g": 1, "b": 1, "a": 1 },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": { "x": 0, "y": 0 },
+          "size": { "x": 0.7, "y": 0.63 }
+        }
+      }
+    },
+    {
+      "id": "Mine_Gold",
+      "parent": "Mine_Iron",
+      "gameName": "金矿山",
+      "description": "含金矿脉的岩体，需要镐开采，开采后掉落金矿石。",
+      "lootTableId": "Mine_Gold_Default",
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Environment/Mine_Gold/Mine_Gold_Idle.png",
+        "color": { "r": 1, "g": 1, "b": 1, "a": 1 }
+      }
+    }
+  ]
+}

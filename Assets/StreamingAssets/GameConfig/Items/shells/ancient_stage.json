@@ -150,6 +150,7 @@
     {
       "id": "HerbCrop",
       "parent": "WildCrop_Base",
+      "tags": ["BeeForage.Crop"],
       "gameName": "药草-农作物",
       "description": "成熟后采收；可留种种植。持续受寒或受热会枯萎。",
       "weight": 0.4,
@@ -198,6 +199,7 @@
     {
       "id": "FoxtailCrop",
       "parent": "WildCrop_Base",
+      "tags": ["BeeForage.Crop"],
       "gameName": "狗尾草-农作物",
       "description": "成熟后可采收狗尾草穗；持续受寒或受热会枯萎。",
       "weight": 0.5,
@@ -1068,51 +1070,6 @@
                   "EnableSpoilage": true,
                   "SpoilageElapsedSeconds": 0.0,
                   "SpoilageIntervalSeconds": 900.0,
-                  "SpoilageTargetItemID": "Humus"
-                }
-              },
-              {
-                "StateKey": "food.consumption",
-                "Data": {
-                  "EatingProgress": 0.0
-                }
-              }
-            ]
-          }
-        }
-      },
-      "visual": {
-        "spriteAddress": "Assets/6_Art/Food/Item_Jam.png",
-        "color": {
-          "r": 1,
-          "g": 1,
-          "b": 1,
-          "a": 1
-        }
-      }
-    },
-    {
-      "id": "BottledJam",
-      "parent": "Jam",
-      "gameName": "瓶装果酱",
-      "tags": [
-        "47",
-        "PreserveFreshness"
-      ],
-      "description": "用陶罐密封保存的果酱，保质期为一个游戏年；装瓶时继承原果酱的剩余新鲜度。",
-      "weight": 3.5,
-      "volume": 8.5,
-      "stackable": false,
-      "modules": {
-        "food": {
-          "data": {
-            "MechanicStates": [
-              {
-                "StateKey": "food.spoilage",
-                "Data": {
-                  "EnableSpoilage": true,
-                  "SpoilageElapsedSeconds": 0.0,
-                  "SpoilageIntervalSeconds": 34560.0,
                   "SpoilageTargetItemID": "Humus"
                 }
               },

@@ -1814,7 +1814,7 @@
               "FireSeed"
             ],
             "ignitionTags": [
-              "火种"
+              "Combustion.Tinder"
             ],
             "ignitionFuelValueOverride": 8.0
           }

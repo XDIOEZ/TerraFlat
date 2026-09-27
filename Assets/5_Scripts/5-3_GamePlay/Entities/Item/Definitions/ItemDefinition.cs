@@ -101,6 +101,10 @@ public sealed class ItemDefinitionDto
     [JsonProperty("weight")]
     public float? Weight;
 
+    /// <summary>作为建筑放置时每个占地格需要的最低承重；普通物品默认 0。</summary>
+    [JsonProperty("requiredGroundSupport")]
+    public int RequiredGroundSupport;
+
     [JsonProperty("stackable")]
     public bool? Stackable;
 
@@ -249,14 +253,14 @@ public sealed class LiquidSurfaceDefinition
 
 /// <summary>
 /// 物品世界阴影的静态视觉参数：落地点使用物品根节点的局部坐标，
-/// 圆形底座阴影宽度以世界格为单位；只填写落地点时仍可单独校正太阳投影。
+/// 椭圆底座阴影宽度以世界格为单位；只填写落地点时仍可单独校正太阳投影。
 /// </summary>
 [Serializable]
 public sealed class ItemShadowVisualDefinitionDto
 {
     #region 落地点与底座尺寸
 
-    /// <summary>圆形底座阴影宽度；未填写时不额外注册底座阴影。</summary>
+    /// <summary>椭圆底座阴影宽度；未填写时不额外注册底座阴影。</summary>
     [JsonProperty("contactWidth", NullValueHandling = NullValueHandling.Ignore)]
     public float? ContactWidth;
 
@@ -372,6 +376,8 @@ public sealed class RuntimeItemDefinition
     public ItemHealthDefinitionDto Health { get; }
     public string LootTableId { get; }
     public string WaterEntryTransformItemId { get; }
+    /// <summary>当前物品定义的建筑放置承重门槛，不随实例存档覆盖。</summary>
+    public int RequiredGroundSupport { get; }
     public string RendererPath => Visual?.RendererPath;
     public Sprite Sprite { get; }
     public Material Material { get; }
@@ -396,6 +402,17 @@ public sealed class RuntimeItemDefinition
 
     /// <summary>定义中的默认名称，独立于业务 ID 和当前语言，供文本绑定使用。</summary>
     public string SourceDisplayName => templateData.GameName;
+
+    /// <summary>按当前定义的语义标签匹配世界数据资源，无需实例化 Item。</summary>
+    public bool HasTag(string tag)
+    {
+        if (string.IsNullOrWhiteSpace(tag) || templateData.Tags == null)
+            return false;
+        for (int index = 0; index < templateData.Tags.Count; index++)
+            if (string.Equals(templateData.Tags[index], tag, StringComparison.OrdinalIgnoreCase))
+                return true;
+        return false;
+    }
 
     /// <summary>按名称键查询当前语言；界面统一使用此属性，不读取存档里的 GameName。</summary>
     public string DisplayName => FlatWorldLocalizationService.Get(LabelKey, SourceDisplayName);
@@ -422,7 +439,8 @@ public sealed class RuntimeItemDefinition
         Material material = null,
         Dictionary<string, Sprite> stateSprites = null,
         bool isGroundCover = false,
-        IReadOnlyList<GridCellOffset> worldGridOccupancy = null)
+        IReadOnlyList<GridCellOffset> worldGridOccupancy = null,
+        int requiredGroundSupport = 0)
     {
         Id = id;
         ShellPrefabId = shellPrefabId;
@@ -434,6 +452,7 @@ public sealed class RuntimeItemDefinition
         WaterEntryTransformItemId = string.IsNullOrWhiteSpace(waterEntryTransformItemId)
             ? null
             : waterEntryTransformItemId.Trim();
+        RequiredGroundSupport = requiredGroundSupport;
         Sprite = sprite;
         Material = material;
         AnimatorController = animatorController;

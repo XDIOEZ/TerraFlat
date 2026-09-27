@@ -4,6 +4,7 @@
     {
       "id": "TileBase_StoneWall",
       "runtimeTileId": 7,
+      "loadCapacity": 10,
       "displayName": "矿洞岩壁",
       "tileAsset": "TileBase_StoneWall",
       "data": {
@@ -20,6 +21,7 @@
     {
       "id": "TileBase_BuiltStoneWall",
       "runtimeTileId": 8,
+      "loadCapacity": 10,
       "displayName": "石墙",
       "tileAsset": "TileBase_BuiltStoneWall",
       "data": {
@@ -36,6 +38,7 @@
     {
       "id": "TileBase_BuiltWoodWall",
       "runtimeTileId": 12,
+      "loadCapacity": 5,
       "displayName": "木墙",
       "tileAsset": "TileBase_BuiltWoodWall",
       "data": {
@@ -52,6 +55,7 @@
     {
       "id": "Tile_WaterPlatform",
       "runtimeTileId": 13,
+      "loadCapacity": 5,
       "displayName": "水上平台",
       "tileAsset": "Tile_WaterPlatform",
       "data": {
@@ -69,6 +73,7 @@
     {
       "id": "Tile_Platform_Stone",
       "runtimeTileId": 15,
+      "loadCapacity": 10,
       "displayName": "石平台",
       "tileAsset": "Tile_Platform_Stone",
       "data": {
@@ -86,6 +91,7 @@
     {
       "id": "Tile_Platform_Copper",
       "runtimeTileId": 16,
+      "loadCapacity": 10,
       "displayName": "铜平台",
       "tileAsset": "Tile_Platform_Copper",
       "data": {
@@ -103,6 +109,7 @@
     {
       "id": "Tile_Platform_Iron",
       "runtimeTileId": 17,
+      "loadCapacity": 10,
       "displayName": "铁平台",
       "tileAsset": "Tile_Platform_Iron",
       "data": {
@@ -120,6 +127,7 @@
     {
       "id": "Tile_Platform_Bronze",
       "runtimeTileId": 18,
+      "loadCapacity": 10,
       "displayName": "青铜平台",
       "tileAsset": "Tile_Platform_Bronze",
       "data": {
@@ -137,6 +145,7 @@
     {
       "id": "Tile_Wall_Copper",
       "runtimeTileId": 19,
+      "loadCapacity": 10,
       "displayName": "铜墙",
       "tileAsset": "Tile_Wall_Copper",
       "data": {
@@ -153,6 +162,7 @@
     {
       "id": "Tile_Wall_Iron",
       "runtimeTileId": 20,
+      "loadCapacity": 10,
       "displayName": "铁墙",
       "tileAsset": "Tile_Wall_Iron",
       "data": {
@@ -169,6 +179,7 @@
     {
       "id": "Tile_Wall_Bronze",
       "runtimeTileId": 21,
+      "loadCapacity": 10,
       "displayName": "青铜墙",
       "tileAsset": "Tile_Wall_Bronze",
       "data": {
@@ -185,6 +196,7 @@
     {
       "id": "Tile_DirtWall",
       "runtimeTileId": 22,
+      "loadCapacity": 8,
       "displayName": "泥土墙",
       "tileAsset": "TileBase_Dirt",
       "data": {
@@ -201,6 +213,7 @@
     {
       "id": "Tile_Floor_Wood",
       "runtimeTileId": 23,
+      "loadCapacity": 5,
       "displayName": "木地板",
       "tileAsset": "Tile_WaterPlatform",
       "data": {
@@ -218,6 +231,7 @@
     {
       "id": "Tile_Floor_Stone",
       "runtimeTileId": 24,
+      "loadCapacity": 10,
       "displayName": "石地板",
       "tileAsset": "Tile_Platform_Stone",
       "data": {
@@ -235,6 +249,7 @@
     {
       "id": "Tile_Floor_Copper",
       "runtimeTileId": 25,
+      "loadCapacity": 10,
       "displayName": "铜地板",
       "tileAsset": "Tile_Platform_Copper",
       "data": {
@@ -252,6 +267,7 @@
     {
       "id": "Tile_Floor_Iron",
       "runtimeTileId": 26,
+      "loadCapacity": 10,
       "displayName": "铁地板",
       "tileAsset": "Tile_Platform_Iron",
       "data": {
@@ -269,6 +285,7 @@
     {
       "id": "Tile_Floor_Bronze",
       "runtimeTileId": 27,
+      "loadCapacity": 10,
       "displayName": "青铜地板",
       "tileAsset": "Tile_Platform_Bronze",
       "data": {

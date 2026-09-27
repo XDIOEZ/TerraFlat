@@ -185,14 +185,21 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
 
     #region 发射与停止
 
-    /// <summary>按给定射手、方向、蓄力比例和来源武器倍率开始一次飞行。</summary>
+    /// <summary>按原有伤害倍率发射；无额外速度修饰时保持现有调用入口。</summary>
     public void Launch(Item shooter, Vector2 direction, float charge01, float sourceDamageMultiplier = 1f)
+    {
+        Launch(shooter, direction, charge01, sourceDamageMultiplier, 1f);
+    }
+
+    /// <summary>按射手、蓄力和武器模块产出的速度与伤害倍率开始一次飞行。</summary>
+    public void Launch(Item shooter, Vector2 direction, float charge01, float sourceDamageMultiplier, float sourceSpeedMultiplier)
     {
         if (item == null || _damage == null || direction.sqrMagnitude < 0.0001f)
             throw new System.InvalidOperationException($"{name} 无法发射：投射物尚未正确初始化或方向无效。");
 
         float normalizedCharge = Mathf.Clamp01(charge01);
         float speed = Mathf.Lerp(Mathf.Max(0f, MinSpeed), Mathf.Max(MinSpeed, MaxSpeed), normalizedCharge);
+        speed *= Mathf.Max(0f, sourceSpeedMultiplier);
         float damageMultiplier = Mathf.Lerp(
             Mathf.Max(0f, MinDamageMultiplier),
             Mathf.Max(0f, MaxDamageMultiplier),

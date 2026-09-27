@@ -34,6 +34,7 @@
       "volume": 4.0,
       "stackable": false,
       "canBePickedUp": false,
+      "lootTableId": "Beehive_Default",
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Environment/Beehive.png",
         "color": {
@@ -56,6 +57,74 @@
             "y": 0.3
           }
         }
+      },
+      "modules": {
+        "生命值系统模块": {
+          "prefab": "Module_DamageReciver",
+          "id": "生命值系统模块",
+          "enabled": true,
+          "data": {
+            "BitData": "",
+            "Type": 0
+          },
+          "parameters": {
+            "Data": {
+              "Hp": 30.0,
+              "MaxHp": 30.0,
+              "UseBodyPartHealth": false,
+              "TwoPartHitChance": 0.0,
+              "BodyPartDataVersion": 0,
+              "BodyParts": [],
+              "DefenseValues": {
+                "Cutting": 0.0,
+                "Piercing": 0.0,
+                "Chopping": 0.0,
+                "Blunt": 0.0
+              },
+              "AttackersUIDs": [],
+              "DamageInterval": 0.12,
+              "DestroyDelay": 0.0
+            },
+            "impactAudioMaterial": 0,
+            "hurtAudioCueId": "",
+            "enableHitSlowdown": false,
+            "HideUiDelayAfterLastDamage": 4.0,
+            "healthBarTopPadding": 0.08,
+            "healthBarWorldScale": 0.35,
+            "$collider2D": {
+              "type": "BoxCollider2D",
+              "enabled": true,
+              "isTrigger": true,
+              "offset": {
+                "x": 0.0,
+                "y": 0.15
+              },
+              "size": {
+                "x": 0.4,
+                "y": 0.3
+              },
+              "edgeRadius": 0.0
+            }
+          }
+        },
+        "Mod_HiveColony": {
+          "prefab": "Module_HiveColony",
+          "id": "Mod_HiveColony",
+          "enabled": true,
+          "data": { "BitData": null, "Type": 0 },
+          "parameters": {
+            "ActorId": "Bee",
+            "MinimumResidents": 3,
+            "MaximumResidents": 10,
+            "SpawnRadius": 0.45,
+            "ReconcileInterval": 1.0,
+            "TerritoryBaseRadiusCells": 2,
+            "AlarmSeconds": 10.0,
+            "DayStartRatio": 0.25,
+            "DayEndRatio": 0.75,
+            "SleepingSatietyDrainMultiplier": 0.5
+          }
+        }
       }
     },
     {
@@ -72,7 +141,8 @@
       "canBePickedUp": true,
       "groundCover": true,
       "tags": [
-        "Plant"
+        "Plant",
+        "BeeForage.Flower"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Plants/Flower.png",
@@ -1629,6 +1699,13 @@
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Environment/Iceberg/Iceberg_Idle.png",
+        "shadows": {
+          "contactWidth": 0.8,
+          "footLocalPosition": {
+            "x": 0.0,
+            "y": 0.0
+          }
+        },
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -1640,8 +1717,8 @@
           "z": 0.0
         },
         "rendererLocalScale": {
-          "x": 1.0,
-          "y": 1.0,
+          "x": 1.2,
+          "y": 1.2,
           "z": 1.0
         },
         "color": {

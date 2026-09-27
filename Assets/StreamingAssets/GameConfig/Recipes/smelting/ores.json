@@ -151,6 +151,33 @@
       "actions": []
     },
     {
+      "id": "core:金矿石=金锭",
+      "displayName": "金矿石=金锭",
+      "recipeType": "smelting",
+      "inputRule": "unordered",
+      "gridWidth": 1,
+      "gridHeight": 1,
+      "allowMirror": true,
+      "temperature": 1064.0,
+      "maxTemperature": 2000.0,
+      "inputs": [
+        {
+          "slot": 0,
+          "match": "exact_item",
+          "itemId": "Ore_Gold",
+          "tag": "",
+          "amount": 2
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Ingot_Gold",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
       "id": "core:锡矿=锡",
       "displayName": "锡矿=锡",
       "recipeType": "smelting",

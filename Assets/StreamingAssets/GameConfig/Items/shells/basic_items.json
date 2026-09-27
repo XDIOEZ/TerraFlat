@@ -3182,13 +3182,7 @@
       "tags": [],
       "visual": {
         "spriteAddress": "Assets/6_Art/Food/椰子壳-空.png",
-        "spriteStates": {
-          "empty": "Assets/6_Art/Food/椰子壳-空.png",
-          "filled": "Assets/6_Art/Food/椰子壳-有水.png",
-          "dirty": "Assets/6_Art/Food/椰子壳-脏水.png",
-          "drinkable": "Assets/6_Art/Food/椰子壳-有水.png",
-          "sea": "Assets/6_Art/Food/椰子壳-有水.png"
-        },
+        "liquidSurface": { "bounds": { "x": 0.0625, "y": 0.36, "width": 0.875, "height": 0.56 }, "maxSourceChannel": 100 },
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -5883,7 +5877,7 @@
         "Mineral"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Mechanical/Items/DrilledStone_Idle.png"
       },
       "modules": {}
     }
@@ -5896,7 +5890,6 @@
       "volume": 0.2,
       "stackable": true,
       "tags": ["Material", "Fiber"],
-      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Materials/Material.prefab",
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Cotton/Cotton_Icon.png"
       }
@@ -5942,7 +5935,7 @@
       "canBePickedUp": true,
       "tags": ["Material"],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Nails/Nail_Icon.png"
       },
       "modules": {}
     },
@@ -6063,19 +6056,6 @@
       "modules": {}
     },
     {
-      "id": "OrePowder_Flint",
-      "parent": "BasicItem_Base",
-      "gameName": "燧石粉",
-      "description": "石磨研磨燧石得到的细粉，可用于后续材料加工。",
-      "weight": 0.35,
-      "volume": 0.18,
-      "stackable": true,
-      "canBePickedUp": true,
-      "tags": ["Material", "Powder"],
-      "visual": { "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Powders/OrePowder_Flint.png" },
-      "modules": {}
-    },
-    {
       "id": "OrePowder_Iron",
       "parent": "BasicItem_Base",
       "gameName": "铁矿粉",
@@ -6126,6 +6106,58 @@
       "tags": ["Material", "Powder"],
       "visual": { "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Powders/OrePowder_Niter.png" },
       "modules": {}
+    },
+    {
+      "id": "Beeswax",
+      "parent": "Apple",
+      "gameName": "蜂蜡",
+      "description": "由蜂巢产出的金黄色天然蜂蜡，可以直接食用；富含碳水化合物和维生素，但会降低 5 点水分。",
+      "weight": 0.1,
+      "volume": 0.12,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": ["Food", "Material", "AnimalProduct"],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Beeswax/Beeswax_Icon.png"
+      },
+      "modules": {
+        "food": {
+          "data": {
+            "FoodData": {
+              "nutrition": {
+                "Carbohydrates": 55.0,
+                "Max_Carbohydrates": 55.0,
+                "Fat": 2.0,
+                "Max_Fat": 2.0,
+                "Protein": 1.0,
+                "Max_Protein": 1.0,
+                "Water": -5.0,
+                "Max_Water": 5.0,
+                "Vitamins": 25.0,
+                "Max_Vitamins": 25.0
+              },
+              "Max_EatingProgress": 1.0
+            },
+            "MechanicStates": [
+              {
+                "StateKey": "food.spoilage",
+                "Data": {
+                  "EnableSpoilage": false,
+                  "SpoilageElapsedSeconds": 0.0,
+                  "SpoilageIntervalSeconds": 0.0,
+                  "SpoilageTargetItemID": ""
+                }
+              },
+              {
+                "StateKey": "food.consumption",
+                "Data": {
+                  "EatingProgress": 0.0
+                }
+              }
+            ]
+          }
+        }
+      }
     }
   ]
 }

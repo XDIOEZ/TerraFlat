@@ -492,6 +492,7 @@
     {
       "id": "BerryCrop",
       "parent": "WildCrop_Base",
+      "tags": ["BeeForage.Crop"],
       "gameName": "浆果丛-农作物",
       "description": "可自然生长或种在耕地中的浆果丛；成熟后可反复采摘，果实会周期再生。",
       "weight": 1.5,
@@ -689,7 +690,7 @@
       "volume": 3.0,
       "stackable": true,
       "canBePickedUp": false,
-      "tags": [],
+      "tags": ["BeeForage.Crop"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Farming/Rice/RiceCrop_Seedling.png",
         "spriteStates": {
@@ -774,6 +775,7 @@
     ,{
       "id": "CottonCrop",
       "parent": "WildCrop_Base",
+      "tags": ["BeeForage.Crop"],
       "gameName": "棉花",
       "description": "成熟后可以采集棉花纤维。",
       "weight": 0.7,

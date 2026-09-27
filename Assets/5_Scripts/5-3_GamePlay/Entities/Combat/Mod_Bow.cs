@@ -1,10 +1,11 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// 通用弓类远程武器模块：复用 GameController 的统一攻击按住/松开语义进行蓄力，
-/// 只从弓所在的同一 Inventory 选择并消费带指定标签的弹药，松手后生成对应投射物。
+/// 通用蓄力远程武器模块：复用 GameController 的统一攻击按住/松开语义进行蓄力，
+/// 只从武器所在的同一 Inventory 选择并消费带指定标签的弹药，附加模块可独立修饰发射倍率。
 /// </summary>
-public sealed class Mod_Bow : Module
+public sealed class Mod_Bow : Module, IItemModuleDependencyBinder
 {
     public const string PersistedModuleId = "Mod_Bow";
 
@@ -61,6 +62,7 @@ public sealed class Mod_Bow : Module
     private float _chargeSeconds;
     private bool _charging;
     private bool _inventoryResolveWarningLogged;
+    private readonly List<IProjectileChargeModifier> _chargeModifiers = new List<IProjectileChargeModifier>();
 
     #endregion
 
@@ -72,6 +74,15 @@ public sealed class Mod_Bow : Module
         Data ??= new Ex_ModData_MemoryPackable();
         Data.ID = PersistedModuleId;
         base.Awake();
+    }
+
+    /// <summary>在物品模块全部注册后收集可选蓄力修饰模块。</summary>
+    public void BindModuleDependencies(ItemMods modules)
+    {
+        _chargeModifiers.Clear();
+        foreach (Module module in modules.Mods.Values)
+            if (module != this && module is IProjectileChargeModifier modifier)
+                _chargeModifiers.Add(modifier);
     }
 
     /// <summary>手持弓加载时绑定射手控制器；地面弓不监听攻击输入。</summary>
@@ -106,6 +117,8 @@ public sealed class Mod_Bow : Module
                 safeDeltaTime);
 
         _chargeSeconds += safeDeltaTime;
+        foreach (IProjectileChargeModifier modifier in _chargeModifiers)
+            modifier.UpdateCharge(safeDeltaTime);
         UpdateNockedArrowVisual(GetCharge01());
     }
 
@@ -169,6 +182,8 @@ public sealed class Mod_Bow : Module
         _ownerStamina = item.Owner.itemMods?.GetMod_ByID<Mod_Stamina>(ModText.Stamina);
         _charging = true;
         _chargeSeconds = 0f;
+        foreach (IProjectileChargeModifier modifier in _chargeModifiers)
+            modifier.StartCharge();
         if (ShowNockedAmmo) CreateNockedArrowVisual(ammoSlot.itemData.IDName);
         UpdateNockedArrowVisual(0f);
     }
@@ -187,6 +202,14 @@ public sealed class Mod_Bow : Module
         }
 
         float charge01 = GetCharge01();
+        float sourceDamageMultiplier = ProjectileDamageMultiplier;
+        float sourceSpeedMultiplier = 1f;
+        foreach (IProjectileChargeModifier modifier in _chargeModifiers)
+        {
+            ProjectileLaunchMultipliers multipliers = modifier.CompleteCharge();
+            sourceDamageMultiplier *= Mathf.Max(0f, multipliers.DamageMultiplier);
+            sourceSpeedMultiplier *= Mathf.Max(0f, multipliers.SpeedMultiplier);
+        }
         _charging = false;
         _ownerStamina = null;
         DestroyNockedArrowVisual();
@@ -237,7 +260,7 @@ public sealed class Mod_Bow : Module
             return;
         }
 
-        projectile.Launch(shooter, direction, charge01, ProjectileDamageMultiplier);
+        projectile.Launch(shooter, direction, charge01, sourceDamageMultiplier, sourceSpeedMultiplier);
         if (UseHeldItemAsAmmo)
         {
             hotbar?.RefreshUI(ammoSlot.Index);
@@ -260,6 +283,9 @@ public sealed class Mod_Bow : Module
     /// <summary>取消蓄力但不消费弹药。</summary>
     private void CancelCharge()
     {
+        if (_charging)
+            foreach (IProjectileChargeModifier modifier in _chargeModifiers)
+                modifier.CancelCharge();
         _charging = false;
         _chargeSeconds = 0f;
         _ownerStamina = null;

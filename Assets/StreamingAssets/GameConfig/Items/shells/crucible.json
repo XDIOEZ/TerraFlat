@@ -4,7 +4,7 @@
     {
       "id": "Sand",
       "parent": "BasicItem_Base",
-      "gameName": "砂子",
+      "gameName": "沙子",
       "description": "可放入坩埚，在合适温度下熔化为熔融玻璃。",
       "durability": 1.0,
       "maxDurability": 1.0,
@@ -18,7 +18,7 @@
         "Mineral"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Sand/Sand_Icon.png"
       }
     },
     {
@@ -38,14 +38,14 @@
         "Material"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Glass/Glass_Icon.png"
       }
     },
     {
       "id": "Crucible",
       "parent": "BasicItem_Base",
       "gameName": "坩埚",
-      "description": "可装入砂子、矿石等固体材料，也可保存熔化后的高温液体。放入任意接入通用加热能力的炉子后，坩埚会按材料配方和温度区间处理内部材料。",
+      "description": "可装入沙子、矿石等固体材料，也可保存熔化后的高温液体。放入任意接入通用加热能力的炉子后，坩埚会按材料配方和温度区间处理内部材料。",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,

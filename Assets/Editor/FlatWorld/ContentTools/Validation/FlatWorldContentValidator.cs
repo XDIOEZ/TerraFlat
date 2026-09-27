@@ -2233,12 +2233,10 @@ public static class FlatWorldContentValidator
         {
             new("Weather/RainEffect", "Assets/Resources/Weather/RainEffect.prefab", typeof(GameObject)),
             new("Config/StructureCatalog_Default", "Assets/Resources/Config/StructureCatalog_Default.asset", typeof(StructureCatalogSO)),
-            new("Config/SpawnerConfig", "Assets/Resources/Config/SpawnerConfig.asset", typeof(SpawnerConfig)),
-            new("Config/SpawnerConfig_Wolves", "Assets/Resources/Config/SpawnerConfig_Wolves.asset", typeof(SpawnerConfig)),
-            new("Config/SpawnerConfig_Ghost", "Assets/Resources/Config/SpawnerConfig_Ghost.asset", typeof(SpawnerConfig)),
             new("Networking/FlatWorldNetworkPlayer", "Assets/Resources/Networking/FlatWorldNetworkPlayer.prefab", typeof(GameObject))
         };
 
+        // 生物生成配置统一由 Resources/GameConfig/Spawners JSON 提供，已在 ValidateSpawners 中校验。
         foreach (ResourceRequirement requirement in requirements)
         {
             Object asset = AssetDatabase.LoadAssetAtPath(requirement.AssetPath, requirement.ExpectedType);

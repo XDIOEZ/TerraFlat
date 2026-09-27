@@ -7,6 +7,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
 using UnityEngine.ResourceManagement.AsyncOperations;
+using FlatWorld.Localization;
 using FlatWorld.WorldModel;
 #if UNITY_EDITOR
 using UnityEditor;
@@ -751,9 +752,11 @@ public static class ItemDefinitionCatalogLoader
             MergeArrayHandling = MergeArrayHandling.Replace,
             MergeNullValueHandling = MergeNullValueHandling.Merge
         });
+        RemoveInheritedModules(result, source, id);
         result["id"] = id;
         result["abstract"] = source.Value<bool?>("abstract") ?? false;
         result.Remove("parent");
+        result.Remove("removeModules");
 
         resolving.Remove(id);
         resolved.Add(id, result);
@@ -784,6 +787,25 @@ public static class ItemDefinitionCatalogLoader
             {
                 inheritedModules.Remove(childModule.Name);
             }
+        }
+    }
+
+    /// <summary>子定义显式删除父模板物种专属模块，避免外壳与 JSON 再实例化旧机制。</summary>
+    private static void RemoveInheritedModules(JObject result, JObject source, string id)
+    {
+        JToken removalToken = source["removeModules"];
+        if (removalToken == null)
+            return;
+        if (removalToken is not JArray removals || result["modules"] is not JObject modules)
+            throw new InvalidDataException($"物品 {id} removeModules 必须是有效模块名数组。");
+
+        foreach (JToken token in removals)
+        {
+            if (token.Type != JTokenType.String || string.IsNullOrWhiteSpace(token.Value<string>()))
+                throw new InvalidDataException($"物品 {id} removeModules 包含无效模块名。");
+            string moduleName = token.Value<string>().Trim();
+            if (!modules.Remove(moduleName))
+                throw new InvalidDataException($"物品 {id} removeModules 未找到父模块：{moduleName}");
         }
     }
 
@@ -828,7 +850,11 @@ public static class ItemDefinitionCatalogLoader
             throw new InvalidDataException($"物品 {id} 的外壳不是有效 Item：{shellId}");
 
         ItemData template = FastCloner.FastCloner.DeepClone(shellItem.itemData);
+        template.HeatConductionRate = ItemData.DefaultHeatConductionRate; // 基础速率只取代码默认值或 JSON，不继承外壳 Prefab。
         PopulateTemplateData(dto.ItemData, template, id);
+        if (float.IsNaN(template.HeatConductionRate) || float.IsInfinity(template.HeatConductionRate) ||
+            template.HeatConductionRate < 0f)
+            throw new InvalidDataException($"物品 {id} 的 itemData.heatConductionRate 必须是非负的有限速率(℃/s)。");
         template.IDName = id;
         template.Guid = 0;
         if (string.IsNullOrWhiteSpace(dto.GameName))
@@ -837,7 +863,21 @@ public static class ItemDefinitionCatalogLoader
         if (dto.Description != null) template.Description = dto.Description;
         if (dto.Durability.HasValue) template.Durability = dto.Durability.Value;
         if (dto.MaxDurability.HasValue) template.MaxDurability = dto.MaxDurability.Value;
-        if (dto.Tags != null) template.Tags = new List<string>(dto.Tags);
+        if (dto.Tags != null)
+        {
+            template.Tags = new List<string>(dto.Tags.Count);
+            for (int tagIndex = 0; tagIndex < dto.Tags.Count; tagIndex++)
+            {
+                string tagId = dto.Tags[tagIndex]?.Trim();
+                if (!ItemTagLocalizationCatalog.IsStableId(tagId))
+                {
+                    throw new InvalidDataException(
+                        $"物品 {id} 的 Tag 必须使用稳定 ASCII ID，不能直接保存本地化文本：{dto.Tags[tagIndex]}");
+                }
+
+                template.Tags.Add(tagId);
+            }
+        }
 
         template.Stack ??= new ItemStack();
         if (!isActor)
@@ -854,6 +894,8 @@ public static class ItemDefinitionCatalogLoader
         if (dto.Weight.HasValue) template.Stack.Weight = dto.Weight.Value;
         if (dto.Stackable.HasValue) template.Stack.Stackable = dto.Stackable.Value;
         if (dto.CanBePickedUp.HasValue) template.Stack.CanBePickedUp = dto.CanBePickedUp.Value;
+        if (dto.RequiredGroundSupport < 0)
+            throw new InvalidDataException($"物品 {id} 的 requiredGroundSupport 不能为负数");
 
         // JSON 是模块初始状态的唯一来源，不继承外壳 Prefab 上的 ModuleData。
         template.ModuleDataDic = new Dictionary<string, ModuleData>(StringComparer.Ordinal);
@@ -952,7 +994,8 @@ public static class ItemDefinitionCatalogLoader
             material,
             stateSprites,
             dto.GroundCover,
-            ResolveWorldGridOccupancy(dto.WorldGridOccupancy, id));
+            ResolveWorldGridOccupancy(dto.WorldGridOccupancy, id),
+            dto.RequiredGroundSupport);
     }
 
     /// <summary>校验并转换配置中的整数占格，禁止空格、重复格或无效条目进入运行时定义。</summary>

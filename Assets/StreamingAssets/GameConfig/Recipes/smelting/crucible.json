@@ -3,7 +3,7 @@
   "recipes": [
     {
       "id": "core:砂子=熔融玻璃",
-      "displayName": "砂子=熔融玻璃",
+      "displayName": "沙子=熔融玻璃",
       "recipeType": "smelting",
       "requiredStation": "crucible",
       "inputRule": "unordered",

@@ -175,6 +175,41 @@
       "actions": []
     },
     {
+      "id": "core:吹箭",
+      "displayName": "吹箭",
+      "recipeType": "crafting",
+      "requiredStation": "workbench",
+      "inputRule": "unordered",
+      "gridWidth": 2,
+      "gridHeight": 1,
+      "allowMirror": false,
+      "temperature": 0.0,
+      "maxTemperature": 2000.0,
+      "inputs": [
+        {
+          "slot": 0,
+          "match": "exact_item",
+          "itemId": "Stick_Wood",
+          "tag": "",
+          "amount": 2
+        },
+        {
+          "slot": 1,
+          "match": "exact_item",
+          "itemId": "Rope",
+          "tag": "",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Blowgun_Wood",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
       "id": "core:木箭",
       "displayName": "木箭",
       "recipeType": "crafting",
