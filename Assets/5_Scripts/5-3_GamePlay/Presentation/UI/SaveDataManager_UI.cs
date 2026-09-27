@@ -26,6 +26,7 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
         public ButtonInfoData Info;
         public GameSaveItemView View;
         public TextMeshProUGUI Label;
+        public Button EditButton;
         public string Value;
         public bool IsSave;
     }
@@ -74,6 +75,9 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
 
     /// <summary>当前批量选中的存档数量。</summary>
     public int BatchSelectedSaveCount => batchSelectedSaveNames.Count;
+
+    /// <summary>选中存档的身份始终由条目持有，不以可编辑标题文字查询文件。</summary>
+    public string SelectedSaveName => selectedSaveRow?.Value;
 
     // UI 控件由当前存档面板的 BasePanel 统一获取。
 
@@ -202,8 +206,8 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
         playerNameBuffer.Clear();
         if (saveAndLoad?.SaveData?.PlayerData_Dict != null)
         {
-            foreach (string playerName in saveAndLoad.SaveData.PlayerData_Dict.Keys)
-                playerNameBuffer.Add(playerName);
+            foreach (string profileId in saveAndLoad.SaveData.PlayerData_Dict.Keys)
+                playerNameBuffer.Add(profileId);
         }
 
         bool playerStructureChanged = SyncRows(
@@ -244,6 +248,9 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
         Button deleteButton = panel?.GetButton(GameManager.GameSaveDeleteButtonKey);
         if (deleteButton != null)
             deleteButton.interactable = true;
+        Button renameButton = panel?.GetButton(GameManager.GameSaveRenameButtonKey);
+        if (renameButton != null)
+            renameButton.interactable = true;
 
         // 选择存档后立即复用现有加载流程，并刷新可用角色列表。
         GameManager.Instance?.OnClick_LoadSaveData_Button();
@@ -276,9 +283,97 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
         // 使用当前存档面板更新输入框，并将手柄流程推进到进入世界。
         if (TryGetSavePanel(out BasePanel panel))
         {
-            panel.SetInputFieldText(GameManager.GameSavePlayerInputKey, playerName);
+            Data_Player playerData = saveAndLoad?.SaveData?.PlayerData_Dict != null &&
+                                     saveAndLoad.SaveData.PlayerData_Dict.TryGetValue(playerName, out Data_Player found)
+                ? found : null;
+            TMP_InputField input = panel.GetInputField(GameManager.GameSavePlayerInputKey);
+            input?.SetTextWithoutNotify(playerData?.Name_User ?? playerName);
             FocusStartGameForGamepad();
         }
+    }
+
+    /// <summary>手动输入代表新角色；已有角色仍只能按已选条目的稳定 ID 进入。</summary>
+    public void OnPlayerNameInputChanged(string displayName)
+    {
+        ClearSelectedRow(ref selectedPlayerRow);
+        if (saveAndLoad != null)
+            saveAndLoad.CurrentContrrolPlayerName = string.Empty;
+    }
+
+    /// <summary>选择已有角色时返回其 ID；输入新名字时分配新 ID。</summary>
+    public bool TryResolveStartPlayer(string inputName, out string profileId, out string newDisplayName)
+    {
+        profileId = string.Empty;
+        newDisplayName = null;
+        if (saveAndLoad?.SaveData?.PlayerData_Dict == null)
+            return false;
+
+        if (selectedPlayerRow != null &&
+            saveAndLoad.SaveData.PlayerData_Dict.ContainsKey(selectedPlayerRow.Value))
+        {
+            profileId = selectedPlayerRow.Value;
+            return true;
+        }
+
+        string requestedName = inputName?.Trim();
+        if (string.IsNullOrWhiteSpace(requestedName) || requestedName.Length > 48)
+            return false;
+        foreach (Data_Player existing in saveAndLoad.SaveData.PlayerData_Dict.Values)
+        {
+            if (existing != null && string.Equals(existing.Name_User, requestedName,
+                    System.StringComparison.OrdinalIgnoreCase))
+            {
+                Debug.LogWarning("已有同名角色，请从列表中选择该角色。");
+                return false;
+            }
+        }
+
+        do
+        {
+            profileId = SaveDataMgr.CreatePlayerProfileId();
+        }
+        while (saveAndLoad.SaveData.PlayerData_Dict.ContainsKey(profileId));
+        newDisplayName = requestedName;
+        return true;
+    }
+
+    /// <summary>从标题左侧铅笔打开当前存档的独立改名弹窗。</summary>
+    public void BeginRenameSelectedSave()
+    {
+        if (isBatchDeleteMode || selectedSaveRow?.Info == null)
+            return;
+        GameManager.Instance?.OpenSaveRenameDialogForSave(
+            selectedSaveRow.Value, selectedSaveRow.Label.text);
+    }
+
+    /// <summary>从角色条目左侧铅笔打开对应角色的独立改名弹窗。</summary>
+    private void BeginRenamePlayer(SelectionRow row)
+    {
+        if (isBatchDeleteMode || row?.IsSave != false || row.Info == null)
+            return;
+        GameManager.Instance?.OpenSaveRenameDialogForPlayer(row.Value, row.Label.text);
+    }
+
+    /// <summary>重命名后刷新条目并继续选中同一个存档。</summary>
+    public void RefreshAfterSaveRename(string saveName)
+    {
+        string selectedProfileId = selectedPlayerRow?.Value;
+        Refresh();
+        SelectionRow row = FindRow(saveRows, saveName, null);
+        if (row != null)
+            OnClick_List_Save_Button(saveName, row.Root);
+        SelectionRow playerRow = FindRow(playerRows, selectedProfileId, null);
+        if (playerRow != null)
+            OnClick_List_PlayerName_Button(selectedProfileId, playerRow.Root);
+    }
+
+    /// <summary>角色改名后仍按原 ID 选择同一角色。</summary>
+    public void RefreshAfterPlayerRename(string profileId)
+    {
+        GeneratePlayerButtons();
+        SelectionRow row = FindRow(playerRows, profileId, null);
+        if (row != null)
+            OnClick_List_PlayerName_Button(profileId, row.Root);
     }
 
     /// <summary>
@@ -470,12 +565,15 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
 
         Button loadButton = panel.GetButton(GameManager.GameSaveLoadButtonKey);
         Button singleDeleteButton = panel.GetButton(GameManager.GameSaveDeleteButtonKey);
+        Button renameButton = panel.GetButton(GameManager.GameSaveRenameButtonKey);
         Button startButton = panel.GetButton(GameManager.GameSaveStartButtonKey);
         Button backButton = panel.GetButton(GameManager.GameSaveBackButtonKey);
         if (loadButton != null)
             loadButton.interactable = !isBatchDeleteMode;
         if (singleDeleteButton != null)
             singleDeleteButton.interactable = !isBatchDeleteMode && selectedSaveRow != null;
+        if (renameButton != null)
+            renameButton.interactable = !isBatchDeleteMode && selectedSaveRow != null;
         if (startButton != null)
             startButton.interactable = !isBatchDeleteMode;
         if (backButton != null)
@@ -566,6 +664,9 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
         Button deleteButton = panel.GetButton(GameManager.GameSaveDeleteButtonKey);
         if (deleteButton != null)
             deleteButton.interactable = false;
+        Button renameButton = panel.GetButton(GameManager.GameSaveRenameButtonKey);
+        if (renameButton != null)
+            renameButton.interactable = false;
 
         CommitDynamicListChanges(false, playerStructureChanged, false, panel);
         FocusFirstSaveOrBackForGamepad();
@@ -858,7 +959,8 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
             Button = root.GetComponent<Button>(),
             Info = root.GetComponent<ButtonInfoData>(),
             View = root.GetComponent<GameSaveItemView>(),
-            Label = root.GetComponentInChildren<TextMeshProUGUI>(true)
+            Label = root.GetComponent<GameSaveItemView>()?.Label,
+            EditButton = root.transform.Find("RenamePlayerPencilButton")?.GetComponent<Button>()
         };
         if (row.Button == null || row.Label == null)
         {
@@ -868,6 +970,7 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
         }
 
         row.Button.onClick.AddListener(() => HandleRowClicked(row));
+        row.EditButton?.onClick.AddListener(() => BeginRenamePlayer(row));
         rowsByObject[root] = row;
         return row;
     }
@@ -880,8 +983,10 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
         row.Value = value ?? string.Empty;
         row.IsSave = isSave;
         row.Root.name = (isSave ? SaveItemNamePrefix : PlayerItemNamePrefix) + (index + 1);
-        row.Label.text = row.Value;
+        row.Label.text = isSave ? row.Value : GetPlayerDisplayName(row.Value);
         row.Button.interactable = true;
+        if (row.EditButton != null)
+            row.EditButton.gameObject.SetActive(!isSave);
         if (row.Info != null)
         {
             row.Info.Name = row.Value;
@@ -891,6 +996,15 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
         }
 
         SetRowVisual(row, false);
+    }
+
+    private string GetPlayerDisplayName(string profileId)
+    {
+        if (saveAndLoad?.SaveData?.PlayerData_Dict != null &&
+            saveAndLoad.SaveData.PlayerData_Dict.TryGetValue(profileId, out Data_Player playerData) &&
+            !string.IsNullOrWhiteSpace(playerData?.Name_User))
+            return playerData.Name_User;
+        return profileId;
     }
 
     private bool ReleaseRows(List<SelectionRow> activeRows)

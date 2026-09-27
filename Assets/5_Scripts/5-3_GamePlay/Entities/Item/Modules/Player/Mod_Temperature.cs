@@ -21,8 +21,6 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable
         public float CurrentTemperature = NormalBodyTemperature; // 当前体温(℃)
         [HideInInspector]
         public float AmbientTemperature = 20f; // 当前环境温度(℃)
-        [LabelText("变化速度"), SuffixLabel("℃/s", true), PropertyTooltip("体温向环境温度逼近的速度。")]
-        public float ChangeSpeed = 0.5f; // 体温趋近环境的速度(℃/s)
         [LabelText("保温系数"), SuffixLabel("℃", true), PropertyTooltip("正数偏保暖，负数偏散热。")]
         public float Insulation = 0f; // 保温系数(℃，正数偏保暖，负数偏散热)
 
@@ -133,6 +131,7 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable
         ProcessWaterEntryCooling(deltaTime);
         TemperatureMgr.Instance.ProcessTemperature(
             Data,
+            item.itemData.HeatConductionRate,
             _damageReceiver,
             deltaTime,
             SetNaturalTemperature,

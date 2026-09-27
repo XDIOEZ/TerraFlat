@@ -20,6 +20,7 @@ public static class ResourceCatalogValidation
     {
         ["items"] = new ItemResourceCatalogValidator(),
         ["spawners"] = new SpawnerResourceCatalogValidator(),
+        ["natural-items"] = new NaturalGenerationRuleCatalogValidator(),
         ["buildings"] = new BuildingResourceCatalogValidator(),
         ["tiles"] = new TileDefinitionCatalogValidator(),
         ["mechanical"] = new MechanicalResourceCatalogValidator()

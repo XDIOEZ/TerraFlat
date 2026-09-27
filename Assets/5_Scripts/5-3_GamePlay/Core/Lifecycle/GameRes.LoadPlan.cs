@@ -35,8 +35,11 @@ public partial class GameRes
                 PlayerCreationTemplateCatalogService.ReplaceBuiltIn));
         plan.Add("time", "加载时间系统配置", 1,
             () => LoadCatalog<TimeSystemConfigCatalog>(TimeSystemConfigLoader.LoadBuiltInAsync, TimeSystemConfigService.ReplaceCatalog));
+        plan.Add("water-current", "加载水流推动配置", 1,
+            () => LoadCatalog<WaterCurrentPushCatalog>(WaterCurrentPushConfigLoader.LoadBuiltInAsync,
+                WaterCurrentPushConfigService.ReplaceCatalog));
         plan.Add("startup-ready", "开放主菜单", 0.5f,
-            PublishStartupReadyStage, "startup-ui", "players", "time");
+            PublishStartupReadyStage, "startup-ui", "players", "time", "water-current");
         plan.Add("item-manifest", "解析物品清单", 3,
             () => LoadCatalog<List<ItemDefinitionDto>>((done, fail) =>
                 ItemDefinitionCatalogLoader.LoadBuiltInDefinitionsAsync(done, fail, plan.Report), value => itemSources = value), "addressables");
@@ -58,7 +61,10 @@ public partial class GameRes
         plan.Add("animal-skills", "加载动物技能", 1,
             () => LoadCatalog<AnimalSkillCatalog>(AnimalSkillCatalogLoader.LoadBuiltInAsync, AnimalSkillCatalogService.Replace), "actors");
         plan.Add("spawners", "加载生物生成配置", 1,
-            () => LoadCatalog<SpawnerConfigCatalog>(SpawnerConfigCatalogLoader.LoadBuiltInAsync, SpawnerConfigCatalogService.ReplaceCatalog), "actors");
+            () => LoadCatalog<SpawnerConfigCatalog>(SpawnerConfigCatalogLoader.LoadBuiltInAsync, SpawnerConfigCatalogService.ReplaceCatalog), "actors", "water-current");
+        plan.Add("natural-items", "加载自然物生成规则", 2,
+            () => LoadCatalog<NaturalGenerationRuleCatalog>(NaturalGenerationRuleCatalogLoader.LoadBuiltInAsync,
+                NaturalGenerationRuleCatalogService.ReplaceCatalog));
         plan.Add("recipes", "加载制作配方", 3,
             () => LoadCatalog<int>((done, fail) => RecipeCatalogLoader.LoadBuiltInAsync(this, done, fail), _ => { }), "items");
         plan.Add("buffs", "加载状态效果", 2,
@@ -73,7 +79,7 @@ public partial class GameRes
             () => LoadCatalog<TextLibraryService>(TextLibraryCatalogLoader.LoadBuiltInAsync, value => textLibraryService = value));
         plan.Add("validate-built-in", "校验本体资源引用", 3,
             () => RunAction(() => ResourceCatalogValidation.Validate(this)),
-            "players", "time", "items", "actors", "animal-skills", "spawners", "recipes", "buffs", "liquids", "contamination", "quests", "texts", "inventory", "skills");
+            "players", "time", "water-current", "items", "actors", "animal-skills", "spawners", "natural-items", "recipes", "buffs", "liquids", "contamination", "quests", "texts", "inventory", "skills");
         plan.Add("mods", "加载扩展内容", 5, () => LoadModCatalog(plan), "validate-built-in");
         plan.Add("validate-final", "校验最终资源目录", 3,
             () => RunAction(() =>

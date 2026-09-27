@@ -204,6 +204,7 @@ public partial class GameRes
         Clear(ClearAllDictionaries);
         Clear(PlayerCreationTemplateCatalogService.Reset);
         Clear(TimeSystemConfigService.Reset);
+        Clear(WaterCurrentPushConfigService.Reset);
         Clear(MechanicalCatalog.Clear);
         Clear(() => resourceAssets.Dispose());
         LoadedCount = 0;
@@ -221,6 +222,7 @@ public partial class GameRes
         LootTables.Clear();
         ActorDefinitionCatalogLoader.ResetRuntimeCatalog();
         SpawnerConfigCatalogService.Reset();
+        NaturalGenerationRuleCatalogService.Reset();
         recipeDict.Clear();
         recipeCatalog.Clear();
         tileBaseDict.Clear();

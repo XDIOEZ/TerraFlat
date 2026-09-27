@@ -1,13 +1,12 @@
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.IO;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 
+/// <summary>复用存档右键菜单输入框编辑显示名，并由存档服务负责持久化。</summary>
 public class SaveMenuRightMenuUI : SingletonAutoMono<SaveMenuRightMenuUI>
 {
+    #region 引用与初始化
+
     public Transform MenuUI;
     public ButtonInfoData SelectInfo;
 
@@ -15,13 +14,13 @@ public class SaveMenuRightMenuUI : SingletonAutoMono<SaveMenuRightMenuUI>
     public Button ClossSaveMenu_Button;
     public Button Rename_Button;
 
-    public ReNameSystem ReNameSystem = new();
+    private readonly ReNameSystem renameSystem = new();
     public TMP_InputField InpuFieldSystem;
 
     private new void Awake()
     {
         base.Awake();
-        InpuFieldSystem = GetComponentInChildren<TMP_InputField>();
+        InpuFieldSystem = GetComponentInChildren<TMP_InputField>(true);
     }
 
     void Start()
@@ -31,10 +30,17 @@ public class SaveMenuRightMenuUI : SingletonAutoMono<SaveMenuRightMenuUI>
         Rename_Button.onClick.AddListener(Rename);
     }
 
+    #endregion
+
+    #region 存档与角色操作
+
     private void Rename()
     {
+        if (SelectInfo == null || InpuFieldSystem == null)
+            return;
+
         string oldName = SelectInfo.Name;
-        string newName = InpuFieldSystem.text;
+        string newName = InpuFieldSystem.text?.Trim();
 
         if (string.IsNullOrEmpty(newName))
         {
@@ -42,43 +48,80 @@ public class SaveMenuRightMenuUI : SingletonAutoMono<SaveMenuRightMenuUI>
             return;
         }
 
-        if (!string.IsNullOrEmpty(SelectInfo.Path) && File.Exists(SelectInfo.Path))
+        SaveDataMgr manager = SaveDataMgr.Instance;
+        if (manager == null)
+            return;
+
+        bool isSave = !string.IsNullOrEmpty(SelectInfo.Path);
+        if (isSave)
         {
-            ReNameSystem.Rename_SaveName(oldName, SelectInfo.Path, newName);
+            if (!renameSystem.TryRenameSave(oldName, newName, out string renamedSaveName))
+            {
+                Debug.LogWarning("存档改名失败：名称无效、已被占用或写盘失败。");
+                return;
+            }
+            CloseUI();
+            SaveDataManager_UI.Ins?.RefreshAfterSaveRename(renamedSaveName);
         }
         else
         {
-            ReNameSystem.Rename_PlayerName(oldName, newName);
+            if (!renameSystem.TryRenamePlayer(oldName, newName))
+            {
+                Debug.LogWarning("角色改名失败：名称无效、已有同名角色或写盘失败。");
+                return;
+            }
+            CloseUI();
+            SaveDataManager_UI.Ins?.RefreshAfterPlayerRename(oldName);
         }
-
-        SaveDataMgr.Instance.Save_And_WriteToDisk();
-        SaveDataManager_UI.Ins.Refresh();
-        CloseUI();
     }
 
     public void CloseUI()
     {
         MenuUI.gameObject.SetActive(false);
+        GetComponent<BasePanel>()?.Close();
     }
 
     public void Delete()
     {
+        if (SelectInfo == null || SaveDataMgr.Instance == null)
+            return;
+
+        SaveDataMgr manager = SaveDataMgr.Instance;
         if (!string.IsNullOrEmpty(SelectInfo.Path))
         {
-            File.Delete(SelectInfo.Path);
+            manager.DeleteSave(manager.UserSavePath, SelectInfo.Name);
+            if (manager.SaveData != null &&
+                string.Equals(manager.SaveData.saveName, SelectInfo.Name, System.StringComparison.Ordinal))
+            {
+                manager.SaveData = null;
+                manager.CurrentContrrolPlayerName = string.Empty;
+            }
         }
         else
         {
-            SaveDataMgr.Instance.SaveData.PlayerData_Dict.Remove(SelectInfo.Name);
-            SaveDataMgr.Instance.Save_And_WriteToDisk();
+            if (manager.SaveData?.PlayerData_Dict == null ||
+                !manager.SaveData.PlayerData_Dict.Remove(SelectInfo.Name))
+                return;
+            if (string.Equals(manager.CurrentContrrolPlayerName, SelectInfo.Name,
+                    System.StringComparison.Ordinal))
+                manager.CurrentContrrolPlayerName = string.Empty;
+            manager.Save_And_WriteToDisk();
         }
 
-        SaveDataManager_UI.Ins.Refresh();
         CloseUI();
+        SaveDataManager_UI.Ins?.Refresh();
+        SaveDataManager_UI.Ins?.ClearSaveSelection();
     }
 
     public void OpenUI(Vector2 Point)
     {
+        if (Delete_Save_Button != null)
+            Delete_Save_Button.gameObject.SetActive(true);
+        if (InpuFieldSystem != null && SelectInfo != null)
+        {
+            TextMeshProUGUI label = SelectInfo.GetComponent<GameSaveItemView>()?.Label;
+            InpuFieldSystem.SetTextWithoutNotify(label != null ? label.text : SelectInfo.Name);
+        }
         RectTransform menuRect = MenuUI.GetComponent<RectTransform>();
 
         float screenWidth = Screen.width;
@@ -93,4 +136,6 @@ public class SaveMenuRightMenuUI : SingletonAutoMono<SaveMenuRightMenuUI>
         menuRect.position = Point;
         MenuUI.gameObject.SetActive(true);
     }
+
+    #endregion
 }

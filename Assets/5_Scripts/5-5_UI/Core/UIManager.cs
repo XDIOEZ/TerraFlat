@@ -61,8 +61,6 @@ public class UIManager : MonoBehaviour
     public GameObject panelRootPrefab;
     public GameObject[] panelPrefabs;
     public const int GameplayHudSortingOrder = 0;
-    /// <summary>快捷栏固定使用的交互层级，高于普通玩法面板且低于设置与全局覆盖层。</summary>
-    public const int HotbarModalSortingOrder = 1000;
     /// <summary>指针手持物是纯视觉拖拽层，固定占用 Canvas 排序上限，始终高于其它游戏 UI。</summary>
     public const int HeldItemSortingOrder = 32767;
     /// <summary>设置面板的基础 Canvas 层级；高于玩法 HUD，低于加载和调试全屏覆盖层。</summary>
@@ -757,7 +755,10 @@ public class UIManager : MonoBehaviour
 
     #region 面板创建和销毁
 
-    public BasePanel CreatePanelFromGameObject(GameObject panelPrefab, string panelName = "")
+    public BasePanel CreatePanelFromGameObject(
+        GameObject panelPrefab,
+        string panelName = "",
+        bool initializeClosed = false)
     {
         EnsurePanelRootExists();
 
@@ -784,8 +785,11 @@ public class UIManager : MonoBehaviour
         panelInstance.name = finalName;
         _basePanel.PanelName = finalName;
 
-        //初始化面板
-        _basePanel.Init();
+        // 需要首次 Open 触发生命周期事件的面板，必须在注册前明确初始化为关闭态。
+        if (initializeClosed)
+            _basePanel.InitClosed();
+        else
+            _basePanel.Init();
 
         // 设置子页使用独立高层 Canvas；主世界设置面板由 SettingCanvas 在打开时显式配置。
         if (IsSettingsPanelName(baseName))
@@ -849,6 +853,51 @@ public class UIManager : MonoBehaviour
             panelList.Clear();
             NotifyInteractionSurfaceChanged();
         }
+    }
+
+    /// <summary>
+    /// F5 资源热更新提交后清空全部运行时 UI 实例，但保留 UIRoot / SafeAreaRoot 本身。
+    /// 下一轮玩家模块和全局 HUD 必须从最新 GameRes Prefab 重新实例化，禁止继续复用旧资源会话中的实例。
+    /// </summary>
+    public void DestroyRuntimeUiInstancesForResourceReload()
+    {
+        EnsurePanelRootExists();
+
+        presentationCanvasStates.Clear();
+        presentationRaycasterStates.Clear();
+        panels.Clear();
+
+        if (safeAreaRoot != null)
+        {
+            for (int i = safeAreaRoot.childCount - 1; i >= 0; i--)
+            {
+                Transform child = safeAreaRoot.GetChild(i);
+                if (child != null)
+                    Destroy(child.gameObject);
+            }
+        }
+
+        if (rootCanvas != null)
+        {
+            Transform root = rootCanvas.transform;
+            for (int i = root.childCount - 1; i >= 0; i--)
+            {
+                Transform child = root.GetChild(i);
+                if (child == null || child == safeAreaRoot)
+                    continue;
+
+                Destroy(child.gameObject);
+            }
+        }
+
+        nextSettingsPanelSortingOrder = SettingsPanelSortingOrder;
+        panelQueryBuffer.Clear();
+        panelQueryCacheRoot = null;
+        panelQueryCacheRevision = int.MinValue;
+        cachedTopmostGamepadPanel = null;
+        cachedTopmostGameplayInputPanel = null;
+        cachedTopmostCancelPanel = null;
+        NotifyInteractionSurfaceChanged();
     }
     #endregion
 

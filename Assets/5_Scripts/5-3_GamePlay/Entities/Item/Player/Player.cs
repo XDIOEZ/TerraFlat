@@ -33,10 +33,12 @@ public class Player : Item
 
     public bool IsLocalProfile => isLocalProfile;
     public bool IsNewProfile => isLocalProfile && wasProfileDataCreated;
-    /// <summary>存档字典使用的稳定档案名，不受显示名或管理员身份临时变化影响。</summary>
+    /// <summary>存档字典使用的稳定角色 ID；旧档沿用原字典键，不受显示名变化影响。</summary>
     public string ProfileName => string.IsNullOrWhiteSpace(profileName)
         ? data?.Name_User
         : profileName;
+    /// <summary>角色身份 ID；未建立档案上下文前不从显示名推断身份。</summary>
+    public string ProfileId => profileName;
     internal bool WasProfileDataCreated => wasProfileDataCreated;
 
     public event Action ProfileContextChanged;

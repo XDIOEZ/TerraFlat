@@ -9,7 +9,7 @@ using UnityEngine;
 
 #region 玩家创建配置模型
 
-/// <summary>玩家创建 JSON 配置目录；只在无玩家存档的创建阶段应用。</summary>
+/// <summary>玩家创建 JSON 配置目录；创建期属性只用于新玩家，热量传导速率始终取当前配置。</summary>
 [Serializable]
 public sealed class PlayerCreationTemplateCatalogConfig
 {
@@ -51,6 +51,7 @@ public sealed class PlayerCreationTemplateConfig
         [JsonProperty("dataSpeed")] public float DataSpeed = 8f;
         [JsonProperty("playerPov")] public float PlayerPov = 10f;
         [JsonProperty("perceptionRadiusMultiplier")] public float PerceptionRadiusMultiplier = 1f;
+        [JsonProperty("heatConductionRate")] public float HeatConductionRate = ItemData.DefaultHeatConductionRate; // 玩家基础热量传导速率(℃/s)
         [JsonProperty("initialStamina")] public float InitialStamina = 100f;
         [JsonProperty("maxStamina")] public float MaxStamina = 100f;
         [JsonProperty("staminaRecoverySpeed")] public float StaminaRecoverySpeed = 10f;
@@ -144,11 +145,18 @@ public sealed class PlayerCreationTemplateConfig
         data.Speed = new GameValue_float(Mathf.Max(0f, Core.DataSpeed));
         data.PlayerPov = Mathf.Max(0f, Core.PlayerPov);
         data.PerceptionRadiusMultiplier = Mathf.Max(0f, Core.PerceptionRadiusMultiplier);
+        ApplyHeatConductionRate(data);
         data.stamina = Mathf.Clamp(Core.InitialStamina, 0f, maxStamina);
         data.staminaMax = maxStamina;
         data.staminaRecoverySpeed = Mathf.Max(0f, Core.StaminaRecoverySpeed);
         data.MaxCarryWeight = Mathf.Max(0f, Core.MaxCarryWeight);
         data.MaxCarryVolume = Mathf.Max(0f, Core.MaxCarryVolume);
+    }
+
+    /// <summary>重新加载玩家时只更新当前 JSON 的热量传导配置，不重置其他创建期属性。</summary>
+    public void ApplyHeatConductionRate(Data_Player data)
+    {
+        data.HeatConductionRate = Core.HeatConductionRate;
     }
 
     private void ApplyMovement(Mover mover)
@@ -346,6 +354,7 @@ public static class PlayerCreationTemplateJsonLoader
         ValidateFiniteNonNegative(profile.Core.DataSpeed, $"{profile.Id}.core.dataSpeed");
         ValidateFiniteNonNegative(profile.Core.PlayerPov, $"{profile.Id}.core.playerPov");
         ValidateFiniteNonNegative(profile.Core.PerceptionRadiusMultiplier, $"{profile.Id}.core.perceptionRadiusMultiplier");
+        ValidateFiniteNonNegative(profile.Core.HeatConductionRate, $"{profile.Id}.core.heatConductionRate");
         ValidateFiniteNonNegative(profile.Core.InitialStamina, $"{profile.Id}.core.initialStamina");
         ValidateFiniteNonNegative(profile.Core.MaxStamina, $"{profile.Id}.core.maxStamina");
         ValidateFiniteNonNegative(profile.Core.StaminaRecoverySpeed, $"{profile.Id}.core.staminaRecoverySpeed");

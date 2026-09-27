@@ -52,8 +52,11 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
     [Tooltip("当前使用的存档数据")]
     public GameSaveData SaveData;
 
-    [Tooltip("当前控制的玩家名称")]
+    [Tooltip("当前控制的角色 ID；字段名保留以兼容现有调用")]
     public string CurrentContrrolPlayerName;
+
+    /// <summary>为新角色创建与显示名无关的持久身份键。</summary>
+    public static string CreatePlayerProfileId() => "player:" + Guid.NewGuid().ToString("N");
     
     /// <summary>
     /// 获取当前活跃星球数据（快捷属性）
@@ -397,6 +400,91 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         createdSaveName = GetAvailableSaveName(requestedName);
         return SaveToDisk(saveData, UserSavePath, createdSaveName);
     }
+
+    #region 存档与角色改名
+
+    /// <summary>只修改角色显示名，字典键、运行时玩家索引和控制角色 ID 保持稳定。</summary>
+    public bool TryRenamePlayerDisplayName(string profileId, string requestedName)
+    {
+        string displayName = requestedName?.Trim();
+        if (string.IsNullOrWhiteSpace(profileId) || string.IsNullOrWhiteSpace(displayName) ||
+            SaveData?.PlayerData_Dict == null ||
+            !SaveData.PlayerData_Dict.TryGetValue(profileId, out Data_Player playerData) ||
+            playerData == null)
+            return false;
+
+        if (displayName.Length > 48)
+            return false;
+        if (string.Equals(playerData.Name_User, displayName, StringComparison.Ordinal))
+            return true;
+        foreach (KeyValuePair<string, Data_Player> profile in SaveData.PlayerData_Dict)
+        {
+            if (!string.Equals(profile.Key, profileId, StringComparison.Ordinal) &&
+                string.Equals(profile.Value?.Name_User, displayName, StringComparison.OrdinalIgnoreCase))
+                return false;
+        }
+
+        string previousName = playerData.Name_User;
+        playerData.Name_User = displayName;
+        if (SaveToDisk(SaveData, UserSavePath, SaveData.saveName))
+            return true;
+
+        playerData.Name_User = previousName;
+        return false;
+    }
+
+    /// <summary>先写入新文件及内部名称，再移除旧文件；失败时保留旧档。</summary>
+    public bool TryRenameSave(string oldName, string requestedName, out string renamedSaveName)
+    {
+        renamedSaveName = oldName;
+        string newName = requestedName?.Trim();
+        if (SaveData == null || string.IsNullOrWhiteSpace(oldName) ||
+            !string.Equals(SaveData.saveName, oldName, StringComparison.Ordinal) ||
+            string.IsNullOrWhiteSpace(newName) || newName.Length > 48 ||
+            !string.Equals(newName, NormalizeSaveName(newName), StringComparison.Ordinal))
+            return false;
+
+        if (string.Equals(oldName, newName, StringComparison.Ordinal))
+            return true;
+
+        string oldPath = GetSaveFilePath(UserSavePath, oldName);
+        string newPath = GetSaveFilePath(UserSavePath, newName);
+        if (!File.Exists(oldPath) || File.Exists(newPath) ||
+            File.Exists(GetBackupSavePath(newPath)) || File.Exists(GetTemporarySavePath(newPath)))
+            return false;
+
+        DateTime lastExitTimeUtc = GetLastExitTimeUtc(oldPath);
+        if (!SaveToDisk(SaveData, UserSavePath, newName))
+        {
+            SaveData.saveName = oldName;
+            return false;
+        }
+
+        try
+        {
+            if (lastExitTimeUtc != DateTime.MinValue)
+                RecordLastExitTimeUtc(newPath, lastExitTimeUtc);
+            // 先让旧路径的后台快照过期，再与原子写盘共用文件锁移除旧档。
+            ReserveSaveRevision(oldPath);
+            lock (SaveFileLock)
+            {
+                DeleteSaveFile(oldPath);
+                if (File.Exists(oldPath))
+                    throw new IOException("旧存档未能删除");
+            }
+            renamedSaveName = newName;
+            return true;
+        }
+        catch (Exception exception)
+        {
+            Debug.LogException(exception);
+            DeleteSaveFile(newPath);
+            SaveData.saveName = oldName;
+            return false;
+        }
+    }
+
+    #endregion
 
     private string GetAvailableSaveName(string requestedName)
     {

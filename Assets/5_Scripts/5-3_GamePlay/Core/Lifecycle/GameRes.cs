@@ -450,7 +450,10 @@ public partial class GameRes : SingletonAutoMono<GameRes>
         }
 
         displayName = definition.DisplayName;
-        sprite = definition.Sprite;
+        // 物品可声明独立库存图标，世界主体仍保留可供动态部件叠加的基础贴图。
+        sprite = definition.TryGetVisualStateSprite("inventoryIcon", out Sprite inventoryIcon)
+            ? inventoryIcon
+            : definition.Sprite;
         if (sprite == null)
         {
             Debug.LogError($"物品 {requestedId} 的 JSON 定义缺少 visual.spriteAddress");

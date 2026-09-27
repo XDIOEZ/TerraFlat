@@ -26,18 +26,28 @@ namespace FlatWorld.Editor.Diagnostics
             string[] movedAssets,
             string[] movedFromAssetPaths)
         {
-            if (!ContainsAddressablesPath(importedAssets) &&
-                !ContainsAddressablesPath(deletedAssets) &&
-                !ContainsAddressablesPath(movedAssets) &&
-                !ContainsAddressablesPath(movedFromAssetPaths))
-            {
-                return;
-            }
-
             AddressableAssetSettings settings = AddressableAssetSettingsDefaultObject.Settings;
             if (settings == null)
             {
-                Debug.LogWarning("[AddressablesHotReload] Addressables 目录已变化，但默认 Settings 不存在。");
+                if (ContainsAddressablesPath(importedAssets) ||
+                    ContainsAddressablesPath(deletedAssets) ||
+                    ContainsAddressablesPath(movedAssets) ||
+                    ContainsAddressablesPath(movedFromAssetPaths))
+                {
+                    Debug.LogWarning("[AddressablesHotReload] Addressables 目录已变化，但默认 Settings 不存在。");
+                }
+
+                return;
+            }
+
+            bool addressablesCatalogChanged =
+                ContainsAddressablesPath(importedAssets) ||
+                ContainsAddressablesPath(deletedAssets) ||
+                ContainsAddressablesPath(movedAssets) ||
+                ContainsAddressablesPath(movedFromAssetPaths);
+            bool importedRegisteredAsset = ContainsImportedAddressableEntry(settings, importedAssets);
+            if (!addressablesCatalogChanged && !importedRegisteredAsset)
+            {
                 return;
             }
 
@@ -56,6 +66,34 @@ namespace FlatWorld.Editor.Diagnostics
             return paths != null && paths.Any(path =>
                 !string.IsNullOrWhiteSpace(path) &&
                 path.StartsWith(AddressablesRoot, StringComparison.OrdinalIgnoreCase));
+        }
+
+        /// <summary>新资源晚于 Addressables YAML 导入时，也要让 Fast Mode 重新索引已有条目。</summary>
+        private static bool ContainsImportedAddressableEntry(
+            AddressableAssetSettings settings,
+            string[] importedAssets)
+        {
+            if (settings == null || importedAssets == null || importedAssets.Length == 0)
+            {
+                return false;
+            }
+
+            foreach (string path in importedAssets)
+            {
+                if (string.IsNullOrWhiteSpace(path) ||
+                    path.StartsWith(AddressablesRoot, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                string guid = AssetDatabase.AssetPathToGUID(path);
+                if (!string.IsNullOrWhiteSpace(guid) && settings.FindAssetEntry(guid) != null)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         #endregion

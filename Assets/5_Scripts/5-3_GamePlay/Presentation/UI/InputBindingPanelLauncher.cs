@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using FlatWorld.Localization;
+using FlatWorld.Settings;
 using InputSystem;
 using TMPro;
 using UnityEngine;
@@ -37,6 +38,8 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour, ISettingsPageLife
     private GameObject rowPrefab;
     private TextMeshProUGUI statusText;
     private TMP_Dropdown controlModeDropdown;
+    private Toggle preciseInteractionToggle;
+    private ISettingsToggle preciseInteractionSetting;
     private Button keyboardMouseTabButton;
     private Button gamepadTabButton;
     private Button touchLayoutButton;
@@ -128,6 +131,9 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour, ISettingsPageLife
         content = bindingScrollRect != null ? bindingScrollRect.content : null;
         statusText = FindText(transform, "状态文本");
         controlModeDropdown = FindDropdown(transform, "控制模式下拉列表");
+        preciseInteractionToggle = FindComponent<Toggle>(transform, "精确交互");
+        preciseInteractionSetting = InteractionUserSettings.SettingsProvider.GetToggle(
+            InteractionUserSettings.PreciseInteractionSettingKey);
         keyboardMouseTabButton = FindButton(transform, "键鼠分页按钮");
         gamepadTabButton = FindButton(transform, "手柄分页按钮");
         touchLayoutButton = FindButton(transform, "触屏布局按钮");
@@ -135,6 +141,7 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour, ISettingsPageLife
         rowPrefab = GameRes.Instance?.GetPrefab(RuntimeUIPrefabKeys.InputBindingRow);
 
         controlModeDropdown?.onValueChanged.AddListener(HandleControlModeChanged);
+        preciseInteractionToggle?.onValueChanged.AddListener(HandlePreciseInteractionChanged);
         keyboardMouseTabButton?.onClick.AddListener(ShowKeyboardMouseBindings);
         gamepadTabButton?.onClick.AddListener(ShowGamepadBindings);
         touchLayoutButton?.onClick.AddListener(OpenTouchLayoutEditor);
@@ -142,6 +149,7 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour, ISettingsPageLife
 
         if (bindingList == null || bindingScrollRect == null || content == null ||
             statusText == null || controlModeDropdown == null ||
+            preciseInteractionToggle == null || preciseInteractionSetting == null ||
             keyboardMouseTabButton == null || gamepadTabButton == null || touchLayoutButton == null ||
             resetButton == null)
         {
@@ -174,6 +182,7 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour, ISettingsPageLife
 
         RebuildRows();
         RefreshControlModeDropdown();
+        RefreshPreciseInteractionToggle();
         SetStatus(GetDevicePageHint());
         RequestLocalLayoutRebuild();
     }
@@ -312,6 +321,19 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour, ISettingsPageLife
     #endregion
 
     #region 分页与绑定操作
+
+    /// <summary>按持久化偏好回填目标选择开关。</summary>
+    private void RefreshPreciseInteractionToggle()
+    {
+        if (preciseInteractionToggle != null && preciseInteractionSetting != null)
+            preciseInteractionToggle.SetIsOnWithoutNotify(preciseInteractionSetting.Value);
+    }
+
+    /// <summary>立即切换交互键与预览共用的目标选择规则。</summary>
+    private void HandlePreciseInteractionChanged(bool enabled)
+    {
+        preciseInteractionSetting?.SetValue(enabled);
+    }
 
     /// <summary>按当前语言重建控制方式选项，并保持已保存的手动选择。</summary>
     private void RefreshControlModeDropdown()
@@ -523,6 +545,8 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour, ISettingsPageLife
             return;
 
         bindingService.ResetToDefaults(currentDeviceGroup);
+        InteractionUserSettings.ResetToDefault();
+        RefreshPreciseInteractionToggle();
         RefreshRows();
         SetStatus(
             FlatWorldLocalizationService.GetUiFormat(
@@ -537,6 +561,8 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour, ISettingsPageLife
             return;
 
         bindingService.ResetToDefaults();
+        InteractionUserSettings.ResetToDefault();
+        RefreshPreciseInteractionToggle();
         RefreshRows();
         SetStatus(FlatWorldLocalizationService.GetUiText("全部按键绑定已恢复默认值。"));
     }
@@ -597,6 +623,8 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour, ISettingsPageLife
             touchLayoutButton.interactable = interactable;
         if (controlModeDropdown != null)
             controlModeDropdown.interactable = interactable;
+        if (preciseInteractionToggle != null)
+            preciseInteractionToggle.interactable = interactable;
         if (resetButton != null)
             resetButton.interactable = interactable;
     }
@@ -656,6 +684,7 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour, ISettingsPageLife
         touchLayoutButton?.onClick.RemoveListener(OpenTouchLayoutEditor);
         resetButton?.onClick.RemoveListener(ResetToDefaults);
         controlModeDropdown?.onValueChanged.RemoveListener(HandleControlModeChanged);
+        preciseInteractionToggle?.onValueChanged.RemoveListener(HandlePreciseInteractionChanged);
         FlatWorldLocalizationService.LanguageChanged -= HandleLanguageChanged;
 
         standaloneBindingService?.Dispose();

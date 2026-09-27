@@ -14,6 +14,8 @@ public partial class GameManager : SingletonAutoMono<GameManager>
 {
     #region Events
     public static event Action<Player> Event_PlayerEnterWorld;
+    /// <summary>F5 仅重建本地玩家运行时外壳时发布；不得当作重新进入世界事件使用。</summary>
+    public static event Action<Player> Event_LocalPlayerRuntimeReloaded;
     #endregion
 
     #region 游戏生命周期状态
@@ -364,7 +366,8 @@ public partial class GameManager : SingletonAutoMono<GameManager>
         {
             saveDataMgr.ResetChunkDifferenceState();
             saveDataMgr.SaveData = new GameSaveData();
-            saveDataMgr.CurrentContrrolPlayerName = request.PlayerName;
+            string newPlayerId = SaveDataMgr.CreatePlayerProfileId();
+            saveDataMgr.CurrentContrrolPlayerName = newPlayerId;
             ApplyNewWorldDifficulty(saveDataMgr.SaveData, request);
             ReportWorldEntryProgress("正在创建新世界", "正在生成世界种子…", 0.2f);
 
@@ -409,8 +412,8 @@ public partial class GameManager : SingletonAutoMono<GameManager>
 
             Debug.Log($"[GameManager] 已创建新世界存档：{createdSaveName}");
             ReportWorldEntryProgress("正在创建新世界", "存档已创建，正在进入世界…", 0.55f);
-            ContinueGameInternal(request.PlayerName, request.PlanetData.Name,
-                prepareNewWorldSpawn: true);
+            ContinueGameInternal(newPlayerId, request.PlanetData.Name,
+                prepareNewWorldSpawn: true, newPlayerDisplayName: request.PlayerName);
         }
         catch (Exception exception)
         {
@@ -505,8 +508,14 @@ public partial class GameManager : SingletonAutoMono<GameManager>
         return TrySetReadyTimeSystemProfile(TimeSystemConfigService.DefaultProfileId);
     }
 
-    [Tooltip("继续游戏,加载传入的玩家名称,通过名称获取玩家数据, ")]
+    [Tooltip("继续游戏，按稳定角色 ID 获取玩家数据")]
     public void ContinueGame(string PlayerName)
+    {
+        ContinueGame(PlayerName, null);
+    }
+
+    /// <summary>新角色入口单独传递显示名；普通恢复仍使用原有单参数 Patch 边界。</summary>
+    public void ContinueGame(string playerId, string newPlayerDisplayName)
     {
         if (!CanQueueWorldEntry("继续游戏"))
             return;
@@ -514,10 +523,10 @@ public partial class GameManager : SingletonAutoMono<GameManager>
         if (!BeginWorldEntry("正在进入存档", "正在准备世界数据…", 0.12f))
             return;
 
-        StartCoroutine(ContinueGameCoroutine(PlayerName));
+        StartCoroutine(ContinueGameCoroutine(playerId, newPlayerDisplayName));
     }
 
-    private IEnumerator ContinueGameCoroutine(string playerName)
+    private IEnumerator ContinueGameCoroutine(string playerId, string newPlayerDisplayName)
     {
         // 黑幕盖住主菜单后再读取存档和切换场景。
         yield return WaitForWorldLoadingCurtain();
@@ -531,11 +540,21 @@ public partial class GameManager : SingletonAutoMono<GameManager>
         if (!contentReady)
             yield break;
 
-        ContinueGameInternal(playerName);
+        if (newPlayerDisplayName == null)
+            ContinueGameInternal(playerId);
+        else
+            ContinueGameInternal(playerId, null, false, newPlayerDisplayName);
     }
 
     private void ContinueGameInternal(string playerName, string fallbackPlanetName = null,
         bool prepareNewWorldSpawn = false)
+    {
+        ContinueGameInternal(playerName, fallbackPlanetName, prepareNewWorldSpawn, null);
+    }
+
+    /// <summary>新建角色使用独立显示名，恢复入口继续沿用三参数签名。</summary>
+    private void ContinueGameInternal(string playerName, string fallbackPlanetName,
+        bool prepareNewWorldSpawn, string newPlayerDisplayName)
     {
         try
         {
@@ -562,7 +581,7 @@ public partial class GameManager : SingletonAutoMono<GameManager>
 
             ReportWorldEntryProgress("正在进入存档", $"正在加载星球：{planetName}", 0.38f);
 
-            // 根据用户当前控制的玩家名称加载玩家。
+            // 根据稳定角色 ID 加载玩家；首次创建时另行传递显示名。
             float sceneTransitionStartedAt = Time.realtimeSinceStartup;
             startNewWorldSpawnSearchOnActivation = prepareNewWorldSpawn;
             RunWorld(NewScenename: planetName, () =>
@@ -571,7 +590,10 @@ public partial class GameManager : SingletonAutoMono<GameManager>
                 {
                     Debug.Log($"[GameManager] 世界场景切换耗时 {Time.realtimeSinceStartup - sceneTransitionStartedAt:0.00} 秒。");
                     ReportWorldEntryProgress("正在进入存档", "正在创建玩家并准备出生区域…", 0.66f);
-                    LoadPlayer(playerName: playerName);
+                    if (newPlayerDisplayName == null)
+                        LoadPlayer(playerName);
+                    else
+                        LoadPlayer(playerName, newPlayerDisplayName);
                 }
                 catch (Exception exception)
                 {
@@ -916,7 +938,15 @@ public partial class GameManager : SingletonAutoMono<GameManager>
     [Tooltip("在当前场景中实例化并加载玩家")]
     private void LoadPlayer(string playerName)
     {
-        Player player = ItemMgr.Instance.LoadPlayer(playerName);
+        LoadPlayer(playerName, null);
+    }
+
+    /// <summary>新角色用显示名初始化数据，现有角色恢复仍经过单参数入口。</summary>
+    private void LoadPlayer(string playerName, string newPlayerDisplayName)
+    {
+        Player player = string.IsNullOrWhiteSpace(newPlayerDisplayName)
+            ? ItemMgr.Instance.LoadPlayer(playerName)
+            : ItemMgr.Instance.LoadPlayer(playerName, newPlayerDisplayName);
         if (player?.Data != null)
         {
             player.Data.CurrentSceneName = SceneManager.GetActiveScene().name;
@@ -931,6 +961,25 @@ public partial class GameManager : SingletonAutoMono<GameManager>
         }
 
         Event_PlayerEnterWorld?.Invoke(player);
+    }
+
+    /// <summary>通知只缓存本地主角运行时引用的系统重新绑定，不触发世界进入语义。</summary>
+    internal static void NotifyLocalPlayerRuntimeReloaded(Player player)
+    {
+        if (player == null || Event_LocalPlayerRuntimeReloaded == null)
+            return;
+
+        foreach (Delegate callback in Event_LocalPlayerRuntimeReloaded.GetInvocationList())
+        {
+            try
+            {
+                ((Action<Player>)callback)(player);
+            }
+            catch (Exception exception)
+            {
+                Debug.LogException(exception);
+            }
+        }
     }
 
     private static bool RequiresInitialPlayerPlacement(Player player)

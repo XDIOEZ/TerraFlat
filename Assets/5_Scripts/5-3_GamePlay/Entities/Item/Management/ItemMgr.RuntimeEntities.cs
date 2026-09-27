@@ -72,6 +72,14 @@ internal static class RuntimeAiEntityUtility
     }
 }
 
+#region 运行时 AI 持久化契约
+/// <summary>由宿主模块声明运行时 AI 是否拥有独立存档，供临时巢群等所有权模型使用。</summary>
+public interface IRuntimeAiPersistencePolicy
+{
+    bool PersistRuntimeAi { get; }
+}
+#endregion
+
 /// <summary>
 /// ItemMgr 的 AI 实体区块索引。索引键为纯 WorldModel.WorldAddress，
 /// 实体统一挂在场景级 RuntimeEntities 根节点，不再成为 ChunkView 或旧 Chunk 的子对象。
@@ -162,9 +170,21 @@ public partial class ItemMgr
 
         foreach (Item item in items)
         {
-            if (item != null && item.itemData != null)
+            if (item != null && item.itemData != null && ShouldPersistRuntimeAi(item))
                 output.Add(item);
         }
+    }
+
+    /// <summary>具有宿主所有权的实体由宿主恢复，不再另存一份自由 AI。</summary>
+    private static bool ShouldPersistRuntimeAi(Item item)
+    {
+        MonoBehaviour[] behaviours = item.GetComponentsInChildren<MonoBehaviour>(true);
+        for (int index = 0; index < behaviours.Length; index++)
+        {
+            if (behaviours[index] is IRuntimeAiPersistencePolicy policy && !policy.PersistRuntimeAi)
+                return false;
+        }
+        return true;
     }
 
     /// <summary>复制本次存档需要重写的地址，并包含所有仍有活体的地址。</summary>

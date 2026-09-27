@@ -93,10 +93,12 @@ public partial class GameManager
     public const string GameSaveBackButtonKey = "返回按钮";
     public const string GameSavePlayerInputKey = "选择或新增玩家名称输入框";
     public const string GameSaveSelectedTextKey = "选中的存档名称";
+    public const string GameSaveRenameButtonKey = "RenameSavePencilButton";
     public const string GameSaveTimeTextKey = "存档保存时间";
     public const string GameSaveGenerationFreezeToggleKey = "冻结世界生成规则开关";
     public const string GameSaveNoSelectionText = "尚未选择存档";
     public const string GameSaveNoTimeText = "保存时间：--";
+    public const string SaveRenameDialogPanelKey = RuntimeUIPrefabKeys.SaveRenameDialog;
 
     private const string ContextMenuPanelKey = "ContextMenu";
 
@@ -1176,6 +1178,42 @@ public partial class GameManager
         panel.Open();
     }
 
+    /// <summary>从存档标题铅笔打开独立的改名弹窗。</summary>
+    public void OpenSaveRenameDialogForSave(string saveName, string displayName)
+    {
+        GetOrCreateSaveRenameDialog()?.OpenForSave(saveName, displayName);
+    }
+
+    /// <summary>从角色条目铅笔打开同一个改名弹窗。</summary>
+    public void OpenSaveRenameDialogForPlayer(string profileId, string displayName)
+    {
+        GetOrCreateSaveRenameDialog()?.OpenForPlayer(profileId, displayName);
+    }
+
+    /// <summary>复用已经创建的弹窗；首次打开从 Prefab 目录加载正式资源。</summary>
+    private SaveRenameDialogUI GetOrCreateSaveRenameDialog()
+    {
+        UIManager uiManager = UIManager.Instance;
+        if (uiManager == null)
+            return null;
+        if (uiManager.TryGetPanel(SaveRenameDialogPanelKey, out BasePanel existingPanel))
+            return existingPanel.GetComponent<SaveRenameDialogUI>();
+
+        GameObject prefab = GameRes.Instance?.GetPrefab(SaveRenameDialogPanelKey, false);
+        if (prefab == null)
+        {
+            Debug.LogError($"[GameManager] 缺少改名弹窗 Prefab：{SaveRenameDialogPanelKey}。", this);
+            return null;
+        }
+
+        BasePanel panel = uiManager.CreatePanelFromGameObject(
+            prefab, SaveRenameDialogPanelKey, initializeClosed: true);
+        SaveRenameDialogUI dialog = panel?.GetComponent<SaveRenameDialogUI>();
+        if (dialog == null)
+            Debug.LogError("[GameManager] 改名弹窗 Prefab 缺少 SaveRenameDialogUI。", this);
+        return dialog;
+    }
+
     public void OpenNewGame()
     {
         if (TryOpenExistingPanel(NewGamePanelKey))
@@ -1230,6 +1268,7 @@ public partial class GameManager
         panel.SetButtonOnClick(GameSaveStartButtonKey, OnClick_StartGame_Button);
         panel.SetButtonOnClick(GameSaveLoadButtonKey, OnClick_LoadSaveData_Button);
         panel.SetButtonOnClick(GameSaveDeleteButtonKey, OnClick_DeleteSave_Button);
+        panel.SetButtonOnClick(GameSaveRenameButtonKey, () => saveList?.BeginRenameSelectedSave());
         panel.SetButtonOnClick(GameSaveBatchDeleteButtonKey, () => saveList?.BeginBatchDeleteMode());
         panel.SetButtonOnClick(GameSaveBatchConfirmButtonKey, () => saveList?.OpenBatchDeleteConfirmation());
         panel.SetButtonOnClick(GameSaveBatchCancelButtonKey, () => saveList?.CancelBatchDeleteMode());
@@ -1240,7 +1279,8 @@ public partial class GameManager
             saveList?.ResetBatchDeleteState();
             panel.Close();
         });
-        panel.GetInputField(GameSavePlayerInputKey)?.onValueChanged.AddListener(OnUpdatePlayerNameChanged);
+        panel.GetInputField(GameSavePlayerInputKey)?.onValueChanged.AddListener(
+            value => saveList?.OnPlayerNameInputChanged(value));
         Toggle generationFreezeToggle = panel.GetToggle(GameSaveGenerationFreezeToggleKey);
         if (generationFreezeToggle != null)
         {
@@ -1642,7 +1682,8 @@ public partial class GameManager
     public void OnClick_StartGame_Button()
     {
         BasePanel panel = GetSaveManagerPanel();
-        string selectedSaveName = panel?.GetText(GameSaveSelectedTextKey)?.text;
+        SaveDataManager_UI saveList = SaveDataManager_UI.Instance;
+        string selectedSaveName = saveList?.SelectedSaveName;
         if (SaveDataMgr.Instance?.SaveData == null || SaveDataMgr.Instance.SaveData.Seed == 0 ||
             string.IsNullOrWhiteSpace(selectedSaveName) ||
             string.Equals(selectedSaveName, GameSaveNoSelectionText, StringComparison.Ordinal))
@@ -1652,13 +1693,17 @@ public partial class GameManager
         }
 
         string playerName = panel?.GetInputField(GameSavePlayerInputKey)?.text;
-        if (string.IsNullOrWhiteSpace(playerName))
+        if (saveList == null ||
+            !saveList.TryResolveStartPlayer(playerName, out string profileId, out string newDisplayName))
         {
-            Debug.LogWarning("请先选择或输入玩家名称");
+            Debug.LogWarning("请先选择角色或输入有效的新角色名称");
             return;
         }
 
-        ContinueGame(playerName);
+        if (newDisplayName == null)
+            ContinueGame(profileId);
+        else
+            ContinueGame(profileId, newDisplayName);
     }
 
     public void OnClick_LoadSaveData_Button()
@@ -1670,7 +1715,7 @@ public partial class GameManager
         }
 
         BasePanel panel = GetSaveManagerPanel();
-        string selectedSaveName = panel?.GetText(GameSaveSelectedTextKey)?.text;
+        string selectedSaveName = SaveDataManager_UI.Instance?.SelectedSaveName;
         if (string.IsNullOrWhiteSpace(selectedSaveName) ||
             string.Equals(selectedSaveName, GameSaveNoSelectionText, StringComparison.Ordinal))
         {
@@ -1701,7 +1746,7 @@ public partial class GameManager
         }
 
         BasePanel panel = GetSaveManagerPanel();
-        string selectedSaveName = panel?.GetText(GameSaveSelectedTextKey)?.text;
+        string selectedSaveName = SaveDataManager_UI.Instance?.SelectedSaveName;
         if (string.IsNullOrWhiteSpace(selectedSaveName) ||
             string.Equals(selectedSaveName, GameSaveNoSelectionText, StringComparison.Ordinal))
         {

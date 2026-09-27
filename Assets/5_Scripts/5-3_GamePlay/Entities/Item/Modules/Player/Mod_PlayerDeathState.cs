@@ -130,6 +130,8 @@ public partial class Mod_PlayerDeathState : Module
         // 模块 Load 顺序不保证生命数据先就绪，等全部玩家模块加载完成后再恢复状态。
         GameManager.Event_PlayerEnterWorld -= RestoreDyingStateOnWorldEnter;
         GameManager.Event_PlayerEnterWorld += RestoreDyingStateOnWorldEnter;
+        GameManager.Event_LocalPlayerRuntimeReloaded -= RestoreDyingStateOnWorldEnter;
+        GameManager.Event_LocalPlayerRuntimeReloaded += RestoreDyingStateOnWorldEnter;
     }
 
     public override void Save()
@@ -141,6 +143,7 @@ public partial class Mod_PlayerDeathState : Module
     public override void Unload()
     {
         GameManager.Event_PlayerEnterWorld -= RestoreDyingStateOnWorldEnter;
+        GameManager.Event_LocalPlayerRuntimeReloaded -= RestoreDyingStateOnWorldEnter;
         if (_damageReceiver != null)
         {
             _damageReceiver.OnDead -= OnPlayerDead;
@@ -540,6 +543,7 @@ public partial class Mod_PlayerDeathState : Module
             return;
 
         GameManager.Event_PlayerEnterWorld -= RestoreDyingStateOnWorldEnter;
+        GameManager.Event_LocalPlayerRuntimeReloaded -= RestoreDyingStateOnWorldEnter;
         if (_damageReceiver.Hp > 0f || _isInDyingState)
             return;
 

@@ -9,7 +9,8 @@ using UnityEngine;
 
 /// <summary>
 /// 当前存档内的资源更新事务：跨帧准备候选目录，正式世界继续运行；校验成功后同帧切换。
-/// 不保存、不退出、不重建玩家与区块。旧代资源保留到世界彻底退出，防止活跃实例持有失效引用。
+/// 不写盘、不退出、不重建区块；发布后只重建本地 Player 运行时外壳与 UI，继续复用同一份玩家 Data。
+/// 旧代资源保留到世界彻底退出，防止其它活跃实例持有失效引用。
 /// </summary>
 public partial class GameRes
 {
@@ -177,6 +178,10 @@ public partial class GameRes
             }
 
             PublishInPlaceReload(previousItems, mods);
+            ItemMgr itemManager = ItemMgr.GetInstance();
+            if (itemManager != null)
+                yield return itemManager.ReloadLocalPlayerAfterResourceReload();
+
             if (retainedItemIds.Length > 0 || retainedMechanicalEntries.Length > 0)
                 Debug.Log($"[GameRes] F5 已发布；当前世界暂时保留旧定义：物品 [{string.Join("、", retainedItemIds)}]，机械 [{string.Join("、", retainedMechanicalEntries)}]（退出世界后释放）。", this);
             if (LastResourceReloadWarnings != null)
@@ -184,7 +189,7 @@ public partial class GameRes
             if (manager != null)
                 manager.EndResourceReloadStatus(true);
             terminalFeedbackReported = true;
-            Debug.Log($"[GameRes] F5 原位更新完成：版本={ResourceReloadVersion}，玩家和世界实例保持不变。", this);
+            Debug.Log($"[GameRes] F5 原位更新完成：版本={ResourceReloadVersion}，世界实例保持不变，本地玩家与运行时 UI 已按最新 Prefab 重建。", this);
         }
         finally { cancelInPlaceReload?.Invoke(); }
     }
@@ -218,7 +223,9 @@ public partial class GameRes
         ActorDefinitionCatalogLoader.ConfigureResourceReload(context);
         PlayerCreationTemplateCatalogService.ConfigureResourceReload(context);
         TimeSystemConfigService.ConfigureResourceReload(context);
+        WaterCurrentPushConfigService.ConfigureResourceReload(context);
         SpawnerConfigCatalogService.ConfigureResourceReload(context);
+        NaturalGenerationRuleCatalogService.ConfigureResourceReload(context);
         AnimalSkillCatalogService.ConfigureResourceReload(context);
         QuestCatalog.ConfigureResourceReload(context);
         MechanicalCatalog.ConfigureResourceReload(context);

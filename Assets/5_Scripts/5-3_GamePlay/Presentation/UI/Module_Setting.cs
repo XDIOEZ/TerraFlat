@@ -108,7 +108,9 @@ public class SettingCanvas : Module, IInstanceUI
         if (SettingCanvasPrefab == null)
             throw new System.InvalidOperationException("[SettingCanvas] SettingCanvasPrefab 为空，无法创建设置面板");
 
-        basePanel = UIManager.Instance.CreatePanelFromGameObject(SettingCanvasPrefab);
+        basePanel = UIManager.Instance.CreatePanelFromGameObject(
+            SettingCanvasPrefab,
+            initializeClosed: true);
         BindButton(UIText.SaveButton, SaveGame);
         returnToMainMenuButton = BindButton(
             UIText.ReturnToMainMenuButton,
