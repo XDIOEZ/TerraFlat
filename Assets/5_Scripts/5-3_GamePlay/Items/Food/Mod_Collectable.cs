@@ -280,25 +280,21 @@ public sealed class Mod_Collectable : Module, IInteractable, IItemPoolLifecycle,
             }
         }
 
-        SyncOwnerSortingGroup(ownerItem);
+        ValidateOwnerSortingGroup(ownerItem);
     }
 
-    /// <summary>把主体与提示图标作为一个整体参与世界 Y 排序，避免提示的内部高层级压过角色。</summary>
-    private void SyncOwnerSortingGroup(Item ownerItem)
+    /// <summary>要求主体与提示共用已启用的根排序组，其世界层级由 WorldSortingManager 独占。</summary>
+    private void ValidateOwnerSortingGroup(Item ownerItem)
     {
         if (!FollowOwnerRendererSorting || ownerItem == null || ownerRenderer == null)
             return;
 
         SortingGroup sortingGroup = ownerItem.GetComponent<SortingGroup>();
-        if (sortingGroup == null)
+        if (sortingGroup == null || !sortingGroup.enabled)
         {
             throw new MissingComponentException(
-                $"[Mod_Collectable] 物品 {ownerItem.name} 的外壳缺少 SortingGroup，无法把主体与采集提示作为同一深度单元排序。");
+                $"[Mod_Collectable] 物品 {ownerItem.name} 的外壳缺少启用的 SortingGroup，无法把主体与采集提示作为同一深度单元排序。");
         }
-
-        sortingGroup.enabled = true;
-        sortingGroup.sortingLayerID = ownerRenderer.sortingLayerID;
-        sortingGroup.sortingOrder = ownerRenderer.sortingOrder;
     }
 
     private void EnsureIndicatorRenderers()
@@ -369,7 +365,7 @@ public sealed class Mod_Collectable : Module, IInteractable, IItemPoolLifecycle,
     private void ApplyIndicatorSorting()
     {
         if (FollowOwnerRendererSorting && ownerRenderer != null)
-            SyncOwnerSortingGroup(item != null ? item : GetComponentInParent<Item>());
+            ValidateOwnerSortingGroup(item != null ? item : GetComponentInParent<Item>());
 
         foreach (SpriteRenderer renderer in IndicatorRenderers)
         {

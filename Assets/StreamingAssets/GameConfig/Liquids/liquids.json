@@ -20,6 +20,9 @@
       "primaryColor": { "r": 0.42, "g": 0.37, "b": 0.22, "a": 1.0 },
       "drinkable": true,
       "hydrationPerServing": 25.0,
+      "ingredientReactions": [
+        { "itemId": "Salt", "amount": 10, "resultLiquidId": "core:salt_water", "requireFullContainer": true }
+      ],
       "drinkEffects": [
         {
           "buffId": "感染",
@@ -35,6 +38,7 @@
       "worldWater": {
         "spriteAddress": "Assets/6_Art/Tilemap/Grass.png[Water_0]",
         "materialAddress": "Assets/9_Shaders/Material/Tilemap-Water-Lit.mat",
+        "loadCapacity": 2,
         "navigationCost": 20000,
         "shallowMoveSpeedMultiplier": 0.5,
         "deepMoveSpeedMultiplier": 0.2,
@@ -53,7 +57,27 @@
       "visualState": "drinkable",
       "primaryColor": { "r": 0.22, "g": 0.55, "b": 0.73, "a": 1.0 },
       "drinkable": true,
-      "hydrationPerServing": 25.0
+      "hydrationPerServing": 25.0,
+      "ingredientReactions": [
+        { "itemId": "Salt", "amount": 10, "resultLiquidId": "core:salt_water", "requireFullContainer": true }
+      ]
+    },
+    {
+      "id": "core:salt_water",
+      "displayName": "盐水",
+      "description": "将一桶淡水与十份盐混合得到的高盐度水。",
+      "category": "water",
+      "visualState": "sea",
+      "primaryColor": { "r": 0.14, "g": 0.47, "b": 0.55, "a": 1.0 },
+      "drinkable": true,
+      "hydrationPerServing": 10.0,
+      "drinkEffects": [
+        {
+          "buffId": "脱水",
+          "chance": 1.0,
+          "feedback": "这盐水含有大量盐分，喝下去反而会让我脱水。"
+        }
+      ]
     },
     {
       "id": "core:sea_water",
@@ -83,6 +107,7 @@
       "worldWater": {
         "spriteAddress": "Assets/6_Art/Tilemap/Winter.png[Winter_0]",
         "materialAddress": "Assets/9_Shaders/Material/Tilemap-Water-Lit.mat",
+        "loadCapacity": 2,
         "navigationCost": 20000,
         "shallowMoveSpeedMultiplier": 0.5,
         "deepMoveSpeedMultiplier": 0.2,
@@ -96,7 +121,7 @@
     {
       "id": "core:molten_glass",
       "displayName": "熔融玻璃",
-      "description": "砂子在坩埚中达到熔化温度后形成的高温玻璃液体。",
+      "description": "沙子在坩埚中达到熔化温度后形成的高温玻璃液体。",
       "category": "molten",
       "visualState": "molten_glass",
       "primaryColor": { "r": 0.92, "g": 0.64, "b": 0.24, "a": 1.0 },

@@ -59,6 +59,23 @@ public sealed class LiquidSolidification
     public int OutputAmount { get; }
 }
 
+/// <summary>固体投入液体后的配方；原料留在容器库存中，满足份数与数量后才由库存事务扣除。</summary>
+public sealed class LiquidIngredientReaction
+{
+    public LiquidIngredientReaction(string itemId, int amount, string resultLiquidId, bool requireFullContainer)
+    {
+        ItemId = itemId;
+        Amount = amount;
+        ResultLiquidId = resultLiquidId;
+        RequireFullContainer = requireFullContainer;
+    }
+
+    public string ItemId { get; }
+    public int Amount { get; }
+    public string ResultLiquidId { get; }
+    public bool RequireFullContainer { get; }
+}
+
 /// <summary>
 /// 可注册的通用液体定义。容器只保存 LiquidId 与数量，不再把水质写死在容器类型里；
 /// 本体和 MOD 都通过同一目录声明液体的显示、饮用与加热语义。
@@ -79,7 +96,8 @@ public sealed class LiquidDefinition
         float buoyancyThresholdMultiplier = 1f,
         string sourceItemId = null,
         WorldLiquidSettings worldWater = null,
-        LiquidSolidification solidification = null)
+        LiquidSolidification solidification = null,
+        IReadOnlyList<LiquidIngredientReaction> ingredientReactions = null)
     {
         Id = id;
         DisplayName = displayName;
@@ -92,6 +110,7 @@ public sealed class LiquidDefinition
         DrinkEffects = drinkEffects ?? Array.Empty<LiquidDrinkEffect>();
         HeatProcess = heatProcess;
         Solidification = solidification;
+        IngredientReactions = ingredientReactions ?? Array.Empty<LiquidIngredientReaction>();
         BuoyancyThresholdMultiplier = buoyancyThresholdMultiplier;
         SourceItemId = sourceItemId;
         WorldWater = worldWater;
@@ -111,6 +130,7 @@ public sealed class LiquidDefinition
     public LiquidHeatProcess HeatProcess { get; }
     /// <summary>液体冷却到熔点以下时的固体产物规则。</summary>
     public LiquidSolidification Solidification { get; }
+    public IReadOnlyList<LiquidIngredientReaction> IngredientReactions { get; } // 固体投料转换规则。
     /// <summary>世界掉落物浮沉阈值倍率；1 保持基础阈值不变。</summary>
     public float BuoyancyThresholdMultiplier { get; }
     public string SourceItemId { get; } // 可装入容器的库存原料 ID；一个完整物品对应一份液体，未配置则仅支持液体来源。
@@ -174,6 +194,9 @@ public sealed class LiquidDefinitionDto
     [JsonProperty("solidification")]
     public LiquidSolidificationDto Solidification;
 
+    [JsonProperty("ingredientReactions")]
+    public List<LiquidIngredientReactionDto> IngredientReactions = new();
+
     [JsonProperty("buoyancyThresholdMultiplier")]
     public float BuoyancyThresholdMultiplier = 1f;
 
@@ -236,6 +259,16 @@ public sealed class LiquidSolidificationDto
 
     [JsonProperty("outputAmount")]
     public int OutputAmount = 1;
+}
+
+/// <summary>液体投料配方 DTO；原料与目标液体在完整目录载入后验证。</summary>
+[Serializable]
+public sealed class LiquidIngredientReactionDto
+{
+    [JsonProperty("itemId", Required = Required.Always)] public string ItemId;
+    [JsonProperty("amount", Required = Required.Always)] public int Amount;
+    [JsonProperty("resultLiquidId", Required = Required.Always)] public string ResultLiquidId;
+    [JsonProperty("requireFullContainer")] public bool RequireFullContainer;
 }
 
 /// <summary>本体液体目录。</summary>
@@ -310,6 +343,21 @@ public static class LiquidDefinitionFactory
         LiquidSolidification solidification = dto.Solidification == null
             ? null
             : BuildSolidification(id, dto.Solidification);
+        var ingredientReactions = new List<LiquidIngredientReaction>();
+        var reactionItems = new HashSet<string>(StringComparer.Ordinal);
+        foreach (LiquidIngredientReactionDto reaction in dto.IngredientReactions ?? new List<LiquidIngredientReactionDto>())
+        {
+            if (reaction == null || reaction.Amount <= 0)
+                throw new InvalidDataException($"液体 {id} 的 ingredientReactions 数量必须大于 0");
+            string itemId = NormalizeRequired(reaction.ItemId, $"液体 {id} ingredientReactions.itemId");
+            if (!reactionItems.Add(itemId))
+                throw new InvalidDataException($"液体 {id} 重复声明了投料物品：{itemId}");
+            ingredientReactions.Add(new LiquidIngredientReaction(
+                itemId,
+                reaction.Amount,
+                NormalizeContentId(reaction.ResultLiquidId, $"液体 {id} ingredientReactions.resultLiquidId"),
+                reaction.RequireFullContainer));
+        }
 
         return new LiquidDefinition(
             id,
@@ -325,7 +373,8 @@ public static class LiquidDefinitionFactory
             dto.BuoyancyThresholdMultiplier,
             string.IsNullOrWhiteSpace(dto.SourceItemId) ? null : dto.SourceItemId.Trim(),
             dto.WorldWater,
-            solidification);
+            solidification,
+            ingredientReactions);
     }
 
     /// <summary>构建整个本体分包并拒绝重复 ID。</summary>
@@ -374,6 +423,12 @@ public static class LiquidDefinitionFactory
             LiquidSolidification solidification = definition.Solidification;
             if (solidification != null && !itemExists(solidification.OutputItemId))
                 throw new InvalidDataException($"液体 {definition.Id} 的凝固产物物品不存在：{solidification.OutputItemId}");
+
+            foreach (LiquidIngredientReaction reaction in definition.IngredientReactions)
+            {
+                if (!itemExists(reaction.ItemId) || !liquidExists(reaction.ResultLiquidId))
+                    throw new InvalidDataException($"液体 {definition.Id} 的投料配方引用不存在：{reaction.ItemId} / {reaction.ResultLiquidId}");
+            }
 
             LiquidHeatProcess heat = definition.HeatProcess;
             if (heat == null)
@@ -510,6 +565,7 @@ public static class LiquidIds
 {
     public const string DirtyWater = "core:dirty_water";
     public const string DrinkableWater = "core:drinkable_water";
+    public const string SaltWater = "core:salt_water";
     public const string SeaWater = "core:sea_water";
 }
 

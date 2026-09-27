@@ -34,7 +34,7 @@ public static partial class RuntimeUIPrefabBuilder
         GameObject art = CreateUIObject("陶罐切面", picture.transform, typeof(Image));
         SetCentered((RectTransform)art.transform, new Vector2(-115f, 0f), new Vector2(350f, 350f));
         art.GetComponent<Image>().sprite = AssetDatabase.LoadAssetAtPath<Sprite>(ClayJarUIArtBuilder.Root + "ClayJar_Cutaway.png");
-        art.GetComponent<Image>().raycastTarget = false;
+        art.GetComponent<Image>().raycastTarget = true;
         RectTransform leftPourOutlet = (RectTransform)CreateUIObject("左罐口出口", art.transform).transform;
         SetCentered(leftPourOutlet, new Vector2(-58f, 120f), Vector2.zero);
         RectTransform rightPourOutlet = (RectTransform)CreateUIObject("右罐口出口", art.transform).transform;
@@ -145,16 +145,16 @@ public static partial class RuntimeUIPrefabBuilder
             }
         };
 
-    /// <summary>与石臼一致移除整块灰色底板，仅保留透明射线阻挡面和独立操作按钮。</summary>
+    /// <summary>移除透明背景射线，只让罐体和操作按钮接收指针。</summary>
     private static void ConfigureBackgroundlessWaterVessel(GameObject root, Transform content)
     {
         Image rootBlocker = root.GetComponent<Image>();
         rootBlocker.color = Color.clear;
-        rootBlocker.raycastTarget = true;
+        rootBlocker.raycastTarget = false;
 
         Image contentBlocker = content.GetComponent<Image>();
         contentBlocker.color = Color.clear;
-        contentBlocker.raycastTarget = true;
+        contentBlocker.raycastTarget = false;
 
         Outline contentOutline = content.GetComponent<Outline>();
         if (contentOutline != null)

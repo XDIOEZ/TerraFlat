@@ -6,6 +6,7 @@ using UnityEngine.UI;
 [RequireComponent(typeof(CanvasRenderer))]
 public sealed class WaterVesselLiquidGraphic : MaskableGraphic
 {
+    private const int LiquidColumns = 48; // 扩展液层后保持水面像素列的原有密度。
     [Serializable]
     public struct LiquidStyle
     {
@@ -25,6 +26,7 @@ public sealed class WaterVesselLiquidGraphic : MaskableGraphic
     private string visualState;
     private float level, targetLevel, nextFrame;
     private float agitation; // 来回摇晃产生的额外水面波动，随时间自然衰减。
+    private float vesselTiltDegrees; // 内腔遮罩的倾角，用于扩展水平液层的绘制范围。
     private int frame;
 
     public Color CurrentBodyColor => style.Body;
@@ -32,6 +34,14 @@ public sealed class WaterVesselLiquidGraphic : MaskableGraphic
     public Color CurrentDetailColor => style.Detail;
     public float CurrentMurkiness => style.Murkiness;
     public float CurrentViscosity => style.Viscosity;
+
+    /// <summary>液层反向旋转时，按容器倾角扩展网格，避免露出矩形边界。</summary>
+    public void SetVesselTilt(float tiltDegrees)
+    {
+        if (Mathf.Approximately(vesselTiltDegrees, tiltDegrees)) return;
+        vesselTiltDegrees = tiltDegrees;
+        SetVerticesDirty();
+    }
 
     /// <summary>接收容器真实数据，打开时直接定位，使用过程中平滑升降。</summary>
     public void SetWater(float amount, int capacity, string id, bool immediate = false)
@@ -77,19 +87,26 @@ public sealed class WaterVesselLiquidGraphic : MaskableGraphic
     {
         mesh.Clear();
         if (level <= 0) return;
-        Rect r = rectTransform.rect;
-        float pixel = r.height / 128f;
-        float bottom = r.yMin + r.height * FillRange.x;
-        float surface = Mathf.Lerp(bottom, r.yMin + r.height * FillRange.y, level);
+        Rect vesselRect = rectTransform.rect;
+        float radians = vesselTiltDegrees * Mathf.Deg2Rad;
+        float cosine = Mathf.Abs(Mathf.Cos(radians));
+        float sine = Mathf.Abs(Mathf.Sin(radians));
+        float width = vesselRect.width * cosine + vesselRect.height * sine;
+        float height = vesselRect.width * sine + vesselRect.height * cosine;
+        Rect r = new Rect(vesselRect.center.x - width * 0.5f, vesselRect.center.y - height * 0.5f, width, height);
+        float pixel = vesselRect.height / 128f;
+        float fillBottom = vesselRect.yMin + vesselRect.height * FillRange.x;
+        float bottom = Mathf.Min(fillBottom, r.yMin);
+        float surface = Mathf.Lerp(fillBottom, vesselRect.yMin + vesselRect.height * FillRange.y, level);
         float wavePixels = Mathf.Lerp(1f, 5f, agitation) * Mathf.Min(1f, level * 12f) *
                            Mathf.Lerp(1f, 0.72f, style.Murkiness) * Mathf.Lerp(1f, 0.45f, style.Viscosity);
-        for (int i = 0; i < 32; i++)
+        for (int i = 0; i < LiquidColumns; i++)
         {
-            float x = r.xMin + i * r.width / 32f;
+            float x = r.xMin + i * r.width / LiquidColumns;
             float wave = GetWave(i);
             float top = surface + Mathf.Round(wave * wavePixels) * pixel;
-            DrawBodyColumn(mesh, x, bottom, top, r.width / 32f);
-            Quad(mesh, x, Mathf.Max(bottom, top - pixel), r.width / 32f, Mathf.Min(pixel, top - bottom), style.Surface);
+            DrawBodyColumn(mesh, x, bottom, top, r.width / LiquidColumns);
+            Quad(mesh, x, Mathf.Max(bottom, top - pixel), r.width / LiquidColumns, Mathf.Min(pixel, top - bottom), style.Surface);
 
             if (style.Foam && i % 5 == 0)
             {
@@ -194,7 +211,7 @@ public sealed class WaterVesselLiquidGraphic : MaskableGraphic
                 continue;
 
             float normalizedX = (i + 0.35f + Hash01(i * 23 + 7) * 0.3f) / patches;
-            int waveColumn = Mathf.Clamp(Mathf.FloorToInt(normalizedX * 32f), 0, 31);
+            int waveColumn = Mathf.Clamp(Mathf.FloorToInt(normalizedX * LiquidColumns), 0, LiquidColumns - 1);
             float top = surface + Mathf.Round(GetWave(waveColumn) * wavePixels) * pixel;
             float width = pixel * Mathf.Lerp(2f, 5f, Hash01(i * 31 + 13));
             Quad(mesh, Mathf.Lerp(r.xMin, r.xMax, normalizedX) - width * 0.5f,

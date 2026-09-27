@@ -197,7 +197,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
-  m_RaycastTarget: 0
+  m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
   m_OnCullStateChanged:
@@ -401,7 +401,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
   m_Color: {r: 0, g: 0, b: 0, a: 0}
-  m_RaycastTarget: 1
+  m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
   m_OnCullStateChanged:
@@ -1116,6 +1116,7 @@ GameObject:
   - component: {fileID: 8509918733089672743}
   - component: {fileID: 9093030333110724190}
   - component: {fileID: 2722478120596566922}
+  - component: {fileID: 9411270600612050201}
   - component: {fileID: 7000000000000000000}
   m_Layer: 5
   m_Name: UI_WaterVessel
@@ -1178,7 +1179,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
   m_Color: {r: 0, g: 0, b: 0, a: 0}
-  m_RaycastTarget: 1
+  m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
   m_OnCullStateChanged:
@@ -1257,6 +1258,22 @@ MonoBehaviour:
     LeftOutlet: {x: 0.25, y: 0.8125}
     RightOutlet: {x: 0.75, y: 0.8125}
     MouthWidth: 0.625
+--- !u!114 &9411270600612050201
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7635845824747382361}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f8d19a1a62544987bde8ba92f44e5084, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  SlotTemplate: {fileID: 8358718560466821998, guid: 00321e829cd3f504ebf5c22b9aeff708, type: 3}
+  Interior: {fileID: 165898361073695759}
+  VesselArt: {fileID: 3584968628784151460}
+  StorageBounds: {x: 0.26, y: 0.12, width: 0.48, height: 0.62}
 --- !u!1 &8077230647050648011
 GameObject:
   m_ObjectHideFlags: 0

@@ -407,6 +407,26 @@ public sealed class Mod_WaterVessel : Module, IInteractable
         return true;
     }
 
+    /// <summary>投料前检查液体身份与装量；此入口不修改容器，供库存事务预检。</summary>
+    public bool CanApplyIngredientReaction(LiquidIngredientReaction reaction)
+    {
+        return GameNetwork.HasStateAuthority && reaction != null &&
+               !IsEmptyAmount(Data.Amount) && CurrentLiquid != null &&
+               !string.Equals(Data.LiquidId, reaction.ResultLiquidId, StringComparison.Ordinal) &&
+               (!reaction.RequireFullContainer || Data.Amount >= Capacity - AmountEpsilon) &&
+               ResolveLiquidDefinition(reaction.ResultLiquidId, false) != null;
+    }
+
+    /// <summary>原料库存事务成功后替换液体身份，保留原有液量并刷新存档、图标和面板。</summary>
+    public bool TryApplyIngredientReaction(LiquidIngredientReaction reaction)
+    {
+        if (!CanApplyIngredientReaction(reaction)) return false;
+        Data.LiquidId = reaction.ResultLiquidId;
+        Data.ProcessingSeconds = 0f;
+        Commit();
+        return true;
+    }
+
     /// <summary>库存中的模块没有运行时组件时读取容器状态，供炉体等系统处理。</summary>
     public static bool TryRead(ItemData itemData, out Ex_ModData_MemoryPackable storage, out LiquidContainerState state)
     {
@@ -669,6 +689,7 @@ public sealed class Mod_WaterVessel : Module, IInteractable
         generatedTexture.Apply(false, false);
 
         Vector2 pivot = new Vector2(sourceSprite.pivot.x / width, sourceSprite.pivot.y / height);
+        // 落地建筑的光照遮挡读取当前液面 Sprite 的物理轮廓。
         Sprite generatedSprite = Sprite.Create(
             generatedTexture,
             new Rect(0f, 0f, width, height),
@@ -677,7 +698,7 @@ public sealed class Mod_WaterVessel : Module, IInteractable
             0,
             SpriteMeshType.Tight,
             sourceSprite.border,
-            false);
+            true);
         generatedTexture.Apply(false, true);
         generatedSprite.name = generatedTexture.name;
         GeneratedVesselSprites.Add(key, generatedSprite);

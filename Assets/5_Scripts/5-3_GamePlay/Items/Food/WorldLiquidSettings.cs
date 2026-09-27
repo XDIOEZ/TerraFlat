@@ -17,6 +17,8 @@ public sealed class WorldLiquidSettings
     [JsonProperty("materialBundle")] public string MaterialBundle;
     [JsonProperty("materialAsset")] public string MaterialAsset;
     [JsonProperty("navigationCost")] public int NavigationCost = 20000;
+    // 液面承重与底部地块独立；未配置的 MOD 世界液体沿用 2 点。
+    [JsonProperty("loadCapacity")] public int LoadCapacity = 2;
     [JsonProperty("shallowMoveSpeedMultiplier")] public float ShallowMoveSpeedMultiplier = 0.5f;
     [JsonProperty("deepMoveSpeedMultiplier")] public float DeepMoveSpeedMultiplier = 0.2f;
     [JsonProperty("entryTemperatureFloor")] public float EntryTemperatureFloor = 10f;
@@ -36,7 +38,7 @@ public sealed class WorldLiquidSettings
     {
         if (!ValidResource(SpriteAddress, SpriteBundle, SpriteAsset) || !ValidResource(MaterialAddress, MaterialBundle, MaterialAsset))
             throw new InvalidDataException($"液体 {id} 缺少世界 Sprite/Material 地址。");
-        if (NavigationCost < 1 || NavigationCost > short.MaxValue ||
+        if (NavigationCost < 1 || NavigationCost > short.MaxValue || LoadCapacity < 0 ||
             !Positive(ShallowMoveSpeedMultiplier) || ShallowMoveSpeedMultiplier > 1f ||
             !Positive(DeepMoveSpeedMultiplier) || DeepMoveSpeedMultiplier > ShallowMoveSpeedMultiplier ||
             float.IsNaN(EntryTemperatureFloor) || float.IsInfinity(EntryTemperatureFloor) ||
