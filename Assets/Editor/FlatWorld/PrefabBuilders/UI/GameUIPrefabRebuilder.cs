@@ -657,7 +657,7 @@ public static class GameUIPrefabRebuilder
         int columns,
         Vector2 cellSize)
     {
-        RectTransform frame = PrepareWindow(root, width, height, title, eyebrow, hint);
+        RectTransform frame = PrepareWindow(root, width, height, title, eyebrow, hint, true);
         AddSection(frame, "CONTENTS", "物资清单", 24f, 104f, width - 48f, height - 184f);
 
         RectTransform scroll = FindRect(root.transform, "Scroll View");
@@ -694,7 +694,7 @@ public static class GameUIPrefabRebuilder
         const float width = 920f;
         const float height = 560f;
 
-        RectTransform chrome = PrepareWindow(root, width, height, "行囊", string.Empty, string.Empty);
+        RectTransform chrome = PrepareWindow(root, width, height, "行囊", string.Empty, string.Empty, true);
 
         // 简约主题不保留额外图标、眉题和装饰性英文。
         DestroyGeneratedElement(chrome, "FWUI_眉题");
@@ -981,7 +981,7 @@ public static class GameUIPrefabRebuilder
     {
         float width = compact ? 646f : 726f;
         float height = compact ? 438f : 526f;
-        RectTransform frame = PrepareWindow(root, width, height, title, eyebrow, compact ? "按住操作键推进过程 · 松开即可暂停" : "放入材料 · 核对产物 · 开始制作");
+        RectTransform frame = PrepareWindow(root, width, height, title, eyebrow, compact ? "按住操作键推进过程 · 松开即可暂停" : "放入材料 · 核对产物 · 开始制作", true);
 
         float sectionHeight = height - 206f;
         float inputWidth = compact ? 220f : 398f;
@@ -1032,7 +1032,7 @@ public static class GameUIPrefabRebuilder
             height,
             title,
             eyebrow,
-            "放入材料 · 选择配方 · 开始制作");
+            "放入材料 · 选择配方 · 开始制作", true);
         ResizeCraftingFooter(frame, width, height);
 
         AddSection(frame, "INPUT", "输入材料", 20f, sectionTop, 376f, sectionHeight);
@@ -1103,12 +1103,16 @@ public static class GameUIPrefabRebuilder
             }
             List<Transform> children = new List<Transform>();
             foreach (Transform child in root.transform)
-                if (child != content)
+                if (child != content && child.name != "FWUI_DragSurface")
                     children.Add(child);
             foreach (Transform child in children)
                 child.SetParent(content, false);
         }
         content.localScale = Vector3.one;
+        content.GetComponent<Image>().raycastTarget = false;
+        UIWindowDragSurface dragSurface = root.GetComponentInChildren<UIWindowDragSurface>(true);
+        if (dragSurface != null)
+            dragSurface.Configure(content);
         Stretch(outer);
         outer.localScale = Vector3.one;
         SafeAreaScaleGroup scale = root.GetComponent<SafeAreaScaleGroup>();
@@ -1167,7 +1171,7 @@ public static class GameUIPrefabRebuilder
         if (!bonfire)
             RemoveLegacyFurnaceVisuals(root.transform);
 
-        RectTransform frame = PrepareWindow(root, width, height, title, eyebrow, bonfire ? "维持燃料 · 处理食物与基础材料" : "控制燃料与温度 · 等待冶炼完成");
+        RectTransform frame = PrepareWindow(root, width, height, title, eyebrow, bonfire ? "维持燃料 · 处理食物与基础材料" : "控制燃料与温度 · 等待冶炼完成", true);
 
         AddSection(frame, "INPUT", "投入", 24f, 104f, bonfire ? 188f : 232f, 366f);
         AddSection(frame, "PROCESS", "作业状态", bonfire ? 232f : 276f, 104f, bonfire ? 276f : 296f, 366f);
@@ -1368,12 +1372,12 @@ public static class GameUIPrefabRebuilder
         if (rect == null)
             return;
 
-        // 快捷栏 Canvas 固定高于普通玩法面板，容器等面板的全屏透明底图不能挡住槽位点击。
+        // 快捷栏跟随 PanelRoot 的普通面板层级；需要取用快捷栏的面板由背景 Image 自行放行射线。
         Canvas canvas = root.GetComponent<Canvas>();
         if (canvas == null)
-            throw new InvalidOperationException("UI_HotBar 缺少独立 Canvas，无法保证面板打开时快捷栏可交互。");
-        canvas.overrideSorting = true;
-        canvas.sortingOrder = UIManager.HotbarModalSortingOrder;
+            throw new InvalidOperationException("UI_HotBar 缺少 Canvas，无法承载快捷栏槽位射线。");
+        canvas.overrideSorting = false;
+        canvas.sortingOrder = UIManager.GameplayHudSortingOrder;
 
         rect.anchorMin = new Vector2(0.5f, 0f);
         rect.anchorMax = new Vector2(0.5f, 0f);
@@ -2173,7 +2177,8 @@ public static class GameUIPrefabRebuilder
         }
     }
 
-    private static RectTransform PrepareWindow(GameObject root, float width, float height, string title, string eyebrow, string footerHint)
+    /// <summary>布置面板底板；需要从快捷栏拖入物品的面板不让底板接收射线。</summary>
+    private static RectTransform PrepareWindow(GameObject root, float width, float height, string title, string eyebrow, string footerHint, bool allowHotbarInput = false)
     {
         RectTransform rootRect = root.GetComponent<RectTransform>();
         if (rootRect == null)
@@ -2189,6 +2194,7 @@ public static class GameUIPrefabRebuilder
         rootImage.color = Ink;
         rootImage.sprite = null;
         rootImage.type = Image.Type.Simple;
+        rootImage.raycastTarget = !allowHotbarInput;
         AddOutline(rootImage, new Color(0.83f, 0.49f, 0.23f, 0.30f));
 
         RectTransform chrome = CreateRect("FWUI_Chrome", root.transform);
@@ -2238,6 +2244,18 @@ public static class GameUIPrefabRebuilder
 
         AddCornerTicks(chrome, width, height);
         PlaceCloseButton(root.transform, width);
+        if (allowHotbarInput && root.GetComponent<UI_Drag>() != null)
+        {
+            RectTransform hitRect = root.transform.Find("FWUI_DragSurface") as RectTransform;
+            if (hitRect == null)
+                hitRect = CreateRect("FWUI_DragSurface", root.transform);
+            Stretch(hitRect);
+            hitRect.SetAsFirstSibling();
+            UIWindowDragSurface dragSurface = hitRect.GetComponent<UIWindowDragSurface>();
+            if (dragSurface == null)
+                dragSurface = hitRect.gameObject.AddComponent<UIWindowDragSurface>();
+            dragSurface.Configure(rootRect);
+        }
         return chrome;
     }
 

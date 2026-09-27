@@ -47,6 +47,9 @@ public class UI_Drag : MonoBehaviour, IPointerDownHandler, IBeginDragHandler, ID
     /// 是否正在拖拽状态
     /// </summary>
     public bool IsDragging = false;
+
+    /// <summary>独立子节点上的窗口拖动命中面。</summary>
+    private UIWindowDragSurface dragSurface;
     
     #endregion
 
@@ -58,6 +61,7 @@ public class UI_Drag : MonoBehaviour, IPointerDownHandler, IBeginDragHandler, ID
     public void Awake()
     {        
         rectTransform = GetComponent<RectTransform>();
+        dragSurface = GetComponentInChildren<UIWindowDragSurface>(true);
         if (canvas == null)
         {
             // 尝试从父物体获取Canvas引用
@@ -227,7 +231,13 @@ public class UI_Drag : MonoBehaviour, IPointerDownHandler, IBeginDragHandler, ID
     /// <returns>是否点击在可拖拽图片上</returns>
     private bool IsPointerOverDraggableImage(PointerEventData eventData)
     {        
-        if (eventData == null || draggableImage == null)
+        if (eventData == null)
+            return false;
+
+        if (dragSurface != null)
+            return dragSurface.IsDragHit(eventData.position, eventData.pressEventCamera);
+
+        if (draggableImage == null)
             return false;
             
         GameObject clickedObject = eventData.pointerCurrentRaycast.gameObject;

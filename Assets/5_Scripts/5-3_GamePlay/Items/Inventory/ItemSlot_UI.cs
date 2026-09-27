@@ -579,9 +579,9 @@ public class ItemSlot_UI : MonoBehaviour,
             {
                 ItemSlot_UI touchTargetSlot = FindSlotUnderPointer(eventData);
                 bool hasTouchTarget = touchTargetSlot != null && touchTargetSlot.isActiveAndEnabled;
-                if (hasTouchTarget)
+                bool touchSlotAccepted = hasTouchTarget &&
                     touchTargetSlot.HandleMouseDragDrop(activeDragTransaction, eventData);
-                IInventoryDragDropTarget touchGameplayTarget = hasTouchTarget
+                IInventoryDragDropTarget touchGameplayTarget = touchSlotAccepted
                     ? null
                     : FindInventoryDragDropTargetUnderPointer(eventData);
                 if (touchGameplayTarget != null)
@@ -610,9 +610,8 @@ public class ItemSlot_UI : MonoBehaviour,
 
         ItemSlot_UI targetSlot = FindSlotUnderPointer(eventData);
         bool hasTarget = targetSlot != null && targetSlot.isActiveAndEnabled;
-        if (hasTarget)
-            targetSlot.HandleMouseDragDrop(activeDragTransaction, eventData);
-        IInventoryDragDropTarget gameplayTarget = hasTarget
+        bool slotAccepted = hasTarget && targetSlot.HandleMouseDragDrop(activeDragTransaction, eventData);
+        IInventoryDragDropTarget gameplayTarget = slotAccepted
             ? null
             : FindInventoryDragDropTargetUnderPointer(eventData);
         if (gameplayTarget != null)
