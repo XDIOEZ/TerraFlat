@@ -6,13 +6,21 @@ using UnityEngine;
 /// <summary>鸟的地面、助跑与飞行阶段；助跑仍接触地面，离地后才屏蔽近战和地块效果。</summary>
 public enum BirdFlightPhase { Ground, RunUp, TakingOff, Flying, Landing }
 
+/// <summary>常驻飞行物种可注册独立行为模块，复用鸟的飞行、导航和表现能力。</summary>
+public interface IBirdFlightPilot
+{
+    /// <summary>由鸟的权威 Tick 驱动具体物种行为。</summary>
+    void TickFlight(float deltaTime);
+}
+
 /// <summary>
-/// GameObject 鸟与海鸥共用模块。地面 0.5 格/秒、助跑 2.6 格/秒、空中 6.3 格/秒，飞行受独立耐力约束。
+/// GameObject 鸟、海鸥与常驻飞行生物共用模块。普通鸟地面 0.5 格/秒、助跑 2.6 格/秒、空中 6.3 格/秒，飞行受独立耐力约束。
 /// Item 和刚体始终保存地面映射坐标；独立 LiftRoot 在飞行时提升表现与受击盒 2 单位。
-/// 助跑沿可走地面累计 1.2 格前进，再沿当前运动方向边加速边抬升；状态与目的地随模块存档。
+/// 普通鸟助跑 1.2 格后离地；常驻飞行生物默认直接巡航，独立 Pilot 可在特定行为期间临时落地。
 /// </summary>
-public sealed partial class AI_Bird : Module, IAIActor, IItemModuleDependencyBinder,
-    IIncomingDamageRule, IIncomingDamageContextRule, ICombatAirborneTarget, IVisualGroundOffset
+public sealed partial class AI_Bird : Module, IAIActor, IItemModuleDependencyBinder, IRuntimeAiPersistencePolicy,
+    IIncomingDamageRule, IIncomingDamageContextRule, ICombatAirborneTarget, IVisualGroundOffset,
+    IWaterCurrentExposure
 {
     #region 配置与独立存档
     private static readonly int GroundAnimationHash = Animator.StringToHash("Base Layer.Ground");
@@ -47,6 +55,10 @@ public sealed partial class AI_Bird : Module, IAIActor, IItemModuleDependencyBin
         public float TakeoffDirectionY;
         /// <summary>本次助跑已经完成的前进距离。</summary>
         public float RunUpDistance;
+        public float HomeX; // 常驻飞行物种的巢位 X。
+        public float HomeY; // 常驻飞行物种的巢位 Y。
+        public bool HasHome; // 是否绑定了巢位。
+        public int HomeHiveGuid; // 所属蜂巢的稳定 GUID；独立鸟类为零。
     }
 
     public Ex_ModData Data = new();
@@ -63,6 +75,7 @@ public sealed partial class AI_Bird : Module, IAIActor, IItemModuleDependencyBin
     public float transitionDuration = 0.75f;
     public float groundWanderRadius = 2f;
     public float flightWanderRadius = 18f;
+    public bool permanentFlight; // 蜜蜂等物种默认空中巡航，不进入普通鸟耐力循环；Pilot 可临时切到地面。
     [Min(0.01f)] public float flightStaminaMax = 100f;
     [Min(0f)] public float flightStaminaDrainRate = 1f;
     [Min(0f)] public float flightStaminaRecoveryRate = 10f;
@@ -92,10 +105,14 @@ public sealed partial class AI_Bird : Module, IAIActor, IItemModuleDependencyBin
     private long fatigueSafetyVersion = -1;
     private bool restoreGroundDestination;
     private BirdFlightStaminaBar staminaDisplay;
+    private IBirdFlightPilot flightPilot; // 可替换的常驻飞行行为。
     public Item ActorItem => item;
+    public bool PersistRuntimeAi => state.HomeHiveGuid == 0;
+    public int HomeHiveGuid => state.HomeHiveGuid;
     public bool IsAlive => health != null && health.Hp > 0f;
     public BirdFlightPhase Phase => state.Phase;
     public bool IsAirborne => state.Phase != BirdFlightPhase.Ground && state.Phase != BirdFlightPhase.RunUp;
+    public bool ReceivesWaterCurrent => !IsAirborne;
     public float FlightStamina => state.Stamina;
     public bool IsRecoveringFlightStamina => state.MustRecoverStamina;
     #endregion
@@ -120,12 +137,22 @@ public sealed partial class AI_Bird : Module, IAIActor, IItemModuleDependencyBin
         if (body == null)
             throw new InvalidOperationException("鸟外壳缺少根刚体。");
         // 依赖装配阶段尚未执行 Module.LoadMod，item 只在 Load 阶段保证已绑定。
-        staminaDisplay = item.GetComponent<BirdFlightStaminaBar>();
-        if (staminaDisplay == null) staminaDisplay = item.gameObject.AddComponent<BirdFlightStaminaBar>();
-        staminaDisplay.Bind(this, liftRoot);
+        if (!permanentFlight)
+        {
+            staminaDisplay = item.GetComponent<BirdFlightStaminaBar>();
+            if (staminaDisplay == null) staminaDisplay = item.gameObject.AddComponent<BirdFlightStaminaBar>();
+            staminaDisplay.Bind(this, liftRoot);
+        }
         state = Data.GetData<FlightState>() ?? new FlightState();
         if (!Enum.IsDefined(typeof(BirdFlightPhase), state.Phase))
             throw new InvalidOperationException("鸟存档包含无效飞行阶段。");
+        if (permanentFlight)
+        {
+            state.Phase = BirdFlightPhase.Flying;
+            state.HasTransitionStartHeight = false;
+            if (!state.HasHome)
+                SetFlightHome(body.position);
+        }
         state.Stamina = Mathf.Clamp(state.Stamina, 0f, flightStaminaMax);
         if (state.Stamina <= 0f) state.MustRecoverStamina = true;
         threatDetector.DetectionRadius = Mathf.Max(fleeTriggerDistance, fleeSafeDistance);
@@ -186,8 +213,16 @@ public sealed partial class AI_Bird : Module, IAIActor, IItemModuleDependencyBin
         {
             float step = Mathf.Max(0f, deltaTime);
             state.Elapsed += step;
-            bool exhausted = AdvanceFlightStamina(state, step, flightStaminaMax, flightStaminaDrainRate, flightStaminaRecoveryRate);
-            TickVigilance(step);
+            bool exhausted = !permanentFlight && AdvanceFlightStamina(
+                state, step, flightStaminaMax, flightStaminaDrainRate, flightStaminaRecoveryRate);
+            if (flightPilot == null)
+                TickVigilance(step);
+            if (flightPilot != null)
+            {
+                flightPilot.TickFlight(step);
+                ApplyFlightPresentation();
+                return;
+            }
             // 耗尽后仍把降落放在逃跑/觅食之前，但不允许在不可站立地块上硬降落。
             // 若脚下没有安全地块，就继续飞到检测到安全落点为止。
             if (exhausted && (state.Phase == BirdFlightPhase.Flying || state.Phase == BirdFlightPhase.TakingOff))
@@ -208,7 +243,8 @@ public sealed partial class AI_Bird : Module, IAIActor, IItemModuleDependencyBin
                 ApplyFlightPresentation();
                 return;
             }
-            if (TickEscape(step) || TickFatigueLanding(step, forceLanding: false) || TickForaging(step))
+            if (TickEscape(step) ||
+                (!permanentFlight && (TickFatigueLanding(step, forceLanding: false) || TickForaging(step))))
             {
                 ApplyFlightPresentation();
                 return;
@@ -227,7 +263,7 @@ public sealed partial class AI_Bird : Module, IAIActor, IItemModuleDependencyBin
                     break;
                 case BirdFlightPhase.Flying:
                     TickFlightWander(step);
-                    if (state.Elapsed >= flightDuration && CanLand(body.position)) BeginLanding();
+                    if (!permanentFlight && state.Elapsed >= flightDuration && CanLand(body.position)) BeginLanding();
                     break;
                 case BirdFlightPhase.Landing:
                     mover.StopMovement();
@@ -268,8 +304,104 @@ public sealed partial class AI_Bird : Module, IAIActor, IItemModuleDependencyBin
         state.TakeoffDirectionX = airborneDirection.x;
         state.TakeoffDirectionY = airborneDirection.y;
     }
-    public void BeginLanding() => EnterPhase(BirdFlightPhase.Landing);
-    public void CompleteLanding() => EnterPhase(BirdFlightPhase.Ground);
+    public void BeginLanding()
+    {
+        if (!permanentFlight) EnterPhase(BirdFlightPhase.Landing);
+    }
+
+    public void CompleteLanding()
+    {
+        if (!permanentFlight) EnterPhase(BirdFlightPhase.Ground);
+    }
+
+    /// <summary>巢群在创建后绑定独立巡航中心，常驻飞行目标只围绕该位置选择。</summary>
+    public void SetFlightHome(Vector2 position)
+    {
+        Vector2 home = WorldTopologyRuntime.NormalizePosition(position);
+        state.HomeX = home.x;
+        state.HomeY = home.y;
+        state.HasHome = true;
+    }
+
+    /// <summary>蜂巢接管该鸟的生命周期，记录自身归属并绑定巡航中心。</summary>
+    public void SetColonyHome(int hiveGuid, Vector2 position)
+    {
+        if (hiveGuid == 0)
+            throw new InvalidOperationException("巢群成员必须绑定有效的蜂巢 GUID。");
+        SetFlightHome(position);
+        state.HomeHiveGuid = hiveGuid;
+    }
+
+    /// <summary>蜂巢被摧毁后解除巢群归属，但保留原巢位置作为自由飞行中心。</summary>
+    public void ReleaseColonyHome(Vector2 position)
+    {
+        SetFlightHome(position);
+        state.HomeHiveGuid = 0;
+    }
+
+    /// <summary>为常驻飞行物种注册独立行为，不让普通鸟的逃跑和觅食覆盖它。</summary>
+    public void RegisterFlightPilot(IBirdFlightPilot pilot)
+    {
+        if (!permanentFlight || pilot == null || (flightPilot != null && !ReferenceEquals(flightPilot, pilot)))
+            throw new InvalidOperationException("鸟的常驻飞行行为注册无效。");
+        flightPilot = pilot;
+    }
+
+    /// <summary>模块卸载时解除本轮飞行行为绑定。</summary>
+    public void UnregisterFlightPilot(IBirdFlightPilot pilot)
+    {
+        if (ReferenceEquals(flightPilot, pilot))
+            flightPilot = null;
+    }
+
+    /// <summary>向独立行为开放同一套飞行通行和转向逻辑。</summary>
+    public void FlyTo(Vector2 destination, float deltaTime)
+    {
+        EnsurePilotAirborne();
+        FlyTowards(destination, deltaTime);
+    }
+
+    /// <summary>按基础飞行速度倍率移动，并返回本帧是否成功前进。</summary>
+    public bool TryFlyTo(Vector2 destination, float deltaTime, float speedMultiplier)
+    {
+        if (speedMultiplier <= 0f)
+            return false;
+        EnsurePilotAirborne();
+        mover.StopMovement();
+        body.velocity = Vector2.zero;
+        Vector2 displacement = WorldTopologyRuntime.ShortestDelta(body.position, destination);
+        return MoveCruiseStep(displacement, flightSpeed * speedMultiplier, deltaTime);
+    }
+
+    /// <summary>没有明确目标时沿用以巢位为中心的巡航。</summary>
+    public void WanderAroundHome(float deltaTime)
+    {
+        EnsurePilotAirborne();
+        TickFlightWander(deltaTime);
+    }
+
+    /// <summary>常驻飞行 Pilot 在采蜜等明确地面行为期间临时切换地面接触与表现。</summary>
+    public void SetPilotGrounded(IBirdFlightPilot pilot, bool grounded)
+    {
+        if (!permanentFlight || pilot == null || !ReferenceEquals(flightPilot, pilot))
+            throw new InvalidOperationException("只有已注册的常驻飞行 Pilot 才能切换临时落地状态。");
+
+        BirdFlightPhase target = grounded ? BirdFlightPhase.Ground : BirdFlightPhase.Flying;
+        if (state.Phase == target)
+        {
+            if (grounded)
+                mover.StopMovement();
+            return;
+        }
+        EnterPhase(target);
+    }
+
+    /// <summary>独立 Pilot 发出飞行移动请求时自动结束临时落地，避免地面状态仍执行空中位移。</summary>
+    private void EnsurePilotAirborne()
+    {
+        if (permanentFlight && flightPilot != null && state.Phase != BirdFlightPhase.Flying)
+            EnterPhase(BirdFlightPhase.Flying);
+    }
 
     /// <summary>纯耐力结算：飞行每秒扣 1，地面每秒回 10；耗尽后必须回满才能解除强制休息。</summary>
     public static bool AdvanceFlightStamina(FlightState state, float deltaTime, float maximum, float drain, float recovery)
@@ -497,7 +629,10 @@ public sealed partial class AI_Bird : Module, IAIActor, IItemModuleDependencyBin
             float angle = UnityEngine.Random.value * Mathf.PI * 2f;
             float distance = UnityEngine.Random.Range(1f, Mathf.Max(1f, flightWanderRadius));
             Vector2 direction = new(Mathf.Cos(angle), Mathf.Sin(angle));
-            destination = WorldTopologyRuntime.NormalizePosition(position + direction * distance);
+            Vector2 center = permanentFlight && state.HasHome
+                ? new Vector2(state.HomeX, state.HomeY)
+                : position;
+            destination = WorldTopologyRuntime.NormalizePosition(center + direction * distance);
             SetWanderTarget(destination);
             delta = WorldTopologyRuntime.ShortestDelta(position, destination);
         }
@@ -664,18 +799,22 @@ public sealed partial class AI_Bird : Module, IAIActor, IItemModuleDependencyBin
 
     /// <summary>巡航直线受阻时沿已加载地形转向；没有空中出口但可落脚时结束飞行。</summary>
     private bool MoveCruiseStep(Vector2 desiredDisplacement, float deltaTime)
+        => MoveCruiseStep(desiredDisplacement, flightSpeed, deltaTime);
+
+    /// <summary>允许具体飞行行为覆写本次巡航速度，同时复用统一通行和转向逻辑。</summary>
+    private bool MoveCruiseStep(Vector2 desiredDisplacement, float speed, float deltaTime)
     {
-        if (desiredDisplacement.sqrMagnitude <= 0.0001f) return false;
-        if (MoveFlightStep(desiredDisplacement, flightSpeed, deltaTime)) return true;
+        if (desiredDisplacement.sqrMagnitude <= 0.0001f || speed <= 0f) return false;
+        if (MoveFlightStep(desiredDisplacement, speed, deltaTime)) return true;
 
         Vector2 forward = desiredDisplacement.normalized;
         for (int index = 0; index < FlightTurnOffsets.Length; index++)
         {
             Vector2 direction = Quaternion.Euler(0f, 0f, FlightTurnOffsets[index]) * forward;
-            if (MoveFlightStep(direction * (flightSpeed * deltaTime), flightSpeed, deltaTime)) return true;
+            if (MoveFlightStep(direction * (speed * deltaTime), speed, deltaTime)) return true;
         }
 
-        if (CanLand(body.position)) BeginLanding();
+        if (!permanentFlight && CanLand(body.position)) BeginLanding();
         return false;
     }
 

@@ -829,6 +829,7 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
             !IsRuntimeTerrainReady(candidate) ||
             !IsWalkableSpawnPosition(candidate) ||
             !IsBiomeAllowed(config, candidate) ||
+            !IsGroundTileAllowed(config, candidate) ||
             !IsLightAllowed(config, candidate))
             return false;
 
@@ -864,6 +865,16 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
         }
 
         return false;
+    }
+
+    /// <summary>按权威地表 Tile 限制生态出生地，避免只看群系时刷在石块斑块上。</summary>
+    private bool IsGroundTileAllowed(SpawnerConfig config, Vector3 worldPos)
+    {
+        if (config.AllowedGroundTileIds == null || config.AllowedGroundTileIds.Count == 0)
+            return true;
+
+        return _chunkManager.TryGetRuntimeTerrainTile(worldPos, out RuntimeTerrainTileSample sample) &&
+               config.AllowedGroundTileIds.Contains(sample.Cell.GroundTileId);
     }
 
     /// <summary>兼容旧 BiomeData 的显示名与资源名。</summary>

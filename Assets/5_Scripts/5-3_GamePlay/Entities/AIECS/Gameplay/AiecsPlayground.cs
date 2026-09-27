@@ -45,7 +45,9 @@ namespace FlatWorld.AIECS.Gameplay
         {
             if (active != null && active != this) { Destroy(gameObject); return; }
             active = this; DontDestroyOnLoad(gameObject);
-            mode = InitialMode; GameManager.Event_PlayerEnterWorld += OnPlayerEntered;
+            mode = InitialMode;
+            GameManager.Event_PlayerEnterWorld += OnPlayerEntered;
+            GameManager.Event_LocalPlayerRuntimeReloaded += OnPlayerEntered;
         }
 
         /// <summary>复用游戏本来的新建世界流程，不替用户打开或覆盖存档。</summary>
@@ -113,6 +115,7 @@ namespace FlatWorld.AIECS.Gameplay
         {
             if (active != this) return;
             GameManager.Event_PlayerEnterWorld -= OnPlayerEntered;
+            GameManager.Event_LocalPlayerRuntimeReloaded -= OnPlayerEntered;
             if (manager != null) manager.Event_GameWorldExit -= OnWorldExit;
             StopScenario(); active = null;
         }
@@ -134,7 +137,8 @@ namespace FlatWorld.AIECS.Gameplay
                     TrySpawnScenarioLootActor, removeSpawnedStaticDropsOnDispose: true);
                 bridge.Simulation.LocalAvoidanceEnabled = LocalAvoidanceEnabled;
                 bridge.PlayerParticipates = requested != AiecsPlaygroundMode.Armies;
-                display = new AiecsWorldRenderer(Catalog, ids, player.gameObject.scene);
+                display = new AiecsWorldRenderer(Catalog, ids, player.gameObject.scene,
+                    AiecsWorldSortingResolver.Resolve());
                 simulationTime = Time.timeAsDouble;
                 float2 center = (Vector2)player.transform.position;
                 if (requested == AiecsPlaygroundMode.Armies)

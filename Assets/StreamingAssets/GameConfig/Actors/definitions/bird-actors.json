@@ -3,6 +3,7 @@
   "actors": [
     {
       "id": "Bird",
+      "weight": 0.3,
       "parent": "Chicken",
       "lootTableId": "Chicken_Default",
       "shellPrefab": "CoreActor.Bird.Shell",
@@ -104,6 +105,7 @@
     },
     {
       "id": "Seagull",
+      "weight": 0.8,
       "parent": "Bird",
       "shellPrefab": "CoreActor.Seagull.Shell",
       "shellAddress": "flatworld.actor.shell.seagull",
@@ -130,6 +132,74 @@
       "itemData": {
         "factionId": "birds"
       }
+    },
+    {
+      "id": "Bee",
+      "weight": 0.001,
+      "parent": "Bird",
+      "lootTableId": "",
+      "shellPrefab": "CoreActor.Bee.Shell",
+      "shellAddress": "flatworld.actor.shell.bee",
+      "sourcePrefab": "Assets/2_Prefabs/Gameplay/AI/Bee.prefab",
+      "gameName": "蜜蜂",
+      "description": "在蜂巢周围持续飞行的小型生物。",
+      "tags": ["Bee", "Insect", "Animal", "Blood", "Prey"],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/AI/Bee/Bee_Flying_Left.png",
+        "animatorControllerAddress": "flatworld.actor.animator.bee",
+        "flipX": false,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": { "x": 0.0, "y": 0.05 },
+          "path": "",
+          "size": { "x": 0.22, "y": 0.16 },
+          "edgeRadius": 0.0
+        }
+      },
+      "modules": {
+        "detector": { "parameters": { "DetectionRadius": 6.0 } },
+        "ai": {
+          "parameters": {
+            "permanentFlight": true,
+            "flightSpeed": 3.2,
+            "flightHeight": 0.8,
+            "flightWanderRadius": 3.0,
+            "flightStaminaDrainRate": 0.0,
+            "fleeTriggerDistance": 3.0,
+            "fleeSafeDistance": 6.0,
+            "fleeRunDistance": 5.0,
+            "hurtEscapeSeconds": 2.0
+          }
+        },
+        "beeBehavior": {
+          "prefab": "Module_BeeBehavior",
+          "id": "Mod_BeeBehavior",
+          "enabled": true,
+          "data": { "BitData": null, "Type": 0 },
+          "parameters": {
+            "SatietyMaximum": 1440.0,
+            "SatietyDrainPerSecond": 1.0,
+            "ForageBelow": 800.0,
+            "ReturnAbove": 1000.0,
+            "HoneyContributionCost": 500.0,
+            "HoneyMealGain": 500.0,
+            "CropGainPerSecond": 100.0,
+            "FlowerGainPerSecond": 0.5,
+            "PatrolFlightSpeedMultiplier": 0.5,
+            "AngryLockRadius": 3.0,
+            "AngerMaximum": 10.0,
+            "AngerDecayPerSecond": 0.1
+          }
+        },
+        "health": {
+          "parameters": {
+            "Data": { "Hp": 4.0, "MaxHp": 4.0 }
+          }
+        }
+      },
+      "itemData": { "factionId": "insects" }
     }
   ]
 }

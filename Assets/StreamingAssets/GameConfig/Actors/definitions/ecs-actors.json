@@ -3,9 +3,9 @@
   "actors": [
     {
       "id": "Zombie",
+      "weight": 70.0,
       "parent": "Wolf",
       "lootTableId": "",
-      "sourcePrefab": "",
       "gameName": "丧尸",
       "description": "用于尸潮等超大规模战斗的基础 ECS 敌对生物。",
       "tags": [

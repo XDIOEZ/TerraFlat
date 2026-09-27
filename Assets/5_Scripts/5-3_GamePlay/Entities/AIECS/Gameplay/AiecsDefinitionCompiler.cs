@@ -78,6 +78,7 @@ namespace FlatWorld.AIECS.Gameplay
                 foreach (var part in anatomy.Parts) { hp += part.Hp; maxHp += part.MaxHp; }
             }
             return new AiecsActorTemplate { Definition = definitionIndex, Faction = factionIndex, Body = body,
+                WaterCurrentPushSpeed = WaterCurrentPushConfigService.ResolvePushSpeed(actorId, item.Stack.Weight),
                 Vital = new AiecsVital { Hp = hp, MaxHp = maxHp, DamageInterval = life.DamageInterval,
                     ReceivedMultiplier = 1f, LastDamageTime = double.NegativeInfinity },
                 Anatomy = anatomy, Defense = new AiecsDefense { Values = GameplayCombatBridge.Values(life.DefenseValues) },

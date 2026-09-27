@@ -143,7 +143,7 @@ public class AI_Ghost : Module, IAIActor, ISimulationRangeAware
         if (_pathAgent == null)
             _pathAgent = item.gameObject.AddComponent<WorldNavigationAgent>();
 
-        _pathAgent.Bind(item.GetComponent<Rigidbody2D>());
+        _pathAgent.Bind(item.GetComponent<Rigidbody2D>(), null, null, item);
         _pathAgent.Configure(0.05f, 0.1f, stuckRepathDelay, 0.01f);
         _pathAgent.Stop(clearDestination: true);
     }
@@ -323,7 +323,11 @@ public class AI_Ghost : Module, IAIActor, ISimulationRangeAware
         Vector2 nextPosition = distance <= stepDistance
             ? target
             : (Vector2)item.transform.position + delta / distance * stepDistance;
-        Vector2 normalizedPosition = WorldTopologyRuntime.NormalizePosition(nextPosition);
+        // 幽灵直追不经导航刚体速度，仍须叠加与其它生物相同的表层水流位移。
+        Vector2 currentVelocity = WorldMotionSystem.SampleWaterVelocity(
+            item.transform.position, WaterCurrentPushConfigService.ResolvePushSpeed(item));
+        Vector2 normalizedPosition = WorldTopologyRuntime.NormalizePosition(
+            nextPosition + currentVelocity * Mathf.Max(0f, deltaTime));
 
         if (_rigidbody != null)
         {

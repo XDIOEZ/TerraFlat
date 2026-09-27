@@ -327,7 +327,8 @@ public sealed class AIBehaviorGraphRuntime
         AIBehaviorGraphDefinition definition,
         AIBehaviorGraphContext context,
         Action<string, string> onStateChanged,
-        string initialState = null)
+        string initialState = null,
+        float initialStateElapsed = 0f)
     {
         _context = context ?? throw new ArgumentNullException(nameof(context));
         _onStateChanged = onStateChanged;
@@ -374,10 +375,11 @@ public sealed class AIBehaviorGraphRuntime
             throw new InvalidDataException($"AI 行为图初始状态未定义：{stateToEnter}");
 
         _decisionTimer = 0f;
-        _context.StateElapsed = 0f;
         _context.BeginState();
         _stateMachine.Initialize(stateToEnter);
+        _context.StateElapsed = Mathf.Max(0f, initialStateElapsed);
         _isInitialized = true;
+        _context.Damaged += RequestImmediateDecision;
         PlayStateAnimation(stateToEnter);
     }
 
@@ -407,6 +409,7 @@ public sealed class AIBehaviorGraphRuntime
         if (!_isInitialized)
             return;
 
+        _context.Damaged -= RequestImmediateDecision;
         _stateMachine.Reset();
         _context.StateElapsed = 0f;
         _isInitialized = false;
@@ -447,6 +450,12 @@ public sealed class AIBehaviorGraphRuntime
             return true;
         }
         return false;
+    }
+
+    /// <summary>受击后下一帧优先评估打断条件，不等待普通决策间隔。</summary>
+    private void RequestImmediateDecision()
+    {
+        _decisionTimer = 0f;
     }
 
     private void TransitionTo(string nextState)

@@ -7,7 +7,7 @@ using UltEvents;
 
 #region Actor 能力上下文
 
-/// <summary>状态图节点读取的统一 Actor 能力；能力由 AI Prefab 上的模块提供。</summary>
+/// <summary>状态图节点读取的 Actor 能力入口；运行态由 Blackboard 保存，物种参数由 Actor JSON 提供。</summary>
 public sealed class AIBehaviorGraphContext
 {
     public Item Actor { get; } // 当前行为图所属实体。
@@ -16,22 +16,24 @@ public sealed class AIBehaviorGraphContext
     public DamageReceiver Health { get; } // 通用生命能力。
     public Mod_Food Food { get; } // 通用营养能力。
     public Mod_AnimatorController Animator { get; } // 结构动画能力。
-    public float StateElapsed { get; set; } // 当前 JSON 状态已持续时间。
+    public float StateElapsed { get => _blackboard.StateElapsed; set => _blackboard.StateElapsed = value; } // 当前状态时长。
     public Vector3 Position => Actor.transform.position;
-    public bool DamagedSinceStateEnter { get; private set; } // 当前状态进入后是否受过有效伤害。
-    public bool HasRecentDamageThreat => _recentDamageRemain > 0f; // 受击威胁记忆是否仍有效。
-    public bool ForageSatisfied { get; internal set; } // 当前觅食节点是否已完成本轮目标。
-    public bool ForageAvailable { get; internal set; } = true; // 当前觅食节点是否存在可用食物。
+    public bool DamagedSinceStateEnter => _blackboard.DamagedSinceStateEnter; // 当前状态受击事实。
+    public bool HasRecentDamageThreat => _blackboard.HasRecentDamageThreat; // 近期受击来源是否有效。
+    public bool ForageSatisfied { get => _blackboard.ForageSatisfied; internal set => _blackboard.ForageSatisfied = value; }
+    public bool ForageAvailable { get => _blackboard.ForageAvailable; internal set => _blackboard.ForageAvailable = value; }
+    public float RecentDamageRemaining => _blackboard.RecentDamageRemaining; // 可存档的受击记忆时长。
+    public Vector3 RecentDamageOrigin => _blackboard.RecentDamageOrigin; // 可存档的受击来源。
+    public event Action Damaged; // 通知当前节点重规划并提前评估状态。
 
-    private readonly Dictionary<string, float> _timers = new(StringComparer.Ordinal); // 可存档通用计时器。
-    private readonly List<string> _timerKeys = new(); // 无分配推进计时器。
+    private readonly AIBehaviorGraphBlackboard _blackboard; // 可存档事实和计时器。
+    private readonly AIBehaviorGraphPerception _perception; // 目标感知与刷新。
     private readonly List<Action<float>> _backgroundTicks = new(); // 节点注册的跨状态后台计时器。
     private readonly float _damageThreatMemoryDuration; // 受击来源记忆时长。
     private readonly bool _hasDamageModules; // 是否具备攻击伤害模块。
     private DamageReceiver _damageEventSource; // 当前受击事件来源。
-    private Vector3 _recentDamageOrigin; // 最近一次有效伤害来源位置。
-    private float _recentDamageRemain; // 受击来源剩余记忆时间。
     private string _nutritionSustenanceTimerKey; // 草食维持期使用的计时器键。
+    private DayTimeSystem _worldTimeSource; // 草食计时使用的权威世界时间源。
     private Mod_TurnBack _turnBody; // 通用朝向模块。
 
     public AIBehaviorGraphContext(
@@ -42,7 +44,11 @@ public sealed class AIBehaviorGraphContext
         Mod_Food food,
         Mod_AnimatorController animator,
         float damageThreatMemoryDuration,
-        IReadOnlyDictionary<string, float> savedTimers)
+        float detectorRefreshInterval,
+        IReadOnlyDictionary<string, float> savedTimers,
+        float savedStateElapsed,
+        float savedDamageRemaining,
+        Vector3 savedDamageOrigin)
     {
         Actor = actor ?? throw new ArgumentNullException(nameof(actor));
         Mover = mover;
@@ -50,21 +56,12 @@ public sealed class AIBehaviorGraphContext
         Health = health;
         Food = food;
         Animator = animator;
+        _blackboard = new AIBehaviorGraphBlackboard(
+            savedTimers, savedStateElapsed, savedDamageRemaining, savedDamageOrigin);
+        _perception = new AIBehaviorGraphPerception(actor, detector, detectorRefreshInterval);
         _damageThreatMemoryDuration = Mathf.Max(0f, damageThreatMemoryDuration);
         _hasDamageModules = actor.GetComponentsInChildren<Mod_Damage>(true).Length > 0;
         _turnBody = actor.GetComponentInChildren<Mod_TurnBack>(true);
-
-        if (savedTimers != null)
-        {
-            foreach (KeyValuePair<string, float> pair in savedTimers)
-            {
-                if (string.IsNullOrWhiteSpace(pair.Key))
-                    continue;
-                _timers[pair.Key] = Mathf.Max(0f, pair.Value);
-                _timerKeys.Add(pair.Key);
-            }
-        }
-
         BindDamageEvents();
     }
 
@@ -105,68 +102,19 @@ public sealed class AIBehaviorGraphContext
     /// <summary>从当前感知快照中按配置查找最近、可见且位于目标倍率范围内的威胁。</summary>
     public Item FindClosestThreat(float distance, string[] tags, bool includePlayers)
     {
-        if (Detector == null)
-            throw new InvalidOperationException("AI 行为图查找威胁需要 Mod_ItemDetector。");
-
-        List<Item> detectedItems = Detector.CurrentItemsInArea;
-        if (detectedItems == null)
-            return null;
-
-        Item closest = null;
-        float closestDistance = float.MaxValue;
-        for (int i = 0; i < detectedItems.Count; i++)
-        {
-            Item candidate = detectedItems[i];
-            if (candidate == null || candidate == Actor)
-                continue;
-
-            bool isPlayer = candidate is Player;
-            if ((!includePlayers || !isPlayer) && !HasAnyTag(candidate, tags))
-                continue;
-
-            if (!AIFleeUtility.IsWithinEscapeRange(Position, candidate, Detector, distance))
-                continue;
-
-            float candidateDistance = WorldTopologyRuntime.SqrDistance(Position, candidate.transform.position);
-            if (candidateDistance >= closestDistance)
-                continue;
-
-            closest = candidate;
-            closestDistance = candidateDistance;
-        }
-
-        return closest;
+        return _perception.FindClosestThreat(distance, tags, includePlayers);
     }
 
     /// <summary>按标签和有效感知距离查找最近物品目标。</summary>
     public Item FindClosestTaggedItem(float distance, string[] tags)
     {
-        if (Detector == null)
-            throw new InvalidOperationException("AI 行为图查找物品需要 Mod_ItemDetector。");
+        return _perception.FindClosestTaggedFood(distance, tags);
+    }
 
-        List<Item> detectedItems = Detector.CurrentItemsInArea;
-        if (detectedItems == null)
-            return null;
-
-        Item closest = null;
-        float closestDistance = float.MaxValue;
-        for (int i = 0; i < detectedItems.Count; i++)
-        {
-            Item candidate = detectedItems[i];
-            if (candidate == null || candidate == Actor || candidate.DestructionHandled ||
-                !HasAnyTag(candidate, tags))
-                continue;
-
-            float effectiveDistance = Mod_ItemDetector.CalculateEffectiveDetectionRadius(distance, candidate);
-            float distanceSqr = WorldTopologyRuntime.SqrDistance(Position, candidate.transform.position);
-            if (distanceSqr > effectiveDistance * effectiveDistance || distanceSqr >= closestDistance)
-                continue;
-
-            closest = candidate;
-            closestDistance = distanceSqr;
-        }
-
-        return closest;
+    /// <summary>在威胁筛选后按阵营和生命值选择可攻击目标，避免友方遮挡更远的敌人。</summary>
+    public Item FindClosestAttackTarget(float distance, string[] tags, bool includePlayers)
+    {
+        return _perception.FindClosestAttackTarget(distance, tags, includePlayers);
     }
 
     /// <summary>读取当前营养比例。</summary>
@@ -180,22 +128,16 @@ public sealed class AIBehaviorGraphContext
     /// <summary>进入新状态时清除仅属于上一状态的瞬时事实。</summary>
     public void BeginState()
     {
-        DamagedSinceStateEnter = false;
+        _blackboard.BeginState();
     }
 
     /// <summary>推进行为图共享计时器和受击记忆。</summary>
     public void Tick(float deltaTime)
     {
         float step = Mathf.Max(0f, deltaTime);
-        for (int i = 0; i < _timerKeys.Count; i++)
-        {
-            string key = _timerKeys[i];
-            if (_timers[key] > 0f)
-                _timers[key] = Mathf.Max(0f, _timers[key] - step);
-        }
-
-        if (_recentDamageRemain > 0f)
-            _recentDamageRemain = Mathf.Max(0f, _recentDamageRemain - step);
+        _blackboard.Tick(step, _nutritionSustenanceTimerKey);
+        _perception.Tick(step);
+        EnsureWorldTimeBinding();
 
         for (int i = 0; i < _backgroundTicks.Count; i++)
             _backgroundTicks[i]?.Invoke(step);
@@ -214,22 +156,22 @@ public sealed class AIBehaviorGraphContext
     /// <summary>写入或刷新一个可存档计时器。</summary>
     public void SetTimer(string key, float seconds)
     {
-        if (string.IsNullOrWhiteSpace(key))
-            throw new ArgumentException("AI 行为图计时器键不能为空。", nameof(key));
-
-        if (!_timers.ContainsKey(key))
-            _timerKeys.Add(key);
-        _timers[key] = Mathf.Max(0f, seconds);
+        _blackboard.SetTimer(key, seconds);
     }
 
     public bool IsTimerElapsed(string key)
     {
-        return string.IsNullOrWhiteSpace(key) || !_timers.TryGetValue(key, out float remain) || remain <= 0f;
+        return _blackboard.IsTimerElapsed(key);
+    }
+
+    public float GetTimerRemaining(string key)
+    {
+        return _blackboard.GetTimerRemaining(key);
     }
 
     public Dictionary<string, float> ExportTimers()
     {
-        return new Dictionary<string, float>(_timers, StringComparer.Ordinal);
+        return _blackboard.ExportTimers();
     }
 
     /// <summary>按世界一天长度初始化并维护草食维持期。</summary>
@@ -245,16 +187,17 @@ public sealed class AIBehaviorGraphContext
         }
 
         _nutritionSustenanceTimerKey = timerKey;
-        if (!_timers.ContainsKey(timerKey))
+        if (!_blackboard.HasTimer(timerKey))
             SetTimer(timerKey, GetCurrentDayLength() * days);
+        EnsureWorldTimeBinding();
         ApplyNutritionSustenanceState();
     }
 
     /// <summary>完成一次草食摄取并恢复营养维持期。</summary>
     public void RestoreNutritionSustenance(string timerKey, float days)
     {
-        Food?.RestoreNutritionToMaximum();
-        SetTimer(timerKey, GetCurrentDayLength() * Mathf.Max(0.1f, days));
+        Food.RestoreNutritionToMaximum();
+        SetTimer(timerKey, GetCurrentDayLength() * days);
         ApplyNutritionSustenanceState();
     }
 
@@ -277,8 +220,7 @@ public sealed class AIBehaviorGraphContext
     /// <summary>优先返回近期受击来源位置，供逃离节点在攻击者脱离 Detector 后继续撤离。</summary>
     public bool TryGetRecentDamageOrigin(out Vector3 origin)
     {
-        origin = _recentDamageOrigin;
-        return _recentDamageRemain > 0f;
+        return _blackboard.TryGetRecentDamageOrigin(out origin);
     }
 
     /// <summary>立即面向目标；攻击节点不修改移动目标。</summary>
@@ -304,10 +246,7 @@ public sealed class AIBehaviorGraphContext
 
     public bool IsLivingAttackTarget(Item target)
     {
-        if (target == null || target == Actor || target.DestructionHandled)
-            return false;
-        DamageReceiver receiver = target.itemMods?.GetMod_ByID<DamageReceiver>(ModText.Hp);
-        return receiver != null && receiver.Hp > 0f && FactionRelationService.CanAttack(Actor, target);
+        return _perception.IsLivingAttackTarget(target);
     }
 
     /// <summary>解绑事件并恢复由行为图临时控制的营养倍率。</summary>
@@ -316,6 +255,9 @@ public sealed class AIBehaviorGraphContext
         if (_damageEventSource != null)
             _damageEventSource.OnDamageReceived -= HandleDamageReceived;
         _damageEventSource = null;
+        if (_worldTimeSource != null)
+            _worldTimeSource.TimeAdvanced -= HandleWorldTimeAdvanced;
+        _worldTimeSource = null;
         if (Food != null && !string.IsNullOrWhiteSpace(_nutritionSustenanceTimerKey))
             Food.RuntimeNutritionConsumeMultiplier = 1f;
     }
@@ -333,12 +275,33 @@ public sealed class AIBehaviorGraphContext
         if (info == null || info.DamageValue <= 0f || info.Attacker == Actor)
             return;
 
-        DamagedSinceStateEnter = true;
-        if (_damageThreatMemoryDuration <= 0f || !DamageThreatOrigin.TryResolve(info, out Vector2 origin))
-            return;
+        bool hasOrigin = DamageThreatOrigin.TryResolve(info, out Vector2 origin);
+        _blackboard.RecordDamage(_damageThreatMemoryDuration, hasOrigin, origin);
+        Damaged?.Invoke();
+    }
 
-        _recentDamageOrigin = origin;
-        _recentDamageRemain = _damageThreatMemoryDuration;
+    /// <summary>时间系统可能晚于 Actor 加载，按当前场景和系统实例保持唯一订阅。</summary>
+    private void EnsureWorldTimeBinding()
+    {
+        if (string.IsNullOrWhiteSpace(_nutritionSustenanceTimerKey))
+            return;
+        DayTimeSystem current = DayTimeSystem.Instance;
+        if (_worldTimeSource == current)
+            return;
+        if (_worldTimeSource != null)
+            _worldTimeSource.TimeAdvanced -= HandleWorldTimeAdvanced;
+        _worldTimeSource = current;
+        if (_worldTimeSource != null)
+            _worldTimeSource.TimeAdvanced += HandleWorldTimeAdvanced;
+    }
+
+    /// <summary>草食维持期按世界权威推进量计时，支持加速和跳时。</summary>
+    private void HandleWorldTimeAdvanced(string sceneName, float oldTotalTime, float newTotalTime)
+    {
+        if (!string.Equals(sceneName, Actor.gameObject.scene.name, StringComparison.Ordinal))
+            return;
+        _blackboard.TickWorldTimer(_nutritionSustenanceTimerKey, newTotalTime - oldTotalTime);
+        ApplyNutritionSustenanceState();
     }
 
     private void ApplyNutritionSustenanceState()
@@ -361,26 +324,6 @@ public sealed class AIBehaviorGraphContext
         return Mathf.Max(1f, timeData.DayLength);
     }
 
-    private static bool HasAnyTag(Item candidate, string[] tags)
-    {
-        List<string> candidateTags = candidate.itemData?.Tags;
-        if (candidateTags == null || tags == null)
-            return false;
-
-        for (int tagIndex = 0; tagIndex < tags.Length; tagIndex++)
-        {
-            string expected = tags[tagIndex];
-            if (string.IsNullOrWhiteSpace(expected))
-                continue;
-            for (int candidateIndex = 0; candidateIndex < candidateTags.Count; candidateIndex++)
-            {
-                if (string.Equals(candidateTags[candidateIndex], expected, StringComparison.OrdinalIgnoreCase))
-                    return true;
-            }
-        }
-
-        return false;
-    }
 }
 
 #endregion
@@ -394,7 +337,12 @@ public sealed class AI_BehaviorGraph : Module, IModuleJsonParameterValidator, IA
     private sealed class SaveData
     {
         public string CurrentState; // 上次保存时的 JSON 状态键。
+        public float StateElapsed; // 当前状态已执行秒数。
         public Dictionary<string, float> Timers = new(); // 节点共享的可存档计时器。
+        public float RecentDamageRemaining; // 受击来源记忆时长。
+        public float RecentDamageOriginX; // 受击来源的 X 坐标。
+        public float RecentDamageOriginY; // 受击来源的 Y 坐标。
+        public float RecentDamageOriginZ; // 受击来源的 Z 坐标。
     }
 
     public Ex_ModData ModData = new(); // 保存当前 JSON 状态键。
@@ -409,6 +357,9 @@ public sealed class AI_BehaviorGraph : Module, IModuleJsonParameterValidator, IA
 
     [JsonProperty("damageThreatMemoryDuration")]
     public float DamageThreatMemoryDuration { get; set; } = 5f; // 受击后保持逃离来源的时长。
+
+    [JsonProperty("detectorRefreshInterval")]
+    public float DetectorRefreshInterval { get; set; } = 0.8f; // 感知快照刷新间隔。
 
     public UltEvent<string, string> OnStateChanged = new(); // 状态切换事件，供外部扩展监听。
 
@@ -433,7 +384,7 @@ public sealed class AI_BehaviorGraph : Module, IModuleJsonParameterValidator, IA
     {
         ModData ??= new Ex_ModData();
         SaveData saved = ReadSaveData();
-        BuildRuntime(saved?.CurrentState, saved?.Timers);
+        BuildRuntime(saved);
         _isLoaded = true;
     }
 
@@ -445,11 +396,7 @@ public sealed class AI_BehaviorGraph : Module, IModuleJsonParameterValidator, IA
     public override void Save()
     {
         ModData ??= new Ex_ModData();
-        ModData.WriteData(new SaveData
-        {
-            CurrentState = _runtime?.CurrentState,
-            Timers = _context?.ExportTimers() ?? new Dictionary<string, float>()
-        });
+        ModData.WriteData(CaptureSaveData());
     }
 
     public override void Unload()
@@ -467,11 +414,10 @@ public sealed class AI_BehaviorGraph : Module, IModuleJsonParameterValidator, IA
         if (!_isLoaded)
             return;
 
-        string currentState = _runtime?.CurrentState;
-        Dictionary<string, float> timers = _context?.ExportTimers();
+        SaveData snapshot = CaptureSaveData();
         _runtime?.Reset();
         _context?.Dispose();
-        BuildRuntime(currentState, timers);
+        BuildRuntime(snapshot);
     }
 
     /// <summary>Actor 目录预检时验证图结构与所有已注册节点参数。</summary>
@@ -493,9 +439,18 @@ public sealed class AI_BehaviorGraph : Module, IModuleJsonParameterValidator, IA
             if (float.IsNaN(value) || float.IsInfinity(value) || value < 0f)
                 throw new InvalidOperationException("AI_BehaviorGraph damageThreatMemoryDuration 必须是非负有限数值。");
         }
+        JToken refreshToken = parameters["detectorRefreshInterval"];
+        if (refreshToken != null)
+        {
+            if (refreshToken.Type != JTokenType.Float && refreshToken.Type != JTokenType.Integer)
+                throw new InvalidOperationException("AI_BehaviorGraph detectorRefreshInterval 必须是数值。");
+            float value = refreshToken.Value<float>();
+            if (float.IsNaN(value) || float.IsInfinity(value) || value <= 0f)
+                throw new InvalidOperationException("AI_BehaviorGraph detectorRefreshInterval 必须是正有限数值。");
+        }
     }
 
-    private void BuildRuntime(string initialState, IReadOnlyDictionary<string, float> savedTimers)
+    private void BuildRuntime(SaveData saved)
     {
         if (item == null || item.itemMods == null)
             throw new InvalidOperationException("AI_BehaviorGraph 尚未绑定所属 Item 模块表。");
@@ -518,13 +473,28 @@ public sealed class AI_BehaviorGraph : Module, IModuleJsonParameterValidator, IA
             food,
             animator,
             DamageThreatMemoryDuration,
-            savedTimers);
-        AIBehaviorGraphRequirements requirements = AIBehaviorGraphRegistry.Validate(BehaviorGraph);
-        _context.RequireCapabilities(requirements.Capabilities);
-        if (detector != null)
-            detector.DetectionRadius = Mathf.Max(detector.DetectionRadius, requirements.DetectionRadius);
+            DetectorRefreshInterval,
+            saved?.Timers,
+            saved?.StateElapsed ?? 0f,
+            saved?.RecentDamageRemaining ?? 0f,
+            saved == null ? default : new Vector3(
+                saved.RecentDamageOriginX, saved.RecentDamageOriginY, saved.RecentDamageOriginZ));
+        try
+        {
+            AIBehaviorGraphRequirements requirements = AIBehaviorGraphRegistry.Validate(BehaviorGraph);
+            _context.RequireCapabilities(requirements.Capabilities);
+            if (detector != null)
+                detector.DetectionRadius = Mathf.Max(detector.DetectionRadius, requirements.DetectionRadius);
 
-        _runtime = new AIBehaviorGraphRuntime(BehaviorGraph, _context, HandleStateChanged, initialState);
+            _runtime = new AIBehaviorGraphRuntime(
+                BehaviorGraph, _context, HandleStateChanged, saved?.CurrentState, saved?.StateElapsed ?? 0f);
+        }
+        catch
+        {
+            _context.Dispose();
+            _context = null;
+            throw;
+        }
     }
 
     private SaveData ReadSaveData()
@@ -533,6 +503,22 @@ public sealed class AI_BehaviorGraph : Module, IModuleJsonParameterValidator, IA
             return null;
 
         return ModData.GetData<SaveData>();
+    }
+
+    /// <summary>保存与资源热重载共用同一份行为图运行态快照。</summary>
+    private SaveData CaptureSaveData()
+    {
+        Vector3 damageOrigin = _context?.RecentDamageOrigin ?? default;
+        return new SaveData
+        {
+            CurrentState = _runtime?.CurrentState,
+            StateElapsed = _context?.StateElapsed ?? 0f,
+            Timers = _context?.ExportTimers() ?? new Dictionary<string, float>(),
+            RecentDamageRemaining = _context?.RecentDamageRemaining ?? 0f,
+            RecentDamageOriginX = damageOrigin.x,
+            RecentDamageOriginY = damageOrigin.y,
+            RecentDamageOriginZ = damageOrigin.z
+        };
     }
 
     private void HandleStateChanged(string previousState, string nextState)

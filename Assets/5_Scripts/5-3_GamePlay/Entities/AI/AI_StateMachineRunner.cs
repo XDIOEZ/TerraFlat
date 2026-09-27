@@ -194,7 +194,12 @@ public sealed class AIFleeStateNode<TState> : AIStateNode<TState>
 
     public override void Tick(float deltaTime)
     {
-        ReportNavigationFailure();
+        if (ReportNavigationFailure())
+        {
+            _hasEscapeDestination = false;
+            Retarget();
+            return;
+        }
         // 一段逃离过程中不因威胁角度抖动反复重算；受击仍可显式 Retarget。
         if (!_hasEscapeDestination || _hasReachedDestination() ||
             WorldTopologyRuntime.SqrDistance(_getCurrentPosition(), _escapeDestination) <=
@@ -218,11 +223,11 @@ public sealed class AIFleeStateNode<TState> : AIStateNode<TState>
         base.Exit();
     }
 
-    /// <summary>导航连续失败时让节点进入错误状态；成功获得路径后恢复。</summary>
-    private void ReportNavigationFailure()
+    /// <summary>导航连续失败时报告错误并请求重新选路；成功获得路径后恢复。</summary>
+    private bool ReportNavigationFailure()
     {
         if (!_hasEscapeDestination)
-            return;
+            return false;
 
         WorldNavigationDestinationResult result = _getDestinationResult();
         if (result == WorldNavigationDestinationResult.Failed)
@@ -231,12 +236,14 @@ public sealed class AIFleeStateNode<TState> : AIStateNode<TState>
                 $"逃离寻路连续至少 {WorldNavigationAgent.PathFailureErrorThreshold} 次失败；" +
                 $"当前位置={_getCurrentPosition()}，目标={_escapeDestination}。",
                 _diagnosticContext);
+            return true;
         }
         else if (result == WorldNavigationDestinationResult.Accepted ||
                  result == WorldNavigationDestinationResult.Reached)
         {
             ClearError();
         }
+        return false;
     }
 
     /// <summary>新伤害来源出现时重新按当前威胁规划一次逃离目标。</summary>

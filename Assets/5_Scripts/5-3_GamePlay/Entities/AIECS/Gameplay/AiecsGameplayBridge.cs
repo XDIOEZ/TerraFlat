@@ -49,6 +49,8 @@ namespace FlatWorld.AIECS.Gameplay
         private readonly uint worldStamp, dimensionStamp;
         private readonly string dimensionName;
         private readonly RuntimeLootTable[] lootTables;
+        private readonly string[] actorIds; // 资源重载后按定义索引刷新现有 ECS 居民。
+        private uint waterCurrentRevision;
         public AiecsSimulation Simulation { get; private set; }
         public FlowNavigationCache Navigation { get; private set; }
         public AiecsActorTemplate[] Templates { get; private set; }
@@ -80,6 +82,7 @@ namespace FlatWorld.AIECS.Gameplay
             if (fleeFromHostiles != null && fleeFromHostiles.Length != actorIds.Length)
                 throw new ArgumentException("AIECS 行为策略目录必须与 Actor 目录长度一致。", nameof(fleeFromHostiles));
 
+            this.actorIds = (string[])actorIds.Clone();
             Navigation = navigation; worldStamp = ++worldSequence;
             dimensionName = ChunkMgr.Instance.ResolveWorldAddress(player.transform.position).DimensionId;
             if (!DimensionIds.TryGetValue(dimensionName, out dimensionStamp))
@@ -97,6 +100,7 @@ namespace FlatWorld.AIECS.Gameplay
                 extent = math.max(extent, math.cmax(math.abs(Templates[i].Body.Hit.Center) + Templates[i].Body.Hit.Extents));
                 GameRes.Instance.TryGetLootTable(definitions[i].LootTable.ToString(), out lootTables[i]);
             }
+            waterCurrentRevision = WaterCurrentPushConfigService.Revision;
             try
             {
                 los = new AiecsLosBridge();
@@ -138,12 +142,20 @@ namespace FlatWorld.AIECS.Gameplay
             if (player == null || !player.gameObject.activeInHierarchy) return;
             CombatIdentity key = IdentityOf(player);
             if (proxyLookup.ContainsKey(key)) return;
+            ReleasePlayer(player);
+            AddPlayer(player, Templates.Length);
+        }
+
+        /// <summary>玩家实体卸载前仅撤销外部代理，保留本世界的 ECS 居民与模拟状态。</summary>
+        public void ReleasePlayer(Player player)
+        {
             for (int i = proxies.Count - 1; i >= 0; i--)
             {
-                if (proxies[i].Item != player) continue;
-                Simulation.Despawn(proxies[i].Entity); proxyLookup.Remove(proxies[i].Key); proxies.RemoveAt(i);
+                if (!ReferenceEquals(proxies[i].Item, player)) continue;
+                Simulation.Despawn(proxies[i].Entity);
+                proxyLookup.Remove(proxies[i].Key);
+                proxies.RemoveAt(i);
             }
-            AddPlayer(player, Templates.Length);
         }
 
         /// <summary>只在合法已加载位置创建 Entity；低血量演示同样使用真实部位生命比例。</summary>
@@ -199,6 +211,7 @@ namespace FlatWorld.AIECS.Gameplay
         public void Step(float deltaTime, double time, AiecsSimulationRange range = default)
         {
             Simulation.Complete();
+            RefreshWaterCurrentPushSpeeds();
             for (int i = proxies.Count - 1; i >= 0; i--)
             {
                 var proxy = proxies[i];
@@ -224,6 +237,34 @@ namespace FlatWorld.AIECS.Gameplay
                 expiredCorpses.Add(corpses.Dequeue().Entity);
             }
             Simulation.DespawnBatch(expiredCorpses.AsArray());
+        }
+
+        /// <summary>仅在水流 JSON 重新发布时同步模板和现有 ECS 居民，不增加常规 Tick 的逐实体托管访问。</summary>
+        private void RefreshWaterCurrentPushSpeeds()
+        {
+            uint revision = WaterCurrentPushConfigService.Revision;
+            if (waterCurrentRevision == revision) return;
+
+            for (int i = 0; i < Templates.Length; i++)
+            {
+                AiecsActorTemplate template = Templates[i];
+                template.WaterCurrentPushSpeed = WaterCurrentPushConfigService.ResolvePushSpeed(actorIds[i]);
+                Templates[i] = template;
+            }
+
+            EntityManager entities = Simulation.Entities;
+            using EntityQuery query = entities.CreateEntityQuery(
+                ComponentType.ReadOnly<AiecsIdentity>(), ComponentType.ReadWrite<AiecsFlowAgent>());
+            using NativeArray<Entity> residents = query.ToEntityArray(Allocator.Temp);
+            foreach (Entity entity in residents)
+            {
+                AiecsIdentity identity = entities.GetComponentData<AiecsIdentity>(entity);
+                if (identity.External != 0) continue;
+                AiecsFlowAgent agent = entities.GetComponentData<AiecsFlowAgent>(entity);
+                agent.WaterCurrentPushSpeed = Templates[identity.Definition].WaterCurrentPushSpeed;
+                entities.SetComponentData(entity, agent);
+            }
+            waterCurrentRevision = revision;
         }
         #endregion
 

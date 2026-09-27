@@ -18,6 +18,8 @@ public interface IAiEcologyBackend
     bool IsReady { get; }
     bool PrepareWorld(IReadOnlyList<SpawnerConfig> configs);
     void ResetWorld();
+    /// <summary>玩家实例卸载前解除后端引用，但保留当前世界的生态运行态。</summary>
+    void ReleasePlayer(Player player);
     bool SupportsSpecies(string speciesId);
     bool TrySpawn(SpawnerConfig config, SpawnerConfig.SpawnEntry entry, Vector3 position);
     bool TrySpawnEvent(string speciesId, Vector3 position);

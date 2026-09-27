@@ -3,9 +3,13 @@
   "actors": [
     {
       "id": "Sheep",
+      "weight": 65.0,
       "parent": "Chicken",
+      "removeModules": ["生产模块"],
       "lootTableId": "Sheep_Default",
-      "sourcePrefab": "Assets/2_Prefabs/Gameplay/AI/Chicken.prefab",
+      "shellPrefab": "CoreActor.Sheep.Shell",
+      "shellAddress": "flatworld.actor.shell.sheep",
+      "sourcePrefab": "Assets/2_Prefabs/Gameplay/AI/Sheep.prefab",
       "gameName": "绵羊",
       "description": "温顺的草食动物，可以剪取羊毛。",
       "tags": ["Sheep", "Animal", "Blood", "Prey"],
@@ -17,8 +21,10 @@
         "ai": {
           "prefab": "Module_AI_BehaviorGraph",
           "id": "Module_AI_BehaviorGraph",
+          "enabled": true,
           "parameters": {
             "damageThreatMemoryDuration": 5.0,
+            "detectorRefreshInterval": 0.8,
             "behaviorGraph": {
               "schemaVersion": 1,
               "initialState": "Wander",
@@ -42,9 +48,10 @@
                   "transitions": [
                     {
                       "targetState": "Flee",
-                      "conditionMode": "all",
+                      "conditionMode": "any",
                       "conditions": [
-                        { "type": "recentDamage", "parameters": {} }
+                        { "type": "recentDamage", "parameters": {} },
+                        { "type": "damagedSinceStateEnter", "parameters": {} }
                       ]
                     },
                     {
@@ -85,7 +92,8 @@
                           "type": "forageNeeded",
                           "parameters": {
                             "nutritionRatio": 0.35,
-                            "sustenanceTimer": "grassSustenance"
+                            "sustenanceTimer": "grassSustenance",
+                            "unavailableTimer": "forageUnavailable"
                           }
                         }
                       ]
@@ -131,9 +139,10 @@
                   "transitions": [
                     {
                       "targetState": "Flee",
-                      "conditionMode": "all",
+                      "conditionMode": "any",
                       "conditions": [
-                        { "type": "recentDamage", "parameters": {} }
+                        { "type": "recentDamage", "parameters": {} },
+                        { "type": "damagedSinceStateEnter", "parameters": {} }
                       ]
                     },
                     {
@@ -154,16 +163,7 @@
                       "targetState": "Wander",
                       "conditionMode": "all",
                       "conditions": [
-                        { "type": "damagedSinceStateEnter", "parameters": {} }
-                      ]
-                    },
-                    {
-                      "targetState": "Wander",
-                      "conditionMode": "all",
-                      "conditions": [
-                        { "type": "stateElapsedAtLeast", "parameters": { "seconds": 6.0 } },
-                        { "type": "isDay", "parameters": { "dayStartRatio": 0.25, "dayEndRatio": 0.75 } },
-                        { "type": "healthAbove", "parameters": { "ratio": 0.55 } }
+                        { "type": "stateElapsedAtLeast", "parameters": { "seconds": 6.0 } }
                       ]
                     }
                   ]
@@ -182,15 +182,19 @@
                     "sustenanceDays": 2.0,
                     "nutritionExitRatio": 0.85,
                     "searchRetryDelay": 0.8,
+                    "unavailableTimer": "forageUnavailable",
+                    "unavailableCooldown": 15.0,
+                    "itemEatInterval": 0.6,
                     "moveAnimation": "Move",
                     "eatAnimation": "Stand"
                   },
                   "transitions": [
                     {
                       "targetState": "Flee",
-                      "conditionMode": "all",
+                      "conditionMode": "any",
                       "conditions": [
-                        { "type": "recentDamage", "parameters": {} }
+                        { "type": "recentDamage", "parameters": {} },
+                        { "type": "damagedSinceStateEnter", "parameters": {} }
                       ]
                     },
                     {
@@ -243,7 +247,9 @@
               ]
             }
           }
-        }
+        },
+        "detector": { "enabled": true },
+        "mover": { "enabled": true }
       }
     }
   ]

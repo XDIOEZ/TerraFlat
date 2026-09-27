@@ -3,7 +3,8 @@
   "actors": [
     {
       "id": "Rabbit",
-      "parent": "Chicken",
+      "weight": 2.0,
+      "parent": "Sheep",
       "shellPrefab": "CoreActor.Rabbit.Shell",
       "shellAddress": "flatworld.actor.shell.rabbit",
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/AI/Rabbit.prefab",
@@ -22,21 +23,331 @@
       },
       "modules": {
         "ai": {
-          "prefab": "AI_Chicken",
-          "id": "Module_AI_Chicken",
+          "prefab": "Module_AI_BehaviorGraph",
+          "id": "Module_AI_BehaviorGraph",
+          "enabled": true,
           "parameters": {
-            "debugLog": false,
-            "grassSustenanceDays": 6.0,
-            "isAdult": true,
-            "enableEggLaying": false,
-            "eggItemId": "",
-            "layEggIntervalDays": 2.0,
-            "enableGrassForaging": true,
-            "edibleTags": [
-              "Food",
-              "Plant",
-              "Grass"
-            ]
+            "damageThreatMemoryDuration": 5.0,
+            "detectorRefreshInterval": 0.8,
+            "behaviorGraph": {
+              "schemaVersion": 1,
+              "initialState": "Wander",
+              "decisionInterval": 0.15,
+              "states": [
+                {
+                  "id": "Wander",
+                  "node": "wander",
+                  "parameters": {
+                    "radius": 4.0,
+                    "stopDistance": 0.35,
+                    "pauseMin": 0.8,
+                    "pauseMax": 2.2,
+                    "minimumDistance": 0.5,
+                    "avoidHighPenalty": true,
+                    "dangerPenalty": 1200,
+                    "sampleCount": 8,
+                    "penaltyWeight": 1.0
+                  },
+                  "animation": "Move",
+                  "transitions": [
+                    {
+                      "targetState": "Flee",
+                      "conditionMode": "any",
+                      "conditions": [
+                        {
+                          "type": "recentDamage",
+                          "parameters": {}
+                        },
+                        {
+                          "type": "damagedSinceStateEnter",
+                          "parameters": {}
+                        }
+                      ]
+                    },
+                    {
+                      "targetState": "Flee",
+                      "conditionMode": "all",
+                      "conditions": [
+                        {
+                          "type": "threatWithinDistance",
+                          "parameters": {
+                            "distance": 6.0,
+                            "includePlayers": true,
+                            "threatTags": [
+                              "Predator",
+                              "Wolf"
+                            ]
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "targetState": "Sleep",
+                      "conditionMode": "all",
+                      "conditions": [
+                        {
+                          "type": "timerElapsed",
+                          "parameters": {
+                            "key": "sleepCooldown"
+                          }
+                        },
+                        {
+                          "type": "isNight",
+                          "parameters": {
+                            "dayStartRatio": 0.25,
+                            "dayEndRatio": 0.75
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "targetState": "Sleep",
+                      "conditionMode": "all",
+                      "conditions": [
+                        {
+                          "type": "timerElapsed",
+                          "parameters": {
+                            "key": "sleepCooldown"
+                          }
+                        },
+                        {
+                          "type": "healthBelow",
+                          "parameters": {
+                            "ratio": 0.5
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "targetState": "Forage",
+                      "conditionMode": "all",
+                      "conditions": [
+                        {
+                          "type": "forageNeeded",
+                          "parameters": {
+                            "nutritionRatio": 0.35,
+                            "sustenanceTimer": "grassSustenance",
+                            "unavailableTimer": "forageUnavailable"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "id": "Flee",
+                  "node": "flee",
+                  "parameters": {
+                    "distance": 36.0,
+                    "threatDistance": 36.0,
+                    "includePlayers": true,
+                    "threatTags": [
+                      "Predator",
+                      "Wolf"
+                    ]
+                  },
+                  "animation": "Move",
+                  "transitions": [
+                    {
+                      "targetState": "Wander",
+                      "conditionMode": "all",
+                      "conditions": [
+                        {
+                          "type": "recentDamageExpired",
+                          "parameters": {}
+                        },
+                        {
+                          "type": "threatOutsideDistance",
+                          "parameters": {
+                            "distance": 36.0,
+                            "includePlayers": true,
+                            "threatTags": [
+                              "Predator",
+                              "Wolf"
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "id": "Sleep",
+                  "node": "sleep",
+                  "parameters": {
+                    "cooldownTimer": "sleepCooldown",
+                    "cooldown": 3.0
+                  },
+                  "animation": "Stand",
+                  "transitions": [
+                    {
+                      "targetState": "Flee",
+                      "conditionMode": "any",
+                      "conditions": [
+                        {
+                          "type": "recentDamage",
+                          "parameters": {}
+                        },
+                        {
+                          "type": "damagedSinceStateEnter",
+                          "parameters": {}
+                        }
+                      ]
+                    },
+                    {
+                      "targetState": "Flee",
+                      "conditionMode": "all",
+                      "conditions": [
+                        {
+                          "type": "threatWithinDistance",
+                          "parameters": {
+                            "distance": 6.0,
+                            "includePlayers": true,
+                            "threatTags": [
+                              "Predator",
+                              "Wolf"
+                            ]
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "targetState": "Wander",
+                      "conditionMode": "all",
+                      "conditions": [
+                        {
+                          "type": "stateElapsedAtLeast",
+                          "parameters": {
+                            "seconds": 6.0
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "id": "Forage",
+                  "node": "forage",
+                  "parameters": {
+                    "itemSearchDistance": 8.0,
+                    "arrivalDistance": 1.2,
+                    "foodTags": [
+                      "Food",
+                      "Plant",
+                      "Grass"
+                    ],
+                    "allowRuntimeGrass": true,
+                    "grassSearchRadius": 8.0,
+                    "grassEatDuration": 1.0,
+                    "sustenanceTimer": "grassSustenance",
+                    "sustenanceDays": 6.0,
+                    "nutritionExitRatio": 0.85,
+                    "searchRetryDelay": 0.8,
+                    "unavailableTimer": "forageUnavailable",
+                    "unavailableCooldown": 15.0,
+                    "itemEatInterval": 0.6,
+                    "moveAnimation": "Move",
+                    "eatAnimation": "Stand"
+                  },
+                  "transitions": [
+                    {
+                      "targetState": "Flee",
+                      "conditionMode": "any",
+                      "conditions": [
+                        {
+                          "type": "recentDamage",
+                          "parameters": {}
+                        },
+                        {
+                          "type": "damagedSinceStateEnter",
+                          "parameters": {}
+                        }
+                      ]
+                    },
+                    {
+                      "targetState": "Flee",
+                      "conditionMode": "all",
+                      "conditions": [
+                        {
+                          "type": "threatWithinDistance",
+                          "parameters": {
+                            "distance": 6.0,
+                            "includePlayers": true,
+                            "threatTags": [
+                              "Predator",
+                              "Wolf"
+                            ]
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "targetState": "Sleep",
+                      "conditionMode": "all",
+                      "conditions": [
+                        {
+                          "type": "timerElapsed",
+                          "parameters": {
+                            "key": "sleepCooldown"
+                          }
+                        },
+                        {
+                          "type": "isNight",
+                          "parameters": {
+                            "dayStartRatio": 0.25,
+                            "dayEndRatio": 0.75
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "targetState": "Sleep",
+                      "conditionMode": "all",
+                      "conditions": [
+                        {
+                          "type": "timerElapsed",
+                          "parameters": {
+                            "key": "sleepCooldown"
+                          }
+                        },
+                        {
+                          "type": "healthBelow",
+                          "parameters": {
+                            "ratio": 0.5
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "targetState": "Wander",
+                      "conditionMode": "all",
+                      "conditions": [
+                        {
+                          "type": "forageSatisfied",
+                          "parameters": {}
+                        }
+                      ]
+                    },
+                    {
+                      "targetState": "Wander",
+                      "conditionMode": "all",
+                      "conditions": [
+                        {
+                          "type": "stateElapsedAtLeast",
+                          "parameters": {
+                            "seconds": 1.0
+                          }
+                        },
+                        {
+                          "type": "forageUnavailable",
+                          "parameters": {}
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
           }
         },
         "mover": {
@@ -46,15 +357,18 @@
                 "BaseValue": 7.5
               }
             }
-          }
+          },
+          "enabled": true
         }
       },
       "itemData": {
         "factionId": "rabbits"
-      }
+      },
+      "lootTableId": "Rabbit_Default"
     },
     {
       "id": "SnowLeopard",
+      "weight": 55.0,
       "lootTableId": "SnowLeopard_Default",
       "parent": "Wolf",
       "shellPrefab": "CoreActor.SnowLeopard.Shell",

@@ -255,6 +255,10 @@ public class SpawnerConfig : ScriptableObject
     [Tooltip("填写 BiomeName 或资源名；为空时允许所有群系")]
     public List<string> AllowedBiomeNames = new();
 
+    [LabelText("允许出生的地表 Tile ID")]
+    [Tooltip("为空时不限制；填写后只允许在这些权威地表 Tile 上生成。")]
+    public List<int> AllowedGroundTileIds = new();
+
     [LabelText("远距离休眠距离")]
     [Tooltip("生物距离全部玩家均超过该值时序列化休眠；0 表示保持装载")]
     [MinValue(0f)]

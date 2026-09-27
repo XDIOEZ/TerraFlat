@@ -92,6 +92,19 @@ namespace FlatWorld.AIECS.Gameplay
 
             if (_bridge == null)
                 TryStartSimulation();
+            else if (_player == null)
+            {
+                Player currentPlayer = ItemMgr.Instance?.User_Player;
+                if (currentPlayer == null)
+                    return;
+                if (!_bridge.IsCurrentWorld(currentPlayer))
+                {
+                    DisposeSimulation();
+                    _startFailed = false;
+                    return;
+                }
+                _player = currentPlayer;
+            }
             if (_bridge == null || _player == null)
                 return;
 
@@ -141,7 +154,7 @@ namespace FlatWorld.AIECS.Gameplay
 
         private void LateUpdate()
         {
-            if (_bridge == null || _renderer == null)
+            if (_bridge == null || _renderer == null || _player == null)
                 return;
 
             if (_camera == null || !_camera.isActiveAndEnabled)
@@ -246,6 +259,15 @@ namespace FlatWorld.AIECS.Gameplay
             _camera = null;
         }
 
+        /// <summary>玩家离开当前运行实例时先撤销战斗代理；新玩家会在下一次 Update 重新绑定。</summary>
+        public void ReleasePlayer(Player player)
+        {
+            if (!ReferenceEquals(_player, player))
+                return;
+            _bridge?.ReleasePlayer(player);
+            _player = null;
+        }
+
         private void TryStartSimulation()
         {
             // 空闲的 GM 调试入口不阻断正式生态；只有正在运行的开发场景才独占模拟。
@@ -267,7 +289,8 @@ namespace FlatWorld.AIECS.Gameplay
                     _actorFactions.ToArray(),
                     0f,
                     _fleeFromHostiles.ToArray());
-                _renderer = new AiecsWorldRenderer(_catalog, ids, _player.gameObject.scene);
+                _renderer = new AiecsWorldRenderer(_catalog, ids, _player.gameObject.scene,
+                    AiecsWorldSortingResolver.Resolve());
                 _simulationTime = Time.timeAsDouble;
                 Debug.Log($"[AIECS] 正式 ECS 生态已启动：{ids.Length} 个 Actor 定义；GameObject AI 保持并行运行。", this);
             }

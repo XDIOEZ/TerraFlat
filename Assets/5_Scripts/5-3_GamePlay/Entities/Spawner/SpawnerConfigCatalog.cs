@@ -88,6 +88,8 @@ public sealed class SpawnerConfigDefinition
     public bool RequireCompletelyDarkTile = true;
     public float MaxAllowedTileLight = 1f;
     public List<string> AllowedBiomeNames = new();
+    [JsonProperty(Required = Required.Default)]
+    public List<int> AllowedGroundTileIds = new();
     public float RecycleDistance = 110f;
     public float RecycleGraceSeconds = 20f;
     public List<SpawnerSpawnEntryDefinition> SpawnEntries = new();
@@ -130,6 +132,7 @@ public sealed class SpawnerConfigDefinition
         config.RequireCompletelyDarkTile = RequireCompletelyDarkTile;
         config.MaxAllowedTileLight = MaxAllowedTileLight;
         config.AllowedBiomeNames = new List<string>(AllowedBiomeNames);
+        config.AllowedGroundTileIds = new List<int>(AllowedGroundTileIds);
         config.RecycleDistance = RecycleDistance;
         config.RecycleGraceSeconds = RecycleGraceSeconds;
         config.SpawnEntries = new List<SpawnerConfig.SpawnEntry>();

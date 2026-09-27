@@ -692,6 +692,7 @@
     },
     {
       "id": "WildBoar",
+      "weight": 90.0,
       "lootTableId": "WildBoar_Default",
       "shellPrefab": "CoreActor.WildBoar.Shell",
       "shellAddress": "flatworld.actor.shell.wildboar",
@@ -847,7 +848,7 @@
           }
         },
         "detector": {
-          "prefab": "Mod_ItemDetector",
+          "prefab": "Module_Detector",
           "id": "物品检测模块",
           "enabled": false,
           "data": {
@@ -877,7 +878,7 @@
           }
         },
         "FaceMouse模块": {
-          "prefab": "Mod_FocusPoint_AI",
+          "prefab": "Module_FocusPoint_AI",
           "id": "FaceMouse模块",
           "enabled": false,
           "data": {
@@ -925,7 +926,7 @@
           }
         },
         "mover": {
-          "prefab": "Mover_AI",
+          "prefab": "Module_Mover_AI",
           "id": "移动模块",
           "enabled": false,
           "data": {
@@ -1577,7 +1578,7 @@
           }
         },
         "detector": {
-          "prefab": "Mod_ItemDetector",
+          "prefab": "Module_Detector",
           "id": "物品检测模块",
           "enabled": false,
           "data": {
@@ -1607,7 +1608,7 @@
           }
         },
         "FaceMouse模块": {
-          "prefab": "Mod_FocusPoint_AI",
+          "prefab": "Module_FocusPoint_AI",
           "id": "FaceMouse模块",
           "enabled": false,
           "data": {
@@ -1655,7 +1656,7 @@
           }
         },
         "mover": {
-          "prefab": "Mover_AI",
+          "prefab": "Module_Mover_AI",
           "id": "移动模块",
           "enabled": false,
           "data": {
@@ -1784,7 +1785,7 @@
           }
         },
         "damage": {
-          "prefab": "Mod_Damage_AI",
+          "prefab": "AttackTrigger_AI",
           "id": "AttackTrigger_AI",
           "enabled": true,
           "data": {
@@ -2008,7 +2009,7 @@
           }
         },
         "ai": {
-          "prefab": "AI_Wolf",
+          "prefab": "Module_AI_Wolf",
           "id": "Module_AI_Wolf",
           "enabled": true,
           "data": {
@@ -2119,6 +2120,7 @@
     },
     {
       "id": "Ghost",
+      "weight": 1.0,
       "shellPrefab": "CoreActor.Ghost.Shell",
       "shellAddress": "flatworld.actor.shell.ghost",
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/AI/Ghost.prefab",

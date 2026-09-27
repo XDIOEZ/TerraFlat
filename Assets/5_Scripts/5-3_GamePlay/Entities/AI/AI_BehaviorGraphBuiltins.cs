@@ -188,27 +188,8 @@ internal static class AIBehaviorGraphBuiltins
         bool includePlayers = AIBehaviorJsonParameters.ReadBool(parameters, "includePlayers");
         string[] threatTags = AIBehaviorJsonParameters.ReadStringArray(parameters, "threatTags");
 
-        return new AIFleeStateNode<string>(
-            stateId,
-            () =>
-            {
-                if (context.TryGetRecentDamageOrigin(out Vector3 damageOrigin))
-                    return damageOrigin;
-                Item threat = context.FindClosestThreat(threatDistance, threatTags, includePlayers);
-                return threat != null ? threat.transform.position : (Vector3?)null;
-            },
-            (threatPosition, distance) => AIFleeUtility.ResolveNavigableGroundEscapeDestination(
-                context.Position,
-                threatPosition,
-                distance,
-                WorldTopologyRuntime.ShortestDelta(threatPosition, context.Position)),
-            () => runDistance,
-            destination => context.Mover.SetDestination(destination),
-            context.Mover.StopMovement,
-            () => context.Position,
-            () => context.Mover.HasReachedTarget,
-            () => context.Mover.DestinationResult,
-            context.Mover);
+        return new AIBehaviorFleeNode(
+            stateId, context, runDistance, threatDistance, includePlayers, threatTags);
     }
 
     private static AIStateNode<string> CreateApproachNode(
@@ -243,11 +224,7 @@ internal static class AIBehaviorGraphBuiltins
     {
         string cooldownTimer = AIBehaviorJsonParameters.ReadString(parameters, "cooldownTimer");
         float cooldown = AIBehaviorJsonParameters.ReadFloat(parameters, "cooldown");
-        return new AIStoppedStateNode<string>(
-            stateId,
-            context.Mover.StopMovement,
-            _ => context.Mover.StopMovement(),
-            onExit: () => context.SetTimer(cooldownTimer, cooldown));
+        return new AIBehaviorSleepNode(stateId, context, cooldownTimer, cooldown);
     }
 
     private static AIStateNode<string> CreateForageNode(
@@ -267,6 +244,9 @@ internal static class AIBehaviorGraphBuiltins
             SustenanceDays = AIBehaviorJsonParameters.ReadFloat(parameters, "sustenanceDays"),
             NutritionExitRatio = AIBehaviorJsonParameters.ReadFloat(parameters, "nutritionExitRatio"),
             SearchRetryDelay = AIBehaviorJsonParameters.ReadFloat(parameters, "searchRetryDelay"),
+            UnavailableTimer = AIBehaviorJsonParameters.ReadString(parameters, "unavailableTimer"),
+            UnavailableCooldown = AIBehaviorJsonParameters.ReadFloat(parameters, "unavailableCooldown"),
+            ItemEatInterval = AIBehaviorJsonParameters.ReadFloat(parameters, "itemEatInterval"),
             MoveAnimation = AIBehaviorJsonParameters.ReadString(parameters, "moveAnimation"),
             EatAnimation = AIBehaviorJsonParameters.ReadString(parameters, "eatAnimation")
         };
@@ -296,7 +276,7 @@ internal static class AIBehaviorGraphBuiltins
             Recovery = AIBehaviorJsonParameters.ReadFloat(parameters, "recovery"),
             Animation = AIBehaviorJsonParameters.ReadString(parameters, "animation")
         };
-        var node = new AIBehaviorAttackNode(context, config);
+        var node = new AIBehaviorAttackNode(context, stateId, config);
         return new AIStateNode<string>(
             stateId,
             node.Tick,
@@ -380,7 +360,9 @@ internal static class AIBehaviorGraphBuiltins
     {
         float nutritionRatio = AIBehaviorJsonParameters.ReadFloat(parameters, "nutritionRatio");
         string sustenanceTimer = AIBehaviorJsonParameters.ReadString(parameters, "sustenanceTimer");
-        return () => context.IsTimerElapsed(sustenanceTimer) || context.GetNutritionRate() <= nutritionRatio;
+        string unavailableTimer = AIBehaviorJsonParameters.ReadString(parameters, "unavailableTimer");
+        return () => context.IsTimerElapsed(unavailableTimer) &&
+                     (context.IsTimerElapsed(sustenanceTimer) || context.GetNutritionRate() <= nutritionRatio);
     }
 
     private static void ValidateWanderParameters(JObject parameters)
@@ -450,7 +432,8 @@ internal static class AIBehaviorGraphBuiltins
             {
                 "itemSearchDistance", "arrivalDistance", "foodTags", "allowRuntimeGrass",
                 "grassSearchRadius", "grassEatDuration", "sustenanceTimer", "sustenanceDays",
-                "nutritionExitRatio", "searchRetryDelay", "moveAnimation", "eatAnimation"
+                "nutritionExitRatio", "searchRetryDelay", "unavailableTimer", "unavailableCooldown",
+                "itemEatInterval", "moveAnimation", "eatAnimation"
             });
 
         float itemSearchDistance = AIBehaviorJsonParameters.ReadFloat(parameters, "itemSearchDistance");
@@ -463,12 +446,16 @@ internal static class AIBehaviorGraphBuiltins
         float sustenanceDays = AIBehaviorJsonParameters.ReadFloat(parameters, "sustenanceDays");
         float nutritionExitRatio = AIBehaviorJsonParameters.ReadFloat(parameters, "nutritionExitRatio");
         float searchRetryDelay = AIBehaviorJsonParameters.ReadFloat(parameters, "searchRetryDelay");
+        AIBehaviorJsonParameters.ReadString(parameters, "unavailableTimer");
+        float unavailableCooldown = AIBehaviorJsonParameters.ReadFloat(parameters, "unavailableCooldown");
+        float itemEatInterval = AIBehaviorJsonParameters.ReadFloat(parameters, "itemEatInterval");
         AIBehaviorJsonParameters.ReadString(parameters, "moveAnimation");
         AIBehaviorJsonParameters.ReadString(parameters, "eatAnimation");
 
         if (itemSearchDistance <= 0f || arrivalDistance <= 0f || arrivalDistance > itemSearchDistance ||
             grassSearchRadius <= 0f || grassEatDuration < 0f || sustenanceDays <= 0f ||
-            nutritionExitRatio < 0f || nutritionExitRatio > 1f || searchRetryDelay < 0.05f)
+            nutritionExitRatio < 0f || nutritionExitRatio > 1f || searchRetryDelay < 0.05f ||
+            unavailableCooldown < 0f || itemEatInterval <= 0f)
         {
             throw new InvalidOperationException("forage 节点参数超出有效范围。");
         }
@@ -555,15 +542,126 @@ internal static class AIBehaviorGraphBuiltins
 
     private static void ValidateForageNeededParameters(JObject parameters)
     {
-        AIBehaviorJsonParameters.ValidateObject(parameters, new[] { "nutritionRatio", "sustenanceTimer" });
+        AIBehaviorJsonParameters.ValidateObject(parameters, new[] { "nutritionRatio", "sustenanceTimer", "unavailableTimer" });
         float ratio = AIBehaviorJsonParameters.ReadFloat(parameters, "nutritionRatio");
         AIBehaviorJsonParameters.ReadString(parameters, "sustenanceTimer");
+        AIBehaviorJsonParameters.ReadString(parameters, "unavailableTimer");
         if (ratio < 0f || ratio > 1f)
             throw new InvalidOperationException("forageNeeded nutritionRatio 必须在 0 到 1 之间。");
     }
 
     #endregion
 }
+
+#region 标准逃离节点
+
+/// <summary>行为图逃离适配层；只提供威胁来源，规划和导航由共用 AIFleeStateNode 执行。</summary>
+internal sealed class AIBehaviorFleeNode : AIStateNode<string>
+{
+    private readonly AIBehaviorGraphContext _context; // 感知与移动能力。
+    private readonly AIFleeStateNode<string> _flee; // 共用逃离生命周期。
+    private readonly float _runDistance; // 单次目标距离。
+    private readonly float _threatDistance; // 威胁维持距离。
+    private readonly bool _includePlayers; // 玩家是否为威胁。
+    private readonly string[] _threatTags; // 物品威胁标签。
+
+    public AIBehaviorFleeNode(string stateId, AIBehaviorGraphContext context,
+        float runDistance, float threatDistance, bool includePlayers, string[] threatTags)
+        : base(stateId, AIStateAnimationRole.Moving)
+    {
+        _context = context;
+        _runDistance = runDistance;
+        _threatDistance = threatDistance;
+        _includePlayers = includePlayers;
+        _threatTags = threatTags;
+        _flee = new AIFleeStateNode<string>(
+            stateId, ResolveThreatPosition, ResolveDestination, GetRunDistance,
+            MoveTo, _context.Mover.StopMovement, GetCurrentPosition,
+            HasReachedDestination, GetDestinationResult, _context.Mover);
+    }
+
+    public override void Enter()
+    {
+        base.Enter();
+        _context.Damaged += HandleDamage;
+        _flee.Enter();
+    }
+
+    public override void Tick(float deltaTime)
+    {
+        _flee.Tick(deltaTime);
+    }
+
+    public override void Exit()
+    {
+        _context.Damaged -= HandleDamage;
+        _flee.Exit();
+        base.Exit();
+    }
+
+    private Vector3? ResolveThreatPosition()
+    {
+        if (_context.TryGetRecentDamageOrigin(out Vector3 origin))
+            return origin;
+        Item threat = _context.FindClosestThreat(_threatDistance, _threatTags, _includePlayers);
+        return threat != null ? threat.transform.position : (Vector3?)null;
+    }
+
+    private Vector3? ResolveDestination(Vector3 threatPosition, float distance)
+    {
+        return AIFleeUtility.ResolveNavigableGroundEscapeDestination(
+            _context.Position, threatPosition, distance,
+            WorldTopologyRuntime.ShortestDelta(threatPosition, _context.Position));
+    }
+
+    private float GetRunDistance() => _runDistance;
+    private Vector3 GetCurrentPosition() => _context.Position;
+    private bool HasReachedDestination() => _context.Mover.HasReachedTarget;
+    private WorldNavigationDestinationResult GetDestinationResult() => _context.Mover.DestinationResult;
+    private void MoveTo(Vector3 destination) => _context.Mover.SetDestination(destination);
+    private void HandleDamage() => _flee.Retarget();
+}
+
+#endregion
+
+#region 标准睡眠节点
+
+/// <summary>普通动物的睡眠生命周期；退出时统一启动可存档冷却，打断优先级由 JSON 转换决定。</summary>
+internal sealed class AIBehaviorSleepNode : AIStateNode<string>
+{
+    private readonly AIBehaviorGraphContext _context; // 移动与命名计时器能力。
+    private readonly string _cooldownTimer; // 睡眠退出后的冷却键。
+    private readonly float _cooldown; // 冷却秒数。
+
+    public AIBehaviorSleepNode(string stateId, AIBehaviorGraphContext context,
+        string cooldownTimer, float cooldown)
+        : base(stateId, AIStateAnimationRole.Stopped)
+    {
+        _context = context;
+        _cooldownTimer = cooldownTimer;
+        _cooldown = cooldown;
+    }
+
+    public override void Enter()
+    {
+        base.Enter();
+        _context.Mover.StopMovement();
+    }
+
+    public override void Tick(float deltaTime)
+    {
+        _context.Mover.StopMovement();
+    }
+
+    public override void Exit()
+    {
+        _context.SetTimer(_cooldownTimer, _cooldown);
+        _context.Mover.StopMovement();
+        base.Exit();
+    }
+}
+
+#endregion
 
 #region 标准闲逛节点
 
@@ -607,15 +705,16 @@ internal sealed class AIBehaviorWanderNode
         if (_hasTarget)
         {
             float distance = WorldTopologyRuntime.Distance(_context.Position, _target);
-            if (distance <= _config.StopDistance || _context.Mover.HasReachedTarget)
+            if (distance <= _config.StopDistance || _context.Mover.HasReachedTarget ||
+                _context.Mover.DestinationResult == WorldNavigationDestinationResult.Failed)
             {
-                _hasTarget = false;
-                _pauseRemaining = UnityEngine.Random.Range(_config.PauseMin, _config.PauseMax);
-                _context.Mover.StopMovement();
+                BeginPause();
                 return;
             }
 
             _context.Mover.SetDestination(_target);
+            if (_context.Mover.DestinationResult == WorldNavigationDestinationResult.Failed)
+                BeginPause();
             return;
         }
 
@@ -639,12 +738,22 @@ internal sealed class AIBehaviorWanderNode
         _target = WorldTopologyRuntime.NormalizePosition(_context.Position + (Vector3)offset);
         _hasTarget = true;
         _context.Mover.SetDestination(_target);
+        if (_context.Mover.DestinationResult == WorldNavigationDestinationResult.Failed)
+            BeginPause();
     }
 
     public void Exit()
     {
         _hasTarget = false;
         _pauseRemaining = 0f;
+        _context.Mover.StopMovement();
+    }
+
+    /// <summary>到达或导航失败后短暂停留，再选择新的可达目标。</summary>
+    private void BeginPause()
+    {
+        _hasTarget = false;
+        _pauseRemaining = UnityEngine.Random.Range(_config.PauseMin, _config.PauseMax);
         _context.Mover.StopMovement();
     }
 }
@@ -671,6 +780,9 @@ internal sealed class AIBehaviorForageNode
         public float SustenanceDays; // 一次吃草维持的世界天数。
         public float NutritionExitRatio; // 达到该营养比例后本轮觅食完成。
         public float SearchRetryDelay; // 无目标时的再次搜索间隔。
+        public string UnavailableTimer; // 没有食物时的跨状态重试计时器。
+        public float UnavailableCooldown; // 没有食物后的重试间隔。
+        public float ItemEatInterval; // 物品食物每次摄食动作间隔。
         public string MoveAnimation; // 移动动画。
         public string EatAnimation; // 摄食动画。
     }
@@ -713,10 +825,12 @@ internal sealed class AIBehaviorForageNode
 
         _searchCooldown = Mathf.Max(0f, _searchCooldown - Mathf.Max(0f, deltaTime));
 
-        if (_config.AllowRuntimeGrass && _context.IsTimerElapsed(_config.SustenanceTimer))
+        if (_config.AllowRuntimeGrass && _context.IsTimerElapsed(_config.SustenanceTimer) &&
+            (_itemTarget == null || _context.GetNutritionRate() >= _config.NutritionExitRatio))
         {
             TickRuntimeGrass(deltaTime);
-            return;
+            if (_context.ForageAvailable || _context.GetNutritionRate() >= _config.NutritionExitRatio)
+                return;
         }
 
         if (_context.GetNutritionRate() >= _config.NutritionExitRatio)
@@ -727,11 +841,14 @@ internal sealed class AIBehaviorForageNode
             return;
         }
 
-        TickItemFood();
+        TickItemFood(deltaTime);
     }
 
     public void Exit()
     {
+        if (!_context.ForageAvailable ||
+            (_config.AllowRuntimeGrass && _context.IsTimerElapsed(_config.SustenanceTimer)))
+            _context.SetTimer(_config.UnavailableTimer, _config.UnavailableCooldown);
         ClearTargets();
         _context.ForageSatisfied = false;
         _context.ForageAvailable = true;
@@ -779,6 +896,13 @@ internal sealed class AIBehaviorForageNode
             Play(_config.MoveAnimation);
             _eatElapsed = 0f;
             _context.Mover.SetDestination(targetPosition);
+            if (_context.Mover.DestinationResult == WorldNavigationDestinationResult.Failed)
+            {
+                _context.ForageAvailable = false;
+                ClearGrassTarget();
+                _context.Mover.StopMovement();
+                return;
+            }
             return;
         }
 
@@ -803,7 +927,7 @@ internal sealed class AIBehaviorForageNode
         ClearGrassTarget();
     }
 
-    private void TickItemFood()
+    private void TickItemFood(float deltaTime)
     {
         if (!IsValidItemTarget(_itemTarget))
         {
@@ -824,6 +948,7 @@ internal sealed class AIBehaviorForageNode
                 _context.Mover.StopMovement();
                 return;
             }
+            _eatElapsed = 0f;
         }
 
         _context.ForageAvailable = true;
@@ -831,14 +956,26 @@ internal sealed class AIBehaviorForageNode
         if (distance > _config.ArrivalDistance)
         {
             Play(_config.MoveAnimation);
+            _eatElapsed = 0f;
             _context.Mover.SetDestination(_itemTarget.transform.position);
+            if (_context.Mover.DestinationResult == WorldNavigationDestinationResult.Failed)
+            {
+                _itemTarget = null;
+                _context.ForageAvailable = false;
+                _context.Mover.StopMovement();
+                return;
+            }
             return;
         }
 
         _context.Mover.StopMovement();
         Play(_config.EatAnimation);
+        _eatElapsed += Mathf.Max(0f, deltaTime);
+        if (_eatElapsed < _config.ItemEatInterval)
+            return;
+        _eatElapsed = 0f;
         Mod_Food targetFood = _itemTarget.GetComponentInChildren<Mod_Food>(true);
-        if (targetFood == null)
+        if (targetFood == null || !targetFood.ConsumptionEnabled)
         {
             _itemTarget = null;
             _context.ForageAvailable = false;
@@ -866,7 +1003,8 @@ internal sealed class AIBehaviorForageNode
         return target != null &&
                !target.DestructionHandled &&
                target.itemData?.Stack != null &&
-               target.itemData.Stack.Amount > 0f;
+               target.itemData.Stack.Amount > 0f &&
+               target.GetComponentInChildren<Mod_Food>(true) is { ConsumptionEnabled: true };
     }
 
     private void ClearTargets()
@@ -914,19 +1052,22 @@ internal sealed class AIBehaviorAttackNode
     private readonly AIBehaviorGraphContext _context;
     private readonly Config _config;
     private readonly AI_AttackController _attack = new();
+    private readonly string _cooldownTimerKey; // 状态独立的可存档攻击冷却键。
     private Item _target;
 
-    public AIBehaviorAttackNode(AIBehaviorGraphContext context, Config config)
+    public AIBehaviorAttackNode(AIBehaviorGraphContext context, string stateId, Config config)
     {
         _context = context;
         _config = config;
+        _cooldownTimerKey = $"attackCooldown:{stateId}";
         _attack.Cooldown = config.Cooldown;
         _attack.WindupDuration = config.Windup;
         _attack.DamageWindow = config.DamageWindow;
         _attack.RecoveryDuration = config.Recovery;
         _attack.Bind(context.Actor);
         _attack.Reset();
-        _context.RegisterBackgroundTick(_attack.Tick);
+        _attack.RestoreCooldown(_context.GetTimerRemaining(_cooldownTimerKey));
+        _context.RegisterBackgroundTick(TickController);
     }
 
     public void Enter()
@@ -945,7 +1086,7 @@ internal sealed class AIBehaviorAttackNode
                 _context.Detector,
                 _config.TargetDistance))
         {
-            _target = _context.FindClosestThreat(
+            _target = _context.FindClosestAttackTarget(
                 _config.TargetDistance,
                 _config.ThreatTags,
                 _config.IncludePlayers);
@@ -953,7 +1094,11 @@ internal sealed class AIBehaviorAttackNode
 
         if (!_context.IsLivingAttackTarget(_target))
         {
-            _attack.StopWindow();
+            if (_attack.IsAttackLocked)
+                _attack.OnExitAttackState();
+            else
+                _attack.StopWindow();
+            SaveCooldown();
             _context.Mover.StopMovement();
             return;
         }
@@ -980,9 +1125,25 @@ internal sealed class AIBehaviorAttackNode
 
     public void Exit()
     {
-        _attack.OnExitAttackState();
+        if (_attack.IsAttackLocked)
+            _attack.OnExitAttackState();
+        else
+            _attack.StopWindow();
+        SaveCooldown();
         _target = null;
         _context.Mover.StopMovement();
+    }
+
+    /// <summary>攻击时序跨状态推进，并把唯一权威冷却写入可存档计时器。</summary>
+    private void TickController(float deltaTime)
+    {
+        _attack.Tick(deltaTime);
+        SaveCooldown();
+    }
+
+    private void SaveCooldown()
+    {
+        _context.SetTimer(_cooldownTimerKey, _attack.CooldownRemaining);
     }
 }
 

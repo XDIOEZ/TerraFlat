@@ -14,12 +14,12 @@
     "perPlayerAliveLimit": 8,
     "spawnSearchRetryCount": 5,
     "spawnCount": 2,
-    "spawnChance": 1.0,
+    "spawnChance": 0.5,
     "daysBetweenSpawns": 1,
     "groupAliveLimit": 12,
     "maxEcologyBudget": 12,
     "dailyBudgetRecovery": 6,
-    "recoveryTargetPopulation": 8,
+    "recoveryTargetPopulation": 4,
     "recoveryCheckInterval": 8.0,
     "growthIntervalDays": 3,
     "maxLifetimeSpawnCount": 64,
@@ -28,17 +28,15 @@
     "ignorePopulationLimits": false,
     "requireCompletelyDarkTile": false,
     "maxAllowedTileLight": 1.0,
-    "allowedBiomeNames": [
-      "森林",
-      "石地"
-    ],
+    "allowedBiomeNames": ["森林"],
+    "allowedGroundTileIds": [1],
     "recycleDistance": 110.0,
     "recycleGraceSeconds": 20.0,
     "spawnEntries": [
       {
         "prefabName": "Chicken",
         "runtimeBackend": "gameObject",
-        "probability": 5.0,
+        "probability": 2.5,
         "ecologyCost": 1,
         "speciesAliveLimit": 8,
         "initialization": {
@@ -52,7 +50,7 @@
       {
         "prefabName": "WildBoar",
         "runtimeBackend": "gameObject",
-        "probability": 0.5263158,
+        "probability": 0.2631579,
         "ecologyCost": 2,
         "speciesAliveLimit": 5
       }

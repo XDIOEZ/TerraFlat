@@ -180,6 +180,8 @@ public static class SpawnerConfigCatalogLoader
             throw new InvalidDataException($"生物生成配置 {config.Id} 的时间、光照或生态数值无效");
         if (config.GroupAliveLimit < 1 || config.MaxEcologyBudget < 1)
             throw new InvalidDataException($"生物生成配置 {config.Id} 的生态上限无效");
+        if (config.AllowedGroundTileIds == null || config.AllowedGroundTileIds.Exists(tileId => tileId <= 0))
+            throw new InvalidDataException($"生物生成配置 {config.Id} 的地表 Tile ID 无效");
 
         HashSet<string> speciesIds = new(StringComparer.OrdinalIgnoreCase);
         if (config.TreeHabitat == null || config.TreeHabitat.TreesPerActor < 1 ||
