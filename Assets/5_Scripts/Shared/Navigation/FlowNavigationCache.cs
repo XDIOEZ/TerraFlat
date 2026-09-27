@@ -18,10 +18,10 @@ namespace FlatWorld.Navigation
         private readonly IFlowGridSource source;
         private readonly int maximumGoals;
         private readonly Dictionary<int2, CachedChunk> chunks = new();
-        private readonly Dictionary<int2, bool> dirty = new();
+        private readonly Dictionary<int2, ChunkDirtyKind> dirty = new();
         private readonly List<Goal> goals = new();
         private readonly List<int2> coordinates = new();
-        private readonly List<int2> changedCoordinates = new();
+        private readonly List<ChunkPublication> changedChunks = new();
         private readonly List<FieldBuild> builds = new();
         private JobHandle readers;
         private bool resetPending, goalsChanged, disposed;
@@ -36,6 +36,10 @@ namespace FlatWorld.Navigation
         public long ExitFieldBuilds { get; private set; }
         public long TargetFieldBuilds { get; private set; }
         public long HighLevelRouteBuilds { get; private set; }
+        // 区分表层原位发布与整表重排，便于核对增量路径是否实际生效。
+        public long FullTablePublications { get; private set; }
+        public long PatchedTablePublications { get; private set; }
+        public long SurfaceOnlyPublications { get; private set; }
 
         /// <summary>绑定权威来源，目标数量上限限制意外的逐 AI 目标注册。</summary>
         public FlowNavigationCache(IFlowGridSource source, int maximumGoals = 32)
@@ -111,13 +115,13 @@ namespace FlatWorld.Navigation
         {
             cell = domain.Normalize(cell);
             int2 chunk = FlowNavigationMath.ChunkOf(cell, domain);
-            MarkChunk(chunk, true);
+            MarkChunk(chunk, ChunkDirtyKind.Content);
             int2 local = FlowNavigationMath.LocalCell(FlowNavigationMath.LocalIndex(cell, domain));
             for (int side = 0; side < 4; side++)
             {
                 if ((side == 0 && local.x != 15) || (side == 1 && local.x != 0) ||
                     (side == 2 && local.y != 15) || (side == 3 && local.y != 0)) continue;
-                MarkChunk(FlowNavigationMath.ChunkOf(cell + FlowNavigationMath.SideOffset(side), domain), false);
+                MarkChunk(FlowNavigationMath.ChunkOf(cell + FlowNavigationMath.SideOffset(side), domain), ChunkDirtyKind.Connections);
             }
         }
 
@@ -132,13 +136,15 @@ namespace FlatWorld.Navigation
             if (dirty.Count == 0 && !goalsChanged && nativeChunks.IsCreated) return Snapshot();
             readers.Complete(); readers = default;
             bool graphChanged = !nativeChunks.IsCreated;
-            changedCoordinates.Clear();
+            changedChunks.Clear();
             builds.Clear();
             foreach (var entry in dirty)
             {
-                ChunkRefreshResult result = RefreshChunk(entry.Key, entry.Value);
+                ChunkRefreshResult result = RefreshChunk(entry.Key,
+                    (entry.Value & ChunkDirtyKind.Content) != 0,
+                    (entry.Value & ChunkDirtyKind.Connections) != 0);
                 if (result == ChunkRefreshResult.None) continue;
-                changedCoordinates.Add(entry.Key);
+                changedChunks.Add(new ChunkPublication(entry.Key, result));
                 graphChanged |= result == ChunkRefreshResult.Graph;
             }
             if (builds.Count > 0) { BuildFields(); ExitFieldBuilds += builds.Count; }
@@ -155,9 +161,10 @@ namespace FlatWorld.Navigation
                 else goal.Field.Clear();
             }
             if (builds.Count > 0) { BuildFields(); TargetFieldBuilds += builds.Count; }
-            if (changedCoordinates.Count > 0 || !nativeChunks.IsCreated) PublishChunks(changedCoordinates);
+            if (changedChunks.Count > 0 || !nativeChunks.IsCreated) PublishChunks(changedChunks, graphChanged);
             if (graphChanged || goalsChanged) PublishGoals(graphChanged);
             goalsChanged = false;
+            CaptureSnapshot();
             return Snapshot();
         }
 
@@ -170,31 +177,43 @@ namespace FlatWorld.Navigation
         #endregion
 
         #region 脏块与出口生成
-        /// <summary>合并同块的内容/连接脏标记。</summary>
-        private void MarkChunk(int2 coordinate, bool content)
+        /// <summary>把格内容和邻块连接标记分别保留，水面更新可跳过出口扫描。</summary>
+        private enum ChunkDirtyKind : byte { Connections = 1, Content = 2 }
+
+        /// <summary>合并同块的内容与边缘连接脏标记。</summary>
+        private void MarkChunk(int2 coordinate, ChunkDirtyKind kind)
         {
-            dirty.TryGetValue(coordinate, out bool previous);
-            dirty[coordinate] = previous || content;
+            dirty.TryGetValue(coordinate, out ChunkDirtyKind previous);
+            dirty[coordinate] = previous | kind;
         }
 
         /// <summary>重建世界身份和首次块清单，不消费旧路径管理器的变更队列。</summary>
         private void ResetWorld()
         {
             readers.Complete(); readers = default; DisposeNative();
-            chunks.Clear(); dirty.Clear(); goals.Clear(); changedCoordinates.Clear();
+            chunks.Clear(); dirty.Clear(); goals.Clear(); changedChunks.Clear();
             domain = source.Domain;
             if (domain.IsWrapped && (math.any(domain.Span <= 0) || math.any(domain.Span % 16 != 0)))
                 throw new InvalidOperationException("16×16 分层导航要求循环世界跨度由完整 Chunk 组成。");
             Epoch = ++nextEpoch; resetPending = false; goalsChanged = true;
             coordinates.Clear(); source.CollectChunks(coordinates);
-            foreach (int2 coordinate in coordinates) MarkChunk(coordinate, true);
+            foreach (int2 coordinate in coordinates) MarkChunk(coordinate, ChunkDirtyKind.Content);
         }
 
         /// <summary>区分表层数据变化与代价/出口图变化，避免液体表现刷新触发路线重建。</summary>
         private enum ChunkRefreshResult : byte { None, Surface, Graph }
 
+        /// <summary>记录需要发布的块及其失效层级。</summary>
+        private readonly struct ChunkPublication
+        {
+            internal readonly int2 Coordinate;
+            internal readonly ChunkRefreshResult Result;
+            internal ChunkPublication(int2 coordinate, ChunkRefreshResult result)
+            { Coordinate = coordinate; Result = result; }
+        }
+
         /// <summary>冻结受影响块的权重，并只为代价或出口变化生成缺失图。</summary>
-        private ChunkRefreshResult RefreshChunk(int2 coordinate, bool contentDirty)
+        private ChunkRefreshResult RefreshChunk(int2 coordinate, bool contentDirty, bool connectionsDirty)
         {
             bool exists = chunks.TryGetValue(coordinate, out CachedChunk chunk);
             if (!exists) chunk = new CachedChunk(coordinate);
@@ -227,8 +246,9 @@ namespace FlatWorld.Navigation
                     chunks.Remove(coordinate); MarkTargetChunkChanged(coordinate); return ChunkRefreshResult.Graph;
                 }
             }
-            List<FlowPortal> portals = DiscoverPortals(chunk);
-            bool portalsChanged = !SamePortals(chunk.Portals, portals);
+            List<FlowPortal> portals = costChanged || connectionsDirty
+                ? DiscoverPortals(chunk) : chunk.Portals;
+            bool portalsChanged = !ReferenceEquals(portals, chunk.Portals) && !SamePortals(chunk.Portals, portals);
             if (!costChanged && !surfaceChanged && !portalsChanged) return ChunkRefreshResult.None;
             chunks[coordinate] = chunk;
             if (costChanged || surfaceChanged) ChunkContentBuilds++;
