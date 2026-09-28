@@ -11,13 +11,20 @@ using Unity.Profiling;
 
 public partial class ChunkMgr
 {
+    public const int MaxRuntimeChunkWorkCountPerFrame = 1024;
+    public const float MinRuntimeChunkWorkMillisecondsPerFrame = 0.5f;
+    public const float MaxRuntimeChunkWorkMillisecondsPerFrame = 16f;
+
     private static readonly ProfilerMarker WorldRuntimeAdvanceMarker =
         new("FlatWorld.ChunkStreaming.CommitAndTick");
     [Header("无头世界模型")]
     [SerializeField] private ChunkGenerationProfileSO defaultGenerationProfile;
     [SerializeField, Min(1)] private int backgroundGenerationConcurrency = 2;
-    [Tooltip("主线程每帧最多提交的后台生成结果；提交会计算哈希并发布事件，建议保持 1。")]
-    [SerializeField, Range(1, 4)] private int maxChunkCommitsPerFrame = 1;
+    [Tooltip("主线程每帧最多提交多少个后台生成结果；达到毫秒预算后仍会提前停止。")]
+    [SerializeField, Range(1, MaxRuntimeChunkWorkCountPerFrame)] private int maxChunkCommitsPerFrame = 64;
+    [Tooltip("后台结果提交每帧最多占用的主线程毫秒数；单个提交仍会完整执行。")]
+    [SerializeField, Range(MinRuntimeChunkWorkMillisecondsPerFrame, MaxRuntimeChunkWorkMillisecondsPerFrame)]
+    private float maxChunkCommitMillisecondsPerFrame = 3f;
     [SerializeField] private bool authoritativeSimulation = true;
 
     private RuntimeChunkMgr runtimeChunkManager;
@@ -36,8 +43,27 @@ public partial class ChunkMgr
         runtimeChunkManager?.Chunks ?? EmptyChunkRuntimeDictionary.Instance;
     public bool HasPendingChunkDataLoads => runtimeChunkManager?.HasPendingChunkLoads == true;
     public RuntimeChunkMgr RuntimeChunks => runtimeChunkManager;
-    /// <summary>每帧允许提交的后台生成结果数，供流送诊断读取实际 Prefab 配置。</summary>
-    public int RuntimeChunkCommitBudget => Mathf.Max(1, maxChunkCommitsPerFrame);
+    #region 区块提交预算
+
+    /// <summary>每帧允许提交的后台生成结果数，GM 修改后立即生效。</summary>
+    public int RuntimeChunkCommitBudget
+    {
+        get => Mathf.Clamp(maxChunkCommitsPerFrame, 1, MaxRuntimeChunkWorkCountPerFrame);
+        set => maxChunkCommitsPerFrame = Mathf.Clamp(value, 1, MaxRuntimeChunkWorkCountPerFrame);
+    }
+
+    /// <summary>每帧提交生成结果可用的主线程毫秒数。</summary>
+    public float RuntimeChunkCommitMillisecondsBudget
+    {
+        get => float.IsNaN(maxChunkCommitMillisecondsPerFrame) ? 3f :
+            Mathf.Clamp(maxChunkCommitMillisecondsPerFrame,
+                MinRuntimeChunkWorkMillisecondsPerFrame, MaxRuntimeChunkWorkMillisecondsPerFrame);
+        set => maxChunkCommitMillisecondsPerFrame = float.IsNaN(value) ? 3f :
+            Mathf.Clamp(value, MinRuntimeChunkWorkMillisecondsPerFrame,
+                MaxRuntimeChunkWorkMillisecondsPerFrame);
+    }
+
+    #endregion
     /// <summary>当前世界实际提交给后台区块生成器的完整参数快照。</summary>
     public ChunkGenerationProfileSnapshot ActiveGenerationProfile =>
         activeGenerationSnapshot ?? defaultGenerationSnapshot;
@@ -188,7 +214,7 @@ public partial class ChunkMgr
         using (WorldRuntimeAdvanceMarker.Auto())
         {
             runtimeChunkManager?.Advance(deltaSeconds, authoritativeSimulation,
-                Mathf.Max(1, maxChunkCommitsPerFrame));
+                RuntimeChunkCommitBudget, RuntimeChunkCommitMillisecondsBudget);
         }
         ReconcileRuntimeWindowBindings();
         AdvanceLiquidFlowExperiment(deltaSeconds);
@@ -249,6 +275,7 @@ public partial class ChunkMgr
             return;
         runtimeChunkManager.ClearWindow();
         runtimeChunkManager.CancelAllRequests();
+        runtimeGenerator?.BeginNewWorldHydrologyEpoch(runtimeEpoch);
         runtimeChunkManager.CommitCompleted();
         runtimeEpoch++;
         runtimeChunkManager.World.BeginNewEpoch(runtimeEpoch);
@@ -270,6 +297,7 @@ public partial class ChunkMgr
         if (runtimeHost != null)
             runtimeHost.Bind(null);
         runtimeChunkManager?.CancelAllRequests();
+        runtimeGenerator?.BeginNewWorldHydrologyEpoch(runtimeEpoch);
         try
         {
             ClearRuntimeWindowBindings();

@@ -192,6 +192,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
 
     private void OnDestroy()
     {
+        GMConsolePreferences.SavePendingChanges();
         if (FlatWorld.AIECS.Gameplay.AiecsPlayground.Active != null)
             FlatWorld.AIECS.Gameplay.AiecsPlayground.Active.HealthOverlaySuppressed = false;
         CancelTeleportTargeting();
@@ -216,6 +217,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         RefreshResponsiveLayoutIfCanvasChanged();
         RefreshAiecsPageIfNeeded();
         RefreshDayTimeControlIfNeeded();
+        RefreshChunkStreamingStatusIfNeeded();
         HandleTeleportInput();
 
         if (Keyboard.current?.f4Key.wasPressedThisFrame != true)
@@ -229,6 +231,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
 
     private void OnActiveSceneChanged(Scene previous, Scene next)
     {
+        activePageDataDirty = true;
         CancelPendingDayTimeJump();
         CancelTeleportTargeting();
         HandleBuffTargetingSceneChanged();
@@ -239,7 +242,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
             (airdropBrowserRoot != null && airdropBrowserRoot.activeSelf) ||
             (aiCreatureBrowserRoot != null && aiCreatureBrowserRoot.activeSelf))
         {
-            RefreshRuntimeData();
+            RefreshRuntimeData(true);
         }
     }
 
@@ -274,9 +277,10 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
     {
         bool playerSpeedRestored = false;
         bool chunkSpeedRestored = false;
+        bool chunkBudgetRestored = false;
         var retryDelay = new WaitForSecondsRealtime(0.25f);
 
-        while (!playerSpeedRestored || !chunkSpeedRestored)
+        while (!playerSpeedRestored || !chunkSpeedRestored || !chunkBudgetRestored)
         {
             if (!playerSpeedRestored &&
                 FindFirstComponent("PlayerAdminController") is PlayerAdminController controller)
@@ -297,13 +301,24 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
                     out _);
             }
 
-            if (!playerSpeedRestored || !chunkSpeedRestored)
+            if (!chunkBudgetRestored && chunkManager != null)
+            {
+                chunkManager.RuntimeChunkCommitBudget = GMConsolePreferences.ChunkCommitCount;
+                chunkManager.RuntimeChunkCommitMillisecondsBudget = GMConsolePreferences.ChunkCommitMilliseconds;
+                chunkManager.RuntimeChunkPresentationStartBudget = GMConsolePreferences.ChunkBaseCount;
+                chunkManager.RuntimeChunkPresentationStartMillisecondsBudget = GMConsolePreferences.ChunkBaseMilliseconds;
+                chunkManager.RuntimeChunkPresentationContinuationBudget = GMConsolePreferences.ChunkDetailCount;
+                chunkManager.RuntimeChunkPresentationContinuationMillisecondsBudget = GMConsolePreferences.ChunkDetailMilliseconds;
+                chunkBudgetRestored = true;
+            }
+
+            if (!playerSpeedRestored || !chunkSpeedRestored || !chunkBudgetRestored)
                 yield return retryDelay;
         }
 
         restorePreferencesCoroutine = null;
         if (windowRoot != null && windowRoot.activeSelf)
-            RefreshRuntimeData();
+            RefreshRuntimeData(true);
     }
 
     #endregion
@@ -320,11 +335,12 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         if (!visible)
         {
             CancelPendingDayTimeJump();
+            GMConsolePreferences.SavePendingChanges();
             return;
         }
 
         ClampTabbedWindowToCanvas();
-        RefreshRuntimeData();
+        RefreshRuntimeData(activePageDataDirty);
         SetStatus("GM 窗口已打开：反射命令仅作用于当前运行场景。", new Color(0.35f, 0.95f, 0.85f));
     }
 
@@ -1395,31 +1411,72 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
 
     #endregion
 
-    #region Reflection command discovery
+    #region GM 当前分页刷新
 
-    private void RefreshRuntimeData()
+    // 打开窗口只同步当前页；目录扫描与列表重建留给首次进入页面或场景切换。
+    private void RefreshRuntimeData(bool refreshCatalogs = false)
     {
-        BindGameEventManager();
-        RefreshBuffDefinitions();
-        RefreshBuffTargetList();
-        RefreshBuffTargetingControls();
-        RefreshQuestPage();
-        RefreshTeleportShortcutButton();
-        RefreshAdminInvincibilityButton();
-        RefreshPlayerMoveSpeedButton();
-        RefreshChunkLoadSpeedControl();
-        RefreshWorldRangeControls();
-        RefreshWorldWindControl();
-        RefreshNavigationPathButton();
-        RefreshAnimalDebugOverlayButton();
-        RefreshItemIds();
-        RefreshWorldLayerOverlayButtons();
-        RefreshAiecsPage();
-        RefreshAiCreatureIds();
-        RefreshStructureOptions();
-        RebuildReflectedCommands();
-        RebuildGameEventPage();
+        switch (activeGmPage)
+        {
+            case GmPageId.Player:
+                RefreshTeleportShortcutButton();
+                RefreshAdminInvincibilityButton();
+                RefreshPlayerMoveSpeedButton();
+                break;
+            case GmPageId.Buff:
+                RefreshBuffDefinitions();
+                if (refreshCatalogs)
+                    RefreshBuffTargetList(false);
+                RefreshBuffTargetingControls();
+                break;
+            case GmPageId.Quests:
+                if (refreshCatalogs)
+                    RefreshQuestPage();
+                else
+                {
+                    BindQuestRuntime();
+                    RefreshQuestRowStates();
+                }
+                break;
+            case GmPageId.Spawn:
+                UpdateSummonHint();
+                break;
+            case GmPageId.World:
+                RefreshChunkLoadSpeedControl();
+                RefreshChunkStreamingBudgetControls();
+                RefreshWorldRangeControls();
+                RefreshWorldWindControl();
+                RefreshNavigationPathButton();
+                RefreshAnimalDebugOverlayButton();
+                RefreshHiveDebugOverlayButton();
+                break;
+            case GmPageId.Layers:
+                RefreshWorldLayerOverlayButtons();
+                break;
+            case GmPageId.Aiecs:
+                RefreshAiecsPage();
+                break;
+            case GmPageId.Structures:
+                if (refreshCatalogs)
+                    RefreshStructureOptions();
+                break;
+            case GmPageId.GameEvents:
+                BindGameEventManager();
+                if (refreshCatalogs)
+                    RebuildGameEventPage();
+                break;
+            case GmPageId.Commands:
+                if (refreshCatalogs)
+                    RebuildReflectedCommands();
+                break;
+        }
+
+        activePageDataDirty = false;
     }
+
+    #endregion
+
+    #region Reflection command discovery
 
     private void CyclePlayerMoveSpeed()
     {
@@ -1495,7 +1552,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
 
     private void RefreshPlayerMoveSpeedButton()
     {
-        PlayerAdminController controller = FindFirstComponent("PlayerAdminController") as PlayerAdminController;
+        PlayerAdminController controller = FindObjectOfType<PlayerAdminController>(true);
         float multiplier = controller != null ? controller.AdminMoveSpeedMultiplier : 1f;
         if (playerMoveSpeedInput != null && !playerMoveSpeedInput.isFocused)
             playerMoveSpeedInput.SetTextWithoutNotify(multiplier.ToString("0.##", CultureInfo.InvariantCulture));
@@ -1673,8 +1730,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         if (adminInvincibilityButton == null)
             return;
 
-        PlayerAdminController controller =
-            FindFirstComponent("PlayerAdminController") as PlayerAdminController;
+        PlayerAdminController controller = FindObjectOfType<PlayerAdminController>(true);
         bool canToggle = controller != null && controller.IsAdministrator;
         bool enabled = canToggle && controller.IsAdminInvincibilityEnabled;
 
@@ -1791,26 +1847,48 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
     {
         commands.Clear();
 
-        AddNamedCommand("环境", "晴天", "GameDebugManager", "SetClearWeather");
-        AddNamedCommand("环境", "下雨", "GameDebugManager", "SetRainWeather");
-        AddNamedCommand("环境", "环境信息", "GameDebugManager", "ToggleEnvironmentInfo");
-        AddNamedCommand("管理员", "刷新区块", "Mod_ChunkLoader", "RefreshChunksAroundPlayer");
-        AddNamedCommand("管理员", "手持 +9999", "PlayerAdminController", "AddAmountToCurrentHandItem", 9999f);
-        AddNamedCommand("管理员", "背包 +100", "PlayerAdminController", "AddAmountToAllBagItems", 100f);
-        AddNamedCommand("管理员", "时间恢复", "PlayerAdminController", "ResetTimeScale");
-        AddNamedCommand("管理员", "时间 +0.5", "PlayerAdminController", "TryUpdateTimeScale", 0.5f);
-        AddNamedCommand("管理员", "时间 -0.5", "PlayerAdminController", "TryUpdateTimeScale", -0.5f);
-
-        foreach (MonoBehaviour behaviour in FindSceneBehaviours())
+        // 场景组件只扫描一次，命名命令和自动命令共用这份快照。
+        MonoBehaviour[] sceneBehaviours = FindObjectsOfType<MonoBehaviour>(true);
+        Dictionary<string, Component> namedTargets = new(StringComparer.Ordinal);
+        for (int i = 0; i < sceneBehaviours.Length; i++)
         {
+            MonoBehaviour behaviour = sceneBehaviours[i];
+            if (behaviour != null && behaviour.gameObject.scene.IsValid())
+                namedTargets.TryAdd(behaviour.GetType().Name, behaviour);
+        }
+
+        AddNamedCommand(namedTargets, "环境", "晴天", "GameDebugManager", "SetClearWeather");
+        AddNamedCommand(namedTargets, "环境", "下雨", "GameDebugManager", "SetRainWeather");
+        AddNamedCommand(namedTargets, "环境", "环境信息", "GameDebugManager", "ToggleEnvironmentInfo");
+        AddNamedCommand(namedTargets, "管理员", "刷新区块", "Mod_ChunkLoader", "RefreshChunksAroundPlayer");
+        AddNamedCommand(namedTargets, "管理员", "手持 +9999", "PlayerAdminController", "AddAmountToCurrentHandItem", 9999f);
+        AddNamedCommand(namedTargets, "管理员", "背包 +100", "PlayerAdminController", "AddAmountToAllBagItems", 100f);
+        AddNamedCommand(namedTargets, "管理员", "时间恢复", "PlayerAdminController", "ResetTimeScale");
+        AddNamedCommand(namedTargets, "管理员", "时间 +0.5", "PlayerAdminController", "TryUpdateTimeScale", 0.5f);
+        AddNamedCommand(namedTargets, "管理员", "时间 -0.5", "PlayerAdminController", "TryUpdateTimeScale", -0.5f);
+
+        Dictionary<Type, MethodInfo[]> safeMethodsByType = new();
+        foreach (MonoBehaviour behaviour in sceneBehaviours)
+        {
+            if (commands.Count >= MaxDiscoveredCommands)
+                break;
+            if (behaviour == null || !behaviour.gameObject.scene.IsValid())
+                continue;
+
             Type type = behaviour.GetType();
-            MethodInfo[] methods = type.GetMethods(BindingFlags.Instance | BindingFlags.Public);
+            if (!safeMethodsByType.TryGetValue(type, out MethodInfo[] methods))
+            {
+                methods = type.GetMethods(BindingFlags.Instance | BindingFlags.Public)
+                    .Where(method => method.ReturnType == typeof(void) &&
+                                     method.GetParameters().Length == 0 &&
+                                     IsSafeAutoCommand(method))
+                    .ToArray();
+                safeMethodsByType.Add(type, methods);
+            }
+
             for (int i = 0; i < methods.Length && commands.Count < MaxDiscoveredCommands; i++)
             {
                 MethodInfo method = methods[i];
-                if (method.ReturnType != typeof(void) || method.GetParameters().Length != 0 || !IsSafeAutoCommand(method))
-                    continue;
-
                 AddCommand($"扫描/{type.Name}", method.Name, behaviour, method, Array.Empty<object>());
             }
         }
@@ -1818,10 +1896,9 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         RebuildCommandButtons();
     }
 
-    private void AddNamedCommand(string category, string label, string typeName, string methodName, params object[] arguments)
+    private void AddNamedCommand(Dictionary<string, Component> namedTargets, string category, string label, string typeName, string methodName, params object[] arguments)
     {
-        Component target = FindFirstComponent(typeName);
-        if (target == null)
+        if (!namedTargets.TryGetValue(typeName, out Component target) || target == null)
             return;
 
         MethodInfo method = FindCompatibleMethod(target.GetType(), methodName, arguments);
@@ -1972,7 +2049,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
     private void RefreshItemIds()
     {
         availableAirdropItems.Clear();
-        GameRes gameRes = FindFirstComponent("GameRes") as GameRes;
+        GameRes gameRes = GameRes.ExistingInstance;
         if (gameRes != null)
         {
             HashSet<string> discoveredIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -2022,7 +2099,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
     private void RefreshAiCreatureIds()
     {
         availableAiCreatures.Clear();
-        Component gameRes = FindFirstComponent("GameRes");
+        Component gameRes = GameRes.ExistingInstance;
         object prefabDictionary = ReadMember(gameRes, "AllPrefabs");
         if (prefabDictionary is IDictionary dictionary)
         {
@@ -2111,7 +2188,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
 
         if (availableAirdropItems.Count == 0 && availableAiCreatures.Count == 0)
         {
-            itemHintText.text = "尚未发现可召唤内容。请等待 GameRes 加载完成，或先进入游戏世界。";
+            itemHintText.text = "打开上方目录载入可用内容；若目录为空，请先进入游戏世界。";
             return;
         }
 
@@ -2734,12 +2811,11 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
 
     private Transform GetLocalPlayerTransform()
     {
-        Component itemManager = FindFirstComponent("ItemMgr");
-        Transform transform = ReadMember(itemManager, "UserPlayerTransform") as Transform;
-        if (transform != null)
-            return transform;
+        Transform localPlayer = ItemMgr.GetInstance()?.UserPlayerTransform;
+        if (localPlayer != null)
+            return localPlayer;
 
-        Component player = FindFirstComponent("Player");
+        Component player = FindLocalPlayer() ?? FindObjectOfType<Player>(true);
         return player != null ? player.transform : null;
     }
 

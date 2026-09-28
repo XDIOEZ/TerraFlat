@@ -77,13 +77,16 @@ public partial class ChunkMgr
 
     [Header("区块表现分帧")]
     [Tooltip("主线程每帧最多启动多少个新区块；启动时优先完成基础地形 BRG，让扩大视距后先快速消除空白区块。")]
-    [SerializeField, Min(1)] private int maxChunkPresentationsPerFrame = 4;
+    [SerializeField, Range(1, MaxRuntimeChunkWorkCountPerFrame)] private int maxChunkPresentationsPerFrame = 64;
     [Tooltip("新区块基础地形每帧最多占用的主线程毫秒数；至少启动一个，单块绑定仍会完整执行。")]
-    [SerializeField, Min(0.1f)] private float maxChunkPresentationStartMillisecondsPerFrame = 4f;
+    [SerializeField, Range(MinRuntimeChunkWorkMillisecondsPerFrame, MaxRuntimeChunkWorkMillisecondsPerFrame)]
+    private float maxChunkPresentationStartMillisecondsPerFrame = 4f;
     [Tooltip("主线程每帧额外推进多少次已启动区块的后续表现绑定；与首层地形分离，避免草地/导航/自然物阻塞其它区块的基础地形。")]
-    [SerializeField, Min(1)] private int maxChunkPresentationContinuationStepsPerFrame = 6;
+    [SerializeField, Range(1, MaxRuntimeChunkWorkCountPerFrame)]
+    private int maxChunkPresentationContinuationStepsPerFrame = 64;
     [Tooltip("已启动区块的后续表现每帧最多占用的主线程毫秒数；单个表现步骤仍会完整执行。")]
-    [SerializeField, Min(0.1f)] private float maxChunkPresentationContinuationMillisecondsPerFrame = 3f;
+    [SerializeField, Range(MinRuntimeChunkWorkMillisecondsPerFrame, MaxRuntimeChunkWorkMillisecondsPerFrame)]
+    private float maxChunkPresentationContinuationMillisecondsPerFrame = 3f;
 
     private const int MaxIdlePrefetchConcurrency = 1;
     private const int ChunkViewPoolSpareCapacity = 4;
@@ -118,11 +121,45 @@ public partial class ChunkMgr
     /// <summary>等待主线程绘制、碰撞和导航绑定的区块数量。</summary>
     public int PendingRuntimeChunkPresentationCount =>
         runtimePresentationQueue.Count + runtimePresentationInProgressCount;
-    /// <summary>每帧允许启动的基础地形表现数量，供流送诊断读取实际 Prefab 配置。</summary>
-    public int RuntimeChunkPresentationStartBudget => Mathf.Max(1, maxChunkPresentationsPerFrame);
+    #region 区块表现预算
+
+    /// <summary>每帧允许启动的基础地形表现数量。</summary>
+    public int RuntimeChunkPresentationStartBudget
+    {
+        get => Mathf.Clamp(maxChunkPresentationsPerFrame, 1, MaxRuntimeChunkWorkCountPerFrame);
+        set => maxChunkPresentationsPerFrame = Mathf.Clamp(value, 1, MaxRuntimeChunkWorkCountPerFrame);
+    }
+
+    /// <summary>每帧启动基础地形可用的主线程毫秒数。</summary>
+    public float RuntimeChunkPresentationStartMillisecondsBudget
+    {
+        get => float.IsNaN(maxChunkPresentationStartMillisecondsPerFrame) ? 4f :
+            Mathf.Clamp(maxChunkPresentationStartMillisecondsPerFrame,
+                MinRuntimeChunkWorkMillisecondsPerFrame, MaxRuntimeChunkWorkMillisecondsPerFrame);
+        set => maxChunkPresentationStartMillisecondsPerFrame = float.IsNaN(value) ? 4f :
+            Mathf.Clamp(value, MinRuntimeChunkWorkMillisecondsPerFrame,
+                MaxRuntimeChunkWorkMillisecondsPerFrame);
+    }
+
     /// <summary>每帧允许推进的后续表现步骤数。</summary>
-    public int RuntimeChunkPresentationContinuationBudget =>
-        Mathf.Max(1, maxChunkPresentationContinuationStepsPerFrame);
+    public int RuntimeChunkPresentationContinuationBudget
+    {
+        get => Mathf.Clamp(maxChunkPresentationContinuationStepsPerFrame, 1, MaxRuntimeChunkWorkCountPerFrame);
+        set => maxChunkPresentationContinuationStepsPerFrame = Mathf.Clamp(value, 1, MaxRuntimeChunkWorkCountPerFrame);
+    }
+
+    /// <summary>每帧后续表现步骤可用的主线程毫秒数。</summary>
+    public float RuntimeChunkPresentationContinuationMillisecondsBudget
+    {
+        get => float.IsNaN(maxChunkPresentationContinuationMillisecondsPerFrame) ? 3f :
+            Mathf.Clamp(maxChunkPresentationContinuationMillisecondsPerFrame,
+                MinRuntimeChunkWorkMillisecondsPerFrame, MaxRuntimeChunkWorkMillisecondsPerFrame);
+        set => maxChunkPresentationContinuationMillisecondsPerFrame = float.IsNaN(value) ? 3f :
+            Mathf.Clamp(value, MinRuntimeChunkWorkMillisecondsPerFrame,
+                MaxRuntimeChunkWorkMillisecondsPerFrame);
+    }
+
+    #endregion
     /// <summary>尚未完成的空闲预取总数，包含队列和正在运行的任务。</summary>
     public int PendingRuntimeChunkPrefetchCount =>
         runtimePrefetchQueue.Count + runtimePrefetchInFlightCount;
@@ -617,10 +654,9 @@ public partial class ChunkMgr
         yield return null;
         while (runtimePresentationQueue.Count > 0 || runtimePresentationContinuationQueue.Count > 0)
         {
-            int startBudget = Mathf.Max(1, maxChunkPresentationsPerFrame);
+            int startBudget = RuntimeChunkPresentationStartBudget;
             long startDeadline = Stopwatch.GetTimestamp() + (long)(
-                Stopwatch.Frequency * (double)Mathf.Max(0.1f,
-                    maxChunkPresentationStartMillisecondsPerFrame) / 1000d);
+                Stopwatch.Frequency * (double)RuntimeChunkPresentationStartMillisecondsBudget / 1000d);
             while (startBudget-- > 0 &&
                    TryDequeueRuntimePresentation(out RuntimeWorldAddress address))
             {
@@ -629,15 +665,14 @@ public partial class ChunkMgr
                     break;
             }
 
-            int continuationBudget = Mathf.Max(1, maxChunkPresentationContinuationStepsPerFrame);
+            int continuationBudget = RuntimeChunkPresentationContinuationBudget;
             if (runtimePresentationQueue.Count > 0)
             {
                 if (startBudget <= 0) WorldRuntime.StreamingDiagnostics.Count("view.start_count_limit_hits");
                 if (Stopwatch.GetTimestamp() >= startDeadline) WorldRuntime.StreamingDiagnostics.Count("view.start_time_limit_hits");
             }
             long continuationDeadline = Stopwatch.GetTimestamp() + (long)(
-                Stopwatch.Frequency * (double)Mathf.Max(0.1f,
-                    maxChunkPresentationContinuationMillisecondsPerFrame) / 1000d);
+                Stopwatch.Frequency * (double)RuntimeChunkPresentationContinuationMillisecondsBudget / 1000d);
             runtimePresentationRescheduleBuffer.Clear();
             while (continuationBudget-- > 0 && Stopwatch.GetTimestamp() < continuationDeadline &&
                    TryDequeueRuntimePresentationContinuation(out RuntimeWorldAddress continuationAddress))

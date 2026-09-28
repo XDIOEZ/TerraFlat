@@ -10,6 +10,12 @@ internal static class GMConsolePreferences
     private const string PlayerMoveSpeedKey = KeyPrefix + "PlayerMoveSpeed";
     private const string ChunkLoadSpeedKey = KeyPrefix + "ChunkLoadSpeed";
     private const string ChunkLoadUnlimitedKey = KeyPrefix + "ChunkLoadUnlimited";
+    private const string ChunkCommitCountKey = KeyPrefix + "ChunkCommitCount";
+    private const string ChunkCommitMillisecondsKey = KeyPrefix + "ChunkCommitMilliseconds";
+    private const string ChunkBaseCountKey = KeyPrefix + "ChunkBaseCount";
+    private const string ChunkBaseMillisecondsKey = KeyPrefix + "ChunkBaseMilliseconds";
+    private const string ChunkDetailCountKey = KeyPrefix + "ChunkDetailCount";
+    private const string ChunkDetailMillisecondsKey = KeyPrefix + "ChunkDetailMilliseconds";
     private const string TeleportShortcutKey = KeyPrefix + "TeleportShortcut";
     private const string NavigationPathKey = KeyPrefix + "NavigationPath";
     private const string AnimalDebugOverlayKey = KeyPrefix + "AnimalDebugOverlay";
@@ -29,6 +35,17 @@ internal static class GMConsolePreferences
 
     public static bool ChunkLoadSpeedUnlimited =>
         PlayerPrefs.GetInt(ChunkLoadUnlimitedKey, 0) != 0;
+
+    #region 区块流送预算
+
+    public static int ChunkCommitCount => GetPositiveInt(ChunkCommitCountKey, 64);
+    public static float ChunkCommitMilliseconds => GetFinitePositiveFloat(ChunkCommitMillisecondsKey, 3f);
+    public static int ChunkBaseCount => GetPositiveInt(ChunkBaseCountKey, 64);
+    public static float ChunkBaseMilliseconds => GetFinitePositiveFloat(ChunkBaseMillisecondsKey, 4f);
+    public static int ChunkDetailCount => GetPositiveInt(ChunkDetailCountKey, 64);
+    public static float ChunkDetailMilliseconds => GetFinitePositiveFloat(ChunkDetailMillisecondsKey, 3f);
+
+    #endregion
 
     public static bool TeleportShortcutEnabled =>
         PlayerPrefs.GetInt(TeleportShortcutKey, 1) != 0;
@@ -86,6 +103,20 @@ internal static class GMConsolePreferences
         PlayerPrefs.Save();
     }
 
+    /// <summary>拖动滑条时只改内存偏好，松开或失焦后再写盘。</summary>
+    public static void SetChunkStreamingBudgets(ChunkMgr chunkManager)
+    {
+        if (chunkManager == null)
+            return;
+
+        PlayerPrefs.SetInt(ChunkCommitCountKey, chunkManager.RuntimeChunkCommitBudget);
+        PlayerPrefs.SetFloat(ChunkCommitMillisecondsKey, chunkManager.RuntimeChunkCommitMillisecondsBudget);
+        PlayerPrefs.SetInt(ChunkBaseCountKey, chunkManager.RuntimeChunkPresentationStartBudget);
+        PlayerPrefs.SetFloat(ChunkBaseMillisecondsKey, chunkManager.RuntimeChunkPresentationStartMillisecondsBudget);
+        PlayerPrefs.SetInt(ChunkDetailCountKey, chunkManager.RuntimeChunkPresentationContinuationBudget);
+        PlayerPrefs.SetFloat(ChunkDetailMillisecondsKey, chunkManager.RuntimeChunkPresentationContinuationMillisecondsBudget);
+    }
+
     public static void SetTeleportShortcut(bool enabled)
     {
         PlayerPrefs.SetInt(TeleportShortcutKey, enabled ? 1 : 0);
@@ -141,6 +172,12 @@ internal static class GMConsolePreferences
     {
         float value = PlayerPrefs.GetFloat(key, fallback);
         return IsFinitePositive(value) ? value : fallback;
+    }
+
+    private static int GetPositiveInt(string key, int fallback)
+    {
+        int value = PlayerPrefs.GetInt(key, fallback);
+        return value > 0 ? value : fallback;
     }
 
     private static bool IsFinitePositive(float value)

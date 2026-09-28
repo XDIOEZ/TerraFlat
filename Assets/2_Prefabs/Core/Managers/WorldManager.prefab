@@ -714,11 +714,12 @@ MonoBehaviour:
   maxPooledChunkCount: 32
   chunkLoadSpeedMultiplier: 1
   unlimitedChunkLoadSpeed: 0
-  maxChunkPresentationsPerFrame: 4
+  maxChunkPresentationsPerFrame: 64
   maxChunkPresentationStartMillisecondsPerFrame: 4
-  maxChunkPresentationContinuationStepsPerFrame: 6
+  maxChunkPresentationContinuationStepsPerFrame: 64
   maxChunkPresentationContinuationMillisecondsPerFrame: 3
   defaultGenerationProfile: {fileID: 0}
   backgroundGenerationConcurrency: 2
-  maxChunkCommitsPerFrame: 1
+  maxChunkCommitsPerFrame: 64
+  maxChunkCommitMillisecondsPerFrame: 3
   authoritativeSimulation: 1

@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Threading;
 using System.Threading.Tasks;
+using Stopwatch = System.Diagnostics.Stopwatch;
 
 namespace FlatWorld.WorldModel
 {
@@ -480,7 +481,8 @@ namespace FlatWorld.WorldModel
         /// 取回所有已经做完的后台任务，并逐个处理成功、取消或失败。
         /// 有效结果会正式交给世界；返回值表示这次一共处理了几个任务。
         /// </summary>
-        public int CommitCompleted(int maxCount = int.MaxValue)
+        public int CommitCompleted(int maxCount = int.MaxValue,
+            double maxMilliseconds = double.PositiveInfinity)
         {
             ThrowIfDisposed();
             if (maxCount <= 0)
@@ -488,6 +490,11 @@ namespace FlatWorld.WorldModel
             World.StreamingDiagnostics.Count("commit.pumps");
             using var batchTiming = World.StreamingDiagnostics.Measure("commit.batch");
             int count = 0;
+            bool hasTimeLimit = maxMilliseconds > 0d && !double.IsInfinity(maxMilliseconds);
+            long startedAt = hasTimeLimit ? Stopwatch.GetTimestamp() : 0L;
+            double allowedTicks = hasTimeLimit
+                ? maxMilliseconds * Stopwatch.Frequency / 1000d
+                : double.PositiveInfinity;
             while (count < maxCount &&
                    _completed.TryDequeue(out GenerationCompletion completion))
             {
@@ -544,6 +551,13 @@ namespace FlatWorld.WorldModel
                 }
                 completion.Pending.Cancellation.Dispose();
                 World.StreamingDiagnostics.Complete(completion.Pending.Timing, diagnosticOutcome);
+                // 单个提交完整执行，之后再按真实耗时决定本帧是否继续。
+                if (hasTimeLimit && Stopwatch.GetTimestamp() - startedAt >= allowedTicks)
+                {
+                    if (!_completed.IsEmpty)
+                        World.StreamingDiagnostics.Count("commit.time_limit_hits");
+                    break;
+                }
             }
             if (count == maxCount && !_completed.IsEmpty)
                 World.StreamingDiagnostics.Count("commit.count_limit_hits");
@@ -552,9 +566,9 @@ namespace FlatWorld.WorldModel
 
         /// <summary>先处理后台结果，再让世界逻辑向前运行一步。</summary>
         public void Advance(float deltaSeconds, bool authoritativeSimulation = true,
-            int maxCompletedCommits = 1)
+            int maxCompletedCommits = 1, double maxCommitMilliseconds = double.PositiveInfinity)
         {
-            CommitCompleted(maxCompletedCommits);
+            CommitCompleted(maxCompletedCommits, maxCommitMilliseconds);
             if (authoritativeSimulation)
                 World.Tick(deltaSeconds);
         }

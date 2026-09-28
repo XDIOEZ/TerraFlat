@@ -7,6 +7,7 @@ using FlatWorld.Gameplay.Events;
 using FlatWorld.Networking;
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
 using UnityEngine.Events;
@@ -57,6 +58,13 @@ public sealed partial class GMReflectionConsole
     private readonly Dictionary<GmPageId, GmPageView> gmPages = new();
     private readonly List<GmSearchEntry> gmSearchEntries = new();
     private readonly List<GmResponsiveGrid> gmResponsiveGrids = new();
+    private GmPageId activeGmPage = GmPageId.Player;
+    private bool activePageDataDirty = true;
+
+    private readonly Slider[] chunkStreamingBudgetSliders = new Slider[6];
+    private readonly TextMeshProUGUI[] chunkStreamingBudgetValues = new TextMeshProUGUI[6];
+    private TextMeshProUGUI chunkStreamingStatusText;
+    private float nextChunkStreamingStatusRefreshAt;
 
     private RectTransform gmCanvasRect;
     private RectTransform gmWindowRect;
@@ -489,7 +497,7 @@ public sealed partial class GMReflectionConsole
             52f);
         SetGmButtonVisual(creatureButton, GmSurfaceRaised, true);
 
-        itemHintText = AddPageHint(page.Content, "进入游戏世界后会自动刷新物品与生物目录。", 24f);
+        itemHintText = AddPageHint(page.Content, "打开目录时会载入当前可用的物品与生物。", 24f);
     }
 
     private void BuildWorldPage()
@@ -522,6 +530,7 @@ public sealed partial class GMReflectionConsole
             "AI 导航 路线 path navmesh",
             ToggleNavigationPathHints);
         CreateWorldRangeControls(page.Content);
+        CreateChunkStreamingBudgetControls(page.Content);
         CreateWorldWindControl(page.Content);
 
         RefreshNavigationPathButton();
@@ -529,6 +538,7 @@ public sealed partial class GMReflectionConsole
         RefreshHiveDebugOverlayButton();
         RefreshChunkLoadSpeedControl();
         RefreshWorldRangeControls();
+        RefreshChunkStreamingBudgetControls();
         RefreshWorldWindControl();
     }
 
@@ -777,7 +787,10 @@ public sealed partial class GMReflectionConsole
     {
         RefreshDayTimeControl();
 
-        PlayerAdminController controller = FindLocalPlayerModule<PlayerAdminController>();
+        Player localPlayer = FindLocalPlayer();
+        PlayerAdminController controller = localPlayer != null
+            ? localPlayer.GetComponentInChildren<PlayerAdminController>(true)
+            : null;
         timeScaleSlider.onValueChanged.RemoveListener(SetTimeScaleFromSlider);
         timeScaleSlider.interactable = controller != null;
         if (controller != null)
@@ -793,7 +806,9 @@ public sealed partial class GMReflectionConsole
         }
         timeScaleSlider.onValueChanged.AddListener(SetTimeScaleFromSlider);
 
-        Mod_Cam cameraModule = FindLocalPlayerModule<Mod_Cam>();
+        Mod_Cam cameraModule = localPlayer != null
+            ? localPlayer.GetComponentInChildren<Mod_Cam>(true)
+            : null;
         cameraViewSlider.onValueChanged.RemoveListener(SetCameraViewFromSlider);
         bool cameraReady = cameraModule != null && cameraModule.IsCameraReady;
         cameraViewSlider.interactable = cameraReady;
@@ -814,7 +829,9 @@ public sealed partial class GMReflectionConsole
         }
         cameraViewSlider.onValueChanged.AddListener(SetCameraViewFromSlider);
 
-        Mod_ChunkLoader loader = FindLocalPlayerModule<Mod_ChunkLoader>();
+        Mod_ChunkLoader loader = localPlayer != null
+            ? localPlayer.GetComponentInChildren<Mod_ChunkLoader>(true)
+            : null;
         chunkLoadDistanceSlider.onValueChanged.RemoveListener(SetChunkLoadDistanceFromSlider);
         chunkLoadDistanceSlider.interactable = loader != null;
         if (loader != null)
@@ -834,9 +851,154 @@ public sealed partial class GMReflectionConsole
     /// <summary>世界页只控制本机玩家，不把滑条绑定到联机远程玩家副本。</summary>
     private static T FindLocalPlayerModule<T>() where T : Component
     {
-        Player localPlayer = FindObjectsOfType<Player>(true)
-            .FirstOrDefault(player => player.IsLocalProfile);
+        Player localPlayer = FindLocalPlayer();
         return localPlayer != null ? localPlayer.GetComponentInChildren<T>(true) : null;
+    }
+
+    private static Player FindLocalPlayer()
+    {
+        return FindObjectsOfType<Player>(true)
+            .FirstOrDefault(player => player.IsLocalProfile);
+    }
+
+    #endregion
+
+    #region 区块流送预算
+
+    /// <summary>开发人员可分别调整结果提交、基础地形和后续表现的数量与耗时上限。</summary>
+    private void CreateChunkStreamingBudgetControls(Transform parent)
+    {
+        AddPageIntro(parent, "区块每帧预算",
+            "先提交生成结果，再显示地面和补齐细节。每项同时受数量与毫秒限制；单个区块会完整执行。数量滑条按指数增长，最高 1024。");
+
+        string[] labels =
+        {
+            "提交数量/帧", "提交耗时/帧", "地面数量/帧", "地面耗时/帧",
+            "细节步骤/帧", "细节耗时/帧"
+        };
+        string[] keywords =
+        {
+            "区块 生成结果 提交 数量 commit count",
+            "区块 生成结果 提交 毫秒 时间 commit ms",
+            "区块 基础地形 显示 数量 presentation start count",
+            "区块 基础地形 显示 毫秒 presentation start ms",
+            "区块 草地 自然物 导航 细节 步骤 continuation count",
+            "区块 草地 自然物 导航 细节 毫秒 continuation ms"
+        };
+        for (int i = 0; i < chunkStreamingBudgetSliders.Length; i++)
+        {
+            int slot = i;
+            Slider slider = CreateWorldRangeSlider(parent, labels[i], keywords[i],
+                out chunkStreamingBudgetValues[i], false);
+            slider.minValue = i % 2 == 0 ? 0f : ChunkMgr.MinRuntimeChunkWorkMillisecondsPerFrame;
+            slider.maxValue = i % 2 == 0 ? 10f : ChunkMgr.MaxRuntimeChunkWorkMillisecondsPerFrame;
+            slider.onValueChanged.AddListener(value => SetChunkStreamingBudgetFromSlider(slot, value));
+            chunkStreamingBudgetSliders[i] = slider;
+
+            EventTrigger trigger = slider.GetComponent<EventTrigger>() ??
+                                   slider.gameObject.AddComponent<EventTrigger>();
+            foreach (EventTriggerType eventType in new[]
+                         { EventTriggerType.PointerUp, EventTriggerType.Deselect })
+            {
+                EventTrigger.Entry entry = new() { eventID = eventType };
+                entry.callback.AddListener(_ => GMConsolePreferences.SavePendingChanges());
+                trigger.triggers.Add(entry);
+            }
+        }
+
+        chunkStreamingStatusText = AddPageHint(parent, "生成排队 -- | 生成中 -- | 待提交 -- | 待显示 --", 32f);
+    }
+
+    /// <summary>滑动时即时写入当前 ChunkMgr，数量轴用 2 的幂覆盖 1～1024。</summary>
+    private void SetChunkStreamingBudgetFromSlider(int slot, float value)
+    {
+        ChunkMgr chunkManager = ChunkMgr.ExistingInstance;
+        if (chunkManager == null)
+        {
+            RefreshChunkStreamingBudgetControls();
+            return;
+        }
+
+        int count = Mathf.Clamp(Mathf.RoundToInt(Mathf.Pow(2f, value)),
+            1, ChunkMgr.MaxRuntimeChunkWorkCountPerFrame);
+        float milliseconds = Mathf.Round(value * 2f) / 2f;
+        switch (slot)
+        {
+            case 0: chunkManager.RuntimeChunkCommitBudget = count; break;
+            case 1: chunkManager.RuntimeChunkCommitMillisecondsBudget = milliseconds; break;
+            case 2: chunkManager.RuntimeChunkPresentationStartBudget = count; break;
+            case 3: chunkManager.RuntimeChunkPresentationStartMillisecondsBudget = milliseconds; break;
+            case 4: chunkManager.RuntimeChunkPresentationContinuationBudget = count; break;
+            case 5: chunkManager.RuntimeChunkPresentationContinuationMillisecondsBudget = milliseconds; break;
+        }
+
+        GMConsolePreferences.SetChunkStreamingBudgets(chunkManager);
+        RefreshChunkStreamingBudgetControls();
+    }
+
+    /// <summary>从运行中管理器读取真实预算，切换世界和重新打开 GM 时不会显示旧滑条值。</summary>
+    private void RefreshChunkStreamingBudgetControls()
+    {
+        ChunkMgr chunkManager = ChunkMgr.ExistingInstance;
+        if (chunkStreamingBudgetSliders[0] == null)
+            return;
+
+        for (int i = 0; i < chunkStreamingBudgetSliders.Length; i++)
+        {
+            Slider slider = chunkStreamingBudgetSliders[i];
+            slider.interactable = chunkManager != null;
+            if (chunkManager == null)
+            {
+                chunkStreamingBudgetValues[i].text = "--";
+                continue;
+            }
+
+            float budget = i switch
+            {
+                0 => chunkManager.RuntimeChunkCommitBudget,
+                1 => chunkManager.RuntimeChunkCommitMillisecondsBudget,
+                2 => chunkManager.RuntimeChunkPresentationStartBudget,
+                3 => chunkManager.RuntimeChunkPresentationStartMillisecondsBudget,
+                4 => chunkManager.RuntimeChunkPresentationContinuationBudget,
+                _ => chunkManager.RuntimeChunkPresentationContinuationMillisecondsBudget
+            };
+            bool isCount = i % 2 == 0;
+            slider.SetValueWithoutNotify(isCount ? Mathf.Log(budget, 2f) : budget);
+            chunkStreamingBudgetValues[i].text = isCount
+                ? $"{budget:0}"
+                : $"{budget:0.0} ms";
+        }
+        RefreshChunkStreamingStatus();
+    }
+
+    /// <summary>只在世界页打开时刷新队列数，方便判断该调哪一段预算。</summary>
+    private void RefreshChunkStreamingStatusIfNeeded()
+    {
+        if (windowRoot == null || !windowRoot.activeSelf || activeGmPage != GmPageId.World ||
+            Time.unscaledTime < nextChunkStreamingStatusRefreshAt)
+            return;
+
+        nextChunkStreamingStatusRefreshAt = Time.unscaledTime + 0.4f;
+        RefreshChunkStreamingStatus();
+    }
+
+    private void RefreshChunkStreamingStatus()
+    {
+        if (chunkStreamingStatusText == null)
+            return;
+
+        ChunkMgr chunkManager = ChunkMgr.ExistingInstance;
+        if (chunkManager?.RuntimeChunks == null)
+        {
+            chunkStreamingStatusText.text = "生成排队 -- | 生成中 -- | 待提交 -- | 待显示 --";
+            return;
+        }
+
+        chunkStreamingStatusText.text =
+            $"生成排队 {chunkManager.RuntimeChunks.QueuedGenerationCount} | " +
+            $"生成中 {chunkManager.RuntimeChunks.ActiveGenerationCount} | " +
+            $"待提交 {chunkManager.RuntimeChunks.PendingCommitCount} | " +
+            $"待显示 {chunkManager.PendingRuntimeChunkPresentationCount}";
     }
 
     #endregion
@@ -1340,6 +1502,7 @@ public sealed partial class GMReflectionConsole
             return;
 
         GMConsolePreferences.SetActivePageIndex((int)pageId);
+        activeGmPage = pageId;
 
         foreach (KeyValuePair<GmPageId, GmPageView> pair in gmPages)
         {
@@ -1359,15 +1522,9 @@ public sealed partial class GMReflectionConsole
             }
         }
 
+        RefreshRuntimeData(true);
         Canvas.ForceUpdateCanvases();
         ResizeResponsiveGrids();
-        if (pageId == GmPageId.World)
-        {
-            RefreshWorldRangeControls();
-            RefreshWorldWindControl();
-        }
-        if (pageId == GmPageId.Aiecs)
-            RefreshAiecsPage();
         if (selected.Content != null)
             LayoutRebuilder.ForceRebuildLayoutImmediate(selected.Content);
     }
@@ -1778,8 +1935,13 @@ public sealed partial class GMReflectionConsole
         if (gmCanvasRect == null || gmWindowRect == null)
             return;
 
-        Canvas.ForceUpdateCanvases();
         Vector2 canvasSize = gmCanvasRect.rect.size;
+        if (canvasSize.x > 0f && canvasSize.y > 0f &&
+            (canvasSize - lastGmCanvasSize).sqrMagnitude < 1f)
+            return;
+
+        Canvas.ForceUpdateCanvases();
+        canvasSize = gmCanvasRect.rect.size;
         if (canvasSize.x <= 0f || canvasSize.y <= 0f)
             return;
 
