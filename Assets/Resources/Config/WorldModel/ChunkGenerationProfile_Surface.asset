@@ -154,7 +154,7 @@ MonoBehaviour:
   - Id: river.meanderTieTolerance
     Value: 0
   - Id: river.meanderStrength
-    Value: 0.85
+    Value: 1.15
   - Id: river.meanderScale
     Value: 48
   - Id: river.valleyDetailWeight

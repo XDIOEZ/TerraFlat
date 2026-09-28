@@ -167,7 +167,7 @@ namespace FlatWorld.WorldModel
             var sampling = new HydrologySamplingContext(request, settings);
             var centers = new Dictionary<Int2, ChannelCenterSample>();
             int margin = settings.RiverMaxWidth + settings.RiverFloodplainMaxRadius +
-                         settings.RiverRunoffCellSize / 4 + 3;
+                         settings.RiverRunoffCellSize / 3 + 3;
             int minX = request.Address.ChunkOrigin.X - margin;
             int minY = request.Address.ChunkOrigin.Y - margin;
             int maxX = request.Address.ChunkOrigin.X + request.Profile.Width + margin;
@@ -203,9 +203,9 @@ namespace FlatWorld.WorldModel
                     out double endTangentY);
                 double normalX = -delta.y / length;
                 double normalY = delta.x / length;
-                double amplitude = Math.Min(length * 0.16d,
-                    Math.Min(settings.RiverMeanderScale * 0.25d,
-                        Math.Max(2d, settings.RiverMaxWidth * 1.6d))) *
+                double amplitude = Math.Min(length * 0.28d,
+                    Math.Min(settings.RiverMeanderScale * 0.42d,
+                        Math.Max(3d, settings.RiverMaxWidth * 2.7d))) *
                     settings.RiverMeanderStrength;
                 double bendA = SampleChannelBend(sampling, sourceX, sourceY,
                     endX, endY, 1d / 3d, amplitude);
@@ -232,7 +232,12 @@ namespace FlatWorld.WorldModel
                     double y = startWeight * sourceY + startTangentWeight * startTangentY +
                                endWeight * endY + endTangentWeight * endTangentY +
                                normalY * offset;
-                    if (x < minX || x > maxX || y < minY || y > maxY) continue;
+                    if (x < minX || x > maxX || y < minY || y > maxY)
+                    {
+                        previousX = x;
+                        previousY = y;
+                        continue;
+                    }
                     Int2 cell = sampling.Normalize(new Int2((int)Math.Floor(x), (int)Math.Floor(y)));
                     double flow = Lerp(region.Flows[i], region.Flows[next], t);
                     double directionX = step == 0 ? startTangentX : x - previousX;
