@@ -141,6 +141,7 @@ namespace FlatWorld.AIECS
         [ReadOnly] public NativeParallelHashMap<int2, int2> Ranges;
         [ReadOnly] public NativeParallelHashMap<int2, int> Density;
         [ReadOnly] public ComponentLookup<AiecsSimulationPulse> Pulses;
+        [ReadOnly] public ComponentLookup<AiecsFlight> Flights;
         public float DeltaTime;
         public int NeighbourLimit; // 单位级 Steering 的固定总预算，不随人群密度平方增长。
         public float SeparationWeight;
@@ -150,7 +151,9 @@ namespace FlatWorld.AIECS
         {
             float deltaTime = Pulses.TryGetComponent(entity, out AiecsSimulationPulse pulse)
                 ? pulse.DeltaTime : DeltaTime;
-            float waterSpeedMultiplier = UpdateWaterState(ref actor, deltaTime);
+            bool airborne = Flights.TryGetComponent(entity, out AiecsFlight flight) && flight.Airborne != 0;
+            float waterSpeedMultiplier = airborne ? 1f : UpdateWaterState(ref actor, deltaTime);
+            if (airborne) { actor.LiquidDepth = 0f; actor.WaterBlend = 0f; }
             FlowSample sample = Sample(actor);
             actor.Status = sample.Status;
             if (deltaTime <= 0f)
@@ -161,15 +164,16 @@ namespace FlatWorld.AIECS
 
             float2 start = actor.Position;
             if (sample.Status == FlowSampleStatus.Moving)
-                MoveDriven(entity, ref actor, sample, waterSpeedMultiplier, deltaTime);
+                MoveDriven(entity, ref actor, sample, waterSpeedMultiplier, deltaTime, airborne);
             actor.DrivenVelocity = Navigation.Domain.ShortestDelta(start, actor.Position) / deltaTime;
-            MoveWithWaterCurrent(ref actor, Navigation.CurrentAt(start) * actor.WaterCurrentPushSpeed * deltaTime);
+            if (!airborne)
+                MoveWithWaterCurrent(ref actor, Navigation.CurrentAt(start) * actor.WaterCurrentPushSpeed * deltaTime);
             actor.Velocity = Navigation.Domain.ShortestDelta(start, actor.Position) / deltaTime;
         }
 
         /// <summary>主动导航保持原流场、避让及地形代价约束。</summary>
         private void MoveDriven(Entity entity, ref AiecsFlowAgent actor, FlowSample sample,
-            float waterSpeedMultiplier, float deltaTime)
+            float waterSpeedMultiplier, float deltaTime, bool airborne)
         {
             float distance = math.length(sample.Delta);
             float2 desired = math.normalizesafe(sample.Delta);
@@ -192,6 +196,11 @@ namespace FlatWorld.AIECS
             float2 step = movement / steps;
             for (int i = 0; i < steps; i++)
             {
+                if (airborne)
+                {
+                    actor.Position = Navigation.Domain.Normalize(actor.Position + step);
+                    continue;
+                }
                 float stepLength = moveLength / steps;
                 float2 desiredNext = actor.Position + desired * stepLength;
                 int allowedCost = Navigation.StepMaximumCost(actor.Position, desiredNext, actor.Radius);
@@ -398,6 +407,7 @@ namespace FlatWorld.AIECS
                 Ranges = ranges,
                 Density = density,
                 Pulses = scheduler.GetPulseLookup(),
+                Flights = scheduler.GetFlightLookup(),
                 DeltaTime = deltaTime,
                 NeighbourLimit = math.max(1, neighbourLimit),
                 SeparationWeight = math.max(0f, separationWeight),

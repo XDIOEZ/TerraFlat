@@ -144,6 +144,10 @@ public sealed class ItemDefinitionDto
     /// <summary>稳定模块名 -> 模块定义。稳定名会直接成为 ModuleDataDic 的键。</summary>
     [JsonProperty("modules")]
     public Dictionary<string, ItemModuleDefinitionDto> Modules = new();
+
+    /// <summary>Actor 的 ECS 能力模块及参数，继承合并后交给 AIECS 冷路径编译。</summary>
+    [JsonProperty("ecs", NullValueHandling = NullValueHandling.Ignore)]
+    public JObject Ecs;
 }
 
 [Serializable]
@@ -387,6 +391,7 @@ public sealed class RuntimeItemDefinition
     public Material Material { get; }
     public RuntimeAnimatorController AnimatorController { get; }
     public bool IsActor { get; }
+    public JObject ActorEcs { get; }
 
     /// <summary>由当前内容编译的共享根级感知几何；非 Actor 通过旧对象 Bridge 感知。</summary>
     internal FlatWorld.Geometry.PerceptionShape2D[] ActorPerceptionShapes { get; }
@@ -444,7 +449,8 @@ public sealed class RuntimeItemDefinition
         Dictionary<string, Sprite> stateSprites = null,
         bool isGroundCover = false,
         IReadOnlyList<GridCellOffset> worldGridOccupancy = null,
-        int requiredGroundSupport = 0)
+        int requiredGroundSupport = 0,
+        JObject actorEcs = null)
     {
         Id = id;
         ShellPrefabId = shellPrefabId;
@@ -461,6 +467,7 @@ public sealed class RuntimeItemDefinition
         Material = material;
         AnimatorController = animatorController;
         IsActor = isActor;
+        ActorEcs = isActor ? (JObject)actorEcs?.DeepClone() : null;
         ActorPerceptionShapes = isActor ? ActorPerceptionShapeCompiler.Compile(shellPrefab, visual?.Collider) : null;
         IsGroundCover = isGroundCover;
         var occupancyCells = worldGridOccupancy == null

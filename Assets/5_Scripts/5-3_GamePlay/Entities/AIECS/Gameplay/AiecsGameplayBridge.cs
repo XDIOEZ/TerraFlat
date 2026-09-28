@@ -228,7 +228,19 @@ namespace FlatWorld.AIECS.Gameplay
             var centers = Simulation.GroupPositions;
             for (int i = 0; i < Templates.Length; i++) if (centers[i].z > 0f) Navigation.UpdateGoal(goals[i], centers[i].xy);
             losView = los.Read(Navigation.Read()); Simulation.Difficulty = GameplayCombatBridge.Difficulty();
+            Player currentPlayer = ItemMgr.Instance?.User_Player;
+            DayTimeSystem clock = DayTimeSystem.Instance;
+            if (currentPlayer != null && clock != null &&
+                clock.TryGetResolvedTimeData(currentPlayer.gameObject.scene.name, out _, out TimeData day) &&
+                day != null && day.DayLength > 0f)
+            {
+                Simulation.DayRatio = Mathf.Repeat(day.CurrentTime, day.DayLength) / day.DayLength;
+                Simulation.GameDays = day.TotalDays + (double)day.CurrentTime / day.DayLength;
+            }
+            RefreshDarknessSamples(time);
             Simulation.Step(Navigation, losView, deltaTime, time, range);
+            ApplyFeedRequests();
+            ApplyProductionRequests();
             Publish();
             PublishDrops(64);
             expiredCorpses.Clear();
@@ -237,6 +249,134 @@ namespace FlatWorld.AIECS.Gameplay
                 expiredCorpses.Add(corpses.Dequeue().Entity);
             }
             Simulation.DespawnBatch(expiredCorpses.AsArray());
+        }
+
+        /// <summary>环境亮度由 Unity 世界提供，避光决策与受击则留在共享 ECS 能力里。</summary>
+        private void RefreshDarknessSamples(double time)
+        {
+            LightLayerMgr lights = LightLayerMgr.Instance;
+            WorldNavigationManager navigation = WorldNavigationManager.ExistingInstance;
+            if (lights == null) return;
+            Simulation.Complete();
+            EntityManager entities = Simulation.Entities;
+            using EntityQuery query = entities.CreateEntityQuery(
+                ComponentType.ReadOnly<AiecsFlowAgent>(), ComponentType.ReadWrite<AiecsDarkness>());
+            using NativeArray<Entity> actors = query.ToEntityArray(Allocator.Temp);
+            foreach (Entity entity in actors)
+            {
+                AiecsDarkness darkness = entities.GetComponentData<AiecsDarkness>(entity);
+                if (time < darkness.NextSampleTime) continue;
+                darkness.NextSampleTime = time + 0.2d;
+                float2 position = entities.GetComponentData<AiecsFlowAgent>(entity).Position;
+                Vector2 origin = new Vector2(position.x, position.y);
+                darkness.LightLevel = lights.TryGetLightLevel(origin, out float brightness) ? brightness : 0f;
+                darkness.HasDarkDestination = 0;
+                if (darkness.LightLevel > 0.0001f && navigation != null && navigation.IsNavigationReady)
+                {
+                    float phase = entity.Index * 2.399963f;
+                    for (int ring = 1; ring <= 3 && darkness.HasDarkDestination == 0; ring++)
+                        for (int sample = 0; sample < 16; sample++)
+                        {
+                            float angle = phase + sample * Mathf.PI * 0.125f;
+                            float distance = darkness.RetreatRadius * ring / 3f;
+                            Vector2 candidate = WorldTopologyRuntime.NormalizePosition(origin +
+                                new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * distance);
+                            if (!lights.IsCompletelyDark(candidate) ||
+                                !navigation.TryGetCell(candidate, out _, out bool walkable) || !walkable)
+                                continue;
+                            darkness.DarkDestination = new float2(candidate.x, candidate.y);
+                            darkness.HasDarkDestination = 1;
+                            break;
+                        }
+                }
+                entities.SetComponentData(entity, darkness);
+            }
+        }
+
+        /// <summary>产物请求完成实体身份复核后交给正式掉落服务。</summary>
+        private void ApplyProductionRequests()
+        {
+            EntityManager entities = Simulation.Entities;
+            while (Simulation.TryDequeueProductionRequest(out AiecsProductionRequest request))
+            {
+                if (!entities.Exists(request.Entity) ||
+                    entities.GetComponentData<AiecsIdentity>(request.Entity).Key != request.Identity ||
+                    entities.GetComponentData<AiecsVital>(request.Entity).Dead != 0 ||
+                    request.ItemId.IsEmpty)
+                    continue;
+                DroppedItemService.SpawnLoot(request.ItemId.ToString(),
+                    new Vector2(request.Position.x, request.Position.y));
+            }
+        }
+
+        /// <summary>统一校验草格并原子扣除资源，同一格被多只生物争抢时只给成功者回写营养。</summary>
+        private void ApplyFeedRequests()
+        {
+            EntityManager entities = Simulation.Entities;
+            ChunkMgr chunks = ChunkMgr.Instance;
+            int searches = 0;
+            while (Simulation.TryDequeueFeedRequest(out AiecsFeedRequest request))
+            {
+                if (chunks == null || !entities.Exists(request.Entity) ||
+                    entities.GetComponentData<AiecsIdentity>(request.Entity).Key != request.Identity ||
+                    !entities.HasComponent<AiecsNutrition>(request.Entity) ||
+                    entities.GetComponentData<AiecsVital>(request.Entity).Dead != 0)
+                    continue;
+                AiecsNutrition nutrition = entities.GetComponentData<AiecsNutrition>(request.Entity);
+                float2 position = entities.GetComponentData<AiecsFlowAgent>(request.Entity).Position;
+                if (request.Operation == AiecsFeedOperation.Search)
+                {
+                    if (searches++ >= 8) continue;
+                    if (request.Resource == AiecsFoodResource.Nectar)
+                    {
+                        if (AiecsNectarForageProvider.TryFind(new Vector2(position.x, position.y),
+                                out Vector2 nectar, out int guid, out AiecsFoodTarget kind))
+                        {
+                            nutrition.FoodGuid = guid;
+                            nutrition.FoodPosition = new float2(nectar.x, nectar.y);
+                            nutrition.TargetKind = kind;
+                            nutrition.HasFoodTarget = 1;
+                            entities.SetComponentData(request.Entity, nutrition);
+                        }
+                        continue;
+                    }
+                    if (chunks.TryFindRuntimeGrassNear(new Vector2(position.x, position.y), 6f,
+                            out RuntimeTerrainTileSample grass))
+                    {
+                        nutrition.FoodCell = new int2(grass.WorldCell.x, grass.WorldCell.y);
+                        nutrition.FoodPosition = new float2(grass.WorldCell.x + 0.5f, grass.WorldCell.y + 0.5f);
+                        nutrition.HasFoodTarget = 1;
+                        entities.SetComponentData(request.Entity, nutrition);
+                    }
+                    continue;
+                }
+                if (request.Resource == AiecsFoodResource.Nectar)
+                {
+                    Vector2 nectar = new Vector2(nutrition.FoodPosition.x, nutrition.FoodPosition.y);
+                    if (WorldTopologyRuntime.SqrDistance(new Vector2(position.x, position.y), nectar) > 0.36f ||
+                        !AiecsNectarForageProvider.IsStillAvailable(nectar, request.FoodGuid,
+                            request.TargetKind))
+                        continue;
+                    nutrition.Current = Mathf.Min(nutrition.Maximum, nutrition.Current + nutrition.FeedGain);
+                    entities.SetComponentData(request.Entity, nutrition);
+                    if (entities.HasComponent<AiecsHiveMember>(request.Entity) && nutrition.Current > 1000f)
+                    {
+                        AiecsHiveMember hive = entities.GetComponentData<AiecsHiveMember>(request.Entity);
+                        if (hive.HomeGuid != 0)
+                        {
+                            hive.CarryingHoney = 1;
+                            entities.SetComponentData(request.Entity, hive);
+                        }
+                    }
+                    continue;
+                }
+                Vector2 foodCenter = new Vector2(request.FoodCell.x + 0.5f, request.FoodCell.y + 0.5f);
+                if (WorldTopologyRuntime.SqrDistance(new Vector2(position.x, position.y), foodCenter) > 0.36f ||
+                    !chunks.TryConsumeRuntimeGrass(new Vector2Int(request.FoodCell.x, request.FoodCell.y)))
+                    continue;
+                nutrition.Current = Mathf.Min(nutrition.Maximum, nutrition.Current + nutrition.FeedGain);
+                entities.SetComponentData(request.Entity, nutrition);
+            }
         }
 
         /// <summary>仅在水流 JSON 重新发布时同步模板和现有 ECS 居民，不增加常规 Tick 的逐实体托管访问。</summary>
@@ -249,6 +389,7 @@ namespace FlatWorld.AIECS.Gameplay
             {
                 AiecsActorTemplate template = Templates[i];
                 template.WaterCurrentPushSpeed = WaterCurrentPushConfigService.ResolvePushSpeed(actorIds[i]);
+                template.Flight.BaseWaterPushSpeed = template.WaterCurrentPushSpeed;
                 Templates[i] = template;
             }
 

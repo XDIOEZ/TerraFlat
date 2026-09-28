@@ -618,8 +618,7 @@ public sealed partial class ModRuntimeManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 解析 MOD Actor 继承并原子注册。Actor 复用 ItemDefinition 的实例化/存档管线，
-    /// 但必须继承或提供带 IAIActor 的合法外壳；行为参数与外观均由 JSON 覆盖。
+    /// 解析 MOD Actor 继承并原子注册；外壳只提供内容编译素材，运行行为由 ECS 能力组成。
     /// </summary>
     private void ProcessActorDefinitions(GameRes gameRes)
     {
@@ -644,6 +643,13 @@ public sealed partial class ModRuntimeManager : MonoBehaviour
                 ?? throw new InvalidDataException($"Actor Def 无法解析：{pair.Key}");
             if (definition.Abstract)
                 continue;
+            if (pair.Value["ecs"]?["capabilities"] is not JArray capabilities || capabilities.Count == 0)
+                throw new InvalidDataException($"Actor {pair.Key} 缺少 ecs.capabilities，不能交给 ECS 运行。");
+            if (pair.Value["modules"] is JObject actorModules)
+                foreach (JProperty module in actorModules.Properties())
+                    if (module.Value is JObject definitionModule && IsActorLuaModule(definitionModule))
+                        throw new InvalidDataException(
+                            $"Actor {pair.Key} 的 Lua Item 模块不会在 ECS 生物上运行；请使用 ecs.capabilities。");
             PendingActorDefinition source = sources[pair.Key];
             if (string.IsNullOrWhiteSpace(definition.Id) || !seenActorIds.Add(definition.Id))
                 throw new InvalidDataException($"Actor Def ID 为空或重复：{definition.Id ?? "<empty>"}");

@@ -5,6 +5,8 @@ public sealed partial class Mod_HiveColony
 {
     #region 昼夜睡眠
 
+    private double defenseUntil; // 蜂巢受击后短时间内不让防守成员重新睡回去。
+
     /// <summary>夜间让清醒成员返巢并推进睡眠消耗；白天恢复所有巢内成员。</summary>
     private void TickSleepCycle(float deltaTime)
     {
@@ -12,38 +14,38 @@ public sealed partial class Mod_HiveColony
         if (dayTime)
         {
             WakeSleepingResidents(null);
-            foreach (Item resident in residents.Values)
-            {
-                Mod_BeeBehavior bee = resident?.itemMods?.GetMod_ByID<Mod_BeeBehavior>(Mod_BeeBehavior.ModuleId);
-                bee?.SetNightSleepRequested(false);
-            }
+            IAiEcologyBackend backend = AiRuntimeBackendService.Ecology;
+            foreach (int guid in residents)
+                backend?.TrySetHiveActorDirective(guid, false, 0f, default, false);
             return;
         }
 
         AdvanceSleepingResidents(deltaTime);
-        ItemMgr manager = ItemMgr.Instance;
+        if (TryGetWorldTime(out double now, out _) && now < defenseUntil)
+            return;
+        IAiEcologyBackend ecology = AiRuntimeBackendService.Ecology;
         for (int index = 0; index < state.Residents.Count; index++)
         {
             ResidentState member = state.Residents[index];
-            if (member.SleepingInHive || !residents.TryGetValue(member.Guid, out Item resident) || resident == null)
+            if (member.SleepingInHive || !residents.Contains(member.Guid) || ecology == null ||
+                !ecology.TryGetActor(member.Guid, out Vector3 position, out bool alive) || !alive)
+                continue;
+            ecology.TrySetHiveActorDirective(member.Guid, true, 0f, default, false);
+            const float arrivalRadius = 0.45f;
+            if (WorldTopologyRuntime.SqrDistance(position, HomePosition) > arrivalRadius * arrivalRadius)
                 continue;
 
-            Mod_BeeBehavior bee = resident.itemMods?.GetMod_ByID<Mod_BeeBehavior>(Mod_BeeBehavior.ModuleId);
-            if (bee == null)
-                continue;
-            bee.SetNightSleepRequested(true);
-
-            float arrivalRadius = bee.HomeArrivalRadius;
-            if (WorldTopologyRuntime.SqrDistance(resident.transform.position, HomePosition) >
-                arrivalRadius * arrivalRadius)
-                continue;
-
-            member.Bee = bee.CaptureState();
-            member.SleepDrainPerSecond = Mathf.Max(0f, bee.SatietyDrainRate);
+            if (ecology.TryGetHiveActorState(member.Guid, out AiHiveActorState live))
+            {
+                member.Bee.Satiety = live.Satiety;
+                member.Bee.Anger = live.Anger;
+                member.Bee.Angry = live.Angry;
+                member.Bee.ReturningHome = live.ReturningHome;
+            }
+            member.SleepDrainPerSecond = 1f;
             member.SleepingInHive = true;
             residents.Remove(member.Guid);
-            if (!resident.DestructionHandled)
-                manager.DespawnItem(resident, saveData: false);
+            ecology.TryDespawnActor(member.Guid);
         }
     }
 
@@ -57,7 +59,7 @@ public sealed partial class Mod_HiveColony
         for (int index = 0; index < state.Residents.Count; index++)
         {
             ResidentState member = state.Residents[index];
-            if (!member.SleepingInHive || member.Bee == null)
+            if (!member.SleepingInHive)
                 continue;
             member.Bee.Satiety = Mathf.Max(
                 0f,
@@ -69,27 +71,29 @@ public sealed partial class Mod_HiveColony
     private void WakeSleepingResidents(Item defenseTarget)
     {
         bool nightTime = !IsDayTime();
+        IAiEcologyBackend backend = AiRuntimeBackendService.Ecology;
         for (int index = 0; index < state.Residents.Count; index++)
         {
             ResidentState member = state.Residents[index];
             if (!member.SleepingInHive)
                 continue;
 
+            if (!SpawnResident(index, member))
+                continue;
             member.SleepingInHive = false;
-            SpawnResident(index, member);
-            if (!residents.TryGetValue(member.Guid, out Item resident) || resident == null)
-                continue;
-            Mod_BeeBehavior bee = resident.itemMods?.GetMod_ByID<Mod_BeeBehavior>(Mod_BeeBehavior.ModuleId);
-            if (bee == null)
-                continue;
-            bee.SetNightSleepRequested(nightTime);
-            if (defenseTarget != null)
-                bee.ForceHiveDefenseTarget(defenseTarget);
+            backend?.TrySetHiveActorDirective(member.Guid, nightTime, defenseTarget != null ? 1f : 0f,
+                defenseTarget != null ? (Vector2)defenseTarget.transform.position : default,
+                defenseTarget != null);
         }
     }
 
     /// <summary>蜂巢受击专用唤醒入口。</summary>
-    private void WakeSleepingResidentsForDefense(Item attacker) => WakeSleepingResidents(attacker);
+    private void WakeSleepingResidentsForDefense(Item attacker)
+    {
+        if (TryGetWorldTime(out double now, out _))
+            defenseUntil = now + 10d;
+        WakeSleepingResidents(attacker);
+    }
 
     /// <summary>当前场景六点到十八点视作活动时段；时钟不可用时保守保持清醒。</summary>
     private bool IsDayTime()

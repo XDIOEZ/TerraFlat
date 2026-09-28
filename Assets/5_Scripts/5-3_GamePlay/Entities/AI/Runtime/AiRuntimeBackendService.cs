@@ -2,11 +2,42 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
+#region ECS 生物后端契约
+
 /// <summary>单个生态物种使用的 AI 运行时后端。</summary>
 public enum AiRuntimeBackendKind
 {
-    GameObject = 0,
+    Unsupported = 0,
     Entities = 1
+}
+
+/// <summary>蜂巢与 ECS 成员交换的持久状态，不暴露 Entity 或旧鸟类模块。</summary>
+[Serializable]
+public struct AiHiveActorState
+{
+    public float Satiety;
+    public float Anger;
+    public bool Angry;
+    public bool ReturningHome;
+    public bool Orphaned;
+}
+
+/// <summary>事件和 MOD 向 ECS 生物下发的推进目标。</summary>
+public readonly struct AIAdvanceCommand
+{
+    public int TargetItemGuid { get; }
+    public Vector3 TargetPosition { get; }
+    public float ArrivalDistance { get; }
+    public bool AttackActorsOnRoute { get; }
+
+    public AIAdvanceCommand(int targetItemGuid, Vector3 targetPosition,
+        float arrivalDistance, bool attackActorsOnRoute)
+    {
+        TargetItemGuid = targetItemGuid;
+        TargetPosition = targetPosition;
+        ArrivalDistance = Mathf.Max(0.05f, arrivalDistance);
+        AttackActorsOnRoute = attackActorsOnRoute;
+    }
 }
 
 /// <summary>
@@ -23,6 +54,21 @@ public interface IAiEcologyBackend
     bool SupportsSpecies(string speciesId);
     bool TrySpawn(SpawnerConfig config, SpawnerConfig.SpawnEntry entry, Vector3 position);
     bool TrySpawnEvent(string speciesId, Vector3 position);
+    bool TrySpawnEvent(string speciesId, Vector3 position, out int actorGuid);
+    bool TrySpawnDirect(string speciesId, Vector3 position, int requestedGuid, out int actorGuid);
+    bool TrySetAdvanceCommand(int actorGuid, AIAdvanceCommand command);
+    bool TryClearAdvanceCommand(int actorGuid);
+    bool TryGetActor(int actorGuid, out Vector3 position, out bool alive);
+    bool TryDespawnActor(int actorGuid);
+    bool TryBindHiveActor(int actorGuid, int hiveGuid, Vector2 home, float patrolRadius, AiHiveActorState state);
+    bool TryGetHiveActorState(int actorGuid, out AiHiveActorState state);
+    bool TrySetHiveActorDirective(int actorGuid, bool returnHome, float alert, Vector2 defensePosition, bool hasDefenseTarget);
+    bool TryReleaseHiveActor(int actorGuid, Vector2 formerHome, Vector2 defensePosition, bool hasDefenseTarget);
+    bool TryCollectHiveHoney(int actorGuid, Vector2 home, float arrivalRadius,
+        float minimumSatiety, float contributionCost);
+    bool TryGiveHiveHoney(int actorGuid, Vector2 home, float arrivalRadius,
+        float feedBelow, float mealGain);
+    void CaptureResidents(MonsterSpawnerSaveData destination);
     int GetGroupCount(SpawnerConfig config);
     int GetSpeciesCount(string speciesId);
     int ResidentCount { get; }
@@ -30,9 +76,12 @@ public interface IAiEcologyBackend
     int CountGroupWithinRadius(SpawnerConfig config, Vector3 center, float radiusSqr);
 }
 
+#endregion
+
+#region ECS 物种路由
+
 /// <summary>
-/// AI 后端路由。全局开关只控制是否允许 Entities，具体物种由生成配置单独选择；
-/// GameObject AI 与正式 AIECS 可以并行存在，但同一物种在同一世界只能归属一个后端。
+/// AI 后端路由。正式 Actor 目录统一归属 Entities，生成配置只决定何时何地出生；
 /// 后端注册采用单实例所有权，避免开发入口和正式世界同时驱动两套 ECS World。
 /// </summary>
 public static class AiRuntimeBackendService
@@ -44,7 +93,7 @@ public static class AiRuntimeBackendService
     public static IAiEcologyBackend Ecology => _ecology;
     public static bool HasEntitiesRoutes => EntitySpecies.Count > 0;
 
-    /// <summary>按当前世界生成目录冻结物种后端；同一物种禁止配置成两个不同后端。</summary>
+    /// <summary>当前已注册的 Actor 统一交给 ECS；普通生成器和蜂巢等直接生成入口使用同一归属。</summary>
     public static void ConfigureRoutes(IReadOnlyList<SpawnerConfig> configs)
     {
         if (configs == null)
@@ -53,7 +102,6 @@ public static class AiRuntimeBackendService
             return;
         }
 
-        var configured = new Dictionary<string, AiRuntimeBackendKind>(StringComparer.OrdinalIgnoreCase);
         var entitySpecies = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         for (int configIndex = 0; configIndex < configs.Count; configIndex++)
         {
@@ -68,18 +116,18 @@ public static class AiRuntimeBackendService
                 if (string.IsNullOrWhiteSpace(speciesId))
                     continue;
 
-                if (configured.TryGetValue(speciesId, out AiRuntimeBackendKind existing) &&
-                    existing != entry.RuntimeBackend)
-                {
+                if (entry.RuntimeBackend != AiRuntimeBackendKind.Entities ||
+                    GameRes.Instance == null || !GameRes.Instance.ActorDefinitions.ContainsKey(speciesId))
                     throw new InvalidOperationException(
-                        $"AI 物种 {speciesId} 同时配置了 {existing} 与 {entry.RuntimeBackend} 后端。");
-                }
-
-                configured[speciesId] = entry.RuntimeBackend;
-                if (entry.RuntimeBackend == AiRuntimeBackendKind.Entities)
-                    entitySpecies.Add(speciesId);
+                        $"生态条目 {speciesId} 必须是已注册的 ECS Actor，后端={entry.RuntimeBackend}。");
+                entitySpecies.Add(speciesId);
             }
         }
+
+        // 普通生态规则未列出的 Actor（例如蜂巢成员）也必须归入同一 ECS 后端。
+        if (GameRes.Instance != null)
+            foreach (string speciesId in GameRes.Instance.ActorDefinitions.Keys)
+                entitySpecies.Add(speciesId);
 
         EntitySpecies.Clear();
         EntitySpecies.UnionWith(entitySpecies);
@@ -97,10 +145,10 @@ public static class AiRuntimeBackendService
         return !string.IsNullOrWhiteSpace(speciesId) && EntitySpecies.Contains(speciesId.Trim());
     }
 
-    /// <summary>当前生成条目是否明确选择 AIECS。</summary>
+    /// <summary>物种归属是唯一权威，生成规则不能把已迁移 Actor 送回旧 GameObject 后端。</summary>
     public static bool UsesEntities(SpawnerConfig.SpawnEntry entry)
     {
-        return entry != null && entry.RuntimeBackend == AiRuntimeBackendKind.Entities;
+        return entry != null && UsesEntities(entry.PrefabName);
     }
 
     /// <summary>
@@ -134,3 +182,5 @@ public static class AiRuntimeBackendService
             _ecology = null;
     }
 }
+
+#endregion

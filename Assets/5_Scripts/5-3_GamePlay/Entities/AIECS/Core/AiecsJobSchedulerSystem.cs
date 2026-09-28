@@ -15,6 +15,15 @@ namespace FlatWorld.AIECS
         internal ComponentLookup<AiecsSimulationPulse> GetPulseLookup() =>
             GetComponentLookup<AiecsSimulationPulse>(true);
 
+        internal ComponentLookup<AiecsFlight> GetFlightLookup() =>
+            GetComponentLookup<AiecsFlight>(true);
+
+        internal ComponentLookup<AiecsHiveMember> GetHiveLookup() =>
+            GetComponentLookup<AiecsHiveMember>(true);
+
+        internal ComponentLookup<AiecsBrain> GetBrainLookup() =>
+            GetComponentLookup<AiecsBrain>(true);
+
         protected override void OnUpdate()
         {
             // 本系统不加入更新组，只作为私有 AIECS World 的显式调度入口。
@@ -27,6 +36,30 @@ namespace FlatWorld.AIECS
             job.ScheduleParallel(query, dependency);
 
         internal JobHandle ScheduleParallel(AiecsPerceptionSystem job, EntityQuery query, JobHandle dependency) =>
+            job.ScheduleParallel(query, dependency);
+
+        internal JobHandle ScheduleParallel(AiecsNutritionJob job, EntityQuery query, JobHandle dependency) =>
+            job.ScheduleParallel(query, dependency);
+
+        internal JobHandle ScheduleParallel(AiecsSleepJob job, EntityQuery query, JobHandle dependency) =>
+            job.ScheduleParallel(query, dependency);
+
+        internal JobHandle ScheduleParallel(AiecsHiveJob job, EntityQuery query, JobHandle dependency) =>
+            job.ScheduleParallel(query, dependency);
+
+        internal JobHandle ScheduleParallel(AiecsReproductionJob job, EntityQuery query, JobHandle dependency) =>
+            job.ScheduleParallel(query, dependency);
+
+        internal JobHandle ScheduleParallel(AiecsDarknessJob job, EntityQuery query, JobHandle dependency) =>
+            job.ScheduleParallel(query, dependency);
+
+        internal JobHandle ScheduleParallel(AiecsPackJob job, EntityQuery query, JobHandle dependency) =>
+            job.ScheduleParallel(query, dependency);
+
+        internal JobHandle ScheduleParallel(AiecsTacticsJob job, EntityQuery query, JobHandle dependency) =>
+            job.ScheduleParallel(query, dependency);
+
+        internal JobHandle ScheduleParallel(AiecsFlightJob job, EntityQuery query, JobHandle dependency) =>
             job.ScheduleParallel(query, dependency);
 
         internal JobHandle ScheduleParallel(AiecsDecisionSystem job, EntityQuery query, JobHandle dependency) =>

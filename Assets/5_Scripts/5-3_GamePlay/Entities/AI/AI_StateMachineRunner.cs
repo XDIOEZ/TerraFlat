@@ -9,27 +9,6 @@ public interface IAIActor
     bool IsAlive { get; }
 }
 
-/// <summary>外部系统下发给 AI 的推进命令。</summary>
-public readonly struct AIAdvanceCommand
-{
-    public int TargetItemGuid { get; }
-    public Vector3 TargetPosition { get; }
-    public float ArrivalDistance { get; }
-    public bool AttackActorsOnRoute { get; }
-
-    public AIAdvanceCommand(
-        int targetItemGuid,
-        Vector3 targetPosition,
-        float arrivalDistance,
-        bool attackActorsOnRoute)
-    {
-        TargetItemGuid = targetItemGuid;
-        TargetPosition = targetPosition;
-        ArrivalDistance = Mathf.Max(0.05f, arrivalDistance);
-        AttackActorsOnRoute = attackActorsOnRoute;
-    }
-}
-
 /// <summary>可接收通用推进命令的 AI。</summary>
 public interface IAIAdvanceCommandReceiver
 {

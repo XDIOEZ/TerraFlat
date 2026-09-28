@@ -246,9 +246,7 @@ public static class SpawnerConfigCatalogLoader
 
     private static bool IsSupportedRuntimeBackend(string value)
     {
-        return string.Equals(value, "gameObject", StringComparison.OrdinalIgnoreCase) ||
-               string.Equals(value, nameof(AiRuntimeBackendKind.GameObject), StringComparison.OrdinalIgnoreCase) ||
-               string.Equals(value, "entities", StringComparison.OrdinalIgnoreCase) ||
+        return string.Equals(value, "entities", StringComparison.OrdinalIgnoreCase) ||
                string.Equals(value, nameof(AiRuntimeBackendKind.Entities), StringComparison.OrdinalIgnoreCase);
     }
 

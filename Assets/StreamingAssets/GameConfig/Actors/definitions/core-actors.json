@@ -3,6 +3,12 @@
   "actors": [
     {
       "id": "Chicken",
+      "ecs": {
+        "capabilities": ["movement", "perception", "nutrition", "feeding", "sleep", "flee", "reproduction", "eggLaying"],
+        "nutrition": { "maximum": 100.0, "drainPerSecond": 0.02, "feedBelow": 35.0, "feedGain": 25.0 },
+        "sleep": { "dayStartRatio": 0.25, "dayEndRatio": 0.75, "healthBelow": 0.5 },
+        "reproduction": { "cooldownDays": 2.0, "eggItemId": "Egg" }
+      },
       "lootTableId": "Chicken_Default",
       "shellPrefab": "CoreActor.Chicken.Shell",
       "shellAddress": "flatworld.actor.shell.chicken",
@@ -692,6 +698,11 @@
     },
     {
       "id": "WildBoar",
+      "ecs": {
+        "capabilities": ["movement", "perception", "nutrition", "feeding", "flee", "combat", "charge", "chase"],
+        "nutrition": { "maximum": 100.0, "drainPerSecond": 0.025, "feedBelow": 35.0, "feedGain": 30.0 },
+        "charge": { "speedMultiplier": 1.8, "durationSeconds": 1.2, "cooldownSeconds": 5.0 }
+      },
       "weight": 90.0,
       "lootTableId": "WildBoar_Default",
       "shellPrefab": "CoreActor.WildBoar.Shell",
@@ -1423,6 +1434,10 @@
     },
     {
       "id": "Wolf",
+      "ecs": {
+        "capabilities": ["movement", "perception", "combat", "flee", "pack", "chase"],
+        "pack": { "assistRadius": 8.0, "cohesionRadius": 3.0, "candidateBudget": 32 }
+      },
       "lootTableId": "Wolf_Default",
       "shellPrefab": "CoreActor.Wolf.Shell",
       "shellAddress": "flatworld.actor.shell.wolf",
@@ -2120,6 +2135,10 @@
     },
     {
       "id": "Ghost",
+      "ecs": {
+        "capabilities": ["movement", "perception", "combat", "darkness", "chase"],
+        "darkness": { "damageThreshold": 0.5, "damageFractionPerSecond": 0.05, "retreatRadius": 5.0 }
+      },
       "weight": 1.0,
       "shellPrefab": "CoreActor.Ghost.Shell",
       "shellAddress": "flatworld.actor.shell.ghost",

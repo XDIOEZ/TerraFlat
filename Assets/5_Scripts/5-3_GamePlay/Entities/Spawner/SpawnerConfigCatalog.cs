@@ -180,8 +180,8 @@ public sealed class SpawnerSpawnEntryDefinition
 {
     [JsonProperty(Required = Required.Always)]
     public string PrefabName;
-    [JsonProperty(Required = Required.Always)]
-    public string RuntimeBackend = "gameObject";
+    [JsonProperty("runtimeBackend")]
+    public string RuntimeBackend = "entities";
     [JsonProperty(Required = Required.Always)]
     public float Probability = 0.5f;
     [JsonProperty(Required = Required.Always)]
@@ -217,7 +217,7 @@ public sealed class SpawnerSpawnEntryDefinition
         return string.Equals(value, "entities", StringComparison.OrdinalIgnoreCase) ||
                string.Equals(value, nameof(AiRuntimeBackendKind.Entities), StringComparison.OrdinalIgnoreCase)
             ? AiRuntimeBackendKind.Entities
-            : AiRuntimeBackendKind.GameObject;
+            : AiRuntimeBackendKind.Unsupported;
     }
 }
 

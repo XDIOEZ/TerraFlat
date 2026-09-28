@@ -3,6 +3,10 @@
   "actors": [
     {
       "id": "Bird",
+      "ecs": {
+        "capabilities": ["movement", "perception", "nutrition", "feeding", "sleep", "flee", "flight"],
+        "flight": { "height": 0.8, "speed": 3.2, "staminaMaximum": 100.0, "staminaDrainPerSecond": 1.0 }
+      },
       "weight": 0.3,
       "parent": "Chicken",
       "lootTableId": "Chicken_Default",
@@ -105,6 +109,9 @@
     },
     {
       "id": "Seagull",
+      "ecs": {
+        "capabilities": ["movement", "perception", "nutrition", "feeding", "sleep", "flee", "flight"]
+      },
       "weight": 0.8,
       "parent": "Bird",
       "shellPrefab": "CoreActor.Seagull.Shell",
@@ -135,6 +142,12 @@
     },
     {
       "id": "Bee",
+      "ecs": {
+        "capabilities": ["movement", "perception", "nutrition", "feeding", "flight", "hiveMember", "combat", "chase"],
+        "nutrition": { "maximum": 1440.0, "drainPerSecond": 1.0, "feedBelow": 800.0, "feedGain": 500.0, "resource": "nectar" },
+        "flight": { "height": 0.8, "speed": 3.2, "staminaMaximum": 100.0, "staminaDrainPerSecond": 0.0 },
+        "combat": { "damage": { "piercing": 1.0 } }
+      },
       "weight": 0.001,
       "parent": "Bird",
       "lootTableId": "",

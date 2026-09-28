@@ -19,7 +19,8 @@ namespace FlatWorld.AIECS
 
         /// <summary>消费行为意图，设置共享 Goal 或局部目标，不建立单位级路线。</summary>
         private void Execute([EntityIndexInQuery] int index, Entity entity, in AiecsIdentity identity, in AiecsVital vital,
-            in AiecsBehaviorIntent intent, in AiecsAttackState attack, in AiecsStatus status,
+            in AiecsBehaviorIntent intent, in AiecsAdvanceDirective advance,
+            in AiecsAttackState attack, in AiecsStatus status,
             ref AiecsBrain brain, ref AiecsLocalMotion local, ref AiecsBody body, ref AiecsFlowAgent actor)
         {
             actor.Mode = AiecsMoveMode.Hold;
@@ -29,6 +30,13 @@ namespace FlatWorld.AIECS
             if (math.lengthsq(actor.Velocity) > 0.0001f) body.Facing = math.normalizesafe(actor.Velocity);
             bool locked = attack.Phase == AiecsAttackPhase.Windup || attack.Phase == AiecsAttackPhase.Active || attack.Phase == AiecsAttackPhase.Recovery;
             if (locked || intent.Behavior == (int)AiecsBehavior.Idle || intent.Behavior == (int)AiecsBehavior.Attack) return;
+            if (intent.Behavior == (int)AiecsBehavior.Advance && advance.Active != 0)
+            {
+                actor.Mode = AiecsMoveMode.SharedGoal;
+                actor.Goal = advance.Goal;
+                actor.StopDistance = advance.ArrivalDistance;
+                return;
+            }
             if (intent.Behavior == (int)AiecsBehavior.Chase && Spatial.TryTarget(intent.Target, intent.TargetKey, out var target))
             {
                 body.Facing = math.normalizesafe(Spatial.Domain.ShortestDelta(actor.Position, target.Position), body.Facing);

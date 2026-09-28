@@ -20,9 +20,10 @@ namespace FlatWorld.AIECS
         [NativeDisableParallelForRestriction] public NativeArray<AiecsDisplayRecord> Display;
         [NativeDisableParallelForRestriction] public NativeArray<AiecsWorkCounters> Work;
         public CombatClock Clock;
+        [ReadOnly] public ComponentLookup<AiecsFlight> Flights;
 
         /// <summary>按查询索引写出一致状态供渲染、界面和组中心归约消费。</summary>
-        private void Execute([EntityIndexInQuery] int index, in AiecsIdentity identity, in AiecsFlowAgent actor,
+        private void Execute([EntityIndexInQuery] int index, Entity entity, in AiecsIdentity identity, in AiecsFlowAgent actor,
             in AiecsBody body, in AiecsVital vital, in AiecsBrain brain, in AiecsAttackState attack,
             in AiecsSimulationPulse pulse, in AiecsWorkCounters counters)
         {
@@ -50,6 +51,7 @@ namespace FlatWorld.AIECS
                 AttackPhase = attack.Phase, Dead = vital.Dead, External = identity.External,
                 ActionElapsed = math.max(0f, (float)(displayTime - actionStarted)),
                 LiquidDepth = actor.LiquidDepth, WaterBlend = actor.WaterBlend,
+                FlightHeight = Flights.TryGetComponent(entity, out AiecsFlight flight) ? flight.Height : 0f,
                 HasTarget = (byte)(brain.Target != Entity.Null ? 1 : 0) };
             Work[index] = counters;
         }

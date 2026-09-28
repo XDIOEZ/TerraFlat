@@ -41,13 +41,13 @@ public sealed partial class Mod_HiveColony
     /// <summary>领地内成员共享玩家的最高停留进度；飞出领地的成员立即移除这一路警戒源。</summary>
     private void ApplyTerritoryAlert(float staySeconds)
     {
-        foreach (Item resident in residents.Values)
+        IAiEcologyBackend backend = AiRuntimeBackendService.Ecology;
+        foreach (int guid in residents)
         {
-            Mod_BeeBehavior bee = resident?.itemMods?.GetMod_ByID<Mod_BeeBehavior>(Mod_BeeBehavior.ModuleId);
-            if (bee == null)
+            if (backend?.TryGetActor(guid, out Vector3 position, out bool alive) != true || !alive)
                 continue;
-            float residentStay = IsInsideTerritory(resident.transform.position) ? staySeconds : 0f;
-            bee.SetColonyTerritoryAlert(residentStay, AlarmSeconds);
+            float residentStay = IsInsideTerritory(position) ? staySeconds : 0f;
+            backend.TrySetHiveActorDirective(guid, false, residentStay / AlarmSeconds, default, false);
         }
     }
 

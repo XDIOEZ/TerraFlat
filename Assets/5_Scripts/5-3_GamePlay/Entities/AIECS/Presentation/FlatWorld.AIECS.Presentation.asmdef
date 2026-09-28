@@ -1,5 +1,6 @@
 {
     "name": "FlatWorld.AIECS.Presentation",
     "references": ["FlatWorld.AIECS", "FlatWorld.WorldTopology", "Data", "Unity.Entities", "Unity.Collections", "Unity.Mathematics", "Unity.Burst"],
-    "autoReferenced": true
+    "autoReferenced": true,
+    "allowUnsafeCode": true
 }

@@ -11,7 +11,6 @@ public partial class MonsterSpawnerManager
 
     /// <summary>事件候选重试共用相机缓冲；相机数量增加时完整扩容，不截断视野查询。</summary>
     private Camera[] _eventCameras = Array.Empty<Camera>();
-    private readonly List<MonoBehaviour> _eventActorBehaviours = new(16);
     private float _nextEventSearchTime;
 
     public int GetEventSpawnPlayerCount(string worldKey)
@@ -33,7 +32,7 @@ public partial class MonsterSpawnerManager
 
     public int SpawnEventCreatures(
         GameEventCreatureSpawnRequest request,
-        List<Item> spawnedItems)
+        List<int> spawnedActorGuids)
     {
         if (!GameNetwork.HasStateAuthority ||
             request == null ||
@@ -72,9 +71,9 @@ public partial class MonsterSpawnerManager
             return 0;
 
         _nextCreatureBirthTime = now + Mathf.Max(0.1f, _settings.EcologyTickInterval);
-        if (!TrySpawnEventCreature(request.PrefabId, position, out Item spawnedItem))
+        if (!TrySpawnEventCreature(request.PrefabId, position, out int actorGuid))
             return 0;
-        spawnedItems?.Add(spawnedItem);
+        spawnedActorGuids?.Add(actorGuid);
         return 1;
     }
 
@@ -187,98 +186,29 @@ public partial class MonsterSpawnerManager
 
     #endregion
 
-    #region 事件生物初始化校验
+    #region 事件生物 ECS 创建
 
     private bool TrySpawnEventCreature(
         string prefabId,
         Vector3 position,
-        out Item spawnedItem)
+        out int actorGuid)
     {
-        spawnedItem = null;
-        if (AiRuntimeBackendService.UsesEntities(prefabId))
+        actorGuid = 0;
+        if (!AiRuntimeBackendService.UsesEntities(prefabId))
         {
-            IAiEcologyBackend backend = AiRuntimeBackendService.Ecology;
-            if (backend == null || !backend.SupportsSpecies(prefabId))
-            {
-                Debug.LogWarning($"[GameEvent] 物种 '{prefabId}' 已指定 AIECS，但当前后端不支持；不会静默回退 GameObject。");
-                return false;
-            }
-
-            if (backend.ResidentCount >= Mathf.Max(1, _settings.MaxLoadedEntityActors))
-                return false;
-
-            return backend.TrySpawnEvent(prefabId, position);
-        }
-
-        if (_monsterManager == null || _monsterManager.Count >= Mathf.Max(1, _settings.MaxLoadedGameObjectActors))
-            return false;
-
-        try
-        {
-            spawnedItem = _itemManager.InstantiateItem(
-                prefabId,
-                position,
-                Quaternion.identity,
-                Vector3.one);
-            if (spawnedItem == null)
-                return false;
-
-            spawnedItem.Load();
-            if (!TryGetBoundAiActor(spawnedItem, out _))
-            {
-                Debug.LogError(
-                    $"[GameEvent] 生成 '{prefabId}' 后没有找到已绑定的 IAIActor，已回收未初始化实体。");
-                DespawnFailedEventCreature(spawnedItem);
-                spawnedItem = null;
-                return false;
-            }
-
-            spawnedItem.GetComponentInChildren<Mod_ItemDetector>(true)?.Update_Detector();
-            return true;
-        }
-        catch (Exception exception)
-        {
-            DespawnFailedEventCreature(spawnedItem);
-            spawnedItem = null;
-            Debug.LogError($"[GameEvent] Failed to spawn '{prefabId}': {exception.Message}");
+            Debug.LogWarning($"[GameEvent] 物种 '{prefabId}' 未注册为 ECS Actor。", this);
             return false;
         }
-    }
 
-    private bool TryGetBoundAiActor(Item spawnedItem, out IAIActor actor)
-    {
-        actor = null;
-        if (spawnedItem == null)
+        IAiEcologyBackend backend = AiRuntimeBackendService.Ecology;
+        if (backend == null || !backend.SupportsSpecies(prefabId))
+        {
+            Debug.LogWarning($"[GameEvent] ECS 后端尚不支持物种 '{prefabId}'。", this);
             return false;
-
-        _eventActorBehaviours.Clear();
-        spawnedItem.GetComponentsInChildren(true, _eventActorBehaviours);
-        for (int i = 0; i < _eventActorBehaviours.Count; i++)
-        {
-            if (_eventActorBehaviours[i] is not IAIActor candidate || candidate.ActorItem != spawnedItem)
-                continue;
-
-            actor = candidate;
-            _eventActorBehaviours.Clear();
-            return true;
         }
-        _eventActorBehaviours.Clear();
-        return false;
-    }
-
-    private void DespawnFailedEventCreature(Item spawnedItem)
-    {
-        if (spawnedItem == null || spawnedItem.DestructionHandled || _itemManager == null)
-            return;
-
-        try
-        {
-            _itemManager.DespawnItem(spawnedItem, saveData: false);
-        }
-        catch (Exception cleanupException)
-        {
-            Debug.LogError($"[GameEvent] 回收未初始化实体失败: {cleanupException.Message}");
-        }
+        if (backend.ResidentCount >= Mathf.Max(1, _settings.MaxLoadedEntityActors))
+            return false;
+        return backend.TrySpawnEvent(prefabId, position, out actorGuid);
     }
 
     #endregion

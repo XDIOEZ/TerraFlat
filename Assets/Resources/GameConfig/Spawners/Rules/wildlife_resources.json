@@ -35,7 +35,7 @@
     "spawnEntries": [
       {
         "prefabName": "Chicken",
-        "runtimeBackend": "gameObject",
+        "runtimeBackend": "entities",
         "probability": 2.5,
         "ecologyCost": 1,
         "speciesAliveLimit": 8,
@@ -49,7 +49,7 @@
       },
       {
         "prefabName": "WildBoar",
-        "runtimeBackend": "gameObject",
+        "runtimeBackend": "entities",
         "probability": 0.2631579,
         "ecologyCost": 2,
         "speciesAliveLimit": 5

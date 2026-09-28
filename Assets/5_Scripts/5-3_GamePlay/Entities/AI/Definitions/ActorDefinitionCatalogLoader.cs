@@ -601,10 +601,7 @@ public static class ActorDefinitionCatalogLoader
             throw new InvalidDataException($"Actor 外壳不存在：{shellId ?? "<empty>"}");
         if (shell.GetComponent<Item>()?.itemData == null)
             throw new InvalidDataException($"Actor 外壳缺少有效 Item：{shellId}");
-        bool hasActor = shell.GetComponentsInChildren<MonoBehaviour>(true)
-            .Any(component => component is IAIActor);
-        if (!hasActor)
-            throw new InvalidDataException($"Actor 外壳缺少 IAIActor 行为：{shellId}");
+        // 正式 Actor 的行为由 ECS 能力装配，外壳只提供静态作者资源。
     }
 
     #endregion

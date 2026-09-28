@@ -38,7 +38,7 @@
     "spawnEntries": [
       {
         "prefabName": "Ghost",
-        "runtimeBackend": "gameObject",
+        "runtimeBackend": "entities",
         "probability": 1.0,
         "ecologyCost": 1,
         "speciesAliveLimit": 0

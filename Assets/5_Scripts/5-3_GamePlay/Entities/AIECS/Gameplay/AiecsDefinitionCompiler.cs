@@ -27,38 +27,50 @@ namespace FlatWorld.AIECS.Gameplay
         {
             if (!GameRes.Instance.TryGetItemDefinition(actorId, out RuntimeItemDefinition source) || !source.IsActor)
                 throw new InvalidOperationException("AIECS 找不到当前 Actor 定义：" + actorId);
+            JObject ecs = source.ActorEcs;
+            AiecsCapability capabilities = ParseCapabilities(actorId, ecs);
             ItemData item = source.CreateItemData();
             JObject ai = Module<IAIActor>(source, item, out _);
             JObject detector = Module<Mod_ItemDetector>(source, item, out _);
             JObject mover = Module<Mover_AI>(source, item, out _);
             JObject health = Module<DamageReceiver>(source, item, out var healthModule);
             JObject attack = Module<Mod_Damage>(source, item, out _);
-            if (ai == null || health == null || mover == null || detector == null ||
-                (!fleeFromHostiles && attack == null))
-                throw new InvalidOperationException(actorId + " 缺少本轮基础战斗切片所需模块；不得通过旧 AI 静默回退。");
-            var life = health["Data"].ToObject<DamageReceiver.DamageReceiver_SaveData>();
+            if (health == null && ecs?["health"] == null)
+                throw new InvalidOperationException(actorId + " 缺少 ecs.health 生命配置。");
+            if ((capabilities & AiecsCapability.Combat) != 0 &&
+                attack == null && ecs?["combat"]?["damage"] == null)
+                throw new InvalidOperationException(actorId + " 缺少 ecs.combat.damage 攻击配置。");
+            var life = health != null
+                ? health["Data"].ToObject<DamageReceiver.DamageReceiver_SaveData>()
+                : EcsLife(ecs["health"]);
             var body = Body(source, health, healthModule);
             float start = Number(ai, "attackTriggerDistance", 1.2f);
-            float sense = senseOverride > 0f ? senseOverride : Number(ai, "chaseTriggerDistance", Number(detector, "detectionRadius", 10f));
+            float sense = senseOverride > 0f ? senseOverride : Number(ecs?["perception"], "radius",
+                Number(ai, "chaseTriggerDistance", Number(detector, "detectionRadius", 10f)));
             definition = new AiecsDefinition { Id = actorId, Faction = faction, LootTable = source.LootTableId ?? string.Empty,
+                Capabilities = capabilities,
                 SenseRange = sense, ChaseRange = math.max(sense, Number(ai, "chaseLossDistance", sense * 1.5f)),
                 ChaseRetryDelay = math.max(0.1f, Number(ai, "chasePathRetryDelay", 3f)),
                 PerceptionPeriod = math.max(0.1f, Number(ai, "detectorRefreshInterval", 0.6f)), DecisionPeriod = 0.15f,
                 FleeHealthRatio = Number(ai, "fleeTriggerHpRate", 0.22f), FleeSeconds = 3f, MemorySeconds = 4f,
                 WanderRadius = Number(ai, "wanderRadius", 4f), WanderSeconds = 2.5f,
                 IdleSeconds = (Number(ai, "idleMinDuration", 0.8f) + Number(ai, "idleMaxDuration", 2.2f)) * 0.5f,
-                MoveSpeed = Speed(mover["Data"]?["Speed"]), AttackStartRange = start,
+                MoveSpeed = Number(ecs?["movement"], "speed", Speed(mover?["Data"]?["Speed"])), AttackStartRange = start,
                 HitRange = start * AI_AttackController.DefaultDamageRangeMultiplier, AttackArcCos = 0f,
                 Windup = Number(ai, "attackDamageStartDelay", 0.5f), Active = Number(ai, "attackDamageWindow", 0.2f),
                 Recovery = Number(ai, "attackRecoveryDuration", 0.35f), Cooldown = Number(ai, "attackCooldown", 2f),
                 // 被动生态单位不会进入 Attack 规则，因此无需为了纯逃跑行为伪造旧攻击模块。
-                Damage = GameplayCombatBridge.Values(attack?["DamageValues"]?.ToObject<CombatDamage>()),
+                Damage = attack != null ? GameplayCombatBridge.Values(attack["DamageValues"]?.ToObject<CombatDamage>()) :
+                    new float4(Number(ecs?["combat"]?["damage"], "cutting", 0f),
+                        Number(ecs?["combat"]?["damage"], "piercing", 0f),
+                        Number(ecs?["combat"]?["damage"], "chopping", 0f),
+                        Number(ecs?["combat"]?["damage"], "blunt", 0f)),
                 SlowMultiplier = Number(attack, "HitSlowMultiplier", 0.5f),
                 SlowDuration = attack == null || (bool?)attack["EnableHitSlowdown"] == false
                     ? 0f
                     : Number(attack, "HitSlowDuration", 0.35f),
-                CandidateBudget = 64, RequireLos = (byte)((bool?)detector["wallsBlockPerception"] == false ? 0 : 1) };
-            AddRules(ref definition, fleeFromHostiles);
+                CandidateBudget = 64, RequireLos = (byte)((bool?)detector?["wallsBlockPerception"] == false ? 0 : 1) };
+            AddRules(ref definition, capabilities);
             JObject onHit = Module<DamageOnHitBuffApplier>(source, item, out _);
             if (onHit != null && !string.IsNullOrWhiteSpace((string)onHit["buffId"]))
                 definition.OnHitBuffs.Add(new CombatOnHitBuff { Id = (string)onHit["buffId"],
@@ -77,7 +89,70 @@ namespace FlatWorld.AIECS.Gameplay
                 hp = 0f; maxHp = 0f;
                 foreach (var part in anatomy.Parts) { hp += part.Hp; maxHp += part.MaxHp; }
             }
+            float flightHeight = Number(ecs?["flight"], "height", 0.8f);
+            float flightDrain = Number(ecs?["flight"], "staminaDrainPerSecond", 1f);
+            bool permanentFlight = flightDrain <= 0f;
             return new AiecsActorTemplate { Definition = definitionIndex, Faction = factionIndex, Body = body,
+                Capabilities = capabilities,
+                Nutrition = new AiecsNutrition
+                {
+                    Maximum = Number(ecs?["nutrition"], "maximum", 100f),
+                    Current = Number(ecs?["nutrition"], "maximum", 100f),
+                    DrainPerSecond = Number(ecs?["nutrition"], "drainPerSecond", 0.02f),
+                    FeedBelow = Number(ecs?["nutrition"], "feedBelow", 35f),
+                    FeedGain = Number(ecs?["nutrition"], "feedGain", 25f),
+                    Resource = string.Equals((string)ecs?["nutrition"]?["resource"], "nectar",
+                        StringComparison.OrdinalIgnoreCase) ? AiecsFoodResource.Nectar : AiecsFoodResource.Grass,
+                    CanFeed = (byte)((capabilities & AiecsCapability.Feeding) != 0 ? 1 : 0)
+                },
+                Sleep = new AiecsSleep
+                {
+                    DayStartRatio = Number(ecs?["sleep"], "dayStartRatio", 0.25f),
+                    DayEndRatio = Number(ecs?["sleep"], "dayEndRatio", 0.75f),
+                    HealthBelow = Number(ecs?["sleep"], "healthBelow", 0.5f)
+                },
+                Flight = new AiecsFlight
+                {
+                    Height = permanentFlight ? flightHeight : 0f,
+                    TargetHeight = permanentFlight ? flightHeight : 0f,
+                    CruiseHeight = flightHeight,
+                    Speed = Number(ecs?["flight"], "speed", 3.2f),
+                    GroundSpeed = definition.MoveSpeed,
+                    Stamina = Number(ecs?["flight"], "staminaMaximum", 100f),
+                    StaminaMaximum = Number(ecs?["flight"], "staminaMaximum", 100f),
+                    DrainPerSecond = flightDrain,
+                    RecoveryPerSecond = Number(ecs?["flight"], "staminaRecoveryPerSecond", 10f),
+                    BaseWaterPushSpeed = WaterCurrentPushConfigService.ResolvePushSpeed(actorId, item.Stack.Weight),
+                    Airborne = (byte)(permanentFlight ? 1 : 0)
+                },
+                Reproduction = new AiecsReproduction
+                {
+                    CooldownDays = Number(ecs?["reproduction"], "cooldownDays", 2f),
+                    EggItemId = new FixedString64Bytes((string)ecs?["reproduction"]?["eggItemId"] ??
+                        (string)ai?["eggItemId"] ?? "Egg"),
+                    EggLaying = (byte)((capabilities & AiecsCapability.EggLaying) != 0 ? 1 : 0)
+                },
+                Darkness = new AiecsDarkness
+                {
+                    DamageThreshold = Number(ecs?["darkness"], "damageThreshold", 0.5f),
+                    DamageFractionPerSecond = Number(ecs?["darkness"], "damageFractionPerSecond", 0.05f),
+                    RetreatRadius = Number(ecs?["darkness"], "retreatRadius", 5f)
+                },
+                Tactics = new AiecsTactics
+                {
+                    Flags = capabilities,
+                    BaseSpeed = definition.MoveSpeed,
+                    ChargeMultiplier = Number(ecs?["charge"], "speedMultiplier", 1.8f),
+                    ChargeSeconds = Number(ecs?["charge"], "durationSeconds", 1.2f),
+                    ChargeCooldown = Number(ecs?["charge"], "cooldownSeconds", 5f),
+                    PredatorMultiplier = Number(ecs?["predator"], "chaseSpeedMultiplier", 1.15f)
+                },
+                Pack = new AiecsPack
+                {
+                    AssistRadius = Number(ecs?["pack"], "assistRadius", 8f),
+                    CohesionRadius = Number(ecs?["pack"], "cohesionRadius", 3f),
+                    CandidateBudget = Mathf.Max(1, (int)Number(ecs?["pack"], "candidateBudget", 32f))
+                },
                 WaterCurrentPushSpeed = WaterCurrentPushConfigService.ResolvePushSpeed(actorId, item.Stack.Weight),
                 Vital = new AiecsVital { Hp = hp, MaxHp = maxHp, DamageInterval = life.DamageInterval,
                     ReceivedMultiplier = 1f, LastDamageTime = double.NegativeInfinity },
@@ -108,23 +183,59 @@ namespace FlatWorld.AIECS.Gameplay
         }
 
         /// <summary>无物种分支的共同优先级；生态配置只选择“主动战斗”或“受威胁逃离”策略。</summary>
-        private static void AddRules(ref AiecsDefinition definition, bool fleeFromHostiles)
+        private static void AddRules(ref AiecsDefinition definition, AiecsCapability capabilities)
         {
-            if (fleeFromHostiles)
+            bool chase = (capabilities & AiecsCapability.Chase) != 0;
+            bool flee = (capabilities & AiecsCapability.Flee) != 0;
+            bool combat = (capabilities & AiecsCapability.Combat) != 0;
+            if (!chase)
             {
-                definition.Rules.Add(new AiecsDecisionRule { Require = AiecsDecisionFacts.LowHealth | AiecsDecisionFacts.HasThreat, Behavior = (int)AiecsBehavior.Flee, Priority = 90 });
-                definition.Rules.Add(new AiecsDecisionRule { Require = AiecsDecisionFacts.HasTarget, Behavior = (int)AiecsBehavior.Flee, Priority = 80 });
+                if (flee)
+                {
+                    definition.Rules.Add(new AiecsDecisionRule { Require = AiecsDecisionFacts.LowHealth | AiecsDecisionFacts.HasThreat, Behavior = (int)AiecsBehavior.Flee, Priority = 90 });
+                    definition.Rules.Add(new AiecsDecisionRule { Require = AiecsDecisionFacts.HasTarget, Behavior = (int)AiecsBehavior.Flee, Priority = 80 });
+                }
                 definition.Rules.Add(new AiecsDecisionRule { Require = AiecsDecisionFacts.RestFinished, Exclude = AiecsDecisionFacts.HasTarget, Behavior = (int)AiecsBehavior.Wander, Priority = 10 });
                 definition.Rules.Add(new AiecsDecisionRule { Behavior = (int)AiecsBehavior.Idle, Priority = 0 });
                 return;
             }
 
-            definition.Rules.Add(new AiecsDecisionRule { Require = AiecsDecisionFacts.AttackLocked, Behavior = (int)AiecsBehavior.Attack, Priority = 100 });
-            definition.Rules.Add(new AiecsDecisionRule { Require = AiecsDecisionFacts.LowHealth | AiecsDecisionFacts.HasThreat, Behavior = (int)AiecsBehavior.Flee, Priority = 90 });
-            definition.Rules.Add(new AiecsDecisionRule { Require = AiecsDecisionFacts.HasTarget | AiecsDecisionFacts.InAttackRange, Behavior = (int)AiecsBehavior.Attack, Priority = 70 });
+            if (combat)
+            {
+                definition.Rules.Add(new AiecsDecisionRule { Require = AiecsDecisionFacts.AttackLocked, Behavior = (int)AiecsBehavior.Attack, Priority = 100 });
+                definition.Rules.Add(new AiecsDecisionRule { Require = AiecsDecisionFacts.HasTarget | AiecsDecisionFacts.InAttackRange, Behavior = (int)AiecsBehavior.Attack, Priority = 70 });
+            }
+            if (flee)
+                definition.Rules.Add(new AiecsDecisionRule { Require = AiecsDecisionFacts.LowHealth | AiecsDecisionFacts.HasThreat, Behavior = (int)AiecsBehavior.Flee, Priority = 90 });
             definition.Rules.Add(new AiecsDecisionRule { Require = AiecsDecisionFacts.HasTarget, Behavior = (int)AiecsBehavior.Chase, Priority = 50 });
             definition.Rules.Add(new AiecsDecisionRule { Require = AiecsDecisionFacts.RestFinished, Exclude = AiecsDecisionFacts.HasTarget, Behavior = (int)AiecsBehavior.Wander, Priority = 10 });
             definition.Rules.Add(new AiecsDecisionRule { Behavior = (int)AiecsBehavior.Idle, Priority = 0 });
+        }
+
+        /// <summary>能力名称集中校验，内容作者只需组合已有模块并填写参数。</summary>
+        private static AiecsCapability ParseCapabilities(string actorId, JObject ecs)
+        {
+            if (ecs?["capabilities"] is not JArray list || list.Count == 0)
+                throw new InvalidOperationException(actorId + " 缺少 ecs.capabilities 能力列表。");
+            AiecsCapability result = AiecsCapability.None;
+            foreach (JToken token in list)
+            {
+                string name = (string)token;
+                if (string.IsNullOrWhiteSpace(name) ||
+                    !Enum.TryParse(name, true, out AiecsCapability capability) ||
+                    capability == AiecsCapability.None ||
+                    (result & capability) != 0)
+                    throw new InvalidOperationException(actorId + " 包含无效或重复的 ECS 能力：" + name);
+                result |= capability;
+            }
+            if ((result & (AiecsCapability.Movement | AiecsCapability.Perception)) !=
+                (AiecsCapability.Movement | AiecsCapability.Perception))
+                throw new InvalidOperationException(actorId + " 必须组合 movement 与 perception。");
+            if ((result & AiecsCapability.Feeding) != 0 && (result & AiecsCapability.Nutrition) == 0)
+                throw new InvalidOperationException(actorId + " feeding 依赖 nutrition。");
+            if ((result & AiecsCapability.EggLaying) != 0 && (result & AiecsCapability.Reproduction) == 0)
+                throw new InvalidOperationException(actorId + " eggLaying 依赖 reproduction。");
+            return result;
         }
 
         /// <summary>复用正式模块定位规则并叠加当前 JSON 参数，不修改 Prefab 或创建运行时 Module。</summary>
@@ -144,24 +255,46 @@ namespace FlatWorld.AIECS.Gameplay
             prototype = null; return null;
         }
 
-        /// <summary>根感知形状和生命模块受击形状分别编译，禁止把感知脚底框当作完整受击框。</summary>
+        /// <summary>新物种可直接从 ECS 配置获得生命值，不要求挂旧 DamageReceiver 模块。</summary>
+        private static DamageReceiver.DamageReceiver_SaveData EcsLife(JToken health)
+        {
+            float maximum = math.max(0.001f, Number(health, "maxHp", 100f));
+            JToken defense = health?["defense"];
+            return new DamageReceiver.DamageReceiver_SaveData
+            {
+                Hp = math.clamp(Number(health, "hp", maximum), 0.001f, maximum),
+                MaxHp = maximum,
+                DamageInterval = math.max(0f, Number(health, "damageInterval", 0.1f)),
+                BodyPartDataVersion = 1,
+                TwoPartHitChance = 0f,
+                DefenseValues = new CombatDefense(
+                    Number(defense, "cutting", 0f), Number(defense, "piercing", 0f),
+                    Number(defense, "chopping", 0f), Number(defense, "blunt", 0f))
+            };
+        }
+
+        /// <summary>旧作者受击盒与纯 ECS 感知体型统一编译，后者默认同时用作受击盒。</summary>
         private static AiecsBody Body(RuntimeItemDefinition source, JObject health, DamageReceiver prototype)
         {
             if (source.PerceptionShapes == null || source.PerceptionShapes.Count != 1)
                 throw new InvalidOperationException(source.Id + " 需要单个圆/AABB 感知体型，复杂组合尚未迁移。");
             var perception = source.PerceptionShapes[0];
-            BoxCollider2D box = prototype.GetComponent<BoxCollider2D>();
-            JObject collider = health["$collider2D"] as JObject;
-            if (box == null || (collider != null && (string)collider["type"] != "BoxCollider2D"))
-                throw new InvalidOperationException(source.Id + " 的受击形状不是已支持的 BoxCollider2D。");
-            float2 size = Pair(collider?["size"], box.size), offset = Pair(collider?["offset"], box.offset);
-            JToken transform = health["$transform"];
-            float2 scale = Pair(transform?["localScale"], prototype.transform.localScale);
-            float2 translation = Pair(transform?["localPosition"], prototype.transform.localPosition);
-            float angle = math.radians((float?)transform?["localEulerAngles"]?["z"] ?? prototype.transform.localEulerAngles.z);
-            float2 x = new float2(math.cos(angle), math.sin(angle)) * scale.x;
-            float2 y = new float2(-math.sin(angle), math.cos(angle)) * scale.y;
-            var hit = PerceptionShape2D.Aabb(offset, size * 0.5f).Transform(translation, x, y);
+            var hit = perception;
+            if (health != null && prototype != null)
+            {
+                BoxCollider2D box = prototype.GetComponent<BoxCollider2D>();
+                JObject collider = health["$collider2D"] as JObject;
+                if (box == null || (collider != null && (string)collider["type"] != "BoxCollider2D"))
+                    throw new InvalidOperationException(source.Id + " 的受击形状不是已支持的 BoxCollider2D。");
+                float2 size = Pair(collider?["size"], box.size), offset = Pair(collider?["offset"], box.offset);
+                JToken transform = health["$transform"];
+                float2 scale = Pair(transform?["localScale"], prototype.transform.localScale);
+                float2 translation = Pair(transform?["localPosition"], prototype.transform.localPosition);
+                float angle = math.radians((float?)transform?["localEulerAngles"]?["z"] ?? prototype.transform.localEulerAngles.z);
+                float2 x = new float2(math.cos(angle), math.sin(angle)) * scale.x;
+                float2 y = new float2(-math.sin(angle), math.cos(angle)) * scale.y;
+                hit = PerceptionShape2D.Aabb(offset, size * 0.5f).Transform(translation, x, y);
+            }
             float radius = perception.IsCircle != 0 ? perception.Radius : math.cmax(perception.Extents);
             radius = math.max(0.05f, radius);
             if (radius >= 0.5f) throw new InvalidOperationException(source.Id + " 的体型需要额外通行配置，不能使用当前共享点格配置。");

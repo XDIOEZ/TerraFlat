@@ -3,6 +3,9 @@
   "actors": [
     {
       "id": "Sheep",
+      "ecs": {
+        "capabilities": ["movement", "perception", "nutrition", "feeding", "sleep", "flee"]
+      },
       "weight": 65.0,
       "parent": "Chicken",
       "removeModules": ["生产模块"],

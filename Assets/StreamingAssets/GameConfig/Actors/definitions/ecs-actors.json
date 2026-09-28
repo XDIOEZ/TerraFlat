@@ -3,6 +3,9 @@
   "actors": [
     {
       "id": "Zombie",
+      "ecs": {
+        "capabilities": ["movement", "perception", "combat", "chase"]
+      },
       "weight": 70.0,
       "parent": "Wolf",
       "lootTableId": "",

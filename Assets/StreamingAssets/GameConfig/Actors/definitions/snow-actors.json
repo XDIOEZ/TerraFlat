@@ -3,6 +3,9 @@
   "actors": [
     {
       "id": "Rabbit",
+      "ecs": {
+        "capabilities": ["movement", "perception", "nutrition", "feeding", "flee"]
+      },
       "weight": 2.0,
       "parent": "Sheep",
       "shellPrefab": "CoreActor.Rabbit.Shell",
@@ -368,6 +371,10 @@
     },
     {
       "id": "SnowLeopard",
+      "ecs": {
+        "capabilities": ["movement", "perception", "combat", "predator", "chase"],
+        "predator": { "chaseSpeedMultiplier": 1.15 }
+      },
       "weight": 55.0,
       "lootTableId": "SnowLeopard_Default",
       "parent": "Wolf",

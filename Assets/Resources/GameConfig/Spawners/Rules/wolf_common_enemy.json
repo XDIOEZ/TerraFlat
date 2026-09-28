@@ -37,7 +37,7 @@
     "spawnEntries": [
       {
         "prefabName": "Wolf",
-        "runtimeBackend": "gameObject",
+        "runtimeBackend": "entities",
         "probability": 1.0,
         "ecologyCost": 2,
         "speciesAliveLimit": 6

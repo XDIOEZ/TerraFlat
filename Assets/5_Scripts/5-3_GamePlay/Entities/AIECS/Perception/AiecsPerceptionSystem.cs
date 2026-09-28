@@ -13,6 +13,7 @@ namespace FlatWorld.AIECS
         [ReadOnly] public NativeArray<AiecsDefinition> Definitions;
         [ReadOnly] public AiecsSpatialView Spatial;
         [ReadOnly] public AiecsLosView Los;
+        [ReadOnly] public ComponentLookup<AiecsHiveMember> Hives;
         public double Time; // 当前权威模拟时间。
         public uint Tick; // 密集候选遍历起点的轮转种子。
 
@@ -22,6 +23,16 @@ namespace FlatWorld.AIECS
         {
             counters = default;
             if (identity.External != 0 || vital.Dead != 0) return;
+            if (Hives.HasComponent(entity))
+            {
+                AiecsHiveMember hive = Hives[entity];
+                if (hive.HomeGuid != 0 && hive.Alert < 1f && hive.HasDefenseTarget == 0 &&
+                    !vital.LastAttacker.IsValid)
+                {
+                    Clear(ref brain);
+                    return;
+                }
+            }
             AiecsDefinition definition = Definitions[identity.Definition];
             bool valid = Spatial.TryTarget(brain.Target, brain.TargetKey, out AiecsTargetSample target);
             if (!valid) Clear(ref brain);

@@ -45,6 +45,8 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         public string ItemId;
         public string DisplayName;
         public Sprite Icon;
+        public Texture IconAtlas;
+        public Rect IconUv;
     }
 
     private readonly List<ReflectedCommand> commands = new List<ReflectedCommand>();
@@ -2099,45 +2101,24 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
     private void RefreshAiCreatureIds()
     {
         availableAiCreatures.Clear();
-        Component gameRes = GameRes.ExistingInstance;
-        object prefabDictionary = ReadMember(gameRes, "AllPrefabs");
-        if (prefabDictionary is IDictionary dictionary)
+        GameRes resources = GameRes.ExistingInstance;
+        var ecology = FlatWorld.AIECS.Gameplay.AiecsEcologyRuntimeHost.Active;
+        if (resources != null)
         {
-            HashSet<string> discoveredIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            foreach (DictionaryEntry entry in dictionary)
+            foreach (RuntimeItemDefinition definition in resources.ActorDefinitions.Values)
             {
-                if (!(entry.Key is string itemId) ||
-                    string.IsNullOrWhiteSpace(itemId) ||
-                    !discoveredIds.Add(itemId) ||
-                    !(entry.Value is GameObject prefab) ||
-                    !IsAiCreaturePrefab(prefab))
-                {
-                    continue;
-                }
-
-                Item item = prefab.GetComponent<Item>() ?? prefab.GetComponentInChildren<Item>(true);
-                if (item == null)
-                    continue;
-
-                ItemData data = null;
-                try
-                {
-                    data = item.itemData;
-                }
-                catch (Exception exception)
-                {
-                    Debug.LogWarning($"[GM] 读取 AI 生物 {itemId} 的 ItemData 失败：{exception.Message}");
-                }
-
-                Sprite icon = item.Sprite != null ? item.Sprite.sprite : null;
-                if (icon == null)
-                    icon = prefab.GetComponentInChildren<SpriteRenderer>(true)?.sprite;
-
+                if (definition == null) continue;
+                Texture iconAtlas = null;
+                Rect iconUv = default;
+                if (ecology == null || !ecology.TryGetCatalogIcon(definition.Id, out iconAtlas, out iconUv))
+                    iconAtlas = null;
                 availableAiCreatures.Add(new AiCreatureEntry
                 {
-                    ItemId = itemId,
-                    DisplayName = !string.IsNullOrWhiteSpace(data?.GameName) ? data.GameName : itemId,
-                    Icon = icon
+                    ItemId = definition.Id,
+                    DisplayName = definition.DisplayName,
+                    Icon = iconAtlas == null ? ResolveAiCreaturePrefabIcon(definition) : null,
+                    IconAtlas = iconAtlas,
+                    IconUv = iconUv
                 });
             }
         }
@@ -2155,30 +2136,28 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
             RebuildAiCreatureGrid();
     }
 
-    private static bool IsAiCreaturePrefab(GameObject prefab)
+    /// <summary>动画图集不可用时，从 Actor 外壳的身体渲染器取目录图标。</summary>
+    private static Sprite ResolveAiCreaturePrefabIcon(RuntimeItemDefinition definition)
     {
-        if (prefab == null)
-            return false;
+        if (definition.Sprite != null)
+            return definition.Sprite;
+        GameObject shell = definition.ShellPrefab;
+        if (shell == null)
+            return null;
 
-        MonoBehaviour[] behaviours = prefab.GetComponentsInChildren<MonoBehaviour>(true);
-        for (int i = 0; i < behaviours.Length; i++)
+        if (!string.IsNullOrWhiteSpace(definition.RendererPath))
         {
-            MonoBehaviour behaviour = behaviours[i];
-            if (behaviour == null)
-                continue;
-
-            Type type = behaviour.GetType();
-            string typeName = type.Name;
-            if (string.Equals(typeName, "Mover_AI", StringComparison.Ordinal) ||
-                (typeName.StartsWith("AI_", StringComparison.Ordinal) &&
-                 !string.Equals(typeName, "AI_AttackController", StringComparison.Ordinal)) ||
-                string.Equals(type.FullName, "BehaviorDesigner.Runtime.BehaviorTree", StringComparison.Ordinal))
-            {
-                return true;
-            }
+            Transform body = shell.transform.Find(definition.RendererPath);
+            Sprite sprite = body != null ? body.GetComponent<SpriteRenderer>()?.sprite : null;
+            if (sprite != null)
+                return sprite;
         }
 
-        return false;
+        SpriteRenderer[] renderers = shell.GetComponentsInChildren<SpriteRenderer>(true);
+        for (int i = 0; i < renderers.Length; i++)
+            if (renderers[i].sprite != null)
+                return renderers[i].sprite;
+        return null;
     }
 
     private void UpdateSummonHint()
@@ -2271,7 +2250,9 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
                 creature.ItemId,
                 creature.DisplayName,
                 creature.Icon,
-                () => SpawnAiCreature(creature));
+                () => SpawnAiCreature(creature),
+                creature.IconAtlas,
+                creature.IconUv);
         }
 
         if (visibleCreatures.Count == 0)
@@ -2298,7 +2279,9 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         string itemId,
         string displayName,
         Sprite icon,
-        UnityAction onClick)
+        UnityAction onClick,
+        Texture iconAtlas = null,
+        Rect iconUv = default)
     {
         GameObject tile = CreateUiObject(objectName, parent);
         Image tileImage = tile.AddComponent<Image>();
@@ -2325,13 +2308,27 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         iconRect.pivot = new Vector2(0.5f, 1f);
         iconRect.anchoredPosition = new Vector2(0f, -8f);
         iconRect.sizeDelta = new Vector2(64f, 64f);
-        Image iconImage = iconObject.AddComponent<Image>();
-        iconImage.sprite = icon;
-        iconImage.preserveAspect = true;
-        iconImage.raycastTarget = false;
-        iconImage.color = icon != null ? Color.white : Color.clear;
+        if (iconAtlas != null)
+        {
+            float aspect = iconUv.width * iconAtlas.width / (iconUv.height * iconAtlas.height);
+            iconRect.sizeDelta = aspect >= 1f
+                ? new Vector2(64f, 64f / aspect)
+                : new Vector2(64f * aspect, 64f);
+            RawImage atlasImage = iconObject.AddComponent<RawImage>();
+            atlasImage.texture = iconAtlas;
+            atlasImage.uvRect = iconUv;
+            atlasImage.raycastTarget = false;
+        }
+        else
+        {
+            Image iconImage = iconObject.AddComponent<Image>();
+            iconImage.sprite = icon;
+            iconImage.preserveAspect = true;
+            iconImage.raycastTarget = false;
+            iconImage.color = icon != null ? Color.white : Color.clear;
+        }
 
-        if (icon == null)
+        if (iconAtlas == null && icon == null)
         {
             TextMeshProUGUI placeholder = CreateText(
                 iconObject.transform,
@@ -2399,23 +2396,16 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
             return;
         }
 
-        ItemMgr itemManager = ItemMgr.Instance;
-        if (itemManager == null)
-        {
-            SetAiCreatureResult("召唤失败：未找到 ItemMgr。", new Color(1f, 0.42f, 0.38f));
-            return;
-        }
-
         int spawnedCount = 0;
         string firstFailure = null;
+        var occupiedPositions = new List<Vector3>(amount);
         for (int i = 0; i < amount; i++)
         {
-            Vector3 spawnPosition = GetAiCreatureSpawnPosition(player.position, i, amount);
-            if (TrySpawnInitializedAiCreature(
-                    itemManager,
+            if (TrySpawnEagCreatureNearPlayer(
                     entry.ItemId,
-                    spawnPosition,
-                    out _,
+                    player.position,
+                    i,
+                    occupiedPositions,
                     out string spawnError))
             {
                 spawnedCount++;
@@ -2440,117 +2430,67 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         SetAiCreatureResult(result, new Color(1f, 0.42f, 0.38f));
     }
 
-    private static Vector3 GetAiCreatureSpawnPosition(Vector3 playerPosition, int index, int amount)
+    private static Vector3 GetAiCreatureSpawnPosition(Vector3 playerPosition, int index, int attempt)
     {
-        const float GoldenAngleRadians = 2.39996323f;
-        float angle = index * GoldenAngleRadians;
-        float radius = amount == 1 ? 2.5f : 2.5f + Mathf.Sqrt(index) * 0.65f;
+        const float RingStepRadians = Mathf.PI * 0.25f;
+        float angle = index * 2.39996323f + attempt * RingStepRadians;
+        float radius = 2.5f + attempt / 8 * 1.25f + Mathf.Sqrt(index) * 0.4f;
         Vector3 offset = new Vector3(Mathf.Cos(angle), Mathf.Sin(angle), 0f) * radius;
         Vector3 position = playerPosition + offset;
         position.z = playerPosition.z;
         return position;
     }
 
-    /// <summary>
-    /// GM 生物必须沿用自然生成的完整链路：ItemMgr 注册后立即 Load，
-    /// 否则 AI 的状态机、感知和移动模块都不会完成初始化。
-    /// </summary>
-    private static bool TrySpawnInitializedAiCreature(
-        ItemMgr itemManager,
+    /// <summary>GM 在玩家周围找可走位置，交由正式 EAG 后端创建 ECS 生物及近距镜像。</summary>
+    private static bool TrySpawnEagCreatureNearPlayer(
         string itemId,
-        Vector3 spawnPosition,
-        out Item spawnedItem,
+        Vector3 playerPosition,
+        int index,
+        List<Vector3> occupiedPositions,
         out string error)
     {
-        spawnedItem = null;
-        if (itemManager == null)
+        IAiEcologyBackend backend = AiRuntimeBackendService.Ecology;
+        if (!AiRuntimeBackendService.UseEntities || backend == null || !backend.SupportsSpecies(itemId))
         {
-            error = "未找到 ItemMgr。";
+            error = "EAG 生物后端未就绪，或此物种没有加入当前世界。";
             return false;
         }
 
-        try
+        for (int attempt = 0; attempt < 32; attempt++)
         {
-            spawnedItem = itemManager.InstantiateItem(
-                itemId,
-                spawnPosition,
-                Quaternion.identity,
-                Vector3.one);
-            if (spawnedItem == null)
+            Vector3 position = GetAiCreatureSpawnPosition(playerPosition, index, attempt);
+            bool overlaps = false;
+            for (int i = 0; i < occupiedPositions.Count; i++)
             {
-                error = "ItemMgr 未返回 Item 实例。";
+                if ((position - occupiedPositions[i]).sqrMagnitude >= 1.44f) continue;
+                overlaps = true;
+                break;
+            }
+            if (overlaps) continue;
+
+            try
+            {
+                if (backend.TrySpawnDirect(itemId, position, 0, out _))
+                {
+                    occupiedPositions.Add(position);
+                    error = null;
+                    return true;
+                }
+            }
+            catch (Exception exception)
+            {
+                Debug.LogException(exception);
+                error = $"EAG 生物生成异常：{exception.Message}";
                 return false;
             }
 
-            if (!TryGetRuntimeAiActor(spawnedItem, out _))
-            {
-                error = $"{itemId} 不包含可运行的 AI 模块。";
-                DespawnFailedAiCreature(itemManager, spawnedItem);
-                spawnedItem = null;
-                return false;
-            }
-
-            if (!spawnedItem.IsInitialized)
-                spawnedItem.Load();
-
-            if (!spawnedItem.IsInitialized ||
-                !TryGetRuntimeAiActor(spawnedItem, out IAIActor actor) ||
-                !ReferenceEquals(actor.ActorItem, spawnedItem))
-            {
-                error = $"{itemId} 的 AI 初始化未完成。";
-                DespawnFailedAiCreature(itemManager, spawnedItem);
-                spawnedItem = null;
-                return false;
-            }
-
-            error = null;
-            return true;
-        }
-        catch (Exception exception)
-        {
-            error = exception.Message;
-            Debug.LogException(exception);
-            DespawnFailedAiCreature(itemManager, spawnedItem);
-            spawnedItem = null;
+            if (backend.IsReady) continue;
+            error = "EAG 世界未启动，请等待玩家和导航加载完成。";
             return false;
         }
-    }
 
-    /// <summary>从实例层级寻找真实 AI 标记，避免把仅有相似名称的普通物品当作生物生成。</summary>
-    private static bool TryGetRuntimeAiActor(Item item, out IAIActor actor)
-    {
-        actor = null;
-        if (item == null)
-            return false;
-
-        MonoBehaviour[] behaviours = item.GetComponentsInChildren<MonoBehaviour>(true);
-        for (int i = 0; i < behaviours.Length; i++)
-        {
-            if (behaviours[i] is IAIActor candidate)
-            {
-                actor = candidate;
-                return true;
-            }
-        }
-
+        error = "玩家附近没有适合该生物的已加载导航位置。";
         return false;
-    }
-
-    /// <summary>初始化或校验失败时通过 ItemMgr 回收临时实体，避免残留未完成初始化的对象。</summary>
-    private static void DespawnFailedAiCreature(ItemMgr itemManager, Item item)
-    {
-        if (item == null || item.DestructionHandled)
-            return;
-
-        try
-        {
-            itemManager?.DespawnItem(item, saveData: false);
-        }
-        catch (Exception cleanupException)
-        {
-            Debug.LogWarning($"[GM] 回收失败的 AI 生物失败：{cleanupException.Message}");
-            UnityEngine.Object.Destroy(item.gameObject);
-        }
     }
 
     private void SetAiCreatureResult(string message, Color color)

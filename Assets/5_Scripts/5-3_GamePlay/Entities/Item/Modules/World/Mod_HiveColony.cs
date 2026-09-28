@@ -29,7 +29,7 @@ public sealed partial class Mod_HiveColony : Module
     public sealed class ResidentState
     {
         public int Guid; // 成员的稳定身份。
-        public Mod_BeeBehavior.BeeState Bee = new(); // 该蜂的行为快照。
+        public AiHiveActorState Bee; // 该蜂的行为快照。
         public bool SleepingInHive; // 夜间已回到蜂巢并卸载本体。
         public float SleepDrainPerSecond = 1f; // 入睡时记录该蜂正常饱食消耗，睡眠按倍率推进。
     }
@@ -56,9 +56,13 @@ public sealed partial class Mod_HiveColony : Module
     [Range(0f, 1f)] public float DayStartRatio = 0.25f; // 早晨六点开始出巢。
     [Range(0f, 1f)] public float DayEndRatio = 0.75f; // 傍晚六点后开始归巢。
     [Range(0f, 1f)] public float SleepingSatietyDrainMultiplier = 0.5f; // 睡眠饱食消耗减半。
+    [Min(0f)] public float HoneyContributionSatiety = 1000f; // 返巢贡献蜂蜜的最低饱食度。
+    [Min(0f)] public float HoneyContributionCost = 500f; // 每份蜂蜜从成员扣除的饱食度。
+    [Min(0f)] public float HoneyMealGain = 500f; // 成员取食巢蜜恢复的饱食度。
+    [Min(0f)] public float HoneyMealBelow = 800f; // 低于此值且返巢时允许取食。
 
     private ColonyState state = new(); // 持久巢群状态。
-    private readonly Dictionary<int, Item> residents = new(10); // 本轮装载成员。
+    private readonly HashSet<int> residents = new(); // 本轮装载的 ECS 成员身份。
     private float reconcileRemaining; // 下次成员维护的现实帧间隔。
     private bool alarmClockReady; // 本轮警戒时钟是否已校准。
     private double lastAlarmGameTime; // 上次警戒检查的世界绝对时间。
@@ -160,7 +164,7 @@ public sealed partial class Mod_HiveColony : Module
             throw new InvalidOperationException("蜂巢存档状态无效。");
         HashSet<int> unique = new();
         foreach (ResidentState member in state.Residents)
-            if (member == null || member.Guid == 0 || member.Bee == null || !unique.Add(member.Guid))
+            if (member == null || member.Guid == 0 || !unique.Add(member.Guid))
                 throw new InvalidOperationException("蜂巢存档包含无效或重复的成员。");
         residents.Clear();
         ClearTerritoryAlarm();
@@ -187,10 +191,9 @@ public sealed partial class Mod_HiveColony : Module
         ModData.WriteData(state);
         if (!hiveDestroyed)
         {
-            ItemMgr manager = ItemMgr.Instance;
-            foreach (Item resident in residents.Values)
-                if (resident != null && !resident.DestructionHandled)
-                    manager.DespawnItem(resident, saveData: false);
+            IAiEcologyBackend backend = AiRuntimeBackendService.Ecology;
+            foreach (int guid in residents)
+                backend?.TryDespawnActor(guid);
         }
         residents.Clear();
         ClearTerritoryAlarm();
@@ -227,31 +230,51 @@ public sealed partial class Mod_HiveColony : Module
     /// <summary>恢复存档成员；只在新巢首次装载时创建初始成员。</summary>
     private void ReconcileResidents()
     {
+        IAiEcologyBackend backend = AiRuntimeBackendService.Ecology;
+        if (backend?.IsReady != true)
+            return;
         PruneDeadResidents();
+        ExchangeHoneyWithResidents(backend);
         for (int index = 0; index < state.Residents.Count; index++)
         {
             ResidentState member = state.Residents[index];
-            if (!member.SleepingInHive && !residents.ContainsKey(member.Guid))
+            if (!member.SleepingInHive && !residents.Contains(member.Guid))
                 SpawnResident(index, member);
         }
         if (state.InitialResidentsCreated)
             return;
         state.Honey = UnityEngine.Random.Range(1, 11); // 新蜂巢初始携带 1~10 点蜂蜜，仅首次创建成员时随机一次。
-        while (state.Residents.Count < MinimumResidents)
-            SpawnResident(state.Residents.Count, null);
-        state.InitialResidentsCreated = true;
+        while (state.Residents.Count < MinimumResidents && SpawnResident(state.Residents.Count, null)) { }
+        state.InitialResidentsCreated = state.Residents.Count >= MinimumResidents;
+    }
+
+    /// <summary>蜂蜜库存仍由蜂巢权威结算，ECS 只暴露到巢成员的营养和采蜜状态。</summary>
+    private void ExchangeHoneyWithResidents(IAiEcologyBackend backend)
+    {
+        Vector2 home = HomePosition;
+        foreach (int guid in residents)
+        {
+            if (backend.TryCollectHiveHoney(guid, home, 0.45f,
+                    HoneyContributionSatiety, HoneyContributionCost))
+                ReceiveHoney();
+            if (state.Honey > 0 && backend.TryGiveHiveHoney(guid, home, 0.45f,
+                    HoneyMealBelow, HoneyMealGain))
+                state.Honey--;
+        }
     }
 
     /// <summary>死亡成员永久离巢；尚未重建的存档成员保持原 GUID。</summary>
     private void PruneDeadResidents()
     {
+        IAiEcologyBackend backend = AiRuntimeBackendService.Ecology;
+        if (backend?.IsReady != true)
+            return;
         for (int index = state.Residents.Count - 1; index >= 0; index--)
         {
             ResidentState member = state.Residents[index];
-            if (!residents.TryGetValue(member.Guid, out Item resident))
+            if (!residents.Contains(member.Guid))
                 continue;
-            AI_Bird bird = resident != null ? resident.GetComponentInChildren<AI_Bird>(true) : null;
-            if (bird != null && bird.IsAlive && !resident.DestructionHandled)
+            if (backend.TryGetActor(member.Guid, out _, out bool alive) && alive)
                 continue;
             residents.Remove(member.Guid);
             state.Residents.RemoveAt(index);
@@ -261,54 +284,51 @@ public sealed partial class Mod_HiveColony : Module
     /// <summary>复制每只已装载蜜蜂的运行态。</summary>
     private void CaptureResidents()
     {
+        IAiEcologyBackend backend = AiRuntimeBackendService.Ecology;
         foreach (ResidentState member in state.Residents)
         {
-            if (!residents.TryGetValue(member.Guid, out Item resident) || resident == null)
+            if (!residents.Contains(member.Guid) ||
+                backend?.TryGetHiveActorState(member.Guid, out AiHiveActorState live) != true)
                 continue;
-            Mod_BeeBehavior bee = resident.itemMods?.GetMod_ByID<Mod_BeeBehavior>(Mod_BeeBehavior.ModuleId);
-            if (bee != null)
-                member.Bee = bee.CaptureState();
+            member.Bee.Satiety = live.Satiety;
+            member.Bee.Anger = live.Anger;
+            member.Bee.Angry = live.Angry;
+            member.Bee.ReturningHome = live.ReturningHome;
+            member.Bee.Orphaned = live.Orphaned;
         }
     }
 
     /// <summary>按存档 GUID 或新身份创建成员，并绑定蜂巢与行为快照。</summary>
-    private void SpawnResident(int slot, ResidentState saved)
+    private bool SpawnResident(int slot, ResidentState saved)
     {
-        ItemMgr manager = ItemMgr.Instance;
-        if (!GameRes.Instance.TryGetItemDefinition(ActorId, out _))
+        IAiEcologyBackend backend = AiRuntimeBackendService.Ecology;
+        if (backend?.IsReady != true)
+            return false;
+        if (!GameRes.Instance.TryGetActorDefinition(ActorId, out _))
             throw new InvalidOperationException($"蜂巢物种 {ActorId} 未注册。");
         Vector2 home = HomePosition;
         float angle = slot * (Mathf.PI * 2f / MaximumResidents);
         Vector2 offset = new(Mathf.Cos(angle), Mathf.Sin(angle));
         Vector3 position = WorldTopologyRuntime.NormalizePosition((Vector3)(home + offset * SpawnRadius));
-        ItemData data = GameRes.Instance.CreateItemData(ActorId);
-        if (saved != null)
-        {
-            if (manager.GetItemByGuid(saved.Guid) != null)
-                throw new InvalidOperationException($"蜂巢成员 GUID {saved.Guid} 已被其他实体占用。");
-            data.Guid = saved.Guid;
-        }
-        Item resident = manager.InstantiateItem(data, position);
+        if (!backend.TrySpawnDirect(ActorId, position, saved?.Guid ?? 0, out int guid))
+            return false;
         try
         {
-            resident.Load();
-            AI_Bird bird = resident.itemMods.GetMod_ByID<AI_Bird>("AI_Bird");
-            Mod_BeeBehavior bee = resident.itemMods.GetMod_ByID<Mod_BeeBehavior>(Mod_BeeBehavior.ModuleId);
-            if (bird == null || !bird.permanentFlight || bee == null)
-                throw new InvalidOperationException($"蜂巢物种 {ActorId} 必须组合常驻飞行与蜜蜂行为模块。");
-            bird.SetColonyHome(item.itemData.Guid, home);
-            bee.BindColony(this, saved?.Bee);
-            int guid = resident.itemData.Guid;
-            if (guid == 0 || (saved != null && guid != saved.Guid) || residents.ContainsKey(guid))
+            AiHiveActorState bee = saved?.Bee ?? new AiHiveActorState
+            {
+                Satiety = UnityEngine.Random.Range(1f, 1440f)
+            };
+            if (guid == 0 || (saved != null && guid != saved.Guid) || residents.Contains(guid) ||
+                !backend.TryBindHiveActor(guid, item.itemData.Guid, home, TerritoryRadiusCells, bee))
                 throw new InvalidOperationException($"蜂巢生成了无效或重复的成员 GUID：{guid}。");
-            residents.Add(guid, resident);
+            residents.Add(guid);
             if (saved == null)
-                state.Residents.Add(new ResidentState { Guid = guid, Bee = bee.CaptureState() });
+                state.Residents.Add(new ResidentState { Guid = guid, Bee = bee });
+            return true;
         }
         catch
         {
-            if (!resident.DestructionHandled)
-                manager.DespawnItem(resident, saveData: false);
+            backend.TryDespawnActor(guid);
             throw;
         }
     }
@@ -341,7 +361,8 @@ public sealed partial class Mod_HiveColony : Module
         if (state.Residents.Count >= MaximumResidents || state.Honey != state.HoneyCapacity ||
             now - state.LastBirthTime <= dayLength * 3d)
             return;
-        SpawnResident(state.Residents.Count, null);
+        if (!SpawnResident(state.Residents.Count, null))
+            return;
         state.Honey -= 5;
         state.HoneyCapacity++;
         state.LastBirthTime = now;

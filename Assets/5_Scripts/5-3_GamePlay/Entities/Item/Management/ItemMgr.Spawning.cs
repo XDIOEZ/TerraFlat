@@ -44,6 +44,10 @@ public partial class ItemMgr
         {
             throw new ArgumentException("ItemData.IDName 不能为空", nameof(itemData));
         }
+        // Actor 的权威运行态属于 AIECS，禁止通用物品入口重新实例化旧生物外壳。
+        if (GameRes.Instance.TryGetItemDefinition(itemData.IDName, out RuntimeItemDefinition actorDefinition) &&
+            actorDefinition.IsActor)
+            throw new InvalidOperationException($"生物 {itemData.IDName} 请使用 ECS 生成入口。");
 
         if (rotation == default) rotation = Quaternion.identity;
         if (scale == default || scale == Vector3.zero) scale = Vector3.one;

@@ -23,8 +23,7 @@ namespace FlatWorld.AIECS
     }
 
     /// <summary>
-    /// 正式模拟的只读批量表现；复用 P1 图集/网格，不使用原型运动，不为每个单位创建对象。
-    /// 开发显示按相机高度分为 24 行批次，行内按 Y 稳定排序；与旧透明对象的逐像素交错属于后续正式排序接入。
+    /// 正式模拟的只读批量表现；主体交给独立 BRG，共享图集、网格和实例缓冲。
     /// </summary>
     public sealed class AiecsWorldRenderer : IDisposable
     {
@@ -48,7 +47,7 @@ namespace FlatWorld.AIECS
         private readonly AiecsAnimationCatalog catalog;
         private readonly int[] visuals;
         private readonly int[,] clips;
-        private readonly List<AiecsRenderBatch> batches = new List<AiecsRenderBatch>();
+        private readonly AiecsBatchRendererGroup batch;
         private readonly List<DrawItem> visible = new List<DrawItem>();
         private readonly UnityEngine.SceneManagement.Scene scene;
         private readonly AiecsShadowRenderer shadows;
@@ -90,6 +89,7 @@ namespace FlatWorld.AIECS
             shadows = new AiecsShadowRenderer(scene, sortingKeys.ShadowLayer, sortingKeys.ShadowOrder);
             sunShadows = new AiecsSunShadowRenderer(scene, catalog.Material.mainTexture,
                 sortingKeys.ShadowLayer, sortingKeys.ShadowOrder);
+            batch = new AiecsBatchRendererGroup(catalog.Material);
         }
 
         /// <summary>MOD 可按当前定义索引调整太阳投影高度，0 表示关闭该物种投影。</summary>
@@ -118,7 +118,7 @@ namespace FlatWorld.AIECS
             if (camera == null || !simulation.Display.IsCreated)
             {
                 visible.Clear(); BatchCount = 0; shadows.Hide(); sunShadows.Hide();
-                foreach (var batch in batches) batch.Hide();
+                batch.Hide();
                 return;
             }
             shadows.Begin();
@@ -139,46 +139,39 @@ namespace FlatWorld.AIECS
                 visible.Add(new DrawItem { Index = i, Visual = visual, Row = row, Y = delta.y,
                     Layer = sortingKeys.ActorLayer, Order = sortingKeys.ActorOrder });
             }
-            visible.Sort(DrawComparer.Instance); BatchCount = 0;
-            int start = 0;
-            while (start < visible.Count)
+            visible.Sort(DrawComparer.Instance);
+            batch.Begin();
+            for (int i = 0; i < visible.Count; i++)
             {
-                DrawItem first = visible[start]; int end = start + 1;
-                while (end < visible.Count && end - start < AiecsRenderBatch.MaxSprites && visible[end].Row == first.Row &&
-                    visible[end].Layer == first.Layer && visible[end].Order == first.Order) end++;
-                if (BatchCount == batches.Count) batches.Add(new AiecsRenderBatch(scene, catalog.Material));
-                var batch = batches[BatchCount++]; batch.Begin();
-                for (int i = start; i < end; i++)
-                {
-                    var item = visible[i]; var record = records[item.Index]; var definition = catalog.Actors[item.Visual];
+                var item = visible[i]; var record = records[item.Index]; var definition = catalog.Actors[item.Visual];
                     // 攻击前摇/后摇是明确的战斗阶段；专用素材完成前复用待机，只有 Active 播放真正攻击动作。
                     int action = record.Dead != 0 ? 3 : record.Behavior == (int)AiecsBehavior.Attack
                         ? record.AttackPhase == AiecsAttackPhase.Active ? 2 : 0
                         : record.Behavior == (int)AiecsBehavior.Idle ? 0 : 1;
                     var frame = definition.Clips[clips[record.Definition, action]].Sample(record.ActionElapsed);
+                    float2 ground = center + domain.ShortestDelta(center, record.Position);
                     var actor = new AiecsPrototypeActor
                     {
-                        Position = center + domain.ShortestDelta(center, record.Position),
+                        Position = ground + new float2(0f, record.FlightHeight),
                         WaterBlend = Mathf.Clamp01(record.WaterBlend)
                     };
                     float liquidDepth = Mathf.Clamp01(record.LiquidDepth);
                     float waterTint = Mathf.Lerp(0.12f, 0.8f, liquidDepth);
-                    Color color = definition.Color * (record.Group % 2 == 0 ? new Color(0.7f, 0.85f, 1f) : new Color(1f, 0.7f, 0.65f));
+                    Color color = definition.Color;
                     if (record.Dead != 0) color.a *= Mathf.Clamp01(2f - record.ActionElapsed);
                     // 复用真实水态和当前可见列表，绝不逐实体查询地形或创建阴影组件。
                     if (ShadowsEnabled)
-                        shadows.Append(new Vector2(actor.Position.x, actor.Position.y), shadowFootprints[record.Definition],
+                        shadows.Append(new Vector2(ground.x, ground.y), shadowFootprints[record.Definition],
                             record.Facing.x < 0f, AiecsShadowRenderer.ResolveOpacity(ShadowOpacity, color.a, record.LiquidDepth, record.WaterBlend));
                     if (sunShadows.Active)
                         sunShadows.Append(actor, definition, frame, catalog.Sprites[frame.Sprite], record.Facing.x < 0f,
-                            color.a, actor.Position.y + shadowFootprints[record.Definition].y - 0.02f,
+                            color.a, ground.y + shadowFootprints[record.Definition].y - 0.02f,
                             sunShadowHeights[record.Definition]);
-                    batch.Append(actor, definition, frame, catalog.Sprites[frame.Sprite], liquidDepth, waterTint,
-                        record.Facing.x < 0f, color);
-                }
-                batch.Submit(first.Layer, first.Order); start = end;
+                batch.Append(actor, definition, frame, catalog.Sprites[frame.Sprite], liquidDepth, waterTint,
+                    record.Facing.x < 0f, color);
             }
-            for (int i = BatchCount; i < batches.Count; i++) batches[i].Hide();
+            batch.Submit();
+            BatchCount = batch.Count > 0 ? 1 : 0;
             shadows.End();
             sunShadows.End();
         }
@@ -193,7 +186,8 @@ namespace FlatWorld.AIECS
             for (int i = 0; i < math.min(64, visible.Count); i++)
             {
                 var actor = simulation.Display[visible[i].Index]; if (actor.Dead != 0) continue;
-                float2 position = center + domain.ShortestDelta(center, actor.Position) + new float2(0, 0.8f);
+                float2 position = center + domain.ShortestDelta(center, actor.Position) +
+                    new float2(0, 0.8f + actor.FlightHeight);
                 Vector3 point = camera.WorldToScreenPoint(new Vector3(position.x, position.y, 0f));
                 Rect rect = new Rect(point.x - 20f, Screen.height - point.y, 40f, 5f);
                 GUI.color = Color.black; GUI.DrawTexture(rect, Texture2D.whiteTexture);
@@ -208,8 +202,8 @@ namespace FlatWorld.AIECS
         {
             shadows.Dispose();
             sunShadows.Dispose();
-            foreach (var batch in batches) batch.Dispose();
-            batches.Clear(); visible.Clear(); BatchCount = 0;
+            batch.Dispose();
+            visible.Clear(); BatchCount = 0;
         }
     }
 }
