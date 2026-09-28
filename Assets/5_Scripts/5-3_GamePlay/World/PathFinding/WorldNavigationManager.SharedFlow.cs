@@ -9,6 +9,8 @@ public sealed partial class WorldNavigationManager
     #region ECS 共享导航所有权
     // 只有实际使用 ECS 导航时才创建；旧 GameObject Agent 保持现有请求路径。
     private FlowNavigationCache sharedNavigation;
+    private readonly Dictionary<Vector2Int, FlowGoalHandle> portalPathGoals = new();
+    private readonly Queue<Vector2Int> portalPathGoalOrder = new();
 
     /// <summary>只验证共享缓存所有权；观察者和旧模拟检查世界时不能隐式创建新缓存。</summary>
     public bool OwnsSharedNavigation(FlowNavigationCache cache) =>
@@ -37,6 +39,8 @@ public sealed partial class WorldNavigationManager
         grid.CellChanged -= MarkSharedNavigationDirty;
         grid.Cleared -= sharedNavigation.RequestReset;
         sharedNavigation.Dispose(); sharedNavigation = null;
+        portalPathGoals.Clear();
+        portalPathGoalOrder.Clear();
     }
 
     /// <summary>主线程适配器，复用最终 WorldNavigationGrid 权重、建筑覆盖与循环坐标。</summary>

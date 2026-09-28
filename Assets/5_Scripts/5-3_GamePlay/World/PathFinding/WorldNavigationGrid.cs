@@ -19,8 +19,7 @@ public readonly struct WorldNavigationCell
 }
 
 /// <summary>
-/// Sparse navigation storage keyed by canonical world cells. Infinite worlds keep absolute
-/// coordinates; wrapped worlds connect opposite boundary cells as direct neighbours.
+/// Chunk 连续导航块是格数据权威；世界拓扑负责把循环边界归一到同一块。
 /// </summary>
 public sealed class WorldNavigationGrid
 {
@@ -32,7 +31,70 @@ public sealed class WorldNavigationGrid
         new(1, 1), new(1, -1), new(-1, 1), new(-1, -1)
     };
 
-    private readonly Dictionary<Vector2Int, WorldNavigationCell> cells = new(8192);
+    #region Chunk 连续格数据
+    private const int BlockSize = 16;
+    private readonly Dictionary<Vector2Int, ChunkNavigationBlock> blocks = new(128);
+    private int registeredCellCount;
+
+    private sealed class ChunkNavigationBlock
+    {
+        internal readonly WorldNavigationCell[] Cells = new WorldNavigationCell[BlockSize * BlockSize];
+        internal readonly bool[] Registered = new bool[BlockSize * BlockSize];
+        internal int Count;
+    }
+
+    private static Vector2Int BlockOrigin(Vector2Int cell)
+        => new(FloorBlock(cell.x), FloorBlock(cell.y));
+
+    private static int FloorBlock(int value)
+    {
+        int quotient = value / BlockSize;
+        if (value < 0 && value % BlockSize != 0) quotient--;
+        return quotient * BlockSize;
+    }
+
+    private static int BlockIndex(Vector2Int cell, Vector2Int origin)
+        => (cell.y - origin.y) * BlockSize + cell.x - origin.x;
+
+    private bool TryGetTerrainCell(Vector2Int cell, out WorldNavigationCell value)
+    {
+        Vector2Int origin = BlockOrigin(cell);
+        if (blocks.TryGetValue(origin, out ChunkNavigationBlock block))
+        {
+            int index = BlockIndex(cell, origin);
+            if (block.Registered[index]) { value = block.Cells[index]; return true; }
+        }
+        value = default;
+        return false;
+    }
+
+    private void WriteTerrainCell(Vector2Int cell, WorldNavigationCell value)
+    {
+        Vector2Int origin = BlockOrigin(cell);
+        if (!blocks.TryGetValue(origin, out ChunkNavigationBlock block))
+        {
+            block = new ChunkNavigationBlock();
+            blocks.Add(origin, block);
+        }
+        int index = BlockIndex(cell, origin);
+        if (!block.Registered[index]) { block.Registered[index] = true; block.Count++; registeredCellCount++; }
+        block.Cells[index] = value;
+    }
+
+    private bool RemoveTerrainCell(Vector2Int cell)
+    {
+        Vector2Int origin = BlockOrigin(cell);
+        if (!blocks.TryGetValue(origin, out ChunkNavigationBlock block)) return false;
+        int index = BlockIndex(cell, origin);
+        if (!block.Registered[index]) return false;
+        block.Registered[index] = false;
+        block.Cells[index] = default;
+        block.Count--;
+        registeredCellCount--;
+        if (block.Count == 0) blocks.Remove(origin);
+        return true;
+    }
+    #endregion
     private readonly Dictionary<Vector2Int, int> blockerCounts = new(512);
     private readonly Dictionary<int, HashSet<Vector2Int>> blockerCells = new(128);
     private readonly HashSet<Vector2Int> changedCells = new();
@@ -45,17 +107,20 @@ public sealed class WorldNavigationGrid
     public int Revision { get; private set; }
     public int PathInvalidationRevision { get; private set; }
     public int PathCostRevision { get; private set; }
-    public int CellCount => cells.Count;
+    public int CellCount => registeredCellCount;
 
     // 独立失效通知供共享流场订阅，不竞争旧路径管理器的 ConsumeChanges 队列。
     public event Action<Vector2Int> CellChanged;
     public event Action Cleared;
 
-    /// <summary>复制已注册坐标供新导航后端首次建立块索引，不暴露可写字典。</summary>
+    /// <summary>复制已注册坐标供流场后端首次建立块索引。</summary>
     public void CopyCellPositions(List<Vector2Int> result)
     {
         result.Clear();
-        result.AddRange(cells.Keys);
+        foreach (KeyValuePair<Vector2Int, ChunkNavigationBlock> pair in blocks)
+        for (int index = 0; index < pair.Value.Registered.Length; index++)
+            if (pair.Value.Registered[index])
+                result.Add(pair.Key + new Vector2Int(index % BlockSize, index / BlockSize));
     }
 
     public static Vector2Int WorldToCell(Vector2 worldPosition)
@@ -104,10 +169,11 @@ public sealed class WorldNavigationGrid
     public void Clear()
     {
         Cleared?.Invoke();
-        if (cells.Count == 0 && blockerCounts.Count == 0 && blockerCells.Count == 0)
+        if (registeredCellCount == 0 && blockerCounts.Count == 0 && blockerCells.Count == 0)
             return;
 
-        cells.Clear();
+        blocks.Clear();
+        registeredCellCount = 0;
         blockerCounts.Clear();
         blockerCells.Clear();
         changedCells.Clear();
@@ -119,7 +185,7 @@ public sealed class WorldNavigationGrid
     {
         position = NormalizeCell(position);
         WorldNavigationCell next = new(penalty, walkable && penalty > 0u, water, liquidDepth);
-        bool hasCurrent = cells.TryGetValue(position, out WorldNavigationCell current);
+        bool hasCurrent = TryGetTerrainCell(position, out WorldNavigationCell current);
         if (hasCurrent &&
             current.Penalty == next.Penalty &&
             current.Walkable == next.Walkable &&
@@ -132,7 +198,7 @@ public sealed class WorldNavigationGrid
         bool blocked = blockerCounts.TryGetValue(position, out int blockerCount) && blockerCount > 0;
         bool wasEffectivelyWalkable = hasCurrent && current.Walkable && !blocked;
         bool willBeEffectivelyWalkable = next.Walkable && !blocked;
-        cells[position] = next;
+        WriteTerrainCell(position, next);
         RecordChangedCell(position);
         // 代价变化会改变最优路径，单独记录代价版本供运行中的 Agent 重新寻路。
         bool changesPathCost = wasEffectivelyWalkable && current.Penalty != next.Penalty;
@@ -145,12 +211,12 @@ public sealed class WorldNavigationGrid
     public bool RemoveCell(Vector2Int position)
     {
         position = NormalizeCell(position);
-        if (!cells.TryGetValue(position, out WorldNavigationCell current))
+        if (!TryGetTerrainCell(position, out WorldNavigationCell current))
             return false;
 
         bool blocked = blockerCounts.TryGetValue(position, out int blockerCount) && blockerCount > 0;
         bool invalidatesExistingPaths = current.Walkable && !blocked;
-        cells.Remove(position);
+        RemoveTerrainCell(position);
         RecordChangedCell(position);
         MarkRevisionChanged(invalidatesExistingPaths);
         return true;
@@ -168,11 +234,11 @@ public sealed class WorldNavigationGrid
                 Vector2Int position = NormalizeCell(new Vector2Int(x, y));
                 if (!visited.Add(position))
                     continue;
-                if (cells.TryGetValue(position, out WorldNavigationCell current))
+                if (TryGetTerrainCell(position, out WorldNavigationCell current))
                 {
                     bool blocked = blockerCounts.TryGetValue(position, out int blockerCount) && blockerCount > 0;
                     invalidatesExistingPaths |= current.Walkable && !blocked;
-                    cells.Remove(position);
+                    RemoveTerrainCell(position);
                     RecordChangedCell(position);
                     removed++;
                 }
@@ -191,7 +257,7 @@ public sealed class WorldNavigationGrid
     /// <summary>调用方已用当前世界 Domain 规范化坐标时，直接读取最终格状态。</summary>
     internal bool TryGetCanonicalCell(Vector2Int position, out WorldNavigationCell cell)
     {
-        if (!cells.TryGetValue(position, out WorldNavigationCell terrain))
+        if (!TryGetTerrainCell(position, out WorldNavigationCell terrain))
         {
             cell = default;
             return false;
@@ -236,7 +302,7 @@ public sealed class WorldNavigationGrid
             foreach (Vector2Int cell in next)
             {
                 blockerCounts.TryGetValue(cell, out int count);
-                if (count <= 0 && cells.TryGetValue(cell, out WorldNavigationCell terrain) && terrain.Walkable)
+                if (count <= 0 && TryGetTerrainCell(cell, out WorldNavigationCell terrain) && terrain.Walkable)
                     invalidatesExistingPaths = true;
 
                 blockerCounts[cell] = count + 1;

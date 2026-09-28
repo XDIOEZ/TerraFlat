@@ -33,14 +33,29 @@ public sealed class ChunkNavigationBinder : MonoBehaviour, IChunkViewRenderer
         boundChunk = null;
     }
 
-    private void HandleTerrainChanged(ChunkTerrainChanged changed) => RefreshNavigation();
-    /// <summary>整个液体 Tick 对本 Chunk 只注册一次导航，后续共享流场仍消费原导航脏块。</summary>
-    private void HandleLiquidBatchChanged(ChunkLiquidBatchChanged changed) => RefreshNavigation();
-    private void HandleOccupancyChanged(ChunkOccupancyChanged changed) => RefreshNavigation();
+    #region 增量导航同步
+    private void HandleTerrainChanged(ChunkTerrainChanged changed)
+    {
+        if (boundChunk != null && changed.Kind != TerrainChangeKind.Grass)
+            WorldNavigationManager.ExistingInstance?.UpdateChunkRuntimeCell(
+                boundChunk, changed.LocalCell.X, changed.LocalCell.Y);
+    }
 
-    private void RefreshNavigation()
+    private void HandleLiquidBatchChanged(ChunkLiquidBatchChanged changed)
     {
         if (boundChunk != null)
-            WorldNavigationManager.ExistingInstance?.RegisterChunkRuntime(boundChunk);
+            WorldNavigationManager.ExistingInstance?.UpdateChunkRuntimeCells(
+                boundChunk, changed.CellIndices.Span);
     }
+
+    private void HandleOccupancyChanged(ChunkOccupancyChanged changed)
+    {
+        if (boundChunk == null) return;
+        WorldNavigationManager manager = WorldNavigationManager.ExistingInstance;
+        if (changed.Cells.Count == 0)
+            manager?.RefreshChunkRuntimeCells(boundChunk);
+        else
+            manager?.UpdateChunkRuntimeCells(boundChunk, changed.Cells);
+    }
+    #endregion
 }

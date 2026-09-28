@@ -78,8 +78,7 @@ public sealed partial class WorldNavigationManager : SingletonAutoMono<WorldNavi
 
     private readonly WorldNavigationGrid grid = new();
     private readonly Dictionary<int, HashSet<Vector2Int>> cellsByMap = new(128);
-    private readonly Dictionary<RuntimeWorldAddress, HashSet<Vector2Int>> cellsByRuntimeChunk = new();
-    private readonly Dictionary<Vector2Int, RuntimeWorldAddress> runtimeTerrainOwnerByCell = new(8192);
+    private readonly Dictionary<RuntimeWorldAddress, RuntimeChunkRegistration> runtimeChunks = new();
     private readonly Stack<HashSet<Vector2Int>> mapCellSetPool = new(32);
     private readonly Dictionary<Vector2Int, int> terrainOwnerByCell = new(8192);
     private readonly Dictionary<Vector2Int, GoalField> fieldsByGoal = new(32);
@@ -93,6 +92,15 @@ public sealed partial class WorldNavigationManager : SingletonAutoMono<WorldNavi
     private readonly List<Vector2Int> gridChangeBuffer = new(256);
     private readonly Stopwatch pathStopwatch = new();
     private readonly WorldNavigationItemFootprintBridge itemFootprintBridge = new();
+
+    private readonly struct RuntimeChunkRegistration
+    {
+        public RuntimeChunkRegistration(ChunkRuntime chunk, int width, int height)
+        { Chunk = chunk; Width = width; Height = height; }
+        public ChunkRuntime Chunk { get; }
+        public int Width { get; }
+        public int Height { get; }
+    }
 
     private int nextRequestId = 1;
     private int observedGridRevision;
@@ -211,8 +219,7 @@ public sealed partial class WorldNavigationManager : SingletonAutoMono<WorldNavi
         grid.Clear();
         RecycleAllMapCellSets();
         terrainOwnerByCell.Clear();
-        cellsByRuntimeChunk.Clear();
-        runtimeTerrainOwnerByCell.Clear();
+        runtimeChunks.Clear();
         observedGridRevision = grid.Revision;
         activeWorldKey = string.Empty;
         enabled = false;
@@ -240,9 +247,11 @@ public sealed partial class WorldNavigationManager : SingletonAutoMono<WorldNavi
     {
         if (chunk?.Terrain == null || chunk.DataStatus != ChunkDataStatus.Ready)
             return;
+        if (runtimeChunks.TryGetValue(chunk.Address, out RuntimeChunkRegistration existing) &&
+            ReferenceEquals(existing.Chunk, chunk))
+            return;
 
         UnregisterChunkRuntime(chunk.Address);
-        var ownedCells = new HashSet<Vector2Int>();
         ChunkTerrainData terrain = chunk.Terrain;
         grid.BeginBatchUpdate();
         try
@@ -263,11 +272,10 @@ public sealed partial class WorldNavigationManager : SingletonAutoMono<WorldNavi
                     if (walkable) penalty = WorldLiquidSystem.GetNavigationCost(terrain, x, y, penalty);
                     grid.SetCell(worldCell, penalty, walkable, water,
                         ResolveRuntimeLiquidDepth(terrain, x, y, water));
-                    ownedCells.Add(worldCell);
-                    runtimeTerrainOwnerByCell[worldCell] = chunk.Address;
                 }
             }
-            cellsByRuntimeChunk[chunk.Address] = ownedCells;
+            runtimeChunks[chunk.Address] = new RuntimeChunkRegistration(chunk,
+                terrain.Width, terrain.Height);
         }
         finally
         {
@@ -275,29 +283,101 @@ public sealed partial class WorldNavigationManager : SingletonAutoMono<WorldNavi
         }
     }
 
+    #region Runtime Chunk 局部更新
+    /// <summary>单格地形变化只重读该格的有效地面和水体。</summary>
+    public void UpdateChunkRuntimeCell(ChunkRuntime chunk, int localX, int localY)
+    {
+        if (!CanUpdateRuntimeChunk(chunk)) return;
+        grid.BeginBatchUpdate();
+        try { WriteRuntimeNavigationCell(chunk, localX, localY); }
+        finally { grid.EndBatchUpdate(); }
+    }
+
+    /// <summary>液体批次按变更索引同步，避免重建整块导航。</summary>
+    public void UpdateChunkRuntimeCells(ChunkRuntime chunk, ReadOnlySpan<int> indices)
+    {
+        if (!CanUpdateRuntimeChunk(chunk)) return;
+        int width = chunk.Terrain.Width;
+        grid.BeginBatchUpdate();
+        try
+        {
+            for (int i = 0; i < indices.Length; i++)
+                WriteRuntimeNavigationCell(chunk, indices[i] % width, indices[i] / width);
+        }
+        finally { grid.EndBatchUpdate(); }
+    }
+
+    /// <summary>占用变化只同步受影响的格子。</summary>
+    public void UpdateChunkRuntimeCells(ChunkRuntime chunk, IReadOnlyList<Int2> cells)
+    {
+        if (!CanUpdateRuntimeChunk(chunk) || cells == null) return;
+        grid.BeginBatchUpdate();
+        try
+        {
+            for (int i = 0; i < cells.Count; i++)
+                WriteRuntimeNavigationCell(chunk, cells[i].X, cells[i].Y);
+        }
+        finally { grid.EndBatchUpdate(); }
+    }
+
+    /// <summary>整体清空占用时保留已登记的 Chunk 和格索引，只刷新格值。</summary>
+    public void RefreshChunkRuntimeCells(ChunkRuntime chunk)
+    {
+        if (!CanUpdateRuntimeChunk(chunk)) return;
+        grid.BeginBatchUpdate();
+        try
+        {
+            for (int y = 0; y < chunk.Terrain.Height; y++)
+            for (int x = 0; x < chunk.Terrain.Width; x++)
+                WriteRuntimeNavigationCell(chunk, x, y);
+        }
+        finally { grid.EndBatchUpdate(); }
+    }
+
+    private bool CanUpdateRuntimeChunk(ChunkRuntime chunk) =>
+        chunk?.Terrain != null && chunk.DataStatus == ChunkDataStatus.Ready &&
+        runtimeChunks.TryGetValue(chunk.Address, out RuntimeChunkRegistration registration) &&
+        ReferenceEquals(registration.Chunk, chunk);
+
+    private void WriteRuntimeNavigationCell(ChunkRuntime chunk, int localX, int localY)
+    {
+        ChunkTerrainData terrain = chunk.Terrain;
+        if ((uint)localX >= (uint)terrain.Width || (uint)localY >= (uint)terrain.Height)
+            return;
+        Vector2Int worldCell = WorldNavigationGrid.NormalizeCell(new Vector2Int(
+            chunk.Address.ChunkOrigin.X + localX, chunk.Address.ChunkOrigin.Y + localY));
+        TerrainCell surface = TerrainSupportLayer.GetSurfaceCell(terrain, localX, localY);
+        bool walkable = (surface.Flags & TerrainCellFlags.Walkable) != 0 &&
+                        (surface.Flags & TerrainCellFlags.Blocking) == 0;
+        walkable = BuildingOccupancyRegistry.GetEffectiveWalkable(worldCell, walkable);
+        bool water = WorldLiquidSystem.GetSurfaceDepth(terrain, localX, localY) > 0f;
+        uint penalty = walkable ? (uint)Mathf.Max(1, surface.NavigationCost) : 0u;
+        if (walkable) penalty = WorldLiquidSystem.GetNavigationCost(terrain, localX, localY, penalty);
+        grid.SetCell(worldCell, penalty, walkable, water,
+            ResolveRuntimeLiquidDepth(terrain, localX, localY, water));
+    }
+    #endregion
+
     public void UnregisterChunkRuntime(ChunkRuntime chunk)
     {
-        if (chunk != null)
+        if (chunk != null &&
+            runtimeChunks.TryGetValue(chunk.Address, out RuntimeChunkRegistration registration) &&
+            ReferenceEquals(registration.Chunk, chunk))
             UnregisterChunkRuntime(chunk.Address);
     }
 
     public void UnregisterChunkRuntime(RuntimeWorldAddress address)
     {
-        if (!cellsByRuntimeChunk.TryGetValue(address, out HashSet<Vector2Int> ownedCells))
+        if (!runtimeChunks.Remove(address, out RuntimeChunkRegistration registration))
             return;
 
         grid.BeginBatchUpdate();
         try
         {
-            cellsByRuntimeChunk.Remove(address);
-            foreach (Vector2Int worldCell in ownedCells)
-            {
-                if (!runtimeTerrainOwnerByCell.TryGetValue(worldCell, out RuntimeWorldAddress owner) ||
-                    owner != address)
-                    continue;
-                runtimeTerrainOwnerByCell.Remove(worldCell);
-                grid.RemoveCell(worldCell);
-            }
+            for (int y = 0; y < registration.Height; y++)
+            for (int x = 0; x < registration.Width; x++)
+                grid.RemoveCell(WorldNavigationGrid.NormalizeCell(new Vector2Int(
+                    address.ChunkOrigin.X + x, address.ChunkOrigin.Y + y)));
         }
         finally
         {
@@ -394,8 +474,14 @@ public sealed partial class WorldNavigationManager : SingletonAutoMono<WorldNavi
 
         if (TryReadCellFromRuntime(cellPosition, out cell, out ChunkRuntime sourceChunk))
         {
-            grid.SetCell(cellPosition, cell.Penalty, cell.Walkable, cell.Water, cell.LiquidDepth);
-            AssignRuntimeCellOwner(sourceChunk, cellPosition);
+            if (sourceChunk.HasNavigationLease)
+            {
+                if (!runtimeChunks.TryGetValue(sourceChunk.Address,
+                        out RuntimeChunkRegistration registration) ||
+                    !ReferenceEquals(registration.Chunk, sourceChunk))
+                    RegisterChunkRuntime(sourceChunk);
+                grid.TryGetCell(cellPosition, out cell);
+            }
             penalty = cell.Penalty;
             walkable = cell.Walkable;
             return true;
@@ -469,7 +555,7 @@ public sealed partial class WorldNavigationManager : SingletonAutoMono<WorldNavi
                 if (chunk == null || !chunk.HasNavigationLease ||
                     chunk.DataStatus != ChunkDataStatus.Ready)
                     continue;
-                if (!cellsByRuntimeChunk.ContainsKey(chunk.Address))
+                if (!runtimeChunks.ContainsKey(chunk.Address))
                     RegisterChunkRuntime(chunk);
             }
         }
@@ -507,8 +593,7 @@ public sealed partial class WorldNavigationManager : SingletonAutoMono<WorldNavi
             grid.Clear();
             RecycleAllMapCellSets();
             terrainOwnerByCell.Clear();
-            cellsByRuntimeChunk.Clear();
-            runtimeTerrainOwnerByCell.Clear();
+            runtimeChunks.Clear();
             observedGridRevision = grid.Revision;
             scheduleIndex = 0;
         }
@@ -521,8 +606,12 @@ public sealed partial class WorldNavigationManager : SingletonAutoMono<WorldNavi
         worldCell = WorldNavigationGrid.NormalizeCell(worldCell);
         if (TryReadCellFromRuntime(worldCell, out WorldNavigationCell cell, out ChunkRuntime sourceChunk))
         {
-            grid.SetCell(worldCell, cell.Penalty, cell.Walkable, cell.Water, cell.LiquidDepth);
-            AssignRuntimeCellOwner(sourceChunk, worldCell);
+            if (!runtimeChunks.TryGetValue(sourceChunk.Address,
+                    out RuntimeChunkRegistration registration) ||
+                !ReferenceEquals(registration.Chunk, sourceChunk))
+                RegisterChunkRuntime(sourceChunk);
+            else
+                grid.SetCell(worldCell, cell.Penalty, cell.Walkable, cell.Water, cell.LiquidDepth);
         }
         else
         {
@@ -607,7 +696,8 @@ public sealed partial class WorldNavigationManager : SingletonAutoMono<WorldNavi
 
         Vector2 center = WorldNavigationGrid.CellCenter(worldCell);
         RuntimeWorldAddress address = chunkManager.ResolveWorldAddress(center);
-        if (!chunkManager.TryGetChunkRuntime(address, out sourceChunk) || sourceChunk.Terrain == null)
+        if (!chunkManager.TryGetChunkRuntime(address, out sourceChunk) ||
+            sourceChunk.Terrain == null || sourceChunk.DataStatus != ChunkDataStatus.Ready)
             return false;
         int localX = worldCell.x - sourceChunk.Address.ChunkOrigin.X;
         int localY = worldCell.y - sourceChunk.Address.ChunkOrigin.Y;
@@ -634,20 +724,6 @@ public sealed partial class WorldNavigationManager : SingletonAutoMono<WorldNavi
             return 0f;
 
         return terrain.GetLiquidDepth(localX, localY);
-    }
-
-    private void AssignRuntimeCellOwner(ChunkRuntime chunk, Vector2Int worldCell)
-    {
-        if (chunk == null)
-            return;
-        worldCell = WorldNavigationGrid.NormalizeCell(worldCell);
-        if (!cellsByRuntimeChunk.TryGetValue(chunk.Address, out HashSet<Vector2Int> cells))
-        {
-            cells = new HashSet<Vector2Int>();
-            cellsByRuntimeChunk[chunk.Address] = cells;
-        }
-        cells.Add(worldCell);
-        runtimeTerrainOwnerByCell[worldCell] = chunk.Address;
     }
 
     #endregion
@@ -830,6 +906,14 @@ public sealed partial class WorldNavigationManager : SingletonAutoMono<WorldNavi
                 new[] { resolved },
                 true,
                 start == goal ? 0 : directPathCost);
+            return;
+        }
+
+        if (TryBuildPortalPath(request, requestedGoal, out Vector2[] portalPath,
+                out Vector2 portalDestination, out bool portalReachesGoal,
+                out int portalCost))
+        {
+            ScheduleSuccess(request, portalDestination, portalPath, portalReachesGoal, portalCost);
             return;
         }
 
