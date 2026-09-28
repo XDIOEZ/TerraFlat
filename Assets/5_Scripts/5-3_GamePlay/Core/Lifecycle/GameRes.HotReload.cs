@@ -226,6 +226,7 @@ public partial class GameRes
         WaterCurrentPushConfigService.ConfigureResourceReload(context);
         SpawnerConfigCatalogService.ConfigureResourceReload(context);
         NaturalGenerationRuleCatalogService.ConfigureResourceReload(context);
+        RiverGenerationConfigService.ConfigureResourceReload(context);
         AnimalSkillCatalogService.ConfigureResourceReload(context);
         QuestCatalog.ConfigureResourceReload(context);
         MechanicalCatalog.ConfigureResourceReload(context);

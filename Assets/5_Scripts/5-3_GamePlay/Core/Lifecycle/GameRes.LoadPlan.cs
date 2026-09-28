@@ -65,6 +65,9 @@ public partial class GameRes
         plan.Add("natural-items", "加载自然物生成规则", 2,
             () => LoadCatalog<NaturalGenerationRuleCatalog>(NaturalGenerationRuleCatalogLoader.LoadBuiltInAsync,
                 NaturalGenerationRuleCatalogService.ReplaceCatalog));
+        plan.Add("river-generation", "加载河流生成配置", 1,
+            () => LoadCatalog<RiverGenerationConfigCatalog>(RiverGenerationConfigLoader.LoadBuiltInAsync,
+                RiverGenerationConfigService.ReplaceCatalog));
         plan.Add("recipes", "加载制作配方", 3,
             () => LoadCatalog<int>((done, fail) => RecipeCatalogLoader.LoadBuiltInAsync(this, done, fail), _ => { }), "items");
         plan.Add("buffs", "加载状态效果", 2,
@@ -79,7 +82,7 @@ public partial class GameRes
             () => LoadCatalog<TextLibraryService>(TextLibraryCatalogLoader.LoadBuiltInAsync, value => textLibraryService = value));
         plan.Add("validate-built-in", "校验本体资源引用", 3,
             () => RunAction(() => ResourceCatalogValidation.Validate(this)),
-            "players", "time", "water-current", "items", "actors", "animal-skills", "spawners", "natural-items", "recipes", "buffs", "liquids", "contamination", "quests", "texts", "inventory", "skills");
+            "players", "time", "water-current", "items", "actors", "animal-skills", "spawners", "natural-items", "river-generation", "recipes", "buffs", "liquids", "contamination", "quests", "texts", "inventory", "skills");
         plan.Add("mods", "加载扩展内容", 5, () => LoadModCatalog(plan), "validate-built-in");
         plan.Add("validate-final", "校验最终资源目录", 3,
             () => RunAction(() =>

@@ -277,6 +277,7 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
 
     [SerializeField] private ChunkGenerationProfileSO profileAsset;
     private NaturalGenerationRuleCatalog previewNaturalRules;
+    private RiverGenerationConfigCatalog previewRiverConfigs;
     [SerializeField] private int worldSeed = -329089282;
     [SerializeField] private int centerX;
     [SerializeField] private int centerY;
@@ -348,8 +349,12 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
         EditorApplication.update += PollGeneration;
     }
 
-    /// <summary>重新聚焦时读取可能被外部修改的自然物 JSON。</summary>
-    private void OnFocus() => previewNaturalRules = null;
+    /// <summary>重新聚焦时读取可能被外部修改的世界生成 JSON。</summary>
+    private void OnFocus()
+    {
+        previewNaturalRules = null;
+        previewRiverConfigs = null;
+    }
 
     private void OnDisable()
     {
@@ -675,7 +680,7 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
 
         using (new EditorGUILayout.HorizontalScope())
         {
-            if (GUILayout.Button("从 Profile 重新读取"))
+            if (GUILayout.Button("从 Profile 和 JSON 重新读取"))
                 ResetParametersFromProfile();
 
             using (new EditorGUI.DisabledScope(profileAsset == null || generationTask != null))
@@ -685,8 +690,9 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
             }
         }
         EditorGUILayout.HelpBox(
-            "“应用”会直接保存所选 Profile SO，并支持撤销。世界坐标缩放属于当前 PlanetData，" +
-            "进入世界时会覆盖 Profile，因此不会写入。",
+            "“应用”只保存 Profile SO 中的参数，并支持撤销。河流参数保存在" +
+            " GameConfig/WorldGeneration/Hydrology/river-generation.json；在此调整河流只影响本次预览。" +
+            "世界坐标缩放由 PlanetData 管理，不会写入。",
             MessageType.Info);
     }
 
@@ -929,17 +935,19 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
 
     #region 参数操作
 
-    /// <summary>预览显式读取自然物 JSON；窗口重新聚焦或重新读取时刷新目录。</summary>
+    /// <summary>预览显式读取自然物与河流 JSON；窗口重新聚焦或重新读取时刷新目录。</summary>
     private ChunkGenerationProfileSnapshot ReadProfileSnapshot(ChunkGenerationProfileSO profile)
     {
         previewNaturalRules ??= NaturalGenerationRuleCatalogLoader.LoadBuiltIn();
-        return profile.CreateSnapshot(previewNaturalRules);
+        previewRiverConfigs ??= RiverGenerationConfigLoader.LoadBuiltIn();
+        return profile.CreateSnapshot(previewNaturalRules, previewRiverConfigs);
     }
 
     /// <summary>把 Profile 参数复制为窗口私有值，并补上运行时星球才提供的世界坐标缩放。</summary>
     private void ResetParametersFromProfile()
     {
         previewNaturalRules = null;
+        previewRiverConfigs = null;
         numericParameters.Clear();
         if (profileAsset == null)
             return;
@@ -1031,7 +1039,7 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
             string confirmation =
                 $"确定把当前窗口参数应用到“{profileAsset.name}”吗？\n\n" +
                 $"资源：{assetPath}\n匹配参数：{matchedCount} 项\n将修改：{changedCount} 项\n\n" +
-                "世界坐标缩放不会写入，它由当前世界的 PlanetData 管理。";
+                "河流参数需在 river-generation.json 中修改；世界坐标缩放由 PlanetData 管理。";
             if (!EditorUtility.DisplayDialog("应用地形参数到 Profile SO", confirmation,
                     "应用并保存", "取消"))
             {
@@ -1040,7 +1048,7 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
 
             if (changedCount == 0)
             {
-                statusMessage = $"{profileAsset.name} 已经与当前可保存参数一致，无需修改。";
+                statusMessage = $"{profileAsset.name} 的 SO 参数没有变化；河流参数请在 river-generation.json 中修改。";
                 statusType = MessageType.Info;
                 return;
             }

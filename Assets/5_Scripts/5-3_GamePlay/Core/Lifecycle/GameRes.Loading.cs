@@ -223,6 +223,7 @@ public partial class GameRes
         ActorDefinitionCatalogLoader.ResetRuntimeCatalog();
         SpawnerConfigCatalogService.Reset();
         NaturalGenerationRuleCatalogService.Reset();
+        RiverGenerationConfigService.Reset();
         recipeDict.Clear();
         recipeCatalog.Clear();
         tileBaseDict.Clear();

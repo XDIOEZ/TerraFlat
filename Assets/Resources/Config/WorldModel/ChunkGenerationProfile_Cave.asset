@@ -61,16 +61,6 @@ MonoBehaviour:
     Value: 0.25
   - Id: cave.groundwater.maxDepth
     Value: 0.85
-  - Id: cave.river.enabled
-    Value: 1
-  - Id: cave.river.connectionChance
-    Value: 0.35
-  - Id: cave.river.halfWidth
-    Value: 0.72
-  - Id: cave.river.minDepth
-    Value: 0.25
-  - Id: cave.river.maxDepth
-    Value: 0.65
   - Id: cave.dirtWall.enabled
     Value: 1
   - Id: cave.dirtWall.tileId

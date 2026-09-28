@@ -129,62 +129,6 @@ MonoBehaviour:
     Value: 0.8
   - Id: climate.orographic.leewardLoss
     Value: 0.6
-  - Id: river.enabled
-    Value: 1
-  - Id: river.hydrologyRegionSize
-    Value: 256
-  - Id: river.runoffCellSize
-    Value: 64
-  - Id: river.runoffSampleStride
-    Value: 16
-  - Id: river.maxTraceSteps
-    Value: 384
-  - Id: river.minimumVisibleCourseLength
-    Value: 96
-  - Id: river.infiltrationFloor
-    Value: 0.25
-  - Id: river.startFlow
-    Value: 0.14
-  - Id: river.tributaryStartFlow
-    Value: 0.1
-  - Id: river.fullWidthFlow
-    Value: 0.45
-  - Id: river.maxWidth
-    Value: 7
-  - Id: river.meanderTieTolerance
-    Value: 0
-  - Id: river.meanderStrength
-    Value: 1.15
-  - Id: river.meanderScale
-    Value: 48
-  - Id: river.valleyDetailWeight
-    Value: 4
-  - Id: river.lookAheadWeight
-    Value: 0.55
-  - Id: river.lookAheadDistance
-    Value: 6
-  - Id: river.floodplainStartFlow
-    Value: 0.14
-  - Id: river.floodplainMaxRadius
-    Value: 8
-  - Id: river.floodplainMaxSlope
-    Value: 0.08
-  - Id: river.alluvialTileThreshold
-    Value: 0.62
-  - Id: river.depthMin
-    Value: 0.2
-  - Id: river.depthMax
-    Value: 0.9
-  - Id: river.minLakeCells
-    Value: 18
-  - Id: river.maxLakeCells
-    Value: 220
-  - Id: river.maxLakeLevelRise
-    Value: 0.045
-  - Id: river.lakeMinFlow
-    Value: 0.35
-  - Id: river.lakeChance
-    Value: 0
   - Id: lake.large.enabled
     Value: 1
   - Id: lake.large.regionSize
@@ -197,8 +141,6 @@ MonoBehaviour:
     Value: 104
   - Id: lake.large.islandChance
     Value: 0.7
-  - Id: river.maxCachedRegions
-    Value: 9
   - Id: grass.density
     Value: 0.24
   - Id: biome.snow.iceLakeChance
@@ -250,8 +192,6 @@ MonoBehaviour:
     Value: surface
   - Id: climate.algorithm
     Value: legacyLand
-  - Id: river.algorithm
-    Value: heightDriven
   - Id: tile.block.1
     Value: Tile_Grass
   - Id: tile.block.3

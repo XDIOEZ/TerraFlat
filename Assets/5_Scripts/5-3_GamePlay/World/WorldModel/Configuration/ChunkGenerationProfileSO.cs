@@ -4,7 +4,7 @@ using FlatWorld.WorldModel;
 using Sirenix.OdinInspector;
 using UnityEngine;
 
-/// <summary>世界生成预设；自然物和矿脉只引用 JSON 规则 ID。</summary>
+/// <summary>世界生成预设；自然物、矿脉和河流配置由 JSON 补入快照。</summary>
 [CreateAssetMenu(fileName = "ChunkGenerationProfile", menuName = "FlatWorld/World/Chunk Generation Profile")]
 public sealed class ChunkGenerationProfileSO : ScriptableObject
 {
@@ -58,12 +58,15 @@ public sealed class ChunkGenerationProfileSO : ScriptableObject
 
     /// <summary>从已发布的 JSON 目录解析规则，复制成后台线程可安全读取的配置快照。</summary>
     public ChunkGenerationProfileSnapshot CreateSnapshot() =>
-        CreateSnapshot(NaturalGenerationRuleCatalogService.RequireCatalog());
+        CreateSnapshot(NaturalGenerationRuleCatalogService.RequireCatalog(),
+            RiverGenerationConfigService.RequireCatalog());
 
     /// <summary>显式目录入口供编辑器预览使用；运行时由资源加载阶段提供目录。</summary>
-    public ChunkGenerationProfileSnapshot CreateSnapshot(NaturalGenerationRuleCatalog rules)
+    public ChunkGenerationProfileSnapshot CreateSnapshot(NaturalGenerationRuleCatalog rules,
+        RiverGenerationConfigCatalog riverConfigs)
     {
         if (rules == null) throw new ArgumentNullException(nameof(rules));
+        if (riverConfigs == null) throw new ArgumentNullException(nameof(riverConfigs));
         var numbers = new Dictionary<string, double>(StringComparer.Ordinal);
         for (int i = 0; i < numericParameters.Count; i++)
         {
@@ -75,6 +78,7 @@ public sealed class ChunkGenerationProfileSO : ScriptableObject
         }
 
         Dictionary<string, string> texts = CreateTextParametersSnapshot();
+        riverConfigs.ApplyTo(profileId, numbers, texts);
 
         var ecologySnapshots = new List<EcologySpawnRuleSnapshot>(ecologyRuleIds.Count);
         var ruleIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
