@@ -268,6 +268,10 @@ public sealed class ItemShadowVisualDefinitionDto
     [JsonProperty("footLocalPosition", NullValueHandling = NullValueHandling.Ignore)]
     public Vector2? FootLocalPosition;
 
+    /// <summary>脚点相对可见底边的最小内缩；未填写时使用全局阴影默认值。</summary>
+    [JsonProperty("footOverlap", NullValueHandling = NullValueHandling.Ignore)]
+    public float? FootOverlap;
+
     #endregion
 }
 

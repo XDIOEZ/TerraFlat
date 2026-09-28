@@ -86,30 +86,32 @@ public static class ShadowFootprintResolver
 
     /// <summary>允许配置覆盖脚点，但不允许其低于可见底边的内缩位置。</summary>
     public static Vector3 ResolveFoot(Item item, Bounds groundedBounds, Vector2? localFoot,
-        float footOffset = 0f)
+        float footOffset = 0f, float? footOverlap = null)
     {
         Vector3 foot = localFoot.HasValue
             ? item.transform.TransformPoint(new Vector3(localFoot.Value.x, localFoot.Value.y, 0f))
             : new Vector3(groundedBounds.center.x, groundedBounds.min.y, groundedBounds.center.z);
-        return ClampFoot(foot, groundedBounds, footOffset);
+        return ClampFoot(foot, groundedBounds, footOffset, footOverlap);
     }
 
     /// <summary>数据机械使用建造矩阵和同一可见底边约束定位落点。</summary>
     public static Vector3 ResolveFoot(Matrix4x4 localToWorld, Bounds groundedBounds,
-        Vector2? localFoot, float footOffset = 0f)
+        Vector2? localFoot, float footOffset = 0f, float? footOverlap = null)
     {
         Vector3 foot = localFoot.HasValue
             ? localToWorld.MultiplyPoint3x4(new Vector3(localFoot.Value.x, localFoot.Value.y, 0f))
             : new Vector3(groundedBounds.center.x, groundedBounds.min.y, groundedBounds.center.z);
-        return ClampFoot(foot, groundedBounds, footOffset);
+        return ClampFoot(foot, groundedBounds, footOffset, footOverlap);
     }
 
     /// <summary>统一限制自定义脚点，避免投影与主体可见底边脱节。</summary>
-    private static Vector3 ClampFoot(Vector3 foot, Bounds groundedBounds, float footOffset)
+    private static Vector3 ClampFoot(Vector3 foot, Bounds groundedBounds, float footOffset,
+        float? footOverlap)
     {
         WorldRenderingConfig.ContactShadow settings = WorldRenderingConfigCatalog.Default.shadows.contact;
-        float overlap = Mathf.Min(settings.maximumFootOverlap,
-            groundedBounds.size.y * settings.footOverlapRatio);
+        float overlap = footOverlap.HasValue
+            ? Mathf.Clamp(footOverlap.Value, 0f, groundedBounds.size.y * 0.5f)
+            : Mathf.Min(settings.maximumFootOverlap, groundedBounds.size.y * settings.footOverlapRatio);
         float sideInset = Mathf.Min(settings.maximumFootOverlap,
             groundedBounds.size.x * settings.footOverlapRatio);
         foot.x = Mathf.Clamp(foot.x, groundedBounds.min.x + sideInset,

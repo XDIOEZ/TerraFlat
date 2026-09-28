@@ -496,7 +496,8 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
         SunShadowCaster authoring, ItemShadowVisualDefinitionDto shadowVisual)
     {
         return ShadowFootprintResolver.ResolveFoot(owner, footprint,
-            shadowVisual?.FootLocalPosition, authoring != null ? authoring.FootOffset : 0f).y;
+            shadowVisual?.FootLocalPosition, authoring != null ? authoring.FootOffset : 0f,
+            shadowVisual?.FootOverlap).y;
     }
 
     /// <summary>每张 Sprite 只读取一次图集 UV，模糊采样限定在本帧贴图区域内。</summary>

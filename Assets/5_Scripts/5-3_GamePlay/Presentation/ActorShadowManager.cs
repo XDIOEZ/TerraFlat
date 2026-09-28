@@ -217,7 +217,7 @@ public sealed class ActorShadowManager : SingletonMono<ActorShadowManager>
             footprint.center -= VisualGroundOffsetResolver.Resolve(binding.GroundOffsetProvider,
                 sourceRenderer.transform);
         Vector3 footprintAnchor = ShadowFootprintResolver.ResolveFoot(item, footprint,
-            binding.ShadowVisual?.FootLocalPosition);
+            binding.ShadowVisual?.FootLocalPosition, 0f, binding.ShadowVisual?.FootOverlap);
         if (contactWidth > 0f)
         {
             binding.ShadowWidth = Mathf.Clamp(contactWidth * Mathf.Abs(item.transform.lossyScale.x),

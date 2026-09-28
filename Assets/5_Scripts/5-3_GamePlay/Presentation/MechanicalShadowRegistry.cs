@@ -79,7 +79,8 @@ internal static class MechanicalShadowRegistry
         entry.Scene = scene;
         entry.Layer = owner.gameObject.layer;
         entry.PrimarySprite = sprite;
-        entry.Foot = ShadowFootprintResolver.ResolveFoot(matrix, bounds, settings?.FootLocalPosition);
+        entry.Foot = ShadowFootprintResolver.ResolveFoot(matrix, bounds, settings?.FootLocalPosition,
+            0f, settings?.FootOverlap);
         WorldRenderingConfig.ContactShadow defaults = WorldRenderingConfigCatalog.Default.shadows.contact;
         float width = settings?.ContactWidth ?? bounds.size.x * defaults.widthRatio;
         entry.ContactWidth = width <= 0f ? 0f :
