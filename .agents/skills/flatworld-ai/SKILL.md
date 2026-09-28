@@ -17,6 +17,7 @@ description: "Use when: 定位或修改 FlatWorld 的动物/怪物 AI、状态�
 
 - `AI_Bird` 的起飞入口必须统一执行飞行耐力门禁；耗尽后的强制降落先于逃跑/觅食，落地回满才能解锁，不能让受击逃跑在地面仍调用空中位移。耐力与恢复锁写入独立模块快照，`LiftRoot` 已包含飞行高度，头顶条不能重复叠加。
 - `AI_Bird` 的 Flying 阶段不能把“已到固定目标”或“直线路径进入未加载地形”留给 `MoveFlightStep` 原地返回：逃跑到点须结束该目标，巡航目标保持最短前进距离，空中追逐与漫游共用转向通行逻辑；周围无可通行空路而脚下可落地时转入降落。
+- 鸟类飞行只检查经过格所在的权威 Chunk 是否 Ready；单次移动共用拓扑与区块查询、同格去重，未加载格仍阻挡，不要为通行检查逐采样读取地块表面。
 - 共用 `AIFleeStateNode` 在当前逃离段接近终点时接续下一段，导航确认失败时重选段；普通威胁位置抖动不应触发重新寻路，新伤害仍可显式 `Retarget`。
 - 常驻飞行 Actor 使用 `AI_Bird.permanentFlight`，默认保持 Flying 且不进入普通鸟耐力/觅食降落循环；物种行为经 `IBirdFlightPilot` 注册，明确的地面行为可通过 Pilot 临时切到 Ground，后续 `FlyTo/WanderAroundHome` 会恢复 Flying。`Mod_HiveColony` 只在新巢首次创建初始成员，之后死亡成员须按繁殖规则补充；蜂巢持有成员 GUID 与独立行为快照，成员的 `AI_Bird.HomeHiveGuid` 标记归属，并通过 `IRuntimeAiPersistencePolicy` 排除独立 AI 快照。蜂巢领地共享警戒只作用于同时位于领地内的成员，Scene Gizmo 与蜜蜂随机巡逻必须复用同一套整格领地判定；普通巡逻使用 `PatrolFlightSpeedMultiplier` 缩放基础飞行速度，追击、返巢和采蜜赶路不得继承该减速。
 - 蜂群夜间睡眠由蜂巢统一调度：日落后清醒成员真实飞回巢位，到达后保存 `BeeState` 并卸载 GameObject；睡眠饱食按 `ModUpdate` 的缩放时间以清醒速率的一半直接推进快照，日出恢复同一 GUID。普通领地警戒不能唤醒睡蜂，蜂巢 `DamageReceiver` 的有效受击必须唤醒全巢并把武器/投射物 `Owner` 解析为最高优先级攻击目标；蜂巢死亡时解除 `HomeHiveGuid` 并保留蜜蜂实体继续复仇，不能随蜂巢 `Unload` 一起回收。
@@ -31,7 +32,7 @@ description: "Use when: 定位或修改 FlatWorld 的动物/怪物 AI、状态�
 - Actor 感知形状由当前外壳根级作者数据与合并后的 `visual.collider` 编译，共享于 `RuntimeItemDefinition`；子级攻击盒、生命受击盒不是感知体型。运行时位置、缩放和旋转只变换纯数据形状，不能再因 Collider 开关或 Physics2D 同步时机改变 AI 感知结果；圆采用包围圆，复杂形状采用明确的 AABB 语义，不能把这一感知近似当成精确伤害形状。
 - 异步、同步圆形查询与 `IsWithinEffectivePerceptionRange` 必须使用同一 Actor 几何和循环镜像规则；空间格按中心登记时，粗筛范围须覆盖最大变换后体型。Job 结果还须核对注册代际、Guid、实例与当前层；仅检查 GetInstanceID 无法防止对象池原对象复用。
 - 生物感知默认经过整数格 LOS：动态建筑以 `BuildingOccupancyRegistry` 的离散占地为权威遮挡，格子墙/岩壁以运行时 `TerrainCell.BlockingTileId + TerrainCellFlags.Blocking` 为权威遮挡；`Mod_ItemDetector.wallsBlockPerception` 允许特殊生物显式关闭。AI 的持续锁定/状态距离判断必须复用 `IsWithinEffectivePerceptionRange`，避免目标进入遮挡后仍只按距离保持感知。
-- LOS 属于感知热路径；沿格检测禁止 Physics2D 射线、Collider 扫描或逐格调用 `ChunkMgr.TryGetRuntimeTerrainTile`。应从观察者格到目标格逐格查询 `BuildingOccupancyRegistry`，同时缓存当前 `ChunkRuntime/ChunkTerrainData`，仅跨 Chunk 时重新解析地址并直接读取 `BlockingTileId + Blocking`；任一格命中遮挡立即终止。
+- LOS 属于感知热路径；沿格检测禁止 Physics2D 射线、Collider 扫描或逐格调用 `ChunkMgr.TryGetRuntimeTerrainTile`。每条视线只取一次 `WorldTopologyDomain`，仅跨 Chunk 时重新解析地址，已加载格直接读取 `ChunkTerrainData.IsSightBlockingCell`；地形统一写入口和建筑占地登记负责维护遮挡位，未加载格始终视为遮挡。AIECS 快照按 `BlockingRevision`、占地格通知和整层重建版本刷新。
 - 目标感知范围由 Detector 的 `DetectionRadius` 与 Item 的 `PerceptionRadiusMultiplier` 共同决定；修改感知逻辑时必须同步空间粗筛、目标快照精筛和 AI 状态阈值，避免大体型目标被漏筛或状态机仍使用旧距离。
 - 现代 AI 位于 `Entities/AI/`；修改 Prefab 前确认其使用状态机还是旧 Kiwi 行为树。
 - `Chicken_Tree`、`WildBoar_Tree` 是历史 Kiwi 兼容 Prefab，不实现 `IAIActor`，不加入正式 Actor JSON/MOD 继承目录。

@@ -42,6 +42,7 @@ description: "Use when: 定位或修改 FlatWorld 的稀疏网格寻路、16×16
 
 - `GamePlay` 与 `FlatWorld.AIECS` 共同引用无业务依赖的 `FlatWorld.Navigation`；跨两者的桥接放在独立 `FlatWorld.AIECS.Gameplay`，不能让核心导航引用 AI、Item 或 GamePlay，也不能让 AIECS 与 GamePlay 循环引用。
 - `FlowNavigationCache` 交给 `IFlowGridSource.TryGetCell` 的格坐标已按冻结的 `WorldTopologyDomain` 规范化；GamePlay 适配器应直读网格中的规范坐标，普通公开网格查询仍负责自行规范化。不要在 16×16 逐格快照内反复经 `WorldTopologyRuntime` 查询活动存档。
+- 共享 Flow 的水深、水流等表层变化只更新受影响块的 Native 数据；通行代价或出口变化才重建局部图与共享目标路线。Native 容器的快照视图借给 Job 使用，原位写入、扩容和重排前必须完成已登记的读取依赖；改变 `NativeList` 长度后重新取得 `AsArray` 视图。
 - 共享缓存只读取 `WorldNavigationGrid` 最终有效值，沿用 10/14 八邻接、目标格地形代价和禁止对角切角；不能另建一套地形/建筑/Physics2D 权威。旧 `RequestPath`、总代价拒绝和取消路径仍由旧后端负责，尚未迁移为 ECS 追击规则。
 - `ConsumeChanges` 只供旧管理器消费；共享缓存订阅独立的 `CellChanged/Cleared`。逐格通知必须在旧队列的数量上限判断之前发出，否则大量变更会漏掉 ECS 脏块；世界切换先等待快照读取 Job，再取消订阅和释放缓存。
 - 导航 Chunk 固定 16×16，出口由双方都可走的连续边缘缺口生成，一侧可有多个出口；块内断开的区域不能因为“属于同一 Chunk”就连通。每个缺口使用确定的代表格，缓存到代表格的带权局部图，因此保留可达性与代价规则，但不保证等于完整逐格搜索的全局最短路线。

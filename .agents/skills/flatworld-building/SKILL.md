@@ -32,7 +32,7 @@ description: "Use when: 定位或修改 FlatWorld 的建筑放置预览、安装
 - 建筑 Summoner 一旦进入有效放置模式，玩家普通世界交互必须让位于放置：附近 `IInteractable` 不得因交互键、鼠标点选或同帧多输入被打开，交互描边也应隐藏；退出放置模式后再恢复普通目标选择。
 - 通用建筑本体只提供 `Item + SpriteRenderer + BoxCollider2D`；伤害由 JSON `health` 注入，门、容器、工作台等反馈由独立 `IInteractable` Module 提供，不再依赖通用 `Mod_InteractReciver` 转发。
 - 火把的手持职责与落地建筑本体保持分离：落地后统一使用 `Torch_Building`，`Torch_Summoner` 只能指向后者；攻击、武器动作、燃料、燃烧、光源、燃烧视觉、局部温度、命中 Buff、投料交互与建筑能力全部由 JSON 组合通用模块，运行时代码不得保留 `Mod_Torch` 或其它火把专用玩法聚合器。手持/落地之间只通过 `SharedModuleIds` 转移确需持续的燃料与燃烧状态。
-- 普通动态建筑保持 GameObject + Collider，机械动力建筑走 `MechanicalWorld` 数据节点；放置冲突、导航占地以及 AI 视线遮挡统一读取 `BuildingOccupancyRegistry` 的离散世界格层，不得写入地形 `TileData`，也不得用 Physics2D Overlap/Collider Bounds 推导这些逻辑结果。
+- 普通动态建筑保持 GameObject + Collider，机械动力建筑走 `MechanicalWorld` 数据节点；放置冲突和导航占地仍读取 `BuildingOccupancyRegistry`，占地登记则增量维护 `ChunkTerrainData` 的动态视线遮挡位，供 AI 只读。不得写入地形 `TileData`，也不得用 Physics2D Overlap/Collider Bounds 推导这些逻辑结果。
 - 动态建筑的多格占地由建筑模块 `Building_Data.FootprintWidth/FootprintHeight` 声明，吸附格为左下锚点，缺省零值按 1×1 兼容旧数据；预览与提交必须逐格校验地形和占用，落地及读档逐格注册，拆除、禁用和失败回滚统一注销。视觉与物理碰撞体可覆盖多格，但不能代替离散格校验；跨世界边界的每格分别按拓扑归一化。
 - 建筑承重需求由当前物品定义的 `requiredGroundSupport` 提供，不写入建筑模块存档；每个占地格与当前有效表面比较 `loadCapacity`。有独立地表覆盖时使用平台/地板定义，露出的液面使用对应 `worldWater.loadCapacity`，干地使用 Tile 定义；预览、正式安装与服务端机械建筑校验共用门槛，等值允许。
 - 建筑占地的 Revision/CellChanged 同时服务 Native LOS 脏块桥，不能只依赖导航最终可走值的变化来刷新视线（例如原本不可走但不遮挡的格）。通知只标脏，复制前完成旧 Job；退出世界注销订阅，避免每个 AI 注册占地事件。
@@ -72,7 +72,7 @@ description: "Use when: 定位或修改 FlatWorld 的建筑放置预览、安装
 - `CrossShaft` 只占 Layer1 中心一格，放置时要求同格 Layer0 存在下穿节点，但不要求 A/B 相邻端口预先连接；图构建只把 A/B 接到相邻 Layer0 节点，绝不把同格下穿节点接入跨轴器网络。普通建筑仍占 Layer0，导航只考虑下层阻挡。手持 R 朝向属于模块临时状态，拆回快照和重新选中都必须恢复初始朝向；禁止把方向写进 Summoner 堆叠数据。轴类按横竖两态切换，带定向轴接口的齿轮按四个九十度朝向轮换；世界节点的端口方向、固定输入杆和预览图必须使用同一朝向。
 - 机械风箱的四向出风朝向与本体预览、落地旋转共用 `MechanicalNodeState.RotationQuarterTurns`；炉体由 `Mod_Furnace.acceptsMechanicalBellows` 显式配置接入，只影响出风口所对的相邻熔炉或高炉。20 RPM 对应最多 500℃温度上限增量，温度增益截断不改变其它机械用力器的线性效率。
 - 机械风箱的传动轴入口使用局部 `AxlePorts:["left"]` 与 `InputShaftLocalPosition`，随 `RotationQuarterTurns` 与右侧出风口保持相反；独立轴图层应像风车叶轮一样挂在主体 Sprite 下，放置预览坐标需包含 ShadowRenderer 偏移，只有齿轮推进本体自转相位。
-- 风箱召唤器使用完整展开静态图，落地主体则把固定木框和皮革风囊分成同画布、PPU、中心 Pivot 的 Sprite；皮革图层由 BRG 机械动画模式 4 按节点相位压缩，落地主体不能再次烘入可见皮革，否则会在收缩时重影。右端 T 型喷嘴属于固定框架，四向旋转后仍须与逻辑出风方向一致。
+- 风箱召唤器使用完整展开静态图，落地主体则把固定木框和皮革风囊分成同画布、PPU、中心 Pivot 的 Sprite；皮革图层由 BRG 机械动画模式 4 按节点相位压缩，落地主体不能再次烘入可见皮革，否则会在收缩时重影。右端上窄下宽的梯形喷嘴属于固定框架，四向旋转后仍须与逻辑出风方向一致。
 - 轴类机械端口属于独立视觉图层：物品 `visual.spriteStates.axisPorts` 声明端口贴图，`AxisPortLayout=mirroredSingle` 用于镜像单端接头，`centeredShaftRings` 则居中挂接整格传动杆的双端铁环图，并按 SortingOrder 让箱体遮住中间杆芯；两种布局都只显示一对相对端口并随 `RotationQuarterTurns` 同步旋转。用力器等设备的镜像单端接口总跨度统一为一节标准传动轴的可见长度：左右端口中心间距按 `Shaft_Wood` 轴芯长度推导，当前 128 PPU、116px 可见轴芯对应 `AxisPortOffset≈0.45` 世界单位；不要用 `0.75` 等偏移把每侧接头拉长。设备主体宽于一格时也不得随外壳放大接口，末端应贴合外侧轴承座。双端铁环应按现有传动杆贴图的格边位置与邻接轴环衔接；Summoner 与 BuildingBody 都要声明该状态，主体贴图不得烘入端口。
   - 双端轴环要连接到非地面高度时，将 `Sprite Pivot` 放在端口轴线，使端口层的局部零点、建筑格心和机械网络接口重合；Summoner 与 BuildingBody 使用相同轴线 Pivot，放置预览和落地表现共用 `AxisPortLayout` 与 `AxisPortDrawOnTop`，改 Pivot 后按轴承实际像素重算 `RotorLocalPosition`。主体需显露轴环时用 `AxisPortDrawOnTop` 绘制在支架上层，不要在静态图里重复烘入同一接口。
 - 变速箱箱体贴图留空心腔，内部通过 `visual.spriteStates.gearboxGear` 挂接两枚独立齿轮图层；齿轮中心、尺寸比由机械模块参数配置，动画以 `MechanicalNode.Rpm` 和 `EntryDirection` 换算输入侧，输出齿轮反向转动并按半径比换算角速度。放置时 R 键应轮换四个九十度朝向；传动倍率必须先把世界输入方向减去 `RotationQuarterTurns`，再按箱体局部左右侧判定，不能用世界方向直接判断，预览需与朝向保持一致。

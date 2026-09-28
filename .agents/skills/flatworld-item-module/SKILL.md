@@ -34,6 +34,7 @@ description: "Use when: 定位或修改 FlatWorld 的 Item/Module 组合架构�
 - 模块 JSON 配置计划属于当前 `RuntimeItemDefinition`：解析和严格校验只做一次，实体每次 Load 仍重新应用字段；资源重载通过替换定义实例自然丢弃旧计划。
 - 远程网络副本不进入本地 Tick、感知和存档索引。
 - 感知后端在注册和 `Item.RuntimeStructureChanged` 边界选择：Actor 使用当前 `RuntimeItemDefinition` 的共享根级纯几何，旧对象才缓存 Collider Bridge；移动通知仅更新位置索引，不能重新扫描组件。注销必须移除后端映射，重建索引前完成并丢弃旧 Job；每次重新注册/结构变化递增代际以拒绝对象池复用前的结果。正式 Actor 的物理 Collider 尺寸不是运行时感知配置权威，新增动态体型应提供纯数据输入。
+- 感知批次对已存在空间格的重复访问用格子内 `LastVisitedBatch` 访问戳去重，禁止恢复每批 `HashSet<long>` 已访问集合；格子回池时必须清空成员并重置访问戳。
 - `ItemMgr.NotifyRuntimeItemMoved` 完成位置索引刷新后发布通用 `RuntimeItemMoved` 适配事件；移动订阅方只维护显式声明需要跟随的状态，并按网格根格变化去重，避免轮询或给普通 Item 增加每帧扫描。
 - 新模块同时检查脚本、ModuleData、模块/Item Prefab、Addressables 与 JSON 定义。
 - `Module.Load()` 与 `Module.Save()` 均为抽象方法；无持久化运行态的模块也需显式实现空 `Save()`，说明状态由宿主或配置恢复。

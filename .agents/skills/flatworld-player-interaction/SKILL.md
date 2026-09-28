@@ -26,6 +26,7 @@ description: "Use when: 定位或修改 FlatWorld 的玩家实体、输入系统
 - 载具的按键、鼠标点选和白色描边必须共用光标落点查询；上船与下船都要求光标实际命中载具，禁止因“当前已乘坐”或“靠近船体”绕过光标选择。光标指向可触及水面且未命中载具时，交互键交给喝水等环境动作。远海登船与下船都合法：登船恢复位置优先附近安全陆地，否则保留真实登船坐标；下船优先附近安全陆地，没有陆地时落到船体外侧安全水面。
 
 - 输入链为 Input System → `GameController` → 玩家模块；不要让 UI、物理输入和玩法模块各自维护冲突状态。
+- 桌面指针由 `GameController` 缓存 `Win10.Mouse` 的位置变化，需同时处理 `performed/canceled`；鼠标按键回调要读取当前鼠标坐标，避免同次输入更新中点击先于位置回调造成落点滞后。
 - `GameController` 挂在玩家根对象，模块 ID 必须是 `ModText.Controller`；若留空会退化为根对象名 `Player`，按 ID 获取控制器的地块交互将静默失败。
 - 组合键冲突由 `GameController` 暴露语义状态统一仲裁：按住丢弃快捷键期间，`Ctrl+滚轮` 镜头缩放必须让位，但普通滚轮快捷栏切换继续工作，便于玩家在 `Ctrl+F` 整组丢弃准备态中换槽位。
 - Editor Agent、自动化或其它非物理输入源接管本地主角时统一使用 `GameController` 的唯一 External Gameplay Control 租约；租约期间真实设备退出玩法输入仲裁，移动/瞄准/攻击继续注入现有生产链。打包游戏的 AI/LLM 适配器通过玩家运行时模块 `Mod_GameMCP_LLM` 提交和查询导航意图；该模块复用同一租约与 Mover 输入链，不依赖 Editor 或 GamePlayMCP。禁止为自动化直接改玩家 `Rigidbody2D`、Transform 或另建平行输入状态。
@@ -37,6 +38,7 @@ description: "Use when: 定位或修改 FlatWorld 的玩家实体、输入系统
 - 环境交互输入只转发按下/持续/松开；具体环境提供 `IEnvironmentActionDefinition` 或 `IEnvironmentEffectDefinition`，角色侧 `EnvironmentInteractionRunner` 每次创建独立实例，禁止把玩家长按或被动效果状态存进共享地块配置。
 - 世界实体持续交互统一走 `IInteractable.OnInteractStart/OnInteractUpdate/OnInteractEnd`：`Mod_InteractSender` 只在交互键按住期间转发 Update，正常松开时转发 End；鼠标与外部单次交互只触发 Start→End，不进入持续通道；目标取消或失效走 `OnInteractCancel`，业务模块不得自行读取 E 键状态。
 - 需要只能由交互键打开的设施面板时，让目标实现 `IInteractable.CanPointerInteract` 并返回 `false`；发送器的左键点选遵守该策略，交互键仍须满足范围与目标有效性，避免在发送器内硬编码具体设施类型。
+- `SpatialInteractionRegistry.Query` 包含 `MechanicalWorld` 的纯数据目标；逐帧描边只用 `QueryPreview` 查可描边的注册组件。机械目标没有组件描边，不能把机械图查询接回 `RefreshInteractionPreview` 的每帧路径；手摇轮仍由目标的 Start/Update/End 区分短按开面板与长按供能。
 - 本地档案由 `Player.IsLocalProfile`/ProfileContext 判定；远程副本不得持久化、跑本地教程或玩家语音。
 - 玩家存档与 `Player_DIC` 必须使用 `Player.ProfileName`/`ProfileId` 稳定角色 ID；旧档原字典键继续作为 ID，新角色分配独立 ID。`Data_Player.Name_User` 仅用于显示，也可能被管理员身份临时改写，禁止用它决定保存、卸载或跨维度重建的角色槽位。
 - 手柄焦点只能停留在顶层导航面板；虚拟光标/虚拟键盘按现有模式接管。

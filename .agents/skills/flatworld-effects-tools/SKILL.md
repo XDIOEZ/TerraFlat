@@ -15,7 +15,7 @@ description: "Use when: 定位或修改 FlatWorld 的运行时特效、粒子、
 - 根植植物复用 `ActorShadowManager` 的接触阴影：不可拾取且未被持有的树按 `Tree/Plant` 标签、作物按 `IPlantableCrop` 模块注册；以根部 Collider 定位，并用可见 Sprite 宽度限制阴影大小，成长时更新尺寸。草饰批次没有 Item，不进入该注册链。
 - 源贴图被飞行等表现抬升时，`ActorShadowManager` 与 `WorldShadowProjectionManager` 共用 `IVisualGroundOffset` 将阴影定位折算回地面；提供者按当前实际视觉 Transform 计算世界位移，回池或死亡归零后不能继续用飞行状态值抵扣。
 - 太阳长投影由 `Presentation/WorldShadowProjectionManager.cs` 独立持有，偏好由 `SunShadowSettings` 保存；代理监听完整 `RuntimeItemRegistered/Unregistered`，不复用脚底阴影的水体显隐。`SunShadowCaster` 允许 Prefab 覆盖主体、视觉高度与落地点。
-- 使用共享外壳的世界物品通过 JSON `visual.shadows.contactWidth` 显式接入场景级椭圆底座阴影，`visual.shadows.footLocalPosition` 作为底座和太阳投影共用的物品根节点局部落地点；脚点由 `ShadowFootprintResolver` 限定在可见底边内缩范围，避免旧配置或透明留白拉出断层。尺寸与锚点属于具体物品定义，不得写到共享 Shell 或按物品 ID 硬编码。
+- 使用共享外壳的世界物品通过 JSON `visual.shadows.contactWidth` 显式接入场景级椭圆底座阴影，`visual.shadows.footLocalPosition` 作为底座和太阳投影共用的物品根节点局部落地点；脚点由 `ShadowFootprintResolver` 限定在可见底边内缩范围，避免旧配置或透明留白拉出断层。宽矮主体若默认内缩导致长阴影根部与本体断开，可用 `visual.shadows.footOverlap` 单独缩小最小内缩，禁止改全局阴影参数迁就单个物体。尺寸与锚点属于具体物品定义，不得写到共享 Shell 或按物品 ID 硬编码。
 - 编辑器工具：`Assets/Editor/FlatWorld/`、`Assets/Editor/FlatWorld/ProjectTools/`；内容工坊入口为菜单 `FlatWorld/内容配置/内容工坊`
 - 调试：`Assets/5_Scripts/5-3_GamePlay/Development/Debug/`、`Development/Diagnostics/{GameDebugManager,GameLogManager}.cs`
 

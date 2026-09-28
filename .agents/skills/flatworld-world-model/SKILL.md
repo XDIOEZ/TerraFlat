@@ -21,6 +21,7 @@ description: "Use when: 定位或修改 FlatWorld 的纯 WorldModel、Chunk 运�
 
 - `5-0_WorldModel` 保持纯 C#，后台生成不得访问 Unity 对象。
 - `ChunkRuntime + ChunkTerrainData` 是权威状态；Tilemap、Collider 和 Renderer 只是表现。
+- 正式地块写入统一经 `ChunkTerrainData.WriteCell` 同步核心数据、固定视线遮挡位及版本；生成时建初始遮挡位，建筑和机械占地通过独立动态位叠加，读者只读合成结果。
 - 墙体裂缝等耐久表现必须从 `ChunkTerrainData` 的 `flatworld.tileBuilding.damage` 权威层推导；`IChunkViewRenderer.Bind` 时重建、监听 `TerrainChangeKind.Environment/Cell/TileStack` 增量刷新、`Unbind` 时解除订阅，禁止在表现组件中保存第二份生命值。
 - 墙脚、岸线等依赖邻接关系的表现除监听自身 `ChunkTerrainData.Changed` 外，还必须监听正交相邻区块的共享边界变化；`ChunkCommitted` 只表示邻区就绪，不能覆盖后续拆除或放置造成的运行时更新。
 - ChunkView 的 Ground / Liquid / Back / Blocking、环境阈值、支撑面、积雪与雪冠统一由 `ChunkBatchRendererGroupService` 跨 Chunk 分层绘制；`ChunkTilemapRenderer` 保留历史类名，但材质直接在根组件配置。Prefab 仅保留 Blocking Tilemap 维护 `TilemapCollider2D` 所需碰撞格，不再挂 TilemapRenderer；扩展层使用同一 Owner 的独立 VisualLayer 槽并在 Owner 重建时重提。
@@ -47,7 +48,8 @@ description: "Use when: 定位或修改 FlatWorld 的纯 WorldModel、Chunk 运�
 - `river.route_network` 若仍占主耗时，慢日志区分邻格选择与原始高度噪声，并列出出队格数与高度缓存未命中次数；这些阶段存在嵌套，子阶段毫秒数不能直接相加。采样计时只在诊断开启且缓存未命中时执行，避免逐格 Unity 日志。
 - 耗时为单调墙钟而非 CPU 使用率；Editor 暂停跨越的请求单独标记并排除等待汇总，不能把暂停后的完成通知积压当作运行时算力证据。父子阶段有重叠，累计时长不能相加；采样差值只统计本段结束的阶段，不冒充仅落在时间窗口内的 CPU 时间。
 - 以空间换显示延迟时，纯模型窗口需分别维护模拟圈、完整表现预加载圈和数据保留圈；本地 ChunkView 在预加载圈提前绑定并持有表现租约，进入活动圈不应重新绑定。世界进入就绪判定只检查活动圈，关闭窗口必须释放全部预加载表现需求。BRG 按 Owner 区块边界与相机裁剪面筛选实例，离屏 Owner 保留已提交数据，靠近时由 Culling 直接显示。
-- BRG 剔除热路径不可对每个实例反复以 UnityEngine.Object 为字典键查询 Owner：注册时缓存整数身份，单次回调按 Owner 计算可见性，并保留每批可见实例索引供绘制命令复用；交换删除实例时仍须同步维护其 Owner 身份和索引。
+- BRG 剔除由流送设置的 `WorldStreamingPreferences.OwnerCullingEnabled` 控制，默认关闭以便对照高视距的全量绘制；开启时单次回调按 Owner 计算可见性，只在 Owner 可见集合或实例增删变化后重建每批可见索引。交换删除实例时须同步维护状态引用与索引；全部 Owner 可见时直接走全量可见路径。关闭剔除仍须正常生成 BRG 的可见实例和绘制命令，不能跳过回调。
+- 卸载 BRG Owner 时先批量交换删除并修正被搬动实例的句柄，最后按 Batch 合并上传仍有效的脏区；单格增量继续即时上传。
 - `Mod_ChunkLoader` 的窗口刷新与逐帧 `RetargetRuntimePresentationQueue` 必须使用相同的表现预加载距离，否则下一帧会撤销外圈 ChunkView；同一 Chunk 内的移动只更新任务优先级，跨 Chunk 或视距变化才重建窗口。
 - 外圈数据预取只须等待可见窗口的数据与基础地形 BRG 完成；草地、导航、自然物等后续表现继续轮转时不应长期占住后台生成的空闲时机。存档地形差量必须先于基础地形绑定恢复，同一 ChunkRuntime 实例不能因窗口刷新重复恢复。
 - BRG 的单格 `SetVisual` 不得在 Owner 丢失时隐式重新注册 Owner；否则脚本热重载或后端重建后的第一次脏格刷新只会恢复局部实例，却让后续校验误判整块已登记。增量刷新发现 Owner 丢失时必须先从权威 Terrain 全量重建，再恢复单格增量路径。
