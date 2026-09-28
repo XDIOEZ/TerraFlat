@@ -40,7 +40,8 @@ internal static class ChunkBatchRendererGroupService
         MechanicalUpperBase,
         MechanicalUpperMotionA,
         MechanicalUpperMotionB,
-        MechanicalUpperFront
+        MechanicalUpperFront,
+        NaturalStatic
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -144,6 +145,11 @@ internal static class ChunkBatchRendererGroupService
         backend?.ClearVisual(owner, slotKey);
     }
 
+    /// <summary>整块首次提交时合并同批次的 GPU 写入。</summary>
+    internal static void BeginBulkSubmit() => backend?.BeginBulkSubmit();
+
+    internal static void EndBulkSubmit() => backend?.EndBulkSubmit();
+
     /// <summary>检查某个区块地形表现是否仍登记在当前 BRG 后端。</summary>
     internal static bool IsOwnerRegistered(ChunkTilemapRenderer owner)
     {
@@ -207,6 +213,8 @@ internal static class ChunkBatchRendererGroupService
         private readonly Dictionary<VisualKey, TileBatch> batches = new();
         private readonly List<TileBatch> orderedBatches = new();
         private readonly HashSet<TileBatch> ownerRemovalBatches = new();
+        private readonly HashSet<TileBatch> bulkSubmitBatches = new();
+        private int bulkSubmitDepth;
         private readonly Dictionary<int, MeshRegistration> meshes = new();
         private readonly Dictionary<MaterialKey, MaterialRegistration> materials = new();
         private readonly HashSet<int> warnedMissingOwnerIds = new();
@@ -401,6 +409,7 @@ internal static class ChunkBatchRendererGroupService
                     if (current.Batch.Key.Equals(key))
                     {
                         current.Batch.Update(current.Index, visual.Data, visual.SortingPosition);
+                        if (bulkSubmitDepth > 0) bulkSubmitBatches.Add(current.Batch);
                         return;
                     }
 
@@ -410,8 +419,26 @@ internal static class ChunkBatchRendererGroupService
                 TileBatch batch = GetOrCreateBatch(key, visual);
                 OwnerCullingState cullingState = ownerCullingById[owner.GetInstanceID()];
                 int index = batch.Add(owner, slotKey, cullingState, visual.Data, visual.SortingPosition);
+                if (bulkSubmitDepth > 0) bulkSubmitBatches.Add(batch);
                 handles[slotKey] = new InstanceHandle(batch, index);
                 visibleInstanceListsDirty = true;
+            }
+        }
+
+        public void BeginBulkSubmit()
+        {
+            lock (syncRoot) bulkSubmitDepth++;
+        }
+
+        public void EndBulkSubmit()
+        {
+            lock (syncRoot)
+            {
+                if (bulkSubmitDepth == 0) return;
+                if (--bulkSubmitDepth != 0) return;
+                foreach (TileBatch batch in bulkSubmitBatches)
+                    batch.FlushBulkSubmit();
+                bulkSubmitBatches.Clear();
             }
         }
 
@@ -814,6 +841,7 @@ internal static class ChunkBatchRendererGroupService
             VisualLayer.SnowWall => 5,
             VisualLayer.Grass => 5,
             VisualLayer.GroundCover => 6,
+            VisualLayer.NaturalStatic => 5,
             VisualLayer.MechanicalLowerBase => 7,
             VisualLayer.MechanicalLowerMotionA => 8,
             VisualLayer.MechanicalLowerMotionB => 9,
@@ -828,7 +856,8 @@ internal static class ChunkBatchRendererGroupService
         /// <summary>机械所有子层共享一个透明队列，真正的前后关系交给节点 Y 锚点；草花仍保持既有固定队列。</summary>
         private static int ResolveRenderQueuePriority(VisualLayer layer) => layer switch
         {
-            VisualLayer.SnowWall or VisualLayer.Grass or VisualLayer.GroundCover => 5,
+            VisualLayer.SnowWall or VisualLayer.Grass or VisualLayer.GroundCover or
+                VisualLayer.NaturalStatic => 5,
             VisualLayer.MechanicalLowerBase or VisualLayer.MechanicalLowerMotionA or
                 VisualLayer.MechanicalLowerMotionB or VisualLayer.MechanicalLowerFront or
                 VisualLayer.MechanicalUpperBase or VisualLayer.MechanicalUpperMotionA or
@@ -861,6 +890,7 @@ internal static class ChunkBatchRendererGroupService
             private int capacity;
             private bool bulkRemoving;
             private readonly List<int> bulkDirtyIndices = new();
+            private readonly List<int> bulkSubmitIndices = new();
 
             public TileBatch(Backend backend, VisualKey key, BatchMeshID meshId,
                 BatchMaterialID materialId, int priority, bool depthSorted, int capacity)
@@ -904,7 +934,8 @@ internal static class ChunkBatchRendererGroupService
                 gpuData.Add(data);
                 owners.Add(new InstanceOwner(owner, slotKey, cullingState));
                 sortingPositions.Add(sortingPosition);
-                Upload(index, data);
+                if (backend.bulkSubmitDepth > 0) bulkSubmitIndices.Add(index);
+                else Upload(index, data);
                 return index;
             }
 
@@ -914,7 +945,29 @@ internal static class ChunkBatchRendererGroupService
                     return;
                 gpuData[index] = data;
                 sortingPositions[index] = sortingPosition;
-                Upload(index, data);
+                if (backend.bulkSubmitDepth > 0) bulkSubmitIndices.Add(index);
+                else Upload(index, data);
+            }
+
+            public void FlushBulkSubmit()
+            {
+                bulkSubmitIndices.Sort();
+                int start = -1;
+                int end = -1;
+                for (int i = 0; i < bulkSubmitIndices.Count; i++)
+                {
+                    int index = bulkSubmitIndices[i];
+                    if (index >= gpuData.Count) continue;
+                    if (start >= 0 && index <= end + 1)
+                    {
+                        end = Mathf.Max(end, index);
+                        continue;
+                    }
+                    UploadRange(start, end);
+                    start = end = index;
+                }
+                UploadRange(start, end);
+                bulkSubmitIndices.Clear();
             }
 
             /// <summary>同一区块的实例先在 CPU 上交换删除，结束时合并写回 GPU。</summary>

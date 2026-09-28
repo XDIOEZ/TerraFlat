@@ -32,7 +32,7 @@ public sealed class ChunkView : MonoBehaviour
     public ChunkRuntime Model => chunk;
     public bool IsBound => chunk != null && presentationComplete;
     public bool IsBinding => chunk != null && !presentationComplete;
-    /// <summary>基础地形已提交给 BRG，后续草地、碰撞和自然物可以继续分帧绑定。</summary>
+    /// <summary>基础地形网格已提交，后续草地、碰撞和自然物可以继续分帧绑定。</summary>
     public bool IsBaseTerrainPresented =>
         chunk != null && terrainRenderer != null && terrainRenderer.IsBatchPresentationComplete;
 
@@ -41,7 +41,7 @@ public sealed class ChunkView : MonoBehaviour
     /// <summary>当前 View 保留的阴影槽数量，供流送 Profiler 与回归检查使用。</summary>
     public int RetainedOccluderCount => lightOccluderRenderer?.RetainedOccluderCount ?? 0;
 
-    /// <summary>只读取得基础地形 BRG 状态；诊断调用不会创建、重建或修复渲染后端。</summary>
+    /// <summary>只读取得扩展表现 BRG 状态；诊断调用不会创建、重建或修复渲染后端。</summary>
     public bool TryGetTerrainBatchDebugState(out bool registered, out int visualCount)
     {
         ChunkTilemapRenderer tilemapRenderer = null;
@@ -64,7 +64,8 @@ public sealed class ChunkView : MonoBehaviour
         }
 
         registered = ChunkBatchRendererGroupService.IsOwnerRegistered(tilemapRenderer);
-        visualCount = ChunkBatchRendererGroupService.GetOwnerTerrainVisualCount(tilemapRenderer);
+        visualCount = tilemapRenderer.BaseTerrainVisualCount +
+                      ChunkBatchRendererGroupService.GetOwnerTerrainVisualCount(tilemapRenderer);
         return true;
     }
 
@@ -325,7 +326,7 @@ public sealed class ChunkView : MonoBehaviour
         presentationLease = chunk.AcquireLease(ChunkLeaseKind.Presentation);
         if (includeNavigation)
             navigationLease = chunk.AcquireLease(ChunkLeaseKind.Navigation);
-        committedSubscription = world.Events.Subscribe<ChunkCommitted>(HandleChunkCommitted);
+        committedSubscription = world.Events.SubscribeChunkCommitted(chunk.Address, HandleChunkCommitted);
     }
 
     /// <summary>先让地面可见，再补环境、碰撞、草地和导航。</summary>

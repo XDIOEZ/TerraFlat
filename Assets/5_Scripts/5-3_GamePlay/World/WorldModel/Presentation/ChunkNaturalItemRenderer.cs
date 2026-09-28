@@ -19,8 +19,8 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IIncrementalChunkV
     #region 字段
 
     private const float AutoSaveFrameBudgetSeconds = 0.0025f;
-    private const string LegacyNaturalPortalItemId = "CaveExit";
-    private const string NaturalSurfacePortalItemId = "NaturalMineEntrance";
+    private const float MinePromotionDistance = 20f;
+    private const float MineDemotionDistance = 28f;
     private static readonly ProfilerMarker NaturalItemSpawnMarker =
         new("FlatWorld.ChunkStreaming.SpawnNaturalItem");
     private static readonly ProfilerMarker NaturalItemCaptureMarker =
@@ -34,7 +34,11 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IIncrementalChunkV
     private readonly HashSet<Item> unbindItemSet = new();
     private readonly HashSet<int> generatedPortalGuids = new();
     private readonly List<NaturalItemPlacement> deferredCompanionPlacements = new();
+    private readonly Dictionary<int, NaturalEntityData> mineEntities = new();
+    private readonly HashSet<int> promotedMineGuids = new();
+    private readonly List<int> mineDemotionBuffer = new();
     private ChunkRuntime boundChunk;
+    private ChunkTilemapRenderer terrainOwner;
     private EnvironmentLayers environmentLayers;
     // 绑定时记录依赖，销毁阶段不再通过单例搜索场景。
     private ItemMgr itemManager;
@@ -46,6 +50,7 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IIncrementalChunkV
     private int renewalCursor; // 每次最多检查四个自然生成点。
     private float nextCompanionReadinessCheck; // 小树长大后低频补生成伴生物。
     private int companionReadinessCursor;
+    private float nextMinePromotionCheck;
 
     public int SpawnedItemCount => spawnedItems.Count;
 
@@ -116,6 +121,11 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IIncrementalChunkV
         itemManager = ItemMgr.GetInstance();
         chunkManager = ChunkMgr.ExistingInstance;
         boundChunk = chunk;
+        terrainOwner = GetComponent<ChunkTilemapRenderer>();
+        if (terrainOwner != null)
+            terrainOwner.BatchPresentationRebuilt += RefreshMineVisuals;
+        if (chunkManager != null)
+            chunkManager.NaturalItemRemoved += HandleMineRemoved;
         initialBindingInProgress = true;
 
         try
@@ -131,6 +141,11 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IIncrementalChunkV
             for (int i = 0; i < placements.Count; i++)
             {
                 NaturalItemPlacement placement = placements[i];
+                if (!placement.IsCompanion && TryBindMineEntity(placement, out bool promoted))
+                {
+                    if (promoted) yield return null;
+                    continue;
+                }
                 if (!placement.IsCompanion && SpawnInitialPlacement(placement))
                     yield return null;
             }
@@ -179,6 +194,10 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IIncrementalChunkV
         unbinding = true;
         try
         {
+            if (chunkManager != null)
+                chunkManager.NaturalItemRemoved -= HandleMineRemoved;
+            if (terrainOwner != null)
+                terrainOwner.BatchPresentationRebuilt -= RefreshMineVisuals;
             using (NaturalItemCaptureMarker.Auto())
                 CaptureState();
             unbindItems.Clear();
@@ -213,14 +232,23 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IIncrementalChunkV
             unbindItems.Clear();
             unbindItemSet.Clear();
             spawnedItems.Clear();
+            if (terrainOwner != null && terrainOwner.IsBatchPresentationRegistered)
+                foreach (NaturalEntityData mine in mineEntities.Values)
+                    terrainOwner.ClearLayerVisual(ChunkBatchRendererGroupService.VisualLayer.NaturalStatic,
+                        mine.LocalX, mine.LocalY);
+            mineEntities.Clear();
+            promotedMineGuids.Clear();
+            mineDemotionBuffer.Clear();
             transientItems.Clear();
             generatedPortalGuids.Clear();
             deferredCompanionPlacements.Clear();
             companionReadinessCursor = 0;
             nextCompanionReadinessCheck = 0f;
+            nextMinePromotionCheck = 0f;
             initialBindingInProgress = false;
             environmentLayers = null;
             boundChunk = null;
+            terrainOwner = null;
             itemManager = null;
             chunkManager = null;
             unbinding = false;
@@ -311,6 +339,182 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IIncrementalChunkV
 
     #endregion
 
+    #region 矿脉数据实体
+
+    /// <summary>普通矿脉和冰山在远处只登记稳定数据和批量精灵，联机沿用现有实体链。</summary>
+    private bool TryBindMineEntity(NaturalItemPlacement placement, out bool promoted)
+    {
+        promoted = false;
+        if (GameNetwork.IsOnline || placement.IsCompanion || placement.IsDimensionPortal ||
+            !(placement.ItemId.StartsWith("Mine_", StringComparison.Ordinal) ||
+              string.Equals(placement.ItemId, "Iceberg", StringComparison.Ordinal)) ||
+            terrainOwner == null || chunkManager == null || GameRes.ExistingInstance == null ||
+            !GameRes.ExistingInstance.TryGetItemDefinition(placement.ItemId, out RuntimeItemDefinition definition) ||
+            definition.Sprite == null || definition.AnimatorController != null)
+            return false;
+
+        if (mineEntities.ContainsKey(placement.Guid)) return true;
+        RuntimeWorldAddress address = boundChunk.Address;
+        bool renewing = chunkManager.IsNaturalItemRemoved(address, placement.Guid);
+        if (renewing && (!chunkManager.IsNaturalRenewalDue(address, placement.Guid) ||
+                         !CanRenewAt(placement)))
+            return true;
+
+        NaturalEntityData entity = new NaturalEntityData(placement);
+        mineEntities.Add(entity.Guid, entity);
+        if (renewing) chunkManager.CompleteNaturalRenewal(address, entity.Guid);
+        if (IsAnyPlayerNear(GetMinePosition(entity), MinePromotionDistance))
+        {
+            PromoteMine(entity);
+            promoted = promotedMineGuids.Contains(entity.Guid);
+        }
+        else
+        {
+            DrawMineVisual(entity);
+        }
+        return true;
+    }
+
+    private void ProcessMinePromotion()
+    {
+        if (unbinding || boundChunk == null || mineEntities.Count == 0 ||
+            Time.unscaledTime < nextMinePromotionCheck) return;
+        nextMinePromotionCheck = Time.unscaledTime + 0.25f;
+
+        foreach (NaturalEntityData mine in mineEntities.Values)
+        {
+            if (!promotedMineGuids.Contains(mine.Guid) &&
+                IsAnyPlayerNear(GetMinePosition(mine), MinePromotionDistance))
+            {
+                PromoteMine(mine);
+                break;
+            }
+        }
+
+        mineDemotionBuffer.Clear();
+        foreach (int guid in promotedMineGuids)
+            if (mineEntities.TryGetValue(guid, out NaturalEntityData mine) &&
+                !IsAnyPlayerNear(GetMinePosition(mine), MineDemotionDistance))
+                mineDemotionBuffer.Add(guid);
+        for (int i = 0; i < mineDemotionBuffer.Count; i++)
+            DemoteMine(mineDemotionBuffer[i]);
+        mineDemotionBuffer.Clear();
+    }
+
+    private void PromoteMine(NaturalEntityData mine)
+    {
+        if (promotedMineGuids.Contains(mine.Guid)) return;
+        terrainOwner.ClearLayerVisual(ChunkBatchRendererGroupService.VisualLayer.NaturalStatic,
+            mine.LocalX, mine.LocalY);
+        using (NaturalItemSpawnMarker.Auto())
+            SpawnPlacement(mine.ToPlacement());
+        if (spawnedItems.ContainsKey(mine.Guid))
+            promotedMineGuids.Add(mine.Guid);
+        else
+            DrawMineVisual(mine);
+    }
+
+    private void DemoteMine(int guid)
+    {
+        if (!promotedMineGuids.Contains(guid) || !mineEntities.TryGetValue(guid, out NaturalEntityData mine))
+            return;
+        if (!spawnedItems.TryGetValue(guid, out Item item) || item == null || item.DestructionHandled)
+        {
+            promotedMineGuids.Remove(guid);
+            spawnedItems.Remove(guid);
+            return;
+        }
+        try
+        {
+            item.Save();
+            ItemData snapshot = FastCloner.FastCloner.DeepClone(item.itemData);
+            chunkManager.CaptureNaturalItemState(boundChunk.Address, snapshot);
+        }
+        catch (Exception exception)
+        {
+            Debug.LogError($"[ChunkNaturalItemRenderer] 矿脉降级保存失败：{guid}，{exception}", item);
+            return;
+        }
+        item.OnItemDestroy -= HandleNaturalItemDestroy;
+        spawnedItems.Remove(guid);
+        promotedMineGuids.Remove(guid);
+        itemManager.DespawnItem(item, saveData: false, detachFromChunk: false);
+        DrawMineVisual(mine);
+    }
+
+    private Vector3 GetMinePosition(NaturalEntityData mine)
+    {
+        Vector3 position = new Vector3(boundChunk.Address.ChunkOrigin.X + mine.LocalX + 0.5f + mine.OffsetX,
+            boundChunk.Address.ChunkOrigin.Y + mine.LocalY + 0.5f + mine.OffsetY, 0f);
+        if (chunkManager.TryGetNaturalItemOverride(boundChunk.Address, mine.Guid, out ItemData changed) &&
+            changed?.transform != null)
+            position = changed.transform.position;
+        return position;
+    }
+
+    private bool IsAnyPlayerNear(Vector3 position, float distance)
+    {
+        if (itemManager == null) return false;
+        float maximumSquared = distance * distance;
+        foreach (Player player in itemManager.Player_DIC.Values)
+        {
+            if (player == null || !player.gameObject.activeInHierarchy) continue;
+            Vector2 delta = WorldTopologyRuntime.ShortestDelta(player.transform.position, position);
+            if (delta.sqrMagnitude <= maximumSquared) return true;
+        }
+        Transform local = itemManager.UserPlayerTransform;
+        if (local == null) return false;
+        Vector2 localDelta = WorldTopologyRuntime.ShortestDelta(local.position, position);
+        return localDelta.sqrMagnitude <= maximumSquared;
+    }
+
+    private void DrawMineVisual(NaturalEntityData mine)
+    {
+        if (terrainOwner == null || promotedMineGuids.Contains(mine.Guid) ||
+            !terrainOwner.IsBatchPresentationRegistered || GameRes.ExistingInstance == null ||
+            !GameRes.ExistingInstance.TryGetItemDefinition(mine.ItemId, out RuntimeItemDefinition definition))
+            return;
+        Sprite sprite = definition.Sprite;
+        if (chunkManager.TryGetNaturalItemOverride(boundChunk.Address, mine.Guid, out ItemData changed) &&
+            ItemDataPresentationResolverRegistry.TryResolve(changed, out Sprite changedSprite))
+            sprite = changedSprite;
+        Material material = definition.Material ??
+            definition.ShellPrefab?.GetComponentInChildren<SpriteRenderer>(true)?.sharedMaterial;
+        material ??= Resources.Load<Material>("Config/WorldModel/BRG/ChunkBRG-Sprite-Lit");
+        if (sprite == null || material == null) return;
+
+        Vector3 position = GetMinePosition(mine);
+        ItemVisualDefinitionDto visual = definition.Visual;
+        Vector3 offset = visual?.RendererLocalPosition ?? Vector3.zero;
+        Quaternion rotation = Quaternion.Euler(visual?.RendererLocalEulerAngles ?? Vector3.zero);
+        Vector3 scale = visual?.RendererLocalScale ?? Vector3.one;
+        if (visual?.FlipX == true) scale.x = -scale.x;
+        if (visual?.FlipY == true) scale.y = -scale.y;
+        Matrix4x4 matrix = Matrix4x4.TRS(position, Quaternion.identity, Vector3.one) *
+                           Matrix4x4.TRS(offset, rotation, scale);
+        terrainOwner.SetLayerVisual(ChunkBatchRendererGroupService.VisualLayer.NaturalStatic,
+            mine.LocalX, mine.LocalY, sprite, material, matrix, visual?.Color ?? Color.white,
+            Vector4.zero, Vector4.zero, position);
+    }
+
+    private void RefreshMineVisuals()
+    {
+        foreach (NaturalEntityData mine in mineEntities.Values)
+            if (!promotedMineGuids.Contains(mine.Guid)) DrawMineVisual(mine);
+    }
+
+    private void HandleMineRemoved(RuntimeWorldAddress address, int guid)
+    {
+        if (boundChunk == null || boundChunk.Address != address ||
+            !mineEntities.TryGetValue(guid, out NaturalEntityData mine)) return;
+        terrainOwner?.ClearLayerVisual(ChunkBatchRendererGroupService.VisualLayer.NaturalStatic,
+            mine.LocalX, mine.LocalY);
+        mineEntities.Remove(guid);
+        promotedMineGuids.Remove(guid);
+    }
+
+    #endregion
+
     #region 物品实例化
 
     /// <summary>应用删除/状态覆盖后实例化一个自然物；返回本次是否尝试创建实体。</summary>
@@ -325,7 +529,7 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IIncrementalChunkV
             return false;
 
         RuntimeWorldAddress address = boundChunk.Address;
-        string runtimeItemId = ResolveRuntimeItemId(address, placement);
+        string runtimeItemId = placement.ItemId;
         // 地表植被保留纯生成点和删除差量，但由专用 Tilemap 绘制，不创建常驻 Item。
         if (GameRes.ExistingInstance.TryGetItemDefinition(runtimeItemId, out RuntimeItemDefinition definition) &&
             definition.IsGroundCover)
@@ -431,26 +635,6 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IIncrementalChunkV
         }
     }
 
-    /// <summary>
-    /// 旧世界的冻结生成快照会把地表天然入口保存成 CaveExit。
-    /// 只在“地表→洞穴”的自然传送门表现层迁移为可破坏入口，地下出口继续保留 CaveExit。
-    /// </summary>
-    private static string ResolveRuntimeItemId(RuntimeWorldAddress address, NaturalItemPlacement placement)
-    {
-        if (placement.IsDimensionPortal &&
-            string.Equals(address.DimensionId, global::WorldAddress.SurfaceDimensionId,
-                StringComparison.OrdinalIgnoreCase) &&
-            string.Equals(placement.TargetDimensionId, global::WorldAddress.CaveDimensionId,
-                StringComparison.OrdinalIgnoreCase) &&
-            string.Equals(placement.ItemId, LegacyNaturalPortalItemId,
-                StringComparison.OrdinalIgnoreCase))
-        {
-            return NaturalSurfacePortalItemId;
-        }
-
-        return placement.ItemId;
-    }
-
     /// <summary>自然物被玩家采集或其它系统销毁时写入删除列表。</summary>
     private void HandleNaturalItemDestroy(Item item)
     {
@@ -459,6 +643,7 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IIncrementalChunkV
 
         int guid = item.itemData.Guid;
         spawnedItems.Remove(guid);
+        promotedMineGuids.Remove(guid);
         if (boundChunk != null && chunkManager != null && !chunkManager.IsWorldRuntimeShuttingDown)
         {
             chunkManager.MarkNaturalItemRemoved(boundChunk.Address, guid);
@@ -475,6 +660,7 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IIncrementalChunkV
             return;
         ProcessDeferredCompanionSpawns();
         ProcessNaturalRenewal();
+        ProcessMinePromotion();
     }
 
     private void ProcessDeferredCompanionSpawns()
@@ -547,7 +733,8 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IIncrementalChunkV
             NaturalItemPlacement placement = placements[renewalCursor++ % placements.Count];
             if (!spawnedItems.ContainsKey(placement.Guid) && chunkManager.IsNaturalRenewalDue(boundChunk.Address, placement.Guid))
             {
-                SpawnPlacement(placement);
+                if (!TryBindMineEntity(placement, out _))
+                    SpawnPlacement(placement);
                 break;
             }
         }

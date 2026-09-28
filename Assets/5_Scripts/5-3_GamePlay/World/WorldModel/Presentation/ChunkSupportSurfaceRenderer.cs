@@ -19,7 +19,7 @@ public sealed class ChunkSupportSurfaceRenderer : MonoBehaviour, IChunkViewRende
     private WorldRuntime boundWorld;
     private ChunkRuntime chunk;
     private ChunkTilemapRenderer owner;
-    private IDisposable chunkCommittedSubscription;
+    private readonly List<IDisposable> neighbourChunkSubscriptions = new(4);
 
     #endregion
 
@@ -31,11 +31,9 @@ public sealed class ChunkSupportSurfaceRenderer : MonoBehaviour, IChunkViewRende
         if (ReferenceEquals(boundWorld, worldRuntime))
             return;
 
-        chunkCommittedSubscription?.Dispose();
-        chunkCommittedSubscription = null;
+        ClearNeighbourChunkSubscriptions();
         boundWorld = worldRuntime;
-        if (boundWorld != null)
-            chunkCommittedSubscription = boundWorld.Events.Subscribe<ChunkCommitted>(HandleChunkCommitted);
+        SubscribeNeighbourChunkEvents();
         RefreshNeighbourTerrainSubscriptions();
     }
 
@@ -50,6 +48,7 @@ public sealed class ChunkSupportSurfaceRenderer : MonoBehaviour, IChunkViewRende
         Unbind();
         owner = GetComponent<ChunkTilemapRenderer>();
         chunk = value;
+        SubscribeNeighbourChunkEvents();
         chunk.Terrain.Changed += HandleChanged;
         owner.BatchPresentationRebuilt += HandleBatchPresentationRebuilt;
         RefreshNeighbourTerrainSubscriptions();
@@ -62,6 +61,7 @@ public sealed class ChunkSupportSurfaceRenderer : MonoBehaviour, IChunkViewRende
         if (chunk?.Terrain != null)
             chunk.Terrain.Changed -= HandleChanged;
         ClearNeighbourTerrainSubscriptions();
+        ClearNeighbourChunkSubscriptions();
         if (owner != null)
         {
             owner.BatchPresentationRebuilt -= HandleBatchPresentationRebuilt;
@@ -76,8 +76,7 @@ public sealed class ChunkSupportSurfaceRenderer : MonoBehaviour, IChunkViewRende
     private void OnDestroy()
     {
         Unbind();
-        chunkCommittedSubscription?.Dispose();
-        chunkCommittedSubscription = null;
+        ClearNeighbourChunkSubscriptions();
         boundWorld = null;
     }
 
@@ -221,8 +220,10 @@ public sealed class ChunkSupportSurfaceRenderer : MonoBehaviour, IChunkViewRende
         ChunkTerrainData terrain = chunk.Terrain;
         Int2 origin = chunk.Address.ChunkOrigin;
         Int2 changed = committed.Address.ChunkOrigin;
-        int deltaX = changed.X - origin.X;
-        int deltaY = changed.Y - origin.Y;
+        Vector2Int delta = WorldTopologyRuntime.ShortestDelta(
+            new Vector2Int(origin.X, origin.Y), new Vector2Int(changed.X, changed.Y));
+        int deltaX = delta.x;
+        int deltaY = delta.y;
         bool orthogonalNeighbour =
             (Math.Abs(deltaX) == terrain.Width && deltaY == 0) ||
             (Math.Abs(deltaY) == terrain.Height && deltaX == 0);
@@ -238,6 +239,36 @@ public sealed class ChunkSupportSurfaceRenderer : MonoBehaviour, IChunkViewRende
             RefreshHorizontalEdge(0);
         else
             RefreshHorizontalEdge(terrain.Height - 1);
+    }
+
+    private void SubscribeNeighbourChunkEvents()
+    {
+        ClearNeighbourChunkSubscriptions();
+        if (boundWorld == null || chunk?.Terrain == null) return;
+        Int2 origin = chunk.Address.ChunkOrigin;
+        var unique = new HashSet<FlatWorld.WorldModel.WorldAddress>();
+        Vector2Int[] offsets =
+        {
+            new(-chunk.Terrain.Width, 0), new(chunk.Terrain.Width, 0),
+            new(0, -chunk.Terrain.Height), new(0, chunk.Terrain.Height)
+        };
+        foreach (Vector2Int offset in offsets)
+        {
+            Vector2Int canonical = WorldTopologyRuntime.NormalizeCell(
+                new Vector2Int(origin.X + offset.x, origin.Y + offset.y));
+            var address = new FlatWorld.WorldModel.WorldAddress(chunk.Address.DimensionId,
+                new Int2(canonical.x, canonical.y));
+            if (address == chunk.Address || !unique.Add(address)) continue;
+            neighbourChunkSubscriptions.Add(boundWorld.Events.SubscribeChunkCommitted(
+                address, HandleChunkCommitted));
+        }
+    }
+
+    private void ClearNeighbourChunkSubscriptions()
+    {
+        for (int i = 0; i < neighbourChunkSubscriptions.Count; i++)
+            neighbourChunkSubscriptions[i].Dispose();
+        neighbourChunkSubscriptions.Clear();
     }
 
     /// <summary>订阅四个正交相邻区块，覆盖面变化时同步共享边阴影。</summary>
@@ -257,8 +288,10 @@ public sealed class ChunkSupportSurfaceRenderer : MonoBehaviour, IChunkViewRende
     private void SubscribeNeighbourTerrain(int offsetX, int offsetY)
     {
         Int2 origin = chunk.Address.ChunkOrigin;
+        Vector2Int canonical = WorldTopologyRuntime.NormalizeCell(new Vector2Int(
+            origin.X + offsetX, origin.Y + offsetY));
         var address = new FlatWorld.WorldModel.WorldAddress(chunk.Address.DimensionId,
-            new Int2(origin.X + offsetX, origin.Y + offsetY));
+            new Int2(canonical.x, canonical.y));
         if (!boundWorld.TryGetChunkTerrain(address, out ChunkTerrainData neighbourTerrain))
             return;
 

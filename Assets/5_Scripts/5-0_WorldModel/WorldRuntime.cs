@@ -95,11 +95,8 @@ namespace FlatWorld.WorldModel
             using (StreamingDiagnostics.Measure("commit.apply"))
                 chunk.ApplyGeneratedData(terrain, ecology);
             result.Dispose();
-            ChunkCommitted committed;
-            using (StreamingDiagnostics.Measure("commit.hash"))
-                committed = new ChunkCommitted(request.Address, request.RequestVersion, terrain.ComputeStableHash());
             using (StreamingDiagnostics.Measure("commit.events"))
-                Events.Publish(committed);
+                Events.Publish(new ChunkCommitted(request.Address, request.RequestVersion));
             rejectionReason = null;
             return true;
         }

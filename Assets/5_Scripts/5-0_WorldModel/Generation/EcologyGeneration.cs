@@ -230,6 +230,34 @@ namespace FlatWorld.WorldModel
         #endregion
     }
 
+    /// <summary>可按固定种子重建的自然物数据身份；运行态状态沿用生态差量存档。</summary>
+    public readonly struct NaturalEntityData
+    {
+        #region 稳定生成数据
+        public NaturalEntityData(NaturalItemPlacement placement)
+        {
+            Guid = placement.Guid;
+            ItemId = placement.ItemId;
+            LocalX = placement.LocalX;
+            LocalY = placement.LocalY;
+            OffsetX = placement.OffsetX;
+            OffsetY = placement.OffsetY;
+            RuleId = placement.RuleId;
+        }
+
+        public int Guid { get; }
+        public string ItemId { get; }
+        public int LocalX { get; }
+        public int LocalY { get; }
+        public float OffsetX { get; }
+        public float OffsetY { get; }
+        public string RuleId { get; }
+
+        public NaturalItemPlacement ToPlacement() => new NaturalItemPlacement(
+            Guid, ItemId, LocalX, LocalY, OffsetX, OffsetY, RuleId);
+        #endregion
+    }
+
     /// <summary>一个区块的自然物品生成结果，只保存纯数据，不持有 Item 或 GameObject。</summary>
     public sealed class ChunkEcologyData
     {
