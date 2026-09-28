@@ -1,0 +1,11 @@
+{
+  "name": "puerts-unity-mcp-extension-demo",
+  "displayName": "PuerTS Unity MCP Extension Demo",
+  "version": "0.1.0",
+  "unity": "2021.3",
+  "description": "Demo C# MCP tool providers for a Unity project extension package.",
+  "license": "MIT",
+  "dependencies": {
+    "puerts-unity-mcp": "0.1.0"
+  }
+}

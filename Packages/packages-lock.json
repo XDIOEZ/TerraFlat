@@ -39,6 +39,20 @@
       "source": "embedded",
       "dependencies": {}
     },
+    "com.tencent.puerts.core": {
+      "version": "file:../puerts-unity-mcp/third_party/puerts/unity/upms/core",
+      "depth": 0,
+      "source": "local",
+      "dependencies": {}
+    },
+    "com.tencent.puerts.v8": {
+      "version": "file:../puerts-unity-mcp/third_party/puerts/unity/upms/v8",
+      "depth": 0,
+      "source": "local",
+      "dependencies": {
+        "com.tencent.puerts.core": "3.0.2"
+      }
+    },
     "com.unity.2d.animation": {
       "version": "9.2.0",
       "depth": 1,
@@ -465,6 +479,20 @@
       "depth": 0,
       "source": "embedded",
       "dependencies": {}
+    },
+    "puerts-unity-mcp": {
+      "version": "file:../puerts-unity-mcp/Packages/puerts-unity-mcp",
+      "depth": 0,
+      "source": "local",
+      "dependencies": {
+        "com.tencent.puerts.core": "3.0.2",
+        "com.tencent.puerts.v8": "3.0.2",
+        "com.unity.ugui": "1.0.0",
+        "com.unity.modules.imageconversion": "1.0.0",
+        "com.unity.modules.physics": "1.0.0",
+        "com.unity.modules.screencapture": "1.0.0",
+        "com.unity.modules.unitywebrequest": "1.0.0"
+      }
     },
     "com.unity.modules.ai": {
       "version": "1.0.0",

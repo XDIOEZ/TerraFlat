@@ -78,9 +78,16 @@ crashlytics-build.properties
 
 # Windows/Codex accidental device-name output
 /nul
+/$null
+/~/
 
 # Codex temporary files
 /.codex-tmp/
+
+# PuerTS Unity MCP runtime state and generated project-local files
+/.puerts-unity-mcp/
+/Assets/puerts-unity-mcp/Runtime/Generated/
+/Assets/puerts-unity-mcp/Runtime/Generated/Plugins/puerts_il2cpp/
 
 # Local task outputs
 /outputs/

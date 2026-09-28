@@ -1,0 +1,19 @@
+{
+    "version": 5,
+    "_comment_editorBindAddress": "Use 127.0.0.1 for local-only access. Use 0.0.0.0 when other computers need to connect to this Editor MCP by explicit URL.",
+    "_comment_runtimeBindAddress": "Use 0.0.0.0 for APK/IPA/standalone LAN direct so a PC agent can connect to the embedded Player MCP by explicit URL. 127.0.0.1 makes the Player MCP local-only inside the device.",
+    "_comment_directTargets": "No LAN discovery is performed. Set selectedTargetUrl, pass --target-url, or set PUERTS_UNITY_MCP_TARGET_URL when connecting to a remote Unity Editor or phone/player MCP.",
+    "editorAutoStart": true,
+    "editorBindAddress": "127.0.0.1",
+    "editorPort": 18990,
+    "runtimeAutoStart": true,
+    "runtimeBindAddress": "0.0.0.0",
+    "runtimePort": 18991,
+    "runtimeLogBufferSize": 500,
+    "name": "FlatWorld",
+    "selectedTargetKind": "editor",
+    "selectedTargetId": "",
+    "selectedTargetName": "",
+    "selectedTargetUrl": "",
+    "serverName": "puerts-unity-mcp"
+}

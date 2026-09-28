@@ -1,0 +1,18 @@
+{
+  "name": "PuertsUnityMcp.Runtime",
+  "rootNamespace": "PuertsUnityMcp",
+  "references": [
+    "com.tencent.puerts.core",
+    "com.tencent.puerts.v8",
+    "UnityEngine.UI"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

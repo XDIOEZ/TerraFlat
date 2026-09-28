@@ -1,0 +1,19 @@
+{
+  "name": "PuertsUnityMcp.Editor",
+  "rootNamespace": "PuertsUnityMcp.Editor",
+  "references": [
+    "PuertsUnityMcp.Runtime",
+    "com.tencent.puerts.core.Editor"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}
