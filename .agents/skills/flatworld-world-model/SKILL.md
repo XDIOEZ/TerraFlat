@@ -24,14 +24,14 @@ description: "Use when: 定位或修改 FlatWorld 的纯 WorldModel、Chunk 运�
 - 正式地块写入统一经 `ChunkTerrainData.WriteCell` 同步核心数据、固定视线遮挡位及版本；生成时建初始遮挡位，建筑和机械占地通过独立动态位叠加，读者只读合成结果。
 - 墙体裂缝等耐久表现必须从 `ChunkTerrainData` 的 `flatworld.tileBuilding.damage` 权威层推导；`IChunkViewRenderer.Bind` 时重建、监听 `TerrainChangeKind.Environment/Cell/TileStack` 增量刷新、`Unbind` 时解除订阅，禁止在表现组件中保存第二份生命值。
 - 墙脚、岸线等依赖邻接关系的表现除监听自身 `ChunkTerrainData.Changed` 外，还必须监听正交相邻区块的共享边界变化；`ChunkCommitted` 只表示邻区就绪，不能覆盖后续拆除或放置造成的运行时更新。
-- ChunkView 的 Ground / Liquid / Back / Blocking、环境阈值、支撑面、积雪与雪冠统一由 `ChunkBatchRendererGroupService` 跨 Chunk 分层绘制；`ChunkTilemapRenderer` 保留历史类名，但材质直接在根组件配置。Prefab 仅保留 Blocking Tilemap 维护 `TilemapCollider2D` 所需碰撞格，不再挂 TilemapRenderer；扩展层使用同一 Owner 的独立 VisualLayer 槽并在 Owner 重建时重提。
+- Ground / Water / Back / Blocking 用 `ChunkGroundMeshRenderer` 按 Chunk 和纹理批量绘制；单格只更新四个顶点。Blocking Tilemap 只保留碰撞。草、自然物、机械等扩展层继续共用 `ChunkBatchRendererGroupService` 的 Owner，Owner 重建时各层重提。
 - BRG 没有 `SpriteRenderer/TilemapRenderer` 的 Sorting Layer 字段，不能指望较低的 Render Queue 跨 Sorting Layer 压到 `Tilemap` 层下面；当前地形 BRG 使用 Default 排序域和 2987~2992 队列。草等需要盖在地形之上、普通世界 Sprite 之下的表现必须与 BRG 共用 Default 排序域，并使用高于 2992、低于 3000 的透明队列。玩家、生物、建筑和世界物品的 `WorldSorting` JSON 应统一使用比 Default 更靠前的 `Player` 排序层，再由同层 Y 轴决定实体间前后；只提高 Default 层内 Order 无法保证实体不被 BRG 地形盖住。
 - 地形 Sprite 几何只经资源会话级 `SharedSpriteMeshCache` 构造，最终 Tile/MOD/Liquid 目录和 Palette 在 Ready 前预热，动态 Sprite 保留懒加载兜底。普通流送与 `ReleaseUnusedBackend` 不清 Mesh；`BatchMeshID` 仅存当前 Backend，退出世界销毁 BRG 后再次进入必须重新注册共享 Mesh。缓存清理先通知 BRG 解绑再销毁 Mesh，禁止反向依赖 Batch 内部实现。
 - 世界内 F5 不销毁 WorldRuntime、Chunk、租约或 BRG；`ChunkTilemapRenderer` 随 Bind/Unbind 成对订阅 `GameRes.ResourcesReloaded`，发布后用原权威地形刷新碰撞映射和批量视觉。候选期间不预热或清除共享 Mesh；运行中液体身份集合及数字索引必须不变，因为原世界和后台生成器仍持有原编号表。
 - Chunk BRG 自定义 Shader 的全部数值/向量/颜色材质属性必须统一声明在 `UnityPerMaterial` CBUFFER，且同一 Shader 的所有活跃 Pass 保持一致布局；不要 `UsePass` 借用另一个材质布局不同的 Shader Pass，否则 BatchRendererGroup 会因 SRP Batcher 不兼容而拒绝绘制。
 - BRG 自定义 AoS 数据寻址必须在 `UNITY_SETUP_INSTANCE_ID` 后使用 `GetDOTSInstanceIndex()` 取得可见列表映射后的真实实例索引；`unity_InstanceID` 只是单次 draw 的局部序号，大批次被 Unity 拆分后会重复从零计数。误用会出现“数据、Owner 和实例数量均正常，但视野扩大后地面永久缺块”，不能靠增加加载距离或重建 Owner 修复。
-- BRG 地形实例按脏格增量上传；岸线与墙脚方向放入实例数据，连续水深使用每水格四个格角深度在 Shader 内双线性插值。边界数据依赖八方向邻区，正交邻区变化刷新共享边、对角邻区变化刷新共享角，不得退回整 Chunk `SetTilesBlock` 或每 Chunk 水深纹理重建。
-- 水面 BRG 的 `FlowX/FlowY` 对河流保存四格角的下游速度，对海洋重复保存当前格 `windX/windY` 派生的单位方向；海浪和岸边泡沫从该实例数据取方向，不能再用材质 `_FlowDirection` 独立决定海浪流向。
+- Chunk Mesh 的顶点数据保存岸线、接触、高度、四角水深和流向；材质复制源材质关键字。边界依赖八方向邻区，正交变化刷新共享边，对角变化刷新共享角，不得为单格变化重建整 Chunk。
+- 水面四角 `FlowX/FlowY` 对河流保存下游速度，对海洋保存当前格风向；海浪和岸边泡沫读取顶点数据，不再由材质 `_FlowDirection` 独立决定方向。
 - `ChunkMgr` 随 `WorldManager` 常驻 DDOL；`ChunkView` 及其自然物表现必须挂到当前世界场景的独立根节，禁止以 `ChunkMgr.transform` 作为活动或池化 View 的父级。
 - `ChunkView` Prefab 必须直接装配 `NaturalItems/ChunkNaturalItemRenderer` 与 `LightOccluders/ChunkLightOccluderRenderer`，并由根组件序列化引用；流送时不在 `Awake` 动态添加表现组件，缺失时明确报错。
 - 相机驱动的本地区块窗口必须覆盖真实视口，并按相机半宽/半高分别计算 X/Y 距离；禁止为超宽屏取最大边后构造巨大正方形窗口。普通玩法可以受自动视距上限保护，但管理员无限视野不能继续被普通上限截断；管理员手动增加加载距离只作为最低加载圈数，不能关闭相机自动扩圈。
@@ -40,20 +40,20 @@ description: "Use when: 定位或修改 FlatWorld 的纯 WorldModel、Chunk 运�
 - 草与花使用 ChunkTilemapRenderer 的同一个 BRG Owner，以独立 VisualLayer 和单格槽提交；解绑只清自己的槽，Owner 全量修复后通过 BatchPresentationRebuilt 重提。花层首次绑定应沿 Ecology.Placements 一次扫描并直接提交同格首个未采集点，不能对每个放置点反复调用全列表 TryFindAt，避免密集区块出现 O(n²) 查询。草地图集 Sprite 必须按贴图配置跨 Chunk 共享身份，否则 Sprite 网格缓存和 BRG 批次会被每 Chunk 重复切开；批量绑定按 IIncrementalChunkViewRenderer 分步推进。BRG 后端不得在普通流送中因 Owner 短暂归零立即销毁；只在世界窗口彻底关闭后释放。窗口变化时可事件式校验当前绑定，并在登记丢失时从权威 Terrain 原地重建基础层，禁止使用每帧或定时轮询。
 - 高视距会一次产生大量已 Ready 的 ChunkView 表现任务；调度必须跨 Chunk 优先完成基础地形 BRG，再补齐草地、碰撞、导航、自然物等后续表现。启动和后续表现每次取队都按玩家当前位置重选，跨区块时应在完整窗口节流前撤销旧视野任务；禁止让单个 Chunk 的全部表现器串行完成后才开始下一个 Chunk，否则会出现“数据已经生成但视野大片长期空白”的表现饥饿。
 - 单个表现器会批量实例化实体时实现 `IIncrementalChunkViewRenderer`，让 `ChunkView` 按步骤推进；基础地形启动与后续表现分别受主线程时间预算约束，后续队列同一区块每帧最多执行一步。自然物必须先生成宿主、后生成伴生物，初始绑定完成前暂停季节补位与延迟伴生物检查；同步入口复用相同步骤。
-- `WorldManager.prefab` 的序列化分帧预算会覆盖 `ChunkMgr` 字段默认值；排查黑块时先用 `gameplay_chunk_render_debug` 对照 `generationQueued/Active`、`pendingCommits`、`readyDataWithoutView`、`pendingBaseTerrain` 与实际 `presentationStartsPerFrame`，不要仅凭源码默认值判断表现吞吐。
+- `Assets/2_Prefabs/Core/Managers/WorldManager.prefab` 的序列化预算会覆盖 `ChunkMgr` 字段默认值；GM 世界页可分别调整提交、基础地形、后续表现的每帧数量和毫秒上限，单项工作会完整执行。排查黑块时用 `gameplay_chunk_render_debug` 对照 `pendingCommits`、`readyDataWithoutView`、`pendingBaseTerrain` 与实际吞吐，不凭源码默认值判断。
 - 流送性能由 `WorldRuntime.StreamingDiagnostics` 在阶段边界记账：生成排队/执行、提交排队/处理、差量恢复、各 `renderer.*` 同步步骤与表现等待分开；仅 Editor/Development 启用，有界缓存且不逐格刷日志。诊断必须同时检查 `WorldRuntimeHost` 现有 owner 和 Update/Advance 心跳，禁止在读取时自动重绑、提交或补生成。未测 GPU 不可凭 BRG 登记正常断言 GPU 没瓶颈。
-- 慢区块日志由纯模型记录分段耗时、主线程限频输出；河网 `Lazy.Value` 可能由任意等待线程执行，`river.region_compute` 必须归实际执行线程，`river.region_get` 才代表包含共享等待的总耗时。只有 `region_get` 很慢而没有 `region_compute` 的区块是在等同一区域计算，不能误判为各区块重复计算。
-- 高度河网区域未就绪时，生成调度按与水文缓存相同的区域键只运行一个同组任务，其余任务留在优先队列，空闲名额先计算其它区域；区域缓存就绪后同组区块恢复并行。稀疏源头和单主路径限制计算格数，选路只查相邻八格真实高度；严格下坡的最大堆出队顺序已保证无需额外 `processed` 集合。
+- 慢区块日志由纯模型记录分段耗时、主线程限频输出；宏观水文 `Lazy.Value` 可由任意等待线程执行，`river.macro_compute` 归实际执行者，`river.macro_get` 包含共享等待，`river.local_refine` 只计本 Chunk 细化。
+- 水文缓存键按世界纪元、维度、种子、配置和稳定 Region 组成；未就绪时同组只运行一个任务，其余留在优先队列。宏观图只保留低分辨率下游和汇水量，局部水格由请求的 Chunk 细化；邻区预热与世界退出共用取消令牌。
 - 共享河网区域的计算不能绑定到单个区块的取消：当前区块离开窗口时，只要队列仍有同区域有效请求就继续算完并复用缓存；该区域所有请求都取消或世界关闭时才停止。原区块结果仍须丢弃，不能把已取消区块提交回世界；判断剩余需求要沿用与河网缓存相同的区域键。
-- `river.route_network` 若仍占主耗时，慢日志区分邻格选择与原始高度噪声，并列出出队格数与高度缓存未命中次数；这些阶段存在嵌套，子阶段毫秒数不能直接相加。采样计时只在诊断开启且缓存未命中时执行，避免逐格 Unity 日志。
+- 生成阶段分别记录 `terrain.noise`、`terrain.biome`、`terrain.environment_write` 和 `ecology.input`；父子阶段有重叠，耗时不能直接相加。后台 Burst 数学核只接收冻结的数值配置，不读取 Unity 对象。Unity 2022.3 的 Burst IL 后处理要求该 asmdef 保留 Engine 程序集引用；代码边界仍禁止访问 Unity 对象。
 - 耗时为单调墙钟而非 CPU 使用率；Editor 暂停跨越的请求单独标记并排除等待汇总，不能把暂停后的完成通知积压当作运行时算力证据。父子阶段有重叠，累计时长不能相加；采样差值只统计本段结束的阶段，不冒充仅落在时间窗口内的 CPU 时间。
-- 以空间换显示延迟时，纯模型窗口需分别维护模拟圈、完整表现预加载圈和数据保留圈；本地 ChunkView 在预加载圈提前绑定并持有表现租约，进入活动圈不应重新绑定。世界进入就绪判定只检查活动圈，关闭窗口必须释放全部预加载表现需求。BRG 按 Owner 区块边界与相机裁剪面筛选实例，离屏 Owner 保留已提交数据，靠近时由 Culling 直接显示。
+- 以空间换显示延迟时，纯模型窗口需分别维护模拟圈、完整表现预加载圈和数据保留圈；本地 ChunkView 在预加载圈提前绑定并持有表现租约，进入活动圈不应重新绑定。世界进入就绪判定只检查活动圈，关闭窗口必须释放全部预加载表现需求。基础 Chunk Mesh 由 Renderer 视锥裁剪，扩展 BRG 按 Owner 区块边界裁剪。
 - BRG 剔除由流送设置的 `WorldStreamingPreferences.OwnerCullingEnabled` 控制，默认关闭以便对照高视距的全量绘制；开启时单次回调按 Owner 计算可见性，只在 Owner 可见集合或实例增删变化后重建每批可见索引。交换删除实例时须同步维护状态引用与索引；全部 Owner 可见时直接走全量可见路径。关闭剔除仍须正常生成 BRG 的可见实例和绘制命令，不能跳过回调。
 - 卸载 BRG Owner 时先批量交换删除并修正被搬动实例的句柄，最后按 Batch 合并上传仍有效的脏区；单格增量继续即时上传。
 - `Mod_ChunkLoader` 的窗口刷新与逐帧 `RetargetRuntimePresentationQueue` 必须使用相同的表现预加载距离，否则下一帧会撤销外圈 ChunkView；同一 Chunk 内的移动只更新任务优先级，跨 Chunk 或视距变化才重建窗口。
-- 外圈数据预取只须等待可见窗口的数据与基础地形 BRG 完成；草地、导航、自然物等后续表现继续轮转时不应长期占住后台生成的空闲时机。存档地形差量必须先于基础地形绑定恢复，同一 ChunkRuntime 实例不能因窗口刷新重复恢复。
+- 外圈数据预取只须等待可见窗口的数据与基础地形 Chunk Mesh 完成；草地、导航、自然物等后续表现继续轮转时不应长期占住后台生成的空闲时机。存档地形差量必须先于基础地形绑定恢复，同一 ChunkRuntime 实例不能因窗口刷新重复恢复。
 - BRG 的单格 `SetVisual` 不得在 Owner 丢失时隐式重新注册 Owner；否则脚本热重载或后端重建后的第一次脏格刷新只会恢复局部实例，却让后续校验误判整块已登记。增量刷新发现 Owner 丢失时必须先从权威 Terrain 全量重建，再恢复单格增量路径。
-- `ChunkTilemapRenderer.Bind` 激活水层 GameObject 时会同步触发 `WaterVisualStyleBinding.OnEnable`；绑定期允许它先更新共享材质，但必须抑制 `NotifyWaterVisualStyleChanged` 的增量 BRG 修复，因为紧随其后的全量提交会直接读取最新材质。不要把这个正常激活时序误判成 Owner 丢失。
+- 水面风格切换和 F5 发布后，用当前权威 Liquid/Tile 数据重建对应 Chunk Mesh；绑定期触发的材质变化由紧随其后的全量提交消费，不另起增量修复。
 - 提交生成结果前校验世界纪元与请求版本；取消、失败和逐出路径必须释放结果及租约。
 - 生成保持固定种子和稳定签名；修改地形内容规则时同时使用 `flatworld-map`。
 - 地表出生搜索只判断可走地形与 Liquid 深度，应复用正式生成的 Profile、世界纪元、水文缓存和单格地形规则；不要为候选格生成完整 Chunk 或生态放置记录。当前结构阶段不改可走标记和液体，若以后改变这一约束，出生查询也必须纳入对应规则。
@@ -82,7 +82,7 @@ description: "Use when: 定位或修改 FlatWorld 的纯 WorldModel、Chunk 运�
 - 验收统一进入真实 Play Mode，实际移动跨区块、触发生成/流送/逐出并观察权威状态与表现；编译与 Console 只作为运行门禁和故障定位。
 
 - Liquid 独立持有池化的 `LiquidDepth[]/LiquidTypeIndex[]`，Seal 移交唯一所有权、取消或逐出时归还；编号来自资源会话冻结的 `LiquidTypeCatalog`，稳定哈希与持久化使用 LiquidId，不能使用会话编号。`height` 在 Seal 时随环境数组移交给正式区块，供 Surface Ground 高度分层读取，直到区块 Dispose 才归还；它不参与玩法内容指纹，不增加存档字段，也不能用于反算液深。
-- 高度分层只读取原生成高度：Ground 的 `Transform0.w` 保存当前高度（负值禁用），`Data1` 按左、右、下、上保存邻高，BRG 步长保持 112 字节。缺失邻区、非法高度、无 Ground 或有 Liquid 的邻格回退为本格同高；本格非 Surface 或有 Liquid 时禁用。复用 Environment/Liquid 脏区及邻区 Changed，并同时响应 ChunkCommitted / ChunkEvicted，不能靠轮询或重新采样 Noise 补边界。
+- 高度分层只读取原生成高度：Ground Mesh 顶点保存当前高度（负值禁用）及左、右、下、上邻高。缺失邻区、非法高度、无 Ground 或有 Liquid 的邻格回退为本格同高；本格非 Surface 或有 Liquid 时禁用。响应地址定向的 ChunkCommitted / ChunkEvicted 与邻区变化补边界。
 - `TerrainChangeKind.Liquid` 必须驱动当前格、八方向邻区的岸线/四角液深和导航刷新。TerrainCell 不保存液体标记，SetLiquid 不能修改任何 Ground 字段；生成筛选读取 LiquidDepth，有效表面接触额外考虑 TerrainSupportLayer，纯液体变化不得产生 Ground 差量。
 
 ## Skill 维护原则

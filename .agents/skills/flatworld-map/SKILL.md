@@ -29,7 +29,7 @@ description: "Use when: 定位或修改 FlatWorld 的地图内容、Tilemap、�
 - Ground 永远保存真实底部地块，海洋、河流、湖泊、地下水的初始液体在生成阶段另外写入 `ChunkTerrainData`。修改地面不会自动改液体；抽水只走 `WorldLiquidSystem.TryPump/TrySet`，禁止抽水时生成底部或修改 Ground。平台通过 `TerrainSupportLayer` 遮断表面接触，底部液体仍保留。
 - 世界液体来源统一由 `WorldLiquidSourceResolver` 读取权威 Liquid 层的深度与稳定 `LiquidId`，再解析 `LiquidDefinition`；不能按 Ground Tile、TerrainCellFlags、盐度或 Collider 猜身份。容器份数与世界液深是不同单位，不能未经规则换算直接互相扣减。液体接触直接使用 `WorldLiquidSourceTarget`，不继承 TileData，不注册地块 water 数据/行为或 MemoryPack Union。
 - 河流生成把真实下游单位方向保存到 `riverFlowX/riverFlowY` 环境层；运行时水流玩法统一通过 `ChunkMgr.TryGetRuntimeWaterCurrent` 读取，禁止在物品、角色等消费方重复按邻格高度猜河道方向。海洋暂无独立洋流层时使用生成环境层的 `windX/windY` 作为表层漂移方向，正式水面也消费同一方向，湖泊保持静止。
-- `heightDriven` 地表河网以固定世界坐标分组挑选稀疏源头，同源跨区域选择必须一致；每格只看八邻格原始高度并选一条严格下坡主路径，不再做逐格 D∞ 坡面、谷底前视或曲流噪声计算。可见河槽仍经曲率松弛、Chaikin 圆角和亚格采样重建，不能直接把格子链当最终水体；修改源头采样、选路或小湖规则需递增生成签名。
+- `heightDriven` 河网按稳定 Region 缓存低分辨率高度、下游和汇水量；每个 Chunk 只细化相关走廊与终端小湖。边界两侧必须从同一宏观图和世界坐标取样，固定 Seed 不能依赖 Chunk 加载顺序；修改拓扑、细化或小湖规则需递增生成签名。
 - 生成保持固定种子、稳定 BiomeId/顺序和统一噪声、气候、水文规则。
 - 修改算法时考虑生成签名、旧存档、联机指纹和 Wrapped 坐标。
 - 雪山地表固定使用纯白 `Tile_Snow`，禁止按随机噪声混入雪地变体；若未来恢复变体，只能按温度区间确定。
