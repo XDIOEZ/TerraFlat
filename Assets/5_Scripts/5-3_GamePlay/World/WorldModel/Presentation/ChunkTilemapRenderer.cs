@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using FlatWorld.WorldModel;
 using UnityEngine;
 using UnityEngine.Tilemaps;
+using Unity.Profiling;
 
 /// <summary>
 /// 新版区块的基础 BRG 地图表现适配器。
@@ -25,7 +26,12 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRend
     [SerializeField] private Tilemap blockingTilemap;
 
     private readonly List<NeighbourTerrainSubscription> neighbourTerrainSubscriptions = new(8);
+    private readonly ChunkTerrainData[] neighbourTerrains = new ChunkTerrainData[9]; // 八方向邻区在订阅时解析一次。
     private readonly HashSet<int> liquidVisualDirty = new(); // 合并本块与相邻块的液体批次。
+    private static readonly ProfilerMarker BatchOwnerUnregisterMarker =
+        new("FlatWorld.ChunkStreaming.UnregisterBatchOwner");
+    private static readonly ProfilerMarker BlockingTilemapClearMarker =
+        new("FlatWorld.ChunkStreaming.ClearBlockingTilemap");
     private WorldRuntime boundWorld;
     private GameRes boundResources; // 只订阅正式目录发布，不重建 ChunkRuntime。
     private ChunkRuntime boundChunk;
@@ -136,9 +142,11 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRend
         ClearNeighbourTerrainSubscriptions();
         batchBindingInProgress = false;
         batchPresentationComplete = false;
-        ChunkBatchRendererGroupService.UnregisterOwner(this);
+        using (BatchOwnerUnregisterMarker.Auto())
+            ChunkBatchRendererGroupService.UnregisterOwner(this);
         if (blockingTilemap != null)
-            blockingTilemap.ClearAllTiles();
+            using (BlockingTilemapClearMarker.Auto())
+                blockingTilemap.ClearAllTiles();
         renderGroundElevation = false;
         boundChunk = null;
     }
@@ -316,6 +324,7 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRend
         if (!boundWorld.TryGetChunkTerrain(address, out ChunkTerrainData neighbourTerrain))
             return;
 
+        neighbourTerrains[(Math.Sign(offsetY) + 1) * 3 + Math.Sign(offsetX) + 1] = neighbourTerrain;
         Action<ChunkTerrainChanged> handler = changed =>
             HandleNeighbourTerrainChanged(neighbourTerrain, offsetX, offsetY, changed);
         neighbourTerrain.Changed += handler;
@@ -364,6 +373,7 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRend
         }
 
         neighbourTerrainSubscriptions.Clear();
+        Array.Clear(neighbourTerrains, 0, neighbourTerrains.Length);
     }
 
     #region BRG 表现与碰撞兼容
@@ -448,11 +458,15 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRend
     }
 
     private void RefreshBatchArea(ChunkTerrainData terrain, int centerX, int centerY, int radius)
+        => RefreshBatchRectangle(terrain, centerX - radius, centerX + radius,
+            centerY - radius, centerY + radius);
+
+    private void RefreshBatchRectangle(ChunkTerrainData terrain, int left, int right, int bottom, int top)
     {
-        int minX = Mathf.Max(0, centerX - radius);
-        int maxX = Mathf.Min(terrain.Width - 1, centerX + radius);
-        int minY = Mathf.Max(0, centerY - radius);
-        int maxY = Mathf.Min(terrain.Height - 1, centerY + radius);
+        int minX = Mathf.Max(0, left);
+        int maxX = Mathf.Min(terrain.Width - 1, right);
+        int minY = Mathf.Max(0, bottom);
+        int maxY = Mathf.Min(terrain.Height - 1, top);
         for (int y = minY; y <= maxY; y++)
         for (int x = minX; x <= maxX; x++)
             RefreshBatchCell(terrain, x, y);
@@ -481,14 +495,13 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRend
         if (offsetX != 0)
         {
             int x = offsetX < 0 ? 0 : terrain.Width - 1;
-            for (int y = 0; y < terrain.Height; y++)
-                RefreshBatchArea(terrain, x, y, 1);
+            // 连续边界的一圈依赖格只遍历一次，避免相邻 3x3 区域反复提交相同实例。
+            RefreshBatchRectangle(terrain, x - 1, x + 1, 0, terrain.Height - 1);
             return;
         }
 
         int edgeY = offsetY < 0 ? 0 : terrain.Height - 1;
-        for (int x = 0; x < terrain.Width; x++)
-            RefreshBatchArea(terrain, x, edgeY, 1);
+        RefreshBatchRectangle(terrain, 0, terrain.Width - 1, edgeY - 1, edgeY + 1);
     }
 
     private void RefreshBatchCell(ChunkTerrainData terrain, int x, int y)
@@ -1070,33 +1083,21 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRend
         if (boundWorld == null || boundChunk == null)
             return false;
 
-        Int2 origin = boundChunk.Address.ChunkOrigin;
-        int targetOriginX = origin.X;
-        int targetOriginY = origin.Y;
+        int neighbourX = x < 0 ? -1 : x >= terrain.Width ? 1 : 0;
+        int neighbourY = y < 0 ? -1 : y >= terrain.Height ? 1 : 0;
+        ChunkTerrainData neighbourTerrain = neighbourTerrains[(neighbourY + 1) * 3 + neighbourX + 1];
+        if (neighbourTerrain == null || neighbourTerrain.IsDisposed)
+            return false;
+
         int localX = x;
         int localY = y;
         if (x < 0)
-            targetOriginX -= terrain.Width;
-        else if (x >= terrain.Width)
-            targetOriginX += terrain.Width;
-        if (y < 0)
-            targetOriginY -= terrain.Height;
-        else if (y >= terrain.Height)
-            targetOriginY += terrain.Height;
-
-        Vector2Int normalizedOrigin = WorldTopologyRuntime.NormalizeCell(new Vector2Int(targetOriginX, targetOriginY));
-        var address = new FlatWorld.WorldModel.WorldAddress(boundChunk.Address.DimensionId,
-            new Int2(normalizedOrigin.x, normalizedOrigin.y));
-        if (!boundWorld.TryGetChunkTerrain(address, out ChunkTerrainData neighbourTerrain))
-            return false;
-
-        if (localX < 0)
             localX += neighbourTerrain.Width;
-        else if (localX >= terrain.Width)
+        else if (x >= terrain.Width)
             localX -= terrain.Width;
-        if (localY < 0)
+        if (y < 0)
             localY += neighbourTerrain.Height;
-        else if (localY >= terrain.Height)
+        else if (y >= terrain.Height)
             localY -= terrain.Height;
         if (localX < 0 || localX >= neighbourTerrain.Width ||
             localY < 0 || localY >= neighbourTerrain.Height)

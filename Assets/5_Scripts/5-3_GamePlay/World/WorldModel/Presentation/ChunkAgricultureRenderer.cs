@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using FlatWorld.Networking;
 using FlatWorld.WorldModel;
 using UnityEngine;
+using Unity.Profiling;
 
 /// <summary>
 /// 区块农业表现：按权威进度透明渐显耕地，同时管理玩家播种的作物生命周期。
@@ -25,6 +26,12 @@ public sealed class ChunkAgricultureRenderer : MonoBehaviour, IChunkViewRenderer
 
     private readonly Dictionary<Vector2Int, TillingOverlay> overlays = new();
     private readonly Dictionary<Vector2Int, Item> crops = new();
+    private static readonly ProfilerMarker CropCaptureMarker =
+        new("FlatWorld.ChunkStreaming.CaptureCrops");
+    private static readonly ProfilerMarker CropDespawnMarker =
+        new("FlatWorld.ChunkStreaming.DespawnCrops");
+    private static readonly ProfilerMarker OverlayClearMarker =
+        new("FlatWorld.ChunkStreaming.ClearTillingOverlays");
     private ChunkRuntime chunk;
     private bool unbinding;
     private bool applicationQuitting;
@@ -85,19 +92,24 @@ public sealed class ChunkAgricultureRenderer : MonoBehaviour, IChunkViewRenderer
         if (chunk == null)
             return;
         unbinding = true;
-        CaptureState();
+        using (CropCaptureMarker.Auto())
+            CaptureState();
         chunk.Terrain.Changed -= HandleChanged;
-        foreach (Item crop in crops.Values)
+        using (CropDespawnMarker.Auto())
         {
-            if (crop == null)
-                continue;
-            crop.OnItemDestroy -= HandleCropDestroyed;
-            if (itemManager != null)
-                itemManager.DespawnItem(crop, saveData: false);
+            foreach (Item crop in crops.Values)
+            {
+                if (crop == null)
+                    continue;
+                crop.OnItemDestroy -= HandleCropDestroyed;
+                if (itemManager != null)
+                    itemManager.DespawnItem(crop, saveData: false);
+            }
         }
         crops.Clear();
-        foreach (TillingOverlay overlay in overlays.Values)
-            DisposeOverlay(overlay);
+        using (OverlayClearMarker.Auto())
+            foreach (TillingOverlay overlay in overlays.Values)
+                DisposeOverlay(overlay);
         overlays.Clear();
         hasActiveFade = false;
         chunk = null;

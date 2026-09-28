@@ -197,13 +197,16 @@ internal static class ChunkBatchRendererGroupService
         private readonly object syncRoot = new();
         private readonly BatchRendererGroup rendererGroup;
         private readonly Dictionary<ChunkTilemapRenderer, Dictionary<int, InstanceHandle>> ownerHandles = new();
-        /// <summary>剔除回调使用整数身份，避免逐实例比较 Unity 对象。</summary>
-        private readonly Dictionary<int, Bounds> ownerBounds = new();
-        private readonly Dictionary<int, bool> ownerVisibility = new();
+        /// <summary>注册时建立区块可见状态，剔除回调不再逐实例查字典。</summary>
+        private readonly Dictionary<int, OwnerCullingState> ownerCullingById = new();
+        private readonly List<OwnerCullingState> activeOwnerCullingStates = new();
         /// <summary>每个批次复用本次剔除的可见实例索引。</summary>
         private readonly List<List<int>> batchVisibleInstances = new();
+        /// <summary>实例或批次变化后，下次局部剔除重新收集可见索引。</summary>
+        private bool visibleInstanceListsDirty = true;
         private readonly Dictionary<VisualKey, TileBatch> batches = new();
         private readonly List<TileBatch> orderedBatches = new();
+        private readonly HashSet<TileBatch> ownerRemovalBatches = new();
         private readonly Dictionary<int, MeshRegistration> meshes = new();
         private readonly Dictionary<MaterialKey, MaterialRegistration> materials = new();
         private readonly HashSet<int> warnedMissingOwnerIds = new();
@@ -243,9 +246,24 @@ internal static class ChunkBatchRendererGroupService
                 if (!ownerHandles.ContainsKey(owner))
                     ownerHandles.Add(owner, new Dictionary<int, InstanceHandle>());
                 int ownerId = owner.GetInstanceID();
-                ownerBounds[ownerId] = worldBounds;
+                RegisterOwnerCullingState(ownerId, worldBounds);
                 warnedMissingOwnerIds.Remove(ownerId);
             }
+        }
+
+        /// <summary>复用区块状态，使已有实例自动读取最新边界。</summary>
+        private void RegisterOwnerCullingState(int ownerId, Bounds worldBounds)
+        {
+            if (ownerCullingById.TryGetValue(ownerId, out OwnerCullingState state))
+            {
+                state.Bounds = worldBounds;
+                return;
+            }
+
+            state = new OwnerCullingState(worldBounds, activeOwnerCullingStates.Count);
+            ownerCullingById.Add(ownerId, state);
+            activeOwnerCullingStates.Add(state);
+            visibleInstanceListsDirty = true;
         }
 
         public bool IsOwnerRegistered(ChunkTilemapRenderer owner)
@@ -293,7 +311,8 @@ internal static class ChunkBatchRendererGroupService
                 string ownerPart = owner != null
                     ? $" owner={owner.name} ownerRegistered={ownerInstances >= 0} ownerInstances={Mathf.Max(0, ownerInstances)}"
                     : string.Empty;
-                return $"[ChunkRenderDebug] owners={ownerHandles.Count} batches={batches.Count} activeBatches={activeBatches} " +
+                return $"[ChunkRenderDebug] ownerCulling={WorldStreamingPreferences.OwnerCullingEnabled} " +
+                       $"owners={ownerHandles.Count} batches={batches.Count} activeBatches={activeBatches} " +
                        $"instances={totalInstances} meshes={meshes.Count} materials={materials.Count} " +
                        $"culls={cullingCallbackCount} lastCullCommands={lastCullingCommandCount} " +
                        $"lastCullVisible={lastCullingVisibleCount}{ownerPart}";
@@ -309,16 +328,50 @@ internal static class ChunkBatchRendererGroupService
                 if (!ownerHandles.TryGetValue(owner, out Dictionary<int, InstanceHandle> handles))
                     return;
 
-                while (handles.Count > 0)
+                ownerRemovalBatches.Clear();
+                foreach (InstanceHandle handle in handles.Values)
                 {
-                    using Dictionary<int, InstanceHandle>.Enumerator enumerator = handles.GetEnumerator();
-                    enumerator.MoveNext();
-                    RemoveHandle(owner, enumerator.Current.Key, enumerator.Current.Value, handles);
+                    if (ownerRemovalBatches.Add(handle.Batch))
+                        handle.Batch.BeginBulkRemoval();
+                }
+
+                try
+                {
+                    while (handles.Count > 0)
+                    {
+                        using Dictionary<int, InstanceHandle>.Enumerator enumerator = handles.GetEnumerator();
+                        enumerator.MoveNext();
+                        RemoveHandle(owner, enumerator.Current.Key, enumerator.Current.Value, handles);
+                    }
+                }
+                finally
+                {
+                    foreach (TileBatch batch in ownerRemovalBatches)
+                        batch.EndBulkRemoval();
+                    ownerRemovalBatches.Clear();
                 }
 
                 ownerHandles.Remove(owner);
-                ownerBounds.Remove(owner.GetInstanceID());
+                UnregisterOwnerCullingState(owner.GetInstanceID());
             }
+        }
+
+        /// <summary>交换删除区块状态，避免大量区块卸载时线性搬移列表。</summary>
+        private void UnregisterOwnerCullingState(int ownerId)
+        {
+            if (!ownerCullingById.TryGetValue(ownerId, out OwnerCullingState state))
+                return;
+
+            int lastIndex = activeOwnerCullingStates.Count - 1;
+            if (state.Index != lastIndex)
+            {
+                OwnerCullingState moved = activeOwnerCullingStates[lastIndex];
+                activeOwnerCullingStates[state.Index] = moved;
+                moved.Index = state.Index;
+            }
+            activeOwnerCullingStates.RemoveAt(lastIndex);
+            ownerCullingById.Remove(ownerId);
+            visibleInstanceListsDirty = true;
         }
 
         public void SetVisual(ChunkTilemapRenderer owner, int slotKey, Visual visual)
@@ -355,8 +408,10 @@ internal static class ChunkBatchRendererGroupService
                 }
 
                 TileBatch batch = GetOrCreateBatch(key, visual);
-                int index = batch.Add(owner, slotKey, visual.Data, visual.SortingPosition);
+                OwnerCullingState cullingState = ownerCullingById[owner.GetInstanceID()];
+                int index = batch.Add(owner, slotKey, cullingState, visual.Data, visual.SortingPosition);
                 handles[slotKey] = new InstanceHandle(batch, index);
+                visibleInstanceListsDirty = true;
             }
         }
 
@@ -380,6 +435,7 @@ internal static class ChunkBatchRendererGroupService
             Dictionary<int, InstanceHandle> handles)
         {
             handles.Remove(slotKey);
+            visibleInstanceListsDirty = true;
             if (handle.Batch.Remove(handle.Index, out InstanceOwner movedOwner))
             {
                 if (ownerHandles.TryGetValue(movedOwner.Owner, out Dictionary<int, InstanceHandle> movedHandles))
@@ -515,21 +571,17 @@ internal static class ChunkBatchRendererGroupService
                 int visibleCount = 0;
                 int sortedVisibleCount = 0;
                 int submittedCount = 0;
-                ownerVisibility.Clear();
+                bool ownerVisibilityChanged = false;
+                bool allOwnersVisible = !WorldStreamingPreferences.OwnerCullingEnabled ||
+                    RefreshOwnerVisibility(context.cullingPlanes, out ownerVisibilityChanged);
+                if (!allOwnersVisible && (visibleInstanceListsDirty || ownerVisibilityChanged))
+                    RebuildVisibleInstanceLists();
                 for (int i = 0; i < orderedBatches.Count; i++)
                 {
                     TileBatch batch = orderedBatches[i];
-                    submittedCount += batch.Count;
-                    if (i == batchVisibleInstances.Count)
-                        batchVisibleInstances.Add(new List<int>(64));
-                    List<int> visibleInstances = batchVisibleInstances[i];
-                    visibleInstances.Clear();
-                    for (int instance = 0; instance < batch.Count; instance++)
-                    {
-                        if (IsOwnerVisible(batch.GetOwnerId(instance), context.cullingPlanes))
-                            visibleInstances.Add(instance);
-                    }
-                    int batchVisible = visibleInstances.Count;
+                    int batchCount = batch.Count;
+                    submittedCount += batchCount;
+                    int batchVisible = allOwnersVisible ? batchCount : batchVisibleInstances[i].Count;
                     if (batchVisible <= 0)
                         continue;
                     commandCount += batch.DepthSorted ? batchVisible : 1;
@@ -581,8 +633,8 @@ internal static class ChunkBatchRendererGroupService
                 for (int i = 0; i < orderedBatches.Count; i++)
                 {
                     TileBatch batch = orderedBatches[i];
-                    List<int> visibleInstances = batchVisibleInstances[i];
-                    int batchVisible = visibleInstances.Count;
+                    List<int> visibleInstances = allOwnersVisible ? null : batchVisibleInstances[i];
+                    int batchVisible = allOwnersVisible ? batch.Count : visibleInstances.Count;
                     if (batchVisible <= 0)
                         continue;
 
@@ -590,7 +642,7 @@ internal static class ChunkBatchRendererGroupService
                     {
                         for (int visibleIndex = 0; visibleIndex < batchVisible; visibleIndex++)
                         {
-                            int instance = visibleInstances[visibleIndex];
+                            int instance = allOwnersVisible ? visibleIndex : visibleInstances[visibleIndex];
 
                             BatchDrawCommand* sortedDraw = commands->drawCommands + commandIndex;
                             sortedDraw->visibleOffset = (uint)visibleOffset;
@@ -646,7 +698,8 @@ internal static class ChunkBatchRendererGroupService
                     };
 
                     for (int visibleIndex = 0; visibleIndex < batchVisible; visibleIndex++)
-                        commands->visibleInstances[visibleOffset + visibleIndex] = visibleInstances[visibleIndex];
+                        commands->visibleInstances[visibleOffset + visibleIndex] =
+                            allOwnersVisible ? visibleIndex : visibleInstances[visibleIndex];
 
                     visibleOffset += batchVisible;
                     commandIndex++;
@@ -656,16 +709,44 @@ internal static class ChunkBatchRendererGroupService
             return default;
         }
 
-        /// <summary>按区块边界与当前相机裁剪面判断，预加载区块靠近镜头时无需重新绑定 BRG。</summary>
-        private bool IsOwnerVisible(int ownerId, NativeArray<Plane> planes)
+        /// <summary>只在区块可见状态变化时通知重建实例索引，镜头在区块内移动可复用旧结果。</summary>
+        private bool RefreshOwnerVisibility(NativeArray<Plane> planes, out bool visibilityChanged)
         {
-            if (ownerVisibility.TryGetValue(ownerId, out bool visible))
-                return visible;
+            bool allVisible = true;
+            visibilityChanged = false;
+            for (int i = 0; i < activeOwnerCullingStates.Count; i++)
+            {
+                OwnerCullingState state = activeOwnerCullingStates[i];
+                bool visible = IsOwnerVisible(state.Bounds, planes);
+                if (state.Visible != visible)
+                {
+                    state.Visible = visible;
+                    visibilityChanged = true;
+                }
+                if (!visible)
+                    allVisible = false;
+            }
+            return allVisible;
+        }
 
-            Bounds bounds = ownerBounds[ownerId];
+        /// <summary>批次顺序或区块可见集合改变后，才扫描实例生成可见索引。</summary>
+        private void RebuildVisibleInstanceLists()
+        {
+            for (int i = 0; i < orderedBatches.Count; i++)
+            {
+                TileBatch batch = orderedBatches[i];
+                if (i == batchVisibleInstances.Count)
+                    batchVisibleInstances.Add(new List<int>(Mathf.Min(batch.Count, 64)));
+                batch.CollectVisibleInstances(batchVisibleInstances[i]);
+            }
+            visibleInstanceListsDirty = false;
+        }
+
+        /// <summary>按区块边界与相机裁剪面判断，预加载区块靠近镜头时直接显示。</summary>
+        private static bool IsOwnerVisible(Bounds bounds, NativeArray<Plane> planes)
+        {
             Vector3 center = bounds.center;
             Vector3 extents = bounds.extents;
-            visible = true;
             for (int i = 0; i < planes.Length; i++)
             {
                 Plane plane = planes[i];
@@ -675,12 +756,9 @@ internal static class ChunkBatchRendererGroupService
                                Mathf.Abs(normal.z) * extents.z;
                 if (Vector3.Dot(normal, center) + plane.distance + radius >= 0f)
                     continue;
-                visible = false;
-                break;
+                return false;
             }
-
-            ownerVisibility.Add(ownerId, visible);
-            return visible;
+            return true;
         }
 
         public void Dispose()
@@ -697,8 +775,8 @@ internal static class ChunkBatchRendererGroupService
                 orderedBatches.Clear();
                 batches.Clear();
                 ownerHandles.Clear();
-                ownerBounds.Clear();
-                ownerVisibility.Clear();
+                ownerCullingById.Clear();
+                activeOwnerCullingStates.Clear();
                 batchVisibleInstances.Clear();
 
                 foreach (MaterialRegistration registration in materials.Values)
@@ -781,6 +859,8 @@ internal static class ChunkBatchRendererGroupService
             private readonly InstanceData[] scratch = new InstanceData[1];
             private GraphicsBuffer buffer;
             private int capacity;
+            private bool bulkRemoving;
+            private readonly List<int> bulkDirtyIndices = new();
 
             public TileBatch(Backend backend, VisualKey key, BatchMeshID meshId,
                 BatchMaterialID materialId, int priority, bool depthSorted, int capacity)
@@ -801,17 +881,28 @@ internal static class ChunkBatchRendererGroupService
             public bool DepthSorted { get; }
             public BatchID BatchId { get; private set; }
             public int Count => gpuData.Count;
-            /// <summary>返回登记时缓存的 Owner 身份。</summary>
-            public int GetOwnerId(int index) => owners[index].OwnerId;
             public Vector3 GetSortingPosition(int index) => sortingPositions[index];
 
-            public int Add(ChunkTilemapRenderer owner, int slotKey, InstanceData data, Vector3 sortingPosition)
+            /// <summary>只在可见区块集合变化时扫描本批次，平常复用上次的索引。</summary>
+            public void CollectVisibleInstances(List<int> visibleInstances)
+            {
+                visibleInstances.Clear();
+                int count = owners.Count;
+                for (int index = 0; index < count; index++)
+                {
+                    if (owners[index].CullingState.Visible)
+                        visibleInstances.Add(index);
+                }
+            }
+
+            public int Add(ChunkTilemapRenderer owner, int slotKey, OwnerCullingState cullingState,
+                InstanceData data, Vector3 sortingPosition)
             {
                 if (gpuData.Count >= capacity)
                     Resize(capacity * 2);
                 int index = gpuData.Count;
                 gpuData.Add(data);
-                owners.Add(new InstanceOwner(owner, slotKey));
+                owners.Add(new InstanceOwner(owner, slotKey, cullingState));
                 sortingPositions.Add(sortingPosition);
                 Upload(index, data);
                 return index;
@@ -824,6 +915,42 @@ internal static class ChunkBatchRendererGroupService
                 gpuData[index] = data;
                 sortingPositions[index] = sortingPosition;
                 Upload(index, data);
+            }
+
+            /// <summary>同一区块的实例先在 CPU 上交换删除，结束时合并写回 GPU。</summary>
+            public void BeginBulkRemoval()
+            {
+                bulkRemoving = true;
+                bulkDirtyIndices.Clear();
+            }
+
+            public void EndBulkRemoval()
+            {
+                bulkRemoving = false;
+                bulkDirtyIndices.Sort();
+                int rangeStart = -1;
+                int rangeEnd = -1;
+                for (int i = 0; i < bulkDirtyIndices.Count; i++)
+                {
+                    int index = bulkDirtyIndices[i];
+                    if (index >= gpuData.Count)
+                        break;
+                    if (rangeStart >= 0 && index <= rangeEnd + 1)
+                    {
+                        rangeEnd = Mathf.Max(rangeEnd, index);
+                        continue;
+                    }
+                    UploadRange(rangeStart, rangeEnd);
+                    rangeStart = rangeEnd = index;
+                }
+                UploadRange(rangeStart, rangeEnd);
+                bulkDirtyIndices.Clear();
+            }
+
+            private void UploadRange(int start, int end)
+            {
+                if (start >= 0)
+                    buffer.SetData(gpuData, start, start + 1, end - start + 1);
             }
 
             public bool Remove(int index, out InstanceOwner movedOwner)
@@ -840,7 +967,10 @@ internal static class ChunkBatchRendererGroupService
                     owners[index] = owners[last];
                     sortingPositions[index] = sortingPositions[last];
                     movedOwner = owners[index];
-                    Upload(index, gpuData[index]);
+                    if (bulkRemoving)
+                        bulkDirtyIndices.Add(index);
+                    else
+                        Upload(index, gpuData[index]);
                 }
                 gpuData.RemoveAt(last);
                 owners.RemoveAt(last);
@@ -907,17 +1037,31 @@ internal static class ChunkBatchRendererGroupService
 
         private readonly struct InstanceOwner
         {
-            public InstanceOwner(ChunkTilemapRenderer owner, int slotKey)
+            public InstanceOwner(ChunkTilemapRenderer owner, int slotKey, OwnerCullingState cullingState)
             {
                 Owner = owner;
-                OwnerId = owner.GetInstanceID();
                 SlotKey = slotKey;
+                CullingState = cullingState;
             }
 
             public ChunkTilemapRenderer Owner { get; }
-            /// <summary>剔除回调使用的稳定运行时身份。</summary>
-            public int OwnerId { get; }
             public int SlotKey { get; }
+            /// <summary>区块共享的本次相机可见状态。</summary>
+            public OwnerCullingState CullingState { get; }
+        }
+
+        /// <summary>一个区块只保存一份边界和本次相机可见结果。</summary>
+        private sealed class OwnerCullingState
+        {
+            public OwnerCullingState(Bounds bounds, int index)
+            {
+                Bounds = bounds;
+                Index = index;
+            }
+
+            public Bounds Bounds { get; set; }
+            public int Index { get; set; }
+            public bool Visible { get; set; }
         }
 
         private readonly struct VisualKey : IEquatable<VisualKey>

@@ -23,9 +23,15 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IIncrementalChunkV
     private const string NaturalSurfacePortalItemId = "NaturalMineEntrance";
     private static readonly ProfilerMarker NaturalItemSpawnMarker =
         new("FlatWorld.ChunkStreaming.SpawnNaturalItem");
+    private static readonly ProfilerMarker NaturalItemCaptureMarker =
+        new("FlatWorld.ChunkStreaming.CaptureNaturalItems");
+    private static readonly ProfilerMarker NaturalItemDespawnMarker =
+        new("FlatWorld.ChunkStreaming.DespawnNaturalItems");
 
     private readonly Dictionary<int, Item> spawnedItems = new();
     private readonly HashSet<Item> transientItems = new();
+    private readonly List<Item> unbindItems = new();
+    private readonly HashSet<Item> unbindItemSet = new();
     private readonly HashSet<int> generatedPortalGuids = new();
     private readonly List<NaturalItemPlacement> deferredCompanionPlacements = new();
     private ChunkRuntime boundChunk;
@@ -173,27 +179,39 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IIncrementalChunkV
         unbinding = true;
         try
         {
-            CaptureState();
-            var items = new List<Item>(spawnedItems.Values);
+            using (NaturalItemCaptureMarker.Auto())
+                CaptureState();
+            unbindItems.Clear();
+            unbindItemSet.Clear();
+            foreach (Item item in spawnedItems.Values)
+            {
+                unbindItems.Add(item);
+                unbindItemSet.Add(item);
+            }
             foreach (Item transientItem in transientItems)
             {
-                if (transientItem != null && !items.Contains(transientItem))
-                    items.Add(transientItem);
+                if (transientItem != null && unbindItemSet.Add(transientItem))
+                    unbindItems.Add(transientItem);
             }
 
-            for (int i = 0; i < items.Count; i++)
+            using (NaturalItemDespawnMarker.Auto())
             {
-                Item item = items[i];
-                if (item == null)
-                    continue;
-                item.OnItemDestroy -= HandleNaturalItemDestroy;
-                item.OnItemDestroy -= HandleTransientItemDestroy;
-                if (itemManager != null && !item.DestructionHandled)
-                    itemManager.DespawnItem(item, saveData: false, detachFromChunk: false);
+                for (int i = 0; i < unbindItems.Count; i++)
+                {
+                    Item item = unbindItems[i];
+                    if (item == null)
+                        continue;
+                    item.OnItemDestroy -= HandleNaturalItemDestroy;
+                    item.OnItemDestroy -= HandleTransientItemDestroy;
+                    if (itemManager != null && !item.DestructionHandled)
+                        itemManager.DespawnItem(item, saveData: false, detachFromChunk: false);
+                }
             }
         }
         finally
         {
+            unbindItems.Clear();
+            unbindItemSet.Clear();
             spawnedItems.Clear();
             transientItems.Clear();
             generatedPortalGuids.Clear();
