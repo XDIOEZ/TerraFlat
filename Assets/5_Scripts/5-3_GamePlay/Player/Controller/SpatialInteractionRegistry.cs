@@ -17,8 +17,21 @@ public static class SpatialInteractionRegistry
     public static void Register(Component target, float radius) => Targets[target] = radius;
     public static void Unregister(Component target) => Targets.Remove(target);
 
-    /// <summary>查询同场景有效目标；pointer 为 null 表示邻近查询。</summary>
+    /// <summary>执行正式交互查询；pointer 为 null 表示邻近查询。</summary>
     public static void Query(Item actor, float radius, Vector2? pointer, List<IInteractable> results)
+    {
+        QueryRegisteredTargets(actor, radius, pointer, results);
+        MechanicalWorld.QueryInteractionTargets(actor, radius, pointer, results);
+    }
+
+    /// <summary>只查询能显示描边的组件目标，不为纯数据机械逐帧遍历图。</summary>
+    public static void QueryPreview(Item actor, float radius, Vector2? pointer, List<IInteractable> results)
+    {
+        QueryRegisteredTargets(actor, radius, pointer, results);
+    }
+
+    /// <summary>查询同场景注册组件，供正式交互与视觉预览共用。</summary>
+    private static void QueryRegisteredTargets(Item actor, float radius, Vector2? pointer, List<IInteractable> results)
     {
         foreach (KeyValuePair<Component, float> entry in Targets)
         {
@@ -32,7 +45,6 @@ public static class SpatialInteractionRegistry
                 : WorldTopologyRuntime.Distance(pointer.Value, target.transform.position) > entry.Value)) continue;
             if (!results.Contains(interaction)) results.Add(interaction);
         }
-        MechanicalWorld.QueryInteractionTargets(actor, radius, pointer, results);
     }
     #endregion
 }

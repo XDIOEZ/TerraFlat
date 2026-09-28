@@ -233,8 +233,16 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
         }
     }
 
-    /// <summary>按键、鼠标和描边共用精确落点查询，木筏优先于其下方的水面。</summary>
+    /// <summary>正式交互按光标落点查询全部目标，包括纯数据机械。</summary>
     private IInteractable FindReceiverAtPointer(Vector2 pointerWorld, bool requirePointerPermission = false)
+        => FindReceiverAtPointerCore(pointerWorld, requirePointerPermission, previewOnly: false);
+
+    /// <summary>描边只查有视觉组件的目标，不轮询机械图。</summary>
+    private IInteractable FindPreviewReceiverAtPointer(Vector2 pointerWorld)
+        => FindReceiverAtPointerCore(pointerWorld, requirePointerPermission: false, previewOnly: true);
+
+    /// <summary>按用途选择空间目标，物理落点和距离校验保持一致。</summary>
+    private IInteractable FindReceiverAtPointerCore(Vector2 pointerWorld, bool requirePointerPermission, bool previewOnly)
     {
         Physics2D.SyncTransforms();
         int count = Physics2D.OverlapPointNonAlloc(pointerWorld, interactionOverlapBuffer, InteractionQueryLayerMask);
@@ -261,7 +269,10 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
         }
 
         spatialCandidates.Clear();
-        SpatialInteractionRegistry.Query(item, maxInteractDistance, pointerWorld, spatialCandidates);
+        if (previewOnly)
+            SpatialInteractionRegistry.QueryPreview(item, maxInteractDistance, pointerWorld, spatialCandidates);
+        else
+            SpatialInteractionRegistry.Query(item, maxInteractDistance, pointerWorld, spatialCandidates);
         foreach (IInteractable candidate in spatialCandidates)
         {
             if (requirePointerPermission && !candidate.CanPointerInteract(item)) continue;
@@ -286,7 +297,7 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
         return closestReceiver != null && StartInteraction(closestReceiver);
     }
 
-    /// <summary>持续寻找当前真正会被交互键选中的目标，只更新本地视觉提示。</summary>
+    /// <summary>每帧只寻找能显示描边的目标，机械不参与预览查询。</summary>
     private void RefreshInteractionPreview()
     {
         if (!IsLocalInteractionOwner() ||
@@ -313,7 +324,6 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
         if (receiver is IWorldInteractionTarget)
         {
             ClearInteractionPreview();
-            previewReceiver = receiver;
             return;
         }
 
@@ -340,7 +350,9 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
 
         if (TryGetInteractionPointer(out Vector2 pointer))
         {
-            IInteractable pointedReceiver = FindReceiverAtPointer(pointer);
+            IInteractable pointedReceiver = collectReceivers
+                ? FindReceiverAtPointer(pointer)
+                : FindPreviewReceiverAtPointer(pointer);
             if (pointedReceiver != null) return pointedReceiver;
             // 水面交互严格服从光标落点；未命中木筏时交给喝水等环境动作。
             if (IsPointerOverWater(pointer)) return null;
@@ -364,7 +376,10 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
         bool hasInteractionDirection = TryGetInteractionDirection(out Vector2 interactionDirection);
 
         spatialCandidates.Clear();
-        SpatialInteractionRegistry.Query(item, maxInteractDistance, null, spatialCandidates);
+        if (collectReceivers)
+            SpatialInteractionRegistry.Query(item, maxInteractDistance, null, spatialCandidates);
+        else
+            SpatialInteractionRegistry.QueryPreview(item, maxInteractDistance, null, spatialCandidates);
         for (int i = 0; i < count; i++)
         {
             Collider2D overlap = interactionOverlapBuffer[i];

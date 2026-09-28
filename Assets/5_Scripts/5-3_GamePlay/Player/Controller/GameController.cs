@@ -114,6 +114,8 @@ public partial class GameController : Module
     private bool _gamepadAimDirectionInitialized; // 是否已经收到有效右摇杆方向
     private bool _gamepadPointerActive; // 手机模式下最近一次是否由手柄接管指向/UI光标
     private bool _hardwareMousePointerActive; // 最近一次鼠标输入是否应作为 UI/世界指针
+    private Mouse _cachedMouseDevice;
+    private Vector2 _cachedMouseScreenPosition;
     private bool _virtualCursorInitialized; // 虚拟光标是否初始化
     private bool _isGameplayInputLocked; // 濒死/过场时是否锁定玩家输入
     private bool _reportedMissingMainCamera; // 是否已经提示过相机尚未就绪
@@ -228,6 +230,7 @@ public partial class GameController : Module
 
     public void OnEnable()
     {
+        _cachedMouseDevice = null;
         _inputActions.Enable();
         RegisterInputCallbacks();
     }
@@ -425,7 +428,7 @@ public partial class GameController : Module
     {
         if (_hardwareMousePointerActive && Mouse.current != null)
         {
-            return Mouse.current.position.ReadValue();
+            return GetHardwareMouseScreenPosition();
         }
 
         if ((_currentInputDevice == InputDeviceType.Gamepad ||
@@ -438,10 +441,26 @@ public partial class GameController : Module
 
         if (Mouse.current != null)
         {
-            return Mouse.current.position.ReadValue();
+            return GetHardwareMouseScreenPosition();
         }
 
         return Input.mousePosition;
+    }
+
+    /// <summary>鼠标移动时更新缓存，静止帧的交互预览直接复用坐标。</summary>
+    private Vector2 GetHardwareMouseScreenPosition()
+    {
+        Mouse mouse = Mouse.current;
+        bool mouseActionEnabled = isActiveAndEnabled &&
+                                  _inputActions != null &&
+                                  _inputActions.Win10.Mouse.enabled;
+        if (_cachedMouseDevice != mouse || !mouseActionEnabled)
+        {
+            _cachedMouseDevice = mouseActionEnabled ? mouse : null;
+            _cachedMouseScreenPosition = mouse.position.ReadValue();
+        }
+
+        return _cachedMouseScreenPosition;
     }
 
     /// <summary>在 UI 即将渲染时，用本帧最终玩家与相机位置刷新手机准线屏幕坐标。</summary>
@@ -540,7 +559,8 @@ public partial class GameController : Module
         _inputActions.Win10.Move_Player.canceled += HandleMoveInputChanged;
         // Shift 只是 Mover 的奔跑修饰键，不参与设备切换，避免键盘长按干扰手机触摸/UI 指针。
         _inputActions.Win10.Shift.started += HandleKeyboardModifierStarted;
-        _inputActions.Win10.Mouse.performed += UpdateCurrentInputDevice;
+        _inputActions.Win10.Mouse.performed += HandleMousePosition;
+        _inputActions.Win10.Mouse.canceled += HandleMousePosition;
         _inputActions.Win10.GamepadCursor.performed += UpdateCurrentInputDevice;
         _inputActions.Win10.GamepadCursor.canceled += UpdateCurrentInputDevice;
         _inputActions.Win10.MobileAim_Player.performed += HandleMobileAim;
@@ -575,7 +595,8 @@ public partial class GameController : Module
         _inputActions.Win10.Move_Player.performed -= HandleMoveInputChanged;
         _inputActions.Win10.Move_Player.canceled -= HandleMoveInputChanged;
         _inputActions.Win10.Shift.started -= HandleKeyboardModifierStarted;
-        _inputActions.Win10.Mouse.performed -= UpdateCurrentInputDevice;
+        _inputActions.Win10.Mouse.performed -= HandleMousePosition;
+        _inputActions.Win10.Mouse.canceled -= HandleMousePosition;
         _inputActions.Win10.GamepadCursor.performed -= UpdateCurrentInputDevice;
         _inputActions.Win10.GamepadCursor.canceled -= UpdateCurrentInputDevice;
         _inputActions.Win10.MobileAim_Player.performed -= HandleMobileAim;
@@ -748,12 +769,33 @@ public partial class GameController : Module
         {
             // 键盘修饰键和鼠标点击只退出手柄 UI/虚拟光标，不切换手机玩法方案，也不清空触摸状态。
             DeactivateGamepadInput();
-            if (device is Mouse)
+            if (device is Mouse mouse)
+            {
+                if (context.action != _inputActions.Win10.Mouse)
+                {
+                    _cachedMouseDevice = mouse;
+                    _cachedMouseScreenPosition = mouse.position.ReadValue();
+                }
                 _hardwareMousePointerActive = true;
+            }
 
             if (_preferredInputDevice == InputDeviceType.KeyboardMouse)
                 SetCurrentInputDevice(InputDeviceType.KeyboardMouse);
         }
+    }
+
+    private void HandleMousePosition(InputAction.CallbackContext context)
+    {
+        if (context.control?.device is Mouse mouse)
+        {
+            _cachedMouseDevice = mouse;
+            _cachedMouseScreenPosition = context.performed
+                ? context.ReadValue<Vector2>()
+                : mouse.position.ReadValue();
+        }
+
+        if (context.performed)
+            UpdateCurrentInputDevice(context);
     }
 
     /// <summary>键盘修饰键只退出手柄 UI 接管，不切换手机方案、不清理触摸状态。</summary>
@@ -1056,7 +1098,7 @@ public partial class GameController : Module
     {
         if (Mouse.current != null)
         {
-            _virtualCursorScreenPosition = Mouse.current.position.ReadValue();
+            _virtualCursorScreenPosition = GetHardwareMouseScreenPosition();
         }
         else
         {
@@ -1177,6 +1219,7 @@ public partial class GameController : Module
     /// </summary>
     private void HandleBindingsChanged()
     {
+        _cachedMouseDevice = null;
         ClearParallelInputBindingMasks();
         EventSystemGuard.SynchronizeUIInputBindings(_inputActions?.asset);
     }
