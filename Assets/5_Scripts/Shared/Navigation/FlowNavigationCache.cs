@@ -250,6 +250,12 @@ namespace FlatWorld.Navigation
                 ? DiscoverPortals(chunk) : chunk.Portals;
             bool portalsChanged = !ReferenceEquals(portals, chunk.Portals) && !SamePortals(chunk.Portals, portals);
             if (!costChanged && !surfaceChanged && !portalsChanged) return ChunkRefreshResult.None;
+            if (!costChanged && !portalsChanged)
+            {
+                // 水面数据已写入原有块缓存，出口与局部图无需分配临时集合或重新筛选。
+                ChunkContentBuilds++;
+                return ChunkRefreshResult.Surface;
+            }
             chunks[coordinate] = chunk;
             if (costChanged || surfaceChanged) ChunkContentBuilds++;
             if (costChanged) MarkTargetChunkChanged(coordinate);

@@ -24,10 +24,24 @@ public partial class ItemMgr
         public uint Revision;
     }
 
+    /// <summary>感知格持有成员和批次访问戳，避免每批额外维护已访问 HashSet。</summary>
+    private sealed class PerceptionCell
+    {
+        public readonly HashSet<Item> Items = new();
+        public uint LastVisitedBatch;
+
+        public void Reset()
+        {
+            Items.Clear();
+            LastVisitedBatch = 0;
+        }
+    }
+
     private const float PerceptionCellSize = 8f;
-    private readonly Dictionary<long, HashSet<Item>> _perceptionCells = new();
+    private readonly Dictionary<long, PerceptionCell> _perceptionCells = new();
     private readonly Dictionary<Item, long> _itemPerceptionCells = new();
-    private readonly Stack<HashSet<Item>> _perceptionCellPool = new();
+    private readonly Stack<PerceptionCell> _perceptionCellPool = new();
+    private uint _perceptionVisitBatch;
 
     [ShowInInspector, Sirenix.OdinInspector.ReadOnly] private int PerceptionCellCount => _perceptionCells.Count;
 
@@ -44,7 +58,6 @@ public partial class ItemMgr
     private readonly List<PerceptionItemSnapshot> _perceptionSnapshotData = new(256);
     // 世界空间纯数据形状按目标连续存放，支持一个目标拥有多个不相连的形状。
     private readonly List<PerceptionShape2D> _perceptionShapeData = new(256);
-    private readonly HashSet<long> _perceptionSnapshotCells = new();
     private readonly HashSet<Item> _perceptionSnapshotItemSet = new();
     private readonly HashSet<Item> _perceptionResultItemSet = new();
     private readonly List<Item> _detectorApplyBuffer = new(64);
@@ -355,8 +368,8 @@ public partial class ItemMgr
         _perceptionSnapshotItems.Clear();
         _perceptionSnapshotData.Clear();
         _perceptionShapeData.Clear();
-        _perceptionSnapshotCells.Clear();
         _perceptionSnapshotItemSet.Clear();
+        uint visitBatch = BeginPerceptionVisitBatch();
 
         for (int queryIndex = 0; queryIndex < _perceptionQueryData.Count; queryIndex++)
         {
@@ -378,19 +391,34 @@ public partial class ItemMgr
                         for (int cellY = minCellY; cellY <= maxCellY; cellY++)
                         {
                             long cellKey = PackPerceptionCell(cellX, cellY);
-                            if (!_perceptionSnapshotCells.Add(cellKey) ||
-                                !_perceptionCells.TryGetValue(cellKey, out HashSet<Item> cellItems))
+                            if (!_perceptionCells.TryGetValue(cellKey, out PerceptionCell cell) ||
+                                cell.LastVisitedBatch == visitBatch)
                             {
                                 continue;
                             }
 
-                            foreach (Item candidate in cellItems)
+                            cell.LastVisitedBatch = visitBatch;
+                            foreach (Item candidate in cell.Items)
                                 TryAddPerceptionSnapshot(candidate);
                         }
                     }
                 }
             }
         }
+    }
+
+    /// <summary>推进访问批次；极低频溢出时重置所有格子的访问戳。</summary>
+    private uint BeginPerceptionVisitBatch()
+    {
+        _perceptionVisitBatch++;
+        if (_perceptionVisitBatch != 0)
+            return _perceptionVisitBatch;
+
+        foreach (PerceptionCell cell in _perceptionCells.Values)
+            cell.LastVisitedBatch = 0;
+
+        _perceptionVisitBatch = 1;
+        return _perceptionVisitBatch;
     }
 
     /// <summary>Actor 从纯数据形状构建世界包围范围，旧对象才访问 Collider Bridge。</summary>
@@ -505,7 +533,6 @@ public partial class ItemMgr
         _perceptionSnapshotItems.Clear();
         _perceptionSnapshotData.Clear();
         _perceptionShapeData.Clear();
-        _perceptionSnapshotCells.Clear();
         _perceptionSnapshotItemSet.Clear();
     }
 
@@ -655,10 +682,10 @@ public partial class ItemMgr
                     for (int cellY = minCellY; cellY <= maxCellY; cellY++)
                     {
                         long cellKey = PackPerceptionCell(cellX, cellY);
-                        if (!_perceptionCells.TryGetValue(cellKey, out HashSet<Item> cellItems))
+                        if (!_perceptionCells.TryGetValue(cellKey, out PerceptionCell cell))
                             continue;
 
-                        foreach (Item candidate in cellItems)
+                        foreach (Item candidate in cell.Items)
                             TryAddSpatialCandidate(candidate, imageCenter, radius, layerMask, excludedItem, results, dedupe);
                     }
                 }
@@ -681,15 +708,16 @@ public partial class ItemMgr
             RemoveItemFromPerceptionCell(item, currentCellKey);
         }
 
-        if (!_perceptionCells.TryGetValue(newCellKey, out HashSet<Item> targetCell))
+        if (!_perceptionCells.TryGetValue(newCellKey, out PerceptionCell targetCell))
         {
             targetCell = _perceptionCellPool.Count > 0
                 ? _perceptionCellPool.Pop()
-                : new HashSet<Item>();
+                : new PerceptionCell();
+            targetCell.Reset();
             _perceptionCells[newCellKey] = targetCell;
         }
 
-        targetCell.Add(item);
+        targetCell.Items.Add(item);
         _itemPerceptionCells[item] = newCellKey;
     }
 
@@ -706,16 +734,16 @@ public partial class ItemMgr
     private void RemoveItemFromPerceptionCell(Item item, long cellKey)
     {
         _itemPerceptionCells.Remove(item);
-        if (!_perceptionCells.TryGetValue(cellKey, out HashSet<Item> cellItems))
+        if (!_perceptionCells.TryGetValue(cellKey, out PerceptionCell cell))
             return;
 
-        cellItems.Remove(item);
-        if (cellItems.Count > 0)
+        cell.Items.Remove(item);
+        if (cell.Items.Count > 0)
             return;
 
         _perceptionCells.Remove(cellKey);
-        cellItems.Clear();
-        _perceptionCellPool.Push(cellItems);
+        cell.Reset();
+        _perceptionCellPool.Push(cell);
     }
 
     /// <summary>在维护边界同时重建空间与感知后端，清除已销毁对象的 Bridge/几何引用。</summary>
@@ -723,10 +751,10 @@ public partial class ItemMgr
     {
         CompletePerceptionBatch(false);
         _perceptionTargets.Clear();
-        foreach (HashSet<Item> cellItems in _perceptionCells.Values)
+        foreach (PerceptionCell cell in _perceptionCells.Values)
         {
-            cellItems.Clear();
-            _perceptionCellPool.Push(cellItems);
+            cell.Reset();
+            _perceptionCellPool.Push(cell);
         }
 
         _perceptionCells.Clear();

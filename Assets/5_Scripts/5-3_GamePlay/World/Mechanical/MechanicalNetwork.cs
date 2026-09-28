@@ -129,6 +129,7 @@ public sealed class MechanicalNetworkGraph
     #region 拓扑索引
     public static readonly Vector2Int[] Directions = { Vector2Int.right, Vector2Int.up, Vector2Int.left, Vector2Int.down };
     private readonly Dictionary<Vector3Int, MechanicalNode> cells = new();
+    private readonly HashSet<Vector2Int> occupiedOnPlacementLayers = new();
     public readonly List<MechanicalNetwork> Networks = new();
     private readonly Func<Vector2Int, Vector2Int> normalize; // 旧 MOD 构图入口的坐标归一化委托。
     private readonly WorldTopologyDomain topology; // 核心机械世界的纯坐标域快照。
@@ -167,6 +168,10 @@ public sealed class MechanicalNetworkGraph
     /// <summary>调用方已将世界格归一化时直接查索引，避免邻格或交互扫描重复读取世界拓扑。</summary>
     internal MechanicalNode AtNormalized(Vector2Int cell, int layer)
         => cells.TryGetValue(new Vector3Int(cell.x, cell.y, layer), out var node) ? node : null;
+
+    /// <summary>已归一化格上的任一放置层占用，供建筑与 LOS 一次查询。</summary>
+    internal bool IsOccupiedOnPlacementLayersNormalized(Vector2Int cell)
+        => occupiedOnPlacementLayers.Contains(cell);
 
     /// <summary>空机械世界跳过逐帧交互格扫描。</summary>
     internal bool HasNodes => cells.Count > 0;
@@ -211,7 +216,7 @@ public sealed class MechanicalNetworkGraph
     public void Rebuild(IEnumerable<MechanicalNode> nodes)
     {
         pointerWindow.Reset(); nearbyWindow.Reset();
-        cells.Clear(); Networks.Clear();
+        cells.Clear(); occupiedOnPlacementLayers.Clear(); Networks.Clear();
         var sorted = new List<MechanicalNode>(nodes);
         sorted.Sort(CompareNodes);
         foreach (var node in sorted)
@@ -220,6 +225,8 @@ public sealed class MechanicalNetworkGraph
             var key = new Vector3Int(node.Cell.x, node.Cell.y, node.Definition.Layer);
             if (cells.ContainsKey(key)) throw new InvalidOperationException("机械格重复占用：" + key);
             cells.Add(key, node);
+            if (node.Definition.Layer == 0 || node.Definition.Layer == 1)
+                occupiedOnPlacementLayers.Add(node.Cell);
             node.Network = null;
             node.Links.Clear();
             node.FlowVisited = false;

@@ -16,14 +16,31 @@ public sealed class BirdFlightNavigationProfile
     public bool CanTraverse(Vector2 origin, Vector2 target)
     {
         ChunkMgr chunks = ChunkMgr.Instance;
-        if (chunks == null)
+        if (chunks == null || !chunks.TryCreateTerrainPresenceQuery(out ChunkMgr.RuntimeTerrainPresenceQuery query))
             return false;
-        Vector2 delta = WorldTopologyRuntime.ShortestDelta(origin, target);
+
+        return CanTraverse(origin, target, ref query);
+    }
+
+    internal bool CanTraverse(Vector2 origin, Vector2 target, ref ChunkMgr.RuntimeTerrainPresenceQuery query)
+    {
+        Vector2 delta = query.ShortestDelta(origin, target);
         int steps = Mathf.Max(1, Mathf.CeilToInt(delta.magnitude / Mathf.Max(0.05f, sampleSpacing)));
+        int previousX = 0;
+        int previousY = 0;
+        bool hasPreviousCell = false;
         for (int index = 1; index <= steps; index++)
         {
-            Vector2 sample = WorldTopologyRuntime.NormalizePosition(origin + delta * ((float)index / steps));
-            if (!chunks.TryGetRuntimeTerrainTile(sample, out _) || (!crossGroundObstacles && !AI_Bird.CanLand(sample)))
+            Vector2 sample = query.NormalizePosition(origin + delta * ((float)index / steps));
+            int cellX = Mathf.FloorToInt(sample.x);
+            int cellY = Mathf.FloorToInt(sample.y);
+            // 同一格的地形就绪和地面可走状态只检查一次。
+            if (hasPreviousCell && cellX == previousX && cellY == previousY)
+                continue;
+            hasPreviousCell = true;
+            previousX = cellX;
+            previousY = cellY;
+            if (!query.IsLoadedNormalized(sample) || (!crossGroundObstacles && !AI_Bird.CanLand(sample)))
                 return false;
         }
         return true;

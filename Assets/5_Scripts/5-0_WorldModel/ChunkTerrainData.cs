@@ -217,10 +217,13 @@ namespace FlatWorld.WorldModel
         public const byte GrassPresent = 2;
 
         private TerrainCell[] _cells;
+        private uint[] _terrainSightBlockingBits;
+        private uint[] _dynamicSightBlockingBits;
         private Dictionary<string, float[]> _environmentLayers;
         private Dictionary<int, int[]> _extendedTileStacks;
         private byte[] _grass;
         private long _revision;
+        private long _blockingRevision;
 
         internal ChunkTerrainData(int width, int height, TerrainCell[] cells,
             Dictionary<string, float[]> environmentLayers, byte[] grass = null,
@@ -230,6 +233,13 @@ namespace FlatWorld.WorldModel
             Height = height;
             CellCount = checked(width * height);
             _cells = cells ?? throw new ArgumentNullException(nameof(cells));
+            _terrainSightBlockingBits = new uint[(CellCount + 31) >> 5];
+            _dynamicSightBlockingBits = new uint[_terrainSightBlockingBits.Length];
+            for (int index = 0; index < CellCount; index++)
+            {
+                if (_cells[index].BlocksLineOfSight)
+                    _terrainSightBlockingBits[index >> 5] |= 1u << (index & 31);
+            }
             this.liquid = liquid ?? new LiquidCellStorage(CellCount, LiquidTypeCatalog.BuiltIn);
             _environmentLayers = environmentLayers ??
                 new Dictionary<string, float[]>(StringComparer.Ordinal);
@@ -249,6 +259,8 @@ namespace FlatWorld.WorldModel
         public bool IsDisposed => _cells == null;
         /// <summary>生成完成后又被修改了多少次；刚生成时是 0。</summary>
         public long Revision => _revision;
+        /// <summary>视线阻挡状态的版本；水、草和环境变化不会使遮挡快照失效。</summary>
+        public long BlockingRevision => _blockingRevision;
         /// <summary>这里目前保存了哪些环境数据，例如 temperature 或 riverFlow。</summary>
         public IEnumerable<string> EnvironmentLayerIds =>
             _environmentLayers == null
@@ -265,15 +277,40 @@ namespace FlatWorld.WorldModel
             return _cells[GetIndex(x, y)];
         }
 
+        #region 视线遮挡层
+
+        /// <summary>读取固定地块和动态占地合成后的视线遮挡位。</summary>
+        public bool IsSightBlockingCell(int x, int y)
+        {
+            ThrowIfDisposed();
+            int index = GetIndex(x, y);
+            uint mask = 1u << (index & 31);
+            return ((_terrainSightBlockingBits[index >> 5] | _dynamicSightBlockingBits[index >> 5]) & mask) != 0;
+        }
+
+        /// <summary>建筑与机械占地变化时只更新对应格的动态遮挡位。</summary>
+        public void SetDynamicSightBlockingCell(int x, int y, bool blocking)
+        {
+            ThrowIfDisposed();
+            int index = GetIndex(x, y);
+            uint mask = 1u << (index & 31);
+            if (blocking)
+                _dynamicSightBlockingBits[index >> 5] |= mask;
+            else
+                _dynamicSightBlockingBits[index >> 5] &= ~mask;
+        }
+
+        #endregion
+
         /// <summary>修改某个格子的核心数据；新旧完全一样时就不做无用更新。</summary>
         public void SetCell(int x, int y, TerrainCell value)
         {
             ThrowIfDisposed();
             int index = GetIndex(x, y);
-            if (_cells[index].Equals(value))
+            TerrainCell previous = _cells[index];
+            if (previous.Equals(value))
                 return;
-            _cells[index] = value;
-            MarkChanged(x, y, TerrainChangeKind.Cell);
+            WriteCell(x, y, index, value, TerrainChangeKind.Cell);
         }
 
         /// <summary>
@@ -373,9 +410,8 @@ namespace FlatWorld.WorldModel
                 return true;
 
             TerrainCellFlags flags = previous.Flags | TerrainCellFlags.Blocking;
-            _cells[index] = new TerrainCell(previous.GroundTileId, previous.BackTileId,
-                tileId, previous.BiomeId, previous.NavigationCost, flags);
-            MarkChanged(x, y, TerrainChangeKind.TileStack);
+            WriteCell(x, y, index, new TerrainCell(previous.GroundTileId, previous.BackTileId,
+                tileId, previous.BiomeId, previous.NavigationCost, flags), TerrainChangeKind.TileStack);
             return true;
         }
 
@@ -393,9 +429,8 @@ namespace FlatWorld.WorldModel
                 return false;
 
             TerrainCellFlags flags = previous.Flags & ~TerrainCellFlags.Blocking;
-            _cells[index] = new TerrainCell(previous.GroundTileId, previous.BackTileId,
-                0, previous.BiomeId, previous.NavigationCost, flags);
-            MarkChanged(x, y, TerrainChangeKind.TileStack);
+            WriteCell(x, y, index, new TerrainCell(previous.GroundTileId, previous.BackTileId,
+                0, previous.BiomeId, previous.NavigationCost, flags), TerrainChangeKind.TileStack);
             return true;
         }
 
@@ -433,9 +468,8 @@ namespace FlatWorld.WorldModel
             flags = blocking == 0
                 ? flags & ~TerrainCellFlags.Blocking
                 : flags | TerrainCellFlags.Blocking;
-            _cells[index] = new TerrainCell(ground, back, blocking, previous.BiomeId,
-                previous.NavigationCost, flags);
-            MarkChanged(x, y, TerrainChangeKind.TileStack);
+            WriteCell(x, y, index, new TerrainCell(ground, back, blocking, previous.BiomeId,
+                previous.NavigationCost, flags), TerrainChangeKind.TileStack);
         }
 
         /// <summary>读取某个格子的草地状态。</summary>
@@ -622,6 +656,8 @@ namespace FlatWorld.WorldModel
                 ArrayPool<TerrainCell>.Shared.Return(_cells);
                 _cells = null;
             }
+            _terrainSightBlockingBits = null;
+            _dynamicSightBlockingBits = null;
 
             if (_environmentLayers == null)
                 return;
@@ -665,6 +701,28 @@ namespace FlatWorld.WorldModel
             _revision++;
             Changed?.Invoke(new ChunkTerrainChanged(new Int2(x, y), kind, _revision));
         }
+
+        #region 地块核心变更
+
+        /// <summary>所有正式地块写入都在这里同步视线位、版本和变更通知。</summary>
+        private void WriteCell(int x, int y, int index, TerrainCell value, TerrainChangeKind kind)
+        {
+            bool wasBlocking = _cells[index].BlocksLineOfSight;
+            bool isBlocking = value.BlocksLineOfSight;
+            _cells[index] = value;
+            if (wasBlocking != isBlocking)
+            {
+                uint mask = 1u << (index & 31);
+                if (isBlocking)
+                    _terrainSightBlockingBits[index >> 5] |= mask;
+                else
+                    _terrainSightBlockingBits[index >> 5] &= ~mask;
+                _blockingRevision++;
+            }
+            MarkChanged(x, y, kind);
+        }
+
+        #endregion
 
         private static void Hash(ref ulong hash, int value, ulong prime)
         {

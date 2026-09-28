@@ -29,7 +29,13 @@ public sealed partial class AI_Bird : Module, IAIActor, IItemModuleDependencyBin
     private static readonly int FlyingAnimationHash = Animator.StringToHash("Base Layer.Flying");
     private static readonly int LandingAnimationHash = Animator.StringToHash("Base Layer.Landing");
     private static readonly float[] RunUpDirectionOffsets = { 0f, 45f, -45f, 90f, -90f, 135f, -135f, 180f };
-    private static readonly float[] FlightTurnOffsets = { 45f, -45f, 90f, -90f, 135f, -135f, 180f }; // 巡航直线受阻后的转向顺序。
+    private static readonly Quaternion[] FlightTurnRotations =
+    {
+        Quaternion.Euler(0f, 0f, 45f), Quaternion.Euler(0f, 0f, -45f),
+        Quaternion.Euler(0f, 0f, 90f), Quaternion.Euler(0f, 0f, -90f),
+        Quaternion.Euler(0f, 0f, 135f), Quaternion.Euler(0f, 0f, -135f),
+        Quaternion.Euler(0f, 0f, 180f)
+    }; // 巡航转向角只在类型初始化时计算一次。
     private const float RunUpSampleSpacing = 0.25f;
     private const float RunUpStallSeconds = 1.5f;
     private const float FlightTargetArrivalDistance = 0.2f; // 到达目标后须立即接续下一段飞行。
@@ -805,13 +811,19 @@ public sealed partial class AI_Bird : Module, IAIActor, IItemModuleDependencyBin
     private bool MoveCruiseStep(Vector2 desiredDisplacement, float speed, float deltaTime)
     {
         if (desiredDisplacement.sqrMagnitude <= 0.0001f || speed <= 0f) return false;
-        if (MoveFlightStep(desiredDisplacement, speed, deltaTime)) return true;
+        ChunkMgr chunks = ChunkMgr.Instance;
+        if (chunks == null || !chunks.TryCreateTerrainPresenceQuery(out ChunkMgr.RuntimeTerrainPresenceQuery query))
+        {
+            if (!permanentFlight && CanLand(body.position)) BeginLanding();
+            return false;
+        }
+        if (MoveFlightStep(desiredDisplacement, speed, deltaTime, ref query)) return true;
 
         Vector2 forward = desiredDisplacement.normalized;
-        for (int index = 0; index < FlightTurnOffsets.Length; index++)
+        for (int index = 0; index < FlightTurnRotations.Length; index++)
         {
-            Vector2 direction = Quaternion.Euler(0f, 0f, FlightTurnOffsets[index]) * forward;
-            if (MoveFlightStep(direction * (speed * deltaTime), speed, deltaTime)) return true;
+            Vector2 direction = FlightTurnRotations[index] * forward;
+            if (MoveFlightStep(direction * (speed * deltaTime), speed, deltaTime, ref query)) return true;
         }
 
         if (!permanentFlight && CanLand(body.position)) BeginLanding();
@@ -821,10 +833,19 @@ public sealed partial class AI_Bird : Module, IAIActor, IItemModuleDependencyBin
     /// <summary>飞行与离地共用同一段通行检查和位置通知。</summary>
     private bool MoveFlightStep(Vector2 direction, float speed, float deltaTime)
     {
+        ChunkMgr chunks = ChunkMgr.Instance;
+        if (chunks == null || !chunks.TryCreateTerrainPresenceQuery(out ChunkMgr.RuntimeTerrainPresenceQuery query))
+            return false;
+        return MoveFlightStep(direction, speed, deltaTime, ref query);
+    }
+
+    private bool MoveFlightStep(Vector2 direction, float speed, float deltaTime,
+        ref ChunkMgr.RuntimeTerrainPresenceQuery query)
+    {
         Vector2 position = body.position;
-        Vector2 next = WorldTopologyRuntime.NormalizePosition(
+        Vector2 next = query.NormalizePosition(
             position + Vector2.ClampMagnitude(direction, speed * deltaTime));
-        if (!flightNavigation.CanTraverse(position, next)) return false;
+        if (!flightNavigation.CanTraverse(position, next, ref query)) return false;
         body.position = next;
         ItemMgr.Instance?.NotifyRuntimeItemMoved(item);
         return true;

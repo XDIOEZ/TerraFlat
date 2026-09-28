@@ -125,10 +125,17 @@ public static partial class FarmlandSystem
     #region 水肥快照
 
     public static bool TryReadSoil(Vector2Int worldCell, out TileData_Farmland soil)
+        => TryReadSoil(worldCell, out soil, out _);
+
+    /// <summary>同时返回已加载的地块，供旧作物识别区分“无耕地”和“区块未就绪”。</summary>
+    public static bool TryReadSoil(Vector2Int worldCell, out TileData_Farmland soil,
+        out RuntimeTerrainTileSample sample)
     {
         soil = null;
-        if (ChunkMgr.ExistingInstance == null || !ChunkMgr.ExistingInstance.TryGetRuntimeTerrainTile(
-                new Vector2(worldCell.x + 0.5f, worldCell.y + 0.5f), out var sample) ||
+        sample = default;
+        ChunkMgr manager = ChunkMgr.ExistingInstance;
+        if (manager == null || !manager.TryGetRuntimeTerrainTile(
+                new Vector2(worldCell.x + 0.5f, worldCell.y + 0.5f), out sample) ||
             !IsOpen(sample) || (!IsFarmland(sample.Cell) && !HasSoilState(sample)))
             return false;
         soil = ReadSoilSnapshot(sample);

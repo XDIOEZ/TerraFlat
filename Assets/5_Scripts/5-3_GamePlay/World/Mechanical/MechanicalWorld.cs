@@ -82,6 +82,7 @@ public static class MechanicalWorld
         if (save?.Mechanical?.Worlds != null && save.Mechanical.Worlds.TryGetValue(key, out var snapshots))
             foreach (var data in snapshots) RestoreDescriptor(data);
         dirty = true;
+        BuildingOccupancyRegistry.RebuildSightBlockingIndex(nodes.Values, topology);
     }
 
     private static void RestoreDescriptor(ItemData snapshot)
@@ -105,6 +106,7 @@ public static class MechanicalWorld
         if (!GameNetwork.HasStateAuthority) return null;
         EnsureScope();
         int id = view.item.itemData.Guid;
+        bool added = false;
         if (!nodes.TryGetValue(id, out var node))
         {
             node = new MechanicalNode { Id = id, Cell = CellOf(view.item.transform.position), Definition = view.Definition,
@@ -112,9 +114,11 @@ public static class MechanicalWorld
             nodes.Add(id, node); dirty = true;
             CopyTopology(node);
             EnsureProcessor(node);
+            added = true;
         }
         else if (node.State == null) WakeNode(node);
         node.View = view;
+        if (added) BuildingOccupancyRegistry.NotifyMechanicalChanged(node.Cell);
         return node;
     }
 
@@ -658,6 +662,22 @@ public static class MechanicalWorld
         return node != null && node.Id != except;
     }
 
+    /// <summary>调用方已归一化世界格，机械图仍沿用自己的冻结拓扑域。</summary>
+    internal static bool IsOccupiedNormalized(Vector2Int cell, int layer)
+    {
+        if (graph == null) return false;
+        if (dirty) { graph.Rebuild(nodes.Values); dirty = false; }
+        return graph.At(cell, layer) != null;
+    }
+
+    /// <summary>两层机械共用一份格索引，避免逐格分别查询两次。</summary>
+    internal static bool IsOccupiedOnPlacementLayersNormalized(Vector2Int cell)
+    {
+        if (graph == null) return false;
+        if (dirty) { graph.Rebuild(nodes.Values); dirty = false; }
+        return graph.IsOccupiedOnPlacementLayersNormalized(graph.NormalizeCell(cell));
+    }
+
     public static bool ValidatePlacement(MechanicalDefinition definition, Vector2Int cell, bool vertical, out string reason)
     {
         EnsureScope();
@@ -761,6 +781,7 @@ public static class MechanicalWorld
     {
         if (capture) CaptureCurrentWorld();
         ReleaseRuntime(); owner = null; worldKey = null; graph = null;
+        BuildingOccupancyRegistry.RebuildSightBlockingIndex(null, default);
     }
     private static void ReleaseRuntime()
     {

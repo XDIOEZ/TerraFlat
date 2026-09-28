@@ -162,6 +162,8 @@ namespace FlatWorld.WorldModel
         /// <summary>地形格是否允许行走；液体由调用方单独判断。</summary>
         public bool IsWalkable => (Flags & TerrainCellFlags.Walkable) != 0 &&
                                   (Flags & (TerrainCellFlags.Blocking | TerrainCellFlags.Occupied)) == 0;
+        /// <summary>固定地块是否挡住视线；动态建筑占用由上层单独合成。</summary>
+        public bool BlocksLineOfSight => BlockingTileId != 0 && (Flags & TerrainCellFlags.Blocking) != 0;
 
         public bool Equals(TerrainCell other) =>
             GroundTileId == other.GroundTileId && BackTileId == other.BackTileId &&

@@ -27,6 +27,7 @@ public partial class ChunkMgr
     private ChunkGenerationProfileSnapshot activeGenerationSnapshot;
     private long runtimeEpoch;
     private WorldRuntimeHost runtimeHost;
+    private IDisposable sightBlockingChunkCommittedSubscription;
     /// <summary>管理器进入终止阶段后，不再保存生态快照或重新创建世界运行时。</summary>
     internal bool IsWorldRuntimeShuttingDown { get; private set; }
 
@@ -223,7 +224,20 @@ public partial class ChunkMgr
         runtimeGenerator = new DeterministicChunkGenerator(GameRes.ExistingInstance?.LiquidTypes);
         runtimeChunkManager = new RuntimeChunkMgr(world, runtimeGenerator,
             EffectiveBackgroundGenerationConcurrency, new UnityWorldAddressNormalizer());
+        sightBlockingChunkCommittedSubscription =
+            world.Events.Subscribe<ChunkCommitted>(HandleSightBlockingChunkCommitted);
     }
+
+    #region 视线遮挡层接入
+
+    /// <summary>区块正式就绪后一次性接入已登记的动态遮挡格。</summary>
+    private void HandleSightBlockingChunkCommitted(ChunkCommitted committed)
+    {
+        if (TryGetChunkRuntime(committed.Address, out ChunkRuntime chunk))
+            BuildingOccupancyRegistry.InitializeSightBlockingForChunk(chunk);
+    }
+
+    #endregion
 
     /// <summary>切换场景时清空旧区块，并让新场景使用新的世界纪元。</summary>
     private void ResetWorldRuntimeForSceneChange()
@@ -266,6 +280,8 @@ public partial class ChunkMgr
             RuntimeChunkMgr manager = runtimeChunkManager;
             runtimeChunkManager = null;
             runtimeGenerator = null;
+            sightBlockingChunkCommittedSubscription?.Dispose();
+            sightBlockingChunkCommittedSubscription = null;
             activeGenerationSnapshot = null;
             runtimeTileCatalogSnapshot = null;
             if (manager != null)

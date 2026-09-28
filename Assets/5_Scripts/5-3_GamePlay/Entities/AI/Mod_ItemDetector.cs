@@ -1,6 +1,7 @@
 using Sirenix.OdinInspector;
 using System.Collections.Generic;
 using FlatWorld.WorldModel;
+using Unity.Mathematics;
 using RuntimeWorldAddress = FlatWorld.WorldModel.WorldAddress;
 #if UNITY_EDITOR
 using UnityEditor;
@@ -389,26 +390,28 @@ public class Mod_ItemDetector : Module
         return false;
     }
 
-    /// <summary>
-    /// 沿狼到目标的整数世界格逐格检查遮挡；动态建筑读取 BuildingOccupancyRegistry，格子墙读取 TerrainCell.BlockingTileId。
-    /// </summary>
+    #endregion
+
+    #region 视线遮挡
+
+    /// <summary>沿观察者到目标的整数格检查视线，遇到动态建筑或固定阻挡就结束。</summary>
     private static bool HasClearGridLineOfSight(Vector2 fromWorld, Vector2 toWorld)
     {
         ChunkMgr chunkManager = ChunkMgr.ExistingInstance;
         if (chunkManager == null)
             return false;
 
-        var sampler = new GridLineSampler(chunkManager);
+        // 一条视线共用同一份世界拓扑，避免沿途每格重新读取活动星球。
+        var sampler = new GridLineSampler(chunkManager, WorldTopologyRuntime.GetActiveDomain());
 
-        Vector2Int from = WorldTopologyRuntime.NormalizeCell(new Vector2Int(
+        Vector2Int from = sampler.NormalizeCell(new Vector2Int(
             Mathf.FloorToInt(fromWorld.x),
             Mathf.FloorToInt(fromWorld.y)));
-        Vector2Int to = WorldTopologyRuntime.NormalizeCell(new Vector2Int(
+        Vector2Int to = sampler.NormalizeCell(new Vector2Int(
             Mathf.FloorToInt(toWorld.x),
             Mathf.FloorToInt(toWorld.y)));
 
-        if (!sampler.TryGetBlockingState(from, out _) ||
-            !sampler.TryGetBlockingState(to, out _))
+        if (!sampler.IsCellLoaded(from) || !sampler.IsCellLoaded(to))
         {
             return false;
         }
@@ -416,7 +419,7 @@ public class Mod_ItemDetector : Module
         if (from == to)
             return true;
 
-        Vector2Int shortest = WorldTopologyRuntime.ShortestDelta(from, to);
+        Vector2Int shortest = sampler.ShortestDelta(from, to);
         Vector2Int unwrappedTo = from + shortest;
         int x = from.x;
         int y = from.y;
@@ -464,42 +467,44 @@ public class Mod_ItemDetector : Module
     private struct GridLineSampler
     {
         private readonly ChunkMgr chunkManager;
+        private readonly WorldTopologyDomain topology;
         private RuntimeWorldAddress cachedAddress;
         private ChunkTerrainData cachedTerrain;
         private bool hasCachedChunk;
 
-        public GridLineSampler(ChunkMgr chunkManager)
+        public GridLineSampler(ChunkMgr chunkManager, WorldTopologyDomain topology)
         {
             this.chunkManager = chunkManager;
+            this.topology = topology;
             cachedAddress = default;
             cachedTerrain = null;
             hasCachedChunk = false;
         }
 
-        /// <summary>先查动态建筑占地，再查固定地形；未知/未加载格按遮挡处理。</summary>
-        public bool IsSightBlockingCell(Vector2Int worldCell)
+        public Vector2Int NormalizeCell(Vector2Int cell)
         {
-            worldCell = WorldTopologyRuntime.NormalizeCell(worldCell);
-            if (BuildingOccupancyRegistry.IsOccupied(worldCell))
-                return true;
-
-            return !TryGetBlockingState(worldCell, out bool isBlocking) || isBlocking;
+            if (topology.Contains(new int2(cell.x, cell.y)))
+                return cell;
+            int2 normalized = topology.Normalize(new int2(cell.x, cell.y));
+            return new Vector2Int(normalized.x, normalized.y);
         }
 
-        /// <summary>读取固定阻挡层；与世界光照遮挡使用同一 BlockingTileId + Blocking 语义。</summary>
-        public bool TryGetBlockingState(Vector2Int worldCell, out bool isBlocking)
+        public Vector2Int ShortestDelta(Vector2Int from, Vector2Int to)
         {
-            worldCell = WorldTopologyRuntime.NormalizeCell(worldCell);
-            if (!TryResolveTerrain(worldCell, out ChunkTerrainData terrain, out int localX, out int localY))
-            {
-                isBlocking = true;
-                return false;
-            }
+            int2 delta = topology.ShortestDelta(new int2(from.x, from.y), new int2(to.x, to.y));
+            return new Vector2Int(delta.x, delta.y);
+        }
 
-            TerrainCell cell = terrain.GetCell(localX, localY);
-            isBlocking = cell.BlockingTileId != 0 &&
-                         (cell.Flags & TerrainCellFlags.Blocking) != 0;
-            return true;
+        public bool IsCellLoaded(Vector2Int worldCell)
+            => TryResolveTerrain(worldCell, out _, out _, out _);
+
+        /// <summary>未知格仍挡视线，已加载格只读取权威地形的遮挡位。</summary>
+        public bool IsSightBlockingCell(Vector2Int worldCell)
+        {
+            worldCell = NormalizeCell(worldCell);
+            if (!TryResolveTerrain(worldCell, out ChunkTerrainData terrain, out int localX, out int localY))
+                return true;
+            return terrain.IsSightBlockingCell(localX, localY);
         }
 
         private bool TryResolveTerrain(
@@ -540,6 +545,7 @@ public class Mod_ItemDetector : Module
             return (uint)localX < (uint)terrain.Width && (uint)localY < (uint)terrain.Height;
         }
     }
+
     #endregion
 
     #region 私有方法

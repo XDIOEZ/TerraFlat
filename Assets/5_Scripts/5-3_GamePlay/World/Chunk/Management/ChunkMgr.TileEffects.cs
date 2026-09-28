@@ -1,4 +1,5 @@
 using FlatWorld.WorldModel;
+using Unity.Mathematics;
 using UnityEngine;
 using RuntimeWorldAddress = FlatWorld.WorldModel.WorldAddress;
 
@@ -144,6 +145,88 @@ public static class ChunkRuntimeTileEffectResolver
 public partial class ChunkMgr
 {
     #region 运行时地块查询
+
+    /// <summary>单次飞行判定共用世界地址和区块缓存，不读取不需要的地块表面数据。</summary>
+    internal struct RuntimeTerrainPresenceQuery
+    {
+        private readonly WorldRuntime world;
+        private readonly WorldTopologyDomain topology;
+        private readonly string dimensionId;
+        private readonly int chunkWidth;
+        private readonly int chunkHeight;
+        private int cachedOriginX;
+        private int cachedOriginY;
+        private bool hasCachedOrigin;
+        private ChunkRuntime cachedChunk;
+
+        internal RuntimeTerrainPresenceQuery(WorldRuntime world, WorldTopologyDomain topology,
+            string dimensionId, int chunkWidth, int chunkHeight)
+        {
+            this.world = world;
+            this.topology = topology;
+            this.dimensionId = dimensionId;
+            this.chunkWidth = chunkWidth;
+            this.chunkHeight = chunkHeight;
+            cachedOriginX = 0;
+            cachedOriginY = 0;
+            hasCachedOrigin = false;
+            cachedChunk = null;
+        }
+
+        internal Vector2 NormalizePosition(Vector2 position)
+        {
+            float2 normalized = topology.Normalize(new float2(position.x, position.y));
+            return new Vector2(normalized.x, normalized.y);
+        }
+
+        internal Vector2 ShortestDelta(Vector2 origin, Vector2 target)
+        {
+            float2 delta = topology.ShortestDelta(
+                new float2(origin.x, origin.y), new float2(target.x, target.y));
+            return new Vector2(delta.x, delta.y);
+        }
+
+        internal bool IsLoadedNormalized(Vector2 position)
+        {
+            if (world == null)
+                return false;
+
+            int worldX = Mathf.FloorToInt(position.x);
+            int worldY = Mathf.FloorToInt(position.y);
+            int originX = topology.NormalizeX(Mathf.FloorToInt(position.x / chunkWidth) * chunkWidth);
+            int originY = topology.NormalizeY(Mathf.FloorToInt(position.y / chunkHeight) * chunkHeight);
+            if (!hasCachedOrigin || cachedOriginX != originX || cachedOriginY != originY)
+            {
+                cachedOriginX = originX;
+                cachedOriginY = originY;
+                hasCachedOrigin = true;
+                world.TryGetChunk(new RuntimeWorldAddress(dimensionId, new Int2(originX, originY)),
+                    out cachedChunk);
+            }
+
+            if (cachedChunk == null || cachedChunk.DataStatus != ChunkDataStatus.Ready ||
+                cachedChunk.Terrain == null || cachedChunk.Terrain.IsDisposed)
+                return false;
+
+            ChunkTerrainData terrain = cachedChunk.Terrain;
+            int localX = worldX - originX;
+            int localY = worldY - originY;
+            return (uint)localX < (uint)terrain.Width && (uint)localY < (uint)terrain.Height;
+        }
+    }
+
+    internal bool TryCreateTerrainPresenceQuery(out RuntimeTerrainPresenceQuery query)
+    {
+        query = default;
+        if (runtimeChunkManager == null || defaultGenerationSnapshot == null)
+            return false;
+
+        query = new RuntimeTerrainPresenceQuery(runtimeChunkManager.World,
+            WorldTopologyRuntime.GetActiveDomain(), ResolveCurrentDimensionId(),
+            Mathf.Max(1, defaultGenerationSnapshot.Width),
+            Mathf.Max(1, defaultGenerationSnapshot.Height));
+        return true;
+    }
 
     /// <summary>按世界坐标读取新版权威区块中的顶层地块。</summary>
     public bool TryGetRuntimeTerrainTile(Vector2 worldPosition, out RuntimeTerrainTileSample sample)

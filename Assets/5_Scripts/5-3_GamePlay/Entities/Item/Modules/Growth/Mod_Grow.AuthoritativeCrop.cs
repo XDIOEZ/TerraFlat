@@ -77,6 +77,8 @@ public partial class Mod_Grow
 
 #region 生命周期接入
 
+    private bool legacyFarmlandProbeComplete;
+
     private void ReadGrowthDataWithMigration()
     {
         if (ModData?.BitData == null || ModData.BitData.Length == 0)
@@ -114,6 +116,7 @@ public partial class Mod_Grow
 
     private void LoadAuthoritativeCropState()
     {
+        legacyFarmlandProbeComplete = false;
         Data ??= new GrowData();
         Data.environmentGrowthMultiplier = Mathf.Max(0f, Data.environmentGrowthMultiplier);
         Data.MaxGrowProgress = Mathf.Max(0.01f, Data.MaxGrowProgress);
@@ -374,7 +377,7 @@ public partial class Mod_Grow
 
     private bool TryAdoptFarmlandAsLegacyCrop()
     {
-        if (Data.isCultivatedCrop || item == null)
+        if (Data.isCultivatedCrop || item == null || legacyFarmlandProbeComplete)
             return Data.isCultivatedCrop;
 
         Vector2Int tilePos = new Vector2Int(
@@ -382,7 +385,17 @@ public partial class Mod_Grow
             Mathf.FloorToInt(item.transform.position.y));
         Data.plantedTilePos = tilePos;
 
-        if (!TryResolveFarmland(out _))
+        bool hasSoil = FarmlandSystem.TryReadSoil(tilePos, out _, out RuntimeTerrainTileSample sample);
+        if (sample.Terrain == null)
+            return false;
+
+        // 已有耕地暂时被遮挡时继续等待，普通土地确认一次后不再重复查地形。
+        if (!hasSoil && (FarmlandSystem.IsFarmland(sample.Cell) ||
+                         FarmlandSystem.Read(sample.Terrain, sample.LocalCell, FarmlandSystem.SourceLayer) > 0f))
+            return false;
+
+        legacyFarmlandProbeComplete = true;
+        if (!hasSoil)
             return false;
 
         Data.isCultivatedCrop = true;
