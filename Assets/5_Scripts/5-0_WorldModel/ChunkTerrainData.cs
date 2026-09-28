@@ -65,18 +65,21 @@ namespace FlatWorld.WorldModel
         /// </summary>
         public void SetEnvironmentValue(string layerId, int x, int y, float value)
         {
+            GetOrCreateEnvironmentLayer(layerId)[GetIndex(x, y)] = value;
+        }
+
+        /// <summary>生成批次只在开始时解析层名，格子热循环直接按数组索引写入。</summary>
+        internal float[] GetOrCreateEnvironmentLayer(string layerId)
+        {
             ThrowIfUnavailable();
             if (string.IsNullOrWhiteSpace(layerId))
                 throw new ArgumentException("Environment layer id is required.", nameof(layerId));
-
-            if (!_environmentLayers.TryGetValue(layerId, out float[] values))
-            {
-                values = ArrayPool<float>.Shared.Rent(CellCount);
-                Array.Clear(values, 0, CellCount);
-                _environmentLayers.Add(layerId, values);
-            }
-
-            values[GetIndex(x, y)] = value;
+            if (_environmentLayers.TryGetValue(layerId, out float[] values))
+                return values;
+            values = ArrayPool<float>.Shared.Rent(CellCount);
+            Array.Clear(values, 0, CellCount);
+            _environmentLayers.Add(layerId, values);
+            return values;
         }
 
         /// <summary>读取生成阶段已经写入的环境值，供后续纯生成阶段复用。</summary>

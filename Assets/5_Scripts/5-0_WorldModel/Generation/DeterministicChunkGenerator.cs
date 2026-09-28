@@ -1,8 +1,10 @@
 using System;
+using System.Buffers;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace FlatWorld.WorldModel
 {
@@ -10,11 +12,11 @@ namespace FlatWorld.WorldModel
     /// 不使用 Unity、可以放到后台运行的区块生成器。
     /// 所有“随机”结果都来自世界种子和坐标，所以输入相同时，无论先生成哪个区块，结果都一样。
     /// </summary>
-    public sealed class DeterministicChunkGenerator : IChunkPureGenerator,
+    public sealed partial class DeterministicChunkGenerator : IChunkPureGenerator,
         IChunkEcologyNeighborhoodTagResolver
     {
         /// <summary>纯区块生成规则版本；气候、群系、河流或生态空间分布规则改变时递增。</summary>
-        public const int CurrentGenerationSignature = 50;
+        public const int CurrentGenerationSignature = 53;
 
         private readonly LiquidTypeCatalog liquidTypes;
         /// <summary>资源就绪后注入会话液体表；离线纯算法测试可以使用本体最小目录。</summary>
@@ -27,9 +29,22 @@ namespace FlatWorld.WorldModel
 
         #region 水文区域共享缓存与调度
 
-        private readonly ConcurrentDictionary<HeightDrivenRegionKey, Lazy<GeneratedHydrologyMap>>
+        private readonly ConcurrentDictionary<HeightDrivenRegionKey, Lazy<MacroHydrologyRegion>>
             heightDrivenRegionCache = new();
         private readonly ConcurrentQueue<HeightDrivenRegionKey> heightDrivenCacheOrder = new();
+        private CancellationTokenSource sharedHydrologyCancellation = new();
+        private long retiredWorldEpoch = long.MinValue;
+
+        /// <summary>切换世界时取消当前宏观水文并释放旧纪元缓存。</summary>
+        public void BeginNewWorldHydrologyEpoch(long retiredEpoch)
+        {
+            Volatile.Write(ref retiredWorldEpoch, retiredEpoch);
+            CancellationTokenSource previous = Interlocked.Exchange(ref sharedHydrologyCancellation,
+                new CancellationTokenSource());
+            previous.Cancel();
+            heightDrivenRegionCache.Clear();
+            while (heightDrivenCacheOrder.TryDequeue(out _)) { }
+        }
 
         /// <summary>供纯算法诊断确认新版水文缓存保持有界。</summary>
         internal int CachedHeightDrivenRegionCount => heightDrivenRegionCache.Count;
@@ -46,7 +61,7 @@ namespace FlatWorld.WorldModel
 
             HeightDrivenRegionDescriptor region = ResolveHeightDrivenRegion(request, settings);
             HeightDrivenRegionKey key = CreateHeightDrivenRegionKey(request, region);
-            return heightDrivenRegionCache.TryGetValue(key, out Lazy<GeneratedHydrologyMap> cached) &&
+            return heightDrivenRegionCache.TryGetValue(key, out Lazy<MacroHydrologyRegion> cached) &&
                    cached.IsValueCreated ? null : key;
         }
 
@@ -85,9 +100,11 @@ namespace FlatWorld.WorldModel
                     }
                     else
                     {
-                        ChunkEcologyData surfaceEcology = ChunkEcologyGenerator.Generate(
-                            request, terrain, profile.EcologyGlobalMultiplier,
-                            profile.EcologyRules, cancellationToken, this);
+                        ChunkEcologyData surfaceEcology;
+                        using (timing?.MeasureStage("ecology.input") ?? default)
+                            surfaceEcology = ChunkEcologyGenerator.Generate(
+                                request, terrain, profile.EcologyGlobalMultiplier,
+                                profile.EcologyRules, cancellationToken, this);
                         // 天然矿洞入口优先占用候选格，避免与树木、灌木等生态物重叠。
                         ecology = CaveGenerationFeatureGenerator.AppendSurfacePortals(
                             request, terrain, surfaceEcology);
@@ -136,19 +153,21 @@ namespace FlatWorld.WorldModel
                 BuildSurfaceHydrologyMap(request, settings, cancellationToken, timing);
             using (timing?.MeasureStage("terrain.cells") ?? default)
             {
-                for (int y = 0; y < profile.Height; y++)
-                for (int x = 0; x < profile.Width; x++)
+                if (cave)
                 {
-                    if (((y * profile.Width + x) & 63) == 0)
-                        cancellationToken.ThrowIfCancellationRequested();
-                    int worldX = request.Address.ChunkOrigin.X + x;
-                    int worldY = request.Address.ChunkOrigin.Y + y;
-                    if (cave)
+                    for (int y = 0; y < profile.Height; y++)
+                    for (int x = 0; x < profile.Width; x++)
+                    {
+                        if (((y * profile.Width + x) & 63) == 0)
+                            cancellationToken.ThrowIfCancellationRequested();
+                        int worldX = request.Address.ChunkOrigin.X + x;
+                        int worldY = request.Address.ChunkOrigin.Y + y;
                         GenerateCaveCell(request, settings, terrain, x, y, worldX, worldY);
-                    else
-                        GenerateSurfaceCell(request, settings, terrain, riverMap,
-                            x, y, worldX, worldY);
+                    }
                 }
+                else
+                    GenerateSurfaceChunk(request, settings, terrain, riverMap,
+                        cancellationToken, timing);
             }
             if (!cave)
             {
@@ -390,6 +409,325 @@ namespace FlatWorld.WorldModel
             return riverMap;
         }
 
+        #region 地表区块批量生成
+
+        /// <summary>气候输入先按区块采样，再批量判群系并写入连续地形数组。</summary>
+        private static void GenerateSurfaceChunk(ChunkGenerationRequest request,
+            ChunkGenerationSettingsSnapshot settings, ChunkTerrainBuffer terrain,
+            GeneratedHydrologyMap riverMap, CancellationToken cancellationToken,
+            ChunkGenerationTiming timing)
+        {
+            using var batch = new SurfaceChunkBatch(request, settings);
+            using (timing?.MeasureStage("terrain.noise") ?? default)
+                batch.SampleCore(cancellationToken);
+            int seaWater = terrain.LiquidTypes.GetIndex(LiquidTypeCatalog.SeaWaterId);
+            int dirtyWater = terrain.LiquidTypes.GetIndex(LiquidTypeCatalog.DirtyWaterId);
+            using (timing?.MeasureStage("terrain.biome") ?? default)
+            {
+                batch.ClassifyCore(cancellationToken);
+                for (int y = 0; y < terrain.Height; y++)
+                for (int x = 0; x < terrain.Width; x++)
+                {
+                    int index = y * terrain.Width + x;
+                    if ((index & 63) == 0)
+                        cancellationToken.ThrowIfCancellationRequested();
+                    batch.Output[index] = BuildSurfaceCell(request, settings, riverMap,
+                        batch.GetCore(x, y), batch, x, y,
+                        request.Address.ChunkOrigin.X + x,
+                        request.Address.ChunkOrigin.Y + y, seaWater, dirtyWater);
+                }
+            }
+            using (timing?.MeasureStage("terrain.environment_write") ?? default)
+            {
+                var layers = new SurfaceEnvironmentWriter(terrain);
+                for (int y = 0; y < terrain.Height; y++)
+                for (int x = 0; x < terrain.Width; x++)
+                {
+                    int index = y * terrain.Width + x;
+                    if ((index & 63) == 0)
+                        cancellationToken.ThrowIfCancellationRequested();
+                    SurfaceCellOutput output = batch.Output[index];
+                    terrain.SetCell(x, y, output.Cell);
+                    terrain.SetLiquid(x, y, output.LiquidTypeIndex, output.LiquidDepth);
+                    terrain.SetGrass(x, y, output.Grass);
+                    layers.Write(index, output);
+                }
+            }
+        }
+
+        private struct SurfaceClimateSample
+        {
+            public double Height;
+            public double Temperature;
+            public double TemperatureCelsius;
+            public double BasePrecipitation;
+            public double Precipitation;
+            public double WindX;
+            public double WindY;
+            public SurfaceBiomeKind BaseBiome;
+            public bool Classified;
+        }
+
+        private struct SurfaceCellOutput
+        {
+            public TerrainCell Cell;
+            public int LiquidTypeIndex;
+            public float LiquidDepth;
+            public byte Grass;
+            public float Height;
+            public float Temperature;
+            public float TemperatureCelsius;
+            public float BasePrecipitation;
+            public float Precipitation;
+            public float WindX;
+            public float WindY;
+            public float Moisture;
+            public float Mountain;
+            public float RiverFlow;
+            public float RiverFlowX;
+            public float RiverFlowY;
+            public float RiverFloodplain;
+            public float RiverSurfaceLevel;
+            public float RiverKind;
+        }
+
+        /// <summary>固定环境层布局只解析一次名称，热循环只写数组索引。</summary>
+        private readonly struct SurfaceEnvironmentWriter
+        {
+            private readonly float[] height;
+            private readonly float[] temperature;
+            private readonly float[] temperatureCelsius;
+            private readonly float[] basePrecipitation;
+            private readonly float[] precipitation;
+            private readonly float[] windX;
+            private readonly float[] windY;
+            private readonly float[] moisture;
+            private readonly float[] mountain;
+            private readonly float[] riverFlow;
+            private readonly float[] riverFlowX;
+            private readonly float[] riverFlowY;
+            private readonly float[] riverFloodplain;
+            private readonly float[] riverSurfaceLevel;
+            private readonly float[] riverKind;
+            private readonly float[] structure;
+            private readonly float[] grass;
+
+            public SurfaceEnvironmentWriter(ChunkTerrainBuffer terrain)
+            {
+                height = terrain.GetOrCreateEnvironmentLayer("height");
+                temperature = terrain.GetOrCreateEnvironmentLayer("temperature");
+                temperatureCelsius = terrain.GetOrCreateEnvironmentLayer("temperature.celsius");
+                basePrecipitation = terrain.GetOrCreateEnvironmentLayer("basePrecipitation");
+                precipitation = terrain.GetOrCreateEnvironmentLayer("precipitation");
+                windX = terrain.GetOrCreateEnvironmentLayer("windX");
+                windY = terrain.GetOrCreateEnvironmentLayer("windY");
+                moisture = terrain.GetOrCreateEnvironmentLayer("moisture");
+                mountain = terrain.GetOrCreateEnvironmentLayer("mountain");
+                riverFlow = terrain.GetOrCreateEnvironmentLayer("riverFlow");
+                riverFlowX = terrain.GetOrCreateEnvironmentLayer("riverFlowX");
+                riverFlowY = terrain.GetOrCreateEnvironmentLayer("riverFlowY");
+                riverFloodplain = terrain.GetOrCreateEnvironmentLayer("riverFloodplain");
+                riverSurfaceLevel = terrain.GetOrCreateEnvironmentLayer("riverSurfaceLevel");
+                riverKind = terrain.GetOrCreateEnvironmentLayer("riverKind");
+                structure = terrain.GetOrCreateEnvironmentLayer("structure");
+                grass = terrain.GetOrCreateEnvironmentLayer("grass");
+            }
+
+            public void Write(int index, SurfaceCellOutput value)
+            {
+                height[index] = value.Height;
+                temperature[index] = value.Temperature;
+                temperatureCelsius[index] = value.TemperatureCelsius;
+                basePrecipitation[index] = value.BasePrecipitation;
+                precipitation[index] = value.Precipitation;
+                windX[index] = value.WindX;
+                windY[index] = value.WindY;
+                moisture[index] = value.Moisture;
+                mountain[index] = value.Mountain;
+                riverFlow[index] = value.RiverFlow;
+                riverFlowX[index] = value.RiverFlowX;
+                riverFlowY[index] = value.RiverFlowY;
+                riverFloodplain[index] = value.RiverFloodplain;
+                riverSurfaceLevel[index] = value.RiverSurfaceLevel;
+                riverKind[index] = value.RiverKind;
+                structure[index] = 0f;
+                grass[index] = value.Grass == GrassPresent ? 1f : 0f;
+            }
+        }
+
+        /// <summary>邻格首次采样后留在局部窗口，泥炭边界不重复计算整套气候。</summary>
+        private sealed class SurfaceChunkBatch : IDisposable
+        {
+            private readonly ChunkGenerationRequest request;
+            private readonly ChunkGenerationSettingsSnapshot settings;
+            private readonly int radius;
+            private readonly int stride;
+            private readonly SurfaceClimateSample[] samples;
+            public readonly SurfaceCellOutput[] Output;
+
+            public SurfaceChunkBatch(ChunkGenerationRequest request,
+                ChunkGenerationSettingsSnapshot settings)
+            {
+                this.request = request;
+                this.settings = settings;
+                radius = settings.PeatTileId > 0 && settings.PeatSpawnChance > 0d
+                    ? settings.PeatStoneBoundaryRadius : 0;
+                stride = request.Profile.Width + radius * 2;
+                int sampleCount = stride * (request.Profile.Height + radius * 2);
+                samples = ArrayPool<SurfaceClimateSample>.Shared.Rent(sampleCount);
+                Array.Clear(samples, 0, sampleCount);
+                Output = ArrayPool<SurfaceCellOutput>.Shared.Rent(
+                    request.Profile.Width * request.Profile.Height);
+            }
+
+            public void SampleCore(CancellationToken cancellationToken)
+            {
+                if (settings.SurfaceClimateAlgorithm == SurfaceClimateAlgorithm.LegacyLand)
+                {
+                    SurfaceClimateBurstKernel.ClimateSample[] batch =
+                        SurfaceClimateBurstKernel.RentAndSample(request, settings);
+                    try
+                    {
+                        for (int y = 0; y < request.Profile.Height; y++)
+                        for (int x = 0; x < request.Profile.Width; x++)
+                        {
+                            int index = y * request.Profile.Width + x;
+                            if ((index & 63) == 0)
+                                cancellationToken.ThrowIfCancellationRequested();
+                            SurfaceClimateBurstKernel.ClimateSample value = batch[index];
+                            samples[(y + radius) * stride + x + radius] = new SurfaceClimateSample
+                            {
+                                Height = value.Height,
+                                Temperature = value.Temperature,
+                                TemperatureCelsius = value.TemperatureCelsius,
+                                BasePrecipitation = value.BasePrecipitation,
+                                Precipitation = value.Precipitation,
+                                WindX = value.WindX,
+                                WindY = value.WindY
+                            };
+                        }
+                    }
+                    finally
+                    {
+                        SurfaceClimateBurstKernel.Return(batch);
+                    }
+                    return;
+                }
+                for (int y = 0; y < request.Profile.Height; y++)
+                for (int x = 0; x < request.Profile.Width; x++)
+                {
+                    int index = y * request.Profile.Width + x;
+                    if ((index & 63) == 0)
+                        cancellationToken.ThrowIfCancellationRequested();
+                    samples[(y + radius) * stride + x + radius] =
+                        SampleSurfaceClimate(request, settings,
+                            request.Address.ChunkOrigin.X + x,
+                            request.Address.ChunkOrigin.Y + y);
+                }
+            }
+
+            public void ClassifyCore(CancellationToken cancellationToken)
+            {
+                for (int y = 0; y < request.Profile.Height; y++)
+                for (int x = 0; x < request.Profile.Width; x++)
+                {
+                    int index = y * request.Profile.Width + x;
+                    if ((index & 63) == 0)
+                        cancellationToken.ThrowIfCancellationRequested();
+                    int sampleIndex = (y + radius) * stride + x + radius;
+                    SurfaceClimateSample sample = samples[sampleIndex];
+                    ClassifyBase(ref sample);
+                    samples[sampleIndex] = sample;
+                }
+            }
+
+            public SurfaceClimateSample GetCore(int x, int y) =>
+                samples[(y + radius) * stride + x + radius];
+
+            public bool HasStoneNeighbor(int x, int y)
+            {
+                for (int offsetY = -radius; offsetY <= radius; offsetY++)
+                for (int offsetX = -radius; offsetX <= radius; offsetX++)
+                {
+                    if (offsetX == 0 && offsetY == 0)
+                        continue;
+                    int sampleIndex = (y + offsetY + radius) * stride +
+                                      x + offsetX + radius;
+                    SurfaceClimateSample sample = samples[sampleIndex];
+                    if (!sample.Classified)
+                    {
+                        sample = SampleSurfaceClimate(request, settings,
+                            request.Address.ChunkOrigin.X + x + offsetX,
+                            request.Address.ChunkOrigin.Y + y + offsetY);
+                        ClassifyBase(ref sample);
+                        samples[sampleIndex] = sample;
+                    }
+                    if (sample.BaseBiome == SurfaceBiomeKind.Stone)
+                        return true;
+                }
+                return false;
+            }
+
+            private void ClassifyBase(ref SurfaceClimateSample sample)
+            {
+                double moisture = Clamp01(sample.Precipitation * 0.78d +
+                                          (1d - sample.Height) * 0.22d);
+                sample.BaseBiome = SurfaceBiomeClassifier.Resolve(settings,
+                    sample.Height, sample.Temperature, sample.Precipitation,
+                    moisture, false);
+                sample.Classified = true;
+            }
+
+            public void Dispose()
+            {
+                ArrayPool<SurfaceClimateSample>.Shared.Return(samples);
+                ArrayPool<SurfaceCellOutput>.Shared.Return(Output);
+            }
+        }
+
+        private static SurfaceClimateSample SampleSurfaceClimate(
+            ChunkGenerationRequest request, ChunkGenerationSettingsSnapshot settings,
+            int worldX, int worldY)
+        {
+            worldX = request.Topology.NormalizeX(worldX);
+            worldY = request.Topology.NormalizeY(worldY);
+            if (settings.SurfaceClimateAlgorithm == SurfaceClimateAlgorithm.LegacyLand)
+            {
+                LegacyClimateSample climate = LegacyTerrainClimateKernel.SampleClimate(
+                    request, settings, worldX, worldY);
+                return new SurfaceClimateSample
+                {
+                    Height = climate.Height,
+                    Temperature = climate.Temperature,
+                    TemperatureCelsius = climate.TemperatureCelsius,
+                    BasePrecipitation = climate.BasePrecipitation,
+                    Precipitation = climate.Precipitation,
+                    WindX = climate.WindX,
+                    WindY = climate.WindY
+                };
+            }
+            double height = SampleHeight(request, settings, worldX, worldY);
+            double precipitation = SamplePrecipitation(request, settings, worldX, worldY);
+            double temperatureNoise = Fractal(CreateSeed(request, 0x85ebca6bu),
+                worldX, worldY, settings.ClimateScale, settings.ClimateOctaves,
+                2.07d, 0.5d, request.Topology);
+            double latitudeCooling = Math.Min(0.34d, Math.Abs(worldY) * 0.000025d);
+            double temperature = settings.ApplyAltitudeTemperatureCooling(
+                height, temperatureNoise - latitudeCooling);
+            return new SurfaceClimateSample
+            {
+                Height = height,
+                Temperature = temperature,
+                TemperatureCelsius = -20d + temperature * 65d,
+                BasePrecipitation = precipitation,
+                Precipitation = precipitation,
+                WindX = 1d,
+                WindY = 0d
+            };
+        }
+
+        #endregion
+
         /// <summary>根据高度、温度、降水和河流结果，生成一个地表格子的完整数据。</summary>
         private static void GenerateSurfaceCell(
             ChunkGenerationRequest request,
@@ -401,44 +739,47 @@ namespace FlatWorld.WorldModel
             int worldX,
             int worldY)
         {
+            SurfaceClimateSample climate = SampleSurfaceClimate(
+                request, settings, worldX, worldY);
+            double baseMoisture = Clamp01(climate.Precipitation * 0.78d +
+                                          (1d - climate.Height) * 0.22d);
+            climate.BaseBiome = SurfaceBiomeClassifier.Resolve(settings,
+                climate.Height, climate.Temperature, climate.Precipitation,
+                baseMoisture, false);
+            climate.Classified = true;
+            SurfaceCellOutput output = BuildSurfaceCell(request, settings, riverMap,
+                climate, null, x, y, worldX, worldY,
+                terrain.LiquidTypes.GetIndex(LiquidTypeCatalog.SeaWaterId),
+                terrain.LiquidTypes.GetIndex(LiquidTypeCatalog.DirtyWaterId));
+            terrain.SetCell(x, y, output.Cell);
+            terrain.SetLiquid(x, y, output.LiquidTypeIndex, output.LiquidDepth);
+            terrain.SetGrass(x, y, output.Grass);
+            new SurfaceEnvironmentWriter(terrain).Write(y * terrain.Width + x, output);
+        }
+
+        private static SurfaceCellOutput BuildSurfaceCell(
+            ChunkGenerationRequest request,
+            ChunkGenerationSettingsSnapshot settings,
+            GeneratedHydrologyMap riverMap,
+            SurfaceClimateSample climate,
+            SurfaceChunkBatch batch,
+            int x,
+            int y,
+            int worldX,
+            int worldY,
+            int seaWater,
+            int dirtyWater)
+        {
             // 如果世界会绕回另一边，先把越界坐标换回世界内，保证两侧地形能严丝合缝。
             worldX = request.Topology.NormalizeX(worldX);
             worldY = request.Topology.NormalizeY(worldY);
-            double height;
-            double basePrecipitation;
-            double precipitation;
-            double windX;
-            double windY;
-            double temperature;
-            double temperatureCelsius;
-            if (settings.SurfaceClimateAlgorithm == SurfaceClimateAlgorithm.LegacyLand)
-            {
-                LegacyClimateSample climate = LegacyTerrainClimateKernel.SampleClimate(
-                    request, settings, worldX, worldY);
-                height = climate.Height;
-                temperature = climate.Temperature;
-                temperatureCelsius = climate.TemperatureCelsius;
-                basePrecipitation = climate.BasePrecipitation;
-                precipitation = climate.Precipitation;
-                windX = climate.WindX;
-                windY = climate.WindY;
-            }
-            else
-            {
-                height = SampleHeight(request, settings, worldX, worldY);
-                precipitation = SamplePrecipitation(request, settings, worldX, worldY);
-                basePrecipitation = precipitation;
-                windX = 1d;
-                windY = 0d;
-                double temperatureNoise = Fractal(CreateSeed(request, 0x85ebca6bu),
-                    worldX, worldY, settings.ClimateScale, settings.ClimateOctaves,
-                    2.07d, 0.5d, request.Topology);
-                // 两种气候算法都通过同一个海拔降温入口输出实际温度。
-                double latitudeCooling = Math.Min(0.34d, Math.Abs(worldY) * 0.000025d);
-                temperature = settings.ApplyAltitudeTemperatureCooling(
-                    height, temperatureNoise - latitudeCooling);
-                temperatureCelsius = -20d + temperature * 65d;
-            }
+            double height = climate.Height;
+            double basePrecipitation = climate.BasePrecipitation;
+            double precipitation = climate.Precipitation;
+            double windX = climate.WindX;
+            double windY = climate.WindY;
+            double temperature = climate.Temperature;
+            double temperatureCelsius = climate.TemperatureCelsius;
             bool ocean = height < settings.SeaLevel;
             GeneratedHydrologyCell riverCell = default;
             bool river = !ocean && riverMap != null &&
@@ -450,8 +791,10 @@ namespace FlatWorld.WorldModel
                 precipitation * 0.78d + (1d - height) * 0.22d + floodplain * 0.18d);
             if (ocean)
                 moisture = Math.Max(moisture, settings.OceanMoistureFloor);
-            SurfaceBiomeKind biome = SurfaceBiomeClassifier.Resolve(
-                settings, height, temperature, precipitation, moisture, river);
+            SurfaceBiomeKind biome = !river && floodplain == 0d
+                ? climate.BaseBiome
+                : SurfaceBiomeClassifier.Resolve(
+                    settings, height, temperature, precipitation, moisture, river);
             bool frozenRiver = river && SurfaceBiomeClassifier.IsSnowClimate(
                 settings, temperature, precipitation);
             bool mountain = biome == SurfaceBiomeKind.Stone;
@@ -508,7 +851,8 @@ namespace FlatWorld.WorldModel
                 flags = TerrainCellFlags.Walkable;
             }
             else if (ShouldGeneratePeat(
-                         request, settings, biome, floodplain, worldX, worldY))
+                         request, settings, biome, floodplain, worldX, worldY,
+                         batch, x, y))
             {
                 // 泥炭只铺在草原一侧的石地交界带，不再跟随河谷湿度向河岸扩张。
                 biomeId = (int)biome;
@@ -552,37 +896,10 @@ namespace FlatWorld.WorldModel
                 flags = TerrainCellFlags.Walkable;
             }
 
-            // 地面与液体独立写入；height 先供生成期生态筛选，Seal 时原数组直接移交为只读地表海拔表现数据。
-            // 液体仍只读取独立 LiquidDepth，禁止用海拔反算液深。
-            terrain.SetCell(x, y, new TerrainCell(groundTileId, 0, 0, biomeId,
-                navigationCost, flags));
-            terrain.SetEnvironmentValue("height", x, y, (float)height);
+            // 地面与液体在同一批次提交，height 继续随权威区块移交。
             float initialLiquidDepth = ocean
                 ? (float)(1d - Math.Pow(Clamp01(height / Math.Max(0.0001d, settings.SeaLevel)), 2d))
                 : river && !frozenRiver ? (float)riverCell.Depth : 0f;
-            terrain.SetLiquid(x, y, initialLiquidDepth > 0f
-                ? terrain.LiquidTypes.GetIndex(ocean ? LiquidTypeCatalog.SeaWaterId : LiquidTypeCatalog.DirtyWaterId) : 0,
-                initialLiquidDepth);
-            terrain.SetEnvironmentValue("temperature", x, y, (float)temperature);
-            terrain.SetEnvironmentValue("temperature.celsius", x, y,
-                (float)temperatureCelsius);
-            terrain.SetEnvironmentValue("basePrecipitation", x, y, (float)basePrecipitation);
-            terrain.SetEnvironmentValue("precipitation", x, y, (float)precipitation);
-            terrain.SetEnvironmentValue("windX", x, y, (float)windX);
-            terrain.SetEnvironmentValue("windY", x, y, (float)windY);
-            terrain.SetEnvironmentValue("moisture", x, y, (float)moisture);
-            terrain.SetEnvironmentValue("mountain", x, y, mountain ? 1f : 0f);
-            terrain.SetEnvironmentValue("riverFlow", x, y, river ? (float)riverCell.Flow : 0f);
-            terrain.SetEnvironmentValue("riverFlowX", x, y,
-                river ? (float)riverCell.FlowDirectionX : 0f);
-            terrain.SetEnvironmentValue("riverFlowY", x, y,
-                river ? (float)riverCell.FlowDirectionY : 0f);
-            terrain.SetEnvironmentValue("riverFloodplain", x, y, (float)floodplain);
-            terrain.SetEnvironmentValue("riverSurfaceLevel", x, y,
-                river ? (float)riverCell.SurfaceLevel : 0f);
-            terrain.SetEnvironmentValue("riverKind", x, y,
-                river ? (float)riverCell.Kind : 0f);
-            terrain.SetEnvironmentValue("structure", x, y, 0f);
 
             // 草长不长只看世界种子、坐标和湿度，不用会变化的全局随机数，所以每次结果相同。
             bool snowSurface = biome == SurfaceBiomeKind.Snow &&
@@ -594,8 +911,30 @@ namespace FlatWorld.WorldModel
                          (groundTileId == settings.GroundTileId || snowSurface) &&
                          Hash01(request.WorldSeed, worldX, worldY, 0x165667b1u) <
                          grassDensity * (0.55d + moisture * 0.75d);
-            terrain.SetGrass(x, y, grass ? GrassPresent : GrassEmpty);
-            terrain.SetEnvironmentValue("grass", x, y, grass ? 1f : 0f);
+            return new SurfaceCellOutput
+            {
+                Cell = new TerrainCell(groundTileId, 0, 0, biomeId,
+                    navigationCost, flags),
+                LiquidTypeIndex = initialLiquidDepth > 0f
+                    ? ocean ? seaWater : dirtyWater : 0,
+                LiquidDepth = initialLiquidDepth,
+                Grass = grass ? GrassPresent : GrassEmpty,
+                Height = (float)height,
+                Temperature = (float)temperature,
+                TemperatureCelsius = (float)temperatureCelsius,
+                BasePrecipitation = (float)basePrecipitation,
+                Precipitation = (float)precipitation,
+                WindX = (float)windX,
+                WindY = (float)windY,
+                Moisture = (float)moisture,
+                Mountain = mountain ? 1f : 0f,
+                RiverFlow = river ? (float)riverCell.Flow : 0f,
+                RiverFlowX = river ? (float)riverCell.FlowDirectionX : 0f,
+                RiverFlowY = river ? (float)riverCell.FlowDirectionY : 0f,
+                RiverFloodplain = (float)floodplain,
+                RiverSurfaceLevel = river ? (float)riverCell.SurfaceLevel : 0f,
+                RiverKind = river ? (float)riverCell.Kind : 0f
+            };
         }
 
         /// <summary>判定泥炭斑块：草原石地交界、远离河漫滩，并按斑块区域概率稀疏生成。</summary>
@@ -605,7 +944,10 @@ namespace FlatWorld.WorldModel
             SurfaceBiomeKind biome,
             double floodplain,
             int worldX,
-            int worldY)
+            int worldY,
+            SurfaceChunkBatch batch,
+            int x,
+            int y)
         {
             if (settings.PeatTileId <= 0 ||
                 settings.PeatSpawnChance <= 0d ||
@@ -634,7 +976,9 @@ namespace FlatWorld.WorldModel
                 return false;
             }
 
-            return IsGrasslandStoneBoundary(request, settings, worldX, worldY);
+            return batch != null
+                ? batch.HasStoneNeighbor(x, y)
+                : IsGrasslandStoneBoundary(request, settings, worldX, worldY);
         }
 
         /// <summary>只接受草原侧指定半径内能直接采样到石地的过渡格。</summary>
@@ -784,17 +1128,20 @@ namespace FlatWorld.WorldModel
             ChunkGenerationSettingsSnapshot settings,
             CancellationToken cancellationToken, ChunkGenerationTiming timing)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (request.WorldEpoch <= Volatile.Read(ref retiredWorldEpoch))
+                throw new OperationCanceledException("旧世界的水文请求已经失效。");
             HeightDrivenRegionDescriptor region = ResolveHeightDrivenRegion(request, settings);
             HeightDrivenRegionKey key = CreateHeightDrivenRegionKey(request, region);
-            var candidate = new Lazy<GeneratedHydrologyMap>(() =>
+            CancellationToken sharedCancellation = sharedHydrologyCancellation.Token;
+            var candidate = new Lazy<MacroHydrologyRegion>(() =>
             {
-                // Lazy 的创建者未必是执行者，按实际运行线程记录区域计算。
-                using (ChunkGenerationTiming.CurrentOnThread?.MeasureStage("river.region_compute") ?? default)
-                    return BuildHeightDrivenRiverRegion(
-                        CreateHeightDrivenRegionRequest(request, region), settings, cancellationToken);
+                using (ChunkGenerationTiming.CurrentOnThread?.MeasureStage("river.macro_compute") ?? default)
+                    return BuildMacroHydrologyRegion(
+                        CreateHeightDrivenRegionRequest(request, region), settings, sharedCancellation);
             },
                 LazyThreadSafetyMode.ExecutionAndPublication);
-            Lazy<GeneratedHydrologyMap> shared = heightDrivenRegionCache.GetOrAdd(key, candidate);
+            Lazy<MacroHydrologyRegion> shared = heightDrivenRegionCache.GetOrAdd(key, candidate);
             if (ReferenceEquals(shared, candidate))
             {
                 heightDrivenCacheOrder.Enqueue(key);
@@ -804,91 +1151,81 @@ namespace FlatWorld.WorldModel
             try
             {
                 // region_get 包含共享等待；有 region_compute 的请求才真正执行了区域计算。
-                using (timing?.MeasureStage("river.region_get") ?? default)
-                    return shared.Value;
+                MacroHydrologyRegion macro;
+                using (timing?.MeasureStage("river.macro_get") ?? default)
+                    macro = shared.Value;
+                cancellationToken.ThrowIfCancellationRequested();
+                if (request.WorldEpoch <= Volatile.Read(ref retiredWorldEpoch))
+                    throw new OperationCanceledException("旧世界的水文请求已经失效。");
+                QueueNeighbourHydrologyPrewarm(request, settings, region);
+                using (timing?.MeasureStage("river.local_refine") ?? default)
+                    return BuildMacroRiverChunk(request, settings, macro, cancellationToken);
             }
             catch
             {
-                if (heightDrivenRegionCache.TryGetValue(key, out Lazy<GeneratedHydrologyMap> failed) &&
+                if (!shared.IsValueCreated &&
+                    heightDrivenRegionCache.TryGetValue(key, out Lazy<MacroHydrologyRegion> failed) &&
                     ReferenceEquals(failed, shared))
                     heightDrivenRegionCache.TryRemove(key, out _);
                 throw;
             }
         }
 
-        /// <summary>按世界固定区域单次构建河网；同区域相邻区块只会共享这一份结果。</summary>
-        private static GeneratedHydrologyMap BuildHeightDrivenRiverRegion(
-            ChunkGenerationRequest request,
-            ChunkGenerationSettingsSnapshot settings,
-            CancellationToken cancellationToken)
+        /// <summary>只在靠近区域边界时预热相邻低分辨率图，后台任务共享世界纪元取消。</summary>
+        private void QueueNeighbourHydrologyPrewarm(ChunkGenerationRequest request,
+            ChunkGenerationSettingsSnapshot settings, HeightDrivenRegionDescriptor region)
         {
-            ChunkGenerationTiming timing = ChunkGenerationTiming.CurrentOnThread;
-            var sampling = new HydrologySamplingContext(request, settings);
-            var sourceFlowByCell = new Dictionary<Int2, double>();
-            var flowByCell = new Dictionary<Int2, double>();
-            var terminalFlowByCell = new Dictionary<Int2, double>();
-            var dominantDownstreamByCell = new Dictionary<Int2, Int2>();
-            var processedSourceOrigins = new HashSet<Int2>();
-            int maximumRadius = Math.Max(0, (settings.RiverMaxWidth - 1) / 2);
-            int padding = settings.RiverMaxTraceSteps + maximumRadius + 1;
-            int sourceCellSize = settings.RiverRunoffCellSize;
-            int anchorX = request.Topology.IsWrapped ? request.Topology.Min.X : 0;
-            int anchorY = request.Topology.IsWrapped ? request.Topology.Min.Y : 0;
-            int minX = request.Address.ChunkOrigin.X;
-            int minY = request.Address.ChunkOrigin.Y;
-            int maxX = minX + request.Profile.Width - 1;
-            int maxY = minY + request.Profile.Height - 1;
-            int minSourceX = FloorDiv(minX - padding - anchorX, sourceCellSize);
-            int maxSourceX = FloorDiv(maxX + padding - anchorX, sourceCellSize);
-            int minSourceY = FloorDiv(minY - padding - anchorY, sourceCellSize);
-            int maxSourceY = FloorDiv(maxY + padding - anchorY, sourceCellSize);
+            int x = request.Address.ChunkOrigin.X;
+            int y = request.Address.ChunkOrigin.Y;
+            int distance = Math.Max(request.Profile.Width, request.Profile.Height);
+            if (x - region.Origin.X <= distance)
+                TryQueueHydrologyPrewarm(request, settings, region, -1, 0);
+            if (region.Origin.X + region.Width - x - request.Profile.Width <= distance)
+                TryQueueHydrologyPrewarm(request, settings, region, 1, 0);
+            if (y - region.Origin.Y <= distance)
+                TryQueueHydrologyPrewarm(request, settings, region, 0, -1);
+            if (region.Origin.Y + region.Height - y - request.Profile.Height <= distance)
+                TryQueueHydrologyPrewarm(request, settings, region, 0, 1);
+        }
 
-            using (timing?.MeasureStage("river.collect_sources") ?? default)
+        private void TryQueueHydrologyPrewarm(ChunkGenerationRequest request,
+            ChunkGenerationSettingsSnapshot settings, HeightDrivenRegionDescriptor region,
+            int offsetX, int offsetY)
+        {
+            if (request.WorldEpoch <= Volatile.Read(ref retiredWorldEpoch)) return;
+            if (heightDrivenRegionCache.Count >= settings.RiverMaxCachedRegions)
+                return;
+            int nextX = request.Topology.NormalizeX(region.Origin.X + offsetX *
+                settings.RiverHydrologyRegionSize);
+            int nextY = request.Topology.NormalizeY(region.Origin.Y + offsetY *
+                settings.RiverHydrologyRegionSize);
+            var adjacentRequest = new ChunkGenerationRequest(request.WorldEpoch,
+                new WorldAddress(request.Address.DimensionId, new Int2(nextX, nextY)),
+                request.WorldSeed, request.RequestVersion, request.Profile, request.Topology);
+            HeightDrivenRegionDescriptor adjacent = ResolveHeightDrivenRegion(adjacentRequest, settings);
+            HeightDrivenRegionKey key = CreateHeightDrivenRegionKey(adjacentRequest, adjacent);
+            if (heightDrivenRegionCache.ContainsKey(key)) return;
+            CancellationToken token = sharedHydrologyCancellation.Token;
+            var candidate = new Lazy<MacroHydrologyRegion>(() =>
             {
-                for (int sourceY = minSourceY; sourceY <= maxSourceY; sourceY++)
+                if (request.WorldEpoch <= Volatile.Read(ref retiredWorldEpoch))
+                    throw new OperationCanceledException("旧世界的水文预热已经失效。");
+                return BuildMacroHydrologyRegion(
+                    CreateHeightDrivenRegionRequest(adjacentRequest, adjacent), settings, token);
+            },
+                LazyThreadSafetyMode.ExecutionAndPublication);
+            if (!heightDrivenRegionCache.TryAdd(key, candidate)) return;
+            heightDrivenCacheOrder.Enqueue(key);
+            _ = Task.Run(() =>
+            {
+                try { _ = candidate.Value; }
+                catch
                 {
-                    for (int sourceX = minSourceX; sourceX <= maxSourceX; sourceX++)
-                    {
-                        cancellationToken.ThrowIfCancellationRequested();
-                        Int2 sourceOrigin = sampling.Normalize(new Int2(
-                            anchorX + sourceX * sourceCellSize,
-                            anchorY + sourceY * sourceCellSize));
-                        if (!processedSourceOrigins.Add(sourceOrigin))
-                            continue;
-                        if (!ShouldTraceRunoffSource(
-                                request.WorldSeed, sourceOrigin,
-                                anchorX, anchorY, sourceCellSize))
-                            continue;
-
-                        CollectRunoffSource(sampling, sourceOrigin, sourceFlowByCell);
-                    }
+                    if (heightDrivenRegionCache.TryGetValue(key, out Lazy<MacroHydrologyRegion> current) &&
+                        ReferenceEquals(current, candidate))
+                        heightDrivenRegionCache.TryRemove(key, out _);
                 }
-            }
-
-            using (timing?.MeasureStage("river.route_network") ?? default)
-                RouteRunoffNetwork(
-                    sampling, sourceFlowByCell, flowByCell, terminalFlowByCell,
-                    dominantDownstreamByCell, cancellationToken);
-
-            HashSet<Int2> visibleFlowCells;
-            using (timing?.MeasureStage("river.visible_flow") ?? default)
-                visibleFlowCells = BuildVisibleFlowCells(
-                    sampling, flowByCell, settings.RiverStartFlow,
-                    settings.RiverTributaryStartFlow, settings.RiverMinimumVisibleCourseLength);
-            var riverCells = new Dictionary<Int2, GeneratedHydrologyCell>();
-            var floodplainCells = new Dictionary<Int2, double>();
-            using (timing?.MeasureStage("river.render_channels") ?? default)
-                RenderSmoothedRiverChannels(
-                    request, settings, sampling, flowByCell,
-                    dominantDownstreamByCell, visibleFlowCells, maximumRadius,
-                    riverCells, floodplainCells, cancellationToken);
-
-            using (timing?.MeasureStage("river.terminal_lakes") ?? default)
-                AddHeightDrivenTerminalLakes(
-                    request, settings, sampling, terminalFlowByCell,
-                    riverCells, cancellationToken);
-
-            return new GeneratedHydrologyMap(riverCells, floodplainCells);
+            });
         }
 
         /// <summary>
@@ -1400,7 +1737,16 @@ namespace FlatWorld.WorldModel
             maximumRegions = Math.Max(1, maximumRegions);
             while (heightDrivenRegionCache.Count > maximumRegions &&
                    heightDrivenCacheOrder.TryDequeue(out HeightDrivenRegionKey oldest))
+            {
+                if (!heightDrivenRegionCache.TryGetValue(oldest, out Lazy<MacroHydrologyRegion> entry))
+                    continue;
+                if (!entry.IsValueCreated)
+                {
+                    heightDrivenCacheOrder.Enqueue(oldest);
+                    break;
+                }
                 heightDrivenRegionCache.TryRemove(oldest, out _);
+            }
         }
 
         /// <summary>按有限世界左下角或无限世界原点，把区块归入稳定的水文区域。</summary>

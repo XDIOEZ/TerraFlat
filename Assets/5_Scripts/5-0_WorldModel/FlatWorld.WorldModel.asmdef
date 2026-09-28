@@ -1,14 +1,14 @@
 {
     "name": "FlatWorld.WorldModel",
     "rootNamespace": "FlatWorld.WorldModel",
-    "references": ["FlatWorld.WorldTopology", "Unity.Mathematics"],
+    "references": ["FlatWorld.WorldTopology", "Unity.Mathematics", "Unity.Burst"],
     "includePlatforms": [],
     "excludePlatforms": [],
-    "allowUnsafeCode": false,
+    "allowUnsafeCode": true,
     "overrideReferences": false,
     "precompiledReferences": [],
     "autoReferenced": true,
     "defineConstraints": [],
     "versionDefines": [],
-    "noEngineReferences": true
+    "noEngineReferences": false
 }
