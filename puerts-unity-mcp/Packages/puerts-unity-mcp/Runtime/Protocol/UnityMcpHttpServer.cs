@@ -44,6 +44,8 @@ namespace PuertsUnityMcp
 
         private string DisplayHost => PrefixHost == "*" ? "0.0.0.0" : PrefixHost;
 
+        #region HTTP 监听生命周期
+
         public void Start()
         {
             if (running)
@@ -55,7 +57,8 @@ namespace PuertsUnityMcp
             listener.Prefixes.Add("http://" + PrefixHost + ":" + Port + "/");
             listener.Start();
             running = true;
-            listenerThread = new Thread(ListenLoop)
+            HttpListener activeListener = listener;
+            listenerThread = new Thread(() => ListenLoop(activeListener))
             {
                 IsBackground = true,
                 Name = "PuertsUnityMcpHttpServer-" + endpoint.EndpointKind
@@ -75,6 +78,11 @@ namespace PuertsUnityMcp
                 try { listener.Close(); } catch { }
                 listener = null;
             }
+            // 关闭监听解除 GetContext 阻塞后，有限等待线程退出，避免重载时才被强制中止。
+            Thread stoppingThread = listenerThread;
+            listenerThread = null;
+            if (stoppingThread != null && stoppingThread != Thread.CurrentThread && stoppingThread.IsAlive)
+                stoppingThread.Join(1000);
         }
 
         public void Dispose()
@@ -82,13 +90,13 @@ namespace PuertsUnityMcp
             Stop();
         }
 
-        private void ListenLoop()
+        private void ListenLoop(HttpListener activeListener)
         {
-            while (running)
+            while (running && ReferenceEquals(listener, activeListener))
             {
                 try
                 {
-                    var context = listener.GetContext();
+                    var context = activeListener.GetContext();
                     ThreadPool.QueueUserWorkItem(_ => HandleContext(context));
                 }
                 catch (HttpListenerException)
@@ -99,15 +107,22 @@ namespace PuertsUnityMcp
                 {
                     break;
                 }
+                catch (ThreadAbortException)
+                {
+                    // 域卸载必须继续中止线程，不把预期退出当作 HTTP 故障，也不调用 ResetAbort。
+                    throw;
+                }
                 catch (Exception ex)
                 {
-                    if (running)
+                    if (running && ReferenceEquals(listener, activeListener))
                     {
                         Debug.LogWarning("[UnityMCP] HTTP listener error: " + ex.Message);
                     }
                 }
             }
         }
+
+        #endregion
 
         private void HandleContext(HttpListenerContext context)
         {
