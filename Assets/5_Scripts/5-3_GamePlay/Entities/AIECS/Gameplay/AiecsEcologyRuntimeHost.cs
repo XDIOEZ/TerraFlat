@@ -66,9 +66,10 @@ namespace FlatWorld.AIECS.Gameplay
         private bool _worldPrepared;
         private bool _startFailed;
         private bool _ownsBackendRegistration;
+        private bool _disposingSimulation;
 
         public static AiecsEcologyRuntimeHost Active => active;
-        public bool IsReady => _bridge != null;
+        public bool IsReady => !_disposingSimulation && _bridge?.Simulation?.IsCreated == true;
         public string RuntimeModuleId => "entity.ai";
 
         #endregion
@@ -91,7 +92,17 @@ namespace FlatWorld.AIECS.Gameplay
 
         private void Update()
         {
-            if (!AiRuntimeBackendService.UseEntities || !_worldPrepared)
+            if (!AiRuntimeBackendService.UseEntities)
+            {
+                // 停用只保存并释放 AI 自身的状态与绘制，不关闭树木和作物共用的 World。
+                if (_bridge != null)
+                {
+                    CaptureResidents(SaveDataMgr.Instance?.SaveData?.MonsterSpawnerData);
+                    DisposeSimulation();
+                }
+                return;
+            }
+            if (!_worldPrepared)
                 return;
 
             // GM 开发场景与正式生态共享同一套玩家/导航资源，但任何时刻只允许一个模拟真正运行。
@@ -134,7 +145,8 @@ namespace FlatWorld.AIECS.Gameplay
         /// <summary>动物能力由统一实体入口驱动；Update 只准备依赖，不再另起一套玩法 Tick。</summary>
         public void TickEntities(float deltaTime)
         {
-            if (deltaTime <= 0f || !_worldPrepared || _bridge == null || _player == null ||
+            if (!AiRuntimeBackendService.UseEntities || deltaTime <= 0f ||
+                !_worldPrepared || !IsReady || _player == null ||
                 AiecsPlayground.Active?.HasActiveScenario == true || !_bridge.IsCurrentWorld(_player))
                 return;
 
@@ -183,7 +195,7 @@ namespace FlatWorld.AIECS.Gameplay
 
         private void LateUpdate()
         {
-            if (_bridge == null || _renderer == null || _player == null)
+            if (!AiRuntimeBackendService.UseEntities || !IsReady || _renderer == null || _player == null)
                 return;
 
             if (_camera == null || !_camera.isActiveAndEnabled)
@@ -203,6 +215,9 @@ namespace FlatWorld.AIECS.Gameplay
             ChunkMgr chunkManager = ChunkMgr.ExistingInstance;
             return chunkManager == null || chunkManager.IsRuntimeEntityPresentationReady(position);
         }
+
+        /// <summary>脚本重载不保证调用 OnDestroy，停用阶段就释放自有模拟与原生绘制资源。</summary>
+        private void OnDisable() => DisposeSimulation();
 
         private void OnDestroy()
         {
@@ -353,25 +368,51 @@ namespace FlatWorld.AIECS.Gameplay
 
         private void DisposeSimulation()
         {
-            WorldEntityRuntime.Unregister(this);
-            if (_bridge != null)
+            if (_disposingSimulation) return;
+            _disposingSimulation = true;
+            try
             {
-                _pendingRestores.Clear();
-                CaptureActiveResidents(_pendingRestores);
-                ReleaseAllAdvanceGoals();
+                WorldEntityRuntime.Unregister(this);
+                if (_bridge != null)
+                {
+                    TryReleaseSimulationResource(() =>
+                    {
+                        var snapshots = new List<AiecsResidentSaveData>(_pendingRestores);
+                        if (!TryCaptureActiveResidents(snapshots)) return;
+                        _pendingRestores.Clear();
+                        _pendingRestores.AddRange(snapshots);
+                    });
+                }
+
+                // 先断开可重入引用，各资源独立清理，快照失败不能让 BRG 和 Native 内存泄漏。
+                AiecsGameplayBridge bridge = _bridge;
+                AiecsWorldRenderer renderer = _renderer;
+                _bridge = null;
+                _renderer = null;
+                TryReleaseSimulationResource(() => ReleaseAllAdvanceGoals(bridge?.Navigation));
+                TryReleaseSimulationResource(DisposeMirrors);
+                if (renderer != null) TryReleaseSimulationResource(renderer.Dispose);
+                if (bridge != null) TryReleaseSimulationResource(bridge.Dispose);
             }
-            DisposeMirrors();
-            _renderer?.Dispose();
-            _renderer = null;
-            _bridge?.Dispose();
-            _bridge = null;
-            _actors.Clear();
-            _actorsByGuid.Clear();
-            _actorSweep.Clear();
-            _actorSweepCursor = 0;
-            _aliveByGroup.Clear();
-            _aliveBySpecies.Clear();
-            _populationLimitedCount = 0;
+            finally
+            {
+                _advanceGoals.Clear();
+                _actors.Clear();
+                _actorsByGuid.Clear();
+                _actorSweep.Clear();
+                _actorSweepCursor = 0;
+                _aliveByGroup.Clear();
+                _aliveBySpecies.Clear();
+                _populationLimitedCount = 0;
+                _disposingSimulation = false;
+            }
+        }
+
+        /// <summary>只隔离退出清理步骤，仍记录真实异常，不影响其它资源继续释放。</summary>
+        private void TryReleaseSimulationResource(Action release)
+        {
+            try { release(); }
+            catch (Exception exception) { Debug.LogException(exception, this); }
         }
 
         /// <summary>为正常 GameStart 世界提供惰性 GM 调试入口；只创建宿主，不立即创建第二套 ECS 模拟。</summary>
@@ -593,10 +634,10 @@ namespace FlatWorld.AIECS.Gameplay
             _advanceGoals.Remove(targetGuid);
         }
 
-        private void ReleaseAllAdvanceGoals()
+        private void ReleaseAllAdvanceGoals(FlowNavigationCache navigation)
         {
             foreach (AdvanceGoal goal in _advanceGoals.Values)
-                _bridge?.Navigation?.RemoveGoal(goal.Handle);
+                navigation?.RemoveGoal(goal.Handle);
             _advanceGoals.Clear();
         }
 
@@ -816,7 +857,7 @@ namespace FlatWorld.AIECS.Gameplay
 
         private bool PrepareRead()
         {
-            if (_bridge?.Simulation == null)
+            if (!IsReady)
                 return false;
             _bridge.Simulation.Complete();
             return true;
@@ -825,7 +866,7 @@ namespace FlatWorld.AIECS.Gameplay
         private bool IsAlive(EcologyActor actor, out float2 position)
         {
             position = default;
-            if (_bridge?.Simulation == null || actor == null || !_bridge.Simulation.Entities.Exists(actor.Entity))
+            if (!IsReady || actor == null || !_bridge.Simulation.Entities.Exists(actor.Entity))
                 return false;
 
             AiecsVital vital = _bridge.Simulation.Entities.GetComponentData<AiecsVital>(actor.Entity);

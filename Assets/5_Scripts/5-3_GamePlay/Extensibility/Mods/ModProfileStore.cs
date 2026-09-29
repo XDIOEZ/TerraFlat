@@ -28,6 +28,15 @@ public sealed class ModProfile
     [JsonProperty("loadOrder")]
     public List<string> LoadOrder = new();
 
+    /// <summary>按代码内容指纹确认信任，新增或替换 DLL 必须重新授权。</summary>
+    [JsonProperty("trustedManagedCodeHashes")]
+    public Dictionary<string, string> TrustedManagedCodeHashes = new(StringComparer.OrdinalIgnoreCase);
+
+    public bool IsManagedCodeTrusted(string modId, string codeHash)
+        => !string.IsNullOrWhiteSpace(codeHash) && TrustedManagedCodeHashes != null &&
+           TrustedManagedCodeHashes.TryGetValue(modId, out string trustedHash) &&
+           string.Equals(trustedHash, codeHash, StringComparison.OrdinalIgnoreCase);
+
     public bool IsEnabled(string modId)
     {
         if (DisabledMods.Any(id => string.Equals(id, modId, StringComparison.OrdinalIgnoreCase)))
@@ -111,6 +120,18 @@ public static class ModProfileStore
         SaveActiveProfile(profile);
     }
 
+    /// <summary>此授权只允许下次加载指定代码版本，不会自动执行或热替换 DLL。</summary>
+    public static void SetManagedCodeTrust(string modId, string codeHash, bool trusted)
+    {
+        if (string.IsNullOrWhiteSpace(modId)) throw new ArgumentException("MOD ID 不能为空", nameof(modId));
+        if (trusted && (codeHash == null || codeHash.Length != 64 || !codeHash.All(Uri.IsHexDigit)))
+            throw new ArgumentException("托管 MOD 代码指纹无效", nameof(codeHash));
+        ModProfile profile = LoadActiveProfile();
+        if (trusted) profile.TrustedManagedCodeHashes[modId] = codeHash;
+        else profile.TrustedManagedCodeHashes.Remove(modId);
+        SaveActiveProfile(profile);
+    }
+
     #endregion
 
     #region 安全模式
@@ -150,6 +171,12 @@ public static class ModProfileStore
         profile.EnabledMods = NormalizeIds(profile.EnabledMods);
         profile.DisabledMods = NormalizeIds(profile.DisabledMods);
         profile.LoadOrder = NormalizeIds(profile.LoadOrder);
+        var trusted = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        if (profile.TrustedManagedCodeHashes != null)
+            foreach (KeyValuePair<string, string> entry in profile.TrustedManagedCodeHashes)
+                if (!string.IsNullOrWhiteSpace(entry.Key) && entry.Value?.Length == 64 && entry.Value.All(Uri.IsHexDigit))
+                    trusted[entry.Key.Trim()] = entry.Value;
+        profile.TrustedManagedCodeHashes = trusted;
     }
 
     private static List<string> NormalizeIds(IEnumerable<string> ids)

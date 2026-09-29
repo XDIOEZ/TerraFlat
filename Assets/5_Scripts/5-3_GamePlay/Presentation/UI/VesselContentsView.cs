@@ -20,7 +20,7 @@ public sealed class VesselContentsView : MonoBehaviour
 
     private readonly List<Body> bodies = new();
     private readonly List<Body> deposits = new(); // 合并到旧堆叠时的无射线临时投料图标。
-    private Mod_VesselContents target;
+    private IVesselContents target;
     private Coroutine motion;
     private float liquidFraction;
     private float previousTilt;
@@ -36,7 +36,7 @@ public sealed class VesselContentsView : MonoBehaviour
     }
 
     /// <summary>切换木桶时解除旧槽位绑定；同一木桶的库存变化保留已有物品落点。</summary>
-    public void Bind(Mod_VesselContents contents)
+    public void Bind(IVesselContents contents)
     {
         if (ReferenceEquals(target, contents)) { SyncSlots(); return; }
         Unbind();

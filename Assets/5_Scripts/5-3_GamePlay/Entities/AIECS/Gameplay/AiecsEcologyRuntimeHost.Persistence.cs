@@ -16,21 +16,16 @@ namespace FlatWorld.AIECS.Gameplay
         public void CaptureResidents(MonsterSpawnerSaveData destination)
         {
             if (destination == null) return;
-            if (_bridge == null)
-            {
-                if (_pendingRestores.Count > 0)
-                    destination.EntitiesResidents = new List<AiecsResidentSaveData>(_pendingRestores);
-                return;
-            }
-            var snapshots = new List<AiecsResidentSaveData>(_actors.Count);
-            CaptureActiveResidents(snapshots);
-            destination.EntitiesResidents = snapshots;
+            // 未恢复居民也必须保留；World 已销毁时不能用一次空采集覆盖已有冷快照。
+            var snapshots = new List<AiecsResidentSaveData>(_pendingRestores);
+            if (TryCaptureActiveResidents(snapshots) || snapshots.Count > 0)
+                destination.EntitiesResidents = snapshots;
         }
 
-        private void CaptureActiveResidents(List<AiecsResidentSaveData> output)
+        private bool TryCaptureActiveResidents(List<AiecsResidentSaveData> output)
         {
-            if (_bridge?.Simulation == null) return;
-            AiecsSimulation simulation = _bridge.Simulation;
+            AiecsSimulation simulation = _bridge?.Simulation;
+            if (simulation?.IsCreated != true) return false;
             simulation.Complete();
             EntityManager manager = simulation.Entities;
             foreach (EcologyActor actor in _actors.Values)
@@ -79,6 +74,7 @@ namespace FlatWorld.AIECS.Gameplay
                     snapshot.NextBirthTime = manager.GetComponentData<AiecsReproduction>(entity).NextBirthTime;
                 output.Add(snapshot);
             }
+            return true;
         }
 
         private void LoadResidentSnapshots()
@@ -94,7 +90,7 @@ namespace FlatWorld.AIECS.Gameplay
         /// <summary>目录与导航就绪后恢复相同身份及能力状态，不创建旧 Item。</summary>
         private void RestoreResidentSnapshots()
         {
-            if (_bridge?.Simulation == null || _pendingRestores.Count == 0) return;
+            if (_bridge?.Simulation?.IsCreated != true || _pendingRestores.Count == 0) return;
             EntityManager manager = _bridge.Simulation.Entities;
             for (int i = _pendingRestores.Count - 1; i >= 0; i--)
             {

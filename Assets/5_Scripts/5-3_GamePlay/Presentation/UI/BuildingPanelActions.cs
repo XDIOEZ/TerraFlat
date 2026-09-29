@@ -11,7 +11,7 @@ public sealed class BuildingPanelActions : MonoBehaviour
     public Button DismantleButton; // 世界建筑的拆回入口。
     private BasePanel panel;
     private Mod_Building building;
-    private MechanicalNode mechanical; // 已安装机械的无物体拆除目标。
+    private MachineEntity mechanical; // 已安装机械的无物体拆除目标。
 
     private void Awake()
     {
@@ -34,7 +34,7 @@ public sealed class BuildingPanelActions : MonoBehaviour
     }
 
     /// <summary>纯数据机械直接绑定权威节点，面板拆除按钮沿用正式外观。</summary>
-    public void BindMechanical(MechanicalNode target)
+    public void BindMechanical(MachineEntity target)
     {
         building = null;
         mechanical = target;
@@ -55,7 +55,7 @@ public sealed class BuildingPanelActions : MonoBehaviour
     {
         if (mechanical != null)
         {
-            MechanicalNode targetNode = mechanical;
+            MachineEntity targetNode = mechanical;
             panel.Close();
             if (ItemNetworkStateSerialization.BeginNetworkMechanicalDismantle(targetNode))
                 return;

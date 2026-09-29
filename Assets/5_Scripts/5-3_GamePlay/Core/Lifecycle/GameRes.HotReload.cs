@@ -72,7 +72,7 @@ public partial class GameRes
         GameSaveData world = SaveDataMgr.Instance?.SaveData;
         Dictionary<string, RuntimeItemDefinition> previousItems = ItemDefinitions;
         ActorDefinitionCatalogLoader.ReloadSnapshot actorSnapshot = null;
-        MechanicalCatalog.ReloadSnapshot previousMechanical = null;
+        MachineCatalog.ReloadSnapshot previousMechanical = null;
         Dictionary<string, RuntimeTileDefinition> previousTiles = TileBlockDict;
         LiquidTypeCatalog previousLiquidTypes = LiquidTypes;
         string[] previousLiquids = LiquidDefinitions.Keys.ToArray();
@@ -111,12 +111,12 @@ public partial class GameRes
             try
             {
                 if (mods == null) throw new InvalidOperationException("当前资源会话缺少 MOD 管理器。");
-                previousMechanical = MechanicalCatalog.CaptureReloadSnapshot();
+                previousMechanical = MachineCatalog.CaptureReloadSnapshot();
                 actorSnapshot = ActorDefinitionCatalogLoader.CaptureReloadSnapshot(this);
                 context = CreateInPlaceReloadContext(candidateAssets, mods);
                 plan = CreateResourceLoadPlan(actorSnapshot);
                 // 发布前单独验证机械目录；不清除正在运行的机械网络和动力源。
-                plan.Add("mechanical-reload", "校验机械配置", 1, () => RunAction(MechanicalCatalog.EnsureLoaded));
+                plan.Add("mechanical-reload", "校验机械配置", 1, () => RunAction(MachineCatalog.EnsureLoaded));
                 context.Add(() => loadPipeline, value => loadPipeline = value, plan);
             }
             catch (Exception exception) { error = exception; }
@@ -138,7 +138,7 @@ public partial class GameRes
                     context.InCandidate(() =>
                     {
                         retainedItemIds = RetainRemovedItemDefinitions(previousItems);
-                        retainedMechanicalEntries = MechanicalCatalog.RetainMissingEntries(previousMechanical);
+                        retainedMechanicalEntries = MachineCatalog.RetainMissingEntries(previousMechanical);
                         ValidateInPlaceCompatibility(previousItems, previousTiles, previousLiquidTypes, previousLiquids);
                         mods.PrepareReloadState(modState);
                     });
@@ -229,7 +229,7 @@ public partial class GameRes
         RiverGenerationConfigService.ConfigureResourceReload(context);
         AnimalSkillCatalogService.ConfigureResourceReload(context);
         QuestCatalog.ConfigureResourceReload(context);
-        MechanicalCatalog.ConfigureResourceReload(context);
+        MachineCatalog.ConfigureResourceReload(context);
         mods.ConfigureResourceReload(context);
         return context;
     }
@@ -326,7 +326,7 @@ public partial class GameRes
 
     private void ReleaseRetiredResourceSessions()
     {
-        MechanicalCatalog.ReleaseRetiredEntries();
+        MachineCatalog.ReleaseRetiredEntries();
         RemoveRetiredWorldItemDefinitions();
         foreach (Action release in retiredResourceReleases)
         {

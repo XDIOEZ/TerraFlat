@@ -245,10 +245,17 @@ namespace FlatWorld.AIECS
         /// <summary>释放该表现入口创建的批次，保留共享内容资源。</summary>
         public void Dispose()
         {
-            shadows.Dispose();
-            sunShadows.Dispose();
-            batch.Dispose();
-            visible.Clear(); BatchCount = 0;
+            // 阴影节点清理失败也必须释放 BRG，避免脚本域重载时遗失原生句柄。
+            try { shadows.Dispose(); }
+            finally
+            {
+                try { sunShadows.Dispose(); }
+                finally
+                {
+                    batch.Dispose();
+                    visible.Clear(); BatchCount = 0;
+                }
+            }
         }
     }
 }

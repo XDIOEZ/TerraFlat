@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using FlatWorld.NaturalEntities;
 using FlatWorld.WorldModel;
 using UnityEngine;
 
@@ -11,10 +12,11 @@ public sealed partial class Mod_BeeBehavior
     private readonly HashSet<Vector2Int> forageChunks = new(); // 当前九宫格区块。
     private Item forageCrop; // 有 BeeForage.Crop 标签的植株。
     private int forageFlowerGuid; // 无 Item 地表花朵的生成点身份。
+    private int forageEntityGuid; // ECS 作物的稳定身份，不为采蜜创建资源 GameObject。
     private Vector2 foragePosition;
     private float forageRate;
     private float forageScanRemaining;
-    private bool HasActiveForageTarget => forageCrop != null || forageFlowerGuid != 0;
+    private bool HasActiveForageTarget => forageCrop != null || forageFlowerGuid != 0 || forageEntityGuid != 0;
 
     /// <summary>清空短期采蜜、移动和攻击目标，存档只保存行为数值。</summary>
     private void ResetBeeTargets()
@@ -134,6 +136,20 @@ public sealed partial class Mod_BeeBehavior
         }
 
         float radius = Mathf.Sqrt(4f * size.x * size.x + 4f * size.y * size.y);
+        if (NaturalEntityEcsService.TryFindForage(item.transform.position, radius, CropNectarTag,
+            CanReachEntityForage, out Vector2 entityPosition, out int entityGuid))
+        {
+            float distance = WorldTopologyRuntime.SqrDistance(item.transform.position, entityPosition);
+            if (distance < nearest)
+            {
+                nearest = distance;
+                forageCrop = null;
+                forageFlowerGuid = 0;
+                forageEntityGuid = entityGuid;
+                foragePosition = entityPosition;
+                forageRate = CropGainPerSecond;
+            }
+        }
         ItemMgr.Instance.QueryItemsInCircleNonAlloc(item.transform.position, radius, ~0, item,
             forageCandidates, forageDedupe);
         foreach (Item candidate in forageCandidates)
@@ -150,6 +166,7 @@ public sealed partial class Mod_BeeBehavior
             nearest = distance;
             forageCrop = candidate;
             forageFlowerGuid = 0;
+            forageEntityGuid = 0;
             foragePosition = candidate.transform.position;
             forageRate = CropGainPerSecond;
         }
@@ -158,6 +175,9 @@ public sealed partial class Mod_BeeBehavior
             return false;
         return true;
     }
+
+    private bool CanReachEntityForage(Vector2 position) =>
+        forageChunks.Contains(Chunk.GetChunkPosition(position)) && AI_Bird.CanLand(position);
 
     /// <summary>从无 Item 的地表花层读取仍可见、未被采走的花朵生成点。</summary>
     private void ConsiderGroundFlowers(ChunkRuntime chunk, ChunkMgr manager, ref float nearest)
@@ -183,6 +203,7 @@ public sealed partial class Mod_BeeBehavior
             nearest = distance;
             forageCrop = null;
             forageFlowerGuid = placement.Guid;
+            forageEntityGuid = 0;
             foragePosition = WorldTopologyRuntime.NormalizePosition(position);
             forageRate = FlowerGainPerSecond;
         }
@@ -191,6 +212,8 @@ public sealed partial class Mod_BeeBehavior
     /// <summary>采蜜期间持续核实源头仍属于原植株或地表花生成点。</summary>
     private bool IsForageTargetValid()
     {
+        if (forageEntityGuid != 0)
+            return NaturalEntityEcsService.IsForageAvailable(foragePosition, forageEntityGuid, CropNectarTag);
         if (forageCrop != null)
             return !forageCrop.DestructionHandled && forageCrop.gameObject.activeInHierarchy &&
                 forageCrop.itemData?.Tags?.Contains(CropNectarTag) == true;
@@ -203,6 +226,7 @@ public sealed partial class Mod_BeeBehavior
     {
         forageCrop = null;
         forageFlowerGuid = 0;
+        forageEntityGuid = 0;
         foragePosition = default;
         forageRate = 0f;
     }

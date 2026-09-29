@@ -187,12 +187,14 @@ public sealed partial class ModRuntimeManager : MonoBehaviour
             packages = packages.Where(package => activeProfile.IsEnabled(package.Manifest.Id)).ToList();
         }
 
+        PrepareManagedPackages(packages);
         List<ModPackage> sortedPackages = ResolveLoadOrder(packages, activeProfile);
 
         for (int i = 0; i < sortedPackages.Count; i++)
         {
             ModPackage package = sortedPackages[i];
             reportProgress?.Invoke($"读取 MOD 内容：{package.Manifest.Name ?? package.Manifest.Id}", CalculateProgress(i, sortedPackages.Count, 0.05f, 0.45f));
+            InitializeManaged(package);
             LoadPackageSources(gameRes, package);
             loadedPackages.Add(package);
             packagesById.Add(package.Manifest.Id, package);
@@ -230,6 +232,7 @@ public sealed partial class ModRuntimeManager : MonoBehaviour
     /// <summary>仅正式发布后通知脚本，候选目录不能触发当前世界的生命周期副作用。</summary>
     internal void PublishContentReady()
     {
+        PublishManagedContentReady();
         BindGameEvents();
         DispatchEvent("content.ready", new
         {
@@ -618,7 +621,7 @@ public sealed partial class ModRuntimeManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 解析 MOD Actor 继承并原子注册；外壳只提供内容编译素材，运行行为由 ECS 能力组成。
+    /// 解析 MOD Actor 继承并原子注册；默认复用 GameObject 模块，ECS 能力仅供显式 ECS 物种编译。
     /// </summary>
     private void ProcessActorDefinitions(GameRes gameRes)
     {
@@ -643,13 +646,6 @@ public sealed partial class ModRuntimeManager : MonoBehaviour
                 ?? throw new InvalidDataException($"Actor Def 无法解析：{pair.Key}");
             if (definition.Abstract)
                 continue;
-            if (pair.Value["ecs"]?["capabilities"] is not JArray capabilities || capabilities.Count == 0)
-                throw new InvalidDataException($"Actor {pair.Key} 缺少 ecs.capabilities，不能交给 ECS 运行。");
-            if (pair.Value["modules"] is JObject actorModules)
-                foreach (JProperty module in actorModules.Properties())
-                    if (module.Value is JObject definitionModule && IsActorLuaModule(definitionModule))
-                        throw new InvalidDataException(
-                            $"Actor {pair.Key} 的 Lua Item 模块不会在 ECS 生物上运行；请使用 ecs.capabilities。");
             PendingActorDefinition source = sources[pair.Key];
             if (string.IsNullOrWhiteSpace(definition.Id) || !seenActorIds.Add(definition.Id))
                 throw new InvalidDataException($"Actor Def ID 为空或重复：{definition.Id ?? "<empty>"}");
@@ -1873,6 +1869,7 @@ public sealed partial class ModRuntimeManager : MonoBehaviour
             ModPathUtility.ResolvePackagePath(packageRoot, manifest.SettingsFile, true);
         if (!string.IsNullOrWhiteSpace(manifest.EntryLua))
             ModPathUtility.ResolvePackagePath(packageRoot, manifest.EntryLua, true);
+        ModManagedAssemblyStore.ValidateDefinition(packageRoot, manifest.Managed);
     }
 
     private static void ValidateContentId(string modId, string contentId)
@@ -1982,9 +1979,12 @@ public sealed partial class ModRuntimeManager : MonoBehaviour
 
     private static string ComputePackageHash(string packageRoot, string manifestJson)
     {
-        List<string> files = EnumerateSafePackageFiles(packageRoot);
-
         JObject canonicalManifest = JObject.Parse(manifestJson);
+        ModManagedDefinition managed = canonicalManifest["managed"]?.ToObject<ModManagedDefinition>();
+        ModManagedAssemblyStore.ValidateDefinition(packageRoot, managed);
+        var allowedAssemblies = new HashSet<string>(ModManagedAssemblyStore.Paths(managed)
+            .Select(path => ModPathUtility.ResolvePackagePath(packageRoot, path, true)), StringComparer.OrdinalIgnoreCase);
+        List<string> files = EnumerateSafePackageFiles(packageRoot, allowedAssemblies);
         canonicalManifest["contentHash"] = string.Empty;
 
         using IncrementalHash hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
@@ -2009,7 +2009,7 @@ public sealed partial class ModRuntimeManager : MonoBehaviour
         return ToLowerHex(hash.GetHashAndReset());
     }
 
-    private static List<string> EnumerateSafePackageFiles(string packageRoot)
+    private static List<string> EnumerateSafePackageFiles(string packageRoot, HashSet<string> allowedAssemblies = null)
     {
         List<string> files = new();
         Stack<string> pendingDirectories = new();
@@ -2035,8 +2035,9 @@ public sealed partial class ModRuntimeManager : MonoBehaviour
                     throw new InvalidDataException($"MOD 不允许使用符号链接：{file}");
 
                 string extension = Path.GetExtension(file).ToLowerInvariant();
-                if (extension is ".dll" or ".exe" or ".com" or ".scr" or ".msi" or
+                if ((extension is ".dll" or ".exe" or ".com" or ".scr" or ".msi" or
                     ".bat" or ".cmd" or ".ps1" or ".vbs" or ".js" or ".cs")
+                    && !(extension == ".dll" && allowedAssemblies?.Contains(Path.GetFullPath(file)) == true))
                 {
                     throw new InvalidDataException($"MOD 包包含禁止的可执行文件：{file}");
                 }
@@ -2117,6 +2118,8 @@ public sealed partial class ModRuntimeManager : MonoBehaviour
     private void UnloadAll(bool keepFailureState = false)
     {
         UnbindGameEvents();
+
+        UnloadManaged();
 
         GameRes gameRes = GameRes.ExistingInstance;
         UnloadTileDefinitions(gameRes);

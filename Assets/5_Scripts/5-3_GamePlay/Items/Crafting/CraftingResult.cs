@@ -14,7 +14,8 @@ public enum CraftingFailureReason
     InvalidOutput,
     OutputSpaceInsufficient,
     InventoryChanged,
-    CommitFailed
+    CommitFailed,
+    ConditionsNotMet
 }
 
 /// <summary>

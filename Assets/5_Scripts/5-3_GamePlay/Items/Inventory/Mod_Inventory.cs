@@ -450,7 +450,7 @@ public class Mod_Inventory : Module, IInventory, IInstanceUI, IInteractable
 
     #region 辅助方法
     /// <summary>生成库存存档键；优先使用配置名称，否则使用列表索引保证稳定唯一。</summary>
-    private static string GetInventoryKey(Inventory targetInventory, int index)
+    public static string GetInventoryKey(Inventory targetInventory, int index)
     {
         string configuredName = targetInventory?.Data?.Name;
         return string.IsNullOrWhiteSpace(configuredName)

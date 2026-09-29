@@ -4,22 +4,24 @@ using TMPro;
 using UnityEngine;
 
 /// <summary>加工面板的通用生命周期与库存绑定；只复用视图交互，不持有加工进度或建筑业务。</summary>
-public sealed class MechanicalPanelSession : IDisposable
+public sealed class MechanicalPanelSession : IMachinePanelSession
 {
     #region 面板会话
     private readonly BasePanel panel;
     private readonly MechanicalPanelView view;
     private readonly Item owner;
-    private readonly MechanicalNode mechanicalOwner; // 已安装机械的纯数据目标。
-    private readonly MechanicalProcessor processor;
+    private readonly MachineEntity mechanicalOwner; // 已安装机械的纯数据目标。
+    private readonly RecipeProcessor processor;
     private readonly Action<Player> action;
     private readonly Func<string> status;
     private readonly Func<string> actionLabel;
     private readonly Func<bool> actionAvailable; // 操作资格由机械域判断，面板只呈现按钮禁用态。
     private readonly CraftingOutputPreview preview;
     private Player actor;
+    public bool IsAlive => panel != null;
+    public bool IsOpen => panel != null && panel.IsOpen();
 
-    public MechanicalPanelSession(string prefabId, Item owner, MechanicalProcessor processor, Action<Player> action,
+    public MechanicalPanelSession(string prefabId, Item owner, RecipeProcessor processor, Action<Player> action,
         Func<string> status, Func<string> actionLabel, Func<bool> actionAvailable = null)
     {
         this.owner = owner; this.processor = processor; this.action = action; this.status = status;
@@ -43,7 +45,7 @@ public sealed class MechanicalPanelSession : IDisposable
     }
 
     /// <summary>纯数据机械节点使用相同面板，不需要对应世界 Item。</summary>
-    public MechanicalPanelSession(string prefabId, MechanicalNode owner, MechanicalProcessor processor,
+    public MechanicalPanelSession(string prefabId, MachineEntity owner, RecipeProcessor processor,
         Action<Player> action, Func<string> status, Func<string> actionLabel, Func<bool> actionAvailable = null)
         : this(prefabId, (Item)null, processor, action, status, actionLabel, actionAvailable)
     {

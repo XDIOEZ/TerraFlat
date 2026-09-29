@@ -15,6 +15,21 @@ public static class SharedSpriteMeshCache
     private static readonly Dictionary<Sprite, Mesh> meshes = new();
     /// <summary>资源销毁前通知使用者释放注册和引用；只允许主线程订阅。</summary>
     internal static event Action Clearing;
+    /// <summary>会话结束后禁止重新登记渲染资源，直到下一次运行初始化。</summary>
+    private static bool sessionEnding;
+    private static bool clearing;
+    internal static bool IsSessionEnding
+    {
+        get
+        {
+#if UNITY_EDITOR
+            // 其它管理器可能先收到退出回调，不能只依赖本缓存的事件先后次序。
+            if (Application.isPlaying && !UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode)
+                return true;
+#endif
+            return sessionEnding;
+        }
+    }
     /// <summary>当前会话已构造的唯一网格数。</summary>
     public static int Count => meshes.Count;
 
@@ -78,9 +93,29 @@ public static class SharedSpriteMeshCache
     /// <summary>先释放使用者，确保 BRG 不再引用即将销毁的 Mesh 和 Texture。</summary>
     private static void ClearMeshes(bool immediate)
     {
-        Clearing?.Invoke();
-        foreach (Mesh mesh in meshes.Values) DestroyMesh(mesh, immediate);
-        meshes.Clear();
+        if (clearing) return;
+        clearing = true;
+        try
+        {
+            // 一个消费者退出失败不能阻断其它消费者和共享网格的回收。
+            Action handlers = Clearing;
+            if (handlers != null)
+                foreach (Action release in handlers.GetInvocationList())
+                {
+                    try { release(); }
+                    catch (Exception exception) { Debug.LogException(exception); }
+                }
+            foreach (Mesh mesh in meshes.Values)
+            {
+                try { DestroyMesh(mesh, immediate); }
+                catch (Exception exception) { Debug.LogException(exception); }
+            }
+        }
+        finally
+        {
+            meshes.Clear();
+            clearing = false;
+        }
     }
 
     /// <summary>运行时延迟销毁，编辑器卸载前立即销毁自有隐藏对象。</summary>
@@ -95,10 +130,20 @@ public static class SharedSpriteMeshCache
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetStatics()
     {
-        Clear();
-        Application.quitting -= Clear;
-        Application.quitting += Clear;
+        EndSession(false);
+        sessionEnding = false;
+        Application.quitting -= OnApplicationQuitting;
+        Application.quitting += OnApplicationQuitting;
     }
+
+    /// <summary>退出先关闭重建入口，再按 BRG 到共享 Mesh 的顺序释放资源。</summary>
+    private static void EndSession(bool immediate)
+    {
+        sessionEnding = true;
+        ClearMeshes(immediate);
+    }
+
+    private static void OnApplicationQuitting() => EndSession(false);
 
 #if UNITY_EDITOR
     /// <summary>脚本域重载和停止播放前清理，不能依赖 HideAndDontSave 被自动卸载。</summary>
@@ -112,12 +157,13 @@ public static class SharedSpriteMeshCache
     }
 
     /// <summary>在托管引用消失前同步销毁原生 Mesh。</summary>
-    private static void BeforeAssemblyReload() => ClearMeshes(true);
+    private static void BeforeAssemblyReload() => EndSession(true);
 
     /// <summary>停止播放时同步释放，包括资源加载尚未完成的会话。</summary>
     private static void OnPlayModeStateChanged(UnityEditor.PlayModeStateChange state)
     {
-        if (state == UnityEditor.PlayModeStateChange.ExitingPlayMode) ClearMeshes(true);
+        if (state == UnityEditor.PlayModeStateChange.ExitingPlayMode) EndSession(true);
+        else if (state == UnityEditor.PlayModeStateChange.EnteredEditMode) sessionEnding = false;
     }
 #endif
 

@@ -116,7 +116,7 @@ namespace FlatWorld.AIECS.Gameplay
         {
             if (proxy == null || proxy.Entity == Entity.Null ||
                 !_actors.TryGetValue(proxy.Identity, out EcologyActor actor) || actor.Proxy != proxy ||
-                actor.Entity != proxy.Entity || _bridge?.Simulation == null)
+                actor.Entity != proxy.Entity || !IsReady)
                 return false;
             AiecsSimulation simulation = _bridge.Simulation;
             simulation.Complete();

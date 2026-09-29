@@ -186,7 +186,7 @@ public partial class MonsterSpawnerManager
 
     #endregion
 
-    #region 事件生物 ECS 创建
+    #region 事件生物创建
 
     private bool TrySpawnEventCreature(
         string prefabId,
@@ -194,21 +194,18 @@ public partial class MonsterSpawnerManager
         out int actorGuid)
     {
         actorGuid = 0;
-        if (!AiRuntimeBackendService.UsesEntities(prefabId))
+        if (AiRuntimeBackendService.UsesEntities(prefabId))
         {
-            Debug.LogWarning($"[GameEvent] 物种 '{prefabId}' 未注册为 ECS Actor。", this);
-            return false;
+            IAiEcologyBackend backend = AiRuntimeBackendService.Ecology;
+            if (!AiRuntimeBackendService.UseEntities || backend == null ||
+                !backend.SupportsSpecies(prefabId) ||
+                backend.ResidentCount >= Mathf.Max(1, _settings.MaxLoadedEntityActors))
+                return false;
         }
-
-        IAiEcologyBackend backend = AiRuntimeBackendService.Ecology;
-        if (backend == null || !backend.SupportsSpecies(prefabId))
-        {
-            Debug.LogWarning($"[GameEvent] ECS 后端尚不支持物种 '{prefabId}'。", this);
+        else if (_monsterManager == null ||
+                 _monsterManager.Count >= Mathf.Max(1, _settings.MaxLoadedGameObjectActors))
             return false;
-        }
-        if (backend.ResidentCount >= Mathf.Max(1, _settings.MaxLoadedEntityActors))
-            return false;
-        return backend.TrySpawnEvent(prefabId, position, out actorGuid);
+        return AiRuntimeBackendService.TrySpawnDirect(prefabId, position, 0, out actorGuid);
     }
 
     #endregion

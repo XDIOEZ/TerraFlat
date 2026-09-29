@@ -17,10 +17,19 @@ public sealed class Mod_VesselHeating : Module, IInventoryHeatTreatment
 
     /// <summary>在原库存槽中处理液体；需要物品产出时先成功提交产物事务，再消耗液体。</summary>
     public bool ProcessHeat(Inventory input, Inventory output, float temperature, float seconds)
+        => InventoryVesselHeating.ProcessHeat(input, output, temperature, seconds);
+}
+
+/// <summary>所有热源共用的托管容器处理器；纯数据炉体无需创建 Module。</summary>
+public static class InventoryVesselHeating
+{
+    #region 库存加热
+    public static bool ProcessHeat(Inventory input, Inventory output, float temperature, float seconds)
     {
         bool handled = false;
         foreach (ItemSlot slot in input.Data.itemSlots)
         {
+            if (input.IsSlotBeingDragged(slot.Index)) continue;
             if (Mod_Mortar.IsCrucibleItem(slot.itemData))
             {
                 handled = true;
@@ -102,4 +111,5 @@ public sealed class Mod_VesselHeating : Module, IInventoryHeatTreatment
         transaction.Complete();
         return true;
     }
+    #endregion
 }

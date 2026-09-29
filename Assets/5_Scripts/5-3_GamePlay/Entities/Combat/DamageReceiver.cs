@@ -246,6 +246,7 @@ public partial class DamageReceiver : Module, IRemoteNetworkModule, IItemModuleD
     // 结算期间禁止回调重入，死亡标记在 Load 或显式复活时重置。
     private bool _resolvingDamage;
     private bool _deathHandled;
+    private bool _reportedInvalidCombatFaction; // 每次装载只报告一次非法阵营，避免连续命中刷屏。
     private Coroutine _deathCoroutine;
 
     #region Buff 受伤倍率
@@ -302,6 +303,7 @@ public partial class DamageReceiver : Module, IRemoteNetworkModule, IItemModuleD
         NormalizeStatRanges();
         BindHandStateEvent();
         _resolvingDamage = false;
+        _reportedInvalidCombatFaction = false;
         ResetDeathResolution();
         _deathConsumedByExternalHandler = false;
         lastDamageTime = double.NegativeInfinity;
@@ -611,8 +613,14 @@ public partial class DamageReceiver : Module, IRemoteNetworkModule, IItemModuleD
     {
         if (!CanMutateBodyState() || _resolvingDamage || _deathHandled || Hp <= 0f || item == null || !context.Attack.Source.IsValid) return -1f;
         var target = GameplayCombatBridge.Identity(item);
-        if (context.Attack.Source == target || context.Attack.Source.World != target.World || context.Attack.Source.Dimension != target.Dimension ||
-            FactionRelationService.GetRelation(context.Faction.ToString(), FactionRelationService.GetFactionId(item)) != FactionRelation.Hostile) return -1f;
+        if (context.Attack.Source == target || context.Attack.Source.World != target.World || context.Attack.Source.Dimension != target.Dimension) return -1f;
+        if (!FactionRelationService.TryGetCombatRelation(in context.Faction, FactionRelationService.GetFactionId(item),
+            out FactionRelation relation, out string factionError))
+        {
+            ReportInvalidCombatFaction(in context, factionError);
+            return -1f;
+        }
+        if (relation != FactionRelation.Hostile) return -1f;
         float rules = 1f;
         foreach (IIncomingDamageRule rule in incomingDamageRules)
         {
@@ -632,6 +640,26 @@ public partial class DamageReceiver : Module, IRemoteNetworkModule, IItemModuleD
                         buffManager.AddBuff(effect.Id.ToString(), Mathf.Max(1, effect.Stacks));
         }
         return result;
+    }
+
+    /// <summary>保留有限的原始字节和攻击身份，不再对异常长度的 Native 字符串调用 ToString。</summary>
+    private void ReportInvalidCombatFaction(in FlatWorld.Combat.CombatDamageContext context, string error)
+    {
+        if (_reportedInvalidCombatFaction) return;
+        _reportedInvalidCombatFaction = true;
+        Unity.Collections.FixedString128Bytes faction = context.Faction;
+        int count = Math.Min(16, Math.Min(faction.Length, faction.Capacity));
+        var prefix = new System.Text.StringBuilder(count * 3);
+        for (int i = 0; i < count; i++)
+        {
+            if (i > 0) prefix.Append(' ');
+            prefix.Append(faction[i].ToString("X2"));
+        }
+        var source = context.Attack.Source;
+        Debug.LogError($"[Combat] 已拒绝非法阵营命中，不修改生命或受伤冷却。{error} " +
+            $"source={source.Backend}:{source.Value}/{source.Generation} world={source.World} dimension={source.Dimension} " +
+            $"attack={context.Attack.Sequence}/{context.Attack.Window}/{context.Attack.Pulse} tick={context.Clock.Tick} " +
+            $"target={item?.itemData?.IDName}:{item?.itemData?.Guid} factionBytes={faction.Length} prefixHex={prefix}", this);
     }
 
     /// <summary>新旧攻击共享间隔、四类数值、难度、归因和原有生命提交/反馈链。</summary>

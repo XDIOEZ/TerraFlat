@@ -3,6 +3,7 @@
   "items": [
     {
       "id": "Crop_Base",
+      "entityRuntime": "resource",
       "abstract": true,
       "parent": "BasicItem_Base",
       "weight": 0.7,

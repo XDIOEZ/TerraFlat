@@ -7,7 +7,8 @@ using UnityEngine;
 /// <summary>单个生态物种使用的 AI 运行时后端。</summary>
 public enum AiRuntimeBackendKind
 {
-    Unsupported = 0,
+    Unsupported = -1,
+    GameObject = 0,
     Entities = 1
 }
 
@@ -81,7 +82,7 @@ public interface IAiEcologyBackend
 #region ECS 物种路由
 
 /// <summary>
-/// AI 后端路由。正式 Actor 目录统一归属 Entities，生成配置只决定何时何地出生；
+/// AI 后端路由。默认使用 GameObject，只有生成配置显式指定的物种才交给 Entities；
 /// 后端注册采用单实例所有权，避免开发入口和正式世界同时驱动两套 ECS World。
 /// </summary>
 public static class AiRuntimeBackendService
@@ -89,11 +90,11 @@ public static class AiRuntimeBackendService
     private static IAiEcologyBackend _ecology;
     private static readonly HashSet<string> EntitySpecies = new(StringComparer.OrdinalIgnoreCase);
 
-    public static bool UseEntities { get; set; } = true;
+    public static bool UseEntities { get; set; } = false;
     public static IAiEcologyBackend Ecology => _ecology;
     public static bool HasEntitiesRoutes => EntitySpecies.Count > 0;
 
-    /// <summary>当前已注册的 Actor 统一交给 ECS；普通生成器和蜂巢等直接生成入口使用同一归属。</summary>
+    /// <summary>按物种冻结后端，同一物种不能同时由 GameObject 和 ECS 接管。</summary>
     public static void ConfigureRoutes(IReadOnlyList<SpawnerConfig> configs)
     {
         if (configs == null)
@@ -102,6 +103,7 @@ public static class AiRuntimeBackendService
             return;
         }
 
+        var configured = new Dictionary<string, AiRuntimeBackendKind>(StringComparer.OrdinalIgnoreCase);
         var entitySpecies = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         for (int configIndex = 0; configIndex < configs.Count; configIndex++)
         {
@@ -116,18 +118,19 @@ public static class AiRuntimeBackendService
                 if (string.IsNullOrWhiteSpace(speciesId))
                     continue;
 
-                if (entry.RuntimeBackend != AiRuntimeBackendKind.Entities ||
-                    GameRes.Instance == null || !GameRes.Instance.ActorDefinitions.ContainsKey(speciesId))
+                if (entry.RuntimeBackend != AiRuntimeBackendKind.Entities &&
+                    entry.RuntimeBackend != AiRuntimeBackendKind.GameObject)
                     throw new InvalidOperationException(
-                        $"生态条目 {speciesId} 必须是已注册的 ECS Actor，后端={entry.RuntimeBackend}。");
-                entitySpecies.Add(speciesId);
+                        $"AI 物种 {speciesId} 的后端无效：{entry.RuntimeBackend}。");
+                if (configured.TryGetValue(speciesId, out AiRuntimeBackendKind existing) &&
+                    existing != entry.RuntimeBackend)
+                    throw new InvalidOperationException(
+                        $"AI 物种 {speciesId} 同时配置了 {existing} 与 {entry.RuntimeBackend} 后端。");
+                configured[speciesId] = entry.RuntimeBackend;
+                if (entry.RuntimeBackend == AiRuntimeBackendKind.Entities)
+                    entitySpecies.Add(speciesId);
             }
         }
-
-        // 普通生态规则未列出的 Actor（例如蜂巢成员）也必须归入同一 ECS 后端。
-        if (GameRes.Instance != null)
-            foreach (string speciesId in GameRes.Instance.ActorDefinitions.Keys)
-                entitySpecies.Add(speciesId);
 
         EntitySpecies.Clear();
         EntitySpecies.UnionWith(entitySpecies);
@@ -145,11 +148,117 @@ public static class AiRuntimeBackendService
         return !string.IsNullOrWhiteSpace(speciesId) && EntitySpecies.Contains(speciesId.Trim());
     }
 
-    /// <summary>物种归属是唯一权威，生成规则不能把已迁移 Actor 送回旧 GameObject 后端。</summary>
+    /// <summary>关闭 ECS 只暂停显式 ECS 物种，不改变其归属或偷偷创建第二套 AI。</summary>
     public static bool UsesEntities(SpawnerConfig.SpawnEntry entry)
     {
         return entry != null && UsesEntities(entry.PrefabName);
     }
+
+    #region 跨后端生物入口
+
+    /// <summary>GM、技能、事件与 MOD 共用出生入口，GameObject 必须完成 Load 后才能返回。</summary>
+    public static bool TrySpawnDirect(string speciesId, Vector3 position, int requestedGuid, out int actorGuid)
+    {
+        actorGuid = 0;
+        if (string.IsNullOrWhiteSpace(speciesId)) return false;
+        if (UsesEntities(speciesId))
+            return UseEntities && _ecology != null &&
+                   _ecology.TrySpawnDirect(speciesId, position, requestedGuid, out actorGuid);
+
+        ItemMgr manager = ItemMgr.Instance;
+        if (manager == null || GameRes.Instance == null ||
+            !GameRes.Instance.TryGetActorDefinition(speciesId, out _)) return false;
+        if (requestedGuid != 0 && (manager.GetItemByGuid(requestedGuid) != null ||
+            (_ecology != null && _ecology.TryGetActor(requestedGuid, out _, out _)))) return false;
+
+        Item item = null;
+        try
+        {
+            ItemData data = GameRes.Instance.CreateItemData(speciesId);
+            if (requestedGuid != 0) data.Guid = requestedGuid;
+            item = manager.InstantiateItem(data, position);
+            if (item == null) return false;
+            if (!item.IsInitialized) item.Load();
+            if (!TryGetGameObjectActor(item, out _))
+                throw new InvalidOperationException($"生物 {speciesId} 缺少已初始化的 GameObject AI。");
+            item.GetComponentInChildren<Mod_ItemDetector>(true)?.Update_Detector();
+            actorGuid = item.itemData.Guid;
+            return true;
+        }
+        catch (Exception exception)
+        {
+            if (item != null && !item.DestructionHandled)
+                manager.DespawnItem(item, saveData: false);
+            Debug.LogError($"[AI] 生成 {speciesId} 失败：{exception}");
+            return false;
+        }
+    }
+
+    /// <summary>只认绑定到当前 Item 的真实 AI，镜像与未初始化外壳不算 GameObject 生物。</summary>
+    public static bool TryGetGameObjectActor(Item item, out IAIActor actor)
+    {
+        actor = null;
+        if (item == null || item.DestructionHandled || !item.IsInitialized) return false;
+        foreach (MonoBehaviour behaviour in item.GetComponentsInChildren<MonoBehaviour>(true))
+            if (behaviour is IAIActor candidate && ReferenceEquals(candidate.ActorItem, item))
+            { actor = candidate; return true; }
+        return false;
+    }
+
+    public static bool TryGetActor(int actorGuid, out Vector3 position, out bool alive)
+    {
+        Item item = ItemMgr.Instance?.GetItemByGuid(actorGuid);
+        if (TryGetGameObjectActor(item, out IAIActor actor))
+        {
+            position = WorldTopologyRuntime.NormalizePosition(item.transform.position);
+            alive = actor.IsAlive;
+            return true;
+        }
+        position = default;
+        alive = false;
+        return _ecology != null && _ecology.TryGetActor(actorGuid, out position, out alive);
+    }
+
+    public static bool TrySetAdvanceCommand(int actorGuid, AIAdvanceCommand command)
+    {
+        Item item = ItemMgr.Instance?.GetItemByGuid(actorGuid);
+        if (TryGetGameObjectActor(item, out IAIActor actor))
+        {
+            if (!actor.IsAlive) return false;
+            foreach (MonoBehaviour behaviour in item.GetComponentsInChildren<MonoBehaviour>(true))
+                if (behaviour is IAIAdvanceCommandReceiver receiver)
+                { receiver.BeginAdvance(command); return true; }
+            return false;
+        }
+        return _ecology?.TrySetAdvanceCommand(actorGuid, command) == true;
+    }
+
+    public static bool TryClearAdvanceCommand(int actorGuid)
+    {
+        Item item = ItemMgr.Instance?.GetItemByGuid(actorGuid);
+        if (TryGetGameObjectActor(item, out _))
+        {
+            foreach (MonoBehaviour behaviour in item.GetComponentsInChildren<MonoBehaviour>(true))
+                if (behaviour is IAIAdvanceCommandCancellationReceiver receiver)
+                { receiver.CancelAdvance(); return true; }
+            return false;
+        }
+        return _ecology?.TryClearAdvanceCommand(actorGuid) == true;
+    }
+
+    public static bool TryDespawnActor(int actorGuid)
+    {
+        ItemMgr manager = ItemMgr.Instance;
+        Item item = manager?.GetItemByGuid(actorGuid);
+        if (TryGetGameObjectActor(item, out _))
+        {
+            manager.DespawnItem(item, saveData: false);
+            return true;
+        }
+        return _ecology?.TryDespawnActor(actorGuid) == true;
+    }
+
+    #endregion
 
     /// <summary>
     /// 尝试取得正式生态后端所有权。场景切换时 GameStartScene 会短暂创建第二份 WorldManager，

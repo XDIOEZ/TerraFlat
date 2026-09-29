@@ -56,6 +56,7 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
         public Mod_Building Building;
         public IVisualGroundOffset GroundOffsetProvider;
         public float NextCheck;
+        public bool InvalidGeometryReported;
     }
 
     /// <summary>机械子层只保存视觉代理，不创建 Item 或独立玩法对象。</summary>
@@ -65,6 +66,7 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
         public float NextCheck;
         public bool Seen;
         public int Revision = -1; // 未变化的静态 Sprite 不重复设置 MPB。
+        public bool InvalidGeometryReported;
     }
 
     #endregion
@@ -339,14 +341,13 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
         Matrix4x4 matrix = Matrix4x4.TRS(position, rotation, part.Scale);
         Bounds sourceBounds = ShadowFootprintResolver.MeasureVisibleWorldBounds(part.Sprite, matrix);
         float footY = part.Owner.Foot.y;
-        float height = Mathf.Max(0.01f, sourceBounds.max.y - footY);
-        Vector2 displacement = CurrentParameters.ShadowDirection * Mathf.Min(
-            CurrentParameters.MaximumDistance, height * CurrentParameters.LengthMultiplier);
-        Bounds projected = new Bounds();
-        projected.SetMinMax(new Vector3(sourceBounds.min.x + Mathf.Min(0f, displacement.x),
-                footY + Mathf.Min(0f, displacement.y), sourceBounds.min.z - 0.1f),
-            new Vector3(sourceBounds.max.x + Mathf.Max(0f, displacement.x),
-                footY + Mathf.Max(0f, displacement.y) + 0.02f, sourceBounds.max.z + 0.1f));
+        if (!TryCalculateProjectedBounds(sourceBounds, footY, 1f, out float height, out Bounds projected))
+        {
+            ReportInvalidGeometry(ref binding.InvalidGeometryReported, part.Sprite, sourceBounds, footY, 1f);
+            ReleaseMechanicalProxy(binding, true);
+            binding.NextCheck = Time.unscaledTime + OffscreenInterval;
+            return;
+        }
         if (!IsInView(projected, part.Owner.Layer))
         {
             ReleaseMechanicalProxy(binding, true);
@@ -434,14 +435,13 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
         float footY = ResolveFootY(owner, footprint, authoring, binding.ShadowVisual);
         Bounds sourceBounds = source.bounds;
         sourceBounds.center -= visualOffset;
-        float height = Mathf.Max(0.01f, sourceBounds.max.y - footY);
-        Vector2 displacement = CurrentParameters.ShadowDirection * Mathf.Min(CurrentParameters.MaximumDistance,
-            height * heightScale * CurrentParameters.LengthMultiplier);
-        Bounds projected = new Bounds();
-        projected.SetMinMax(new Vector3(sourceBounds.min.x + Mathf.Min(0f, displacement.x),
-                footY + Mathf.Min(0f, displacement.y), sourceBounds.min.z - 0.1f),
-            new Vector3(sourceBounds.max.x + Mathf.Max(0f, displacement.x),
-                footY + Mathf.Max(0f, displacement.y) + 0.02f, sourceBounds.max.z + 0.1f));
+        if (!TryCalculateProjectedBounds(sourceBounds, footY, heightScale, out float height, out Bounds projected))
+        {
+            ReportInvalidGeometry(ref binding.InvalidGeometryReported, source, sourceBounds, footY, heightScale);
+            ReleaseProxy(binding);
+            binding.NextCheck = Time.unscaledTime + OffscreenInterval;
+            return;
+        }
         if (!IsInView(projected, source.gameObject.layer))
         {
             ReleaseProxy(binding);
@@ -479,6 +479,7 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
     /// <summary>所有游戏相机共用代理，包含环绕世界镜像相机；不依赖主体 isVisible。</summary>
     private bool IsInView(Bounds bounds, int layer)
     {
+        if (!IsValidBounds(bounds)) return false;
         for (int i = 0; i < cameraCount; i++)
         {
             Camera camera = cameras[i];
@@ -489,6 +490,47 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
             if (GeometryUtility.TestPlanesAABB(cameraFrustums[i], bounds)) return true;
         }
         return false;
+    }
+
+    /// <summary>物品和机械共用投影计算，非法输入与溢出不得进入剔除、排序或 Renderer.bounds。</summary>
+    private bool TryCalculateProjectedBounds(Bounds source, float footY, float heightScale,
+        out float height, out Bounds projected)
+    {
+        height = 0f;
+        projected = default;
+        if (!CurrentParameters.IsValid || !IsValidBounds(source) || !IsFinite(footY) ||
+            !IsFinite(heightScale) || heightScale <= 0f)
+            return false;
+        height = Mathf.Max(0.01f, source.max.y - footY);
+        float length = height * heightScale * CurrentParameters.LengthMultiplier;
+        if (!IsFinite(height) || !IsFinite(length)) return false;
+        Vector2 displacement = CurrentParameters.ShadowDirection * Mathf.Min(CurrentParameters.MaximumDistance, length);
+        projected.SetMinMax(new Vector3(source.min.x + Mathf.Min(0f, displacement.x),
+                footY + Mathf.Min(0f, displacement.y), source.min.z - 0.1f),
+            new Vector3(source.max.x + Mathf.Max(0f, displacement.x),
+                footY + Mathf.Max(0f, displacement.y) + 0.02f, source.max.z + 0.1f));
+        return IsValidBounds(projected);
+    }
+
+    private static bool IsFinite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);
+    private static bool IsFinite(Vector3 value) => IsFinite(value.x) && IsFinite(value.y) && IsFinite(value.z);
+
+    private static bool IsValidBounds(Bounds bounds)
+    {
+        Vector3 extents = bounds.extents;
+        return IsFinite(bounds.center) && IsFinite(extents) &&
+            extents.x >= 0f && extents.y >= 0f && extents.z >= 0f &&
+            IsFinite(bounds.min) && IsFinite(bounds.max) &&
+            IsFinite(bounds.center.sqrMagnitude) && IsFinite(extents.sqrMagnitude);
+    }
+
+    /// <summary>每个绑定只诊断一次异常源，后续低频重试不刷屏，也不改写实体位置或存档。</summary>
+    private void ReportInvalidGeometry(ref bool reported, Object source, Bounds bounds, float footY, float heightScale)
+    {
+        if (reported) return;
+        reported = true;
+        Debug.LogWarning($"[SunShadow] 跳过无效投影：source={source.name}, bounds={bounds}, " +
+            $"footY={footY}, heightScale={heightScale}, sun={CurrentParameters.ShaderVector}", source);
     }
 
     /// <summary>所有物品都从可见轮廓求脚点；显式偏移不能把阴影推离贴图底边。</summary>

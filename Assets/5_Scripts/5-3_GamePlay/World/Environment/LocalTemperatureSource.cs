@@ -17,6 +17,8 @@ public sealed class LocalTemperatureSource : MonoBehaviour
     private float celsiusOffset = 15f;
     private float nextPublishTime;
     private TemperatureMgr registeredManager;
+    public float Radius => radius;
+    public float CelsiusOffset => celsiusOffset;
 
     #endregion
 

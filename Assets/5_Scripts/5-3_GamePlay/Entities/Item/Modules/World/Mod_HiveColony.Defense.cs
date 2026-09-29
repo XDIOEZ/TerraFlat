@@ -62,19 +62,22 @@ public sealed partial class Mod_HiveColony
     /// <summary>护巢仇恨不受领地、距离或昼夜限制。</summary>
     private void AlertAllResidentsToAttacker(Item attacker)
     {
-        IAiEcologyBackend backend = AiRuntimeBackendService.Ecology;
-        foreach (int guid in residents)
-            backend?.TrySetHiveActorDirective(guid, false, 1f, attacker.transform.position, true);
+        foreach (Item resident in residents.Values)
+        {
+            Mod_BeeBehavior bee = resident?.itemMods?.GetMod_ByID<Mod_BeeBehavior>(Mod_BeeBehavior.ModuleId);
+            bee?.ForceHiveDefenseTarget(attacker);
+        }
     }
 
     /// <summary>蜂巢死亡后保留所有蜜蜂本体，清除 HomeHiveGuid，使其后续能作为独立实体保存。</summary>
     private void ReleaseResidentsAfterHiveDestroyed(Item attacker)
     {
         Vector2 destroyedHome = HomePosition;
-        Vector2 defense = attacker != null ? (Vector2)attacker.transform.position : default;
-        IAiEcologyBackend backend = AiRuntimeBackendService.Ecology;
-        foreach (int guid in residents)
-            backend?.TryReleaseHiveActor(guid, destroyedHome, defense, attacker != null);
+        foreach (Item resident in residents.Values)
+        {
+            Mod_BeeBehavior bee = resident?.itemMods?.GetMod_ByID<Mod_BeeBehavior>(Mod_BeeBehavior.ModuleId);
+            bee?.DetachFromDestroyedColony(attacker, destroyedHome);
+        }
     }
 
     #endregion

@@ -138,38 +138,60 @@ public partial class MonsterSpawnerManager
         };
     }
 
-    /// <summary>只读报告正式 ECS 居民与生态进度，不再统计旧 Item 怪物注册表。</summary>
+    /// <summary>冷路径审计，独立重数注册表后对照缓存；不得用这次审计修正计数。</summary>
     public object CaptureSpawnerDiagnostics()
     {
-        IAiEcologyBackend backend = AiRuntimeBackendService.Ecology;
+        var registrations = new List<MonsterManager.Registration>();
+        _monsterManager?.CopyRegistrations(registrations);
+        var groups = new Dictionary<SpawnerConfig, int>();
+        var species = new Dictionary<string, int>(StringComparer.Ordinal);
+        int active = 0, expectedLimited = 0, invalid = 0, mismatches = 0;
+        for (int i = 0; i < registrations.Count; i++)
+        {
+            var registration = registrations[i];
+            if (registration.Item == null || registration.Item.DestructionHandled) invalid++;
+            if (!MonsterManager.IsActiveForPopulationLimits(registration.Item)) continue;
+            active++;
+            groups.TryGetValue(registration.Config, out int groupCount);
+            groups[registration.Config] = groupCount + 1;
+            species.TryGetValue(registration.SpeciesId, out int speciesCount);
+            species[registration.SpeciesId] = speciesCount + 1;
+            if (!registration.Config.UnboundedDailyGrowth && !registration.Config.IgnorePopulationLimits)
+                expectedLimited++;
+        }
+
         var configs = new List<object>();
         foreach (SpawnerConfig config in _spawnerConfigs)
         {
             if (config == null) continue;
-            var species = new List<object>();
+            groups.TryGetValue(config, out int expectedGroup);
+            int cachedGroup = _monsterManager?.GetGroupCount(config) ?? 0;
+            if (cachedGroup != expectedGroup) mismatches++;
             foreach (var entry in config.SpawnEntries)
             {
                 if (entry == null) continue;
-                species.Add(new { id = entry.PrefabName,
-                    active = backend?.GetSpeciesCount(entry.PrefabName) ?? 0 });
+                species.TryGetValue(entry.PrefabName, out int expectedSpecies);
+                if ((_monsterManager?.GetSpeciesCount(entry.PrefabName) ?? 0) != expectedSpecies) mismatches++;
             }
             _runtimeStates.TryGetValue(GetConfigKey(config), out var state);
             configs.Add(new
             {
-                id = GetConfigKey(config), active = backend?.GetGroupCount(config) ?? 0, species,
+                id = GetConfigKey(config), active = cachedGroup, expectedActive = expectedGroup,
                 effectiveLimit = GetEffectiveGroupLimit(config),
                 ignoreLimits = config.IgnorePopulationLimits, unbounded = config.UnboundedDailyGrowth,
                 pending = state?.PendingSpawnCount ?? 0, replacements = state?.PendingReplacementCount ?? 0,
                 budget = state?.AvailableBudget ?? -1, lifetimeSpawns = state?.LifetimeSpawnCount ?? 0
             });
         }
+        if ((_monsterManager?.PopulationLimitedCount ?? 0) != expectedLimited) mismatches++;
         return new
         {
             ready = _gameManager != null && _gameManager.IsGameplayReady,
-            enabled, backendReady = backend?.IsReady == true,
-            registered = backend?.ResidentCount ?? 0,
-            activePopulationLimited = backend?.PopulationLimitedCount ?? 0,
-            maxLoaded = _settings.MaxLoadedEntityActors,
+            enabled, registered = registrations.Count, active, expectedLimited, invalid, mismatches,
+            dormant = _chunkDormantItems.Count,
+            parked = SaveDataMgr.Instance?.ParkedRuntimeAiCount ?? 0,
+            maxLoaded = _settings.MaxLoadedGameObjectActors,
+            farAwayTimers = _farAwaySince.Count,
             retryTimers = _nextSpawnRetryTime.Count, recoveryTimers = _nextRecoveryCheckTime.Count,
             runtimeStates = _runtimeStates.Count, configs
         };

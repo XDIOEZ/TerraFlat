@@ -52,6 +52,9 @@ public static partial class FarmlandSystem
     /// <summary>活着的植株和资源节点占格；普通掉落物与玩家不阻止农业操作。</summary>
     public static bool HasWorldPlant(Vector2Int cell)
     {
+        cell = WorldTopologyRuntime.NormalizeCell(cell);
+        if (FlatWorld.NaturalEntities.NaturalEntityEcsService.HasResourceAtCell(cell)) return true;
+        if (ItemMgr.Instance == null) return false;
         ItemMgr.Instance.QueryItemsInCircleNonAlloc(new Vector2(cell.x + 0.5f, cell.y + 0.5f),
             2f, ~0, null, occupancyBuffer, occupancyDedupe);
         try

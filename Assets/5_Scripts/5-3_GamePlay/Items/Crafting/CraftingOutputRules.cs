@@ -98,10 +98,15 @@ public static class CraftedDurabilityQuality
             return;
 
         float ratio = receiver.MaxHp > 0f ? Mathf.Clamp01(receiver.Hp / receiver.MaxHp) : 1f;
-        float targetMaxHp = Mathf.Max(0.01f, definition.Health.MaxHp) * multiplier;
+        float targetMaxHp = ResolveMaximumHp(definition.Health.MaxHp, item.itemData);
         receiver.MaxHp = targetMaxHp;
         receiver.Hp = targetMaxHp * ratio;
     }
+
+    /// <summary>普通 Item 与数据机器共用制作品质换算，始终从定义基础生命计算而不叠乘已存生命。</summary>
+    public static float ResolveMaximumHp(float definitionMaximumHp, ItemData itemData)
+        => Mathf.Max(0.01f, definitionMaximumHp) *
+           NormalizeMultiplier(itemData?.CraftedDurabilityMultiplier ?? DefaultMultiplier);
 
     private static float NormalizeMultiplier(float multiplier)
     {

@@ -68,18 +68,22 @@ public sealed class WaterVesselPanel : MonoBehaviour, IPointerDownHandler, IDrag
     #endregion
 
     private BasePanel panel; // 通用面板生命周期。
-    private Mod_WaterVessel vessel; // 当前目标液体容器。
+    private ILiquidVessel vessel; // 手持与数据机器共用容器领域契约。
     private Item actor; // 操作者。
     private TextMeshProUGUI title, hint; // 当前容器名称与通用操作提示。
     private TextMeshProUGUI status; // 水质、份数与提示。
     private Button drink; // 根据液体定义与余量启用。
     private static WaterVesselPanel current; // 世界 UI 下的一份面板实例。
+    public static bool IsShowing(ILiquidVessel target)
+        => current != null && ReferenceEquals(current.vessel, target) && current.panel != null && current.panel.IsOpen();
+    public static void CloseTarget(ILiquidVessel target)
+    { if (current != null && ReferenceEquals(current.vessel, target)) current.Close(); }
     private float nextRefresh; // 可见时五次每秒刷新，避免逐帧生成文本。
     private RectTransform vesselArt; // 可摇摆的陶罐切面根节点。
     private RectTransform vesselGestureFrame; // 不随罐体旋转的手势坐标系。
     private WaterVesselPourGraphic pourGraphic; // 罐口外可见的分段液流。
     private VesselContentsView contentsView; // 可选固体库存的物理槽位表现。
-    private Mod_VesselContents contents; // 当前容器内独立持久化的固体库存。
+    private IVesselContents contents; // 当前容器内独立持久化的固体库存。
     private int pourPointerId = InvalidPointerId; // 当前占用摇摆手势的触点。
     private Vector2 pourStartLocalPoint; // 按下位置；中心附近起手时用于二维线性回退。
     private Vector2 pourStartRadial; // 按下位置相对罐体中心的向量，用于半圆/圆弧手势。
@@ -102,7 +106,7 @@ public sealed class WaterVesselPanel : MonoBehaviour, IPointerDownHandler, IDrag
         Mod_WaterVessel.OpenRequested += Show;
     }
     /// <summary>通过资源注册表实例化正式面板，并切换当前目标。</summary>
-    private static void Show(Mod_WaterVessel target, Item owner)
+    public static void Show(ILiquidVessel target, Item owner)
     {
         if (current == null)
             current = UIManager.Instance.CreatePanelFromGameObject(GameRes.Instance.GetPrefab(PrefabKey)).GetComponent<WaterVesselPanel>();
@@ -110,13 +114,14 @@ public sealed class WaterVesselPanel : MonoBehaviour, IPointerDownHandler, IDrag
         current.vessel = target;
         target.Changed += current.Refresh;
         current.actor = owner;
-        current.ApplyAppearance(target.item.itemData.IDName);
+        current.ApplyAppearance(target.ItemData.IDName);
         BuildingPanelActions buildingActions = current.GetComponent<BuildingPanelActions>();
         if (buildingActions == null)
             throw new InvalidOperationException("水容器面板缺少 BuildingPanelActions，正式 Prefab 未完成建筑操作绑定。");
-        buildingActions.Bind(target.item);
+        if (target.Machine != null) buildingActions.BindMechanical(target.Machine);
+        else buildingActions.Bind(target.Item);
         current.panel.Open();
-        current.contents = target.item.itemMods.GetMod_ByID<Mod_VesselContents>(Mod_VesselContents.ModuleId);
+        current.contents = target.ContentsSource;
         current.contentsView.Bind(current.contents);
         if (current.contents != null)
         {
@@ -183,7 +188,7 @@ public sealed class WaterVesselPanel : MonoBehaviour, IPointerDownHandler, IDrag
     private void Refresh()
     {
         title.text = GameRes.Instance != null &&
-                     GameRes.Instance.TryGetItemDefinition(vessel.item.itemData.IDName, out RuntimeItemDefinition definition)
+                     GameRes.Instance.TryGetItemDefinition(vessel.ItemData.IDName, out RuntimeItemDefinition definition)
             ? definition.DisplayName
             : FlatWorldLocalizationService.GetUiText("水容器");
         hint.text = FlatWorldLocalizationService.GetUiText(contents == null

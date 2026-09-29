@@ -237,10 +237,19 @@ public partial class Mover : Module
 
     private bool _wasMoving = false;
 
-    /// <summary>物理结算后检测实际世界单位格变化；无订阅者时不做位置换算。</summary>
+    /// <summary>每个物理步先约束纯数据阻挡，再检测上一物理步实际到达的世界单位格。</summary>
     private void FixedUpdate()
     {
-        if (WorldUnitChanged == null || rb == null)
+        if (rb == null)
+            return;
+
+        // 一帧可补跑多个物理步，必须按当前刚体位置重新扫掠，不能复用 ModUpdate 的一次预测。
+        if (item != null && item.IsInitialized && !item.DestructionHandled &&
+            rb.simulated && CarrierSource == null)
+            rb.velocity = WorldMotionSystem.ResolveStaticContactVelocity(this, rb.position,
+                rb.velocity, Time.fixedDeltaTime);
+
+        if (WorldUnitChanged == null)
             return;
 
         Vector2 position = WorldTopologyRuntime.NormalizePosition(rb.position);

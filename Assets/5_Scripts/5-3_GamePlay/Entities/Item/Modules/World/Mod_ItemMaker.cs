@@ -48,6 +48,7 @@ public partial class Mod_Production : Module, IEnvironmentAdjustable
         public Vector2 Random_ProductionTime = new Vector2(0f, 1000f);
         [Tooltip("是否已经完成首次环境随机初始化")]
         public bool IsInitialized;
+        public uint EntityRandomState; // Entity 库存生产的随机流随运行态保存。
 
         public void RandomInitialize()
         {

@@ -41,7 +41,8 @@ internal static class ChunkBatchRendererGroupService
         MechanicalUpperMotionA,
         MechanicalUpperMotionB,
         MechanicalUpperFront,
-        NaturalStatic
+        NaturalStatic,
+        NaturalShadow
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -106,12 +107,12 @@ internal static class ChunkBatchRendererGroupService
     static ChunkBatchRendererGroupService()
     {
         // 资源会话结束必须先注销 BRG；共享缓存本身不依赖地形后端。
-        SharedSpriteMeshCache.Clearing += ResetStatics;
+        SharedSpriteMeshCache.Clearing += OnSharedMeshesClearing;
     }
 
     internal static void RegisterOwner(ChunkTilemapRenderer owner, Bounds worldBounds)
     {
-        if (owner == null)
+        if (owner == null || SharedSpriteMeshCache.IsSessionEnding)
             return;
         EnsureBackend().RegisterOwner(owner, worldBounds);
     }
@@ -129,8 +130,7 @@ internal static class ChunkBatchRendererGroupService
     {
         if (backend == null || backend.OwnerCount != 0)
             return;
-        backend.Dispose();
-        backend = null;
+        ReleaseBackend(false);
     }
 
     internal static void SetVisual(ChunkTilemapRenderer owner, int slotKey, Visual visual)
@@ -171,13 +171,19 @@ internal static class ChunkBatchRendererGroupService
     }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetStatics()
+    private static void ResetStatics() => ReleaseBackend(false);
+
+    private static void OnSharedMeshesClearing() => ReleaseBackend(!SharedSpriteMeshCache.IsSessionEnding);
+
+    /// <summary>正常退出静默释放；只有运行中丢弃仍有 Owner 的后端才报告异常重建。</summary>
+    private static void ReleaseBackend(bool reportActiveReset)
     {
-        if (RenderDebugEnabled && backend != null)
-            Debug.LogWarning("[ChunkRenderDebug] BRG backend 正在 Reset；现有 ChunkView 的基础地块表现需要重新登记。 " +
-                             backend.BuildDebugSummary());
-        backend?.Dispose();
+        Backend previous = backend;
         backend = null;
+        if (reportActiveReset && Application.isPlaying && RenderDebugEnabled && previous != null && previous.OwnerCount > 0)
+            Debug.LogWarning("[ChunkRenderDebug] BRG backend 正在 Reset；现有 ChunkView 的 BRG 表现需要重新登记。 " +
+                             previous.BuildDebugSummary());
+        previous?.Dispose();
     }
 
     private static Backend EnsureBackend() => backend ??= new Backend();
@@ -517,7 +523,8 @@ internal static class ChunkBatchRendererGroupService
             };
             int queuePriority = ResolveRenderQueuePriority(layer);
             var key = new MaterialKey(template.GetInstanceID(), sourceMaterial.GetInstanceID(),
-                texture != null ? texture.GetInstanceID() : 0, queuePriority);
+                texture != null ? texture.GetInstanceID() : 0, queuePriority,
+                layer == VisualLayer.NaturalStatic || layer == VisualLayer.NaturalShadow ? 2 : IsMechanicalLayer(layer) ? 1 : 0);
             if (materials.TryGetValue(key, out MaterialRegistration registration))
                 return registration;
 
@@ -540,6 +547,9 @@ internal static class ChunkBatchRendererGroupService
                 runtimeMaterial.DisableKeyword(GrassSwayKeyword);
             if (IsMechanicalLayer(layer)) runtimeMaterial.EnableKeyword(MechanicalKeyword);
             else runtimeMaterial.DisableKeyword(MechanicalKeyword);
+            if (layer == VisualLayer.NaturalStatic || layer == VisualLayer.NaturalShadow)
+                runtimeMaterial.EnableKeyword("_CHUNK_RESOURCE");
+            else runtimeMaterial.DisableKeyword("_CHUNK_RESOURCE");
             if (layer == VisualLayer.Ground)
                 ApplyGroundElevationPreference(runtimeMaterial);
             BatchMaterialID id = rendererGroup.RegisterMaterial(runtimeMaterial);
@@ -789,28 +799,45 @@ internal static class ChunkBatchRendererGroupService
                 disposed = true;
                 GroundElevationShadowSettings.Changed -= ApplyGroundElevationPreference;
 
-                for (int i = 0; i < orderedBatches.Count; i++)
-                    orderedBatches[i].Dispose();
-                orderedBatches.Clear();
-                batches.Clear();
-                ownerHandles.Clear();
-                ownerCullingById.Clear();
-                activeOwnerCullingStates.Clear();
-                batchVisibleInstances.Clear();
-
-                foreach (MaterialRegistration registration in materials.Values)
+                try
                 {
-                    rendererGroup.UnregisterMaterial(registration.Id);
-                    DestroyRuntimeObject(registration.Material);
+                    for (int i = 0; i < orderedBatches.Count; i++)
+                    {
+                        try { orderedBatches[i].Dispose(); }
+                        catch (Exception exception) { Debug.LogException(exception); }
+                    }
+                    foreach (MaterialRegistration registration in materials.Values)
+                    {
+                        try { rendererGroup.UnregisterMaterial(registration.Id); }
+                        catch (Exception exception) { Debug.LogException(exception); }
+                        try { DestroyRuntimeObject(registration.Material); }
+                        catch (Exception exception) { Debug.LogException(exception); }
+                    }
+                    foreach (MeshRegistration registration in meshes.Values)
+                    {
+                        try { rendererGroup.UnregisterMesh(registration.Id); }
+                        catch (Exception exception) { Debug.LogException(exception); }
+                    }
                 }
-                materials.Clear();
-
-                foreach (MeshRegistration registration in meshes.Values)
+                finally
                 {
-                    rendererGroup.UnregisterMesh(registration.Id);
+                    // 原生组必须独立释放，不能被某一批次的清理异常留在旧脚本域。
+                    try { rendererGroup.Dispose(); }
+                    finally
+                    {
+                        orderedBatches.Clear();
+                        batches.Clear();
+                        ownerHandles.Clear();
+                        ownerCullingById.Clear();
+                        activeOwnerCullingStates.Clear();
+                        batchVisibleInstances.Clear();
+                        ownerRemovalBatches.Clear();
+                        bulkSubmitBatches.Clear();
+                        bulkSubmitDepth = 0;
+                        materials.Clear();
+                        meshes.Clear();
+                    }
                 }
-                meshes.Clear();
-                rendererGroup.Dispose();
             }
         }
 
@@ -833,7 +860,8 @@ internal static class ChunkBatchRendererGroupService
             VisualLayer.SnowWall => 5,
             VisualLayer.Grass => 5,
             VisualLayer.GroundCover => 6,
-            VisualLayer.NaturalStatic => 5,
+            VisualLayer.NaturalStatic => 7,
+            VisualLayer.NaturalShadow => 5,
             VisualLayer.MechanicalLowerBase => 7,
             VisualLayer.MechanicalLowerMotionA => 8,
             VisualLayer.MechanicalLowerMotionB => 9,
@@ -849,7 +877,8 @@ internal static class ChunkBatchRendererGroupService
         private static int ResolveRenderQueuePriority(VisualLayer layer) => layer switch
         {
             VisualLayer.SnowWall or VisualLayer.Grass or VisualLayer.GroundCover or
-                VisualLayer.NaturalStatic => 5,
+                VisualLayer.NaturalShadow => 5,
+            VisualLayer.NaturalStatic => 6,
             VisualLayer.MechanicalLowerBase or VisualLayer.MechanicalLowerMotionA or
                 VisualLayer.MechanicalLowerMotionB or VisualLayer.MechanicalLowerFront or
                 VisualLayer.MechanicalUpperBase or VisualLayer.MechanicalUpperMotionA or
@@ -1059,12 +1088,14 @@ internal static class ChunkBatchRendererGroupService
             {
                 if (buffer == null)
                     return;
-                backend.rendererGroup.RemoveBatch(BatchId);
-                buffer.Dispose();
+                GraphicsBuffer previous = buffer;
                 buffer = null;
                 gpuData.Clear();
                 owners.Clear();
                 sortingPositions.Clear();
+                bulkDirtyIndices.Clear();
+                try { backend.rendererGroup.RemoveBatch(BatchId); }
+                finally { previous.Dispose(); }
             }
         }
 
@@ -1130,23 +1161,25 @@ internal static class ChunkBatchRendererGroupService
 
         private readonly struct MaterialKey : IEquatable<MaterialKey>
         {
-            public MaterialKey(int templateId, int sourceId, int textureId, int priority)
+            public MaterialKey(int templateId, int sourceId, int textureId, int priority, int variant)
             {
                 TemplateId = templateId;
                 SourceId = sourceId;
                 TextureId = textureId;
                 Priority = priority;
+                Variant = variant;
             }
 
             private int TemplateId { get; }
             private int SourceId { get; }
             private int TextureId { get; }
             private int Priority { get; }
+            private int Variant { get; }
 
             public bool Equals(MaterialKey other) => TemplateId == other.TemplateId && SourceId == other.SourceId &&
-                                                     TextureId == other.TextureId && Priority == other.Priority;
+                                                     TextureId == other.TextureId && Priority == other.Priority && Variant == other.Variant;
             public override bool Equals(object obj) => obj is MaterialKey other && Equals(other);
-            public override int GetHashCode() => HashCode.Combine(TemplateId, SourceId, TextureId, Priority);
+            public override int GetHashCode() => HashCode.Combine(TemplateId, SourceId, TextureId, Priority, Variant);
         }
 
         private readonly struct MeshRegistration

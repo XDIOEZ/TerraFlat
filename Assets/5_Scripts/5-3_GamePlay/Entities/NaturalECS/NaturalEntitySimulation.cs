@@ -77,7 +77,16 @@ namespace FlatWorld.NaturalEntities
         public bool IsCreated => world.IsCreated;
         public int Count => entities.Count;
         public EntityManager Manager => world.EntityManager;
-        public bool Contains(int id) => IsCreated && entities.ContainsKey(id);
+        public bool Contains(int id) => IsCreated && entities.TryGetValue(id, out Entity entity) && Manager.Exists(entity);
+        public World World => world;
+        public Entity GetEntity(int id) { Complete(); return entities[id]; }
+
+        public DynamicBuffer<T> Buffer<T>(int id) where T : unmanaged, IBufferElementData
+        {
+            Complete();
+            Entity entity = entities[id];
+            return Manager.HasComponent<T>(entity) ? Manager.GetBuffer<T>(entity) : Manager.AddBuffer<T>(entity);
+        }
 
         public void Create(int runtimeId, NaturalEntityBody body, AiecsVital? health,
             EntityGrowth? growth, EntityClimate? climate, EntityHarvestRequirement? harvest)

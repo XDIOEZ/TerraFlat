@@ -109,22 +109,28 @@ public sealed class ActorShadowManager : SingletonMono<ActorShadowManager>
         ItemMgr.RuntimeItemDespawning -= UnregisterActor;
         Item.RuntimeStructureChanged -= RefreshActor;
         ClearBindings();
-        shadowBatch?.Dispose();
-        shadowBatch = null;
-        mechanicalShadowBatch?.Dispose();
-        mechanicalShadowBatch = null;
+        ReleaseBatches();
 
         base.OnDestroy();
     }
 
-    /// <summary>组件停用时立即清除上一帧 BRG 可见实例。</summary>
+    /// <summary>脚本重载可能不调用 OnDestroy，停用时必须释放原生 BRG 而不是只隐藏。</summary>
     private void OnDisable()
     {
         ItemMgr.RuntimeItemInstantiated -= RegisterActor;
         ItemMgr.RuntimeItemDespawning -= UnregisterActor;
         Item.RuntimeStructureChanged -= RefreshActor;
-        shadowBatch?.Hide();
-        mechanicalShadowBatch?.Hide();
+        ReleaseBatches();
+    }
+
+    private void ReleaseBatches()
+    {
+        ContactShadowBatchRenderer actors = shadowBatch;
+        ContactShadowBatchRenderer machines = mechanicalShadowBatch;
+        shadowBatch = null;
+        mechanicalShadowBatch = null;
+        try { actors?.Dispose(); }
+        finally { machines?.Dispose(); }
     }
 
     #endregion
@@ -134,7 +140,7 @@ public sealed class ActorShadowManager : SingletonMono<ActorShadowManager>
     /// <summary>为符合条件的角色、落地植物或世界物品建立轻量阴影绑定。</summary>
     public void RegisterActor(Item item)
     {
-        if (this == null)
+        if (this == null || !isActiveAndEnabled)
             return;
 
         if (item == null || bindings.ContainsKey(item) ||

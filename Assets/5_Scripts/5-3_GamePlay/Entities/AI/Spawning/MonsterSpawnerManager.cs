@@ -159,7 +159,7 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
                 if (backend == null || !backend.PrepareWorld(_spawnerConfigs))
                 {
                     Debug.LogError(
-                        "[MonsterSpawnerManager] AIECS 物种后端未就绪；生物不会回退到旧 GameObject AI。",
+                        "[MonsterSpawnerManager] AIECS 物种后端未就绪；这些物种不会回退 GameObject，其他 GameObject 生物继续运行。",
                         this);
                 }
             }
@@ -326,7 +326,9 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
 
         saveData.MonsterSpawnerData ??= new MonsterSpawnerSaveData();
         saveData.MonsterSpawnerData.ConfigStates = _runtimeStates ?? new Dictionary<string, SpawnerProgressSaveData>();
-        AiRuntimeBackendService.Ecology?.CaptureResidents(saveData.MonsterSpawnerData);
+        // ECS 停用时保留原有冷快照，不让未启动的后端覆盖历史居民。
+        if (AiRuntimeBackendService.UseEntities && AiRuntimeBackendService.HasEntitiesRoutes)
+            AiRuntimeBackendService.Ecology?.CaptureResidents(saveData.MonsterSpawnerData);
     }
 
     private void BindSaveData(GameSaveData saveData)
@@ -656,6 +658,10 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
         if (config.RequireGlobalDarkness && !IsGlobalDark(sceneName))
             return false;
 
+        if (_monsterManager.Count >= Mathf.Max(1, _settings.MaxLoadedGameObjectActors) &&
+            !UsesEntityPopulation(config))
+            return false;
+
         if (!TrySpawnOne(config, state))
         {
             int remaining = _remainingSearchAttempts.TryGetValue(config, out int value)
@@ -774,15 +780,19 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
             return false;
         }
 
-        if (!AiRuntimeBackendService.UsesEntities(entry) ||
-            !AiRuntimeBackendService.UseEntities ||
-            AiRuntimeBackendService.Ecology == null ||
-            !AiRuntimeBackendService.Ecology.SupportsSpecies(entry.PrefabName))
+        if (AiRuntimeBackendService.UsesEntities(entry) &&
+            (!AiRuntimeBackendService.UseEntities ||
+             AiRuntimeBackendService.Ecology == null ||
+             !AiRuntimeBackendService.Ecology.SupportsSpecies(entry.PrefabName)))
         {
             return false;
         }
 
-        if (AiRuntimeBackendService.Ecology.ResidentCount >= Mathf.Max(1, _settings.MaxLoadedEntityActors))
+        if (!AiRuntimeBackendService.UsesEntities(entry) &&
+            _monsterManager.Count >= Mathf.Max(1, _settings.MaxLoadedGameObjectActors))
+            return false;
+        if (AiRuntimeBackendService.UsesEntities(entry) &&
+            AiRuntimeBackendService.Ecology.ResidentCount >= Mathf.Max(1, _settings.MaxLoadedEntityActors))
             return false;
 
          int speciesLimit = GameDifficultyService.ScaleCount(
@@ -909,10 +919,79 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
         SpawnerConfig.SpawnEntry entry,
         Vector3 spawnPosition)
     {
-        SpawnerConfig owner = FindConfigForEntry(entry);
-        return AiRuntimeBackendService.UsesEntities(entry) &&
-               AiRuntimeBackendService.UseEntities && owner != null &&
-               AiRuntimeBackendService.Ecology?.TrySpawn(owner, entry, spawnPosition) == true;
+        if (AiRuntimeBackendService.UsesEntities(entry))
+        {
+            SpawnerConfig owner = FindConfigForEntry(entry);
+            return AiRuntimeBackendService.UseEntities &&
+                   owner != null && AiRuntimeBackendService.Ecology != null &&
+                   AiRuntimeBackendService.Ecology.TrySpawn(owner, entry, spawnPosition);
+        }
+
+        Item spawnedItem = null;
+        try
+        {
+            spawnedItem = _itemManager.InstantiateItem(
+                entry.PrefabName,
+                spawnPosition,
+                Quaternion.identity,
+                Vector3.one);
+
+            if (spawnedItem == null)
+                return false;
+
+            spawnedItem.Load();
+            ApplySpawnInitialization(spawnedItem, entry);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            if (spawnedItem != null && !spawnedItem.DestructionHandled && _itemManager != null)
+                _itemManager.DespawnItem(spawnedItem, saveData: false);
+
+            Debug.LogError($"[MonsterSpawnerManager] 生成 {entry?.PrefabName} 失败: {ex}");
+            return false;
+        }
+    }
+
+    private static void ApplySpawnInitialization(
+        Item spawnedItem,
+        SpawnerConfig.SpawnEntry entry)
+    {
+        SpawnerConfig.SpawnerNutritionInitialization nutritionConfig = entry?.Initialization?.Nutrition;
+        if (spawnedItem == null || nutritionConfig == null || !nutritionConfig.Enabled)
+            return;
+
+        Mod_Food food = spawnedItem.itemMods?.GetMod_ByID<Mod_Food>(ModText.Food);
+        if (food?.Data?.nutrition == null)
+        {
+            throw new InvalidOperationException(
+                $"物种 {entry.PrefabName} 配置了营养出生初始化，但实例缺少 Food 模块。");
+        }
+
+        Nutrition nutrition = food.Data.nutrition;
+        float minRate = Mathf.Clamp01(Mathf.Min(
+            nutritionConfig.MinFoodRate,
+            nutritionConfig.MaxFoodRate));
+        float maxRate = Mathf.Clamp01(Mathf.Max(
+            nutritionConfig.MinFoodRate,
+            nutritionConfig.MaxFoodRate));
+        float rate = GetDeterministicFoodRate(spawnedItem, minRate, maxRate);
+        nutrition.Carbohydrates = nutrition.Max_Carbohydrates * rate;
+        nutrition.Fat = nutrition.Max_Fat * rate;
+        food.NotifyStateChanged();
+    }
+
+    private static float GetDeterministicFoodRate(Item item, float minRate, float maxRate)
+    {
+        if (Mathf.Approximately(minRate, maxRate))
+            return minRate;
+
+        int seed = item?.itemData != null && item.itemData.Guid != 0
+            ? item.itemData.Guid
+            : item != null ? item.GetInstanceID() : 1;
+        uint hash = unchecked((uint)seed * 2654435761u);
+        float normalized = (hash & 0xFFFFu) / 65535f;
+        return Mathf.Lerp(minRate, maxRate, normalized);
     }
 
     private bool IsGlobalDark(string sceneName)
@@ -1314,7 +1393,9 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
             SpawnerConfig.SpawnEntry entry = config.SpawnEntries[i];
             if (entry == null || string.IsNullOrWhiteSpace(entry.PrefabName))
                 continue;
-            if (AiRuntimeBackendService.UsesEntities(entry) && AiRuntimeBackendService.UseEntities &&
+            if (!AiRuntimeBackendService.UsesEntities(entry))
+                return true;
+            if (AiRuntimeBackendService.UseEntities &&
                 AiRuntimeBackendService.Ecology?.SupportsSpecies(entry.PrefabName) == true)
                 return true;
         }

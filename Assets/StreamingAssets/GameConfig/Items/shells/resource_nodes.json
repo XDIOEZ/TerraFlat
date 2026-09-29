@@ -15,6 +15,7 @@
     },
     {
       "id": "MineResource_Base",
+      "entityRuntime": "resource",
       "abstract": true,
       "parent": "WorldResource_Base",
       "weight": 2000.0,
@@ -164,6 +165,7 @@
     },
     {
       "id": "AppleTree",
+      "entityRuntime": "resource",
       "parent": "WorldResource_Base",
       "gameName": "苹果树",
       "description": "一颗可以生产苹果的树",
@@ -489,6 +491,7 @@
     },
     {
       "id": "Tree_Coconut",
+      "entityRuntime": "resource",
       "parent": "WorldResource_Base",
       "gameName": "椰子树",
       "description": "树冠会长出椰子。成熟果可能自行坠落；砍伐只掉落已经成熟的果实。",
@@ -1867,6 +1870,7 @@
     },
     {
       "id": "Tree_Pine",
+      "entityRuntime": "resource",
       "parent": "WorldResource_Base",
       "gameName": "松树",
       "description": "森林中生长的松树，砍伐后可获得原木和树脂；所在地越温暖，树脂产量越高。",

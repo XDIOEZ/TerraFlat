@@ -1,11 +1,12 @@
 using System;
 using System.Collections.Generic;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
 namespace FlatWorld.NaturalEntities
 {
     /// <summary>从现有 Item 模块定义编译出的 ECS 能力模板；具体物种只组合模块，不写专用运行时代码。</summary>
-    internal sealed class NaturalEntityEcsProfile
+    internal sealed partial class NaturalEntityEcsProfile
     {
         public RuntimeItemDefinition Definition;
         public NaturalEntityCapability Capabilities;
@@ -58,16 +59,10 @@ namespace FlatWorld.NaturalEntities
 
     /// <summary>
     /// 自然物 ECS 的冷路径编译器。支持列表按“通用模块能力”扩展；
-    /// 出现未知/复杂模块时整件自然物保留 Item 路径，禁止静默丢玩法。
+    /// 已声明 Entity 的资源遇到未知模块必须明确报错，不能退回 GameObject。
     /// </summary>
-    internal static class NaturalEntityEcsProfileCompiler
+    internal static partial class NaturalEntityEcsProfileCompiler
     {
-        private static readonly HashSet<string> PassiveSupportedPrefabs =
-            new(StringComparer.OrdinalIgnoreCase)
-            {
-                "Module_TemperatureYield"
-            };
-
         #region 编译入口
 
         public static bool TryCompile(RuntimeItemDefinition definition,
@@ -81,9 +76,8 @@ namespace FlatWorld.NaturalEntities
                 return false;
             }
 
-            if (definition.IsActor || definition.IsGroundCover || definition.CanBePickedUp ||
-                definition.Sprite == null || definition.AnimatorController != null ||
-                definition.ShellPrefab == null)
+            if (!definition.UsesResourceEntities || definition.IsActor || definition.IsGroundCover || definition.CanBePickedUp ||
+                definition.Sprite == null || definition.AnimatorController != null)
             {
                 reason = "不是可由静态自然物 ECS 托管的实体";
                 return false;
@@ -98,6 +92,8 @@ namespace FlatWorld.NaturalEntities
                     continue;
 
                 string prefab = module.PrefabId?.Trim() ?? string.Empty;
+                if (TryCompilePlantModule(module, result, out bool recognized, out reason)) continue;
+                if (recognized) return false;
                 if (string.Equals(prefab, "Module_DamageReciver", StringComparison.OrdinalIgnoreCase))
                 {
                     if (!CompileHealth(module, result, out reason))
@@ -126,15 +122,13 @@ namespace FlatWorld.NaturalEntities
                     continue;
                 }
 
-                if (PassiveSupportedPrefabs.Contains(prefab))
-                    continue;
-
                 reason = $"模块 {module.StableName}/{prefab} 尚未提供 ECS 能力实现";
                 return false;
             }
 
-            if ((result.Capabilities & NaturalEntityCapability.Growth) != 0 &&
-                (result.Capabilities & NaturalEntityCapability.Health) == 0)
+            if (result.HasCrop && result.HealthDefaults == null)
+                result.HealthDefaults = new DamageReceiver.DamageReceiver_SaveData { Hp = 1f, MaxHp = 1f };
+            if ((result.Capabilities & NaturalEntityCapability.Growth) != 0 && result.HealthDefaults == null)
             {
                 reason = "成长能力依赖生命能力";
                 return false;
@@ -147,6 +141,7 @@ namespace FlatWorld.NaturalEntities
                 return false;
             }
 
+            if (!ValidatePlantComposition(result, out reason)) return false;
             profile = result;
             return true;
         }
@@ -168,9 +163,10 @@ namespace FlatWorld.NaturalEntities
             JObject parameters = ParseParameters(module, out reason);
             if (parameters == null)
                 return false;
-            var data = parameters["Data"]?.ToObject<DamageReceiver.DamageReceiver_SaveData>() ??
+            var data = DeserializeConfiguration<DamageReceiver.DamageReceiver_SaveData>(parameters["Data"]) ??
                        new DamageReceiver.DamageReceiver_SaveData();
-            if (!FinitePositive(data.MaxHp) || !Finite(data.Hp) || data.UseBodyPartHealth)
+            if (!FinitePositive(data.MaxHp) || !Finite(data.Hp) || data.UseBodyPartHealth ||
+                !Finite(data.DamageInterval) || data.DamageInterval < 0f)
             {
                 reason = $"生命模块 {module.StableName} 的 Hp/MaxHp 无效";
                 return false;
@@ -180,6 +176,7 @@ namespace FlatWorld.NaturalEntities
             data.Hp = Math.Clamp(data.Hp, 0f, data.MaxHp);
             profile.HealthDefaults = data;
             profile.HealthModuleName = module.StableName;
+            profile.HealthParameters = parameters;
             profile.Capabilities |= NaturalEntityCapability.Health;
             return true;
         }
@@ -197,7 +194,7 @@ namespace FlatWorld.NaturalEntities
             JObject parameters = ParseParameters(module, out reason);
             if (parameters == null)
                 return false;
-            GrowData data = parameters["Data"]?.ToObject<GrowData>() ?? new GrowData();
+            GrowData data = DeserializeConfiguration<GrowData>(parameters["Data"]) ?? new GrowData();
             JArray healthRatios = parameters["growState_MaxHealthRatios"] as JArray;
             float matureMaxHealth = parameters.Value<float?>("matureMaxHealth") ?? 200f;
             if (data.growState_Value == null || data.growState_Scale == null ||
@@ -220,10 +217,14 @@ namespace FlatWorld.NaturalEntities
                 float ratio = healthRatios != null && i < healthRatios.Count
                     ? healthRatios[i].Value<float>()
                     : (i + 1f) / ratios.Length;
-                if (!Finite(threshold) || !FinitePositive(scale) || !FinitePositive(ratio) ||
-                    (i > 0 && threshold < data.growState_Value[i - 1]))
+                if (!Finite(threshold) || !FinitePositive(scale) || !FinitePositive(ratio))
                 {
-                    reason = $"成长模块 {module.StableName} 的阶段阈值/缩放/生命倍率无效";
+                    reason = $"成长模块 {module.StableName} 的第 {i + 1} 阶段阈值/缩放/生命倍率无效：{threshold}/{scale}/{ratio}";
+                    return false;
+                }
+                if (i > 0 && threshold < data.growState_Value[i - 1])
+                {
+                    reason = $"成长模块 {module.StableName} 的第 {i + 1} 阶段阈值 {threshold} 小于上一阶段 {data.growState_Value[i - 1]}";
                     return false;
                 }
                 ratios[i] = ratio;
@@ -235,6 +236,7 @@ namespace FlatWorld.NaturalEntities
             profile.MatureMaxHealth = matureMaxHealth;
             profile.RainGrowthBonus = parameters.Value<float?>("rainGrowthBonus") ?? 0.15f;
             profile.GrowthModuleName = module.StableName;
+            ReadTreeExtras(parameters, profile);
             profile.Capabilities |= NaturalEntityCapability.Growth;
             return true;
         }
@@ -252,21 +254,18 @@ namespace FlatWorld.NaturalEntities
             JObject p = ParseParameters(module, out reason);
             if (p == null)
                 return false;
-            bool autonomous = p.Value<bool?>("autonomous") ?? false;
             float minGrowth = p.Value<float?>("minimumGrowthTemperature") ?? 5f;
             float maxGrowth = p.Value<float?>("maximumGrowthTemperature") ?? 35f;
             float minSurvival = p.Value<float?>("minimumSurvivalTemperature") ?? 0f;
             float maxSurvival = p.Value<float?>("maximumSurvivalTemperature") ?? 40f;
             float fatalHours = p.Value<float?>("fatalExposureHours") ?? 6f;
             float recovery = p.Value<float?>("recoveryRate") ?? 0.5f;
-            if (!autonomous || !Finite(minGrowth) || !Finite(maxGrowth) || !Finite(minSurvival) ||
+            if (!Finite(minGrowth) || !Finite(maxGrowth) || !Finite(minSurvival) ||
                 !Finite(maxSurvival) || !FinitePositive(fatalHours) || !Finite(recovery) ||
                 recovery < 0f || minSurvival > minGrowth || minGrowth >= maxGrowth ||
                 maxGrowth > maxSurvival)
             {
-                reason = autonomous
-                    ? $"植物耐候模块 {module.StableName} 的温度区间无效"
-                    : $"植物耐候模块 {module.StableName} 不是自主自然物模式";
+                reason = $"植物耐候模块 {module.StableName} 的温度区间无效";
                 return false;
             }
 
@@ -307,6 +306,15 @@ namespace FlatWorld.NaturalEntities
         #endregion
 
         #region 工具
+
+        private static T DeserializeConfiguration<T>(JToken token) where T : class
+        {
+            // 显式集合替换构造默认值，缺省字段仍保留默认值，避免成长阶段和提示点被重复追加。
+            return token?.ToObject<T>(new JsonSerializer
+            {
+                ObjectCreationHandling = ObjectCreationHandling.Replace
+            });
+        }
 
         private static JObject ParseParameters(RuntimeItemModuleDefinition module, out string reason)
         {

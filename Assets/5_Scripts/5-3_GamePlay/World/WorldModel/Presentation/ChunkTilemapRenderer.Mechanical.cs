@@ -35,7 +35,7 @@ public sealed partial class ChunkTilemapRenderer
     }
 
     private static readonly Dictionary<string, MechanicalVisualConfig> mechanicalVisualConfigs = new(StringComparer.Ordinal);
-    private readonly List<MechanicalWorld.MechanicalRenderCell> mechanicalVisualNodes = new();
+    private readonly List<MachineWorld.MachineRenderCell> mechanicalVisualNodes = new();
     private readonly Dictionary<Vector3Int, MechanicalDynamicVisual> dynamicMechanicalVisuals = new(); // 高大机械的轻量排序代理。
     private readonly HashSet<Vector3Int> submittedMechanicalCells = new(); // 资源重建时清除旧 BRG 子层。
     internal HashSet<Vector3Int> MechanicalShadowKeys => submittedMechanicalCells; // 供阴影注册表按区块卸载。
@@ -51,14 +51,14 @@ public sealed partial class ChunkTilemapRenderer
     /// <summary>基础 BRG Owner 建立后接入机械数据变化和重建通知。</summary>
     private void BindMechanicalPresentation()
     {
-        MechanicalWorld.CellChanged += HandleMechanicalCellChanged;
+        MachineWorld.CellChanged += HandleMechanicalCellChanged;
         BatchPresentationRebuilt += RefreshMechanicalPresentation;
     }
 
     /// <summary>区块卸载时解除事件，BRG Owner 统一清除全部机械实例。</summary>
     private void UnbindMechanicalPresentation()
     {
-        MechanicalWorld.CellChanged -= HandleMechanicalCellChanged;
+        MachineWorld.CellChanged -= HandleMechanicalCellChanged;
         BatchPresentationRebuilt -= RefreshMechanicalPresentation;
         mechanicalVisualNodes.Clear();
         ClearDynamicMechanicalVisuals();
@@ -79,9 +79,9 @@ public sealed partial class ChunkTilemapRenderer
         }
         submittedMechanicalCells.Clear();
         var origin = boundChunk.Address.ChunkOrigin;
-        MechanicalWorld.CollectInBounds(new BoundsInt(origin.X, origin.Y, 0,
+        MachineWorld.CollectInBounds(new BoundsInt(origin.X, origin.Y, 0,
             boundChunk.Terrain.Width, boundChunk.Terrain.Height, 1), mechanicalVisualNodes);
-        foreach (MechanicalWorld.MechanicalRenderCell entry in mechanicalVisualNodes)
+        foreach (MachineWorld.MachineRenderCell entry in mechanicalVisualNodes)
             SubmitMechanicalNode(entry.Node, entry.DisplayCell.x - origin.X,
                 entry.DisplayCell.y - origin.Y);
     }
@@ -99,7 +99,7 @@ public sealed partial class ChunkTilemapRenderer
         {
             for (int part = 0; part < 4; part++)
                 ClearLayerVisual(Layer(occupancy, part), x, y);
-            MechanicalNode node = MechanicalWorld.GetAt(cell, occupancy);
+            MachineEntity node = MachineWorld.GetAt(cell, occupancy);
             if (node != null) SubmitMechanicalNode(node, x, y);
             else
             {
@@ -116,7 +116,7 @@ public sealed partial class ChunkTilemapRenderer
             ((int)ChunkBatchRendererGroupService.VisualLayer.MechanicalLowerBase + occupancy * 4 + part);
 
     /// <summary>按机械类型组合 Sprite，视觉状态来自物品定义而不是运行时 Item。</summary>
-    private void SubmitMechanicalNode(MechanicalNode node, int x, int y)
+    private void SubmitMechanicalNode(MachineEntity node, int x, int y)
     {
         GameRes resources = GameRes.ExistingInstance;
         if (resources == null || !resources.TryGetItemDefinition(node.Definition.Id, out RuntimeItemDefinition def) ||
@@ -130,12 +130,15 @@ public sealed partial class ChunkTilemapRenderer
         Vector3 origin = new(chunkOrigin.X + x + .5f, chunkOrigin.Y + y + .5f,
             node.Snapshot.transform.position.z);
         Quaternion rotation = Quaternion.Euler(0f, 0f, node.RotationQuarterTurns * 90f);
+        Vector3 facilityBodyOffset = node.Definition.Ports == "none"
+            ? (def.Visual?.RendererLocalPosition ?? Vector3.zero)
+            : Vector3.zero;
         string kind = node.Definition.Kind;
         Vector3Int key = new(x, y, node.Definition.Layer);
         submittedMechanicalCells.Add(key);
         if (node.Definition.ShouldCastVisualShadows())
             MechanicalShadowRegistry.BeginNode(this, key, gameObject.scene, def.Sprite,
-                origin, rotation, def.Visual?.Shadows);
+                origin + rotation * facilityBodyOffset, rotation, def.Visual?.Shadows);
         else MechanicalShadowRegistry.Remove(this, key);
         PrepareDynamicMechanicalVisual(node, x, y, origin);
 
@@ -245,13 +248,17 @@ public sealed partial class ChunkTilemapRenderer
                     new Vector3(0f, config.AxisPortOffsetY), Vector3.one, 0, 0f);
             return;
         }
-        Part(node, x, y, 0, def.Sprite, material, origin, rotation,
-            Vector3.zero, Vector3.one, 0, 0f);
+        Sprite body = def.Sprite;
+        if (node.Definition.LogicId == "vessel" && Mod_WaterVessel.TryResolvePresentationSprite(node.Snapshot, out Sprite vessel)) body = vessel;
+        // 设施本体沿用预览的图片局部偏移，让 Sprite Pivot 落在同一建造锚点上。
+        Part(node, x, y, 0, body, material, origin, rotation, facilityBodyOffset, Vector3.one, 0, 0f);
+        if (node.Definition.RenderSorting == "dynamicY")
+            dynamicMechanicalVisuals[new Vector3Int(x, y, node.Definition.Layer)].UpdateFacility(node);
         Ports(node, x, y, 3, def, material, origin, rotation, config);
     }
 
     /// <summary>声明了端口贴图的设备按配置叠加轴环或镜像接头。</summary>
-    private void Ports(MechanicalNode node, int x, int y, int part, RuntimeItemDefinition def,
+    private void Ports(MachineEntity node, int x, int y, int part, RuntimeItemDefinition def,
         Material material, Vector3 origin, Quaternion rotation, MechanicalVisualConfig config)
     {
         if (!def.TryGetVisualStateSprite("axisPorts", out Sprite port)) return;
@@ -269,7 +276,7 @@ public sealed partial class ChunkTilemapRenderer
     }
 
     /// <summary>写入 GPU 动画速度和相位，零转速时停在当前角度。</summary>
-    private void Part(MechanicalNode node, int x, int y, int part, Sprite sprite, Material material,
+    private void Part(MachineEntity node, int x, int y, int part, Sprite sprite, Material material,
         Vector3 origin, Quaternion rotation, Vector3 offset, Vector3 scale,
         int mode, float multiplier, float phase = 0f, int track = 0, float stroke = 0f)
     {
@@ -303,14 +310,14 @@ public sealed partial class ChunkTilemapRenderer
     }
 
     /// <summary>整台机械共用建造锚点参与 Y 排序，内部占地层与子图层仅施加极小前景偏移。</summary>
-    private static Vector3 MechanicalSortPosition(MechanicalNode node, Vector3 origin, int part)
+    private static Vector3 MechanicalSortPosition(MachineEntity node, Vector3 origin, int part)
     {
         int visualDepth = node.Definition.Layer * 4 + part;
         return new Vector3(origin.x, origin.y - visualDepth * MechanicalPartSortStep, origin.z);
     }
 
     /// <summary>高大机械创建动态 Y 排序代理；贴地传动件仅保留 BRG 绘制。</summary>
-    private void PrepareDynamicMechanicalVisual(MechanicalNode node, int x, int y, Vector3 origin)
+    private void PrepareDynamicMechanicalVisual(MachineEntity node, int x, int y, Vector3 origin)
     {
         Vector3Int key = new(x, y, node.Definition.Layer);
         if (node.Definition.RenderSorting != "dynamicY")
@@ -324,6 +331,7 @@ public sealed partial class ChunkTilemapRenderer
             dynamicMechanicalVisuals[key] = visual;
         }
         visual.BeginUpdate(origin);
+        visual.BindInteraction(MachineWorld.GetOrCreateInteractionTarget(node));
     }
 
     /// <summary>拆除或类型切换后释放当前格的动态视觉。</summary>
@@ -360,7 +368,11 @@ public sealed partial class ChunkTilemapRenderer
     {
         if (mechanicalVisualConfigs.TryGetValue(def.Id, out MechanicalVisualConfig config)) return config;
         if (!def.TryGetModuleParameters(Mod_MechanicalNode.ModuleId, out string json))
-            throw new InvalidOperationException("机械图层参数缺失：" + def.Id);
+        {
+            config = new MechanicalVisualConfig();
+            mechanicalVisualConfigs.Add(def.Id, config);
+            return config;
+        }
         config = JsonConvert.DeserializeObject<MechanicalVisualConfig>(json) ??
             throw new InvalidOperationException("机械图层参数无效：" + def.Id);
         mechanicalVisualConfigs.Add(def.Id, config);

@@ -68,9 +68,11 @@ public partial class ItemMgr
         {
             throw new ArgumentException("ItemData.IDName 不能为空", nameof(itemData));
         }
-        // Actor 的权威运行态属于 AIECS，禁止通用物品入口重新实例化旧生物外壳。
-        if (GameRes.Instance.TryGetItemDefinition(itemData.IDName, out RuntimeItemDefinition actorDefinition) &&
-            actorDefinition.IsActor)
+        // 落地设施只能由机器世界持有，禁止调用旧 Item 入口形成第二个权威实例。
+        if (!itemData.inHand && MachineWorld.OwnsWorldItem(itemData))
+            throw new InvalidOperationException($"落地设施 {itemData.IDName} 请使用 MachineWorld.Place/SpawnGenerated/RestoreMachine。");
+        // 只有显式归属 ECS 的物种才禁止创建 GameObject，普通 Actor 沿用完整 Item 生命周期。
+        if (AiRuntimeBackendService.UsesEntities(itemData.IDName))
             throw new InvalidOperationException($"生物 {itemData.IDName} 请使用 ECS 生成入口。");
 
         if (rotation == default) rotation = Quaternion.identity;
@@ -115,7 +117,7 @@ public partial class ItemMgr
             return;
 
         WorldItemWaterSystem.CancelSpawnCheck(item);
-        MechanicalWorld.BeforeDespawn(item);
+        MachineWorld.BeforeDespawn(item);
         RuntimeItemDespawning?.Invoke(item);
         WorldItemWaterSystem.ClearRuntimeState(item);
 

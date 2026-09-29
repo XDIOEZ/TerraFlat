@@ -44,7 +44,7 @@ public static class InventoryContextResolver
                 return true;
         }
 
-        return false;
+        return MachineWorld.TryFindContainingInventory(inventoryOwner, containedItem, out inventory);
     }
 
     /// <summary>检查候选库存是否包含目标物品实例；优先引用相等，Guid 仅作运行时重绑后的稳定回退。</summary>

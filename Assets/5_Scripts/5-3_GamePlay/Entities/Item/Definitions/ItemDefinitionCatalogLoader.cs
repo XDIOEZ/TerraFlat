@@ -996,7 +996,8 @@ public static class ItemDefinitionCatalogLoader
             dto.GroundCover,
             ResolveWorldGridOccupancy(dto.WorldGridOccupancy, id),
             dto.RequiredGroundSupport,
-            dto.Ecs);
+            dto.Ecs,
+            dto.EntityRuntime);
     }
 
     /// <summary>校验并转换配置中的整数占格，禁止空格、重复格或无效条目进入运行时定义。</summary>

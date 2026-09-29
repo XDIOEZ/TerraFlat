@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEngine.Rendering;
 
 /// <summary>高大机械的纯视觉代理；与玩家共用 Y 轴排序键，最多四个旋转或往复 Sprite 子层。</summary>
-public sealed class MechanicalDynamicVisual : MonoBehaviour
+public sealed partial class MechanicalDynamicVisual : MonoBehaviour, ISpatialInteractionShape
 {
     #region 子层状态
     private sealed class PartVisual
@@ -82,9 +82,75 @@ public sealed class MechanicalDynamicVisual : MonoBehaviour
     /// <summary>拆除和区块卸载时立即隐藏，随后释放视觉对象。</summary>
     internal void Dispose()
     {
+        UnregisterInteraction();
+        interactionTarget = null;
         gameObject.SetActive(false);
         if (Application.isPlaying) Destroy(gameObject);
         else DestroyImmediate(gameObject);
+    }
+    #endregion
+
+    #region 交互表现
+    private MachineInteractionTarget interactionTarget;
+    private InteractionTargetOutline interactionOutline;
+
+    /// <summary>视觉只登记权威交互目标，不承担机器业务或创建物理碰撞体。</summary>
+    internal void BindInteraction(MachineInteractionTarget target)
+    {
+        if (ReferenceEquals(interactionTarget, target)) return;
+        UnregisterInteraction();
+        interactionTarget = target;
+        if (isActiveAndEnabled) RegisterInteraction();
+    }
+
+    private void OnEnable() => RegisterInteraction();
+    private void OnDisable() => UnregisterInteraction();
+    private void OnDestroy() => UnregisterInteraction();
+
+    private void RegisterInteraction()
+    {
+        if (interactionTarget == null || !interactionTarget.IsValid) return;
+        interactionTarget.InteractionHighlightChanged -= SetInteractionHighlighted;
+        interactionTarget.InteractionHighlightChanged += SetInteractionHighlighted;
+        SpatialInteractionRegistry.Register(this, 0f, interactionTarget);
+        SetInteractionHighlighted(interactionTarget.IsInteractionHighlighted);
+    }
+
+    private void UnregisterInteraction()
+    {
+        SpatialInteractionRegistry.Unregister(this);
+        if (interactionTarget != null)
+            interactionTarget.InteractionHighlightChanged -= SetInteractionHighlighted;
+        if (interactionOutline != null) interactionOutline.SetHighlighted(false);
+    }
+
+    private void SetInteractionHighlighted(bool highlighted)
+    {
+        if (highlighted && isActiveAndEnabled && interactionOutline == null)
+            interactionOutline = GetComponent<InteractionTargetOutline>() ?? gameObject.AddComponent<InteractionTargetOutline>();
+        if (interactionOutline != null)
+            interactionOutline.SetHighlighted(highlighted && isActiveAndEnabled);
+    }
+
+    /// <summary>命中可见图层而非锚点小圆，支持高炉、旋转与环绕世界副本。</summary>
+    public bool ContainsInteractionPoint(Vector2 point)
+    {
+        Vector2 projected = (Vector2)transform.position +
+            WorldTopologyRuntime.ShortestDelta(transform.position, point);
+        foreach (PartVisual part in parts)
+            if (part != null && ContainsRendererPoint(part.Renderer, projected)) return true;
+        foreach (SpriteRenderer renderer in facilitySprites)
+            if (ContainsRendererPoint(renderer, projected)) return true;
+        return false;
+    }
+
+    private static bool ContainsRendererPoint(SpriteRenderer renderer, Vector2 point)
+    {
+        if (renderer == null || !renderer.enabled || !renderer.gameObject.activeInHierarchy || renderer.sprite == null) return false;
+        Vector3 local = renderer.transform.InverseTransformPoint(new Vector3(point.x, point.y, renderer.transform.position.z));
+        Bounds bounds = renderer.sprite.bounds;
+        return local.x >= bounds.min.x && local.x <= bounds.max.x &&
+            local.y >= bounds.min.y && local.y <= bounds.max.y;
     }
     #endregion
 

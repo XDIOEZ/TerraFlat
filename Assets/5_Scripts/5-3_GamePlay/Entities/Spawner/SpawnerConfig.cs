@@ -46,8 +46,8 @@ public class SpawnerConfig : ScriptableObject
         public string PrefabName; // 生成的怪物预制体名称，需与物品/预制体标识一致
 
         [LabelText("AI 运行后端")]
-        [Tooltip("正式 Actor 统一使用 ECS；旧 GameObject 生物仅保留为未使用资源。")]
-        public AiRuntimeBackendKind RuntimeBackend = AiRuntimeBackendKind.Entities;
+        [Tooltip("普通动物使用 GameObject；尸潮、虫灾等超大规模单位显式选择 Entities。")]
+        public AiRuntimeBackendKind RuntimeBackend = AiRuntimeBackendKind.GameObject;
 
         [LabelText("生成权重")]
         [Tooltip("参与归一化抽取的相对权重，不要求总和为 1")]

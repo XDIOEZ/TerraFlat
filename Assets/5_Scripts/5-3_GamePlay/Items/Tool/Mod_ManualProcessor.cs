@@ -3,7 +3,7 @@ using FlatWorld.Localization;
 using FlatWorld.Networking;
 using UnityEngine;
 
-/// <summary>通用手动加工台模块；站点配方来自 MechanicalCatalog，WorkPerClick 由物品定义独立配置，便携物与建筑共用进度。</summary>
+/// <summary>通用手动加工台模块；站点配方来自 MachineCatalog，WorkPerClick 由物品定义独立配置，便携物与建筑共用进度。</summary>
 public sealed class Mod_ManualProcessor : Module, IInteractable
 {
     #region 配置与状态
@@ -14,7 +14,7 @@ public sealed class Mod_ManualProcessor : Module, IInteractable
     public override ModuleData _Data { get => Data; set => Data = (Ex_ModData_MemoryPackable)value; }
     public override string CanonicalModuleId => ModuleId;
     public override ModuleTickMode TickMode => ModuleTickMode.Disabled;
-    public MechanicalProcessor Processor { get; private set; }
+    public RecipeProcessor Processor { get; private set; }
 
     private MechanicalPanelSession panel;
     #endregion
@@ -27,10 +27,10 @@ public sealed class Mod_ManualProcessor : Module, IInteractable
             throw new InvalidOperationException("手动加工台的站点或单次工作量无效。");
 
         Data ??= new Ex_ModData_MemoryPackable { ID = ModuleId };
-        MechanicalProcessingState state = Data.BitData != null && Data.BitData.Length > 0
-            ? Data.GetData<MechanicalProcessingState>()
-            : new MechanicalProcessingState();
-        Processor = new MechanicalProcessor(Station, state ?? new MechanicalProcessingState());
+        RecipeProcessingState state = Data.BitData != null && Data.BitData.Length > 0
+            ? Data.GetData<RecipeProcessingState>()
+            : new RecipeProcessingState();
+        Processor = new RecipeProcessor(Station, state ?? new RecipeProcessingState());
         item.OnAct += OnItemAct;
     }
 

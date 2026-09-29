@@ -2,12 +2,11 @@ using System;
 using System.Collections.Generic;
 using FlatWorld.WorldModel;
 using UnityEngine;
-using UnityEngine.Tilemaps;
 using Unity.Profiling;
 
 /// <summary>
 /// Ground / Water / Back / Blocking 共用 Chunk Mesh，扩展表现仍借用 BRG Owner。
-/// Blocking Tilemap 只负责碰撞；Ground 单格变更只上传 GPU Cell 数据，其余层沿用局部顶点更新。
+/// 碰撞由 ChunkCollisionRenderer 独立映射；Ground 单格变更只上传 GPU Cell 数据。
 /// </summary>
 public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer, IWorldAwareChunkViewRenderer
 {
@@ -19,15 +18,12 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRend
     [SerializeField] private Material blockingMaterial;
     [SerializeField] private Material stylizedWaterMaterial;
     [SerializeField] private Material realisticWaterMaterial;
-    [SerializeField] private Tilemap blockingTilemap;
 
     private readonly List<NeighbourTerrainSubscription> neighbourTerrainSubscriptions = new(8);
     private readonly ChunkTerrainData[] neighbourTerrains = new ChunkTerrainData[9]; // 八方向邻区在订阅时解析一次。
     private readonly HashSet<int> liquidVisualDirty = new(); // 合并本块与相邻块的液体批次。
     private static readonly ProfilerMarker BatchOwnerUnregisterMarker =
         new("FlatWorld.ChunkStreaming.UnregisterBatchOwner");
-    private static readonly ProfilerMarker BlockingTilemapClearMarker =
-        new("FlatWorld.ChunkStreaming.ClearBlockingTilemap");
     private WorldRuntime boundWorld;
     private GameRes boundResources; // 只订阅正式目录发布，不重建 ChunkRuntime。
     private ChunkRuntime boundChunk;
@@ -118,7 +114,6 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRend
             RefreshNeighbourTerrainSubscriptions();
             batchPresentationComplete = false;
             ChunkBatchRendererGroupService.RegisterOwner(this, GetBatchWorldBounds(chunk.Terrain));
-            SyncBlockingCollisionAll(chunk.Terrain);
             RefreshAllBatchVisuals(chunk.Terrain);
             batchPresentationComplete = true;
             BindMechanicalPresentation();
@@ -132,6 +127,10 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRend
 
     public void Unbind()
     {
+        naturalVisualSlots.Clear();
+        freeNaturalVisualSlots.Clear();
+        nextNaturalVisualSlot = 0;
+        hasResourceVisualBounds = false;
         UnbindMechanicalPresentation();
         if (boundResources != null) boundResources.ResourcesReloaded -= HandleResourcesReloaded;
         WaterVisualSettings.Changed -= HandleWaterVisualStyleChanged;
@@ -156,9 +155,6 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRend
         blockingMesh = null;
         using (BatchOwnerUnregisterMarker.Auto())
             ChunkBatchRendererGroupService.UnregisterOwner(this);
-        if (blockingTilemap != null)
-            using (BlockingTilemapClearMarker.Auto())
-                blockingTilemap.ClearAllTiles();
         renderGroundElevation = false;
         boundChunk = null;
     }
@@ -180,7 +176,6 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRend
             boundChunk.Terrain.Height, backMaterial, ChunkBatchRendererGroupService.VisualLayer.Back);
         blockingMesh = new ChunkGroundMeshRenderer(transform, boundChunk.Terrain.Width,
             boundChunk.Terrain.Height, blockingMaterial, ChunkBatchRendererGroupService.VisualLayer.Blocking);
-        SyncBlockingCollisionAll(boundChunk.Terrain);
         RefreshAllBatchVisuals(boundChunk.Terrain);
         BatchPresentationRebuilt?.Invoke();
     }
@@ -276,8 +271,6 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRend
             changed.Kind != TerrainChangeKind.Environment && changed.Kind != TerrainChangeKind.Liquid)
             return;
 
-        if (changed.Kind == TerrainChangeKind.Cell || changed.Kind == TerrainChangeKind.TileStack)
-            SyncBlockingCollisionCell(boundChunk.Terrain, changed.LocalCell.X, changed.LocalCell.Y);
         if (!EnsureBatchPresentationForIncrementalRefresh("TerrainChanged"))
             return;
         // 高度边、岸线、墙脚和四角水深最多依赖一圈邻格，因此只刷新 3x3 脏区。
@@ -451,7 +444,7 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRend
         Array.Clear(neighbourTerrains, 0, neighbourTerrains.Length);
     }
 
-    #region BRG 表现与碰撞兼容
+    #region BRG 表现
 
     /// <summary>延后到本帧所有液体 Chunk 写回之后，合并处理岸线、四角液深与高度边。</summary>
     private void HandleLiquidBatchChanged(ChunkLiquidBatchChanged changed) => QueueLiquidVisuals(changed, 0, 0);
@@ -496,33 +489,6 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRend
                 RefreshBatchCell(terrain, index % terrain.Width, index / terrain.Width);
         }
         liquidVisualDirty.Clear();
-    }
-
-    /// <summary>首次绑定时一次性建立 Blocking 碰撞格；视觉由 Chunk Mesh 绘制。</summary>
-    private void SyncBlockingCollisionAll(ChunkTerrainData terrain)
-    {
-        if (blockingTilemap == null)
-            return;
-        var tiles = new TileBase[terrain.CellCount];
-        for (int y = 0; y < terrain.Height; y++)
-        for (int x = 0; x < terrain.Width; x++)
-        {
-            TerrainCell cell = terrain.GetCell(x, y);
-            if (cell.BlockingTileId != 0)
-                palette.TryGetTile(cell.BlockingTileId, out tiles[y * terrain.Width + x]);
-        }
-        blockingTilemap.SetTilesBlock(new BoundsInt(0, 0, 0, terrain.Width, terrain.Height, 1), tiles);
-    }
-
-    private void SyncBlockingCollisionCell(ChunkTerrainData terrain, int x, int y)
-    {
-        if (blockingTilemap == null || x < 0 || x >= terrain.Width || y < 0 || y >= terrain.Height)
-            return;
-        TerrainCell cell = terrain.GetCell(x, y);
-        TileBase tile = null;
-        if (cell.BlockingTileId != 0)
-            palette.TryGetTile(cell.BlockingTileId, out tile);
-        blockingTilemap.SetTile(new Vector3Int(x, y, 0), tile);
     }
 
     private void RefreshAllBatchVisuals(ChunkTerrainData terrain)
@@ -748,22 +714,63 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRend
             ChunkBatchRendererGroupService.ClearVisual(this, GetBatchSlotKey(terrain, x, y, layer));
     }
 
-    /// <summary>实体使用独立的负槽位域，同一格多个自然物不会互相覆盖，正槽位仍保留给地块层。</summary>
+    private readonly Dictionary<(int Entity, int Part), int> naturalVisualSlots = new();
+    private readonly Stack<int> freeNaturalVisualSlots = new();
+    private int nextNaturalVisualSlot;
+    private Bounds resourceVisualBounds;
+    private bool hasResourceVisualBounds;
+
+    /// <summary>资源可超出格子和环世界原像，裁剪边界覆盖实际主体与太阳投影。</summary>
+    internal void IncludeNaturalEntityBounds(Bounds logicalBounds, Vector3 projectionOffset)
+    {
+        if (boundChunk?.Terrain == null || !IsBatchPresentationRegistered) return;
+        if (!hasResourceVisualBounds) { resourceVisualBounds = logicalBounds; hasResourceVisualBounds = true; }
+        else resourceVisualBounds.Encapsulate(logicalBounds);
+        Bounds local = resourceVisualBounds;
+        local.center += projectionOffset;
+        local.Expand(WorldRenderingConfigCatalog.Default.shadows.maximumDistance * 2f);
+        Bounds bounds = GetBatchWorldBounds(boundChunk.Terrain);
+        bounds.Encapsulate(local);
+        ChunkBatchRendererGroupService.RegisterOwner(this, bounds);
+    }
+
+    /// <summary>实体与部件共同标识负槽位；树冠果实、阴影和同格植物不会互相覆盖。</summary>
     internal void SetNaturalEntityVisual(int guid, Sprite sprite, Material material,
         Matrix4x4 localToWorld, Color tint, Vector3 sortingPosition)
+        => SetNaturalEntityPart(guid, 0, sprite, material, localToWorld, tint, sortingPosition,
+            Vector4.zero, Vector4.zero, Vector4.zero);
+
+    internal void SetNaturalEntityPart(int entityId, int part, Sprite sprite, Material material,
+        Matrix4x4 localToWorld, Color tint, Vector3 sortingPosition,
+        Vector4 crop, Vector4 uvRegion, Vector4 shadow, bool sunShadow = false)
     {
-        if (guid <= 0) throw new ArgumentOutOfRangeException(nameof(guid));
+        if (entityId <= 0 || part < 0) throw new ArgumentOutOfRangeException(nameof(entityId));
         if (boundChunk?.Terrain == null) throw new InvalidOperationException("自然物提交前必须绑定区块。");
-        var data = ChunkBatchRendererGroupService.InstanceData.Create(localToWorld, Vector4.zero, Vector4.zero, tint);
+        var key = (entityId, part);
+        if (!naturalVisualSlots.TryGetValue(key, out int slot))
+        {
+            if (nextNaturalVisualSlot == int.MinValue && freeNaturalVisualSlots.Count == 0)
+                throw new InvalidOperationException("区块资源表现槽位耗尽。");
+            slot = freeNaturalVisualSlots.Count > 0 ? freeNaturalVisualSlots.Pop() : --nextNaturalVisualSlot;
+            naturalVisualSlots.Add(key, slot);
+        }
+        var data = ChunkBatchRendererGroupService.InstanceData.Create(localToWorld, crop, uvRegion, tint);
         data.Transform0.w = -1f;
-        ChunkBatchRendererGroupService.SetVisual(this, -guid,
-            new ChunkBatchRendererGroupService.Visual(ChunkBatchRendererGroupService.VisualLayer.NaturalStatic,
+        data.FlowX = shadow;
+        ChunkBatchRendererGroupService.SetVisual(this, slot,
+            new ChunkBatchRendererGroupService.Visual(sunShadow
+                    ? ChunkBatchRendererGroupService.VisualLayer.NaturalShadow
+                    : ChunkBatchRendererGroupService.VisualLayer.NaturalStatic,
                 sprite, material, data, sortingPosition));
     }
 
-    internal void ClearNaturalEntityVisual(int guid)
+    internal void ClearNaturalEntityVisual(int guid) => ClearNaturalEntityPart(guid, 0);
+
+    internal void ClearNaturalEntityPart(int entityId, int part)
     {
-        if (guid > 0) ChunkBatchRendererGroupService.ClearVisual(this, -guid);
+        if (!naturalVisualSlots.Remove((entityId, part), out int slot)) return;
+        ChunkBatchRendererGroupService.ClearVisual(this, slot);
+        freeNaturalVisualSlots.Push(slot);
     }
 
     private void ClearBatchVisual(ChunkTerrainData terrain, int x, int y,

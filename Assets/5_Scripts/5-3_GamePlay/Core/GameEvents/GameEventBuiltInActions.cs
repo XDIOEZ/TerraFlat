@@ -359,15 +359,14 @@ namespace FlatWorld.Gameplay.Events
                 targetPosition,
                 value.ArrivalDistance,
                 value.AttackActorsOnRoute);
-            IAiEcologyBackend backend = AiRuntimeBackendService.Ecology;
             for (int i = 0; i < spawnedActorGuids.Count; i++)
             {
                 int actorGuid = spawnedActorGuids[i];
-                if (backend?.TrySetAdvanceCommand(actorGuid, command) != true)
+                if (!AiRuntimeBackendService.TrySetAdvanceCommand(actorGuid, command))
                 {
-                    backend?.TryDespawnActor(actorGuid);
+                    AiRuntimeBackendService.TryDespawnActor(actorGuid);
                     spawned--;
-                    Debug.LogWarning($"[GameEvent] ECS 生物 '{value.PrefabId}' 接收推进命令失败，已回收。GUID={actorGuid}");
+                    Debug.LogWarning($"[GameEvent] 生物 '{value.PrefabId}' 接收推进命令失败，已回收。GUID={actorGuid}");
                 }
             }
 

@@ -24,7 +24,7 @@ public enum WolfState
 /// 狼 AI：支持群体协作（呼叫同伴、集火）、攻击伤害窗口、逃跑/避让等行为。
 /// 状态优先级：逃跑 > 攻击 > 追击 > 避让 > 警觉 > 移动 > 待机
 /// </summary>
-public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver
+public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver, IAIAdvanceCommandCancellationReceiver
 {
 #region SaveData
 	[Serializable]
@@ -411,6 +411,14 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver
 				$"沿途攻击={command.AttackActorsOnRoute}",
 				this);
 		}
+	}
+
+	/// <summary>取消外部推进并停下旧寻路，后续由正常状态机重新选择行为。</summary>
+	public void CancelAdvance()
+	{
+		CompleteAdvance();
+		ClearChaseFormation();
+		item?.GetComponentInChildren<Mover_AI>(true)?.StopMovement();
 	}
 
 	[Button("狼群集火玩家")]

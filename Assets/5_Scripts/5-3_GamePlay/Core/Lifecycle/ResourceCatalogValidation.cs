@@ -23,7 +23,7 @@ public static class ResourceCatalogValidation
         ["natural-items"] = new NaturalGenerationRuleCatalogValidator(),
         ["buildings"] = new BuildingResourceCatalogValidator(),
         ["tiles"] = new TileDefinitionCatalogValidator(),
-        ["mechanical"] = new MechanicalResourceCatalogValidator()
+        ["mechanical"] = new MachineResourceCatalogValidator()
     };
 
     /// <summary>按稳定 ID 接入独立系统校验；替换既有校验必须显式声明。</summary>

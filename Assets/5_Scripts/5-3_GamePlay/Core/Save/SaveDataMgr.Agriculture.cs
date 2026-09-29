@@ -58,6 +58,10 @@ public partial class SaveDataMgr
 
     /// <summary>作物生成、保存及收获后更新对应格的独立快照。</summary>
     public void RecordCultivatedCrop(RuntimeWorldAddress address, Vector2Int local, Item crop)
+        => RecordCultivatedCropData(address, local, crop == null ? null : crop.itemData);
+
+    /// <summary>Entity 作物直接提交纯数据快照，不为保存临时实例化 Item。</summary>
+    public void RecordCultivatedCropData(RuntimeWorldAddress address, Vector2Int local, ItemData crop)
     {
         if (!GameNetwork.HasStateAuthority || SaveData == null)
             return;
@@ -65,7 +69,7 @@ public partial class SaveDataMgr
         var cell = record.AgricultureCells.Find(c => c.LocalPosition == local);
         if (cell == null)
             throw new InvalidOperationException("种植格缺少水肥状态，必须先准备种植基质。");
-        cell.Crop = crop == null ? null : CloneItemData(crop.itemData);
+        cell.Crop = crop == null ? null : CloneItemData(crop);
     }
 
     public IReadOnlyList<AgricultureCellSaveData> GetAgricultureCells(RuntimeWorldAddress address) =>

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "useAiecsBackend": true,
+  "useAiecsBackend": false,
   "globalAliveLimit": 40,
   "spawnRetryInterval": 0.5,
   "ecologyTickInterval": 0.25,

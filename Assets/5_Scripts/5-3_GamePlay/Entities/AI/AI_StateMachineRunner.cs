@@ -15,6 +15,12 @@ public interface IAIAdvanceCommandReceiver
     void BeginAdvance(AIAdvanceCommand command);
 }
 
+/// <summary>可选的命令取消契约，不要求已有 MOD 推进接收器新增方法。</summary>
+public interface IAIAdvanceCommandCancellationReceiver
+{
+    void CancelAdvance();
+}
+
 /// <summary>推进节点每帧读取的目标快照，可支持固定点或动态 Transform。</summary>
 public readonly struct AIAdvanceTarget
 {

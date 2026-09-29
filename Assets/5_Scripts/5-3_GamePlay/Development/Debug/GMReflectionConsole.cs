@@ -2110,7 +2110,8 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
                 if (definition == null) continue;
                 Texture iconAtlas = null;
                 Rect iconUv = default;
-                if (ecology == null || !ecology.TryGetCatalogIcon(definition.Id, out iconAtlas, out iconUv))
+                if (!AiRuntimeBackendService.UsesEntities(definition.Id) || ecology == null ||
+                    !ecology.TryGetCatalogIcon(definition.Id, out iconAtlas, out iconUv))
                     iconAtlas = null;
                 availableAiCreatures.Add(new AiCreatureEntry
                 {
@@ -2401,7 +2402,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         var occupiedPositions = new List<Vector3>(amount);
         for (int i = 0; i < amount; i++)
         {
-            if (TrySpawnEagCreatureNearPlayer(
+            if (TrySpawnCreatureNearPlayer(
                     entry.ItemId,
                     player.position,
                     i,
@@ -2441,8 +2442,8 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         return position;
     }
 
-    /// <summary>GM 在玩家周围找可走位置，交由正式 EAG 后端创建 ECS 生物及近距镜像。</summary>
-    private static bool TrySpawnEagCreatureNearPlayer(
+    /// <summary>GM 在玩家周围生成完整生物，具体后端由统一物种路由决定。</summary>
+    private static bool TrySpawnCreatureNearPlayer(
         string itemId,
         Vector3 playerPosition,
         int index,
@@ -2450,9 +2451,10 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         out string error)
     {
         IAiEcologyBackend backend = AiRuntimeBackendService.Ecology;
-        if (!AiRuntimeBackendService.UseEntities || backend == null || !backend.SupportsSpecies(itemId))
+        bool usesEntities = AiRuntimeBackendService.UsesEntities(itemId);
+        if (usesEntities && (!AiRuntimeBackendService.UseEntities || backend == null || !backend.SupportsSpecies(itemId)))
         {
-            error = "EAG 生物后端未就绪，或此物种没有加入当前世界。";
+            error = "该物种的 ECS 后端未启用或尚未就绪。";
             return false;
         }
 
@@ -2470,7 +2472,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
 
             try
             {
-                if (backend.TrySpawnDirect(itemId, position, 0, out _))
+                if (AiRuntimeBackendService.TrySpawnDirect(itemId, position, 0, out _))
                 {
                     occupiedPositions.Add(position);
                     error = null;
@@ -2480,12 +2482,12 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
             catch (Exception exception)
             {
                 Debug.LogException(exception);
-                error = $"EAG 生物生成异常：{exception.Message}";
+                error = $"生物生成异常：{exception.Message}";
                 return false;
             }
 
-            if (backend.IsReady) continue;
-            error = "EAG 世界未启动，请等待玩家和导航加载完成。";
+            if (usesEntities && backend.IsReady) continue;
+            error = "生物创建失败，请检查 Item/AI 初始化日志及世界是否就绪。";
             return false;
         }
 

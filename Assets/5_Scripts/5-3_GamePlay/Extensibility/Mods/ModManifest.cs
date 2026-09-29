@@ -64,8 +64,26 @@ public sealed class ModManifest
     [JsonProperty("entryLua")]
     public string EntryLua;
 
+    /// <summary>显式声明受信任的 C# 入口；AssetBundle 和普通 JSON 不会自动执行 DLL。</summary>
+    [JsonProperty("managed")]
+    public ModManagedDefinition Managed;
+
     [JsonProperty("contentHash")]
     public string ContentHash;
+}
+
+[Serializable]
+public sealed class ModManagedDefinition
+{
+    [JsonProperty("entryAssembly", Required = Required.Always)]
+    public string EntryAssembly;
+
+    [JsonProperty("entryType", Required = Required.Always)]
+    public string EntryType;
+
+    /// <summary>包内托管依赖的相对路径；例如 lib/0Harmony.dll，不允许原生插件。</summary>
+    [JsonProperty("dependencies")]
+    public List<string> Dependencies = new();
 }
 
 [Serializable]

@@ -115,6 +115,10 @@ public sealed class ItemDefinitionDto
     [JsonProperty("groundCover")]
     public bool GroundCover;
 
+    /// <summary>resource 表示世界形态必须由共享 Entity 模块运行，禁止实例化 Item 外壳。</summary>
+    [JsonProperty("entityRuntime", NullValueHandling = NullValueHandling.Ignore)]
+    public string EntityRuntime;
+
     /// <summary>不依赖 Collider 的确定性世界格占地；偏移相对物品根节点所在格。</summary>
     [JsonProperty("worldGridOccupancy", NullValueHandling = NullValueHandling.Ignore)]
     public WorldGridOccupancyData WorldGridOccupancy;
@@ -398,6 +402,8 @@ public sealed class RuntimeItemDefinition
 
     /// <summary>世界侧可直接判断拾取语义，避免为了筛选 ECS 实体克隆 ItemData。</summary>
     public bool CanBePickedUp => templateData?.Stack?.CanBePickedUp == true;
+    public string EntityRuntime { get; }
+    public bool UsesResourceEntities => string.Equals(EntityRuntime, "resource", StringComparison.Ordinal);
 
     /// <summary>由当前内容编译的共享根级感知几何；非 Actor 通过旧对象 Bridge 感知。</summary>
     internal FlatWorld.Geometry.PerceptionShape2D[] ActorPerceptionShapes { get; }
@@ -456,9 +462,11 @@ public sealed class RuntimeItemDefinition
         bool isGroundCover = false,
         IReadOnlyList<GridCellOffset> worldGridOccupancy = null,
         int requiredGroundSupport = 0,
-        JObject actorEcs = null)
+        JObject actorEcs = null,
+        string entityRuntime = null)
     {
         Id = id;
+        EntityRuntime = entityRuntime;
         ShellPrefabId = shellPrefabId;
         ShellPrefab = shellPrefab;
         templateData = itemData;

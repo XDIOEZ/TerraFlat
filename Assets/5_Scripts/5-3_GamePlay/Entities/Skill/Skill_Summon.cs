@@ -14,9 +14,8 @@ public class Skill_Summon : Skill
         if (GameRes.Instance.TryGetItemDefinition(SummonItemName, out RuntimeItemDefinition definition) &&
             definition.IsActor)
         {
-            IAiEcologyBackend backend = AiRuntimeBackendService.Ecology;
-            if (backend == null || !backend.TrySpawnDirect(SummonItemName, runtimeSkill.targetPoint, 0, out _))
-                throw new System.InvalidOperationException($"ECS 生物召唤失败：{SummonItemName}");
+            if (!AiRuntimeBackendService.TrySpawnDirect(SummonItemName, runtimeSkill.targetPoint, 0, out _))
+                throw new System.InvalidOperationException($"生物召唤失败：{SummonItemName}");
             return;
         }
         ItemMgr.Instance.InstantiateItem(SummonItemName, runtimeSkill.targetPoint).Load();

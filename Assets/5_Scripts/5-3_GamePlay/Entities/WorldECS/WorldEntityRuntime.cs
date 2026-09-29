@@ -15,6 +15,12 @@ public interface IWorldEntityRuntimeModule
     void ReleaseEntities();
 }
 
+/// <summary>统一 Job 完成后提交少量存档、库存与表现副作用，不在并行任务里调用 Unity 接口。</summary>
+public interface IWorldEntityPostSimulationModule
+{
+    void AfterEntitySimulation(float deltaTime);
+}
+
 /// <summary>正式世界实体的唯一 World 所有者；AI 是能力运行器，不再拥有另一套实体世界。</summary>
 public static class WorldEntityRuntime
 {
@@ -30,6 +36,7 @@ public static class WorldEntityRuntime
     private static readonly HashSet<IWorldEntityRuntimeModule> failed = new();
     private static IWorldEntityRuntimeModule[] dispatch = Array.Empty<IWorldEntityRuntimeModule>();
     private static EntityCapabilitySystem capabilities;
+    private static EntityPlantModuleSystem plants;
     private static EntitySeasonPeriod[] seasonPeriods;
     private static float capabilitySeconds;
     private const float CapabilityInterval = 0.25f;
@@ -65,6 +72,7 @@ public static class WorldEntityRuntime
         dimensionId = dimension;
         world = new World("FlatWorld 统一实体世界 / " + dimension);
         capabilities = world.GetOrCreateSystemManaged<EntityCapabilitySystem>();
+        plants = world.GetOrCreateSystemManaged<EntityPlantModuleSystem>();
         return world;
     }
 
@@ -121,6 +129,12 @@ public static class WorldEntityRuntime
             }
         }
         TickCommonCapabilities(deltaTime);
+        foreach (IWorldEntityRuntimeModule module in currentDispatch)
+        {
+            if (!modules.Contains(module) || failed.Contains(module) || module is not IWorldEntityPostSimulationModule post) continue;
+            try { post.AfterEntitySimulation(deltaTime); }
+            catch (Exception exception) { failed.Add(module); Debug.LogError($"[WorldEntityRuntime] 能力提交失败 {module.RuntimeModuleId}：{exception}"); }
+        }
     }
 
     /// <summary>结构变更与保存之前完成全部能力的 Native 访问。</summary>
@@ -128,6 +142,7 @@ public static class WorldEntityRuntime
     {
         foreach (IWorldEntityRuntimeModule module in dispatch) module.CompleteEntityJobs();
         if (Current != null) capabilities?.Complete();
+        if (Current != null) plants?.Complete();
     }
 
     /// <summary>成长、耐候等通用能力有自己的低频脉冲，动物和资源共用这些组件时也只计算一次。</summary>
@@ -155,6 +170,16 @@ public static class WorldEntityRuntime
         UpdateSeasonSnapshot(clock);
         capabilities.Update();
         capabilities.Complete();
+        plants.StepSeconds = capabilities.StepSeconds;
+        plants.GameTime = capabilities.GameTime;
+        plants.DayLength = capabilities.DayLength;
+        plants.Seasonal = capabilities.Seasonal;
+        plants.GrowthDifficulty = capabilities.DifficultyGrowthMultiplier;
+        plants.WeatherMultiplier = capabilities.WeatherMultiplier;
+        plants.RainGrowthIntensity = capabilities.RainIntensity;
+        plants.RainIntensity = weather != null && (weather.CurrentWeather == WeatherType.Rain || weather.CurrentWeather == WeatherType.Storm) ? intensity : 0f;
+        plants.Update();
+        plants.Complete();
     }
 
     private static void UpdateSeasonSnapshot(TimeData clock)
@@ -172,7 +197,7 @@ public static class WorldEntityRuntime
                 !previous.Days.Equals(next.Days) || !previous.Temperatures.Equals(next.Temperatures)) changed = true;
             seasonPeriods[i] = next;
         }
-        if (changed) capabilities.SetSeasons(seasonPeriods);
+        if (changed) { capabilities.SetSeasons(seasonPeriods); plants.SetSeasons(seasonPeriods); }
     }
 
     /// <summary>区块先保存解绑，然后运行器释放自己的实体，最后由唯一所有者销毁 World。</summary>
@@ -182,24 +207,29 @@ public static class WorldEntityRuntime
         releasing = true;
         try
         {
-            if (Current != null) capabilities?.Complete();
             IWorldEntityRuntimeModule[] currentDispatch = dispatch;
-            foreach (IWorldEntityRuntimeModule module in currentDispatch)
+            // 单个 Job 收尾失败不能跳过其它运行器及 World 的释放。
+            if (Current != null)
             {
-                try { module.CompleteEntityJobs(); }
-                catch (Exception exception) { Debug.LogException(exception); }
+                TryReleaseResource("通用能力 Job", () => capabilities?.Complete());
+                TryReleaseResource("植物能力 Job", () => plants?.Complete());
             }
             foreach (IWorldEntityRuntimeModule module in currentDispatch)
             {
-                try { module.ReleaseEntities(); }
-                catch (Exception exception) { Debug.LogException(exception); }
+                TryReleaseResource(module.RuntimeModuleId + " Job", module.CompleteEntityJobs);
             }
-            if (world != null && world.IsCreated) world.Dispose();
+            foreach (IWorldEntityRuntimeModule module in currentDispatch)
+            {
+                TryReleaseResource(module.RuntimeModuleId, module.ReleaseEntities);
+            }
+            if (world != null && world.IsCreated)
+                TryReleaseResource("World", world.Dispose);
         }
         finally
         {
             world = null;
             capabilities = null;
+            plants = null;
             seasonPeriods = null;
             capabilitySeconds = 0f;
             DevelopmentSuspended = false;
@@ -211,6 +241,16 @@ public static class WorldEntityRuntime
             dispatch = Array.Empty<IWorldEntityRuntimeModule>();
             Generation++;
             releasing = false;
+        }
+    }
+
+    /// <summary>只在退出边界隔离异常，保留具体失败步骤并继续清理独立资源。</summary>
+    private static void TryReleaseResource(string stage, Action release)
+    {
+        try { release(); }
+        catch (Exception exception)
+        {
+            Debug.LogException(new InvalidOperationException("[WorldEntityRuntime] 释放失败：" + stage, exception));
         }
     }
 

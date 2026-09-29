@@ -10,7 +10,7 @@
       "parent": "Wolf",
       "lootTableId": "",
       "gameName": "丧尸",
-      "description": "用于尸潮等超大规模战斗的基础 ECS 敌对生物。",
+      "description": "用于尸潮的基础敌对生物，当前使用 GameObject AI，保留可选 ECS 配置。",
       "tags": [
         "Zombie",
         "Undead",

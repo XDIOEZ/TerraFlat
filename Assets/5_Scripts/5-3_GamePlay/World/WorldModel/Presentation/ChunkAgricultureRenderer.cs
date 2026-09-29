@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using System;
+using FlatWorld.NaturalEntities;
 using FlatWorld.Networking;
 using FlatWorld.WorldModel;
 using UnityEngine;
@@ -26,6 +28,9 @@ public sealed class ChunkAgricultureRenderer : MonoBehaviour, IChunkViewRenderer
 
     private readonly Dictionary<Vector2Int, TillingOverlay> overlays = new();
     private readonly Dictionary<Vector2Int, Item> crops = new();
+    private readonly Dictionary<Vector2Int, NaturalEntityHandle> entityCrops = new();
+    private readonly Dictionary<int, Vector2Int> entityCropCells = new();
+    private ChunkTilemapRenderer terrainOwner;
     private static readonly ProfilerMarker CropCaptureMarker =
         new("FlatWorld.ChunkStreaming.CaptureCrops");
     private static readonly ProfilerMarker CropDespawnMarker =
@@ -52,6 +57,8 @@ public sealed class ChunkAgricultureRenderer : MonoBehaviour, IChunkViewRenderer
         saveManager = SaveDataMgr.Instance;
         chunkManager = ChunkMgr.ExistingInstance;
         chunk = model;
+        terrainOwner = GetComponentInParent<ChunkView>()?.GetComponentInChildren<ChunkTilemapRenderer>(true);
+        if (terrainOwner != null) terrainOwner.BatchPresentationRebuilt += RefreshEntityPresentation;
         chunk.Terrain.Changed += HandleChanged;
         bindingInitialState = true;
         try
@@ -72,6 +79,11 @@ public sealed class ChunkAgricultureRenderer : MonoBehaviour, IChunkViewRenderer
             ItemData data = MemoryPack.MemoryPackSerializer.Deserialize<ItemData>(
                 MemoryPack.MemoryPackSerializer.Serialize(saved.Crop));
             Vector2Int worldCell = saved.LocalPosition + Origin;
+            if (GameRes.ExistingInstance.TryGetItemDefinition(data.IDName, out var definition) && definition.UsesResourceEntities)
+            {
+                RestoreEntityCrop(worldCell, definition, data, false);
+                continue;
+            }
             Item crop = itemManager.InstantiateItem(data,
                 new Vector3(worldCell.x + 0.5f, worldCell.y + 0.5f), parent: gameObject);
             crop.Load();
@@ -95,6 +107,7 @@ public sealed class ChunkAgricultureRenderer : MonoBehaviour, IChunkViewRenderer
         using (CropCaptureMarker.Auto())
             CaptureState();
         chunk.Terrain.Changed -= HandleChanged;
+        if (terrainOwner != null) terrainOwner.BatchPresentationRebuilt -= RefreshEntityPresentation;
         using (CropDespawnMarker.Auto())
         {
             foreach (Item crop in crops.Values)
@@ -107,6 +120,10 @@ public sealed class ChunkAgricultureRenderer : MonoBehaviour, IChunkViewRenderer
             }
         }
         crops.Clear();
+        foreach (NaturalEntityHandle handle in entityCrops.Values) NaturalEntityEcsService.Remove(handle);
+        entityCrops.Clear();
+        entityCropCells.Clear();
+        terrainOwner = null;
         using (OverlayClearMarker.Auto())
             foreach (TillingOverlay overlay in overlays.Values)
                 DisposeOverlay(overlay);
@@ -129,6 +146,12 @@ public sealed class ChunkAgricultureRenderer : MonoBehaviour, IChunkViewRenderer
             pair.Value.Save();
             saveManager.RecordCultivatedCrop(chunk.Address, pair.Key, pair.Value);
         }
+        foreach (var pair in new List<KeyValuePair<Vector2Int, NaturalEntityHandle>>(entityCrops))
+        {
+            NaturalEntityEcsService.PrepareForCapture(pair.Value);
+            if (NaturalEntityEcsService.TryCapture(pair.Value, out ItemData snapshot))
+                saveManager.RecordCultivatedCropData(chunk.Address, pair.Key, snapshot);
+        }
     }
 
     public void RegisterCrop(Vector2Int worldCell, Item crop)
@@ -140,6 +163,90 @@ public sealed class ChunkAgricultureRenderer : MonoBehaviour, IChunkViewRenderer
     }
 
     private Vector2Int Origin => new(chunk.Address.ChunkOrigin.X, chunk.Address.ChunkOrigin.Y);
+
+    #region Entity 播种与收获
+
+    /// <summary>创建植株后由种子入口提交扣料；失败只回滚实体，不制造收获或死亡事件。</summary>
+    public NaturalEntityHandle CreateEntityCrop(Vector2Int worldCell, RuntimeItemDefinition definition)
+    {
+        if (chunk == null || unbinding || !GameNetwork.HasStateAuthority)
+            throw new InvalidOperationException("农业区块尚未就绪。");
+        Vector3 center = new(worldCell.x + 0.5f, worldCell.y + 0.5f);
+        if (!chunkManager.TryGetRuntimeTerrainTile(center, out var sample))
+            throw new InvalidOperationException("种植格没有可用的地形数据。");
+        FarmlandSystem.EnsureSoilState(sample);
+        ItemData data = definition.CreateItemData();
+        data.Guid = Guid.NewGuid().GetHashCode() & int.MaxValue;
+        if (data.Guid == 0) data.Guid = 1;
+        data.transform.position = center;
+        data.transform.rotation = Quaternion.identity;
+        data.transform.scale = Vector3.one;
+        return RestoreEntityCrop(worldCell, definition, data, true);
+    }
+
+    private NaturalEntityHandle RestoreEntityCrop(Vector2Int worldCell, RuntimeItemDefinition definition,
+        ItemData data, bool newlyPlanted)
+    {
+        Vector2Int local = worldCell - Origin;
+        if (entityCrops.ContainsKey(local) || crops.ContainsKey(local))
+            throw new InvalidOperationException("种植格已经有作物。");
+        chunk.Terrain.TryGetEnvironmentValue("temperature.celsius", local.x, local.y, out float temperature);
+        chunk.Terrain.TryGetEnvironmentValue("precipitation", local.x, local.y, out float precipitation);
+        if (!NaturalEntityEcsService.TryRegister(definition, data.Guid, data.transform.position,
+            temperature, precipitation, chunk.Address.DimensionId, data, out NaturalEntityHandle handle,
+            newlyPlanted ? worldCell : null))
+            throw new InvalidOperationException($"作物 {definition.Id} 未能建立 Entity，禁止回退 Item。");
+        try
+        {
+            entityCrops.Add(local, handle);
+            entityCropCells.Add(handle.Id, local);
+            NaturalEntityEcsService.BindRemovalHandler(handle, HandleEntityCropRemoved);
+            NaturalEntityEcsService.BindPresentation(handle, terrainOwner);
+            return handle;
+        }
+        catch
+        {
+            entityCrops.Remove(local); entityCropCells.Remove(handle.Id);
+            NaturalEntityEcsService.Remove(handle);
+            throw;
+        }
+    }
+
+    public void RollbackEntityCrop(NaturalEntityHandle handle)
+    {
+        if (entityCropCells.Remove(handle.Id, out Vector2Int local)) entityCrops.Remove(local);
+        NaturalEntityEcsService.Remove(handle);
+    }
+
+    public void CaptureEntityCrop(NaturalEntityHandle handle)
+    {
+        if (chunk != null && entityCropCells.TryGetValue(handle.Id, out Vector2Int local) &&
+            NaturalEntityEcsService.TryCapture(handle, out ItemData snapshot))
+            saveManager.RecordCultivatedCropData(chunk.Address, local, snapshot);
+    }
+
+    private void HandleEntityCropRemoved(NaturalEntityHandle handle)
+    {
+        if (chunk == null || applicationQuitting || chunkManager == null || chunkManager.IsWorldRuntimeShuttingDown ||
+            !entityCropCells.TryGetValue(handle.Id, out Vector2Int local) ||
+            !entityCrops.TryGetValue(local, out var current) || current != handle) return;
+        saveManager.RecordCultivatedCropData(chunk.Address, local, null);
+        entityCropCells.Remove(handle.Id); entityCrops.Remove(local);
+    }
+
+    private void RefreshEntityPresentation()
+    {
+        foreach (NaturalEntityHandle handle in entityCrops.Values)
+        {
+            if (NaturalEntityEcsService.TryGetDefinition(handle, out var old) &&
+                GameRes.ExistingInstance.TryGetItemDefinition(old.Id, out var current) &&
+                !NaturalEntityEcsService.TryRefreshDefinition(handle, current))
+                Debug.LogError($"作物 {old.Id} 配置刷新失败，保留原 Entity。");
+            NaturalEntityEcsService.BindPresentation(handle, terrainOwner);
+        }
+    }
+
+    #endregion
 
     private void HandleCropDestroyed(Item crop)
     {

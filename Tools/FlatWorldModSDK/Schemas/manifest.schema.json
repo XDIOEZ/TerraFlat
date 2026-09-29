@@ -22,10 +22,30 @@
     "localizationFiles": { "type": "array", "items": { "$ref": "#/$defs/path" } },
     "settingsFile": { "$ref": "#/$defs/path" },
     "entryLua": { "$ref": "#/$defs/path" },
+    "managed": { "$ref": "#/$defs/managed" },
     "bundles": { "type": "array", "items": { "$ref": "#/$defs/bundle" } },
     "contentHash": { "type": "string" }
   },
   "$defs": {
+    "managed": {
+      "type": "object",
+      "required": ["entryAssembly", "entryType"],
+      "additionalProperties": false,
+      "properties": {
+        "entryAssembly": { "$ref": "#/$defs/managedAssemblyPath" },
+        "entryType": { "type": "string", "minLength": 1, "maxLength": 512 },
+        "dependencies": {
+          "type": "array", "maxItems": 64, "uniqueItems": true,
+          "items": { "$ref": "#/$defs/managedAssemblyPath" }
+        }
+      }
+    },
+    "managedAssemblyPath": {
+      "allOf": [
+        { "$ref": "#/$defs/path" },
+        { "type": "string", "pattern": "\\.[dD][lL][lL]$" }
+      ]
+    },
     "path": { "type": "string", "minLength": 1, "pattern": "^(?![A-Za-z]:|/|.*(?:^|/)\\.\\.(?:/|$)).+$" },
     "dependency": {
       "type": "object",

@@ -237,7 +237,7 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
     private IInteractable FindReceiverAtPointer(Vector2 pointerWorld, bool requirePointerPermission = false)
         => FindReceiverAtPointerCore(pointerWorld, requirePointerPermission, previewOnly: false);
 
-    /// <summary>描边只查有视觉组件的目标，不轮询机械图。</summary>
+    /// <summary>描边只查已接入表现的目标，机器通过轻量视觉注册而不轮询机械图。</summary>
     private IInteractable FindPreviewReceiverAtPointer(Vector2 pointerWorld)
         => FindReceiverAtPointerCore(pointerWorld, requirePointerPermission: false, previewOnly: true);
 
@@ -297,7 +297,7 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
         return closestReceiver != null && StartInteraction(closestReceiver);
     }
 
-    /// <summary>每帧只寻找能显示描边的目标，机械不参与预览查询。</summary>
+    /// <summary>每帧只寻找已接入描边的目标，不为预览扫描整张机械图。</summary>
     private void RefreshInteractionPreview()
     {
         if (!IsLocalInteractionOwner() ||
@@ -318,6 +318,15 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
         if (!IsInteractionCandidate(receiver, receiverComponent))
         {
             ClearInteractionPreview();
+            return;
+        }
+
+        if (receiver is IWorldInteractionPreview entityPreview)
+        {
+            if (previewReceiver == receiver) return;
+            ClearInteractionPreview();
+            previewReceiver = receiver;
+            entityPreview.SetInteractionHighlighted(true);
             return;
         }
 
@@ -557,6 +566,8 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
     /// <summary>停止当前本地目标的描边，避免对象回收或切换目标后残留。</summary>
     private void ClearInteractionPreview()
     {
+        if (previewReceiver is IWorldInteractionPreview entityPreview)
+            entityPreview.SetInteractionHighlighted(false);
         previewOutline?.SetHighlighted(false);
         previewReceiver = null;
         previewReceiverComponent = null;

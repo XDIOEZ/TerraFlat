@@ -229,20 +229,26 @@ internal sealed class ContactShadowBatchRenderer : IDisposable
         {
             if (disposed) return;
             disposed = true;
-            group.RemoveBatch(batchId);
-            buffer.Dispose();
-            group.UnregisterMesh(meshId);
-            group.UnregisterMaterial(materialId);
-            group.Dispose();
-            if (Application.isPlaying)
+            // 先销毁整个 BRG 结束全部注册，再独立释放自有缓冲与资源。
+            try { group.Dispose(); }
+            finally
             {
-                UnityEngine.Object.Destroy(mesh);
-                UnityEngine.Object.Destroy(material);
-            }
-            else
-            {
-                UnityEngine.Object.DestroyImmediate(mesh);
-                UnityEngine.Object.DestroyImmediate(material);
+                GraphicsBuffer previous = buffer;
+                buffer = null;
+                try { previous?.Dispose(); }
+                finally
+                {
+                    if (Application.isPlaying)
+                    {
+                        UnityEngine.Object.Destroy(mesh);
+                        UnityEngine.Object.Destroy(material);
+                    }
+                    else
+                    {
+                        UnityEngine.Object.DestroyImmediate(mesh);
+                        UnityEngine.Object.DestroyImmediate(material);
+                    }
+                }
             }
         }
     }

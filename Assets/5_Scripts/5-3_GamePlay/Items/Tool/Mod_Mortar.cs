@@ -460,7 +460,7 @@ public sealed class Mod_Mortar : Module, IInteractable, IInventory
     #endregion
 
     /// <summary>只接收该工作站的原料与产物，避免无关物品或石臼自身被放入容器。</summary>
-    private sealed class MortarInventory : Inventory
+    public sealed class MortarInventory : Inventory
     {
         public string StationId;
         public bool MaterialOnly;

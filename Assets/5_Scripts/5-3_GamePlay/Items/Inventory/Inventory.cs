@@ -129,6 +129,7 @@ public sealed class InventoryDragTransaction
 [System.Serializable]
 public class Inventory
 {
+    [NonSerialized] public MachineEntity MachineOwner; // 数据机器的归属信息不参与库存序列化。
     #region 字段和属性
 
     [FoldoutGroup("基础引用"), ReadOnly, LabelText("所属物品")]
@@ -1448,6 +1449,8 @@ public class Inventory
              !CanHoldWholeStack(sourceSlot, targetItem)))
             return false;
 
+        if (MachineInventoryCommands.TryRoute(this, Data.itemSlots.IndexOf(sourceSlot), targetInventory,
+                targetIndex, "move", 0, out bool routed)) return routed;
         if (!Data.DropItemSlotTo(sourceSlot, targetInventory.Data, targetSlot))
             return false;
 
@@ -1767,6 +1770,7 @@ public class Inventory
         if (sourceSlot == null || sourceSlot.itemData == null)
             return false;
 
+        if (MachineInventoryCommands.TryRoute(this, sourceIndex, targetInventory, -1, "quick", 0, out bool routed)) return routed;
         bool moved = false;
         moved |= TryTransferToMatchedSlots(sourceSlot, targetInventory);
         moved |= TryTransferToEmptySlots(sourceSlot, targetInventory);
@@ -1845,11 +1849,24 @@ public class Inventory
         if (!targetInventory.CanAcceptQuickTransfer(sourceSlot, targetSlot))
             return false;
 
+        if (MachineInventoryCommands.TryRoute(this, Data.itemSlots.IndexOf(sourceSlot), targetInventory,
+                targetInventory.Data.itemSlots.IndexOf(targetSlot), "quantity", transferCount, out bool routed)) return routed;
         return Data.TransferItemQuantityTo(
             sourceSlot,
             targetInventory.Data,
             targetSlot,
             transferCount);
+    }
+
+    /// <summary>服务端的已校验请求复用完整拖拽与数量转移规则。</summary>
+    public bool ExecuteMachineTransfer(int sourceIndex, Inventory target, int targetIndex, string operation, int amount)
+    {
+        if (Data?.itemSlots == null || (uint)sourceIndex >= (uint)Data.itemSlots.Count || target?.Data?.itemSlots == null) return false;
+        if (operation == "quick") return TryQuickMoveSlotToInventory(sourceIndex, target);
+        if ((uint)targetIndex >= (uint)target.Data.itemSlots.Count) return false;
+        if (operation == "move") return TryMoveSlotTo(sourceIndex, target, targetIndex);
+        return operation == "quantity" && amount > 0 &&
+            TryTransferQuickQuantity(Data.itemSlots[sourceIndex], target, target.Data.itemSlots[targetIndex], amount);
     }
 
     /// <summary>

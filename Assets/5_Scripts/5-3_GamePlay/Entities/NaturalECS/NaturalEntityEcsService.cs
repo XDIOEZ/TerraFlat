@@ -1,9 +1,15 @@
 using System;
 using System.Collections.Generic;
+using FlatWorld.AIECS;
+using FlatWorld.Combat;
+using FlatWorld.Geometry;
+using FlatWorld.Networking;
 using FlatWorld.WorldModel;
 using Unity.Collections;
+using Unity.Entities;
 using Unity.Mathematics;
 using UnityEngine;
+using Newtonsoft.Json.Linq;
 using NaturalEntityHealth = FlatWorld.AIECS.AiecsVital;
 using NaturalEntityGrowth = FlatWorld.AIECS.EntityGrowth;
 using NaturalEntityClimate = FlatWorld.AIECS.EntityClimate;
@@ -13,11 +19,11 @@ namespace FlatWorld.NaturalEntities
 {
     /// <summary>
     /// 自然物 ECS 与现有 Item/存档/导航之间的唯一桥。
-    /// 热数据留在 Entities；完整 ItemData 只作为冷载荷，在升格、存档和降级边界读写。
+    /// 热数据留在 Entities；ItemData 仅用于定义和存档，树木排序外壳不承载资源玩法。
     /// </summary>
-    public static class NaturalEntityEcsService
+    public static partial class NaturalEntityEcsService
     {
-        private sealed class Record
+        private sealed partial class Record
         {
             public NaturalEntityHandle Handle;
             public NaturalEntityEcsProfile Profile;
@@ -26,7 +32,6 @@ namespace FlatWorld.NaturalEntities
             public bool NavigationRegistered;
             public WorldNavigationManager NavigationOwner;
             public float Precipitation;
-            public bool Suspended;
         }
 
         private sealed class CompileCacheEntry
@@ -43,12 +48,15 @@ namespace FlatWorld.NaturalEntities
         private const float SimulationInterval = 0.25f;
         private static int nextRuntimeId = 1;
         private static float pendingSimulationSeconds;
-        private sealed class RuntimeModule : IWorldEntityRuntimeModule
+        private sealed class RuntimeModule : IWorldEntityRuntimeModule, IWorldEntityPostSimulationModule, IGameplayCombatBridge
         {
             public string RuntimeModuleId => "entity.resource-inputs";
             public void TickEntities(float deltaTime) => Tick(deltaTime);
             public void CompleteEntityJobs() => simulation?.Complete();
             public void ReleaseEntities() => ReleaseWorld();
+            public void AfterEntitySimulation(float deltaTime) => PublishEntities(deltaTime);
+            public bool TryGetIdentity(Item item, out CombatIdentity identity) { identity = default; return false; }
+            public void QueryWeaponPulse(Mod_Damage weapon, AttackShape2D shape, CombatDamageContext context) => QueryWeapon(weapon, shape, context);
         }
         private static readonly RuntimeModule runtimeModule = new();
 
@@ -81,39 +89,47 @@ namespace FlatWorld.NaturalEntities
             pendingSimulationSeconds = 0f;
             foreach (Record record in records.Values)
             {
-                if (record.Suspended) continue;
                 if (record.NavigationOwner != WorldNavigationManager.ExistingInstance)
                     UnregisterNavigation(record);
                 if (!record.NavigationRegistered) TryRegisterNavigation(record);
                 FreezeEnvironment(record);
+                FreezeSoil(record);
             }
         }
 
         public static void ReleaseWorld()
         {
             WorldEntityRuntime.Unregister(runtimeModule);
+            GameplayCombatBridge.Unregister(runtimeModule);
             foreach (Record record in records.Values)
+            {
                 UnregisterNavigation(record);
+                ReleasePresentation(record);
+            }
             records.Clear();
             simulation?.Dispose();
             simulation = null;
             profiles.Clear();
             nextRuntimeId = 1;
             pendingSimulationSeconds = 0f;
+            ClearResourceQueries();
+            contactShadows?.Dispose();
+            contactShadows = null;
         }
 
         #endregion
 
-        #region 注册与升降级
+        #region 实体创建与配置刷新
 
-        /// <summary>按现有模块组合尝试进入自然物 ECS；不支持的组合返回 false，由调用方保留完整 Item。</summary>
+        /// <summary>已声明 Entity 的资源只能走当前入口；模块缺失必须报错，不能降回 Item。</summary>
         public static bool TryRegister(RuntimeItemDefinition definition, int naturalGuid,
             Vector3 defaultPosition, float baselineCelsius, float precipitation, string dimensionId, ItemData persistedData,
-            out NaturalEntityHandle handle)
+            out NaturalEntityHandle handle, Vector2Int? plantedCell = null)
         {
             handle = default;
-            if (!TryGetProfile(definition, out NaturalEntityEcsProfile profile, out _))
-                return false;
+            if (definition?.UsesResourceEntities != true) return false;
+            if (!TryGetProfile(definition, out NaturalEntityEcsProfile profile, out string failure))
+                throw new InvalidOperationException($"资源实体 {definition.Id} 编译失败：{failure}");
             if (profile.HasClimate && (float.IsNaN(baselineCelsius) || float.IsInfinity(baselineCelsius)))
                 return false;
 
@@ -123,7 +139,6 @@ namespace FlatWorld.NaturalEntities
                     GameRes.ExistingInstance, FastCloner.FastCloner.DeepClone(persistedData));
             if (snapshot == null)
                 return false;
-            if (!SupportsInstance(profile, snapshot)) return false;
             snapshot.Guid = naturalGuid;
             snapshot.transform ??= new ItemTransform();
             if (persistedData?.transform == null)
@@ -132,12 +147,17 @@ namespace FlatWorld.NaturalEntities
                 snapshot.transform.rotation = Quaternion.identity;
                 snapshot.transform.scale = Vector3.one;
             }
+            snapshot.transform.position = WorldTopologyRuntime.NormalizePosition(snapshot.transform.position);
+            if (simulation != null && (!ReferenceEquals(simulation.World, WorldEntityRuntime.Current) ||
+                !string.Equals(WorldEntityRuntime.DimensionId, dimensionId, StringComparison.Ordinal)))
+                throw new InvalidOperationException("资源实体不能写入另一维度或过期的共享世界。");
 
             if (simulation == null)
             {
                 var world = WorldEntityRuntime.GetOrCreate(dimensionId);
                 simulation = new NaturalEntitySimulation(world);
                 WorldEntityRuntime.Register(world, runtimeModule);
+                GameplayCombatBridge.Register(runtimeModule);
             }
             int runtimeId = AllocateRuntimeId();
             handle = new NaturalEntityHandle(runtimeId, WorldEntityRuntime.Generation);
@@ -147,28 +167,34 @@ namespace FlatWorld.NaturalEntities
                 Profile = profile,
                 Snapshot = snapshot,
                 Precipitation = precipitation,
+                DimensionId = dimensionId,
                 ObstacleId = (1L << 32) | (uint)runtimeId // 与 Unity 有符号 32 位 InstanceID 分开。
             };
 
             try
             {
+                InitializePlantedSnapshot(record, plantedCell);
+                ValidateOutputDefinitions(profile);
                 BuildComponents(record, baselineCelsius,
                     out NaturalEntityBody body,
                     out NaturalEntityHealth? health,
                     out NaturalEntityGrowth? growth,
                     out NaturalEntityClimate? climate,
                     out NaturalEntityHarvest? harvest);
+                body.Suspended = (byte)(GameNetwork.HasStateAuthority ? 0 : 1);
                 simulation.Create(runtimeId, body, health, growth, climate, harvest);
                 records.Add(runtimeId, record);
+                InstallPlantModules(record, persistedData, plantedCell.HasValue);
                 FreezeEnvironment(record);
+                FreezeSoil(record);
                 TryRegisterNavigation(record);
+                RegisterSpatial(record);
                 return true;
             }
             catch
             {
-                simulation.Remove(runtimeId);
-                records.Remove(runtimeId);
-                UnregisterNavigation(record);
+                if (records.ContainsKey(runtimeId)) Remove(handle);
+                else simulation.Remove(runtimeId);
                 handle = default;
                 throw;
             }
@@ -183,49 +209,41 @@ namespace FlatWorld.NaturalEntities
             if (!Contains(handle) || !records.TryGetValue(handle.Id, out Record record))
                 return;
             UnregisterNavigation(record);
+            UnregisterSpatial(record);
+            ReleasePresentation(record);
+            if (simulation.TryGet(handle.Id, out EntityPlantLifecycle plant) && plant.Cultivated != 0)
+            {
+                Vector2Int cell = WorldTopologyRuntime.NormalizeCell(new Vector2Int(plant.SoilCell.x, plant.SoilCell.y));
+                if (cultivatedCells.TryGetValue(cell, out int occupant) && occupant == handle.Id) cultivatedCells.Remove(cell);
+            }
             records.Remove(handle.Id);
             simulation?.Remove(handle.Id);
         }
 
-        /// <summary>升格时暂停 ECS 能力并交出导航占格；Item 注册后由旧桥接管。</summary>
-        public static void SetSuspended(NaturalEntityHandle handle, bool suspended)
-        {
-            if (!Contains(handle))
-                return;
-            NaturalEntityBody body = simulation.GetBody(handle.Id);
-            if ((body.Suspended != 0) == suspended)
-                return;
-            body.Suspended = (byte)(suspended ? 1 : 0);
-            body.VisualVersion++;
-            simulation.SetBody(handle.Id, body);
-
-            Record record = records[handle.Id];
-            record.Suspended = suspended;
-            if (suspended)
-                UnregisterNavigation(record);
-            else
-            {
-                TryRegisterNavigation(record);
-                FreezeEnvironment(record);
-            }
-        }
-
-        /// <summary>降级时把完整 Item 快照重新压回 ECS 热组件，不丢其它尚未迁移的冷模块数据。</summary>
+        /// <summary>配置刷新时将保存的运行态恢复到原 Entity，不切换玩法后端。</summary>
         public static void ApplySnapshot(NaturalEntityHandle handle, ItemData snapshot,
-            float baselineCelsius)
+            float baselineCelsius, bool rebaseCurrentDefinition = true)
         {
             if (!Contains(handle) || snapshot == null)
                 return;
             Record record = records[handle.Id];
+            if (record.Snapshot.Guid != snapshot.Guid || !string.Equals(record.Profile.Definition.Id, snapshot.IDName, StringComparison.Ordinal))
+                throw new InvalidOperationException("配置刷新不能替换植物的实体身份。");
+            AiecsVital previousVital = default;
+            bool hasPreviousVital = simulation.TryGet(handle.Id, out previousVital);
+            if (simulation.TryGet(handle.Id, out EntityPlantLifecycle previousPlant) && previousPlant.Cultivated != 0)
+                cultivatedCells.Remove(WorldTopologyRuntime.NormalizeCell(new Vector2Int(previousPlant.SoilCell.x, previousPlant.SoilCell.y)));
             UnregisterNavigation(record);
+            UnregisterSpatial(record);
             if (record.Profile.HasClimate &&
                 (float.IsNaN(baselineCelsius) || float.IsInfinity(baselineCelsius)) &&
                 simulation.TryGet(handle.Id, out NaturalEntityClimate currentClimate))
             {
                 baselineCelsius = currentClimate.BaselineCelsius;
             }
-            record.Snapshot = ItemDefinitionRuntime.RebasePersistedData(
-                GameRes.ExistingInstance, FastCloner.FastCloner.DeepClone(snapshot));
+            record.Snapshot = rebaseCurrentDefinition
+                ? ItemDefinitionRuntime.RebasePersistedData(GameRes.ExistingInstance, FastCloner.FastCloner.DeepClone(snapshot))
+                : FastCloner.FastCloner.DeepClone(snapshot);
 
             BuildComponents(record, baselineCelsius,
                 out NaturalEntityBody nextBody,
@@ -238,6 +256,14 @@ namespace FlatWorld.NaturalEntities
             nextBody.Suspended = current.Suspended;
             nextBody.VisualVersion = current.VisualVersion + 1;
             simulation.SetBody(handle.Id, nextBody);
+            if (health.HasValue && hasPreviousVital)
+            {
+                AiecsVital next = health.Value;
+                next.LastDamageTime = previousVital.LastDamageTime;
+                next.DeathPublished = previousVital.DeathPublished;
+                next.ReceivedMultiplier = previousVital.ReceivedMultiplier;
+                health = next;
+            }
             if (health.HasValue) simulation.Set(handle.Id, health.Value);
             else simulation.RemoveComponent<NaturalEntityHealth>(handle.Id);
             if (growth.HasValue) simulation.Set(handle.Id, growth.Value);
@@ -246,43 +272,54 @@ namespace FlatWorld.NaturalEntities
             else simulation.RemoveComponent<NaturalEntityClimate>(handle.Id);
             if (harvest.HasValue) simulation.Set(handle.Id, harvest.Value);
             else simulation.RemoveComponent<NaturalEntityHarvest>(handle.Id);
+            InstallPlantModules(record, snapshot, false);
+            record.PresentationDirty = true;
 
             if (nextBody.Suspended == 0)
             {
                 TryRegisterNavigation(record);
                 FreezeEnvironment(record);
+                FreezeSoil(record);
+                RegisterSpatial(record);
             }
         }
 
-        /// <summary>F5 只替换当前配置，保留已提交热状态；未迁移的新能力由调用方转为完整接口实体。</summary>
+        /// <summary>F5 只替换配置并保留原 Entity，未知能力保留原状态并报告错误。</summary>
         public static bool TryRefreshDefinition(NaturalEntityHandle handle, RuntimeItemDefinition definition)
         {
             if (!Contains(handle)) return false;
             Record record = records[handle.Id];
             if (ReferenceEquals(record.Profile.Definition, definition)) return true;
             if (!TryGetProfile(definition, out NaturalEntityEcsProfile replacement, out _)) return false;
-            profiles.Remove(record.Profile.Definition);
-            if (record.Suspended) { record.Profile = replacement; return true; }
+            ValidateOutputDefinitions(replacement);
             if (!TryCapture(handle, out ItemData snapshot)) return false;
             float baseline = simulation.TryGet(handle.Id, out NaturalEntityClimate climate) ? climate.BaselineCelsius : 0f;
+            NaturalEntityEcsProfile previous = record.Profile;
             record.Profile = replacement;
-            ApplySnapshot(handle, snapshot, baseline);
-            return true;
-        }
-
-        public static bool CanDemote(NaturalEntityHandle handle, ItemData snapshot) =>
-            Contains(handle) && SupportsInstance(records[handle.Id].Profile, snapshot);
-
-        private static bool SupportsInstance(NaturalEntityEcsProfile profile, ItemData snapshot)
-        {
-            // 耕地水肥尚未接入通用能力，不能把已有人工种植状态当作野生树木计算。
-            return !profile.HasGrowth || !TryGetModuleData(snapshot, profile.GrowthModuleName, out ModuleData raw) ||
-                raw is not Ex_ModData_MemoryPackable data || data.GetData<GrowData>()?.isCultivatedCrop != true;
+            try
+            {
+                ApplySnapshot(handle, snapshot, baseline);
+                profiles.Remove(previous.Definition);
+                return true;
+            }
+            catch (Exception exception)
+            {
+                record.Profile = previous;
+                ApplySnapshot(handle, snapshot, baseline, rebaseCurrentDefinition: false);
+                Debug.LogError($"[NaturalEntities] {definition.Id} 刷新失败，已恢复原实体状态：{exception}");
+                return false;
+            }
         }
 
         #endregion
 
         #region 查询与持久化
+
+        public static bool TryGetDefinition(NaturalEntityHandle handle, out RuntimeItemDefinition definition)
+        {
+            definition = Contains(handle) ? records[handle.Id].Profile.Definition : null;
+            return definition != null;
+        }
 
         public static bool TryGetPresentation(NaturalEntityHandle handle,
             out NaturalEntityPresentationState state)
@@ -308,6 +345,7 @@ namespace FlatWorld.NaturalEntities
                 return false;
             Record record = records[handle.Id];
             WriteHotState(record, record.Snapshot);
+            WritePlantState(record, record.Snapshot);
             snapshot = FastCloner.FastCloner.DeepClone(record.Snapshot);
             return true;
         }
@@ -336,14 +374,14 @@ namespace FlatWorld.NaturalEntities
             if (!Contains(handle) || !records[handle.Id].Profile.HasGrowth ||
                 !DayTimeSystem.Instance.TryGetCurrentSeason(out SeasonSnapshot season))
                 return false;
+            if (simulation.TryGet(handle.Id, out EntityPlantLifecycle plant) && plant.Cultivated != 0) return false;
             year = season.Year + 1;
             return true;
         }
 
         /// <summary>只有远距离仍会自行变化的能力需要周期写生态差量；纯矿点保持可由世界种子重建。</summary>
         public static bool RequiresRuntimePersistence(NaturalEntityHandle handle)
-            => Contains(handle) &&
-               (records[handle.Id].Profile.HasGrowth || records[handle.Id].Profile.HasClimate);
+            => Contains(handle);
 
         public static bool TryGetUnsupportedReason(RuntimeItemDefinition definition, out string reason)
         {
@@ -382,7 +420,7 @@ namespace FlatWorld.NaturalEntities
             climate = null;
             harvest = null;
 
-            if ((profile.Capabilities & NaturalEntityCapability.Health) != 0)
+            if (profile.HealthDefaults != null)
             {
                 DamageReceiver.DamageReceiver_SaveData state = ReadHealthState(record);
                 health = new NaturalEntityHealth
@@ -398,7 +436,7 @@ namespace FlatWorld.NaturalEntities
             if ((profile.Capabilities & NaturalEntityCapability.Growth) != 0)
             {
                 GrowData state = ReadGrowthState(record);
-                Mod_Grow.InitializeNaturalGrowthData(state, snapshot.Guid, record.Precipitation);
+                if (!profile.HasCrop) Mod_Grow.InitializeNaturalGrowthData(state, snapshot.Guid, record.Precipitation);
                 int stage = 0;
                 for (int i = 0; i < state.growState_Value.Count; i++)
                     if (state.GrowProgress >= state.growState_Value[i]) stage = i;
@@ -417,12 +455,12 @@ namespace FlatWorld.NaturalEntities
                 FillFixedList(profile.GrowthHealthRatios, ref component.HealthRatios);
                 growth = component;
 
-                if (component.Scales.Length > component.Stage)
+                if (!profile.HasCrop && component.Scales.Length > component.Stage)
                 {
                     float stageScale = component.Scales[component.Stage];
                     body.Scale = new float2(stageScale, stageScale);
                 }
-                if (health.HasValue)
+                if (!profile.HasCrop && health.HasValue)
                 {
                     NaturalEntityHealth vital = health.Value;
                     float fraction = vital.MaxHp > 0f ? Mathf.Clamp01(vital.Hp / vital.MaxHp) : 1f;
@@ -485,6 +523,8 @@ namespace FlatWorld.NaturalEntities
                     result.MaxHp = saved.MaxHp;
                     result.AttackersUIDs = saved.AttackersUIDs;
                 }
+                if (!string.IsNullOrWhiteSpace(data.BitData))
+                    record.DeathByDamage = JObject.Parse(data.BitData)["entityResource"]?.Value<bool?>("deathByDamage") == true;
             }
             return result;
         }
@@ -492,6 +532,18 @@ namespace FlatWorld.NaturalEntities
         private static GrowData ReadGrowthState(Record record)
         {
             GrowData result = FastCloner.FastCloner.DeepClone(record.Profile.GrowthDefaults);
+            if (record.Profile.HasCrop)
+            {
+                CropRuntimeData crop = ReadCropState(record);
+                result.GrowProgress = crop.stage == CropStage.Mature ? 1f : Mathf.Clamp01(crop.normalizedGrowth);
+                result.isCultivatedCrop = crop.isPlanted;
+                result.environmentInitialized = true;
+                result.environmentGrowthMultiplier = 1f;
+                result.simulationInitialized = crop.simulationInitialized;
+                result.lastSimulatedTime = crop.lastSimulatedTime;
+                result.plantedTilePos = crop.plantedTilePosition;
+                return result;
+            }
             if (TryGetModuleData(record.Snapshot, record.Profile.GrowthModuleName, out ModuleData raw) &&
                 raw is Ex_ModData_MemoryPackable data)
             {
@@ -535,7 +587,7 @@ namespace FlatWorld.NaturalEntities
         /// <summary>局部热源和天气先冻结为纯数值，再交给共享并行能力；不把当前火源用于历史补算。</summary>
         private static void FreezeEnvironment(Record record)
         {
-            if (!record.Profile.HasClimate || record.Suspended ||
+            if (!record.Profile.HasClimate ||
                 !simulation.TryGet(record.Handle.Id, out NaturalEntityClimate climate)) return;
             TemperatureMgr temperature = TemperatureMgr.Instance;
             Vector3 position = record.Snapshot.transform.position;
@@ -569,9 +621,13 @@ namespace FlatWorld.NaturalEntities
                 state.Hp = health.Hp;
                 state.MaxHp = health.MaxHp;
                 healthData.WriteData(state);
+                JObject payload = JObject.Parse(healthData.BitData);
+                payload["entityResource"] = new JObject { ["deathByDamage"] = record.DeathByDamage };
+                healthData.BitData = payload.ToString(Newtonsoft.Json.Formatting.None);
             }
 
             if (simulation.TryGet(record.Handle.Id, out NaturalEntityGrowth growth) &&
+                !record.Profile.HasCrop &&
                 TryGetModuleData(data, record.Profile.GrowthModuleName, out ModuleData growthRaw) &&
                 growthRaw is Ex_ModData_MemoryPackable growthData)
             {

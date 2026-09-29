@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using FlatWorld.NaturalEntities;
 using FlatWorld.WorldModel;
 using UnityEngine;
 
@@ -60,6 +61,18 @@ namespace FlatWorld.AIECS.Gameplay
                 }
 
             float radius = Mathf.Sqrt(4f * size.x * size.x + 4f * size.y * size.y);
+            if (NaturalEntityEcsService.TryFindForage(origin, radius, CropTag, CanLand,
+                out Vector2 entityPosition, out int entityGuid))
+            {
+                float distance = WorldTopologyRuntime.SqrDistance(origin, entityPosition);
+                if (distance < nearest)
+                {
+                    nearest = distance;
+                    target = entityPosition;
+                    guid = entityGuid;
+                    kind = AiecsFoodTarget.Crop;
+                }
+            }
             items.QueryItemsInCircleNonAlloc(origin, radius, ~0, null, Candidates, Dedupe);
             foreach (Item candidate in Candidates)
             {
@@ -83,6 +96,7 @@ namespace FlatWorld.AIECS.Gameplay
         {
             if (kind == AiecsFoodTarget.Crop)
             {
+                if (NaturalEntityEcsService.IsForageAvailable(position, guid, CropTag)) return true;
                 Item item = ItemMgr.Instance?.GetItemByGuid(guid);
                 return item != null && !item.DestructionHandled && item.gameObject.activeInHierarchy &&
                     item.itemData?.Tags?.Contains(CropTag) == true &&

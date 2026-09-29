@@ -73,6 +73,8 @@ namespace FlatWorld.Combat
     /// <summary>四类伤害按切割/穿刺/劈砍/钝击的固定顺序存储；该顺序同时用于防御和结算结果。</summary>
     public struct CombatDamageContext
     {
+        public int ResourceToolKind, ResourceToolTier;
+        public float ResourceToolEfficiency;
         public CombatDeliveryCapabilities DeliveryCapabilities;
         public CombatAttackKey Attack; // 去重与攻击者身份。
         public CombatIdentity Credit; // 击杀归因；武器可以与 Attack.Source 不同。

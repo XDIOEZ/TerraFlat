@@ -56,8 +56,16 @@ public class Mod_FireDrill : Module, IInteractable
 
     public override void Load()
     {
-        ModSaveData.ReadData(ref RawData);
         EnsureRuntimeDefaults();
+        if (ModSaveData.BitData?.Length > 0)
+        {
+            FireDrillRuntimeState saved = ModSaveData.GetData<FireDrillRuntimeState>();
+            if (saved?.Input == null || saved.Output == null) throw new InvalidOperationException("取火器库存快照无效。");
+            InputInventory.Data = saved.Input;
+            OutputInventory.Data = saved.Output;
+            _progress = saved.Progress;
+            _hasClickedThisSession = saved.HasClicked;
+        }
         InputInventory.InitData();
         OutputInventory.InitData();
         BindItemActEvent();
@@ -66,7 +74,13 @@ public class Mod_FireDrill : Module, IInteractable
 
     public override void Save()
     {
-        ModSaveData.WriteData(RawData);
+        ModSaveData.WriteData(new FireDrillRuntimeState
+        {
+            Input = InputInventory.Data, Output = OutputInventory.Data,
+            Progress = _progress, HasClicked = _hasClickedThisSession,
+            RecipeId = InputInventory.Data.GetItemSlot(0)?.itemData is ItemData input
+                ? "machine.fire_drill." + input.IDName : ""
+        });
     }
 
     public override void Unload()

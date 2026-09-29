@@ -72,6 +72,12 @@ public static class GameplayCombatBridge
             SlowMultiplier = slow?.HitSlowMultiplier ?? 1f, SlowDuration = slow?.HitSlowDuration ?? 0f,
             BuildingMultiplier = sender is IBuildingDamageSource building ? building.BuildingDamageMultiplier : 1f };
         if (sender is ICombatDamageContextModifier modifier) modifier.ModifyDamageContext(ref context);
+        if (sender is IResourceHarvestTool resourceTool)
+        {
+            context.ResourceToolKind = (int)resourceTool.HarvestKind;
+            context.ResourceToolTier = resourceTool.HarvestTier;
+            context.ResourceToolEfficiency = resourceTool.HarvestEfficiency;
+        }
         return context;
     }
 

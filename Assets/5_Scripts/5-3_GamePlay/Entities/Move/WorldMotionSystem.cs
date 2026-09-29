@@ -84,7 +84,17 @@ public static class WorldMotionSystem
             if (inwardSpeed > allowedInward)
                 totalVelocity += outwardNormal * (inwardSpeed - allowedInward);
         }
-        return ResolveMechanicalContactVelocity(actor, position, totalVelocity, deltaTime);
+        return ResolveStaticContactVelocity(actor, position, totalVelocity, deltaTime);
+    }
+
+    /// <summary>静态 Entity 阻挡可在每个物理步重复约束，不重复提交载具推动请求。</summary>
+    public static Vector2 ResolveStaticContactVelocity(Mover actor, Vector2 position,
+        Vector2 velocity, float deltaTime)
+    {
+        if (actor == null || deltaTime <= 0f || velocity.sqrMagnitude <= 0f) return velocity;
+        velocity = ResolveMechanicalContactVelocity(actor, position, velocity, deltaTime);
+        return FlatWorld.NaturalEntities.NaturalEntityEcsService.ResolveContactVelocity(position,
+            velocity, actor.pushContactRadius, deltaTime);
     }
 
     /// <summary>纯数据机械按视觉底座矩形阻挡角色，保留滑边运动而不创建逐建筑碰撞体。</summary>
@@ -102,9 +112,9 @@ public static class WorldMotionSystem
         for (int y = minY; y <= maxY; y++)
         for (int x = minX; x <= maxX; x++)
         {
-            MechanicalNode node = MechanicalWorld.GetAtCurrentWorld(new Vector2Int(x, y), 0);
+            MachineEntity node = MachineWorld.GetAtCurrentWorld(new Vector2Int(x, y), 0);
             if (node?.Definition.BlocksMovement != true) continue;
-            MechanicalCollisionBounds.ResolveWorldBox(node, out Vector2 boxCenter,
+            MachineCollisionBounds.ResolveWorldBox(node, out Vector2 boxCenter,
                 out Vector2 boxHalfExtents);
             Vector2 origin = WorldTopologyRuntime.ShortestDelta(
                 boxCenter, position);

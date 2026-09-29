@@ -347,6 +347,8 @@ namespace FlatWorld.AIECS
         private bool disposed;
         private readonly bool ownsWorld;
         private float maximumBodyExtent; // 单次世界生命周期内只扩张，覆盖动态玩家体型与偏心形状。
+        /// <summary>托管模拟仍有引用不代表共享 World 存活，读取实体前必须检查原生生命周期。</summary>
+        public bool IsCreated => !disposed && world != null && world.IsCreated;
         public EntityManager Entities => world.EntityManager;
         public CombatClock Clock { get; private set; }
         public NativeArray<AiecsDisplayRecord> Display => display;

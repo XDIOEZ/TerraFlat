@@ -365,7 +365,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule
         }
 
         // 机械建筑直接提交权威数据节点；背包中的召唤器仍沿用通用建造入口。
-        if (BuildingPlacementLifecycle.GetExtension(item) is Mod_MechanicalNode)
+        if (MachineCatalog.Get(ResolveBuildingPrefabId(item?.itemData?.IDName, Data)) != null)
         {
             InstallMechanicalData(placement);
             return;
@@ -386,7 +386,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule
     /// <summary>把机械召唤器转换为纯数据世界节点，成功扣料后才发布建造结果。</summary>
     private void InstallMechanicalData(Vector3 placement)
     {
-        MechanicalNode node = null;
+        MachineEntity node = null;
         bool sourceConsumed = false;
         Player actor = _placementActor;
         try
@@ -397,7 +397,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule
                 throw new InvalidOperationException(reason);
             BuildingPlacementLifecycle.GetExtension(item)?.PreparePlacedData(placedData);
             SetInstalledDataState(placedData);
-            node = MechanicalWorld.Place(placedData);
+            node = MachineWorld.Place(placedData);
             CurrentState = BuildingState.NotInstalled;
             Save();
             if (!ConsumeOneSourceItem())
@@ -409,7 +409,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule
         }
         catch (Exception exception)
         {
-            if (node != null && !sourceConsumed) MechanicalWorld.Remove(node.Id);
+            if (node != null && !sourceConsumed) MachineWorld.Remove(node.Id);
             Debug.LogWarning("[机械安装] " + exception.Message, item);
         }
         finally
@@ -441,15 +441,15 @@ public partial class Mod_Building : Module, IIncomingDamageRule
             reason = "机械建筑超出建造距离";
             return false;
         }
-        MechanicalDefinition definition = MechanicalCatalog.Get(placedData.IDName);
+        MachineDefinition definition = MachineCatalog.Get(placedData.IDName);
         if (definition == null)
         {
             reason = "机械定义不存在：" + placedData.IDName;
             return false;
         }
-        Vector2Int cell = MechanicalWorld.CellOf(placedData.transform.position);
+        Vector2Int cell = MachineWorld.CellOf(placedData.transform.position);
         int requiredGroundSupport = GetRequiredGroundSupport(placedData.IDName);
-        return MechanicalWorld.ValidatePlacement(definition, cell, false, out reason) &&
+        return MachineWorld.ValidatePlacement(definition, cell, false, out reason) &&
             CheckTilePenalties(cell, requiredGroundSupport, out reason);
     }
 
@@ -559,7 +559,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule
 
         string buildingPrefabId = ResolveBuildingPrefabId(summonerData.IDName, carrierState);
         bool mechanical = !string.IsNullOrWhiteSpace(buildingPrefabId) &&
-            MechanicalCatalog.Get(buildingPrefabId) != null;
+            MachineCatalog.Get(buildingPrefabId) != null;
         bool definitionExists = GameRes.Instance != null &&
             GameRes.Instance.TryGetItemDefinition(buildingPrefabId, out _);
         if (string.IsNullOrWhiteSpace(buildingPrefabId) || !definitionExists ||
@@ -711,19 +711,19 @@ public partial class Mod_Building : Module, IIncomingDamageRule
     }
 
     /// <summary>纯数据机械先生成返还召唤器，成功后才移除权威节点和 BRG 占格。</summary>
-    public static bool TryDismantleMechanical(MechanicalNode node, out string reason)
+    public static bool TryDismantleMechanical(MachineEntity node, out string reason)
         => TryDismantleMechanical(node, out _, out reason);
 
     /// <summary>服务端可取得返还物以广播正式出生消息。</summary>
-    public static bool TryDismantleMechanical(MechanicalNode node, out Item summoner, out string reason)
+    public static bool TryDismantleMechanical(MachineEntity node, out Item summoner, out string reason)
         => TryCreateMechanicalDismantledSummoner(node, true, out summoner, out reason);
 
     /// <summary>联机事务先生成可发布的返还物，待广播成功后再提交机械节点删除。</summary>
-    public static bool TryPrepareMechanicalDismantle(MechanicalNode node, out Item summoner, out string reason)
+    public static bool TryPrepareMechanicalDismantle(MachineEntity node, out Item summoner, out string reason)
         => TryCreateMechanicalDismantledSummoner(node, false, out summoner, out reason);
 
     private static bool TryCreateMechanicalDismantledSummoner(
-        MechanicalNode node, bool removeNode, out Item summoner, out string reason)
+        MachineEntity node, bool removeNode, out Item summoner, out string reason)
     {
         summoner = null;
         reason = null;
@@ -732,7 +732,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule
             reason = "机械拆除需要当前世界写入权限";
             return false;
         }
-        ItemData placed = MechanicalWorld.CaptureSnapshot(node);
+        ItemData placed = MachineWorld.CaptureSnapshot(node);
         if (placed == null || !TryReadBuildingData(placed, out _, out Building_Data building))
         {
             reason = "机械节点快照无效";
@@ -747,12 +747,10 @@ public partial class Mod_Building : Module, IIncomingDamageRule
             placed.transform.scale = Vector3.one;
             if (TryReadBuildingData(placed, out _, out _))
                 WriteBuildingData(placed, state => state.SnapshotBase64 = null);
-            if (MechanicalWorld.TryGetModuleData(placed, out Ex_ModData_MemoryPackable mechanicalData))
-            {
-                MechanicalNodeState state = mechanicalData.GetData<MechanicalNodeState>() ?? new MechanicalNodeState();
-                state.RotationQuarterTurns = 0;
-                mechanicalData.WriteData(state);
-            }
+            MachineState state = MachineWorld.ReadMachineState(placed);
+            state.RotationQuarterTurns = 0;
+            state.Generated = false;
+            MachineWorld.WriteMachineState(placed, state);
             if (!ItemNetworkStateSerialization.TrySerializeItemData(placed, out byte[] payload) ||
                 payload.Length > MaxEmbeddedSnapshotBytes)
                 throw new InvalidOperationException("机械建筑快照无法序列化");
@@ -788,7 +786,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule
             summoner.Load();
             summoner.DropInRange();
             summoner.Save();
-            if (removeNode && MechanicalWorld.Remove(node.Id) == null)
+            if (removeNode && MachineWorld.Remove(node.Id) == null)
                 throw new InvalidOperationException("机械节点已失效");
             ItemNetworkStateSerialization.NotifyRuntimeStateChanged(summoner);
             return true;
@@ -803,7 +801,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule
     }
 
     /// <summary>非锤击致命伤害按原建筑材料回收规则处理纯数据机械。</summary>
-    public static void DestroyMechanical(MechanicalNode node)
+    public static void DestroyMechanical(MachineEntity node)
     {
         if (node == null || !GameNetwork.HasStateAuthority) return;
         if (TryReadBuildingData(node.Snapshot, out _, out Building_Data building))
@@ -813,7 +811,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule
                     summonerId, NormalizePlacement(node.Snapshot.transform.position), out string reason))
                 Debug.LogWarning("[机械摧毁] " + reason);
         }
-        MechanicalWorld.Remove(node.Id);
+        MachineWorld.Remove(node.Id);
     }
 
     /// <summary>纯数据机械受损时同步建筑快照中的正式状态。</summary>

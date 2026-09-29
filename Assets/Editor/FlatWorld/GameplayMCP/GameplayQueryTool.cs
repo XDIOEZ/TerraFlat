@@ -236,10 +236,10 @@ namespace FlatWorld.GameplayMCP
             if (view == null)
                 return null;
 
-            MechanicalNode node = view.Node;
+            MachineEntity node = view.Node;
             MechanicalNetwork network = node?.Network;
-            MechanicalNodeState state = node?.State ?? view.LocalState;
-            MechanicalProcessor processor = node?.Processor;
+            MachineState state = node?.State ?? view.LocalState;
+            RecipeProcessor processor = node?.Processor;
             ItemData input = processor?.Input?.Data?.GetItemSlot(0)?.itemData;
             ItemData output = processor?.Output?.Data?.GetItemSlot(0)?.itemData;
 

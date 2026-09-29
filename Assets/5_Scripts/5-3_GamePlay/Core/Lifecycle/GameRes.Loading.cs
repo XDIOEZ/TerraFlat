@@ -205,7 +205,7 @@ public partial class GameRes
         Clear(PlayerCreationTemplateCatalogService.Reset);
         Clear(TimeSystemConfigService.Reset);
         Clear(WaterCurrentPushConfigService.Reset);
-        Clear(MechanicalCatalog.Clear);
+        Clear(MachineCatalog.Clear);
         Clear(() => resourceAssets.Dispose());
         LoadedCount = 0;
         IsStartupReady = false;

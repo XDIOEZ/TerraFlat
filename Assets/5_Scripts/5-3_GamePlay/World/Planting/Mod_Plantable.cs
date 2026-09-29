@@ -1,4 +1,5 @@
 using System;
+using FlatWorld.NaturalEntities;
 using FlatWorld.Networking;
 using System.Collections.Generic;
 using UnityEngine;
@@ -153,6 +154,11 @@ public sealed class Mod_Plantable : Module
         }
 
         Item actor = item.Owner;
+        if (GameRes.ExistingInstance.TryGetItemDefinition(cropItemId, out var definition) && definition.UsesResourceEntities)
+        {
+            TryPlantEntity(target, actor, definition);
+            return;
+        }
         Item crop = TryCreateCultivatedCrop(target);
         if (crop == null)
             return;
@@ -328,6 +334,33 @@ public sealed class Mod_Plantable : Module
     #endregion
 
     #region 作物生成与种子消耗
+
+    /// <summary>先创建同一套 Entity 植株，再扣种子；无外壳，也不把实体回滚误记成收获。</summary>
+    private void TryPlantEntity(PlantingTarget target, Item actor, RuntimeItemDefinition definition)
+    {
+        NaturalEntityHandle handle = default;
+        bool consumed = false;
+        try
+        {
+            handle = target.agriculture.CreateEntityCrop(target.tilePosition, definition);
+            if (!ConsumeOneSeed())
+            {
+                target.agriculture.RollbackEntityCrop(handle);
+                return;
+            }
+            consumed = true;
+            target.agriculture.CaptureEntityCrop(handle);
+            Inventory_HotBar hotbar = actor.itemMods.GetMod_ByID<Inventory_HotBar>(ModText.Hotbar);
+            hotbar?.RuntimeInventory?.SyncHeldItemImmediately();
+            hotbar?.NotifyOwnerNetworkStateChanged();
+        }
+        catch (Exception exception)
+        {
+            if (!consumed && handle.IsValid) target.agriculture.RollbackEntityCrop(handle);
+            Debug.LogError($"[种植] Entity 作物 {definition.Id} 处理失败；" +
+                (consumed ? "种子已扣除，保留已生成植株。" : "未消耗种子，已回滚植株。") + exception);
+        }
+    }
 
     private Item TryCreateCultivatedCrop(PlantingTarget target)
     {

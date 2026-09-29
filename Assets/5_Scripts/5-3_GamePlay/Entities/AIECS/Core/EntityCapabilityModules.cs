@@ -92,11 +92,18 @@ namespace FlatWorld.AIECS
 
         protected override void OnCreate()
         {
-            climateQuery = GetEntityQuery(ComponentType.ReadWrite<EntityClimate>(),
-                ComponentType.ReadWrite<AiecsVital>(), ComponentType.ReadOnly<EntityModuleActive>());
-            growthQuery = GetEntityQuery(ComponentType.ReadWrite<EntityGrowth>(),
-                ComponentType.ReadWrite<EntityModuleAppearance>(), ComponentType.ReadWrite<AiecsVital>(),
-                ComponentType.ReadOnly<EntityModuleActive>());
+            // 带植物生命周期的实体需要按同一历史时间段同时结算气候与土壤，不能重复推进。
+            climateQuery = GetEntityQuery(new EntityQueryDesc
+            {
+                All = new[] { ComponentType.ReadWrite<EntityClimate>(), ComponentType.ReadWrite<AiecsVital>(), ComponentType.ReadOnly<EntityModuleActive>() },
+                None = new[] { ComponentType.ReadOnly<EntityPlantLifecycle>() }
+            });
+            growthQuery = GetEntityQuery(new EntityQueryDesc
+            {
+                All = new[] { ComponentType.ReadWrite<EntityGrowth>(), ComponentType.ReadWrite<EntityModuleAppearance>(),
+                    ComponentType.ReadWrite<AiecsVital>(), ComponentType.ReadOnly<EntityModuleActive>() },
+                None = new[] { ComponentType.ReadOnly<EntityPlantLifecycle>() }
+            });
         }
 
         /// <summary>历史快照只在内容改变时替换，普通批次复用 Native 内存。</summary>

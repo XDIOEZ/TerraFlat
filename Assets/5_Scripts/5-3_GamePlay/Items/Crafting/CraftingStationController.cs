@@ -46,6 +46,9 @@ public sealed class CraftingStationController : IDisposable
     private RuntimeRecipe selectedRecipe;
     private string lastFailureMessage;
     private int currentClickProgress;
+    private readonly RecipeProcessor authoritativeProcessor;
+    private readonly Action<string> selectAuthoritativeRecipe;
+    private readonly Action performAuthoritativeWork;
     private bool disposed;
 
     #endregion
@@ -59,7 +62,10 @@ public sealed class CraftingStationController : IDisposable
         CraftingCapabilities capabilities,
         Func<int> requiredClickCount,
         Func<Player> resolveActor,
-        Action<string> log = null)
+        Action<string> log = null,
+        RecipeProcessor authoritativeProcessor = null,
+        Action<string> selectRecipe = null,
+        Action performWork = null)
     {
         this.panel = panel ?? throw new ArgumentNullException(nameof(panel));
         this.inputInventory = inputInventory ?? throw new ArgumentNullException(nameof(inputInventory));
@@ -68,6 +74,9 @@ public sealed class CraftingStationController : IDisposable
         this.requiredClickCount = requiredClickCount ?? throw new ArgumentNullException(nameof(requiredClickCount));
         this.resolveActor = resolveActor ?? throw new ArgumentNullException(nameof(resolveActor));
         this.log = log;
+        this.authoritativeProcessor = authoritativeProcessor;
+        selectAuthoritativeRecipe = selectRecipe;
+        performAuthoritativeWork = performWork;
 
         craftButton = panel.GetButton("合成按钮")
             ?? throw new InvalidOperationException("[CraftingStationController] 面板缺少合成按钮");
@@ -87,6 +96,7 @@ public sealed class CraftingStationController : IDisposable
         outputInventory.Data.Event_OnDataChanged -= OnOutputChanged;
         outputInventory.Data.Event_OnDataChanged += OnOutputChanged;
         FlatWorldLocalizationService.LanguageChanged += OnLanguageChanged;
+        if (authoritativeProcessor != null) authoritativeProcessor.Changed += RefreshAuthoritativeState;
 
         RefreshCandidates();
     }
@@ -97,6 +107,7 @@ public sealed class CraftingStationController : IDisposable
             return;
 
         disposed = true;
+        if (authoritativeProcessor != null) authoritativeProcessor.Changed -= RefreshAuthoritativeState;
         FlatWorldLocalizationService.LanguageChanged -= OnLanguageChanged;
         craftButton.onClick.RemoveListener(OnCraftButtonClick);
         if (inputInventory.Data != null)
@@ -116,14 +127,19 @@ public sealed class CraftingStationController : IDisposable
 
     private void OnInputChanged(ItemSlot _)
     {
-        ResetProgress();
+        if (authoritativeProcessor?.IsCommitting == true) return;
+        if (authoritativeProcessor == null) ResetProgress();
         RefreshCandidates();
     }
 
     private void OnOutputChanged(ItemSlot _)
     {
+        if (authoritativeProcessor?.IsCommitting == true) return;
         RefreshSelectedRecipe();
     }
+
+    private void RefreshAuthoritativeState()
+    { if (!disposed && authoritativeProcessor?.IsCommitting != true) RefreshCandidates(); }
 
     /// <summary>动态工具标记跟随语言切换，同时保留当前配方选择及制作进度。</summary>
     private void OnLanguageChanged(string _)
@@ -136,6 +152,13 @@ public sealed class CraftingStationController : IDisposable
         if (recipe == null || ReferenceEquals(selectedRecipe, recipe))
             return;
 
+        if (authoritativeProcessor != null)
+        {
+            selectAuthoritativeRecipe?.Invoke(recipe.Id);
+            RefreshCandidates();
+            return;
+        }
+
         selectedRecipe = recipe;
         ResetProgress();
         RefreshSelectionVisuals();
@@ -145,6 +168,12 @@ public sealed class CraftingStationController : IDisposable
 
     private void OnCraftButtonClick()
     {
+        if (authoritativeProcessor != null)
+        {
+            performAuthoritativeWork?.Invoke();
+            RefreshCandidates();
+            return;
+        }
         RuntimeRecipe recipe = selectedRecipe;
         if (recipe == null)
             return;
@@ -190,7 +219,7 @@ public sealed class CraftingStationController : IDisposable
     /// <summary>输入变化时一次更新候选集合；输出空间不会隐藏材料本身能够制作的配方。</summary>
     private void RefreshCandidates()
     {
-        string previousRecipeId = selectedRecipe?.Id;
+        string previousRecipeId = authoritativeProcessor?.State.RecipeId ?? selectedRecipe?.Id;
         if (!CraftingRecipeMatcher.TryMatchAll(
                 inputInventory,
                 capabilities,
@@ -333,7 +362,8 @@ public sealed class CraftingStationController : IDisposable
         if (description.Success)
         {
             int requiredClicks = Mathf.Max(1, requiredClickCount());
-            RefreshOutputPreviews(description.Outputs, currentClickProgress / (float)requiredClicks);
+            RefreshOutputPreviews(description.Outputs, authoritativeProcessor != null
+                ? authoritativeProcessor.Progress01 : currentClickProgress / (float)requiredClicks);
         }
         else
         {

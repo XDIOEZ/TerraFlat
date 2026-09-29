@@ -148,7 +148,7 @@ public static class MechanicalContentBuilder
                 view.ProcessingVisuals == null || view.ProcessingVisuals.Length != 11 || view.ProcessingVisuals.Any(value => value == null) ||
                 asset.GetComponent<BuildingPanelActions>() == null) throw new InvalidOperationException(id + " 引用不完整。");
         }
-        MechanicalCatalog.EnsureLoaded();
+        MachineCatalog.EnsureLoaded();
         Debug.Log("[Mechanical] 正式 Prefab 引用与机械目录校验通过。");
     }
     #endregion

@@ -13,9 +13,19 @@ public readonly struct SunShadowParameters
     public readonly float MaximumDistance;
     public readonly SunShadowPhase Phase;
     public Vector2 SunDirection => -ShadowDirection;
-    public bool IsVisible => Opacity > 0.001f;
-    public Vector4 ShaderVector => new Vector4(ShadowDirection.x * LengthMultiplier,
-        ShadowDirection.y * LengthMultiplier, MaximumDistance, Opacity);
+    public bool IsValid => IsFinite(ShadowDirection.x) && IsFinite(ShadowDirection.y) &&
+        IsFinite(LengthMultiplier) && LengthMultiplier >= 0f &&
+        IsFinite(Opacity) && Opacity >= 0f &&
+        IsFinite(MaximumDistance) && MaximumDistance >= 0f &&
+        IsFinite(ShadowDirection.x * LengthMultiplier) && IsFinite(ShadowDirection.y * LengthMultiplier);
+    public bool IsVisible => IsValid && Opacity > 0.001f;
+    // 全局参数也供资源 ECS 和批量阴影读取，非法快照不能进入任何 Shader。
+    public Vector4 ShaderVector => IsValid
+        ? new Vector4(ShadowDirection.x * LengthMultiplier,
+            ShadowDirection.y * LengthMultiplier, MaximumDistance, Opacity)
+        : Vector4.zero;
+
+    private static bool IsFinite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);
 
     /// <summary>创建本帧统一快照。</summary>
     public SunShadowParameters(Vector2 direction, float length, float opacity, float maximumDistance, SunShadowPhase phase)
@@ -52,6 +62,9 @@ public static class SunShadowParametersProvider
         if (time == null || !AllowsSunShadows(worldKey) ||
             !time.TryGetResolvedTimeData(worldKey, out _, out TimeData data) || data == null)
             return default;
+        if (float.IsNaN(data.CurrentTime) || float.IsInfinity(data.CurrentTime) ||
+            float.IsNaN(data.DayLength) || float.IsInfinity(data.DayLength) || data.DayLength <= 0f)
+            return default;
 
         float day = Mathf.Repeat(data.CurrentTime / Mathf.Max(1f, data.DayLength), 1f);
         if (ResolveDaylightFade(day) <= 0f) return default;
@@ -60,7 +73,8 @@ public static class SunShadowParametersProvider
         float progress = Mathf.Clamp01((day - SunriseFadeEnd) /
             (SunsetFadeStart - SunriseFadeEnd));
 
-        float altitude = Mathf.Sin(progress * Mathf.PI);
+        // 单精度 Sin(PI) 可能略小于零，非整数次幂前必须限制在太阳高度的合法区间。
+        float altitude = Mathf.Clamp01(Mathf.Sin(progress * Mathf.PI));
         Vector2 direction = new Vector2(-Mathf.Cos(progress * Mathf.PI), -0.55f).normalized;
         float length = Mathf.Lerp(Mathf.Max(minimumLength, maximumLength), minimumLength,
             Mathf.Pow(altitude, 0.75f));
@@ -75,12 +89,14 @@ public static class SunShadowParametersProvider
     /// <summary>同一场景光照对应的基础透明度；晨昏进度由 ResolveSolarOpacity 叠加。</summary>
     public static float ResolveOpacity(float sunlight)
     {
+        if (float.IsNaN(sunlight) || float.IsInfinity(sunlight)) return 0f;
         return MaximumOpacity * Mathf.InverseLerp(MinimumSunlight, 1f, Mathf.Clamp01(sunlight));
     }
 
     /// <summary>所有太阳投影与脚底阴影共用的日出渐显、日落渐隐系数。</summary>
     public static float ResolveDaylightFade(float dayFraction)
     {
+        if (float.IsNaN(dayFraction) || float.IsInfinity(dayFraction)) return 0f;
         float day = Mathf.Repeat(dayFraction, 1f);
         if (day <= SunriseFadeStart || day >= SunsetFadeEnd) return 0f;
         if (day < SunriseFadeEnd)

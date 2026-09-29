@@ -21,6 +21,9 @@ public sealed partial class ModRuntimeManager
     /// <summary>登记资源所有权与目录槽位；游戏事件订阅由同一个管理器持续持有，不重复解绑和绑定。</summary>
     internal void ConfigureResourceReload(ResourceReloadContext context)
     {
+        // Harmony 补丁影响进程全局方法，不能假装能在候选目录中隔离执行。
+        if (HasManagedMods)
+            throw new InvalidOperationException("当前启用了 C# / Harmony MOD，暂不支持世界内原位资源重载；请返回主菜单重载内容，更换 DLL 后须重启游戏。");
         reloadSourcePackages = packagesById;
         reloadSourceWorldMutationAllowed = worldMutationAllowed;
         context.Add(() => preparingResourceReload, value => preparingResourceReload = value, true);

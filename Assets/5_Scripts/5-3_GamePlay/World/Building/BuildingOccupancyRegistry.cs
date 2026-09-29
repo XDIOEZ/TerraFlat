@@ -37,8 +37,8 @@ public static class BuildingOccupancyRegistry
     public static bool IsOccupiedNormalized(Vector2Int cell, Mod_Building except = null, int layer = -1)
     {
         bool mechanicalOccupied = layer < 0
-            ? MechanicalWorld.IsOccupiedOnPlacementLayersNormalized(cell)
-            : MechanicalWorld.IsOccupiedNormalized(cell, layer);
+            ? MachineWorld.IsOccupiedOnPlacementLayersNormalized(cell)
+            : MachineWorld.IsOccupiedNormalized(cell, layer);
         if (!OccupantsByCell.TryGetValue(cell, out HashSet<Mod_Building> occupants))
             return mechanicalOccupied;
 
@@ -96,7 +96,7 @@ public static class BuildingOccupancyRegistry
     }
 
     /// <summary>机械世界切换后从现有建筑和机械节点重建一次动态遮挡索引。</summary>
-    public static void RebuildSightBlockingIndex(IEnumerable<MechanicalNode> mechanicalNodes,
+    public static void RebuildSightBlockingIndex(IEnumerable<MachineEntity> mechanicalNodes,
         WorldTopologyDomain mechanicalTopology)
     {
         SightBlockedCells.Clear();
@@ -113,7 +113,7 @@ public static class BuildingOccupancyRegistry
 
         if (mechanicalNodes != null)
         {
-            foreach (MechanicalNode node in mechanicalNodes)
+            foreach (MachineEntity node in mechanicalNodes)
             {
                 if (node?.Definition == null ||
                     (node.Definition.Layer != 0 && node.Definition.Layer != 1))
@@ -138,7 +138,7 @@ public static class BuildingOccupancyRegistry
     {
         if (!terrainWalkable) return false;
         cell = WorldTopologyRuntime.NormalizeCell(cell);
-        MechanicalNode mechanical = MechanicalWorld.GetAtCurrentWorld(cell, 0);
+        MachineEntity mechanical = MachineWorld.GetAtCurrentWorld(cell, 0);
         if (mechanical?.Definition.BlocksMovement == true) return false;
         if (OccupantsByCell.TryGetValue(cell, out HashSet<Mod_Building> occupants))
             foreach (Mod_Building building in occupants)
@@ -154,7 +154,7 @@ public static class BuildingOccupancyRegistry
     {
         Vector2Int cell = WorldTopologyRuntime.NormalizeCell(
             new Vector2Int(Mathf.FloorToInt(position.x), Mathf.FloorToInt(position.y)));
-        float multiplier = MechanicalWorld.GetAtCurrentWorld(cell, 0)?.Definition.PlayerMoveSpeedMultiplier ?? 1f;
+        float multiplier = MachineWorld.GetAtCurrentWorld(cell, 0)?.Definition.PlayerMoveSpeedMultiplier ?? 1f;
         if (!OccupantsByCell.TryGetValue(cell, out HashSet<Mod_Building> occupants))
             return multiplier;
         occupants.RemoveWhere(building => building == null || !building.isActiveAndEnabled || !building.IsInstalled());

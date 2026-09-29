@@ -1,0 +1,25 @@
+<linker>
+  <assembly fullname="GamePlay">
+    <type fullname="MachineWorld" preserve="all" />
+    <type fullname="MachineEntity" preserve="all" />
+    <type fullname="MachineState" preserve="all" />
+    <type fullname="MachineDefinition" preserve="all" />
+    <type fullname="MachineLogic" preserve="all" />
+    <type fullname="MachineLogicRegistry" preserve="all" />
+    <type fullname="RecipeProcessor" preserve="all" />
+    <type fullname="MechanicalNetworkGraph" preserve="all" />
+    <type fullname="FurnaceLogic" preserve="all" />
+    <type fullname="WorkbenchLogic" preserve="all" />
+    <type fullname="StorageLogic" preserve="all" />
+    <type fullname="CompostLogic" preserve="all" />
+    <type fullname="DryingRackLogic" preserve="all" />
+    <type fullname="ManualProcessingLogic" preserve="all" />
+    <type fullname="HandDrillLogic" preserve="all" />
+    <type fullname="FireDrillLogic" preserve="all" />
+    <type fullname="MortarLogic" preserve="all" />
+    <type fullname="VesselLogic" preserve="all" />
+    <type fullname="MachineCombatBridge" preserve="all" />
+    <type fullname="IManagedGameMod" preserve="all" />
+    <type fullname="ManagedModContext" preserve="all" />
+  </assembly>
+</linker>

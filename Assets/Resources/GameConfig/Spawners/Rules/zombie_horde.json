@@ -38,7 +38,7 @@
     "spawnEntries": [
       {
         "prefabName": "Zombie",
-        "runtimeBackend": "entities",
+        "runtimeBackend": "gameObject",
         "probability": 1.0,
         "ecologyCost": 1,
         "speciesAliveLimit": 0

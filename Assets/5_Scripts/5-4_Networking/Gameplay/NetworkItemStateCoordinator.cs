@@ -11,7 +11,7 @@ namespace FlatWorld.Networking.Gameplay
     /// 因此 DamageReceiver 之外的 Module 也会自动进入同步范围。
     /// </summary>
     [DisallowMultipleComponent]
-    public sealed class NetworkItemStateCoordinator : MonoBehaviour
+    public sealed partial class NetworkItemStateCoordinator : MonoBehaviour
     {
         private const float ScanInterval = 0.5f;
         private const int MaxScanItemsPerFrame = 4;
@@ -74,7 +74,7 @@ namespace FlatWorld.Networking.Gameplay
         private readonly Dictionary<uint, ClientBuildingRequest> pendingClientBuildings = new();
         private readonly Dictionary<uint, ClientBuildingDismantleRequest> pendingClientDismantles = new();
         private readonly HashSet<int> dirtyMechanicalNodes = new(); // 加工进度等节点状态按既有扫描频率合并发送。
-        private readonly List<MechanicalNode> mechanicalSyncNodes = new();
+        private readonly List<MachineEntity> mechanicalSyncNodes = new();
         private float nextMechanicalScanTime;
         private float nextScanTime;
         private Item[] scheduledScanItems;
@@ -100,9 +100,10 @@ namespace FlatWorld.Networking.Gameplay
             NetworkServer.RegisterHandler<NetworkItemPickupCommit>(OnServerPickupCommit, false);
             NetworkServer.RegisterHandler<NetworkBuildingPlaceRequest>(OnServerBuildingPlaceRequest, false);
             NetworkServer.RegisterHandler<NetworkBuildingDismantleRequest>(OnServerBuildingDismantleRequest, false);
-            MechanicalWorld.NodeStateChanged += OnMechanicalStateChanged;
-            MechanicalWorld.NodeRemoved += OnMechanicalRemoved;
-            MechanicalWorld.VisualSpeedChanged += OnMechanicalSpeedChanged;
+            MachineWorld.NodeStateChanged += OnMechanicalStateChanged;
+            MachineWorld.NodeRemoved += OnMechanicalRemoved;
+            MachineWorld.VisualSpeedChanged += OnMechanicalSpeedChanged;
+            StartMachineServerBridge();
             serverHandlersRegistered = true;
             UpdateRuntimeBridgeRegistration();
         }
@@ -119,6 +120,7 @@ namespace FlatWorld.Networking.Gameplay
             NetworkClient.RegisterHandler<NetworkBuildingPlaceResponse>(OnClientBuildingPlaceResponse, false);
             NetworkClient.RegisterHandler<NetworkBuildingDismantleResponse>(OnClientBuildingDismantleResponse, false);
             NetworkClient.RegisterHandler<NetworkMechanicalNodeMessage>(OnClientMechanicalNode, false);
+            StartMachineClientBridge();
             clientHandlersRegistered = true;
             requestedInitialState = false;
             UpdateRuntimeBridgeRegistration();
@@ -136,9 +138,10 @@ namespace FlatWorld.Networking.Gameplay
             NetworkServer.UnregisterHandler<NetworkItemPickupCommit>();
             NetworkServer.UnregisterHandler<NetworkBuildingPlaceRequest>();
             NetworkServer.UnregisterHandler<NetworkBuildingDismantleRequest>();
-            MechanicalWorld.NodeStateChanged -= OnMechanicalStateChanged;
-            MechanicalWorld.NodeRemoved -= OnMechanicalRemoved;
-            MechanicalWorld.VisualSpeedChanged -= OnMechanicalSpeedChanged;
+            MachineWorld.NodeStateChanged -= OnMechanicalStateChanged;
+            MachineWorld.NodeRemoved -= OnMechanicalRemoved;
+            MachineWorld.VisualSpeedChanged -= OnMechanicalSpeedChanged;
+            StopMachineServerBridge();
             dirtyMechanicalNodes.Clear();
             ReleaseAllPickupReservations();
             serverHandlersRegistered = false;
@@ -159,6 +162,7 @@ namespace FlatWorld.Networking.Gameplay
             NetworkClient.UnregisterHandler<NetworkBuildingPlaceResponse>();
             NetworkClient.UnregisterHandler<NetworkBuildingDismantleResponse>();
             NetworkClient.UnregisterHandler<NetworkMechanicalNodeMessage>();
+            StopMachineClientBridge();
             clientHandlersRegistered = false;
             clientStates.Clear();
             pendingClientStates.Clear();
@@ -322,13 +326,13 @@ namespace FlatWorld.Networking.Gameplay
             foreach (KeyValuePair<int, StateRecord> pair in serverStates)
                 connection.Send(CreateMessage(pair.Key, pair.Value));
             connection.Send(new NetworkMechanicalNodeMessage { Reset = true });
-            MechanicalWorld.CollectNodes(mechanicalSyncNodes);
-            foreach (MechanicalNode node in mechanicalSyncNodes)
+            MachineWorld.CollectNodes(mechanicalSyncNodes);
+            foreach (MachineEntity node in mechanicalSyncNodes)
                 SendMechanicalSnapshot(connection, node);
         }
 
         /// <summary>机械状态变化只记录身份，定时合并同一节点的进度与库存更新。</summary>
-        private void OnMechanicalStateChanged(MechanicalNode node)
+        private void OnMechanicalStateChanged(MachineEntity node)
         {
             if (NetworkServer.active && node != null) dirtyMechanicalNodes.Add(node.Id);
         }
@@ -342,7 +346,7 @@ namespace FlatWorld.Networking.Gameplay
         }
 
         /// <summary>动力解算只发转速变化，不重复发送整份加工库存。</summary>
-        private void OnMechanicalSpeedChanged(MechanicalNode node)
+        private void OnMechanicalSpeedChanged(MachineEntity node)
         {
             if (NetworkServer.active && node != null)
                 NetworkServer.SendToAll(new NetworkMechanicalNodeMessage
@@ -359,15 +363,15 @@ namespace FlatWorld.Networking.Gameplay
             dirtyMechanicalNodes.Clear();
             foreach (int id in ids)
             {
-                MechanicalNode node = MechanicalWorld.GetById(id);
+                MachineEntity node = MachineWorld.GetById(id);
                 if (node != null) BroadcastMechanicalSnapshot(node);
             }
         }
 
         /// <summary>独立节点快照传输，不生成 NetworkItemSpawnMessage。</summary>
-        private static NetworkMechanicalNodeMessage CreateMechanicalSnapshot(MechanicalNode node)
+        private static NetworkMechanicalNodeMessage CreateMechanicalSnapshot(MachineEntity node)
         {
-            ItemData snapshot = MechanicalWorld.CaptureSnapshot(node);
+            ItemData snapshot = MachineWorld.CaptureSnapshot(node);
             if (snapshot == null ||
                 !ItemNetworkStateSerialization.TrySerializeItemData(snapshot, out byte[] payload))
                 throw new InvalidOperationException("机械联机快照序列化失败：" + node?.Id);
@@ -376,24 +380,24 @@ namespace FlatWorld.Networking.Gameplay
                 EntryDirection = node.EntryDirection };
         }
 
-        private static void SendMechanicalSnapshot(NetworkConnectionToClient connection, MechanicalNode node)
+        private static void SendMechanicalSnapshot(NetworkConnectionToClient connection, MachineEntity node)
             => connection.Send(CreateMechanicalSnapshot(node));
 
-        private static void BroadcastMechanicalSnapshot(MechanicalNode node)
+        private static void BroadcastMechanicalSnapshot(MachineEntity node)
             => NetworkServer.SendToAll(CreateMechanicalSnapshot(node));
 
         /// <summary>客户端把服务器快照还原为数据节点并通知区块 BRG。</summary>
         private void OnClientMechanicalNode(NetworkMechanicalNodeMessage message)
         {
             if (NetworkServer.active) return;
-            if (message.Reset) { MechanicalWorld.ApplyRemoteReset(); return; }
-            if (message.Removed) { MechanicalWorld.ApplyRemoteRemoval(message.NodeGuid); return; }
+            if (message.Reset) { MachineWorld.ApplyRemoteReset(); return; }
+            if (message.Removed) { MachineWorld.ApplyRemoteRemoval(message.NodeGuid); return; }
             if (message.SpeedOnly)
-            { MechanicalWorld.ApplyRemoteSpeed(message.NodeGuid, message.Rpm, message.EntryDirection); return; }
+            { MachineWorld.ApplyRemoteSpeed(message.NodeGuid, message.Rpm, message.EntryDirection); return; }
             if (!ItemNetworkStateSerialization.TryDeserializeItemData(message.Payload, out ItemData snapshot) ||
                 snapshot.Guid != message.NodeGuid)
                 throw new InvalidOperationException("机械联机节点快照损坏：" + message.NodeGuid);
-            MechanicalWorld.ApplyRemoteSnapshot(snapshot, message.Rpm, message.EntryDirection);
+            MachineWorld.ApplyRemoteSnapshot(snapshot, message.Rpm, message.EntryDirection);
         }
 
         private void OnServerStateSubmit(NetworkConnectionToClient connection, NetworkItemStateSubmit submit)
@@ -1073,7 +1077,7 @@ namespace FlatWorld.Networking.Gameplay
             };
 
             Item buildingItem = null;
-            MechanicalNode mechanicalNode = null;
+            MachineEntity mechanicalNode = null;
             int buildingGuid = 0;
             bool materialConsumed = false;
             ItemData authoritativeSourceData = null;
@@ -1109,13 +1113,12 @@ namespace FlatWorld.Networking.Gameplay
 
                 buildingGuid = placedData.Guid;
 
-                if (MechanicalCatalog.Get(placedData.IDName) != null)
+                if (MachineCatalog.Get(placedData.IDName) != null)
                 {
-                    if (!MechanicalWorld.TryGetModuleData(placedData, out Ex_ModData_MemoryPackable module))
-                        throw new InvalidOperationException("机械节点模块缺失");
-                    MechanicalNodeState state = module.GetData<MechanicalNodeState>() ?? new MechanicalNodeState();
-                    state.RotationQuarterTurns = request.RotationQuarterTurns & 3;
-                    module.WriteData(state);
+                    MachineState state = MachineWorld.ReadMachineState(placedData);
+                    state.RotationQuarterTurns = MachineCatalog.Get(placedData.IDName).Rotatable
+                        ? request.RotationQuarterTurns & 3 : 0;
+                    MachineWorld.WriteMachineState(placedData, state);
                     Mod_Building.SetInstalledDataState(placedData);
                     if (!Mod_Building.ValidateMechanicalDataPlacement(placedData,
                             GetConnectionLogicalPosition(connection), MaxBuildingRequestDistance, out reason))
@@ -1123,7 +1126,7 @@ namespace FlatWorld.Networking.Gameplay
                     materialConsumed = true;
                     response.RemainingAmount = ConsumeAuthoritativeBuildingMaterial(
                         authoritativeSlot, authoritativePlayer);
-                    mechanicalNode = MechanicalWorld.Place(placedData);
+                    mechanicalNode = MachineWorld.Place(placedData);
                     BroadcastMechanicalSnapshot(mechanicalNode);
                     dirtyMechanicalNodes.Remove(mechanicalNode.Id);
                     RuntimeGrassClearing.ClearAt(position);
@@ -1175,7 +1178,7 @@ namespace FlatWorld.Networking.Gameplay
                 }
 
                 Debug.LogWarning($"[联机建造] 服务端拒绝 {request.ItemId}：{response.Reason}");
-                if (mechanicalNode != null) MechanicalWorld.Remove(mechanicalNode.Id);
+                if (mechanicalNode != null) MachineWorld.Remove(mechanicalNode.Id);
                 if (buildingItem != null && ItemMgr.Instance != null)
                 {
                     buildingItem.itemMods?.GetMod_ByID<Mod_Building>(ModText.Building)?.ReleasePlacementOccupancy();
@@ -1278,7 +1281,7 @@ namespace FlatWorld.Networking.Gameplay
         }
 
         /// <summary>客户端对纯数据机械发送已有建筑拆除请求，不伪造世界 Item。</summary>
-        private bool TryBeginClientMechanicalDismantle(MechanicalNode node)
+        private bool TryBeginClientMechanicalDismantle(MachineEntity node)
         {
             if (!NetworkClient.active || NetworkServer.active) return false;
             if (node == null || NetworkClient.connection == null) return true;
@@ -1346,7 +1349,7 @@ namespace FlatWorld.Networking.Gameplay
                 if (connection?.identity == null || request.RequestToken == 0 || request.BuildingGuid == 0)
                     throw new InvalidOperationException("身份或建筑标识无效");
 
-                MechanicalNode mechanical = MechanicalWorld.GetById(request.BuildingGuid);
+                MachineEntity mechanical = MachineWorld.GetById(request.BuildingGuid);
                 if (mechanical != null)
                 {
                     if (WorldTopologyRuntime.Distance(GetConnectionLogicalPosition(connection),
@@ -1357,7 +1360,7 @@ namespace FlatWorld.Networking.Gameplay
                     Vector3 dropPosition = GetLogicalItemPosition(summoner);
                     if (!PublishServerSpawn(summoner, dropPosition, dropPosition, 0.05f, false))
                         throw new InvalidOperationException("服务端无法发布机械召唤器");
-                    MechanicalWorld.Remove(mechanical.Id);
+                    MachineWorld.Remove(mechanical.Id);
                     response.Accepted = true;
                     response.Reason = string.Empty;
                     connection.Send(response);

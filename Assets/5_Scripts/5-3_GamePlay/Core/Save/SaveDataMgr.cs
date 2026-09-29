@@ -1850,7 +1850,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
     private static bool IsRuntimeBuildingItem(Item item, out Mod_Building building)
     {
         building = null;
-        if (MechanicalWorld.OwnsWorldItem(item?.itemData)) return false;
+        if (MachineWorld.OwnsWorldItem(item?.itemData)) return false;
         if (item == null || item is Player || item is Map || item.itemData == null)
             return false;
 
@@ -1889,7 +1889,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
     /// <summary>判断建筑 SaveData 是否可以在世界加载时重新实例化。</summary>
     private static bool IsRestorableRuntimeBuildingData(ItemData data)
     {
-        if (MechanicalWorld.OwnsWorldItem(data)) return false;
+        if (MachineWorld.OwnsWorldItem(data)) return true;
         try
         {
             if (data == null || !Mod_Building.TryReadBuildingData(
@@ -2004,6 +2004,13 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
             {
                 ItemData runtimeData = CloneAndRebaseItemData(savedData);
                 ItemTransform transformData = runtimeData.transform ?? new ItemTransform();
+                if (MachineWorld.OwnsWorldItem(runtimeData))
+                {
+                    MachineWorld.RestoreMachine(runtimeData);
+                    // 机器快照接管成功后删除旧区块 Item 来源，避免拆除后旧差量再次恢复同一台设施。
+                    delta?.ChangedItems?.RemoveAll(item => item?.Guid == runtimeData.Guid);
+                    continue;
+                }
                 Item restored = ItemMgr.Instance.InstantiateItem(
                     runtimeData,
                     transformData.position,
@@ -2538,7 +2545,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
             Version = CompactSaveVersion,
             CoreSaveData = SerializeCoreDataWithoutChunks(saveData),
             DroppedItems = DroppedItemService.CaptureArchive(saveData),
-            MechanicalNetworks = MechanicalWorld.CaptureArchive(saveData)
+            MechanicalNetworks = MachineWorld.CaptureArchive(saveData)
         };
 
         foreach (KeyValuePair<string, ChunkSaveRecord> pair in chunkDeltas)
@@ -2634,7 +2641,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
             throw new InvalidDataException("差异存档的核心数据为空");
 
         DroppedItemService.RestoreArchive(saveData, envelope.DroppedItems);
-        MechanicalWorld.RestoreArchive(saveData, envelope.MechanicalNetworks);
+        MachineWorld.RestoreArchive(saveData, envelope.MechanicalNetworks);
 
         if (envelope.ChunkRecords == null)
             return saveData;

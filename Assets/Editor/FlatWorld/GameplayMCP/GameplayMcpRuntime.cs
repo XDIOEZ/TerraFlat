@@ -665,9 +665,9 @@ namespace FlatWorld.GameplayMCP
 
             if (mechanical != null)
             {
-                MechanicalNode node = mechanical.Node;
+                MachineEntity node = mechanical.Node;
                 MechanicalNetwork network = node?.Network;
-                MechanicalNodeState state = node?.State ?? mechanical.LocalState;
+                MachineState state = node?.State ?? mechanical.LocalState;
                 result["mechanical"] = new JObject
                 {
                     ["attached"] = node != null,

@@ -15,7 +15,7 @@ public partial class VesselContentsState
 /// 可注册到液体容器的固体库存模块。库存和液体分别持久化，放置与拆回通过共享模块状态迁移；
 /// 投料配方从当前液体定义读取，满足数量后经库存事务消耗原料，剩余物品仍留在桶内。
 /// </summary>
-public sealed class Mod_VesselContents : Module, IInventory
+public sealed class Mod_VesselContents : Module, IInventory, IVesselContents
 {
     #region 数据与生命周期
 
@@ -174,7 +174,7 @@ public sealed class Mod_VesselContents : Module, IInventory
     #region 库存接收
 
     /// <summary>空白落点形成独立物品堆；只有直接投到同类图标才合并，保持库存与物理表现一致。</summary>
-    private sealed class VesselInventory : Inventory
+    public sealed class VesselInventory : Inventory
     {
         public override bool CanAcceptQuickTransfer(ItemSlot sourceSlot, ItemSlot targetSlot)
         {

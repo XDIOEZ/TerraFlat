@@ -152,7 +152,8 @@ namespace FlatWorld.AIECS.Gameplay
             for (int i = proxies.Count - 1; i >= 0; i--)
             {
                 if (!ReferenceEquals(proxies[i].Item, player)) continue;
-                Simulation.Despawn(proxies[i].Entity);
+                if (Simulation?.IsCreated == true)
+                    Simulation.Despawn(proxies[i].Entity);
                 proxyLookup.Remove(proxies[i].Key);
                 proxies.RemoveAt(i);
             }
@@ -184,7 +185,7 @@ namespace FlatWorld.AIECS.Gameplay
         }
 
         /// <summary>玩家维度或导航缓存更换时必须结束整个旧模拟。</summary>
-        public bool IsCurrentWorld(Player player) => player != null && Navigation != null && WorldNavigationManager.ExistingInstance != null &&
+        public bool IsCurrentWorld(Player player) => Simulation?.IsCreated == true && player != null && Navigation != null && WorldNavigationManager.ExistingInstance != null &&
             WorldNavigationManager.ExistingInstance.OwnsSharedNavigation(Navigation) &&
             ChunkMgr.ExistingInstance != null && ChunkMgr.ExistingInstance.ResolveWorldAddress(player.transform.position).DimensionId == dimensionName;
 
@@ -514,7 +515,9 @@ namespace FlatWorld.AIECS.Gameplay
             foreach (var hit in Simulation.ExternalHits)
             {
                 if (!proxyLookup.TryGetValue(hit.TargetKey, out var proxy) || proxy.Item == null || IdentityOf(proxy.Item) != hit.TargetKey) continue;
-                float damage = proxy.Receiver.Hurt(hit.Context);
+                // 使用独立值快照跨入旧后端，不把集合迭代临时值的字段直接作为只读引用传递。
+                CombatDamageContext context = hit.Context;
+                float damage = proxy.Receiver.Hurt(in context);
                 if (damage >= 0f) { PlayerHits++; PlayerDamage += damage; }
             }
             foreach (var result in Simulation.DamageResults)
@@ -586,8 +589,12 @@ namespace FlatWorld.AIECS.Gameplay
         /// <summary>运行时新阵营追加稳定索引；这是稀少配置变化，不在每只 AI 中处理字符串。</summary>
         private int Faction(string value)
         {
-            value = (value ?? string.Empty).Trim().ToLowerInvariant();
+            value = FactionRelationService.NormalizeFactionId(value, allowEmpty: true).ToLowerInvariant();
             if (factionIndices.TryGetValue(value, out int index)) return index;
+            // 字符上限与 UTF-8 字节容量是两个约束，必须在修改目录前全部验证。
+            int byteCount = System.Text.Encoding.UTF8.GetByteCount(value);
+            if (byteCount > FixedString128Bytes.UTF8MaxLengthInBytes)
+                throw new ArgumentException($"ECS 阵营 ID 的 UTF-8 长度 {byteCount} 超过 {FixedString128Bytes.UTF8MaxLengthInBytes} 字节。", nameof(value));
             index = factionNames.Count; factionNames.Add(value); factionIndices.Add(value, index);
             if (Simulation != null) RefreshFactions(); return index;
         }

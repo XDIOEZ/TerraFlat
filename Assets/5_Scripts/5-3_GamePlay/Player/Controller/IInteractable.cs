@@ -38,3 +38,9 @@ public interface IWorldInteractionTarget : IInteractable
     int TargetGuid { get; }
     bool IsValid { get; }
 }
+
+/// <summary>Entity 目标直接请求批量表现高亮，不需要伪造用于描边的 GameObject。</summary>
+public interface IWorldInteractionPreview
+{
+    void SetInteractionHighlighted(bool highlighted);
+}
