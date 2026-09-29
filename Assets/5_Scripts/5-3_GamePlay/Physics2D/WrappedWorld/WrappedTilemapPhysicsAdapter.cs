@@ -40,7 +40,7 @@ public sealed class WrappedTilemapPhysicsAdapter : MonoBehaviour
 
     public static void Ensure(ChunkCollisionRenderer target)
     {
-        if (target == null || target.SourceCollider == null)
+        if (target == null || target.SourceTilemapCollider == null)
             return;
         WrappedTilemapPhysicsAdapter proxy = target.GetComponent<WrappedTilemapPhysicsAdapter>();
         if (proxy == null)
@@ -152,9 +152,9 @@ public sealed class WrappedTilemapPhysicsAdapter : MonoBehaviour
             BlockingTilemapLayer blockingLayer = map.GetComponent<BlockingTilemapLayer>();
             RefreshSource(blockingLayer != null ? blockingLayer.BlockingTilemap : null, requiredOffsets);
         }
-        else if (chunkRenderer.SourceCollider != null)
+        else if (chunkRenderer.SourceTilemapCollider != null)
         {
-            RefreshSource(chunkRenderer.SourceCollider.GetComponent<Tilemap>(), requiredOffsets);
+            RefreshSource(chunkRenderer.SourceTilemapCollider.GetComponent<Tilemap>(), requiredOffsets);
         }
         RemoveStaleProxies();
         SyncSourceState();
@@ -167,13 +167,16 @@ public sealed class WrappedTilemapPhysicsAdapter : MonoBehaviour
         TilemapCollider2D sourceCollider = source.GetComponent<TilemapCollider2D>();
         if (sourceCollider == null)
             return;
+        CompositeCollider2D sourceComposite = sourceCollider.usedByComposite
+            ? source.GetComponent<CompositeCollider2D>()
+            : null;
         EligibleSourceColliderCount++;
 
         for (int i = 0; i < offsets.Count; i++)
         {
             float2 imageOffset = offsets[i];
             Vector2 offset = new Vector2(imageOffset.x, imageOffset.y);
-            ProxyRecord record = GetOrCreate(source, sourceCollider, offset);
+            ProxyRecord record = GetOrCreate(source, sourceCollider, sourceComposite, offset);
             if (record == null)
                 continue;
             CopyTiles(source, record.Tilemap);
@@ -182,6 +185,9 @@ public sealed class WrappedTilemapPhysicsAdapter : MonoBehaviour
             record.Root.SetActive(source.gameObject.activeInHierarchy && sourceCollider.enabled);
             record.Collider.enabled = sourceCollider.enabled;
             record.Collider.ProcessTilemapChanges();
+            if (record.Composite != null &&
+                record.Composite.generationType == CompositeCollider2D.GenerationType.Manual)
+                record.Composite.GenerateGeometry();
             if (record.Root.activeSelf)
                 ActiveProxyCount++;
         }
@@ -209,9 +215,15 @@ public sealed class WrappedTilemapPhysicsAdapter : MonoBehaviour
                 continue;
             UpdateTransform(record, record.Source, record.Offset);
             record.Collider.enabled = true;
-            record.Collider.isTrigger = record.SourceCollider.isTrigger;
-            record.Collider.sharedMaterial = record.SourceCollider.sharedMaterial;
-            record.Collider.usedByEffector = record.SourceCollider.usedByEffector;
+            Collider2D sourcePhysics = record.SourceComposite != null
+                ? record.SourceComposite
+                : record.SourceCollider;
+            Collider2D proxyPhysics = record.Composite != null
+                ? record.Composite
+                : record.Collider;
+            proxyPhysics.isTrigger = sourcePhysics.isTrigger;
+            proxyPhysics.sharedMaterial = sourcePhysics.sharedMaterial;
+            proxyPhysics.usedByEffector = sourcePhysics.usedByEffector;
             ActiveProxyCount++;
         }
     }
@@ -230,12 +242,14 @@ public sealed class WrappedTilemapPhysicsAdapter : MonoBehaviour
         }
     }
 
-    private ProxyRecord GetOrCreate(Tilemap source, TilemapCollider2D sourceCollider, Vector2 offset)
+    private ProxyRecord GetOrCreate(Tilemap source, TilemapCollider2D sourceCollider,
+        CompositeCollider2D sourceComposite, Vector2 offset)
     {
         for (int i = 0; i < records.Count; i++)
         {
             ProxyRecord existing = records[i];
-            if (existing.Source == source && existing.SourceCollider == sourceCollider && existing.Offset == offset)
+            if (existing.Source == source && existing.SourceCollider == sourceCollider &&
+                existing.SourceComposite == sourceComposite && existing.Offset == offset)
                 return existing;
         }
 
@@ -261,13 +275,29 @@ public sealed class WrappedTilemapPhysicsAdapter : MonoBehaviour
         proxyTilemap.orientation = source.orientation;
         proxyTilemap.orientationMatrix = source.orientationMatrix;
         proxyTilemap.tileAnchor = source.tileAnchor;
+        if (sourceComposite != null)
+        {
+            Rigidbody2D staticBody = tileObject.AddComponent<Rigidbody2D>();
+            staticBody.bodyType = RigidbodyType2D.Static;
+            staticBody.gravityScale = 0f;
+        }
         TilemapCollider2D proxyCollider = tileObject.AddComponent<TilemapCollider2D>();
-        proxyCollider.isTrigger = sourceCollider.isTrigger;
-        proxyCollider.sharedMaterial = sourceCollider.sharedMaterial;
-        proxyCollider.usedByEffector = sourceCollider.usedByEffector;
         proxyCollider.extrusionFactor = sourceCollider.extrusionFactor;
         proxyCollider.maximumTileChangeCount = sourceCollider.maximumTileChangeCount;
-        proxyCollider.gameObject.AddComponent<ColliderSource2D>().Bind(sourceCollider, offset);
+        CompositeCollider2D proxyComposite = null;
+        if (sourceComposite != null)
+        {
+            proxyComposite = tileObject.AddComponent<CompositeCollider2D>();
+            proxyComposite.geometryType = sourceComposite.geometryType;
+            proxyComposite.generationType = sourceComposite.generationType;
+            proxyCollider.usedByComposite = true;
+        }
+        Collider2D sourcePhysics = sourceComposite != null ? sourceComposite : sourceCollider;
+        Collider2D proxyPhysics = proxyComposite != null ? proxyComposite : proxyCollider;
+        proxyPhysics.isTrigger = sourcePhysics.isTrigger;
+        proxyPhysics.sharedMaterial = sourcePhysics.sharedMaterial;
+        proxyPhysics.usedByEffector = sourcePhysics.usedByEffector;
+        tileObject.AddComponent<ColliderSource2D>().Bind(sourcePhysics, offset);
         if (map != null)
         {
             TilemapDamageReceiver damageReceiver = tileObject.AddComponent<TilemapDamageReceiver>();
@@ -278,9 +308,11 @@ public sealed class WrappedTilemapPhysicsAdapter : MonoBehaviour
         {
             Source = source,
             SourceCollider = sourceCollider,
+            SourceComposite = sourceComposite,
             Root = root,
             Tilemap = proxyTilemap,
             Collider = proxyCollider,
+            Composite = proxyComposite,
             Offset = offset
         };
         records.Add(record);
@@ -332,9 +364,11 @@ public sealed class WrappedTilemapPhysicsAdapter : MonoBehaviour
     {
         public Tilemap Source;
         public TilemapCollider2D SourceCollider;
+        public CompositeCollider2D SourceComposite;
         public GameObject Root;
         public Tilemap Tilemap;
         public TilemapCollider2D Collider;
+        public CompositeCollider2D Composite;
         public Vector2 Offset;
         public int Generation;
     }

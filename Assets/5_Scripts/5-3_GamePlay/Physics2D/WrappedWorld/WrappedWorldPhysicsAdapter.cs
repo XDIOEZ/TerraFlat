@@ -18,6 +18,8 @@ internal static class WrappedWorldPhysicsAdapter
         Item.RuntimeStructureChanged += RefreshItemStructure;
         Map.TilemapPresentationChanged -= RefreshMap;
         Map.TilemapPresentationChanged += RefreshMap;
+        ChunkCollisionRenderer.PresentationChanged -= RefreshChunkCollision;
+        ChunkCollisionRenderer.PresentationChanged += RefreshChunkCollision;
         WorldTopologyRuntime.LocalPlayerWrapped -= ReprojectLocalWorld;
         WorldTopologyRuntime.LocalPlayerWrapped += ReprojectLocalWorld;
     }
@@ -56,6 +58,15 @@ internal static class WrappedWorldPhysicsAdapter
             WrappedTilemapPhysicsAdapter.Ensure(map);
         else
             map.GetComponent<WrappedTilemapPhysicsAdapter>()?.Suspend();
+    }
+
+    private static void RefreshChunkCollision(ChunkCollisionRenderer renderer)
+    {
+        if (renderer == null) return;
+        if (renderer.isActiveAndEnabled && renderer.BoundChunk?.Terrain != null)
+            WrappedTilemapPhysicsAdapter.Ensure(renderer);
+        else
+            renderer.GetComponent<WrappedTilemapPhysicsAdapter>()?.Suspend();
     }
 
     /// <summary>跨周只批量重选本机镜像；不复制 Item Collider，也不改任何逻辑坐标。</summary>
