@@ -21,6 +21,8 @@ description: "Use when: 定位或修改 FlatWorld 的运行时特效、粒子、
 
 ## 不变量
 
+- 太阳高度 `Sin(progress * PI)` 在非整数次幂前必须 Clamp01，单精度日落端点可能略为负数；`SunShadowParameters.IsValid` 同时约束可见性和全局 Shader 参数。普通物品与机械共用有限投影包围盒检查，拒绝 NaN/Infinity、负范围及排序距离溢出，异常绑定只诊断一次并低频重试，不改写实体或存档坐标。
+- BRG 原生资源不能只在 `OnDestroy` 释放；脚本域重载的 `OnDisable` 必须执行幂等 Dispose，而不是仅 Hide。接触阴影与 AIECS 主体先销毁整个 BRG，再在 finally 释放自有缓冲、Mesh 和材质；多批次地形须保证任何子批次失败后仍会执行 group.Dispose。恢复启用时按需重建批次。排查重复退出日志先比对堆栈方法名、当前 DLL 符号及 Editor.log 重载顺序，不能把修复前日志当作新代码复现。
 - 先确认触发系统及 Prefab/材质/Shader 的真实引用来源，再改表现。
 - 陶罐 UI 的水面摇晃和罐口液流属于表现层：水面扰动只读取罐体角速度并自行衰减，罐口液流只在 `Mod_WaterVessel.RemoveLiquidAmount` 实际移除液体后触发；不得让粒子/Graphic 帧率参与液体数量结算。罐口液流应作为正式 `UI_WaterVessel.prefab` 中位于罐体外 Mask 的独立 Graphic，避免被内腔裁剪。
 - 池化特效每次取出时重置 Transform、Animator、颜色和生命周期；回收/禁用时清理订阅与状态。
@@ -58,6 +60,7 @@ description: "Use when: 定位或修改 FlatWorld 的运行时特效、粒子、
 - 运行时 Sprite 描边若复制 `SortingGroup` 内的渲染器，描边 Renderer 必须放到组外并排在主体之后；URP 2D 自定义 Sprite Shader 必须包含 `Core2D.hlsl`，同时保留 SpriteRenderer 的逐渲染器属性。需要随场景 `Light2D` 明暗变化的 `Universal2D` Pass 还必须实际采样 Shape Light（如 `CombinedShapeLightShared`）；只有 `LightMode=Universal2D` 标签不会自动获得 2D 光照。
 - 描边等代理 `SpriteRenderer` 必须同步源 Renderer 的 MPB 局部裁剪参数；代理写入自有 MPB 时必须同时写回 Sprite 的 `_MainTex`，避免逐渲染器贴图被默认白图替换。`Universal2D`、`NormalsRendering`、`UniversalForward` 等实际参与的 Shader Pass 必须使用同一坐标与阈值，避免代理或回退 Pass 重新显示已剔除像素。
 - 玩家被树冠遮挡时的圆形穿透窗由 `PlayerOcclusionShaderGlobals` 写入本地主角世界坐标，`Sprite-Lit-Master` 只对逐 Renderer `_PlayerOccluder=1` 的对象降低 Alpha；世界树必须带 `Tag.Tree`，`ItemDefinitionRuntime` 在共享外壳/对象池复用时必须显式写入 1 或 0 并保留其它 MPB 参数，禁止给所有 Sprite 开全局遮挡或为每棵树增加逐帧脚本。
+- 树木资源 ECS 通过纯视觉 `TreeSortingVisual` 使用原生 `SortingGroup`，树根与角色共用动态排序键，果实偏移只作用于组内；主体不能继续留在 Default BRG。直接复用物品植被材质，MPB 同步贴图、分离 Alpha、裁剪与 `_PlayerOccluder`，太阳投影仍走共享 BRG，不创建逐树阴影脚本。
 - 角色水体效果覆盖会旋转的手持物等附属 Sprite 时，水面高度与波浪横轴必须使用角色统一的世界空间坐标；保留本地坐标模式只用于不旋转的旧材质兼容，避免水线随物品旋转成竖线。
 - `ActorWaterCommon.hlsl` 是旧 `Sprite-Lit-Master` 与 AIECS Lit 原型共用的角色水下公式；调整染色、透明或水线时保持两个调用方一致。AIECS 原型的顶点水参数只是视觉输入，不能代替 `TileEffectReceiver` 的真实地形、体力和氧气状态。
 - 手持物通过 `RegisterExternalRenderers` 接入角色渲染效果后，运行时再动态创建的子 `Renderer` 不会自动进入该次注册快照；这类临时表现必须在创建后再次注册自身节点，并在销毁前 `UnregisterExternalRenderers`，避免水体浸没、受击染色等 MPB 效果漏掉或控制器残留引用。

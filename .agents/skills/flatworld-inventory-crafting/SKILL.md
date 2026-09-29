@@ -7,6 +7,8 @@ description: "Use when: 定位或修改 FlatWorld 的背包、槽位、快捷栏
 
 ## 入口
 
+- 落地工作台、炉体、储物/堆肥/晾架及便携设施本体使用 `World/Machines`，先读 `flatworld-machines/SKILL.md`；原有部分 Mod 脚本仅作内容模板，不能重新增加落地 Item 模拟链。
+
 - 库存：`Assets/5_Scripts/5-3_GamePlay/Items/Inventory/{Inventory,Mod_Inventory,Inventory_UI,Inventory_HotBar,ItemSlot_UI}.cs`
 - 制作：`Assets/5_Scripts/5-3_GamePlay/Items/Crafting/`
 - 配方真源：`Assets/StreamingAssets/GameConfig/Recipes/recipe-manifest.json` 及分包 JSON
@@ -71,13 +73,13 @@ description: "Use when: 定位或修改 FlatWorld 的背包、槽位、快捷栏
 - 手机端已经拿起物品后的轻点/长按丢弃由 `MobileHeldItemDropSurface` 统一转发到 `Module_DiscardItem.TryDropHeldItemAtScreenPosition`，仅操作手部携带槽，空手不得取快捷栏选中物；中间空白触控面只在 `Inventory_Hand` 有物品时参与射线，`ItemSlot_UI` 的拖拽射线必须继续把该组件视为世界落点。
 - `Inventory` 持有的 `item` 是 `UnityEngine.Object`；生命周期边界禁止用 `item?.GetComponent...` 判断存活，因为 C# 空条件运算符不会触发 Unity 的“已销毁对象视为 null”语义。玩家/容器卸载时必须先解除库存输入监听并清空所属 `item`，`Mod_Hand.Unload` 同时清理 `Inventory_Hand.PlayerHand`，避免槽位 `OnDisable` 或延迟 UI 回调访问上一轮玩家。
 - `Inventory.BindController/UnbindController` 只管理输入绑定，不能顺带解除 `Inventory_Data.Event_RefreshUI` 或槽位 `onSlotDataChanged`；这些数据/UI 监听只在库存真正退出运行时生命周期时通过 `UnbindRuntimeDataEvents` 清理。否则快捷栏在控制器重绑后会失去滚轮转移等事务的自动刷新，只在切换选中槽时才重画图标。
-- `Mod_Plantable` 只通过 `IPlantableCrop` 初始化幼苗并判断地块占用；作物定义只配置 `cropItemId`，统一 `PlantingSummoner` 负责预览，禁止写死依赖某个成长模块或复用 `Mod_Building` 链路。
+- `Mod_Plantable` 对 `entityRuntime: "resource"` 的作物调用 `ChunkAgricultureRenderer.CreateEntityCrop`，先装配 Entity 再扣真实库存种子，失败通过 `RollbackEntityCrop` 回滚，禁止临时创建 Item 提取状态。`PlantingSummoner` 仅是共享种植预览；未迁移定义仍有明确的 `IPlantableCrop` 入口，不得拿它给已声明资源后端的作物兜底。
 - 同一物品同时挂 `Mod_Plantable` 与 `Mod_Food` 时，右键动作按目标上下文仲裁：有效耕地由种植优先，无效种植目标则静默让给食用，不能一次动作同时播种和进食，也不能在正常进食时刷种植警告。
 - 新版农业统一通过 `FarmlandSystem` 查询 `ChunkTerrainData`，禁止返回旧 `Chunk.Map`；锄地进度属于地格而非锄头实例。水肥计算使用临时 `TileData_Farmland` 快照，成长或施肥后必须 `CommitSoil`，否则数据修改不会进入权威环境层。
-- 玩家播种作物由 `ChunkAgricultureRenderer` 管理，保存到独立的 `ChunkSaveRecord.AgricultureCells`；不得登记为 `ChunkNaturalItemRenderer` 的临时掉落物，否则区块解绑会回收且不保存。`ChunkView` 的同步/分帧保存入口均须抓取农业状态，退出世界不能当成收获删除快照。
+- 玩家播种的 Entity 作物由 `ChunkAgricultureRenderer` 登记句柄，纯数据通过 `SaveDataMgr.RecordCultivatedCropData` 保存到 `ChunkSaveRecord.AgricultureCells`；天然植物仍使用生态 GUID 与差量，不能交叉登记或同时保存两份。保存前提交待结算土壤与真实死亡，解绑本身不删除农业快照。`FarmlandSystem.HasWorldPlant` 与 AI 采蜜均须包含资源实体查询，不能只看 ItemManager。
 - 耕地植株保存已结算的绝对游戏秒，由 `IWorldTimePlant` 在区块恢复后按 `DayTimeSystem` 的时钟补算；退出游戏和暂停期间不补现实时间，历史段不能沿用重载时的短时天气。`Mod_Grow` 与 `Mod_PlantClimate` 组合时由成长模块统一推进气候，避免冷热暴露重复结算；`GrowData` 的 MemoryPack 成员只能在末尾追加，不能调换既有字段顺序。
-- 普通农作物使用 `CropShell + Mod_Crop + Mod_CropYield + Mod_CropVisual`：`Mod_Crop` 只保存两阶段权威状态并调度 `ICropHarvestAction`，产物表和其他收获副作用必须拆成独立动作模块。
-- `BerryCrop` 继续让野外生态与耕地播种复用同一 `CropShell` Item 定义，但持续采果不能走一次性 `Mod_CropYield`：由 `Mod_Collectable` 同时实现 `ICropHarvestAction/ICropHarvestPolicy` 保存果实库存并保留成熟植株，单次交互严格消费 1 份库存并掉落 1 个果实，不使用全局掉落数量倍率放大单次采摘；`Mod_Production` 只在成熟且库存未满时周期补果，果实提示跟随库存显隐；继承得到的 `Mod_CropYield` 必须禁用，避免一次采摘销毁植株或额外掉落种子。普通一次性作物仍保持 `Mod_Crop + Mod_CropYield + Mod_CropVisual`。药草、狗尾草等一次性小型作物不要直接继承这套持续采果行为。
+- 普通作物的 JSON 仍以 crop/cropYield/cropVisual 描述组合，但资源后端编译为生命周期、产出和批量表现，不实例化这些 MonoBehaviour。一次性收获先生成全部产物再标记收获并清除农业或生态来源；持续采果只扣资源库存，不销毁植株。库存与掉落事务只在主线程提交，不能由多个 Job 直接写同一库存。
+- `BerryCrop` 的野生与播种共用资源实体定义：采集模块编译成 `EntityResourceStock`，生产列表编译成 `EntityStockProduction`，成熟且库存未满才补果；一次交互严格扣 1 份库存并掉落 1 个果实，不叠加全局掉落倍率，不销毁植株。继承的 cropYield 必须禁用；药草、狗尾草等一次性植物不要继承持续采果规则。库存提示是 BRG 部件，不创建果实 GameObject。
 - 野外自然生成、允许玩家用武器清除的小型作物统一继承 `WildCrop_Base`；该抽象定义负责成熟自然初态、通用 `DamageReceiver`、植被受击材质和独立 DamageReceiver Trigger，具体作物只按外形/耐久覆盖 HP 与伤害碰撞尺寸。仅种植链使用的萝卜、水稻不因该规则自动获得生命模块；具体死亡掉落仍由各物品顶层 `lootTableId` 定义，禁止把通用掉落塞进 `WildCrop_Base`。
 - 作物需要多张成长图时，在物品 `visual.spriteStates` 同时声明 `seedling/growing/mature`，由 `Mod_CropVisual` 根据 `normalizedGrowth` 派生表现阶段；不得为了中间画面给 `CropStage` 增加持久化阶段。只要声明任一阶段图就必须三张齐全，对象池卸载时恢复外壳原 Sprite。
 - 世界植株与收获物必须保留独立 Item ID；种下时把植株重置为幼苗，一次性作物成熟交互后由动作生成食物/种子并销毁植株，持续采果植株只扣果实库存；不能把世界植株直接改成食物实例。
@@ -123,10 +125,10 @@ description: "Use when: 定位或修改 FlatWorld 的背包、槽位、快捷栏
 
 ## Skill 维护原则
 
-- `Mod_HandDrill` 使用独立二进制 `MechanicalProcessingState` 与 `UI_HandDrill`；手持/建筑通过 `SharedModuleIds=["手钻模块"]` 迁移同一库存和进度，不再使用 amount=0 工具配方。加工表位于 `Resources/Config/Mechanical/mechanical-catalog.json`，MOD 注册入口为 `MechanicalCatalog.RegisterProcess`。
-- `MechanicalProcessor` 的输入过滤覆盖统一库存转移入口；预览与提交均走 `CraftingService`，输出满时不扣料、不清空已有进度。固定物料转换必须设置 `ApplyDifficultyOutputMultiplier=false`，避免难度增产倍率破坏 1:1 钻孔。
-- 机械加工的手动推进通过 `MechanicalProcessor.AdvanceManually` 复用同一进度与 `CraftingService` 事务；节点配置 `ManualWorkSecondsPerPress` 决定是否显示按钮及每次推进量，不能直接改库存或绕过产物预检。
-- `Mod_ManualProcessor` 用 `Station + WorkPerClick` 配置可复用的手动加工台，按对应 `MechanicalCatalog` 站点读取配方并调用 `MechanicalProcessor.AdvanceManually`；可放置设备的便携物/建筑本体须用 `SharedModuleIds` 保持加工库存与进度连续。
+- `Mod_HandDrill` 使用独立二进制 `RecipeProcessingState` 与 `UI_HandDrill`；手持/建筑通过 `SharedModuleIds=["手钻模块"]` 迁移同一库存和进度，不再使用 amount=0 工具配方。加工表位于 `Resources/Config/Mechanical/mechanical-catalog.json`，MOD 注册入口为 `MachineCatalog.RegisterProcess`。
+- `RecipeProcessor` 的输入过滤覆盖统一库存转移入口；预览与提交均走 `CraftingService`，输出满时不扣料、不清空已有进度。固定物料转换必须设置 `ApplyDifficultyOutputMultiplier=false`，避免难度增产倍率破坏 1:1 钻孔。
+- 机械加工的手动推进通过 `RecipeProcessor.AdvanceManually` 复用同一进度与 `CraftingService` 事务；节点配置 `ManualWorkSecondsPerPress` 决定是否显示按钮及每次推进量，不能直接改库存或绕过产物预检。
+- `Mod_ManualProcessor` 用 `Station + WorkPerClick` 配置可复用的手动加工台，按对应 `MachineCatalog` 站点读取配方并调用 `RecipeProcessor.AdvanceManually`；可放置设备的便携物/建筑本体须用 `SharedModuleIds` 保持加工库存与进度连续。
 - 容器禁止放入状态统一保存在 `Inventory_Data.IsDepositBlocked`；物品新增与跨库存转入必须在数据事务入口检查该标识，阻止放入时仍允许取出与同库存整理，自动运输入口也应沿用同一标识。
 - 熔炉燃料消费统一使用 `Inventory_Data.TryConsumeFromSlot`，不能直接扣 `Stack.Amount`；燃料副产物按配置规则 ID 保存累计进度与待交付数量，目标库存满时保留待交付量，库存释放后再提交。点火时可检查当前手持物的 `Mod_Combustion.IsActivelyBurning`，不能仅凭物品 ID 或燃料模块判断它正在燃烧。
 - 玩家超重减速由主背包和快捷栏的 `Inventory_Data.Event_OnDataChanged` 事件驱动；库存 `InitData` 绑定、模块卸载解绑，玩家全部模块加载完成后做一次状态校准。不要在 `Mod_Inventory.ModUpdate` 中轮询重量。

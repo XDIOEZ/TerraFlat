@@ -21,6 +21,7 @@ description: "Use when: 定位或修改 FlatWorld 的玩家实体、输入系统
 - 单机世界内 F5 成功发布资源后会保存当前本地玩家 Data，注销旧 Player 运行时外壳，清空旧运行时 UI 实例，并从最新资源目录的 Player Prefab 重新实例化同一档案；世界、区块和存档会话不重建。外部系统需要重新绑定玩家引用时订阅 `GameManager.Event_LocalPlayerRuntimeReloaded`，禁止复用 `Event_PlayerEnterWorld` 制造重复世界进入语义。
 - 玩家主动速度与环境速度必须分开：`Mover.DrivenVelocity` 决定步行动画，水流和承载只写 `ExternalVelocity`；不能把上一帧总刚体速度重新当作主动移动的缓动起点。玩家和 GameObject 生物的推动速度统一读取 `StreamingAssets/GameConfig/Movement/water-current.json`：已列 Actor 用指定速度，未列实体按 `ItemData.Stack.Weight` 与 `weightRule` 换算；河流推动读取权威 `Flow` 并经 `WaterEnvironmentRules.ResolveRiverStrength` 换算，不能用 `Clamp01(Flow)` 抹平大流量河段的速度差。
 - 依赖玩家离散位置变化的系统统一订阅 `Mover.WorldUnitChanged`；该事件按拓扑规范化后的 `Rigidbody2D` 实际位置进入新的 1×1 世界单位格时触发，消费方禁止各自累计移动距离或重复轮询坐标。
+- 玩家刚体对无 Collider 的资源/机器实体，必须在 `Mover.FixedUpdate` 用当前刚体位置、实际速度和 `Time.fixedDeltaTime` 再走 `WorldMotionSystem.ResolveStaticContactVelocity`；不能只靠 `ModUpdate` 的一次预测，也不能受 `WorldUnitChanged` 是否有订阅者影响。物理步只约束静态阻挡，不重复提交载具推动；乘坐载具或停止刚体模拟时跳过。
 - 玩家脚下动态建筑造成的移速惩罚由 `BuildingOccupancyRegistry.GetPlayerMoveSpeedMultiplier` 按离散格读取，并只乘入 `Mover` 的主动目标速度；不要把这类地块惩罚写进永久 `Speed.MultiplicativeModifier`，否则进出地块时容易与 Buff、奔跑倍率互相污染。
 - `WorldMotionSystem` 用作者矩形占地与扫掠统一处理推动，载具通过 `IWorldPushTarget` 注册来源；船的水流、划行与推动先合成，航向限制必须作用于合成后的最终速度，再由 `ICarrierMotionSource` 传递给乘员。转向上限允许按运动上下文配置，例如海上/普通航向与陆地玩家推动使用独立角速度，但不能让任一来源绕过统一航向；禁止乘员反推自身载具或用物理冲量代替游戏速度规则。
 - 载具的按键、鼠标点选和白色描边必须共用光标落点查询；上船与下船都要求光标实际命中载具，禁止因“当前已乘坐”或“靠近船体”绕过光标选择。光标指向可触及水面且未命中载具时，交互键交给喝水等环境动作。远海登船与下船都合法：登船恢复位置优先附近安全陆地，否则保留真实登船坐标；下船优先附近安全陆地，没有陆地时落到船体外侧安全水面。
@@ -38,7 +39,7 @@ description: "Use when: 定位或修改 FlatWorld 的玩家实体、输入系统
 - 环境交互输入只转发按下/持续/松开；具体环境提供 `IEnvironmentActionDefinition` 或 `IEnvironmentEffectDefinition`，角色侧 `EnvironmentInteractionRunner` 每次创建独立实例，禁止把玩家长按或被动效果状态存进共享地块配置。
 - 世界实体持续交互统一走 `IInteractable.OnInteractStart/OnInteractUpdate/OnInteractEnd`：`Mod_InteractSender` 只在交互键按住期间转发 Update，正常松开时转发 End；鼠标与外部单次交互只触发 Start→End，不进入持续通道；目标取消或失效走 `OnInteractCancel`，业务模块不得自行读取 E 键状态。
 - 需要只能由交互键打开的设施面板时，让目标实现 `IInteractable.CanPointerInteract` 并返回 `false`；发送器的左键点选遵守该策略，交互键仍须满足范围与目标有效性，避免在发送器内硬编码具体设施类型。
-- `SpatialInteractionRegistry.Query` 包含 `MechanicalWorld` 的纯数据目标；逐帧描边只用 `QueryPreview` 查可描边的注册组件。机械目标没有组件描边，不能把机械图查询接回 `RefreshInteractionPreview` 的每帧路径；手摇轮仍由目标的 Start/Update/End 区分短按开面板与长按供能。
+- `SpatialInteractionRegistry.Query` 包含 `MachineWorld` 的纯数据目标；逐帧描边只用 `QueryPreview` 查已注册视觉与资源实体。`MechanicalDynamicVisual` 以视觉归属注册同一 `MachineInteractionTarget`，通过 `IWorldInteractionPreview` 接收描边状态；不能把机械图查询接回 `RefreshInteractionPreview` 的每帧路径。手摇轮仍由目标的 Start/Update/End 区分短按开面板与长按供能。
 - 本地档案由 `Player.IsLocalProfile`/ProfileContext 判定；远程副本不得持久化、跑本地教程或玩家语音。
 - 玩家存档与 `Player_DIC` 必须使用 `Player.ProfileName`/`ProfileId` 稳定角色 ID；旧档原字典键继续作为 ID，新角色分配独立 ID。`Data_Player.Name_User` 仅用于显示，也可能被管理员身份临时改写，禁止用它决定保存、卸载或跨维度重建的角色槽位。
 - 手柄焦点只能停留在顶层导航面板；虚拟光标/虚拟键盘按现有模式接管。

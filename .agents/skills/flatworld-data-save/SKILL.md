@@ -65,9 +65,9 @@ description: "Use when: 定位或修改 FlatWorld 的数据模型、MemoryPack �
 
 - 液体模拟按 Chunk 调用 `RecordLiquidBatch`，只更新内存中的 `LiquidCells` 并复用已有记录；全部权威写回后再发布批次通知。稳定 ID、零深度和恢复生成值时删除差量的规则不变；实验开关、活动集合、生成高度缓存及动态流向不增加存档字段。关闭实验不能撤销已经保存的模拟结果。
 
-- 机械整网使用外层追加的 `CompactSaveEnvelope.MechanicalNetworks`；`GameSaveData.Mechanical` 保持 `MemoryPackIgnore`。机械本体不能同时写进普通建筑 Chunk 快照，远端无表现节点也必须进入独立存档；退出保存完成之后才能释放 `MechanicalWorld`。
+- 机械及工作方块统一用 `MachineArchive` 和外层 `CompactSaveEnvelope.MechanicalNetworks`；`GameSaveData.Mechanical` 保持 `MemoryPackIgnore`。落地机器不能在 Item 与机器存档中双写；无表现节点也进入独立存档，保存完成后才能释放 `MachineWorld`。
 - 落地机械节点的 `ItemData` 仅作冷快照，不创建运行时 Item；加工库存、拓扑、朝向和耐久随机械专用归档保存，拆回 Summoner 时先捕获完整快照，成功提交后才移除节点。区块表现回收不能影响节点存续。
-- 二进制加工库存由 `MechanicalProcessor` 恢复时重新挂接当前 ItemDefinition；不能假设通用 `Inventory_ModuleData` 递归会访问专用二进制载荷。缺失机械 MOD 定义的原快照仍保留在对应世界档案中。
+- 二进制加工库存由 `RecipeProcessor/MachineInventory` 恢复时重新挂接当前 ItemDefinition；不能假设通用 `Inventory_ModuleData` 递归会访问专用二进制载荷。缺失机器 MOD 定义的原快照仍保留在对应世界档案中。
 
 - 只补充后续维护可复用的易错点、隐含约束和必要注意事项。
 - 不记录修改日期、近期变更或仅描述本次改动内容的流水账。

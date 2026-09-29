@@ -57,6 +57,7 @@ description: "Use when: 定位或修改 FlatWorld 的伤害、生命值、身体
 
 - `Shared/Combat/CombatContext.cs` 位于无 GamePlay 依赖的公共程序集，固定值身份与四类伤害可进入 Burst。两个后端共用难度/防御、实际损失裁剪与刃伤出血阈值；managed CombatDamage 只在旧入口与反馈边界转换。
 - `Hurt(IDamageSender)` 保留原来发送端 Item 与旧规则，然后适配同一生命提交核心；`Hurt(in CombatDamageContext)` 使用明确 Source/Credit 和模拟 Tick/Time。ECS 来源不提供旧 Item 引用，消费方应读取 `DamageReceiverDamageInfo.Context`，不可把其旧 Attacker 字段为空解释成环境攻击或丢弃击杀归因。
+- 阵营配置注册仍严格校验 96 字符限制，进入 Native 目录前另查 UTF-8 字节容量；接收 Native 命中必须先验证长度再解码。非法阵营返回无效命中 `-1` 并限次记录来源身份、Tick 和有限原始字节，不截断、不改为空阵营、不消耗受伤冷却，也不能让单次坏数据中断整轮 AI 更新。
 - 武器自身 Source 与 Owner 的 Credit 分开；generation/world/dimension 必须随事件传递。模拟时间使用 double，不能把同一渲染帧的多个 ECS Tick 都改成 Time.time，否则受伤间隔与 Buff 结算会漂移。旧对象的专属 incoming rule 未提供纯上下文实现时必须显式拒绝，不能绕过资源/建筑门槛。
 - `Mod_Damage` 仅在实际窗口或周期 Pulse 导出 Box OBB，通过少量 GameplayCombatBridge 查询原生空间桶；GO 与 ECS 共用 MaxAttackTargets 和窗口预约集合。Sequence/Window/Pulse 在生产处保持唯一，原生普通攻击每次 Active 只生产一次；新增技能也必须在真实 Pulse 生成事件，不能靠每帧扫描后交给生命层去重。
 - AIECS 的近战接敌资格由目标级 `Engagement Slot` 批量裁决，而不是导航格占位；新的起手动作需要当前槽位资格，已进入既有动作阶段的实体继续使用原有锁定时序。槽位只控制同时接近目标的数量，最终有效性仍由现有距离、方向、LOS 与阵营规则确认。

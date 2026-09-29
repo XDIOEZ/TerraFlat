@@ -23,7 +23,7 @@ description: "Use when: 定位或修改 FlatWorld 的 Mirror/KCP 联机启动、
 - 每个客户端通过 `WorldLocalPresentation` 独立把远端玩家、世界 Item 与 Chunk 投影到 owned 玩家附近；远端插值目标先保持服务器逻辑坐标，再在本机选择最近镜像。`NetworkChunkStreamingCoordinator` 只消费 `ObserverLogicalPosition`/规范化坐标，不能把表现 Transform 发回流送或导航逻辑。
 - 世界/Item 快照必须版本化、可往返；生成指纹或 MOD 集合不兼容时在入世前拒绝。
 - Chunk 按观察者并集流送；本地导航窗口仍只跟随 owned 玩家。
-- 机械建筑以 `MechanicalWorld` 节点快照、删除消息与转速增量同步，不进入普通世界 Item 出生/状态流；完整重同步先清空客户端旧节点再下发当前节点，避免旧存档快照残留。服务端放置直接提交数据，拆除先发布召唤器再删除节点，客户端只应用权威机械表现。
+- 机械及工作方块以 `MachineWorld` 快照、删除消息与转速增量同步，不进入普通世界 Item 出生/状态流；完整重同步先清空客户端旧节点。服务端放置直接提交数据，拆除先发布召唤器再删除节点；客户端交互、库存转移及排序/整理只发命令，不能直接修改机器库存。具体入口见 `flatworld-machines/SKILL.md`。
 - 网络 UI 从正式 Prefab 实例化，不运行时构造；网络玩家名称节点预制在 `Assets/Resources/Networking/FlatWorldNetworkPlayer.prefab`。
 - `NetworkModeUIController` 常驻于 `NetworkGameBootstrap`，但联机面板和主菜单入口属于场景 UI；必须按 `GameStartScene` 加载与 `UIManager.InteractionSurfaceChanged` 幂等重建/重绑，不能只在 `Initialize` 中缓存一次引用。
 - `UI_NetworkMode` 在完整资源就绪后实例化；Prefab 根 `CanvasGroup` 的 Alpha 保持 1 供 Prefab Mode 编辑，交互与射线默认关闭；运行时在注册面板前调用 `BasePanel.InitClosed()` 无动画地隐藏，不能靠带动画的 `Close()` 初始化。

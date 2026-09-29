@@ -7,6 +7,8 @@ description: "Use when: 定位或修改 FlatWorld 的 MOD 扫描、manifest、�
 
 ## 入口
 
+- 可信 C# / Harmony MOD：`ModRuntimeManager.Managed.cs`、`ModManagedAssemblyStore.cs`；示例 `ModSDK/Examples/HarmonyMachines/`，清单 schema 在 `Tools/FlatWorldModSDK/Schemas/manifest.schema.json`。仅桌面 Mono 支持，不自动授权代码指纹；机器扩展另读 `flatworld-machines/SKILL.md`。
+
 - 管理/模型/API/Lua：`Assets/5_Scripts/5-3_GamePlay/Extensibility/Mods/{ModRuntimeManager,ModManifest,ModApi,ModLuaRuntime,Mod_LuaBehaviour}.cs`
 - 存档：`World/Map/Data/GameSaveData.Mods.cs`
 - 模板：`Assets/Editor/FlatWorld/ProjectTools/Mods/ModTemplateCreator.cs`

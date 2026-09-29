@@ -19,6 +19,7 @@ description: "Use when: 定位或修改 FlatWorld 的纯 WorldModel、Chunk 运�
 
 ## 边界
 
+- `SharedSpriteMeshCache.IsSessionEnding` 同时检查会话标记与 Editor 退出状态，不依赖缓存回调先于其它管理器。结束时先禁止 Owner 重登记，再释放 BRG 和 Mesh；正常退出不报重建警告，运行中仍有 Owner 的后端被清空时保留诊断。清理通知、单个批次及 World 的 Job 收尾须隔离异常并继续释放其余资源，不能让第一处失败遗失全部原生句柄。
 - `ChunkNaturalItemRenderer` 位于 NaturalItems 子节点，BRG Owner 必须从所属 ChunkView 查找；自然物使用按 GUID 区分的负实例槽，不能复用地块单格槽覆盖同格其它实体。实体 World 由 `WorldEntityRuntime` 与 AI 共用，解绑先保存/撤销实例与导航，最后才释放世界。
 
 - `5-0_WorldModel` 保持纯 C#，后台生成不得访问 Unity 对象。
@@ -28,6 +29,7 @@ description: "Use when: 定位或修改 FlatWorld 的纯 WorldModel、Chunk 运�
 - 墙脚、岸线等依赖邻接关系的表现除监听自身 `ChunkTerrainData.Changed` 外，还必须监听正交相邻区块的共享边界变化；`ChunkCommitted` 只表示邻区就绪，不能覆盖后续拆除或放置造成的运行时更新。
 - Ground / Water / Back / Blocking 用 `ChunkGroundMeshRenderer` 按 Chunk 和纹理批量绘制；Ground 对可安全限制在单格内的 Sprite 使用单 Quad + `GraphicsBuffer` 单格数据，单个纹理/材质批次固定 2 个三角面，单格变化只上传一条 GPU Cell 记录；外扩 Sprite 与其它层保留局部顶点路径。Blocking Tilemap 只保留碰撞。草、自然物、机械等扩展层继续共用 `ChunkBatchRendererGroupService` 的 Owner，Owner 重建时各层重提。
 - BRG 没有 `SpriteRenderer/TilemapRenderer` 的 Sorting Layer 字段，不能指望较低的 Render Queue 跨 Sorting Layer 压到 `Tilemap` 层下面；当前地形 BRG 使用 Default 排序域和 2987~2992 队列。草等需要盖在地形之上、普通世界 Sprite 之下的表现必须与 BRG 共用 Default 排序域，并使用高于 2992、低于 3000 的透明队列。玩家、生物、建筑和世界物品的 `WorldSorting` JSON 应统一使用比 Default 更靠前的 `Player` 排序层，再由同层 Y 轴决定实体间前后；只提高 Default 层内 Order 无法保证实体不被 BRG 地形盖住。
+- `HasSortingPosition` 只能在 BRG 自身排序域内生效，不能让 Default 层的树身与 Player 层角色混排。树木 ECS 的主体/果实由区块持有轻量原生排序外壳，阴影仍提交 BRG；重绑先清旧槽，解绑同时释放外壳，投影坐标只能用于表现，不能回写实体或存档。
 - 地形 Sprite 几何只经资源会话级 `SharedSpriteMeshCache` 构造，最终 Tile/MOD/Liquid 目录和 Palette 在 Ready 前预热，动态 Sprite 保留懒加载兜底。普通流送与 `ReleaseUnusedBackend` 不清 Mesh；`BatchMeshID` 仅存当前 Backend，退出世界销毁 BRG 后再次进入必须重新注册共享 Mesh。缓存清理先通知 BRG 解绑再销毁 Mesh，禁止反向依赖 Batch 内部实现。
 - 世界内 F5 不销毁 WorldRuntime、Chunk、租约或 BRG；`ChunkTilemapRenderer` 随 Bind/Unbind 成对订阅 `GameRes.ResourcesReloaded`，发布后用原权威地形刷新碰撞映射和批量视觉。候选期间不预热或清除共享 Mesh；运行中液体身份集合及数字索引必须不变，因为原世界和后台生成器仍持有原编号表。
 - Chunk BRG 自定义 Shader 的全部数值/向量/颜色材质属性必须统一声明在 `UnityPerMaterial` CBUFFER，且同一 Shader 的所有活跃 Pass 保持一致布局；不要 `UsePass` 借用另一个材质布局不同的 Shader Pass，否则 BatchRendererGroup 会因 SRP Batcher 不兼容而拒绝绘制。
@@ -94,7 +96,7 @@ description: "Use when: 定位或修改 FlatWorld 的纯 WorldModel、Chunk 运�
 - `SetLiquidBatch` 要求索引唯一递增，跨 Chunk 先全部写回再 `PublishLiquidBatch`；批次仅发 `LiquidBatchChanged`，不会逐格发 `Changed`。借用的变化索引只能在同步回调内读取；新消费方必须显式订阅批事件。BRG 在帧末合并邻块脏格，Navigation 与植被也消费批事件。
 - 实验流动从外部修改或显式唤醒开始；模拟内部只能在已开放的有限区域传播，不能通过再次扩大区域绕过海洋保护。等待邻区、停用、异常和换世界都必须结束批次并归还租约；存档差量与建筑恢复完成前不能计算流量。四邻格共享松弛预算，并同时限制整格总流入/总流出，避免透支、溢出与棋盘振荡。
 
-- `World/Mechanical/MechanicalWorld` 的模拟权威独立于 `ChunkView`：真实端口连通网络整组唤醒、先全量恢复再 Tick、先全量快照再休眠；不可因可见 Chunk 卸载而删除节点或冻结一半扭矩源。
+- `World/Machines/MachineWorld` 的模拟权威独立于 `ChunkView`：真实端口连通网络整组唤醒、先全量恢复再 Tick、先全量快照再休眠；不可因可见 Chunk 卸载而删除节点或冻结一半扭矩源。
 - 机械图在世界作用域建立时冻结 `WorldTopologyDomain` 值副本，构图、查格和交互候选窗口必须使用同一坐标域；换世界重建图，节点增删、移位或拓扑变化置脏并由 `Rebuild` 清空候选窗口。窗口只缓存节点集合，最终交互距离仍按玩家和光标的实时位置判断；旧 MOD 的归一化委托构造入口保留。
 - 机械 Sprite 按区块 BRG Owner 分层提交；节点格或转速变化只更新对应实例槽，Owner 全量重建后从机械数据网重提。连续转动和轴纹滚动用实例速度/相位在 GPU 计算，轴纹 `frac` 必须在片元阶段执行并限制在 Sprite UV 区间，避免顶点跨接缝插值撕裂；循环世界显示坐标取当前区块格，节点规范化坐标仅作数据身份。不能恢复逐节点 `Update`、SpriteRenderer 或重建地形批次。
 - 机械距离只查询缓存的 Chunk `BoundsInt`，含滞回和冷却；拓扑变化时重算单区块属性和循环世界最短包围跨度。表现层只查询已存在的 ChunkView，不为传动网络申请整条地图加载。

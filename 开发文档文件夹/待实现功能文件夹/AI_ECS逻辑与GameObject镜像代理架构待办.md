@@ -1,4 +1,17 @@
-# FlatWorld 统一实体：ECS 模块、GameObject 镜像代理与 BRG
+# FlatWorld AI：GameObject 主控与可选 ECS 后端
+
+> **当前执行结论：所有 AI（包括僵尸）恢复完整 GameObject 主控；ECS AI、BRG 和桥梁代码保留但默认不启用。本文下方的全量 ECS 方案属于历史参考，不能再据此迁移或删除 GameObject AI。**
+
+## 当前运行边界
+
+- 普通生成、GM、事件、技能、MOD 与蜂巢均使用 GameObject AI；实际运行原来的行为模块、Mover 和 Animator，不是 ECS 的镜像空壳。
+- 后端按物种选择，同一生物只有一个主控；ECS 物种仍允许显式配置，但当前连僵尸也选择 `gameObject`，`useAiecsBackend=false`。
+- 事件和 MOD 的稳定 GUID 命令通过统一服务分发；已有战斗桥与镜像保留。完整混合 AI 的感知/战斗互通需要在以后实际启用时单独完成和验收。
+- GameObject 居民恢复原有 ItemData/休眠链；已有 `EntitiesResidents` 冷快照保留，不自动转换或删除。重新进入世界后按新路由生成，不能把配置切换当作当前场景实体已经热转换。
+- 树木、作物、机器和掉落物的现有后端不在本次 AI 还原范围内；GameObject AI 通过资源查询桥继续访问 ECS 树木和作物。
+- 验证与验收由用户负责；不主动编译、运行测试或操作 Unity 现场。
+
+## 历史 ECS 方案（以下保留备查，不再自动执行）
 
 ## 1. 系统定位
 
