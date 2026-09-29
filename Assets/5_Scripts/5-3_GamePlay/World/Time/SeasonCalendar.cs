@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using MemoryPack;
 using UnityEngine;
+using FlatWorld.AIECS;
+using Unity.Mathematics;
 
 /// <summary>四季的稳定身份；数值同时用于日历顺序与季节配置查询。</summary>
 public enum WorldSeason { Spring, Summer, Autumn, Winter }
@@ -132,27 +134,22 @@ public static class SeasonCalendar
     /// <summary>按各季长度定位季节，并在季节中心与交界之间平滑连接温差。</summary>
     public static SeasonSnapshot Sample(SeasonCycleSettings settings, double elapsedDays)
     {
-        double completedYears = Math.Floor(elapsedDays / settings.YearDays);
-        double remaining = elapsedDays - completedYears * settings.YearDays;
-        int index = 0;
-        while (index < 3 && remaining >= settings.GetDays((WorldSeason)index))
-            remaining -= settings.GetDays((WorldSeason)index++);
-
+        EntitySeasonPeriod period = CreateEntityPeriod(settings, 0d, double.PositiveInfinity);
+        float temperature = period.Sample(elapsedDays, out int index, out double completedYears, out float progress);
         WorldSeason season = (WorldSeason)index;
         float duration = settings.GetDays(season);
-        float progress = (float)(remaining / duration);
-        float center = settings.GetTemperature(season);
-        float previous = settings.GetTemperature((WorldSeason)((index + 3) % 4));
-        float next = settings.GetTemperature((WorldSeason)((index + 1) % 4));
-        // 第一年的春初没有经历过冬季，保持温和开局；后续春初正常承接冬季回暖。
-        if (completedYears == 0d && season == WorldSeason.Spring)
-            previous = center;
-        float temperature = progress < 0.5f
-            ? Mathf.SmoothStep((previous + center) * 0.5f, center, progress * 2f)
-            : Mathf.SmoothStep(center, (center + next) * 0.5f, (progress - 0.5f) * 2f);
         return new SeasonSnapshot(season, (int)Math.Min(int.MaxValue - 1d, completedYears) + 1,
-            progress, (float)remaining, duration, temperature);
+            progress, progress * duration, duration, temperature);
     }
+
+    /// <summary>把当前日历配置冻结给共享能力 Job；季节温度公式保持唯一来源。</summary>
+    public static EntitySeasonPeriod CreateEntityPeriod(SeasonCycleSettings settings, double offset, double endDay) => new()
+    {
+        EndDay = endDay, OffsetDays = offset,
+        Days = new float4(settings.SpringDays, settings.SummerDays, settings.AutumnDays, settings.WinterDays),
+        Temperatures = new float4(settings.SpringTemperatureOffset, settings.SummerTemperatureOffset,
+            settings.AutumnTemperatureOffset, settings.WinterTemperatureOffset)
+    };
 
     /// <summary>替换季长时保持当前年份、季节与完成比例，不改世界时间或重新触发生产结算。</summary>
     public static void ChangeLengths(TimeData time, float spring, float summer, float autumn, float winter)

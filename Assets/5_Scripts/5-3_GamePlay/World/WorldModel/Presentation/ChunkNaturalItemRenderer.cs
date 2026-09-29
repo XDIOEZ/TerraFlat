@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using FlatWorld.NaturalEntities;
 using FlatWorld.Networking;
 using FlatWorld.WorldModel;
 using UnityEngine;
@@ -19,8 +20,8 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IIncrementalChunkV
     #region 字段
 
     private const float AutoSaveFrameBudgetSeconds = 0.0025f;
-    private const float MinePromotionDistance = 20f;
-    private const float MineDemotionDistance = 28f;
+    private const float StaticPromotionDistance = 20f;
+    private const float StaticDemotionDistance = 28f;
     private static readonly ProfilerMarker NaturalItemSpawnMarker =
         new("FlatWorld.ChunkStreaming.SpawnNaturalItem");
     private static readonly ProfilerMarker NaturalItemCaptureMarker =
@@ -34,9 +35,10 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IIncrementalChunkV
     private readonly HashSet<Item> unbindItemSet = new();
     private readonly HashSet<int> generatedPortalGuids = new();
     private readonly List<NaturalItemPlacement> deferredCompanionPlacements = new();
-    private readonly Dictionary<int, NaturalEntityData> mineEntities = new();
-    private readonly HashSet<int> promotedMineGuids = new();
-    private readonly List<int> mineDemotionBuffer = new();
+    private readonly Dictionary<int, StaticNaturalRuntime> staticEntities = new();
+    private readonly HashSet<int> promotedStaticGuids = new();
+    private readonly List<int> staticDemotionBuffer = new();
+    private readonly List<int> staticRemovalBuffer = new();
     private ChunkRuntime boundChunk;
     private ChunkTilemapRenderer terrainOwner;
     private EnvironmentLayers environmentLayers;
@@ -50,9 +52,19 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IIncrementalChunkV
     private int renewalCursor; // 每次最多检查四个自然生成点。
     private float nextCompanionReadinessCheck; // 小树长大后低频补生成伴生物。
     private int companionReadinessCursor;
-    private float nextMinePromotionCheck;
+    private float nextStaticPromotionCheck;
+
+    private sealed class StaticNaturalRuntime
+    {
+        public NaturalEntityData Data;
+        public NaturalEntityHandle Handle;
+        public uint LastVisualVersion;
+        public bool RequiresItemBridge;
+    }
 
     public int SpawnedItemCount => spawnedItems.Count;
+    public int EcsEntityCount => staticEntities.Count;
+    public int EcsOnlyEntityCount => staticEntities.Count - promotedStaticGuids.Count;
 
     /// <summary>按稳定 GUID 查询当前区块已经实例化的自然物。</summary>
     public bool TryGetSpawnedItem(int guid, out Item item)
@@ -121,11 +133,11 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IIncrementalChunkV
         itemManager = ItemMgr.GetInstance();
         chunkManager = ChunkMgr.ExistingInstance;
         boundChunk = chunk;
-        terrainOwner = GetComponent<ChunkTilemapRenderer>();
+        terrainOwner = GetComponentInParent<ChunkView>()?.GetComponentInChildren<ChunkTilemapRenderer>(true);
         if (terrainOwner != null)
-            terrainOwner.BatchPresentationRebuilt += RefreshMineVisuals;
+            terrainOwner.BatchPresentationRebuilt += RefreshStaticVisuals;
         if (chunkManager != null)
-            chunkManager.NaturalItemRemoved += HandleMineRemoved;
+            chunkManager.NaturalItemRemoved += HandleStaticRemoved;
         initialBindingInProgress = true;
 
         try
@@ -138,12 +150,17 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IIncrementalChunkV
                 throw new InvalidOperationException("绑定自然物需要有效的 ItemMgr 和 ChunkMgr。");
 
             // 宿主必须先完成生成，伴生物才能按宿主状态决定是否出现。
+            int dataEntityBatch = 0;
             for (int i = 0; i < placements.Count; i++)
             {
                 NaturalItemPlacement placement = placements[i];
-                if (!placement.IsCompanion && TryBindMineEntity(placement, out bool promoted))
+                if (!placement.IsCompanion && TryBindStaticEntity(placement, out bool promoted))
                 {
-                    if (promoted) yield return null;
+                    if (promoted || ++dataEntityBatch >= 16)
+                    {
+                        dataEntityBatch = 0;
+                        yield return null;
+                    }
                     continue;
                 }
                 if (!placement.IsCompanion && SpawnInitialPlacement(placement))
@@ -195,9 +212,9 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IIncrementalChunkV
         try
         {
             if (chunkManager != null)
-                chunkManager.NaturalItemRemoved -= HandleMineRemoved;
+                chunkManager.NaturalItemRemoved -= HandleStaticRemoved;
             if (terrainOwner != null)
-                terrainOwner.BatchPresentationRebuilt -= RefreshMineVisuals;
+                terrainOwner.BatchPresentationRebuilt -= RefreshStaticVisuals;
             using (NaturalItemCaptureMarker.Auto())
                 CaptureState();
             unbindItems.Clear();
@@ -233,18 +250,20 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IIncrementalChunkV
             unbindItemSet.Clear();
             spawnedItems.Clear();
             if (terrainOwner != null && terrainOwner.IsBatchPresentationRegistered)
-                foreach (NaturalEntityData mine in mineEntities.Values)
-                    terrainOwner.ClearLayerVisual(ChunkBatchRendererGroupService.VisualLayer.NaturalStatic,
-                        mine.LocalX, mine.LocalY);
-            mineEntities.Clear();
-            promotedMineGuids.Clear();
-            mineDemotionBuffer.Clear();
+                foreach (StaticNaturalRuntime runtime in staticEntities.Values)
+                    terrainOwner.ClearNaturalEntityVisual(runtime.Data.Guid);
+            foreach (StaticNaturalRuntime runtime in staticEntities.Values)
+                NaturalEntityEcsService.Remove(runtime.Handle);
+            staticEntities.Clear();
+            promotedStaticGuids.Clear();
+            staticDemotionBuffer.Clear();
+            staticRemovalBuffer.Clear();
             transientItems.Clear();
             generatedPortalGuids.Clear();
             deferredCompanionPlacements.Clear();
             companionReadinessCursor = 0;
             nextCompanionReadinessCheck = 0f;
-            nextMinePromotionCheck = 0f;
+            nextStaticPromotionCheck = 0f;
             initialBindingInProgress = false;
             environmentLayers = null;
             boundChunk = null;
@@ -289,6 +308,7 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IIncrementalChunkV
                     item);
             }
         }
+        CaptureStaticEntityStates();
     }
 
     /// <summary>自动保存专用的自然物分帧快照，避免一次克隆全部表现物。</summary>
@@ -335,121 +355,210 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IIncrementalChunkV
                 yield return null;
             }
         }
+
+        List<StaticNaturalRuntime> staticRuntimes = new(staticEntities.Values);
+        for (int i = 0; i < staticRuntimes.Count; i++)
+        {
+            if (applicationQuitting || !ReferenceEquals(boundChunk, capturedChunk) ||
+                chunkManager == null || chunkManager.IsWorldRuntimeShuttingDown)
+                yield break;
+            StaticNaturalRuntime runtime = staticRuntimes[i];
+            if (runtime != null && !promotedStaticGuids.Contains(runtime.Data.Guid) &&
+                NaturalEntityEcsService.TryGetPresentation(runtime.Handle, out NaturalEntityPresentationState state) && state.Dead)
+            {
+                HandleStaticEcsDeath(runtime.Data.Guid);
+                continue;
+            }
+            if (runtime != null && !promotedStaticGuids.Contains(runtime.Data.Guid) &&
+                NaturalEntityEcsService.RequiresRuntimePersistence(runtime.Handle) &&
+                NaturalEntityEcsService.TryCapture(runtime.Handle, out ItemData snapshot))
+            {
+                chunkManager.CaptureNaturalItemState(address, snapshot);
+            }
+            if (Time.realtimeSinceStartup - frameStart >= AutoSaveFrameBudgetSeconds)
+            {
+                frameStart = Time.realtimeSinceStartup;
+                yield return null;
+            }
+        }
     }
 
     #endregion
 
-    #region 矿脉数据实体
+    #region 静态自然物 ECS
 
-    /// <summary>普通矿脉和冰山在远处只登记稳定数据和批量精灵，联机沿用现有实体链。</summary>
-    private bool TryBindMineEntity(NaturalItemPlacement placement, out bool promoted)
+    /// <summary>由模块组合决定是否进入 ECS；未知复杂模块自动保留完整 Item，联机继续走原权威链。</summary>
+    private bool TryBindStaticEntity(NaturalItemPlacement placement, out bool promoted)
     {
         promoted = false;
         if (GameNetwork.IsOnline || placement.IsCompanion || placement.IsDimensionPortal ||
-            !(placement.ItemId.StartsWith("Mine_", StringComparison.Ordinal) ||
-              string.Equals(placement.ItemId, "Iceberg", StringComparison.Ordinal)) ||
             terrainOwner == null || chunkManager == null || GameRes.ExistingInstance == null ||
-            !GameRes.ExistingInstance.TryGetItemDefinition(placement.ItemId, out RuntimeItemDefinition definition) ||
-            definition.Sprite == null || definition.AnimatorController != null)
+            !GameRes.ExistingInstance.TryGetItemDefinition(placement.ItemId, out RuntimeItemDefinition definition))
             return false;
+        if (staticEntities.ContainsKey(placement.Guid))
+            return true;
 
-        if (mineEntities.ContainsKey(placement.Guid)) return true;
         RuntimeWorldAddress address = boundChunk.Address;
         bool renewing = chunkManager.IsNaturalItemRemoved(address, placement.Guid);
         if (renewing && (!chunkManager.IsNaturalRenewalDue(address, placement.Guid) ||
                          !CanRenewAt(placement)))
             return true;
 
-        NaturalEntityData entity = new NaturalEntityData(placement);
-        mineEntities.Add(entity.Guid, entity);
-        if (renewing) chunkManager.CompleteNaturalRenewal(address, entity.Guid);
-        if (IsAnyPlayerNear(GetMinePosition(entity), MinePromotionDistance))
+        Vector3 defaultPosition = GetPlacementPosition(placement);
+        chunkManager.TryGetNaturalItemOverride(address, placement.Guid, out ItemData changedData);
+        float baselineCelsius = TryGetBaselineCelsius(placement, out float baseline)
+            ? baseline
+            : float.NaN;
+        boundChunk.Terrain.TryGetEnvironmentValue("precipitation", placement.LocalX, placement.LocalY, out float precipitation);
+        if (!NaturalEntityEcsService.TryRegister(definition, placement.Guid,
+                defaultPosition, baselineCelsius, precipitation, address.DimensionId,
+                changedData, out NaturalEntityHandle handle))
+            return false;
+
+        var runtime = new StaticNaturalRuntime
         {
-            PromoteMine(entity);
-            promoted = promotedMineGuids.Contains(entity.Guid);
+            Data = new NaturalEntityData(placement),
+            Handle = handle
+        };
+        staticEntities.Add(placement.Guid, runtime);
+        if (renewing)
+            chunkManager.CompleteNaturalRenewal(address, placement.Guid);
+
+        if (NaturalEntityEcsService.TryGetPresentation(handle, out NaturalEntityPresentationState state) &&
+            IsAnyPlayerNear(new Vector3(state.Position.x, state.Position.y, 0f), StaticPromotionDistance))
+        {
+            PromoteStaticEntity(runtime);
+            promoted = promotedStaticGuids.Contains(placement.Guid);
         }
         else
         {
-            DrawMineVisual(entity);
+            DrawStaticVisual(runtime);
         }
         return true;
     }
 
-    private void ProcessMinePromotion()
+    /// <summary>低频处理升降级、成长视觉和远距离气候死亡；每轮最多升格一个实体避免生成尖峰。</summary>
+    private void ProcessStaticEntities()
     {
-        if (unbinding || boundChunk == null || mineEntities.Count == 0 ||
-            Time.unscaledTime < nextMinePromotionCheck) return;
-        nextMinePromotionCheck = Time.unscaledTime + 0.25f;
+        if (unbinding || boundChunk == null || staticEntities.Count == 0 ||
+            Time.unscaledTime < nextStaticPromotionCheck)
+            return;
+        nextStaticPromotionCheck = Time.unscaledTime + 0.25f;
 
-        foreach (NaturalEntityData mine in mineEntities.Values)
+        int deadGuid = 0;
+        StaticNaturalRuntime promotion = null;
+        foreach (KeyValuePair<int, StaticNaturalRuntime> pair in staticEntities)
         {
-            if (!promotedMineGuids.Contains(mine.Guid) &&
-                IsAnyPlayerNear(GetMinePosition(mine), MinePromotionDistance))
+            if (promotedStaticGuids.Contains(pair.Key) ||
+                !NaturalEntityEcsService.TryGetPresentation(pair.Value.Handle,
+                    out NaturalEntityPresentationState state))
+                continue;
+            if (state.Dead)
             {
-                PromoteMine(mine);
+                deadGuid = pair.Key;
                 break;
+            }
+            if (pair.Value.LastVisualVersion != state.VisualVersion)
+                DrawStaticVisual(pair.Value);
+            if (promotion == null &&
+                IsAnyPlayerNear(new Vector3(state.Position.x, state.Position.y, 0f),
+                    StaticPromotionDistance))
+            {
+                promotion = pair.Value;
             }
         }
 
-        mineDemotionBuffer.Clear();
-        foreach (int guid in promotedMineGuids)
-            if (mineEntities.TryGetValue(guid, out NaturalEntityData mine) &&
-                !IsAnyPlayerNear(GetMinePosition(mine), MineDemotionDistance))
-                mineDemotionBuffer.Add(guid);
-        for (int i = 0; i < mineDemotionBuffer.Count; i++)
-            DemoteMine(mineDemotionBuffer[i]);
-        mineDemotionBuffer.Clear();
+        if (deadGuid != 0)
+        {
+            HandleStaticEcsDeath(deadGuid);
+            return;
+        }
+        if (promotion != null)
+            PromoteStaticEntity(promotion);
+
+        staticDemotionBuffer.Clear();
+        foreach (int guid in promotedStaticGuids)
+        {
+            if (!staticEntities.TryGetValue(guid, out StaticNaturalRuntime runtime) ||
+                !spawnedItems.TryGetValue(guid, out Item item) || item == null ||
+                item.DestructionHandled)
+                continue;
+            if (!IsAnyPlayerNear(item.transform.position, StaticDemotionDistance))
+                staticDemotionBuffer.Add(guid);
+        }
+        for (int i = 0; i < staticDemotionBuffer.Count; i++)
+            DemoteStaticEntity(staticDemotionBuffer[i]);
+        staticDemotionBuffer.Clear();
     }
 
-    private void PromoteMine(NaturalEntityData mine)
+    private void PromoteStaticEntity(StaticNaturalRuntime runtime)
     {
-        if (promotedMineGuids.Contains(mine.Guid)) return;
-        terrainOwner.ClearLayerVisual(ChunkBatchRendererGroupService.VisualLayer.NaturalStatic,
-            mine.LocalX, mine.LocalY);
+        if (runtime != null && NaturalEntityEcsService.TryGetPresentation(runtime.Handle, out var state) && state.Dead)
+        {
+            HandleStaticEcsDeath(runtime.Data.Guid);
+            return;
+        }
+        if (runtime == null || promotedStaticGuids.Contains(runtime.Data.Guid) ||
+            !NaturalEntityEcsService.TryCapture(runtime.Handle, out ItemData snapshot))
+            return;
+
+        int guid = runtime.Data.Guid;
+        chunkManager.CaptureNaturalItemState(boundChunk.Address, snapshot);
+        terrainOwner.ClearNaturalEntityVisual(runtime.Data.Guid);
+        NaturalEntityEcsService.SetSuspended(runtime.Handle, true);
         using (NaturalItemSpawnMarker.Auto())
-            SpawnPlacement(mine.ToPlacement());
-        if (spawnedItems.ContainsKey(mine.Guid))
-            promotedMineGuids.Add(mine.Guid);
-        else
-            DrawMineVisual(mine);
+            SpawnPlacement(runtime.Data.ToPlacement());
+        if (spawnedItems.ContainsKey(guid))
+        {
+            promotedStaticGuids.Add(guid);
+            return;
+        }
+
+        NaturalEntityEcsService.SetSuspended(runtime.Handle, false);
+        DrawStaticVisual(runtime);
     }
 
-    private void DemoteMine(int guid)
+    private void DemoteStaticEntity(int guid)
     {
-        if (!promotedMineGuids.Contains(guid) || !mineEntities.TryGetValue(guid, out NaturalEntityData mine))
+        if (!promotedStaticGuids.Contains(guid) ||
+            !staticEntities.TryGetValue(guid, out StaticNaturalRuntime runtime) || runtime.RequiresItemBridge)
             return;
         if (!spawnedItems.TryGetValue(guid, out Item item) || item == null || item.DestructionHandled)
         {
-            promotedMineGuids.Remove(guid);
+            promotedStaticGuids.Remove(guid);
             spawnedItems.Remove(guid);
+            NaturalEntityEcsService.SetSuspended(runtime.Handle, false);
+            DrawStaticVisual(runtime);
             return;
         }
+
         try
         {
             item.Save();
             ItemData snapshot = FastCloner.FastCloner.DeepClone(item.itemData);
+            if (!NaturalEntityEcsService.CanDemote(runtime.Handle, snapshot))
+            {
+                runtime.RequiresItemBridge = true;
+                return;
+            }
             chunkManager.CaptureNaturalItemState(boundChunk.Address, snapshot);
+            float baseline = TryGetBaselineCelsius(runtime.Data.ToPlacement(), out float value)
+                ? value
+                : float.NaN;
+            NaturalEntityEcsService.ApplySnapshot(runtime.Handle, snapshot, baseline);
         }
         catch (Exception exception)
         {
-            Debug.LogError($"[ChunkNaturalItemRenderer] 矿脉降级保存失败：{guid}，{exception}", item);
+            Debug.LogError($"[ChunkNaturalItemRenderer] 静态自然物降级保存失败：{guid}，{exception}", item);
             return;
         }
+
         item.OnItemDestroy -= HandleNaturalItemDestroy;
         spawnedItems.Remove(guid);
-        promotedMineGuids.Remove(guid);
+        promotedStaticGuids.Remove(guid);
         itemManager.DespawnItem(item, saveData: false, detachFromChunk: false);
-        DrawMineVisual(mine);
-    }
-
-    private Vector3 GetMinePosition(NaturalEntityData mine)
-    {
-        Vector3 position = new Vector3(boundChunk.Address.ChunkOrigin.X + mine.LocalX + 0.5f + mine.OffsetX,
-            boundChunk.Address.ChunkOrigin.Y + mine.LocalY + 0.5f + mine.OffsetY, 0f);
-        if (chunkManager.TryGetNaturalItemOverride(boundChunk.Address, mine.Guid, out ItemData changed) &&
-            changed?.transform != null)
-            position = changed.transform.position;
-        return position;
+        NaturalEntityEcsService.SetSuspended(runtime.Handle, false);
+        DrawStaticVisual(runtime);
     }
 
     private bool IsAnyPlayerNear(Vector3 position, float distance)
@@ -468,14 +577,16 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IIncrementalChunkV
         return localDelta.sqrMagnitude <= maximumSquared;
     }
 
-    private void DrawMineVisual(NaturalEntityData mine)
+    private void DrawStaticVisual(StaticNaturalRuntime runtime)
     {
-        if (terrainOwner == null || promotedMineGuids.Contains(mine.Guid) ||
+        if (runtime == null || terrainOwner == null || promotedStaticGuids.Contains(runtime.Data.Guid) ||
             !terrainOwner.IsBatchPresentationRegistered || GameRes.ExistingInstance == null ||
-            !GameRes.ExistingInstance.TryGetItemDefinition(mine.ItemId, out RuntimeItemDefinition definition))
+            !GameRes.ExistingInstance.TryGetItemDefinition(runtime.Data.ItemId, out RuntimeItemDefinition definition) ||
+            !NaturalEntityEcsService.TryGetPresentation(runtime.Handle, out NaturalEntityPresentationState state) ||
+            state.Suspended || state.Dead)
             return;
         Sprite sprite = definition.Sprite;
-        if (chunkManager.TryGetNaturalItemOverride(boundChunk.Address, mine.Guid, out ItemData changed) &&
+        if (chunkManager.TryGetNaturalItemOverride(boundChunk.Address, runtime.Data.Guid, out ItemData changed) &&
             ItemDataPresentationResolverRegistry.TryResolve(changed, out Sprite changedSprite))
             sprite = changedSprite;
         Material material = definition.Material ??
@@ -483,34 +594,93 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IIncrementalChunkV
         material ??= Resources.Load<Material>("Config/WorldModel/BRG/ChunkBRG-Sprite-Lit");
         if (sprite == null || material == null) return;
 
-        Vector3 position = GetMinePosition(mine);
+        Vector3 position = new(state.Position.x, state.Position.y, 0f);
         ItemVisualDefinitionDto visual = definition.Visual;
         Vector3 offset = visual?.RendererLocalPosition ?? Vector3.zero;
         Quaternion rotation = Quaternion.Euler(visual?.RendererLocalEulerAngles ?? Vector3.zero);
         Vector3 scale = visual?.RendererLocalScale ?? Vector3.one;
         if (visual?.FlipX == true) scale.x = -scale.x;
         if (visual?.FlipY == true) scale.y = -scale.y;
-        Matrix4x4 matrix = Matrix4x4.TRS(position, Quaternion.identity, Vector3.one) *
+        Matrix4x4 matrix = Matrix4x4.TRS(position,
+                               Quaternion.Euler(0f, 0f, state.Rotation),
+                               new Vector3(state.Scale.x, state.Scale.y, 1f)) *
                            Matrix4x4.TRS(offset, rotation, scale);
-        terrainOwner.SetLayerVisual(ChunkBatchRendererGroupService.VisualLayer.NaturalStatic,
-            mine.LocalX, mine.LocalY, sprite, material, matrix, visual?.Color ?? Color.white,
-            Vector4.zero, Vector4.zero, position);
+        terrainOwner.SetNaturalEntityVisual(runtime.Data.Guid, sprite, material, matrix,
+            visual?.Color ?? Color.white, position);
+        runtime.LastVisualVersion = state.VisualVersion;
     }
 
-    private void RefreshMineVisuals()
+    private void RefreshStaticVisuals()
     {
-        foreach (NaturalEntityData mine in mineEntities.Values)
-            if (!promotedMineGuids.Contains(mine.Guid)) DrawMineVisual(mine);
+        var current = new List<StaticNaturalRuntime>(staticEntities.Values);
+        foreach (StaticNaturalRuntime runtime in current)
+        {
+            if (GameRes.ExistingInstance == null ||
+                !GameRes.ExistingInstance.TryGetItemDefinition(runtime.Data.ItemId, out RuntimeItemDefinition definition))
+                continue;
+            runtime.RequiresItemBridge = !NaturalEntityEcsService.TryRefreshDefinition(runtime.Handle, definition);
+            if (promotedStaticGuids.Contains(runtime.Data.Guid)) continue;
+            if (runtime.RequiresItemBridge) PromoteStaticEntity(runtime);
+            else DrawStaticVisual(runtime);
+        }
     }
 
-    private void HandleMineRemoved(RuntimeWorldAddress address, int guid)
+    private void HandleStaticRemoved(RuntimeWorldAddress address, int guid)
     {
         if (boundChunk == null || boundChunk.Address != address ||
-            !mineEntities.TryGetValue(guid, out NaturalEntityData mine)) return;
-        terrainOwner?.ClearLayerVisual(ChunkBatchRendererGroupService.VisualLayer.NaturalStatic,
-            mine.LocalX, mine.LocalY);
-        mineEntities.Remove(guid);
-        promotedMineGuids.Remove(guid);
+            !staticEntities.TryGetValue(guid, out StaticNaturalRuntime runtime))
+            return;
+        terrainOwner?.ClearNaturalEntityVisual(runtime.Data.Guid);
+        NaturalEntityEcsService.Remove(runtime.Handle);
+        staticEntities.Remove(guid);
+        promotedStaticGuids.Remove(guid);
+    }
+
+    private void HandleStaticEcsDeath(int guid)
+    {
+        if (!staticEntities.TryGetValue(guid, out StaticNaturalRuntime runtime))
+            return;
+        bool renews = NaturalEntityEcsService.TryGetRenewalYear(runtime.Handle, out int renewalYear);
+        chunkManager.MarkNaturalItemRemoved(boundChunk.Address, guid);
+        if (renews)
+            chunkManager.ScheduleNaturalRenewal(boundChunk.Address, guid, renewalYear);
+    }
+
+    private Vector3 GetPlacementPosition(NaturalItemPlacement placement)
+        => new(
+            boundChunk.Address.ChunkOrigin.X + placement.LocalX + 0.5f + placement.OffsetX,
+            boundChunk.Address.ChunkOrigin.Y + placement.LocalY + 0.5f + placement.OffsetY,
+            0f);
+
+    private bool TryGetBaselineCelsius(NaturalItemPlacement placement, out float baseline)
+    {
+        baseline = float.NaN;
+        return boundChunk?.Terrain != null &&
+               boundChunk.Terrain.TryGetEnvironmentValue(
+                   "temperature.celsius", placement.LocalX, placement.LocalY, out baseline);
+    }
+
+    private void CaptureStaticEntityStates()
+    {
+        if (boundChunk == null || chunkManager == null)
+            return;
+        staticRemovalBuffer.Clear();
+        foreach (StaticNaturalRuntime runtime in staticEntities.Values)
+        {
+            if (!promotedStaticGuids.Contains(runtime.Data.Guid) &&
+                NaturalEntityEcsService.TryGetPresentation(runtime.Handle, out var state) && state.Dead)
+            {
+                staticRemovalBuffer.Add(runtime.Data.Guid);
+                continue;
+            }
+            if (promotedStaticGuids.Contains(runtime.Data.Guid) ||
+                !NaturalEntityEcsService.RequiresRuntimePersistence(runtime.Handle) ||
+                !NaturalEntityEcsService.TryCapture(runtime.Handle, out ItemData snapshot))
+                continue;
+            chunkManager.CaptureNaturalItemState(boundChunk.Address, snapshot);
+        }
+        for (int i = 0; i < staticRemovalBuffer.Count; i++) HandleStaticEcsDeath(staticRemovalBuffer[i]);
+        staticRemovalBuffer.Clear();
     }
 
     #endregion
@@ -643,7 +813,7 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IIncrementalChunkV
 
         int guid = item.itemData.Guid;
         spawnedItems.Remove(guid);
-        promotedMineGuids.Remove(guid);
+        promotedStaticGuids.Remove(guid);
         if (boundChunk != null && chunkManager != null && !chunkManager.IsWorldRuntimeShuttingDown)
         {
             chunkManager.MarkNaturalItemRemoved(boundChunk.Address, guid);
@@ -660,7 +830,7 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IIncrementalChunkV
             return;
         ProcessDeferredCompanionSpawns();
         ProcessNaturalRenewal();
-        ProcessMinePromotion();
+        ProcessStaticEntities();
     }
 
     private void ProcessDeferredCompanionSpawns()
@@ -702,22 +872,20 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IIncrementalChunkV
     {
         if (!placement.IsCompanion)
             return true;
-        if (!spawnedItems.TryGetValue(placement.HostGuid, out Item host) || host == null ||
-            host.DestructionHandled || host.itemMods == null)
+        if (spawnedItems.TryGetValue(placement.HostGuid, out Item host) && host != null &&
+            !host.DestructionHandled && host.itemMods != null)
         {
-            return false;
-        }
-
-        foreach (Module module in host.itemMods.Mods.Values)
-        {
-            if (module is INaturalCompanionHostCondition condition &&
-                !condition.CanHostNaturalCompanion(placement.ItemId))
+            foreach (Module module in host.itemMods.Mods.Values)
             {
-                return false;
+                if (module is INaturalCompanionHostCondition condition &&
+                    !condition.CanHostNaturalCompanion(placement.ItemId))
+                    return false;
             }
+            return true;
         }
-
-        return true;
+        return staticEntities.TryGetValue(placement.HostGuid, out StaticNaturalRuntime runtime) &&
+               NaturalEntityEcsService.TryCanHostCompanion(runtime.Handle, out bool canHost) &&
+               canHost;
     }
 
     /// <summary>春季逐步补回已被移除的自然植物，不扫描或加载窗口以外的区块。</summary>
@@ -731,9 +899,11 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IIncrementalChunkV
         for (int i = 0; i < 4 && placements.Count > 0; i++)
         {
             NaturalItemPlacement placement = placements[renewalCursor++ % placements.Count];
-            if (!spawnedItems.ContainsKey(placement.Guid) && chunkManager.IsNaturalRenewalDue(boundChunk.Address, placement.Guid))
+            if (!spawnedItems.ContainsKey(placement.Guid) &&
+                !staticEntities.ContainsKey(placement.Guid) &&
+                chunkManager.IsNaturalRenewalDue(boundChunk.Address, placement.Guid))
             {
-                if (!TryBindMineEntity(placement, out _))
+                if (!TryBindStaticEntity(placement, out _))
                     SpawnPlacement(placement);
                 break;
             }

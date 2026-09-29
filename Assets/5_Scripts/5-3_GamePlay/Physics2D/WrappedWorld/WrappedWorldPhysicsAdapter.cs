@@ -18,8 +18,8 @@ internal static class WrappedWorldPhysicsAdapter
         Item.RuntimeStructureChanged += RefreshItemStructure;
         Map.TilemapPresentationChanged -= RefreshMap;
         Map.TilemapPresentationChanged += RefreshMap;
-        ChunkCollisionRenderer.PresentationChanged -= RefreshChunk;
-        ChunkCollisionRenderer.PresentationChanged += RefreshChunk;
+        WorldTopologyRuntime.LocalPlayerWrapped -= ReprojectLocalWorld;
+        WorldTopologyRuntime.LocalPlayerWrapped += ReprojectLocalWorld;
     }
 
     private static bool IsRegistered(Item item)
@@ -31,7 +31,6 @@ internal static class WrappedWorldPhysicsAdapter
     private static void RegisterItem(Item item)
     {
         WrappedRigidbody2DAdapter.Ensure(item);
-        WrappedItemPhysicsAdapter.Ensure(item);
     }
 
     private static void RefreshItemStructure(Item item)
@@ -39,11 +38,6 @@ internal static class WrappedWorldPhysicsAdapter
         if (!IsRegistered(item))
             return;
         WrappedRigidbody2DAdapter.Ensure(item);
-        WrappedItemPhysicsAdapter adapter = item.GetComponent<WrappedItemPhysicsAdapter>();
-        if (adapter != null)
-            adapter.InvalidateSources();
-        else
-            WrappedItemPhysicsAdapter.Ensure(item);
     }
 
     private static void UnregisterItem(Item item)
@@ -51,7 +45,6 @@ internal static class WrappedWorldPhysicsAdapter
         if (item == null)
             return;
         item.GetComponent<WrappedRigidbody2DAdapter>()?.Suspend();
-        item.GetComponent<WrappedItemPhysicsAdapter>()?.Suspend();
         item.GetComponent<WrappedTilemapPhysicsAdapter>()?.Suspend();
     }
 
@@ -65,13 +58,10 @@ internal static class WrappedWorldPhysicsAdapter
             map.GetComponent<WrappedTilemapPhysicsAdapter>()?.Suspend();
     }
 
-    private static void RefreshChunk(ChunkCollisionRenderer renderer)
+    /// <summary>跨周只批量重选本机镜像；不复制 Item Collider，也不改任何逻辑坐标。</summary>
+    private static void ReprojectLocalWorld()
     {
-        if (renderer == null)
-            return;
-        if (renderer.isActiveAndEnabled && renderer.BoundChunk?.Terrain != null && renderer.SourceCollider != null)
-            WrappedTilemapPhysicsAdapter.Ensure(renderer);
-        else
-            renderer.GetComponent<WrappedTilemapPhysicsAdapter>()?.Suspend();
+        ItemMgr.Instance?.ReprojectRuntimeItemsToLocalAnchor();
+        ChunkMgr.ExistingInstance?.ReprojectRuntimeChunkViewsToLocalAnchor();
     }
 }

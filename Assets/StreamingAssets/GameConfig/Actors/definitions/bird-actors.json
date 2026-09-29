@@ -5,7 +5,14 @@
       "id": "Bird",
       "ecs": {
         "capabilities": ["movement", "perception", "nutrition", "feeding", "sleep", "flee", "flight"],
-        "flight": { "height": 0.8, "speed": 3.2, "staminaMaximum": 100.0, "staminaDrainPerSecond": 1.0 }
+        "flight": {
+          "height": 0.8,
+          "speed": 3.2,
+          "staminaMaximum": 100.0,
+          "staminaDrainPerSecond": 1.0,
+          "takeoffRecoveryRatio": 0.5,
+          "takeoffChancePerSecond": 0.25
+        }
       },
       "weight": 0.3,
       "parent": "Chicken",

@@ -46,12 +46,16 @@ namespace FlatWorld.AIECS
                 }
             }
 
+            bool hasFlight = Flights.TryGetComponent(entity, out AiecsFlight flight);
             Display[index] = new AiecsDisplayRecord { Key = identity.Key, Position = actor.Position, Facing = body.Facing,
                 Hp = vital.Hp, MaxHp = vital.MaxHp, Definition = identity.Definition, Group = identity.Group, Behavior = brain.Behavior,
                 AttackPhase = attack.Phase, Dead = vital.Dead, External = identity.External,
                 ActionElapsed = math.max(0f, (float)(displayTime - actionStarted)),
                 LiquidDepth = actor.LiquidDepth, WaterBlend = actor.WaterBlend,
-                FlightHeight = Flights.TryGetComponent(entity, out AiecsFlight flight) ? flight.Height : 0f,
+                FlightHeight = hasFlight ? flight.Height : 0f,
+                FlightCruiseHeight = hasFlight ? flight.CruiseHeight : 0f,
+                FlightAirborne = hasFlight ? flight.Airborne : (byte)0,
+                Moving = (byte)(math.lengthsq(actor.Velocity) > 0.0001f ? 1 : 0),
                 HasTarget = (byte)(brain.Target != Entity.Null ? 1 : 0) };
             Work[index] = counters;
         }

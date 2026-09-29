@@ -90,8 +90,9 @@ public class ItemMaker
     [Tooltip("根据Item掉落物品 附带动画")]
     public void DropItem_cric(Item item, Vector3 startPos, float radius)
     {
-        item.transform.position = WorldTopologyRuntime.NormalizePosition(startPos);
-        ItemWorldPlacement.TryAttachWorldModelTransientItem(item, item.transform.position);
+        Vector3 logicalStart = WorldTopologyRuntime.NormalizePosition(startPos);
+        item.transform.position = WorldLocalPresentation.ProjectPosition(logicalStart);
+        ItemWorldPlacement.TryAttachWorldModelTransientItem(item, logicalStart);
 
         // 设置物品暂时不可被拾取
         item.itemData.Stack.CanBePickedUp = false;
@@ -119,8 +120,9 @@ public class ItemMaker
     [Tooltip("根据Item掉落物品 附带动画（简化参数）")]
     public void DropItemWithAnimation(Transform itemTransform, Vector3 startPos, Vector3 endPos, Item item)
     {
-        item.transform.position = WorldTopologyRuntime.NormalizePosition(startPos);
-        ItemWorldPlacement.TryAttachWorldModelTransientItem(item, item.transform.position);
+        Vector3 logicalStart = WorldTopologyRuntime.NormalizePosition(startPos);
+        item.transform.position = WorldLocalPresentation.ProjectPosition(logicalStart);
+        ItemWorldPlacement.TryAttachWorldModelTransientItem(item, logicalStart);
         item.itemData.Stack.CanBePickedUp = false;
 
         item.StartCoroutine(
@@ -151,14 +153,16 @@ public class ItemMaker
         float maxHeight
     )
     {
-        startPos = WorldTopologyRuntime.NormalizePosition(startPos);
-        Vector2 nearestEnd = WorldTopologyRuntime.NearestImagePosition(startPos, endPos);
-        endPos = new Vector3(nearestEnd.x, nearestEnd.y, endPos.z);
+        Vector3 logicalStart = WorldTopologyRuntime.NormalizePosition(startPos);
+        Vector3 logicalEnd = WorldTopologyRuntime.NormalizePosition(endPos);
+        Vector3 presentationStart = WorldLocalPresentation.ProjectPosition(logicalStart);
+        Vector2 shortestEnd = WorldTopologyRuntime.ShortestDelta(logicalStart, logicalEnd);
+        Vector3 presentationEnd = presentationStart + new Vector3(shortestEnd.x, shortestEnd.y, 0f);
         float timeElapsed = 0f;
-        float distance = Vector3.Distance(startPos, endPos);
+        float distance = Vector3.Distance(presentationStart, presentationEnd);
         float duration = baseDuration + distance * distanceSensitivity;
 
-        Vector3 controlPoint = (startPos + endPos) / 2f + Vector3.up * Mathf.Clamp(
+        Vector3 controlPoint = (presentationStart + presentationEnd) / 2f + Vector3.up * Mathf.Clamp(
             Mathf.Lerp(0.5f, maxHeight, Mathf.InverseLerp(0f, 10f, distance)),
             0.5f,
             maxHeight
@@ -169,14 +173,15 @@ public class ItemMaker
         while (timeElapsed < duration)
         {
             float t = timeElapsed / duration;
-            itemTransform.position = WorldTopologyRuntime.NormalizePosition(
-                CalculateBezierPoint(t, startPos, controlPoint, endPos));
+            itemTransform.position = CalculateBezierPoint(t, presentationStart, controlPoint, presentationEnd);
             itemTransform.Rotate(Vector3.forward, rotationSpeed * Time.deltaTime);
             timeElapsed += Time.deltaTime;
             yield return null;
         }
 
-        itemTransform.position = WorldTopologyRuntime.NormalizePosition(endPos);
+        itemTransform.position = presentationEnd;
+        if (item.itemData?.transform != null)
+            item.itemData.transform.position = logicalEnd;
 
         yield return LandingSettleEffect(
             itemTransform,

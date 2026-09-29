@@ -691,7 +691,14 @@ public abstract class Item : MonoBehaviour
     /// </summary>
     public void LoadDataPosition()
     {
-        transform.position = itemData.transform.position;
+        Vector3 logicalPosition = itemData.inHand
+            ? itemData.transform.position
+            : WorldLocalPresentation.ToLogical(itemData.transform.position);
+        if (!itemData.inHand)
+            itemData.transform.position = logicalPosition;
+        transform.position = itemData.inHand
+            ? logicalPosition
+            : WorldLocalPresentation.ProjectPosition(logicalPosition);
         transform.rotation = itemData.transform.rotation;
         transform.localScale = itemData.transform.scale;
         ItemMgr.GetInstance()?.NotifyItemSpatialIndexChanged(this);
@@ -703,7 +710,9 @@ public abstract class Item : MonoBehaviour
     [Button("保存模块")]
     public virtual void Save()
     {
-        itemData.transform.position = transform.position;
+        itemData.transform.position = itemData.inHand
+            ? transform.position
+            : WorldLocalPresentation.ToLogical(transform.position);
         itemData.transform.rotation = transform.rotation;
         itemData.transform.scale = transform.localScale;
         ModuleSave();

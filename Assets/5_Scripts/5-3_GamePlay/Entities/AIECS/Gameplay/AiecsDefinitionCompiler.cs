@@ -122,8 +122,11 @@ namespace FlatWorld.AIECS.Gameplay
                     StaminaMaximum = Number(ecs?["flight"], "staminaMaximum", 100f),
                     DrainPerSecond = flightDrain,
                     RecoveryPerSecond = Number(ecs?["flight"], "staminaRecoveryPerSecond", 10f),
+                    TakeoffRecoveryRatio = Number(ecs?["flight"], "takeoffRecoveryRatio", 0.5f),
+                    TakeoffChancePerSecond = Number(ecs?["flight"], "takeoffChancePerSecond", 0.25f),
                     BaseWaterPushSpeed = WaterCurrentPushConfigService.ResolvePushSpeed(actorId, item.Stack.Weight),
-                    Airborne = (byte)(permanentFlight ? 1 : 0)
+                    Airborne = (byte)(permanentFlight ? 1 : 0),
+                    Recovering = 0
                 },
                 Reproduction = new AiecsReproduction
                 {

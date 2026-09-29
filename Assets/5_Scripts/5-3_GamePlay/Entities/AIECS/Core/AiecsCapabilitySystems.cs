@@ -330,15 +330,50 @@ namespace FlatWorld.AIECS
     {
         private void Execute(in AiecsIdentity identity, in AiecsVital vital,
             in AiecsSimulationPulse pulse, in AiecsBehaviorIntent intent,
-            ref AiecsFlight flight, ref AiecsFlowAgent actor)
+            ref AiecsBrain brain, ref AiecsFlight flight, ref AiecsFlowAgent actor)
         {
             if (identity.External != 0 || vital.Dead != 0) return;
             bool moving = actor.Mode != AiecsMoveMode.Hold && intent.Behavior != (int)AiecsBehavior.Idle;
             bool permanent = flight.DrainPerSecond <= 0f;
-            if (moving && (permanent || flight.Stamina > 0f))
-                flight.Airborne = 1;
-            else if (!permanent && flight.Stamina <= 0f)
+            if (!permanent && flight.Airborne == 0 && flight.Stamina <= 0f)
+                flight.Recovering = 1;
+            if (permanent)
+            {
+                flight.Recovering = 0;
+                if (moving) flight.Airborne = 1;
+            }
+            else if (flight.Recovering != 0)
+            {
                 flight.Airborne = 0;
+                flight.Stamina = math.min(flight.StaminaMaximum,
+                    flight.Stamina + pulse.DeltaTime * flight.RecoveryPerSecond);
+                if (CanChooseTakeoff(moving, pulse.DeltaTime, ref brain, flight))
+                {
+                    flight.Airborne = 1;
+                    flight.Recovering = 0;
+                }
+            }
+            else
+            {
+                if (flight.Airborne == 0 && CanChooseTakeoff(moving, pulse.DeltaTime, ref brain, flight))
+                    flight.Airborne = 1;
+                if (flight.Airborne != 0)
+                {
+                    flight.Stamina = math.max(0f,
+                        flight.Stamina - flight.DrainPerSecond * pulse.DeltaTime);
+                    if (flight.Stamina <= 0f)
+                    {
+                        flight.Stamina = 0f;
+                        flight.Airborne = 0;
+                        flight.Recovering = 1;
+                    }
+                }
+                else
+                {
+                    flight.Stamina = math.min(flight.StaminaMaximum,
+                        flight.Stamina + pulse.DeltaTime * flight.RecoveryPerSecond);
+                }
+            }
             flight.TargetHeight = flight.Airborne != 0 ? math.max(0f, flight.CruiseHeight) : 0f;
             flight.Height = math.lerp(flight.Height, flight.TargetHeight,
                 math.saturate(pulse.DeltaTime * 3f));
@@ -346,15 +381,27 @@ namespace FlatWorld.AIECS
             {
                 actor.Speed = math.max(0.01f, flight.Speed);
                 actor.WaterCurrentPushSpeed = 0f;
-                flight.Stamina = math.max(0f, flight.Stamina - flight.DrainPerSecond * pulse.DeltaTime);
             }
             else
             {
                 actor.Speed = math.max(0.01f, flight.GroundSpeed);
                 actor.WaterCurrentPushSpeed = flight.BaseWaterPushSpeed;
-                flight.Stamina = math.min(flight.StaminaMaximum,
-                    flight.Stamina + pulse.DeltaTime * flight.RecoveryPerSecond);
             }
+        }
+
+        /// <summary>恢复到阈值后按每秒概率自主选择起飞；满耐力也不会被强制起飞。</summary>
+        private static bool CanChooseTakeoff(bool moving, float deltaTime, ref AiecsBrain brain, AiecsFlight flight)
+        {
+            if (!moving || flight.StaminaMaximum <= 0f ||
+                flight.Stamina < flight.StaminaMaximum * math.saturate(flight.TakeoffRecoveryRatio))
+                return false;
+            float perSecond = math.saturate(flight.TakeoffChancePerSecond);
+            if (perSecond <= 0f) return false;
+            float chance = 1f - math.pow(1f - perSecond, math.max(0f, deltaTime));
+            var random = new Random(brain.RandomState == 0 ? 1u : brain.RandomState);
+            bool takeoff = random.NextFloat() < chance;
+            brain.RandomState = random.state;
+            return takeoff;
         }
     }
 

@@ -50,6 +50,7 @@ Shader "FlatWorld/2D/Chunk Mesh Contact Lit"
             nointerpolation half4 contact : TEXCOORD3;
             nointerpolation float4 elevationDelta : TEXCOORD4;
             nointerpolation float elevationLevel : TEXCOORD5;
+            float2 positionOS : TEXCOORD6;
             half4 tint : COLOR;
         };
 
@@ -71,7 +72,24 @@ Shader "FlatWorld/2D/Chunk Mesh Contact Lit"
             float _ElevationHighlightStrength;
             float _ElevationEdgeWidth;
             float _ElevationDeltaForMaxStrength;
+            float4 _ChunkSize;
         CBUFFER_END
+
+        #if defined(FLATWORLD_CHUNK_CELL_BUFFER)
+        struct ChunkGroundCellData
+        {
+            float4 uv01;
+            float4 uv23;
+            float4 tint;
+            float4 contact;
+            float4 neighbourHeight;
+            float4 meta;
+            float4 inverse0;
+            float4 inverse1;
+            float4 spriteBounds;
+        };
+        StructuredBuffer<ChunkGroundCellData> _ChunkCellData;
+        #endif
 
         Varyings Vert(Attributes input)
         {
@@ -79,6 +97,7 @@ Shader "FlatWorld/2D/Chunk Mesh Contact Lit"
             float3 positionWS = TransformObjectToWorld(input.positionOS);
             output.positionCS = TransformWorldToHClip(positionWS);
             output.positionWS = positionWS.xy;
+            output.positionOS = input.positionOS.xy;
             output.uv = input.uv;
             output.tint = input.tint;
             output.contact = input.contact;
@@ -94,6 +113,50 @@ Shader "FlatWorld/2D/Chunk Mesh Contact Lit"
             }
             return output;
         }
+
+        void ResolveElevation(float height, float4 neighbourHeight,
+            out float4 elevationDelta, out float elevationLevel)
+        {
+            elevationDelta = 0.0;
+            elevationLevel = -1.0;
+            if (height < 0.0)
+                return;
+            float levelCount = max(2.0, floor(_ElevationLevelCount));
+            float level = min(floor(saturate(height) * levelCount), levelCount - 1.0);
+            float4 neighbourLevels = min(floor(saturate(neighbourHeight) * levelCount), levelCount - 1.0);
+            elevationDelta = neighbourLevels - level;
+            elevationLevel = level / (levelCount - 1.0);
+        }
+
+        #if defined(FLATWORLD_CHUNK_CELL_BUFFER)
+        ChunkGroundCellData LoadGroundCell(float2 positionOS, out float2 spriteUV)
+        {
+            float2 chunkSize = max(_ChunkSize.xy, 1.0);
+            float2 local = clamp(positionOS, 0.0, chunkSize - 0.0001);
+            uint2 cell = (uint2)floor(local);
+            uint width = (uint)max(1.0, floor(chunkSize.x + 0.5));
+            ChunkGroundCellData data = _ChunkCellData[cell.y * width + cell.x];
+            clip(data.meta.y - 0.5);
+
+            float2 target = frac(local) - 0.5;
+            float2 source = float2(
+                dot(data.inverse0.xyz, float3(target, 1.0)),
+                dot(data.inverse1.xyz, float3(target, 1.0)));
+            spriteUV = (source - data.spriteBounds.xy) * data.spriteBounds.zw;
+            clip(spriteUV.x);
+            clip(spriteUV.y);
+            clip(1.0 - spriteUV.x);
+            clip(1.0 - spriteUV.y);
+            return data;
+        }
+
+        float2 ResolveAtlasUV(ChunkGroundCellData data, float2 spriteUV)
+        {
+            float2 bottom = lerp(data.uv01.xy, data.uv01.zw, spriteUV.x);
+            float2 top = lerp(data.uv23.xy, data.uv23.zw, spriteUV.x);
+            return lerp(bottom, top, spriteUV.y);
+        }
+        #endif
 
         half3 ApplyGroundElevation(half3 color, float2 positionWS, float4 delta, float level)
         {
@@ -127,13 +190,27 @@ Shader "FlatWorld/2D/Chunk Mesh Contact Lit"
             return saturate(strongest + overlap * _CornerStrength);
         }
 
-        half4 SampleGround(Varyings input)
+        half4 SampleGround(Varyings input, out float2 sampleUV)
         {
-            half4 main = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv) *
-                input.tint * _Color * _RendererColor;
+            half4 tint = input.tint;
+            half4 contactMask = input.contact;
+            float4 elevationDelta = input.elevationDelta;
+            float elevationLevel = input.elevationLevel;
+            sampleUV = input.uv;
+            #if defined(FLATWORLD_CHUNK_CELL_BUFFER)
+                float2 spriteUV;
+                ChunkGroundCellData data = LoadGroundCell(input.positionOS, spriteUV);
+                sampleUV = ResolveAtlasUV(data, spriteUV);
+                tint = data.tint;
+                contactMask = data.contact;
+                ResolveElevation(data.meta.x, data.neighbourHeight, elevationDelta, elevationLevel);
+            #endif
+
+            half4 main = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, sampleUV) *
+                tint * _Color * _RendererColor;
             main.rgb = ApplyGroundElevation(main.rgb, input.positionWS,
-                input.elevationDelta, input.elevationLevel);
-            half contact = ComputeContact(input.positionWS, input.contact);
+                elevationDelta, elevationLevel);
+            half contact = ComputeContact(input.positionWS, contactMask);
             main.rgb = lerp(main.rgb, _EdgeColor.rgb,
                 saturate(contact * _EdgeStrength * _EdgeColor.a));
             return main;
@@ -148,6 +225,7 @@ Shader "FlatWorld/2D/Chunk Mesh Contact Lit"
             #pragma target 4.5
             #pragma vertex Vert
             #pragma fragment Frag
+            #pragma shader_feature_local _ FLATWORLD_CHUNK_CELL_BUFFER
             #pragma multi_compile USE_SHAPE_LIGHT_TYPE_0 __
             #pragma multi_compile USE_SHAPE_LIGHT_TYPE_1 __
             #pragma multi_compile USE_SHAPE_LIGHT_TYPE_2 __
@@ -169,11 +247,12 @@ Shader "FlatWorld/2D/Chunk Mesh Contact Lit"
 
             half4 Frag(Varyings input) : SV_Target
             {
-                half4 main = SampleGround(input);
-                half4 mask = SAMPLE_TEXTURE2D(_MaskTex, sampler_MaskTex, input.uv);
+                float2 sampleUV;
+                half4 main = SampleGround(input, sampleUV);
+                half4 mask = SAMPLE_TEXTURE2D(_MaskTex, sampler_MaskTex, sampleUV);
                 SurfaceData2D surfaceData; InputData2D inputData;
                 InitializeSurfaceData(main.rgb, main.a, mask, surfaceData);
-                InitializeInputData(input.uv, input.lightingUV, inputData);
+                InitializeInputData(sampleUV, input.lightingUV, inputData);
                 return CombinedShapeLightShared(surfaceData, inputData);
             }
             ENDHLSL
@@ -187,7 +266,12 @@ Shader "FlatWorld/2D/Chunk Mesh Contact Lit"
             #pragma target 4.5
             #pragma vertex Vert
             #pragma fragment Frag
-            half4 Frag(Varyings input) : SV_Target { return SampleGround(input); }
+            #pragma shader_feature_local _ FLATWORLD_CHUNK_CELL_BUFFER
+            half4 Frag(Varyings input) : SV_Target
+            {
+                float2 sampleUV;
+                return SampleGround(input, sampleUV);
+            }
             ENDHLSL
         }
     }

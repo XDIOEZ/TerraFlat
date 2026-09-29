@@ -345,6 +345,7 @@ namespace FlatWorld.AIECS
         private NativeQueue<AiecsProductionRequest> productionRequests;
         private JobHandle pending;
         private bool disposed;
+        private readonly bool ownsWorld;
         private float maximumBodyExtent; // 单次世界生命周期内只扩张，覆盖动态玩家体型与偏心形状。
         public EntityManager Entities => world.EntityManager;
         public CombatClock Clock { get; private set; }
@@ -365,11 +366,13 @@ namespace FlatWorld.AIECS
         #region 创建与外部输入
         /// <summary>冻结当前内容编译结果；组数是战略位置数量，不能按单位数量扩展。</summary>
         public AiecsSimulation(AiecsDefinition[] actorDefinitions, AiecsBuffDefinition[] buffDefinitions,
-            FixedString128Bytes[] factionIds, byte[] factionRelations, int groupCount, float bodyExtent, double startTime)
+            FixedString128Bytes[] factionIds, byte[] factionRelations, int groupCount, float bodyExtent, double startTime,
+            World sharedWorld = null)
         {
             if (groupCount < 1 || groupCount > 32) throw new ArgumentOutOfRangeException(nameof(groupCount));
             if (factionRelations.Length != factionIds.Length * factionIds.Length) throw new ArgumentException("阵营矩阵尺寸不匹配");
-            world = new World("AIECS 正式模拟");
+            ownsWorld = sharedWorld == null;
+            world = sharedWorld ?? new World("AIECS 隔离诊断");
             scheduler = world.GetOrCreateSystemManaged<AiecsJobSchedulerSystem>();
             var types = new ComponentType[] { typeof(AiecsIdentity), typeof(AiecsBody), typeof(AiecsVital), typeof(AiecsDefense),
                 typeof(AiecsAnatomy), typeof(AiecsBrain), typeof(AiecsBehaviorProposal), typeof(AiecsBehaviorIntent),
@@ -416,7 +419,8 @@ namespace FlatWorld.AIECS
                 ComponentType.ReadWrite<AiecsBehaviorProposal>());
             flightQuery = Entities.CreateEntityQuery(ComponentType.ReadOnly<AiecsIdentity>(),
                 ComponentType.ReadOnly<AiecsVital>(), ComponentType.ReadOnly<AiecsSimulationPulse>(),
-                ComponentType.ReadOnly<AiecsBehaviorIntent>(), ComponentType.ReadWrite<AiecsFlight>(),
+                ComponentType.ReadOnly<AiecsBehaviorIntent>(), ComponentType.ReadWrite<AiecsBrain>(),
+                ComponentType.ReadWrite<AiecsFlight>(),
                 ComponentType.ReadWrite<AiecsFlowAgent>());
             definitions = new NativeArray<AiecsDefinition>(actorDefinitions, Allocator.Persistent);
             buffs = new NativeArray<AiecsBuffDefinition>(buffDefinitions, Allocator.Persistent);
@@ -703,6 +707,8 @@ namespace FlatWorld.AIECS
             bool disposeWorld = world != null && world.IsCreated;
             if (disposeWorld)
             {
+                // 借用正式实体世界时只移除带 AI 组件集合的实体，不能清空树木等其它能力实体。
+                if (!ownsWorld) Entities.DestroyEntity(allQuery);
                 allQuery.Dispose(); activeQuery.Dispose();
                 nutritionQuery.Dispose(); sleepQuery.Dispose(); hiveQuery.Dispose();
                 reproductionQuery.Dispose(); flightQuery.Dispose();
@@ -715,7 +721,7 @@ namespace FlatWorld.AIECS
             if (display.IsCreated) display.Dispose(); if (work.IsCreated) work.Dispose();
             pendingInputs.Dispose(); inputs.Dispose(); hits.Dispose(); externalHits.Dispose(); results.Dispose(); deaths.Dispose();
             hitRanges.Dispose(); abilityHits.Dispose(); feedRequests.Dispose(); productionRequests.Dispose(); density.Dispose();
-            if (disposeWorld) world.Dispose();
+            if (disposeWorld && ownsWorld) world.Dispose();
         }
         #endregion
     }

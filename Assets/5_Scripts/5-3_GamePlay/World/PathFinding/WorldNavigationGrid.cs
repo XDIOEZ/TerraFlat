@@ -96,7 +96,7 @@ public sealed class WorldNavigationGrid
     }
     #endregion
     private readonly Dictionary<Vector2Int, int> blockerCounts = new(512);
-    private readonly Dictionary<int, HashSet<Vector2Int>> blockerCells = new(128);
+    private readonly Dictionary<long, HashSet<Vector2Int>> blockerCells = new(128);
     private readonly HashSet<Vector2Int> changedCells = new();
     private bool fullResetPending;
     private int batchUpdateDepth;
@@ -276,7 +276,7 @@ public sealed class WorldNavigationGrid
     public bool IsWalkable(Vector2Int position)
         => TryGetCell(position, out WorldNavigationCell cell) && cell.Walkable;
 
-    public void RegisterBlocker(int blockerId, IEnumerable<Vector2Int> occupiedCells)
+    public void RegisterBlocker(long blockerId, IEnumerable<Vector2Int> occupiedCells)
     {
         if (occupiedCells == null)
         {
@@ -317,7 +317,7 @@ public sealed class WorldNavigationGrid
         }
     }
 
-    public void UnregisterBlocker(int blockerId)
+    public void UnregisterBlocker(long blockerId)
     {
         if (!blockerCells.TryGetValue(blockerId, out HashSet<Vector2Int> occupied))
             return;

@@ -271,6 +271,7 @@ public partial class ChunkMgr
         StopLiquidFlowExperiment();
         WorldLiquidFlowObstacles.ClearWorld();
         ClearRuntimeWindowBindings();
+        WorldEntityRuntime.ReleaseWorld();
         if (runtimeChunkManager == null)
             return;
         runtimeChunkManager.ClearWindow();
@@ -305,6 +306,7 @@ public partial class ChunkMgr
         finally
         {
             // 表现清理发生异常时，后台任务与纯数据仍必须释放，原始异常继续上报。
+            WorldEntityRuntime.ReleaseWorld();
             RuntimeChunkMgr manager = runtimeChunkManager;
             runtimeChunkManager = null;
             runtimeGenerator = null;

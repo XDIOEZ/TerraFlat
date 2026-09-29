@@ -81,17 +81,19 @@ public class Mod_BaseDroper : Module
             mode == MoveMode.BezierCurve ? bezierOffset : 0f, arcHeight,
             Random.Range(minRotationSpeed, maxRotationSpeed))) return;
         startPos = WorldTopologyRuntime.NormalizePosition(startPos);
-        endPos = WorldTopologyRuntime.NearestImagePosition(startPos, endPos);
-        item.transform.position = startPos;
+        Vector2 logicalEnd = WorldTopologyRuntime.NormalizePosition(endPos);
+        Vector2 logicalEndImage = WorldTopologyRuntime.NearestImagePosition(startPos, logicalEnd);
+        item.transform.position = WorldLocalPresentation.ProjectPosition(startPos);
 
         // 根据移动模式计算控制点
-        Vector2 controlPos = CalculateControlPoint(startPos, endPos, mode, bezierOffset);
+        Vector2 controlPos = WorldTopologyRuntime.NormalizePosition(
+            CalculateControlPoint(startPos, logicalEndImage, mode, bezierOffset));
 
         Mod_BaseDroper.Drop drop = new Mod_BaseDroper.Drop
         {
             itemGuid = item.itemData.Guid,
             startPos = startPos,
-            endPos = endPos,
+            endPos = logicalEnd,
             controlPos = controlPos,
             time = time,
             progressTime = 0f,
@@ -147,12 +149,16 @@ public class Mod_BaseDroper : Module
             drop.progressTime += deltaTime;
             float t = Mathf.Clamp01(drop.progressTime / drop.time);
 
-            // 使用存储在drop中的控制点进行贝塞尔插值
-            Vector2 pos = Bezier2(drop.startPos, drop.controlPos, drop.endPos, t);
+            Vector2 presentationStart = WorldLocalPresentation.ProjectPosition(drop.startPos);
+            Vector2 presentationEnd = presentationStart +
+                                      WorldTopologyRuntime.ShortestDelta(drop.startPos, drop.endPos);
+            Vector2 presentationControl = presentationStart +
+                                          WorldTopologyRuntime.ShortestDelta(drop.startPos, drop.controlPos);
+            // Drop 存档只保存规范逻辑坐标，当前客户端每帧重建连续的局部轨迹。
+            Vector2 pos = Bezier2(presentationStart, presentationControl, presentationEnd, t);
             // 垂直方向叠加正弦高度
             pos.y += Mathf.Sin(t * Mathf.PI) * arcHeight;
 
-            pos = WorldTopologyRuntime.NormalizePosition(pos);
             drop.item.transform.position = new Vector3(pos.x, pos.y, 0);
             drop.item.transform.Rotate(Vector3.forward * 360f * deltaTime);
 

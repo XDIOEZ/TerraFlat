@@ -108,8 +108,9 @@ public class Mod_Droping : Module
 
         // Chunk 归属按地面轨迹计算。贝塞尔高度和 arcHeight 只是表现层高度，
         // 不能让物品在抛起时误切换到上方相邻 Chunk。
+        Vector2 logicalEndImage = WorldTopologyRuntime.NearestImagePosition(drop.startPos, drop.endPos);
         Vector2 ownershipPos = WorldTopologyRuntime.NormalizePosition(
-            Vector2.Lerp(drop.startPos, drop.endPos, t));
+            Vector2.Lerp(drop.startPos, logicalEndImage, t));
 
         // 区块画面可能正在分帧绑定；新版掉落在动画期间重试归属，
         // 仍只访问 WorldModel，不触发旧 Chunk 加载。
@@ -119,9 +120,13 @@ public class Mod_Droping : Module
             ItemWorldPlacement.TryAttachWorldModelTransientItem(drop.item, ownershipPos);
         }
 
-        Vector2 pos = Bezier2(drop.startPos, drop.controlPos, drop.endPos, t);
+        Vector2 presentationStart = WorldLocalPresentation.ProjectPosition(drop.startPos);
+        Vector2 presentationEnd = presentationStart +
+                                  WorldTopologyRuntime.ShortestDelta(drop.startPos, drop.endPos);
+        Vector2 presentationControl = presentationStart +
+                                      WorldTopologyRuntime.ShortestDelta(drop.startPos, drop.controlPos);
+        Vector2 pos = Bezier2(presentationStart, presentationControl, presentationEnd, t);
         pos.y += Mathf.Sin(t * Mathf.PI) * arcHeight;
-        pos = WorldTopologyRuntime.NormalizePosition(pos);
         drop.item.transform.position = new Vector3(pos.x, pos.y, 0f);
         drop.item.transform.Rotate(Vector3.forward * drop.rotationSpeed * deltaTime);
 
@@ -279,18 +284,20 @@ public class Mod_Droping : Module
         if (DroppedItemService.ScheduleLegacyDrop(item, startPos, endPos, time,
             isLinear ? 0f : bezierOffset, arcHeight, Random.Range(minRotationSpeed, maxRotationSpeed))) return;
         startPos = WorldTopologyRuntime.NormalizePosition(startPos);
-        endPos = WorldTopologyRuntime.NearestImagePosition(startPos, endPos);
-        item.transform.position = startPos;
+        Vector2 logicalEnd = WorldTopologyRuntime.NormalizePosition(endPos);
+        Vector2 logicalEndImage = WorldTopologyRuntime.NearestImagePosition(startPos, logicalEnd);
+        item.transform.position = WorldLocalPresentation.ProjectPosition(startPos);
 
         Vector2 controlPos = isLinear
-            ? CreateLinearControlPoint(startPos, endPos)
-            : CreateParabolicControlPoint(startPos, endPos, bezierOffset);
+            ? CreateLinearControlPoint(startPos, logicalEndImage)
+            : CreateParabolicControlPoint(startPos, logicalEndImage, bezierOffset);
+        controlPos = WorldTopologyRuntime.NormalizePosition(controlPos);
 
         Mod_BaseDroper.Drop drop = new Mod_BaseDroper.Drop
         {
             itemGuid = item.itemData.Guid,
             startPos = startPos,
-            endPos = endPos,
+            endPos = logicalEnd,
             controlPos = controlPos,
             time = time,
             progressTime = 0f,

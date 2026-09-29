@@ -89,13 +89,18 @@ public class SaveMenuRightMenuUI : SingletonAutoMono<SaveMenuRightMenuUI>
         SaveDataMgr manager = SaveDataMgr.Instance;
         if (!string.IsNullOrEmpty(SelectInfo.Path))
         {
-            manager.DeleteSave(manager.UserSavePath, SelectInfo.Name);
-            if (manager.SaveData != null &&
-                string.Equals(manager.SaveData.saveName, SelectInfo.Name, System.StringComparison.Ordinal))
+            string saveName = SelectInfo.Name;
+            CloseUI();
+            SaveDataManager_UI saveList = SaveDataManager_UI.Ins;
+            if (saveList == null)
             {
-                manager.SaveData = null;
-                manager.CurrentContrrolPlayerName = string.Empty;
+                Debug.LogWarning("存档选择界面未绑定，已取消删除请求。");
+                return;
             }
+
+            // 右键菜单的单删与主按钮共用同一个确认层，避免绕过二次确认。
+            saveList.OpenSingleDeleteConfirmation(saveName);
+            return;
         }
         else
         {

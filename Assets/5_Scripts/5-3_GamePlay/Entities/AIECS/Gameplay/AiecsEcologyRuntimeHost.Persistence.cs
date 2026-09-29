@@ -70,7 +70,11 @@ namespace FlatWorld.AIECS.Gameplay
                 if (manager.HasComponent<AiecsNutrition>(entity))
                     snapshot.Nutrition = manager.GetComponentData<AiecsNutrition>(entity).Current;
                 if (manager.HasComponent<AiecsFlight>(entity))
-                    snapshot.FlightStamina = manager.GetComponentData<AiecsFlight>(entity).Stamina;
+                {
+                    AiecsFlight flight = manager.GetComponentData<AiecsFlight>(entity);
+                    snapshot.FlightStamina = flight.Stamina;
+                    snapshot.FlightRecovering = flight.Recovering != 0;
+                }
                 if (manager.HasComponent<AiecsReproduction>(entity))
                     snapshot.NextBirthTime = manager.GetComponentData<AiecsReproduction>(entity).NextBirthTime;
                 output.Add(snapshot);
@@ -122,6 +126,9 @@ namespace FlatWorld.AIECS.Gameplay
                 {
                     AiecsFlight flight = manager.GetComponentData<AiecsFlight>(entity);
                     flight.Stamina = Mathf.Clamp(snapshot.FlightStamina, 0f, flight.StaminaMaximum);
+                    flight.Recovering = (byte)(snapshot.FlightRecovering ? 1 : 0);
+                    if (flight.Recovering != 0)
+                        flight.Airborne = 0;
                     manager.SetComponentData(entity, flight);
                 }
                 if (manager.HasComponent<AiecsReproduction>(entity))

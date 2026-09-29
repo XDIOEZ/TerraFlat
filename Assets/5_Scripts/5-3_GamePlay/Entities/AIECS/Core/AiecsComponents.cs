@@ -232,10 +232,10 @@ namespace FlatWorld.AIECS
         public float2 Position, Facing; // 当前位置与逻辑朝向。
         public float Hp, MaxHp, ActionElapsed; // 生命与动作时钟。
         public float LiquidDepth, WaterBlend; // 有效水深与入水表现混合。
-        public float FlightHeight; // 表现高度，不改变地面碰撞与掉落位置。
+        public float FlightHeight, FlightCruiseHeight; // 表现高度与巡航高度，不改变地面碰撞与掉落位置。
         public int Definition, Group, Behavior; // 目录索引、分组颜色与行为。
         public AiecsAttackPhase AttackPhase; // 映射表现动作。
-        public byte Dead, External, HasTarget; // 可见对象分类与实际锁定状态。
+        public byte Dead, External, HasTarget, FlightAirborne, Moving; // 可见对象分类、锁定、飞行与实际移动状态。
     }
     #endregion
 }

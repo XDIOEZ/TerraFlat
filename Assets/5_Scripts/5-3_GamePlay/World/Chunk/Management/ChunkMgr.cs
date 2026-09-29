@@ -673,15 +673,7 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
             return;
         }
 
-        Vector2 worldPosition = item.transform.position;
-        if (WorldTopologyRuntime.TryGetActiveBounds(out WorldTopologyBounds bounds) &&
-            !bounds.Contains(worldPosition))
-        {
-            // A dynamic Rigidbody2D can be observed by Update between the physics
-            // integration that crossed the seam and WrappedRigidbody2DAdapter.FixedUpdate.
-            // Do not index that transient, non-canonical image into either edge Chunk.
-            return;
-        }
+        Vector2 worldPosition = WorldTopologyRuntime.NormalizePosition(item.transform.position);
 
         Vector2Int chunkPos = NormalizeChunkPosition(Chunk.GetChunkPosition(worldPosition));
         Chunk targetChunk = null;

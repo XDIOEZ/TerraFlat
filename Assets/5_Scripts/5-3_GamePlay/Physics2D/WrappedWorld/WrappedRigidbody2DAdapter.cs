@@ -1,12 +1,14 @@
 using FlatWorld.Networking;
 using UnityEngine;
 
-/// <summary>GameObject 物理适配：把权威非玩家刚体应用到标准坐标，保留速度、角速度、索引和归属通知。</summary>
+/// <summary>GameObject 物理适配：刚体留在本机连续平面，只把权威数据写回规范逻辑坐标。</summary>
 [DisallowMultipleComponent]
 public sealed class WrappedRigidbody2DAdapter : MonoBehaviour
 {
     private Item item;
     private Rigidbody2D body;
+    private bool hasPresentationImage;
+    private Vector2Int presentationImage;
 
     public static void Ensure(Item target)
     {
@@ -35,10 +37,15 @@ public sealed class WrappedRigidbody2DAdapter : MonoBehaviour
     {
         item = target;
         body = rigidbody;
+        hasPresentationImage = false;
         enabled = true;
     }
 
-    internal void Suspend() => enabled = false;
+    internal void Suspend()
+    {
+        hasPresentationImage = false;
+        enabled = false;
+    }
 
     private void FixedUpdate()
     {
@@ -58,26 +65,38 @@ public sealed class WrappedRigidbody2DAdapter : MonoBehaviour
             return false;
         }
 
-        Vector2 previous = body.position;
-        if (bounds.Contains(previous) || !IsFinite(previous))
+        Vector2 current = body.position;
+        if (!IsFinite(current))
             return false;
 
-        Vector2 velocity = body.velocity;
-        float angularVelocity = body.angularVelocity;
-        Vector2 normalized = bounds.NormalizePosition(previous);
-        float z = transform.position.z;
-        body.position = normalized;
-        body.velocity = velocity;
-        body.angularVelocity = angularVelocity;
-        transform.position = new Vector3(normalized.x, normalized.y, z);
+        Vector2 logical = bounds.NormalizePosition(current);
         if (item.itemData.transform != null)
-            item.itemData.transform.position = transform.position;
+            item.itemData.transform.position = new Vector3(logical.x, logical.y, transform.position.z);
+
+        Vector2Int currentImage = ResolvePresentationImage(bounds, current);
+        if (!hasPresentationImage)
+        {
+            presentationImage = currentImage;
+            hasPresentationImage = true;
+            return false;
+        }
+
+        if (currentImage == presentationImage)
+            return false;
+
+        presentationImage = currentImage;
 
         ItemMgr.Instance.NotifyRuntimeItemMoved(item);
         if (!ItemMgr.Instance.IsRuntimeAiEntity(item))
             ChunkMgr.Instance?.UpdateItem_ChunkOwner(item);
-        WorldTopologyRuntime.NotifyPositionWrapped(previous, normalized);
         return true;
+    }
+
+    private static Vector2Int ResolvePresentationImage(WorldTopologyBounds bounds, Vector2 position)
+    {
+        return new Vector2Int(
+            Mathf.FloorToInt((position.x - bounds.Min.x) / bounds.Span.x),
+            Mathf.FloorToInt((position.y - bounds.Min.y) / bounds.Span.y));
     }
 
     private static bool IsFinite(Vector2 value)

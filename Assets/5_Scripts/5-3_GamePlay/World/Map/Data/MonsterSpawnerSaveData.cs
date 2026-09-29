@@ -21,6 +21,7 @@ public partial class AiecsResidentSaveData
     public List<float> BodyPartHp = new();
     public float Nutrition = -1f;
     public float FlightStamina = -1f;
+    public bool FlightRecovering;
     public double NextBirthTime;
     public bool Orphaned;
     public float HiveHomeX, HiveHomeY;

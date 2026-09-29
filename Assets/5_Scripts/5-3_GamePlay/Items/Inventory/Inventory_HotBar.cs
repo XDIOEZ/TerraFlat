@@ -42,8 +42,16 @@ public class Inventory_HotBar : Module, IInventory, IRemoteNetworkModule
 
         public override void InitData()
         {
+            Owner?.UnbindHeldInventoryEvents();
             base.InitData();
             Owner?.OnInventoryInitData();
+        }
+
+        /// <summary>直接修改槽位数量也标记手持绑定待同步，不在库存事件栈内卸载物品。</summary>
+        protected override void OnItemSlotChanged(ItemSlot slot)
+        {
+            base.OnItemSlotChanged(slot);
+            Owner?.HandleHeldInventoryChanged(slot);
         }
 
         public override void InitUI()
@@ -162,6 +170,10 @@ public class Inventory_HotBar : Module, IInventory, IRemoteNetworkModule
     private Mod_FocusPoint faceMouse;
     private Mod_TurnBack turnBody;
     private ActorRenderEffectController actorRenderEffects;
+    private Inventory_Data observedHeldInventory;
+    private bool heldItemSyncPending;
+    private bool heldItemTransitionInProgress;
+    private bool runtimeUnloading;
 
     private GameController _inputController;
     private InputAction _mouseScrollAction;
@@ -198,6 +210,8 @@ public class Inventory_HotBar : Module, IInventory, IRemoteNetworkModule
 
     public override void Load()
     {
+        runtimeUnloading = false;
+        heldItemSyncPending = true;
         EnsureRuntimeInventoryBinding();
 
         // 旧版本只保存 RawData；新版本将真实快捷栏库存与选中格写入 ModuleData。
@@ -225,6 +239,9 @@ public class Inventory_HotBar : Module, IInventory, IRemoteNetworkModule
     public override void Save()
     {
         EnsureRuntimeInventoryBinding();
+        // 手持模块先提交实时进度，玩家快照不能早于食用、容器和武器状态的保存。
+        if (CurentSelectItem != null && !CurentSelectItem.DestructionHandled)
+            CurentSelectItem.ModuleSave();
         ModSaveData.WriteData(new InventoryHotBarSaveState
         {
             Version = InventoryHotBarSaveState.CurrentVersion,
@@ -235,10 +252,33 @@ public class Inventory_HotBar : Module, IInventory, IRemoteNetworkModule
             item.itemData.ModuleDataDic[_Data.Name] = ModSaveData;
     }
 
-    /// <summary>快捷栏模块卸载时解除背包重量事件监听。</summary>
+    /// <summary>卸载和对象回池共用完整清理，不能等到 OnDestroy 才解除手持物与输入。</summary>
     public override void Unload()
     {
+        if (runtimeUnloading) return;
+        runtimeUnloading = true;
+        heldItemSyncPending = false;
+        UIUserSettings.HotbarLayoutChanged -= HandleHotbarLayoutChanged;
+        UnbindHotbarInput();
+        UnbindHeldInventoryEvents();
+        if (SelectBox != null)
+            SelectBox.transform.DOKill();
+        UnloadCurrentItem();
         RuntimeInventory?.UnbindPlayerCarryWeightEvents();
+        RuntimeInventory?.UnbindController();
+        RuntimeInventory?.UnbindRuntimeDataEvents();
+        if (RuntimeInventory != null)
+        {
+            RuntimeInventory.item = null;
+            RuntimeInventory.Owner = null;
+        }
+        if (turnBody != null && spawnLocation != null)
+            turnBody.controlledTransforms_Position.Remove(spawnLocation);
+        faceMouse = null;
+        turnBody = null;
+        actorRenderEffects = null;
+        CurrentSelectItemSlot = null;
+        HeldItemChanged = null;
     }
 
     public override void ApplyNetworkData(ModuleData data)
@@ -266,6 +306,7 @@ public class Inventory_HotBar : Module, IInventory, IRemoteNetworkModule
         if (owner == null || data is not Ex_ModData_MemoryPackable networkData)
             return;
 
+        runtimeUnloading = false;
         ModuleInit(owner, networkData, owner.itemData);
         ModSaveData = networkData;
         EnsureRuntimeInventoryBinding();
@@ -299,13 +340,7 @@ public class Inventory_HotBar : Module, IInventory, IRemoteNetworkModule
 
     private void OnDestroy()
     {
-        UIUserSettings.HotbarLayoutChanged -= HandleHotbarLayoutChanged;
-        UnbindHotbarInput();
-        RuntimeInventory?.UnbindPlayerCarryWeightEvents();
-        RuntimeInventory?.UnbindController();
-        RuntimeInventory?.UnbindRuntimeDataEvents();
-        HeldItemChanged?.Invoke(null);
-        HeldItemChanged = null;
+        Unload();
     }
 
     public override void ModUpdate(float deltaTime)
@@ -374,6 +409,7 @@ public class Inventory_HotBar : Module, IInventory, IRemoteNetworkModule
 
     private void OnInventoryInitData()
     {
+        BindHeldInventoryEvents();
         if (spawnLocation == null)
         {
             if (item != null)
@@ -428,7 +464,40 @@ public class Inventory_HotBar : Module, IInventory, IRemoteNetworkModule
 
     private void OnInventoryModUpdate(float deltaTime)
     {
-        SyncCurrentHeldItemWithSlot();
+        if (heldItemSyncPending)
+            SyncCurrentHeldItemWithSlot();
+    }
+
+    private void BindHeldInventoryEvents()
+    {
+        UnbindHeldInventoryEvents();
+        observedHeldInventory = Data;
+        if (observedHeldInventory == null) return;
+        observedHeldInventory.Event_OnDataChanged += HandleHeldInventoryChanged;
+        observedHeldInventory.Event_RefreshUI += HandleHeldInventoryRefresh;
+        heldItemSyncPending = true;
+    }
+
+    private void UnbindHeldInventoryEvents()
+    {
+        if (observedHeldInventory == null) return;
+        observedHeldInventory.Event_OnDataChanged -= HandleHeldInventoryChanged;
+        observedHeldInventory.Event_RefreshUI -= HandleHeldInventoryRefresh;
+        observedHeldInventory = null;
+    }
+
+    private void HandleHeldInventoryChanged(ItemSlot slot)
+    {
+        if (runtimeUnloading || Data?.itemSlots == null || MaxIndex == 0) return;
+        if (slot == null || ReferenceEquals(slot, CurrentSelectItemSlot) ||
+            ReferenceEquals(slot, Data.itemSlots[NormalizeIndex(CurrentIndex)]))
+            heldItemSyncPending = true;
+    }
+
+    private void HandleHeldInventoryRefresh(int index)
+    {
+        if (!runtimeUnloading && (index < 0 || index == CurrentIndex))
+            heldItemSyncPending = true;
     }
 
     private void EnsureHotBarSlots()
@@ -756,15 +825,17 @@ public class Inventory_HotBar : Module, IInventory, IRemoteNetworkModule
     private void SwitchItem(int targetIndex, bool animateSelection = true)
     {
         targetIndex = NormalizeIndex(targetIndex);
-        UnloadCurrentItem();
+        bool selectionChanged = targetIndex != CurrentIndex;
         CurrentIndex = targetIndex;
         if (animateSelection)
             MoveSelectBox(targetIndex);
         else
             SnapSelectBoxToSlot(targetIndex);
-        LoadItemFromSlot(targetIndex);
+        // 同槽重复选择和同一物品的槽位迁移不重建外壳。
+        SyncCurrentHeldItemWithSlot();
         RefreshUI(CurrentIndex);
-        NotifyOwnerNetworkStateChanged();
+        if (selectionChanged)
+            NotifyOwnerNetworkStateChanged();
     }
 
     private void LoadItemFromSlot(int index)
@@ -784,43 +855,59 @@ public class Inventory_HotBar : Module, IInventory, IRemoteNetworkModule
 
         ItemData data = slot.itemData;
 
-        Item itemInstance = ItemMgr.Instance.InstantiateItem(
-            data.IDName,
-            position: default,
-            parent: spawnLocation.gameObject
-        );
-
-        ConfigureItemInstance(itemInstance, data, slot);
+        bool previousInHand = data.inHand;
+        Item itemInstance = ItemMgr.Instance.InstantiateHeldItem(data, item, spawnLocation);
+        try
+        {
+            ConfigureItemInstance(itemInstance, data, slot);
+        }
+        catch
+        {
+            // 配置失败只回收外壳，不能保存半初始化模块覆盖真实库存。
+            itemInstance.OnUIRefresh -= RefreshUI;
+            itemInstance.OnItemDestroy -= OnDestroyCurrentObject;
+            actorRenderEffects?.UnregisterExternalRenderers(itemInstance.transform);
+            faceMouse?.RemoveRotationTarget(itemInstance.transform);
+            if (ReferenceEquals(CurentSelectItem, itemInstance))
+            {
+                CurentSelectItem = null;
+                currentObject = null;
+            }
+            if (!itemInstance.DestructionHandled)
+                ItemMgr.Instance.DespawnItem(itemInstance, saveData: false);
+            data.inHand = previousInHand;
+            throw;
+        }
     }
 
     private void UnloadCurrentItem()
     {
-        if (CurentSelectItem == null) return;
+        Item previous = CurentSelectItem;
+        // 先撤销绑定再触发模块事件，旧物品的回调不能卸下刚切换的新物品。
+        CurentSelectItem = null;
+        currentObject = null;
+        if (previous == null) return;
 
-        actorRenderEffects?.UnregisterExternalRenderers(CurentSelectItem.transform);
-        CurentSelectItem.SetInHand(false);
+        previous.OnUIRefresh -= RefreshUI;
+        previous.OnItemDestroy -= OnDestroyCurrentObject;
+        actorRenderEffects?.UnregisterExternalRenderers(previous.transform);
+        previous.SetInHand(false);
 
         if (faceMouse != null)
         {
-            faceMouse.RemoveRotationTarget(CurentSelectItem.transform);
+            faceMouse.RemoveRotationTarget(previous.transform);
         }
 
         if (turnBody != null)
         {
-            turnBody.controlledTransforms_Direction.Remove(CurentSelectItem.transform);
-            turnBody.controlledTransforms_Position.Remove(CurentSelectItem.transform);
+            turnBody.controlledTransforms_Direction.Remove(previous.transform);
+            turnBody.controlledTransforms_Position.Remove(previous.transform);
         }
 
-        CurentSelectItem.OnUIRefresh -= RefreshUI;
-        CurentSelectItem.OnItemDestroy -= OnDestroyCurrentObject;
-
-        if (!CurentSelectItem.DestructionHandled && ItemMgr.Instance != null)
-            ItemMgr.Instance.DespawnItem(CurentSelectItem);
-        else if (!CurentSelectItem.DestructionHandled)
-            Destroy(CurentSelectItem.gameObject);
-
-        CurentSelectItem = null;
-        currentObject = null;
+        if (!previous.DestructionHandled && ItemMgr.Instance != null)
+            ItemMgr.Instance.DespawnItem(previous);
+        else if (!previous.DestructionHandled)
+            Destroy(previous.gameObject);
         HeldItemChanged?.Invoke(null);
     }
 
@@ -843,22 +930,22 @@ public class Inventory_HotBar : Module, IInventory, IRemoteNetworkModule
         rot.z = 0;
         tf.localEulerAngles = rot;
 
-        itemInstance.BindData(data);
-        itemInstance.Owner = item;
+        // InstantiateHeldItem 已在注册之前绑定槽位数据与持有者。
         // 模块 Load 时必须已经知道自己属于玩家并处于手持状态。
         itemInstance.SetInHand(true);
 
         itemInstance.OnUIRefresh += RefreshUI;
         itemInstance.OnItemDestroy += OnDestroyCurrentObject;
 
-        itemInstance.Load();
-
-        // 手持物位于快捷栏节点而非角色动画节点，需要显式加入角色水体/受击等渲染效果。
-        actorRenderEffects?.RegisterExternalRenderers(itemInstance.transform);
-
         CurentSelectItem = itemInstance;
         CurrentSelectItemSlot = slot;
         currentObject = itemInstance.gameObject;
+        itemInstance.Load();
+        if (itemInstance.DestructionHandled || !ReferenceEquals(CurentSelectItem, itemInstance))
+            return;
+
+        // 手持物位于快捷栏节点而非角色动画节点，需要显式加入角色水体/受击等渲染效果。
+        actorRenderEffects?.RegisterExternalRenderers(itemInstance.transform);
 
         faceMouse?.AddRotationTarget(tf);
 
@@ -931,7 +1018,7 @@ public class Inventory_HotBar : Module, IInventory, IRemoteNetworkModule
     private int NormalizeIndex(int index)
     {
         if (MaxIndex <= 0) return 0;
-        return (index + MaxIndex) % MaxIndex;
+        return (index % MaxIndex + MaxIndex) % MaxIndex;
     }
 
     private bool IsPointerOverUI()
@@ -974,17 +1061,41 @@ public class Inventory_HotBar : Module, IInventory, IRemoteNetworkModule
 
     public void OnDestroyCurrentObject(Item obj)
     {
-        if (obj == null) return;
+        if (obj == null || obj != CurentSelectItem) return;
 
-        obj.SetInHand(false);
         UnloadCurrentItem();
+        heldItemSyncPending = !runtimeUnloading;
         NotifyOwnerNetworkStateChanged();
     }
 
     private void SyncCurrentHeldItemWithSlot()
     {
-        if (Data == null || Data.itemSlots == null || Data.itemSlots.Count == 0)
+        if (runtimeUnloading) return;
+        if (heldItemTransitionInProgress)
+        {
+            heldItemSyncPending = true;
             return;
+        }
+        heldItemSyncPending = false;
+        heldItemTransitionInProgress = true;
+        try
+        {
+            SyncCurrentHeldItemCore();
+        }
+        finally
+        {
+            heldItemTransitionInProgress = false;
+        }
+    }
+
+    private void SyncCurrentHeldItemCore()
+    {
+        if (Data == null || Data.itemSlots == null || Data.itemSlots.Count == 0)
+        {
+            UnloadCurrentItem();
+            CurrentSelectItemSlot = null;
+            return;
+        }
 
         int fixedIndex = NormalizeIndex(CurrentIndex);
         if (fixedIndex != CurrentIndex)

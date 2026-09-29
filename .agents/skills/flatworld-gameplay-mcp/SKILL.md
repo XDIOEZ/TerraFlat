@@ -31,6 +31,12 @@ GamePlayMCP 默认不做操作系统级鼠标键盘自动化，也不让视觉�
 
 GamePlayMCP 复用项目已有 MCPForUnity 自定义工具发现机制，不另起一套任意代码执行服务器。
 
+## 方法与经验分层
+
+- 本 `SKILL.md` 只保存稳定的操作方法、工具契约、测试流程与协议扩展规则。
+- MCP 连接、超时、Profiler 解读、截图验收、多人并行开发等实战经验放在 `Exp/`。
+- 遇到性能诊断、连接异常、超时或测试结果难以解释时，再读取 `Exp/MCP游戏测试经验.md`；不要把一次性测试流水账回填到 Skill。
+
 ## 每次自主游玩任务的强制启动顺序
 
 只要任务要求 AI 自主游玩、持续测试、探索或“自己玩一会看看问题”，必须优先启动 GamePlayMCP，而不是先截图。
@@ -49,7 +55,7 @@ GamePlayMCP 复用项目已有 MCPForUnity 自定义工具发现机制，不另�
 
 需要操作主菜单、教程、背包、制作、设置等 UI 时，不要求先进入世界或获取玩家控制租约。直接调用 `gameplay_ui(action="tree")` 获取当前激活 Canvas 的语义 UI 树；点击时从 `clickable=true` 且 `interactable=true` 的节点选择 `id`，调用 `gameplay_ui(action="click", targetId=<id>)`。需要浏览 ScrollRect 中的屏外内容时，对树中的 `type=scroll` 节点调用 `gameplay_ui(action="scroll", targetId=<id>, deltaY=<滚轮量>)`；需要移动可拖拽窗口或滑块时，对对应可拖拽节点调用 `gameplay_ui(action="drag", targetId=<id>, deltaX=<像素>, dragDeltaY=<像素>)`。滚动与拖拽都必须走真实 EventSystem 事件链，不直接改 ScrollRect/RectTransform 数据。UI 操作后界面可能同步变化，继续操作前必须重新读取 UI 树，不复用旧树猜测下一个节点。
 
-创建新世界使用 `gameplay_session(action="create_world", isolated=true)`，默认把首个存档及后续保存都写入 Library 隔离目录；只有用户明确要求正式存档时才传 `isolated=false`。它通过 `GameRes.Instance` 启动可能尚未创建的资源会话，等完整 Ready 后调用生产 `GameManager.CreateNewWorld(NewWorldCreationRequest)`；不得只轮询 `ExistingInstance` 导致永久等待。资源等待与世界等待共用单次调用时限，默认 60 秒、最长 120 秒，已经开始进入世界时只能查询状态，不能重复创建或改换存档目录。若返回 `world_entry_timeout`，先查 `gameplay_session(action="status")`；实测场景切换后仍可能继续初始化并最终就绪，轮询确认前不要重试创建。需要保存并返回主菜单时使用 `gameplay_session(action="save_exit")`；它直接调用生产退出协程并保存当前世界。
+创建新世界使用 `gameplay_session(action="create_world", isolated=true)`，默认把首个存档及后续保存都写入 Library 隔离目录；只有用户明确要求正式存档时才传 `isolated=false`。资源等待与世界等待共用单次调用时限，默认 60 秒、最长 120 秒；已经开始进入世界时只能查询状态，不能重复创建或改换存档目录。若返回 `world_entry_timeout`，先查 `gameplay_session(action="status")`，确认当前会话状态后再决定是否重试。需要保存并返回主菜单时使用 `gameplay_session(action="save_exit")`；它直接调用生产退出协程并保存当前世界。
 
 脚本重编译、Domain Reload、退出世界或重新进入 Play Mode 后，旧控制租约不可假定仍有效。必须重新执行 `status -> acquire -> observe`。
 
@@ -57,7 +63,7 @@ GamePlayMCP 复用项目已有 MCPForUnity 自定义工具发现机制，不另�
 
 循环应保持短、可观察、可复现：
 
-1. `gameplay_observe`：读取玩家位置、速度、生命、体力、营养、输入锁、快捷栏、背包摘要、附近实体、附近 ECS 掉落物，以及以玩家脚下为中心的固定 3×3 权威地块；水格同时附带可用的河流/海洋表层流向与流量，避免 Agent 在河流中把环境漂移误判成移动或战斗异常。
+1. `gameplay_observe`：读取玩家位置、速度、生命、体力、营养、输入锁、快捷栏、背包摘要、附近实体、附近 ECS 掉落物，以及以玩家脚下为中心的固定 3×3 权威地块；水格同时附带可用的河流/海洋表层流向与流量，用于区分主动移动与环境漂移。
    - 玩家液体观察读取 TileEffectReceiver 的 LiquidDepth、LiquidId、LiquidFloating；附近水格读取独立液体层并考虑支撑面。currentTileData 只代表 Ground，不能再据此推断液体或盐度。
    - 需要从大量世界数据中快速寻找目标时，使用只读 `gameplay_query`。`source=runtime` 查询已实例化 Item，`query` 可填写稳定 ID 或任意已配置 Locale 下的完整物品名（例如 `Ore_Stone` / `石头` / `Stone`）；传入 `radius` 时只查询玩家周围该半径内的 Item，并复用 `ItemMgr` 空间索引，`radius` 最大 64 世界单位。运行时结果按玩家距离排序并强制分页，默认只返回最近 3 条、单页最多 32 条，通过 `total_count/truncated/next_offset` 继续读取；不填写 ID/名称时可直接取得附近不同物品，每条结果都包含稳定 `id` 与明确的 `position.x/position.y`，可直接交给 `gameplay_act(move_to)`。`source=ecology` 查询已加载 ChunkRuntime 的确定性自然物放置结果；`source=terrain` 按环境层阈值查询已加载地形格；`source=tile` 按数字 Tile ID、`Tile_Block` 稳定 ID、`tileItemName` 或显示名精确查询最近已加载地块坐标，默认只返回最近 1 格；`source=drops` 直接查询离线 ECS 掉落物空间桶，返回飞行中和落地后的实时世界坐标、数量与可拾取状态。所有查询都只读，不能生成、传送或直接拾取实体。
    - `source=runtime` 命中机械节点时额外返回只读 `mechanical` 快照（RPM、网络状态、扭矩供给/扭矩负载、手摇缓冲，以及加工器输入/输出/进度）；只用于观察真实运行状态，不允许由查询工具修改机械网络。
@@ -171,8 +177,8 @@ GM 使用独立的 `gameplay_gm` 白名单：
 - TerraFlat 功能验收统一使用真实 Play Mode / GamePlayMCP 运行链；项目不再维护 `Assets/GameTest`、Unity Test Runner、冒烟测试或一次性 `*_test` Gameplay 动作。需要补能力时只能增加可复用的真实玩法动作、GM 能力或只读观察，不新增为了“让测试通过”的测试后门。
 
 - `gameplay_aiecs_debug(status/sample)` 只读当前 GM 开发模拟；sample 在 1～20 秒内记录真实帧时、Burst、隔离会话、错误、Tick、实际实体与占格状态。单位生成/清理与数量调整仍通过 GM 的正式 UI 按钮，不通过诊断工具修改游戏数据。
-- `gameplay_chunk_render_debug` 的 `status` 支持冻结现场，附带分阶段耗时、最老请求、有效/取消/过期提交通知及驱动心跳；`sample(seconds=1~20)` 只观察真实运行，不移动、不解除暂停、不改预算。暂停/换世界/编译时中断并标记无效，结束仅输出一条日志与 `Library/FlatWorldGameplayMCP/ChunkDiagnostics/` JSON。Editor 菜单为 `FlatWorld/调试/区块加载`；无埋点历史不能补造耗时，GPU 时间未采集时明确标为未测。
-- 用户要求截图循环时，每轮应在真实操作后抓取 Game View，并实际打开返回的 PNG；把截图检查与结构化状态/整轮 Console 对照。截图只报告已保存路径不等于看过画面，也不能仅以一个无错误的短采样窗口代替整个运行周期检查。
+- `gameplay_chunk_render_debug` 的 `status` 支持冻结现场，附带分阶段耗时、最老请求、有效/取消/过期提交通知及驱动心跳；`sample(seconds=1~20)` 只观察真实运行，不移动、不解除暂停、不改预算。暂停/换世界/编译时中断并标记无效，结束仅输出一条日志与 `Library/FlatWorldGameplayMCP/ChunkDiagnostics/` JSON。Editor 菜单为 `FlatWorld/调试/区块加载`。
+- 用户要求截图循环时，每轮应在真实操作后抓取 Game View，并实际打开返回的 PNG；把截图检查与结构化状态、整轮 Console 对照，不能用一个短采样窗口代替完整运行周期检查。
 
 - GamePlayMCP：负责开放式、自主、探索式游玩和发现未知问题。
 

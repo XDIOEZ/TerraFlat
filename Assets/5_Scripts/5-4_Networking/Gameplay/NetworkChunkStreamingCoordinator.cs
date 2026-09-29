@@ -93,7 +93,7 @@ namespace FlatWorld.Networking.Gameplay
             observerPositions.Clear();
             for (int i = 0; i < observers.Count; i++)
             {
-                Vector3 position = observers[i].position;
+                Vector3 position = ResolveLogicalObserverPosition(observers[i]);
                 if (!IsValidObserverPosition(position))
                     continue;
 
@@ -167,10 +167,14 @@ namespace FlatWorld.Networking.Gameplay
             }
 
             anchor ??= observers.Count > 0 ? observers[0] : null;
-            if (anchor == null || !IsValidObserverPosition(anchor.position))
+            if (anchor == null)
                 return;
 
-            Vector2Int anchorChunk = ChunkMgr.NormalizeChunkPosition(Chunk.GetChunkPosition(anchor.position));
+            Vector3 logicalPosition = ResolveLogicalObserverPosition(anchor);
+            if (!IsValidObserverPosition(logicalPosition))
+                return;
+
+            Vector2Int anchorChunk = ChunkMgr.NormalizeChunkPosition(Chunk.GetChunkPosition(logicalPosition));
             if (anchorChunk == lastNavigationAnchorChunk && activeDistance == lastNavigationLoadDistance)
                 return;
 
@@ -185,6 +189,18 @@ namespace FlatWorld.Networking.Gameplay
                    !float.IsNaN(position.y) && !float.IsInfinity(position.y) &&
                    Mathf.Abs(position.x) <= MaxSupportedWorldCoordinate &&
                    Mathf.Abs(position.y) <= MaxSupportedWorldCoordinate;
+        }
+
+        /// <summary>客户端网络 Transform 可处于局部表现镜像；区块与导航只消费规范逻辑坐标。</summary>
+        private static Vector3 ResolveLogicalObserverPosition(Transform observer)
+        {
+            if (observer == null)
+                return default;
+
+            NetworkWorldPlayer networkPlayer = observer.GetComponent<NetworkWorldPlayer>();
+            return networkPlayer != null
+                ? networkPlayer.ObserverLogicalPosition
+                : WorldTopologyRuntime.NormalizePosition(observer.position);
         }
     }
 }

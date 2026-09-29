@@ -320,27 +320,29 @@ public class AI_Ghost : Module, IAIActor, ISimulationRangeAware
         }
 
         float stepDistance = Mathf.Max(0f, speed) * Mathf.Max(0f, deltaTime);
+        Vector2 currentPosition = item.transform.position;
+        Vector2 targetPresentation = currentPosition + delta;
         Vector2 nextPosition = distance <= stepDistance
-            ? target
-            : (Vector2)item.transform.position + delta / distance * stepDistance;
+            ? targetPresentation
+            : currentPosition + delta / distance * stepDistance;
         // 幽灵直追不经导航刚体速度，仍须叠加与其它生物相同的表层水流位移。
         Vector2 currentVelocity = WorldMotionSystem.SampleWaterVelocity(
             item.transform.position, WaterCurrentPushConfigService.ResolvePushSpeed(item));
-        Vector2 normalizedPosition = WorldTopologyRuntime.NormalizePosition(
-            nextPosition + currentVelocity * Mathf.Max(0f, deltaTime));
+        Vector2 presentationPosition = nextPosition + currentVelocity * Mathf.Max(0f, deltaTime);
+        Vector2 logicalPosition = WorldTopologyRuntime.NormalizePosition(presentationPosition);
 
         if (_rigidbody != null)
         {
-            _rigidbody.position = normalizedPosition;
+            _rigidbody.position = presentationPosition;
             _rigidbody.velocity = Vector2.zero;
         }
 
         item.transform.position = new Vector3(
-            normalizedPosition.x,
-            normalizedPosition.y,
+            presentationPosition.x,
+            presentationPosition.y,
             item.transform.position.z);
         if (item.itemData?.transform != null)
-            item.itemData.transform.position = item.transform.position;
+            item.itemData.transform.position = new Vector3(logicalPosition.x, logicalPosition.y, item.transform.position.z);
 
         ItemMgr.Instance?.NotifyRuntimeItemMoved(item);
     }

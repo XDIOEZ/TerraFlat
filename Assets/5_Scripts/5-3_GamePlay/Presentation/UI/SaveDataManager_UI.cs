@@ -60,6 +60,10 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
         new HashSet<string>(System.StringComparer.OrdinalIgnoreCase);
     private bool isBatchDeleteMode;
     private bool isBatchDeleteConfirmationOpen;
+    private string pendingSingleDeleteSaveName;
+
+    private bool IsDeleteConfirmationOpen =>
+        isBatchDeleteConfirmationOpen || !string.IsNullOrWhiteSpace(pendingSingleDeleteSaveName);
 
     /// <summary>当前显示的存档条目数量。</summary>
     public int ActiveSaveEntryCount => saveRows.Count;
@@ -423,15 +427,89 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
     /// <summary>危险确认层优先消费返回键；其余情况仍交给 BasePanel 原有关闭逻辑。</summary>
     public bool TryHandleCancel(BaseEventData eventData)
     {
-        if (!isBatchDeleteConfirmationOpen)
+        if (!IsDeleteConfirmationOpen)
             return false;
 
         eventData?.Use();
-        CancelBatchDeleteConfirmation();
+        CancelDeleteConfirmation();
         return true;
     }
 
-    #region 批量删除
+    #region 存档删除确认
+
+    /// <summary>主删除按钮只打开确认层；真正删除只能从确认按钮进入。</summary>
+    public void OpenSingleDeleteConfirmation()
+    {
+        OpenSingleDeleteConfirmation(selectedSaveRow?.Value);
+    }
+
+    /// <summary>为指定存档打开单删确认层，右键菜单等入口也统一复用这条安全路径。</summary>
+    public void OpenSingleDeleteConfirmation(string saveName)
+    {
+        if (isBatchDeleteMode || string.IsNullOrWhiteSpace(saveName) || !saves.Contains(saveName))
+        {
+            Debug.LogWarning("请先选择要删除的有效存档");
+            return;
+        }
+
+        pendingSingleDeleteSaveName = saveName;
+        isBatchDeleteConfirmationOpen = false;
+        UpdateDeleteUi();
+        FocusBatchDeleteControl(GameManager.GameSaveBatchDialogCancelButtonKey);
+    }
+
+    /// <summary>确认按钮的统一入口：有单删目标时删单个，否则处理批量删除。</summary>
+    public void ConfirmDelete()
+    {
+        if (!string.IsNullOrWhiteSpace(pendingSingleDeleteSaveName))
+        {
+            ConfirmSingleDelete();
+            return;
+        }
+
+        ConfirmBatchDelete();
+    }
+
+    /// <summary>取消任意删除确认；单删回到普通列表，批删回到原有多选状态。</summary>
+    public void CancelDeleteConfirmation()
+    {
+        if (!IsDeleteConfirmationOpen)
+            return;
+
+        bool wasBatchConfirmation = isBatchDeleteConfirmationOpen;
+        pendingSingleDeleteSaveName = null;
+        isBatchDeleteConfirmationOpen = false;
+        UpdateDeleteUi();
+
+        if (wasBatchConfirmation)
+            FocusBatchDeleteControl(GameManager.GameSaveBatchConfirmButtonKey);
+        else
+            FocusFirstSaveOrBackForGamepad();
+    }
+
+    private void ConfirmSingleDelete()
+    {
+        string saveName = pendingSingleDeleteSaveName;
+        if (string.IsNullOrWhiteSpace(saveName) || !saves.Contains(saveName))
+        {
+            Debug.LogWarning("单个存档删除确认状态无效，未删除任何存档");
+            pendingSingleDeleteSaveName = null;
+            UpdateDeleteUi();
+            return;
+        }
+
+        SaveDataMgr manager = saveAndLoad != null ? saveAndLoad : SaveDataMgr.Instance;
+        if (manager == null)
+        {
+            Debug.LogWarning("SaveAndLoad组件未绑定！");
+            return;
+        }
+
+        DeleteSaveAndClearLoadedState(manager, saveName);
+        ResetBatchDeleteState();
+        Refresh();
+        ClearSaveSelection();
+    }
 
     /// <summary>进入多选模式；仅改变列表交互，不读取或删除磁盘文件。</summary>
     public void BeginBatchDeleteMode()
@@ -441,13 +519,14 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
 
         isBatchDeleteMode = true;
         isBatchDeleteConfirmationOpen = false;
+        pendingSingleDeleteSaveName = null;
         batchSelectedSaveNames.Clear();
         ClearSelectedRow(ref selectedSaveRow);
         ClearSaveSelectionVisuals();
         ClearSelectedRow(ref selectedPlayerRow);
         ResetWorldGenerationFreezeToggle();
         bool playerStructureChanged = ReleaseRows(playerRows);
-        UpdateBatchDeleteUi();
+        UpdateDeleteUi();
         CommitDynamicListChanges(false, playerStructureChanged, false);
         FocusBatchDeleteCancelForGamepad();
     }
@@ -468,8 +547,9 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
             return;
         }
 
+        pendingSingleDeleteSaveName = null;
         isBatchDeleteConfirmationOpen = true;
-        UpdateBatchDeleteUi();
+        UpdateDeleteUi();
         FocusBatchDeleteControl(GameManager.GameSaveBatchDialogCancelButtonKey);
     }
 
@@ -479,9 +559,7 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
         if (!isBatchDeleteConfirmationOpen)
             return;
 
-        isBatchDeleteConfirmationOpen = false;
-        UpdateBatchDeleteUi();
-        FocusBatchDeleteControl(GameManager.GameSaveBatchConfirmButtonKey);
+        CancelDeleteConfirmation();
     }
 
     /// <summary>仅由二次确认按钮调用，逐个复用正式存档删除 API。</summary>
@@ -508,13 +586,7 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
             if (!saves.Contains(saveName))
                 continue;
 
-            manager.DeleteSave(manager.UserSavePath, saveName);
-            if (manager.SaveData != null &&
-                string.Equals(manager.SaveData.saveName, saveName, System.StringComparison.Ordinal))
-            {
-                manager.SaveData = null;
-                manager.CurrentContrrolPlayerName = string.Empty;
-            }
+            DeleteSaveAndClearLoadedState(manager, saveName);
         }
 
         ResetBatchDeleteState();
@@ -527,10 +599,11 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
     {
         isBatchDeleteMode = false;
         isBatchDeleteConfirmationOpen = false;
+        pendingSingleDeleteSaveName = null;
         batchSelectedSaveNames.Clear();
         for (int index = 0; index < saveRows.Count; index++)
             ClearRowVisual(saveRows[index]);
-        UpdateBatchDeleteUi();
+        UpdateDeleteUi();
     }
 
     private void ToggleBatchSaveSelection(SelectionRow row)
@@ -542,22 +615,27 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
         if (!selected)
             batchSelectedSaveNames.Remove(row.Value);
         SetRowVisual(row, selected);
-        UpdateBatchDeleteUi();
+        UpdateDeleteUi();
     }
 
     /// <summary>集中更新模式按钮、普通操作和危险确认遮罩。</summary>
-    private void UpdateBatchDeleteUi()
+    private void UpdateDeleteUi()
     {
         if (!TryGetSavePanel(out BasePanel panel))
             return;
 
+        bool deleteConfirmationOpen = IsDeleteConfirmationOpen;
+
         Button entryButton = panel.GetButton(GameManager.GameSaveBatchDeleteButtonKey);
         if (entryButton != null)
+        {
             entryButton.gameObject.SetActive(!isBatchDeleteMode);
+            entryButton.interactable = !deleteConfirmationOpen;
+        }
         if (BatchDeleteModeActions != null)
-            BatchDeleteModeActions.SetActive(isBatchDeleteMode && !isBatchDeleteConfirmationOpen);
+            BatchDeleteModeActions.SetActive(isBatchDeleteMode && !deleteConfirmationOpen);
         if (BatchDeleteConfirmationDialog != null)
-            BatchDeleteConfirmationDialog.SetActive(isBatchDeleteConfirmationOpen);
+            BatchDeleteConfirmationDialog.SetActive(deleteConfirmationOpen);
 
         Button confirmSelectionButton = panel.GetButton(GameManager.GameSaveBatchConfirmButtonKey);
         if (confirmSelectionButton != null)
@@ -569,21 +647,35 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
         Button startButton = panel.GetButton(GameManager.GameSaveStartButtonKey);
         Button backButton = panel.GetButton(GameManager.GameSaveBackButtonKey);
         if (loadButton != null)
-            loadButton.interactable = !isBatchDeleteMode;
+            loadButton.interactable = !isBatchDeleteMode && !deleteConfirmationOpen;
         if (singleDeleteButton != null)
-            singleDeleteButton.interactable = !isBatchDeleteMode && selectedSaveRow != null;
+            singleDeleteButton.interactable = !isBatchDeleteMode && !deleteConfirmationOpen && selectedSaveRow != null;
         if (renameButton != null)
-            renameButton.interactable = !isBatchDeleteMode && selectedSaveRow != null;
+            renameButton.interactable = !isBatchDeleteMode && !deleteConfirmationOpen && selectedSaveRow != null;
         if (startButton != null)
-            startButton.interactable = !isBatchDeleteMode;
+            startButton.interactable = !isBatchDeleteMode && !deleteConfirmationOpen;
         if (backButton != null)
-            backButton.interactable = !isBatchDeleteConfirmationOpen;
+            backButton.interactable = !deleteConfirmationOpen;
         for (int index = 0; index < saveRows.Count; index++)
         {
             Button rowButton = saveRows[index]?.Button;
             if (rowButton != null)
-                rowButton.interactable = !isBatchDeleteConfirmationOpen;
+                rowButton.interactable = !deleteConfirmationOpen;
         }
+        for (int index = 0; index < playerRows.Count; index++)
+        {
+            Button rowButton = playerRows[index]?.Button;
+            if (rowButton != null)
+                rowButton.interactable = !deleteConfirmationOpen;
+        }
+
+        TMP_InputField playerNameInput = panel.GetInputField(GameManager.GameSavePlayerInputKey);
+        if (playerNameInput != null)
+            playerNameInput.interactable = !isBatchDeleteMode && !deleteConfirmationOpen;
+
+        Toggle generationFreezeToggle = panel.GetToggle(GameManager.GameSaveGenerationFreezeToggleKey);
+        if (deleteConfirmationOpen && generationFreezeToggle != null)
+            generationFreezeToggle.interactable = false;
 
         if (isBatchDeleteMode)
         {
@@ -598,14 +690,50 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
         if (isBatchDeleteConfirmationOpen)
         {
             panel.SetText(
+                GameManager.GameSaveDeleteDialogTitleTextKey,
+                FlatWorldLocalizationService.GetUiText("确认批量删除存档？"));
+            panel.SetText(
+                GameManager.GameSaveDeleteDialogConfirmTextKey,
+                FlatWorldLocalizationService.GetUiText("永久删除所选存档"));
+            panel.SetText(
                 GameManager.GameSaveBatchWarningTextKey,
                 FlatWorldLocalizationService.GetUiFormat(
                     "将永久删除已选中的 {0} 个存档。\n{1}\n此操作无法撤销。",
                     batchSelectedSaveNames.Count,
                     BuildBatchDeleteNamePreview()));
         }
+        else if (!string.IsNullOrWhiteSpace(pendingSingleDeleteSaveName))
+        {
+            panel.SetText(
+                GameManager.GameSaveDeleteDialogTitleTextKey,
+                FlatWorldLocalizationService.GetUiText("删除存档"));
+            panel.SetText(
+                GameManager.GameSaveDeleteDialogConfirmTextKey,
+                FlatWorldLocalizationService.GetUiText("永久删除所选存档"));
+            panel.SetText(
+                GameManager.GameSaveBatchWarningTextKey,
+                FlatWorldLocalizationService.GetUiFormat(
+                    "将永久删除已选中的 {0} 个存档。\n{1}\n此操作无法撤销。",
+                    1,
+                    pendingSingleDeleteSaveName));
+        }
+        else if (!isBatchDeleteMode && !string.IsNullOrWhiteSpace(selectedSaveRow?.Value))
+        {
+            RefreshWorldGenerationFreezeToggle(selectedSaveRow.Value);
+        }
 
         panel.RefreshGamepadNavigationState();
+    }
+
+    private static void DeleteSaveAndClearLoadedState(SaveDataMgr manager, string saveName)
+    {
+        manager.DeleteSave(manager.UserSavePath, saveName);
+        if (manager.SaveData != null &&
+            string.Equals(manager.SaveData.saveName, saveName, System.StringComparison.Ordinal))
+        {
+            manager.SaveData = null;
+            manager.CurrentContrrolPlayerName = string.Empty;
+        }
     }
 
     private string BuildBatchDeleteNamePreview()

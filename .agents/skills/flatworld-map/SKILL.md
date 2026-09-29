@@ -53,8 +53,8 @@ description: "Use when: 定位或修改 FlatWorld 的地图内容、Tilemap、�
 ## 验证
 
 - `WorldTopologyDomain` 是 `Shared/WorldTopology/FlatWorld.WorldTopology.asmdef` 中的纯数学坐标真源；Bounds 只负责配置/类型封装，Runtime 仍读取 SaveDataMgr，只允许主线程使用。禁止在 Map 或数学核心直接创建 Wrapped Physics Proxy。
-- Tilemap 镜像由独立 `WrappedTilemapPhysicsAdapter` 消费表现生命周期：旧 Map 发布 `TilemapPresentationChanged`，新版 ChunkView 经 `ChunkCollisionRenderer` 的绑定/失效通知接入。不得假定地图一定由 ItemMgr.InstantiateItem 创建；重新加载开始、失败、停用、重新启用和增量编辑都须同步失效。
-- Item 的严格接缝带与 Tilemap 的包含边界触边是两种调用语义，共用 Domain 的无分配镜像偏移查询，但不能合并阈值。旧 Map 的镜像 `TilemapDamageReceiver` 必须绑定真实 Map 与镜像 Tilemap，不能用源 Tilemap 坐标代替；新版 WorldModel 继续通过权威格子查询结算伤害。
+- `WrappedTilemapPhysicsAdapter` 只服务旧 Map 的 Tilemap 镜像生命周期；新版 WorldModel 的碰撞随本地投影后的 `ChunkView` 根节点一起移动，不再为 `ChunkCollisionRenderer` 创建环绕物理代理。不得把局部显示坐标写回 Chunk 地址。
+- 旧 Map 的镜像 `TilemapDamageReceiver` 必须绑定真实 Map 与镜像 Tilemap，不能用源 Tilemap 坐标代替；新版 WorldModel 继续通过规范逻辑格子查询结算伤害，不能依赖某个客户端的 ChunkView Transform。
 
 - 功能验收以实际游戏操作和可观察结果为准；不以冒烟、自动化测试或静态检查代替实际验收。
 - 世界生成与持久化改动实际覆盖新建世界、抽干露底、区块往返和保存重进；保留用户当前试玩时，不自动停止游戏或排队运行测试。

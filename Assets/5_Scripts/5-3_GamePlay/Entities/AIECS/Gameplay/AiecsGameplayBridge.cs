@@ -73,7 +73,7 @@ namespace FlatWorld.AIECS.Gameplay
         /// <summary>每个配置组一个战略目标，另加一个玩家目标；实际单位多少不会增加 Goal 数量。</summary>
         public AiecsGameplayBridge(Player player, FlowNavigationCache navigation, string[] actorIds, string[] actorFactions, float senseOverride,
             bool[] fleeFromHostiles = null, Func<string, float2, bool> actorLootSpawner = null,
-            bool removeSpawnedStaticDropsOnDispose = false)
+            bool removeSpawnedStaticDropsOnDispose = false, World sharedWorld = null)
         {
             this.actorLootSpawner = actorLootSpawner;
             this.removeSpawnedStaticDropsOnDispose = removeSpawnedStaticDropsOnDispose;
@@ -105,7 +105,7 @@ namespace FlatWorld.AIECS.Gameplay
             {
                 los = new AiecsLosBridge();
                 Simulation = new AiecsSimulation(definitions, AiecsDefinitionCompiler.CompileBuffs(UnsupportedBuffs),
-                    FactionValues(), Relations(), actorIds.Length + 1, extent, Time.timeAsDouble);
+                    FactionValues(), Relations(), actorIds.Length + 1, extent, Time.timeAsDouble, sharedWorld);
                 goals = new FlowGoalHandle[actorIds.Length + 1];
                 foreach (var definition in definitions)
                     foreach (var effect in definition.OnHitBuffs)

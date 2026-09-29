@@ -33,8 +33,32 @@ public partial class ItemMgr
 
     #region Instantiate
 
-    // 核心实例化方法：统一所有重载走这里
     public Item InstantiateItem(ItemData itemData, Vector3 position = default, Quaternion rotation = default, Vector3 scale = default, GameObject parent = null)
+        => InstantiateItemInternal(itemData, position, rotation, scale, parent, null);
+
+    /// <summary>手持物直接绑定真实槽位数据，注册前建立持有者与手持标记，禁止先生成世界物再换 GUID。</summary>
+    public Item InstantiateHeldItem(ItemData data, Item owner, Transform attachment)
+    {
+        if (data == null) throw new ArgumentNullException(nameof(data));
+        if (owner == null) throw new ArgumentNullException(nameof(owner));
+        if (attachment == null) throw new ArgumentNullException(nameof(attachment));
+        bool previousInHand = data.inHand;
+        data.inHand = true;
+        try
+        {
+            return InstantiateItemInternal(data, attachment.position, Quaternion.identity,
+                Vector3.one, attachment.gameObject, owner);
+        }
+        catch
+        {
+            data.inHand = previousInHand;
+            throw;
+        }
+    }
+
+    // 所有实例化入口共用外壳池、定义装配和完整注册链。
+    private Item InstantiateItemInternal(ItemData itemData, Vector3 position, Quaternion rotation,
+        Vector3 scale, GameObject parent, Item owner)
     {
         if (itemData == null)
         {
@@ -56,18 +80,24 @@ public partial class ItemMgr
         Item item = itemObj.GetComponent<Item>();
         item.BindData(itemData);
         item.PrepareForPoolReuse();
+        item.Owner = owner;
         if (GameRes.Instance.TryGetItemDefinition(itemData.IDName, out RuntimeItemDefinition definition))
             ItemDefinitionRuntime.ConfigureInstance(GameRes.Instance, definition, item, itemData);
         // JSON 模块装配完成后才固定池内层级；首次外壳结构并不是可复用的最终结构。
         item.PoolMarker.CaptureBaseline();
         itemObj.name = itemData.IDName;
-        itemObj.transform.position = position;
+        Vector3 logicalPosition = itemData.inHand
+            ? position
+            : WorldLocalPresentation.ToLogical(position);
+        itemObj.transform.position = itemData.inHand
+            ? position
+            : WorldLocalPresentation.ProjectPosition(logicalPosition);
         itemObj.transform.rotation = rotation;
         itemObj.transform.localScale = scale;
         itemObj.SetActive(true);
 
         RegisterRuntimeItem(item, itemData.IDName);
-        ItemWorldPlacement.Attach(item, itemObj, position, parent);
+        ItemWorldPlacement.Attach(item, itemObj, logicalPosition, parent);
         RuntimeItemInstantiated?.Invoke(item);
         WorldItemWaterSystem.ScheduleSpawnCheck(item);
 

@@ -222,7 +222,6 @@ internal static class ChunkBatchRendererGroupService
         private readonly Material contactTemplate;
         private readonly Material waterTemplate;
         private long cullingCallbackCount;
-        private long lastZeroVisibleWarningCull;
         private int lastCullingCommandCount;
         private int lastCullingVisibleCount;
         private bool disposed;
@@ -597,7 +596,6 @@ internal static class ChunkBatchRendererGroupService
                 int commandCount = 0;
                 int visibleCount = 0;
                 int sortedVisibleCount = 0;
-                int submittedCount = 0;
                 bool ownerVisibilityChanged = false;
                 bool allOwnersVisible = !WorldStreamingPreferences.OwnerCullingEnabled ||
                     RefreshOwnerVisibility(context.cullingPlanes, out ownerVisibilityChanged);
@@ -607,7 +605,6 @@ internal static class ChunkBatchRendererGroupService
                 {
                     TileBatch batch = orderedBatches[i];
                     int batchCount = batch.Count;
-                    submittedCount += batchCount;
                     int batchVisible = allOwnersVisible ? batchCount : batchVisibleInstances[i].Count;
                     if (batchVisible <= 0)
                         continue;
@@ -618,13 +615,8 @@ internal static class ChunkBatchRendererGroupService
                 lastCullingCommandCount = commandCount;
                 lastCullingVisibleCount = visibleCount;
 
-                if (RenderDebugEnabled && ownerHandles.Count > 0 && submittedCount == 0 &&
-                    cullingCallbackCount - lastZeroVisibleWarningCull >= 180)
-                {
-                    lastZeroVisibleWarningCull = cullingCallbackCount;
-                    Debug.LogWarning($"[ChunkRenderDebug] BRG 有 {ownerHandles.Count} 个 Owner，但没有提交可绘制实例。 " +
-                                     BuildDebugSummary());
-                }
+                // 基础地形已经由 ChunkGroundMeshRenderer 绘制，BRG Owner 只给草、自然物、机械等扩展层复用。
+                // 因此“有 Owner 但当前没有 BRG 实例”是合法空状态，不能再按异常周期刷 Warning。
 
                 BatchCullingOutputDrawCommands* commands =
                     (BatchCullingOutputDrawCommands*)output.drawCommands.GetUnsafePtr();

@@ -1065,7 +1065,7 @@ public partial class GameManager : SingletonAutoMono<GameManager>
         }
 
         Vector3 spawnPosition = new Vector3(landPosition.x + 0.5f, landPosition.y + 0.5f, 0f);
-        player.transform.position = spawnPosition;
+        player.transform.position = WorldLocalPresentation.ProjectPosition(spawnPosition);
         player.Data.transform.position = spawnPosition;
         // 以最终确认的安全陆地坐标写入一次主世界出生点，确保复活不会回到死亡位置。
         PlayerMainWorldSpawnStore.SetMainWorldSpawn(

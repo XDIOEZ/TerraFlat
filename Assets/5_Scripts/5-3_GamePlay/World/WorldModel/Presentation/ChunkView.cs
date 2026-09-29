@@ -318,7 +318,7 @@ public sealed class ChunkView : MonoBehaviour
         chunk = chunkRuntime;
         navigationEnabled = includeNavigation;
         presentationComplete = false;
-        transform.position = new Vector3(chunk.Address.ChunkOrigin.X, chunk.Address.ChunkOrigin.Y, 0f);
+        RefreshLocalPresentationPosition();
         CacheRenderers();
         for (int i = 0; i < renderers.Count; i++)
             if (renderers[i] is IWorldAwareChunkViewRenderer worldAware)
@@ -327,6 +327,17 @@ public sealed class ChunkView : MonoBehaviour
         if (includeNavigation)
             navigationLease = chunk.AcquireLease(ChunkLeaseKind.Navigation);
         committedSubscription = world.Events.SubscribeChunkCommitted(chunk.Address, HandleChunkCommitted);
+    }
+
+    /// <summary>ChunkRuntime 地址保持规范坐标；ChunkView 只选择离本地玩家最近的显示/碰撞镜像。</summary>
+    public void RefreshLocalPresentationPosition()
+    {
+        if (chunk == null)
+            return;
+
+        Vector2 logicalOrigin = new Vector2(chunk.Address.ChunkOrigin.X, chunk.Address.ChunkOrigin.Y);
+        Vector2 projectedOrigin = WorldLocalPresentation.ProjectPosition(logicalOrigin);
+        transform.position = new Vector3(projectedOrigin.x, projectedOrigin.y, 0f);
     }
 
     /// <summary>先让地面可见，再补环境、碰撞、草地和导航。</summary>

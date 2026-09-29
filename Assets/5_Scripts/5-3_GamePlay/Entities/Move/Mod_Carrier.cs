@@ -332,10 +332,15 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, IWorldPushTarget
         Vector2 displacement = ResolveAllowedDisplacement(body.position, steeredVelocity * deltaTime);
         CurrentVelocity = displacement / deltaTime;
         CurrentForce = (CurrentVelocity - previousVelocity) * (Mass / deltaTime);
-        Vector2 next = WorldTopologyRuntime.NormalizePosition(body.position + displacement);
+        Vector2 next = body.position + displacement;
         body.velocity = Vector2.zero;
         body.position = next;
         item.transform.position = new Vector3(next.x, next.y, item.transform.position.z);
+        if (item.itemData?.transform != null)
+        {
+            Vector2 logical = WorldTopologyRuntime.NormalizePosition(next);
+            item.itemData.transform.position = new Vector3(logical.x, logical.y, item.transform.position.z);
+        }
         UpdateVisualFacing();
         TrackPhysicsMovement();
     }
@@ -382,14 +387,18 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, IWorldPushTarget
         Vector2 position = origin;
         for (int index = 0; index < steps; index++)
         {
-            Vector2 candidate = WorldTopologyRuntime.NormalizePosition(position + increment);
-            if (CanOccupyFootprint(candidate)) { position = candidate; continue; }
-            Vector2 x = WorldTopologyRuntime.NormalizePosition(position + new Vector2(increment.x, 0f));
-            if (CanOccupyFootprint(x)) position = x;
-            Vector2 y = WorldTopologyRuntime.NormalizePosition(position + new Vector2(0f, increment.y));
-            if (CanOccupyFootprint(y)) position = y;
+            Vector2 candidate = position + increment;
+            if (CanOccupyFootprint(WorldTopologyRuntime.NormalizePosition(candidate)))
+            {
+                position = candidate;
+                continue;
+            }
+            Vector2 x = position + new Vector2(increment.x, 0f);
+            if (CanOccupyFootprint(WorldTopologyRuntime.NormalizePosition(x))) position = x;
+            Vector2 y = position + new Vector2(0f, increment.y);
+            if (CanOccupyFootprint(WorldTopologyRuntime.NormalizePosition(y))) position = y;
         }
-        return WorldTopologyRuntime.ShortestDelta(origin, position);
+        return position - origin;
     }
 
     /// <summary>物理位移后刷新 Item 空间索引；跨区块时同时标记新位置的建筑存档。</summary>
@@ -399,11 +408,14 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, IWorldPushTarget
         if ((currentPosition - lastPhysicsPosition).sqrMagnitude <= 0.000001f)
             return;
 
+        Vector2 logicalCurrent = WorldTopologyRuntime.NormalizePosition(currentPosition);
+        Vector2 logicalPrevious = WorldTopologyRuntime.NormalizePosition(lastPhysicsPosition);
+
         ChunkMgr manager = ChunkMgr.ExistingInstance;
         if (manager != null &&
-            manager.ResolveRuntimeChunkOrigin(lastPhysicsPosition) != manager.ResolveRuntimeChunkOrigin(currentPosition))
+            manager.ResolveRuntimeChunkOrigin(logicalPrevious) != manager.ResolveRuntimeChunkOrigin(logicalCurrent))
         {
-            SaveDataMgr.Instance?.RecordRuntimeBuildingChangeAtPosition(item, lastPhysicsPosition);
+            SaveDataMgr.Instance?.RecordRuntimeBuildingChangeAtPosition(item, logicalPrevious);
             SaveDataMgr.Instance?.RecordRuntimeBuildingChange(item);
         }
 

@@ -396,8 +396,13 @@ public partial class Mod_PlayerDeathState : Module
             gameManager.BeginRespawnLoadingPresentation();
 
         _dyingPanel?.Close();
-        item.transform.position = new Vector3(respawnPosition.x, respawnPosition.y, 0f);
-        _player.Data.transform.position = item.transform.position;
+        Vector3 logicalRespawnPosition = WorldTopologyRuntime.NormalizePosition(
+            new Vector3(respawnPosition.x, respawnPosition.y, 0f));
+        Vector3 presentationRespawnPosition = WorldLocalPresentation.ProjectPosition(logicalRespawnPosition);
+        item.transform.position = presentationRespawnPosition;
+        if (_rb != null)
+            _rb.position = presentationRespawnPosition;
+        _player.Data.transform.position = logicalRespawnPosition;
         RestartChunkStreamingForRespawn();
 
         yield return null;

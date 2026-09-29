@@ -873,7 +873,7 @@ public class Inventory
     }
 
     // 当物品槽数据发生变化时的回调
-    private void OnItemSlotChanged(ItemSlot slot)
+    protected virtual void OnItemSlotChanged(ItemSlot slot)
     {
         // 防守性编程：检查slot和Data是否为空
         if (slot == null || Data == null || Data.itemSlots == null)

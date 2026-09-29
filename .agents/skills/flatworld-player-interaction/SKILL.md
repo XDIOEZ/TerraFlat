@@ -58,7 +58,7 @@ description: "Use when: 定位或修改 FlatWorld 的玩家实体、输入系统
 - Escape/Android 返回遵循“最上层可取消面板 → 手机抽屉 → 设置面板”的统一顺序；不要在尝试关闭顶部面板之前用 Gameplay Input Lock 拦截，否则持锁面板会让返回键表现为完全失效。
 - `Mover_SaveData.isRunning` 是玩家奔跑开关的持久字段；输入锁定只停止位移，不清空该字段，跨维度重建后须在解锁输入后恢复。
 - 玩家创建参数来自 `StreamingAssets/GameConfig/Players/player-creation-manifest.json`，由 `PlayerCreationTemplateCatalogService` 在新档案 `Player.Load()` 前解析并注入；MOD 可在 definition JSON 中增加 `playerCreationTemplates`，或用 `playerTemplate:ID` Patch 修改模板；已有存档不得再次套用模板。
-- `Player.prefab` 根的环绕控制只处理本地玩家且仅在 Wrapped 拓扑启用。
+- `Player.prefab` 根的环绕控制只处理本地玩家且仅在 Wrapped 拓扑启用；本地玩家 `Rigidbody2D/Transform` 在客户端局部平面连续移动，`PlayerWorldWrapController` 只把 Data 规范化并在跨周时发布重投影事件，禁止把玩家刚体瞬移回主世界坐标或把表现位置当存档权威。
 - 环绕世界副本以 URP Overlay 加入主相机栈；URP 14 的 `Renderer2D.Setup` 按每台相机的 `postProcessEnabled` 执行后处理，Base 不会自动延后到整个栈的末尾。`WrappedWorldCameraRenderer` 是后处理开关的唯一写入者：绑定时保存主相机配置，有副本时只在最后一台活动副本开启，无副本/停用/重绑时恢复主相机；副本沿用主相机的 Volume Mask 和采样位置。`ScreenPostProcessManager` 只合成 Volume 参数，禁止逐帧重新开启 Base，否则会重复处理或被后续世界补绘覆盖。判断行为应核对项目实际 URP 源码，不套用其它版本或渲染器结论。
 - 玩家实体非 Trigger 碰撞体固定使用 Player 层，不递归覆盖模块 Trigger 专用层。
 - UI 焦点联动 `flatworld-ui`，网络身份联动 `flatworld-networking`，移动可走性联动 `flatworld-navigation`。

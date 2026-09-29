@@ -30,7 +30,7 @@ public partial class Mover
         if (!manager.IsRuntimeWalkableLand(safePosition) && source is Mod_Carrier carrier &&
             carrier.TryFindDismount(out Vector2 shorePosition)) safePosition = shorePosition;
         carrierSafeChunkLease = manager.AcquireChunkLease(manager.ResolveWorldAddress(safePosition), ChunkLeaseKind.Simulation);
-        carrierSafePosition = safePosition;
+        carrierSafePosition = WorldTopologyRuntime.NormalizePosition(safePosition);
         carrierBodyType = rb.bodyType;
         carrierSimulated = rb.simulated;
         DrivenVelocity = ExternalVelocity = RequestedMoveInput = Vector2.zero;
@@ -115,9 +115,13 @@ public partial class Mover
     /// <summary>源提供世界位置；关闭物理积分后刚体与 Transform 只写同一份位置。</summary>
     private void ApplyCarrierPosition(Vector2 position)
     {
-        carrierLastPosition = WorldTopologyRuntime.NormalizePosition(position);
-        rb.position = carrierLastPosition;
-        item.transform.position = new Vector3(carrierLastPosition.x, carrierLastPosition.y, item.transform.position.z);
+        Vector2 logicalPosition = WorldTopologyRuntime.NormalizePosition(position);
+        Vector2 presentationPosition = WorldLocalPresentation.ProjectPosition(logicalPosition);
+        carrierLastPosition = presentationPosition;
+        rb.position = presentationPosition;
+        item.transform.position = new Vector3(presentationPosition.x, presentationPosition.y, item.transform.position.z);
+        if (item.itemData?.transform != null)
+            item.itemData.transform.position = new Vector3(logicalPosition.x, logicalPosition.y, item.transform.position.z);
         ItemMgr.Instance?.NotifyRuntimeItemMoved(item);
     }
 

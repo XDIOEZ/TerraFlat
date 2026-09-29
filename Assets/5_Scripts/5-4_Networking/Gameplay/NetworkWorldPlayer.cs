@@ -82,6 +82,15 @@ namespace FlatWorld.Networking.Gameplay
 
         public string DisplayName => displayName;
         public Player CorePlayer => corePlayer;
+        /// <summary>服务器权威逻辑坐标；协议、距离校验和存档禁止读取本机表现 Transform 代替它。</summary>
+        public Vector3 AuthoritativeLogicalPosition => IsValidPosition(authoritativePosition)
+            ? WorldTopologyRuntime.NormalizePosition(authoritativePosition)
+            : WorldTopologyRuntime.NormalizePosition(transform.position);
+
+        /// <summary>区块观察者使用的逻辑位置；本机拥有者可使用尚未发包的最新预测位置。</summary>
+        public Vector3 ObserverLogicalPosition => isOwned && corePlayer != null
+            ? WorldTopologyRuntime.NormalizePosition(corePlayer.transform.position)
+            : AuthoritativeLogicalPosition;
 
         [Server]
         public void InitializeOnServer(string playerName, int playerIndex)
@@ -102,11 +111,11 @@ namespace FlatWorld.Networking.Gameplay
         {
             base.OnStartClient();
             DontDestroyOnLoad(gameObject);
-            remoteTargetPosition = authoritativePosition;
+            remoteTargetPosition = WorldLocalPresentation.ProjectPosition(authoritativePosition);
             remoteSnapshotStartPosition = transform.position;
             remoteVelocity = authoritativeVelocity;
             if (!isOwned && IsValidPosition(authoritativePosition))
-                transform.position = authoritativePosition;
+                transform.position = remoteTargetPosition;
 
             ApplyPlayerColor(playerColor);
             EnsureNameLabel();
@@ -114,6 +123,7 @@ namespace FlatWorld.Networking.Gameplay
             EnsureCorePlayer(isOwned);
             NetworkChunkStreamingCoordinator.Register(transform);
             ItemNetworkStateSerialization.RuntimeStateChanged += OnRuntimeItemStateChanged;
+            WorldTopologyRuntime.LocalPlayerWrapped += HandleLocalPresentationWrap;
         }
 
         public override void OnStartLocalPlayer()
@@ -134,6 +144,7 @@ namespace FlatWorld.Networking.Gameplay
         public override void OnStopClient()
         {
             ItemNetworkStateSerialization.RuntimeStateChanged -= OnRuntimeItemStateChanged;
+            WorldTopologyRuntime.LocalPlayerWrapped -= HandleLocalPresentationWrap;
             NetworkChunkStreamingCoordinator.Unregister(transform);
 
             if (manualCameraFollow && followCamera != null)
@@ -212,6 +223,9 @@ namespace FlatWorld.Networking.Gameplay
         {
             if (corePlayer == null || !corePlayer.IsInitialized)
                 return;
+
+            if (corePlayer.Data?.transform != null)
+                corePlayer.Data.transform.position = WorldTopologyRuntime.NormalizePosition(corePlayer.transform.position);
 
             itemStateSendTimer -= Time.deltaTime;
             if (!itemStateDirty && itemStateSendTimer > 0f)
@@ -326,7 +340,7 @@ namespace FlatWorld.Networking.Gameplay
 
             Vector3 acceptedPosition = IsValidPosition(authoritativePosition)
                 ? authoritativePosition
-                : transform.position;
+                : WorldTopologyRuntime.NormalizePosition(transform.position);
             float maxStep = Mathf.Max(0.5f, movementSpeed * 0.35f);
             requestedPosition = CalculateAcceptedPosition(
                 acceptedPosition,
@@ -364,13 +378,17 @@ namespace FlatWorld.Networking.Gameplay
 
             BeginRemoteSnapshot(newPosition, authoritativeVelocity);
             float snapDistance = isOwned ? 4f : 10f;
-            Vector2 correctionDelta = WorldTopologyRuntime.ShortestDelta(transform.position, newPosition);
+            Vector3 comparisonPosition = isOwned && corePlayer != null
+                ? corePlayer.transform.position
+                : transform.position;
+            Vector2 correctionDelta = WorldTopologyRuntime.ShortestDelta(comparisonPosition, newPosition);
             if (correctionDelta.sqrMagnitude > snapDistance * snapDistance)
             {
-                Vector3 canonicalPosition = WorldTopologyRuntime.NormalizePosition(newPosition);
-                transform.position = canonicalPosition;
-                remoteSnapshotStartPosition = canonicalPosition;
-                SyncCorePlayerPosition(canonicalPosition);
+                Vector3 logicalPosition = WorldTopologyRuntime.NormalizePosition(newPosition);
+                Vector3 presentationPosition = WorldLocalPresentation.ProjectPosition(logicalPosition);
+                transform.position = isOwned ? logicalPosition : presentationPosition;
+                remoteSnapshotStartPosition = presentationPosition;
+                SyncCorePlayerPosition(presentationPosition, forceLocal: isOwned);
             }
         }
 
@@ -394,9 +412,18 @@ namespace FlatWorld.Networking.Gameplay
                 : networkSendInterval;
             lastRemoteSnapshotTime = now;
 
-            remoteSnapshotStartPosition = WorldTopologyRuntime.NormalizePosition(transform.position);
-            Vector2 shortestDelta = WorldTopologyRuntime.ShortestDelta(remoteSnapshotStartPosition, targetPosition);
-            remoteTargetPosition = remoteSnapshotStartPosition + new Vector3(shortestDelta.x, shortestDelta.y, 0f);
+            Vector3 presentationStart = transform.position;
+            Vector3 reprojectedStart = WorldLocalPresentation.ProjectPosition(
+                WorldTopologyRuntime.NormalizePosition(presentationStart));
+            if ((reprojectedStart - presentationStart).sqrMagnitude > 0.000001f)
+            {
+                presentationStart = reprojectedStart;
+                transform.position = presentationStart;
+                SyncCorePlayerPosition(presentationStart);
+            }
+
+            remoteSnapshotStartPosition = presentationStart;
+            remoteTargetPosition = WorldLocalPresentation.ProjectPosition(targetPosition);
             remoteVelocity = IsValidVelocity(velocity) ? velocity : Vector2.zero;
             remoteSnapshotElapsed = 0f;
             remoteSnapshotDuration = Mathf.Clamp(
@@ -425,7 +452,6 @@ namespace FlatWorld.Networking.Gameplay
             if (!IsValidPosition(visualPosition))
                 return;
 
-            visualPosition = WorldTopologyRuntime.NormalizePosition(visualPosition);
             transform.position = visualPosition;
             SyncCorePlayerPosition(visualPosition);
 
@@ -566,7 +592,7 @@ namespace FlatWorld.Networking.Gameplay
                 return;
 
             if (corePlayer != null && IsValidPosition(corePlayer.transform.position))
-                transform.position = corePlayer.transform.position;
+                transform.position = WorldTopologyRuntime.NormalizePosition(corePlayer.transform.position);
 
             if (manualCameraFollow)
             {
@@ -583,12 +609,15 @@ namespace FlatWorld.Networking.Gameplay
             try
             {
                 int networkGuid = unchecked((int)(0x40000000u | (netId & 0x3fffffffu)));
-                corePlayer = ItemMgr.Instance.LoadNetworkPlayer(displayName, networkGuid, transform.position, localControl);
+                Vector3 logicalSpawnPosition = localControl
+                    ? WorldTopologyRuntime.NormalizePosition(transform.position)
+                    : AuthoritativeLogicalPosition;
+                corePlayer = ItemMgr.Instance.LoadNetworkPlayer(displayName, networkGuid, logicalSpawnPosition, localControl);
                 if (corePlayer == null)
                     return;
 
                 if (localControl && !coreAvatarIsLocal)
-                    ItemMgr.Instance.PromoteNetworkPlayerToLocal(corePlayer, transform.position);
+                    ItemMgr.Instance.PromoteNetworkPlayerToLocal(corePlayer, logicalSpawnPosition);
 
                 coreAvatarIsLocal |= localControl;
                 if (!coreAvatarIsLocal)
@@ -611,7 +640,9 @@ namespace FlatWorld.Networking.Gameplay
                 chunkLoader?.SetExternalStreamingManaged(true);
 
                 HideNetworkProxyRenderer();
-                SyncCorePlayerPosition(transform.position);
+                SyncCorePlayerPosition(localControl
+                    ? corePlayer.transform.position
+                    : WorldLocalPresentation.ProjectPosition(AuthoritativeLogicalPosition));
                 itemStateDirty = true;
 
                 if (!isOwned && ItemNetworkStateSerialization.IsValidPayload(authoritativeItemState))
@@ -687,12 +718,12 @@ namespace FlatWorld.Networking.Gameplay
             return null;
         }
 
-        private void SyncCorePlayerPosition(Vector3 position)
+        private void SyncCorePlayerPosition(Vector3 position, bool forceLocal = false)
         {
             if (corePlayer == null || !IsValidPosition(position))
                 return;
 
-            if (!coreAvatarIsLocal)
+            if (!coreAvatarIsLocal || forceLocal)
             {
                 if (coreBody != null)
                 {
@@ -704,7 +735,21 @@ namespace FlatWorld.Networking.Gameplay
             }
 
             if (corePlayer.Data != null)
-                corePlayer.Data.transform.position = corePlayer.transform.position;
+                corePlayer.Data.transform.position = WorldTopologyRuntime.NormalizePosition(position);
+        }
+
+        /// <summary>本机锚点跨周时只重选远端玩家的显示镜像，服务器 SyncVar 逻辑坐标保持不变。</summary>
+        private void HandleLocalPresentationWrap()
+        {
+            if (isOwned || !IsValidPosition(authoritativePosition))
+                return;
+
+            Vector3 projected = WorldLocalPresentation.ProjectPosition(AuthoritativeLogicalPosition);
+            transform.position = projected;
+            remoteSnapshotStartPosition = projected;
+            remoteTargetPosition = projected;
+            remoteSnapshotElapsed = 0f;
+            SyncCorePlayerPosition(projected);
         }
 
         private void HideNetworkProxyRenderer()

@@ -198,7 +198,7 @@ public partial class ItemMgr
         if (!hasSavedData)
             playerData.Name_User = playerName;
         playerData.CurrentSceneName = SceneManager.GetActiveScene().name;
-        playerData.transform.position = spawnPosition;
+        playerData.transform.position = WorldLocalPresentation.ToLogical(spawnPosition);
         playerData.transform.rotation = Quaternion.identity;
         if (playerData.transform.scale == Vector3.zero)
             playerData.transform.scale = Vector3.one;
@@ -266,6 +266,8 @@ public partial class ItemMgr
 
     private void InitializeNetworkLocalPlayer(Player player, Vector3 spawnPosition)
     {
+        Vector3 logicalSpawnPosition = WorldLocalPresentation.ToLogical(spawnPosition);
+        Vector3 presentationSpawnPosition = WorldLocalPresentation.ProjectPosition(logicalSpawnPosition);
         Rigidbody2D body = player.GetComponent<Rigidbody2D>();
         if (body != null)
         {
@@ -277,8 +279,10 @@ public partial class ItemMgr
         if (_networkInitializedPlayers.Add(player))
             player.Load();
 
-        player.transform.position = spawnPosition;
-        player.Data.transform.position = spawnPosition;
+        player.transform.position = presentationSpawnPosition;
+        if (body != null)
+            body.position = presentationSpawnPosition;
+        player.Data.transform.position = logicalSpawnPosition;
 
         GameController controller = player.GetComponentInChildren<GameController>(true);
         controller?.SetGameplayInputLocked(false);
@@ -286,12 +290,14 @@ public partial class ItemMgr
 
     private static void ConfigureRemoteNetworkReplica(Player player, Vector3 spawnPosition)
     {
+        Vector3 logicalSpawnPosition = WorldLocalPresentation.ToLogical(spawnPosition);
+        Vector3 presentationSpawnPosition = WorldLocalPresentation.ProjectPosition(logicalSpawnPosition);
         player.SetProfileContext(
             localProfile: false,
             profileDataWasCreated: player.WasProfileDataCreated,
             runtimeProfileName: player.ProfileName);
-        player.transform.position = spawnPosition;
-        player.Data.transform.position = spawnPosition;
+        player.transform.position = presentationSpawnPosition;
+        player.Data.transform.position = logicalSpawnPosition;
 
         GameController controller = player.GetComponentInChildren<GameController>(true);
         controller?.SetGameplayInputLocked(true);
@@ -299,6 +305,7 @@ public partial class ItemMgr
         Rigidbody2D body = player.GetComponent<Rigidbody2D>();
         if (body != null)
         {
+            body.position = presentationSpawnPosition;
             body.velocity = Vector2.zero;
             body.bodyType = RigidbodyType2D.Kinematic;
             // 网络层已经按每帧生成平滑视觉坐标，关闭物理插值避免再次插值造成节拍抖动。

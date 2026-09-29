@@ -456,10 +456,10 @@ public sealed partial class WorldNavigationManager : SingletonAutoMono<WorldNavi
         }
     }
 
-    public void RegisterObstacle(int obstacleId, IEnumerable<Vector2Int> occupiedCells)
+    public void RegisterObstacle(long obstacleId, IEnumerable<Vector2Int> occupiedCells)
         => grid.RegisterBlocker(obstacleId, occupiedCells);
 
-    public void UnregisterObstacle(int obstacleId)
+    public void UnregisterObstacle(long obstacleId)
         => grid.UnregisterBlocker(obstacleId);
 
     public bool TryGetCell(Vector2 worldPosition, out uint penalty, out bool walkable)

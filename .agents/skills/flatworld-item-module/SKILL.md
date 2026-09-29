@@ -74,13 +74,17 @@ description: "Use when: 定位或修改 FlatWorld 的 Item/Module 组合架构�
 - 世界散落物的水体浮沉/漂流统一由 `WorldItemWaterSystem` + `WorldItemWaterRuntime` 根据最终世界位置派生；`ItemMgr.InstantiateItem` 只登记延迟检查，抛掷/投射等入口在轨迹结束后交回该系统，禁止把水体逻辑重新塞回 `Mod_Droping` 或只覆盖丢弃路径。
 - 水体运行态不写入库存 `ItemData/ModuleData`，也不能用 `CanBePickedUp=false` 表示“在水中”；拾取时无需再剔除临时水体模块，对象池复用由 `IItemPoolLifecycle` 清理运行态。世界散落物随水移动统一读取 `ChunkMgr.TryGetRuntimeWaterCurrent`，跨新版 ChunkView 时通过 `ItemWorldPlacement.TryAttachWorldModelTransientItem` 重绑临时归属。
 - 入水真实转换的源物品若需要一次性表现，实现 `IWaterEntryTransformEffect`；`WorldItemWaterSystem` 会在 `DespawnItem` 前调用，表现对象必须自行脱离源物品，避免源物品同帧回收时把粒子一起清掉。
-- Wrapped World 物理属于 `Physics2D/WrappedWorld/`，由 `WrappedWorldPhysicsAdapter` 订阅完整的 `RuntimeItemRegistered/RuntimeItemUnregistered` 注册链；不要改订阅仅覆盖 Instantiate 的网络生成事件。注入、加载、回池重绑和远程纯表现注销都必须经过该链，`ItemMgr` 不直接创建具体物理代理。
-- `WrappedItemPhysicsAdapter` 的碰撞体角色筛选在注册、重绑或结构失效时完成并缓存，不在每次 `FixedUpdate` 扫描层级。模块装卸与 Item.Load 发布 `NotifyRuntimeStructureChanged`；业务直接增删 Collider 等组件后也须发布此通知，已有形状的尺寸变化由适配器的 shape hash 同步。嵌套 Item 的碰撞体只由最近 Item 根负责，发送器、手持物和纯表现对象不得借父 Item 被镜像。
+- Wrapped World 的 Item 只保留真实根刚体适配：`WrappedWorldPhysicsAdapter` 经完整的 `RuntimeItemRegistered/RuntimeItemUnregistered` 链管理 `WrappedRigidbody2DAdapter`；禁止恢复逐 Item 的接缝 Collider Proxy 或为镜像对象新增 `Update/FixedUpdate`。
+- 世界 Item 的 `ItemData.transform.position`、存档与空间索引使用规范逻辑坐标；`Transform/Rigidbody2D` 可以位于当前客户端的局部世界镜像。玩家跨周时只在事件边界由 `ItemMgr.ReprojectRuntimeItemsToLocalAnchor` 批量重选镜像，连续运动期间不得逐帧把表现坐标强制归一化。
 - Physics2D 命中统一通过 `GameplayPhysics2D.ResolveComponent<T>` 解析源对象；通用 `ColliderSource2D` 标记不依赖 Item，Item 根下兄弟模块的查找仅留在 Gameplay 解析入口，不能把镜像识别成独立物品或库存对象。
 
 ## 验证
 
-- 单机世界掉落态统一经 `DroppedItemService.Spawn/SpawnLoot` 进入独立 `FlatWorld.DroppedItems.Core` ECS World。位置、数量、短期运动属于组件；`ItemData` 只保留库存冷载荷，不调用 Item.Load、业务模块 Tick 或创建逐物品 Collider。远处普通矿点与冰山由稳定 GUID 的 `NaturalEntityData` 和 BRG 表现，靠近时按生态状态覆盖提升为 Item，远离后保存状态并回收壳；降级不能写入删除差量。树、已安装建筑、手持物和飞行/附着中的投射物仍保持原实体语义。
+- 单机世界掉落态统一经 `DroppedItemService.Spawn/SpawnLoot` 进入独立 `FlatWorld.DroppedItems.Core` ECS World。位置、数量、短期运动属于组件；`ItemData` 只保留库存冷载荷，不调用 Item.Load、业务模块 Tick 或创建逐物品 Collider。
+- 正式 AI 与静态资源共用 `Entities/WorldECS/WorldEntityRuntime` 持有的同一个 Entities World；`ItemMgr` 只调用统一 Tick，AI 是 `IWorldEntityRuntimeModule` 运行器。新增领域能力不能再次 `new World`；诊断隔离 World 例外。动物只额外装配 AI 组件，静物不得进入感知/移动查询。
+- 自然生成经 `NaturalEntityEcsProfileCompiler` 按模块组合编译，不按物种 ID/矿名前缀分流。`NaturalEntitySimulation` 仅桥接生成来源和坐标；生命复用 `AiecsVital`，成长/耐候由共享 `EntityGrowth/EntityClimate` 及 `EntityCapabilitySystem` 批量计算。当前近端采集、受击及被动产量仍由完整 Item 交接；复杂树冠结果、蜂巢、耕地等未迁移组合保留 Item，不能宣称全部模块已经 ECS 化或静默丢功能。
+- 静态资源的配置刷新以当前定义为准，已保存树龄、冷热负担和实例生命保留；天然初始化只执行一次。历史耐候读取冻结季节历史，当前局部热源不能延伸到过去。自然物句柄包含 World 代际，过期 Chunk 回调不能命中新世界复用的整数 ID。
+- ECS 自然物必须继续维护 `worldGridOccupancy` 的导航占格；升格前注销 ECS 占格让 `WorldNavigationItemFootprintBridge` 接管，降级后再注册，禁止 BRG 化后让 AI 穿过树木。自然物降级不能写删除差量；真正死亡/采集才通过生态删除和续生链提交。
 - 旧 Item 返回型扩展通过 `ScheduleLegacyDrop` 在本轮模块更新完成后移交，禁止在 Item.Load 的模块栈内销毁宿主。联机仍使用已有 Item 权威链，不能把单机 ECS 路径当成已完成网络迁移。
 - ECS 与 Item 兼容路径的浮沉数值统一读取 `WorldItemWaterRules`；达到有效阈值即下沉，液体倍率只改变浮力阈值，水线、时长和水花曲线保持同一来源。禁止在 ECS 分支复制另一套常量或使用不同的临界比较；纯数值校验入口为 `FlatWorld/诊断/验证掉落物水体规则`。
 - `FlatWorld/诊断/验证掉落物 ECS` 仅使用隔离 ECS World、内存快照和预览场景，适用于不触碰真实存档的回归。

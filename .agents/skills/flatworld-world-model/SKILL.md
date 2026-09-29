@@ -19,12 +19,14 @@ description: "Use when: 定位或修改 FlatWorld 的纯 WorldModel、Chunk 运�
 
 ## 边界
 
+- `ChunkNaturalItemRenderer` 位于 NaturalItems 子节点，BRG Owner 必须从所属 ChunkView 查找；自然物使用按 GUID 区分的负实例槽，不能复用地块单格槽覆盖同格其它实体。实体 World 由 `WorldEntityRuntime` 与 AI 共用，解绑先保存/撤销实例与导航，最后才释放世界。
+
 - `5-0_WorldModel` 保持纯 C#，后台生成不得访问 Unity 对象。
 - `ChunkRuntime + ChunkTerrainData` 是权威状态；Tilemap、Collider 和 Renderer 只是表现。
 - 正式地块写入统一经 `ChunkTerrainData.WriteCell` 同步核心数据、固定视线遮挡位及版本；生成时建初始遮挡位，建筑和机械占地通过独立动态位叠加，读者只读合成结果。
 - 墙体裂缝等耐久表现必须从 `ChunkTerrainData` 的 `flatworld.tileBuilding.damage` 权威层推导；`IChunkViewRenderer.Bind` 时重建、监听 `TerrainChangeKind.Environment/Cell/TileStack` 增量刷新、`Unbind` 时解除订阅，禁止在表现组件中保存第二份生命值。
 - 墙脚、岸线等依赖邻接关系的表现除监听自身 `ChunkTerrainData.Changed` 外，还必须监听正交相邻区块的共享边界变化；`ChunkCommitted` 只表示邻区就绪，不能覆盖后续拆除或放置造成的运行时更新。
-- Ground / Water / Back / Blocking 用 `ChunkGroundMeshRenderer` 按 Chunk 和纹理批量绘制；单格只更新四个顶点。Blocking Tilemap 只保留碰撞。草、自然物、机械等扩展层继续共用 `ChunkBatchRendererGroupService` 的 Owner，Owner 重建时各层重提。
+- Ground / Water / Back / Blocking 用 `ChunkGroundMeshRenderer` 按 Chunk 和纹理批量绘制；Ground 对可安全限制在单格内的 Sprite 使用单 Quad + `GraphicsBuffer` 单格数据，单个纹理/材质批次固定 2 个三角面，单格变化只上传一条 GPU Cell 记录；外扩 Sprite 与其它层保留局部顶点路径。Blocking Tilemap 只保留碰撞。草、自然物、机械等扩展层继续共用 `ChunkBatchRendererGroupService` 的 Owner，Owner 重建时各层重提。
 - BRG 没有 `SpriteRenderer/TilemapRenderer` 的 Sorting Layer 字段，不能指望较低的 Render Queue 跨 Sorting Layer 压到 `Tilemap` 层下面；当前地形 BRG 使用 Default 排序域和 2987~2992 队列。草等需要盖在地形之上、普通世界 Sprite 之下的表现必须与 BRG 共用 Default 排序域，并使用高于 2992、低于 3000 的透明队列。玩家、生物、建筑和世界物品的 `WorldSorting` JSON 应统一使用比 Default 更靠前的 `Player` 排序层，再由同层 Y 轴决定实体间前后；只提高 Default 层内 Order 无法保证实体不被 BRG 地形盖住。
 - 地形 Sprite 几何只经资源会话级 `SharedSpriteMeshCache` 构造，最终 Tile/MOD/Liquid 目录和 Palette 在 Ready 前预热，动态 Sprite 保留懒加载兜底。普通流送与 `ReleaseUnusedBackend` 不清 Mesh；`BatchMeshID` 仅存当前 Backend，退出世界销毁 BRG 后再次进入必须重新注册共享 Mesh。缓存清理先通知 BRG 解绑再销毁 Mesh，禁止反向依赖 Batch 内部实现。
 - 世界内 F5 不销毁 WorldRuntime、Chunk、租约或 BRG；`ChunkTilemapRenderer` 随 Bind/Unbind 成对订阅 `GameRes.ResourcesReloaded`，发布后用原权威地形刷新碰撞映射和批量视觉。候选期间不预热或清除共享 Mesh；运行中液体身份集合及数字索引必须不变，因为原世界和后台生成器仍持有原编号表。
@@ -34,6 +36,7 @@ description: "Use when: 定位或修改 FlatWorld 的纯 WorldModel、Chunk 运�
 - 水面四角 `FlowX/FlowY` 对河流保存下游速度，对海洋保存当前格风向；海浪和岸边泡沫读取顶点数据，不再由材质 `_FlowDirection` 独立决定方向。
 - `ChunkMgr` 随 `WorldManager` 常驻 DDOL；`ChunkView` 及其自然物表现必须挂到当前世界场景的独立根节，禁止以 `ChunkMgr.transform` 作为活动或池化 View 的父级。
 - `ChunkView` Prefab 必须直接装配 `NaturalItems/ChunkNaturalItemRenderer` 与 `LightOccluders/ChunkLightOccluderRenderer`，并由根组件序列化引用；流送时不在 `Awake` 动态添加表现组件，缺失时明确报错。
+- 循环世界中 `ChunkRuntime.Address/ChunkOrigin` 永远是规范逻辑坐标；`ChunkView` 根 Transform 只由 `WorldLocalPresentation` 选择离本地玩家最近的显示/碰撞镜像。窗口变化或本地玩家跨周时可事件式重投影 View，禁止把投影后的 Transform 写回 WorldModel，也禁止为同一 Chunk 复制整套物理对象。
 - 相机驱动的本地区块窗口必须覆盖真实视口，并按相机半宽/半高分别计算 X/Y 距离；禁止为超宽屏取最大边后构造巨大正方形窗口。普通玩法可以受自动视距上限保护，但管理员无限视野不能继续被普通上限截断；管理员手动增加加载距离只作为最低加载圈数，不能关闭相机自动扩圈。
 - 区块窗口变化时必须取消已经离开当前数据窗口、但仍处于 pending/后台队列中的旧生成请求；不能只逐出已完成 Chunk。否则 FIFO 生成队列会持续计算过期区块，导致新进入视野的区块长期饥饿并显示为黑块。
 - 已经排队但仍属于当前窗口的生成请求也必须随玩家当前位置重新排序；只在首次入队时按距离排序会让后来进入镜头的新区块卡在历史队列尾部。

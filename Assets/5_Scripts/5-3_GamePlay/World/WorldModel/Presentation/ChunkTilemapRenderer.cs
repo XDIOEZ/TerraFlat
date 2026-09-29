@@ -7,7 +7,7 @@ using Unity.Profiling;
 
 /// <summary>
 /// Ground / Water / Back / Blocking 共用 Chunk Mesh，扩展表现仍借用 BRG Owner。
-/// Blocking Tilemap 只负责碰撞；地形变更只上传对应格的顶点数据。
+/// Blocking Tilemap 只负责碰撞；Ground 单格变更只上传 GPU Cell 数据，其余层沿用局部顶点更新。
 /// </summary>
 public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer, IWorldAwareChunkViewRenderer
 {
@@ -746,6 +746,24 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRend
         ChunkTerrainData terrain = boundChunk?.Terrain;
         if (terrain != null)
             ChunkBatchRendererGroupService.ClearVisual(this, GetBatchSlotKey(terrain, x, y, layer));
+    }
+
+    /// <summary>实体使用独立的负槽位域，同一格多个自然物不会互相覆盖，正槽位仍保留给地块层。</summary>
+    internal void SetNaturalEntityVisual(int guid, Sprite sprite, Material material,
+        Matrix4x4 localToWorld, Color tint, Vector3 sortingPosition)
+    {
+        if (guid <= 0) throw new ArgumentOutOfRangeException(nameof(guid));
+        if (boundChunk?.Terrain == null) throw new InvalidOperationException("自然物提交前必须绑定区块。");
+        var data = ChunkBatchRendererGroupService.InstanceData.Create(localToWorld, Vector4.zero, Vector4.zero, tint);
+        data.Transform0.w = -1f;
+        ChunkBatchRendererGroupService.SetVisual(this, -guid,
+            new ChunkBatchRendererGroupService.Visual(ChunkBatchRendererGroupService.VisualLayer.NaturalStatic,
+                sprite, material, data, sortingPosition));
+    }
+
+    internal void ClearNaturalEntityVisual(int guid)
+    {
+        if (guid > 0) ChunkBatchRendererGroupService.ClearVisual(this, -guid);
     }
 
     private void ClearBatchVisual(ChunkTerrainData terrain, int x, int y,

@@ -89,6 +89,8 @@ public partial class GameManager
     public const string GameSaveBatchCancelButtonKey = "取消批量删除按钮";
     public const string GameSaveBatchDialogConfirmButtonKey = "二次确认删除按钮";
     public const string GameSaveBatchDialogCancelButtonKey = "二次确认取消按钮";
+    public const string GameSaveDeleteDialogTitleTextKey = "批量删除确认标题";
+    public const string GameSaveDeleteDialogConfirmTextKey = GameSaveBatchDialogConfirmButtonKey + "_文字";
     public const string GameSaveBatchWarningTextKey = "批量删除确认提示";
     public const string GameSaveBackButtonKey = "返回按钮";
     public const string GameSavePlayerInputKey = "选择或新增玩家名称输入框";
@@ -1272,8 +1274,8 @@ public partial class GameManager
         panel.SetButtonOnClick(GameSaveBatchDeleteButtonKey, () => saveList?.BeginBatchDeleteMode());
         panel.SetButtonOnClick(GameSaveBatchConfirmButtonKey, () => saveList?.OpenBatchDeleteConfirmation());
         panel.SetButtonOnClick(GameSaveBatchCancelButtonKey, () => saveList?.CancelBatchDeleteMode());
-        panel.SetButtonOnClick(GameSaveBatchDialogConfirmButtonKey, () => saveList?.ConfirmBatchDelete());
-        panel.SetButtonOnClick(GameSaveBatchDialogCancelButtonKey, () => saveList?.CancelBatchDeleteConfirmation());
+        panel.SetButtonOnClick(GameSaveBatchDialogConfirmButtonKey, () => saveList?.ConfirmDelete());
+        panel.SetButtonOnClick(GameSaveBatchDialogCancelButtonKey, () => saveList?.CancelDeleteConfirmation());
         panel.SetButtonOnClick(GameSaveBackButtonKey, () =>
         {
             saveList?.ResetBatchDeleteState();
@@ -1738,44 +1740,15 @@ public partial class GameManager
 
     public void OnClick_DeleteSave_Button()
     {
-        SaveDataMgr saveDataMgr = SaveDataMgr.Instance;
-        if (saveDataMgr == null)
-        {
-            Debug.LogWarning("SaveAndLoad组件未绑定！");
-            return;
-        }
-
-        BasePanel panel = GetSaveManagerPanel();
-        string selectedSaveName = SaveDataManager_UI.Instance?.SelectedSaveName;
-        if (string.IsNullOrWhiteSpace(selectedSaveName) ||
-            string.Equals(selectedSaveName, GameSaveNoSelectionText, StringComparison.Ordinal))
-        {
-            Debug.LogWarning("请先选择要删除的存档");
-            return;
-        }
-
-        saveDataMgr.DeleteSave(saveDataMgr.UserSavePath, selectedSaveName);
-        if (saveDataMgr.SaveData != null &&
-            string.Equals(saveDataMgr.SaveData.saveName, selectedSaveName, StringComparison.Ordinal))
-        {
-            saveDataMgr.SaveData = null;
-            saveDataMgr.CurrentContrrolPlayerName = string.Empty;
-        }
-
         SaveDataManager_UI saveList = SaveDataManager_UI.Instance;
-        if (saveList != null)
+        if (saveList == null)
         {
-            saveList.Refresh();
-            saveList.ClearSaveSelection();
+            Debug.LogWarning("存档选择界面未绑定，已取消删除请求。");
+            return;
         }
-        else
-        {
-            panel?.SetText(GameSaveSelectedTextKey, GameSaveNoSelectionText);
-            panel?.SetInputFieldText(GameSavePlayerInputKey, string.Empty);
-            Button deleteButton = panel?.GetButton(GameSaveDeleteButtonKey);
-            if (deleteButton != null)
-                deleteButton.interactable = false;
-        }
+
+        // 单个存档删除必须先经过确认层，按钮本身不再直接触碰磁盘。
+        saveList.OpenSingleDeleteConfirmation();
     }
 
     // 保留旧拼写入口，避免已有 Inspector 事件丢失。

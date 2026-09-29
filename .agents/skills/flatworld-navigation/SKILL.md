@@ -18,6 +18,8 @@ description: "Use when: 定位或修改 FlatWorld 的稀疏网格寻路、16×16
 
 ## 不变量
 
+- 导航阻挡来源 ID 使用 `long`：Unity InstanceID 保持原有有符号 32 位值，数据实体使用高 32 位的来源域。不得用“很小的负 int”猜一个不冲突的区间；升降级交接须先撤销旧来源再登记新来源。
+
 - 权威链：Tile 栈顶可走性/权重 + 动态建筑占地 → 脏格/脏区 → 稀疏 `WorldNavigationGrid`。
 - 新运行时世界注册导航读取有效 Ground 与独立 LiquidDepth。地块基础 NavigationCost 不随抽水改变，`WorldLiquidSystem.GetNavigationCost` 按当前液体定义合成有限高成本，抽干自动回到原地面成本；水仍可走，由带权寻路决定绕行。平台同时遮断液体接触与液体导航成本。
 - 短距离直视线快捷路径只能在中间格代价不高于起终点代价时使用；包含河流等高代价格时必须进入带权寻路，不能只检查可走性。

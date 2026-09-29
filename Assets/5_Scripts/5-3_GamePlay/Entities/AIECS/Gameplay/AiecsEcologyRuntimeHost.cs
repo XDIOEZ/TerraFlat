@@ -15,7 +15,7 @@ namespace FlatWorld.AIECS.Gameplay
     /// </summary>
     [DisallowMultipleComponent]
     [AddComponentMenu("FlatWorld/AIECS/正式生态宿主")]
-    public sealed partial class AiecsEcologyRuntimeHost : MonoBehaviour, IAiEcologyBackend
+    public sealed partial class AiecsEcologyRuntimeHost : MonoBehaviour, IAiEcologyBackend, IWorldEntityRuntimeModule
     {
         #region 配置与记录
 
@@ -69,6 +69,7 @@ namespace FlatWorld.AIECS.Gameplay
 
         public static AiecsEcologyRuntimeHost Active => active;
         public bool IsReady => _bridge != null;
+        public string RuntimeModuleId => "entity.ai";
 
         #endregion
 
@@ -96,10 +97,12 @@ namespace FlatWorld.AIECS.Gameplay
             // GM 开发场景与正式生态共享同一套玩家/导航资源，但任何时刻只允许一个模拟真正运行。
             if (AiecsPlayground.Active?.HasActiveScenario == true)
             {
+                WorldEntityRuntime.DevelopmentSuspended = true;
                 if (_bridge != null)
                     DisposeSimulation();
                 return;
             }
+            WorldEntityRuntime.DevelopmentSuspended = false;
 
             if (_bridge == null)
                 TryStartSimulation();
@@ -125,6 +128,15 @@ namespace FlatWorld.AIECS.Gameplay
                 _startFailed = false;
                 return;
             }
+
+        }
+
+        /// <summary>动物能力由统一实体入口驱动；Update 只准备依赖，不再另起一套玩法 Tick。</summary>
+        public void TickEntities(float deltaTime)
+        {
+            if (deltaTime <= 0f || !_worldPrepared || _bridge == null || _player == null ||
+                AiecsPlayground.Active?.HasActiveScenario == true || !_bridge.IsCurrentWorld(_player))
+                return;
 
             float step = 1f / BaseSimulationHz;
             double now = Time.timeAsDouble;
@@ -166,6 +178,9 @@ namespace FlatWorld.AIECS.Gameplay
             }
         }
 
+        public void CompleteEntityJobs() => _bridge?.Simulation?.Complete();
+        public void ReleaseEntities() => DisposeSimulation();
+
         private void LateUpdate()
         {
             if (_bridge == null || _renderer == null || _player == null)
@@ -178,7 +193,15 @@ namespace FlatWorld.AIECS.Gameplay
 
             ActorShadowManager shadowManager = ActorShadowManager.GetInstance();
             _renderer.ShadowOpacity = shadowManager != null ? shadowManager.GetShadowOpacity(_player.gameObject.scene) : 0.4f;
-            _renderer.Draw(_bridge.Simulation, _camera, _bridge.Navigation.Read().Domain);
+            _renderer.Draw(_bridge.Simulation, _camera, _bridge.Navigation.Read().Domain,
+                IsRuntimeEntityPresentationReady);
+        }
+
+        /// <summary>由 Gameplay 层查询 ChunkMgr，避免 Presentation 程序集反向依赖 GamePlay。</summary>
+        private static bool IsRuntimeEntityPresentationReady(Vector2 position)
+        {
+            ChunkMgr chunkManager = ChunkMgr.ExistingInstance;
+            return chunkManager == null || chunkManager.IsRuntimeEntityPresentationReady(position);
         }
 
         private void OnDestroy()
@@ -304,17 +327,20 @@ namespace FlatWorld.AIECS.Gameplay
             try
             {
                 string[] ids = _actorIds.ToArray();
+                World entityWorld = WorldEntityRuntime.GetOrCreate(
+                    ChunkMgr.ExistingInstance.ResolveWorldAddress(_player.transform.position).DimensionId);
                 _bridge = new AiecsGameplayBridge(
                     _player,
                     navigation.GetSharedNavigation(),
                     ids,
                     _actorFactions.ToArray(),
                     0f,
-                    _fleeFromHostiles.ToArray());
+                    _fleeFromHostiles.ToArray(), sharedWorld: entityWorld);
                 _renderer = new AiecsWorldRenderer(_catalog, ids, _player.gameObject.scene,
                     AiecsWorldSortingResolver.Resolve());
                 RestoreResidentSnapshots();
                 _simulationTime = Time.timeAsDouble;
+                WorldEntityRuntime.Register(entityWorld, this);
                 Debug.Log($"[AIECS] 正式 ECS 生态已启动：{ids.Length} 个 Actor 定义。", this);
             }
             catch (Exception exception)
@@ -327,6 +353,7 @@ namespace FlatWorld.AIECS.Gameplay
 
         private void DisposeSimulation()
         {
+            WorldEntityRuntime.Unregister(this);
             if (_bridge != null)
             {
                 _pendingRestores.Clear();
@@ -362,6 +389,7 @@ namespace FlatWorld.AIECS.Gameplay
         {
             if (owner == null || AiecsPlayground.Active != owner)
                 return;
+            WorldEntityRuntime.DevelopmentSuspended = true;
             DisposeSimulation();
             _startFailed = false;
         }

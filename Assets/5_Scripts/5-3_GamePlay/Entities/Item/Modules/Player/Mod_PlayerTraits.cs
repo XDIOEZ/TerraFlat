@@ -336,16 +336,18 @@ public class Mod_PlayerTraits : Module
 
         Vector3 destination = gameController.GetMouseWorldPosition(screenPosition);
         destination.z = target.transform.position.z;
+        Vector3 logicalDestination = WorldTopologyRuntime.NormalizePosition(destination);
+        Vector3 presentationDestination = WorldLocalPresentation.ProjectPosition(logicalDestination);
         Rigidbody2D body = target.GetComponent<Rigidbody2D>();
         body.velocity = Vector2.zero;
         body.angularVelocity = 0f;
-        body.position = destination;
-        target.transform.position = destination;
-        target.Data.transform.position = destination;
+        body.position = presentationDestination;
+        target.transform.position = presentationDestination;
+        target.Data.transform.position = logicalDestination;
         ChunkMgr.ExistingInstance?.ResetChunkLoadQueue();
         target.itemMods.GetMod_ByID<Mod_ChunkLoader>(ModText.ChunkLoader)?.RefreshChunksAroundPlayer();
 
-        Debug.Log($"[GM] 玩家已传送到位置: {destination}");
+        Debug.Log($"[GM] 玩家已传送到逻辑位置: {logicalDestination}");
         return true;
     }
 

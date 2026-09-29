@@ -60,8 +60,10 @@ namespace FlatWorld.AIECS
     {
         public float Height, TargetHeight, CruiseHeight, Speed, GroundSpeed;
         public float Stamina, StaminaMaximum, DrainPerSecond, RecoveryPerSecond;
+        public float TakeoffRecoveryRatio, TakeoffChancePerSecond;
         public float BaseWaterPushSpeed;
         public byte Airborne;
+        public byte Recovering; // 耐力耗尽后进入恢复态，达到阈值后才允许随机选择起飞。
     }
 
     public struct AiecsReproduction : IComponentData

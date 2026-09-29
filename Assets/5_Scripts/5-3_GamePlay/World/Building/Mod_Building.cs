@@ -928,7 +928,10 @@ public partial class Mod_Building : Module, IIncomingDamageRule
         Data.BuildingPrefabId = ResolveBuildingPrefabId(item?.itemData?.IDName, Data);
         Data.SummonerPrefabId = ResolveSummonerPrefabId(Data.BuildingPrefabId, Data);
 
-        item.transform.position = NormalizePlacement(item.transform.position);
+        Vector3 logicalPlacement = NormalizePlacement(item.transform.position);
+        item.transform.position = WorldLocalPresentation.ProjectPosition(logicalPlacement);
+        if (item.itemData?.transform != null)
+            item.itemData.transform.position = logicalPlacement;
         item.transform.rotation = Quaternion.identity;
         item.transform.localScale = Vector3.one;
         item.SetInHand(false);
@@ -1746,7 +1749,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule
                 return;
         }
 
-        GhostShadow.transform.position = mouse;
+        GhostShadow.transform.position = WorldLocalPresentation.ProjectPosition(mouse);
         GhostShadow.UpdateAlpha(1f);
         BuildingPlacementLifecycle.GetExtension(item)?.ApplyPreview(GhostShadow);
         GhostShadow.UpdateColor(!ValidatePlacement(mouse, authorityPosition, out _));

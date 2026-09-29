@@ -393,6 +393,12 @@ public sealed class RuntimeItemDefinition
     public bool IsActor { get; }
     public JObject ActorEcs { get; }
 
+    /// <summary>定义编译后的模块描述；纯数据系统可据此装配能力，不需要实例化 Module Prefab。</summary>
+    public IReadOnlyList<RuntimeItemModuleDefinition> ModuleDefinitions { get; }
+
+    /// <summary>世界侧可直接判断拾取语义，避免为了筛选 ECS 实体克隆 ItemData。</summary>
+    public bool CanBePickedUp => templateData?.Stack?.CanBePickedUp == true;
+
     /// <summary>由当前内容编译的共享根级感知几何；非 Actor 通过旧对象 Bridge 感知。</summary>
     internal FlatWorld.Geometry.PerceptionShape2D[] ActorPerceptionShapes { get; }
     public IReadOnlyList<FlatWorld.Geometry.PerceptionShape2D> PerceptionShapes => ActorPerceptionShapes; // 数据后端只读共享几何。
@@ -488,6 +494,22 @@ public sealed class RuntimeItemDefinition
         moduleParameters = parameters ?? new Dictionary<string, string>(StringComparer.Ordinal);
         modulePrefabIds = prefabIds ?? new Dictionary<string, string>(StringComparer.Ordinal);
         visualStateSprites = stateSprites ?? new Dictionary<string, Sprite>(StringComparer.OrdinalIgnoreCase);
+
+        var modules = new List<RuntimeItemModuleDefinition>(moduleParameters.Count);
+        foreach (KeyValuePair<string, string> pair in moduleParameters)
+        {
+            string stableName = pair.Key ?? string.Empty;
+            modulePrefabIds.TryGetValue(stableName, out string prefabId);
+            ModuleData moduleData = null;
+            templateData?.ModuleDataDic?.TryGetValue(stableName, out moduleData);
+            modules.Add(new RuntimeItemModuleDefinition(
+                stableName,
+                moduleData?.ID ?? string.Empty,
+                prefabId ?? string.Empty,
+                pair.Value,
+                moduleData?.isRunning != false));
+        }
+        ModuleDefinitions = modules.AsReadOnly();
     }
 
     /// <summary>按状态名读取已由资源目录统一持有的额外 Sprite。</summary>
@@ -543,4 +565,24 @@ public sealed class RuntimeItemDefinition
             ? prefabId
             : fallbackId;
     }
+}
+
+/// <summary>运行时模块的不可变纯数据描述，供 ECS/批处理等无 GameObject 路径编译能力。</summary>
+public sealed class RuntimeItemModuleDefinition
+{
+    public RuntimeItemModuleDefinition(string stableName, string moduleId, string prefabId,
+        string parametersJson, bool enabled)
+    {
+        StableName = stableName ?? string.Empty;
+        ModuleId = moduleId ?? string.Empty;
+        PrefabId = prefabId ?? string.Empty;
+        ParametersJson = parametersJson;
+        Enabled = enabled;
+    }
+
+    public string StableName { get; }
+    public string ModuleId { get; }
+    public string PrefabId { get; }
+    public string ParametersJson { get; }
+    public bool Enabled { get; }
 }

@@ -696,7 +696,8 @@ namespace FlatWorld.Networking.Gameplay
                 return false;
             }
 
-            if (WorldTopologyRuntime.Distance(connection.identity.transform.position, item.transform.position) > MaxPickupDistance)
+            if (WorldTopologyRuntime.Distance(
+                    GetConnectionLogicalPosition(connection), GetLogicalItemPosition(item)) > MaxPickupDistance)
             {
                 item = null;
                 return false;
@@ -815,6 +816,8 @@ namespace FlatWorld.Networking.Gameplay
             if (!ItemNetworkStateSerialization.IsValidPayload(payload))
                 return;
 
+            start = WorldTopologyRuntime.NormalizePosition(start);
+            end = WorldTopologyRuntime.NormalizePosition(end);
             requestedClientSpawns.Add(item.itemData.Guid);
             NetworkClient.Send(new NetworkItemSpawnRequest
             {
@@ -834,9 +837,9 @@ namespace FlatWorld.Networking.Gameplay
                 return;
 
             Vector2 start = WorldTopologyRuntime.NormalizePosition(request.StartPosition);
-            Vector2 end = start + Vector2.ClampMagnitude(
+            Vector2 end = WorldTopologyRuntime.NormalizePosition(start + Vector2.ClampMagnitude(
                 WorldTopologyRuntime.ShortestDelta(start, request.EndPosition),
-                MaxDropDistance);
+                MaxDropDistance));
             Vector3 scale = SanitizeScale(request.Scale);
             Item item = null;
 
@@ -875,6 +878,8 @@ namespace FlatWorld.Networking.Gameplay
             if (!NetworkServer.active || !CanSynchronizeWorldItem(item))
                 return false;
 
+            start = WorldTopologyRuntime.NormalizePosition(start);
+            end = WorldTopologyRuntime.NormalizePosition(end);
             byte[] payload = CaptureSafely(item);
             if (!ItemNetworkStateSerialization.IsValidPayload(payload))
                 return false;
@@ -946,7 +951,7 @@ namespace FlatWorld.Networking.Gameplay
                 Hash = message.PayloadHash,
                 Payload = message.Payload,
                 SpawnIfMissing = true,
-                Position = item.transform.position,
+                Position = GetLogicalItemPosition(item),
                 Rotation = item.transform.rotation,
                 Scale = item.transform.localScale
             };
@@ -1113,7 +1118,7 @@ namespace FlatWorld.Networking.Gameplay
                     module.WriteData(state);
                     Mod_Building.SetInstalledDataState(placedData);
                     if (!Mod_Building.ValidateMechanicalDataPlacement(placedData,
-                            connection.identity.transform.position, MaxBuildingRequestDistance, out reason))
+                            GetConnectionLogicalPosition(connection), MaxBuildingRequestDistance, out reason))
                         throw new InvalidOperationException(reason);
                     materialConsumed = true;
                     response.RemainingAmount = ConsumeAuthoritativeBuildingMaterial(
@@ -1139,7 +1144,7 @@ namespace FlatWorld.Networking.Gameplay
                     if (building == null)
                         throw new MissingComponentException($"{request.ItemId} 缺少建筑模块");
 
-                    if (!building.ValidateAuthoritativePlacement(connection.identity.transform.position, out reason))
+                    if (!building.ValidateAuthoritativePlacement(GetConnectionLogicalPosition(connection), out reason))
                         throw new InvalidOperationException(reason);
 
                     materialConsumed = true;
@@ -1253,7 +1258,7 @@ namespace FlatWorld.Networking.Gameplay
                 if (!building.TryCreateDismantledSummoner(out summoner, out string reason))
                     throw new InvalidOperationException(reason);
 
-                Vector3 position = summoner.transform.position;
+                Vector3 position = GetLogicalItemPosition(summoner);
                 if (!PublishServerSpawn(summoner, position, position, 0.05f, false))
                     throw new InvalidOperationException("服务端无法发布建筑召唤器");
 
@@ -1344,12 +1349,12 @@ namespace FlatWorld.Networking.Gameplay
                 MechanicalNode mechanical = MechanicalWorld.GetById(request.BuildingGuid);
                 if (mechanical != null)
                 {
-                    if (WorldTopologyRuntime.Distance(connection.identity.transform.position,
-                            mechanical.Snapshot.transform.position) > MaxPickupDistance)
+                    if (WorldTopologyRuntime.Distance(GetConnectionLogicalPosition(connection),
+                            WorldTopologyRuntime.NormalizePosition(mechanical.Snapshot.transform.position)) > MaxPickupDistance)
                         throw new InvalidOperationException("机械建筑超出拆除距离");
                     if (!Mod_Building.TryPrepareMechanicalDismantle(mechanical, out summoner, out string mechanicalReason))
                         throw new InvalidOperationException(mechanicalReason);
-                    Vector3 dropPosition = summoner.transform.position;
+                    Vector3 dropPosition = GetLogicalItemPosition(summoner);
                     if (!PublishServerSpawn(summoner, dropPosition, dropPosition, 0.05f, false))
                         throw new InvalidOperationException("服务端无法发布机械召唤器");
                     MechanicalWorld.Remove(mechanical.Id);
@@ -1364,7 +1369,7 @@ namespace FlatWorld.Networking.Gameplay
                 if (building == null || !building.CanCommitDismantle)
                     throw new InvalidOperationException("目标不是可拆除的建筑");
 
-                if (WorldTopologyRuntime.Distance(connection.identity.transform.position, buildingItem.transform.position) >
+                if (WorldTopologyRuntime.Distance(GetConnectionLogicalPosition(connection), GetLogicalItemPosition(buildingItem)) >
                     MaxPickupDistance)
                 {
                     throw new InvalidOperationException("目标超出拆除距离");
@@ -1373,7 +1378,7 @@ namespace FlatWorld.Networking.Gameplay
                 if (!building.TryCreateDismantledSummoner(out summoner, out string reason))
                     throw new InvalidOperationException(reason);
 
-                Vector3 position = summoner.transform.position;
+                Vector3 position = GetLogicalItemPosition(summoner);
                 if (!PublishServerSpawn(summoner, position, position, 0.05f, false))
                     throw new InvalidOperationException("服务端无法发布建筑召唤器");
 
@@ -1465,7 +1470,7 @@ namespace FlatWorld.Networking.Gameplay
             if (connection?.identity == null || request.RequestToken == 0 || request.SourceItemGuid == 0 ||
                 string.IsNullOrWhiteSpace(request.ItemId) || request.ItemId.Length > 128 ||
                 !IsFinite(request.Position) ||
-                WorldTopologyRuntime.Distance(connection.identity.transform.position, request.Position) > MaxBuildingRequestDistance)
+                WorldTopologyRuntime.Distance(GetConnectionLogicalPosition(connection), request.Position) > MaxBuildingRequestDistance)
             {
                 reason = "身份、坐标或距离校验失败";
                 return false;
@@ -1589,7 +1594,11 @@ namespace FlatWorld.Networking.Gameplay
         }
 
         private static Vector3 NormalizeBuildingPosition(Vector3 position)
-            => new Vector3(Mathf.Floor(position.x) + 0.5f, Mathf.Floor(position.y) + 0.5f, 0f);
+        {
+            Vector3 logical = WorldTopologyRuntime.NormalizePosition(position);
+            return WorldTopologyRuntime.NormalizePosition(
+                new Vector3(Mathf.Floor(logical.x) + 0.5f, Mathf.Floor(logical.y) + 0.5f, 0f));
+        }
 
         private static string LimitReason(string reason)
         {
@@ -1610,8 +1619,8 @@ namespace FlatWorld.Networking.Gameplay
             if (dropping?.drop == null)
                 return false;
 
-            start = item.transform.position;
-            end = dropping.drop.endPos;
+            start = WorldTopologyRuntime.NormalizePosition(item.transform.position);
+            end = WorldTopologyRuntime.NormalizePosition(dropping.drop.endPos);
             remaining = Mathf.Max(0.05f, dropping.drop.time - dropping.drop.progressTime);
             return IsFinite(start) && IsFinite(end);
         }
@@ -1627,12 +1636,12 @@ namespace FlatWorld.Networking.Gameplay
                 return false;
             }
 
-            return WorldTopologyRuntime.Distance(connection.identity.transform.position, request.StartPosition) <= 8f;
+            return WorldTopologyRuntime.Distance(GetConnectionLogicalPosition(connection), request.StartPosition) <= 8f;
         }
 
         private static void CapturePose(Item item, StateRecord state)
         {
-            state.Position = item.transform.position;
+            state.Position = GetLogicalItemPosition(item);
             state.Rotation = item.transform.rotation;
             state.Scale = SanitizeScale(item.transform.localScale);
         }
@@ -1660,6 +1669,21 @@ namespace FlatWorld.Networking.Gameplay
                !float.IsNaN(value.y) && !float.IsInfinity(value.y) &&
                !float.IsNaN(value.z) && !float.IsInfinity(value.z) &&
                !float.IsNaN(value.w) && !float.IsInfinity(value.w);
+
+        /// <summary>Host 上 identity Transform 可能是本机远端表现镜像，服务端判定只能读权威逻辑坐标。</summary>
+        private static Vector3 GetConnectionLogicalPosition(NetworkConnectionToClient connection)
+        {
+            if (connection?.identity == null)
+                return default;
+
+            NetworkWorldPlayer networkPlayer = connection.identity.GetComponent<NetworkWorldPlayer>();
+            return networkPlayer != null
+                ? networkPlayer.AuthoritativeLogicalPosition
+                : WorldTopologyRuntime.NormalizePosition(connection.identity.transform.position);
+        }
+
+        private static Vector3 GetLogicalItemPosition(Item item)
+            => item == null ? default : WorldTopologyRuntime.NormalizePosition(item.transform.position);
 
         private void OnRuntimeStateChanged(Item item)
         {
@@ -1777,6 +1801,8 @@ namespace FlatWorld.Networking.Gameplay
         {
             try
             {
+                if (item?.itemData?.transform != null && !item.InHand)
+                    item.itemData.transform.position = GetLogicalItemPosition(item);
                 return ItemNetworkStateSerialization.Capture(item, false);
             }
             catch (Exception exception)

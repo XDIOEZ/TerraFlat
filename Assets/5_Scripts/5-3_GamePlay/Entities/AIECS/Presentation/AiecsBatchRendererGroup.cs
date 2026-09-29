@@ -113,7 +113,8 @@ namespace FlatWorld.AIECS
         {
             lock (syncRoot)
                 if (count > 0)
-                    buffer.SetData(instances, 0, PrefixBytes / sizeof(int), count);
+                    // GraphicsBuffer.SetData 的目标偏移按 T 元素计数；实例数据必须紧跟 1 个 96 字节零前缀。
+                    buffer.SetData(instances, 0, PrefixBytes / InstanceStride, count);
         }
 
         public void Hide() => Begin();

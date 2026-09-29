@@ -183,16 +183,22 @@ public partial class Mod_Grow
     {
         if (Data.isCultivatedCrop || Data.environmentInitialized || layers == null || !layers.Contains(localPos.x, localPos.y))
             return;
-
-        Data.environmentInitialized = true;
         int guid = item?.itemData != null ? item.itemData.Guid : 0;
+        InitializeNaturalGrowthData(Data, guid, layers.Precipitation[localPos.x, localPos.y]);
+        UpdateVisualAndBehavior();
+    }
+
+    /// <summary>自然物 Item 与 ECS 共用确定性树龄和降水初始化，后续升降级不能重新抽树龄。</summary>
+    public static void InitializeNaturalGrowthData(GrowData data, int guid, float precipitation)
+    {
+        if (data == null || data.isCultivatedCrop || data.environmentInitialized) return;
+        data.environmentInitialized = true;
         float deterministicProgress = Mathf.Abs(guid % 10000) / 10000f;
-        Data.GrowProgress = deterministicProgress * Data.MaxGrowProgress;
-        Data.environmentGrowthMultiplier = Mathf.Lerp(
+        data.GrowProgress = deterministicProgress * data.MaxGrowProgress;
+        data.environmentGrowthMultiplier = Mathf.Lerp(
             0.8f,
             1.2f,
-            Mathf.Clamp01(layers.Precipitation[localPos.x, localPos.y]));
-        UpdateVisualAndBehavior();
+            Mathf.Clamp01(precipitation));
     }
 
 #endregion

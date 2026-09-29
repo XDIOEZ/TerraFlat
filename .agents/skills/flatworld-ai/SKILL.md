@@ -17,10 +17,13 @@ description: "Use when: 定位或修改 FlatWorld 的动物、怪物、蜂群、
 
 ## 运行边界
 
+- 正式 World 的唯一所有者是 `WorldEntityRuntime`，`AiecsSimulation` 借用它并只处理带 AI 组件的查询；AI 运行器的 Tick 由统一入口调用，MonoBehaviour Update 只准备依赖。释放 AI 只能销毁自身查询命中的实体，不能销毁资源实体或共享 World。通用成长/耐候位于 `Core/EntityCapabilityModules.cs`，可与 AI 组件组合；独立 World 仅用于诊断场景。
+
 - 当前 Actor 物种由 `AiRuntimeBackendService` 统一路由到 Entities。普通刷怪、事件、生物战利品、蜂巢、GM 召唤、技能和 MOD 的生物出生都调用同一 ECS 后端；失败时明确拒绝，不回退旧 GameObject AI。`ItemMgr.InstantiateItem` 不再创建 Actor。
 - `MonsterSpawnerManager` 只决定出生时间、群系、地形、位置与预算；`AiecsEcologyRuntimeHost` 持有 Entity、GUID、生命、行为和居民数量。GamePlay 只依赖 `IAiEcologyBackend`，不能反向依赖 AIECS Gameplay 程序集。
 - 玩家保持 GameObject。镜像代理是可池化的 Unity 接口空壳；普通 AI 和绘制状态都以 ECS 为准。延迟命中须核对 GUID、Entity 与绑定代际，避免代理回池后误伤新生物。
 - 生物身体由 BRG 图集绘制，阴影走共享批量表现。只在外部接口需要时启用代理碰撞体；不要在代理上挂旧 AI、逐实体 Animator 或逐实体绘制组件。
+- ECS 居民生命周期独立于 ChunkView；正式世界 BRG 只提交当前已绑定 ChunkView 内的主体与阴影。区块卸载只撤销本地表现，不删除居民或依赖“相机最近镜像”继续绘制未加载区块。
 - GM 生物目录从 BRG 动画图集取图标；召唤在玩家附近寻找合法导航落点后调用正式 `TrySpawnDirect`，镜像代理由生态宿主绑定。
 - 游戏事件按 ECS Actor GUID 下发推进命令；同一物品目标共享 Flow 目标，命令随居民快照保存，完成、死亡、取消及世界退出时释放句柄。MOD 用 `ModApi` 的 GUID 接口控制生物；Actor 的旧 Lua Item 模块不运行。
 - 新存档使用 `MonsterSpawnerSaveData.EntitiesResidents` 保存普通 ECS 居民；蜂巢独占记录所属蜜蜂，避免同 GUID 重复恢复。旧 GameObject 生物快照无需迁移。

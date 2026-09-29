@@ -412,6 +412,7 @@ public partial class ChunkMgr
             dataDistance: new Int2(resolvedPresentation.x, resolvedPresentation.y),
             presentationDistance: new Int2(resolvedPresentation.x, resolvedPresentation.y)));
         ReconcileRuntimeWindowBindings();
+        ReprojectRuntimeChunkViewsToLocalAnchor();
         // 只在流送窗口发生变化时校验一次现有表现，不做定时轮询。
         RepairRuntimeWindowPresentationBackends();
         RebuildRuntimePrefetchQueue(centerOrigin, dimensionId, resolvedPresentation,
@@ -458,6 +459,17 @@ public partial class ChunkMgr
         runtimePresentationInterestOrigin = centerOrigin;
         runtimePresentationInterestDistance = presentationDistance;
         runtimePresentationInterestDimensionId = dimensionId;
+        ReprojectRuntimeChunkViewsToLocalAnchor();
+    }
+
+    /// <summary>只移动 ChunkView 表现根节点，ChunkRuntime/WorldAddress 完全不变。</summary>
+    public void ReprojectRuntimeChunkViewsToLocalAnchor()
+    {
+        foreach (RuntimeChunkBinding binding in activeRuntimeBindings.Values)
+        {
+            if (binding.View != null)
+                binding.View.RefreshLocalPresentationPosition();
+        }
     }
 
     /// <summary>按玩家到区块中心的世界距离计算表现优先级，环绕世界取最短距离。</summary>

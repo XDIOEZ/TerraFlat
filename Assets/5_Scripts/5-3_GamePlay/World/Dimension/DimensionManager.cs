@@ -305,7 +305,7 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
         if (string.IsNullOrWhiteSpace(playerProfileName))
             throw new InvalidOperationException("维度切换缺少稳定玩家档案名。");
 
-        Vector3 sourcePosition = sourcePlayer.transform.position;
+        Vector3 sourcePosition = WorldTopologyRuntime.NormalizePosition(sourcePlayer.transform.position);
         GameController sourceController = sourcePlayer.GetComponentInChildren<GameController>(true);
         Mover sourceMover = sourcePlayer.itemMods?.GetMod_ByID<Mover>(ModText.Mover);
         TransitionState state = new TransitionState
@@ -459,7 +459,7 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
         state.EnterNotified = true;
 
         Player targetPlayer = ItemMgr.Instance.LoadPlayer(playerName);
-        targetPlayer.transform.position = targetPosition;
+        targetPlayer.transform.position = WorldLocalPresentation.ProjectPosition(targetPosition);
         targetPlayer.Data.transform.position = targetPosition;
         targetPlayer.GetComponentInChildren<GameController>(true)?.SetGameplayInputLocked(true);
         GameManager.Instance.NotifyDimensionPlayerEntered(targetPlayer);
@@ -549,7 +549,7 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
         GameManager.Instance.NotifyDimensionWorldEntered();
 
         Player recoveredPlayer = ItemMgr.Instance.LoadPlayer(playerProfileName);
-        recoveredPlayer.transform.position = sourcePosition;
+        recoveredPlayer.transform.position = WorldLocalPresentation.ProjectPosition(sourcePosition);
         recoveredPlayer.Data.transform.position = sourcePosition;
         recoveredPlayer.GetComponentInChildren<GameController>(true)?.SetGameplayInputLocked(true);
         GameManager.Instance.NotifyDimensionPlayerEntered(recoveredPlayer);

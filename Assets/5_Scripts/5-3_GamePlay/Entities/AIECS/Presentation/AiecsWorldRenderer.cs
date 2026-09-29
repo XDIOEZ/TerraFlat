@@ -47,6 +47,13 @@ namespace FlatWorld.AIECS
         private readonly AiecsAnimationCatalog catalog;
         private readonly int[] visuals;
         private readonly int[,] clips;
+        private const int StandClip = 0;
+        private const int MoveClip = 1;
+        private const int AttackClip = 2;
+        private const int DeathClip = 3;
+        private const int TakingOffClip = 4;
+        private const int FlyingClip = 5;
+        private const int LandingClip = 6;
         private readonly AiecsBatchRendererGroup batch;
         private readonly List<DrawItem> visible = new List<DrawItem>();
         private readonly UnityEngine.SceneManagement.Scene scene;
@@ -70,7 +77,7 @@ namespace FlatWorld.AIECS
         {
             this.catalog = catalog; this.scene = scene; this.sortingKeys = sortingKeys;
             if (catalog == null || catalog.Material == null) throw new InvalidOperationException("请先导出 AIECS 动画目录。");
-            visuals = new int[actorIds.Length]; clips = new int[actorIds.Length, 4];
+            visuals = new int[actorIds.Length]; clips = new int[actorIds.Length, 7];
             shadowFootprints = new Vector4[actorIds.Length];
             sunShadowHeights = new float[actorIds.Length];
             for (int i = 0; i < actorIds.Length; i++)
@@ -79,11 +86,14 @@ namespace FlatWorld.AIECS
                 visuals[i] = Array.FindIndex(catalog.Actors, value => value.Id == actorIds[i]);
                 if (visuals[i] < 0) throw new InvalidOperationException("AIECS 动画目录缺少 " + actorIds[i]);
                 var definition = catalog.Actors[visuals[i]];
-                clips[i, 0] = FindClip(definition, "Stand", "Idle");
-                clips[i, 1] = FindClip(definition, "Move", "Walk");
-                clips[i, 2] = FindClip(definition, "Attack", "Attack");
-                clips[i, 3] = FindClip(definition, "Death", "Dead");
-                var idle = definition.Clips[clips[i, 0]].Sample(0f);
+                clips[i, StandClip] = FindClip(definition, "Stand", "Idle");
+                clips[i, MoveClip] = FindClip(definition, "Move", "Walk");
+                clips[i, AttackClip] = FindClip(definition, "Attack", "Attack");
+                clips[i, DeathClip] = FindClip(definition, "Death", "Dead");
+                clips[i, TakingOffClip] = FindClip(definition, "TakingOff", "TakeOff");
+                clips[i, FlyingClip] = FindClip(definition, "Flying", "Fly");
+                clips[i, LandingClip] = FindClip(definition, "Landing", "Land");
+                var idle = definition.Clips[clips[i, StandClip]].Sample(0f);
                 shadowFootprints[i] = AiecsShadowRenderer.MeasureFootprint(definition, catalog.Sprites[idle.Sprite], idle);
             }
             shadows = new AiecsShadowRenderer(scene, sortingKeys.ShadowLayer, sortingKeys.ShadowOrder);
@@ -113,7 +123,8 @@ namespace FlatWorld.AIECS
         }
 
         /// <summary>读取真实 ECS 位置/行为/生命，循环世界只绘制相机最近镜像。</summary>
-        public void Draw(AiecsSimulation simulation, Camera camera, WorldTopologyDomain domain)
+        public void Draw(AiecsSimulation simulation, Camera camera, WorldTopologyDomain domain,
+            Func<Vector2, bool> presentationReady = null)
         {
             if (camera == null || !simulation.Display.IsCreated)
             {
@@ -134,6 +145,10 @@ namespace FlatWorld.AIECS
                 // 屏外主体的长投影仍可能落入视口，开启时扩展候选范围。
                 float margin = 2f + sunShadows.CullingMargin;
                 if (math.abs(delta.x) > halfWidth + margin || math.abs(delta.y) > halfHeight + margin) continue;
+                // ECS 居民可以继续在纯逻辑层存活，但 ChunkView 一旦离开本机表现窗口就停止提交主体和阴影。
+                if (presentationReady != null &&
+                    !presentationReady(new Vector2(record.Position.x, record.Position.y)))
+                    continue;
                 int visual = visuals[record.Definition];
                 int row = math.clamp((int)((delta.y + halfHeight) / math.max(0.01f, halfHeight * 2f) * 24), 0, 23);
                 visible.Add(new DrawItem { Index = i, Visual = visual, Row = row, Y = delta.y,
@@ -144,11 +159,10 @@ namespace FlatWorld.AIECS
             for (int i = 0; i < visible.Count; i++)
             {
                 var item = visible[i]; var record = records[item.Index]; var definition = catalog.Actors[item.Visual];
-                    // 攻击前摇/后摇是明确的战斗阶段；专用素材完成前复用待机，只有 Active 播放真正攻击动作。
-                    int action = record.Dead != 0 ? 3 : record.Behavior == (int)AiecsBehavior.Attack
-                        ? record.AttackPhase == AiecsAttackPhase.Active ? 2 : 0
-                        : record.Behavior == (int)AiecsBehavior.Idle ? 0 : 1;
-                    var frame = definition.Clips[clips[record.Definition, action]].Sample(record.ActionElapsed);
+                    int action = ResolveClip(record);
+                    AiecsAnimationClip clip = definition.Clips[clips[record.Definition, action]];
+                    float sampleTime = ResolveSampleTime(record, action, clip);
+                    var frame = clip.Sample(sampleTime);
                     float2 ground = center + domain.ShortestDelta(center, record.Position);
                     var actor = new AiecsPrototypeActor
                     {
@@ -174,6 +188,37 @@ namespace FlatWorld.AIECS
             BatchCount = batch.Count > 0 ? 1 : 0;
             shadows.End();
             sunShadows.End();
+        }
+
+        /// <summary>飞行表现优先于地面移动，避免 ECS 鸟升空后仍播放 Walk。</summary>
+        private static int ResolveClip(AiecsDisplayRecord record)
+        {
+            if (record.Dead != 0) return DeathClip;
+            if (record.Behavior == (int)AiecsBehavior.Attack && record.AttackPhase == AiecsAttackPhase.Active)
+                return AttackClip;
+            if (record.FlightCruiseHeight > 0.001f)
+            {
+                if (record.FlightAirborne != 0)
+                    return record.FlightHeight < record.FlightCruiseHeight * 0.5f ? TakingOffClip : FlyingClip;
+                if (record.FlightHeight > 0.01f) return LandingClip;
+            }
+            return record.Moving != 0 ? MoveClip : StandClip;
+        }
+
+        /// <summary>起降动画直接跟随实际高度进度，行为状态切换不会让非循环动画跳到末帧。</summary>
+        private static float ResolveSampleTime(AiecsDisplayRecord record, int action, AiecsAnimationClip clip)
+        {
+            if (action == TakingOffClip)
+            {
+                float takeoffHeight = Mathf.Max(0.001f, record.FlightCruiseHeight * 0.5f);
+                return clip.Duration * Mathf.Clamp01(record.FlightHeight / takeoffHeight);
+            }
+            if (action == LandingClip)
+            {
+                float cruiseHeight = Mathf.Max(0.001f, record.FlightCruiseHeight);
+                return clip.Duration * Mathf.Clamp01((1f - record.FlightHeight / cruiseHeight) * 2f);
+            }
+            return record.ActionElapsed;
         }
 
         /// <summary>开发 HUD 最多绘制 64 个可见实体血条，不创建逐实体 UI 节点。</summary>
