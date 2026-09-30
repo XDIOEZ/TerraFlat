@@ -424,7 +424,7 @@ public sealed partial class GMReflectionConsole
     private void BuildPlayerPage()
     {
         GmPageView page = CreatePage(GmPageId.Player);
-        AddPageIntro(page.Content, "玩家与管理", "电脑 Ctrl+T 传送到鼠标位置；手机或电脑均可点击“点选传送”，再点击场景选择位置。");
+        AddPageIntro(page.Content, "玩家与管理", "电脑 T 键传送到鼠标位置；手机或电脑均可点击“点选传送”，再点击场景选择位置。");
 
         Transform grid = CreateActionGrid(page.Content, 4, 256f, 60f, 8);
         CreateSearchableButton(grid, GmPageId.Player, "设为管理员", "管理员 admin 权限", SetAdministrator);
@@ -445,8 +445,8 @@ public sealed partial class GMReflectionConsole
         teleportShortcutButton = CreateSearchableButton(
             grid,
             GmPageId.Player,
-            "Ctrl+T 传送：开",
-            "T键 Ctrl+T 传送开关 快捷键",
+            "T 传送：开",
+            "T键 传送开关 快捷键",
             ToggleTeleportShortcut);
         CreatePlayerMoveSpeedControl(grid);
         CreateSearchableButton(

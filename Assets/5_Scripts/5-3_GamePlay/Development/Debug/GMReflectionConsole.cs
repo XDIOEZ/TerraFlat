@@ -604,7 +604,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
 
         CreateButton(quickGrid.transform, "设为管理员", SetAdministrator, 0f, 35f);
         CreateButton(quickGrid.transform, "传送至鼠标", () => InvokeByTypeName("Mod_PlayerTraits", "TeleportToMousePosition"), 0f, 35f);
-        teleportShortcutButton = CreateButton(quickGrid.transform, "Ctrl+T 传送：开", ToggleTeleportShortcut, 0f, 35f);
+        teleportShortcutButton = CreateButton(quickGrid.transform, "T 传送：开", ToggleTeleportShortcut, 0f, 35f);
         RefreshTeleportShortcutButton();
         playerMoveSpeedButton = CreateButton(quickGrid.transform, "玩家移速：1x", CyclePlayerMoveSpeed, 0f, 35f);
         RefreshPlayerMoveSpeedButton();
@@ -1706,7 +1706,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         GMConsolePreferences.SetTeleportShortcut(enabled);
         RefreshTeleportShortcutButton();
         SetStatus(
-            enabled ? "Ctrl+T 鼠标传送已开启。" : "Ctrl+T 鼠标传送已关闭。",
+            enabled ? "T 键鼠标传送已开启。" : "T 键鼠标传送已关闭。",
             enabled ? GmAccentHover : GmTextSecondary);
     }
 
@@ -1759,7 +1759,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         bool enabled = PlayerAdminController.TeleportToMouseShortcutEnabled;
         TextMeshProUGUI label = teleportShortcutButton.GetComponentInChildren<TextMeshProUGUI>(true);
         if (label != null)
-            label.text = enabled ? "Ctrl+T 传送：开" : "Ctrl+T 传送：关";
+            label.text = enabled ? "T 传送：开" : "T 传送：关";
 
         SetGmButtonVisual(
             teleportShortcutButton,

@@ -13,7 +13,7 @@ public sealed partial class GMReflectionConsole
     private GameController teleportInputOwner;
     private Mod_PlayerTraits teleportTargetPlayer;
 
-    /// <summary>由唯一 GM 实例消费 Ctrl+T，不依赖角色显示名或重复管理员模块。</summary>
+    /// <summary>由唯一 GM 实例消费 T，不依赖角色显示名或重复管理员模块。</summary>
     private void HandleTeleportInput()
     {
         Keyboard keyboard = Keyboard.current;
@@ -27,8 +27,7 @@ public sealed partial class GMReflectionConsole
         }
 
         if (!PlayerAdminController.TeleportToMouseShortcutEnabled ||
-            keyboard?.tKey.wasPressedThisFrame != true ||
-            !(keyboard.leftCtrlKey.isPressed || keyboard.rightCtrlKey.isPressed))
+            keyboard?.tKey.wasPressedThisFrame != true)
             return;
 
         GameObject selected = EventSystem.current?.currentSelectedGameObject;
