@@ -193,29 +193,33 @@ public class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyBinder
     [Button]
     public void RequestAttack()
     {
+        TryRequestAttack();
+    }
+
+    /// <summary>请求一段实际挥动；只有动画在本次调用中真正开始时返回 true。</summary>
+    public bool TryRequestAttack(bool queueIfBusy = true)
+    {
         if (animator == null)
         {
             Debug.LogError($"{name} 缺少 Animator 组件。", this);
-            return;
+            return false;
         }
 
         if (attackAnimationNames == null || attackAnimationNames.Count == 0)
         {
             Debug.LogError($"{name} 攻击动画列表为空。", this);
-            return;
+            return false;
         }
 
         if (!isAttacking)
         {
-            StartAttack(0);
-            return;
+            return StartAttack(0);
         }
 
         if (Time.time > comboDeadline)
         {
             ResetToIdle();
-            StartAttack(0);
-            return;
+            return StartAttack(0);
         }
 
         int nextIndex = currentIndex + 1;
@@ -223,12 +227,15 @@ public class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyBinder
         {
             if (Time.time < nextReadyTime)
             {
-                queuedNext = true;
-                return;
+                if (queueIfBusy)
+                    queuedNext = true;
+                return false;
             }
 
-            StartAttack(nextIndex);
+            return StartAttack(nextIndex);
         }
+
+        return false;
     }
 
     public float AttackSpeedMultiplier => attackSpeedMultiplier * BodyTraumaBuffEffects.GetAttackMultiplier(item?.Owner); /// 当前攻击速度倍率（只读）

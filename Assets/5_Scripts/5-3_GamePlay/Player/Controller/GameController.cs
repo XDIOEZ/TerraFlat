@@ -121,6 +121,7 @@ public partial class GameController : Module
     private bool _reportedMissingMainCamera; // 是否已经提示过相机尚未就绪
     private bool _suppressLeftClickUntilRelease;
     private bool _suppressRightClickUntilRelease;
+    private bool _rightClickHeld;
     private bool _suppressMobileAttackUntilRelease;
     private bool _keyboardMouseAttackHeld;
     private bool _gamepadAttackHeld;
@@ -159,6 +160,8 @@ public partial class GameController : Module
         _isGameplayInputLocked ||
         _gameplayInputLockOwners.Count > 0 ||
         IsWorldLoadingGameplayLocked(); // 当前是否锁定玩家输入
+
+    public bool IsRightClickHeld => _rightClickHeld; // 玩法模块只读取中央输入层维护的持续“使用”状态
 
     /// <summary>
     /// 判断当前输入锁中是否存在不属于指定兼容面板的锁。
@@ -347,29 +350,34 @@ public partial class GameController : Module
         bool isMobileUse = obj.control?.device is FlatWorldMobileDevice;
         if (!IsGameplayInputAllowed(obj))
         {
+            _rightClickHeld = false;
             _suppressRightClickUntilRelease = true;
             return;
         }
 
         if (obj.control?.device is Gamepad && EventSystemGuard.TryHandleGamepadContextAction())
         {
+            _rightClickHeld = false;
             _suppressRightClickUntilRelease = true;
             return;
         }
 
         if (IsGameplayInputLocked || (!isMobileUse && IsPointerOverUI()) || EventSystemGuard.IsGamepadUISelectionActive)
         {
+            _rightClickHeld = false;
             _suppressRightClickUntilRelease = true;
             return;
         }
 
         _suppressRightClickUntilRelease = false;
+        _rightClickHeld = true;
         RightClick.Invoke();
     }
 
     public void RightClickUpAction(InputAction.CallbackContext obj) /// 右键抬起
     {
         UpdateCurrentInputDevice(obj);
+        _rightClickHeld = false;
         if (!IsGameplayInputAllowed(obj))
         {
             _suppressRightClickUntilRelease = false;
@@ -1075,6 +1083,7 @@ public partial class GameController : Module
         _mobileAttackActive = false;
         _mobileAttackDraggedOutsideDeadZone = false;
         _suppressMobileAttackUntilRelease = false;
+        _rightClickHeld = false;
         SetAttackSourceHeld(AttackInputSource.KeyboardMouse, false);
         SetAttackSourceHeld(AttackInputSource.Gamepad, false);
         SetAttackSourceHeld(AttackInputSource.Mobile, false);

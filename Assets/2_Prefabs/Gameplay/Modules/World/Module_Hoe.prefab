@@ -55,4 +55,3 @@ MonoBehaviour:
     BitData: 
   usesPerTile: 6
   maxTillingDistance: 2
-  useInterval: 0.2
