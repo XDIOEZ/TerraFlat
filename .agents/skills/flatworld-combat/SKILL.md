@@ -68,6 +68,7 @@ description: "Use when: 定位或修改 FlatWorld 的伤害、生命值、身体
 
 - 投射物的地面位移由 Dynamic Rigidbody2D 负责；`UseVisibleArc` 仅按虚拟高度偏移视觉和攻击传感器。实体碰撞盒与伤害 Trigger 分开，Physics2D 的反弹结果只回写运行时速度和接触事实；目标身份、阵营、距离、次数与伤害始终由数据和 `CombatRules` 裁定。
 - 需要精确抛物线预判的 `UseVisibleArc` 投掷物必须让地面位移保持匀速，并由 `Mod_Projectile` 的同一速度/时长/虚拟重力公式同时驱动真实飞行与预览；预览只在蓄力期间显示并随蓄力延长，落点圆环表示无碰撞情况下的预计终点，禁止另写一套近似曲线。
+- 消耗外部弹药的抛掷武器仍组合 `Mod_Bow`；可用 `AmmoItemId` 精确筛选同库存弹药，留空则沿用 `AmmoTag`。开启轨迹预览时读取实际弹药定义与模块 Prefab 默认值，并缓存 `Mod_Projectile.TrajectorySettings`；弹药或资源定义变化后更新缓存，禁止为了预判生成临时 Item 或复制弹药的投射参数。
 
 - 覆盖攻击→受伤→死亡→掉落，确认事件只触发一次、随机输入固定、池化特效每次重置。
 

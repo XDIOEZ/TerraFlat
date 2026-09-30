@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Newtonsoft.Json.Linq;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -14,6 +15,8 @@ public sealed class Mod_Bow : Module, IItemModuleDependencyBinder
 
     [Tooltip("可作为弹药的物品标签。")]
     public string AmmoTag = "Arrow";
+    [Tooltip("指定弹药的稳定物品 ID；留空时沿用弹药标签筛选。")]
+    public string AmmoItemId = "";
     [Tooltip("抛石等可堆叠投掷物消耗手持物自身；弓仍按弹药 Tag 从同一库存取箭。")]
     public bool UseHeldItemAsAmmo;
     [Tooltip("是否显示独立搭箭图像；抛掷自身的物品不需要第二份手持图片。")]
@@ -77,6 +80,8 @@ public sealed class Mod_Bow : Module, IItemModuleDependencyBinder
     private bool _inventoryResolveWarningLogged;
     private readonly List<IProjectileChargeModifier> _chargeModifiers = new List<IProjectileChargeModifier>();
     private Mod_Projectile _previewProjectile;
+    private RuntimeItemDefinition _previewAmmoDefinition;
+    private Mod_Projectile.TrajectorySettings? _previewAmmoTrajectory;
     private LineRenderer _trajectoryLine;
     private LineRenderer _trajectoryRing;
     private Material _trajectoryMaterial;
@@ -298,7 +303,13 @@ public sealed class Mod_Bow : Module, IItemModuleDependencyBinder
     private ItemSlot ResolveAmmoSlot()
     {
         if (_sourceInventory?.Data == null) return null;
-        if (!UseHeldItemAsAmmo) return _sourceInventory.Data.FindFirstByTag(AmmoTag);
+        if (!UseHeldItemAsAmmo)
+        {
+            if (string.IsNullOrWhiteSpace(AmmoItemId)) return _sourceInventory.Data.FindFirstByTag(AmmoTag);
+            foreach (ItemSlot slot in _sourceInventory.Data.itemSlots)
+                if (slot?.itemData?.IDName == AmmoItemId && slot.itemData.Stack?.Amount >= 1f) return slot;
+            return null;
+        }
         foreach (ItemSlot slot in _sourceInventory.Data.itemSlots)
             if (ReferenceEquals(slot.itemData, item.itemData)) return slot;
         return null;
@@ -328,12 +339,51 @@ public sealed class Mod_Bow : Module, IItemModuleDependencyBinder
 
     #region 轨迹预判
 
+    /// <summary>按实际弹药定义缓存纯轨迹参数，资源重载或弹药变化时重新读取。</summary>
+    private bool TryResolvePreviewTrajectory(out Mod_Projectile.TrajectorySettings trajectory)
+    {
+        trajectory = default;
+        if (UseHeldItemAsAmmo)
+        {
+            if (_previewProjectile == null) return false;
+            trajectory = _previewProjectile.FlightTrajectory;
+            return true;
+        }
+
+        string ammoId = ResolveAmmoSlot()?.itemData?.IDName;
+        if (GameRes.Instance == null || string.IsNullOrWhiteSpace(ammoId) ||
+            !GameRes.Instance.TryGetItemDefinition(ammoId, out RuntimeItemDefinition definition)) return false;
+        if (!ReferenceEquals(definition, _previewAmmoDefinition))
+        {
+            _previewAmmoDefinition = definition;
+            _previewAmmoTrajectory = null;
+            foreach (RuntimeItemModuleDefinition module in definition.ModuleDefinitions)
+            {
+                if (!module.Enabled || module.ModuleId != Mod_Projectile.PersistedModuleId) continue;
+                GameObject prefab = GameRes.Instance.GetPrefab(module.PrefabId, logError: false);
+                Mod_Projectile template = prefab?.GetComponentInChildren<Mod_Projectile>(true);
+                if (template == null) continue;
+                JObject parameters = string.IsNullOrWhiteSpace(module.ParametersJson)
+                    ? new JObject() : JObject.Parse(module.ParametersJson);
+                _previewAmmoTrajectory = new Mod_Projectile.TrajectorySettings(
+                    parameters.Value<float?>(nameof(Mod_Projectile.MinSpeed)) ?? template.MinSpeed,
+                    parameters.Value<float?>(nameof(Mod_Projectile.MaxSpeed)) ?? template.MaxSpeed,
+                    parameters.Value<float?>(nameof(Mod_Projectile.MaxFlightSeconds)) ?? template.MaxFlightSeconds,
+                    parameters.Value<float?>(nameof(Mod_Projectile.VirtualGravity)) ?? template.VirtualGravity,
+                    parameters.Value<bool?>(nameof(Mod_Projectile.UseVisibleArc)) ?? template.UseVisibleArc);
+                break;
+            }
+        }
+        if (!_previewAmmoTrajectory.HasValue) return false;
+        trajectory = _previewAmmoTrajectory.Value;
+        return true;
+    }
+
     /// <summary>蓄力期间按真实投射公式绘制逐渐延长的抛物线，并用圆环标出预计落点。</summary>
     private void UpdateTrajectoryPreview(float charge01)
     {
-        if (!ShowTrajectoryPreview || !UseHeldItemAsAmmo || !_charging ||
-            _previewProjectile == null || !_previewProjectile.UseVisibleArc ||
-            item?.Owner == null)
+        if (!ShowTrajectoryPreview || !_charging || item?.Owner == null ||
+            !TryResolvePreviewTrajectory(out Mod_Projectile.TrajectorySettings trajectory) || !trajectory.UseVisibleArc)
         {
             HideTrajectoryPreview();
             return;
@@ -361,7 +411,7 @@ public sealed class Mod_Bow : Module, IItemModuleDependencyBinder
         for (int i = 0; i <= segmentCount; i++)
         {
             float t = i / (float)segmentCount;
-            Vector2 point = _previewProjectile.EvaluateVisibleTrajectoryPoint(
+            Vector2 point = trajectory.EvaluateVisibleTrajectoryPoint(
                 launchPosition, direction, charge01, t);
             _trajectoryLine.SetPosition(i, new Vector3(point.x, point.y, -0.06f));
             landingPosition = point;
@@ -452,6 +502,8 @@ public sealed class Mod_Bow : Module, IItemModuleDependencyBinder
         _trajectoryLine = null;
         _trajectoryRing = null;
         _trajectoryMaterial = null;
+        _previewAmmoDefinition = null;
+        _previewAmmoTrajectory = null;
     }
 
     #endregion

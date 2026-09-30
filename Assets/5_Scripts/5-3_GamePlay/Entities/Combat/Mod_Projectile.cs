@@ -207,18 +207,63 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
 
     #region 发射与停止
 
+    /// <summary>只保存轨迹参数，让弹药预览与真实投射共用计算而无需生成临时物品。</summary>
+    public readonly struct TrajectorySettings
+    {
+        public readonly float MinSpeed, MaxSpeed, MaxFlightSeconds, VirtualGravity;
+        public readonly bool UseVisibleArc;
+
+        public TrajectorySettings(float minSpeed, float maxSpeed, float maxFlightSeconds,
+            float virtualGravity, bool useVisibleArc)
+        {
+            MinSpeed = minSpeed;
+            MaxSpeed = maxSpeed;
+            MaxFlightSeconds = maxFlightSeconds;
+            VirtualGravity = virtualGravity;
+            UseVisibleArc = useVisibleArc;
+        }
+
+        public float ResolveLaunchSpeed(float charge01, float sourceSpeedMultiplier = 1f)
+        {
+            float speed = Mathf.Lerp(Mathf.Max(0f, MinSpeed), Mathf.Max(MinSpeed, MaxSpeed), Mathf.Clamp01(charge01));
+            return speed * Mathf.Max(0f, sourceSpeedMultiplier);
+        }
+
+        public float ResolveFlightDuration(float charge01)
+        {
+            return Mathf.Max(0.05f, Mathf.Max(0f, MaxFlightSeconds) * Mathf.Clamp01(charge01));
+        }
+
+        public Vector2 EvaluateVisibleTrajectoryPoint(Vector2 launchPosition, Vector2 direction,
+            float charge01, float normalizedTime, float sourceSpeedMultiplier = 1f)
+        {
+            Vector2 normalizedDirection = direction.sqrMagnitude > 0.0001f ? direction.normalized : Vector2.right;
+            float duration = ResolveFlightDuration(charge01);
+            float elapsed = duration * Mathf.Clamp01(normalizedTime);
+            Vector2 position = launchPosition + normalizedDirection * ResolveLaunchSpeed(charge01, sourceSpeedMultiplier) * elapsed;
+            if (UseVisibleArc)
+            {
+                float gravity = Mathf.Max(0.01f, VirtualGravity);
+                float height = 0.5f * gravity * duration * elapsed - 0.5f * gravity * elapsed * elapsed;
+                position.y += Mathf.Max(0f, height);
+            }
+            return position;
+        }
+    }
+
+    public TrajectorySettings FlightTrajectory =>
+        new TrajectorySettings(MinSpeed, MaxSpeed, MaxFlightSeconds, VirtualGravity, UseVisibleArc);
+
     /// <summary>按当前投射物配置计算本次发射速度，预览与真实发射共用同一公式。</summary>
     public float ResolveLaunchSpeed(float charge01, float sourceSpeedMultiplier = 1f)
     {
-        float normalizedCharge = Mathf.Clamp01(charge01);
-        float speed = Mathf.Lerp(Mathf.Max(0f, MinSpeed), Mathf.Max(MinSpeed, MaxSpeed), normalizedCharge);
-        return speed * Mathf.Max(0f, sourceSpeedMultiplier);
+        return FlightTrajectory.ResolveLaunchSpeed(charge01, sourceSpeedMultiplier);
     }
 
     /// <summary>按当前蓄力计算完整飞行时长，保持轻点也有最短有效飞行段。</summary>
     public float ResolveFlightDuration(float charge01)
     {
-        return Mathf.Max(0.05f, Mathf.Max(0f, MaxFlightSeconds) * Mathf.Clamp01(charge01));
+        return FlightTrajectory.ResolveFlightDuration(charge01);
     }
 
     /// <summary>计算无碰撞情况下的可见轨迹点；可见抛物线始终使用向下开的二次曲线。</summary>
@@ -229,19 +274,8 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
         float normalizedTime,
         float sourceSpeedMultiplier = 1f)
     {
-        Vector2 normalizedDirection = direction.sqrMagnitude > 0.0001f ? direction.normalized : Vector2.right;
-        float duration = ResolveFlightDuration(charge01);
-        float elapsed = duration * Mathf.Clamp01(normalizedTime);
-        Vector2 position = launchPosition + normalizedDirection * ResolveLaunchSpeed(charge01, sourceSpeedMultiplier) * elapsed;
-
-        if (!UseVisibleArc)
-            return position;
-
-        float gravity = Mathf.Max(0.01f, VirtualGravity);
-        float launchVerticalSpeed = 0.5f * gravity * duration;
-        float height = launchVerticalSpeed * elapsed - 0.5f * gravity * elapsed * elapsed;
-        position.y += Mathf.Max(0f, height);
-        return position;
+        return FlightTrajectory.EvaluateVisibleTrajectoryPoint(
+            launchPosition, direction, charge01, normalizedTime, sourceSpeedMultiplier);
     }
 
     /// <summary>按原有伤害倍率发射；无额外速度修饰时保持现有调用入口。</summary>

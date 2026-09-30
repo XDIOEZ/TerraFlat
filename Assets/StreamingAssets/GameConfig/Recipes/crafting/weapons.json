@@ -155,6 +155,23 @@
       "actions": []
     },
     {
+      "id": "core:投石索",
+      "displayName": "投石索",
+      "recipeType": "crafting",
+      "requiredStation": "workbench",
+      "inputRule": "unordered",
+      "temperature": 0.0,
+      "maxTemperature": 2000.0,
+      "inputs": [
+        {"match": "exact_item", "itemId": "Rope", "amount": 2},
+        {"match": "exact_item", "itemId": "Leather", "amount": 1}
+      ],
+      "outputs": [
+        {"itemId": "StoneThrowingRope", "amount": 1}
+      ],
+      "actions": []
+    },
+    {
       "id": "core:木箭",
       "displayName": "木箭",
       "recipeType": "crafting",

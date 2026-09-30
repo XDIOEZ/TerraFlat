@@ -1909,6 +1909,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: b2ff97fe3e0e44a7a8db664f387ffa5e
+    m_Address: Assets/6_Art/Generated/Combat/Sling/Sling_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 877cf282663109243952565edb137b36
     m_Address: Assets/6_Art/Generated/Combat/Archery/Arrow_Copper_Icon.png
     m_ReadOnly: 0
