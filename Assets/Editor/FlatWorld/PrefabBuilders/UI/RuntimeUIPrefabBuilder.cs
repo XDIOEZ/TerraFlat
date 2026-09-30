@@ -77,6 +77,7 @@ public static partial class RuntimeUIPrefabBuilder
             return;
         }
 
+        SaveGameSettingsPrefab();
         GameUIPrefabRebuilder.RebuildActionListUI();
         UpdateExistingPrefab(
             MainMenuCoreRoot + "UI_ActionList.prefab",
@@ -127,6 +128,7 @@ public static partial class RuntimeUIPrefabBuilder
         SaveCoordinateDisplaySettingsPrefab();
         SaveVisualEffectsSettingsPrefab();
         SaveDebugSettingsPrefab();
+        SaveGameSettingsPrefab();
         SaveNewPrefab(SettingsPanelsRoot + RuntimeUIPrefabKeys.AutoSaveSettings + ".prefab", BuildAutoSaveSettings);
         SaveNewPrefab(SettingsPanelsRoot + RuntimeUIPrefabKeys.WorldStreamingSettings + ".prefab", BuildWorldStreamingSettings);
         SaveNewPrefab(SettingsPanelsRoot + RuntimeUIPrefabKeys.DifficultySettings + ".prefab", BuildDifficultySettings);
@@ -138,6 +140,26 @@ public static partial class RuntimeUIPrefabBuilder
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
         Debug.Log("[Runtime UI] 已固化全部设置分页，并同步主菜单客户端设置子集。");
+    }
+
+    /// <summary>只重建难度设置页，避免难度界面迭代时触碰其他设置资产。</summary>
+    [MenuItem("FlatWorld/UI/Rebuild Difficulty Settings UI")]
+    public static void RebuildDifficultySettingsUI()
+    {
+        font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
+        if (font == null)
+        {
+            Debug.LogError($"[Runtime UI] 缺少统一字体：{FontPath}");
+            return;
+        }
+
+        Directory.CreateDirectory(SettingsPanelsRoot);
+        SaveNewPrefab(
+            SettingsPanelsRoot + RuntimeUIPrefabKeys.DifficultySettings + ".prefab",
+            BuildDifficultySettings);
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+        Debug.Log("[Runtime UI] 已固化 0-20 级难度设置页。");
     }
 
     [MenuItem("FlatWorld/UI/Rebuild Runtime Prefab UI")]
@@ -166,6 +188,7 @@ public static partial class RuntimeUIPrefabBuilder
         SaveVisualEffectsSettingsPrefab();
         SaveDebugSettingsPrefab();
         SaveMainMenuExitConfirmationPrefab();
+        SaveGameSettingsPrefab();
         SaveNewPrefab(SettingsPanelsRoot + RuntimeUIPrefabKeys.AutoSaveSettings + ".prefab", BuildAutoSaveSettings);
         SaveNewPrefab(SettingsPanelsRoot + RuntimeUIPrefabKeys.WorldStreamingSettings + ".prefab", BuildWorldStreamingSettings);
         SaveNewPrefab(SettingsPanelsRoot + RuntimeUIPrefabKeys.DifficultySettings + ".prefab", BuildDifficultySettings);
@@ -1811,7 +1834,7 @@ public static partial class RuntimeUIPrefabBuilder
             RuntimeUIPrefabKeys.DifficultySettings,
             out Transform content);
         CreateSettingsHeader(content, "游戏难度");
-        CreateSettingsHint(content, "难度属于当前存档并立即生效。选择预设后点击应用。", 52f);
+        CreateSettingsHint(content, "选择 0 - 20 级难度后点击应用。", 52f);
 
         for (int i = 0; i < GameDifficultyCatalog.All.Count; i++)
         {
@@ -1819,7 +1842,7 @@ public static partial class RuntimeUIPrefabBuilder
             CreateDifficultyOption(content, definition, i == 0);
         }
 
-        TextMeshProUGUI status = CreateText("状态文本", content, "当前存档难度：简单", 16f, Teal);
+        TextMeshProUGUI status = CreateText("状态文本", content, "当前存档难度：难度 0", 16f, Teal);
         status.gameObject.AddComponent<LayoutElement>().preferredHeight = 28f;
 
         Transform footer = CreateFooter(content);
@@ -2174,6 +2197,7 @@ public static partial class RuntimeUIPrefabBuilder
         EnsureActionListTabBar(root.transform);
         RemoveObsoleteActionListPagerControls(root.transform);
         EnsureSeasonSettingsPage(root);
+        EnsureGameSettingsPage(root);
     }
 
     /// <summary>
@@ -2252,6 +2276,7 @@ public static partial class RuntimeUIPrefabBuilder
 
         Transform[] orderedPages =
         {
+            FindDirectChild(content, SettingsActionListPagination.GamePageName),
             FindDirectChild(content, SettingsActionListPagination.InterfacePageName),
             FindDirectChild(content, SettingsActionListPagination.InputBindingPageName),
             FindDirectChild(content, SettingsActionListPagination.DisplayPageName),
@@ -2268,7 +2293,8 @@ public static partial class RuntimeUIPrefabBuilder
                 throw new MissingReferenceException($"主菜单设置缺少客户端分页，索引={index}。");
 
             orderedPages[index].SetSiblingIndex(index);
-            orderedPages[index].gameObject.SetActive(index == 0);
+            orderedPages[index].gameObject.SetActive(
+                orderedPages[index].name == SettingsActionListPagination.InterfacePageName);
         }
 
         Button graphicsTab = EnsureActionListTabButton(
@@ -2288,6 +2314,7 @@ public static partial class RuntimeUIPrefabBuilder
             "调试");
         Button[] orderedTabs =
         {
+            FindTransform(tabBar, SettingsActionListPagination.GameTabButtonName)?.GetComponent<Button>(),
             FindTransform(root.transform, "UI设置")?.GetComponent<Button>(),
             FindTransform(root.transform, "按键绑定")?.GetComponent<Button>(),
             FindTransform(root.transform, "显示设置")?.GetComponent<Button>(),

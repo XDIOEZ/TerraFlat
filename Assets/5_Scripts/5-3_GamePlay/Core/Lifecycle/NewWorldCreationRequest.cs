@@ -33,7 +33,7 @@ public sealed class NewWorldCreationRequest
         string seed,
         PlanetData planetData,
         TimeData timeData,
-        GameDifficultyId difficulty = GameDifficultyId.Simple,
+        GameDifficultyId difficulty = GameDifficultyId.Level0,
         GameDifficultyRuleValues customDifficultyRules = null,
         ITextLibraryService textLibrary = null)
     {

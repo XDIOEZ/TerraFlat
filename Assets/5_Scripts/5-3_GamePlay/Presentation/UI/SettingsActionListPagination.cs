@@ -44,6 +44,8 @@ public sealed class SettingsActionListPagination : MonoBehaviour
     public const string DifficultyPageName = "设置分页_游戏难度";
     public const string GraphicsPageName = "设置分页_画质设置";
     public const string LanguagePageName = "设置分页_语言";
+    public const string GamePageName = "设置分页_游戏设置";
+    public const string GameTabButtonName = "设置页签_游戏设置";
     public const string TabBarName = "设置分页栏";
     public const string WorldTabButtonName = "设置页签_世界";
     public const string SessionTabButtonName = "设置页签_会话";
@@ -69,7 +71,8 @@ public sealed class SettingsActionListPagination : MonoBehaviour
         SeasonSettingsPanel.PageName,
         GraphicsPageName,
         LanguagePageName,
-        DebugPageName
+        DebugPageName,
+        GamePageName
     };
 
     private static readonly string[] TabButtonNames =
@@ -84,7 +87,8 @@ public sealed class SettingsActionListPagination : MonoBehaviour
         DebugTabButtonName,
         SessionTabButtonName,
         GraphicsTabButtonName,
-        LanguageTabButtonName
+        LanguageTabButtonName,
+        GameTabButtonName
     };
 
     private static readonly int[] TabPageIndices =
@@ -99,7 +103,8 @@ public sealed class SettingsActionListPagination : MonoBehaviour
         14,
         7,
         12,
-        13
+        13,
+        15
     };
 
     private static readonly int[] PageTabIndices =
@@ -118,7 +123,8 @@ public sealed class SettingsActionListPagination : MonoBehaviour
         0,
         9,
         10,
-        7
+        7,
+        11
     };
 
     private static readonly string[] FirstSelectableNames =
@@ -137,7 +143,8 @@ public sealed class SettingsActionListPagination : MonoBehaviour
         "季节天数_0",
         GameManager.MainMenuSettingsQualityPresetKey,
         GameManager.MainMenuSettingsLanguageDropdownKey,
-        "日志悬浮窗开关"
+        "日志悬浮窗开关",
+        GameSettingsPanel.WidthSliderName
     };
 
     private static readonly Color ActiveTabColor = new Color32(103, 103, 103, 255);
@@ -517,6 +524,9 @@ public sealed class SettingsActionListPagination : MonoBehaviour
     /// <summary>判断当前环境是否应解析并显示指定分页。</summary>
     private bool IsPageIncluded(int pageIndex)
     {
+        if (pageIndex == 15)
+            return true;
+
         if (panelContext == SettingsPanelContext.InGame)
             return (pageIndex >= 0 && pageIndex <= 11) || pageIndex == 14;
 
@@ -527,6 +537,9 @@ public sealed class SettingsActionListPagination : MonoBehaviour
     /// <summary>判断当前环境是否应绑定指定顶部页签。</summary>
     private bool IsTabIncluded(int tabIndex)
     {
+        if (tabIndex == 11)
+            return true;
+
         if (panelContext == SettingsPanelContext.InGame)
             return tabIndex >= 0 && tabIndex <= 8;
 
