@@ -130,7 +130,7 @@ public static class MachineLogicRegistry
         MachineDefinition result = selected == null ? null : new MachineDefinition
         {
             Id = id, Kind = selected.Id, LogicId = selected.Id, Ports = "none",
-            RenderSorting = "dynamicY", CastVisualShadows = true, Content = content
+            CastVisualShadows = true, Content = content
         };
         compiled[id] = (source, result);
         return result;

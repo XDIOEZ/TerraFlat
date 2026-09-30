@@ -209,7 +209,6 @@ public sealed class MachineDefinition
     public float ReverseTorqueRatio = 1f; // 从右/上侧输入时输出侧的扭矩倍率。
     public bool BlocksMovement = true; // 是否作为实体障碍阻挡角色与导航。
     public float PlayerMoveSpeedMultiplier = 1f; // 可通行机械占格对玩家主动移速的倍率。
-    public string RenderSorting = "ground"; // 默认贴地；dynamicY 与玩家按建造锚点 Y 排序。
     public bool? CastVisualShadows; // MOD 可覆盖用力器与发力器的默认两类世界阴影。
     public int Layer => Kind == "bridge" ? 1 : 0;
     public bool HasMechanicalPorts => Ports == "axis" || Ports == "all";
@@ -246,7 +245,6 @@ public sealed class MachineDefinition
     public void Validate()
     {
         if (string.IsNullOrWhiteSpace(Id) || (Ports != "axis" && Ports != "all" && Ports != "none") ||
-            (RenderSorting != "dynamicY" && RenderSorting != "ground") ||
             (PortMode != "auto" && PortMode != "input" && PortMode != "output" && PortMode != "relay") ||
             !NonNegative(Torque) || !Positive(Rpm) || !Positive(RequiredRpm) || !NonNegative(TorqueLoad) ||
             (Source == "water" && !Positive(SourceRadius)) ||
