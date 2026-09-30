@@ -17,6 +17,12 @@ MonoBehaviour:
     m_SerializedData: []
   m_GUID: 47b73bec22f621a498a1748af8eb38da
   m_SerializeEntries:
+  - m_GUID: eb8d3e53cbaa4497aa5644c2be743045
+    m_Address: Assets/9_Shaders/Material/Ground-Facility-Lit.mat
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemMaterial
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 0017c78e6bdddaae8e0096d70189ceed
     m_Address: Assets/6_Art/Generated/Farming/HerbSeed/HerbSeed_Icon.png
     m_ReadOnly: 0
@@ -646,6 +652,12 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 2a4d072c8b9b4c05800a082f5a5765e4
+    m_Address: Assets/6_Art/Generated/Building/MineEntrance/MineEntrance_Artificial_Idle.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 2ac7438069ffb464980388cdb844aef5
     m_Address: Assets/2_Prefabs/Gameplay/Modules/Combat/AttackTrigger.prefab
@@ -3474,6 +3486,12 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: ffb11e57913cc21489a4f57a2a2272a8
     m_Address: Assets/2_Prefabs/2-1_UI/Common/Controls/UI_SwitchOption.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 17b596bac2f14f92b50423d142dc1b84
+    m_Address: Assets/2_Prefabs/2-1_UI/Settings/Panels/UI_GameSettings.prefab
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
