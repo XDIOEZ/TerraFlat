@@ -79,7 +79,9 @@ public static partial class MachineWorld
         ReleaseRuntime();
         owner = save; worldKey = key;
         MachineCatalog.EnsureLoaded();
-        Vector2 size = ChunkMgr.ExistingInstance != null ? ChunkMgr.GetChunkSize() : new Vector2(16, 16);
+        Vector2 size = ChunkMgr.ExistingInstance != null
+            ? ChunkMgr.GetChunkSize()
+            : new Vector2(PlanetData.DefaultChunkDimension, PlanetData.DefaultChunkDimension);
         var chunkSize = new Vector2Int(Mathf.Max(1, Mathf.RoundToInt(size.x)), Mathf.Max(1, Mathf.RoundToInt(size.y)));
         WorldTopologyDomain topology = WorldTopologyRuntime.GetActiveDomain();
         Vector2Int period = topology.IsWrapped
