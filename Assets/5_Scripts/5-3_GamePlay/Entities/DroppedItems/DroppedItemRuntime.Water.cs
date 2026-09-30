@@ -60,7 +60,7 @@ internal sealed partial class DroppedItemRuntime
         if (!spatial.TryGetValue(SpatialCell((Vector2)cell + Vector2.one * 0.5f), out HashSet<int> bucket)) return;
         foreach (int id in bucket)
         {
-            DroppedBody body = simulation.Get(id);
+            LightweightDroppedBody body = simulation.Get(id);
             if (Mathf.FloorToInt(body.Position.x) == cell.x && Mathf.FloorToInt(body.Position.y) == cell.y)
                 QueueEnvironment(id);
         }
@@ -91,7 +91,7 @@ internal sealed partial class DroppedItemRuntime
         {
             if (!simulation.Contains(id)) continue;
             CheckEnvironment(id);
-            DroppedBody body = simulation.Get(id);
+            LightweightDroppedBody body = simulation.Get(id);
             ChunkMgr chunks = ChunkMgr.ExistingInstance;
             if (body.WaterKind == 0 || chunks == null || !chunks.TryGetRuntimeWaterCurrent(body.Position, out RuntimeWaterCurrentSample current)) continue;
             float speed = ResolveDriftSpeed(current.Kind, current.Flow);
@@ -109,7 +109,7 @@ internal sealed partial class DroppedItemRuntime
     private void CheckEnvironment(int id)
     {
         if (!simulation.Contains(id) || simulation.TryGetFlight(id, out _)) return;
-        DroppedBody body = simulation.Get(id);
+        LightweightDroppedBody body = simulation.Get(id);
         ChunkMgr chunks = ChunkMgr.ExistingInstance;
         if (chunks == null || !chunks.TryGetRuntimeTerrainTile(body.Position, out RuntimeTerrainTileSample sample))
         {
@@ -148,7 +148,7 @@ internal sealed partial class DroppedItemRuntime
             float start = entering ? (kind == 1 ? Mathf.Max(FloatingEntryDepth, target) : 0f) : body.LiquidDepth;
             float duration = kind == 1 ? FloatingRiseDuration : ResolveSinkDuration(ratio);
             body.WaterKind = kind; body.LiquidDepth = start; body.SubmergedProgress = 0f;
-            simulation.SetWater(id, new DroppedWaterTransition
+            simulation.SetWater(id, new LightweightDroppedWaterTransition
             { StartDepth = start, TargetDepth = target, Duration = duration,
                 RecedeDuration = kind == 2 ? SubmergedRecedeDuration : 0f });
             if (entering)
@@ -160,7 +160,7 @@ internal sealed partial class DroppedItemRuntime
     }
 
     /// <summary>火把等规则从定义读取；先准备替代载荷与视觉，成功后保留同一实体及整组数量。</summary>
-    private void TransformOnWaterEntry(int id, ref DroppedBody body)
+    private void TransformOnWaterEntry(int id, ref LightweightDroppedBody body)
     {
         GameRes resources = GameRes.ExistingInstance;
         ItemData original = payloads[id];

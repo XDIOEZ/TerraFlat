@@ -4,23 +4,23 @@ using FlatWorld.DroppedItems;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-/// <summary>主线程只桥接资源、地形、库存和存档；位置、数量及运动状态保存在独立 ECS World。</summary>
+/// <summary>主线程统一驱动轻量掉落物；没有 Entity、逐物品 Update、Rigidbody2D 或完整 Item 模块。</summary>
 internal sealed partial class DroppedItemRuntime : IDisposable
 {
     private const float SpatialCellSize = 2f;
-    private readonly DroppedItemSimulation simulation = new();
+    private readonly LightweightDroppedItemSimulation simulation = new();
     private readonly Dictionary<int, ItemData> payloads = new();
     private readonly Dictionary<int, DroppedItemVisual> visuals = new();
     private readonly Dictionary<(string, Sprite), DroppedItemVisual> visualCache = new();
     private readonly Dictionary<Vector2Int, HashSet<int>> spatial = new();
     private readonly Dictionary<int, Vector2Int> spatialOwners = new();
-    private readonly List<DroppedChange> changes = new();
+    private readonly List<LightweightDroppedChange> changes = new();
     private readonly List<DroppedItemSaveRecord> unresolved = new();
     private readonly DroppedItemPresentation presentation;
     private WorldTopologyDomain domain;
     public int Count => simulation.Count;
     public bool IsCreated => simulation.IsCreated;
-    public int VisibleBatchCount => presentation.VisibleBatchCount;
+    public int VisibleViewCount => presentation.VisibleViewCount;
     public bool Contains(int id) => simulation.Contains(id);
 
     public DroppedItemRuntime(Scene scene, List<DroppedItemSaveRecord> records)
@@ -50,7 +50,8 @@ internal sealed partial class DroppedItemRuntime : IDisposable
         return visual;
     }
 
-    public void Add(ItemData data, DroppedBody body, DroppedFlight? flight = null, DroppedWaterTransition? water = null)
+    public void Add(ItemData data, LightweightDroppedBody body, LightweightDroppedFlight? flight = null,
+        LightweightDroppedWaterTransition? water = null)
     {
         // 先验证共享视觉，失败时还没有创建实体，调用者可以安全保留库存。
         DroppedItemVisual visual = ResolveVisual(data);
@@ -85,7 +86,7 @@ internal sealed partial class DroppedItemRuntime : IDisposable
 
     private void UpdatePlacement(int id)
     {
-        DroppedBody body = simulation.Get(id);
+        LightweightDroppedBody body = simulation.Get(id);
         Vector2Int cell = SpatialCell(body.Position);
         if (!spatialOwners.TryGetValue(id, out Vector2Int previous) || previous != cell)
         {
@@ -109,7 +110,7 @@ internal sealed partial class DroppedItemRuntime : IDisposable
         if (deltaTime <= 0f) return;
         domain = WorldTopologyRuntime.GetActiveDomain();
         simulation.Step(deltaTime, domain, changes);
-        foreach (DroppedChange change in changes)
+        foreach (LightweightDroppedChange change in changes)
         {
             if (!simulation.Contains(change.Id)) continue;
             if (change.Kind == 3) { Remove(change.Id); continue; }
@@ -120,7 +121,7 @@ internal sealed partial class DroppedItemRuntime : IDisposable
         TickPickup(deltaTime, pickers);
     }
 
-    public void Present(Camera camera) => presentation.Present(camera, domain);
+    public void Present(Camera camera) => presentation.Present(camera, domain, spatial, SpatialCellSize);
 
     public List<DroppedItemSaveRecord> Capture()
     {
@@ -141,7 +142,7 @@ internal sealed partial class DroppedItemRuntime : IDisposable
                 FastCloner.FastCloner.DeepClone(record.Data));
             DroppedItemService.RemoveLegacyDropData(data);
             data.inHand = false; data.Stack.CanBePickedUp = true;
-            DroppedBody body = new()
+            LightweightDroppedBody body = new()
             {
                 Id = data.Guid, Amount = data.Stack.Amount, Position = domain.Normalize(record.Position),
                 Scale = record.Scale, Rotation = record.Rotation, VisualHeight = record.VisualHeight,
@@ -149,13 +150,13 @@ internal sealed partial class DroppedItemRuntime : IDisposable
                 SubmergedProgress = record.WaterKind == 2 && record.HasWaterTransition
                     ? Mathf.Clamp01((record.WaterElapsed - record.WaterDuration) / WorldItemWaterRules.SubmergedRecedeDuration) : 0f
             };
-            DroppedFlight? flight = record.HasFlight ? new DroppedFlight
+            LightweightDroppedFlight? flight = record.HasFlight ? new LightweightDroppedFlight
             {
                 Start = record.FlightStart, End = record.FlightEnd, Control = record.FlightControl,
                 Duration = record.FlightDuration, Elapsed = record.FlightElapsed,
                 ArcHeight = record.ArcHeight, RotationSpeed = record.RotationSpeed
             } : null;
-            DroppedWaterTransition? water = record.HasWaterTransition ? new DroppedWaterTransition
+            LightweightDroppedWaterTransition? water = record.HasWaterTransition ? new LightweightDroppedWaterTransition
             {
                 StartDepth = record.WaterStart, TargetDepth = record.WaterTarget,
                 Duration = record.WaterDuration, Elapsed = record.WaterElapsed,

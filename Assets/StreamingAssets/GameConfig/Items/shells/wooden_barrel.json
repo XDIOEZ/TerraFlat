@@ -3,6 +3,7 @@
   "items": [
     {
       "id": "WoodenBarrel",
+      "worldDropBehavior": "interactive",
       "parent": "BuildingSummoner_Base",
       "shellPrefab": "BuildingSummonerShell",
       "gameName": "木桶",

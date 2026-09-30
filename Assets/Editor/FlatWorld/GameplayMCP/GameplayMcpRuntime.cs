@@ -839,11 +839,11 @@ namespace FlatWorld.GameplayMCP
             return true;
         }
 
-        /// <summary>读取附近 ECS 掉落物当前位置，与旧 ItemMgr nearby 分开返回。</summary>
+        /// <summary>读取附近轻量掉落物当前位置，与完整 ItemMgr nearby 分开返回。</summary>
         private static JArray BuildNearbyDroppedItemObservation(Player player, float radius, int maxDrops)
         {
             var candidates = new List<DroppedItemObservation>(Mathf.Max(4, maxDrops));
-            DroppedItemService.QueryNearbyEntityDrops(player.transform.position, radius, candidates);
+            DroppedItemService.QueryNearbyLightweightDrops(player.transform.position, radius, candidates);
             var ordered = candidates
                 .Select(drop => new
                 {

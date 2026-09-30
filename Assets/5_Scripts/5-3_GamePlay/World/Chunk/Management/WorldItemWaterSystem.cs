@@ -53,8 +53,8 @@ public static class WorldItemWaterSystem
             if (!IsLooseWorldItemCandidate(item))
                 continue;
 
-            // 兼容未声明掉落 API 的 MOD/旧存档；普通陆地掉落也移交 ECS，不再只处理水格。
-            if (DroppedItemService.UsesEntities && DroppedItemService.TryConvertLooseItem(item))
+            // 兼容未声明掉落 API 的 MOD/旧存档；passive 普通掉落移交轻量模拟器。
+            if (DroppedItemService.UsesLightweightDrops && DroppedItemService.TryConvertLooseItem(item))
                 continue;
 
             if (!TryResolveWaterAt(item.transform.position, out bool isWater))
@@ -83,7 +83,7 @@ public static class WorldItemWaterSystem
         if (!TryResolveWaterAt(item.transform.position, out bool isWater) || !isWater)
             return EntryResult.None;
 
-        if (DroppedItemService.UsesEntities && DroppedItemService.TryConvertLooseItem(item))
+        if (DroppedItemService.UsesLightweightDrops && DroppedItemService.TryConvertLooseItem(item))
             return EntryResult.Transformed;
 
         WorldItemWaterRuntime existingRuntime = item.GetComponent<WorldItemWaterRuntime>();

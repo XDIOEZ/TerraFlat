@@ -83,7 +83,7 @@ description: "Use when: 定位或修改 FlatWorld 的 Item/Module 组合架构�
 
 ## 验证
 
-- 单机世界掉落态统一经 `DroppedItemService.Spawn/SpawnLoot` 进入独立 `FlatWorld.DroppedItems.Core` ECS World。位置、数量、短期运动属于组件；`ItemData` 只保留库存冷载荷，不调用 Item.Load、业务模块 Tick 或创建逐物品 Collider。
+- 单机世界掉落统一经 `DroppedItemService.Spawn/SpawnLoot`。定义的 `worldDropBehavior` 默认为 `passive`：进入普通 C# 轻量模拟器，只保留位置、数量、短期运动、水体与拾取数据；表现仅在镜头附近从对象池取一个无 Update/Collider/Rigidbody/Item/Module 的 SpriteRenderer GameObject。`interactive` 则始终保留完整 Item，继续运行受伤、死亡掉落、燃烧、水容器等世界交互模块。
 - 当前所有 AI（含 Zombie）恢复完整 GameObject/Item 模块主控。保留的可选 ECS AI 与静态资源共用 `WorldEntityRuntime`，但关闭 ECS AI 不影响资源 ECS；不可因共享底座再次强制迁移原生 AI。新增 ECS 领域能力不能另建 World，诊断隔离 World 例外。
 - 声明 `entityRuntime: "resource"` 的树、矿点和作物经 `NaturalEntityEcsProfileCompiler` 按模块组合编译，缺失能力必须报错，禁止按距离、联机状态或物种名回退完整 Item。`NaturalEntityEcsService` 持有同一 World 内的实体句柄；`ItemData/ModuleData` 仅用于定义与冷存档，不调用资源 Item.Load 或 Module Tick。
 - ECS 模块冷编译统一通过 `DeserializeConfiguration<T>` 以 `ObjectCreationHandling.Replace` 读取配置；显式集合必须替换构造默认集合，缺省字段仍保留默认值，禁止把成长阶段、采集提示点等追加到默认列表后再放宽校验。
@@ -94,9 +94,9 @@ description: "Use when: 定位或修改 FlatWorld 的 Item/Module 组合架构�
 - 资源 BRG 使用运行时实体 ID 与部件号分配负槽位，不能用格子或自然 GUID 覆盖树身、果实、阴影。静态自然物表现由 Dirty/Event 队列驱动，成长版本、采集、受击、树冠变化和环世界重投影才触发重提；禁止在 `Present` 中每帧全量遍历所有资源。接触阴影几何只在实体几何/绑定变化时重建，昼夜透明度走批次级材质参数。源材质缓存键必须区分机械与资源 Shader 变体；逻辑坐标进入存档，局部镜像变换只用于表现。渲染卸载必须清除全部部件。
 - 带 `Tag.Tree` 的资源主体与附属果实使用 `NaturalEntityEcsService.TreeSortingVisual` 纯视觉桥，以树根本地镜像为 `SortingGroup` 锚点，读取 `world-item` 排序键与玩家混排。不得同时保留主体 BRG 实例；太阳/接触阴影继续合批。视觉外壳只含 Transform、SortingGroup、SpriteRenderer，不恢复 Item、Module、Collider 或逐树 Update，解绑与换世界必须一并释放。
 - 资源客户端不推进权威植物 Job；客户端采集命令及资源状态增量同步仍需独立接入，不能把服务端实体迁移当成联机链已经完成，也不能回退旧 GameObject 来掩盖缺口。蜂巢、传送门等未声明资源后端的独立玩法不在植物后端中静默模拟。
-- 旧 Item 返回型扩展通过 `ScheduleLegacyDrop` 在本轮模块更新完成后移交，禁止在 Item.Load 的模块栈内销毁宿主。联机仍使用已有 Item 权威链，不能把单机 ECS 路径当成已完成网络迁移。
-- ECS 与 Item 兼容路径的浮沉数值统一读取 `WorldItemWaterRules`；达到有效阈值即下沉，液体倍率只改变浮力阈值，水线、时长和水花曲线保持同一来源。禁止在 ECS 分支复制另一套常量或使用不同的临界比较；纯数值校验入口为 `FlatWorld/诊断/验证掉落物水体规则`。
-- `FlatWorld/诊断/验证掉落物 ECS` 仅使用隔离 ECS World、内存快照和预览场景，适用于不触碰真实存档的回归。
+- 旧 Item 返回型扩展只有在定义为 `passive` 时才通过 `ScheduleLegacyDrop` 在本轮模块更新完成后移交；`interactive` 不得被转换，避免在 Item.Load 的模块栈内丢失玩法能力。联机仍使用已有 Item 权威链。
+- 轻量掉落与完整 Item 的浮沉数值统一读取 `WorldItemWaterRules`；达到有效阈值即下沉，液体倍率只改变浮力阈值，水线、时长和水花曲线保持同一来源。
+- `Entities/DroppedItems/Core` 的旧 ECS 掉落实现保留为 Editor-only 学习参考，不参与正式游戏运行；菜单 `FlatWorld/诊断/学习参考/验证旧掉落物 ECS` 只验证这份参考实现。
 
 - 检查加载→Tick→保存→Despawn→复用后无旧状态、订阅、空间索引或调度残留。
 - 生命周期/ModuleData 联动 Data Skill；网络状态联动 Networking；具体玩法只加载其领域 Skill。

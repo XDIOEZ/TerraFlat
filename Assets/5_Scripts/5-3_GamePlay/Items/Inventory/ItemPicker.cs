@@ -473,9 +473,9 @@ public class ItemPicker : Module
             worldItem.itemData?.Guid ?? worldItem.GetInstanceID()));
     }
 
-    #region ECS 掉落物桥接
+    #region 轻量掉落物桥接
 
-    /// <summary>ECS 与旧物品共用失败提示限频，静止在满包玩家身边不会不断刷提示。</summary>
+    /// <summary>轻量掉落物与完整 Item 共用失败提示限频，静止在满包玩家身边不会不断刷提示。</summary>
     internal bool TryAcceptDroppedPickup(ItemData data)
     {
         if (TryAcceptNetworkPickup(data)) return true;
@@ -500,12 +500,12 @@ public class ItemPicker : Module
             (droppedPickupCollider.ClosestPoint(point) - point).sqrMagnitude <= 0.0625f;
     }
 
-    /// <summary>只为已经成功入包的物品创建短期吸入视觉，实体本身从来不需要 SpriteRenderer。</summary>
-    internal void PlayDroppedPickupFeedback(DroppedItemVisual visual, FlatWorld.DroppedItems.DroppedBody body)
+    /// <summary>只为已经成功入包的物品创建短期吸入视觉。</summary>
+    internal void PlayDroppedPickupFeedback(DroppedItemVisual visual, FlatWorld.DroppedItems.LightweightDroppedBody body)
     {
         Vector3 position = new(body.Position.x, body.Position.y + body.VisualHeight, 0f);
         AudioService.Instance.PlayAt(AudioEventIds.ItemPickup, position);
-        GameObject root = new GameObject("ECS掉落物_拾取反馈");
+        GameObject root = new GameObject("轻量掉落物_拾取反馈");
         UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(root, gameObject.scene);
         Quaternion rotation = Quaternion.Euler(0f, 0f, body.Rotation);
         Vector3 scale = new(body.Scale.x, body.Scale.y, 1f);

@@ -74,6 +74,7 @@
     },
     {
       "id": "HandDrill_Summoner",
+      "worldDropBehavior": "interactive",
       "parent": "BuildingSummoner_Base",
       "gameName": "手钻",
       "description": "可携带的手动钻孔工具，放置后共享手钻加工状态。",

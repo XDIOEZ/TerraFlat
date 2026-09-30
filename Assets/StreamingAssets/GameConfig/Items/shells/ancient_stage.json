@@ -918,6 +918,7 @@
     },
     {
       "id": "ClayJar",
+      "worldDropBehavior": "interactive",
       "parent": "Clay",
       "shellPrefab": "BuildingSummonerShell",
       "gameName": "陶罐",

@@ -17,7 +17,7 @@ public readonly struct DroppedItemHandle
 }
 
 /// <summary>
-/// 掉落态入口：生成、轨迹、拾取与持久化共享同一 ECS 权威世界。ItemData 只作库存冷载荷，
+/// 掉落态入口：passive 使用轻量 GameObject 模拟器，interactive 保留完整 Item。ItemData 只作轻量掉落物冷载荷，
 /// 树木、矿石节点、安装中的建筑、手持物和战斗中的投射物仍由各自原系统管理。
 /// </summary>
 public static partial class DroppedItemService
@@ -36,9 +36,9 @@ public static partial class DroppedItemService
     private static readonly List<KeyValuePair<Item, LegacyDropPlan>> legacyScratch = new();
     internal static uint Epoch { get; private set; } = 1;
     public static int Count => runtime?.Count ?? 0;
-    public static int VisibleBatchCount => runtime?.VisibleBatchCount ?? 0;
-    // 联机仍通过现有 Item 权威事务；不得让本地 ECS 绕过服务端的生成/拾取确认。
-    public static bool UsesEntities => !GameNetwork.IsOnline;
+    public static int VisibleViewCount => runtime?.VisibleViewCount ?? 0;
+    // 联机仍通过现有 Item 权威事务；轻量 GameObject 掉落物当前只在单机作为本地权威运行。
+    public static bool UsesLightweightDrops => !GameNetwork.IsOnline;
     internal static bool Contains(int id) => runtime != null && runtime.Contains(id);
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -51,7 +51,7 @@ public static partial class DroppedItemService
 
     #region 生成与回收
 
-    /// <summary>先成功构造实体，再由调用者提交库存扣减；正常掉落入口完全不实例化 Item。</summary>
+    /// <summary>先成功创建掉落态，再由调用者提交库存扣减；passive 不实例化完整 Item。</summary>
     public static DroppedItemHandle Spawn(ItemData source, Vector2 position, Vector2? destination = null,
         float duration = 0f, Vector3? scale = null, float rotation = 0f, float bezierOffset = 1f,
         float arcHeight = 1f, float rotationSpeed = 720f)
@@ -66,8 +66,9 @@ public static partial class DroppedItemService
             throw new InvalidOperationException($"找不到掉落物定义：{source.IDName}");
         if (definition.IsActor) throw new InvalidOperationException($"生物不是静态掉落物：{source.IDName}");
         Vector3 finalScale = scale ?? ResolveDefaultWorldDropScale(source);
-        if (!UsesEntities) return SpawnNetworkCompatible(source, position, destination, duration, finalScale, rotation,
-            bezierOffset, arcHeight, rotationSpeed);
+        if (!definition.UsesLightweightWorldDrop || !UsesLightweightDrops)
+            return SpawnItemBacked(source, position, destination, duration, finalScale, rotation,
+                bezierOffset, arcHeight, rotationSpeed);
         EnsureContext();
         ItemData payload = FastCloner.FastCloner.DeepClone(source);
         payload.inHand = false; payload.Stack.CanBePickedUp = true;
@@ -77,12 +78,12 @@ public static partial class DroppedItemService
         payload.Guid = id;
         Vector2 start = WorldTopologyRuntime.NormalizePosition(position);
         Vector2 end = WorldTopologyRuntime.NearestImagePosition(start, destination ?? start);
-        DroppedBody body = new()
+        LightweightDroppedBody body = new()
         {
             Id = id, Position = start, Scale = new Unity.Mathematics.float2(finalScale.x, finalScale.y),
             Rotation = rotation, Amount = payload.Stack.Amount, Pickable = 0
         };
-        DroppedFlight? flight = duration > 0f ? new DroppedFlight
+        LightweightDroppedFlight? flight = duration > 0f ? new LightweightDroppedFlight
         {
             Start = start, End = end, Control = (start + end) * 0.5f + Vector2.up * bezierOffset,
             Duration = Mathf.Max(0.0001f, duration), ArcHeight = arcHeight, RotationSpeed = rotationSpeed
@@ -146,6 +147,17 @@ public static partial class DroppedItemService
         return true;
     }
 
+    /// <summary>内容层只声明 passive/interactive；这里集中决定当前实例能否进入轻量掉落物模拟器。</summary>
+    public static bool ShouldUseLightweightDrop(ItemData source)
+    {
+        if (!UsesLightweightDrops || source == null || string.IsNullOrWhiteSpace(source.IDName))
+            return false;
+        GameRes resources = GameRes.ExistingInstance;
+        return resources != null &&
+               resources.TryGetItemDefinition(source.IDName, out RuntimeItemDefinition definition) &&
+               definition.UsesLightweightWorldDrop;
+    }
+
     /// <summary>回滚未提交的生成，或删除已被完全拾取的实体。</summary>
     public static void Remove(DroppedItemHandle handle)
     {
@@ -175,7 +187,10 @@ public static partial class DroppedItemService
     public static bool ScheduleLegacyDrop(Item item, Vector2 start, Vector2 end, float duration,
         float bezierOffset = 1f, float arcHeight = 1f, float rotationSpeed = 720f)
     {
-        if (!UsesEntities || item?.itemData?.Stack == null || RuntimeAiEntityUtility.IsAiEntity(item)) return false;
+        if (!ShouldUseLightweightDrop(item?.itemData) ||
+            item?.itemData?.Stack == null ||
+            RuntimeAiEntityUtility.IsAiEntity(item))
+            return false;
         item.itemData.Stack.CanBePickedUp = false;
         legacyPlans[item] = new LegacyDropPlan
         { Start = start, End = end, Duration = duration, Bezier = bezierOffset, Arc = arcHeight, Spin = rotationSpeed };
@@ -185,7 +200,7 @@ public static partial class DroppedItemService
     /// <summary>无轨迹的遗留生成入口也可移交；调用方必须先排除手持物、自然实体与附着投射物。</summary>
     public static bool TryConvertLooseItem(Item item)
     {
-        if (!UsesEntities || item == null || item.DestructionHandled || item.itemData == null ||
+        if (!ShouldUseLightweightDrop(item?.itemData) || item == null || item.DestructionHandled || item.itemData == null ||
             legacyPlans.ContainsKey(item)) return false;
         DroppedItemHandle handle = default;
         try
@@ -229,7 +244,7 @@ public static partial class DroppedItemService
         legacyScratch.Clear();
     }
 
-    private static DroppedItemHandle SpawnNetworkCompatible(ItemData source, Vector2 position, Vector2? destination,
+    private static DroppedItemHandle SpawnItemBacked(ItemData source, Vector2 position, Vector2? destination,
         float duration, Vector3? scale, float rotation, float bezier, float arc, float spin)
     {
         ItemData data = FastCloner.FastCloner.DeepClone(source); data.inHand = false;
@@ -275,15 +290,15 @@ public static partial class DroppedItemService
     /// <summary>由 ItemMgr 在正式世界门禁内集中驱动一次，而非为每个掉落物创建 MonoBehaviour。</summary>
     public static void Tick(float deltaTime)
     {
-        if (!UsesEntities) return;
+        if (!UsesLightweightDrops) return;
         EnsureContext(); ProcessLegacyPlans();
         runtime.Tick(deltaTime, pickers);
     }
 
-    /// <summary>在区块快照开始前结清本帧旧生产者，避免同一物品同时写入旧区块与 ECS 快照。</summary>
+    /// <summary>在区块快照开始前结清本帧旧生产者，避免同一物品同时写入旧区块与轻量掉落物快照。</summary>
     public static void PrepareForSave()
     {
-        if (!UsesEntities || !Application.isPlaying || SaveDataMgr.Instance.SaveData == null ||
+        if (!UsesLightweightDrops || !Application.isPlaying || SaveDataMgr.Instance.SaveData == null ||
             (runtime == null && legacyPlans.Count == 0 &&
              (ChunkMgr.ExistingInstance == null || !ChunkMgr.ExistingInstance.IsWorldModelRuntimeActive))) return;
         EnsureContext();
@@ -293,10 +308,10 @@ public static partial class DroppedItemService
 
     public static void Present()
     {
-        if (UsesEntities) runtime?.Present(Camera.main);
+        if (UsesLightweightDrops) runtime?.Present(Camera.main);
     }
 
-    /// <summary>必须在退出保存之后释放；GameWorldExit 通知发生在保存之前，不能在该事件中销毁实体。</summary>
+    /// <summary>必须在退出保存之后释放；GameWorldExit 通知发生在保存之前，不能提前回收掉落物。</summary>
     public static void ReleaseWorld(bool capture = true, bool clearPending = true)
     {
         if (runtime != null)

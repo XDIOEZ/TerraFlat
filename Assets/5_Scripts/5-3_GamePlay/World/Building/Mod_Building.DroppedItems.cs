@@ -50,8 +50,8 @@ public partial class Mod_Building
         ItemMgr.Instance.DespawnItem(item, false);
     }
 
-    /// <summary>单机拆除直接生成带完整快照的 ECS 库存载体，不为地面召唤器装配建筑模块或碰撞体。</summary>
-    private bool TryCreateDismantledEcsDrop(out string reason)
+    /// <summary>单机拆除经统一掉落服务生成库存载体，具体使用轻量掉落物还是完整 Item 由定义决定。</summary>
+    private bool TryCreateDismantledDrop(out string reason)
     {
         reason = null;
         if (item?.itemData == null || Data?.Role != BuildingRole.PlacedBuilding)

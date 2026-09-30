@@ -496,9 +496,9 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IIncrementalChunkV
                 if (machine != null) chunkManager.MarkNaturalItemRemoved(address, placement.Guid);
                 return true;
             }
-            // 可直接拾取的散落生成点只创建 ECS 掉落物；树、矿石、传送门等自然实体仍走 Item。
+            // 可直接拾取的散落生成点交给统一掉落服务；passive 走轻量 GameObject，interactive 保留完整 Item。
             ItemData looseData = changedData;
-            if (DroppedItemService.UsesEntities && !placement.IsDimensionPortal && definition != null &&
+            if (DroppedItemService.UsesLightweightDrops && !placement.IsDimensionPortal && definition != null &&
                 !definition.IsActor && definition.ShellPrefab != null &&
                 definition.ShellPrefab.GetComponentInChildren<TileEffectReceiver>(true) == null)
             {

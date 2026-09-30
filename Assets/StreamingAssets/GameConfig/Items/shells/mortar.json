@@ -3,6 +3,7 @@
   "items": [
     {
       "id": "StoneMortar",
+      "worldDropBehavior": "interactive",
       "parent": "BasicItem_Base",
       "shellPrefab": "BuildingSummonerShell",
       "gameName": "石臼",

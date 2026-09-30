@@ -51,14 +51,16 @@ public class Mod_Droping : Module
         BindDropItemReference();
 
         // 旧存档只在完成 Item.Load 后转换；不能在加载模块栈内回收宿主。
-        if (DroppedItemService.UsesEntities && item != null && !RuntimeAiEntityUtility.IsAiEntity(item))
+        if (item != null &&
+            !RuntimeAiEntityUtility.IsAiEntity(item) &&
+            DroppedItemService.ShouldUseLightweightDrop(item.itemData))
         {
             bool moving = drop != null && !drop.waterFloating && !drop.waterSinking;
             Vector2 start = item.transform.position;
-            DroppedItemService.ScheduleLegacyDrop(item, start, moving ? drop.endPos : start,
-                moving ? Mathf.Max(0f, drop.time - drop.progressTime) : 0f,
-                arcHeight: arcHeight, rotationSpeed: drop?.rotationSpeed ?? 0f);
-            return;
+            if (DroppedItemService.ScheduleLegacyDrop(item, start, moving ? drop.endPos : start,
+                    moving ? Mathf.Max(0f, drop.time - drop.progressTime) : 0f,
+                    arcHeight: arcHeight, rotationSpeed: drop?.rotationSpeed ?? 0f))
+                return;
         }
 
         // 掉落物先尝试绑定新版 ChunkView。新区块窗口已启用时，即使当前画面尚未
@@ -86,7 +88,9 @@ public class Mod_Droping : Module
 
     public override void ModUpdate(float deltaTime)
     {
-        if (DroppedItemService.UsesEntities && item != null && !RuntimeAiEntityUtility.IsAiEntity(item))
+        if (item != null &&
+            !RuntimeAiEntityUtility.IsAiEntity(item) &&
+            DroppedItemService.ShouldUseLightweightDrop(item.itemData))
             return;
         if (drop == null)
         {

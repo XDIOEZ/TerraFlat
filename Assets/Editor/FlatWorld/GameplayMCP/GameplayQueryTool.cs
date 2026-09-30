@@ -534,7 +534,7 @@ namespace FlatWorld.GameplayMCP
             }
         }
 
-        /// <summary>查询玩家附近 ECS 掉落物，并保留飞行中掉落的实时世界位置。</summary>
+        /// <summary>查询玩家附近轻量 GameObject 掉落物，并保留飞行中掉落的实时世界位置。</summary>
         private static object QueryDrops(
             Player player,
             string itemId,
@@ -547,7 +547,7 @@ namespace FlatWorld.GameplayMCP
         {
             limit = Mathf.Clamp(limit, 1, MaximumRuntimePageSize);
             var candidates = new List<DroppedItemObservation>(64);
-            DroppedItemService.QueryNearbyEntityDrops(player.transform.position, radius, candidates);
+            DroppedItemService.QueryNearbyLightweightDrops(player.transform.position, radius, candidates);
             HashSet<string> resolvedItemIds = ResolveCatalogItemIds(itemId, query);
             bool hasIdentityFilter = !string.IsNullOrWhiteSpace(itemId) || !string.IsNullOrWhiteSpace(query);
 

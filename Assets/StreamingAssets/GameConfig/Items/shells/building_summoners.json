@@ -14,6 +14,7 @@
     },
     {
       "id": "BlastFurnace_Summoner",
+      "worldDropBehavior": "interactive",
       "parent": "BuildingSummoner_Base",
       "sourcePrefab": "Assets/2_Prefabs/World/Buildings/Summoners/BlastFurnace_Summoner.prefab",
       "gameName": "高炉",
@@ -139,6 +140,7 @@
     },
     {
       "id": "Bonfire_Summoner",
+      "worldDropBehavior": "interactive",
       "parent": "BuildingSummoner_Base",
       "sourcePrefab": "Assets/2_Prefabs/World/Buildings/Summoners/Bonfire_Summoner.prefab",
       "gameName": "篝火",
@@ -264,6 +266,7 @@
     },
     {
       "id": "Chest_Wood_Summoner",
+      "worldDropBehavior": "interactive",
       "parent": "BuildingSummoner_Base",
       "sourcePrefab": "Assets/2_Prefabs/World/Buildings/Summoners/Chest_Wood_Summoner.prefab",
       "gameName": "木箱",
@@ -389,6 +392,7 @@
     },
     {
       "id": "Door_Stone_Summoner",
+      "worldDropBehavior": "interactive",
       "parent": "BuildingSummoner_Base",
       "sourcePrefab": "Assets/2_Prefabs/World/Buildings/Summoners/Door_Stone_Summoner.prefab",
       "gameName": "石门",
@@ -514,6 +518,7 @@
     },
     {
       "id": "Door_Wood_Summoner",
+      "worldDropBehavior": "interactive",
       "parent": "BuildingSummoner_Base",
       "sourcePrefab": "Assets/2_Prefabs/World/Buildings/Summoners/Door_Wood_Summoner.prefab",
       "gameName": "木门",
@@ -639,6 +644,7 @@
     },
     {
       "id": "Meatrack_Summoner",
+      "worldDropBehavior": "interactive",
       "parent": "BuildingSummoner_Base",
       "sourcePrefab": "Assets/2_Prefabs/World/Buildings/Summoners/Meatrack_Summoner.prefab",
       "gameName": "晾肉架",
@@ -764,6 +770,7 @@
     },
     {
       "id": "MineEntrance_Summoner",
+      "worldDropBehavior": "interactive",
       "parent": "BuildingSummoner_Base",
       "sourcePrefab": "Assets/2_Prefabs/World/Buildings/Summoners/MineEntrance_Summoner.prefab",
       "gameName": "矿坑入口",
@@ -895,6 +902,7 @@
     },
     {
       "id": "Scarecrow_Summoner",
+      "worldDropBehavior": "interactive",
       "parent": "BuildingSummoner_Base",
       "sourcePrefab": "Assets/2_Prefabs/World/Buildings/Summoners/Scarecrow_Summoner.prefab",
       "gameName": "稻草人",
@@ -1020,6 +1028,7 @@
     },
     {
       "id": "Smelter_Summoner",
+      "worldDropBehavior": "interactive",
       "parent": "BuildingSummoner_Base",
       "sourcePrefab": "Assets/2_Prefabs/World/Buildings/Summoners/Smelter_Summoner.prefab",
       "gameName": "熔炉",
@@ -1145,6 +1154,7 @@
     },
     {
       "id": "Tent_Summoner",
+      "worldDropBehavior": "interactive",
       "parent": "BuildingSummoner_Base",
       "sourcePrefab": "Assets/2_Prefabs/World/Buildings/Summoners/Tent_Summoner.prefab",
       "gameName": "帐篷",
@@ -1270,6 +1280,7 @@
     },
     {
       "id": "Wall_Stone_Summoner",
+      "worldDropBehavior": "interactive",
       "parent": "BuildingSummoner_Base",
       "sourcePrefab": "Assets/2_Prefabs/World/Buildings/Summoners/Wall_Stone_Summoner.prefab",
       "gameName": "石墙",
@@ -1395,6 +1406,7 @@
     },
     {
       "id": "Wall_Wood_Summoner",
+      "worldDropBehavior": "interactive",
       "parent": "BuildingSummoner_Base",
       "sourcePrefab": "Assets/2_Prefabs/World/Buildings/Summoners/Wall_Wood_Summoner.prefab",
       "gameName": "木墙",
@@ -1520,6 +1532,7 @@
     },
     {
       "id": "WorkBench_Summoner",
+      "worldDropBehavior": "interactive",
       "parent": "BuildingSummoner_Base",
       "sourcePrefab": "Assets/2_Prefabs/World/Buildings/Summoners/WorkBench_Summoner.prefab",
       "gameName": "工作台",
@@ -1645,6 +1658,7 @@
     },
     {
       "id": "SparkMaker_Summoner",
+      "worldDropBehavior": "interactive",
       "parent": "BuildingSummoner_Base",
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Tools/Summoners/SparkMaker_Summoner.prefab",
       "gameName": "钻木取火工具",
@@ -1779,6 +1793,7 @@
     },
     {
       "id": "Torch_Summoner",
+      "worldDropBehavior": "interactive",
       "parent": "Torch_Base",
       "waterEntryTransformItemId": "Stick_Wood",
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Tools/Summoners/Torch_Summoner.prefab",
@@ -1908,6 +1923,7 @@
     },
     {
       "id": "CompostBin_Summoner",
+      "worldDropBehavior": "interactive",
       "parent": "BuildingSummoner_Base",
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Food/Summoners/CompostBin_Summoner.prefab",
       "gameName": "堆肥箱",
@@ -2033,6 +2049,7 @@
     },
     {
       "id": "WaterPlatform_Summoner",
+      "worldDropBehavior": "interactive",
       "parent": "BuildingSummoner_Base",
       "gameName": "水上平台",
       "description": "只能铺设在水中的木板平台。铺好后成为普通地面，可正常行走并继续放置建筑。",

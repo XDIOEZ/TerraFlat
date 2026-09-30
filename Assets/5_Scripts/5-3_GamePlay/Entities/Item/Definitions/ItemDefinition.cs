@@ -119,6 +119,10 @@ public sealed class ItemDefinitionDto
     [JsonProperty("entityRuntime", NullValueHandling = NullValueHandling.Ignore)]
     public string EntityRuntime;
 
+    /// <summary>passive 使用轻量掉落物；interactive 在地面仍保留完整 Item 与模块交互。</summary>
+    [JsonProperty("worldDropBehavior", NullValueHandling = NullValueHandling.Ignore)]
+    public string WorldDropBehavior;
+
     /// <summary>不依赖 Collider 的确定性世界格占地；偏移相对物品根节点所在格。</summary>
     [JsonProperty("worldGridOccupancy", NullValueHandling = NullValueHandling.Ignore)]
     public WorldGridOccupancyData WorldGridOccupancy;
@@ -373,6 +377,12 @@ public sealed class ItemModuleDefinitionDto
     public JObject Parameters;
 }
 
+public enum WorldDropBehavior
+{
+    Passive = 0,
+    Interactive = 1
+}
+
 /// <summary>校验并解析后的不可变运行时物品定义。</summary>
 public sealed class RuntimeItemDefinition
 {
@@ -404,6 +414,8 @@ public sealed class RuntimeItemDefinition
     public bool CanBePickedUp => templateData?.Stack?.CanBePickedUp == true;
     public string EntityRuntime { get; }
     public bool UsesResourceEntities => string.Equals(EntityRuntime, "resource", StringComparison.Ordinal);
+    public WorldDropBehavior DropBehavior { get; }
+    public bool UsesLightweightWorldDrop => !IsActor && DropBehavior == WorldDropBehavior.Passive;
 
     /// <summary>由当前内容编译的共享根级感知几何；非 Actor 通过旧对象 Bridge 感知。</summary>
     internal FlatWorld.Geometry.PerceptionShape2D[] ActorPerceptionShapes { get; }
@@ -463,10 +475,12 @@ public sealed class RuntimeItemDefinition
         IReadOnlyList<GridCellOffset> worldGridOccupancy = null,
         int requiredGroundSupport = 0,
         JObject actorEcs = null,
-        string entityRuntime = null)
+        string entityRuntime = null,
+        WorldDropBehavior worldDropBehavior = WorldDropBehavior.Passive)
     {
         Id = id;
         EntityRuntime = entityRuntime;
+        DropBehavior = worldDropBehavior;
         ShellPrefabId = shellPrefabId;
         ShellPrefab = shellPrefab;
         templateData = itemData;

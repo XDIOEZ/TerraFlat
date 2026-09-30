@@ -997,7 +997,22 @@ public static class ItemDefinitionCatalogLoader
             ResolveWorldGridOccupancy(dto.WorldGridOccupancy, id),
             dto.RequiredGroundSupport,
             dto.Ecs,
-            dto.EntityRuntime);
+            dto.EntityRuntime,
+            ResolveWorldDropBehavior(dto.WorldDropBehavior, id));
+    }
+
+    private static WorldDropBehavior ResolveWorldDropBehavior(string value, string itemId)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return WorldDropBehavior.Passive;
+
+        return value.Trim().ToLowerInvariant() switch
+        {
+            "passive" => WorldDropBehavior.Passive,
+            "interactive" => WorldDropBehavior.Interactive,
+            _ => throw new InvalidDataException(
+                $"物品 {itemId} 的 worldDropBehavior 只能是 passive 或 interactive：{value}")
+        };
     }
 
     /// <summary>校验并转换配置中的整数占格，禁止空格、重复格或无效条目进入运行时定义。</summary>

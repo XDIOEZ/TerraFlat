@@ -720,8 +720,8 @@ public partial class Mod_Building : Module, IIncomingDamageRule
 
         _dismantlePending = false;
         string reason;
-        bool created = DroppedItemService.UsesEntities
-            ? TryCreateDismantledEcsDrop(out reason)
+        bool created = DroppedItemService.UsesLightweightDrops
+            ? TryCreateDismantledDrop(out reason)
             : TryCreateDismantledSummoner(out _, out reason);
         if (!created)
         {

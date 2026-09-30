@@ -32,6 +32,7 @@
     },
     {
       "id": "GrassBed",
+      "worldDropBehavior": "interactive",
       "parent": "Tent",
       "sourcePrefab": "",
       "gameName": "草床-建筑",

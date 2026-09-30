@@ -6,7 +6,7 @@ using Unity.Mathematics;
 
 namespace FlatWorld.DroppedItems
 {
-    /// <summary>独立世界中的掉落运动系统；主线程冻结拓扑，Burst 只处理具有短期运动组件的实体。</summary>
+    /// <summary>学习参考：旧 ECS 掉落运动系统；展示 Job/Burst 处理短期运动的写法，不参与正式运行。</summary>
     [DisableAutoCreation]
     public partial class DroppedMotionSystem : SystemBase
     {

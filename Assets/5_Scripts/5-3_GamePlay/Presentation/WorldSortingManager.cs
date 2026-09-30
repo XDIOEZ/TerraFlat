@@ -18,7 +18,7 @@ public sealed class WorldSortingManager : SingletonMono<WorldSortingManager>
     public const string CreatureCategory = "creature"; // ECS 与旧生物共用类别。
     public const string BuildingCategory = "building"; // 建筑与机械动态视觉共用类别。
     public const string VehicleCategory = "vehicle"; // 木筏与未来交通工具共用类别。
-    public const string WorldItemCategory = "world-item"; // 普通 Item 与 ECS 掉落物共用类别。
+    public const string WorldItemCategory = "world-item"; // 普通 Item 与轻量掉落物共用类别。
     public const string GroundShadowCategory = "ground-shadow"; // 太阳与接触阴影共用地表排序键。
     public const string GroundBuildingCategory = "ground-building"; // 贴地设施复用地形层，材质队列放在墙体下面。
     public const string GroundMarkCategory = "ground-mark"; // 裂纹、脚印与耕地渐显。

@@ -43,6 +43,7 @@
     },
     {
       "id": "Crucible",
+      "worldDropBehavior": "interactive",
       "parent": "BasicItem_Base",
       "gameName": "坩埚",
       "description": "可装入沙子、矿石等固体材料，也可保存熔化后的高温液体。放入任意接入通用加热能力的炉子后，坩埚会按材料配方和温度区间处理内部材料。",

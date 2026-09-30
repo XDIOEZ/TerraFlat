@@ -2745,6 +2745,7 @@
     },
     {
       "id": "Coconut_Green",
+      "worldDropBehavior": "interactive",
       "parent": "BasicItem_Base",
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Food/Coconut_Green.prefab",
       "gameName": "青椰子",
@@ -2851,6 +2852,7 @@
     },
     {
       "id": "Coconut_Half",
+      "worldDropBehavior": "interactive",
       "parent": "BasicItem_Base",
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Food/Coconut_Half.prefab",
       "gameName": "半个椰子",
@@ -3062,6 +3064,7 @@
     },
     {
       "id": "Coconut_Nude",
+      "worldDropBehavior": "interactive",
       "parent": "BasicItem_Base",
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Food/Coconut_Nude.prefab",
       "gameName": "去皮椰子",
@@ -3168,6 +3171,7 @@
     },
     {
       "id": "Coconut_Shell",
+      "worldDropBehavior": "interactive",
       "parent": "BasicItem_Base",
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Food/Coconut_Shell.prefab",
       "gameName": "椰壳",

@@ -36,7 +36,7 @@ internal sealed partial class DroppedItemRuntime
                     if (!spatial.TryGetValue(SpatialCell(point), out HashSet<int> bucket)) continue;
                     foreach (int id in bucket)
                     {
-                        DroppedBody body = simulation.Get(id);
+                        LightweightDroppedBody body = simulation.Get(id);
                         if (body.Pickable != 0 && picker.CanReachDroppedPoint(domain.NearestImagePosition((Vector2)bounds.center, body.Position)))
                             nearby.Add(id);
                     }
@@ -55,7 +55,7 @@ internal sealed partial class DroppedItemRuntime
         if (!simulation.Contains(id) || !pickupReservations.Add(id)) return;
         try
         {
-            DroppedBody body = simulation.Get(id);
+            LightweightDroppedBody body = simulation.Get(id);
             if (body.Pickable == 0 || body.Amount <= 0f) return;
             ItemData candidate = FastCloner.FastCloner.DeepClone(payloads[id]);
             candidate.Stack.Amount = body.Amount; candidate.Stack.CanBePickedUp = true;

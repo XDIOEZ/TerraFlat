@@ -13,6 +13,8 @@ Shader "Game/2D/AIECS Sprite Lit"
         _WaterWaveFrequency("波频率", Float) = 8
         _WaterWaveSpeed("波速度", Float) = 2.4
         _WaterLineOffset("批次水线世界偏移", Float) = 0
+        [PerRendererData] _UsePerRendererDroppedWater("轻量掉落物独立水线", Float) = 0
+        [PerRendererData] _DroppedWaterParams("轻量掉落物水线参数", Vector) = (0,0,1,0)
     }
     SubShader
     {
@@ -32,6 +34,8 @@ Shader "Game/2D/AIECS Sprite Lit"
             float _WaterAlpha, _WaterLineStrength, _WaterFeather, _WaterLineWidth;
             float _WaterWaveAmplitude, _WaterWaveFrequency, _WaterWaveSpeed;
             float _WaterLineOffset;
+            float _UsePerRendererDroppedWater;
+            float4 _DroppedWaterParams;
         CBUFFER_END
 
         #if defined(UNITY_DOTS_INSTANCING_ENABLED)
@@ -95,10 +99,17 @@ Shader "Game/2D/AIECS Sprite Lit"
         half4 SampleBody(Varyings input)
         {
             half4 main = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv) * input.color;
+            float4 resolvedWater = input.water;
+            float waterOffset = _WaterLineOffset;
+            if (_UsePerRendererDroppedWater > 0.5)
+            {
+                resolvedWater = _DroppedWaterParams;
+                waterOffset = 0;
+            }
             return FlatWorldApplyActorWater(main, 0, 0, input.world,
-                float4(input.water.x, 1, input.water.y + _WaterLineOffset, input.water.z),
+                float4(resolvedWater.x, 1, resolvedWater.y + waterOffset, resolvedWater.z),
                 float4(0, _WaterFeather, _WaterLineWidth, _WaterWaveAmplitude),
-                float4(_WaterWaveFrequency, _WaterWaveSpeed, input.water.w, _WaterLineStrength),
+                float4(_WaterWaveFrequency, _WaterWaveSpeed, resolvedWater.w, _WaterLineStrength),
                 _WaterTint, _WaterLineColor, _WaterAlpha, _Time.y);
         }
         ENDHLSL

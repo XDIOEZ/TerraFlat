@@ -981,6 +981,7 @@
     },
     {
       "id": "Torch_Base",
+      "worldDropBehavior": "interactive",
       "weight": 1.0,
       "volume": 2.0,
       "stackable": false,

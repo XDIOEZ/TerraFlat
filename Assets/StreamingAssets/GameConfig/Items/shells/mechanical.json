@@ -82,6 +82,7 @@
     },
     {
       "id": "HandCrank_Summoner",
+      "worldDropBehavior": "interactive",
       "parent": "BuildingSummoner_Base",
       "gameName": "手摇轮",
       "description": "手摇轮，用于首版机械扭矩系统试玩。",
@@ -234,6 +235,7 @@
     },
     {
       "id": "WaterWheel_Summoner",
+      "worldDropBehavior": "interactive",
       "parent": "BuildingSummoner_Base",
       "gameName": "水车",
       "description": "水车，用于首版机械扭矩系统试玩。",
@@ -384,6 +386,7 @@
     },
     {
       "id": "Windmill_Summoner",
+      "worldDropBehavior": "interactive",
       "parent": "BuildingSummoner_Base",
       "requiredGroundSupport": 7,
       "gameName": "风车",
@@ -533,6 +536,7 @@
     },
     {
       "id": "Shaft_Wood_Summoner",
+      "worldDropBehavior": "interactive",
       "parent": "BuildingSummoner_Base",
       "gameName": "木制传动轴",
       "description": "木制传动轴，用于首版机械扭矩系统试玩。",
@@ -681,6 +685,7 @@
     },
     {
       "id": "Gear_Wood_Summoner",
+      "worldDropBehavior": "interactive",
       "parent": "BuildingSummoner_Base",
       "gameName": "木制齿轮",
       "description": "放置后仅左侧短轴接通传动杆；齿牙可与相邻齿轮啮合。",
@@ -834,6 +839,7 @@
     },
     {
       "id": "Gearbox_Wood_Summoner",
+      "worldDropBehavior": "interactive",
       "parent": "BuildingSummoner_Base",
       "gameName": "变速箱",
       "description": "从大齿轮端输入时输出转速×2、扭矩×0.5；从小齿轮端输入时输出转速×0.5、扭矩×2。",
@@ -988,6 +994,7 @@
     },
     {
       "id": "Clutch_Summoner",
+      "worldDropBehavior": "interactive",
       "parent": "BuildingSummoner_Base",
       "gameName": "离合器",
       "description": "离合器，用于首版机械扭矩系统试玩。",
@@ -1136,6 +1143,7 @@
     },
     {
       "id": "CrossShaft_Summoner",
+      "worldDropBehavior": "interactive",
       "parent": "BuildingSummoner_Base",
       "gameName": "跨轴器",
       "description": "跨轴器，用于首版机械扭矩系统试玩。",
@@ -1279,6 +1287,7 @@
     },
     {
       "id": "Millstone_Summoner",
+      "worldDropBehavior": "interactive",
       "parent": "BuildingSummoner_Base",
       "gameName": "石磨",
       "description": "石磨，用于首版机械扭矩系统试玩。",
@@ -1428,6 +1437,7 @@
     },
     {
       "id": "MechanicalBellows_Summoner",
+      "worldDropBehavior": "interactive",
       "parent": "BuildingSummoner_Base",
       "gameName": "机械风箱",
       "description": "出风口朝向相邻熔炉或高炉时，按转速提升其温度上限；20 RPM 时最高增加 500℃。",
@@ -1573,6 +1583,7 @@
     },
     {
       "id": "Sawmill_Summoner",
+      "worldDropBehavior": "interactive",
       "parent": "BuildingSummoner_Base",
       "gameName": "锯木机",
       "description": "锯木机，用于首版机械扭矩系统试玩。",
@@ -1721,6 +1732,7 @@
     },
     {
       "id": "MechanicalHammer_Summoner",
+      "worldDropBehavior": "interactive",
       "parent": "BuildingSummoner_Base",
       "gameName": "机械锻锤",
       "description": "机械锻锤，可接入传动轴自动处理生铁、熟铁、铜、青铜、锡和钢锭。",
@@ -1844,6 +1856,7 @@
     },
     {
       "id": "CopperAnvil_Summoner",
+      "worldDropBehavior": "interactive",
       "parent": "BuildingSummoner_Base",
       "gameName": "铜砧",
       "description": "铜砧可手动锻打各类金属锭；每次锻打推进 0.7 工作秒。",

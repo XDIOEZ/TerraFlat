@@ -259,8 +259,8 @@ public partial class Mod_Production : Module, IEnvironmentAdjustable
             return true;
         }
 
-        // 产出的散落物直接进入 ECS；生物和不可拾取世界节点仍保留原实体生成语义。
-        if (DroppedItemService.UsesEntities && GameRes.ExistingInstance.TryGetItemDefinition(data.itemName, out RuntimeItemDefinition definition) &&
+        // 产出的散落物交给统一掉落服务；passive 轻量化，interactive 保留完整 Item。
+        if (DroppedItemService.UsesLightweightDrops && GameRes.ExistingInstance.TryGetItemDefinition(data.itemName, out RuntimeItemDefinition definition) &&
             !definition.IsActor && (data.ThrowItem || definition.CreateItemData().Stack?.CanBePickedUp == true))
         {
             DroppedItemService.SpawnLoot(data.itemName, transform.position, randomCount,

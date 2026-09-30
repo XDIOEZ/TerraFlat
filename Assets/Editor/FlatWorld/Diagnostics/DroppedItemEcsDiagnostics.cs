@@ -15,7 +15,7 @@ public static class DroppedItemEcsDiagnostics
     private const string ReportPath = "Temp/DroppedItemEcsValidation.txt";
     private static readonly List<string> Results = new();
 
-    [MenuItem("FlatWorld/诊断/验证掉落物 ECS")]
+    [MenuItem("FlatWorld/诊断/学习参考/验证旧掉落物 ECS")]
     public static void Run()
     {
         if (EditorApplication.isPlayingOrWillChangePlaymode)
