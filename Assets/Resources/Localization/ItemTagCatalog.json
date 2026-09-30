@@ -12,6 +12,7 @@
     { "id": "Bow", "labels": [{ "locale": "zh-CN", "text": "弓" }, { "locale": "en", "text": "Bow" }] },
     { "id": "Bronze", "labels": [{ "locale": "zh-CN", "text": "青铜" }, { "locale": "en", "text": "Bronze" }] },
     { "id": "BronzePlate", "labels": [{ "locale": "zh-CN", "text": "青铜板" }, { "locale": "en", "text": "Bronze Plate" }] },
+    { "id": "Carnivore", "labels": [{ "locale": "zh-CN", "text": "食肉动物" }, { "locale": "en", "text": "Carnivore" }] },
     { "id": "Combustion.Tinder", "labels": [{ "locale": "zh-CN", "text": "火种" }, { "locale": "en", "text": "Tinder" }] },
     { "id": "Container", "labels": [{ "locale": "zh-CN", "text": "容器" }, { "locale": "en", "text": "Container" }] },
     { "id": "Copper", "labels": [{ "locale": "zh-CN", "text": "铜" }, { "locale": "en", "text": "Copper" }] },
@@ -24,6 +25,7 @@
     { "id": "Glass", "labels": [{ "locale": "zh-CN", "text": "玻璃" }, { "locale": "en", "text": "Glass" }] },
     { "id": "Gold", "labels": [{ "locale": "zh-CN", "text": "金" }, { "locale": "en", "text": "Gold" }] },
     { "id": "HandDrill", "labels": [{ "locale": "zh-CN", "text": "手钻" }, { "locale": "en", "text": "Hand Drill" }] },
+    { "id": "Herbivore", "labels": [{ "locale": "zh-CN", "text": "食草动物" }, { "locale": "en", "text": "Herbivore" }] },
     { "id": "Ingot", "labels": [{ "locale": "zh-CN", "text": "金属锭" }, { "locale": "en", "text": "Ingot" }] },
     { "id": "InventoryGroup.MechanicalPower", "labels": [{ "locale": "zh-CN", "text": "机械动力" }, { "locale": "en", "text": "Mechanical Power" }] },
     { "id": "Iron", "labels": [{ "locale": "zh-CN", "text": "铁" }, { "locale": "en", "text": "Iron" }] },
@@ -34,6 +36,7 @@
     { "id": "Metal", "labels": [{ "locale": "zh-CN", "text": "金属" }, { "locale": "en", "text": "Metal" }] },
     { "id": "Mineral", "labels": [{ "locale": "zh-CN", "text": "矿物" }, { "locale": "en", "text": "Mineral" }] },
     { "id": "Modern", "labels": [{ "locale": "zh-CN", "text": "现代" }, { "locale": "en", "text": "Modern" }] },
+    { "id": "Omnivore", "labels": [{ "locale": "zh-CN", "text": "杂食动物" }, { "locale": "en", "text": "Omnivore" }] },
     { "id": "Ore", "labels": [{ "locale": "zh-CN", "text": "矿石" }, { "locale": "en", "text": "Ore" }] },
     { "id": "Pickaxe", "labels": [{ "locale": "zh-CN", "text": "镐" }, { "locale": "en", "text": "Pickaxe" }] },
     { "id": "Plant", "labels": [{ "locale": "zh-CN", "text": "植物" }, { "locale": "en", "text": "Plant" }] },
@@ -58,7 +61,6 @@
     { "id": "TinPlate", "labels": [{ "locale": "zh-CN", "text": "锡板" }, { "locale": "en", "text": "Tin Plate" }] },
     { "id": "Tool", "labels": [{ "locale": "zh-CN", "text": "工具" }, { "locale": "en", "text": "Tool" }] },
     { "id": "Tree", "labels": [{ "locale": "zh-CN", "text": "树木" }, { "locale": "en", "text": "Tree" }] },
-    { "id": "Vegetarian", "labels": [{ "locale": "zh-CN", "text": "食草动物" }, { "locale": "en", "text": "Herbivore" }] },
     { "id": "Wood", "labels": [{ "locale": "zh-CN", "text": "木材" }, { "locale": "en", "text": "Wood" }] },
     { "id": "WroughtIron", "labels": [{ "locale": "zh-CN", "text": "锻铁" }, { "locale": "en", "text": "Wrought Iron" }] }
   ]

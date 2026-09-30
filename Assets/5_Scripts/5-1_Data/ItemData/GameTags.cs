@@ -16,6 +16,8 @@ public class GameTags
     public static string Carnivore = "Carnivore";
     [Tooltip("草食动物")]
     public static string Herbivore = "Herbivore";
+    [Tooltip("杂食动物")]
+    public static string Omnivore = "Omnivore";
     [Tooltip("植物")]
     public static string Plant = "Plant";
     [Tooltip("矿石")]

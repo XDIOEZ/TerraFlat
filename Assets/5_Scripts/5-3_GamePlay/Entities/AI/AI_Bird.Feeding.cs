@@ -18,7 +18,7 @@ public sealed partial class AI_Bird
     [Min(0.1f)] public float hurtEscapeSeconds = 4f;
     private Mod_Food food;
     private Mod_ItemDetector threatDetector;
-    private readonly System.Collections.Generic.List<string> threatTags = new() { "Predator", "Wolf" };
+    private readonly System.Collections.Generic.List<string> threatTags = new() { Tag.Carnivore };
     private float vigilanceRemaining;
     private long lastVigilanceVersion; // 上次已处理的感知结果版本。
     private DroppedItemHandle forageTarget;
@@ -127,7 +127,7 @@ public sealed partial class AI_Bird
         forageTargetTag = tag;
     }
 
-    /// <summary>每 0.4 秒提交感知，结果一应用就评估玩家威胁并打断当前行为。</summary>
+    /// <summary>每 0.4 秒提交感知，结果一应用就评估玩家或食肉动物威胁并打断当前行为。</summary>
     private void TickVigilance(float deltaTime)
     {
         vigilanceRemaining -= deltaTime;
@@ -173,7 +173,8 @@ public sealed partial class AI_Bird
 
     private bool IsBirdThreat(Item candidate)
     {
-        if (candidate is Player || candidate.CompareTag("Player"))
+        // Player 身份统一走项目数据 Tag，不依赖 Unity Tag。
+        if (candidate is Player || candidate.itemData?.Tags?.ContainsTag(Tag.Player) == true)
             return true;
         if (candidate.itemData?.Tags == null)
             return false;

@@ -23,7 +23,8 @@
       "tags": [
         "35",
         "Animal",
-        "Blood"
+        "Blood",
+        "Herbivore"
       ],
       "visual": {
         "rendererPath": "Module_Animator_AI",
@@ -198,8 +199,7 @@
             "fleeRunDistance": 36.0,
             "damageFleeDuration": 5.0,
             "threatTags": [
-              "Predator",
-              "Wolf"
+              "Carnivore"
             ],
             "fleeFromPlayer": true,
             "defaultMateDuration": 8.0,
@@ -718,7 +718,10 @@
       "tags": [
         "WildBoar",
         "Animal",
-        "Blood"
+        "Blood",
+        "Carnivore",
+        "Herbivore",
+        "Omnivore"
       ],
       "visual": {
         "rendererPath": "Module_Animator_AI",
@@ -1452,7 +1455,8 @@
       "tags": [
         "Wolf",
         "Animal",
-        "Blood"
+        "Blood",
+        "Carnivore"
       ],
       "visual": {
         "rendererPath": "AI动画模块",

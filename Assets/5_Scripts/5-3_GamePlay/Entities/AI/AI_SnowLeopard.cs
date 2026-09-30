@@ -500,20 +500,11 @@ public sealed partial class AI_SnowLeopard : AI_Base<SnowLeopardState>
 
     private static bool IsPlayerTarget(Item target)
     {
-        if (target is Player || target.CompareTag("Player"))
+        if (target is Player)
             return true;
 
         List<string> tags = target.itemData?.Tags;
-        if (tags == null)
-            return false;
-
-        for (int i = 0; i < tags.Count; i++)
-        {
-            if (string.Equals(tags[i], "Player", StringComparison.OrdinalIgnoreCase))
-                return true;
-        }
-
-        return false;
+        return tags?.ContainsTag(Tag.Player) == true;
     }
 
     private static bool IsRabbitTarget(Item target)

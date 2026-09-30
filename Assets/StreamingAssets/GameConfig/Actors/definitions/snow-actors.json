@@ -387,7 +387,8 @@
         "SnowLeopard",
         "Predator",
         "Animal",
-        "Blood"
+        "Blood",
+        "Carnivore"
       ],
       "visual": {
         "animationState": "Idle",

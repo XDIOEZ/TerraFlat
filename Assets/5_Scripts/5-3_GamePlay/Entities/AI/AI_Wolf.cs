@@ -1067,10 +1067,10 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver, IA
 		return (stableMemberIndex & 1) != 0;
 	}
 
-	/// <summary>兼容 Item 标签缺失但 Unity Tag 标记为 Player 的本地玩家。</summary>
+	/// <summary>玩家身份只读取项目 ItemData Tag，不再依赖 Unity Tag。</summary>
 	private bool IsPlayerChaseTarget(Item target)
 	{
-		return IsPlayerThreat(target) || (target != null && target.CompareTag("Player"));
+		return IsPlayerThreat(target);
 	}
 
 	/// <summary>阵型追击期间，只有足够靠近自身槽位才允许进入攻击状态。</summary>

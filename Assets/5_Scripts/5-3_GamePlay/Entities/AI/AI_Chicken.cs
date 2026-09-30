@@ -156,7 +156,7 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 	[FoldoutGroup("逃跑参数"), PropertyOrder(58), LabelText("受击威胁记忆"), SuffixLabel("秒", true), MinValue(0.1f)]
 	public float damageFleeDuration = 5f;
 	[FoldoutGroup("逃跑参数"), PropertyOrder(58), LabelText("威胁TypeTag列表")]
-	public List<string> threatTags = new List<string> { "Predator", "Wolf" };
+	public List<string> threatTags = new List<string> { Tag.Carnivore };
 	[FoldoutGroup("逃跑参数"), PropertyOrder(59), LabelText("检测所有玩家")]
 	public bool fleeFromPlayer = true;
 
@@ -580,7 +580,7 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 		return _detector.FindClosestItemByTags(
 			threatTags,
 			transform.position,
-			includeUnityPlayerTag: fleeFromPlayer);
+			includePlayerEntities: fleeFromPlayer);
 	}
 
 	private Item FindClosestEdibleItem()

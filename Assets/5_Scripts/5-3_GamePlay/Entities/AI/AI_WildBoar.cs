@@ -920,14 +920,13 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 		return IsPlayerThreat(player) ? player : null;
 	}
 
-	/// <summary>识别本地玩家类、Unity Player 标签和运行时 Player 物品标签。</summary>
+	/// <summary>识别玩家实体或运行时 Player 物品标签。</summary>
 	private static bool IsPlayerThreat(Item target)
 	{
 		if (target == null)
 			return false;
 
-		return target is Player || target.CompareTag("Player") ||
-			target.itemData?.Tags?.Contains("Player") == true;
+		return target is Player || target.itemData?.Tags?.ContainsTag(Tag.Player) == true;
 	}
 
 	/// <summary>狂暴进度供调试信息显示，计时结束时归零。</summary>

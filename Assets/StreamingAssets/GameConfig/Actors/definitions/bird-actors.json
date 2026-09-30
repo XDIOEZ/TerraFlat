@@ -26,7 +26,8 @@
         "Bird",
         "Animal",
         "Blood",
-        "Prey"
+        "Prey",
+        "Herbivore"
       ],
       "visual": {
         "spriteAddress": "Assets/8_Animations/Character/Birds/Bird/Ground_0.png",

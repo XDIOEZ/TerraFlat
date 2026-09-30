@@ -10,8 +10,12 @@ public static class Tag
 
     [Tooltip("装备")]
     public const string Equipment = "Equipment";
+    [Tooltip("食肉动物")]
+    public const string Carnivore = "Carnivore";
     [Tooltip("食草动物")]
-    public const string Vegetarian = "Vegetarian";
+    public const string Herbivore = "Herbivore";
+    [Tooltip("杂食动物")]
+    public const string Omnivore = "Omnivore";
     [Tooltip("植物")]
     public const string Plant = "Plant";
     [Tooltip("树")]
