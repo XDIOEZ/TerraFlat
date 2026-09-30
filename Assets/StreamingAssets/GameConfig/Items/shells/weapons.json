@@ -1363,6 +1363,7 @@
             "MinSpeed": 25.0,
             "MaxSpeed": 60.0,
             "FlightLinearDrag": 0.12,
+            "CollisionBounciness": 0.35,
             "VirtualGravity": 9.8,
             "MinDamageMultiplier": 0.35,
             "MaxDamageMultiplier": 1.0,
