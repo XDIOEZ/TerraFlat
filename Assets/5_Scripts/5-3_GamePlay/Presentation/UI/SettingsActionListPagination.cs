@@ -139,7 +139,7 @@ public sealed class SettingsActionListPagination : MonoBehaviour
         UIText.SaveButton,
         "自动保存间隔下拉列表",
         "性能模式下拉列表",
-        "难度_Simple",
+        $"难度_{GameDifficultyId.Level0}",
         "季节天数_0",
         GameManager.MainMenuSettingsQualityPresetKey,
         GameManager.MainMenuSettingsLanguageDropdownKey,
