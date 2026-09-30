@@ -6,12 +6,24 @@
       "displayName": "石臼",
       "recipeType": "crafting",
       "inputRule": "unordered",
-      "allowMirror": false,
       "inputs": [
-        { "slot": 0, "match": "exact_item", "itemId": "StoneSlab", "amount": 1 },
-        { "slot": 1, "match": "exact_item", "itemId": "Ore_Stone", "amount": 1 }
+        {
+          "match": "exact_item",
+          "itemId": "StoneSlab",
+          "amount": 1
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Ore_Stone",
+          "amount": 1
+        }
       ],
-      "outputs": [{ "itemId": "StoneMortar", "amount": 1 }],
+      "outputs": [
+        {
+          "itemId": "StoneMortar",
+          "amount": 1
+        }
+      ],
       "actions": []
     },
     {
@@ -20,9 +32,19 @@
       "requiredStation": "mortar",
       "recipeType": "crafting",
       "inputRule": "unordered",
-      "allowMirror": false,
-      "inputs": [{ "slot": 0, "match": "exact_item", "itemId": "Berry", "amount": 2 }],
-      "outputs": [{ "itemId": "Jam", "amount": 1 }],
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Berry",
+          "amount": 2
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Jam",
+          "amount": 1
+        }
+      ],
       "actions": []
     },
     {
@@ -31,9 +53,19 @@
       "requiredStation": "mortar",
       "recipeType": "crafting",
       "inputRule": "unordered",
-      "allowMirror": false,
-      "inputs": [{ "slot": 0, "match": "exact_item", "itemId": "FoxtailSpike", "amount": 1 }],
-      "outputs": [{ "itemId": "Seed_Foxtail", "amount": 1 }],
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "FoxtailSpike",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Seed_Foxtail",
+          "amount": 1
+        }
+      ],
       "actions": []
     },
     {
@@ -42,9 +74,19 @@
       "requiredStation": "mortar",
       "recipeType": "crafting",
       "inputRule": "unordered",
-      "allowMirror": false,
-      "inputs": [{ "slot": 0, "match": "exact_item", "itemId": "Seed_Foxtail", "amount": 5 }],
-      "outputs": [{ "itemId": "Flour", "amount": 1 }],
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Seed_Foxtail",
+          "amount": 5
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Flour",
+          "amount": 1
+        }
+      ],
       "actions": []
     }
   ]

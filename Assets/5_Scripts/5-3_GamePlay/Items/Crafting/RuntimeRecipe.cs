@@ -104,5 +104,4 @@ public sealed class RuntimeRecipeAction
     public string Type;
     public string TargetRole;
     public float Value;
-    public int SlotIndex = -1;
 }

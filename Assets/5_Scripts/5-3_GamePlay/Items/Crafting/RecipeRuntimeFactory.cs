@@ -45,18 +45,9 @@ public static class RecipeRuntimeFactory
         RecipeInputRule inputRule = ParseInputRule(dto.InputRule, id);
         if (recipeType == RecipeType.Crafting && inputRule != RecipeInputRule.无规则合成)
             throw new InvalidDataException($"配方 {id} 是普通合成，inputRule 必须为 unordered");
-        if (recipeType == RecipeType.Crafting && dto.AllowMirror)
-            throw new InvalidDataException($"配方 {id} 是无位置合成，allowMirror 必须为 false");
-
-        List<RecipeIngredientDto> sourceInputs = dto.Inputs ?? new List<RecipeIngredientDto>();
-        int inputCount = sourceInputs.Count == 0 ? Math.Max(0, dto.GridWidth * dto.GridHeight) : sourceInputs.Max(input => input.Slot) + 1;
-        int width = dto.GridWidth > 0 ? dto.GridWidth : InferGridWidth(inputCount);
-        int height = dto.GridHeight > 0 ? dto.GridHeight : (width > 0 ? (int)Math.Ceiling((double)inputCount / width) : 0);
-        int slotCount = Math.Max(inputCount, width * height);
-        if (slotCount <= 0)
-            throw new InvalidDataException($"配方 {id} 没有输入槽");
-        if (width <= 0 || height <= 0 || width * height != slotCount)
-            throw new InvalidDataException($"配方 {id} 的网格 {width}x{height} 与槽位数 {slotCount} 不一致");
+        RuntimeRecipeInput inputs = recipeType == RecipeType.Crafting
+            ? BuildCraftingInputs(dto, id, itemExists, warnings)
+            : BuildHeatingInputs(dto, id, inputRule, itemExists, warnings);
 
         var recipe = new RuntimeRecipe
         {
@@ -65,56 +56,12 @@ public static class RecipeRuntimeFactory
             RequiredStation = string.IsNullOrWhiteSpace(dto.RequiredStation)
                 ? string.Empty
                 : dto.RequiredStation.Trim(),
-            enableMirrorCrafting = dto.AllowMirror,
+            enableMirrorCrafting = dto.AllowMirror == true,
             Temperature = dto.Temperature,
             Temperature_Max = dto.MaxTemperature,
             ProcessingSeconds = dto.ProcessingSeconds,
-            inputs = new RuntimeRecipeInput
-            {
-                recipeType = recipeType,
-                inputOrder = inputRule,
-                GridWidth = width,
-                GridHeight = height,
-                RowItems_List = Enumerable.Range(0, slotCount).Select(_ => new RuntimeRecipeIngredient()).ToList()
-            }
+            inputs = inputs
         };
-
-        var occupiedSlots = new HashSet<int>();
-        foreach (RecipeIngredientDto input in sourceInputs)
-        {
-            if (input == null)
-                continue;
-            if (input.Slot < 0 || input.Slot >= slotCount)
-                throw new InvalidDataException($"配方 {id} 的输入槽索引越界：{input.Slot}");
-            if (!occupiedSlots.Add(input.Slot))
-                throw new InvalidDataException($"配方 {id} 重复定义输入槽：{input.Slot}");
-
-            MatchMode matchMode = ParseMatchMode(input.Match, id, input.Slot);
-            string itemId = (input.ItemId ?? string.Empty).Trim();
-            string tag = (input.Tag ?? string.Empty).Trim();
-            int amount = input.Amount;
-            bool isEmpty = string.IsNullOrEmpty(itemId) && string.IsNullOrEmpty(tag) && amount <= 0;
-            if (amount < 0)
-                throw new InvalidDataException($"配方 {id} 的输入槽 {input.Slot} 数量不能小于 0");
-            if (matchMode == MatchMode.ExactItem && !isEmpty)
-            {
-                if (string.IsNullOrWhiteSpace(itemId))
-                    throw new InvalidDataException($"配方 {id} 的输入槽 {input.Slot} 缺少 itemId");
-                ValidateItemReference(itemId, itemExists, $"配方 {id} 输入", warnings);
-            }
-            else if (matchMode == MatchMode.ByTag && !isEmpty && string.IsNullOrWhiteSpace(tag))
-            {
-                throw new InvalidDataException($"配方 {id} 的输入槽 {input.Slot} 缺少 tag");
-            }
-
-            recipe.inputs.RowItems_List[input.Slot] = new RuntimeRecipeIngredient
-            {
-                matchMode = matchMode,
-                ItemName = itemId,
-                Tag = tag,
-                amount = Math.Max(0, amount)
-            };
-        }
 
         foreach (RecipeOutputDto output in dto.Outputs ?? Enumerable.Empty<RecipeOutputDto>())
         {
@@ -169,13 +116,14 @@ public static class RecipeRuntimeFactory
                 throw new InvalidDataException($"配方 {id} 的 change_durability 缺少 targetRole");
             if (type == RecipeActionRunner.ChangeDurabilityType && action.Value <= 0f)
                 throw new InvalidDataException($"配方 {id} 的 change_durability.value 必须大于 0");
+            if (action.LegacySlotIndex.HasValue)
+                throw new InvalidDataException($"配方 {id} 的 action.slotIndex 已废弃，请用 targetRole 指定工具");
 
             recipe.action.Add(new RuntimeRecipeAction
             {
                 Type = type,
                 TargetRole = action.TargetRole?.Trim(),
-                Value = action.Value,
-                SlotIndex = action.SlotIndex
+                Value = action.Value
             });
         }
 
@@ -183,6 +131,119 @@ public static class RecipeRuntimeFactory
             throw new InvalidDataException($"配方 {id} 的最高温度不能低于最低温度");
         return recipe;
     }
+
+    #region 输入材料解析
+
+    private static RuntimeRecipeInput BuildCraftingInputs(
+        RecipeDto dto, string id, Func<string, bool> itemExists, List<string> warnings)
+    {
+        if (dto.GridWidth.HasValue || dto.GridHeight.HasValue || dto.AllowMirror.HasValue)
+            throw new InvalidDataException($"普通合成配方 {id} 不再使用 gridWidth、gridHeight 或 allowMirror，只需列出材料和数量");
+
+        List<RecipeIngredientDto> source = dto.Inputs ?? new List<RecipeIngredientDto>();
+        if (source.Count == 0)
+            throw new InvalidDataException($"普通合成配方 {id} 没有输入材料");
+
+        var result = new RuntimeRecipeInput
+        {
+            recipeType = RecipeType.Crafting,
+            inputOrder = RecipeInputRule.无规则合成
+        };
+        var identities = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        for (int index = 0; index < source.Count; index++)
+        {
+            RecipeIngredientDto input = source[index];
+            if (input?.Slot.HasValue == true)
+                throw new InvalidDataException($"普通合成配方 {id} 的 inputs[{index}] 不再使用 slot，请按物品或标签填写总数量");
+            RuntimeRecipeIngredient ingredient = ParseIngredient(
+                input, id, $"材料 {index + 1}", itemExists, warnings);
+            if (CraftingIngredientMatcher.IsEmpty(ingredient))
+                throw new InvalidDataException($"普通合成配方 {id} 的材料 {index + 1} 没有物品或标签");
+            string identity = ingredient.matchMode == MatchMode.ExactItem
+                ? "item:" + ingredient.ItemName
+                : "tag:" + ingredient.Tag;
+            if (!identities.Add(identity))
+                throw new InvalidDataException($"普通合成配方 {id} 重复列出 {identity}，请合并为一条材料并填写总数量");
+            result.RowItems_List.Add(ingredient);
+        }
+        return result;
+    }
+
+    private static RuntimeRecipeInput BuildHeatingInputs(
+        RecipeDto dto, string id, RecipeInputRule inputRule,
+        Func<string, bool> itemExists, List<string> warnings)
+    {
+        List<RecipeIngredientDto> source = dto.Inputs ?? new List<RecipeIngredientDto>();
+        int configuredWidth = dto.GridWidth.GetValueOrDefault();
+        int configuredHeight = dto.GridHeight.GetValueOrDefault();
+        int inputCount = source.Count == 0
+            ? Math.Max(0, configuredWidth * configuredHeight)
+            : source.Max(input => input?.Slot ?? -1) + 1;
+        int width = configuredWidth > 0 ? configuredWidth : InferGridWidth(inputCount);
+        int height = configuredHeight > 0 ? configuredHeight
+            : width > 0 ? (int)Math.Ceiling((double)inputCount / width) : 0;
+        int slotCount = Math.Max(inputCount, width * height);
+        if (slotCount <= 0)
+            throw new InvalidDataException($"热加工配方 {id} 没有输入槽");
+        if (width <= 0 || height <= 0 || width * height != slotCount)
+            throw new InvalidDataException($"热加工配方 {id} 的网格 {width}x{height} 与槽位数 {slotCount} 不一致");
+
+        var result = new RuntimeRecipeInput
+        {
+            recipeType = RecipeType.Smelting,
+            inputOrder = inputRule,
+            GridWidth = width,
+            GridHeight = height,
+            RowItems_List = Enumerable.Range(0, slotCount).Select(_ => new RuntimeRecipeIngredient()).ToList()
+        };
+        var occupiedSlots = new HashSet<int>();
+        foreach (RecipeIngredientDto input in source)
+        {
+            if (input == null)
+                continue;
+            if (!input.Slot.HasValue || input.Slot.Value < 0 || input.Slot.Value >= slotCount)
+                throw new InvalidDataException($"热加工配方 {id} 的输入槽索引无效：{input.Slot}");
+            int slot = input.Slot.Value;
+            if (!occupiedSlots.Add(slot))
+                throw new InvalidDataException($"热加工配方 {id} 重复定义输入槽：{slot}");
+            result.RowItems_List[slot] = ParseIngredient(
+                input, id, $"输入槽 {slot}", itemExists, warnings);
+        }
+        return result;
+    }
+
+    private static RuntimeRecipeIngredient ParseIngredient(
+        RecipeIngredientDto input, string id, string location,
+        Func<string, bool> itemExists, List<string> warnings)
+    {
+        if (input == null)
+            throw new InvalidDataException($"配方 {id} 的{location}为空");
+        MatchMode matchMode = ParseMatchMode(input.Match, id, location);
+        string itemId = (input.ItemId ?? string.Empty).Trim();
+        string tag = (input.Tag ?? string.Empty).Trim();
+        if (input.Amount < 0)
+            throw new InvalidDataException($"配方 {id} 的{location}数量不能小于 0");
+        bool isEmpty = itemId.Length == 0 && tag.Length == 0 && input.Amount == 0;
+        if (matchMode == MatchMode.ExactItem && !isEmpty)
+        {
+            if (itemId.Length == 0)
+                throw new InvalidDataException($"配方 {id} 的{location}缺少 itemId");
+            ValidateItemReference(itemId, itemExists, $"配方 {id} 输入", warnings);
+        }
+        else if (matchMode == MatchMode.ByTag && !isEmpty && tag.Length == 0)
+        {
+            throw new InvalidDataException($"配方 {id} 的{location}缺少 tag");
+        }
+        return new RuntimeRecipeIngredient
+        {
+            matchMode = matchMode,
+            ItemName = itemId,
+            Tag = tag,
+            amount = input.Amount
+        };
+    }
+
+    #endregion
 
     public static RecipeCatalogDto Deserialize(string json)
     {
@@ -236,14 +297,14 @@ public static class RecipeRuntimeFactory
         };
     }
 
-    private static MatchMode ParseMatchMode(string value, string id, int slot)
+    private static MatchMode ParseMatchMode(string value, string id, string location)
     {
         return (value ?? string.Empty).Trim().ToLowerInvariant() switch
         {
             "" => MatchMode.ExactItem,
             "exact_item" => MatchMode.ExactItem,
             "tag" => MatchMode.ByTag,
-            _ => throw new InvalidDataException($"配方 {id} 的输入槽 {slot} match 无效：{value}")
+            _ => throw new InvalidDataException($"配方 {id} 的{location} match 无效：{value}")
         };
     }
 

@@ -8,7 +8,7 @@ using Force.DeepCloner;
 using System.Linq;
 using Sirenix.OdinInspector;
 
-[CreateAssetMenu(fileName = "新配方格式", menuName = "配方/新配方")]
+/// <summary>旧热加工资源的兼容数据，普通合成以 JSON 配方为准。</summary>
 public class Recipe : ScriptableObject
 {
     #region Public Fields 

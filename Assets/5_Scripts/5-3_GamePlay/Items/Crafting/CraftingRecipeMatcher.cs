@@ -126,14 +126,15 @@ public static class CraftingRecipeMatcher
         string nearbySummary = string.Join("；", nearbyRecipes.Select(candidate =>
             $"{candidate.Recipe.Id}" +
             $"({DescribeRule(candidate.Recipe)}, " +
-            $"{candidate.Recipe.inputs.GridWidth}x{candidate.Recipe.inputs.GridHeight}, " +
-            $"镜像={candidate.Recipe.enableMirrorCrafting}, " +
+            (candidate.Recipe.inputs.recipeType == RecipeType.Crafting
+                ? $"材料种类={candidate.RequiredCount}, "
+                : $"{candidate.Recipe.inputs.GridWidth}x{candidate.Recipe.inputs.GridHeight}, 镜像={candidate.Recipe.enableMirrorCrafting}, ") +
             $"身份命中={candidate.IdentityMatches}/{candidate.RequiredCount}, " +
             $"期望={DescribeRecipePattern(candidate.Recipe)})"));
         return $"{catalogSummary}；最近候选={nearbySummary}";
     }
 
-    /// <summary>按运行时槽序输出配方图案，和输入快照可直接逐槽对照。</summary>
+    /// <summary>普通合成列出材料总量，热加工才显示输入位置。</summary>
     private static string DescribeRecipePattern(RuntimeRecipe recipe)
     {
         return "[" + string.Join(", ", recipe.inputs.RowItems_List.Select((ingredient, index) =>
@@ -145,7 +146,9 @@ public static class CraftingRecipeMatcher
                 ? $"Tag:{ingredient.Tag?.Trim()}"
                 : ingredient.ItemName?.Trim();
             string amount = ingredient.amount > 0f ? $" x{ingredient.amount}" : "（不消耗）";
-            return $"{index}:{identity}{amount}";
+            return recipe.inputs.recipeType == RecipeType.Crafting
+                ? $"{identity}{amount}"
+                : $"{index}:{identity}{amount}";
         })) + "]";
     }
 

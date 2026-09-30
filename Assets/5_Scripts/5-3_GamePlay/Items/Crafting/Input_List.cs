@@ -12,7 +12,7 @@ public class Input_List
     public List<CraftingIngredient> RowItems_List = new List<CraftingIngredient>();
 
     [Header("配方类型")]
-    public RecipeType recipeType = RecipeType.Crafting;
+    public RecipeType recipeType = RecipeType.Smelting;
 
     [Header("合成顺序")]
     public RecipeInputRule inputOrder = RecipeInputRule.规则合成;
