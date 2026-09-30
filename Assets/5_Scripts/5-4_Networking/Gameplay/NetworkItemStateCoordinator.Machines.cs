@@ -119,6 +119,21 @@ namespace FlatWorld.Networking.Gameplay
             MachineEntity entity = MachineWorld.GetById(request.EntityId);
             bool accepted = MachineWorld.Execute(entity, request.Operation, request.Argument, actor);
             if (MachineWorld.Contains(entity)) SendMechanicalSnapshot(connection, entity);
+            if (accepted && (request.Operation == "inventory.private-open" ||
+                             request.Operation == "inventory.private-layout"))
+            {
+                string key = request.Operation == "inventory.private-layout"
+                    ? MachineInventoryCommands.ReadPrivateLayoutKey(request.Argument) : request.Argument;
+                Inventory privateInventory = MachineInventoryCommands.ResolvePrivate(actor, entity, key);
+                if (privateInventory != null)
+                    connection.Send(new NetworkMachineTransferResponse
+                    {
+                        Token = request.Token, Accepted = true, OperationUpdate = true,
+                        Source = new MachineInventoryAddress
+                        { MachineId = entity.Id, PlayerInventory = key },
+                        SourceInventory = MemoryPackSerializer.Serialize(privateInventory.Data)
+                    });
+            }
             if (accepted && request.Operation == "vessel.fill")
             {
                 var fill = JsonConvert.DeserializeObject<VesselFillRequest>(request.Argument);
@@ -175,9 +190,13 @@ namespace FlatWorld.Networking.Gameplay
             if (from?.Guid == request.ExpectedSourceGuid && from?.IDName == request.ExpectedSourceId && targetValid &&
                 request.Amount >= 0 && request.Amount <= 1000000000)
                 response.Accepted = source.ExecuteMachineTransfer(request.SourceSlot, target, request.TargetSlot, request.Operation, request.Amount);
-            if (request.Source.MachineId != 0) SendMechanicalSnapshot(connection, MachineWorld.GetById(request.Source.MachineId));
+            if (MachineInventoryCommands.IsPrivateInventoryAddress(request.Source))
+                response.SourceInventory = MemoryPackSerializer.Serialize(source.Data);
+            else if (request.Source.MachineId != 0) SendMechanicalSnapshot(connection, MachineWorld.GetById(request.Source.MachineId));
             else response.SourceInventory = MemoryPackSerializer.Serialize(source.Data);
-            if (request.Target.MachineId != 0) SendMechanicalSnapshot(connection, MachineWorld.GetById(request.Target.MachineId));
+            if (MachineInventoryCommands.IsPrivateInventoryAddress(request.Target))
+                response.TargetInventory = MemoryPackSerializer.Serialize(target.Data);
+            else if (request.Target.MachineId != 0) SendMechanicalSnapshot(connection, MachineWorld.GetById(request.Target.MachineId));
             else response.TargetInventory = MemoryPackSerializer.Serialize(target.Data);
             ItemNetworkStateSerialization.NotifyRuntimeStateChanged(actor);
             connection.Send(response);
@@ -204,7 +223,8 @@ namespace FlatWorld.Networking.Gameplay
 
         private static void ApplyPlayerInventory(Player actor, MachineInventoryAddress address, byte[] payload)
         {
-            if (address.MachineId != 0 || payload == null || payload.Length == 0 || payload.Length > 8 * 1024 * 1024) return;
+            if (address.MachineId != 0 && !MachineInventoryCommands.IsPrivateInventoryAddress(address) ||
+                payload == null || payload.Length == 0 || payload.Length > 8 * 1024 * 1024) return;
             Inventory inventory = MachineInventoryCommands.Resolve(actor, address);
             if (inventory == null) return;
             MachineInventory.ApplySnapshot(inventory, MemoryPackSerializer.Deserialize<Inventory_Data>(payload));

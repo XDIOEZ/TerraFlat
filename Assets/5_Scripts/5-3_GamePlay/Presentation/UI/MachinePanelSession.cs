@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using FlatWorld.Networking;
 using TMPro;
 using UnityEngine;
@@ -34,6 +35,7 @@ public sealed class MachinePanelSession : IMachinePanelSession
     public bool IsAlive => !disposed && panels.Count > 0 && panels[0] != null;
     public bool IsOpen => IsAlive && panels[0].IsOpen();
 
+    [MethodImpl(MethodImplOptions.NoInlining)]
     public static IMachinePanelSession Create(MachineEntity entity)
     {
         if (entity.Logic is VesselLogic vessel) return new VesselMachinePanelSession(vessel);

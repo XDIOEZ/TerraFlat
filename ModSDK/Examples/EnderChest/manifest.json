@@ -1,0 +1,13 @@
+{
+  "apiVersion": 1,
+  "id": "example.enderchest",
+  "name": "末影箱 Harmony 示例",
+  "version": "1.0.0",
+  "description": "每名玩家拥有一份跨箱体共享的私有库存；示例展示 Harmony、物品定义、存档和联机接入。",
+  "previewImage": "preview.png",
+  "definitionFiles": ["Defs/recipes.json"],
+  "managed": {
+    "entryAssembly": "lib/Example.EnderChest.dll",
+    "entryType": "Example.EnderChest.ModEntry"
+  }
+}

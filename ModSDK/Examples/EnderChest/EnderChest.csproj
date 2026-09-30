@@ -1,0 +1,50 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <AssemblyName>Example.EnderChest</AssemblyName>
+    <RootNamespace>Example.EnderChest</RootNamespace>
+    <GameManagedDirectory Condition="'$(GameManagedDirectory)' == ''">$(MSBuildThisFileDirectory)..\..\..\Library\ScriptAssemblies</GameManagedDirectory>
+    <GamePlayDllPath Condition="'$(GamePlayDllPath)' == ''">$(GameManagedDirectory)\GamePlay.dll</GamePlayDllPath>
+    <HarmonyDllPath Condition="'$(HarmonyDllPath)' == ''">$(MSBuildThisFileDirectory)..\..\..\Assets\Plugins\Harmony\0Harmony.dll</HarmonyDllPath>
+    <UnityEngineCorePath Condition="'$(UnityEngineCorePath)' == '' and Exists('$(GameManagedDirectory)\UnityEngine.CoreModule.dll')">$(GameManagedDirectory)\UnityEngine.CoreModule.dll</UnityEngineCorePath>
+    <UnityEngineCorePath Condition="'$(UnityEngineCorePath)' == ''">G:\UnityHub\UnityEditor\2022.3.62f3c1\Editor\Data\Managed\UnityEngine\UnityEngine.CoreModule.dll</UnityEngineCorePath>
+    <UnityEngineAnimationPath Condition="'$(UnityEngineAnimationPath)' == ''">$([System.IO.Path]::GetDirectoryName('$(UnityEngineCorePath)'))\UnityEngine.AnimationModule.dll</UnityEngineAnimationPath>
+    <UnityEngineImageConversionPath Condition="'$(UnityEngineImageConversionPath)' == ''">$([System.IO.Path]::GetDirectoryName('$(UnityEngineCorePath)'))\UnityEngine.ImageConversionModule.dll</UnityEngineImageConversionPath>
+    <NewtonsoftJsonPath Condition="'$(NewtonsoftJsonPath)' == '' and Exists('$(GameManagedDirectory)\Newtonsoft.Json.dll')">$(GameManagedDirectory)\Newtonsoft.Json.dll</NewtonsoftJsonPath>
+    <NewtonsoftJsonPath Condition="'$(NewtonsoftJsonPath)' == ''">$(MSBuildThisFileDirectory)..\..\..\Library\PackageCache\com.unity.nuget.newtonsoft-json@3.2.1\Runtime\Newtonsoft.Json.dll</NewtonsoftJsonPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="GamePlay"><HintPath>$(GamePlayDllPath)</HintPath><Private>false</Private></Reference>
+    <Reference Include="Data"><HintPath>$(GameManagedDirectory)\Data.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UI"><HintPath>$(GameManagedDirectory)\UI.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="FlatWorld.Networking.Core"><HintPath>$(GameManagedDirectory)\FlatWorld.Networking.Core.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="FlatWorld.Utilities"><HintPath>$(GameManagedDirectory)\FlatWorld.Utilities.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="FlatWorld.WorldModel"><HintPath>$(GameManagedDirectory)\FlatWorld.WorldModel.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Kybernetik.UltEvents"><HintPath>$(GameManagedDirectory)\Kybernetik.UltEvents.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Newtonsoft.Json"><HintPath>$(NewtonsoftJsonPath)</HintPath><Private>false</Private></Reference>
+    <Reference Include="0Harmony"><HintPath>$(HarmonyDllPath)</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.CoreModule"><HintPath>$(UnityEngineCorePath)</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.AnimationModule"><HintPath>$(UnityEngineAnimationPath)</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.ImageConversionModule"><HintPath>$(UnityEngineImageConversionPath)</HintPath><Private>false</Private></Reference>
+    <Reference Include="Unity.TextMeshPro"><HintPath>$(GameManagedDirectory)\Unity.TextMeshPro.dll</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
+  <Target Name="ValidateReferences" BeforeTargets="ResolveReferences">
+    <Error Condition="!Exists('$(GamePlayDllPath)')" Text="找不到 GamePlay.dll；请设置 GameManagedDirectory 或 GamePlayDllPath。" />
+    <Error Condition="!Exists('$(HarmonyDllPath)')" Text="找不到游戏自带的 0Harmony.dll；请设置 HarmonyDllPath。" />
+    <Error Condition="!Exists('$(UnityEngineCorePath)')" Text="找不到 UnityEngine.CoreModule.dll；请设置 UnityEngineCorePath。" />
+    <Error Condition="!Exists('$(UnityEngineAnimationPath)')" Text="找不到 UnityEngine.AnimationModule.dll；请设置 UnityEngineAnimationPath。" />
+    <Error Condition="!Exists('$(UnityEngineImageConversionPath)')" Text="找不到 UnityEngine.ImageConversionModule.dll；请设置 UnityEngineImageConversionPath。" />
+    <Error Condition="!Exists('$(NewtonsoftJsonPath)')" Text="找不到 Newtonsoft.Json.dll；请设置 NewtonsoftJsonPath。" />
+    <Error Condition="!Exists('$(GameManagedDirectory)\Unity.TextMeshPro.dll')" Text="找不到 Unity.TextMeshPro.dll；请设置 GameManagedDirectory。" />
+    <Error Condition="!Exists('$(GameManagedDirectory)\Data.dll') or !Exists('$(GameManagedDirectory)\UI.dll') or !Exists('$(GameManagedDirectory)\FlatWorld.Networking.Core.dll')" Text="缺少 Data、UI 或 Networking.Core 程序集；请设置 GameManagedDirectory。" />
+  </Target>
+  <Target Name="CreateModPackage" AfterTargets="Build">
+    <MakeDir Directories="$(MSBuildProjectDirectory)\package\lib;$(MSBuildProjectDirectory)\package\Defs;$(MSBuildProjectDirectory)\package\Art" />
+    <Delete Files="$(MSBuildProjectDirectory)\package\lib\0Harmony.dll" />
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(MSBuildProjectDirectory)\package\lib" />
+    <Copy SourceFiles="$(MSBuildProjectDirectory)\manifest.json" DestinationFolder="$(MSBuildProjectDirectory)\package" />
+    <Copy SourceFiles="$(MSBuildProjectDirectory)\Defs\recipes.json" DestinationFolder="$(MSBuildProjectDirectory)\package\Defs" />
+    <Copy SourceFiles="$(MSBuildProjectDirectory)\..\..\..\Assets\6_Art\Generated\Building\EnderChest\EnderChest_Closed.png" DestinationFolder="$(MSBuildProjectDirectory)\package\Art" />
+  </Target>
+</Project>

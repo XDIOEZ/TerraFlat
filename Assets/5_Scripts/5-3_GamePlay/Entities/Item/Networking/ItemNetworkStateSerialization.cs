@@ -48,30 +48,34 @@ public static class ItemNetworkStateSerialization
             return Array.Empty<byte>();
 
         item.ModuleSave();
-        if (!ignoreTransform)
-            return MemoryPackSerializer.Serialize<ItemData>(item.itemData);
-
-        // 玩家移动由独立运动通道同步。临时清空位姿后只序列化一次，避免移动期间
-        // 每次状态检查都“序列化 -> 反序列化克隆 -> 再序列化”造成 GC 尖峰。
-        ItemTransform transformState = item.itemData.transform;
-        if (transformState == null)
-            return MemoryPackSerializer.Serialize<ItemData>(item.itemData);
-
-        Vector3 position = transformState.position;
-        Quaternion rotation = transformState.rotation;
-        Vector3 scale = transformState.scale;
+        ItemData data = item.itemData;
+        string privateState = data.ItemSpecialData;
+        // 玩家公共快照不携带已注册的私有库存，完整值只保留在权威存档里。
+        if (item is Player) data.ItemSpecialData = MachineInventoryCommands.PublicSpecialData(privateState);
+        ItemTransform transformState = ignoreTransform ? data.transform : null;
+        Vector3 position = transformState?.position ?? default;
+        Quaternion rotation = transformState?.rotation ?? default;
+        Vector3 scale = transformState?.scale ?? default;
         try
         {
-            transformState.position = Vector3.zero;
-            transformState.rotation = Quaternion.identity;
-            transformState.scale = Vector3.one;
-            return MemoryPackSerializer.Serialize<ItemData>(item.itemData);
+            if (transformState != null)
+            {
+                // 玩家移动由独立运动通道同步，序列化时暂时去掉位姿。
+                transformState.position = Vector3.zero;
+                transformState.rotation = Quaternion.identity;
+                transformState.scale = Vector3.one;
+            }
+            return MemoryPackSerializer.Serialize<ItemData>(data);
         }
         finally
         {
-            transformState.position = position;
-            transformState.rotation = rotation;
-            transformState.scale = scale;
+            data.ItemSpecialData = privateState;
+            if (transformState != null)
+            {
+                transformState.position = position;
+                transformState.rotation = rotation;
+                transformState.scale = scale;
+            }
         }
     }
 
@@ -254,9 +258,13 @@ public static class ItemNetworkStateSerialization
         previousModuleStates = current.ModuleDataDic;
         ItemTransform preservedTransform = current.transform;
         int preservedGuid = current.Guid;
+        string privateState = target is Player ? current.ItemSpecialData : null;
         CopySerializableFields(incoming, current);
         current.Guid = preservedGuid;
         current.transform = preservedTransform;
+        if (target is Player)
+            current.ItemSpecialData = MachineInventoryCommands.MergePrivateSpecialData(
+                privateState, current.ItemSpecialData);
 
         if (current.ModuleDataDic == null)
             current.ModuleDataDic = new Dictionary<string, ModuleData>();

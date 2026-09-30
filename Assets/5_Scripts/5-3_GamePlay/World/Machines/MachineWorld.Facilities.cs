@@ -84,6 +84,8 @@ public static partial class MachineWorld
         if (!GameNetwork.HasStateAuthority || !Contains(entity)) return false;
         WakeForInteraction(entity);
         if (operation == "inventory.layout") return MachineInventoryCommands.ExecuteLayout(entity, argument);
+        if (operation == "inventory.private-layout")
+            return MachineInventoryCommands.ExecutePrivateLayout(entity, argument, actor);
         if (entity.Logic != null) return entity.Logic.Execute(operation, argument, actor);
         if (operation == "crank" && entity.Definition.Source == "manual")
         {
