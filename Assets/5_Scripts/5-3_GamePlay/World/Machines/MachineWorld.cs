@@ -125,8 +125,10 @@ public static partial class MachineWorld
             added = true;
         }
         else if (node.State == null) WakeNode(node);
+        bool viewChanged = node.View != view;
         node.View = view;
         if (added) BuildingOccupancyRegistry.NotifyMechanicalChanged(node.Cell);
+        if (viewChanged) CellChanged?.Invoke(node.Cell); // 外壳接管阻挡时撤销数据 Box，避免重复碰撞。
         return node;
     }
 
@@ -445,10 +447,15 @@ public static partial class MachineWorld
         node.View = null;
         DisposeProcessor(node);
         nodes.Remove(node.Id); dirty = true;
+        CellChanged?.Invoke(node.Cell);
     }
     public static void Detach(Mod_MechanicalNode view)
     {
-        if (view.Node != null && view.Node.View == view) view.Node.View = null;
+        if (view.Node != null && view.Node.View == view)
+        {
+            view.Node.View = null;
+            CellChanged?.Invoke(view.Node.Cell); // 外壳卸载后由数据 Box 继续阻挡。
+        }
     }
     #endregion
 
