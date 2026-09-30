@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using FlatWorld.Combat;
 using FlatWorld.Geometry;
@@ -6,7 +7,7 @@ using FlatWorld.Networking;
 using Unity.Mathematics;
 using UnityEngine;
 
-/// <summary>机械数据格的战斗适配器；共享真实武器 Pulse 和攻击配额，不生成每座建筑的 Collider。</summary>
+/// <summary>机械数据格的战斗适配器；只在武器 Pulse 内投影候选受击 Collider。</summary>
 public sealed class MachineCombatBridge : IGameplayCombatBridge
 {
     #region 数据受击
@@ -20,7 +21,7 @@ public sealed class MachineCombatBridge : IGameplayCombatBridge
         return false;
     }
 
-    /// <summary>仅查询攻击盒覆盖的数据格，命中后使用共同伤害规则扣除节点耐久。</summary>
+    /// <summary>数据格负责候选索引，Collider2D 负责实际接触，机械数据负责耐久结算。</summary>
     public void QueryWeaponPulse(Mod_Damage weapon, AttackShape2D shape, CombatDamageContext context)
     {
         if (!GameNetwork.HasStateAuthority || weapon == null || weapon.RemainingAttackTargets == 0) return;
@@ -29,26 +30,57 @@ public sealed class MachineCombatBridge : IGameplayCombatBridge
         int maxX = Mathf.FloorToInt(center.x + extents.x + 1f);
         int minY = Mathf.FloorToInt(center.y - extents.y - 1f);
         int maxY = Mathf.FloorToInt(center.y + extents.y + 1f);
-        for (int y = minY; y <= maxY; y++)
-        for (int x = minX; x <= maxX; x++)
-        for (int layer = 0; layer < 2; layer++)
+        var nodes = new List<(MachineEntity Node, RuntimeItemDefinition Definition)>();
+        var seen = new HashSet<int>();
+        var colliderHits = new List<CombatColliderHit2D>();
+        using (CombatColliderQuery2D physics = CombatColliderQuery2D.Rent())
         {
-            if (weapon.RemainingAttackTargets == 0) return;
-            MachineEntity node = MachineWorld.GetAtCurrentWorld(new Vector2Int(x, y), layer);
-            if (node == null) continue;
-            if (GameRes.ExistingInstance == null ||
-                !GameRes.ExistingInstance.TryGetItemDefinition(node.Definition.Id, out RuntimeItemDefinition definition) ||
-                definition.Health?.HasHp != true)
-                throw new InvalidOperationException("机械耐久定义无效：" + node.Definition.Id);
-
-            Vector2 relative = WorldTopologyRuntime.ShortestDelta(
-                (Vector2)center, node.Snapshot.transform.position);
-            float2 hitCenter = center + new float2(relative.x, relative.y);
-            Vector2 size = definition.Health.Collider?.Size ?? Vector2.one;
-            PerceptionShape2D hit = PerceptionShape2D.Aabb(hitCenter,
-                new float2(Mathf.Abs(size.x), Mathf.Abs(size.y)) * .5f);
-            if (!shape.Intersects(hit)) continue;
-
+            for (int y = minY; y <= maxY; y++)
+            for (int x = minX; x <= maxX; x++)
+            for (int layer = 0; layer < 2; layer++)
+            {
+                MachineEntity node = MachineWorld.GetAtCurrentWorld(new Vector2Int(x, y), layer);
+                if (node == null || !seen.Add(node.Id)) continue;
+                if (GameRes.ExistingInstance == null ||
+                    !GameRes.ExistingInstance.TryGetItemDefinition(node.Definition.Id, out RuntimeItemDefinition definition) ||
+                    definition.Health?.HasHp != true)
+                    throw new InvalidOperationException("机械耐久定义无效：" + node.Definition.Id);
+                ItemColliderDefinitionDto collider = definition.Health.Collider;
+                if (collider?.Enabled == false) continue;
+                Vector2 relative = WorldTopologyRuntime.ShortestDelta(
+                    (Vector2)center, node.Snapshot.transform.position);
+                Vector2 localCenter = (Vector2)(definition.Health.ModuleLocalPosition ?? Vector3.zero) +
+                    (collider?.Offset ?? Vector2.zero);
+                Vector2 rotatedCenter = (node.RotationQuarterTurns & 3) switch
+                {
+                    1 => new Vector2(-localCenter.y, localCenter.x),
+                    2 => -localCenter,
+                    3 => new Vector2(localCenter.y, -localCenter.x),
+                    _ => localCenter
+                };
+                float2 hitCenter = center + new float2(relative.x + rotatedCenter.x, relative.y + rotatedCenter.y);
+                PerceptionShape2D hitShape;
+                if (string.Equals(collider?.Type, nameof(CircleCollider2D), StringComparison.Ordinal))
+                    hitShape = PerceptionShape2D.Circle(hitCenter, Mathf.Abs(collider.Radius ?? 0.5f));
+                else
+                {
+                    Vector2 size = collider?.Size ?? Vector2.one;
+                    if ((node.RotationQuarterTurns & 1) != 0) size = new Vector2(size.y, size.x);
+                    hitShape = PerceptionShape2D.Aabb(hitCenter,
+                        new float2(Mathf.Abs(size.x), Mathf.Abs(size.y)) * .5f);
+                }
+                physics.Add(nodes.Count, hitShape);
+                nodes.Add((node, definition));
+            }
+            physics.Query(shape, colliderHits);
+        }
+        colliderHits.Sort((a, b) => a.Fraction != b.Fraction ? a.Fraction.CompareTo(b.Fraction) :
+            Vector2.SqrMagnitude(a.Point - (Vector2)center).CompareTo(Vector2.SqrMagnitude(b.Point - (Vector2)center)));
+        for (int i = 0; i < colliderHits.Count && weapon.RemainingAttackTargets > 0; i++)
+        {
+            CombatColliderHit2D contact = colliderHits[i];
+            (MachineEntity node, RuntimeItemDefinition definition) = nodes[contact.CandidateId];
+            if (!MachineWorld.Contains(node)) continue;
             var identity = new CombatIdentity
             {
                 Backend = CombatBackend.External,
@@ -57,7 +89,9 @@ public sealed class MachineCombatBridge : IGameplayCombatBridge
                 Dimension = context.Attack.Source.Dimension
             };
             if (!weapon.TryReserveExternalTarget(identity)) continue;
-            ApplyDamage(node, definition, weapon, context);
+            CombatDamageContext hit = context;
+            hit.HitPoint = contact.Point;
+            ApplyDamage(node, definition, weapon, hit);
         }
     }
 
