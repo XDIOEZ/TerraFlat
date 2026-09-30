@@ -503,6 +503,7 @@ namespace FlatWorld.WorldModel
                 World.StreamingDiagnostics.Count("commit.notifications");
                 completion.Pending.Timing?.StartCommit();
                 string diagnosticOutcome = "failed";
+                bool retryWindowRequest = false;
                 _generationTasks.Remove(completion.Task);
                 // 同一个地址可能后来又开了新任务，所以还要确认这张通知确实属于当前任务。
                 bool current = _pending.TryGetValue(completion.Address,
@@ -518,6 +519,13 @@ namespace FlatWorld.WorldModel
                     {
                         // 旧任务迟到或已经取消，它的结果不会再使用，要在这里把内存释放掉。
                         result?.Dispose();
+                        if (current)
+                        {
+                            // 调度器完成为取消时也必须把 WorldRuntime 的 Generating 状态收口。
+                            // 否则窗口仍需要该区块时会留下“没有任务的 Generating”死状态，加载页永远等不到地形。
+                            World.CancelChunkGeneration(completion.Address);
+                            retryWindowRequest = _windowDataDemand.Contains(completion.Address);
+                        }
                         completion.Pending.Completion.TrySetCanceled();
                         diagnosticOutcome = current ? "cancelled" : "stale";
                     }
@@ -529,13 +537,21 @@ namespace FlatWorld.WorldModel
                     }
                     else
                     {
-                        completion.Pending.Completion.TrySetException(
-                            new InvalidOperationException(rejection));
+                        var failure = new InvalidOperationException(rejection);
+                        // 有效任务提交失败时不能继续假装处于 Generating；记录失败后，下一次窗口刷新可以重新请求。
+                        World.RejectFailedGeneration(completion.Pending.Request, failure);
+                        completion.Pending.Completion.TrySetException(failure);
+                        World.Events.Publish(new ChunkGenerationFailed(completion.Address, failure.Message));
                         diagnosticOutcome = "rejected";
                     }
                 }
                 else if (completion.Task.IsCanceled)
                 {
+                    if (current)
+                    {
+                        World.CancelChunkGeneration(completion.Address);
+                        retryWindowRequest = _windowDataDemand.Contains(completion.Address);
+                    }
                     completion.Pending.Completion.TrySetCanceled();
                     diagnosticOutcome = "cancelled";
                 }
@@ -551,6 +567,14 @@ namespace FlatWorld.WorldModel
                 }
                 completion.Pending.Cancellation.Dispose();
                 World.StreamingDiagnostics.Complete(completion.Pending.Timing, diagnosticOutcome);
+                if (retryWindowRequest)
+                {
+                    // 单个调用者的取消不能永久取消仍在当前数据窗口里的共享区块需求。
+                    ChunkGenerationRequest request = completion.Pending.Request;
+                    World.StreamingDiagnostics.Count("generation.window_retry");
+                    _ = RequestChunkDataAsync(completion.Address, request.WorldSeed,
+                        request.Profile, topology: request.Topology);
+                }
                 // 单个提交完整执行，之后再按真实耗时决定本帧是否继续。
                 if (hasTimeLimit && Stopwatch.GetTimestamp() - startedAt >= allowedTicks)
                 {
