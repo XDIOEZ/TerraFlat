@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using Newtonsoft.Json;
 using UnityEngine;
 
-/// <summary>机械节点的分层表现；贴地件由 BRG 批绘，高大建筑用排序代理与玩家比较 Y 轴。</summary>
+/// <summary>机械节点的分层表现；主体与运动部件共用脚点行网格，阴影继续独立批绘。</summary>
 public sealed partial class ChunkTilemapRenderer
 {
     #region 机械表现
@@ -12,7 +12,6 @@ public sealed partial class ChunkTilemapRenderer
     private const string ReciprocatingSpriteState = "reciprocating"; // 往复运动的独立图层键。
     private const string BellowsLeatherSpriteState = "bellowsLeather"; // 风箱皮革折页的独立图层键。
     private const int BellowsCompressionMode = 4; // 按机械相位沿局部纵轴压缩皮革折页。
-    private const float MechanicalPartSortStep = 1f / 4096f; // 同一 Y 锚点内只用于稳定机械子图层，不跨相邻格倒序。
 
     /// <summary>机械物品定义中的图层坐标，新增 MOD 机械可沿用同一参数契约。</summary>
     private sealed class MechanicalVisualConfig
@@ -36,32 +35,32 @@ public sealed partial class ChunkTilemapRenderer
 
     private static readonly Dictionary<string, MechanicalVisualConfig> mechanicalVisualConfigs = new(StringComparer.Ordinal);
     private readonly List<MachineWorld.MachineRenderCell> mechanicalVisualNodes = new();
-    private readonly Dictionary<Vector3Int, MechanicalDynamicVisual> dynamicMechanicalVisuals = new(); // 高大机械的轻量排序代理。
-    private readonly HashSet<Vector3Int> submittedMechanicalCells = new(); // 资源重建时清除旧 BRG 子层。
+    private readonly Dictionary<Vector3Int, MechanicalDepthVisual> mechanicalDepthVisuals = new(); // 机器的交互和灯光桥，图像统一合入行网格。
+    private readonly HashSet<Vector3Int> submittedMechanicalCells = new(); // 资源重建时清理已提交的机械和阴影身份。
     internal HashSet<Vector3Int> MechanicalShadowKeys => submittedMechanicalCells; // 供阴影注册表按区块卸载。
-    private static Material mechanicalBatchMaterial;
+    private static Material mechanicalFallbackMaterial;
 
     /// <summary>新资源会话重新解析 MOD 多图层参数。</summary>
     private static void ResetMechanicalVisualCache()
     {
         mechanicalVisualConfigs.Clear();
-        mechanicalBatchMaterial = null;
+        mechanicalFallbackMaterial = null;
     }
 
-    /// <summary>基础 BRG Owner 建立后接入机械数据变化和重建通知。</summary>
+    /// <summary>基础地形建立后接入机械数据变化和表现重建通知。</summary>
     private void BindMechanicalPresentation()
     {
         MachineWorld.CellChanged += HandleMechanicalCellChanged;
         BatchPresentationRebuilt += RefreshMechanicalPresentation;
     }
 
-    /// <summary>区块卸载时解除事件，BRG Owner 统一清除全部机械实例。</summary>
+    /// <summary>区块卸载时解除事件，回收行网格部件、交互和阴影注册。</summary>
     private void UnbindMechanicalPresentation()
     {
         MachineWorld.CellChanged -= HandleMechanicalCellChanged;
         BatchPresentationRebuilt -= RefreshMechanicalPresentation;
         mechanicalVisualNodes.Clear();
-        ClearDynamicMechanicalVisuals();
+        ClearMechanicalDepthVisuals();
         MechanicalShadowRegistry.RemoveOwner(this);
         submittedMechanicalCells.Clear();
     }
@@ -70,12 +69,10 @@ public sealed partial class ChunkTilemapRenderer
     private void RefreshMechanicalPresentation()
     {
         if (boundChunk?.Terrain == null || !batchPresentationComplete) return;
-        ClearDynamicMechanicalVisuals();
+        ClearMechanicalDepthVisuals();
         foreach (Vector3Int key in submittedMechanicalCells)
         {
             MechanicalShadowRegistry.Remove(this, key);
-            for (int part = 0; part < 4; part++)
-                ClearLayerVisual(Layer(key.z, part), key.x, key.y);
         }
         submittedMechanicalCells.Clear();
         var origin = boundChunk.Address.ChunkOrigin;
@@ -86,7 +83,7 @@ public sealed partial class ChunkTilemapRenderer
                 entry.DisplayCell.y - origin.Y);
     }
 
-    /// <summary>局部放置、拆除或转速变化只刷新对应格的八个实例槽。</summary>
+    /// <summary>局部放置、拆除或转速变化只刷新对应格的表现部件。</summary>
     private void HandleMechanicalCellChanged(Vector2Int cell)
     {
         if (boundChunk?.Terrain == null || !batchPresentationComplete) return;
@@ -97,23 +94,16 @@ public sealed partial class ChunkTilemapRenderer
         if ((uint)x >= (uint)boundChunk.Terrain.Width || (uint)y >= (uint)boundChunk.Terrain.Height) return;
         for (int occupancy = 0; occupancy < 2; occupancy++)
         {
-            for (int part = 0; part < 4; part++)
-                ClearLayerVisual(Layer(occupancy, part), x, y);
             MachineEntity node = MachineWorld.GetAt(cell, occupancy);
             if (node != null) SubmitMechanicalNode(node, x, y);
             else
             {
                 MechanicalShadowRegistry.Remove(this, new Vector3Int(x, y, occupancy));
                 submittedMechanicalCells.Remove(new Vector3Int(x, y, occupancy));
-                RemoveDynamicMechanicalVisual(x, y, occupancy);
+                RemoveMechanicalDepthVisual(x, y, occupancy);
             }
         }
     }
-
-    /// <summary>两个机械占地层分别提供主体、两个运动层和前景层。</summary>
-    private static ChunkBatchRendererGroupService.VisualLayer Layer(int occupancy, int part)
-        => (ChunkBatchRendererGroupService.VisualLayer)
-            ((int)ChunkBatchRendererGroupService.VisualLayer.MechanicalLowerBase + occupancy * 4 + part);
 
     /// <summary>按机械类型组合 Sprite，视觉状态来自物品定义而不是运行时 Item。</summary>
     private void SubmitMechanicalNode(MachineEntity node, int x, int y)
@@ -121,14 +111,15 @@ public sealed partial class ChunkTilemapRenderer
         GameRes resources = GameRes.ExistingInstance;
         if (resources == null || !resources.TryGetItemDefinition(node.Definition.Id, out RuntimeItemDefinition def) ||
             def.Sprite == null) throw new InvalidOperationException("机械本体 Sprite 缺失：" + node.Definition.Id);
-        mechanicalBatchMaterial ??= Resources.Load<Material>("Config/WorldModel/BRG/ChunkBRG-Sprite-Lit");
-        if (mechanicalBatchMaterial == null) throw new InvalidOperationException("机械 BRG 材质缺失。");
-        Material material = def.Material ?? mechanicalBatchMaterial;
+        mechanicalFallbackMaterial ??= Resources.Load<Material>("Config/WorldModel/BRG/ChunkBRG-Sprite-Lit");
+        if (mechanicalFallbackMaterial == null) throw new InvalidOperationException("机械共享材质缺失。");
+        Material material = def.Material ?? mechanicalFallbackMaterial;
         MechanicalVisualConfig config = Config(def);
         // 循环世界的显示区块可能使用非规范坐标；实例位置必须跟当前区块格一致。
         var chunkOrigin = boundChunk.Address.ChunkOrigin;
         Vector3 origin = new(chunkOrigin.X + x + .5f, chunkOrigin.Y + y + .5f,
             node.Snapshot.transform.position.z);
+        origin += DepthPresentationOffset;
         Quaternion rotation = Quaternion.Euler(0f, 0f, node.RotationQuarterTurns * 90f);
         Vector3 facilityBodyOffset = node.Definition.Ports == "none"
             ? (def.Visual?.RendererLocalPosition ?? Vector3.zero)
@@ -140,7 +131,10 @@ public sealed partial class ChunkTilemapRenderer
             MechanicalShadowRegistry.BeginNode(this, key, gameObject.scene, def.Sprite,
                 origin + rotation * facilityBodyOffset, rotation, def.Visual?.Shadows);
         else MechanicalShadowRegistry.Remove(this, key);
-        PrepareDynamicMechanicalVisual(node, x, y, origin);
+        PrepareMechanicalDepthVisual(node, x, y, origin);
+        MechanicalDepthVisual depthVisual = mechanicalDepthVisuals[key];
+        try
+        {
 
         if (kind == "shaft")
         {
@@ -215,8 +209,6 @@ public sealed partial class ChunkTilemapRenderer
 
         if (def.TryGetVisualStateSprite(ReciprocatingSpriteState, out Sprite reciprocating))
         {
-            if (node.Definition.RenderSorting != "dynamicY")
-                throw new InvalidOperationException("往复机械图层需要动态 Y 排序：" + node.Definition.Id);
             Part(node, x, y, 0, def.Sprite, material, origin, rotation,
                 Vector3.zero, Vector3.one, 0, 0f);
             int movingPart = config.AxisPortDrawOnTop ? 1 : 3;
@@ -252,9 +244,10 @@ public sealed partial class ChunkTilemapRenderer
         if (node.Definition.LogicId == "vessel" && Mod_WaterVessel.TryResolvePresentationSprite(node.Snapshot, out Sprite vessel)) body = vessel;
         // 设施本体沿用预览的图片局部偏移，让 Sprite Pivot 落在同一建造锚点上。
         Part(node, x, y, 0, body, material, origin, rotation, facilityBodyOffset, Vector3.one, 0, 0f);
-        if (node.Definition.RenderSorting == "dynamicY")
-            dynamicMechanicalVisuals[new Vector3Int(x, y, node.Definition.Layer)].UpdateFacility(node);
+        depthVisual.UpdateFacility(node);
         Ports(node, x, y, 3, def, material, origin, rotation, config);
+        }
+        finally { depthVisual.EndUpdate(); }
     }
 
     /// <summary>声明了端口贴图的设备按配置叠加轴环或镜像接头。</summary>
@@ -291,64 +284,39 @@ public sealed partial class ChunkTilemapRenderer
                 node.GearboxSmallPhase - node.GearboxSmallTime * node.GearboxSmallSpeed + phase, 0f);
         MechanicalShadowRegistry.SetPart(this, new Vector3Int(x, y, node.Definition.Layer),
             part, sprite, origin, rotation, offset, scale, mode, animation);
-        Vector4 region = Vector4.zero;
-        if (mode == 2)
-        {
-            float min = float.MaxValue, max = float.MinValue;
-            foreach (Vector2 uv in sprite.uv) { min = Mathf.Min(min, uv.x); max = Mathf.Max(max, uv.x); }
-            region = new Vector4(min, max, .5f / sprite.texture.width, 0f);
-        }
-        if (node.Definition.RenderSorting == "dynamicY")
-        {
-            dynamicMechanicalVisuals[new Vector3Int(x, y, node.Definition.Layer)]
-                .SetPart(part, sprite, material, rotation, offset, scale, mode, animation);
-            return;
-        }
-        SetLayerVisual(Layer(node.Definition.Layer, part), x, y, sprite, material,
-            Matrix4x4.TRS(origin + rotation * offset, rotation, scale),
-            Color.white, animation, region, MechanicalSortPosition(node, origin, part));
+        mechanicalDepthVisuals[new Vector3Int(x, y, node.Definition.Layer)]
+            .SetPart(part, sprite, material, rotation, offset, scale, mode, animation);
     }
 
-    /// <summary>整台机械共用建造锚点参与 Y 排序，内部占地层与子图层仅施加极小前景偏移。</summary>
-    private static Vector3 MechanicalSortPosition(MachineEntity node, Vector3 origin, int part)
-    {
-        int visualDepth = node.Definition.Layer * 4 + part;
-        return new Vector3(origin.x, origin.y - visualDepth * MechanicalPartSortStep, origin.z);
-    }
-
-    /// <summary>高大机械创建动态 Y 排序代理；贴地传动件仅保留 BRG 绘制。</summary>
-    private void PrepareDynamicMechanicalVisual(MachineEntity node, int x, int y, Vector3 origin)
+    /// <summary>每台机械只保留交互与必要灯光；图像通过共享行网格绘制。</summary>
+    private void PrepareMechanicalDepthVisual(MachineEntity node, int x, int y, Vector3 origin)
     {
         Vector3Int key = new(x, y, node.Definition.Layer);
-        if (node.Definition.RenderSorting != "dynamicY")
+        if (!mechanicalDepthVisuals.TryGetValue(key, out MechanicalDepthVisual visual) || visual == null)
         {
-            RemoveDynamicMechanicalVisual(x, y, node.Definition.Layer);
-            return;
-        }
-        if (!dynamicMechanicalVisuals.TryGetValue(key, out MechanicalDynamicVisual visual) || visual == null)
-        {
-            visual = MechanicalDynamicVisual.Create(transform, origin);
-            dynamicMechanicalVisuals[key] = visual;
+            int id = x + y * boundChunk.Terrain.Width + node.Definition.Layer * boundChunk.Terrain.CellCount;
+            visual = MechanicalDepthVisual.Create(this, origin, id, node.Definition.Layer);
+            mechanicalDepthVisuals[key] = visual;
         }
         visual.BeginUpdate(origin);
         visual.BindInteraction(MachineWorld.GetOrCreateInteractionTarget(node));
     }
 
     /// <summary>拆除或类型切换后释放当前格的动态视觉。</summary>
-    private void RemoveDynamicMechanicalVisual(int x, int y, int occupancy)
+    private void RemoveMechanicalDepthVisual(int x, int y, int occupancy)
     {
         Vector3Int key = new(x, y, occupancy);
-        if (!dynamicMechanicalVisuals.TryGetValue(key, out MechanicalDynamicVisual visual)) return;
-        dynamicMechanicalVisuals.Remove(key);
+        if (!mechanicalDepthVisuals.TryGetValue(key, out MechanicalDepthVisual visual)) return;
+        mechanicalDepthVisuals.Remove(key);
         if (visual != null) visual.Dispose();
     }
 
     /// <summary>区块卸载与资源重建时统一回收全部动态视觉。</summary>
-    private void ClearDynamicMechanicalVisuals()
+    private void ClearMechanicalDepthVisuals()
     {
-        foreach (MechanicalDynamicVisual visual in dynamicMechanicalVisuals.Values)
+        foreach (MechanicalDepthVisual visual in mechanicalDepthVisuals.Values)
             if (visual != null) visual.Dispose();
-        dynamicMechanicalVisuals.Clear();
+        mechanicalDepthVisuals.Clear();
     }
 
     /// <summary>滚动木芯按旧 Tiled Sprite 的固定世界尺寸缩放。</summary>

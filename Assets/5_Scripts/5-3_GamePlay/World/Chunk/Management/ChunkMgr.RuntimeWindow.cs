@@ -488,6 +488,7 @@ public partial class ChunkMgr
         ChunkGenerationProfileSnapshot profile = profileAsset != null
             ? profileAsset.CreateSnapshot()
             : defaultGenerationSnapshot;
+        profile = ApplyWorldChunkSize(profile);
         profile = ApplyWorldCoordinateScale(profile);
         profile = WorldGenerationRuntimeHooks.ApplyBeforeWorldModelGeneration(profile);
         // 玩家可建造 Tile 属于当前内容目录，不应被旧存档冻结的世界生成参数锁死。

@@ -107,7 +107,8 @@ public partial class Mod_Building
         Vector3[] path = clipped ? ClipOccluderBelowHeight(_fullOccluderPath, cutY) : _fullOccluderPath;
 
         // 裁剪后不能继续用整张 Sprite 写入自阴影模板，否则光源仍会被完整轮廓盖住。
-        _lightOccluder.useRendererSilhouette = !clipped;
+        // 主体已合入行网格时，局部光阴影使用现有轮廓 Mesh，不依赖隐藏的源 SpriteRenderer。
+        _lightOccluder.useRendererSilhouette = !clipped && !BuildingDepthMeshBridge.IsProjected(source);
         _lightOccluder.selfShadows = true;
         _lightOccluder.castsShadows = true;
         ShadowCasterShapePathField.SetValue(_lightOccluder, path);

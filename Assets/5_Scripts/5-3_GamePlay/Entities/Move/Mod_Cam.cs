@@ -50,7 +50,7 @@ public class Mod_Cam : Module
     public float CurrentOrthographicSize => vcam != null ? vcam.m_Lens.OrthographicSize : (ControllerCamera != null ? ControllerCamera.orthographicSize : 0f);
     
     [Header("视野限制")]
-    public float MaxPovValue = 20f; // 视野最大拉伸值
+    public float MaxPovValue = 40f; // 视野最大拉伸值
     public float MinPovValue = 1f;  // 视野最小缩放值，保持正交相机尺寸大于零
     private bool _unlimitedViewEnabled; // 管理员无限视野只放开运行时上限，不污染普通视野配置。
 

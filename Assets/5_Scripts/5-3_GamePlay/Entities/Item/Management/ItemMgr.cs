@@ -1,6 +1,7 @@
 using Sirenix.OdinInspector;
 using System;
 using System.Collections.Generic;
+using Unity.Profiling;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -8,6 +9,16 @@ using UnityEngine.SceneManagement;
 
 public partial class ItemMgr : SingletonMono<ItemMgr>
 {
+    private static readonly ProfilerMarker MachineTickMarker = new("ItemMgr.Update.MachineWorld");
+    private static readonly ProfilerMarker EntityTickMarker = new("ItemMgr.Update.WorldEntityRuntime");
+    private static readonly ProfilerMarker PerceptionCompleteMarker = new("ItemMgr.Update.PerceptionComplete");
+    private static readonly ProfilerMarker SchedulerTickMarker = new("ItemMgr.Update.TickScheduler");
+    private static readonly ProfilerMarker WaterTickMarker = new("ItemMgr.Update.WorldItemWater");
+    private static readonly ProfilerMarker DroppedTickMarker = new("ItemMgr.Update.DroppedItems");
+    private static readonly ProfilerMarker PerceptionScheduleMarker = new("ItemMgr.LateUpdate.PerceptionSchedule");
+    private static readonly ProfilerMarker DroppedPresentMarker = new("ItemMgr.LateUpdate.DroppedPresent");
+    private static readonly ProfilerMarker NaturalPresentMarker = new("ItemMgr.LateUpdate.NaturalPresent");
+
     /// <summary>
     /// AI-Context: 网络层通过这两个事件观察运行时 Item 生命周期；GamePlay 层不反向依赖 Mirror。
     /// 事件发生在注册完成后、销毁注销前，订阅方不得在回调内再次销毁同一 Item。
@@ -223,10 +234,13 @@ public partial class ItemMgr : SingletonMono<ItemMgr>
 
         _itemTickSuspended = false;
 
-        MachineWorld.Tick(Time.deltaTime);
-        WorldEntityRuntime.Tick(Time.deltaTime);
+        using (MachineTickMarker.Auto())
+            MachineWorld.Tick(Time.deltaTime);
+        using (EntityTickMarker.Auto())
+            WorldEntityRuntime.Tick(Time.deltaTime);
 
-        CompletePerceptionBatch();
+        using (PerceptionCompleteMarker.Auto())
+            CompletePerceptionBatch();
 
         if (RuntimeItems.Count == 0)
         {
@@ -235,10 +249,13 @@ public partial class ItemMgr : SingletonMono<ItemMgr>
         }
 
         RefreshSimulationPlayers();
-        _tickScheduler.Update(RuntimeItems, Time.deltaTime, RefreshRuntimeItemIndexes,
-            _simulationPlayers, WorldTopologyRuntime.GetActiveDomain());
-        WorldItemWaterSystem.ProcessPendingSpawnChecks();
-        DroppedItemService.Tick(Time.deltaTime);
+        using (SchedulerTickMarker.Auto())
+            _tickScheduler.Update(RuntimeItems, Time.deltaTime, RefreshRuntimeItemIndexes,
+                _simulationPlayers, WorldTopologyRuntime.GetActiveDomain());
+        using (WaterTickMarker.Auto())
+            WorldItemWaterSystem.ProcessPendingSpawnChecks();
+        using (DroppedTickMarker.Auto())
+            DroppedItemService.Tick(Time.deltaTime);
     }
 
     private void LateUpdate()
@@ -246,9 +263,12 @@ public partial class ItemMgr : SingletonMono<ItemMgr>
         if (!IsWorldItemRuntimeActive())
             return;
 
-        SchedulePerceptionBatch();
-        DroppedItemService.Present();
-        FlatWorld.NaturalEntities.NaturalEntityEcsService.Present();
+        using (PerceptionScheduleMarker.Auto())
+            SchedulePerceptionBatch();
+        using (DroppedPresentMarker.Auto())
+            DroppedItemService.Present();
+        using (NaturalPresentMarker.Auto())
+            FlatWorld.NaturalEntities.NaturalEntityEcsService.Present();
     }
 
     /// <summary>仅在真实游戏世界中调度 Item，菜单与退出回收阶段不允许旧实体继续运行。</summary>

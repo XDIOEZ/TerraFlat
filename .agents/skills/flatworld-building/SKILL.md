@@ -69,20 +69,20 @@ description: "Use when: 定位或修改 FlatWorld 的建筑放置预览、安装
 ## Skill 维护原则
 
 - 机械节点通过 `IBuildingPlacementExtension` 声明占地层、候选数据与拆回快照处理；扩展校验必须同时覆盖放置预览和真实事务。只有 `IBuildingPlacementCommitted` 后才登记世界副作用，不能在未提交候选的 `Load` 中入网。
-- 落地机械由 `MachineWorld` 保存纯数据节点，不实例化本体 Item/GameObject。`MachineDefinition.RenderSorting` 显式区分 `ground` 与 `dynamicY`：贴地传动件留在区块 BRG 的地表队列，始终低于玩家；高大机械仅建立轻量视觉代理，根 `SortingGroup` 使用普通建筑与玩家共用的动态排序键，并以建造锚点参与 Y 排序。BRG 绘制命令没有 Unity Sorting Layer，不能只给机械 BRG 设置 Y 深度就期待它与 Player 层互相遮挡；同一贴地节点的 BRG 子层仍共用透明队列，仅以极小 Y 偏移保持内部顺序。
-- 普通建筑通行性由 `IBuildingTraversalPolicy` 声明；机械节点直接读取 `mechanical-catalog.json` 的 `BlocksMovement` 和 `PlayerMoveSpeedMultiplier`。`BuildingOccupancyRegistry` 负责机械导航与移速，`WorldMotionSystem` 对阻挡机械做数据格扫掠；传动轴不生成 Collider，不按具体机械 ID 硬编码规则。
+- 落地机械由 `MachineWorld` 保存纯数据节点，不实例化本体 Item。主体和运动部件由 `ChunkDepthMeshRenderer` 按建造脚点所在的整格 Y 行合批；`MechanicalDepthVisual` 只保留交互与灯光。16 格高的区块最多 16 个排序行，材质和部件层级仍会拆分绘制；格内多个对象与玩家交错时按行中心近似排序。机械阴影仍走 BRG。
+- 普通建筑通行性由 `IBuildingTraversalPolicy` 声明；机械节点直接读取 `mechanical-catalog.json` 的 `BlocksMovement` 和 `PlayerMoveSpeedMultiplier`。`BuildingOccupancyRegistry` 负责机械导航与移速，已加载 Chunk 只把阻挡机械的数据矩形投影成合并静态 Collider；传动轴不生成阻挡几何，不按具体机械 ID 硬编码规则。
 - `CrossShaft` 只占 Layer1 中心一格，放置时要求同格 Layer0 存在下穿节点，但不要求 A/B 相邻端口预先连接；图构建只把 A/B 接到相邻 Layer0 节点，绝不把同格下穿节点接入跨轴器网络。普通建筑仍占 Layer0，导航只考虑下层阻挡。手持 R 朝向属于模块临时状态，拆回快照和重新选中都必须恢复初始朝向；禁止把方向写进 Summoner 堆叠数据。轴类按横竖两态切换，带定向轴接口的齿轮按四个九十度朝向轮换；世界节点的端口方向、固定输入杆和预览图必须使用同一朝向。
 - 机械风箱的四向出风朝向与本体预览、落地旋转共用 `MachineState.RotationQuarterTurns`；炉体由 `Mod_Furnace.acceptsMechanicalBellows` 显式配置接入，只影响出风口所对的相邻熔炉或高炉。20 RPM 对应最多 500℃温度上限增量，温度增益截断不改变其它机械用力器的线性效率。
 - 机械风箱的传动轴入口使用局部 `AxlePorts:["left"]` 与 `InputShaftLocalPosition`，随 `RotationQuarterTurns` 与右侧出风口保持相反；独立轴图层应像风车叶轮一样挂在主体 Sprite 下，放置预览坐标需包含 ShadowRenderer 偏移，只有齿轮推进本体自转相位。
-- 风箱召唤器使用完整展开静态图，落地主体则把固定木框和皮革风囊分成同画布、PPU、中心 Pivot 的 Sprite；皮革图层由 BRG 机械动画模式 4 按节点相位压缩，落地主体不能再次烘入可见皮革，否则会在收缩时重影。右端上窄下宽的梯形喷嘴属于固定框架，四向旋转后仍须与逻辑出风方向一致。
+- 风箱召唤器使用完整展开静态图，落地主体把固定木框和皮革风囊分成同画布、PPU、中心 Pivot 的 Sprite；皮革行网格图层由 GPU 动画模式 4 按节点相位压缩，落地主体不能再次烘入可见皮革。右端梯形喷嘴属于固定框架，四向旋转后仍须与逻辑出风方向一致。
 - 轴类机械端口属于独立视觉图层：物品 `visual.spriteStates.axisPorts` 声明端口贴图，`AxisPortLayout=mirroredSingle` 用于镜像单端接头，`centeredShaftRings` 则居中挂接整格传动杆的双端铁环图，并按 SortingOrder 让箱体遮住中间杆芯；两种布局都只显示一对相对端口并随 `RotationQuarterTurns` 同步旋转。用力器等设备的镜像单端接口总跨度统一为一节标准传动轴的可见长度：左右端口中心间距按 `Shaft_Wood` 轴芯长度推导，当前 128 PPU、116px 可见轴芯对应 `AxisPortOffset≈0.45` 世界单位；不要用 `0.75` 等偏移把每侧接头拉长。设备主体宽于一格时也不得随外壳放大接口，末端应贴合外侧轴承座。双端铁环应按现有传动杆贴图的格边位置与邻接轴环衔接；Summoner 与 BuildingBody 都要声明该状态，主体贴图不得烘入端口。
   - 双端轴环要连接到非地面高度时，将 `Sprite Pivot` 放在端口轴线，使端口层的局部零点、建筑格心和机械网络接口重合；Summoner 与 BuildingBody 使用相同轴线 Pivot，放置预览和落地表现共用 `AxisPortLayout` 与 `AxisPortDrawOnTop`，改 Pivot 后按轴承实际像素重算 `RotorLocalPosition`。主体需显露轴环时用 `AxisPortDrawOnTop` 绘制在支架上层，不要在静态图里重复烘入同一接口。
 - 变速箱箱体贴图留空心腔，内部通过 `visual.spriteStates.gearboxGear` 挂接两枚独立齿轮图层；齿轮中心、尺寸比由机械模块参数配置，动画以 `MachineEntity.Rpm` 和 `EntryDirection` 换算输入侧，输出齿轮反向转动并按半径比换算角速度。放置时 R 键应轮换四个九十度朝向；传动倍率必须先把世界输入方向减去 `RotationQuarterTurns`，再按箱体局部左右侧判定，不能用世界方向直接判断，预览需与朝向保持一致。
-- 变速箱两枚 BRG 齿轮各自保存相位与角速度锚点；供能侧或倍率切换时先按旧速度积分再上传新参数，避免旋转动画跳帧。其它机械转速变化也只更新 BRG 实例参数，Shader 连续计算角度与轴芯 UV。
+- 变速箱两枚行网格齿轮各自保存相位与角速度锚点；供能侧或倍率切换时先按旧速度积分再上传新参数，避免旋转动画跳帧。其它机械转速变化也只更新对应网格部件，Shader 连续计算角度与轴芯 UV。
 - 小型机械传动件通过建筑模块的 `LightOcclusionMode=None` 与 `CastSunShadow=false` 同时关闭局部光遮挡和太阳长投影；大型机械建筑可保留投影。预览虚影仍用于放置反馈，不能因关闭真实阴影而停用。
 - 落地机械只存在 `MachineWorld` 数据节点，不会进入普通 Item 阴影注册链；动力源、用力器与风箱的底部阴影应由可见区块登记到机械专用的 BRG 椭圆批次，并排在贴地机械主体前绘制，不能并入位于机械主体之后的旧 Item 阴影批次。太阳投影只复用主体和运动子层的 Sprite/相位并按视口租用代理。拆除、资源重建、区块卸载和夜间须同步撤销旧投影；传动件默认不投影，MOD 可用 `MachineDefinition.CastVisualShadows` 覆盖分类。
 - 机械用力器效率统一按 `Rpm / RequiredRpm` 线性计算且不封顶，不得再次除以全局基准转速。扭矩源为输出端、用力器为不转送扭矩的输入端；输入相接不入网，同速扭矩源允许合网并累加扭矩，异速扭矩源停转，未供能的源不参与转速冲突。变速箱左侧大齿轮输入时转速 ×2 / 扭矩 ×0.5，右侧小齿轮输入时转速 ×0.5 / 扭矩 ×2；负载按所在侧扭矩倍率折算，旧材料 ID 仅保留存档兼容且不应重新暴露为配方。
-- 高大机械的竖直往复件可由本体定义的 `visual.spriteStates.reciprocating` 独立图层与机械模块参数 `ReciprocatingStroke`（世界单位）驱动；图层与静止机架必须使用相同画布、PPU 和 Pivot，静止叠合应还原原图。动画沿建筑局部向下方向运动，频率跟随节点连续 `VisualRpm` 相位，停转保持当时姿态；往复图层目前只用于 `RenderSorting=dynamicY` 的视觉代理，并同步进入机械太阳投影。
+- 高大机械的竖直往复件由 `visual.spriteStates.reciprocating` 与 `ReciprocatingStroke`（世界单位）驱动；图层与静止机架使用相同画布、PPU 和 Pivot。动画沿建筑局部向下方向运动，频率跟随连续 `VisualRpm` 相位，停转保持当时姿态；往复图层进入行网格，并同步进入机械太阳投影。
 - 动力源的扭矩比例与实际转速是独立输入；动态源分别实现 `MachineWorld.RegisterSource` 与 `RegisterSourceRpm`，网络冲突、负载和输出转速统一读取本次求解的 `MachineEntity.SourceRpm`。水流源读取权威水格的 `RuntimeWaterCurrentSample`，通过共享漂流速度规则和定义中的 `SourceRadius` 将线速度换算为 RPM；不能只用“邻格有水”判定供能。
 - 固定转速源和用力器需求转速决定转动与加工效率；用力器的 `TorqueLoad` 是独立固定需求，不随实际 RPM 或串联变速箱数量变化。水车转速由实际水流和叶轮半径独立换算，不跟随固定源默认 RPM；调河流供给时修改水车基础扭矩，而非水流转速。
 - 机械扭矩源按实际连接关系向用力器供能；用力器按距最近可达源的传动距离由近到远取得并消耗自身固定需求，同距离按稳定节点 ID 决定顺序，同一用力器优先取用较近的动力源。输入终点不能作为其它节点的传动通道，来自不同分支的同速源仍可在传动件处合流。变速箱按朝向转换可用扭矩与转速；供给不足只让未获完整需求的用力器停机。传动轴、齿轮、离合器和跨轴器只传递扭矩与转速，不限制通过量；`TorqueCapacity` 仅保留旧目录兼容，不参与求解。默认源扭矩和用力器负载按十位档配置，先在源或用力器所在侧取档，再按变速倍率换算；面板用本节点可取得的扭矩对照本设备固定需求，不把整网需求乘成单台设备需求。
@@ -91,7 +91,7 @@ description: "Use when: 定位或修改 FlatWorld 的建筑放置预览、安装
 - 建筑若需让外接传动轴与叶轮轴心同高，应以轴心作为 Sprite Pivot 和建造锚点，旋转图层使用轴心中心 Pivot 且局部位置为零；建筑支架可向锚点下方延伸，Summoner 图标使用静态合成图，落地本体使用固定主体与独立旋转层。
 - 圆锯等嵌入台面的转子保留完整圆形透明 Sprite，主体图不再烘入转子并保留不透明的台面前沿；配置 `RotorBehindBody` 后，落地代理、实体和放置虚影都将转子排在主体之后，以同一 `RotorLocalPosition` 对准轴心并遮住下半圈。
 - 机械风车是机械动力源、用力器/出力器链路和外接传动轴视觉的权威参考对象：塔身 Sprite 使用 128 PPU、Pivot `(0.5, 0.06606607)`，把底部横向外露轴套放在放置锚点线上；独立转子使用中心 Pivot `(0.5, 0.5)`，风车自身的轴承中心对应 `RotorLocalPosition=(0, 1.3828125, 0)`，Summoner 静态合成图沿用塔身 Pivot。其它风/水动力源复用该根锚点、端口和分层旋转机制，但转子局部位置必须按各自贴图的轴承中心相对根 Pivot 换算，不能盲目复用风车的转子高度；运行转子、放置预览和 Summoner 静态合成图必须使用同一局部位置。水车本体必须落在 `LiquidDefinition.WorldWater` 有效的水格，三脚架底座作为建造锚点，独立叶轮按 `RotorLocalPosition` 配置并与召唤器合成图保持一致；机械节点保留逻辑传动端口，水车不额外挂传动杆 Sprite。
-- 建筑实体碰撞范围配置在物品 `visual.collider`，`health.collider` 属于 `DamageReceiver` 的受击碰撞体；调整建筑底座阻挡范围时只改前者，避免缩小受击范围或把命中体误当成物理碰撞体。数据机械没有实体 Collider，玩家移动扫掠从 `visual.collider` 读取局部 Box，按节点朝向旋转后使用；扫描候选节点仍以单格占地为索引，配置的矩形需保持在该格内，导航和放置占格仍由离散格决定。
+- 建筑实体碰撞范围配置在物品 `visual.collider`，`health.collider` 属于 `DamageReceiver` 的受击碰撞体；调整建筑底座阻挡范围时只改前者。数据机械的阻挡形状由 Chunk 静态 Collider 投影；攻击时按数据格索引候选，临时投影 `health.collider` 受击形状交给 Physics2D 查询，节点耐久仍由 `MachineWorld` 管理。导航和放置占格仍由离散格决定。
 - 可堆叠的召唤器若携带拆除快照，堆叠身份必须来自规范化后的快照内容，不能附加每实例 Guid；先归一化放置事务会重写的 Guid 与 Transform，再计算身份，并在 `IsValidSummonerData` 校验同状态堆叠。扩展确认状态可由物品定义完整重建时，可通过 `IBuildingSnapshotRepackPolicy` 省略默认快照身份，使拆回物品与新制物品合堆；共享模块、损伤或非默认状态仍须保留快照。
 
 - 只补充后续维护可复用的易错点、隐含约束和必要注意事项。

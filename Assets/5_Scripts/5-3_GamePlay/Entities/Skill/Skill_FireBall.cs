@@ -5,6 +5,8 @@ using UnityEngine;
 
 public class Skill_FireBall : Skill
 {
+    #region 配置和运行状态
+
     [Header("组件引用")]
     public List<Module> mods = new List<Module>();
     
@@ -15,6 +17,11 @@ public class Skill_FireBall : Skill
     // 存储火球的初始飞行方向
     private Vector2 fireballDirection = Vector2.zero;
     private Vector3 startPoint;
+    private Rigidbody2D physicsBody;
+
+    #endregion
+
+    #region 物理投影与技能模块
 
     public void Start()
     {
@@ -58,6 +65,13 @@ public class Skill_FireBall : Skill
             {
                 mod.Load();
             }
+            physicsBody = GetComponent<Rigidbody2D>();
+            if (physicsBody == null)
+                throw new MissingComponentException("火球缺少 Rigidbody2D。");
+            physicsBody.bodyType = RigidbodyType2D.Dynamic;
+            physicsBody.gravityScale = 0f;
+            physicsBody.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+            physicsBody.velocity = fireballDirection * runtimeSkill.skillData.speed;
         }
     }
 
@@ -73,16 +87,11 @@ public class Skill_FireBall : Skill
             mod.ModUpdate(deltaTime);
         }
         
-        // 直接控制2D火球移动，按照初始方向直线飞行
-        Vector3 currentPosition = transform.position;
-        
-        // 根据速度和时间计算移动距离
-        float moveDistance = runtimeSkill.skillData.speed * deltaTime;
-        
-        // 按初始方向和速度移动火球
-        Vector2 newPosition = currentPosition + (Vector3)(fireballDirection * moveDistance);
-        transform.position = new Vector3(newPosition.x, newPosition.y, currentPosition.z);
     }
+
+    #endregion
+
+    #region 保存
 
     public override void Save()
     {
@@ -92,4 +101,6 @@ public class Skill_FireBall : Skill
             mod.Save();
         }
     }
+
+    #endregion
 }

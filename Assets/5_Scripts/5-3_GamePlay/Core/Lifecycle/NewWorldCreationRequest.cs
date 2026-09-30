@@ -143,6 +143,15 @@ public sealed class NewWorldCreationRequest
             return false;
         }
 
+        if (!global::PlanetData.IsValidChunkDimension(PlanetData.ChunkSize.x) ||
+            !global::PlanetData.IsValidChunkDimension(PlanetData.ChunkSize.y))
+        {
+            int minChunkDimension = global::PlanetData.MinChunkDimension;
+            int maxChunkDimension = global::PlanetData.MaxChunkDimension;
+            error = $"区块尺寸必须在 {minChunkDimension} 到 {maxChunkDimension} 之间。";
+            return false;
+        }
+
         if (PlanetData.TopologyMode != WorldTopologyMode.Infinite &&
             PlanetData.TopologyMode != WorldTopologyMode.Wrapped)
         {

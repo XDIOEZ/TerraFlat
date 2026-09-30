@@ -32,6 +32,7 @@ internal static class WrappedWorldPhysicsAdapter
 
     private static void RegisterItem(Item item)
     {
+        ItemPhysicsProjection2D.Ensure(item);
         WrappedRigidbody2DAdapter.Ensure(item);
     }
 
@@ -39,6 +40,7 @@ internal static class WrappedWorldPhysicsAdapter
     {
         if (!IsRegistered(item))
             return;
+        ItemPhysicsProjection2D.Ensure(item);
         WrappedRigidbody2DAdapter.Ensure(item);
     }
 
@@ -46,6 +48,7 @@ internal static class WrappedWorldPhysicsAdapter
     {
         if (item == null)
             return;
+        item.GetComponent<ItemPhysicsProjection2D>()?.Suspend();
         item.GetComponent<WrappedRigidbody2DAdapter>()?.Suspend();
         item.GetComponent<WrappedTilemapPhysicsAdapter>()?.Suspend();
     }

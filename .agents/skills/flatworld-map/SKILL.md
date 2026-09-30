@@ -53,7 +53,7 @@ description: "Use when: 定位或修改 FlatWorld 的地图内容、Tilemap、�
 ## 验证
 
 - `WorldTopologyDomain` 是 `Shared/WorldTopology/FlatWorld.WorldTopology.asmdef` 中的纯数学坐标真源；Bounds 只负责配置/类型封装，Runtime 仍读取 SaveDataMgr，只允许主线程使用。禁止在 Map 或数学核心直接创建 Wrapped Physics Proxy。
-- `WrappedTilemapPhysicsAdapter` 只服务旧 Map 的 Tilemap 镜像生命周期；新版 WorldModel 的碰撞随本地投影后的 `ChunkView` 根节点一起移动，不再为 `ChunkCollisionRenderer` 创建环绕物理代理。不得把局部显示坐标写回 Chunk 地址。
+- `WrappedTilemapPhysicsAdapter` 同时镜像旧 Map 和 `ChunkCollisionRenderer` 的边界 Collider；Chunk 的权威地址与阻挡规则仍取自 `ChunkTerrainData`，局部显示坐标不得写回 Chunk 地址。
 - 旧 Map 的镜像 `TilemapDamageReceiver` 必须绑定真实 Map 与镜像 Tilemap，不能用源 Tilemap 坐标代替；新版 WorldModel 继续通过规范逻辑格子查询结算伤害，不能依赖某个客户端的 ChunkView Transform。
 
 - 功能验收以实际游戏操作和可观察结果为准；不以冒烟、自动化测试或静态检查代替实际验收。

@@ -294,8 +294,13 @@ namespace FlatWorld.NaturalEntities
                 NaturalEntityBody body = simulation.GetBody(record.Handle.Id);
                 if (body.Dead != 0) { endedPlants.Add(record.Handle.Id); continue; }
                 if (record.Profile.Canopy != null) AdvanceCanopy(record);
+                if (body.VisualVersion != record.PresentedRevision)
+                    MarkPresentationDirty(record);
                 if (body.VisualVersion != record.IndexedRevision)
-                { UnregisterSpatial(record); RegisterSpatial(record); }
+                {
+                    UnregisterSpatial(record, PhysicsBodyChangeReason.VisualRevision);
+                    RegisterSpatial(record, PhysicsBodyChangeReason.VisualRevision);
+                }
             }
             foreach (int id in endedPlants)
             {

@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using FlatWorld.AIECS;
 using UnityEngine;
-using UnityEngine.Rendering;
+using UnityEngine.SceneManagement;
 
 namespace FlatWorld.NaturalEntities
 {
@@ -15,69 +15,191 @@ namespace FlatWorld.NaturalEntities
             public ChunkTilemapRenderer PresentationOwner;
             public uint PresentedRevision;
             public bool PresentationDirty = true, PresentedFlash;
+            public bool PresentationQueued;
             public Vector2 ShadowFoot;
             public float ShadowWidth;
             public Vector3 RenderOffset;
-            public TreeSortingVisual SortingVisual;
         }
 
         private static ContactShadowBatchRenderer contactShadows;
+        private static readonly Queue<int> presentationDirtyQueue = new();
+        private static readonly HashSet<int> flashPresentationWatch = new();
+        private static readonly List<int> flashPresentationScratch = new();
+        private static bool contactShadowListDirty = true;
+        private static bool presentationEventsHooked;
+        private static Scene contactShadowScene;
 
-        /// <summary>绑定区块表现；树木只增加排序用视觉外壳，资源玩法仍完全由 Entity 管理。</summary>
+        /// <summary>绑定区块表现；资源主体按脚点 Y 合行网格，阴影继续提交 BRG。</summary>
         public static void BindPresentation(NaturalEntityHandle handle, ChunkTilemapRenderer owner)
         {
             if (!Contains(handle)) return;
+            EnsurePresentationEvents();
             Record record = records[handle.Id];
             if (record.PresentationOwner != owner) ReleasePresentation(record);
             record.PresentationOwner = owner;
             record.PresentationDirty = true;
+            record.PresentationQueued = false;
             DrawResource(record);
+        }
+
+        /// <summary>表现变化只入队一次；静止自然物不会再被每帧全量轮询。</summary>
+        private static void MarkPresentationDirty(Record record)
+        {
+            if (record == null) return;
+            record.PresentationDirty = true;
+            if (record.PresentationOwner == null || record.PresentationQueued) return;
+            record.PresentationQueued = true;
+            presentationDirtyQueue.Enqueue(record.Handle.Id);
         }
 
         private static void RefreshPresentation(NaturalEntityHandle handle)
         {
-            if (Contains(handle)) records[handle.Id].PresentationDirty = true;
+            if (!Contains(handle)) return;
+            Record record = records[handle.Id];
+            MarkPresentationDirty(record);
+            if (record.FlashUntil > Time.time)
+                flashPresentationWatch.Add(handle.Id);
         }
 
         private static void ReleasePresentation(Record record)
         {
-            record.SortingVisual?.Dispose();
-            record.SortingVisual = null;
             if (record.PresentationOwner != null)
+            {
                 for (int part = 0; part < record.RenderPartCount; part++)
                     record.PresentationOwner.ClearNaturalEntityPart(record.Handle.Id, part);
+                if (record.ShadowWidth > 0f)
+                    contactShadowListDirty = true;
+            }
             record.RenderPartCount = 0;
             record.PresentationOwner = null;
+            record.PresentationQueued = false;
+            flashPresentationWatch.Remove(record.Handle.Id);
         }
 
         /// <summary>静态主体只在版本变化时重提；太阳方向在 Shader 更新，短期坠果单独逐帧更新。</summary>
         public static void Present()
         {
-            if (simulation == null || records.Count == 0) { contactShadows?.Hide(); return; }
+            if (simulation == null || records.Count == 0)
+            {
+                contactShadows?.Hide();
+                presentationDirtyQueue.Clear();
+                flashPresentationWatch.Clear();
+                return;
+            }
+
+            ProcessFlashPresentationWatch();
+            ProcessDirtyPresentations();
+            if (contactShadowListDirty)
+                RebuildContactShadows();
+            UpdateContactShadowOpacity();
+        }
+
+        /// <summary>受击闪白到期是少量短生命周期动态状态，只跟踪被击中的实体。</summary>
+        private static void ProcessFlashPresentationWatch()
+        {
+            if (flashPresentationWatch.Count == 0) return;
+            flashPresentationScratch.Clear();
+            foreach (int id in flashPresentationWatch)
+            {
+                if (!records.TryGetValue(id, out Record record) || !Contains(record.Handle))
+                {
+                    flashPresentationScratch.Add(id);
+                    continue;
+                }
+                if (record.FlashUntil > Time.time) continue;
+                flashPresentationScratch.Add(id);
+                MarkPresentationDirty(record);
+            }
+            for (int i = 0; i < flashPresentationScratch.Count; i++)
+                flashPresentationWatch.Remove(flashPresentationScratch[i]);
+            flashPresentationScratch.Clear();
+        }
+
+        /// <summary>每帧只消费真正变化的资源；尚未完成 Owner 注册的条目延后一帧重试。</summary>
+        private static void ProcessDirtyPresentations()
+        {
+            int pending = presentationDirtyQueue.Count;
+            for (int i = 0; i < pending; i++)
+            {
+                int id = presentationDirtyQueue.Dequeue();
+                if (!records.TryGetValue(id, out Record record) || !record.PresentationQueued)
+                    continue;
+                if (record.PresentationOwner == null)
+                {
+                    record.PresentationQueued = false;
+                    continue;
+                }
+                if (!record.PresentationOwner.IsBatchPresentationRegistered)
+                {
+                    presentationDirtyQueue.Enqueue(id);
+                    continue;
+                }
+                record.PresentationQueued = false;
+                DrawResource(record);
+            }
+        }
+
+        /// <summary>阴影几何只在树体尺寸/位置/绑定变化时全量重建；昼夜透明度单独改批次材质。</summary>
+        private static void RebuildContactShadows()
+        {
             contactShadows ??= new ContactShadowBatchRenderer(2993);
             contactShadows.BeginFrame();
+            contactShadowScene = default;
+            var defaults = WorldRenderingConfigCatalog.Default.shadows.contact;
             foreach (Record record in records.Values)
             {
-                if (record.PresentationOwner == null || !record.PresentationOwner.IsBatchPresentationRegistered) continue;
-                NaturalEntityBody body = simulation.GetBody(record.Handle.Id);
-                if (body.Dead != 0) continue;
-                bool flashing = record.FlashUntil > Time.time;
-                Vector3 logicalPosition = new(body.Position.x, body.Position.y);
-                Vector3 projectionOffset = WorldLocalPresentation.ProjectPosition(logicalPosition) - logicalPosition;
-                bool missingTreeVisual = record.Profile.Definition.HasTag(Tag.Tree) &&
-                    (record.SortingVisual == null || !record.SortingVisual.IsValid);
-                if (record.PresentationDirty || missingTreeVisual || record.PresentedRevision != body.VisualVersion ||
-                    record.PresentedFlash != flashing || record.Profile.Canopy != null || record.RenderOffset != projectionOffset)
-                    DrawResource(record);
-                if (record.ShadowWidth <= 0f) continue;
-                ActorShadowManager shadowManager = ActorShadowManager.GetInstance();
-                float opacity = shadowManager != null ? shadowManager.GetShadowOpacity(record.PresentationOwner.gameObject.scene) : 0f;
-                Vector2 foot = WorldLocalPresentation.ProjectPosition(record.ShadowFoot);
-                var defaults = WorldRenderingConfigCatalog.Default.shadows.contact;
+                if (record.PresentationOwner == null || !record.PresentationOwner.IsBatchPresentationRegistered ||
+                    record.ShadowWidth <= 0f || record.RenderPartCount <= 0)
+                    continue;
+                if (!contactShadowScene.IsValid())
+                    contactShadowScene = record.PresentationOwner.gameObject.scene;
+                Vector2 foot = record.ShadowFoot + new Vector2(record.RenderOffset.x, record.RenderOffset.y);
                 foot.y += defaults.groundOffset;
-                contactShadows.Append(foot, record.ShadowWidth, record.ShadowWidth * defaults.heightRatio, opacity);
+                contactShadows.Append(foot, record.ShadowWidth,
+                    record.ShadowWidth * defaults.heightRatio, 1f);
             }
             contactShadows.EndFrame();
+            contactShadowListDirty = false;
+        }
+
+        private static void UpdateContactShadowOpacity()
+        {
+            if (contactShadows == null) return;
+            ActorShadowManager shadowManager = ActorShadowManager.GetInstance();
+            float opacity = shadowManager != null && contactShadowScene.IsValid() && contactShadowScene.isLoaded
+                ? shadowManager.GetShadowOpacity(contactShadowScene)
+                : 0f;
+            contactShadows.SetGlobalOpacity(opacity);
+        }
+
+        private static void EnsurePresentationEvents()
+        {
+            if (presentationEventsHooked) return;
+            WorldTopologyRuntime.LocalPlayerWrapped += HandleLocalPresentationWrap;
+            presentationEventsHooked = true;
+        }
+
+        /// <summary>环世界切换局部镜像时才批量重投影，不再逐实体每帧计算 ProjectPosition。</summary>
+        private static void HandleLocalPresentationWrap()
+        {
+            foreach (Record record in records.Values)
+                if (record.PresentationOwner != null)
+                    MarkPresentationDirty(record);
+            contactShadowListDirty = true;
+        }
+
+        private static void ReleasePresentationRuntime()
+        {
+            if (presentationEventsHooked)
+                WorldTopologyRuntime.LocalPlayerWrapped -= HandleLocalPresentationWrap;
+            presentationEventsHooked = false;
+            presentationDirtyQueue.Clear();
+            flashPresentationWatch.Clear();
+            flashPresentationScratch.Clear();
+            contactShadowListDirty = true;
+            contactShadowScene = default;
+            contactShadows?.Dispose();
+            contactShadows = null;
         }
 
         private static Matrix4x4 BodyMatrix(NaturalEntityBody body) => Matrix4x4.TRS(
@@ -136,6 +258,9 @@ namespace FlatWorld.NaturalEntities
             if (owner == null || !owner.IsBatchPresentationRegistered || !Contains(record.Handle)) return;
             NaturalEntityBody body = simulation.GetBody(record.Handle.Id);
             if (body.Dead != 0) return;
+            Vector2 previousShadowFoot = record.ShadowFoot;
+            float previousShadowWidth = record.ShadowWidth;
+            Vector3 previousRenderOffset = record.RenderOffset;
             ResolveBodyVisual(record, body, out Sprite sprite, out Matrix4x4 matrix, out Color tint,
                 out Vector4 crop, out Vector3 rendererScale);
             Material material = record.Profile.Definition.Material;
@@ -146,29 +271,10 @@ namespace FlatWorld.NaturalEntities
             Vector3 localAnchor = anchor + record.RenderOffset;
             Matrix4x4 projectedMatrix = Matrix4x4.Translate(record.RenderOffset) * matrix;
             int part = 0;
-            if (record.Profile.Definition.HasTag(Tag.Tree))
-            {
-                if (record.SortingVisual == null || !record.SortingVisual.IsValid)
-                {
-                    record.SortingVisual?.Dispose();
-                    record.SortingVisual = new TreeSortingVisual(owner.transform, record.Handle.Id);
-                }
-                record.SortingVisual.BeginUpdate(localAnchor, body);
-                var visual = record.Profile.Definition.Visual;
-                // 主体退出 Default 层 BRG，整个树冠以实体根部参与 Player 层的原生 Y 排序。
-                owner.ClearNaturalEntityPart(record.Handle.Id, part);
-                record.SortingVisual.SetPart(part++, true, sprite, material,
-                    visual?.RendererLocalPosition ?? Vector3.zero,
-                    Quaternion.Euler(visual?.RendererLocalEulerAngles ?? Vector3.zero), rendererScale,
-                    tint, crop, true);
-            }
-            else
-            {
-                record.SortingVisual?.Dispose();
-                record.SortingVisual = null;
-                owner.SetNaturalEntityPart(record.Handle.Id, part++, sprite, material, projectedMatrix, tint, localAnchor,
-                    crop, Vector4.zero, Vector4.zero);
-            }
+            // 主体和附属果实共用真实树根行，不再创建逐树补绘或切换两套渲染器。
+            owner.SetNaturalEntityPart(record.Handle.Id, part++, sprite, material, projectedMatrix, tint, localAnchor,
+                crop, Vector4.zero, Vector4.zero, playerOccluder: record.Profile.Definition.HasTag(Tag.Tree),
+                highlighted: record.Highlighted);
 
             Bounds visible = ShadowFootprintResolver.MeasureVisibleWorldBounds(sprite, matrix);
             owner.IncludeNaturalEntityBounds(visible, record.RenderOffset);
@@ -192,18 +298,10 @@ namespace FlatWorld.NaturalEntities
                 int count = Mathf.Min(stock.Count, collection.IndicatorLocalPositions.Count);
                 for (int index = 0; index < count; index++)
                 {
-                    if (record.SortingVisual != null)
-                    {
-                        owner.ClearNaturalEntityPart(record.Handle.Id, part);
-                        record.SortingVisual.SetPart(part++, true, fruitDefinition.Sprite, fruitDefinition.Material,
-                            collection.IndicatorLocalPositions[index], Quaternion.identity,
-                            Vector3.one * collection.IndicatorScale, Color.white, Vector4.zero, false);
-                        continue;
-                    }
                     Matrix4x4 fruitMatrix = Matrix4x4.Translate(record.RenderOffset) * BodyMatrix(body) * Matrix4x4.TRS(collection.IndicatorLocalPositions[index],
                         Quaternion.identity, Vector3.one * collection.IndicatorScale);
                     owner.SetNaturalEntityPart(record.Handle.Id, part++, fruitDefinition.Sprite, fruitDefinition.Material,
-                        fruitMatrix, Color.white, localAnchor + Vector3.down * 0.0001f,
+                        fruitMatrix, Color.white, localAnchor,
                         Vector4.zero, Vector4.zero, Vector4.zero);
                 }
             }
@@ -221,6 +319,11 @@ namespace FlatWorld.NaturalEntities
             record.PresentedRevision = body.VisualVersion;
             record.PresentedFlash = record.FlashUntil > Time.time;
             record.PresentationDirty = false;
+            record.PresentationQueued = false;
+            if (previousShadowFoot != record.ShadowFoot ||
+                !Mathf.Approximately(previousShadowWidth, record.ShadowWidth) ||
+                previousRenderOffset != record.RenderOffset)
+                contactShadowListDirty = true;
         }
 
         private static void DrawCanopyFruit(Record record, CanopyFruitRecord fruit, Vector2 position,
@@ -230,126 +333,12 @@ namespace FlatWorld.NaturalEntities
             if (!GameRes.ExistingInstance.TryGetItemDefinition(itemId, out var definition) || definition.Sprite == null)
                 throw new InvalidOperationException($"树冠果实 {itemId} 缺少表现资源。");
             float scale = record.Profile.Canopy.FruitWidth * growth / Mathf.Max(0.0001f, definition.Sprite.bounds.size.x);
-            if (record.SortingVisual != null)
-            {
-                record.PresentationOwner.ClearNaturalEntityPart(record.Handle.Id, part);
-                record.SortingVisual.SetPart(part++, false, definition.Sprite, definition.Material,
-                    (Vector3)position - anchor, Quaternion.identity, new Vector3(scale, scale, 1f),
-                    Color.white, Vector4.zero, false);
-                return;
-            }
             record.PresentationOwner.SetNaturalEntityPart(record.Handle.Id, part++, definition.Sprite, definition.Material,
                 Matrix4x4.TRS((Vector3)position + record.RenderOffset, Quaternion.identity, new Vector3(scale, scale, 1f)), Color.white,
-                anchor + record.RenderOffset + Vector3.down * 0.0001f, Vector4.zero, Vector4.zero, Vector4.zero);
+                anchor + record.RenderOffset, Vector4.zero, Vector4.zero, Vector4.zero);
         }
 
         #endregion
 
-        #region 树木原生排序桥
-
-        /// <summary>只含 Transform、SortingGroup 和 SpriteRenderer，没有 Item、碰撞体或逐树更新脚本。</summary>
-        private sealed class TreeSortingVisual : IDisposable
-        {
-            private static readonly int MainTextureId = Shader.PropertyToID("_MainTex");
-            private static readonly int AlphaTextureId = Shader.PropertyToID("_AlphaTex");
-            private static readonly int ExternalAlphaId = Shader.PropertyToID("_EnableExternalAlpha");
-            private static readonly int PlayerOccluderId = Shader.PropertyToID("_PlayerOccluder");
-            private static readonly int BodyMinId = Shader.PropertyToID("_BodyMinV");
-            private static readonly int BodyMaxId = Shader.PropertyToID("_BodyMaxV");
-            private static readonly int BodyClipId = Shader.PropertyToID("_BodyClip");
-
-            private readonly Transform root;
-            private readonly Transform bodySpace;
-            private readonly SortingGroup group;
-            private readonly Dictionary<int, SpriteRenderer> parts = new();
-            private readonly MaterialPropertyBlock properties = new();
-            private int sortingLayer;
-
-            public bool IsValid => root != null;
-
-            public TreeSortingVisual(Transform owner, int entityId)
-            {
-                root = CreateNode("EntityTreeVisual_" + entityId, owner);
-                group = root.gameObject.AddComponent<SortingGroup>();
-                bodySpace = CreateNode("BodySpace", root);
-            }
-
-            /// <summary>排序锚点只取本地镜像的树根，成长缩放和风摆不移动排序线。</summary>
-            public void BeginUpdate(Vector3 anchor, NaturalEntityBody body)
-            {
-                root.position = anchor;
-                bodySpace.localRotation = Quaternion.Euler(0f, 0f, body.Rotation);
-                bodySpace.localScale = new Vector3(body.Scale.x, body.Scale.y, 1f);
-                WorldSortingManager manager = WorldSortingManager.GetInstance();
-                int order;
-                if (manager != null)
-                    manager.GetSortingKey(WorldSortingManager.WorldItemCategory, out sortingLayer, out order);
-                else
-                    WorldSortingManager.GetResourceSortingKey(WorldSortingManager.WorldItemCategory, out sortingLayer, out order);
-                group.sortingLayerID = sortingLayer;
-                group.sortingOrder = order;
-                foreach (SpriteRenderer renderer in parts.Values) renderer.enabled = false;
-            }
-
-            /// <summary>附属果实只使用组内相对顺序，不能越过外部角色的 Y 深度。</summary>
-            public void SetPart(int index, bool followsBody, Sprite sprite, Material material,
-                Vector3 position, Quaternion rotation, Vector3 scale, Color tint, Vector4 crop, bool occluder)
-            {
-                if (sprite == null || material == null)
-                    throw new InvalidOperationException("树木排序表现缺少 Sprite 或材质。");
-                if (!parts.TryGetValue(index, out SpriteRenderer renderer))
-                {
-                    renderer = CreateNode("Part_" + index, followsBody ? bodySpace : root)
-                        .gameObject.AddComponent<SpriteRenderer>();
-                    renderer.spriteSortPoint = SpriteSortPoint.Pivot;
-                    parts.Add(index, renderer);
-                }
-                Transform target = renderer.transform;
-                Transform parent = followsBody ? bodySpace : root;
-                if (target.parent != parent) target.SetParent(parent, false);
-                target.localPosition = position;
-                target.localRotation = rotation;
-                target.localScale = scale;
-                renderer.sprite = sprite;
-                renderer.sharedMaterial = material;
-                renderer.color = tint;
-                renderer.sortingLayerID = sortingLayer;
-                renderer.sortingOrder = index;
-
-                // 复用源植被 Shader；MPB 明确恢复贴图、裁剪和遮挡开关，保留风摆与 Light2D。
-                properties.Clear();
-                properties.SetTexture(MainTextureId, sprite.texture);
-                Texture2D alpha = sprite.associatedAlphaSplitTexture;
-                if (alpha != null) properties.SetTexture(AlphaTextureId, alpha);
-                properties.SetFloat(ExternalAlphaId, alpha != null ? 1f : 0f);
-                properties.SetFloat(PlayerOccluderId, occluder ? 1f : 0f);
-                Bounds bounds = sprite.bounds;
-                properties.SetFloat(BodyMinId, bounds.min.y);
-                properties.SetFloat(BodyMaxId, bounds.max.y);
-                properties.SetFloat(BodyClipId, crop.w > 0f
-                    ? Mathf.InverseLerp(bounds.min.y, bounds.max.y, crop.x) : 0f);
-                renderer.SetPropertyBlock(properties);
-                renderer.enabled = true;
-            }
-
-            private static Transform CreateNode(string name, Transform parent)
-            {
-                GameObject node = new(name) { hideFlags = HideFlags.DontSave, layer = parent.gameObject.layer };
-                node.transform.SetParent(parent, false);
-                return node.transform;
-            }
-
-            /// <summary>卸载先隐藏再销毁，避免同帧残影；不触及实体数据或存档。</summary>
-            public void Dispose()
-            {
-                parts.Clear();
-                if (root == null) return;
-                root.gameObject.SetActive(false);
-                if (Application.isPlaying) UnityEngine.Object.Destroy(root.gameObject);
-                else UnityEngine.Object.DestroyImmediate(root.gameObject);
-            }
-        }
-
-        #endregion
     }
 }

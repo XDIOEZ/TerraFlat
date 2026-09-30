@@ -57,7 +57,6 @@ MonoBehaviour:
   Braking: 6
   FacingTurnSpeed: 30
   LandPushTurnSpeed: 15
-  Mass: 60
   Radius: 0.35
   SeatOffset: {x: 0, y: 0.25}
   AllowsWater: 1

@@ -13,7 +13,9 @@ public sealed partial class Mod_HiveColony
     private void TickTerritoryAlarm(float deltaTime)
     {
         observedPlayers.Clear();
-        ItemMgr manager = ItemMgr.Instance;
+        ItemMgr manager = itemManager;
+        if (manager == null)
+            return;
         float highestStay = 0f;
         foreach (Player player in manager.Player_DIC.Values)
         {

@@ -21,7 +21,7 @@ public sealed class ActorShadowManager : SingletonMono<ActorShadowManager>
     private ContactShadowBatchRenderer shadowBatch; // 所有 Item 共用的原生绘制批次。
     private ContactShadowBatchRenderer mechanicalShadowBatch; // 机械数据节点共用的单独排序批次。
     private int lightingFrame = -1;
-    private string lightingSceneName;
+    private int lightingSceneHandle = int.MinValue;
     private float cachedShadowOpacity; // 本帧光照与晨昏进度合成后的透明度。
     private float nextRegistrationScanTime;
 
@@ -202,7 +202,7 @@ public sealed class ActorShadowManager : SingletonMono<ActorShadowManager>
         }
 
         if (sourceRenderer == null || sourceRenderer.sprite == null ||
-            !sourceRenderer.enabled || sourceRenderer.forceRenderingOff ||
+            !sourceRenderer.enabled || (sourceRenderer.forceRenderingOff && !BuildingDepthMeshBridge.IsProjected(sourceRenderer)) ||
             !sourceRenderer.gameObject.activeInHierarchy)
             return;
 
@@ -302,16 +302,19 @@ public sealed class ActorShadowManager : SingletonMono<ActorShadowManager>
     /// <summary>每场景每帧只计算一次有效光照与太阳出现进度，供所有接触阴影复用。</summary>
     private float GetCachedSolarOpacity(Scene actorScene)
     {
-        string sceneName = actorScene.IsValid() && actorScene.isLoaded
-            ? actorScene.name
-            : SceneManager.GetActiveScene().name;
+        Scene resolvedScene = actorScene.IsValid() && actorScene.isLoaded
+            ? actorScene
+            : SceneManager.GetActiveScene();
+        int sceneHandle = resolvedScene.handle;
 
-        if (lightingFrame == Time.frameCount && lightingSceneName == sceneName)
+        // Scene.name 是 native -> managed 字符串桥；先用整数句柄命中缓存，避免每个实体每帧分配字符串。
+        if (lightingFrame == Time.frameCount && lightingSceneHandle == sceneHandle)
             return cachedShadowOpacity;
 
         lightingFrame = Time.frameCount;
-        lightingSceneName = sceneName;
+        lightingSceneHandle = sceneHandle;
         cachedShadowOpacity = SunShadowParametersProvider.ResolveOpacity(1f);
+        string sceneName = resolvedScene.name;
 
         DayTimeSystem dayTimeSystem = DayTimeSystem.GetInstance();
         if (dayTimeSystem == null ||

@@ -151,7 +151,9 @@ public readonly struct WorldTopologyBounds
 
     private static bool TryAlignHalfExtent(int radius, int chunkSize, out int aligned)
     {
-        long value = ((long)radius + chunkSize - 1L) / chunkSize * chunkSize;
+        // 世界区块尺寸可由玩家配置；同时保证循环域跨度仍是 16 格导航内部块的整数倍。
+        int alignment = LeastCommonMultiple(chunkSize, 8);
+        long value = ((long)radius + alignment - 1L) / alignment * alignment;
         if (value <= 0L || value > int.MaxValue / 2L)
         {
             aligned = 0;
@@ -160,6 +162,23 @@ public readonly struct WorldTopologyBounds
 
         aligned = (int)value;
         return true;
+    }
+
+    private static int LeastCommonMultiple(int left, int right)
+    {
+        int a = Mathf.Abs(left);
+        int b = Mathf.Abs(right);
+        int x = a;
+        int y = b;
+        while (y != 0)
+        {
+            int remainder = x % y;
+            x = y;
+            y = remainder;
+        }
+        int gcd = Mathf.Max(1, x);
+        long lcm = (long)a / gcd * b;
+        return lcm > int.MaxValue ? int.MaxValue : (int)lcm;
     }
 
 }

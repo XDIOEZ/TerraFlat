@@ -165,8 +165,9 @@ public partial class ChunkMgr
     public RuntimeWorldAddress ResolveWorldAddress(Vector2 worldPosition, string dimensionId = null)
     {
         EnsureWorldRuntime();
-        int width = Math.Max(1, defaultGenerationSnapshot.Width);
-        int height = Math.Max(1, defaultGenerationSnapshot.Height);
+        ChunkGenerationProfileSnapshot profile = ActiveGenerationProfile ?? defaultGenerationSnapshot;
+        int width = Math.Max(1, profile.Width);
+        int height = Math.Max(1, profile.Height);
         var origin = NormalizeChunkPosition(new Vector2Int(
             Mathf.FloorToInt(worldPosition.x / width) * width,
             Mathf.FloorToInt(worldPosition.y / height) * height));
@@ -236,6 +237,7 @@ public partial class ChunkMgr
         defaultGenerationSnapshot = defaultGenerationProfile != null
             ? defaultGenerationProfile.CreateSnapshot()
             : CreateFallbackGenerationSnapshot();
+        defaultGenerationSnapshot = ApplyWorldChunkSize(defaultGenerationSnapshot);
         runtimeTileCatalogSnapshot = defaultGenerationSnapshot;
         activeGenerationSnapshot = defaultGenerationSnapshot;
         string worldId = SceneManager.GetActiveScene().name;
@@ -364,6 +366,20 @@ public partial class ChunkMgr
             throw new ArgumentNullException(nameof(profile));
         PlanetData planet = SaveDataMgr.Instance?.GetCurrentPlanetData();
         return ApplyWorldCoordinateScale(profile, planet);
+    }
+
+    /// <summary>把存档中的区块尺寸覆盖到生成 Profile，避免资源 Profile 与世界网格出现双真源。</summary>
+    private static ChunkGenerationProfileSnapshot ApplyWorldChunkSize(
+        ChunkGenerationProfileSnapshot profile, PlanetData planet = null)
+    {
+        if (profile == null)
+            throw new ArgumentNullException(nameof(profile));
+        planet ??= SaveDataMgr.Instance?.GetCurrentPlanetData();
+        if (planet == null)
+            return profile;
+
+        Vector2Int chunkSize = PlanetData.NormalizeChunkSize(planet.ChunkSize);
+        return profile.WithChunkSize(chunkSize.x, chunkSize.y);
     }
 
     /// <summary>按指定维度 PlanetData 写入坐标缩放；矿洞复核地表时不能误用当前矿洞数值。</summary>

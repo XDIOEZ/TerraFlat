@@ -21,9 +21,9 @@ description: "Use when: 定位或修改 FlatWorld 的玩家实体、输入系统
 - 单机世界内 F5 成功发布资源后会保存当前本地玩家 Data，注销旧 Player 运行时外壳，清空旧运行时 UI 实例，并从最新资源目录的 Player Prefab 重新实例化同一档案；世界、区块和存档会话不重建。外部系统需要重新绑定玩家引用时订阅 `GameManager.Event_LocalPlayerRuntimeReloaded`，禁止复用 `Event_PlayerEnterWorld` 制造重复世界进入语义。
 - 玩家主动速度与环境速度必须分开：`Mover.DrivenVelocity` 决定步行动画，水流和承载只写 `ExternalVelocity`；不能把上一帧总刚体速度重新当作主动移动的缓动起点。玩家和 GameObject 生物的推动速度统一读取 `StreamingAssets/GameConfig/Movement/water-current.json`：已列 Actor 用指定速度，未列实体按 `ItemData.Stack.Weight` 与 `weightRule` 换算；河流推动读取权威 `Flow` 并经 `WaterEnvironmentRules.ResolveRiverStrength` 换算，不能用 `Clamp01(Flow)` 抹平大流量河段的速度差。
 - 依赖玩家离散位置变化的系统统一订阅 `Mover.WorldUnitChanged`；该事件按拓扑规范化后的 `Rigidbody2D` 实际位置进入新的 1×1 世界单位格时触发，消费方禁止各自累计移动距离或重复轮询坐标。
-- 玩家刚体对无 Collider 的资源/机器实体，必须在 `Mover.FixedUpdate` 用当前刚体位置、实际速度和 `Time.fixedDeltaTime` 再走 `WorldMotionSystem.ResolveStaticContactVelocity`；不能只靠 `ModUpdate` 的一次预测，也不能受 `WorldUnitChanged` 是否有订阅者影响。物理步只约束静态阻挡，不重复提交载具推动；乘坐载具或停止刚体模拟时跳过。
+- `Mover` 只向 Dynamic Rigidbody2D 提交主动速度与水流速度；地块、资源、机器的接触由 Chunk 静态 Collider 投影和 Physics2D 求解。`WorldUnitChanged` 仍按刚体实际到达位置发布，不能用期望速度代替。
 - 玩家脚下动态建筑造成的移速惩罚由 `BuildingOccupancyRegistry.GetPlayerMoveSpeedMultiplier` 按离散格读取，并只乘入 `Mover` 的主动目标速度；不要把这类地块惩罚写进永久 `Speed.MultiplicativeModifier`，否则进出地块时容易与 Buff、奔跑倍率互相污染。
-- `WorldMotionSystem` 用作者矩形占地与扫掠统一处理推动，载具通过 `IWorldPushTarget` 注册来源；船的水流、划行与推动先合成，航向限制必须作用于合成后的最终速度，再由 `ICarrierMotionSource` 传递给乘员。转向上限允许按运动上下文配置，例如海上/普通航向与陆地玩家推动使用独立角速度，但不能让任一来源绕过统一航向；禁止乘员反推自身载具或用物理冲量代替游戏速度规则。
+- 载具接触由 Dynamic Rigidbody2D + 非 Trigger 船体 Collider 求解；`CarrierPhysicsContact2D` 只报告接触，`Mod_Carrier` 仍按数据规则决定玩家推动速度。船的水流、划行与推动先合成，再统一限制航向；乘员承载仍由 `ICarrierMotionSource` 传递，禁止乘员反推自身载具。
 - 载具的按键、鼠标点选和白色描边必须共用光标落点查询；上船与下船都要求光标实际命中载具，禁止因“当前已乘坐”或“靠近船体”绕过光标选择。光标指向可触及水面且未命中载具时，交互键交给喝水等环境动作。远海登船与下船都合法：登船恢复位置优先附近安全陆地，否则保留真实登船坐标；下船优先附近安全陆地，没有陆地时落到船体外侧安全水面。
 
 - 输入链为 Input System → `GameController` → 玩家模块；不要让 UI、物理输入和玩法模块各自维护冲突状态。

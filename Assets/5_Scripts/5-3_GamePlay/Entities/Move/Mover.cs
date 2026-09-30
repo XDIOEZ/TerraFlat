@@ -194,7 +194,7 @@ public partial class Mover : Module
         bool persistedRunState = Data.isRunning;
         Data.isRunning = false;
 
-        rb = GetComponentInParent<Rigidbody2D>();
+        rb = ItemPhysicsProjection2D.EnsureMovable(item);
         DrivenVelocity = ExternalVelocity = RequestedMoveInput = Vector2.zero;
         _wasMoving = IsMoving = false;
         ResetWorldUnitTracking();
@@ -237,17 +237,11 @@ public partial class Mover : Module
 
     private bool _wasMoving = false;
 
-    /// <summary>每个物理步先约束纯数据阻挡，再检测上一物理步实际到达的世界单位格。</summary>
+    /// <summary>物理接触由 Rigidbody2D 结算，这里只检测实际到达的世界单位格。</summary>
     private void FixedUpdate()
     {
         if (rb == null)
             return;
-
-        // 一帧可补跑多个物理步，必须按当前刚体位置重新扫掠，不能复用 ModUpdate 的一次预测。
-        if (item != null && item.IsInitialized && !item.DestructionHandled &&
-            rb.simulated && CarrierSource == null)
-            rb.velocity = WorldMotionSystem.ResolveStaticContactVelocity(this, rb.position,
-                rb.velocity, Time.fixedDeltaTime);
 
         if (WorldUnitChanged == null)
             return;
@@ -412,8 +406,7 @@ public partial class Mover : Module
             : delta.normalized * moveSpeed;
         DrivenVelocity = SmoothSurfaceVelocity(DrivenVelocity, targetVelocity, deltaTime);
         ExternalVelocity = ResolveWaterCurrentVelocity();
-        rb.velocity = WorldMotionSystem.ResolveContactVelocity(this, rb.position,
-            DrivenVelocity, DrivenVelocity + ExternalVelocity, Mathf.Max(deltaTime, Time.fixedDeltaTime));
+        rb.velocity = DrivenVelocity + ExternalVelocity;
         UpdateMovementState();
     }
 
@@ -436,8 +429,7 @@ public partial class Mover : Module
         // 主动速度独立缓动，不能把上帧水流当作下帧主动移动的初速度。
         DrivenVelocity = SmoothSurfaceVelocity(DrivenVelocity, targetVelocity, deltaTime);
         ExternalVelocity = ResolveWaterCurrentVelocity();
-        rb.velocity = WorldMotionSystem.ResolveContactVelocity(this, rb.position,
-            DrivenVelocity, DrivenVelocity + ExternalVelocity, Mathf.Max(deltaTime, Time.fixedDeltaTime));
+        rb.velocity = DrivenVelocity + ExternalVelocity;
         UpdateMovementState();
     }
 
@@ -457,8 +449,7 @@ public partial class Mover : Module
 
         DrivenVelocity = SmoothSurfaceVelocity(DrivenVelocity, targetVelocity, deltaTime);
         ExternalVelocity = ResolveWaterCurrentVelocity();
-        rb.velocity = WorldMotionSystem.ResolveContactVelocity(this, rb.position,
-            DrivenVelocity, DrivenVelocity + ExternalVelocity, deltaTime);
+        rb.velocity = DrivenVelocity + ExternalVelocity;
         UpdateMovementState();
     }
 

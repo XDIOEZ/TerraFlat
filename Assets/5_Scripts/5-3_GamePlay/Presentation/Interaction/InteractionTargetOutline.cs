@@ -118,6 +118,13 @@ public sealed class InteractionTargetOutline : MonoBehaviour
             if (source == null || IsOutlineRenderer(source))
                 continue;
 
+            // 建筑主体已合入行网格时直接更新该部件的描边状态，不再补绘整张白色 Sprite。
+            if (BuildingDepthMeshBridge.IsProjected(source))
+            {
+                BuildingDepthMeshBridge.SetHighlighted(source, true);
+                continue;
+            }
+
             activeSourceRenderers.Add(source);
             OutlineEntry entry = GetOrCreateEntry(source);
             if (entry != null)
@@ -289,6 +296,8 @@ public sealed class InteractionTargetOutline : MonoBehaviour
 
     private void DisableOutlineRenderers()
     {
+        foreach (SpriteRenderer source in sourceRenderers)
+            BuildingDepthMeshBridge.SetHighlighted(source, false);
         for (int i = 0; i < outlineEntries.Count; i++)
             SetEntryEnabled(outlineEntries[i], false);
     }

@@ -21,7 +21,9 @@ public sealed partial class Mod_HiveColony
         }
 
         AdvanceSleepingResidents(deltaTime);
-        ItemMgr manager = ItemMgr.Instance;
+        ItemMgr manager = itemManager;
+        if (manager == null)
+            return;
         for (int index = 0; index < state.Residents.Count; index++)
         {
             ResidentState member = state.Residents[index];

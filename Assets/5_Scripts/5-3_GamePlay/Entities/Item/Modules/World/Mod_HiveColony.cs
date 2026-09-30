@@ -59,6 +59,7 @@ public sealed partial class Mod_HiveColony : Module
 
     private ColonyState state = new(); // 持久巢群状态。
     private readonly Dictionary<int, Item> residents = new(10); // 本轮装载成员。
+    private ItemMgr itemManager; // 绑定加载蜂巢时的管理器，卸载阶段不再重新查找单例。
     private float reconcileRemaining; // 下次成员维护的现实帧间隔。
     private bool alarmClockReady; // 本轮警戒时钟是否已校准。
     private double lastAlarmGameTime; // 上次警戒检查的世界绝对时间。
@@ -162,6 +163,9 @@ public sealed partial class Mod_HiveColony : Module
         foreach (ResidentState member in state.Residents)
             if (member == null || member.Guid == 0 || member.Bee == null || !unique.Add(member.Guid))
                 throw new InvalidOperationException("蜂巢存档包含无效或重复的成员。");
+        itemManager = ItemMgr.GetInstance();
+        if (itemManager == null)
+            throw new InvalidOperationException("蜂巢加载时 ItemMgr 不可用。");
         residents.Clear();
         ClearTerritoryAlarm();
         reconcileRemaining = 0f;
@@ -181,19 +185,22 @@ public sealed partial class Mod_HiveColony : Module
     /// <summary>卸载时先保存成员状态，再撤回独立 Actor。</summary>
     public override void Unload()
     {
+        ItemMgr manager = itemManager;
         UnbindHiveDamageEvents();
-        PruneDeadResidents();
+        // 世界关闭时管理器可能已经先销毁，此时不能把随场景销毁的蜜蜂误判成真实死亡。
+        if (manager != null)
+            PruneDeadResidents();
         CaptureResidents();
         ModData.WriteData(state);
-        if (!hiveDestroyed)
+        if (!hiveDestroyed && manager != null)
         {
-            ItemMgr manager = ItemMgr.Instance;
             foreach (Item resident in residents.Values)
                 if (resident != null && !resident.DestructionHandled)
                     manager.DespawnItem(resident, saveData: false);
         }
         residents.Clear();
         ClearTerritoryAlarm();
+        itemManager = null;
     }
 
     public override void ModUpdate(float deltaTime)
@@ -274,7 +281,9 @@ public sealed partial class Mod_HiveColony : Module
     /// <summary>按存档 GUID 或新身份创建成员，并绑定蜂巢与行为快照。</summary>
     private void SpawnResident(int slot, ResidentState saved)
     {
-        ItemMgr manager = ItemMgr.Instance;
+        ItemMgr manager = itemManager;
+        if (manager == null)
+            throw new InvalidOperationException("蜂巢成员生成时 ItemMgr 不可用。");
         if (!GameRes.Instance.TryGetItemDefinition(ActorId, out _))
             throw new InvalidOperationException($"蜂巢物种 {ActorId} 未注册。");
         Vector2 home = HomePosition;

@@ -420,7 +420,7 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
         SpriteRenderer source = binding.Source;
         float heightScale = authoring != null ? Mathf.Max(0f, authoring.HeightMultiplier) : 1f;
         if (!owner.gameObject.activeInHierarchy || owner.InHand || source == null || source.sprite == null ||
-            !source.enabled || source.forceRenderingOff || !source.gameObject.activeInHierarchy ||
+            !source.enabled || (source.forceRenderingOff && !BuildingDepthMeshBridge.IsProjected(source)) || !source.gameObject.activeInHierarchy ||
             (authoring != null && !authoring.CastShadow) || heightScale <= 0f ||
             (binding.Building != null && (!binding.Building.IsInstalled() || !binding.Building.CastSunShadow)))
         {

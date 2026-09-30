@@ -52,6 +52,6 @@ MonoBehaviour:
     Type: 0
     BitData: 
   distanceConfig:
-    UnActiveDistance: 4
-    DestroyChunkDistance: 5
-    LoadChunkDistance: 2
+    UnActiveDistance: 7
+    DestroyChunkDistance: 8
+    LoadChunkDistance: 5

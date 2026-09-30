@@ -173,6 +173,26 @@ internal static class ChunkBatchRendererGroupService
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetStatics() => ReleaseBackend(false);
 
+#if UNITY_EDITOR
+    /// <summary>Ctrl+R/脚本热重载后下一帧从权威 Chunk 数据恢复全部可见 BRG Owner。</summary>
+    [UnityEditor.InitializeOnLoadMethod]
+    private static void ScheduleEditorAssemblyReloadRecovery()
+    {
+        UnityEditor.EditorApplication.delayCall -= RepairEditorAssemblyReloadedViews;
+        UnityEditor.EditorApplication.delayCall += RepairEditorAssemblyReloadedViews;
+    }
+
+    private static void RepairEditorAssemblyReloadedViews()
+    {
+        if (!Application.isPlaying)
+            return;
+
+        ChunkView[] views = UnityEngine.Object.FindObjectsByType<ChunkView>(FindObjectsSortMode.None);
+        for (int i = 0; i < views.Length; i++)
+            views[i]?.RepairPresentationBackendIfNeeded();
+    }
+#endif
+
     private static void OnSharedMeshesClearing() => ReleaseBackend(!SharedSpriteMeshCache.IsSessionEnding);
 
     /// <summary>正常退出静默释放；只有运行中丢弃仍有 Owner 的后端才报告异常重建。</summary>
@@ -198,7 +218,6 @@ internal static class ChunkBatchRendererGroupService
         private const int InstanceStride = 112;
         private const int ZeroPrefixBytes = InstanceStride;
         private const uint InstanceMetadataAddress = ZeroPrefixBytes;
-        private const int TerrainQueueBase = 2988;
         private const string MechanicalKeyword = "_CHUNK_MECHANICAL";
         private static readonly int InstanceDataId = Shader.PropertyToID("_ChunkInstanceData");
         private static readonly int ElevationStrengthId = Shader.PropertyToID("_ElevationStrength");
@@ -234,6 +253,7 @@ internal static class ChunkBatchRendererGroupService
 
         public Backend()
         {
+            ValidateBatchSortingProfiles();
             spriteTemplate = LoadTemplate("Config/WorldModel/BRG/ChunkBRG-Sprite-Lit");
             contactTemplate = LoadTemplate("Config/WorldModel/BRG/ChunkBRG-Contact-Lit");
             waterTemplate = LoadTemplate("Config/WorldModel/BRG/ChunkBRG-Water-Lit");
@@ -491,7 +511,7 @@ internal static class ChunkBatchRendererGroupService
             return batch;
         }
 
-        /// <summary>保持同队列的草与花按图层稳定排序，花批次始终绘制在草批次上方。</summary>
+        /// <summary>同一透明队列内按逻辑优先级与图层稳定排序。</summary>
         private static int CompareBatchOrder(TileBatch left, TileBatch right)
         {
             int priority = left.Priority.CompareTo(right.Priority);
@@ -522,6 +542,7 @@ internal static class ChunkBatchRendererGroupService
                 _ => spriteTemplate
             };
             int queuePriority = ResolveRenderQueuePriority(layer);
+            int renderQueue = WorldRenderingConfigCatalog.Default.sorting.batchRenderQueueBase + queuePriority;
             var key = new MaterialKey(template.GetInstanceID(), sourceMaterial.GetInstanceID(),
                 texture != null ? texture.GetInstanceID() : 0, queuePriority,
                 layer == VisualLayer.NaturalStatic || layer == VisualLayer.NaturalShadow ? 2 : IsMechanicalLayer(layer) ? 1 : 0);
@@ -533,13 +554,13 @@ internal static class ChunkBatchRendererGroupService
                 name = $"ChunkBRG_{layer}_{sourceMaterial.name}_{texture?.name}",
                 hideFlags = HideFlags.HideAndDontSave,
                 enableInstancing = true,
-                // BRG 没有 SpriteRenderer/TilemapRenderer 的 Sorting Layer 字段；草花共用 Default/0 与 2993 队列。
-                renderQueue = TerrainQueueBase + queuePriority
+                // BRG 没有 SpriteRenderer/TilemapRenderer 的 Sorting Layer 字段；统一按世界渲染 JSON 配置透明队列。
+                renderQueue = renderQueue
             };
             runtimeMaterial.CopyPropertiesFromMaterial(sourceMaterial);
             runtimeMaterial.shaderKeywords = sourceMaterial.shaderKeywords;
             runtimeMaterial.SetTexture("_MainTex", texture);
-            runtimeMaterial.renderQueue = TerrainQueueBase + queuePriority;
+            runtimeMaterial.renderQueue = renderQueue;
             if (sourceMaterial.HasProperty(GrassSwayEnabledId) &&
                 sourceMaterial.GetFloat(GrassSwayEnabledId) > 0.5f)
                 runtimeMaterial.EnableKeyword(GrassSwayKeyword);
@@ -849,42 +870,46 @@ internal static class ChunkBatchRendererGroupService
             return template;
         }
 
-        private static int ResolvePriority(VisualLayer layer) => layer switch
+        /// <summary>所有 BRG 图层顺序只从世界渲染 JSON 读取，避免表现层再维护第二份硬编码层级。</summary>
+        private static WorldRenderingConfig.BatchSortingProfile ResolveBatchSortingProfile(VisualLayer layer)
         {
-            VisualLayer.Back => -1,
-            VisualLayer.Ground => 0,
-            VisualLayer.Water => 1,
-            VisualLayer.Support or VisualLayer.Environment => 2,
-            VisualLayer.Snow => 3,
-            VisualLayer.Blocking => 4,
-            VisualLayer.SnowWall => 5,
-            VisualLayer.Grass => 5,
-            VisualLayer.GroundCover => 6,
-            VisualLayer.NaturalStatic => 7,
-            VisualLayer.NaturalShadow => 5,
-            VisualLayer.MechanicalLowerBase => 7,
-            VisualLayer.MechanicalLowerMotionA => 8,
-            VisualLayer.MechanicalLowerMotionB => 9,
-            VisualLayer.MechanicalLowerFront => 10,
-            VisualLayer.MechanicalUpperBase => 11,
-            VisualLayer.MechanicalUpperMotionA => 12,
-            VisualLayer.MechanicalUpperMotionB => 13,
-            VisualLayer.MechanicalUpperFront => 14,
-            _ => 0
-        };
+            WorldRenderingConfig.BatchSortingProfile[] profiles =
+                WorldRenderingConfigCatalog.Default.sorting.batchProfiles;
+            string layerName = layer.ToString();
+            for (int i = 0; i < profiles.Length; i++)
+            {
+                WorldRenderingConfig.BatchSortingProfile profile = profiles[i];
+                if (profile != null && string.Equals(profile.visualLayer, layerName, StringComparison.Ordinal))
+                    return profile;
+            }
+            throw new InvalidOperationException($"世界渲染配置缺少 BRG 图层 {layerName} 的排序配置。");
+        }
 
-        /// <summary>机械所有子层共享一个透明队列，真正的前后关系交给节点 Y 锚点；草花仍保持既有固定队列。</summary>
-        private static int ResolveRenderQueuePriority(VisualLayer layer) => layer switch
+        private static int ResolvePriority(VisualLayer layer) => ResolveBatchSortingProfile(layer).batchOrder;
+
+        private static int ResolveRenderQueuePriority(VisualLayer layer) =>
+            ResolveBatchSortingProfile(layer).renderQueueOffset;
+
+        /// <summary>启动 BRG 后端时要求 JSON 精确覆盖全部 VisualLayer，未知或漏配直接报错。</summary>
+        private static void ValidateBatchSortingProfiles()
         {
-            VisualLayer.SnowWall or VisualLayer.Grass or VisualLayer.GroundCover or
-                VisualLayer.NaturalShadow => 5,
-            VisualLayer.NaturalStatic => 6,
-            VisualLayer.MechanicalLowerBase or VisualLayer.MechanicalLowerMotionA or
-                VisualLayer.MechanicalLowerMotionB or VisualLayer.MechanicalLowerFront or
-                VisualLayer.MechanicalUpperBase or VisualLayer.MechanicalUpperMotionA or
-                VisualLayer.MechanicalUpperMotionB or VisualLayer.MechanicalUpperFront => 6,
-            _ => ResolvePriority(layer)
-        };
+            var configured = new HashSet<VisualLayer>();
+            WorldRenderingConfig.BatchSortingProfile[] profiles =
+                WorldRenderingConfigCatalog.Default.sorting.batchProfiles;
+            for (int i = 0; i < profiles.Length; i++)
+            {
+                WorldRenderingConfig.BatchSortingProfile profile = profiles[i];
+                if (profile == null ||
+                    !Enum.TryParse(profile.visualLayer, false, out VisualLayer layer) ||
+                    !Enum.IsDefined(typeof(VisualLayer), layer))
+                    throw new InvalidOperationException($"世界渲染配置包含未知 BRG 图层：{profile?.visualLayer ?? "<null>"}。");
+                configured.Add(layer);
+            }
+
+            foreach (VisualLayer layer in Enum.GetValues(typeof(VisualLayer)))
+                if (!configured.Contains(layer))
+                    throw new InvalidOperationException($"世界渲染配置缺少 BRG 图层 {layer} 的排序配置。");
+        }
 
         /// <summary>机械实例使用同一 BRG 后端，但启用专属 GPU 动画变体。</summary>
         private static bool IsMechanicalLayer(VisualLayer layer)

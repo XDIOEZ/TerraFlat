@@ -5,10 +5,10 @@ using UnityEngine;
 
 /// <summary>
 /// 可配置单座承载源：默认速度 5 格/秒、Shift 加速倍率 1.5、加速 3 格/秒²、制动 6 格/秒²、海上航向转速 30°/秒、陆地推动转速 15°/秒、质量 60。
-/// 船与未来车辆使用同一输入/力溯源契约；不使用 Collider 推人，不改变乘员层级。
+/// 船与未来车辆使用同一输入/力溯源契约；刚体负责接触，不改变乘员层级。
 /// 座位和速度是会话租约，不写存档；位置由 Item 快照保存，读档为空船且静止。
 /// </summary>
-public sealed class Mod_Carrier : Module, ICarrierMotionSource, IWorldPushTarget, IInteractable, ISpatialInteractionShape, IItemModuleDependencyBinder, IBuildingPlacementCommitted
+public sealed class Mod_Carrier : Module, ICarrierMotionSource, IInteractable, ISpatialInteractionShape, IItemModuleDependencyBinder, IBuildingPlacementCommitted
 {
     #region 配置和状态
     public const string ModuleId = "Mod_Carrier";
@@ -19,12 +19,11 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, IWorldPushTarget
     [Min(0.1f)] public float Braking = 6f; // 松杆减速度。
     [Min(1f)] public float FacingTurnSpeed = 30f; // 海上及普通运动来源合成后的最大航向转速（度/秒）。
     [Min(1f)] public float LandPushTurnSpeed = 15f; // 木筏位于陆地且由玩家推动时的最大航向转速（度/秒）。
-    [Min(0.1f)] public float Mass = 60f; // 力计算质量。
-    [Min(0.05f)] public float Radius = 0.35f; // 地形扫掠半径。
+    [Min(0.05f)] public float Radius = 0.35f; // 交互与下船安全半径。
     [Range(0.01f, 1f)] public float LandSpeedMultiplier = 0.1f; // 陆地最高速度相对水面的倍率。
     [Range(0.01f, 1f)] public float LandPushSpeedMultiplier = 0.2f; // 陆地推动按推动者当前速度的五分之一。
     [Min(0f)] public float WaterCurrentSpeed = 0.18f; // 水流经载具继续传递到乘员。
-    public Vector2 HullSize = new(1.5f, 1f); // 作者定义的船体扫掠与推动占地。
+    public Vector2 HullSize = new(1.5f, 1f); // 作者定义的船体尺寸与下船净空。
     public Vector2 SeatOffset = new(0, 0.25f); // 座位相对船中心。
     public bool AllowsWater = true; // 水陆通行能力，不依赖具体车型继承。
     public override string CanonicalModuleId => ModuleId;
@@ -36,9 +35,6 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, IWorldPushTarget
     public Vector2 DrivenVelocity { get; private set; } // 划船或主动推动的速度。
     public Vector2 ExternalVelocity { get; private set; } // 环境传入的被动速度。
     public Mover PushSource { get; private set; } // 当前推动来源，瞬时关系不入存档。
-    public Component MotionComponent => this;
-    public Vector2 MotionPosition => item.transform.position;
-    public Vector2 MotionVelocity => CurrentVelocity;
     public Vector2 PushHalfExtents => Vector2.Scale(HullSize * 0.5f,
         new Vector2(Mathf.Abs(item.transform.lossyScale.x), Mathf.Abs(item.transform.lossyScale.y)));
     public bool IsAvailable => loaded && isActiveAndEnabled && item != null && !item.DestructionHandled &&
@@ -74,13 +70,13 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, IWorldPushTarget
     /// <summary>只恢复空座位，不迁移任何启动资产或旧存档。</summary>
     public override void Load()
     {
-        if (!(MaxSpeed > 0 && BoostSpeedMultiplier >= 1f && Acceleration > 0 && Braking > 0 && FacingTurnSpeed > 0 && LandPushTurnSpeed > 0 && Mass > 0 && Radius > 0) ||
+        if (!(MaxSpeed > 0 && BoostSpeedMultiplier >= 1f && Acceleration > 0 && Braking > 0 && FacingTurnSpeed > 0 && LandPushTurnSpeed > 0 && Radius > 0) ||
             !(LandSpeedMultiplier > 0f && LandSpeedMultiplier <= 1f) ||
             !(LandPushSpeedMultiplier > 0f && LandPushSpeedMultiplier <= 1f) ||
             !(HullSize.x > 0f && HullSize.y > 0f) ||
-            float.IsInfinity(MaxSpeed + BoostSpeedMultiplier + Acceleration + Braking + FacingTurnSpeed + LandPushTurnSpeed + Mass + Radius) ||
+            float.IsInfinity(MaxSpeed + BoostSpeedMultiplier + Acceleration + Braking + FacingTurnSpeed + LandPushTurnSpeed + Radius) ||
             float.IsNaN(SeatOffset.sqrMagnitude) || float.IsInfinity(SeatOffset.sqrMagnitude))
-            throw new InvalidOperationException("载具速度、加速倍率、加速度、制动、海上转向速度、陆地推动转向速度、质量、半径和陆地速度倍率必须有效。");
+            throw new InvalidOperationException("载具速度、加速倍率、加速度、制动、转向、半径和陆地速度倍率必须有效。");
         CarrierSaveState state = Data.GetData<CarrierSaveState>();
         if (state == null || state.Version != 1)
             throw new InvalidOperationException("载具模块要求 Version=1 的显式快照。");
@@ -92,7 +88,7 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, IWorldPushTarget
         body = item.GetComponent<Rigidbody2D>();
         physicalCollider = item.GetComponent<BoxCollider2D>();
         if (body == null || physicalCollider == null)
-            throw new InvalidOperationException("载具外壳必须提供根 Rigidbody2D 与禁用的查询 Collider；移动由游戏推动系统结算。");
+            throw new InvalidOperationException("载具外壳必须提供根 Rigidbody2D 与船体 Collider2D。");
         requestedInput = Vector2.zero;
         requestedControlsLocked = true;
         requestedBoost = false;
@@ -120,7 +116,6 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, IWorldPushTarget
         StopMotion();
         if (health != null) health.DeathStarted -= HandleSourceDeath;
         SpatialInteractionRegistry.Unregister(this);
-        WorldMotionSystem.Unregister(this);
         waterWake?.Clear();
         activated = false;
     }
@@ -133,7 +128,9 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, IWorldPushTarget
             health.DeathStarted += HandleSourceDeath;
         }
         SpatialInteractionRegistry.Register(this, Mathf.Max(0.7f, Radius));
-        WorldMotionSystem.Register(this);
+        CarrierPhysicsContact2D relay = item.GetComponent<CarrierPhysicsContact2D>() ??
+            item.gameObject.AddComponent<CarrierPhysicsContact2D>();
+        relay.Bind(this);
     }
 
     private void OnEnable()
@@ -165,18 +162,18 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, IWorldPushTarget
         if (Rider != null && (!Rider.isActiveAndEnabled || !GameNetwork.HasStateAuthority)) Rider.ReleaseCarrierLease();
     }
 
-    /// <summary>安装事务提交即关闭碰撞，不等下一次物理帧。</summary>
+    /// <summary>安装事务提交即启用船体物理，不等下一次物理帧。</summary>
     public void OnBuildingPlacementCommitted() => ActivateInstalledCarrier();
 
     private void ActivateInstalledCarrier()
     {
         if (activated || !IsAvailable) return;
-        physicalCollider.enabled = false;
-        body.bodyType = RigidbodyType2D.Kinematic;
+        physicalCollider.enabled = true;
+        body.bodyType = RigidbodyType2D.Dynamic;
         body.simulated = true;
         body.gravityScale = 0f;
-        body.mass = Mass;
-        body.interpolation = RigidbodyInterpolation2D.None;
+        body.mass = Mathf.Max(0.01f, item.itemData.Stack.CurrentWeight);
+        body.interpolation = RigidbodyInterpolation2D.Interpolate;
         body.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
         body.constraints = RigidbodyConstraints2D.FreezeRotation;
         lastPhysicsPosition = body.position;
@@ -300,13 +297,12 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, IWorldPushTarget
         requestedBoost = !controlsLocked && boostRequested && requestedInput.sqrMagnitude > 0.001f;
     }
 
-    /// <summary>按来源合成速度，再用地形扫掠积分；刚体仅同步位置，禁止施加碰撞冲量。</summary>
+    /// <summary>逻辑只提交期望速度，实际位移和接触由 Physics2D 结算。</summary>
     private void FixedUpdate()
     {
         if (!IsAvailable || body == null || !body.simulated || !GameNetwork.HasStateAuthority)
             return;
         float deltaTime = Time.fixedDeltaTime;
-        Vector2 previousVelocity = CurrentVelocity;
         RefreshPushSource();
         Vector2 input = Rider != null && !requestedControlsLocked ? requestedInput : Vector2.zero;
         float speedLimit = ResolveSurfaceSpeedLimit(body.position);
@@ -329,19 +325,18 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, IWorldPushTarget
             ? LandPushTurnSpeed
             : FacingTurnSpeed;
         Vector2 steeredVelocity = ResolveSteeredVelocity(requestedVelocity, deltaTime, true, turnSpeed);
-        Vector2 displacement = ResolveAllowedDisplacement(body.position, steeredVelocity * deltaTime);
-        CurrentVelocity = displacement / deltaTime;
-        CurrentForce = (CurrentVelocity - previousVelocity) * (Mass / deltaTime);
-        Vector2 next = body.position + displacement;
-        body.velocity = Vector2.zero;
-        body.position = next;
-        item.transform.position = new Vector3(next.x, next.y, item.transform.position.z);
-        if (item.itemData?.transform != null)
-        {
-            Vector2 logical = WorldTopologyRuntime.NormalizePosition(next);
-            item.itemData.transform.position = new Vector3(logical.x, logical.y, item.transform.position.z);
-        }
+        body.velocity = steeredVelocity;
         UpdateVisualFacing();
+    }
+
+    /// <summary>物理步结束后读取实际速度，数据投影组件负责回写实体快照。</summary>
+    private void LateUpdate()
+    {
+        if (!IsAvailable || body == null || !body.simulated || !GameNetwork.HasStateAuthority) return;
+        Vector2 previousVelocity = CurrentVelocity;
+        CurrentVelocity = body.velocity;
+        CurrentForce = (CurrentVelocity - previousVelocity) *
+            (body.mass / Mathf.Max(0.001f, Time.deltaTime));
         TrackPhysicsMovement();
     }
 
@@ -350,7 +345,18 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, IWorldPushTarget
         => IsAvailable && GameNetwork.HasStateAuthority && source != null && source != Rider &&
            source.CarrierSource == null && source.RequestedMoveInput.sqrMagnitude > 0.001f;
 
-    /// <summary>登记一次有界推动并返回下一步可实现的速度，用于限制推动者穿入船体。</summary>
+    internal void HandlePhysicalContact(Collision2D collision)
+    {
+        Mover source = collision.rigidbody != null
+            ? collision.rigidbody.GetComponentInChildren<Mover>()
+            : null;
+        if (!CanReceivePush(source) || source.rb == null || body == null) return;
+        Vector2 towardCarrier = WorldTopologyRuntime.ShortestDelta(source.rb.position, body.position);
+        if (Vector2.Dot(source.DrivenVelocity, towardCarrier) <= 0.001f) return;
+        RequestPush(source, source.DrivenVelocity, Time.fixedDeltaTime);
+    }
+
+    /// <summary>物理接触产生推动意图，下一固定步交给刚体处理。</summary>
     public Vector2 RequestPush(Mover source, Vector2 velocity, float deltaTime)
     {
         if (!CanReceivePush(source)) return CurrentVelocity;
@@ -360,10 +366,7 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, IWorldPushTarget
         PushSource = source;
         pushedVelocity = WorldMotionSystem.CalculatePushVelocity(velocity, inWater, LandPushSpeedMultiplier);
         pushValidUntil = Time.time + Mathf.Max(0.1f, deltaTime * 2f);
-        Vector2 total = pushedVelocity + WorldMotionSystem.SampleWaterVelocity(body.position, WaterCurrentSpeed);
-        float turnSpeed = IsWaterSurface(body.position) ? FacingTurnSpeed : LandPushTurnSpeed;
-        Vector2 steeredVelocity = ResolveSteeredVelocity(total, deltaTime, false, turnSpeed);
-        return ResolveAllowedDisplacement(body.position, steeredVelocity * deltaTime) / Mathf.Max(0.001f, deltaTime);
+        return pushedVelocity;
     }
 
     /// <summary>松开输入、换场景、远离或来源回收立即解除推动关系。</summary>
@@ -377,28 +380,6 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, IWorldPushTarget
             PushSource = null;
             pushedVelocity = Vector2.zero;
         }
-    }
-
-    /// <summary>最多每 0.1 格检查完整船体，阻挡时保留合法的单轴滑动，防止高速穿墙或角落越界。</summary>
-    private Vector2 ResolveAllowedDisplacement(Vector2 origin, Vector2 desired)
-    {
-        int steps = Mathf.Max(1, Mathf.CeilToInt(desired.magnitude / 0.1f));
-        Vector2 increment = desired / steps;
-        Vector2 position = origin;
-        for (int index = 0; index < steps; index++)
-        {
-            Vector2 candidate = position + increment;
-            if (CanOccupyFootprint(WorldTopologyRuntime.NormalizePosition(candidate)))
-            {
-                position = candidate;
-                continue;
-            }
-            Vector2 x = position + new Vector2(increment.x, 0f);
-            if (CanOccupyFootprint(WorldTopologyRuntime.NormalizePosition(x))) position = x;
-            Vector2 y = position + new Vector2(0f, increment.y);
-            if (CanOccupyFootprint(WorldTopologyRuntime.NormalizePosition(y))) position = y;
-        }
-        return position - origin;
     }
 
     /// <summary>物理位移后刷新 Item 空间索引；跨区块时同时标记新位置的建筑存档。</summary>

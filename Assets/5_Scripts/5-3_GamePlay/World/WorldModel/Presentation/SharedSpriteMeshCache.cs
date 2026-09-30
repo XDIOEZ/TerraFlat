@@ -13,23 +13,38 @@ public static class SharedSpriteMeshCache
 
     // Unity Object 键使用 Unity 身份比较，并持有源 Sprite，避免按名称合并不同资源。
     private static readonly Dictionary<Sprite, Mesh> meshes = new();
+    private static readonly Dictionary<Sprite, Geometry> geometries = new();
+
+    /// <summary>行网格复用同一份原始几何，不能为每个实例重复读取 Sprite 的分配型数组属性。</summary>
+    internal sealed class Geometry
+    {
+        internal readonly Vector3[] Vertices;
+        internal readonly Vector2[] Uv;
+        internal readonly int[] Triangles;
+        internal readonly Bounds Bounds;
+        internal readonly Vector4 UvRect;
+        internal Geometry(Vector3[] vertices, Vector2[] uv, int[] triangles, Bounds bounds)
+        {
+            Vertices = vertices; Uv = uv; Triangles = triangles; Bounds = bounds;
+            Vector2 min = new(float.MaxValue, float.MaxValue), max = new(float.MinValue, float.MinValue);
+            foreach (Vector2 value in uv) { min = Vector2.Min(min, value); max = Vector2.Max(max, value); }
+            UvRect = new Vector4(min.x, min.y, max.x, max.y);
+        }
+    }
+
+    internal static Geometry GetGeometry(Sprite sprite)
+    {
+        Mesh mesh = GetOrCreate(sprite);
+        if (!geometries.TryGetValue(sprite, out Geometry geometry))
+            geometries.Add(sprite, geometry = new Geometry(mesh.vertices, mesh.uv, mesh.triangles, mesh.bounds));
+        return geometry;
+    }
     /// <summary>资源销毁前通知使用者释放注册和引用；只允许主线程订阅。</summary>
     internal static event Action Clearing;
     /// <summary>会话结束后禁止重新登记渲染资源，直到下一次运行初始化。</summary>
     private static bool sessionEnding;
     private static bool clearing;
-    internal static bool IsSessionEnding
-    {
-        get
-        {
-#if UNITY_EDITOR
-            // 其它管理器可能先收到退出回调，不能只依赖本缓存的事件先后次序。
-            if (Application.isPlaying && !UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode)
-                return true;
-#endif
-            return sessionEnding;
-        }
-    }
+    internal static bool IsSessionEnding => sessionEnding;
     /// <summary>当前会话已构造的唯一网格数。</summary>
     public static int Count => meshes.Count;
 
@@ -71,6 +86,7 @@ public static class SharedSpriteMeshCache
             mesh.uv = spriteUv;
             mesh.triangles = triangles;
             mesh.RecalculateBounds();
+            geometries[sprite] = new Geometry(vertices, spriteUv, triangles, mesh.bounds);
             return mesh;
         }
         catch
@@ -114,6 +130,7 @@ public static class SharedSpriteMeshCache
         finally
         {
             meshes.Clear();
+            geometries.Clear();
             clearing = false;
         }
     }
@@ -156,8 +173,8 @@ public static class SharedSpriteMeshCache
         UnityEditor.EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
     }
 
-    /// <summary>在托管引用消失前同步销毁原生 Mesh。</summary>
-    private static void BeforeAssemblyReload() => EndSession(true);
+    /// <summary>脚本热重载只释放原生资源；真正退出 Play Mode 才关闭资源会话。</summary>
+    private static void BeforeAssemblyReload() => ClearMeshes(true);
 
     /// <summary>停止播放时同步释放，包括资源加载尚未完成的会话。</summary>
     private static void OnPlayModeStateChanged(UnityEditor.PlayModeStateChange state)

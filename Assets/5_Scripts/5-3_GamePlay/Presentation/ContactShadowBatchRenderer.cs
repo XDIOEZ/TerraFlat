@@ -19,6 +19,7 @@ internal sealed class ContactShadowBatchRenderer : IDisposable
     private const int ZeroPrefixBytes = 64;
     private const int ShadowRenderQueue = 2995; // 旧实体位于地形 BRG 之后。
     private static readonly int InstanceDataId = Shader.PropertyToID("_ContactShadowData");
+    private static readonly int ColorId = Shader.PropertyToID("_Color");
     private readonly object syncRoot = new();
     private readonly BatchRendererGroup group;
     private readonly Mesh mesh;
@@ -30,6 +31,8 @@ internal sealed class ContactShadowBatchRenderer : IDisposable
     private InstanceData[] instances = new InstanceData[InitialCapacity];
     private int count;
     private bool disposed;
+    private Color batchColor;
+    private float globalOpacity = 1f;
 
     [StructLayout(LayoutKind.Sequential)]
     private struct InstanceData
@@ -50,6 +53,7 @@ internal sealed class ContactShadowBatchRenderer : IDisposable
             enableInstancing = true,
             renderQueue = renderQueue
         };
+        batchColor = material.HasProperty(ColorId) ? material.GetColor(ColorId) : Color.white;
         mesh = CreateQuad();
         group = new BatchRendererGroup(OnPerformCulling, IntPtr.Zero);
         group.SetGlobalBounds(new Bounds(Vector3.zero, new Vector3(2000000f, 2000000f, 1000f)));
@@ -87,6 +91,16 @@ internal sealed class ContactShadowBatchRenderer : IDisposable
     {
         lock (syncRoot)
             if (count > 0) buffer.SetData(instances, 0, ZeroPrefixBytes / InstanceStride, count);
+    }
+
+    /// <summary>只改整批透明度；实例位置不变时无需重新扫描和上传所有阴影。</summary>
+    public void SetGlobalOpacity(float opacity)
+    {
+        opacity = Mathf.Clamp01(opacity);
+        if (Mathf.Approximately(globalOpacity, opacity)) return;
+        globalOpacity = opacity;
+        batchColor.a = opacity;
+        material.SetColor(ColorId, batchColor);
     }
 
     /// <summary>组件停用或退出世界时清空可见实例。</summary>

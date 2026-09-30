@@ -59,14 +59,14 @@ description: "Use when: 定位或修改 FlatWorld 的伤害、生命值、身体
 - `Hurt(IDamageSender)` 保留原来发送端 Item 与旧规则，然后适配同一生命提交核心；`Hurt(in CombatDamageContext)` 使用明确 Source/Credit 和模拟 Tick/Time。ECS 来源不提供旧 Item 引用，消费方应读取 `DamageReceiverDamageInfo.Context`，不可把其旧 Attacker 字段为空解释成环境攻击或丢弃击杀归因。
 - 阵营配置注册仍严格校验 96 字符限制，进入 Native 目录前另查 UTF-8 字节容量；接收 Native 命中必须先验证长度再解码。非法阵营返回无效命中 `-1` 并限次记录来源身份、Tick 和有限原始字节，不截断、不改为空阵营、不消耗受伤冷却，也不能让单次坏数据中断整轮 AI 更新。
 - 武器自身 Source 与 Owner 的 Credit 分开；generation/world/dimension 必须随事件传递。模拟时间使用 double，不能把同一渲染帧的多个 ECS Tick 都改成 Time.time，否则受伤间隔与 Buff 结算会漂移。旧对象的专属 incoming rule 未提供纯上下文实现时必须显式拒绝，不能绕过资源/建筑门槛。
-- `Mod_Damage` 仅在实际窗口或周期 Pulse 导出 Box OBB，通过少量 GameplayCombatBridge 查询原生空间桶；GO 与 ECS 共用 MaxAttackTargets 和窗口预约集合。Sequence/Window/Pulse 在生产处保持唯一，原生普通攻击每次 Active 只生产一次；新增技能也必须在真实 Pulse 生成事件，不能靠每帧扫描后交给生命层去重。
+- `Mod_Damage` 仅在实际窗口或周期 Pulse 导出 `AttackShape2D` 范围描述；各数据后端用空间桶收集候选，临时投影受击 `Collider2D`，统一由 Physics2D Overlap/BoxCast 判几何命中。`AttackShape2D` 不实现命中相交算法；身份、阵营、LOS、配额和伤害仍归数据逻辑。GO 与 ECS 共用 MaxAttackTargets 和窗口预约集合，Sequence/Window/Pulse 在生产处保持唯一。
 - AIECS 的近战接敌资格由目标级 `Engagement Slot` 批量裁决，而不是导航格占位；新的起手动作需要当前槽位资格，已进入既有动作阶段的实体继续使用原有锁定时序。槽位只控制同时接近目标的数量，最终有效性仍由现有距离、方向、LOS 与阵营规则确认。
 - 命中附加状态由 `ICombatDamageContextModifier` 组合导出，装配时从 ItemMods 已注册表缓存；上下文的 FixedList 容量在装配时校验，不能热路径静默截断。旧命中回调与纯数据结算各自应用一次；0 伤害有效命中仍可触发附加 Buff，负数拒绝结果不可触发，出血必须有实际刃伤。
 - 原生同目标命中按时间/攻击键分组串行提交、不同目标并行；死亡与掉落先锁存一次性状态再发布。死亡事件携带 Entity，尸体按时间排队批量回收，掉落按预算消费，不得每次死亡扫描全体实体或一次创建全部掉落。旧投射物扫掠/附着、完整技能、生态掉落修饰尚未迁移，不能因近战 Bridge 已接通而宣称全战斗兼容。
 
 ## 验证
 
-- `Mod_Projectile.UseVisibleArc` 的可见轨迹由逐帧模块更新持有：显式提交 Rigidbody2D 和 Transform 姿态，并关闭物理插值，不能只写刚体位置再等待物理帧显示。阻力采用指数衰减的解析位移积分，避免射程依赖渲染帧率；普通物理投射物仍保留自身插值。
+- 投射物的地面位移由 Dynamic Rigidbody2D 负责；`UseVisibleArc` 仅按虚拟高度偏移视觉和攻击传感器。实体碰撞盒与伤害 Trigger 分开，Physics2D 的反弹结果只回写运行时速度和接触事实；目标身份、阵营、距离、次数与伤害始终由数据和 `CombatRules` 裁定。
 
 - 覆盖攻击→受伤→死亡→掉落，确认事件只触发一次、随机输入固定、池化特效每次重置。
 

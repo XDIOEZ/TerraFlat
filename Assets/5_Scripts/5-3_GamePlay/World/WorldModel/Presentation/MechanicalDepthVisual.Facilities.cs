@@ -2,17 +2,15 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering.Universal;
 
-public sealed partial class MechanicalDynamicVisual
+public sealed partial class MechanicalDepthVisual
 {
-    #region 设施纯表现
-    private readonly List<SpriteRenderer> facilitySprites = new();
+    #region 设施灯光与内容图层
+    private readonly List<PartVisual> facilityParts = new();
     private Light2D facilityLight;
 
-    /// <summary>只创建可见设施的灯光和挂架图层，不创建 Item、玩法 Module 或权威库存。</summary>
+    /// <summary>灯光保留 Unity 专用代理，晾架内容与主体一起合入脚点行。</summary>
     internal void UpdateFacility(MachineEntity entity)
     {
-        if (facilityLight != null) facilityLight.enabled = false;
-        foreach (SpriteRenderer renderer in facilitySprites) if (renderer != null) renderer.enabled = false;
         if (entity.Definition.LogicId == "furnace") UpdateFurnaceLight(entity);
         if (entity.Definition.LogicId == "drying") UpdateDryingSprites(entity);
     }
@@ -38,10 +36,11 @@ public sealed partial class MechanicalDynamicVisual
         facilityLight.transform.localPosition = template != null ? template.transform.localPosition : Vector3.zero;
         facilityLight.transform.rotation = Quaternion.identity;
         var config = lighting?.Data("Data", ((Mod_LightSource)lighting.Authoring).Data);
-        facilityLight.color = lighting?.Value("lightColor", template != null ? template.color : Color.white) ?? template.color;
-        facilityLight.intensity = config?.Intensity ?? ((Mod_Fuel)fuel.Authoring).lightBaseIntensity;
-        facilityLight.pointLightOuterRadius = config?.Range ?? template.pointLightOuterRadius;
-        facilityLight.pointLightInnerRadius = config?.InnerRadius ?? template.pointLightInnerRadius;
+        facilityLight.color = lighting?.Value("lightColor", template != null ? template.color : Color.white) ??
+            (template != null ? template.color : Color.white);
+        facilityLight.intensity = config?.Intensity ?? (fuel?.Authoring is Mod_Fuel source ? source.lightBaseIntensity : 0f);
+        facilityLight.pointLightOuterRadius = config?.Range ?? (template != null ? template.pointLightOuterRadius : 0f);
+        facilityLight.pointLightInnerRadius = config?.InnerRadius ?? (template != null ? template.pointLightInnerRadius : 0f);
         if (template != null)
         {
             facilityLight.blendStyleIndex = template.blendStyleIndex;
@@ -69,36 +68,33 @@ public sealed partial class MechanicalDynamicVisual
             if (item == null) continue;
             MeatrackDryingRule rule = runtime?.GetRule(item);
             Sprite sprite = rule?.DisplaySprite;
-            if (sprite == null && GameRes.ExistingInstance.TryGetItemDefinition(item.IDName, out var itemDefinition)) sprite = itemDefinition.Sprite;
-            if (sprite == null) continue;
+            Material material = parts[0]?.Material;
+            if (GameRes.ExistingInstance.TryGetItemDefinition(item.IDName, out var itemDefinition))
+            {
+                if (sprite == null) sprite = itemDefinition.Sprite;
+                if (itemDefinition.Material != null) material = itemDefinition.Material;
+            }
+            if (sprite == null || material == null) continue;
             Vector3 position = config.Value("VisualAnchorOffset", source.VisualAnchorOffset) +
                 Vector3.right * ((i - (count - 1) * .5f) * config.Value("VisualSlotSpacing", source.VisualSlotSpacing));
-            SetFacilitySprite(i * 2, sprite, position, source.ItemSpriteSortingOrder, Color.white);
+            SetFacilitySprite(i * 2, sprite, material, position, source.ItemSpriteSortingOrder, Color.white);
             Sprite smoked = rule?.SmokedStateSprite ?? source.DefaultSmokeStateSprite;
             if (smoked == null || rule == null) continue;
             float progress = Mathf.Clamp01(state.Elapsed[i] / Mathf.Max(.01f, rule.RequiredDryingSeconds));
-            SetFacilitySprite(i * 2 + 1, smoked, position, source.SmokeSpriteSortingOrder,
+            SetFacilitySprite(i * 2 + 1, smoked, material, position, source.SmokeSpriteSortingOrder,
                 Color.Lerp(source.SmokeStartColor, source.SmokeDoneColor, progress));
         }
     }
 
-    private void SetFacilitySprite(int index, Sprite sprite, Vector3 position, int order, Color color)
+    private void SetFacilitySprite(int index, Sprite sprite, Material material, Vector3 position, int order, Color color)
     {
-        while (facilitySprites.Count <= index) facilitySprites.Add(null);
-        SpriteRenderer renderer = facilitySprites[index];
-        if (renderer == null)
-        {
-            var child = new GameObject("MachineContents_" + index);
-            child.transform.SetParent(transform, false);
-            renderer = child.AddComponent<SpriteRenderer>();
-            facilitySprites[index] = renderer;
-        }
-        renderer.transform.localPosition = position;
-        renderer.sprite = sprite;
-        renderer.sortingLayerID = sortingLayerId;
-        renderer.sortingOrder = order;
-        renderer.color = color;
-        renderer.enabled = true;
+        while (facilityParts.Count <= index) facilityParts.Add(null);
+        PartVisual part = facilityParts[index] ??= new PartVisual { Id = 4 + index };
+        part.Sprite = sprite; part.Material = material; part.Offset = position;
+        part.Rotation = Quaternion.identity; part.Scale = Vector3.one;
+        part.Order = occupancy * 32 + order; part.Tint = color;
+        part.Animation = Vector4.zero; part.Touched = part.Visible = true;
+        Submit(part);
     }
     #endregion
 }

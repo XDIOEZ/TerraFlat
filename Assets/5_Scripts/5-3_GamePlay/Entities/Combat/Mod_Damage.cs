@@ -113,6 +113,8 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
     private bool explicitProjectileSweep;
     private bool hasImpactOrigin;
     private Vector2 impactOrigin;
+    private bool hasExplicitImpactPoint;
+    private Vector2 explicitImpactPoint;
     public Vector2 DamageOrigin => hasImpactOrigin ? impactOrigin : damageCollider != null ? (Vector2)damageCollider.bounds.center : (Vector2)transform.position;
 
     public CombatWeaponAudioClass WeaponAudioClass => weaponAudioClass;
@@ -409,12 +411,15 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
     }
 
     /// <summary>供高速投射物的射线/碰撞体扫掠复用同一套命中结算，避免绕过 Mod_Damage。</summary>
-    public void ProcessExplicitColliderHit(Collider2D other, Vector2? sourceOrigin = null)
+    public void ProcessExplicitColliderHit(Collider2D other, Vector2? sourceOrigin = null,
+        Vector2? hitPoint = null)
     {
         hasImpactOrigin = sourceOrigin.HasValue;
         impactOrigin = sourceOrigin.GetValueOrDefault();
+        hasExplicitImpactPoint = hitPoint.HasValue;
+        explicitImpactPoint = hitPoint.GetValueOrDefault();
         try { ProcessDamageColliderHit(other); }
-        finally { hasImpactOrigin = false; }
+        finally { hasImpactOrigin = false; hasExplicitImpactPoint = false; }
     }
 
     /// <summary>统一处理 Trigger 与显式扫掠得到的伤害碰撞体。</summary>
@@ -555,7 +560,7 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
     private Vector2 ResolveHitPoint(DamageReceiver receiver, Collider2D hitCollider)
     {
         if (hitCollider != null)
-            return hitCollider.ClosestPoint(transform.position);
+            return hitCollider.ClosestPoint(hasExplicitImpactPoint ? explicitImpactPoint : (Vector2)transform.position);
 
         Collider2D receiverCollider = receiver.GetComponent<Collider2D>();
         if (receiverCollider == null)

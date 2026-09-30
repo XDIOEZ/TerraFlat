@@ -27,6 +27,8 @@ namespace FlatWorld.AIECS.Gameplay
         private struct DropRecord { public string ItemId; public float2 Position; public int Remaining; } // 队列持有静态 ID，无逐掉落任务对象。
         private struct WeaponCandidate { public AiecsHitEvent Hit; public float Fraction, Distance; }
         private readonly List<WeaponCandidate> weaponCandidates = new(); // 复用候选数组，跨桶按最近碰撞排序。
+        private readonly List<CombatColliderHit2D> colliderHits = new();
+        private readonly HashSet<int> weaponVisited = new();
         private static uint worldSequence;
         private static readonly Dictionary<string, uint> DimensionIds = new Dictionary<string, uint>(StringComparer.Ordinal);
         private readonly List<ExternalProxy> proxies = new List<ExternalProxy>();
@@ -424,7 +426,7 @@ namespace FlatWorld.AIECS.Gameplay
             identity = IdentityOf(item); return true;
         }
 
-        /// <summary>实际窗口才查询稀疏桶；OBB 精筛与旧目标共同预约武器的 MaxAttackTargets。</summary>
+        /// <summary>稀疏桶只筛数据候选；Collider2D 决定几何命中后再预约攻击配额。</summary>
         public void QueryWeaponPulse(Mod_Damage weapon, AttackShape2D shape, CombatDamageContext context)
         {
             if (Simulation == null || !GameDifficultyService.IsPlayer(weapon.item) || context.Attack.Source.World != worldStamp ||
@@ -440,29 +442,40 @@ namespace FlatWorld.AIECS.Gameplay
             view = Simulation.Spatial;
             WeaponPulses++; weapons[context.Attack.Source] = weapon;
             weaponCandidates.Clear();
-            view.BucketRange(shape.BoundsCenter, shape.BoundsExtents + view.MaximumBodyExtent, out int2 first, out int2 size);
-            for (int y = 0; y < size.y; y++)
-            for (int x = 0; x < size.x; x++)
+            weaponVisited.Clear();
+            using (CombatColliderQuery2D query = CombatColliderQuery2D.Rent())
             {
-                int2 bucket = view.NormalizeBucket(first + new int2(x, y));
-                for (int faction = 0; faction < factionNames.Count; faction++)
+                view.BucketRange(shape.BoundsCenter, shape.BoundsExtents + view.MaximumBodyExtent, out int2 first, out int2 size);
+                for (int y = 0; y < size.y; y++)
+                for (int x = 0; x < size.x; x++)
                 {
-                    if (!view.IsHostile(sourceFaction, faction) || !view.Buckets.TryGetFirstValue(new int3(bucket, faction), out int index, out var iterator)) continue;
-                    do
+                    int2 bucket = view.NormalizeBucket(first + new int2(x, y));
+                    for (int faction = 0; faction < factionNames.Count; faction++)
                     {
-                        WeaponCandidates++;
-                        var target = view.Samples[index];
-                        if (target.Identity.External != 0 || target.Dead != 0 || target.Identity.Key.World != worldStamp ||
-                            !shape.TryIntersect(target.ShapeNear(shape.BoundsCenter, view.Domain, true), out float fraction) ||
-                            !losView.Visible(context.Origin, target.Position)) continue;
-                        if (!Simulation.Entities.Exists(target.Entity) || Simulation.Entities.GetComponentData<AiecsVital>(target.Entity).Dead != 0) continue;
-                        var hit = context;
-                        hit.HitPoint = math.lengthsq(shape.SweepDelta) > 0.000001f
-                            ? shape.Center - shape.SweepDelta * (1f - fraction) : target.Position;
-                        weaponCandidates.Add(new WeaponCandidate {
-                            Hit = new AiecsHitEvent { Target = target.Entity, TargetKey = target.Identity.Key, Context = hit },
-                            Fraction = fraction, Distance = math.distancesq(context.Origin, hit.HitPoint) });
-                    } while (view.Buckets.TryGetNextValue(out index, ref iterator));
+                        if (!view.IsHostile(sourceFaction, faction) ||
+                            !view.Buckets.TryGetFirstValue(new int3(bucket, faction), out int index, out var iterator)) continue;
+                        do
+                        {
+                            WeaponCandidates++;
+                            var target = view.Samples[index];
+                            if (target.Identity.External != 0 || target.Dead != 0 || target.Identity.Key.World != worldStamp ||
+                                !weaponVisited.Add(index) || !losView.Visible(context.Origin, target.Position)) continue;
+                            query.Add(index, target.ShapeNear(shape.BoundsCenter, view.Domain, true));
+                        } while (view.Buckets.TryGetNextValue(out index, ref iterator));
+                    }
+                }
+                query.Query(shape, colliderHits);
+                for (int i = 0; i < colliderHits.Count; i++)
+                {
+                    CombatColliderHit2D contact = colliderHits[i];
+                    AiecsTargetSample target = view.Samples[contact.CandidateId];
+                    if (!Simulation.Entities.Exists(target.Entity) ||
+                        Simulation.Entities.GetComponentData<AiecsVital>(target.Entity).Dead != 0) continue;
+                    var hit = context;
+                    hit.HitPoint = contact.Point;
+                    weaponCandidates.Add(new WeaponCandidate {
+                        Hit = new AiecsHitEvent { Target = target.Entity, TargetKey = target.Identity.Key, Context = hit },
+                        Fraction = contact.Fraction, Distance = math.distancesq(context.Origin, hit.HitPoint) });
                 }
             }
             weaponCandidates.Sort(CompareWeaponCandidates);

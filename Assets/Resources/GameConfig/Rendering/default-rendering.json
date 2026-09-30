@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "preferences": {
     "graphicsPreset": 0,
     "postProcessQuality": 0,
@@ -106,6 +106,29 @@
     "terrainSortingLayer": "Default",
     "dynamicCategories": ["player", "creature", "building", "world-item"],
     "transparencySortAxis": { "x": 0.0, "y": 1.0, "z": 0.0 },
+    "batchRenderQueueBase": 2988,
+    "batchProfiles": [
+      { "visualLayer": "Back", "batchOrder": -1, "renderQueueOffset": -1 },
+      { "visualLayer": "Ground", "batchOrder": 0, "renderQueueOffset": 0 },
+      { "visualLayer": "Water", "batchOrder": 1, "renderQueueOffset": 1 },
+      { "visualLayer": "Support", "batchOrder": 2, "renderQueueOffset": 2 },
+      { "visualLayer": "Environment", "batchOrder": 2, "renderQueueOffset": 2 },
+      { "visualLayer": "Grass", "batchOrder": 2, "renderQueueOffset": 2 },
+      { "visualLayer": "Snow", "batchOrder": 3, "renderQueueOffset": 3 },
+      { "visualLayer": "Blocking", "batchOrder": 4, "renderQueueOffset": 4 },
+      { "visualLayer": "SnowWall", "batchOrder": 5, "renderQueueOffset": 5 },
+      { "visualLayer": "NaturalShadow", "batchOrder": 5, "renderQueueOffset": 5 },
+      { "visualLayer": "GroundCover", "batchOrder": 6, "renderQueueOffset": 5 },
+      { "visualLayer": "NaturalStatic", "batchOrder": 7, "renderQueueOffset": 6 },
+      { "visualLayer": "MechanicalLowerBase", "batchOrder": 7, "renderQueueOffset": 6 },
+      { "visualLayer": "MechanicalLowerMotionA", "batchOrder": 8, "renderQueueOffset": 6 },
+      { "visualLayer": "MechanicalLowerMotionB", "batchOrder": 9, "renderQueueOffset": 6 },
+      { "visualLayer": "MechanicalLowerFront", "batchOrder": 10, "renderQueueOffset": 6 },
+      { "visualLayer": "MechanicalUpperBase", "batchOrder": 11, "renderQueueOffset": 6 },
+      { "visualLayer": "MechanicalUpperMotionA", "batchOrder": 12, "renderQueueOffset": 6 },
+      { "visualLayer": "MechanicalUpperMotionB", "batchOrder": 13, "renderQueueOffset": 6 },
+      { "visualLayer": "MechanicalUpperFront", "batchOrder": 14, "renderQueueOffset": 6 }
+    ],
     "profiles": [
       { "category": "player", "sortingLayer": "Player", "order": 100 },
       { "category": "creature", "sortingLayer": "Player", "order": 100 },

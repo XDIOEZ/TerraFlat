@@ -15,6 +15,7 @@ namespace FlatWorld.NaturalEntities
         {
             public double CanopyStepFrom, CanopyStepTo;
             public bool CanopyLiveStep;
+            public float NextCanopyPresentationTime;
 
             public void BeginFall(CanopyFruitRecord fruit)
             {
@@ -23,18 +24,20 @@ namespace FlatWorld.NaturalEntities
                 fruit.StartX = start.x; fruit.StartY = start.y;
                 fruit.EndX = end.x; fruit.EndY = end.y;
                 SweepCanopyFlight(this, fruit);
+                MarkPresentationDirty(this);
             }
 
             public void Land(CanopyFruitRecord fruit)
             {
                 fruit.HitConsumed = true;
                 SpawnCanopyOutput(this, fruit, false);
-                PresentationDirty = true;
+                MarkPresentationDirty(this);
             }
         }
 
         private static readonly List<RaycastHit2D> canopyHits = new();
         private static readonly HashSet<DamageReceiver> canopyReceivers = new();
+        private const float CanopyGrowthPresentationInterval = 0.25f;
 
         private static CanopyFruitState GetCanopy(Record record)
         {
@@ -52,12 +55,39 @@ namespace FlatWorld.NaturalEntities
                 if (!simulation.TryGet(record.Handle.Id, out EntityGrowth growth) || growth.Progress < growth.MaxProgress) return;
                 CanopyFruitTimeline.Initialize(state, now, unchecked((uint)record.Snapshot.Guid));
             }
+            int previousNextId = state.NextId;
             record.CanopyStepFrom = state.Time;
             record.CanopyStepTo = now;
             record.CanopyLiveStep = record.CanopyWasLive && now >= state.Time && now - state.Time <= 0.25d;
             foreach (CanopyFruitRecord fruit in state.Flights) SweepCanopyFlight(record, fruit);
             record.CanopyWasLive = CanopyFruitTimeline.Advance(state, record.Profile.Canopy.Settings, now, record);
-            record.PresentationDirty = true;
+
+            // 坠落果仍逐帧刷新；树冠缓慢生长只低频刷新，避免静态树每帧重提整套表现。
+            bool hasFlights = state.Flights.Count > 0;
+            bool hasGrowingFruit = false;
+            for (int index = 0; index < state.Fruits.Count; index++)
+            {
+                if (state.Time < state.Fruits[index].MatureAt)
+                {
+                    hasGrowingFruit = true;
+                    break;
+                }
+            }
+
+            if (hasFlights || state.NextId != previousNextId)
+            {
+                MarkPresentationDirty(record);
+                record.NextCanopyPresentationTime = Time.time + CanopyGrowthPresentationInterval;
+            }
+            else if (hasGrowingFruit && Time.time >= record.NextCanopyPresentationTime)
+            {
+                MarkPresentationDirty(record);
+                record.NextCanopyPresentationTime = Time.time + CanopyGrowthPresentationInterval;
+            }
+            else if (!hasGrowingFruit)
+            {
+                record.NextCanopyPresentationTime = 0f;
+            }
         }
 
         private static Vector2 CrownPosition(Record record, int slot)

@@ -23,7 +23,7 @@ public class Mod_ChunkLoader : Module
         [Tooltip("区块加载距离（此距离内的区块将被加载）")]
         public int LoadChunkDistance;
 
-        public ChunkDistanceConfig(int unActive = 3, int destroy = 4, int load = 1)
+        public ChunkDistanceConfig(int unActive = 7, int destroy = 8, int load = 5)
         {
             UnActiveDistance = unActive;
             DestroyChunkDistance = destroy;
@@ -42,7 +42,7 @@ public class Mod_ChunkLoader : Module
 
     [Header("区块加载距离设置")]
     [SerializeField]
-    private ChunkDistanceConfig distanceConfig = new ChunkDistanceConfig(3, 4, 1);
+    private ChunkDistanceConfig distanceConfig = new ChunkDistanceConfig(7, 8, 5);
 
     [Header("性能节流")]
     [Tooltip("滑条调整区块范围后的窗口更新最小间隔（秒）；玩家跨区块时立即刷新")]

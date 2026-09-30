@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>世界共用的渲染默认值。资源引用与逐物体外观仍由各自资源持有。</summary>
@@ -180,6 +181,8 @@ public sealed class WorldRenderingConfig
         public string[] dynamicCategories;
         public Vector3 transparencySortAxis;
         public WorldSortingProfile[] profiles;
+        public int batchRenderQueueBase;
+        public BatchSortingProfile[] batchProfiles;
     }
 
     [Serializable]
@@ -188,6 +191,14 @@ public sealed class WorldRenderingConfig
         public string category;
         public string sortingLayer;
         public int order;
+    }
+
+    [Serializable]
+    public sealed class BatchSortingProfile
+    {
+        public string visualLayer;
+        public int batchOrder;
+        public int renderQueueOffset;
     }
 
 }
@@ -207,7 +218,7 @@ public static class WorldRenderingConfigCatalog
             throw new InvalidOperationException($"缺少世界渲染配置：Resources/{ResourcePath}.json");
 
         WorldRenderingConfig config = JsonUtility.FromJson<WorldRenderingConfig>(asset.text);
-        if (config == null || config.schemaVersion != 1 || config.preferences == null ||
+        if (config == null || config.schemaVersion != 2 || config.preferences == null ||
             config.shadows == null || config.shadows.contact == null || config.shadows.ecsContact == null ||
             config.shadows.groundElevation == null || config.occlusion == null ||
             config.postProcess == null || config.postProcess.worldVolume == null ||
@@ -217,6 +228,7 @@ public static class WorldRenderingConfigCatalog
             config.postProcess.worldVolume.splitToning == null ||
             config.postProcess.worldVolume.vignette == null || config.grass == null || config.sorting == null ||
             config.sorting.profiles == null || config.sorting.dynamicCategories == null ||
+            config.sorting.batchProfiles == null ||
             string.IsNullOrWhiteSpace(config.sorting.terrainSortingLayer))
             throw new InvalidOperationException($"世界渲染配置结构无效：Resources/{ResourcePath}.json");
         if (config.preferences.graphicsPreset < 0 || config.preferences.graphicsPreset > 2 ||
@@ -249,8 +261,23 @@ public static class WorldRenderingConfigCatalog
             config.grass.scaleRange.x <= 0f || config.grass.scaleRange.y <= 0f ||
             config.grass.accentVariantChance < 0f || config.grass.accentVariantChance > 1f ||
             config.sorting.transparencySortAxis.sqrMagnitude < 0.001f ||
-            config.sorting.profiles.Length == 0 || config.sorting.dynamicCategories.Length == 0)
+            config.sorting.profiles.Length == 0 || config.sorting.dynamicCategories.Length == 0 ||
+            config.sorting.batchRenderQueueBase < 0 || config.sorting.batchRenderQueueBase > 5000 ||
+            config.sorting.batchProfiles.Length == 0)
             throw new InvalidOperationException($"世界渲染配置数值无效：Resources/{ResourcePath}.json");
+
+        var batchLayers = new HashSet<string>(StringComparer.Ordinal);
+        foreach (WorldRenderingConfig.BatchSortingProfile profile in config.sorting.batchProfiles)
+        {
+            if (profile == null || string.IsNullOrWhiteSpace(profile.visualLayer) ||
+                !batchLayers.Add(profile.visualLayer))
+                throw new InvalidOperationException($"世界渲染批量图层配置重复或无效：Resources/{ResourcePath}.json");
+
+            long renderQueue = (long)config.sorting.batchRenderQueueBase + profile.renderQueueOffset;
+            if (renderQueue < 0 || renderQueue > 5000)
+                throw new InvalidOperationException(
+                    $"世界渲染批量图层 {profile.visualLayer} 的 RenderQueue 超出 Unity 有效范围。");
+        }
         return config;
     }
 }

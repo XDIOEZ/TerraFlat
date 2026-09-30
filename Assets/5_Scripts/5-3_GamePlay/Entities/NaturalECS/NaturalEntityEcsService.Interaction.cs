@@ -20,6 +20,7 @@ namespace FlatWorld.NaturalEntities
             public ulong LastSpatialQuery;
             public Bounds HitBounds, BodyBounds, VisualBounds;
             public bool BlocksMovement;
+            public bool HitColliderEnabled;
             public Vector3 WorldPosition => WorldLocalPresentation.ProjectPosition(Snapshot.transform.position);
             public int TargetGuid => Snapshot.Guid;
             public bool IsValid => Contains(Handle) && simulation.GetBody(Handle.Id).Dead == 0;
@@ -33,6 +34,10 @@ namespace FlatWorld.NaturalEntities
         private static readonly Dictionary<Vector2Int, HashSet<int>> spatialCells = new();
         private static readonly Stack<List<Record>> queryLists = new();
         private static ulong spatialQuerySequence;
+        public enum PhysicsBodyChangeReason : byte { Registered, Removed, VisualRevision, SnapshotRefresh }
+        public static event Action<Bounds> PhysicsBodyChanged;
+        public static event Action<Bounds, PhysicsBodyChangeReason, int, string> PhysicsBodyChangedWithReason;
+        public static event Action PhysicsBodiesReset;
 
         private readonly struct ResourceQuery : IDisposable
         {
@@ -96,7 +101,7 @@ namespace FlatWorld.NaturalEntities
             return false;
         }
 
-        private static void RegisterSpatial(Record record)
+        private static void RegisterSpatial(Record record, PhysicsBodyChangeReason reason = PhysicsBodyChangeReason.Registered)
         {
             NaturalEntityBody body = simulation.GetBody(record.Handle.Id);
             Matrix4x4 root = BodyMatrix(body);
@@ -105,6 +110,7 @@ namespace FlatWorld.NaturalEntities
             record.BodyBounds = TransformBounds(root, collider?.Offset ?? Vector2.zero, collider?.Size ?? Vector2.one);
             JObject health = record.Profile.HealthParameters;
             JObject hit = health?["$collider2D"] as JObject;
+            record.HitColliderEnabled = hit?["enabled"]?.Value<bool>() != false;
             Vector2 hitOffset = hit?["offset"]?.ToObject<Vector2>() ?? collider?.Offset ?? Vector2.zero;
             Vector2 hitSize = hit?["size"]?.ToObject<Vector2>() ?? collider?.Size ?? Vector2.one;
             JObject transform = health?["$transform"] as JObject;
@@ -128,10 +134,22 @@ namespace FlatWorld.NaturalEntities
                 if (bucket.Add(record.Handle.Id)) record.SpatialCells.Add(cell);
             }
             record.IndexedRevision = body.VisualVersion;
+            if (record.BlocksMovement)
+            {
+                PhysicsBodyChanged?.Invoke(record.BodyBounds);
+                PhysicsBodyChangedWithReason?.Invoke(record.BodyBounds, reason,
+                    record.Snapshot.Guid, record.Profile.Definition.Id);
+            }
         }
 
-        private static void UnregisterSpatial(Record record)
+        private static void UnregisterSpatial(Record record, PhysicsBodyChangeReason reason = PhysicsBodyChangeReason.Removed)
         {
+            if (record.BlocksMovement && record.SpatialCells.Count > 0)
+            {
+                PhysicsBodyChanged?.Invoke(record.BodyBounds);
+                PhysicsBodyChangedWithReason?.Invoke(record.BodyBounds, reason,
+                    record.Snapshot.Guid, record.Profile.Definition.Id);
+            }
             foreach (Vector2Int cell in record.SpatialCells)
                 if (spatialCells.TryGetValue(cell, out HashSet<int> bucket))
                 {
@@ -139,6 +157,20 @@ namespace FlatWorld.NaturalEntities
                     if (bucket.Count == 0) spatialCells.Remove(cell);
                 }
             record.SpatialCells.Clear();
+        }
+
+        /// <summary>给已加载区块提供纯数据障碍外形，物理组件不反向持有实体。</summary>
+        public static void CollectBlockingBounds(BoundsInt area, List<Bounds> output)
+        {
+            if (output == null) throw new ArgumentNullException(nameof(output));
+            output.Clear();
+            if (simulation == null) return;
+            Vector2 center = new(area.xMin + area.size.x * 0.5f, area.yMin + area.size.y * 0.5f);
+            Vector2 extents = new(area.size.x * 0.5f, area.size.y * 0.5f);
+            using ResourceQuery query = QueryBounds(center, extents);
+            foreach (Record record in query)
+                if (record.BlocksMovement && record.IsValid)
+                    output.Add(record.BodyBounds);
         }
 
         private static ResourceQuery QueryBounds(Vector2 center, Vector2 extents)
@@ -193,25 +225,6 @@ namespace FlatWorld.NaturalEntities
                 Mathf.Abs(x.y) + Mathf.Abs(y.y), 0.01f) * 2f);
         }
 
-        /// <summary>玩家仍走旧运动入口时，直接扫掠 Entity 身体数据，不给每棵树补物理对象。</summary>
-        public static Vector2 ResolveContactVelocity(Vector2 position, Vector2 velocity, float radius, float deltaTime)
-        {
-            if (records.Count == 0 || deltaTime <= 0f || velocity.sqrMagnitude <= 0f) return velocity;
-            Vector2 travel = velocity * deltaTime;
-            using ResourceQuery query = QueryBounds(position + travel * 0.5f,
-                new Vector2(Mathf.Abs(travel.x), Mathf.Abs(travel.y)) * 0.5f + Vector2.one * radius);
-            foreach (Record record in query)
-            {
-                if (!record.BlocksMovement || !record.IsValid) continue;
-                Vector2 origin = WorldTopologyRuntime.ShortestDelta(record.BodyBounds.center, position);
-                if (!WorldMotionSystem.TrySweepBox(origin, velocity * deltaTime,
-                    (Vector2)record.BodyBounds.extents + Vector2.one * radius, out Vector2 normal, out float fraction)) continue;
-                float inward = -Vector2.Dot(velocity, normal);
-                if (inward > 0f) velocity += normal * inward * (1f - fraction);
-            }
-            return velocity;
-        }
-
         #endregion
 
         #region 共享伤害数值与采集命令
@@ -220,26 +233,41 @@ namespace FlatWorld.NaturalEntities
         {
             if (!GameNetwork.HasStateAuthority || weapon == null || weapon.RemainingAttackTargets <= 0 ||
                 (context.DeliveryCapabilities & CombatDeliveryCapabilities.AirborneOnly) != 0) return;
-            var candidates = new List<(Record Record, float Fraction, float Distance)>();
-            using ResourceQuery query = QueryBounds(shape.BoundsCenter, shape.BoundsExtents);
-            foreach (Record record in query)
+            var recordsByCollider = new List<Record>();
+            var colliderHits = new List<CombatColliderHit2D>();
+            using (CombatColliderQuery2D physics = CombatColliderQuery2D.Rent())
             {
-                if (record.Profile.HealthModuleName == null || !record.IsValid) continue;
-                Vector2 delta = WorldTopologyRuntime.ShortestDelta((Vector2)shape.BoundsCenter, record.HitBounds.center);
-                var hit = PerceptionShape2D.Aabb(shape.BoundsCenter + new float2(delta.x, delta.y),
-                    new float2(record.HitBounds.extents.x, record.HitBounds.extents.y));
-                if (shape.TryIntersect(hit, out float fraction)) candidates.Add((record, fraction, delta.sqrMagnitude));
+                using ResourceQuery candidates = QueryBounds(shape.BoundsCenter, shape.BoundsExtents);
+                foreach (Record record in candidates)
+                {
+                    if (record.Profile.HealthModuleName == null || !record.HitColliderEnabled || !record.IsValid) continue;
+                    Vector2 center = WorldTopologyRuntime.NearestImagePosition((Vector2)shape.BoundsCenter,
+                        record.HitBounds.center);
+                    physics.Add(recordsByCollider.Count, PerceptionShape2D.Aabb(center,
+                        new float2(record.HitBounds.extents.x, record.HitBounds.extents.y)));
+                    recordsByCollider.Add(record);
+                }
+                physics.Query(shape, colliderHits);
             }
-            candidates.Sort((a, b) => a.Fraction != b.Fraction ? a.Fraction.CompareTo(b.Fraction) :
+            var candidatesByDistance = new List<(Record Record, float Fraction, float Distance, Vector2 Point)>();
+            for (int i = 0; i < colliderHits.Count; i++)
+            {
+                CombatColliderHit2D hit = colliderHits[i];
+                Record record = recordsByCollider[hit.CandidateId];
+                candidatesByDistance.Add((record, hit.Fraction,
+                    WorldTopologyRuntime.SqrDistance((Vector2)shape.BoundsCenter, hit.Point), hit.Point));
+            }
+            candidatesByDistance.Sort((a, b) => a.Fraction != b.Fraction ? a.Fraction.CompareTo(b.Fraction) :
                 a.Distance != b.Distance ? a.Distance.CompareTo(b.Distance) : a.Record.Handle.Id.CompareTo(b.Record.Handle.Id));
-            foreach (var candidate in candidates)
+            foreach (var candidate in candidatesByDistance)
             {
                 if (weapon == null || weapon.RemainingAttackTargets <= 0) break;
+                if (!candidate.Record.IsValid) continue;
                 var target = new CombatIdentity { Backend = CombatBackend.Entity, Value = (1UL << 63) | (uint)candidate.Record.Handle.Id,
                     Generation = (uint)candidate.Record.Handle.Generation, World = context.Attack.Source.World, Dimension = context.Attack.Source.Dimension };
                 if (!weapon.TryReserveExternalTarget(target)) continue;
                 CombatDamageContext hit = context;
-                hit.HitPoint = WorldTopologyRuntime.NearestImagePosition((Vector2)shape.Center, candidate.Record.HitBounds.center);
+                hit.HitPoint = candidate.Point;
                 float damage = ApplyDamage(candidate.Record.Handle, hit);
                 if (damage >= 0f && weapon != null) weapon.PublishExternalDamage(hit, damage);
                 else if (damage == -2f && weapon != null) ItemActionFeedback.Show(weapon.item.Owner ?? weapon.item, "需要使用符合种类与等级的工具采集。");

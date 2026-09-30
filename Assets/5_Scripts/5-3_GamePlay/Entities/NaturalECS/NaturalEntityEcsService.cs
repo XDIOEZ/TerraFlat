@@ -113,8 +113,8 @@ namespace FlatWorld.NaturalEntities
             nextRuntimeId = 1;
             pendingSimulationSeconds = 0f;
             ClearResourceQueries();
-            contactShadows?.Dispose();
-            contactShadows = null;
+            PhysicsBodiesReset?.Invoke();
+            ReleasePresentationRuntime();
         }
 
         #endregion
@@ -234,7 +234,7 @@ namespace FlatWorld.NaturalEntities
             if (simulation.TryGet(handle.Id, out EntityPlantLifecycle previousPlant) && previousPlant.Cultivated != 0)
                 cultivatedCells.Remove(WorldTopologyRuntime.NormalizeCell(new Vector2Int(previousPlant.SoilCell.x, previousPlant.SoilCell.y)));
             UnregisterNavigation(record);
-            UnregisterSpatial(record);
+            UnregisterSpatial(record, PhysicsBodyChangeReason.SnapshotRefresh);
             if (record.Profile.HasClimate &&
                 (float.IsNaN(baselineCelsius) || float.IsInfinity(baselineCelsius)) &&
                 simulation.TryGet(handle.Id, out NaturalEntityClimate currentClimate))
@@ -273,14 +273,14 @@ namespace FlatWorld.NaturalEntities
             if (harvest.HasValue) simulation.Set(handle.Id, harvest.Value);
             else simulation.RemoveComponent<NaturalEntityHarvest>(handle.Id);
             InstallPlantModules(record, snapshot, false);
-            record.PresentationDirty = true;
+            MarkPresentationDirty(record);
 
             if (nextBody.Suspended == 0)
             {
                 TryRegisterNavigation(record);
                 FreezeEnvironment(record);
                 FreezeSoil(record);
-                RegisterSpatial(record);
+                RegisterSpatial(record, PhysicsBodyChangeReason.SnapshotRefresh);
             }
         }
 

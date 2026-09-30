@@ -33,7 +33,7 @@ description: "Use when: 定位或修改 FlatWorld 的 Item/Module 组合架构�
 - Item 回池资格独立于 `saveData`；JSON 模块装配完成后才记录层级基线，回池时按子节点身份核验。模块若用 `OnDestroy` 清理订阅或资源，必须在 `Unload` 提供同等清理，池复用才安全。
 - 模块 JSON 配置计划属于当前 `RuntimeItemDefinition`：解析和严格校验只做一次，实体每次 Load 仍重新应用字段；资源重载通过替换定义实例自然丢弃旧计划。
 - 远程网络副本不进入本地 Tick、感知和存档索引。
-- 感知后端在注册和 `Item.RuntimeStructureChanged` 边界选择：Actor 使用当前 `RuntimeItemDefinition` 的共享根级纯几何，旧对象才缓存 Collider Bridge；移动通知仅更新位置索引，不能重新扫描组件。注销必须移除后端映射，重建索引前完成并丢弃旧 Job；每次重新注册/结构变化递增代际以拒绝对象池复用前的结果。正式 Actor 的物理 Collider 尺寸不是运行时感知配置权威，新增动态体型应提供纯数据输入。
+- 感知后端在注册和 `Item.RuntimeStructureChanged` 边界选择：Actor 使用当前 `RuntimeItemDefinition` 的共享根级纯几何，旧对象才缓存 Collider Bridge；移动通知仅更新位置索引，不能重新扫描组件。注销必须移除后端映射，重建索引前完成并丢弃旧 Job；每次重新注册/结构变化递增代际以拒绝对象池复用前的结果。正式 Actor 的物理 Collider 尺寸不是运行时感知配置权威，新增动态体型应提供纯数据输入。`ItemPhysicsProjection2D` 只把 `ItemData.Stack.CurrentWeight` 映射成动态刚体质量，并将实际速度与接触事实写回不入存档的 `ItemData.PhysicsState`。
 - 感知批次对已存在空间格的重复访问用格子内 `LastVisitedBatch` 访问戳去重，禁止恢复每批 `HashSet<long>` 已访问集合；格子回池时必须清空成员并重置访问戳。
 - `ItemMgr.NotifyRuntimeItemMoved` 完成位置索引刷新后发布通用 `RuntimeItemMoved` 适配事件；移动订阅方只维护显式声明需要跟随的状态，并按网格根格变化去重，避免轮询或给普通 Item 增加每帧扫描。
 - 新模块同时检查脚本、ModuleData、模块/Item Prefab、Addressables 与 JSON 定义。
@@ -87,7 +87,7 @@ description: "Use when: 定位或修改 FlatWorld 的 Item/Module 组合架构�
 - 植物共用 `EntityGrowth/EntityClimate/AiecsVital`，带 `EntityPlantLifecycle` 的实体只由 `EntityPlantModuleSystem` 推进，普通通用能力查询必须排除它，避免成长和耐候重复结算；资源库存与周期生产分别使用 `EntityResourceStock/EntityStockProduction`。树冠的 `EntityCanopyFruitModule` 为托管组件，复用纯 C# 事件时间线，不代表所有树果结算已经 Burst 化。
 - 静态资源的配置刷新以当前定义为准，已保存树龄、冷热负担和实例生命保留；天然初始化只执行一次。历史耐候读取冻结季节历史，当前局部热源不能延伸到过去。自然物句柄包含 World 代际，过期 Chunk 回调不能命中新世界复用的整数 ID。
 - 资源实体持续维护纯数据导航、矩形接触阻挡和空间交互；玩家武器通过 `GameplayCombatBridge` 直接提交命中。区块解绑只保存释放，不触发采集或死亡；真实死亡/一次性收获才提交来源删除，天然续生和耕地作物快照分开管理。不得恢复近端 Item 接管或逐资源 Collider。
-- 资源 BRG 使用运行时实体 ID 与部件号分配负槽位，不能用格子或自然 GUID 覆盖树身、果实、阴影。源材质缓存键必须区分机械与资源 Shader 变体；逻辑坐标进入存档，局部镜像变换只用于表现。渲染卸载必须清除全部部件。
+- 资源 BRG 使用运行时实体 ID 与部件号分配负槽位，不能用格子或自然 GUID 覆盖树身、果实、阴影。静态自然物表现由 Dirty/Event 队列驱动，成长版本、采集、受击、树冠变化和环世界重投影才触发重提；禁止在 `Present` 中每帧全量遍历所有资源。接触阴影几何只在实体几何/绑定变化时重建，昼夜透明度走批次级材质参数。源材质缓存键必须区分机械与资源 Shader 变体；逻辑坐标进入存档，局部镜像变换只用于表现。渲染卸载必须清除全部部件。
 - 带 `Tag.Tree` 的资源主体与附属果实使用 `NaturalEntityEcsService.TreeSortingVisual` 纯视觉桥，以树根本地镜像为 `SortingGroup` 锚点，读取 `world-item` 排序键与玩家混排。不得同时保留主体 BRG 实例；太阳/接触阴影继续合批。视觉外壳只含 Transform、SortingGroup、SpriteRenderer，不恢复 Item、Module、Collider 或逐树 Update，解绑与换世界必须一并释放。
 - 资源客户端不推进权威植物 Job；客户端采集命令及资源状态增量同步仍需独立接入，不能把服务端实体迁移当成联机链已经完成，也不能回退旧 GameObject 来掩盖缺口。蜂巢、传送门等未声明资源后端的独立玩法不在植物后端中静默模拟。
 - 旧 Item 返回型扩展通过 `ScheduleLegacyDrop` 在本轮模块更新完成后移交，禁止在 Item.Load 的模块栈内销毁宿主。联机仍使用已有 Item 权威链，不能把单机 ECS 路径当成已完成网络迁移。

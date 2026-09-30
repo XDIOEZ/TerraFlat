@@ -243,6 +243,7 @@ public sealed class WorldSortingManager : SingletonMono<WorldSortingManager>
         if (member == null)
             member = item.gameObject.AddComponent<WorldSortingMember>();
         member.Bind(category, renderer, item);
+        BuildingDepthMeshBridge.Register(item);
     }
 
     /// <summary>优先使用 Item 的主体引用，尚未赋值时选非 Canvas 的有效世界精灵。</summary>

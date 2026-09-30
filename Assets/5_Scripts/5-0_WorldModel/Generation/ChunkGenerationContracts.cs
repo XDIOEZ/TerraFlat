@@ -300,6 +300,29 @@ namespace FlatWorld.WorldModel
                 PortalPairing);
         }
 
+        /// <summary>复制 Profile 并覆盖区块尺寸；运行时世界的 PlanetData 是区块网格唯一真源。</summary>
+        public ChunkGenerationProfileSnapshot WithChunkSize(int width, int height)
+        {
+            if (width <= 0)
+                throw new ArgumentOutOfRangeException(nameof(width));
+            if (height <= 0)
+                throw new ArgumentOutOfRangeException(nameof(height));
+            if (Width == width && Height == height)
+                return this;
+
+            return new ChunkGenerationProfileSnapshot(
+                ProfileId,
+                Signature,
+                width,
+                height,
+                new Dictionary<string, double>(numericParameters, StringComparer.Ordinal),
+                new Dictionary<string, string>(textParameters, StringComparer.Ordinal),
+                EcologyGlobalMultiplier,
+                EcologyRules,
+                CaveResourceRules,
+                PortalPairing);
+        }
+
         /// <summary>复制 Profile 并替换已经冻结的生态规则，用于存档恢复。</summary>
         public ChunkGenerationProfileSnapshot WithEcology(
             double globalMultiplier, IEnumerable<EcologySpawnRuleSnapshot> rules)

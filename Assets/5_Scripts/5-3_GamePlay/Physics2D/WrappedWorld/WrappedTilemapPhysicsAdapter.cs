@@ -170,16 +170,20 @@ public sealed class WrappedTilemapPhysicsAdapter : MonoBehaviour
         CompositeCollider2D sourceComposite = sourceCollider.usedByComposite
             ? source.GetComponent<CompositeCollider2D>()
             : null;
+        PolygonCollider2D sourceDataCollider = sourceComposite != null
+            ? source.GetComponent<PolygonCollider2D>()
+            : null;
         EligibleSourceColliderCount++;
 
         for (int i = 0; i < offsets.Count; i++)
         {
             float2 imageOffset = offsets[i];
             Vector2 offset = new Vector2(imageOffset.x, imageOffset.y);
-            ProxyRecord record = GetOrCreate(source, sourceCollider, sourceComposite, offset);
+            ProxyRecord record = GetOrCreate(source, sourceCollider, sourceComposite, sourceDataCollider, offset);
             if (record == null)
                 continue;
             CopyTiles(source, record.Tilemap);
+            CopyDataPaths(sourceDataCollider, record.DataCollider);
             UpdateTransform(record, source, offset);
             record.Generation = refreshGeneration;
             record.Root.SetActive(source.gameObject.activeInHierarchy && sourceCollider.enabled);
@@ -243,13 +247,14 @@ public sealed class WrappedTilemapPhysicsAdapter : MonoBehaviour
     }
 
     private ProxyRecord GetOrCreate(Tilemap source, TilemapCollider2D sourceCollider,
-        CompositeCollider2D sourceComposite, Vector2 offset)
+        CompositeCollider2D sourceComposite, PolygonCollider2D sourceDataCollider, Vector2 offset)
     {
         for (int i = 0; i < records.Count; i++)
         {
             ProxyRecord existing = records[i];
             if (existing.Source == source && existing.SourceCollider == sourceCollider &&
-                existing.SourceComposite == sourceComposite && existing.Offset == offset)
+                existing.SourceComposite == sourceComposite && existing.SourceDataCollider == sourceDataCollider &&
+                existing.Offset == offset)
                 return existing;
         }
 
@@ -292,6 +297,13 @@ public sealed class WrappedTilemapPhysicsAdapter : MonoBehaviour
             proxyComposite.generationType = sourceComposite.generationType;
             proxyCollider.usedByComposite = true;
         }
+        PolygonCollider2D proxyDataCollider = null;
+        if (sourceDataCollider != null)
+        {
+            proxyDataCollider = tileObject.AddComponent<PolygonCollider2D>();
+            proxyDataCollider.pathCount = 0;
+            proxyDataCollider.usedByComposite = sourceDataCollider.usedByComposite;
+        }
         Collider2D sourcePhysics = sourceComposite != null ? sourceComposite : sourceCollider;
         Collider2D proxyPhysics = proxyComposite != null ? proxyComposite : proxyCollider;
         proxyPhysics.isTrigger = sourcePhysics.isTrigger;
@@ -309,10 +321,12 @@ public sealed class WrappedTilemapPhysicsAdapter : MonoBehaviour
             Source = source,
             SourceCollider = sourceCollider,
             SourceComposite = sourceComposite,
+            SourceDataCollider = sourceDataCollider,
             Root = root,
             Tilemap = proxyTilemap,
             Collider = proxyCollider,
             Composite = proxyComposite,
+            DataCollider = proxyDataCollider,
             Offset = offset
         };
         records.Add(record);
@@ -327,6 +341,14 @@ public sealed class WrappedTilemapPhysicsAdapter : MonoBehaviour
             return;
         target.SetTilesBlock(cellBounds, source.GetTilesBlock(cellBounds));
         target.RefreshAllTiles();
+    }
+
+    private static void CopyDataPaths(PolygonCollider2D source, PolygonCollider2D target)
+    {
+        if (source == null || target == null) return;
+        target.pathCount = source.pathCount;
+        for (int i = 0; i < source.pathCount; i++)
+            target.SetPath(i, source.GetPath(i));
     }
 
     private static void UpdateTransform(ProxyRecord record, Tilemap source, Vector2 offset)
@@ -365,10 +387,12 @@ public sealed class WrappedTilemapPhysicsAdapter : MonoBehaviour
         public Tilemap Source;
         public TilemapCollider2D SourceCollider;
         public CompositeCollider2D SourceComposite;
+        public PolygonCollider2D SourceDataCollider;
         public GameObject Root;
         public Tilemap Tilemap;
         public TilemapCollider2D Collider;
         public CompositeCollider2D Composite;
+        public PolygonCollider2D DataCollider;
         public Vector2 Offset;
         public int Generation;
     }

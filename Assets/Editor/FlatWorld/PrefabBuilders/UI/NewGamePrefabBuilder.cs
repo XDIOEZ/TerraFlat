@@ -184,13 +184,19 @@ public static class NewGamePrefabBuilder
         TMP_Text heading = CreateText("世界参数标题", panel.transform, "世界参数", font, 28f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
         SetRect(heading.rectTransform, new Vector2(24f, -62f), new Vector2(320f, 40f), new Vector2(0f, 1f));
 
-        CreateCompactLabel(panel.transform, font, "星球半径标签", "星球半径", "越大，探索范围越广", new Vector2(24f, -108f), 286f);
-        CreateCompactLabel(panel.transform, font, "噪声缩放标签", "世界坐标缩放", "越小舒展，越大密集", new Vector2(322f, -108f), 286f);
+        const float fieldWidth = 140f;
+        CreateCompactLabel(panel.transform, font, "星球半径标签", "星球半径", "探索范围", new Vector2(24f, -108f), fieldWidth);
+        CreateCompactLabel(panel.transform, font, "噪声缩放标签", "坐标缩放", "地貌疏密", new Vector2(180f, -108f), fieldWidth);
+        CreateCompactLabel(panel.transform, font, "区块宽度标签", "区块宽度", "1–256 格", new Vector2(336f, -108f), fieldWidth);
+        CreateCompactLabel(panel.transform, font, "区块高度标签", "区块高度", "建议 16–64", new Vector2(492f, -108f), fieldWidth);
 
         string defaultRadius = PlanetData.DefaultRadius.ToString(CultureInfo.InvariantCulture);
-        CreateInput(panel.transform, font, GameManager.NewGameRadiusInputKey, defaultRadius, defaultRadius, new Vector2(24f, -166f), new Vector2(286f, 84f), TMP_InputField.ContentType.IntegerNumber);
+        CreateInput(panel.transform, font, GameManager.NewGameRadiusInputKey, defaultRadius, defaultRadius, new Vector2(24f, -166f), new Vector2(fieldWidth, 84f), TMP_InputField.ContentType.IntegerNumber);
         string defaultNoiseScale = PlanetData.DefaultNoiseScale.ToString("0.########", CultureInfo.InvariantCulture);
-        CreateInput(panel.transform, font, GameManager.NewGameNoiseInputKey, defaultNoiseScale, defaultNoiseScale, new Vector2(322f, -166f), new Vector2(286f, 84f), TMP_InputField.ContentType.DecimalNumber);
+        CreateInput(panel.transform, font, GameManager.NewGameNoiseInputKey, defaultNoiseScale, defaultNoiseScale, new Vector2(180f, -166f), new Vector2(fieldWidth, 84f), TMP_InputField.ContentType.DecimalNumber);
+        string defaultChunkSize = PlanetData.DefaultChunkDimension.ToString(CultureInfo.InvariantCulture);
+        CreateInput(panel.transform, font, GameManager.NewGameChunkWidthInputKey, defaultChunkSize, defaultChunkSize, new Vector2(336f, -166f), new Vector2(fieldWidth, 84f), TMP_InputField.ContentType.IntegerNumber);
+        CreateInput(panel.transform, font, GameManager.NewGameChunkHeightInputKey, defaultChunkSize, defaultChunkSize, new Vector2(492f, -166f), new Vector2(fieldWidth, 84f), TMP_InputField.ContentType.IntegerNumber);
 
         Toggle topologyToggle = CreateToggle(
             panel.transform,

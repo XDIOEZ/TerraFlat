@@ -65,6 +65,7 @@ public sealed class ChunkView : MonoBehaviour
 
         registered = ChunkBatchRendererGroupService.IsOwnerRegistered(tilemapRenderer);
         visualCount = tilemapRenderer.BaseTerrainVisualCount +
+                      tilemapRenderer.DepthMeshPartCount +
                       ChunkBatchRendererGroupService.GetOwnerTerrainVisualCount(tilemapRenderer);
         return true;
     }
@@ -108,6 +109,7 @@ public sealed class ChunkView : MonoBehaviour
         {
             if (!navigationEnabled && renderers[i] is ChunkNavigationBinder)
                 continue;
+            EnsureBaseTerrainPresentation(renderers[i]);
             LastBindingRenderer = rendererTimingNames[i];
             using (world.StreamingDiagnostics.Measure(LastBindingRenderer))
                 renderers[i].Bind(chunk);
@@ -142,6 +144,7 @@ public sealed class ChunkView : MonoBehaviour
             if (!navigationEnabled && renderers[i] is ChunkNavigationBinder)
                 continue;
 
+            EnsureBaseTerrainPresentation(renderers[i]);
             LastBindingRenderer = rendererTimingNames[i];
             if (renderers[i] is IIncrementalChunkViewRenderer incrementalRenderer)
             {
@@ -150,6 +153,7 @@ public sealed class ChunkView : MonoBehaviour
                 {
                     while (version == bindVersion && ReferenceEquals(chunk, chunkRuntime))
                     {
+                        EnsureBaseTerrainPresentation(renderers[i]);
                         bool hasNext;
                         using (RendererBindMarker.Auto())
                         using (worldRuntime.StreamingDiagnostics.Measure(LastBindingRenderer))
@@ -329,6 +333,20 @@ public sealed class ChunkView : MonoBehaviour
         committedSubscription = world.Events.SubscribeChunkCommitted(chunk.Address, HandleChunkCommitted);
     }
 
+    /// <summary>分帧绑定期间 BRG 后端可能被资源生命周期重置；继续扩展表现前先从权威地形恢复 Owner。</summary>
+    private void EnsureBaseTerrainPresentation(IChunkViewRenderer renderer)
+    {
+        if (renderer is ChunkTilemapRenderer)
+            return;
+        if (terrainRenderer == null)
+            throw new InvalidOperationException("ChunkView 缺少基础地形表现器。");
+        if (terrainRenderer.IsBatchPresentationComplete)
+            return;
+        if (!terrainRenderer.RepairBatchPresentationIfNeeded())
+            throw new InvalidOperationException(
+                $"{renderer.GetType().Name} 绑定前无法恢复基础地形 BRG Owner。");
+    }
+
     /// <summary>ChunkRuntime 地址保持规范坐标；ChunkView 只选择离本地玩家最近的显示/碰撞镜像。</summary>
     public void RefreshLocalPresentationPosition()
     {
@@ -337,7 +355,10 @@ public sealed class ChunkView : MonoBehaviour
 
         Vector2 logicalOrigin = new Vector2(chunk.Address.ChunkOrigin.X, chunk.Address.ChunkOrigin.Y);
         Vector2 projectedOrigin = WorldLocalPresentation.ProjectPosition(logicalOrigin);
-        transform.position = new Vector3(projectedOrigin.x, projectedOrigin.y, 0f);
+        Vector3 projected = new(projectedOrigin.x, projectedOrigin.y, 0f);
+        if (transform.position == projected) return;
+        transform.position = projected;
+        terrainRenderer?.RefreshDepthProjection();
     }
 
     /// <summary>先让地面可见，再补环境、碰撞、草地和导航。</summary>

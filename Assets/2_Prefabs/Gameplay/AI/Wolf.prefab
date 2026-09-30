@@ -693,7 +693,7 @@ MonoBehaviour:
   _chaseFormationTarget: {x: 0, y: 0, z: 0}
   _chaseFormationSlot: -1
   _chaseFormationMemberCount: 0
-  debugLog: 1
+  debugLog: 0
   wolfTags:
   - Wolf
   playerTags:

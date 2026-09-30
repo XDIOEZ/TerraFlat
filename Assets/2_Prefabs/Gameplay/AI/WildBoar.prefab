@@ -547,7 +547,7 @@ MonoBehaviour:
     GrassSustenanceRemaining: 0
   _currentFoodTarget: {fileID: 0}
   _currentThreat: {fileID: 0}
-  debugLog: 1
+  debugLog: 0
   eatEnterHungerRate: 0.4
   eatExitHungerRate: 0.8
   sleepEnterHpRate: 0.45
