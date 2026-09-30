@@ -356,6 +356,15 @@ public static class FlatWorldUITheme
                 continue;
             }
 
+            if (IsPopupBackdropGraphic(root, image))
+            {
+                image.sprite = null;
+                image.type = Image.Type.Simple;
+                image.preserveAspect = false;
+                image.color = Color.clear;
+                continue;
+            }
+
             if (IsFillGraphic(image))
             {
                 StyleSemanticFill(image);
@@ -1300,11 +1309,14 @@ public static class FlatWorldUITheme
         return false;
     }
 
-    /// <summary>瓦罐采用与石臼同类的无底板表现，只把根节点和内容容器保留为透明输入层。</summary>
+    /// <summary>无底板玩法面板与弹窗根节点只保留透明输入层，不绘制全屏底色。</summary>
     private static bool IsBackgroundlessPanelSurface(Transform root, Transform candidate)
     {
         if (root == null || candidate == null)
             return false;
+
+        if (candidate == root && HasDirectDialogChild(root))
+            return true;
 
         bool backgroundlessRoot = false;
         for (int i = 0; i < BackgroundlessPanelNames.Length; i++)
@@ -1321,6 +1333,46 @@ public static class FlatWorldUITheme
 
         return candidate == root ||
                string.Equals(candidate.name, "设置对话框", StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>弹窗允许透明输入阻挡层，但不允许任何可见的全屏暗幕或大面积背景投影。</summary>
+    private static bool IsPopupBackdropGraphic(Transform root, Image image)
+    {
+        if (root == null || image == null)
+            return false;
+
+        string objectName = image.name;
+        if (ContainsAny(
+                objectName,
+                "界面遮罩",
+                "全屏背景遮罩",
+                "二次确认界面",
+                "保存退出确认层"))
+        {
+            return true;
+        }
+
+        return HasDirectDialogChild(root) &&
+               ContainsAny(objectName, "主卡投影", "Scrim", "Blocker", "Overlay");
+    }
+
+    /// <summary>带直属“对话框”子节点的根视为悬浮弹窗容器。</summary>
+    private static bool HasDirectDialogChild(Transform root)
+    {
+        if (root == null)
+            return false;
+
+        for (int index = 0; index < root.childCount; index++)
+        {
+            Transform child = root.GetChild(index);
+            if (child != null &&
+                child.name.IndexOf("对话框", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static bool IsHud(string rootName)

@@ -1685,7 +1685,7 @@ public static partial class RuntimeUIPrefabBuilder
             new Vector2(760f, 360f));
         Transform dialog = root.transform.Find("设置对话框");
         dialog.name = "退出确认对话框";
-        ConfigureMainMenuModalBackground(root, dialog, "退出确认");
+        ConfigureMainMenuModalBackground(root, dialog);
 
         CreateMainMenuSettingsHeader(
             dialog,
@@ -1723,34 +1723,14 @@ public static partial class RuntimeUIPrefabBuilder
         return root;
     }
 
-    /// <summary>为主菜单模态窗口建立覆盖刘海区的暗幕、卡片投影和暖黑背景。</summary>
+    /// <summary>主菜单弹窗只保留悬浮窗口本体；全屏根节点仅透明拦截背景输入。</summary>
     private static void ConfigureMainMenuModalBackground(
         GameObject root,
-        Transform dialog,
-        string objectNamePrefix)
+        Transform dialog)
     {
         Image rootBlocker = root.GetComponent<Image>();
-        rootBlocker.color = new Color(0.004f, 0.008f, 0.012f, 0.01f);
-
-        Image backdrop = CreateImage(
-            objectNamePrefix + "全屏背景遮罩",
-            root.transform,
-            new Color(0.004f, 0.009f, 0.013f, 0.88f));
-        Stretch(backdrop.rectTransform);
-        backdrop.raycastTarget = false;
-        backdrop.gameObject.AddComponent<FullScreenRectController>();
-        backdrop.transform.SetAsFirstSibling();
-
-        Image shadow = CreateImage(
-            objectNamePrefix + "主卡投影",
-            root.transform,
-            new Color(0f, 0f, 0f, 0.48f));
-        SetCentered(
-            shadow.rectTransform,
-            new Vector2(14f, -16f),
-            FlatWorldUIPanelMetrics.SharedModalCardSize);
-        shadow.raycastTarget = false;
-        shadow.transform.SetSiblingIndex(1);
+        rootBlocker.color = Color.clear;
+        rootBlocker.raycastTarget = true;
 
         Image dialogImage = dialog.GetComponent<Image>();
         dialogImage.color = MainMenuSettingsCanvas;
@@ -2569,7 +2549,7 @@ public static partial class RuntimeUIPrefabBuilder
 
     /// <summary>
     /// 重建会话页共用的保存退出确认层；340 高度的内容预算为上下边距 56 + 提示 150 + 间距 18 + 按钮区 72 = 296。
-    /// 遮罩是设置面板的最后一个兄弟节点，鼠标射线与手柄焦点均不会穿透到底层分页。
+    /// 全屏层保持完全透明，只负责阻断鼠标射线与底层分页焦点，不遮暗背景。
     /// </summary>
     private static void RebuildSettingsExitConfirmation(Transform root)
     {
@@ -2586,7 +2566,7 @@ public static partial class RuntimeUIPrefabBuilder
             typeof(Image));
         Stretch(layer.GetComponent<RectTransform>());
         Image blocker = layer.GetComponent<Image>();
-        blocker.color = new Color(0.008f, 0.014f, 0.018f, 0.82f);
+        blocker.color = Color.clear;
         blocker.raycastTarget = true;
 
         GameObject dialog = CreateUIObject(
@@ -3592,7 +3572,7 @@ public static partial class RuntimeUIPrefabBuilder
         return root;
     }
 
-    /// <summary>创建带遮罩的居中模态面板，根节点负责拦截背景输入。</summary>
+    /// <summary>创建无可见蒙板的居中模态面板；透明根节点只负责拦截背景输入。</summary>
     private static GameObject CreateModalPanelRoot(string name, Vector2 size)
     {
         GameObject root = new GameObject(
@@ -3605,7 +3585,7 @@ public static partial class RuntimeUIPrefabBuilder
         Stretch(root.GetComponent<RectTransform>());
 
         Image overlay = root.GetComponent<Image>();
-        overlay.color = new Color(0.015f, 0.028f, 0.034f, 0.78f);
+        overlay.color = Color.clear;
         overlay.raycastTarget = true;
         ConfigureBasePanel(root);
 

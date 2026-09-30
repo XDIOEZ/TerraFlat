@@ -109,7 +109,7 @@ public static class GameSavePrefabBuilder
 
     private static void BuildScrim(Transform root)
     {
-        Image scrim = CreateImage("存档界面遮罩", root, new Color(0.006f, 0.016f, 0.024f, 0.76f));
+        Image scrim = CreateImage("存档界面遮罩", root, Color.clear);
         Stretch(scrim.rectTransform);
         scrim.gameObject.AddComponent<FullScreenRectController>();
         scrim.raycastTarget = true;
@@ -293,10 +293,10 @@ public static class GameSavePrefabBuilder
         return actions;
     }
 
-    /// <summary>构建覆盖主卡的二次确认层；遮罩阻断点击，默认焦点落在安全的取消按钮。</summary>
+    /// <summary>构建覆盖主卡的二次确认层；透明输入层阻断点击，默认焦点落在安全的取消按钮。</summary>
     private static GameObject BuildBatchDeleteConfirmation(Transform card, TMP_FontAsset font)
     {
-        Image overlay = CreateImage("批量删除二次确认界面", card, new Color(0.003f, 0.008f, 0.012f, 0.88f));
+        Image overlay = CreateImage("批量删除二次确认界面", card, Color.clear);
         Stretch(overlay.rectTransform);
         overlay.raycastTarget = true;
 

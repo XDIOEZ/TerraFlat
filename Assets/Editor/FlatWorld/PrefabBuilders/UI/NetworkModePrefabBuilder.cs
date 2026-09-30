@@ -86,7 +86,7 @@ public static class NetworkModePrefabBuilder
 
     private static void BuildVisualTree(Transform root, TMP_FontAsset font)
     {
-        Image scrim = CreateImage("联机界面遮罩", root, new Color(0.006f, 0.016f, 0.024f, 0.76f));
+        Image scrim = CreateImage("联机界面遮罩", root, Color.clear);
         Stretch(scrim.rectTransform);
         scrim.gameObject.AddComponent<FullScreenRectController>();
         scrim.raycastTarget = true;
