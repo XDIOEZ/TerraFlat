@@ -37,20 +37,15 @@ public readonly struct SunShadowParameters
 }
 
 /// <summary>
-/// 直接采样 DayTimeSystem 的场景时间和有效光照：5～6 点渐显、18～19 点渐隐。
-/// 正午仍保留短投影；最大倍率和世界长度同时限制，不使用 Unity _Time 或另一个时钟。
+/// 直接采样 DayTimeSystem 的场景时间和太阳日照：影子是否出现只由日照亮度决定。
+/// 时间只负责太阳轨迹方向；正午仍保留短投影，不使用 Unity _Time 或另一个时钟。
 /// </summary>
 public static class SunShadowParametersProvider
 {
     #region 太阳采样与维度规则
 
     public const string ShaderVectorName = "_WorldSunShadow";
-    private const float SunriseFadeStart = 5f / 24f; // 日出前一小时开始显现。
-    private const float SunriseFadeEnd = 6f / 24f;
-    private const float SunsetFadeStart = 18f / 24f;
-    private const float SunsetFadeEnd = 19f / 24f; // 日落后一小时完全消失。
     public static float MaximumOpacity => WorldRenderingConfigCatalog.Default.shadows.maximumOpacity;
-    private static float MinimumSunlight => WorldRenderingConfigCatalog.Default.shadows.minimumSunlight;
     private static readonly int ParametersId = Shader.PropertyToID(ShaderVectorName);
     private static readonly int ColorId = Shader.PropertyToID("_WorldSunShadowColor");
 
@@ -67,18 +62,17 @@ public static class SunShadowParametersProvider
             return default;
 
         float day = Mathf.Repeat(data.CurrentTime / Mathf.Max(1f, data.DayLength), 1f);
-        if (ResolveDaylightFade(day) <= 0f) return default;
+        float alpha = ResolveOpacity(time.GetSunLighting(worldKey));
+        if (alpha <= 0.001f) return default;
 
-        // 渐显和渐隐期间保持地平线方向，避免 6 点或 18 点切换投影几何。
-        float progress = Mathf.Clamp01((day - SunriseFadeEnd) /
-            (SunsetFadeStart - SunriseFadeEnd));
+        // 时间只决定太阳在天空中的方向，不再决定影子的出现和消失。
+        float progress = Mathf.Clamp01((day - 0.25f) / 0.5f);
 
         // 单精度 Sin(PI) 可能略小于零，非整数次幂前必须限制在太阳高度的合法区间。
         float altitude = Mathf.Clamp01(Mathf.Sin(progress * Mathf.PI));
         Vector2 direction = new Vector2(-Mathf.Cos(progress * Mathf.PI), -0.55f).normalized;
         float length = Mathf.Lerp(Mathf.Max(minimumLength, maximumLength), minimumLength,
             Mathf.Pow(altitude, 0.75f));
-        float alpha = ResolveSolarOpacity(time.GetLighting(worldKey), day);
         SunShadowPhase phase = progress < 0.08f ? SunShadowPhase.Sunrise :
             progress > 0.92f ? SunShadowPhase.Sunset :
             Mathf.Abs(progress - 0.5f) < 0.04f ? SunShadowPhase.Noon :
@@ -86,31 +80,11 @@ public static class SunShadowParametersProvider
         return new SunShadowParameters(direction, length, alpha, Mathf.Max(0.1f, maximumDistance), phase);
     }
 
-    /// <summary>同一场景光照对应的基础透明度；晨昏进度由 ResolveSolarOpacity 叠加。</summary>
+    /// <summary>太阳日照直接决定阴影透明度；只要仍有日照就保留对应强度的阴影。</summary>
     public static float ResolveOpacity(float sunlight)
     {
         if (float.IsNaN(sunlight) || float.IsInfinity(sunlight)) return 0f;
-        return MaximumOpacity * Mathf.InverseLerp(MinimumSunlight, 1f, Mathf.Clamp01(sunlight));
-    }
-
-    /// <summary>所有太阳投影与脚底阴影共用的日出渐显、日落渐隐系数。</summary>
-    public static float ResolveDaylightFade(float dayFraction)
-    {
-        if (float.IsNaN(dayFraction) || float.IsInfinity(dayFraction)) return 0f;
-        float day = Mathf.Repeat(dayFraction, 1f);
-        if (day <= SunriseFadeStart || day >= SunsetFadeEnd) return 0f;
-        if (day < SunriseFadeEnd)
-            return Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(SunriseFadeStart, SunriseFadeEnd, day));
-        if (day > SunsetFadeStart)
-            return 1f - Mathf.SmoothStep(0f, 1f,
-                Mathf.InverseLerp(SunsetFadeStart, SunsetFadeEnd, day));
-        return 1f;
-    }
-
-    /// <summary>有效光照与当天太阳出现进度共同决定阴影透明度，月光不会留下太阳阴影。</summary>
-    public static float ResolveSolarOpacity(float sunlight, float dayFraction)
-    {
-        return ResolveOpacity(sunlight) * ResolveDaylightFade(dayFraction);
+        return MaximumOpacity * Mathf.Clamp01(sunlight);
     }
 
     /// <summary>自动规则禁止地下及固定光照维度；作者可显式覆盖。</summary>

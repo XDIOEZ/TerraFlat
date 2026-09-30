@@ -14,6 +14,17 @@ public static class SharedSpriteMeshCache
     // Unity Object 键使用 Unity 身份比较，并持有源 Sprite，避免按名称合并不同资源。
     private static readonly Dictionary<Sprite, Mesh> meshes = new();
     private static readonly Dictionary<Sprite, Geometry> geometries = new();
+    private static readonly Dictionary<Sprite, SunShadowGeometry> sunShadowGeometries = new();
+    internal const float SunShadowPaddingPixels = 5f; // 覆盖最大四像素模糊半径与半像素线性过滤边界。
+    private const float SunShadowReferencePixelsPerUnit = 16f; // 阴影柔化按世界像素密度归一，避免高分辨率 Sprite 变成硬边。
+
+    internal sealed class SunShadowGeometry
+    {
+        internal Mesh Mesh;
+        internal Vector4 UvBounds;
+        internal Vector3 UvToLocalY;
+        internal float TexelScale;
+    }
 
     /// <summary>行网格复用同一份原始几何，不能为每个实例重复读取 Sprite 的分配型数组属性。</summary>
     internal sealed class Geometry
@@ -98,6 +109,86 @@ public static class SharedSpriteMeshCache
 
     #endregion
 
+    #region 太阳投影几何
+
+    /// <summary>每张 Sprite 共享一个带透明外沿的四边形，不修改本体网格与贴图过滤。</summary>
+    internal static SunShadowGeometry GetSunShadowGeometry(Sprite sprite)
+    {
+        if (sunShadowGeometries.TryGetValue(sprite, out SunShadowGeometry existing)) return existing;
+        Geometry source = GetGeometry(sprite);
+        Vector2 origin = default, uvX = default, uvY = default;
+        bool mapped = false;
+        for (int triangle = 0; triangle < source.Triangles.Length; triangle += 3)
+        {
+            int a = source.Triangles[triangle], b = source.Triangles[triangle + 1], c = source.Triangles[triangle + 2];
+            Vector2 p = source.Vertices[a];
+            Vector2 x = (Vector2)source.Vertices[b] - p, y = (Vector2)source.Vertices[c] - p;
+            float determinant = x.x * y.y - x.y * y.x;
+            if (Mathf.Abs(determinant) < 1e-12f) continue;
+            Vector2 u = source.Uv[b] - source.Uv[a], v = source.Uv[c] - source.Uv[a];
+            uvX = (u * y.y - v * x.y) / determinant;
+            uvY = (v * x.x - u * y.x) / determinant;
+            origin = source.Uv[a] - uvX * p.x - uvY * p.y;
+            mapped = true;
+            break;
+        }
+        if (!mapped) throw new InvalidOperationException($"太阳投影 Sprite 没有有效三角形：{sprite.name}");
+
+        // 从真实顶点恢复 UV 映射，旋转或翻转打包的图集也沿用原图坐标。
+        float uvDeterminant = uvX.x * uvY.y - uvX.y * uvY.x;
+        if (Mathf.Abs(uvDeterminant) < 1e-20f)
+            throw new InvalidOperationException($"太阳投影 Sprite 的 UV 无效：{sprite.name}");
+        Vector2 uvToY = new Vector2(-uvX.y, uvX.x) / uvDeterminant;
+        float texelScale = Mathf.Max(0.01f, sprite.pixelsPerUnit / SunShadowReferencePixelsPerUnit);
+        Bounds bounds = source.Bounds;
+        bounds.Expand(SunShadowPaddingPixels * texelScale * 2f / sprite.pixelsPerUnit);
+        var vertices = new Vector3[4];
+        var uv = new Vector2[4];
+        for (int corner = 0; corner < 4; corner++)
+        {
+            bool right = corner == 1 || corner == 2, top = corner >= 2;
+            Vector3 point = new Vector3(right ? bounds.max.x : bounds.min.x, top ? bounds.max.y : bounds.min.y, 0f);
+            vertices[corner] = point;
+            uv[corner] = origin + uvX * point.x + uvY * point.y;
+        }
+        var mesh = new Mesh { name = $"SunShadow_{sprite.name}", hideFlags = HideFlags.HideAndDontSave };
+        try
+        {
+            mesh.vertices = vertices;
+            mesh.uv = uv;
+            mesh.colors = new[] { Color.white, Color.white, Color.white, Color.white };
+            mesh.triangles = new[] { 0, 1, 2, 0, 2, 3 };
+            mesh.RecalculateBounds();
+            existing = new SunShadowGeometry { Mesh = mesh, UvBounds = source.UvRect,
+                UvToLocalY = new Vector3(uvToY.x, uvToY.y, -Vector2.Dot(uvToY, origin)),
+                TexelScale = texelScale };
+            sunShadowGeometries.Add(sprite, existing);
+            return existing;
+        }
+        catch { DestroyMesh(mesh, false); throw; }
+    }
+
+    /// <summary>CPU 剔除使用阴影外沿的真实范围，镜像和旋转与绘制变换一致。</summary>
+    internal static Bounds GetSunShadowWorldBounds(Sprite sprite, Matrix4x4 localToWorld,
+        bool flipX = false, bool flipY = false)
+    {
+        Bounds local = GetSunShadowGeometry(sprite).Mesh.bounds;
+        Bounds world = default;
+        for (int corner = 0; corner < 4; corner++)
+        {
+            Vector3 point = new Vector3((corner & 1) == 0 ? local.min.x : local.max.x,
+                corner < 2 ? local.min.y : local.max.y, 0f);
+            if (flipX) point.x = -point.x;
+            if (flipY) point.y = -point.y;
+            point = localToWorld.MultiplyPoint3x4(point);
+            if (corner == 0) world = new Bounds(point, Vector3.zero);
+            else world.Encapsulate(point);
+        }
+        return world;
+    }
+
+    #endregion
+
     #region 会话与编辑器清理
 
     /// <summary>F5、失败、取消或 GameRes 销毁时释放整个会话；普通退出世界不调用。</summary>
@@ -126,11 +217,17 @@ public static class SharedSpriteMeshCache
                 try { DestroyMesh(mesh, immediate); }
                 catch (Exception exception) { Debug.LogException(exception); }
             }
+            foreach (SunShadowGeometry geometry in sunShadowGeometries.Values)
+            {
+                try { DestroyMesh(geometry.Mesh, immediate); }
+                catch (Exception exception) { Debug.LogException(exception); }
+            }
         }
         finally
         {
             meshes.Clear();
             geometries.Clear();
+            sunShadowGeometries.Clear();
             clearing = false;
         }
     }

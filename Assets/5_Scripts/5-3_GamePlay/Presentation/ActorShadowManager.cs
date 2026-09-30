@@ -299,7 +299,7 @@ public sealed class ActorShadowManager : SingletonMono<ActorShadowManager>
         return GetCachedSolarOpacity(actorScene);
     }
 
-    /// <summary>每场景每帧只计算一次有效光照与太阳出现进度，供所有接触阴影复用。</summary>
+    /// <summary>每场景每帧只计算一次太阳日照，供所有接触阴影复用。</summary>
     private float GetCachedSolarOpacity(Scene actorScene)
     {
         Scene resolvedScene = actorScene.IsValid() && actorScene.isLoaded
@@ -313,7 +313,7 @@ public sealed class ActorShadowManager : SingletonMono<ActorShadowManager>
 
         lightingFrame = Time.frameCount;
         lightingSceneHandle = sceneHandle;
-        cachedShadowOpacity = SunShadowParametersProvider.ResolveOpacity(1f);
+        cachedShadowOpacity = 0f;
         string sceneName = resolvedScene.name;
 
         DayTimeSystem dayTimeSystem = DayTimeSystem.GetInstance();
@@ -323,9 +323,8 @@ public sealed class ActorShadowManager : SingletonMono<ActorShadowManager>
             return cachedShadowOpacity;
         }
 
-        float dayFraction = Mathf.Repeat(timeData.CurrentTime / Mathf.Max(1f, timeData.DayLength), 1f);
-        cachedShadowOpacity = SunShadowParametersProvider.ResolveSolarOpacity(
-            dayTimeSystem.GetLighting(sceneName), dayFraction);
+        cachedShadowOpacity = SunShadowParametersProvider.ResolveOpacity(
+            dayTimeSystem.GetSunLighting(sceneName));
         return cachedShadowOpacity;
     }
 
@@ -373,6 +372,8 @@ public sealed class ActorShadowManager : SingletonMono<ActorShadowManager>
         isRootedPlant = false;
         shadowVisual = null;
         if (item == null || !item.gameObject.activeInHierarchy || IsItemInPool(item))
+            return false;
+        if (item.itemMods?.GetMod_ByID<Mod_Building>(ModText.Building)?.IsGroundFacility == true)
             return false;
 
         GameRes resources = GameRes.Instance;

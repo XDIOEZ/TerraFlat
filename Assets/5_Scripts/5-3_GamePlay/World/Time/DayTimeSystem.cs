@@ -413,6 +413,18 @@ private void TimeRun(string sceneName, float deltaTime)
     /// </summary>
     public float GetLighting(string sceneName)
     {
+        return GetLightingInternal(sceneName, true);
+    }
+
+    /// <summary>获取仅由太阳日照产生的最终场景亮度，不包含月光。</summary>
+    public float GetSunLighting(string sceneName)
+    {
+        return GetLightingInternal(sceneName, false);
+    }
+
+    /// <summary>统一计算场景光照；太阳阴影通过 includeMoonlight=false 读取纯日照。</summary>
+    private float GetLightingInternal(string sceneName, bool includeMoonlight)
+    {
         // 获取采光率
         float lightingRate = 1.0f;
         SceneLightingRateDict.TryGetValue(sceneName, out lightingRate);
@@ -426,14 +438,15 @@ private void TimeRun(string sceneName, float deltaTime)
         // 如果该场景引用了其他场景，则使用被引用场景的光照参数
         if (!string.IsNullOrEmpty(timeData.ReferenceScene))
         {
-            baseLightIntensity = GetLighting(timeData.ReferenceScene);
+            baseLightIntensity = GetLightingInternal(timeData.ReferenceScene, includeMoonlight);
         }
         else
         {
             // 使用自身光照参数计算基础光照强度
             float timeRatio = timeData.CurrentTime / timeData.DayLength;
-            baseLightIntensity = timeData.LightParams.Evaluate(timeRatio);
-            baseLightIntensity = Mathf.Max(baseLightIntensity, GetMoonlightIntensity(timeData));
+            baseLightIntensity = Mathf.Max(0f, timeData.LightParams.Evaluate(timeRatio));
+            if (includeMoonlight)
+                baseLightIntensity = Mathf.Max(baseLightIntensity, GetMoonlightIntensity(timeData));
         }
 
         // 维度光照值是上限而不是固定值：白天不会超过矿洞亮度，夜晚仍跟随地表继续变暗。

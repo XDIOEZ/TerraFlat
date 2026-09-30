@@ -74,11 +74,13 @@ Shader "FlatWorld/2D/Chunk BRG Sprite Lit"
 
             TEXTURE2D(_MainTex); SAMPLER(sampler_MainTex);
             TEXTURE2D(_MaskTex); SAMPLER(sampler_MaskTex);
+            #include "SunShadowSampling.hlsl"
             float4 _WorldSunShadow;
             float4 _WorldSunShadowColor;
             CBUFFER_START(UnityPerMaterial)
                 float4 _Color;
                 float4 _RendererColor;
+                float4 _MainTex_TexelSize;
                 float _GrassSwayEnabled;
                 float _GrassSwayAmplitude;
                 float _GrassSwaySpeed;
@@ -130,9 +132,12 @@ Shader "FlatWorld/2D/Chunk BRG Sprite Lit"
                 #if defined(_CHUNK_RESOURCE)
                 if (instanceData.data0.z > 0.5)
                 {
-                    float height = max(0, positionWS.y - instanceData.flowX.y) * instanceData.flowX.z;
-                    height = min(height, _WorldSunShadow.z / max(0.0001, length(_WorldSunShadow.xy)));
-                    positionWS.xy = float2(positionWS.x, instanceData.flowX.y) + _WorldSunShadow.xy * height;
+                    // 根部保留负高度，允许投影与主体重叠。
+                    float height = positionWS.y - instanceData.flowX.y;
+                    float2 displacement = _WorldSunShadow.xy * max(0, instanceData.flowX.z);
+                    displacement *= min(1, _WorldSunShadow.z /
+                        max(0.0001, length(displacement) * instanceData.flowX.w));
+                    positionWS.xy = float2(positionWS.x, instanceData.flowX.y) + displacement * height;
                 }
                 #endif
                 Varyings output = (Varyings)0;
@@ -160,14 +165,18 @@ Shader "FlatWorld/2D/Chunk BRG Sprite Lit"
                 #if defined(_CHUNK_MECHANICAL)
                 uv = AnimateChunkMechanicalUV(uv, input.mechanicalAnimation, input.mechanicalRegion);
                 #endif
-                half4 main = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, uv);
                 #if defined(_CHUNK_RESOURCE)
                 ChunkBRGInstanceData resource = LoadChunkBRGInstanceData();
-                if (resource.data0.w > 0.5) clip(input.resourceLocalY - resource.data0.x);
                 if (resource.data0.z > 0.5)
+                {
+                    half coverage = SampleSunShadowCoverage(uv, abs(_MainTex_TexelSize.xy),
+                        resource.data1, resource.flowY, resource.data0.y);
                     return half4(_WorldSunShadowColor.rgb,
-                        main.a * input.tint.a * _WorldSunShadowColor.a * _WorldSunShadow.w);
+                        coverage * input.tint.a * _WorldSunShadowColor.a * _WorldSunShadow.w);
+                }
+                if (resource.data0.w > 0.5) clip(input.resourceLocalY - resource.data0.x);
                 #endif
+                half4 main = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, uv);
                 main *= input.tint * _Color * _RendererColor;
                 half4 mask = SAMPLE_TEXTURE2D(_MaskTex, sampler_MaskTex, uv);
                 SurfaceData2D surfaceData;
@@ -208,11 +217,13 @@ Shader "FlatWorld/2D/Chunk BRG Sprite Lit"
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
             TEXTURE2D(_MainTex); SAMPLER(sampler_MainTex);
+            #include "SunShadowSampling.hlsl"
             float4 _WorldSunShadow;
             float4 _WorldSunShadowColor;
             CBUFFER_START(UnityPerMaterial)
                 float4 _Color;
                 float4 _RendererColor;
+                float4 _MainTex_TexelSize;
                 float _GrassSwayEnabled;
                 float _GrassSwayAmplitude;
                 float _GrassSwaySpeed;
@@ -250,9 +261,11 @@ Shader "FlatWorld/2D/Chunk BRG Sprite Lit"
                 #if defined(_CHUNK_RESOURCE)
                 if (d.data0.z > 0.5)
                 {
-                    float height = max(0, positionWS.y - d.flowX.y) * d.flowX.z;
-                    height = min(height, _WorldSunShadow.z / max(0.0001, length(_WorldSunShadow.xy)));
-                    positionWS.xy = float2(positionWS.x, d.flowX.y) + _WorldSunShadow.xy * height;
+                    float height = positionWS.y - d.flowX.y;
+                    float2 displacement = _WorldSunShadow.xy * max(0, d.flowX.z);
+                    displacement *= min(1, _WorldSunShadow.z /
+                        max(0.0001, length(displacement) * d.flowX.w));
+                    positionWS.xy = float2(positionWS.x, d.flowX.y) + displacement * height;
                 }
                 #endif
                 Varyings o = (Varyings)0;
@@ -276,14 +289,18 @@ Shader "FlatWorld/2D/Chunk BRG Sprite Lit"
                 #if defined(_CHUNK_MECHANICAL)
                 uv = AnimateChunkMechanicalUV(uv, input.mechanicalAnimation, input.mechanicalRegion);
                 #endif
-                half4 main = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, uv);
                 #if defined(_CHUNK_RESOURCE)
                 ChunkBRGInstanceData resource = LoadChunkBRGInstanceData();
-                if (resource.data0.w > 0.5) clip(input.resourceLocalY - resource.data0.x);
                 if (resource.data0.z > 0.5)
+                {
+                    half coverage = SampleSunShadowCoverage(uv, abs(_MainTex_TexelSize.xy),
+                        resource.data1, resource.flowY, resource.data0.y);
                     return half4(_WorldSunShadowColor.rgb,
-                        main.a * input.tint.a * _WorldSunShadowColor.a * _WorldSunShadow.w);
+                        coverage * input.tint.a * _WorldSunShadowColor.a * _WorldSunShadow.w);
+                }
+                if (resource.data0.w > 0.5) clip(input.resourceLocalY - resource.data0.x);
                 #endif
+                half4 main = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, uv);
                 return main * input.tint * _Color * _RendererColor;
             }
             ENDHLSL
