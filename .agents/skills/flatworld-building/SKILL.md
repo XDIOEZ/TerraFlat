@@ -18,6 +18,8 @@ description: "Use when: 定位或修改 FlatWorld 的建筑放置预览、安装
 
 ## 核心链与不变量
 
+- 贴地可交互设施使用建筑模块静态参数 `PlacementLayer=Ground`，召唤器与本体须一致；占用 Layer2，仅拒绝同层重复放置，允许 Layer0 墙体/实体建筑共格。根 Collider 保留 Trigger，导航与动态 LOS 不阻挡，三类阴影全部排除，维度交互/安装状态仍走原建筑模块。世界排序使用 `ground-building`（Default/0），配套 `Ground-Facility-Lit.mat` 的 Queue2991 位于地表覆盖之后、Blocking 墙体 Queue2992 之前；不可并入玩家层的 `BuildingDepthMeshBridge`。配置不写入安装快照，资源重载需同步占地、碰撞与排序。
+
 - 门模块必须绑定所属 Item 的主 SpriteRenderer 与根实体碰撞体；Unity 缺失组件的假 null 不能用 `??=` 判定。打开时交互注册仍须保留，导航通行通过 `BuildingOccupancyRegistry.SetPassable` 更新，但建筑放置占格不撤销；安装流程完成后再次同步开门状态。
 - 放置范围由交互半径的两倍统一派生，虚影与提交复用同一格边距离校验。越界隐藏虚影；仅在实际提交时以 `BuildingPlacementFailureReason` 向表现层区分越界和其它非法位置，不能逐帧发提示。
 - 放置模式的右键所有权不等于位置有效性；虚影因越界隐藏后，仍需根据当前准线先做范围校验并发拒绝反馈，不能被“预览为空”提前返回吞掉。
@@ -38,7 +40,7 @@ description: "Use when: 定位或修改 FlatWorld 的建筑放置预览、安装
 - 动态建筑的多格占地由建筑模块 `Building_Data.FootprintWidth/FootprintHeight` 声明，吸附格为左下锚点，缺省零值按 1×1 兼容旧数据；预览与提交必须逐格校验地形和占用，落地及读档逐格注册，拆除、禁用和失败回滚统一注销。视觉与物理碰撞体可覆盖多格，但不能代替离散格校验；跨世界边界的每格分别按拓扑归一化。
 - 建筑承重需求由当前物品定义的 `requiredGroundSupport` 提供，不写入建筑模块存档；每个占地格与当前有效表面比较 `loadCapacity`。有独立地表覆盖时使用平台/地板定义，露出的液面使用对应 `worldWater.loadCapacity`，干地使用 Tile 定义；预览、正式安装与服务端机械建筑校验共用门槛，等值允许。
 - 建筑占地的 Revision/CellChanged 同时服务 Native LOS 脏块桥，不能只依赖导航最终可走值的变化来刷新视线（例如原本不可走但不遮挡的格）。通知只标脏，复制前完成旧 Job；退出世界注销订阅，避免每个 AI 注册占地事件。
-- `Module_Building` 不得再携带独立物理 Collider；其 `boxCollider2D` 运行时统一绑定所属 Item 根节点由 `visual.collider` 定义的碰撞体，避免模块默认框与建筑实体框叠加后产生额外阻挡或错误光照遮挡。`BuildingBodyShell` 的根碰撞体必须保持启用、非 Trigger，并位于 `Collider` Layer；召唤器查询碰撞体仍按召唤器规则处理。
+- `Module_Building` 不得再携带独立物理 Collider；其 `boxCollider2D` 运行时统一绑定所属 Item 根节点由 `visual.collider` 定义的碰撞体，避免模块默认框与建筑实体框叠加后产生额外阻挡或错误光照遮挡。`BuildingBodyShell` 的根碰撞体位于 `Collider` Layer；实体障碍保持启用、非 Trigger，地板层设施保留 Trigger；召唤器查询碰撞体仍按召唤器规则处理。
 - 动态建筑的局部光阴影配置集中在 `Mod_Building.LightOcclusion.cs`：`LightOcclusionMode=Automatic` 只在自身有效 `Module_LightSource` 的光源进入真实轮廓或边缘间隙时，裁去光源以上的遮挡，熄灭后恢复完整轮廓；读取真实 Light2D 启用状态以兼容燃料模块直接熄灯。默认间隙 `OwnLightClearance=0.0625` 世界单位，`FullSilhouette` 保留封闭外壳，`None` 适合纯火焰/透明物。参数属于 Prefab/JSON `parameters` 配置，不写入建筑快照；MOD 改接收层后调用 `RefreshLightOcclusion()`。裁剪作用于该建筑对全部局部光的轮廓，是 2D 近似，不代表按光源高度逐灯排除自身。
 - 平台与地板铺设都由 `Tile_Block.groundPlacement` 与 `TileBuildingSystem.GroundPlacement` 负责，统一写入 `TerrainSupportLayer`，不替换底层地形、不占用 Blocking 层；来源地面标记与液体条件独立，平台用 `LiquidRequirement=Present`，地板用 `RequiredSourceFlags=Walkable + LiquidRequirement=Absent`，液体条件直接读取原始 LiquidDepth。预览、角色水域效果、建造和导航读取有效覆盖面；扣料失败或主动拆除只撤销覆盖值，底层原始地块自然恢复。
 - 静态岩壁/结构墙才使用 Blocking Tile；例如 `Wall_Stone`、`Wall_Wood` 只有 Summoner JSON，不创建动态本体定义。Tile 栈只通过 `Data_TileMap` API 读写。

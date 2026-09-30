@@ -39,6 +39,7 @@ python .agents/skills/flatworld-pixel-art/scripts/validate_pixel_asset.py <sprit
 - AI 生物尽量合并为一张等尺寸 Sprite Sheet，只制作一套标准侧向帧（默认 `Left`）和特殊动作组；`Right` 通过 Unity 的水平镜像得到，不在 PNG 中复制第二套帧，不能把四方向移动表混进来，Unity 负责按帧网格切割。
 - 仅生成美术时不创建 Prefab、Animator、SO 或玩法代码；需要接入时再读取对应 FlatWorld 领域 Skill，通过 Unity MCP 操作时读取 `unity-mcp-orchestrator`。
 - 不复制其他资源的 GUID；仅在目标 `.meta` 已存在时精确修改导入字段。高清设计源默认不进 Addressables，也不挂到 Prefab。
+- 参与局部光遮挡的 `Mod_Building` 世界建筑 Sprite 需要物理轮廓；未手工绘制时保留 `spriteGenerateFallbackPhysicsShape: 1`，否则安装可能因轮廓缺失回滚。`PlacementLayer=Ground` 或 `LightOcclusionMode=None` 不生成遮光轮廓。Sprite 物理轮廓不代替 JSON 中的实体 Collider 或离散占地。
 - 替换 JSON 定义物品的贴图时，先核对 `visual.spriteAddress`，它可能覆盖外壳 Prefab 的 Sprite；若旧引用指向共享地形图集，应为道具生成独立 Sprite 并同步注册同址 `ItemSprite` Addressables 条目，禁止直接覆盖共享图集。
 - 新增或替换物品 Sprite 后，不能只凭 PNG、`.meta` GUID 和 `Default.asset` 的 YAML 文本一致就认定地址可加载：运行中的 Addressables Fast Mode Locator 可能仍持有旧键索引。先确认 Unity 已将目标导入为 Sprite，优先通过 `AddressableAssetSettings.CreateOrMoveEntry` 在默认组注册 GUID、设为与 `visual.spriteAddress` 完全一致的地址并添加 `ItemSprite` 标签；若从外部修改了 Addressables YAML，须在 Unity 中重新导入对应分组资源，使 `AddressablesCatalogRefreshPostprocessor` 刷新 Locator。交付前执行 `FlatWorld/诊断/检查 Addressables 目录` 静态预检，确认没有“Sprite 地址未注册或类型不符”；这一步不需要进入 Play Mode。
 - 将继承其他物品贴图的染色占位物替换为独立成图时，同步检查 `visual.color` 与继承的 `rendererLocalScale`；原有乘色会改变新图配色，成图通常显式设为白色，尺寸则结合继承缩放和 PPU 验收。

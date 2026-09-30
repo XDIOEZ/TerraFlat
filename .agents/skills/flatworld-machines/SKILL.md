@@ -10,7 +10,7 @@ description: "Use when: 定位或修改 FlatWorld 的机器世界、工作台、
 - 权威实体和粗粒度领域逻辑：`Assets/5_Scripts/5-3_GamePlay/World/Machines/`。
 - 调度/存档：`MachineWorld.cs`；无端口设施/命令/鼓风：`MachineWorld.Facilities.cs`。
 - 工作台、熔炉、储物、堆肥、晾架、手动加工、手钻、取火、石臼、水容器各有 `MachineLogic`，机械扭矩仍由 `MechanicalNetworkGraph` 解算。
-- 表现：`ChunkTilemapRenderer.Mechanical.cs`、`MechanicalDynamicVisual*.cs`；面板：`MachinePanelSession`、`MechanicalPanelSession`、`VesselMachinePanelSession`。
+- 表现：`ChunkTilemapRenderer.Mechanical.cs`、`ChunkDepthMeshRenderer*.cs`、`MechanicalDepthVisual*.cs`；面板：`MachinePanelSession`、`MechanicalPanelSession`、`VesselMachinePanelSession`。
 - 网络：`NetworkItemStateCoordinator.Machines.cs`；库存入口：`MachineInventoryCommands`。
 - 代码 MOD：`ModRuntimeManager.Managed.cs`、`ModManagedAssemblyStore.cs`；作者示例：`ModSDK/Examples/HarmonyMachines/`。
 
@@ -23,14 +23,16 @@ description: "Use when: 定位或修改 FlatWorld 的机器世界、工作台、
 - 工作台配方与进度属于 `RecipeProcessor`，面板只发命令；输入/输出预检与结算复用 `CraftingService`。炉温、燃料、点火、副产物仍内聚在 `FurnaceLogic`，不要用“温度直接乘秒”替代实际热加工规则。
 - 机械最终 RPM 决定工作效率，扭矩是供给门槛；风箱通过 `Airflow` 输入影响炉体，炉体不遍历网络拓扑。
 - 机器库存只能由权威端修改。拖放、快捷转移、排序/整理都走正式命令和现有库存事务；服务端校验玩家归属、距离与物品身份。客户端快照先校验候选，再更新同格 ItemSlot 的内容；保留库存和槽位身份、本地 UI 布局，并同步禁止放入状态，不能因定期同步使拖拽来源失效。
+- 每名玩家独占、跨多个箱体共享的库存用 `MachineInventoryCommands.RegisterPrivateInventory` 注册角色与机器双键解析；不要放进公开的 `MachineLogic.Inventories` 或箱体快照。服务端用现有搬运/整理事务，私有库存只回给发起交互的连接；公共角色状态与联机全量存档快照也要剔除已注册的私有键。
 - 放置提交失败不得消费召唤器；拆回先捕获全部状态、成功生成返还物再删除。便携设施继续按 SharedModuleIds 迁移同一状态，不能另存手持/落地两份进度。
 - 箱子首次创建须接收当前配置/结构生成载荷中的库存及 InventoryInitName，后续只恢复 MachineStorageState；随机空结果也视为初始化完成，休眠、读档、F5 都不能重抽战利品。
 - 机器最大生命按当前定义 MaxHp 与快照 CraftedDurabilityMultiplier 共用 CraftedDurabilityQuality 换算；只在未初始化时赋当前生命，读档/唤醒不得重复叠乘已有受损生命。受损表现阈值同样使用实例最大生命。
 - `MachineArchive` 使用现有外层 `MechanicalNetworks` 载荷；保留缺失 MOD 的冷快照，避免卸载显示或暂缺资源导致存档丢失。不建立旧运行架构兼容层。
 - 新增设施必须通过资源目录预检：稳定身份、主领域工厂、必要库存/燃料配置与正式面板。预检不创建 MachineLogic、面板或世界节点，不污染 F5 候选会话。
-- 图形代理不保存 HP、库存、炉温等权威数据。ground 用 BRG；dynamicY 允许轻量 SpriteRenderer/SortingGroup 以正确遮挡玩家。
+- 机械图形代理不保存 HP、库存、炉温等权威数据；主体和运动部件合入所属区块的 Y 行网格，轻量 `MechanicalDepthVisual` 只负责交互与灯光，阴影继续走 BRG。
 - 普通设施本体的 `visual.rendererLocalPosition` 要同时用于放置预览、落地 Sprite 和阴影落点；格心仍是建造与动态排序锚点，不要用图片偏移改动权威占格。
 - 工作设施库存/加工面板保持非模态，不主动获取玩法输入锁；交互发送器会在锁定时取消当前目标，面板自行加锁会形成“刚打开就关闭”的循环。距离失效、切换目标和关闭按钮继续走原清理链。
+- 火堆与高炉/熔炉统一视为可交互炉类机械：`Mod_Furnace -> FurnaceLogic -> MachineWorld`；火堆是 `Ports=none` 的普通设施，不另建火堆专用交互运行时。炉体面板的输入/输出/燃料槽数量与命名必须和库存模板一致。
 - dynamicY 视觉用 `SpatialInteractionRegistry.Register` 绑定 `MachineWorld.GetOrCreateInteractionTarget` 返回的同一数据目标，光标命中按实际图层范围，描边由 `IWorldInteractionPreview` 通知现有视觉；停用/卸载须注销和清理描边，不为预览逐帧查询机械图，也不把库存或面板搬回视觉代理。
 
 ## MOD

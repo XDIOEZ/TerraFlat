@@ -12,6 +12,7 @@ description: "Use when: 定位或修改 FlatWorld 的 UIManager、BasePanel、�
 - 面板层级主要通过明度区分：根面板最暗、内容区略亮、按钮/标题栏再抬一级；普通 UI 边框统一使用约 2 个参考像素的低透明白/灰线，文字描边仍保持约 1 像素，避免像素字体发糊；不叠加厚重双描边、木框或高对比阴影。
 - 暖黄只用于细强调线、焦点描边、选择状态和少量关键操作；危险/生命等玩法语义色允许保留低饱和状态色，但不能让整套界面重新变成彩色主题。
 - 文字继续使用现有 TMP/本地化字体与移动端字号、触控尺寸约束；标题、正文、说明只靠字号/明度/字重分级，禁止为填充视觉新增装饰性英文眉题、重复说明或无意义标签。
+- 所有确认窗、改名窗、二次确认等弹窗只显示悬浮窗口本体，禁止使用可见的全屏暗幕、半透明背景蒙板或大面积背景卡片/投影遮挡原界面。需要阻断底层点击时保留 `Color.clear + raycastTarget=true` 的透明输入层即可；世界加载黑幕等非弹窗流程不受此规则影响。
 - 正式视觉必须落在可复用控件/Prefab 与 `FlatWorldUITheme` 中；Prefab 构建器保存前应重新应用统一主题，避免未来重建时恢复旧蓝绿/图集皮肤。仅修改业务行为时，不顺带整体翻修既有界面。
 - `FlatWorldUIThemeMigrator` 只能通过 `FlatWorld/UI/主题迁移/` 菜单显式执行；禁止使用 `[InitializeOnLoad]`、`delayCall`、`EditorApplication.update` 等启动/重载钩子自动遍历并保存全部 UI Prefab，避免仅打开 Unity 就污染 Git 工作区。迁移版本升级后由开发者主动执行“执行当前版本迁移”，需要覆盖重烘焙时再使用“强制重新应用统一主题”。
 
@@ -20,6 +21,7 @@ description: "Use when: 定位或修改 FlatWorld 的 UIManager、BasePanel、�
 - 生命周期：`Assets/5_Scripts/5-5_UI/Core/{UIManager,BasePanel}.cs`
 - 通用控件/表现：`Assets/5_Scripts/5-5_UI/Common/{Controls,Presentation}/`；输入：`Assets/5_Scripts/5-5_UI/Input/`
 - 主菜单：`Assets/5_Scripts/5-3_GamePlay/Core/Lifecycle/GameManager.UI.cs`；存档 UI：`Assets/5_Scripts/5-3_GamePlay/Presentation/UI/SaveDataManager_UI.cs`
+- MOD 管理页：`GameManager.UI.Mods.cs`、`ModMenuDragController.cs` 和 `ModManagerPrefabBuilder.cs`；标题栏右上角保留名为“关闭”的按钮供 BasePanel 自动绑定。拖拽由条目共同父节点接收，以文件夹身份保存来源，跨页复用行槽位时不能改变来源；预览和落点线不接收射线，关闭面板取消拖拽。
 - 游戏内 UI：`Assets/5_Scripts/5-3_GamePlay/Presentation/UI/`
 - Prefab：`Assets/2_Prefabs/2-1_UI/`；根：`Assets/Resources/UI/UIRoot.prefab`
 - 运行时键/构建器：`Assets/5_Scripts/5-5_UI/Core/RuntimeUIPrefabKeys.cs`、`Assets/Editor/FlatWorld/PrefabBuilders/UI/RuntimeUIPrefabBuilder.cs`
@@ -60,6 +62,7 @@ description: "Use when: 定位或修改 FlatWorld 的 UIManager、BasePanel、�
 `UI_InterfaceSettings.prefab` - 界面设置面板
 `UI_MainMenu.prefab` - 主菜单面板
 `UI_MainMenuExitConfirmation.prefab` - 主菜单退出确认面板
+`UI_ModManager.prefab` - 主菜单 MOD 管理面板
 `UI_MainMenuSettings.prefab` - 主菜单设置面板
 `UI_MakerTable.prefab` - 制作台面板
 `UI_MeatRack.prefab` - 晾肉架面板
@@ -163,6 +166,9 @@ description: "Use when: 定位或修改 FlatWorld 的 UIManager、BasePanel、�
 - 现有静态偏好类通过 `SettingsProvider` 兼容入口注册；新增实例型系统优先让管理器直接实现接口。Provider 不负责创建 Prefab，正式布局仍由专用 Launcher 和 Prefab 管理。
 - `UI_VisualEffectsSettings` 同时嵌套在游戏内与主菜单设置中；太阳长投影开关与共用的阴影柔化开关、模糊程度滑块绑定 `SunShadowSettings` Provider。关闭太阳投影必须停止对应渲染工作，但脚底阴影仍由柔化开关与滑块控制；柔化关闭只把有效强度置零。地面层级阴影开关和宽度滑块绑定 `GroundElevationShadowSettings` Provider。所有初始值、范围与恢复默认值读取 `Resources/GameConfig/Rendering/default-rendering.json`，玩家更改仍保存在 PlayerPrefs。新增必需控件时同步源 Prefab、控制器和 `RuntimeUIPrefabBuilder.VisualEffects`，并核对两个嵌套使用处的真实引用。
 - 游戏内设置页签由 `SettingsActionListPagination` 的页面名、入口名、页签映射和首个焦点控件共同定义；新增分页时同步正式 `UI_ActionList` 嵌套 Prefab 与完整/定向构建入口。直接挂在子页 Prefab 的控制器会由分页器收集 `ISettingsPageLifecycle`，不必再向 `SettingCanvas` 添加专用初始化分支。
+- 游戏设置页在主菜单和游戏内共用 `NewWorldUserSettings` Provider；区块默认宽、高只在每次打开新世界窗口时回填，不修改已有星球或 `PlanetData` 的存档兼容默认值。主菜单沿用保存/关闭还原会话，正式 `UI_GameSettings` 与 `RuntimeUIPrefabBuilder.GameSettings` 同步维护。
+- 新世界窗口默认显示名称页；“世界设置”在同一主卡内切换整块内容，通过显隐保留两页输入。隐藏世界页仍参与创建请求取值，切页不能重新回填全局默认值；返回键先关闭难度层，再返回名称页，最后关闭窗口。布局需同步 `UI_NewGame` 与 `NewGamePrefabBuilder`。
+- 新世界与游戏内难度统一读取 `GameDifficultyCatalog` 的 0–20 级正式难度；新世界难度弹层左侧使用 `ItemStepScrollRect` 选择等级，右侧只展示战斗/生存/世界/生产四类差异摘要，不恢复“简单/困难”或官方/自定义双分页。
 - 调整界面缩放范围或默认值时，以 `UIUserSettings` 常量为权威，同时检查 Provider/写入校验、`UIScaleController` 的实际应用下限，并同步 `UI_InterfaceSettings.prefab` 与 `RuntimeUIPrefabBuilder`；`PlayerPrefs` 默认参数只服务无旧键的新配置，不得覆盖已有玩家值。
 - `UIRoot.prefab` 的根 Canvas 显式持有独立同名脚本 `UIScaleController.cs` 与 1920×1080 基准分辨率，背包等普通面板继承该根缩放；识别已受控 Canvas 时不能再次用已被缩放改写的参考分辨率作门槛。
 

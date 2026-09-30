@@ -22,6 +22,7 @@ description: "Use when: 定位或修改 FlatWorld 的多语言系统、Unity Loc
 - 物品名称同步使用正式 Manifest 和继承解析结果，在写表前校验完整的中文名、英文译名和名称键冲突；继承只复用玩法和外观，子物品不得隐式继承父级 `gameName/labelKey/descriptionKey`。
 - 跨语言物品搜索使用 `FlatWorldLocalizationService.GetInLocale` 按正式 `LabelKey` 读取指定 Locale 的 String Table；`ItemNames.en.json` 只作为编辑器同步源，不在运行时直接读取。
 - 物品 `ItemData.Tags` 只保存语言无关的稳定 ASCII ID；Tag 显示/搜索别名由 `ItemTagLocalizationCatalog` 维护，并同步为 `tag.<TagId>.name` 到 `FlatWorld` 表。背包搜索必须同时匹配 Tag ID 与所有已登记语言名称，禁止把中文/英文显示文本直接写回业务 Tag。
+- 动物食性 Tag 固定使用 `Carnivore`、`Herbivore`、`Omnivore`；旧 `Vegetarian` 不再作为正式 ID。新增或修改食性 Tag 时同步维护 `Assets/Resources/Localization/ItemTagCatalog.json` 的中英文名称。
 - 静态 Prefab 文本由 Setup 扫描并自动绑定；动态文本用 `GetUiText/GetUiFormat`，在语言事件后刷新，模板同时登记英文覆盖。
 - 动态物品名称可用 `LocalizedTextBinder` 显式绑定物品定义的 `LabelKey`；运行时静态文本扫描必须尊重已有绑定，不能根据当前显示的中文覆盖其内容表与 key。
 - 运行时若从已本地化控件克隆新的按钮/文本，克隆体会继承原 `LocalizedTextBinder` 的 key；改业务文案时必须同时 `Configure` 新 key，不能只改 `TMP_Text.text`，否则后续刷新语言或 UI 时会被旧 key 覆盖回来。

@@ -41,6 +41,7 @@ description: "Use when: 定位或修改 FlatWorld 的动物、怪物、蜂群、
 
 ## 易错边界
 
+- 动物食性与捕食关系使用 ItemData 的稳定数据 Tag：`Carnivore`、`Herbivore`、`Omnivore`。猎物感知捕食者统一查询 `Carnivore`，玩家作为独立威胁来源处理；不要按 `Wolf`/`Predator` 等物种名硬编码，更不能改回 Unity Tag。
 - 感知使用 ECS 身份、几何、稀疏空间桶和整数格 LOS；建筑占地与地形阻挡要独立于导航可走性。移动前快照用于感知，移动后快照用于命中；Native 借用必须进入 Job 依赖链。
 - 外部武器命中 ECS Actor 时，空间桶、阵营和 LOS 先筛候选，再临时投影受击 Collider2D 让 Physics2D 判接触；镜像代理是否已绑定不能影响命中资格，生命仍只由 ECS 结算。
 - 正式模拟使用 60Hz 基础时钟与每实体距离脉冲。休眠/恢复不能追补全部离线 Tick；玩法系统查活跃实体，表现和统计可以查全部实体。

@@ -37,6 +37,7 @@ description: "Use when: 定位或修改 FlatWorld 的 Item/Module 组合架构�
 - 感知批次对已存在空间格的重复访问用格子内 `LastVisitedBatch` 访问戳去重，禁止恢复每批 `HashSet<long>` 已访问集合；格子回池时必须清空成员并重置访问戳。
 - `ItemMgr.NotifyRuntimeItemMoved` 完成位置索引刷新后发布通用 `RuntimeItemMoved` 适配事件；移动订阅方只维护显式声明需要跟随的状态，并按网格根格变化去重，避免轮询或给普通 Item 增加每帧扫描。
 - 新模块同时检查脚本、ModuleData、模块/Item Prefab、Addressables 与 JSON 定义。
+- 游戏内容分类（武器类别、生物种类、阵营语义、资源类型等）统一使用 `ItemData.Tags`，以便 JSON/MOD 扩展；Unity Tag 只用于 `MainCamera`、`MapCore`、UI/编辑器辅助等场景与开发基础设施，玩法判定不得依赖 Unity Tag。
 - `Module.Load()` 与 `Module.Save()` 均为抽象方法；无持久化运行态的模块也需显式实现空 `Save()`，说明状态由宿主或配置恢复。
 - 遇到“物品找不到模块 Prefab”时先核对 `[GameRes] Prefab 加载计划` 和失败阶段；通用 Prefab 数量为 0 时先查标签、目录与初始化，不能直接断言某个物品定义错误。
 - JSON 本体按职责组合通用模块；单个资源节点的名称和玩法配置不能成为专用模块 Prefab。周期资源应由生产模块写入库存接收契约，再由采集模块处理交互和掉落。
@@ -86,7 +87,8 @@ description: "Use when: 定位或修改 FlatWorld 的 Item/Module 组合架构�
 - ECS 模块冷编译统一通过 `DeserializeConfiguration<T>` 以 `ObjectCreationHandling.Replace` 读取配置；显式集合必须替换构造默认集合，缺省字段仍保留默认值，禁止把成长阶段、采集提示点等追加到默认列表后再放宽校验。
 - 植物共用 `EntityGrowth/EntityClimate/AiecsVital`，带 `EntityPlantLifecycle` 的实体只由 `EntityPlantModuleSystem` 推进，普通通用能力查询必须排除它，避免成长和耐候重复结算；资源库存与周期生产分别使用 `EntityResourceStock/EntityStockProduction`。树冠的 `EntityCanopyFruitModule` 为托管组件，复用纯 C# 事件时间线，不代表所有树果结算已经 Burst 化。
 - 静态资源的配置刷新以当前定义为准，已保存树龄、冷热负担和实例生命保留；天然初始化只执行一次。历史耐候读取冻结季节历史，当前局部热源不能延伸到过去。自然物句柄包含 World 代际，过期 Chunk 回调不能命中新世界复用的整数 ID。
-- 资源实体持续维护纯数据导航、矩形接触阻挡和空间交互；玩家武器通过 `GameplayCombatBridge` 直接提交命中。区块解绑只保存释放，不触发采集或死亡；真实死亡/一次性收获才提交来源删除，天然续生和耕地作物快照分开管理。不得恢复近端 Item 接管或逐资源 Collider。
+- 资源实体持续维护纯数据导航、矩形接触阻挡和空间交互；玩家武器通过 `GameplayCombatBridge` 直接提交命中。区块解绑只保存释放，不触发采集或死亡；真实死亡/一次性收获才提交来源删除，天然续生和耕地作物快照分开管理。不得恢复近端 Item 接管；接触物理允许独立 Box 代理，由 Chunk 的静态碰撞容器统一管理，禁止给资源创建 Item/Module/逐实体更新回调。
+- 自然物 `VisualVersion` 不等于阻挡形状版本：果实、受击和外观变化仍刷新空间索引，只有 `BlocksMovement` 或 `BodyBounds` 改变才发布物理变更；移动/缩放需通知旧、新范围，World 重置先清理旧代理再消费新注册。
 - 资源 BRG 使用运行时实体 ID 与部件号分配负槽位，不能用格子或自然 GUID 覆盖树身、果实、阴影。静态自然物表现由 Dirty/Event 队列驱动，成长版本、采集、受击、树冠变化和环世界重投影才触发重提；禁止在 `Present` 中每帧全量遍历所有资源。接触阴影几何只在实体几何/绑定变化时重建，昼夜透明度走批次级材质参数。源材质缓存键必须区分机械与资源 Shader 变体；逻辑坐标进入存档，局部镜像变换只用于表现。渲染卸载必须清除全部部件。
 - 带 `Tag.Tree` 的资源主体与附属果实使用 `NaturalEntityEcsService.TreeSortingVisual` 纯视觉桥，以树根本地镜像为 `SortingGroup` 锚点，读取 `world-item` 排序键与玩家混排。不得同时保留主体 BRG 实例；太阳/接触阴影继续合批。视觉外壳只含 Transform、SortingGroup、SpriteRenderer，不恢复 Item、Module、Collider 或逐树 Update，解绑与换世界必须一并释放。
 - 资源客户端不推进权威植物 Job；客户端采集命令及资源状态增量同步仍需独立接入，不能把服务端实体迁移当成联机链已经完成，也不能回退旧 GameObject 来掩盖缺口。蜂巢、传送门等未声明资源后端的独立玩法不在植物后端中静默模拟。
