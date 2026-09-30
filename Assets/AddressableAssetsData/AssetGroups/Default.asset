@@ -1993,6 +1993,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 8ca0f2b7c4d94a81be35d6f0127ab9ce
+    m_Address: Assets/2_Prefabs/Effects/WetStatusEffect.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 8d957a5691b916f48b40231a4b297ea4
     m_Address: Assets/2_Prefabs/Gameplay/Skills/FireBall.prefab
     m_ReadOnly: 0
