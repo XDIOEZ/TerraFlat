@@ -1987,6 +1987,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 8c7d41c0b2d84a7da6c650f2413eb182
+    m_Address: Assets/2_Prefabs/2-1_UI/Common/Controls/UI_PanelBackground.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 8c8eb8cf412e3ca4d8845cecbc358d4d
     m_Address: Assets/2_Prefabs/2-1_UI/MainMenu/Core/UI_MainMenu.prefab
     m_ReadOnly: 0

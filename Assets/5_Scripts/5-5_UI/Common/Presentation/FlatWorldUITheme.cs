@@ -14,6 +14,8 @@ using UnityEngine.UI;
 /// </summary>
 public static class FlatWorldUITheme
 {
+    private const string SharedPanelBackgroundName = "UI_PanelBackground";
+
     public static readonly Color Canvas = Hex("343434", 0.97f);
     public static readonly Color SurfaceLow = Hex("3D3D3D", 0.98f);
     public static readonly Color Surface = Hex("494949", 0.98f);
@@ -357,6 +359,16 @@ public static class FlatWorldUITheme
             }
 
             if (IsPopupBackdropGraphic(root, image))
+            {
+                image.sprite = null;
+                image.type = Image.Type.Simple;
+                image.preserveAspect = false;
+                image.color = Color.clear;
+                continue;
+            }
+
+            // 普通窗口的可见底板由共享 Prefab 负责；根 Image 只保留原有射线职责。
+            if (isRoot && HasSharedPanelBackground(root))
             {
                 image.sprite = null;
                 image.type = Image.Type.Simple;
@@ -1307,6 +1319,11 @@ public static class FlatWorldUITheme
         }
 
         return false;
+    }
+
+    private static bool HasSharedPanelBackground(Transform root)
+    {
+        return root != null && root.Find(SharedPanelBackgroundName) != null;
     }
 
     /// <summary>无底板玩法面板与弹窗根节点只保留透明输入层，不绘制全屏底色。</summary>

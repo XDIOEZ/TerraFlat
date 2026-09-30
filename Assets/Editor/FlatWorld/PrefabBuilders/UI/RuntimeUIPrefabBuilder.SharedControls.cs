@@ -18,9 +18,11 @@ public static partial class RuntimeUIPrefabBuilder
     #region 控件库
 
     public const string SharedControlsRoot = PrefabRoot + "Common/Controls/";
+    private const string SharedPanelBackgroundKey = "UI_PanelBackground";
     private static bool buildingSharedControls;
     private static readonly string[] SharedControlNames =
     {
+        "UI_PanelBackground",
         "UI_Button", "UI_CloseButton", "UI_TabButton", "UI_Toggle",
         "UI_SwitchOption", "UI_Switch", "UI_SliderControl", "UI_ProgressBar",
         "UI_Dropdown", "UI_InputField"
@@ -41,6 +43,7 @@ public static partial class RuntimeUIPrefabBuilder
         try
         {
             Directory.CreateDirectory(SharedControlsRoot);
+            CreateSharedAsset(SharedPanelBackgroundKey, BuildSharedPanelBackground);
             CreateSharedAsset("UI_Button", () => CreateButton("UI_Button", null, string.Empty, 160f, 64f, false).gameObject);
             CreateSharedAsset("UI_Toggle", () => CreateToggle("UI_Toggle", null).gameObject);
             CreateSharedAsset("UI_SliderControl", () => CreateSlider("UI_SliderControl", null).gameObject);
@@ -134,6 +137,16 @@ public static partial class RuntimeUIPrefabBuilder
     private static void ConfigureSharedDefaults(GameObject root)
     {
         RectTransform rect = root.GetComponent<RectTransform>();
+        if (string.Equals(root.name, SharedPanelBackgroundKey, StringComparison.Ordinal))
+        {
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.anchoredPosition = Vector2.zero;
+            rect.sizeDelta = Vector2.zero;
+            return;
+        }
+
         rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0.5f);
         rect.sizeDelta = new Vector2(240f, 64f);
         foreach (TextMeshProUGUI text in root.GetComponentsInChildren<TextMeshProUGUI>(true))
@@ -173,6 +186,29 @@ public static partial class RuntimeUIPrefabBuilder
             ((RectTransform)dropdown.itemText.transform.parent).sizeDelta = new Vector2(0f, 60f);
             dropdown.template.sizeDelta = new Vector2(0f, 360f);
         }
+    }
+
+    private static GameObject BuildSharedPanelBackground()
+    {
+        GameObject root = new GameObject(
+            SharedPanelBackgroundKey,
+            typeof(RectTransform),
+            typeof(CanvasRenderer),
+            typeof(Image),
+            typeof(Outline),
+            typeof(ReusableUIControl));
+        Image image = root.GetComponent<Image>();
+        image.color = FlatWorldUITheme.Canvas;
+        image.raycastTarget = false;
+        image.sprite = null;
+        image.type = Image.Type.Simple;
+        image.preserveAspect = false;
+
+        Outline outline = root.GetComponent<Outline>();
+        outline.effectColor = FlatWorldUITheme.Border;
+        outline.effectDistance = FlatWorldUITheme.BorderOutlineDistance;
+        outline.useGraphicAlpha = true;
+        return root;
     }
 
     /// <summary>滑块的 60 像素命中区与轨道分离，手柄拥有明确非零高度。</summary>
@@ -290,6 +326,7 @@ public static partial class RuntimeUIPrefabBuilder
     {
         if (buildingSharedControls)
             return;
+        EnsureSharedPanelBackground(root);
         ConvertCompatibleControls(root);
         foreach (ReusableUIControl control in root.GetComponentsInChildren<ReusableUIControl>(true))
         {
@@ -352,7 +389,7 @@ public static partial class RuntimeUIPrefabBuilder
         if (root == null || buildingSharedControls || IsSharedLibraryAsset(AssetDatabase.GetAssetPath(root)))
             return 0;
         EnsureSharedControlPrefabs();
-        int converted = 0;
+        int converted = EnsureSharedPanelBackground(root);
         Selectable[] controls = root.GetComponentsInChildren<Selectable>(true);
         foreach (Selectable control in controls)
         {
@@ -389,6 +426,77 @@ public static partial class RuntimeUIPrefabBuilder
             converted++;
         }
         return converted;
+    }
+
+    /// <summary>普通 BasePanel 根节点统一改为共享底板；加载页、HUD、无底板和专属视觉继续保留自身实现。</summary>
+    private static int EnsureSharedPanelBackground(GameObject root)
+    {
+        if (root == null || !IsSharedPanelBackgroundOwner(root) ||
+            IsSharedPanelBackgroundExcluded(root.name))
+        {
+            return 0;
+        }
+
+        Image ownerImage = root.GetComponent<Image>();
+        if (ownerImage == null)
+            return 0;
+
+        Transform existing = root.transform.Find(SharedPanelBackgroundKey);
+        if (existing != null)
+        {
+            existing.SetAsFirstSibling();
+            ownerImage.sprite = null;
+            ownerImage.type = Image.Type.Simple;
+            ownerImage.preserveAspect = false;
+            ownerImage.color = Color.clear;
+            return 0;
+        }
+
+        if (ownerImage.color.a <= 0.01f)
+            return 0;
+
+        GameObject asset = AssetDatabase.LoadAssetAtPath<GameObject>(
+            SharedControlsRoot + SharedPanelBackgroundKey + ".prefab");
+        if (asset == null)
+            throw new InvalidOperationException("找不到共享面板背景 Prefab。");
+
+        GameObject instance = (GameObject)PrefabUtility.InstantiatePrefab(asset, root.transform);
+        instance.name = SharedPanelBackgroundKey;
+        instance.transform.SetAsFirstSibling();
+        instance.transform.localScale = Vector3.one;
+        RecordSharedInstance(instance);
+
+        ownerImage.sprite = null;
+        ownerImage.type = Image.Type.Simple;
+        ownerImage.preserveAspect = false;
+        ownerImage.color = Color.clear;
+        return 1;
+    }
+
+    private static bool IsSharedPanelBackgroundOwner(GameObject root)
+    {
+        return root.GetComponent<BasePanel>() != null ||
+               root.name.EndsWith("Settings", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsSharedPanelBackgroundExcluded(string rootName)
+    {
+        return string.Equals(rootName, "UI_MainMenu", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(rootName, "UI_HotBar", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(rootName, "UI_Health", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(rootName, "UI_Food", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(rootName, "UI_Sleep", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(rootName, "UI_Hand", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(rootName, "UI_BuffStatus", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(rootName, "UI_SaveStatus", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(rootName, "UI_PlayerWorldCoordinate", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(rootName, "UI_WorldLoading", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(rootName, "UI_ResourceLoading", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(rootName, "UI_DimensionLoading", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(rootName, "UI_Death", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(rootName, "UI_ReadableBook", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(rootName, "UI_WaterVessel", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(rootName, "UI_StoneMortar", StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>只迁移已知的标准层级，不把槽位、专用图标、多文本卡片强行替换成普通按钮。</summary>

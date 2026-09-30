@@ -176,6 +176,7 @@ description: "Use when: 定位或修改 FlatWorld 的 UIManager、BasePanel、�
 ## Prefab 与目录约束
 
 - 公共控件位于 `Common/Controls/UI_Button、UI_CloseButton、UI_TabButton、UI_Toggle、UI_SwitchOption、UI_Switch、UI_SliderControl、UI_ProgressBar、UI_Dropdown、UI_InputField.prefab`。窗口应使用真正的嵌套实例；关闭按钮/页签继承按钮，进度条继承滑块，互斥选项继承开关。不要 Unpack 或复制层级来复用。
+- 普通 `BasePanel` 与标准设置页的可见底板统一使用 `Common/Controls/UI_PanelBackground.prefab`，并作为业务内容之前的第一个嵌套 Prefab；面板根 `Image` 只保留原有射线职责且视觉透明。HUD、加载黑幕、主菜单、透明弹窗根和明确无底板/专属视觉面板不得强制套用该底板。
 - `ReusableUIControl` 标记子树的外观所有权；主题兼容层不得覆盖公共控件的颜色、字体、内部几何。使用处只保存文案、业务事件/数值、选项及外部布局差异，颜色等外观应编辑源 Prefab 或有明确用途的 Variant，否则会阻断统一风格传播。
 - 页签业务选中状态由 `ReusableUITabVisual` 的 Prefab 字段决定，分页控制器只调用 `SetSelected`，不在业务脚本中重新写死公共页签配色。原位转换使用 `ObjectMatchMode.ByHierarchy` 保留未匹配原组件；清理嵌套实例覆盖时只处理 `ReusableUIControl` 所有的目标，因为 Unity 可能返回整个外层面板的覆盖集合。
 - `FlatWorld/UI/Shared Controls/` 提供补建缺失资产、显式迁移和验证菜单；补建不覆盖已有公共 Prefab 的人工编辑。`RuntimeUIPrefabBuilder` 保存前应执行公共控件准备流程，避免重建重新生成独立控件。迁移不重建整个窗口，专用图标/复杂卡片与不匹配层级不强制替换。
