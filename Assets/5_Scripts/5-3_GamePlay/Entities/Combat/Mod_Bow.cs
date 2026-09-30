@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 /// <summary>
 /// 通用蓄力远程武器模块：复用 GameController 的统一攻击按住/松开语义进行蓄力，
@@ -33,6 +34,18 @@ public sealed class Mod_Bow : Module, IItemModuleDependencyBinder
     [Min(0f), Tooltip("持续拉弓时每秒消耗的体力；最终消耗仍经过游戏难度倍率。")]
     public float StaminaConsumePerSecond = 5f;
 
+    [Tooltip("蓄力期间显示真实投射公式生成的抛物线预判与落点圆环。")]
+    public bool ShowTrajectoryPreview;
+
+    [Range(8, 64), Tooltip("轨迹预判线的采样段数。")]
+    public int TrajectoryPreviewSegments = 28;
+
+    [Min(0.01f), Tooltip("轨迹预判线宽。")]
+    public float TrajectoryPreviewLineWidth = 0.04f;
+
+    [Min(0.05f), Tooltip("预判落点圆环半径。")]
+    public float TrajectoryLandingRingRadius = 0.22f;
+
     [Tooltip("搭箭开始时箭矢在弓物体下的局部位置。")]
     public Vector3 NockedArrowStartLocalPosition = new Vector3(0.14f, 0f, -0.01f);
 
@@ -63,6 +76,10 @@ public sealed class Mod_Bow : Module, IItemModuleDependencyBinder
     private bool _charging;
     private bool _inventoryResolveWarningLogged;
     private readonly List<IProjectileChargeModifier> _chargeModifiers = new List<IProjectileChargeModifier>();
+    private Mod_Projectile _previewProjectile;
+    private LineRenderer _trajectoryLine;
+    private LineRenderer _trajectoryRing;
+    private Material _trajectoryMaterial;
 
     #endregion
 
@@ -83,6 +100,8 @@ public sealed class Mod_Bow : Module, IItemModuleDependencyBinder
         foreach (Module module in modules.Mods.Values)
             if (module != this && module is IProjectileChargeModifier modifier)
                 _chargeModifiers.Add(modifier);
+
+        _previewProjectile = modules.GetMod_ByID<Mod_Projectile>(Mod_Projectile.PersistedModuleId);
     }
 
     /// <summary>手持弓加载时绑定射手控制器；地面弓不监听攻击输入。</summary>
@@ -119,7 +138,9 @@ public sealed class Mod_Bow : Module, IItemModuleDependencyBinder
         _chargeSeconds += safeDeltaTime;
         foreach (IProjectileChargeModifier modifier in _chargeModifiers)
             modifier.UpdateCharge(safeDeltaTime);
-        UpdateNockedArrowVisual(GetCharge01());
+        float charge01 = GetCharge01();
+        UpdateNockedArrowVisual(charge01);
+        UpdateTrajectoryPreview(charge01);
     }
 
     /// <summary>解除统一攻击事件并清理临时搭箭表现。</summary>
@@ -127,6 +148,7 @@ public sealed class Mod_Bow : Module, IItemModuleDependencyBinder
     {
         UnbindController();
         CancelCharge();
+        DestroyTrajectoryPreview();
     }
 
     #endregion
@@ -186,6 +208,7 @@ public sealed class Mod_Bow : Module, IItemModuleDependencyBinder
             modifier.StartCharge();
         if (ShowNockedAmmo) CreateNockedArrowVisual(ammoSlot.itemData.IDName);
         UpdateNockedArrowVisual(0f);
+        UpdateTrajectoryPreview(0f);
     }
 
     /// <summary>松开攻击时消费同库存的一支箭并按当前蓄力发射。</summary>
@@ -213,6 +236,7 @@ public sealed class Mod_Bow : Module, IItemModuleDependencyBinder
         _charging = false;
         _ownerStamina = null;
         DestroyNockedArrowVisual();
+        HideTrajectoryPreview();
 
         if (_sourceInventory?.Data == null || item == null || item.Owner == null || !item.InHand)
         {
@@ -291,12 +315,143 @@ public sealed class Mod_Bow : Module, IItemModuleDependencyBinder
         _ownerStamina = null;
         _sourceInventory = null;
         DestroyNockedArrowVisual();
+        HideTrajectoryPreview();
     }
 
     /// <summary>返回 0-1 蓄力比例。</summary>
     private float GetCharge01()
     {
         return FullChargeSeconds <= 0f ? 1f : Mathf.Clamp01(_chargeSeconds / FullChargeSeconds);
+    }
+
+    #endregion
+
+    #region 轨迹预判
+
+    /// <summary>蓄力期间按真实投射公式绘制逐渐延长的抛物线，并用圆环标出预计落点。</summary>
+    private void UpdateTrajectoryPreview(float charge01)
+    {
+        if (!ShowTrajectoryPreview || !UseHeldItemAsAmmo || !_charging ||
+            _previewProjectile == null || !_previewProjectile.UseVisibleArc ||
+            item?.Owner == null)
+        {
+            HideTrajectoryPreview();
+            return;
+        }
+
+        Vector2 direction = ResolveAimDirection();
+        if (direction.sqrMagnitude < 0.0001f)
+        {
+            HideTrajectoryPreview();
+            return;
+        }
+
+        EnsureTrajectoryPreview();
+        if (_trajectoryLine == null || _trajectoryRing == null)
+            return;
+
+        Vector2 logicalShooterPosition = WorldTopologyRuntime.NormalizePosition(item.Owner.transform.position);
+        Vector2 logicalLaunchPosition = WorldTopologyRuntime.NormalizePosition(
+            logicalShooterPosition + direction * Mathf.Max(0f, SpawnForwardOffset));
+        Vector2 launchPosition = WorldLocalPresentation.ProjectPosition(logicalLaunchPosition);
+        int segmentCount = Mathf.Clamp(TrajectoryPreviewSegments, 8, 64);
+        _trajectoryLine.positionCount = segmentCount + 1;
+
+        Vector2 landingPosition = launchPosition;
+        for (int i = 0; i <= segmentCount; i++)
+        {
+            float t = i / (float)segmentCount;
+            Vector2 point = _previewProjectile.EvaluateVisibleTrajectoryPoint(
+                launchPosition, direction, charge01, t);
+            _trajectoryLine.SetPosition(i, new Vector3(point.x, point.y, -0.06f));
+            landingPosition = point;
+        }
+
+        const int ringSegments = 24;
+        _trajectoryRing.positionCount = ringSegments;
+        float radius = Mathf.Max(0.05f, TrajectoryLandingRingRadius);
+        for (int i = 0; i < ringSegments; i++)
+        {
+            float angle = i / (float)ringSegments * Mathf.PI * 2f;
+            Vector2 point = landingPosition + new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * radius;
+            _trajectoryRing.SetPosition(i, new Vector3(point.x, point.y, -0.06f));
+        }
+
+        _trajectoryLine.enabled = true;
+        _trajectoryRing.enabled = true;
+    }
+
+    /// <summary>延迟创建纯运行时预判线，不向场景或 Prefab 写入临时对象。</summary>
+    private void EnsureTrajectoryPreview()
+    {
+        if (_trajectoryLine != null && _trajectoryRing != null)
+            return;
+
+        Shader shader = Shader.Find("Universal Render Pipeline/2D/Sprite-Unlit-Default") ??
+                        Shader.Find("Sprites/Default");
+        if (shader == null)
+        {
+            Debug.LogError($"[{nameof(Mod_Bow)}] 无法创建投掷轨迹预览：缺少无光照 Sprite Shader。", this);
+            ShowTrajectoryPreview = false;
+            return;
+        }
+
+        _trajectoryMaterial = new Material(shader)
+        {
+            name = "Projectile Trajectory Preview (Runtime)",
+            hideFlags = HideFlags.HideAndDontSave
+        };
+
+        _trajectoryLine = CreateTrajectoryLineRenderer("TrajectoryLine", false, TrajectoryPreviewLineWidth);
+        _trajectoryRing = CreateTrajectoryLineRenderer("LandingRing", true, TrajectoryPreviewLineWidth * 1.15f);
+    }
+
+    /// <summary>创建统一世界特效排序的白色预判线。</summary>
+    private LineRenderer CreateTrajectoryLineRenderer(string objectName, bool loop, float width)
+    {
+        GameObject lineObject = new GameObject(objectName)
+        {
+            hideFlags = HideFlags.DontSave
+        };
+        lineObject.transform.SetParent(transform, false);
+
+        LineRenderer line = lineObject.AddComponent<LineRenderer>();
+        line.hideFlags = HideFlags.DontSave;
+        line.sharedMaterial = _trajectoryMaterial;
+        line.useWorldSpace = true;
+        line.loop = loop;
+        line.startWidth = Mathf.Max(0.01f, width);
+        line.endWidth = Mathf.Max(0.01f, width);
+        Color previewColor = new Color(1f, 1f, 1f, 0.78f);
+        line.startColor = previewColor;
+        line.endColor = previewColor;
+        line.numCornerVertices = 0;
+        line.numCapVertices = 0;
+        line.alignment = LineAlignment.View;
+        line.textureMode = LineTextureMode.Stretch;
+        line.shadowCastingMode = ShadowCastingMode.Off;
+        line.receiveShadows = false;
+        line.lightProbeUsage = LightProbeUsage.Off;
+        line.reflectionProbeUsage = ReflectionProbeUsage.Off;
+        WorldSortingManager.GetInstance().ApplyRenderer(line, WorldSortingManager.WorldEffectCategory, 32000);
+        line.enabled = false;
+        return line;
+    }
+
+    private void HideTrajectoryPreview()
+    {
+        if (_trajectoryLine != null) _trajectoryLine.enabled = false;
+        if (_trajectoryRing != null) _trajectoryRing.enabled = false;
+    }
+
+    private void DestroyTrajectoryPreview()
+    {
+        if (_trajectoryLine != null) Destroy(_trajectoryLine.gameObject);
+        if (_trajectoryRing != null) Destroy(_trajectoryRing.gameObject);
+        if (_trajectoryMaterial != null) Destroy(_trajectoryMaterial);
+        _trajectoryLine = null;
+        _trajectoryRing = null;
+        _trajectoryMaterial = null;
     }
 
     #endregion

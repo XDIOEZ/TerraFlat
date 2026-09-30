@@ -207,6 +207,43 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
 
     #region 发射与停止
 
+    /// <summary>按当前投射物配置计算本次发射速度，预览与真实发射共用同一公式。</summary>
+    public float ResolveLaunchSpeed(float charge01, float sourceSpeedMultiplier = 1f)
+    {
+        float normalizedCharge = Mathf.Clamp01(charge01);
+        float speed = Mathf.Lerp(Mathf.Max(0f, MinSpeed), Mathf.Max(MinSpeed, MaxSpeed), normalizedCharge);
+        return speed * Mathf.Max(0f, sourceSpeedMultiplier);
+    }
+
+    /// <summary>按当前蓄力计算完整飞行时长，保持轻点也有最短有效飞行段。</summary>
+    public float ResolveFlightDuration(float charge01)
+    {
+        return Mathf.Max(0.05f, Mathf.Max(0f, MaxFlightSeconds) * Mathf.Clamp01(charge01));
+    }
+
+    /// <summary>计算无碰撞情况下的可见轨迹点；可见抛物线始终使用向下开的二次曲线。</summary>
+    public Vector2 EvaluateVisibleTrajectoryPoint(
+        Vector2 launchPosition,
+        Vector2 direction,
+        float charge01,
+        float normalizedTime,
+        float sourceSpeedMultiplier = 1f)
+    {
+        Vector2 normalizedDirection = direction.sqrMagnitude > 0.0001f ? direction.normalized : Vector2.right;
+        float duration = ResolveFlightDuration(charge01);
+        float elapsed = duration * Mathf.Clamp01(normalizedTime);
+        Vector2 position = launchPosition + normalizedDirection * ResolveLaunchSpeed(charge01, sourceSpeedMultiplier) * elapsed;
+
+        if (!UseVisibleArc)
+            return position;
+
+        float gravity = Mathf.Max(0.01f, VirtualGravity);
+        float launchVerticalSpeed = 0.5f * gravity * duration;
+        float height = launchVerticalSpeed * elapsed - 0.5f * gravity * elapsed * elapsed;
+        position.y += Mathf.Max(0f, height);
+        return position;
+    }
+
     /// <summary>按原有伤害倍率发射；无额外速度修饰时保持现有调用入口。</summary>
     public void Launch(Item shooter, Vector2 direction, float charge01, float sourceDamageMultiplier = 1f)
     {
@@ -220,8 +257,7 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
             throw new System.InvalidOperationException($"{name} 无法发射：投射物尚未正确初始化或方向无效。");
 
         float normalizedCharge = Mathf.Clamp01(charge01);
-        float speed = Mathf.Lerp(Mathf.Max(0f, MinSpeed), Mathf.Max(MinSpeed, MaxSpeed), normalizedCharge);
-        speed *= Mathf.Max(0f, sourceSpeedMultiplier);
+        float speed = ResolveLaunchSpeed(normalizedCharge, sourceSpeedMultiplier);
         float damageMultiplier = Mathf.Lerp(
             Mathf.Max(0f, MinDamageMultiplier),
             Mathf.Max(0f, MaxDamageMultiplier),
@@ -240,7 +276,8 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
         _body.bodyType = RigidbodyType2D.Dynamic;
         _body.gravityScale = 0f;
         _body.mass = Mathf.Max(0.01f, item.itemData.Stack.CurrentWeight);
-        _body.drag = Mathf.Max(0f, FlightLinearDrag);
+        // 可见抛物线必须保持匀速地面位移，否则向下投掷时阻力会把曲线扭成非二次曲线。
+        _body.drag = UseVisibleArc ? 0f : Mathf.Max(0f, FlightLinearDrag);
         _body.constraints = RigidbodyConstraints2D.FreezeRotation;
         _body.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
         _body.interpolation = RigidbodyInterpolation2D.Interpolate;
@@ -259,7 +296,7 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
         _damage.MaxAttackTargets = 1;
 
         // 飞行时长与蓄力保持同一比例：轻点只飞很短一段，满蓄力才使用完整持续时间。
-        float flightSeconds = Mathf.Max(0.05f, MaxFlightSeconds * normalizedCharge);
+        float flightSeconds = ResolveFlightDuration(normalizedCharge);
         _flightDuration = flightSeconds;
         float virtualGravity = Mathf.Max(0.01f, VirtualGravity);
         _flightRemain = flightSeconds;

@@ -5632,7 +5632,9 @@
           "prefab": "Mod_Bow", "id": "Mod_Bow", "enabled": true,
           "data": {"BitData": [], "Type": 0},
           "parameters": {"UseHeldItemAsAmmo": true, "ShowNockedAmmo": false, "FullChargeSeconds": 1.2,
-            "MaxAimDistance": 16.0, "SpawnForwardOffset": 0.45, "StaminaConsumePerSecond": 1.0}
+            "MaxAimDistance": 16.0, "SpawnForwardOffset": 0.45, "StaminaConsumePerSecond": 1.0,
+            "ShowTrajectoryPreview": true, "TrajectoryPreviewSegments": 28,
+            "TrajectoryPreviewLineWidth": 0.04, "TrajectoryLandingRingRadius": 0.22}
         },
         "damage": {
           "prefab": "Mod_Damage", "id": "Mod_Damage", "enabled": true,
@@ -5648,7 +5650,7 @@
           "prefab": "Mod_Projectile", "id": "Mod_Projectile", "enabled": true,
           "data": {"BitData": [], "Type": 0},
           "parameters": {"UseVisibleArc": true, "GroundImpactFraction": 0.15, "SpinDegreesPerSecond": 480.0,
-            "MinSpeed": 3.0, "MaxSpeed": 8.0, "FlightLinearDrag": 0.08, "VirtualGravity": 8.0,
+            "MinSpeed": 3.0, "MaxSpeed": 8.0, "FlightLinearDrag": 0.0, "VirtualGravity": 8.0,
             "MinDamageMultiplier": 0.35, "MaxDamageMultiplier": 1.0, "MaxFlightSeconds": 1.5,
             "RecoveryChance": 1.0, "EmbedOnDamageReceiverWhenRecovered": false, "BrokenSalvageChance": 0.0,
             "SpriteForwardAngleDegrees": 0.0}
