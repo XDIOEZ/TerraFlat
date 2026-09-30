@@ -38,6 +38,27 @@ namespace FlatWorld.NaturalEntities
         public static event Action<Bounds> PhysicsBodyChanged;
         public static event Action<Bounds, PhysicsBodyChangeReason, int, string> PhysicsBodyChangedWithReason;
         public static event Action PhysicsBodiesReset;
+        // 原生静态阻挡的投影通知，与公开玩法通知分离，使用当前 World 的运行时身份。
+        internal static event Action<BlockingBodySnapshot, bool, PhysicsBodyChangeReason> BlockingBodyChanged;
+
+        internal readonly struct BlockingBodySnapshot
+        {
+            public readonly int RuntimeId, Guid;
+            public readonly string DefinitionId;
+            public readonly Bounds Bounds;
+            public BlockingBodySnapshot(int runtimeId, int guid, string definitionId, Bounds bounds)
+            { RuntimeId = runtimeId; Guid = guid; DefinitionId = definitionId; Bounds = bounds; }
+        }
+
+        private static BlockingBodySnapshot CaptureBlockingBody(Record record)
+            => new(record.Handle.Id, record.Snapshot.Guid, record.Profile.Definition.Id, record.BodyBounds);
+
+        private static void PublishPhysicsBodyChanged(Record record, PhysicsBodyChangeReason reason, bool exists)
+        {
+            PhysicsBodyChanged?.Invoke(record.BodyBounds);
+            PhysicsBodyChangedWithReason?.Invoke(record.BodyBounds, reason, record.Snapshot.Guid, record.Profile.Definition.Id);
+            BlockingBodyChanged?.Invoke(CaptureBlockingBody(record), exists, reason);
+        }
 
         private readonly struct ResourceQuery : IDisposable
         {
@@ -101,7 +122,7 @@ namespace FlatWorld.NaturalEntities
             return false;
         }
 
-        private static void RegisterSpatial(Record record, PhysicsBodyChangeReason reason = PhysicsBodyChangeReason.Registered)
+        private static void RegisterSpatial(Record record, PhysicsBodyChangeReason reason = PhysicsBodyChangeReason.Registered, bool notifyPhysics = true)
         {
             NaturalEntityBody body = simulation.GetBody(record.Handle.Id);
             Matrix4x4 root = BodyMatrix(body);
@@ -134,22 +155,14 @@ namespace FlatWorld.NaturalEntities
                 if (bucket.Add(record.Handle.Id)) record.SpatialCells.Add(cell);
             }
             record.IndexedRevision = body.VisualVersion;
-            if (record.BlocksMovement)
-            {
-                PhysicsBodyChanged?.Invoke(record.BodyBounds);
-                PhysicsBodyChangedWithReason?.Invoke(record.BodyBounds, reason,
-                    record.Snapshot.Guid, record.Profile.Definition.Id);
-            }
+            if (notifyPhysics && record.BlocksMovement)
+                PublishPhysicsBodyChanged(record, reason, true);
         }
 
-        private static void UnregisterSpatial(Record record, PhysicsBodyChangeReason reason = PhysicsBodyChangeReason.Removed)
+        private static void UnregisterSpatial(Record record, PhysicsBodyChangeReason reason = PhysicsBodyChangeReason.Removed, bool notifyPhysics = true)
         {
-            if (record.BlocksMovement && record.SpatialCells.Count > 0)
-            {
-                PhysicsBodyChanged?.Invoke(record.BodyBounds);
-                PhysicsBodyChangedWithReason?.Invoke(record.BodyBounds, reason,
-                    record.Snapshot.Guid, record.Profile.Definition.Id);
-            }
+            if (notifyPhysics && record.BlocksMovement && record.SpatialCells.Count > 0)
+                PublishPhysicsBodyChanged(record, reason, false);
             foreach (Vector2Int cell in record.SpatialCells)
                 if (spatialCells.TryGetValue(cell, out HashSet<int> bucket))
                 {
@@ -171,6 +184,18 @@ namespace FlatWorld.NaturalEntities
             foreach (Record record in query)
                 if (record.BlocksMovement && record.IsValid)
                     output.Add(record.BodyBounds);
+        }
+
+        /// <summary>仅首次绑定枚举阻挡实体，后续碰撞更新直接消费单实体通知。</summary>
+        internal static void CollectBlockingBodies(BoundsInt area, List<BlockingBodySnapshot> output)
+        {
+            output.Clear();
+            if (simulation == null) return;
+            Vector2 center = new(area.xMin + area.size.x * 0.5f, area.yMin + area.size.y * 0.5f);
+            Vector2 extents = new(area.size.x * 0.5f, area.size.y * 0.5f);
+            using ResourceQuery query = QueryBounds(center, extents);
+            foreach (Record record in query)
+                if (record.BlocksMovement && record.IsValid) output.Add(CaptureBlockingBody(record));
         }
 
         private static ResourceQuery QueryBounds(Vector2 center, Vector2 extents)

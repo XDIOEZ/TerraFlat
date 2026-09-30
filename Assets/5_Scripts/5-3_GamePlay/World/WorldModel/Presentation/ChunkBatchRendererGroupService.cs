@@ -240,7 +240,7 @@ internal static class ChunkBatchRendererGroupService
         private readonly HashSet<TileBatch> ownerRemovalBatches = new();
         private readonly HashSet<TileBatch> bulkSubmitBatches = new();
         private int bulkSubmitDepth;
-        private readonly Dictionary<int, MeshRegistration> meshes = new();
+        private readonly Dictionary<(int SpriteId, bool SunShadow), MeshRegistration> meshes = new();
         private readonly Dictionary<MaterialKey, MaterialRegistration> materials = new();
         private readonly HashSet<int> warnedMissingOwnerIds = new();
         private readonly Material spriteTemplate;
@@ -500,7 +500,7 @@ internal static class ChunkBatchRendererGroupService
             if (batches.TryGetValue(key, out TileBatch existing))
                 return existing;
 
-            MeshRegistration mesh = GetOrCreateMesh(visual.Sprite);
+            MeshRegistration mesh = GetOrCreateMesh(visual.Sprite, visual.Layer == VisualLayer.NaturalShadow);
             MaterialRegistration material = GetOrCreateMaterial(visual.Layer, visual.Sprite.texture,
                 visual.SourceMaterial);
             var batch = new TileBatch(this, key, mesh.Id, material.Id, ResolvePriority(visual.Layer),
@@ -518,14 +518,15 @@ internal static class ChunkBatchRendererGroupService
             return priority != 0 ? priority : left.Key.Layer.CompareTo(right.Key.Layer);
         }
 
-        private MeshRegistration GetOrCreateMesh(Sprite sprite)
+        private MeshRegistration GetOrCreateMesh(Sprite sprite, bool sunShadow)
         {
-            int key = sprite.GetInstanceID();
+            var key = (sprite.GetInstanceID(), sunShadow);
             if (meshes.TryGetValue(key, out MeshRegistration registration))
                 return registration;
 
             // Mesh 属于资源会话；注册 ID 只保存在当前 Backend，重建 BRG 后重新注册。
-            Mesh mesh = SharedSpriteMeshCache.GetOrCreate(sprite);
+            Mesh mesh = sunShadow ? SharedSpriteMeshCache.GetSunShadowGeometry(sprite).Mesh
+                : SharedSpriteMeshCache.GetOrCreate(sprite);
             BatchMeshID id = rendererGroup.RegisterMesh(mesh);
             registration = new MeshRegistration(id);
             meshes.Add(key, registration);

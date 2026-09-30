@@ -298,8 +298,23 @@ namespace FlatWorld.NaturalEntities
                     MarkPresentationDirty(record);
                 if (body.VisualVersion != record.IndexedRevision)
                 {
-                    UnregisterSpatial(record, PhysicsBodyChangeReason.VisualRevision);
-                    RegisterSpatial(record, PhysicsBodyChangeReason.VisualRevision);
+                    // 外观、果实和受击版本仍刷新空间索引，但相同阻挡矩形不通知物理层。
+                    Bounds previousBounds = record.BodyBounds;
+                    bool previouslyBlocking = record.BlocksMovement;
+                    UnregisterSpatial(record, PhysicsBodyChangeReason.VisualRevision, notifyPhysics: false);
+                    RegisterSpatial(record, PhysicsBodyChangeReason.VisualRevision, notifyPhysics: false);
+                    if (previouslyBlocking != record.BlocksMovement || !previousBounds.Equals(record.BodyBounds))
+                    {
+                        if (previouslyBlocking)
+                        {
+                            PhysicsBodyChanged?.Invoke(previousBounds);
+                            PhysicsBodyChangedWithReason?.Invoke(previousBounds, PhysicsBodyChangeReason.VisualRevision,
+                                record.Snapshot.Guid, record.Profile.Definition.Id);
+                            BlockingBodyChanged?.Invoke(new BlockingBodySnapshot(record.Handle.Id, record.Snapshot.Guid,
+                                record.Profile.Definition.Id, previousBounds), false, PhysicsBodyChangeReason.VisualRevision);
+                        }
+                        if (record.BlocksMovement) PublishPhysicsBodyChanged(record, PhysicsBodyChangeReason.VisualRevision, true);
+                    }
                 }
             }
             foreach (int id in endedPlants)

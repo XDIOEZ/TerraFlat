@@ -20,6 +20,8 @@ internal static class WrappedWorldPhysicsAdapter
         Map.TilemapPresentationChanged += RefreshMap;
         ChunkCollisionRenderer.PresentationChanged -= RefreshChunkCollision;
         ChunkCollisionRenderer.PresentationChanged += RefreshChunkCollision;
+        ChunkCollisionRenderer.ObstaclePresentationChanged -= RefreshChunkObstacles;
+        ChunkCollisionRenderer.ObstaclePresentationChanged += RefreshChunkObstacles;
         WorldTopologyRuntime.LocalPlayerWrapped -= ReprojectLocalWorld;
         WorldTopologyRuntime.LocalPlayerWrapped += ReprojectLocalWorld;
     }
@@ -70,6 +72,12 @@ internal static class WrappedWorldPhysicsAdapter
             WrappedTilemapPhysicsAdapter.Ensure(renderer);
         else
             renderer.GetComponent<WrappedTilemapPhysicsAdapter>()?.Suspend();
+    }
+
+    /// <summary>实体障碍变化只同步 Box 镜像，不让树木重新生成整块地形几何。</summary>
+    private static void RefreshChunkObstacles(ChunkCollisionRenderer renderer)
+    {
+        if (renderer != null) renderer.GetComponent<WrappedTilemapPhysicsAdapter>()?.RefreshObstaclesNow();
     }
 
     /// <summary>跨周只批量重选本机镜像；不复制 Item Collider，也不改任何逻辑坐标。</summary>

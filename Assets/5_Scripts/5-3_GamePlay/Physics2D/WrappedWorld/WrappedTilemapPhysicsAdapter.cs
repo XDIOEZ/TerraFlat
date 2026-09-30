@@ -170,7 +170,7 @@ public sealed class WrappedTilemapPhysicsAdapter : MonoBehaviour
         CompositeCollider2D sourceComposite = sourceCollider.usedByComposite
             ? source.GetComponent<CompositeCollider2D>()
             : null;
-        PolygonCollider2D sourceDataCollider = sourceComposite != null
+        PolygonCollider2D sourceDataCollider = sourceComposite != null && chunkRenderer == null
             ? source.GetComponent<PolygonCollider2D>()
             : null;
         EligibleSourceColliderCount++;
@@ -184,6 +184,7 @@ public sealed class WrappedTilemapPhysicsAdapter : MonoBehaviour
                 continue;
             CopyTiles(source, record.Tilemap);
             CopyDataPaths(sourceDataCollider, record.DataCollider);
+            if (record.ObstacleColliders != null) chunkRenderer.CopyObstacleCollidersTo(record.ObstacleColliders, offset);
             UpdateTransform(record, source, offset);
             record.Generation = refreshGeneration;
             record.Root.SetActive(source.gameObject.activeInHierarchy && sourceCollider.enabled);
@@ -194,6 +195,18 @@ public sealed class WrappedTilemapPhysicsAdapter : MonoBehaviour
                 record.Composite.GenerateGeometry();
             if (record.Root.activeSelf)
                 ActiveProxyCount++;
+        }
+    }
+
+    /// <summary>由实体障碍事件同步已有镜像；初始化或拓扑失效仍由完整刷新一次完成。</summary>
+    internal void RefreshObstaclesNow()
+    {
+        if (dirty || chunkRenderer == null || !IsSourceReady) return;
+        for (int i = 0; i < records.Count; i++)
+        {
+            ProxyRecord record = records[i];
+            if (record.ObstacleColliders != null)
+                chunkRenderer.CopyObstacleCollidersTo(record.ObstacleColliders, record.Offset);
         }
     }
 
@@ -327,6 +340,7 @@ public sealed class WrappedTilemapPhysicsAdapter : MonoBehaviour
             Collider = proxyCollider,
             Composite = proxyComposite,
             DataCollider = proxyDataCollider,
+            ObstacleColliders = chunkRenderer != null ? new ChunkObstacleColliderSet(tileObject.transform) : null,
             Offset = offset
         };
         records.Add(record);
@@ -393,6 +407,7 @@ public sealed class WrappedTilemapPhysicsAdapter : MonoBehaviour
         public TilemapCollider2D Collider;
         public CompositeCollider2D Composite;
         public PolygonCollider2D DataCollider;
+        public ChunkObstacleColliderSet ObstacleColliders;
         public Vector2 Offset;
         public int Generation;
     }

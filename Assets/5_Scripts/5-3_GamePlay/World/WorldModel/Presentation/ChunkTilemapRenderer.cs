@@ -765,8 +765,16 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRend
             naturalVisualSlots.Add(key, slot);
         }
         var data = ChunkBatchRendererGroupService.InstanceData.Create(localToWorld, crop, uvRegion, tint);
+        // 太阳阴影携带当前 Sprite 边界和半埋裁切平面，模糊不会采入邻图。
+        SharedSpriteMeshCache.SunShadowGeometry geometry = SharedSpriteMeshCache.GetSunShadowGeometry(sprite);
+        data.Data1 = geometry.UvBounds;
+        Vector3 clipPlane = geometry.UvToLocalY;
+        data.FlowY = new Vector4(clipPlane.x, clipPlane.y, clipPlane.z - crop.x, crop.w);
+        data.Data0.y = geometry.TexelScale;
         data.Transform0.w = -1f;
         data.FlowX = shadow;
+        Bounds shadowBounds = SharedSpriteMeshCache.GetSunShadowWorldBounds(sprite, localToWorld);
+        data.FlowX.w = Mathf.Max(0.01f, shadowBounds.max.y - shadow.y);
         ChunkBatchRendererGroupService.SetVisual(this, slot,
             new ChunkBatchRendererGroupService.Visual(sunShadow
                     ? ChunkBatchRendererGroupService.VisualLayer.NaturalShadow
