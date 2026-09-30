@@ -25,6 +25,10 @@ public sealed class ModManifest
     [JsonProperty("author")]
     public string Author;
 
+    /// <summary>MOD 文件夹内的可选展示图相对路径；只用于 UI，不参与内容加载。</summary>
+    [JsonProperty("previewImage")]
+    public string PreviewImage;
+
     [JsonProperty("minGameVersion")]
     public string MinGameVersion;
 
@@ -81,7 +85,7 @@ public sealed class ModManagedDefinition
     [JsonProperty("entryType", Required = Required.Always)]
     public string EntryType;
 
-    /// <summary>包内托管依赖的相对路径；例如 lib/0Harmony.dll，不允许原生插件。</summary>
+    /// <summary>包内托管依赖的相对路径；Harmony 由游戏提供，不允许原生插件。</summary>
     [JsonProperty("dependencies")]
     public List<string> Dependencies = new();
 }

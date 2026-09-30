@@ -60,9 +60,7 @@ public sealed partial class ModRuntimeManager
             throw new PlatformNotSupportedException("此构建使用 IL2CPP，不能加载 C# / Harmony MOD：" + package.Manifest.Id);
 #else
             var code = ModManagedAssemblyStore.ReadPackage(package.RootPath, package.Manifest.Managed);
-            if (!activeProfile.IsManagedCodeTrusted(package.Manifest.Id, code.Fingerprint))
-                throw new InvalidOperationException("C# MOD 尚未获代码指纹授权：" + package.Manifest.Id +
-                    "，SHA256=" + code.Fingerprint + "。只有确认信任作者后才能授权，DLL 代码不受沙箱限制。");
+            // 启动游戏即默认允许已启用的 C# MOD，不再单独核对指纹授权。
             preparedManaged.Add(package.Manifest.Id, code);
 #endif
         }
@@ -71,7 +69,7 @@ public sealed partial class ModRuntimeManager
     private void InitializeManaged(ModPackage package)
     {
         if (package.Manifest.Managed == null) return;
-        if (!preparedManaged.TryGetValue(package.Manifest.Id, out var code)) throw new InvalidOperationException("C# MOD 未经过授权准备。");
+        if (!preparedManaged.TryGetValue(package.Manifest.Id, out var code)) throw new InvalidOperationException("C# MOD 尚未准备程序集。");
         Assembly assembly = ModManagedAssemblyStore.LoadTrusted(code);
         Type type = assembly.GetType(package.Manifest.Managed.EntryType, true, false);
         if (type.IsAbstract || !typeof(IManagedGameMod).IsAssignableFrom(type) || type.GetConstructor(Type.EmptyTypes) == null)

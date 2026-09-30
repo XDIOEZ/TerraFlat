@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using FlatWorld.Networking;
 using Newtonsoft.Json;
@@ -170,7 +169,7 @@ public sealed class ModManagerOverlay : MonoBehaviour
             GUILayout.Label(info.Error ?? "未知错误");
             if (GUILayout.Button("禁用此目录", GUILayout.Width(110f)))
             {
-                File.WriteAllText(Path.Combine(info.FolderPath, ".disabled"), "disabled by FlatWorld MOD manager");
+                manager.SetPackageFolderDisabled(info.FolderPath, true);
                 notice = $"已禁用目录 {info.FolderName}。";
                 RefreshList();
             }

@@ -4,21 +4,19 @@
 
 ## 编译和安装
 
-先让当前游戏代码编译成功，再自行准备兼容 Unity Mono 的 Harmony 2 托管程序集。本目录不附带第三方 DLL。
+先让当前游戏代码编译成功。示例默认引用项目 `Assets/Plugins/Harmony/0Harmony.dll`；给独立 MOD 开发环境使用时，把 `HarmonyDllPath` 指向当前游戏发行包自带的同一程序集。
 
 ```powershell
 dotnet build -c Release `
   -p:GameManagedDirectory="D:\_Unity\_UnityProject\FlatWorld\Library\ScriptAssemblies" `
-  -p:HarmonyDllPath="D:\ModLibraries\0Harmony.dll"
+  -p:HarmonyDllPath="D:\Games\FlatWorld\FlatWorld_Data\Managed\0Harmony.dll"
 ```
 
-编译目标将本 MOD DLL、Harmony DLL 和 manifest 放到 `package/`。只把 `package` 的内容安装到 `Application.persistentDataPath/Mods/example.harmony.machines/`，不要把整个作者工程复制进去；运行目录禁止 C# 源文件和未声明的可执行文件。
+编译目标将本 MOD DLL 和 manifest 放到 `package/`。只把 `package` 的内容安装到 `Application.persistentDataPath/Mods/example.harmony.machines/`，不要把整个作者工程复制进去；玩家已有 Harmony，不要把 `0Harmony.dll` 放入 MOD 包。
 
-本示例假定所选 Harmony 发行包的托管依赖已经合并进 0Harmony.dll。若发行包另含必需托管依赖，须一并复制并逐项加入 `managed.dependencies`，不能通过目录扫描自动执行其它 DLL。不要复制 Unity、GamePlay 或系统程序集进 MOD 包。
+其他托管依赖必须逐项加入 `managed.dependencies`，不能通过目录扫描自动执行其它 DLL。不要复制 Unity、GamePlay、Harmony 或系统程序集进 MOD 包。
 
-Unity 菜单 `FlatWorld/MOD/授权 C# MOD 代码版本` 可以选择安装后的包并查看代码 SHA256。确认信任后才授权，再返回主菜单重载资源。代码变化须重新授权；进程中已加载的同名 DLL 换字节后须重启游戏，不支持 F5 隔离替换全局 Harmony 补丁。
-
-这个授权工具只写入用户配置，不执行 DLL。本次仓库修改没有安装或授权示例 MOD，也没有执行 Harmony 运行验收。
+主菜单的 MOD 管理页可查看、启停安装包并拖拽排序；启动游戏默认允许已启用的 C# MOD，无需核对 SHA256 或单独授权。编辑器的 `FlatWorld/MOD/检查 C# MOD 包` 只检查清单和程序集元数据，不执行 DLL。进程中已加载的同名 DLL 换字节后须重启游戏，不支持 F5 隔离替换全局 Harmony 补丁。
 
 ## 补丁边界
 

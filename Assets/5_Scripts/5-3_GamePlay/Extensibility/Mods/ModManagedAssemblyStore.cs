@@ -4,17 +4,15 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Security.Cryptography;
-using System.Text;
 
-/// <summary>托管 MOD 的已授权程序集缓存；只加载清单声明且指纹获准的字节，不扫描自动执行 DLL。</summary>
+/// <summary>托管 MOD 程序集缓存，只加载已启用包在清单中明确声明的 DLL。</summary>
 public static class ModManagedAssemblyStore
 {
-    #region 包校验与指纹
+    #region 包校验与代码读取
     public sealed class PackageCode
     {
         internal string EntryName;
         internal readonly List<AssemblyImage> Images = new();
-        public string Fingerprint { get; internal set; }
     }
 
     internal sealed class AssemblyImage
@@ -42,7 +40,9 @@ public static class ModManagedAssemblyStore
             string path = Resolve(root, relative);
             if (!paths.Add(path)) throw new InvalidDataException("托管 MOD 程序集路径重复：" + relative);
             if (new FileInfo(path).Length > 64 * 1024 * 1024) throw new InvalidDataException("托管 MOD 单个程序集超过 64MB：" + relative);
-            _ = AssemblyName.GetAssemblyName(path); // 只解析元数据，此处不执行代码。
+            AssemblyName name = AssemblyName.GetAssemblyName(path); // 只解析元数据，此处不执行代码。
+            if (string.Equals(name.Name, "0Harmony", StringComparison.OrdinalIgnoreCase))
+                throw new InvalidDataException("游戏已内置 Harmony；请从 MOD 包及 managed.dependencies 移除 0Harmony.dll，并用游戏提供的版本重新编译。");
         }
     }
 
@@ -70,14 +70,12 @@ public static class ModManagedAssemblyStore
         return path;
     }
 
-    /// <summary>读取清单和代码内容供用户确认信任；指纹计算不加载程序集。</summary>
+    /// <summary>读取清单声明的代码；文件哈希只用于识别进程内同名 DLL 是否发生变化。</summary>
     public static PackageCode ReadPackage(string root, ModManagedDefinition definition)
     {
         ValidateDefinition(root, definition);
         if (definition == null) throw new ArgumentNullException(nameof(definition));
         var package = new PackageCode();
-        using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
-        hash.AppendData(Encoding.UTF8.GetBytes(definition.EntryType + "\0"));
         string entryPath = Resolve(root, definition.EntryAssembly);
         var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (string relative in Paths(definition).OrderBy(value => value, StringComparer.Ordinal))
@@ -89,17 +87,15 @@ public static class ModManagedAssemblyStore
             using var sha = SHA256.Create();
             var image = new AssemblyImage { Name = name.Name, FullName = name.FullName, Bytes = bytes, Hash = Hex(sha.ComputeHash(bytes)) };
             package.Images.Add(image);
-            hash.AppendData(Encoding.UTF8.GetBytes(relative.Replace('\\', '/') + "\0" + image.Hash + "\0"));
             if (string.Equals(path, entryPath, StringComparison.OrdinalIgnoreCase)) package.EntryName = image.Name;
         }
-        package.Fingerprint = Hex(hash.GetHashAndReset());
         return package;
     }
 
     private static string Hex(byte[] hash) => BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
     #endregion
 
-    #region 已授权程序集
+    #region 进程程序集缓存
     /// <summary>同进程内不允许换字节的 DLL 热替换；普通内容重载可重用完全相同的程序集。</summary>
     public static Assembly LoadTrusted(PackageCode package)
     {
@@ -107,6 +103,7 @@ public static class ModManagedAssemblyStore
         throw new PlatformNotSupportedException("当前 IL2CPP 平台不支持托管 DLL / Harmony MOD；JSON、资源及 Lua MOD 不受此限制。");
 #else
         if (package == null) throw new ArgumentNullException(nameof(package));
+        EnsureBuiltInHarmonyLoaded();
         foreach (AssemblyImage image in package.Images)
         {
             if (processImages.TryGetValue(image.Name, out var existing))
@@ -124,6 +121,25 @@ public static class ModManagedAssemblyStore
         foreach (AssemblyImage image in package.Images) LoadImage(processImages[image.Name]);
         return LoadImage(processImages[package.EntryName]);
 #endif
+    }
+
+    /// <summary>按程序集名加载游戏自带 Harmony，避免 GamePlay 对补丁库建立编译期引用并被 Burst 扫描。</summary>
+    private static void EnsureBuiltInHarmonyLoaded()
+    {
+        const string harmonyAssemblyName = "0Harmony";
+        if (AppDomain.CurrentDomain.GetAssemblies().Any(value =>
+                string.Equals(value.GetName().Name, harmonyAssemblyName, StringComparison.OrdinalIgnoreCase)))
+            return;
+
+        try
+        {
+            Assembly.Load(harmonyAssemblyName);
+        }
+        catch (Exception exception)
+        {
+            throw new FileLoadException(
+                "游戏自带 Harmony 运行库未能加载；请确认发行包包含 0Harmony.dll。", exception);
+        }
     }
 
     private static Assembly ResolveAssembly(object sender, ResolveEventArgs args)

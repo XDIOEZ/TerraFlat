@@ -4,9 +4,9 @@
   "name": "机器世界 Harmony 示例",
   "version": "1.0.0",
   "description": "示例：给全部炉体增加 100°C 温度上限，不复制炉体实现。",
+  "previewImage": "preview.png",
   "managed": {
     "entryAssembly": "lib/Example.HarmonyMachines.dll",
-    "entryType": "Example.HarmonyMachines.ModEntry",
-    "dependencies": ["lib/0Harmony.dll"]
+    "entryType": "Example.HarmonyMachines.ModEntry"
   }
 }
