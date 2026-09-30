@@ -83,7 +83,8 @@ public static class AutoSavePreferences
 
     private sealed class AutoSaveSettingsProvider :
         ISettingsProvider,
-        ISettingsEditSessionParticipant
+        ISettingsEditSessionParticipant,
+        ISettingsEditSessionChangeTracker
     {
         private sealed class AutoSaveState
         {
@@ -147,6 +148,14 @@ public static class AutoSavePreferences
                 Enabled = AutoSavePreferences.Enabled,
                 IntervalMinutes = AutoSavePreferences.IntervalMinutes
             };
+        }
+
+        /// <summary>检查自定义自动保存分钟数是否偏离设置会话基线。</summary>
+        public bool HasSettingsEditSessionChanges(object baselineState)
+        {
+            return baselineState is AutoSaveState state &&
+                   (state.Enabled != AutoSavePreferences.Enabled ||
+                    state.IntervalMinutes != AutoSavePreferences.IntervalMinutes);
         }
 
         /// <summary>恢复自定义自动保存间隔与启用状态。</summary>
