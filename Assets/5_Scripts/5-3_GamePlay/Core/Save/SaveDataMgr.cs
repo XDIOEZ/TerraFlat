@@ -155,14 +155,29 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
             throw new InvalidOperationException("SaveData为null，无法创建联机世界快照");
 
         PrepareLoadedChunksForSave();
-        byte[] rawData = BuildCompactSavePayload(SaveData);
-        using MemoryStream output = new MemoryStream();
-        using (GZipStream gzip = new GZipStream(output, System.IO.Compression.CompressionLevel.Fastest, true))
+        var privateBackups = new List<(Data_Player Player, string SpecialData)>();
+        try
         {
-            gzip.Write(rawData, 0, rawData.Length);
+            if (SaveData.PlayerData_Dict != null)
+                foreach (Data_Player player in SaveData.PlayerData_Dict.Values)
+                {
+                    if (player == null) continue;
+                    string publicData = MachineInventoryCommands.PublicSpecialData(player.ItemSpecialData);
+                    if (string.Equals(publicData, player.ItemSpecialData, StringComparison.Ordinal)) continue;
+                    privateBackups.Add((player, player.ItemSpecialData));
+                    player.ItemSpecialData = publicData;
+                }
+            byte[] rawData = BuildCompactSavePayload(SaveData);
+            using MemoryStream output = new MemoryStream();
+            using (GZipStream gzip = new GZipStream(output, System.IO.Compression.CompressionLevel.Fastest, true))
+                gzip.Write(rawData, 0, rawData.Length);
+            return output.ToArray();
         }
-
-        return output.ToArray();
+        finally
+        {
+            foreach (var backup in privateBackups)
+                backup.Player.ItemSpecialData = backup.SpecialData;
+        }
     }
 
     /// <summary>
