@@ -49,6 +49,7 @@ public partial class GameRes
         RuntimeUIPrefabKeys.SliderControl,
         RuntimeUIPrefabKeys.MainMenuSettings,
         RuntimeUIPrefabKeys.MainMenuExitConfirmation,
+        RuntimeUIPrefabKeys.ModManager,
         RuntimeUIPrefabKeys.InputBindingRow,
         RuntimeUIPrefabKeys.WorldLoading,
         RuntimeUIPrefabKeys.MobileControls,

@@ -2173,6 +2173,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 9a8e8edb7c184118b4587c4e402bc3dd
+    m_Address: Assets/2_Prefabs/2-1_UI/MainMenu/Core/UI_ModManager.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 9c5b28c80319a2343aa7ba34d9dad9d8
     m_Address: Assets/6_Art/Generated/Mechanical/World/Windmill_Building.png
     m_ReadOnly: 0

@@ -258,7 +258,7 @@ public static class MainMenuPrefabBuilder
         cardRect.anchorMax = Vector2.zero;
         cardRect.pivot = Vector2.zero;
         cardRect.anchoredPosition = new Vector2(76f, 76f);
-        cardRect.sizeDelta = new Vector2(560f, 410f);
+        cardRect.sizeDelta = new Vector2(560f, 524f);
         card.raycastTarget = true;
 
         Outline cardOutline = card.gameObject.AddComponent<Outline>();
@@ -277,6 +277,7 @@ public static class MainMenuPrefabBuilder
         CreateMenuButton(card.transform, font, GameManager.MainMenuContinueButtonKey, "01", "继续旅程", "载入已有世界", 40f, false);
         CreateMenuButton(card.transform, font, GameManager.MainMenuNewGameButtonKey, "02", "新建世界", "自定义你的开局", 154f, false);
         CreateMenuButton(card.transform, font, GameManager.MainMenuMultiplayerButtonKey, "03", "联机模式", "与好友共同生存", 268f, true);
+        CreateMenuButton(card.transform, font, GameManager.MainMenuModsButtonKey, "04", "MOD 管理", "查看与配置扩展内容", 382f, false);
     }
 
     /// <summary>创建主菜单右上角的设置入口；当前只负责展示，不绑定设置逻辑。</summary>

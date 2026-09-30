@@ -20,6 +20,7 @@ public partial class GameManager
     public const string MainMenuNewGameButtonKey = "新游戏";
     public const string MainMenuMultiplayerButtonKey = "联机模式";
     public const string MainMenuSettingsButtonKey = "设置";
+    public const string MainMenuModsButtonKey = "MOD管理";
     public const string MainMenuSettingsPanelKey = RuntimeUIPrefabKeys.MainMenuSettings;
     public const string MainMenuSettingsCloseButtonKey = "关闭";
     public const string MainMenuSettingsPreferredControlKey = "界面缩放";
@@ -785,6 +786,7 @@ public partial class GameManager
         panel.SetButtonOnClick(MainMenuContinueButtonKey, OpenGameSaveManager);
         panel.SetButtonOnClick(MainMenuNewGameButtonKey, OpenNewGame);
         panel.SetButtonOnClick(MainMenuSettingsButtonKey, OpenMainMenuSettings);
+        panel.SetButtonOnClick(MainMenuModsButtonKey, OpenMainMenuMods);
         panel.CancelShortcutOverride = OpenMainMenuExitConfirmation;
         panel.PrepareForGamepadNavigation(MainMenuContinueButtonKey, false);
         panel.Open();

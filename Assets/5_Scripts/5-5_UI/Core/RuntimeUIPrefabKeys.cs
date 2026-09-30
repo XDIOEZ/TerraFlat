@@ -20,6 +20,7 @@ public static class RuntimeUIPrefabKeys
     public const string CoordinateDisplaySettings = "UI_CoordinateDisplaySettings";
     public const string MainMenuSettings = "UI_MainMenuSettings";
     public const string MainMenuExitConfirmation = "UI_MainMenuExitConfirmation";
+    public const string ModManager = "UI_ModManager";
     public const string SaveRenameDialog = "UI_SaveRenameDialog";
     public const string AutoSaveSettings = "UI_AutoSaveSettings";
     public const string WorldStreamingSettings = "UI_WorldStreamingSettings";
