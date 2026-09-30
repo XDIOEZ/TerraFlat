@@ -1019,7 +1019,8 @@ public static class ItemDefinitionMigrationTool
             assetPath.StartsWith("Assets/2_Prefabs/Gameplay/Modules/", StringComparison.OrdinalIgnoreCase))
             return Path.GetFileNameWithoutExtension(assetPath);
 
-        return module.GetType().Name;
+        // 外壳内嵌模块没有独立 Prefab 地址时使用稳定模块 ID，不能把组件类名伪装成 PrefabId。
+        return string.IsNullOrWhiteSpace(fallbackId) ? module.GetType().Name : fallbackId.Trim();
     }
 
     private static string ResolveStableModuleName(

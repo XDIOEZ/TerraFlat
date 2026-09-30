@@ -339,7 +339,7 @@
           }
         },
         "animation": {
-          "prefab": "Mod_Weapon_AnimationAction",
+          "prefab": "Module_Weapon_AnimationAction",
           "id": "Module_Weapon_AnimationAction",
           "enabled": true,
           "data": {
@@ -522,7 +522,7 @@
           }
         },
         "animation": {
-          "prefab": "Mod_Weapon_AnimationAction",
+          "prefab": "Module_Weapon_AnimationAction",
           "id": "Module_Weapon_AnimationAction",
           "enabled": true,
           "data": {
@@ -705,7 +705,7 @@
           }
         },
         "animation": {
-          "prefab": "Mod_Weapon_AnimationAction",
+          "prefab": "Module_Weapon_AnimationAction",
           "id": "Module_Weapon_AnimationAction",
           "enabled": true,
           "data": {
@@ -888,7 +888,7 @@
           }
         },
         "animation": {
-          "prefab": "Mod_Weapon_AnimationAction",
+          "prefab": "Module_Weapon_AnimationAction",
           "id": "Module_Weapon_AnimationAction",
           "enabled": true,
           "data": {
@@ -1043,7 +1043,7 @@
           }
         },
         "animation": {
-          "prefab": "Mod_Weapon_AnimationAction",
+          "prefab": "Module_Weapon_AnimationAction",
           "id": "Module_Weapon_AnimationAction",
           "enabled": true,
           "data": {
