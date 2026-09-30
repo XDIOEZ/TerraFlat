@@ -17,16 +17,18 @@ public sealed class WorldSortingManager : SingletonMono<WorldSortingManager>
     private const string PlayerCategory = "player";
     public const string CreatureCategory = "creature"; // ECS 与旧生物共用类别。
     public const string BuildingCategory = "building"; // 建筑与机械动态视觉共用类别。
+    public const string VehicleCategory = "vehicle"; // 木筏与未来交通工具共用类别。
     public const string WorldItemCategory = "world-item"; // 普通 Item 与 ECS 掉落物共用类别。
     public const string GroundShadowCategory = "ground-shadow"; // 太阳与接触阴影共用地表排序键。
+    public const string GroundBuildingCategory = "ground-building"; // 贴地设施复用地形层，材质队列放在墙体下面。
     public const string GroundMarkCategory = "ground-mark"; // 裂纹、脚印与耕地渐显。
     public const string GroundSplashCategory = "ground-splash"; // 雨滴与物品入水水花。
     public const string GroundPreviewCategory = "ground-preview"; // 建造与播种预览。
     public const string WorldEffectCategory = "world-effect"; // 脱离主体的世界特效。
     private static readonly string[] requiredCategories =
     {
-        PlayerCategory, CreatureCategory, BuildingCategory, WorldItemCategory,
-        GroundShadowCategory, GroundMarkCategory, GroundSplashCategory,
+        PlayerCategory, CreatureCategory, BuildingCategory, VehicleCategory, WorldItemCategory,
+        GroundBuildingCategory, GroundShadowCategory, GroundMarkCategory, GroundSplashCategory,
         GroundPreviewCategory, WorldEffectCategory
     };
 
@@ -47,6 +49,7 @@ public sealed class WorldSortingManager : SingletonMono<WorldSortingManager>
     private void OnEnable()
     {
         ItemMgr.RuntimeItemRegistered += RegisterItem;
+        Item.RuntimeStructureChanged += RefreshRegisteredItem;
         ItemMgr itemManager = ItemMgr.GetInstance();
         if (itemManager == null) return;
         foreach (Item item in itemManager.WorldRunTimeItems.Values)
@@ -57,6 +60,7 @@ public sealed class WorldSortingManager : SingletonMono<WorldSortingManager>
     private void OnDisable()
     {
         ItemMgr.RuntimeItemRegistered -= RegisterItem;
+        Item.RuntimeStructureChanged -= RefreshRegisteredItem;
     }
     #endregion
 
@@ -103,7 +107,7 @@ public sealed class WorldSortingManager : SingletonMono<WorldSortingManager>
         if (HasRequiredProfiles()) ValidateWorldDomainProfiles();
     }
 
-    /// <summary>动态类别共用排序键，并位于 Default 地形与 Shadow 地表表现之后。</summary>
+    /// <summary>动态类别共用 Sorting Layer，并允许由 JSON 的 Order 定义类别间固定前后关系。</summary>
     private void ValidateDynamicProfiles()
     {
         WorldSortingProfile first = null;
@@ -117,8 +121,8 @@ public sealed class WorldSortingManager : SingletonMono<WorldSortingManager>
             if (SortingLayer.GetLayerValueFromName(current.sortingLayer) <= groundEffectLayerValue)
                 throw new InvalidOperationException($"动态类别 {category} 必须位于地表表现 Shadow 排序层前方。");
             if (first == null) { first = current; continue; }
-            if (current.sortingLayer != first.sortingLayer || current.order != first.order)
-                throw new InvalidOperationException("所有动态排序类别必须使用同一 Sorting Layer 和 Order。");
+            if (current.sortingLayer != first.sortingLayer)
+                throw new InvalidOperationException("所有动态排序类别必须使用同一 Sorting Layer；类别间 Order 由 JSON 控制。");
         }
     }
 
@@ -132,6 +136,10 @@ public sealed class WorldSortingManager : SingletonMono<WorldSortingManager>
         if (ground <= terrain)
             throw new InvalidOperationException("地表表现排序层必须位于 Default 地形之后。");
 
+        GetSortingKey(GroundBuildingCategory, out int floorLayerId, out int floorOrder);
+        if (floorLayerId != SortingLayer.NameToID(WorldRenderingConfigCatalog.Default.sorting.terrainSortingLayer) || floorOrder != 0)
+            throw new InvalidOperationException("贴地建筑必须使用地形排序层与 Order 0，由地板材质队列排在墙体下面。");
+
         string[] groundCategories = { GroundMarkCategory, GroundSplashCategory, GroundPreviewCategory };
         foreach (string category in groundCategories)
         {
@@ -139,10 +147,13 @@ public sealed class WorldSortingManager : SingletonMono<WorldSortingManager>
             if (layerId != shadowLayerId || order <= shadowOrder)
                 throw new InvalidOperationException($"地表表现类别 {category} 必须与阴影同层且顺序更高。");
         }
-        GetSortingKey(PlayerCategory, out int playerLayerId, out _);
+        GetSortingKey(PlayerCategory, out int playerLayerId, out int playerOrder);
         int player = SortingLayer.GetLayerValueFromID(playerLayerId);
         if (player <= ground)
             throw new InvalidOperationException("动态实体排序层必须位于地表表现之后。");
+        GetSortingKey(VehicleCategory, out int vehicleLayerId, out int vehicleOrder);
+        if (vehicleLayerId != playerLayerId || vehicleOrder >= playerOrder)
+            throw new InvalidOperationException("交通工具必须与玩家位于同一 Sorting Layer，且 Order 低于玩家。");
         GetSortingKey(WorldEffectCategory, out int effectLayerId, out _);
         if (SortingLayer.GetLayerValueFromID(effectLayerId) <= player)
             throw new InvalidOperationException("世界特效排序层必须位于动态实体之后。");
@@ -228,8 +239,10 @@ public sealed class WorldSortingManager : SingletonMono<WorldSortingManager>
         if (item == null || item is Map) return;
 
         WorldSortingMember member = item.GetComponent<WorldSortingMember>();
-        string category = member != null && !string.IsNullOrWhiteSpace(member.Category)
-            ? member.Category : ResolveCategory(item);
+        string resolvedCategory = ResolveCategory(item);
+        string category = resolvedCategory == GroundBuildingCategory || member == null ||
+                          string.IsNullOrWhiteSpace(member.Category) || member.Category == GroundBuildingCategory
+            ? resolvedCategory : member.Category;
 
         SpriteRenderer renderer = member != null && member.TargetRenderer != null
             ? member.TargetRenderer : ResolveMainRenderer(item);
@@ -244,6 +257,15 @@ public sealed class WorldSortingManager : SingletonMono<WorldSortingManager>
             member = item.gameObject.AddComponent<WorldSortingMember>();
         member.Bind(category, renderer, item);
         BuildingDepthMeshBridge.Register(item);
+    }
+
+    /// <summary>已登记实体原位切换地板层时同步类别，模块装配期间不提前绑定。</summary>
+    private void RefreshRegisteredItem(Item item)
+    {
+        ItemMgr manager = ItemMgr.GetInstance();
+        if (item?.itemData == null || manager == null ||
+            !manager.WorldRunTimeItems.TryGetValue(item.itemData.Guid, out Item registered) || registered != item) return;
+        RegisterItem(item);
     }
 
     /// <summary>优先使用 Item 的主体引用，尚未赋值时选非 Canvas 的有效世界精灵。</summary>
@@ -263,7 +285,9 @@ public sealed class WorldSortingManager : SingletonMono<WorldSortingManager>
     {
         if (item is Player) return PlayerCategory;
         if (RuntimeAiEntityUtility.IsAiEntity(item)) return CreatureCategory;
-        if (item.GetComponentInChildren<Mod_Building>(true) != null) return BuildingCategory;
+        if (item.GetComponentInChildren<Mod_Carrier>(true) != null) return VehicleCategory;
+        Mod_Building building = item.GetComponentInChildren<Mod_Building>(true);
+        if (building != null) return building.IsGroundFacility ? GroundBuildingCategory : BuildingCategory;
         return WorldItemCategory;
     }
     #endregion

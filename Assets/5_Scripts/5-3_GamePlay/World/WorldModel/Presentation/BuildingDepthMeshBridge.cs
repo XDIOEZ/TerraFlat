@@ -33,7 +33,7 @@ internal static class BuildingDepthMeshBridge
         if (item == null) return;
         Unregister(item);
         Mod_Building building = item.itemMods?.GetMod_ByID<Mod_Building>(ModText.Building);
-        if (building?.Data?.Role != BuildingRole.PlacedBuilding || item.Sprite == null) return;
+        if (building?.Data?.Role != BuildingRole.PlacedBuilding || building.IsGroundFacility || item.Sprite == null) return;
         // 移动车辆不是静态格子建筑，继续由自己的动态表现控制。
         if (item.GetComponentInChildren<Mod_Carrier>(true) != null) return;
         if (!hooked)
@@ -116,7 +116,7 @@ internal static class BuildingDepthMeshBridge
 
         internal void Present()
         {
-            if (building == null || !Item.isActiveAndEnabled || Item.InHand || !building.IsInstalled() ||
+            if (building == null || building.IsGroundFacility || !Item.isActiveAndEnabled || Item.InHand || !building.IsInstalled() ||
                 ChunkMgr.ExistingInstance == null ||
                 !ChunkMgr.ExistingInstance.TryGetRuntimeChunkView(Item.transform.position, out ChunkView currentView))
             { Release(); return; }

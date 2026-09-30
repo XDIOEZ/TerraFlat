@@ -69,7 +69,7 @@ public partial class Mod_Building
     {
         SpriteRenderer source = _lightOccluderSource;
         if (source == null || !source.enabled || !source.gameObject.activeInHierarchy || source.sprite == null ||
-            LightOcclusionMode == BuildingLightOcclusionMode.None)
+            IsGroundFacility || LightOcclusionMode == BuildingLightOcclusionMode.None)
         {
             _lightOccluder.enabled = false;
             _appliedOcclusionMode = LightOcclusionMode;

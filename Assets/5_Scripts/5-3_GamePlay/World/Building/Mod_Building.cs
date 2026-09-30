@@ -29,6 +29,13 @@ public enum BuildingRole
     PlacedBuilding
 }
 
+/// <summary>贴地设施与实体建筑分层占地，机械扩展仍可指定自己的层。</summary>
+public enum BuildingPlacementLayer
+{
+    Structure = 0,
+    Ground = 2
+}
+
 /// <summary>
 /// 建筑召唤器是持久化载体，PlacedBuilding 是快照还原后的世界实例。
 /// 拆除时先生成带快照的召唤器，成功后才删除原建筑。
@@ -111,6 +118,13 @@ public partial class Mod_Building : Module, IIncomingDamageRule
     public bool IsPlacementPending => _placementPending;
     public bool IsDismantlePending => _dismantlePending;
     public bool IsPlacementModeActive => IsSummoner && (!RequiresPlacementRequest || _placementRequested);
+
+    #region 建筑空间层
+    [Tooltip("地板层设施允许同格放置实体建筑，不阻挡通行或视线。")]
+    public BuildingPlacementLayer PlacementLayer = BuildingPlacementLayer.Structure;
+    public bool IsGroundFacility => BuildingOccupancyRegistry.GetPlacementLayer(this) == (int)BuildingPlacementLayer.Ground;
+    public bool BlocksMovement => !IsGroundFacility && (BuildingPlacementLifecycle.GetTraversalPolicy(item)?.BlocksMovement ?? true);
+    #endregion
 
     /// <summary>落地建筑在完成自身防御结算后应用攻击方的建筑伤害倍率。</summary>
     public float GetDamageMultiplier(IDamageSender sender)
@@ -235,6 +249,17 @@ public partial class Mod_Building : Module, IIncomingDamageRule
         item.itemData.ModuleDataDic[_Data.Name] = BuildingData;
         SaveDataMgr.Instance?.RecordRuntimeBuildingChange(item);
     }
+
+    #region 建筑配置刷新
+    /// <summary>资源重载后按当前空间层更新物理、占地与遮光，保留建筑的安装状态。</summary>
+    public override void OnResourcesReloaded()
+    {
+        if (!_isLoaded || item == null) return;
+        EnsureRuntimeReferences();
+        SyncRuntimeState();
+        SyncNavigationOccupancy();
+    }
+    #endregion
 
     public override void ApplyNetworkData(ModuleData data)
     {
@@ -1455,6 +1480,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule
         bool shouldOcclude = item != null &&
                              Data?.Role == BuildingRole.PlacedBuilding &&
                              !item.InHand &&
+                             !IsGroundFacility &&
                              LightOcclusionMode != BuildingLightOcclusionMode.None &&
                              item.gameObject.activeInHierarchy;
 
@@ -1703,7 +1729,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule
             return;
 
         // 可通行建筑保留 Trigger 供交互/受击查询，但不再形成角色物理阻挡。
-        bool blocksMovement = BuildingPlacementLifecycle.GetTraversalPolicy(item)?.BlocksMovement ?? true;
+        bool blocksMovement = BlocksMovement;
         if (boxCollider2D != null && Data?.Role == BuildingRole.PlacedBuilding)
         {
             int colliderLayer = LayerMask.NameToLayer(BuildingCollisionLayerName);

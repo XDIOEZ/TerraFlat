@@ -1,25 +1,26 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Sprites;
 
 /// <summary>
 /// 交互目标的本地白色描边。组件运行时挂在目标 Item/视觉根节点上，
-/// 每个源 SpriteRenderer 只创建一份略微放大的白色 Sprite 作为轮廓，
+/// 每个源 SpriteRenderer 只创建一份同尺寸的轮廓代理，以屏幕像素计算白边，
 /// 不修改原始 SpriteRenderer 的材质。
 /// </summary>
 [DisallowMultipleComponent]
 public sealed class InteractionTargetOutline : MonoBehaviour
 {
-    private const float DefaultThicknessPixels = 1f;
+    #region 描边参数与资源
 
     private static readonly int MainTextureProperty = Shader.PropertyToID("_MainTex");
+    private static readonly int AlphaTextureProperty = Shader.PropertyToID("_AlphaTex");
+    private static readonly int ExternalAlphaProperty = Shader.PropertyToID("_EnableExternalAlpha");
+    private static readonly int SpriteUvProperty = Shader.PropertyToID("_OutlineSpriteUV");
     private static readonly int BodyClipProperty = Shader.PropertyToID("_BodyClip");
     private static readonly int BodyMinVProperty = Shader.PropertyToID("_BodyMinV");
     private static readonly int BodyMaxVProperty = Shader.PropertyToID("_BodyMaxV");
     private static Shader outlineShader;
     private static Material sharedOutlineMaterial;
-
-    [SerializeField, Min(0.25f)]
-    private float thicknessPixels = DefaultThicknessPixels;
 
     private readonly List<SpriteRenderer> sourceRenderers = new(8);
     private readonly List<OutlineEntry> outlineEntries = new(8);
@@ -29,6 +30,8 @@ public sealed class InteractionTargetOutline : MonoBehaviour
     private bool highlighted;
 
     public bool IsHighlighted => highlighted;
+
+    #endregion
 
     #region 生命周期
 
@@ -40,6 +43,8 @@ public sealed class InteractionTargetOutline : MonoBehaviour
     }
 
     #endregion
+
+    #region 交互目标入口
 
     /// <summary>为交互组件所属的 Item 获取或创建本地描边控制器。</summary>
     public static InteractionTargetOutline GetOrCreate(Component interactable)
@@ -87,6 +92,10 @@ public sealed class InteractionTargetOutline : MonoBehaviour
             DisableOutlineRenderers();
     }
 
+    #endregion
+
+    #region 描边同步与回收
+
     private void LateUpdate()
     {
         if (highlighted)
@@ -101,6 +110,12 @@ public sealed class InteractionTargetOutline : MonoBehaviour
 
     private void RefreshOutlineRenderers()
     {
+        if (!InteractionOutlineSettings.Enabled)
+        {
+            DisableOutlineRenderers();
+            return;
+        }
+
         Material material = GetSharedOutlineMaterial();
         if (material == null)
         {
@@ -173,8 +188,7 @@ public sealed class InteractionTargetOutline : MonoBehaviour
     }
 
     /// <summary>
-    /// 同步单个白色副本，并按期望像素厚度在 X/Y 两轴分别放大。
-    /// 缩放时补偿 Sprite Pivot，使放大围绕可见区域中心进行，而不是围绕 Pivot 偏移。
+    /// 同步同尺寸的轮廓代理，实际白边宽度由 Shader 按屏幕像素计算。
     /// </summary>
     private void SyncOutlineRenderer(
         SpriteRenderer source,
@@ -192,93 +206,50 @@ public sealed class InteractionTargetOutline : MonoBehaviour
         outline.flipY = source.flipY;
         outline.maskInteraction = source.maskInteraction;
         outline.sortingLayerID = source.sortingLayerID;
-        outline.sortingOrder = source.sortingOrder == int.MinValue
-            ? int.MinValue
-            : source.sortingOrder - 1;
+        outline.sortingOrder = Mathf.Min(short.MaxValue, source.sortingOrder + 1);
         outline.drawMode = source.drawMode;
         outline.size = source.size;
         outline.tileMode = source.tileMode;
 
-        Vector3 outlineScale = CalculateOutlineScale(source);
-        Vector3 visibleCenter = CalculateVisibleLocalCenter(source);
-        outline.transform.localPosition = new Vector3(
-            visibleCenter.x * (1f - outlineScale.x),
-            visibleCenter.y * (1f - outlineScale.y),
-            0f);
+        outline.transform.localPosition = Vector3.zero;
         outline.transform.localRotation = Quaternion.identity;
-        outline.transform.localScale = outlineScale;
+        outline.transform.localScale = Vector3.one;
         SyncRendererClipState(source, outline);
         outline.enabled = highlighted && source.enabled &&
             source.gameObject.activeInHierarchy && source.sprite != null;
     }
 
-    /// <summary>同步源渲染器的局部裁剪状态，避免描边重新显示已剔除的像素。</summary>
+    /// <summary>同步贴图、图集边界和局部裁剪，避免描边采到邻图或显示已剔除像素。</summary>
     private void SyncRendererClipState(SpriteRenderer source, SpriteRenderer outline)
     {
         Material sourceMaterial = source.sharedMaterial;
-        if (sourceMaterial == null || !sourceMaterial.HasProperty(BodyClipProperty))
-        {
-            outline.SetPropertyBlock(null);
-            return;
-        }
-
         sourcePropertyBlock.Clear();
         source.GetPropertyBlock(sourcePropertyBlock);
 
         outlinePropertyBlock.Clear();
         // 写入裁剪参数会替换代理 Renderer 的属性块，必须同时恢复 Sprite 的逐渲染器贴图。
-        if (outline.sprite != null)
-            outlinePropertyBlock.SetTexture(MainTextureProperty, outline.sprite.texture);
-        outlinePropertyBlock.SetFloat(BodyClipProperty, sourcePropertyBlock.GetFloat(BodyClipProperty));
-        outlinePropertyBlock.SetFloat(BodyMinVProperty, sourcePropertyBlock.GetFloat(BodyMinVProperty));
-        outlinePropertyBlock.SetFloat(BodyMaxVProperty, sourcePropertyBlock.GetFloat(BodyMaxVProperty));
+        Sprite sprite = outline.sprite;
+        if (sprite != null)
+        {
+            outlinePropertyBlock.SetTexture(MainTextureProperty, sprite.texture);
+            Texture2D alpha = sprite.associatedAlphaSplitTexture;
+            outlinePropertyBlock.SetTexture(AlphaTextureProperty, alpha != null ? alpha : Texture2D.whiteTexture);
+            outlinePropertyBlock.SetFloat(ExternalAlphaProperty, alpha != null ? 1f : 0f);
+            outlinePropertyBlock.SetVector(SpriteUvProperty, DataUtility.GetOuterUV(sprite));
+        }
+        outlinePropertyBlock.SetFloat(BodyClipProperty, ReadSourceFloat(sourceMaterial, BodyClipProperty, 0f));
+        outlinePropertyBlock.SetFloat(BodyMinVProperty, ReadSourceFloat(sourceMaterial, BodyMinVProperty, 0f));
+        outlinePropertyBlock.SetFloat(BodyMaxVProperty, ReadSourceFloat(sourceMaterial, BodyMaxVProperty, 1f));
         outline.SetPropertyBlock(outlinePropertyBlock);
     }
 
-    private Vector3 CalculateOutlineScale(SpriteRenderer source)
+    private float ReadSourceFloat(Material sourceMaterial, int property, float fallback)
     {
-        Sprite sprite = source.sprite;
-        if (sprite == null)
-            return Vector3.one;
-
-        float pixelsPerUnit = Mathf.Max(0.01f, sprite.pixelsPerUnit);
-        float localThickness = Mathf.Max(0.25f, thicknessPixels) / pixelsPerUnit;
-        Vector2 renderedSize = GetRenderedLocalSize(source);
-
-        float scaleX = 1f + (2f * localThickness / Mathf.Max(0.0001f, Mathf.Abs(renderedSize.x)));
-        float scaleY = 1f + (2f * localThickness / Mathf.Max(0.0001f, Mathf.Abs(renderedSize.y)));
-        return new Vector3(scaleX, scaleY, 1f);
-    }
-
-    private static Vector3 CalculateVisibleLocalCenter(SpriteRenderer source)
-    {
-        Sprite sprite = source.sprite;
-        if (sprite == null)
-            return Vector3.zero;
-
-        Vector2 renderedSize = GetRenderedLocalSize(source);
-        Vector2 rectSize = sprite.rect.size;
-        float pivotX = rectSize.x > 0.0001f ? sprite.pivot.x / rectSize.x : 0.5f;
-        float pivotY = rectSize.y > 0.0001f ? sprite.pivot.y / rectSize.y : 0.5f;
-
-        float centerX = (0.5f - pivotX) * renderedSize.x;
-        float centerY = (0.5f - pivotY) * renderedSize.y;
-        if (source.flipX)
-            centerX = -centerX;
-        if (source.flipY)
-            centerY = -centerY;
-
-        return new Vector3(centerX, centerY, 0f);
-    }
-
-    private static Vector2 GetRenderedLocalSize(SpriteRenderer source)
-    {
-        if (source.sprite == null)
-            return Vector2.one;
-
-        return source.drawMode == SpriteDrawMode.Simple
-            ? (Vector2)source.sprite.bounds.size
-            : source.size;
+        if (sourcePropertyBlock.HasProperty(property))
+            return sourcePropertyBlock.GetFloat(property);
+        return sourceMaterial != null && sourceMaterial.HasProperty(property)
+            ? sourceMaterial.GetFloat(property)
+            : fallback;
     }
 
     private static SpriteRenderer CreateOutlineRenderer(SpriteRenderer source)
@@ -345,9 +316,15 @@ public sealed class InteractionTargetOutline : MonoBehaviour
         return sharedOutlineMaterial;
     }
 
+    #endregion
+
+    #region 代理记录
+
     private sealed class OutlineEntry
     {
         public SpriteRenderer Source;
         public SpriteRenderer Renderer;
     }
+
+    #endregion
 }

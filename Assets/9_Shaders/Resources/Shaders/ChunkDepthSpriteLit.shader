@@ -68,6 +68,7 @@ Shader "FlatWorld/2D/Chunk Depth Sprite Lit"
         CBUFFER_END
         #define FLATWORLD_VEGETATION_SWAY_MATERIAL_DECLARED
         #include "../../Shader/VegetationSway.hlsl"
+        #include "../../Shader/InteractionOutlineCommon.hlsl"
         float _PlayerOcclusionEnabled, _PlayerOcclusionRadius, _PlayerOcclusionFeather;
         float _PlayerOcclusionAlpha, _PlayerOcclusionVerticalPadding;
         float4 _PlayerOcclusionCenter;
@@ -158,15 +159,21 @@ Shader "FlatWorld/2D/Chunk Depth Sprite Lit"
             }
             return uv;
         }
-        half SpriteAlpha(float2 uv, float4 region)
-        {
-            if (any(uv < region.xy) || any(uv > region.zw)) return 0;
-            half a = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, uv).a;
-            if (_EnableExternalAlpha > .5) a = SAMPLE_TEXTURE2D(_AlphaTex, sampler_AlphaTex, uv).r;
-            return a;
-        }
         half4 Surface(Varyings input, float2 uv)
         {
+            // 屏幕导数在裁剪前求出，贴图分辨率和对象缩放不再改变描边宽度。
+            float2 pixelScale = InteractionOutlinePixelScale();
+            float2 pixelX = ddx(input.uv.xy) * pixelScale.x;
+            float2 pixelY = ddy(input.uv.xy) * pixelScale.y;
+            if (input.animation.x > 1.5 && input.animation.x < 2.5)
+            {
+                float width = max(.000001, input.region.z - input.region.x);
+                float inset = min(width * .49, _MainTex_TexelSize.x * .5);
+                float uvScale = (width - inset * 2) / width;
+                // 传送带循环接缝只改变采样位置，不能把 frac 跳变当成一个屏幕像素的宽度。
+                pixelX.x *= uvScale;
+                pixelY.x *= uvScale;
+            }
             if (input.localClip.w > .5) clip(input.localClip.y - input.localClip.z);
             half4 main = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, uv);
             if (_EnableExternalAlpha > .5) main.a = SAMPLE_TEXTURE2D(_AlphaTex, sampler_AlphaTex, uv).r;
@@ -189,10 +196,7 @@ Shader "FlatWorld/2D/Chunk Depth Sprite Lit"
             if (_DepthDissolveEnabled > .5) clip(SAMPLE_TEXTURE2D(_DissolveTex, sampler_DissolveTex, uv).r - (input.state.w > .5 ? input.state.z : _Dissolve));
             if (input.effects.w > .5)
             {
-                float2 pixel = _MainTex_TexelSize.xy;
-                half neighbours = min(min(SpriteAlpha(uv + float2(pixel.x,0), input.region), SpriteAlpha(uv - float2(pixel.x,0), input.region)),
-                    min(SpriteAlpha(uv + float2(0,pixel.y), input.region), SpriteAlpha(uv - float2(0,pixel.y), input.region)));
-                main.rgb = lerp(main.rgb, 1, 1 - step(.1, neighbours));
+                main.rgb = lerp(main.rgb, 1, InteractionOutlineMask(uv, input.region, pixelX, pixelY));
             }
             clip(main.a - .0001);
             if (_DepthEmissive > .5) main.rgb *= main.a;

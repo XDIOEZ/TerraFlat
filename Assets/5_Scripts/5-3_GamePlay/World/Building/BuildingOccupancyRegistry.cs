@@ -104,7 +104,7 @@ public static class BuildingOccupancyRegistry
         {
             foreach (Mod_Building building in entry.Value)
             {
-                if (building == null || !building.isActiveAndEnabled || !building.IsInstalled())
+                if (building == null || !building.isActiveAndEnabled || !building.IsInstalled() || building.IsGroundFacility)
                     continue;
                 SightBlockedCells.Add(entry.Key);
                 break;
@@ -184,13 +184,14 @@ public static class BuildingOccupancyRegistry
             foreach (Vector2Int cell in cells) RefreshCell(cell);
     }
 
-    /// <summary>普通建筑仍占 Layer0，上层桥式传动只在自己的层内互斥。</summary>
+    /// <summary>扩展优先指定占用层，普通建筑与贴地设施在各自层内互斥。</summary>
     public static int GetPlacementLayer(Mod_Building building)
-        => BuildingPlacementLifecycle.GetExtension(building?.item)?.OccupancyLayer ?? 0;
+        => BuildingPlacementLifecycle.GetExtension(building?.item)?.OccupancyLayer ?? (int)(building != null
+            ? building.PlacementLayer : BuildingPlacementLayer.Structure);
 
     /// <summary>未声明通行策略的建筑继续按实体障碍处理。</summary>
     private static bool IsMovementBlocking(Mod_Building building)
-        => BuildingPlacementLifecycle.GetTraversalPolicy(building?.item)?.BlocksMovement ?? true;
+        => building == null || building.BlocksMovement;
 
     public static void Register(Mod_Building building, IEnumerable<Vector2Int> cells)
     {
@@ -277,7 +278,7 @@ public static class BuildingOccupancyRegistry
     private static void RefreshCell(Vector2Int cell)
     {
         cell = WorldTopologyRuntime.NormalizeCell(cell);
-        bool sightBlocked = IsOccupiedNormalized(cell);
+        bool sightBlocked = IsSightBlockedNormalized(cell);
         if (sightBlocked)
             SightBlockedCells.Add(cell);
         else
@@ -305,4 +306,18 @@ public static class BuildingOccupancyRegistry
         Revision++;
         CellChanged?.Invoke(cell);
     }
+
+    #region 分层视线查询
+    /// <summary>地板占用只限制重复铺设，不把贴地设施写成动态视线障碍。</summary>
+    private static bool IsSightBlockedNormalized(Vector2Int cell)
+    {
+        if (MachineWorld.IsOccupiedOnPlacementLayersNormalized(cell)) return true;
+        if (!OccupantsByCell.TryGetValue(cell, out HashSet<Mod_Building> occupants)) return false;
+        occupants.RemoveWhere(building => building == null || !building.isActiveAndEnabled || !building.IsInstalled());
+        foreach (Mod_Building building in occupants)
+            if (!building.IsGroundFacility) return true;
+        if (occupants.Count == 0) OccupantsByCell.Remove(cell);
+        return false;
+    }
+    #endregion
 }

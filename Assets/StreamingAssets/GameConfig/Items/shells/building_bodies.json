@@ -849,7 +849,8 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Building/Wall_Stone_Medium.png[Wall_Stone_Medium]",
+        "spriteAddress": "Assets/6_Art/Generated/Building/MineEntrance/MineEntrance_Artificial_Idle.png",
+        "materialAddress": "Assets/9_Shaders/Material/Ground-Facility-Lit.mat",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -866,9 +867,9 @@
           "z": 1.0
         },
         "color": {
-          "r": 0.28,
-          "g": 0.22,
-          "b": 0.18,
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
           "a": 1.0
         },
         "flipX": false,
@@ -876,6 +877,7 @@
         "sortingLayerName": "Default",
         "sortingOrder": 0,
         "collider": {
+          "isTrigger": true,
           "size": {
             "x": 2.0,
             "y": 2.0
@@ -917,6 +919,11 @@
           "prefab": "Module_Building",
           "id": "建筑模块",
           "enabled": false,
+          "parameters": {
+            "PlacementLayer": "Ground",
+            "LightOcclusionMode": "None",
+            "CastSunShadow": false
+          },
           "data": {
             "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"MineEntrance\",\"SummonerPrefabId\":\"MineEntrance_Summoner\"}",
             "Type": 0

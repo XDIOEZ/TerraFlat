@@ -10,6 +10,7 @@ public sealed class WorldRenderingConfig
     public RenderingPreferences preferences;
     public RenderingShadows shadows;
     public RenderingOcclusion occlusion;
+    public RenderingInteractionOutline interactionOutline;
     public RenderingPostProcess postProcess;
     public RenderingGrass grass;
     public RenderingSorting sorting;
@@ -32,7 +33,6 @@ public sealed class WorldRenderingConfig
         public float minimumBlurStrength;
         public float maximumBlurStrength;
         public float maximumOpacity;
-        public float minimumSunlight;
         public float minimumLength;
         public float maximumLength;
         public float maximumDistance;
@@ -87,6 +87,20 @@ public sealed class WorldRenderingConfig
         public float playerCenterOffsetY;
         public float behindVerticalPadding;
     }
+
+    #region 交互描边配置
+
+    [Serializable]
+    public sealed class RenderingInteractionOutline
+    {
+        public bool enabled;
+        // 所有交互目标共用屏幕像素宽度，不跟随素材分辨率变化。
+        public float thicknessPixels;
+        public float minimumThicknessPixels;
+        public float maximumThicknessPixels;
+    }
+
+    #endregion
 
     [Serializable]
     public sealed class RenderingPostProcess
@@ -220,7 +234,7 @@ public static class WorldRenderingConfigCatalog
         WorldRenderingConfig config = JsonUtility.FromJson<WorldRenderingConfig>(asset.text);
         if (config == null || config.schemaVersion != 2 || config.preferences == null ||
             config.shadows == null || config.shadows.contact == null || config.shadows.ecsContact == null ||
-            config.shadows.groundElevation == null || config.occlusion == null ||
+            config.shadows.groundElevation == null || config.occlusion == null || config.interactionOutline == null ||
             config.postProcess == null || config.postProcess.worldVolume == null ||
             config.postProcess.worldVolume.bloom == null ||
             config.postProcess.worldVolume.colorGrading == null ||
@@ -254,6 +268,16 @@ public static class WorldRenderingConfigCatalog
             config.shadows.maximumVisibleDistance <= 0f ||
             config.occlusion.maskRadius <= 0f || config.occlusion.maskFeather < 0f ||
             config.occlusion.occluderAlpha < 0f || config.occlusion.occluderAlpha > 1f ||
+            float.IsNaN(config.interactionOutline.thicknessPixels) ||
+            float.IsInfinity(config.interactionOutline.thicknessPixels) ||
+            float.IsNaN(config.interactionOutline.minimumThicknessPixels) ||
+            float.IsInfinity(config.interactionOutline.minimumThicknessPixels) ||
+            float.IsNaN(config.interactionOutline.maximumThicknessPixels) ||
+            float.IsInfinity(config.interactionOutline.maximumThicknessPixels) ||
+            config.interactionOutline.minimumThicknessPixels < 1f ||
+            config.interactionOutline.maximumThicknessPixels < config.interactionOutline.minimumThicknessPixels ||
+            config.interactionOutline.thicknessPixels < config.interactionOutline.minimumThicknessPixels ||
+            config.interactionOutline.thicknessPixels > config.interactionOutline.maximumThicknessPixels ||
             config.postProcess.worldVolume.bloom.maxIterations < 1 ||
             config.postProcess.worldVolume.mediumBloomMaxIterations < 1 ||
             config.postProcess.worldVolume.mediumBloomIntensityScale < 0f ||

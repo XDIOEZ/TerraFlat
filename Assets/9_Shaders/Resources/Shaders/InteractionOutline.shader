@@ -6,6 +6,7 @@ Shader "Game/2D/Interaction-Outline"
         [HideInInspector] _Color("Tint", Color) = (1, 1, 1, 1)
         [HideInInspector] _RendererColor("Renderer Color", Color) = (1, 1, 1, 1)
         _OutlineColor("Outline Color", Color) = (1, 1, 1, 1)
+        [HideInInspector] _OutlineSpriteUV("Sprite UV Bounds", Vector) = (0, 0, 1, 1)
         [HideInInspector] PixelSnap("Pixel snap", Float) = 0
         [HideInInspector] _Flip("Flip", Vector) = (1, 1, 1, 1)
         [HideInInspector] _AlphaTex("External Alpha", 2D) = "white" {}
@@ -57,6 +58,8 @@ Shader "Game/2D/Interaction-Outline"
 
             TEXTURE2D(_MainTex);
             SAMPLER(sampler_MainTex);
+            TEXTURE2D(_AlphaTex);
+            SAMPLER(sampler_AlphaTex);
 
             #if USE_SHAPE_LIGHT_TYPE_0
             SHAPE_LIGHT(0)
@@ -78,12 +81,15 @@ Shader "Game/2D/Interaction-Outline"
                 float4 _MainTex_ST;
                 float4 _Color;
                 float4 _OutlineColor;
+                float4 _OutlineSpriteUV;
+                float _EnableExternalAlpha;
                 float _BodyClip;
                 float _BodyMinV;
                 float _BodyMaxV;
             CBUFFER_END
 
             float4 _RendererColor;
+            #include "../../Shader/InteractionOutlineCommon.hlsl"
 
             OutlineVaryings OutlineVertex(OutlineAttributes input)
             {
@@ -110,16 +116,21 @@ Shader "Game/2D/Interaction-Outline"
             half4 OutlineFragment(OutlineVaryings input) : SV_Target
             {
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
-                half4 texel = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv);
+                float2 pixelScale = InteractionOutlinePixelScale();
+                float2 pixelX = ddx(input.uv) * pixelScale.x;
+                float2 pixelY = ddy(input.uv) * pixelScale.y;
+                half alpha = InteractionOutlineAlpha(input.uv, _OutlineSpriteUV) *
+                    InteractionOutlineMask(input.uv, _OutlineSpriteUV, pixelX, pixelY);
                 float bodyRange = max(1e-5, _BodyMaxV - _BodyMinV);
                 float bodyV = saturate((input.localY - _BodyMinV) / bodyRange);
                 clip(bodyV - _BodyClip);
+                clip(alpha - 0.0001h);
 
                 // 交互描边也是世界 Sprite；仅声明 Universal2D Pass 不会自动接入 Light2D。
                 // 用与 Sprite-Lit-Default 相同的 Shape Light 合成，使描边随火把/昼夜光一起明暗变化。
                 SurfaceData2D surfaceData;
                 InputData2D inputData;
-                InitializeSurfaceData(input.color.rgb, input.color.a * texel.a, half4(1, 1, 1, 1), surfaceData);
+                InitializeSurfaceData(input.color.rgb, input.color.a * alpha, half4(1, 1, 1, 1), surfaceData);
                 InitializeInputData(input.uv, input.lightingUV, inputData);
                 return CombinedShapeLightShared(surfaceData, inputData);
             }
@@ -130,6 +141,7 @@ Shader "Game/2D/Interaction-Outline"
             Tags { "LightMode" = "Universal2D" }
 
             HLSLPROGRAM
+            #pragma target 3.5
             #pragma vertex OutlineVertex
             #pragma fragment OutlineFragment
             #pragma multi_compile_instancing
@@ -146,6 +158,7 @@ Shader "Game/2D/Interaction-Outline"
             Tags { "LightMode" = "UniversalForward" }
 
             HLSLPROGRAM
+            #pragma target 3.5
             #pragma vertex OutlineVertex
             #pragma fragment OutlineFragment
             #pragma multi_compile_instancing

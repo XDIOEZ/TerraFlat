@@ -13,12 +13,11 @@
     "minimumBlurStrength": 0.0,
     "maximumBlurStrength": 1.0,
     "maximumOpacity": 0.34,
-    "minimumSunlight": 0.02,
     "minimumLength": 0.35,
     "maximumLength": 2.8,
     "maximumDistance": 8.0,
     "maximumVisibleDistance": 80.0,
-    "color": { "r": 0.12, "g": 0.14, "b": 0.2, "a": 1.0 },
+    "color": { "r": 0.02, "g": 0.02, "b": 0.02, "a": 1.0 },
     "contact": {
       "widthRatio": 0.9,
       "heightToWidthRatio": 0.9,
@@ -52,6 +51,12 @@
     "occluderAlpha": 0.18,
     "playerCenterOffsetY": 0.18,
     "behindVerticalPadding": 0.04
+  },
+  "interactionOutline": {
+    "enabled": true,
+    "thicknessPixels": 2.0,
+    "minimumThicknessPixels": 1.0,
+    "maximumThicknessPixels": 6.0
   },
   "postProcess": {
     "worldVolume": {
@@ -104,7 +109,7 @@
   },
   "sorting": {
     "terrainSortingLayer": "Default",
-    "dynamicCategories": ["player", "creature", "building", "world-item"],
+    "dynamicCategories": ["player", "creature", "building", "vehicle", "world-item"],
     "transparencySortAxis": { "x": 0.0, "y": 1.0, "z": 0.0 },
     "batchRenderQueueBase": 2988,
     "batchProfiles": [
@@ -133,7 +138,9 @@
       { "category": "player", "sortingLayer": "Player", "order": 100 },
       { "category": "creature", "sortingLayer": "Player", "order": 100 },
       { "category": "building", "sortingLayer": "Player", "order": 100 },
+      { "category": "vehicle", "sortingLayer": "Player", "order": 99 },
       { "category": "world-item", "sortingLayer": "Player", "order": 100 },
+      { "category": "ground-building", "sortingLayer": "Default", "order": 0 },
       { "category": "ground-shadow", "sortingLayer": "Shadow", "order": 0 },
       { "category": "ground-mark", "sortingLayer": "Shadow", "order": 1 },
       { "category": "ground-splash", "sortingLayer": "Shadow", "order": 40 },

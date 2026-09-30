@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// 视觉特效分页的表现控制器：正式 Prefab 提供水体、透视、两种实体阴影柔化和地面高度阴影控件。
+/// 视觉特效分页绑定水体、透视、阴影与交互描边的正式 Prefab 控件。
 /// 控件只通过 Provider 提交偏好；当前选中状态跟随设置事件刷新，不持有渲染业务。
 /// </summary>
 [DisallowMultipleComponent]
@@ -23,11 +23,16 @@ public sealed class VisualEffectsSettingsPanelLauncher : MonoBehaviour, ISetting
     [SerializeField] private Toggle groundElevationToggle;
     [SerializeField] private Slider groundElevationWidthSlider;
     [SerializeField] private TextMeshProUGUI groundElevationWidthValueText;
+    [SerializeField] private Toggle interactionOutlineToggle;
+    [SerializeField] private Slider interactionOutlineThicknessSlider;
+    [SerializeField] private TextMeshProUGUI interactionOutlineThicknessValueText;
     private ISettingsToggle sunShadowSetting;
     private ISettingsToggle sunShadowBlurSetting; // Provider 开关契约。
     private ISettingsSlider sunShadowBlurStrengthSetting; // Provider 强度契约。
     private ISettingsToggle groundElevationSetting;
     private ISettingsSlider groundElevationWidthSetting;
+    private ISettingsToggle interactionOutlineSetting;
+    private ISettingsSlider interactionOutlineThicknessSetting;
     private ISettingsToggle occlusionSetting;
     private ISettingsProvider provider;
     private ISettingsSwitch styleSetting;
@@ -42,7 +47,9 @@ public sealed class VisualEffectsSettingsPanelLauncher : MonoBehaviour, ISetting
         if (stylizedButton == null || realisticButton == null || resetButton == null ||
             occlusionToggle == null || sunShadowToggle == null || sunShadowBlurToggle == null ||
             sunShadowBlurSlider == null || sunShadowBlurValueText == null || groundElevationToggle == null ||
-            groundElevationWidthSlider == null || groundElevationWidthValueText == null)
+            groundElevationWidthSlider == null || groundElevationWidthValueText == null ||
+            interactionOutlineToggle == null || interactionOutlineThicknessSlider == null ||
+            interactionOutlineThicknessValueText == null)
             throw new MissingReferenceException("视觉特效设置页缺少按钮引用。");
 
         provider = WaterVisualSettings.SettingsProvider;
@@ -62,11 +69,19 @@ public sealed class VisualEffectsSettingsPanelLauncher : MonoBehaviour, ISetting
         groundElevationWidthSlider.minValue = groundElevationWidthSetting.MinValue;
         groundElevationWidthSlider.maxValue = groundElevationWidthSetting.MaxValue;
         groundElevationWidthSlider.wholeNumbers = false;
+        ISettingsProvider outlineProvider = InteractionOutlineSettings.SettingsProvider;
+        interactionOutlineSetting = outlineProvider.GetToggle(InteractionOutlineSettings.EnabledSettingKey);
+        interactionOutlineThicknessSetting = outlineProvider.GetSlider(InteractionOutlineSettings.ThicknessSettingKey);
+        interactionOutlineThicknessSlider.minValue = interactionOutlineThicknessSetting.MinValue;
+        interactionOutlineThicknessSlider.maxValue = interactionOutlineThicknessSetting.MaxValue;
+        interactionOutlineThicknessSlider.wholeNumbers = true;
         sunShadowToggle.onValueChanged.AddListener(SetSunShadows);
         sunShadowBlurToggle.onValueChanged.AddListener(SetSunShadowBlur);
         sunShadowBlurSlider.onValueChanged.AddListener(SetSunShadowBlurStrength);
         groundElevationToggle.onValueChanged.AddListener(SetGroundElevation);
         groundElevationWidthSlider.onValueChanged.AddListener(SetGroundElevationWidth);
+        interactionOutlineToggle.onValueChanged.AddListener(SetInteractionOutline);
+        interactionOutlineThicknessSlider.onValueChanged.AddListener(SetInteractionOutlineThickness);
         occlusionToggle.onValueChanged.AddListener(SetOcclusion);
         stylizedButton.onClick.AddListener(SelectStylized);
         realisticButton.onClick.AddListener(SelectRealistic);
@@ -80,6 +95,7 @@ public sealed class VisualEffectsSettingsPanelLauncher : MonoBehaviour, ISetting
         PlayerOcclusionShaderGlobals.Changed += RefreshView;
         SunShadowSettings.Changed += RefreshView;
         GroundElevationShadowSettings.Changed += RefreshView;
+        InteractionOutlineSettings.Changed += RefreshView;
         RefreshView();
     }
 
@@ -90,6 +106,7 @@ public sealed class VisualEffectsSettingsPanelLauncher : MonoBehaviour, ISetting
         PlayerOcclusionShaderGlobals.Changed -= RefreshView;
         SunShadowSettings.Changed -= RefreshView;
         GroundElevationShadowSettings.Changed -= RefreshView;
+        InteractionOutlineSettings.Changed -= RefreshView;
     }
 
     private void SetOcclusion(bool value) => occlusionSetting.SetValue(value);
@@ -108,6 +125,10 @@ public sealed class VisualEffectsSettingsPanelLauncher : MonoBehaviour, ISetting
 
     /// <summary>通过 Provider 保存阴影宽度，材质收到变更后立即刷新。</summary>
     private void SetGroundElevationWidth(float value) => groundElevationWidthSetting.SetValue(value);
+
+    // 设置仅控制本机描边表现，不改变实际交互目标的选择。
+    private void SetInteractionOutline(bool value) => interactionOutlineSetting.SetValue(value);
+    private void SetInteractionOutlineThickness(float value) => interactionOutlineThicknessSetting.SetValue(value);
 
     /// <summary>通过设置契约选用风格化水面。</summary>
     private void SelectStylized() => SelectStyle(0);
@@ -130,6 +151,7 @@ public sealed class VisualEffectsSettingsPanelLauncher : MonoBehaviour, ISetting
         PlayerOcclusionShaderGlobals.SettingsProvider.ResetToDefaults();
         SunShadowSettings.SettingsProvider.ResetToDefaults();
         GroundElevationShadowSettings.SettingsProvider.ResetToDefaults();
+        InteractionOutlineSettings.SettingsProvider.ResetToDefaults();
     }
 
     /// <summary>用选中底色标识当前风格，两种按钮始终可导航和操作。</summary>
@@ -146,6 +168,10 @@ public sealed class VisualEffectsSettingsPanelLauncher : MonoBehaviour, ISetting
         groundElevationWidthSlider.SetValueWithoutNotify(GroundElevationShadowSettings.Width);
         groundElevationWidthSlider.interactable = GroundElevationShadowSettings.Enabled;
         groundElevationWidthValueText.text = $"{Mathf.RoundToInt(GroundElevationShadowSettings.Width * 100f)}%";
+        interactionOutlineToggle.SetIsOnWithoutNotify(InteractionOutlineSettings.Enabled);
+        interactionOutlineThicknessSlider.SetValueWithoutNotify(InteractionOutlineSettings.ThicknessPixels);
+        interactionOutlineThicknessSlider.interactable = InteractionOutlineSettings.Enabled;
+        interactionOutlineThicknessValueText.text = $"{Mathf.RoundToInt(InteractionOutlineSettings.ThicknessPixels)} px";
         stylizedButton.targetGraphic.color = styleSetting.SelectedIndex == 0
             ? FlatWorldUITheme.Accent : FlatWorldUITheme.Surface;
         realisticButton.targetGraphic.color = styleSetting.SelectedIndex == 1
@@ -155,7 +181,7 @@ public sealed class VisualEffectsSettingsPanelLauncher : MonoBehaviour, ISetting
     /// <summary>分页正式显示时与其它设置页保持统一生命周期。</summary>
     public void OnSettingsPageShown() => RefreshView();
 
-    /// <summary>所有选择即时保存，隐藏时没有待提交草稿。</summary>
+    /// <summary>分页隐藏不单独提交，保存和放弃由外层设置会话处理。</summary>
     public void OnSettingsPageHidden() { }
 
     /// <summary>销毁时解除本控制器的按钮监听。</summary>
@@ -167,6 +193,9 @@ public sealed class VisualEffectsSettingsPanelLauncher : MonoBehaviour, ISetting
         sunShadowBlurSlider.onValueChanged.RemoveListener(SetSunShadowBlurStrength);
         groundElevationToggle.onValueChanged.RemoveListener(SetGroundElevation);
         groundElevationWidthSlider.onValueChanged.RemoveListener(SetGroundElevationWidth);
+        if (interactionOutlineToggle != null) interactionOutlineToggle.onValueChanged.RemoveListener(SetInteractionOutline);
+        if (interactionOutlineThicknessSlider != null)
+            interactionOutlineThicknessSlider.onValueChanged.RemoveListener(SetInteractionOutlineThickness);
         stylizedButton.onClick.RemoveListener(SelectStylized);
         realisticButton.onClick.RemoveListener(SelectRealistic);
         resetButton.onClick.RemoveListener(ResetToDefaults);
