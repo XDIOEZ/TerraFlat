@@ -16,7 +16,7 @@ namespace FlatWorld.WorldModel
         IChunkEcologyNeighborhoodTagResolver
     {
         /// <summary>纯区块生成规则版本；气候、群系、河流或生态空间分布规则改变时递增。</summary>
-        public const int CurrentGenerationSignature = 53;
+        public const int CurrentGenerationSignature = 54;
 
         private readonly LiquidTypeCatalog liquidTypes;
         /// <summary>资源就绪后注入会话液体表；离线纯算法测试可以使用本体最小目录。</summary>
@@ -901,14 +901,20 @@ namespace FlatWorld.WorldModel
                 ? (float)(1d - Math.Pow(Clamp01(height / Math.Max(0.0001d, settings.SeaLevel)), 2d))
                 : river && !frozenRiver ? (float)riverCell.Depth : 0f;
 
-            // 草长不长只看世界种子、坐标和湿度，不用会变化的全局随机数，所以每次结果相同。
+            // 草先过较宽松的气候门槛，再由湿度决定局部密度；全程只依赖种子和环境层。
             bool snowSurface = biome == SurfaceBiomeKind.Snow &&
                                groundTileId != settings.IceTileId;
             double grassDensity = snowSurface
                 ? settings.GrassDensity * settings.SnowGrassDensityMultiplier
                 : settings.GrassDensity;
+            bool grassClimateSuitable =
+                temperature >= settings.GrassMinimumTemperature &&
+                temperature <= settings.GrassMaximumTemperature &&
+                precipitation >= settings.GrassMinimumPrecipitation &&
+                height <= settings.GrassMaximumHeight;
             bool grass = (flags & TerrainCellFlags.Walkable) != 0 &&
                          (groundTileId == settings.GroundTileId || snowSurface) &&
+                         grassClimateSuitable &&
                          Hash01(request.WorldSeed, worldX, worldY, 0x165667b1u) <
                          grassDensity * (0.55d + moisture * 0.75d);
             return new SurfaceCellOutput

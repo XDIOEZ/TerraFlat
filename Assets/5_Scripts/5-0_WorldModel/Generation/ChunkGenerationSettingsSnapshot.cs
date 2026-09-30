@@ -356,6 +356,15 @@ namespace FlatWorld.WorldModel
             LargeLakeMaxRadius = Clamp(GetDouble(numbers, "lake.large.maxRadius", 104d), LargeLakeMinRadius, 512d);
             LargeLakeIslandChance = Clamp01(GetDouble(numbers, "lake.large.islandChance", 0.7d));
             GrassDensity = Clamp01(GetDouble(numbers, "grass.density", 0.24d));
+            GrassMinimumTemperature = Clamp01(
+                GetDouble(numbers, "grass.minimumTemperature", 0.15d));
+            GrassMaximumTemperature = Math.Max(
+                GrassMinimumTemperature,
+                Clamp01(GetDouble(numbers, "grass.maximumTemperature", 0.9d)));
+            GrassMinimumPrecipitation = Clamp01(
+                GetDouble(numbers, "grass.minimumPrecipitation", 0.15d));
+            GrassMaximumHeight = Clamp01(
+                GetDouble(numbers, "grass.maximumHeight", MountainLevel));
             StructureEnabled = GetBool(numbers, "structure.enabled", true);
             StructureRegionSize = Math.Max(8, GetInt(numbers, "structure.regionSize", 96));
             StructureChance = Clamp01(GetDouble(numbers, "structure.spawnChance", 0.18d));
@@ -617,6 +626,13 @@ namespace FlatWorld.WorldModel
         public int RiverMaxCachedRegions { get; }
         /// <summary>合适的地面上长出草的基本概率。</summary>
         public double GrassDensity { get; }
+        /// <summary>草的宽松气候下限，避免极寒区域继续生成普通草。</summary>
+        public double GrassMinimumTemperature { get; }
+        public double GrassMaximumTemperature { get; }
+        /// <summary>低于该降水值时不生成草，区间内仍由湿度继续调节密度。</summary>
+        public double GrassMinimumPrecipitation { get; }
+        /// <summary>草允许出现的最高归一化地形高度。</summary>
+        public double GrassMaximumHeight { get; }
         /// <summary>是否生成遗迹等结构；同样的种子会得到同样的位置。</summary>
         public bool StructureEnabled { get; }
         public int StructureRegionSize { get; }

@@ -131,11 +131,11 @@
       "patchChance": 0.5,
       "biomeMask": 48,
       "minTemperature": 0.3,
-      "maxTemperature": 0.9,
-      "minPrecipitation": 0.25,
+      "maxTemperature": 0.82,
+      "minPrecipitation": 0.35,
       "maxPrecipitation": 1,
       "minHeight": 0,
-      "maxHeight": 1,
+      "maxHeight": 0.64,
       "minRiverFloodplainStrength": 0,
       "providedTags": [
         "Flower"
