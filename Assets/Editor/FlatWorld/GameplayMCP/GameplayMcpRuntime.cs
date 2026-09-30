@@ -322,7 +322,7 @@ namespace FlatWorld.GameplayMCP
                 seed,
                 planetData,
                 timeData,
-                GameDifficultyId.Simple,
+                GameDifficultyId.Level0,
                 null,
                 GameRes.ExistingInstance?.TextLibraries);
             if (!request.TryValidate(out string validationError))
