@@ -45,6 +45,8 @@ public static class RecipeRuntimeFactory
         RecipeInputRule inputRule = ParseInputRule(dto.InputRule, id);
         if (recipeType == RecipeType.Crafting && inputRule != RecipeInputRule.无规则合成)
             throw new InvalidDataException($"配方 {id} 是普通合成，inputRule 必须为 unordered");
+        if (dto.ManualWorkSteps <= 0)
+            throw new InvalidDataException($"配方 {id} 的 manualWorkSteps 必须大于 0");
         RuntimeRecipeInput inputs = recipeType == RecipeType.Crafting
             ? BuildCraftingInputs(dto, id, itemExists, warnings)
             : BuildHeatingInputs(dto, id, inputRule, itemExists, warnings);
@@ -60,6 +62,7 @@ public static class RecipeRuntimeFactory
             Temperature = dto.Temperature,
             Temperature_Max = dto.MaxTemperature,
             ProcessingSeconds = dto.ProcessingSeconds,
+            ManualWorkSteps = dto.ManualWorkSteps,
             inputs = inputs
         };
 

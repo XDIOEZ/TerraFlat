@@ -86,6 +86,10 @@ public sealed class RecipeDto
     [JsonProperty("processingSeconds")]
     public float ProcessingSeconds;
 
+    /// <summary>手动加工配方需要完成的有效操作次数；未填写时默认一次完成。</summary>
+    [JsonProperty("manualWorkSteps")]
+    public int ManualWorkSteps = 1;
+
     [JsonProperty("inputs")]
     public List<RecipeIngredientDto> Inputs = new List<RecipeIngredientDto>();
 

@@ -48,6 +48,7 @@ public class MortarLogic : MachineLogic
                 throw new InvalidOperationException("石臼配方必须是无额外动作的单原料、多产物转换：" + candidate.Id);
             if (CraftingRecipeMatcher.TryMatchRecipe(Bowl, candidate, capabilities, out _)) { recipe = candidate; break; }
         }
+        Mod_Mortar.AlignManualWorkProgress(state, recipe);
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
@@ -56,12 +57,20 @@ public class MortarLogic : MachineLogic
         if (!EnableStrikeGesture || MachineInventory.IsBeingDragged(Bowl)) return false;
         RefreshRecipe();
         if (recipe == null) return false;
+        if (!Mod_Mortar.AdvanceManualWork(state, recipe))
+        {
+            OnInventoryChanged(null);
+            return true;
+        }
+
         processing = true;
         CraftingResult result;
         try { result = CraftingService.CraftRecipe(Bowl, Bowl, capabilities, recipe, actor); }
         finally { processing = false; }
+        if (result.Success)
+            Mod_Mortar.CompleteManualWork(state, recipe);
         OnInventoryChanged(null);
-        return result.Success;
+        return true;
     }
 
     public override bool Execute(string operation, string argument, Player actor) => operation == "work" && Strike(actor);
@@ -78,6 +87,8 @@ public class MortarLogic : MachineLogic
         var incoming = MachineModuleState.Read<MortarState>(snapshot, Mod_Mortar.ModuleId);
         if (incoming?.Bowl == null) return false;
         MachineInventory.ApplySnapshot(Bowl, incoming.Bowl);
+        state.ProcessingRecipeId = incoming.ProcessingRecipeId;
+        state.ProcessingStep = incoming.ProcessingStep;
         RefreshRecipe();
         NotifyRemoteChanged();
         return true;

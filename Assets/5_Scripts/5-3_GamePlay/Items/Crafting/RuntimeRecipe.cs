@@ -17,6 +17,7 @@ public sealed class RuntimeRecipe
     public float Temperature;
     public float Temperature_Max = 2000f;
     public float ProcessingSeconds;
+    public int ManualWorkSteps = 1;
     public RuntimeLiquidOutput LiquidOutput;
 
     public string name => string.IsNullOrWhiteSpace(DisplayName) ? Id : DisplayName;

@@ -53,6 +53,22 @@
       }
     },
     {
+      "id": "OrePowder_Gold",
+      "parent": "BasicItem_Base",
+      "gameName": "金矿粉",
+      "description": "用石臼捣碎金矿石得到的矿粉，可用于后续材料加工。",
+      "weight": 1.5,
+      "volume": 0.375,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": ["Material", "Powder", "Gold"],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Powders/OrePowder_Stone.png",
+        "color": { "r": 1.0, "g": 0.72, "b": 0.28, "a": 1.0 }
+      },
+      "modules": {}
+    },
+    {
       "id": "Mine_Gold",
       "parent": "Mine_Iron",
       "gameName": "金矿山",

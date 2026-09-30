@@ -187,6 +187,50 @@ public sealed class Mod_Mortar : Module, IInteractable, IInventory
             ReserveOutputSlots(recipe);
             break;
         }
+        AlignManualWorkProgress(state, batch);
+    }
+
+    /// <summary>切换配方时清空旧进度，同一配方只保留尚未结算的有效操作次数。</summary>
+    public static void AlignManualWorkProgress(MortarState mortarState, RuntimeRecipe recipe)
+    {
+        if (mortarState == null)
+            return;
+
+        string recipeId = recipe?.Id;
+        if (!string.Equals(mortarState.ProcessingRecipeId, recipeId, StringComparison.OrdinalIgnoreCase))
+        {
+            mortarState.ProcessingRecipeId = recipeId;
+            mortarState.ProcessingStep = 0;
+            return;
+        }
+
+        int requiredSteps = Mathf.Max(1, recipe?.ManualWorkSteps ?? 1);
+        mortarState.ProcessingStep = Mathf.Clamp(mortarState.ProcessingStep, 0, requiredSteps - 1);
+    }
+
+    /// <summary>记录一次有效手动加工；返回 true 表示本次操作已经满足配方结算条件。</summary>
+    public static bool AdvanceManualWork(MortarState mortarState, RuntimeRecipe recipe)
+    {
+        if (mortarState == null || recipe == null)
+            return false;
+
+        AlignManualWorkProgress(mortarState, recipe);
+        int requiredSteps = Mathf.Max(1, recipe.ManualWorkSteps);
+        if (mortarState.ProcessingStep >= requiredSteps - 1)
+            return true;
+
+        mortarState.ProcessingStep++;
+        return false;
+    }
+
+    /// <summary>配方成功结算后从零开始累计下一份原料的手动加工进度。</summary>
+    public static void CompleteManualWork(MortarState mortarState, RuntimeRecipe recipe)
+    {
+        if (mortarState == null || recipe == null)
+            return;
+
+        mortarState.ProcessingRecipeId = recipe.Id;
+        mortarState.ProcessingStep = 0;
     }
 
     /// <summary>提交前为每个产物单位预留空格；实际事务优先合并同类，不同产物可同时原子写入。</summary>
@@ -203,12 +247,20 @@ public sealed class Mod_Mortar : Module, IInteractable, IInventory
     private void OnStrike()
     {
         if (!EnableStrikeGesture || panel == null || !panel.IsOpen() || batch == null) return;
+        bool readyToCraft = AdvanceManualWork(state, batch);
+        view?.PlayProcessingDust();
+        if (!readyToCraft)
+        {
+            OnBowlChanged(null);
+            return;
+        }
+
         processing = true;
         try
         {
             CraftingResult result = CraftingService.CraftRecipe(bowl, bowl, capabilities, batch, actor);
             if (result.Success)
-                view?.PlayProcessingDust();
+                CompleteManualWork(state, batch);
         }
         finally { processing = false; }
         OnBowlChanged(null);

@@ -88,6 +88,160 @@
         }
       ],
       "actions": []
+    },
+    {
+      "id": "core:mortar_coal_powder",
+      "displayName": "捣碎煤矿石制煤粉",
+      "requiredStation": "mortar",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "manualWorkSteps": 4,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Ore_Coal",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "OrePowder_Coal",
+          "amount": 2
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:mortar_copper_powder",
+      "displayName": "捣碎孔雀石制矿粉",
+      "requiredStation": "mortar",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "manualWorkSteps": 4,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Ore_Copper",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "OrePowder_Copper",
+          "amount": 2
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:mortar_iron_powder",
+      "displayName": "捣碎铁矿石制矿粉",
+      "requiredStation": "mortar",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "manualWorkSteps": 4,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Ore_Iron",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "OrePowder_Iron",
+          "amount": 2
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:mortar_tin_powder",
+      "displayName": "捣碎锡矿石制矿粉",
+      "requiredStation": "mortar",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "manualWorkSteps": 4,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Ore_Tin",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "OrePowder_Tin",
+          "amount": 2
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:mortar_stone_powder",
+      "displayName": "捣碎石头制石粉",
+      "requiredStation": "mortar",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "manualWorkSteps": 4,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Ore_Stone",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "OrePowder_Stone",
+          "amount": 2
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:mortar_niter_powder",
+      "displayName": "捣碎硝石制硝石粉",
+      "requiredStation": "mortar",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "manualWorkSteps": 4,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Ore_Niter",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "OrePowder_Niter",
+          "amount": 2
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:mortar_gold_powder",
+      "displayName": "捣碎金矿石制矿粉",
+      "requiredStation": "mortar",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "manualWorkSteps": 4,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Ore_Gold",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "OrePowder_Gold",
+          "amount": 2
+        }
+      ],
+      "actions": []
     }
   ]
 }
