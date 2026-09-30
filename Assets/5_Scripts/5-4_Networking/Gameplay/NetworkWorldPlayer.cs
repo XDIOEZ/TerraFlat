@@ -674,20 +674,23 @@ namespace FlatWorld.Networking.Gameplay
 
                 ModuleData networkData = FindRemoteModuleData(
                     player.itemData.ModuleDataDic,
-                    module._Data.Name,
-                    module._Data.ID);
+                    module._Data.StableName,
+                    module._Data.ModuleId,
+                    out string stableName);
                 if (networkData != null)
                     module._Data = networkData;
 
-                if (string.IsNullOrWhiteSpace(module._Data.Name))
-                    module._Data.Name = Module.GenerateUniqueModName(module._Data.ID);
+                if (string.IsNullOrWhiteSpace(module._Data.StableName))
+                    module._Data.StableName = string.IsNullOrWhiteSpace(stableName)
+                        ? module.gameObject.name
+                        : stableName;
 
                 module.ModuleInit(player, module._Data, player.itemData);
                 player.itemMods.AddMod(module);
             }
 
             Mod_TurnBack turnBack = player.itemMods.GetMod_ByID(ModText.TrunBody) as Mod_TurnBack;
-            if (turnBack != null)
+            if (turnBack?.Enabled == true)
             {
                 turnBack.Load();
                 turnBack.faceMouse = null;
@@ -695,27 +698,37 @@ namespace FlatWorld.Networking.Gameplay
 
             Mod_AnimatorController animator =
                 player.itemMods.GetMod_ByID(ModText.AnimatorReceiver) as Mod_AnimatorController;
-            animator?.Load();
+            if (animator?.Enabled == true)
+                animator.Load();
         }
 
         private static ModuleData FindRemoteModuleData(
             System.Collections.Generic.Dictionary<string, ModuleData> states,
-            string moduleName,
-            string moduleId)
+            string stableName,
+            string moduleId,
+            out string resolvedStableName)
         {
+            resolvedStableName = stableName;
             if (states == null)
                 return null;
 
-            if (!string.IsNullOrEmpty(moduleName) && states.TryGetValue(moduleName, out ModuleData exact))
+            if (!string.IsNullOrEmpty(stableName) && states.TryGetValue(stableName, out ModuleData exact))
                 return exact;
 
-            foreach (ModuleData state in states.Values)
+            ModuleData match = null;
+            foreach (System.Collections.Generic.KeyValuePair<string, ModuleData> pair in states)
             {
-                if (state != null && string.Equals(state.ID, moduleId, System.StringComparison.Ordinal))
-                    return state;
+                ModuleData state = pair.Value;
+                if (state == null || !string.Equals(state.ModuleId, moduleId, System.StringComparison.Ordinal))
+                    continue;
+                if (match != null)
+                    return null;
+
+                match = state;
+                resolvedStableName = pair.Key;
             }
 
-            return null;
+            return match;
         }
 
         private void SyncCorePlayerPosition(Vector3 position, bool forceLocal = false)

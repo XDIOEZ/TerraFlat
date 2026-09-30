@@ -587,8 +587,6 @@ public abstract class Item : MonoBehaviour
         List<Module> candidates = modules?.GetModList_ByID(moduleId);
         if (candidates == null || candidates.Count == 0)
             return null;
-        if (candidates.Count == 1)
-            return candidates[0];
 
         for (int i = 0; i < candidates.Count; i++)
         {
@@ -598,6 +596,10 @@ public abstract class Item : MonoBehaviour
                  string.Equals(candidate.gameObject.name, prefabId, StringComparison.OrdinalIgnoreCase)))
                 return candidate;
         }
+
+        // 没有独立 Prefab 变体时，ModuleId 本身就是实例化地址，可安全按能力唯一回退。
+        if (string.Equals(moduleId, prefabId, StringComparison.OrdinalIgnoreCase) && candidates.Count == 1)
+            return candidates[0];
 
         return null;
     }
@@ -782,7 +784,7 @@ public abstract class Item : MonoBehaviour
     [Button]
     public void SetUpModeule(string modName)
     {
-        Module.ADDModTOItem(this, modName);
+        Module.ADDModTOItem(this, modName)?.LoadRuntime();
     }
 
     /// <summary>

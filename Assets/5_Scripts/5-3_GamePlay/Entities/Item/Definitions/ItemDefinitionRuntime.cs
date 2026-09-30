@@ -414,18 +414,34 @@ public static class ItemDefinitionRuntime
             moduleData.StableName = stableName;
             string prefabId = definition.GetModulePrefabId(stableName, moduleData.ModuleId);
             int embeddedIndex = -1;
+
+            // 先按具体 PrefabId 匹配，避免同一 ModuleId 的多个实现变体互相串用。
             for (int i = 0; i < available.Count; i++)
             {
                 Module candidate = available[i];
                 candidate?.EnsureRuntimeIdentity();
                 if (candidate == null ||
-                    (!string.Equals(candidate.ResolvedModuleId, moduleData.ModuleId, StringComparison.OrdinalIgnoreCase) &&
-                     !string.Equals(candidate.PrefabId, prefabId, StringComparison.OrdinalIgnoreCase) &&
+                    (!string.Equals(candidate.PrefabId, prefabId, StringComparison.OrdinalIgnoreCase) &&
                      !string.Equals(candidate.gameObject.name, prefabId, StringComparison.OrdinalIgnoreCase)))
                     continue;
                 candidate.BindRuntimeIdentity(stableName, moduleData.ModuleId, prefabId);
                 embeddedIndex = i;
                 break;
+            }
+
+            // 没有独立变体时才允许按 ModuleId 唯一回退。
+            if (embeddedIndex < 0 && string.Equals(prefabId, moduleData.ModuleId, StringComparison.OrdinalIgnoreCase))
+            {
+                for (int i = 0; i < available.Count; i++)
+                {
+                    Module candidate = available[i];
+                    if (candidate == null ||
+                        !string.Equals(candidate.ResolvedModuleId, moduleData.ModuleId, StringComparison.OrdinalIgnoreCase))
+                        continue;
+                    candidate.BindRuntimeIdentity(stableName, moduleData.ModuleId, prefabId);
+                    embeddedIndex = i;
+                    break;
+                }
             }
             if (embeddedIndex >= 0)
             {

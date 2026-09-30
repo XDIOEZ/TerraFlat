@@ -360,15 +360,6 @@ public abstract class Module : MonoBehaviour, IRuntimeDataLifecycle
         OnAct.Invoke(this);
     }
 
-    /// <summary>旧调用点的确定性过渡入口；不再生成随机后缀。</summary>
-    [Obsolete("模块实例名必须使用稳定 StableName；该入口仅返回确定性名称。")]
-    public static string GenerateUniqueModName(string moduleId)
-    {
-        return string.IsNullOrWhiteSpace(moduleId) ? string.Empty : moduleId.Trim();
-    }
-
-
-
     #region 添加模块
     public static Module ADDModTOItem(Item item, string modName)
     {
@@ -402,7 +393,6 @@ public abstract class Module : MonoBehaviour, IRuntimeDataLifecycle
         if (item.itemData?.ModuleDataDic != null)
             item.itemData.ModuleDataDic[module.StableName] = module._Data;
         module.ModuleInit(item, null);
-        module.LoadRuntime();
         return module;
     }
 
