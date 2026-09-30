@@ -920,6 +920,12 @@ public partial class Inventory_Data
         return RepackItems(null);
     }
 
+    /// <summary>整理物品并把符合优先条件的物品稳定移动到前方，各分区内保持原有相对顺序。</summary>
+    public bool Organize(Predicate<ItemData> priorityFilter)
+    {
+        return priorityFilter == null ? Organize() : RepackItems(null, priorityFilter);
+    }
+
     /// <summary>在整理状态下按指定规则重新排序；排序始终保持空槽位于末尾。</summary>
     public bool Sort(InventorySortMode mode)
     {
@@ -932,15 +938,7 @@ public partial class Inventory_Data
         if (priorityFilter == null)
             return Sort(mode);
 
-        return RepackItems((left, right) =>
-        {
-            bool leftPreferred = priorityFilter(left);
-            bool rightPreferred = priorityFilter(right);
-            if (leftPreferred != rightPreferred)
-                return leftPreferred ? -1 : 1;
-
-            return CompareItemsForSort(left, right, mode);
-        });
+        return RepackItems((left, right) => CompareItemsForSort(left, right, mode), priorityFilter);
     }
 
     /// <summary>按稳定物品 ID 整理并排序。</summary>
@@ -950,7 +948,7 @@ public partial class Inventory_Data
     }
 
     /// <summary>按当前顺序或指定比较器重新打包库存。</summary>
-    private bool RepackItems(Comparison<ItemData> comparison)
+    private bool RepackItems(Comparison<ItemData> comparison, Predicate<ItemData> priorityFilter = null)
     {
         EnsureRuntimeEvents();
 
@@ -975,6 +973,21 @@ public partial class Inventory_Data
 
         if (comparison != null)
             items.Sort(comparison);
+
+        if (priorityFilter != null)
+        {
+            List<ItemData> preferredItems = new List<ItemData>(items.Count);
+            List<ItemData> regularItems = new List<ItemData>(items.Count);
+            for (int i = 0; i < items.Count; i++)
+            {
+                ItemData itemData = items[i];
+                (priorityFilter(itemData) ? preferredItems : regularItems).Add(itemData);
+            }
+
+            items.Clear();
+            items.AddRange(preferredItems);
+            items.AddRange(regularItems);
+        }
 
         for (int i = 0; i < itemSlots.Count; i++)
         {

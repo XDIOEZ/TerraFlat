@@ -6,7 +6,7 @@ using UnityEngine.UI;
 
 /// <summary>
 /// 将 UI_Bag 的排序和整理操作绑定到各自按钮。
-/// 排序按稳定 ID、分类、堆叠数量、重量、体积循环；搜索激活时命中项优先；整理只合并堆叠并压紧空槽。
+/// 排序按稳定 ID、分类、堆叠数量、重量、体积循环；搜索激活时排序与整理都把命中项优先放到前方。
 /// </summary>
 public sealed class InventorySortButton : MonoBehaviour
 {
@@ -164,8 +164,11 @@ public sealed class InventorySortButton : MonoBehaviour
     /// <summary>只合并可堆叠物品并压紧空槽，不选择新的排序规则。</summary>
     private void HandleOrganize()
     {
-        if (MachineInventoryCommands.TryRequestLayout(inventory, null, null, out _)) return;
-        if (inventory?.Data == null || !inventory.Data.Organize())
+        Predicate<ItemData> priority = bagSearch != null && bagSearch.HasActiveQuery
+            ? bagSearch.MatchesCurrentQuery
+            : null;
+        if (MachineInventoryCommands.TryRequestLayout(inventory, null, priority, out _)) return;
+        if (inventory?.Data == null || !inventory.Data.Organize(priority))
             return;
 
         RefreshInventory();
