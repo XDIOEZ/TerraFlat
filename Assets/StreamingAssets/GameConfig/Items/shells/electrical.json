@@ -1,0 +1,348 @@
+{
+  "schemaVersion": 1,
+  "items": [
+    {
+      "id": "Rubber",
+      "parent": "BasicItem_Base",
+      "gameName": "橡胶",
+      "description": "具有良好绝缘性的弹性材料，可用于制作电线。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 0.2,
+      "volume": 0.18,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": [],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png"
+      },
+      "modules": {}
+    },
+    {
+      "id": "Generator_Basic",
+      "parent": "BuildingBody_Base",
+      "gameName": "基础发电机-建筑",
+      "description": "将机械动力转换为电力的基础发电机。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 40,
+      "volume": 60,
+      "stackable": false,
+      "canBePickedUp": false,
+      "tags": ["35", "InventoryGroup.ElectricalPower"],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png"
+      },
+      "health": {
+        "hasHp": true,
+        "hp": 180,
+        "maxHp": 180,
+        "defense": { "cutting": 8, "piercing": 8, "chopping": 8, "blunt": 8 },
+        "collider": {
+          "type": "BoxCollider2D", "enabled": true, "isTrigger": true,
+          "offset": { "x": 0, "y": 0 }, "size": { "x": 1, "y": 1 }, "edgeRadius": 0
+        }
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building", "id": "建筑模块", "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Generator_Basic\",\"SummonerPrefabId\":\"Generator_Basic_Summoner\"}",
+            "Type": 0
+          },
+          "parameters": { "LightOcclusionMode": "None", "CastSunShadow": false }
+        },
+        "机械扭矩模块": {
+          "prefab": "Module_MechanicalNode", "id": "机械扭矩模块", "enabled": true,
+          "data": { "BitData": [], "Type": 0 },
+          "parameters": { "DefinitionId": "Generator_Basic" }
+        }
+      }
+    },
+    {
+      "id": "Generator_Basic_Summoner",
+      "worldDropBehavior": "interactive",
+      "parent": "BuildingSummoner_Base",
+      "gameName": "基础发电机",
+      "description": "将机械动力转换为电力的基础发电机。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 12,
+      "volume": 24,
+      "stackable": false,
+      "canBePickedUp": true,
+      "tags": ["35", "InventoryGroup.ElectricalPower"],
+      "visual": { "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png" },
+      "health": {
+        "hasHp": true, "hp": 180, "maxHp": 180,
+        "defense": { "cutting": 8, "piercing": 8, "chopping": 8, "blunt": 8 },
+        "collider": {
+          "type": "BoxCollider2D", "enabled": true, "isTrigger": true,
+          "offset": { "x": 0, "y": 0 }, "size": { "x": 1, "y": 1 }, "edgeRadius": 0
+        }
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building", "id": "建筑模块", "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Generator_Basic\",\"SummonerPrefabId\":\"Generator_Basic_Summoner\"}",
+            "Type": 0
+          }
+        },
+        "机械扭矩模块": {
+          "prefab": "Module_MechanicalNode", "id": "机械扭矩模块", "enabled": true,
+          "data": { "BitData": [], "Type": 0 },
+          "parameters": { "DefinitionId": "Generator_Basic" }
+        }
+      }
+    },
+    {
+      "id": "Wire_Copper",
+      "parent": "BuildingBody_Base",
+      "gameName": "铜导线-建筑",
+      "description": "连接电气设备的铜导线。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 1,
+      "volume": 1,
+      "stackable": true,
+      "canBePickedUp": false,
+      "tags": ["35", "InventoryGroup.ElectricalPower"],
+      "visual": { "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png" },
+      "health": {
+        "hasHp": true, "hp": 60, "maxHp": 60,
+        "defense": { "cutting": 2, "piercing": 2, "chopping": 2, "blunt": 2 },
+        "collider": {
+          "type": "BoxCollider2D", "enabled": true, "isTrigger": true,
+          "offset": { "x": 0, "y": 0 }, "size": { "x": 1, "y": 1 }, "edgeRadius": 0
+        }
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building", "id": "建筑模块", "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Wire_Copper\",\"SummonerPrefabId\":\"Wire_Copper_Summoner\"}",
+            "Type": 0
+          },
+          "parameters": { "LightOcclusionMode": "None", "CastSunShadow": false }
+        },
+        "机械扭矩模块": {
+          "prefab": "Module_MechanicalNode", "id": "机械扭矩模块", "enabled": true,
+          "data": { "BitData": [], "Type": 0 },
+          "parameters": { "DefinitionId": "Wire_Copper" }
+        }
+      }
+    },
+    {
+      "id": "Wire_Copper_Summoner",
+      "worldDropBehavior": "interactive",
+      "parent": "BuildingSummoner_Base",
+      "gameName": "铜导线",
+      "description": "连接电气设备的铜导线，由铜和橡胶制成。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 0.25,
+      "volume": 0.5,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": ["35", "InventoryGroup.ElectricalPower"],
+      "visual": { "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png" },
+      "health": {
+        "hasHp": true, "hp": 60, "maxHp": 60,
+        "defense": { "cutting": 2, "piercing": 2, "chopping": 2, "blunt": 2 },
+        "collider": {
+          "type": "BoxCollider2D", "enabled": true, "isTrigger": true,
+          "offset": { "x": 0, "y": 0 }, "size": { "x": 1, "y": 1 }, "edgeRadius": 0
+        }
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building", "id": "建筑模块", "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Wire_Copper\",\"SummonerPrefabId\":\"Wire_Copper_Summoner\"}",
+            "Type": 0
+          }
+        },
+        "机械扭矩模块": {
+          "prefab": "Module_MechanicalNode", "id": "机械扭矩模块", "enabled": true,
+          "data": { "BitData": [], "Type": 0 },
+          "parameters": { "DefinitionId": "Wire_Copper" }
+        }
+      }
+    },
+    {
+      "id": "Battery_Basic",
+      "parent": "BuildingBody_Base",
+      "gameName": "基础电池-建筑",
+      "description": "储存电网多余电力，并在发电不足时自动放电。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 30,
+      "volume": 45,
+      "stackable": false,
+      "canBePickedUp": false,
+      "tags": ["35", "InventoryGroup.ElectricalPower"],
+      "visual": { "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png" },
+      "health": {
+        "hasHp": true, "hp": 160, "maxHp": 160,
+        "defense": { "cutting": 6, "piercing": 6, "chopping": 6, "blunt": 6 },
+        "collider": {
+          "type": "BoxCollider2D", "enabled": true, "isTrigger": true,
+          "offset": { "x": 0, "y": 0 }, "size": { "x": 1, "y": 1 }, "edgeRadius": 0
+        }
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building", "id": "建筑模块", "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Battery_Basic\",\"SummonerPrefabId\":\"Battery_Basic_Summoner\"}",
+            "Type": 0
+          },
+          "parameters": { "LightOcclusionMode": "None", "CastSunShadow": false }
+        },
+        "机械扭矩模块": {
+          "prefab": "Module_MechanicalNode", "id": "机械扭矩模块", "enabled": true,
+          "data": { "BitData": [], "Type": 0 },
+          "parameters": { "DefinitionId": "Battery_Basic" }
+        }
+      }
+    },
+    {
+      "id": "Battery_Basic_Summoner",
+      "worldDropBehavior": "interactive",
+      "parent": "BuildingSummoner_Base",
+      "gameName": "基础电池",
+      "description": "储存电网多余电力，并在发电不足时自动放电。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 10,
+      "volume": 18,
+      "stackable": false,
+      "canBePickedUp": true,
+      "tags": ["35", "InventoryGroup.ElectricalPower"],
+      "visual": { "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png" },
+      "health": {
+        "hasHp": true, "hp": 160, "maxHp": 160,
+        "defense": { "cutting": 6, "piercing": 6, "chopping": 6, "blunt": 6 },
+        "collider": {
+          "type": "BoxCollider2D", "enabled": true, "isTrigger": true,
+          "offset": { "x": 0, "y": 0 }, "size": { "x": 1, "y": 1 }, "edgeRadius": 0
+        }
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building", "id": "建筑模块", "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Battery_Basic\",\"SummonerPrefabId\":\"Battery_Basic_Summoner\"}",
+            "Type": 0
+          }
+        },
+        "机械扭矩模块": {
+          "prefab": "Module_MechanicalNode", "id": "机械扭矩模块", "enabled": true,
+          "data": { "BitData": [], "Type": 0 },
+          "parameters": { "DefinitionId": "Battery_Basic" }
+        }
+      }
+    },
+    {
+      "id": "Motor_Basic",
+      "parent": "BuildingBody_Base",
+      "gameName": "基础马达-建筑",
+      "description": "消耗电力并向机械动力网络输出扭矩。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 36,
+      "volume": 50,
+      "stackable": false,
+      "canBePickedUp": false,
+      "tags": ["35", "InventoryGroup.ElectricalPower"],
+      "visual": { "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png" },
+      "health": {
+        "hasHp": true, "hp": 180, "maxHp": 180,
+        "defense": { "cutting": 8, "piercing": 8, "chopping": 8, "blunt": 8 },
+        "collider": {
+          "type": "BoxCollider2D", "enabled": true, "isTrigger": true,
+          "offset": { "x": 0, "y": 0 }, "size": { "x": 1, "y": 1 }, "edgeRadius": 0
+        }
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building", "id": "建筑模块", "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Motor_Basic\",\"SummonerPrefabId\":\"Motor_Basic_Summoner\"}",
+            "Type": 0
+          },
+          "parameters": { "LightOcclusionMode": "None", "CastSunShadow": false }
+        },
+        "机械扭矩模块": {
+          "prefab": "Module_MechanicalNode", "id": "机械扭矩模块", "enabled": true,
+          "data": { "BitData": [], "Type": 0 },
+          "parameters": { "DefinitionId": "Motor_Basic" }
+        }
+      }
+    },
+    {
+      "id": "Motor_Basic_Summoner",
+      "worldDropBehavior": "interactive",
+      "parent": "BuildingSummoner_Base",
+      "gameName": "基础马达",
+      "description": "消耗电力并向机械动力网络输出扭矩。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 11,
+      "volume": 22,
+      "stackable": false,
+      "canBePickedUp": true,
+      "tags": ["35", "InventoryGroup.ElectricalPower"],
+      "visual": { "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png" },
+      "health": {
+        "hasHp": true, "hp": 180, "maxHp": 180,
+        "defense": { "cutting": 8, "piercing": 8, "chopping": 8, "blunt": 8 },
+        "collider": {
+          "type": "BoxCollider2D", "enabled": true, "isTrigger": true,
+          "offset": { "x": 0, "y": 0 }, "size": { "x": 1, "y": 1 }, "edgeRadius": 0
+        }
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building", "id": "建筑模块", "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Motor_Basic\",\"SummonerPrefabId\":\"Motor_Basic_Summoner\"}",
+            "Type": 0
+          }
+        },
+        "机械扭矩模块": {
+          "prefab": "Module_MechanicalNode", "id": "机械扭矩模块", "enabled": true,
+          "data": { "BitData": [], "Type": 0 },
+          "parameters": { "DefinitionId": "Motor_Basic" }
+        }
+      }
+    },
+    {
+      "id": "Tree_Oak",
+      "parent": "Tree_Pine",
+      "gameName": "橡树",
+      "description": "森林中生长的橡树，可按树脂相同的产出逻辑获得橡胶。",
+      "lootTableId": "Tree_Oak",
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png"
+      },
+      "modules": {
+        "温度产量模块": {
+          "parameters": {
+            "OutputItemId": "Rubber"
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 ---
 name: flatworld-machines
-description: "Use when: 定位或修改 FlatWorld 的机器世界、工作台、熔炉、箱子、堆肥、晾架、落地便携加工设施、机械网络、机器交互/存档及 Harmony MOD 入口。关键词：MachineWorld、MachineEntity、MachineLogic、RecipeProcessor、FurnaceLogic。"
+description: "Use when: 定位或修改 FlatWorld 的机器世界、工作台、熔炉、箱子、堆肥、晾架、落地便携加工设施、机械/电力网络、机器交互/存档及 Harmony MOD 入口。关键词：MachineWorld、MachineEntity、MachineLogic、MechanicalNetworkGraph、ElectricalNetworkGraph、RecipeProcessor、FurnaceLogic。"
 ---
 
 # FlatWorld 机器与工作方块
@@ -9,6 +9,7 @@ description: "Use when: 定位或修改 FlatWorld 的机器世界、工作台、
 
 - 权威实体和粗粒度领域逻辑：`Assets/5_Scripts/5-3_GamePlay/World/Machines/`。
 - 调度/存档：`MachineWorld.cs`；无端口设施/命令/鼓风：`MachineWorld.Facilities.cs`。
+- 电力：`ElectricalNetwork.cs` 负责电网拓扑与整网功率解算，`MachineWorld.Electrical.cs` 负责机械↔电力桥和扩展 Provider；不要再建第二套 ElectricalWorld。
 - 工作台、熔炉、储物、堆肥、晾架、手动加工、手钻、取火、石臼、水容器各有 `MachineLogic`，机械扭矩仍由 `MechanicalNetworkGraph` 解算。
 - 表现：`ChunkTilemapRenderer.Mechanical.cs`、`ChunkDepthMeshRenderer*.cs`、`MechanicalDepthVisual*.cs`；面板：`MachinePanelSession`、`MechanicalPanelSession`、`VesselMachinePanelSession`。
 - 网络：`NetworkItemStateCoordinator.Machines.cs`；库存入口：`MachineInventoryCommands`。
@@ -17,6 +18,8 @@ description: "Use when: 定位或修改 FlatWorld 的机器世界、工作台、
 ## 约束
 
 - 只维护一套 `MachineWorld`，不新建并列的 WorkBlockWorld；普通设施 `Ports=none` 共用格索引，但不能伪造扭矩网络。传动网络和设施业务都保持粗粒度内聚。
+- 机械网与电网是同一批 `MachineEntity` 上的两张独立拓扑图；发电机/马达可同时入两网。电线使用独立覆盖层，与同格设备接入电网，不要求世界布线区分正负极。
+- 电网首版按整网功率求解：W 表示功率、J 表示储能；电压参与兼容性，电流由 `P/V` 推导，电阻只保留正式数据接口，未实现逐段压降/基尔霍夫仿真。
 - 召唤器、玩家库存和手持玩法保留 Item；落地设施走 `Place/SpawnGenerated/RestoreMachine`，`ItemMgr` 拒绝再实例化其完整 Item。`MachineAuthoringModule` 只保存配置，禁止重新启用其 Load/Tick 做运行时兜底。
 - 模拟不依赖 ChunkView。网络整体先恢复再 Tick、先快照再休眠；无端口设施独立按玩家窗口休眠。显示卸载不能删除实体或撤销已保存库存。
 - 业务时间使用传入的世界时间；有界补算保留剩余时间。手摇倒计时在领域逻辑分派前推进，定制领域逻辑不能绕过动力耗时。

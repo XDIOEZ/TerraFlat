@@ -92,7 +92,7 @@ public sealed partial class ChunkTilemapRenderer
             new Vector2(origin.X, origin.Y), new Vector2(cell.x, cell.y));
         int x = Mathf.RoundToInt(displacement.x), y = Mathf.RoundToInt(displacement.y);
         if ((uint)x >= (uint)boundChunk.Terrain.Width || (uint)y >= (uint)boundChunk.Terrain.Height) return;
-        for (int occupancy = 0; occupancy < 2; occupancy++)
+        for (int occupancy = 0; occupancy <= 3; occupancy++)
         {
             MachineEntity node = MachineWorld.GetAt(cell, occupancy);
             if (node != null) SubmitMechanicalNode(node, x, y);
@@ -295,7 +295,8 @@ public sealed partial class ChunkTilemapRenderer
         if (!mechanicalDepthVisuals.TryGetValue(key, out MechanicalDepthVisual visual) || visual == null)
         {
             int id = x + y * boundChunk.Terrain.Width + node.Definition.Layer * boundChunk.Terrain.CellCount;
-            visual = MechanicalDepthVisual.Create(this, origin, id, node.Definition.Layer);
+            int visualLayer = node.Definition.Electrical?.IsWire == true ? -1 : node.Definition.Layer;
+            visual = MechanicalDepthVisual.Create(this, origin, id, visualLayer);
             mechanicalDepthVisuals[key] = visual;
         }
         visual.BeginUpdate(origin);

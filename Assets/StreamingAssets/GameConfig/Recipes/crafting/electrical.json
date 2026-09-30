@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "recipes": [
+    {
+      "id": "core:electrical_Wire_Copper",
+      "displayName": "铜导线",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Ingot_Copper",
+          "amount": 1
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Rubber",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Wire_Copper_Summoner",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    }
+  ]
+}

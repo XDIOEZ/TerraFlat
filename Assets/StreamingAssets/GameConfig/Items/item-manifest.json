@@ -57,6 +57,11 @@
       "enabled": true
     },
     {
+      "id": "electrical",
+      "path": "shells/electrical.json",
+      "enabled": true
+    },
+    {
       "id": "hand_drill",
       "path": "shells/hand_drill.json",
       "enabled": true

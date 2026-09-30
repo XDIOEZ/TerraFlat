@@ -44,6 +44,14 @@ public sealed class MachineEntity
     public float GearboxSmallPhase, GearboxSmallSpeed, GearboxSmallTime;
     public MechanicalNetwork Network;
     public readonly List<MechanicalLink> Links = new();
+    public ElectricalNetwork ElectricalNetwork;
+    public float ElectricalStoredJoules; // 电池轻量储能状态，节点休眠时仍保留。
+    public float ElectricalVoltage;
+    public float ElectricalRequestedWatts;
+    public float ElectricalSuppliedWatts;
+    public float ElectricalGeneratedWatts;
+    public float ElectricalCurrentAmps;
+    public float ElectricalPowerRatio;
 
     public bool HasPort(int direction)
     {
@@ -200,7 +208,7 @@ public sealed class MechanicalNetworkGraph
         for (int dx = -extent; dx <= extent; dx++)
         {
             Vector2Int cell = NormalizeCell(center + new Vector2Int(dx, dy));
-            for (int layer = 0; layer < 2; layer++)
+            for (int layer = 0; layer <= 3; layer++)
             {
                 MachineEntity node = AtNormalized(cell, layer);
                 if (node != null && window.Seen.Add(node)) window.Nodes.Add(node);

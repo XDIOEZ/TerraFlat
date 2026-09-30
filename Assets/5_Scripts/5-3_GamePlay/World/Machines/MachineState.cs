@@ -24,6 +24,7 @@ public partial class MachineState
     public int RatioIndex = 1;
     public float ManualSeconds;
     public float Hp = -1f; // -1 表示按物品定义初始化建造耐久。
+    public float ElectricalStoredJoules; // 电池当前储能；非电池保持 0。
     public RecipeProcessingState Processing = new();
     public bool Generated; // 世界基线设施拆除后由机器存档保留删除标记。
     #endregion

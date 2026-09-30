@@ -210,8 +210,11 @@ public sealed class MachineDefinition
     public bool BlocksMovement = true; // 是否作为实体障碍阻挡角色与导航。
     public float PlayerMoveSpeedMultiplier = 1f; // 可通行机械占格对玩家主动移速的倍率。
     public bool? CastVisualShadows; // MOD 可覆盖用力器与发力器的默认两类世界阴影。
-    public int Layer => Kind == "bridge" ? 1 : 0;
+    public int PlacementLayer = -1; // -1 沿用机械默认层；电线等覆盖层可显式使用独立层。
+    public ElectricalDefinition Electrical; // 可选电气能力；同一机器可同时属于机械网与电网。
+    public int Layer => PlacementLayer >= 0 ? PlacementLayer : Kind == "bridge" ? 1 : 0;
     public bool HasMechanicalPorts => Ports == "axis" || Ports == "all";
+    public bool HasElectricalPorts => Electrical?.HasConnection == true;
     public bool Rotatable => Ports == "axis" || Kind == "bellows" || (Kind == "gear" && AxlePorts?.Length > 0);
     /// <summary>动力源、加工设备与机械风箱默认投影；传动件保持原有无影表现。</summary>
     public bool ShouldCastVisualShadows()
@@ -250,6 +253,7 @@ public sealed class MachineDefinition
             (Source == "water" && !Positive(SourceRadius)) ||
             !Positive(PlayerMoveSpeedMultiplier) || PlayerMoveSpeedMultiplier > 1f || !NonNegative(ManualWorkSecondsPerPress) ||
             !NonNegative(ManualDriveTorque) || !NonNegative(ManualDriveRpm) || !NonNegative(ManualDriveSecondsPerPress) ||
+            PlacementLayer < -1 || PlacementLayer > 15 ||
             Ratios == null || Ratios.Length == 0 ||
             (ReverseSpeedRatio != 0 && !Positive(ReverseSpeedRatio)) ||
             !Positive(ForwardTorqueRatio) || !Positive(ReverseTorqueRatio))
@@ -265,9 +269,66 @@ public sealed class MachineDefinition
             foreach (string port in AxlePorts)
                 if (port != "right" && port != "up" && port != "left" && port != "down")
                     throw new ArgumentException("传动轴接口方向无效：" + Id);
+        Electrical?.Validate(Id);
     }
     internal static bool Positive(float value) => value > 0 && !float.IsInfinity(value) && !float.IsNaN(value);
     internal static bool NonNegative(float value) => value >= 0 && !float.IsInfinity(value) && !float.IsNaN(value);
+    #endregion
+}
+
+/// <summary>电气节点的通用配置；首版按整网功率解算，同时保留电压、电流和电阻接口。</summary>
+[Serializable]
+public sealed class ElectricalDefinition
+{
+    #region 电气参数
+    public string Role = "wire"; // wire/generator/consumer/battery
+    public string Connection = "cell"; // 首版电器端口与同格电线连接。
+    public float NominalVoltage = 120f;
+    public float MinimumVoltage;
+    public float MaximumVoltage;
+    public float PowerWatts; // generator 为额定发电功率，consumer 为满负载需求。
+    public float MaxCurrentAmps; // 电线允许的整网聚合电流上限。
+    public float ResistanceOhms; // 首版保留但不参与压降求解。
+    public float CapacityJoules; // battery 专用。
+    public float MaxChargeWatts; // battery 专用。
+    public float MaxDischargeWatts; // battery 专用。
+    public string PowerProvider = ""; // generator 可选动态供电比例，例如 mechanical。
+    public string DemandProvider = ""; // consumer 可选动态需求比例，例如 motor。
+
+    public bool HasConnection => Connection == "cell";
+    public bool IsWire => Role == "wire";
+    public bool IsGenerator => Role == "generator";
+    public bool IsConsumer => Role == "consumer";
+    public bool IsBattery => Role == "battery";
+
+    public bool AcceptsVoltage(float voltage)
+    {
+        if (!MachineDefinition.Positive(voltage)) return false;
+        if (IsWire) return MaximumVoltage <= 0f || voltage <= MaximumVoltage + 0.001f;
+        float minimum = MinimumVoltage > 0f ? MinimumVoltage : NominalVoltage;
+        float maximum = MaximumVoltage > 0f ? MaximumVoltage : NominalVoltage;
+        return voltage + 0.001f >= minimum && voltage <= maximum + 0.001f;
+    }
+
+    public void Validate(string ownerId)
+    {
+        if ((Role != "wire" && Role != "generator" && Role != "consumer" && Role != "battery") ||
+            Connection != "cell" || !MachineDefinition.Positive(NominalVoltage) ||
+            !MachineDefinition.NonNegative(MinimumVoltage) || !MachineDefinition.NonNegative(MaximumVoltage) ||
+            !MachineDefinition.NonNegative(PowerWatts) || !MachineDefinition.NonNegative(MaxCurrentAmps) ||
+            !MachineDefinition.NonNegative(ResistanceOhms) || !MachineDefinition.NonNegative(CapacityJoules) ||
+            !MachineDefinition.NonNegative(MaxChargeWatts) || !MachineDefinition.NonNegative(MaxDischargeWatts))
+            throw new ArgumentException("电气节点参数无效：" + ownerId);
+        if (MinimumVoltage > 0f && MaximumVoltage > 0f && MaximumVoltage < MinimumVoltage)
+            throw new ArgumentException("电气节点电压范围无效：" + ownerId);
+        if ((IsGenerator || IsConsumer) && !MachineDefinition.Positive(PowerWatts))
+            throw new ArgumentException("电气节点功率无效：" + ownerId);
+        if (IsWire && !MachineDefinition.Positive(MaxCurrentAmps))
+            throw new ArgumentException("电线载流上限无效：" + ownerId);
+        if (IsBattery && (!MachineDefinition.Positive(CapacityJoules) || !MachineDefinition.Positive(MaxChargeWatts) ||
+            !MachineDefinition.Positive(MaxDischargeWatts)))
+            throw new ArgumentException("电池参数无效：" + ownerId);
+    }
     #endregion
 }
 

@@ -23,7 +23,61 @@
     { "Id": "Millstone", "Kind": "consumer", "Ports": "axis", "Station": "millstone", "RequiredRpm": 20, "TorqueLoad": 10, "ManualDriveTorque": 60, "ManualDriveRpm": 2, "ManualDriveSecondsPerPress": 3 },
     { "Id": "MechanicalBellows", "Kind": "bellows", "Ports": "all", "AxlePorts": ["left"], "RequiredRpm": 20, "TorqueLoad": 10 },
     { "Id": "Sawmill", "Kind": "consumer", "Ports": "all", "Station": "sawmill", "RequiredRpm": 40, "TorqueLoad": 20 },
-    { "Id": "MechanicalHammer", "Kind": "consumer", "Ports": "axis", "Station": "mechanical_hammer", "RequiredRpm": 60, "TorqueLoad": 20 }
+    { "Id": "MechanicalHammer", "Kind": "consumer", "Ports": "axis", "Station": "mechanical_hammer", "RequiredRpm": 60, "TorqueLoad": 20 },
+    {
+      "Id": "Generator_Basic",
+      "Kind": "consumer",
+      "Ports": "axis",
+      "RequiredRpm": 20,
+      "TorqueLoad": 20,
+      "Electrical": {
+        "Role": "generator",
+        "NominalVoltage": 120,
+        "PowerWatts": 600,
+        "PowerProvider": "mechanical"
+      }
+    },
+    {
+      "Id": "Wire_Copper",
+      "Kind": "electrical_wire",
+      "Ports": "none",
+      "PlacementLayer": 3,
+      "BlocksMovement": false,
+      "CastVisualShadows": false,
+      "Electrical": {
+        "Role": "wire",
+        "NominalVoltage": 120,
+        "MaximumVoltage": 600,
+        "MaxCurrentAmps": 10,
+        "ResistanceOhms": 0.02
+      }
+    },
+    {
+      "Id": "Battery_Basic",
+      "Kind": "electrical_battery",
+      "Ports": "none",
+      "Electrical": {
+        "Role": "battery",
+        "NominalVoltage": 120,
+        "CapacityJoules": 60000,
+        "MaxChargeWatts": 600,
+        "MaxDischargeWatts": 600
+      }
+    },
+    {
+      "Id": "Motor_Basic",
+      "Kind": "source",
+      "Ports": "axis",
+      "Source": "electric",
+      "Torque": 15,
+      "Rpm": 20,
+      "Electrical": {
+        "Role": "consumer",
+        "NominalVoltage": 120,
+        "PowerWatts": 600,
+        "DemandProvider": "motor"
+      }
+    }
   ],
   "Processes": [
     { "Station": "hand_drill", "Input": "Log", "Outputs": [{ "ItemName": "DrilledLog", "amount": 1 }], "WorkSeconds": 4 },

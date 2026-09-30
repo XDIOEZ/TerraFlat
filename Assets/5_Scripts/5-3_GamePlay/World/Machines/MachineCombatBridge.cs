@@ -37,7 +37,7 @@ public sealed class MachineCombatBridge : IGameplayCombatBridge
         {
             for (int y = minY; y <= maxY; y++)
             for (int x = minX; x <= maxX; x++)
-            for (int layer = 0; layer < 2; layer++)
+            for (int layer = 0; layer <= 3; layer++)
             {
                 MachineEntity node = MachineWorld.GetAtCurrentWorld(new Vector2Int(x, y), layer);
                 if (node == null || !seen.Add(node.Id)) continue;

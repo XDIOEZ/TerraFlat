@@ -51,6 +51,7 @@ public static partial class MachineWorld
         MachineInventoryCommands.Reset();
         nodes.Clear(); interactions.Clear(); processorOwners.Clear(); sourceProviders.Clear(); sourceRpmProviders.Clear(); players.Clear();
         graph = null; owner = null; worldKey = null; dirty = false; suppressRemoval = false; elapsed = 0;
+        ResetElectricalRuntime();
         CellChanged = null;
         NodeStateChanged = null; NodeRemoved = null; VisualSpeedChanged = null;
     }
@@ -67,14 +68,15 @@ public static partial class MachineWorld
         if (string.IsNullOrWhiteSpace(id) || provider == null) throw new ArgumentException("动力源转速注册无效。");
         sourceRpmProviders[id] = provider;
     }
-    public static void ClearSourceProviders() { sourceProviders.Clear(); sourceRpmProviders.Clear(); }
+    public static void ClearSourceProviders()
+    { sourceProviders.Clear(); sourceRpmProviders.Clear(); ClearElectricalProviders(); }
 
     private static void EnsureScope()
     {
         BindMachineResources();
         var save = SaveDataMgr.Instance?.SaveData;
         string key = SceneManager.GetActiveScene().name;
-        if (ReferenceEquals(owner, save) && worldKey == key && graph != null) return;
+        if (ReferenceEquals(owner, save) && worldKey == key && graph != null && electricalGraph != null) return;
         if (ReferenceEquals(owner, save)) CaptureCurrentWorld();
         ReleaseRuntime();
         owner = save; worldKey = key;
@@ -88,6 +90,7 @@ public static partial class MachineWorld
             ? new Vector2Int(topology.Span.x / chunkSize.x, topology.Span.y / chunkSize.y)
             : Vector2Int.zero;
         graph = new MechanicalNetworkGraph(chunkSize, period, topology);
+        InitializeElectricalScope(topology);
         GameplayCombatBridge.Register(MachineCombatBridge.Instance);
         if (save?.Mechanical?.Worlds != null && save.Mechanical.Worlds.TryGetValue(key, out var snapshots))
             foreach (var data in snapshots) RestoreDescriptor(data);
@@ -103,11 +106,13 @@ public static partial class MachineWorld
         if (definition == null) return;
         var state = ReadMachineState(snapshot);
         if (state.Hp < 0f) state.Hp = ResolveMaximumHp(snapshot);
-        nodes.Add(snapshot.Guid, new MachineEntity
+        var node = new MachineEntity
         {
             Id = snapshot.Guid, Cell = CellOf(snapshot.transform.position), Definition = definition, Snapshot = snapshot,
             RotationQuarterTurns = state.RotationQuarterTurns, Engaged = state.Engaged, RatioIndex = state.RatioIndex
-        });
+        };
+        InitializeElectricalState(node, state);
+        nodes.Add(snapshot.Guid, node);
     }
 
     /// <summary>仅正式安装提交和世界存档恢复调用；手持召唤器不会登记到网络。</summary>
@@ -121,6 +126,7 @@ public static partial class MachineWorld
         {
             node = new MachineEntity { Id = id, Cell = CellOf(view.item.transform.position), Definition = view.Definition,
                 Snapshot = view.item.itemData, State = view.LocalState };
+            InitializeElectricalState(node, view.LocalState);
             nodes.Add(id, node); dirty = true;
             CopyTopology(node);
             EnsureProcessor(node);
@@ -158,6 +164,7 @@ public static partial class MachineWorld
             Snapshot = FastCloner.FastCloner.DeepClone(snapshot),
             State = state
         };
+        InitializeElectricalState(node, state);
         CopyTopology(node);
         EnsureProcessor(node);
         nodes.Add(node.Id, node);
@@ -258,6 +265,7 @@ public static partial class MachineWorld
             applied = true;
         }
         node.State = incomingState;
+        InitializeElectricalState(node, incomingState);
         if (!applied) { DisposeProcessor(node); EnsureProcessor(node); }
         CopyTopology(node);
         node.Rpm = rpm;
@@ -306,7 +314,7 @@ public static partial class MachineWorld
     public static MachineEntity GetAt(Vector2Int cell, int layer)
     {
         EnsureScope();
-        if (dirty) { graph.Rebuild(nodes.Values); dirty = false; }
+        RebuildGraphsIfDirty();
         return graph.At(cell, layer);
     }
 
@@ -321,7 +329,7 @@ public static partial class MachineWorld
     public static MachineEntity GetAtCurrentWorld(Vector2Int cell, int layer)
     {
         if (graph == null) return null;
-        if (dirty) { graph.Rebuild(nodes.Values); dirty = false; }
+        RebuildGraphsIfDirty();
         return graph.At(cell, layer);
     }
 
@@ -331,7 +339,7 @@ public static partial class MachineWorld
         if (actor == null || result == null) return;
         EnsureScope();
         if (actor.gameObject.scene.name != worldKey) return;
-        if (dirty) { graph.Rebuild(nodes.Values); dirty = false; }
+        RebuildGraphsIfDirty();
         if (!graph.HasNodes) return;
         Vector3 position = actor.transform.position;
         // 命中点与机械锚点的格坐标差不会超过距离的向上取整，无需多扫外围一圈。
@@ -421,10 +429,10 @@ public static partial class MachineWorld
         if (result == null) throw new ArgumentNullException(nameof(result));
         EnsureScope();
         result.Clear();
-        if (dirty) { graph.Rebuild(nodes.Values); dirty = false; }
+        RebuildGraphsIfDirty();
         for (int y = bounds.yMin; y < bounds.yMax; y++)
         for (int x = bounds.xMin; x < bounds.xMax; x++)
-        for (int layer = 0; layer < 2; layer++)
+        for (int layer = 0; layer <= 3; layer++)
         {
             MachineEntity node = graph.At(new Vector2Int(x, y), layer);
             if (node != null) result.Add(new MachineRenderCell(node, new Vector2Int(x, y)));
@@ -470,7 +478,7 @@ public static partial class MachineWorld
         elapsed += Mathf.Max(0, deltaTime);
         float step = MachineCatalog.Settings.TickSeconds;
         if (elapsed < step) return;
-        if (dirty) { graph.Rebuild(nodes.Values); dirty = false; }
+        RebuildGraphsIfDirty();
         CollectPlayerChunks();
         // 帧内补算有上限，余量留到后续帧；暂停和时间缩放仍服从传入的世界时间。
         int catchUpSteps = Mathf.Min(MaxCatchUpStepsPerFrame, Mathf.FloorToInt(elapsed / step));
@@ -479,7 +487,8 @@ public static partial class MachineWorld
             elapsed -= step;
             foreach (var network in graph.Networks)
             {
-                bool active = graph.ShouldBeActive(network, players, step, MachineCatalog.Settings);
+                bool active = graph.ShouldBeActive(network, players, step, MachineCatalog.Settings) ||
+                    RequiresElectricalBridgeSimulation(network);
                 if (!active)
                 {
                     if (network.Active) SleepNetwork(network);
@@ -489,11 +498,15 @@ public static partial class MachineWorld
                 foreach (var node in network.Nodes) if (node.State == null) WakeNode(node);
                 network.Active = true;
                 SolveNetwork(network);
-                foreach (var node in network.Nodes)
-                {
-                    node.Active = true;
-                    UpdateVisualSpeed(node);
-                }
+                foreach (var node in network.Nodes) node.Active = true;
+            }
+            // 发电机读取本轮机械输入，马达再把本轮电力结果反馈到机械输出。
+            SolveElectricalNetworks(step);
+            foreach (var network in graph.Networks)
+            {
+                if (!network.Active) continue;
+                SolveNetwork(network);
+                foreach (var node in network.Nodes) UpdateVisualSpeed(node);
             }
             // 所有网络先完成转速分配，再推进设施，风箱跨网供风不读上一轮结果。
             foreach (var network in graph.Networks)
@@ -546,6 +559,8 @@ public static partial class MachineWorld
     private static void WakeNode(MachineEntity node)
     {
         node.State = ReadMachineState(node.Snapshot);
+        if (node.Definition?.Electrical?.IsBattery == true)
+            node.State.ElectricalStoredJoules = node.ElectricalStoredJoules;
         if (node.State.Hp < 0f) node.State.Hp = ResolveMaximumHp(node.Snapshot);
         EnsureProcessor(node);
     }
@@ -633,12 +648,13 @@ public static partial class MachineWorld
     [MethodImpl(MethodImplOptions.NoInlining)]
     public static float GetSourceFactor(MachineEntity node)
     {
-        if (node.State == null || node.SourceTorque <= 0) return 0;
+        if (node == null || node.SourceTorque <= 0) return 0;
         if (node.Definition.ManualDriveTorque > 0)
-            return !node.IncomingPower && node.State.ManualSeconds > 0 ? 1 : 0;
+            return node.State != null && !node.IncomingPower && node.State.ManualSeconds > 0 ? 1 : 0;
         string source = node.Definition.Source;
         if (sourceProviders.TryGetValue(source, out var provider)) return Mathf.Clamp01(provider(node));
-        if (source == "manual") return node.State.ManualSeconds > 0 ? 1 : 0;
+        if (source == "electric") return Mathf.Clamp01(node.ElectricalPowerRatio);
+        if (source == "manual") return node.State != null && node.State.ManualSeconds > 0 ? 1 : 0;
         if (source == "wind") return WeatherMgr.Instance != null ? WeatherMgr.Instance.GetCurrentWindStrength() : 0;
         if (source == "water") return GetWaterSourceFactor(node);
         return 0;
@@ -739,7 +755,7 @@ public static partial class MachineWorld
     public static bool IsOccupied(Vector2Int cell, int layer, int except = 0)
     {
         if (graph == null) return false;
-        if (dirty) { graph.Rebuild(nodes.Values); dirty = false; }
+        RebuildGraphsIfDirty();
         var node = graph.At(cell, layer);
         return node != null && node.Id != except;
     }
@@ -748,7 +764,7 @@ public static partial class MachineWorld
     internal static bool IsOccupiedNormalized(Vector2Int cell, int layer)
     {
         if (graph == null) return false;
-        if (dirty) { graph.Rebuild(nodes.Values); dirty = false; }
+        RebuildGraphsIfDirty();
         return graph.At(cell, layer) != null;
     }
 
@@ -756,7 +772,7 @@ public static partial class MachineWorld
     internal static bool IsOccupiedOnPlacementLayersNormalized(Vector2Int cell)
     {
         if (graph == null) return false;
-        if (dirty) { graph.Rebuild(nodes.Values); dirty = false; }
+        RebuildGraphsIfDirty();
         return graph.IsOccupiedOnPlacementLayersNormalized(graph.NormalizeCell(cell));
     }
 
@@ -794,7 +810,7 @@ public static partial class MachineWorld
     public static float GetBellowsBoost(Vector3 position)
     {
         if (graph == null) return 0;
-        if (dirty) { graph.Rebuild(nodes.Values); dirty = false; }
+        RebuildGraphsIfDirty();
         Vector2Int cell = graph.NormalizeCell(new Vector2Int(Mathf.FloorToInt(position.x), Mathf.FloorToInt(position.y)));
         float boost = 0;
         foreach (var offset in MechanicalNetworkGraph.Directions)
@@ -835,11 +851,10 @@ public static partial class MachineWorld
             node.Snapshot = FastCloner.FastCloner.DeepClone(node.View.item.itemData);
         }
         node.Logic?.Capture();
-        if (node.State != null)
-        {
-            MachinePersistence.Write(node.Snapshot, "core", node.State);
-            if (TryGetModuleData(node.Snapshot, out var module)) module.WriteData(node.State);
-        }
+        MachineState state = node.State ?? ReadMachineState(node.Snapshot);
+        WriteElectricalState(node, state);
+        MachinePersistence.Write(node.Snapshot, "core", state);
+        if (TryGetModuleData(node.Snapshot, out var module)) module.WriteData(state);
     }
     private static void CaptureCurrentWorld()
     {
@@ -869,7 +884,7 @@ public static partial class MachineWorld
     {
         UnbindMachineResources();
         if (capture) CaptureCurrentWorld();
-        ReleaseRuntime(); owner = null; worldKey = null; graph = null;
+        ReleaseRuntime(); owner = null; worldKey = null; graph = null; electricalGraph = null;
         BuildingOccupancyRegistry.RebuildSightBlockingIndex(null, default);
     }
     private static void ReleaseRuntime()

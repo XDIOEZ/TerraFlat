@@ -95,6 +95,37 @@
       "requiredTagChunkRadius": 0
     },
     {
+      "ruleId": "surface.forest.oakTree",
+      "itemId": "Tree_Oak",
+      "itemCount": 1,
+      "spawnChance": 0.0015,
+      "spawnChanceMultiplier": 2,
+      "distributionMode": 0,
+      "patchSpacing": 24,
+      "patchRadius": 2.5,
+      "patchChance": 1,
+      "biomeMask": 32,
+      "minTemperature": 0,
+      "maxTemperature": 1,
+      "minPrecipitation": 0,
+      "maxPrecipitation": 1,
+      "minHeight": 0,
+      "maxHeight": 1,
+      "minRiverFloodplainStrength": 0,
+      "providedTags": [
+        "Tree"
+      ],
+      "companionOnly": false,
+      "companionHostTag": "",
+      "companionSpawnChance": 0,
+      "companionOffsetX": 0,
+      "companionOffsetY": 0,
+      "companionMinRadius": 0,
+      "companionMaxRadius": 0,
+      "requiredChunkTag": "",
+      "requiredTagChunkRadius": 0
+    },
+    {
       "ruleId": "surface.forest.beehive",
       "itemId": "Beehive",
       "itemCount": 1,

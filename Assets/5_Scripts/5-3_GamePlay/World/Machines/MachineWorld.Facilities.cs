@@ -41,7 +41,7 @@ public static partial class MachineWorld
     {
         inventory = null;
         if (graph == null || actor == null || item == null || actor.gameObject.scene.name != worldKey) return false;
-        if (dirty) { graph.Rebuild(nodes.Values); dirty = false; }
+        RebuildGraphsIfDirty();
         float range = actor.GetComponentInChildren<Mod_InteractSender>()?.maxInteractDistance ?? Mod_InteractSender.DefaultMaxInteractDistance;
         var candidates = graph.GetInteractionCandidates(CellOf(actor.transform.position), Mathf.CeilToInt(range), false);
         foreach (MachineEntity entity in candidates)
@@ -58,7 +58,7 @@ public static partial class MachineWorld
     public static int CountBurningSources(MachineEntity observer, float radius, IReadOnlyList<string> ids, IReadOnlyList<string> moduleIds)
     {
         if (graph == null || !MachineDefinition.Positive(radius)) return 0;
-        if (dirty) { graph.Rebuild(nodes.Values); dirty = false; }
+        RebuildGraphsIfDirty();
         int extent = Mathf.CeilToInt(radius), count = 0;
         var seen = new HashSet<int>();
         for (int y = -extent; y <= extent; y++)

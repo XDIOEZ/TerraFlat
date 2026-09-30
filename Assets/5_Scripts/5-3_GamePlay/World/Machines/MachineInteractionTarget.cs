@@ -156,6 +156,18 @@ public sealed class MachineInteractionTarget : IWorldInteractionTarget, IWorldIn
             status += FlatWorldLocalizationService.GetUiFormat(
                 " · 工作效率 {0:0.#}%（需求 {1:0} RPM）",
                 MachineWorld.GetWorkEfficiency(node) * 100f, node.Definition.RequiredRpm);
+        ElectricalNetwork electrical = MachineWorld.GetElectricalNetwork(node);
+        if (node.Definition.Electrical != null && electrical != null)
+        {
+            status += FlatWorldLocalizationService.GetUiFormat(
+                " · 电网 {0:0.#}V {1:0.#}A · 功率 {2:0.#}/{3:0.#}W · {4}",
+                electrical.Voltage, electrical.CurrentAmps, electrical.DeliveredWatts,
+                electrical.DemandWatts, electrical.Status);
+            if (node.Definition.Electrical.IsBattery)
+                status += FlatWorldLocalizationService.GetUiFormat(
+                    " · 储能 {0:0}/{1:0}J", node.ElectricalStoredJoules,
+                    node.Definition.Electrical.CapacityJoules);
+        }
         return status;
     }
 
