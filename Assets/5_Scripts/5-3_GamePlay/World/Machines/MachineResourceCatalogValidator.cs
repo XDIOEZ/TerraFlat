@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 /// <summary>资源 Ready 前检查机械配方及落地设施定义，不创建实体、运行逻辑或面板。</summary>
 public sealed class MachineResourceCatalogValidator : IResourceCatalogValidator
@@ -57,6 +58,7 @@ public sealed class MachineResourceCatalogValidator : IResourceCatalogValidator
             ValidateInventory(id, "熔炉燃料", furnace.FuelInventory, errors);
             if (!content.Has<Mod_Fuel>()) errors.Add("炉体缺少燃料配置：" + id);
             ValidatePanel(id, furnace.UI_Prefab, errors);
+            ValidateFurnacePanelBindings(id, furnace, errors);
         }
         if (content.Find<Mod_Inventory>()?.Authoring is Mod_Inventory storage)
         {
@@ -82,6 +84,41 @@ public sealed class MachineResourceCatalogValidator : IResourceCatalogValidator
     {
         if (panel == null || panel.GetComponentInChildren<BasePanel>(true) == null)
             errors.Add("机器正式面板缺失：" + id);
+    }
+
+    /// <summary>炉体面板槽位必须和库存模板一一对应，避免交互时才因缺少槽位抛异常。</summary>
+    private static void ValidateFurnacePanelBindings(string id, Mod_Furnace furnace, List<string> errors)
+    {
+        GameObject panel = furnace?.UI_Prefab;
+        if (panel == null) return;
+        ValidatePanelSlots(id, panel, "输入", furnace.InputInventory, errors);
+        ValidatePanelSlots(id, panel, "输出", furnace.OutputInventory, errors);
+        ValidatePanelSlots(id, panel, "燃料", furnace.FuelInventory, errors);
+
+        bool hasAction = false;
+        foreach (Button button in panel.GetComponentsInChildren<Button>(true))
+        {
+            if (button != null && button.gameObject.name == "合成按钮") { hasAction = true; break; }
+        }
+        if (!hasAction) errors.Add("炉体面板缺少合成按钮：" + id);
+    }
+
+    private static void ValidatePanelSlots(string id, GameObject panel, string prefix, Inventory inventory, List<string> errors)
+    {
+        int count = inventory?.Data?.itemSlots?.Count ?? 0;
+        ItemSlot_UI[] slots = panel.GetComponentsInChildren<ItemSlot_UI>(true);
+        for (int i = 1; i <= count; i++)
+        {
+            string underscore = prefix + "_" + i;
+            string spaced = prefix + " " + i;
+            bool found = false;
+            foreach (ItemSlot_UI slot in slots)
+            {
+                string name = slot != null ? slot.gameObject.name : null;
+                if (name == underscore || name == spaced) { found = true; break; }
+            }
+            if (!found) errors.Add($"炉体面板槽位缺失：{id} / {underscore}");
+        }
     }
     #endregion
 }
