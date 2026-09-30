@@ -5,6 +5,9 @@ public static class RuntimeUIPrefabKeys
 {
     #region 公共控件
 
+    /// <summary>全局通用面板背景控件。</summary>
+    public const string PanelBackground = "UI_PanelBackground";
+
     /// <summary>全局可交互滑动条控件。</summary>
     public const string SliderControl = "UI_SliderControl";
 

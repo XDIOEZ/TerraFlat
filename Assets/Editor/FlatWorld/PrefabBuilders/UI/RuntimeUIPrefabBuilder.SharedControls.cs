@@ -18,11 +18,10 @@ public static partial class RuntimeUIPrefabBuilder
     #region 控件库
 
     public const string SharedControlsRoot = PrefabRoot + "Common/Controls/";
-    private const string SharedPanelBackgroundKey = "UI_PanelBackground";
     private static bool buildingSharedControls;
     private static readonly string[] SharedControlNames =
     {
-        "UI_PanelBackground",
+        RuntimeUIPrefabKeys.PanelBackground,
         "UI_Button", "UI_CloseButton", "UI_TabButton", "UI_Toggle",
         "UI_SwitchOption", "UI_Switch", "UI_SliderControl", "UI_ProgressBar",
         "UI_Dropdown", "UI_InputField"
@@ -43,7 +42,7 @@ public static partial class RuntimeUIPrefabBuilder
         try
         {
             Directory.CreateDirectory(SharedControlsRoot);
-            CreateSharedAsset(SharedPanelBackgroundKey, BuildSharedPanelBackground);
+            CreateSharedAsset(RuntimeUIPrefabKeys.PanelBackground, BuildSharedPanelBackground);
             CreateSharedAsset("UI_Button", () => CreateButton("UI_Button", null, string.Empty, 160f, 64f, false).gameObject);
             CreateSharedAsset("UI_Toggle", () => CreateToggle("UI_Toggle", null).gameObject);
             CreateSharedAsset("UI_SliderControl", () => CreateSlider("UI_SliderControl", null).gameObject);
@@ -137,7 +136,7 @@ public static partial class RuntimeUIPrefabBuilder
     private static void ConfigureSharedDefaults(GameObject root)
     {
         RectTransform rect = root.GetComponent<RectTransform>();
-        if (string.Equals(root.name, SharedPanelBackgroundKey, StringComparison.Ordinal))
+        if (string.Equals(root.name, RuntimeUIPrefabKeys.PanelBackground, StringComparison.Ordinal))
         {
             rect.anchorMin = Vector2.zero;
             rect.anchorMax = Vector2.one;
@@ -191,7 +190,7 @@ public static partial class RuntimeUIPrefabBuilder
     private static GameObject BuildSharedPanelBackground()
     {
         GameObject root = new GameObject(
-            SharedPanelBackgroundKey,
+            RuntimeUIPrefabKeys.PanelBackground,
             typeof(RectTransform),
             typeof(CanvasRenderer),
             typeof(Image),
@@ -441,7 +440,7 @@ public static partial class RuntimeUIPrefabBuilder
         if (ownerImage == null)
             return 0;
 
-        Transform existing = root.transform.Find(SharedPanelBackgroundKey);
+        Transform existing = root.transform.Find(RuntimeUIPrefabKeys.PanelBackground);
         if (existing != null)
         {
             existing.SetAsFirstSibling();
@@ -456,12 +455,12 @@ public static partial class RuntimeUIPrefabBuilder
             return 0;
 
         GameObject asset = AssetDatabase.LoadAssetAtPath<GameObject>(
-            SharedControlsRoot + SharedPanelBackgroundKey + ".prefab");
+            SharedControlsRoot + RuntimeUIPrefabKeys.PanelBackground + ".prefab");
         if (asset == null)
             throw new InvalidOperationException("找不到共享面板背景 Prefab。");
 
         GameObject instance = (GameObject)PrefabUtility.InstantiatePrefab(asset, root.transform);
-        instance.name = SharedPanelBackgroundKey;
+        instance.name = RuntimeUIPrefabKeys.PanelBackground;
         instance.transform.SetAsFirstSibling();
         instance.transform.localScale = Vector3.one;
         RecordSharedInstance(instance);
