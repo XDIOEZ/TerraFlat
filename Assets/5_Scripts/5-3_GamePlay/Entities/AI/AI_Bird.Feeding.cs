@@ -44,7 +44,10 @@ public sealed partial class AI_Bird
     private bool TickForaging(float deltaTime)
     {
         if (state.Phase == BirdFlightPhase.RunUp) return false;
-        if (food?.Data?.nutrition == null || food.Data.nutrition.GetFoodRate() >= 0.9999f)
+        // 鸟类对地面种子/果实保持觅食兴趣，即使当前营养接近满值也会啄食。
+        // 营养本身由 Mod_Food/Nutrition 负责封顶；这里不要用“已吃饱”直接屏蔽掉落物感知，
+        // 否则刚生成且初始营养较高的鸟会表现成完全看不见玩家丢到面前的种子。
+        if (food?.Data?.nutrition == null)
         {
             forageTarget = default;
             return false;
@@ -151,6 +154,27 @@ public sealed partial class AI_Bird
     {
         threat = null;
         float closestDistanceSqr = float.PositiveInfinity;
+
+        // 玩家是独立威胁源，不依赖通用 ItemDetector 是否恰好把玩家纳入本批结果。
+        // 这样层级筛选、感知批处理或玩家外壳变化都不会让鸟彻底“看不见玩家”。
+        ItemMgr itemManager = ItemMgr.Instance;
+        if (itemManager != null)
+        {
+            foreach (Player player in itemManager.Player_DIC.Values)
+            {
+                if (player == null || player == item || !player.gameObject.activeInHierarchy ||
+                    !AIFleeUtility.IsWithinEscapeRange(body.position, player, threatDetector, baseRadius))
+                    continue;
+
+                float playerDistanceSqr = WorldTopologyRuntime.SqrDistance(body.position, player.transform.position);
+                if (playerDistanceSqr >= closestDistanceSqr)
+                    continue;
+
+                closestDistanceSqr = playerDistanceSqr;
+                threat = player;
+            }
+        }
+
         System.Collections.Generic.List<Item> detected = threatDetector.CurrentItemsInArea;
         for (int itemIndex = 0; itemIndex < detected.Count; itemIndex++)
         {

@@ -205,13 +205,22 @@ public class FurnaceLogic : MachineLogic
 
     private bool TryFeedFuel(bool requireIgnition, Player actor)
     {
-        ModuleData data = FuelInventory.Data.GetModuleByID(ModText.Fuel);
-        ItemSlot slot = data == null ? null : FuelInventory.Data.GetItemSlotByModuleID(data.ID);
-        if (slot?.itemData == null || data is not Ex_ModData_MemoryPackable binary || FuelInventory.IsSlotBeingDragged(slot.Index)) return false;
-        bool tinder = IsIgnitionFuel(slot.itemData);
-        if (requireIgnition && !tinder && !HasHeldIgnition(actor)) return false;
-        binary.OutData(out FuelData offered);
-        if (offered == null) return false;
+        ItemSlot slot;
+        FuelData offered;
+        bool tinder;
+        if (requireIgnition)
+        {
+            if (!TryFindFuelSlot(true, out slot, out offered))
+            {
+                if (!HasHeldIgnition(actor) || !TryFindFuelSlot(false, out slot, out offered)) return false;
+            }
+        }
+        else if (!TryFindFuelSlot(false, out slot, out offered) && !TryFindFuelSlot(true, out slot, out offered))
+        {
+            return false;
+        }
+
+        tinder = IsIgnitionFuel(slot.itemData);
         float value = tinder ? Mathf.Min(offered.Fuel.x, ignitionFuel) : offered.Fuel.x;
         float limit = tinder ? Mathf.Min(offered.MaxTemperature, ignitionTemperature) : offered.MaxTemperature;
         if (!MachineDefinition.Positive(value) || !MachineDefinition.Positive(limit) || Fuel.Fuel.y <= 0f) return false;
@@ -221,6 +230,33 @@ public class FurnaceLogic : MachineLogic
         FurnaceFuelByproductProcessor.RecordConsumedFuel(consumed, byproducts, Data);
         FurnaceFuelByproductProcessor.TryFlushPendingOutputs(FuelInventory.Data, byproducts, Data, GameRes.Instance);
         return true;
+    }
+
+    /// <summary>燃料槽按语义挑选，避免槽位顺序决定点火是否成功。</summary>
+    private bool TryFindFuelSlot(bool ignitionFuelOnly, out ItemSlot selected, out FuelData offered)
+    {
+        selected = null;
+        offered = null;
+        if (FuelInventory?.Data?.itemSlots == null) return false;
+
+        for (int i = 0; i < FuelInventory.Data.itemSlots.Count; i++)
+        {
+            ItemSlot slot = FuelInventory.Data.itemSlots[i];
+            ItemData item = slot?.itemData;
+            if (item == null || FuelInventory.IsSlotBeingDragged(i) ||
+                item.Tags?.ContainsTag(Tag.CombustionFuel) != true ||
+                IsIgnitionFuel(item) != ignitionFuelOnly ||
+                !Mod_Fuel.TryResolveItemData(slot.itemData, out FuelData candidate))
+            {
+                continue;
+            }
+
+            selected = slot;
+            offered = candidate;
+            return true;
+        }
+
+        return false;
     }
 
     private bool IsIgnitionFuel(ItemData item)

@@ -257,8 +257,13 @@ internal sealed partial class ChunkDepthMeshRenderer
             Material.SetFloat("_DepthSrcBlendAlpha", (float)BlendMode.One);
             Material.SetFloat("_DepthDstBlendAlpha", (float)(emissive ? BlendMode.One : BlendMode.OneMinusSrcAlpha));
             Material.SetFloat("_DepthBlendOp", (float)(emissive ? BlendOp.Max : BlendOp.Add));
-            SwayMargin = Material.GetFloat("_GrassSwayAmplitude") * 3f *
-                (1f + Mathf.Abs(Material.GetFloat("_GrassSecondaryStrength")));
+            float swayAmplitude = source.HasProperty("_GrassSwayAmplitude")
+                ? source.GetFloat("_GrassSwayAmplitude")
+                : 0f;
+            float secondaryStrength = source.HasProperty("_GrassSecondaryStrength")
+                ? source.GetFloat("_GrassSecondaryStrength")
+                : 0f;
+            SwayMargin = swayAmplitude * 3f * (1f + Mathf.Abs(secondaryStrength));
         }
 
         internal static MaterialLease Acquire(GroupKey key)

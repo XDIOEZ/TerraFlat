@@ -129,6 +129,7 @@ description: "Use when: 定位或修改 FlatWorld 的 UIManager、BasePanel、�
 - 后续任务与教程内容通过书籍物品及 `UI_ReadableBook` 提供；不要在玩家 Prefab 上重新挂载常驻任务追踪面板。
 - 跟随角色的世界空间状态条若需要在水面上方可见，Canvas 的 Sorting Layer 必须高于项目 `Water` 层；`sortingOrder` 只能解决同一 Sorting Layer 内的前后关系。RectTransform 直接挂到普通 Transform 下时，实际偏移以 `anchoredPosition` 为准，不能只改序列化的 `localPosition`。
 - 手机 HUD 的菜单/返回入口必须独立于可隐藏的玩法控制层；模态玩法面板打开时保留该入口并允许背包/制作等面板并行打开，Android 返回键或 Escape 优先关闭最上层可取消面板，避免移动端失去退出路径。
+- 玩家主背包 `UI_Bag` 是可并行面板：继续参与 BasePanel 的置顶、手柄导航与取消关闭链，但不获取玩法输入锁，也不计入 GameplayInputBlocking；其它 UI 的打开/关闭不与背包互斥，世界加载等直接硬锁仍可阻止首次打开。
 - 手机左侧“奔跑”是 `UI_MobileControls.prefab` 的状态按钮，但两态颜色会由 `PlayerMobileControlsHUD.RefreshRunButtonVisual` 在运行时重写；统一主题时不能只改 Prefab。关闭态保持灰黑表面与低对比边界，开启态仍用灰阶底，只允许暖黄描边/状态标记作为少量状态强调。
 - 主菜单属于不可直接关闭的根面板；Android 返回键、Escape 或手柄取消应通过 `BasePanel.CancelShortcutOverride` 打开正式退出确认 Prefab，只有确认按钮退出应用，取消或再次返回只关闭确认层。
 - 坐标、角色状态等信息型 HUD 使用屏幕角落锚点和透明容器，只显示会随运行时变化的字段/状态条；禁止为这类 HUD 添加整块背景、卡片标题或装饰性介绍文字。

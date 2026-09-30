@@ -26,6 +26,7 @@ description: "Use when: 定位或修改 FlatWorld 的伤害、生命值、身体
 - 正式 AI 的生命、防御、攻击伤害、伤害碰撞窗静态值来自 Actor JSON modules；当前生命和攻击者等运行态仍由存档/模块维护。
 - 历史武器/Actor 大量通过 Prefab 或 JSON 继承覆盖旧单值 `Damage`；迁移到四类伤害时只能在最终运行实例 `Load` 后读取合并结果，禁止在 `OnValidate` 提前固化父模板数值。
 - 树木、矿物等世界资源的 `DamageReceiver.Data` 会进入世界存档；调整 Prefab 防御时若旧存档也必须生效，要同步提升数据版本并在 `Load` 按稳定物品 ID 迁移，不能只改 Prefab。
+- `Mine_Stone` 是普通可受伤石矿，故意不挂 `Mod_ResourceHarvest`；它允许其它武器/工具按正常伤害与防御结算。煤、铜、铁、锡等矿脉仍用 `Mod_ResourceHarvest` 保留工具种类与等级门槛。
 - `DamageReceiver` 与实际受击 `Collider2D` 不保证位于同一节点；Collider 还可能位于同一 Item 的兄弟模块。组件解析在当前节点/父级/子级都失败时必须回到最近的 Item 根搜索完整子树；命中特效应优先使用碰撞回调传入的 Collider 定位，并在缺失时回退子级、父级或接收器中心，禁止直接假定 `receiver.GetComponent<Collider2D>()` 非空。
 - ItemDefinition 的模块 JSON 不应写入 `AttackEffects: []` 等 Unity 资源引用集合；运行时 `PopulateObject` 会用空数组覆盖 Prefab 引用，导致命中特效被清空。迁移器应跳过 `UnityEngine.Object` 集合。
 - 类型命中特效由 `Mod_Damage.impactEffectSet` 显式引用 `CombatImpactEffectSet`，`AttackEffects` 只放数字等每次都播放的通用反馈；不能用通用列表是否为空阻断命中形状。动画与数字统一读取攻击数值 `CombatDamage.DominantKind`，不要按武器名称分类或分别实现占比比较；映射资源留在 GamePlay 程序集，避免 Effect 反向引用战斗程序集。
@@ -46,6 +47,7 @@ description: "Use when: 定位或修改 FlatWorld 的伤害、生命值、身体
 - 带 `Owner` 的武器、投射物仍保持伤害物品自身作为 `IDamageSender.attacker`，兼容资源节点、难度与既有结算语义；防自伤只在 Trigger、主动重叠扫描和最终结算入口额外排除 `item.Owner`，禁止为了防自伤全局改写攻击者身份。
 - 受击后附加状态统一消费 `DamageReceiverDamageInfo`，具体规则通过 `DamageReceivedStatusEffectRegistry` 注册，禁止把出血/中毒等业务硬编码进 `Mod_Damage`。需要按真实伤害类型判定时读取 `ResolvedDamageValues`（已应用难度、防御和受击倍率），并按 `DamageValue` 裁掉过量伤害；玩家/动物出血只认切割、穿刺、劈砍分量，纯钝击和被防御完全抵消的分量不能触发。
 - 玩家弓类远程武器使用 `Mod_Bow` 监听 `GameController.AttackStarted/AttackEnded` 完成按住蓄力与松开发射；持续拉弓时通过持有者的 `Mod_Stamina.ConsumeStaminaPerSecond` 以稳定来源 `flatworld.combat.bow_charge` 按秒消耗体力，松开、取消或卸载后必须立即停止消耗，难度倍率仍由体力权威模块统一应用。弹药只通过通用 `Arrow` 标签和同库存事务选择，不按木/石/铜/铁写特殊分支。箭矢自身组合 `Mod_Projectile + Mod_Damage`：前者只负责飞行、蓄力倍率与落地回收，后者继续作为唯一伤害发送器；两者用 `IItemModuleDependencyBinder` 显式绑定，使新增 MOD 箭种只需遵守相同模块契约即可接入。不同弓身的伤害差异统一通过 `Mod_Bow.ProjectileDamageMultiplier` 传给 `Mod_Projectile.Launch`，禁止为某把弓复制箭矢定义或直接改箭矢基础伤害。
+- 远程武器贴图主轴或握持锚点不在 Sprite 中心时，用 `Mod_Bow` 的手持视觉局部姿态只校正手持实例，并用局部管口坐标统一驱动真实投射物与轨迹预览生成点；禁止为了修手持锚点直接改世界 Sprite Pivot，避免落地坐标、拾取范围和对象池复用一起偏移。
 - 蓄力武器的额外发射效果由同一物品上的 `IProjectileChargeModifier` 模块组合提供；`Mod_Bow` 只在有效弹药开始蓄力后通知模块，并在松开或取消时收束其运行态，`Mod_Projectile` 分别接收速度和伤害倍率。麦克风采集只能由本地玩家的修饰模块在蓄力期间持有，结束、失焦、卸载时立即停止；音量状态不存档，也不复制一套箭矢定义。
 - 高速箭矢不能只依赖 Trigger 回调和 Rigidbody2D Continuous；`Mod_Projectile` 应使用 `Mod_Damage` 的实际伤害盒对上一帧到当前帧做 NonAlloc 形状扫掠，再把命中交回 `Mod_Damage` 的统一结算入口，避免高速穿过窄目标时漏伤害。
 - 箭矢损坏回收材料由 `Mod_Projectile` 读取当前物品对应的普通合成配方并从 `ExactItem` 输入中按用量权重选一份，禁止在战斗代码里硬编码木棍、石料或金属；Tag 输入无法还原本次实际消耗的具体物品，因此没有可确定的精确材料时应跳过回收，不允许猜测生成物。
@@ -66,7 +68,7 @@ description: "Use when: 定位或修改 FlatWorld 的伤害、生命值、身体
 
 ## 验证
 
-- 投射物的地面位移由 Dynamic Rigidbody2D 负责；`UseVisibleArc` 仅按虚拟高度偏移视觉和攻击传感器。实体碰撞盒与伤害 Trigger 分开，Physics2D 的反弹结果只回写运行时速度和接触事实；目标身份、阵营、距离、次数与伤害始终由数据和 `CombatRules` 裁定。
+- 投射物的地面位移由 Dynamic Rigidbody2D 负责；`UseVisibleArc` 仅按虚拟高度偏移视觉和攻击传感器。实体碰撞盒与伤害 Trigger 分开；撞到带 `DamageReceiver` 的实体时必须先完成统一伤害结算：实际伤害大于 0 走正常命中/回收/附着流程，只有有效 0 伤害（被防御完全抵消）才允许反弹，不能让 Physics2D 抢先把可造成伤害的箭弹走。目标身份、阵营、距离、次数与伤害始终由数据和 `CombatRules` 裁定。
 - 需要精确抛物线预判的 `UseVisibleArc` 投掷物必须让地面位移保持匀速，并由 `Mod_Projectile` 的同一速度/时长/虚拟重力公式同时驱动真实飞行与预览；预览只在蓄力期间显示并随蓄力延长，落点圆环表示无碰撞情况下的预计终点，禁止另写一套近似曲线。
 - 消耗外部弹药的抛掷武器仍组合 `Mod_Bow`；可用 `AmmoItemId` 精确筛选同库存弹药，留空则沿用 `AmmoTag`。开启轨迹预览时读取实际弹药定义与模块 Prefab 默认值，并缓存 `Mod_Projectile.TrajectorySettings`；弹药或资源定义变化后更新缓存，禁止为了预判生成临时 Item 或复制弹药的投射参数。
 

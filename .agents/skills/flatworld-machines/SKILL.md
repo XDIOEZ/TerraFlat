@@ -21,6 +21,7 @@ description: "Use when: 定位或修改 FlatWorld 的机器世界、工作台、
 - 模拟不依赖 ChunkView。网络整体先恢复再 Tick、先快照再休眠；无端口设施独立按玩家窗口休眠。显示卸载不能删除实体或撤销已保存库存。
 - 业务时间使用传入的世界时间；有界补算保留剩余时间。手摇倒计时在领域逻辑分派前推进，定制领域逻辑不能绕过动力耗时。
 - 工作台配方与进度属于 `RecipeProcessor`，面板只发命令；输入/输出预检与结算复用 `CraftingService`。炉温、燃料、点火、副产物仍内聚在 `FurnaceLogic`，不要用“温度直接乘秒”替代实际热加工规则。
+- 炉体先用 `Combustion.Fuel` Tag 判断物品是否允许作为燃料，再走 `Mod_Fuel.TryResolveItemData` 读取数值；冷 `ItemData` 先读保存态 BitData，缺失时回退当前物品定义的 `parameters.Data`。Tag 负责语义资格，FuelData 负责燃值与最高温度。
 - 机械最终 RPM 决定工作效率，扭矩是供给门槛；风箱通过 `Airflow` 输入影响炉体，炉体不遍历网络拓扑。
 - 机器库存只能由权威端修改。拖放、快捷转移、排序/整理都走正式命令和现有库存事务；服务端校验玩家归属、距离与物品身份。客户端快照先校验候选，再更新同格 ItemSlot 的内容；保留库存和槽位身份、本地 UI 布局，并同步禁止放入状态，不能因定期同步使拖拽来源失效。
 - 每名玩家独占、跨多个箱体共享的库存用 `MachineInventoryCommands.RegisterPrivateInventory` 注册角色与机器双键解析；不要放进公开的 `MachineLogic.Inventories` 或箱体快照。服务端用现有搬运/整理事务，私有库存只回给发起交互的连接；公共角色状态与联机全量存档快照也要剔除已注册的私有键。

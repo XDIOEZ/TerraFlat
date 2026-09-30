@@ -1704,6 +1704,9 @@
           "data": {
             "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Torch_Building\",\"SummonerPrefabId\":\"Torch_Summoner\",\"SharedModuleIds\":[\"燃料模块\",\"Mod_Combustion\"]}",
             "Type": 0
+          },
+          "parameters": {
+            "LightOcclusionMode": "DisabledWhileEmitting"
           }
         },
         "燃料模块": {

@@ -23,6 +23,9 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
     private const BindingFlags InstanceFlags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
     private const string AdministratorName = "管理员";
     private const int MaxDiscoveredCommands = 36;
+    private const float CatalogBrowserHeaderHeight = 42f;
+    private const float CatalogBrowserToolbarHeight = 34f;
+    private const float CatalogBrowserControlHeight = 30f;
 
     private sealed class ReflectedCommand
     {
@@ -692,18 +695,22 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         panelLayout.childForceExpandHeight = false;
 
         GameObject header = CreateUiObject("Header", airdropBrowserRoot.transform);
-        header.AddComponent<LayoutElement>().preferredHeight = 54f;
+        LayoutElement headerElement = header.AddComponent<LayoutElement>();
+        headerElement.minHeight = CatalogBrowserHeaderHeight;
+        headerElement.preferredHeight = CatalogBrowserHeaderHeight;
+        headerElement.flexibleHeight = 0f;
         Image headerImage = header.AddComponent<Image>();
         headerImage.color = GmSurfaceRaised;
         HorizontalLayoutGroup headerLayout = header.AddComponent<HorizontalLayoutGroup>();
-        headerLayout.padding = new RectOffset(16, 12, 7, 7);
-        headerLayout.spacing = 12f;
+        headerLayout.padding = new RectOffset(12, 10, 4, 4);
+        headerLayout.spacing = 10f;
         headerLayout.childAlignment = TextAnchor.MiddleLeft;
         headerLayout.childControlWidth = true;
         headerLayout.childControlHeight = true;
         headerLayout.childForceExpandWidth = false;
+        headerLayout.childForceExpandHeight = false;
 
-        TextMeshProUGUI title = CreateText(header.transform, "物品空投", 20f, GmTextPrimary);
+        TextMeshProUGUI title = CreateText(header.transform, "物品空投", 18f, GmTextPrimary);
         title.fontStyle = FontStyles.Bold;
         title.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
 
@@ -714,18 +721,23 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
             GmTextSecondary);
         instruction.alignment = TextAlignmentOptions.Right;
         instruction.gameObject.AddComponent<LayoutElement>().preferredWidth = 220f;
-        CreateButton(header.transform, "返回", CloseAirdropBrowser, 64f, 34f);
+        CreateButton(header.transform, "返回", CloseAirdropBrowser, 60f, CatalogBrowserControlHeight);
 
         GameObject toolbar = CreateUiObject("Toolbar", airdropBrowserRoot.transform);
-        toolbar.AddComponent<LayoutElement>().preferredHeight = 42f;
+        LayoutElement toolbarElement = toolbar.AddComponent<LayoutElement>();
+        toolbarElement.minHeight = CatalogBrowserToolbarHeight;
+        toolbarElement.preferredHeight = CatalogBrowserToolbarHeight;
+        toolbarElement.flexibleHeight = 0f;
         HorizontalLayoutGroup toolbarLayout = toolbar.AddComponent<HorizontalLayoutGroup>();
         toolbarLayout.spacing = 8f;
         toolbarLayout.childAlignment = TextAnchor.MiddleLeft;
         toolbarLayout.childControlWidth = true;
         toolbarLayout.childControlHeight = true;
         toolbarLayout.childForceExpandWidth = false;
+        toolbarLayout.childForceExpandHeight = false;
 
         airdropSearchInput = CreateInputField(toolbar.transform, "搜索物品名称或 ID", 560f, false);
+        airdropSearchInput.GetComponent<LayoutElement>().preferredHeight = CatalogBrowserControlHeight;
         airdropSearchInput.onValueChanged.AddListener(_ => RebuildAirdropItemGrid());
 
         TextMeshProUGUI amountLabel = CreateText(
@@ -737,8 +749,9 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         amountLabel.gameObject.AddComponent<LayoutElement>().preferredWidth = 40f;
 
         amountInput = CreateInputField(toolbar.transform, "数量", 90f, true);
+        amountInput.GetComponent<LayoutElement>().preferredHeight = CatalogBrowserControlHeight;
         amountInput.text = "1";
-        CreateButton(toolbar.transform, "刷新物品", RefreshItemIds, 96f, 38f);
+        CreateButton(toolbar.transform, "刷新物品", RefreshItemIds, 92f, CatalogBrowserControlHeight);
 
         airdropBrowserCountText = CreateText(
             toolbar.transform,
@@ -791,18 +804,22 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         panelLayout.childForceExpandHeight = false;
 
         GameObject header = CreateUiObject("Header", aiCreatureBrowserRoot.transform);
-        header.AddComponent<LayoutElement>().preferredHeight = 54f;
+        LayoutElement headerElement = header.AddComponent<LayoutElement>();
+        headerElement.minHeight = CatalogBrowserHeaderHeight;
+        headerElement.preferredHeight = CatalogBrowserHeaderHeight;
+        headerElement.flexibleHeight = 0f;
         Image headerImage = header.AddComponent<Image>();
         headerImage.color = GmSurfaceRaised;
         HorizontalLayoutGroup headerLayout = header.AddComponent<HorizontalLayoutGroup>();
-        headerLayout.padding = new RectOffset(16, 12, 7, 7);
-        headerLayout.spacing = 12f;
+        headerLayout.padding = new RectOffset(12, 10, 4, 4);
+        headerLayout.spacing = 10f;
         headerLayout.childAlignment = TextAnchor.MiddleLeft;
         headerLayout.childControlWidth = true;
         headerLayout.childControlHeight = true;
         headerLayout.childForceExpandWidth = false;
+        headerLayout.childForceExpandHeight = false;
 
-        TextMeshProUGUI title = CreateText(header.transform, "AI 生物召唤", 20f, GmTextPrimary);
+        TextMeshProUGUI title = CreateText(header.transform, "AI 生物召唤", 18f, GmTextPrimary);
         title.fontStyle = FontStyles.Bold;
         title.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
 
@@ -813,18 +830,23 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
             GmTextSecondary);
         instruction.alignment = TextAlignmentOptions.Right;
         instruction.gameObject.AddComponent<LayoutElement>().preferredWidth = 240f;
-        CreateButton(header.transform, "返回", CloseAiCreatureBrowser, 64f, 34f);
+        CreateButton(header.transform, "返回", CloseAiCreatureBrowser, 60f, CatalogBrowserControlHeight);
 
         GameObject toolbar = CreateUiObject("Toolbar", aiCreatureBrowserRoot.transform);
-        toolbar.AddComponent<LayoutElement>().preferredHeight = 42f;
+        LayoutElement toolbarElement = toolbar.AddComponent<LayoutElement>();
+        toolbarElement.minHeight = CatalogBrowserToolbarHeight;
+        toolbarElement.preferredHeight = CatalogBrowserToolbarHeight;
+        toolbarElement.flexibleHeight = 0f;
         HorizontalLayoutGroup toolbarLayout = toolbar.AddComponent<HorizontalLayoutGroup>();
         toolbarLayout.spacing = 8f;
         toolbarLayout.childAlignment = TextAnchor.MiddleLeft;
         toolbarLayout.childControlWidth = true;
         toolbarLayout.childControlHeight = true;
         toolbarLayout.childForceExpandWidth = false;
+        toolbarLayout.childForceExpandHeight = false;
 
         aiCreatureSearchInput = CreateInputField(toolbar.transform, "搜索生物名称或 ID", 560f, false);
+        aiCreatureSearchInput.GetComponent<LayoutElement>().preferredHeight = CatalogBrowserControlHeight;
         aiCreatureSearchInput.onValueChanged.AddListener(_ => RebuildAiCreatureGrid());
 
         TextMeshProUGUI amountLabel = CreateText(
@@ -836,8 +858,9 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         amountLabel.gameObject.AddComponent<LayoutElement>().preferredWidth = 40f;
 
         aiCreatureAmountInput = CreateInputField(toolbar.transform, "1-20", 90f, true);
+        aiCreatureAmountInput.GetComponent<LayoutElement>().preferredHeight = CatalogBrowserControlHeight;
         aiCreatureAmountInput.text = "1";
-        CreateButton(toolbar.transform, "刷新生物", RefreshAiCreatureIds, 96f, 38f);
+        CreateButton(toolbar.transform, "刷新生物", RefreshAiCreatureIds, 92f, CatalogBrowserControlHeight);
 
         aiCreatureBrowserCountText = CreateText(
             toolbar.transform,

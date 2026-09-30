@@ -1,6 +1,5 @@
 using System;
 using FlatWorld.Networking;
-using Newtonsoft.Json.Linq;
 using UnityEngine;
 
 /// <summary>
@@ -153,7 +152,10 @@ public sealed class Mod_FuelInteraction : Module, IInteractable, IItemModuleDepe
             return false;
 
         bool ignitionSource = IsIgnitionSource(source);
-        bool hasFuelData = TryResolveFuelData(source, out FuelData sourceFuel);
+        bool taggedFuel = source.Tags?.ContainsTag(Tag.CombustionFuel) == true;
+        FuelData sourceFuel = null;
+        bool hasFuelData = (taggedFuel || ignitionSource) &&
+                           Mod_Fuel.TryResolveItemData(source, out sourceFuel);
 
         if (!combustion.IsBurning && ignitionSource)
         {
@@ -235,73 +237,6 @@ public sealed class Mod_FuelInteraction : Module, IInteractable, IItemModuleDepe
         {
             string tag = ignitionTags[i];
             if (!string.IsNullOrWhiteSpace(tag) && source.Tags.Contains(tag))
-                return true;
-        }
-
-        return false;
-    }
-
-    /// <summary>库存冷数据没有运行时 Module 时，从保存态或当前物品定义读取通用 FuelData。</summary>
-    private static bool TryResolveFuelData(ItemData source, out FuelData fuelData)
-    {
-        fuelData = null;
-        if (source?.ModuleDataDic == null)
-            return false;
-
-        string stableModuleName = null;
-        Ex_ModData_MemoryPackable storage = null;
-        foreach (var pair in source.ModuleDataDic)
-        {
-            if (pair.Value is not Ex_ModData_MemoryPackable candidate ||
-                !string.Equals(candidate.ID, ModText.Fuel, StringComparison.Ordinal))
-            {
-                continue;
-            }
-
-            stableModuleName = pair.Key;
-            storage = candidate;
-            break;
-        }
-
-        if (storage == null)
-            return false;
-
-        if (storage.BitData != null && storage.BitData.Length > 0)
-        {
-            fuelData = new FuelData();
-            storage.ReadData(ref fuelData);
-            return fuelData != null;
-        }
-
-        if (GameRes.Instance == null ||
-            !GameRes.Instance.TryGetItemDefinition(source.IDName, out RuntimeItemDefinition definition))
-        {
-            return false;
-        }
-
-        string[] parameterKeys =
-        {
-            stableModuleName,
-            storage.Name,
-            ModText.Fuel
-        };
-        for (int i = 0; i < parameterKeys.Length; i++)
-        {
-            string key = parameterKeys[i];
-            if (string.IsNullOrWhiteSpace(key) ||
-                !definition.TryGetModuleParameters(key, out string json) ||
-                string.IsNullOrWhiteSpace(json))
-            {
-                continue;
-            }
-
-            JObject parameters = JObject.Parse(json);
-            JToken dataToken = parameters["Data"];
-            if (dataToken == null)
-                continue;
-
-            fuelData = dataToken.ToObject<FuelData>();
-            if (fuelData != null)
                 return true;
         }
 

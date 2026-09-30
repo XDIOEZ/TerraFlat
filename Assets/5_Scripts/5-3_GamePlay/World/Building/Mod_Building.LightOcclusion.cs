@@ -11,7 +11,9 @@ public enum BuildingLightOcclusionMode
     /// <summary>始终使用完整轮廓，适合不透光外壳等需要封闭光源的建筑。</summary>
     FullSilhouette,
     /// <summary>不参与局部光遮挡，适合纯火焰或透明灯罩。</summary>
-    None
+    None,
+    /// <summary>自身光源亮起时不投射局部阴影，熄灭后恢复完整轮廓。</summary>
+    DisabledWhileEmitting
 }
 
 /// <summary>
@@ -87,6 +89,15 @@ public partial class Mod_Building
             _occluderFlipY = source.flipY;
         }
 
+        if (LightOcclusionMode == BuildingLightOcclusionMode.DisabledWhileEmitting &&
+            HasActiveOwnOcclusionLight())
+        {
+            _lightOccluder.enabled = false;
+            _appliedOcclusionMode = LightOcclusionMode;
+            _appliedOccluderCutY = float.NaN;
+            return;
+        }
+
         float cutY = ResolveOwnLightCutHeight(source, _fullOccluderPath);
         if (!shapeChanged && _appliedOcclusionMode == LightOcclusionMode &&
             cutY.Equals(_appliedOccluderCutY))
@@ -144,6 +155,24 @@ public partial class Mod_Building
         }
 
         return cutY;
+    }
+
+    /// <summary>火把等小型发光建筑亮起时可完全退出局部阴影，熄灭后由同一遮挡器自动恢复。</summary>
+    private bool HasActiveOwnOcclusionLight()
+    {
+        List<Module> lightModules = item.itemMods.GetModList_ByID(ModText.LightSource);
+        if (lightModules == null)
+            return false;
+
+        for (int i = 0; i < lightModules.Count; i++)
+        {
+            if (lightModules[i] is Mod_LightSource emitter &&
+                emitter.TryGetActiveOcclusionLight(out Light2D light) &&
+                Light2DSortingLayerUtility.SharesShadowLayers(light, _lightOccluder))
+                return true;
+        }
+
+        return false;
     }
 
     #endregion

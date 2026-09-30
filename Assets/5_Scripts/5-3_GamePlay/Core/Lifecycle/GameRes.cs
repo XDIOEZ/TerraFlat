@@ -505,7 +505,7 @@ public partial class GameRes : SingletonAutoMono<GameRes>
             return;
         }
 
-        definition.ApplyModuleConfiguration(module, moduleName, data?.ID);
+        definition.ApplyModuleConfiguration(module, moduleName, data?.ModuleId);
     }
 
     public void RegisterBuff(BuffDefinition definition)

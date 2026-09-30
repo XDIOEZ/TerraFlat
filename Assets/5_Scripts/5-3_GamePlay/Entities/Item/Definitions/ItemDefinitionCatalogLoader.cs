@@ -920,12 +920,12 @@ public static class ItemDefinitionCatalogLoader
                 throw new InvalidDataException(
                     $"物品 {id} 的模块 {moduleName} 数据类型复制失败：期望 {prototype._Data.GetType().Name}，实际 {moduleData?.GetType().Name ?? "null"}");
             PopulateModuleData(moduleDto.Data, moduleData, id, moduleName);
-            moduleData.Name = moduleName;
-            moduleData.ID = string.IsNullOrWhiteSpace(moduleDto.Id)
-                ? (!string.IsNullOrWhiteSpace(prototype._Data.ID) ? prototype._Data.ID : moduleId)
+            moduleData.StableName = moduleName;
+            moduleData.ModuleId = string.IsNullOrWhiteSpace(moduleDto.Id)
+                ? (!string.IsNullOrWhiteSpace(prototype._Data.ModuleId) ? prototype._Data.ModuleId : moduleId)
                 : moduleDto.Id.Trim();
             if (moduleDto.Enabled.HasValue)
-                moduleData.isRunning = moduleDto.Enabled.Value;
+                moduleData.Enabled = moduleDto.Enabled.Value;
             template.ModuleDataDic.Add(moduleName, moduleData);
 
             JObject parameters = moduleDto.Parameters == null
@@ -940,7 +940,7 @@ public static class ItemDefinitionCatalogLoader
                 lootTableBound = true;
             }
 
-            ModuleJsonConfigurator.Validate(prototype, id, moduleName, moduleData.ID, parameters?.ToString(Formatting.None));
+            ModuleJsonConfigurator.Validate(prototype, id, moduleName, moduleData.ModuleId, parameters?.ToString(Formatting.None));
             moduleParameters.Add(moduleName, parameters?.ToString(Formatting.None));
             modulePrefabIds.Add(moduleName, moduleId);
         }
@@ -1076,9 +1076,9 @@ public static class ItemDefinitionCatalogLoader
         ModuleData moduleData = FastCloner.FastCloner.DeepClone<object>(prototype._Data) as ModuleData;
         if (moduleData == null || moduleData.GetType() != prototype._Data.GetType())
             throw new InvalidDataException($"物品 {itemId} 的 health 模块数据复制失败");
-        moduleData.Name = moduleName;
-        moduleData.ID = !string.IsNullOrWhiteSpace(prototype._Data.ID) ? prototype._Data.ID : moduleName;
-        moduleData.isRunning = true;
+        moduleData.StableName = moduleName;
+        moduleData.ModuleId = !string.IsNullOrWhiteSpace(prototype._Data.ModuleId) ? prototype._Data.ModuleId : moduleName;
+        moduleData.Enabled = true;
         template.ModuleDataDic.Add(moduleName, moduleData);
         modulePrefabIds.Add(moduleName, prefabId);
 

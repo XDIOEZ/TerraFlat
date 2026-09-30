@@ -34,6 +34,21 @@ public sealed class Mod_Bow : Module, IItemModuleDependencyBinder
     [Min(0f), Tooltip("箭矢生成点相对射手中心沿瞄准方向的前移距离。")]
     public float SpawnForwardOffset = 0.45f;
 
+    [Tooltip("手持时是否覆盖武器 Sprite 的局部姿态；用于吹箭筒等锚点不在贴图中心的远程武器。")]
+    public bool OverrideHeldVisualTransform;
+
+    [Tooltip("手持时武器 Sprite 相对物品根节点的局部位置。")]
+    public Vector3 HeldVisualLocalPosition = Vector3.zero;
+
+    [Tooltip("手持时武器 Sprite 相对物品根节点的局部欧拉角。")]
+    public Vector3 HeldVisualLocalEulerAngles = Vector3.zero;
+
+    [Tooltip("是否使用武器根节点下的局部管口/发射口坐标，而不是射手中心前移。")]
+    public bool UseLocalMuzzlePosition;
+
+    [Tooltip("投射物实际生成点在手持武器根节点下的局部坐标。")]
+    public Vector2 LocalMuzzlePosition = Vector2.zero;
+
     [Min(0f), Tooltip("持续拉弓时每秒消耗的体力；最终消耗仍经过游戏难度倍率。")]
     public float StaminaConsumePerSecond = 5f;
 
@@ -85,6 +100,10 @@ public sealed class Mod_Bow : Module, IItemModuleDependencyBinder
     private LineRenderer _trajectoryLine;
     private LineRenderer _trajectoryRing;
     private Material _trajectoryMaterial;
+    private Transform _heldVisualTransform;
+    private Vector3 _heldVisualOriginalLocalPosition;
+    private Quaternion _heldVisualOriginalLocalRotation;
+    private bool _heldVisualOverrideApplied;
 
     #endregion
 
@@ -112,7 +131,9 @@ public sealed class Mod_Bow : Module, IItemModuleDependencyBinder
     /// <summary>手持弓加载时绑定射手控制器；地面弓不监听攻击输入。</summary>
     public override void Load()
     {
+        RestoreHeldVisualTransform();
         CancelCharge();
+        ApplyHeldVisualTransform();
         BindController();
     }
 
@@ -140,7 +161,11 @@ public sealed class Mod_Bow : Module, IItemModuleDependencyBinder
                 StaminaConsumePerSecond,
                 safeDeltaTime);
 
-        _chargeSeconds += safeDeltaTime;
+        // 满蓄力只锁定蓄力值，发射仍然只由攻击键松开触发。
+        if (FullChargeSeconds > 0f)
+            _chargeSeconds = Mathf.Min(FullChargeSeconds, _chargeSeconds + safeDeltaTime);
+        else
+            _chargeSeconds = 0f;
         foreach (IProjectileChargeModifier modifier in _chargeModifiers)
             modifier.UpdateCharge(safeDeltaTime);
         float charge01 = GetCharge01();
@@ -154,6 +179,7 @@ public sealed class Mod_Bow : Module, IItemModuleDependencyBinder
         UnbindController();
         CancelCharge();
         DestroyTrajectoryPreview();
+        RestoreHeldVisualTransform();
     }
 
     #endregion
@@ -400,9 +426,7 @@ public sealed class Mod_Bow : Module, IItemModuleDependencyBinder
         if (_trajectoryLine == null || _trajectoryRing == null)
             return;
 
-        Vector2 logicalShooterPosition = WorldTopologyRuntime.NormalizePosition(item.Owner.transform.position);
-        Vector2 logicalLaunchPosition = WorldTopologyRuntime.NormalizePosition(
-            logicalShooterPosition + direction * Mathf.Max(0f, SpawnForwardOffset));
+        Vector2 logicalLaunchPosition = ResolveLaunchPosition(direction);
         Vector2 launchPosition = WorldLocalPresentation.ProjectPosition(logicalLaunchPosition);
         int segmentCount = Mathf.Clamp(TrajectoryPreviewSegments, 8, 64);
         _trajectoryLine.positionCount = segmentCount + 1;
@@ -463,7 +487,8 @@ public sealed class Mod_Bow : Module, IItemModuleDependencyBinder
         {
             hideFlags = HideFlags.DontSave
         };
-        lineObject.transform.SetParent(transform, false);
+        // 预判线使用世界坐标，避免继承手持物朝左时的旋转/翻转。
+        lineObject.transform.SetParent(item?.Owner != null ? item.Owner.transform : null, false);
 
         LineRenderer line = lineObject.AddComponent<LineRenderer>();
         line.hideFlags = HideFlags.DontSave;
@@ -527,9 +552,7 @@ public sealed class Mod_Bow : Module, IItemModuleDependencyBinder
         if (ItemMgr.Instance == null || GameRes.Instance == null || string.IsNullOrWhiteSpace(ammoItemId))
             return null;
 
-        Vector2 shooterPosition = item.Owner.transform.position;
-        Vector2 spawnPosition = WorldTopologyRuntime.NormalizePosition(
-            shooterPosition + direction * Mathf.Max(0f, SpawnForwardOffset));
+        Vector2 spawnPosition = ResolveLaunchPosition(direction);
 
         Item projectileItem;
         try
@@ -548,6 +571,59 @@ public sealed class Mod_Bow : Module, IItemModuleDependencyBinder
         }
 
         return projectileItem;
+    }
+
+    /// <summary>优先使用武器自身的真实管口坐标，未配置时保持旧的射手中心前移逻辑。</summary>
+    private Vector2 ResolveLaunchPosition(Vector2 direction)
+    {
+        if (item == null)
+            return Vector2.zero;
+
+        if (UseLocalMuzzlePosition)
+        {
+            Vector3 muzzleWorld = item.transform.TransformPoint(new Vector3(
+                LocalMuzzlePosition.x,
+                LocalMuzzlePosition.y,
+                0f));
+            return WorldTopologyRuntime.NormalizePosition((Vector2)muzzleWorld);
+        }
+
+        Vector2 shooterPosition = item.Owner != null
+            ? (Vector2)item.Owner.transform.position
+            : (Vector2)item.transform.position;
+        return WorldTopologyRuntime.NormalizePosition(
+            shooterPosition + direction * Mathf.Max(0f, SpawnForwardOffset));
+    }
+
+    #endregion
+
+    #region 手持视觉锚点
+
+    /// <summary>只在手持实例上校正 Sprite；落地物继续保持物品定义中的原始世界姿态。</summary>
+    private void ApplyHeldVisualTransform()
+    {
+        if (!OverrideHeldVisualTransform || item == null || !item.InHand || item.Sprite == null)
+            return;
+
+        _heldVisualTransform = item.Sprite.transform;
+        _heldVisualOriginalLocalPosition = _heldVisualTransform.localPosition;
+        _heldVisualOriginalLocalRotation = _heldVisualTransform.localRotation;
+        _heldVisualTransform.localPosition = HeldVisualLocalPosition;
+        _heldVisualTransform.localEulerAngles = HeldVisualLocalEulerAngles;
+        _heldVisualOverrideApplied = true;
+    }
+
+    /// <summary>对象池复用前恢复世界物品的原始 Sprite 姿态，避免手持锚点串到落地实例。</summary>
+    private void RestoreHeldVisualTransform()
+    {
+        if (_heldVisualOverrideApplied && _heldVisualTransform != null)
+        {
+            _heldVisualTransform.localPosition = _heldVisualOriginalLocalPosition;
+            _heldVisualTransform.localRotation = _heldVisualOriginalLocalRotation;
+        }
+
+        _heldVisualTransform = null;
+        _heldVisualOverrideApplied = false;
     }
 
     #endregion

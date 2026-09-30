@@ -248,17 +248,10 @@ public class PlayerAdminController : Module
         return TrySetAdminInvincibilityEnabled(enabled);
     }
 
-    /// <summary>只允许 F2 穿过当前玩家已打开主背包持有的玩法输入锁。</summary>
+    /// <summary>F2 只遵守统一玩法输入锁；主背包本身不再制造输入锁。</summary>
     private bool CanOpenCreativeInventoryShortcut()
     {
-        if (gameController == null || !gameController.IsGameplayInputLocked)
-            return true;
-
-        Inventory bag = player.itemMods?.GetMod_ByID<Mod_Inventory>(ModText.Bag)?.inventory;
-        if (bag?.basePanel == null || !bag.basePanel.IsOpen())
-            return false;
-
-        return !gameController.HasBlockingGameplayInputLock(owner => ReferenceEquals(owner, bag));
+        return gameController == null || !gameController.IsGameplayInputLocked;
     }
 
     /// <summary>F2 一次完成创造背包初始化，并确保玩家主背包面板处于打开状态。</summary>

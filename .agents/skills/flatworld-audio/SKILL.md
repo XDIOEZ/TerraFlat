@@ -17,6 +17,7 @@ description: "Use when: 定位或修改 FlatWorld 的音频服务、AudioCue、�
 - 业务系统通过稳定 Cue ID 发声，不自行管理临时 `AudioSource`。
 - `AudioService` 负责跨场景生命周期、池化、并发、优先级、淡入淡出与音量。
 - Catalog/Config 移动时同步 Resources 加载常量；循环 Cue 必须有明确停止和回收路径。
+- AI 生成音效以事件 ID 结尾的 `.loop` 作为循环语义；`player.*` 属于带空间衰减的世界 SFX，角色循环音效必须绑定角色 Transform 并在状态失效时停止。
 - 战斗音效联动 `flatworld-combat`，UI 音效联动 `flatworld-ui`；角色台词和气泡属于 `flatworld-dialogue`。
 - 音量和静音设置由 `AudioService` 直接实现 `ISettingsProvider`，通过 `SettingsProviderRegistry` 暴露 Slider/Toggle；`FlatWorld.Audio` 只依赖 `Data` 中的设置契约，不依赖 UI 或 GamePlay。
 - 音量页六路滑块使用公共 `UI_SliderControl` 嵌套实例；保留 `MasterVolume/MusicVolume/SfxVolume/UIVolume/AmbientVolume/VoiceVolume` 及对应 `_数值` 节点名，外观封装不能改变 Provider 绑定契约。回归测试临时写入音量后必须恢复玩家原值。

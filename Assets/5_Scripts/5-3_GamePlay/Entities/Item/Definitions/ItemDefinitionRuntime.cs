@@ -24,7 +24,7 @@ public static class ItemDefinitionRuntime
             Module module = pair.Value;
             if (module == null || !current.TryGetModuleParameters(pair.Key, out string json)) continue;
             previous.TryGetModuleParameters(pair.Key, out string oldJson);
-            string moduleId = module._Data?.ID;
+            string moduleId = module._Data?.ModuleId;
             if (json == oldJson || current.GetModulePrefabId(pair.Key, moduleId) != previous.GetModulePrefabId(pair.Key, moduleId)) continue;
             json = GetChangedModuleParameters(oldJson, json);
             if (json == null) continue;
@@ -408,17 +408,22 @@ public static class ItemDefinitionRuntime
         {
             string stableName = pair.Key;
             ModuleData moduleData = pair.Value;
-            if (moduleData == null || string.IsNullOrWhiteSpace(moduleData.ID))
+            if (moduleData == null || string.IsNullOrWhiteSpace(moduleData.ModuleId))
                 continue;
 
-            string prefabId = definition.GetModulePrefabId(stableName, moduleData.ID);
+            moduleData.StableName = stableName;
+            string prefabId = definition.GetModulePrefabId(stableName, moduleData.ModuleId);
             int embeddedIndex = -1;
             for (int i = 0; i < available.Count; i++)
             {
                 Module candidate = available[i];
-                if (!candidate.MatchesPersistedId(moduleData.ID) &&
-                    !candidate.MatchesPersistedId(prefabId))
+                candidate?.EnsureRuntimeIdentity();
+                if (candidate == null ||
+                    (!string.Equals(candidate.ResolvedModuleId, moduleData.ModuleId, StringComparison.OrdinalIgnoreCase) &&
+                     !string.Equals(candidate.PrefabId, prefabId, StringComparison.OrdinalIgnoreCase) &&
+                     !string.Equals(candidate.gameObject.name, prefabId, StringComparison.OrdinalIgnoreCase)))
                     continue;
+                candidate.BindRuntimeIdentity(stableName, moduleData.ModuleId, prefabId);
                 embeddedIndex = i;
                 break;
             }
@@ -432,11 +437,12 @@ public static class ItemDefinitionRuntime
             Module module = moduleObject?.GetComponentInChildren<Module>(true);
             if (module == null)
                 throw new MissingComponentException(
-                    $"物品 {itemData.IDName} 无法实例化模块：{moduleData.ID}（Prefab={prefabId}）");
+                    $"物品 {itemData.IDName} 无法实例化模块：{moduleData.ModuleId}（PrefabId={prefabId}）");
             moduleObject.name = prefabId;
             moduleObject.transform.localPosition = Vector3.zero;
             moduleObject.transform.localRotation = Quaternion.identity;
             moduleObject.transform.localScale = Vector3.one;
+            module.BindRuntimeIdentity(stableName, moduleData.ModuleId, prefabId);
         }
     }
 }

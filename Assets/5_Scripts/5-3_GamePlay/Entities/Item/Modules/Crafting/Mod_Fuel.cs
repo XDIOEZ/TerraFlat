@@ -1,4 +1,5 @@
 using MemoryPack;
+using Newtonsoft.Json.Linq;
 using UnityEngine;
 using UnityEngine.Rendering.Universal;
 
@@ -209,6 +210,86 @@ public class Mod_Fuel : Module
     {
         return burnSpeedMultiplier;
     }
+
+    #region 冷数据解析
+    /// <summary>库存里的 ItemData 没有实例化 Module 时，从保存态或当前物品定义解析燃料数据。</summary>
+    public static bool TryResolveItemData(ItemData source, out FuelData fuelData)
+    {
+        fuelData = null;
+        if (source?.ModuleDataDic == null)
+            return false;
+
+        string stableModuleName = null;
+        Ex_ModData_MemoryPackable storage = null;
+        if (source.ModuleDataDic.TryGetValue(ModText.Fuel, out ModuleData direct) &&
+            direct is Ex_ModData_MemoryPackable directStorage &&
+            string.Equals(directStorage.ID, ModText.Fuel, System.StringComparison.Ordinal))
+        {
+            stableModuleName = ModText.Fuel;
+            storage = directStorage;
+        }
+        else
+        {
+            foreach (var pair in source.ModuleDataDic)
+            {
+                if (pair.Value is not Ex_ModData_MemoryPackable candidate ||
+                    !string.Equals(candidate.ID, ModText.Fuel, System.StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                stableModuleName = pair.Key;
+                storage = candidate;
+                break;
+            }
+        }
+
+        if (storage == null)
+            return false;
+
+        if (storage.BitData != null && storage.BitData.Length > 0)
+        {
+            fuelData = new FuelData();
+            storage.ReadData(ref fuelData);
+            return fuelData != null;
+        }
+
+        GameRes gameRes = GameRes.ExistingInstance;
+        if (gameRes == null ||
+            !gameRes.TryGetItemDefinition(source.IDName, out RuntimeItemDefinition definition))
+        {
+            return false;
+        }
+
+        string[] parameterKeys =
+        {
+            stableModuleName,
+            storage.Name,
+            ModText.Fuel
+        };
+        for (int i = 0; i < parameterKeys.Length; i++)
+        {
+            string key = parameterKeys[i];
+            if (string.IsNullOrWhiteSpace(key) ||
+                !definition.TryGetModuleParameters(key, out string json) ||
+                string.IsNullOrWhiteSpace(json))
+            {
+                continue;
+            }
+
+            JObject parameters = JObject.Parse(json);
+            JToken dataToken = parameters["Data"];
+            if (dataToken == null)
+                continue;
+
+            fuelData = dataToken.ToObject<FuelData>();
+            if (fuelData != null)
+                return true;
+        }
+
+        return false;
+    }
+    #endregion
 }
 
 [MemoryPackable]

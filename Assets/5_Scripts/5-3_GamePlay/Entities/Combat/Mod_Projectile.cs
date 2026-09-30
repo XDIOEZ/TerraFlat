@@ -23,6 +23,12 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
     [Range(0f, 1f), Tooltip("投射物撞到实体墙面时由 Physics2D 计算的反弹系数。")]
     public float CollisionBounciness = 0.35f;
 
+    [Min(0f), Tooltip("投射物被防御弹开时的视觉旋转速度。")]
+    public float BounceSpinDegreesPerSecond = 900f;
+
+    [Min(0f), Tooltip("投射物被防御弹开后的视觉旋转持续时间。")]
+    public float BounceSpinDuration = 0.35f;
+
     [Min(0.01f), Tooltip("虚拟抛物线使用的重力；仅用于计算箭矢离地高度与落地时机。")]
     public float VirtualGravity = 9.8f;
 
@@ -82,7 +88,13 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
     private readonly RaycastHit2D[] _sweepHits = new RaycastHit2D[16];
     private readonly List<Collider2D> _ignoredShooterColliders = new();
     private Vector2 _pendingImpactPosition;
+    private Vector2 _pendingImpactNormal;
     private bool _hasPendingImpact;
+    private bool _processingPhysicalContact;
+    private bool _physicalContactResolved;
+    private bool _resolvedBounceThisSweep;
+    private float _bounceSpinRemaining;
+    private float _bounceSpinDirection = 1f;
     private bool _isFlying;
     private bool _endingFlight;
     private Transform _embeddedTarget;
@@ -130,6 +142,7 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
         _flightElapsed = 0f;
         _virtualLaunchVerticalSpeed = 0f;
         _virtualHeight = 0f;
+        ResetBounceSpin();
         ClearEmbeddedState();
         BindArcPresentation();
         UpdateArcPresentation(0f);
@@ -172,6 +185,7 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
             SetFlightDeliveryCapabilities();
         }
 
+        UpdateBounceSpin(step);
         SweepFlightPath();
         if (!_isFlying) return;
         ItemMgr.Instance?.NotifyRuntimeItemMoved(item);
@@ -195,6 +209,7 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
         _flightRemain = 0f;
         _flightElapsed = 0f;
         _virtualHeight = 0f;
+        ResetBounceSpin();
         ClearEmbeddedState();
         UpdateArcPresentation(0f);
         RestoreShooterCollisions();
@@ -340,6 +355,7 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
         _lastFlightPosition = _body.position;
         _lastSensorPosition = ResolveSensorPosition();
         _endingFlight = false;
+        ResetBounceSpin();
         _isFlying = true;
 
         _damage.SetExplicitProjectileSweep(true);
@@ -369,6 +385,7 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
     /// <summary>用伤害盒扫过上一帧到当前帧的完整路径，补足高速 Trigger 可能漏掉的目标。</summary>
     private void SweepFlightPath()
     {
+        _resolvedBounceThisSweep = false;
         Vector2 currentPosition = _body != null ? _body.position : (Vector2)item.transform.position;
         if (!(_damage.DamageCollider is BoxCollider2D damageBox) || !damageBox.enabled)
         {
@@ -416,6 +433,13 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
                 break;
             }
         _damage.QueryProjectileSweep(displacement, maximumFraction);
+        if (_resolvedBounceThisSweep)
+        {
+            _lastFlightPosition = _body.position;
+            _lastSensorPosition = ResolveSensorPosition();
+            ItemMgr.Instance?.NotifyRuntimeItemMoved(item);
+            return;
+        }
 
         for (int i = 0; i < hitCount && _isFlying; i++)
         {
@@ -426,9 +450,17 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
             float impactFraction = Mathf.Clamp01(_sweepHits[i].distance / distance);
             Vector2 impactPosition = _lastFlightPosition + rootDisplacement * impactFraction;
             _pendingImpactPosition = impactPosition;
+            _pendingImpactNormal = _sweepHits[i].normal;
             _hasPendingImpact = true;
             try { _damage.ProcessExplicitColliderHit(hitCollider, castOrigin, _sweepHits[i].point); }
             finally { _hasPendingImpact = false; }
+            if (_resolvedBounceThisSweep)
+            {
+                _lastFlightPosition = _body.position;
+                _lastSensorPosition = ResolveSensorPosition();
+                ItemMgr.Instance?.NotifyRuntimeItemMoved(item);
+                return;
+            }
             if (!_isFlying)
             {
                 _lastFlightPosition = impactPosition;
@@ -467,14 +499,25 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
         }
     }
 
-    /// <summary>首次有效实体命中后立即结束飞行；无效结算不会吞掉箭矢。</summary>
+    /// <summary>有实际伤害时走正常命中流程；完全被防御的 0 伤害命中才弹开。</summary>
     private void HandleReceiverDamageResolved(DamageReceiver receiver, float resolvedDamage)
     {
-        if (_isFlying && resolvedDamage >= 0f)
+        if (!_isFlying || resolvedDamage < 0f)
+            return;
+
+        if (_processingPhysicalContact)
+            _physicalContactResolved = true;
+
+        if (resolvedDamage > 0f)
         {
             if (_hasPendingImpact) SetProjectilePosition(_pendingImpactPosition);
             FinishFlight(receiver);
+            return;
         }
+
+        if (_hasPendingImpact && !_processingPhysicalContact)
+            SetProjectilePosition(_pendingImpactPosition);
+        BounceFromBlockedHit(_pendingImpactNormal, _processingPhysicalContact);
     }
 
     /// <summary>ECS 结算回执同样结束投射物，不能因没有 DamageReceiver 组件而穿过狼继续飞。</summary>
@@ -484,7 +527,143 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
         Vector2 offset = _damage.DamageCollider is BoxCollider2D box
             ? (Vector2)box.transform.TransformPoint(box.offset) - (Vector2)item.transform.position : Vector2.zero;
         SetProjectilePosition(WorldTopologyRuntime.NormalizePosition((Vector2)context.HitPoint - offset));
+        if (resolvedDamage == 0f)
+        {
+            BounceFromBlockedHit(Vector2.zero, false);
+            return;
+        }
         FinishFlight();
+    }
+
+    /// <summary>实体碰撞先交给伤害系统裁决，避免能造成伤害的箭先被普通刚体碰撞弹走。</summary>
+    public void HandlePhysicalContact(Collision2D collision)
+    {
+        if (!_isFlying || collision == null || _solidCollider == null)
+            return;
+
+        Collider2D otherCollider = collision.collider == _solidCollider
+            ? collision.otherCollider
+            : collision.collider;
+        Vector2 contactPoint = _body != null ? _body.position : (Vector2)item.transform.position;
+        Vector2 contactNormal = Vector2.zero;
+        if (collision.contactCount > 0)
+        {
+            ContactPoint2D contact = collision.GetContact(0);
+            contactPoint = contact.point;
+            contactNormal = contact.normal;
+            if (Vector2.Dot(_body != null ? _body.velocity : Vector2.zero, contactNormal) > 0f)
+                contactNormal = -contactNormal;
+        }
+
+        DamageReceiver receiver = GameplayPhysics2D.ResolveComponent<DamageReceiver>(otherCollider);
+        Collider2D receiverCollider = ResolveDamageReceiverCollider(receiver);
+        if (receiverCollider == null)
+        {
+            StartBounceSpin(contactNormal);
+            return;
+        }
+
+        _pendingImpactPosition = contactPoint;
+        _pendingImpactNormal = contactNormal;
+        _hasPendingImpact = true;
+        _processingPhysicalContact = true;
+        _physicalContactResolved = false;
+        try
+        {
+            _damage.ProcessExplicitColliderHit(
+                receiverCollider,
+                _body != null ? _body.position : (Vector2)item.transform.position,
+                contactPoint);
+        }
+        finally
+        {
+            _processingPhysicalContact = false;
+            _hasPendingImpact = false;
+        }
+
+        // 无法进入伤害结算的普通物理反弹也给出旋转反馈；有效伤害已在回调里结束飞行。
+        if (_isFlying && !_physicalContactResolved)
+            StartBounceSpin(contactNormal);
+    }
+
+    private static Collider2D ResolveDamageReceiverCollider(DamageReceiver receiver)
+    {
+        if (receiver == null)
+            return null;
+
+        Collider2D[] colliders = receiver.GetComponents<Collider2D>();
+        for (int i = 0; i < colliders.Length; i++)
+            if (CombatPhysicsChannels.IsDamageReceiverCollider(colliders[i]))
+                return colliders[i];
+        return null;
+    }
+
+    /// <summary>0 伤害代表攻击被防御完全抵消，箭矢沿接触法线弹回并播放短暂翻滚。</summary>
+    private void BounceFromBlockedHit(Vector2 impactNormal, bool physicsAlreadyResolved)
+    {
+        if (_body == null)
+            return;
+
+        if (physicsAlreadyResolved)
+        {
+            _arcVelocity = _body.velocity;
+            StartBounceSpin(impactNormal);
+            return;
+        }
+
+        Vector2 velocity = _body.velocity;
+        if (velocity.sqrMagnitude <= 0.0001f)
+            velocity = _arcVelocity;
+        if (velocity.sqrMagnitude <= 0.0001f)
+            return;
+
+        Vector2 normal = impactNormal.sqrMagnitude > 0.0001f
+            ? impactNormal.normalized
+            : -velocity.normalized;
+        if (Vector2.Dot(velocity, normal) < 0f)
+            velocity = Vector2.Reflect(velocity, normal);
+
+        velocity *= Mathf.Clamp01(CollisionBounciness);
+
+        _body.velocity = velocity;
+        _arcVelocity = velocity;
+        _resolvedBounceThisSweep = true;
+        StartBounceSpin(normal);
+    }
+
+    private void StartBounceSpin(Vector2 impactNormal)
+    {
+        if (BounceSpinDuration <= 0f || BounceSpinDegreesPerSecond <= 0f)
+            return;
+
+        Vector2 velocity = _body != null ? _body.velocity : Vector2.zero;
+        float cross = velocity.x * impactNormal.y - velocity.y * impactNormal.x;
+        _bounceSpinDirection = Mathf.Abs(cross) > 0.001f
+            ? Mathf.Sign(cross)
+            : (velocity.x >= 0f ? -1f : 1f);
+        _bounceSpinRemaining = BounceSpinDuration;
+    }
+
+    private void UpdateBounceSpin(float deltaTime)
+    {
+        if (_bounceSpinRemaining <= 0f || _arcVisual == null || deltaTime <= 0f)
+            return;
+
+        float duration = Mathf.Max(0.0001f, BounceSpinDuration);
+        float strength = Mathf.Clamp01(_bounceSpinRemaining / duration);
+        _arcVisual.localRotation *= Quaternion.Euler(
+            0f, 0f, BounceSpinDegreesPerSecond * _bounceSpinDirection * strength * deltaTime);
+        _bounceSpinRemaining = Mathf.Max(0f, _bounceSpinRemaining - deltaTime);
+    }
+
+    private void ResetBounceSpin()
+    {
+        _bounceSpinRemaining = 0f;
+        _bounceSpinDirection = 1f;
+        _pendingImpactNormal = Vector2.zero;
+        _processingPhysicalContact = false;
+        _physicalContactResolved = false;
+        _resolvedBounceThisSweep = false;
     }
 
     /// <summary>停止飞行，并按 RecoveryChance 决定留下可拾取物还是销毁。</summary>
@@ -513,6 +692,7 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
 
         _flightRemain = 0f;
         _virtualHeight = 0f;
+        ResetBounceSpin();
         UpdateArcPresentation(0f);
 
         ItemMgr.Instance?.NotifyRuntimeItemMoved(item);
@@ -720,6 +900,11 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
         _flightMaterial.bounciness = Mathf.Clamp01(CollisionBounciness);
         _solidCollider.isTrigger = false;
         _solidCollider.sharedMaterial = _flightMaterial;
+
+        ProjectilePhysicsContact2D contactRelay = item.GetComponent<ProjectilePhysicsContact2D>();
+        if (contactRelay == null)
+            contactRelay = item.gameObject.AddComponent<ProjectilePhysicsContact2D>();
+        contactRelay.Bind(this);
     }
 
     /// <summary>发射点可能还在射手身体内，飞行期间只排除这一组实体碰撞。</summary>
@@ -764,8 +949,21 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
 
     private void UpdateArcPresentation(float height)
     {
-        if (_arcVisual != null) _arcVisual.localPosition = _arcVisualBase + Vector3.up * height;
-        if (_arcHitbox != null) _arcHitbox.localPosition = _arcHitboxBase + Vector3.up * height;
+        // 抛物线高度固定沿世界 Y 轴抬升，不能跟随投射物朝向旋转，否则朝左时会把弧线翻成反向开口。
+        ApplyWorldArcHeight(_arcVisual, _arcVisualBase, height);
+        ApplyWorldArcHeight(_arcHitbox, _arcHitboxBase, height);
+    }
+
+    private static void ApplyWorldArcHeight(Transform target, Vector3 baseLocalPosition, float height)
+    {
+        if (target == null)
+            return;
+
+        Transform parent = target.parent;
+        Vector3 groundPosition = parent != null
+            ? parent.TransformPoint(baseLocalPosition)
+            : baseLocalPosition;
+        target.position = groundPosition + Vector3.up * Mathf.Max(0f, height);
     }
 
     /// <summary>普通世界箭矢保持静止但继续参与拾取触发器。</summary>
@@ -783,4 +981,15 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
     }
 
     #endregion
+}
+
+/// <summary>把投射物根节点的刚体碰撞回传给模块，让伤害结算先于反弹表现作最终裁决。</summary>
+[DisallowMultipleComponent]
+public sealed class ProjectilePhysicsContact2D : MonoBehaviour
+{
+    private Mod_Projectile projectile;
+
+    public void Bind(Mod_Projectile target) => projectile = target;
+
+    private void OnCollisionEnter2D(Collision2D collision) => projectile?.HandlePhysicalContact(collision);
 }

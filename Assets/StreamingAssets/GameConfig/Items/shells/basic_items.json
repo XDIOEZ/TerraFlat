@@ -455,7 +455,7 @@
       "volume": 2.0,
       "stackable": true,
       "canBePickedUp": true,
-      "tags": [],
+      "tags": ["Combustion.Fuel"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/icons_sheet.png[icons_sheet_69]",
         "rendererLocalPosition": {
@@ -656,7 +656,7 @@
       "volume": 3.0,
       "stackable": true,
       "canBePickedUp": true,
-      "tags": [],
+      "tags": ["Combustion.Fuel"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/RawHide.png",
         "rendererLocalPosition": {
@@ -1529,7 +1529,7 @@
       "volume": 1.1,
       "stackable": true,
       "canBePickedUp": true,
-      "tags": ["readable.writing.ink"],
+      "tags": ["readable.writing.ink", "Combustion.Fuel"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Tools/Item_Tool_229.png",
         "rendererLocalPosition": {
@@ -3878,7 +3878,8 @@
       "stackable": true,
       "canBePickedUp": true,
       "tags": [
-        "47"
+        "47",
+        "Combustion.Fuel"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/icons_sheet.png[icons_sheet_10]",
@@ -5710,7 +5711,7 @@
       "volume": 0.45,
       "stackable": true,
       "canBePickedUp": true,
-      "tags": ["readable.writing.ink"],
+      "tags": ["readable.writing.ink", "Combustion.Fuel"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Charcoal/Charcoal_Icon.png",
         "collider": {
@@ -5759,6 +5760,7 @@
       "description": "从湿地挖出的可燃有机土，可作为低温燃料。",
       "weight": 0.6,
       "volume": 0.8,
+      "tags": ["Combustion.Fuel"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Environment/Peat/Peat_Icon.png",
         "color": { "r": 1, "g": 1, "b": 1, "a": 1 }

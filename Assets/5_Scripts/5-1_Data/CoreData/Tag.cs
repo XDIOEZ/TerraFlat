@@ -5,6 +5,7 @@ using UnityEngine;
 public static class Tag
 {
     public const string Player = "Player";
+    public const string CombustionFuel = "Combustion.Fuel";
     public const string CombustionTinder = "Combustion.Tinder";
     public const string InventoryGroupMechanicalPower = "InventoryGroup.MechanicalPower";
 

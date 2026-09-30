@@ -49,6 +49,7 @@ namespace FlatWorld.Audio.Editor
             FoodEat,
             FoodCrunch,
             FoodDrink,
+            PlayerWetClothesMoveLoop,
             WeatherRainLoop
         }
 
@@ -83,6 +84,7 @@ namespace FlatWorld.Audio.Editor
             new KeyValuePair<string, SoundKind>("food.eat__01.wav", SoundKind.FoodEat),
             new KeyValuePair<string, SoundKind>("food.crunch__01.wav", SoundKind.FoodCrunch),
             new KeyValuePair<string, SoundKind>("food.drink__01.wav", SoundKind.FoodDrink),
+            new KeyValuePair<string, SoundKind>("player.wet_clothes.move.loop__01.wav", SoundKind.PlayerWetClothesMoveLoop),
             new KeyValuePair<string, SoundKind>("weather.rain.loop__01.wav", SoundKind.WeatherRainLoop)
         };
 
@@ -178,9 +180,47 @@ namespace FlatWorld.Audio.Editor
                 case SoundKind.FoodEat: return CreateFoodEat();
                 case SoundKind.FoodCrunch: return CreateFoodCrunch();
                 case SoundKind.FoodDrink: return CreateFoodDrink();
+                case SoundKind.PlayerWetClothesMoveLoop: return CreateWetClothesMoveLoop();
                 case SoundKind.WeatherRainLoop: return CreateRainLoop();
                 default: return CreateChirp(0.06f, 440f, 440f, 0.2f, 0f, 1);
             }
+        }
+
+        private static float[] CreateWetClothesMoveLoop()
+        {
+            const float duration = 2.4f;
+            const float crossFadeDuration = 0.24f;
+            int count = Mathf.CeilToInt(duration * SampleRate);
+            int crossFadeSamples = Mathf.CeilToInt(crossFadeDuration * SampleRate);
+            float[] samples = new float[count];
+            float lowBand = 0f;
+            float midBand = 0f;
+            uint seed = 20260930;
+
+            for (int i = 0; i < count; i++)
+            {
+                float time = i / (float)SampleRate;
+                float phase = Mathf.Repeat(time * 2.15f, 1f);
+                float firstStep = Mathf.Exp(-Mathf.Pow((phase - 0.12f) / 0.085f, 2f));
+                float secondStep = Mathf.Exp(-Mathf.Pow((phase - 0.60f) / 0.10f, 2f));
+                float squeeze = Mathf.Clamp01(firstStep + secondStep * 0.82f);
+
+                float white = NextNoise(ref seed);
+                lowBand = Mathf.Lerp(lowBand, white, 0.014f);
+                midBand = Mathf.Lerp(midBand, white, 0.11f);
+                float cloth = lowBand * 0.34f + (white - midBand) * 0.055f;
+                float body = Mathf.Sin(time * Mathf.PI * 2f * 78f) * 0.035f * squeeze;
+                samples[i] = Mathf.Clamp(cloth * (0.20f + squeeze * 0.95f) + body, -0.72f, 0.72f);
+            }
+
+            for (int i = 0; i < crossFadeSamples; i++)
+            {
+                int tailIndex = count - crossFadeSamples + i;
+                float blend = i / (float)Mathf.Max(1, crossFadeSamples - 1);
+                samples[tailIndex] = Mathf.Lerp(samples[tailIndex], samples[i], blend);
+            }
+
+            return samples;
         }
 
         private static float[] CreateRainLoop()

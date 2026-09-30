@@ -512,10 +512,10 @@ public sealed class RuntimeItemDefinition
             templateData?.ModuleDataDic?.TryGetValue(stableName, out moduleData);
             modules.Add(new RuntimeItemModuleDefinition(
                 stableName,
-                moduleData?.ID ?? string.Empty,
+                moduleData?.ModuleId ?? string.Empty,
                 prefabId ?? string.Empty,
                 pair.Value,
-                moduleData?.isRunning != false));
+                moduleData?.Enabled != false));
         }
         ModuleDefinitions = modules.AsReadOnly();
     }

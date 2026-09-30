@@ -14,6 +14,7 @@ public class Mod_Cam : Module
     {
         public float PovValue = DefaultPovValue;
         public bool UnlimitedViewEnabled;
+        public float AdminFiniteViewMaxOverride;
     }
 
     #region 字段声明
@@ -53,6 +54,7 @@ public class Mod_Cam : Module
     public float MaxPovValue = 40f; // 视野最大拉伸值
     public float MinPovValue = 1f;  // 视野最小缩放值，保持正交相机尺寸大于零
     private bool _unlimitedViewEnabled; // 管理员无限视野只放开运行时上限，不污染普通视野配置。
+    private float _adminFiniteViewMaxOverride; // GM 可临时扩展有限视野，不改普通玩法上限。
 
     /// <summary>当前是否启用了管理员无限视野。</summary>
     public bool IsUnlimitedViewEnabled => _unlimitedViewEnabled;
@@ -290,17 +292,23 @@ public class Mod_Cam : Module
         SetOrthographicSize(CurrentOrthographicSize - screenDistanceDelta * safeSensitivity);
     }
 
-    /// <summary>原子设置视野上限模式和正交尺寸，供 GM 滑条的普通档与无限档共用。</summary>
-    public void SetViewLimitAndSize(float value, bool unlimited)
+    /// <summary>原子设置 GM 视野上限模式和正交尺寸，有限档可独立扩展普通玩法上限。</summary>
+    public void SetViewLimitAndSize(float value, bool unlimited, float finiteMaxOverride)
     {
         _unlimitedViewEnabled = unlimited;
+        _adminFiniteViewMaxOverride = unlimited
+            ? 0f
+            : Mathf.Max(MaxPovValue, finiteMaxOverride);
         SetOrthographicSize(value);
     }
 
     /// <summary>按普通玩法上限或管理员无限权限约束镜头正交尺寸。</summary>
     private float ClampPovValue(float value)
     {
-        return Mathf.Max(MinPovValue, _unlimitedViewEnabled ? value : Mathf.Min(value, MaxPovValue));
+        float finiteMax = _adminFiniteViewMaxOverride > 0f
+            ? _adminFiniteViewMaxOverride
+            : MaxPovValue;
+        return Mathf.Max(MinPovValue, _unlimitedViewEnabled ? value : Mathf.Min(value, finiteMax));
     }
     #endregion
 
@@ -313,6 +321,7 @@ public class Mod_Cam : Module
             {
                 povValue = saved.PovValue;
                 _unlimitedViewEnabled = saved.UnlimitedViewEnabled;
+                _adminFiniteViewMaxOverride = saved.AdminFiniteViewMaxOverride;
                 return;
             }
         }
@@ -329,7 +338,8 @@ public class Mod_Cam : Module
         ModData.WriteData(new CameraFollowSaveData
         {
             PovValue = povValue,
-            UnlimitedViewEnabled = _unlimitedViewEnabled
+            UnlimitedViewEnabled = _unlimitedViewEnabled,
+            AdminFiniteViewMaxOverride = _adminFiniteViewMaxOverride
         });
     }
 }

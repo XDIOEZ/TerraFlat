@@ -1321,7 +1321,23 @@
       "modules": {
         "bow": {
           "parameters": {
-            "ShowNockedAmmo": false
+            "ShowNockedAmmo": false,
+            "OverrideHeldVisualTransform": true,
+            "HeldVisualLocalPosition": {
+              "x": 0.50,
+              "y": 0.03,
+              "z": 0.0
+            },
+            "HeldVisualLocalEulerAngles": {
+              "x": 0.0,
+              "y": 0.0,
+              "z": -45.0
+            },
+            "UseLocalMuzzlePosition": true,
+            "LocalMuzzlePosition": {
+              "x": 1.00,
+              "y": 0.0
+            }
           }
         },
         "microphoneCharge": {

@@ -316,7 +316,7 @@ public class Inventory
             if (gameController.IsGameplayInputLocked &&
                 (basePanel == null || !basePanel.IsOpen()) &&
                 !CanToggleFromMobileMenu() &&
-                !CanOpenPlayerBagAlongsideHandCraft(gameController))
+                !CanOpenPlayerBagAlongsideOtherPanels(gameController))
             {
                 return;
             }
@@ -331,7 +331,7 @@ public class Inventory
         _boundToggleAction = action;
         BindCarryCapacityLinkedInventory();
 
-        if (basePanel != null && basePanel.IsOpen() && UsesModalGameplayInputLock())
+        if (basePanel != null && basePanel.IsOpen() && UsesGameplayInputLock())
             AcquirePanelInputLock();
     }
 
@@ -343,13 +343,13 @@ public class Inventory
                PlayerMobileControlsHUD.IsActiveDrawerOpen;
     }
 
-    /// <summary>玩家行囊允许在手工制作面板持有玩法输入锁时继续打开；其它库存不放宽。</summary>
-    private bool CanOpenPlayerBagAlongsideHandCraft(GameController gameController)
+    /// <summary>玩家主背包与其它 UI 面板并行；只保留直接锁和世界加载锁这类硬阻断。</summary>
+    private bool CanOpenPlayerBagAlongsideOtherPanels(GameController gameController)
     {
         if (!IsPlayerBagInventory() || gameController == null)
             return false;
 
-        return !gameController.HasBlockingGameplayInputLock(owner => owner is Mod_HandCraftTable);
+        return !gameController.HasBlockingGameplayInputLock(_ => true);
     }
 
     /// <summary>
@@ -479,18 +479,20 @@ public class Inventory
 
         basePanel = UIManager.Instance.CreatePanelFromGameObject(panelPrefab).GetComponentInChildren<BasePanel>();
         ResolvePanelInputController();
-        bool usesModalGameplayInputLock = UsesModalGameplayInputLock();
-        basePanel.SetGameplayInputBlocking(usesModalGameplayInputLock);
-        // 快捷栏与手部库存属于常驻/内部 HUD，不进入模态焦点链，也不锁定玩家输入。
-        if (usesModalGameplayInputLock)
-        {
+        bool usesTogglePanelLifecycle = UsesTogglePanelLifecycle();
+        bool usesGameplayInputLock = UsesGameplayInputLock();
+        basePanel.SetGameplayInputBlocking(usesGameplayInputLock);
+        // 玩家主背包仍参与关闭/手柄焦点链，但不再通过玩法输入锁影响其它 UI。
+        if (usesTogglePanelLifecycle)
             basePanel.PrepareForGamepadNavigation(closeOnCancel: true);
+        if (usesGameplayInputLock)
+        {
             basePanel.Opened += AcquirePanelInputLock;
             basePanel.Closed += ReleasePanelInputLock;
         }
-        // 普通背包 Prefab 可能以可见状态保存；先统一为关闭态，确保随后 Open 能触发输入锁事件。
+        // 可开关库存 Prefab 可能以可见状态保存；先统一为关闭态，确保随后 Open 走正常面板生命周期。
         // 快捷栏与手部库存保留 Prefab 的显示状态，不参与这次归一化。
-        if (usesModalGameplayInputLock)
+        if (usesTogglePanelLifecycle)
         {
             basePanel.Close();
         }
@@ -535,7 +537,7 @@ public class Inventory
 
     private void AcquirePanelInputLock()
     {
-        if (UsesModalGameplayInputLock())
+        if (UsesGameplayInputLock())
             _boundController?.AcquireGameplayInputLock(this);
     }
 
@@ -687,7 +689,7 @@ public class Inventory
         // 槽位是运行时动态创建的，必须在创建完成后重新收集组件并补齐导航图。
         Canvas.ForceUpdateCanvases();
         basePanel.RefreshUIComponents();
-        if (UsesModalGameplayInputLock())
+        if (UsesTogglePanelLifecycle())
         {
             basePanel.PrepareForGamepadNavigation(
                 preferredControlName: "UI_Slot",
@@ -1980,10 +1982,16 @@ public class Inventory
         return this is Inventory_Hand || Data?.Name == ModText.Hand;
     }
 
-    /// <summary>只有玩家主动打开的库存面板才参与模态输入锁与手柄焦点链。</summary>
-    private bool UsesModalGameplayInputLock()
+    /// <summary>玩家主动开关的库存面板参与关闭与手柄焦点链；快捷栏和手部库存不参与。</summary>
+    private bool UsesTogglePanelLifecycle()
     {
         return !IsHotBarInventory() && !IsHandInventory();
+    }
+
+    /// <summary>玩家主背包是可并行 UI，不获取玩法输入锁；其它独立库存面板维持原有锁定行为。</summary>
+    private bool UsesGameplayInputLock()
+    {
+        return UsesTogglePanelLifecycle() && !IsPlayerBagInventory();
     }
 
     #endregion

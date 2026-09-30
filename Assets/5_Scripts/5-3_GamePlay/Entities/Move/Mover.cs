@@ -228,6 +228,8 @@ public partial class Mover : Module
             animationController.SetBool(AnimationText.Run, false);
         }
 
+        InitializeWetClothesAudio();
+
         // 先恢复基础数据，再通过统一入口重建奔跑倍率与动画状态。
         if (persistedRunState)
             SetRunState(true);
@@ -520,6 +522,9 @@ public partial class Mover : Module
                                 DrivenVelocity.sqrMagnitude > stopThreshold * stopThreshold;
         IsMoving = isActuallyMoving;
 
+        if (_wasMoving != isActuallyMoving)
+            RefreshWetClothesAudio();
+
         if (!_wasMoving && isActuallyMoving)
             OnMoveStart?.Invoke();
         else if (_wasMoving && !isActuallyMoving)
@@ -560,6 +565,7 @@ public partial class Mover : Module
     {
         ReleaseCarrierLease();
         UnbindRunActions();
+        DisposeWetClothesAudio();
         OnMoveStart?.Clear();
         OnMoveEnd?.Clear();
         RunStateChanged = null;

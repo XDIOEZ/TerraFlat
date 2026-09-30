@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using MemoryPack;
 using UnityEngine;
@@ -35,6 +36,8 @@ public class Mod_Equipment : Module, IInventory, IInteractable, IInstanceUI
     List<Ex_ModData_MemoryPackable> equipment_ModuleData = new();
 
     List<ItemData> cached_ItemDatas = new();
+
+    public event Action EquipmentChanged;
 
     #endregion
 
@@ -220,6 +223,21 @@ public class Mod_Equipment : Module, IInventory, IInteractable, IInstanceUI
     #endregion
 
     #region 装备逻辑
+
+    /// <summary>是否至少穿戴了一件装备；潮湿衣物等表现只关心装备栏是否为空。</summary>
+    public bool HasAnyEquippedItem()
+    {
+        if (EquipmentInventory?.Data?.itemSlots == null)
+            return false;
+
+        foreach (ItemSlot slot in EquipmentInventory.Data.itemSlots)
+        {
+            if (slot?.itemData != null)
+                return true;
+        }
+
+        return false;
+    }
 
     /// <summary>重新挂载所有已装备收纳袋，兼容背包模块晚于装备模块恢复存档的顺序。</summary>
     public void RefreshBagStorageSlots()
@@ -421,6 +439,7 @@ public class Mod_Equipment : Module, IInventory, IInteractable, IInstanceUI
         if (LocalSlot.itemData == null)
         {
             cached_ItemDatas[index] = null;
+            EquipmentChanged?.Invoke();
             return;
         }
 
@@ -439,6 +458,8 @@ public class Mod_Equipment : Module, IInventory, IInteractable, IInstanceUI
 
             equipment_Instances[index] = loadedList;
         }
+
+        EquipmentChanged?.Invoke();
     }
 
     void SaveSlotEquipmentDataToPairedItem(int index, ItemData previousItemData, ItemSlot pairSlot)

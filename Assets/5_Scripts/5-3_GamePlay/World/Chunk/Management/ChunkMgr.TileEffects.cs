@@ -218,13 +218,15 @@ public partial class ChunkMgr
     internal bool TryCreateTerrainPresenceQuery(out RuntimeTerrainPresenceQuery query)
     {
         query = default;
-        if (runtimeChunkManager == null || defaultGenerationSnapshot == null)
+        ChunkGenerationProfileSnapshot profile = ActiveGenerationProfile ?? defaultGenerationSnapshot;
+        if (runtimeChunkManager == null || profile == null)
             return false;
 
+        // 飞行导航必须和正式世界寻址使用同一份当前世界区块尺寸，否则自定义区块大小会被误判为未加载。
         query = new RuntimeTerrainPresenceQuery(runtimeChunkManager.World,
             WorldTopologyRuntime.GetActiveDomain(), ResolveCurrentDimensionId(),
-            Mathf.Max(1, defaultGenerationSnapshot.Width),
-            Mathf.Max(1, defaultGenerationSnapshot.Height));
+            Mathf.Max(1, profile.Width),
+            Mathf.Max(1, profile.Height));
         return true;
     }
 

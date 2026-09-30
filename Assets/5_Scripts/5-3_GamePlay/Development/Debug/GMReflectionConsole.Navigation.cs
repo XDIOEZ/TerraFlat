@@ -95,6 +95,7 @@ public sealed partial class GMReflectionConsole
     private TextMeshProUGUI aiecsNavigationText;
     private float nextAiecsPageRefreshTime;
     private const int MaxGmChunkLoadDistance = 16; // 覆盖无限档初始 5 倍视野所需的常见区块圈数。
+    private const float MaxGmFiniteCameraView = 50f; // GM 有限档可读到 50，再往右进入无限视野。
     private const int MinutesPerGameDay = 24 * 60; // 一天的滑条刻度对应 00:00～23:59。
     private const float DayTimeRefreshInterval = 0.25f; // 用未缩放时间刷新时钟显示。
     private Slider timeScaleSlider;
@@ -758,11 +759,12 @@ public sealed partial class GMReflectionConsole
         {
             cameraModule.SetViewLimitAndSize(
                 Mathf.Max(cameraModule.CurrentOrthographicSize, cameraModule.MaxPovValue * 5f),
-                true);
+                true,
+                MaxGmFiniteCameraView);
         }
         else
         {
-            cameraModule.SetViewLimitAndSize(value, false);
+            cameraModule.SetViewLimitAndSize(value, false, MaxGmFiniteCameraView);
         }
 
         RefreshWorldRangeControls();
@@ -815,10 +817,10 @@ public sealed partial class GMReflectionConsole
         if (cameraReady)
         {
             cameraViewSlider.minValue = cameraModule.MinPovValue;
-            cameraViewSlider.maxValue = cameraModule.MaxPovValue + 1f;
+            cameraViewSlider.maxValue = MaxGmFiniteCameraView + 1f;
             cameraViewSlider.SetValueWithoutNotify(cameraModule.IsUnlimitedViewEnabled
                 ? cameraViewSlider.maxValue
-                : Mathf.Round(cameraModule.CurrentOrthographicSize));
+                : Mathf.Min(MaxGmFiniteCameraView, Mathf.Round(cameraModule.CurrentOrthographicSize)));
             cameraViewValueText.text = cameraModule.IsUnlimitedViewEnabled
                 ? "无限"
                 : $"{cameraModule.CurrentOrthographicSize:0}";

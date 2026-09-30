@@ -132,11 +132,11 @@ public static class ItemNetworkStateSerialization
             if (module == null || module._Data == null)
                 continue;
 
-            ModuleData state = FindModuleState(current.ModuleDataDic, module._Data.Name, module._Data.ID);
+            ModuleData state = FindModuleState(current.ModuleDataDic, module.StableName);
             if (state == null)
                 continue;
 
-            ModuleData previousState = FindModuleState(previousModuleStates, module._Data.Name, module._Data.ID);
+            ModuleData previousState = FindModuleState(previousModuleStates, module.StableName);
             if (ModuleStatesEqual(previousState, state))
                 continue;
 
@@ -170,7 +170,7 @@ public static class ItemNetworkStateSerialization
             if (module == null || module._Data == null)
                 continue;
 
-            ModuleData state = FindModuleState(current.ModuleDataDic, module._Data.Name, module._Data.ID);
+            ModuleData state = FindModuleState(current.ModuleDataDic, module.StableName);
             if (state == null)
                 continue;
 
@@ -205,9 +205,9 @@ public static class ItemNetworkStateSerialization
                 return hash;
 
             hash = AppendHash(hash, state.GetType().FullName);
-            hash = AppendHash(hash, state.ID);
-            hash = AppendHash(hash, state.Name);
-            hash = (hash ^ (state.isRunning ? (byte)1 : (byte)0)) * 16777619u;
+            hash = AppendHash(hash, state.ModuleId);
+            hash = AppendHash(hash, state.StableName);
+            hash = (hash ^ (state.Enabled ? (byte)1 : (byte)0)) * 16777619u;
 
             if (state is Ex_ModData_MemoryPackable binaryState)
                 return AppendHash(hash, binaryState.BitData);
@@ -325,22 +325,12 @@ public static class ItemNetworkStateSerialization
 
     private static ModuleData FindModuleState(
         Dictionary<string, ModuleData> states,
-        string moduleName,
-        string moduleId)
+        string stableName)
     {
-        if (states == null)
+        if (states == null || string.IsNullOrWhiteSpace(stableName))
             return null;
 
-        if (!string.IsNullOrEmpty(moduleName) && states.TryGetValue(moduleName, out ModuleData exact))
-            return exact;
-
-        foreach (ModuleData state in states.Values)
-        {
-            if (state != null && string.Equals(state.ID, moduleId, StringComparison.Ordinal))
-                return state;
-        }
-
-        return null;
+        return states.TryGetValue(stableName, out ModuleData exact) ? exact : null;
     }
 
     private static bool ModuleStatesEqual(ModuleData left, ModuleData right)
@@ -348,7 +338,7 @@ public static class ItemNetworkStateSerialization
         if (ReferenceEquals(left, right))
             return true;
         if (left == null || right == null || left.GetType() != right.GetType() ||
-            left.ID != right.ID || left.Name != right.Name || left.isRunning != right.isRunning)
+            left.ModuleId != right.ModuleId || left.StableName != right.StableName || left.Enabled != right.Enabled)
         {
             return false;
         }

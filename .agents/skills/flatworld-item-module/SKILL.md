@@ -23,7 +23,9 @@ description: "Use when: 定位或修改 FlatWorld 的 Item/Module 组合架构�
 
 `ItemMaker/ItemMgr → ItemData → ItemMods → ModuleInit/Load → ItemMgr 分级 Tick → Save/Despawn/Pool`
 
-- Module 明确选择 EveryFrame、FixedInterval 或 Disabled；增删模块、配置变化和池复用必须使调度缓存失效。
+- `ModuleData` 的权威身份字段是 `StableName / ModuleId / Enabled`：`StableName` 是单个 Item 内唯一实例键，`ModuleId` 是可一对多复用的能力 ID，`PrefabId` 只描述当前定义选用的具体实现且不进入实例存档。禁止再生成随机模块名；重复 StableName 必须直接报错。
+- 会覆写 `ModUpdate` 的模块必须显式选择 EveryFrame、FixedInterval 或 Disabled；`Module.TickMode` 默认 Unspecified，新模块不得依赖隐式 EveryFrame。增删模块、启停、配置变化和池复用必须使调度缓存失效。
+- JSON `enabled` 统一写入 `ModuleData.Enabled`；运行中切换必须走 `Module.SetEnabled`，由框架负责 Load/Unload 与 Tick 参与资格，禁止各模块各自维护第二套启用状态。
 - 距离模拟档只限制 `ItemMgr` 驱动的玩法 Tick 频率，不改变模块自身更慢的 FixedInterval；以同场景最近玩家和循环世界最短距离判定，玩家、地图、手持物保持完整更新。`Owner` 不能作为免降频条件，因为在飞投射物也会保留发射者引用。范围外暂停时重置调度时钟，停用根刚体并回调 `ISimulationRangeAware` 模块释放导航运行态；重入时先恢复原 `Rigidbody2D.simulated` 值再重提目标，不能补算休眠期间的 Tick。对象池或模块卸载也须恢复刚体开关；不要把摄像机缩放当模拟距离。
 - 世界内 F5 经 `ItemDefinitionRuntime.RefreshLiveConfiguration` 只更新现有模块的已改变显式参数，以及仍由原定义控制的 Sprite/材质；不替换 ItemData、模块集合或调用 Load。外壳/模块结构变化与删除参数后的 Prefab 默认值由后续新实例应用，不能把旧实例伪装为已完整迁移。
 - 模块通过具名 `ApplyResourceConfiguration` 保留配置对象内部的运行态，通过 `OnResourcesReloaded` 更新派生缓存；依赖 JSON 能力字段的事件订阅也须在该回调中按当前配置解绑、重绑，不能只在 `Load` 订阅。禁止用重新 Load 代替配置刷新。生产模块更换规则列表时按产物身份保留累计时间、次数与初始化标记。
@@ -65,7 +67,7 @@ description: "Use when: 定位或修改 FlatWorld 的 Item/Module 组合架构�
 - `Ex_ModData_MemoryPackable` 若序列化了带 `ItemData` 的内嵌 `Inventory_Data`，`ItemDefinitionRuntime` 不会自动遍历这段二进制负载；模块读取状态后应逐槽调用 `RebasePersistedData(GameRes.Instance, itemData)`，再绑定库存 UI，确保内嵌物品按当前定义恢复。
 - 制作材料赋予的实例耐久使用 `ItemData.CraftedDurabilityMultiplier` 持久化；定义重建后以当前定义的基础耐久重新应用倍率，不能直接沿用旧 `MaxDurability`。堆叠身份必须包含该倍率，避免不同品质实例合并后丢失品质。
 - 堆叠身份统一由 `ItemData` 判定，空与 null 特殊数据按现有规范处理。
-- 模块 Prefab 的 `ModuleData.Name/ID` 可能未序列化；进入 `ItemMods`、`ModuleInit` 或网络更新前必须统一建立非空身份，禁止直接把空值写入字典。
+- 模块 Prefab 的 `StableName/ModuleId` 可能未序列化；进入 `ItemMods`、`ModuleInit` 或网络更新前必须统一建立非空确定性身份。JSON 模块以 `modules` 的键作为 StableName；Prefab-only 模块才允许回退到确定性的 GameObject 名，禁止随机后缀。
 - JSON 动态组合存在跨模块引用时实现 `IItemModuleDependencyBinder`；`Item` 会在全部模块进入 `ItemMods` 后、`ModuleInit/Load` 前统一绑定，依赖必须按唯一稳定 ID 解析并对缺失或重复直接报错。
 - 可燃物品采用纯组合：`Mod_Fuel` 提供燃料数据，`Mod_Combustion` 提供燃烧状态与世界时间消耗，`Mod_FuelInteraction` 提供通用投料/点火交互；光源、燃烧粒子、局部温度、命中 Buff 等通过 `ICombustionStateReceiver` 独立响应。具体物品名称、外观与组件选择只存在于 JSON，禁止新增 `Mod_具体物品名` 来重新聚合这些职责。
 - JSON 的 `modules.*.prefab` 是模块变体的唯一实例化地址；多个专用 Prefab 可以共用同一玩法 `ModuleData.ID`，`GameRes` 只能为唯一候选登记该 ID 的兼容别名，禁止按加载顺序静默覆盖。

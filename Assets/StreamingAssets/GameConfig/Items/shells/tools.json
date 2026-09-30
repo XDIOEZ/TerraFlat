@@ -255,7 +255,8 @@
       "stackable": true,
       "canBePickedUp": true,
       "tags": [
-        "Wood"
+        "Wood",
+        "Combustion.Fuel"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Plants/Tree/item296.png",
@@ -472,7 +473,8 @@
       "stackable": true,
       "canBePickedUp": true,
       "tags": [
-        "Combustion.Tinder"
+        "Combustion.Tinder",
+        "Combustion.Fuel"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Plants/火种.png[火种]",
