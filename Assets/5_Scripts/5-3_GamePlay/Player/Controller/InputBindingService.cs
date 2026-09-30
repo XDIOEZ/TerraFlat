@@ -204,6 +204,12 @@ public sealed class InputBindingService : IDisposable
     public IReadOnlyList<InputBindingEntry> Entries => entries;
     public bool IsRebinding => activeRebind != null;
     public bool IsSettingsEditSessionActive => settingsEditSessionActive;
+    public bool HasSettingsEditSessionChanges =>
+        settingsEditSessionActive &&
+        !string.Equals(
+            settingsEditSessionBaselineJson ?? string.Empty,
+            inputAsset.SaveBindingOverridesAsJson() ?? string.Empty,
+            StringComparison.Ordinal);
 
     public IReadOnlyList<InputBindingEntry> GetEntries(InputBindingDeviceGroup deviceGroup)
     {

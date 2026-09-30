@@ -2,6 +2,7 @@ using FlatWorld.Localization;
 using FlatWorld.Settings;
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 /// <summary>主菜单设置编辑会话控制器；保存按钮提交修改，关闭面板时恢复最近一次保存状态。</summary>
@@ -11,6 +12,9 @@ public sealed class SettingsEditSessionController : MonoBehaviour
     #region 节点命名契约
 
     public const string SaveButtonName = "保存设置";
+    private const string CloseButtonName = GameManager.MainMenuSettingsCloseButtonKey;
+    private const string UnsavedConfirmationPanelName = "UI_SettingsUnsavedExitConfirmation";
+    private const string ConfirmationPromptName = "退出确认提示";
 
     #endregion
 
@@ -22,11 +26,20 @@ public sealed class SettingsEditSessionController : MonoBehaviour
     /// <summary>底部保存按钮。</summary>
     private Button saveButton;
 
+    /// <summary>设置窗口右上角关闭按钮。</summary>
+    private Button closeButton;
+
     /// <summary>负责按键绑定编辑的页面控制器。</summary>
     private InputBindingPanelLauncher inputBindingLauncher;
 
     /// <summary>本控制器是否持有正在进行的编辑会话。</summary>
     private bool sessionActive;
+
+    /// <summary>复用主菜单确认 Prefab 创建的未保存修改弹窗。</summary>
+    private BasePanel unsavedConfirmationPanel;
+
+    private Button exitWithoutSavingButton;
+    private Button saveAndExitButton;
 
     #endregion
 
@@ -53,6 +66,7 @@ public sealed class SettingsEditSessionController : MonoBehaviour
         Unbind();
         basePanel = panel;
         saveButton = FindButton(basePanel.transform, SaveButtonName);
+        closeButton = FindButton(basePanel.transform, CloseButtonName);
         inputBindingLauncher =
             basePanel.GetComponentInChildren<InputBindingPanelLauncher>(true);
 
@@ -67,6 +81,23 @@ public sealed class SettingsEditSessionController : MonoBehaviour
             saveButton.onClick.RemoveListener(CommitChanges);
             saveButton.onClick.AddListener(CommitChanges);
         }
+
+        if (closeButton == null)
+        {
+            Debug.LogError(
+                $"[SettingsEditSessionController] 缺少关闭按钮：{CloseButtonName}。",
+                basePanel);
+        }
+        else
+        {
+            // BasePanel 会自动给名为“关闭”的按钮绑定 Close；这里改为先检查未保存修改。
+            closeButton.onClick.RemoveListener(basePanel.Close);
+            closeButton.onClick.RemoveListener(RequestClose);
+            closeButton.onClick.AddListener(RequestClose);
+        }
+
+        basePanel.CancelOverride = HandlePanelCancel;
+        basePanel.CancelShortcutOverride = HandleCancelShortcut;
 
         basePanel.Opened -= HandlePanelOpened;
         basePanel.Closed -= HandlePanelClosed;
@@ -85,6 +116,7 @@ public sealed class SettingsEditSessionController : MonoBehaviour
     /// <summary>关闭面板时放弃未保存修改并恢复运行时表现。</summary>
     private void HandlePanelClosed()
     {
+        CloseUnsavedConfirmation();
         if (!sessionActive)
             return;
 
@@ -128,10 +160,16 @@ public sealed class SettingsEditSessionController : MonoBehaviour
     /// <summary>保存当前设置值并以此建立后续放弃修改的新基线。</summary>
     private void CommitChanges()
     {
+        TryCommitChanges();
+    }
+
+    /// <summary>尝试提交当前设置；只有全部保存成功才允许“保存退出”继续关闭。</summary>
+    private bool TryCommitChanges()
+    {
         if (!sessionActive)
             BeginSession();
         if (!sessionActive)
-            return;
+            return false;
 
         try
         {
@@ -139,12 +177,14 @@ public sealed class SettingsEditSessionController : MonoBehaviour
             PlayerPrefs.Save();
             SettingsProviderRegistry.CommitEditSession();
             SetSavedStatus();
+            return true;
         }
         catch (System.Exception exception)
         {
             Debug.LogError(
                 $"[SettingsEditSessionController] 保存设置失败：{exception.Message}",
                 this);
+            return false;
         }
     }
 
@@ -156,6 +196,158 @@ public sealed class SettingsEditSessionController : MonoBehaviour
         {
             statusText.text = FlatWorldLocalizationService.GetUiText("设置修改已保存。");
         }
+    }
+
+    #endregion
+
+    #region 未保存修改退出确认
+
+    /// <summary>关闭按钮统一入口：有未保存修改时先弹确认，没有修改则直接关闭。</summary>
+    public void RequestClose()
+    {
+        if (!HasUnsavedChanges())
+        {
+            basePanel?.Close();
+            return;
+        }
+
+        OpenUnsavedConfirmation();
+    }
+
+    /// <summary>检查 Provider 与按键绑定两部分是否偏离最近一次保存基线。</summary>
+    private bool HasUnsavedChanges()
+    {
+        return sessionActive &&
+               (SettingsProviderRegistry.HasEditSessionChanges() ||
+                (inputBindingLauncher != null &&
+                 inputBindingLauncher.HasSettingsEditSessionChanges));
+    }
+
+    /// <summary>Escape/手柄取消在有修改时也走同一层保存确认。</summary>
+    private bool HandlePanelCancel(BaseEventData eventData)
+    {
+        if (!HasUnsavedChanges())
+            return false;
+
+        OpenUnsavedConfirmation();
+        return true;
+    }
+
+    /// <summary>全局返回快捷键在有修改时阻止直接关闭设置面板。</summary>
+    private bool HandleCancelShortcut()
+    {
+        if (!HasUnsavedChanges())
+            return false;
+
+        OpenUnsavedConfirmation();
+        return true;
+    }
+
+    /// <summary>打开复用的双按钮确认弹窗。</summary>
+    private void OpenUnsavedConfirmation()
+    {
+        if (!EnsureUnsavedConfirmationPanel())
+            return;
+
+        RefreshUnsavedConfirmationText();
+        unsavedConfirmationPanel.Open();
+    }
+
+    /// <summary>按需从正式主菜单确认 Prefab 创建未保存修改弹窗，不在运行时拼视觉节点。</summary>
+    private bool EnsureUnsavedConfirmationPanel()
+    {
+        if (unsavedConfirmationPanel != null)
+            return true;
+
+        UIManager uiManager = UIManager.Instance;
+        GameObject prefab = GameRes.Instance?.GetPrefab(
+            RuntimeUIPrefabKeys.MainMenuExitConfirmation,
+            false);
+        if (uiManager == null || prefab == null)
+        {
+            Debug.LogError(
+                "[SettingsEditSessionController] 无法创建未保存修改确认弹窗：确认 Prefab 或 UIManager 未就绪。",
+                this);
+            return false;
+        }
+
+        unsavedConfirmationPanel = uiManager.CreatePanelFromGameObject(
+            prefab,
+            UnsavedConfirmationPanelName);
+        if (unsavedConfirmationPanel == null)
+            return false;
+
+        Button dismissButton = unsavedConfirmationPanel.GetButton(
+            GameManager.MainMenuExitConfirmationCloseButtonKey);
+        exitWithoutSavingButton = unsavedConfirmationPanel.GetButton(
+            GameManager.MainMenuExitConfirmationCancelButtonKey);
+        saveAndExitButton = unsavedConfirmationPanel.GetButton(
+            GameManager.MainMenuExitConfirmationConfirmButtonKey);
+        if (dismissButton == null ||
+            exitWithoutSavingButton == null ||
+            saveAndExitButton == null)
+        {
+            Debug.LogError(
+                "[SettingsEditSessionController] 未保存修改确认 Prefab 的按钮命名契约不完整。",
+                unsavedConfirmationPanel);
+            return false;
+        }
+
+        dismissButton.onClick.AddListener(CloseUnsavedConfirmation);
+        exitWithoutSavingButton.onClick.AddListener(ExitWithoutSaving);
+        saveAndExitButton.onClick.AddListener(SaveAndExit);
+        unsavedConfirmationPanel.PrepareForGamepadNavigation(
+            GameManager.MainMenuExitConfirmationCancelButtonKey);
+        return true;
+    }
+
+    /// <summary>刷新弹窗文案；复用已有本地化条目避免引入另一套提示语。</summary>
+    private void RefreshUnsavedConfirmationText()
+    {
+        TextMeshProUGUI prompt = unsavedConfirmationPanel?.GetText(
+            ConfirmationPromptName);
+        if (prompt != null)
+            prompt.text = FlatWorldLocalizationService.GetUiText("是否保存再退出");
+
+        SetButtonLabel(
+            exitWithoutSavingButton,
+            FlatWorldLocalizationService.GetUiText("不保存直接退出"));
+        SetButtonLabel(
+            saveAndExitButton,
+            FlatWorldLocalizationService.GetUiText("保存与退出"));
+    }
+
+    /// <summary>明确放弃本次修改，再由原关闭流程恢复最近保存基线。</summary>
+    private void ExitWithoutSaving()
+    {
+        CloseUnsavedConfirmation();
+        basePanel?.Close();
+    }
+
+    /// <summary>先提交本次修改，成功后再关闭设置面板。</summary>
+    private void SaveAndExit()
+    {
+        if (!TryCommitChanges())
+            return;
+
+        CloseUnsavedConfirmation();
+        basePanel?.Close();
+    }
+
+    private void CloseUnsavedConfirmation()
+    {
+        if (unsavedConfirmationPanel != null && unsavedConfirmationPanel.IsOpen())
+            unsavedConfirmationPanel.Close();
+    }
+
+    /// <summary>复用确认 Prefab 的按钮视觉，只替换业务文案。</summary>
+    private static void SetButtonLabel(Button button, string label)
+    {
+        TextMeshProUGUI text = button != null
+            ? button.GetComponentInChildren<TextMeshProUGUI>(true)
+            : null;
+        if (text != null)
+            text.text = label ?? string.Empty;
     }
 
     #endregion
@@ -180,11 +372,24 @@ public sealed class SettingsEditSessionController : MonoBehaviour
     {
         if (saveButton != null)
             saveButton.onClick.RemoveListener(CommitChanges);
+        if (closeButton != null)
+            closeButton.onClick.RemoveListener(RequestClose);
+
+        if (unsavedConfirmationPanel != null)
+        {
+            Button dismissButton = unsavedConfirmationPanel.GetButton(
+                GameManager.MainMenuExitConfirmationCloseButtonKey);
+            dismissButton?.onClick.RemoveListener(CloseUnsavedConfirmation);
+            exitWithoutSavingButton?.onClick.RemoveListener(ExitWithoutSaving);
+            saveAndExitButton?.onClick.RemoveListener(SaveAndExit);
+        }
 
         if (basePanel != null)
         {
             basePanel.Opened -= HandlePanelOpened;
             basePanel.Closed -= HandlePanelClosed;
+            basePanel.CancelOverride = null;
+            basePanel.CancelShortcutOverride = null;
         }
     }
 

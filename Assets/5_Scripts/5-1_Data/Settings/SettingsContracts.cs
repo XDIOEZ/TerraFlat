@@ -123,6 +123,12 @@ namespace FlatWorld.Settings
         void RestoreSettingsEditSessionState(object state);
     }
 
+    /// <summary>为设置控件以外的会话状态补充未保存修改检测。</summary>
+    public interface ISettingsEditSessionChangeTracker
+    {
+        bool HasSettingsEditSessionChanges(object baselineState);
+    }
+
     /// <summary>提供 Toggle 设置的能力接口。</summary>
     public interface ISettingsToggleProvider
     {
@@ -281,6 +287,9 @@ namespace FlatWorld.Settings
 
             /// <summary>恢复值并在失败时返回可读原因。</summary>
             public Func<string> Restore;
+
+            /// <summary>判断当前值是否已经偏离本次会话基线。</summary>
+            public Func<bool> HasChanged;
         }
 
         private sealed class ProviderEditSessionSnapshot
@@ -351,6 +360,32 @@ namespace FlatWorld.Settings
             editSessionSnapshots.Clear();
             CaptureRegisteredProviders();
             return editSessionSnapshots.Count;
+        }
+
+        /// <summary>判断当前编辑会话是否存在尚未提交的设置修改。</summary>
+        public static bool HasEditSessionChanges()
+        {
+            if (editSessionSnapshots == null)
+                return false;
+
+            for (int snapshotIndex = 0; snapshotIndex < editSessionSnapshots.Count; snapshotIndex++)
+            {
+                ProviderEditSessionSnapshot snapshot = editSessionSnapshots[snapshotIndex];
+                for (int settingIndex = 0; settingIndex < snapshot.Settings.Count; settingIndex++)
+                {
+                    Func<bool> hasChanged = snapshot.Settings[settingIndex].HasChanged;
+                    if (hasChanged != null && hasChanged())
+                        return true;
+                }
+
+                if (snapshot.Provider is ISettingsEditSessionChangeTracker changeTracker &&
+                    changeTracker.HasSettingsEditSessionChanges(snapshot.ParticipantState))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         /// <summary>恢复会话基线并收集无法还原的设置项错误。</summary>
@@ -436,6 +471,7 @@ namespace FlatWorld.Settings
                 snapshot.Settings.Add(new SettingRestoreAction
                 {
                     Key = setting.Descriptor.Key,
+                    HasChanged = () => setting.Value != value,
                     Restore = () =>
                     {
                         setting.SetValue(value);
@@ -455,6 +491,7 @@ namespace FlatWorld.Settings
                 snapshot.Settings.Add(new SettingRestoreAction
                 {
                     Key = setting.Descriptor.Key,
+                    HasChanged = () => Math.Abs(setting.Value - value) > 0.0001f,
                     Restore = () =>
                     {
                         setting.SetValue(value);
@@ -474,6 +511,7 @@ namespace FlatWorld.Settings
                 snapshot.Settings.Add(new SettingRestoreAction
                 {
                     Key = setting.Descriptor.Key,
+                    HasChanged = () => setting.SelectedIndex != selectedIndex,
                     Restore = () => setting.TrySetSelectedIndex(selectedIndex, out string error)
                         ? null
                         : error
@@ -491,6 +529,7 @@ namespace FlatWorld.Settings
                 snapshot.Settings.Add(new SettingRestoreAction
                 {
                     Key = setting.Descriptor.Key,
+                    HasChanged = () => setting.SelectedIndex != selectedIndex,
                     Restore = () => setting.TrySetSelectedIndex(selectedIndex, out string error)
                         ? null
                         : error

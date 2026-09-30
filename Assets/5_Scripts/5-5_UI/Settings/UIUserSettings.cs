@@ -699,7 +699,10 @@ public static class UIUserSettings
         return new UISettingsProvider();
     }
 
-    private sealed class UISettingsProvider : ISettingsProvider, ISettingsEditSessionParticipant
+    private sealed class UISettingsProvider :
+        ISettingsProvider,
+        ISettingsEditSessionParticipant,
+        ISettingsEditSessionChangeTracker
     {
         private readonly IReadOnlyList<ISettingsToggle> toggles;
         private readonly IReadOnlyList<ISettingsSlider> sliders;
@@ -887,6 +890,37 @@ public static class UIUserSettings
             }
 
             return states;
+        }
+
+        /// <summary>检查手机控件布局是否偏离打开设置时的基线。</summary>
+        public bool HasSettingsEditSessionChanges(object baselineState)
+        {
+            if (!(baselineState is List<MobileControlLayoutState> states))
+                return false;
+
+            for (int index = 0; index < states.Count; index++)
+            {
+                MobileControlLayoutState layout = states[index];
+                string xKey = GetMobileControlLayoutKey(layout.ControlId, "X");
+                string yKey = GetMobileControlLayoutKey(layout.ControlId, "Y");
+                string sizeKey = GetMobileControlLayoutKey(layout.ControlId, "Size");
+
+                if (PlayerPrefs.HasKey(xKey) != layout.HasX ||
+                    PlayerPrefs.HasKey(yKey) != layout.HasY ||
+                    PlayerPrefs.HasKey(sizeKey) != layout.HasSize)
+                {
+                    return true;
+                }
+
+                if ((layout.HasX && !Mathf.Approximately(PlayerPrefs.GetFloat(xKey), layout.X)) ||
+                    (layout.HasY && !Mathf.Approximately(PlayerPrefs.GetFloat(yKey), layout.Y)) ||
+                    (layout.HasSize && !Mathf.Approximately(PlayerPrefs.GetFloat(sizeKey), layout.Size)))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         /// <summary>恢复全部内置手机控件布局，并通知运行时 HUD 重新投影。</summary>

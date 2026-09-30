@@ -53,6 +53,10 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour, ISettingsPageLife
     /// <summary>当前保留的绑定行总数，供 Profiler 检查是否发生重复实例化。</summary>
     public int RetainedRowCount => rows.Count + pooledRows.Count;
 
+    /// <summary>当前按键覆盖是否存在尚未提交的修改。</summary>
+    public bool HasSettingsEditSessionChanges =>
+        bindingService != null && bindingService.HasSettingsEditSessionChanges;
+
     #region 初始化与页面生命周期
 
     /// <summary>在指定内嵌页上建立唯一按键绑定器。</summary>
