@@ -50,9 +50,22 @@ namespace FlatWorld.GameplayMCP
         /// <summary>返回实时玩家、附近实体与资源状态。</summary>
         private static object ExecuteCommand(JObject parameters)
         {
+            JObject observation = GameplayMcpRuntime.BuildObservation(parameters);
+            // 复用正式随身容量口径，避免空槽被误认为还能拾取。
+            if (observation["player"] is JObject playerData &&
+                GameplayMcpRuntime.TryGetPlayerContext(out Player player, out _, out _, out _) &&
+                PlayerCarryCapacityUtility.TryGetSnapshot(player, out PlayerCarryCapacitySnapshot capacity))
+                playerData["carryCapacity"] = new JObject
+                {
+                    ["weight"] = capacity.CurrentWeight,
+                    ["volume"] = capacity.CurrentVolume,
+                    ["maxWeight"] = float.IsInfinity(capacity.MaxWeight) ? null : new JValue(capacity.MaxWeight),
+                    ["maxVolume"] = float.IsInfinity(capacity.MaxVolume) ? null : new JValue(capacity.MaxVolume),
+                    ["unlimited"] = capacity.IsUnlimited
+                };
             return new SuccessResponse(
                 "FlatWorld gameplay observation.",
-                GameplayMcpRuntime.BuildObservation(parameters));
+                observation);
         }
 
         #endregion

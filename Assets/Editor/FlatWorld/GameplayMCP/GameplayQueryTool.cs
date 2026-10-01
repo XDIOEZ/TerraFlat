@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using FlatWorld.Localization;
+using FlatWorld.NaturalEntities;
 using FlatWorld.WorldModel;
 using MCPForUnity.Editor.Helpers;
 using MCPForUnity.Editor.Tools;
@@ -373,12 +374,17 @@ namespace FlatWorld.GameplayMCP
             var result = new JArray();
             for (int i = 0; i < matches.Length; i++)
             {
+                // 自然物生命直接取 ECS，未激活或没有生命组件时明确返回 null。
+                Vector2 health = default;
+                bool hasHealth = !matches[i].Removed && NaturalEntityEcsService.TryGetHealthAtPosition(
+                    matches[i].Placement.Guid, matches[i].Position, out health);
                 result.Add(new JObject
                 {
                     ["guid"] = matches[i].Placement.Guid,
                     ["id"] = matches[i].Placement.ItemId,
                     ["rule"] = matches[i].Placement.RuleId,
                     ["removed"] = matches[i].Removed,
+                    ["hp"] = hasHealth ? new JArray(Round(health.x), Round(health.y)) : null,
                     ["position"] = new JArray(
                         Round(matches[i].Position.x),
                         Round(matches[i].Position.y)),

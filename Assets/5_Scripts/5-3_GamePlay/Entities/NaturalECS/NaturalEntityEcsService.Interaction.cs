@@ -84,6 +84,20 @@ namespace FlatWorld.NaturalEntities
             return false;
         }
 
+        /// <summary>按生成身份和位置读取实时生命，不写回存档快照。</summary>
+        public static bool TryGetHealthAtPosition(int guid, Vector2 position, out Vector2 health)
+        {
+            health = default;
+            if (simulation == null) return false;
+            using ResourceQuery query = QueryBounds(position, Vector2.one);
+            foreach (Record record in query)
+                if (record.Snapshot.Guid == guid && record.IsValid &&
+                    WorldTopologyRuntime.Distance(record.Snapshot.transform.position, position) < .01f &&
+                    simulation.TryGet(record.Handle.Id, out AiecsVital vital))
+                { health = new Vector2(vital.Hp, vital.MaxHp); return true; }
+            return false;
+        }
+
         /// <summary>给低频鸟类栖息地快照追加当前世界仍存活的 ECS 树木，不创建 Item 代理。</summary>
         public static void AppendTreeHabitatPositions(List<Vector2> destination)
         {

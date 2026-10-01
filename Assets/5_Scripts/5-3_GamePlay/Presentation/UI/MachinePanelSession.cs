@@ -28,6 +28,7 @@ public sealed class MachinePanelSession : IMachinePanelSession
     private Slider progress;
     private Slider fuel;
     private TMP_Text temperature;
+    private TMP_Text furnaceHint;
     private Player actor;
     private MortarInteractionView mortarView;
     private CraftingOutputPreview firePreview;
@@ -79,6 +80,7 @@ public sealed class MachinePanelSession : IMachinePanelSession
                 progress = panel.GetSlider("熔炼进度条");
                 fuel = panel.GetSlider("燃料显示条");
                 temperature = panel.GetText("FWUI_FurnaceTemperatureValue");
+                furnaceHint = panel.GetText("FWUI_FooterHint");
             }
             else if (logic is MortarLogic mortar)
             {
@@ -183,6 +185,7 @@ public sealed class MachinePanelSession : IMachinePanelSession
             if (progress != null) progress.value = furnace.Progress01;
             if (fuel != null) fuel.value = furnace.FuelRatio;
             if (temperature != null) temperature.text = furnace.Status;
+            if (furnaceHint != null) furnaceHint.text = furnace.GetProcessingHint();
         }
         if (logic is MortarLogic mortar) mortarView?.SyncSlots(mortar.Bowl);
         if (logic is FireDrillLogic fireDrill && firePreview != null)

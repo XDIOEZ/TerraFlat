@@ -352,6 +352,21 @@ public class FurnaceLogic : MachineLogic
         return CraftingResult.Succeeded(recipe, new[] { charred });
     }
 
+    /// <summary>说明材料加热与加工阻塞，避免只看炉温误判机器停转。</summary>
+    public string GetProcessingHint()
+    {
+        CraftingResult preview = Processor.Preview();
+        if (activeReaction != null && preview.Message == "材料温度不足" &&
+            CraftingRecipeMatcher.TryMatchRecipe(Input, Processor.Recipe, Processor.Capabilities, out CraftingRecipeMatch match))
+        {
+            float current = ItemMatterRuntime.GetMinimumConsumedTemperature(Input, match, Data.Temperature);
+            return $"材料 {current:0}°C / 需要 {activeReaction.MinTemperature:0}°C · " +
+                (IsBurning ? "正在加热" : "补充燃料并点火");
+        }
+        if (!preview.Success) return preview.Message;
+        return IsBurning ? "正在加工 · 等待产出" : "材料就绪 · 补充燃料并点火";
+    }
+
     private CraftingResult PreviewSmelting()
     {
         CraftingResult outputs = ResolveOutputs();
