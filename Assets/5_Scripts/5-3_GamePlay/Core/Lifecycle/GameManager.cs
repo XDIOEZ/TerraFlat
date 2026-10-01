@@ -2,6 +2,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
 using FlatWorld.Gameplay.Quests;
@@ -376,10 +377,10 @@ public partial class GameManager : SingletonAutoMono<GameManager>
 
             if (isNoSeedInput)
             {
-                string randomSeed = GenerateRandomSeedString();
-                saveDataMgr.SaveData.SaveSeed = randomSeed;
-                saveDataMgr.SaveData.Seed = ConvertSeedStringToStableInt(randomSeed);
-                Debug.Log($"[GameManager] 玩家未输入种子，自动生成随机种子={randomSeed}");
+                string creationTimeSeed = GenerateCreationTimeSeedString();
+                saveDataMgr.SaveData.SaveSeed = creationTimeSeed;
+                saveDataMgr.SaveData.Seed = ConvertSeedStringToStableInt(creationTimeSeed);
+                Debug.Log($"[GameManager] 玩家未输入种子，使用存档创建时间作为世界种子={creationTimeSeed}");
             }
             else
             {
@@ -432,15 +433,10 @@ public partial class GameManager : SingletonAutoMono<GameManager>
         GameDifficultyCatalog.WriteCustomRules(saveData, request.CustomDifficultyRules);
     }
 
-    private static string GenerateRandomSeedString()
+    private static string GenerateCreationTimeSeedString()
     {
-        int seedValue = Environment.TickCount ^ Guid.NewGuid().GetHashCode();
-        if (seedValue == int.MinValue)
-        {
-            seedValue = int.MaxValue;
-        }
-
-        return Mathf.Abs(seedValue).ToString();
+        // 精确到秒，同一秒创建的存档会得到同一个时间种子。
+        return DateTime.Now.ToString("yyyyMMddHHmmss", CultureInfo.InvariantCulture);
     }
 
     private static int ConvertSeedStringToStableInt(string seedText)
@@ -911,7 +907,7 @@ public partial class GameManager : SingletonAutoMono<GameManager>
                 Mod_Fly spaceFly = rocketItem.GetMod<Mod_Fly>();
                 if (spaceFly == null)
                 {
-                    throw new InvalidOperationException($"[GameManager] 太空火箭缺少 Mod_Fly，rocket={rocketItemData.IDName}");
+                    throw new InvalidOperationException($"[GameManager] 太空火箭缺少 Module_Fly，rocket={rocketItemData.IDName}");
                 }
 
                 spaceFly.EnterControlFromTransfer(playerItem);
