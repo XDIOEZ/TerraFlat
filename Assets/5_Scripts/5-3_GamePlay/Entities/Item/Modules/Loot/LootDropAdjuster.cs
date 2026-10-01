@@ -1,7 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using static DamageReceiver;
+using static Mod_DamageReceiver;
 [CreateAssetMenu(fileName = "New LootDropAdjuster", menuName = "ModActions/战利品调整", order = 0)]
 public class LootDropAdjuster : ModAction
 {
@@ -9,7 +9,7 @@ public class LootDropAdjuster : ModAction
     public LootEntry dropLoot;
     public override void Action(Item ModOwner, Module module, Item targetItem = null)
     {
-        ModOwner.itemMods.GetMod_ByID<DamageReceiver>(ModText.Hp, out var damageReceiver);
+        ModOwner.itemMods.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp, out var damageReceiver);
         damageReceiver.Data.LootTable.Add(dropLoot);
     }
 }

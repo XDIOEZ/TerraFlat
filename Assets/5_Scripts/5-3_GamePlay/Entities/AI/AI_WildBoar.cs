@@ -340,7 +340,7 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 		if (item == null || damageInfo == null || damageInfo.DamageValue <= 0f)
 			return;
 
-		BuffManager buffManager = item.itemMods?.GetMod_ByID<BuffManager>(ModText.BuffManager);
+		Mod_BuffManager buffManager = item.itemMods?.GetMod_ByID<Mod_BuffManager>(ModText.Mod_BuffManager);
 		buffManager?.AddBuff(DamageReductionBuffId);
 		AccumulatePlayerDamage(damageInfo);
 	}
@@ -527,7 +527,7 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 			return;
 		}
 
-		// 追击目标是玩家左右两侧的站位点，并补偿 Mover_AI 自带的到达停止距离。
+		// 追击目标是玩家左右两侧的站位点，并补偿 Mod_Mover_AI 自带的到达停止距离。
 		WorldNavigationDestinationResult moveResult =
 			MoveToChaseTarget(navigationTarget, chasePathCostLimit);
 		if (TryHandleRejectedChasePath(moveResult, _currentThreat, chasePathRetryDelay))

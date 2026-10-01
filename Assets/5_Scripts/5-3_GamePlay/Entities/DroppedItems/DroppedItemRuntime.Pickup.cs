@@ -5,23 +5,23 @@ using UnityEngine;
 
 internal sealed partial class DroppedItemRuntime
 {
-    private readonly Dictionary<ItemPicker, HashSet<int>> pickupAttempts = new();
+    private readonly Dictionary<Mod_ItemPicker, HashSet<int>> pickupAttempts = new();
     private readonly HashSet<int> nearby = new();
     private readonly HashSet<int> pickupReservations = new();
     private readonly List<int> pickupScratch = new();
-    private readonly List<ItemPicker> pickerScratch = new();
+    private readonly List<Mod_ItemPicker> pickerScratch = new();
     private float pickupClock;
 
-    public void ForgetPicker(ItemPicker picker) => pickupAttempts.Remove(picker);
+    public void ForgetPicker(Mod_ItemPicker picker) => pickupAttempts.Remove(picker);
 
     /// <summary>只查询拾取器附近空间桶；沿用其真实 Collider 的范围，不为掉落物创建 Collider。</summary>
-    private void TickPickup(float deltaTime, IEnumerable<ItemPicker> pickers)
+    private void TickPickup(float deltaTime, IEnumerable<Mod_ItemPicker> pickers)
     {
         pickupClock += deltaTime;
         if (pickupClock < 0.1f) return;
         pickupClock = 0f;
         pickerScratch.Clear(); pickerScratch.AddRange(pickers);
-        foreach (ItemPicker picker in pickerScratch)
+        foreach (Mod_ItemPicker picker in pickerScratch)
         {
             if (picker == null || !picker.TryGetDroppedPickupBounds(out Bounds bounds)) continue;
             if (!pickupAttempts.TryGetValue(picker, out HashSet<int> attempted))
@@ -50,7 +50,7 @@ internal sealed partial class DroppedItemRuntime
     }
 
     /// <summary>用独立候选载荷执行现有库存事务；失败时绝不把被预检改写的数量写回实体。</summary>
-    private void TryPickup(ItemPicker picker, int id)
+    private void TryPickup(Mod_ItemPicker picker, int id)
     {
         if (!simulation.Contains(id) || !pickupReservations.Add(id)) return;
         try

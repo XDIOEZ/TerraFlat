@@ -52,7 +52,7 @@ public static class MachineLogicRegistry
         Add("workbench", typeof(Mod_MakeTable), entity => new WorkbenchLogic(entity));
         Add("furnace", typeof(Mod_Furnace), entity => new FurnaceLogic(entity));
         Add("compost", typeof(Mod_CompostBin), entity => new CompostLogic(entity));
-        Add("drying", typeof(Meatrack), entity => new DryingRackLogic(entity));
+        Add("drying", typeof(Mod_Meatrack), entity => new DryingRackLogic(entity));
         Add("storage", typeof(Mod_Inventory), entity => new StorageLogic(entity));
         Add("manual-processing", typeof(Mod_ManualProcessor), entity => new ManualProcessingLogic(entity));
         Add("hand-drill", typeof(Mod_HandDrill), entity => new HandDrillLogic(entity));

@@ -220,11 +220,11 @@ public class Mod_Inventory : Module, IInventory, IInstanceUI, IInteractable
 
     public virtual void BindController()
     {
-        GameController gameController = null;
+        Mod_GameController gameController = null;
         if (item?.itemMods?.ContainsKey_ID(ModText.Controller) == true)
-            gameController = item.itemMods.GetMod_ByID<GameController>(ModText.Controller);
+            gameController = item.itemMods.GetMod_ByID<Mod_GameController>(ModText.Controller);
         else if (item?.Owner?.itemMods?.ContainsKey_ID(ModText.Controller) == true)
-            gameController = item.Owner.itemMods.GetMod_ByID<GameController>(ModText.Controller);
+            gameController = item.Owner.itemMods.GetMod_ByID<Mod_GameController>(ModText.Controller);
 
         foreach (var currentInventory in inventoryRefDic.Values)
         {

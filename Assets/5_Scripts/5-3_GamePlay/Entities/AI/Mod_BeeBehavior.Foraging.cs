@@ -64,7 +64,7 @@ public sealed partial class Mod_BeeBehavior
             bird.FlyTo(foragePosition, flightSeconds);
             return;
         }
-        if (!AI_Bird.CanLand(item.transform.position))
+        if (!Mod_AI_Bird.CanLand(item.transform.position))
         {
             CompleteForageVisit();
             return;
@@ -158,7 +158,7 @@ public sealed partial class Mod_BeeBehavior
                 !forageChunks.Contains(Chunk.GetChunkPosition(candidate.transform.position)) ||
                 candidate.itemData?.Tags == null || !candidate.itemData.Tags.Contains(CropNectarTag) ||
                 candidate.itemMods?.GetMod_ByID<Mod_Crop>(ModText.Crop) == null ||
-                !AI_Bird.CanLand(candidate.transform.position))
+                !Mod_AI_Bird.CanLand(candidate.transform.position))
                 continue;
             float distance = WorldTopologyRuntime.SqrDistance(item.transform.position, candidate.transform.position);
             if (distance >= nearest)
@@ -177,7 +177,7 @@ public sealed partial class Mod_BeeBehavior
     }
 
     private bool CanReachEntityForage(Vector2 position) =>
-        forageChunks.Contains(Chunk.GetChunkPosition(position)) && AI_Bird.CanLand(position);
+        forageChunks.Contains(Chunk.GetChunkPosition(position)) && Mod_AI_Bird.CanLand(position);
 
     /// <summary>从无 Item 的地表花层读取仍可见、未被采走的花朵生成点。</summary>
     private void ConsiderGroundFlowers(ChunkRuntime chunk, ChunkMgr manager, ref float nearest)
@@ -195,7 +195,7 @@ public sealed partial class Mod_BeeBehavior
                     out GroundCoverTarget visible) || visible.Placement.Guid != placement.Guid)
                 continue;
             Vector2 position = new GroundCoverTarget(chunk, placement, definition).WorldPosition;
-            if (!AI_Bird.CanLand(position))
+            if (!Mod_AI_Bird.CanLand(position))
                 continue;
             float distance = WorldTopologyRuntime.SqrDistance(item.transform.position, position);
             if (distance >= nearest)

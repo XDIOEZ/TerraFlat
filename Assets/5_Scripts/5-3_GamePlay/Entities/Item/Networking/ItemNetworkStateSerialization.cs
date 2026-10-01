@@ -15,7 +15,7 @@ public static class ItemNetworkStateSerialization
 
     public static event Action<Item> RuntimeStateChanged;
     public static Func<bool> ShouldDeferLocalDestruction;
-    public static Func<ItemPicker, Item, bool> TryBeginNetworkPickup;
+    public static Func<Mod_ItemPicker, Item, bool> TryBeginNetworkPickup;
     public static Func<Mod_Building, Vector3, bool> TryBeginNetworkBuilding;
     public static Func<Mod_Building, bool> TryBeginNetworkBuildingDismantle;
     public static Func<MachineEntity, bool> TryBeginNetworkMechanicalDismantle;
@@ -29,7 +29,7 @@ public static class ItemNetworkStateSerialization
     public static bool DeferLocalDestruction()
         => ShouldDeferLocalDestruction?.Invoke() == true;
 
-    public static bool BeginNetworkPickup(ItemPicker picker, Item worldItem)
+    public static bool BeginNetworkPickup(Mod_ItemPicker picker, Item worldItem)
         => TryBeginNetworkPickup?.Invoke(picker, worldItem) == true;
 
     public static bool BeginNetworkBuilding(Mod_Building building, Vector3 position)

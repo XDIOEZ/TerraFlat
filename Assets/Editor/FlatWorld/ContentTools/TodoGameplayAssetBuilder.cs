@@ -130,11 +130,11 @@ public static class TodoGameplayAssetBuilder
         GameObject root = PrefabUtility.LoadPrefabContents(PlayerPath);
         try
         {
-            DamageReceiver receiver = root.GetComponentInChildren<DamageReceiver>(true);
+            Mod_DamageReceiver receiver = root.GetComponentInChildren<Mod_DamageReceiver>(true);
             if (receiver == null) throw new InvalidOperationException("玩家 Prefab 缺少伤害接收器。");
             receiver.Data.UseBodyPartHealth = true;
             receiver.Data.BodyPartDataVersion = 2;
-            receiver.Data.BodyParts = DamageReceiver.CreateDefaultBodyParts(receiver.Hp, receiver.MaxHp);
+            receiver.Data.BodyParts = Mod_DamageReceiver.CreateDefaultBodyParts(receiver.Hp, receiver.MaxHp);
             receiver.modData ??= new Ex_ModData();
             receiver.modData.ID = ModText.Hp;
             if (string.IsNullOrWhiteSpace(receiver.modData.Name)) receiver.modData.Name = "health";

@@ -34,14 +34,14 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, IInteractable, I
     public Vector2 CurrentForce { get; private set; }
     public Vector2 DrivenVelocity { get; private set; } // 划船或主动推动的速度。
     public Vector2 ExternalVelocity { get; private set; } // 环境传入的被动速度。
-    public Mover PushSource { get; private set; } // 当前推动来源，瞬时关系不入存档。
+    public Mod_Mover PushSource { get; private set; } // 当前推动来源，瞬时关系不入存档。
     public Vector2 PushHalfExtents => Vector2.Scale(HullSize * 0.5f,
         new Vector2(Mathf.Abs(item.transform.lossyScale.x), Mathf.Abs(item.transform.lossyScale.y)));
     public bool IsAvailable => loaded && isActiveAndEnabled && item != null && !item.DestructionHandled &&
         health != null && health.Hp > 0f && building != null && building.IsInstalled();
-    public Mover Rider { get; private set; } // 源持有的唯一乘员。
+    public Mod_Mover Rider { get; private set; } // 源持有的唯一乘员。
     private Mod_Building building;
-    private DamageReceiver health;
+    private Mod_DamageReceiver health;
     private Rigidbody2D body;
     private BoxCollider2D physicalCollider;
     private Transform visualTransform;
@@ -64,7 +64,7 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, IInteractable, I
     public void BindModuleDependencies(ItemMods modules)
     {
         building = modules.RequireSingleModById<Mod_Building>(ModText.Building);
-        health = modules.RequireSingleModById<DamageReceiver>(ModText.Hp);
+        health = modules.RequireSingleModById<Mod_DamageReceiver>(ModText.Hp);
     }
 
     /// <summary>只恢复空座位，不迁移任何启动资产或旧存档。</summary>
@@ -143,7 +143,7 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, IInteractable, I
     private void OnDestroy() => Unload();
 
     /// <summary>载具击沉时让乘员留在当前世界位置并恢复自身物理/水体效果，禁止传回登船点。</summary>
-    private void HandleSourceDeath(DamageReceiver receiver)
+    private void HandleSourceDeath(Mod_DamageReceiver receiver)
     {
         Rider?.DetachCarrier(null);
         Unload();
@@ -198,7 +198,7 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, IInteractable, I
         Player player = ResolvePlayer(actor);
         if (!IsAvailable || !GameNetwork.HasStateAuthority || player == null || !player.IsLocalProfile)
             return false;
-        Mover mover = player.itemMods.GetMod_ByID<Mover>(ModText.Mover);
+        Mod_Mover mover = player.itemMods.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover);
         return mover != null && (Rider == mover || (Rider == null && mover.CarrierSource == null));
     }
 
@@ -208,7 +208,7 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, IInteractable, I
         if (!CanInteract(actor)) return;
         ActivateInstalledCarrier();
         Player player = ResolvePlayer(actor);
-        Mover mover = player.itemMods.GetMod_ByID<Mover>(ModText.Mover);
+        Mod_Mover mover = player.itemMods.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover);
         if (Rider == mover)
         {
             StopMotion();
@@ -226,7 +226,7 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, IInteractable, I
     /// <summary>焦点取消和临时输入锁不是下船指令。</summary>
     public void OnInteractCancel(Item actor) { }
 
-    public void ReleaseRider(Mover rider)
+    public void ReleaseRider(Mod_Mover rider)
     {
         if (Rider != rider) return;
         Rider = null;
@@ -253,7 +253,7 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, IInteractable, I
     }
 
     /// <summary>远海没有陆地时，把乘员放到船体外侧的可用水格，避免 E 键被永久困在船上。</summary>
-    private bool TryFindWaterDismount(Mover rider, out Vector2 destination)
+    private bool TryFindWaterDismount(Mod_Mover rider, out Vector2 destination)
     {
         Vector2 origin = item.transform.position;
         float riderRadius = rider != null ? Mathf.Max(0.05f, rider.pushContactRadius) : 0.2f;
@@ -289,7 +289,7 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, IInteractable, I
 
     #region 源拥有的移动和力
     /// <summary>只接收乘员输入；水流、划船与外部推动在同一固定步结算。</summary>
-    public void AdvanceMotion(Mover rider, Vector2 input, float deltaTime, bool controlsLocked, bool boostRequested)
+    public void AdvanceMotion(Mod_Mover rider, Vector2 input, float deltaTime, bool controlsLocked, bool boostRequested)
     {
         if (rider != Rider || !IsAvailable || !GameNetwork.HasStateAuthority) return;
         requestedControlsLocked = controlsLocked;
@@ -341,14 +341,14 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, IInteractable, I
     }
 
     /// <summary>当前有效玩家输入才可推动；已乘坐同一载具的乘员不能形成循环作用链。</summary>
-    public bool CanReceivePush(Mover source)
+    public bool CanReceivePush(Mod_Mover source)
         => IsAvailable && GameNetwork.HasStateAuthority && source != null && source != Rider &&
            source.CarrierSource == null && source.RequestedMoveInput.sqrMagnitude > 0.001f;
 
     internal void HandlePhysicalContact(Collision2D collision)
     {
-        Mover source = collision.rigidbody != null
-            ? collision.rigidbody.GetComponentInChildren<Mover>()
+        Mod_Mover source = collision.rigidbody != null
+            ? collision.rigidbody.GetComponentInChildren<Mod_Mover>()
             : null;
         if (!CanReceivePush(source) || source.rb == null || body == null) return;
         Vector2 towardCarrier = WorldTopologyRuntime.ShortestDelta(source.rb.position, body.position);
@@ -357,7 +357,7 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, IInteractable, I
     }
 
     /// <summary>物理接触产生推动意图，下一固定步交给刚体处理。</summary>
-    public Vector2 RequestPush(Mover source, Vector2 velocity, float deltaTime)
+    public Vector2 RequestPush(Mod_Mover source, Vector2 velocity, float deltaTime)
     {
         if (!CanReceivePush(source)) return CurrentVelocity;
         ChunkMgr manager = ChunkMgr.ExistingInstance;

@@ -239,7 +239,7 @@ public sealed class InventoryFoodItemOperationGateway : IFoodItemOperationGatewa
     private static void RefreshOwnerHotbar(Item item, int slotIndex)
     {
         // 如果物品来自快捷栏，立即同步当前手持物和网络状态。
-        Inventory_HotBar hotbar = item?.Owner?.itemMods?.GetMod_ByID<Inventory_HotBar>(ModText.Hotbar);
+        Mod_HotBar hotbar = item?.Owner?.itemMods?.GetMod_ByID<Mod_HotBar>(ModText.Hotbar);
         if (hotbar == null)
             return;
 
@@ -254,7 +254,7 @@ public sealed class InventoryFoodItemOperationGateway : IFoodItemOperationGatewa
         if (HasInventoryContext || food?.Item == null)
             return;
 
-        Inventory_HotBar hotbar = food.Item.Owner?.itemMods?.GetMod_ByID<Inventory_HotBar>(ModText.Hotbar);
+        Mod_HotBar hotbar = food.Item.Owner?.itemMods?.GetMod_ByID<Mod_HotBar>(ModText.Hotbar);
         ItemSlot selectedSlot = hotbar?.CurrentSelectItemSlot;
         Inventory_Data hotbarData = hotbar?.Data;
         if (hotbarData == null || selectedSlot == null ||

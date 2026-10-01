@@ -33,7 +33,7 @@ public class Mod_Cam : Module
     [Header("跟随目标")]
     public Item CameraFollowItem;
     public Player Player;
-    public GameController GameController;
+    public Mod_GameController Mod_GameController;
     private WrappedWorldCameraRenderer _wrappedWorldRenderer;
     private CinemachineFramingTransposer _framingTransposer;
     private float _baseXDamping;
@@ -95,12 +95,12 @@ public class Mod_Cam : Module
     // 在Load方法中实例化相机逻辑
     public override void Load()
     {
-        // 获取GameController并绑定输入事件
-        GameController = GetComponentInParent<GameController>();
-        if (GameController != null && GameController._inputActions != null)
+        // 获取Mod_GameController并绑定输入事件
+        Mod_GameController = GetComponentInParent<Mod_GameController>();
+        if (Mod_GameController != null && Mod_GameController._inputActions != null)
         {
             // 注意：Win10Actions是结构体，不能与null比较，直接绑定事件
-            GameController._inputActions.Win10.CtrlMouse.performed += PovValueChanged;
+            Mod_GameController._inputActions.Win10.CtrlMouse.performed += PovValueChanged;
         }
     
         // 获取跟随对象
@@ -150,7 +150,7 @@ public class Mod_Cam : Module
                 ControllerCamera.orthographicSize = povValue;
             ApplyCameraFollowSettings();
         }
-        GameController._mainCamera = ControllerCamera;
+        Mod_GameController._mainCamera = ControllerCamera;
     
         // 重置旋转
         transform.rotation = Quaternion.identity;
@@ -167,9 +167,9 @@ public class Mod_Cam : Module
         CameraUserSettings.Changed -= HandleCameraSettingsChanged;
 
         // 注销事件
-        if (GameController != null && GameController._inputActions != null)
+        if (Mod_GameController != null && Mod_GameController._inputActions != null)
         {
-            GameController._inputActions.Win10.CtrlMouse.performed -= PovValueChanged;
+            Mod_GameController._inputActions.Win10.CtrlMouse.performed -= PovValueChanged;
         }
         
         // 销毁实例化的相机预制体
@@ -244,8 +244,8 @@ public class Mod_Cam : Module
     /// <param name="context"></param>
     public void PovValueChanged(InputAction.CallbackContext context)
     {
-        if (GameController != null &&
-            (GameController.IsGameplayInputLocked || GameController.IsDropShortcutHeld))
+        if (Mod_GameController != null &&
+            (Mod_GameController.IsGameplayInputLocked || Mod_GameController.IsDropShortcutHeld))
         {
             return;
         }
@@ -282,7 +282,7 @@ public class Mod_Cam : Module
     /// <summary>按双指间距变化调整正交视野；两指分开时镜头拉近，合拢时镜头拉远。</summary>
     public void ApplyPinchZoom(float screenDistanceDelta, float sensitivity)
     {
-        if (Vcam == null || GameController?.IsGameplayInputLocked == true)
+        if (Vcam == null || Mod_GameController?.IsGameplayInputLocked == true)
             return;
 
         float safeSensitivity = Mathf.Max(0f, sensitivity);

@@ -257,7 +257,7 @@ public sealed partial class Mod_HiveColony : Module
             ResidentState member = state.Residents[index];
             if (!residents.TryGetValue(member.Guid, out Item resident))
                 continue;
-            AI_Bird bird = resident != null ? resident.GetComponentInChildren<AI_Bird>(true) : null;
+            Mod_AI_Bird bird = resident != null ? resident.GetComponentInChildren<Mod_AI_Bird>(true) : null;
             if (bird != null && bird.IsAlive && !resident.DestructionHandled)
                 continue;
             residents.Remove(member.Guid);
@@ -301,7 +301,7 @@ public sealed partial class Mod_HiveColony : Module
         try
         {
             resident.Load();
-            AI_Bird bird = resident.itemMods.GetMod_ByID<AI_Bird>("AI_Bird");
+            Mod_AI_Bird bird = resident.itemMods.GetMod_ByID<Mod_AI_Bird>("Mod_AI_Bird");
             Mod_BeeBehavior bee = resident.itemMods.GetMod_ByID<Mod_BeeBehavior>(Mod_BeeBehavior.ModuleId);
             if (bird == null || !bird.permanentFlight || bee == null)
                 throw new InvalidOperationException($"蜂巢物种 {ActorId} 必须组合常驻飞行与蜜蜂行为模块。");

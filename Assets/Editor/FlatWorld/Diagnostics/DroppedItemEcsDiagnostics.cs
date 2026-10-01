@@ -179,7 +179,7 @@ public static class DroppedItemEcsDiagnostics
         UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(root, scene);
         try
         {
-            ItemPicker picker = root.AddComponent<ItemPicker>();
+            Mod_ItemPicker picker = root.AddComponent<Mod_ItemPicker>();
             picker.ModSaveData = new Ex_ModData_MemoryPackable();
             InventoryFixture hotbar = new(ModText.Hotbar, 2f), bag = new(ModText.Bag);
             picker.AddTargetInventories.Add(hotbar); picker.AddTargetInventories.Add(bag);

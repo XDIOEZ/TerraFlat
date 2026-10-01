@@ -22,8 +22,8 @@ public sealed class BodyPartTreatmentPanel : MonoBehaviour
     private BasePanel panel;
     private Mod_BodyPartTreatment treatment;
     private Item actor;
-    private GameController controller;
-    private DamageReceiver receiver;
+    private Mod_GameController controller;
+    private Mod_DamageReceiver receiver;
     private BodyPartType selectedPart;
     private bool channeling;
     private float elapsed;
@@ -64,8 +64,8 @@ public sealed class BodyPartTreatmentPanel : MonoBehaviour
         ClearTarget();
         treatment = target;
         actor = owner;
-        receiver = owner.itemMods.GetMod_ByID<DamageReceiver>(ModText.Hp);
-        controller = owner.itemMods.GetMod_ByID<GameController>(ModText.Controller);
+        receiver = owner.itemMods.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
+        controller = owner.itemMods.GetMod_ByID<Mod_GameController>(ModText.Controller);
         foreach (BodyPartHealth part in receiver.BodyParts)
         {
             if (part == null) continue;

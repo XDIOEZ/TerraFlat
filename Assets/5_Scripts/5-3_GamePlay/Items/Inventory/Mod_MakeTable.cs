@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>工作台内容配置；世界运行逻辑位于 WorkbenchLogic。</summary>
-public class Mod_MakeTable : MachineAuthoringModule
+public class Mod_MakeTable : Mod_MachineAuthoring
 {
     #region 内容参数
     public Ex_ModData_MemoryPackable ModSaveData = new();

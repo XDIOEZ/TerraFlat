@@ -38,12 +38,12 @@ public class WorldLiquidBehaviour
 
     #region 液体接触生命周期
     /// <summary>进入液体时启用真实水体状态、动作与被动效果。</summary>
-    public virtual void OnEnter(Item item, WorldLiquidSourceTarget source, TileEffectReceiver receiver)
+    public virtual void OnEnter(Item item, WorldLiquidSourceTarget source, Mod_TileEffectReceiver receiver)
     {
         if (item == null)
             return;
 
-        BuffManager buffManager = item.GetComponentInChildren<BuffManager>();
+        Mod_BuffManager buffManager = item.GetComponentInChildren<Mod_BuffManager>();
         float depthValue = Mathf.Clamp01(source.Sample.LiquidDepth);
         bool edgeInteractionOnly = receiver != null && receiver.IsActiveTileEdgeInteractionOnly;
         buffManager?.SetWaterStackExposure(!edgeInteractionOnly && depthValue > 0f);
@@ -67,7 +67,7 @@ public class WorldLiquidBehaviour
     }
 
     /// <summary>离开液体时撤销水体状态、动作与被动效果。</summary>
-    public virtual void OnExit(Item item, WorldLiquidSourceTarget source, TileEffectReceiver receiver)
+    public virtual void OnExit(Item item, WorldLiquidSourceTarget source, Mod_TileEffectReceiver receiver)
     {
         if (item == null)
             return;
@@ -75,7 +75,7 @@ public class WorldLiquidBehaviour
         receiver?.ExitWaterSurvival(item);
         SetWaterVisualState(item, 0f, false);
 
-        BuffManager buffManager = item.GetComponentInChildren<BuffManager>();
+        Mod_BuffManager buffManager = item.GetComponentInChildren<Mod_BuffManager>();
         buffManager?.SetWaterStackExposure(false);
 
         receiver?.EnvironmentInteractions.ClearAvailableActions();
@@ -83,7 +83,7 @@ public class WorldLiquidBehaviour
     }
 
     /// <summary>持续同步真实水格的水深与移动速度影响。</summary>
-    public virtual void OnUpdate(Item item, WorldLiquidSourceTarget source, TileEffectReceiver receiver, float deltaTime)
+    public virtual void OnUpdate(Item item, WorldLiquidSourceTarget source, Mod_TileEffectReceiver receiver, float deltaTime)
     {
         if (item == null)
             return;
@@ -94,7 +94,7 @@ public class WorldLiquidBehaviour
 
         // 漂浮结算直接以 Liquid 真实液深为准；液深不超过 0.3 时不进入漂浮维持。
         float depthValue = Mathf.Clamp01(source.Sample.LiquidDepth);
-        BuffManager buffManager = item.itemMods?.GetMod_ByID<BuffManager>(ModText.BuffManager);
+        Mod_BuffManager buffManager = item.itemMods?.GetMod_ByID<Mod_BuffManager>(ModText.Mod_BuffManager);
         buffManager?.SetWaterStackExposure(depthValue > 0f);
         buffManager?.AdvanceWaterWetness(depthValue, deltaTime);
         float effectiveImmersion = receiver != null
@@ -141,7 +141,7 @@ public class WorldLiquidBehaviour
 
     /// <summary>水体只提供无角色状态的动作定义；角色侧运行器在按键时创建独立实例。</summary>
     private void ProvideWaterActions(Item item, LiquidDefinition liquid,
-        TileEffectReceiver receiver)
+        Mod_TileEffectReceiver receiver)
     {
         EnvironmentInteractionRunner runner = receiver?.EnvironmentInteractions;
         if (runner == null)
@@ -166,7 +166,7 @@ public class WorldLiquidBehaviour
     }
 
     /// <summary>根据当前有效淹没高度计算减速；漂浮时固定按 0.3，体力耗尽后随下沉程度继续增加。</summary>
-    private void ProvideWaterEffects(TileEffectReceiver receiver, float immersionLevel)
+    private void ProvideWaterEffects(Mod_TileEffectReceiver receiver, float immersionLevel)
     {
         EnvironmentInteractionRunner runner = receiver?.EnvironmentInteractions;
         if (runner == null)

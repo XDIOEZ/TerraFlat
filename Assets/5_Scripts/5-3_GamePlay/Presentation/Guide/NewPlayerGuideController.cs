@@ -227,7 +227,7 @@ namespace FlatWorld.Guide
                     total += CountInventoryItem(bag.InventoryInstances[i], itemId, visited);
             }
 
-            Inventory_HotBar hotbar = actor.itemMods.GetMod_ByID<Inventory_HotBar>(ModText.Hotbar);
+            Mod_HotBar hotbar = actor.itemMods.GetMod_ByID<Mod_HotBar>(ModText.Hotbar);
             total += CountInventoryItem(hotbar?.RuntimeInventory, itemId, visited);
             return total;
         }

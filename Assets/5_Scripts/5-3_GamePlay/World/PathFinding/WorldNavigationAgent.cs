@@ -33,8 +33,8 @@ public sealed class WorldNavigationAgent : MonoBehaviour
     [SerializeField, Min(0.001f)] private float progressDistanceThreshold = 0.02f;
 
     private Rigidbody2D body;
-    private Mover surfaceMover;
-    private Item waterActor; // 无 Mover 生物的水流配置身份。
+    private Mod_Mover surfaceMover;
+    private Item waterActor; // 无 Mod_Mover 生物的水流配置身份。
     private WorldNavigationManager navigationManager;
     private Vector2[] waypoints = Array.Empty<Vector2>();
     private Vector2 destination;
@@ -125,14 +125,14 @@ public sealed class WorldNavigationAgent : MonoBehaviour
         Bind(rigidbody2D, manager, null);
     }
 
-    /// <summary>AI 模块位于子物体，显式绑定其 Mover 才能让导航速度与水流共用刚体出口。</summary>
-    public void Bind(Rigidbody2D rigidbody2D, WorldNavigationManager manager, Mover mover)
+    /// <summary>AI 模块位于子物体，显式绑定其 Mod_Mover 才能让导航速度与水流共用刚体出口。</summary>
+    public void Bind(Rigidbody2D rigidbody2D, WorldNavigationManager manager, Mod_Mover mover)
     {
         Bind(rigidbody2D, manager, mover, null);
     }
 
-    /// <summary>无 Mover 的生物仍以 Actor 身份读取统一水流配置；有 Mover 时由其结算主动和被动速度。</summary>
-    public void Bind(Rigidbody2D rigidbody2D, WorldNavigationManager manager, Mover mover, Item actor)
+    /// <summary>无 Mod_Mover 的生物仍以 Actor 身份读取统一水流配置；有 Mod_Mover 时由其结算主动和被动速度。</summary>
+    public void Bind(Rigidbody2D rigidbody2D, WorldNavigationManager manager, Mod_Mover mover, Item actor)
     {
         body = rigidbody2D != null ? rigidbody2D : GetComponent<Rigidbody2D>();
         surfaceMover = mover;

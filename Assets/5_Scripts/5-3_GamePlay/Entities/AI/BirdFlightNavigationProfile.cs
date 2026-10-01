@@ -40,7 +40,7 @@ public sealed class BirdFlightNavigationProfile
             hasPreviousCell = true;
             previousX = cellX;
             previousY = cellY;
-            if (!query.IsLoadedNormalized(sample) || (!crossGroundObstacles && !AI_Bird.CanLand(sample)))
+            if (!query.IsLoadedNormalized(sample) || (!crossGroundObstacles && !Mod_AI_Bird.CanLand(sample)))
                 return false;
         }
         return true;

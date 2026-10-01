@@ -17,7 +17,7 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
 
     [SerializeReference]
     public List<string> RawData = new List<string>();
-    public GameController gameController;
+    public Mod_GameController gameController;
     [ShowInInspector]
     public List<IInteractable> receiversInRange = new List<IInteractable>();
     public IInteractable currentReceiver;
@@ -37,13 +37,13 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
     // 交互是纯查询通道，不再创建或启用任何 Trigger；该缓冲区只服务 Physics2D Overlap 查询。
     private readonly Collider2D[] interactionOverlapBuffer = new Collider2D[32];
     private readonly List<IInteractable> spatialCandidates = new(); // 纯空间目标共用选择规则。
-    private Inventory_HotBar hotBar;
+    private Mod_HotBar hotBar;
 
     public override void Load()
     {
         ModSaveData.ReadData(ref RawData);
-        gameController = item != null ? item.GetComponentInChildren<GameController>() : null;
-        hotBar = item != null ? item.GetComponentInChildren<Inventory_HotBar>(true) : null;
+        gameController = item != null ? item.GetComponentInChildren<Mod_GameController>() : null;
+        hotBar = item != null ? item.GetComponentInChildren<Mod_HotBar>(true) : null;
         BindInput();
     }
 
@@ -94,7 +94,7 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
         action.performed += OnInteractPressed;
         action.canceled += OnInteractReleased;
 
-        // 世界物体支持左键直接交互；GameController 已过滤 UI 与锁定状态。
+        // 世界物体支持左键直接交互；Mod_GameController 已过滤 UI 与锁定状态。
         gameController.LeftClick -= OnPointerClick;
         gameController.LeftClick += OnPointerClick;
     }
@@ -506,7 +506,7 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
         }
     }
 
-    /// <summary>伤害专用碰撞体不参与任何交互查询，避免交互链解析到 DamageSender / DamageReceiver。</summary>
+    /// <summary>伤害专用碰撞体不参与任何交互查询，避免交互链解析到 DamageSender / Mod_DamageReceiver。</summary>
     private static bool IsCombatOnlyCollider(Collider2D collider)
     {
         if (collider == null)
@@ -686,7 +686,7 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
         if (item == null)
             return false;
 
-        hotBar ??= item.GetComponentInChildren<Inventory_HotBar>(true);
+        hotBar ??= item.GetComponentInChildren<Mod_HotBar>(true);
         Item heldItem = hotBar?.CurentSelectItem;
         Mod_Building building = heldItem?.itemMods?.GetMod_ByID<Mod_Building>(ModText.Building);
         return building != null && building.IsItemInInventory && building.IsPlacementModeActive;

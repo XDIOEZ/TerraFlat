@@ -30,7 +30,7 @@ description: "Use when: 定位或修改 FlatWorld 的建筑放置预览、安装
 - 以 `BuildingRole` 区分 Summoner/PlacedBuilding，禁止用血量或位置推断。
 - 无快照的新放置必须通过 `GameRes.CreateItemData(BuildingPrefabId)` 创建本体 JSON 数据；禁止再克隆 Summoner 数据后改 ID。拆除快照仍由 Summoner 携带并优先恢复。
 - 可手持操作的设施仍使用真实 Summoner 与独立 BuildingBody；以 `RequiresPlacementRequest` 从正式面板显式进入放置模式，功能模块先调用 `TryHandlePlacementAction` 仲裁使用，禁止同一次动作同时建造、装水或开面板。`RequiresPlacementRequest=true` 只允许用于确有正式入口调用 `BeginPlacement()` 的物品；没有面板或其它显式入口的普通召唤器（例如简单载具）必须保持 false，让 `Item.OnAct -> Install` 直接进入标准放置链。两端通过 `Building_Data.SharedModuleIds` 声明需双向转移的模块，由 `BuildingModuleStateTransfer` 按唯一稳定 ID 深拷贝；拆回必须在载体 `Load` 前注入，重放旧建筑快照后必须再覆盖当前载体的共享状态，避免手持期间的水量/库存修改丢失。转移仅允许单件载体，失败不得修改或消费源物品。
-- 便携建筑的制作耐久品质通过 `CraftedDurabilityMultiplier` 在 Summoner 与 PlacedBuilding 间迁移；`Item.Load` 按当前 `RuntimeItemDefinition.Health.MaxHp` 重新计算实际 `DamageReceiver.MaxHp`，避免放置、拆回、读档或重复 Load 时丢失品质或重复叠乘。
+- 便携建筑的制作耐久品质通过 `CraftedDurabilityMultiplier` 在 Summoner 与 PlacedBuilding 间迁移；`Item.Load` 按当前 `RuntimeItemDefinition.Health.MaxHp` 重新计算实际 `Mod_DamageReceiver.MaxHp`，避免放置、拆回、读档或重复 Load 时丢失品质或重复叠乘。
 - 便携设施若由共享模块驱动状态贴图，Summoner 与 PlacedBuilding 都必须在各自当前 Item 定义中声明对应 `visual.spriteStates`；运行时视觉解析只读取当前载体 ID 的定义，不能假设落地本体会自动继承手持物的状态图。
 - 当便携设施的 Summoner 与 PlacedBuilding 使用不同稳定 Item ID 时，`Building_Data.Role` 必须与当前载体 ID 对齐；模块加载、联机数据应用和面板绑定都要按 `SummonerPrefabId/BuildingPrefabId` 校正当前实例，禁止一个已落地实例的角色状态污染另一个同类手持物的“放到地上”按钮。
 - 建筑 Summoner 一旦进入有效放置模式，玩家普通世界交互必须让位于放置：附近 `IInteractable` 不得因交互键、鼠标点选或同帧多输入被打开，交互描边也应隐藏；退出放置模式后再恢复普通目标选择。
@@ -57,9 +57,9 @@ description: "Use when: 定位或修改 FlatWorld 的建筑放置预览、安装
 - 手机准星可以停在最大建造半径；格心吸附会产生每轴最多半格的偏差，距离校验应按目标格最近边缘判断，禁止直接用吸附后格心距离或 `Ceil` 取整决定预览与放置资格。
 - 动态建筑相邻放置只比较 `BuildingOccupancyRegistry` 中的离散格记录；相邻格永远不因实体 Collider 接触而互相否决，同一格则由占用层直接拒绝。
 - Summoner 只能由快捷栏的真实手持实例放置：`IsItemInInventory`、`BuildingShadow` 与源槽扣减都依赖 `InHand + Owner + CurrentSelectItemSlot`；库存菜单不得临时实例化 Summoner 后直接 `Act`。
-- Summoner 成功放置后的源槽扣减必须继续走 `Inventory_Data.TryConsumeFromSlot/TrySetSlotItemAmount`，并在事务成功后按真实快捷栏槽位索引显式调用 `Inventory_HotBar.RefreshUI`；不能只依赖通用库存事件或仅在数量归零时同步手持物，否则部分堆叠放置后快捷栏数量可能延迟刷新。联机权威数量回写同样遵守这一收尾规则。
+- Summoner 成功放置后的源槽扣减必须继续走 `Inventory_Data.TryConsumeFromSlot/TrySetSlotItemAmount`，并在事务成功后按真实快捷栏槽位索引显式调用 `Mod_HotBar.RefreshUI`；不能只依赖通用库存事件或仅在数量归零时同步手持物，否则部分堆叠放置后快捷栏数量可能延迟刷新。联机权威数量回写同样遵守这一收尾规则。
 - `GamePlay` 程序集不能反向引用已依赖它的 `FlatWorld.Dialogue`；放置失败等玩家反馈由玩法层发布语义事件，再由 Dialogue 表现桥接，并且只能在实际 `Install` 提交失败时发布，禁止从逐帧虚影校验中触发。
-- 建筑模块对 `DamageReceiver` 等模块的依赖必须在加载阶段从 `ItemMods` 注册表解析；禁止序列化嵌套模块 Prefab 的组件引用，模块缺失修复后原引用可能成为无效组件。
+- 建筑模块对 `Mod_DamageReceiver` 等模块的依赖必须在加载阶段从 `ItemMods` 注册表解析；禁止序列化嵌套模块 Prefab 的组件引用，模块缺失修复后原引用可能成为无效组件。
 - 占地算法或安装/拆除顺序变化时联动 `flatworld-navigation` 与 `flatworld-map`。
 
 - 主动拆平台同时检查前后建筑层、设施占地和角色／世界物品占用；返还物完成装配后才撤销支撑。返还装配异常必须清理未完成物件，不能遗留可捡返还物又保留原平台。
@@ -94,7 +94,7 @@ description: "Use when: 定位或修改 FlatWorld 的建筑放置预览、安装
 - 建筑若需让外接传动轴与叶轮轴心同高，应以轴心作为 Sprite Pivot 和建造锚点，旋转图层使用轴心中心 Pivot 且局部位置为零；建筑支架可向锚点下方延伸，Summoner 图标使用静态合成图，落地本体使用固定主体与独立旋转层。
 - 圆锯等嵌入台面的转子保留完整圆形透明 Sprite，主体图不再烘入转子并保留不透明的台面前沿；配置 `RotorBehindBody` 后，落地代理、实体和放置虚影都将转子排在主体之后，以同一 `RotorLocalPosition` 对准轴心并遮住下半圈。
 - 机械风车是机械动力源、用力器/出力器链路和外接传动轴视觉的权威参考对象：塔身 Sprite 使用 128 PPU、Pivot `(0.5, 0.06606607)`，把底部横向外露轴套放在放置锚点线上；独立转子使用中心 Pivot `(0.5, 0.5)`，风车自身的轴承中心对应 `RotorLocalPosition=(0, 1.3828125, 0)`，Summoner 静态合成图沿用塔身 Pivot。其它风/水动力源复用该根锚点、端口和分层旋转机制，但转子局部位置必须按各自贴图的轴承中心相对根 Pivot 换算，不能盲目复用风车的转子高度；运行转子、放置预览和 Summoner 静态合成图必须使用同一局部位置。水车本体必须落在 `LiquidDefinition.WorldWater` 有效的水格，三脚架底座作为建造锚点，独立叶轮按 `RotorLocalPosition` 配置并与召唤器合成图保持一致；机械节点保留逻辑传动端口，水车不额外挂传动杆 Sprite。
-- 建筑实体碰撞范围配置在物品 `visual.collider`，`health.collider` 属于 `DamageReceiver` 的受击碰撞体；调整建筑底座阻挡范围时只改前者。数据机械的阻挡形状由 Chunk 静态 Collider 投影；攻击时按数据格索引候选，临时投影 `health.collider` 受击形状交给 Physics2D 查询，节点耐久仍由 `MachineWorld` 管理。导航和放置占格仍由离散格决定。
+- 建筑实体碰撞范围配置在物品 `visual.collider`，`health.collider` 属于 `Mod_DamageReceiver` 的受击碰撞体；调整建筑底座阻挡范围时只改前者。数据机械的阻挡形状由 Chunk 静态 Collider 投影；攻击时按数据格索引候选，临时投影 `health.collider` 受击形状交给 Physics2D 查询，节点耐久仍由 `MachineWorld` 管理。导航和放置占格仍由离散格决定。
 - 可堆叠的召唤器若携带拆除快照，堆叠身份必须来自规范化后的快照内容，不能附加每实例 Guid；先归一化放置事务会重写的 Guid 与 Transform，再计算身份，并在 `IsValidSummonerData` 校验同状态堆叠。扩展确认状态可由物品定义完整重建时，可通过 `IBuildingSnapshotRepackPolicy` 省略默认快照身份，使拆回物品与新制物品合堆；共享模块、损伤或非默认状态仍须保留快照。
 
 - 只补充后续维护可复用的易错点、隐含约束和必要注意事项。

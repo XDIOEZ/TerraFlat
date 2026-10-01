@@ -1,0 +1,1251 @@
+using System;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.InputSystem;
+using UltEvents;
+using InputSystem;
+using FlatWorld.Mobile;
+
+[RequireComponent(typeof(Item))]
+public partial class Mod_GameController : Module
+{
+    #region 模块身份
+    /// <summary>玩家根对象上的控制器必须使用稳定模块 ID，供所有地块交互统一定位。</summary>
+    public override string CanonicalModuleId => ModText.Controller;
+    #endregion
+
+    private const string PreferredInputDeviceKey = "FlatWorld.Input.PreferredDevice";
+    private const float MoveInputEpsilonSqr = 0.0001f;
+
+    public enum InputDeviceType
+    {
+        KeyboardMouse,
+        Gamepad,
+        Mobile
+    }
+
+#region 输入系统
+
+    public PlayerInputActions _inputActions; // 新输入系统动作集合
+    public InputActionAsset InputAsset => _inputActions?.asset;
+    public InputBindingService InputBindings { get; private set; }
+    public Camera _mainCamera; // 主相机引用
+    public bool CtrlIsDown; // Ctrl状态（保留原字段）
+    /// <summary>丢弃快捷键是否正在按住；供其它输入功能处理组合键优先级。</summary>
+    public bool IsDropShortcutHeld => _inputActions?.Win10.F.IsPressed() == true;
+    public InputDeviceType CurrentInputDevice => _currentInputDevice; // 当前活跃输入设备
+    public bool IsUsingGamepad => _currentInputDevice == InputDeviceType.Gamepad;
+    // Mobile 是玩家选择的触屏方案，键盘只作为非冲突的补充输入。
+    public bool IsUsingMobile => _preferredInputDevice == InputDeviceType.Mobile;
+    public InputDeviceType PreferredInputDevice => _preferredInputDevice;
+    /// <summary>判断某个设备是否可以进入当前玩家的世界玩法；手机方案隔离手柄世界输入。</summary>
+    public bool IsGameplayInputAllowed(InputDevice device)
+    {
+        // 外部 Agent 接管期间只接收带专用 Usage 的虚拟设备，真实设备继续退出玩法仲裁。
+        if (HasExternalGameplayControl)
+            return IsExternalGameplayInputDevice(device);
+
+        if (device is FlatWorldMobileDevice)
+            return _preferredInputDevice == InputDeviceType.Mobile;
+
+        if (device is Gamepad)
+            return _preferredInputDevice != InputDeviceType.Mobile;
+
+        return true;
+    }
+
+    /// <summary>按回调来源判断世界玩法是否接收这次输入。</summary>
+    public bool IsGameplayInputAllowed(InputAction.CallbackContext context)
+    {
+        return IsGameplayInputAllowed(context.control?.device);
+    }
+
+    /// <summary>读取经过输入源仲裁的玩家移动值，避免手机摇杆被手柄左摇杆抢占。</summary>
+    public Vector2 ReadMoveInput(InputAction fallbackAction)
+    {
+        if (TryReadExternalMoveInput(out Vector2 externalInput))
+            return externalInput;
+
+        if (_preferredInputDevice == InputDeviceType.Mobile)
+        {
+            Vector2 mobileInput = MobileInputRuntime.State.move;
+            if (mobileInput.sqrMagnitude <= MoveInputEpsilonSqr)
+                mobileInput = _mobileMoveInput;
+
+            if (mobileInput.sqrMagnitude > MoveInputEpsilonSqr)
+                return mobileInput;
+
+            return _keyboardMoveInput;
+        }
+
+        if (_preferredInputDevice == InputDeviceType.Gamepad)
+        {
+            if (_gamepadMoveInput.sqrMagnitude > MoveInputEpsilonSqr)
+                return _gamepadMoveInput;
+
+            return _keyboardMoveInput;
+        }
+
+        return fallbackAction != null ? fallbackAction.ReadValue<Vector2>() : Vector2.zero;
+    }
+    public event Action<InputDeviceType> ActiveInputDeviceChanged;
+    public event Action AttackStarted;
+    public event Action AttackEnded;
+    public event Action BuildingRotationRequested; // 当前手持建筑的临时朝向切换。
+    public float AimDeadZone => Mathf.Clamp01(GamepadCursorDeadZone); // 手机和手柄共用的准星死区
+
+    [Header("手柄适配")]
+    public bool EnableGamepadAdapter = true; // 是否启用手柄适配
+    public bool UseGamepadVirtualCursor = true; // 手柄模式下是否启用虚拟光标
+    public float GamepadCursorSpeed = 1300f; // 虚拟光标速度（像素/秒）
+    [Min(1f)] public float GamepadCursorRadius = 120f; // 游戏内准星相对玩家的屏幕半径
+    [Range(0f, 0.95f)] public float GamepadCursorDeadZone = PlayerAimCursorSystem.DefaultDeadZone; // 摇杆死区
+    public float CursorClampPadding = 6f; // 光标屏幕边缘留白
+
+    [Header("手机指向")]
+    [Min(0f)] public float MobileCursorMinWorldDistance = PlayerAimCursorSystem.DefaultMinWorldDistance; // 手机摇杆回中时的最小世界距离
+    [Min(0f)] public float MobileCursorMaxWorldDistance = PlayerAimCursorSystem.DefaultMaxWorldDistance; // 手机摇杆推满时的最大世界距离
+
+    private InputDeviceType _currentInputDevice = InputDeviceType.KeyboardMouse; // 当前输入源缓存
+    private InputDeviceType _preferredInputDevice = InputDeviceType.KeyboardMouse; // 设置中锁定的玩法控制方案
+    private Vector2 _virtualCursorScreenPosition; // 手柄虚拟光标位置
+    private Vector2 _gamepadAimDirection = Vector2.right; // 游戏内手柄准星方向
+    private bool _gamepadAimDirectionInitialized; // 是否已经收到有效右摇杆方向
+    private bool _gamepadPointerActive; // 手机模式下最近一次是否由手柄接管指向/UI光标
+    private bool _hardwareMousePointerActive; // 最近一次鼠标输入是否应作为 UI/世界指针
+    private Mouse _cachedMouseDevice;
+    private Vector2 _cachedMouseScreenPosition;
+    private bool _virtualCursorInitialized; // 虚拟光标是否初始化
+    private bool _isGameplayInputLocked; // 濒死/过场时是否锁定玩家输入
+    private bool _reportedMissingMainCamera; // 是否已经提示过相机尚未就绪
+    private bool _suppressLeftClickUntilRelease;
+    private bool _suppressRightClickUntilRelease;
+    private bool _rightClickHeld;
+    private bool _suppressMobileAttackUntilRelease;
+    private bool _keyboardMouseAttackHeld;
+    private bool _gamepadAttackHeld;
+    private bool _mobileAttackInputHeld;
+    private Vector2 _keyboardMoveInput;
+    private Vector2 _gamepadMoveInput;
+    private Vector2 _mobileMoveInput;
+    private float _mobileAimStrength;
+    private float _mobileAttackAimStrength;
+    private Vector2 _mobileAimDirection = Vector2.right;
+    private Vector2 _mobileAttackAimDirection = Vector2.right;
+    private bool _mobileAimDirectionInitialized;
+    private bool _mobileAttackActive;
+    private bool _mobileAttackDraggedOutsideDeadZone;
+    private Vector3 _mobileCursorWorldPosition; // 手机准星当前唯一的世界目标
+    private bool _mobileCursorWorldPositionInitialized; // 是否已经生成可供玩法消费的手机世界目标
+    private readonly PlayerAimCursorSystem _aimCursor = new();
+    private Mod_HotBar _playerHotBar;
+    private Mod_InteractSender _interactionSender;
+    private readonly List<RaycastResult> _uiRaycastResults = new List<RaycastResult>(8);
+    private readonly HashSet<object> _gameplayInputLockOwners = new HashSet<object>();
+
+#endregion
+
+#region 事件与数据
+
+    public UltEvent LeftClick = new UltEvent(); // 左键按下事件
+    public UltEvent LeftClickUp = new UltEvent(); // 左键抬起事件
+    public UltEvent RightClick = new UltEvent(); // 右键按下事件
+    public UltEvent RightClickUp = new UltEvent(); // 右键抬起事件
+
+    public Ex_ModData _modData; // 模组数据
+    public override ModuleData _Data { get => _modData; set => _modData = value as Ex_ModData; }
+
+    public bool IsGameplayInputLocked =>
+        _isGameplayInputLocked ||
+        _gameplayInputLockOwners.Count > 0 ||
+        IsWorldLoadingGameplayLocked(); // 当前是否锁定玩家输入
+
+    public bool IsRightClickHeld => _rightClickHeld; // 玩法模块只读取中央输入层维护的持续“使用”状态
+
+    /// <summary>
+    /// 判断当前输入锁中是否存在不属于指定兼容面板的锁。
+    /// 用于允许少数组合面板并行打开，同时继续阻止死亡、设置、加载等其它模态状态穿透。
+    /// </summary>
+    public bool HasBlockingGameplayInputLock(Func<object, bool> isCompatibleLockOwner)
+    {
+        if (_isGameplayInputLocked || IsWorldLoadingGameplayLocked())
+            return true;
+
+        foreach (object owner in _gameplayInputLockOwners)
+        {
+            if (isCompatibleLockOwner == null || !isCompatibleLockOwner(owner))
+                return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>世界尚未进入可玩态时阻止输入回调绕过 Item Tick 闸门。</summary>
+    private static bool IsWorldLoadingGameplayLocked()
+    {
+        GameManager gameManager = GameManager.Instance;
+        return gameManager != null &&
+               gameManager.IsInGameWorld &&
+               !gameManager.IsGameplayReady;
+    }
+
+    /// <summary>生成输入锁诊断文本，供自动化错误报告定位直接锁与叠加锁所有者。</summary>
+    public string DescribeGameplayInputLockState()
+    {
+        var ownerNames = new List<string>(_gameplayInputLockOwners.Count);
+        foreach (object owner in _gameplayInputLockOwners)
+        {
+            if (owner is UnityEngine.Object unityObject)
+            {
+                ownerNames.Add($"{owner.GetType().Name}({unityObject.name})");
+            }
+            else
+            {
+                ownerNames.Add(owner?.GetType().FullName ?? "null");
+            }
+        }
+
+        return $"direct={_isGameplayInputLocked}, ownerCount={ownerNames.Count}, " +
+               $"owners=[{string.Join(", ", ownerNames)}]";
+    }
+
+#endregion
+
+#region Unity生命周期
+
+    public override void Awake()
+    {
+        if (_Data.ID == "")
+        {
+            _Data.ID = ModText.Controller;
+        }
+
+        _inputActions = new PlayerInputActions();
+        _aimCursor.DeadZone = AimDeadZone;
+        LoadPreferredInputDevice();
+        ApplyPreferredInputDevice();
+        InputBindings = new InputBindingService(_inputActions.asset);
+        InputBindings.BindingsChanged += HandleBindingsChanged;
+        EventSystemGuard.ConfigureInputActions(_inputActions.asset);
+        InitializeVirtualCursor();
+    }
+
+    public void OnEnable()
+    {
+        _cachedMouseDevice = null;
+        _inputActions.Enable();
+        RegisterInputCallbacks();
+    }
+
+    public void OnDisable()
+    {
+        if (_inputActions == null)
+        {
+            return;
+        }
+
+        UnregisterInputCallbacks();
+        CancelActiveAttackAndMobileInput();
+        ResetExternalGameplayControl();
+        _inputActions.Disable();
+    }
+
+    public override void ModUpdate(float deltaTime)
+    {
+        if (_preferredInputDevice == InputDeviceType.Mobile && !_gamepadPointerActive)
+            UpdateMobileRadialCursor();
+
+        if (!EnableGamepadAdapter || !UseGamepadVirtualCursor)
+        {
+            return;
+        }
+
+        UpdateVirtualCursor(deltaTime);
+    }
+
+    public void OnDestroy()
+    {
+        CancelActiveAttackAndMobileInput();
+        ResetExternalGameplayControl();
+        EventSystemGuard.SetGamepadModeEntryAllowed(true);
+        InputBindings?.Dispose();
+        if (InputBindings != null)
+            InputBindings.BindingsChanged -= HandleBindingsChanged;
+        EventSystemGuard.ClearInputActions(_inputActions?.asset);
+        InputBindings = null;
+        _inputActions?.Dispose();
+        _inputActions = null;
+        _gameplayInputLockOwners.Clear();
+        ActiveInputDeviceChanged = null;
+        AttackStarted = null;
+        AttackEnded = null;
+        LeftClick.Clear();
+        LeftClickUp.Clear();
+        RightClick.Clear();
+        RightClickUp.Clear();
+    }
+
+#endregion
+
+#region 输入事件
+
+    public void LeftClickAction(InputAction.CallbackContext obj) /// 左键按下
+    {
+        UpdateCurrentInputDevice(obj);
+        if (!IsGameplayInputAllowed(obj))
+        {
+            _suppressLeftClickUntilRelease = true;
+            return;
+        }
+
+        if (obj.control?.device is Gamepad && EventSystemGuard.TryHandleGamepadVirtualCursorClick())
+        {
+            _suppressLeftClickUntilRelease = true;
+            return;
+        }
+
+        if (IsGameplayInputLocked || IsPointerOverUI() || EventSystemGuard.IsGamepadUISelectionActive)
+        {
+            _suppressLeftClickUntilRelease = true;
+            return;
+        }
+
+        _suppressLeftClickUntilRelease = false;
+        LeftClick.Invoke();
+        SetAttackSourceHeld(
+            obj.control?.device is Gamepad ? AttackInputSource.Gamepad : AttackInputSource.KeyboardMouse,
+            true);
+    }
+
+    public void LeftClickUpAction(InputAction.CallbackContext obj) /// 左键抬起
+    {
+        UpdateCurrentInputDevice(obj);
+        if (!IsGameplayInputAllowed(obj))
+        {
+            _suppressLeftClickUntilRelease = false;
+            return;
+        }
+
+        if (_suppressLeftClickUntilRelease)
+        {
+            _suppressLeftClickUntilRelease = false;
+            return;
+        }
+
+        if (IsGameplayInputLocked)
+        {
+            return;
+        }
+
+        LeftClickUp.Invoke();
+        SetAttackSourceHeld(
+            obj.control?.device is Gamepad ? AttackInputSource.Gamepad : AttackInputSource.KeyboardMouse,
+            false);
+    }
+
+    public void RightClickAction(InputAction.CallbackContext obj) /// 右键按下
+    {
+        UpdateCurrentInputDevice(obj);
+        bool isMobileUse = obj.control?.device is FlatWorldMobileDevice;
+        if (!IsGameplayInputAllowed(obj))
+        {
+            _rightClickHeld = false;
+            _suppressRightClickUntilRelease = true;
+            return;
+        }
+
+        if (obj.control?.device is Gamepad && EventSystemGuard.TryHandleGamepadContextAction())
+        {
+            _rightClickHeld = false;
+            _suppressRightClickUntilRelease = true;
+            return;
+        }
+
+        if (IsGameplayInputLocked || (!isMobileUse && IsPointerOverUI()) || EventSystemGuard.IsGamepadUISelectionActive)
+        {
+            _rightClickHeld = false;
+            _suppressRightClickUntilRelease = true;
+            return;
+        }
+
+        _suppressRightClickUntilRelease = false;
+        _rightClickHeld = true;
+        RightClick.Invoke();
+    }
+
+    public void RightClickUpAction(InputAction.CallbackContext obj) /// 右键抬起
+    {
+        UpdateCurrentInputDevice(obj);
+        _rightClickHeld = false;
+        if (!IsGameplayInputAllowed(obj))
+        {
+            _suppressRightClickUntilRelease = false;
+            return;
+        }
+
+        if (_suppressRightClickUntilRelease)
+        {
+            _suppressRightClickUntilRelease = false;
+            return;
+        }
+
+        if (IsGameplayInputLocked)
+        {
+            return;
+        }
+
+        RightClickUp.Invoke();
+    }
+
+    public void SetGameplayInputLocked(bool isLocked) /// 锁定或解锁玩家快捷键输入
+    {
+        _isGameplayInputLocked = isLocked;
+        if (isLocked)
+            CancelActiveAttackAndMobileInput();
+        UIManager.Instance?.NotifyInteractionSurfaceChanged();
+    }
+
+    public void AcquireGameplayInputLock(object owner)
+    {
+        if (owner != null)
+        {
+            bool added = _gameplayInputLockOwners.Add(owner);
+            if (added)
+            {
+                CancelActiveAttackAndMobileInput();
+                UIManager.Instance?.NotifyInteractionSurfaceChanged();
+            }
+        }
+    }
+
+    public void ReleaseGameplayInputLock(object owner)
+    {
+        if (owner != null)
+        {
+            if (_gameplayInputLockOwners.Remove(owner))
+                UIManager.Instance?.NotifyInteractionSurfaceChanged();
+        }
+    }
+
+#endregion
+
+#region 对外输入接口
+
+    public Vector2 GetPointerScreenPosition() /// 获取当前屏幕指针坐标
+    {
+        if (_hardwareMousePointerActive && Mouse.current != null)
+        {
+            return GetHardwareMouseScreenPosition();
+        }
+
+        if ((_currentInputDevice == InputDeviceType.Gamepad ||
+             _preferredInputDevice == InputDeviceType.Mobile) &&
+            UseGamepadVirtualCursor &&
+            _virtualCursorInitialized)
+        {
+            return _virtualCursorScreenPosition;
+        }
+
+        if (Mouse.current != null)
+        {
+            return GetHardwareMouseScreenPosition();
+        }
+
+        return Input.mousePosition;
+    }
+
+    /// <summary>鼠标移动时更新缓存，静止帧的交互预览直接复用坐标。</summary>
+    private Vector2 GetHardwareMouseScreenPosition()
+    {
+        Mouse mouse = Mouse.current;
+        bool mouseActionEnabled = isActiveAndEnabled &&
+                                  _inputActions != null &&
+                                  _inputActions.Win10.Mouse.enabled;
+        if (_cachedMouseDevice != mouse || !mouseActionEnabled)
+        {
+            _cachedMouseDevice = mouseActionEnabled ? mouse : null;
+            _cachedMouseScreenPosition = mouse.position.ReadValue();
+        }
+
+        return _cachedMouseScreenPosition;
+    }
+
+    /// <summary>在 UI 即将渲染时，用本帧最终玩家与相机位置刷新手机准线屏幕坐标。</summary>
+    public bool TryRefreshMobileAimCursorScreenPosition(out Vector2 screenPosition)
+    {
+        if (!CanUpdateMobileRadialCursor())
+        {
+            screenPosition = default;
+            return false;
+        }
+
+        UpdateMobileRadialCursor();
+        screenPosition = _virtualCursorScreenPosition;
+        return _virtualCursorInitialized;
+    }
+
+    public bool IsPointerOverUI()
+    {
+        if (EventSystemGuard.IsGamepadUISelectionActive)
+            return true;
+
+        EventSystem eventSystem = EventSystem.current;
+        if (eventSystem == null)
+            return false;
+
+        PointerEventData eventData = new PointerEventData(eventSystem)
+        {
+            position = GetPointerScreenPosition()
+        };
+
+        _uiRaycastResults.Clear();
+        eventSystem.RaycastAll(eventData, _uiRaycastResults);
+        return _uiRaycastResults.Count > 0;
+    }
+
+    public Vector3 GetMouseWorldPosition() /// 获取指针世界坐标（鼠标或手柄虚拟光标）
+    {
+        if (TryGetExternalAimWorldPosition(out Vector3 externalAimWorldPosition))
+            return externalAimWorldPosition;
+
+        if (_preferredInputDevice == InputDeviceType.Mobile && _mobileCursorWorldPositionInitialized)
+            return _mobileCursorWorldPosition;
+
+        return GetMouseWorldPosition(GetPointerScreenPosition());
+    }
+
+    public Vector3 GetMouseWorldPosition(Vector2 screenPosition) /// 获取指定屏幕坐标对应的世界坐标
+    {
+        if (_mainCamera == null)
+        {
+            _mainCamera = Camera.main;
+        }
+
+        if (_mainCamera == null)
+        {
+            if (!_reportedMissingMainCamera)
+            {
+                _reportedMissingMainCamera = true;
+                Debug.LogWarning("[Mod_GameController] 主相机尚未就绪，暂时使用玩家位置作为指针坐标", this);
+            }
+
+            return WorldTopologyRuntime.NormalizePosition(new Vector3(transform.position.x, transform.position.y, 0f));
+        }
+
+        _reportedMissingMainCamera = false;
+
+        Vector3 worldPos = _mainCamera.ScreenToWorldPoint(new Vector3(screenPosition.x, screenPosition.y, Mathf.Abs(_mainCamera.transform.position.z)));
+        worldPos.z = 0f;
+        return WorldTopologyRuntime.NormalizePosition(worldPos);
+    }
+
+    /// <summary>获取当前准星世界位置，并按调用方提供的玩法距离统一裁剪。</summary>
+    public Vector3 GetAimWorldPosition(float maxWorldDistance)
+    {
+        return _aimCursor.ClampWorldPosition(
+            transform.position,
+            GetMouseWorldPosition(),
+            maxWorldDistance);
+    }
+
+#endregion
+
+#region 手柄适配
+
+    private void RegisterInputCallbacks() /// 注册输入监听
+    {
+        _inputActions.asset.FindAction("Win10/RotateBuilding", true).performed += HandleBuildingRotation;
+        _inputActions.Win10.LeftClick.performed += LeftClickAction;
+        _inputActions.Win10.LeftClick.canceled += LeftClickUpAction;
+        _inputActions.Win10.Attack_Player.started += MobileAttackStartedAction;
+        _inputActions.Win10.Attack_Player.canceled += MobileAttackEndedAction;
+        _inputActions.Win10.RightClick.performed += RightClickAction;
+        _inputActions.Win10.RightClick.canceled += RightClickUpAction;
+
+        _inputActions.Win10.Move_Player.performed += HandleMoveInputChanged;
+        _inputActions.Win10.Move_Player.canceled += HandleMoveInputChanged;
+        // Shift 只是 Mod_Mover 的奔跑修饰键，不参与设备切换，避免键盘长按干扰手机触摸/UI 指针。
+        _inputActions.Win10.Shift.started += HandleKeyboardModifierStarted;
+        _inputActions.Win10.Mouse.performed += HandleMousePosition;
+        _inputActions.Win10.Mouse.canceled += HandleMousePosition;
+        _inputActions.Win10.GamepadCursor.performed += UpdateCurrentInputDevice;
+        _inputActions.Win10.GamepadCursor.canceled += UpdateCurrentInputDevice;
+        _inputActions.Win10.MobileAim_Player.performed += HandleMobileAim;
+        _inputActions.Win10.MobileAim_Player.canceled += HandleMobileAim;
+        _inputActions.Win10.MobileAttackAim_Player.performed += HandleMobileAttackAim;
+        _inputActions.Win10.MobileAttackAim_Player.canceled += HandleMobileAttackAim;
+        _inputActions.Win10.OpenChat.performed += UpdateCurrentInputDevice;
+        _inputActions.Win10.SwitchHotBar_Player.performed += UpdateCurrentInputDevice;
+        _inputActions.Win10.HotbarPrevious.performed += UpdateCurrentInputDevice;
+        _inputActions.Win10.HotbarNext.performed += UpdateCurrentInputDevice;
+        _inputActions.Win10.CtrlMouse.performed += UpdateCurrentInputDevice;
+        _inputActions.Win10.E.performed += UpdateCurrentInputDevice;
+        _inputActions.Win10.F.performed += UpdateCurrentInputDevice;
+        _inputActions.Win10.B.performed += UpdateCurrentInputDevice;
+        _inputActions.Win10.P.performed += UpdateCurrentInputDevice;
+        _inputActions.Win10.H.performed += UpdateCurrentInputDevice;
+        _inputActions.Win10.ToggleRun.performed += UpdateCurrentInputDevice;
+        _inputActions.Win10.Ctrl.performed += UpdateCurrentInputDevice;
+        _inputActions.Win10.ESC.performed += UpdateCurrentInputDevice;
+    }
+
+    private void UnregisterInputCallbacks() /// 取消输入监听
+    {
+        _inputActions.asset.FindAction("Win10/RotateBuilding", true).performed -= HandleBuildingRotation;
+        _inputActions.Win10.LeftClick.performed -= LeftClickAction;
+        _inputActions.Win10.LeftClick.canceled -= LeftClickUpAction;
+        _inputActions.Win10.Attack_Player.started -= MobileAttackStartedAction;
+        _inputActions.Win10.Attack_Player.canceled -= MobileAttackEndedAction;
+        _inputActions.Win10.RightClick.performed -= RightClickAction;
+        _inputActions.Win10.RightClick.canceled -= RightClickUpAction;
+
+        _inputActions.Win10.Move_Player.performed -= HandleMoveInputChanged;
+        _inputActions.Win10.Move_Player.canceled -= HandleMoveInputChanged;
+        _inputActions.Win10.Shift.started -= HandleKeyboardModifierStarted;
+        _inputActions.Win10.Mouse.performed -= HandleMousePosition;
+        _inputActions.Win10.Mouse.canceled -= HandleMousePosition;
+        _inputActions.Win10.GamepadCursor.performed -= UpdateCurrentInputDevice;
+        _inputActions.Win10.GamepadCursor.canceled -= UpdateCurrentInputDevice;
+        _inputActions.Win10.MobileAim_Player.performed -= HandleMobileAim;
+        _inputActions.Win10.MobileAim_Player.canceled -= HandleMobileAim;
+        _inputActions.Win10.MobileAttackAim_Player.performed -= HandleMobileAttackAim;
+        _inputActions.Win10.MobileAttackAim_Player.canceled -= HandleMobileAttackAim;
+        _inputActions.Win10.OpenChat.performed -= UpdateCurrentInputDevice;
+        _inputActions.Win10.SwitchHotBar_Player.performed -= UpdateCurrentInputDevice;
+        _inputActions.Win10.HotbarPrevious.performed -= UpdateCurrentInputDevice;
+        _inputActions.Win10.HotbarNext.performed -= UpdateCurrentInputDevice;
+        _inputActions.Win10.CtrlMouse.performed -= UpdateCurrentInputDevice;
+        _inputActions.Win10.E.performed -= UpdateCurrentInputDevice;
+        _inputActions.Win10.F.performed -= UpdateCurrentInputDevice;
+        _inputActions.Win10.B.performed -= UpdateCurrentInputDevice;
+        _inputActions.Win10.P.performed -= UpdateCurrentInputDevice;
+        _inputActions.Win10.H.performed -= UpdateCurrentInputDevice;
+        _inputActions.Win10.ToggleRun.performed -= UpdateCurrentInputDevice;
+        _inputActions.Win10.Ctrl.performed -= UpdateCurrentInputDevice;
+        _inputActions.Win10.ESC.performed -= UpdateCurrentInputDevice;
+    }
+
+    /// <summary>只在玩法输入可用时，把旋转请求转发给当前手持建筑。</summary>
+    private void HandleBuildingRotation(InputAction.CallbackContext context)
+    {
+        if (!context.performed || !IsGameplayInputAllowed(context) || IsGameplayInputLocked ||
+            IsPointerOverUI() || EventSystemGuard.IsGamepadUISelectionActive) return;
+        BuildingRotationRequested?.Invoke();
+    }
+
+    /// <summary>手机轻点预览时只命中当前快捷栏手持建筑的可旋转虚影。</summary>
+    public bool CanRotateBuildingPreviewAt(Vector2 screenPosition)
+        => TryGetBuildingPreviewRotation(screenPosition, out _);
+
+    /// <summary>手机轻点与 R 共用建筑模块的旋转入口，避免输入层维护另一份朝向。</summary>
+    public bool TryRotateBuildingPreviewAt(Vector2 screenPosition)
+    {
+        if (!TryGetBuildingPreviewRotation(screenPosition, out IBuildingPreviewRotation rotation))
+            return false;
+
+        rotation.RotatePlacement();
+        return true;
+    }
+
+    /// <summary>从真实手持建筑读取可旋转预览，并用触点屏幕位置进行无物理命中判断。</summary>
+    private bool TryGetBuildingPreviewRotation(Vector2 screenPosition, out IBuildingPreviewRotation rotation)
+    {
+        rotation = null;
+        if (_preferredInputDevice != InputDeviceType.Mobile || IsGameplayInputLocked ||
+            !IsGameplayInputAllowed(Touchscreen.current) || EventSystemGuard.IsGamepadUISelectionActive)
+            return false;
+
+        if (_playerHotBar == null && item != null)
+            _playerHotBar = item.GetComponentInChildren<Mod_HotBar>(true);
+
+        Item heldItem = _playerHotBar?.CurentSelectItem;
+        Mod_Building building = heldItem?.itemMods?.GetMod_ByID<Mod_Building>(ModText.Building);
+        rotation = BuildingPlacementLifecycle.GetExtension(heldItem) as IBuildingPreviewRotation;
+        return building != null && building.IsPlacementActionAvailable &&
+               building.GhostShadow != null && rotation?.CanRotatePlacement == true &&
+               building.GhostShadow.ContainsWorldPoint(GetMouseWorldPosition(screenPosition));
+    }
+
+    /// <summary>切换并保存玩家选择的玩法控制方案；UI 指针动作不受玩法绑定遮罩影响。</summary>
+    public void SetPreferredInputDevice(InputDeviceType deviceType)
+    {
+        if (!Enum.IsDefined(typeof(InputDeviceType), deviceType))
+            throw new ArgumentOutOfRangeException(nameof(deviceType), deviceType, "未知的输入设备类型");
+
+        if (deviceType == InputDeviceType.Gamepad && !EnableGamepadAdapter)
+            deviceType = InputDeviceType.KeyboardMouse;
+
+        _preferredInputDevice = deviceType;
+        SavePreferredInputDevicePreference(deviceType);
+        ApplyPreferredInputDevice();
+    }
+
+    /// <summary>读取不依赖世界实例的玩法控制偏好，供主菜单设置直接回填。</summary>
+    public static InputDeviceType GetPreferredInputDevicePreference()
+    {
+        InputDeviceType platformDefault = GetPlatformDefaultInputDevice();
+        int savedValue = PlayerPrefs.GetInt(PreferredInputDeviceKey, (int)platformDefault);
+        return Enum.IsDefined(typeof(InputDeviceType), savedValue)
+            ? (InputDeviceType)savedValue
+            : platformDefault;
+    }
+
+    /// <summary>保存不依赖世界实例的玩法控制偏好；实际玩家存在时由实例入口负责立即应用。</summary>
+    public static void SavePreferredInputDevicePreference(InputDeviceType deviceType)
+    {
+        if (!Enum.IsDefined(typeof(InputDeviceType), deviceType))
+            throw new ArgumentOutOfRangeException(nameof(deviceType), deviceType, "未知的输入设备类型");
+
+        PlayerPrefs.SetInt(PreferredInputDeviceKey, (int)deviceType);
+        PlayerPrefs.Save();
+    }
+
+    /// <summary>恢复全局控制偏好；首次运行时桌面默认键鼠，移动平台默认触屏。</summary>
+    private void LoadPreferredInputDevice()
+    {
+        _preferredInputDevice = GetPreferredInputDevicePreference();
+
+        if (_preferredInputDevice == InputDeviceType.Gamepad && !EnableGamepadAdapter)
+            _preferredInputDevice = InputDeviceType.KeyboardMouse;
+    }
+
+    /// <summary>取得当前平台首次运行时的默认玩法控制方案。</summary>
+    private static InputDeviceType GetPlatformDefaultInputDevice()
+    {
+        return Application.isMobilePlatform
+            ? InputDeviceType.Mobile
+            : InputDeviceType.KeyboardMouse;
+    }
+
+    /// <summary>切换控制偏好只影响界面呈现，不再用 bindingMask 让不同输入源互相屏蔽。</summary>
+    private void ApplyPreferredInputDevice()
+    {
+        if (_inputActions == null)
+            return;
+
+        CancelActiveAttackAndMobileInput();
+        EventSystemGuard.SetMobileAimCursorVisible(false);
+        EventSystemGuard.SetGamepadModeEntryAllowed(_preferredInputDevice != InputDeviceType.Mobile);
+        _hardwareMousePointerActive = false;
+        // ActionMap 保持并行绑定；真正冲突的世界语义由本类按输入源仲裁。
+        ClearParallelInputBindingMasks();
+
+        if (_preferredInputDevice == InputDeviceType.Gamepad && !_virtualCursorInitialized)
+            InitializeVirtualCursor();
+
+        SetCurrentInputDevice(_preferredInputDevice);
+    }
+
+    /// <summary>清除资产及所有 ActionMap 的设备遮罩，防止旧配置再次隔离并行输入。</summary>
+    private void ClearParallelInputBindingMasks()
+    {
+        InputActionAsset inputAsset = _inputActions?.asset;
+        if (inputAsset == null)
+            return;
+
+        inputAsset.bindingMask = null;
+        foreach (InputActionMap actionMap in inputAsset.actionMaps)
+            actionMap.bindingMask = null;
+    }
+
+    private void UpdateCurrentInputDevice(InputAction.CallbackContext context) /// 校正所选输入源的运行时状态
+    {
+        InputDevice device = context.control?.device;
+        if (device is FlatWorldMobileDevice && _preferredInputDevice == InputDeviceType.Mobile)
+        {
+            _hardwareMousePointerActive = false;
+            DeactivateGamepadInput();
+            SetCurrentInputDevice(InputDeviceType.Mobile);
+            return;
+        }
+
+        if (!IsGameplayInputAllowed(device))
+            return;
+
+        if (device is Gamepad && EnableGamepadAdapter &&
+            _preferredInputDevice == InputDeviceType.Gamepad)
+        {
+            _hardwareMousePointerActive = false;
+            ActivateGamepadInput();
+            if (_preferredInputDevice == InputDeviceType.Gamepad)
+                SetCurrentInputDevice(InputDeviceType.Gamepad);
+            return;
+        }
+
+        if (device is Keyboard || device is Mouse)
+        {
+            // 键盘修饰键和鼠标点击只退出手柄 UI/虚拟光标，不切换手机玩法方案，也不清空触摸状态。
+            DeactivateGamepadInput();
+            if (device is Mouse mouse)
+            {
+                if (context.action != _inputActions.Win10.Mouse)
+                {
+                    _cachedMouseDevice = mouse;
+                    _cachedMouseScreenPosition = mouse.position.ReadValue();
+                }
+                _hardwareMousePointerActive = true;
+            }
+
+            if (_preferredInputDevice == InputDeviceType.KeyboardMouse)
+                SetCurrentInputDevice(InputDeviceType.KeyboardMouse);
+        }
+    }
+
+    private void HandleMousePosition(InputAction.CallbackContext context)
+    {
+        if (context.control?.device is Mouse mouse)
+        {
+            _cachedMouseDevice = mouse;
+            _cachedMouseScreenPosition = context.performed
+                ? context.ReadValue<Vector2>()
+                : mouse.position.ReadValue();
+        }
+
+        if (context.performed)
+            UpdateCurrentInputDevice(context);
+    }
+
+    /// <summary>键盘修饰键只退出手柄 UI 接管，不切换手机方案、不清理触摸状态。</summary>
+    private void HandleKeyboardModifierStarted(InputAction.CallbackContext context)
+    {
+        if (context.control?.device is Keyboard)
+            DeactivateGamepadInput();
+    }
+
+    private void SetCurrentInputDevice(InputDeviceType deviceType)
+    {
+        // 手机方案始终保留触摸语义；其它设备不能改写当前手机控制源。
+        if (_preferredInputDevice == InputDeviceType.Mobile &&
+            deviceType != InputDeviceType.Mobile)
+            return;
+
+        bool deviceChanged = _currentInputDevice != deviceType;
+        _currentInputDevice = deviceType;
+        // 即使缓存设备类型未变化，也要校正可能由场景切换遗留的全局 UI 手柄状态。
+        EventSystemGuard.SetGamepadMode(deviceType == InputDeviceType.Gamepad);
+        if (deviceChanged)
+            ActiveInputDeviceChanged?.Invoke(deviceType);
+    }
+
+    private bool IsGamepadInputAvailable =>
+        EnableGamepadAdapter &&
+        _preferredInputDevice == InputDeviceType.Gamepad;
+
+    /// <summary>仅手柄控制方案可以启用手柄准星和手柄 UI 输入源。</summary>
+    private void ActivateGamepadInput()
+    {
+        if (!IsGamepadInputAvailable)
+            return;
+
+        if (!_virtualCursorInitialized)
+            InitializeVirtualCursor();
+
+        EventSystemGuard.SetMobileAimCursorVisible(false);
+        _gamepadPointerActive = true;
+        EventSystemGuard.SetGamepadMode(true);
+        EventSystemGuard.NotifyGamepadCursorPosition(_virtualCursorScreenPosition);
+    }
+
+    private void DeactivateGamepadInput()
+    {
+        _gamepadPointerActive = false;
+        EventSystemGuard.SetGamepadMode(false);
+    }
+
+    #region 手机输入语义与径向指向
+
+    /// <summary>手机攻击只产生攻击语义，不再复用 LeftClick，避免同时触发世界交互或拆除。</summary>
+    private void MobileAttackStartedAction(InputAction.CallbackContext context)
+    {
+        if (!IsGameplayInputAllowed(context))
+        {
+            _suppressMobileAttackUntilRelease = true;
+            return;
+        }
+
+        UpdateCurrentInputDevice(context);
+        _mobileAttackActive = true;
+        _mobileAttackDraggedOutsideDeadZone = false;
+        _mobileAttackAimStrength = 0f;
+        UpdateMobileRadialCursor();
+
+        if (IsGameplayInputLocked)
+        {
+            _suppressMobileAttackUntilRelease = true;
+            return;
+        }
+
+        _suppressMobileAttackUntilRelease = false;
+        SetAttackSourceHeld(AttackInputSource.Mobile, true);
+    }
+
+    /// <summary>无论方向是否拖出死区，手机攻击抬起都会可靠释放攻击状态。</summary>
+    private void MobileAttackEndedAction(InputAction.CallbackContext context)
+    {
+        UpdateCurrentInputDevice(context);
+        _mobileAttackActive = false;
+
+        if (_suppressMobileAttackUntilRelease)
+        {
+            _suppressMobileAttackUntilRelease = false;
+        }
+        else
+        {
+            SetAttackSourceHeld(AttackInputSource.Mobile, false);
+        }
+
+        if (_mobileAttackDraggedOutsideDeadZone)
+        {
+            _mobileAimDirection = _mobileAttackAimDirection;
+            _mobileAimStrength = _mobileAttackAimStrength;
+            _mobileAimDirectionInitialized = true;
+        }
+
+        _mobileAttackDraggedOutsideDeadZone = false;
+        _mobileAttackAimStrength = 0f;
+        UpdateMobileRadialCursor();
+    }
+
+    /// <summary>普通指向松手时保留最后有效方向和力度，零向量只结束当前触控所有权。</summary>
+    private void HandleMobileAim(InputAction.CallbackContext context)
+    {
+        if (!IsGameplayInputAllowed(context))
+            return;
+
+        UpdateCurrentInputDevice(context);
+        Vector2 aim = context.ReadValue<Vector2>();
+        _aimCursor.DeadZone = AimDeadZone;
+        if (_aimCursor.ApplyStickInput(aim, ref _mobileAimDirection, out float strength))
+        {
+            _mobileAimDirectionInitialized = true;
+            _mobileAimStrength = strength;
+        }
+
+        if (!_mobileAttackActive)
+            UpdateMobileRadialCursor();
+    }
+
+    /// <summary>攻击摇杆拖出死区后同步普通视角方向和力度，使松手后仍保持该朝向并跟随玩家。</summary>
+    private void HandleMobileAttackAim(InputAction.CallbackContext context)
+    {
+        if (!IsGameplayInputAllowed(context))
+            return;
+
+        UpdateCurrentInputDevice(context);
+        Vector2 aim = context.ReadValue<Vector2>();
+        _aimCursor.DeadZone = AimDeadZone;
+        if (_aimCursor.ApplyStickInput(aim, ref _mobileAttackAimDirection, out float strength))
+        {
+            _mobileAttackDraggedOutsideDeadZone = true;
+            _mobileAimDirection = _mobileAttackAimDirection;
+            _mobileAimStrength = strength;
+            _mobileAimDirectionInitialized = true;
+            _mobileAttackAimStrength = strength;
+        }
+
+        if (_mobileAttackActive)
+            UpdateMobileRadialCursor();
+    }
+
+    /// <summary>按玩家当前位置和最后有效方向更新手机世界目标及其屏幕投影。</summary>
+    private void UpdateMobileRadialCursor()
+    {
+        if (!CanUpdateMobileRadialCursor())
+        {
+            _mobileCursorWorldPositionInitialized = false;
+            EventSystemGuard.SetMobileAimCursorVisible(false);
+            return;
+        }
+
+        EnsureMobileAimDirectionInitialized();
+        Vector2 direction;
+        float mobileAimStrength;
+        if (_mobileAttackActive && _mobileAttackDraggedOutsideDeadZone)
+        {
+            direction = _mobileAttackAimDirection;
+            mobileAimStrength = _mobileAttackAimStrength;
+        }
+        else
+        {
+            direction = _mobileAimDirection;
+            mobileAimStrength = _mobileAimStrength;
+        }
+
+        if (_mainCamera == null)
+        {
+            _mobileCursorWorldPositionInitialized = false;
+            _virtualCursorScreenPosition = _aimCursor.CalculateRadialScreenPosition(
+                GetPlayerScreenPosition(),
+                direction,
+                GamepadCursorRadius,
+                new Vector2(Screen.width, Screen.height),
+                CursorClampPadding);
+            _virtualCursorInitialized = true;
+            return;
+        }
+
+        // 每帧以玩家当前坐标重新投影，避免准线停留在玩家移动前的旧世界位置。
+        Vector3 mobileCursorWorldPosition = _aimCursor.CalculateRadialWorldPosition(
+            transform.position,
+            direction,
+            mobileAimStrength,
+            MobileCursorMinWorldDistance,
+            GetMobileCursorMaxWorldDistance());
+        _mobileCursorWorldPosition = mobileCursorWorldPosition;
+        _mobileCursorWorldPositionInitialized = true;
+        Vector3 screenPosition = _mainCamera.WorldToScreenPoint(mobileCursorWorldPosition);
+        _virtualCursorScreenPosition = new Vector2(screenPosition.x, screenPosition.y);
+        _virtualCursorInitialized = true;
+    }
+
+    /// <summary>判断正式手机准线当前是否允许更新和显示。</summary>
+    private bool CanUpdateMobileRadialCursor()
+    {
+        return _preferredInputDevice == InputDeviceType.Mobile &&
+               !_gamepadPointerActive &&
+               UIManager.ExistingInstance?.HasOpenGameplayInputBlockingPanel() != true;
+    }
+
+    private float GetMobileCursorMaxWorldDistance()
+    {
+        if (_interactionSender == null && item != null)
+            _interactionSender = item.GetComponentInChildren<Mod_InteractSender>(true);
+
+        float interactionDistance = _interactionSender != null
+            ? Mathf.Max(0.01f, _interactionSender.maxInteractDistance)
+            : Mathf.Max(0.01f, MobileCursorMaxWorldDistance);
+
+        if (_playerHotBar == null && item != null)
+            _playerHotBar = item.GetComponentInChildren<Mod_HotBar>(true);
+
+        Item heldItem = _playerHotBar?.CurentSelectItem;
+        Mod_Building building = heldItem?.itemMods?.GetMod_ByID<Mod_Building>(ModText.Building);
+        if (building != null && building.IsItemInInventory && building.Data != null)
+            return building.GetMaxPlacementDistance();
+
+        return interactionDistance;
+    }
+
+    /// <summary>首次进入手机玩法时沿角色当前左右朝向显示准线。</summary>
+    private void EnsureMobileAimDirectionInitialized()
+    {
+        if (_mobileAimDirectionInitialized)
+            return;
+
+        Mod_TurnBack turnBody = item?.itemMods?.GetMod_ByID(ModText.TrunBody) as Mod_TurnBack;
+        Vector2 direction = turnBody != null && turnBody.currentDirection.sqrMagnitude > 0.001f
+            ? turnBody.currentDirection.normalized
+            : Vector2.right;
+        _mobileAimDirection = direction;
+        _mobileAimDirectionInitialized = true;
+    }
+
+    private enum AttackInputSource
+    {
+        KeyboardMouse,
+        Gamepad,
+        Mobile
+    }
+
+    /// <summary>按输入源汇总攻击按住状态，避免一个来源抬起误释放另一个来源。</summary>
+    private void SetAttackSourceHeld(AttackInputSource source, bool held)
+    {
+        bool wasHeld = _keyboardMouseAttackHeld || _gamepadAttackHeld || _mobileAttackInputHeld;
+        switch (source)
+        {
+            case AttackInputSource.Gamepad:
+                _gamepadAttackHeld = held;
+                break;
+            case AttackInputSource.Mobile:
+                _mobileAttackInputHeld = held;
+                break;
+            default:
+                _keyboardMouseAttackHeld = held;
+                break;
+        }
+
+        bool isHeld = _keyboardMouseAttackHeld || _gamepadAttackHeld || _mobileAttackInputHeld;
+        if (!wasHeld && isHeld)
+            AttackStarted?.Invoke();
+        else if (wasHeld && !isHeld)
+            AttackEnded?.Invoke();
+    }
+
+    /// <summary>释放输入锁、暂停和失焦等场景的持续输入，保留最后有效瞄准，杜绝移动或攻击卡住。</summary>
+    public void CancelActiveAttackAndMobileInput()
+    {
+        MobileInputRuntime.ResetAll();
+        DeactivateGamepadInput();
+        EventSystemGuard.SetMobileAimCursorVisible(false);
+        // 普通瞄准的方向、力度和世界目标属于保留状态，释放触摸不能把准星拉回玩家中心。
+        _mobileAttackAimStrength = 0f;
+        _mobileAttackActive = false;
+        _mobileAttackDraggedOutsideDeadZone = false;
+        _suppressMobileAttackUntilRelease = false;
+        _rightClickHeld = false;
+        SetAttackSourceHeld(AttackInputSource.KeyboardMouse, false);
+        SetAttackSourceHeld(AttackInputSource.Gamepad, false);
+        SetAttackSourceHeld(AttackInputSource.Mobile, false);
+    }
+
+    private void OnApplicationFocus(bool hasFocus)
+    {
+        if (!hasFocus)
+            CancelActiveAttackAndMobileInput();
+    }
+
+    private void OnApplicationPause(bool paused)
+    {
+        if (paused)
+            CancelActiveAttackAndMobileInput();
+    }
+
+    #endregion
+
+    private void InitializeVirtualCursor() /// 初始化虚拟光标
+    {
+        if (Mouse.current != null)
+        {
+            _virtualCursorScreenPosition = GetHardwareMouseScreenPosition();
+        }
+        else
+        {
+            _virtualCursorScreenPosition = new Vector2(Screen.width * 0.5f, Screen.height * 0.5f);
+        }
+
+        _virtualCursorInitialized = true;
+        EventSystemGuard.NotifyGamepadCursorPosition(_virtualCursorScreenPosition);
+    }
+
+    private void UpdateVirtualCursor(float deltaTime) /// 更新手柄虚拟光标
+    {
+        if (!IsGamepadInputAvailable ||
+            (!_gamepadPointerActive && !EventSystemGuard.IsGamepadUISelectionActive))
+        {
+            return;
+        }
+
+        if (_inputActions == null)
+        {
+            return;
+        }
+
+        Vector2 look = _inputActions.Win10.GamepadCursor.ReadValue<Vector2>();
+        float deadZoneSquared = GamepadCursorDeadZone * GamepadCursorDeadZone;
+        if (!EventSystemGuard.HasOpenModalGamepadNavigationPanel)
+        {
+            UpdateGameplayRadialCursor(look, deadZoneSquared);
+            return;
+        }
+
+        if (look.sqrMagnitude < deadZoneSquared)
+        {
+            return;
+        }
+
+        if (!_virtualCursorInitialized)
+        {
+            InitializeVirtualCursor();
+        }
+
+        _virtualCursorScreenPosition += look * (GamepadCursorSpeed * deltaTime);
+
+        float minX = CursorClampPadding;
+        float maxX = Mathf.Max(minX, Screen.width - CursorClampPadding);
+        float minY = CursorClampPadding;
+        float maxY = Mathf.Max(minY, Screen.height - CursorClampPadding);
+        _virtualCursorScreenPosition.x = Mathf.Clamp(_virtualCursorScreenPosition.x, minX, maxX);
+        _virtualCursorScreenPosition.y = Mathf.Clamp(_virtualCursorScreenPosition.y, minY, maxY);
+        EventSystemGuard.NotifyGamepadCursorPosition(_virtualCursorScreenPosition);
+    }
+
+    /// <summary>按玩家屏幕位置和右摇杆方向更新游戏内径向准星。</summary>
+    private void UpdateGameplayRadialCursor(Vector2 look, float deadZoneSquared)
+    {
+        if (look.sqrMagnitude >= deadZoneSquared)
+        {
+            _gamepadAimDirection = look.normalized;
+            _gamepadAimDirectionInitialized = true;
+        }
+
+        // 未推动过右摇杆前不主动显示准星；一旦确定方向，玩家移动或按其他键时仍持续保持准星。
+        if (!_gamepadAimDirectionInitialized)
+        {
+            return;
+        }
+
+        Vector2 playerScreenPosition = GetPlayerScreenPosition();
+        _virtualCursorScreenPosition = _aimCursor.CalculateRadialScreenPosition(
+            playerScreenPosition,
+            _gamepadAimDirection,
+            GamepadCursorRadius,
+            new Vector2(Screen.width, Screen.height),
+            CursorClampPadding);
+        _virtualCursorInitialized = true;
+        EventSystemGuard.NotifyGamepadCursorPosition(_virtualCursorScreenPosition);
+    }
+
+    /// <summary>获取玩家在当前相机下的屏幕中心位置。</summary>
+    private Vector2 GetPlayerScreenPosition()
+    {
+        if (_mainCamera != null)
+        {
+            Vector3 screenPosition = _mainCamera.WorldToScreenPoint(transform.position);
+            if (screenPosition.z >= 0f)
+                return new Vector2(screenPosition.x, screenPosition.y);
+        }
+
+        return new Vector2(Screen.width * 0.5f, Screen.height * 0.5f);
+    }
+
+    /// <summary>
+    /// 左摇杆用于 UI 焦点导航时退出虚拟光标模式。
+    /// </summary>
+    private void HandleMoveInputChanged(InputAction.CallbackContext context)
+    {
+        CacheMoveInput(context);
+        UpdateCurrentInputDevice(context);
+        if (context.control?.device is Gamepad && _preferredInputDevice == InputDeviceType.Gamepad)
+            EventSystemGuard.NotifyGamepadFocusInput();
+    }
+
+    /// <summary>保存各输入源最近一次移动值，让手机方案可以忽略手柄而保留键盘移动。</summary>
+    private void CacheMoveInput(InputAction.CallbackContext context)
+    {
+        InputDevice device = context.control?.device;
+        Vector2 value = context.canceled ? Vector2.zero : context.ReadValue<Vector2>();
+        if (device is FlatWorldMobileDevice)
+            _mobileMoveInput = value;
+        else if (device is Gamepad)
+            _gamepadMoveInput = value;
+        else if (device is Keyboard || device is Mouse)
+            _keyboardMoveInput = value;
+    }
+
+    /// <summary>
+    /// 重绑完成后刷新 UI 专用动作，使 UI 与玩家操作保持一致。
+    /// </summary>
+    private void HandleBindingsChanged()
+    {
+        _cachedMouseDevice = null;
+        ClearParallelInputBindingMasks();
+        EventSystemGuard.SynchronizeUIInputBindings(_inputActions?.asset);
+    }
+
+#endregion
+
+#region 数据存取
+
+    public override void Load()
+    {
+        // 输入绑定由 InputBindingService 构造时独立加载，不进入物品模块存档。
+    }
+
+    public override void Save()
+    {
+        // 输入绑定在重绑完成时独立保存，不进入物品模块存档。
+    }
+
+#endregion
+}

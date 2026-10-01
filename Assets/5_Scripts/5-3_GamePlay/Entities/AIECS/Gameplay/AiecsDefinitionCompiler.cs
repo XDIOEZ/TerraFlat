@@ -32,8 +32,8 @@ namespace FlatWorld.AIECS.Gameplay
             ItemData item = source.CreateItemData();
             JObject ai = Module<IAIActor>(source, item, out _);
             JObject detector = Module<Mod_ItemDetector>(source, item, out _);
-            JObject mover = Module<Mover_AI>(source, item, out _);
-            JObject health = Module<DamageReceiver>(source, item, out var healthModule);
+            JObject mover = Module<Mod_Mover_AI>(source, item, out _);
+            JObject health = Module<Mod_DamageReceiver>(source, item, out var healthModule);
             JObject attack = Module<Mod_Damage>(source, item, out _);
             if (health == null && ecs?["health"] == null)
                 throw new InvalidOperationException(actorId + " 缺少 ecs.health 生命配置。");
@@ -41,7 +41,7 @@ namespace FlatWorld.AIECS.Gameplay
                 attack == null && ecs?["combat"]?["damage"] == null)
                 throw new InvalidOperationException(actorId + " 缺少 ecs.combat.damage 攻击配置。");
             var life = health != null
-                ? health["Data"].ToObject<DamageReceiver.DamageReceiver_SaveData>()
+                ? health["Data"].ToObject<Mod_DamageReceiver.DamageReceiver_SaveData>()
                 : EcsLife(ecs["health"]);
             var body = Body(source, health, healthModule);
             float start = Number(ai, "attackTriggerDistance", 1.2f);
@@ -71,7 +71,7 @@ namespace FlatWorld.AIECS.Gameplay
                     : Number(attack, "HitSlowDuration", 0.35f),
                 CandidateBudget = 64, RequireLos = (byte)((bool?)detector?["wallsBlockPerception"] == false ? 0 : 1) };
             AddRules(ref definition, capabilities);
-            JObject onHit = Module<DamageOnHitBuffApplier>(source, item, out _);
+            JObject onHit = Module<Mod_DamageOnHitBuffApplier>(source, item, out _);
             if (onHit != null && !string.IsNullOrWhiteSpace((string)onHit["buffId"]))
                 definition.OnHitBuffs.Add(new CombatOnHitBuff { Id = (string)onHit["buffId"],
                     Chance = Number(onHit, "applicationChance", 0.25f), Stacks = Mathf.Max(1, (int)Number(onHit, "applicationStacks", 1f)) });
@@ -79,7 +79,7 @@ namespace FlatWorld.AIECS.Gameplay
             // Actor 的版本 0 数据沿用旧后端升级为身体部位生命的规则。
             if (life.UseBodyPartHealth || life.BodyPartDataVersion == 0)
             {
-                var parts = life.BodyParts != null && life.BodyParts.Count > 0 ? life.BodyParts : DamageReceiver.CreateDefaultBodyParts(life.Hp, life.MaxHp);
+                var parts = life.BodyParts != null && life.BodyParts.Count > 0 ? life.BodyParts : Mod_DamageReceiver.CreateDefaultBodyParts(life.Hp, life.MaxHp);
                 foreach (BodyPartHealth part in parts) anatomy.Parts.Add(new AiecsBodyPart { Id = (int)part.Part, Hp = part.Hp,
                     MaxHp = part.MaxHp, Weight = part.AreaRatio * part.InjuryProbability });
             }
@@ -258,12 +258,12 @@ namespace FlatWorld.AIECS.Gameplay
             prototype = null; return null;
         }
 
-        /// <summary>新物种可直接从 ECS 配置获得生命值，不要求挂旧 DamageReceiver 模块。</summary>
-        private static DamageReceiver.DamageReceiver_SaveData EcsLife(JToken health)
+        /// <summary>新物种可直接从 ECS 配置获得生命值，不要求挂旧 Mod_DamageReceiver 模块。</summary>
+        private static Mod_DamageReceiver.DamageReceiver_SaveData EcsLife(JToken health)
         {
             float maximum = math.max(0.001f, Number(health, "maxHp", 100f));
             JToken defense = health?["defense"];
-            return new DamageReceiver.DamageReceiver_SaveData
+            return new Mod_DamageReceiver.DamageReceiver_SaveData
             {
                 Hp = math.clamp(Number(health, "hp", maximum), 0.001f, maximum),
                 MaxHp = maximum,
@@ -277,7 +277,7 @@ namespace FlatWorld.AIECS.Gameplay
         }
 
         /// <summary>旧作者受击盒与纯 ECS 感知体型统一编译，后者默认同时用作受击盒。</summary>
-        private static AiecsBody Body(RuntimeItemDefinition source, JObject health, DamageReceiver prototype)
+        private static AiecsBody Body(RuntimeItemDefinition source, JObject health, Mod_DamageReceiver prototype)
         {
             if (source.PerceptionShapes == null || source.PerceptionShapes.Count != 1)
                 throw new InvalidOperationException(source.Id + " 需要单个圆/AABB 感知体型，复杂组合尚未迁移。");

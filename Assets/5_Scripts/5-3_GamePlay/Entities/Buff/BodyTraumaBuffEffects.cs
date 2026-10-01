@@ -19,7 +19,7 @@ public static class BodyTraumaBuffEffects
     public static void ApplyDurabilityRecovery(BuffEffectDefinition effect, BuffInstance runtime)
     {
         if (!FlatWorld.Networking.GameNetwork.HasStateAuthority || runtime.Receiver == null) return;
-        DamageReceiver receiver = runtime.Receiver.itemMods.GetMod_ByID<DamageReceiver>(ModText.Hp);
+        Mod_DamageReceiver receiver = runtime.Receiver.itemMods.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
         float amount = effect.Value;
         // 自然到期结算最后不足一个周期的余量；主动移除/预留回滚绝不额外治疗。
         if (effect.Phase == BuffEffectPhase.Stop)
@@ -50,7 +50,7 @@ public static class BodyTraumaBuffEffects
         var entry = new Entry { Type = effect.TypeId, Value = effect.Value };
         if (effect.TypeId == Move)
         {
-            entry.Speed = runtime.Receiver.itemMods.GetMod_ByID<Mover>(ModText.Mover)?.Speed;
+            entry.Speed = runtime.Receiver.itemMods.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover)?.Speed;
             if (entry.Speed != null) entry.Speed.MultiplicativeModifier *= entry.Value;
         }
         if (effect.TypeId == Blur && runtime.Receiver is Player player && player.IsLocalProfile)

@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEngine.Rendering;
 
 /// <summary>
-/// 通用蓄力远程武器模块：复用 GameController 的统一攻击按住/松开语义进行蓄力，
+/// 通用蓄力远程武器模块：复用 Mod_GameController 的统一攻击按住/松开语义进行蓄力，
 /// 只从武器所在的同一 Inventory 选择并消费带指定标签的弹药，附加模块可独立修饰发射倍率。
 /// </summary>
 public sealed class Mod_Bow : Module, IItemModuleDependencyBinder
@@ -84,7 +84,7 @@ public sealed class Mod_Bow : Module, IItemModuleDependencyBinder
 
     #region 运行时状态
 
-    private GameController _controller;
+    private Mod_GameController _controller;
     private Mod_Stamina _ownerStamina;
     private Inventory _sourceInventory;
     private GameObject _nockedArrowObject;
@@ -186,14 +186,14 @@ public sealed class Mod_Bow : Module, IItemModuleDependencyBinder
 
     #region 输入与蓄力
 
-    /// <summary>绑定拥有者 GameController 的统一攻击开始/结束事件。</summary>
+    /// <summary>绑定拥有者 Mod_GameController 的统一攻击开始/结束事件。</summary>
     private void BindController()
     {
         UnbindController();
         if (item?.Owner?.itemMods == null || !item.InHand)
             return;
 
-        _controller = item.Owner.itemMods.GetMod_ByID<GameController>(ModText.Controller);
+        _controller = item.Owner.itemMods.GetMod_ByID<Mod_GameController>(ModText.Controller);
         if (_controller == null)
             return;
 
@@ -248,7 +248,7 @@ public sealed class Mod_Bow : Module, IItemModuleDependencyBinder
         if (!_charging)
             return;
 
-        // 输入锁、失焦或应用暂停会由 GameController 主动释放“按住”状态；这些属于取消，不应误射一箭。
+        // 输入锁、失焦或应用暂停会由 Mod_GameController 主动释放“按住”状态；这些属于取消，不应误射一箭。
         if ((_controller != null && _controller.IsGameplayInputLocked) || !Application.isFocused)
         {
             CancelCharge();
@@ -307,7 +307,7 @@ public sealed class Mod_Bow : Module, IItemModuleDependencyBinder
         }
 
         Item shooter = item.Owner;
-        Inventory_HotBar hotbar = shooter.itemMods.GetMod_ByID<Inventory_HotBar>(ModText.Hotbar);
+        Mod_HotBar hotbar = shooter.itemMods.GetMod_ByID<Mod_HotBar>(ModText.Hotbar);
         if (!_sourceInventory.Data.TryConsumeFromSlot(ammoSlot, 1, out _))
         {
             ItemMgr.Instance.DespawnItem(projectileItem, saveData: false);

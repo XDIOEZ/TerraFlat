@@ -124,7 +124,7 @@ public static class MachineInventoryCommands
     {
         var hand = actor.GetComponentInChildren<Mod_Hand>()?.HandInventory;
         if (hand != null) yield return (new MachineInventoryAddress { PlayerInventory = "@hand" }, hand);
-        var hotbar = actor.itemMods?.GetMod_ByID<Inventory_HotBar>(ModText.Hotbar)?.RuntimeInventory;
+        var hotbar = actor.itemMods?.GetMod_ByID<Mod_HotBar>(ModText.Hotbar)?.RuntimeInventory;
         if (hotbar != null) yield return (new MachineInventoryAddress { PlayerInventory = "@hotbar" }, hotbar);
         if (actor.itemMods?.Mods == null) yield break;
         foreach (Module module in actor.itemMods.Mods.Values)

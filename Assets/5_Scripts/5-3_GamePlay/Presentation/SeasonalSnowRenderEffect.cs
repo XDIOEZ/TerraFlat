@@ -18,7 +18,7 @@ public sealed class SeasonalSnowRenderEffect : ActorRenderEffectModule
     /// <summary>物件只增加行为组件，材质和模型仍来自正式资源。</summary>
     private static void Attach(Item item)
     {
-        if (item is Player || item.GetComponentInChildren<Mover>(true) != null) return;
+        if (item is Player || item.GetComponentInChildren<Mod_Mover>(true) != null) return;
         var effect = item.GetComponent<SeasonalSnowRenderEffect>() ?? item.gameObject.AddComponent<SeasonalSnowRenderEffect>();
         effect.owner = item;
         effect.lastPosition = item.transform.position;

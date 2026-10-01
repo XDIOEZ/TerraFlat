@@ -46,7 +46,7 @@ public partial class TemperatureMgr : SingletonAutoMono<TemperatureMgr>
     public bool ProcessTemperature(
         Mod_Temperature.TemperatureData data,
         float heatConductionRate,
-        DamageReceiver damageReceiver,
+        Mod_DamageReceiver damageReceiver,
         float deltaTime,
         Action<float> onTemperatureChanged,
         ref float coldDamageTickTimer,

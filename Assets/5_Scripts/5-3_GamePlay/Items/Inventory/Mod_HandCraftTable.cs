@@ -46,7 +46,7 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
     public int minClickCount = 1;
 
     private CraftingStationController _craftingController;
-    private GameController _inputController;
+    private Mod_GameController _inputController;
     private InputAction _toggleAction;
     private Action<InputAction.CallbackContext> _toggleCallback;
     private Inventory_Data observedInputData;
@@ -93,8 +93,8 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
 
     private void BindToggleInput()
     {
-        _inputController = item?.itemMods?.GetMod_ByID<GameController>(ModText.Controller);
-        _inputController ??= item != null ? item.GetComponent<GameController>() : null;
+        _inputController = item?.itemMods?.GetMod_ByID<Mod_GameController>(ModText.Controller);
+        _inputController ??= item != null ? item.GetComponent<Mod_GameController>() : null;
         if (_inputController == null || _inputController._inputActions == null)
             return;
 

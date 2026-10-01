@@ -908,10 +908,10 @@ public partial class GameManager : SingletonAutoMono<GameManager>
                 Item rocketItem = SpaceMgr.Instance.InstantiateItemNearPlanet(rocketItemData, planetBodyId, rocketOffset);
                 Item playerItem = SpaceMgr.Instance.InstantiateItemNearPlanet(playerItemData, planetBodyId, playerOffset);
 
-                Module_Fly spaceFly = rocketItem.GetMod<Module_Fly>();
+                Mod_Fly spaceFly = rocketItem.GetMod<Mod_Fly>();
                 if (spaceFly == null)
                 {
-                    throw new InvalidOperationException($"[GameManager] 太空火箭缺少 Module_Fly，rocket={rocketItemData.IDName}");
+                    throw new InvalidOperationException($"[GameManager] 太空火箭缺少 Mod_Fly，rocket={rocketItemData.IDName}");
                 }
 
                 spaceFly.EnterControlFromTransfer(playerItem);

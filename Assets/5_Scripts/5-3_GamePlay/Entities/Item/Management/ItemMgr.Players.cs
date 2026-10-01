@@ -284,7 +284,7 @@ public partial class ItemMgr
             body.position = presentationSpawnPosition;
         player.Data.transform.position = logicalSpawnPosition;
 
-        GameController controller = player.GetComponentInChildren<GameController>(true);
+        Mod_GameController controller = player.GetComponentInChildren<Mod_GameController>(true);
         controller?.SetGameplayInputLocked(false);
     }
 
@@ -299,7 +299,7 @@ public partial class ItemMgr
         player.transform.position = presentationSpawnPosition;
         player.Data.transform.position = logicalSpawnPosition;
 
-        GameController controller = player.GetComponentInChildren<GameController>(true);
+        Mod_GameController controller = player.GetComponentInChildren<Mod_GameController>(true);
         controller?.SetGameplayInputLocked(true);
 
         Rigidbody2D body = player.GetComponent<Rigidbody2D>();

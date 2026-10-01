@@ -272,7 +272,7 @@ GameObject:
   - component: {fileID: 2346054118044131776}
   - component: {fileID: 750791655451355564}
   m_Layer: 0
-  m_Name: Module_Equipment
+  m_Name: Mod_EquipmentRuntime
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -497,7 +497,7 @@ MonoBehaviour:
     version: 2
     RefIds:
     - rid: 4916459727764848643
-      type: {class: Inventory_HotBar/HotBarRuntimeInventory, ns: , asm: GamePlay}
+      type: {class: Mod_HotBar/HotBarRuntimeInventory, ns: , asm: GamePlay}
       data:
         item: {fileID: 0}
         InventoryPanel_Prefab: {fileID: 3157743334102886615, guid: 834b874f2bd43a34e95f52adb0e4a211, type: 3}
@@ -1788,7 +1788,7 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5958215070207355882, guid: 9d6c3cee7e6aea74d892677e88925c7f, type: 3}
-      propertyPath: GameController
+      propertyPath: Mod_GameController
       value: 
       objectReference: {fileID: 7199555808017476116}
     - target: {fileID: 7704802002852346167, guid: 9d6c3cee7e6aea74d892677e88925c7f, type: 3}
@@ -1991,7 +1991,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4487204284434559042, guid: 3c46ab8e0ed4f064685fd412d78b98ee, type: 3}
       propertyPath: m_Name
-      value: Module_DiscardItem
+      value: Mod_DiscardItem
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

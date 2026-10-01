@@ -1,0 +1,1649 @@
+// AI-Context: 生命值权威数据与受伤反馈模块；远程应用只刷新数值/表现，不在客户端重复结算伤害或死亡。
+
+using System;
+using Sirenix.OdinInspector;
+using System.Collections;
+using System.Collections.Generic;
+using UltEvents;
+using UnityEngine;
+using ReadOnlyAttribute = Unity.Collections.ReadOnlyAttribute;
+using Random = UnityEngine.Random;
+
+/// <summary>
+/// GameObject 实体生命值与死亡的唯一权威：血量限制在 0 到 MaxHp，旧攻击和纯数据攻击共用结算与死亡收尾。
+/// 受伤反馈在数值提交后执行；死亡每次生命只结算一次，掉落异常不能中断实体生命周期。
+/// </summary>
+[RequireComponent(typeof(BoxCollider2D))]
+public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemModuleDependencyBinder
+{
+    private readonly List<IIncomingDamageRule> incomingDamageRules = new(); // 已装配的受击规则。
+
+    /// <summary>从模块注册表缓存受击规则，避免把具体资源玩法耦合进生命系统。</summary>
+    public void BindModuleDependencies(ItemMods modules)
+    {
+        incomingDamageRules.Clear();
+        foreach (Module module in modules.Mods.Values)
+            if (module is IIncomingDamageRule rule)
+                incomingDamageRules.Add(rule);
+    }
+    private const int CurrentBodyPartDataVersion = 2;
+    // 玩家每恢复 1 点生命值消耗 1 点蛋白质。
+    private const float PlayerHealingProteinCostPerHp = 1f;
+
+    #region 数据引用
+
+    public Ex_ModData modData;
+    public override ModuleData _Data { get => modData; set => modData = (Ex_ModData)value; }
+
+    [SerializeField]
+    public DamageReceiver_SaveData Data = new DamageReceiver_SaveData();
+
+    public float MaxHp
+    {
+        get => Data.MaxHp;
+        set => SetOverallMaxHp(value);
+    }
+
+    public float Hp
+    {
+        get => Data.Hp;
+        set
+        {
+            float previousHp = Hp;
+            SetOverallHp(value);
+            // 显式恢复生命开始新的生命周期；普通 Heal 不允许复活。
+            if (previousHp <= 0f && Hp > 0f)
+            {
+                ResetBodyPartDurability();
+                ResetDeathResolution();
+            }
+        }
+    }
+
+    public CombatDefense Defense
+    {
+        get => Data.DefenseValues;
+    }
+
+    public UltEvent OnDead = new();
+
+    /// <summary>死亡流程开始时触发，供生态等系统识别真实死亡。</summary>
+    public event Action<Mod_DamageReceiver> DeathStarted;
+
+    [Header("受伤调用")]
+    [SerializeReference]
+    public List<DamageReciver_Action> HurtActions = new List<DamageReciver_Action>(); // 受伤触发动作列表
+
+    [Header("死亡调用")]
+    [SerializeReference]
+    public List<DamageReciver_Action> DeathActions = new List<DamageReciver_Action>(); // 死亡触发动作列表
+
+    public event Action<DamageReceiverDamageInfo> OnDamageReceived; // 收到伤害时触发，外部模块可订阅
+
+    public event Action<BodyPartDamageInfo> OnBodyPartDamaged;
+    public event Action<BodyPartHealthChangeInfo> OnBodyPartHealthChanged;
+
+    [Header("受击材质音效")]
+    [SerializeField]
+    private CombatImpactMaterial impactAudioMaterial = CombatImpactMaterial.Auto;
+    [SerializeField, Tooltip("对象专属受击 AudioCue ID。留空时按材质及武器组合自动选择。")]
+    private string hurtAudioCueId;
+
+    public CombatImpactMaterial ImpactAudioMaterial => impactAudioMaterial;
+    public string HurtAudioCueId => hurtAudioCueId;
+
+    public bool UsesBodyPartHealth =>
+        Data != null &&
+        Data.UseBodyPartHealth &&
+        Data.BodyParts != null &&
+        Data.BodyParts.Count > 0;
+
+    public IReadOnlyList<BodyPartHealth> BodyParts => Data?.BodyParts;
+
+    [System.Serializable]
+    public class DamageReceiver_SaveData
+    {
+        [Header("生命值设置")]
+        public float Hp = 100;
+        public float MaxHp = 100;
+
+        [Header("Body part health")]
+        [Tooltip("Characters can use independent body-part health. Non-character receivers keep legacy total health.")]
+        public bool UseBodyPartHealth = false;
+
+        [Range(0f, 1f)]
+        [Tooltip("Chance that one attack selects two distinct parts. Each selected part receives 50% damage.")]
+        public float TwoPartHitChance = 0.25f;
+
+        public int BodyPartDataVersion = 0;
+        public List<BodyPartHealth> BodyParts = new List<BodyPartHealth>();
+
+        [Header("防御设置")]
+        [Tooltip("切割、穿刺、劈砍、钝击防御分别只抵消同类型伤害。")]
+        public CombatDefense DefenseValues = new CombatDefense();
+        [Header("伤害者的UID列表")]
+        public List<int> AttackersUIDs = new List<int>();
+
+        [Header("伤害接收间隔时间 (秒)")]
+        [Min(0f)]
+        public float DamageInterval = 0.1f;
+
+        [Header("血量归零后多久才销毁物体 (秒)")]//-1表示永久存活 0表示不延迟销毁物体 
+        public float DestroyDelay = 0f;
+
+        // 修复循环引用问题：使用字符串存储预制体名称而不是直接引用GameObject
+        [Header("战利品设置")]
+        [ListDrawerSettings()]
+        public List<LootEntry> LootTable = new List<LootEntry>();
+    }
+    private void OnValidate()
+    {
+        // 自动更新所有战利品条目的预制体名称
+        if (Data != null && Data.LootTable != null)
+        {
+            foreach (var lootEntry in Data.LootTable)
+            {
+                if (lootEntry != null)
+                {
+                    lootEntry.OnValidate();
+                }
+            }
+        }
+
+        if (HurtActions != null)
+        {
+            foreach (var action in HurtActions)
+            {
+                action?.OnValidate();
+            }
+        }
+
+        if (DeathActions != null)
+        {
+            foreach (var action in DeathActions)
+            {
+                action?.OnValidate();
+            }
+        }
+
+        NormalizeStatRanges();
+        hitSlowMultiplier = Mathf.Clamp(hitSlowMultiplier, 0.05f, 1f);
+        hitSlowDuration = Mathf.Max(0f, hitSlowDuration);
+        healthBarWorldScale = Mathf.Max(0.01f, healthBarWorldScale);
+        modData ??= new Ex_ModData();
+        modData.ID = ModText.Hp;
+    }
+
+
+    /// <summary>
+    /// 上一次受到伤害的时间（秒）
+    /// </summary>
+    private double lastDamageTime = double.NegativeInfinity; // 新旧入口共用同一游戏时间域。
+    public FlatWorld.Combat.CombatIdentity LastDamageSource { get; private set; } // 运行时来源，不能用伪 Item UID 代表 ECS。
+    public FlatWorld.Combat.CombatIdentity LastDamageCredit { get; private set; } // 击杀归因身份。
+
+    #region 受击减速参数
+
+    [Header("受击减速设置")]
+    [SerializeField]
+    private bool enableHitSlowdown = true;
+
+    [SerializeField, Range(0.05f, 1f)]
+    private float hitSlowMultiplier = 0.5f;
+
+    [SerializeField, Min(0f)]
+    private float hitSlowDuration = 0.35f;
+
+    private GameValue_float _slowedMoveSpeed;
+    private float _appliedHitSlowMultiplier = 1f;
+    private float _hitSlowRemainingDuration;
+
+    public bool HitSlowdownEnabled => enableHitSlowdown;
+    public float HitSlowMultiplier => hitSlowMultiplier;
+    public float HitSlowDuration => hitSlowDuration;
+
+    #endregion
+
+    #endregion
+
+    #region 动画相关参数
+
+    [Header("受击动画设置")]
+    public int flashCount = 1;
+
+    [Min(0.01f)]
+    public float flashDuration = 0.2f;
+
+    public Color flashColor = new Color(1f, 0.08f, 0.08f, 1f);
+    public float shakeDuration = 0.15f;
+    public float shakeMagnitude = 0.1f;
+
+    public GameObject PanelPrefab;
+    [ReadOnly]
+    public GameObject PanleInstance;
+
+    public UltEvent DataUpdate = new UltEvent();
+
+    public BasePanel UIValues;
+    [Header("受伤UI自动隐藏设置")]
+    [Min(0f)]
+    public float HideUiDelayAfterLastDamage = 4f;
+
+    [Header("世界血条自适应")]
+    [SerializeField, Min(0f)]
+    private float healthBarTopPadding = 0.16f;
+    [SerializeField, Min(0.01f)]
+    private float healthBarWorldScale = 0.55f;
+
+    private Coroutine _hideUiCoroutine;
+    private float _lastDamageUiTime = -999f;
+    private Item _handStateEventOwner;
+    private bool _isVisualShaking;
+    private Coroutine _shakeCoroutine;
+    private Vector3 _visualShakeRestPosition;
+
+    private bool _deathConsumedByExternalHandler;
+    // 结算期间禁止回调重入，死亡标记在 Load 或显式复活时重置。
+    private bool _resolvingDamage;
+    private bool _deathHandled;
+    private bool _reportedInvalidCombatFaction; // 每次装载只报告一次非法阵营，避免连续命中刷屏。
+    private Coroutine _deathCoroutine;
+
+    #region Buff 受伤倍率
+
+    /// <summary>运行时最终受伤倍率；1 表示不受 Buff 影响，0.7 表示减伤 30%。</summary>
+    private float damageTakenMultiplier = 1f;
+
+    /// <summary>当前运行时最终受伤倍率。</summary>
+    public float DamageTakenMultiplier => damageTakenMultiplier;
+
+    /// <summary>叠加一个 Buff 提供的最终受伤倍率。</summary>
+    public void MultiplyDamageTakenMultiplier(float multiplier)
+    {
+        if (float.IsNaN(multiplier) || float.IsInfinity(multiplier) || multiplier <= 0f)
+            return;
+
+        damageTakenMultiplier *= multiplier;
+        if (float.IsNaN(damageTakenMultiplier) || float.IsInfinity(damageTakenMultiplier))
+            damageTakenMultiplier = 1f;
+    }
+
+    #endregion
+
+    public bool ShowCanvas
+    {
+        get => IsPanelVisible();
+        set
+        {
+            if (value)
+                ShowPanel();
+            else
+                HidePanel();
+        }
+    }
+
+    #endregion
+
+    #region 生命周期函数
+
+    public override void Awake()
+    {
+        _Data.ID = ModText.Hp;
+        NormalizeStatRanges();
+    }
+
+    public override void Load()
+    {
+        CombatPhysicsChannels.AssignDamageReceiver(this);
+        ClearBodyPartPenalties();
+        ClearHitSlowdown();
+        damageTakenMultiplier = 1f;
+        modData.ReadData(ref Data);
+        UpgradeBodyPartData();
+        NormalizeStatRanges();
+        BindHandStateEvent();
+        _resolvingDamage = false;
+        _reportedInvalidCombatFaction = false;
+        ResetDeathResolution();
+        _deathConsumedByExternalHandler = false;
+        lastDamageTime = double.NegativeInfinity;
+        LastDamageSource = default; LastDamageCredit = default;
+        Equipment_Inventory = item.itemMods.GetMod_ByID<Mod_Inventory>(ModText.Equipment);
+
+        HidePanel();
+    }
+
+    public override void ApplyNetworkData(ModuleData data)
+    {
+        if (data is not Ex_ModData networkData)
+            return;
+
+        float previousHp = Hp;
+        Dictionary<BodyPartType, BodyPartSnapshot> previousBodyParts = CaptureBodyPartSnapshots();
+        modData = networkData;
+        modData.ReadData(ref Data);
+        UpgradeBodyPartData();
+        NormalizeStatRanges();
+        if (previousHp <= 0f && Hp > 0f)
+            ResetDeathResolution();
+        if (item?.itemData != null && !string.IsNullOrEmpty(modData.Name))
+            item.itemData.ModuleDataDic[modData.Name] = modData;
+
+        if (Hp < previousHp)
+            OnDamaged_ShowUiAndScheduleHide();
+
+        DispatchNetworkBodyPartChanges(previousBodyParts);
+
+        if (IsPanelVisible())
+            RefreshUI();
+
+        DataUpdate?.Invoke();
+        OnAction?.Invoke(Hp);
+    }
+
+    public void ApplyRemoteNetworkData(Item owner, ModuleData data)
+    {
+        if (owner == null || data == null)
+            return;
+
+        ModuleInit(owner, data, owner.itemData);
+        ApplyNetworkData(data);
+    }
+
+    [Button("显示面板")]
+    public void ShowPanel()
+    {
+        if (ShouldHidePanelWhileHeld())
+        {
+            if (PanleInstance != null)
+                HidePanel();
+            return;
+        }
+
+        // 玩家生命值由专属状态面板展示，未配置世界血条时只跳过面板创建。
+        if (PanelPrefab == null)
+            return;
+
+        if (PanleInstance != null) return;
+        if (transform.gameObject.scene.IsValid() == false) return;//表示为Prefab状态，不显示面板
+        GameObject panel = Instantiate(PanelPrefab, transform);
+        UIValues = panel.GetComponentInChildren<BasePanel>();
+        UIValues.CollectUIComponents();
+        PanleInstance = panel;
+        UpdateWorldHealthBarLayout();
+        DataUpdate += RefreshUI;
+
+        RefreshUI();
+        // ✅ 从 UI_Drag 中获取 rectTransform 并恢复位置
+        var s = panel.GetComponentInChildren<UI_Drag>();
+        if (s != null)
+        {
+            // s.rectTransform.anchoredPosition = Data.PanelPosition;
+        }
+    }
+    [Button("刷新面板")]
+    public void RefreshUI()
+    {
+        if (UIValues == null) return;
+        UIValues.GetText("血量").text = $"{Hp:F1}";  // F1 表示保留 1 位小数
+    }
+
+
+
+    [Button("隐藏面板")]
+    public void HidePanel()
+    {
+        DataUpdate -= RefreshUI;
+
+        if (PanleInstance == null)
+        {
+            UIValues = null;
+            return;
+        }
+
+        if (transform.gameObject.scene.IsValid() == false) return;//表示为Prefab状态，不显示面板
+
+        // ✅ 从 UI_Drag 中获取 rectTransform 并保存位置
+        var s = PanleInstance.GetComponentInChildren<UI_Drag>();
+        if (s != null)
+        {
+            //    Data.PanelPosition = s.rectTransform.anchoredPosition;
+        }
+
+        Destroy(PanleInstance);
+        PanleInstance = null;
+        UIValues = null;
+    }
+    public bool IsPanelVisible()
+    {
+        return PanleInstance != null;
+    }// 添加检查面板是否可见的方法
+
+    public override void ModUpdate(float deltaTime)
+    {
+        ReconcileBodyPartPenalties();
+        UpdateHitSlowdown(deltaTime);
+
+        // 抖动只属于受击视觉，血条继续跟随稳定的物品根节点。
+        if (PanleInstance != null && !_isVisualShaking)
+            UpdateWorldHealthBarLayout();
+    }
+
+    private void UpdateWorldHealthBarLayout()
+    {
+        if (PanleInstance == null)
+            return;
+
+        Bounds visualBounds = GetOwnerVisualBounds();
+
+        Transform panelTransform = PanleInstance.transform;
+        panelTransform.rotation = Quaternion.identity;
+        panelTransform.position = new Vector3(
+            visualBounds.center.x,
+            visualBounds.max.y + GetAdaptiveTopPadding(visualBounds),
+            transform.position.z);
+
+        Vector3 parentScale = panelTransform.parent != null
+            ? panelTransform.parent.lossyScale
+            : Vector3.one;
+
+        panelTransform.localScale = new Vector3(
+            healthBarWorldScale / SafeScale(parentScale.x),
+            healthBarWorldScale / SafeScale(parentScale.y),
+            healthBarWorldScale / SafeScale(parentScale.z));
+    }
+
+    private Bounds GetOwnerVisualBounds()
+    {
+        GameObject owner = item != null ? item.gameObject : gameObject;
+        SpriteRenderer[] renderers = owner.GetComponentsInChildren<SpriteRenderer>(false);
+        bool hasBounds = false;
+        Bounds bounds = default;
+
+        for (int i = 0; i < renderers.Length; i++)
+        {
+            SpriteRenderer renderer = renderers[i];
+            if (renderer == null || !renderer.enabled || renderer.sprite == null)
+                continue;
+
+            // 手持武器等物品会挂在角色节点下，但不属于角色自身外观。
+            // 只合并由当前 Item 直接拥有的渲染器，避免武器位置改变血条锚点。
+            Item rendererOwner = renderer.GetComponentInParent<Item>();
+            if (item != null && rendererOwner != item)
+                continue;
+
+            if (!hasBounds)
+            {
+                bounds = renderer.bounds;
+                hasBounds = true;
+            }
+            else
+            {
+                bounds.Encapsulate(renderer.bounds);
+            }
+        }
+
+        if (hasBounds)
+            return bounds;
+
+        Collider2D ownerCollider = owner.GetComponentInChildren<Collider2D>(false);
+        if (ownerCollider != null)
+            return ownerCollider.bounds;
+
+        return new Bounds(owner.transform.position, Vector3.one);
+    }
+
+    private float GetAdaptiveTopPadding(Bounds bounds)
+    {
+        return Mathf.Clamp(
+            bounds.size.y * 0.035f,
+            healthBarTopPadding,
+            healthBarTopPadding * 1.75f);
+    }
+
+    private static float SafeScale(float scale)
+    {
+        return Mathf.Max(0.0001f, Mathf.Abs(scale));
+    }
+
+    private void BindHandStateEvent()
+    {
+        if (_handStateEventOwner == item)
+            return;
+
+        if (_handStateEventOwner != null)
+            _handStateEventOwner.OnInHandChanged -= HandleInHandChanged;
+
+        _handStateEventOwner = item;
+        if (_handStateEventOwner != null)
+            _handStateEventOwner.OnInHandChanged += HandleInHandChanged;
+    }
+
+    private void HandleInHandChanged(bool inHand)
+    {
+        if (inHand && IsBuildingOwner())
+            HidePanel();
+    }
+
+    private bool ShouldHidePanelWhileHeld()
+    {
+        return item != null && item.itemData != null && item.InHand && IsBuildingOwner();
+    }
+
+    private bool IsBuildingOwner()
+    {
+        return item != null && item.GetComponentInChildren<Mod_Building>(true) != null;
+    }
+
+    private void OnDestroy()
+    {
+        Unload();
+    }
+
+    public override void Unload()
+    {
+        incomingDamageRules.Clear();
+        ClearBodyPartPenalties();
+        bodyArmorSources.Clear();
+        ClearHitSlowdown();
+        if (_deathCoroutine != null)
+        {
+            StopCoroutine(_deathCoroutine);
+            _deathCoroutine = null;
+        }
+        if (_hideUiCoroutine != null)
+        {
+            StopCoroutine(_hideUiCoroutine);
+            _hideUiCoroutine = null;
+        }
+        Equipment_Inventory = null;
+
+        if (_handStateEventOwner != null)
+        {
+            _handStateEventOwner.OnInHandChanged -= HandleInHandChanged;
+            _handStateEventOwner = null;
+        }
+    }
+
+
+    [Button]
+    public override void Save()
+    {
+        modData.WriteData(Data);
+        item.itemData.ModuleDataDic[_Data.Name] = modData;
+    }
+
+    /// <summary>先校验阵营及可组合受击规则，再统一结算伤害、耐久与死亡。</summary>
+    public virtual float Hurt(IDamageSender damageSender)
+    {
+        BodyPartType? preferred = null;
+        if (UsesBodyPartHealth && damageSender is IPreferredBodyPartDamageSource source &&
+            TryGetBodyPart(source.PreferredBodyPart, out _))
+            preferred = source.PreferredBodyPart;
+        return Hurt(damageSender, preferred);
+    }
+
+    /// <summary>定向部位入口；null 使用随机部位，仍通过阵营、受击规则及统一结算。</summary>
+    public virtual float Hurt(IDamageSender damageSender, BodyPartType? targetPart)
+    {
+        if (!CanMutateBodyState() || _resolvingDamage || _deathHandled || Hp <= 0 || item == null || damageSender == null) return -1;
+        if (!FactionRelationService.CanAttack(damageSender.attacker, item)) return -1;
+        var context = GameplayCombatBridge.Context(damageSender, new FlatWorld.Combat.CombatClock {
+            Tick = (ulong)Time.frameCount, Time = Time.timeAsDouble, DeltaTime = Time.deltaTime });
+        context.HitPoint = (Vector2)transform.position;
+        float ruleMultiplier = 1f;
+        foreach (IIncomingDamageRule rule in incomingDamageRules)
+        {
+            float multiplier = rule.GetDamageMultiplier(damageSender);
+            if (multiplier <= 0f)
+                return -1;
+            if (float.IsNaN(multiplier) || float.IsInfinity(multiplier))
+                throw new InvalidOperationException("受击规则必须返回有限倍率。");
+            ruleMultiplier *= multiplier;
+        }
+
+        return HurtContext(context, ruleMultiplier, damageSender, targetPart);
+    }
+
+    /// <summary>数据后端的正式入口；使用真实来源身份与模拟时钟，不伪造 Item 或 IDamageSender。</summary>
+    public virtual float Hurt(in FlatWorld.Combat.CombatDamageContext context) => Hurt(context, null);
+
+    /// <summary>共享上下文的定向部位入口。</summary>
+    public virtual float Hurt(in FlatWorld.Combat.CombatDamageContext context, BodyPartType? targetPart)
+    {
+        if (!CanMutateBodyState() || _resolvingDamage || _deathHandled || Hp <= 0f || item == null || !context.Attack.Source.IsValid) return -1f;
+        var target = GameplayCombatBridge.Identity(item);
+        if (context.Attack.Source == target || context.Attack.Source.World != target.World || context.Attack.Source.Dimension != target.Dimension) return -1f;
+        if (!FactionRelationService.TryGetCombatRelation(in context.Faction, FactionRelationService.GetFactionId(item),
+            out FactionRelation relation, out string factionError))
+        {
+            ReportInvalidCombatFaction(in context, factionError);
+            return -1f;
+        }
+        if (relation != FactionRelation.Hostile) return -1f;
+        float rules = 1f;
+        foreach (IIncomingDamageRule rule in incomingDamageRules)
+        {
+            if (!(rule is IIncomingDamageContextRule pureRule)) return -1f;
+            float multiplier = pureRule.GetDamageMultiplier(context);
+            if (float.IsNaN(multiplier) || float.IsInfinity(multiplier)) throw new InvalidOperationException("受击规则必须返回有限倍率。");
+            if (multiplier <= 0f) return -1f;
+            rules *= multiplier;
+        }
+        float result = HurtContext(context, rules, targetPart: targetPart);
+        if (result >= 0f && Hp > 0f && context.OnHitBuffs.Length > 0)
+        {
+            Mod_BuffManager buffManager = item.itemMods.GetMod_ByID<Mod_BuffManager>(ModText.Mod_BuffManager);
+            if (buffManager != null)
+                foreach (var effect in context.OnHitBuffs)
+                    if (effect.Chance >= 1f || Random.value < effect.Chance)
+                        buffManager.AddBuff(effect.Id.ToString(), Mathf.Max(1, effect.Stacks));
+        }
+        return result;
+    }
+
+    /// <summary>保留有限的原始字节和攻击身份，不再对异常长度的 Native 字符串调用 ToString。</summary>
+    private void ReportInvalidCombatFaction(in FlatWorld.Combat.CombatDamageContext context, string error)
+    {
+        if (_reportedInvalidCombatFaction) return;
+        _reportedInvalidCombatFaction = true;
+        Unity.Collections.FixedString128Bytes faction = context.Faction;
+        int count = Math.Min(16, Math.Min(faction.Length, faction.Capacity));
+        var prefix = new System.Text.StringBuilder(count * 3);
+        for (int i = 0; i < count; i++)
+        {
+            if (i > 0) prefix.Append(' ');
+            prefix.Append(faction[i].ToString("X2"));
+        }
+        var source = context.Attack.Source;
+        Debug.LogError($"[Combat] 已拒绝非法阵营命中，不修改生命或受伤冷却。{error} " +
+            $"source={source.Backend}:{source.Value}/{source.Generation} world={source.World} dimension={source.Dimension} " +
+            $"attack={context.Attack.Sequence}/{context.Attack.Window}/{context.Attack.Pulse} tick={context.Clock.Tick} " +
+            $"target={item?.itemData?.IDName}:{item?.itemData?.Guid} factionBytes={faction.Length} prefixHex={prefix}", this);
+    }
+
+    /// <summary>新旧攻击共享间隔、四类数值、难度、归因和原有生命提交/反馈链。</summary>
+    private float HurtContext(in FlatWorld.Combat.CombatDamageContext context, float rules, IDamageSender legacySender = null, BodyPartType? targetPart = null)
+    {
+        if (!Unity.Mathematics.math.all(Unity.Mathematics.math.isfinite(context.Damage)) ||
+            !Unity.Mathematics.math.isfinite(context.Clock.Time)) throw new ArgumentException("伤害上下文必须包含有限数值和模拟时间。");
+        if (context.Clock.Time - lastDamageTime < Data.DamageInterval) return -1f;
+        lastDamageTime = context.Clock.Time;
+        float difficulty = GameplayCombatBridge.Difficulty().Resolve(context.SourceIsPlayer != 0, GameDifficultyService.IsPlayer(item));
+        List<BodyPartDamageInfo> preparedHits = null;
+        var values = UsesBodyPartHealth && context.IsTrueDamage == 0
+            ? ResolveBodyPartAttack(context.Damage, difficulty, Mathf.Max(0f, damageTakenMultiplier) * rules, targetPart, out preparedHits)
+            : FlatWorld.Combat.CombatRules.Resolve(context.Damage,
+                context.IsTrueDamage != 0 ? Unity.Mathematics.float4.zero : GameplayCombatBridge.Values(Defense), difficulty,
+                Mathf.Max(0f, damageTakenMultiplier) * rules);
+        float damage = Unity.Mathematics.math.csum(values);
+        if (damage > 0f || Random.value <= 0.1f)
+        {
+            LastDamageSource = context.Attack.Source; LastDamageCredit = context.Credit;
+            if (legacySender?.attacker != null)
+            {
+                Data.AttackersUIDs.Add(legacySender.attacker.itemData.Guid);
+                if (Data.AttackersUIDs.Count > 3) Data.AttackersUIDs.RemoveAt(0);
+            }
+        }
+        return ResolveDamage(damage, legacySender, difficulty > 0f ? (damage > 0f ? 1f : 0.5f) : 0f,
+            GameplayCombatBridge.LegacyValues(values), context, preparedHits);
+    }
+
+    #region 统一伤害结算
+
+    /// <summary>先完成纯生命数值提交，再发布反馈；离开结算作用域时必须完成权威同步和死亡收尾。</summary>
+    private float ResolveDamage(
+        float damage,
+        IDamageSender sender,
+        float durabilityDamage,
+        CombatDamage resolvedDamageValues = null,
+        FlatWorld.Combat.CombatDamageContext? context = null,
+        List<BodyPartDamageInfo> preparedHits = null)
+    {
+        if (float.IsNaN(damage) || float.IsInfinity(damage) || damage < 0f)
+            throw new ArgumentOutOfRangeException(nameof(damage), "伤害必须是有限非负数。");
+
+        float hpBefore = Hp;
+        DamageReceiverDamageInfo damageInfo = CreateDamageInfo(
+            sender,
+            0f,
+            hpBefore,
+            hpBefore,
+            resolvedDamageValues: resolvedDamageValues,
+            context: context);
+        _resolvingDamage = true;
+        try
+        {
+            if (damage > 0f)
+            {
+                SetOverallHp(hpBefore - damage);
+                List<BodyPartDamageInfo> bodyPartHits = preparedHits;
+                if (bodyPartHits != null)
+                    foreach (BodyPartDamageInfo hit in bodyPartHits)
+                        if (TryGetBodyPart(hit.Part, out BodyPartHealth part)) part.Hp = hit.HpAfter;
+
+                // 总血量与部位伤害都以实际扣除值结算，过量伤害不计入实际损失。
+                damageInfo.DamageValue = hpBefore - Hp;
+                damageInfo.HpAfter = Hp;
+                damageInfo.IsFatal = Hp <= 0f;
+                damageInfo.BodyPartHits = bodyPartHits ?? damageInfo.BodyPartHits;
+
+                foreach (BodyPartDamageInfo hit in damageInfo.BodyPartHits)
+                    DispatchBodyPartDamaged(hit);
+
+                if (Hp > 0f)
+                {
+                    if (context.HasValue && sender == null)
+                        ApplyHitSlowdown(context.Value.SlowEnabled != 0, context.Value.SlowMultiplier, context.Value.SlowDuration);
+                    else if (sender != null) ApplyHitSlowdown(sender);
+                }
+                DispatchDamageReceived(damageInfo);
+                OnDamaged_ShowUiAndScheduleHide();
+                if (IsPanelVisible())
+                    RefreshUI();
+                OnAction.Invoke(Hp);
+                PlayHitVisualFeedback();
+            }
+
+            if (durabilityDamage > 0f)
+                ApplyDurabilityDamageToEquipments(durabilityDamage);
+
+            return damageInfo.DamageValue;
+        }
+        finally
+        {
+            try
+            {
+                // 网络提交仍在实体离场前执行，客户端继续只提交结果、由权威端处理死亡。
+                try
+                {
+                    if (damageInfo.DamageValue > 0f)
+                        ItemNetworkStateSerialization.NotifyRuntimeStateChanged(item);
+                }
+                finally
+                {
+                    if (Hp <= 0f && !ItemNetworkStateSerialization.DeferLocalDestruction())
+                        HandleDeath(damageInfo);
+                }
+            }
+            finally
+            {
+                _resolvingDamage = false;
+            }
+        }
+    }
+
+    #endregion
+
+    #region 受击减速
+
+    public void ApplyHitSlowdown()
+    {
+        ApplyHitSlowdown(enableHitSlowdown, hitSlowMultiplier, hitSlowDuration);
+    }
+
+    /// <summary>优先使用攻击者提供的减速参数；旧的接收器参数作为非武器攻击的兼容回退。</summary>
+    public void ApplyHitSlowdown(IDamageSender damageSender)
+    {
+        if (damageSender is IHitSlowdownSource source)
+        {
+            ApplyHitSlowdown(
+                source.HitSlowdownEnabled,
+                source.HitSlowMultiplier,
+                source.HitSlowDuration);
+            return;
+        }
+
+        ApplyHitSlowdown();
+    }
+
+    private void ApplyHitSlowdown(bool enabled, float multiplier, float duration)
+    {
+        if (!enabled || duration <= 0f || multiplier >= 1f)
+            return;
+
+        Mod_Mover mover = ResolveMover();
+        GameValue_float moveSpeed = mover?.Speed;
+        if (moveSpeed == null)
+            return;
+
+        if (_slowedMoveSpeed == moveSpeed)
+        {
+            _hitSlowRemainingDuration = duration;
+            return;
+        }
+
+        ClearHitSlowdown();
+
+        _appliedHitSlowMultiplier = Mathf.Clamp(multiplier, 0.05f, 1f);
+        _slowedMoveSpeed = moveSpeed;
+        _slowedMoveSpeed.MultiplicativeModifier *= _appliedHitSlowMultiplier;
+        _hitSlowRemainingDuration = duration;
+    }
+
+    private void UpdateHitSlowdown(float deltaTime)
+    {
+        if (_slowedMoveSpeed == null || deltaTime <= 0f)
+            return;
+
+        _hitSlowRemainingDuration -= deltaTime;
+        if (_hitSlowRemainingDuration <= 0f)
+            ClearHitSlowdown();
+    }
+
+    private void ClearHitSlowdown()
+    {
+        if (_slowedMoveSpeed != null && _appliedHitSlowMultiplier > 0f)
+            _slowedMoveSpeed.MultiplicativeModifier /= _appliedHitSlowMultiplier;
+
+        _slowedMoveSpeed = null;
+        _appliedHitSlowMultiplier = 1f;
+        _hitSlowRemainingDuration = 0f;
+    }
+
+    private Mod_Mover ResolveMover()
+    {
+        if (item?.itemMods != null)
+        {
+            Mod_Mover mover = item.itemMods.GetMod_ByID(ModText.Mod_Mover) as Mod_Mover;
+            if (mover != null)
+                return mover;
+        }
+
+        return item != null
+            ? item.GetComponentInChildren<Mod_Mover>(true)
+            : null;
+    }
+
+    #endregion
+
+
+    public virtual float ForceHurt(float damage)
+    {
+        if (!CanMutateBodyState() || _resolvingDamage || _deathHandled || Hp <= 0) return -1;
+        damage *= GameDifficultyService.ResolveEnvironmentalDamageMultiplier(item);
+        damage *= Mathf.Max(0f, damageTakenMultiplier);
+        if (damage <= 0f) return Hp;
+
+        ResolveDamage(damage, null, durabilityDamage: 0f);
+        return Hp;
+    }
+
+
+
+    public virtual float Heal(float healAmount, Item healer = null)
+    {
+        if (!CanMutateBodyState()) return Hp;
+        float oldHp = Hp;
+        // 已经归零的实体不能通过普通回血重新复活；玩家复活由 Mod_PlayerDeathState 显式赋值处理。
+        if (oldHp <= 0f)
+            return Hp;
+
+        healAmount *= GameDifficultyService.ResolveHealingMultiplier(item);
+        if (healAmount <= 0f)
+            return Hp;
+
+        float missingHp = Mathf.Max(0f, MaxHp - oldHp);
+        if (missingHp <= 0f)
+            return Hp;
+
+        healAmount = Mathf.Min(healAmount, missingHp);
+
+        // 玩家回血由蛋白质支付，其他实体仍沿用原有免费回血逻辑。
+        Mod_Food playerFood = null;
+        if (GameDifficultyService.IsPlayer(item))
+        {
+            playerFood = item?.itemMods?.GetMod_ByID<Mod_Food>(ModText.Food);
+            if (playerFood?.Data?.nutrition == null)
+                return Hp;
+
+            float availableProtein = Mathf.Max(0f, playerFood.Data.nutrition.Protein);
+            float proteinLimitedHeal = availableProtein / PlayerHealingProteinCostPerHp;
+            healAmount = Mathf.Min(healAmount, proteinLimitedHeal);
+            if (healAmount <= 0f)
+                return Hp;
+        }
+
+        SetOverallHp(Mathf.Min(Hp + healAmount, MaxHp));
+
+        float actualHeal = Mathf.Max(0f, Hp - oldHp);
+        if (playerFood != null && actualHeal > 0f)
+        {
+            Nutrition nutrition = playerFood.Data.nutrition;
+            nutrition.Protein = Mathf.Max(
+                0f,
+                nutrition.Protein - actualHeal * PlayerHealingProteinCostPerHp);
+            playerFood.NotifyStateChanged();
+        }
+
+        // 只有在血量发生变化时才刷新UI
+        if (actualHeal > 0.001f && IsPanelVisible())
+        {
+            RefreshUI();
+        }
+
+        if (actualHeal > 0.001f)
+        {
+            DataUpdate?.Invoke();
+            OnAction?.Invoke(Hp);
+            ItemNetworkStateSerialization.NotifyRuntimeStateChanged(item);
+        }
+
+        return Hp;
+    }
+
+    public void ResolveNetworkAuthoritativeDeath()
+    {
+        if (Hp <= 0f)
+            HandleDeath(CreateDamageInfo(null, 0f, Hp, Hp));
+    }
+
+    public void AddDefense(CombatDefense value)
+    {
+        Defense.Add(value);
+    }
+
+    public void RemoveDefense(CombatDefense value)
+    {
+        Defense.Remove(value);
+    }
+
+    public void SetDefense(CombatDefense value)
+    {
+        Data.DefenseValues = value ?? new CombatDefense();
+        Data.DefenseValues.ClampNonNegative();
+    }
+
+    [Button("Enable and reset body-part health")]
+    public void ConfigureDefaultBodyParts()
+    {
+        if (Data == null)
+            Data = new DamageReceiver_SaveData();
+
+        float totalHp = Mathf.Max(0f, Data.Hp);
+        float totalMaxHp = Mathf.Max(0f, Data.MaxHp);
+        Data.UseBodyPartHealth = true;
+        Data.BodyPartDataVersion = CurrentBodyPartDataVersion;
+        Data.BodyParts = CreateDefaultBodyParts(totalHp, totalMaxHp);
+    }
+
+    public void SetBodyPartHealthEnabled(bool enabled)
+    {
+        if (Data == null)
+            Data = new DamageReceiver_SaveData();
+
+        if (enabled && (Data.BodyParts == null || Data.BodyParts.Count == 0))
+            Data.BodyParts = CreateDefaultBodyParts(Data.Hp, Data.MaxHp);
+
+
+        Data.UseBodyPartHealth = enabled;
+        Data.BodyPartDataVersion = CurrentBodyPartDataVersion;
+        NormalizeStatRanges();
+    }
+
+    public bool TryGetBodyPart(BodyPartType part, out BodyPartHealth bodyPart)
+    {
+        bodyPart = null;
+        if (!UsesBodyPartHealth)
+            return false;
+
+        for (int i = 0; i < Data.BodyParts.Count; i++)
+        {
+            BodyPartHealth candidate = Data.BodyParts[i];
+            if (candidate != null && candidate.Part == part)
+            {
+                bodyPart = candidate;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public float GetBodyPartHealth01(BodyPartType part)
+    {
+        if (TryGetBodyPart(part, out BodyPartHealth bodyPart))
+            return bodyPart.Health01;
+
+        return MaxHp <= 0f ? 0f : Mathf.Clamp01(Hp / MaxHp);
+    }
+
+    public float GetCombinedBodyPartHealth01(params BodyPartType[] parts)
+    {
+        if (!UsesBodyPartHealth || parts == null || parts.Length == 0)
+            return MaxHp <= 0f ? 0f : Mathf.Clamp01(Hp / MaxHp);
+
+        float hpTotal = 0f;
+        float maxHpTotal = 0f;
+        for (int i = 0; i < parts.Length; i++)
+        {
+            if (!TryGetBodyPart(parts[i], out BodyPartHealth bodyPart))
+                continue;
+
+            hpTotal += bodyPart.Hp;
+            maxHpTotal += bodyPart.MaxHp;
+        }
+
+        return maxHpTotal <= 0f ? 0f : Mathf.Clamp01(hpTotal / maxHpTotal);
+    }
+
+    public float HealBodyPart(BodyPartType part, float healAmount)
+    {
+        if (healAmount <= 0f || !TryGetBodyPart(part, out BodyPartHealth bodyPart))
+            return 0f;
+
+        if (Hp <= 0f || !CanMutateBodyState()) return 0f;
+        ValidateBodyValue(healAmount, nameof(healAmount));
+
+        float hpBefore = bodyPart.Hp;
+        bodyPart.Hp = Mathf.Min(bodyPart.MaxHp, bodyPart.Hp + healAmount);
+        float appliedHeal = bodyPart.Hp - hpBefore;
+        if (appliedHeal <= 0f)
+            return 0f;
+
+        DispatchBodyPartHealthChanged(bodyPart, hpBefore);
+        DataUpdate?.Invoke();
+        OnAction?.Invoke(Hp);
+
+        if (IsPanelVisible())
+            RefreshUI();
+
+        ItemNetworkStateSerialization.NotifyRuntimeStateChanged(item);
+        return appliedHeal;
+    }
+
+    private void UpgradeBodyPartData()
+    {
+        if (Data == null)
+            Data = new DamageReceiver_SaveData();
+
+        if (Data.BodyParts == null)
+            Data.BodyParts = new List<BodyPartHealth>();
+
+        if (Data.BodyPartDataVersion < CurrentBodyPartDataVersion)
+        {
+            Data.UseBodyPartHealth = Data.UseBodyPartHealth || ShouldUseBodyPartHealthByDefault();
+            // 旧档保留受损比例，部位生命转为耐久；绝不据此重新求和整体 Hp。
+            foreach (BodyPartHealth part in Data.BodyParts)
+            {
+                if (part == null) continue;
+                float ratio = part.MaxHp > 0f ? Mathf.Clamp01(part.Hp / part.MaxHp) : 1f;
+                part.MaxHp = GetDefaultDurability(part.Part);
+                part.Hp = part.MaxHp * ratio;
+                part.DamageMultiplier = part.Part == BodyPartType.Head ? 1.5f : 1f;
+                part.DepletionBuffIds = BodyPartPenaltyRegistry.GetDefaultBuffIds(part.Part);
+                part.DefenseValues ??= new CombatDefense();
+            }
+            Data.BodyPartDataVersion = CurrentBodyPartDataVersion;
+        }
+
+        if (Data.UseBodyPartHealth && Data.BodyParts.Count == 0)
+            Data.BodyParts = CreateDefaultBodyParts(Data.Hp, Data.MaxHp);
+    }
+
+    private bool ShouldUseBodyPartHealthByDefault()
+    {
+        if (item is Player)
+            return true;
+
+        if (item?.itemMods == null)
+            return false;
+
+        return item.itemMods.ContainsKey_ID(ModText.AI) ||
+               item.itemMods.ContainsKey_ID(ModText.Mod_Mover_AI);
+    }
+
+    /// <summary>静态内容编译与旧实例升级共用默认身体模板；返回独立部位列表。</summary>
+    public static List<BodyPartHealth> CreateDefaultBodyParts(float totalHp, float totalMaxHp)
+    {
+        Array values = Enum.GetValues(typeof(BodyPartType));
+        List<BodyPartHealth> result = new List<BodyPartHealth>(values.Length);
+
+        foreach (BodyPartType part in values)
+        {
+            float maxHp = GetDefaultDurability(part);
+            result.Add(new BodyPartHealth
+            {
+                Part = part,
+                Hp = maxHp,
+                MaxHp = maxHp,
+                AreaRatio = GetDefaultAreaRatio(part),
+                InjuryProbability = 1f,
+                DamageMultiplier = part == BodyPartType.Head ? 1.5f : 1f,
+                DepletionBuffIds = BodyPartPenaltyRegistry.GetDefaultBuffIds(part)
+            });
+        }
+
+        return result;
+    }
+
+    private static float GetDefaultDurability(BodyPartType part)
+    {
+        switch (part)
+        {
+            case BodyPartType.Head: return 20f;
+            case BodyPartType.Chest: return 50f;
+            case BodyPartType.Abdomen: return 30f;
+            default: return 25f;
+        }
+    }
+
+    private static float GetDefaultAreaRatio(BodyPartType part)
+    {
+        switch (part)
+        {
+            case BodyPartType.Head: return 0.08f;
+            case BodyPartType.Chest: return 0.22f;
+            case BodyPartType.Abdomen: return 0.16f;
+            case BodyPartType.LeftHand:
+            case BodyPartType.RightHand: return 0.09f;
+            case BodyPartType.Pelvis: return 0.10f;
+            case BodyPartType.LeftLeg:
+            case BodyPartType.RightLeg: return 0.13f;
+            default: return 0f;
+        }
+    }
+
+    /// <summary>整体生命上限独立于部位耐久；提升上限不自动治疗。</summary>
+    public void SetOverallMaxHp(float value)
+    {
+        ValidateBodyValue(value, nameof(value));
+        if (!CanMutateBodyState()) return;
+        Data.MaxHp = value;
+        Data.Hp = Mathf.Clamp(Data.Hp, 0f, value);
+        NotifyBodyStateChanged();
+    }
+
+    private void SetOverallHp(float value)
+    {
+        if (float.IsNaN(value) || float.IsInfinity(value)) throw new ArgumentOutOfRangeException(nameof(value));
+        Data.Hp = Mathf.Clamp(value, 0f, Data.MaxHp);
+        bodyPenaltiesDirty = true;
+    }
+
+    private BodyPartHealth SelectRandomBodyPart(BodyPartHealth excluded)
+    {
+        List<BodyPartHealth> candidates = new List<BodyPartHealth>(Data.BodyParts.Count);
+        float totalWeight = 0f;
+        for (int i = 0; i < Data.BodyParts.Count; i++)
+        {
+            BodyPartHealth part = Data.BodyParts[i];
+            if (part == null || part == excluded || part.MaxHp <= 0f)
+                continue;
+
+            float weight = Mathf.Max(0f, part.AreaRatio) * Mathf.Max(0f, part.InjuryProbability);
+            if (weight <= 0f)
+                continue;
+
+            candidates.Add(part);
+            totalWeight += weight;
+        }
+
+        if (candidates.Count == 0)
+            return null;
+
+        float roll = Random.value * totalWeight;
+        for (int i = 0; i < candidates.Count; i++)
+        {
+            BodyPartHealth part = candidates[i];
+            roll -= Mathf.Max(0f, part.AreaRatio) * Mathf.Max(0f, part.InjuryProbability);
+            if (roll <= 0f)
+                return part;
+        }
+
+        return candidates[candidates.Count - 1];
+    }
+
+    private void DispatchBodyPartDamaged(BodyPartDamageInfo hit)
+    {
+        ApplyTimedBodyPartTrauma(hit);
+        OnBodyPartDamaged?.Invoke(hit);
+        if (TryGetBodyPart(hit.Part, out BodyPartHealth part))
+            DispatchBodyPartHealthChanged(part, hit.HpBefore);
+    }
+
+    private void DispatchBodyPartHealthChanged(BodyPartHealth part, float hpBefore)
+    {
+        bodyPenaltiesDirty = true;
+        ReconcileBodyPartPenalties();
+        OnBodyPartHealthChanged?.Invoke(new BodyPartHealthChangeInfo
+        {
+            Receiver = this,
+            Part = part.Part,
+            HpBefore = hpBefore,
+            HpAfter = part.Hp,
+            MaxHp = part.MaxHp,
+            Delta = part.Hp - hpBefore,
+            Health01 = part.Health01,
+            IsDepleted = part.Hp <= 0f
+        });
+    }
+
+    private Dictionary<BodyPartType, BodyPartSnapshot> CaptureBodyPartSnapshots()
+    {
+        Dictionary<BodyPartType, BodyPartSnapshot> result =
+            new Dictionary<BodyPartType, BodyPartSnapshot>();
+
+        if (Data?.BodyParts == null)
+            return result;
+
+        for (int i = 0; i < Data.BodyParts.Count; i++)
+        {
+            BodyPartHealth part = Data.BodyParts[i];
+            if (part != null && !result.ContainsKey(part.Part))
+                result.Add(part.Part, new BodyPartSnapshot(part.Hp, part.MaxHp));
+        }
+
+        return result;
+    }
+
+    private void DispatchNetworkBodyPartChanges(Dictionary<BodyPartType, BodyPartSnapshot> previous)
+    {
+        if (!UsesBodyPartHealth || previous == null)
+            return;
+
+        for (int i = 0; i < Data.BodyParts.Count; i++)
+        {
+            BodyPartHealth part = Data.BodyParts[i];
+            if (part == null || !previous.TryGetValue(part.Part, out BodyPartSnapshot oldState))
+                continue;
+
+            if (!Mathf.Approximately(oldState.Hp, part.Hp) ||
+                !Mathf.Approximately(oldState.MaxHp, part.MaxHp))
+            {
+                DispatchBodyPartHealthChanged(part, oldState.Hp);
+            }
+        }
+    }
+
+    private void EnsureCompleteBodyPartList()
+    {
+        if (!Data.UseBodyPartHealth)
+            return;
+
+        if (Data.BodyParts == null)
+            Data.BodyParts = new List<BodyPartHealth>();
+
+        HashSet<BodyPartType> seen = new HashSet<BodyPartType>();
+        bool requiresRepair = false;
+        for (int i = 0; i < Data.BodyParts.Count; i++)
+        {
+            BodyPartHealth part = Data.BodyParts[i];
+            if (part == null || !seen.Add(part.Part))
+            {
+                requiresRepair = true;
+                break;
+            }
+        }
+
+        int expectedCount = Enum.GetValues(typeof(BodyPartType)).Length;
+        if (!requiresRepair && seen.Count == expectedCount)
+            return;
+
+        throw new InvalidOperationException("身体配置必须包含每种部位且不得重复；请修正静态内容配置。");
+    }
+
+    private readonly struct BodyPartSnapshot
+    {
+        public readonly float Hp;
+        public readonly float MaxHp;
+
+        public BodyPartSnapshot(float hp, float maxHp)
+        {
+            Hp = hp;
+            MaxHp = maxHp;
+        }
+    }
+
+    private void NormalizeStatRanges()
+    {
+        if (Data == null)
+            Data = new DamageReceiver_SaveData();
+
+        Data.MaxHp = Mathf.Max(0f, Data.MaxHp);
+        Data.Hp = Mathf.Clamp(Data.Hp, 0f, Data.MaxHp);
+        Data.TwoPartHitChance = Mathf.Clamp01(Data.TwoPartHitChance);
+        Data.DefenseValues ??= new CombatDefense();
+        Data.DefenseValues.ClampNonNegative();
+
+        if (!Data.UseBodyPartHealth)
+            return;
+
+        EnsureCompleteBodyPartList();
+        for (int i = 0; i < Data.BodyParts.Count; i++)
+        {
+            BodyPartHealth part = Data.BodyParts[i];
+            if (part == null)
+                continue;
+
+            part.MaxHp = Mathf.Max(0f, part.MaxHp);
+            part.Hp = Mathf.Clamp(part.Hp, 0f, part.MaxHp);
+            part.AreaRatio = Mathf.Clamp01(part.AreaRatio);
+            part.InjuryProbability = Mathf.Clamp01(part.InjuryProbability);
+            ValidateBodyValue(part.DamageMultiplier, nameof(part.DamageMultiplier));
+            part.DefenseValues ??= new CombatDefense();
+            part.DefenseValues.ClampNonNegative();
+        }
+
+    }
+
+    private void OnDamaged_ShowUiAndScheduleHide()
+    {
+        if (!Application.isPlaying || !isActiveAndEnabled) return;
+        _lastDamageUiTime = Time.time;
+
+        if (!IsPanelVisible())
+        {
+            ShowPanel();
+        }
+
+        if (_hideUiCoroutine != null)
+        {
+            StopCoroutine(_hideUiCoroutine);
+        }
+
+        _hideUiCoroutine = StartCoroutine(HideUiAfterNoDamageCoroutine());
+    }
+
+    private IEnumerator HideUiAfterNoDamageCoroutine()
+    {
+        float delay = Mathf.Max(0f, HideUiDelayAfterLastDamage);
+        yield return new WaitForSeconds(delay);
+
+        // 若等待期间又受伤，则保留面板
+        if (Time.time - _lastDamageUiTime < delay)
+        {
+            _hideUiCoroutine = null;
+            yield break;
+        }
+
+        HidePanel();
+        _hideUiCoroutine = null;
+    }
+
+    /// <summary>新实例加载或显式复活时取消上一轮延迟销毁，开启新的死亡结算周期。</summary>
+    private void ResetDeathResolution()
+    {
+        _deathHandled = false;
+        if (_deathCoroutine != null)
+        {
+            StopCoroutine(_deathCoroutine);
+            _deathCoroutine = null;
+        }
+    }
+
+    private void HandleDeath(DamageReceiverDamageInfo damageInfo = null)
+    {
+        if (_deathHandled || Hp > 0f)
+            return;
+
+        _deathHandled = true;
+        _deathConsumedByExternalHandler = false;
+        try
+        {
+            DeathStarted?.Invoke(this);
+            OnDead.Invoke();
+            if (_deathConsumedByExternalHandler || Hp > 0f)
+                return;
+
+            DispatchDamageActions(DeathActions, damageInfo);
+            DropLoot();
+        }
+        finally
+        {
+            // 生命周期结束是死亡的必经阶段，掉落或回调异常仍向上抛出，不能留下半死亡实体。
+            if (!_deathConsumedByExternalHandler && Hp <= 0f && Data.DestroyDelay >= 0f)
+            {
+                if (Data.DestroyDelay <= 0f)
+                    DespawnDeadItem();
+                else
+                    _deathCoroutine = StartCoroutine(DespawnDeadItemAfterDelay(Data.DestroyDelay));
+            }
+        }
+    }
+
+    private IEnumerator DespawnDeadItemAfterDelay(float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        _deathCoroutine = null;
+        DespawnDeadItem();
+    }
+
+    private void DespawnDeadItem()
+    {
+        if (item == null)
+            return;
+
+        if (ItemMgr.Instance != null)
+            ItemMgr.Instance.DespawnItem(item, saveData: false);
+        else
+            Destroy(item.gameObject);
+    }
+
+    public void ConsumeCurrentDeath()
+    {
+        _deathConsumedByExternalHandler = true;
+    }
+
+    private void DispatchDamageReceived(DamageReceiverDamageInfo damageInfo)
+    {
+        CombatAudioRouter.PlayImpact(this, damageInfo);
+        OnDamageReceived?.Invoke(damageInfo);
+        DamageReceivedStatusEffectRegistry.Publish(damageInfo);
+        DispatchDamageActions(HurtActions, damageInfo);
+    }
+
+    private void DispatchDamageActions(List<DamageReciver_Action> actions, DamageReceiverDamageInfo damageInfo)
+    {
+        if (actions == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < actions.Count; i++)
+        {
+            DamageReciver_Action action = actions[i];
+            if (action == null || !action.Enabled)
+            {
+                continue;
+            }
+
+            action.Execute(this, damageInfo);
+        }
+    }
+
+    /// <summary>保留旧反馈字段，并把后端无关来源与权威模拟时间交给所有新消费者。</summary>
+    private DamageReceiverDamageInfo CreateDamageInfo(
+        IDamageSender damageSender,
+        float damageValue,
+        float hpBefore,
+        float hpAfter,
+        List<BodyPartDamageInfo> bodyPartHits = null,
+        CombatDamage resolvedDamageValues = null,
+        FlatWorld.Combat.CombatDamageContext? context = null)
+    {
+        return new DamageReceiverDamageInfo
+        {
+            Receiver = this,
+            ReceiverItem = item,
+            DamageSender = damageSender,
+            Attacker = damageSender?.attacker,
+            Context = context ?? default,
+            DamageValue = damageValue,
+            SenderDamageValue = context.HasValue ? Unity.Mathematics.math.csum(context.Value.Damage) : damageSender?.DamageValues?.TotalCombatPower ?? damageValue,
+            SenderDamageValues = context.HasValue ? GameplayCombatBridge.LegacyValues(context.Value.Damage) : damageSender?.DamageValues,
+            ResolvedDamageValues = resolvedDamageValues,
+            HpBefore = hpBefore,
+            HpAfter = hpAfter,
+            IsFatal = hpAfter <= 0f,
+            HitPosition = transform.position,
+            Time = context.HasValue ? (float)context.Value.Clock.Time : Time.time,
+            BodyPartHits = bodyPartHits ?? new List<BodyPartDamageInfo>()
+        };
+    }
+    #endregion
+
+    public Mod_Inventory Equipment_Inventory;
+
+    [Header("调试开关")]
+    [SerializeField]
+    private bool enableDebugTools = false;
+
+    /// <summary>
+    /// 所有装备模块（Tag为"Equipment"）的耐久度下降指定数值，如果耐久为0则移除该装备
+    /// </summary>
+    /// <param name="amount">耐久下降的数值</param>
+    protected virtual void ApplyDurabilityDamageToEquipments(float amount = 1f)
+    {
+        if (Equipment_Inventory == null)
+        {
+            return;
+        }
+
+        foreach (var mod in Equipment_Inventory.inventory.Data.itemSlots)
+        {
+            if (mod.itemData == null) continue;
+
+            if (mod.itemData.Tags.ContainsTag(Tag.Armor))
+            {
+                // 使用物品自身提供的耐久变更方法，传入负值表示扣减
+                mod.itemData.AddDurability(-amount);
+
+                if (mod.itemData.Durability <= 0)
+                {
+                    // 耐久为0，清空该格子
+                    mod.ClearData();
+                    mod.RefreshUI();
+                }
+                else
+                {
+                    // 否则确保耐久不为负
+                    mod.itemData.Durability = Mathf.Max(0, mod.itemData.Durability);
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// 根据战利品表掉落物品
+    /// </summary>
+    protected virtual void DropLoot()
+    {
+        // 检查是否有战利品表
+        if (Data.LootTable == null || Data.LootTable.Count == 0)
+            return;
+
+        // 遍历战利品表
+        foreach (var lootEntry in Data.LootTable)
+        {
+            // 检查预制体名称是否存在
+            if (string.IsNullOrEmpty(lootEntry.LootPrefabName))
+                continue;
+
+            // 根据掉落概率决定是否掉落
+            if (Random.value > lootEntry.DropChance)
+                continue;
+
+            // 确定掉落数量（在MinAmount和MaxAmount之间）
+            int baseDropAmount = Random.Range(lootEntry.MinAmount, lootEntry.MaxAmount + 1);
+            // 环境等产出修饰由源物品的通用模块提供，与难度合并后只随机取整一次。
+            float resourceMultiplier = ResourceYieldUtility.GetMultiplier(item, lootEntry.LootPrefabName);
+            int dropAmount = GameDifficultyService.ScaleRandomizedAmount(
+                baseDropAmount,
+                GameDifficultyService.Current.World.LootAmountMultiplier * resourceMultiplier);
+
+            // 如果数量为0，跳过
+            if (dropAmount <= 0)
+                continue;
+
+            // 使用自带的实例化方法创建战利品
+            for (int i = 0; i < dropAmount; i++)
+            {
+                DroppedItemService.SpawnLoot(lootEntry.LootPrefabName, transform.position);
+            }
+        }
+    }
+
+    #region 调试方法
+
+    [Button("重置四类防御")]
+    public void Debug_ResetTypedDefense()
+    {
+        if (!enableDebugTools)
+        {
+            Debug.LogWarning($"[{item?.itemData?.GameName}] 调试开关未开启，跳过重置四类防御");
+            return;
+        }
+
+        Data.DefenseValues = new CombatDefense();
+    }
+
+    #endregion
+
+    #region 动画效果实现
+
+    /// <summary>使用角色渲染模块播放闪红，并启动轻微震动；不再访问 Renderer.material。</summary>
+    private void PlayHitVisualFeedback()
+    {
+        if (!Application.isPlaying || !isActiveAndEnabled || item == null || item.Sprite == null)
+            return;
+
+        Hit_Flash(item.Sprite);
+        Transform spriteTransform = item.Sprite.transform;
+
+        if (_shakeCoroutine != null)
+        {
+            StopCoroutine(_shakeCoroutine);
+            spriteTransform.localPosition = _visualShakeRestPosition;
+        }
+        else
+        {
+            _visualShakeRestPosition = spriteTransform.localPosition;
+        }
+
+        _shakeCoroutine = StartCoroutine(ShakeSprite(spriteTransform, _visualShakeRestPosition));
+    }
+
+    /// <summary>把受击参数转交给角色渲染模块，保留旧的公共方法名兼容外部调用。</summary>
+    public void Hit_Flash(SpriteRenderer spriteRenderer)
+    {
+        if (spriteRenderer == null)
+            return;
+
+        ActorRenderColorEffect renderEffect = spriteRenderer.GetComponentInParent<ActorRenderColorEffect>();
+        if (renderEffect == null && item != null)
+            renderEffect = item.GetComponentInChildren<ActorRenderColorEffect>(true);
+
+        if (renderEffect != null)
+            renderEffect.PlayHitFlash(flashColor, flashDuration, flashCount);
+    }
+
+    /// <summary>使用衰减正弦位移实现稳定的小幅震动，连续受击时会重新触发而不会叠加偏移。</summary>
+    private IEnumerator ShakeSprite(Transform spriteTransform, Vector3 restPosition)
+    {
+        float elapsed = 0f;
+        _isVisualShaking = true;
+        float duration = Mathf.Max(0f, shakeDuration);
+        float magnitude = Mathf.Max(0f, shakeMagnitude);
+
+        while (elapsed < duration)
+        {
+            float progress = duration <= 0f ? 1f : Mathf.Clamp01(elapsed / duration);
+            float envelope = 1f - progress;
+            float x = Mathf.Sin(elapsed * 52f) * magnitude * envelope;
+            float y = Mathf.Cos(elapsed * 67f) * magnitude * 0.55f * envelope;
+
+            spriteTransform.localPosition = restPosition + new Vector3(x, y, 0f);
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+
+        spriteTransform.localPosition = restPosition;
+        _isVisualShaking = false;
+        _shakeCoroutine = null;
+        UpdateWorldHealthBarLayout();
+    }
+
+    #endregion
+}

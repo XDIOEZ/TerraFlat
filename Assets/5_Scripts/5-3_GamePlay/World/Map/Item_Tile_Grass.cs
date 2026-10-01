@@ -17,7 +17,7 @@ public class Item_Tile_Grass : Item
     public const string RuntimeStoneWallTileBlockId = "TileBase_BuiltStoneWall";
 
     private BuildingShadow placementShadow;
-    private GameController ownerController;
+    private Mod_GameController ownerController;
     private bool previewCreationFailed;
 
     /// <summary>旧石墙物品是否已经接入新区块的阻挡地块。</summary>
@@ -177,8 +177,8 @@ public class Item_Tile_Grass : Item
     {
         if (ownerController == null && Owner != null)
         {
-            ownerController = Owner.itemMods?.GetMod_ByID<GameController>(ModText.Controller);
-            ownerController ??= Owner.GetComponent<GameController>();
+            ownerController = Owner.itemMods?.GetMod_ByID<Mod_GameController>(ModText.Controller);
+            ownerController ??= Owner.GetComponent<Mod_GameController>();
         }
 
         return ownerController?._mainCamera != null ? ownerController._mainCamera : Camera.main;
@@ -207,7 +207,7 @@ public class Item_Tile_Grass : Item
             return;
 
         Item owner = Owner;
-        Inventory_HotBar hotBar = owner?.itemMods?.GetMod_ByID<Inventory_HotBar>(ModText.Hotbar);
+        Mod_HotBar hotBar = owner?.itemMods?.GetMod_ByID<Mod_HotBar>(ModText.Hotbar);
         ItemSlot selectedSlot = hotBar?.CurrentSelectItemSlot;
         itemData.Stack.Amount = Mathf.Max(0f, itemData.Stack.Amount - 1f);
         bool depleted = itemData.Stack.Amount <= 0f;

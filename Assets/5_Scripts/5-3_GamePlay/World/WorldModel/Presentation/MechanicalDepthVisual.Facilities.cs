@@ -55,8 +55,8 @@ public sealed partial class MechanicalDepthVisual
 
     private void UpdateDryingSprites(MachineEntity entity)
     {
-        var config = entity.Definition.Content?.Find<Meatrack>();
-        if (config?.Authoring is not Meatrack source) return;
+        var config = entity.Definition.Content?.Find<Mod_Meatrack>();
+        if (config?.Authoring is not Mod_Meatrack source) return;
         var runtime = entity.Logic as DryingRackLogic;
         SlotProcessingState state = runtime?.State ?? MachinePersistence.Read<SlotProcessingState>(entity.Snapshot, "drying");
         if (state?.Inventory?.itemSlots == null) return;

@@ -106,7 +106,7 @@ public sealed class Mod_FuelInteraction : Module, IInteractable, IItemModuleDepe
     {
         if (!GameNetwork.HasStateAuthority || actor == null || actor.DestructionHandled ||
             item == null || item.DestructionHandled ||
-            !(actor.itemMods.GetMod_ByID<DamageReceiver>(ModText.Hp)?.Hp > 0f))
+            !(actor.itemMods.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp)?.Hp > 0f))
         {
             return false;
         }

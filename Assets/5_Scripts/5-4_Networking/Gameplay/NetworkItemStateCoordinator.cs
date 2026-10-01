@@ -8,7 +8,7 @@ namespace FlatWorld.Networking.Gameplay
 {
     /// <summary>
     /// 世界 Item 的服务器权威快照通道。状态以 Item Guid 定位，内容由 Item 系统统一序列化，
-    /// 因此 DamageReceiver 之外的 Module 也会自动进入同步范围。
+    /// 因此 Mod_DamageReceiver 之外的 Module 也会自动进入同步范围。
     /// </summary>
     [DisallowMultipleComponent]
     public sealed partial class NetworkItemStateCoordinator : MonoBehaviour
@@ -37,7 +37,7 @@ namespace FlatWorld.Networking.Gameplay
 
         private sealed class ClientPickupRequest
         {
-            public ItemPicker Picker;
+            public Mod_ItemPicker Picker;
             public float ExpiresAt;
         }
 
@@ -436,7 +436,7 @@ namespace FlatWorld.Networking.Gameplay
             CapturePose(item, state);
             BroadcastServerState(submit.ItemGuid, state);
 
-            DamageReceiver damageReceiver = item.GetComponentInChildren<DamageReceiver>(true);
+            Mod_DamageReceiver damageReceiver = item.GetComponentInChildren<Mod_DamageReceiver>(true);
             if (damageReceiver != null && damageReceiver.Hp <= 0f)
             {
                 BroadcastDespawn(item);
@@ -555,7 +555,7 @@ namespace FlatWorld.Networking.Gameplay
             serverStates.Remove(item.itemData.Guid);
         }
 
-        private bool TryBeginClientPickup(ItemPicker picker, Item worldItem)
+        private bool TryBeginClientPickup(Mod_ItemPicker picker, Item worldItem)
         {
             if (!NetworkClient.active || !NetworkClient.ready || picker == null ||
                 worldItem?.itemData == null || worldItem.itemData.Guid == 0)
@@ -1516,8 +1516,8 @@ namespace FlatWorld.Networking.Gameplay
 
             NetworkWorldPlayer networkPlayer = connection.identity.GetComponent<NetworkWorldPlayer>();
             authoritativePlayer = networkPlayer?.CorePlayer;
-            Inventory_HotBar hotBar = authoritativePlayer?.itemMods?
-                .GetMod_ByID<Inventory_HotBar>(ModText.Hotbar);
+            Mod_HotBar hotBar = authoritativePlayer?.itemMods?
+                .GetMod_ByID<Mod_HotBar>(ModText.Hotbar);
             if (hotBar?.Data?.itemSlots == null || hotBar.CurrentIndex < 0 ||
                 hotBar.CurrentIndex >= hotBar.Data.itemSlots.Count)
             {
@@ -1548,7 +1548,7 @@ namespace FlatWorld.Networking.Gameplay
             if (slot?.itemData?.Stack == null || slot.itemData.Stack.Amount < 1f)
                 throw new InvalidOperationException("服务端材料已失效");
 
-            Inventory_HotBar hotBar = player?.itemMods?.GetMod_ByID<Inventory_HotBar>(ModText.Hotbar);
+            Mod_HotBar hotBar = player?.itemMods?.GetMod_ByID<Mod_HotBar>(ModText.Hotbar);
             if (hotBar?.Data == null || !hotBar.Data.TryConsumeFromSlot(slot, 1, out ItemData consumedData))
                 throw new InvalidOperationException("服务端材料库存事务提交失败");
 
@@ -1566,7 +1566,7 @@ namespace FlatWorld.Networking.Gameplay
             if (slot == null || sourceData?.Stack == null)
                 return;
 
-            Inventory_HotBar hotBar = player?.itemMods?.GetMod_ByID<Inventory_HotBar>(ModText.Hotbar);
+            Mod_HotBar hotBar = player?.itemMods?.GetMod_ByID<Mod_HotBar>(ModText.Hotbar);
             if (hotBar?.Data == null ||
                 !hotBar.Data.TrySetSlotItemAmount(slot, sourceData, Mathf.Max(0f, sourceAmount)))
             {
@@ -1714,7 +1714,7 @@ namespace FlatWorld.Networking.Gameplay
                 serverStates[guid] = state;
                 BroadcastServerState(guid, state);
 
-                DamageReceiver receiver = item.GetComponentInChildren<DamageReceiver>(true);
+                Mod_DamageReceiver receiver = item.GetComponentInChildren<Mod_DamageReceiver>(true);
                 if (receiver != null && receiver.Hp <= 0f)
                     BroadcastDespawn(item);
                 return;

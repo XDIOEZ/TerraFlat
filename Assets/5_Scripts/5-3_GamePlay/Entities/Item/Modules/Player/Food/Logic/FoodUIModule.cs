@@ -6,7 +6,7 @@ using UnityEngine.UI;
 
 /// <summary>
 /// 食物 UI 模块：仅为本地玩家创建常驻参数 HUD，负责刷新、位置保存和销毁，
-/// 并读取玩家 DamageReceiver 的权威生命值显示到角色参数面板。
+/// 并读取玩家 Mod_DamageReceiver 的权威生命值显示到角色参数面板。
 /// UI 只读取运行时状态，不参与营养计算、回血或进食结算。
 /// </summary>
 public sealed class FoodUIModule : IFoodMechanic, IFoodStateObserver, IDisposable
@@ -14,7 +14,7 @@ public sealed class FoodUIModule : IFoodMechanic, IFoodStateObserver, IDisposabl
     private const float StatusBarTransitionDuration = 0.24f;
 
     private readonly IFoodRuntimeContext context;
-    private readonly DamageReceiver damageReceiver;
+    private readonly Mod_DamageReceiver damageReceiver;
     private readonly GameObject panelPrefab;
     private readonly Func<GameObject> readPanelInstance;
     private readonly Action<GameObject> writePanelInstance;
@@ -24,7 +24,7 @@ public sealed class FoodUIModule : IFoodMechanic, IFoodStateObserver, IDisposabl
 
     public FoodUIModule(
         IFoodRuntimeContext context,
-        DamageReceiver damageReceiver,
+        Mod_DamageReceiver damageReceiver,
         GameObject panelPrefab,
         Func<GameObject> readPanelInstance,
         Action<GameObject> writePanelInstance,
@@ -269,7 +269,7 @@ public sealed class FoodUIModule : IFoodMechanic, IFoodStateObserver, IDisposabl
         return null;
     }
 
-    /// <summary>监听 DamageReceiver 的统一状态事件，确保受伤、回血和网络同步都能刷新面板。</summary>
+    /// <summary>监听 Mod_DamageReceiver 的统一状态事件，确保受伤、回血和网络同步都能刷新面板。</summary>
     private void BindHealthChanged()
     {
         if (damageReceiver == null)

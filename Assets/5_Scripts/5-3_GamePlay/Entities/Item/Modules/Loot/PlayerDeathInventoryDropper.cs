@@ -51,8 +51,8 @@ public static class PlayerDeathInventoryDropper
             }
         }
 
-        Inventory_HotBar hotbar =
-            player.itemMods.GetMod_ByID<Inventory_HotBar>(ModText.Hotbar);
+        Mod_HotBar hotbar =
+            player.itemMods.GetMod_ByID<Mod_HotBar>(ModText.Hotbar);
         if (hotbar?.CurentSelectItem != null &&
             (hotbar.CurrentSelectItemSlot == null || hotbar.CurrentSelectItemSlot.itemData == null))
         {
@@ -91,7 +91,7 @@ public static class PlayerDeathInventoryDropper
                             AddInventories(result, seenData, inventoryModule.InventoryInstances);
                             break;
 
-                        case Inventory_HotBar hotbar:
+                        case Mod_HotBar hotbar:
                             AddInventory(result, seenData, hotbar.RuntimeInventory);
                             break;
 

@@ -248,8 +248,8 @@ public sealed class ModItemApi
     public float X => item != null ? item.transform.position.x : 0f;
     public float Y => item != null ? item.transform.position.y : 0f;
     public bool IsActor => AiRuntimeBackendService.TryGetGameObjectActor(item, out _);
-    public float Health => item?.GetComponentInChildren<DamageReceiver>(true)?.Hp ?? 0f;
-    public float MaxHealth => item?.GetComponentInChildren<DamageReceiver>(true)?.MaxHp ?? 0f;
+    public float Health => item?.GetComponentInChildren<Mod_DamageReceiver>(true)?.Hp ?? 0f;
+    public float MaxHealth => item?.GetComponentInChildren<Mod_DamageReceiver>(true)?.MaxHp ?? 0f;
     public string FactionId => FactionRelationService.GetFactionId(item);
     public bool IsLiquidContainer => GetLiquidContainer() != null;
     public string LiquidId => GetLiquidContainer()?.Data?.LiquidId ?? string.Empty;
@@ -304,7 +304,7 @@ public sealed class ModItemApi
     public bool MoveTo(float x, float y, bool forceRepath = false)
     {
         ModRuntimeManager.Instance?.EnsureWorldMutationAllowed("ActorMoveTo");
-        Mover_AI mover = item?.GetComponentInChildren<Mover_AI>(true);
+        Mod_Mover_AI mover = item?.GetComponentInChildren<Mod_Mover_AI>(true);
         if (mover == null) return false;
         mover.SetDestination(new Vector2(x, y), forceRepath);
         return true;
@@ -313,7 +313,7 @@ public sealed class ModItemApi
     public bool StopMoving()
     {
         ModRuntimeManager.Instance?.EnsureWorldMutationAllowed("ActorStopMoving");
-        Mover_AI mover = item?.GetComponentInChildren<Mover_AI>(true);
+        Mod_Mover_AI mover = item?.GetComponentInChildren<Mod_Mover_AI>(true);
         if (mover == null) return false;
         mover.StopMovement();
         return true;

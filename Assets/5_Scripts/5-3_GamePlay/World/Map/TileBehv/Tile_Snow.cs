@@ -10,7 +10,7 @@ public sealed class Tile_Snow : TileBlockBehaviour
     [SerializeField, Min(0.01f)] private float moveSpeedMultiplier = 0.9f;
     [SerializeField, Min(0.1f)] private float footprintLifetime = 60f;
 
-    public override void OnEnter(Item item, TileData tileData, Map map, TileEffectReceiver receiver)
+    public override void OnEnter(Item item, TileData tileData, Map map, Mod_TileEffectReceiver receiver)
     {
         if (item == null)
             return;
@@ -26,7 +26,7 @@ public sealed class Tile_Snow : TileBlockBehaviour
         footprintTrail.SetSurfaceActive(true);
     }
 
-    public override void OnExit(Item item, TileData tileData, Map map, TileEffectReceiver receiver)
+    public override void OnExit(Item item, TileData tileData, Map map, Mod_TileEffectReceiver receiver)
     {
         receiver?.EnvironmentInteractions.ClearAvailableEffects();
         item?.GetComponent<SnowFootprintTrail>()?.SetSurfaceActive(false);

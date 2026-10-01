@@ -54,7 +54,7 @@ namespace FlatWorld.Networking.Gameplay
         private Renderer cachedRenderer;
         private TextMeshPro nameLabel;
         private Player corePlayer;
-        private Mover coreMover;
+        private Mod_Mover coreMover;
         private Rigidbody2D coreBody;
         private Mod_TurnBack coreTurnBack;
         private Mod_AnimatorController coreAnimator;
@@ -623,7 +623,7 @@ namespace FlatWorld.Networking.Gameplay
                 if (!coreAvatarIsLocal)
                     BindRemoteVisualModules(corePlayer);
 
-                coreMover = corePlayer.GetComponentInChildren<Mover>(true);
+                coreMover = corePlayer.GetComponentInChildren<Mod_Mover>(true);
                 coreBody = corePlayer.GetComponent<Rigidbody2D>();
                 coreTurnBack = corePlayer.itemMods?.GetMod_ByID<Mod_TurnBack>(ModText.TrunBody);
                 coreAnimator = corePlayer.itemMods?.GetMod_ByID<Mod_AnimatorController>(ModText.AnimatorReceiver);
@@ -631,7 +631,7 @@ namespace FlatWorld.Networking.Gameplay
                 if (!coreAvatarIsLocal && coreTurnBack != null)
                     coreTurnBack.faceMouse = null;
 
-                GameController controller = corePlayer.GetComponentInChildren<GameController>(true);
+                Mod_GameController controller = corePlayer.GetComponentInChildren<Mod_GameController>(true);
                 controller?.SetGameplayInputLocked(!coreAvatarIsLocal);
                 if (coreMover != null)
                     coreMover.IsLock = !coreAvatarIsLocal;

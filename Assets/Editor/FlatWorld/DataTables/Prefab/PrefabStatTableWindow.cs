@@ -348,7 +348,7 @@ public class PrefabStatTableWindow : EditorWindow
 
     private static bool HasTargetDamageComponents(GameObject prefab)
     {
-        if (prefab.GetComponentInChildren<DamageReceiver>(true) != null)
+        if (prefab.GetComponentInChildren<Mod_DamageReceiver>(true) != null)
         {
             return true;
         }
@@ -409,7 +409,7 @@ public class PrefabStatTableWindow : EditorWindow
             HasDamage = false
         };
 
-        DamageReceiver[] receivers = prefab.GetComponentsInChildren<DamageReceiver>(true);
+        Mod_DamageReceiver[] receivers = prefab.GetComponentsInChildren<Mod_DamageReceiver>(true);
         if (receivers != null && receivers.Length > 0)
         {
             row.HasHp = true;
@@ -470,8 +470,8 @@ public class PrefabStatTableWindow : EditorWindow
         {
             bool changed = false;
 
-            DamageReceiver[] receivers = root.GetComponentsInChildren<DamageReceiver>(true);
-            foreach (DamageReceiver receiver in receivers)
+            Mod_DamageReceiver[] receivers = root.GetComponentsInChildren<Mod_DamageReceiver>(true);
+            foreach (Mod_DamageReceiver receiver in receivers)
             {
                 if (receiver == null || receiver.Data == null)
                 {
@@ -595,7 +595,7 @@ public class PrefabStatTableWindow : EditorWindow
         }
 
         Object target = stage.prefabContentsRoot;
-        DamageReceiver receiver = stage.prefabContentsRoot.GetComponentInChildren<DamageReceiver>(true);
+        Mod_DamageReceiver receiver = stage.prefabContentsRoot.GetComponentInChildren<Mod_DamageReceiver>(true);
         if (receiver != null)
         {
             target = receiver;

@@ -418,7 +418,7 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver, IA
 	{
 		CompleteAdvance();
 		ClearChaseFormation();
-		item?.GetComponentInChildren<Mover_AI>(true)?.StopMovement();
+		item?.GetComponentInChildren<Mod_Mover_AI>(true)?.StopMovement();
 	}
 
 	[Button("狼群集火玩家")]
@@ -853,7 +853,7 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver, IA
 		if (TryGetWolfAlly(target, out _))
 			return false;
 
-		DamageReceiver receiver = target.itemMods?.GetMod_ByID<DamageReceiver>(ModText.Hp);
+		Mod_DamageReceiver receiver = target.itemMods?.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
 		if (receiver == null || receiver.Hp <= 0f)
 			return false;
 

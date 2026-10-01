@@ -31,7 +31,7 @@ public static partial class DroppedItemService
     private static DroppedItemRuntime runtime;
     private static GameSaveData ownerSave;
     private static string ownerWorld;
-    private static readonly HashSet<ItemPicker> pickers = new();
+    private static readonly HashSet<Mod_ItemPicker> pickers = new();
     private static readonly Dictionary<Item, LegacyDropPlan> legacyPlans = new();
     private static readonly List<KeyValuePair<Item, LegacyDropPlan>> legacyScratch = new();
     internal static uint Epoch { get; private set; } = 1;
@@ -284,8 +284,8 @@ public static partial class DroppedItemService
         runtime = new DroppedItemRuntime(scene, records);
     }
 
-    public static void RegisterPicker(ItemPicker picker) { if (picker != null) pickers.Add(picker); }
-    public static void UnregisterPicker(ItemPicker picker) { pickers.Remove(picker); runtime?.ForgetPicker(picker); }
+    public static void RegisterPicker(Mod_ItemPicker picker) { if (picker != null) pickers.Add(picker); }
+    public static void UnregisterPicker(Mod_ItemPicker picker) { pickers.Remove(picker); runtime?.ForgetPicker(picker); }
 
     /// <summary>由 ItemMgr 在正式世界门禁内集中驱动一次，而非为每个掉落物创建 MonoBehaviour。</summary>
     public static void Tick(float deltaTime)

@@ -17,7 +17,7 @@ public partial class EquipmentInstance_Speed : EquipmentInstance
         if (_isApplied)
             return;
 
-        item.itemMods.GetMod_ByID<Mover>(ModText.Mover).Data.Speed.AdditiveModifier += SpeedIncrease;
+        item.itemMods.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover).Data.Speed.AdditiveModifier += SpeedIncrease;
         _isApplied = true;
     }
 
@@ -26,7 +26,7 @@ public partial class EquipmentInstance_Speed : EquipmentInstance
         if (!_isApplied)
             return;
 
-        item.itemMods.GetMod_ByID<Mover>(ModText.Mover).Data.Speed.AdditiveModifier -= SpeedIncrease;
+        item.itemMods.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover).Data.Speed.AdditiveModifier -= SpeedIncrease;
         _isApplied = false;
     }
 

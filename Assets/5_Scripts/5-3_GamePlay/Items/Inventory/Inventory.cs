@@ -180,7 +180,7 @@ public class Inventory
     private Inventory_Data _overweightObservedData; // 当前绑定超重监听的数据源，用于安全解绑旧引用。
 
     // 输入绑定缓存，便于之后解除绑定
-    private GameController _boundController;
+    private Mod_GameController _boundController;
     private InputAction _boundToggleAction;
     private Action<InputAction.CallbackContext> _toggleCallback;
     private bool _isProcessingGamepadSubmit;
@@ -269,7 +269,7 @@ public class Inventory
     #region 输入绑定
 
 
-    public void BindController(GameController gameController)
+    public void BindController(Mod_GameController gameController)
     {
         // 先解除之前的绑定，避免重复订阅
         UnbindController();
@@ -277,7 +277,7 @@ public class Inventory
         // 基本防守：控制器或输入资产为空则不绑定
         if (gameController == null || gameController._inputActions == null)
         {
-            Debug.LogWarning("[Inventory.BindController] GameController 或 _inputActions 为空，取消绑定");
+            Debug.LogWarning("[Inventory.BindController] Mod_GameController 或 _inputActions 为空，取消绑定");
             return;
         }
 
@@ -344,7 +344,7 @@ public class Inventory
     }
 
     /// <summary>玩家主背包与其它 UI 面板并行；只保留直接锁和世界加载锁这类硬阻断。</summary>
-    private bool CanOpenPlayerBagAlongsideOtherPanels(GameController gameController)
+    private bool CanOpenPlayerBagAlongsideOtherPanels(Mod_GameController gameController)
     {
         if (!IsPlayerBagInventory() || gameController == null)
             return false;
@@ -551,8 +551,8 @@ public class Inventory
         if (_boundController != null || item == null)
             return;
 
-        _boundController = item.itemMods?.GetMod_ByID<GameController>(ModText.Controller);
-        _boundController ??= item.GetComponent<GameController>();
+        _boundController = item.itemMods?.GetMod_ByID<Mod_GameController>(ModText.Controller);
+        _boundController ??= item.GetComponent<Mod_GameController>();
     }
 
     // 辅助方法：检查 Vector2 是否有效
@@ -978,7 +978,7 @@ public class Inventory
     {
         UnbindPlayerCarryWeightEvents();
         if (item is not Player player || Data == null ||
-            (!IsPlayerBagInventory() && this is not Inventory_HotBar.HotBarRuntimeInventory))
+            (!IsPlayerBagInventory() && this is not Mod_HotBar.HotBarRuntimeInventory))
             return;
 
         _overweightObservedData = Data;
@@ -1264,7 +1264,7 @@ public class Inventory
         RefreshUI(index);
         handInventory.RefreshUI(handSlot.Index);
 
-        if (this is Inventory_HotBar.HotBarRuntimeInventory hotBarInventory)
+        if (this is Mod_HotBar.HotBarRuntimeInventory hotBarInventory)
             hotBarInventory.SyncHeldItemImmediately();
 
         _touchTapFlow = HasHeldItem(handInventory)
@@ -1543,7 +1543,7 @@ public class Inventory
     /// <summary>拖拽改变快捷栏槽位后立即刷新玩家手持实例。</summary>
     private static void SyncHotBarAfterDrag(Inventory inventory)
     {
-        if (inventory is Inventory_HotBar.HotBarRuntimeInventory hotBarInventory)
+        if (inventory is Mod_HotBar.HotBarRuntimeInventory hotBarInventory)
             hotBarInventory.SyncHeldItemImmediately();
     }
 
@@ -1598,7 +1598,7 @@ public class Inventory
             return;
 
         // 玩家背包转入快捷栏后，立即刷新当前手持实例，避免等待下一次模块 Tick 才显示。
-        if (DefaultTarget_Inventory is Inventory_HotBar.HotBarRuntimeInventory hotBarInventory)
+        if (DefaultTarget_Inventory is Mod_HotBar.HotBarRuntimeInventory hotBarInventory)
             hotBarInventory.SyncHeldItemImmediately();
 
         RefreshUI(index);
@@ -1713,7 +1713,7 @@ public class Inventory
     /// </summary>
     private int GetLeftClickTargetSlotIndex(int sourceIndex)
     {
-        if (DefaultTarget_Inventory is Inventory_HotBar.HotBarRuntimeInventory hotBarInventory &&
+        if (DefaultTarget_Inventory is Mod_HotBar.HotBarRuntimeInventory hotBarInventory &&
             hotBarInventory.Data?.itemSlots != null &&
             hotBarInventory.Data.itemSlots.Count > 0)
         {
@@ -1925,7 +1925,7 @@ public class Inventory
         if (ownerItem == null || ownerItem.itemMods == null)
             return null;
 
-        Inventory_HotBar hotbarModule = ownerItem.itemMods.GetMod_ByID<Inventory_HotBar>(ModText.Hotbar);
+        Mod_HotBar hotbarModule = ownerItem.itemMods.GetMod_ByID<Mod_HotBar>(ModText.Hotbar);
         if (hotbarModule != null)
             return hotbarModule.GetDefaultTargetInventory();
 

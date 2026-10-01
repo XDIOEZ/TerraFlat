@@ -22,12 +22,12 @@ public sealed partial class GMReflectionConsole
     /// <summary>运行时 Buff 目标列表中的一个索引按钮与其对应组件。</summary>
     private sealed class BuffTargetEntry
     {
-        public BuffManager Manager;
+        public Mod_BuffManager Manager;
         public Button Button;
     }
 
     private readonly List<BuffDefinition> availableBuffDefinitions = new();
-    private readonly List<BuffManager> availableBuffTargets = new();
+    private readonly List<Mod_BuffManager> availableBuffTargets = new();
     private readonly List<BuffTargetEntry> buffTargetEntries = new();
 
     private TMP_InputField buffIdInput;
@@ -387,7 +387,7 @@ public sealed partial class GMReflectionConsole
     /// <summary>重新扫描并刷新可接受 Buff 的目标索引按钮。</summary>
     private void RefreshBuffTargetList(bool forceRebuild = true)
     {
-        List<BuffManager> discoveredTargets = FindBuffManagersInLoadedScenes();
+        List<Mod_BuffManager> discoveredTargets = FindBuffManagersInLoadedScenes();
         bool targetsChanged = forceRebuild || availableBuffTargets.Count != discoveredTargets.Count;
 
         if (!targetsChanged)
@@ -413,7 +413,7 @@ public sealed partial class GMReflectionConsole
             {
                 AddPageHint(
                     buffTargetListContent,
-                    "当前加载场景没有运行中的 BuffManager 目标。",
+                    "当前加载场景没有运行中的 Mod_BuffManager 目标。",
                     34f);
             }
             else
@@ -421,7 +421,7 @@ public sealed partial class GMReflectionConsole
                 for (int i = 0; i < availableBuffTargets.Count; i++)
                 {
                     int targetIndex = i;
-                    BuffManager target = availableBuffTargets[i];
+                    Mod_BuffManager target = availableBuffTargets[i];
                     Button button = CreateButton(
                         buffTargetListContent,
                         FormatBuffTargetLabel(targetIndex, target),
@@ -464,14 +464,14 @@ public sealed partial class GMReflectionConsole
         nextBuffTargetRefreshTime = Time.unscaledTime + BuffTargetRefreshInterval;
     }
 
-    /// <summary>扫描所有已加载场景，只保留激活且可运行的 BuffManager。</summary>
-    private static List<BuffManager> FindBuffManagersInLoadedScenes()
+    /// <summary>扫描所有已加载场景，只保留激活且可运行的 Mod_BuffManager。</summary>
+    private static List<Mod_BuffManager> FindBuffManagersInLoadedScenes()
     {
-        BuffManager[] managers = FindObjectsOfType<BuffManager>(true);
-        List<BuffManager> targets = new(managers.Length);
+        Mod_BuffManager[] managers = FindObjectsOfType<Mod_BuffManager>(true);
+        List<Mod_BuffManager> targets = new(managers.Length);
         for (int i = 0; i < managers.Length; i++)
         {
-            BuffManager manager = managers[i];
+            Mod_BuffManager manager = managers[i];
             if (manager == null || !manager.isActiveAndEnabled || !manager.gameObject.scene.IsValid())
                 continue;
 
@@ -482,7 +482,7 @@ public sealed partial class GMReflectionConsole
         return targets;
     }
 
-    private static int CompareBuffManagers(BuffManager left, BuffManager right)
+    private static int CompareBuffManagers(Mod_BuffManager left, Mod_BuffManager right)
     {
         int nameComparison = StringComparer.OrdinalIgnoreCase.Compare(
             GetBuffTargetName(left),
@@ -492,13 +492,13 @@ public sealed partial class GMReflectionConsole
             : left.GetInstanceID().CompareTo(right.GetInstanceID());
     }
 
-    private static string FormatBuffTargetLabel(int index, BuffManager manager)
+    private static string FormatBuffTargetLabel(int index, Mod_BuffManager manager)
     {
         int activeBuffCount = manager?.ActiveBuffs?.Count ?? 0;
         return $"[{index}] {GetBuffTargetName(manager)}  ·  当前 Buff {activeBuffCount} 个";
     }
 
-    private static void SetBuffTargetButtonLabel(Button button, int index, BuffManager manager)
+    private static void SetBuffTargetButtonLabel(Button button, int index, Mod_BuffManager manager)
     {
         TextMeshProUGUI text = button != null
             ? button.GetComponentInChildren<TextMeshProUGUI>(true)
@@ -517,7 +517,7 @@ public sealed partial class GMReflectionConsole
             return;
         }
 
-        BuffManager target = availableBuffTargets[targetIndex];
+        Mod_BuffManager target = availableBuffTargets[targetIndex];
         if (target == null || !target.isActiveAndEnabled || !target.gameObject.scene.IsValid())
         {
             RefreshBuffTargetList();
@@ -706,7 +706,7 @@ public sealed partial class GMReflectionConsole
         pendingBuffApplicationCount = 1;
     }
 
-    private void ClearBuffsFromTarget(BuffManager target)
+    private void ClearBuffsFromTarget(Mod_BuffManager target)
     {
         string targetName = GetBuffTargetName(target);
         int clearedCount = target.ActiveBuffs?.Count ?? 0;
@@ -718,7 +718,7 @@ public sealed partial class GMReflectionConsole
             new Color(1f, 0.71f, 0.30f));
     }
 
-    private void ApplyBuffToTarget(BuffManager target)
+    private void ApplyBuffToTarget(Mod_BuffManager target)
     {
         string targetName = GetBuffTargetName(target);
         if (string.IsNullOrWhiteSpace(pendingBuffId))
@@ -757,7 +757,7 @@ public sealed partial class GMReflectionConsole
             new Color(0.35f, 0.95f, 0.85f));
     }
 
-    private static string GetBuffTargetName(BuffManager manager)
+    private static string GetBuffTargetName(Mod_BuffManager manager)
     {
         if (manager == null)
             return "未知目标";

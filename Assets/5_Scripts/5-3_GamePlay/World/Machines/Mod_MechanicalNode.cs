@@ -72,7 +72,7 @@ public sealed partial class Mod_MechanicalNode : Module, IInteractable, IBuildin
     public bool BlocksMovement => ResolveDefinition()?.BlocksMovement ?? true;
     public float PlayerMoveSpeedMultiplier => ResolveDefinition()?.PlayerMoveSpeedMultiplier ?? 1f;
     private MechanicalPanelSession panel;
-    private GameController controller;
+    private Mod_GameController controller;
     private SpriteRenderer spriteRenderer;
     private SortingGroup buildingSortingGroup; // 建筑根节点的整体深度排序组。
     private bool hasOriginalBuildingSortingGroup;
@@ -248,7 +248,7 @@ public sealed partial class Mod_MechanicalNode : Module, IInteractable, IBuildin
     private void BindRotationInput()
     {
         if (controller != null) controller.BuildingRotationRequested -= RotatePlacement;
-        controller = item.Owner?.GetComponentInChildren<GameController>();
+        controller = item.Owner?.GetComponentInChildren<Mod_GameController>();
         if (controller != null) controller.BuildingRotationRequested += RotatePlacement;
     }
     private void OnHandChanged(bool held)

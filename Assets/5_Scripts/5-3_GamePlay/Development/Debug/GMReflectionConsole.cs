@@ -257,8 +257,8 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
     private void ApplyPersistedTogglePreferences()
     {
         bool teleportEnabled = GMConsolePreferences.TeleportShortcutEnabled;
-        if (PlayerAdminController.TeleportToMouseShortcutEnabled != teleportEnabled)
-            PlayerAdminController.ToggleTeleportToMouseShortcut();
+        if (Mod_PlayerAdminController.TeleportToMouseShortcutEnabled != teleportEnabled)
+            Mod_PlayerAdminController.ToggleTeleportToMouseShortcut();
 
         WorldNavigationPathDebugOverlay.SetRoutesVisible(
             GMConsolePreferences.NavigationPathVisible);
@@ -288,7 +288,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         while (!playerSpeedRestored || !chunkSpeedRestored || !chunkBudgetRestored)
         {
             if (!playerSpeedRestored &&
-                FindFirstComponent("PlayerAdminController") is PlayerAdminController controller)
+                FindFirstComponent("Mod_PlayerAdminController") is Mod_PlayerAdminController controller)
             {
                 playerSpeedRestored = controller.TrySetAdminMoveSpeedMultiplier(
                     GMConsolePreferences.PlayerMoveSpeedMultiplier,
@@ -483,10 +483,10 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         CreateButton(quickGrid.transform, "设为管理员", SetAdministrator, 0f, 32f);
         CreateButton(quickGrid.transform, "传送至鼠标", () => InvokeByTypeName("Mod_PlayerTraits", "TeleportToMousePosition"), 0f, 32f);
         CreateButton(quickGrid.transform, "创造背包", () => InvokeByTypeName("Mod_PlayerTraits", "InitializeCreativeInventoryForAdmin"), 0f, 32f);
-        CreateButton(quickGrid.transform, "手持 +9999", () => InvokeByTypeName("PlayerAdminController", "AddAmountToCurrentHandItem", 9999f), 0f, 32f);
-        CreateButton(quickGrid.transform, "背包 +100", () => InvokeByTypeName("PlayerAdminController", "AddAmountToAllBagItems", 100f), 0f, 32f);
-        CreateButton(quickGrid.transform, "时间 -0.5", () => InvokeByTypeName("PlayerAdminController", "TryUpdateTimeScale", -0.5f), 0f, 32f);
-        CreateButton(quickGrid.transform, "时间重置", () => InvokeByTypeName("PlayerAdminController", "ResetTimeScale"), 0f, 32f);
+        CreateButton(quickGrid.transform, "手持 +9999", () => InvokeByTypeName("Mod_PlayerAdminController", "AddAmountToCurrentHandItem", 9999f), 0f, 32f);
+        CreateButton(quickGrid.transform, "背包 +100", () => InvokeByTypeName("Mod_PlayerAdminController", "AddAmountToAllBagItems", 100f), 0f, 32f);
+        CreateButton(quickGrid.transform, "时间 -0.5", () => InvokeByTypeName("Mod_PlayerAdminController", "TryUpdateTimeScale", -0.5f), 0f, 32f);
+        CreateButton(quickGrid.transform, "时间重置", () => InvokeByTypeName("Mod_PlayerAdminController", "ResetTimeScale"), 0f, 32f);
 
         GameObject commandBox = CreateDesktopGroup(mainColumns.transform, "反射调试命令");
         LayoutElement commandBoxLayout = commandBox.AddComponent<LayoutElement>();
@@ -612,10 +612,10 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         playerMoveSpeedButton = CreateButton(quickGrid.transform, "玩家移速：1x", CyclePlayerMoveSpeed, 0f, 35f);
         RefreshPlayerMoveSpeedButton();
         CreateButton(quickGrid.transform, "创造背包", () => InvokeByTypeName("Mod_PlayerTraits", "InitializeCreativeInventoryForAdmin"), 0f, 35f);
-        CreateButton(quickGrid.transform, "手持 +9999", () => InvokeByTypeName("PlayerAdminController", "AddAmountToCurrentHandItem", 9999f), 0f, 35f);
-        CreateButton(quickGrid.transform, "背包 +100", () => InvokeByTypeName("PlayerAdminController", "AddAmountToAllBagItems", 100f), 0f, 35f);
-        CreateButton(quickGrid.transform, "时间 -0.5", () => InvokeByTypeName("PlayerAdminController", "TryUpdateTimeScale", -0.5f), 0f, 35f);
-        CreateButton(quickGrid.transform, "时间重置", () => InvokeByTypeName("PlayerAdminController", "ResetTimeScale"), 0f, 35f);
+        CreateButton(quickGrid.transform, "手持 +9999", () => InvokeByTypeName("Mod_PlayerAdminController", "AddAmountToCurrentHandItem", 9999f), 0f, 35f);
+        CreateButton(quickGrid.transform, "背包 +100", () => InvokeByTypeName("Mod_PlayerAdminController", "AddAmountToAllBagItems", 100f), 0f, 35f);
+        CreateButton(quickGrid.transform, "时间 -0.5", () => InvokeByTypeName("Mod_PlayerAdminController", "TryUpdateTimeScale", -0.5f), 0f, 35f);
+        CreateButton(quickGrid.transform, "时间重置", () => InvokeByTypeName("Mod_PlayerAdminController", "ResetTimeScale"), 0f, 35f);
         navigationPathButton = CreateButton(quickGrid.transform, "AI 路线提示：关", ToggleNavigationPathHints, 0f, 35f);
         RefreshNavigationPathButton();
 
@@ -1505,7 +1505,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
 
     private void CyclePlayerMoveSpeed()
     {
-        PlayerAdminController controller = FindFirstComponent("PlayerAdminController") as PlayerAdminController;
+        Mod_PlayerAdminController controller = FindFirstComponent("Mod_PlayerAdminController") as Mod_PlayerAdminController;
         if (controller == null)
         {
             SetStatus("未找到本地玩家，无法调整移动速度。", Color.yellow);
@@ -1549,7 +1549,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
             return;
         }
 
-        PlayerAdminController controller = FindFirstComponent("PlayerAdminController") as PlayerAdminController;
+        Mod_PlayerAdminController controller = FindFirstComponent("Mod_PlayerAdminController") as Mod_PlayerAdminController;
         if (controller == null)
         {
             SetStatus("未找到本地玩家，无法调整移动速度。", Color.yellow);
@@ -1577,7 +1577,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
 
     private void RefreshPlayerMoveSpeedButton()
     {
-        PlayerAdminController controller = FindObjectOfType<PlayerAdminController>(true);
+        Mod_PlayerAdminController controller = FindObjectOfType<Mod_PlayerAdminController>(true);
         float multiplier = controller != null ? controller.AdminMoveSpeedMultiplier : 1f;
         if (playerMoveSpeedInput != null && !playerMoveSpeedInput.isFocused)
             playerMoveSpeedInput.SetTextWithoutNotify(multiplier.ToString("0.##", CultureInfo.InvariantCulture));
@@ -1725,7 +1725,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
 
     private void ToggleTeleportShortcut()
     {
-        bool enabled = PlayerAdminController.ToggleTeleportToMouseShortcut();
+        bool enabled = Mod_PlayerAdminController.ToggleTeleportToMouseShortcut();
         GMConsolePreferences.SetTeleportShortcut(enabled);
         RefreshTeleportShortcutButton();
         SetStatus(
@@ -1735,8 +1735,8 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
 
     private void ToggleAdminInvincibility()
     {
-        PlayerAdminController controller =
-            FindFirstComponent("PlayerAdminController") as PlayerAdminController;
+        Mod_PlayerAdminController controller =
+            FindFirstComponent("Mod_PlayerAdminController") as Mod_PlayerAdminController;
         if (controller == null || !controller.TryToggleAdminInvincibility(out bool enabled))
         {
             RefreshAdminInvincibilityButton();
@@ -1755,7 +1755,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         if (adminInvincibilityButton == null)
             return;
 
-        PlayerAdminController controller = FindObjectOfType<PlayerAdminController>(true);
+        Mod_PlayerAdminController controller = FindObjectOfType<Mod_PlayerAdminController>(true);
         bool canToggle = controller != null && controller.IsAdministrator;
         bool enabled = canToggle && controller.IsAdminInvincibilityEnabled;
 
@@ -1779,7 +1779,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         if (teleportShortcutButton == null)
             return;
 
-        bool enabled = PlayerAdminController.TeleportToMouseShortcutEnabled;
+        bool enabled = Mod_PlayerAdminController.TeleportToMouseShortcutEnabled;
         TextMeshProUGUI label = teleportShortcutButton.GetComponentInChildren<TextMeshProUGUI>(true);
         if (label != null)
             label.text = enabled ? "T 传送：开" : "T 传送：关";
@@ -1886,11 +1886,11 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         AddNamedCommand(namedTargets, "环境", "下雨", "GameDebugManager", "SetRainWeather");
         AddNamedCommand(namedTargets, "环境", "环境信息", "GameDebugManager", "ToggleEnvironmentInfo");
         AddNamedCommand(namedTargets, "管理员", "刷新区块", "Mod_ChunkLoader", "RefreshChunksAroundPlayer");
-        AddNamedCommand(namedTargets, "管理员", "手持 +9999", "PlayerAdminController", "AddAmountToCurrentHandItem", 9999f);
-        AddNamedCommand(namedTargets, "管理员", "背包 +100", "PlayerAdminController", "AddAmountToAllBagItems", 100f);
-        AddNamedCommand(namedTargets, "管理员", "时间恢复", "PlayerAdminController", "ResetTimeScale");
-        AddNamedCommand(namedTargets, "管理员", "时间 +0.5", "PlayerAdminController", "TryUpdateTimeScale", 0.5f);
-        AddNamedCommand(namedTargets, "管理员", "时间 -0.5", "PlayerAdminController", "TryUpdateTimeScale", -0.5f);
+        AddNamedCommand(namedTargets, "管理员", "手持 +9999", "Mod_PlayerAdminController", "AddAmountToCurrentHandItem", 9999f);
+        AddNamedCommand(namedTargets, "管理员", "背包 +100", "Mod_PlayerAdminController", "AddAmountToAllBagItems", 100f);
+        AddNamedCommand(namedTargets, "管理员", "时间恢复", "Mod_PlayerAdminController", "ResetTimeScale");
+        AddNamedCommand(namedTargets, "管理员", "时间 +0.5", "Mod_PlayerAdminController", "TryUpdateTimeScale", 0.5f);
+        AddNamedCommand(namedTargets, "管理员", "时间 -0.5", "Mod_PlayerAdminController", "TryUpdateTimeScale", -0.5f);
 
         Dictionary<Type, MethodInfo[]> safeMethodsByType = new();
         foreach (MonoBehaviour behaviour in sceneBehaviours)
@@ -2752,8 +2752,8 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
 
     private void SetAdministrator()
     {
-        PlayerAdminController adminController =
-            FindFirstComponent("PlayerAdminController") as PlayerAdminController;
+        Mod_PlayerAdminController adminController =
+            FindFirstComponent("Mod_PlayerAdminController") as Mod_PlayerAdminController;
         if (adminController != null && adminController.TryEnableAdministrator())
         {
             RefreshAdminInvincibilityButton();

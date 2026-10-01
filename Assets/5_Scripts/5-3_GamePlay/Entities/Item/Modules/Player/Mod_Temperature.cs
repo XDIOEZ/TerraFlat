@@ -70,7 +70,7 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable
 
     public UltEvent<float> OnTemperatureChanged = new UltEvent<float>(); // 体温变化事件
 
-    private DamageReceiver _damageReceiver; // 血量模块引用
+    private Mod_DamageReceiver _damageReceiver; // 血量模块引用
     private float _coldDamageTickTimer; // 低温伤害计时器
     private float _hotDamageTickTimer; // 高温伤害计时器
     private bool _isInWater; // 当前是否处于真实水体中
@@ -109,7 +109,7 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable
         _hotDamageTickTimer = 0f;
         ResetWaterExposureState();
 
-        _damageReceiver = item.itemMods.GetMod_ByID<DamageReceiver>(ModText.Hp);
+        _damageReceiver = item.itemMods.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
         item.OnInit_Env += AdjustByEnvironment;
     }
 

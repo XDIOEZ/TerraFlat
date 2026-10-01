@@ -1525,14 +1525,14 @@ public static class FlatWorldContentValidator
                     record.Item);
             }
 
-            if (record.Prefab.GetComponentInChildren<DamageReceiver>(true) == null &&
+            if (record.Prefab.GetComponentInChildren<Mod_DamageReceiver>(true) == null &&
                 !DefinitionProvidesBuildingHealth(context, expectedSummonerId))
             {
                 AddError(
                     report,
                     "FWC-BUILDING-013",
                     record.Path,
-                    "DamageReceiver",
+                    "Mod_DamageReceiver",
                     $"建筑及其召唤器定义 '{expectedSummonerId}' 均未提供生命值模块。",
                     module);
             }

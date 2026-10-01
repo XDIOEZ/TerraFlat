@@ -32,7 +32,7 @@ public class Mod_SkillManager : Module
     [Tooltip("聚焦点位")]
     public Mod_FocusPoint focusPoint;
     [Tooltip("控制器")]
-    public GameController controller;
+    public Mod_GameController controller;
     [Tooltip("施法点列表(手动挂接,顺序A/B/C)")]
     public List<Transform> castingPoints = new List<Transform>(3);
 
@@ -72,7 +72,7 @@ public class Mod_SkillManager : Module
         if (item.Owner != null && item.Owner.itemMods != null)
         {
             focusPoint = item.Owner.itemMods.GetMod_ByID<Mod_FocusPoint>(ModText.FocusPoint);
-            controller = item.Owner.itemMods.GetMod_ByID<GameController>(ModText.Controller);
+            controller = item.Owner.itemMods.GetMod_ByID<Mod_GameController>(ModText.Controller);
         }
 
         if (focusPoint == null && item.itemMods != null)
@@ -82,7 +82,7 @@ public class Mod_SkillManager : Module
 
         if (controller == null && item.itemMods != null)
         {
-            controller = item.itemMods.GetMod_ByID<GameController>(ModText.Controller);
+            controller = item.itemMods.GetMod_ByID<Mod_GameController>(ModText.Controller);
         }
 
         if (controller != null)

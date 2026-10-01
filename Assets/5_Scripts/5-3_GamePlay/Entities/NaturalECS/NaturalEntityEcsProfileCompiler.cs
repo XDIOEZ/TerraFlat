@@ -13,7 +13,7 @@ namespace FlatWorld.NaturalEntities
         public string HealthModuleName;
         public string GrowthModuleName;
         public string ClimateModuleName;
-        public DamageReceiver.DamageReceiver_SaveData HealthDefaults;
+        public Mod_DamageReceiver.DamageReceiver_SaveData HealthDefaults;
         public GrowData GrowthDefaults;
         public float[] GrowthHealthRatios;
         public float MatureMaxHealth;
@@ -127,7 +127,7 @@ namespace FlatWorld.NaturalEntities
             }
 
             if (result.HasCrop && result.HealthDefaults == null)
-                result.HealthDefaults = new DamageReceiver.DamageReceiver_SaveData { Hp = 1f, MaxHp = 1f };
+                result.HealthDefaults = new Mod_DamageReceiver.DamageReceiver_SaveData { Hp = 1f, MaxHp = 1f };
             if ((result.Capabilities & NaturalEntityCapability.Growth) != 0 && result.HealthDefaults == null)
             {
                 reason = "成长能力依赖生命能力";
@@ -163,8 +163,8 @@ namespace FlatWorld.NaturalEntities
             JObject parameters = ParseParameters(module, out reason);
             if (parameters == null)
                 return false;
-            var data = DeserializeConfiguration<DamageReceiver.DamageReceiver_SaveData>(parameters["Data"]) ??
-                       new DamageReceiver.DamageReceiver_SaveData();
+            var data = DeserializeConfiguration<Mod_DamageReceiver.DamageReceiver_SaveData>(parameters["Data"]) ??
+                       new Mod_DamageReceiver.DamageReceiver_SaveData();
             if (!FinitePositive(data.MaxHp) || !Finite(data.Hp) || data.UseBodyPartHealth ||
                 !Finite(data.DamageInterval) || data.DamageInterval < 0f)
             {

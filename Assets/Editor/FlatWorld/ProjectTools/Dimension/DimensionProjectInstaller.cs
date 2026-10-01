@@ -167,7 +167,7 @@ public static class DimensionProjectInstaller
             interaction.isTrigger = true;
             interaction.size = new Vector2(2.6f, 2f);
 
-            DimensionPortal portal = root.AddComponent<DimensionPortal>();
+            Mod_DimensionPortal portal = root.AddComponent<Mod_DimensionPortal>();
             portal.Configure(WorldAddress.SurfaceDimensionId, false);
 
             GameObject visual = new GameObject("Visual");
@@ -265,7 +265,7 @@ public static class DimensionProjectInstaller
     private static string BuildPortalComponentYaml(long rootId, long componentId, string targetDimensionId, bool requiresBuilding)
     {
         string scriptGuid = AssetDatabase.AssetPathToGUID(
-            "Assets/5_Scripts/5-3_GamePlay/World/Dimension/DimensionPortal.cs");
+            "Assets/5_Scripts/5-3_GamePlay/World/Dimension/Mod_DimensionPortal.cs");
         return
             $"\n--- !u!114 &{componentId}\n" +
             "MonoBehaviour:\n" +

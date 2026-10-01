@@ -80,10 +80,10 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
     // 定时伤害相关
     [SerializeField]
     private float lastDamageTime = 0f;
-    private List<DamageReceiver> insideReceivers = new List<DamageReceiver>();
+    private List<Mod_DamageReceiver> insideReceivers = new List<Mod_DamageReceiver>();
     private readonly List<Collider2D> overlapColliders = new List<Collider2D>();
-    private readonly HashSet<DamageReceiver> windowScanHitReceivers = new HashSet<DamageReceiver>();
-    private readonly HashSet<DamageReceiver> attackWindowHitReceivers = new HashSet<DamageReceiver>();
+    private readonly HashSet<Mod_DamageReceiver> windowScanHitReceivers = new HashSet<Mod_DamageReceiver>();
+    private readonly HashSet<Mod_DamageReceiver> attackWindowHitReceivers = new HashSet<Mod_DamageReceiver>();
     private readonly HashSet<FlatWorld.Combat.CombatIdentity> externalWindowTargets = new HashSet<FlatWorld.Combat.CombatIdentity>(); // 与旧目标共享窗口预算。
     private uint attackSequence, attackPulse; // 每个真实窗口的新序列与实际 Pulse。
     private double nextDataPulseTime; // 周期查询时钟，不依赖是否命中旧 Collider。
@@ -108,7 +108,7 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
     public event System.Action<float> OnDamageApplied;
 
     /// <summary>实体伤害完成后发布目标与结算结果；0 表示有效命中，负数表示本次结算无效。</summary>
-    public event System.Action<DamageReceiver, float> OnReceiverDamageResolved;
+    public event System.Action<Mod_DamageReceiver, float> OnReceiverDamageResolved;
     public event System.Action<FlatWorld.Combat.CombatDamageContext, float> OnExternalDamageResolved;
     private bool explicitProjectileSweep;
     private bool hasImpactOrigin;
@@ -182,7 +182,7 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
         GameplayCombatBridge.QueryWeaponPulse(this, shape, context);
     }
 
-    /// <summary>纯数据后端确认生命提交后复用武器反馈，原 DamageReceiver 专用事件仍只传真实旧接收器。</summary>
+    /// <summary>纯数据后端确认生命提交后复用武器反馈，原 Mod_DamageReceiver 专用事件仍只传真实旧接收器。</summary>
     public void PublishExternalDamage(in FlatWorld.Combat.CombatDamageContext context, float damage)
     {
         if (GameplayCombatBridge.Identity(item) != context.Attack.Source || context.Attack.Sequence != attackSequence) return;
@@ -404,7 +404,7 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
     public bool CanHitColliderTarget(Collider2D collider)
     {
         if (!CombatPhysicsChannels.IsDamageReceiverCollider(collider)) return false;
-        DamageReceiver receiver = GameplayPhysics2D.ResolveComponent<DamageReceiver>(collider);
+        Mod_DamageReceiver receiver = GameplayPhysics2D.ResolveComponent<Mod_DamageReceiver>(collider);
         return receiver != null && !IsDamageSourceReceiver(receiver) && CanDealDamageNow() &&
             AllowsTargetDelivery(receiver) && FactionRelationService.CanAttack(item, receiver.item) &&
             !attackWindowHitReceivers.Contains(receiver);
@@ -432,7 +432,7 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
             return;
         }
 
-        DamageReceiver receiver = GameplayPhysics2D.ResolveComponent<DamageReceiver>(other);
+        Mod_DamageReceiver receiver = GameplayPhysics2D.ResolveComponent<Mod_DamageReceiver>(other);
         if (receiver == null)
         {
             TryPlayNonDamageableImpact(other);
@@ -483,7 +483,7 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
             return;
 
         // 从内部接收器列表中移除
-        DamageReceiver receiver = GameplayPhysics2D.ResolveComponent<DamageReceiver>(other);
+        Mod_DamageReceiver receiver = GameplayPhysics2D.ResolveComponent<Mod_DamageReceiver>(other);
         if (receiver != null)
         {
             insideReceivers.Remove(receiver);
@@ -508,7 +508,7 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
     }
 
     /// <summary>结算一次实体伤害，并优先使用本次实际命中的碰撞体定位特效。</summary>
-    private void ApplyDamageToReceiver(DamageReceiver receiver, Collider2D hitCollider = null)
+    private void ApplyDamageToReceiver(Mod_DamageReceiver receiver, Collider2D hitCollider = null)
     {
         if (receiver == null ||
             IsDamageSourceReceiver(receiver) ||
@@ -530,7 +530,7 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
         // 造成伤害
         float acDamage = receiver.Hurt(this);
 
-        // DamageReceiver 与受击 Collider 可能位于不同层级，不能假定接收器节点自身带 Collider。
+        // Mod_DamageReceiver 与受击 Collider 可能位于不同层级，不能假定接收器节点自身带 Collider。
         if (acDamage >= 0f)
         {
             Vector2 hitPoint = ResolveHitPoint(receiver, hitCollider);
@@ -547,7 +547,7 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
     }
 
     /// <summary>抛掷物高空段只接受真正飞行的目标；不能在地面目标处提前消费唯一命中名额。</summary>
-    private bool AllowsTargetDelivery(DamageReceiver receiver)
+    private bool AllowsTargetDelivery(Mod_DamageReceiver receiver)
     {
         if ((DeliveryCapabilities & FlatWorld.Combat.CombatDeliveryCapabilities.AirborneOnly) == 0) return true;
         if (receiver.item?.itemMods == null) return false;
@@ -557,7 +557,7 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
     }
 
     /// <summary>解析稳定的命中特效位置；缺少碰撞体时回退到受击对象中心。</summary>
-    private Vector2 ResolveHitPoint(DamageReceiver receiver, Collider2D hitCollider)
+    private Vector2 ResolveHitPoint(Mod_DamageReceiver receiver, Collider2D hitCollider)
     {
         if (hitCollider != null)
             return hitCollider.ClosestPoint(hasExplicitImpactPoint ? explicitImpactPoint : (Vector2)transform.position);
@@ -651,7 +651,7 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
     }
 
     /// <summary>判断接收器是否属于伤害物品自身或其拥有者；仅过滤自伤，不改变攻击者身份。</summary>
-    private bool IsDamageSourceReceiver(DamageReceiver receiver)
+    private bool IsDamageSourceReceiver(Mod_DamageReceiver receiver)
     {
         Item receiverItem = receiver?.item;
         if (receiverItem == null)
@@ -842,7 +842,7 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
         for (int i = 0; i < overlapColliders.Count; i++)
         {
             Collider2D overlap = overlapColliders[i];
-            DamageReceiver receiver = GameplayPhysics2D.ResolveComponent<DamageReceiver>(overlap);
+            Mod_DamageReceiver receiver = GameplayPhysics2D.ResolveComponent<Mod_DamageReceiver>(overlap);
             if (receiver == null || IsDamageSourceReceiver(receiver) || !windowScanHitReceivers.Add(receiver))
                 continue;
 
@@ -1024,7 +1024,7 @@ public static class CombatPhysicsChannels
         Collider2D[] colliders = receiver.GetComponents<Collider2D>();
         if (colliders.Length == 0)
         {
-            Debug.LogError($"{receiver.name} 缺少 DamageReceiver 专用 Collider2D。", receiver);
+            Debug.LogError($"{receiver.name} 缺少 Mod_DamageReceiver 专用 Collider2D。", receiver);
             return;
         }
 

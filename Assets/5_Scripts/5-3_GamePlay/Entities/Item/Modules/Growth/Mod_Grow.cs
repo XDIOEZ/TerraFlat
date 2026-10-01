@@ -116,8 +116,8 @@ public partial class Mod_Grow : Module, IInteractable, IPlantableCrop, IWorldTim
         成熟,
     }
 
-    // 缓存 DamageReceiver 组件
-    private DamageReceiver cachedDamageReceiver;
+    // 缓存 Mod_DamageReceiver 组件
+    private Mod_DamageReceiver cachedDamageReceiver;
     private int lastAppliedHealthStage = -1;
 
     public override void Awake()
@@ -135,7 +135,7 @@ public partial class Mod_Grow : Module, IInteractable, IPlantableCrop, IWorldTim
         // 确保 cachedDamageReceiver，如果前面没成功，这里再尝试一次
         if (cachedDamageReceiver == null && item != null)
         {
-            cachedDamageReceiver = item.itemMods.GetMod_ByID<DamageReceiver>(ModText.Hp);
+            cachedDamageReceiver = item.itemMods.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
         }
         lastAppliedHealthStage = -1;
 
@@ -221,7 +221,7 @@ private void ApplyStageHealth(bool force = false)
         return;
 
     if (cachedDamageReceiver == null)
-        cachedDamageReceiver = item.itemMods.GetMod_ByID<DamageReceiver>(ModText.Hp);
+        cachedDamageReceiver = item.itemMods.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
 
     if (cachedDamageReceiver == null ||
         growState_MaxHealthRatios == null ||

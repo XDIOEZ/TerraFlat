@@ -33,8 +33,8 @@ namespace FlatWorld.GameplayMCP
                                                  StringComparison.Ordinal));
             bag ??= bagModule?.InventoryInstances?.FirstOrDefault(candidate => candidate != null);
 
-            Inventory_HotBar hotbar = player?.itemMods?.GetMod_ByID<Inventory_HotBar>(ModText.Hotbar) ??
-                                      player?.GetComponentInChildren<Inventory_HotBar>(true);
+            Mod_HotBar hotbar = player?.itemMods?.GetMod_ByID<Mod_HotBar>(ModText.Hotbar) ??
+                                      player?.GetComponentInChildren<Mod_HotBar>(true);
             Inventory target = hotbar?.RuntimeInventory;
             if (bag?.Data?.itemSlots == null || target?.Data?.itemSlots == null)
             {

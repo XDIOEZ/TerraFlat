@@ -422,7 +422,7 @@ namespace FlatWorld.NaturalEntities
 
             if (profile.HealthDefaults != null)
             {
-                DamageReceiver.DamageReceiver_SaveData state = ReadHealthState(record);
+                Mod_DamageReceiver.DamageReceiver_SaveData state = ReadHealthState(record);
                 health = new NaturalEntityHealth
                 {
                     Hp = Mathf.Clamp(state.Hp, 0f, Mathf.Max(1f, state.MaxHp)),
@@ -509,14 +509,14 @@ namespace FlatWorld.NaturalEntities
             }
         }
 
-        private static DamageReceiver.DamageReceiver_SaveData ReadHealthState(Record record)
+        private static Mod_DamageReceiver.DamageReceiver_SaveData ReadHealthState(Record record)
         {
             var result = FastCloner.FastCloner.DeepClone(record.Profile.HealthDefaults);
             if (TryGetModuleData(record.Snapshot, record.Profile.HealthModuleName, out ModuleData raw) &&
                 raw is Ex_ModData data)
             {
-                DamageReceiver.DamageReceiver_SaveData saved =
-                    data.GetData<DamageReceiver.DamageReceiver_SaveData>();
+                Mod_DamageReceiver.DamageReceiver_SaveData saved =
+                    data.GetData<Mod_DamageReceiver.DamageReceiver_SaveData>();
                 if (saved != null)
                 {
                     result.Hp = saved.Hp;
@@ -615,8 +615,8 @@ namespace FlatWorld.NaturalEntities
                 TryGetModuleData(data, record.Profile.HealthModuleName, out ModuleData healthRaw) &&
                 healthRaw is Ex_ModData healthData)
             {
-                DamageReceiver.DamageReceiver_SaveData state =
-                    healthData.GetData<DamageReceiver.DamageReceiver_SaveData>() ??
+                Mod_DamageReceiver.DamageReceiver_SaveData state =
+                    healthData.GetData<Mod_DamageReceiver.DamageReceiver_SaveData>() ??
                     FastCloner.FastCloner.DeepClone(record.Profile.HealthDefaults);
                 state.Hp = health.Hp;
                 state.MaxHp = health.MaxHp;

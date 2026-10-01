@@ -411,7 +411,7 @@ namespace FlatWorld.Gameplay.Quests
                     total += CountItem(inventory, itemId, visited);
             }
 
-            Inventory_HotBar hotbar = player.itemMods.GetMod_ByID<Inventory_HotBar>(ModText.Hotbar);
+            Mod_HotBar hotbar = player.itemMods.GetMod_ByID<Mod_HotBar>(ModText.Hotbar);
             total += CountItem(hotbar?.RuntimeInventory, itemId, visited);
             return total;
         }
@@ -431,7 +431,7 @@ namespace FlatWorld.Gameplay.Quests
                 }
             }
 
-            Inventory_HotBar hotbar = player.itemMods.GetMod_ByID<Inventory_HotBar>(ModText.Hotbar);
+            Mod_HotBar hotbar = player.itemMods.GetMod_ByID<Mod_HotBar>(ModText.Hotbar);
             return IsUsable(hotbar?.RuntimeInventory) ? hotbar.RuntimeInventory : null;
         }
 

@@ -61,7 +61,7 @@ public static class BirdActorAssetBuilder
             root.name = species;
             Item actor = root.GetComponent<Item>();
             Animator animator = root.GetComponentInChildren<Animator>(true);
-            DamageReceiver receiver = root.GetComponentInChildren<DamageReceiver>(true);
+            Mod_DamageReceiver receiver = root.GetComponentInChildren<Mod_DamageReceiver>(true);
             if (actor == null || animator == null || receiver == null ||
                 animator.transform == root.transform || receiver.transform == root.transform)
                 throw new InvalidDataException("动物源外壳必须含独立动画与受击子节点。");
@@ -82,17 +82,17 @@ public static class BirdActorAssetBuilder
             if (actor.Sprite == null || actor.Sprite.transform.name != "Module_Animator_AI")
                 throw new InvalidDataException("鸟 JSON 约定动画与主 Sprite 同在 Module_Animator_AI 节点。");
 
-            var birdObject = new GameObject("AI_Bird");
+            var birdObject = new GameObject("Mod_AI_Bird");
             birdObject.transform.SetParent(root.transform, false);
-            AI_Bird bird = birdObject.AddComponent<AI_Bird>();
+            Mod_AI_Bird bird = birdObject.AddComponent<Mod_AI_Bird>();
             bird.liftRoot = lift;
             bird.birdAnimator = animator;
-            bird.Data.ID = "AI_Bird";
+            bird.Data.ID = "Mod_AI_Bird";
             bird.Data.Name = "ai";
             actor.itemData.IDName = species;
             actor.itemData.Guid = 0;
             actor.itemData.ModuleDataDic.Clear();
-            root.GetComponentInChildren<Mover_AI>(true).Speed.BaseValue = 0.5f;
+            root.GetComponentInChildren<Mod_Mover_AI>(true).Speed.BaseValue = 0.5f;
 
             string path = $"Assets/2_Prefabs/Gameplay/AI/{species}.prefab";
             PrefabUtility.SaveAsPrefabAsset(root, path);
@@ -252,8 +252,8 @@ public static class BirdActorAssetBuilder
             ItemDefinitionDto definition = definitions.Single(value => value.Id == species);
             GameObject shell = AssetDatabase.LoadAssetAtPath<GameObject>($"Assets/2_Prefabs/Gameplay/AI/{species}.prefab");
             Require(shell != null, $"{species} 外壳未构建");
-            AI_Bird bird = shell.GetComponentInChildren<AI_Bird>(true);
-            DamageReceiver receiver = shell.GetComponentInChildren<DamageReceiver>(true);
+            Mod_AI_Bird bird = shell.GetComponentInChildren<Mod_AI_Bird>(true);
+            Mod_DamageReceiver receiver = shell.GetComponentInChildren<Mod_DamageReceiver>(true);
             Require(bird != null && bird.liftRoot != null && bird.birdAnimator != null, $"{species} 飞行引用缺失");
             Require(receiver != null && receiver.transform.IsChildOf(bird.liftRoot), $"{species} 受击盒没有随视觉升高");
             Require(bird.birdAnimator.transform.IsChildOf(bird.liftRoot), $"{species} Animator 不在升高节点下");

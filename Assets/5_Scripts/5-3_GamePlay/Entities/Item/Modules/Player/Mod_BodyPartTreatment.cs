@@ -56,7 +56,7 @@ public sealed class Mod_BodyPartTreatment : Module
     #region 选择与正式使用
 
     /// <summary>按剩余耐久比例选择最严重的合格部位；健康或不存在的部位不消耗用品。</summary>
-    public static BodyPartHealth SelectTreatmentTarget(DamageReceiver receiver, BodyPartType[] allowed)
+    public static BodyPartHealth SelectTreatmentTarget(Mod_DamageReceiver receiver, BodyPartType[] allowed)
     {
         if (receiver == null || receiver.Hp <= 0f || !receiver.UsesBodyPartHealth || allowed == null)
             return null;
@@ -82,7 +82,7 @@ public sealed class Mod_BodyPartTreatment : Module
     public bool CanUse(Item consumer) => !usingItem && GameNetwork.HasStateAuthority &&
         item != null && item.InHand && consumer != null && item.Owner == consumer &&
         item.itemData?.Stack != null && item.itemData.Stack.Amount >= 1f &&
-        consumer.itemMods.GetMod_ByID<DamageReceiver>(ModText.Hp) is { Hp: > 0f };
+        consumer.itemMods.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp) is { Hp: > 0f };
 
     public string GetRecoveryBuffId(BodyPartType part) => string.IsNullOrEmpty(recoveryBuffPrefix)
         ? null : recoveryBuffPrefix + part.ToString().ToLowerInvariant();
@@ -92,14 +92,14 @@ public sealed class Mod_BodyPartTreatment : Module
     {
         reason = "请将医疗用品拿在手上";
         if (!CanUse(consumer)) return false;
-        DamageReceiver receiver = consumer.itemMods.GetMod_ByID<DamageReceiver>(ModText.Hp);
+        Mod_DamageReceiver receiver = consumer.itemMods.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
         reason = "该用品不能治疗此部位";
         if (Array.IndexOf(treatableParts, part) < 0 || !receiver.TryGetBodyPart(part, out BodyPartHealth state))
             return false;
         reason = "该部位耐久已满";
         if (state.MaxHp <= 0f || state.Hp >= state.MaxHp) return false;
         string recoveryId = GetRecoveryBuffId(part);
-        BuffManager buffs = consumer.itemMods.GetMod_ByID<BuffManager>(ModText.BuffManager);
+        Mod_BuffManager buffs = consumer.itemMods.GetMod_ByID<Mod_BuffManager>(ModText.Mod_BuffManager);
         reason = "该部位正在恢复";
         if (recoveryId != null && (buffs == null || buffs.HasBuff(recoveryId))) return false;
         reason = null;
@@ -110,9 +110,9 @@ public sealed class Mod_BodyPartTreatment : Module
     public bool TryCompleteTreatment(Item consumer, BodyPartType targetPart)
     {
         if (!CanTreat(consumer, targetPart, out _)) return false;
-        DamageReceiver receiver = consumer.itemMods.GetMod_ByID<DamageReceiver>(ModText.Hp);
-        BuffManager buffs = consumer.itemMods.GetMod_ByID<BuffManager>(ModText.BuffManager);
-        Inventory_HotBar hotbar = consumer.itemMods.GetMod_ByID<Inventory_HotBar>(ModText.Hotbar);
+        Mod_DamageReceiver receiver = consumer.itemMods.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
+        Mod_BuffManager buffs = consumer.itemMods.GetMod_ByID<Mod_BuffManager>(ModText.Mod_BuffManager);
+        Mod_HotBar hotbar = consumer.itemMods.GetMod_ByID<Mod_HotBar>(ModText.Hotbar);
         ItemSlot slot = hotbar?.CurrentSelectItemSlot;
         if (slot == null || !ReferenceEquals(slot.itemData, item.itemData)) return false;
         string recoveryId = GetRecoveryBuffId(targetPart);

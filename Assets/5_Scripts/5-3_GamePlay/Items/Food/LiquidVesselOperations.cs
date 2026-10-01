@@ -127,7 +127,7 @@ public static class LiquidVesselOperations
         if (!target.CanOperate(actor) || source == null || ReferenceEquals(source, target.ItemData) ||
             source.Guid != 0 && source.Guid == target.ItemData.Guid ||
             !InventoryContextResolver.TryResolveContainingInventory(actor, source, out Inventory inventory)) return false;
-        Item held = actor.itemMods?.GetMod_ByID<Inventory_HotBar>(ModText.Hotbar)?.CurentSelectItem;
+        Item held = actor.itemMods?.GetMod_ByID<Mod_HotBar>(ModText.Hotbar)?.CurentSelectItem;
         if (held?.itemData != null && (ReferenceEquals(held.itemData, source) || source.Guid != 0 && held.itemData.Guid == source.Guid))
         {
             var vessel = held.itemMods.GetMod_ByID<Mod_WaterVessel>(Mod_WaterVessel.ModuleId);

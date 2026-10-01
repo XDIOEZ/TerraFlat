@@ -23,7 +23,7 @@ public class CompostBinSaveState
     public List<float> SlotElapsedSeconds = new List<float>(); // 槽位计时
 }
 
-public class Mod_CompostBin : MachineAuthoringModule
+public class Mod_CompostBin : Mod_MachineAuthoring
 {
 
 #region 基础参数

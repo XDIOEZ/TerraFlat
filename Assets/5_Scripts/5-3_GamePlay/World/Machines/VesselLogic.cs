@@ -51,7 +51,7 @@ public class VesselLogic : MachineLogic, ILiquidVessel, IVesselContents
     public bool CanOperate(Item actor)
         => MachineWorld.Contains(Entity) && actor != null && !actor.DestructionHandled &&
            actor.gameObject.scene.name == MachineWorld.WorldKey &&
-           actor.itemMods?.GetMod_ByID<DamageReceiver>(ModText.Hp)?.Hp > 0f &&
+           actor.itemMods?.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp)?.Hp > 0f &&
            WorldTopologyRuntime.ShortestDelta(actor.transform.position, Entity.Position).sqrMagnitude <= Reach * Reach;
 
     public bool Drink(Item actor) => GameNetwork.HasStateAuthority ? LiquidVesselOperations.Drink(this, actor)

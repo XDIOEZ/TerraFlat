@@ -30,7 +30,7 @@ public class OreStoneThrowOnAct : MonoBehaviour
 #region 缓存
 
     private Item _item;
-    private Inventory_HotBar _hotBar;
+    private Mod_HotBar _hotBar;
     private Mod_FocusPoint _focusPoint;
 
 #endregion
@@ -182,7 +182,7 @@ public class OreStoneThrowOnAct : MonoBehaviour
             return false;
 
         Module hotbarMod = _item.Owner.itemMods.GetMod_ByID(ModText.Hotbar);
-        _hotBar = hotbarMod != null ? hotbarMod.GetComponent<Inventory_HotBar>() : null;
+        _hotBar = hotbarMod != null ? hotbarMod.GetComponent<Mod_HotBar>() : null;
         _focusPoint = _item.Owner.itemMods.GetMod_ByID<Mod_FocusPoint>(ModText.FocusPoint);
 
         return _hotBar != null && _hotBar.Data != null;

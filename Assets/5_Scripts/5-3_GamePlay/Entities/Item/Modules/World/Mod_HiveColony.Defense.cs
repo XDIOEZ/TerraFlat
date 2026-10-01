@@ -5,14 +5,14 @@ public sealed partial class Mod_HiveColony
 {
     #region 蜂巢受击防御
 
-    private DamageReceiver hiveDamageReceiver; // 蜂巢正式生命模块。
+    private Mod_DamageReceiver hiveDamageReceiver; // 蜂巢正式生命模块。
     private bool hiveDestroyed; // 致命伤害后阻止 Unload 回收已释放蜜蜂。
 
     /// <summary>蜂巢必须通过统一生命链受击，才能可靠解析武器/投射物持有者。</summary>
     private void BindHiveDamageEvents()
     {
         UnbindHiveDamageEvents();
-        hiveDamageReceiver = item?.itemMods?.GetMod_ByID<DamageReceiver>(ModText.Hp);
+        hiveDamageReceiver = item?.itemMods?.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
         if (hiveDamageReceiver == null)
             throw new System.InvalidOperationException("蜂巢必须组合生命值系统模块才能响应攻击。");
         hiveDamageReceiver.OnDamageReceived += HandleHiveDamageReceived;

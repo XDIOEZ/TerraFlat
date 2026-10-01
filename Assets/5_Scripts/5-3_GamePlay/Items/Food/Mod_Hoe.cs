@@ -4,7 +4,7 @@ using UnityEngine;
 
 /// <summary>
 /// 锄头持续使用入口；每次真实挥动只结算一次地块进度，地块进度不会随换工具重置。
-/// 木、石、铜、铁分别配置 6、4、3、2 次完成，右键/手机长按共用 GameController 的使用状态。
+/// 木、石、铜、铁分别配置 6、4、3、2 次完成，右键/手机长按共用 Mod_GameController 的使用状态。
 /// </summary>
 public partial class Mod_Hoe : Module
 {
@@ -25,7 +25,7 @@ public partial class Mod_Hoe : Module
     [Min(0.1f)] public float maxTillingDistance = 2f; // 可操作距离
     private bool actBound;
     private WorldTileTargetOutline targetOutline;
-    private GameController ownerController;
+    private Mod_GameController ownerController;
     private Mod_Weapon_AnimationAction attackAction;
     private bool continuousUseArmed;
 
@@ -71,7 +71,7 @@ public partial class Mod_Hoe : Module
             ownerController = null;
             return;
         }
-        ownerController ??= player.itemMods.GetMod_ByID<GameController>(ModText.Controller);
+        ownerController ??= player.itemMods.GetMod_ByID<Mod_GameController>(ModText.Controller);
         if (ownerController == null)
         {
             targetOutline?.Hide();
@@ -111,13 +111,13 @@ public partial class Mod_Hoe : Module
         if (item?.Owner == null)
             return;
 
-        ownerController ??= item.Owner.itemMods.GetMod_ByID<GameController>(ModText.Controller);
+        ownerController ??= item.Owner.itemMods.GetMod_ByID<Mod_GameController>(ModText.Controller);
         continuousUseArmed = ownerController?.IsRightClickHeld == true;
         TryPerformTillingSwing(ownerController);
     }
 
     /// <summary>动画确认这一挥真实开始后，才对当前目标地块结算一次工作量。</summary>
-    private void TryPerformTillingSwing(GameController controller)
+    private void TryPerformTillingSwing(Mod_GameController controller)
     {
         if (!GameNetwork.HasStateAuthority || controller == null || item == null || !item.InHand ||
             item.Owner == null || usesPerTile <= 0)

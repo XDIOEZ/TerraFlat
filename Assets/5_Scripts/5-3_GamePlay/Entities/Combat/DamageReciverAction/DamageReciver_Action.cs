@@ -4,7 +4,7 @@ using UnityEngine;
 [System.Serializable]
 public class DamageReceiverDamageInfo
 {
-    public DamageReceiver Receiver;
+    public Mod_DamageReceiver Receiver;
     public Item ReceiverItem;
     public IDamageSender DamageSender;
     public Item Attacker;
@@ -26,7 +26,7 @@ public class DamageReciver_Action
 {
     public bool Enabled = true;
 
-    public virtual void Execute(DamageReceiver receiver, DamageReceiverDamageInfo damageInfo)
+    public virtual void Execute(Mod_DamageReceiver receiver, DamageReceiverDamageInfo damageInfo)
     {
         // 默认实现：子类可重写（基类不执行任何操作）
     }
@@ -55,7 +55,7 @@ public class DamageReciver_Action_SpawnItem : DamageReciver_Action
     [Tooltip("生成点的Y轴偏移，用于高处掉落的物品（例如树上的椰子）。正值向上偏移。")]
     public float SpawnYOffset = 0f;
 
-    public override void Execute(DamageReceiver receiver, DamageReceiverDamageInfo damageInfo)
+    public override void Execute(Mod_DamageReceiver receiver, DamageReceiverDamageInfo damageInfo)
     {
         if (receiver == null || Loot == null || string.IsNullOrEmpty(Loot.LootPrefabName))
             return;

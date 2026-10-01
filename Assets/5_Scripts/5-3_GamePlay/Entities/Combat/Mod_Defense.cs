@@ -27,7 +27,7 @@ public partial class Mod_Defense : Module
         DefenseValues.ClampNonNegative();
         if (item.itemMods.ContainsKey_ID(ModText.Hp))
         {
-            var Hp = item.itemMods.GetMod_ByID(ModText.Hp) as DamageReceiver;
+            var Hp = item.itemMods.GetMod_ByID(ModText.Hp) as Mod_DamageReceiver;
             Hp.AddDefense(DefenseValues);
             _isDefenseApplied = true;
         }
@@ -46,7 +46,7 @@ public partial class Mod_Defense : Module
 
         if (item.Mods.ContainsKey(ModText.Hp))
         {
-            var Hp = item.itemMods.GetMod_ByID(ModText.Hp) as DamageReceiver;
+            var Hp = item.itemMods.GetMod_ByID(ModText.Hp) as Mod_DamageReceiver;
             Hp.RemoveDefense(DefenseValues);
         }
 

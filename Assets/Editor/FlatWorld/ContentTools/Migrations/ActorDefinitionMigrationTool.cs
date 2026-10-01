@@ -244,7 +244,7 @@ public static class ActorDefinitionMigrationTool
     /// <summary>存档状态与 Inspector 缓存不属于模板配置，避免 JSON 重置运行中的 AI 状态。</summary>
     private static void RemoveRuntimeOnlyParameters(Module module, JObject parameters)
     {
-        if (module is AI_Chicken or AI_WildBoar or AI_Wolf or AI_Ghost)
+        if (module is AI_Chicken or AI_WildBoar or AI_Wolf or Mod_AI_Ghost)
             parameters.Remove("Data");
         foreach (JProperty property in parameters.Properties().ToArray())
         {
@@ -260,14 +260,14 @@ public static class ActorDefinitionMigrationTool
             case Mod_ItemDetector:
                 RemoveParameters(parameters, "currentItemsInArea", "Type_Tag_Item_Dict");
                 break;
-            case Mover:
+            case Mod_Mover:
                 RemoveParameters(
                     parameters,
                     "CanMove", "HasReachedTarget", "MemoryPath_Forbidden", "TargetPosition", "IsMoving");
                 if (parameters["Data"] is JObject moverData)
                     moverData.Remove("isRunning");
                 break;
-            case DamageReceiver:
+            case Mod_DamageReceiver:
                 if (parameters["Data"] is JObject healthData)
                     healthData.Remove("AttackersUIDs");
                 break;
@@ -283,7 +283,7 @@ public static class ActorDefinitionMigrationTool
             case Mod_TurnBack:
                 RemoveParameters(parameters, "currentDirection", "isTurning");
                 break;
-            case BuffManager:
+            case Mod_BuffManager:
                 RemoveParameters(parameters, "ActiveBuffs");
                 break;
         }
@@ -299,10 +299,10 @@ public static class ActorDefinitionMigrationTool
     {
         return module switch
         {
-            AI_Chicken or AI_WildBoar or AI_Wolf or AI_Ghost => "ai",
+            AI_Chicken or AI_WildBoar or AI_Wolf or Mod_AI_Ghost => "ai",
             Mod_ItemDetector => "detector",
-            Mover_AI => "mover",
-            DamageReceiver => "health",
+            Mod_Mover_AI => "mover",
+            Mod_DamageReceiver => "health",
             Mod_Damage => "damage",
             Mod_AnimatorController => "animator",
             Mod_Food => "food",

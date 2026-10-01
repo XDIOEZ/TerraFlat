@@ -4,10 +4,10 @@ public interface IBuildingPlacementCommitted
     void OnBuildingPlacementCommitted();
 }
 
-/// <summary>允许特殊建筑在致死攻击时继续走 DamageReceiver 的死亡/战利品流程，而不是拆回召唤器。</summary>
+/// <summary>允许特殊建筑在致死攻击时继续走 Mod_DamageReceiver 的死亡/战利品流程，而不是拆回召唤器。</summary>
 public interface IBuildingFatalDamagePolicy
 {
-    bool UseDamageReceiverFatalResolution(DamageReceiver receiver);
+    bool UseDamageReceiverFatalResolution(Mod_DamageReceiver receiver);
 }
 
 /// <summary>扩展建筑的分层占格、候选状态和预览；手持临时配置只在提交候选时写入世界数据。</summary>

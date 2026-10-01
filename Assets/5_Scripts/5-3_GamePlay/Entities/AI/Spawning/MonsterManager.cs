@@ -63,8 +63,8 @@ public sealed class MonsterManager : SingletonMono<MonsterManager>
     private readonly Dictionary<string, int> _activeSpeciesCounts = new(StringComparer.Ordinal);
     private readonly Dictionary<SpawnerConfig, int> _residentGroupCounts = new();
     private readonly Dictionary<string, int> _residentSpeciesCounts = new(StringComparer.Ordinal);
-    private readonly Dictionary<DamageReceiver, Item> _itemByDeathReceiver = new();
-    private readonly Dictionary<Item, DamageReceiver> _deathReceiverByItem = new();
+    private readonly Dictionary<Mod_DamageReceiver, Item> _itemByDeathReceiver = new();
+    private readonly Dictionary<Item, Mod_DamageReceiver> _deathReceiverByItem = new();
     private readonly Dictionary<Item, int> _ecologyRecycleProtectionCounts = new();
     private readonly List<Item> _cleanupItems = new(64);
     private readonly HashSet<Item> _populationActiveItems = new();
@@ -230,7 +230,7 @@ public sealed class MonsterManager : SingletonMono<MonsterManager>
         observer.Bind(this, item);
         NotifyPopulationActivityChanged(item);
 
-        DamageReceiver receiver = item.GetComponentInChildren<DamageReceiver>(true);
+        Mod_DamageReceiver receiver = item.GetComponentInChildren<Mod_DamageReceiver>(true);
         if (receiver != null && !_itemByDeathReceiver.ContainsKey(receiver))
         {
             _itemByDeathReceiver.Add(receiver, item);
@@ -256,7 +256,7 @@ public sealed class MonsterManager : SingletonMono<MonsterManager>
             registration.Observer.Unbind(this);
 
         _ecologyRecycleProtectionCounts.Remove(item);
-        if (!_deathReceiverByItem.TryGetValue(item, out DamageReceiver receiver))
+        if (!_deathReceiverByItem.TryGetValue(item, out Mod_DamageReceiver receiver))
         {
             MonsterUnregistered?.Invoke(item, registration.Config);
             return;
@@ -292,7 +292,7 @@ public sealed class MonsterManager : SingletonMono<MonsterManager>
             if (registration.Observer != null)
                 registration.Observer.Unbind(this);
         }
-        foreach (DamageReceiver receiver in _itemByDeathReceiver.Keys)
+        foreach (Mod_DamageReceiver receiver in _itemByDeathReceiver.Keys)
         {
             if (receiver != null)
                 receiver.DeathStarted -= OnMonsterDeathStarted;
@@ -311,7 +311,7 @@ public sealed class MonsterManager : SingletonMono<MonsterManager>
         RegistrationVersion++;
     }
 
-    private void OnMonsterDeathStarted(DamageReceiver receiver)
+    private void OnMonsterDeathStarted(Mod_DamageReceiver receiver)
     {
         if (receiver == null ||
             !_itemByDeathReceiver.TryGetValue(receiver, out Item item) ||

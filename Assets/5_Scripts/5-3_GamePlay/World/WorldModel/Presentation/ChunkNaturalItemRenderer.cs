@@ -500,7 +500,7 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IIncrementalChunkV
             ItemData looseData = changedData;
             if (DroppedItemService.UsesLightweightDrops && !placement.IsDimensionPortal && definition != null &&
                 !definition.IsActor && definition.ShellPrefab != null &&
-                definition.ShellPrefab.GetComponentInChildren<TileEffectReceiver>(true) == null)
+                definition.ShellPrefab.GetComponentInChildren<Mod_TileEffectReceiver>(true) == null)
             {
                 looseData ??= definition.CreateItemData();
                 bool installed = Mod_Building.TryReadBuildingData(looseData, out _, out Mod_Building.Building_Data building) &&
@@ -549,10 +549,10 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IIncrementalChunkV
             item.Load();
             if (placement.IsDimensionPortal)
             {
-                DimensionPortal portal = item.GetComponentInChildren<DimensionPortal>(true);
+                Mod_DimensionPortal portal = item.GetComponentInChildren<Mod_DimensionPortal>(true);
                 if (portal == null)
                     throw new InvalidOperationException(
-                        $"生成传送门物品缺少 DimensionPortal：{runtimeItemId}");
+                        $"生成传送门物品缺少 Mod_DimensionPortal：{runtimeItemId}");
                 // 显式绑定拥有者，切换维度时不再依赖父层级查找的时序。
                 portal.ConfigureGenerated(placement.TargetDimensionId, item);
                 if (item.itemData.Stack != null)

@@ -16,7 +16,7 @@ public static class InventoryContextResolver
         var visited = new HashSet<Inventory>();
 
         // 快捷栏优先：手持物通常直接绑定这里的槽位数据，优先命中也能避免误扫主背包。
-        Inventory_HotBar hotbar = inventoryOwner.itemMods?.GetMod_ByID<Inventory_HotBar>(ModText.Hotbar);
+        Mod_HotBar hotbar = inventoryOwner.itemMods?.GetMod_ByID<Mod_HotBar>(ModText.Hotbar);
         if (TryCandidate(hotbar?.RuntimeInventory, containedItem, visited, out inventory))
             return true;
 

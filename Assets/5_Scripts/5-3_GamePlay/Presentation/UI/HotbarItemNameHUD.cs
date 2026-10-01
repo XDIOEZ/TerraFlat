@@ -18,7 +18,7 @@ public sealed class HotbarItemNameHUD : MonoBehaviour
     [SerializeField, Min(0f)] private float visibleSeconds = 3f;
     [SerializeField, Min(0.1f)] private float fadeSeconds = 0.8f;
 
-    private Inventory_HotBar hotbar;
+    private Mod_HotBar hotbar;
     private LocalizedTextBinder nameBinding;
     private Tween fadeTween;
 
@@ -32,7 +32,7 @@ public sealed class HotbarItemNameHUD : MonoBehaviour
     }
 
     /// <summary>由本地快捷栏在 UI 初始化时绑定，远端视觉副本不创建此视图。</summary>
-    public void Bind(Inventory_HotBar source)
+    public void Bind(Mod_HotBar source)
     {
         Unsubscribe();
         hotbar = source;

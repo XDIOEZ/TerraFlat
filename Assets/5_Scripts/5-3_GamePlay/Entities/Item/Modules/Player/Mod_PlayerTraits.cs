@@ -18,8 +18,8 @@ public class Mod_PlayerTraits : Module
     }
 
     private Player player;
-    private PlayerAdminController adminController;
-    private GameController gameController;
+    private Mod_PlayerAdminController adminController;
+    private Mod_GameController gameController;
 
     public override void Awake()
     {
@@ -35,7 +35,7 @@ public class Mod_PlayerTraits : Module
             player = GetComponentInParent<Player>();
         }
 
-        gameController = GetComponentInParent<GameController>();
+        gameController = GetComponentInParent<Mod_GameController>();
     }
 
     public override void Save()
@@ -55,7 +55,7 @@ public class Mod_PlayerTraits : Module
     }
 
     /// <summary>
-    /// 玩家死亡处理（统一走 DamageReceiver 濒死流程）
+    /// 玩家死亡处理（统一走 Mod_DamageReceiver 濒死流程）
     /// </summary>
     public void Death()
     {
@@ -66,10 +66,10 @@ public class Mod_PlayerTraits : Module
             return;
         }
 
-        var damageReceiver = item.itemMods.GetMod_ByID<DamageReceiver>(ModText.Hp);
+        var damageReceiver = item.itemMods.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
         if (damageReceiver == null)
         {
-            throw new MissingComponentException($"[Mod_PlayerTraits] 玩家缺少 {nameof(DamageReceiver)}，无法触发濒死状态");
+            throw new MissingComponentException($"[Mod_PlayerTraits] 玩家缺少 {nameof(Mod_DamageReceiver)}，无法触发濒死状态");
         }
 
         damageReceiver.ForceHurt(damageReceiver.Hp + damageReceiver.MaxHp + 99999f);
@@ -387,7 +387,7 @@ public class Mod_PlayerTraits : Module
     public void TeleportToMousePosition()
     {
         if (gameController == null)
-            gameController = GetComponentInParent<GameController>();
+            gameController = GetComponentInParent<Mod_GameController>();
 
         if (gameController != null)
             TryTeleportToScreenPosition(gameController.GetPointerScreenPosition());
@@ -400,11 +400,11 @@ public class Mod_PlayerTraits : Module
             return false;
 
         if (gameController == null)
-            gameController = target.GetComponent<GameController>();
+            gameController = target.GetComponent<Mod_GameController>();
 
         if (gameController == null)
         {
-            Debug.LogWarning("[Mod_PlayerTraits] 未找到 GameController，无法读取指针世界坐标");
+            Debug.LogWarning("[Mod_PlayerTraits] 未找到 Mod_GameController，无法读取指针世界坐标");
             return false;
         }
 
@@ -458,7 +458,7 @@ public class Mod_PlayerTraits : Module
             TryGetPlayer(out _);
 
         if (adminController == null)
-            adminController = player?.GetComponentInChildren<PlayerAdminController>(true);
+            adminController = player?.GetComponentInChildren<Mod_PlayerAdminController>(true);
 
         if (adminController != null)
             return adminController.IsAdminInvincibilityEnabled;

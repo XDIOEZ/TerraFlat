@@ -607,7 +607,7 @@ public static class LiquidDrinkEffectProcessor
         if (actor == null || liquid == null || liquid.DrinkEffects == null || liquid.DrinkEffects.Count == 0)
             return default;
 
-        BuffManager buffManager = actor.itemMods?.GetMod_ByID<BuffManager>(ModText.BuffManager);
+        Mod_BuffManager buffManager = actor.itemMods?.GetMod_ByID<Mod_BuffManager>(ModText.Mod_BuffManager);
         bool anyEffectTriggered = false;
         bool feedbackShown = false;
 

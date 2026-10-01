@@ -171,7 +171,7 @@ public sealed partial class Mod_BeeBehavior
         if (candidate == null || candidate.DestructionHandled || !candidate.gameObject.activeInHierarchy ||
             !FactionRelationService.CanAttack(item, candidate))
             return false;
-        DamageReceiver health = candidate.itemMods?.GetMod_ByID<DamageReceiver>(ModText.Hp);
+        Mod_DamageReceiver health = candidate.itemMods?.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
         if (health == null || health.Hp <= 0f)
             return false;
         return candidate is Player ||
@@ -264,7 +264,7 @@ public sealed partial class Mod_BeeBehavior
         bird.FlyTo(position, flightSeconds);
         if (stingRemaining > 0f)
             return;
-        DamageReceiver receiver = lockedTarget.itemMods.GetMod_ByID<DamageReceiver>(ModText.Hp);
+        Mod_DamageReceiver receiver = lockedTarget.itemMods.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
         if (receiver != null)
             receiver.Hurt(this);
         stingRemaining = StingInterval;

@@ -109,10 +109,10 @@ public sealed class Mod_GroundCoverHarvest : Module
         cuttingGrass = false;
         if (!GameNetwork.HasStateAuthority || item == null || !item.InHand || item.DestructionHandled ||
             item.Owner is not Player actor || !actor.IsLocalProfile || actor.DestructionHandled ||
-            !(actor.itemMods.GetMod_ByID<DamageReceiver>(ModText.Hp)?.Hp > 0f))
+            !(actor.itemMods.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp)?.Hp > 0f))
             return false;
 
-        GameController controller = actor.itemMods.GetMod_ByID<GameController>(ModText.Controller);
+        Mod_GameController controller = actor.itemMods.GetMod_ByID<Mod_GameController>(ModText.Controller);
         if (controller == null || controller.IsGameplayInputLocked ||
             (!controller.IsUsingMobile && controller.IsPointerOverUI()))
             return false;

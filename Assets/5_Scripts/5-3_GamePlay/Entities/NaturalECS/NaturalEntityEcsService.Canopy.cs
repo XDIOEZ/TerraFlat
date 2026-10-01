@@ -36,7 +36,7 @@ namespace FlatWorld.NaturalEntities
         }
 
         private static readonly List<RaycastHit2D> canopyHits = new();
-        private static readonly HashSet<DamageReceiver> canopyReceivers = new();
+        private static readonly HashSet<Mod_DamageReceiver> canopyReceivers = new();
         private const float CanopyGrowthPresentationInterval = 0.25f;
 
         private static CanopyFruitState GetCanopy(Record record)
@@ -140,7 +140,7 @@ namespace FlatWorld.NaturalEntities
             var damage = new FallingFruitDamage(record.Profile.Canopy.BluntDamage);
             foreach (RaycastHit2D hit in canopyHits)
             {
-                DamageReceiver target = GameplayPhysics2D.ResolveComponent<DamageReceiver>(hit.collider);
+                Mod_DamageReceiver target = GameplayPhysics2D.ResolveComponent<Mod_DamageReceiver>(hit.collider);
                 if (target == null || !canopyReceivers.Add(target)) continue;
                 double hitTime = Math.Min(record.CanopyStepTo, fruit.LandAt - 0.000001d);
                 if (FallingFruitDamage.TryHit(fruit, hitTime, () => target.Hurt(damage),

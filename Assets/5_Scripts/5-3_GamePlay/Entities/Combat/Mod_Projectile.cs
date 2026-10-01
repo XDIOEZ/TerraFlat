@@ -44,7 +44,7 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
     [Range(0f, 1f), Tooltip("投射结束后保留为可拾取物品的概率；箭矢默认 50%。")]
     public float RecoveryChance = 0.5f;
 
-    [Tooltip("命中 DamageReceiver 且本次判定为可回收时，是否嵌入目标并随目标移动。")]
+    [Tooltip("命中 Mod_DamageReceiver 且本次判定为可回收时，是否嵌入目标并随目标移动。")]
     public bool EmbedOnDamageReceiverWhenRecovered;
 
     [Range(0f, 1f), Tooltip("投射物损坏后，从其普通合成配方中掉落一份原材料的概率；箭矢默认 30%。")]
@@ -500,7 +500,7 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
     }
 
     /// <summary>有实际伤害时走正常命中流程；完全被防御的 0 伤害命中才弹开。</summary>
-    private void HandleReceiverDamageResolved(DamageReceiver receiver, float resolvedDamage)
+    private void HandleReceiverDamageResolved(Mod_DamageReceiver receiver, float resolvedDamage)
     {
         if (!_isFlying || resolvedDamage < 0f)
             return;
@@ -520,7 +520,7 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
         BounceFromBlockedHit(_pendingImpactNormal, _processingPhysicalContact);
     }
 
-    /// <summary>ECS 结算回执同样结束投射物，不能因没有 DamageReceiver 组件而穿过狼继续飞。</summary>
+    /// <summary>ECS 结算回执同样结束投射物，不能因没有 Mod_DamageReceiver 组件而穿过狼继续飞。</summary>
     private void HandleExternalDamageResolved(FlatWorld.Combat.CombatDamageContext context, float resolvedDamage)
     {
         if (!_isFlying || resolvedDamage < 0f) return;
@@ -555,7 +555,7 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
                 contactNormal = -contactNormal;
         }
 
-        DamageReceiver receiver = GameplayPhysics2D.ResolveComponent<DamageReceiver>(otherCollider);
+        Mod_DamageReceiver receiver = GameplayPhysics2D.ResolveComponent<Mod_DamageReceiver>(otherCollider);
         Collider2D receiverCollider = ResolveDamageReceiverCollider(receiver);
         if (receiverCollider == null)
         {
@@ -586,7 +586,7 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
             StartBounceSpin(contactNormal);
     }
 
-    private static Collider2D ResolveDamageReceiverCollider(DamageReceiver receiver)
+    private static Collider2D ResolveDamageReceiverCollider(Mod_DamageReceiver receiver)
     {
         if (receiver == null)
             return null;
@@ -667,7 +667,7 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
     }
 
     /// <summary>停止飞行，并按 RecoveryChance 决定留下可拾取物还是销毁。</summary>
-    private void FinishFlight(DamageReceiver hitReceiver = null)
+    private void FinishFlight(Mod_DamageReceiver hitReceiver = null)
     {
         if (!_isFlying || _endingFlight)
             return;
@@ -725,7 +725,7 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
     }
 
     /// <summary>记录命中瞬间相对受击实体的局部姿态，使可回收投射物继续附着在移动目标上。</summary>
-    private void EmbedInReceiver(DamageReceiver receiver)
+    private void EmbedInReceiver(Mod_DamageReceiver receiver)
     {
         Transform target = receiver.item != null ? receiver.item.transform : receiver.transform;
         if (target == null || !target.gameObject.activeInHierarchy || item == null)

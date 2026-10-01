@@ -10,7 +10,7 @@ public sealed partial class GMReflectionConsole
 
     /// <summary>只在选择传送落点时启用的独占点击层。</summary>
     private GameObject teleportTargetRoot;
-    private GameController teleportInputOwner;
+    private Mod_GameController teleportInputOwner;
     private Mod_PlayerTraits teleportTargetPlayer;
 
     /// <summary>由唯一 GM 实例消费 T，不依赖角色显示名或重复管理员模块。</summary>
@@ -26,7 +26,7 @@ public sealed partial class GMReflectionConsole
             return;
         }
 
-        if (!PlayerAdminController.TeleportToMouseShortcutEnabled ||
+        if (!Mod_PlayerAdminController.TeleportToMouseShortcutEnabled ||
             keyboard?.tKey.wasPressedThisFrame != true)
             return;
 
@@ -35,13 +35,13 @@ public sealed partial class GMReflectionConsole
             (selected.GetComponent<TMP_InputField>() != null || selected.GetComponent<InputField>() != null))
             return;
 
-        if (TryGetTeleportPlayer(out GameController controller, out Mod_PlayerTraits traits) &&
+        if (TryGetTeleportPlayer(out Mod_GameController controller, out Mod_PlayerTraits traits) &&
             !controller.IsGameplayInputLocked && !controller.IsPointerOverUI())
             traits.TryTeleportToScreenPosition(controller.GetPointerScreenPosition());
     }
 
     /// <summary>只从当前本地玩家解析模块，不扫描任意场景中的玩家副本。</summary>
-    private static bool TryGetTeleportPlayer(out GameController controller, out Mod_PlayerTraits traits)
+    private static bool TryGetTeleportPlayer(out Mod_GameController controller, out Mod_PlayerTraits traits)
     {
         Player player = ItemMgr.Instance?.User_Player;
         controller = null;
@@ -49,7 +49,7 @@ public sealed partial class GMReflectionConsole
         if (player == null || !player.IsLocalProfile || player.Data == null)
             return false;
 
-        controller = player.GetComponent<GameController>();
+        controller = player.GetComponent<Mod_GameController>();
         traits = player.itemMods.GetMod_ByID<Mod_PlayerTraits>(Mod_PlayerTraits.ModuleId);
         return controller != null && traits != null;
     }
@@ -57,7 +57,7 @@ public sealed partial class GMReflectionConsole
     /// <summary>收起 GM 后独占一次鼠标/触屏点选，输入锁同时释放已有摇杆和攻击。</summary>
     private void BeginTeleportTargeting()
     {
-        if (!TryGetTeleportPlayer(out GameController controller, out Mod_PlayerTraits traits) ||
+        if (!TryGetTeleportPlayer(out Mod_GameController controller, out Mod_PlayerTraits traits) ||
             controller.IsGameplayInputLocked)
         {
             SetStatus("当前无法传送：请进入游戏并关闭其他操作面板。", Color.yellow);

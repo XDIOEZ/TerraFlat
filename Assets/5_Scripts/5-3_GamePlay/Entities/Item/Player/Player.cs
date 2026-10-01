@@ -43,7 +43,7 @@ public class Player : Item
 
     public event Action ProfileContextChanged;
 
-    // 时间控制与管理员逻辑已迁移到 PlayerAdminController
+    // 时间控制与管理员逻辑已迁移到 Mod_PlayerAdminController
 
     public override ItemData itemData => data;
 
@@ -101,7 +101,7 @@ public class Player : Item
         transform.rotation = itemData.transform.rotation;
         transform.localScale = itemData.transform.scale;
         base.Load();
-        // 所有模块加载完成后校准一次，覆盖初始背包数据早于 BuffManager 加载的情况。
+        // 所有模块加载完成后校准一次，覆盖初始背包数据早于 Mod_BuffManager 加载的情况。
         PlayerCarryCapacityUtility.RefreshOverweightSlowdown(this);
         EnsureLowHealthPostProcessEffect();
     }
@@ -113,7 +113,7 @@ public class Player : Item
     /// <summary>在玩家模块完成加载后绑定低血量表现，避免远程玩家重复接管本地相机。</summary>
     private void EnsureLowHealthPostProcessEffect()
     {
-        DamageReceiver damageReceiver = itemMods.GetMod_ByID<DamageReceiver>(ModText.Hp);
+        Mod_DamageReceiver damageReceiver = itemMods.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
         if (damageReceiver == null)
             return;
 

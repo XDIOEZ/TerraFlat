@@ -105,7 +105,7 @@ namespace FlatWorld.Networking.Gameplay
         {
             MachineEntity entity = MachineWorld.GetById(id);
             if (entity == null || actor == null || actor.DestructionHandled || actor.gameObject.scene.name != MachineWorld.WorldKey) return false;
-            if (actor.itemMods?.GetMod_ByID<DamageReceiver>(ModText.Hp)?.Hp <= 0f) return false;
+            if (actor.itemMods?.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp)?.Hp <= 0f) return false;
             float range = actor.GetComponentInChildren<Mod_InteractSender>()?.maxInteractDistance ?? Mod_InteractSender.DefaultMaxInteractDistance;
             return WorldTopologyRuntime.Distance(GetConnectionLogicalPosition(connection), entity.Position) <= range + .05f;
         }
@@ -228,7 +228,7 @@ namespace FlatWorld.Networking.Gameplay
             Inventory inventory = MachineInventoryCommands.Resolve(actor, address);
             if (inventory == null) return;
             MachineInventory.ApplySnapshot(inventory, MemoryPackSerializer.Deserialize<Inventory_Data>(payload));
-            Inventory_HotBar hotbar = actor.itemMods?.GetMod_ByID<Inventory_HotBar>(ModText.Hotbar);
+            Mod_HotBar hotbar = actor.itemMods?.GetMod_ByID<Mod_HotBar>(ModText.Hotbar);
             if (hotbar != null && ReferenceEquals(hotbar.RuntimeInventory, inventory)) hotbar.RefreshUI();
         }
         #endregion

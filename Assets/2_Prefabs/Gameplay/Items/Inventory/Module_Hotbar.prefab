@@ -62,7 +62,7 @@ MonoBehaviour:
     version: 2
     RefIds:
     - rid: 4513346371909844998
-      type: {class: Inventory_HotBar, ns: , asm: GamePlay}
+      type: {class: Mod_HotBar, ns: , asm: GamePlay}
       data:
         item: {fileID: 0}
         InventoryPanel_Prefab: {fileID: 3157743334102886615, guid: 834b874f2bd43a34e95f52adb0e4a211, type: 3}

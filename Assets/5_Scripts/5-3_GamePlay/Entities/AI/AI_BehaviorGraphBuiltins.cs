@@ -8,14 +8,14 @@ internal static class AIBehaviorGraphBuiltins
 {
     #region 标准节点和条件注册
 
-    private static readonly string[] MoverCapability = { AIBehaviorCapability.Mover };
+    private static readonly string[] MoverCapability = { AIBehaviorCapability.Mod_Mover };
     private static readonly string[] DetectorCapabilities =
-        { AIBehaviorCapability.Mover, AIBehaviorCapability.Detector };
+        { AIBehaviorCapability.Mod_Mover, AIBehaviorCapability.Detector };
     private static readonly string[] HealthCapability = { AIBehaviorCapability.Health };
     private static readonly string[] FoodCapabilities =
-        { AIBehaviorCapability.Mover, AIBehaviorCapability.Detector, AIBehaviorCapability.Food, AIBehaviorCapability.Animator };
+        { AIBehaviorCapability.Mod_Mover, AIBehaviorCapability.Detector, AIBehaviorCapability.Food, AIBehaviorCapability.Animator };
     private static readonly string[] AttackCapabilities =
-        { AIBehaviorCapability.Mover, AIBehaviorCapability.Detector, AIBehaviorCapability.Animator, AIBehaviorCapability.Damage };
+        { AIBehaviorCapability.Mod_Mover, AIBehaviorCapability.Detector, AIBehaviorCapability.Animator, AIBehaviorCapability.Damage };
 
     public static void RegisterBuiltins()
     {
@@ -148,8 +148,8 @@ internal static class AIBehaviorGraphBuiltins
     {
         return new AIStoppedStateNode<string>(
             stateId,
-            context.Mover.StopMovement,
-            _ => context.Mover.StopMovement());
+            context.Mod_Mover.StopMovement,
+            _ => context.Mod_Mover.StopMovement());
     }
 
     private static AIStateNode<string> CreateWanderNode(
@@ -213,8 +213,8 @@ internal static class AIBehaviorGraphBuiltins
             },
             () => context.Position,
             () => arrivalDistance,
-            destination => context.Mover.SetDestination(destination),
-            context.Mover.StopMovement);
+            destination => context.Mod_Mover.SetDestination(destination),
+            context.Mod_Mover.StopMovement);
     }
 
     private static AIStateNode<string> CreateSleepNode(
@@ -297,7 +297,7 @@ internal static class AIBehaviorGraphBuiltins
         return () => ReadHealthRatio(context.Health) > ratio;
     }
 
-    private static float ReadHealthRatio(DamageReceiver health)
+    private static float ReadHealthRatio(Mod_DamageReceiver health)
     {
         return health.MaxHp <= 0f ? 0f : Mathf.Clamp01(health.Hp / health.MaxHp);
     }
@@ -576,8 +576,8 @@ internal sealed class AIBehaviorFleeNode : AIStateNode<string>
         _threatTags = threatTags;
         _flee = new AIFleeStateNode<string>(
             stateId, ResolveThreatPosition, ResolveDestination, GetRunDistance,
-            MoveTo, _context.Mover.StopMovement, GetCurrentPosition,
-            HasReachedDestination, GetDestinationResult, _context.Mover);
+            MoveTo, _context.Mod_Mover.StopMovement, GetCurrentPosition,
+            HasReachedDestination, GetDestinationResult, _context.Mod_Mover);
     }
 
     public override void Enter()
@@ -616,9 +616,9 @@ internal sealed class AIBehaviorFleeNode : AIStateNode<string>
 
     private float GetRunDistance() => _runDistance;
     private Vector3 GetCurrentPosition() => _context.Position;
-    private bool HasReachedDestination() => _context.Mover.HasReachedTarget;
-    private WorldNavigationDestinationResult GetDestinationResult() => _context.Mover.DestinationResult;
-    private void MoveTo(Vector3 destination) => _context.Mover.SetDestination(destination);
+    private bool HasReachedDestination() => _context.Mod_Mover.HasReachedTarget;
+    private WorldNavigationDestinationResult GetDestinationResult() => _context.Mod_Mover.DestinationResult;
+    private void MoveTo(Vector3 destination) => _context.Mod_Mover.SetDestination(destination);
     private void HandleDamage() => _flee.Retarget();
 }
 
@@ -645,18 +645,18 @@ internal sealed class AIBehaviorSleepNode : AIStateNode<string>
     public override void Enter()
     {
         base.Enter();
-        _context.Mover.StopMovement();
+        _context.Mod_Mover.StopMovement();
     }
 
     public override void Tick(float deltaTime)
     {
-        _context.Mover.StopMovement();
+        _context.Mod_Mover.StopMovement();
     }
 
     public override void Exit()
     {
         _context.SetTimer(_cooldownTimer, _cooldown);
-        _context.Mover.StopMovement();
+        _context.Mod_Mover.StopMovement();
         base.Exit();
     }
 }
@@ -697,7 +697,7 @@ internal sealed class AIBehaviorWanderNode
     {
         _hasTarget = false;
         _pauseRemaining = 0f;
-        _context.Mover.StopMovement();
+        _context.Mod_Mover.StopMovement();
     }
 
     public void Tick(float deltaTime)
@@ -705,15 +705,15 @@ internal sealed class AIBehaviorWanderNode
         if (_hasTarget)
         {
             float distance = WorldTopologyRuntime.Distance(_context.Position, _target);
-            if (distance <= _config.StopDistance || _context.Mover.HasReachedTarget ||
-                _context.Mover.DestinationResult == WorldNavigationDestinationResult.Failed)
+            if (distance <= _config.StopDistance || _context.Mod_Mover.HasReachedTarget ||
+                _context.Mod_Mover.DestinationResult == WorldNavigationDestinationResult.Failed)
             {
                 BeginPause();
                 return;
             }
 
-            _context.Mover.SetDestination(_target);
-            if (_context.Mover.DestinationResult == WorldNavigationDestinationResult.Failed)
+            _context.Mod_Mover.SetDestination(_target);
+            if (_context.Mod_Mover.DestinationResult == WorldNavigationDestinationResult.Failed)
                 BeginPause();
             return;
         }
@@ -721,7 +721,7 @@ internal sealed class AIBehaviorWanderNode
         _pauseRemaining = Mathf.Max(0f, _pauseRemaining - Mathf.Max(0f, deltaTime));
         if (_pauseRemaining > 0f)
         {
-            _context.Mover.StopMovement();
+            _context.Mod_Mover.StopMovement();
             return;
         }
 
@@ -737,8 +737,8 @@ internal sealed class AIBehaviorWanderNode
             _config.MinimumDistance);
         _target = WorldTopologyRuntime.NormalizePosition(_context.Position + (Vector3)offset);
         _hasTarget = true;
-        _context.Mover.SetDestination(_target);
-        if (_context.Mover.DestinationResult == WorldNavigationDestinationResult.Failed)
+        _context.Mod_Mover.SetDestination(_target);
+        if (_context.Mod_Mover.DestinationResult == WorldNavigationDestinationResult.Failed)
             BeginPause();
     }
 
@@ -746,7 +746,7 @@ internal sealed class AIBehaviorWanderNode
     {
         _hasTarget = false;
         _pauseRemaining = 0f;
-        _context.Mover.StopMovement();
+        _context.Mod_Mover.StopMovement();
     }
 
     /// <summary>到达或导航失败后短暂停留，再选择新的可达目标。</summary>
@@ -754,7 +754,7 @@ internal sealed class AIBehaviorWanderNode
     {
         _hasTarget = false;
         _pauseRemaining = UnityEngine.Random.Range(_config.PauseMin, _config.PauseMax);
-        _context.Mover.StopMovement();
+        _context.Mod_Mover.StopMovement();
     }
 }
 
@@ -812,14 +812,14 @@ internal sealed class AIBehaviorForageNode
         _eatElapsed = 0f;
         _context.ForageSatisfied = false;
         _context.ForageAvailable = true;
-        _context.Mover.StopMovement();
+        _context.Mod_Mover.StopMovement();
     }
 
     public void Tick(float deltaTime)
     {
         if (_context.ForageSatisfied)
         {
-            _context.Mover.StopMovement();
+            _context.Mod_Mover.StopMovement();
             return;
         }
 
@@ -837,7 +837,7 @@ internal sealed class AIBehaviorForageNode
         {
             _context.ForageSatisfied = true;
             _context.ForageAvailable = true;
-            _context.Mover.StopMovement();
+            _context.Mod_Mover.StopMovement();
             return;
         }
 
@@ -852,7 +852,7 @@ internal sealed class AIBehaviorForageNode
         ClearTargets();
         _context.ForageSatisfied = false;
         _context.ForageAvailable = true;
-        _context.Mover.StopMovement();
+        _context.Mod_Mover.StopMovement();
     }
 
     private void TickRuntimeGrass(float deltaTime)
@@ -863,7 +863,7 @@ internal sealed class AIBehaviorForageNode
             if (_searchCooldown > 0f)
             {
                 _context.ForageAvailable = false;
-                _context.Mover.StopMovement();
+                _context.Mod_Mover.StopMovement();
                 return;
             }
 
@@ -876,7 +876,7 @@ internal sealed class AIBehaviorForageNode
                     out RuntimeTerrainTileSample runtimeGrass))
             {
                 _context.ForageAvailable = false;
-                _context.Mover.StopMovement();
+                _context.Mod_Mover.StopMovement();
                 return;
             }
 
@@ -895,18 +895,18 @@ internal sealed class AIBehaviorForageNode
         {
             Play(_config.MoveAnimation);
             _eatElapsed = 0f;
-            _context.Mover.SetDestination(targetPosition);
-            if (_context.Mover.DestinationResult == WorldNavigationDestinationResult.Failed)
+            _context.Mod_Mover.SetDestination(targetPosition);
+            if (_context.Mod_Mover.DestinationResult == WorldNavigationDestinationResult.Failed)
             {
                 _context.ForageAvailable = false;
                 ClearGrassTarget();
-                _context.Mover.StopMovement();
+                _context.Mod_Mover.StopMovement();
                 return;
             }
             return;
         }
 
-        _context.Mover.StopMovement();
+        _context.Mod_Mover.StopMovement();
         Play(_config.EatAnimation);
         _eatElapsed += Mathf.Max(0f, deltaTime);
         if (_eatElapsed < _config.GrassEatDuration)
@@ -935,7 +935,7 @@ internal sealed class AIBehaviorForageNode
             if (_searchCooldown > 0f)
             {
                 _context.ForageAvailable = false;
-                _context.Mover.StopMovement();
+                _context.Mod_Mover.StopMovement();
                 return;
             }
 
@@ -945,7 +945,7 @@ internal sealed class AIBehaviorForageNode
             {
                 _itemTarget = null;
                 _context.ForageAvailable = false;
-                _context.Mover.StopMovement();
+                _context.Mod_Mover.StopMovement();
                 return;
             }
             _eatElapsed = 0f;
@@ -957,18 +957,18 @@ internal sealed class AIBehaviorForageNode
         {
             Play(_config.MoveAnimation);
             _eatElapsed = 0f;
-            _context.Mover.SetDestination(_itemTarget.transform.position);
-            if (_context.Mover.DestinationResult == WorldNavigationDestinationResult.Failed)
+            _context.Mod_Mover.SetDestination(_itemTarget.transform.position);
+            if (_context.Mod_Mover.DestinationResult == WorldNavigationDestinationResult.Failed)
             {
                 _itemTarget = null;
                 _context.ForageAvailable = false;
-                _context.Mover.StopMovement();
+                _context.Mod_Mover.StopMovement();
                 return;
             }
             return;
         }
 
-        _context.Mover.StopMovement();
+        _context.Mod_Mover.StopMovement();
         Play(_config.EatAnimation);
         _eatElapsed += Mathf.Max(0f, deltaTime);
         if (_eatElapsed < _config.ItemEatInterval)
@@ -1074,7 +1074,7 @@ internal sealed class AIBehaviorAttackNode
     {
         _target = null;
         _attack.OnEnterAttackState();
-        _context.Mover.StopMovement();
+        _context.Mod_Mover.StopMovement();
     }
 
     public void Tick(float _)
@@ -1099,7 +1099,7 @@ internal sealed class AIBehaviorAttackNode
             else
                 _attack.StopWindow();
             SaveCooldown();
-            _context.Mover.StopMovement();
+            _context.Mod_Mover.StopMovement();
             return;
         }
 
@@ -1107,12 +1107,12 @@ internal sealed class AIBehaviorAttackNode
         if (distance > _config.TriggerDistance && !_attack.IsAttackLocked)
         {
             _attack.StopWindow();
-            _context.Mover.StopMovement();
+            _context.Mod_Mover.StopMovement();
             return;
         }
 
         Vector3 targetPosition = _target.transform.position;
-        _context.Mover.StopMovement();
+        _context.Mod_Mover.StopMovement();
         _context.FaceTarget(targetPosition, true);
         if (!_attack.IsAttackLocked && _attack.IsCooldownDone)
         {
@@ -1131,7 +1131,7 @@ internal sealed class AIBehaviorAttackNode
             _attack.StopWindow();
         SaveCooldown();
         _target = null;
-        _context.Mover.StopMovement();
+        _context.Mod_Mover.StopMovement();
     }
 
     /// <summary>攻击时序跨状态推进，并把唯一权威冷却写入可存档计时器。</summary>

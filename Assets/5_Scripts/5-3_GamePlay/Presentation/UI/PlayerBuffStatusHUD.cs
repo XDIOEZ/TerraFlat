@@ -6,7 +6,7 @@ using UnityEngine.UI;
 
 /// <summary>
 /// 为本地玩家维护屏幕左侧中部的 Buff 条目列表。
-/// 只实例化 UI_BuffStatus 与 UI_BuffStatusItem Prefab；通过 BuffManager 生命周期与整秒倒计时事件刷新，
+/// 只实例化 UI_BuffStatus 与 UI_BuffStatusItem Prefab；通过 Mod_BuffManager 生命周期与整秒倒计时事件刷新，
 /// HUD 容器本身不绘制背景或静态标题，只显示动态 Buff 条目；没有 Buff 时整体隐藏。
 /// </summary>
 [DisallowMultipleComponent]
@@ -22,7 +22,7 @@ public sealed class PlayerBuffStatusHUD : MonoBehaviour
     private const float RowSpacing = 7f;
 
     private Player player;
-    private BuffManager buffManager;
+    private Mod_BuffManager buffManager;
     private GameObject viewObject;
     private GameObject itemPrefab;
     private RectTransform viewRect;
@@ -72,7 +72,7 @@ public sealed class PlayerBuffStatusHUD : MonoBehaviour
             Destroy(viewObject);
     }
 
-    /// <summary>模块修复或运行时补装改变玩家子层级时，按事件重新解析一次 BuffManager。</summary>
+    /// <summary>模块修复或运行时补装改变玩家子层级时，按事件重新解析一次 Mod_BuffManager。</summary>
     private void OnTransformChildrenChanged()
     {
         if (isActiveAndEnabled && player != null && player.IsLocalProfile)
@@ -83,7 +83,7 @@ public sealed class PlayerBuffStatusHUD : MonoBehaviour
 
     #region 数据绑定与刷新
 
-    /// <summary>按本地玩家资格绑定一次 BuffManager；静止期间不再扫描组件。</summary>
+    /// <summary>按本地玩家资格绑定一次 Mod_BuffManager；静止期间不再扫描组件。</summary>
     private void RefreshBinding()
     {
         ResolvePlayer();
@@ -105,8 +105,8 @@ public sealed class PlayerBuffStatusHUD : MonoBehaviour
 
     private bool TryBindBuffManager()
     {
-        BuffManager candidate = player != null
-            ? player.GetComponentInChildren<BuffManager>(true)
+        Mod_BuffManager candidate = player != null
+            ? player.GetComponentInChildren<Mod_BuffManager>(true)
             : null;
         if (candidate == buffManager)
             return candidate != null;

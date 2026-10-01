@@ -30,7 +30,7 @@ namespace FlatWorld.GameplayMCP
 
             if (!GameplayMcpRuntime.TryGetPlayerContext(
                     out _,
-                    out GameController controller,
+                    out Mod_GameController controller,
                     out _,
                     out string error))
             {

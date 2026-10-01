@@ -12,7 +12,7 @@ public interface IDamageReceivedStatusRule
 }
 
 /// <summary>
-/// 受击状态规则注册表。DamageReceiver 只负责发布结算结果；出血、中毒等状态通过独立规则注册，避免把具体 Buff 写进核心伤害模块。
+/// 受击状态规则注册表。Mod_DamageReceiver 只负责发布结算结果；出血、中毒等状态通过独立规则注册，避免把具体 Buff 写进核心伤害模块。
 /// </summary>
 public static class DamageReceivedStatusEffectRegistry
 {
@@ -99,8 +99,8 @@ public sealed class BleedingDamageStatusRule : IDamageReceivedStatusRule
         if (tier == 0)
             return;
 
-        BuffManager buffManager = damageInfo.ReceiverItem?.itemMods?
-            .GetMod_ByID<BuffManager>(ModText.BuffManager);
+        Mod_BuffManager buffManager = damageInfo.ReceiverItem?.itemMods?
+            .GetMod_ByID<Mod_BuffManager>(ModText.Mod_BuffManager);
         if (buffManager == null)
             return;
 

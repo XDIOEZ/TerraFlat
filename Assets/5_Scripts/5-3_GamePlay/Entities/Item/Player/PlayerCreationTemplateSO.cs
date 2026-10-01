@@ -106,7 +106,7 @@ public sealed class PlayerCreationTemplateSO : ScriptableObject
             throw new InvalidOperationException("玩家创建模板配置不完整。");
 
         ApplyCore(player.Data);
-        ApplyMovement(player.GetComponentInChildren<Mover>(true));
+        ApplyMovement(player.GetComponentInChildren<Mod_Mover>(true));
         ApplyFood(player.GetComponentInChildren<Mod_Food>(true));
         ApplyStamina(player.GetComponentInChildren<Mod_Stamina>(true));
 
@@ -130,12 +130,12 @@ public sealed class PlayerCreationTemplateSO : ScriptableObject
         data.MaxCarryVolume = core.maxCarryVolume;
     }
 
-    private void ApplyMovement(Mover mover)
+    private void ApplyMovement(Mod_Mover mover)
     {
         if (mover == null)
             return;
 
-        mover.Data = new Mover.Mover_SaveData
+        mover.Data = new Mod_Mover.Mover_SaveData
         {
             Speed = new GameValue_float(movement.speed),
             slowDownSpeed = movement.slowDownSpeed,

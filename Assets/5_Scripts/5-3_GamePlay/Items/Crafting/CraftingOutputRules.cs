@@ -93,7 +93,7 @@ public static class CraftedDurabilityQuality
             definition?.Health?.HasHp != true)
             return;
 
-        DamageReceiver receiver = item.itemMods?.GetMod_ByID<DamageReceiver>(ModText.Hp);
+        Mod_DamageReceiver receiver = item.itemMods?.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
         if (receiver == null)
             return;
 

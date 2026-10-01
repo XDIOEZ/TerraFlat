@@ -21,13 +21,13 @@ public class Tile_Universal : TileBlockBehaviour
     [Header("进入地块时附加的 Buff 列表(可选)")]
     public List<string> BuffInfo = new List<string>();
 
-    public override void OnEnter(Item item, TileData tileData, Map map, TileEffectReceiver receiver)
+    public override void OnEnter(Item item, TileData tileData, Map map, Mod_TileEffectReceiver receiver)
     {
         if (item == null)
             return;
 
         bool validItem = item != null;
-        BuffManager buffManager = validItem ? item.GetComponentInChildren<BuffManager>() : null;
+        Mod_BuffManager buffManager = validItem ? item.GetComponentInChildren<Mod_BuffManager>() : null;
 
         // 通用进入特效（如果配置了名称）
         if (validItem && !string.IsNullOrEmpty(enterEffectName))
@@ -55,7 +55,7 @@ public class Tile_Universal : TileBlockBehaviour
         }
     }
 
-    public override void OnExit(Item item, TileData tileData, Map map, TileEffectReceiver receiver)
+    public override void OnExit(Item item, TileData tileData, Map map, Mod_TileEffectReceiver receiver)
     {
         if (item == null)
             return;
@@ -78,7 +78,7 @@ public class Tile_Universal : TileBlockBehaviour
         }
 
         // 移除 Buff
-        BuffManager buffManager = item.GetComponentInChildren<BuffManager>();
+        Mod_BuffManager buffManager = item.GetComponentInChildren<Mod_BuffManager>();
         if (buffManager == null || BuffInfo == null)
             return;
 
@@ -92,7 +92,7 @@ public class Tile_Universal : TileBlockBehaviour
         }
     }
 
-    public override void OnUpdate(Item item, TileData tileData, Map map, TileEffectReceiver receiver, float deltaTime)
+    public override void OnUpdate(Item item, TileData tileData, Map map, Mod_TileEffectReceiver receiver, float deltaTime)
     {
         // 通用地块默认不做持续效果，如需要可以在这里扩展：
         // 例如：持续减速、持续掉血、持续获得某种状态等。

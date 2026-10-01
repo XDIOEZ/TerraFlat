@@ -299,7 +299,7 @@ namespace FlatWorld.NaturalEntities
             }
         }
 
-        /// <summary>生命只写回同一 Entity，MOD 可修补这个命令边界；不会创建 DamageReceiver。</summary>
+        /// <summary>生命只写回同一 Entity，MOD 可修补这个命令边界；不会创建 Mod_DamageReceiver。</summary>
         public static float ApplyDamage(NaturalEntityHandle handle, in CombatDamageContext context)
         {
             if (!GameNetwork.HasStateAuthority || !Contains(handle) || !context.Attack.Source.IsValid ||

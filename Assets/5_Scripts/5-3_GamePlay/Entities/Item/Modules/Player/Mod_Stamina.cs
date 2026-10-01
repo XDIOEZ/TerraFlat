@@ -9,7 +9,7 @@ using UnityEngine.UI;
 public partial class Mod_Stamina : Module, IItemModuleDependencyBinder
 {
     private readonly List<IStaminaCapacityModifier> capacityModifiers = new(); // 独立容量来源。
-    private PlayerAdminController adminController; // 管理员拥有无限体力，统一在体力权威模块拦截消耗。
+    private Mod_PlayerAdminController adminController; // 管理员拥有无限体力，统一在体力权威模块拦截消耗。
 
     /// <summary>任意体力消费完成后发布；仅用于运行时观察和调试，不进入存档。</summary>
     public event Action<StaminaConsumptionRecord> StaminaConsumed;
@@ -22,7 +22,7 @@ public partial class Mod_Stamina : Module, IItemModuleDependencyBinder
         foreach (Module module in modules.Mods.Values)
         {
             if (module is IStaminaCapacityModifier modifier) capacityModifiers.Add(modifier);
-            if (module is PlayerAdminController controller) adminController = controller;
+            if (module is Mod_PlayerAdminController controller) adminController = controller;
         }
     }
     /// <summary>容量变化后限制当前值，并通知现有 HUD。</summary>

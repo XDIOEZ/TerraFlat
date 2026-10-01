@@ -1,0 +1,691 @@
+using System;
+using System.Collections.Generic;
+using Sirenix.OdinInspector;
+using UnityEngine;
+
+/// <summary>
+/// Buff 生命周期、叠加、持久化和角色消费事件的统一入口。
+/// </summary>
+public partial class Mod_BuffManager : Module
+{
+    private const float TickInterval = 0.1f;
+    private const string LegacyModuleId = "Buff模块";
+
+    [ShowInInspector]
+    public Dictionary<string, BuffInstance> ActiveBuffs =
+        new(StringComparer.OrdinalIgnoreCase);
+
+    public Ex_ModData_MemoryPackable ModData;
+
+    public override ModuleData _Data
+    {
+        get => ModData;
+        set => ModData = (Ex_ModData_MemoryPackable)value;
+    }
+
+    public override ModuleTickMode TickMode => ModuleTickMode.FixedInterval;
+    public override float FixedTickInterval => TickInterval;
+    public override string CanonicalModuleId => ModText.Mod_BuffManager;
+
+    public override bool MatchesPersistedId(string persistedId)
+    {
+        return base.MatchesPersistedId(persistedId) ||
+               string.Equals(persistedId?.Trim(), LegacyModuleId, StringComparison.OrdinalIgnoreCase);
+    }
+
+    public event Action<BuffInstance> BuffAdded;
+    public event Action<BuffInstance> BuffRemoved;
+    public event Action<BuffInstance> BuffDurationChanged;
+    public event Action<BuffInstance> BuffStacksChanged; // 层数变化的独立通知，供 HUD 与特效订阅。
+
+    /// <summary>限时 Buff 的显示秒数变化时触发，供只读表现层按需刷新倒计时。</summary>
+    public event Action<BuffInstance> BuffCountdownChanged;
+
+    private readonly List<string> iterationIds = new(16);
+    private readonly List<string> expiredIds = new(8);
+
+    private Item buffReceiver;
+    private Mod_Food observedFood;
+
+    public override void Awake()
+    {
+        base.Awake();
+        _Data.ID = ModText.Mod_BuffManager;
+        buffReceiver = GetComponentInParent<Item>();
+
+        if (buffReceiver == null)
+            Debug.LogWarning("[Mod_BuffManager] 找不到父级 Item。", this);
+    }
+
+    public override void Load()
+    {
+        ResetWaterStackClock();
+        ClearAllBuffs();
+        buffReceiver = item;
+        if (ModData == null)
+        {
+            Debug.LogError("[Mod_BuffManager] ModData 为空，无法加载 Buff。", this);
+            return;
+        }
+
+        try
+        {
+            var saveData = new BuffManagerSaveData();
+            ModData.ReadData(ref saveData);
+            ActiveBuffs = new Dictionary<string, BuffInstance>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (BuffInstance runtime in saveData?.Buffs ?? new List<BuffInstance>())
+            {
+                if (runtime == null || string.IsNullOrWhiteSpace(runtime.DefinitionId))
+                    continue;
+
+                if (!ActiveBuffs.TryAdd(runtime.DefinitionId, runtime))
+                {
+                    throw new InvalidOperationException(
+                        $"Buff 存档包含重复定义 ID：{runtime.DefinitionId}");
+                }
+            }
+        }
+        catch (Exception exception)
+        {
+            Debug.LogError($"[Mod_BuffManager] Buff 存档读取失败，已使用空状态：{exception.Message}", this);
+            ActiveBuffs = new Dictionary<string, BuffInstance>(StringComparer.OrdinalIgnoreCase);
+        }
+
+        MigrateLegacyBleedingBuffs();
+        InitializeBuffs();
+        BindFoodEvents();
+    }
+
+    public override void Save()
+    {
+        if (ModData == null)
+        {
+            Debug.LogError("[Mod_BuffManager] ModData 为空，无法保存 Buff。", this);
+            return;
+        }
+
+        var runtimes = new List<BuffInstance>();
+        foreach (BuffInstance runtime in ActiveBuffs.Values)
+            if (string.IsNullOrEmpty(runtime.SourceKey)) runtimes.Add(runtime);
+        runtimes.Sort((left, right) => StringComparer.OrdinalIgnoreCase.Compare(
+            left?.DefinitionId,
+            right?.DefinitionId));
+        ModData.WriteData(new BuffManagerSaveData { Buffs = runtimes });
+    }
+
+    private void OnDestroy()
+    {
+        Unload();
+    }
+
+    public override void Unload()
+    {
+        ResetWaterStackClock();
+        ClearAllBuffs();
+        UnbindFoodEvents();
+        buffReceiver = null;
+    }
+
+    private void InitializeBuffs()
+    {
+        if (ActiveBuffs.Count == 0)
+            return;
+
+        iterationIds.Clear();
+        iterationIds.AddRange(ActiveBuffs.Keys);
+
+        for (int i = 0; i < iterationIds.Count; i++)
+        {
+            string dictionaryId = iterationIds[i];
+            if (!ActiveBuffs.TryGetValue(dictionaryId, out BuffInstance runtime) ||
+                runtime == null)
+            {
+                ActiveBuffs.Remove(dictionaryId);
+                continue;
+            }
+
+            // 旧版移动饥饿 Buff 已迁移为 Mod_Mover 的独立动作；读旧存档时直接丢弃，
+            // 不执行旧 Stop 效果，避免把新的 Food 运行时倍率错误地反向修改。
+            if (IsLegacyMovementHungerBuff(dictionaryId))
+            {
+                ActiveBuffs.Remove(dictionaryId);
+                continue;
+            }
+
+            if (!runtime.Restore(buffReceiver))
+            {
+                Debug.LogWarning($"[Mod_BuffManager] 已跳过无效 Buff：{runtime.DefinitionId}", this);
+                ActiveBuffs.Remove(dictionaryId);
+                continue;
+            }
+
+            if (runtime.IsExpired)
+                RemoveBuffInternal(dictionaryId, runtime, invokeStop: true);
+        }
+    }
+
+    #region 旧版迁移
+
+    /// <summary>把历史失血/流血/出血 ID 迁移为出血1/2/3，并把同时存在的多个等级收敛为最高等级。</summary>
+    private void MigrateLegacyBleedingBuffs()
+    {
+        if (ActiveBuffs.Count == 0)
+            return;
+
+        var migrated = new Dictionary<string, BuffInstance>(StringComparer.OrdinalIgnoreCase);
+        BuffInstance strongestBleeding = null;
+        int strongestTier = 0;
+
+        foreach (KeyValuePair<string, BuffInstance> pair in ActiveBuffs)
+        {
+            BuffInstance runtime = pair.Value;
+            if (runtime == null)
+                continue;
+
+            string normalizedId = BloodLossBuffIds.NormalizePersistedId(
+                string.IsNullOrWhiteSpace(runtime.DefinitionId) ? pair.Key : runtime.DefinitionId);
+            runtime.DefinitionId = normalizedId;
+
+            if (BloodLossBuffIds.TryGetTier(normalizedId, out int tier))
+            {
+                if (strongestBleeding == null ||
+                    tier > strongestTier ||
+                    (tier == strongestTier &&
+                     runtime.RemainingDurationSeconds > strongestBleeding.RemainingDurationSeconds))
+                {
+                    strongestBleeding = runtime;
+                    strongestTier = tier;
+                }
+
+                continue;
+            }
+
+            migrated[pair.Key] = runtime;
+        }
+
+        if (strongestBleeding != null)
+        {
+            string strongestId = BloodLossBuffIds.GetIdForTier(strongestTier);
+            strongestBleeding.DefinitionId = strongestId;
+            migrated[strongestId] = strongestBleeding;
+        }
+
+        ActiveBuffs = migrated;
+    }
+
+    /// <summary>识别移动饥饿 Buff 的历史 ID，保证旧存档不会恢复可驱散的旧实现。</summary>
+    private static bool IsLegacyMovementHungerBuff(string buffId)
+    {
+        return string.Equals(buffId, "饥饿1.6", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(buffId, "饥饿2.0", StringComparison.OrdinalIgnoreCase);
+    }
+
+    #endregion
+
+    #region 添加与叠加
+
+    public bool AddBuff(string buffId)
+    {
+        return AddBuff(buffId, 1);
+    }
+
+    /// <summary>施加指定层数；非叠层定义保持原有续期/忽略语义，调用者无需循环施加。</summary>
+    public bool AddBuff(string buffId, int stacks)
+    {
+        if (stacks <= 0)
+            return false;
+        buffReceiver ??= item;
+        if (string.IsNullOrWhiteSpace(buffId))
+        {
+            Debug.LogWarning("[Mod_BuffManager] 不能添加空 Buff ID。", this);
+            return false;
+        }
+
+        BuffDefinition definition = GameRes.Instance?.GetBuffDefinition(buffId.Trim());
+        if (definition == null)
+        {
+            Debug.LogWarning($"[Mod_BuffManager] 找不到 Buff JSON 定义：{buffId}", this);
+            return false;
+        }
+
+        if (buffReceiver == null)
+        {
+            Debug.LogWarning($"[Mod_BuffManager] Buff {definition.Id} 缺少接收者。", this);
+            return false;
+        }
+
+        int incomingStacks = ResolveIncomingStacks(definition, stacks);
+        if (!CanApplyStackedBuff(definition.Id, incomingStacks))
+            return false;
+
+        string definitionId = definition.Id;
+        if (ActiveBuffs.TryGetValue(definitionId, out BuffInstance existing) &&
+            existing != null)
+        {
+            bool handled = HandleBuffStack(definition, existing, incomingStacks);
+            if (handled)
+                ResolveAppliedBuffInteractions(definitionId);
+            return handled;
+        }
+
+        var runtime = new BuffInstance();
+        if (!runtime.Initialize(definition, buffReceiver))
+            return false;
+
+        runtime.SetStackCount(incomingStacks);
+
+        ActiveBuffs[definitionId] = runtime;
+        runtime.Start();
+        BuffAdded?.Invoke(runtime);
+        ResolveAppliedBuffInteractions(definitionId);
+        return true;
+    }
+
+    private void ResolveAppliedBuffInteractions(string buffId)
+    {
+        if (string.Equals(buffId, WetBuffIds.Wet, StringComparison.OrdinalIgnoreCase) &&
+            GetBuffStacks(WetBuffIds.Wet) >= GetBuffStacks(BurningBuffIds.Burning))
+            RemoveBuff(BurningBuffIds.Burning);
+        else if (string.Equals(buffId, BurningBuffIds.Burning, StringComparison.OrdinalIgnoreCase))
+            RemoveBuff(WetBuffIds.Wet);
+    }
+
+    private bool HandleBuffStack(BuffDefinition incoming, BuffInstance existing, int incomingStacks)
+    {
+        switch (incoming.StackMode)
+        {
+            case BuffStackMode.AddStacks:
+                bool changed = existing.SetStackCount(incomingStacks);
+                existing.RefreshDuration();
+                if (changed)
+                    BuffStacksChanged?.Invoke(existing);
+                BuffDurationChanged?.Invoke(existing);
+                return true;
+
+            case BuffStackMode.ExtendDuration:
+                existing.ExtendDuration(Mathf.Max(0f, incoming.DurationSeconds ?? 0f));
+                BuffDurationChanged?.Invoke(existing);
+                return true;
+
+            case BuffStackMode.RefreshDuration:
+                existing.RefreshDuration();
+                BuffDurationChanged?.Invoke(existing);
+                return true;
+
+            case BuffStackMode.Ignore:
+                return true;
+
+            default:
+                Debug.LogWarning($"[Mod_BuffManager] 未知叠加模式：{incoming.StackMode}", this);
+                return false;
+        }
+    }
+
+    #endregion
+
+    #region 查询与延时
+
+    /// <summary>应用互斥的出血等级；更低等级不会覆盖更高等级，更高等级会替换已有低等级。</summary>
+    public bool ApplyBleedingTier(int tier)
+    {
+        string targetId = BloodLossBuffIds.GetIdForTier(tier);
+        int highestActiveTier = 0;
+        string highestActiveId = null;
+
+        for (int currentTier = 1; currentTier <= BloodLossBuffIds.MaxTier; currentTier++)
+        {
+            string currentId = BloodLossBuffIds.GetIdForTier(currentTier);
+            if (!HasBuff(currentId))
+                continue;
+
+            highestActiveTier = currentTier;
+            highestActiveId = currentId;
+        }
+
+        // 低等级命中只能续期当前更严重的出血，不能把伤势降级。
+        if (highestActiveTier > tier && !string.IsNullOrEmpty(highestActiveId))
+            return AddBuff(highestActiveId);
+
+        // 先确保目标等级成功加入，再清理旧等级，避免目录缺失时把已有状态先删掉。
+        if (!AddBuff(targetId))
+            return false;
+
+        for (int currentTier = 1; currentTier <= BloodLossBuffIds.MaxTier; currentTier++)
+        {
+            string currentId = BloodLossBuffIds.GetIdForTier(currentTier);
+            if (!string.Equals(currentId, targetId, StringComparison.OrdinalIgnoreCase))
+                RemoveBuff(currentId);
+        }
+
+        return true;
+    }
+
+    public bool HasBuff(string buffId)
+    {
+        return !string.IsNullOrWhiteSpace(buffId) &&
+               ActiveBuffs.ContainsKey(buffId);
+    }
+
+    public bool TryGetBuff(string buffId, out BuffInstance runtime)
+    {
+        runtime = null;
+        return !string.IsNullOrWhiteSpace(buffId) &&
+               ActiveBuffs.TryGetValue(buffId, out runtime);
+    }
+
+    public bool TryExtendBuffDuration(string buffId, float seconds)
+    {
+        if (seconds <= 0f || !TryGetBuff(buffId, out BuffInstance runtime))
+            return false;
+
+        if (!runtime.ExtendDuration(seconds))
+            return false;
+
+        BuffDurationChanged?.Invoke(runtime);
+        return true;
+    }
+
+    /// <summary>
+    /// 覆盖一个限时 Buff 的剩余时间。
+    /// 永久 Buff 不支持覆盖，以免运行时调试操作改变 JSON 定义的永久语义。
+    /// </summary>
+    public bool TrySetBuffDuration(string buffId, float seconds)
+    {
+        if (!TryGetBuff(buffId, out BuffInstance runtime) ||
+            !runtime.TrySetRemainingDuration(seconds))
+        {
+            return false;
+        }
+
+        BuffDurationChanged?.Invoke(runtime);
+        return true;
+    }
+
+    /// <summary>
+    /// 完整喝下一份饮品后调用。每个血液流逝 Buff 使用自己的固定延时配置。
+    /// </summary>
+    public int ExtendBloodLossBuffsForDrink()
+    {
+        if (ActiveBuffs.Count == 0)
+            return 0;
+
+        int extendedCount = 0;
+        iterationIds.Clear();
+        iterationIds.AddRange(ActiveBuffs.Keys);
+
+        for (int i = 0; i < iterationIds.Count; i++)
+        {
+            if (!ActiveBuffs.TryGetValue(iterationIds[i], out BuffInstance runtime) ||
+                runtime?.Definition == null ||
+                runtime.Definition.Category != BuffCategory.BloodLoss)
+            {
+                continue;
+            }
+
+            float extension = Mathf.Max(0f, runtime.Definition.DrinkDurationExtensionSeconds);
+            if (extension <= 0f)
+                continue;
+
+            runtime.ExtendDuration(extension);
+            BuffDurationChanged?.Invoke(runtime);
+            extendedCount++;
+        }
+
+        return extendedCount;
+    }
+
+    #endregion
+
+    #region 移除与更新
+
+    public void RemoveBuff(string buffId)
+    {
+        if (string.IsNullOrWhiteSpace(buffId) ||
+            !ActiveBuffs.TryGetValue(buffId, out BuffInstance runtime))
+        {
+            return;
+        }
+
+        RemoveBuffInternal(buffId, runtime, invokeStop: true);
+    }
+
+    public void ClearAllBuffs()
+    {
+        ResetWaterStackClock();
+        if (ActiveBuffs.Count == 0)
+            return;
+
+        iterationIds.Clear();
+        iterationIds.AddRange(ActiveBuffs.Keys);
+
+        for (int i = 0; i < iterationIds.Count; i++)
+        {
+            string buffId = iterationIds[i];
+            if (ActiveBuffs.TryGetValue(buffId, out BuffInstance runtime))
+                RemoveBuffInternal(buffId, runtime, invokeStop: true);
+        }
+    }
+
+    public override void ModUpdate(float deltaTime)
+    {
+        Tick(deltaTime);
+    }
+
+    public void Tick(float deltaTime)
+    {
+        if (ActiveBuffs.Count == 0 || deltaTime <= 0f)
+        {
+            return;
+        }
+
+        iterationIds.Clear();
+        expiredIds.Clear();
+        iterationIds.AddRange(ActiveBuffs.Keys);
+        Action<BuffInstance> countdownChanged = BuffCountdownChanged;
+
+        for (int i = 0; i < iterationIds.Count; i++)
+        {
+            string buffId = iterationIds[i];
+            if (!ActiveBuffs.TryGetValue(buffId, out BuffInstance runtime) || runtime == null)
+            {
+                expiredIds.Add(buffId);
+                continue;
+            }
+
+            int previousDisplaySeconds = countdownChanged != null
+                ? GetCountdownDisplaySeconds(runtime)
+                : -1;
+            int previousStackCount = runtime.StackCount;
+            if (runtime.Tick(deltaTime))
+            {
+                expiredIds.Add(buffId);
+                continue;
+            }
+
+            if (runtime.StackCount != previousStackCount)
+            {
+                BuffStacksChanged?.Invoke(runtime);
+                BuffDurationChanged?.Invoke(runtime);
+            }
+
+            if (countdownChanged != null)
+            {
+                int currentDisplaySeconds = GetCountdownDisplaySeconds(runtime);
+                if (currentDisplaySeconds != previousDisplaySeconds)
+                    countdownChanged.Invoke(runtime);
+            }
+        }
+
+        for (int i = 0; i < expiredIds.Count; i++)
+        {
+            string buffId = expiredIds[i];
+            if (ActiveBuffs.TryGetValue(buffId, out BuffInstance runtime))
+                RemoveBuffInternal(buffId, runtime, invokeStop: true);
+        }
+    }
+
+    private void RemoveBuffInternal(string buffId, BuffInstance runtime, bool invokeStop)
+    {
+        if (runtime != null && invokeStop)
+            runtime.Stop();
+
+        ActiveBuffs.Remove(buffId);
+        if (runtime != null)
+            BuffRemoved?.Invoke(runtime);
+    }
+
+    /// <summary>把连续时长压缩为 HUD 实际显示的整秒值，永久 Buff 不参与倒计时事件。</summary>
+    private static int GetCountdownDisplaySeconds(BuffInstance runtime)
+    {
+        if (runtime?.Definition == null || runtime.Definition.IsPermanent)
+            return -1;
+
+        return Mathf.CeilToInt(Mathf.Max(0f, runtime.RemainingDurationSeconds));
+    }
+
+    #endregion
+
+    #region 饮水事件
+
+    private void BindFoodEvents()
+    {
+        UnbindFoodEvents();
+        if (item?.itemMods == null)
+            return;
+
+        observedFood = item.itemMods.GetMod_ByID(ModText.Food) as Mod_Food;
+        if (observedFood != null)
+            observedFood.ConsumeCompleted += OnConsumeCompleted;
+    }
+
+    private void UnbindFoodEvents()
+    {
+        if (observedFood != null)
+            observedFood.ConsumeCompleted -= OnConsumeCompleted;
+
+        observedFood = null;
+    }
+
+    private void OnConsumeCompleted(FoodConsumeResult result)
+    {
+        if (!result.IsDrink)
+            return;
+
+        ExtendBloodLossBuffsForDrink();
+    }
+
+    #endregion
+
+    #region 调试入口
+
+    [Button("调试：添加出血1")]
+    private void DebugAddBleeding1()
+    {
+        ApplyBleedingTier(1);
+    }
+
+    [Button("调试：添加出血2")]
+    private void DebugAddBleeding2()
+    {
+        ApplyBleedingTier(2);
+    }
+
+    [Button("调试：添加出血3")]
+    private void DebugAddBleeding3()
+    {
+        ApplyBleedingTier(3);
+    }
+
+    [Button("调试：模拟完整喝水一次")]
+    private void DebugDrinkOnce()
+    {
+        int count = ExtendBloodLossBuffsForDrink();
+        Debug.Log($"[Mod_BuffManager] 模拟喝水完成，延长 {count} 个血液流逝 Buff。", this);
+    }
+
+    [Button("调试：清除全部 Buff")]
+    private void DebugClearAll()
+    {
+        ClearAllBuffs();
+    }
+
+    private void DebugAddBuff(string buffId)
+    {
+        AddBuff(buffId);
+    }
+
+    #endregion
+}
+
+public static class BloodLossBuffIds
+{
+    public const int MaxTier = 3;
+    public const string Bleeding1 = "出血1";
+    public const string Bleeding2 = "出血2";
+    public const string Bleeding3 = "出血3";
+
+    private const string LegacyBloodLoss = "失血";
+    private const string LegacyBleeding = "流血";
+    private const string LegacyHemorrhage = "出血";
+
+    /// <summary>按等级返回稳定 Buff ID；等级范围固定为 1..3。</summary>
+    public static string GetIdForTier(int tier)
+    {
+        return tier switch
+        {
+            1 => Bleeding1,
+            2 => Bleeding2,
+            3 => Bleeding3,
+            _ => throw new ArgumentOutOfRangeException(nameof(tier), tier, "出血等级必须位于 1..3。")
+        };
+    }
+
+    /// <summary>解析当前正式出血 ID 的等级。</summary>
+    public static bool TryGetTier(string buffId, out int tier)
+    {
+        tier = 0;
+        if (string.Equals(buffId, Bleeding1, StringComparison.OrdinalIgnoreCase))
+            tier = 1;
+        else if (string.Equals(buffId, Bleeding2, StringComparison.OrdinalIgnoreCase))
+            tier = 2;
+        else if (string.Equals(buffId, Bleeding3, StringComparison.OrdinalIgnoreCase))
+            tier = 3;
+
+        return tier > 0;
+    }
+
+    /// <summary>迁移历史失血、流血、出血 ID；其他 Buff 原样返回。</summary>
+    public static string NormalizePersistedId(string buffId)
+    {
+        if (string.Equals(buffId, LegacyBloodLoss, StringComparison.OrdinalIgnoreCase))
+            return Bleeding1;
+        if (string.Equals(buffId, LegacyBleeding, StringComparison.OrdinalIgnoreCase))
+            return Bleeding2;
+        if (string.Equals(buffId, LegacyHemorrhage, StringComparison.OrdinalIgnoreCase))
+            return Bleeding3;
+        return buffId;
+    }
+}
+
+public static class BurningBuffIds
+{
+    public const string Burning = "燃烧";
+}
+
+public static class WetBuffIds
+{
+    public const string Wet = "潮湿";
+}
+
+/// <summary>感染类 Buff 的稳定 ID，供玩法、表现和测试统一引用。</summary>
+public static class InfectionBuffIds
+{
+    public const string Infection = "感染";
+}
+
+/// <summary>脱水类 Buff 的稳定 ID，供饮水玩法与测试统一引用。</summary>
+public static class DehydrationBuffIds
+{
+    public const string Dehydration = "脱水";
+}

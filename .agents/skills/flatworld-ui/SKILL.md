@@ -95,7 +95,7 @@ description: "Use when: 定位或修改 FlatWorld 的 UIManager、BasePanel、�
 
 ## 架构与运行时约束
 
-- 快捷栏选中外观由 `Common/Controls/UI_SelectBox.prefab` 持有，`Inventory_HotBar.SelectBoxPrefab` 在玩家和热栏模块 Prefab 中引用它；`UI_HotBar.prefab` 只承载槽位与栏位布局。修改选中框贴图时应更新 `UI_SelectBox` 的 Image 引用，不能只替换 PNG。
+- 快捷栏选中外观由 `Common/Controls/UI_SelectBox.prefab` 持有，`Mod_HotBar.SelectBoxPrefab` 在玩家和热栏模块 Prefab 中引用它；`UI_HotBar.prefab` 只承载槽位与栏位布局。修改选中框贴图时应更新 `UI_SelectBox` 的 Image 引用，不能只替换 PNG。
 
 - 面板动画位于 `Common/Animation/`，依赖固定为 `BasePanel → BaseUIAnimation → UIAnimationManager → JSON`：BasePanel 直接调用同物体 BUA，BUA 禁止反向引用或监听 BasePanel；`Opened/Closed` 继续保持同步业务事件，无动画组件时维持即时开关。
 - 每个 BasePanel 同物体最多一个 `BaseUIAnimation` 或子类，稳定 `AnimationId` 匹配 `Resources/Config/UIAnimations.json`。JSON 只保存 Duration、相对 Offset、Scale、Ease 等结果参数，不保存移动/开关速度，也不按 `Screen.width/height` 二次换算；分辨率适配交给现有 CanvasScaler。
@@ -166,7 +166,7 @@ description: "Use when: 定位或修改 FlatWorld 的 UIManager、BasePanel、�
 - 主菜单设置由 `SettingsEditSessionController` 管理保存基线；新增 Provider 时把可编辑值放进控件契约，非控件偏好实现 `ISettingsEditSessionParticipant` 快照与还原。按键绑定通过 `InputBindingService` 单独开始、提交和放弃编辑会话。
 - 现有静态偏好类通过 `SettingsProvider` 兼容入口注册；新增实例型系统优先让管理器直接实现接口。Provider 不负责创建 Prefab，正式布局仍由专用 Launcher 和 Prefab 管理。
 - `UI_VisualEffectsSettings` 同时嵌套在游戏内与主菜单设置中；太阳长投影开关与共用的阴影柔化开关、模糊程度滑块绑定 `SunShadowSettings` Provider。关闭太阳投影必须停止对应渲染工作，但脚底阴影仍由柔化开关与滑块控制；柔化关闭只把有效强度置零。地面层级阴影开关和宽度滑块绑定 `GroundElevationShadowSettings` Provider。所有初始值、范围与恢复默认值读取 `Resources/GameConfig/Rendering/default-rendering.json`，玩家更改仍保存在 PlayerPrefs。新增必需控件时同步源 Prefab、控制器和 `RuntimeUIPrefabBuilder.VisualEffects`，并核对两个嵌套使用处的真实引用。
-- 游戏内设置页签由 `SettingsActionListPagination` 的页面名、入口名、页签映射和首个焦点控件共同定义；新增分页时同步正式 `UI_ActionList` 嵌套 Prefab 与完整/定向构建入口。直接挂在子页 Prefab 的控制器会由分页器收集 `ISettingsPageLifecycle`，不必再向 `SettingCanvas` 添加专用初始化分支。
+- 游戏内设置页签由 `SettingsActionListPagination` 的页面名、入口名、页签映射和首个焦点控件共同定义；新增分页时同步正式 `UI_ActionList` 嵌套 Prefab 与完整/定向构建入口。直接挂在子页 Prefab 的控制器会由分页器收集 `ISettingsPageLifecycle`，不必再向 `Mod_SettingCanvas` 添加专用初始化分支。
 - 游戏设置页在主菜单和游戏内共用 `NewWorldUserSettings` Provider；区块默认宽、高只在每次打开新世界窗口时回填，不修改已有星球或 `PlanetData` 的存档兼容默认值。主菜单沿用保存/关闭还原会话，正式 `UI_GameSettings` 与 `RuntimeUIPrefabBuilder.GameSettings` 同步维护。
 - 新世界窗口默认显示名称页；“世界设置”在同一主卡内切换整块内容，通过显隐保留两页输入。隐藏世界页仍参与创建请求取值，切页不能重新回填全局默认值；返回键先关闭难度层，再返回名称页，最后关闭窗口。布局需同步 `UI_NewGame` 与 `NewGamePrefabBuilder`。
 - 新世界与游戏内难度统一读取 `GameDifficultyCatalog` 的 0–20 级正式难度；新世界难度弹层左侧使用 `ItemStepScrollRect` 选择等级，右侧只展示战斗/生存/世界/生产四类差异摘要，不恢复“简单/困难”或官方/自定义双分页。

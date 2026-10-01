@@ -105,7 +105,7 @@ internal sealed partial class DroppedItemRuntime : IDisposable
 
     #region 驱动与保存
 
-    public void Tick(float deltaTime, IEnumerable<ItemPicker> pickers)
+    public void Tick(float deltaTime, IEnumerable<Mod_ItemPicker> pickers)
     {
         if (deltaTime <= 0f) return;
         domain = WorldTopologyRuntime.GetActiveDomain();

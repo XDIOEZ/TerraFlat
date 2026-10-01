@@ -62,21 +62,21 @@ public sealed class RuntimeTileDefinition
 
     #region 稳定行为入口
     /// <summary>按 JSON 顺序执行进入行为。</summary>
-    public void OnEnter(Item item, TileData tileData, Map map, TileEffectReceiver receiver)
+    public void OnEnter(Item item, TileData tileData, Map map, Mod_TileEffectReceiver receiver)
     {
         for (int i = 0; i < Behaviours.Count; i++)
             Behaviours[i].OnEnter(item, tileData, map, receiver);
     }
 
     /// <summary>按 JSON 顺序执行离开行为。</summary>
-    public void OnExit(Item item, TileData tileData, Map map, TileEffectReceiver receiver)
+    public void OnExit(Item item, TileData tileData, Map map, Mod_TileEffectReceiver receiver)
     {
         for (int i = 0; i < Behaviours.Count; i++)
             Behaviours[i].OnExit(item, tileData, map, receiver);
     }
 
     /// <summary>共享行为读取调用方上下文，不在此创建对象或解析 JSON。</summary>
-    public void OnUpdate(Item item, TileData tileData, Map map, TileEffectReceiver receiver, float deltaTime)
+    public void OnUpdate(Item item, TileData tileData, Map map, Mod_TileEffectReceiver receiver, float deltaTime)
     {
         for (int i = 0; i < Behaviours.Count; i++)
             Behaviours[i].OnUpdate(item, tileData, map, receiver, deltaTime);

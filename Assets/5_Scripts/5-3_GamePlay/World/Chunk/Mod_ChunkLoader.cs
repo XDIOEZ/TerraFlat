@@ -62,7 +62,7 @@ public class Mod_ChunkLoader : Module
     private Vector2Int _effectiveDestroyDistance;
     private bool _effectiveDistancesInitialized;
     private bool _externalStreamingManaged;
-    private Mover _movementSource;
+    private Mod_Mover _movementSource;
     /// <summary>上次提交给区块窗口的中心；同一区块内移动只更新表现优先级。</summary>
     private Vector2Int _streamedChunkOrigin;
     private bool _hasStreamedChunkOrigin;
@@ -152,7 +152,7 @@ public class Mod_ChunkLoader : Module
         if (_externalStreamingManaged)
             return;
 
-        // 完整窗口刷新由 Mover 的跨区块事件驱动；圈内移动只更新表现队列的精确距离优先级。
+        // 完整窗口刷新由 Mod_Mover 的跨区块事件驱动；圈内移动只更新表现队列的精确距离优先级。
         ChunkMgr.ExistingInstance?.RetargetRuntimePresentationQueue(
             transform.position, GetPresentationPreloadDistance());
 
@@ -242,7 +242,7 @@ public class Mod_ChunkLoader : Module
     /// <summary>绑定玩家唯一移动权威事件，避免区块加载器自己轮询或累计移动距离。</summary>
     private void BindMovementEvent()
     {
-        Mover resolved = item?.itemMods?.GetMod_ByID<Mover>(ModText.Mover);
+        Mod_Mover resolved = item?.itemMods?.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover);
         if (ReferenceEquals(_movementSource, resolved))
             return;
 

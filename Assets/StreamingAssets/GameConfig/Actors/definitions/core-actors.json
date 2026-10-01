@@ -230,9 +230,9 @@
             }
           }
         },
-        "BuffManager": {
+        "Mod_BuffManager": {
           "prefab": "Module_BuffManager",
-          "id": "BuffManager",
+          "id": "Mod_BuffManager",
           "enabled": true,
           "data": {
             "BitData": [],
@@ -1303,9 +1303,9 @@
             }
           }
         },
-        "BuffManager": {
+        "Mod_BuffManager": {
           "prefab": "Module_BuffManager",
-          "id": "BuffManager",
+          "id": "Mod_BuffManager",
           "enabled": true,
           "data": {
             "BitData": [],
@@ -1920,9 +1920,9 @@
             }
           }
         },
-        "BuffManager": {
+        "Mod_BuffManager": {
           "prefab": "Module_BuffManager",
-          "id": "BuffManager",
+          "id": "Mod_BuffManager",
           "enabled": true,
           "data": {
             "BitData": [],
@@ -2245,8 +2245,8 @@
           }
         },
         "ai": {
-          "prefab": "AI_Ghost",
-          "id": "AI_Ghost",
+          "prefab": "Mod_AI_Ghost",
+          "id": "Mod_AI_Ghost",
           "enabled": true,
           "data": {
             "BitData": [],
@@ -2361,9 +2361,9 @@
             }
           }
         },
-        "BuffManager": {
+        "Mod_BuffManager": {
           "prefab": "Module_BuffManager",
-          "id": "BuffManager",
+          "id": "Mod_BuffManager",
           "enabled": true,
           "data": {
             "BitData": [],

@@ -94,7 +94,7 @@ public partial class EquipmentInstance_Bag : EquipmentInstance
         BagInventory.Data = CloneInventoryData(BagData);
         BagInventory.item = item;
 
-        var controller = item.itemMods.GetMod_ByID<GameController>(ModText.Controller);
+        var controller = item.itemMods.GetMod_ByID<Mod_GameController>(ModText.Controller);
         BagInventory.InitData();
         BagInventory.BindController(controller);
 

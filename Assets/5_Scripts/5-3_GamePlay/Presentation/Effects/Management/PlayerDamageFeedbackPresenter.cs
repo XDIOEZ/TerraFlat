@@ -2,11 +2,11 @@ using FlatWorld.Localization;
 using UnityEngine;
 
 /// <summary>
-/// 玩家受伤的世界空间文字反馈：复用 DamageReceiver 的权威伤害快照和身体部位命中结果，
+/// 玩家受伤的世界空间文字反馈：复用 Mod_DamageReceiver 的权威伤害快照和身体部位命中结果，
 /// 在玩家附近弹出实际伤害数字以及“某部位受到攻击”的小字，不参与任何伤害结算。
 /// </summary>
 [DisallowMultipleComponent]
-[RequireComponent(typeof(DamageReceiver))]
+[RequireComponent(typeof(Mod_DamageReceiver))]
 public sealed class PlayerDamageFeedbackPresenter : MonoBehaviour
 {
     #region 配置
@@ -38,17 +38,17 @@ public sealed class PlayerDamageFeedbackPresenter : MonoBehaviour
 
     #region 运行时
 
-    private DamageReceiver receiver;
+    private Mod_DamageReceiver receiver;
 
     private void Awake()
     {
-        receiver = GetComponent<DamageReceiver>();
+        receiver = GetComponent<Mod_DamageReceiver>();
     }
 
     private void OnEnable()
     {
         if (receiver == null)
-            receiver = GetComponent<DamageReceiver>();
+            receiver = GetComponent<Mod_DamageReceiver>();
 
         if (receiver == null)
             return;

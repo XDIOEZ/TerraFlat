@@ -175,7 +175,7 @@ namespace FlatWorld.GameplayMCP
             {
                 Item item = matches[i].Item;
                 ItemData data = item.itemData;
-                DamageReceiver health = item.itemMods?.GetMod_ByID<DamageReceiver>(ModText.Hp);
+                Mod_DamageReceiver health = item.itemMods?.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
                 bool interactable = GameplayMcpRuntime.CanPlayerInteract(item, player);
 
                 var entry = new JObject

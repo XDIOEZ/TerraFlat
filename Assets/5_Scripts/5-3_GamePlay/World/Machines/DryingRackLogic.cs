@@ -8,14 +8,14 @@ public class DryingRackLogic : MachineLogic
     #region 晾晒状态
     public SlotProcessingState State { get; }
     public Inventory Inventory { get; }
-    public Meatrack VisualConfiguration { get; }
+    public Mod_Meatrack VisualConfiguration { get; }
     public override GameObject PanelPrefab { get; }
     private readonly float airExposureMultiplier;
 
     public DryingRackLogic(MachineEntity entity) : base(entity)
     {
-        var config = entity.Definition.Content.Find<Meatrack>() ?? throw new InvalidOperationException("晾架缺少内容配置。");
-        var source = (Meatrack)config.Authoring;
+        var config = entity.Definition.Content.Find<Mod_Meatrack>() ?? throw new InvalidOperationException("晾架缺少内容配置。");
+        var source = (Mod_Meatrack)config.Authoring;
         VisualConfiguration = source;
         State = MachinePersistence.Read<SlotProcessingState>(entity.Snapshot, "drying") ?? new SlotProcessingState();
         Inventory = Track(MachineInventory.Create(source.RackInventory, State.Inventory, "晾肉架", Mathf.Max(1, config.Value("SlotCount", source.SlotCount))));

@@ -28,7 +28,7 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour, ISettingsPageLife
     private readonly List<BindingRow> rows = new List<BindingRow>();
     private readonly Stack<BindingRow> pooledRows = new Stack<BindingRow>();
 
-    private GameController gameController;
+    private Mod_GameController gameController;
     private InputBindingService bindingService;
     private PlayerInputActions standaloneInputActions;
     private InputBindingService standaloneBindingService;
@@ -63,7 +63,7 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour, ISettingsPageLife
     public static InputBindingPanelLauncher Ensure(
         Transform pageRoot,
         BasePanel ownerPanel,
-        GameController controller)
+        Mod_GameController controller)
     {
         if (pageRoot == null)
             return null;
@@ -78,7 +78,7 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour, ISettingsPageLife
     }
 
     /// <summary>绑定本页控件，并接入当前玩家的输入绑定服务。</summary>
-    private void Initialize(BasePanel ownerPanel, GameController controller)
+    private void Initialize(BasePanel ownerPanel, Mod_GameController controller)
     {
         parentPanel = ownerPanel;
         BindPageControls();
@@ -107,7 +107,7 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour, ISettingsPageLife
     }
 
     /// <summary>世界内复用当前玩家服务；主菜单创建只承载持久化设置的独立输入资产。</summary>
-    private InputBindingService ResolveBindingService(GameController controller)
+    private InputBindingService ResolveBindingService(Mod_GameController controller)
     {
         if (controller != null)
             return controller.InputBindings;
@@ -169,7 +169,7 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour, ISettingsPageLife
         if (bindingService == null)
         {
             Debug.LogError(
-                "[InputBindingPanelLauncher] GameController 尚未准备好按键绑定服务。",
+                "[InputBindingPanelLauncher] Mod_GameController 尚未准备好按键绑定服务。",
                 this);
             return;
         }
@@ -355,7 +355,7 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour, ISettingsPageLife
 
         int selectedIndex = gameController != null
             ? (int)gameController.PreferredInputDevice
-            : (int)GameController.GetPreferredInputDevicePreference();
+            : (int)Mod_GameController.GetPreferredInputDevicePreference();
         controlModeDropdown.SetValueWithoutNotify(Mathf.Clamp(selectedIndex, 0, 2));
         controlModeDropdown.RefreshShownValue();
     }
@@ -368,12 +368,12 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour, ISettingsPageLife
             if (selectedIndex < 0 || selectedIndex > 2)
                 return;
 
-            GameController.SavePreferredInputDevicePreference(
-                (GameController.InputDeviceType)selectedIndex);
+            Mod_GameController.SavePreferredInputDevicePreference(
+                (Mod_GameController.InputDeviceType)selectedIndex);
         }
         else
         {
-            gameController.SetPreferredInputDevice((GameController.InputDeviceType)selectedIndex);
+            gameController.SetPreferredInputDevice((Mod_GameController.InputDeviceType)selectedIndex);
         }
 
         RefreshControlModeDropdown();

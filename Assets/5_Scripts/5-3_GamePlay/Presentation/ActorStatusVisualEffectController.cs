@@ -4,7 +4,7 @@ using UnityEngine;
 
 /// <summary>
 /// 通用角色状态视觉控制器。
-/// 监听角色 BuffManager 的添加、移除和续期事件，为状态提供附着式 Sprite 序列、低强度光晕或 VisualEffectManager 池化特效；当前燃烧使用八帧火焰，
+/// 监听角色 Mod_BuffManager 的添加、移除和续期事件，为状态提供附着式 Sprite 序列、低强度光晕或 VisualEffectManager 池化特效；当前燃烧使用八帧火焰，
 /// 出血1/2/3复用一个持续循环的红色血滴粒子，光耀复用圆形精灵叠加轻微呼吸光。后续中毒、冰冻等状态只需在 Animator 模块 Prefab 追加配置，无需侵入 Buff 的伤害或 Tick 逻辑。
 /// </summary>
 [DisallowMultipleComponent]
@@ -110,7 +110,7 @@ public sealed class ActorStatusVisualEffectController : MonoBehaviour
         }
 
         /// <summary>判断该配置绑定的任意一个 Buff 当前是否仍存在。</summary>
-        public bool HasAnyBuff(BuffManager manager)
+        public bool HasAnyBuff(Mod_BuffManager manager)
         {
             if (manager == null)
                 return false;
@@ -228,7 +228,7 @@ public sealed class ActorStatusVisualEffectController : MonoBehaviour
         new Dictionary<string, RuntimeStatusGlowVisual>(StringComparer.OrdinalIgnoreCase);
 
     private SpriteRenderer sourceRenderer;
-    private BuffManager buffManager;
+    private Mod_BuffManager buffManager;
     private float nextReconciliationTime;
     private bool statusesDirty = true;
 
@@ -356,10 +356,10 @@ public sealed class ActorStatusVisualEffectController : MonoBehaviour
 
     #region Buff Binding
 
-    /// <summary>解析父级角色上的 BuffManager；模块延后创建时会在下一次校验自动重新绑定。</summary>
+    /// <summary>解析父级角色上的 Mod_BuffManager；模块延后创建时会在下一次校验自动重新绑定。</summary>
     private void BindBuffManager()
     {
-        BuffManager resolvedManager = ResolveBuffManager();
+        Mod_BuffManager resolvedManager = ResolveBuffManager();
         if (ReferenceEquals(buffManager, resolvedManager))
             return;
 
@@ -377,14 +377,14 @@ public sealed class ActorStatusVisualEffectController : MonoBehaviour
     }
 
     /// <summary>优先从角色 Item 的模块容器查找，兼容 Prefab 装配尚未完成的早期阶段。</summary>
-    private BuffManager ResolveBuffManager()
+    private Mod_BuffManager ResolveBuffManager()
     {
         Item owner = GetComponentInParent<Item>();
         if (owner == null)
-            return GetComponentInParent<BuffManager>();
+            return GetComponentInParent<Mod_BuffManager>();
 
-        BuffManager module = owner.itemMods?.GetMod_ByID<BuffManager>(ModText.BuffManager);
-        return module != null ? module : owner.GetComponentInChildren<BuffManager>(true);
+        Mod_BuffManager module = owner.itemMods?.GetMod_ByID<Mod_BuffManager>(ModText.Mod_BuffManager);
+        return module != null ? module : owner.GetComponentInChildren<Mod_BuffManager>(true);
     }
 
     /// <summary>解除旧模块事件，避免对象池复用后继续驱动已离场角色。</summary>
@@ -606,7 +606,7 @@ public sealed class ActorStatusVisualEffectController : MonoBehaviour
         return true;
     }
 
-    /// <summary>事件遗漏或 Buff 从存档恢复时，按权威 BuffManager 状态修正视觉。</summary>
+    /// <summary>事件遗漏或 Buff 从存档恢复时，按权威 Mod_BuffManager 状态修正视觉。</summary>
     private void ReconcileStatusVisuals()
     {
         foreach (KeyValuePair<string, RuntimeStatusVisual> pair in visualsByBuffId)

@@ -27,13 +27,13 @@ public static class GroundTileHarvestSystem
             tool.HarvestKind == ResourceToolKind.None || !tool.item.InHand ||
             tool.item.DestructionHandled || tool.item.Owner is not Player actor ||
             !actor.IsLocalProfile || actor.DestructionHandled ||
-            !(actor.itemMods.GetMod_ByID<DamageReceiver>(ModText.Hp)?.Hp > 0f))
+            !(actor.itemMods.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp)?.Hp > 0f))
         {
             reason = "当前无法使用铲子。";
             return false;
         }
 
-        GameController controller = actor.itemMods.GetMod_ByID<GameController>(ModText.Controller);
+        Mod_GameController controller = actor.itemMods.GetMod_ByID<Mod_GameController>(ModText.Controller);
         if (controller == null || controller.IsGameplayInputLocked ||
             (!controller.IsUsingMobile && controller.IsPointerOverUI()))
         {
@@ -88,7 +88,7 @@ public static class GroundTileHarvestSystem
             !tool.item.InHand || tool.item.Owner is not Player actor || !actor.IsLocalProfile)
             return false;
 
-        GameController controller = actor.itemMods.GetMod_ByID<GameController>(ModText.Controller);
+        Mod_GameController controller = actor.itemMods.GetMod_ByID<Mod_GameController>(ModText.Controller);
         ChunkMgr manager = ChunkMgr.ExistingInstance;
         if (controller == null || controller.IsGameplayInputLocked ||
             (!controller.IsUsingMobile && controller.IsPointerOverUI()) || manager == null ||

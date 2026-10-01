@@ -49,7 +49,7 @@ public class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyBinder
     [Tooltip("当前动画状态哈希")]
     [ShowInInspector, ReadOnly]
     private int currentStateHash;
-    private GameController cachedController;
+    private Mod_GameController cachedController;
     // 缓存命中模块，确保待机状态不保留伤害碰撞体。
     private Mod_Damage cachedDamageModule;
     // 持有者体力模块；没有体力模块的非玩家持有者不受该限制。
@@ -96,7 +96,7 @@ public class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyBinder
         if (item.Owner != null)
         {
             ownerStamina = item.Owner.itemMods?.GetMod_ByID<Mod_Stamina>(ModText.Stamina);
-            cachedController = item.Owner.GetComponentInChildren<GameController>();
+            cachedController = item.Owner.GetComponentInChildren<Mod_GameController>();
             if (cachedController != null)
             {
                 // 只监听中央攻击语义；手机交互与使用不会再误触发武器。

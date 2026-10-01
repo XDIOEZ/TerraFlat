@@ -11,21 +11,21 @@ public abstract class TileBlockBehaviour
     /// <summary>
     /// 进入该地块时调用
     /// </summary>
-    public virtual void OnEnter(Item item, TileData tileData, Map map, TileEffectReceiver receiver)
+    public virtual void OnEnter(Item item, TileData tileData, Map map, Mod_TileEffectReceiver receiver)
     {
     }
 
     /// <summary>
     /// 离开该地块时调用
     /// </summary>
-    public virtual void OnExit(Item item, TileData tileData, Map map, TileEffectReceiver receiver)
+    public virtual void OnExit(Item item, TileData tileData, Map map, Mod_TileEffectReceiver receiver)
     {
     }
 
     /// <summary>
     /// 每帧在该地块上时调用（可选）
     /// </summary>
-    public virtual void OnUpdate(Item item, TileData tileData, Map map, TileEffectReceiver receiver, float deltaTime)
+    public virtual void OnUpdate(Item item, TileData tileData, Map map, Mod_TileEffectReceiver receiver, float deltaTime)
     {
     }
 }

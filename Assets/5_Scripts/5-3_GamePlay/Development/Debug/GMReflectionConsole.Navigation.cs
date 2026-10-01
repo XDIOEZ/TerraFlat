@@ -461,13 +461,13 @@ public sealed partial class GMReflectionConsole
             GmPageId.Player,
             "手持 +9999",
             "手持 物品 数量",
-            () => InvokeByTypeName("PlayerAdminController", "AddAmountToCurrentHandItem", 9999f));
+            () => InvokeByTypeName("Mod_PlayerAdminController", "AddAmountToCurrentHandItem", 9999f));
         CreateSearchableButton(
             grid,
             GmPageId.Player,
             "背包 +100",
             "背包 物品 数量",
-            () => InvokeByTypeName("PlayerAdminController", "AddAmountToAllBagItems", 100f));
+            () => InvokeByTypeName("Mod_PlayerAdminController", "AddAmountToAllBagItems", 100f));
 
         RefreshTeleportShortcutButton();
         RefreshAdminInvincibilityButton();
@@ -622,7 +622,7 @@ public sealed partial class GMReflectionConsole
     /// <summary>按 0.1 倍步长设置本地玩家的时间流速。</summary>
     private void SetTimeScaleFromSlider(float value)
     {
-        PlayerAdminController controller = FindLocalPlayerModule<PlayerAdminController>();
+        Mod_PlayerAdminController controller = FindLocalPlayerModule<Mod_PlayerAdminController>();
         if (controller == null)
         {
             RefreshWorldRangeControls();
@@ -790,8 +790,8 @@ public sealed partial class GMReflectionConsole
         RefreshDayTimeControl();
 
         Player localPlayer = FindLocalPlayer();
-        PlayerAdminController controller = localPlayer != null
-            ? localPlayer.GetComponentInChildren<PlayerAdminController>(true)
+        Mod_PlayerAdminController controller = localPlayer != null
+            ? localPlayer.GetComponentInChildren<Mod_PlayerAdminController>(true)
             : null;
         timeScaleSlider.onValueChanged.RemoveListener(SetTimeScaleFromSlider);
         timeScaleSlider.interactable = controller != null;

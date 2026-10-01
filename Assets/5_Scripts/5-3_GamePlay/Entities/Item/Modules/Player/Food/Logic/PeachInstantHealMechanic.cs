@@ -24,7 +24,7 @@ public sealed class PeachInstantHealMechanic : IFoodMechanic, IFoodConsumptionOb
             return;
         }
 
-        DamageReceiver receiver = result.Consumer.itemMods?.GetMod_ByID<DamageReceiver>(ModText.Hp);
+        Mod_DamageReceiver receiver = result.Consumer.itemMods?.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
         Mod_PlayerDeathState deathState = result.Consumer.itemMods?.GetMod_ByID<Mod_PlayerDeathState>(
             Mod_PlayerDeathState.ModuleId);
         if (receiver == null || receiver.Hp <= 0f || deathState?.IsInDyingState == true)

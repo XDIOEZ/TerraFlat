@@ -266,7 +266,7 @@ public class FurnaceLogic : MachineLogic
     private static bool HasHeldIgnition(Player actor)
     {
         if (actor == null) return false;
-        Item held = actor.itemMods?.GetMod_ByID<Inventory_HotBar>(ModText.Hotbar)?.CurentSelectItem;
+        Item held = actor.itemMods?.GetMod_ByID<Mod_HotBar>(ModText.Hotbar)?.CurentSelectItem;
         return held != null && held.InHand && held.Owner == actor &&
             held.itemMods?.GetMod_ByID<Mod_Combustion>(Mod_Combustion.ModuleId)?.IsActivelyBurning == true;
     }

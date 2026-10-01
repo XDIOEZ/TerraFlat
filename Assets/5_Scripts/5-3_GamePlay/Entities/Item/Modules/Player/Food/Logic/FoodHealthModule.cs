@@ -9,7 +9,7 @@ public sealed class FoodHealthModule : IFoodMechanic, IFoodTickObserver, IFoodTi
     private const float WaterDamageTickInterval = 5f;
 
     private readonly IFoodRuntimeContext context;
-    private readonly DamageReceiver damageReceiver;
+    private readonly Mod_DamageReceiver damageReceiver;
     private readonly Mod_PlayerDeathState deathState;
     private readonly Mod_Food.FoodHealthState state;
 
@@ -19,7 +19,7 @@ public sealed class FoodHealthModule : IFoodMechanic, IFoodTickObserver, IFoodTi
 
     public FoodHealthModule(
         IFoodRuntimeContext context,
-        DamageReceiver damageReceiver,
+        Mod_DamageReceiver damageReceiver,
         Mod_PlayerDeathState deathState)
     {
         this.context = context;

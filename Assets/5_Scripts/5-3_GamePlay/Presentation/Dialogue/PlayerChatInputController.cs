@@ -13,7 +13,7 @@ namespace FlatWorld.Dialogue
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(Player))]
-    [RequireComponent(typeof(GameController))]
+    [RequireComponent(typeof(Mod_GameController))]
     [RequireComponent(typeof(CharacterSoliloquyController))]
     public sealed class PlayerChatInputController : MonoBehaviour
     {
@@ -39,7 +39,7 @@ namespace FlatWorld.Dialogue
             new List<IPlayerChatCommandHandler>();
 
         private Player player;
-        private GameController gameController;
+        private Mod_GameController gameController;
         private CharacterSoliloquyController speechController;
         private GameObject viewObject;
         private RectTransform viewRect;
@@ -449,7 +449,7 @@ private bool EnsureView()
             if (player == null)
                 player = GetComponent<Player>();
             if (gameController == null)
-                gameController = GetComponent<GameController>();
+                gameController = GetComponent<Mod_GameController>();
             if (speechController == null)
                 speechController = GetComponent<CharacterSoliloquyController>();
         }

@@ -174,7 +174,7 @@ public sealed class Mod_WaterVessel : Module, IInteractable, ILiquidVessel
     public bool CanOperate(Item actor)
     {
         if (!GameNetwork.HasStateAuthority || actor == null || actor.DestructionHandled || item == null || item.DestructionHandled ||
-            !(actor.itemMods.GetMod_ByID<DamageReceiver>(ModText.Hp)?.Hp > 0f))
+            !(actor.itemMods.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp)?.Hp > 0f))
             return false;
         return item.InHand ? item.Owner == actor :
             item.Owner == null && WorldTopologyRuntime.ShortestDelta(actor.transform.position, item.transform.position).sqrMagnitude <= reach * reach;
@@ -659,7 +659,7 @@ public sealed class Mod_WaterVessel : Module, IInteractable, ILiquidVessel
     /// <summary>当前快捷栏手持物若正是拖拽来源，则返回它的运行时容器模块。</summary>
     private static Mod_WaterVessel ResolveHeldRuntimeSource(Item actor, ItemData sourceItemData)
     {
-        Inventory_HotBar hotbar = actor?.itemMods?.GetMod_ByID<Inventory_HotBar>(ModText.Hotbar);
+        Mod_HotBar hotbar = actor?.itemMods?.GetMod_ByID<Mod_HotBar>(ModText.Hotbar);
         Item heldItem = hotbar?.CurentSelectItem;
         if (heldItem?.itemData == null || !IsSameItemData(heldItem.itemData, sourceItemData))
             return null;
@@ -761,7 +761,7 @@ public sealed class Mod_WaterVessel : Module, IInteractable, ILiquidVessel
         Save();
         RefreshVisual();
         RefreshContainingInventoryPresentation();
-        // 快捷栏当前手持实例会把 OnUIRefresh 绑定到 Inventory_HotBar.RefreshUI；
+        // 快捷栏当前手持实例会把 OnUIRefresh 绑定到 Mod_HotBar.RefreshUI；
         // 模块内部状态变化不会替换 ItemData 引用，因此必须显式发布这一运行时表现事件。
         item.OnUIRefresh?.Invoke();
         ItemNetworkStateSerialization.NotifyRuntimeStateChanged(item);
@@ -801,7 +801,7 @@ public sealed class Mod_WaterVessel : Module, IInteractable, ILiquidVessel
         if (building != null && building.IsPlacementModeActive)
             return false;
 
-        GameController controller = actor.itemMods.GetMod_ByID<GameController>(ModText.Controller);
+        Mod_GameController controller = actor.itemMods.GetMod_ByID<Mod_GameController>(ModText.Controller);
         if (controller == null || controller.IsGameplayInputLocked ||
             (!controller.IsUsingMobile && controller.IsPointerOverUI()))
         {

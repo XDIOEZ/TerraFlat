@@ -19,7 +19,7 @@ namespace FlatWorld.AIECS.Gameplay
         #region 所有权与外部代理
         private sealed class ExternalProxy
         {
-            public Item Item; public DamageReceiver Receiver; public Collider2D BodyCollider, HitCollider;
+            public Item Item; public Mod_DamageReceiver Receiver; public Collider2D BodyCollider, HitCollider;
             public CombatIdentity Key; public Entity Entity; public int Group;
             public string Faction; public int FactionIndex; // 只有实际身份变化时规范化字符串。
         }
@@ -126,7 +126,7 @@ namespace FlatWorld.AIECS.Gameplay
         /// <summary>为少量真实玩家维护受击/感知代理；引用只存在 Bridge 中。</summary>
         private void AddPlayer(Player player, int group)
         {
-            DamageReceiver receiver = player.itemMods.GetMod_ByID<DamageReceiver>(ModText.Hp);
+            Mod_DamageReceiver receiver = player.itemMods.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
             if (receiver == null) throw new InvalidOperationException("当前玩家没有生命接收器，无法建立双向战斗入口。");
             var proxy = new ExternalProxy { Item = player, Receiver = receiver, Group = group,
                 BodyCollider = player.GetComponent<Collider2D>(), HitCollider = receiver.GetComponent<Collider2D>(), Key = IdentityOf(player) };

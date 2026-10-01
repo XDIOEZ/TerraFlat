@@ -131,7 +131,7 @@ public static class WorldItemWaterSystem
             return false;
         if (item.itemData.inHand || RuntimeAiEntityUtility.IsAiEntity(item))
             return false;
-        if (item.GetComponentInChildren<TileEffectReceiver>(true) != null)
+        if (item.GetComponentInChildren<Mod_TileEffectReceiver>(true) != null)
             return false;
         Mod_Projectile projectile = item.GetComponentInChildren<Mod_Projectile>(true);
         if (projectile != null && projectile.HasActiveWorldAttachment)

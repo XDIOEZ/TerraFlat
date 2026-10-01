@@ -112,7 +112,7 @@ public abstract class AI_Base<TState> : Module, IAIActor where TState : struct, 
 	[SerializeField, ReadOnly] private float _damageThreatRemain;
 	private Vector3 _lastDamageThreatPosition;
 	private bool _freezeDamageThreatOrigin; // 投射物来源按命中瞬间冻结，不能跟着穿过身体的弹体翻转方向。
-	private DamageReceiver _damageEventSource;
+	private Mod_DamageReceiver _damageEventSource;
 	// 睡眠中受到有效伤害后锁存一次唤醒请求，直到真正离开睡眠状态。
 	private bool _sleepInterruptedByDamage;
 	// 路径代价拒绝后暂时屏蔽同一追击目标，避免状态机立即重复追击。
@@ -121,8 +121,8 @@ public abstract class AI_Base<TState> : Module, IAIActor where TState : struct, 
 #endregion
 
 #region CachedModules
-	[SerializeField, ReadOnly] protected Mover_AI _mover;
-	[SerializeField, ReadOnly] protected DamageReceiver _hp;
+	[SerializeField, ReadOnly] protected Mod_Mover_AI _mover;
+	[SerializeField, ReadOnly] protected Mod_DamageReceiver _hp;
 	[SerializeField, ReadOnly] protected Mod_ItemDetector _detector;
 	[SerializeField, ReadOnly] protected Mod_AnimatorController _animator;
 	[SerializeField, ReadOnly] protected Mod_TurnBack _turnBody;
@@ -1012,7 +1012,7 @@ public abstract class AI_Base<TState> : Module, IAIActor where TState : struct, 
 #region Debug
 	private string GetDebugBuffInfo()
 	{
-		BuffManager buffManager = item?.itemMods?.GetMod_ByID<BuffManager>(ModText.BuffManager);
+		Mod_BuffManager buffManager = item?.itemMods?.GetMod_ByID<Mod_BuffManager>(ModText.Mod_BuffManager);
 		if (buffManager?.ActiveBuffs == null || buffManager.ActiveBuffs.Count == 0)
 			return string.Empty;
 
@@ -1038,15 +1038,15 @@ public abstract class AI_Base<TState> : Module, IAIActor where TState : struct, 
 #endregion
 
 #region ModuleBinding
-	/// <summary>绑定通用模块（Mover、Detector、Hp、Animator），并调用子类的额外绑定</summary>
+	/// <summary>绑定通用模块（Mod_Mover、Detector、Hp、Animator），并调用子类的额外绑定</summary>
 	protected void BindCommonModules()
 	{
 		_isReady = true;
 
-		item.itemMods.GetMod_ByID(ModText.Mover, out _mover);
+		item.itemMods.GetMod_ByID(ModText.Mod_Mover, out _mover);
 		if (_mover == null)
 		{
-			item.itemMods.GetMod_ByID(ModText.Mover_AI, out _mover);
+			item.itemMods.GetMod_ByID(ModText.Mod_Mover_AI, out _mover);
 		}
 
 		item.itemMods.GetMod_ByID(ModText.Detector, out _detector);

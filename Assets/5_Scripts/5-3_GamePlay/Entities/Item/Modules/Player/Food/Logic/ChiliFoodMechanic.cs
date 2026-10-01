@@ -18,14 +18,14 @@ public sealed class ChiliFoodMechanic : IFoodMechanic, IFoodConsumptionObserver
 
     #region 食用完成
 
-    /// <summary>只在玩家完整吃完一颗辣椒后添加状态，由 BuffManager 统一处理续期。</summary>
+    /// <summary>只在玩家完整吃完一颗辣椒后添加状态，由 Mod_BuffManager 统一处理续期。</summary>
     public void OnFoodConsumed(FoodConsumeResult result)
     {
         if (!GameNetwork.HasStateAuthority || !(result.Consumer is Player) ||
             !string.Equals(result.ConsumedItem?.itemData?.IDName, ItemId, StringComparison.OrdinalIgnoreCase))
             return;
 
-        BuffManager buffs = result.Consumer.itemMods.GetMod_ByID<BuffManager>(ModText.BuffManager);
+        Mod_BuffManager buffs = result.Consumer.itemMods.GetMod_ByID<Mod_BuffManager>(ModText.Mod_BuffManager);
         buffs?.AddBuff(BuffId);
     }
 

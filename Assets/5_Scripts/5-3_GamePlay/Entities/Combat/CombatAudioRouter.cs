@@ -21,7 +21,7 @@ public enum CombatWeaponAudioClass
 
 /// <summary>
 /// 受击对象材质。Auto 会根据物品 ID、名称和标签推断，
-/// 新对象可直接在 DamageReceiver 上显式指定。
+/// 新对象可直接在 Mod_DamageReceiver 上显式指定。
 /// </summary>
 public enum CombatImpactMaterial
 {
@@ -88,7 +88,7 @@ public static class CombatAudioRouter
         AudioService.Instance.PlayAttached(cueId, origin);
     }
 
-    public static void PlayImpact(DamageReceiver receiver, DamageReceiverDamageInfo damageInfo)
+    public static void PlayImpact(Mod_DamageReceiver receiver, DamageReceiverDamageInfo damageInfo)
     {
         if (receiver == null ||
             damageInfo == null ||
@@ -154,7 +154,7 @@ public static class CombatAudioRouter
         return CombatWeaponAudioClass.Generic;
     }
 
-    private static CombatImpactMaterial ResolveImpactMaterial(DamageReceiver receiver)
+    private static CombatImpactMaterial ResolveImpactMaterial(Mod_DamageReceiver receiver)
     {
         if (receiver.ImpactAudioMaterial != CombatImpactMaterial.Auto)
             return receiver.ImpactAudioMaterial;

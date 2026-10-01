@@ -51,7 +51,7 @@ public sealed class Mod_Plantable : Module
     private bool actBound;
     private bool previewCreationFailed;
     private PlantingSummoner plantingSummoner;
-    private GameController ownerController;
+    private Mod_GameController ownerController;
 
     /// <summary>当前指向有效耕地时，本模块保留这次使用动作，供食物等并存模块做优先级仲裁。</summary>
     public bool IsPlantingActionAvailable
@@ -60,7 +60,7 @@ public sealed class Mod_Plantable : Module
         {
             if (!GameNetwork.HasStateAuthority || item == null || !item.InHand || item.Owner == null)
                 return false;
-            if (!TryResolveOwnerController(out GameController controller))
+            if (!TryResolveOwnerController(out Mod_GameController controller))
                 return false;
             return TryResolvePlantingTarget(controller.GetMouseWorldPosition(), out _, out _);
         }
@@ -117,7 +117,7 @@ public sealed class Mod_Plantable : Module
             return;
         }
 
-        if (!TryResolveOwnerController(out GameController controller))
+        if (!TryResolveOwnerController(out Mod_GameController controller))
         {
             DisposePlantingSummoner();
             return;
@@ -141,7 +141,7 @@ public sealed class Mod_Plantable : Module
         if (!GameNetwork.HasStateAuthority || item == null || !item.InHand || item.Owner == null)
             return;
 
-        if (!TryResolveOwnerController(out GameController controller))
+        if (!TryResolveOwnerController(out Mod_GameController controller))
             return;
 
         Vector3 pointerWorldPosition = controller.GetMouseWorldPosition();
@@ -173,7 +173,7 @@ public sealed class Mod_Plantable : Module
         target.agriculture.RegisterCrop(target.tilePosition, crop);
         target.agriculture.CaptureState();
 
-        Inventory_HotBar hotbar = actor.itemMods.GetMod_ByID<Inventory_HotBar>(ModText.Hotbar);
+        Mod_HotBar hotbar = actor.itemMods.GetMod_ByID<Mod_HotBar>(ModText.Hotbar);
         hotbar?.RuntimeInventory?.SyncHeldItemImmediately();
         hotbar?.NotifyOwnerNetworkStateChanged();
     }
@@ -290,7 +290,7 @@ public sealed class Mod_Plantable : Module
             return false;
         }
 
-        if (!TryResolveOwnerController(out GameController controller) || controller == null || item.Owner == null)
+        if (!TryResolveOwnerController(out Mod_GameController controller) || controller == null || item.Owner == null)
         {
             reason = "种植者控制器尚未就绪";
             return false;
@@ -350,7 +350,7 @@ public sealed class Mod_Plantable : Module
             }
             consumed = true;
             target.agriculture.CaptureEntityCrop(handle);
-            Inventory_HotBar hotbar = actor.itemMods.GetMod_ByID<Inventory_HotBar>(ModText.Hotbar);
+            Mod_HotBar hotbar = actor.itemMods.GetMod_ByID<Mod_HotBar>(ModText.Hotbar);
             hotbar?.RuntimeInventory?.SyncHeldItemImmediately();
             hotbar?.NotifyOwnerNetworkStateChanged();
         }
@@ -430,7 +430,7 @@ public sealed class Mod_Plantable : Module
 
     #region 玩家控制器
 
-    private bool TryResolveOwnerController(out GameController controller)
+    private bool TryResolveOwnerController(out Mod_GameController controller)
     {
         if (ownerController != null)
         {
@@ -439,8 +439,8 @@ public sealed class Mod_Plantable : Module
         }
 
         Item owner = item?.Owner;
-        ownerController = owner?.itemMods?.GetMod_ByID<GameController>(ModText.Controller);
-        ownerController ??= owner?.GetComponent<GameController>();
+        ownerController = owner?.itemMods?.GetMod_ByID<Mod_GameController>(ModText.Controller);
+        ownerController ??= owner?.GetComponent<Mod_GameController>();
         controller = ownerController;
         return controller != null;
     }

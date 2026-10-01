@@ -12,7 +12,7 @@ public class CheckHealth : ActionNode
     [SerializeField]
     private bool usePercent = true;
 
-    private DamageReceiver health => context.damageReciver;
+    private Mod_DamageReceiver health => context.damageReciver;
 
     protected override void OnStart()
     {

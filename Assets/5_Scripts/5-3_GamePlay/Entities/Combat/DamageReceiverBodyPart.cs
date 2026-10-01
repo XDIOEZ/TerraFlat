@@ -3,7 +3,7 @@ using Newtonsoft.Json;
 using UnityEngine;
 
 /// <summary>
-/// Character body regions managed by <see cref="DamageReceiver"/>.
+/// Character body regions managed by <see cref="Mod_DamageReceiver"/>.
 /// </summary>
 public enum BodyPartType
 {
@@ -64,7 +64,7 @@ public sealed class BodyPartDamageInfo
 /// </summary>
 public sealed class BodyPartHealthChangeInfo
 {
-    public DamageReceiver Receiver;
+    public Mod_DamageReceiver Receiver;
     public BodyPartType Part;
     public float HpBefore;
     public float HpAfter;

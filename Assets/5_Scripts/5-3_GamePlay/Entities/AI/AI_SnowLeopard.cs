@@ -494,7 +494,7 @@ public sealed partial class AI_SnowLeopard : AI_Base<SnowLeopardState>
         if (target == null || target == item)
             return false;
 
-        DamageReceiver receiver = target.itemMods?.GetMod_ByID<DamageReceiver>(ModText.Hp);
+        Mod_DamageReceiver receiver = target.itemMods?.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
         return receiver != null && receiver.Hp > 0f;
     }
 

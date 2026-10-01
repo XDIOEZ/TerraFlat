@@ -5,7 +5,7 @@ using UnityEngine;
 
 /// <summary>
 /// 蜜蜂的独立飞行行为模块：1440 点饱食度支撑一个游戏日，采蜜、返巢和警戒均由本模块决定。
-/// 飞行导航仍由 AI_Bird 执行；蜂蜜和成员快照由所属 Mod_HiveColony 持久化。
+/// 飞行导航仍由 Mod_AI_Bird 执行；蜂蜜和成员快照由所属 Mod_HiveColony 持久化。
 /// 采蜜物种通过 BeeForage.Crop / BeeForage.Flower 标签注册，不依赖具体物品 ID。
 /// </summary>
 public sealed partial class Mod_BeeBehavior : Module, IBirdFlightPilot, IDamageSender,
@@ -62,7 +62,7 @@ public sealed partial class Mod_BeeBehavior : Module, IBirdFlightPilot, IDamageS
     [Min(0.1f)] public float StingInterval = 1f; // 同一蜜蜂的攻击间隔。
 
     private BeeState state = new(); // 本蜂权威玩法状态。
-    private AI_Bird bird; // 复用飞行与导航的通用模块。
+    private Mod_AI_Bird bird; // 复用飞行与导航的通用模块。
     private Mod_HiveColony colony; // 归属蜂巢。
     private Mod_ItemDetector detector; // 共用地形视线判断。
     private float stingRemaining; // 蜇刺剩余冷却。
@@ -82,7 +82,7 @@ public sealed partial class Mod_BeeBehavior : Module, IBirdFlightPilot, IDamageS
     #region 装配与持久化
     public override void Load()
     {
-        bird = item.itemMods.RequireSingleModById<AI_Bird>("AI_Bird");
+        bird = item.itemMods.RequireSingleModById<Mod_AI_Bird>("Mod_AI_Bird");
         detector = item.itemMods.RequireSingleModById<Mod_ItemDetector>(ModText.Detector);
         if (!bird.permanentFlight || SatietyMaximum <= ReturnAbove || ReturnAbove <= ForageBelow ||
             HoneyContributionCost < 0f || HoneyMealGain < 0f || CropGainPerSecond <= 0f ||

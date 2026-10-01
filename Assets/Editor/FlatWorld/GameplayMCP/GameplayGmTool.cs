@@ -232,10 +232,10 @@ namespace FlatWorld.GameplayMCP
         /// <summary>解析当前本地玩家的管理员控制器。</summary>
         internal static bool TryGetAdminController(
             Player player,
-            out PlayerAdminController controller,
+            out Mod_PlayerAdminController controller,
             out string error)
         {
-            controller = player?.GetComponentInChildren<PlayerAdminController>(true);
+            controller = player?.GetComponentInChildren<Mod_PlayerAdminController>(true);
             if (player == null)
             {
                 error = "当前本地玩家不可用。";
@@ -244,7 +244,7 @@ namespace FlatWorld.GameplayMCP
 
             if (controller == null)
             {
-                error = "当前本地玩家缺少 PlayerAdminController。";
+                error = "当前本地玩家缺少 Mod_PlayerAdminController。";
                 return false;
             }
 
@@ -256,7 +256,7 @@ namespace FlatWorld.GameplayMCP
         internal static JObject BuildStatus(
             string command,
             Player player,
-            PlayerAdminController controller)
+            Mod_PlayerAdminController controller)
         {
             return new JObject
             {
@@ -287,7 +287,7 @@ namespace FlatWorld.GameplayMCP
         {
             if (!GameplayMcpGmCommandRegistry.TryGetAdminController(
                     player,
-                    out PlayerAdminController controller,
+                    out Mod_PlayerAdminController controller,
                     out error))
             {
                 result = null;
@@ -310,7 +310,7 @@ namespace FlatWorld.GameplayMCP
         {
             if (!GameplayMcpGmCommandRegistry.TryGetAdminController(
                     player,
-                    out PlayerAdminController controller,
+                    out Mod_PlayerAdminController controller,
                     out error))
             {
                 result = null;
@@ -340,7 +340,7 @@ namespace FlatWorld.GameplayMCP
         {
             if (!GameplayMcpGmCommandRegistry.TryGetAdminController(
                     player,
-                    out PlayerAdminController controller,
+                    out Mod_PlayerAdminController controller,
                     out error))
             {
                 result = null;
@@ -380,7 +380,7 @@ namespace FlatWorld.GameplayMCP
         {
             if (!GameplayMcpGmCommandRegistry.TryGetAdminController(
                     player,
-                    out PlayerAdminController controller,
+                    out Mod_PlayerAdminController controller,
                     out error))
             {
                 result = null;
@@ -420,7 +420,7 @@ namespace FlatWorld.GameplayMCP
         {
             if (!GameplayMcpGmCommandRegistry.TryGetAdminController(
                     player,
-                    out PlayerAdminController controller,
+                    out Mod_PlayerAdminController controller,
                     out error))
             {
                 result = null;
@@ -460,7 +460,7 @@ namespace FlatWorld.GameplayMCP
         {
             if (!GameplayMcpGmCommandRegistry.TryGetAdminController(
                     player,
-                    out PlayerAdminController controller,
+                    out Mod_PlayerAdminController controller,
                     out error))
             {
                 result = null;
@@ -493,13 +493,13 @@ namespace FlatWorld.GameplayMCP
         }
     }
 
-    /// <summary>向当前受控玩家施加一个已注册 Buff，复用正式 BuffManager 生命周期。</summary>
+    /// <summary>向当前受控玩家施加一个已注册 Buff，复用正式 Mod_BuffManager 生命周期。</summary>
     [GameplayMcpGmCommand(
         "apply_self_buff",
-        "Apply one exact registered BuffDefinition id to the current controlled local player through BuffManager.AddBuff. Invoke as command=apply_self_buff:<buffId>.")]
+        "Apply one exact registered BuffDefinition id to the current controlled local player through Mod_BuffManager.AddBuff. Invoke as command=apply_self_buff:<buffId>.")]
     internal sealed class GameplayMcpGmApplySelfBuffCommand : IGameplayMcpGmCommand
     {
-        /// <summary>校验目录与玩家模块后，通过正式 BuffManager 施加状态。</summary>
+        /// <summary>校验目录与玩家模块后，通过正式 Mod_BuffManager 施加状态。</summary>
         public bool TryExecute(Player player, JObject parameters, out JObject result, out string error)
         {
             string buffId = parameters?["buffId"]?.ToString()?.Trim();
@@ -518,11 +518,11 @@ namespace FlatWorld.GameplayMCP
                 return false;
             }
 
-            BuffManager manager = player?.itemMods?.GetMod_ByID<BuffManager>(ModText.BuffManager);
+            Mod_BuffManager manager = player?.itemMods?.GetMod_ByID<Mod_BuffManager>(ModText.Mod_BuffManager);
             if (manager == null)
             {
                 result = null;
-                error = "当前玩家缺少 BuffManager。";
+                error = "当前玩家缺少 Mod_BuffManager。";
                 return false;
             }
 
@@ -532,7 +532,7 @@ namespace FlatWorld.GameplayMCP
             if (!applied && !active)
             {
                 result = null;
-                error = $"BuffManager 拒绝施加 Buff：{definition.Id}。";
+                error = $"Mod_BuffManager 拒绝施加 Buff：{definition.Id}。";
                 return false;
             }
 

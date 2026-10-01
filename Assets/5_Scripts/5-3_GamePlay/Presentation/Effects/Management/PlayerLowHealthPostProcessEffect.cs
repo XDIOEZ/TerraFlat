@@ -2,7 +2,7 @@ using UnityEngine;
 
 /// <summary>
 /// 本地玩家低血量屏幕后处理适配器。生命值低于 30% 后按严重程度提交红黑 Vignette，
-/// 不修改 DamageReceiver 的结算；死亡和重生通过每帧校验生命比例保证表现不会残留。
+/// 不修改 Mod_DamageReceiver 的结算；死亡和重生通过每帧校验生命比例保证表现不会残留。
 /// </summary>
 [DisallowMultipleComponent]
 public sealed class PlayerLowHealthPostProcessEffect : MonoBehaviour,
@@ -21,7 +21,7 @@ public sealed class PlayerLowHealthPostProcessEffect : MonoBehaviour,
     #region 运行时状态
 
     private Player player;
-    private DamageReceiver damageReceiver;
+    private Mod_DamageReceiver damageReceiver;
     private float cachedHealth01 = 1f;
     private bool isRegistered;
 
@@ -51,7 +51,7 @@ public sealed class PlayerLowHealthPostProcessEffect : MonoBehaviour,
     }
 
     /// <summary>绑定玩家与生命模块；重复加载时先解除旧事件，避免同一血量重复提交。</summary>
-    public void Bind(Player owner, DamageReceiver receiver)
+    public void Bind(Player owner, Mod_DamageReceiver receiver)
     {
         Unbind();
         player = owner;

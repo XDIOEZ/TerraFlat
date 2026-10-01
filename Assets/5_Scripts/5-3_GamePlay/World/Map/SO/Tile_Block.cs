@@ -89,13 +89,13 @@ public class Tile_Block : ScriptableObject
     public virtual TileBase GetTileBaseAsset() => Definition.GetTileBaseAsset();
 
     /// <summary>旧地图转发到 JSON 创建的共享行为。</summary>
-    public void OnEnter(Item item, TileData tileData, Map map, TileEffectReceiver receiver)
+    public void OnEnter(Item item, TileData tileData, Map map, Mod_TileEffectReceiver receiver)
         => Definition.OnEnter(item, tileData, map, receiver);
 
-    public void OnExit(Item item, TileData tileData, Map map, TileEffectReceiver receiver)
+    public void OnExit(Item item, TileData tileData, Map map, Mod_TileEffectReceiver receiver)
         => Definition.OnExit(item, tileData, map, receiver);
 
-    public void OnUpdate(Item item, TileData tileData, Map map, TileEffectReceiver receiver, float deltaTime)
+    public void OnUpdate(Item item, TileData tileData, Map map, Mod_TileEffectReceiver receiver, float deltaTime)
         => Definition.OnUpdate(item, tileData, map, receiver, deltaTime);
     #endregion
 }

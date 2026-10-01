@@ -89,7 +89,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule
     public BoxCollider2D boxCollider2D;
     // 伤害模块由 ItemMods 注册表提供，禁止序列化嵌套 Prefab 的组件引用。
     [NonSerialized]
-    private DamageReceiver damageReceiver;
+    private Mod_DamageReceiver damageReceiver;
     [NonSerialized]
     private ShadowCaster2D _lightOccluder;
     private static readonly FieldInfo ShadowCasterShapePathField = ResolveShadowCasterField("m_ShapePath");
@@ -104,7 +104,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule
     private bool _placementPending;
     private bool _dismantlePending;
     private bool _ghostCreationFailed;
-    private GameController _ownerController;
+    private Mod_GameController _ownerController;
     private Player _placementActor;
 
     public override ModuleData _Data
@@ -1155,7 +1155,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule
         if (item?.itemData?.Stack == null || item.itemData.Stack.Amount < 1f)
             return false;
 
-        if (!TryGetSourceHotBarSlot(out Inventory_HotBar hotBar, out ItemSlot sourceSlot) ||
+        if (!TryGetSourceHotBarSlot(out Mod_HotBar hotBar, out ItemSlot sourceSlot) ||
             !hotBar.Data.TryConsumeFromSlot(sourceSlot, 1, out ItemData consumedData))
         {
             return false;
@@ -1188,7 +1188,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule
         if (item?.itemData?.Stack == null)
             return;
 
-        if (!TryGetSourceHotBarSlot(out Inventory_HotBar hotBar, out ItemSlot sourceSlot))
+        if (!TryGetSourceHotBarSlot(out Mod_HotBar hotBar, out ItemSlot sourceSlot))
         {
             Debug.LogError("[建筑安装] 无法解析召唤器所属快捷栏槽位，不能应用权威数量", item);
             return;
@@ -1214,7 +1214,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule
     }
 
     /// <summary>建筑扣料后直接刷新快捷栏表现，不能只依赖通用库存事件等待后续 UI 同步。</summary>
-    private static void RefreshSourceHotBarSlot(Inventory_HotBar hotBar, ItemSlot sourceSlot)
+    private static void RefreshSourceHotBarSlot(Mod_HotBar hotBar, ItemSlot sourceSlot)
     {
         if (hotBar?.Data?.itemSlots == null || sourceSlot == null)
             return;
@@ -1225,9 +1225,9 @@ public partial class Mod_Building : Module, IIncomingDamageRule
     }
 
     /// <summary>建筑召唤器只允许从玩家当前快捷栏真实槽位扣除。</summary>
-    private bool TryGetSourceHotBarSlot(out Inventory_HotBar hotBar, out ItemSlot sourceSlot)
+    private bool TryGetSourceHotBarSlot(out Mod_HotBar hotBar, out ItemSlot sourceSlot)
     {
-        hotBar = item?.Owner?.itemMods?.GetMod_ByID<Inventory_HotBar>(ModText.Hotbar);
+        hotBar = item?.Owner?.itemMods?.GetMod_ByID<Mod_HotBar>(ModText.Hotbar);
         sourceSlot = hotBar?.CurrentSelectItemSlot;
         if (hotBar?.Data?.itemSlots == null || sourceSlot == null || !hotBar.Data.itemSlots.Contains(sourceSlot))
             return false;
@@ -1464,9 +1464,9 @@ public partial class Mod_Building : Module, IIncomingDamageRule
         if (boxCollider2D == null) boxCollider2D = GetComponent<BoxCollider2D>();
         if (boxCollider2D == null) boxCollider2D = item.GetComponentInChildren<BoxCollider2D>(true);
 
-        damageReceiver = item.itemMods.GetMod_ByID<DamageReceiver>(ModText.Hp);
+        damageReceiver = item.itemMods.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
         if (damageReceiver == null)
-            throw new MissingComponentException($"[Mod_Building] {item.name} 缺少 DamageReceiver 模块");
+            throw new MissingComponentException($"[Mod_Building] {item.name} 缺少 Mod_DamageReceiver 模块");
     }
 
     #region 2D 光照遮挡
@@ -1831,9 +1831,9 @@ public partial class Mod_Building : Module, IIncomingDamageRule
     {
         if (_ownerController == null && item?.Owner != null)
         {
-            _ownerController = item.Owner.itemMods?.GetMod_ByID<GameController>(ModText.Controller);
+            _ownerController = item.Owner.itemMods?.GetMod_ByID<Mod_GameController>(ModText.Controller);
             if (_ownerController == null)
-                _ownerController = item.Owner.GetComponent<GameController>();
+                _ownerController = item.Owner.GetComponent<Mod_GameController>();
         }
 
         return _ownerController != null

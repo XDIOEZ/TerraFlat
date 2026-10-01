@@ -50,7 +50,7 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
     private static PlayerMobileControlsHUD activeLocalHud;
 
     private Player player;
-    private GameController controller;
+    private Mod_GameController controller;
     private GameObject viewObject;
     private GameObject gameplayLayer;
     private CanvasGroup gameplayOpacityGroup;
@@ -69,7 +69,7 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
     private Transform hotbarCraftingHome;
     private RectTransform hotbarBackpackButton;
     private Transform hotbarBackpackHome;
-    private Mover mover;
+    private Mod_Mover mover;
     private Image runButtonImage;
     private Outline runButtonOutline;
     private Image runStateIndicator;
@@ -125,8 +125,8 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
     private void Awake()
     {
         player = GetComponent<Player>();
-        controller = GetComponentInChildren<GameController>(true);
-        mover = GetComponentInChildren<Mover>(true);
+        controller = GetComponentInChildren<Mod_GameController>(true);
+        mover = GetComponentInChildren<Mod_Mover>(true);
     }
 
     /// <summary>绑定本地玩家、设置与系统手势边距变化，并刷新手机 HUD 可见性。</summary>
@@ -218,11 +218,11 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
             return false;
 
         return controller != null &&
-               controller.PreferredInputDevice == GameController.InputDeviceType.Mobile;
+               controller.PreferredInputDevice == Mod_GameController.InputDeviceType.Mobile;
     }
 
     /// <summary>设置切换控制方式后立即刷新触屏 HUD，并可靠释放旧触控状态。</summary>
-    private void HandleInputDeviceChanged(GameController.InputDeviceType deviceType)
+    private void HandleInputDeviceChanged(Mod_GameController.InputDeviceType deviceType)
     {
         RefreshAvailability();
     }
@@ -895,7 +895,7 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         inputButton.Configure(virtualButton);
     }
 
-    /// <summary>缓存奔跑开关的两态视觉节点，状态由真实 Mover 统一驱动。</summary>
+    /// <summary>缓存奔跑开关的两态视觉节点，状态由真实 Mod_Mover 统一驱动。</summary>
     private void CacheRunButtonVisual()
     {
         Transform runButton = FindRequired("奔跑");
@@ -908,7 +908,7 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
     private void BindRunStateVisual()
     {
         if (mover == null)
-            mover = GetComponentInChildren<Mover>(true);
+            mover = GetComponentInChildren<Mod_Mover>(true);
         if (mover == null || viewObject == null)
             return;
 
@@ -1018,7 +1018,7 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
     private bool TryConfigureHotbarWidth()
     {
         RectTransform hotbarAnchor = FindRequired(HotbarAnchorName) as RectTransform;
-        Inventory_HotBar hotbar = GetComponentInChildren<Inventory_HotBar>(true);
+        Mod_HotBar hotbar = GetComponentInChildren<Mod_HotBar>(true);
         RectTransform hotbarRect = hotbar?.RuntimeInventory?.basePanel?.transform as RectTransform;
         if (hotbarAnchor == null || hotbarRect == null)
             return false;

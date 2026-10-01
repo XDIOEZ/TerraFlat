@@ -60,13 +60,13 @@ namespace FlatWorld.GameplayMCP
             try
             {
                 keyboard = UnityInputSystem.AddDevice<Keyboard>(VirtualKeyboardName);
-                UnityInputSystem.SetDeviceUsage(keyboard, GameController.ExternalGameplayInputDeviceUsage);
+                UnityInputSystem.SetDeviceUsage(keyboard, Mod_GameController.ExternalGameplayInputDeviceUsage);
 
                 if (!context.Controller.IsGameplayInputAllowed(keyboard))
                 {
                     return GameplayMcpRuntime.BuildActionError(
                         "external_keyboard_rejected",
-                        "GameController 未接受 GamePlayMCP 虚拟键盘；请重新获取外部控制租约。",
+                        "Mod_GameController 未接受 GamePlayMCP 虚拟键盘；请重新获取外部控制租约。",
                         false);
                 }
 
@@ -115,7 +115,7 @@ namespace FlatWorld.GameplayMCP
 
         /// <summary>从玩家当前 InputAction 的生效绑定中选择第一个直接 Keyboard 绑定。</summary>
         private static bool TryResolveKeyboardBinding(
-            GameController controller,
+            Mod_GameController controller,
             string inputActionName,
             out string keyboardPath,
             out string error)

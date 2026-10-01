@@ -13,7 +13,7 @@ public partial class Mod_EquipmentSaveData
 
 /// <summary>
 /// 装备系统模块 —— 独立继承 Module，统一管理装备栏 Inventory UI、交互面板与装备效果实例。
-/// 取代原先由 Mod_Inventory + Module_Equipment 分散实现的双模块方案。
+/// 取代原先由 Mod_Inventory + Mod_EquipmentRuntime 分散实现的双模块方案。
 /// </summary>
 public class Mod_Equipment : Module, IInventory, IInteractable, IInstanceUI
 {
@@ -71,7 +71,7 @@ public class Mod_Equipment : Module, IInventory, IInteractable, IInstanceUI
             : Inventory_Hand.PlayerHand;
 
         // 初始化数据与控制器绑定
-        var ctrl = item.itemMods.GetMod_ByID<GameController>(ModText.Controller);
+        var ctrl = item.itemMods.GetMod_ByID<Mod_GameController>(ModText.Controller);
         EquipmentInventory.InitData();
         EquipmentInventory.BindController(ctrl);
 
