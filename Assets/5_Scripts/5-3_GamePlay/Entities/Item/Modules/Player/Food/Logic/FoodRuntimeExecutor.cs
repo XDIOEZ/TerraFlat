@@ -406,7 +406,8 @@ public sealed class FoodSurvivalRule : IFoodMechanic, IFoodTickObserver, IFoodTi
         if (stamina?.Data == null || nutritionService == null)
             return;
 
-        if (stamina.Data.CurrentStamina < stamina.Data.MaxStamina)
+        // 缺盐等状态降低可用上限后，满体力不再为无效恢复消耗营养。
+        if (stamina.CurrentValue < stamina.MaxValue)
         {
             nutritionService.ConsumeNutrition(timeDelta * staminaState.StaminaConsumeSpeed);
             float recoveryMultiplier = mover != null && !mover.IsMoving

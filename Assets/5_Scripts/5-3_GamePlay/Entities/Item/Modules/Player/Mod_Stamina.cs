@@ -54,6 +54,7 @@ public partial class Mod_Stamina : Module, IItemModuleDependencyBinder
     public GameObject Prefab_UI;//TODO 这个是UI的预制体
 
     public Slider slider;
+    private BasePanel staminaPanel; // 模块持有自己创建的体力面板，卸载时对称释放。
     private RectTransform staminaBackground; // 原体力条灰黑底纹，只调整可用宽度。
     private RectTransform staminaFillArea; // 保持原填充样式，仅让填充范围与可用上限一致。
     public override void Awake()
@@ -70,7 +71,7 @@ public partial class Mod_Stamina : Module, IItemModuleDependencyBinder
         // 实例化体力 UI 预制体并获取 Slider 组件
         if (Prefab_UI != null)
         {
-            BasePanel staminaPanel = UIManager.Instance.CreatePanelFromGameObject(Prefab_UI);
+            staminaPanel = UIManager.Instance.CreatePanelFromGameObject(Prefab_UI);
             if (staminaPanel != null)
             {
                 // 耐力条是常驻信息 HUD：不阻断玩法输入，并固定在其它面板下方。
@@ -96,6 +97,27 @@ public partial class Mod_Stamina : Module, IItemModuleDependencyBinder
     {
         modData.WriteData(Data);
     }
+
+    #region 体力面板生命周期
+    public override void Unload()
+    {
+        if (staminaPanel != null)
+        {
+            UIManager manager = UIManager.ExistingInstance;
+            if (manager != null)
+                manager.DestroyPanel(staminaPanel);
+            else
+                Destroy(staminaPanel.gameObject);
+        }
+
+        staminaPanel = null;
+        slider = null;
+        staminaBackground = null;
+        staminaFillArea = null;
+        capacityModifiers.Clear();
+        adminController = null;
+    }
+    #endregion
 
     /// <summary>增加基础体力；负值仅作为未分类兼容入口，正式玩法消费应使用带来源的 Consume API。</summary>
     public void AddStamina(float value)

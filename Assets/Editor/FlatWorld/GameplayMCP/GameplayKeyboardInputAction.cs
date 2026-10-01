@@ -57,8 +57,14 @@ namespace FlatWorld.GameplayMCP
 
             float holdSeconds = ReadHoldSeconds(parameters);
             Keyboard keyboard = null;
+            InputSettings settings = UnityInputSystem.settings;
+            InputSettings.BackgroundBehavior previousBackgroundBehavior = settings.backgroundBehavior;
+            InputSettings.EditorInputBehaviorInPlayMode previousEditorBehavior = settings.editorInputBehaviorInPlayMode;
             try
             {
+                // 专用键盘短按期间接收后台输入，结束后恢复原焦点策略。
+                settings.editorInputBehaviorInPlayMode = InputSettings.EditorInputBehaviorInPlayMode.AllDeviceInputAlwaysGoesToGameView;
+                settings.backgroundBehavior = InputSettings.BackgroundBehavior.IgnoreFocus;
                 keyboard = UnityInputSystem.AddDevice<Keyboard>(VirtualKeyboardName);
                 UnityInputSystem.SetDeviceUsage(keyboard, Mod_GameController.ExternalGameplayInputDeviceUsage);
 
@@ -110,6 +116,8 @@ namespace FlatWorld.GameplayMCP
             {
                 if (keyboard != null && keyboard.added)
                     UnityInputSystem.RemoveDevice(keyboard);
+                settings.backgroundBehavior = previousBackgroundBehavior;
+                settings.editorInputBehaviorInPlayMode = previousEditorBehavior;
             }
         }
 
