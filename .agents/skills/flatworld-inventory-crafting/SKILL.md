@@ -21,6 +21,8 @@ description: "Use when: 定位或修改 FlatWorld 的背包、槽位、快捷栏
 
 ## 不变量
 
+- 多容器模块完成全部库存初始化后统一绑定输入；未配置 `ToggleActionName` 的常驻容器不依赖控制器输入资产。
+
 - 体力恢复按 `Mod_Stamina.MaxValue` 的有效上限判断，不能用原始 `Data.MaxStamina`，避免缺盐等容量下降后反复消耗营养；体力模块卸载时释放自己创建的 HUD。
 
 - 背包“排序”按钮依次循环稳定 ID、分类、数量、重量、体积五种独立规则；只有“分类”模式读取物品 `ItemData.Tags` 中的 `InventoryGroup.<类别>` 标签分组，无分组物品排在分组之后，同组内再按稳定 ID 排序。机械扭矩节点及其便携召唤器使用 `InventoryGroup.MechanicalPower`，MOD 物品可声明同一标签加入；纯手动锻造设备不属于该组。

@@ -117,7 +117,6 @@ public class Mod_Inventory : Module, IInventory, IInstanceUI, IInteractable
             // 初始化库存
             CreativeInventoryState.Restore(currentInventory);
             currentInventory.InitData();
-            BindController();
 
             // 尝试初始化物品
             GameRes.Instance.InventoryInitGet(Data.InventoryInitName, out Inventoryinit inventoryInit);
@@ -135,6 +134,9 @@ public class Mod_Inventory : Module, IInventory, IInstanceUI, IInteractable
                 NewMethod(currentInventory);
             }
         }
+        // 所有容器初始化完成后统一绑定，避免每个容器重复重绑整组输入。
+        BindController();
+
         // 获取交互模块引用
         UnbindInteractionReceiver();
         if (item != null && item.itemMods != null)

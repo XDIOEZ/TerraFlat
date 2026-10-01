@@ -274,6 +274,10 @@ public class Inventory
         // 先解除之前的绑定，避免重复订阅
         UnbindController();
 
+        // 常驻容器没有开关按键，不需要输入资产，也不应产生绑定警告。
+        if (string.IsNullOrEmpty(ToggleActionName))
+            return;
+
         // 基本防守：控制器或输入资产为空则不绑定
         if (gameController == null || gameController._inputActions == null)
         {
@@ -282,13 +286,7 @@ public class Inventory
         }
 
 
-        // 未配置 ToggleActionName 时不绑定
-        if (string.IsNullOrEmpty(ToggleActionName))
-        {
-            // 快捷栏、装备栏等常驻库存不需要独立开关按键。
-            return;
-        }
-        // 未配置 ToggleActionName 时不绑定
+        // 有开关按键的容器需要对应面板。
         if (InventoryPanel_Prefab == null)
         {
             InventoryPanel_Prefab = GameRes.Instance.GetPrefab(Data.UIPrefabName);

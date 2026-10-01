@@ -240,7 +240,11 @@ namespace FlatWorld.GameplayMCP
             if (slot != null)
             {
                 node["slotIndex"] = slot.slotIndex;
-                string iconName = slot.image?.sprite?.name;
+                // 空槽隐藏图标后仍保留 Sprite 引用，只报告当前实际显示的图标。
+                string iconName = slot.image != null && slot.image.isActiveAndEnabled &&
+                                  slot.image.color.a > 0f
+                    ? slot.image.sprite?.name
+                    : null;
                 if (!string.IsNullOrEmpty(iconName))
                     node["icon"] = iconName;
             }
