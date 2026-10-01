@@ -729,7 +729,7 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Building/Mod_Meatrack.png[Mod_Meatrack]",
+        "spriteAddress": "Assets/6_Art/Building/Meatrack.png[Meatrack]",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,

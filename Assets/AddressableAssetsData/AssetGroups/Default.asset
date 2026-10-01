@@ -756,7 +756,7 @@ MonoBehaviour:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 317545efc361a3143807103bf36506d3
-    m_Address: Assets/6_Art/Building/Mod_Meatrack.png
+    m_Address: Assets/6_Art/Building/Meatrack.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
