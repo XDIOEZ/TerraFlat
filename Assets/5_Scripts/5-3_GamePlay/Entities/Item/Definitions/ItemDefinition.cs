@@ -55,6 +55,9 @@ public sealed class ItemDefinitionDto
     [JsonProperty("id")]
     public string Id;
 
+    [JsonProperty("formerIds")]
+    public string[] FormerIds; // 身份合并只声明查找别名，不额外生成可选物品。
+
     [JsonProperty("abstract")]
     public bool Abstract;
 
@@ -434,6 +437,7 @@ public enum WorldDropBehavior
 /// <summary>校验并解析后的不可变运行时物品定义。</summary>
 public sealed class RuntimeItemDefinition
 {
+    public IReadOnlyList<string> FormerIds { get; }
     private readonly ItemData templateData;
     private readonly Dictionary<string, string> moduleParameters;
     private readonly Dictionary<string, string> modulePrefabIds;
@@ -532,9 +536,15 @@ public sealed class RuntimeItemDefinition
         string entityRuntime = null,
         WorldDropBehavior worldDropBehavior = WorldDropBehavior.Passive,
         Dictionary<string, RuntimeItemProcessingDefinition> processing = null,
-        Dictionary<string, int> processingCapabilities = null)
+        Dictionary<string, int> processingCapabilities = null,
+        string[] formerIds = null)
     {
         Id = id;
+        var aliases = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (string alias in formerIds ?? Array.Empty<string>())
+            if (string.IsNullOrWhiteSpace(alias) || string.Equals(alias.Trim(), id, StringComparison.OrdinalIgnoreCase) ||
+                !aliases.Add(alias.Trim())) throw new InvalidDataException("物品旧身份无效：" + id);
+        FormerIds = Array.AsReadOnly(new List<string>(aliases).ToArray());
         EntityRuntime = entityRuntime;
         DropBehavior = worldDropBehavior;
         ShellPrefabId = shellPrefabId;

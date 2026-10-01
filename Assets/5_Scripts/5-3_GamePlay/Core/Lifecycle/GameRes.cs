@@ -24,6 +24,7 @@ public partial class GameRes : SingletonAutoMono<GameRes>
     [ShowInInspector]
     public Dictionary<string, RuntimeItemDefinition> ItemDefinitions =
         new Dictionary<string, RuntimeItemDefinition>(System.StringComparer.OrdinalIgnoreCase);
+    private Dictionary<string, string> itemDefinitionAliases = new(System.StringComparer.OrdinalIgnoreCase);
 
     [Header("JSON Actor 定义字典")]
     [ShowInInspector]
@@ -235,7 +236,7 @@ public partial class GameRes : SingletonAutoMono<GameRes>
             if (ModRuntimeManager.Instance != null && ModRuntimeManager.Instance.IsRuntimeTemplate(go))
                 obj.SetActive(true);
 
-            if (ItemDefinitions.TryGetValue(prefab, out RuntimeItemDefinition definition) &&
+            if (TryGetItemDefinition(prefab, out RuntimeItemDefinition definition) &&
                 obj.TryGetComponent(out Item item))
             {
                 ItemDefinitionRuntime.ConfigureInstance(this, definition, item, definition.CreateItemData());
@@ -320,12 +321,21 @@ public partial class GameRes : SingletonAutoMono<GameRes>
     {
         if (definition == null || string.IsNullOrWhiteSpace(definition.Id) || definition.ShellPrefab == null)
             throw new InvalidDataException("注册的 ItemDefinition、ID 或外壳为空");
-        if (ItemDefinitions.ContainsKey(definition.Id))
+        if (ItemDefinitions.ContainsKey(definition.Id) || itemDefinitionAliases.ContainsKey(definition.Id))
             throw new InvalidDataException($"ItemDefinition ID 冲突：{definition.Id}");
         if (AllPrefabs.TryGetValue(definition.Id, out GameObject existing) && existing != definition.ShellPrefab)
             throw new InvalidDataException($"物品 ID 与 Prefab 名称/别名冲突：{definition.Id} -> {existing.name} / {definition.ShellPrefab.name}");
 
+        foreach (string alias in definition.FormerIds)
+            if (ItemDefinitions.ContainsKey(alias) || itemDefinitionAliases.ContainsKey(alias) ||
+                AllPrefabs.TryGetValue(alias, out GameObject aliasPrefab) && aliasPrefab != definition.ShellPrefab)
+                throw new InvalidDataException($"ItemDefinition 旧身份冲突：{alias}");
         ItemDefinitions.Add(definition.Id, definition);
+        foreach (string alias in definition.FormerIds)
+        {
+            itemDefinitionAliases.Add(alias, definition.Id);
+            AllPrefabs[alias] = definition.ShellPrefab;
+        }
         // 物品 ID 与实例化目录使用同一个权威外壳。
         AllPrefabs[definition.Id] = definition.ShellPrefab;
         LoadedCount++;
@@ -381,6 +391,7 @@ public partial class GameRes : SingletonAutoMono<GameRes>
             if (itemRegistered)
             {
                 ItemDefinitions.Remove(definition.Id);
+                UnregisterItemDefinitionAliases(definition);
                 if (AllPrefabs.TryGetValue(definition.Id, out GameObject prefab) &&
                     prefab == definition.ShellPrefab)
                 {
@@ -413,6 +424,7 @@ public partial class GameRes : SingletonAutoMono<GameRes>
         }
 
         ItemDefinitions.Remove(actorId.Trim());
+        UnregisterItemDefinitionAliases(definition);
         if (AllPrefabs.TryGetValue(actorId.Trim(), out GameObject prefab) &&
             prefab == definition.ShellPrefab)
         {
@@ -429,7 +441,18 @@ public partial class GameRes : SingletonAutoMono<GameRes>
             definition = null;
             return false;
         }
-        return ItemDefinitions.TryGetValue(itemId, out definition);
+        return ItemDefinitions.TryGetValue(itemDefinitionAliases.TryGetValue(itemId, out string canonicalId)
+            ? canonicalId : itemId, out definition);
+    }
+
+    private void UnregisterItemDefinitionAliases(RuntimeItemDefinition definition)
+    {
+        foreach (string alias in definition.FormerIds)
+        {
+            itemDefinitionAliases.Remove(alias);
+            if (AllPrefabs.TryGetValue(alias, out GameObject prefab) && prefab == definition.ShellPrefab)
+                AllPrefabs.Remove(alias);
+        }
     }
 
     /// <summary>

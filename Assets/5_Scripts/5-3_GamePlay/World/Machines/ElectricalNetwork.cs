@@ -24,7 +24,7 @@ public sealed class ElectricalNetwork
     #endregion
 }
 
-/// <summary>电线覆盖层与同格电气端口组成的轻量电网；电线负责拓扑，设备业务留在各自机器逻辑中。</summary>
+/// <summary>电线覆盖层与设备电气端口组成轻量电网，方向端口随设备旋转。</summary>
 public sealed class ElectricalNetworkGraph
 {
     #region 拓扑
@@ -40,7 +40,7 @@ public sealed class ElectricalNetworkGraph
     private Vector2Int Normalize(Vector2Int cell)
         => new(topology.NormalizeX(cell.x), topology.NormalizeY(cell.y));
 
-    /// <summary>表现只读取同一电网索引，设备仍通过同格电线接入。</summary>
+    /// <summary>表现只读取同一电网索引，设备连接位置由电气配置决定。</summary>
     public MachineEntity GetWire(Vector2Int cell)
         => wires.TryGetValue(Normalize(cell), out MachineEntity wire) ? wire : null;
 
@@ -52,10 +52,15 @@ public sealed class ElectricalNetworkGraph
         if (GetWire(cell + Vector2Int.right) != null) mask |= 2;
         if (GetWire(cell + Vector2Int.down) != null) mask |= 4;
         if (GetWire(cell + Vector2Int.left) != null) mask |= 8;
+        if (endpoints.TryGetValue(Normalize(cell), out var localEndpoints))
+            foreach (MachineEntity node in localEndpoints)
+                for (int direction = 0; direction < 4; direction++)
+                    if (Normalize(cell + Directions[direction]) == node.Cell)
+                        mask |= direction switch { 0 => 2, 1 => 1, 2 => 8, _ => 4 };
         return mask;
     }
 
-    /// <summary>只有拓扑变化时重建；设备通过同格电线接入，世界电网不暴露正负极。</summary>
+    /// <summary>只有拓扑变化时重建，按同格或旋转后的邻格接入端口。</summary>
     public void Rebuild(IEnumerable<MachineEntity> source)
     {
         wires.Clear(); endpoints.Clear(); Networks.Clear();
@@ -76,8 +81,9 @@ public sealed class ElectricalNetworkGraph
             }
             else
             {
-                if (!endpoints.TryGetValue(node.Cell, out List<MachineEntity> list))
-                    endpoints[node.Cell] = list = new List<MachineEntity>();
+                Vector2Int connectionCell = Normalize(node.Cell + electrical.GetConnectionOffset(node.RotationQuarterTurns));
+                if (!endpoints.TryGetValue(connectionCell, out List<MachineEntity> list))
+                    endpoints[connectionCell] = list = new List<MachineEntity>();
                 list.Add(node);
             }
         }
@@ -132,7 +138,7 @@ public sealed class ElectricalNetworkGraph
     public static void Solve(ElectricalNetwork network, float seconds,
         Func<MachineEntity, float> generatorFactor,
         Func<MachineEntity, float> demandFactor,
-        Action<MachineEntity> batteryChanged)
+        Action<MachineEntity> batteryChanged, bool commitStorage = true)
     {
         if (network == null) return;
         seconds = Mathf.Max(0.0001f, seconds);
@@ -151,7 +157,7 @@ public sealed class ElectricalNetworkGraph
         foreach (MachineEntity node in network.Nodes)
         {
             ElectricalDefinition electrical = node.Definition.Electrical;
-            if (electrical.IsGenerator)
+            if (node.IsElectricalGenerator)
             {
                 float factor = Mathf.Clamp01(generatorFactor?.Invoke(node) ?? 1f);
                 float output = electrical.PowerWatts * factor;
@@ -161,7 +167,7 @@ public sealed class ElectricalNetworkGraph
                     network.GeneratedWatts += output;
                 }
             }
-            else if (electrical.IsConsumer)
+            else if (node.IsElectricalConsumer)
             {
                 float factor = Mathf.Clamp01(demandFactor?.Invoke(node) ?? 1f);
                 float request = electrical.PowerWatts * factor;
@@ -191,12 +197,12 @@ public sealed class ElectricalNetworkGraph
 
         float compatibleDemand = 0f;
         foreach (MachineEntity node in network.Nodes)
-            if (node.Definition.Electrical.IsConsumer && node.Definition.Electrical.AcceptsVoltage(voltage))
+            if (node.IsElectricalConsumer && node.Definition.Electrical.AcceptsVoltage(voltage))
                 compatibleDemand += node.ElectricalRequestedWatts;
 
         float deficit = Mathf.Max(0f, compatibleDemand - network.GeneratedWatts);
         if (deficit > 0f)
-            network.DischargingWatts = DischargeBatteries(network, voltage, deficit, seconds, batteryChanged);
+            network.DischargingWatts = DischargeBatteries(network, voltage, deficit, seconds, batteryChanged, commitStorage);
 
         float available = network.GeneratedWatts + network.DischargingWatts;
         network.DeliveredWatts = Mathf.Min(compatibleDemand, available);
@@ -207,7 +213,7 @@ public sealed class ElectricalNetworkGraph
         foreach (MachineEntity node in network.Nodes)
         {
             ElectricalDefinition electrical = node.Definition.Electrical;
-            if (!electrical.IsConsumer || !electrical.AcceptsVoltage(voltage)) continue;
+            if (!node.IsElectricalConsumer || !electrical.AcceptsVoltage(voltage)) continue;
             node.ElectricalPowerRatio = network.PowerRatio;
             node.ElectricalSuppliedWatts = node.ElectricalRequestedWatts * network.PowerRatio;
             node.ElectricalCurrentAmps = node.ElectricalSuppliedWatts / voltage;
@@ -215,7 +221,7 @@ public sealed class ElectricalNetworkGraph
 
         float surplusGeneration = Mathf.Max(0f, network.GeneratedWatts - network.DeliveredWatts);
         if (surplusGeneration > 0f)
-            network.ChargingWatts = ChargeBatteries(network, voltage, surplusGeneration, seconds, batteryChanged);
+            network.ChargingWatts = ChargeBatteries(network, voltage, surplusGeneration, seconds, batteryChanged, commitStorage);
         network.WastedWatts = Mathf.Max(0f, surplusGeneration - network.ChargingWatts);
 
         float transmittedWatts = network.DeliveredWatts + network.ChargingWatts;
@@ -261,7 +267,7 @@ public sealed class ElectricalNetworkGraph
         foreach (MachineEntity node in network.Nodes)
         {
             ElectricalDefinition electrical = node.Definition.Electrical;
-            if (!electrical.IsGenerator || electrical.PowerWatts <= 0f ||
+            if (!node.IsElectricalGenerator || electrical.PowerWatts <= 0f ||
                 Mathf.Clamp01(generatorFactor?.Invoke(node) ?? 1f) <= 0f) continue;
             if (!MergeSourceVoltage(ref voltage, electrical.NominalVoltage)) conflict = true;
         }
@@ -299,7 +305,7 @@ public sealed class ElectricalNetworkGraph
     }
 
     private static float DischargeBatteries(ElectricalNetwork network, float voltage, float requestedWatts,
-        float seconds, Action<MachineEntity> batteryChanged)
+        float seconds, Action<MachineEntity> batteryChanged, bool commitStorage)
     {
         float remaining = requestedWatts, total = 0f;
         foreach (MachineEntity node in network.Nodes)
@@ -310,17 +316,17 @@ public sealed class ElectricalNetworkGraph
             float watts = Mathf.Min(remaining, Mathf.Min(electrical.MaxDischargeWatts,
                 node.ElectricalStoredJoules / seconds));
             if (watts <= 0f) continue;
-            node.ElectricalStoredJoules -= watts * seconds;
+            if (commitStorage) node.ElectricalStoredJoules -= watts * seconds;
             node.ElectricalGeneratedWatts = watts;
             node.ElectricalCurrentAmps = watts / voltage;
             remaining -= watts; total += watts;
-            batteryChanged?.Invoke(node);
+            if (commitStorage) batteryChanged?.Invoke(node);
         }
         return total;
     }
 
     private static float ChargeBatteries(ElectricalNetwork network, float voltage, float availableWatts,
-        float seconds, Action<MachineEntity> batteryChanged)
+        float seconds, Action<MachineEntity> batteryChanged, bool commitStorage)
     {
         float remaining = availableWatts, total = 0f;
         foreach (MachineEntity node in network.Nodes)
@@ -331,11 +337,11 @@ public sealed class ElectricalNetworkGraph
             float room = electrical.CapacityJoules - node.ElectricalStoredJoules;
             float watts = Mathf.Min(remaining, Mathf.Min(electrical.MaxChargeWatts, room / seconds));
             if (watts <= 0f) continue;
-            node.ElectricalStoredJoules += watts * seconds;
+            if (commitStorage) node.ElectricalStoredJoules += watts * seconds;
             node.ElectricalSuppliedWatts = watts;
             node.ElectricalCurrentAmps = watts / voltage;
             remaining -= watts; total += watts;
-            batteryChanged?.Invoke(node);
+            if (commitStorage) batteryChanged?.Invoke(node);
         }
         return total;
     }

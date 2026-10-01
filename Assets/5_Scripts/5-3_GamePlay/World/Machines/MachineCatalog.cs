@@ -143,6 +143,8 @@ public static class MachineCatalog
     {
         definition.Validate();
         definitions[definition.Id] = definition;
+        if (definition.FormerIds != null)
+            foreach (string id in definition.FormerIds) definitions[id] = definition;
     }
 
     private static void RegisterProcessCore(MachineProcessDefinition process)
@@ -163,6 +165,7 @@ public sealed class MechanicalSettings
     public int DeactivationChunks = 2;
     public float UnloadDelaySeconds = 5f;
     public float ReferenceRpm = 20f;
+    public float WattsPerTorqueRpm = 1.5f; // 游戏扭矩与转速统一换算成功率，保持原有额定功率。
     public float ManualHoldThresholdSeconds = 0.25f; // 手摇轮按住达到此时间后开始供能，短按用于打开面板。
     public float ManualPulseSeconds = 0.2f; // 按住交互时维持的最小动力缓冲。
     public float ManualReserveSeconds = 0.2f; // 松开后允许残留的最大动力缓冲。
@@ -171,7 +174,7 @@ public sealed class MechanicalSettings
     {
         if (!MachineDefinition.Positive(TickSeconds) || TickSeconds > 1 || ActivationChunks < 0 ||
             DeactivationChunks <= ActivationChunks || !MachineDefinition.Positive(UnloadDelaySeconds) ||
-            !MachineDefinition.Positive(ReferenceRpm) || !MachineDefinition.Positive(ManualHoldThresholdSeconds) ||
+            !MachineDefinition.Positive(ReferenceRpm) || !MachineDefinition.Positive(WattsPerTorqueRpm) || !MachineDefinition.Positive(ManualHoldThresholdSeconds) ||
             !MachineDefinition.Positive(ManualPulseSeconds) ||
             !MachineDefinition.Positive(ManualReserveSeconds) || !MachineDefinition.NonNegative(BellowsHeatBonus))
             throw new ArgumentException("机械调度参数无效。");
@@ -185,6 +188,7 @@ public sealed class MachineDefinition
 {
     #region 参数
     public string Id;
+    public string[] FormerIds; // 合并后的旧身份只用于查找，实际节点使用当前定义。
     public string LogicId = ""; // 可注册的粗粒度玩法；留空表示原机械网络设备。
     [JsonIgnore] public MachineContent Content;
     public string Kind = "shaft"; // shaft/gear/gearbox/clutch/bridge/source/consumer/bellows
@@ -217,6 +221,7 @@ public sealed class MachineDefinition
     public int Layer => PlacementLayer >= 0 ? PlacementLayer : Kind == "bridge" ? 1 : 0;
     public bool HasMechanicalPorts => Ports == "axis" || Ports == "all";
     public bool HasElectricalPorts => Electrical?.HasConnection == true;
+    public bool IsConverter => Electrical?.IsConverter == true;
     public bool Rotatable => Ports == "axis" || Kind == "bellows" || (Kind == "gear" && AxlePorts?.Length > 0);
     /// <summary>动力源、加工设备与机械风箱默认投影；传动件保持原有无影表现。</summary>
     public bool ShouldCastVisualShadows()
@@ -226,6 +231,7 @@ public sealed class MachineDefinition
     public string GetPortMode()
     {
         if (PortMode != "auto") return PortMode;
+        if (IsConverter) return "relay";
         if (ManualDriveTorque > 0) return "relay"; // 建图允许接入，实际输入/输出由节点当前动力状态决定。
         if (Kind == "consumer" || Kind == "bellows" || !string.IsNullOrEmpty(Station)) return "input";
         return Kind == "source" || Torque > 0 ? "output" : "relay";
@@ -275,6 +281,12 @@ public sealed class MachineDefinition
             ProcessCapabilityLevel > 0 && string.IsNullOrWhiteSpace(ProcessCapability))
             throw new ArgumentException("机械加工能力等级无效：" + Id);
         Electrical?.Validate(Id);
+        if (FormerIds != null)
+            foreach (string id in FormerIds)
+                if (string.IsNullOrWhiteSpace(id) || id == Id) throw new ArgumentException("机械旧身份无效：" + Id);
+        if (IsConverter && (!HasMechanicalPorts || !Positive(Torque) || !Positive(TorqueLoad) ||
+            AxlePorts?.Length != 1 || Electrical.Connection == "cell"))
+            throw new ArgumentException("双向电机必须分别声明一个机械接口和一个电气接口：" + Id);
     }
     internal static bool Positive(float value) => value > 0 && !float.IsInfinity(value) && !float.IsNaN(value);
     internal static bool NonNegative(float value) => value >= 0 && !float.IsInfinity(value) && !float.IsNaN(value);
@@ -287,7 +299,8 @@ public sealed class ElectricalDefinition
 {
     #region 电气参数
     public string Role = "wire"; // wire/generator/consumer/battery
-    public string Connection = "cell"; // 首版电器端口与同格电线连接。
+    public string Connection = "cell"; // cell 接同格电线，其余方向表示随设备旋转的邻格端口。
+    public float ConversionEfficiency = 1f; // 双向电机的转换效率不允许超过百分之百。
     public float NominalVoltage = 120f;
     public float MinimumVoltage;
     public float MaximumVoltage;
@@ -300,11 +313,20 @@ public sealed class ElectricalDefinition
     public string PowerProvider = ""; // generator 可选动态供电比例，例如 mechanical。
     public string DemandProvider = ""; // consumer 可选动态需求比例，例如 motor。
 
-    public bool HasConnection => Connection == "cell";
+    public bool HasConnection => Connection == "cell" || Connection == "right" || Connection == "up" ||
+        Connection == "left" || Connection == "down";
     public bool IsWire => Role == "wire";
     public bool IsGenerator => Role == "generator";
     public bool IsConsumer => Role == "consumer";
     public bool IsBattery => Role == "battery";
+    public bool IsConverter => Role == "converter";
+    public Vector2Int GetConnectionOffset(int rotation)
+    {
+        int direction = Connection switch { "right" => 0, "up" => 1, "left" => 2, "down" => 3, _ => -1 };
+        if (direction < 0) return Vector2Int.zero;
+        return ((direction + rotation) & 3) switch
+        { 0 => Vector2Int.right, 1 => Vector2Int.up, 2 => Vector2Int.left, _ => Vector2Int.down };
+    }
 
     public bool AcceptsVoltage(float voltage)
     {
@@ -317,8 +339,9 @@ public sealed class ElectricalDefinition
 
     public void Validate(string ownerId)
     {
-        if ((Role != "wire" && Role != "generator" && Role != "consumer" && Role != "battery") ||
-            Connection != "cell" || !MachineDefinition.Positive(NominalVoltage) ||
+        if ((Role != "wire" && Role != "generator" && Role != "consumer" && Role != "battery" && Role != "converter") ||
+            !HasConnection || !MachineDefinition.Positive(NominalVoltage) ||
+            !MachineDefinition.Positive(ConversionEfficiency) || ConversionEfficiency > 1f ||
             !MachineDefinition.NonNegative(MinimumVoltage) || !MachineDefinition.NonNegative(MaximumVoltage) ||
             !MachineDefinition.NonNegative(PowerWatts) || !MachineDefinition.NonNegative(MaxCurrentAmps) ||
             !MachineDefinition.NonNegative(ResistanceOhms) || !MachineDefinition.NonNegative(CapacityJoules) ||
@@ -326,7 +349,7 @@ public sealed class ElectricalDefinition
             throw new ArgumentException("电气节点参数无效：" + ownerId);
         if (MinimumVoltage > 0f && MaximumVoltage > 0f && MaximumVoltage < MinimumVoltage)
             throw new ArgumentException("电气节点电压范围无效：" + ownerId);
-        if ((IsGenerator || IsConsumer) && !MachineDefinition.Positive(PowerWatts))
+        if ((IsGenerator || IsConsumer || IsConverter) && !MachineDefinition.Positive(PowerWatts))
             throw new ArgumentException("电气节点功率无效：" + ownerId);
         if (IsWire && !MachineDefinition.Positive(MaxCurrentAmps))
             throw new ArgumentException("电线载流上限无效：" + ownerId);

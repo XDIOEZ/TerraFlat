@@ -763,6 +763,7 @@ public static class ItemDefinitionCatalogLoader
             result.Remove("gameName");
             result.Remove("labelKey");
             result.Remove("descriptionKey");
+            result.Remove("formerIds");
             // processing 描述具体物品受到加工后的结果；模板 parent 只复用静态配置，不能把加工产物串给子物品。
             result.Remove("processing");
         }
@@ -1021,7 +1022,7 @@ public static class ItemDefinitionCatalogLoader
             dto.EntityRuntime,
             ResolveWorldDropBehavior(dto.WorldDropBehavior, id),
             ResolveProcessingDefinitions(dto.Processing, id),
-            ResolveProcessingCapabilityLevels(dto.ProcessingCapabilities, id));
+            ResolveProcessingCapabilityLevels(dto.ProcessingCapabilities, id), dto.FormerIds);
     }
 
     private static Dictionary<string, int> ResolveProcessingCapabilityLevels(

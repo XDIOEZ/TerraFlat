@@ -32,9 +32,10 @@
     },
     {
       "id": "Generator_Basic",
+      "formerIds": ["Motor_Basic"],
       "parent": "BuildingBody_Base",
-      "gameName": "基础发电机-建筑",
-      "description": "将机械动力转换为电力的基础发电机。",
+      "gameName": "基础电机-建筑",
+      "description": "左侧接电线，右侧接传动轴；通电输出机械动力，受机械驱动时输出电力。",
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,
@@ -85,10 +86,11 @@
     },
     {
       "id": "Generator_Basic_Summoner",
+      "formerIds": ["Motor_Basic_Summoner"],
       "worldDropBehavior": "interactive",
       "parent": "BuildingSummoner_Base",
-      "gameName": "基础发电机",
-      "description": "将机械动力转换为电力的基础发电机。",
+      "gameName": "基础电机",
+      "description": "左侧接电线，右侧接传动轴；通电输出机械动力，受机械驱动时输出电力。",
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,
@@ -371,108 +373,6 @@
           "prefab": "Module_MechanicalNode", "id": "机械扭矩模块", "enabled": true,
           "data": { "BitData": [], "Type": 0 },
           "parameters": { "DefinitionId": "Battery_Basic" }
-        }
-      }
-    },
-    {
-      "id": "Motor_Basic",
-      "parent": "BuildingBody_Base",
-      "gameName": "基础马达-建筑",
-      "description": "消耗电力并向机械动力网络输出扭矩。",
-      "durability": 1,
-      "maxDurability": 1,
-      "amount": 1,
-      "weight": 36,
-      "volume": 50,
-      "stackable": false,
-      "canBePickedUp": false,
-      "tags": ["35", "InventoryGroup.ElectricalPower"],
-      "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Electrical/Motor_Basic/Motor_Basic_Idle.png",
-        "color": {
-          "r": 1,
-          "g": 1,
-          "b": 1,
-          "a": 1
-        },
-        "rendererLocalScale": {
-          "x": 1,
-          "y": 1,
-          "z": 1
-        }
-      },
-      "health": {
-        "hasHp": true, "hp": 180, "maxHp": 180,
-        "defense": { "cutting": 8, "piercing": 8, "chopping": 8, "blunt": 8 },
-        "collider": {
-          "type": "BoxCollider2D", "enabled": true, "isTrigger": true,
-          "offset": { "x": 0, "y": 0 }, "size": { "x": 1, "y": 1 }, "edgeRadius": 0
-        }
-      },
-      "modules": {
-        "建筑模块": {
-          "prefab": "Module_Building", "id": "建筑模块", "enabled": true,
-          "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Motor_Basic\",\"SummonerPrefabId\":\"Motor_Basic_Summoner\"}",
-            "Type": 0
-          },
-          "parameters": { "LightOcclusionMode": "None", "CastSunShadow": false }
-        },
-        "机械扭矩模块": {
-          "prefab": "Module_MechanicalNode", "id": "机械扭矩模块", "enabled": true,
-          "data": { "BitData": [], "Type": 0 },
-          "parameters": { "DefinitionId": "Motor_Basic" }
-        }
-      }
-    },
-    {
-      "id": "Motor_Basic_Summoner",
-      "worldDropBehavior": "interactive",
-      "parent": "BuildingSummoner_Base",
-      "gameName": "基础马达",
-      "description": "消耗电力并向机械动力网络输出扭矩。",
-      "durability": 1,
-      "maxDurability": 1,
-      "amount": 1,
-      "weight": 11,
-      "volume": 22,
-      "stackable": false,
-      "canBePickedUp": true,
-      "tags": ["35", "InventoryGroup.ElectricalPower"],
-      "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Electrical/Motor_Basic/Motor_Basic_Idle.png",
-        "color": {
-          "r": 1,
-          "g": 1,
-          "b": 1,
-          "a": 1
-        },
-        "rendererLocalScale": {
-          "x": 1,
-          "y": 1,
-          "z": 1
-        }
-      },
-      "health": {
-        "hasHp": true, "hp": 180, "maxHp": 180,
-        "defense": { "cutting": 8, "piercing": 8, "chopping": 8, "blunt": 8 },
-        "collider": {
-          "type": "BoxCollider2D", "enabled": true, "isTrigger": true,
-          "offset": { "x": 0, "y": 0 }, "size": { "x": 1, "y": 1 }, "edgeRadius": 0
-        }
-      },
-      "modules": {
-        "建筑模块": {
-          "prefab": "Module_Building", "id": "建筑模块", "enabled": true,
-          "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Motor_Basic\",\"SummonerPrefabId\":\"Motor_Basic_Summoner\"}",
-            "Type": 0
-          }
-        },
-        "机械扭矩模块": {
-          "prefab": "Module_MechanicalNode", "id": "机械扭矩模块", "enabled": true,
-          "data": { "BitData": [], "Type": 0 },
-          "parameters": { "DefinitionId": "Motor_Basic" }
         }
       }
     },

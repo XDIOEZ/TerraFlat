@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using UnityEngine;
 
+public enum ElectricalConversionMode { Idle, Motor, Generator }
+
 /// <summary>机械网络的轻量拓扑节点。冷状态只保留端口信息和物品快照，活动状态才持有加工器与可变运行数据。</summary>
 public sealed class MachineEntity
 {
@@ -52,17 +54,27 @@ public sealed class MachineEntity
     public float ElectricalGeneratedWatts;
     public float ElectricalCurrentAmps;
     public float ElectricalPowerRatio;
+    public ElectricalConversionMode ConversionMode; // 每轮按真实输入重算，不保存上轮输出作为动力来源。
+    public float LoadTorque => Definition.IsConverter
+        ? ConversionMode == ElectricalConversionMode.Generator ? Definition.TorqueLoad : 0f
+        : Definition.TorqueLoad;
+    public bool IsElectricalGenerator => Definition.Electrical?.IsGenerator == true ||
+        Definition.IsConverter && ConversionMode == ElectricalConversionMode.Generator;
+    public bool IsElectricalConsumer => Definition.Electrical?.IsConsumer == true ||
+        Definition.IsConverter && ConversionMode == ElectricalConversionMode.Motor;
 
     public bool HasPort(int direction)
     {
         if (!Definition.HasMechanicalPorts) return false;
         if (Definition.Kind == "clutch" && !Engaged) return false;
+        if (Definition.IsConverter) return Definition.HasAxlePort((direction - RotationQuarterTurns + 4) & 3);
         return Definition.Ports == "all" || (RotationQuarterTurns & 1) == (direction & 1);
     }
     /// <summary>用力器只输入；扭矩源与传动件按当前供能方向标记输入侧和输出侧，同速扭矩源可接入已有网络。</summary>
     public string GetPortMode(int direction)
     {
         if (!HasPort(direction)) return "closed";
+        if (Definition.IsConverter) return ConversionMode == ElectricalConversionMode.Motor ? "output" : "input";
         if (Definition.ManualDriveTorque > 0)
         {
             if (SourceFactor <= 0) return "input";
@@ -91,13 +103,13 @@ public sealed class MachineEntity
     /// <summary>供给显示为沿传动路径实际可取得的扭矩；用力器始终显示自身固定需求。</summary>
     public void GetLocalTorque(out float supply, out float demand)
     {
-        demand = MechanicalNetworkGraph.RoundLoadTorqueToTens(Definition.TorqueLoad);
+        demand = MechanicalNetworkGraph.RoundLoadTorqueToTens(LoadTorque);
         if (!FlowVisited || Network == null)
         {
             supply = 0f;
             return;
         }
-        supply = Definition.TorqueLoad > 0f
+        supply = LoadTorque > 0f
             ? AvailableTorque
             : MechanicalNetworkGraph.GetRemainingLocalTorque(this);
     }
@@ -105,7 +117,7 @@ public sealed class MachineEntity
     public string GetOperatingStatus()
     {
         string status = Network?.Status ?? "停止";
-        return status == "运行中" && Definition.TorqueLoad > 0f && !LoadSatisfied ? "过载" : status;
+        return status == "运行中" && LoadTorque > 0f && !LoadSatisfied ? "过载" : status;
     }
     /// <summary>旧 MOD 使用的正向端口速比入口；实际双向传动由 GetTransmission 求解。</summary>
     public float PortRatio(int direction)
@@ -138,6 +150,8 @@ public sealed class MechanicalNetwork
     public string Status = "停止";
     public float TorqueSupply;
     public float TorqueDemand;
+    public bool HasConverters; // 转换能力只在拓扑重建时归集。
+    public float ConversionGenerationFactor = 1f; // 跨网络发电总量受本轮实际输入功率约束。
 }
 
 /// <summary>确定性的分层端口构图与整网负载求解；邻块显示卸载不参与断网判断。</summary>
@@ -264,6 +278,7 @@ public sealed class MechanicalNetworkGraph
             {
                 var node = queue.Dequeue();
                 network.Nodes.Add(node);
+                network.HasConverters |= node.Definition.IsConverter;
                 network.Active |= node.State != null;
                 for (int direction = 0; direction < 4; direction++)
                 {
@@ -390,7 +405,7 @@ public sealed class MechanicalNetworkGraph
             float suppliedRpm = node.SourceFactor > 0f ? sourceRpm(node) : 0f;
             node.SourceRpm = MachineDefinition.Positive(suppliedRpm) ? suppliedRpm : 0f;
             // 不足半档的环境动力不参与同速源冲突，也不阻止手推石磨接管。
-            if (node.SourceRpm <= 0f || RoundTorqueToTens(node.SourceTorque * node.SourceFactor) <= 0f)
+            if (node.SourceRpm <= 0f || GetSourceTorque(node) <= 0f)
             { node.SourceFactor = 0f; node.SourceRpm = 0f; }
             if (root == null && node.SourceFactor > 0 && node.SourceTorque > 0) root = node;
         }
@@ -416,10 +431,10 @@ public sealed class MechanicalNetworkGraph
             if (!node.FlowVisited) continue; // 用力器输入端以外的断开支路不吃动力。
             if (node.SourceFactor > 0 && node.SourceTorque > 0)
             {
-                node.RemainingSourceTorque = RoundTorqueToTens(node.SourceTorque * node.SourceFactor) / node.TorqueRatio;
+                node.RemainingSourceTorque = GetSourceTorque(node) / node.TorqueRatio;
                 network.TorqueSupply += node.RemainingSourceTorque;
             }
-            if (node.Definition.TorqueLoad > 0f)
+            if (node.LoadTorque > 0f)
             {
                 network.TorqueDemand += GetRootSideLoad(node);
                 consumers.Add(node);
@@ -448,7 +463,7 @@ public sealed class MechanicalNetworkGraph
         foreach (var node in network.Nodes)
         {
             if (!node.FlowVisited) continue;
-            if (node.Definition.TorqueLoad <= 0f || node.LoadSatisfied)
+            if (node.LoadTorque <= 0f || node.LoadSatisfied)
                 node.Rpm = node.SpeedRatio * rootRpm;
         }
     }
@@ -519,7 +534,7 @@ public sealed class MechanicalNetworkGraph
 
     /// <summary>用力器需求固定为配置值，仅为上游分配换算到根侧单位。</summary>
     private static float GetRootSideLoad(MachineEntity node)
-        => RoundLoadTorqueToTens(node.Definition.TorqueLoad) / node.TorqueRatio;
+        => RoundLoadTorqueToTens(node.LoadTorque) / node.TorqueRatio;
 
     /// <summary>从用力器沿实际连接查找可达动力源，输入终点不能作为其它节点的传动通道。</summary>
     private static List<SourceRoute> CollectSourceRoutes(MachineEntity destination)
@@ -582,6 +597,11 @@ public sealed class MechanicalNetworkGraph
     }
 
     /// <summary>动力源先在自身所在侧取最近十位档，再沿变速箱倍率换算。</summary>
+    private static float GetSourceTorque(MachineEntity node)
+        => node.Definition.IsConverter
+            ? Mathf.Floor((node.SourceTorque * node.SourceFactor + .0001f) / 10f) * 10f
+            : RoundTorqueToTens(node.SourceTorque * node.SourceFactor);
+
     public static float RoundTorqueToTens(float torque)
     {
         if (torque <= 0f) return 0f;

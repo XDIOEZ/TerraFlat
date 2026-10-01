@@ -159,6 +159,14 @@ public sealed class MachineInteractionTarget : IWorldInteractionTarget, IWorldIn
         ElectricalNetwork electrical = MachineWorld.GetElectricalNetwork(node);
         if (node.Definition.Electrical != null && electrical != null)
         {
+            if (node.Definition.IsConverter)
+                status += " · " + (node.ConversionMode switch
+                {
+                    ElectricalConversionMode.Motor => node.ElectricalSuppliedWatts > 0f
+                        ? "电力输入 → 机械输出" : "等待电力输入",
+                    ElectricalConversionMode.Generator => "机械输入 → 电力输出",
+                    _ => "电机待机"
+                });
             status += FlatWorldLocalizationService.GetUiFormat(
                 " · 电网 {0:0.#}V {1:0.#}A · 功率 {2:0.#}/{3:0.#}W · {4}",
                 electrical.Voltage, electrical.CurrentAmps, electrical.DeliveredWatts,

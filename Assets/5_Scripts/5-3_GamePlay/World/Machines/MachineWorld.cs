@@ -497,10 +497,9 @@ public static partial class MachineWorld
                 // 拓扑合并可能包含冷节点，全部恢复成功后才运行任何一个节点。
                 foreach (var node in network.Nodes) if (node.State == null) WakeNode(node);
                 network.Active = true;
-                SolveNetwork(network);
                 foreach (var node in network.Nodes) node.Active = true;
             }
-            // 发电机读取本轮机械输入，马达再把本轮电力结果反馈到机械输出。
+            // 双向电机先辨别外部输入，再按无回流的转换顺序结算本轮供能。
             SolveElectricalNetworks(step);
             foreach (var network in graph.Networks)
             {
@@ -519,10 +518,11 @@ public static partial class MachineWorld
     }
 
     /// <summary>先排除手推源检查整网外部动力，再让无外部动力的手推石磨作为动力源入网。</summary>
-    private static void SolveNetwork(MechanicalNetwork network)
+    private static void SolveNetwork(MechanicalNetwork network, bool independentPowerOnly = false)
     {
         float referenceRpm = MachineCatalog.Settings.ReferenceRpm;
-        MechanicalNetworkGraph.Solve(network, GetExternalSourceFactor, GetSourceRpm, referenceRpm);
+        MechanicalNetworkGraph.Solve(network, independentPowerOnly ? GetIndependentExternalSourceFactor : GetExternalSourceFactor,
+            GetSourceRpm, referenceRpm);
         bool hasExternalSource = false;
         foreach (MachineEntity node in network.Nodes)
             if (node.Definition.ManualDriveTorque <= 0 && node.SourceFactor > 0)
@@ -536,16 +536,23 @@ public static partial class MachineWorld
         }
         if (manualDriveActive)
         {
-            MechanicalNetworkGraph.Solve(network, GetSourceFactor, GetSourceRpm, referenceRpm);
+            MechanicalNetworkGraph.Solve(network, independentPowerOnly ? GetIndependentSourceFactor : GetSourceFactor,
+                GetSourceRpm, referenceRpm);
             foreach (MachineEntity node in network.Nodes)
                 if (node.Definition.ManualDriveTorque > 0 && node.FlowVisited && node.EntryDirection >= 0)
                     node.IncomingPower = true;
         }
+        UpdateConversionPowerBudget(network);
     }
 
     /// <summary>外部动力探测不计入手推石磨自身，避免按钮状态依赖上一次解算顺序。</summary>
     private static float GetExternalSourceFactor(MachineEntity node)
         => node.Definition.ManualDriveTorque > 0 ? 0f : GetSourceFactor(node);
+
+    private static float GetIndependentSourceFactor(MachineEntity node)
+        => node.Definition.IsConverter || node.Definition.Source == "electric" ? 0f : GetSourceFactor(node);
+    private static float GetIndependentExternalSourceFactor(MachineEntity node)
+        => node.Definition.ManualDriveTorque > 0 ? 0f : GetIndependentSourceFactor(node);
 
     private static void CollectPlayerChunks()
     {
@@ -655,6 +662,7 @@ public static partial class MachineWorld
     public static float GetSourceFactor(MachineEntity node)
     {
         if (node == null || node.SourceTorque <= 0) return 0;
+        if (node.Definition.IsConverter) return GetConverterMotorFactor(node);
         if (node.Definition.ManualDriveTorque > 0)
             return node.State != null && !node.IncomingPower && node.State.ManualSeconds > 0 ? 1 : 0;
         string source = node.Definition.Source;

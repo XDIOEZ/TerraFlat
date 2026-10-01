@@ -205,6 +205,7 @@ public partial class GameRes
         context.Add(() => LoadState, value => LoadState = value, ResourceLoadState.Loading);
         context.AddDictionary(() => AllPrefabs, value => AllPrefabs = value);
         context.AddDictionary(() => ItemDefinitions, value => ItemDefinitions = value);
+        context.AddDictionary(() => itemDefinitionAliases, value => itemDefinitionAliases = value);
         context.AddDictionary(() => ActorDefinitions, value => ActorDefinitions = value);
         context.AddDictionary(() => LootTables, value => LootTables = value);
         context.AddDictionary(() => recipeDict, value => recipeDict = value);
@@ -244,7 +245,7 @@ public partial class GameRes
         var retainedIds = new List<string>();
         foreach (KeyValuePair<string, RuntimeItemDefinition> pair in previousItems)
         {
-            if (ItemDefinitions.ContainsKey(pair.Key)) continue;
+            if (TryGetItemDefinition(pair.Key, out _)) continue;
             ItemDefinitions.Add(pair.Key, pair.Value);
             retainedIds.Add(pair.Key);
         }
@@ -280,7 +281,7 @@ public partial class GameRes
         string[] liquidIds)
     {
         foreach (string id in items.Keys)
-            if (!ItemDefinitions.ContainsKey(id)) throw new InvalidDataException($"运行中不能删除物品定义：{id}");
+            if (!TryGetItemDefinition(id, out _)) throw new InvalidDataException($"运行中不能删除物品定义：{id}");
         foreach (RuntimeTileDefinition tile in tiles.Values)
             if (!TileBlockDict.TryGetValue(tile.Id, out RuntimeTileDefinition current) || current.RuntimeTileId != tile.RuntimeTileId)
                 throw new InvalidDataException($"运行中不能删除地块或改变稳定编号：{tile.Id}");

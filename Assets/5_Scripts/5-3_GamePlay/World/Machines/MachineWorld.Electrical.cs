@@ -51,13 +51,89 @@ public static partial class MachineWorld
         dirty = false;
     }
 
-    /// <summary>首版整网电力解算；机械侧先求发电机输入，电气侧再决定马达可输出的比例。</summary>
+    /// <summary>从独立动力向外确定转换方向，已经过的电网不能再作为该条动力链的发电目标。</summary>
     private static void SolveElectricalNetworks(float seconds)
     {
         if (electricalGraph == null) return;
+        bool hasConverters = false;
+        foreach (MechanicalNetwork network in graph.Networks) hasConverters |= network.HasConverters;
+        if (!hasConverters)
+        {
+            foreach (MechanicalNetwork network in graph.Networks)
+                if (network.Active) SolveNetwork(network);
+            SettleElectricalNetworks(seconds, true);
+            return;
+        }
+        var resolved = new HashSet<MechanicalNetwork>();
+        var ancestry = new Dictionary<ElectricalNetwork, HashSet<ElectricalNetwork>>();
+        foreach (MachineEntity node in nodes.Values)
+        {
+            node.ConversionMode = ElectricalConversionMode.Idle;
+            node.ElectricalPowerRatio = 0f;
+            node.ElectricalSuppliedWatts = 0f;
+        }
+        foreach (MechanicalNetwork network in graph.Networks)
+        {
+            if (!network.Active) continue;
+            SolveNetwork(network, true);
+            bool independent = false;
+            foreach (MachineEntity node in network.Nodes) independent |= node.SourceFactor > 0f;
+            foreach (MachineEntity node in network.Nodes)
+                if (node.Definition.IsConverter)
+                    node.ConversionMode = independent ? ElectricalConversionMode.Generator : ElectricalConversionMode.Motor;
+            if (!independent) continue;
+            resolved.Add(network);
+            SolveNetwork(network, true);
+        }
+
+        int depth = 0;
+        for (; depth <= graph.Networks.Count; depth++)
+        {
+            SettleElectricalNetworks(seconds, false);
+            bool advanced = false;
+            foreach (MechanicalNetwork network in graph.Networks)
+            {
+                if (!network.Active || !network.HasConverters || resolved.Contains(network)) continue;
+                var inputs = new HashSet<ElectricalNetwork>();
+                foreach (MachineEntity node in network.Nodes)
+                    if (node.Definition.IsConverter && node.ElectricalSuppliedWatts > 0f)
+                    {
+                        inputs.Add(node.ElectricalNetwork);
+                        if (ancestry.TryGetValue(node.ElectricalNetwork, out var parents)) inputs.UnionWith(parents);
+                    }
+                if (inputs.Count == 0) continue;
+                foreach (MachineEntity node in network.Nodes)
+                {
+                    if (!node.Definition.IsConverter || node.ElectricalSuppliedWatts > 0f) continue;
+                    node.ConversionMode = inputs.Contains(node.ElectricalNetwork)
+                        ? ElectricalConversionMode.Idle : ElectricalConversionMode.Generator;
+                    if (node.ConversionMode != ElectricalConversionMode.Generator) continue;
+                    if (!ancestry.TryGetValue(node.ElectricalNetwork, out var parents))
+                        ancestry[node.ElectricalNetwork] = parents = new HashSet<ElectricalNetwork>();
+                    parents.UnionWith(inputs);
+                }
+                resolved.Add(network);
+                SolveNetwork(network);
+                advanced = true;
+            }
+            if (!advanced) break;
+        }
+
+        // 方向固定后沿链传播实际功率；探算不写电池，正式储能结算每轮只执行一次。
+        for (int pass = 0; pass <= depth; pass++)
+        {
+            SettleElectricalNetworks(seconds, false);
+            foreach (MechanicalNetwork network in graph.Networks)
+                if (network.Active) SolveNetwork(network);
+        }
+        SettleElectricalNetworks(seconds, true);
+    }
+
+    private static void SettleElectricalNetworks(float seconds, bool commitStorage)
+    {
         foreach (ElectricalNetwork network in electricalGraph.Networks)
             ElectricalNetworkGraph.Solve(network, seconds,
-                GetElectricalGeneratorFactor, GetElectricalDemandFactor, ElectricalBatteryChanged);
+                GetElectricalGeneratorFactor, GetElectricalDemandFactor, ElectricalBatteryChanged, commitStorage);
     }
 
     /// <summary>发电机和马达跨越机械网与电网，首版保持其机械网全局求解，避免远端输电因休眠断能。</summary>
@@ -68,7 +144,7 @@ public static partial class MachineWorld
         {
             ElectricalDefinition electrical = node.Definition?.Electrical;
             if (electrical == null || node.ElectricalNetwork?.Nodes.Count <= 1) continue;
-            if (electrical.PowerProvider == "mechanical" || electrical.DemandProvider == "motor") return true;
+            if (electrical.IsConverter || electrical.PowerProvider == "mechanical" || electrical.DemandProvider == "motor") return true;
         }
         return false;
     }
@@ -77,6 +153,12 @@ public static partial class MachineWorld
     {
         ElectricalDefinition electrical = node?.Definition?.Electrical;
         if (electrical == null) return 0f;
+        if (electrical.IsConverter)
+            return node.ConversionMode == ElectricalConversionMode.Generator && node.LoadSatisfied
+                ? Mathf.Clamp01(MechanicalNetworkGraph.RoundLoadTorqueToTens(node.LoadTorque) * node.Rpm *
+                    MachineCatalog.Settings.WattsPerTorqueRpm * electrical.ConversionEfficiency / electrical.PowerWatts)
+                    * (node.Network?.ConversionGenerationFactor ?? 0f)
+                : 0f;
         if (electricalPowerProviders.TryGetValue(electrical.PowerProvider ?? string.Empty, out var provider))
             return Mathf.Clamp01(provider(node));
         if (electrical.PowerProvider == "mechanical")
@@ -91,12 +173,59 @@ public static partial class MachineWorld
     {
         ElectricalDefinition electrical = node?.Definition?.Electrical;
         if (electrical == null) return 0f;
+        if (electrical.IsConverter)
+        {
+            if (node.ConversionMode != ElectricalConversionMode.Motor || !ConverterHasWork(node)) return 0f;
+            return Mathf.Clamp01(node.SourceTorque * node.Definition.Rpm * MachineCatalog.Settings.WattsPerTorqueRpm /
+                electrical.ConversionEfficiency / electrical.PowerWatts);
+        }
         if (electricalDemandProviders.TryGetValue(electrical.DemandProvider ?? string.Empty, out var provider))
             return Mathf.Clamp01(provider(node));
         if (electrical.DemandProvider == "motor")
             return node.Network != null && node.Network.TorqueDemand > 0f ? 1f : 0f;
         if (!string.IsNullOrWhiteSpace(electrical.DemandProvider)) return 0f;
         return node.State != null ? 1f : 0f;
+    }
+
+    private static bool ConverterHasWork(MachineEntity motor)
+    {
+        if (motor.Network == null || motor.Links.Count == 0) return false;
+        foreach (MachineEntity node in motor.Network.Nodes)
+            if (!ReferenceEquals(node, motor) && (node.LoadTorque > 0f || node.Definition.IsConverter)) return true;
+        return false;
+    }
+
+    private static void UpdateConversionPowerBudget(MechanicalNetwork network)
+    {
+        if (!network.HasConverters) return;
+        float inputs = 0f, otherLoads = 0f, generation = 0f;
+        float wattsScale = MachineCatalog.Settings.WattsPerTorqueRpm;
+        foreach (MachineEntity node in network.Nodes)
+        {
+            if (node.SourceFactor > 0f && node.Rpm > 0f)
+            {
+                float torque = node.Definition.IsConverter
+                    ? Mathf.Floor((node.SourceTorque * node.SourceFactor + .0001f) / 10f) * 10f
+                    : MechanicalNetworkGraph.RoundTorqueToTens(node.SourceTorque * node.SourceFactor);
+                inputs += torque * node.SourceRpm * wattsScale;
+            }
+            if (node.LoadTorque <= 0f || !node.LoadSatisfied || node.Rpm <= 0f) continue;
+            float work = MechanicalNetworkGraph.RoundLoadTorqueToTens(node.LoadTorque) * node.Rpm * wattsScale;
+            if (node.Definition.IsConverter)
+                generation += Mathf.Min(node.Definition.Electrical.PowerWatts,
+                    work * node.Definition.Electrical.ConversionEfficiency);
+            else otherLoads += work;
+        }
+        network.ConversionGenerationFactor = generation > 0f
+            ? Mathf.Clamp01(Mathf.Max(0f, inputs - otherLoads) / generation) : 0f;
+    }
+
+    private static float GetConverterMotorFactor(MachineEntity node)
+    {
+        if (node.ConversionMode != ElectricalConversionMode.Motor || node.ElectricalSuppliedWatts <= 0f) return 0f;
+        float ratedWatts = node.SourceTorque * node.Definition.Rpm * MachineCatalog.Settings.WattsPerTorqueRpm;
+        return ratedWatts > 0f ? Mathf.Clamp01(node.ElectricalSuppliedWatts *
+            node.Definition.Electrical.ConversionEfficiency / ratedWatts) : 0f;
     }
 
     private static void ElectricalBatteryChanged(MachineEntity node)

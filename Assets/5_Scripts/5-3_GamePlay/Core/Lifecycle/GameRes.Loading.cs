@@ -219,6 +219,7 @@ public partial class GameRes
     {
         AllPrefabs.Clear();
         ItemDefinitions.Clear();
+        itemDefinitionAliases.Clear();
         ActorDefinitions.Clear();
         LootTables.Clear();
         ActorDefinitionCatalogLoader.ResetRuntimeCatalog();

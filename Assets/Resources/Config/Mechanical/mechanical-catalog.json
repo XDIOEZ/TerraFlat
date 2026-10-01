@@ -6,6 +6,7 @@
     "DeactivationChunks": 2,
     "UnloadDelaySeconds": 5,
     "ReferenceRpm": 20,
+    "WattsPerTorqueRpm": 1.5,
     "ManualHoldThresholdSeconds": 0.25,
     "ManualPulseSeconds": 0.2,
     "ManualReserveSeconds": 0.2,
@@ -26,15 +27,21 @@
     { "Id": "MechanicalHammer", "Kind": "consumer", "Ports": "axis", "Station": "mechanical_hammer", "RequiredRpm": 60, "TorqueLoad": 20 },
     {
       "Id": "Generator_Basic",
-      "Kind": "consumer",
+      "FormerIds": ["Motor_Basic"],
+      "Kind": "converter",
       "Ports": "axis",
+      "AxlePorts": ["right"],
+      "Source": "electric",
+      "Torque": 20,
+      "Rpm": 20,
       "RequiredRpm": 20,
       "TorqueLoad": 20,
       "Electrical": {
-        "Role": "generator",
+        "Role": "converter",
+        "Connection": "left",
+        "ConversionEfficiency": 1,
         "NominalVoltage": 120,
-        "PowerWatts": 600,
-        "PowerProvider": "mechanical"
+        "PowerWatts": 600
       }
     },
     {
@@ -62,20 +69,6 @@
         "CapacityJoules": 60000,
         "MaxChargeWatts": 600,
         "MaxDischargeWatts": 600
-      }
-    },
-    {
-      "Id": "Motor_Basic",
-      "Kind": "source",
-      "Ports": "axis",
-      "Source": "electric",
-      "Torque": 15,
-      "Rpm": 20,
-      "Electrical": {
-        "Role": "consumer",
-        "NominalVoltage": 120,
-        "PowerWatts": 600,
-        "DemandProvider": "motor"
       }
     }
   ],

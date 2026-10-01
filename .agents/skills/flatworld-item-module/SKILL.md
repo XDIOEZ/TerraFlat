@@ -54,6 +54,7 @@ description: "Use when: 定位或修改 FlatWorld 的 Item/Module 组合架构�
 - Manifest 是唯一发现入口；包的最终 `shellPrefab` 必须与声明一致。启动只异步解析一次 Item Manifest，Prefab 排除计划和物品构建共用该结果，Android 不得退回另一套发现规则。
 - 本体 Item/Actor 的 Sprite、材质、动画和独立外壳请求由 `GameRes.ResourceAssets` 持有；新增加载分支不能丢失句柄所有权。`shellPrefab` 引用通用目录，独立加载只接受 `shellAddress`，禁止从编辑器 `sourcePrefab` 推导运行时外壳。
 - 每个具体定义必须独立填写默认显示名 `gameName`；`id` 与名称翻译键分别承担业务引用和界面查询职责。继承不能把父物品的名称或翻译键带入子物品，编辑器也不能把 GameObject 名和 `ItemData.ToString()` 写成显示名与说明。
+- 物品身份合并用当前定义的 `formerIds` 声明旧查找名，别名不继承、不进入物品枚举；查询统一走 `TryGetItemDefinition`，存档重建生成当前 ID。别名字典与正式目录一起隔离、重载和清理，不能把已合并的旧定义作为退役内容重新放回目录。
 - JSON 通用 Item Shell 的 SpriteRenderer 必须使用 `SpriteSortPoint.Pivot`；运行时换图也要重新写入该值，透明排序锚点以 Sprite 导入 Pivot 为唯一权威。
 - 通用 `Module_Production` Prefab 不能内置 Apple 等具体产物；具体产物由物品 JSON 或专用 Prefab override 明确配置。`ProductionList` 的产物、数量、周期等属于当前定义；读取模块存档时只恢复 `ProductionTime`、`CurrentProductionCount`、`IsInitialized` 等运行时进度，禁止让 BitData 整体覆盖当前配置，否则内容改动后会继续生产历史产物。
 - 世界物品若由主体 SpriteRenderer + 子提示/装饰 SpriteRenderer 组成，子层级需要 `sortingOrder` 偏移时必须用根 `SortingGroup` 把整件物品作为一个 Y 深度单元；禁止让子 Renderer 的正偏移直接跨过角色等外部实体的世界排序。
