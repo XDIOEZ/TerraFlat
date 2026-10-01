@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Text;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -412,13 +414,74 @@ public sealed class RuntimeDebugOverlay : MonoBehaviour, IBeginDragHandler, IDra
         if (logText == null)
             return;
 
-        logText.text = GameLogManager.GetRuntimeLogSnapshot(DisplayCharacterLimit, out bool truncated);
+        string snapshot = GameLogManager.GetRuntimeLogSnapshot(DisplayCharacterLimit, out bool truncated);
+        logText.text = BuildDisplayLog(snapshot);
         if (truncated && statusText != null)
             statusText.text = "页面只显示最近内容；复制条数可在顶部手动设置。";
 
         LayoutRebuilder.MarkLayoutForRebuild(logText.rectTransform);
         if (logScrollRect != null)
             logScrollRect.verticalNormalizedPosition = 0f;
+    }
+
+    // 仅把显示端缺字转成 Unicode 编号，避免缺字警告再次进入日志；复制与磁盘日志保留原文。
+    private string BuildDisplayLog(string snapshot)
+    {
+        if (logText.font == null || string.IsNullOrEmpty(snapshot))
+            return snapshot;
+
+        var supportedCharacters = new Dictionary<uint, bool>();
+        StringBuilder builder = null;
+        for (int index = 0; index < snapshot.Length; index++)
+        {
+            char current = snapshot[index];
+            int length = char.IsHighSurrogate(current) && index + 1 < snapshot.Length &&
+                         char.IsLowSurrogate(snapshot[index + 1]) ? 2 : 1;
+            uint unicode = length == 2
+                ? (uint)char.ConvertToUtf32(current, snapshot[index + 1])
+                : current;
+            bool supported = current == '\n' || current == '\r' || current == '\t';
+            if (!supported && !supportedCharacters.TryGetValue(unicode, out supported))
+            {
+                supported = !char.IsSurrogate(current) || length == 2;
+                supported = supported && HasDisplayCharacter(unicode);
+                supportedCharacters.Add(unicode, supported);
+            }
+
+            if (!supported && builder == null)
+            {
+                builder = new StringBuilder(snapshot.Length);
+                builder.Append(snapshot, 0, index);
+            }
+
+            if (builder != null)
+            {
+                if (supported)
+                    builder.Append(snapshot, index, length);
+                else
+                    builder.Append("[U+").Append(unicode.ToString("X4")).Append(']');
+            }
+            index += length - 1;
+        }
+        return builder != null ? builder.ToString() : snapshot;
+    }
+
+    private bool HasDisplayCharacter(uint unicode)
+    {
+        if (TMP_FontAssetUtilities.GetCharacterFromFontAsset(
+                unicode, logText.font, true, logText.fontStyle, logText.fontWeight, out _) != null)
+            return true;
+
+        if (TMP_Settings.fallbackFontAssets != null &&
+            TMP_FontAssetUtilities.GetCharacterFromFontAssets(
+                unicode, logText.font, TMP_Settings.fallbackFontAssets, true,
+                logText.fontStyle, logText.fontWeight, out _) != null)
+            return true;
+
+        return TMP_Settings.defaultFontAsset != null &&
+               TMP_FontAssetUtilities.GetCharacterFromFontAsset(
+                   unicode, TMP_Settings.defaultFontAsset, true,
+                   logText.fontStyle, logText.fontWeight, out _) != null;
     }
 
     #endregion

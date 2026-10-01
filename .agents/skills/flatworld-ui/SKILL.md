@@ -147,6 +147,7 @@ description: "Use when: 定位或修改 FlatWorld 的 UIManager、BasePanel、�
 - GM 动态按钮的 `Selectable.ColorBlock` 是乘在深灰 `Image` 底色上的状态 Tint；禁用态应保持接近白色且不降低 Alpha，只通过轻微乘色降低一级明度。禁止使用半透明中灰作为 `disabledColor`，否则统一灰阶主题会把禁用按钮乘成近黑色，误导为视觉故障。
 - 层级显示中的导航模式也走统一观察模式与透明度偏好；新增 `GmWorldLayerMode` 只追加枚举数值，不能重排已保存的模式。导航按钮保持独立行，避免挤压原有温度/污染按钮及透明度滑轨；箭头表示朝本地玩家的共享寻路场，不代表每只怪物当前都在追击。
 - 日志页的 GM 入口广播 `RuntimeDebugOverlay.GmPanelOpenRequested`，由 `GMReflectionConsole` 订阅；日志属于 GamePlay，而 GM 属于依赖 GamePlay 的 `FlatWorld.Gameplay.Debug`，禁止反向直接引用。日志 Canvas 排序高于 GM，打开 GM 前先收起日志页。GM 点选传送层仅在主动选点时启用，持有独立触点和玩法输入锁；关闭、失焦和换场景必须释放。
+- 日志正文显示前按 Unicode 码点检查 TMP 字体及回退字体，缺字显示为 `[U+编号]`，防止缺字警告反复写回日志；复制和磁盘日志必须保留原文。
 - GM 分页枚举数值由 `ActivePageIndex` 保存；新页追加枚举项，显示顺序由 `BuildTabBar` 决定。页签横向内容宽度由布局计算，禁止恢复手写总宽而截断末尾分页。世界观察层独立于 GM 窗口显隐，关闭窗口只收起操作界面，不能顺带关闭观察层。
 - 宣传片录制模式由 `UIManager` 统一管理：裸 F1 只临时停用全部已加载 `Canvas` 与 `GraphicRaycaster`，必须保存并恢复原 `enabled` 状态，不能通过 Close/ShowAll 改变业务面板开关；录制期间新建 Canvas 要在渲染前继续纳入隐藏。
 - 主菜单控件名集中在 `GameManager.UI.cs`；定向构建 Prefab，避免无关重写。

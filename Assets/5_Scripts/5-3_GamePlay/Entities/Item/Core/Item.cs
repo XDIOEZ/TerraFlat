@@ -578,10 +578,12 @@ public abstract class Item : MonoBehaviour
         if (gameRes == null)
             return;
 
-        GameObject moduleObject = gameRes.InstantiatePrefab("Module_Equipment", parent: transform);
+        // 实例化使用当前 Prefab 地址，模块对象名继续保留原有稳定身份。
+        const string equipmentPrefabId = "Mod_EquipmentRuntime";
+        GameObject moduleObject = gameRes.InstantiatePrefab(equipmentPrefabId, parent: transform);
         if (moduleObject == null)
         {
-            Debug.LogError($"[Item] {name} 无法补齐通用装备模块 Module_Equipment", this);
+            Debug.LogError($"[Item] {name} 无法补齐通用装备模块 {equipmentPrefabId}", this);
             return;
         }
 
