@@ -441,6 +441,16 @@ public static partial class RuntimeUIPrefabBuilder
             return 0;
 
         Transform existing = root.transform.Find(RuntimeUIPrefabKeys.PanelBackground);
+        // 根 Image 被显式禁用表示它只是全屏输入/安全区外壳，不能再补一张可见的共享底板。
+        if (!ownerImage.enabled)
+        {
+            if (existing == null)
+                return 0;
+
+            UnityEngine.Object.DestroyImmediate(existing.gameObject);
+            return 1;
+        }
+
         if (existing != null)
         {
             existing.SetAsFirstSibling();
