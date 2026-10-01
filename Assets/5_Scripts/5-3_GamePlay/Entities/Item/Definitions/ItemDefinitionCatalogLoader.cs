@@ -1020,7 +1020,28 @@ public static class ItemDefinitionCatalogLoader
             dto.Ecs,
             dto.EntityRuntime,
             ResolveWorldDropBehavior(dto.WorldDropBehavior, id),
-            ResolveProcessingDefinitions(dto.Processing, id));
+            ResolveProcessingDefinitions(dto.Processing, id),
+            ResolveProcessingCapabilityLevels(dto.ProcessingCapabilities, id));
+    }
+
+    private static Dictionary<string, int> ResolveProcessingCapabilityLevels(
+        Dictionary<string, ItemProcessingCapabilityDto> source,
+        string itemId)
+    {
+        var result = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        if (source == null)
+            return result;
+
+        foreach (KeyValuePair<string, ItemProcessingCapabilityDto> pair in source)
+        {
+            string capability = pair.Key?.Trim();
+            int level = pair.Value?.Level ?? 0;
+            if (string.IsNullOrWhiteSpace(capability) || level < 1)
+                throw new InvalidDataException($"物品 {itemId} 包含无效加工发出能力");
+            if (!result.TryAdd(capability, level))
+                throw new InvalidDataException($"物品 {itemId} 重复声明加工发出能力：{capability}");
+        }
+        return result;
     }
 
     /// <summary>把物品内聚的加工响应编译为稳定 RuntimeRecipe，具体设备只负责提供能力和工作量。</summary>
@@ -1043,6 +1064,14 @@ public static class ItemDefinitionCatalogLoader
             {
                 throw new InvalidDataException($"物品 {itemId} 的加工能力 {capability} 参数无效");
             }
+            bool hasMinLevel = definition.MinLevel.HasValue;
+            bool hasMaxLevel = definition.MaxLevel.HasValue;
+            if (hasMinLevel != hasMaxLevel ||
+                hasMinLevel && (definition.MinLevel.Value < 1 || definition.MaxLevel.Value < definition.MinLevel.Value))
+            {
+                throw new InvalidDataException(
+                    $"物品 {itemId} 的加工能力 {capability} 必须声明有效的 minLevel/maxLevel 闭区间");
+            }
 
             var outputs = new List<RuntimeRecipeResult>(definition.Outputs.Count);
             foreach (ItemProcessingOutputDto output in definition.Outputs)
@@ -1064,7 +1093,8 @@ public static class ItemDefinitionCatalogLoader
             }
 
             if (!result.TryAdd(capability, new RuntimeItemProcessingDefinition(
-                    itemId, capability, definition.InputAmount, definition.Work, outputs)))
+                    itemId, capability, definition.InputAmount, definition.Work, outputs,
+                    definition.MinLevel, definition.MaxLevel)))
             {
                 throw new InvalidDataException($"物品 {itemId} 重复声明加工能力：{capability}");
             }

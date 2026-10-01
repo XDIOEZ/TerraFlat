@@ -16,6 +16,9 @@
         "Knife",
         "Modern"
       ],
+      "processingCapabilities": {
+        "cut": { "level": 1 }
+      },
       "visual": {
         "rendererPath": "Render/Render_1"
       },

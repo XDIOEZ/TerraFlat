@@ -26,7 +26,7 @@ description: "Use when: 定位或修改 FlatWorld 的背包、槽位、快捷栏
 
 - 库存液体原料通过 `LiquidDefinition.sourceItemId` 唯一映射到液体；每个完整物品对应一份，容器拖入先校验同液体与整份容量，再从真实所属库存调用 `TryConsumeFromSlot`，数量不得超过 `InventoryDragTransaction.DraggedAmount`。不能把液体原料伪装成容器变体；已有进食进度的原料不能再按完整一份装液。浮点残余容量不足一份时不扣料，容器之间仍允许按原有规则部分转液。
 
-- 固定/多物料配方继续以 Recipe JSON 为真源；单物料通用加工以物品 `processing` 为真源，由 `ItemProcessingResolver` 适配成临时 `RuntimeRecipe` 后继续走 `CraftingService`。旧 CookRecipe/熔炼 Recipe SO 只作热加工 MOD 兼容，普通合成不再载入旧 SO。
+- 固定/多物料配方继续以 Recipe JSON 为真源；单物料通用加工以物品 `processing` 为真源，由 `ItemProcessingResolver` 适配成临时 `RuntimeRecipe` 后继续走 `CraftingService`。通用加工可用 `minLevel/maxLevel` 声明发出者等级闭区间；有区间时缺少等级、低于下界或高于上界都拒绝。物品发出能力写在 `processingCapabilities.<capability>.level`，不要拿战斗伤害或资源采集 `HarvestTier` 代替加工等级。旧 CookRecipe/熔炼 Recipe SO 只作热加工 MOD 兼容，普通合成不再载入旧 SO。
 - 配方输出可通过可选 `durabilityMultiplier` 为同一产物定义赋予实例耐久品质；倍率必须为大于 0 的有限数，由 `CraftedDurabilityQuality` 在预览与真实提交共用的产物创建阶段应用，并写入 `ItemData.CraftedDurabilityMultiplier`。禁止为单个配方另写按配方 ID 硬编码的输出规则，否则容易与通用倍率重复叠乘。
 - 金属手钻的钻头质量读取实际扣除矿锭的 `DrillDurability:<正数>` Tag，并通过 `CraftingOutputRules` 写入产物实例；动态耐久必须同时持久化到共享“手钻模块”，放置/拆回及 ItemDefinition 读档重建后再恢复，不能只改临时 `ItemData.MaxDurability`。MOD 矿锭可通过同一 Tag 接入。
 - 内容工坊的普通合成使用不限长度的滚动材料清单，按物品或标签身份填写总数量，`amount=0` 表示必须存在但不消耗的工具。只有热加工继续使用 3×3 位置画布。保存前必须使用运行时配方工厂校验整份启用目录，并保留已有配方的未知顶层字段。

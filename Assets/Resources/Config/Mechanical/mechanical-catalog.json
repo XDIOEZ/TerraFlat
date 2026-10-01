@@ -22,7 +22,7 @@
     { "Id": "CrossShaft", "Kind": "bridge", "Ports": "axis" },
     { "Id": "Millstone", "Kind": "consumer", "Ports": "axis", "Station": "millstone", "ProcessCapability": "grind", "RequiredRpm": 20, "TorqueLoad": 10, "ManualDriveTorque": 60, "ManualDriveRpm": 2, "ManualDriveSecondsPerPress": 3 },
     { "Id": "MechanicalBellows", "Kind": "bellows", "Ports": "all", "AxlePorts": ["left"], "RequiredRpm": 20, "TorqueLoad": 10 },
-    { "Id": "Sawmill", "Kind": "consumer", "Ports": "all", "Station": "sawmill", "ProcessCapability": "cut", "RequiredRpm": 40, "TorqueLoad": 20 },
+    { "Id": "Sawmill", "Kind": "consumer", "Ports": "all", "Station": "sawmill", "ProcessCapability": "cut", "ProcessCapabilityLevel": 3, "RequiredRpm": 40, "TorqueLoad": 20 },
     { "Id": "MechanicalHammer", "Kind": "consumer", "Ports": "axis", "Station": "mechanical_hammer", "RequiredRpm": 60, "TorqueLoad": 20 },
     {
       "Id": "Generator_Basic",

@@ -138,6 +138,10 @@ public sealed class ItemDefinitionDto
     [JsonProperty("processing", NullValueHandling = NullValueHandling.Ignore)]
     public Dictionary<string, ItemProcessingDefinitionDto> Processing = new();
 
+    /// <summary>物品作为加工发出者时提供的能力等级；例如小刀可提供低等级 cut。</summary>
+    [JsonProperty("processingCapabilities", NullValueHandling = NullValueHandling.Ignore)]
+    public Dictionary<string, ItemProcessingCapabilityDto> ProcessingCapabilities = new();
+
     /// <summary>ItemData 中除公共快捷字段外的其余静态模板数据。</summary>
     [JsonProperty("itemData")]
     public JObject ItemData;
@@ -391,8 +395,21 @@ public sealed class ItemProcessingDefinitionDto
     [JsonProperty("work")]
     public float Work = 1f;
 
+    [JsonProperty("minLevel", NullValueHandling = NullValueHandling.Ignore)]
+    public int? MinLevel;
+
+    [JsonProperty("maxLevel", NullValueHandling = NullValueHandling.Ignore)]
+    public int? MaxLevel;
+
     [JsonProperty("outputs")]
     public List<ItemProcessingOutputDto> Outputs = new();
+}
+
+[Serializable]
+public sealed class ItemProcessingCapabilityDto
+{
+    [JsonProperty("level")]
+    public int Level = 1;
 }
 
 [Serializable]
@@ -422,6 +439,7 @@ public sealed class RuntimeItemDefinition
     private readonly Dictionary<string, string> modulePrefabIds;
     private readonly Dictionary<string, Sprite> visualStateSprites;
     private readonly Dictionary<string, RuntimeItemProcessingDefinition> processingDefinitions;
+    private readonly Dictionary<string, int> processingCapabilityLevels;
 
     public string Id { get; }
     public string ShellPrefabId { get; }
@@ -444,6 +462,7 @@ public sealed class RuntimeItemDefinition
 
     /// <summary>当前物品可响应的加工能力；配方关系属于物品，不属于石臼、石磨等具体设备。</summary>
     public IReadOnlyDictionary<string, RuntimeItemProcessingDefinition> ProcessingDefinitions => processingDefinitions;
+    public IReadOnlyDictionary<string, int> ProcessingCapabilityLevels => processingCapabilityLevels;
 
     /// <summary>世界侧可直接判断拾取语义，避免为了筛选 ECS 实体克隆 ItemData。</summary>
     public bool CanBePickedUp => templateData?.Stack?.CanBePickedUp == true;
@@ -512,7 +531,8 @@ public sealed class RuntimeItemDefinition
         JObject actorEcs = null,
         string entityRuntime = null,
         WorldDropBehavior worldDropBehavior = WorldDropBehavior.Passive,
-        Dictionary<string, RuntimeItemProcessingDefinition> processing = null)
+        Dictionary<string, RuntimeItemProcessingDefinition> processing = null,
+        Dictionary<string, int> processingCapabilities = null)
     {
         Id = id;
         EntityRuntime = entityRuntime;
@@ -553,6 +573,7 @@ public sealed class RuntimeItemDefinition
         modulePrefabIds = prefabIds ?? new Dictionary<string, string>(StringComparer.Ordinal);
         visualStateSprites = stateSprites ?? new Dictionary<string, Sprite>(StringComparer.OrdinalIgnoreCase);
         processingDefinitions = processing ?? new Dictionary<string, RuntimeItemProcessingDefinition>(StringComparer.OrdinalIgnoreCase);
+        processingCapabilityLevels = processingCapabilities ?? new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 
         var modules = new List<RuntimeItemModuleDefinition>(moduleParameters.Count);
         foreach (KeyValuePair<string, string> pair in moduleParameters)
@@ -581,6 +602,14 @@ public sealed class RuntimeItemDefinition
         }
 
         return processingDefinitions.TryGetValue(capability.Trim(), out processing);
+    }
+
+    public bool TryGetProcessingCapabilityLevel(string capability, out int level)
+    {
+        level = 0;
+        return !string.IsNullOrWhiteSpace(capability) &&
+               processingCapabilityLevels.TryGetValue(capability.Trim(), out level) &&
+               level > 0;
     }
 
     /// <summary>按状态名读取已由资源目录统一持有的额外 Sprite。</summary>
@@ -644,6 +673,9 @@ public sealed class RuntimeItemProcessingDefinition
     public string Capability { get; }
     public int InputAmount { get; }
     public float WorkRequired { get; }
+    public int? MinLevel { get; }
+    public int? MaxLevel { get; }
+    public bool RequiresSourceLevel => MinLevel.HasValue;
     public RuntimeRecipe Recipe { get; }
 
     public RuntimeItemProcessingDefinition(
@@ -651,11 +683,15 @@ public sealed class RuntimeItemProcessingDefinition
         string capability,
         int inputAmount,
         float workRequired,
-        IReadOnlyList<RuntimeRecipeResult> outputs)
+        IReadOnlyList<RuntimeRecipeResult> outputs,
+        int? minLevel = null,
+        int? maxLevel = null)
     {
         Capability = capability;
         InputAmount = inputAmount;
         WorkRequired = workRequired;
+        MinLevel = minLevel;
+        MaxLevel = maxLevel;
         Recipe = new RuntimeRecipe
         {
             Id = $"item-process.{capability}.{itemId}",
@@ -676,6 +712,15 @@ public sealed class RuntimeItemProcessingDefinition
                 results = outputs == null ? new List<RuntimeRecipeResult>() : new List<RuntimeRecipeResult>(outputs)
             }
         };
+    }
+
+    public bool AcceptsSourceLevel(int? sourceLevel)
+    {
+        if (!RequiresSourceLevel)
+            return true;
+        return sourceLevel.HasValue &&
+               sourceLevel.Value >= MinLevel.Value &&
+               sourceLevel.Value <= MaxLevel.Value;
     }
 }
 

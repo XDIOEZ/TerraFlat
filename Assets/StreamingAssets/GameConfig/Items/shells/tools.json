@@ -262,6 +262,8 @@
         "cut": {
           "inputAmount": 1,
           "work": 6,
+          "minLevel": 3,
+          "maxLevel": 5,
           "outputs": [
             { "itemId": "Plank", "amount": 4 }
           ]

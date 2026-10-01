@@ -195,6 +195,7 @@ public sealed class MachineDefinition
     public float SourceRadius; // 由水流线速度换算转速时使用的动力轮半径，单位为世界格。
     public string Station = "";
     public string ProcessCapability = ""; // grind 等物品加工能力；填写后具体产物从输入物品自身解析。
+    public int ProcessCapabilityLevel; // 0 表示无等级；有等级区间的加工必须由正等级来源匹配。
     public float TorqueCapacity = 60f; // 旧目录兼容字段；传动件现只传递扭矩，不以容量限制运行。
     public float Torque;
     public float Rpm = 20f;
@@ -270,6 +271,9 @@ public sealed class MachineDefinition
             foreach (string port in AxlePorts)
                 if (port != "right" && port != "up" && port != "left" && port != "down")
                     throw new ArgumentException("传动轴接口方向无效：" + Id);
+        if (ProcessCapabilityLevel < 0 ||
+            ProcessCapabilityLevel > 0 && string.IsNullOrWhiteSpace(ProcessCapability))
+            throw new ArgumentException("机械加工能力等级无效：" + Id);
         Electrical?.Validate(Id);
     }
     internal static bool Positive(float value) => value > 0 && !float.IsInfinity(value) && !float.IsNaN(value);

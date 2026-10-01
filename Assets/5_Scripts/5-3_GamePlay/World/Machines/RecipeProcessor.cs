@@ -11,6 +11,7 @@ public class RecipeProcessor : IDisposable
     public Inventory Output { get; }
     public string Station { get; }
     public string ProcessCapability { get; }
+    public int? ProcessCapabilityLevel { get; }
     public CraftingCapabilities Capabilities { get; }
     public RuntimeRecipe Recipe { get; private set; }
     public float RequiredWork { get; private set; } = 1f;
@@ -25,14 +26,17 @@ public class RecipeProcessor : IDisposable
     public event Action<RecipeProcessor> StateChanged; // 世界快照增量同步入口。
     private bool committing;
 
-    public RecipeProcessor(string station, RecipeProcessingState state, string processCapability = null)
+    public RecipeProcessor(string station, RecipeProcessingState state, string processCapability = null, int? processCapabilityLevel = null)
     {
         Station = station;
         ProcessCapability = processCapability?.Trim() ?? string.Empty;
+        ProcessCapabilityLevel = processCapabilityLevel.HasValue && processCapabilityLevel.Value > 0
+            ? processCapabilityLevel
+            : null;
         State = state ?? throw new ArgumentNullException(nameof(state));
         RebaseInventory(State.Input);
         RebaseInventory(State.Output);
-        Input = new ProcessingInventory(station, ProcessCapability) { Data = state.Input };
+        Input = new ProcessingInventory(station, ProcessCapability, ProcessCapabilityLevel) { Data = state.Input };
         Output = new Inventory { Data = state.Output };
         Capabilities = new CraftingCapabilities { StationId = station, InputSlotLimit = 1, ApplyDifficultyOutputMultiplier = false };
         registeredProcess = true;
@@ -153,7 +157,8 @@ public class RecipeProcessor : IDisposable
             if (!string.IsNullOrWhiteSpace(ProcessCapability))
             {
                 bool found = ItemProcessingResolver.TryResolveRecipe(
-                    Input, ProcessCapability, Capabilities, out RuntimeItemProcessingDefinition processing);
+                    Input, ProcessCapability, Capabilities, out RuntimeItemProcessingDefinition processing,
+                    ProcessCapabilityLevel);
                 SelectRecipe(found ? processing.Recipe : null, found ? processing.WorkRequired : 1f);
             }
             else
@@ -197,15 +202,17 @@ public class RecipeProcessor : IDisposable
     {
         private readonly string station;
         private readonly string processCapability;
-        public ProcessingInventory(string station, string processCapability)
+        private readonly int? processCapabilityLevel;
+        public ProcessingInventory(string station, string processCapability, int? processCapabilityLevel)
         {
             this.station = station;
             this.processCapability = processCapability;
+            this.processCapabilityLevel = processCapabilityLevel;
         }
         public override bool CanAcceptQuickTransfer(ItemSlot source, ItemSlot target)
             => base.CanAcceptQuickTransfer(source, target) &&
                (!string.IsNullOrWhiteSpace(processCapability)
-                   ? ItemProcessingResolver.TryResolve(source?.itemData, processCapability, out _)
+                   ? ItemProcessingResolver.TryResolve(source?.itemData, processCapability, processCapabilityLevel, out _)
                    : MachineCatalog.TryGetProcess(station, source?.itemData?.IDName, out _));
     }
 }

@@ -578,7 +578,8 @@ public static partial class MachineWorld
             node.Processor = new RecipeProcessor(
                 node.Definition.Station,
                 node.State.Processing ??= new RecipeProcessingState(),
-                node.Definition.ProcessCapability);
+                node.Definition.ProcessCapability,
+                node.Definition.ProcessCapabilityLevel > 0 ? node.Definition.ProcessCapabilityLevel : null);
             node.Processor.Input.MachineOwner = node;
             node.Processor.Output.MachineOwner = node;
             node.Processor.StateChanged += OnProcessorChanged;
