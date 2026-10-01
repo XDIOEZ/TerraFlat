@@ -65,6 +65,11 @@ GamePlayMCP 复用项目已有 MCPForUnity 自定义工具发现机制，不另�
 
 ### Agent 快速输入输出
 
+- 所有 `gameplay_*` 接口共享 `output="compact"`、`fields="字段1,字段2"`、`observe=true`；常规 Agent 调用优先精简输出。`fields` 选择返回数据的顶层字段，状态、错误、分页和批次结果始终保留；省略字段不代表空值。旧调用默认 `output="full"`。它主要压缩输出，不承诺跳过任意字段对应的业务查询。
+- `gameplay_control(acquire, observe=true)` 可把取控制权与首次精简观察合并；会话 `status` 的 compact 模式跳过附近世界查询。能力接口 compact 只列命令名，查具体命令语义时读 full；默认不缓存会话与世界状态。
+- `gameplay_ui(click/scroll/drag, treeAfter=true, output="compact")` 操作后等待一次 Editor 更新并附带新树，下一步从 `data.tree.data.semantic_tree` 选节点；compact UI 省略 path/rect/depth，但保留 ID、父节点、文本和可操作状态。分页只构造当前页完整节点，仍遍历统计总数。树读取失败时查看 `data.tree.success/error`，不要沿用旧节点。
+- `gameplay_query(source="runtime", output="compact")` 跳过名称、生命与机械详情；确实需要详情时传 `includeDetails=true`。其它查询源保留自身匹配内容与分页规则。
+- 诊断接口 compact 最多保留每个对象样本数组的前 4 项；截断时通过 `omittedSamples` 标明各字段省略数量，完整证据保存在 `reportPath` 指向的 Library JSON。计数、错误、标量数组完整保留；保存失败会保留原始完整数据。需要全部证据时读取报告，不要重跑采样来替代原样本。
 - 高频位置/血量检查优先 `gameplay_observe(profile="compact")`；需要时显式开启 `includeNearby/includeTerrain/includeDrops/includeInventory`。省略分区表示未查询，不表示没有内容。首次进入世界、环境变化、异常诊断仍读取 `profile="full"`；旧调用默认保持完整观察。
 - 动作后需要状态时用 `gameplay_act(..., observe=true)`，同一次返回附带真实精简观察；`observation={"profile":"full"}` 或其它 observe 参数可按需补充信息。
 - 已经确定、无需中途观察决策的短动作可用 `gameplay_act(steps=[{"action":"select_hotbar","index":0},{"action":"use"}], observe=true)`；最多 8 步，持续动作必须显式传 `seconds`，总等待预算最多 8 秒，失败或业务拒绝立即停止。每步仍通过正式动作注册表与控制租约执行；结果有 `executed/remaining/results`，已执行动作不会回滚，不能整批盲目重试。

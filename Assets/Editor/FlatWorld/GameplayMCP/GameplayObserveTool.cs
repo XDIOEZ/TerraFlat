@@ -11,11 +11,21 @@ namespace FlatWorld.GameplayMCP
         Group = "core")]
     public static class GameplayObserveTool
     {
+        #region 统一输入输出
+
+        /// <summary>按需返回数据，错误与分页状态保持完整。</summary>
+        public static object HandleCommand(JObject parameters)
+        {
+            return GameplayMcpOutput.Finish(ExecuteCommand(parameters), parameters, false);
+        }
+
+        #endregion
+
         #region 观察参数与响应
 
-        public sealed class Parameters
+        public sealed class Parameters : GameplayMcpOutputParameters
         {
-            [ToolParameter("Observation profile: full (legacy default) or compact (player position, health, stamina and input state only). Explicit include flags override profile defaults.", Required = false, DefaultValue = "full")]
+            [ToolParameter("Observation profile: full or compact. Defaults to output mode. Explicit include flags override profile defaults.", Required = false)]
             public string profile { get; set; }
 
             [ToolParameter("Include the 3x3 terrain grid. Defaults to false in compact, true in full.", Required = false)]
@@ -38,7 +48,7 @@ namespace FlatWorld.GameplayMCP
         }
 
         /// <summary>返回实时玩家、附近实体与资源状态。</summary>
-        public static object HandleCommand(JObject parameters)
+        private static object ExecuteCommand(JObject parameters)
         {
             return new SuccessResponse(
                 "FlatWorld gameplay observation.",

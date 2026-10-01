@@ -23,12 +23,25 @@ namespace FlatWorld.GameplayMCP
         Group = "core")]
     public static class GameplayQueryTool
     {
+        #region 统一输入输出
+
+        /// <summary>按需返回数据，错误与分页状态保持完整。</summary>
+        public static object HandleCommand(JObject parameters)
+        {
+            return GameplayMcpOutput.Finish(ExecuteCommand(parameters), parameters, false);
+        }
+
+        #endregion
+
         private const int DefaultRuntimePageSize = 3;
         private const int MaximumRuntimePageSize = 32;
         private const float MaximumRuntimeRadius = 64f;
 
-        public sealed class Parameters
+        public sealed class Parameters : GameplayMcpOutputParameters
         {
+            [ToolParameter("Runtime matches: include localized names, health and mechanical details. Defaults to false with output=compact, true with output=full.", Required = false)]
+            public bool? includeDetails { get; set; }
+
             [ToolParameter("Query source: runtime for instantiated Items, ecology for deterministic natural placements, terrain for environment layers, tile for surface tile identity, drops for ECS dropped items.", Required = false, DefaultValue = "runtime")]
             public string source { get; set; }
 
@@ -67,7 +80,7 @@ namespace FlatWorld.GameplayMCP
         }
 
         /// <summary>按稳定条件查询当前已加载实体，并按玩家距离排序。</summary>
-        public static object HandleCommand(JObject parameters)
+        private static object ExecuteCommand(JObject parameters)
         {
             if (!GameplayMcpRuntime.TryGetPlayerContext(
                     out Player player,
@@ -171,18 +184,19 @@ namespace FlatWorld.GameplayMCP
                 .ToArray();
 
             var result = new JArray();
+            bool includeDetails = bool.TryParse(parameters?["includeDetails"]?.ToString(), out bool details)
+                ? details : !GameplayMcpOutput.IsCompact(parameters);
             for (int i = 0; i < matches.Length; i++)
             {
                 Item item = matches[i].Item;
                 ItemData data = item.itemData;
-                Mod_DamageReceiver health = item.itemMods?.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
+                Mod_DamageReceiver health = includeDetails ? item.itemMods?.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp) : null;
                 bool interactable = GameplayMcpRuntime.CanPlayerInteract(item, player);
 
                 var entry = new JObject
                 {
                     ["guid"] = data.Guid,
                     ["id"] = data.IDName ?? string.Empty,
-                    ["name"] = ResolveCurrentDisplayName(data),
                     ["position"] = new JObject
                     {
                         ["x"] = Round(item.transform.position.x),
@@ -197,9 +211,15 @@ namespace FlatWorld.GameplayMCP
                         : new JArray(Round(health.Hp), Round(health.MaxHp))
                 };
 
-                JToken mechanical = BuildMechanicalSnapshot(item);
-                if (mechanical != null)
-                    entry["mechanical"] = mechanical;
+                if (includeDetails)
+                {
+                    entry["name"] = ResolveCurrentDisplayName(data);
+                    JToken mechanical = BuildMechanicalSnapshot(item);
+                    if (mechanical != null)
+                        entry["mechanical"] = mechanical;
+                }
+                else
+                    entry.Remove("hp");
 
                 result.Add(entry);
             }

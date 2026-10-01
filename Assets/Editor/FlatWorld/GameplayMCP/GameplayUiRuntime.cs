@@ -53,23 +53,34 @@ namespace FlatWorld.GameplayMCP
                 .ThenBy(canvas => BuildPath(canvas.transform), StringComparer.Ordinal)
                 .ToArray();
 
-            var nodes = new List<JObject>(Math.Min(MaximumNodeLimit * 2, 256));
+            var nodes = new List<JObject>(limit);
+            int totalCount = 0;
             for (int i = 0; i < rootCanvases.Length; i++)
             {
                 Canvas canvas = rootCanvases[i];
                 int rootId = canvas.gameObject.GetInstanceID();
-                nodes.Add(BuildNode(canvas.gameObject, null, 0, "canvas"));
+                if (totalCount >= offset && nodes.Count < limit)
+                    nodes.Add(BuildNode(canvas.gameObject, null, 0, "canvas"));
+                totalCount++;
                 TraverseSemanticChildren(
                     canvas.transform,
                     rootId,
                     1,
                     includeText,
                     interactiveOnly,
-                    nodes);
+                    nodes, offset, limit, ref totalCount);
             }
 
-            int totalCount = nodes.Count;
-            JObject[] page = nodes.Skip(offset).Take(limit).ToArray();
+            JObject[] page = nodes.ToArray();
+            if (GameplayMcpOutput.IsCompact(parameters))
+            {
+                foreach (JObject node in page)
+                {
+                    node.Remove("path");
+                    node.Remove("rect");
+                    node.Remove("depth");
+                }
+            }
             bool truncated = offset + page.Length < totalCount;
             Scene activeScene = SceneManager.GetActiveScene();
 
@@ -96,7 +107,7 @@ namespace FlatWorld.GameplayMCP
             int semanticDepth,
             bool includeText,
             bool interactiveOnly,
-            ICollection<JObject> result)
+            ICollection<JObject> result, int offset, int limit, ref int totalCount)
         {
             for (int i = 0; i < parent.childCount; i++)
             {
@@ -108,8 +119,10 @@ namespace FlatWorld.GameplayMCP
                 int nextDepth = semanticDepth;
                 if (TryResolveSemanticKind(child.gameObject, includeText, interactiveOnly, out string kind))
                 {
-                    JObject node = BuildNode(child.gameObject, semanticParentId, semanticDepth, kind);
-                    result.Add(node);
+                    // 只给当前页构造完整节点，分页外仍计数并保留语义父节点。
+                    if (totalCount >= offset && result.Count < limit)
+                        result.Add(BuildNode(child.gameObject, semanticParentId, semanticDepth, kind));
+                    totalCount++;
                     nextParentId = child.gameObject.GetInstanceID();
                     nextDepth = semanticDepth + 1;
                 }
@@ -120,7 +133,7 @@ namespace FlatWorld.GameplayMCP
                     nextDepth,
                     includeText,
                     interactiveOnly,
-                    result);
+                    result, offset, limit, ref totalCount);
             }
         }
 

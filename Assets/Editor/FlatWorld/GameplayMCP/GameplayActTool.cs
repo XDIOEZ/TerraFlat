@@ -13,16 +13,23 @@ namespace FlatWorld.GameplayMCP
         Group = "core")]
     public static class GameplayActTool
     {
-        public sealed class Parameters
+        #region 统一输入输出
+
+        /// <summary>按需返回数据，错误与分页状态保持完整。</summary>
+        public static async Task<object> HandleCommand(JObject parameters)
+        {
+            return GameplayMcpOutput.Finish(await ExecuteCommand(parameters), parameters, false);
+        }
+
+        #endregion
+
+        public sealed class Parameters : GameplayMcpOutputParameters
         {
             [ToolParameter("Action name. Required unless steps is supplied. Call gameplay_capabilities for registered actions.", Required = false)]
             public string action { get; set; }
 
             [ToolParameter("Optional array of 1-8 action parameter objects, executed in order. Timed actions require explicit seconds; total duration at most 8 seconds. No nested batches. Immediate batch actions: look_at, select_hotbar, interact, use, stop, inventory_to_hotbar. Timed: move, move_to, attack, wait, press_key, interact_hold.", Required = false)]
             public JObject[] steps { get; set; }
-
-            [ToolParameter("Return live compact observation after execution, avoiding a separate gameplay_observe call.", Required = false)]
-            public bool observe { get; set; }
 
             [ToolParameter("Observation options, same as gameplay_observe. Implies observe=true; defaults to profile=compact.", Required = false)]
             public object observation { get; set; }
@@ -61,7 +68,7 @@ namespace FlatWorld.GameplayMCP
         #region 动作与合并观察
 
         /// <summary>合并已确定的短动作与最终观察，减少 Agent 往返。</summary>
-        public static async Task<object> HandleCommand(JObject parameters)
+        private static async Task<object> ExecuteCommand(JObject parameters)
         {
             JObject args = parameters ?? new JObject();
             if (args["observation"] != null && args["observation"] is not JObject)

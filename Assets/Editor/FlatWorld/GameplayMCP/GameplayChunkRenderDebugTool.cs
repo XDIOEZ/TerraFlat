@@ -19,12 +19,22 @@ namespace FlatWorld.GameplayMCP
         Group = "core")]
     public static class GameplayChunkRenderDebugTool
     {
+        #region 统一输入输出
+
+        /// <summary>按需返回数据，错误与分页状态保持完整。</summary>
+        public static async Task<object> HandleCommand(JObject parameters)
+        {
+            return GameplayMcpOutput.Finish(await ExecuteCommand(parameters), parameters, true);
+        }
+
+        #endregion
+
         #region 诊断采样
 
         /// <summary>每类异常最多返回的地址数，避免高视距产生过大的 MCP 响应。</summary>
         private const int MaxSamplesPerCategory = 32;
 
-        public sealed class Parameters
+        public sealed class Parameters : GameplayMcpOutputParameters
         {
             [ToolParameter("status or sample", Required = false, DefaultValue = "status")]
             public string action { get; set; }
@@ -32,7 +42,7 @@ namespace FlatWorld.GameplayMCP
             public float seconds { get; set; }
         }
 
-        public static async Task<object> HandleCommand(JObject parameters)
+        private static async Task<object> ExecuteCommand(JObject parameters)
         {
             string action = parameters?["action"]?.ToString()?.Trim().ToLowerInvariant() ?? "status";
             if (action == "sample")

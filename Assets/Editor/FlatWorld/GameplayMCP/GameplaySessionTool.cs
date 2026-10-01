@@ -12,7 +12,17 @@ namespace FlatWorld.GameplayMCP
         Group = "core")]
     public static class GameplaySessionTool
     {
-        public sealed class Parameters
+        #region 统一输入输出
+
+        /// <summary>按需返回数据，错误与分页状态保持完整。</summary>
+        public static async Task<object> HandleCommand(JObject parameters)
+        {
+            return GameplayMcpOutput.Finish(await ExecuteCommand(parameters), parameters, false);
+        }
+
+        #endregion
+
+        public sealed class Parameters : GameplayMcpOutputParameters
         {
             [ToolParameter("One of: status, list_saves, continue_save, create_world, reload_resources, save_exit.", Required = false, DefaultValue = "status")]
             public string action { get; set; }
@@ -46,7 +56,7 @@ namespace FlatWorld.GameplayMCP
         }
 
         /// <summary>执行会话查询或启动。</summary>
-        public static async Task<object> HandleCommand(JObject parameters)
+        private static async Task<object> ExecuteCommand(JObject parameters)
         {
             string action = parameters?["action"]?.ToString()?.Trim().ToLowerInvariant() ?? "status";
             switch (action)
@@ -125,7 +135,9 @@ namespace FlatWorld.GameplayMCP
                 }
                 case "status":
                 {
-                    JObject observation = GameplayMcpRuntime.BuildObservation(4f, 4, false);
+                    JObject observation = GameplayMcpOutput.IsCompact(parameters)
+                        ? GameplayMcpRuntime.BuildObservation(new JObject { ["profile"] = "compact" })
+                        : GameplayMcpRuntime.BuildObservation(4f, 4, false);
                     return new SuccessResponse("FlatWorld gameplay session status.", observation);
                 }
                 default:

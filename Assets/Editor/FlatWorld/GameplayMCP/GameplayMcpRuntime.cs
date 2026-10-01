@@ -5,6 +5,8 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using FlatWorld.WorldModel;
+using MCPForUnity.Editor.Helpers;
+using MCPForUnity.Editor.Tools;
 using Newtonsoft.Json.Linq;
 using UnityEditor;
 using UnityEngine;
@@ -18,7 +20,7 @@ namespace FlatWorld.GameplayMCP
     /// </summary>
     internal static class GameplayMcpRuntime
     {
-        public const string ProtocolVersion = "0.9.0";
+        public const string ProtocolVersion = "0.10.0";
         public const string ExtensionPath = "Assets/Editor/FlatWorld/GameplayMCP/";
         private const float MinimumSessionTimeoutSeconds = 2f;
         private const float MaximumSessionTimeoutSeconds = 120f;
@@ -455,7 +457,7 @@ namespace FlatWorld.GameplayMCP
         /// <summary>按调用方需要生成观察，省略的分区不执行查询。</summary>
         public static JObject BuildObservation(JObject parameters)
         {
-            bool compact = string.Equals(GetString(parameters, "profile", "full"), "compact", StringComparison.OrdinalIgnoreCase);
+            bool compact = string.Equals(GetString(parameters, "profile", GameplayMcpOutput.IsCompact(parameters) ? "compact" : "full"), "compact", StringComparison.OrdinalIgnoreCase);
             return BuildObservation(
                 GetFloat(parameters, "radius", 10f),
                 GetInt(parameters, "maxEntities", compact ? 6 : 24),
@@ -1702,6 +1704,120 @@ namespace FlatWorld.GameplayMCP
 
         #endregion
     }
+
+    #region 统一工具输入输出
+
+    /// <summary>所有玩法接口共享精简输出与按字段取数参数。</summary>
+    public abstract class GameplayMcpOutputParameters
+    {
+        [ToolParameter("Attach compact live player observation to a successful result, avoiding a separate gameplay_observe call.", Required = false)]
+        public bool observe { get; set; }
+
+        [ToolParameter("Output mode: full (legacy default) or compact. Compact diagnostics preview at most 4 object samples per array and save the complete report. Errors remain complete.", Required = false, DefaultValue = "full")]
+        public string output { get; set; }
+
+        [ToolParameter("Optional comma-separated top-level data fields to return. Status, errors and pagination metadata are always retained; omitted fields mean not returned, not empty.", Required = false)]
+        public string fields { get; set; }
+    }
+
+    /// <summary>保持旧协议兼容，统一压缩成功响应并保留诊断证据。</summary>
+    internal static class GameplayMcpOutput
+    {
+        public static bool IsCompact(JObject args) =>
+            string.Equals(args?["output"]?.ToString(), "compact", StringComparison.OrdinalIgnoreCase);
+
+        /// <summary>只筛选成功数据，业务错误及控制、分页状态始终完整返回。</summary>
+        public static object Finish(object response, JObject args, bool diagnostic = false)
+        {
+            bool compact = IsCompact(args);
+            string fields = args?["fields"]?.ToString();
+            bool observe = args?.Value<bool?>("observe") == true;
+            if (response is not SuccessResponse success || (!compact && !observe && string.IsNullOrWhiteSpace(fields)))
+                return response;
+            JObject data = success.Data is JObject json ? (JObject)json.DeepClone() :
+                success.Data == null ? new JObject() : JObject.FromObject(success.Data);
+            if (data.Value<bool?>("ok") == false || data.Value<bool?>("ready") == false)
+                return response;
+            if (observe && data["observation"] == null)
+                data["observation"] = GameplayMcpRuntime.BuildObservation(new JObject { ["profile"] = "compact" });
+
+            string reportPath = null;
+            var omitted = new JObject();
+            if (compact && diagnostic)
+            {
+                JObject preview = (JObject)data.DeepClone();
+                TrimSamples(preview, string.Empty, omitted);
+                if (omitted.Count > 0)
+                {
+                    try
+                    {
+                        string directory = Path.GetFullPath("Library/FlatWorldGameplayMCP/Reports");
+                        Directory.CreateDirectory(directory);
+                        reportPath = Path.Combine(directory, Guid.NewGuid().ToString("N") + ".json");
+                        File.WriteAllText(reportPath, data.ToString(Newtonsoft.Json.Formatting.None));
+                        data = preview;
+                    }
+                    catch (IOException)
+                    {
+                        omitted.RemoveAll();
+                    }
+                    catch (UnauthorizedAccessException)
+                    {
+                        omitted.RemoveAll();
+                    }
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(fields))
+            {
+                var wanted = new HashSet<string>(fields.Split(',').Select(name => name.Trim()), StringComparer.Ordinal);
+                foreach (string key in new[] { "ok", "ready", "reason", "playing", "frame", "scene", "protocol", "code",
+                    "aborted", "valid", "errors", "warnings", "issues", "source", "offset", "limit", "truncated",
+                    "next_offset", "returned_count", "total_count", "executed", "remaining", "results", "observation",
+                    "active", "owned", "owner", "timeScale", "isolated", "profilerEnabled", "deepProfiling",
+                    "elapsed", "frameSamples", "invalidReason", "completed" })
+                    wanted.Add(key);
+                var missing = new JArray(fields.Split(',').Select(name => name.Trim()).Distinct().Where(name => !data.ContainsKey(name)));
+                foreach (JProperty property in data.Properties().ToArray())
+                    if (!wanted.Contains(property.Name))
+                        property.Remove();
+                data["selectedFields"] = fields;
+                if (missing.Count > 0)
+                    data["missingFields"] = missing;
+            }
+            if (reportPath != null)
+            {
+                data["reportPath"] = reportPath;
+                data["omittedSamples"] = omitted;
+            }
+            return compact ? new JObject { ["success"] = true, ["data"] = data } :
+                new SuccessResponse(success.Message, data);
+        }
+
+        /// <summary>只限制对象样本数组，坐标、血量、方向和标量列表保持完整。</summary>
+        private static void TrimSamples(JToken token, string path, JObject omitted)
+        {
+            if (token is JObject obj)
+            {
+                foreach (JProperty property in obj.Properties())
+                    TrimSamples(property.Value, string.IsNullOrEmpty(path) ? property.Name : path + "." + property.Name, omitted);
+            }
+            else if (token is JArray array)
+            {
+                if (array.Count > 4 && array.All(value => value is JObject) &&
+                    !path.EndsWith("issues", StringComparison.Ordinal) && !path.EndsWith("errors", StringComparison.Ordinal))
+                {
+                    omitted[path] = array.Count - 4;
+                    while (array.Count > 4)
+                        array.RemoveAt(array.Count - 1);
+                }
+                for (int i = 0; i < array.Count; i++)
+                    TrimSamples(array[i], path + "[" + i + "]", omitted);
+            }
+        }
+    }
+
+    #endregion
 
     /// <summary>标记一个可被 GamePlayMCP 自动发现的玩法动作。</summary>
     [AttributeUsage(AttributeTargets.Class, AllowMultiple = false)]

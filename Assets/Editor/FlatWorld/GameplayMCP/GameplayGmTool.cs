@@ -20,10 +20,20 @@ namespace FlatWorld.GameplayMCP
         Group = "core")]
     public static class GameplayGmTool
     {
+        #region 统一输入输出
+
+        /// <summary>按需返回数据，错误与分页状态保持完整。</summary>
+        public static object HandleCommand(JObject parameters)
+        {
+            return GameplayMcpOutput.Finish(ExecuteCommand(parameters), parameters, false);
+        }
+
+        #endregion
+
         #region 工具参数与执行
 
         /// <summary>GamePlayMCP GM 命令参数。</summary>
-        public sealed class Parameters
+        public sealed class Parameters : GameplayMcpOutputParameters
         {
             [ToolParameter("GM command. Call gameplay_capabilities first for the current registered command list.", Required = true)]
             public string command { get; set; }
@@ -33,7 +43,7 @@ namespace FlatWorld.GameplayMCP
         }
 
         /// <summary>在当前控制租约下执行一个已注册的 GM 命令。</summary>
-        public static object HandleCommand(JObject parameters)
+        private static object ExecuteCommand(JObject parameters)
         {
             string rawCommand = parameters?["command"]?.ToString()?.Trim();
             string command = GameplayMcpGmCommandRegistry.NormalizeCommand(rawCommand);
