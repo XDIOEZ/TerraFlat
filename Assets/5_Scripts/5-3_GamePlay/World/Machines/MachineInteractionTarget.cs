@@ -148,11 +148,16 @@ public sealed class MachineInteractionTarget : IWorldInteractionTarget, IWorldIn
     private string GetStatus()
     {
         string state = FlatWorldLocalizationService.GetUiText(node.GetOperatingStatus());
-        node.GetLocalTorque(out float torqueSupply, out float torqueDemand);
-        string status = FlatWorldLocalizationService.GetUiFormat(
-            "{0} · 转速 {1:0} · 扭矩 {2:0.#}/{3:0.#}",
-            state, node.Rpm, torqueSupply, torqueDemand);
-        if (node.Definition.Kind == "consumer" || node.Definition.Kind == "bellows")
+        string status = state;
+        if (node.Definition.HasMechanicalPorts)
+        {
+            node.GetLocalTorque(out float torqueSupply, out float torqueDemand);
+            status = FlatWorldLocalizationService.GetUiFormat(
+                "{0} · 转速 {1:0} · 扭矩 {2:0.#}/{3:0.#}",
+                state, node.Rpm, torqueSupply, torqueDemand);
+        }
+        if (node.Definition.HasMechanicalPorts &&
+            (node.Definition.Kind == "consumer" || node.Definition.Kind == "bellows"))
             status += FlatWorldLocalizationService.GetUiFormat(
                 " · 工作效率 {0:0.#}%（需求 {1:0} RPM）",
                 MachineWorld.GetWorkEfficiency(node) * 100f, node.Definition.RequiredRpm);

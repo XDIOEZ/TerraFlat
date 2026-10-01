@@ -78,7 +78,7 @@ public sealed class MechanicalPanelSession : IMachinePanelSession
         string itemId = mechanicalOwner?.Definition.Id ?? owner?.itemData?.IDName;
         if (itemId != null && GameRes.Instance.TryGetItemDefinition(itemId, out var definition))
             view.Title.text = definition.DisplayName;
-        view.Status.text = status?.Invoke() ?? string.Empty;
+        view.Status.text = (status?.Invoke() ?? string.Empty).Replace(" · ", "\n");
         string caption = actionLabel?.Invoke() ?? string.Empty;
         view.SetActionVisible(!string.IsNullOrWhiteSpace(caption));
         view.ActionButton.interactable = !string.IsNullOrWhiteSpace(caption) && actionAvailable?.Invoke() != false;

@@ -13,6 +13,7 @@ public sealed class MechanicalPanelView : MonoBehaviour
 
     public TMP_Text Title;
     public TMP_Text Status;
+    public ScrollRect StatusScroll; // 信息较多时允许纵向滚动，避免状态文字继续横向挤成一行。
     public RectTransform InnerField; // 加工内容底板，随面板模式同步缩放。
     public Button ActionButton;
     public Button DismantleButton; // 已安装组件的拆回入口。
@@ -31,7 +32,7 @@ public sealed class MechanicalPanelView : MonoBehaviour
         InnerField.gameObject.SetActive(true);
 
         var panelRect = (RectTransform)transform;
-        RectTransform statusRect = Status.rectTransform;
+        RectTransform statusRect = StatusScroll != null ? (RectTransform)StatusScroll.transform : Status.rectTransform;
         var buttonRect = (RectTransform)ActionButton.transform;
         var dismantleRect = (RectTransform)DismantleButton.transform;
         if (visible)
@@ -41,8 +42,8 @@ public sealed class MechanicalPanelView : MonoBehaviour
 
             statusRect.anchorMin = statusRect.anchorMax = new Vector2(0, 0);
             statusRect.pivot = new Vector2(0, 0.5f);
-            statusRect.anchoredPosition = new Vector2(24, 83);
-            statusRect.sizeDelta = new Vector2(598, 42);
+            statusRect.anchoredPosition = new Vector2(24, 84);
+            statusRect.sizeDelta = new Vector2(598, StatusScroll != null ? 64 : 42);
 
             buttonRect.anchorMin = buttonRect.anchorMax = new Vector2(1, 0);
             buttonRect.pivot = new Vector2(1, 0.5f);
@@ -61,7 +62,8 @@ public sealed class MechanicalPanelView : MonoBehaviour
         InnerField.sizeDelta = new Vector2(InnerField.sizeDelta.x, CompactInnerFieldHeight);
         statusRect.anchorMin = statusRect.anchorMax = new Vector2(0.5f, 0.5f);
         statusRect.pivot = new Vector2(0.5f, 0.5f);
-        statusRect.sizeDelta = new Vector2(580, 36);
+        statusRect.sizeDelta = new Vector2(580, StatusScroll != null ? 104 : 36);
+        statusRect.anchoredPosition = Vector2.zero;
 
         buttonRect.anchorMin = buttonRect.anchorMax = new Vector2(.5f, .5f);
         buttonRect.pivot = new Vector2(0.5f, 0.5f);
@@ -81,7 +83,13 @@ public sealed class MechanicalPanelView : MonoBehaviour
         ActionButton.gameObject.SetActive(visible);
         if (processingVisible) return;
 
-        Status.rectTransform.anchoredPosition = new Vector2(0, visible ? 12 : -17);
+        if (StatusScroll != null)
+        {
+            var statusRect = (RectTransform)StatusScroll.transform;
+            statusRect.anchoredPosition = new Vector2(0, visible ? 22 : 0);
+            statusRect.sizeDelta = new Vector2(580, visible ? 72 : 104);
+        }
+        else Status.rectTransform.anchoredPosition = new Vector2(0, visible ? 12 : -17);
     }
     #endregion
 }

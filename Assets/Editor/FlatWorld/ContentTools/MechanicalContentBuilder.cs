@@ -60,6 +60,7 @@ public static class MechanicalContentBuilder
             var view = root.GetComponent<MechanicalPanelView>() ?? root.AddComponent<MechanicalPanelView>();
             view.Title = Find<TMP_Text>(root, "FWUI_标题");
             view.Status = Find<TMP_Text>(root, "FWUI_FooterHint");
+            view.StatusScroll = EnsureStatusScroll(root, view.Status);
             view.InnerField = Find<RectTransform>(root, "FWUI_InnerField");
             view.ActionButton = Find<Button>(root, "合成按钮");
             var buildingActions = root.GetComponent<BuildingPanelActions>()
@@ -80,20 +81,21 @@ public static class MechanicalContentBuilder
                 if (binder != null) UnityEngine.Object.DestroyImmediate(binder);
             }
             view.Title.text = title; view.Status.text = ""; view.Status.fontSize = 16;
-            view.Status.enableAutoSizing = true; view.Status.fontSizeMin = 10; view.Status.fontSizeMax = 16;
+            view.Status.enableAutoSizing = false;
+            view.Status.enableWordWrapping = true;
+            view.Status.overflowMode = TextOverflowModes.Overflow;
+            view.Status.verticalAlignment = VerticalAlignmentOptions.Top;
             view.ActionButton.GetComponentInChildren<TMP_Text>(true).text = caption;
 
             var panelRect = (RectTransform)root.transform;
             panelRect.sizeDelta = new Vector2(panelRect.sizeDelta.x, 480);
             view.InnerField.sizeDelta = new Vector2(view.InnerField.sizeDelta.x, 280);
 
-            RectTransform statusRect = view.Status.rectTransform;
+            RectTransform statusRect = (RectTransform)view.StatusScroll.transform;
             statusRect.anchorMin = statusRect.anchorMax = new Vector2(0, 0);
             statusRect.pivot = new Vector2(0, 0.5f);
-            statusRect.anchoredPosition = new Vector2(24, 83);
-            statusRect.sizeDelta = new Vector2(598, 42);
-            view.Status.enableWordWrapping = true;
-            view.Status.overflowMode = TextOverflowModes.Truncate;
+            statusRect.anchoredPosition = new Vector2(24, 84);
+            statusRect.sizeDelta = new Vector2(598, 64);
 
             var actionRect = (RectTransform)view.ActionButton.transform;
             actionRect.anchorMin = actionRect.anchorMax = new Vector2(1, 0);
@@ -122,6 +124,71 @@ public static class MechanicalContentBuilder
         => root.GetComponentsInChildren<T>(true).FirstOrDefault(value => value.name == name)
            ?? throw new InvalidOperationException(root.name + " 缺少控件 " + name);
 
+    /// <summary>状态信息使用正式滚动区承载多行文本，避免参数增多后横向挤压或截断。</summary>
+    private static ScrollRect EnsureStatusScroll(GameObject root, TMP_Text status)
+    {
+        Transform existing = root.GetComponentsInChildren<Transform>(true)
+            .FirstOrDefault(value => value.name == "FWUI_StatusScroll");
+        RectTransform scrollRect;
+        RectTransform viewport;
+        if (existing == null)
+        {
+            Transform originalParent = status.transform.parent;
+            int siblingIndex = status.transform.GetSiblingIndex();
+            var scrollObject = new GameObject("FWUI_StatusScroll", typeof(RectTransform), typeof(CanvasRenderer),
+                typeof(Image), typeof(ScrollRect));
+            scrollRect = (RectTransform)scrollObject.transform;
+            scrollRect.SetParent(originalParent, false);
+            scrollRect.SetSiblingIndex(siblingIndex);
+
+            var viewportObject = new GameObject("Viewport", typeof(RectTransform), typeof(CanvasRenderer),
+                typeof(Image), typeof(Mask));
+            viewport = (RectTransform)viewportObject.transform;
+            viewport.SetParent(scrollRect, false);
+            status.rectTransform.SetParent(viewport, false);
+        }
+        else
+        {
+            scrollRect = (RectTransform)existing;
+            viewport = existing.Find("Viewport") as RectTransform
+                ?? throw new InvalidOperationException(root.name + " 的状态滚动区缺少 Viewport。");
+        }
+
+        scrollRect.anchorMin = scrollRect.anchorMax = new Vector2(0, 0);
+        scrollRect.pivot = new Vector2(0, 0.5f);
+        var hitImage = scrollRect.GetComponent<Image>();
+        hitImage.color = Color.clear;
+        hitImage.raycastTarget = true;
+
+        viewport.anchorMin = Vector2.zero;
+        viewport.anchorMax = Vector2.one;
+        viewport.offsetMin = viewport.offsetMax = Vector2.zero;
+        var viewportImage = viewport.GetComponent<Image>();
+        viewportImage.color = new Color(1f, 1f, 1f, 0.01f);
+        viewportImage.raycastTarget = false;
+        viewport.GetComponent<Mask>().showMaskGraphic = false;
+
+        RectTransform content = status.rectTransform;
+        content.anchorMin = new Vector2(0, 1);
+        content.anchorMax = new Vector2(1, 1);
+        content.pivot = new Vector2(0.5f, 1);
+        content.anchoredPosition = new Vector2(0, -6);
+        content.sizeDelta = new Vector2(-16, 0);
+        var fitter = status.GetComponent<ContentSizeFitter>() ?? status.gameObject.AddComponent<ContentSizeFitter>();
+        fitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
+        fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+        var scroll = scrollRect.GetComponent<ScrollRect>();
+        scroll.content = content;
+        scroll.viewport = viewport;
+        scroll.horizontal = false;
+        scroll.vertical = true;
+        scroll.movementType = ScrollRect.MovementType.Clamped;
+        scroll.inertia = true;
+        scroll.scrollSensitivity = 24f;
+        return scroll;
+    }
+
     private static void Register(string path, string address)
     {
         AddressableAssetSettings settings = AddressableAssetSettingsDefaultObject.Settings;
@@ -142,7 +209,8 @@ public static class MechanicalContentBuilder
         {
             var asset = AssetDatabase.LoadAssetAtPath<GameObject>(UiFolder + "/" + id + ".prefab");
             var view = asset.GetComponent<MechanicalPanelView>();
-            if (view == null || view.Title == null || view.Status == null || view.InnerField == null || view.ActionButton == null ||
+            if (view == null || view.Title == null || view.Status == null || view.StatusScroll == null ||
+                view.InnerField == null || view.ActionButton == null ||
                 view.DismantleButton == null ||
                 view.CloseButton == null || view.InputSlot == null || view.OutputSlot == null ||
                 view.ProcessingVisuals == null || view.ProcessingVisuals.Length != 11 || view.ProcessingVisuals.Any(value => value == null) ||
