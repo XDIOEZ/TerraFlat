@@ -57,7 +57,7 @@ public partial class GameRes
     };
 
     /// <summary>
-    /// F5/调试入口统一使用这里：主菜单直接重载；单机世界内准备独立候选目录并原位发布。
+    /// Alt+R/调试入口统一使用这里：主菜单直接重载；单机世界内准备独立候选目录并原位发布。
     /// 活跃实例继续持有旧资源，不保存、不退出、不从磁盘恢复世界。
     /// </summary>
     public bool RequestResourceReload()
@@ -81,14 +81,14 @@ public partial class GameRes
 
         if (manager.IsWorldEntryInProgress)
         {
-            Debug.LogWarning("[GameRes] 正在进入世界，暂不能执行 F5 资源重载。");
+            Debug.LogWarning("[GameRes] 正在进入世界，暂不能执行 Alt+R 资源重载。");
             return false;
         }
 
         // 联机状态需要由服务器统一协调资源版本；本地单边热重载会直接造成内容目录不一致。
         if (GameNetwork.IsOnline)
         {
-            Debug.LogWarning("[GameRes] 联机世界不允许本地 F5 热重载资源，请先结束联机会话。");
+            Debug.LogWarning("[GameRes] 联机世界不允许本地 Alt+R 热重载资源，请先结束联机会话。");
             return false;
         }
 
@@ -109,7 +109,7 @@ public partial class GameRes
         if ((manager != null && (manager.IsInGameWorld || manager.IsWorldEntryInProgress)) ||
             (items != null && items.WorldRunTimeItems.Values.Any(item => item != null)))
         {
-            Debug.LogWarning("[GameRes] 底层资源会话仍有世界运行态引用；游戏内请通过 F5/RequestResourceReload 执行安全重载。");
+            Debug.LogWarning("[GameRes] 底层资源会话仍有世界运行态引用；游戏内请通过 Alt+R/RequestResourceReload 执行安全重载。");
             return false;
         }
 
@@ -171,7 +171,7 @@ public partial class GameRes
         resourceLoadFailed = true;
         loadCoroutine = null;
         LastLoadError = $"阶段 {stage} 失败：{exception.Message}";
-        loadingText = $"资源加载失败（{stage}），修正配置后可按 F5 重试";
+        loadingText = $"资源加载失败（{stage}），修正配置后可按 Alt+R 重试";
         showLoadingGUI = true;
         Debug.LogError($"[GameRes] {LastLoadError}\n{exception}", this);
     }
