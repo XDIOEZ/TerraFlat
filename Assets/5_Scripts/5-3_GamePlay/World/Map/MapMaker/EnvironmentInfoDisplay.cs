@@ -35,7 +35,7 @@ public class EnvironmentInfoDisplay : MonoBehaviour
 
     [Header("显示设置")]
     public KeyCode toggleKey = KeyCode.F3;
-    public Vector2 panelSize = new(430f, 180f);
+    public Vector2 panelSize = new(560f, 240f);
     public Vector2 offset = new(20f, 20f);
 
     [Header("悬停指示器设置")]
@@ -45,7 +45,7 @@ public class EnvironmentInfoDisplay : MonoBehaviour
     [Header("样式设置")]
     public Color backgroundColor = new(0f, 0f, 0f, 0.78f);
     public Color textColor = Color.white;
-    public int fontSize = 12;
+    public int fontSize = 16;
 
     #endregion
 
@@ -247,7 +247,7 @@ public class EnvironmentInfoDisplay : MonoBehaviour
         }
 
         float panelWidth = Mathf.Min(Mathf.Max(320f, panelSize.x), Mathf.Max(1f, Screen.width));
-        float lineHeight = Mathf.Max(fontSize + 4f, 16f);
+        float lineHeight = Mathf.Max(fontSize + 6f, 20f);
         float wantedHeight = Mathf.Max(panelSize.y, lineCount * lineHeight + 12f);
         float panelHeight = Mathf.Min(wantedHeight, Mathf.Max(1f, Screen.height - 4f));
 
@@ -596,7 +596,7 @@ public class EnvironmentInfoDisplay : MonoBehaviour
 
         boxStyle = new GUIStyle(GUI.skin.box);
         boxStyle.normal.background = backgroundTexture;
-        boxStyle.padding = new RectOffset(8, 8, 6, 6);
+        boxStyle.padding = new RectOffset(12, 12, 10, 10);
 
         labelStyle = new GUIStyle(GUI.skin.label);
         labelStyle.normal.textColor = textColor;
