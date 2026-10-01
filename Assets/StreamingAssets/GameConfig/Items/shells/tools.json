@@ -269,6 +269,27 @@
           ]
         }
       },
+      "reactions": [
+        {
+          "id": "core:原木=木炭",
+          "minTemperature": 500.0,
+          "maxTemperature": 2000.0,
+          "work": 100,
+          "inputs": [
+            {
+              "match": "exact_item",
+              "amount": 3,
+              "itemId": "Log"
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "Charcoal",
+              "amount": 1
+            }
+          ]
+        }
+      ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Plants/Tree/item296.png",
         "rendererLocalPosition": {

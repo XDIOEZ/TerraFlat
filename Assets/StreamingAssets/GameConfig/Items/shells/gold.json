@@ -47,6 +47,27 @@
           "outputs": [{ "itemId": "OrePowder_Gold", "amount": 2 }]
         }
       },
+      "reactions": [
+        {
+          "id": "core:金矿石=金锭",
+          "minTemperature": 1064.0,
+          "maxTemperature": 2000.0,
+          "work": 100,
+          "inputs": [
+            {
+              "match": "exact_item",
+              "amount": 2,
+              "itemId": "Ore_Gold"
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "Ingot_Gold",
+              "amount": 1
+            }
+          ]
+        }
+      ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Environment/Ore_Gold/Ore_Gold_Idle.png",
         "color": { "r": 1, "g": 1, "b": 1, "a": 1 },

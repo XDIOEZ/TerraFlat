@@ -17,6 +17,25 @@
         "Sand",
         "Mineral"
       ],
+      "reactions": [
+        {
+          "id": "core:砂子=熔融玻璃",
+          "minTemperature": 1700.0,
+          "maxTemperature": 2000.0,
+          "work": 20.0,
+          "inputs": [
+            {
+              "match": "exact_item",
+              "amount": 1,
+              "itemId": "Sand"
+            }
+          ],
+          "liquidOutput": {
+            "liquidId": "core:molten_glass",
+            "amount": 1.0
+          }
+        }
+      ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Sand/Sand_Icon.png"
       }

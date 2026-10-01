@@ -127,6 +127,15 @@ public static class ItemDefinitionRuntime
         currentData.inHand = persistedData.inHand;
         currentData.transform = persistedData.transform ?? currentData.transform;
         currentData.FactionId = persistedData.FactionId;
+        if (persistedData.MatterState != null)
+        {
+            currentData.MatterState = new ItemMatterState
+            {
+                Initialized = persistedData.MatterState.Initialized,
+                TemperatureCelsius = persistedData.MatterState.TemperatureCelsius,
+                Moisture = persistedData.MatterState.Moisture
+            };
+        }
         CraftedDurabilityQuality.RestorePersistedMultiplier(currentData, persistedData);
 
         if (currentData.Stack != null && persistedData.Stack != null)

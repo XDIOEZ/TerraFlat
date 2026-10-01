@@ -927,6 +927,27 @@
       "weight": 2.5,
       "volume": 6.0,
       "stackable": true,
+      "reactions": [
+        {
+          "id": "core:烧制陶罐",
+          "minTemperature": 600,
+          "maxTemperature": 2000,
+          "work": 100,
+          "inputs": [
+            {
+              "match": "exact_item",
+              "amount": 1,
+              "itemId": "ClayJarBlank"
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "ClayJar",
+              "amount": 1
+            }
+          ]
+        }
+      ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/WaterVessel/ClayJarBlank/ClayJarBlank_Icon.png",
         "color": {

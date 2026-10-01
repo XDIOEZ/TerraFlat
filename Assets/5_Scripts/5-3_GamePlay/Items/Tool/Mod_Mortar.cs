@@ -323,21 +323,30 @@ public sealed class Mod_Mortar : Module, IInteractable, IInventory
             AllowOutputIntoInput = true
         };
 
+        foreach (ItemSlot materialSlot in materialInventory.Data.itemSlots)
+        {
+            ItemData material = materialSlot?.itemData;
+            if (material != null && ItemMatterRuntime.Advance(material, temperature, 1f, seconds))
+                materialInventory.Data.NotifyItemStateChanged(material);
+        }
+
+        RuntimeItemReactionDefinition selectedReaction = null;
         RuntimeRecipe selectedRecipe = null;
         CraftingRecipeMatch selectedMatch = null;
-        foreach (RuntimeRecipe recipe in GameRes.ExistingInstance.GetRecipes(RecipeType.Smelting))
+        if (ItemReactionResolver.TryResolve(materialInventory, heatCapabilities,
+                out RuntimeItemReactionDefinition reaction, out CraftingRecipeMatch reactionMatch,
+                requireLiquidOutput: true))
         {
-            if (!string.Equals(recipe.RequiredStation, CrucibleStationId, StringComparison.OrdinalIgnoreCase) ||
-                recipe.LiquidOutput == null || temperature < recipe.Temperature || temperature > recipe.Temperature_Max)
-                continue;
-            if (hasLiquid && !string.Equals(recipe.LiquidOutput.LiquidId, liquidState.LiquidId, StringComparison.OrdinalIgnoreCase))
-                continue;
-            if (!CraftingRecipeMatcher.TryMatchRecipe(materialInventory, recipe, heatCapabilities, out CraftingRecipeMatch match))
-                continue;
-
-            selectedRecipe = recipe;
-            selectedMatch = match;
-            break;
+            float materialTemperature = ItemMatterRuntime.GetMinimumConsumedTemperature(
+                materialInventory, reactionMatch, temperature);
+            if (reaction.TemperatureMatches(materialTemperature) &&
+                (!hasLiquid || string.Equals(reaction.LiquidOutput.LiquidId, liquidState.LiquidId,
+                    StringComparison.OrdinalIgnoreCase)))
+            {
+                selectedReaction = reaction;
+                selectedRecipe = reaction.Recipe;
+                selectedMatch = reactionMatch;
+            }
         }
 
         if (selectedRecipe == null)
@@ -351,7 +360,7 @@ public sealed class Mod_Mortar : Module, IInteractable, IInventory
         }
 
         state.HeatingSeconds += Mathf.Max(0f, seconds);
-        if (state.HeatingSeconds < selectedRecipe.ProcessingSeconds)
+        if (state.HeatingSeconds < selectedReaction.WorkRequired)
         {
             storage.WriteData(state);
             return true;

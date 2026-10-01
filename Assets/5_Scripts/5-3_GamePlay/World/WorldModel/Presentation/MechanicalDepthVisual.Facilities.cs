@@ -66,21 +66,21 @@ public sealed partial class MechanicalDepthVisual
         {
             ItemData item = state.Inventory.itemSlots[i].itemData;
             if (item == null) continue;
-            MeatrackDryingRule rule = runtime?.GetRule(item);
-            Sprite sprite = rule?.DisplaySprite;
+            Sprite sprite = null;
             Material material = parts[0]?.Material;
             if (GameRes.ExistingInstance.TryGetItemDefinition(item.IDName, out var itemDefinition))
             {
-                if (sprite == null) sprite = itemDefinition.Sprite;
+                sprite = itemDefinition.Sprite;
                 if (itemDefinition.Material != null) material = itemDefinition.Material;
             }
             if (sprite == null || material == null) continue;
             Vector3 position = config.Value("VisualAnchorOffset", source.VisualAnchorOffset) +
                 Vector3.right * ((i - (count - 1) * .5f) * config.Value("VisualSlotSpacing", source.VisualSlotSpacing));
             SetFacilitySprite(i * 2, sprite, material, position, source.ItemSpriteSortingOrder, Color.white);
-            Sprite smoked = rule?.SmokedStateSprite ?? source.DefaultSmokeStateSprite;
-            if (smoked == null || rule == null) continue;
-            float progress = Mathf.Clamp01(state.Elapsed[i] / Mathf.Max(.01f, rule.RequiredDryingSeconds));
+            Sprite smoked = source.DefaultSmokeStateSprite;
+            bool canDry = runtime?.CanDry(item) ?? ItemMatterRuntime.CanMoistureTransform(item);
+            if (smoked == null || !canDry) continue;
+            float progress = runtime?.GetProgress(i) ?? ItemMatterRuntime.GetMoistureProgress01(item);
             SetFacilitySprite(i * 2 + 1, smoked, material, position, source.SmokeSpriteSortingOrder,
                 Color.Lerp(source.SmokeStartColor, source.SmokeDoneColor, progress));
         }

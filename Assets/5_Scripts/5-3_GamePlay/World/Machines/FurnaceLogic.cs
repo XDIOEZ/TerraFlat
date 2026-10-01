@@ -49,6 +49,7 @@ public class FurnaceLogic : MachineLogic
     private readonly float heatOffset;
     private TemperatureMgr temperatureManager;
     private Player productionActor;
+    private RuntimeItemReactionDefinition activeReaction;
     #endregion
 
     #region 生命周期
@@ -293,6 +294,12 @@ public class FurnaceLogic : MachineLogic
             (1f + airflow) * (hasInput ? 1f : 2f) * seconds);
         if (!hasInput) { Processor.State.Progress = 0f; return; }
         if (MachineInventory.IsBeingDragged(Input) || MachineInventory.IsBeingDragged(Output)) return;
+        foreach (ItemSlot slot in Input.Data.itemSlots)
+        {
+            ItemData item = slot?.itemData;
+            if (item != null && ItemMatterRuntime.Advance(item, Data.Temperature, 1f, seconds))
+                Input.Data.NotifyItemStateChanged(item);
+        }
         if (heatVessels && InventoryVesselHeating.ProcessHeat(Input, Output, Data.Temperature, seconds))
         { Processor.State.Progress = 0f; return; }
         RefreshRecipe();
@@ -303,6 +310,15 @@ public class FurnaceLogic : MachineLogic
     private void RefreshRecipe()
     {
         if (Processor == null || Processor.IsCommitting) return;
+        if (ItemReactionResolver.TryResolve(Input, Processor.Capabilities,
+                out RuntimeItemReactionDefinition reaction, out _, requireLiquidOutput: false))
+        {
+            activeReaction = reaction;
+            Processor.SelectRecipe(reaction.Recipe, reaction.WorkRequired);
+            return;
+        }
+
+        activeReaction = null;
         bool found = CraftingRecipeMatcher.TryMatch(Input, Processor.Capabilities, out CraftingRecipeMatch match, out _);
         Processor.SelectRecipe(found ? match.Recipe : null, 100f);
     }
@@ -312,9 +328,25 @@ public class FurnaceLogic : MachineLogic
     {
         RuntimeRecipe recipe = Processor.Recipe;
         if (recipe == null) return CraftingResult.Failed(CraftingFailureReason.RecipeNotFound, "当前材料没有熔炼配方");
-        if (Data.Temperature < recipe.Temperature)
+        float reactionTemperature = Data.Temperature;
+        if (activeReaction != null &&
+            CraftingRecipeMatcher.TryMatchRecipe(Input, recipe, Processor.Capabilities, out CraftingRecipeMatch reactionMatch))
+        {
+            reactionTemperature = ItemMatterRuntime.GetMinimumConsumedTemperature(Input, reactionMatch, Data.Temperature);
+            if (reactionTemperature < (activeReaction.MinTemperature ?? float.MinValue))
+                return CraftingResult.Failed(CraftingFailureReason.ConditionsNotMet, "材料温度不足", recipe);
+            if (reactionTemperature > (activeReaction.MaxTemperature ?? float.MaxValue))
+            {
+                ItemData charredReaction = GameRes.Instance.CreateItemData("CharredMatter");
+                charredReaction.Stack.Amount = 1f;
+                return CraftingResult.Succeeded(recipe, new[] { charredReaction });
+            }
+            return CraftingService.DescribeRecipe(recipe);
+        }
+
+        if (reactionTemperature < recipe.Temperature)
             return CraftingResult.Failed(CraftingFailureReason.ConditionsNotMet, "炉温不足", recipe);
-        if (Data.Temperature <= recipe.Temperature_Max) return CraftingService.DescribeRecipe(recipe);
+        if (reactionTemperature <= recipe.Temperature_Max) return CraftingService.DescribeRecipe(recipe);
         ItemData charred = GameRes.Instance.CreateItemData("CharredMatter");
         charred.Stack.Amount = 1f;
         return CraftingResult.Succeeded(recipe, new[] { charred });
@@ -331,8 +363,12 @@ public class FurnaceLogic : MachineLogic
     {
         CraftingResult outputs = ResolveOutputs();
         if (!outputs.Success) return outputs;
+        float reactionTemperature = Data.Temperature;
+        if (activeReaction != null &&
+            CraftingRecipeMatcher.TryMatchRecipe(Input, Processor.Recipe, Processor.Capabilities, out CraftingRecipeMatch reactionMatch))
+            reactionTemperature = ItemMatterRuntime.GetMinimumConsumedTemperature(Input, reactionMatch, Data.Temperature);
         CraftingResult result = CraftingService.CraftRecipeOutputs(Input, Output, Processor.Capabilities, Processor.Recipe,
-            outputs.Outputs, Data.Temperature <= Processor.Recipe.Temperature_Max, actor, publishCrafting: false);
+            outputs.Outputs, reactionTemperature <= Processor.Recipe.Temperature_Max, actor, publishCrafting: false);
         if (result.Success)
             foreach (ItemData output in result.Outputs)
                 GameplayProgressEvents.PublishSmeltSucceeded(actor, output.IDName, output.Stack.Amount);

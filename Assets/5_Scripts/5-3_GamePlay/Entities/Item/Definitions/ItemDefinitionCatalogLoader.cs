@@ -873,6 +873,7 @@ public static class ItemDefinitionCatalogLoader
 
         ItemData template = FastCloner.FastCloner.DeepClone(shellItem.itemData);
         template.HeatConductionRate = ItemData.DefaultHeatConductionRate; // 基础速率只取代码默认值或 JSON，不继承外壳 Prefab。
+        template.MatterState = new ItemMatterState(); // 连续物质状态属于实例，不继承外壳或静态定义。
         PopulateTemplateData(dto.ItemData, template, id);
         if (float.IsNaN(template.HeatConductionRate) || float.IsInfinity(template.HeatConductionRate) ||
             template.HeatConductionRate < 0f)
@@ -1022,7 +1023,10 @@ public static class ItemDefinitionCatalogLoader
             dto.EntityRuntime,
             ResolveWorldDropBehavior(dto.WorldDropBehavior, id),
             ResolveProcessingDefinitions(dto.Processing, id),
-            ResolveProcessingCapabilityLevels(dto.ProcessingCapabilities, id), dto.FormerIds);
+            ResolveProcessingCapabilityLevels(dto.ProcessingCapabilities, id),
+            dto.FormerIds,
+            ItemMatterReactionCompiler.CompileMatter(dto.Matter, id),
+            ItemMatterReactionCompiler.CompileReactions(dto.Reactions, id));
     }
 
     private static Dictionary<string, int> ResolveProcessingCapabilityLevels(

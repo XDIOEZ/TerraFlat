@@ -26,6 +26,7 @@ description: "Use when: 定位或修改 FlatWorld 的机器世界、工作台、
 - 模拟不依赖 ChunkView。网络整体先恢复再 Tick、先快照再休眠；无端口设施独立按玩家窗口休眠。显示卸载不能删除实体或撤销已保存库存。
 - 业务时间使用传入的世界时间；有界补算保留剩余时间。手摇倒计时在领域逻辑分派前推进，定制领域逻辑不能绕过动力耗时。
 - 工作台配方与进度属于 `RecipeProcessor`，面板只发命令；输入/输出预检与结算复用 `CraftingService`。只提供通用加工方式的设备使用 `MachineDefinition.ProcessCapability`：石磨提供 `grind`、锯木机提供 `cut`，具体输入、产物和工作量读取物品自己的 `ItemDefinition.processing`，禁止再在 `mechanical-catalog.Processes` 为每种可加工物复制设备专用配方。需要加工尺度约束时，设备用 `ProcessCapabilityLevel` 提供单一等级，目标物品用 `processing.<capability>.minLevel/maxLevel` 声明可接受闭区间；等级过低或过高都不匹配。尚未迁移为物品能力的手钻、锻造等专用转换继续使用现有 `MachineProcessDefinition`。炉温、燃料、点火、副产物仍内聚在 `FurnaceLogic`，不要用“温度直接乘秒”替代实际热加工规则。
+- 热加工同样遵循“设备给条件、材料定义结果”：晾架只提高空气暴露并读取 `TemperatureMgr` 的实际环境温度；炉体与坩埚优先解析物品 `reactions`，反应温度判断使用参与材料自身的 `MatterState.TemperatureCelsius`，不能把炉温直接当作材料温度。
 - 炉体先用 `Combustion.Fuel` Tag 判断物品是否允许作为燃料，再走 `Mod_Fuel.TryResolveItemData` 读取数值；冷 `ItemData` 先读保存态 BitData，缺失时回退当前物品定义的 `parameters.Data`。Tag 负责语义资格，FuelData 负责燃值与最高温度。
 - 机械最终 RPM 决定工作效率，扭矩是供给门槛；风箱通过 `Airflow` 输入影响炉体，炉体不遍历网络拓扑。
 - 机器库存只能由权威端修改。拖放、快捷转移、排序/整理都走正式命令和现有库存事务；服务端校验玩家归属、距离与物品身份。客户端快照先校验候选，再更新同格 ItemSlot 的内容；保留库存和槽位身份、本地 UI 布局，并同步禁止放入状态，不能因定期同步使拖拽来源失效。

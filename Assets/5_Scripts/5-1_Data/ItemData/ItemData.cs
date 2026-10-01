@@ -79,6 +79,9 @@ public abstract partial class ItemData
     [Tooltip("制作材料赋予的耐久倍率；1 表示使用物品定义中的基础耐久")]
     public float CraftedDurabilityMultiplier = 1f;
 
+    [Tooltip("物品实例当前的温度与含水率状态")]
+    public ItemMatterState MatterState = new();
+
     #region 热量传导
 
     public const float DefaultHeatConductionRate = 1f; // 未在 JSON 配置时的基础热量传导速率(℃/s)
@@ -175,6 +178,15 @@ public abstract partial class ItemData
     }
 
     #endregion
+}
+
+[MemoryPackable]
+[Serializable]
+public partial class ItemMatterState
+{
+    public bool Initialized;
+    public float TemperatureCelsius = 20f;
+    public float Moisture;
 }
 
 /// <summary>Physics2D 回写给实体数据的瞬时结果，不承载战斗裁决。</summary>

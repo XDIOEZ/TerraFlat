@@ -118,6 +118,7 @@ internal sealed partial class DroppedItemRuntime : IDisposable
             if (simulation.Contains(change.Id)) UpdatePlacement(change.Id);
         }
         TickWater(deltaTime);
+        TickMatter(deltaTime);
         TickPickup(deltaTime, pickers);
     }
 

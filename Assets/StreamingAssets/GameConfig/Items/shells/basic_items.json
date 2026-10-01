@@ -272,6 +272,20 @@
       "tags": [
         "47"
       ],
+      "matter": {
+        "initialMoisture": 0.8,
+        "evaporationRatePerSecond": 0.00085,
+        "evaporationStartTemperature": 0,
+        "temperatureDryingMultiplierPer10C": 0.25,
+        "waterAbsorptionRatePerSecond": 0.02,
+        "transitions": [
+          {
+            "id": "dry:leaf",
+            "maxMoisture": 0.2,
+            "outputItemId": "Tea"
+          }
+        ]
+      },
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Plants/Tree/plants.png[plants_57]",
         "rendererLocalPosition": {
@@ -657,6 +671,20 @@
       "stackable": true,
       "canBePickedUp": true,
       "tags": ["Combustion.Fuel"],
+      "matter": {
+        "initialMoisture": 0.8,
+        "evaporationRatePerSecond": 0.00085,
+        "evaporationStartTemperature": 0,
+        "temperatureDryingMultiplierPer10C": 0.25,
+        "waterAbsorptionRatePerSecond": 0.02,
+        "transitions": [
+          {
+            "id": "dry:hide",
+            "maxMoisture": 0.2,
+            "outputItemId": "Leather"
+          }
+        ]
+      },
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/RawHide.png",
         "rendererLocalPosition": {
@@ -1108,6 +1136,48 @@
         "Ingot",
         "DrillDurability:100"
       ],
+      "reactions": [
+        {
+          "id": "core:铜+锡=青铜",
+          "minTemperature": 1000.0,
+          "maxTemperature": 2000.0,
+          "work": 100,
+          "inputs": [
+            {
+              "match": "exact_item",
+              "amount": 9,
+              "itemId": "Ingot_Copper"
+            },
+            {
+              "match": "exact_item",
+              "amount": 1,
+              "itemId": "Ingot_Tin"
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "Ingot_Bronze",
+              "amount": 10
+            }
+          ]
+        },
+        {
+          "id": "matter:melt:Ingot_Copper",
+          "minTemperature": 1085,
+          "work": 20,
+          "inputs": [
+            {
+              "match": "exact_item",
+              "itemId": "Ingot_Copper",
+              "amount": 1
+            }
+          ],
+          "liquidOutput": {
+            "liquidId": "core:molten_copper",
+            "amount": 1.0
+          }
+        }
+      ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Tools/Item_Tool_402.png",
         "rendererLocalPosition": {
@@ -1193,6 +1263,48 @@
         "Iron",
         "RawIron",
         "DrillDurability:160"
+      ],
+      "reactions": [
+        {
+          "id": "core:粗铁锭=铁锭",
+          "minTemperature": 1489.0,
+          "maxTemperature": 2000.0,
+          "work": 100,
+          "inputs": [
+            {
+              "match": "exact_item",
+              "amount": 1,
+              "itemId": "Ingot_RawIron"
+            },
+            {
+              "match": "exact_item",
+              "amount": 1,
+              "itemId": "Ingot_RawIron"
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "Ingot_WroughtIron",
+              "amount": 2
+            }
+          ]
+        },
+        {
+          "id": "matter:melt:Ingot_RawIron",
+          "minTemperature": 1538,
+          "work": 20,
+          "inputs": [
+            {
+              "match": "exact_item",
+              "itemId": "Ingot_RawIron",
+              "amount": 1
+            }
+          ],
+          "liquidOutput": {
+            "liquidId": "core:molten_iron",
+            "amount": 1.0
+          }
+        }
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Materials/Ores/ores.png[ores_10]",
@@ -1362,6 +1474,24 @@
       "tags": [
         "Ingot",
         "DrillDurability:80"
+      ],
+      "reactions": [
+        {
+          "id": "matter:melt:Ingot_Tin",
+          "minTemperature": 232,
+          "work": 20,
+          "inputs": [
+            {
+              "match": "exact_item",
+              "itemId": "Ingot_Tin",
+              "amount": 1
+            }
+          ],
+          "liquidOutput": {
+            "liquidId": "core:molten_tin",
+            "amount": 1.0
+          }
+        }
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Tools/Item_Tool_394.png",
@@ -1664,6 +1794,68 @@
           "outputs": [{ "itemId": "OrePowder_Copper", "amount": 2 }]
         }
       },
+      "reactions": [
+        {
+          "id": "core:铜矿=铜",
+          "minTemperature": 1000.0,
+          "maxTemperature": 2000.0,
+          "work": 100,
+          "inputs": [
+            {
+              "match": "exact_item",
+              "amount": 2,
+              "itemId": "Ore_Copper"
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "Ingot_Copper",
+              "amount": 1
+            }
+          ]
+        },
+        {
+          "id": "core:铜+锡=青铜 1",
+          "minTemperature": 1000.0,
+          "maxTemperature": 2000.0,
+          "work": 100,
+          "inputs": [
+            {
+              "match": "exact_item",
+              "amount": 9,
+              "itemId": "Ore_Copper"
+            },
+            {
+              "match": "exact_item",
+              "amount": 1,
+              "itemId": "Ore_Tin"
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "Ingot_Bronze",
+              "amount": 5
+            }
+          ]
+        },
+        {
+          "id": "core:铜矿石=熔融铜",
+          "minTemperature": 1085.0,
+          "maxTemperature": 1600.0,
+          "work": 20.0,
+          "inputs": [
+            {
+              "match": "exact_item",
+              "amount": 2,
+              "itemId": "Ore_Copper"
+            }
+          ],
+          "liquidOutput": {
+            "liquidId": "core:molten_copper",
+            "amount": 1.0
+          }
+        }
+      ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Tools/Item_Tool_399.png",
         "rendererLocalPosition": {
@@ -1836,6 +2028,102 @@
           "outputs": [{ "itemId": "OrePowder_Iron", "amount": 2 }]
         }
       },
+      "reactions": [
+        {
+          "id": "core:铁矿=粗铁锭",
+          "minTemperature": 1000.0,
+          "maxTemperature": 2000.0,
+          "work": 100,
+          "inputs": [
+            {
+              "match": "exact_item",
+              "amount": 1,
+              "itemId": "Ore_Iron"
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "Ingot_RawIron",
+              "amount": 1
+            }
+          ]
+        },
+        {
+          "id": "core:铁矿=铁锭",
+          "minTemperature": 1489.0,
+          "maxTemperature": 2000.0,
+          "work": 100,
+          "inputs": [
+            {
+              "match": "exact_item",
+              "amount": 1,
+              "itemId": "Ore_Iron"
+            },
+            {
+              "match": "exact_item",
+              "amount": 1,
+              "itemId": "Ore_Iron"
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "Ingot_WroughtIron",
+              "amount": 1
+            }
+          ]
+        },
+        {
+          "id": "core:铁矿+碳=钢",
+          "minTemperature": 1489.0,
+          "maxTemperature": 9999.0,
+          "work": 100,
+          "inputs": [
+            {
+              "match": "exact_item",
+              "amount": 1,
+              "itemId": "Ore_Iron"
+            },
+            {
+              "match": "exact_item",
+              "amount": 1,
+              "itemId": "Ore_Coal"
+            },
+            {
+              "match": "exact_item",
+              "amount": 1,
+              "itemId": "Ore_Iron"
+            },
+            {
+              "match": "exact_item",
+              "amount": 1,
+              "itemId": "Ore_Coal"
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "Ingot_Steel",
+              "amount": 1
+            }
+          ]
+        },
+        {
+          "id": "core:铁矿石=熔融铁",
+          "minTemperature": 1538.0,
+          "maxTemperature": 2000.0,
+          "work": 20.0,
+          "inputs": [
+            {
+              "match": "exact_item",
+              "amount": 1,
+              "itemId": "Ore_Iron"
+            }
+          ],
+          "liquidOutput": {
+            "liquidId": "core:molten_iron",
+            "amount": 1.0
+          }
+        }
+      ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Tools/Item_Tool_391.png",
         "rendererLocalPosition": {
@@ -1924,6 +2212,44 @@
           "outputs": [{ "itemId": "OrePowder_Tin", "amount": 2 }]
         }
       },
+      "reactions": [
+        {
+          "id": "core:锡矿=锡",
+          "minTemperature": 1000.0,
+          "maxTemperature": 2000.0,
+          "work": 100,
+          "inputs": [
+            {
+              "match": "exact_item",
+              "amount": 2,
+              "itemId": "Ore_Tin"
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "Ingot_Tin",
+              "amount": 1
+            }
+          ]
+        },
+        {
+          "id": "core:锡矿石=熔融锡",
+          "minTemperature": 232.0,
+          "maxTemperature": 1200.0,
+          "work": 20.0,
+          "inputs": [
+            {
+              "match": "exact_item",
+              "amount": 2,
+              "itemId": "Ore_Tin"
+            }
+          ],
+          "liquidOutput": {
+            "liquidId": "core:molten_tin",
+            "amount": 1.0
+          }
+        }
+      ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Tools/Item_Tool_393.png",
         "rendererLocalPosition": {
@@ -2344,6 +2670,27 @@
       "weight": 0.1,
       "volume": 0.15,
       "stackable": true,
+      "reactions": [
+        {
+          "id": "core:大米=米饭",
+          "minTemperature": 100.0,
+          "maxTemperature": 2000.0,
+          "work": 100,
+          "inputs": [
+            {
+              "match": "exact_item",
+              "amount": 1,
+              "itemId": "Rice"
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "CookedRice",
+              "amount": 1
+            }
+          ]
+        }
+      ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Farming/Rice/Rice_Icon.png",
         "rendererLocalScale": {
@@ -3507,6 +3854,27 @@
       "tags": [
         "47"
       ],
+      "reactions": [
+        {
+          "id": "core:鸡蛋=煎鸡蛋",
+          "minTemperature": 150.0,
+          "maxTemperature": 2000.0,
+          "work": 100,
+          "inputs": [
+            {
+              "match": "exact_item",
+              "amount": 1,
+              "itemId": "Egg"
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "Egg_Cooked",
+              "amount": 1
+            }
+          ]
+        }
+      ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Tools/Item_Tool_115.png",
         "rendererLocalPosition": {
@@ -4133,6 +4501,41 @@
       "canBePickedUp": true,
       "tags": [
         "47"
+      ],
+      "matter": {
+        "initialMoisture": 0.8,
+        "evaporationRatePerSecond": 0.00085,
+        "evaporationStartTemperature": 0,
+        "temperatureDryingMultiplierPer10C": 0.25,
+        "waterAbsorptionRatePerSecond": 0.02,
+        "transitions": [
+          {
+            "id": "dry:meat",
+            "maxMoisture": 0.2,
+            "outputItemId": "Meat_Dehydrate"
+          }
+        ]
+      },
+      "reactions": [
+        {
+          "id": "core:生肉=熟肉",
+          "minTemperature": 200.0,
+          "maxTemperature": 400.0,
+          "work": 100,
+          "inputs": [
+            {
+              "match": "exact_item",
+              "amount": 1,
+              "itemId": "Meat"
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "Meat_Cooked",
+              "amount": 1
+            }
+          ]
+        }
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/icons_sheet.png[icons_sheet_107]",

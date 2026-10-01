@@ -145,6 +145,14 @@ public sealed class ItemDefinitionDto
     [JsonProperty("processingCapabilities", NullValueHandling = NullValueHandling.Ignore)]
     public Dictionary<string, ItemProcessingCapabilityDto> ProcessingCapabilities = new();
 
+    /// <summary>物品自身的连续物质状态参数；机器只改变环境，不保存具体物品转化表。</summary>
+    [JsonProperty("matter", NullValueHandling = NullValueHandling.Ignore)]
+    public ItemMatterDefinitionDto Matter;
+
+    /// <summary>多物料反应可声明在任一相关物品上；运行时按反应签名去重，不要求固定归属物。</summary>
+    [JsonProperty("reactions", NullValueHandling = NullValueHandling.Ignore)]
+    public List<ItemReactionDefinitionDto> Reactions = new();
+
     /// <summary>ItemData 中除公共快捷字段外的其余静态模板数据。</summary>
     [JsonProperty("itemData")]
     public JObject ItemData;
@@ -467,6 +475,8 @@ public sealed class RuntimeItemDefinition
     /// <summary>当前物品可响应的加工能力；配方关系属于物品，不属于石臼、石磨等具体设备。</summary>
     public IReadOnlyDictionary<string, RuntimeItemProcessingDefinition> ProcessingDefinitions => processingDefinitions;
     public IReadOnlyDictionary<string, int> ProcessingCapabilityLevels => processingCapabilityLevels;
+    public RuntimeItemMatterDefinition Matter { get; }
+    public IReadOnlyList<RuntimeItemReactionDefinition> Reactions { get; }
 
     /// <summary>世界侧可直接判断拾取语义，避免为了筛选 ECS 实体克隆 ItemData。</summary>
     public bool CanBePickedUp => templateData?.Stack?.CanBePickedUp == true;
@@ -537,7 +547,9 @@ public sealed class RuntimeItemDefinition
         WorldDropBehavior worldDropBehavior = WorldDropBehavior.Passive,
         Dictionary<string, RuntimeItemProcessingDefinition> processing = null,
         Dictionary<string, int> processingCapabilities = null,
-        string[] formerIds = null)
+        string[] formerIds = null,
+        RuntimeItemMatterDefinition matter = null,
+        IReadOnlyList<RuntimeItemReactionDefinition> reactions = null)
     {
         Id = id;
         var aliases = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -584,6 +596,8 @@ public sealed class RuntimeItemDefinition
         visualStateSprites = stateSprites ?? new Dictionary<string, Sprite>(StringComparer.OrdinalIgnoreCase);
         processingDefinitions = processing ?? new Dictionary<string, RuntimeItemProcessingDefinition>(StringComparer.OrdinalIgnoreCase);
         processingCapabilityLevels = processingCapabilities ?? new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        Matter = matter;
+        Reactions = reactions ?? Array.Empty<RuntimeItemReactionDefinition>();
 
         var modules = new List<RuntimeItemModuleDefinition>(moduleParameters.Count);
         foreach (KeyValuePair<string, string> pair in moduleParameters)
