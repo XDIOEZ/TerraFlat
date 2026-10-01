@@ -5,7 +5,7 @@ using UnityEngine;
 
 /// <summary>
 /// 玩家氧气状态模块。
-/// 水深、漂浮、下沉、减速与何时开始缺氧由 TileEffectReceiver 的通用水中生存状态统一判定；
+/// 水深、漂浮、下沉、减速与何时开始缺氧由 Mod_TileEffectReceiver 的通用水中生存状态统一判定；
 /// 本模块只保存玩家氧气、提供水中消耗参数并向 HUD 广播变化。
 /// </summary>
 public partial class Mod_Oxygen : Module

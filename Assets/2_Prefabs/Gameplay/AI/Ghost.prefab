@@ -398,7 +398,7 @@ MonoBehaviour:
   item: {fileID: 0}
   ModData:
     Name:
-    ID: AI_Ghost
+    ID: Mod_AI_Ghost
     isRunning: 1
     Type: 0
     BitData:

@@ -29,7 +29,7 @@ public static class ItemDefinitionCatalogLoader
         "Assets/2_Prefabs/Gameplay/Modules/Common/Module_FocusPoint.prefab",
         "Assets/2_Prefabs/Gameplay/Modules/Managers/TileReciver.prefab",
         "Assets/2_Prefabs/Gameplay/Modules/Movement/Module_Move.prefab",
-        "Assets/2_Prefabs/Gameplay/Modules/Movement/Mover.prefab",
+        "Assets/2_Prefabs/Gameplay/Modules/Movement/Mod_Mover.prefab",
         "Assets/2_Prefabs/Gameplay/Modules/Variants/Module_SmeltingVariant.prefab",
         "Assets/2_Prefabs/World/Buildings/Wall_Stone.prefab",
         "Assets/2_Prefabs/World/Buildings/Wall_Wood.prefab"
@@ -979,7 +979,7 @@ public static class ItemDefinitionCatalogLoader
             modulePrefabIds);
         lootTableBound |= lootTable != null && dto.Health?.HasHp == true;
         if (lootTable != null && !lootTableBound)
-            throw new InvalidDataException($"物品 {id} 引用了战利品表 {lootTable.Id}，但没有 DamageReceiver");
+            throw new InvalidDataException($"物品 {id} 引用了战利品表 {lootTable.Id}，但没有 Mod_DamageReceiver");
 
         // Actor 由 AnimatorController 驱动 SpriteRenderer，永远不再解析 Sprite 子资源地址。
         Sprite sprite = isActor
@@ -1251,7 +1251,7 @@ public static class ItemDefinitionCatalogLoader
         moduleParameters.Add(moduleName, parameters.ToString(Formatting.None));
     }
 
-    /// <summary>把表引用展开到显式 DamageReceiver 参数，并拒绝两套掉落来源并存。</summary>
+    /// <summary>把表引用展开到显式 Mod_DamageReceiver 参数，并拒绝两套掉落来源并存。</summary>
     private static JObject BindLootTableParameters(
         JObject parameters,
         RuntimeLootTable lootTable,
@@ -1270,7 +1270,7 @@ public static class ItemDefinitionCatalogLoader
         }
         else
         {
-            throw new InvalidDataException($"物品 {itemId} 的 DamageReceiver.Data 必须是对象");
+            throw new InvalidDataException($"物品 {itemId} 的 Mod_DamageReceiver.Data 必须是对象");
         }
 
         if (data.Property("LootTable", StringComparison.OrdinalIgnoreCase) != null)

@@ -229,7 +229,7 @@ GameObject:
   - component: {fileID: 5925862315762508756}
   - component: {fileID: 1448019589593312339}
   m_Layer: 0
-  m_Name: AI_Bird
+  m_Name: Mod_AI_Bird
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -265,7 +265,7 @@ MonoBehaviour:
   item: {fileID: 0}
   Data:
     Name: ai
-    ID: AI_Bird
+    ID: Mod_AI_Bird
     isRunning: 1
     Type: 0
     BitData: 

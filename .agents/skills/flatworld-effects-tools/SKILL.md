@@ -67,10 +67,10 @@ description: "Use when: 定位或修改 FlatWorld 的运行时特效、粒子、
 - 玩家被树冠遮挡时的圆形穿透窗由 `PlayerOcclusionShaderGlobals` 写入本地主角世界坐标，`Sprite-Lit-Master` 只对逐 Renderer `_PlayerOccluder=1` 的对象降低 Alpha；世界树必须带 `Tag.Tree`，`ItemDefinitionRuntime` 在共享外壳/对象池复用时必须显式写入 1 或 0 并保留其它 MPB 参数，禁止给所有 Sprite 开全局遮挡或为每棵树增加逐帧脚本。
 - 树木资源 ECS 通过纯视觉 `TreeSortingVisual` 使用原生 `SortingGroup`，树根与角色共用动态排序键，果实偏移只作用于组内；主体不能继续留在 Default BRG。直接复用物品植被材质，MPB 同步贴图、分离 Alpha、裁剪与 `_PlayerOccluder`，太阳投影仍走共享 BRG，不创建逐树阴影脚本。
 - 角色水体效果覆盖会旋转的手持物等附属 Sprite 时，水面高度与波浪横轴必须使用角色统一的世界空间坐标；保留本地坐标模式只用于不旋转的旧材质兼容，避免水线随物品旋转成竖线。
-- `ActorWaterCommon.hlsl` 是旧 `Sprite-Lit-Master` 与 AIECS Lit 原型共用的角色水下公式；调整染色、透明或水线时保持两个调用方一致。AIECS 原型的顶点水参数只是视觉输入，不能代替 `TileEffectReceiver` 的真实地形、体力和氧气状态。
+- `ActorWaterCommon.hlsl` 是旧 `Sprite-Lit-Master` 与 AIECS Lit 原型共用的角色水下公式；调整染色、透明或水线时保持两个调用方一致。AIECS 原型的顶点水参数只是视觉输入，不能代替 `Mod_TileEffectReceiver` 的真实地形、体力和氧气状态。
 - 手持物通过 `RegisterExternalRenderers` 接入角色渲染效果后，运行时再动态创建的子 `Renderer` 不会自动进入该次注册快照；这类临时表现必须在创建后再次注册自身节点，并在销毁前 `UnregisterExternalRenderers`，避免水体浸没、受击染色等 MPB 效果漏掉或控制器残留引用。
-- 角色/动物的水中生存由 `TileEffectReceiver` 读取独立 LiquidDepth；水深不超过 0.3 时不漂浮，超过 0.3 且有体力时把有效淹没维持在 0.3，体力耗尽后下沉。氧气安全线读取接收器配置（脚本默认 0.6），不得把视觉阈值当玩法阈值。水体遮罩和减速使用有效淹没，世界液深不被漂浮效果改写。
-- `TileEffectReceiver` 的邻接水格容错只服务于水边交互；`WorldLiquidBehaviour` 必须根据 `IsActiveTileEdgeInteractionOnly` 阻断浸没视觉、脚底阴影、Buff 和移动速度效果，避免站在沙格边缘的角色被误判为入水。
+- 角色/动物的水中生存由 `Mod_TileEffectReceiver` 读取独立 LiquidDepth；水深不超过 0.3 时不漂浮，超过 0.3 且有体力时把有效淹没维持在 0.3，体力耗尽后下沉。氧气安全线读取接收器配置（脚本默认 0.6），不得把视觉阈值当玩法阈值。水体遮罩和减速使用有效淹没，世界液深不被漂浮效果改写。
+- `Mod_TileEffectReceiver` 的邻接水格容错只服务于水边交互；`WorldLiquidBehaviour` 必须根据 `IsActiveTileEdgeInteractionOnly` 阻断浸没视觉、脚底阴影、Buff 和移动速度效果，避免站在沙格边缘的角色被误判为入水。
 - Liquid 接触独立于 Ground：WorldLiquidBehaviour 的 OnEnter/OnUpdate/OnExit 直接接收 WorldLiquidSourceTarget，不继承 TileBlockBehaviour，也不构造临时水地块数据。同一液体内移动或静止抽水只刷新采样，液体身份/边缘接触模式变化才 Exit/Enter。液体切换保留同帧下沉状态；LiquidFloating 只触发 Ground 边界回调，不清空液体效果。
 - 雪地脚印等带历史轨迹的地表表现不能在 Tile `OnExit` 时清空历史；跨相邻同类地块同样会先 Exit 再 Enter，应只停止新轨迹采样，让已有轨迹继续按自身寿命逐步淘汰。`SnowFootprintTrail` 当前由 `Tile_Snow` 运行时 `AddComponent`，默认表现资源不能只依赖 Prefab/Inspector 预先赋值，必须保证动态创建后也能解析到专用 Shader/材质配置；脚印使用 `ground-mark` 类别，位于 BRG 地表之上、世界实体层之下。
 - `Assets/2_Prefabs/Gameplay/Modules/Rendering/Shadow.prefab` 是 URP `ShadowCaster2D` 投影组件，不是实体脚底贴图；实体可视阴影应复用 `ActorShadowManager` 的独立注册和水体显隐入口。

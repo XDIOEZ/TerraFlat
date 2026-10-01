@@ -443,7 +443,7 @@ namespace FlatWorld.Editor.ContentWorkshop
                     moduleNames.Add("animation");
             }
             if (draft.AddEquipmentAbility)
-                moduleNames.Add("Module_Equipment_Store");
+                moduleNames.Add("Mod_EquipmentStore");
 
             var modules = new JObject();
             foreach (string moduleName in moduleNames)

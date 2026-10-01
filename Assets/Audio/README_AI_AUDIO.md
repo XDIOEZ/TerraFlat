@@ -70,7 +70,7 @@ item.itemMods
 - `combat.impact.pickaxe.stone`
 
 武器在 `Mod_Damage` 中可指定分类、动作 Cue 和材质覆盖；受击对象在
-`DamageReceiver` 中可指定材质或对象专属 Cue。保持 `Auto` 时会根据
+`Mod_DamageReceiver` 中可指定材质或对象专属 Cue。保持 `Auto` 时会根据
 Item 的 ID、名称和标签自动识别，新增预制体通常无需改伤害代码。
 
 ## 约定

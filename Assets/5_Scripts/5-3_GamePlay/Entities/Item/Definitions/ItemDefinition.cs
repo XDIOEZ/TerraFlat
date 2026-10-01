@@ -355,11 +355,11 @@ public sealed class ItemHealthDefinitionDto
     [JsonProperty("defense")]
     public ItemDefenseDefinitionDto Defense = new();
 
-    /// <summary>DamageReceiver 模块节点相对 Item 根节点的位置。</summary>
+    /// <summary>Mod_DamageReceiver 模块节点相对 Item 根节点的位置。</summary>
     [JsonProperty("moduleLocalPosition", NullValueHandling = NullValueHandling.Ignore)]
     public Vector3? ModuleLocalPosition;
 
-    /// <summary>DamageReceiver 模块自己的受击 Collider，不与物品交互 Collider 混用。</summary>
+    /// <summary>Mod_DamageReceiver 模块自己的受击 Collider，不与物品交互 Collider 混用。</summary>
     [JsonProperty("collider", NullValueHandling = NullValueHandling.Ignore)]
     public ItemColliderDefinitionDto Collider;
 }

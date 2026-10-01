@@ -8,7 +8,7 @@
 
 - Buff 内容由 JSON 定义，Manifest 统一发现。
 - Buff ID 同时承担注册、运行时、存档和内容引用，属于稳定业务 ID。
-- `BuffManager` 管理角色当前 BuffInstance。
+- `Mod_BuffManager` 管理角色当前 BuffInstance。
 - Effect 的 `typeId` 在定义构建阶段映射到缓存 Handler，运行 Tick 不做反射或字符串查找。
 - `durationSeconds=null` 表示永久状态。
 - Tick 型 Buff 必须有正 Tick 间隔。
@@ -24,7 +24,7 @@
 ## 设计边界
 
 - “当前正在水里/当前允许某操作”这类环境事实不使用 Buff 表达。
-- 潮湿、感染、中毒、出血等具有角色持续状态语义的效果才进入 BuffManager。
+- 潮湿、感染、中毒、出血等具有角色持续状态语义的效果才进入 Mod_BuffManager。
 - 伤害模块只发布结算结果，具体命中附加 Buff 通过独立处理器接入。
 - 玩家正式重生时统一清空全部 Buff，不能只清 UI。
 
@@ -48,7 +48,7 @@
 
 ## 原生 ECS 边界
 
-原生燃烧同步支持命中层数、最高层数和按层周期伤害；玩家和 GameObject 生物使用完整 BuffManager 以及附着火焰表现。原生 ECS 的温度、完整潮湿环境状态及 Buff 火焰表现尚属未迁移能力，不把缺少温度效果的潮湿定义伪装为已经完整支持。
+原生燃烧同步支持命中层数、最高层数和按层周期伤害；玩家和 GameObject 生物使用完整 Mod_BuffManager 以及附着火焰表现。原生 ECS 的温度、完整潮湿环境状态及 Buff 火焰表现尚属未迁移能力，不把缺少温度效果的潮湿定义伪装为已经完整支持。
 
 ## 修改时联动
 

@@ -8,7 +8,7 @@ description: "Use when: 定位或修改 FlatWorld 的动物、怪物、蜂群、
 ## 正式入口
 
 - Actor 定义：`Assets/StreamingAssets/GameConfig/Actors/definitions/*.json`；默认使用 GameObject 外壳、`modules` 和 Animator。`ecs` 配置仅供可选 ECS 后端使用。
-- GameObject 主控：`Entities/AI/AI_Base.cs`、`AI_Bird.cs`、`AI_Wolf.cs`、`Mod_BeeBehavior*.cs`；生命周期、分级 Tick 与对象池由 `ItemMgr` 驱动。
+- GameObject 主控：`Entities/AI/AI_Base.cs`、`Mod_AI_Bird.cs`、`AI_Wolf.cs`、`Mod_BeeBehavior*.cs`；生命周期、分级 Tick 与对象池由 `ItemMgr` 驱动。
 - 定义编译：`Entities/AIECS/Gameplay/AiecsDefinitionCompiler.cs`。解析当前合并的 Actor/MOD 目录，检查能力依赖并生成纯值模板；不要实例化旧 AI 来提取运行态。
 - 批量模拟：`Entities/AIECS/Core/AiecsSimulation.cs`、`AiecsCapabilities.cs`、`AiecsCapabilitySystems.cs`。感知、决策、移动、战斗和可选能力按组件查询运行。
 - 世界桥：`Entities/AIECS/Gameplay/AiecsEcologyRuntimeHost*.cs`、`AiecsGameplayBridge.cs`。负责正式世界生命周期、蜂巢、存档、旧 Unity 接口输入。
@@ -24,7 +24,7 @@ description: "Use when: 定位或修改 FlatWorld 的动物、怪物、蜂群、
 
 - `AiRuntimeBackendService.ConfigureRoutes` 按生成条目冻结物种归属，未列出的物种默认 GameObject；同一物种不能配置两个后端。显式 ECS 物种停用或失败时不静默回退。`ItemMgr.InstantiateItem` 只拒绝显式 ECS 物种。
 - `MonsterSpawnerManager` 恢复 GameObject 生成、营养初始化、人数预算及远距休眠；GM、事件、技能和 MOD 的生物生成复用 `AiRuntimeBackendService.TrySpawnDirect`。GameObject 返回前必须完成 `Item.Load` 并核对 `IAIActor.ActorItem`。
-- GameObject AI 使用真实模块、Mover、Animator 与表现组件，不是镜像空壳。只有显式 ECS 生物才用池化镜像与 BRG；两套后端不得同时接管同一生物。
+- GameObject AI 使用真实模块、Mod_Mover、Animator 与表现组件，不是镜像空壳。只有显式 ECS 生物才用池化镜像与 BRG；两套后端不得同时接管同一生物。
 - 保留 `IAiEcologyBackend`、`AiecsGameplayBridge`、镜像及命中接口，GamePlay 不反向依赖 AIECS Gameplay 程序集。延迟命中仍须核对身份和绑定代际；保留接口不代表完整混合 AI 感知/战斗已经验收。
 - ECS 居民生命周期独立于 ChunkView；正式世界 BRG 只提交当前已绑定 ChunkView 内的主体与阴影。区块卸载只撤销本地表现，不删除居民或依赖“相机最近镜像”继续绘制未加载区块。
 - GM 的 GameObject 图标来自当前 Actor 定义与外壳；仅显式 ECS 物种读取 BRG 图集。事件与 MOD 的 GUID 命令通过统一服务分发到 `IAIAdvanceCommandReceiver` 或 ECS；取消是可选接口，不破坏旧 MOD 接收器。
@@ -48,7 +48,7 @@ description: "Use when: 定位或修改 FlatWorld 的动物、怪物、蜂群、
 - 决策只选择意图，行为准备目标，攻击在 Active 阶段重新确认目标、朝向和 LOS。前摇、Active、后摇的时钟不能混用。
 - 水深和水流从共享导航快照进入 `AiecsFlowAgent`；飞行态不接受地面水流推动。环境、觅食、产蛋、蜂群等托管桥只提交少量结算或外部数据，不允许逐实体恢复旧 AI 状态机。
 - GameObject 鸟的 `BirdFlightNavigationProfile` 只检查飞行线路经过的地形是否已加载；它的区块寻址必须和 `ChunkMgr.ResolveWorldAddress` 使用同一份当前 `ActiveGenerationProfile` 区块尺寸，不能退回默认生成尺寸，否则自定义区块大小会让空中移动被误判为未加载。
-- `AI_Base`、`AI_Bird`、`Module_AI_BehaviorGraph` 等原生脚本和 Prefab 是当前正式运行时，不能按“仅作者数据”删除或禁用。
+- `AI_Base`、`Mod_AI_Bird`、`Module_AI_BehaviorGraph` 等原生脚本和 Prefab 是当前正式运行时，不能按“仅作者数据”删除或禁用。
 
 ## 相关 Skill
 

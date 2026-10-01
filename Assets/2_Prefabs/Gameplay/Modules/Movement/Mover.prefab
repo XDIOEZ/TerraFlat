@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 5212766382432827428}
   - component: {fileID: 8271045753735966782}
   m_Layer: 6
-  m_Name: Mover
+  m_Name: Mod_Mover
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -44,6 +44,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 85636781262a4b443a74fa12df2b22ed, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  OrganName: Mover
+  OrganName: Mod_Mover
   MoveSpeedAdd: 0
   Speed: 2.19

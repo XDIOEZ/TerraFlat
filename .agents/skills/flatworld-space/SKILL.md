@@ -1,6 +1,6 @@
 ---
 name: flatworld-space
-description: "Use when: 定位或修改 FlatWorld 的太空场景、星球运行、公转自转、星体数据、飞行模块、SpaceMgr 或 Space Prefab。关键词：SpaceMgr、PlanetData、Module_Fly、SpaceScene。"
+description: "Use when: 定位或修改 FlatWorld 的太空场景、星球运行、公转自转、星体数据、飞行模块、SpaceMgr 或 Space Prefab。关键词：SpaceMgr、PlanetData、Mod_Fly、SpaceScene。"
 ---
 
 # FlatWorld 太空与星球
@@ -9,7 +9,7 @@ description: "Use when: 定位或修改 FlatWorld 的太空场景、星球运行
 
 - 管理：`Assets/5_Scripts/5-3_GamePlay/World/Space/SpaceMgr.cs`
 - 轨道数据：同目录 `PlanetData.cs`；地图/天气 partial：`World/Map/Data/PlanetData.cs`
-- 飞行：`World/Space/Module_Fly.cs`
+- 飞行：`World/Space/Mod_Fly.cs`
 - 场景/资源：`Assets/3_Scenes/SpaceScene.unity`、`Assets/2_Prefabs/World/Space/`
 
 ## 不变量

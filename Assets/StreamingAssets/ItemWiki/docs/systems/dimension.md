@@ -35,7 +35,7 @@
 
 - `Assets/5_Scripts/5-3_GamePlay/World/Dimension/WorldAddress.cs`
 - `DimensionManager.cs`
-- `DimensionPortal.cs`
+- `Mod_DimensionPortal.cs`
 - `DimensionCatalogSO.cs`
 - `DimensionTravelProgressStore.cs`
 

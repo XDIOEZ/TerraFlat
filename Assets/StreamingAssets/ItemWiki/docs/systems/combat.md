@@ -6,7 +6,7 @@
 
 ## 当前机制
 
-- `DamageReceiver` 是生命、受伤、死亡和通用战利品的唯一权威。
+- `Mod_DamageReceiver` 是生命、受伤、死亡和通用战利品的唯一权威。
 - 普通攻击、环境伤害和身体部位伤害最终都进入统一伤害结算。
 - 当前伤害分为：`Cutting`、`Piercing`、`Chopping`、`Blunt`。
 - 有效结算中的 `0` 表示被完全抵消，仍可播放命中反馈；负值表示无效结算，不触发普通命中特效。
@@ -24,7 +24,7 @@
 ## 关键入口
 
 - `Assets/5_Scripts/5-3_GamePlay/Entities/Combat/`
-- `DamageReceiver.cs`
+- `Mod_DamageReceiver.cs`
 - `Mod_Damage.cs`
 - `Mod_Defense.cs`
 - `Entities/Skill/`
@@ -34,7 +34,7 @@
 
 - 不恢复第二套 Health 模块。
 - Buff 附加效果通过独立状态处理器消费伤害结果，不硬编码到 `Mod_Damage`。
-- DamageSender / DamageReceiver 使用专用 Trigger 层，不与普通阻挡/拾取碰撞层混用。
+- DamageSender / Mod_DamageReceiver 使用专用 Trigger 层，不与普通阻挡/拾取碰撞层混用。
 - 远程副本只应用权威伤害结果，不再次计算伤害或掉落。
 
 ## 修改时联动

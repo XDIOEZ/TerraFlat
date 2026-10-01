@@ -65,7 +65,7 @@ namespace FlatWorld.Editor.ContentWorkshop
                 "equipment",
                 "Equipment_Base",
                 "Chestplate_Wood",
-                "Module_Equipment_Store"),
+                "Mod_EquipmentStore"),
             new(
                 WorkshopItemTemplateKind.Seed,
                 "种子",

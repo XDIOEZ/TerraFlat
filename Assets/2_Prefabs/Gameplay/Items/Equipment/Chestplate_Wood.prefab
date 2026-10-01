@@ -220,7 +220,7 @@ GameObject:
   - component: {fileID: 3562974829945502215}
   - component: {fileID: 620700796921959370}
   m_Layer: 0
-  m_Name: Module_Equipment_Store
+  m_Name: Mod_EquipmentStore
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

@@ -231,7 +231,7 @@ MonoBehaviour:
       Index: 0
     RuntimeOwnerSlotIndex: -1
     BitData: 
-  GameController: {fileID: 0}
+  Mod_GameController: {fileID: 0}
   turnBody: {fileID: 0}
   targetRotationTransforms: []
   mover: {fileID: 0}

@@ -713,9 +713,9 @@
       }
     },
     {
-      "id": "Meatrack",
+      "id": "Mod_Meatrack",
       "parent": "BuildingBody_Base",
-      "sourcePrefab": "Assets/2_Prefabs/World/Buildings/Meatrack.prefab",
+      "sourcePrefab": "Assets/2_Prefabs/World/Buildings/Mod_Meatrack.prefab",
       "gameName": "晾肉架-建筑",
       "description": "用于晾晒和加工肉类的架子。",
       "durability": 1.0,
@@ -729,7 +729,7 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Building/Meatrack.png[Meatrack]",
+        "spriteAddress": "Assets/6_Art/Building/Mod_Meatrack.png[Mod_Meatrack]",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -792,7 +792,7 @@
           "id": "建筑模块",
           "enabled": false,
           "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Meatrack\",\"SummonerPrefabId\":\"Meatrack_Summoner\"}",
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Mod_Meatrack\",\"SummonerPrefabId\":\"Meatrack_Summoner\"}",
             "Type": 0
           }
         },
@@ -1058,9 +1058,9 @@
             "Type": 0
           }
         },
-        "Module_Equipment": {
+        "Mod_EquipmentRuntime": {
           "prefab": "BuildingFeature_Scarecrow_Mod_Equipment",
-          "id": "Module_Equipment",
+          "id": "Mod_EquipmentRuntime",
           "enabled": true,
           "data": {
             "BitData": [],

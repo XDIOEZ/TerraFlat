@@ -13,7 +13,7 @@ public static class ModText
     #region B
     public static string Bag = "背包模块";
     public static string Building = "建筑模块";
-    public static string BuffManager = "BuffManager";
+    public static string Mod_BuffManager = "Mod_BuffManager";
     #endregion
 
     #region C
@@ -67,14 +67,14 @@ public static class ModText
     #region I
     public static string Picker = "物品拾取模块";
     public static string Interact = "Module_Interaction";//交互模块
-    public static string ItemDorper = "Module_DiscardItem";
+    public static string ItemDorper = "Mod_DiscardItem";
     #endregion
 
     #region M
     public static string LightSource = "Module_LightSource";
     public static string MoveSpeed = "移动模块";
-    public static string Mover = "移动模块";
-    public static string Mover_AI = "移动模块_AI";
+    public static string Mod_Mover = "移动模块";
+    public static string Mod_Mover_AI = "移动模块_AI";
 
     #endregion
 
@@ -98,7 +98,7 @@ public static class ModText
 
     #region T
     public static string TrunBody = "Module_TurnBack";
-    public static string TileEffectReceiver = "TileReciver";
+    public static string Mod_TileEffectReceiver = "TileReciver";
     public static string Temperature = "体温模块";
     public static string Tool = "工具模块";
     #endregion

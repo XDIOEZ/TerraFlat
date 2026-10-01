@@ -32,7 +32,7 @@ MonoBehaviour:
     Optional: 1
     SpawnChance: 0.8
     SeedSalt: 11
-  - ItemPrefabId: Meatrack
+  - ItemPrefabId: Mod_Meatrack
     LocalPosition: {x: 7.5, y: 6}
     RotationZ: 0
     Scale: {x: 1, y: 1, z: 1}

@@ -791,7 +791,7 @@ public class UIManager : MonoBehaviour
         else
             _basePanel.Init();
 
-        // 设置子页使用独立高层 Canvas；主世界设置面板由 SettingCanvas 在打开时显式配置。
+        // 设置子页使用独立高层 Canvas；主世界设置面板由 Mod_SettingCanvas 在打开时显式配置。
         if (IsSettingsPanelName(baseName))
             ConfigureSettingsPanelLayer(_basePanel);
 

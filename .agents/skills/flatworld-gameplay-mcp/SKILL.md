@@ -23,10 +23,10 @@ GamePlayMCP 默认不做操作系统级鼠标键盘自动化，也不让视觉�
 ## 入口
 
 - Editor MCP 工具：`Assets/Editor/FlatWorld/GameplayMCP/`
-- 外部控制租约：`Assets/5_Scripts/5-3_GamePlay/Player/Controller/GameController.ExternalControl.cs`
-- 输入仲裁：`Assets/5_Scripts/5-3_GamePlay/Player/Controller/GameController.cs`
+- 外部控制租约：`Assets/5_Scripts/5-3_GamePlay/Player/Controller/Mod_GameController.ExternalControl.cs`
+- 输入仲裁：`Assets/5_Scripts/5-3_GamePlay/Player/Controller/Mod_GameController.cs`
 - 交互入口：`Assets/5_Scripts/5-3_GamePlay/Player/Controller/Mod_InteractSender.cs`
-- 快捷栏入口：`Assets/5_Scripts/5-3_GamePlay/Items/Inventory/Inventory_HotBar.cs`
+- 快捷栏入口：`Assets/5_Scripts/5-3_GamePlay/Items/Inventory/Mod_HotBar.cs`
 - UI 观察与点击：`Assets/Editor/FlatWorld/GameplayMCP/GameplayUi{Tool,Runtime}.cs`
 
 GamePlayMCP 复用项目已有 MCPForUnity 自定义工具发现机制，不另起一套任意代码执行服务器。
@@ -64,7 +64,7 @@ GamePlayMCP 复用项目已有 MCPForUnity 自定义工具发现机制，不另�
 循环应保持短、可观察、可复现：
 
 1. `gameplay_observe`：读取玩家位置、速度、生命、体力、营养、输入锁、快捷栏、背包摘要、附近实体、附近 ECS 掉落物，以及以玩家脚下为中心的固定 3×3 权威地块；水格同时附带可用的河流/海洋表层流向与流量，用于区分主动移动与环境漂移。
-   - 玩家液体观察读取 TileEffectReceiver 的 LiquidDepth、LiquidId、LiquidFloating；附近水格读取独立液体层并考虑支撑面。currentTileData 只代表 Ground，不能再据此推断液体或盐度。
+   - 玩家液体观察读取 Mod_TileEffectReceiver 的 LiquidDepth、LiquidId、LiquidFloating；附近水格读取独立液体层并考虑支撑面。currentTileData 只代表 Ground，不能再据此推断液体或盐度。
    - 需要从大量世界数据中快速寻找目标时，使用只读 `gameplay_query`。`source=runtime` 查询已实例化 Item，`query` 可填写稳定 ID 或任意已配置 Locale 下的完整物品名（例如 `Ore_Stone` / `石头` / `Stone`）；传入 `radius` 时只查询玩家周围该半径内的 Item，并复用 `ItemMgr` 空间索引，`radius` 最大 64 世界单位。运行时结果按玩家距离排序并强制分页，默认只返回最近 3 条、单页最多 32 条，通过 `total_count/truncated/next_offset` 继续读取；不填写 ID/名称时可直接取得附近不同物品，每条结果都包含稳定 `id` 与明确的 `position.x/position.y`，可直接交给 `gameplay_act(move_to)`。`source=ecology` 查询已加载 ChunkRuntime 的确定性自然物放置结果；`source=terrain` 按环境层阈值查询已加载地形格；`source=tile` 按数字 Tile ID、`Tile_Block` 稳定 ID、`tileItemName` 或显示名精确查询最近已加载地块坐标，默认只返回最近 1 格；`source=drops` 直接查询离线 ECS 掉落物空间桶，返回飞行中和落地后的实时世界坐标、数量与可拾取状态。所有查询都只读，不能生成、传送或直接拾取实体。
    - `source=runtime` 命中机械节点时额外返回只读 `mechanical` 快照（RPM、网络状态、扭矩供给/扭矩负载、手摇缓冲，以及加工器输入/输出/进度）；只用于观察真实运行状态，不允许由查询工具修改机械网络。
 2. 选择一个小目标，例如：
@@ -85,7 +85,7 @@ GamePlayMCP 复用项目已有 MCPForUnity 自定义工具发现机制，不另�
 当前协议通过 `gameplay_act` 至少支持：
 
 - `move`：按二维方向持续移动一段时间。
-- `move_to`：把目标提交给玩家运行时模块 `Mod_GameMCP_LLM`，使用 `WorldNavigationManager` 路径并经 `GameController` 外部控制租约和 `Mover` 跟随路点；返回路径请求、重规划、路点、路径代价和停止原因。
+- `move_to`：把目标提交给玩家运行时模块 `Mod_GameMCP_LLM`，使用 `WorldNavigationManager` 路径并经 `Mod_GameController` 外部控制租约和 `Mod_Mover` 跟随路点；返回路径请求、重规划、路点、路径代价和停止原因。
 - `look_at`：按坐标或 `targetGuid` 设置世界瞄准点。
 - `interact`：按真实交互规则交互，可指定 `targetGuid`。
 - `press_key`：通过独立虚拟 Keyboard 完成一次有界按下/松开。优先传 `inputAction`（如 `B/E/H/P/ESC/OpenChat`）以跟随玩家当前改键；`key` 用于明确模拟某个物理键。
@@ -105,7 +105,7 @@ UI 使用独立的 `gameplay_ui`：
 
 GM 使用独立的 `gameplay_gm` 白名单：
 
-- 给当前受控玩家施加已注册 Buff 时使用 `command=apply_self_buff:<buffId>`，例如 `apply_self_buff:core:night_vision`；内部先校验当前 GameRes 的 BuffDefinition，再走正式 `BuffManager.AddBuff`，不直接改运行时字典。
+- 给当前受控玩家施加已注册 Buff 时使用 `command=apply_self_buff:<buffId>`，例如 `apply_self_buff:core:night_vision`；内部先校验当前 GameRes 的 BuffDefinition，再走正式 `Mod_BuffManager.AddBuff`，不直接改运行时字典。
 - GM 命令仍要求当前世界就绪且已取得 GamePlayMCP 控制租约；具体命令始终以 `gameplay_capabilities.gmCommands` 为准。
 
 已有 `interact`、`select_hotbar`、`use` 等专用玩法语义时仍优先使用这些动作；`press_key` 主要服务桌面面板快捷键、返回/聊天等 InputAction，以及确实只通过键盘暴露的行为，不应退化成用按键猜测替代结构化玩法 API。

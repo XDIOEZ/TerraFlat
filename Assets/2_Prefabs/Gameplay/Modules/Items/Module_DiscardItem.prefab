@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 149349575426666685}
   - component: {fileID: 6266971111914089656}
   m_Layer: 0
-  m_Name: Module_DiscardItem
+  m_Name: Mod_DiscardItem
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -72,7 +72,7 @@ MonoBehaviour:
   dropRepeatInterval: 0.1
   Hotbar: {fileID: 0}
   hand: {fileID: 0}
-  GameController: {fileID: 0}
+  Mod_GameController: {fileID: 0}
   isDropButtonPressed: 0
   dropButtonPressTime: 0
   isDropRepeatActive: 0

@@ -1,6 +1,6 @@
 ---
 name: flatworld-player-interaction
-description: "Use when: 定位或修改 FlatWorld 的玩家实体、输入系统、鼠标/手柄、虚拟光标、移动、摄像机、焦点、交互发送接收、管理员控制或玩家 Prefab。关键词：Player、GameController、InputBindingService、Mod_InteractSender。"
+description: "Use when: 定位或修改 FlatWorld 的玩家实体、输入系统、鼠标/手柄、虚拟光标、移动、摄像机、焦点、交互发送接收、管理员控制或玩家 Prefab。关键词：Player、Mod_GameController、InputBindingService、Mod_InteractSender。"
 ---
 
 # FlatWorld 玩家、输入与交互
@@ -8,34 +8,34 @@ description: "Use when: 定位或修改 FlatWorld 的玩家实体、输入系统
 ## 入口
 
 - 玩家：`Assets/5_Scripts/5-3_GamePlay/Entities/Item/Player/Player.cs`；数据：`Assets/5_Scripts/5-1_Data/ItemData/Data_Player.cs`
-- 输入：`Player/Controller/{GameController,InputBindingService}.cs`
+- 输入：`Player/Controller/{Mod_GameController,InputBindingService}.cs`
 - 交互：同目录 `{Mod_InteractSender,Mod_InteractReciver}.cs`
-- 管理员：`PlayerAdminController.cs`；移动/相机/焦点：`Entities/Move/`
-- `PlayerAdminController` 的 Ctrl+F1 用于启用管理员身份；裸 F1 由 `UIManager` 专用于宣传片录制 UI 隐藏。F2 是本地开发用创造背包一键入口：不依赖管理员身份，按下后复用 `Mod_PlayerTraits.InitializeCreativeInventoryForAdmin` 初始化/补充物品，并确保玩家主背包面板打开；已打开的玩家主背包输入锁不能拦截 F2，其它模态输入锁与世界加载仍须拦截，管理员专属的其它快捷键仍保持原有权限门槛。
-- GM 传送由唯一的 `Development/Debug/GMReflectionConsole.Teleport.cs` 消费 T 键和点选入口；不能放回 `PlayerAdminController.Update`，因为玩家外壳与 Module_Player 均可能挂载管理员模块，且 GM 传送不依赖角色显示名。落点统一交给 `Mod_PlayerTraits.TryTeleportToScreenPosition` 同步刚体、玩家位置和区块加载。聊天框默认由 Enter 打开；由于 Enter 同时用于提交，打开当帧必须抑制一次提交，避免输入框闪开闪关。
+- 管理员：`Mod_PlayerAdminController.cs`；移动/相机/焦点：`Entities/Move/`
+- `Mod_PlayerAdminController` 的 Ctrl+F1 用于启用管理员身份；裸 F1 由 `UIManager` 专用于宣传片录制 UI 隐藏。F2 是本地开发用创造背包一键入口：不依赖管理员身份，按下后复用 `Mod_PlayerTraits.InitializeCreativeInventoryForAdmin` 初始化/补充物品，并确保玩家主背包面板打开；已打开的玩家主背包输入锁不能拦截 F2，其它模态输入锁与世界加载仍须拦截，管理员专属的其它快捷键仍保持原有权限门槛。
+- GM 传送由唯一的 `Development/Debug/GMReflectionConsole.Teleport.cs` 消费 T 键和点选入口；不能放回 `Mod_PlayerAdminController.Update`，因为玩家外壳与 Module_Player 均可能挂载管理员模块，且 GM 传送不依赖角色显示名。落点统一交给 `Mod_PlayerTraits.TryTeleportToScreenPosition` 同步刚体、玩家位置和区块加载。聊天框默认由 Enter 打开；由于 Enter 同时用于提交，打开当帧必须抑制一次提交，避免输入框闪开闪关。
 - 游戏镜头由 `Mod_Cam` 实例化 `Assets/2_Prefabs/Gameplay/Modules/Camera/Main Camera.prefab`；2D 跟随使用 Cinemachine 2.x `Framing Transposer`，跟随手感优先在该 Prefab 的 Lookahead 与 XY Damping 调整。
 - `Mod_Cam` 与 `Mod_ChunkLoader` 是玩家下的兄弟模块；镜头缩放需要刷新区块窗口时必须经玩家根节点/ItemMods 解析区块加载器，不能只用 `GetComponentInParent<Mod_ChunkLoader>()`，否则大视野变化只能等加载模块下一次 Tick 才被动追上。
 
 ## 不变量
 
 - 单机世界内 F5 成功发布资源后会保存当前本地玩家 Data，注销旧 Player 运行时外壳，清空旧运行时 UI 实例，并从最新资源目录的 Player Prefab 重新实例化同一档案；世界、区块和存档会话不重建。外部系统需要重新绑定玩家引用时订阅 `GameManager.Event_LocalPlayerRuntimeReloaded`，禁止复用 `Event_PlayerEnterWorld` 制造重复世界进入语义。
-- 玩家主动速度与环境速度必须分开：`Mover.DrivenVelocity` 决定步行动画，水流和承载只写 `ExternalVelocity`；不能把上一帧总刚体速度重新当作主动移动的缓动起点。玩家和 GameObject 生物的推动速度统一读取 `StreamingAssets/GameConfig/Movement/water-current.json`：已列 Actor 用指定速度，未列实体按 `ItemData.Stack.Weight` 与 `weightRule` 换算；河流推动读取权威 `Flow` 并经 `WaterEnvironmentRules.ResolveRiverStrength` 换算，不能用 `Clamp01(Flow)` 抹平大流量河段的速度差。
-- 依赖玩家离散位置变化的系统统一订阅 `Mover.WorldUnitChanged`；该事件按拓扑规范化后的 `Rigidbody2D` 实际位置进入新的 1×1 世界单位格时触发，消费方禁止各自累计移动距离或重复轮询坐标。
-- `Mover` 只向 Dynamic Rigidbody2D 提交主动速度与水流速度；地块、资源、机器的接触由 Chunk 静态 Collider 投影和 Physics2D 求解。`WorldUnitChanged` 仍按刚体实际到达位置发布，不能用期望速度代替。
-- 玩家脚下动态建筑造成的移速惩罚由 `BuildingOccupancyRegistry.GetPlayerMoveSpeedMultiplier` 按离散格读取，并只乘入 `Mover` 的主动目标速度；不要把这类地块惩罚写进永久 `Speed.MultiplicativeModifier`，否则进出地块时容易与 Buff、奔跑倍率互相污染。
+- 玩家主动速度与环境速度必须分开：`Mod_Mover.DrivenVelocity` 决定步行动画，水流和承载只写 `ExternalVelocity`；不能把上一帧总刚体速度重新当作主动移动的缓动起点。玩家和 GameObject 生物的推动速度统一读取 `StreamingAssets/GameConfig/Movement/water-current.json`：已列 Actor 用指定速度，未列实体按 `ItemData.Stack.Weight` 与 `weightRule` 换算；河流推动读取权威 `Flow` 并经 `WaterEnvironmentRules.ResolveRiverStrength` 换算，不能用 `Clamp01(Flow)` 抹平大流量河段的速度差。
+- 依赖玩家离散位置变化的系统统一订阅 `Mod_Mover.WorldUnitChanged`；该事件按拓扑规范化后的 `Rigidbody2D` 实际位置进入新的 1×1 世界单位格时触发，消费方禁止各自累计移动距离或重复轮询坐标。
+- `Mod_Mover` 只向 Dynamic Rigidbody2D 提交主动速度与水流速度；地块、资源、机器的接触由 Chunk 静态 Collider 投影和 Physics2D 求解。`WorldUnitChanged` 仍按刚体实际到达位置发布，不能用期望速度代替。
+- 玩家脚下动态建筑造成的移速惩罚由 `BuildingOccupancyRegistry.GetPlayerMoveSpeedMultiplier` 按离散格读取，并只乘入 `Mod_Mover` 的主动目标速度；不要把这类地块惩罚写进永久 `Speed.MultiplicativeModifier`，否则进出地块时容易与 Buff、奔跑倍率互相污染。
 - 载具接触由 Dynamic Rigidbody2D + 非 Trigger 船体 Collider 求解；`CarrierPhysicsContact2D` 只报告接触，`Mod_Carrier` 仍按数据规则决定玩家推动速度。船的水流、划行与推动先合成，再统一限制航向；乘员承载仍由 `ICarrierMotionSource` 传递，禁止乘员反推自身载具。
 - 载具的按键、鼠标点选和白色描边必须共用光标落点查询；上船与下船都要求光标实际命中载具，禁止因“当前已乘坐”或“靠近船体”绕过光标选择。光标指向可触及水面且未命中载具时，交互键交给喝水等环境动作。远海登船与下船都合法：登船恢复位置优先附近安全陆地，否则保留真实登船坐标；下船优先附近安全陆地，没有陆地时落到船体外侧安全水面。
 
-- 输入链为 Input System → `GameController` → 玩家模块；不要让 UI、物理输入和玩法模块各自维护冲突状态。
-- 桌面指针由 `GameController` 缓存 `Win10.Mouse` 的位置变化，需同时处理 `performed/canceled`；鼠标按键回调要读取当前鼠标坐标，避免同次输入更新中点击先于位置回调造成落点滞后。
-- `GameController` 挂在玩家根对象，模块 ID 必须是 `ModText.Controller`；若留空会退化为根对象名 `Player`，按 ID 获取控制器的地块交互将静默失败。
-- 组合键冲突由 `GameController` 暴露语义状态统一仲裁：按住丢弃快捷键期间，`Ctrl+滚轮` 镜头缩放必须让位，但普通滚轮快捷栏切换继续工作，便于玩家在 `Ctrl+F` 整组丢弃准备态中换槽位。
-- Editor Agent、自动化或其它非物理输入源接管本地主角时统一使用 `GameController` 的唯一 External Gameplay Control 租约；租约期间真实设备退出玩法输入仲裁，移动/瞄准/攻击继续注入现有生产链。打包游戏的 AI/LLM 适配器通过玩家运行时模块 `Mod_GameMCP_LLM` 提交和查询导航意图；该模块复用同一租约与 Mover 输入链，不依赖 Editor 或 GamePlayMCP。禁止为自动化直接改玩家 `Rigidbody2D`、Transform 或另建平行输入状态。
+- 输入链为 Input System → `Mod_GameController` → 玩家模块；不要让 UI、物理输入和玩法模块各自维护冲突状态。
+- 桌面指针由 `Mod_GameController` 缓存 `Win10.Mouse` 的位置变化，需同时处理 `performed/canceled`；鼠标按键回调要读取当前鼠标坐标，避免同次输入更新中点击先于位置回调造成落点滞后。
+- `Mod_GameController` 挂在玩家根对象，模块 ID 必须是 `ModText.Controller`；若留空会退化为根对象名 `Player`，按 ID 获取控制器的地块交互将静默失败。
+- 组合键冲突由 `Mod_GameController` 暴露语义状态统一仲裁：按住丢弃快捷键期间，`Ctrl+滚轮` 镜头缩放必须让位，但普通滚轮快捷栏切换继续工作，便于玩家在 `Ctrl+F` 整组丢弃准备态中换槽位。
+- Editor Agent、自动化或其它非物理输入源接管本地主角时统一使用 `Mod_GameController` 的唯一 External Gameplay Control 租约；租约期间真实设备退出玩法输入仲裁，移动/瞄准/攻击继续注入现有生产链。打包游戏的 AI/LLM 适配器通过玩家运行时模块 `Mod_GameMCP_LLM` 提交和查询导航意图；该模块复用同一租约与 Mod_Mover 输入链，不依赖 Editor 或 GamePlayMCP。禁止为自动化直接改玩家 `Rigidbody2D`、Transform 或另建平行输入状态。
 - `InputBindingService` 的覆盖存档按 binding GUID 关联输入资产；输入资产删改绑定后，加载前必须过滤当前资产不存在的 GUID 并重存清理后的配置，因为 Unity 内置加载器会直接输出警告而不会抛出异常。
 - 输入重绑定冲突检测必须按物理修饰键语义统一 `<Keyboard>/shift` 与左右 Shift、`ctrl` 与左右 Ctrl、`alt` 与左右 Alt；历史冲突覆盖加载时应自动清理，避免镜头缩放等组合输入被静默改绑到已有玩法键。
-- 需要按触点落地的世界玩法统一调用 `GameController.GetMouseWorldPosition(screenPosition)`，不得在手机玩法模块内直接读取相机或共享虚拟光标坐标。
+- 需要按触点落地的世界玩法统一调用 `Mod_GameController.GetMouseWorldPosition(screenPosition)`，不得在手机玩法模块内直接读取相机或共享虚拟光标坐标。
 - `Move_Player` 的二维幅度同时表达模拟移动速度比例：手机虚拟摇杆与手柄左摇杆必须保留 0～1 幅度，玩家移动路径不得提前归一化；键盘满幅输入与目标寻路接口保持原有语义。
-- 玩家乘坐载具统一经 `ICarrierMotionSource` 与 `Mover.TryAttachCarrier` 仲裁：载具源拥有位移积分、速度和力，乘员不改 Transform 父级，只在租约期间关闭自身 Rigidbody2D 模拟并跟随座位；乘员引用和瞬时速度不进存档，恢复位置使用登船时取得的作用域租约。无 Collider 载具交互使用 `SpatialInteractionRegistry`，不要为了点选重新添加物理碰撞体。
+- 玩家乘坐载具统一经 `ICarrierMotionSource` 与 `Mod_Mover.TryAttachCarrier` 仲裁：载具源拥有位移积分、速度和力，乘员不改 Transform 父级，只在租约期间关闭自身 Rigidbody2D 模拟并跟随座位；乘员引用和瞬时速度不进存档，恢复位置使用登船时取得的作用域租约。无 Collider 载具交互使用 `SpatialInteractionRegistry`，不要为了点选重新添加物理碰撞体。
 - 环境交互输入只转发按下/持续/松开；具体环境提供 `IEnvironmentActionDefinition` 或 `IEnvironmentEffectDefinition`，角色侧 `EnvironmentInteractionRunner` 每次创建独立实例，禁止把玩家长按或被动效果状态存进共享地块配置。
 - 世界实体持续交互统一走 `IInteractable.OnInteractStart/OnInteractUpdate/OnInteractEnd`：`Mod_InteractSender` 只在交互键按住期间转发 Update，正常松开时转发 End；鼠标与外部单次交互只触发 Start→End，不进入持续通道；目标取消或失效走 `OnInteractCancel`，业务模块不得自行读取 E 键状态。
 - 需要只能由交互键打开的设施面板时，让目标实现 `IInteractable.CanPointerInteract` 并返回 `false`；发送器的左键点选遵守该策略，交互键仍须满足范围与目标有效性，避免在发送器内硬编码具体设施类型。
@@ -53,8 +53,8 @@ description: "Use when: 定位或修改 FlatWorld 的玩家实体、输入系统
 - 玩家交互发送器必须是纯 Physics2D 查询通道，不得拥有或临时启用 Trigger；`Module_Hand` 禁止挂载 Collider2D。交互查询必须跳过 `DamageSender`/`DamageReciver` 专用 Collider，避免交互与伤害系统产生接触回调或互相解析。
 - 手机准线的有效距离不能固定写在输入层；空手和普通物品应跟随交互发送器距离，手持建筑应跟随建筑模块的放置距离。
 - 玩家跑步模式与视觉状态分离：`Run` 只表示逻辑奔跑模式，`Move=false` 时 `Player.controller` 必须切换到 `Idle`；进入 `Run` 必须直接播放，不添加播放倍率渐起或 Animator 混合延迟，禁止修改全局 `Animator.speed`，否则会连带暂停攻击等其他动画。
-- 管理员身份拥有无限体力：权限统一读取 `PlayerAdminController.IsAdministrator`，所有体力消耗继续汇入 `Mod_Stamina` 的统一消费 API，由体力权威模块统一拦截；禁止在移动、武器、游泳、高温等消费方分别添加管理员特判。
-- 内置体力消费必须使用 `Mod_Stamina.ConsumeStamina*` / 带来源的 `TryConsumeStamina(sourceId, amount)` 并声明稳定来源 ID；普通划船不耗体力，乘员按住奔跑键且存在移动输入时才启用载具加速，并按玩家 `RunStaminaConsume` 频率记为 `flatworld.carrier.boost`。长按奔跑状态由 `Mover` 的输入回调显式维护，载具禁止再次用 `InputAction.IsPressed()` 轮询物理键。不同来源同帧独立累加，禁止玩法模块直接改 `CurrentStamina`。
+- 管理员身份拥有无限体力：权限统一读取 `Mod_PlayerAdminController.IsAdministrator`，所有体力消耗继续汇入 `Mod_Stamina` 的统一消费 API，由体力权威模块统一拦截；禁止在移动、武器、游泳、高温等消费方分别添加管理员特判。
+- 内置体力消费必须使用 `Mod_Stamina.ConsumeStamina*` / 带来源的 `TryConsumeStamina(sourceId, amount)` 并声明稳定来源 ID；普通划船不耗体力，乘员按住奔跑键且存在移动输入时才启用载具加速，并按玩家 `RunStaminaConsume` 频率记为 `flatworld.carrier.boost`。长按奔跑状态由 `Mod_Mover` 的输入回调显式维护，载具禁止再次用 `InputAction.IsPressed()` 轮询物理键。不同来源同帧独立累加，禁止玩法模块直接改 `CurrentStamina`。
 - `Mod_Cam` 的管理员“无限视野”属于运行时权限状态，不得把 `MaxPovValue` 改成 `float.MaxValue`；`MaxPovValue` 仍是普通玩法、UI 滑条和镜头预判的有限配置上限，只有最终镜头尺寸约束在无限模式下跳过该上限。
 - Escape/Android 返回遵循“最上层可取消面板 → 手机抽屉 → 设置面板”的统一顺序；不要在尝试关闭顶部面板之前用 Gameplay Input Lock 拦截，否则持锁面板会让返回键表现为完全失效。
 - `Mover_SaveData.isRunning` 是玩家奔跑开关的持久字段；输入锁定只停止位移，不清空该字段，跨维度重建后须在解锁输入后恢复。
@@ -66,7 +66,7 @@ description: "Use when: 定位或修改 FlatWorld 的玩家实体、输入系统
 
 ## 验证
 
-- 输入验收必须在真实 Play Mode 中走正式 Input System → `GameController` → 玩法模块链；GamePlayMCP 可通过生产输入入口注入动作，不能直接改业务状态。
+- 输入验收必须在真实 Play Mode 中走正式 Input System → `Mod_GameController` → 玩法模块链；GamePlayMCP 可通过生产输入入口注入动作，不能直接改业务状态。
 - 实际覆盖锁定/释放、短按/长按、切设备和重复绑定等受影响路径；不再维护 `PlayerInteraction.Input` 或 `Assets/GameTest` 测试程序集。
 - 编译与 Console 只作为进入运行态的门禁和故障证据，最终结果以真实玩法状态变化为准。
 

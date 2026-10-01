@@ -38,7 +38,7 @@
 - **区块看不见不等于生成慢。** 先分辨 `pendingCommits / readyDataWithoutView / pendingBaseTerrain / 表现队列`：数据已经 Ready 而 View 迟迟没出现时，根因通常在主线程表现绑定而不是后台地形生成。
 - 大存档进入世界时见过“后台生成已经结束，但可见窗口仍有数百个待表现，加载页继续超过 12 秒”的现场；这类情况应优先查 `view.queue_wait / view.start / renderer.*`，不要继续加后台生成线程。
 - 区块**进入预算**和**离开预算**必须分开看。真实跨 Chunk 采样中，玩家移动触发 `Mod_ChunkLoader.UpdateChunks -> ChunkMgr.RefreshRuntimeWindow`，随后旧 View 直接走 `RecycleRuntimeChunkView -> ChunkView.Unbind -> ChunkNaturalItemRenderer.CaptureState`；一次跨边界会同步回收一整条旧窗口边（当前 10 格视距就是约 21 个 Chunk），出现过 `window.refresh ≈ 655ms`、其中 `CaptureNaturalItems ≈ 258ms` 的单帧尖峰。`presentationStart/continuation` 的 4ms/3ms 预算**管不到这条卸载/保存链**，所以看到加载队列预算正常也不能认为流送已经受控。
-- 上述卸载尖峰会出现在玩家移动的 `FixedUpdate` 调用树下，因此如果只看 `Mover.FixedUpdate` 会误以为“玩家移动算法很慢”。必须继续展开子 Marker；发现 `FlatWorld.ChunkStreaming.CaptureNaturalItems / DespawnNaturalItems / UnregisterBatchOwner` 后，再回到窗口刷新与 View 解绑逻辑定位根因。
+- 上述卸载尖峰会出现在玩家移动的 `FixedUpdate` 调用树下，因此如果只看 `Mod_Mover.FixedUpdate` 会误以为“玩家移动算法很慢”。必须继续展开子 Marker；发现 `FlatWorld.ChunkStreaming.CaptureNaturalItems / DespawnNaturalItems / UnregisterBatchOwner` 后，再回到窗口刷新与 View 解绑逻辑定位根因。
 - `gameplay_chunk_render_debug(status)` 的 `total` 和 `recent 128` 都是**当前诊断会话历史**。世界刚进入时如果堆过很长的表现队列，即使此刻 `windowPresentationsReady=true`、`pendingPresentations=0`，`view.ready_latency / view.queue_wait` 仍可能被启动期旧样本长期污染；要判断“刚才移动一小段”的流送延迟，应使用新的 `sample` 窗口、重置后的诊断会话或只比较新增事件，不能直接拿累计平均值下结论。
 - 区块表现的单次 `MoveNext()` 即使属于“分帧”流程，也可能一次吃掉数毫秒。判断预算是否有效要看单步 Marker 和队列吞吐，不能只看“代码里有 yield”。
 - AIECS 测试要同时看 `Alive / Visible / Tick / Backlog / Burst`。实体很多但 Backlog 很低，通常说明模拟仍能跟上；只看 FPS 容易把渲染、Editor 或其它系统误归因给 AI。

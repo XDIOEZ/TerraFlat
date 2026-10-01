@@ -71,9 +71,9 @@
         }
       },
       "modules": {
-        "Module_Equipment_Store": {
-          "prefab": "Module_Equipment_Store",
-          "id": "Module_Equipment_Store",
+        "Mod_EquipmentStore": {
+          "prefab": "Mod_EquipmentStore",
+          "id": "Mod_EquipmentStore",
           "enabled": true,
           "data": {
             "BitData": [],
@@ -199,9 +199,9 @@
         }
       },
       "modules": {
-        "Module_Equipment_Store": {
-          "prefab": "Module_Equipment_Store",
-          "id": "Module_Equipment_Store",
+        "Mod_EquipmentStore": {
+          "prefab": "Mod_EquipmentStore",
+          "id": "Mod_EquipmentStore",
           "enabled": true,
           "data": {
             "BitData": [],
@@ -322,9 +322,9 @@
         }
       },
       "modules": {
-        "Module_Equipment_Store": {
-          "prefab": "Module_Equipment_Store",
-          "id": "Module_Equipment_Store",
+        "Mod_EquipmentStore": {
+          "prefab": "Mod_EquipmentStore",
+          "id": "Mod_EquipmentStore",
           "enabled": true,
           "data": {
             "BitData": [],

@@ -117,7 +117,7 @@ public static class StructureProjectInstaller
             });
             template.ItemStamps.Add(new StructureItemStamp
             {
-                ItemPrefabId = "Meatrack",
+                ItemPrefabId = "Mod_Meatrack",
                 LocalPosition = new Vector2(7.5f, 6f),
                 Scale = Vector3.one,
                 Optional = true,

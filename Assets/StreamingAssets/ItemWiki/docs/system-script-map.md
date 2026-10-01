@@ -48,7 +48,7 @@
 
 | world-address | 维度 | WorldAddress.cs | Assets/5_Scripts/5-3_GamePlay/World/Dimension/WorldAddress.cs | 3900 | 320 | 统一构造和解析地表、矿洞等世界地址，业务代码不直接拼接 WorldKey 字符串。 | dimension-manager |
 | dimension-manager | 维度 | DimensionManager.cs | Assets/5_Scripts/5-3_GamePlay/World/Dimension/DimensionManager.cs | 4300 | 320 | 负责维度目录、切换请求、世界地址与环境覆盖，是地表/地下迁移的总入口。 | game-manager |
-| dimension-portal | 维度 | DimensionPortal.cs | Assets/5_Scripts/5-3_GamePlay/World/Dimension/DimensionPortal.cs | 4700 | 320 | 可挂到自然入口或建筑上的维度交互模块，把玩家入口操作交给维度管理流程。 | dimension-manager |
+| dimension-portal | 维度 | Mod_DimensionPortal.cs | Assets/5_Scripts/5-3_GamePlay/World/Dimension/Mod_DimensionPortal.cs | 4700 | 320 | 可挂到自然入口或建筑上的维度交互模块，把玩家入口操作交给维度管理流程。 | dimension-manager |
 | day-time | 环境 | DayTimeSystem.cs | Assets/5_Scripts/5-3_GamePlay/World/Time/DayTimeSystem.cs | 3900 | 740 | 跨场景维护世界时间、天数和季节，并为天气、事件和生存系统提供统一时间基准。 | save-data-mgr |
 | weather | 环境 | WeatherMgr.cs | Assets/5_Scripts/5-3_GamePlay/World/Environment/WeatherMgr.cs | 4300 | 740 | 管理星球级天气阶段、风、降水与环境事件，并把权威状态写入当前 PlanetData。 | temperature |
 | temperature | 环境 | TemperatureMgr.cs | Assets/5_Scripts/5-3_GamePlay/World/Environment/TemperatureMgr.cs | 4700 | 740 | 汇总地块气候、星球/季节/天气修正和局部冷热源，提供统一逐格环境温度查询。 | day-time |
@@ -61,8 +61,8 @@
 | inventory | 背包 | Inventory.cs | Assets/5_Scripts/5-3_GamePlay/Items/Inventory/Inventory.cs | 300 | 2000 | 背包事务与槽位数据的核心容器，负责增减、移动、容量和变化事件，不允许业务直接改 Stack。 | item |
 | mod-inventory | 背包 | Mod_Inventory.cs | Assets/5_Scripts/5-3_GamePlay/Items/Inventory/Mod_Inventory.cs | 700 | 2000 | 把 Inventory 作为 Item 模块接入交互、实例 UI、固定频率 Tick 和模块存档。 | inventory |
 | crafting-service | 制作 | CraftingService.cs | Assets/5_Scripts/5-3_GamePlay/Items/Crafting/CraftingService.cs | 1100 | 2000 | 所有制作入口共用的原子预检与提交服务，统一处理扣料、产出和能力约束。 | inventory |
-| damage-receiver | 战斗 | DamageReceiver.cs | Assets/5_Scripts/5-3_GamePlay/Entities/Combat/DamageReceiver.cs | 1500 | 2000 | 实体生命和受伤处理的权威入口，统一身体部位、防御、死亡与伤害结果。 | item |
-| buff-manager | Buff | BuffManager.cs | Assets/5_Scripts/5-3_GamePlay/Entities/Buff/BuffManager.cs | 1900 | 2000 | 管理单个实体的 Buff 实例、叠加、持续时间、周期效果与存档恢复。 | item |
+| damage-receiver | 战斗 | Mod_DamageReceiver.cs | Assets/5_Scripts/5-3_GamePlay/Entities/Combat/Mod_DamageReceiver.cs | 1500 | 2000 | 实体生命和受伤处理的权威入口，统一身体部位、防御、死亡与伤害结果。 | item |
+| buff-manager | Buff | Mod_BuffManager.cs | Assets/5_Scripts/5-3_GamePlay/Entities/Buff/Mod_BuffManager.cs | 1900 | 2000 | 管理单个实体的 Buff 实例、叠加、持续时间、周期效果与存档恢复。 | item |
 | buff-dispatcher | Buff | BuffEffectDispatcher.cs | Assets/5_Scripts/5-3_GamePlay/Entities/Buff/BuffEffectDispatcher.cs | 300 | 2420 | 把 JSON 的效果 typeId 映射为缓存 C# 委托，让 Tick 热路径不重复做字符串分派。 | damage-receiver |
 | mod-building | 建筑 | Mod_Building.cs | Assets/5_Scripts/5-3_GamePlay/World/Building/Mod_Building.cs | 700 | 2420 | 统一建筑召唤器与已放置建筑的快照生命周期，负责安装、拆除和建筑数据版本。 | item |
 | building-occupancy | 建筑 | BuildingOccupancyRegistry.cs | Assets/5_Scripts/5-3_GamePlay/World/Building/BuildingOccupancyRegistry.cs | 1100 | 2420 | 以离散世界格记录动态建筑占地，同时服务放置冲突和导航脏区，不依赖 Physics2D。 | mod-building |
@@ -70,12 +70,12 @@
 | ai-base | AI | AI_Base.cs | Assets/5_Scripts/5-3_GamePlay/Entities/AI/AI_Base.cs | 2550 | 1580 | 传统 GameObject AI 的共同基类，聚合感知、移动、状态评估与战斗行为入口。 | item |
 | ai-state-runner | AI | AI_StateMachineRunner.cs | Assets/5_Scripts/5-3_GamePlay/Entities/AI/AI_StateMachineRunner.cs | 2980 | 1580 | AI 状态机统一运行入口，负责评估下一状态、执行切换并 Tick 当前节点。 | ai-base |
 | item-detector | AI | Mod_ItemDetector.cs | Assets/5_Scripts/5-3_GamePlay/Entities/AI/Mod_ItemDetector.cs | 3410 | 1580 | 提供范围感知与视线阻挡判断，把候选目标查询从具体 AI 行为中拆开。 | ai-base |
-| mover-ai | 移动 | Mover_AI.cs | Assets/5_Scripts/5-3_GamePlay/Entities/Move/Mover_AI.cs | 2550 | 2020 | AI 公共移动模块；对上层保留目标/停止/到达接口，内部转接无限地图导航。 | world-nav-agent |
+| mover-ai | 移动 | Mod_Mover_AI.cs | Assets/5_Scripts/5-3_GamePlay/Entities/Move/Mod_Mover_AI.cs | 2550 | 2020 | AI 公共移动模块；对上层保留目标/停止/到达接口，内部转接无限地图导航。 | world-nav-agent |
 | world-nav-agent | 导航 | WorldNavigationAgent.cs | Assets/5_Scripts/5-3_GamePlay/World/PathFinding/WorldNavigationAgent.cs | 2980 | 2020 | 面向单个移动者的导航代理，持有目标并消费共享导航结果生成局部移动方向。 | world-nav-manager |
 | world-nav-manager | 导航 | WorldNavigationManager.cs | Assets/5_Scripts/5-3_GamePlay/World/PathFinding/WorldNavigationManager.cs | 3410 | 2020 | 场景级导航入口，维护动态脏区、地块权重和共享寻路数据并对接 Chunk 生命周期。 | gameplay-chunk-mgr |
 | flow-nav-cache | 导航 | FlowNavigationCache.cs | Assets/5_Scripts/Shared/Navigation/FlowNavigationCache.cs | 2980 | 2460 | 按世界缓存 16×16 分层流场与跨区块出口数据，让大量代理共享目标路径结果。 | world-nav-manager |
 
-| game-controller | 玩家 | GameController.cs | Assets/5_Scripts/5-3_GamePlay/Player/Controller/GameController.cs | 4010 | 1580 | 本地玩家的输入与玩法控制入口，协调移动、交互、瞄准以及外部控制租约。 | game-manager |
+| game-controller | 玩家 | Mod_GameController.cs | Assets/5_Scripts/5-3_GamePlay/Player/Controller/Mod_GameController.cs | 4010 | 1580 | 本地玩家的输入与玩法控制入口，协调移动、交互、瞄准以及外部控制租约。 | game-manager |
 | input-binding | 输入 | InputBindingService.cs | Assets/5_Scripts/5-3_GamePlay/Player/Controller/InputBindingService.cs | 4430 | 1580 | 管理 PlayerInputActions 的运行时按键覆盖、重绑和持久化，UI 只消费公开 API。 | game-controller |
 | ui-manager | UI | UIManager.cs | Assets/5_Scripts/5-5_UI/Core/UIManager.cs | 4850 | 1580 | 正式 Prefab 面板的创建、缓存与生命周期管理入口，统一维护 PanelRoot 和打开关闭流程。 | game-manager |
 | base-panel | UI | BasePanel.cs | Assets/5_Scripts/5-5_UI/Core/BasePanel.cs | 4010 | 1990 | 所有正式面板的基础行为契约，负责显示隐藏、输入锁、焦点和取消快捷键等公共规则。 | ui-manager |

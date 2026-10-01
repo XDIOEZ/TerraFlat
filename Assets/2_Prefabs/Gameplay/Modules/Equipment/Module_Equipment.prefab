@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 5863283287701916933}
   - component: {fileID: 9101378343389085559}
   m_Layer: 0
-  m_Name: Module_Equipment
+  m_Name: Mod_EquipmentRuntime
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

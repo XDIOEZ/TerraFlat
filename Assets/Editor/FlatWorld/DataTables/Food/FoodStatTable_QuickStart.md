@@ -190,7 +190,7 @@ A: 所有编辑都会自动保存到配置文件。确认已按Tab键或鼠标�
 
 | 功能 | 武器表 | 食物表 |
 |------|-------|-------|
-| 扫描对象 | DamageReceiver/Mod_Damage | Mod_Food |
+| 扫描对象 | Mod_DamageReceiver/Mod_Damage | Mod_Food |
 | 主要参数 | MaxHp/Damage/Defense | 营养值/腐败 |
 | 应用方式 | 同步 | 同步 |
 | UI布局 | 相似设计 | 参考布局 |

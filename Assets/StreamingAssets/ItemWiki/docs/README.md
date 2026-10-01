@@ -29,7 +29,7 @@ FlatWorld 当前已经形成清晰的三层结构：
 | 背包与快捷栏 | [inventory.md](systems/inventory.md) | Inventory 事务 + Hand/HotBar + 重量/体积容量 |
 | 装备 | [equipment.md](systems/equipment.md) | `Mod_Equipment` 统一装备栏、效果与装备存档 |
 | 制作与加工 | [crafting.md](systems/crafting.md) | Recipe JSON + CraftingService 原子事务 |
-| 战斗 | [combat.md](systems/combat.md) | DamageReceiver 唯一生命权威 + 四类伤害 |
+| 战斗 | [combat.md](systems/combat.md) | Mod_DamageReceiver 唯一生命权威 + 四类伤害 |
 | 生存 | [survival.md](systems/survival.md) | 营养/水分/体力/氧气/体温分模块结算 |
 | 建筑 | [building.md](systems/building.md) | Summoner → Preview → 动态建筑或 Tile 建筑 |
 | 农业 | [agriculture.md](systems/agriculture.md) | Farmland + Crop 模块组合 + 区块农业存档 |
@@ -37,7 +37,7 @@ FlatWorld 当前已经形成清晰的三层结构：
 | 地图生成 / WorldModel | [world-generation.md](systems/world-generation.md) | 确定性 Chunk 生成 + 后台调度 + 主线程绑定 |
 | 环境 | [environment.md](systems/environment.md) | 时间/天气/温度/风/积雪/污染 |
 | 维度 | [dimension.md](systems/dimension.md) | 地表与矿洞独立 WorldKey、独立区块差量 |
-| Buff | [buff.md](systems/buff.md) | JSON BuffDefinition + BuffManager 生命周期 |
+| Buff | [buff.md](systems/buff.md) | JSON BuffDefinition + Mod_BuffManager 生命周期 |
 | 存档与数据 | [save-data.md](systems/save-data.md) | MemoryPack 当前版本存档 + JSON 内容真源 |
 | UI | [ui.md](systems/ui.md) | 正式 Prefab + UIManager/BasePanel + 灰阶统一主题 |
 

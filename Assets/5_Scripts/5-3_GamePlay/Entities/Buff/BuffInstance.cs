@@ -94,7 +94,7 @@ public partial class BuffInstance
     }
 
     /// <summary>
-    /// 推进 Buff。返回 true 表示已到期，应由 BuffManager 统一移除。
+    /// 推进 Buff。返回 true 表示已到期，应由 Mod_BuffManager 统一移除。
     /// </summary>
     public bool Tick(float deltaTime)
     {

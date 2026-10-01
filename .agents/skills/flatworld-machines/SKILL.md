@@ -23,7 +23,7 @@ description: "Use when: 定位或修改 FlatWorld 的机器世界、工作台、
 - 电线 `visual.spriteStates` 使用 `wire0..wire15`，连接位为北1、东2、南4、西8；朝向只读取权威电线格与方向端口索引，同格设备不产生额外支路。邻格增删须刷新跨区块/循环边界的连接形状，连接未变化不重提网格，不能按召唤器旋转或每帧轮询选图。
 - 混合电力/机械设备的接口属于独立表现层：`axisPorts + AxisPortLayout=single + AxisPortLocalPosition` 配置单端轴口，`electricalPort + ElectricalPortLocalPosition` 配置电线口；两者复用标准杆/线切片与原 PPU，放在机身后方，预览和行网格使用同一局部位置。机身不得重复烘入接头，召唤器图标可静态合成；端口方向不对称的电机按四个朝向放置。
 - 电网首版按整网功率求解：W 表示功率、J 表示储能；电压参与兼容性，电流由 `P/V` 推导，电阻只保留正式数据接口，未实现逐段压降/基尔霍夫仿真。
-- 召唤器、玩家库存和手持玩法保留 Item；落地设施走 `Place/SpawnGenerated/RestoreMachine`，`ItemMgr` 拒绝再实例化其完整 Item。`MachineAuthoringModule` 只保存配置，禁止重新启用其 Load/Tick 做运行时兜底。
+- 召唤器、玩家库存和手持玩法保留 Item；落地设施走 `Place/SpawnGenerated/RestoreMachine`，`ItemMgr` 拒绝再实例化其完整 Item。`Mod_MachineAuthoring` 只保存配置，禁止重新启用其 Load/Tick 做运行时兜底。
 - 模拟不依赖 ChunkView。网络整体先恢复再 Tick、先快照再休眠；无端口设施独立按玩家窗口休眠。显示卸载不能删除实体或撤销已保存库存。
 - 业务时间使用传入的世界时间；有界补算保留剩余时间。手摇倒计时在领域逻辑分派前推进，定制领域逻辑不能绕过动力耗时。
 - 工作台配方与进度属于 `RecipeProcessor`，面板只发命令；输入/输出预检与结算复用 `CraftingService`。只提供通用加工方式的设备使用 `MachineDefinition.ProcessCapability`：石磨提供 `grind`、锯木机提供 `cut`，具体输入、产物和工作量读取物品自己的 `ItemDefinition.processing`，禁止再在 `mechanical-catalog.Processes` 为每种可加工物复制设备专用配方。需要加工尺度约束时，设备用 `ProcessCapabilityLevel` 提供单一等级，目标物品用 `processing.<capability>.minLevel/maxLevel` 声明可接受闭区间；等级过低或过高都不匹配。尚未迁移为物品能力的手钻、锻造等专用转换继续使用现有 `MachineProcessDefinition`。炉温、燃料、点火、副产物仍内聚在 `FurnaceLogic`，不要用“温度直接乘秒”替代实际热加工规则。

@@ -14,13 +14,13 @@
 - PC 点击与拖放以整组事务为主；滚轮处理逐件。
 - 移动端轻触、长按、拖拽有独立手势语义，最终仍复用库存事务。
 - 长按把手中整组放入空槽/同类槽时使用统一时间阈值，进度显示在唯一 `UI_Hand` 手部槽位上，走满立即提交，不等待松手。
-- 世界丢弃统一经过 `Module_DiscardItem`，避免不同入口各自改槽位数量。
+- 世界丢弃统一经过 `Mod_DiscardItem`，避免不同入口各自改槽位数量。
 
 ## 关键入口
 
 - `Assets/5_Scripts/5-3_GamePlay/Items/Inventory/Inventory.cs`
 - `Mod_Inventory.cs`
-- `Inventory_HotBar.cs`
+- `Mod_HotBar.cs`
 - `ItemSlot_UI.cs`
 - `Inventory_Hand`
 - `PlayerCarryCapacityUtility.cs`

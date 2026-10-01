@@ -284,7 +284,7 @@ public sealed class AIBehaviorGraphRequirements
 /// <summary>预置体节点能力名称，作为 JSON 节点与运行模块之间的稳定契约。</summary>
 public static class AIBehaviorCapability
 {
-    public const string Mover = "mover";
+    public const string Mod_Mover = "mover";
     public const string Detector = "detector";
     public const string Health = "health";
     public const string Food = "food";

@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 100000000000000002}
   - component: {fileID: 100000000000000003}
   m_Layer: 9
-  m_Name: Module_HeldFood
+  m_Name: Mod_HeldFood
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

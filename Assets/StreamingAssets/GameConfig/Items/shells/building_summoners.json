@@ -660,7 +660,7 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Building/Meatrack.png[Meatrack]",
+        "spriteAddress": "Assets/6_Art/Building/Mod_Meatrack.png[Mod_Meatrack]",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -738,7 +738,7 @@
           "id": "建筑模块",
           "enabled": false,
           "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Meatrack\",\"SummonerPrefabId\":\"Meatrack_Summoner\"}",
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Mod_Meatrack\",\"SummonerPrefabId\":\"Meatrack_Summoner\"}",
             "Type": 0
           }
         }

@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 7326355492928931341}
   - component: {fileID: 7010952402597280618}
   m_Layer: 9
-  m_Name: Module_Equipment
+  m_Name: Mod_EquipmentRuntime
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

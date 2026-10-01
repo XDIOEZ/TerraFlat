@@ -71,7 +71,7 @@ public sealed class RuntimeLootTableEntry
 }
 
 /// <summary>
-/// 校验后的不可变战利品表。运行时按需生成 DamageReceiver 参数，避免共享可变 LootEntry 实例。
+/// 校验后的不可变战利品表。运行时按需生成 Mod_DamageReceiver 参数，避免共享可变 LootEntry 实例。
 /// </summary>
 public sealed class RuntimeLootTable
 {
@@ -86,7 +86,7 @@ public sealed class RuntimeLootTable
         this.entries = entries ?? Array.Empty<RuntimeLootTableEntry>();
     }
 
-    /// <summary>转换为 DamageReceiver.Data.LootTable 的严格 JSON 参数。</summary>
+    /// <summary>转换为 Mod_DamageReceiver.Data.LootTable 的严格 JSON 参数。</summary>
     public JArray CreateDamageReceiverEntries()
     {
         var result = new JArray();

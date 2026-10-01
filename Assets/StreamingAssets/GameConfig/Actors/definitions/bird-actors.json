@@ -52,8 +52,8 @@
           "parameters": {"NutritionTagMultipliers": [{"Tag": "Seed", "Multiplier": 3.0}, {"Tag": "Fruit", "Multiplier": 3.0}]}
         },
         "ai": {
-          "prefab": "AI_Bird",
-          "id": "AI_Bird",
+          "prefab": "Mod_AI_Bird",
+          "id": "Mod_AI_Bird",
           "enabled": true,
           "data": {
             "BitData": null,

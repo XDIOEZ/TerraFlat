@@ -222,7 +222,7 @@ MonoBehaviour:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 0b0b63be0af1a1349acffa15df66bfe8
-    m_Address: Assets/2_Prefabs/Gameplay/Modules/Equipment/Module_Equipment.prefab
+    m_Address: Assets/2_Prefabs/Gameplay/Modules/Equipment/Mod_EquipmentRuntime.prefab
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
@@ -756,7 +756,7 @@ MonoBehaviour:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 317545efc361a3143807103bf36506d3
-    m_Address: Assets/6_Art/Building/Meatrack.png
+    m_Address: Assets/6_Art/Building/Mod_Meatrack.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
@@ -858,7 +858,7 @@ MonoBehaviour:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 3a5b83e504544c94a8138c46c2805e2d
-    m_Address: Assets/2_Prefabs/Gameplay/Modules/Items/Module_HeldFood.prefab
+    m_Address: Assets/2_Prefabs/Gameplay/Modules/Items/Mod_HeldFood.prefab
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
@@ -888,7 +888,7 @@ MonoBehaviour:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 3c46ab8e0ed4f064685fd412d78b98ee
-    m_Address: Assets/2_Prefabs/Gameplay/Modules/Items/Module_DiscardItem.prefab
+    m_Address: Assets/2_Prefabs/Gameplay/Modules/Items/Mod_DiscardItem.prefab
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
@@ -2198,7 +2198,7 @@ MonoBehaviour:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 99e86f308e574534bae5d88a9b404146
-    m_Address: Assets/2_Prefabs/Gameplay/Modules/Movement/Mover.prefab
+    m_Address: Assets/2_Prefabs/Gameplay/Modules/Movement/Mod_Mover.prefab
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
@@ -3202,7 +3202,7 @@ MonoBehaviour:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: eae5f08c6c704a24a8bbbcb19d3dcf13
-    m_Address: Assets/2_Prefabs/Gameplay/Modules/Equipment/Module_Equipment_Store.prefab
+    m_Address: Assets/2_Prefabs/Gameplay/Modules/Equipment/Mod_EquipmentStore.prefab
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab

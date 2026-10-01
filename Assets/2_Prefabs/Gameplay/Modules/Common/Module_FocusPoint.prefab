@@ -55,7 +55,7 @@ MonoBehaviour:
     isRunning: 0
     Type: 0
     BitData: 
-  GameController: {fileID: 0}
+  Mod_GameController: {fileID: 0}
   turnBody: {fileID: 0}
   targetRotationTransforms:
   - {fileID: 2532051417522213741}
