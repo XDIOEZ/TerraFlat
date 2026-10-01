@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 5863283287701916933}
   - component: {fileID: 9101378343389085559}
   m_Layer: 0
-  m_Name: Mod_EquipmentRuntime
+  m_Name: Module_Equipment
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -25,7 +25,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 7086988442357602367}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -41,70 +41,64 @@ MonoBehaviour:
   m_GameObject: {fileID: 7086988442357602367}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f7ca1cab512c06642ab81c00d858f046, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
+  m_Script: {fileID: 11500000, guid: 00deb0e259288fa4b86066e5367325f6, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
   item: {fileID: 0}
   ModSaveData:
-    Name: 
-    ID: 
+    Name: "\u88C5\u5907\u6A21\u5757"
+    ID: "\u88C5\u5907\u6A21\u5757"
     isRunning: 1
     Type: 0
-    BitData: 
+    BitData:
+  EquipmentInventory:
+    item: {fileID: 0}
+    InventoryPanel_Prefab: {fileID: 7912998792349077291, guid: 0fc8137885e212a4db27be3ec37ff185, type: 3}
+    basePanel: {fileID: 0}
+    Data:
+      Name: "\u88C5\u5907\u6A21\u5757"
+      itemSlots:
+      - CanAcceptTags: []
+        SlotMaxVolume: 1
+        Index: 0
+      - CanAcceptTags: []
+        SlotMaxVolume: 1
+        Index: 1
+      - CanAcceptTags: []
+        SlotMaxVolume: 1
+        Index: 2
+      - CanAcceptTags: []
+        SlotMaxVolume: 1
+        Index: 3
+      - CanAcceptTags: []
+        SlotMaxVolume: 1
+        Index: 4
+      - CanAcceptTags: []
+        SlotMaxVolume: 1
+        Index: 5
+      - CanAcceptTags: []
+        SlotMaxVolume: 1
+        Index: 6
+      Index: 0
+      IsInjected: 0
+      PanelPosition: {x: 0, y: 0, z: 0}
+      PanelIsOpen: 0
+      ToggleActionName:
+      UIPrefabName:
+      Event_RefreshUI:
+        _PersistentCalls: []
+      Event_OnBeforeDataChanged:
+        _PersistentCalls: []
+      Event_OnDataChanged:
+        _PersistentCalls: []
+      Event_OnDataChanged_TwoSlots:
+        _PersistentCalls: []
+    itemSlot_UI: []
+    DefaultTarget_Inventory: {rid: 0}
+    StorageMaxWeightKg: 0
+    StorageMaxVolumeCubicMeters: 0
+    SlotRules: []
   equipment_ModuleData: []
-  Equipment_inventory:
-    rid: 4513346386347687940
   references:
     version: 2
-    RefIds:
-    - rid: 4513346386347687940
-      type: {class: Inventory_Equipment, ns: , asm: GamePlay}
-      data:
-        item: {fileID: 0}
-        InventoryPanel_Prefab: {fileID: 7912998792349077291, guid: 0fc8137885e212a4db27be3ec37ff185, type: 3}
-        Data:
-          Name: 
-          itemSlots:
-          - CanAcceptItemType:
-              Item_TypeTag:
-              - None
-              - None
-              Item_Material:
-              - None
-            SlotMaxVolume: 0
-            Index: 0
-          - CanAcceptItemType:
-              Item_TypeTag:
-              - None
-              - None
-              Item_Material:
-              - None
-            SlotMaxVolume: 0
-            Index: 0
-          - CanAcceptItemType:
-              Item_TypeTag:
-              - None
-              - None
-              Item_Material:
-              - None
-            SlotMaxVolume: 0
-            Index: 0
-          - CanAcceptItemType:
-              Item_TypeTag:
-              - None
-              - None
-              Item_Material:
-              - None
-            SlotMaxVolume: 0
-            Index: 0
-          Index: 0
-          IsInjected: 0
-          PanelPosition: {x: 0, y: 0, z: 0}
-          PanelIsOpen: 0
-          Event_RefreshUI:
-            _PersistentCalls: []
-          Event_OnDataChanged:
-            _PersistentCalls: []
-        itemSlot_UI: []
-        ToggleActionName: P
-        basePanel: {fileID: 0}
+    RefIds: []
