@@ -343,8 +343,8 @@ public sealed class Mod_ChargeAttack : Module, IAnimalCombatSkill, ITrunDirectio
 
         if (_mover == null)
         {
-            _mover = item.itemMods.GetMod_ByID<Mod_Mover_AI>(ModText.Mover) ??
-                     item.itemMods.GetMod_ByID<Mod_Mover_AI>(ModText.Mover_AI);
+            _mover = item.itemMods.GetMod_ByID<Mod_Mover_AI>(ModText.Mod_Mover) ??
+                     item.itemMods.GetMod_ByID<Mod_Mover_AI>(ModText.Mod_Mover_AI);
         }
 
         if (_normalDamage == null)

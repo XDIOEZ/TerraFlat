@@ -127,8 +127,8 @@ public sealed partial class Mod_AI_Bird : Module, IAIActor, IItemModuleDependenc
     /// <summary>从模块注册表获取依赖，表现引用由显式外壳构建器绑定。</summary>
     public void BindModuleDependencies(ItemMods modules)
     {
-        mover = modules.RequireSingleModById<Mod_Mover_AI>(ModText.Mover);
-        tileReceiver = modules.RequireSingleModById<Mod_TileEffectReceiver>(ModText.TileEffectReceiver);
+        mover = modules.RequireSingleModById<Mod_Mover_AI>(ModText.Mod_Mover);
+        tileReceiver = modules.RequireSingleModById<Mod_TileEffectReceiver>(ModText.Mod_TileEffectReceiver);
         health = modules.RequireSingleModById<Mod_DamageReceiver>(ModText.Hp);
         food = modules.RequireSingleModById<Mod_Food>(ModText.Food);
         threatDetector = modules.RequireSingleModById<Mod_ItemDetector>(ModText.Detector);

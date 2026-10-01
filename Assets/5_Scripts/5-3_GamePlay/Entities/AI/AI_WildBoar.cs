@@ -340,7 +340,7 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 		if (item == null || damageInfo == null || damageInfo.DamageValue <= 0f)
 			return;
 
-		Mod_BuffManager buffManager = item.itemMods?.GetMod_ByID<Mod_BuffManager>(ModText.BuffManager);
+		Mod_BuffManager buffManager = item.itemMods?.GetMod_ByID<Mod_BuffManager>(ModText.Mod_BuffManager);
 		buffManager?.AddBuff(DamageReductionBuffId);
 		AccumulatePlayerDamage(damageInfo);
 	}

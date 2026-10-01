@@ -25,7 +25,7 @@ public partial class Mod_BuffManager : Module
 
     public override ModuleTickMode TickMode => ModuleTickMode.FixedInterval;
     public override float FixedTickInterval => TickInterval;
-    public override string CanonicalModuleId => ModText.BuffManager;
+    public override string CanonicalModuleId => ModText.Mod_BuffManager;
 
     public override bool MatchesPersistedId(string persistedId)
     {
@@ -50,7 +50,7 @@ public partial class Mod_BuffManager : Module
     public override void Awake()
     {
         base.Awake();
-        _Data.ID = ModText.BuffManager;
+        _Data.ID = ModText.Mod_BuffManager;
         buffReceiver = GetComponentInParent<Item>();
 
         if (buffReceiver == null)

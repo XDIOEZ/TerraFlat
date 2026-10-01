@@ -50,7 +50,7 @@ public static class BodyTraumaBuffEffects
         var entry = new Entry { Type = effect.TypeId, Value = effect.Value };
         if (effect.TypeId == Move)
         {
-            entry.Speed = runtime.Receiver.itemMods.GetMod_ByID<Mod_Mover>(ModText.Mover)?.Speed;
+            entry.Speed = runtime.Receiver.itemMods.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover)?.Speed;
             if (entry.Speed != null) entry.Speed.MultiplicativeModifier *= entry.Value;
         }
         if (effect.TypeId == Blur && runtime.Receiver is Player player && player.IsLocalProfile)

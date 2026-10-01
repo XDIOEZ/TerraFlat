@@ -11,7 +11,7 @@ using UltEvents;
 public sealed class AIBehaviorGraphContext
 {
     public Item Actor { get; } // 当前行为图所属实体。
-    public Mod_Mover_AI Mover { get; } // 通用移动能力。
+    public Mod_Mover_AI Mod_Mover { get; } // 通用移动能力。
     public Mod_ItemDetector Detector { get; } // 通用感知能力。
     public Mod_DamageReceiver Health { get; } // 通用生命能力。
     public Mod_Food Food { get; } // 通用营养能力。
@@ -51,7 +51,7 @@ public sealed class AIBehaviorGraphContext
         Vector3 savedDamageOrigin)
     {
         Actor = actor ?? throw new ArgumentNullException(nameof(actor));
-        Mover = mover;
+        Mod_Mover = mover;
         Detector = detector;
         Health = health;
         Food = food;
@@ -72,7 +72,7 @@ public sealed class AIBehaviorGraphContext
         {
             bool available = capability switch
             {
-                AIBehaviorCapability.Mover => Mover != null,
+                AIBehaviorCapability.Mod_Mover => Mod_Mover != null,
                 AIBehaviorCapability.Detector => Detector != null,
                 AIBehaviorCapability.Health => Health != null,
                 AIBehaviorCapability.Food => Food != null,
@@ -86,7 +86,7 @@ public sealed class AIBehaviorGraphContext
 
             string moduleName = capability switch
             {
-                AIBehaviorCapability.Mover => ModText.Mover_AI,
+                AIBehaviorCapability.Mod_Mover => ModText.Mod_Mover_AI,
                 AIBehaviorCapability.Detector => ModText.Detector,
                 AIBehaviorCapability.Health => ModText.Hp,
                 AIBehaviorCapability.Food => ModText.Food,
@@ -457,9 +457,9 @@ public sealed class Mod_AI_BehaviorGraph : Module, IModuleJsonParameterValidator
         if (BehaviorGraph == null)
             throw new InvalidOperationException($"Actor {item.name} 的 AI JSON 没有 behaviorGraph。");
 
-        Mod_Mover_AI mover = item.itemMods.GetMod_ByID<Mod_Mover_AI>(ModText.Mover_AI);
+        Mod_Mover_AI mover = item.itemMods.GetMod_ByID<Mod_Mover_AI>(ModText.Mod_Mover_AI);
         if (mover == null)
-            mover = item.itemMods.GetMod_ByID<Mod_Mover_AI>(ModText.Mover);
+            mover = item.itemMods.GetMod_ByID<Mod_Mover_AI>(ModText.Mod_Mover);
         Mod_ItemDetector detector = item.itemMods.GetMod_ByID<Mod_ItemDetector>(ModText.Detector);
         Mod_DamageReceiver health = item.itemMods.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
         Mod_Food food = item.itemMods.GetMod_ByID<Mod_Food>(ModText.Food);

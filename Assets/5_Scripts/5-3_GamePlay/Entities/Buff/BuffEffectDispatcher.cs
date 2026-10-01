@@ -116,7 +116,7 @@ public static class BuffEffectDispatcher
     private static void ApplyMoveSpeedMultiplier(BuffEffectDefinition effect, BuffInstance runtime)
     {
         Item receiver = GetReceiver(runtime);
-        Mod_Mover mover = receiver?.itemMods.GetMod_ByID(ModText.Mover) as Mod_Mover;
+        Mod_Mover mover = receiver?.itemMods.GetMod_ByID(ModText.Mod_Mover) as Mod_Mover;
         if (mover?.Speed != null)
             mover.Speed.MultiplicativeModifier *= effect.Value;
     }

@@ -1012,7 +1012,7 @@ public abstract class AI_Base<TState> : Module, IAIActor where TState : struct, 
 #region Debug
 	private string GetDebugBuffInfo()
 	{
-		Mod_BuffManager buffManager = item?.itemMods?.GetMod_ByID<Mod_BuffManager>(ModText.BuffManager);
+		Mod_BuffManager buffManager = item?.itemMods?.GetMod_ByID<Mod_BuffManager>(ModText.Mod_BuffManager);
 		if (buffManager?.ActiveBuffs == null || buffManager.ActiveBuffs.Count == 0)
 			return string.Empty;
 
@@ -1043,10 +1043,10 @@ public abstract class AI_Base<TState> : Module, IAIActor where TState : struct, 
 	{
 		_isReady = true;
 
-		item.itemMods.GetMod_ByID(ModText.Mover, out _mover);
+		item.itemMods.GetMod_ByID(ModText.Mod_Mover, out _mover);
 		if (_mover == null)
 		{
-			item.itemMods.GetMod_ByID(ModText.Mover_AI, out _mover);
+			item.itemMods.GetMod_ByID(ModText.Mod_Mover_AI, out _mover);
 		}
 
 		item.itemMods.GetMod_ByID(ModText.Detector, out _detector);

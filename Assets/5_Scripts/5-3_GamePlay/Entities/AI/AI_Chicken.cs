@@ -266,7 +266,7 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 		if (item == null || damageInfo == null || damageInfo.DamageValue <= 0f)
 			return;
 
-		Mod_BuffManager buffManager = item.itemMods?.GetMod_ByID<Mod_BuffManager>(ModText.BuffManager);
+		Mod_BuffManager buffManager = item.itemMods?.GetMod_ByID<Mod_BuffManager>(ModText.Mod_BuffManager);
 		buffManager?.AddBuff(SpeedOneBuffId);
 	}
 

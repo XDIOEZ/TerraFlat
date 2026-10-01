@@ -132,7 +132,7 @@ public partial class Mod_DamageReceiver
     private void ReconcileBodyPartPenalties()
     {
         if (!bodyPenaltiesDirty) return;
-        Mod_BuffManager manager = item?.itemMods?.GetMod_ByID<Mod_BuffManager>(ModText.BuffManager);
+        Mod_BuffManager manager = item?.itemMods?.GetMod_ByID<Mod_BuffManager>(ModText.Mod_BuffManager);
         if (manager == null) return;
         if (bodyPenaltyManager != manager) { ClearBodyPartPenalties(); bodyPenaltyManager = manager; }
         var expected = new HashSet<string>();
@@ -160,7 +160,7 @@ public partial class Mod_DamageReceiver
     {
         if (!CanMutateBodyState() || Hp <= 0f || hit.DamageValue <= 0f || hit.HpAfter > 0f ||
             !TryGetBodyPart(hit.Part, out BodyPartHealth part)) return;
-        Mod_BuffManager manager = item.itemMods.GetMod_ByID<Mod_BuffManager>(ModText.BuffManager);
+        Mod_BuffManager manager = item.itemMods.GetMod_ByID<Mod_BuffManager>(ModText.Mod_BuffManager);
         if (manager == null) return;
         foreach (string buffId in part.DepletionBuffIds)
         {

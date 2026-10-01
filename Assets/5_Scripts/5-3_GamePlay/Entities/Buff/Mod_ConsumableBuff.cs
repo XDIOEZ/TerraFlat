@@ -31,7 +31,7 @@ public sealed class Mod_ConsumableBuff : Module, IFoodMechanic, IFoodConsumption
     public bool CanUse(FoodUseContext context, out string reason)
     {
         Item consumer = context.Consumer.Item;
-        bool allowed = consumer.itemMods.GetMod_ByID<Mod_BuffManager>(ModText.BuffManager) != null &&
+        bool allowed = consumer.itemMods.GetMod_ByID<Mod_BuffManager>(ModText.Mod_BuffManager) != null &&
             consumer.itemMods.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp)?.Hp > 0f;
         reason = allowed ? string.Empty : "当前状态无法使用药品。";
         return allowed;
@@ -42,7 +42,7 @@ public sealed class Mod_ConsumableBuff : Module, IFoodMechanic, IFoodConsumption
     {
         if (result.ConsumedItem != item)
             return;
-        Mod_BuffManager manager = result.Consumer.itemMods.GetMod_ByID<Mod_BuffManager>(ModText.BuffManager);
+        Mod_BuffManager manager = result.Consumer.itemMods.GetMod_ByID<Mod_BuffManager>(ModText.Mod_BuffManager);
         foreach (string id in buffIds)
             manager.AddBuff(id);
     }

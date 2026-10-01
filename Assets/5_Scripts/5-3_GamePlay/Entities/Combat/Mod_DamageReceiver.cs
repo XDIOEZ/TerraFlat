@@ -668,7 +668,7 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
         float result = HurtContext(context, rules, targetPart: targetPart);
         if (result >= 0f && Hp > 0f && context.OnHitBuffs.Length > 0)
         {
-            Mod_BuffManager buffManager = item.itemMods.GetMod_ByID<Mod_BuffManager>(ModText.BuffManager);
+            Mod_BuffManager buffManager = item.itemMods.GetMod_ByID<Mod_BuffManager>(ModText.Mod_BuffManager);
             if (buffManager != null)
                 foreach (var effect in context.OnHitBuffs)
                     if (effect.Chance >= 1f || Random.value < effect.Chance)
@@ -881,7 +881,7 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
     {
         if (item?.itemMods != null)
         {
-            Mod_Mover mover = item.itemMods.GetMod_ByID(ModText.Mover) as Mod_Mover;
+            Mod_Mover mover = item.itemMods.GetMod_ByID(ModText.Mod_Mover) as Mod_Mover;
             if (mover != null)
                 return mover;
         }
@@ -1126,7 +1126,7 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
             return false;
 
         return item.itemMods.ContainsKey_ID(ModText.AI) ||
-               item.itemMods.ContainsKey_ID(ModText.Mover_AI);
+               item.itemMods.ContainsKey_ID(ModText.Mod_Mover_AI);
     }
 
     /// <summary>静态内容编译与旧实例升级共用默认身体模板；返回独立部位列表。</summary>
