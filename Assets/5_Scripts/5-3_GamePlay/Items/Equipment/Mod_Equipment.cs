@@ -72,7 +72,8 @@ public class Mod_Equipment : Module, IInventory, IInteractable, IInstanceUI
         // 设置默认目标背包
         var handMod = item.itemMods.GetMod_ByID(ModText.Hand);
         Mod_Inventory handInventoryModule = handMod?.GetComponent<Mod_Inventory>();
-        EquipmentInventory.DefaultTarget_Inventory = handInventoryModule?.inventory ?? Inventory_Hand.PlayerHand;
+        // 通用装备模块不能偷偷绑定全局玩家手栏；AI/普通 Item 只使用自己的库存。
+        EquipmentInventory.DefaultTarget_Inventory = handInventoryModule?.inventory;
 
         // 初始化数据与控制器绑定
         var ctrl = item.itemMods.GetMod_ByID<Mod_GameController>(ModText.Controller);
@@ -186,7 +187,7 @@ public class Mod_Equipment : Module, IInventory, IInteractable, IInstanceUI
         EquipmentInventory.EnsurePanelCreated();
         EquipmentInventory.basePanel?.Toggle();
 
-        var handInv = playerItem?.GetComponentInChildren<Mod_Hand>()?.HandInventory ?? Inventory_Hand.PlayerHand;
+        var handInv = playerItem?.GetComponentInChildren<Mod_Hand>()?.HandInventory;
         if (handInv != null)
             EquipmentInventory.DefaultTarget_Inventory = handInv;
     }
@@ -247,6 +248,22 @@ public class Mod_Equipment : Module, IInventory, IInteractable, IInstanceUI
         EquipmentInventory.Data.ChangeItemData_Default(index, transferSlot);
         displacedItem = transferSlot.itemData;
         return EquipmentInventory.Data.itemSlots[index]?.itemData != null;
+    }
+
+    /// <summary>按装备自身标签自动选择兼容槽，AI 不需要知道玩家 UI 的槽位索引。</summary>
+    public bool TryEquip(ItemData equipmentItem, out string slotId, out ItemData displacedItem, bool replaceOccupied = false)
+    {
+        slotId = null;
+        displacedItem = null;
+        if (equipmentItem == null || EquipmentInventory?.Data == null)
+            return false;
+
+        int index = EquipmentInventory.FindCompatibleSlot(equipmentItem, preferEmpty: !replaceOccupied);
+        if (index < 0 || index >= EquipmentInventory.SlotRules.Count)
+            return false;
+
+        slotId = EquipmentInventory.SlotRules[index].Id;
+        return TryEquip(equipmentItem, slotId, out displacedItem);
     }
 
     public bool TryUnequip(string slotId, out ItemData unequippedItem)

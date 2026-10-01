@@ -129,6 +129,29 @@ public class Inventory_Equipment : Inventory
                (itemData.Tags.ContainsTag(rule.RequiredTag) || itemData.Tags.ContainsTag(EquipmentSlotCatalog.AnyTag));
     }
 
+    /// <summary>按装备标签寻找第一个兼容槽位，供 AI 与脚本直接使用。</summary>
+    public int FindCompatibleSlot(ItemData itemData, bool preferEmpty = true)
+    {
+        if (itemData == null || Data?.itemSlots == null)
+            return -1;
+
+        int fallback = -1;
+        int count = Mathf.Min(SlotRules.Count, Data.itemSlots.Count);
+        for (int i = 0; i < count; i++)
+        {
+            if (!CanEquipAt(i, itemData))
+                continue;
+
+            if (Data.itemSlots[i]?.itemData == null)
+                return i;
+
+            if (fallback < 0)
+                fallback = i;
+        }
+
+        return preferEmpty ? -1 : fallback;
+    }
+
     public override bool CanAcceptQuickTransfer(ItemSlot sourceSlot, ItemSlot targetSlot)
     {
         if (!base.CanAcceptQuickTransfer(sourceSlot, targetSlot) || Data?.itemSlots == null)
@@ -234,6 +257,7 @@ public class Inventory_Equipment : Inventory
         image.sprite = sprite;
         image.preserveAspect = true;
         image.type = Image.Type.Simple;
+        image.color = new Color(0.06f, 0.07f, 0.08f, 0.9f);
     }
 
     private void RefreshSlotLabels()
