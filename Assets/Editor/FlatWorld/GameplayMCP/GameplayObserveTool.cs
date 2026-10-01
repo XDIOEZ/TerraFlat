@@ -11,45 +11,40 @@ namespace FlatWorld.GameplayMCP
         Group = "core")]
     public static class GameplayObserveTool
     {
+        #region 观察参数与响应
+
         public sealed class Parameters
         {
+            [ToolParameter("Observation profile: full (legacy default) or compact (player position, health, stamina and input state only). Explicit include flags override profile defaults.", Required = false, DefaultValue = "full")]
+            public string profile { get; set; }
+
+            [ToolParameter("Include the 3x3 terrain grid. Defaults to false in compact, true in full.", Required = false)]
+            public bool? includeTerrain { get; set; }
+
+            [ToolParameter("Include nearby ECS drops. Defaults to false in compact, true in full.", Required = false)]
+            public bool? includeDrops { get; set; }
+
+            [ToolParameter("Include nearby runtime entities. Defaults to false in compact, true in full.", Required = false)]
+            public bool? includeNearby { get; set; }
+
             [ToolParameter("Nearby entity radius in world units.", Required = false, DefaultValue = "10")]
             public float radius { get; set; }
 
-            [ToolParameter("Maximum nearby entities returned.", Required = false, DefaultValue = "24")]
+            [ToolParameter("Maximum nearby entities returned. Defaults to 6 in compact, 24 in full.", Required = false)]
             public int maxEntities { get; set; }
 
-            [ToolParameter("Include aggregated inventory summary.", Required = false, DefaultValue = "true")]
-            public bool includeInventory { get; set; }
+            [ToolParameter("Include aggregated inventory summary. Defaults to false in compact, true in full.", Required = false)]
+            public bool? includeInventory { get; set; }
         }
 
         /// <summary>返回实时玩家、附近实体与资源状态。</summary>
         public static object HandleCommand(JObject parameters)
         {
-            float radius = ReadFloat(parameters, "radius", 10f);
-            int maxEntities = ReadInt(parameters, "maxEntities", 24);
-            bool includeInventory = ReadBool(parameters, "includeInventory", true);
             return new SuccessResponse(
                 "FlatWorld gameplay observation.",
-                GameplayMcpRuntime.BuildObservation(radius, maxEntities, includeInventory));
+                GameplayMcpRuntime.BuildObservation(parameters));
         }
 
-        /// <summary>读取浮点工具参数。</summary>
-        private static float ReadFloat(JObject parameters, string key, float fallback)
-        {
-            return float.TryParse(parameters?[key]?.ToString(), out float value) ? value : fallback;
-        }
-
-        /// <summary>读取整数工具参数。</summary>
-        private static int ReadInt(JObject parameters, string key, int fallback)
-        {
-            return int.TryParse(parameters?[key]?.ToString(), out int value) ? value : fallback;
-        }
-
-        /// <summary>读取布尔工具参数。</summary>
-        private static bool ReadBool(JObject parameters, string key, bool fallback)
-        {
-            return bool.TryParse(parameters?[key]?.ToString(), out bool value) ? value : fallback;
-        }
+        #endregion
     }
 }

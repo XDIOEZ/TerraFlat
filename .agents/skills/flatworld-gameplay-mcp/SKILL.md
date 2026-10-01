@@ -63,6 +63,13 @@ GamePlayMCP 复用项目已有 MCPForUnity 自定义工具发现机制，不另�
 
 ## 自主游玩循环
 
+### Agent 快速输入输出
+
+- 高频位置/血量检查优先 `gameplay_observe(profile="compact")`；需要时显式开启 `includeNearby/includeTerrain/includeDrops/includeInventory`。省略分区表示未查询，不表示没有内容。首次进入世界、环境变化、异常诊断仍读取 `profile="full"`；旧调用默认保持完整观察。
+- 动作后需要状态时用 `gameplay_act(..., observe=true)`，同一次返回附带真实精简观察；`observation={"profile":"full"}` 或其它 observe 参数可按需补充信息。
+- 已经确定、无需中途观察决策的短动作可用 `gameplay_act(steps=[{"action":"select_hotbar","index":0},{"action":"use"}], observe=true)`；最多 8 步，持续动作必须显式传 `seconds`，总等待预算最多 8 秒，失败或业务拒绝立即停止。每步仍通过正式动作注册表与控制租约执行；结果有 `executed/remaining/results`，已执行动作不会回滚，不能整批盲目重试。
+- 批次只用于工具说明列出的短动作；UI 操作仍先读最新 UI 树，不用批次猜旧节点。跨危险地形、战斗目标变化及异步生产结果需要重新观察后再决定下一步。合并观察只等一次 Editor 更新，不保证异步制作/世界加载已经完成。
+
 循环应保持短、可观察、可复现：
 
 1. `gameplay_observe`：读取玩家位置、速度、生命、体力、营养、输入锁、快捷栏、背包摘要、附近实体、附近 ECS 掉落物，以及以玩家脚下为中心的固定 3×3 权威地块；水格同时附带可用的河流/海洋表层流向与流量，用于区分主动移动与环境漂移。

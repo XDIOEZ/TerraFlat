@@ -18,7 +18,7 @@ namespace FlatWorld.GameplayMCP
     /// </summary>
     internal static class GameplayMcpRuntime
     {
-        public const string ProtocolVersion = "0.8.2";
+        public const string ProtocolVersion = "0.9.0";
         public const string ExtensionPath = "Assets/Editor/FlatWorld/GameplayMCP/";
         private const float MinimumSessionTimeoutSeconds = 2f;
         private const float MaximumSessionTimeoutSeconds = 120f;
@@ -452,8 +452,23 @@ namespace FlatWorld.GameplayMCP
 
         #region 世界观察
 
+        /// <summary>按调用方需要生成观察，省略的分区不执行查询。</summary>
+        public static JObject BuildObservation(JObject parameters)
+        {
+            bool compact = string.Equals(GetString(parameters, "profile", "full"), "compact", StringComparison.OrdinalIgnoreCase);
+            return BuildObservation(
+                GetFloat(parameters, "radius", 10f),
+                GetInt(parameters, "maxEntities", compact ? 6 : 24),
+                GetBool(parameters, "includeInventory", !compact),
+                GetBool(parameters, "includeTerrain", !compact),
+                GetBool(parameters, "includeDrops", !compact),
+                GetBool(parameters, "includeNearby", !compact),
+                compact);
+        }
+
         /// <summary>构造供 Agent 高频消费的紧凑结构化观察结果。</summary>
-        public static JObject BuildObservation(float radius, int maxEntities, bool includeInventory)
+        public static JObject BuildObservation(float radius, int maxEntities, bool includeInventory,
+            bool includeTerrain = true, bool includeDrops = true, bool includeNearby = true, bool compact = false)
         {
             radius = Mathf.Clamp(radius, 1f, 64f);
             maxEntities = Mathf.Clamp(maxEntities, 1, 128);
@@ -475,11 +490,40 @@ namespace FlatWorld.GameplayMCP
             }
 
             root["ready"] = true;
-            root["player"] = BuildPlayerObservation(player, controller, mover, includeInventory);
-            root["terrain"] = BuildTerrainGridObservation(player.transform.position);
-            root["drops"] = BuildNearbyDroppedItemObservation(player, radius, Mathf.Min(maxEntities, 16));
-            root["nearby"] = BuildNearbyObservation(player, radius, maxEntities);
+            root["player"] = compact
+                ? BuildCompactPlayerObservation(player, controller, mover, includeInventory)
+                : BuildPlayerObservation(player, controller, mover, includeInventory);
+            if (includeTerrain)
+                root["terrain"] = BuildTerrainGridObservation(player.transform.position);
+            if (includeDrops)
+                root["drops"] = BuildNearbyDroppedItemObservation(player, radius, Mathf.Min(maxEntities, 16));
+            if (includeNearby)
+                root["nearby"] = BuildNearbyObservation(player, radius, maxEntities);
             return root;
+        }
+
+        /// <summary>高频移动只读取位置、生存与输入状态，需要详细信息时再取完整观察。</summary>
+        private static JObject BuildCompactPlayerObservation(Player player, Mod_GameController controller,
+            Mod_Mover mover, bool includeInventory)
+        {
+            Mod_DamageReceiver health = player.itemMods.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
+            Mod_Stamina stamina = player.itemMods.GetMod_ByID<Mod_Stamina>(ModText.Stamina);
+            var result = new JObject
+            {
+                ["guid"] = player.itemData?.Guid ?? 0,
+                ["position"] = VectorToJson(player.transform.position),
+                ["velocity"] = VectorToJson(mover.rb.velocity),
+                ["moving"] = mover.IsMoving,
+                ["running"] = mover.IsRunning,
+                ["hp"] = health == null ? JValue.CreateNull() : new JArray(Round(health.Hp), Round(health.MaxHp)),
+                ["stamina"] = stamina == null ? JValue.CreateNull() : new JArray(Round(stamina.CurrentValue), Round(stamina.MaxValue)),
+                ["inputLocked"] = controller.IsGameplayInputLocked,
+                ["inputLock"] = controller.IsGameplayInputLocked ? controller.DescribeGameplayInputLockState() : string.Empty,
+                ["agentControl"] = new JObject { ["owned"] = OwnsControl(controller) }
+            };
+            if (includeInventory)
+                result["inventory"] = BuildInventorySummary(player, ResolveHotbar(player));
+            return result;
         }
 
         /// <summary>构造玩家核心状态、快捷栏和可选库存摘要。</summary>
