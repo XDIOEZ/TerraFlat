@@ -78,7 +78,7 @@
         if (spoilage?.EnableSpoilage === true) lines.push(`放在库存中会逐渐腐败，大约 ${text(spoilage.SpoilageIntervalSeconds)} 秒后变成${named(context, spoilage.SpoilageTargetItemID)}。`);
         return lines;
     });
-    register(["Module_HeldFood"], "手持食物操作", "Mod_HeldFood；docs/systems/survival.md", () => ["拿在手上时可以直接进行食用操作。"]);
+    register(["Module_HeldFood"], "手持食物操作", "Module_HeldFood；docs/systems/survival.md", () => ["拿在手上时可以直接进行食用操作。"]);
     register(["Module_Equipment_Store"], "装备后效果", "docs/systems/equipment.md；EquipmentInstance_Speed / Defense / Bag", body => {
         const instances = parameters(body).equipmentInstances;
         if (!Array.isArray(instances)) return ["需要装备到角色对应的装备槽后才会生效，卸下后效果消失。"];

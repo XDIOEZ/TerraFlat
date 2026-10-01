@@ -221,6 +221,57 @@ namespace FlatWorld.NaturalEntities
             return query;
         }
 
+        /// <summary>按世界命中点读取最近自然实体的对应类型防御，供无 GameObject 外壳的命中后行为复用。</summary>
+        public static bool TryGetCombatDefenseAtPoint(Vector2 point, CombatDamageKind kind,
+            out float defense, out int runtimeId)
+        {
+            defense = 0f;
+            runtimeId = 0;
+            if (simulation == null || kind == CombatDamageKind.None)
+                return false;
+
+            const float tolerance = 0.18f;
+            float bestDistance = float.PositiveInfinity;
+            using ResourceQuery query = QueryBounds(point, Vector2.one * tolerance);
+            foreach (Record record in query)
+            {
+                if (!record.IsValid || record.Profile.HealthDefaults?.DefenseValues == null ||
+                    !record.HitColliderEnabled)
+                {
+                    continue;
+                }
+
+                float distance = Mathf.Min(
+                    SqrDistanceToBounds(point, record.HitBounds),
+                    SqrDistanceToBounds(point, record.BodyBounds));
+                if (distance > tolerance * tolerance || distance >= bestDistance)
+                    continue;
+
+                CombatDefense values = record.Profile.HealthDefaults.DefenseValues;
+                defense = kind switch
+                {
+                    CombatDamageKind.Cutting => values.Cutting,
+                    CombatDamageKind.Piercing => values.Piercing,
+                    CombatDamageKind.Chopping => values.Chopping,
+                    CombatDamageKind.Blunt => values.Blunt,
+                    _ => 0f
+                };
+                runtimeId = record.Handle.Id;
+                bestDistance = distance;
+            }
+
+            return bestDistance < float.PositiveInfinity;
+        }
+
+        /// <summary>用环形世界的最短位移计算点到 AABB 的平方距离。</summary>
+        private static float SqrDistanceToBounds(Vector2 point, Bounds bounds)
+        {
+            Vector2 delta = WorldTopologyRuntime.ShortestDelta(bounds.center, point);
+            float dx = Mathf.Max(0f, Mathf.Abs(delta.x) - bounds.extents.x);
+            float dy = Mathf.Max(0f, Mathf.Abs(delta.y) - bounds.extents.y);
+            return dx * dx + dy * dy;
+        }
+
         public static void QueryInteractions(Item actor, float distance, Vector2? pointer, List<IInteractable> output)
         {
             if (actor == null || records.Count == 0 || distance < 0f) return;
@@ -295,7 +346,6 @@ namespace FlatWorld.NaturalEntities
                 hit.HitPoint = candidate.Point;
                 float damage = ApplyDamage(candidate.Record.Handle, hit);
                 if (damage >= 0f && weapon != null) weapon.PublishExternalDamage(hit, damage);
-                else if (damage == -2f && weapon != null) ItemActionFeedback.Show(weapon.item.Owner ?? weapon.item, "需要使用符合种类与等级的工具采集。");
             }
         }
 
@@ -307,17 +357,18 @@ namespace FlatWorld.NaturalEntities
             Record record = records[handle.Id];
             if (record.Busy || record.Profile.HealthModuleName == null ||
                 !simulation.TryGet(handle.Id, out AiecsVital vital) || vital.Dead != 0 || vital.Hp <= 0f) return -1f;
-            float efficiency = 1f;
+            float resourceMultiplier = 1f;
             if (context.IsTrueDamage == 0 && simulation.TryGet(handle.Id, out EntityHarvestRequirement requirement))
             {
-                if (context.ResourceToolKind != requirement.ToolKind || context.ResourceToolTier < requirement.MinimumTier) return -2f;
-                if (!math.isfinite(context.ResourceToolEfficiency) || context.ResourceToolEfficiency < 0f) return -1f;
-                efficiency = Mathf.Max(0f, context.ResourceToolEfficiency);
+                resourceMultiplier = Mod_ResourceHarvest.ResolveAffinityMultiplier(
+                    (ResourceToolKind)requirement.ToolKind, requirement.MinimumTier,
+                    (ResourceToolKind)context.ResourceToolKind, context.ResourceToolTier, context.ResourceToolEfficiency);
+                if (!math.isfinite(resourceMultiplier)) return -1f;
             }
             if (context.IsTrueDamage == 0 && context.Clock.Time - vital.LastDamageTime < vital.DamageInterval) return -1f;
             float4 damage = context.IsTrueDamage != 0 ? math.max(0f, context.Damage) :
                 CombatRules.Resolve(context.Damage, GameplayCombatBridge.Values(record.Profile.HealthDefaults.DefenseValues),
-                    GameplayCombatBridge.Difficulty().Resolve(context.SourceIsPlayer != 0, false), vital.ReceivedMultiplier * efficiency);
+                    GameplayCombatBridge.Difficulty().Resolve(context.SourceIsPlayer != 0, false), vital.ReceivedMultiplier * resourceMultiplier);
             float previous = vital.Hp;
             vital.Hp = math.max(0f, vital.Hp - math.csum(damage));
             if (context.IsTrueDamage == 0) vital.LastDamageTime = context.Clock.Time;

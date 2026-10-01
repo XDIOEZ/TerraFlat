@@ -18,6 +18,7 @@ public sealed class Mod_GroundCoverHarvest : Module
     public string grassYieldItemId = "";
     [Min(1)] public int grassYieldAmount = 2;
     private WorldTileTargetOutline targetOutline; // 仅当前本地手持工具拥有的白色目标框。
+    private Mod_Weapon_AnimationAction attackAction; // 剪取前复用武器挥动动画，避免静止瞬间采集。
     private bool actBound; // 防止重复 Load 订阅同一使用事件。
     public override string CanonicalModuleId => ModuleId;
     public override ModuleTickMode TickMode => ModuleTickMode.Disabled;
@@ -43,6 +44,7 @@ public sealed class Mod_GroundCoverHarvest : Module
     {
         if (reach <= 0f || float.IsNaN(reach) || float.IsInfinity(reach))
             throw new InvalidOperationException("地表植被采集距离必须是有限正数。");
+        attackAction = item?.itemMods?.GetMod_ByID<Mod_Weapon_AnimationAction>("Module_Weapon_AnimationAction");
         if (actBound) return;
         item.OnAct += Act;
         actBound = true;
@@ -56,6 +58,7 @@ public sealed class Mod_GroundCoverHarvest : Module
     {
         if (actBound && item != null) item.OnAct -= Act;
         actBound = false;
+        attackAction = null;
         ReleaseOutline();
     }
 
@@ -86,6 +89,12 @@ public sealed class Mod_GroundCoverHarvest : Module
     {
         if (!TryResolveTarget(out GroundCoverTarget target, out RuntimeTerrainTileSample grass, out bool cuttingGrass))
             return;
+
+        // 和锄头一致：只有本次挥动动画真正开始，才结算这一剪。
+        attackAction ??= item.itemMods?.GetMod_ByID<Mod_Weapon_AnimationAction>("Module_Weapon_AnimationAction");
+        if (attackAction == null || !attackAction.TryRequestAttack(queueIfBusy: false))
+            return;
+
         if (cuttingGrass)
         {
             // 先准备真实掉落，再消费草层；失败不清草，连续使用也不会重复出货。

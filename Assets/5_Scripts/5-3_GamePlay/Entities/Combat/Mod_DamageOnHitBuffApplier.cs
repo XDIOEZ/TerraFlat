@@ -75,7 +75,7 @@ public sealed class Mod_DamageOnHitBuffApplier : Module, IItemModuleDependencyBi
             damageModule.OnReceiverDamageResolved -= HandleReceiverDamageResolved;
     }
 
-    /// <summary>对一次有效实体命中执行概率判定，并通过目标 Mod_BuffManager 添加状态。</summary>
+    /// <summary>对一次有效实体命中执行概率判定，并通过目标 BuffManager 添加状态。</summary>
     private void HandleReceiverDamageResolved(Mod_DamageReceiver receiver, float damageResult)
     {
         if (!IsEffectActive ||
@@ -91,7 +91,7 @@ public sealed class Mod_DamageOnHitBuffApplier : Module, IItemModuleDependencyBi
             return;
 
         Item targetItem = receiver.item;
-        Mod_BuffManager buffManager = targetItem?.itemMods?.GetMod_ByID<Mod_BuffManager>(ModText.Mod_BuffManager);
+        Mod_BuffManager buffManager = targetItem?.itemMods?.GetMod_ByID<Mod_BuffManager>(ModText.BuffManager);
         if (buffManager != null)
             buffManager.AddBuff(buffId.Trim(), Mathf.Max(1, applicationStacks));
     }

@@ -42,6 +42,12 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
     [Tooltip("每次攻击伤害窗口最多命中的实体数量；默认 3，特殊单体武器可按需调低。")]
     public int MaxAttackTargets = 3;
 
+    [Header("逻辑命中")]
+    [SerializeField, Range(0.1f, 2f)]
+    [Tooltip("武器逻辑命中修正系数；1 为中性，最终还会叠加攻击者状态与目标体积。")]
+    private float hitChanceMultiplier = 1f;
+    public float HitChanceMultiplier => Mathf.Clamp(hitChanceMultiplier, 0.1f, 2f);
+
     [Header("受击减速效果")]
     [Tooltip("是否让被本次攻击命中的目标减速")]
     public bool EnableHitSlowdown = true;
@@ -109,6 +115,8 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
 
     /// <summary>实体伤害完成后发布目标与结算结果；0 表示有效命中，负数表示本次结算无效。</summary>
     public event System.Action<Mod_DamageReceiver, float> OnReceiverDamageResolved;
+    /// <summary>碰撞体已接触但逻辑命中失败时发布，参数为本次最终命中概率。</summary>
+    public event System.Action<Mod_DamageReceiver, float> OnReceiverLogicalMissed;
     public event System.Action<FlatWorld.Combat.CombatDamageContext, float> OnExternalDamageResolved;
     private bool explicitProjectileSweep;
     private bool hasImpactOrigin;
@@ -182,7 +190,7 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
         GameplayCombatBridge.QueryWeaponPulse(this, shape, context);
     }
 
-    /// <summary>纯数据后端确认生命提交后复用武器反馈，原 Mod_DamageReceiver 专用事件仍只传真实旧接收器。</summary>
+    /// <summary>纯数据后端确认生命提交后复用武器反馈，原 DamageReceiver 专用事件仍只传真实旧接收器。</summary>
     public void PublishExternalDamage(in FlatWorld.Combat.CombatDamageContext context, float damage)
     {
         if (GameplayCombatBridge.Identity(item) != context.Attack.Source || context.Attack.Sequence != attackSequence) return;
@@ -210,7 +218,8 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
         contextModifiers.Clear();
         if (item != null)
             foreach (Module module in item.itemMods.Mods.Values)
-                if (module != this && module is ICombatDamageContextModifier modifier)
+                // Mod_Damage 本身是上下文聚合器；同一 Item 可有多个伤害盒，聚合器之间禁止互相递归。
+                if (module is not Mod_Damage && module is ICombatDamageContextModifier modifier)
                     contextModifiers.Add(modifier);
         var contract = default(FlatWorld.Combat.CombatDamageContext);
         ModifyDamageContext(ref contract);
@@ -527,10 +536,17 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
 
         attackWindowHitReceivers.Add(receiver);
 
+        // 碰撞只代表攻击范围接触；角色之间还要经过武器、状态和目标体积共同决定的逻辑命中。
+        if (!TryResolveLogicalHit(receiver, out float logicalHitChance))
+        {
+            OnReceiverLogicalMissed?.Invoke(receiver, logicalHitChance);
+            return;
+        }
+
         // 造成伤害
         float acDamage = receiver.Hurt(this);
 
-        // Mod_DamageReceiver 与受击 Collider 可能位于不同层级，不能假定接收器节点自身带 Collider。
+        // DamageReceiver 与受击 Collider 可能位于不同层级，不能假定接收器节点自身带 Collider。
         if (acDamage >= 0f)
         {
             Vector2 hitPoint = ResolveHitPoint(receiver, hitCollider);
@@ -545,6 +561,83 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
         lastDamageTime = Time.time;
 
     }
+
+    #region 逻辑命中
+
+    private const float HealthyEqualSizeHitChance = 0.73f;
+    private const float LogicalHitChanceFloor = 0.02f;
+    private const float LogicalHitChanceCeiling = 0.98f;
+    private const float TargetSizeExponent = 0.5f;
+
+    /// <summary>只对角色攻击角色追加逻辑命中判定，环境、资源和普通物件伤害保持原规则。</summary>
+    private bool TryResolveLogicalHit(Mod_DamageReceiver receiver, out float chance)
+    {
+        chance = 1f;
+        Item attackActor = ResolveAttackActor();
+        Item targetActor = receiver?.item;
+        if (!IsLogicalHitActor(attackActor) || !IsLogicalHitActor(targetActor))
+            return true;
+
+        float weaponFactor = HitChanceMultiplier;
+        float stateFactor = ResolveAttackerStateHitChanceMultiplier(attackActor);
+        float sizeFactor = Mathf.Pow(Mathf.Max(0.05f, receiver.HitSizeCoefficient), TargetSizeExponent);
+        chance = Mathf.Clamp(
+            HealthyEqualSizeHitChance * weaponFactor * stateFactor * sizeFactor,
+            LogicalHitChanceFloor,
+            LogicalHitChanceCeiling);
+        return Random.value < chance;
+    }
+
+    /// <summary>武器、箭矢等多级 Owner 最终都归到真实攻击角色。</summary>
+    private Item ResolveAttackActor()
+    {
+        Item current = item;
+        int guard = 0;
+        while (current?.Owner != null && guard++ < 8)
+            current = current.Owner;
+        return current;
+    }
+
+    private static bool IsLogicalHitActor(Item candidate)
+    {
+        if (candidate == null)
+            return false;
+        if (candidate is Player)
+            return true;
+
+        List<string> tags = candidate.itemData?.Tags;
+        return tags != null &&
+               (tags.ContainsTag(Tag.Player) || tags.ContainsTag("Animal") || tags.ContainsTag("Blood"));
+    }
+
+    /// <summary>健康与体力充足时返回 1；受伤或疲劳只降低命中，不额外奖励满状态。</summary>
+    private static float ResolveAttackerStateHitChanceMultiplier(Item attackActor)
+    {
+        if (attackActor?.itemMods == null)
+            return 1f;
+
+        float healthFactor = 1f;
+        Mod_DamageReceiver health = attackActor.itemMods.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
+        if (health != null && health.MaxHp > 0f)
+        {
+            float hpRatio = Mathf.Clamp01(health.Hp / health.MaxHp);
+            if (hpRatio < 0.70f)
+                healthFactor = Mathf.Lerp(0.65f, 1f, hpRatio / 0.70f);
+        }
+
+        float staminaFactor = 1f;
+        Mod_Stamina stamina = attackActor.itemMods.GetMod_ByID<Mod_Stamina>(ModText.Stamina);
+        if (stamina != null && stamina.MaxValue > 0f)
+        {
+            float staminaRatio = Mathf.Clamp01(stamina.CurrentValue / stamina.MaxValue);
+            if (staminaRatio < 0.50f)
+                staminaFactor = Mathf.Lerp(0.75f, 1f, staminaRatio / 0.50f);
+        }
+
+        return Mathf.Clamp(healthFactor * staminaFactor, 0.35f, 1f);
+    }
+
+    #endregion
 
     /// <summary>抛掷物高空段只接受真正飞行的目标；不能在地面目标处提前消费唯一命中名额。</summary>
     private bool AllowsTargetDelivery(Mod_DamageReceiver receiver)
@@ -1024,7 +1117,7 @@ public static class CombatPhysicsChannels
         Collider2D[] colliders = receiver.GetComponents<Collider2D>();
         if (colliders.Length == 0)
         {
-            Debug.LogError($"{receiver.name} 缺少 Mod_DamageReceiver 专用 Collider2D。", receiver);
+            Debug.LogError($"{receiver.name} 缺少 DamageReceiver 专用 Collider2D。", receiver);
             return;
         }
 

@@ -1338,6 +1338,7 @@
               "z": -45.0
             },
             "UseLocalMuzzlePosition": true,
+            "UseHeldRotationForLaunchDirection": true,
             "LocalMuzzlePosition": {
               "x": 1.00,
               "y": 0.0
@@ -1401,7 +1402,10 @@
             "ShowTrajectoryPreview": true,
             "TrajectoryPreviewSegments": 28,
             "TrajectoryPreviewLineWidth": 0.04,
-            "TrajectoryLandingRingRadius": 0.22
+            "TrajectoryLandingRingRadius": 0.22,
+            "SpinHeldVisualWhileCharging": true,
+            "MinChargeSpinDegreesPerSecond": 360.0,
+            "MaxChargeSpinDegreesPerSecond": 1080.0
           }
         }
       }

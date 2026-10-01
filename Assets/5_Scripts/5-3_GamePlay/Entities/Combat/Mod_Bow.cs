@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEngine.Rendering;
 
 /// <summary>
-/// 通用蓄力远程武器模块：复用 Mod_GameController 的统一攻击按住/松开语义进行蓄力，
+/// 通用蓄力远程武器模块：复用 GameController 的统一攻击按住/松开语义进行蓄力，
 /// 只从武器所在的同一 Inventory 选择并消费带指定标签的弹药，附加模块可独立修饰发射倍率。
 /// </summary>
 public sealed class Mod_Bow : Module, IItemModuleDependencyBinder
@@ -49,6 +49,9 @@ public sealed class Mod_Bow : Module, IItemModuleDependencyBinder
     [Tooltip("投射物实际生成点在手持武器根节点下的局部坐标。")]
     public Vector2 LocalMuzzlePosition = Vector2.zero;
 
+    [Tooltip("发射方向是否直接使用手持武器当前实际旋转，而不是在松手瞬间重新读取瞄准光标。")]
+    public bool UseHeldRotationForLaunchDirection;
+
     [Min(0f), Tooltip("持续拉弓时每秒消耗的体力；最终消耗仍经过游戏难度倍率。")]
     public float StaminaConsumePerSecond = 5f;
 
@@ -63,6 +66,15 @@ public sealed class Mod_Bow : Module, IItemModuleDependencyBinder
 
     [Min(0.05f), Tooltip("预判落点圆环半径。")]
     public float TrajectoryLandingRingRadius = 0.22f;
+
+    [Tooltip("蓄力期间是否让手持武器围绕自身轴心持续旋转；用于投石索等旋转蓄力武器。")]
+    public bool SpinHeldVisualWhileCharging;
+
+    [Min(0f), Tooltip("轨迹 AB 距离最短时的旋转速度，单位为度/秒。")]
+    public float MinChargeSpinDegreesPerSecond = 360f;
+
+    [Min(0f), Tooltip("轨迹 AB 距离最长时的旋转速度，单位为度/秒。")]
+    public float MaxChargeSpinDegreesPerSecond = 1080f;
 
     [Tooltip("搭箭开始时箭矢在弓物体下的局部位置。")]
     public Vector3 NockedArrowStartLocalPosition = new Vector3(0.14f, 0f, -0.01f);
@@ -104,6 +116,10 @@ public sealed class Mod_Bow : Module, IItemModuleDependencyBinder
     private Vector3 _heldVisualOriginalLocalPosition;
     private Quaternion _heldVisualOriginalLocalRotation;
     private bool _heldVisualOverrideApplied;
+    private Transform _chargeSpinTransform;
+    private Quaternion _chargeSpinBaseLocalRotation;
+    private float _chargeSpinAngleDegrees;
+    private bool _chargeSpinApplied;
 
     #endregion
 
@@ -171,6 +187,7 @@ public sealed class Mod_Bow : Module, IItemModuleDependencyBinder
         float charge01 = GetCharge01();
         UpdateNockedArrowVisual(charge01);
         UpdateTrajectoryPreview(charge01);
+        UpdateHeldChargeSpin(charge01, safeDeltaTime);
     }
 
     /// <summary>解除统一攻击事件并清理临时搭箭表现。</summary>
@@ -186,7 +203,7 @@ public sealed class Mod_Bow : Module, IItemModuleDependencyBinder
 
     #region 输入与蓄力
 
-    /// <summary>绑定拥有者 Mod_GameController 的统一攻击开始/结束事件。</summary>
+    /// <summary>绑定拥有者 GameController 的统一攻击开始/结束事件。</summary>
     private void BindController()
     {
         UnbindController();
@@ -237,6 +254,7 @@ public sealed class Mod_Bow : Module, IItemModuleDependencyBinder
         _chargeSeconds = 0f;
         foreach (IProjectileChargeModifier modifier in _chargeModifiers)
             modifier.StartCharge();
+        BeginHeldChargeSpin();
         if (ShowNockedAmmo) CreateNockedArrowVisual(ammoSlot.itemData.IDName);
         UpdateNockedArrowVisual(0f);
         UpdateTrajectoryPreview(0f);
@@ -248,7 +266,7 @@ public sealed class Mod_Bow : Module, IItemModuleDependencyBinder
         if (!_charging)
             return;
 
-        // 输入锁、失焦或应用暂停会由 Mod_GameController 主动释放“按住”状态；这些属于取消，不应误射一箭。
+        // 输入锁、失焦或应用暂停会由 GameController 主动释放“按住”状态；这些属于取消，不应误射一箭。
         if ((_controller != null && _controller.IsGameplayInputLocked) || !Application.isFocused)
         {
             CancelCharge();
@@ -266,6 +284,7 @@ public sealed class Mod_Bow : Module, IItemModuleDependencyBinder
         }
         _charging = false;
         _ownerStamina = null;
+        StopHeldChargeSpin();
         DestroyNockedArrowVisual();
         HideTrajectoryPreview();
 
@@ -362,6 +381,7 @@ public sealed class Mod_Bow : Module, IItemModuleDependencyBinder
         _chargeSeconds = 0f;
         _ownerStamina = null;
         _sourceInventory = null;
+        StopHeldChargeSpin();
         DestroyNockedArrowVisual();
         HideTrajectoryPreview();
     }
@@ -546,9 +566,18 @@ public sealed class Mod_Bow : Module, IItemModuleDependencyBinder
 
     #region 发射与瞄准
 
-    /// <summary>使用统一瞄准光标计算方向，鼠标、手柄和手机攻击摇杆共享同一结果。</summary>
+    /// <summary>按武器配置读取实际手持朝向或统一瞄准光标作为发射方向。</summary>
     private Vector2 ResolveAimDirection()
     {
+        if (UseHeldRotationForLaunchDirection && item != null)
+        {
+            // 吹箭等有明确管口的武器以当前真实旋转为准，避免松手瞬间的光标抖动让弹体斜着出膛。
+            Vector3 worldForward = item.transform.TransformDirection(Vector3.right);
+            Vector2 heldDirection = new Vector2(worldForward.x, worldForward.y);
+            if (heldDirection.sqrMagnitude > 0.0001f)
+                return heldDirection.normalized;
+        }
+
         Vector2 origin = item.Owner.transform.position;
         Vector3 aimWorld = _controller != null
             ? _controller.GetAimWorldPosition(Mathf.Max(0.1f, MaxAimDistance))
@@ -609,6 +638,61 @@ public sealed class Mod_Bow : Module, IItemModuleDependencyBinder
     #endregion
 
     #region 手持视觉锚点
+
+    /// <summary>蓄力开始时记录手持 Sprite 当前姿态，旋转表现只叠加在视觉层。</summary>
+    private void BeginHeldChargeSpin()
+    {
+        StopHeldChargeSpin();
+        if (!SpinHeldVisualWhileCharging || item?.Sprite == null)
+            return;
+
+        _chargeSpinTransform = item.Sprite.transform;
+        _chargeSpinBaseLocalRotation = _chargeSpinTransform.localRotation;
+        _chargeSpinAngleDegrees = 0f;
+        _chargeSpinApplied = true;
+    }
+
+    /// <summary>按真实轨迹 AB 端点距离提升旋转速度，让甩得越快与投得越远保持同一反馈。</summary>
+    private void UpdateHeldChargeSpin(float charge01, float deltaTime)
+    {
+        if (!_chargeSpinApplied || _chargeSpinTransform == null)
+            return;
+
+        float range01 = ResolveTrajectoryRange01(charge01);
+        float minSpeed = Mathf.Max(0f, MinChargeSpinDegreesPerSecond);
+        float maxSpeed = Mathf.Max(minSpeed, MaxChargeSpinDegreesPerSecond);
+        float spinSpeed = Mathf.Lerp(minSpeed, maxSpeed, range01);
+        _chargeSpinAngleDegrees = Mathf.Repeat(
+            _chargeSpinAngleDegrees + spinSpeed * Mathf.Max(0f, deltaTime),
+            360f);
+        _chargeSpinTransform.localRotation = _chargeSpinBaseLocalRotation *
+                                             Quaternion.Euler(0f, 0f, _chargeSpinAngleDegrees);
+    }
+
+    /// <summary>用投射物同一公式计算当前 AB 距离在最短/最长射程之间的位置。</summary>
+    private float ResolveTrajectoryRange01(float charge01)
+    {
+        if (!TryResolvePreviewTrajectory(out Mod_Projectile.TrajectorySettings trajectory))
+            return Mathf.Clamp01(charge01);
+
+        float minRange = trajectory.ResolveLaunchSpeed(0f) * trajectory.ResolveFlightDuration(0f);
+        float maxRange = trajectory.ResolveLaunchSpeed(1f) * trajectory.ResolveFlightDuration(1f);
+        float currentRange = trajectory.ResolveLaunchSpeed(charge01) * trajectory.ResolveFlightDuration(charge01);
+        if (Mathf.Abs(maxRange - minRange) <= 0.0001f)
+            return Mathf.Clamp01(charge01);
+        return Mathf.InverseLerp(minRange, maxRange, currentRange);
+    }
+
+    /// <summary>蓄力结束立即停止旋转，并恢复开始甩动前的手持姿态。</summary>
+    private void StopHeldChargeSpin()
+    {
+        if (_chargeSpinApplied && _chargeSpinTransform != null)
+            _chargeSpinTransform.localRotation = _chargeSpinBaseLocalRotation;
+
+        _chargeSpinTransform = null;
+        _chargeSpinAngleDegrees = 0f;
+        _chargeSpinApplied = false;
+    }
 
     /// <summary>只在手持实例上校正 Sprite；落地物继续保持物品定义中的原始世界姿态。</summary>
     private void ApplyHeldVisualTransform()

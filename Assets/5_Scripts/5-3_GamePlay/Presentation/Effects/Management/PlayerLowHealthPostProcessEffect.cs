@@ -2,7 +2,7 @@ using UnityEngine;
 
 /// <summary>
 /// 本地玩家低血量屏幕后处理适配器。生命值低于 30% 后按严重程度提交红黑 Vignette，
-/// 不修改 Mod_DamageReceiver 的结算；死亡和重生通过每帧校验生命比例保证表现不会残留。
+/// 不修改 DamageReceiver 的结算；死亡和重生通过每帧校验生命比例保证表现不会残留。
 /// </summary>
 [DisallowMultipleComponent]
 public sealed class PlayerLowHealthPostProcessEffect : MonoBehaviour,

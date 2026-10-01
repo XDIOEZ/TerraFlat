@@ -25,7 +25,7 @@ public partial class Mod_BuffManager : Module
 
     public override ModuleTickMode TickMode => ModuleTickMode.FixedInterval;
     public override float FixedTickInterval => TickInterval;
-    public override string CanonicalModuleId => ModText.Mod_BuffManager;
+    public override string CanonicalModuleId => ModText.BuffManager;
 
     public override bool MatchesPersistedId(string persistedId)
     {
@@ -50,11 +50,11 @@ public partial class Mod_BuffManager : Module
     public override void Awake()
     {
         base.Awake();
-        _Data.ID = ModText.Mod_BuffManager;
+        _Data.ID = ModText.BuffManager;
         buffReceiver = GetComponentInParent<Item>();
 
         if (buffReceiver == null)
-            Debug.LogWarning("[Mod_BuffManager] 找不到父级 Item。", this);
+            Debug.LogWarning("[BuffManager] 找不到父级 Item。", this);
     }
 
     public override void Load()
@@ -64,7 +64,7 @@ public partial class Mod_BuffManager : Module
         buffReceiver = item;
         if (ModData == null)
         {
-            Debug.LogError("[Mod_BuffManager] ModData 为空，无法加载 Buff。", this);
+            Debug.LogError("[BuffManager] ModData 为空，无法加载 Buff。", this);
             return;
         }
 
@@ -88,7 +88,7 @@ public partial class Mod_BuffManager : Module
         }
         catch (Exception exception)
         {
-            Debug.LogError($"[Mod_BuffManager] Buff 存档读取失败，已使用空状态：{exception.Message}", this);
+            Debug.LogError($"[BuffManager] Buff 存档读取失败，已使用空状态：{exception.Message}", this);
             ActiveBuffs = new Dictionary<string, BuffInstance>(StringComparer.OrdinalIgnoreCase);
         }
 
@@ -101,7 +101,7 @@ public partial class Mod_BuffManager : Module
     {
         if (ModData == null)
         {
-            Debug.LogError("[Mod_BuffManager] ModData 为空，无法保存 Buff。", this);
+            Debug.LogError("[BuffManager] ModData 为空，无法保存 Buff。", this);
             return;
         }
 
@@ -145,7 +145,7 @@ public partial class Mod_BuffManager : Module
                 continue;
             }
 
-            // 旧版移动饥饿 Buff 已迁移为 Mod_Mover 的独立动作；读旧存档时直接丢弃，
+            // 旧版移动饥饿 Buff 已迁移为 Mover 的独立动作；读旧存档时直接丢弃，
             // 不执行旧 Stop 效果，避免把新的 Food 运行时倍率错误地反向修改。
             if (IsLegacyMovementHungerBuff(dictionaryId))
             {
@@ -155,7 +155,7 @@ public partial class Mod_BuffManager : Module
 
             if (!runtime.Restore(buffReceiver))
             {
-                Debug.LogWarning($"[Mod_BuffManager] 已跳过无效 Buff：{runtime.DefinitionId}", this);
+                Debug.LogWarning($"[BuffManager] 已跳过无效 Buff：{runtime.DefinitionId}", this);
                 ActiveBuffs.Remove(dictionaryId);
                 continue;
             }
@@ -238,20 +238,20 @@ public partial class Mod_BuffManager : Module
         buffReceiver ??= item;
         if (string.IsNullOrWhiteSpace(buffId))
         {
-            Debug.LogWarning("[Mod_BuffManager] 不能添加空 Buff ID。", this);
+            Debug.LogWarning("[BuffManager] 不能添加空 Buff ID。", this);
             return false;
         }
 
         BuffDefinition definition = GameRes.Instance?.GetBuffDefinition(buffId.Trim());
         if (definition == null)
         {
-            Debug.LogWarning($"[Mod_BuffManager] 找不到 Buff JSON 定义：{buffId}", this);
+            Debug.LogWarning($"[BuffManager] 找不到 Buff JSON 定义：{buffId}", this);
             return false;
         }
 
         if (buffReceiver == null)
         {
-            Debug.LogWarning($"[Mod_BuffManager] Buff {definition.Id} 缺少接收者。", this);
+            Debug.LogWarning($"[BuffManager] Buff {definition.Id} 缺少接收者。", this);
             return false;
         }
 
@@ -317,7 +317,7 @@ public partial class Mod_BuffManager : Module
                 return true;
 
             default:
-                Debug.LogWarning($"[Mod_BuffManager] 未知叠加模式：{incoming.StackMode}", this);
+                Debug.LogWarning($"[BuffManager] 未知叠加模式：{incoming.StackMode}", this);
                 return false;
         }
     }
@@ -601,7 +601,7 @@ public partial class Mod_BuffManager : Module
     private void DebugDrinkOnce()
     {
         int count = ExtendBloodLossBuffsForDrink();
-        Debug.Log($"[Mod_BuffManager] 模拟喝水完成，延长 {count} 个血液流逝 Buff。", this);
+        Debug.Log($"[BuffManager] 模拟喝水完成，延长 {count} 个血液流逝 Buff。", this);
     }
 
     [Button("调试：清除全部 Buff")]

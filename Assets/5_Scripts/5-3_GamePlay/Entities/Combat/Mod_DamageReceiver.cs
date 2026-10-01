@@ -65,6 +65,37 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
         get => Data.DefenseValues;
     }
 
+    #region 逻辑命中体积
+
+    /// <summary>逻辑命中使用的目标体积系数；玩家固定按 1，内置动物可使用物种默认值并允许内容覆盖。</summary>
+    public float HitSizeCoefficient => ResolveHitSizeCoefficient();
+
+    private float ResolveHitSizeCoefficient()
+    {
+        if (Data != null && Data.HitSizeCoefficientOverride > 0f)
+            return Mathf.Clamp(Data.HitSizeCoefficientOverride, 0.05f, 3f);
+
+        if (item is Player || item?.itemData?.Tags?.ContainsTag(Tag.Player) == true)
+            return 1f;
+
+        return item?.itemData?.IDName switch
+        {
+            "Bee" => 0.10f,
+            "Bird" => 0.30f,
+            "Seagull" => 0.45f,
+            "Chicken" => 0.55f,
+            "Rabbit" => 0.45f,
+            "Wolf" => 0.95f,
+            "Sheep" => 1.10f,
+            "WildBoar" => 1.20f,
+            "SnowLeopard" => 1.05f,
+            "Zombie" => 1.00f,
+            _ => 1f
+        };
+    }
+
+    #endregion
+
     public UltEvent OnDead = new();
 
     /// <summary>死亡流程开始时触发，供生态等系统识别真实死亡。</summary>
@@ -114,6 +145,10 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
         [Range(0f, 1f)]
         [Tooltip("Chance that one attack selects two distinct parts. Each selected part receives 50% damage.")]
         public float TwoPartHitChance = 0.25f;
+
+        [Header("逻辑命中设置")]
+        [Tooltip("目标体积系数覆盖；0 表示使用内置物种默认值，玩家和未知目标默认 1。")]
+        public float HitSizeCoefficientOverride = 0f;
 
         public int BodyPartDataVersion = 0;
         public List<BodyPartHealth> BodyParts = new List<BodyPartHealth>();
@@ -308,7 +343,7 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
         _deathConsumedByExternalHandler = false;
         lastDamageTime = double.NegativeInfinity;
         LastDamageSource = default; LastDamageCredit = default;
-        Equipment_Inventory = item.itemMods.GetMod_ByID<Mod_Inventory>(ModText.Equipment);
+        equipmentInventory = item.itemMods.GetMod_ByID<Mod_Equipment>(ModText.Equipment_Module)?.EquipmentInventory;
 
         HidePanel();
     }
@@ -556,7 +591,7 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
             StopCoroutine(_hideUiCoroutine);
             _hideUiCoroutine = null;
         }
-        Equipment_Inventory = null;
+        equipmentInventory = null;
 
         if (_handStateEventOwner != null)
         {
@@ -633,7 +668,7 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
         float result = HurtContext(context, rules, targetPart: targetPart);
         if (result >= 0f && Hp > 0f && context.OnHitBuffs.Length > 0)
         {
-            Mod_BuffManager buffManager = item.itemMods.GetMod_ByID<Mod_BuffManager>(ModText.Mod_BuffManager);
+            Mod_BuffManager buffManager = item.itemMods.GetMod_ByID<Mod_BuffManager>(ModText.BuffManager);
             if (buffManager != null)
                 foreach (var effect in context.OnHitBuffs)
                     if (effect.Chance >= 1f || Random.value < effect.Chance)
@@ -846,7 +881,7 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
     {
         if (item?.itemMods != null)
         {
-            Mod_Mover mover = item.itemMods.GetMod_ByID(ModText.Mod_Mover) as Mod_Mover;
+            Mod_Mover mover = item.itemMods.GetMod_ByID(ModText.Mover) as Mod_Mover;
             if (mover != null)
                 return mover;
         }
@@ -1091,7 +1126,7 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
             return false;
 
         return item.itemMods.ContainsKey_ID(ModText.AI) ||
-               item.itemMods.ContainsKey_ID(ModText.Mod_Mover_AI);
+               item.itemMods.ContainsKey_ID(ModText.Mover_AI);
     }
 
     /// <summary>静态内容编译与旧实例升级共用默认身体模板；返回独立部位列表。</summary>
@@ -1304,6 +1339,11 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
         Data.MaxHp = Mathf.Max(0f, Data.MaxHp);
         Data.Hp = Mathf.Clamp(Data.Hp, 0f, Data.MaxHp);
         Data.TwoPartHitChance = Mathf.Clamp01(Data.TwoPartHitChance);
+        Data.HitSizeCoefficientOverride = !float.IsNaN(Data.HitSizeCoefficientOverride) &&
+                                          !float.IsInfinity(Data.HitSizeCoefficientOverride) &&
+                                          Data.HitSizeCoefficientOverride > 0f
+            ? Mathf.Clamp(Data.HitSizeCoefficientOverride, 0.05f, 3f)
+            : 0f;
         Data.DefenseValues ??= new CombatDefense();
         Data.DefenseValues.ClampNonNegative();
 
@@ -1484,7 +1524,8 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
     }
     #endregion
 
-    public Mod_Inventory Equipment_Inventory;
+    [NonSerialized]
+    private Inventory equipmentInventory;
 
     [Header("调试开关")]
     [SerializeField]
@@ -1496,13 +1537,14 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
     /// <param name="amount">耐久下降的数值</param>
     protected virtual void ApplyDurabilityDamageToEquipments(float amount = 1f)
     {
-        if (Equipment_Inventory == null)
+        if (equipmentInventory?.Data?.itemSlots == null)
         {
             return;
         }
 
-        foreach (var mod in Equipment_Inventory.inventory.Data.itemSlots)
+        for (int i = 0; i < equipmentInventory.Data.itemSlots.Count; i++)
         {
+            ItemSlot mod = equipmentInventory.Data.itemSlots[i];
             if (mod.itemData == null) continue;
 
             if (mod.itemData.Tags.ContainsTag(Tag.Armor))
@@ -1512,9 +1554,8 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
 
                 if (mod.itemData.Durability <= 0)
                 {
-                    // 耐久为0，清空该格子
-                    mod.ClearData();
-                    mod.RefreshUI();
+                    // 通过库存事务移除，确保装备效果与 UI 同步卸载。
+                    equipmentInventory.Data.ChangeItemData_Default(i, new ItemSlot(-1));
                 }
                 else
                 {

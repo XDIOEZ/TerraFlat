@@ -343,8 +343,8 @@ public sealed class Mod_ChargeAttack : Module, IAnimalCombatSkill, ITrunDirectio
 
         if (_mover == null)
         {
-            _mover = item.itemMods.GetMod_ByID<Mod_Mover_AI>(ModText.Mod_Mover) ??
-                     item.itemMods.GetMod_ByID<Mod_Mover_AI>(ModText.Mod_Mover_AI);
+            _mover = item.itemMods.GetMod_ByID<Mod_Mover_AI>(ModText.Mover) ??
+                     item.itemMods.GetMod_ByID<Mod_Mover_AI>(ModText.Mover_AI);
         }
 
         if (_normalDamage == null)
@@ -443,7 +443,7 @@ public sealed class Mod_ChargeAttack : Module, IAnimalCombatSkill, ITrunDirectio
         }
     }
 
-    /// <summary>冲刺期间暂时屏蔽 Mod_Mover_AI 对动态目标的追踪。</summary>
+    /// <summary>冲刺期间暂时屏蔽 Mover_AI 对动态目标的追踪。</summary>
     private void LockMoverTarget()
     {
         if (_mover == null || _moverTargetLocked)
@@ -454,7 +454,7 @@ public sealed class Mod_ChargeAttack : Module, IAnimalCombatSkill, ITrunDirectio
         _moverTargetLocked = true;
     }
 
-    /// <summary>技能结束后恢复 Mod_Mover_AI 原本的目标。</summary>
+    /// <summary>技能结束后恢复 Mover_AI 原本的目标。</summary>
     private void RestoreMoverTarget()
     {
         if (!_moverTargetLocked || _mover == null)

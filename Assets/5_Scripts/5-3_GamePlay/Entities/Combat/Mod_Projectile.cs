@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using FlatWorld.NaturalEntities;
 using UnityEngine;
 
 /// <summary>
@@ -44,11 +45,23 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
     [Range(0f, 1f), Tooltip("投射结束后保留为可拾取物品的概率；箭矢默认 50%。")]
     public float RecoveryChance = 0.5f;
 
-    [Tooltip("命中 Mod_DamageReceiver 且本次判定为可回收时，是否嵌入目标并随目标移动。")]
+    [Tooltip("命中 DamageReceiver 且本次判定为可回收时，是否嵌入目标并随目标移动。")]
     public bool EmbedOnDamageReceiverWhenRecovered;
 
     [Range(0f, 1f), Tooltip("投射物损坏后，从其普通合成配方中掉落一份原材料的概率；箭矢默认 30%。")]
     public float BrokenSalvageChance = 0.3f;
+
+    [Tooltip("命中硬目标后允许发生形态变化的物品标签；默认只让 Stone 类投射物参与。")]
+    public string HardImpactTransformRequiredTag = "Stone";
+
+    [Tooltip("命中硬目标后成功变化得到的物品 ID；默认得到打制石器。")]
+    public string HardImpactTransformItemId = "ChippedTool";
+
+    [Range(0f, 1f), Tooltip("满足硬度门槛后发生形态变化的概率。")]
+    public float HardImpactTransformChance = 0.1f;
+
+    [Min(0f), Tooltip("目标对应伤害类型防御达到该数值才视为足够坚硬。")]
+    public float HardImpactMinimumDefense = 2f;
 
     [Tooltip("素材自身的朝向角度；当前箭矢素材从左下指向右上，因此为 45 度。")]
     public float SpriteForwardAngleDegrees = 45f;
@@ -97,12 +110,15 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
     private float _bounceSpinDirection = 1f;
     private bool _isFlying;
     private bool _endingFlight;
+    private bool _hardImpactTransformPending;
+    private long _lastHardImpactTargetKey = long.MinValue;
+    private double _lastHardImpactTime = double.NegativeInfinity;
     private Transform _embeddedTarget;
     private bool _wasEmbedded;
     private Vector3 _embeddedLocalPosition;
     private Quaternion _embeddedLocalRotation = Quaternion.identity;
     /// <summary>飞行或仍附着目标时属于战斗实体，不能自动转换成静态掉落物。</summary>
-    public bool HasActiveWorldAttachment => _isFlying || _wasEmbedded;
+    public bool HasActiveWorldAttachment => _isFlying || _wasEmbedded || _hardImpactTransformPending;
 
     #endregion
 
@@ -138,6 +154,9 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
         ConfigureBodyForRest();
         _isFlying = false;
         _endingFlight = false;
+        _hardImpactTransformPending = false;
+        _lastHardImpactTargetKey = long.MinValue;
+        _lastHardImpactTime = double.NegativeInfinity;
         _flightRemain = 0f;
         _flightElapsed = 0f;
         _virtualLaunchVerticalSpeed = 0f;
@@ -158,6 +177,12 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
     /// <summary>飞行期间补做帧间碰撞体扫掠，并按虚拟抛物线高度决定落地。</summary>
     public override void ModUpdate(float deltaTime)
     {
+        if (_hardImpactTransformPending)
+        {
+            CompleteHardImpactTransform();
+            return;
+        }
+
         if (!_isFlying && _wasEmbedded)
         {
             UpdateEmbeddedPose();
@@ -206,6 +231,9 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
         }
         _isFlying = false;
         _endingFlight = false;
+        _hardImpactTransformPending = false;
+        _lastHardImpactTargetKey = long.MinValue;
+        _lastHardImpactTime = double.NegativeInfinity;
         _flightRemain = 0f;
         _flightElapsed = 0f;
         _virtualHeight = 0f;
@@ -355,6 +383,9 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
         _lastFlightPosition = _body.position;
         _lastSensorPosition = ResolveSensorPosition();
         _endingFlight = false;
+        _hardImpactTransformPending = false;
+        _lastHardImpactTargetKey = long.MinValue;
+        _lastHardImpactTime = double.NegativeInfinity;
         ResetBounceSpin();
         _isFlying = true;
 
@@ -508,9 +539,17 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
         if (_processingPhysicalContact)
             _physicalContactResolved = true;
 
+        if (_hasPendingImpact)
+            SetProjectilePosition(_pendingImpactPosition);
+        if (receiver != null && TryQueueHardImpactTransform(
+                ResolveImpactDefense(receiver.Defense), BuildHardImpactTargetKey(receiver.GetInstanceID(), false)))
+        {
+            PrepareHardImpactTransform();
+            return;
+        }
+
         if (resolvedDamage > 0f)
         {
-            if (_hasPendingImpact) SetProjectilePosition(_pendingImpactPosition);
             FinishFlight(receiver);
             return;
         }
@@ -520,13 +559,18 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
         BounceFromBlockedHit(_pendingImpactNormal, _processingPhysicalContact);
     }
 
-    /// <summary>ECS 结算回执同样结束投射物，不能因没有 Mod_DamageReceiver 组件而穿过狼继续飞。</summary>
+    /// <summary>ECS 结算回执同样结束投射物，不能因没有 DamageReceiver 组件而穿过狼继续飞。</summary>
     private void HandleExternalDamageResolved(FlatWorld.Combat.CombatDamageContext context, float resolvedDamage)
     {
         if (!_isFlying || resolvedDamage < 0f) return;
         Vector2 offset = _damage.DamageCollider is BoxCollider2D box
             ? (Vector2)box.transform.TransformPoint(box.offset) - (Vector2)item.transform.position : Vector2.zero;
         SetProjectilePosition(WorldTopologyRuntime.NormalizePosition((Vector2)context.HitPoint - offset));
+        if (TryQueueNaturalHardImpactTransform(context.HitPoint))
+        {
+            PrepareHardImpactTransform();
+            return;
+        }
         if (resolvedDamage == 0f)
         {
             BounceFromBlockedHit(Vector2.zero, false);
@@ -559,6 +603,11 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
         Collider2D receiverCollider = ResolveDamageReceiverCollider(receiver);
         if (receiverCollider == null)
         {
+            if (TryQueueNaturalHardImpactTransform(contactPoint))
+            {
+                PrepareHardImpactTransform();
+                return;
+            }
             StartBounceSpin(contactNormal);
             return;
         }
@@ -665,6 +714,129 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
         _physicalContactResolved = false;
         _resolvedBounceThisSweep = false;
     }
+
+    #region 硬目标打制变化
+
+    /// <summary>读取当前主伤害类型对应的目标防御，避免把“坚硬”写死为某个资源 ID。</summary>
+    private float ResolveImpactDefense(CombatDefense defense)
+    {
+        if (defense == null)
+            return 0f;
+
+        return _damage.ResolveDamageValues().DominantKind switch
+        {
+            CombatDamageKind.Cutting => defense.Cutting,
+            CombatDamageKind.Piercing => defense.Piercing,
+            CombatDamageKind.Chopping => defense.Chopping,
+            CombatDamageKind.Blunt => defense.Blunt,
+            _ => 0f
+        };
+    }
+
+    /// <summary>资源实体没有 DamageReceiver 外壳，因此直接从自然实体后端读取命中点防御。</summary>
+    private bool TryQueueNaturalHardImpactTransform(Vector2 hitPoint)
+    {
+        CombatDamageKind kind = _damage.ResolveDamageValues().DominantKind;
+        if (!NaturalEntityEcsService.TryGetCombatDefenseAtPoint(hitPoint, kind,
+                out float defense, out int runtimeId))
+        {
+            return false;
+        }
+
+        return TryQueueHardImpactTransform(defense, BuildHardImpactTargetKey(runtimeId, true));
+    }
+
+    /// <summary>同一次硬目标接触只抽一次概率，避免 ECS 扫掠与物理碰撞重复判定。</summary>
+    private bool TryQueueHardImpactTransform(float defense, long targetKey)
+    {
+        if (_hardImpactTransformPending || item?.itemData?.Tags == null ||
+            string.IsNullOrWhiteSpace(HardImpactTransformRequiredTag) ||
+            !item.itemData.Tags.Contains(HardImpactTransformRequiredTag) ||
+            string.IsNullOrWhiteSpace(HardImpactTransformItemId) ||
+            defense < Mathf.Max(0f, HardImpactMinimumDefense))
+        {
+            return false;
+        }
+
+        GameRes resources = GameRes.ExistingInstance;
+        if (resources == null || !resources.TryGetItemDefinition(HardImpactTransformItemId, out _))
+            return false;
+
+        double now = Time.timeAsDouble;
+        if (targetKey == _lastHardImpactTargetKey && now - _lastHardImpactTime < 0.12d)
+            return false;
+
+        _lastHardImpactTargetKey = targetKey;
+        _lastHardImpactTime = now;
+        if (Random.value >= Mathf.Clamp01(HardImpactTransformChance))
+            return false;
+
+        _hardImpactTransformPending = true;
+        return true;
+    }
+
+    /// <summary>给 GameObject 与纯数据实体分开命名空间，避免运行时整数 ID 偶然相同。</summary>
+    private static long BuildHardImpactTargetKey(int id, bool external)
+        => ((long)(external ? 2 : 1) << 32) | (uint)id;
+
+    /// <summary>成功抽中后立即结束战斗飞行，但把替换延后一帧，避免在伤害回调栈内回收当前物品。</summary>
+    private void PrepareHardImpactTransform()
+    {
+        if (!_hardImpactTransformPending || !_isFlying || _endingFlight)
+            return;
+
+        _endingFlight = true;
+        _isFlying = false;
+        _damage.StopAttack();
+        _damage.SetExplicitProjectileSweep(false);
+        _damage.SetDamageValues(_baseDamage.Scaled(1f));
+        _damage.SetDeliveryCapabilities(FlatWorld.Combat.CombatDeliveryCapabilities.None);
+        RestoreShooterCollisions();
+
+        if (_body != null)
+        {
+            _body.velocity = Vector2.zero;
+            _body.angularVelocity = 0f;
+            _body.drag = 0f;
+            _body.bodyType = RigidbodyType2D.Kinematic;
+        }
+        if (_solidCollider != null) _solidCollider.enabled = false;
+
+        _flightRemain = 0f;
+        _virtualHeight = 0f;
+        ResetBounceSpin();
+        UpdateArcPresentation(0f);
+        ItemMgr.Instance?.NotifyRuntimeItemMoved(item);
+    }
+
+    /// <summary>把命中的石头替换成真实可拾取的打制产物；配置失效时保留原石头而不吞物品。</summary>
+    private void CompleteHardImpactTransform()
+    {
+        _hardImpactTransformPending = false;
+        GameRes resources = GameRes.ExistingInstance;
+        ItemMgr itemManager = ItemMgr.Instance;
+        if (item == null || resources == null || itemManager == null ||
+            !resources.TryGetItemDefinition(HardImpactTransformItemId, out _))
+        {
+            _endingFlight = false;
+            if (item != null)
+            {
+                item.Owner = null;
+                item.itemData.Stack.CanBePickedUp = true;
+                WorldItemWaterSystem.ScheduleSpawnCheck(item);
+            }
+            return;
+        }
+
+        ItemData replacement = resources.CreateItemData(HardImpactTransformItemId);
+        replacement.Stack.Amount = 1f;
+        replacement.Stack.CanBePickedUp = true;
+        DroppedItemService.Spawn(replacement, item.transform.position,
+            scale: Vector3.one, rotation: item.transform.eulerAngles.z);
+        itemManager.DespawnItem(item, saveData: false);
+    }
+
+    #endregion
 
     /// <summary>停止飞行，并按 RecoveryChance 决定留下可拾取物还是销毁。</summary>
     private void FinishFlight(Mod_DamageReceiver hitReceiver = null)
