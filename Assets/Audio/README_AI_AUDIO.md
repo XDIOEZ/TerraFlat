@@ -1,5 +1,11 @@
 # FlatWorld AI Audio 工作流
 
+## UI 候选素材库
+
+- 手工制作或 LMMS 导出的 UI 候选音效放在 `Assets/Audio/UI/LMMS_Clicks/`，按风格分文件夹，使用 `UI_风格_用途_声音特征_变体编号.wav` 详细命名。
+- 候选素材在 Project 中直接试听；选定风格后再绑定现有 AudioCue。此目录不参与下面的自动 Catalog 扫描，避免不同风格被混成同一事件的随机变体。
+- 原始工程与离线试听页位于 `SoundDesign/UI_Click_LMMS/`；目录内说明文件提供完整音效名称索引。
+
 ## 新增音效
 
 1. 把生成的 WAV 放入 `Assets/Audio/Generated/`。

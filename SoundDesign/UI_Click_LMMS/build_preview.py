@@ -8,6 +8,8 @@ import copy
 import html
 import json
 import math
+import shutil
+import uuid
 import wave
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -264,14 +266,131 @@ window.addEventListener('pagehide',stop);
 # endregion
 
 
+# region Unity 资源命名与导入
+def import_unity(project: Path) -> None:
+    # 候选音效放在自动 Catalog 扫描目录之外，保留三套风格并明确每个文件的用途。
+    project = project.resolve()
+    if not (project / "ProjectSettings/ProjectVersion.txt").is_file():
+        raise ValueError(f"Not a Unity project: {project}")
+    destination = project / "Assets/Audio/UI/LMMS_Clicks"
+    style_names = {"A_wood": ("A_轻木敲击", "轻木敲击"),
+                   "B_soft": ("B_圆润软按键", "圆润软按键"),
+                   "C_pixel": ("C_柔和像素音", "柔和像素音")}
+    event_names = {"click_01": "按钮点击_标准音高_01", "click_02": "按钮点击_微高音_02",
+                   "click_03": "按钮点击_微低音_03", "hover": "鼠标悬停_轻提示_01",
+                   "confirm": "确认成功_上行三连音_01", "cancel": "取消返回_下行双音_01",
+                   "open": "面板打开_上行双音_01", "close": "面板关闭_下行双音_01"}
+    manifest_path = ROOT / "manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    folder_template = """fileFormatVersion: 2
+guid: {guid}
+folderAsset: yes
+DefaultImporter:
+  externalObjects: {{}}
+  userData:
+  assetBundleName:
+  assetBundleVariant:
+"""
+    audio_template = """fileFormatVersion: 2
+guid: {guid}
+AudioImporter:
+  externalObjects: {{}}
+  serializedVersion: 7
+  defaultSettings:
+    serializedVersion: 2
+    loadType: 0
+    sampleRateSetting: 0
+    sampleRateOverride: 48000
+    compressionFormat: 0
+    quality: 1
+    conversionMode: 0
+    preloadAudioData: 1
+  platformSettingOverrides: {{}}
+  forceToMono: 0
+  normalize: 0
+  loadInBackground: 0
+  ambisonic: 0
+  3D: 0
+  userData: LMMS original UI candidate; {style}; {event}
+  assetBundleName:
+  assetBundleVariant:
+"""
+
+    def create_meta(path: Path, template: str, **fields: str) -> None:
+        meta = Path(str(path) + ".meta")
+        try:
+            with meta.open("x", encoding="utf-8", newline="\n") as output:
+                output.write(template.format(guid=uuid.uuid4().hex, **fields))
+        except FileExistsError:
+            pass
+
+    for folder in [project / "Assets/Audio/UI", destination] + [destination / pair[0] for pair in style_names.values()]:
+        folder.mkdir(parents=True, exist_ok=True)
+        create_meta(folder, folder_template)
+    rows = []
+    for entry in manifest["events"]:
+        folder_name, sound_name = style_names[entry["style"]]
+        filename = f"UI_{sound_name}_{event_names[entry['event']]}.wav"
+        target = destination / folder_name / filename
+        create_meta(target, audio_template, style=entry["style"], event=entry["event"])
+        shutil.copyfile(ROOT / entry["file"], target)
+        entry["unity_file"] = target.relative_to(project).as_posix()
+        rows.append(f"| {sound_name} | {entry['label']} | `{folder_name}/{filename}` | {entry['duration_ms']:.1f} ms |")
+    asset_readme = destination / "README_UI音效说明.md"
+    asset_readme.write_text("""# LMMS UI 点击音效
+
+三套风格，每套 8 个独立短音效。选择 WAV 后可以用 Unity Inspector 底部的音频播放器试听。
+
+## 风格与命名
+
+- `A_轻木敲击`：短促木质敲击，带轻微颗粒感。
+- `B_圆润软按键`：较低、圆润的短音，适合频繁点击菜单。
+- `C_柔和像素音`：保留像素游戏味道的三角波短音。
+
+文件名遵循 `UI_风格_用途_声音特征_变体编号.wav`。点击的标准音高、微高音、微低音是同一风格的三个变体。
+
+| 风格 | 用途 | 文件 | 时长 |
+| --- | --- | --- | --- |
+""" + "\n".join(rows) + """
+
+## 导入与使用
+
+- WAV 原文件为 48 kHz、单声道、16-bit PCM，配套 `.meta` 使用 PCM、保留采样率、Decompress On Load 和预加载音频数据。
+- 不开启音量归一化，保留悬停等轻提示与普通点击之间的音量关系。
+- 本目录是可挑选的 UI 素材库，目前没有绑定到运行时 AudioCue。现有游戏按钮的 `ui.click` 等事件配置保持原状。
+- 当前自动 Catalog 构建器只扫描 `Assets/Audio/Generated/`，不会把这里的三个风格混成同一事件的随机变体。
+- 正式接入时通过现有 `Assets/Resources/Audio/Cues/` 的稳定 Cue ID 引用所选 AudioClip，业务代码仍调用 `AudioService`。
+- LMMS 原始工程、离线试听页和再导出脚本位于项目根目录的 `SoundDesign/UI_Click_LMMS/`。
+- 再导出后运行 `python SoundDesign/UI_Click_LMMS/build_preview.py --unity .` 可按相同命名更新 WAV；已有 `.meta` 和 GUID 会保留。
+
+导入参数参考 [Unity 2022.3 Audio Clip 官方文档](https://docs.unity3d.com/2022.3/Documentation/Manual/class-AudioClip.html)。
+""", encoding="utf-8")
+    create_meta(asset_readme, """fileFormatVersion: 2
+guid: {guid}
+TextScriptImporter:
+  externalObjects: {{}}
+  userData:
+  assetBundleName:
+  assetBundleVariant:
+""")
+    manifest["integration"] = "Unity Assets/Audio/UI/LMMS_Clicks candidates; runtime AudioCues not changed"
+    manifest["unity_folder"] = destination.relative_to(project).as_posix()
+    manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    print(f"Copied {len(rows)} named UI AudioClips and .meta files to {destination}")
+# endregion
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--base", type=Path)
     parser.add_argument("--master", type=Path)
+    parser.add_argument("--unity", type=Path)
     args = parser.parse_args()
     if args.base:
         build_project(args.base)
     if args.master:
         export(args.master)
-    if not (args.base or args.master):
-        parser.error("Supply --base LMMS_MCP_project.mmp or --master LMMS_export.wav")
+    if args.unity:
+        import_unity(args.unity)
+    if not (args.base or args.master or args.unity):
+        parser.error("Supply --base LMMS_MCP_project.mmp, --master LMMS_export.wav, or --unity Unity_project")

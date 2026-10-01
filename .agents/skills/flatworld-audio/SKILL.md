@@ -11,10 +11,12 @@ description: "Use when: 定位或修改 FlatWorld 的音频服务、AudioCue、�
 - 实体/战斗：`Assets/5_Scripts/5-3_GamePlay/Presentation/Audio/Mod_AudioEmitter.cs`、`Entities/Combat/CombatAudioRouter.cs`
 - UI：`Assets/5_Scripts/5-5_UI/Audio/`
 - 资源与工具：`Assets/Resources/Audio/`、`Assets/5_Scripts/5-6_Audio/Editor/`
+- LMMS UI 候选素材：`Assets/Audio/UI/LMMS_Clicks/`；原始工程与离线试听：`SoundDesign/UI_Click_LMMS/`
 
 ## 不变量
 
 - 业务系统通过稳定 Cue ID 发声，不自行管理临时 `AudioSource`。
+- UI 候选音效按风格分目录，用 `UI_风格_用途_声音特征_变体编号.wav` 命名；不放入自动 Catalog 扫描的 `Assets/Audio/Generated/`，选定风格后再绑定 Cue，避免三套风格被混成随机变体。再导出用 `build_preview.py --unity .` 同步 WAV 并保留已有 GUID。
 - `AudioService` 负责跨场景生命周期、池化、并发、优先级、淡入淡出与音量。
 - Catalog/Config 移动时同步 Resources 加载常量；循环 Cue 必须有明确停止和回收路径。
 - AI 生成音效以事件 ID 结尾的 `.loop` 作为循环语义；`player.*` 属于带空间衰减的世界 SFX，角色循环音效必须绑定角色 Transform 并在状态失效时停止。

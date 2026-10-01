@@ -41,9 +41,19 @@ python '.\SoundDesign\UI_Click_LMMS\build_preview.py' --base '.\SoundDesign\UI_C
 
 此命令会将三套音色与编排恢复到脚本中的初始参数。
 
-## 当前范围
+## Unity 资源位置
 
-这是试听包，保存在 Unity `Assets` 之外。没有替换游戏中正在使用的 WAV、AudioCue 或 Catalog，也没有执行 Unity 导入或 Play Mode 验收。最终听感由玩家试听决定。
+24 个独立音效已按详细中文名称复制到 `Assets/Audio/UI/LMMS_Clicks/`，三套风格各有一个子文件夹。命名格式为 `UI_风格_用途_声音特征_变体编号.wav`，例如 `UI_圆润软按键_按钮点击_标准音高_01.wav`。
+
+每个 WAV 配套独立 `.meta`，使用 PCM、保留 48 kHz 采样率、加载时解压和预加载音频数据。Unity 目录内的 `README_UI音效说明.md` 包含完整名称与时长索引，`manifest.json` 的 `unity_file` 保存源文件与 Unity 资源的对应路径。
+
+再导出后执行下面的命令，更新 Unity 中的音频并保留已有 GUID：
+
+```powershell
+python '.\SoundDesign\UI_Click_LMMS\build_preview.py' --unity .
+```
+
+LMMS 工程、混合试听 WAV 和 HTML 仍保存在本目录。Unity 中的素材目前用于挑选，没有替换游戏正在使用的 AudioCue 或 Catalog，也没有进行 Play Mode 验收。最终听感由玩家试听决定。
 
 所有波形由 LMMS 合成，未使用网络音效采样。制作时参考 [LMMS 官方包络文档](https://docs.lmms.io/user-manual/jian-ti-zhong-wen/shu-xi-lmms/yue-qi-chuang-kou) 和 [官方爆音排查说明](https://docs.lmms.io/user-manual/getting-started/troubleshooting)，使用短起音和退音处理硬切断。
 

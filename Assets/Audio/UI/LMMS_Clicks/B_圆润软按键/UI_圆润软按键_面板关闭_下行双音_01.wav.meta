@@ -1,0 +1,23 @@
+fileFormatVersion: 2
+guid: c9aa8cf5f499474f8efdd9f9fcd2ad31
+AudioImporter:
+  externalObjects: {}
+  serializedVersion: 7
+  defaultSettings:
+    serializedVersion: 2
+    loadType: 0
+    sampleRateSetting: 0
+    sampleRateOverride: 48000
+    compressionFormat: 0
+    quality: 1
+    conversionMode: 0
+    preloadAudioData: 1
+  platformSettingOverrides: {}
+  forceToMono: 0
+  normalize: 0
+  loadInBackground: 0
+  ambisonic: 0
+  3D: 0
+  userData: LMMS original UI candidate; B_soft; close
+  assetBundleName:
+  assetBundleVariant:
