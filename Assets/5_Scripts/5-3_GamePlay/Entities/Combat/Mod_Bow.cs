@@ -13,9 +13,9 @@ public sealed class Mod_Bow : Module, IItemModuleDependencyBinder
 
     #region 配置
 
-    [Tooltip("可作为弹药的物品标签。")]
+    [Tooltip("可作为弹药的物品标签；与指定弹药 ID 任一匹配即可。")]
     public string AmmoTag = "Arrow";
-    [Tooltip("指定弹药的稳定物品 ID；留空时沿用弹药标签筛选。")]
+    [Tooltip("指定弹药的稳定物品 ID；与弹药标签任一匹配即可。")]
     public string AmmoItemId = "";
     [Tooltip("抛石等可堆叠投掷物消耗手持物自身；弓仍按弹药 Tag 从同一库存取箭。")]
     public bool UseHeldItemAsAmmo;
@@ -331,9 +331,20 @@ public sealed class Mod_Bow : Module, IItemModuleDependencyBinder
         if (_sourceInventory?.Data == null) return null;
         if (!UseHeldItemAsAmmo)
         {
-            if (string.IsNullOrWhiteSpace(AmmoItemId)) return _sourceInventory.Data.FindFirstByTag(AmmoTag);
             foreach (ItemSlot slot in _sourceInventory.Data.itemSlots)
-                if (slot?.itemData?.IDName == AmmoItemId && slot.itemData.Stack?.Amount >= 1f) return slot;
+            {
+                ItemData candidate = slot?.itemData;
+                if (candidate?.Stack == null || candidate.Stack.Amount < 1f)
+                    continue;
+
+                bool idMatches = !string.IsNullOrWhiteSpace(AmmoItemId) &&
+                                 candidate.IDName == AmmoItemId;
+                bool tagMatches = !string.IsNullOrWhiteSpace(AmmoTag) &&
+                                  candidate.Tags != null &&
+                                  candidate.Tags.ContainsTag(AmmoTag);
+                if (idMatches || tagMatches)
+                    return slot;
+            }
             return null;
         }
         foreach (ItemSlot slot in _sourceInventory.Data.itemSlots)

@@ -1774,8 +1774,58 @@
       }
     },
     {
-      "id": "Ore_Copper",
+      "id": "SlingAmmo_Base",
       "parent": "BasicItem_Base",
+      "abstract": true,
+      "tags": ["SlingAmmo"],
+      "modules": {
+        "damage": {
+          "prefab": "Mod_Damage",
+          "id": "Mod_Damage",
+          "enabled": true,
+          "parameters": {
+            "DamageValues": {"Cutting": 0.0, "Piercing": 0.0, "Chopping": 0.0, "Blunt": 12.0},
+            "DamageInterval": -1.0,
+            "EnableOnTriggerEnterDamage": true,
+            "OnlyDealDamageWhenInHand": false,
+            "MaxAttackTargets": 1,
+            "EnableHitSlowdown": true,
+            "$collider2D": {
+              "type": "BoxCollider2D",
+              "enabled": false,
+              "isTrigger": true,
+              "offset": {"x": 0.0, "y": 0.0},
+              "size": {"x": 0.35, "y": 0.35}
+            }
+          }
+        },
+        "projectile": {
+          "prefab": "Mod_Projectile",
+          "id": "Mod_Projectile",
+          "enabled": true,
+          "data": {"BitData": [], "Type": 0},
+          "parameters": {
+            "UseVisibleArc": true,
+            "GroundImpactFraction": 0.15,
+            "SpinDegreesPerSecond": 480.0,
+            "MinSpeed": 3.0,
+            "MaxSpeed": 8.0,
+            "FlightLinearDrag": 0.0,
+            "VirtualGravity": 8.0,
+            "MinDamageMultiplier": 0.35,
+            "MaxDamageMultiplier": 1.0,
+            "MaxFlightSeconds": 1.5,
+            "RecoveryChance": 1.0,
+            "EmbedOnDamageReceiverWhenRecovered": false,
+            "BrokenSalvageChance": 0.0,
+            "SpriteForwardAngleDegrees": 0.0
+          }
+        }
+      }
+    },
+    {
+      "id": "Ore_Copper",
+      "parent": "SlingAmmo_Base",
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Minerals/Ore/Ore_Copper.prefab",
       "gameName": "孔雀石",
       "description": "含铜的矿石，可在熔炉中冶炼为铜锭。",
@@ -1786,7 +1836,6 @@
       "volume": 0.75,
       "stackable": true,
       "canBePickedUp": true,
-      "tags": [],
       "processing": {
         "grind": {
           "inputAmount": 1,
@@ -2006,7 +2055,7 @@
     },
     {
       "id": "Ore_Iron",
-      "parent": "BasicItem_Base",
+      "parent": "SlingAmmo_Base",
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Minerals/Ore/Ore_Iron.prefab",
       "gameName": "铁矿石",
       "description": "含铁的矿石，可在熔炉中冶炼为粗铁锭。",
@@ -2019,7 +2068,8 @@
       "canBePickedUp": true,
       "tags": [
         "Ore",
-        "Iron"
+        "Iron",
+        "SlingAmmo"
       ],
       "processing": {
         "grind": {
@@ -2193,7 +2243,7 @@
     },
     {
       "id": "Ore_Tin",
-      "parent": "BasicItem_Base",
+      "parent": "SlingAmmo_Base",
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Minerals/Ore/Ore_Tin.prefab",
       "gameName": "锡矿石",
       "description": "含锡的矿石，可在熔炉中冶炼为锡锭。",
@@ -2204,7 +2254,6 @@
       "volume": 0.7,
       "stackable": true,
       "canBePickedUp": true,
-      "tags": [],
       "processing": {
         "grind": {
           "inputAmount": 1,

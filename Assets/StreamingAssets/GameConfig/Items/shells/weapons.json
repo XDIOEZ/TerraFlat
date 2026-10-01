@@ -1364,7 +1364,7 @@
       "parent": "Bow_Base",
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Weapons/Ranged/StoneThrowingRope.prefab",
       "gameName": "投石索",
-      "description": "由绳索和皮革制成的投石工具。快捷栏中有石头时，按住攻击键蓄力并显示抛物线，松开后消耗一颗石头投出；石头落地后可以拾回。",
+      "description": "由绳索和皮革制成的投掷工具。快捷栏中的石头或适合作为投石索弹丸的坚硬矿石都可作为弹药；按住攻击键蓄力并显示抛物线，松开后投出，落地后可以拾回。",
       "durability": 100.0,
       "maxDurability": 100.0,
       "amount": 1.0,
@@ -1389,7 +1389,7 @@
           "enabled": true,
           "data": {"BitData": [], "Type": 0},
           "parameters": {
-            "AmmoTag": "Stone",
+            "AmmoTag": "SlingAmmo",
             "AmmoItemId": "Ore_Stone",
             "UseHeldItemAsAmmo": false,
             "ShowNockedAmmo": false,

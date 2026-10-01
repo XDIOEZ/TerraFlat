@@ -29,7 +29,7 @@
     },
     {
       "id": "Ore_Gold",
-      "parent": "BasicItem_Base",
+      "parent": "SlingAmmo_Base",
       "gameName": "金矿石",
       "description": "含金的矿石，可冶炼为金锭。",
       "durability": 1,
@@ -39,7 +39,7 @@
       "volume": 0.75,
       "stackable": true,
       "canBePickedUp": true,
-      "tags": ["Ore", "Gold"],
+      "tags": ["Ore", "Gold", "SlingAmmo"],
       "processing": {
         "grind": {
           "inputAmount": 1,
