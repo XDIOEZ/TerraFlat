@@ -2,7 +2,7 @@ Shader "Game/2D/AIECS Sprite Lit"
 {
     Properties
     {
-        _MainTex("帧图集", 2D) = "white" {}
+        [PerRendererData] _MainTex("帧图集", 2D) = "white" {}
         _WaterTint("水下颜色", Color) = (0.18,0.42,0.78,1)
         _WaterAlpha("水下透明度", Range(0,1)) = 0.1
         _WaterLineColor("水线颜色", Color) = (0.65,0.9,1,1)
