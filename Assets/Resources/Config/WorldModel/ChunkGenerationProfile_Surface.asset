@@ -286,4 +286,5 @@ MonoBehaviour:
   - surface.ancient.cotton
   - surface.ancient.foxtail
   - surface.ancient.willow
+  - surface.common.oreStone
   caveResourceRuleIds: []

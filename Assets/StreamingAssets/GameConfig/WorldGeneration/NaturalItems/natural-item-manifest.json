@@ -12,6 +12,11 @@
       "enabled": true
     },
     {
+      "id": "surface.common",
+      "path": "surface-common.json",
+      "enabled": true
+    },
+    {
       "id": "surface.river",
       "path": "surface-river.json",
       "enabled": true
