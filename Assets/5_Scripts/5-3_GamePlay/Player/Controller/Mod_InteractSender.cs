@@ -541,7 +541,8 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
             return false;
 
         Item receiverItem = receiverComponent.GetComponentInParent<Item>();
-        if (receiverItem == item)
+        // 手持物只参与使用和攻击，不能抢走附近世界目标的交互。
+        if (receiverItem == item || (receiverItem != null && receiverItem.InHand))
             return false;
 
         // 只有按下交互键确实会触发打开、采集或其他玩法结果的目标才显示描边。

@@ -49,6 +49,7 @@ description: "Use when: 定位或修改 FlatWorld 的玩家实体、输入系统
 - 交互描边脚本只能保留在 `GamePlay` 程序集源目录，禁止在 `Assets/5-3_GamePlay` 与 `Assets/5_Scripts/5-3_GamePlay` 同时放置同名类型，否则会触发 CS0436。
 - 同时需要左右翻身与上下瞄准的 Transform 只能由 `Mod_FocusPoint` 写最终旋转；`Mod_TurnBack` 只提供 `CurrentTurnAngleY`，禁止把同一 Transform 再加入其方向控制列表，否则 Y 翻转会被 Z 瞄准覆盖。
 - `InteractionUserSettings.PreciseInteraction` 是交互键与描边预览共用的本机偏好，默认关闭：先按光标命中选择，未命中时按朝向、距离选择附近目标，方便手机与手柄；开启后交互键只认光标落点，不得回退到其它目标。两种模式都服从 `maxInteractDistance`；鼠标左键点选始终精确命中且遵守 `CanPointerInteract`。
+- 世界交互候选统一排除 `Item.InHand` 的手持实例；描边、按键、点选与显式目标校验共用这条规则，避免手持物的装备模块抢走附近资源交互。不能只按 `Owner` 排除，投射物也可能保留持有者。
 - 手持建筑处于正式放置模式时，世界交互发送器必须整体让位：停止当前交互、隐藏普通交互描边，并拒绝按键、鼠标和外部控制源对附近 `IInteractable` 的触发；建筑仍由手持物“使用”动作提交，避免同一输入阶段既放置又打开旁边设施。
 - 玩家交互发送器必须是纯 Physics2D 查询通道，不得拥有或临时启用 Trigger；`Module_Hand` 禁止挂载 Collider2D。交互查询必须跳过 `DamageSender`/`DamageReciver` 专用 Collider，避免交互与伤害系统产生接触回调或互相解析。
 - 手机准线的有效距离不能固定写在输入层；空手和普通物品应跟随交互发送器距离，手持建筑应跟随建筑模块的放置距离。

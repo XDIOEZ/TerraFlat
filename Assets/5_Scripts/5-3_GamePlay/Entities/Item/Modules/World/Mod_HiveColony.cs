@@ -301,7 +301,8 @@ public sealed partial class Mod_HiveColony : Module
         try
         {
             resident.Load();
-            Mod_AI_Bird bird = resident.itemMods.GetMod_ByID<Mod_AI_Bird>("Mod_AI_Bird");
+            // 按飞行能力的规范 ID 查找，避免把脚本名当成模块身份。
+            Mod_AI_Bird bird = resident.itemMods.GetMod_ByID<Mod_AI_Bird>("AI_Bird");
             Mod_BeeBehavior bee = resident.itemMods.GetMod_ByID<Mod_BeeBehavior>(Mod_BeeBehavior.ModuleId);
             if (bird == null || !bird.permanentFlight || bee == null)
                 throw new InvalidOperationException($"蜂巢物种 {ActorId} 必须组合常驻飞行与蜜蜂行为模块。");
