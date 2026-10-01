@@ -72,6 +72,9 @@ namespace FlatWorld.GameplayMCP
             [ToolParameter("Terrain environment layer id when source=terrain, for example riverFloodplain or height.", Required = false, DefaultValue = "riverFloodplain")]
             public string layerId { get; set; }
 
+            [ToolParameter("Optional exact biome id filter for source=terrain. Omit to include all biomes; filtering happens before nearest-result limits.", Required = false)]
+            public int? biomeId { get; set; }
+
             [ToolParameter("Minimum terrain environment value when source=terrain.", Required = false, DefaultValue = "0")]
             public float minValue { get; set; }
 
@@ -155,7 +158,14 @@ namespace FlatWorld.GameplayMCP
                     : null;
                 bool walkableOnly = !bool.TryParse(parameters?["walkableOnly"]?.ToString(), out bool parsedWalkable) ||
                                     parsedWalkable;
-                return QueryTerrain(player, layerId, minValue, maxValue, walkableOnly, limit);
+                int? biomeId = null;
+                if (parameters?["biomeId"] != null && parameters["biomeId"].Type != JTokenType.Null)
+                {
+                    if (!int.TryParse(parameters["biomeId"].ToString(), out int parsedBiomeId) || parsedBiomeId < 0)
+                        return new ErrorResponse("invalid_biome_id: biomeId 必须为非负整数。");
+                    biomeId = parsedBiomeId;
+                }
+                return QueryTerrain(player, layerId, minValue, maxValue, walkableOnly, limit, biomeId);
             }
 
             if (!string.Equals(source, "runtime", StringComparison.OrdinalIgnoreCase))
@@ -394,7 +404,8 @@ namespace FlatWorld.GameplayMCP
             float minValue,
             float? maxValue,
             bool walkableOnly,
-            int limit)
+            int limit,
+            int? biomeId)
         {
             if (string.IsNullOrWhiteSpace(layerId))
                 return new ErrorResponse("terrain_layer_required: source=terrain 时 layerId 不能为空。");
@@ -406,6 +417,8 @@ namespace FlatWorld.GameplayMCP
             var matches = chunkMgr.Chunks.Values
                 .Where(chunk => chunk?.Terrain != null && chunk.DataStatus == ChunkDataStatus.Ready)
                 .SelectMany(chunk => EnumerateTerrainMatches(chunk, layerId, minValue, maxValue, walkableOnly))
+                // 先过滤群系再取最近结果，避免附近草地挤掉已加载的矿区或森林。
+                .Where(entry => !biomeId.HasValue || entry.BiomeId == biomeId.Value)
                 .Select(entry => new
                 {
                     entry.Position,
@@ -436,6 +449,7 @@ namespace FlatWorld.GameplayMCP
             {
                 source = "terrain",
                 layer_id = layerId,
+                biome_id = biomeId,
                 min_value = minValue,
                 max_value = maxValue,
                 walkable_only = walkableOnly,
@@ -762,7 +776,7 @@ namespace FlatWorld.GameplayMCP
         private static bool IsQueryableRuntimeItem(Item item, Player player)
         {
             if (item == null || item == player || item.itemData == null || item.DestructionHandled ||
-                !item.gameObject.activeInHierarchy)
+                item.InHand || !item.gameObject.activeInHierarchy)
             {
                 return false;
             }

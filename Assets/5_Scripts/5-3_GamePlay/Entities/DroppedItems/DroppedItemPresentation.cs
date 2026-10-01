@@ -80,6 +80,7 @@ internal sealed class DroppedItemPresentation : IDisposable
 
     private const float CullingMargin = 4f;
     private const int MaxRetainedViews = 512;
+    private static readonly int MainTextureId = Shader.PropertyToID("_MainTex");
     private static readonly int UsePerRendererWaterId = Shader.PropertyToID("_UsePerRendererDroppedWater");
     private static readonly int DroppedWaterParamsId = Shader.PropertyToID("_DroppedWaterParams");
 
@@ -229,6 +230,8 @@ internal sealed class DroppedItemPresentation : IDisposable
         return new PooledView { Root = root, Renderer = renderer };
     }
 
+    #region 每实例贴图与水线
+
     private void Apply(
         PooledView view,
         int id,
@@ -266,6 +269,8 @@ internal sealed class DroppedItemPresentation : IDisposable
         float height = Mathf.Max(0.0001f, bounds.size.y);
         float waterLine = bounds.min.y + height * Mathf.Clamp01(body.LiquidDepth);
         view.Properties.Clear();
+        // 自定义水线参数会覆盖 SpriteRenderer 的属性块，必须同时保留当前精灵贴图。
+        view.Properties.SetTexture(MainTextureId, visual.Sprite.texture);
         view.Properties.SetFloat(UsePerRendererWaterId, 1f);
         view.Properties.SetVector(DroppedWaterParamsId, new Vector4(
             body.WaterKind != 0 ? 1f : 0f,
@@ -286,6 +291,8 @@ internal sealed class DroppedItemPresentation : IDisposable
                left.LiquidDepth == right.LiquidDepth && left.SubmergedProgress == right.SubmergedProgress &&
                left.WaterKind == right.WaterKind;
     }
+
+    #endregion
 
     private void Release(PooledView view)
     {
