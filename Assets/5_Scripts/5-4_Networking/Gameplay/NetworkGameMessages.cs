@@ -207,6 +207,7 @@ namespace FlatWorld.Networking.Gameplay
         public byte[] SourcePayload;
         public Vector3 Position;
         public int RotationQuarterTurns; // 机械召唤器的放置朝向。
+        public bool HorizontalMirrorX; // 普通横向建筑仅左右镜像的临时放置朝向。
     }
 
     /// <summary>机械节点以纯数据快照或转速增量同步，不进入世界 Item 出生协议。</summary>

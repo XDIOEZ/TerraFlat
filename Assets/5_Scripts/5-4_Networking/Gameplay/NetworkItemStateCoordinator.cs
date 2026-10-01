@@ -1058,7 +1058,8 @@ namespace FlatWorld.Networking.Gameplay
                 ItemId = source.itemData.IDName,
                 SourcePayload = payload,
                 Position = NormalizeBuildingPosition(position),
-                RotationQuarterTurns = (BuildingPlacementLifecycle.GetExtension(source) as Mod_MechanicalNode)?.PlacementQuarterTurns ?? 0
+                RotationQuarterTurns = (BuildingPlacementLifecycle.GetExtension(source) as Mod_MechanicalNode)?.PlacementQuarterTurns ?? 0,
+                HorizontalMirrorX = building.PlacementHorizontalMirrorX
             });
             return true;
         }
@@ -1112,6 +1113,12 @@ namespace FlatWorld.Networking.Gameplay
                 }
 
                 buildingGuid = placedData.Guid;
+
+                if (Mod_Building.SupportsHorizontalMirrorPlacement(sourceData) &&
+                    !Mod_Building.TrySetHorizontalMirrorPlacement(placedData, request.HorizontalMirrorX))
+                {
+                    throw new InvalidOperationException("建筑左右朝向数据无效");
+                }
 
                 if (MachineCatalog.Get(placedData.IDName) != null)
                 {
