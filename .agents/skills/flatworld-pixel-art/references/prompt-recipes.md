@@ -43,6 +43,21 @@ Scene/backdrop: perfectly flat chroma-key background.
 Constraints: no card background; no frame; no label; no shadow unless same-category references contain one; no watermark; no extra objects. For trees, vegetation, large props, and buildings, preserve the existing project's leaf/shape clustering, trunk or structural massing, outline weight, light direction, saturation, and top-down viewpoint even when using a higher pixel density.
 ```
 
+## 带传动接口的机械设备
+
+先从实际相邻轴、电线和同类机身换算目标可见大小、轴心、铁环内缘位置及机身 PPU，再填入模板。连接件使用现有标准 Sprite，生成器只负责机身；参考图里的接口用于定位，不要求生成器重新画一套接口。
+
+```text
+Asset type: FlatWorld pixel-art machine housing, prepared for separate standard mechanical/electrical connector layers.
+Input images: Image 1 is the approved housing design; Image 2 is the existing in-game shaft and iron collar; Image 3 is the existing cable when needed. Preserve the housing design and use the connectors as scale and alignment references.
+Primary request: create one <设备名称> housing with a visible size of <目标世界宽高> on a <画布尺寸> canvas, intended for <机身 PPU> PPU.
+Composition/alignment: preserve the approved housing's aspect ratio; place the connection axis at <画布中的轴心位置>; make the <连接侧> housing edge meet the standard collar's inner edge at <换算后的像素位置>. A marked size box indicates overall size only, not a new aspect ratio.
+Layers: housing only; do not bake in the external shaft, iron collar, cable, or cable junction. These will be composed from the original project sprites at their unchanged world size. Leave enough opaque housing around the entry to cover the internal connector; when a flush collar connection is requested, show no wooden stub between the housing and collar.
+Style/medium: match the same-category FlatWorld asset's viewpoint, pixel clusters, outline, palette, and lighting; complete silhouette; transparent background; no ground, cast shadow, text, watermark, or extra objects.
+```
+
+生成后先按真实 PPU、Pivot、偏移和图层顺序拼出“电线—机身—传动轴”或相应机械组合，查看大小、铁环贴合及 90 度旋转。仅大小不合适时，调整机身 PPU 或等比例缩放；接口保持标准尺寸，并按同一组坐标重合成静态图标，不为尺寸问题重新生成整套图片。
+
 ## 保持身份的变体或动画
 
 ```text
