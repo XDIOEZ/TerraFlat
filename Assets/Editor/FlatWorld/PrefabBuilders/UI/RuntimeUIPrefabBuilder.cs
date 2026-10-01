@@ -881,10 +881,9 @@ public static partial class RuntimeUIPrefabBuilder
         rowElement.preferredHeight = 31f;
 
         Image background = root.GetComponent<Image>();
-        // Buff HUD 沿用当前灰阶主题，不再恢复旧版蓝绿色底。
-        background.color = new Color(0.20392157f, 0.20392157f, 0.20392157f, 0.97f);
+        // 状态 HUD 保持透明，只保留动态内容。
+        background.color = Color.clear;
         background.raycastTarget = false;
-        AddOutline(background, new Color(0.55f, 0.68f, 0.70f, 0.22f));
 
         HorizontalLayoutGroup rowLayout = root.AddComponent<HorizontalLayoutGroup>();
         rowLayout.padding = new RectOffset(5, 5, 4, 4);
@@ -904,7 +903,7 @@ public static partial class RuntimeUIPrefabBuilder
         icon.raycastTarget = false;
         AddOutline(icon, new Color(0.95f, 0.91f, 0.81f, 0.42f));
 
-        TextMeshProUGUI placeholder = CreateText("占位符文本", iconObject.transform, "?", 13f, Cream);
+        TextMeshProUGUI placeholder = CreateText("占位符文本", iconObject.transform, string.Empty, 13f, Cream);
         placeholder.fontStyle = FontStyles.Bold;
         placeholder.alignment = TextAlignmentOptions.Center;
         placeholder.enableWordWrapping = false;

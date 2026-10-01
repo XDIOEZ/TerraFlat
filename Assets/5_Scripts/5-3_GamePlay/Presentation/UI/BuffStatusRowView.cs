@@ -30,15 +30,15 @@ public sealed class BuffStatusRowView : MonoBehaviour
 
     private void Awake()
     {
-        nameText = FindChildText(NameNodeName);
-        remainingText = FindChildText(RemainingNodeName);
-        stackBadge = FindChild(StackBadgeNodeName)?.gameObject;
-        stackText = FindChildText(StackTextNodeName);
+        ResolveReferences();
     }
 
     /// <summary>绑定一个运行时 Buff；无效实例会被清空而不会残留上一行内容。</summary>
     public void Bind(BuffInstance runtime)
     {
+        // 绑定时补一次引用解析，避免首条状态保留 Prefab 默认文案。
+        ResolveReferences();
+
         if (runtime == null || runtime.Definition == null)
         {
             Clear();
@@ -117,6 +117,14 @@ public sealed class BuffStatusRowView : MonoBehaviour
     #endregion
 
     #region 辅助
+
+    private void ResolveReferences()
+    {
+        nameText ??= FindChildText(NameNodeName);
+        remainingText ??= FindChildText(RemainingNodeName);
+        stackBadge ??= FindChild(StackBadgeNodeName)?.gameObject;
+        stackText ??= FindChildText(StackTextNodeName);
+    }
 
     private TextMeshProUGUI FindChildText(string childName)
     {
