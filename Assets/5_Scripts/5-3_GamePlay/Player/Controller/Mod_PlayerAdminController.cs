@@ -5,7 +5,7 @@ using UnityEngine.InputSystem;
 /// 管理员相关输入与时间控制逻辑的独立 Mono 脚本。
 /// 挂在与 Player 相同的 GameObject 上，通过引用 Player 来操作玩家数据。
 /// </summary>
-public class Mod_PlayerAdminController : Module
+public class Mod_PlayerAdminController : Module, IIncomingDamageRule, IIncomingDamageContextRule
 {
     #region 常量与字段
 
@@ -201,6 +201,11 @@ public class Mod_PlayerAdminController : Module
     /// <summary>管理员权限与无敌开关同时开启时，玩家才受无敌保护。</summary>
     public bool IsAdminInvincibilityEnabled => IsAdministrator && AdminInvincibilityEnabled;
 
+    // 无敌在统一受击入口拒绝伤害，避免先触发出血、骨折与装备损耗再回血。
+    public float GetDamageMultiplier(IDamageSender sender) => IsAdminInvincibilityEnabled ? 0f : 1f;
+    public float GetDamageMultiplier(in FlatWorld.Combat.CombatDamageContext context)
+        => IsAdminInvincibilityEnabled ? 0f : 1f;
+
     /// <summary>为当前本地玩家开启管理员权限，供 Ctrl+F1 与 GM 面板复用。</summary>
     public bool TryEnableAdministrator()
     {
@@ -231,6 +236,7 @@ public class Mod_PlayerAdminController : Module
 
         ResolveAdminSurvivalReferences();
         RestoreAdminVitalStats();
+        damageReceiver?.ResetBodyPartDurability();
         ResumeDyingStateForAdminInvincibility();
         return true;
     }

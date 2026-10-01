@@ -53,8 +53,20 @@ namespace FlatWorld.GameplayMCP
             JObject observation = GameplayMcpRuntime.BuildObservation(parameters);
             // 复用正式随身容量口径，避免空槽被误认为还能拾取。
             if (observation["player"] is JObject playerData &&
-                GameplayMcpRuntime.TryGetPlayerContext(out Player player, out _, out _, out _) &&
-                PlayerCarryCapacityUtility.TryGetSnapshot(player, out PlayerCarryCapacitySnapshot capacity))
+                GameplayMcpRuntime.TryGetPlayerContext(out Player player, out _, out _, out _))
+            {
+                // 快捷栏装备与鼠标搬运库存分开观察，避免拿着矿石也被当作挥镐。
+                Item equipped = player.itemMods.GetMod_ByID<Mod_HotBar>(ModText.Hotbar)?.CurentSelectItem;
+                Mod_ColdWeapon weapon = equipped?.GetComponentInChildren<Mod_ColdWeapon>(true);
+                playerData["equippedWeapon"] = new JObject
+                {
+                    ["held"] = equipped?.itemData?.IDName ?? string.Empty,
+                    ["guid"] = equipped?.itemData?.Guid,
+                    ["runtimeWeapon"] = weapon != null,
+                    ["canAttack"] = weapon?.CanAttack ?? false,
+                    ["attackState"] = weapon?.CurrentState.ToString() ?? string.Empty
+                };
+                if (PlayerCarryCapacityUtility.TryGetSnapshot(player, out PlayerCarryCapacitySnapshot capacity))
                 playerData["carryCapacity"] = new JObject
                 {
                     ["weight"] = capacity.CurrentWeight,
@@ -63,6 +75,7 @@ namespace FlatWorld.GameplayMCP
                     ["maxVolume"] = float.IsInfinity(capacity.MaxVolume) ? null : new JValue(capacity.MaxVolume),
                     ["unlimited"] = capacity.IsUnlimited
                 };
+            }
             return new SuccessResponse(
                 "FlatWorld gameplay observation.",
                 observation);
