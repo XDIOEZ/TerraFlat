@@ -19,6 +19,7 @@ description: "Use when: 定位或修改 FlatWorld 的机器世界、工作台、
 
 - 只维护一套 `MachineWorld`，不新建并列的 WorkBlockWorld；普通设施 `Ports=none` 共用格索引，但不能伪造扭矩网络。传动网络和设施业务都保持粗粒度内聚。
 - 机械网与电网是同一批 `MachineEntity` 上的两张独立拓扑图；发电机/马达可同时入两网。电线使用独立覆盖层，与同格设备接入电网，不要求世界布线区分正负极。
+- 电线 `visual.spriteStates` 使用 `wire0..wire15`，连接位为北1、东2、南4、西8；朝向只读取权威电线格索引，同格设备不产生额外支路。邻格增删须刷新跨区块/循环边界的连接形状，连接未变化不重提网格，不能按召唤器旋转或每帧轮询选图。
 - 电网首版按整网功率求解：W 表示功率、J 表示储能；电压参与兼容性，电流由 `P/V` 推导，电阻只保留正式数据接口，未实现逐段压降/基尔霍夫仿真。
 - 召唤器、玩家库存和手持玩法保留 Item；落地设施走 `Place/SpawnGenerated/RestoreMachine`，`ItemMgr` 拒绝再实例化其完整 Item。`MachineAuthoringModule` 只保存配置，禁止重新启用其 Load/Tick 做运行时兜底。
 - 模拟不依赖 ChunkView。网络整体先恢复再 Tick、先快照再休眠；无端口设施独立按玩家窗口休眠。显示卸载不能删除实体或撤销已保存库存。

@@ -3514,6 +3514,42 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 940ae6588d154c0b9baea97109d279bc
+    m_Address: Assets/6_Art/Generated/Electrical/Generator_Basic/Generator_Basic_Idle.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: add20088f500475d925d0ccadb3081eb
+    m_Address: Assets/6_Art/Generated/Electrical/Motor_Basic/Motor_Basic_Idle.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 1775ca47ee8540bab7ea3b4c3ceb8b00
+    m_Address: Assets/6_Art/Generated/Electrical/Battery_Basic/Battery_Basic_Idle.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 08939973a8a640f2b29f168c606ced38
+    m_Address: Assets/6_Art/Generated/InventoryCrafting/Rubber/Rubber_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: c39f1621b91f4c76b52f471c4766cfe5
+    m_Address: Assets/6_Art/Generated/Environment/OakTree/OakTree_Idle.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 0c370d56e19945209114ef87ed621741
+    m_Address: Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
   m_ReadOnly: 0
   m_Settings: {fileID: 11400000, guid: fc59728ab6aa9b54ba0a5f7cc69fc0d8, type: 2}
   m_SchemaSet:

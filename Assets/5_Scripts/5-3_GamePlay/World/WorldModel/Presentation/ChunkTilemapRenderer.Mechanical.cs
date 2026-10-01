@@ -12,6 +12,11 @@ public sealed partial class ChunkTilemapRenderer
     private const string ReciprocatingSpriteState = "reciprocating"; // 往复运动的独立图层键。
     private const string BellowsLeatherSpriteState = "bellowsLeather"; // 风箱皮革折页的独立图层键。
     private const int BellowsCompressionMode = 4; // 按机械相位沿局部纵轴压缩皮革折页。
+    private static readonly Vector2Int[] wireNeighborDirections =
+        { Vector2Int.up, Vector2Int.right, Vector2Int.down, Vector2Int.left };
+    private static readonly string[] wireSpriteStates =
+        { "wire0", "wire1", "wire2", "wire3", "wire4", "wire5", "wire6", "wire7",
+          "wire8", "wire9", "wire10", "wire11", "wire12", "wire13", "wire14", "wire15" };
 
     /// <summary>机械物品定义中的图层坐标，新增 MOD 机械可沿用同一参数契约。</summary>
     private sealed class MechanicalVisualConfig
@@ -37,6 +42,7 @@ public sealed partial class ChunkTilemapRenderer
     private readonly List<MachineWorld.MachineRenderCell> mechanicalVisualNodes = new();
     private readonly Dictionary<Vector3Int, MechanicalDepthVisual> mechanicalDepthVisuals = new(); // 机器的交互和灯光桥，图像统一合入行网格。
     private readonly HashSet<Vector3Int> submittedMechanicalCells = new(); // 资源重建时清理已提交的机械和阴影身份。
+    private readonly Dictionary<Vector3Int, int> submittedWireMasks = new(); // 相邻事件只重提连接发生变化的电线。
     internal HashSet<Vector3Int> MechanicalShadowKeys => submittedMechanicalCells; // 供阴影注册表按区块卸载。
     private static Material mechanicalFallbackMaterial;
 
@@ -87,6 +93,7 @@ public sealed partial class ChunkTilemapRenderer
     private void HandleMechanicalCellChanged(Vector2Int cell)
     {
         if (boundChunk?.Terrain == null || !batchPresentationComplete) return;
+        RefreshElectricalWireNeighbours(cell);
         var origin = boundChunk.Address.ChunkOrigin;
         Vector2 displacement = WorldTopologyRuntime.ShortestDelta(
             new Vector2(origin.X, origin.Y), new Vector2(cell.x, cell.y));
@@ -100,8 +107,29 @@ public sealed partial class ChunkTilemapRenderer
             {
                 MechanicalShadowRegistry.Remove(this, new Vector3Int(x, y, occupancy));
                 submittedMechanicalCells.Remove(new Vector3Int(x, y, occupancy));
+                submittedWireMasks.Remove(new Vector3Int(x, y, occupancy));
                 RemoveMechanicalDepthVisual(x, y, occupancy);
             }
+        }
+    }
+
+    /// <summary>正交邻格也接收变化，跨区块及循环世界边界使用同一权威电线索引。</summary>
+    private void RefreshElectricalWireNeighbours(Vector2Int changedCell)
+    {
+        var origin = boundChunk.Address.ChunkOrigin;
+        foreach (Vector2Int direction in wireNeighborDirections)
+        {
+            Vector2Int cell = changedCell + direction;
+            Vector2 delta = WorldTopologyRuntime.ShortestDelta(
+                new Vector2(origin.X, origin.Y), new Vector2(cell.x, cell.y));
+            int x = Mathf.RoundToInt(delta.x), y = Mathf.RoundToInt(delta.y);
+            if ((uint)x >= (uint)boundChunk.Terrain.Width || (uint)y >= (uint)boundChunk.Terrain.Height) continue;
+            MachineEntity wire = MachineWorld.GetElectricalWireAtCurrentWorld(cell);
+            if (wire == null) continue;
+            var key = new Vector3Int(x, y, wire.Definition.Layer);
+            int mask = MachineWorld.GetElectricalWireConnectionMask(cell);
+            if (!submittedWireMasks.TryGetValue(key, out int previous) || previous != mask)
+                SubmitMechanicalNode(wire, x, y);
         }
     }
 
@@ -135,6 +163,18 @@ public sealed partial class ChunkTilemapRenderer
         MechanicalDepthVisual depthVisual = mechanicalDepthVisuals[key];
         try
         {
+
+        if (node.Definition.Electrical?.IsWire == true)
+        {
+            int mask = MachineWorld.GetElectricalWireConnectionMask(node.Cell);
+            Sprite wire = def.TryGetVisualStateSprite(wireSpriteStates[mask], out Sprite connected)
+                ? connected : def.Sprite;
+            // 接线形状由世界方向决定，忽略召唤器旋转并保持一格宽度。
+            Part(node, x, y, 0, wire, material, origin, Quaternion.identity,
+                facilityBodyOffset, Vector3.one, 0, 0f);
+            submittedWireMasks[key] = mask;
+            return;
+        }
 
         if (kind == "shaft")
         {
@@ -315,6 +355,7 @@ public sealed partial class ChunkTilemapRenderer
     /// <summary>区块卸载与资源重建时统一回收全部动态视觉。</summary>
     private void ClearMechanicalDepthVisuals()
     {
+        submittedWireMasks.Clear();
         foreach (MechanicalDepthVisual visual in mechanicalDepthVisuals.Values)
             if (visual != null) visual.Dispose();
         mechanicalDepthVisuals.Clear();

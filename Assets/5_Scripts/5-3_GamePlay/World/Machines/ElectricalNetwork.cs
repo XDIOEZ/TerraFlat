@@ -40,6 +40,21 @@ public sealed class ElectricalNetworkGraph
     private Vector2Int Normalize(Vector2Int cell)
         => new(topology.NormalizeX(cell.x), topology.NormalizeY(cell.y));
 
+    /// <summary>表现只读取同一电网索引，设备仍通过同格电线接入。</summary>
+    public MachineEntity GetWire(Vector2Int cell)
+        => wires.TryGetValue(Normalize(cell), out MachineEntity wire) ? wire : null;
+
+    /// <summary>连接位固定为北1、东2、南4、西8，不随放置旋转变化。</summary>
+    public int GetWireConnectionMask(Vector2Int cell)
+    {
+        int mask = 0;
+        if (GetWire(cell + Vector2Int.up) != null) mask |= 1;
+        if (GetWire(cell + Vector2Int.right) != null) mask |= 2;
+        if (GetWire(cell + Vector2Int.down) != null) mask |= 4;
+        if (GetWire(cell + Vector2Int.left) != null) mask |= 8;
+        return mask;
+    }
+
     /// <summary>只有拓扑变化时重建；设备通过同格电线接入，世界电网不暴露正负极。</summary>
     public void Rebuild(IEnumerable<MachineEntity> source)
     {

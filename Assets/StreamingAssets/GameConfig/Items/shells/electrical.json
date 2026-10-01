@@ -15,7 +15,18 @@
       "canBePickedUp": true,
       "tags": [],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png"
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Rubber/Rubber_Icon.png",
+        "color": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        },
+        "rendererLocalScale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
       },
       "modules": {}
     },
@@ -33,7 +44,18 @@
       "canBePickedUp": false,
       "tags": ["35", "InventoryGroup.ElectricalPower"],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png"
+        "spriteAddress": "Assets/6_Art/Generated/Electrical/Generator_Basic/Generator_Basic_Idle.png",
+        "color": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        },
+        "rendererLocalScale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
       },
       "health": {
         "hasHp": true,
@@ -75,7 +97,20 @@
       "stackable": false,
       "canBePickedUp": true,
       "tags": ["35", "InventoryGroup.ElectricalPower"],
-      "visual": { "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png" },
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Electrical/Generator_Basic/Generator_Basic_Idle.png",
+        "color": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        },
+        "rendererLocalScale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
       "health": {
         "hasHp": true, "hp": 180, "maxHp": 180,
         "defense": { "cutting": 8, "piercing": 8, "chopping": 8, "blunt": 8 },
@@ -112,7 +147,38 @@
       "stackable": true,
       "canBePickedUp": false,
       "tags": ["35", "InventoryGroup.ElectricalPower"],
-      "visual": { "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png" },
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_10]",
+        "color": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        },
+        "spriteStates": {
+          "wire0": "Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_00]",
+          "wire1": "Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_01]",
+          "wire2": "Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_02]",
+          "wire3": "Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_03]",
+          "wire4": "Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_04]",
+          "wire5": "Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_05]",
+          "wire6": "Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_06]",
+          "wire7": "Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_07]",
+          "wire8": "Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_08]",
+          "wire9": "Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_09]",
+          "wire10": "Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_10]",
+          "wire11": "Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_11]",
+          "wire12": "Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_12]",
+          "wire13": "Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_13]",
+          "wire14": "Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_14]",
+          "wire15": "Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_15]"
+        },
+        "rendererLocalScale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
       "health": {
         "hasHp": true, "hp": 60, "maxHp": 60,
         "defense": { "cutting": 2, "piercing": 2, "chopping": 2, "blunt": 2 },
@@ -151,7 +217,38 @@
       "stackable": true,
       "canBePickedUp": true,
       "tags": ["35", "InventoryGroup.ElectricalPower"],
-      "visual": { "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png" },
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_10]",
+        "color": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        },
+        "spriteStates": {
+          "wire0": "Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_00]",
+          "wire1": "Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_01]",
+          "wire2": "Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_02]",
+          "wire3": "Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_03]",
+          "wire4": "Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_04]",
+          "wire5": "Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_05]",
+          "wire6": "Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_06]",
+          "wire7": "Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_07]",
+          "wire8": "Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_08]",
+          "wire9": "Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_09]",
+          "wire10": "Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_10]",
+          "wire11": "Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_11]",
+          "wire12": "Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_12]",
+          "wire13": "Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_13]",
+          "wire14": "Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_14]",
+          "wire15": "Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_15]"
+        },
+        "rendererLocalScale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
       "health": {
         "hasHp": true, "hp": 60, "maxHp": 60,
         "defense": { "cutting": 2, "piercing": 2, "chopping": 2, "blunt": 2 },
@@ -188,7 +285,20 @@
       "stackable": false,
       "canBePickedUp": false,
       "tags": ["35", "InventoryGroup.ElectricalPower"],
-      "visual": { "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png" },
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Electrical/Battery_Basic/Battery_Basic_Idle.png",
+        "color": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        },
+        "rendererLocalScale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
       "health": {
         "hasHp": true, "hp": 160, "maxHp": 160,
         "defense": { "cutting": 6, "piercing": 6, "chopping": 6, "blunt": 6 },
@@ -227,7 +337,20 @@
       "stackable": false,
       "canBePickedUp": true,
       "tags": ["35", "InventoryGroup.ElectricalPower"],
-      "visual": { "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png" },
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Electrical/Battery_Basic/Battery_Basic_Idle.png",
+        "color": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        },
+        "rendererLocalScale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
       "health": {
         "hasHp": true, "hp": 160, "maxHp": 160,
         "defense": { "cutting": 6, "piercing": 6, "chopping": 6, "blunt": 6 },
@@ -264,7 +387,20 @@
       "stackable": false,
       "canBePickedUp": false,
       "tags": ["35", "InventoryGroup.ElectricalPower"],
-      "visual": { "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png" },
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Electrical/Motor_Basic/Motor_Basic_Idle.png",
+        "color": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        },
+        "rendererLocalScale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
       "health": {
         "hasHp": true, "hp": 180, "maxHp": 180,
         "defense": { "cutting": 8, "piercing": 8, "chopping": 8, "blunt": 8 },
@@ -303,7 +439,20 @@
       "stackable": false,
       "canBePickedUp": true,
       "tags": ["35", "InventoryGroup.ElectricalPower"],
-      "visual": { "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png" },
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Electrical/Motor_Basic/Motor_Basic_Idle.png",
+        "color": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        },
+        "rendererLocalScale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
       "health": {
         "hasHp": true, "hp": 180, "maxHp": 180,
         "defense": { "cutting": 8, "piercing": 8, "chopping": 8, "blunt": 8 },
@@ -334,7 +483,13 @@
       "description": "森林中生长的橡树，可按树脂相同的产出逻辑获得橡胶。",
       "lootTableId": "Tree_Oak",
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png"
+        "spriteAddress": "Assets/6_Art/Generated/Environment/OakTree/OakTree_Idle.png",
+        "color": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        }
       },
       "modules": {
         "温度产量模块": {

@@ -132,5 +132,21 @@ public static partial class MachineWorld
         RebuildGraphsIfDirty();
         return node != null && Contains(node) ? node.ElectricalNetwork : null;
     }
+
+    /// <summary>区块表现只查询已建立的电线格索引，不创建世界作用域。</summary>
+    public static MachineEntity GetElectricalWireAtCurrentWorld(Vector2Int cell)
+    {
+        if (graph == null) return null;
+        RebuildGraphsIfDirty();
+        return electricalGraph?.GetWire(cell);
+    }
+
+    /// <summary>用权威电网的四邻连接选择贴图，不读取可见区块或碰撞体。</summary>
+    public static int GetElectricalWireConnectionMask(Vector2Int cell)
+    {
+        if (graph == null) return 0;
+        RebuildGraphsIfDirty();
+        return electricalGraph?.GetWireConnectionMask(cell) ?? 0;
+    }
     #endregion
 }
