@@ -1,4 +1,4 @@
-﻿using Sirenix.OdinInspector;
+using Sirenix.OdinInspector;
 using System;
 using UnityEngine;
 using UnityEngine.Serialization;
@@ -43,7 +43,7 @@ public class Player : Item
 
     public event Action ProfileContextChanged;
 
-    // 时间控制与管理员逻辑已迁移到 Mod_PlayerAdminController
+    // 时间控制与管理员逻辑已迁移到 PlayerAdminController
 
     public override ItemData itemData => data;
 
@@ -100,10 +100,33 @@ public class Player : Item
         transform.position = itemData.transform.position;
         transform.rotation = itemData.transform.rotation;
         transform.localScale = itemData.transform.scale;
+        PrepareCameraModuleState();
         base.Load();
-        // 所有模块加载完成后校准一次，覆盖初始背包数据早于 Mod_BuffManager 加载的情况。
+        // 所有模块加载完成后校准一次，覆盖初始背包数据早于 BuffManager 加载的情况。
         PlayerCarryCapacityUtility.RefreshOverweightSlowdown(this);
         EnsureLowHealthPostProcessEffect();
+    }
+
+    /// <summary>本地玩家必须启用相机模块；远程玩家保持关闭，避免生成重复主相机。</summary>
+    private void PrepareCameraModuleState()
+    {
+        bool shouldEnableCamera = IsLocalProfile;
+
+        Mod_Cam cameraModule = GetComponentInChildren<Mod_Cam>(true);
+        if (cameraModule?._Data != null)
+            cameraModule._Data.Enabled = shouldEnableCamera;
+
+        if (itemData?.ModuleDataDic == null)
+            return;
+
+        foreach (ModuleData moduleData in itemData.ModuleDataDic.Values)
+        {
+            if (moduleData != null &&
+                string.Equals(moduleData.ModuleId, ModText.Camera, StringComparison.OrdinalIgnoreCase))
+            {
+                moduleData.Enabled = shouldEnableCamera;
+            }
+        }
     }
 
     #endregion

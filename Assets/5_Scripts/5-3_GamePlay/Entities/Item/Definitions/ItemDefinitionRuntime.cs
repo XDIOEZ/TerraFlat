@@ -423,6 +423,7 @@ public static class ItemDefinitionRuntime
             moduleData.StableName = stableName;
             string prefabId = definition.GetModulePrefabId(stableName, moduleData.ModuleId);
             int embeddedIndex = -1;
+            Type expectedModuleType = ResolveModuleType(gameRes, prefabId, moduleData.ModuleId);
 
             // 先按具体 PrefabId 匹配，避免同一 ModuleId 的多个实现变体互相串用。
             for (int i = 0; i < available.Count; i++)
@@ -436,6 +437,33 @@ public static class ItemDefinitionRuntime
                 candidate.BindRuntimeIdentity(stableName, moduleData.ModuleId, prefabId);
                 embeddedIndex = i;
                 break;
+            }
+
+            // 旧 Actor 外壳会把内嵌模块节点改名；PrefabId 因此可能失真，按唯一具体类型复用原模块。
+            if (embeddedIndex < 0 && expectedModuleType != null)
+            {
+                int typedIndex = -1;
+                for (int i = 0; i < available.Count; i++)
+                {
+                    Module candidate = available[i];
+                    if (candidate == null || candidate.GetType() != expectedModuleType)
+                        continue;
+
+                    if (typedIndex >= 0)
+                    {
+                        typedIndex = -1;
+                        break;
+                    }
+
+                    typedIndex = i;
+                }
+
+                if (typedIndex >= 0)
+                {
+                    Module candidate = available[typedIndex];
+                    candidate.BindRuntimeIdentity(stableName, moduleData.ModuleId, prefabId);
+                    embeddedIndex = typedIndex;
+                }
             }
 
             // 没有独立变体时才允许按 ModuleId 唯一回退。
@@ -469,5 +497,15 @@ public static class ItemDefinitionRuntime
             moduleObject.transform.localScale = Vector3.one;
             module.BindRuntimeIdentity(stableName, moduleData.ModuleId, prefabId);
         }
+    }
+
+    private static Type ResolveModuleType(GameRes gameRes, string prefabId, string moduleId)
+    {
+        if (gameRes == null || string.IsNullOrWhiteSpace(prefabId))
+            return null;
+
+        GameObject modulePrefab = gameRes.GetPrefab(prefabId, false);
+        Module prototype = ItemDefinitionCatalogLoader.FindModulePrototype(null, modulePrefab, moduleId);
+        return prototype?.GetType();
     }
 }

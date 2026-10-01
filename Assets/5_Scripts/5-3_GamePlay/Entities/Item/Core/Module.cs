@@ -145,7 +145,11 @@ public abstract class Module : MonoBehaviour, IRuntimeDataLifecycle
         get
         {
             string serializedId = _Data?.ModuleId?.Trim();
-            return string.IsNullOrEmpty(serializedId) ? gameObject.name : serializedId;
+            if (!string.IsNullOrEmpty(serializedId))
+                return serializedId;
+
+            // Item 根节点或同一节点承载多个模块时，GameObject 名不能充当能力 ID。
+            return UsesSharedModuleHost() ? GetType().Name : gameObject.name;
         }
     }
 
@@ -185,8 +189,7 @@ public abstract class Module : MonoBehaviour, IRuntimeDataLifecycle
 
     public virtual void Awake()
     {
-        if (_Data != null)
-            EnsureRuntimeIdentity();
+        // 具体模块经常在 Awake 中补 ModuleId；统一身份延后到注册阶段建立。
     }
 
     /// <summary>建立模块参与运行时索引所需的非空稳定身份。</summary>
@@ -203,17 +206,107 @@ public abstract class Module : MonoBehaviour, IRuntimeDataLifecycle
             ? _Data.StableName?.Trim()
             : stableName.Trim();
         if (string.IsNullOrWhiteSpace(resolvedStableName))
-            resolvedStableName = gameObject.name?.Trim();
-        if (string.IsNullOrWhiteSpace(resolvedStableName))
-            resolvedStableName = moduleId.Trim();
+            resolvedStableName = ResolveImplicitStableName(moduleId);
 
         _Data.ModuleId = moduleId.Trim();
         _Data.StableName = resolvedStableName;
         runtimePrefabId = string.IsNullOrWhiteSpace(prefabId)
-            ? (string.IsNullOrWhiteSpace(runtimePrefabId) ? gameObject.name?.Trim() : runtimePrefabId)
+            ? (string.IsNullOrWhiteSpace(runtimePrefabId) ? ResolveImplicitPrefabId(moduleId) : runtimePrefabId)
             : prefabId.Trim();
         if (string.IsNullOrWhiteSpace(runtimePrefabId))
             runtimePrefabId = _Data.ModuleId;
+    }
+
+    private bool UsesSharedModuleHost()
+    {
+        if (GetComponent<Item>() != null)
+            return true;
+
+        Module[] siblings = GetComponents<Module>();
+        return siblings != null && siblings.Length > 1;
+    }
+
+    private string ResolveImplicitStableName(string moduleId)
+    {
+        string normalizedId = moduleId.Trim();
+        Item owner = GetComponentInParent<Item>();
+        if (owner == null)
+            return UsesSharedModuleHost() ? normalizedId : (gameObject.name?.Trim() ?? normalizedId);
+
+        Module[] modules = owner.GetComponentsInChildren<Module>(true);
+        int matchingIdCount = 0;
+        for (int i = 0; i < modules.Length; i++)
+        {
+            Module candidate = modules[i];
+            if (candidate != null &&
+                string.Equals(candidate.CanonicalModuleId?.Trim(), normalizedId, StringComparison.OrdinalIgnoreCase))
+            {
+                matchingIdCount++;
+            }
+        }
+
+        if (matchingIdCount <= 1)
+            return UsesSharedModuleHost() ? normalizedId : (gameObject.name?.Trim() ?? normalizedId);
+
+        string path = BuildRelativeTransformPath(owner.transform, transform);
+        int ordinal = 0;
+        int sameTransformCount = 0;
+        Module[] localModules = GetComponents<Module>();
+        for (int i = 0; i < localModules.Length; i++)
+        {
+            Module candidate = localModules[i];
+            if (candidate == null ||
+                !string.Equals(candidate.CanonicalModuleId?.Trim(), normalizedId, StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            if (candidate == this)
+                ordinal = sameTransformCount;
+            sameTransformCount++;
+        }
+
+        return sameTransformCount > 1
+            ? $"{normalizedId}@{path}#{ordinal}"
+            : $"{normalizedId}@{path}";
+    }
+
+    private string ResolveImplicitPrefabId(string moduleId)
+    {
+        string gameObjectName = gameObject.name?.Trim();
+        return UsesSharedModuleHost() || string.IsNullOrWhiteSpace(gameObjectName)
+            ? moduleId.Trim()
+            : gameObjectName;
+    }
+
+    private static string BuildRelativeTransformPath(Transform root, Transform target)
+    {
+        if (root == null || target == null || root == target)
+            return "$root";
+
+        var segments = new List<string>();
+        Transform current = target;
+        while (current != null && current != root)
+        {
+            string segment = current.name;
+            Transform parent = current.parent;
+            if (parent != null)
+            {
+                int sameNameCount = 0;
+                for (int i = 0; i < parent.childCount; i++)
+                {
+                    if (string.Equals(parent.GetChild(i).name, current.name, StringComparison.Ordinal))
+                        sameNameCount++;
+                }
+
+                if (sameNameCount > 1)
+                    segment += $"[{current.GetSiblingIndex()}]";
+            }
+
+            segments.Add(segment);
+            current = parent;
+        }
+
+        segments.Reverse();
+        return segments.Count == 0 ? "$root" : string.Join("/", segments);
     }
 
     /// <summary>定义装配阶段一次性写入 StableName / ModuleId / PrefabId 三段身份。</summary>

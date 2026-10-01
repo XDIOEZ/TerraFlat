@@ -146,8 +146,7 @@ public class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
     }
 
     [Header("快捷栏运行时库存")]
-    // Player.prefab 以托管引用保存该对象；这里必须保留 SerializeReference 才能恢复面板 Prefab 与库存数据。
-    [SerializeReference]
+    // 具体类型直接内联序列化，避免托管引用误把 MonoBehaviour 当普通对象构造。
     public HotBarRuntimeInventory RuntimeInventory = new HotBarRuntimeInventory();
 
     [Header("快捷栏设置")]

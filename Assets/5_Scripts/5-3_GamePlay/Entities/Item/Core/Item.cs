@@ -423,6 +423,7 @@ public abstract class Item : MonoBehaviour
         modulesLoaded = true;
         itemMods.BindOwner(this);
         MarkModuleScheduleDirty();
+        EnsureUniversalEquipmentModule();
         bool firstStart = itemData.ModuleDataDic.Count == 0;
 
         // 模板数据会收集停用模块，加载时也必须使用同一范围，避免矿物等 Prefab 被误判为缺失模块。
@@ -504,6 +505,9 @@ public abstract class Item : MonoBehaviour
                         continue;
                     }
 
+                    // Enabled 属于当前模块配置，不从旧存档继承；旧 isRunning 不能决定模块生命周期。
+                    bool configuredEnabled = mod._Data?.Enabled ?? true;
+                    modData.Enabled = configuredEnabled;
                     mod._Data = modData;
                     mod.BindRuntimeIdentity(stableName, modData.ModuleId, modulePrefabId);
 
@@ -514,6 +518,9 @@ public abstract class Item : MonoBehaviour
                 {
                     tempMods.RemoveMod(mod);
 
+                    // 存档只恢复运行态数据，模块启停以当前 Prefab/JSON 配置为准。
+                    bool configuredEnabled = mod._Data?.Enabled ?? true;
+                    modData.Enabled = configuredEnabled;
                     mod._Data = modData;
                     mod.BindRuntimeIdentity(stableName, modData.ModuleId, modulePrefabId);
 
@@ -558,6 +565,30 @@ public abstract class Item : MonoBehaviour
         }
 
         MarkModuleScheduleDirty();
+    }
+
+    /// <summary>装备能力属于 Item 的通用组合能力，按需补齐模块而不是复制到每个物品 Prefab。</summary>
+    private void EnsureUniversalEquipmentModule()
+    {
+        if (GetComponentInChildren<Mod_Equipment>(true) != null ||
+            GetComponentInChildren<Mod_EquipmentRuntime>(true) != null)
+            return;
+
+        GameRes gameRes = GameRes.Instance;
+        if (gameRes == null)
+            return;
+
+        GameObject moduleObject = gameRes.InstantiatePrefab("Module_Equipment", parent: transform);
+        if (moduleObject == null)
+        {
+            Debug.LogError($"[Item] {name} 无法补齐通用装备模块 Module_Equipment", this);
+            return;
+        }
+
+        moduleObject.name = "Module_Equipment";
+        moduleObject.transform.localPosition = Vector3.zero;
+        moduleObject.transform.localRotation = Quaternion.identity;
+        moduleObject.transform.localScale = Vector3.one;
     }
 
     /// <summary>模块注册完成后统一解析显式依赖，确保初始化顺序不影响组合结果。</summary>

@@ -481,7 +481,54 @@ MonoBehaviour:
     BitData: 
   RawData: []
   RuntimeInventory:
-    rid: 4916459727764848643
+    item: {fileID: 0}
+    InventoryPanel_Prefab: {fileID: 3157743334102886615, guid: 834b874f2bd43a34e95f52adb0e4a211, type: 3}
+    basePanel: {fileID: 0}
+    Data:
+      Name: "UI_\u5FEB\u6377\u680F"
+      itemSlots:
+      - CanAcceptTags: []
+        SlotMaxVolume: 0
+        Index: 0
+      - CanAcceptTags: []
+        SlotMaxVolume: 0
+        Index: 0
+      - CanAcceptTags: []
+        SlotMaxVolume: 0
+        Index: 0
+      - CanAcceptTags: []
+        SlotMaxVolume: 0
+        Index: 0
+      - CanAcceptTags: []
+        SlotMaxVolume: 0
+        Index: 0
+      - CanAcceptTags: []
+        SlotMaxVolume: 0
+        Index: 0
+      - CanAcceptTags: []
+        SlotMaxVolume: 0
+        Index: 0
+      - CanAcceptTags: []
+        SlotMaxVolume: 0
+        Index: 0
+      - CanAcceptTags: []
+        SlotMaxVolume: 0
+        Index: 0
+      Index: 0
+      IsInjected: 0
+      PanelPosition: {x: 0, y: 0, z: 0}
+      PanelIsOpen: 0
+      ToggleActionName: ""
+      UIPrefabName: ""
+      Event_RefreshUI:
+        _PersistentCalls: []
+      Event_OnBeforeDataChanged:
+        _PersistentCalls: []
+      Event_OnDataChanged:
+        _PersistentCalls: []
+      Event_OnDataChanged_TwoSlots:
+        _PersistentCalls: []
+    itemSlot_UI: []
   spawnLocation: {fileID: 6639265349670268636}
   HotBarMaxVolume: 9
   SelectBoxPrefab: {fileID: 3351078594653121284, guid: 5fd8b428d015c7044aee5e5491698e72, type: 3}
@@ -493,60 +540,6 @@ MonoBehaviour:
     Index: 0
   CurentSelectItem: {fileID: 0}
   currentObject: {fileID: 0}
-  references:
-    version: 2
-    RefIds:
-    - rid: 4916459727764848643
-      type: {class: Mod_HotBar/HotBarRuntimeInventory, ns: , asm: GamePlay}
-      data:
-        item: {fileID: 0}
-        InventoryPanel_Prefab: {fileID: 3157743334102886615, guid: 834b874f2bd43a34e95f52adb0e4a211, type: 3}
-        basePanel: {fileID: 0}
-        Data:
-          Name: "UI_\u5FEB\u6377\u680F"
-          itemSlots:
-          - CanAcceptTags: []
-            SlotMaxVolume: 0
-            Index: 0
-          - CanAcceptTags: []
-            SlotMaxVolume: 0
-            Index: 0
-          - CanAcceptTags: []
-            SlotMaxVolume: 0
-            Index: 0
-          - CanAcceptTags: []
-            SlotMaxVolume: 0
-            Index: 0
-          - CanAcceptTags: []
-            SlotMaxVolume: 0
-            Index: 0
-          - CanAcceptTags: []
-            SlotMaxVolume: 0
-            Index: 0
-          - CanAcceptTags: []
-            SlotMaxVolume: 0
-            Index: 0
-          - CanAcceptTags: []
-            SlotMaxVolume: 0
-            Index: 0
-          - CanAcceptTags: []
-            SlotMaxVolume: 0
-            Index: 0
-          Index: 0
-          IsInjected: 0
-          PanelPosition: {x: 0, y: 0, z: 0}
-          PanelIsOpen: 0
-          ToggleActionName: 
-          UIPrefabName: 
-          Event_RefreshUI:
-            _PersistentCalls: []
-          Event_OnBeforeDataChanged:
-            _PersistentCalls: []
-          Event_OnDataChanged:
-            _PersistentCalls: []
-          Event_OnDataChanged_TwoSlots:
-            _PersistentCalls: []
-        itemSlot_UI: []
 --- !u!1 &4678875130974218576
 GameObject:
   m_ObjectHideFlags: 0
@@ -1788,7 +1781,7 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5958215070207355882, guid: 9d6c3cee7e6aea74d892677e88925c7f, type: 3}
-      propertyPath: Mod_GameController
+      propertyPath: GameController
       value: 
       objectReference: {fileID: 7199555808017476116}
     - target: {fileID: 7704802002852346167, guid: 9d6c3cee7e6aea74d892677e88925c7f, type: 3}

@@ -20,7 +20,6 @@ public abstract partial class ModuleData
     [Tooltip("模块能力 ID；同一能力允许由不同 Prefab 实现。")]
     public string ModuleId;
 
-    [FormerlySerializedAs("isRunning")]
     [Tooltip("模块是否启用；由 Module 框架统一控制运行态与 Tick。")]
     public bool Enabled = true;
     public ModuleType Type;
