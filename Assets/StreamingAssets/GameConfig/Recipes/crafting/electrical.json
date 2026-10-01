@@ -3,7 +3,7 @@
   "recipes": [
     {
       "id": "core:electrical_Wire_Copper",
-      "displayName": "铜导线",
+      "displayName": "铜电线",
       "recipeType": "crafting",
       "inputRule": "unordered",
       "requiredStation": "workbench",

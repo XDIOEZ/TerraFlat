@@ -189,10 +189,8 @@ public static partial class MachineWorld
 
     private static bool ConverterHasWork(MachineEntity motor)
     {
-        if (motor.Network == null || motor.Links.Count == 0) return false;
-        foreach (MachineEntity node in motor.Network.Nodes)
-            if (!ReferenceEquals(node, motor) && (node.LoadTorque > 0f || node.Definition.IsConverter)) return true;
-        return false;
+        // 纯齿轮/传动轴没有固定扭矩负载，但只要轴端已接上传动件，电机就应建立转速并带动它们空转。
+        return motor?.Network != null && motor.Links.Count > 0;
     }
 
     private static void UpdateConversionPowerBudget(MechanicalNetwork network)

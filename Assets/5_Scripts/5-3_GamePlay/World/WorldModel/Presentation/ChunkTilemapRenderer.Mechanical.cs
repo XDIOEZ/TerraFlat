@@ -150,7 +150,9 @@ public sealed partial class ChunkTilemapRenderer
         Vector3 origin = new(chunkOrigin.X + x + .5f, chunkOrigin.Y + y + .5f,
             node.Snapshot.transform.position.z);
         origin += DepthPresentationOffset;
-        Quaternion rotation = Quaternion.Euler(0f, 0f, node.RotationQuarterTurns * 90f);
+        bool mirrorConverterX = node.Definition.IsConverter && (node.RotationQuarterTurns & 3) == 2;
+        Quaternion rotation = Quaternion.Euler(0f, 0f,
+            mirrorConverterX ? 0f : (node.RotationQuarterTurns & 3) * 90f);
         Vector3 facilityBodyOffset = node.Definition.Ports == "none"
             ? (def.Visual?.RendererLocalPosition ?? Vector3.zero)
             : Vector3.zero;
@@ -333,6 +335,12 @@ public sealed partial class ChunkTilemapRenderer
         Vector3 origin, Quaternion rotation, Vector3 offset, Vector3 scale,
         int mode, float multiplier, float phase = 0f, int track = 0, float stroke = 0f)
     {
+        // 电机反向只做水平镜像，避免 180 度旋转把支脚和顶部结构倒置。
+        if (node.Definition.IsConverter && (node.RotationQuarterTurns & 3) == 2)
+        {
+            offset.x = -offset.x;
+            scale.x = -scale.x;
+        }
         float radians = node.VisualRpm * Mathf.PI * 2f / 60f;
         Vector4 animation = new(mode, radians * multiplier,
             (node.VisualPhase - node.VisualTime * radians) * multiplier + phase, stroke);

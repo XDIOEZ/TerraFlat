@@ -83,6 +83,7 @@ public sealed partial class Mod_MechanicalNode : Module, IInteractable, IBuildin
     private int mechanicalShaftSortingLayerId;
     private Quaternion originalRotation;
     private Vector3 originalSpriteLocalPosition;
+    private Vector3 originalSpriteLocalScale;
     private int originalSortingOrder;
     private bool placed;
     private Sprite inputShaftSprite; // 由物品 visual.spriteStates 预载的固定杆。
@@ -139,6 +140,7 @@ public sealed partial class Mod_MechanicalNode : Module, IInteractable, IBuildin
         {
             originalRotation = spriteRenderer.transform.localRotation;
             originalSpriteLocalPosition = spriteRenderer.transform.localPosition;
+            originalSpriteLocalScale = spriteRenderer.transform.localScale;
             originalSortingOrder = spriteRenderer.sortingOrder;
         }
         buildingSortingGroup = item.GetComponent<SortingGroup>();
@@ -181,6 +183,7 @@ public sealed partial class Mod_MechanicalNode : Module, IInteractable, IBuildin
         {
             spriteRenderer.transform.localRotation = originalRotation;
             spriteRenderer.transform.localPosition = originalSpriteLocalPosition;
+            spriteRenderer.transform.localScale = originalSpriteLocalScale;
             spriteRenderer.sortingOrder = originalSortingOrder;
         }
         if (inputShaftRenderer != null) inputShaftRenderer.enabled = false;
@@ -273,36 +276,70 @@ public sealed partial class Mod_MechanicalNode : Module, IInteractable, IBuildin
     public void ApplyPreview(BuildingShadow shadow)
     {
         if (shadow?.ShadowRenderer == null) return;
-        Quaternion placementRotation = Quaternion.Euler(0f, 0f, PlacementQuarterTurns * 90f);
+        Quaternion placementRotation = ResolvePlacementVisualRotation(PlacementQuarterTurns);
+        bool mirrorX = UsesHorizontalMirrorVisual(PlacementQuarterTurns);
         if (Definition.Rotatable)
+        {
             shadow.ShadowRenderer.transform.localRotation = placementRotation;
+            shadow.ShadowRenderer.flipX = (spriteRenderer != null && spriteRenderer.flipX) ^ mirrorX;
+        }
         if (inputShaftSprite != null)
         {
             Vector3 inputShaftOffset = ResolveInputShaftLocalPosition();
             SpriteRenderer previewShaft = shadow.EnsureOverlay(InputShaftObjectName, inputShaftSprite,
-                shadow.ShadowRenderer.transform.localPosition + placementRotation * inputShaftOffset,
+                shadow.ShadowRenderer.transform.localPosition + ResolvePlacementVisualOffset(inputShaftOffset),
                 spriteRenderer?.sharedMaterial);
             if (previewShaft != null)
             {
                 previewShaft.transform.localRotation = placementRotation;
-                previewShaft.flipX = spriteRenderer != null && spriteRenderer.flipX;
+                previewShaft.flipX = (spriteRenderer != null && spriteRenderer.flipX) ^ mirrorX;
                 previewShaft.flipY = spriteRenderer != null && spriteRenderer.flipY;
             }
         }
         if (rotorSprite != null)
         {
             SpriteRenderer previewRotor = shadow.EnsureOverlay(RotorObjectName, rotorSprite,
-                shadow.ShadowRenderer.transform.localPosition + placementRotation * RotorLocalPosition,
+                shadow.ShadowRenderer.transform.localPosition + ResolvePlacementVisualOffset(RotorLocalPosition),
                 spriteRenderer?.sharedMaterial);
             if (previewRotor != null)
             {
                 previewRotor.transform.localRotation = placementRotation;
+                previewRotor.flipX = mirrorX;
                 previewRotor.sortingOrder = shadow.ShadowRenderer.sortingOrder + (RotorBehindBody ? -1 : 1);
             }
         }
         ApplyGearboxPreview(shadow, placementRotation);
-        ApplyAxisPortPreview(shadow, placementRotation);
+        ApplyAxisPortPreview(shadow, placementRotation, mirrorX);
         ApplyElectricalPortPreview(shadow, placementRotation);
+        NormalizeElectricalPortPreview(shadow, placementRotation, mirrorX);
+    }
+
+    /// <summary>电机反向时只水平镜像机身，保持支脚始终朝下。</summary>
+    private bool UsesHorizontalMirrorVisual(int quarterTurns)
+        => Definition?.IsConverter == true && (quarterTurns & 3) == 2;
+
+    private Quaternion ResolvePlacementVisualRotation(int quarterTurns)
+        => Quaternion.Euler(0f, 0f, UsesHorizontalMirrorVisual(quarterTurns)
+            ? 0f : (quarterTurns & 3) * 90f);
+
+    private Vector3 ResolvePlacementVisualOffset(Vector3 localPosition)
+    {
+        if (UsesHorizontalMirrorVisual(PlacementQuarterTurns))
+            localPosition.x = -localPosition.x;
+        return ResolvePlacementVisualRotation(PlacementQuarterTurns) * localPosition;
+    }
+
+    /// <summary>电线口预览跟随电机的水平镜像，而不是继承 180 度倒置。</summary>
+    private void NormalizeElectricalPortPreview(BuildingShadow shadow, Quaternion visualRotation, bool mirrorX)
+    {
+        if (electricalPortSprite == null) return;
+        Transform portTransform = shadow.transform.Find(ElectricalPortObjectName);
+        if (portTransform == null) return;
+        portTransform.localPosition = shadow.ShadowRenderer.transform.localPosition +
+                                      ResolvePlacementVisualOffset(ElectricalPortLocalPosition);
+        portTransform.localRotation = visualRotation;
+        if (portTransform.TryGetComponent(out SpriteRenderer portRenderer))
+            portRenderer.flipX = (spriteRenderer != null && spriteRenderer.flipX) ^ mirrorX;
     }
 
     /// <summary>在放置虚影上叠加两枚齿轮，并随建筑 R 键朝向同步旋转。</summary>
@@ -329,18 +366,19 @@ public sealed partial class Mod_MechanicalNode : Module, IInteractable, IBuildin
     }
 
     /// <summary>按配置把轴端口叠加到建筑虚影，并与主体预览使用相同朝向。</summary>
-    private void ApplyAxisPortPreview(BuildingShadow shadow, Quaternion placementRotation)
+    private void ApplyAxisPortPreview(BuildingShadow shadow, Quaternion placementRotation, bool mirrorX)
     {
         if (axisPortSprite == null) return;
         Vector3 basePosition = shadow.ShadowRenderer.transform.localPosition;
         if (AxisPortLayout == CenteredShaftRingLayout || AxisPortLayout == SingleAxisPortLayout)
         {
             SpriteRenderer portRings = shadow.EnsureOverlay(AxisPortRingsObjectName, axisPortSprite,
-                basePosition + placementRotation * ResolveSingleAxisPortPosition(), spriteRenderer?.sharedMaterial);
+                basePosition + ResolvePlacementVisualOffset(ResolveSingleAxisPortPosition()), spriteRenderer?.sharedMaterial);
             if (portRings != null)
             {
                 portRings.transform.localRotation = placementRotation;
                 portRings.transform.localScale = Vector3.one;
+                portRings.flipX = (spriteRenderer != null && spriteRenderer.flipX) ^ mirrorX;
                 portRings.sortingOrder = shadow.ShadowRenderer.sortingOrder + (AxisPortDrawOnTop ? 1 : -1);
             }
             return;
@@ -348,18 +386,18 @@ public sealed partial class Mod_MechanicalNode : Module, IInteractable, IBuildin
 
         float offset = Mathf.Abs(AxisPortOffset);
         SpriteRenderer leftPort = shadow.EnsureOverlay(AxisPortLeftObjectName, axisPortSprite,
-            basePosition + placementRotation * new Vector3(-offset, AxisPortOffsetY, 0f), spriteRenderer?.sharedMaterial);
+            basePosition + ResolvePlacementVisualOffset(new Vector3(-offset, AxisPortOffsetY, 0f)), spriteRenderer?.sharedMaterial);
         SpriteRenderer rightPort = shadow.EnsureOverlay(AxisPortRightObjectName, axisPortSprite,
-            basePosition + placementRotation * new Vector3(offset, AxisPortOffsetY, 0f), spriteRenderer?.sharedMaterial);
+            basePosition + ResolvePlacementVisualOffset(new Vector3(offset, AxisPortOffsetY, 0f)), spriteRenderer?.sharedMaterial);
         if (leftPort != null)
         {
             leftPort.transform.localRotation = placementRotation;
-            leftPort.flipX = spriteRenderer != null && spriteRenderer.flipX;
+            leftPort.flipX = (spriteRenderer != null && spriteRenderer.flipX) ^ mirrorX;
         }
         if (rightPort != null)
         {
             rightPort.transform.localRotation = placementRotation;
-            rightPort.flipX = spriteRenderer == null || !spriteRenderer.flipX;
+            rightPort.flipX = (spriteRenderer == null || !spriteRenderer.flipX) ^ mirrorX;
         }
     }
 
@@ -483,9 +521,16 @@ public sealed partial class Mod_MechanicalNode : Module, IInteractable, IBuildin
         if (spriteRenderer == null) return;
         ApplyMechanicalShaftSortingLayer();
         spriteRenderer.transform.localPosition = originalSpriteLocalPosition;
+        spriteRenderer.transform.localScale = originalSpriteLocalScale;
         if (placed)
-            spriteRenderer.transform.localRotation = originalRotation *
-                Quaternion.Euler(0f, 0f, LocalState.RotationQuarterTurns * 90f + gearAngleDegrees);
+        {
+            bool mirrorX = UsesHorizontalMirrorVisual(LocalState.RotationQuarterTurns);
+            float visualAngle = mirrorX ? gearAngleDegrees : LocalState.RotationQuarterTurns * 90f + gearAngleDegrees;
+            spriteRenderer.transform.localRotation = originalRotation * Quaternion.Euler(0f, 0f, visualAngle);
+            if (mirrorX)
+                spriteRenderer.transform.localScale = new Vector3(-originalSpriteLocalScale.x,
+                    originalSpriteLocalScale.y, originalSpriteLocalScale.z);
+        }
         if (placed && Definition.Layer == 1) spriteRenderer.sortingOrder = 2;
         if (inputShaftRenderer != null)
         {
