@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using FlatWorld.Localization;
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 /// <summary>
 /// 行囊搜索只控制槽位明暗，不改变库存数据、槽位顺序或交互。
@@ -13,11 +14,13 @@ public sealed class InventoryBagSearch : MonoBehaviour
     #region 配置与状态
 
     private const float UnmatchedAlpha = 0.25f;
+    private const string ClearButtonName = "清空搜索";
 
     [SerializeField] private TMP_InputField searchInput; // 标题栏中的共用输入框。
 
     private readonly Dictionary<ItemSlot_UI, CanvasGroup> slotGroups = new();
     private readonly Dictionary<RuntimeItemDefinition, string> englishNames = new();
+    private Button clearButton; // 搜索框右侧的小扫把按钮。
     private Inventory inventory; // 当前面板绑定的真实库存。
     private string query = string.Empty; // 已去除首尾空格的搜索词。
 
@@ -30,7 +33,10 @@ public sealed class InventoryBagSearch : MonoBehaviour
 
     private void OnEnable()
     {
+        clearButton = searchInput.transform.Find(ClearButtonName)?.GetComponent<Button>();
         searchInput.onValueChanged.AddListener(OnSearchTextChanged);
+        if (clearButton != null)
+            clearButton.onClick.AddListener(ClearSearch);
         FlatWorldLocalizationService.LanguageChanged += OnLanguageChanged;
         OnSearchTextChanged(searchInput.text);
     }
@@ -38,6 +44,8 @@ public sealed class InventoryBagSearch : MonoBehaviour
     private void OnDisable()
     {
         searchInput.onValueChanged.RemoveListener(OnSearchTextChanged);
+        if (clearButton != null)
+            clearButton.onClick.RemoveListener(ClearSearch);
         FlatWorldLocalizationService.LanguageChanged -= OnLanguageChanged;
     }
 
@@ -80,7 +88,18 @@ public sealed class InventoryBagSearch : MonoBehaviour
     private void OnSearchTextChanged(string value)
     {
         query = value?.Trim() ?? string.Empty;
+        if (clearButton != null)
+            clearButton.interactable = !string.IsNullOrEmpty(value);
         RefreshAllSlots();
+    }
+
+    /// <summary>手机端无需重新呼出软键盘即可一键清空搜索。</summary>
+    private void ClearSearch()
+    {
+        if (string.IsNullOrEmpty(searchInput.text))
+            return;
+
+        searchInput.text = string.Empty;
     }
 
     /// <summary>语言切换后刷新显示名对应的匹配结果。</summary>

@@ -2821,6 +2821,105 @@ public static partial class RuntimeUIPrefabBuilder
         sortLayout.preferredHeight = organizeRect.rect.height;
         ConfigureButtonVisual(sortButton, false, "排序");
         ConfigureButtonVisual(organizeButton, false, "整理");
+        ConfigureBagSearchClearButton(root);
+    }
+
+    /// <summary>在行囊搜索框右侧安装手机端可直接点击的扫把清空按钮。</summary>
+    private static void ConfigureBagSearchClearButton(GameObject root)
+    {
+        Transform searchTransform = FindTransform(root.transform, "FWUI_BagSearch");
+        TMP_InputField searchInput = searchTransform != null
+            ? searchTransform.GetComponent<TMP_InputField>()
+            : null;
+        if (searchInput == null)
+            throw new MissingComponentException("UI_Bag.prefab 缺少 FWUI_BagSearch 输入框。");
+
+        Transform existing = searchTransform.Find("清空搜索");
+        Button clearButton = existing != null ? existing.GetComponent<Button>() : null;
+        if (clearButton == null)
+        {
+            GameObject buttonObject = CreateUIObject(
+                "清空搜索",
+                searchTransform,
+                typeof(CanvasRenderer),
+                typeof(Image),
+                typeof(Button));
+            clearButton = buttonObject.GetComponent<Button>();
+        }
+
+        RectTransform clearRect = clearButton.GetComponent<RectTransform>();
+        clearRect.anchorMin = new Vector2(1f, 0.5f);
+        clearRect.anchorMax = new Vector2(1f, 0.5f);
+        clearRect.pivot = new Vector2(1f, 0.5f);
+        clearRect.anchoredPosition = new Vector2(-5f, 0f);
+        clearRect.sizeDelta = new Vector2(44f, 44f);
+
+        Image background = clearButton.GetComponent<Image>() ?? clearButton.gameObject.AddComponent<Image>();
+        background.sprite = null;
+        background.type = Image.Type.Simple;
+        background.color = SurfaceRaised;
+        background.raycastTarget = true;
+        clearButton.targetGraphic = background;
+        clearButton.navigation = new Navigation { mode = Navigation.Mode.None };
+        ConfigureButtonColors(clearButton);
+
+        RectTransform textViewport = searchInput.textViewport;
+        if (textViewport != null)
+        {
+            Vector2 viewportSize = textViewport.sizeDelta;
+            viewportSize.x = -72f;
+            textViewport.sizeDelta = viewportSize;
+            Vector2 viewportPosition = textViewport.anchoredPosition;
+            viewportPosition.x = -24f;
+            textViewport.anchoredPosition = viewportPosition;
+        }
+
+        Transform iconTransform = clearButton.transform.Find("扫把图标");
+        RectTransform iconRect;
+        if (iconTransform == null)
+        {
+            GameObject iconObject = CreateUIObject("扫把图标", clearButton.transform);
+            iconRect = iconObject.GetComponent<RectTransform>();
+        }
+        else
+        {
+            iconRect = iconTransform.GetComponent<RectTransform>();
+        }
+
+        iconRect.anchorMin = new Vector2(0.5f, 0.5f);
+        iconRect.anchorMax = new Vector2(0.5f, 0.5f);
+        iconRect.pivot = new Vector2(0.5f, 0.5f);
+        iconRect.anchoredPosition = Vector2.zero;
+        iconRect.sizeDelta = new Vector2(24f, 24f);
+        iconRect.localRotation = Quaternion.Euler(0f, 0f, -34f);
+
+        ConfigureBroomPart(iconRect, "扫把柄", new Vector2(3f, 18f), new Vector2(0f, 4f), Cream);
+        ConfigureBroomPart(iconRect, "扫把头", new Vector2(14f, 8f), new Vector2(0f, -8f), Cream);
+    }
+
+    /// <summary>创建或更新扫把图标的一块纯色几何。</summary>
+    private static void ConfigureBroomPart(
+        RectTransform parent,
+        string name,
+        Vector2 size,
+        Vector2 position,
+        Color color)
+    {
+        Transform existing = parent.Find(name);
+        Image image = existing != null ? existing.GetComponent<Image>() : null;
+        if (image == null)
+            image = CreateImage(name, parent, color);
+
+        image.sprite = null;
+        image.type = Image.Type.Simple;
+        image.color = color;
+        image.raycastTarget = false;
+        RectTransform rect = image.rectTransform;
+        rect.anchorMin = new Vector2(0.5f, 0.5f);
+        rect.anchorMax = new Vector2(0.5f, 0.5f);
+        rect.pivot = new Vector2(0.5f, 0.5f);
+        rect.anchoredPosition = position;
+        rect.sizeDelta = size;
     }
 
     /// <summary>获取现有行囊操作按钮，缺少时基于公共控件创建默认尺寸。</summary>
