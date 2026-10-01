@@ -23,7 +23,7 @@ public sealed class PlayerCreationTemplateSO : ScriptableObject
     [Serializable]
     public sealed class MovementSettings
     {
-        [Min(0f)] public float speed = 5f;
+        [Min(0f)] public float speed = 3.5f;
         [Min(0f)] public float slowDownSpeed = 5f;
         [Min(0f)] public float endSpeed = 0.1f;
         [Min(0f)] public float moveStaminaConsume = 0f;

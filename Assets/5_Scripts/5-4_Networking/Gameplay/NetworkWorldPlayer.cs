@@ -22,7 +22,7 @@ namespace FlatWorld.Networking.Gameplay
             new Color(0.95f, 0.2f, 0.58f)
         };
 
-        [SerializeField, Min(0.1f)] private float movementSpeed = 5f;
+        [SerializeField, Min(0.1f)] private float movementSpeed = 3.5f;
         [SerializeField, Min(1f)] private float cameraOrthographicSize = 8f;
         [SerializeField, Min(0.01f)] private float networkSendInterval = 0.033f;
         [SerializeField, Min(0.1f)] private float remotePositionLerpSpeed = 18f;

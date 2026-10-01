@@ -62,7 +62,7 @@ public sealed class PlayerCreationTemplateConfig
     [Serializable]
     public sealed class MovementSettings
     {
-        [JsonProperty("speed")] public float Speed = 5f;
+        [JsonProperty("speed")] public float Speed = 3.5f;
         [JsonProperty("slowDownSpeed")] public float SlowDownSpeed = 5f;
         [JsonProperty("endSpeed")] public float EndSpeed = 0.1f;
         [JsonProperty("moveStaminaConsume")] public float MoveStaminaConsume;
