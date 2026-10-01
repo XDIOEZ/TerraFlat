@@ -45,6 +45,25 @@ public static class ModuleJsonConfigurator
         Prepare(module, itemId, moduleName, moduleId, json).Apply(module);
     }
 
+    /// <summary>装备放在库存中时没有运行时 Module，因此直接从定义参数还原静态装备效果。</summary>
+    public static List<EquipmentInstance> ReadEquipmentInstances(
+        string itemId,
+        string moduleName,
+        string moduleId,
+        string json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+            return new List<EquipmentInstance>();
+
+        JObject parameters = ParseParameters(itemId, moduleName, moduleId, json);
+        JToken token = parameters[nameof(Mod_EquipmentStore.equipmentInstances)];
+        if (token == null || token.Type == JTokenType.Null)
+            return new List<EquipmentInstance>();
+
+        JsonSerializer serializer = JsonSerializer.Create(Settings);
+        return token.ToObject<List<EquipmentInstance>>(serializer) ?? new List<EquipmentInstance>();
+    }
+
     /// <summary>
     /// 模块定义的只读配置计划。解析、严格校验与特殊字段拆分只执行一次，
     /// 每次出生仍向模块实例重新写入当前配置，避免复用对象保留上一次的玩法字段。
@@ -347,7 +366,8 @@ public static class ModuleJsonConfigurator
                 [nameof(EquipmentInstance_Bag)] = typeof(EquipmentInstance_Bag),
                 [nameof(EquipmentInstance_Speed)] = typeof(EquipmentInstance_Speed),
                 [nameof(EquipmentInstance_Defense)] = typeof(EquipmentInstance_Defense),
-                [nameof(EquipmentInstance_WaterInsulation)] = typeof(EquipmentInstance_WaterInsulation)
+                [nameof(EquipmentInstance_WaterInsulation)] = typeof(EquipmentInstance_WaterInsulation),
+                [nameof(EquipmentInstance_ThermalInsulation)] = typeof(EquipmentInstance_ThermalInsulation)
             };
 
         public override bool CanWrite => false;

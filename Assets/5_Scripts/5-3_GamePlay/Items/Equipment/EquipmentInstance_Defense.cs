@@ -27,9 +27,9 @@ public partial class EquipmentInstance_Defense : EquipmentInstance
         if (_isApplied)
             return;
 
-        var damageReceiver = item.itemMods.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
+        var damageReceiver = item?.itemMods?.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
         if (damageReceiver == null)
-            throw new MissingComponentException($"[{nameof(EquipmentInstance_Defense)}] Cannot find {nameof(Mod_DamageReceiver)} on item {item?.name}");
+            return;
 
         CombatDefense bonus = ResolveDefenseBonus();
         appliedDefense = new CombatDefense(bonus.Cutting, bonus.Piercing, bonus.Chopping, bonus.Blunt);

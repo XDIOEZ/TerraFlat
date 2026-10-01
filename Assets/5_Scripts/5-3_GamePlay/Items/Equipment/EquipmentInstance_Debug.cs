@@ -11,6 +11,9 @@ public partial class EquipmentInstance_Debug : EquipmentInstance
     public string DebugInfo_Save = "Saving Bag Equipment Instance";
     public string DebugInfo_Update = "Bag Equipment Instance";
 
+    [MemoryPackIgnore]
+    public override bool RequiresUpdate => true;
+
     public override void Equip(Item item)
     {
         Debug.Log(DebugInfo_Load);
