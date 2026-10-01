@@ -298,6 +298,7 @@ namespace FlatWorld.WorldModel
         private const uint CompanionSalt = 0x636f6d70U;
         private const uint OffsetSalt = 0x6f666673U;
         private const uint PatchSalt = 0x70617463U;
+        private const string TreeTag = "Tree";
 
         #endregion
 
@@ -370,6 +371,7 @@ namespace FlatWorld.WorldModel
 
                     TerrainCell cell = terrain.GetCell(x, y);
                     hosts.Clear();
+                    bool treeCellClaimed = false;
                     if (!IsValidNaturalCell(cell, terrain, x, y))
                         continue;
 
@@ -399,6 +401,11 @@ namespace FlatWorld.WorldModel
                             continue;
                         }
 
+                        bool isTreeRule = RuleProvidesTag(rule, TreeTag);
+                        // 同一世界格只允许一棵树占位，避免不同树种独立判定后叠在一起生成。
+                        if (isTreeRule && treeCellClaimed)
+                            continue;
+
                         for (int itemIndex = 0; itemIndex < rule.ItemCount; itemIndex++)
                         {
                             int guid = CreateGuid(request, worldX, worldY,
@@ -414,6 +421,12 @@ namespace FlatWorld.WorldModel
                                 {
                                     hosts[tag] = guid;
                                 }
+                            }
+
+                            if (isTreeRule)
+                            {
+                                treeCellClaimed = true;
+                                break;
                             }
                         }
                     }

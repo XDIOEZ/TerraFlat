@@ -259,6 +259,7 @@ MonoBehaviour:
   - surface.forest.appleTree
   - surface.forest.orangeTree
   - surface.forest.pineTree
+  - surface.forest.oakTree
   - surface.forest.beehive
   - surface.forest.radish
   - surface.forest.twine

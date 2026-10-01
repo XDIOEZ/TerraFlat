@@ -12,12 +12,12 @@
       "patchRadius": 2.5,
       "patchChance": 1,
       "biomeMask": 4,
-      "minTemperature": 0,
+      "minTemperature": 0.65,
       "maxTemperature": 1,
-      "minPrecipitation": 0,
+      "minPrecipitation": 0.3,
       "maxPrecipitation": 1,
-      "minHeight": 0,
-      "maxHeight": 1,
+      "minHeight": 0.5,
+      "maxHeight": 0.56,
       "minRiverFloodplainStrength": 0,
       "providedTags": [
         "Tree"
