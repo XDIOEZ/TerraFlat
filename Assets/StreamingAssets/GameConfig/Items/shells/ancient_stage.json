@@ -522,6 +522,13 @@
           }
         },
         "harvestRequirement": {
+          "prefab": "Module_ResourceHarvest",
+          "id": "Mod_ResourceHarvest",
+          "enabled": true,
+          "data": {
+            "BitData": "",
+            "Type": 0
+          },
           "parameters": {
             "requiredTool": 1,
             "minimumTier": 4
