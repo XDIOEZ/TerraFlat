@@ -27,7 +27,7 @@ public partial class GhostAISaveData
 /// </summary>
 public class Mod_AI_Ghost : Module, IAIActor, ISimulationRangeAware
 {
-    private const string ModuleId = "Mod_AI_Ghost";
+    private const string ModuleId = "AI_Ghost";
     private const string RadianceBuffId = "光耀";
     private const float LightEpsilon = 0.0001f;
 
@@ -474,7 +474,7 @@ public class Mod_AI_Ghost : Module, IAIActor, ISimulationRangeAware
         if (!_loggedMissingRadianceBuff)
         {
             _loggedMissingRadianceBuff = true;
-            Debug.LogWarning("[Mod_AI_Ghost] 找不到光耀 Buff 或 Mod_BuffManager。", this);
+            Debug.LogWarning("[AI_Ghost] 找不到光耀 Buff 或 BuffManager。", this);
         }
     }
 

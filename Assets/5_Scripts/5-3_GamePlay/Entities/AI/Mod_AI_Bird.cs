@@ -69,7 +69,7 @@ public sealed partial class Mod_AI_Bird : Module, IAIActor, IItemModuleDependenc
 
     public Ex_ModData Data = new();
     public override ModuleData _Data { get => Data; set => Data = (Ex_ModData)value; }
-    public override string CanonicalModuleId => "Mod_AI_Bird";
+    public override string CanonicalModuleId => "AI_Bird";
     public override ModuleTickMode TickMode => ModuleTickMode.EveryFrame;
     public float groundSpeed = 0.5f;
     [Tooltip("离地前在地面助跑的速度。"), Min(0.1f)] public float takeoffRunSpeed = 2.6f;
@@ -127,8 +127,8 @@ public sealed partial class Mod_AI_Bird : Module, IAIActor, IItemModuleDependenc
     /// <summary>从模块注册表获取依赖，表现引用由显式外壳构建器绑定。</summary>
     public void BindModuleDependencies(ItemMods modules)
     {
-        mover = modules.RequireSingleModById<Mod_Mover_AI>(ModText.Mod_Mover);
-        tileReceiver = modules.RequireSingleModById<Mod_TileEffectReceiver>(ModText.Mod_TileEffectReceiver);
+        mover = modules.RequireSingleModById<Mod_Mover_AI>(ModText.Mover);
+        tileReceiver = modules.RequireSingleModById<Mod_TileEffectReceiver>(ModText.TileEffectReceiver);
         health = modules.RequireSingleModById<Mod_DamageReceiver>(ModText.Hp);
         food = modules.RequireSingleModById<Mod_Food>(ModText.Food);
         threatDetector = modules.RequireSingleModById<Mod_ItemDetector>(ModText.Detector);
@@ -511,7 +511,12 @@ public sealed partial class Mod_AI_Bird : Module, IAIActor, IItemModuleDependenc
     /// <summary>沿现有步行方向或逃离方向选出连续可走的助跑线。</summary>
     private bool TryChooseRunUpDirection(out Vector2 direction)
     {
-        Vector2 preferred = escapeRemaining > 0f ? escapeDirection : mover.NavigationAgent.Velocity;
+        // 导航代理尚未完成装配时退回移动模块的真实驱动速度，避免起飞首帧空引用。
+        Vector2 preferred = escapeRemaining > 0f
+            ? escapeDirection
+            : mover.NavigationAgent != null
+                ? mover.NavigationAgent.Velocity
+                : mover.DrivenVelocity;
         if (preferred.sqrMagnitude < 0.0001f && state.HasTarget)
             preferred = WorldTopologyRuntime.ShortestDelta(body.position, new Vector2(state.TargetX, state.TargetY));
         if (preferred.sqrMagnitude < 0.0001f) preferred = UnityEngine.Random.insideUnitCircle;
