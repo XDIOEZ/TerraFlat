@@ -117,6 +117,7 @@ public sealed class FoodNutritionService
     private const float PlayerInitialFatMaximum = 100f;
     private const float PlayerNaturalVitaminLossPerSecond = 0.001f;
     private const float DefaultNaturalVitaminLossPerSecond = 0.01f;
+    private const bool PlayerFatMaximumGrowthEnabled = false; // 暂停“吃满后继续提高脂肪上限”，保留规则便于后续重新调参。
     private const float PlayerFatMaximumCap = PlayerInitialFatMaximum * 2f;
     private const float PlayerFatMaximumGrowthRatio = 0.5f;
 
@@ -257,7 +258,7 @@ public sealed class FoodNutritionService
 
         consumer.Data.nutrition = consumer.Data.nutrition + absorbed;
 
-        if (playerFatWasFull)
+        if (PlayerFatMaximumGrowthEnabled && playerFatWasFull)
         {
             float availableFatMaximumGrowth = Mathf.Max(0f, PlayerFatMaximumCap - fatMaximumBefore);
             float fatMaximumGrowth = Mathf.Min(
