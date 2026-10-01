@@ -17,6 +17,8 @@ description: "Use when: 定位或修改 FlatWorld 的 Item/Module 组合架构�
 
 ## 主链与不变量
 
+- 定义实体装配存档模块之前先建立通用装备组件；不能依赖稍后的 `Item.Load`，也不能把模块能力 ID 当作具体 Prefab 地址。
+
 - `Item.RuntimeGeneration` 是每次 Load 更新的运行态代际，不进存档；纯数据战斗 Bridge 将其与持久 UID、world/dimension 一起构成外部身份。对象池复用、读档重载后即使 UID 相同，也不能接收上一代事件；它与 ItemMgr 感知索引自身的注册代际不是同一个生命周期。
 
 - 新建物品尚无正式美术、明确需要占位贴图时，优先复用 `Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png`，禁止借用其他具体物品的贴图充当通用占位。JSON `visual.spriteAddress` 使用 `Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]`，资源标签为 `ItemSprite`。内容工坊图标留空时由 `ContentWorkshopRepository.ResolveItemIcon` 统一提供预览与保存图标；手选正式素材优先，不能将现有物品的加载错误静默改成占位图。

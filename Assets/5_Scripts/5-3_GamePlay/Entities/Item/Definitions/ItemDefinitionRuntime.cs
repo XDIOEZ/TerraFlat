@@ -69,6 +69,8 @@ public static class ItemDefinitionRuntime
         item.BindData(itemData);
         item.gameObject.name = definition.Id;
         ApplyVisual(definition, item);
+        // 通用模块先建立实体组件，再装配存档模块，避免把能力 ID 当作预制件地址。
+        item.EnsureUniversalEquipmentModule();
         EnsureModuleComponents(gameRes, definition, item, itemData);
     }
 

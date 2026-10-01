@@ -568,7 +568,7 @@ public abstract class Item : MonoBehaviour
     }
 
     /// <summary>装备能力属于 Item 的通用组合能力，按需补齐模块而不是复制到每个物品 Prefab。</summary>
-    private void EnsureUniversalEquipmentModule()
+    internal void EnsureUniversalEquipmentModule()
     {
         if (GetComponentInChildren<Mod_Equipment>(true) != null ||
             GetComponentInChildren<Mod_EquipmentRuntime>(true) != null)

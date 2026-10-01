@@ -45,11 +45,14 @@ namespace FlatWorld.GameplayMCP
             [ToolParameter("Query source: runtime for instantiated Items, ecology for deterministic natural placements, terrain for environment layers, tile for surface tile identity, drops for ECS dropped items.", Required = false, DefaultValue = "runtime")]
             public string source { get; set; }
 
-            [ToolParameter("Search text. runtime/drops accept an exact stable ItemDefinition id or exact localized item name. tile accepts an exact numeric tile id, Tile_Block id, tileItemName, or displayName.", Required = false)]
+            [ToolParameter("Search text. runtime/ecology/drops accept an exact stable ItemDefinition id or exact localized item name. tile accepts an exact numeric tile id, Tile_Block id, tileItemName, or displayName.", Required = false)]
             public string query { get; set; }
 
             [ToolParameter("Backward-compatible exact stable ItemDefinition id filter. When set, it takes precedence over query. Empty means any id.", Required = false)]
             public string itemId { get; set; }
+
+            [ToolParameter("Ecology only: include placements already harvested or destroyed. Defaults to true; removed is reported for each match.", Required = false, DefaultValue = "true")]
+            public bool includeRemoved { get; set; } = true;
 
             [ToolParameter("Required item tag. Empty means any tag.", Required = false)]
             public string tag { get; set; }
@@ -111,7 +114,10 @@ namespace FlatWorld.GameplayMCP
             bool? pickup = TryReadNullableBool(parameters?["pickup"]);
 
             if (string.Equals(source, "ecology", StringComparison.OrdinalIgnoreCase))
-                return QueryEcology(player, itemId, limit);
+            {
+                bool includeRemoved = !bool.TryParse(parameters?["includeRemoved"]?.ToString(), out bool parsedIncludeRemoved) || parsedIncludeRemoved;
+                return QueryEcology(player, itemId, query, includeRemoved, limit);
+            }
 
             if (string.Equals(source, "tile", StringComparison.OrdinalIgnoreCase))
             {
@@ -318,12 +324,15 @@ namespace FlatWorld.GameplayMCP
         /// 查询已加载 ChunkRuntime 的确定性自然物放置结果。
         /// 这里只暴露生成事实，真正交互仍必须等待正常 ChunkView 绑定并通过真实玩法 API 完成。
         /// </summary>
-        private static object QueryEcology(Player player, string itemId, int limit)
+        private static object QueryEcology(Player player, string itemId, string query, bool includeRemoved, int limit)
         {
             ChunkMgr chunkMgr = ChunkMgr.Instance;
             if (chunkMgr == null)
                 return new ErrorResponse("chunk_runtime_not_ready: ChunkMgr 尚未就绪。");
 
+            // 生态目标沿用目录的稳定 ID 和本地化名称匹配，不按显示名猜测物品身份。
+            HashSet<string> resolvedItemIds = ResolveCatalogItemIds(itemId, query);
+            bool hasIdentityFilter = !string.IsNullOrWhiteSpace(itemId) || !string.IsNullOrWhiteSpace(query);
             var matches = chunkMgr.Chunks.Values
                 .Where(chunk => chunk != null &&
                                 chunk.DataStatus == ChunkDataStatus.Ready &&
@@ -336,17 +345,16 @@ namespace FlatWorld.GameplayMCP
                         chunk.Address.ChunkOrigin.X + placement.LocalX + 0.5f + placement.OffsetX,
                         chunk.Address.ChunkOrigin.Y + placement.LocalY + 0.5f + placement.OffsetY)
                 }))
-                .Where(entry => string.IsNullOrEmpty(itemId) ||
-                                string.Equals(
-                                    entry.Placement.ItemId,
-                                    itemId,
-                                    StringComparison.OrdinalIgnoreCase))
+                .Where(entry => !hasIdentityFilter || resolvedItemIds.Contains(entry.Placement.ItemId ?? string.Empty))
                 .Select(entry => new
                 {
                     entry.Placement,
                     entry.Position,
+                    // 删除状态取世界权威记录，生成点还存在不代表现在仍能采集。
+                    Removed = chunkMgr.IsNaturalItemRemoved(entry.Chunk.Address, entry.Placement.Guid),
                     Distance = WorldTopologyRuntime.Distance(player.transform.position, entry.Position)
                 })
+                .Where(entry => includeRemoved || !entry.Removed)
                 .OrderBy(entry => entry.Distance)
                 .ThenBy(entry => entry.Placement.Guid)
                 .Take(limit)
@@ -360,6 +368,7 @@ namespace FlatWorld.GameplayMCP
                     ["guid"] = matches[i].Placement.Guid,
                     ["id"] = matches[i].Placement.ItemId,
                     ["rule"] = matches[i].Placement.RuleId,
+                    ["removed"] = matches[i].Removed,
                     ["position"] = new JArray(
                         Round(matches[i].Position.x),
                         Round(matches[i].Position.y)),
@@ -371,6 +380,8 @@ namespace FlatWorld.GameplayMCP
             {
                 source = "ecology",
                 item_id = itemId,
+                query,
+                include_removed = includeRemoved,
                 count = matches.Length,
                 matches = result
             });
