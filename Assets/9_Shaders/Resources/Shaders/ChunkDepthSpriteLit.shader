@@ -157,6 +157,13 @@ Shader "FlatWorld/2D/Chunk Depth Sprite Lit"
                 float inset = min(width * .49, _MainTex_TexelSize.x * .5);
                 uv.x = input.region.x + inset + frac(u + phase / 6.28318530718) * (width - inset * 2);
             }
+            else if (input.animation.x > 4.5 && input.animation.x < 5.5)
+            {
+                // 世界火焰：首帧 Sprite 提供几何和 UV 宽度，GPU 只沿横向图集切帧。
+                float frameCount = max(1, floor(input.animation.w + .5));
+                float frame = fmod(floor(_Time.y * input.animation.y + input.animation.z), frameCount);
+                uv.x += frame * max(.000001, input.region.z - input.region.x);
+            }
             return uv;
         }
         half4 Surface(Varyings input, float2 uv)
@@ -233,7 +240,7 @@ Shader "FlatWorld/2D/Chunk Depth Sprite Lit"
             {
                 float2 uv = ResolveUv(input);
                 half4 main = Surface(input, uv);
-                if (_DepthUnlit > .5) return main;
+                if (_DepthUnlit > .5 || (input.animation.x > 4.5 && input.animation.x < 5.5)) return main;
                 SurfaceData2D surfaceData; InputData2D inputData;
                 InitializeSurfaceData(main.rgb, main.a, SAMPLE_TEXTURE2D(_MaskTex, sampler_MaskTex, uv), surfaceData);
                 InitializeInputData(uv, input.lightingUV, inputData);
@@ -253,6 +260,7 @@ Shader "FlatWorld/2D/Chunk Depth Sprite Lit"
             half4 FragNormals(Varyings input) : SV_Target
             {
                 clip(.5 - _DepthEmissive);
+                if (input.animation.x > 4.5 && input.animation.x < 5.5) clip(-1);
                 float2 uv = ResolveUv(input);
                 half4 main = Surface(input, uv);
                 half3 normal = UnpackNormal(SAMPLE_TEXTURE2D(_NormalMap, sampler_NormalMap, uv));

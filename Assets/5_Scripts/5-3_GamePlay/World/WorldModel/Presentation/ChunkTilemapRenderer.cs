@@ -18,6 +18,13 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRend
     [SerializeField] private Material blockingMaterial;
     [SerializeField] private Material stylizedWaterMaterial;
     [SerializeField] private Material realisticWaterMaterial;
+    [SerializeField] private Sprite fireSprite;
+    [SerializeField] private Material fireMaterial;
+
+    private const int FireAnimationMode = 5;
+    private const int FireFrameCount = 8;
+    private const float FireFramesPerSecond = 12f;
+    private const int FireDepthOrder = 1;
 
     private readonly List<NeighbourTerrainSubscription> neighbourTerrainSubscriptions = new(8);
     private readonly ChunkTerrainData[] neighbourTerrains = new ChunkTerrainData[9]; // 八方向邻区在订阅时解析一次。
@@ -115,6 +122,7 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRend
             batchPresentationComplete = false;
             ChunkBatchRendererGroupService.RegisterOwner(this, GetBatchWorldBounds(chunk.Terrain));
             RefreshAllBatchVisuals(chunk.Terrain);
+            RefreshAllFireVisuals(chunk.Terrain);
             batchPresentationComplete = true;
             BindMechanicalPresentation();
             BatchPresentationRebuilt?.Invoke();
@@ -179,6 +187,7 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRend
         blockingMesh = new ChunkGroundMeshRenderer(transform, boundChunk.Terrain.Width,
             boundChunk.Terrain.Height, blockingMaterial, ChunkBatchRendererGroupService.VisualLayer.Blocking);
         RefreshAllBatchVisuals(boundChunk.Terrain);
+        RefreshAllFireVisuals(boundChunk.Terrain);
         BatchPresentationRebuilt?.Invoke();
     }
 
@@ -235,6 +244,7 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRend
         ChunkBatchRendererGroupService.UnregisterOwner(this);
         ChunkBatchRendererGroupService.RegisterOwner(this, GetBatchWorldBounds(terrain));
         RefreshAllBatchVisuals(terrain);
+        RefreshAllFireVisuals(terrain);
         batchPresentationComplete = true;
         ValidateBatchPresentation("Repair", terrain);
         BatchPresentationRebuilt?.Invoke();
@@ -269,6 +279,11 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRend
     {
         if (boundChunk?.Terrain == null)
             return;
+        if (changed.Kind == TerrainChangeKind.Fire)
+        {
+            RefreshFireVisual(boundChunk.Terrain, changed.LocalCell.X, changed.LocalCell.Y);
+            return;
+        }
         if (changed.Kind != TerrainChangeKind.Cell &&
             changed.Kind != TerrainChangeKind.TileStack &&
             changed.Kind != TerrainChangeKind.Environment && changed.Kind != TerrainChangeKind.Liquid)
@@ -279,6 +294,48 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRend
         // 高度边、岸线、墙脚和四角水深最多依赖一圈邻格，因此只刷新 3x3 脏区。
         RefreshBatchArea(boundChunk.Terrain, changed.LocalCell.X, changed.LocalCell.Y, 1);
     }
+
+    #region 世界火焰表现
+
+    /// <summary>绑定或重建时只扫描当前区块火层；没有火的区块不会创建 DepthMesh。</summary>
+    private void RefreshAllFireVisuals(ChunkTerrainData terrain)
+    {
+        if (terrain == null)
+            return;
+        for (int y = 0; y < terrain.Height; y++)
+        for (int x = 0; x < terrain.Width; x++)
+            if (terrain.GetFire(x, y) != 0)
+                RefreshFireVisual(terrain, x, y);
+    }
+
+    /// <summary>火格复用树木的整格 Y 行合批；动画完全由 GPU 根据时间切换横向图集帧。</summary>
+    private void RefreshFireVisual(ChunkTerrainData terrain, int x, int y)
+    {
+        int entityId = y * terrain.Width + x;
+        byte intensity = terrain.GetFire(x, y);
+        if (intensity == 0)
+        {
+            depthMesh?.Remove(ChunkDepthMeshRenderer.FireDomain, entityId, 0);
+            return;
+        }
+        if (fireSprite == null || fireMaterial == null)
+            throw new InvalidOperationException("ChunkView 缺少世界火焰 Sprite 或材质配置。");
+
+        Int2 origin = boundChunk.Address.ChunkOrigin;
+        Vector3 local = new(x + 0.5f, y, 0f);
+        Vector3 world = transform.TransformPoint(local);
+        float strength = intensity / 255f;
+        float scale = Mathf.Lerp(0.65f, 1f, strength);
+        Matrix4x4 matrix = Matrix4x4.TRS(world, Quaternion.identity, new Vector3(scale, scale, 1f));
+        uint phaseSeed = unchecked((uint)(origin.X + x) * 73856093u ^ (uint)(origin.Y + y) * 19349663u);
+        float phase = phaseSeed % FireFrameCount;
+        Vector4 animation = new(FireAnimationMode, FireFramesPerSecond, phase, FireFrameCount);
+        Color tint = new(1f, 1f, 1f, Mathf.Lerp(0.72f, 1f, strength));
+        DepthMesh.Set(ChunkDepthMeshRenderer.FireDomain, entityId, 0, fireSprite, fireMaterial,
+            matrix, world, FireDepthOrder, tint, animation: animation);
+    }
+
+    #endregion
 
     /// <summary>水体风格切换后，把现有水格迁移到新材质批次。</summary>
     private void HandleWaterVisualStyleChanged()

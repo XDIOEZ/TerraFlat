@@ -225,6 +225,7 @@ namespace FlatWorld.WorldModel
         private Dictionary<string, float[]> _environmentLayers;
         private Dictionary<int, int[]> _extendedTileStacks;
         private byte[] _grass;
+        private byte[] _fire;
         private long _revision;
         private long _blockingRevision;
 
@@ -515,6 +516,36 @@ namespace FlatWorld.WorldModel
             return copy;
         }
 
+        #region 火层
+
+        /// <summary>读取格子火势；0 表示没有世界火焰，1~255 表示火势强度。</summary>
+        public byte GetFire(int x, int y)
+        {
+            ThrowIfDisposed();
+            return _fire == null ? (byte)0 : _fire[GetIndex(x, y)];
+        }
+
+        /// <summary>修改格子火势；首次出现火焰时才租用整块数组，空区块不承担常驻火层内存。</summary>
+        public void SetFire(int x, int y, byte intensity)
+        {
+            ThrowIfDisposed();
+            int index = GetIndex(x, y);
+            if (_fire == null)
+            {
+                if (intensity == 0)
+                    return;
+                _fire = ArrayPool<byte>.Shared.Rent(CellCount);
+                Array.Clear(_fire, 0, CellCount);
+            }
+
+            if (_fire[index] == intensity)
+                return;
+            _fire[index] = intensity;
+            MarkChanged(x, y, TerrainChangeKind.Fire);
+        }
+
+        #endregion
+
         /// <summary>把所有超过三层的地块列表完整复制一份，防止外部改到原数据。</summary>
         public IReadOnlyDictionary<int, int[]> CopyExtendedTileStacks()
         {
@@ -680,6 +711,12 @@ namespace FlatWorld.WorldModel
                 ArrayPool<byte>.Shared.Return(_grass);
                 _grass = null;
             }
+            if (_fire != null)
+            {
+                Array.Clear(_fire, 0, Math.Min(CellCount, _fire.Length));
+                ArrayPool<byte>.Shared.Return(_fire);
+                _fire = null;
+            }
             Changed = null;
             LiquidBatchChanged = null;
         }
@@ -757,7 +794,9 @@ namespace FlatWorld.WorldModel
         /// <summary>格子是否被物体占用发生了变化；目前这类通知由 ChunkOccupancyData 单独负责。</summary>
         Occupancy,
         /// <summary>液体身份或深度改变，显示、导航和玩法应重新读取同一权威格。</summary>
-        Liquid
+        Liquid,
+        /// <summary>世界格子火焰强度改变；实体自身燃烧状态不属于这里。</summary>
+        Fire
     }
 
     /// <summary>一次“某个地形格子发生变化”的通知内容。</summary>

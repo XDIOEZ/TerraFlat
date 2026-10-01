@@ -90,6 +90,8 @@ MonoBehaviour:
   blockingMaterial: {fileID: 2100000, guid: a97c105638bdf8b4a8650670310a4cd3, type: 2}
   stylizedWaterMaterial: {fileID: 2100000, guid: 377979fffed94e07a2ec70118f552b1d, type: 2}
   realisticWaterMaterial: {fileID: 2100000, guid: c4a8f6d21b7e4c8095d3a1f6e2b7c4d9, type: 2}
+  fireSprite: {fileID: 1068388729, guid: 4a6dc12468324d7cac3f091ef7053ec3, type: 3}
+  fireMaterial: {fileID: 2100000, guid: a97c105638bdf8b4a8650670310a4cd3, type: 2}
 --- !u!114 &2007
 MonoBehaviour:
   m_ObjectHideFlags: 0

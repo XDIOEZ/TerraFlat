@@ -11,6 +11,7 @@ internal sealed partial class ChunkDepthMeshRenderer : IDisposable
     internal const int NaturalDomain = 0;
     internal const int MachineDomain = 1;
     internal const int BuildingDomain = 2;
+    internal const int FireDomain = 3;
     private readonly Transform parent;
     private readonly Dictionary<PartKey, Entry> entries = new();
     private readonly Dictionary<int, Row> rows = new();
