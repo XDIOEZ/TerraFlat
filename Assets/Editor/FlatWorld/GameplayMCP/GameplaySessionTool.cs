@@ -8,13 +8,13 @@ namespace FlatWorld.GameplayMCP
     /// <summary>为 Agent 提供无需视觉导航菜单的存档会话启动入口。</summary>
     [McpForUnityTool(
         "gameplay_session",
-        Description = "Manage the FlatWorld gameplay session without visual menu navigation. Actions: status, list_saves, continue_save, create_world, save_exit. continue_save defaults to the most recent save and an isolated Library copy.",
+        Description = "Manage the FlatWorld gameplay session without visual menu navigation. Actions: status, list_saves, continue_save, create_world, reload_resources, save_exit. continue_save defaults to the most recent save and an isolated Library copy.",
         Group = "core")]
     public static class GameplaySessionTool
     {
         public sealed class Parameters
         {
-            [ToolParameter("One of: status, list_saves, continue_save, create_world, save_exit.", Required = false, DefaultValue = "status")]
+            [ToolParameter("One of: status, list_saves, continue_save, create_world, reload_resources, save_exit.", Required = false, DefaultValue = "status")]
             public string action { get; set; }
 
             [ToolParameter("Save name without .bytes. Empty means most recent save.", Required = false)]
@@ -101,6 +101,20 @@ namespace FlatWorld.GameplayMCP
                         timeout);
                     return new SuccessResponse("FlatWorld new-world request completed.", result);
                 }
+                case "reload_resources":
+                {
+                    GameRes resources = GameRes.Instance;
+                    bool started = resources != null && resources.RequestResourceReload();
+                    return new SuccessResponse("FlatWorld resource reload request completed.", new
+                    {
+                        ok = started,
+                        code = resources == null
+                            ? "resources_unavailable"
+                            : started ? "resource_reload_started" : "resource_reload_rejected",
+                        loadState = resources?.LoadState.ToString() ?? "Missing",
+                        lastError = resources?.LastLoadError ?? string.Empty
+                    });
+                }
                 case "save_exit":
                 {
                     float timeout = float.TryParse(parameters?["timeoutSeconds"]?.ToString(), out float parsedTimeout)
@@ -115,7 +129,7 @@ namespace FlatWorld.GameplayMCP
                     return new SuccessResponse("FlatWorld gameplay session status.", observation);
                 }
                 default:
-                    return new ErrorResponse("Unknown action. Use status, list_saves, continue_save, create_world, or save_exit.");
+                    return new ErrorResponse("Unknown action. Use status, list_saves, continue_save, create_world, reload_resources, or save_exit.");
             }
         }
     }

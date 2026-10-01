@@ -17,7 +17,7 @@ namespace FlatWorld.GameplayMCP
             return new SuccessResponse("FlatWorld GamePlayMCP capabilities.", new
             {
                 protocol = GameplayMcpRuntime.ProtocolVersion,
-                sessionActions = new[] { "status", "list_saves", "continue_save", "create_world", "save_exit" },
+                sessionActions = new[] { "status", "list_saves", "continue_save", "create_world", "reload_resources", "save_exit" },
                 controlActions = new[] { "status", "acquire", "release" },
                 observationTools = new[] { "gameplay_observe", "gameplay_query", "gameplay_aiecs_debug", "gameplay_chunk_render_debug", "gameplay_hydrology_debug" },
                 uiTool = "gameplay_ui",

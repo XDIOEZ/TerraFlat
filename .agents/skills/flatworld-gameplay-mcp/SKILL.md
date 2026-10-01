@@ -57,6 +57,8 @@ GamePlayMCP 复用项目已有 MCPForUnity 自定义工具发现机制，不另�
 
 创建新世界使用 `gameplay_session(action="create_world", isolated=true)`，默认把首个存档及后续保存都写入 Library 隔离目录；只有用户明确要求正式存档时才传 `isolated=false`。资源等待与世界等待共用单次调用时限，默认 60 秒、最长 120 秒；已经开始进入世界时只能查询状态，不能重复创建或改换存档目录。若返回 `world_entry_timeout`，先查 `gameplay_session(action="status")`，确认当前会话状态后再决定是否重试。需要保存并返回主菜单时使用 `gameplay_session(action="save_exit")`；它直接调用生产退出协程并保存当前世界。
 
+启动期资源加载失败且尚无玩家时，使用 `gameplay_session(action="reload_resources")` 调用正式 `GameRes.RequestResourceReload()`；它等价于 Alt+R 的安全重载入口，不需要玩家控制租约，也不会保存或退出世界。
+
 脚本重编译、Domain Reload、退出世界或重新进入 Play Mode 后，旧控制租约不可假定仍有效。必须重新执行 `status -> acquire -> observe`。
 
 ## 自主游玩循环

@@ -27,9 +27,12 @@ public partial class GhostAISaveData
 /// </summary>
 public class Mod_AI_Ghost : Module, IAIActor, ISimulationRangeAware
 {
-    private const string ModuleId = "AI_Ghost";
+    public const string ModuleId = "Mod_AI_Ghost";
     private const string RadianceBuffId = "光耀";
     private const float LightEpsilon = 0.0001f;
+
+    // 幽灵 AI 统一使用 JSON/Prefab 的稳定模块身份，避免资源目录解析到旧别名。
+    public override string CanonicalModuleId => ModuleId;
 
     /// <summary>光照强度严格大于该值时，幽灵才持续受到光耀伤害。</summary>
     public const float LightDamageThreshold = 0.5f;
