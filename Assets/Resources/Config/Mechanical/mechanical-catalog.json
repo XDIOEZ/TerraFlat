@@ -22,7 +22,7 @@
     { "Id": "CrossShaft", "Kind": "bridge", "Ports": "axis" },
     { "Id": "Millstone", "Kind": "consumer", "Ports": "axis", "Station": "millstone", "ProcessCapability": "grind", "RequiredRpm": 20, "TorqueLoad": 10, "ManualDriveTorque": 60, "ManualDriveRpm": 2, "ManualDriveSecondsPerPress": 3 },
     { "Id": "MechanicalBellows", "Kind": "bellows", "Ports": "all", "AxlePorts": ["left"], "RequiredRpm": 20, "TorqueLoad": 10 },
-    { "Id": "Sawmill", "Kind": "consumer", "Ports": "all", "Station": "sawmill", "RequiredRpm": 40, "TorqueLoad": 20 },
+    { "Id": "Sawmill", "Kind": "consumer", "Ports": "all", "Station": "sawmill", "ProcessCapability": "cut", "RequiredRpm": 40, "TorqueLoad": 20 },
     { "Id": "MechanicalHammer", "Kind": "consumer", "Ports": "axis", "Station": "mechanical_hammer", "RequiredRpm": 60, "TorqueLoad": 20 },
     {
       "Id": "Generator_Basic",
@@ -85,7 +85,6 @@
     { "Station": "hand_drill", "Input": "Stick_Wood", "Outputs": [{ "ItemName": "DrilledStick", "amount": 1 }], "WorkSeconds": 4 },
     { "Station": "hand_drill", "Input": "StoneSlab", "Outputs": [{ "ItemName": "DrilledStoneSlab", "amount": 1 }], "WorkSeconds": 6 },
     { "Station": "hand_drill", "Input": "Ore_Stone", "Outputs": [{ "ItemName": "DrilledStone", "amount": 1 }], "WorkSeconds": 6 },
-    { "Station": "sawmill", "Input": "Log", "Outputs": [{ "ItemName": "Plank", "amount": 4 }], "WorkSeconds": 6 },
     { "Station": "mechanical_hammer", "Input": "Ingot_RawIron", "Outputs": [{ "ItemName": "Ingot_WroughtIron", "amount": 1 }], "WorkSeconds": 8 },
     { "Station": "mechanical_hammer", "Input": "Ingot_WroughtIron", "Outputs": [{ "ItemName": "IronPlate", "amount": 1 }], "WorkSeconds": 8 },
     { "Station": "mechanical_hammer", "Input": "Ingot_Copper", "Outputs": [{ "ItemName": "CopperPlate", "amount": 1 }], "WorkSeconds": 8 },

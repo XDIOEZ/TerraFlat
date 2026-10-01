@@ -258,6 +258,15 @@
         "Wood",
         "Combustion.Fuel"
       ],
+      "processing": {
+        "cut": {
+          "inputAmount": 1,
+          "work": 6,
+          "outputs": [
+            { "itemId": "Plank", "amount": 4 }
+          ]
+        }
+      },
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Plants/Tree/item296.png",
         "rendererLocalPosition": {
