@@ -38,6 +38,7 @@ description: "Use when: 定位或修改 FlatWorld 的建筑放置预览、安装
 - 火把的手持职责与落地建筑本体保持分离：落地后统一使用 `Torch_Building`，`Torch_Summoner` 只能指向后者；攻击、武器动作、燃料、燃烧、光源、燃烧视觉、局部温度、命中 Buff、投料交互与建筑能力全部由 JSON 组合通用模块，运行时代码不得保留 `Mod_Torch` 或其它火把专用玩法聚合器。手持/落地之间只通过 `SharedModuleIds` 转移确需持续的燃料与燃烧状态。
 - 门、帐篷等未迁移普通建筑保持自身 GameObject 路径；机械和落地工作方块统一走 `MachineWorld` 数据实体。放置冲突和导航占地仍读取 `BuildingOccupancyRegistry`，占地登记增量维护 `ChunkTerrainData` 的动态视线遮挡位，供 AI 只读；不得写入地形 TileData 或用 Physics2D 查询推导这些逻辑结果。
 - 动态建筑的多格占地由建筑模块 `Building_Data.FootprintWidth/FootprintHeight` 声明，吸附格为左下锚点，缺省零值按 1×1 兼容旧数据；预览与提交必须逐格校验地形和占用，落地及读档逐格注册，拆除、禁用和失败回滚统一注销。视觉与物理碰撞体可覆盖多格，但不能代替离散格校验；跨世界边界的每格分别按拓扑归一化。
+- 横向长建筑需要左右换头时使用 `Building_Data.AllowHorizontalMirrorPlacement`：手持放置状态按 R 只镜像预览与最终主体，不交换 `FootprintWidth/FootprintHeight`；朝向只写入已落地建筑，拆回召唤器时清零，避免朝向污染堆叠身份。
 - 建筑承重需求由当前物品定义的 `requiredGroundSupport` 提供，不写入建筑模块存档；每个占地格与当前有效表面比较 `loadCapacity`。有独立地表覆盖时使用平台/地板定义，露出的液面使用对应 `worldWater.loadCapacity`，干地使用 Tile 定义；预览、正式安装与服务端机械建筑校验共用门槛，等值允许。
 - 建筑占地的 Revision/CellChanged 同时服务 Native LOS 脏块桥，不能只依赖导航最终可走值的变化来刷新视线（例如原本不可走但不遮挡的格）。通知只标脏，复制前完成旧 Job；退出世界注销订阅，避免每个 AI 注册占地事件。
 - `Module_Building` 不得再携带独立物理 Collider；其 `boxCollider2D` 运行时统一绑定所属 Item 根节点由 `visual.collider` 定义的碰撞体，避免模块默认框与建筑实体框叠加后产生额外阻挡或错误光照遮挡。`BuildingBodyShell` 的根碰撞体位于 `Collider` Layer；实体障碍保持启用、非 Trigger，地板层设施保留 Trigger；召唤器查询碰撞体仍按召唤器规则处理。

@@ -77,6 +77,11 @@ public partial class Mod_Building : Module, IIncomingDamageRule
         public int FootprintWidth;
         [Newtonsoft.Json.JsonProperty(DefaultValueHandling = Newtonsoft.Json.DefaultValueHandling.Ignore)]
         public int FootprintHeight;
+        // 横向长建筑可在放置前通过 R 键只切换左右朝向，不改变占地宽高。
+        [Newtonsoft.Json.JsonProperty(DefaultValueHandling = Newtonsoft.Json.DefaultValueHandling.Ignore)]
+        public bool AllowHorizontalMirrorPlacement;
+        [Newtonsoft.Json.JsonProperty(DefaultValueHandling = Newtonsoft.Json.DefaultValueHandling.Ignore)]
+        public bool HorizontalMirrorX;
     }
 
     public Building_Data Data = new();
@@ -106,6 +111,12 @@ public partial class Mod_Building : Module, IIncomingDamageRule
     private bool _ghostCreationFailed;
     private Mod_GameController _ownerController;
     private Player _placementActor;
+    private bool _placementMirrorX;
+    private bool _rotationInputBound;
+    private bool _ghostBaseFlipX;
+    private bool _ghostBaseFlipCaptured;
+    private bool _baseSpriteFlipX;
+    private bool _baseSpriteFlipCaptured;
 
     public override ModuleData _Data
     {
@@ -118,6 +129,8 @@ public partial class Mod_Building : Module, IIncomingDamageRule
     public bool IsPlacementPending => _placementPending;
     public bool IsDismantlePending => _dismantlePending;
     public bool IsPlacementModeActive => IsSummoner && (!RequiresPlacementRequest || _placementRequested);
+    public bool PlacementHorizontalMirrorX => _placementMirrorX;
+    public bool CanRotateHorizontalPlacement => Data?.AllowHorizontalMirrorPlacement == true && IsPlacementActionAvailable;
 
     #region 建筑空间层
     [Tooltip("地板层设施允许同格放置实体建筑，不阻挡通行或视线。")]
@@ -221,9 +234,12 @@ public partial class Mod_Building : Module, IIncomingDamageRule
 
     public override void Load()
     {
+        UnbindPlacementRotationInput();
         _placementRequested = false;
+        _placementMirrorX = false;
         _ownerController = null;
         EnsureRuntimeReferences();
+        CaptureBaseSpriteFlip();
         Data = new Building_Data();
         BuildingData?.ReadData(ref Data);
         Data ??= new Building_Data();
@@ -289,11 +305,16 @@ public partial class Mod_Building : Module, IIncomingDamageRule
         if (!IsItemInInventory || _placementPending || !IsPlacementModeActive)
         {
             if (!IsItemInInventory)
+            {
                 _placementRequested = false;
+                _placementMirrorX = false;
+                UnbindPlacementRotationInput();
+            }
             CleanupGhost();
             return;
         }
 
+        BindPlacementRotationInput();
         SetColliderMode(enabled: false, trigger: true);
         if (CurrentState == BuildingState.Uninstalled)
             CurrentState = BuildingState.NotInstalled;
@@ -532,6 +553,8 @@ public partial class Mod_Building : Module, IIncomingDamageRule
 
         try
         {
+            if (!TrySetHorizontalMirrorPlacement(placedData, _placementMirrorX))
+                throw new InvalidOperationException("建筑候选数据缺少建筑模块");
             BuildingPlacementLifecycle.GetExtension(item)?.PreparePlacedData(placedData);
             building = ItemMgr.Instance.InstantiateItem(
                 placedData,
@@ -1009,6 +1032,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule
             Destroy(GhostShadow.gameObject);
             GhostShadow = null;
         }
+        _ghostBaseFlipCaptured = false;
 
         if (_definitionPreviewSource != null)
         {
@@ -1072,6 +1096,8 @@ public partial class Mod_Building : Module, IIncomingDamageRule
                         : BuildingState.Installed;
                     state.BuildingPrefabId = ResolveBuildingPrefabId(item.itemData.IDName, Data);
                     state.SummonerPrefabId = ResolveSummonerPrefabId(state.BuildingPrefabId, Data);
+                    // 朝向是放置时的临时选择，拆回后不参与召唤器堆叠身份。
+                    state.HorizontalMirrorX = false;
                     // 防止快照递归包含自己。
                     state.SnapshotBase64 = null;
                 }))
@@ -1620,6 +1646,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule
         damageReceiver.OnDead += OnDeath;
         if (!RequiresPlacementRequest)
             item.OnAct += Install;
+        BindPlacementRotationInput();
         _eventsBound = true;
     }
 
@@ -1636,8 +1663,73 @@ public partial class Mod_Building : Module, IIncomingDamageRule
         }
         if (item != null)
             item.OnAct -= Install;
+        UnbindPlacementRotationInput();
         _eventsBound = false;
     }
+
+    #region 放置朝向
+
+    /// <summary>横向建筑只镜像图片，不交换占地宽高。</summary>
+    private void RotateHorizontalPlacement()
+    {
+        if (!CanRotateHorizontalPlacement)
+            return;
+
+        _placementMirrorX = !_placementMirrorX;
+        ApplyHorizontalMirrorPreview();
+    }
+
+    private void BindPlacementRotationInput()
+    {
+        if (Data?.AllowHorizontalMirrorPlacement != true || item?.Owner == null)
+            return;
+
+        Mod_GameController controller = item.Owner.itemMods?.GetMod_ByID<Mod_GameController>(ModText.Controller)
+            ?? item.Owner.GetComponentInChildren<Mod_GameController>(true);
+        if (controller == null)
+            return;
+        if (_rotationInputBound && ReferenceEquals(_ownerController, controller))
+            return;
+
+        UnbindPlacementRotationInput();
+        _ownerController = controller;
+        _ownerController.BuildingRotationRequested += RotateHorizontalPlacement;
+        _rotationInputBound = true;
+    }
+
+    private void UnbindPlacementRotationInput()
+    {
+        if (_rotationInputBound && _ownerController != null)
+            _ownerController.BuildingRotationRequested -= RotateHorizontalPlacement;
+        _rotationInputBound = false;
+    }
+
+    private void CaptureBaseSpriteFlip()
+    {
+        if (_baseSpriteFlipCaptured || item?.Sprite == null)
+            return;
+        _baseSpriteFlipX = item.Sprite.flipX;
+        _baseSpriteFlipCaptured = true;
+    }
+
+    private void ApplyHorizontalMirrorVisual()
+    {
+        if (item?.Sprite == null)
+            return;
+        CaptureBaseSpriteFlip();
+        item.Sprite.flipX = _baseSpriteFlipX ^
+            (Data?.Role == BuildingRole.PlacedBuilding && Data.HorizontalMirrorX);
+    }
+
+    private void ApplyHorizontalMirrorPreview()
+    {
+        if (GhostShadow?.ShadowRenderer == null || !_ghostBaseFlipCaptured ||
+            Data?.AllowHorizontalMirrorPlacement != true)
+            return;
+        GhostShadow.ShadowRenderer.flipX = _ghostBaseFlipX ^ _placementMirrorX;
+    }
+
+    #endregion
 
     private void OnHit(float hp)
     {
@@ -1680,6 +1772,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule
 
     private void SyncRuntimeState()
     {
+        ApplyHorizontalMirrorVisual();
         if (Data.Role == BuildingRole.Summoner)
         {
             BuildingOccupancyRegistry.Unregister(this);
@@ -1776,6 +1869,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule
         GhostShadow.transform.position = WorldLocalPresentation.ProjectPosition(mouse);
         GhostShadow.UpdateAlpha(1f);
         BuildingPlacementLifecycle.GetExtension(item)?.ApplyPreview(GhostShadow);
+        ApplyHorizontalMirrorPreview();
         GhostShadow.UpdateColor(!ValidatePlacement(mouse, authorityPosition, out _));
     }
 
@@ -1816,6 +1910,9 @@ public partial class Mod_Building : Module, IIncomingDamageRule
             GhostShadow.InitShadow(
                 source,
                 sourceRoot);
+            _ghostBaseFlipX = GhostShadow.ShadowRenderer.flipX;
+            _ghostBaseFlipCaptured = true;
+            ApplyHorizontalMirrorPreview();
         }
         catch (Exception exception)
         {
@@ -2213,6 +2310,20 @@ public partial class Mod_Building : Module, IIncomingDamageRule
 
         return false;
     }
+
+    /// <summary>服务端只允许配置明确声明过的建筑接收左右镜像请求。</summary>
+    public static bool SupportsHorizontalMirrorPlacement(ItemData itemData)
+    {
+        if (!TryReadBuildingData(itemData, out _, out Building_Data state))
+            return false;
+        MigrateLegacyData(state, itemData?.IDName);
+        return state.AllowHorizontalMirrorPlacement;
+    }
+
+    /// <summary>把本次临时左右朝向写入已生成的世界建筑候选数据。</summary>
+    public static bool TrySetHorizontalMirrorPlacement(ItemData itemData, bool mirrorX)
+        => WriteBuildingData(itemData, state =>
+            state.HorizontalMirrorX = state.AllowHorizontalMirrorPlacement && mirrorX);
 
     private static bool WriteBuildingData(ItemData itemData, Action<Building_Data> mutate)
     {
