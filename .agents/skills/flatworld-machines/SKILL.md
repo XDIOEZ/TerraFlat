@@ -21,6 +21,7 @@ description: "Use when: 定位或修改 FlatWorld 的机器世界、工作台、
 - 机械网与电网是同一批 `MachineEntity` 上的两张独立拓扑图；电线使用独立覆盖层。`Electrical.Connection=cell` 接同格线，方向名接旋转后的邻格；双向电机 `Role=converter` 的电气接口和唯一 `AxlePorts` 必须分开，默认左线右轴，不要求世界布线区分正负极。
 - 双向电机每轮先排除电驱动力探测机械输入，再从独立电源向外确定方向；机械输入优先，转换链的上游电网不能成为发电回流目标。电池探算不写储能，正式结算每轮一次；输出按实际功率预算限制，电驱扭矩向下取整，不能将上一轮输出或四舍五入增量当作新能量。转换效率与游戏功率换算统一取目录配置。
 - 电线 `visual.spriteStates` 使用 `wire0..wire15`，连接位为北1、东2、南4、西8；朝向只读取权威电线格与方向端口索引，同格设备不产生额外支路。邻格增删须刷新跨区块/循环边界的连接形状，连接未变化不重提网格，不能按召唤器旋转或每帧轮询选图。
+- 混合电力/机械设备的接口属于独立表现层：`axisPorts + AxisPortLayout=single + AxisPortLocalPosition` 配置单端轴口，`electricalPort + ElectricalPortLocalPosition` 配置电线口；两者复用标准杆/线切片与原 PPU，放在机身后方，预览和行网格使用同一局部位置。机身不得重复烘入接头，召唤器图标可静态合成；端口方向不对称的电机按四个朝向放置。
 - 电网首版按整网功率求解：W 表示功率、J 表示储能；电压参与兼容性，电流由 `P/V` 推导，电阻只保留正式数据接口，未实现逐段压降/基尔霍夫仿真。
 - 召唤器、玩家库存和手持玩法保留 Item；落地设施走 `Place/SpawnGenerated/RestoreMachine`，`ItemMgr` 拒绝再实例化其完整 Item。`MachineAuthoringModule` 只保存配置，禁止重新启用其 Load/Tick 做运行时兜底。
 - 模拟不依赖 ChunkView。网络整体先恢复再 Tick、先快照再休眠；无端口设施独立按玩家窗口休眠。显示卸载不能删除实体或撤销已保存库存。

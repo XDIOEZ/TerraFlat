@@ -3550,6 +3550,18 @@ MonoBehaviour:
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 2407b0ab98494b48a6bdeff9b33b0530
+    m_Address: Assets/6_Art/Generated/Electrical/Generator_Basic/Generator_Basic_Body.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 62142eb6862d45e0afb4234a83efd16d
+    m_Address: Assets/6_Art/Generated/Mechanical/World/Transmission/World_Shaft_Wood_RightPort.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
   m_ReadOnly: 0
   m_Settings: {fileID: 11400000, guid: fc59728ab6aa9b54ba0a5f7cc69fc0d8, type: 2}
   m_SchemaSet:

@@ -26,6 +26,8 @@ public sealed partial class ChunkTilemapRenderer
         public float AxisPortOffset = .45f;
         public float AxisPortOffsetY;
         public bool AxisPortDrawOnTop;
+        public Vector3 AxisPortLocalPosition; // 单端轴口独立定位，保持标准传动轴的原始比例。
+        public Vector3 ElectricalPortLocalPosition; // 电线口沿用机身遮挡独立接头的分层方式。
         public Vector3 InputShaftLocalPosition = new(-.55f, 0f, 0f);
         public Vector3 RotorLocalPosition;
         public bool RotorBehindBody; // 锯片等嵌入式转子由机身前沿遮住下部。
@@ -247,6 +249,21 @@ public sealed partial class ChunkTilemapRenderer
             return;
         }
 
+        if (config.AxisPortLayout == "single" ||
+            def.TryGetVisualStateSprite("electricalPort", out _))
+        {
+            // 接头保持原始 PPU，伸入机身的部分由上层外壳遮住。
+            if (!config.AxisPortDrawOnTop) Ports(node, x, y, 0, def, material, origin, rotation, config);
+            if (def.TryGetVisualStateSprite("electricalPort", out Sprite cablePort))
+                Part(node, x, y, 1, cablePort, material, origin, rotation,
+                    config.ElectricalPortLocalPosition, Vector3.one, 0, 0f);
+            Part(node, x, y, 2, def.Sprite, material, origin, rotation,
+                Vector3.zero, Vector3.one, 0, 0f);
+            if (config.AxisPortDrawOnTop) Ports(node, x, y, 3, def, material, origin, rotation, config);
+            depthVisual.UpdateFacility(node);
+            return;
+        }
+
         if (def.TryGetVisualStateSprite(ReciprocatingSpriteState, out Sprite reciprocating))
         {
             Part(node, x, y, 0, def.Sprite, material, origin, rotation,
@@ -295,7 +312,10 @@ public sealed partial class ChunkTilemapRenderer
         Material material, Vector3 origin, Quaternion rotation, MechanicalVisualConfig config)
     {
         if (!def.TryGetVisualStateSprite("axisPorts", out Sprite port)) return;
-        if (config.AxisPortLayout == "centeredShaftRings")
+        if (config.AxisPortLayout == "single")
+            Part(node, x, y, part, port, material, origin, rotation,
+                config.AxisPortLocalPosition, Vector3.one, 0, 0f);
+        else if (config.AxisPortLayout == "centeredShaftRings")
             Part(node, x, y, part, port, material, origin, rotation,
                 new Vector3(0f, config.AxisPortOffsetY), Vector3.one, 0, 0f);
         else if (config.AxisPortLayout == "mirroredSingle")

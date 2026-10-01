@@ -5,7 +5,7 @@ using UnityEngine;
 using UnityEngine.Rendering;
 
 /// <summary>机械节点的 Item 表现与交互桥。普通齿轮旋转主 Sprite 并保留固定输入杆；变速箱的大小齿轮按输入 RPM 与半径比独立旋转；动力源用独立叶轮层，世界状态由 MachineWorld 整网管理。</summary>
-public sealed class Mod_MechanicalNode : Module, IInteractable, IBuildingPlacementCommitted,
+public sealed partial class Mod_MechanicalNode : Module, IInteractable, IBuildingPlacementCommitted,
     IBuildingPlacementExtension, IBuildingTraversalPolicy, IBuildingSnapshotRepackPolicy, IBuildingPreviewRotation
 {
     #region 配置与状态
@@ -39,7 +39,7 @@ public sealed class Mod_MechanicalNode : Module, IInteractable, IBuildingPlaceme
     private static readonly int MainTextureScaleOffset = Shader.PropertyToID("_MainTex_ST");
     public string DefinitionId; // 对应机械配置目录的稳定节点 ID
     public float InputShaftOffsetX = -0.45f; // 固定输入杆中心的局部横向偏移，保留轮盘下的隐藏连接段。
-    public string AxisPortLayout; // 选择镜像单端接头或居中整格双端铁环。
+    public string AxisPortLayout; // 选择镜像接头、居中双端铁环或独立单端接口。
     public float AxisPortOffset = 0.45f; // 镜像单端接头各自相对建筑中心的偏移。
     public float AxisPortOffsetY; // 轴端口相对主体锚点的纵向偏移。
     public bool AxisPortDrawOnTop; // 外露轴环安装在支架表面时，绘制在主体前方。
@@ -154,6 +154,7 @@ public sealed class Mod_MechanicalNode : Module, IInteractable, IBuildingPlaceme
         ConfigureGearboxVisual();
         ConfigureRotorVisual();
         ConfigureAxisPortVisual();
+        ConfigureElectricalPortVisual();
         ConfigureShaftVisual();
         item.OnInHandChanged += OnHandChanged;
         if (!placed) BindRotationInput();
@@ -186,6 +187,7 @@ public sealed class Mod_MechanicalNode : Module, IInteractable, IBuildingPlaceme
         if (axisPortLeftRenderer != null) axisPortLeftRenderer.enabled = false;
         if (axisPortRightRenderer != null) axisPortRightRenderer.enabled = false;
         if (axisPortRingsRenderer != null) axisPortRingsRenderer.enabled = false;
+        ClearElectricalPortVisual();
         if (gearboxLargeGearRenderer != null) gearboxLargeGearRenderer.enabled = false;
         if (gearboxSmallGearRenderer != null) gearboxSmallGearRenderer.enabled = false;
         if (rotorRenderer != null) rotorRenderer.enabled = false;
@@ -225,6 +227,7 @@ public sealed class Mod_MechanicalNode : Module, IInteractable, IBuildingPlaceme
         ConfigureGearboxVisual();
         ConfigureRotorVisual();
         ConfigureAxisPortVisual();
+        ConfigureElectricalPortVisual();
         ConfigureShaftVisual();
         ApplyVisual();
         InvalidateTickSchedule();
@@ -236,6 +239,7 @@ public sealed class Mod_MechanicalNode : Module, IInteractable, IBuildingPlaceme
         ConfigureGearboxVisual();
         ConfigureRotorVisual();
         ConfigureAxisPortVisual();
+        ConfigureElectricalPortVisual();
         ConfigureShaftVisual();
         AttachWorld();
         InvalidateTickSchedule();
@@ -256,12 +260,12 @@ public sealed class Mod_MechanicalNode : Module, IInteractable, IBuildingPlaceme
     #endregion
 
     #region 放置朝向
-    /// <summary>轴类切换横竖；齿轮、变速箱和风箱逐次切换四个方向。</summary>
+    /// <summary>轴类切换横竖，输入输出有方向的设备逐次切换四个朝向。</summary>
     public void RotatePlacement()
     {
         if (!CanRotatePlacement) return;
         int rotationSteps = Definition.Kind == "gear" || Definition.Kind == "gearbox" ||
-                            Definition.Kind == "bellows" ? 4 : 2;
+                            Definition.Kind == "bellows" || Definition.Kind == "converter" ? 4 : 2;
         PlacementQuarterTurns = (PlacementQuarterTurns + 1) % rotationSteps;
         var building = item.itemMods.GetMod_ByID<Mod_Building>(ModText.Building);
         ApplyPreview(building?.GhostShadow);
@@ -298,6 +302,7 @@ public sealed class Mod_MechanicalNode : Module, IInteractable, IBuildingPlaceme
         }
         ApplyGearboxPreview(shadow, placementRotation);
         ApplyAxisPortPreview(shadow, placementRotation);
+        ApplyElectricalPortPreview(shadow, placementRotation);
     }
 
     /// <summary>在放置虚影上叠加两枚齿轮，并随建筑 R 键朝向同步旋转。</summary>
@@ -328,14 +333,15 @@ public sealed class Mod_MechanicalNode : Module, IInteractable, IBuildingPlaceme
     {
         if (axisPortSprite == null) return;
         Vector3 basePosition = shadow.ShadowRenderer.transform.localPosition;
-        if (AxisPortLayout == CenteredShaftRingLayout)
+        if (AxisPortLayout == CenteredShaftRingLayout || AxisPortLayout == SingleAxisPortLayout)
         {
             SpriteRenderer portRings = shadow.EnsureOverlay(AxisPortRingsObjectName, axisPortSprite,
-                basePosition + placementRotation * new Vector3(0f, AxisPortOffsetY, 0f), spriteRenderer?.sharedMaterial);
+                basePosition + placementRotation * ResolveSingleAxisPortPosition(), spriteRenderer?.sharedMaterial);
             if (portRings != null)
             {
                 portRings.transform.localRotation = placementRotation;
-                if (AxisPortDrawOnTop) portRings.sortingOrder = shadow.ShadowRenderer.sortingOrder + 1;
+                portRings.transform.localScale = Vector3.one;
+                portRings.sortingOrder = shadow.ShadowRenderer.sortingOrder + (AxisPortDrawOnTop ? 1 : -1);
             }
             return;
         }
@@ -501,6 +507,7 @@ public sealed class Mod_MechanicalNode : Module, IInteractable, IBuildingPlaceme
             }
         }
         ApplyAxisPortVisual();
+        ApplyElectricalPortVisual();
         ApplyGearboxVisual();
         ApplyShaftSorting();
         if (rotorRenderer == null) return;
@@ -690,7 +697,8 @@ public sealed class Mod_MechanicalNode : Module, IInteractable, IBuildingPlaceme
             !GameRes.Instance.TryGetItemDefinition(item.itemData.IDName, out RuntimeItemDefinition definition) ||
             !definition.TryGetVisualStateSprite(AxisPortState, out axisPortSprite)) return;
 
-        if (AxisPortLayout != MirroredAxisPortLayout && AxisPortLayout != CenteredShaftRingLayout)
+        if (AxisPortLayout != MirroredAxisPortLayout && AxisPortLayout != CenteredShaftRingLayout &&
+            AxisPortLayout != SingleAxisPortLayout)
             throw new InvalidOperationException($"机械端口图层布局未配置或无效：{item.itemData.IDName} / {AxisPortLayout}");
         if (!placed) return;
         switch (AxisPortLayout)
@@ -701,6 +709,7 @@ public sealed class Mod_MechanicalNode : Module, IInteractable, IBuildingPlaceme
                 axisPortRightRenderer = GetOrCreateAxisPortRenderer(AxisPortRightObjectName, !spriteRenderer.flipX);
                 break;
             case CenteredShaftRingLayout:
+            case SingleAxisPortLayout:
                 RemoveAxisPortRenderer(AxisPortLeftObjectName, ref axisPortLeftRenderer);
                 RemoveAxisPortRenderer(AxisPortRightObjectName, ref axisPortRightRenderer);
                 axisPortRingsRenderer = GetOrCreateAxisPortRenderer(AxisPortRingsObjectName, spriteRenderer.flipX);
@@ -722,7 +731,7 @@ public sealed class Mod_MechanicalNode : Module, IInteractable, IBuildingPlaceme
     }
 
     /// <summary>取得或建立与本体共用材质的机械端口图层。</summary>
-    private SpriteRenderer GetOrCreateAxisPortRenderer(string objectName, bool flipX)
+    private SpriteRenderer GetOrCreateAxisPortRenderer(string objectName, bool flipX, Sprite portSprite = null)
     {
         Transform existing = spriteRenderer.transform.Find(objectName);
         if (existing == null)
@@ -738,7 +747,7 @@ public sealed class Mod_MechanicalNode : Module, IInteractable, IBuildingPlaceme
         existing.localScale = Vector3.one;
         SpriteRenderer renderer = existing.GetComponent<SpriteRenderer>();
         if (renderer == null) renderer = existing.gameObject.AddComponent<SpriteRenderer>();
-        ConfigureShaftRenderer(renderer, axisPortSprite);
+        ConfigureShaftRenderer(renderer, portSprite != null ? portSprite : axisPortSprite);
         renderer.flipX = flipX;
         renderer.enabled = true;
         return renderer;
@@ -748,12 +757,12 @@ public sealed class Mod_MechanicalNode : Module, IInteractable, IBuildingPlaceme
     private void ApplyAxisPortVisual()
     {
         if (axisPortSprite == null || spriteRenderer == null) return;
-        if (AxisPortLayout == CenteredShaftRingLayout)
+        if (AxisPortLayout == CenteredShaftRingLayout || AxisPortLayout == SingleAxisPortLayout)
         {
             if (axisPortRingsRenderer == null || !axisPortRingsRenderer.enabled) return;
             if (!AxisPortDrawOnTop)
                 spriteRenderer.sortingOrder = Mathf.Max(spriteRenderer.sortingOrder, originalSortingOrder + 1);
-            axisPortRingsRenderer.transform.localPosition = new Vector3(0f, AxisPortOffsetY, 0f);
+            axisPortRingsRenderer.transform.localPosition = ResolveSingleAxisPortPosition();
             axisPortRingsRenderer.transform.localRotation = Quaternion.identity;
             axisPortRingsRenderer.transform.localScale = Vector3.one;
             ApplyAxisPortSorting(axisPortRingsRenderer, AxisPortDrawOnTop ? 1 : -1);

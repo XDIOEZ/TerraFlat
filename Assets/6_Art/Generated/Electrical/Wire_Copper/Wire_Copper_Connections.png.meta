@@ -458,6 +458,27 @@ TextureImporter:
       indices:
       edges: []
       weights: []
+    - serializedVersion: 2
+      name: CablePort_Left
+      rect:
+        serializedVersion: 2
+        x: 627
+        y: 313.5
+        width: 156.75
+        height: 313.5
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: ced54b5fdce743d3939cca3bd86b7f5e
+      internalID: 21300016
+      vertices: []
+      indices:
+      edges: []
+      weights: []
     outline: []
     physicsShape: []
     bones: []
@@ -485,6 +506,7 @@ TextureImporter:
       Wire_13: 21300013
       Wire_14: 21300014
       Wire_15: 21300015
+      CablePort_Left: 21300016
   mipmapLimitGroupName:
   pSDRemoveMatte: 0
   userData:

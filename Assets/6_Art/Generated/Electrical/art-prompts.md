@@ -1,14 +1,16 @@
 # 电力与橡树美术
 
-这组素材使用内置 ImageGen 生成，参考现有齿轮箱、木传动轴、松树、桃树和木炭图标。
+这组素材的原始图由内置 ImageGen 生成，参考现有齿轮箱、木传动轴、松树、桃树和木炭图标；电机接口与电线方向图使用 Unity 编辑器按标准 Sprite 精确分层拼接。
 机器按一格世界宽度接入；橡树使用根部锚点。电线图集按 4×4 切分，位编号为北=1、东=2、南=4、西=8，子 Sprite 为 Wire_00 到 Wire_15。
-透明 PNG 保留生成工具输出，导入采用 Point、无压缩、无 Mipmap。机器召唤器与本体共用各自正式贴图。
+透明 PNG 导入采用 Point、无压缩、无 Mipmap。双向电机本体使用独立机身，召唤器使用相同坐标合成的完整静态图标。
 
 ## reversible motor-generator
 
-Use case: precise-object-edit. Use the supplied copper-coil generator as the identity reference. Preserve the central housing, copper windings, top terminal box, feet, palette and transparent canvas. Replace the left spindle with a dark rubber cable and continuous copper stripe. Match exposed cable thickness to the existing wire atlas, and enlarge the right wooden shaft and iron coupling to fit the existing wooden transmission shaft. Both stubs reach their respective canvas edges flush, with horizontal centers near the canvas midpoint. Keep hard square pixel clusters; no arrows, text, icons, shadow, ground or background.
+Use case: precise-object-edit. Edit target: attached existing FlatWorld copper-coil reversible motor sprite. Primary request: remove ONLY the cable and shaft extensions protruding outside the main motor housing, so the runtime can attach separate standard connectors behind it. Preserve the machine body, copper winding, brass side housings, steel bands, bolts, feet, exact color groups, pixel clusters and silhouette of the central housing. Erase the entire left cable AND the small circular copper terminal stub protruding on its left; erase the entire right wooden shaft AND its rectangular external steel collar. Both sides should now end at the main rounded housing side bearing edge, around x=220 on left and x=1030 on right in the existing 1254 square image. Close each exposed housing edge cleanly with its existing dark rim, without adding a new socket, shaft, collar, cable or outward protrusion. Keep the body axis at canvas center (627,627), feet at same height, body SAME SIZE, exactly same centered 1254x1254 transparent canvas, large unchanged transparent margins above and below. This is an isolated static motor BODY layer. Match existing hard-edged FlatWorld pixel art and original shading. No redesign, no rescaling or shifting central body, no background, no cast shadow, no text. Return transparent PNG.
 
-接口拼接按实际 Sprite 的 PPU、Pivot 和切片绘制，三格中心距离为一个世界单位；木轴按正式滚动木芯与轴环两层显示。只调整电机接头，电线和木轴资源保持原尺寸。
+`Generator_Basic_Body.png` 为机身层。右端的 `AxlePort_Right` 是标准木轴原图的右半格切片，矩形 `(64,0,64,128)`、128 PPU，中心位于局部 `(0.25,0)`；左端 `CablePort_Left` 从 `Wire_10` 取左半格，矩形 `(627,313.5,156.75,313.5)`、313.5 PPU，中心位于 `(-0.25,0)`。两个接头先绘制，机身盖住内侧；不缩放接头去追随外壳。完整图标在同一 1254×1254 画布上使用这些坐标静态合成。连接预览中的邻格中心距为一个世界单位，邻格木轴沿用正式滚动木芯和轴环两层。
+
+电线的 16 个连接形状由同一无封头线段和接线头拼成：从水平铜线内部取 `(650,450,83,45)` 像素线段，保留原纵向厚度，横向延伸半格；按北1、东2、南4、西8组合，再把 `Wire_00` 接线头盖在中心。图集与旧子 Sprite 身份保持一致，线段终点落在格边，避免绘入单端黑封边。
 
 ## battery
 

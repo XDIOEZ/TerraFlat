@@ -45,7 +45,11 @@
       "canBePickedUp": false,
       "tags": ["35", "InventoryGroup.ElectricalPower"],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Electrical/Generator_Basic/Generator_Basic_Idle.png",
+        "spriteAddress": "Assets/6_Art/Generated/Electrical/Generator_Basic/Generator_Basic_Body.png",
+        "spriteStates": {
+          "axisPorts": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Shaft_Wood_RightPort.png[AxlePort_Right]",
+          "electricalPort": "Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[CablePort_Left]"
+        },
         "color": {
           "r": 1,
           "g": 1,
@@ -80,7 +84,9 @@
         "机械扭矩模块": {
           "prefab": "Module_MechanicalNode", "id": "机械扭矩模块", "enabled": true,
           "data": { "BitData": [], "Type": 0 },
-          "parameters": { "DefinitionId": "Generator_Basic" }
+          "parameters": { "DefinitionId": "Generator_Basic", "AxisPortLayout": "single",
+            "AxisPortLocalPosition": { "x": 0.25, "y": 0, "z": 0 },
+            "ElectricalPortLocalPosition": { "x": -0.25, "y": 0, "z": 0 } }
         }
       }
     },
@@ -101,6 +107,10 @@
       "tags": ["35", "InventoryGroup.ElectricalPower"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Electrical/Generator_Basic/Generator_Basic_Idle.png",
+        "spriteStates": {
+          "axisPorts": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Shaft_Wood_RightPort.png[AxlePort_Right]",
+          "electricalPort": "Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[CablePort_Left]"
+        },
         "color": {
           "r": 1,
           "g": 1,
@@ -132,7 +142,9 @@
         "机械扭矩模块": {
           "prefab": "Module_MechanicalNode", "id": "机械扭矩模块", "enabled": true,
           "data": { "BitData": [], "Type": 0 },
-          "parameters": { "DefinitionId": "Generator_Basic" }
+          "parameters": { "DefinitionId": "Generator_Basic", "AxisPortLayout": "single",
+            "AxisPortLocalPosition": { "x": 0.25, "y": 0, "z": 0 },
+            "ElectricalPortLocalPosition": { "x": -0.25, "y": 0, "z": 0 } }
         }
       }
     },
