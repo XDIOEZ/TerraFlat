@@ -495,6 +495,25 @@ public static class ItemDefinitionCatalogLoader
             }
         }
 
+        if (definition.Processing != null)
+        {
+            foreach (KeyValuePair<string, ItemProcessingDefinitionDto> pair in definition.Processing)
+            {
+                ItemProcessingDefinitionDto processing = pair.Value;
+                if (processing?.Outputs == null)
+                    continue;
+                foreach (ItemProcessingOutputDto output in processing.Outputs)
+                {
+                    string outputId = output?.ItemId?.Trim();
+                    if (string.IsNullOrWhiteSpace(outputId) || !concreteItemIds.Contains(outputId))
+                    {
+                        throw new InvalidDataException(
+                            $"物品 {definition.Id} 的加工能力 {pair.Key} 引用了不存在或抽象的 ItemDefinition：{outputId}");
+                    }
+                }
+            }
+        }
+
         string tableId = definition.LootTableId?.Trim();
         if (!string.IsNullOrWhiteSpace(tableId))
         {
@@ -744,6 +763,8 @@ public static class ItemDefinitionCatalogLoader
             result.Remove("gameName");
             result.Remove("labelKey");
             result.Remove("descriptionKey");
+            // processing 描述具体物品受到加工后的结果；模板 parent 只复用静态配置，不能把加工产物串给子物品。
+            result.Remove("processing");
         }
 
         RemoveReplacedModuleBodies(result, source);
@@ -998,7 +1019,58 @@ public static class ItemDefinitionCatalogLoader
             dto.RequiredGroundSupport,
             dto.Ecs,
             dto.EntityRuntime,
-            ResolveWorldDropBehavior(dto.WorldDropBehavior, id));
+            ResolveWorldDropBehavior(dto.WorldDropBehavior, id),
+            ResolveProcessingDefinitions(dto.Processing, id));
+    }
+
+    /// <summary>把物品内聚的加工响应编译为稳定 RuntimeRecipe，具体设备只负责提供能力和工作量。</summary>
+    private static Dictionary<string, RuntimeItemProcessingDefinition> ResolveProcessingDefinitions(
+        Dictionary<string, ItemProcessingDefinitionDto> source,
+        string itemId)
+    {
+        var result = new Dictionary<string, RuntimeItemProcessingDefinition>(StringComparer.OrdinalIgnoreCase);
+        if (source == null)
+            return result;
+
+        foreach (KeyValuePair<string, ItemProcessingDefinitionDto> pair in source)
+        {
+            string capability = pair.Key?.Trim();
+            ItemProcessingDefinitionDto definition = pair.Value;
+            if (string.IsNullOrWhiteSpace(capability) || definition == null)
+                throw new InvalidDataException($"物品 {itemId} 包含空加工能力定义");
+            if (definition.InputAmount < 1 || float.IsNaN(definition.Work) || float.IsInfinity(definition.Work) ||
+                definition.Work <= 0f || definition.Outputs == null || definition.Outputs.Count == 0)
+            {
+                throw new InvalidDataException($"物品 {itemId} 的加工能力 {capability} 参数无效");
+            }
+
+            var outputs = new List<RuntimeRecipeResult>(definition.Outputs.Count);
+            foreach (ItemProcessingOutputDto output in definition.Outputs)
+            {
+                string outputId = output?.ItemId?.Trim();
+                float durabilityMultiplier = output?.DurabilityMultiplier ?? CraftedDurabilityQuality.DefaultMultiplier;
+                if (output == null || string.IsNullOrWhiteSpace(outputId) || output.Amount < 1 ||
+                    float.IsNaN(durabilityMultiplier) || float.IsInfinity(durabilityMultiplier) || durabilityMultiplier <= 0f)
+                {
+                    throw new InvalidDataException($"物品 {itemId} 的加工能力 {capability} 包含无效产物");
+                }
+
+                outputs.Add(new RuntimeRecipeResult
+                {
+                    ItemName = outputId,
+                    amount = output.Amount,
+                    durabilityMultiplier = durabilityMultiplier
+                });
+            }
+
+            if (!result.TryAdd(capability, new RuntimeItemProcessingDefinition(
+                    itemId, capability, definition.InputAmount, definition.Work, outputs)))
+            {
+                throw new InvalidDataException($"物品 {itemId} 重复声明加工能力：{capability}");
+            }
+        }
+
+        return result;
     }
 
     private static WorldDropBehavior ResolveWorldDropBehavior(string value, string itemId)

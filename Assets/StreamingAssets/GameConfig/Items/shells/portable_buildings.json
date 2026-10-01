@@ -62,7 +62,7 @@
       "id": "StoneMortar_Building",
       "parent": "BuildingBody_Base",
       "gameName": "石臼-建筑",
-      "description": "放置在地上的石臼。交互打开原有捣料面板，每次捣击按配方加工一份材料；拆回或再次放置时保留碗内全部原料与产物。",
+      "description": "放置在地上的石臼，只提供手动研磨能力；具体材料如何加工由材料自身定义。拆回或再次放置时保留碗内原料、产物与加工进度。",
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,
@@ -114,7 +114,8 @@
             "Type": 0
           },
           "parameters": {
-            "StationId": "mortar"
+            "StationId": "mortar",
+            "ProcessCapability": "grind"
           }
         }
       }

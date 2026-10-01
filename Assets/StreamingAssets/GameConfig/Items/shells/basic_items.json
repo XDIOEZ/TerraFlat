@@ -1530,6 +1530,13 @@
       "stackable": true,
       "canBePickedUp": true,
       "tags": ["readable.writing.ink", "Combustion.Fuel"],
+      "processing": {
+        "grind": {
+          "inputAmount": 1,
+          "work": 4,
+          "outputs": [{ "itemId": "OrePowder_Coal", "amount": 2 }]
+        }
+      },
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Tools/Item_Tool_229.png",
         "rendererLocalPosition": {
@@ -1650,6 +1657,13 @@
       "stackable": true,
       "canBePickedUp": true,
       "tags": [],
+      "processing": {
+        "grind": {
+          "inputAmount": 1,
+          "work": 4,
+          "outputs": [{ "itemId": "OrePowder_Copper", "amount": 2 }]
+        }
+      },
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Tools/Item_Tool_399.png",
         "rendererLocalPosition": {
@@ -1815,6 +1829,13 @@
         "Ore",
         "Iron"
       ],
+      "processing": {
+        "grind": {
+          "inputAmount": 1,
+          "work": 4,
+          "outputs": [{ "itemId": "OrePowder_Iron", "amount": 2 }]
+        }
+      },
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Tools/Item_Tool_391.png",
         "rendererLocalPosition": {
@@ -1896,6 +1917,13 @@
       "stackable": true,
       "canBePickedUp": true,
       "tags": [],
+      "processing": {
+        "grind": {
+          "inputAmount": 1,
+          "work": 4,
+          "outputs": [{ "itemId": "OrePowder_Tin", "amount": 2 }]
+        }
+      },
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Tools/Item_Tool_393.png",
         "rendererLocalPosition": {
@@ -2263,6 +2291,13 @@
       "stackable": true,
       "canBePickedUp": true,
       "tags": [],
+      "processing": {
+        "grind": {
+          "inputAmount": 1,
+          "work": 3,
+          "outputs": [{ "itemId": "Rice", "amount": 1 }]
+        }
+      },
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Farming/Rice/RiceGrain_Icon.png",
         "rendererLocalScale": {
@@ -2455,6 +2490,13 @@
         "Fruit",
         "Berry"
       ],
+      "processing": {
+        "grind": {
+          "inputAmount": 2,
+          "work": 4,
+          "outputs": [{ "itemId": "Jam", "amount": 1 }]
+        }
+      },
       "visual": {
         "spriteAddress": "Assets/6_Art/Food/Item_Food_Fruit.png[Item_Food_Fruit_54]",
         "rendererLocalPosition": {
@@ -5629,6 +5671,13 @@
       "volume": 0.7,
       "stackable": true,
       "tags": ["Stone", "Mineral", "Throwable"],
+      "processing": {
+        "grind": {
+          "inputAmount": 1,
+          "work": 4,
+          "outputs": [{ "itemId": "OrePowder_Stone", "amount": 2 }]
+        }
+      },
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Tools/Item_Tool_404.png"
       },

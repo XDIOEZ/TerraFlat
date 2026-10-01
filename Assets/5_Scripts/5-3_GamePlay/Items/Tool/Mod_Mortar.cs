@@ -19,7 +19,8 @@ public sealed class Mod_Mortar : Module, IInteractable, IInventory
     public override ModuleTickMode TickMode => IsCrucible ? ModuleTickMode.FixedInterval : ModuleTickMode.Disabled;
     public override float FixedTickInterval => IsCrucible ? 1f : base.FixedTickInterval;
     public GameObject PanelPrefab; // 正式交互面板。
-    public string StationId = "mortar"; // 配方工作站标识。
+    public string StationId = "mortar"; // 坩埚等仍需要工作站身份；普通石臼不再按 Station 查配方。
+    public string ProcessCapability = "grind"; // 石臼只提供研磨能力，具体加工结果由投入物品自身声明。
     public bool EnableStrikeGesture = true; // 坩埚模式关闭捣击手势，只保留材料容器面板。
     public string ContainerLabel = "石臼"; // 面板标题和异常信息使用的容器名称。
     private readonly MortarInventory bowl = new MortarInventory();
@@ -46,6 +47,7 @@ public sealed class Mod_Mortar : Module, IInteractable, IInventory
             throw new InvalidOperationException($"{ContainerLabel}存档缺少容器内库存。");
         bowl.item = item;
         bowl.StationId = StationId;
+        bowl.ProcessCapability = ProcessCapability;
         bowl.MaterialOnly = IsCrucible;
         bowl.Data = state.Bowl;
         bowl.NormalizeStoredStacks();
@@ -176,16 +178,11 @@ public sealed class Mod_Mortar : Module, IInteractable, IInventory
         if (IsCrucible)
             return;
         batch = null;
-        foreach (RuntimeRecipe recipe in GameRes.Instance.GetRecipes(RecipeType.Crafting))
+        if (ItemProcessingResolver.TryResolveRecipe(
+                bowl, ProcessCapability, capabilities, out RuntimeItemProcessingDefinition processing))
         {
-            if (!string.Equals(recipe.RequiredStation, StationId, StringComparison.OrdinalIgnoreCase)) continue;
-            if (recipe.inputs.RowItems_List.Count != 1 || recipe.outputs.results.Count == 0 || recipe.action.Count != 0)
-                throw new InvalidOperationException($"石臼配方 {recipe.Id} 必须为无额外动作的单原料、多产物转换。");
-            RuntimeRecipeIngredient ingredient = recipe.inputs.RowItems_List[0];
-            if (ingredient.amount <= 0 || !CraftingRecipeMatcher.TryMatchRecipe(bowl, recipe, capabilities, out _)) continue;
-            batch = recipe;
-            ReserveOutputSlots(recipe);
-            break;
+            batch = processing.Recipe;
+            ReserveOutputSlots(batch);
         }
         AlignManualWorkProgress(state, batch);
     }
@@ -515,6 +512,7 @@ public sealed class Mod_Mortar : Module, IInteractable, IInventory
     public sealed class MortarInventory : Inventory
     {
         public string StationId;
+        public string ProcessCapability = "grind";
         public bool MaterialOnly;
 
         /// <summary>加载时修正旧运行过程中被空白投放区拆散的同类堆叠，不改变不同物品的相对顺序。</summary>
@@ -585,6 +583,9 @@ public sealed class Mod_Mortar : Module, IInteractable, IInventory
             ItemData candidate = sourceSlot?.itemData;
             if (candidate == null || ReferenceEquals(candidate, item?.itemData)) return false;
             if (MaterialOnly && Mod_WaterVessel.TryRead(candidate, out _, out _)) return false;
+            if (!string.Equals(StationId, CrucibleStationId, StringComparison.OrdinalIgnoreCase))
+                return ItemProcessingResolver.TryResolve(candidate, ProcessCapability, out _);
+
             RecipeType recipeType = string.Equals(StationId, CrucibleStationId, StringComparison.OrdinalIgnoreCase)
                 ? RecipeType.Smelting
                 : RecipeType.Crafting;

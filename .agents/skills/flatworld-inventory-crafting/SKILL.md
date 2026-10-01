@@ -11,7 +11,7 @@ description: "Use when: 定位或修改 FlatWorld 的背包、槽位、快捷栏
 
 - 库存：`Assets/5_Scripts/5-3_GamePlay/Items/Inventory/{Inventory,Mod_Inventory,Inventory_UI,Inventory_HotBar,ItemSlot_UI}.cs`
 - 制作：`Assets/5_Scripts/5-3_GamePlay/Items/Crafting/`
-- 配方真源：`Assets/StreamingAssets/GameConfig/Recipes/recipe-manifest.json` 及分包 JSON
+- 固定/多物料配方真源：`Assets/StreamingAssets/GameConfig/Recipes/recipe-manifest.json` 及分包 JSON；单物料的通用加工响应（如 grind）内聚在输入物品的 `ItemDefinition.processing`。
 - 配方可视化编辑：`Assets/Editor/FlatWorld/ContentTools/ContentWorkshop/`，Unity 菜单为 `FlatWorld/内容配置/内容工坊`
 - 装备：`Items/Equipment/{Mod_Equipment,Equipment_SO,EquipmentInstance*,Module_Equipment_Store}.cs`
 - 食物/农业：`Entities/Item/Mod_Food.cs`、种子/成长模块与 `Mod_Grow.AuthoritativeCrop.cs`
@@ -26,12 +26,12 @@ description: "Use when: 定位或修改 FlatWorld 的背包、槽位、快捷栏
 
 - 库存液体原料通过 `LiquidDefinition.sourceItemId` 唯一映射到液体；每个完整物品对应一份，容器拖入先校验同液体与整份容量，再从真实所属库存调用 `TryConsumeFromSlot`，数量不得超过 `InventoryDragTransaction.DraggedAmount`。不能把液体原料伪装成容器变体；已有进食进度的原料不能再按完整一份装液。浮点残余容量不足一份时不扣料，容器之间仍允许按原有规则部分转液。
 
-- 配方 JSON 是唯一真源；旧 CookRecipe/熔炼 Recipe SO 只作热加工 MOD 兼容，普通合成不再载入旧 SO。
+- 固定/多物料配方继续以 Recipe JSON 为真源；单物料通用加工以物品 `processing` 为真源，由 `ItemProcessingResolver` 适配成临时 `RuntimeRecipe` 后继续走 `CraftingService`。旧 CookRecipe/熔炼 Recipe SO 只作热加工 MOD 兼容，普通合成不再载入旧 SO。
 - 配方输出可通过可选 `durabilityMultiplier` 为同一产物定义赋予实例耐久品质；倍率必须为大于 0 的有限数，由 `CraftedDurabilityQuality` 在预览与真实提交共用的产物创建阶段应用，并写入 `ItemData.CraftedDurabilityMultiplier`。禁止为单个配方另写按配方 ID 硬编码的输出规则，否则容易与通用倍率重复叠乘。
 - 金属手钻的钻头质量读取实际扣除矿锭的 `DrillDurability:<正数>` Tag，并通过 `CraftingOutputRules` 写入产物实例；动态耐久必须同时持久化到共享“手钻模块”，放置/拆回及 ItemDefinition 读档重建后再恢复，不能只改临时 `ItemData.MaxDurability`。MOD 矿锭可通过同一 Tag 接入。
 - 内容工坊的普通合成使用不限长度的滚动材料清单，按物品或标签身份填写总数量，`amount=0` 表示必须存在但不消耗的工具。只有热加工继续使用 3×3 位置画布。保存前必须使用运行时配方工厂校验整份启用目录，并保留已有配方的未知顶层字段。
 - 所有制作入口调用 `CraftingService`；匹配由 `CraftingRecipeMatcher`，扣料/产出由 `CraftingTransaction` 原子提交。
-- `Mod_Mortar` 只接受单原料、多产物配方；`manualWorkSteps` 决定结算前需要累计多少次有效加工手势，默认 1。加工手势包括“提起后下压到接触线”的捣击，以及石棒贴近碗底累计横移达到配置阈值的研磨步进，两者统一发布同一加工意图。累计进度与当前配方 ID 必须保存在 `MortarState`，配方切换或原料不再匹配时清零；达到步数后才由 `CraftingService` 原子扣料和写入，失败时保留已完成进度。输入与输出共享动态 `Inventory`，禁止整堆改 ID。提交前按全部产物预留空槽；事务优先合并可堆叠产物，剩余原料独立保留。事务通知期间合并刷新，避免槽位变化取消正在拖动的石棒；动态容量策略在 Load 恢复，槽位和内容独立持久化。
+- 普通石臼只提供 `ProcessCapability=grind`，禁止重新按 `requiredStation=mortar` 维护具体物品配方；投入物是否可研磨、输入量、产物和工作量由该物品自己的 `processing.grind` 声明，且 `processing` 不从 parent 自动继承，避免模板物品把具体加工产物泄漏给子定义。运行时由 `ItemProcessingResolver` 生成单原料、多产物 `RuntimeRecipe`，`work` 同时决定石臼需要累计的有效加工手势数；捣击和贴底研磨步进统一发布加工意图。累计进度与当前配方 ID 必须保存在 `MortarState`，配方切换或原料不再匹配时清零；达到工作量后仍由 `CraftingService` 原子扣料和写入，失败时保留已完成进度。坩埚继续使用独立的热加工工作站配方，不走 grind。输入与输出共享动态 `Inventory`，禁止整堆改 ID。提交前按全部产物预留空槽；事务优先合并可堆叠产物，剩余原料独立保留。事务通知期间合并刷新，避免槽位变化取消正在拖动的石棒；动态容量策略在 Load 恢复，槽位和内容独立持久化。
 - `Inventory.basePanel` 只表示由 `Inventory.InitUI` 管理且含 `UI_Content` 的槽位面板；石臼等自管槽位的组合面板只传给 `SyncQuickTransferTarget` 判断快捷转移窗口状态，不得写入 `basePanel`，否则动态扩容通知会误走通用槽位初始化。
 - 储物库存可在序列化 `Inventory` 实例上配置 `StorageMaxWeightKg` 与 `StorageMaxVolumeCubicMeters` 两个正值；`Inventory.InitData` 将立方米按 `LitersPerCubicMeter` 转为库存内部 L 后应用容量策略。`Mod_Inventory.Load` 恢复 `Inventory_Data` 后须重新应用容量策略，动态槽位与物品内容仍由 `Inventory_Data.itemSlots` 持久化。受限非玩家库存的重量/体积 UI 读自身 `Inventory_Data`，玩家行囊继续通过 `PlayerCarryCapacityUtility` 合并统计快捷栏；体积在逻辑与存档中沿用 L，UI 转为 m³ 显示。
 - 石臼面板使用正式透明槽位模板动态克隆，数量增加不等于创建新槽；同类满堆或不同产物才占新格。空槽使用碗内轮廓投料，已有物品的整个槽位随重力移动，确保命中区与图标一致。可见物品分页，关闭面板只复位视觉，不清空库存；父节点失活期间 `OnDisable` 只能清理手势、协程和临时投料表现，禁止调用 `SetSiblingIndex/SetAsLastSibling` 等层级排序，完整槽位布局复位应由层级稳定时的显式开关流程执行。`ItemSlot_UI.ItemAddedAtPointer` 只在点击/拖放事务实际增加物品后发布位置反馈；石臼数量、种类或槽位扩容不能重排已有物品，合并投料只用无射线的图标表现下落，停稳保留落点。透明槽位通过 `ItemSlot_UI.selectionGraphic` 把选择/拖入描边指定到图标，不能对透明背景使用忽略 Alpha 的 Outline，否则会出现整块黄色方形。

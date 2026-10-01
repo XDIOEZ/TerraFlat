@@ -7,7 +7,7 @@
       "parent": "BasicItem_Base",
       "shellPrefab": "BuildingSummonerShell",
       "gameName": "石臼",
-      "description": "将稻谷放进石碗，每捣击一次消耗一份稻谷并立即产出一份大米。手持面板中可选择放到地上，落地后交互使用或拆回；碗内原料与产物全程保留。",
+      "description": "提供手动研磨能力；放入自身声明可研磨的材料后，通过捣击或研磨逐步完成加工。可放到地上使用或拆回，碗内原料、产物与加工进度全程保留。",
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,
@@ -57,7 +57,8 @@
             "Type": 0
           },
           "parameters": {
-            "StationId": "mortar"
+            "StationId": "mortar",
+            "ProcessCapability": "grind"
           }
         }
       }

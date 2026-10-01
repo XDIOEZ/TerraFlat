@@ -45,6 +45,13 @@
       "weight": 0.05,
       "volume": 0.15,
       "stackable": true,
+      "processing": {
+        "grind": {
+          "inputAmount": 1,
+          "work": 4,
+          "outputs": [{ "itemId": "Seed_Foxtail", "amount": 1 }]
+        }
+      },
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Farming/FoxtailEar/FoxtailEar_SeedHead_Icon.png",
         "color": {
@@ -137,6 +144,13 @@
       "weight": 1.0,
       "volume": 0.55,
       "stackable": true,
+      "processing": {
+        "grind": {
+          "inputAmount": 1,
+          "work": 4,
+          "outputs": [{ "itemId": "OrePowder_Niter", "amount": 2 }]
+        }
+      },
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Environment/Ore_Niter/Ore_Niter_Idle.png",
         "color": {
@@ -252,6 +266,13 @@
       "weight": 0.02,
       "volume": 0.05,
       "stackable": true,
+      "processing": {
+        "grind": {
+          "inputAmount": 5,
+          "work": 6,
+          "outputs": [{ "itemId": "Flour", "amount": 1 }]
+        }
+      },
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Farming/FoxtailSeed/FoxtailSeed_Icon.png",
         "color": {

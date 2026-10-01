@@ -40,6 +40,13 @@
       "stackable": true,
       "canBePickedUp": true,
       "tags": ["Ore", "Gold"],
+      "processing": {
+        "grind": {
+          "inputAmount": 1,
+          "work": 4,
+          "outputs": [{ "itemId": "OrePowder_Gold", "amount": 2 }]
+        }
+      },
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Environment/Ore_Gold/Ore_Gold_Idle.png",
         "color": { "r": 1, "g": 1, "b": 1, "a": 1 },

@@ -160,27 +160,6 @@
         }
       ],
       "actions": []
-    },
-    {
-      "id": "core:rice_dehusk",
-      "displayName": "稻谷脱壳",
-      "requiredStation": "mortar",
-      "recipeType": "crafting",
-      "inputRule": "unordered",
-      "inputs": [
-        {
-          "match": "exact_item",
-          "itemId": "RiceGrain",
-          "amount": 1
-        }
-      ],
-      "outputs": [
-        {
-          "itemId": "Rice",
-          "amount": 1
-        }
-      ],
-      "actions": []
     }
   ]
 }

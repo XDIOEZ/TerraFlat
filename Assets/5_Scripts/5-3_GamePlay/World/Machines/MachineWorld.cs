@@ -571,9 +571,14 @@ public static partial class MachineWorld
             node.Logic ??= MachineLogicRegistry.Create(node);
             return;
         }
-        if (node.Processor == null && !string.IsNullOrWhiteSpace(node.Definition.Station))
+        if (node.Processor == null &&
+            (!string.IsNullOrWhiteSpace(node.Definition.Station) ||
+             !string.IsNullOrWhiteSpace(node.Definition.ProcessCapability)))
         {
-            node.Processor = new RecipeProcessor(node.Definition.Station, node.State.Processing ??= new RecipeProcessingState());
+            node.Processor = new RecipeProcessor(
+                node.Definition.Station,
+                node.State.Processing ??= new RecipeProcessingState(),
+                node.Definition.ProcessCapability);
             node.Processor.Input.MachineOwner = node;
             node.Processor.Output.MachineOwner = node;
             node.Processor.StateChanged += OnProcessorChanged;

@@ -10,6 +10,7 @@ public class RecipeProcessor : IDisposable
     public Inventory Input { get; }
     public Inventory Output { get; }
     public string Station { get; }
+    public string ProcessCapability { get; }
     public CraftingCapabilities Capabilities { get; }
     public RuntimeRecipe Recipe { get; private set; }
     public float RequiredWork { get; private set; } = 1f;
@@ -24,13 +25,14 @@ public class RecipeProcessor : IDisposable
     public event Action<RecipeProcessor> StateChanged; // 世界快照增量同步入口。
     private bool committing;
 
-    public RecipeProcessor(string station, RecipeProcessingState state)
+    public RecipeProcessor(string station, RecipeProcessingState state, string processCapability = null)
     {
         Station = station;
+        ProcessCapability = processCapability?.Trim() ?? string.Empty;
         State = state ?? throw new ArgumentNullException(nameof(state));
         RebaseInventory(State.Input);
         RebaseInventory(State.Output);
-        Input = new ProcessingInventory(station) { Data = state.Input };
+        Input = new ProcessingInventory(station, ProcessCapability) { Data = state.Input };
         Output = new Inventory { Data = state.Output };
         Capabilities = new CraftingCapabilities { StationId = station, InputSlotLimit = 1, ApplyDifficultyOutputMultiplier = false };
         registeredProcess = true;
@@ -148,8 +150,17 @@ public class RecipeProcessor : IDisposable
     {
         if (registeredProcess)
         {
-            bool found = TryGetProcess(out var process);
-            SelectRecipe(found ? process.Recipe : null, found ? process.WorkSeconds : 1f);
+            if (!string.IsNullOrWhiteSpace(ProcessCapability))
+            {
+                bool found = ItemProcessingResolver.TryResolveRecipe(
+                    Input, ProcessCapability, Capabilities, out RuntimeItemProcessingDefinition processing);
+                SelectRecipe(found ? processing.Recipe : null, found ? processing.WorkRequired : 1f);
+            }
+            else
+            {
+                bool found = TryGetProcess(out var process);
+                SelectRecipe(found ? process.Recipe : null, found ? process.WorkSeconds : 1f);
+            }
         }
         if (!MachineDefinition.NonNegative(State.Progress)) State.Progress = 0;
     }
@@ -185,9 +196,16 @@ public class RecipeProcessor : IDisposable
     private sealed class ProcessingInventory : Inventory
     {
         private readonly string station;
-        public ProcessingInventory(string station) { this.station = station; }
+        private readonly string processCapability;
+        public ProcessingInventory(string station, string processCapability)
+        {
+            this.station = station;
+            this.processCapability = processCapability;
+        }
         public override bool CanAcceptQuickTransfer(ItemSlot source, ItemSlot target)
             => base.CanAcceptQuickTransfer(source, target) &&
-               MachineCatalog.TryGetProcess(station, source?.itemData?.IDName, out _);
+               (!string.IsNullOrWhiteSpace(processCapability)
+                   ? ItemProcessingResolver.TryResolve(source?.itemData, processCapability, out _)
+                   : MachineCatalog.TryGetProcess(station, source?.itemData?.IDName, out _));
     }
 }

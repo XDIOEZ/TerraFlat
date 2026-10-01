@@ -134,6 +134,10 @@ public sealed class ItemDefinitionDto
     [JsonProperty("tags")]
     public List<string> Tags;
 
+    /// <summary>物品自身对加工能力的响应；键为 grind/cut 等稳定能力 ID，不绑定具体工作站。</summary>
+    [JsonProperty("processing", NullValueHandling = NullValueHandling.Ignore)]
+    public Dictionary<string, ItemProcessingDefinitionDto> Processing = new();
+
     /// <summary>ItemData 中除公共快捷字段外的其余静态模板数据。</summary>
     [JsonProperty("itemData")]
     public JObject ItemData;
@@ -377,6 +381,33 @@ public sealed class ItemModuleDefinitionDto
     public JObject Parameters;
 }
 
+/// <summary>物品自身声明的单物料加工响应；工作量使用抽象单位，由具体设备决定推进速度。</summary>
+[Serializable]
+public sealed class ItemProcessingDefinitionDto
+{
+    [JsonProperty("inputAmount")]
+    public int InputAmount = 1;
+
+    [JsonProperty("work")]
+    public float Work = 1f;
+
+    [JsonProperty("outputs")]
+    public List<ItemProcessingOutputDto> Outputs = new();
+}
+
+[Serializable]
+public sealed class ItemProcessingOutputDto
+{
+    [JsonProperty("itemId")]
+    public string ItemId;
+
+    [JsonProperty("amount")]
+    public int Amount = 1;
+
+    [JsonProperty("durabilityMultiplier", NullValueHandling = NullValueHandling.Ignore)]
+    public float? DurabilityMultiplier;
+}
+
 public enum WorldDropBehavior
 {
     Passive = 0,
@@ -390,6 +421,7 @@ public sealed class RuntimeItemDefinition
     private readonly Dictionary<string, string> moduleParameters;
     private readonly Dictionary<string, string> modulePrefabIds;
     private readonly Dictionary<string, Sprite> visualStateSprites;
+    private readonly Dictionary<string, RuntimeItemProcessingDefinition> processingDefinitions;
 
     public string Id { get; }
     public string ShellPrefabId { get; }
@@ -409,6 +441,9 @@ public sealed class RuntimeItemDefinition
 
     /// <summary>定义编译后的模块描述；纯数据系统可据此装配能力，不需要实例化 Module Prefab。</summary>
     public IReadOnlyList<RuntimeItemModuleDefinition> ModuleDefinitions { get; }
+
+    /// <summary>当前物品可响应的加工能力；配方关系属于物品，不属于石臼、石磨等具体设备。</summary>
+    public IReadOnlyDictionary<string, RuntimeItemProcessingDefinition> ProcessingDefinitions => processingDefinitions;
 
     /// <summary>世界侧可直接判断拾取语义，避免为了筛选 ECS 实体克隆 ItemData。</summary>
     public bool CanBePickedUp => templateData?.Stack?.CanBePickedUp == true;
@@ -476,7 +511,8 @@ public sealed class RuntimeItemDefinition
         int requiredGroundSupport = 0,
         JObject actorEcs = null,
         string entityRuntime = null,
-        WorldDropBehavior worldDropBehavior = WorldDropBehavior.Passive)
+        WorldDropBehavior worldDropBehavior = WorldDropBehavior.Passive,
+        Dictionary<string, RuntimeItemProcessingDefinition> processing = null)
     {
         Id = id;
         EntityRuntime = entityRuntime;
@@ -516,6 +552,7 @@ public sealed class RuntimeItemDefinition
         moduleParameters = parameters ?? new Dictionary<string, string>(StringComparer.Ordinal);
         modulePrefabIds = prefabIds ?? new Dictionary<string, string>(StringComparer.Ordinal);
         visualStateSprites = stateSprites ?? new Dictionary<string, Sprite>(StringComparer.OrdinalIgnoreCase);
+        processingDefinitions = processing ?? new Dictionary<string, RuntimeItemProcessingDefinition>(StringComparer.OrdinalIgnoreCase);
 
         var modules = new List<RuntimeItemModuleDefinition>(moduleParameters.Count);
         foreach (KeyValuePair<string, string> pair in moduleParameters)
@@ -532,6 +569,18 @@ public sealed class RuntimeItemDefinition
                 moduleData?.Enabled != false));
         }
         ModuleDefinitions = modules.AsReadOnly();
+    }
+
+    /// <summary>查询物品是否响应指定加工能力。</summary>
+    public bool TryGetProcessing(string capability, out RuntimeItemProcessingDefinition processing)
+    {
+        if (string.IsNullOrWhiteSpace(capability))
+        {
+            processing = null;
+            return false;
+        }
+
+        return processingDefinitions.TryGetValue(capability.Trim(), out processing);
     }
 
     /// <summary>按状态名读取已由资源目录统一持有的额外 Sprite。</summary>
@@ -586,6 +635,47 @@ public sealed class RuntimeItemDefinition
                !string.IsNullOrWhiteSpace(prefabId)
             ? prefabId
             : fallbackId;
+    }
+}
+
+/// <summary>校验后的单物料加工响应；运行时配方只作为现有 CraftingService 的事务适配层。</summary>
+public sealed class RuntimeItemProcessingDefinition
+{
+    public string Capability { get; }
+    public int InputAmount { get; }
+    public float WorkRequired { get; }
+    public RuntimeRecipe Recipe { get; }
+
+    public RuntimeItemProcessingDefinition(
+        string itemId,
+        string capability,
+        int inputAmount,
+        float workRequired,
+        IReadOnlyList<RuntimeRecipeResult> outputs)
+    {
+        Capability = capability;
+        InputAmount = inputAmount;
+        WorkRequired = workRequired;
+        Recipe = new RuntimeRecipe
+        {
+            Id = $"item-process.{capability}.{itemId}",
+            DisplayName = $"{itemId}:{capability}",
+            RequiredStation = string.Empty,
+            ManualWorkSteps = Mathf.Max(1, Mathf.CeilToInt(workRequired)),
+            inputs = new RuntimeRecipeInput
+            {
+                recipeType = RecipeType.Crafting,
+                inputOrder = RecipeInputRule.无规则合成,
+                RowItems_List = new List<RuntimeRecipeIngredient>
+                {
+                    new() { matchMode = MatchMode.ExactItem, ItemName = itemId, amount = inputAmount }
+                }
+            },
+            outputs = new RuntimeRecipeOutput
+            {
+                results = outputs == null ? new List<RuntimeRecipeResult>() : new List<RuntimeRecipeResult>(outputs)
+            }
+        };
     }
 }
 

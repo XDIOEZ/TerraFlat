@@ -194,6 +194,7 @@ public sealed class MachineDefinition
     public string Source = ""; // manual/water/wind 或 MOD 条件
     public float SourceRadius; // 由水流线速度换算转速时使用的动力轮半径，单位为世界格。
     public string Station = "";
+    public string ProcessCapability = ""; // grind 等物品加工能力；填写后具体产物从输入物品自身解析。
     public float TorqueCapacity = 60f; // 旧目录兼容字段；传动件现只传递扭矩，不以容量限制运行。
     public float Torque;
     public float Rpm = 20f;
