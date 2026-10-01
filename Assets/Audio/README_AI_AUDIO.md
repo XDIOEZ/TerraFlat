@@ -5,6 +5,7 @@
 - 手工制作或 LMMS 导出的 UI 候选音效放在 `Assets/Audio/UI/LMMS_Clicks/`，按风格分文件夹，使用 `UI_风格_用途_声音特征_变体编号.wav` 详细命名。
 - 候选素材在 Project 中直接试听；选定风格后再绑定现有 AudioCue。此目录不参与下面的自动 Catalog 扫描，避免不同风格被混成同一事件的随机变体。
 - 原始工程与离线试听页位于 `SoundDesign/UI_Click_LMMS/`；目录内说明文件提供完整音效名称索引。
+- 背包物品取放素材放在 `Assets/Audio/UI/InventoryItems_LMMS/`，按拿起/背包/箱子及材质分目录，再独立区分重量、体积；`InventoryAudioLibrary.json` 提供 72 个 WAV 的路径、GUID 和分类索引。工程与可拖拽试听页位于 `SoundDesign/Inventory_Items_LMMS/`。
 
 ## 新增音效
 

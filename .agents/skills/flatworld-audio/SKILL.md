@@ -12,11 +12,13 @@ description: "Use when: 定位或修改 FlatWorld 的音频服务、AudioCue、�
 - UI：`Assets/5_Scripts/5-5_UI/Audio/`
 - 资源与工具：`Assets/Resources/Audio/`、`Assets/5_Scripts/5-6_Audio/Editor/`
 - LMMS UI 候选素材：`Assets/Audio/UI/LMMS_Clicks/`；原始工程与离线试听：`SoundDesign/UI_Click_LMMS/`
+- 物品取放素材：`Assets/Audio/UI/InventoryItems_LMMS/`；工程与交互试听：`SoundDesign/Inventory_Items_LMMS/`，JSON 索引按操作/材质/重量/体积选音。
 
 ## 不变量
 
 - 业务系统通过稳定 Cue ID 发声，不自行管理临时 `AudioSource`。
 - UI 候选音效按风格分目录，用 `UI_风格_用途_声音特征_变体编号.wav` 命名；不放入自动 Catalog 扫描的 `Assets/Audio/Generated/`，选定风格后再绑定 Cue，避免三套风格被混成随机变体。再导出用 `build_preview.py --unity .` 同步 WAV 并保留已有 GUID。
+- 物品取放候选按 `物品交互_材质_操作_重量_体积_变体.wav` 命名；重量 kg 与体积 L 独立划档，按真正转移数量计算。背包/箱子用不同接触音色，拿起只在点击取物或开始拖拽时播放一次，放入音只跟随成功事务；候选索引不等于运行时已接入。
 - `AudioService` 负责跨场景生命周期、池化、并发、优先级、淡入淡出与音量。
 - Catalog/Config 移动时同步 Resources 加载常量；循环 Cue 必须有明确停止和回收路径。
 - AI 生成音效以事件 ID 结尾的 `.loop` 作为循环语义；`player.*` 属于带空间衰减的世界 SFX，角色循环音效必须绑定角色 Transform 并在状态失效时停止。

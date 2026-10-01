@@ -1,0 +1,644 @@
+<?xml version="1.0"?>
+<!DOCTYPE lmms-project>
+<lmms-project version="1.0" creator="LMMS" creatorversion="1.2.2" type="song">
+  <head timesig_numerator="4" timesig_denominator="4" bpm="120" mastervol="65" masterpitch="0" />
+  <song>
+    <trackcontainer type="song" visible="1" width="1100" height="440" x="5" y="5" maximized="0" minimized="0">
+      <track muted="0" type="0" name="柔软物品_轻物_小体积" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="30" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="66" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="22" wavetype1="0" coarse1="-12" finel1="0" finer1="0" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="7" wavetype2="0" coarse2="7" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="598" fwet="1">
+            <elvol pdel="0" att="0.018974" hold="0" dec="0.088258" sustain="0" rel="0.048990" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" att="0.000000" hold="0" dec="0.100000" sustain="0" rel="0.044721" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" att="0.000000" hold="0" dec="0.100000" sustain="0" rel="0.044721" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="0" name="柔软物品_轻物_小体积">
+          <note pos="12" key="46" len="8" vol="82" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="柔软物品_轻物_大体积" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="30" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="66" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="22" wavetype1="0" coarse1="-12" finel1="0" finer1="0" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="7" wavetype2="0" coarse2="7" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="598" fwet="1">
+            <elvol pdel="0" att="0.018974" hold="0" dec="0.104428" sustain="0" rel="0.048990" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" att="0.000000" hold="0" dec="0.100000" sustain="0" rel="0.044721" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" att="0.000000" hold="0" dec="0.100000" sustain="0" rel="0.044721" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="192" name="柔软物品_轻物_大体积">
+          <note pos="12" key="44" len="9" vol="82" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="柔软物品_中等重量_小体积" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="40" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="66" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="22" wavetype1="0" coarse1="-12" finel1="0" finer1="0" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="7" wavetype2="0" coarse2="7" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="598" fwet="1">
+            <elvol pdel="0" att="0.018974" hold="0" dec="0.095729" sustain="0" rel="0.048990" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" att="0.000000" hold="0" dec="0.100000" sustain="0" rel="0.044721" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" att="0.000000" hold="0" dec="0.100000" sustain="0" rel="0.044721" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="384" name="柔软物品_中等重量_小体积">
+          <note pos="12" key="38" len="8" vol="82" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="柔软物品_中等重量_大体积" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="40" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="66" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="22" wavetype1="0" coarse1="-12" finel1="0" finer1="0" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="7" wavetype2="0" coarse2="7" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="598" fwet="1">
+            <elvol pdel="0" att="0.018974" hold="0" dec="0.113268" sustain="0" rel="0.048990" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" att="0.000000" hold="0" dec="0.100000" sustain="0" rel="0.044721" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" att="0.000000" hold="0" dec="0.100000" sustain="0" rel="0.044721" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="576" name="柔软物品_中等重量_大体积">
+          <note pos="12" key="36" len="10" vol="82" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="柔软物品_重物_小体积" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="49" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="66" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="22" wavetype1="0" coarse1="-12" finel1="0" finer1="0" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="7" wavetype2="0" coarse2="7" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="598" fwet="1">
+            <elvol pdel="0" att="0.018974" hold="0" dec="0.103988" sustain="0" rel="0.048990" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" att="0.000000" hold="0" dec="0.100000" sustain="0" rel="0.044721" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" att="0.000000" hold="0" dec="0.100000" sustain="0" rel="0.044721" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="768" name="柔软物品_重物_小体积">
+          <note pos="12" key="30" len="9" vol="82" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="柔软物品_重物_大体积" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="49" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="66" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="22" wavetype1="0" coarse1="-12" finel1="0" finer1="0" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="7" wavetype2="0" coarse2="7" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="598" fwet="1">
+            <elvol pdel="0" att="0.018974" hold="0" dec="0.123040" sustain="0" rel="0.048990" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" att="0.000000" hold="0" dec="0.100000" sustain="0" rel="0.044721" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" att="0.000000" hold="0" dec="0.100000" sustain="0" rel="0.044721" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="960" name="柔软物品_重物_大体积">
+          <note pos="12" key="28" len="11" vol="82" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="木质物品_轻物_小体积" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="30" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="60" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="19" wavetype1="0" coarse1="17" finel1="28" finer1="28" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="16" wavetype2="6" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="1560" fwet="1">
+            <elvol pdel="0" att="0.018974" hold="0" dec="0.078599" sustain="0" rel="0.048990" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" att="0.000000" hold="0" dec="0.100000" sustain="0" rel="0.044721" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" att="0.000000" hold="0" dec="0.100000" sustain="0" rel="0.044721" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="1152" name="木质物品_轻物_小体积">
+          <note pos="12" key="62" len="8" vol="82" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="木质物品_轻物_大体积" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="30" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="60" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="19" wavetype1="0" coarse1="17" finel1="28" finer1="28" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="16" wavetype2="6" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="1560" fwet="1">
+            <elvol pdel="0" att="0.018974" hold="0" dec="0.093000" sustain="0" rel="0.048990" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" att="0.000000" hold="0" dec="0.100000" sustain="0" rel="0.044721" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" att="0.000000" hold="0" dec="0.100000" sustain="0" rel="0.044721" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="1344" name="木质物品_轻物_大体积">
+          <note pos="12" key="60" len="8" vol="82" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="木质物品_中等重量_小体积" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="40" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="60" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="19" wavetype1="0" coarse1="17" finel1="28" finer1="28" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="16" wavetype2="6" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="1560" fwet="1">
+            <elvol pdel="0" att="0.018974" hold="0" dec="0.085253" sustain="0" rel="0.048990" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" att="0.000000" hold="0" dec="0.100000" sustain="0" rel="0.044721" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" att="0.000000" hold="0" dec="0.100000" sustain="0" rel="0.044721" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="1536" name="木质物品_中等重量_小体积">
+          <note pos="12" key="54" len="8" vol="82" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="木质物品_中等重量_大体积" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="40" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="60" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="19" wavetype1="0" coarse1="17" finel1="28" finer1="28" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="16" wavetype2="6" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="1560" fwet="1">
+            <elvol pdel="0" att="0.018974" hold="0" dec="0.100872" sustain="0" rel="0.048990" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" att="0.000000" hold="0" dec="0.100000" sustain="0" rel="0.044721" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" att="0.000000" hold="0" dec="0.100000" sustain="0" rel="0.044721" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="1728" name="木质物品_中等重量_大体积">
+          <note pos="12" key="52" len="9" vol="82" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="木质物品_重物_小体积" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="49" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="60" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="19" wavetype1="0" coarse1="17" finel1="28" finer1="28" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="16" wavetype2="6" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="1560" fwet="1">
+            <elvol pdel="0" att="0.018974" hold="0" dec="0.092608" sustain="0" rel="0.048990" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" att="0.000000" hold="0" dec="0.100000" sustain="0" rel="0.044721" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" att="0.000000" hold="0" dec="0.100000" sustain="0" rel="0.044721" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="1920" name="木质物品_重物_小体积">
+          <note pos="12" key="46" len="8" vol="82" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="木质物品_重物_大体积" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="49" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="60" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="19" wavetype1="0" coarse1="17" finel1="28" finer1="28" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="16" wavetype2="6" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="1560" fwet="1">
+            <elvol pdel="0" att="0.018974" hold="0" dec="0.109575" sustain="0" rel="0.048990" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" att="0.000000" hold="0" dec="0.100000" sustain="0" rel="0.044721" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" att="0.000000" hold="0" dec="0.100000" sustain="0" rel="0.044721" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="2112" name="木质物品_重物_大体积">
+          <note pos="12" key="44" len="10" vol="82" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="石质硬物_轻物_小体积" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="30" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="48" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="28" wavetype1="0" coarse1="-12" finel1="0" finer1="0" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="11" wavetype2="0" coarse2="15" finel2="35" finer2="35" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="1924" fwet="1">
+            <elvol pdel="0" att="0.018974" hold="0" dec="0.082760" sustain="0" rel="0.048990" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" att="0.000000" hold="0" dec="0.100000" sustain="0" rel="0.044721" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" att="0.000000" hold="0" dec="0.100000" sustain="0" rel="0.044721" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="2304" name="石质硬物_轻物_小体积">
+          <note pos="12" key="59" len="8" vol="82" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="石质硬物_轻物_大体积" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="30" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="48" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="28" wavetype1="0" coarse1="-12" finel1="0" finer1="0" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="11" wavetype2="0" coarse2="15" finel2="35" finer2="35" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="1924" fwet="1">
+            <elvol pdel="0" att="0.018974" hold="0" dec="0.097924" sustain="0" rel="0.048990" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" att="0.000000" hold="0" dec="0.100000" sustain="0" rel="0.044721" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" att="0.000000" hold="0" dec="0.100000" sustain="0" rel="0.044721" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="2496" name="石质硬物_轻物_大体积">
+          <note pos="12" key="57" len="8" vol="82" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="石质硬物_中等重量_小体积" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="40" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="48" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="28" wavetype1="0" coarse1="-12" finel1="0" finer1="0" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="11" wavetype2="0" coarse2="15" finel2="35" finer2="35" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="1924" fwet="1">
+            <elvol pdel="0" att="0.018974" hold="0" dec="0.089766" sustain="0" rel="0.048990" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" att="0.000000" hold="0" dec="0.100000" sustain="0" rel="0.044721" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" att="0.000000" hold="0" dec="0.100000" sustain="0" rel="0.044721" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="2688" name="石质硬物_中等重量_小体积">
+          <note pos="12" key="51" len="8" vol="82" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="石质硬物_中等重量_大体积" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="40" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="48" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="28" wavetype1="0" coarse1="-12" finel1="0" finer1="0" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="11" wavetype2="0" coarse2="15" finel2="35" finer2="35" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="1924" fwet="1">
+            <elvol pdel="0" att="0.018974" hold="0" dec="0.106213" sustain="0" rel="0.048990" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" att="0.000000" hold="0" dec="0.100000" sustain="0" rel="0.044721" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" att="0.000000" hold="0" dec="0.100000" sustain="0" rel="0.044721" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="2880" name="石质硬物_中等重量_大体积">
+          <note pos="12" key="49" len="9" vol="82" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="石质硬物_重物_小体积" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="49" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="48" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="28" wavetype1="0" coarse1="-12" finel1="0" finer1="0" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="11" wavetype2="0" coarse2="15" finel2="35" finer2="35" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="1924" fwet="1">
+            <elvol pdel="0" att="0.018974" hold="0" dec="0.097511" sustain="0" rel="0.048990" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" att="0.000000" hold="0" dec="0.100000" sustain="0" rel="0.044721" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" att="0.000000" hold="0" dec="0.100000" sustain="0" rel="0.044721" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="3072" name="石质硬物_重物_小体积">
+          <note pos="12" key="43" len="8" vol="82" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="石质硬物_重物_大体积" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="49" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="48" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="28" wavetype1="0" coarse1="-12" finel1="0" finer1="0" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="11" wavetype2="0" coarse2="15" finel2="35" finer2="35" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="1924" fwet="1">
+            <elvol pdel="0" att="0.018974" hold="0" dec="0.115377" sustain="0" rel="0.048990" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" att="0.000000" hold="0" dec="0.100000" sustain="0" rel="0.044721" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" att="0.000000" hold="0" dec="0.100000" sustain="0" rel="0.044721" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="3264" name="石质硬物_重物_大体积">
+          <note pos="12" key="41" len="10" vol="82" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="金属硬物_轻物_小体积" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="30" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="58" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="24" wavetype1="0" coarse1="15" finel1="27" finer1="27" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="13" wavetype2="0" coarse2="23" finel2="-31" finer2="-31" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="2444" fwet="1">
+            <elvol pdel="0" att="0.018974" hold="0" dec="0.104941" sustain="0" rel="0.048990" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" att="0.000000" hold="0" dec="0.100000" sustain="0" rel="0.044721" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" att="0.000000" hold="0" dec="0.100000" sustain="0" rel="0.044721" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="3456" name="金属硬物_轻物_小体积">
+          <note pos="12" key="65" len="9" vol="82" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="金属硬物_轻物_大体积" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="30" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="58" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="24" wavetype1="0" coarse1="15" finel1="27" finer1="27" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="13" wavetype2="0" coarse2="23" finel2="-31" finer2="-31" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="2444" fwet="1">
+            <elvol pdel="0" att="0.018974" hold="0" dec="0.124168" sustain="0" rel="0.048990" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" att="0.000000" hold="0" dec="0.100000" sustain="0" rel="0.044721" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" att="0.000000" hold="0" dec="0.100000" sustain="0" rel="0.044721" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="3648" name="金属硬物_轻物_大体积">
+          <note pos="12" key="63" len="11" vol="82" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="金属硬物_中等重量_小体积" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="40" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="58" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="24" wavetype1="0" coarse1="15" finel1="27" finer1="27" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="13" wavetype2="0" coarse2="23" finel2="-31" finer2="-31" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="2444" fwet="1">
+            <elvol pdel="0" att="0.018974" hold="0" dec="0.113824" sustain="0" rel="0.048990" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" att="0.000000" hold="0" dec="0.100000" sustain="0" rel="0.044721" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" att="0.000000" hold="0" dec="0.100000" sustain="0" rel="0.044721" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="3840" name="金属硬物_中等重量_小体积">
+          <note pos="12" key="57" len="10" vol="82" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="金属硬物_中等重量_大体积" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="40" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="58" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="24" wavetype1="0" coarse1="15" finel1="27" finer1="27" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="13" wavetype2="0" coarse2="23" finel2="-31" finer2="-31" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="2444" fwet="1">
+            <elvol pdel="0" att="0.018974" hold="0" dec="0.134679" sustain="0" rel="0.048990" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" att="0.000000" hold="0" dec="0.100000" sustain="0" rel="0.044721" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" att="0.000000" hold="0" dec="0.100000" sustain="0" rel="0.044721" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="4032" name="金属硬物_中等重量_大体积">
+          <note pos="12" key="55" len="13" vol="82" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="金属硬物_重物_小体积" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="49" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="58" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="24" wavetype1="0" coarse1="15" finel1="27" finer1="27" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="13" wavetype2="0" coarse2="23" finel2="-31" finer2="-31" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="2444" fwet="1">
+            <elvol pdel="0" att="0.018974" hold="0" dec="0.123645" sustain="0" rel="0.048990" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" att="0.000000" hold="0" dec="0.100000" sustain="0" rel="0.044721" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" att="0.000000" hold="0" dec="0.100000" sustain="0" rel="0.044721" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="4224" name="金属硬物_重物_小体积">
+          <note pos="12" key="49" len="11" vol="82" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="金属硬物_重物_大体积" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="49" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="58" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="24" wavetype1="0" coarse1="15" finel1="27" finer1="27" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="13" wavetype2="0" coarse2="23" finel2="-31" finer2="-31" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="2444" fwet="1">
+            <elvol pdel="0" att="0.018974" hold="0" dec="0.146299" sustain="0" rel="0.048990" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" att="0.000000" hold="0" dec="0.100000" sustain="0" rel="0.044721" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" att="0.000000" hold="0" dec="0.100000" sustain="0" rel="0.044721" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="4416" name="金属硬物_重物_大体积">
+          <note pos="12" key="47" len="14" vol="82" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="接触层_放进背包_轻物_小体积" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="16" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="64" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="28" wavetype1="0" coarse1="-12" finel1="-23" finer1="-23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="760" fwet="1">
+            <elvol pdel="0" att="0.031623" hold="0" dec="0.117473" sustain="0" rel="0.054772" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" att="0.000000" hold="0" dec="0.100000" sustain="0" rel="0.044721" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" att="0.000000" hold="0" dec="0.100000" sustain="0" rel="0.044721" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="0" name="柔软物品_轻物_小体积">
+          <note pos="12" key="46" len="10" vol="80" pan="0" />
+        </pattern>
+        <pattern type="1" steps="16" len="192" pos="1152" name="木质物品_轻物_小体积">
+          <note pos="12" key="46" len="10" vol="80" pan="0" />
+        </pattern>
+        <pattern type="1" steps="16" len="192" pos="2304" name="石质硬物_轻物_小体积">
+          <note pos="12" key="46" len="10" vol="80" pan="0" />
+        </pattern>
+        <pattern type="1" steps="16" len="192" pos="3456" name="金属硬物_轻物_小体积">
+          <note pos="12" key="46" len="10" vol="80" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="接触层_放进背包_轻物_大体积" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="16" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="64" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="28" wavetype1="0" coarse1="-12" finel1="-23" finer1="-23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="631" fwet="1">
+            <elvol pdel="0" att="0.031623" hold="0" dec="0.138996" sustain="0" rel="0.054772" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" att="0.000000" hold="0" dec="0.100000" sustain="0" rel="0.044721" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" att="0.000000" hold="0" dec="0.100000" sustain="0" rel="0.044721" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="192" name="柔软物品_轻物_大体积">
+          <note pos="12" key="46" len="13" vol="80" pan="0" />
+        </pattern>
+        <pattern type="1" steps="16" len="192" pos="1344" name="木质物品_轻物_大体积">
+          <note pos="12" key="46" len="13" vol="80" pan="0" />
+        </pattern>
+        <pattern type="1" steps="16" len="192" pos="2496" name="石质硬物_轻物_大体积">
+          <note pos="12" key="46" len="13" vol="80" pan="0" />
+        </pattern>
+        <pattern type="1" steps="16" len="192" pos="3648" name="金属硬物_轻物_大体积">
+          <note pos="12" key="46" len="13" vol="80" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="接触层_放进背包_中等重量_小体积" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="21" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="64" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="28" wavetype1="0" coarse1="-12" finel1="-23" finer1="-23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="760" fwet="1">
+            <elvol pdel="0" att="0.031623" hold="0" dec="0.117473" sustain="0" rel="0.054772" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" att="0.000000" hold="0" dec="0.100000" sustain="0" rel="0.044721" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" att="0.000000" hold="0" dec="0.100000" sustain="0" rel="0.044721" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="384" name="柔软物品_中等重量_小体积">
+          <note pos="12" key="42" len="10" vol="80" pan="0" />
+        </pattern>
+        <pattern type="1" steps="16" len="192" pos="1536" name="木质物品_中等重量_小体积">
+          <note pos="12" key="42" len="10" vol="80" pan="0" />
+        </pattern>
+        <pattern type="1" steps="16" len="192" pos="2688" name="石质硬物_中等重量_小体积">
+          <note pos="12" key="42" len="10" vol="80" pan="0" />
+        </pattern>
+        <pattern type="1" steps="16" len="192" pos="3840" name="金属硬物_中等重量_小体积">
+          <note pos="12" key="42" len="10" vol="80" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="接触层_放进背包_中等重量_大体积" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="21" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="64" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="28" wavetype1="0" coarse1="-12" finel1="-23" finer1="-23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="631" fwet="1">
+            <elvol pdel="0" att="0.031623" hold="0" dec="0.138996" sustain="0" rel="0.054772" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" att="0.000000" hold="0" dec="0.100000" sustain="0" rel="0.044721" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" att="0.000000" hold="0" dec="0.100000" sustain="0" rel="0.044721" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="576" name="柔软物品_中等重量_大体积">
+          <note pos="12" key="42" len="13" vol="80" pan="0" />
+        </pattern>
+        <pattern type="1" steps="16" len="192" pos="1728" name="木质物品_中等重量_大体积">
+          <note pos="12" key="42" len="13" vol="80" pan="0" />
+        </pattern>
+        <pattern type="1" steps="16" len="192" pos="2880" name="石质硬物_中等重量_大体积">
+          <note pos="12" key="42" len="13" vol="80" pan="0" />
+        </pattern>
+        <pattern type="1" steps="16" len="192" pos="4032" name="金属硬物_中等重量_大体积">
+          <note pos="12" key="42" len="13" vol="80" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="接触层_放进背包_重物_小体积" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="26" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="64" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="28" wavetype1="0" coarse1="-12" finel1="-23" finer1="-23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="760" fwet="1">
+            <elvol pdel="0" att="0.031623" hold="0" dec="0.117473" sustain="0" rel="0.054772" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" att="0.000000" hold="0" dec="0.100000" sustain="0" rel="0.044721" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" att="0.000000" hold="0" dec="0.100000" sustain="0" rel="0.044721" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="768" name="柔软物品_重物_小体积">
+          <note pos="12" key="37" len="10" vol="80" pan="0" />
+        </pattern>
+        <pattern type="1" steps="16" len="192" pos="1920" name="木质物品_重物_小体积">
+          <note pos="12" key="37" len="10" vol="80" pan="0" />
+        </pattern>
+        <pattern type="1" steps="16" len="192" pos="3072" name="石质硬物_重物_小体积">
+          <note pos="12" key="37" len="10" vol="80" pan="0" />
+        </pattern>
+        <pattern type="1" steps="16" len="192" pos="4224" name="金属硬物_重物_小体积">
+          <note pos="12" key="37" len="10" vol="80" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="接触层_放进背包_重物_大体积" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="26" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="64" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="28" wavetype1="0" coarse1="-12" finel1="-23" finer1="-23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="631" fwet="1">
+            <elvol pdel="0" att="0.031623" hold="0" dec="0.138996" sustain="0" rel="0.054772" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" att="0.000000" hold="0" dec="0.100000" sustain="0" rel="0.044721" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" att="0.000000" hold="0" dec="0.100000" sustain="0" rel="0.044721" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="960" name="柔软物品_重物_大体积">
+          <note pos="12" key="37" len="13" vol="80" pan="0" />
+        </pattern>
+        <pattern type="1" steps="16" len="192" pos="2112" name="木质物品_重物_大体积">
+          <note pos="12" key="37" len="13" vol="80" pan="0" />
+        </pattern>
+        <pattern type="1" steps="16" len="192" pos="3264" name="石质硬物_重物_大体积">
+          <note pos="12" key="37" len="13" vol="80" pan="0" />
+        </pattern>
+        <pattern type="1" steps="16" len="192" pos="4416" name="金属硬物_重物_大体积">
+          <note pos="12" key="37" len="13" vol="80" pan="0" />
+        </pattern>
+      </track>
+    </trackcontainer>
+    <mixer visible="1" width="561" height="332" x="5" y="310" maximized="0" minimized="0">
+      <mixerchannel num="0" muted="0" volume="1" name="Master" soloed="0">
+        <fxchain numofeffects="0" enabled="0" />
+      </mixerchannel>
+    </mixer>
+    <ControllerRackView visible="1" width="258" height="142" x="836" y="407" maximized="0" minimized="0" />
+    <pianoroll visible="0" width="640" height="480" x="1" y="1" maximized="0" minimized="0" />
+    <automationeditor visible="0" width="640" height="400" x="56" y="255" maximized="0" minimized="0" />
+    <projectnotes visible="0" width="640" height="400" x="1" y="1" maximized="0" minimized="0">FlatWorld 放进背包: 24 cues, one per bar at 120 BPM. Material: soft/wood/stone/metal. Per material: light compact, light bulky, medium compact, medium bulky, heavy compact, heavy bulky. Original TripleOscillator synthesis; no external samples.</projectnotes>
+    <timeline lp0pos="0" lp1pos="192" lpstate="0" />
+    <controllers />
+  </song>
+</lmms-project>
