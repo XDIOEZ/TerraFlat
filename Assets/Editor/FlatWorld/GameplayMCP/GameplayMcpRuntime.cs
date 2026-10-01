@@ -1723,6 +1723,138 @@ namespace FlatWorld.GameplayMCP
     /// <summary>保持旧协议兼容，统一压缩成功响应并保留诊断证据。</summary>
     internal static class GameplayMcpOutput
     {
+        #region 调用反馈
+
+        private static int callSequence;
+        private static readonly string[] LoggedArguments =
+        {
+            "action", "command", "source", "x", "y", "seconds", "targetGuid", "targetId", "index",
+            "itemId", "query", "output", "observe", "treeAfter"
+        };
+
+        /// <summary>同步工具统一报告调用开始、结果与耗时，不改变生产执行链。</summary>
+        public static object Invoke(string tool, JObject args, Func<JObject, object> execute, bool diagnostic = false)
+        {
+            int id = BeginCall(tool, args, out long started);
+            try
+            {
+                object response = execute(args);
+                object output = Finish(response, args, diagnostic);
+                EndCall(id, tool, started, DescribeOutcome(response));
+                return output;
+            }
+            catch (Exception exception)
+            {
+                EndCall(id, tool, started, "异常 " + exception.GetType().Name + ": " + ShortText(exception.Message, 120));
+                throw;
+            }
+        }
+
+        /// <summary>持续动作也立即显示调用开始，完成后再反馈实际等待耗时。</summary>
+        public static async Task<object> InvokeAsync(string tool, JObject args, Func<JObject, Task<object>> execute,
+            bool diagnostic = false)
+        {
+            int id = BeginCall(tool, args, out long started);
+            try
+            {
+                object response = await execute(args);
+                object output = Finish(response, args, diagnostic);
+                EndCall(id, tool, started, DescribeOutcome(response));
+                return output;
+            }
+            catch (Exception exception)
+            {
+                EndCall(id, tool, started, "异常 " + exception.GetType().Name + ": " + ShortText(exception.Message, 120));
+                throw;
+            }
+        }
+
+        /// <summary>只记录短参数摘要，批次列出动作名，不序列化整包输入输出。</summary>
+        private static int BeginCall(string tool, JObject args, out long started)
+        {
+            int id = System.Threading.Interlocked.Increment(ref callSequence);
+            started = System.Diagnostics.Stopwatch.GetTimestamp();
+            var summary = new System.Text.StringBuilder(192);
+            foreach (string key in LoggedArguments)
+            {
+                if (args?[key] is not JValue value || value.Type == JTokenType.Null)
+                    continue;
+                if (summary.Length > 240)
+                    break;
+                summary.Append(' ').Append(key).Append('=').Append(ShortText(value.ToString(CultureInfo.InvariantCulture), 48));
+            }
+            if (args?["steps"] is JArray steps)
+            {
+                summary.Append(" steps=").Append(steps.Count).Append('[');
+                for (int i = 0; i < Math.Min(steps.Count, 8); i++)
+                {
+                    if (i > 0) summary.Append(',');
+                    summary.Append(ShortText(steps[i] is JObject step ? step["action"]?.ToString() : "invalid", 24));
+                }
+                summary.Append(']');
+            }
+            WriteCallLog($"[AI→MCP #{id}] 开始 {tool}{summary}");
+            return id;
+        }
+
+        /// <summary>协议成功与业务拒绝分别反馈，失败摘要保留原始错误令牌。</summary>
+        private static string DescribeOutcome(object response)
+        {
+            if (response is ErrorResponse error)
+                return "失败 " + ShortText(error.Error, 120);
+            if (response is not SuccessResponse success)
+                return "完成";
+            object data = success.Data;
+            if (ReadLogValue(data, "ok") is bool ok && !ok)
+                return "失败 " + ShortText(ReadLogValue(data, "code")?.ToString(), 80) + BatchSummary(data);
+            if (ReadLogValue(data, "ready") is bool ready && !ready)
+                return "未就绪 " + ShortText(ReadLogValue(data, "reason")?.ToString(), 120);
+            if (ReadLogValue(data, "aborted") is bool aborted && aborted)
+                return "采样中断";
+            object outcome = ReadLogValue(data, "data");
+            foreach (string key in new[] { "notReached", "timedOut" })
+                if (ReadLogValue(outcome, key) is bool failed && failed)
+                    return "未完成 " + key + " " + ShortText(ReadLogValue(outcome, "stopReason")?.ToString(), 80);
+            foreach (string key in new[] { "interacted", "selected", "moved" })
+                if (ReadLogValue(outcome, key) is bool accepted && !accepted)
+                    return "操作被拒绝 " + key + "=false";
+            return "成功" + BatchSummary(data);
+        }
+
+        /// <summary>读取少量结果标志，不为日志生成诊断报告的完整 JSON。</summary>
+        private static object ReadLogValue(object data, string key)
+        {
+            if (data is JObject json)
+                return json[key] is JValue value ? value.Value : json[key];
+            return data?.GetType().GetProperty(key)?.GetValue(data);
+        }
+
+        private static string BatchSummary(object data)
+        {
+            object executed = ReadLogValue(data, "executed");
+            return executed == null ? string.Empty : $" 已执行={executed} 剩余={ReadLogValue(data, "remaining")}";
+        }
+
+        private static string ShortText(string text, int limit)
+        {
+            if (string.IsNullOrEmpty(text)) return string.Empty;
+            text = text.Replace('\r', ' ').Replace('\n', ' ');
+            return text.Length <= limit ? text : text.Substring(0, limit) + "…";
+        }
+
+        private static void EndCall(int id, string tool, long started, string outcome)
+        {
+            double milliseconds = (System.Diagnostics.Stopwatch.GetTimestamp() - started) * 1000d /
+                                  System.Diagnostics.Stopwatch.Frequency;
+            WriteCallLog($"[AI→MCP #{id}] {outcome} {tool} 耗时={milliseconds.ToString("F1", CultureInfo.InvariantCulture)}ms");
+        }
+
+        /// <summary>调用反馈不附加堆栈，也不作为游戏警告或错误污染诊断计数。</summary>
+        private static void WriteCallLog(string message) =>
+            Debug.LogFormat(LogType.Log, LogOption.NoStacktrace, null, "{0}", message);
+
+        #endregion
+
         public static bool IsCompact(JObject args) =>
             string.Equals(args?["output"]?.ToString(), "compact", StringComparison.OrdinalIgnoreCase);
 

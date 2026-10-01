@@ -23,7 +23,7 @@ namespace FlatWorld.GameplayMCP
         /// <summary>按需返回数据，错误与分页状态保持完整。</summary>
         public static object HandleCommand(JObject parameters)
         {
-            return GameplayMcpOutput.Finish(ExecuteCommand(parameters), parameters, true);
+            return GameplayMcpOutput.Invoke("gameplay_hydrology_debug", parameters, ExecuteCommand, true);
         }
 
         #endregion

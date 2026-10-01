@@ -65,6 +65,7 @@ GamePlayMCP 复用项目已有 MCPForUnity 自定义工具发现机制，不另�
 
 ### Agent 快速输入输出
 
+- 所有 `gameplay_*` 调用在 Unity Console 输出 `[AI→MCP #编号]` 开始与结束日志，包含接口名、短参数摘要、结果和真实耗时；批次显示动作名与已执行/剩余步数。耗时包含动作等待、采样和输出处理，不等同于业务 CPU 时间。反馈使用无堆栈普通日志，失败通过文字标明，不新增诊断 Warning/Error 计数；不打印完整输入输出。
 - 所有 `gameplay_*` 接口共享 `output="compact"`、`fields="字段1,字段2"`、`observe=true`；常规 Agent 调用优先精简输出。`fields` 选择返回数据的顶层字段，状态、错误、分页和批次结果始终保留；省略字段不代表空值。旧调用默认 `output="full"`。它主要压缩输出，不承诺跳过任意字段对应的业务查询。
 - `gameplay_control(acquire, observe=true)` 可把取控制权与首次精简观察合并；会话 `status` 的 compact 模式跳过附近世界查询。能力接口 compact 只列命令名，查具体命令语义时读 full；默认不缓存会话与世界状态。
 - `gameplay_ui(click/scroll/drag, treeAfter=true, output="compact")` 操作后等待一次 Editor 更新并附带新树，下一步从 `data.tree.data.semantic_tree` 选节点；compact UI 省略 path/rect/depth，但保留 ID、父节点、文本和可操作状态。分页只构造当前页完整节点，仍遍历统计总数。树读取失败时查看 `data.tree.success/error`，不要沿用旧节点。

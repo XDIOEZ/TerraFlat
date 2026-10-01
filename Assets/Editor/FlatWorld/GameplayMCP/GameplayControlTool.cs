@@ -16,7 +16,7 @@ namespace FlatWorld.GameplayMCP
         /// <summary>按需返回数据，错误与分页状态保持完整。</summary>
         public static object HandleCommand(JObject parameters)
         {
-            return GameplayMcpOutput.Finish(ExecuteCommand(parameters), parameters, false);
+            return GameplayMcpOutput.Invoke("gameplay_control", parameters, ExecuteCommand, false);
         }
 
         #endregion

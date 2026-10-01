@@ -19,7 +19,7 @@ namespace FlatWorld.GameplayMCP
         /// <summary>按需返回数据，错误与分页状态保持完整。</summary>
         public static async Task<object> HandleCommand(JObject parameters)
         {
-            return GameplayMcpOutput.Finish(await ExecuteCommand(parameters), parameters, false);
+            return await GameplayMcpOutput.InvokeAsync("gameplay_ui", parameters, ExecuteCommand, false);
         }
 
         #endregion
