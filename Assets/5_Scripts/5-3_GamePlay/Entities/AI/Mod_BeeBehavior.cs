@@ -5,7 +5,7 @@ using UnityEngine;
 
 /// <summary>
 /// 蜜蜂的独立飞行行为模块：1440 点饱食度支撑一个游戏日，采蜜、返巢和警戒均由本模块决定。
-/// 飞行导航仍由 Mod_AI_Bird 执行；蜂蜜和成员快照由所属 Mod_HiveColony 持久化。
+/// 飞行导航仍由 AI_Bird 执行；蜂蜜和成员快照由所属 Mod_HiveColony 持久化。
 /// 采蜜物种通过 BeeForage.Crop / BeeForage.Flower 标签注册，不依赖具体物品 ID。
 /// </summary>
 public sealed partial class Mod_BeeBehavior : Module, IBirdFlightPilot, IDamageSender,
@@ -65,6 +65,7 @@ public sealed partial class Mod_BeeBehavior : Module, IBirdFlightPilot, IDamageS
     private Mod_AI_Bird bird; // 复用飞行与导航的通用模块。
     private Mod_HiveColony colony; // 归属蜂巢。
     private Mod_ItemDetector detector; // 共用地形视线判断。
+    private Mod_DamageReceiver damageReceiver; // 监听本蜂受击，用于巡逻时呼叫同巢支援。
     private float stingRemaining; // 蜇刺剩余冷却。
     private bool nightSleepRequested; // 日落后蜂巢下达的归巢睡眠请求。
     private Vector2 patrolTarget; // 当前领地内随机巡逻点，不持久化。
@@ -82,8 +83,9 @@ public sealed partial class Mod_BeeBehavior : Module, IBirdFlightPilot, IDamageS
     #region 装配与持久化
     public override void Load()
     {
-        bird = item.itemMods.RequireSingleModById<Mod_AI_Bird>("Mod_AI_Bird");
+        bird = item.itemMods.RequireSingleModById<Mod_AI_Bird>("AI_Bird");
         detector = item.itemMods.RequireSingleModById<Mod_ItemDetector>(ModText.Detector);
+        damageReceiver = item.itemMods.RequireSingleModById<Mod_DamageReceiver>(ModText.Hp);
         if (!bird.permanentFlight || SatietyMaximum <= ReturnAbove || ReturnAbove <= ForageBelow ||
             HoneyContributionCost < 0f || HoneyMealGain < 0f || CropGainPerSecond <= 0f ||
             FlowerGainPerSecond <= 0f || PatrolFlightSpeedMultiplier <= 0f)
@@ -98,6 +100,8 @@ public sealed partial class Mod_BeeBehavior : Module, IBirdFlightPilot, IDamageS
         stingRemaining = 0f;
         if (state.Orphaned)
             bird.SetFlightHome(new Vector2(state.OrphanHomeX, state.OrphanHomeY));
+        damageReceiver.OnDamageReceived -= HandleBeeDamageReceived;
+        damageReceiver.OnDamageReceived += HandleBeeDamageReceived;
         bird.RegisterFlightPilot(this);
     }
 
@@ -129,11 +133,14 @@ public sealed partial class Mod_BeeBehavior : Module, IBirdFlightPilot, IDamageS
 
     public override void Unload()
     {
+        if (damageReceiver != null)
+            damageReceiver.OnDamageReceived -= HandleBeeDamageReceived;
         bird?.UnregisterFlightPilot(this);
         ResetBeeTargets();
         colony = null;
         bird = null;
         detector = null;
+        damageReceiver = null;
         nightSleepRequested = false;
     }
     #endregion

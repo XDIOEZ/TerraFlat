@@ -5,6 +5,8 @@ using UnityEngine;
 public sealed partial class Mod_BeeBehavior
 {
     #region 目标采样与警惕
+    private const int AllyHelpRadiusCells = 8; // 以受击蜂为中心横纵各八格，即十七乘十七格。
+
     private sealed class MotionSample
     {
         public Vector2 Position; // 上一次采样的位置。
@@ -36,7 +38,76 @@ public sealed partial class Mod_BeeBehavior
 
     public bool HasHiveDefenseTarget => hiveDefenseTarget != null;
 
-    /// <summary>蜂巢受击后强制锁定真实攻击者；武器和投射物由蜂巢侧提前解析为持有者。</summary>
+    /// <summary>只有正常巡逻中的蜜蜂受击才呼叫同巢支援，觅食、返巢和战斗状态不会连锁广播。</summary>
+    private void HandleBeeDamageReceived(DamageReceiverDamageInfo damageInfo)
+    {
+        if (damageInfo == null || damageInfo.DamageValue <= 0f || colony == null || !IsPatrollingForHelpCall())
+            return;
+
+        Item attacker = ResolveAggressor(damageInfo.Attacker);
+        if (!IsLivingCreature(attacker))
+            return;
+
+        ForceHiveDefenseTarget(attacker);
+        float queryRadius = (AllyHelpRadiusCells + 1f) * 1.414214f;
+        ItemMgr.Instance.QueryItemsInCircleNonAlloc(item.transform.position, queryRadius, ~0, item,
+            nearbyCreatures, nearbyDedupe);
+        Vector2 originCell = GetWorldCellCenter(item.transform.position);
+        foreach (Item candidate in nearbyCreatures)
+        {
+            Mod_BeeBehavior bee = candidate?.itemMods?.GetMod_ByID<Mod_BeeBehavior>(ModuleId);
+            if (bee == null || !ReferenceEquals(bee.colony, colony) || !bee.CanAnswerAllyHelpCall())
+                continue;
+
+            Vector2 delta = WorldTopologyRuntime.ShortestDelta(
+                originCell,
+                GetWorldCellCenter(candidate.transform.position));
+            if (Mathf.Abs(delta.x) > AllyHelpRadiusCells || Mathf.Abs(delta.y) > AllyHelpRadiusCells)
+                continue;
+
+            bee.ForceHiveDefenseTarget(attacker);
+        }
+    }
+
+    /// <summary>武器、投射物等沿 Owner 链还原成真正攻击者。</summary>
+    private static Item ResolveAggressor(Item source)
+    {
+        Item current = source;
+        for (int depth = 0; depth < 8 && current?.Owner != null && current.Owner != current; depth++)
+            current = current.Owner;
+        return current;
+    }
+
+    /// <summary>呼叫范围按整格计算，循环世界也使用规范化后的最近格中心。</summary>
+    private static Vector2 GetWorldCellCenter(Vector2 position)
+    {
+        Vector2 normalized = WorldTopologyRuntime.NormalizePosition(position);
+        return new Vector2(Mathf.Floor(normalized.x) + 0.5f, Mathf.Floor(normalized.y) + 0.5f);
+    }
+
+    /// <summary>与调试面板的“巡航”状态保持一致，避免觅食中的蜜蜂受击拉响蜂群警报。</summary>
+    private bool IsPatrollingForHelpCall()
+    {
+        return !state.Orphaned &&
+               !nightSleepRequested &&
+               !state.Angry &&
+               !state.ReturningHome &&
+               !HasActiveForageTarget &&
+               state.Satiety >= ForageBelow;
+    }
+
+    /// <summary>正在落地采食的蜜蜂不响应同伴呼救，给玩家保留逐只潜行处理的窗口。</summary>
+    private bool CanAnswerAllyHelpCall()
+    {
+        if (colony == null || state.Orphaned || nightSleepRequested || bird == null)
+            return false;
+        if (!HasActiveForageTarget || bird.Phase != BirdFlightPhase.Ground)
+            return true;
+        return WorldTopologyRuntime.SqrDistance(item.transform.position, foragePosition) >
+               ForageLandingDistance * ForageLandingDistance;
+    }
+
+    /// <summary>蜂巢受击或同伴呼救后强制锁定真实攻击者。</summary>
     public void ForceHiveDefenseTarget(Item target)
     {
         if (!IsLivingCreature(target))
