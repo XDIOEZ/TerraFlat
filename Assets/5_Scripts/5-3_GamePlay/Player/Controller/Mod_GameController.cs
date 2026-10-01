@@ -506,16 +506,40 @@ public partial class Mod_GameController : Module
 
     public Vector3 GetMouseWorldPosition() /// 获取指针世界坐标（鼠标或手柄虚拟光标）
     {
-        if (TryGetExternalAimWorldPosition(out Vector3 externalAimWorldPosition))
-            return externalAimWorldPosition;
+        if (TryGetMouseWorldPosition(out Vector3 worldPosition))
+            return worldPosition;
 
-        if (_preferredInputDevice == InputDeviceType.Mobile && _mobileCursorWorldPositionInitialized)
-            return _mobileCursorWorldPosition;
-
-        return GetMouseWorldPosition(GetPointerScreenPosition());
+        return GetPointerFallbackWorldPosition();
     }
 
     public Vector3 GetMouseWorldPosition(Vector2 screenPosition) /// 获取指定屏幕坐标对应的世界坐标
+    {
+        if (TryGetMouseWorldPosition(screenPosition, out Vector3 worldPosition))
+            return worldPosition;
+
+        return GetPointerFallbackWorldPosition();
+    }
+
+    /// <summary>尝试获取当前指针世界坐标；相机初始化期间返回 false，不制造临时假坐标。</summary>
+    public bool TryGetMouseWorldPosition(out Vector3 worldPosition)
+    {
+        if (TryGetExternalAimWorldPosition(out Vector3 externalAimWorldPosition))
+        {
+            worldPosition = externalAimWorldPosition;
+            return true;
+        }
+
+        if (_preferredInputDevice == InputDeviceType.Mobile && _mobileCursorWorldPositionInitialized)
+        {
+            worldPosition = _mobileCursorWorldPosition;
+            return true;
+        }
+
+        return TryGetMouseWorldPosition(GetPointerScreenPosition(), out worldPosition);
+    }
+
+    /// <summary>尝试把指定屏幕坐标转换到世界坐标；主相机未就绪时由调用方决定是否跳过。</summary>
+    public bool TryGetMouseWorldPosition(Vector2 screenPosition, out Vector3 worldPosition)
     {
         if (_mainCamera == null)
         {
@@ -524,20 +548,28 @@ public partial class Mod_GameController : Module
 
         if (_mainCamera == null)
         {
-            if (!_reportedMissingMainCamera)
-            {
-                _reportedMissingMainCamera = true;
-                Debug.LogWarning("[Mod_GameController] 主相机尚未就绪，暂时使用玩家位置作为指针坐标", this);
-            }
-
-            return WorldTopologyRuntime.NormalizePosition(new Vector3(transform.position.x, transform.position.y, 0f));
+            worldPosition = default;
+            return false;
         }
 
         _reportedMissingMainCamera = false;
 
         Vector3 worldPos = _mainCamera.ScreenToWorldPoint(new Vector3(screenPosition.x, screenPosition.y, Mathf.Abs(_mainCamera.transform.position.z)));
         worldPos.z = 0f;
-        return WorldTopologyRuntime.NormalizePosition(worldPos);
+        worldPosition = WorldTopologyRuntime.NormalizePosition(worldPos);
+        return true;
+    }
+
+    /// <summary>保留必须返回坐标的旧接口语义，仅在调用方明确要求时才使用玩家位置兜底。</summary>
+    private Vector3 GetPointerFallbackWorldPosition()
+    {
+        if (!_reportedMissingMainCamera)
+        {
+            _reportedMissingMainCamera = true;
+            Debug.LogWarning("[Mod_GameController] 主相机尚未就绪，暂时使用玩家位置作为指针坐标", this);
+        }
+
+        return WorldTopologyRuntime.NormalizePosition(new Vector3(transform.position.x, transform.position.y, 0f));
     }
 
     /// <summary>获取当前准星世界位置，并按调用方提供的玩法距离统一裁剪。</summary>

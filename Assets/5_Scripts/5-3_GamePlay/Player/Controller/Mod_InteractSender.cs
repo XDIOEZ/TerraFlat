@@ -215,21 +215,21 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
             HasHeldBuildingPlacementPriority() || gameController == null || item == null)
             return;
 
-        Vector3 pointerWorld;
         try
         {
-            pointerWorld = gameController.GetMouseWorldPosition();
+            if (!gameController.TryGetMouseWorldPosition(out Vector3 pointerWorld))
+                return;
+
+            IInteractable selectedReceiver = FindReceiverAtPointer(pointerWorld, requirePointerPermission: true);
+            if (selectedReceiver != null)
+            {
+                if (StartInteraction(selectedReceiver))
+                    CompleteSingleInteraction(selectedReceiver);
+            }
         }
         catch (MissingReferenceException)
         {
             return;
-        }
-
-        IInteractable selectedReceiver = FindReceiverAtPointer(pointerWorld, requirePointerPermission: true);
-        if (selectedReceiver != null)
-        {
-            if (StartInteraction(selectedReceiver))
-                CompleteSingleInteraction(selectedReceiver);
         }
     }
 
@@ -447,7 +447,14 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
     {
         pointer = default;
         if (gameController == null) return false;
-        try { pointer = gameController.GetMouseWorldPosition(); return true; }
+        try
+        {
+            if (!gameController.TryGetMouseWorldPosition(out Vector3 worldPosition))
+                return false;
+
+            pointer = worldPosition;
+            return true;
+        }
         catch (MissingReferenceException) { return false; }
     }
 
@@ -477,8 +484,11 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
 
         try
         {
+            if (!gameController.TryGetMouseWorldPosition(out Vector3 pointerWorld))
+                return false;
+
             Vector2 pointerOffset = WorldTopologyRuntime.ShortestDelta(
-                item.transform.position, gameController.GetMouseWorldPosition());
+                item.transform.position, pointerWorld);
             if (pointerOffset.sqrMagnitude < 0.0001f)
                 return false;
 
