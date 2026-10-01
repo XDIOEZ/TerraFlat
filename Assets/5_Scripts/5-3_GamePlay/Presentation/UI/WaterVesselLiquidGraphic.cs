@@ -17,13 +17,13 @@ public sealed class WaterVesselLiquidGraphic : MaskableGraphic
         [Range(0f, 0.25f)] public float Sediment; // 底部沉淀占当前水深的比例。
         [Range(0f, 1f)] public float SurfaceDebris; // 水面断续污膜/漂浮物强度。
         [Range(0f, 1f)] public float SuspendedParticles; // 水体内悬浮颗粒密度。
-        [Range(0f, 1f)] public float Viscosity; // 视觉黏稠度：降低波速与扰动，增加缓慢回落和光泽；零保持水的原有表现。
+        [Range(0f, 1f)] public float Viscosity; // 运行时由 LiquidDefinition.viscosity 覆盖；Prefab 值仅保留序列化兼容。
         public bool Foam; // 海水泡沫。
     }
     public LiquidStyle[] Styles; // Prefab 配置视觉，不修改液体玩法定义。
     public Vector2 FillRange = new Vector2(20f / 128f, 94f / 128f); // 罐内可用水位的归一化高度。
     private LiquidStyle style;
-    private string visualState;
+    private string liquidId;
     private float level, targetLevel, nextFrame;
     private float agitation; // 来回摇晃产生的额外水面波动，随时间自然衰减。
     private float vesselTiltDegrees; // 内腔遮罩的倾角，用于扩展水平液层的绘制范围。
@@ -44,22 +44,58 @@ public sealed class WaterVesselLiquidGraphic : MaskableGraphic
     }
 
     /// <summary>接收容器真实数据，打开时直接定位，使用过程中平滑升降。</summary>
-    public void SetWater(float amount, int capacity, string id, bool immediate = false)
+    public void SetWater(float amount, int capacity, LiquidDefinition liquid, bool immediate = false)
     {
         float value = capacity > 0 ? Mathf.Clamp01(amount / capacity) : 0f;
-        bool changedStyle = amount > 0 && id != visualState;
+        if (amount > 0f && liquid == null)
+            throw new InvalidOperationException("非空液体容器缺少 LiquidDefinition。");
+
+        float viscosity = liquid?.VisualViscosity01 ?? 0f;
+        bool changedStyle = amount > 0f &&
+            (!string.Equals(liquid?.Id, liquidId, StringComparison.OrdinalIgnoreCase) ||
+             !Mathf.Approximately(style.Viscosity, viscosity));
         if (changedStyle)
         {
-            int index = Array.FindIndex(Styles, entry => string.Equals(entry.VisualState, id, StringComparison.OrdinalIgnoreCase));
-            if (index < 0) throw new InvalidOperationException($"液体 {id} 未配置容器视觉。");
-            style = Styles[index];
-            visualState = id;
+            style = ResolveStyle(liquid);
+            liquidId = liquid.Id;
             agitation = 0f;
         }
         if (!immediate && !changedStyle && targetLevel == value) return;
         targetLevel = value;
         if (immediate) level = value;
         SetVerticesDirty();
+    }
+
+    /// <summary>特殊液体可继续复用 Prefab 样式；未配置状态时按液体主色自动生成，避免每种熔融液体都复制一份 UI 配置。</summary>
+    private LiquidStyle ResolveStyle(LiquidDefinition liquid)
+    {
+        int index = Array.FindIndex(Styles,
+            entry => string.Equals(entry.VisualState, liquid.VisualState, StringComparison.OrdinalIgnoreCase));
+        LiquidStyle resolved;
+        if (index >= 0)
+        {
+            resolved = Styles[index];
+        }
+        else
+        {
+            Color body = liquid.PrimaryColor;
+            resolved = new LiquidStyle
+            {
+                VisualState = liquid.VisualState,
+                Body = body,
+                Surface = Color.Lerp(body, Color.white, 0.38f),
+                Detail = Color.Lerp(body, Color.white, 0.18f),
+                Deep = Color.Lerp(body, Color.black, 0.35f),
+                Murkiness = 0f,
+                Sediment = 0f,
+                SurfaceDebris = 0f,
+                SuspendedParticles = 0f,
+                Foam = false
+            };
+        }
+
+        resolved.Viscosity = liquid.VisualViscosity01;
+        return resolved;
     }
 
     /// <summary>把罐体角速度转成临时水面扰动；空容器不产生无意义波纹。</summary>

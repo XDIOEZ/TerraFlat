@@ -8,6 +8,7 @@
       "category": "syrup",
       "visualState": "honey",
       "primaryColor": { "r": 0.84, "g": 0.55, "b": 0.09, "a": 1.0 },
+      "viscosity": 10.0,
       "drinkable": false,
       "hydrationPerServing": 0.0
     },
@@ -18,6 +19,7 @@
       "category": "water",
       "visualState": "dirty",
       "primaryColor": { "r": 0.42, "g": 0.37, "b": 0.22, "a": 1.0 },
+      "viscosity": 1.25,
       "drinkable": true,
       "hydrationPerServing": 25.0,
       "ingredientReactions": [
@@ -56,6 +58,7 @@
       "category": "water",
       "visualState": "drinkable",
       "primaryColor": { "r": 0.22, "g": 0.55, "b": 0.73, "a": 1.0 },
+      "viscosity": 1.0,
       "drinkable": true,
       "hydrationPerServing": 25.0,
       "ingredientReactions": [
@@ -69,6 +72,7 @@
       "category": "water",
       "visualState": "sea",
       "primaryColor": { "r": 0.14, "g": 0.47, "b": 0.55, "a": 1.0 },
+      "viscosity": 1.08,
       "drinkable": true,
       "hydrationPerServing": 10.0,
       "drinkEffects": [
@@ -86,6 +90,7 @@
       "category": "water",
       "visualState": "sea",
       "primaryColor": { "r": 0.14, "g": 0.47, "b": 0.55, "a": 1.0 },
+      "viscosity": 1.05,
       "buoyancyThresholdMultiplier": 1.5,
       "drinkable": true,
       "hydrationPerServing": 10.0,
@@ -125,6 +130,7 @@
       "category": "molten",
       "visualState": "molten_glass",
       "primaryColor": { "r": 0.92, "g": 0.64, "b": 0.24, "a": 1.0 },
+      "viscosity": 14.0,
       "drinkable": false,
       "hydrationPerServing": 0.0,
       "solidification": {
@@ -140,6 +146,7 @@
       "category": "molten",
       "visualState": "molten_copper",
       "primaryColor": { "r": 0.82, "g": 0.28, "b": 0.10, "a": 1.0 },
+      "viscosity": 4.0,
       "drinkable": false,
       "hydrationPerServing": 0.0,
       "solidification": {
@@ -155,6 +162,7 @@
       "category": "molten",
       "visualState": "molten_tin",
       "primaryColor": { "r": 0.68, "g": 0.72, "b": 0.70, "a": 1.0 },
+      "viscosity": 2.2,
       "drinkable": false,
       "hydrationPerServing": 0.0,
       "solidification": {
@@ -170,6 +178,7 @@
       "category": "molten",
       "visualState": "molten_iron",
       "primaryColor": { "r": 0.72, "g": 0.24, "b": 0.10, "a": 1.0 },
+      "viscosity": 5.0,
       "drinkable": false,
       "hydrationPerServing": 0.0,
       "solidification": {

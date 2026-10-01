@@ -68,6 +68,7 @@ description: "Use when: 定位或修改 FlatWorld 的 Item/Module 组合架构�
 - `Ex_ModData_MemoryPackable` 若序列化了带 `ItemData` 的内嵌 `Inventory_Data`，`ItemDefinitionRuntime` 不会自动遍历这段二进制负载；模块读取状态后应逐槽调用 `RebasePersistedData(GameRes.Instance, itemData)`，再绑定库存 UI，确保内嵌物品按当前定义恢复。
 - 制作材料赋予的实例耐久使用 `ItemData.CraftedDurabilityMultiplier` 持久化；定义重建后以当前定义的基础耐久重新应用倍率，不能直接沿用旧 `MaxDurability`。堆叠身份必须包含该倍率，避免不同品质实例合并后丢失品质。
 - 物品连续物质状态统一保存在 `ItemData.MatterState`，静态参数与相变写在 `ItemDefinition.matter`，多物料条件反应写在 `ItemDefinition.reactions`。反应不要求固定归属物，可声明在任一参与物品；运行时按规范化反应签名去重，设备不得复制具体材料反应表。
+- 液体粘度属于 `LiquidDefinition.viscosity` 的数据属性，1 表示普通水；容器倾倒速度和液流/液面表现都从同一值派生，UI Prefab 不再作为粘度权威。未配置专用 `visualState` 样式的液体按 `primaryColor` 自动生成容器液面表现。
 - 堆叠身份统一由 `ItemData` 判定，空与 null 特殊数据按现有规范处理。
 - 模块 Prefab 的 `StableName/ModuleId` 可能未序列化；进入 `ItemMods`、`ModuleInit` 或网络更新前必须统一建立非空确定性身份。JSON 模块以 `modules` 的键作为 StableName；Prefab-only 模块才允许回退到确定性的 GameObject 名，禁止随机后缀。
 - JSON 动态组合存在跨模块引用时实现 `IItemModuleDependencyBinder`；`Item` 会在全部模块进入 `ItemMods` 后、`ModuleInit/Load` 前统一绑定，依赖必须按唯一稳定 ID 解析并对缺失或重复直接报错。

@@ -130,7 +130,7 @@ public sealed class WaterVesselPanel : MonoBehaviour, IPointerDownHandler, IDrag
             current.contents.Contents.SyncQuickTransferTarget(current.panel);
         }
         current.Refresh();
-        current.Liquid.SetWater(target.Data.Amount, target.Capacity, target.CurrentLiquid?.VisualState, true);
+        current.Liquid.SetWater(target.Data.Amount, target.Capacity, target.CurrentLiquid, true);
         current.ResetPourGesture(true);
     }
     /// <summary>绑定现有节点；界面层级只由 Prefab 决定。</summary>
@@ -195,9 +195,9 @@ public sealed class WaterVesselPanel : MonoBehaviour, IPointerDownHandler, IDrag
             ? "一次只装一种液体；拖入液体原料或其他容器可装液，拖动容器可倾倒。"
             : "拖入物品可存放，点击或拖出可取回；满桶淡水加十份盐制盐水，拖桶沿可倾倒。");
 
-        Liquid.SetWater(vessel.Data.Amount, vessel.Capacity, vessel.CurrentLiquid?.VisualState);
-        contentsView.SetLiquidFraction(vessel.Capacity > 0 ? vessel.Data.Amount / vessel.Capacity : 0f);
         LiquidDefinition liquid = vessel.CurrentLiquid;
+        Liquid.SetWater(vessel.Data.Amount, vessel.Capacity, liquid);
+        contentsView.SetLiquidFraction(vessel.Capacity > 0 ? vessel.Data.Amount / vessel.Capacity : 0f);
         string liquidName = Mod_WaterVessel.IsEmptyAmount(vessel.Data.Amount)
             ? FlatWorldLocalizationService.GetUiText("空容器")
             : FlatWorldLocalizationService.GetUiText(liquid?.DisplayName ?? vessel.Data.LiquidId);
@@ -390,7 +390,9 @@ public sealed class WaterVesselPanel : MonoBehaviour, IPointerDownHandler, IDrag
 
         float tiltRatio = Mathf.Clamp01(physicalTilt / FullEmptyTiltDegrees);
         float speedMultiplier = Mathf.Lerp(1f, HorizontalPourSpeedMultiplier, tiltRatio * tiltRatio);
-        float amountPerSecond = BasePourAmountPerSecond * activeMouthWidthMultiplier * speedMultiplier;
+        LiquidDefinition liquid = vessel.CurrentLiquid;
+        float baseAmountPerSecond = BasePourAmountPerSecond * activeMouthWidthMultiplier * speedMultiplier;
+        float amountPerSecond = baseAmountPerSecond * (liquid?.PourRateMultiplier ?? 1f);
         pourAmountAccumulator = Mathf.Min(maximumSpillAmount, pourAmountAccumulator + amountPerSecond * deltaTime);
         if (pourAmountAccumulator + Mod_WaterVessel.AmountEpsilon < Mod_WaterVessel.AmountStep)
             return;
@@ -400,7 +402,7 @@ public sealed class WaterVesselPanel : MonoBehaviour, IPointerDownHandler, IDrag
             return;
         pourAmountAccumulator = Mathf.Max(0f, pourAmountAccumulator - removed);
 
-        float normalizedFlow = Mathf.Clamp01(0.45f + 0.55f * amountPerSecond /
+        float normalizedFlow = Mathf.Clamp01(0.45f + 0.55f * baseAmountPerSecond /
             (BasePourAmountPerSecond * HorizontalPourSpeedMultiplier));
         pourGraphic.Emit(
             normalizedFlow,
@@ -410,7 +412,7 @@ public sealed class WaterVesselPanel : MonoBehaviour, IPointerDownHandler, IDrag
             Liquid.CurrentMurkiness,
             Liquid.CurrentViscosity);
         Liquid.AddAgitation(Mathf.Clamp01(0.3f + normalizedFlow * 0.7f));
-        Liquid.SetWater(vessel.Data.Amount, vessel.Capacity, vessel.CurrentLiquid?.VisualState, Liquid.CurrentViscosity <= 0.01f);
+        Liquid.SetWater(vessel.Data.Amount, vessel.Capacity, vessel.CurrentLiquid, Liquid.CurrentViscosity <= 0.01f);
     }
 
     /// <summary>来回快速改变倾角会显著放大水面波纹，慢速单向倾倒只产生轻微扰动。</summary>

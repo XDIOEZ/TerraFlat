@@ -89,6 +89,7 @@ public sealed class LiquidDefinition
         string category,
         string visualState,
         Color primaryColor,
+        float viscosity,
         bool drinkable,
         float hydrationPerServing,
         IReadOnlyList<LiquidDrinkEffect> drinkEffects,
@@ -105,6 +106,7 @@ public sealed class LiquidDefinition
         Category = category;
         VisualState = visualState;
         PrimaryColor = primaryColor;
+        Viscosity = viscosity;
         Drinkable = drinkable;
         HydrationPerServing = hydrationPerServing;
         DrinkEffects = drinkEffects ?? Array.Empty<LiquidDrinkEffect>();
@@ -124,6 +126,12 @@ public sealed class LiquidDefinition
     public string VisualState { get; }
     /// <summary>液体容器 Sprite 的程序化液面使用此主色；容器不再为每种液体绑定贴图。</summary>
     public Color PrimaryColor { get; }
+    /// <summary>相对水的玩法粘度；1 为普通水，数值越大越难倾倒。</summary>
+    public float Viscosity { get; }
+    /// <summary>倾倒速度倍率使用平方根压缩差距，避免高粘度液体慢到不可操作。</summary>
+    public float PourRateMultiplier => Mathf.Clamp(1f / Mathf.Sqrt(Mathf.Max(0.0001f, Viscosity)), 0.15f, 2f);
+    /// <summary>把开放式粘度值映射为 0～1 的液面/液柱表现强度。</summary>
+    public float VisualViscosity01 => Viscosity <= 1f ? 0f : Mathf.Clamp01(1f - 1f / Viscosity);
     public bool Drinkable { get; }
     public float HydrationPerServing { get; }
     public IReadOnlyList<LiquidDrinkEffect> DrinkEffects { get; }
@@ -172,6 +180,9 @@ public sealed class LiquidDefinitionDto
 
     [JsonProperty("primaryColor", Required = Required.Always)]
     public Color? PrimaryColor;
+
+    [JsonProperty("viscosity")]
+    public float Viscosity = 1f;
 
     [JsonProperty("worldWater")]
     public WorldLiquidSettings WorldWater;
@@ -325,6 +336,9 @@ public static class LiquidDefinitionFactory
         string visualState = string.IsNullOrWhiteSpace(dto.VisualState) ? "filled" : dto.VisualState.Trim();
         Color primaryColor = dto.PrimaryColor ?? throw new InvalidDataException($"液体 {id} 缺少 primaryColor");
         ValidateColor(primaryColor, id);
+        ValidateFinite(dto.Viscosity, id, nameof(dto.Viscosity));
+        if (dto.Viscosity <= 0f)
+            throw new InvalidDataException($"液体 {id} viscosity 必须大于 0；1 表示普通水。");
         ValidateFinite(dto.HydrationPerServing, id, nameof(dto.HydrationPerServing));
         if (dto.HydrationPerServing < 0f)
             throw new InvalidDataException($"液体 {id} hydrationPerServing 不能小于 0");
@@ -366,6 +380,7 @@ public static class LiquidDefinitionFactory
             category,
             visualState,
             primaryColor,
+            dto.Viscosity,
             dto.Drinkable,
             dto.HydrationPerServing,
             drinkEffects,
