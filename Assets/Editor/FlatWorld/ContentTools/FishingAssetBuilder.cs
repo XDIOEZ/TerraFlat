@@ -5,6 +5,7 @@ using TMPro;
 using UnityEditor;
 using UnityEditor.AddressableAssets;
 using UnityEditor.AddressableAssets.Settings;
+using UnityEditor.Animations;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -12,6 +13,7 @@ using UnityEngine.UI;
 public static class FishingAssetBuilder
 {
     public const string FishSpritePath = "Assets/6_Art/Generated/AI/SmallFish/SmallFish.png";
+    public const string FishControllerPath = "Assets/8_Animations/Character/SmallFish.controller";
     public const string FishShellPath = "Assets/2_Prefabs/Gameplay/AI/SmallFish.prefab";
     public const string RodModulePath = "Assets/2_Prefabs/Gameplay/Modules/Tools/Mod_FishingRod.prefab";
     public const string FishModulePath = "Assets/2_Prefabs/Gameplay/Modules/AI/Mod_AI_Fish.prefab";
@@ -26,7 +28,9 @@ public static class FishingAssetBuilder
         GameObject fish = AssetDatabase.LoadAssetAtPath<GameObject>(FishShellPath);
         GameObject panel = AssetDatabase.LoadAssetAtPath<GameObject>(PanelPath);
         GameObject rod = AssetDatabase.LoadAssetAtPath<GameObject>(RodModulePath);
-        if (fish == null || panel == null || rod == null) throw new InvalidOperationException("钓鱼资源尚未构建完整。");
+        RuntimeAnimatorController fishController = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(FishControllerPath);
+        if (fish == null || panel == null || rod == null || fishController == null)
+            throw new InvalidOperationException("钓鱼资源尚未构建完整。");
         var itemDefinitions = ItemDefinitionCatalogLoader.LoadBuiltInDefinitions();
         var actorDefinitions = ActorDefinitionCatalogLoader.LoadBuiltInDefinitions();
         string[] ids = { "FishingRod", "FishingHook_Bone", "FishingHook_Iron", "FishingHook_Gold" };
@@ -34,8 +38,11 @@ public static class FishingAssetBuilder
             if (!itemDefinitions.Any(value => value.Id == id)) throw new InvalidOperationException("物品目录缺失 " + id);
         if (!actorDefinitions.Any(value => value.Id == "SmallFish")) throw new InvalidOperationException("小鱼未接入 Actor Manifest。");
         Mod_AI_Fish ai = fish.GetComponentInChildren<Mod_AI_Fish>(true);
+        Animator fishAnimator = fish.GetComponentInChildren<Animator>(true);
         FishingRodPanelBindings binding = panel.GetComponent<FishingRodPanelBindings>();
-        if (ai == null || ai.fishRenderer == null || binding == null || binding.HookSlot == null ||
+        if (ai == null || ai.fishRenderer == null || fishAnimator == null ||
+            fishAnimator.runtimeAnimatorController != fishController ||
+            binding == null || binding.HookSlot == null ||
             binding.BaitSlot == null || binding.CloseButton == null || binding.Status == null)
             throw new InvalidOperationException("小鱼或钓竿面板存在缺失引用。");
         return Newtonsoft.Json.JsonConvert.SerializeObject(new
@@ -46,7 +53,8 @@ public static class FishingAssetBuilder
             enabledSolidColliders = fish.GetComponentsInChildren<Collider2D>(true).Count(value => value.enabled && !value.isTrigger),
             panelSlots = panel.GetComponentsInChildren<ItemSlot_UI>(true).Length,
             fishingLine = rod.GetComponent<Mod_FishingRod>().fishingLine != null,
-            fishSprite = AssetDatabase.GetAssetPath(ai.fishRenderer.sprite)
+            fishSprite = AssetDatabase.GetAssetPath(ai.fishRenderer.sprite),
+            fishAnimator = AssetDatabase.GetAssetPath(fishAnimator.runtimeAnimatorController)
         });
     }
 
@@ -59,10 +67,11 @@ public static class FishingAssetBuilder
         settings = AddressableAssetSettingsDefaultObject.Settings;
         if (settings == null || settings.DefaultGroup == null) throw new InvalidOperationException("Addressables 默认组缺失。");
         Sprite sprite = BuildFishSprite();
+        RuntimeAnimatorController fishController = BuildFishAnimatorController();
         BuildHookSprite();
         Register(RodSpritePath, RodSpritePath, "ItemSprite");
         BuildModules();
-        BuildFish(sprite);
+        BuildFish(sprite, fishController);
         BuildPanel();
         EditorUtility.SetDirty(settings);
         EditorUtility.SetDirty(settings.DefaultGroup);
@@ -99,6 +108,24 @@ public static class FishingAssetBuilder
         importer.SaveAndReimport();
         Register(FishSpritePath, FishSpritePath, "ActorVisual");
         return AssetDatabase.LoadAssetAtPath<Sprite>(FishSpritePath);
+    }
+
+    /// <summary>小鱼当前使用静态 Idle 状态，保留独立 Animator 入口以兼容后续游动帧扩展。</summary>
+    private static RuntimeAnimatorController BuildFishAnimatorController()
+    {
+        AnimatorController controller = AssetDatabase.LoadAssetAtPath<AnimatorController>(FishControllerPath);
+        if (controller == null)
+            controller = AnimatorController.CreateAnimatorControllerAtPath(FishControllerPath);
+
+        AnimatorStateMachine stateMachine = controller.layers[0].stateMachine;
+        AnimatorState idle = stateMachine.states
+            .Select(value => value.state)
+            .FirstOrDefault(value => value != null && value.name == "Idle");
+        idle ??= stateMachine.AddState("Idle");
+        stateMachine.defaultState = idle;
+        EditorUtility.SetDirty(controller);
+        Register(FishControllerPath, "flatworld.actor.animator.smallfish", "ActorVisual");
+        return controller;
     }
 
     private static void BuildModules()
@@ -184,7 +211,7 @@ public static class FishingAssetBuilder
         Register(HookSpritePath, HookSpritePath, "ItemSprite");
     }
 
-    private static void BuildFish(Sprite sprite)
+    private static void BuildFish(Sprite sprite, RuntimeAnimatorController controller)
     {
         GameObject root = PrefabUtility.LoadPrefabContents("Assets/2_Prefabs/Gameplay/AI/Chicken.prefab");
         try
@@ -208,6 +235,8 @@ public static class FishingAssetBuilder
             fishRenderer.sprite = sprite;
             fishRenderer.sharedMaterial = material;
             fishRenderer.sortingLayerName = "Default";
+            var animator = visual.AddComponent<Animator>();
+            animator.runtimeAnimatorController = controller;
             var behaviour = new GameObject("Mod_AI_Fish");
             behaviour.transform.SetParent(root.transform, false);
             Mod_AI_Fish ai = behaviour.AddComponent<Mod_AI_Fish>();

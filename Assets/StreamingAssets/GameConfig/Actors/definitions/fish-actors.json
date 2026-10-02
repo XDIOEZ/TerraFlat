@@ -23,6 +23,9 @@
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/AI/SmallFish/SmallFish.png",
         "rendererPath": "FishVisual",
+        "animatorPath": "FishVisual",
+        "animationState": "Idle",
+        "animatorControllerAddress": "flatworld.actor.animator.smallfish",
         "color": {
           "r": 1.0,
           "g": 1.0,
