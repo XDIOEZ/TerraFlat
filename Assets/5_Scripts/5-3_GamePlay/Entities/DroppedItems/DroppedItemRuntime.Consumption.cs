@@ -71,7 +71,8 @@ internal sealed partial class DroppedItemRuntime
         }
     }
 
-    public bool TryFindNearestTagged(Vector2 origin, float radius, string tag, out int nearestId)
+    public bool TryFindNearestTagged(Vector2 origin, float radius, string tag, out int nearestId,
+        Predicate<Vector2> positionFilter = null)
     {
         nearestId = 0;
         float nearestDistance = radius * radius;
@@ -86,6 +87,7 @@ internal sealed partial class DroppedItemRuntime
                     LightweightDroppedBody body = simulation.Get(id);
                     if (body.Pickable == 0 || body.Amount < 1f || payloads[id].Tags?.Contains(tag) != true) continue;
                     Vector2 nearestPosition = domain.NearestImagePosition(origin, body.Position);
+                    if (positionFilter != null && !positionFilter(body.Position)) continue;
                     float distance = (nearestPosition - origin).sqrMagnitude;
                     if (distance > nearestDistance || (distance == nearestDistance && nearestId != 0 && id > nearestId)) continue;
                     nearestDistance = distance; nearestId = id;

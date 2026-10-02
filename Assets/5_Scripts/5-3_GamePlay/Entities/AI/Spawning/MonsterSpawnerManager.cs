@@ -830,7 +830,7 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
             !IsWithinPlayerPopulationLimit(config, candidate) ||
             !_chunkManager.IsRuntimeEntityPresentationReady(candidate) ||
             !IsRuntimeTerrainReady(candidate) ||
-            !IsWalkableSpawnPosition(candidate) ||
+            !(config.WaterOnly ? AquaticHabitat.CanSwimAt(candidate) : IsWalkableSpawnPosition(candidate)) ||
             !IsBiomeAllowed(config, candidate) ||
             !IsGroundTileAllowed(config, candidate) ||
             !IsLightAllowed(config, candidate))

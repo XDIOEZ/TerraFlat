@@ -1,0 +1,98 @@
+{
+  "schemaVersion": 1,
+  "recipes": [
+    {
+      "id": "core:FishingRod",
+      "displayName": "钓鱼竿",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "temperature": 0.0,
+      "maxTemperature": 2000.0,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Stick_Wood",
+          "amount": 2
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Rope",
+          "amount": 2
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "FishingRod",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:FishingHook_Bone",
+      "displayName": "骨质鱼钩",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "temperature": 0.0,
+      "maxTemperature": 2000.0,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Bone",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "FishingHook_Bone",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:FishingHook_Iron",
+      "displayName": "铁质鱼钩",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "temperature": 0.0,
+      "maxTemperature": 2000.0,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Ingot_WroughtIron",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "FishingHook_Iron",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:FishingHook_Gold",
+      "displayName": "金鱼钩",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "temperature": 0.0,
+      "maxTemperature": 2000.0,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Ingot_Gold",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "FishingHook_Gold",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    }
+  ]
+}

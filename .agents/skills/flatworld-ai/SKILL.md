@@ -52,6 +52,9 @@ description: "Use when: 定位或修改 FlatWorld 的动物、怪物、蜂群、
 - 小鸡受伤后的禁睡期使用 `AI_ChickenSaveData` 保存的绝对游戏日截止值，直到下一次夜晚开始才解除；逃跑结束、低血量、跨午夜和远距重载都不能提前恢复睡眠。逃跑威胁记忆与睡眠警戒是两个独立状态。
 - 鸟类产蛋由 `Mod_AI_Bird.EggLaying` 驱动，`AnimalEggLayingSchedule` 随个体保存绝对游戏日；成功落下一颗后重新计算至少两天的冷却，不能追补休眠或跳时积压。`Bird` 必须移除继承自鸡的通用生产模块，`Bee` 显式关闭产蛋；产物和随机延迟由 Actor JSON 配置，联机仅权威端生成。
 
+- 水生 GameObject AI 使用 `AquaticHabitat` 检查真实液体层与整段游动线路，不读取会被平台抹零的表面有效水深，不借用陆地可走性决定出生。未加载区块不是干地；个体饥饿、Buff 与受伤仍走原模块，离水伤害只在权威端结算。
+- 水下整身显示使用 `underwater-creature` 排序类别与地面、水面之间的材质队列；保留受击 Trigger，但禁止实体碰撞和半身水线裁切。水中觅食须同时过滤轻量掉落物和完整 Item，先过滤生境再选最近对象，不能让岸上最近食物挡住水中的食物。
+
 ## 相关 Skill
 
 - 改导航与 LOS：`flatworld-navigation`。

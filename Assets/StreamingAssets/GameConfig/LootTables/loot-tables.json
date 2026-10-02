@@ -2,6 +2,12 @@
   "schemaVersion": 1,
   "lootTables": [
     {
+      "id": "SmallFish_Default",
+      "entries": [
+        { "itemId": "Meat", "probability": 1.0, "minAmount": 1, "maxAmount": 1 }
+      ]
+    },
+    {
       "id": "Tree_Default",
       "entries": [
         {

@@ -155,6 +155,11 @@
       "id": "wooden_barrel",
       "path": "shells/wooden_barrel.json",
       "enabled": true
+    },
+    {
+      "id": "fishing",
+      "path": "shells/fishing.json",
+      "enabled": true
     }
   ]
 }

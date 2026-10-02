@@ -90,6 +90,11 @@
       "id": "crafting/wooden_barrel",
       "path": "crafting/wooden_barrel.json",
       "enabled": true
+    },
+    {
+      "id": "crafting/fishing",
+      "path": "crafting/fishing.json",
+      "enabled": true
     }
   ]
 }

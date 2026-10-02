@@ -59,6 +59,8 @@ public sealed class SpawnerRuntimeSettings
 [Serializable]
 public sealed class SpawnerConfigDefinition
 {
+    [JsonProperty(Required = Required.Default)]
+    public bool WaterOnly;
     public SpawnerTreeHabitat TreeHabitat = new();
     public string Id;
     public string ScheduleMode = "timedWindows";
@@ -99,6 +101,7 @@ public sealed class SpawnerConfigDefinition
         SpawnerConfig config = ScriptableObject.CreateInstance<SpawnerConfig>();
         config.name = Id;
         config.PersistentId = Id;
+        config.WaterOnly = WaterOnly;
         config.TreeHabitat = new SpawnerTreeHabitat
         {
             Enabled = TreeHabitat.Enabled,

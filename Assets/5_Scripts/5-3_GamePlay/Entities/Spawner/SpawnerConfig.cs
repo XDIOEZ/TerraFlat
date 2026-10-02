@@ -33,6 +33,7 @@ public sealed class SpawnerTreeHabitat
 public class SpawnerConfig : ScriptableObject
 {
     public SpawnerTreeHabitat TreeHabitat = new();
+    public bool WaterOnly;
 #region 嵌套类型
 
     /// <summary>

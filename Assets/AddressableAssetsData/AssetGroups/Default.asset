@@ -3580,6 +3580,48 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 0bb01bb5c1f2b5d48a23fe9b370f0b7b
+    m_Address: Assets/6_Art/Generated/Items/Fishing/FishingHook.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 1b33ba0b3ad95074f913980b3e132d6b
+    m_Address: Mod_FishingRod
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 6c4b5ba57867a9a48a13438a6f5c7e2c
+    m_Address: UI_FishingRod
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 6ecad61c31785a04781daf2c0d1bb59a
+    m_Address: flatworld.actor.shell.smallfish
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ActorShell
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 7a9b95e9c41ecc841acb1ff3bcfd4c8c
+    m_Address: Mod_AI_Fish
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: b83a407b98bedbb42a462807fa86912f
+    m_Address: Assets/6_Art/Items/Tools/Item_Tool_389.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: c4e08b7db848a174ba81e3ab9e033b0d
+    m_Address: Assets/6_Art/Generated/AI/SmallFish/SmallFish.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ActorVisual
+    FlaggedDuringContentUpdateRestriction: 0
   m_ReadOnly: 0
   m_Settings: {fileID: 11400000, guid: fc59728ab6aa9b54ba0a5f7cc69fc0d8, type: 2}
   m_SchemaSet:

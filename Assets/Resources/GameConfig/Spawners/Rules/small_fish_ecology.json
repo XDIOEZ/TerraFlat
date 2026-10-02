@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "config": {
+    "id": "small_fish_ecology",
+    "scheduleMode": "timedWindows",
+    "ecologyGroup": "animals",
+    "requireGlobalDarkness": false,
+    "spawnTriggerTime": 360.0,
+    "spawnsPerDay": 4,
+    "minSpawnDistance": 15.0,
+    "maxSpawnDistance": 50.0,
+    "playerVisibilityExclusionDistance": 18.0,
+    "playerPopulationRadius": 65.0,
+    "perPlayerAliveLimit": 16,
+    "spawnSearchRetryCount": 24,
+    "spawnCount": 4,
+    "spawnChance": 1.0,
+    "daysBetweenSpawns": 1,
+    "groupAliveLimit": 24,
+    "maxEcologyBudget": 24,
+    "dailyBudgetRecovery": 12,
+    "recoveryTargetPopulation": 12,
+    "recoveryCheckInterval": 8.0,
+    "growthIntervalDays": 1,
+    "maxLifetimeSpawnCount": 4096,
+    "asyncSpawnInterval": 0.25,
+    "unboundedDailyGrowth": false,
+    "ignorePopulationLimits": false,
+    "requireCompletelyDarkTile": false,
+    "maxAllowedTileLight": 1.0,
+    "allowedBiomeNames": [
+      "海洋"
+    ],
+    "recycleDistance": 110.0,
+    "recycleGraceSeconds": 20.0,
+    "treeHabitat": {
+      "enabled": false,
+      "treesPerActor": 4,
+      "spawnRadius": 3.0
+    },
+    "spawnEntries": [
+      {
+        "prefabName": "SmallFish",
+        "runtimeBackend": "gameObject",
+        "probability": 1.0,
+        "ecologyCost": 1,
+        "speciesAliveLimit": 24,
+        "initialization": {
+          "nutrition": {
+            "enabled": true,
+            "minFoodRate": 0.7,
+            "maxFoodRate": 0.95
+          }
+        }
+      }
+    ],
+    "waterOnly": true
+  }
+}

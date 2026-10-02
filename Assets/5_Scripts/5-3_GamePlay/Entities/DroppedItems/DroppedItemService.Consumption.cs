@@ -63,13 +63,14 @@ public static partial class DroppedItemService
     }
 
     /// <summary>按统一内容标签查询附近已落地实物；单机走轻量空间桶，联机走现有权威 Item 索引。</summary>
-    public static bool TryFindNearestTagged(Vector2 origin, float radius, string tag, out DroppedItemHandle handle)
+    public static bool TryFindNearestTagged(Vector2 origin, float radius, string tag, out DroppedItemHandle handle,
+        System.Predicate<Vector2> positionFilter = null)
     {
         handle = default;
         if (radius <= 0f || float.IsNaN(radius) || float.IsInfinity(radius) || string.IsNullOrWhiteSpace(tag)) return false;
         float nearest = radius * radius;
         if (UsesLightweightDrops && runtime != null &&
-            runtime.TryFindNearestTagged(origin, radius, tag, out int lightweightId) &&
+            runtime.TryFindNearestTagged(origin, radius, tag, out int lightweightId, positionFilter) &&
             runtime.TryGetPickablePosition(lightweightId, out Vector2 lightweightPosition))
         {
             nearest = WorldTopologyRuntime.ShortestDelta(origin, lightweightPosition).sqrMagnitude;
@@ -82,6 +83,7 @@ public static partial class DroppedItemService
         foreach (Item candidate in forageLegacyCandidates)
         {
             if (!IsLoosePickable(candidate) || candidate.itemData.Tags?.Contains(tag) != true) continue;
+            if (positionFilter != null && !positionFilter(candidate.transform.position)) continue;
             float distance = WorldTopologyRuntime.ShortestDelta(origin, candidate.transform.position).sqrMagnitude;
             if (distance > nearest ||
                 (Mathf.Approximately(distance, nearest) && handle.IsValid &&
