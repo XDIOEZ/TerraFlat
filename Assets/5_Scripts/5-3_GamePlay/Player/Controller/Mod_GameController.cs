@@ -42,13 +42,13 @@ public partial class Mod_GameController : Module
     /// <summary>判断某个设备是否可以进入当前玩家的世界玩法；手机方案隔离手柄世界输入。</summary>
     public bool IsGameplayInputAllowed(InputDevice device)
     {
+        // 文本输入时所有键盘都只负责打字，包括 Agent 接管使用的专用虚拟键盘。
+        if (device is Keyboard && EventSystemGuard.IsTextInputFocused)
+            return false;
+
         // 外部 Agent 接管期间只接收带专用 Usage 的虚拟设备，真实设备继续退出玩法仲裁。
         if (HasExternalGameplayControl)
             return IsExternalGameplayInputDevice(device);
-
-        // 文本输入时键盘只负责打字，禁止背包、交互、丢弃、快捷栏等玩法热键穿透。
-        if (device is Keyboard && EventSystemGuard.IsTextInputFocused)
-            return false;
 
         if (device is FlatWorldMobileDevice)
             return _preferredInputDevice == InputDeviceType.Mobile;
