@@ -9,7 +9,8 @@ public enum WeatherType
     Clear,
     Cloudy,
     Rain,
-    Storm
+    Storm,
+    Fog = 4 // 只追加枚举值，保持已有存档和联机天气编号不变。
 }
 
 /// <summary>

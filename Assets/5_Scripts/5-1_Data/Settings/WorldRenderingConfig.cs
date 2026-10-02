@@ -10,6 +10,7 @@ public sealed class WorldRenderingConfig
     public RenderingPreferences preferences;
     public RenderingShadows shadows;
     public RenderingOcclusion occlusion;
+    public RenderingDenseFog denseFog;
     public RenderingInteractionOutline interactionOutline;
     public RenderingPostProcess postProcess;
     public RenderingGrass grass;
@@ -98,6 +99,36 @@ public sealed class WorldRenderingConfig
         public float thicknessPixels;
         public float minimumThicknessPixels;
         public float maximumThicknessPixels;
+    }
+
+    #endregion
+
+    #region 大雾视野配置
+
+    [Serializable]
+    public sealed class RenderingDenseFog
+    {
+        public float clearRadius;
+        public float opaqueRadius;
+        public float transitionSeconds;
+        public Color color;
+        public float noiseScale;
+        public float driftSpeed;
+        public float noiseStrength;
+
+        // 大雾半径使用世界格距离，透明度不能被画质偏好或颜色 Alpha 降低。
+        public bool IsValid =>
+            IsFinite(clearRadius) && clearRadius > 0f &&
+            IsFinite(opaqueRadius) && opaqueRadius > clearRadius &&
+            IsFinite(transitionSeconds) && transitionSeconds >= 0f &&
+            IsFinite(noiseScale) && noiseScale > 0f &&
+            IsFinite(driftSpeed) && driftSpeed >= 0f &&
+            IsFinite(noiseStrength) && noiseStrength >= 0f && noiseStrength <= 0.2f &&
+            IsFinite(color.r) && color.r >= 0f && color.r <= 1f &&
+            IsFinite(color.g) && color.g >= 0f && color.g <= 1f &&
+            IsFinite(color.b) && color.b >= 0f && color.b <= 1f;
+
+        private static bool IsFinite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);
     }
 
     #endregion
@@ -235,6 +266,7 @@ public static class WorldRenderingConfigCatalog
         if (config == null || config.schemaVersion != 2 || config.preferences == null ||
             config.shadows == null || config.shadows.contact == null || config.shadows.ecsContact == null ||
             config.shadows.groundElevation == null || config.occlusion == null || config.interactionOutline == null ||
+            config.denseFog == null ||
             config.postProcess == null || config.postProcess.worldVolume == null ||
             config.postProcess.worldVolume.bloom == null ||
             config.postProcess.worldVolume.colorGrading == null ||
@@ -245,7 +277,8 @@ public static class WorldRenderingConfigCatalog
             config.sorting.batchProfiles == null ||
             string.IsNullOrWhiteSpace(config.sorting.terrainSortingLayer))
             throw new InvalidOperationException($"世界渲染配置结构无效：Resources/{ResourcePath}.json");
-        if (config.preferences.graphicsPreset < 0 || config.preferences.graphicsPreset > 2 ||
+        if (!config.denseFog.IsValid ||
+            config.preferences.graphicsPreset < 0 || config.preferences.graphicsPreset > 2 ||
             config.preferences.postProcessQuality < 0 || config.preferences.postProcessQuality > 2 ||
             config.preferences.waterStyle < 0 || config.preferences.waterStyle > 1 ||
             config.shadows.minimumBlurStrength < 0f ||

@@ -305,6 +305,7 @@ public partial class WeatherMgr
             WeatherType.Rain when intensity >= 0.5f => WeatherPhase.RainSteady,
             WeatherType.Rain => WeatherPhase.RainStarting,
             WeatherType.Storm => WeatherPhase.RainHeavy,
+            WeatherType.Fog => WeatherPhase.Fog,
             _ => WeatherPhase.Clear
         };
     }

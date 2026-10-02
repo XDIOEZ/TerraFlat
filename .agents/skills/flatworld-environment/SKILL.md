@@ -27,6 +27,8 @@ description: "Use when: 定位或修改 FlatWorld 的世界时间、昼夜、天
 - `PlanetData.WindStrength` 是独立于降雨强度的星球级权威状态；修改必须经 `WeatherMgr.SetWindStrength` 发布天气快照，Client 只应用复制值，离开世界或 `SuppressWeather` 维度时清零 Shader 全局表现但不改存档值。
 - 静态降水层影响地形/生态，不等于动态天气强度。
 - 普通 Client 不调度天气或体温伤害，只应用服务器状态。
+- 大雾使用 `WeatherType.Fog / WeatherPhase.Fog` 和已有天气快照；自然触发由 `Config/GameEvents/Definitions/core-fog.json` 配置，手动用 `WeatherMgr.SetFog`。枚举只追加，不能重排旧天气编号；阶段恢复必须保留雾强度和绝对结束时间，不能落回降雨映射。
+- 大雾视野由 `DenseFogRendererFeature` 在本地主相机栈的最终画面合成，只读取 owned 玩家，不隐藏/停用远端实体或增加网络可见状态；圆心与投影始终来自本地主相机，不能用环绕补绘相机的位置。`default-rendering.json` 的 `denseFog` 半径使用世界格距离，不随视距、画质或关闭普通后处理扩大；外圈噪声只改变白色，不降低完整浓雾的遮挡透明度。进房/读档已有浓雾须直接恢复，退出世界及抑制天气的维度不保留遮罩。
 - 角色体温、资源产量和调试温度层必须共用 `TemperatureMgr.TryGetAmbientTemperature`：读取已加载 `ChunkTerrainData` 的 `temperature.celsius`，叠加星球基准相对 `PlanetData.DefaultGlobalTemperature` 的差值、当前维度允许的天气修正和局部源；未加载返回 false，禁止为查询触发生成或复制整层数组。角色初始化只能更新自身 `AmbientTemperature`，不能把某个出生格温度写回星球全局值。
 - 群系基础气温在 `DeterministicChunkGenerator.GenerateSurfaceCell` 完成群系分类后写入 `temperature.celsius`；不要为调整摄氏度改写归一化的 `temperature`，后者仍参与群系判定与生态分布。规则变化需递增纯生成器与地表 Profile 的生成签名，保持噪声布局版本不变。
 - 局部冷热源是可重建的影响层，来源模块负责燃料/供电/保存并在停用、回池时撤销注册；不能把临时偏移写回生成气候，否则卸载后无法恢复并会污染地图差量。修改源快照只使覆盖分区失效，查询缓存不扫描全部来源；环形边界同时归一化分区键并使用最短距离，避免世界接缝出现断层或重复贡献。

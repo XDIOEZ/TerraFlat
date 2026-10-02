@@ -52,6 +52,15 @@
     "playerCenterOffsetY": 0.18,
     "behindVerticalPadding": 0.04
   },
+  "denseFog": {
+    "clearRadius": 5.0,
+    "opaqueRadius": 10.0,
+    "transitionSeconds": 2.0,
+    "color": { "r": 1.0, "g": 1.0, "b": 1.0, "a": 1.0 },
+    "noiseScale": 0.22,
+    "driftSpeed": 0.08,
+    "noiseStrength": 0.04
+  },
   "interactionOutline": {
     "enabled": true,
     "thicknessPixels": 2.0,
