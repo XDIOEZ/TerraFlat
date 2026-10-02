@@ -51,12 +51,14 @@ MonoBehaviour:
   eatRange: 0.45
   eatSeconds: 0.8
   scanInterval: 0.5
+  eatAvailableFoodThreshold: 0.9
+  activeForageThreshold: 0.7
   edibleTags:
   - Food
   - 47
   - Meat
   - Worm
-  minimumWetStacks: 5
+  minimumWetStacks: 3
   dryDamageInterval: 10
   dryDamage: 10
   fishRenderer: {fileID: 0}

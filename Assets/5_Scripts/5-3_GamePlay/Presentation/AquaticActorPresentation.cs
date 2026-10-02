@@ -47,7 +47,22 @@ public sealed class AquaticActorPresentation : IDisposable
             hideFlags = HideFlags.HideAndDontSave,
             renderQueue = waterQueue - 1
         };
+        ConfigureFullySubmergedMaterial(underwaterMaterial);
         sorting = owner.GetComponent<WorldSortingMember>() ?? owner.gameObject.AddComponent<WorldSortingMember>();
+    }
+
+    /// <summary>鱼整身处于水下，额外用全身水下染色避免视觉上贴在水面。</summary>
+    private static void ConfigureFullySubmergedMaterial(Material material)
+    {
+        if (material == null || !material.HasProperty("_WaterEnabled")) return;
+        material.SetFloat("_WaterEnabled", 1f);
+        material.SetFloat("_WaterWorldSpace", 0f);
+        material.SetFloat("_WaterSurfaceV", 1f);
+        material.SetFloat("_WaterFeather", 0.005f);
+        material.SetFloat("_WaterTintStrength", 0.35f);
+        material.SetFloat("_WaterAlpha", 0.82f);
+        material.SetFloat("_WaterLineStrength", 0f);
+        material.SetFloat("_WaterWaveAmplitude", 0f);
     }
     #endregion
 

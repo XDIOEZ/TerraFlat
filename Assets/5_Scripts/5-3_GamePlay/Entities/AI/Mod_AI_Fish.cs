@@ -15,6 +15,8 @@ public sealed partial class Mod_AI_Fish : Module, IAIActor, IItemModuleDependenc
     [Min(0.05f)] public float eatRange = 0.45f;
     [Min(0.1f)] public float eatSeconds = 0.8f;
     [Min(0.1f)] public float scanInterval = 0.5f;
+    [Range(0f, 1f)] public float eatAvailableFoodThreshold = 0.9f;
+    [Range(0f, 1f)] public float activeForageThreshold = 0.7f;
     public string[] edibleTags = { "Food", "47", "Meat", "Worm" };
     [Min(1)] public int minimumWetStacks = 3;
     [Min(0.1f)] public float dryDamageInterval = 10f;
@@ -165,12 +167,12 @@ public sealed partial class Mod_AI_Fish : Module, IAIActor, IItemModuleDependenc
                 return;
             }
             scanRemaining -= deltaTime;
-            if (!IsHooked && depth >= AquaticHabitat.MinimumDepth && NeedsFood && scanRemaining <= 0f)
+            if (!IsHooked && depth >= AquaticHabitat.MinimumDepth && WillEatAvailableFood && scanRemaining <= 0f)
             {
                 scanRemaining = Mathf.Max(0.1f, scanInterval);
-                FindFood();
+                FindFood(ShouldActivelyForage ? forageRadius : eatRange);
             }
-            if (!NeedsFood) { target = default; targetTag = null; }
+            if (!WillEatAvailableFood) { target = default; targetTag = null; }
             Behaviour next = IsHooked ? Behaviour.Hooked : depth < AquaticHabitat.MinimumDepth
                 ? Behaviour.Stranded : target.IsValid ? Behaviour.Forage : Behaviour.Swim;
             machine.TransitionTo(next, null);
@@ -179,19 +181,26 @@ public sealed partial class Mod_AI_Fish : Module, IAIActor, IItemModuleDependenc
         UpdatePresentation(deltaTime);
     }
 
-    private bool NeedsFood => food.Data?.nutrition != null && food.Data.nutrition.GetFoodRate() < 1f;
+    private bool WillEatAvailableFood => food.Data?.nutrition != null &&
+                                          food.Data.nutrition.GetFoodRate() < Mathf.Clamp01(eatAvailableFoodThreshold);
+
+    private bool ShouldActivelyForage => food.Data?.nutrition != null &&
+                                         food.Data.nutrition.GetFoodRate() <
+                                         Mathf.Min(Mathf.Clamp01(eatAvailableFoodThreshold),
+                                             Mathf.Clamp01(activeForageThreshold));
 
     private bool IsReachableFood(Vector2 position) => AquaticHabitat.CanTraverse(item.transform.position, position);
 
-    private void FindFood()
+    private void FindFood(float searchRadius)
     {
         DroppedItemHandle previous = target;
         target = default;
         targetTag = null;
-        float bestDistance = forageRadius * forageRadius;
+        float radius = Mathf.Max(eatRange, searchRadius);
+        float bestDistance = radius * radius;
         foreach (string tag in edibleTags)
         {
-            if (!DroppedItemService.TryFindNearestTagged(item.transform.position, forageRadius, tag,
+            if (!DroppedItemService.TryFindNearestTagged(item.transform.position, radius, tag,
                     out DroppedItemHandle candidate, IsReachableFood) ||
                 !DroppedItemService.TryGetPickablePosition(candidate, out Vector2 position)) continue;
             float distance = WorldTopologyRuntime.SqrDistance(item.transform.position, position);
@@ -205,13 +214,16 @@ public sealed partial class Mod_AI_Fish : Module, IAIActor, IItemModuleDependenc
 
     private void TickForage(float deltaTime)
     {
+        float allowedRadius = ShouldActivelyForage ? forageRadius : eatRange;
         if (!DroppedItemService.TryGetPickablePosition(target, out Vector2 position) ||
             !AquaticHabitat.CanSwimAt(position) ||
-            WorldTopologyRuntime.SqrDistance(item.transform.position, position) > forageRadius * forageRadius)
+            WorldTopologyRuntime.SqrDistance(item.transform.position, position) > allowedRadius * allowedRadius)
         { target = default; eatElapsed = 0f; return; }
         if (WorldTopologyRuntime.SqrDistance(item.transform.position, position) > eatRange * eatRange)
         {
             eatElapsed = 0f;
+            // 70% 以上只吃嘴边已有食物，不会主动追过去。
+            if (!ShouldActivelyForage) { target = default; return; }
             if (!SwimTowards(position, deltaTime)) target = default;
             return;
         }
@@ -220,7 +232,7 @@ public sealed partial class Mod_AI_Fish : Module, IAIActor, IItemModuleDependenc
         eatElapsed = 0f;
         DroppedItemHandle eaten = target;
         int legacyGuid = eaten.Legacy != null ? eaten.Legacy.itemData.Guid : 0;
-        if (NeedsFood && food.TryEatDroppedFood(eaten, targetTag, eatRange))
+        if (WillEatAvailableFood && food.TryEatDroppedFood(eaten, targetTag, eatRange))
             Mod_FishingRod.NotifyBaitEaten(eaten, this, legacyGuid);
         target = default;
     }
