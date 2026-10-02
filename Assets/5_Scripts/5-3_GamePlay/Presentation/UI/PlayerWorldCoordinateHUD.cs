@@ -18,7 +18,7 @@ public sealed class PlayerWorldCoordinateHUD : MonoBehaviour
     public const string AmbientTemperatureFormat = "环境温度  {0:0.0}℃";
     public const string AmbientTemperatureUnavailableText = "环境温度  --℃";
     public const string SeasonTextNodeName = "季节文本";
-    public const string SeasonFormat = "第 {0} 年 · {1} · 第 {2} 天";
+    public const string SeasonFormat = "第 {0} 年 · {1} · 第 {2} 天 · {3:00}时";
     private static readonly string[] SeasonNames = { "春季", "夏季", "秋季", "冬季" };
 
     private const string CoordinateTextNodeName = "坐标文本";
@@ -39,6 +39,7 @@ public sealed class PlayerWorldCoordinateHUD : MonoBehaviour
     private int lastSeasonYear = -1;
     private int lastSeasonIndex = -1;
     private int lastSeasonDay = -1;
+    private int lastSeasonHour = -1;
     private string localizedTemperatureFormat;
     private string localizedTemperatureUnavailableText;
     private int lastTemperatureTenths = int.MinValue;
@@ -183,23 +184,32 @@ public sealed class PlayerWorldCoordinateHUD : MonoBehaviour
         InvalidateFpsSample();
         temperatureDisplayInitialized = false;
         lastSeasonYear = -1;
+        lastSeasonHour = -1;
         return true;
     }
 
-    /// <summary>只在日历显示值变化时更新季节文字，不逐帧创建本地化字符串。</summary>
+    /// <summary>基础 HUD 只显示整点时间，并仅在日历显示值变化时更新文字。</summary>
     private void RefreshSeasonText()
     {
         if (seasonText == null || DayTimeSystem.Instance == null ||
-            !DayTimeSystem.Instance.TryGetCurrentSeason(out SeasonSnapshot season))
+            !DayTimeSystem.Instance.TryGetCurrentSeason(out SeasonSnapshot season) ||
+            !DayTimeSystem.Instance.TryGetActiveTimeData(out TimeData time))
             return;
         int day = Mathf.FloorToInt(season.ElapsedDays) + 1;
-        if (lastSeasonYear == season.Year && lastSeasonIndex == (int)season.Season && lastSeasonDay == day)
+        float dayLength = Mathf.Max(1f, time.DayLength);
+        int hour = Mathf.Clamp(
+            Mathf.FloorToInt(Mathf.Repeat(time.CurrentTime, dayLength) / dayLength * 24f),
+            0,
+            23);
+        if (lastSeasonYear == season.Year && lastSeasonIndex == (int)season.Season &&
+            lastSeasonDay == day && lastSeasonHour == hour)
             return;
         lastSeasonYear = season.Year;
         lastSeasonIndex = (int)season.Season;
         lastSeasonDay = day;
+        lastSeasonHour = hour;
         seasonText.text = FlatWorldLocalizationService.GetUiFormat(SeasonFormat,
-            season.Year, FlatWorldLocalizationService.GetUiText(SeasonNames[lastSeasonIndex]), day);
+            season.Year, FlatWorldLocalizationService.GetUiText(SeasonNames[lastSeasonIndex]), day, hour);
     }
 
     /// <summary>复用热力图的逐格温度入口，未加载时显示空读数；四舍五入到 0.1℃ 后去重刷新。</summary>
@@ -230,6 +240,7 @@ public sealed class PlayerWorldCoordinateHUD : MonoBehaviour
     {
         RefreshTemperatureLocalization();
         lastSeasonYear = -1;
+        lastSeasonHour = -1;
         RefreshSeasonText();
         if (CanDisplay() && ambientTemperatureText != null)
             RefreshAmbientTemperatureText();

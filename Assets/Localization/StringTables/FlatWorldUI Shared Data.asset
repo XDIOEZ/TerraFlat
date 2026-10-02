@@ -2175,6 +2175,10 @@ MonoBehaviour:
     m_Key: ui.text.442DB905
     m_Metadata:
       m_Items: []
+  - m_Id: 3733935167
+    m_Key: ui.text.DE8F643F
+    m_Metadata:
+      m_Items: []
   - m_Id: 11095680595517441
     m_Key: ui.text.A8A1DC67
     m_Metadata:

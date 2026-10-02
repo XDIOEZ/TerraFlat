@@ -602,6 +602,7 @@ namespace FlatWorld.Localization.Editor
                 { "环境温度  {0:0.0}℃", "Ambient  {0:0.0}°C" },
                 { "环境温度  --℃", "Ambient  --°C" },
                 { "第 {0} 年 · {1} · 第 {2} 天", "Year {0} · {1} · Day {2}" },
+                { "第 {0} 年 · {1} · 第 {2} 天 · {3:00}时", "Year {0} · {1} · Day {2} · {3:00}h" },
                 { "第 1 年 · 春季 · 第 1 天", "Year 1 · Spring · Day 1" },
                 { "春季", "Spring" },
                 { "夏季", "Summer" },

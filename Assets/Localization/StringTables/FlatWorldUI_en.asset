@@ -2242,6 +2242,10 @@ MonoBehaviour:
     m_Localized: "Year {0} \xB7 {1} \xB7 Day {2}"
     m_Metadata:
       m_Items: []
+  - m_Id: 3733935167
+    m_Localized: "Year {0} \xB7 {1} \xB7 Day {2} \xB7 {3:00}h"
+    m_Metadata:
+      m_Items: []
   - m_Id: 11095680595517441
     m_Localized: '{0} days per year. Changes preserve current seasonal progress.'
     m_Metadata:

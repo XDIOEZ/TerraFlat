@@ -2209,6 +2209,10 @@ MonoBehaviour:
     m_Localized: "\u7B2C {0} \u5E74 \xB7 {1} \xB7 \u7B2C {2} \u5929"
     m_Metadata:
       m_Items: []
+  - m_Id: 3733935167
+    m_Localized: "\u7B2C {0} \u5E74 \xB7 {1} \xB7 \u7B2C {2} \u5929 \xB7 {3:00}\u65F6"
+    m_Metadata:
+      m_Items: []
   - m_Id: 11095680595517441
     m_Localized: "\u4E00\u5E74\u5171 {0} \u5929\uFF1B\u8C03\u6574\u4F1A\u4FDD\u7559\u5F53\u524D\u5B63\u8282\u8FDB\u5EA6\u3002"
     m_Metadata:
