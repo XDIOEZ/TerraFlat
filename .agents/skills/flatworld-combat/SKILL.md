@@ -58,6 +58,8 @@ description: "Use when: 定位或修改 FlatWorld 的伤害、生命值、身体
 
 ## ECS 与旧战斗的共同契约
 
+- 接触伤害由独立 `Mod_ContactDamage` 的 `Settings` 组合，资源后端由 `NaturalEntityEcsProfileCompiler` 编译并仅遍历已登记的伤害源；两个后端共用 `ContactDamageRuntime`，只查询真实身体、按完整目标身份限频，再调用 `Hurt(CombatDamageContext)`。不得用武器/拾取 Trigger 代替身体、伤及空中目标、在客户端重复扣血或补算离线接触；采集、死亡、卸载与配置停用立即移除来源，冷却不进入存档。
+
 - `Shared/Combat/CombatContext.cs` 位于无 GamePlay 依赖的公共程序集，固定值身份与四类伤害可进入 Burst。两个后端共用难度/防御、实际损失裁剪与刃伤出血阈值；managed CombatDamage 只在旧入口与反馈边界转换。
 - `Hurt(IDamageSender)` 保留原来发送端 Item 与旧规则，然后适配同一生命提交核心；`Hurt(in CombatDamageContext)` 使用明确 Source/Credit 和模拟 Tick/Time。ECS 来源不提供旧 Item 引用，消费方应读取 `DamageReceiverDamageInfo.Context`，不可把其旧 Attacker 字段为空解释成环境攻击或丢弃击杀归因。
 - 阵营配置注册仍严格校验 96 字符限制，进入 Native 目录前另查 UTF-8 字节容量；接收 Native 命中必须先验证长度再解码。非法阵营返回无效命中 `-1` 并限次记录来源身份、Tick 和有限原始字节，不截断、不改为空阵营、不消耗受伤冷却，也不能让单次坏数据中断整轮 AI 更新。

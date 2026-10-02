@@ -54,7 +54,11 @@ namespace FlatWorld.NaturalEntities
             public void TickEntities(float deltaTime) => Tick(deltaTime);
             public void CompleteEntityJobs() => simulation?.Complete();
             public void ReleaseEntities() => ReleaseWorld();
-            public void AfterEntitySimulation(float deltaTime) => PublishEntities(deltaTime);
+            public void AfterEntitySimulation(float deltaTime)
+            {
+                PublishEntities(deltaTime);
+                TickContactDamage(deltaTime);
+            }
             public bool TryGetIdentity(Item item, out CombatIdentity identity) { identity = default; return false; }
             public void QueryWeaponPulse(Mod_Damage weapon, AttackShape2D shape, CombatDamageContext context) => QueryWeapon(weapon, shape, context);
         }
@@ -107,6 +111,7 @@ namespace FlatWorld.NaturalEntities
                 ReleasePresentation(record);
             }
             records.Clear();
+            ClearContactDamageSources();
             simulation?.Dispose();
             simulation = null;
             profiles.Clear();
@@ -210,6 +215,7 @@ namespace FlatWorld.NaturalEntities
                 return;
             UnregisterNavigation(record);
             UnregisterSpatial(record);
+            RemoveContactDamageSource(record);
             ReleasePresentation(record);
             if (simulation.TryGet(handle.Id, out EntityPlantLifecycle plant) && plant.Cultivated != 0)
             {

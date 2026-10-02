@@ -20,6 +20,7 @@ namespace FlatWorld.NaturalEntities
         public float RainGrowthBonus;
         public PlantClimateConfig Climate;
         public ResourceHarvestConfig Harvest;
+        public ContactDamageSettings ContactDamage;
         public bool HasGrowth => (Capabilities & NaturalEntityCapability.Growth) != 0;
         public bool HasClimate => (Capabilities & NaturalEntityCapability.Climate) != 0;
     }
@@ -119,6 +120,17 @@ namespace FlatWorld.NaturalEntities
                 {
                     if (!CompileHarvest(module, result, out reason))
                         return false;
+                    continue;
+                }
+
+                if (string.Equals(prefab, "Module_ContactDamage", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (result.ContactDamage != null) { reason = "接触伤害能力重复。"; return false; }
+                    JObject parameters = ParseParameters(module, out reason);
+                    if (parameters == null) return false;
+                    result.ContactDamage = DeserializeConfiguration<ContactDamageSettings>(parameters["Settings"])
+                        ?? new ContactDamageSettings();
+                    if (!result.ContactDamage.TryValidate(out reason)) return false;
                     continue;
                 }
 

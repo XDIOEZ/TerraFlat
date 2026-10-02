@@ -3562,6 +3562,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 912a5c05d034422ca6124bad600da088
+    m_Address: Module_ContactDamage
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: e7a67803f1e145dca4ae8e6a10ce8f73
     m_Address: Module_ResourceTool
     m_ReadOnly: 0

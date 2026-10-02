@@ -169,6 +169,7 @@ namespace FlatWorld.NaturalEntities
                 if (bucket.Add(record.Handle.Id)) record.SpatialCells.Add(cell);
             }
             record.IndexedRevision = body.VisualVersion;
+            RefreshContactDamageSource(record);
             if (notifyPhysics && record.BlocksMovement)
                 PublishPhysicsBodyChanged(record, reason, true);
         }
