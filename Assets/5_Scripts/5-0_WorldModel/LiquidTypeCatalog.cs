@@ -12,7 +12,8 @@ namespace FlatWorld.WorldModel
         #region 稳定身份与会话映射
         public const string DirtyWaterId = "core:dirty_water";
         public const string SeaWaterId = "core:sea_water";
-        public static readonly LiquidTypeCatalog BuiltIn = new(new[] { DirtyWaterId, SeaWaterId });
+        public const string LavaId = "core:lava";
+        public static readonly LiquidTypeCatalog BuiltIn = new(new[] { DirtyWaterId, SeaWaterId, LavaId });
         private readonly string[] ids;
         private readonly Dictionary<string, int> indices = new(StringComparer.OrdinalIgnoreCase);
 

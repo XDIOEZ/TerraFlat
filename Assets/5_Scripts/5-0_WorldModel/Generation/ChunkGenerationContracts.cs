@@ -470,6 +470,12 @@ namespace FlatWorld.WorldModel
                 for (int tagIndex = 0; tagIndex < tags.Count; tagIndex++)
                     AddString(ref hash, tags[tagIndex]);
                 // 仅显式湿地上限参与扩展指纹，不改变未使用该约束的既有规则。
+                if (!string.IsNullOrEmpty(rule.RequiredEnvironmentLayer))
+                {
+                    AddString(ref hash, "requiredEnvironmentLayer");
+                    AddString(ref hash, rule.RequiredEnvironmentLayer);
+                    AddLong(ref hash, BitConverter.DoubleToInt64Bits(rule.MinimumEnvironmentValue));
+                }
                 if (rule.MaxRiverFloodplainStrength < 1d)
                 {
                     AddString(ref hash, "maxRiverFloodplainStrength");

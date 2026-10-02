@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: ChunkGenerationProfile_Surface
   m_EditorClassIdentifier: 
   profileId: surface.default
-  generationSignature: 54
+  generationSignature: 55
   chunkWidth: 16
   chunkHeight: 16
   numericParameters:
@@ -141,6 +141,20 @@ MonoBehaviour:
     Value: 104
   - Id: lake.large.islandChance
     Value: 0.7
+  - Id: lake.lava.enabled
+    Value: 1
+  - Id: lake.lava.regionSize
+    Value: 192
+  - Id: lake.lava.chance
+    Value: 0.35
+  - Id: lake.lava.minRadius
+    Value: 3
+  - Id: lake.lava.maxRadius
+    Value: 6
+  - Id: lake.lava.minimumHeight
+    Value: 0.74
+  - Id: lake.lava.shoreWidth
+    Value: 2.5
   - Id: grass.density
     Value: 0.24
   - Id: grass.minimumTemperature
@@ -285,6 +299,8 @@ MonoBehaviour:
   - surface.sulfur.mountainLoose
   - surface.sulfur.lavaMine
   - surface.sulfur.lavaLoose
+  - surface.stone.obsidianMine
+  - surface.stone.obsidian
   - surface.beach.coconut
   - surface.beach.oreStone
   - surface.desert.cactus

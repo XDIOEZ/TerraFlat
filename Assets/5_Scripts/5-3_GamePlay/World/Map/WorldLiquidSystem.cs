@@ -35,6 +35,28 @@ public static class WorldLiquidSystem
     #endregion
 
     #region 权威修改
+    /// <summary>只向可接收的世界格加入同种液体，满格、平台和异种液体均不吞掉余量。</summary>
+    public static bool TryPour(Vector2 worldPosition, string liquidId, float requestedDepth, out float addedDepth)
+    {
+        addedDepth = 0f;
+        if (!GameNetwork.HasStateAuthority || !float.IsFinite(requestedDepth) || requestedDepth <= 0f ||
+            ChunkMgr.ExistingInstance == null ||
+            !ChunkMgr.ExistingInstance.TryGetRuntimeTerrainTile(worldPosition, out var sample) ||
+            sample.Terrain == null || sample.Terrain.IsDisposed || sample.Cell.BlockingTileId != 0 ||
+            TerrainSupportLayer.GetTileId(sample.Terrain, sample.LocalCell.x, sample.LocalCell.y) != 0)
+            return false;
+        int x = sample.LocalCell.x, y = sample.LocalCell.y;
+        float current = sample.Terrain.GetLiquidDepth(x, y);
+        if (current > 0f && !string.Equals(sample.Terrain.GetLiquidId(x, y), liquidId, StringComparison.OrdinalIgnoreCase))
+            return false;
+        float accepted = Mathf.Min(requestedDepth, Mathf.Max(0f, 1f - current));
+        // 调用者预先按容器最小份数量化，不能只收下一部分后破坏份数守恒。
+        if (accepted <= 0f || accepted + 0.000001f < requestedDepth || !TrySet(sample, liquidId, current + accepted))
+            return false;
+        addedDepth = accepted;
+        return true;
+    }
+
     public static bool TrySet(Vector2 worldPosition, string liquidId, float liquidDepth)
     {
         if (!GameNetwork.HasStateAuthority || ChunkMgr.ExistingInstance == null ||

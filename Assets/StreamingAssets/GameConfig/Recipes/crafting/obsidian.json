@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "recipes": [
+    {
+      "id": "core:黑曜石小刀",
+      "displayName": "黑曜石小刀",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "inputs": [
+        { "match": "exact_item", "itemId": "Obsidian", "amount": 1 },
+        { "match": "exact_item", "itemId": "Stick_Wood", "amount": 1 },
+        { "match": "exact_item", "itemId": "Rope", "amount": 1 }
+      ],
+      "outputs": [{ "itemId": "Dagger_Obsidian", "amount": 1 }],
+      "actions": []
+    },
+    {
+      "id": "core:黑曜石长矛",
+      "displayName": "黑曜石长矛",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "inputs": [
+        { "match": "exact_item", "itemId": "Obsidian", "amount": 2 },
+        { "match": "exact_item", "itemId": "Stick_Wood", "amount": 2 },
+        { "match": "exact_item", "itemId": "Rope", "amount": 1 }
+      ],
+      "outputs": [{ "itemId": "Spear_Obsidian", "amount": 1 }],
+      "actions": []
+    }
+  ]
+}

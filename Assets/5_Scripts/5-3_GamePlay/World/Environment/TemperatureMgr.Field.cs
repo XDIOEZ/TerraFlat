@@ -115,6 +115,12 @@ public partial class TemperatureMgr
         temperature = includeTransient
             ? baseline + ambientFieldOffset + localTemperatureField.Sample(cell)
             : baseline + (fieldPlanet.GlobalTemperature - PlanetData.DefaultGlobalTemperature);
+        // 热液体的当前温度随 Liquid 身份派生，抽干即撤销，不污染地形基温或历史季节。
+        if (includeTransient && WorldLiquidSystem.GetSurfaceDepth(terrain, x, y) > 0f &&
+            GameRes.ExistingInstance != null &&
+            GameRes.ExistingInstance.TryGetLiquidDefinition(terrain.GetLiquidId(x, y), out var liquid) &&
+            liquid.WorldWater?.ContactHeatingPerSecond > 0f)
+            temperature = Mathf.Max(temperature, liquid.WorldWater.Temperature);
         return true;
     }
 

@@ -96,6 +96,22 @@ public static class LiquidVesselOperations
     #endregion
 
     #region 玩家液体操作
+    /// <summary>世界液深按定义换算为容器份数，先提交有限抽取再保存相同数量和温度。</summary>
+    public static float FillFromWorld(ILiquidVessel target, Item actor, WorldLiquidSourceTarget source)
+    {
+        if (!target.CanOperate(actor) || !WorldLiquidSystem.TryGetDefinition(source.Sample, out var liquid) ||
+            liquid.Id != source.Liquid.Id || !Mod_WaterVessel.IsEmptyAmount(target.Data.Amount) &&
+            !SameLiquid(target.Data.LiquidId, liquid.Id)) return 0f;
+        var sample = source.Sample;
+        float depth = sample.Terrain.GetLiquidDepth(sample.LocalCell.x, sample.LocalCell.y);
+        float unitDepth = liquid.WorldWater.DepthPerServing;
+        float moved = Quantize(Mathf.Min(target.Capacity - target.Data.Amount, depth / unitDepth));
+        if (moved <= 0f || !WorldLiquidSystem.TryPump(sample, moved * unitDepth, out _, out _)) return 0f;
+        AddState(target, liquid.Id, moved, liquid.WorldWater.Temperature);
+        target.CommitVessel();
+        return moved;
+    }
+
     [MethodImpl(MethodImplOptions.NoInlining)]
     public static bool Drink(ILiquidVessel target, Item actor)
     {
@@ -113,11 +129,26 @@ public static class LiquidVesselOperations
 
     public static float PourToGround(ILiquidVessel target, Item actor, float amount)
     {
-        if (!target.CanOperate(actor)) return 0f;
+        if (!target.CanOperate(actor) || !MachineDefinition.Positive(amount)) return 0f;
         LiquidDefinition liquid = target.CurrentLiquid;
-        float removed = Remove(target, amount);
-        if (removed > 0f && liquid?.Category == "water") FarmlandSystem.TryAddGroundWater(actor.transform.position, removed);
-        return removed;
+        float moved = Quantize(Mathf.Min(amount, target.Data.Amount));
+        if (liquid == null || moved <= 0f || ChunkMgr.ExistingInstance == null ||
+            !ChunkMgr.ExistingInstance.TryGetRuntimeTerrainTile(actor.transform.position, out var sample)) return 0f;
+        float depth = sample.Terrain.GetLiquidDepth(sample.LocalCell.x, sample.LocalCell.y);
+        // 干地浇水仍交给土壤；液面倾倒则严格使用独立 Liquid 层，绝不把水加成岩浆。
+        if (liquid.Category == "water" && depth <= 0f)
+        {
+            if (!FarmlandSystem.TryAddGroundWater(actor.transform.position, moved)) return 0f;
+        }
+        else if (liquid.WorldWater != null)
+        {
+            float unitDepth = liquid.WorldWater.DepthPerServing;
+            moved = Quantize(Mathf.Min(moved, Mathf.Max(0f, 1f - depth) / unitDepth));
+            if (moved <= 0f || !WorldLiquidSystem.TryPour(actor.transform.position, liquid.Id, moved * unitDepth, out _))
+                return 0f;
+        }
+        else if (liquid.Category == "water") return 0f;
+        return Remove(target, moved);
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]

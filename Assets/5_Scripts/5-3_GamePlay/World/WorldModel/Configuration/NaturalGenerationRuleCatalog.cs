@@ -75,6 +75,7 @@ public sealed class NaturalGenerationRuleCatalog
             !OrderedUnitRange(rule.MinPrecipitation, rule.MaxPrecipitation) ||
             !OrderedUnitRange(rule.MinHeight, rule.MaxHeight) ||
             !OrderedUnitRange(rule.MinRiverFloodplainStrength, rule.MaxRiverFloodplainStrength) ||
+            !Finite(rule.MinimumEnvironmentValue) ||
             !InRange(rule.CompanionSpawnChance, 0d, 1d) ||
             !Finite(rule.CompanionOffsetX) || !Finite(rule.CompanionOffsetY) ||
             !AtLeast(rule.CompanionMinRadius, 0d) ||
@@ -163,6 +164,10 @@ internal sealed class NaturalEcologyRuleDefinition
     // 既有规则省略上限时仍允许全部河岸强度，新植物可显式排除湿地。
     [JsonProperty(Required = Required.DisallowNull)]
     public float MaxRiverFloodplainStrength = 1f;
+    [JsonProperty(Required = Required.DisallowNull)]
+    public string RequiredEnvironmentLayer = string.Empty;
+    [JsonProperty(Required = Required.DisallowNull)]
+    public float MinimumEnvironmentValue;
     public List<string> ProvidedTags;
     public bool CompanionOnly;
     public string CompanionHostTag;
@@ -182,7 +187,7 @@ internal sealed class NaturalEcologyRuleDefinition
         RequiredChunkTag, CompanionSpawnChance, CompanionOffsetX, CompanionOffsetY,
         CompanionMinRadius, CompanionMaxRadius, MinRiverFloodplainStrength,
         DistributionMode, PatchSpacing, PatchRadius, PatchChance, RequiredTagChunkRadius,
-        MaxRiverFloodplainStrength);
+        MaxRiverFloodplainStrength, RequiredEnvironmentLayer, MinimumEnvironmentValue);
 }
 
 /// <summary>一条洞穴矿脉规则的 JSON 数据；优先级由 SO 引用顺序决定。</summary>

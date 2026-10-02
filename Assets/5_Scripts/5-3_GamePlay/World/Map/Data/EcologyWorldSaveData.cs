@@ -488,6 +488,8 @@ public partial class EcologyRuleSaveData
     public int RequiredTagChunkRadius;
     // 缺省与显式 0 必须分开，避免 MemoryPack 将未记录的上限读成禁止河岸。
     public double? MaxRiverFloodplainStrength;
+    public string RequiredEnvironmentLayer;
+    public double MinimumEnvironmentValue;
 
     #endregion
 
@@ -516,6 +518,8 @@ public partial class EcologyRuleSaveData
             MaxHeight = snapshot.MaxHeight,
             MinRiverFloodplainStrength = snapshot.MinRiverFloodplainStrength,
             MaxRiverFloodplainStrength = snapshot.MaxRiverFloodplainStrength,
+            RequiredEnvironmentLayer = snapshot.RequiredEnvironmentLayer,
+            MinimumEnvironmentValue = snapshot.MinimumEnvironmentValue,
             CompanionOnly = snapshot.CompanionOnly,
             CompanionHostTag = snapshot.CompanionHostTag,
             RequiredChunkTag = snapshot.RequiredChunkTag,
@@ -563,7 +567,9 @@ public partial class EcologyRuleSaveData
             PatchRadius,
             PatchChance,
             RequiredTagChunkRadius,
-            MaxRiverFloodplainStrength ?? 1d);
+            MaxRiverFloodplainStrength ?? 1d,
+            RequiredEnvironmentLayer,
+            MinimumEnvironmentValue);
     }
 
     #endregion

@@ -154,7 +154,7 @@ public sealed class Mod_WaterVessel : Module, IInteractable, ILiquidVessel
             }
             else
             {
-                float moved = AddLiquidAmount(target.Liquid.Id, Capacity - Data.Amount);
+                float moved = LiquidVesselOperations.FillFromWorld(this, actor, target);
                 if (moved > AmountEpsilon)
                     ItemActionFeedback.Show(actor, $"已装入{target.Liquid.DisplayName}。");
             }

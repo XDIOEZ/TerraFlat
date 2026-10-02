@@ -1,0 +1,92 @@
+{
+  "schemaVersion": 1,
+  "items": [
+    {
+      "id": "Obsidian",
+      "parent": "BasicItem_Base",
+      "gameName": "黑曜石",
+      "description": "散落在山顶岩浆湖岸边的黑色石料，也可开采黑曜石矿山获得，可制作黑曜石小刀和长矛。",
+      "weight": 1.2,
+      "volume": 0.5,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": ["Mineral", "Obsidian"],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]",
+        "rendererLocalScale": { "x": 0.6, "y": 0.6, "z": 1 },
+        "color": { "r": 1, "g": 1, "b": 1, "a": 1 }
+      },
+      "modules": {}
+    },
+    {
+      "id": "Mine_Obsidian",
+      "parent": "Mine_Iron",
+      "gameName": "黑曜石矿山",
+      "description": "山顶岩浆湖岸边的黑曜石矿体。用镐子开采可获得黑曜石，不设工具等级门槛。",
+      "canBePickedUp": false,
+      "stackable": false,
+      "lootTableId": "Mine_Obsidian_Default",
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]",
+        "color": { "r": 1, "g": 1, "b": 1, "a": 1 }
+      },
+      "modules": {
+        "生命值系统模块": {
+          "parameters": {
+            "Data": {
+              "Hp": 180,
+              "MaxHp": 180,
+              "DefenseValues": { "Cutting": 12, "Piercing": 10, "Chopping": 12, "Blunt": 5 }
+            }
+          }
+        },
+        "harvestRequirement": {
+          "parameters": { "requiredTool": 1, "minimumTier": 1 }
+        }
+      }
+    },
+    {
+      "id": "Dagger_Obsidian",
+      "parent": "Knife_Base",
+      "gameName": "黑曜石小刀",
+      "description": "用黑曜石制作的锋利小刀，适合切割材料和近身防御。",
+      "weight": 0.55,
+      "volume": 0.8,
+      "stackable": false,
+      "tags": ["Knife", "Obsidian", "Modern"],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]",
+        "rendererLocalScale": { "x": 0.6, "y": 0.6, "z": 1 },
+        "color": { "r": 1, "g": 1, "b": 1, "a": 1 }
+      },
+      "modules": {
+        "damage": {
+          "parameters": {
+            "DamageValues": { "Cutting": 8, "Piercing": 2, "Chopping": 0, "Blunt": 0 }
+          }
+        }
+      }
+    },
+    {
+      "id": "Spear_Obsidian",
+      "parent": "Spear_Stone",
+      "gameName": "黑曜石长矛",
+      "description": "以黑曜石作为矛头的长矛，沿用长矛的刺击动作。",
+      "weight": 1.8,
+      "volume": 5,
+      "stackable": false,
+      "tags": ["Spear", "Obsidian", "Modern"],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]",
+        "color": { "r": 1, "g": 1, "b": 1, "a": 1 }
+      },
+      "modules": {
+        "damage": {
+          "parameters": {
+            "DamageValues": { "Cutting": 3, "Piercing": 12, "Chopping": 0, "Blunt": 0 }
+          }
+        }
+      }
+    }
+  ]
+}

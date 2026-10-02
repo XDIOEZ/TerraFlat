@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "items": [
+    {
+      "id": "IronBucket",
+      "parent": "BasicItem_Base",
+      "worldDropBehavior": "interactive",
+      "gameName": "铁桶",
+      "description": "用六个铁锭制作的可重复使用的液体容器，可盛装水或高温岩浆。不同液体不能混装，倒空后可再次使用。",
+      "durability": 80,
+      "maxDurability": 80,
+      "weight": 3,
+      "volume": 8,
+      "stackable": false,
+      "canBePickedUp": true,
+      "tags": ["Container", "Iron"],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]",
+        "color": { "r": 1, "g": 1, "b": 1, "a": 1 }
+      },
+      "modules": {
+        "vessel": {
+          "prefab": "Module_WaterVessel",
+          "id": "Mod_WaterVessel",
+          "enabled": true,
+          "data": {},
+          "parameters": { "capacity": 8, "reach": 2 }
+        }
+      }
+    }
+  ]
+}

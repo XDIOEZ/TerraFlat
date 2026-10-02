@@ -18,6 +18,7 @@ public class WorldLiquidBehaviour
         entryTemperatureTransitionSeconds = settings.EntryTemperatureTransitionSeconds;
         drinkHoldSeconds = settings.DrinkHoldSeconds;
         drinkTickSeconds = settings.DrinkTickSeconds;
+        waterContact = settings.WaterContact;
     }
     [Header("水体环境动作")]
     [Tooltip("长按交互键达到该时长后开始饮水。")]
@@ -34,6 +35,7 @@ public class WorldLiquidBehaviour
     [Min(0f)] public float entryTemperatureFloor = 10f;
     [Tooltip("首次入水降温平滑过渡到目标体温所需的时间。")]
     [Min(0.1f)] public float entryTemperatureTransitionSeconds = 5f;
+    private bool waterContact = true;
     #endregion
 
     #region 液体接触生命周期
@@ -42,6 +44,18 @@ public class WorldLiquidBehaviour
     {
         if (item == null)
             return;
+
+        if (!waterContact)
+        {
+            SetWaterTemperatureState(item, false, 0f);
+            receiver?.ExitWaterSurvival(item);
+            item.GetComponentInChildren<Mod_BuffManager>()?.SetWaterStackExposure(false);
+            bool touching = receiver == null || !receiver.IsActiveTileEdgeInteractionOnly;
+            SetWaterVisualState(item, touching ? source.Sample.LiquidDepth : 0f, touching);
+            if (touching) ProvideWaterEffects(receiver, source.Sample.LiquidDepth);
+            ProvideWaterActions(item, source.Liquid, receiver);
+            return;
+        }
 
         Mod_BuffManager buffManager = item.GetComponentInChildren<Mod_BuffManager>();
         float depthValue = Mathf.Clamp01(source.Sample.LiquidDepth);
@@ -91,6 +105,14 @@ public class WorldLiquidBehaviour
         // 邻接水格只用于保留边缘交互，不得把沙地角色染成浸没状态或施加水下减速。
         if (receiver != null && receiver.IsActiveTileEdgeInteractionOnly)
             return;
+
+        receiver?.AdvanceLiquidContactHeat(source.Liquid.WorldWater, deltaTime);
+        if (!waterContact)
+        {
+            SetWaterVisualState(item, source.Sample.LiquidDepth, true);
+            ProvideWaterEffects(receiver, source.Sample.LiquidDepth);
+            return;
+        }
 
         // 漂浮结算直接以 Liquid 真实液深为准；液深不超过 0.3 时不进入漂浮维持。
         float depthValue = Mathf.Clamp01(source.Sample.LiquidDepth);

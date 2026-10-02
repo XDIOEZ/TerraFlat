@@ -2,6 +2,31 @@
   "schemaVersion": 2,
   "liquids": [
     {
+      "id": "core:lava",
+      "displayName": "岩浆",
+      "description": "石地山顶小湖中的高温熔体。接触会持续升温并受到灼伤，可用铁桶盛装和倾倒，不能饮用。",
+      "category": "molten",
+      "visualState": "lava",
+      "primaryColor": { "r": 1.0, "g": 0.22, "b": 0.025, "a": 1.0 },
+      "viscosity": 6.0,
+      "drinkable": false,
+      "hydrationPerServing": 0.0,
+      "worldWater": {
+        "spriteAddress": "Assets/6_Art/Tilemap/Grass.png[Water_0]",
+        "materialAddress": "Assets/9_Shaders/Material/Tilemap-Lava-Lit.mat",
+        "loadCapacity": 2,
+        "navigationCost": 30000,
+        "shallowMoveSpeedMultiplier": 0.5,
+        "deepMoveSpeedMultiplier": 0.2,
+        "followWaterVisualStyle": false,
+        "waterContact": false,
+        "temperature": 1100.0,
+        "contactHeatingPerSecond": 12.0,
+        "contactDamagePerSecond": 30.0,
+        "depthPerServing": 0.025
+      }
+    },
+    {
       "id": "core:honey",
       "displayName": "蜂蜜",
       "description": "金黄色的黏稠蜂蜜，只作为液体存在，可储存在液体容器中。",

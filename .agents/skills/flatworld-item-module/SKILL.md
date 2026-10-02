@@ -89,6 +89,9 @@ description: "Use when: 定位或修改 FlatWorld 的 Item/Module 组合架构�
 
 ## 验证
 
+- 可重复装液的容器保持同一物品身份，液体类型、份数和温度只保存在通用容器状态；有状态的落地容器使用 `worldDropBehavior=interactive`，不能拆成满桶/空桶配方或在拾取时重置内容。
+- 从世界装液由 `LiquidVesselOperations.FillFromWorld` 将 `DepthPerServing` 换算后有限抽取，保留来源温度；先成功提交世界侧再提交容器。往液面倾倒时拒绝异种液体、平台、阻挡和满格，失败不扣液；干地浇水仍走土壤水分入口，不能把水量加给岩浆格。
+
 - 单机世界掉落统一经 `DroppedItemService.Spawn/SpawnLoot`。定义的 `worldDropBehavior` 默认为 `passive`：进入普通 C# 轻量模拟器，只保留位置、数量、短期运动、水体与拾取数据；表现仅在镜头附近从对象池取一个无 Update/Collider/Rigidbody/Item/Module 的 SpriteRenderer GameObject。`interactive` 则始终保留完整 Item，继续运行受伤、死亡掉落、燃烧、水容器等世界交互模块。
 - 当前所有 AI（含 Zombie）恢复完整 GameObject/Item 模块主控。保留的可选 ECS AI 与静态资源共用 `WorldEntityRuntime`，但关闭 ECS AI 不影响资源 ECS；不可因共享底座再次强制迁移原生 AI。新增 ECS 领域能力不能另建 World，诊断隔离 World 例外。
 - 声明 `entityRuntime: "resource"` 的树、矿点和作物经 `NaturalEntityEcsProfileCompiler` 按模块组合编译，缺失能力必须报错，禁止按距离、联机状态或物种名回退完整 Item。`NaturalEntityEcsService` 持有同一 World 内的实体句柄；`ItemData/ModuleData` 仅用于定义与冷存档，不调用资源 Item.Load 或 Module Tick。

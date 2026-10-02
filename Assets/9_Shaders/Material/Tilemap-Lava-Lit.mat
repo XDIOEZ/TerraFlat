@@ -1,0 +1,67 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Tilemap-Lava-Lit
+  m_Shader: {fileID: 4800000, guid: 9b7e519d31c6485eb1d1d499a1142e63, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties:
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _MainTex:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - _CausticStrength: 0
+    - _CornerStrength: 0.12
+    - _DetailScale: 3.2
+    - _EdgeWidth: 0.2
+    - _EnableExternalAlpha: 0
+    - _FoamSpeed: 0.1
+    - _TideCyclesPerDay: 0
+    - _NormalStrength: 0.2
+    - _ReflectionSmoothness: 0
+    - _ReflectionStrength: 0
+    - _RippleScale: 2.1
+    - _RippleShadowStrength: 0.2
+    - _RippleStrength: 0.16
+    - _RippleWidth: 0.22
+    - _ShoreFoamStrength: 0
+    - _ShoreStrength: 0.15
+    - _SpecularPower: 8
+    - _SpecularStrength: 0
+    - _SurfaceTint: 1
+    - _SwellScale: 0.7
+    - _WaveDistortion: 0.4
+    - _WaveSpeed: 0.08
+    - _WhitecapStrength: 0
+    m_Colors:
+    - _Color: {r: 1, g: 1, b: 1, a: 1}
+    - _DeepColor: {r: 0.85, g: 0.055, b: 0.008, a: 1}
+    - _Flip: {r: 1, g: 1, b: 1, a: 1}
+    - _FlowDirection: {r: 1, g: 0, b: 0, a: 0}
+    - _FoamColor: {r: 0.18, g: 0.035, b: 0.018, a: 1}
+    - _ReflectionColor: {r: 1, g: 0.2, b: 0.01, a: 1}
+    - _RendererColor: {r: 1, g: 1, b: 1, a: 1}
+    - _RippleColor: {r: 1, g: 0.64, b: 0.045, a: 1}
+    - _ShallowColor: {r: 1, g: 0.38, b: 0.02, a: 1}
+    - _ShoreColor: {r: 0.2, g: 0.025, b: 0.012, a: 1}
+    - _SpecularColor: {r: 1, g: 0.5, b: 0.03, a: 1}
+  m_BuildTextureStacks: []

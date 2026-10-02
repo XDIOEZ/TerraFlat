@@ -52,6 +52,16 @@
       "enabled": true
     },
     {
+      "id": "obsidian",
+      "path": "shells/obsidian.json",
+      "enabled": true
+    },
+    {
+      "id": "iron_bucket",
+      "path": "shells/iron_bucket.json",
+      "enabled": true
+    },
+    {
       "id": "sulfur",
       "path": "shells/sulfur.json",
       "enabled": true

@@ -26,6 +26,12 @@ public sealed class WorldLiquidSettings
     [JsonProperty("drinkHoldSeconds")] public float DrinkHoldSeconds = 1f;
     [JsonProperty("drinkTickSeconds")] public float DrinkTickSeconds = 1f;
     [JsonProperty("followWaterVisualStyle")] public bool FollowWaterVisualStyle;
+    // 液体接触性质来自定义，不能把高温熔体当作会使角色潮湿降温的水。
+    [JsonProperty("waterContact")] public bool WaterContact = true;
+    [JsonProperty("temperature")] public float Temperature = 20f;
+    [JsonProperty("contactHeatingPerSecond")] public float ContactHeatingPerSecond;
+    [JsonProperty("contactDamagePerSecond")] public float ContactDamagePerSecond;
+    [JsonProperty("depthPerServing")] public float DepthPerServing = 0.025f;
     #endregion
 
     #region 会话资源与校验
@@ -43,6 +49,8 @@ public sealed class WorldLiquidSettings
             !Positive(DeepMoveSpeedMultiplier) || DeepMoveSpeedMultiplier > ShallowMoveSpeedMultiplier ||
             float.IsNaN(EntryTemperatureFloor) || float.IsInfinity(EntryTemperatureFloor) ||
             !Positive(EntryTemperatureTransitionSeconds) || !Positive(DrinkTickSeconds) ||
+            !NonNegative(Temperature) || !NonNegative(ContactHeatingPerSecond) ||
+            !NonNegative(ContactDamagePerSecond) || !Positive(DepthPerServing) || DepthPerServing > 1f ||
             float.IsNaN(DrinkHoldSeconds) || float.IsInfinity(DrinkHoldSeconds) || DrinkHoldSeconds < 0f)
             throw new InvalidDataException($"液体 {id} 的世界玩法参数无效。");
     }
@@ -51,5 +59,6 @@ public sealed class WorldLiquidSettings
             ? string.IsNullOrWhiteSpace(bundle) && string.IsNullOrWhiteSpace(asset)
             : !string.IsNullOrWhiteSpace(bundle) && !string.IsNullOrWhiteSpace(asset);
     private static bool Positive(float value) => !float.IsNaN(value) && !float.IsInfinity(value) && value > 0f;
+    private static bool NonNegative(float value) => !float.IsNaN(value) && !float.IsInfinity(value) && value >= 0f;
     #endregion
 }

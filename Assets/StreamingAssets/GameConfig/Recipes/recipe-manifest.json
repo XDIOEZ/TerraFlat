@@ -27,6 +27,16 @@
       "enabled": true
     },
     {
+      "id": "crafting/obsidian",
+      "path": "crafting/obsidian.json",
+      "enabled": true
+    },
+    {
+      "id": "crafting/iron_bucket",
+      "path": "crafting/iron_bucket.json",
+      "enabled": true
+    },
+    {
       "id": "crafting/buildings",
       "path": "crafting/buildings.json",
       "enabled": true

@@ -3586,6 +3586,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 1863ec97b36b4a988820816bbdc28025
+    m_Address: Assets/9_Shaders/Material/Tilemap-Lava-Lit.mat
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemMaterial
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 1b33ba0b3ad95074f913980b3e132d6b
     m_Address: Mod_FishingRod
     m_ReadOnly: 0

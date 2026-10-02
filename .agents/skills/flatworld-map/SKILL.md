@@ -54,6 +54,11 @@ description: "Use when: 定位或修改 FlatWorld 的地图内容、Tilemap、�
 
 ## 验证
 
+- 山顶热液小湖由冻结的 `lake.lava.*` 参数和确定性区域山峰候选生成，候选缓存必须有界且按世界、拓扑和 Profile 隔离；批量区块与单格出生查询共用同一盆地。`lava.shore` 只表示自然生成岸带，人工倾倒不能凭空刷出矿产。
+- 伴生矿产使用自然物 JSON 的 `requiredEnvironmentLayer / minimumEnvironmentValue`，约束同时参与规则快照、指纹和存档；缺失环境层时拒绝生成，不能回退成全图生成。新增液体身份后要重建资源会话，不把索引写进存档。
+- 热液接触性质由 `WorldLiquidSettings` 配置，`waterContact=false` 不触发潮湿、饮水和入水降温；温度场读取当前未被平台遮挡的液体，抽干后撤销热量而不修改气候基温。接触伤害时钟由角色接收器独立保存和清除，客户端不得自行结算。
+- `python Tools/Tests/LavaWorld/verify.py` 使用现有 Bee 编译参数和本机 .NET SDK，在忽略的 Temp 下检查生成分块、负坐标、环绕边界、禁用开关和内容引用，不启动或暂停 Unity；它不替代真实世界表现与联机验收。
+
 - `WorldTopologyDomain` 是 `Shared/WorldTopology/FlatWorld.WorldTopology.asmdef` 中的纯数学坐标真源；Bounds 只负责配置/类型封装，Runtime 仍读取 SaveDataMgr，只允许主线程使用。禁止在 Map 或数学核心直接创建 Wrapped Physics Proxy。
 - `WrappedTilemapPhysicsAdapter` 同时镜像旧 Map 和 `ChunkCollisionRenderer` 的边界 Collider；Chunk 的权威地址与阻挡规则仍取自 `ChunkTerrainData`，局部显示坐标不得写回 Chunk 地址。
 - 旧 Map 的镜像 `TilemapDamageReceiver` 必须绑定真实 Map 与镜像 Tilemap，不能用源 Tilemap 坐标代替；新版 WorldModel 继续通过规范逻辑格子查询结算伤害，不能依赖某个客户端的 ChunkView Transform。

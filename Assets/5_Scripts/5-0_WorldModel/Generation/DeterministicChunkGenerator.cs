@@ -16,7 +16,7 @@ namespace FlatWorld.WorldModel
         IChunkEcologyNeighborhoodTagResolver
     {
         /// <summary>纯区块生成规则版本；气候、群系、河流或生态空间分布规则改变时递增。</summary>
-        public const int CurrentGenerationSignature = 54;
+        public const int CurrentGenerationSignature = 55;
 
         private readonly LiquidTypeCatalog liquidTypes;
         /// <summary>资源就绪后注入会话液体表；离线纯算法测试可以使用本体最小目录。</summary>
@@ -43,6 +43,8 @@ namespace FlatWorld.WorldModel
                 new CancellationTokenSource());
             previous.Cancel();
             heightDrivenRegionCache.Clear();
+            lavaBasins.Clear();
+            while (lavaBasinOrder.TryDequeue(out _)) { }
             while (heightDrivenCacheOrder.TryDequeue(out _)) { }
         }
 
@@ -412,7 +414,7 @@ namespace FlatWorld.WorldModel
         #region 地表区块批量生成
 
         /// <summary>气候输入先按区块采样，再批量判群系并写入连续地形数组。</summary>
-        private static void GenerateSurfaceChunk(ChunkGenerationRequest request,
+        private void GenerateSurfaceChunk(ChunkGenerationRequest request,
             ChunkGenerationSettingsSnapshot settings, ChunkTerrainBuffer terrain,
             GeneratedHydrologyMap riverMap, CancellationToken cancellationToken,
             ChunkGenerationTiming timing)
@@ -422,6 +424,8 @@ namespace FlatWorld.WorldModel
                 batch.SampleCore(cancellationToken);
             int seaWater = terrain.LiquidTypes.GetIndex(LiquidTypeCatalog.SeaWaterId);
             int dirtyWater = terrain.LiquidTypes.GetIndex(LiquidTypeCatalog.DirtyWaterId);
+            IReadOnlyList<LavaBasin> volcanic = ResolveLavaBasins(request, cancellationToken);
+            int lava = volcanic.Count > 0 ? terrain.LiquidTypes.GetIndex(LiquidTypeCatalog.LavaId) : 0;
             using (timing?.MeasureStage("terrain.biome") ?? default)
             {
                 batch.ClassifyCore(cancellationToken);
@@ -434,7 +438,7 @@ namespace FlatWorld.WorldModel
                     batch.Output[index] = BuildSurfaceCell(request, settings, riverMap,
                         batch.GetCore(x, y), batch, x, y,
                         request.Address.ChunkOrigin.X + x,
-                        request.Address.ChunkOrigin.Y + y, seaWater, dirtyWater);
+                        request.Address.ChunkOrigin.Y + y, seaWater, dirtyWater, lava, volcanic);
                 }
             }
             using (timing?.MeasureStage("terrain.environment_write") ?? default)
@@ -489,6 +493,7 @@ namespace FlatWorld.WorldModel
             public float RiverFloodplain;
             public float RiverSurfaceLevel;
             public float RiverKind;
+            public float LavaShore;
         }
 
         /// <summary>固定环境层布局只解析一次名称，热循环只写数组索引。</summary>
@@ -510,6 +515,7 @@ namespace FlatWorld.WorldModel
             private readonly float[] riverSurfaceLevel;
             private readonly float[] riverKind;
             private readonly float[] structure;
+            private readonly float[] lavaShore;
             private readonly float[] grass;
 
             public SurfaceEnvironmentWriter(ChunkTerrainBuffer terrain)
@@ -530,6 +536,7 @@ namespace FlatWorld.WorldModel
                 riverSurfaceLevel = terrain.GetOrCreateEnvironmentLayer("riverSurfaceLevel");
                 riverKind = terrain.GetOrCreateEnvironmentLayer("riverKind");
                 structure = terrain.GetOrCreateEnvironmentLayer("structure");
+                lavaShore = terrain.GetOrCreateEnvironmentLayer("lava.shore");
                 grass = terrain.GetOrCreateEnvironmentLayer("grass");
             }
 
@@ -551,6 +558,7 @@ namespace FlatWorld.WorldModel
                 riverSurfaceLevel[index] = value.RiverSurfaceLevel;
                 riverKind[index] = value.RiverKind;
                 structure[index] = 0f;
+                lavaShore[index] = value.LavaShore;
                 grass[index] = value.Grass == GrassPresent ? 1f : 0f;
             }
         }
@@ -729,7 +737,7 @@ namespace FlatWorld.WorldModel
         #endregion
 
         /// <summary>根据高度、温度、降水和河流结果，生成一个地表格子的完整数据。</summary>
-        private static void GenerateSurfaceCell(
+        private void GenerateSurfaceCell(
             ChunkGenerationRequest request,
             ChunkGenerationSettingsSnapshot settings,
             ChunkTerrainBuffer terrain,
@@ -747,10 +755,12 @@ namespace FlatWorld.WorldModel
                 climate.Height, climate.Temperature, climate.Precipitation,
                 baseMoisture, false);
             climate.Classified = true;
+            IReadOnlyList<LavaBasin> volcanic = ResolveLavaBasins(request);
             SurfaceCellOutput output = BuildSurfaceCell(request, settings, riverMap,
                 climate, null, x, y, worldX, worldY,
                 terrain.LiquidTypes.GetIndex(LiquidTypeCatalog.SeaWaterId),
-                terrain.LiquidTypes.GetIndex(LiquidTypeCatalog.DirtyWaterId));
+                terrain.LiquidTypes.GetIndex(LiquidTypeCatalog.DirtyWaterId),
+                volcanic.Count > 0 ? terrain.LiquidTypes.GetIndex(LiquidTypeCatalog.LavaId) : 0, volcanic);
             terrain.SetCell(x, y, output.Cell);
             terrain.SetLiquid(x, y, output.LiquidTypeIndex, output.LiquidDepth);
             terrain.SetGrass(x, y, output.Grass);
@@ -768,7 +778,9 @@ namespace FlatWorld.WorldModel
             int worldX,
             int worldY,
             int seaWater,
-            int dirtyWater)
+            int dirtyWater,
+            int lava,
+            IReadOnlyList<LavaBasin> volcanic)
         {
             // 如果世界会绕回另一边，先把越界坐标换回世界内，保证两侧地形能严丝合缝。
             worldX = request.Topology.NormalizeX(worldX);
@@ -900,6 +912,32 @@ namespace FlatWorld.WorldModel
             float initialLiquidDepth = ocean
                 ? (float)(1d - Math.Pow(Clamp01(height / Math.Max(0.0001d, settings.SeaLevel)), 2d))
                 : river && !frozenRiver ? (float)riverCell.Depth : 0f;
+            bool lavaCell = false;
+            float lavaShore = 0f;
+            if (climate.BaseBiome == SurfaceBiomeKind.Stone)
+            {
+                foreach (LavaBasin basin in volcanic)
+                {
+                    if (!basin.TrySample(request.Topology, worldX, worldY, out float depth, out float shore)) continue;
+                    if (depth > 0f)
+                    {
+                        lavaCell = true;
+                        initialLiquidDepth = depth;
+                        groundTileId = settings.StoneTileId;
+                        biome = SurfaceBiomeKind.Stone;
+                        biomeId = (int)biome;
+                        flags = TerrainCellFlags.Walkable;
+                        navigationCost = settings.DefaultNavigationCost;
+                        temperatureCelsius = 10d;
+                        mountain = true;
+                        river = false;
+                        floodplain = 0d;
+                        lavaShore = 0f;
+                        break;
+                    }
+                    if (!river && initialLiquidDepth <= 0f) lavaShore = Math.Max(lavaShore, shore);
+                }
+            }
 
             // 草先过较宽松的气候门槛，再由湿度决定局部密度；全程只依赖种子和环境层。
             bool snowSurface = biome == SurfaceBiomeKind.Snow &&
@@ -922,7 +960,7 @@ namespace FlatWorld.WorldModel
                 Cell = new TerrainCell(groundTileId, 0, 0, biomeId,
                     navigationCost, flags),
                 LiquidTypeIndex = initialLiquidDepth > 0f
-                    ? ocean ? seaWater : dirtyWater : 0,
+                    ? lavaCell ? lava : ocean ? seaWater : dirtyWater : 0,
                 LiquidDepth = initialLiquidDepth,
                 Grass = grass ? GrassPresent : GrassEmpty,
                 Height = (float)height,
@@ -939,7 +977,8 @@ namespace FlatWorld.WorldModel
                 RiverFlowY = river ? (float)riverCell.FlowDirectionY : 0f,
                 RiverFloodplain = (float)floodplain,
                 RiverSurfaceLevel = river ? (float)riverCell.SurfaceLevel : 0f,
-                RiverKind = river ? (float)riverCell.Kind : 0f
+                RiverKind = river ? (float)riverCell.Kind : 0f,
+                LavaShore = lavaShore
             };
         }
 

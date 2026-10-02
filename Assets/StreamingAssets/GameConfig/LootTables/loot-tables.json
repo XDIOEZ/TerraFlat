@@ -294,6 +294,17 @@
       ]
     },
     {
+      "id": "Mine_Obsidian_Default",
+      "entries": [
+        {
+          "itemId": "Obsidian",
+          "probability": 1.0,
+          "minAmount": 3,
+          "maxAmount": 5
+        }
+      ]
+    },
+    {
       "id": "Mine_Sulfur_Default",
       "entries": [
         {

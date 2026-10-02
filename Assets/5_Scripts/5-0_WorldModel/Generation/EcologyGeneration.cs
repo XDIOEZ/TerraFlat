@@ -51,7 +51,9 @@ namespace FlatWorld.WorldModel
             double patchRadius = 2.5d,
             double patchChance = 1d,
             int requiredTagChunkRadius = 0,
-            double maxRiverFloodplainStrength = 1d)
+            double maxRiverFloodplainStrength = 1d,
+            string requiredEnvironmentLayer = null,
+            double minimumEnvironmentValue = 0d)
         {
             if (string.IsNullOrWhiteSpace(ruleId))
                 throw new ArgumentException("Ecology rule id is required.", nameof(ruleId));
@@ -83,6 +85,10 @@ namespace FlatWorld.WorldModel
             CompanionHostTag = companionHostTag?.Trim() ?? string.Empty;
             RequiredChunkTag = requiredChunkTag?.Trim() ?? string.Empty;
             RequiredTagChunkRadius = requiredTagChunkRadius;
+            RequiredEnvironmentLayer = requiredEnvironmentLayer?.Trim() ?? string.Empty;
+            if (double.IsNaN(minimumEnvironmentValue) || double.IsInfinity(minimumEnvironmentValue))
+                throw new ArgumentOutOfRangeException(nameof(minimumEnvironmentValue));
+            MinimumEnvironmentValue = minimumEnvironmentValue;
             CompanionSpawnChance = Clamp01(companionSpawnChance);
             CompanionOffsetX = Finite(companionOffsetX, 0d);
             CompanionOffsetY = Finite(companionOffsetY, 0d);
@@ -127,6 +133,9 @@ namespace FlatWorld.WorldModel
         public double MinRiverFloodplainStrength { get; }
         /// <summary>最高河流冲积影响强度；0 排除河岸湿地，默认 1 不限制。</summary>
         public double MaxRiverFloodplainStrength { get; }
+        /// <summary>可选生成环境约束；缺失对应层时不生成，避免稀有伴生资源散落全地图。</summary>
+        public string RequiredEnvironmentLayer { get; }
+        public double MinimumEnvironmentValue { get; }
         /// <summary>自然物逐格均匀生成，或先形成稀疏小聚落。</summary>
         public EcologyDistributionMode DistributionMode { get; }
         /// <summary>聚落候选网格的边长；相邻网格各自最多形成一个聚落。</summary>
@@ -392,7 +401,8 @@ namespace FlatWorld.WorldModel
                     for (int ruleIndex = 0; ruleIndex < hostRules.Count; ruleIndex++)
                     {
                         EcologySpawnRuleSnapshot rule = hostRules[ruleIndex];
-                        if (!rule.Matches(cell.BiomeId, temperature, precipitation, height,
+                        if (!MatchesEnvironmentLayer(rule, terrain, x, y) ||
+                            !rule.Matches(cell.BiomeId, temperature, precipitation, height,
                                 riverFloodplain))
                         {
                             continue;
@@ -441,6 +451,7 @@ namespace FlatWorld.WorldModel
                     {
                         EcologySpawnRuleSnapshot rule = companionRules[ruleIndex];
                         if (string.IsNullOrWhiteSpace(rule.CompanionHostTag) ||
+                            !MatchesEnvironmentLayer(rule, terrain, x, y) ||
                             !rule.Matches(cell.BiomeId, temperature, precipitation, height,
                                 riverFloodplain) ||
                             !hosts.TryGetValue(rule.CompanionHostTag, out int hostGuid))
@@ -595,7 +606,8 @@ namespace FlatWorld.WorldModel
                 for (int ruleIndex = 0; ruleIndex < taggedRules.Count; ruleIndex++)
                 {
                     EcologySpawnRuleSnapshot rule = taggedRules[ruleIndex];
-                    if (!rule.Matches(cell.BiomeId, temperature, precipitation, height,
+                    if (!MatchesEnvironmentLayer(rule, terrain, x, y) ||
+                        !rule.Matches(cell.BiomeId, temperature, precipitation, height,
                             riverFloodplain) ||
                         !MatchesDistribution(request, worldX, worldY, rule))
                         continue;
@@ -650,6 +662,12 @@ namespace FlatWorld.WorldModel
 
             return ReadEnvironment(terrain, "structure", x, y) < 0.5d;
         }
+
+        private static bool MatchesEnvironmentLayer(EcologySpawnRuleSnapshot rule,
+            ChunkTerrainBuffer terrain, int x, int y) =>
+            string.IsNullOrEmpty(rule.RequiredEnvironmentLayer) ||
+            terrain.TryGetEnvironmentValue(rule.RequiredEnvironmentLayer, x, y, out float value) &&
+            value >= rule.MinimumEnvironmentValue;
 
         private static double ReadEnvironment(ChunkTerrainBuffer terrain, string layerId,
             int x, int y)

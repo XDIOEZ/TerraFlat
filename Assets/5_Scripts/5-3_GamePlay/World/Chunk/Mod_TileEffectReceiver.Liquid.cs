@@ -10,6 +10,32 @@ public partial class Mod_TileEffectReceiver
     private bool liquidContactTransition;
     private bool groundCallback;
     private EnvironmentInteractionRunner groundEnvironmentInteractions;
+    private float liquidHeatDamageSeconds;
+
+    /// <summary>接触热量与伤害时钟属于角色；共享液体定义不保存任何角色状态。</summary>
+    public void AdvanceLiquidContactHeat(WorldLiquidSettings settings, float deltaTime)
+    {
+        if (!FlatWorld.Networking.GameNetwork.HasStateAuthority || item == null ||
+            settings == null || !float.IsFinite(deltaTime) || deltaTime <= 0f) return;
+        var health = item.itemMods?.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
+        if (health == null || health.Hp <= 0f) { ResetLiquidContactHeat(); return; }
+        var temperature = item.itemMods?.GetMod_ByID<Mod_Temperature>(ModText.Temperature);
+        if (temperature != null && settings.ContactHeatingPerSecond > 0f)
+        {
+            float increase = Mathf.Min(settings.ContactHeatingPerSecond * deltaTime,
+                Mathf.Max(0f, settings.Temperature - temperature.Data.CurrentTemperature));
+            if (increase > 0f) temperature.AddTemperature(increase);
+        }
+        if (settings.ContactDamagePerSecond <= 0f) { ResetLiquidContactHeat(); return; }
+        liquidHeatDamageSeconds += deltaTime;
+        const float interval = 0.5f;
+        if (liquidHeatDamageSeconds < interval) return;
+        float elapsed = Mathf.Floor(liquidHeatDamageSeconds / interval) * interval;
+        liquidHeatDamageSeconds -= elapsed;
+        health.ForceHurt(settings.ContactDamagePerSecond * elapsed);
+    }
+
+    public void ResetLiquidContactHeat() => liquidHeatDamageSeconds = 0f;
 
     /// <summary>正在深水中消耗游泳储备维持上浮，只暂停 Ground Behaviour。</summary>
     public bool LiquidFloating { get; private set; }
@@ -76,6 +102,7 @@ public partial class Mod_TileEffectReceiver
         try { activeLiquid.WorldWater.Behaviour.OnExit(item, activeLiquidContact, this); }
         finally
         {
+            ResetLiquidContactHeat();
             liquidCallback = false;
             activeLiquid = null;
             activeLiquidContact = default;

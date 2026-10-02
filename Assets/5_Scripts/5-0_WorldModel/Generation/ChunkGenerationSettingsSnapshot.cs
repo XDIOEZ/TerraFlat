@@ -355,6 +355,14 @@ namespace FlatWorld.WorldModel
             LargeLakeMinRadius = Clamp(GetDouble(numbers, "lake.large.minRadius", 48d), 16d, 256d);
             LargeLakeMaxRadius = Clamp(GetDouble(numbers, "lake.large.maxRadius", 104d), LargeLakeMinRadius, 512d);
             LargeLakeIslandChance = Clamp01(GetDouble(numbers, "lake.large.islandChance", 0.7d));
+            // 旧冻结配置没有显式启用时保持原样；新世界 Profile 决定是否生成火山小湖。
+            LavaLakeEnabled = GetBool(numbers, "lake.lava.enabled", false);
+            LavaLakeRegionSize = Clamp(GetInt(numbers, "lake.lava.regionSize", 192), 64, 1024);
+            LavaLakeChance = Clamp01(GetDouble(numbers, "lake.lava.chance", 0.35d));
+            LavaLakeMinRadius = Clamp(GetDouble(numbers, "lake.lava.minRadius", 3d), 1d, 12d);
+            LavaLakeMaxRadius = Clamp(GetDouble(numbers, "lake.lava.maxRadius", 6d), LavaLakeMinRadius, 16d);
+            LavaLakeMinimumHeight = Clamp01(GetDouble(numbers, "lake.lava.minimumHeight", 0.74d));
+            LavaLakeShoreWidth = Clamp(GetDouble(numbers, "lake.lava.shoreWidth", 2.5d), 0.5d, 6d);
             GrassDensity = Clamp01(GetDouble(numbers, "grass.density", 0.24d));
             GrassMinimumTemperature = Clamp01(
                 GetDouble(numbers, "grass.minimumTemperature", 0.15d));
@@ -622,6 +630,13 @@ namespace FlatWorld.WorldModel
         public double LargeLakeMinRadius { get; }
         public double LargeLakeMaxRadius { get; }
         public double LargeLakeIslandChance { get; }
+        public bool LavaLakeEnabled { get; }
+        public int LavaLakeRegionSize { get; }
+        public double LavaLakeChance { get; }
+        public double LavaLakeMinRadius { get; }
+        public double LavaLakeMaxRadius { get; }
+        public double LavaLakeMinimumHeight { get; }
+        public double LavaLakeShoreWidth { get; }
         /// <summary>每个纯生成器实例最多保留多少个已完成水文区域。</summary>
         public int RiverMaxCachedRegions { get; }
         /// <summary>合适的地面上长出草的基本概率。</summary>

@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "recipes": [
+    {
+      "id": "core:铁桶",
+      "displayName": "铁桶",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "inputs": [{ "match": "exact_item", "itemId": "Ingot_WroughtIron", "amount": 6 }],
+      "outputs": [{ "itemId": "IronBucket", "amount": 1 }],
+      "actions": []
+    }
+  ]
+}
