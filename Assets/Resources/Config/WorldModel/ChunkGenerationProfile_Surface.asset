@@ -267,6 +267,7 @@ MonoBehaviour:
   - surface.forest.stone
   - surface.forest.log
   - surface.forest.stick
+  - surface.forest.leaf
   - surface.grassland.berry
   - surface.grassland.radish
   - surface.grassland.stick
@@ -281,6 +282,7 @@ MonoBehaviour:
   - surface.stone.oreStone
   - surface.stone.tin
   - surface.beach.coconut
+  - surface.beach.oreStone
   - surface.snow.iceberg
   - surface.ancient.herb
   - surface.ancient.cotton
