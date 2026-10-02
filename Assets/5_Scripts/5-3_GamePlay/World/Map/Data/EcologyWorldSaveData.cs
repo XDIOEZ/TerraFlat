@@ -486,6 +486,8 @@ public partial class EcologyRuleSaveData
     // 伴生物所需的自然物标签及区块搜索半径。
     public string RequiredChunkTag;
     public int RequiredTagChunkRadius;
+    // 缺省与显式 0 必须分开，避免 MemoryPack 将未记录的上限读成禁止河岸。
+    public double? MaxRiverFloodplainStrength;
 
     #endregion
 
@@ -513,6 +515,7 @@ public partial class EcologyRuleSaveData
             MinHeight = snapshot.MinHeight,
             MaxHeight = snapshot.MaxHeight,
             MinRiverFloodplainStrength = snapshot.MinRiverFloodplainStrength,
+            MaxRiverFloodplainStrength = snapshot.MaxRiverFloodplainStrength,
             CompanionOnly = snapshot.CompanionOnly,
             CompanionHostTag = snapshot.CompanionHostTag,
             RequiredChunkTag = snapshot.RequiredChunkTag,
@@ -559,7 +562,8 @@ public partial class EcologyRuleSaveData
             PatchSpacing,
             PatchRadius,
             PatchChance,
-            RequiredTagChunkRadius);
+            RequiredTagChunkRadius,
+            MaxRiverFloodplainStrength ?? 1d);
     }
 
     #endregion

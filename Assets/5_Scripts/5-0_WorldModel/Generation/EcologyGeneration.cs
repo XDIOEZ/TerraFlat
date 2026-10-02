@@ -50,7 +50,8 @@ namespace FlatWorld.WorldModel
             int patchSpacing = 24,
             double patchRadius = 2.5d,
             double patchChance = 1d,
-            int requiredTagChunkRadius = 0)
+            int requiredTagChunkRadius = 0,
+            double maxRiverFloodplainStrength = 1d)
         {
             if (string.IsNullOrWhiteSpace(ruleId))
                 throw new ArgumentException("Ecology rule id is required.", nameof(ruleId));
@@ -88,6 +89,8 @@ namespace FlatWorld.WorldModel
             CompanionMinRadius = Math.Max(0d, Finite(companionMinRadius, 0d));
             CompanionMaxRadius = Math.Max(CompanionMinRadius, Finite(companionMaxRadius, 0d));
             MinRiverFloodplainStrength = Clamp01(minRiverFloodplainStrength);
+            MaxRiverFloodplainStrength = Math.Max(MinRiverFloodplainStrength,
+                Clamp01(maxRiverFloodplainStrength));
             DistributionMode = distributionMode;
             PatchSpacing = Math.Max(2, patchSpacing);
             PatchRadius = Math.Max(0.5d, Math.Min(PatchSpacing * 0.5d,
@@ -122,6 +125,8 @@ namespace FlatWorld.WorldModel
         public double CompanionMaxRadius { get; }
         /// <summary>最低河流冲积影响强度；大于 0 时只在河岸附近生成。</summary>
         public double MinRiverFloodplainStrength { get; }
+        /// <summary>最高河流冲积影响强度；0 排除河岸湿地，默认 1 不限制。</summary>
+        public double MaxRiverFloodplainStrength { get; }
         /// <summary>自然物逐格均匀生成，或先形成稀疏小聚落。</summary>
         public EcologyDistributionMode DistributionMode { get; }
         /// <summary>聚落候选网格的边长；相邻网格各自最多形成一个聚落。</summary>
@@ -148,7 +153,8 @@ namespace FlatWorld.WorldModel
             return temperature >= MinTemperature && temperature <= MaxTemperature &&
                    precipitation >= MinPrecipitation && precipitation <= MaxPrecipitation &&
                    height >= MinHeight && height <= MaxHeight &&
-                   riverFloodplainStrength >= MinRiverFloodplainStrength;
+                   riverFloodplainStrength >= MinRiverFloodplainStrength &&
+                   riverFloodplainStrength <= MaxRiverFloodplainStrength;
         }
 
         private static List<string> NormalizeTags(IEnumerable<string> tags)

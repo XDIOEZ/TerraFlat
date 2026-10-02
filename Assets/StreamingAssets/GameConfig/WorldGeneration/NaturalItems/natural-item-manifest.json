@@ -32,6 +32,11 @@
       "enabled": true
     },
     {
+      "id": "surface.desert",
+      "path": "surface-desert.json",
+      "enabled": true
+    },
+    {
       "id": "surface.snow",
       "path": "surface-snow.json",
       "enabled": true

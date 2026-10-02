@@ -283,6 +283,7 @@ MonoBehaviour:
   - surface.stone.tin
   - surface.beach.coconut
   - surface.beach.oreStone
+  - surface.desert.cactus
   - surface.snow.iceberg
   - surface.ancient.herb
   - surface.ancient.cotton

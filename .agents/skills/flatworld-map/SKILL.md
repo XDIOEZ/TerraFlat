@@ -15,6 +15,7 @@ description: "Use when: 定位或修改 FlatWorld 的地图内容、Tilemap、�
 - 地表 `river.*` 和洞穴 `cave.river.*` 的生成参数唯一真源是 `Assets/StreamingAssets/GameConfig/WorldGeneration/Hydrology/river-generation.json`；Profile SO 不再保存同名参数，资源加载时合入快照。地形预览器里的河流参数修改只影响本次预览，要持久调整请编辑 JSON。
 - 草和可采集地表植被分别由 `ChunkGrassRenderer` 与 `ChunkGroundCoverRenderer` 批量绘制。JSON 生态规则继续生成确定性数据点；物品定义声明 `groundCover: true` 时跳过自然 Item 实例化，采集才生成普通 Item。选格和图层共用 `GroundCoverSystem`，采集持久化复用生态删除 GUID；不得用草层消费状态记录花朵，也不得在图层解绑时把生成点标记为已采集。
 - 草层生成先受 `grass.minimumTemperature`、`grass.maximumTemperature`、`grass.minimumPrecipitation`、`grass.maximumHeight` 硬门槛限制，再由现有 moisture 公式调节密度；花朵等可采集植被继续直接用 NaturalItems JSON 的温度、降水、高度区间。
+- 耐旱植物按沙漠群系与降水区间筛选，不能仅凭沙地 Tile 生成；可选 `maxRiverFloodplainStrength` 默认 1，设为 0 可排除河岸湿地。环境上下限必须同时进入快照、冻结存档及生态指纹，不能在表现层临时删植物。
 - 生态伴生物的 `CompanionHostTag` 要求同格实际生成的宿主；`RequiredChunkTag` 与 `RequiredTagChunkRadius` 联合查询天然宿主标签，半径 0 只看本区块，半径 1 看含本区块的九宫格。邻区标签须用相同种子、Profile 和地形规则独立计算，不依赖区块加载顺序；同步生态快照、冻结存档与配置指纹。
 - 洞穴可配置植物由 Cave SO 的 `ecologyRuleIds` 选择 JSON 规则；洞穴生成按“入口 → 配置植物 → 藤蔓/矿物”占格，出生安全区不生成配置植物。
 - Chunk 运行时、生成调度和表现绑定改用 `flatworld-world-model`。
