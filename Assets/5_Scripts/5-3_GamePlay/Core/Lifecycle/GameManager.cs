@@ -395,7 +395,18 @@ public partial class GameManager : SingletonAutoMono<GameManager>
             UnityEngine.Random.InitState(saveDataMgr.SaveData.Seed);
 
             ReadyPlanetData = FastCloner.FastCloner.DeepClone(request.PlanetData);
-            ReadyTimeData = request.TimeData.CreateRuntimeCopy();
+            string timeProfileId = request.TimeData?.TimeSystemProfileId;
+            if (!TimeSystemConfigService.TryCreateTimeData(
+                    timeProfileId,
+                    out TimeData configuredTimeData,
+                    out string timeConfigError))
+            {
+                FailWorldEntry($"新世界时间配置无效：{timeConfigError}");
+                yield break;
+            }
+
+            // 创建时重新读取已就绪的 Profile，避免资源加载前点击新建时把 00:00 的默认快照带进存档。
+            ReadyTimeData = configuredTimeData;
             ReadyGameSaveData = new GameSaveData
             {
                 SaveSeed = saveDataMgr.SaveData.SaveSeed,
