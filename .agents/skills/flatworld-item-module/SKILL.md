@@ -45,7 +45,7 @@ description: "Use when: 定位或修改 FlatWorld 的 Item/Module 组合架构�
 - `Module.Load()` 与 `Module.Save()` 均为抽象方法；无持久化运行态的模块也需显式实现空 `Save()`，说明状态由宿主或配置恢复。
 - 遇到“物品找不到模块 Prefab”时先核对 `[GameRes] Prefab 加载计划` 和失败阶段；通用 Prefab 数量为 0 时先查标签、目录与初始化，不能直接断言某个物品定义错误。
 - JSON 本体按职责组合通用模块；单个资源节点的名称和玩法配置不能成为专用模块 Prefab。周期资源应由生产模块写入库存接收契约，再由采集模块处理交互和掉落。
-- `MineResource_Base` 只提供矿点外壳与基础数据，不会自动附加采矿门槛；每个具体矿物资源节点都必须显式组合 `Mod_ResourceHarvest`，并配置有效 `requiredTool/minimumTier`，否则会退化为普通可受伤世界物。
+- `MineResource_Base` 只提供矿点外壳与基础数据；需要工具专精加成时显式组合 `Mod_ResourceHarvest`。其中 `requiredTool/minimumTier` 表示专精工具与完整加成参考等级，不是采矿资格；缺少模块或工具不匹配时仍按普通伤害结算，禁止恢复等级门槛或在物品说明、百科中写成硬性要求。
 - 通用世界实体外壳只能提供 `Item`、表现节点与查询 Collider；作物等玩法必须由 JSON 组合模块。成熟交互的可扩展副作用通过 `ICropHarvestAction` 注册，权威状态模块只负责按顺序调度动作与结束实体生命周期。
 - Prefab 必须由 Unity 序列化生成，禁止手写根对象 `fileID: 100100000`；该值是 Prefab 资产保留 ID，把它分配给 GameObject 会触发 `GameObject to Prefab` 的 PPtr 转换错误。
 - 批量调整 Prefab override 后不得在 `m_Modification.m_Modifications` 序列中留下空项；Unity 会把对应 `PrefabInstance` 判为损坏并在导入时删除整个嵌套模块，修改后必须重新导入并核对实际层级。

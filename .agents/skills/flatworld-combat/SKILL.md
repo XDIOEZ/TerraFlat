@@ -26,7 +26,7 @@ description: "Use when: 定位或修改 FlatWorld 的伤害、生命值、身体
 - 正式 AI 的生命、防御、攻击伤害、伤害碰撞窗静态值来自 Actor JSON modules；当前生命和攻击者等运行态仍由存档/模块维护。
 - 历史武器/Actor 大量通过 Prefab 或 JSON 继承覆盖旧单值 `Damage`；迁移到四类伤害时只能在最终运行实例 `Load` 后读取合并结果，禁止在 `OnValidate` 提前固化父模板数值。
 - 树木、矿物等世界资源的 `DamageReceiver.Data` 会进入世界存档；调整 Prefab 防御时若旧存档也必须生效，要同步提升数据版本并在 `Load` 按稳定物品 ID 迁移，不能只改 Prefab。
-- `Mine_Stone` 是普通可受伤石矿，故意不挂 `Mod_ResourceHarvest`；它允许其它武器/工具按正常伤害与防御结算。煤、铜、铁、锡等矿脉仍用 `Mod_ResourceHarvest` 保留工具种类与等级门槛。
+- 所有矿脉（含硝石）均不以工具种类或等级拒绝有效攻击；`Mine_Stone` 不挂采集专精模块，其余矿脉可组合 `Mod_ResourceHarvest` 获得匹配工具的额外效率。GameObject 与自然资源 ECS 共用 `ResolveAffinityMultiplier`，倍率不低于 1；等级只影响额外加成，硬度继续由伤害与防御结算，禁止恢复采矿等级门槛。
 - `DamageReceiver` 与实际受击 `Collider2D` 不保证位于同一节点；Collider 还可能位于同一 Item 的兄弟模块。组件解析在当前节点/父级/子级都失败时必须回到最近的 Item 根搜索完整子树；命中特效应优先使用碰撞回调传入的 Collider 定位，并在缺失时回退子级、父级或接收器中心，禁止直接假定 `receiver.GetComponent<Collider2D>()` 非空。
 - ItemDefinition 的模块 JSON 不应写入 `AttackEffects: []` 等 Unity 资源引用集合；运行时 `PopulateObject` 会用空数组覆盖 Prefab 引用，导致命中特效被清空。迁移器应跳过 `UnityEngine.Object` 集合。
 - 类型命中特效由 `Mod_Damage.impactEffectSet` 显式引用 `CombatImpactEffectSet`，`AttackEffects` 只放数字等每次都播放的通用反馈；不能用通用列表是否为空阻断命中形状。动画与数字统一读取攻击数值 `CombatDamage.DominantKind`，不要按武器名称分类或分别实现占比比较；映射资源留在 GamePlay 程序集，避免 Effect 反向引用战斗程序集。
