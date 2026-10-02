@@ -16,7 +16,9 @@ namespace FlatWorld.WorldModel
         IChunkEcologyNeighborhoodTagResolver
     {
         /// <summary>纯区块生成规则版本；气候、群系、河流或生态空间分布规则改变时递增。</summary>
-        public const int CurrentGenerationSignature = 55;
+        public const int CurrentGenerationSignature = 56;
+
+        private const int RockyWaterbedMinimumDepthLevel = 2;
 
         private readonly LiquidTypeCatalog liquidTypes;
         /// <summary>资源就绪后注入会话液体表；离线纯算法测试可以使用本体最小目录。</summary>
@@ -912,6 +914,13 @@ namespace FlatWorld.WorldModel
             float initialLiquidDepth = ocean
                 ? (float)(1d - Math.Pow(Clamp01(height / Math.Max(0.0001d, settings.SeaLevel)), 2d))
                 : river && !frozenRiver ? (float)riverCell.Depth : 0f;
+            bool oceanOrLake = ocean || riverCell.Kind == GeneratedHydrologyKind.Lake;
+            if (oceanOrLake && groundTileId == settings.SandTileId &&
+                ResolveWaterDepthLevel(initialLiquidDepth) >= RockyWaterbedMinimumDepthLevel)
+            {
+                // 海底和湖底从第二档水深开始改用石地，浅水岸边继续保留沙地。
+                groundTileId = settings.StoneTileId;
+            }
             bool lavaCell = false;
             float lavaShore = 0f;
             if (climate.BaseBiome == SurfaceBiomeKind.Stone)
@@ -980,6 +989,12 @@ namespace FlatWorld.WorldModel
                 RiverKind = river ? (float)riverCell.Kind : 0f,
                 LavaShore = lavaShore
             };
+        }
+
+        private static int ResolveWaterDepthLevel(float liquidDepth)
+        {
+            double depth = Math.Max(0d, Math.Min(1d, liquidDepth));
+            return Math.Max(0, Math.Min(10, (int)Math.Ceiling(depth * 10d - 0.00001d)));
         }
 
         /// <summary>判定泥炭斑块：草原石地交界、远离河漫滩，并按斑块区域概率稀疏生成。</summary>
