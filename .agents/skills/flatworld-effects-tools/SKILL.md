@@ -30,6 +30,7 @@ description: "Use when: 定位或修改 FlatWorld 的运行时特效、粒子、
 - 源实体会在触发特效的同帧被回收时，一次性粒子根节点必须先脱离源实体并放到同一场景独立播放；否则 `PrepareForDespawn/OnDisable` 会把粒子提前清空。
 - 需要在角色 `OnDisable` 中立即回收的池化特效不能挂到该角色层级下，否则归池 `SetParent` 会与父级激活/停用过程冲突；Owner 登记与 Transform 父级分开，睡眠 ZZZ 由单位缩放的独立特效根节点持有并在 `LateUpdate` 跟随。区块休眠不等于退出 AI 睡眠状态，停用时只释放可见实例，重新激活时恢复仍有效的表现请求。
 - 粒子 `VelocityModule` 的线性 X/Y/Z 必须使用同一种 `minMaxState`；2D 特效即使 Z 速度恒为零，也应使用与 X/Y 相同的模式并把上下限都设为零，避免 `Particle Velocity curves must all be in the same mode`。
+- 运行时动态创建的 `ParticleSystem` 不能依赖 Renderer 默认材质；在 URP 2D 下必须显式绑定可用材质，否则默认/旧管线 Shader 可能直接显示为洋红色。
 - `ParticleSystem.EmitParams.rotation` 使用欧拉角度数；2D `Billboard` 粒子按世界移动方向旋转时，屏幕旋转正负方向与 `Vector2.SignedAngle(Vector2.up, direction)` 相反，应使用其反号，否则水平/垂直方向看似正常但 45° 斜向会转成垂直朝向。
 - 伤害数字的最终颜色由 `DamageTextEffect` 样式或调用数据覆盖，不能只改 TMP 的 Prefab 字色；数值到显示倍率的映射也由该表现组件负责，战斗结算只传递实际伤害值与样式。
 - 角色颜色等共享 Shader 参数通过现有 MPB 控制器提交，避免多个组件互相覆盖。
