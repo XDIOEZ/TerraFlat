@@ -6,7 +6,7 @@ using UnityEngine;
 /// 锄头持续使用入口；每次真实挥动只结算一次地块进度，地块进度不会随换工具重置。
 /// 木、石、铜、铁分别配置 6、4、3、2 次完成，右键/手机长按共用 Mod_GameController 的使用状态。
 /// </summary>
-public partial class Mod_Hoe : Module
+public partial class Mod_Hoe : Module, IItemModuleDependencyBinder
 {
     #region 数据与配置
 
@@ -26,7 +26,7 @@ public partial class Mod_Hoe : Module
     private bool actBound;
     private WorldTileTargetOutline targetOutline;
     private Mod_GameController ownerController;
-    private Mod_Weapon_AnimationAction attackAction;
+    private IWeaponActionAnimation actionAnimation;
     private bool continuousUseArmed;
 
     #endregion
@@ -35,15 +35,16 @@ public partial class Mod_Hoe : Module
 
     public override void Awake() => ModData.ID = ModText.Tool;
 
+    /// <summary>锄地只依赖通用挥动能力，不绑定具体伤害模块或动画实现。</summary>
+    public void BindModuleDependencies(ItemMods modules)
+    {
+        actionAnimation = modules.RequireSingleCapability<IWeaponActionAnimation>();
+    }
+
     public override void Load()
     {
         ModData.ReadData(ref Data);
-        attackAction = item?.itemMods?.GetMod_ByID<Mod_Weapon_AnimationAction>("Module_Weapon_AnimationAction");
-        if (!actBound)
-        {
-            item.OnAct += Act;
-            actBound = true;
-        }
+        BindAct();
     }
 
     public override void Save() => ModData.WriteData(Data);
@@ -56,10 +57,20 @@ public partial class Mod_Hoe : Module
         continuousUseArmed = false;
         ReleaseOutline();
         ownerController = null;
-        attackAction = null;
+        actionAnimation = null;
     }
 
+    private void OnEnable() => BindAct();
     private void OnDestroy() => Unload();
+
+    /// <summary>热重载后重新建立右键事件，不把输入恢复职责塞进伤害模块。</summary>
+    private void BindAct()
+    {
+        if (actBound || item == null)
+            return;
+        item.OnAct += Act;
+        actBound = true;
+    }
 
     /// <summary>手持时复用装水的单格白框；预览和右键都读取同一锄地资格。</summary>
     private void LateUpdate()
@@ -128,8 +139,8 @@ public partial class Mod_Hoe : Module
                 maxTillingDistance, out var target))
             return;
 
-        attackAction ??= item.itemMods?.GetMod_ByID<Mod_Weapon_AnimationAction>("Module_Weapon_AnimationAction");
-        if (attackAction == null || !attackAction.TryRequestAttack(queueIfBusy: false))
+        actionAnimation ??= item.itemMods.RequireSingleCapability<IWeaponActionAnimation>();
+        if (!actionAnimation.TryRequestAction(queueIfBusy: false))
             return;
 
         if (!FarmlandSystem.TryTill(pointer, item.Owner.transform.position,

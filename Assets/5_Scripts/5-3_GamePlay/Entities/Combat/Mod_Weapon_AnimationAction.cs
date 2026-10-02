@@ -4,7 +4,13 @@ using Sirenix.OdinInspector;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
-public class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyBinder
+/// <summary>工具模块只依赖这一层动作表现接口，不直接依赖伤害模块内部实现。</summary>
+public interface IWeaponActionAnimation
+{
+    bool TryRequestAction(bool queueIfBusy = false);
+}
+
+public class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyBinder, IWeaponActionAnimation
 {
     #region Config
     [Tooltip("武器动画树 Animator")]
@@ -237,6 +243,9 @@ public class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyBinder
 
         return false;
     }
+
+    /// <summary>对工具模块暴露稳定动作接口，内部仍复用现有攻击动画与体力节拍。</summary>
+    public bool TryRequestAction(bool queueIfBusy = false) => TryRequestAttack(queueIfBusy);
 
     public float AttackSpeedMultiplier => attackSpeedMultiplier * BodyTraumaBuffEffects.GetAttackMultiplier(item?.Owner); /// 当前攻击速度倍率（只读）
     public float StaminaCostPerAttack => staminaCostPerAttack; /// 每段攻击的基础体力消耗（只读）

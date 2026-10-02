@@ -41,11 +41,37 @@ public sealed class Mod_ResourceHarvest : Module, IIncomingDamageRule, IIncoming
     /// <summary>普通武器保持原始伤害；匹配工具按等级逐步获得采集效率加成。</summary>
     public float GetDamageMultiplier(IDamageSender sender)
     {
-        if (sender is not IResourceHarvestTool tool)
+        IResourceHarvestTool tool = ResolveTool(sender);
+        if (tool == null)
             return 1f;
 
         return ResolveAffinityMultiplier(requiredTool, minimumTier,
             tool.HarvestKind, tool.HarvestTier, tool.HarvestEfficiency);
+    }
+
+    /// <summary>优先从物品组合模块读取工具能力，伤害发送器只负责投送伤害。</summary>
+    private static IResourceHarvestTool ResolveTool(IDamageSender sender)
+    {
+        Item attacker = sender?.attacker;
+        if (attacker?.itemMods != null)
+        {
+            IResourceHarvestTool resolved = null;
+            int count = 0;
+            foreach (Module module in attacker.itemMods.Mods.Values)
+            {
+                if (module is not IResourceHarvestTool candidate)
+                    continue;
+                resolved = candidate;
+                count++;
+            }
+
+            if (count > 1)
+                throw new InvalidOperationException($"物品 {attacker.name} 同时声明了多个资源工具能力。");
+            if (resolved != null)
+                return resolved;
+        }
+
+        return sender as IResourceHarvestTool;
     }
 
     /// <summary>纯数据后端使用相同的软专精规则，不再拒绝非匹配武器。</summary>

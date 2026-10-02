@@ -566,6 +566,7 @@
     {
       "id": "Shovel_Base",
       "parent": "Pickaxe_Stone",
+      "removeModules": [ "resourceTool" ],
       "abstract": true,
       "sourcePrefab": null,
       "tags": [ "Shovel" ],
@@ -573,9 +574,17 @@
         "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/StoneShovel/StoneShovel_Icon.png"
       },
       "modules": {
+        "shovel": {
+          "prefab": "Module_Shovel",
+          "id": "Mod_Shovel",
+          "enabled": true,
+          "parameters": {
+            "harvestTier": 1,
+            "harvestEfficiency": 1.0
+          }
+        },
         "damage": {
           "parameters": {
-            "harvestKind": 2,
             "tileDamageToolKind": 0
           }
         }
@@ -595,11 +604,15 @@
         "color": { "r": 1.0, "g": 1.0, "b": 1.0, "a": 1.0 }
       },
       "modules": {
-        "damage": {
+        "shovel": {
           "parameters": {
-            "DamageValues": { "Cutting": 0.0, "Piercing": 4.0, "Chopping": 0.0, "Blunt": 2.0 },
             "harvestTier": 1,
             "harvestEfficiency": 1.0
+          }
+        },
+        "damage": {
+          "parameters": {
+            "DamageValues": { "Cutting": 0.0, "Piercing": 4.0, "Chopping": 0.0, "Blunt": 2.0 }
           }
         }
       }
@@ -623,11 +636,14 @@
         }
       },
       "modules": {
-        "damage": {
+        "shovel": {
           "parameters": {
             "harvestTier": 2,
             "harvestEfficiency": 1.5
           }
+        },
+        "damage": {
+          "parameters": {}
         }
       }
     },
@@ -645,11 +661,15 @@
         "color": { "r": 1.0, "g": 1.0, "b": 1.0, "a": 1.0 }
       },
       "modules": {
-        "damage": {
+        "shovel": {
           "parameters": {
-            "DamageValues": { "Cutting": 0.0, "Piercing": 12.0, "Chopping": 0.0, "Blunt": 5.0 },
             "harvestTier": 3,
             "harvestEfficiency": 2.0
+          }
+        },
+        "damage": {
+          "parameters": {
+            "DamageValues": { "Cutting": 0.0, "Piercing": 12.0, "Chopping": 0.0, "Blunt": 5.0 }
           }
         }
       }
@@ -668,11 +688,15 @@
         "color": { "r": 1.0, "g": 1.0, "b": 1.0, "a": 1.0 }
       },
       "modules": {
-        "damage": {
+        "shovel": {
           "parameters": {
-            "DamageValues": { "Cutting": 0.0, "Piercing": 16.0, "Chopping": 0.0, "Blunt": 6.5 },
             "harvestTier": 3,
             "harvestEfficiency": 2.25
+          }
+        },
+        "damage": {
+          "parameters": {
+            "DamageValues": { "Cutting": 0.0, "Piercing": 16.0, "Chopping": 0.0, "Blunt": 6.5 }
           }
         }
       }
@@ -691,11 +715,15 @@
         "color": { "r": 1.0, "g": 1.0, "b": 1.0, "a": 1.0 }
       },
       "modules": {
-        "damage": {
+        "shovel": {
           "parameters": {
-            "DamageValues": { "Cutting": 0.0, "Piercing": 18.0, "Chopping": 0.0, "Blunt": 7.0 },
             "harvestTier": 4,
             "harvestEfficiency": 2.7
+          }
+        },
+        "damage": {
+          "parameters": {
+            "DamageValues": { "Cutting": 0.0, "Piercing": 18.0, "Chopping": 0.0, "Blunt": 7.0 }
           }
         }
       }
@@ -714,11 +742,15 @@
         "color": { "r": 1.0, "g": 1.0, "b": 1.0, "a": 1.0 }
       },
       "modules": {
-        "damage": {
+        "shovel": {
           "parameters": {
-            "DamageValues": { "Cutting": 0.0, "Piercing": 25.0, "Chopping": 0.0, "Blunt": 9.0 },
             "harvestTier": 4,
             "harvestEfficiency": 2.5
+          }
+        },
+        "damage": {
+          "parameters": {
+            "DamageValues": { "Cutting": 0.0, "Piercing": 25.0, "Chopping": 0.0, "Blunt": 9.0 }
           }
         }
       }

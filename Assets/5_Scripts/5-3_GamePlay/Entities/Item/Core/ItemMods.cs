@@ -95,6 +95,26 @@ public class ItemMods
         return typed;
     }
 
+    /// <summary>按能力接口解析唯一模块，让玩法模块依赖能力而不是具体实现类。</summary>
+    public T RequireSingleCapability<T>() where T : class
+    {
+        T resolved = null;
+        int count = 0;
+        foreach (Module module in Mods.Values)
+        {
+            if (module is not T capability)
+                continue;
+            resolved = capability;
+            count++;
+        }
+
+        if (count == 0)
+            throw new InvalidOperationException($"物品 {_owner?.name} 缺少必需能力：{typeof(T).Name}");
+        if (count > 1)
+            throw new InvalidOperationException($"物品 {_owner?.name} 的能力 {typeof(T).Name} 必须唯一，实际数量：{count}");
+        return resolved;
+    }
+
     /// <summary>
     /// Resolves a persisted module ID. Older entity prefabs can initialize a module
     /// with a shared runtime ID (for example, the generic AI ID), while their saved

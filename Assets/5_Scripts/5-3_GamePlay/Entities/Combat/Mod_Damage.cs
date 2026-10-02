@@ -1,36 +1,10 @@
 // 伤害模块应该管理的内容
 using System.Collections.Generic;
-using FlatWorld.WorldModel;
 using UnityEngine;
 
 [RequireComponent(typeof(BoxCollider2D))]
-public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlowdownSource, IResourceHarvestTool, IBuildingDamageSource, ICombatDamageContextModifier
+public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlowdownSource, IBuildingDamageSource, ICombatDamageContextModifier
 {
-    #region 资源工具能力
-    [SerializeField] private ResourceToolKind harvestKind; // 采集工具类别。
-    [SerializeField, Min(0)] private int harvestTier; // 开采等级，与战斗伤害分离。
-    [SerializeField, Min(0.01f)] private float harvestEfficiency = 1f; // 资源伤害倍率。
-    public ResourceToolKind HarvestKind => ResolveHarvestKind();
-    public int HarvestTier => harvestTier;
-    public float HarvestEfficiency => harvestEfficiency;
-    private WorldTileTargetOutline groundHarvestOutline; // 当前铲子指向的地格提示。
-    private GroundHarvestCrackOverlay groundHarvestCracks; // 当前地格的累积裂纹。
-    private Mod_GameController groundHarvestController; // 铲子持续右键读取玩家统一输入状态。
-    private Mod_Weapon_AnimationAction groundHarvestAttackAction; // 每次真实挥动只结算一次挖掘。
-    private bool groundHarvestContinuousUseArmed; // 本次按下右键后才允许持续挖掘。
-
-    /// <summary>铲子标签是地表采挖能力的兜底来源，避免热重载或旧实例丢失模块参数后整条交互链失效。</summary>
-    private ResourceToolKind ResolveHarvestKind()
-    {
-        if (harvestKind != ResourceToolKind.None)
-            return harvestKind;
-
-        return item?.itemData?.Tags != null && item.itemData.Tags.Contains("Shovel")
-            ? ResourceToolKind.Shovel
-            : ResourceToolKind.None;
-    }
-    #endregion
-
     #region 伤害相关数据
     [Header("攻击特效")]
     [SerializeField, Tooltip("按本次攻击占比最大的伤害类型播放一个命中特效。")]
@@ -263,159 +237,6 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
         lastColliderEnabled = damageCollider != null && damageCollider.enabled;
         tileDamageAppliedThisWindow = false;
         nonDamageableImpactAppliedThisWindow = false;
-        groundHarvestController = null;
-        groundHarvestAttackAction = item?.itemMods?.GetMod_ByID<Mod_Weapon_AnimationAction>("Module_Weapon_AnimationAction");
-        groundHarvestContinuousUseArmed = false;
-        SynchronizeGroundHarvestAct();
-    }
-
-    /// <summary>资源参数热更新后同步右键采挖订阅，无需重置攻击运行状态。</summary>
-    public override void OnResourcesReloaded() => SynchronizeGroundHarvestAct();
-
-    /// <summary>按当前工具类别重建右键采挖订阅，避免配置变化后仍使用旧能力。</summary>
-    private void SynchronizeGroundHarvestAct()
-    {
-        if (item == null) return;
-        item.OnAct -= HandleGroundHarvestAct;
-        if (HarvestKind != ResourceToolKind.None)
-            item.OnAct += HandleGroundHarvestAct;
-    }
-
-    /// <summary>回池或卸载时解绑右键采挖，避免物品重用后重复工作。</summary>
-    public override void Unload()
-    {
-        if (item != null) item.OnAct -= HandleGroundHarvestAct;
-        groundHarvestContinuousUseArmed = false;
-        groundHarvestController = null;
-        groundHarvestAttackAction = null;
-        ReleaseGroundHarvestOutline();
-    }
-
-    private void OnDisable()
-    {
-        groundHarvestContinuousUseArmed = false;
-        groundHarvestController = null;
-        ReleaseGroundHarvestOutline();
-    }
-    private void OnEnable()
-    {
-        // Play Mode 热重载会丢失运行时事件委托，重新启用时恢复铲子的右键链路。
-        if (item != null)
-            SynchronizeGroundHarvestAct();
-    }
-    private void OnDestroy() => Unload();
-
-    /// <summary>右键按下立即尝试第一铲，并武装持续使用；后续由 LateUpdate 按挥动节拍继续。</summary>
-    private void HandleGroundHarvestAct()
-    {
-        if (HarvestKind == ResourceToolKind.None || item?.Owner == null)
-            return;
-
-        groundHarvestController ??= item.Owner.itemMods.GetMod_ByID<Mod_GameController>(ModText.Controller);
-        groundHarvestContinuousUseArmed = groundHarvestController?.IsRightClickHeld == true;
-        TryPerformGroundHarvestSwing(groundHarvestController, true);
-    }
-
-    /// <summary>像锄头一样持续读取右键；只有本次挥动动画真正开始后才结算一份地块进度。</summary>
-    private void UpdateGroundHarvestContinuousUse()
-    {
-        if (HarvestKind == ResourceToolKind.None || item == null || !item.InHand ||
-            item.Owner is not Player player || !player.IsLocalProfile)
-        {
-            groundHarvestContinuousUseArmed = false;
-            groundHarvestController = null;
-            return;
-        }
-
-        groundHarvestController ??= player.itemMods.GetMod_ByID<Mod_GameController>(ModText.Controller);
-        if (groundHarvestController == null)
-        {
-            groundHarvestContinuousUseArmed = false;
-            return;
-        }
-
-        if (!groundHarvestController.IsRightClickHeld)
-            groundHarvestContinuousUseArmed = false;
-
-        if (groundHarvestContinuousUseArmed)
-            TryPerformGroundHarvestSwing(groundHarvestController, false);
-    }
-
-    /// <summary>单次挥铲：先确认目标，再等待攻击动画取得本次节拍，最后提交地块工作量。</summary>
-    private void TryPerformGroundHarvestSwing(Mod_GameController controller, bool showFailureFeedback)
-    {
-        if (controller == null || item == null || !item.InHand)
-            return;
-
-        if (!GroundTileHarvestSystem.TryResolveTarget(this, out _, out _, out _, out string failureReason))
-        {
-            if (showFailureFeedback && !string.IsNullOrEmpty(failureReason))
-                ItemActionFeedback.Show(item.Owner, failureReason);
-            return;
-        }
-
-        groundHarvestAttackAction ??=
-            item.itemMods.GetMod_ByID<Mod_Weapon_AnimationAction>("Module_Weapon_AnimationAction");
-        if (groundHarvestAttackAction == null ||
-            !groundHarvestAttackAction.TryRequestAttack(queueIfBusy: false))
-            return;
-
-        if (!GroundTileHarvestSystem.TryWork(this, out bool completed, out Vector2Int worldCell,
-                out _, out failureReason))
-        {
-            if (showFailureFeedback && !string.IsNullOrEmpty(failureReason))
-                ItemActionFeedback.Show(item.Owner, failureReason);
-            return;
-        }
-
-        HoeTillingFeedback.PlayDigging(item, worldCell);
-        UpdateGroundHarvestOutline();
-
-        // 部分工作明确显示次数，避免玩家把累计采挖误认为右键无效。
-        if (!completed && GroundTileHarvestSystem.TryResolveTarget(this, out RuntimeTerrainTileSample sample,
-                out _, out GroundTileHarvestRule rule))
-        {
-            int requiredUses = GroundTileHarvestSystem.ResolveRequiredUses(this, rule);
-            int completedUses = Mathf.CeilToInt(GroundTileHarvestSystem.ReadProgress(sample) * requiredUses);
-            ItemActionFeedback.Show(item.Owner, $"挖掘进度：{completedUses}/{requiredUses}");
-        }
-    }
-
-    /// <summary>指向任意地表时显示选格框，仅对可采挖地格显示进度裂纹。</summary>
-    private void UpdateGroundHarvestOutline()
-    {
-        if (!GroundTileHarvestSystem.TryResolvePreview(this, out RuntimeTerrainTileSample sample))
-        {
-            groundHarvestOutline?.Hide();
-            groundHarvestCracks?.Hide();
-            return;
-        }
-
-        groundHarvestOutline ??= WorldTileTargetOutline.Create("Shovel Ground Target Outline");
-        groundHarvestOutline.Show(sample.WorldCell);
-        if (!GroundTileHarvestSystem.IsHarvestableGround(sample.Cell.GroundTileId))
-        {
-            groundHarvestCracks?.Hide();
-            return;
-        }
-        float progress = GroundTileHarvestSystem.ReadProgress(sample);
-        if (progress <= 0f)
-        {
-            groundHarvestCracks?.Hide();
-            return;
-        }
-
-        groundHarvestCracks ??= GroundHarvestCrackOverlay.Create();
-        groundHarvestCracks.Show(sample.WorldCell, progress);
-    }
-
-    /// <summary>物品卸载或禁用时清理临时表现对象。</summary>
-    private void ReleaseGroundHarvestOutline()
-    {
-        if (groundHarvestOutline != null) Destroy(groundHarvestOutline.gameObject);
-        if (groundHarvestCracks != null) Destroy(groundHarvestCracks.gameObject);
-        groundHarvestOutline = null;
-        groundHarvestCracks = null;
     }
 
     public override void Save()
@@ -427,8 +248,6 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
     private void LateUpdate()
     {
         SyncBoundWeaponHitbox();
-        UpdateGroundHarvestContinuousUse();
-        UpdateGroundHarvestOutline();
         // 动画开启的一次窗口会移动：每帧检测新进入 OBB 的 ECS 目标，窗口集合仍保证每目标只受击一次。
         if (!explicitProjectileSweep && EnableOnTriggerEnterDamage && DamageInterval < 0f &&
             damageCollider != null && damageCollider.enabled)

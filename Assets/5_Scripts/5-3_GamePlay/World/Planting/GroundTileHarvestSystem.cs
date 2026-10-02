@@ -11,12 +11,12 @@ public static class GroundTileHarvestSystem
 {
     #region 目标与资格
     /// <summary>按地块定义校验手持工具、光标、距离及未被占用的裸露地表。</summary>
-    public static bool TryResolveTarget(Mod_Damage tool, out RuntimeTerrainTileSample sample,
+    public static bool TryResolveTarget(Mod_Shovel tool, out RuntimeTerrainTileSample sample,
         out RuntimeTileDefinition definition, out GroundTileHarvestRule rule)
         => TryResolveTarget(tool, out sample, out definition, out rule, out _);
 
     /// <summary>返回采挖被拒绝的具体原因，供右键反馈使用。</summary>
-    public static bool TryResolveTarget(Mod_Damage tool, out RuntimeTerrainTileSample sample,
+    public static bool TryResolveTarget(Mod_Shovel tool, out RuntimeTerrainTileSample sample,
         out RuntimeTileDefinition definition, out GroundTileHarvestRule rule, out string reason)
     {
         sample = default;
@@ -81,7 +81,7 @@ public static class GroundTileHarvestSystem
     }
 
     /// <summary>预览铲子指向的地表；采挖资格只影响实际操作，不隐藏所选地块。</summary>
-    public static bool TryResolvePreview(Mod_Damage tool, out RuntimeTerrainTileSample sample)
+    public static bool TryResolvePreview(Mod_Shovel tool, out RuntimeTerrainTileSample sample)
     {
         sample = default;
         if (tool?.item == null || tool.HarvestKind == ResourceToolKind.None ||
@@ -110,7 +110,7 @@ public static class GroundTileHarvestSystem
     }
 
     /// <summary>工具品质提高单次工作量，同时保证任意铲子至少要操作两次。</summary>
-    internal static int ResolveRequiredUses(Mod_Damage tool, GroundTileHarvestRule rule)
+    internal static int ResolveRequiredUses(Mod_Shovel tool, GroundTileHarvestRule rule)
     {
         float quality = Mathf.Max(tool.HarvestEfficiency, 1f + 0.5f * (tool.HarvestTier - 1));
         return Mathf.Max(rule.MinimumUsesPerTile,
@@ -126,12 +126,12 @@ public static class GroundTileHarvestSystem
     }
 
     /// <summary>一次有效挥动只增加一次工作量；完成时才产出物品并替换地块。</summary>
-    public static bool TryWork(Mod_Damage tool, out bool completed, out Vector2Int worldCell,
+    public static bool TryWork(Mod_Shovel tool, out bool completed, out Vector2Int worldCell,
         out float useInterval)
         => TryWork(tool, out completed, out worldCell, out useInterval, out _);
 
     /// <summary>返回一次采挖的结果和拒绝原因，供工具向玩家显示。</summary>
-    public static bool TryWork(Mod_Damage tool, out bool completed, out Vector2Int worldCell,
+    public static bool TryWork(Mod_Shovel tool, out bool completed, out Vector2Int worldCell,
         out float useInterval, out string failureReason)
     {
         completed = false;

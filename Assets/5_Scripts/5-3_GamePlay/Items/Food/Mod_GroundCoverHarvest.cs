@@ -6,7 +6,7 @@ using UnityEngine;
 /// 剪刀等地表植被采集工具的通用模块。复用 Item.OnAct 和陶罐的地格白框，
 /// 键鼠右键、手机使用按钮走同一目标解析；默认距离为 2 格，不为花朵添加 Collider 或常驻 Item。
 /// </summary>
-public sealed class Mod_GroundCoverHarvest : Module
+public sealed class Mod_GroundCoverHarvest : Module, IItemModuleDependencyBinder
 {
     #region 数据与配置
 
@@ -18,7 +18,7 @@ public sealed class Mod_GroundCoverHarvest : Module
     public string grassYieldItemId = "";
     [Min(1)] public int grassYieldAmount = 2;
     private WorldTileTargetOutline targetOutline; // 仅当前本地手持工具拥有的白色目标框。
-    private Mod_Weapon_AnimationAction attackAction; // 剪取前复用武器挥动动画，避免静止瞬间采集。
+    private IWeaponActionAnimation actionAnimation; // 剪取前通过动作接口复用挥动表现。
     private bool actBound; // 防止重复 Load 订阅同一使用事件。
     public override string CanonicalModuleId => ModuleId;
     public override ModuleTickMode TickMode => ModuleTickMode.Disabled;
@@ -39,15 +39,18 @@ public sealed class Mod_GroundCoverHarvest : Module
         base.Awake();
     }
 
+    /// <summary>剪取只消费挥动接口，不关心具体伤害动画模块。</summary>
+    public void BindModuleDependencies(ItemMods modules)
+    {
+        actionAnimation = modules.RequireSingleCapability<IWeaponActionAnimation>();
+    }
+
     /// <summary>绑定工具使用入口；采集状态由世界持有，不在工具中恢复。</summary>
     public override void Load()
     {
         if (reach <= 0f || float.IsNaN(reach) || float.IsInfinity(reach))
             throw new InvalidOperationException("地表植被采集距离必须是有限正数。");
-        attackAction = item?.itemMods?.GetMod_ByID<Mod_Weapon_AnimationAction>("Module_Weapon_AnimationAction");
-        if (actBound) return;
-        item.OnAct += Act;
-        actBound = true;
+        BindAct();
     }
 
     /// <summary>本模块无独立运行态，自动保存不解除输入监听。</summary>
@@ -58,8 +61,19 @@ public sealed class Mod_GroundCoverHarvest : Module
     {
         if (actBound && item != null) item.OnAct -= Act;
         actBound = false;
-        attackAction = null;
+        actionAnimation = null;
         ReleaseOutline();
+    }
+
+    private void OnEnable() => BindAct();
+
+    /// <summary>热重载后只恢复本模块自己的使用订阅。</summary>
+    private void BindAct()
+    {
+        if (actBound || item == null)
+            return;
+        item.OnAct += Act;
+        actBound = true;
     }
 
     /// <summary>只更新手持工具的目标表现，不启用物品 Tick。</summary>
@@ -91,8 +105,8 @@ public sealed class Mod_GroundCoverHarvest : Module
             return;
 
         // 和锄头一致：只有本次挥动动画真正开始，才结算这一剪。
-        attackAction ??= item.itemMods?.GetMod_ByID<Mod_Weapon_AnimationAction>("Module_Weapon_AnimationAction");
-        if (attackAction == null || !attackAction.TryRequestAttack(queueIfBusy: false))
+        actionAnimation ??= item.itemMods.RequireSingleCapability<IWeaponActionAnimation>();
+        if (!actionAnimation.TryRequestAction(queueIfBusy: false))
             return;
 
         if (cuttingGrass)

@@ -1859,6 +1859,18 @@
       "shellPrefab": "Pickaxe",
       "visual": {
         "rendererPath": "Render/Render_1"
+      },
+      "modules": {
+        "resourceTool": {
+          "prefab": "Module_ResourceTool",
+          "id": "Mod_ResourceTool",
+          "enabled": true,
+          "parameters": {
+            "toolKind": 1,
+            "harvestTier": 1,
+            "harvestEfficiency": 1.0
+          }
+        }
       }
     },
     {
@@ -1972,10 +1984,7 @@
                 "x": 1.0,
                 "y": 1.0
               }
-            },
-            "harvestKind": 1,
-            "harvestTier": 1,
-            "harvestEfficiency": 1
+            }
           }
         },
         "animation": {
@@ -2103,6 +2112,12 @@
         }
       },
       "modules": {
+        "resourceTool": {
+          "parameters": {
+            "harvestTier": 2,
+            "harvestEfficiency": 1.15
+          }
+        },
         "animation": {
           "prefab": "Module_Weapon_AnimationAction",
           "id": "Module_Weapon_AnimationAction",
@@ -2194,10 +2209,7 @@
                 "x": 1.0,
                 "y": 1.0
               }
-            },
-            "harvestKind": 1,
-            "harvestTier": 2,
-            "harvestEfficiency": 1.15
+            }
           }
         }
       },
@@ -2284,6 +2296,12 @@
         }
       },
       "modules": {
+        "resourceTool": {
+          "parameters": {
+            "harvestTier": 4,
+            "harvestEfficiency": 2.1
+          }
+        },
         "damage": {
           "prefab": "Mod_Damage",
           "id": "Mod_Damage",
@@ -2336,10 +2354,7 @@
                 "x": 1.0,
                 "y": 1.0
               }
-            },
-            "harvestKind": 1,
-            "harvestTier": 4,
-            "harvestEfficiency": 2.1
+            }
           }
         },
         "animation": {
@@ -2467,6 +2482,12 @@
         }
       },
       "modules": {
+        "resourceTool": {
+          "parameters": {
+            "harvestTier": 3,
+            "harvestEfficiency": 1.35
+          }
+        },
         "damage": {
           "prefab": "Mod_Damage",
           "id": "Mod_Damage",
@@ -2519,10 +2540,7 @@
                 "x": 1.0,
                 "y": 1.0
               }
-            },
-            "harvestKind": 1,
-            "harvestTier": 3,
-            "harvestEfficiency": 1.35
+            }
           }
         },
         "animation": {
@@ -2650,6 +2668,12 @@
         }
       },
       "modules": {
+        "resourceTool": {
+          "parameters": {
+            "harvestTier": 4,
+            "harvestEfficiency": 1.8
+          }
+        },
         "damage": {
           "prefab": "Mod_Damage",
           "id": "Mod_Damage",
@@ -2702,10 +2726,7 @@
                 "x": 1.0,
                 "y": 1.0
               }
-            },
-            "harvestKind": 1,
-            "harvestTier": 4,
-            "harvestEfficiency": 1.8
+            }
           }
         },
         "animation": {
