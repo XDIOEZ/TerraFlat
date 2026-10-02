@@ -36,7 +36,7 @@ namespace FlatWorld.GameplayMCP
                     gameplayActions = GameplayMcpActionRegistry.ActionNames,
                     gmCommands = GameplayMcpGmCommandRegistry.CommandNames,
                     observationTools = new[] { "gameplay_observe", "gameplay_query", "gameplay_aiecs_debug", "gameplay_chunk_render_debug", "gameplay_hydrology_debug", "gameplay_spawner_debug" },
-                    uiActions = new[] { "tree", "click", "scroll", "drag" },
+                    uiActions = new[] { "tree", "click", "text", "scroll", "drag" },
                     io = new { output = "compact|full", fields = "comma-separated data fields", observe = true, uiTreeAfter = true, batchMaxSteps = 8 }
                 });
             }
@@ -47,7 +47,7 @@ namespace FlatWorld.GameplayMCP
                 controlActions = new[] { "status", "acquire", "release" },
                 observationTools = new[] { "gameplay_observe", "gameplay_query", "gameplay_aiecs_debug", "gameplay_chunk_render_debug", "gameplay_hydrology_debug", "gameplay_spawner_debug" },
                 uiTool = "gameplay_ui",
-                uiActions = new[] { "tree", "click", "scroll", "drag" },
+                uiActions = new[] { "tree", "click", "text", "scroll", "drag" },
                 gmTool = "gameplay_gm",
                 gmCommands = GameplayMcpGmCommandRegistry.BuildCapabilityObject(),
                 gmUsage = "Call gameplay_gm with command=enable_invincibility to enable administrator invincibility directly; it enables administrator mode if needed and does not require opening the GM UI.",
@@ -55,7 +55,7 @@ namespace FlatWorld.GameplayMCP
                 gameplayActionDescriptions = GameplayMcpActionRegistry.BuildCapabilityObject(),
                 io = new { output = "compact|full", fields = "comma-separated data fields", observe = true, uiTreeAfter = true, batchMaxSteps = 8 },
                 extensionPath = GameplayMcpRuntime.ExtensionPath,
-                rule = "Use gameplay_ui tree/click/scroll/drag for visible UI. Use gameplay_gm only with its listed commands. When gameplay_act returns capability_gap, add an IGameplayMcpAction with GameplayMcpActionAttribute backed by production APIs. Do not use arbitrary reflection, arbitrary console commands, or direct business callback invocation."
+                rule = "Use gameplay_ui tree/click/text/scroll/drag for visible UI. Use gameplay_gm only with its listed commands. When gameplay_act returns capability_gap, add an IGameplayMcpAction with GameplayMcpActionAttribute backed by production APIs. Do not use arbitrary reflection, arbitrary console commands, or direct business callback invocation."
             });
         }
     }

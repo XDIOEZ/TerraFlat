@@ -68,7 +68,8 @@ namespace FlatWorld.GameplayMCP
                 keyboard = UnityInputSystem.AddDevice<Keyboard>(VirtualKeyboardName);
                 UnityInputSystem.SetDeviceUsage(keyboard, Mod_GameController.ExternalGameplayInputDeviceUsage);
 
-                if (!context.Controller.IsGameplayInputAllowed(keyboard))
+                bool textInputFocused = EventSystemGuard.IsTextInputFocused;
+                if (!textInputFocused && !context.Controller.IsGameplayInputAllowed(keyboard))
                 {
                     return GameplayMcpRuntime.BuildActionError(
                         "external_keyboard_rejected",

@@ -53,7 +53,7 @@ GamePlayMCP 复用项目已有 MCPForUnity 自定义工具发现机制，不另�
 7. 调用 `gameplay_control(action="acquire")` 获取唯一主角控制租约。
 8. 调用 `gameplay_observe` 获取第一份结构化状态，然后开始游玩循环。
 
-需要操作主菜单、教程、背包、制作、设置等 UI 时，不要求先进入世界或获取玩家控制租约。直接调用 `gameplay_ui(action="tree")` 获取当前激活 Canvas 的语义 UI 树；点击时从 `clickable=true` 且 `interactable=true` 的节点选择 `id`，调用 `gameplay_ui(action="click", targetId=<id>)`。需要浏览 ScrollRect 中的屏外内容时，对树中的 `type=scroll` 节点调用 `gameplay_ui(action="scroll", targetId=<id>, deltaY=<滚轮量>)`；需要移动可拖拽窗口或滑块时，对对应可拖拽节点调用 `gameplay_ui(action="drag", targetId=<id>, deltaX=<像素>, dragDeltaY=<像素>)`。滚动与拖拽都必须走真实 EventSystem 事件链，不直接改 ScrollRect/RectTransform 数据。UI 操作后界面可能同步变化，继续操作前必须重新读取 UI 树，不复用旧树猜测下一个节点。
+需要操作主菜单、教程、背包、制作、设置等 UI 时，不要求先进入世界或获取玩家控制租约。直接调用 `gameplay_ui(action="tree")` 获取当前激活 Canvas 的语义 UI 树；点击时从 `clickable=true` 且 `interactable=true` 的节点选择 `id`，调用 `gameplay_ui(action="click", targetId=<id>)`。文本框先真实点击获得焦点，再调用 `gameplay_ui(action="text", targetId=<id>, text=<文本>)`，字符交给 TMP/UGUI InputField 自身处理，不直接赋值。需要浏览 ScrollRect 中的屏外内容时，对树中的 `type=scroll` 节点调用 `gameplay_ui(action="scroll", targetId=<id>, deltaY=<滚轮量>)`；需要移动可拖拽窗口或滑块时，对对应可拖拽节点调用 `gameplay_ui(action="drag", targetId=<id>, deltaX=<像素>, dragDeltaY=<像素>)`。滚动与拖拽都必须走真实 EventSystem 事件链，不直接改 ScrollRect/RectTransform 数据。UI 操作后界面可能同步变化，继续操作前必须重新读取 UI 树，不复用旧树猜测下一个节点。
 
 创建新世界使用 `gameplay_session(action="create_world", isolated=true)`，默认把首个存档及后续保存都写入 Library 隔离目录；只有用户明确要求正式存档时才传 `isolated=false`。资源等待与世界等待共用单次调用时限，默认 60 秒、最长 120 秒；已经开始进入世界时只能查询状态，不能重复创建或改换存档目录。若返回 `world_entry_timeout`，先查 `gameplay_session(action="status")`，确认当前会话状态后再决定是否重试。需要保存并返回主菜单时使用 `gameplay_session(action="save_exit")`；它直接调用生产退出协程并保存当前世界。
 
@@ -70,7 +70,9 @@ GamePlayMCP 复用项目已有 MCPForUnity 自定义工具发现机制，不另�
 - 所有 `gameplay_*` 调用在 Unity Console 输出 `[AI→MCP #编号]` 开始与结果日志，包含接口名、短参数摘要和执行结果；批次显示动作名与已执行/剩余步数。下一次串行调用到达时记录 `Agent反应间隔≈`：上次结果就绪到本次工具入口的间隔，不包含上次游戏动作/采样等待，但包含通信、排队、其它工具调用及人工停顿，不能当成纯模型推理时间；首次及并发调用不统计，重载后重置基线。结果日志不再记录游戏执行耗时。反馈使用无堆栈普通日志，不新增诊断 Warning/Error 计数，也不打印完整输入输出。
 - 所有 `gameplay_*` 接口共享 `output="compact"`、`fields="字段1,字段2"`、`observe=true`；常规 Agent 调用优先精简输出。`fields` 选择返回数据的顶层字段，状态、错误、分页和批次结果始终保留；省略字段不代表空值。旧调用默认 `output="full"`。它主要压缩输出，不承诺跳过任意字段对应的业务查询。
 - `gameplay_control(acquire, observe=true)` 可把取控制权与首次精简观察合并；会话 `status` 的 compact 模式跳过附近世界查询。能力接口 compact 只列命令名，查具体命令语义时读 full；默认不缓存会话与世界状态。
-- `gameplay_ui(click/scroll/drag, treeAfter=true, output="compact")` 操作后等待一次 Editor 更新并附带新树，下一步从 `data.tree.data.semantic_tree` 选节点；compact UI 省略 path/rect/depth，但保留 ID、父节点、文本和可操作状态。分页只构造当前页完整节点，仍遍历统计总数。树读取失败时查看 `data.tree.success/error`，不要沿用旧节点。
+- 完整 `gameplay_observe` 的 `player.hand` 是鼠标搬运槽，不是快捷栏当前装备；`player.hotbar.held` / `equippedWeapon` 才是当前快捷栏手持。完整观察同时提供 `player.temperature` 与顶层 `environment`，用于直接判断体温、环境温度、天气和降雨强度，不再从 UI 文本或画面反推。
+- `gameplay_ui(click/text/scroll/drag, treeAfter=true, output="compact")` 操作后等待一次 Editor 更新并附带新树，下一步从 `data.tree.data.semantic_tree` 选节点；compact UI 省略 path/rect/depth，但保留 ID、父节点、文本和可操作状态。分页只构造当前页完整节点，仍遍历统计总数。树读取失败时查看 `data.tree.success/error`，不要沿用旧节点。
+- `press_key` 使用外部虚拟键盘时，文本输入框聚焦只阻止玩法 Action，工具层不能把 `EventSystemGuard.IsTextInputFocused` 导致的玩法拒绝误判成控制租约失效；TMP/UGUI 的字符输入统一走 `gameplay_ui(action=text)`，不要假设 Input System 的虚拟按键状态会自动生成旧 UI 使用的字符事件。
 - `gameplay_query(source="runtime", output="compact")` 跳过名称、生命与机械详情；确实需要详情时传 `includeDetails=true`。其它查询源保留自身匹配内容与分页规则。
 - 诊断接口 compact 最多保留每个对象样本数组的前 4 项；截断时通过 `omittedSamples` 标明各字段省略数量，完整证据保存在 `reportPath` 指向的 Library JSON。计数、错误、标量数组完整保留；保存失败会保留原始完整数据。需要全部证据时读取报告，不要重跑采样来替代原样本。
 - 高频位置/血量检查优先 `gameplay_observe(profile="compact")`；需要时显式开启 `includeNearby/includeTerrain/includeDrops/includeInventory`。省略分区表示未查询，不表示没有内容。首次进入世界、环境变化、异常诊断仍读取 `profile="full"`；旧调用默认保持完整观察。
@@ -187,7 +189,7 @@ GM 使用独立的 `gameplay_gm` 白名单：
 - 修复视觉 Bug 后做最终定向验收。
 
 禁止把“截图 -> 视觉模型判断 -> 模拟点击”作为普通游玩主循环。
-普通 UI 操作应使用“`gameplay_ui(tree)` -> 读取文本/路径/控件状态 -> `gameplay_ui(click/scroll/drag)`”这一结构化链路；截图只用于确认布局、遮挡、样式等纯视觉问题。
+普通 UI 操作应使用“`gameplay_ui(tree)` -> 读取文本/路径/控件状态 -> `gameplay_ui(click/text/scroll/drag)`”这一结构化链路；截图只用于确认布局、遮挡、样式等纯视觉问题。
 
 ## 与其它测试体系的关系
 

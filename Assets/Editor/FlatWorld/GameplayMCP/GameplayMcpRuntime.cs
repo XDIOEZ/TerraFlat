@@ -20,7 +20,7 @@ namespace FlatWorld.GameplayMCP
     /// </summary>
     internal static class GameplayMcpRuntime
     {
-        public const string ProtocolVersion = "0.10.0";
+        public const string ProtocolVersion = "0.10.4";
         public const string ExtensionPath = "Assets/Editor/FlatWorld/GameplayMCP/";
         private const float MinimumSessionTimeoutSeconds = 2f;
         private const float MaximumSessionTimeoutSeconds = 120f;
@@ -532,6 +532,8 @@ namespace FlatWorld.GameplayMCP
             root["player"] = compact
                 ? BuildCompactPlayerObservation(player, controller, mover, includeInventory)
                 : BuildPlayerObservation(player, controller, mover, includeInventory);
+            if (!compact)
+                root["environment"] = BuildEnvironmentObservation(player);
             if (includeTerrain)
                 root["terrain"] = BuildTerrainGridObservation(player.transform.position);
             if (includeDrops)
@@ -576,6 +578,7 @@ namespace FlatWorld.GameplayMCP
             Mod_Stamina stamina = player.itemMods.GetMod_ByID<Mod_Stamina>(ModText.Stamina);
             Mod_Oxygen oxygen = player.itemMods.GetMod_ByID<Mod_Oxygen>(ModText.Oxygen);
             Mod_Food food = player.itemMods.GetMod_ByID<Mod_Food>(ModText.Food);
+            Mod_Temperature temperature = player.itemMods.GetMod_ByID<Mod_Temperature>(ModText.Temperature);
             Mod_HotBar hotbar = ResolveHotbar(player);
             Mod_Hand handModule = player.GetComponentInChildren<Mod_Hand>(true);
             Inventory_Hand handInventory = handModule?.HandInventory;
@@ -620,6 +623,7 @@ namespace FlatWorld.GameplayMCP
                 },
                 ["hand"] = new JObject
                 {
+                    ["role"] = "cursor_transfer_inventory",
                     ["index"] = handInventory?.Data?.Index ?? -1,
                     ["held"] = handItemData?.IDName ?? string.Empty,
                     ["guid"] = handItemData == null ? JValue.CreateNull() : new JValue(handItemData.Guid),
@@ -627,6 +631,13 @@ namespace FlatWorld.GameplayMCP
                     ["runtimeWeapon"] = handWeapon != null,
                     ["canAttack"] = handWeapon?.CanAttack ?? false,
                     ["attackState"] = handWeapon?.CurrentState.ToString() ?? string.Empty
+                },
+                ["temperature"] = temperature?.Data == null ? JValue.CreateNull() : new JObject
+                {
+                    ["currentCelsius"] = Round(temperature.Data.CurrentTemperature),
+                    ["ambientCelsius"] = Round(temperature.Data.AmbientTemperature),
+                    ["insulationCelsius"] = Round(temperature.Data.Insulation),
+                    ["comfortable"] = temperature.IsComfortable()
                 },
                 ["nutrition"] = nutrition == null ? JValue.CreateNull() : new JObject
                 {
@@ -669,6 +680,7 @@ namespace FlatWorld.GameplayMCP
 
                 result["hotbar"] = new JObject
                 {
+                    ["role"] = "equipped_selection",
                     ["selected"] = hotbar.CurrentIndex,
                     ["held"] = hotbar.CurentSelectItem?.itemData?.IDName ?? string.Empty,
                     ["slots"] = slots
@@ -679,6 +691,29 @@ namespace FlatWorld.GameplayMCP
                 result["inventory"] = BuildInventorySummary(player, hotbar);
 
             return result;
+        }
+
+        /// <summary>暴露玩家当前可感知的天气与环境温度，避免 Agent 只能从画面猜测生存环境。</summary>
+        private static JObject BuildEnvironmentObservation(Player player)
+        {
+            WeatherMgr weather = WeatherMgr.Instance;
+            bool hasAmbient = TemperatureMgr.Instance.TryGetAmbientTemperature(
+                player.transform.position, out float ambientTemperature);
+            return new JObject
+            {
+                ["ambientTemperatureCelsius"] = hasAmbient
+                    ? new JValue(Round(ambientTemperature))
+                    : JValue.CreateNull(),
+                ["weather"] = new JObject
+                {
+                    ["type"] = weather.CurrentWeather.ToString(),
+                    ["phase"] = weather.CurrentWeatherPhase.ToString(),
+                    ["intensity"] = Round(weather.CurrentWeatherIntensity),
+                    ["raining"] = weather.IsRaining(),
+                    ["snowing"] = weather.IsSnowingAt(player.transform.position),
+                    ["remainingSeconds"] = Round(weather.CurrentWeatherRemainingTime)
+                }
+            };
         }
 
         /// <summary>通过 ItemMgr 既有空间索引构造玩家半径内的实体摘要。</summary>
