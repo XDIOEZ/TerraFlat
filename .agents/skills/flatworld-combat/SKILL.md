@@ -33,6 +33,7 @@ description: "Use when: 定位或修改 FlatWorld 的伤害、生命值、身体
 - 玩家自身的受击伤害数字与部位提示应在接收侧订阅 `DamageReceiver.OnDamageReceived` 统一保证，不能依赖攻击者 `Mod_Damage.AttackEffects`（AI 攻击资源可以为空）；部位提示必须读取同一笔 `DamageReceiverDamageInfo.BodyPartHits`，禁止再次随机部位。
 - 命中特效必须区分 `0` 与 `-1`：`0` 表示有效命中但被护甲完全抵消，应播放数字 0；`-1` 表示死亡、受伤冷却等无效结算，不应播放命中特效；可破坏 Tile 也应把零伤害命中返回给 `Mod_Damage`。
 - 概率命中状态不要硬编码进 `Mod_Damage`；伤害模块只发布实体命中目标与结算结果，`DamageOnHitBuffApplier` 等独立组件再通过目标 `BuffManager` 添加状态。`0` 仍属于有效实体命中并可触发状态，负数无效结算不触发；Tile 伤害不发布实体命中事件。
+- 资源工具身份不属于 `Mod_Damage`：镐等通用采集能力由 `Mod_ResourceTool` 提供，铲地能力由 `Mod_Shovel` 提供；这些模块通过 `ICombatDamageContextModifier` 把工具类别、等级和效率附加到伤害上下文。右键工具需要挥动表现时只消费 `IWeaponActionAnimation`，禁止把锄地、铲地、剪草等玩法重新塞进伤害模块。
 - 命中附加状态的层数由 `DamageOnHitBuffApplier.applicationStacks` 配置，并通过 `CombatOnHitBuff.Stacks` 同时传到两个后端；一次命中应原子施加完整层数，不能循环添加单层，否则潮湿免疫等强度比较会错误拒绝多层攻击。
 - 玩家进入 `Mod_PlayerDeathState` 濒死状态后，`Mod_Food` 等被动生命模块不得继续改写 `DamageReceiver.Hp`，否则会把死亡状态抬成极低正数。
 - 濒死控制与界面属于血量的派生运行态，须在本地玩家 `Event_PlayerEnterWorld`（全部模块加载后）按权威血量恢复；不能依赖模块 Load 顺序，也不能重放 `OnDead`，否则读档会重复死亡掉落。
