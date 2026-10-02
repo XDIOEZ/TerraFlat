@@ -10,7 +10,7 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
     [SerializeField] private ResourceToolKind harvestKind; // 采集工具类别。
     [SerializeField, Min(0)] private int harvestTier; // 开采等级，与战斗伤害分离。
     [SerializeField, Min(0.01f)] private float harvestEfficiency = 1f; // 资源伤害倍率。
-    public ResourceToolKind HarvestKind => harvestKind;
+    public ResourceToolKind HarvestKind => ResolveHarvestKind();
     public int HarvestTier => harvestTier;
     public float HarvestEfficiency => harvestEfficiency;
     private WorldTileTargetOutline groundHarvestOutline; // 当前铲子指向的地格提示。
@@ -18,6 +18,17 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
     private Mod_GameController groundHarvestController; // 铲子持续右键读取玩家统一输入状态。
     private Mod_Weapon_AnimationAction groundHarvestAttackAction; // 每次真实挥动只结算一次挖掘。
     private bool groundHarvestContinuousUseArmed; // 本次按下右键后才允许持续挖掘。
+
+    /// <summary>铲子标签是地表采挖能力的兜底来源，避免热重载或旧实例丢失模块参数后整条交互链失效。</summary>
+    private ResourceToolKind ResolveHarvestKind()
+    {
+        if (harvestKind != ResourceToolKind.None)
+            return harvestKind;
+
+        return item?.itemData?.Tags != null && item.itemData.Tags.Contains("Shovel")
+            ? ResourceToolKind.Shovel
+            : ResourceToolKind.None;
+    }
     #endregion
 
     #region 伤害相关数据
@@ -266,7 +277,7 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
     {
         if (item == null) return;
         item.OnAct -= HandleGroundHarvestAct;
-        if (harvestKind != ResourceToolKind.None)
+        if (HarvestKind != ResourceToolKind.None)
             item.OnAct += HandleGroundHarvestAct;
     }
 
@@ -286,12 +297,18 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
         groundHarvestController = null;
         ReleaseGroundHarvestOutline();
     }
+    private void OnEnable()
+    {
+        // Play Mode 热重载会丢失运行时事件委托，重新启用时恢复铲子的右键链路。
+        if (item != null)
+            SynchronizeGroundHarvestAct();
+    }
     private void OnDestroy() => Unload();
 
     /// <summary>右键按下立即尝试第一铲，并武装持续使用；后续由 LateUpdate 按挥动节拍继续。</summary>
     private void HandleGroundHarvestAct()
     {
-        if (harvestKind == ResourceToolKind.None || item?.Owner == null)
+        if (HarvestKind == ResourceToolKind.None || item?.Owner == null)
             return;
 
         groundHarvestController ??= item.Owner.itemMods.GetMod_ByID<Mod_GameController>(ModText.Controller);
@@ -302,7 +319,7 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
     /// <summary>像锄头一样持续读取右键；只有本次挥动动画真正开始后才结算一份地块进度。</summary>
     private void UpdateGroundHarvestContinuousUse()
     {
-        if (harvestKind == ResourceToolKind.None || item == null || !item.InHand ||
+        if (HarvestKind == ResourceToolKind.None || item == null || !item.InHand ||
             item.Owner is not Player player || !player.IsLocalProfile)
         {
             groundHarvestContinuousUseArmed = false;
