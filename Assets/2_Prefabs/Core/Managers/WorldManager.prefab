@@ -340,6 +340,7 @@ GameObject:
   - component: {fileID: 4939125256281199578}
   - component: {fileID: 6188641116391193677}
   - component: {fileID: 8897026105265421041}
+  - component: {fileID: 838629431320725304}
   m_Layer: 0
   m_Name: WorldManager
   m_TagString: Untagged
@@ -347,6 +348,21 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
+--- !u!114 &838629431320725304
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4565539948505994440}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ef4964bd394a48d291f28b5c5736c922, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  damageTextPrefab: {fileID: 1729398625125957200, guid: 3b8b0ac52f922cc499112bd9e5b27298, type: 3}
+  textScale: 0.65
+  textWidthMultiplier: 4
 --- !u!114 &8897026105265421041
 MonoBehaviour:
   m_ObjectHideFlags: 0

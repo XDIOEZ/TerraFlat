@@ -33,6 +33,7 @@ description: "Use when: 定位或修改 FlatWorld 的运行时特效、粒子、
 - 运行时动态创建的 `ParticleSystem` 不能依赖 Renderer 默认材质；在 URP 2D 下必须显式绑定可用材质，否则默认/旧管线 Shader 可能直接显示为洋红色。
 - `ParticleSystem.EmitParams.rotation` 使用欧拉角度数；2D `Billboard` 粒子按世界移动方向旋转时，屏幕旋转正负方向与 `Vector2.SignedAngle(Vector2.up, direction)` 相反，应使用其反号，否则水平/垂直方向看似正常但 45° 斜向会转成垂直朝向。
 - 伤害数字的最终颜色由 `DamageTextEffect` 样式或调用数据覆盖，不能只改 TMP 的 Prefab 字色；数值到显示倍率的映射也由该表现组件负责，战斗结算只传递实际伤害值与样式。
+- 逻辑未命中由 `CombatFeedbackEvents` 发布攻击位置快照，世界级 `CombatMissFeedbackPresenter` 消费后用本地化文本和白色覆盖复用伤害文字池；不得重掷命中概率、把 0 伤害/无效结算当成闪避，或在伤害模块中写入具体文案和动画。
 - 角色颜色等共享 Shader 参数通过现有 MPB 控制器提交，避免多个组件互相覆盖。
 - Unity 2D 使用 URP/Light2D；修改 Shader 前核对材质实际 Shader 与 Pass。
 - 正式 BRG 地形占用 `Default/0` 的 Queue 2987~2994，其中 Ground/Water 为 2988/2989、Blocking 为 2992，草为 2993；旧 Item 接触阴影 BRG 使用 Default/2995，太阳投影与 ECS 接触阴影使用更高的 `Shadow/0`。耕地渐显、地格裂纹、脚印、水花也使用 `Shadow`；玩家等动态世界实体由 `WorldSorting` JSON 放在更高的 `Player`，同层按 Y 轴互相遮挡。BRG 无 SpriteRenderer 的 Sorting Layer，必须靠 Default 材质队列安排与地形的关系，不能仅靠旧 Tilemap Order 推断跨系统可见次序。Shader 位移后的 CPU 包围盒必须同步扩大，屏幕外投影源仍可能把阴影投进视口；逐 Renderer MPB 必须显式恢复 `_MainTex` 及 Android 分离 Alpha。

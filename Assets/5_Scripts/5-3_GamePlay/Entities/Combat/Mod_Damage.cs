@@ -440,7 +440,9 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
         // 碰撞只代表攻击范围接触；角色之间还要经过武器、状态和目标体积共同决定的逻辑命中。
         if (!TryResolveLogicalHit(receiver, out float logicalHitChance))
         {
+            Vector2 missPosition = ResolveHitPoint(receiver, hitCollider);
             OnReceiverLogicalMissed?.Invoke(receiver, logicalHitChance);
+            CombatFeedbackEvents.PublishLogicalMiss(missPosition);
             return;
         }
 
