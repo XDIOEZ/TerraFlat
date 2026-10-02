@@ -125,6 +125,7 @@
       { "visualLayer": "Back", "batchOrder": -1, "renderQueueOffset": -1 },
       { "visualLayer": "Ground", "batchOrder": 0, "renderQueueOffset": 0 },
       { "visualLayer": "Water", "batchOrder": 1, "renderQueueOffset": 2 },
+      { "visualLayer": "SupportShadow", "batchOrder": 2, "renderQueueOffset": 3 },
       { "visualLayer": "Support", "batchOrder": 2, "renderQueueOffset": 3 },
       { "visualLayer": "Environment", "batchOrder": 2, "renderQueueOffset": 3 },
       { "visualLayer": "Grass", "batchOrder": 2, "renderQueueOffset": 2 },

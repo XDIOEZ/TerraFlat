@@ -6,11 +6,13 @@ using UnityEngine;
 /// <summary>
 /// 地表覆盖经共享 BRG Owner 表现；只读取权威层，不改写底层地形数据。
 /// 平台/地板接触阴影通过实例 Data0 RGBA 编码左、右、下、上四个外露方向，
-/// 相邻覆盖面之间不再绘制内部阴影，并支持跨 Chunk 连续铺设。
+/// 水上平台把阴影投到覆盖面外侧，陆地地板保留内侧接触阴影，并支持跨 Chunk 连续铺设。
 /// </summary>
 public sealed class ChunkSupportSurfaceRenderer : MonoBehaviour, IChunkViewRenderer, IWorldAwareChunkViewRenderer
 {
     #region 配置与状态
+
+    private const float WaterPlatformShadowExtent = 0.12f;
 
     [SerializeField] private ChunkTilePaletteSO palette; // 材料到地块的映射。
     [SerializeField] private Material material; // 平台专用接触阴影材质。
@@ -68,7 +70,10 @@ public sealed class ChunkSupportSurfaceRenderer : MonoBehaviour, IChunkViewRende
             if (chunk?.Terrain != null && owner.IsBatchPresentationRegistered)
                 for (int y = 0; y < chunk.Terrain.Height; y++)
                 for (int x = 0; x < chunk.Terrain.Width; x++)
+                {
+                    owner.ClearLayerVisual(ChunkBatchRendererGroupService.VisualLayer.SupportShadow, x, y);
                     owner.ClearLayerVisual(ChunkBatchRendererGroupService.VisualLayer.Support, x, y);
+                }
         }
         chunk = null;
     }
@@ -90,7 +95,8 @@ public sealed class ChunkSupportSurfaceRenderer : MonoBehaviour, IChunkViewRende
     /// <summary>支撑层改变时同步自身和四邻格的外轮廓。</summary>
     private void HandleChanged(ChunkTerrainChanged change)
     {
-        if (change.Kind != TerrainChangeKind.Environment || chunk?.Terrain == null)
+        if ((change.Kind != TerrainChangeKind.Environment && change.Kind != TerrainChangeKind.Liquid) ||
+            chunk?.Terrain == null)
             return;
 
         int x = change.LocalCell.X;
@@ -126,16 +132,39 @@ public sealed class ChunkSupportSurfaceRenderer : MonoBehaviour, IChunkViewRende
         if (id == 0 || !palette.TryGetVisual(id, out Sprite sprite, out Color color,
                 out Matrix4x4 tileTransform))
         {
+            owner.ClearLayerVisual(ChunkBatchRendererGroupService.VisualLayer.SupportShadow, x, y);
             owner.ClearLayerVisual(ChunkBatchRendererGroupService.VisualLayer.Support, x, y);
             return;
         }
 
         Int2 origin = chunk.Address.ChunkOrigin;
-        Matrix4x4 matrix = Matrix4x4.Translate(new Vector3(origin.X + x + 0.5f,
-            origin.Y + y + 0.5f)) * tileTransform;
+        float centerX = origin.X + x + 0.5f;
+        float centerY = origin.Y + y + 0.5f;
+        Matrix4x4 matrix = Matrix4x4.Translate(new Vector3(centerX, centerY)) * tileTransform;
         Color mask = BuildPerimeterMask(chunk.Terrain, x, y);
+        bool isWaterPlatform = chunk.Terrain.GetLiquidDepth(x, y) > 0.001f;
+        Vector4 bodyMask = isWaterPlatform
+            ? Vector4.zero
+            : new Vector4(mask.r, mask.g, mask.b, mask.a);
         owner.SetLayerVisual(ChunkBatchRendererGroupService.VisualLayer.Support, x, y,
-            sprite, material, matrix, color, new Vector4(mask.r, mask.g, mask.b, mask.a), Vector4.zero);
+            sprite, material, matrix, color, bodyMask, Vector4.zero);
+
+        if (!isWaterPlatform)
+        {
+            owner.ClearLayerVisual(ChunkBatchRendererGroupService.VisualLayer.SupportShadow, x, y);
+            return;
+        }
+
+        Matrix4x4 shadowMatrix = matrix;
+        float shadowScale = 1f + WaterPlatformShadowExtent * 2f;
+        shadowMatrix.m00 *= shadowScale;
+        shadowMatrix.m01 *= shadowScale;
+        shadowMatrix.m10 *= shadowScale;
+        shadowMatrix.m11 *= shadowScale;
+        owner.SetLayerVisual(ChunkBatchRendererGroupService.VisualLayer.SupportShadow, x, y,
+            sprite, material, shadowMatrix, Color.white,
+            new Vector4(mask.r, mask.g, mask.b, mask.a),
+            new Vector4(centerX, centerY, WaterPlatformShadowExtent, 0f));
     }
 
     /// <summary>RGBA 分别表示左、右、下、上是否属于平台整体的外露边缘。</summary>

@@ -26,6 +26,7 @@ internal static class ChunkBatchRendererGroupService
         Back,
         Ground,
         Water,
+        SupportShadow,
         Support,
         Environment,
         Snow,
@@ -245,6 +246,7 @@ internal static class ChunkBatchRendererGroupService
         private readonly HashSet<int> warnedMissingOwnerIds = new();
         private readonly Material spriteTemplate;
         private readonly Material contactTemplate;
+        private readonly Material supportShadowTemplate;
         private readonly Material waterTemplate;
         private long cullingCallbackCount;
         private int lastCullingCommandCount;
@@ -256,6 +258,7 @@ internal static class ChunkBatchRendererGroupService
             ValidateBatchSortingProfiles();
             spriteTemplate = LoadTemplate("Config/WorldModel/BRG/ChunkBRG-Sprite-Lit");
             contactTemplate = LoadTemplate("Config/WorldModel/BRG/ChunkBRG-Contact-Lit");
+            supportShadowTemplate = LoadTemplate("Config/WorldModel/BRG/ChunkBRG-Support-Shadow");
             waterTemplate = LoadTemplate("Config/WorldModel/BRG/ChunkBRG-Water-Lit");
             rendererGroup = new BatchRendererGroup(OnPerformCulling, IntPtr.Zero);
             GroundElevationShadowSettings.Changed += ApplyGroundElevationPreference;
@@ -539,6 +542,7 @@ internal static class ChunkBatchRendererGroupService
             Material template = layer switch
             {
                 VisualLayer.Ground or VisualLayer.Support => contactTemplate,
+                VisualLayer.SupportShadow => supportShadowTemplate,
                 VisualLayer.Water => waterTemplate,
                 _ => spriteTemplate
             };
