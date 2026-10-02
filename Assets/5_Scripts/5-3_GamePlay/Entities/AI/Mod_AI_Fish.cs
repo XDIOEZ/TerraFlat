@@ -108,7 +108,7 @@ public sealed partial class Mod_AI_Fish : Module, IAIActor, IItemModuleDependenc
         }
         machine.Initialize(Behaviour.Swim);
         loaded = true;
-        UpdatePresentation();
+        UpdatePresentation(0f);
     }
 
     public override void Save() => Data.WriteData(state);
@@ -161,7 +161,7 @@ public sealed partial class Mod_AI_Fish : Module, IAIActor, IItemModuleDependenc
             if (temperatureSafetyRetreat)
             {
                 TickTemperatureSafetyRetreat(deltaTime);
-                UpdatePresentation();
+                UpdatePresentation(deltaTime);
                 return;
             }
             scanRemaining -= deltaTime;
@@ -176,7 +176,7 @@ public sealed partial class Mod_AI_Fish : Module, IAIActor, IItemModuleDependenc
             machine.TransitionTo(next, null);
             machine.Tick(deltaTime);
         }
-        UpdatePresentation();
+        UpdatePresentation(deltaTime);
     }
 
     private bool NeedsFood => food.Data?.nutrition != null && food.Data.nutrition.GetFoodRate() < 1f;
@@ -306,10 +306,10 @@ public sealed partial class Mod_AI_Fish : Module, IAIActor, IItemModuleDependenc
 
     #endregion
 
-    private void UpdatePresentation()
+    private void UpdatePresentation(float deltaTime)
     {
         bool underwater = AquaticHabitat.CanSwimAt(item.transform.position);
-        presentation?.SetUnderwater(underwater);
+        presentation?.Tick(underwater, deltaTime);
     }
     #endregion
 
