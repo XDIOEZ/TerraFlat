@@ -27,6 +27,11 @@
       "enabled": true
     },
     {
+      "id": "surface.sulfur",
+      "path": "surface-sulfur.json",
+      "enabled": true
+    },
+    {
       "id": "surface.beach",
       "path": "surface-beach.json",
       "enabled": true

@@ -288,6 +288,17 @@
       ]
     },
     {
+      "id": "Mine_Sulfur_Default",
+      "entries": [
+        {
+          "itemId": "Ore_Sulfur",
+          "probability": 1.0,
+          "minAmount": 2,
+          "maxAmount": 4
+        }
+      ]
+    },
+    {
       "id": "Mine_Iron_Default",
       "entries": [
         {

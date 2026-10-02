@@ -281,6 +281,10 @@ MonoBehaviour:
   - surface.stone.stone
   - surface.stone.oreStone
   - surface.stone.tin
+  - surface.sulfur.mountainMine
+  - surface.sulfur.mountainLoose
+  - surface.sulfur.lavaMine
+  - surface.sulfur.lavaLoose
   - surface.beach.coconut
   - surface.beach.oreStone
   - surface.desert.cactus

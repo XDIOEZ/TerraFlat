@@ -59,6 +59,7 @@
     { "id": "Throwable", "labels": [{ "locale": "zh-CN", "text": "可投掷" }, { "locale": "en", "text": "Throwable" }] },
     { "id": "Tin", "labels": [{ "locale": "zh-CN", "text": "锡" }, { "locale": "en", "text": "Tin" }] },
     { "id": "TinPlate", "labels": [{ "locale": "zh-CN", "text": "锡板" }, { "locale": "en", "text": "Tin Plate" }] },
+    { "id": "Sulfur", "labels": [{ "locale": "zh-CN", "text": "硫磺" }, { "locale": "en", "text": "Sulfur" }] },
     { "id": "Tool", "labels": [{ "locale": "zh-CN", "text": "工具" }, { "locale": "en", "text": "Tool" }] },
     { "id": "Tree", "labels": [{ "locale": "zh-CN", "text": "树木" }, { "locale": "en", "text": "Tree" }] },
     { "id": "Wood", "labels": [{ "locale": "zh-CN", "text": "木材" }, { "locale": "en", "text": "Wood" }] },
