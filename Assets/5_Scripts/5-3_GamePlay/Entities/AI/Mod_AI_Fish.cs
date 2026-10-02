@@ -16,7 +16,7 @@ public sealed partial class Mod_AI_Fish : Module, IAIActor, IItemModuleDependenc
     [Min(0.1f)] public float eatSeconds = 0.8f;
     [Min(0.1f)] public float scanInterval = 0.5f;
     public string[] edibleTags = { "Food", "47", "Meat", "Worm" };
-    [Min(1)] public int minimumWetStacks = 5;
+    [Min(1)] public int minimumWetStacks = 3;
     [Min(0.1f)] public float dryDamageInterval = 10f;
     [Min(0f)] public float dryDamage = 10f;
     public SpriteRenderer fishRenderer;
@@ -145,6 +145,7 @@ public sealed partial class Mod_AI_Fish : Module, IAIActor, IItemModuleDependenc
             if (!AquaticHabitat.TryGetDepth(item.transform.position, out float depth)) return;
             buffs.SetWaterStackExposure(depth > 0f);
             buffs.AdvanceWaterWetness(depth, deltaTime);
+            // 鱼达到最低潮湿层数后视为水分充足。
             if (buffs.GetBuffStacks(WetBuffIds.Wet) >= minimumWetStacks) state.DryElapsed = 0f;
             else
             {
