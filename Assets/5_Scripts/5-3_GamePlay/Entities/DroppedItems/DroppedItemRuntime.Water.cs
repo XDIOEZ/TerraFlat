@@ -94,7 +94,7 @@ internal sealed partial class DroppedItemRuntime
             LightweightDroppedBody body = simulation.Get(id);
             ChunkMgr chunks = ChunkMgr.ExistingInstance;
             if (body.WaterKind == 0 || chunks == null || !chunks.TryGetRuntimeWaterCurrent(body.Position, out RuntimeWaterCurrentSample current)) continue;
-            float speed = ResolveDriftSpeed(current.Kind, current.Flow);
+            float speed = ResolveDriftSpeed(current.Kind, current.Flow, payloads[id].Stack);
             if (speed <= 0f || current.Direction.sqrMagnitude <= 0.000001f) continue;
             Vector2 destination = domain.Normalize((Vector2)body.Position + current.Direction * (speed * Mathf.Min(step, 1f)));
             if (!WorldItemWaterSystem.TryResolveWaterAt(destination, out bool isWater) || !isWater) continue;

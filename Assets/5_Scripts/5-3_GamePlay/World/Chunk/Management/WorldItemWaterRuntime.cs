@@ -216,7 +216,7 @@ public sealed class WorldItemWaterRuntime : MonoBehaviour, IItemPoolLifecycle
             return;
         }
 
-        float speed = ResolveDriftSpeed(current.Kind, current.Flow);
+        float speed = ResolveDriftSpeed(current.Kind, current.Flow, waterItem.itemData.Stack);
         if (speed <= 0f || current.Direction.sqrMagnitude <= 0.000001f)
             return;
 
