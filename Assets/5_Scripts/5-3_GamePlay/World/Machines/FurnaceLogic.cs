@@ -360,8 +360,13 @@ public class FurnaceLogic : MachineLogic
             CraftingRecipeMatcher.TryMatchRecipe(Input, Processor.Recipe, Processor.Capabilities, out CraftingRecipeMatch match))
         {
             float current = ItemMatterRuntime.GetMinimumConsumedTemperature(Input, match, Data.Temperature);
+            // 当前燃料的温度上限不足时明确提示换燃料，避免一直等待。
+            float maximum = CalculateMaximumTemperature(AcceptsAirflow ? Entity.Airflow : 0f);
+            string action = !IsBurning ? "补充燃料并点火" : maximum < activeReaction.MinTemperature
+                ? $"当前燃料最高 {maximum:0}°C · 需要更高温燃料或鼓风"
+                : "正在加热";
             return $"材料 {current:0}°C / 需要 {activeReaction.MinTemperature:0}°C · " +
-                (IsBurning ? "正在加热" : "补充燃料并点火");
+                action;
         }
         if (!preview.Success) return preview.Message;
         return IsBurning ? "正在加工 · 等待产出" : "材料就绪 · 补充燃料并点火";

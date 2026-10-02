@@ -5,27 +5,31 @@ using UnityEngine.Rendering.Universal;
 public sealed partial class MechanicalDepthVisual
 {
     #region 设施灯光与内容图层
+    private static readonly Color CombustionLightColor = new(1f, 0.29712662f, 0f, 1f);
     private readonly List<PartVisual> facilityParts = new();
     private Light2D facilityLight;
 
     /// <summary>灯光保留 Unity 专用代理，晾架内容与主体一起合入脚点行。</summary>
     internal void UpdateFacility(MachineEntity entity)
     {
-        if (entity.Definition.LogicId == "furnace") UpdateFurnaceLight(entity);
+        if (entity.Definition.Content?.Find<Mod_Fuel>() != null) UpdateCombustionLight(entity);
         if (entity.Definition.LogicId == "drying") UpdateDryingSprites(entity);
     }
 
-    private void UpdateFurnaceLight(MachineEntity entity)
+    private void UpdateCombustionLight(MachineEntity entity)
     {
-        bool burning = entity.Logic is FurnaceLogic runtime ? runtime.IsBurning
-            : MachinePersistence.Read<FurnaceRuntimeState>(entity.Snapshot, "furnace") is FurnaceRuntimeState saved &&
-              saved.Smelting.IsSmelting && saved.Fuel.Fuel.x > .01f;
+        bool burning = entity.Logic?.IsBurning == true;
+        if (entity.Logic == null && entity.Definition.LogicId == "furnace")
+            burning = MachinePersistence.Read<FurnaceRuntimeState>(entity.Snapshot, "furnace") is FurnaceRuntimeState saved &&
+                saved.Smelting.IsSmelting && saved.Fuel.Fuel.x > .01f;
         if (!burning) return;
+
         var fuel = entity.Definition.Content?.Find<Mod_Fuel>();
         var lighting = entity.Definition.Content?.Find<Mod_LightSource>();
-        Light2D template = (fuel?.Authoring as Mod_Fuel)?.fuelLight ??
-            (lighting?.Authoring as Mod_LightSource)?.TargetLight ?? fuel?.Authoring.GetComponentInChildren<Light2D>(true);
-        if (template == null && lighting == null) return;
+        var fuelAuthoring = fuel?.Authoring as Mod_Fuel;
+        var lightingAuthoring = lighting?.Authoring as Mod_LightSource;
+        Light2D template = fuelAuthoring?.fuelLight ??
+            lightingAuthoring?.TargetLight ?? fuel?.Authoring.GetComponentInChildren<Light2D>(true);
         if (facilityLight == null)
         {
             var child = new GameObject("MachineLight");
@@ -33,14 +37,15 @@ public sealed partial class MechanicalDepthVisual
             facilityLight = child.AddComponent<Light2D>();
             facilityLight.lightType = Light2D.LightType.Point;
         }
+
         facilityLight.transform.localPosition = template != null ? template.transform.localPosition : Vector3.zero;
         facilityLight.transform.rotation = Quaternion.identity;
-        var config = lighting?.Data("Data", ((Mod_LightSource)lighting.Authoring).Data);
-        facilityLight.color = lighting?.Value("lightColor", template != null ? template.color : Color.white) ??
-            (template != null ? template.color : Color.white);
-        facilityLight.intensity = config?.Intensity ?? (fuel?.Authoring is Mod_Fuel source ? source.lightBaseIntensity : 0f);
-        facilityLight.pointLightOuterRadius = config?.Range ?? (template != null ? template.pointLightOuterRadius : 0f);
-        facilityLight.pointLightInnerRadius = config?.InnerRadius ?? (template != null ? template.pointLightInnerRadius : 0f);
+        var config = lightingAuthoring != null ? lighting.Data("Data", lightingAuthoring.Data) : null;
+        // 燃烧工作方块统一使用火把的橙红火光颜色。
+        facilityLight.color = CombustionLightColor;
+        facilityLight.intensity = config?.Intensity ?? fuelAuthoring?.lightBaseIntensity ?? 1f;
+        facilityLight.pointLightOuterRadius = config?.Range ?? (template != null ? template.pointLightOuterRadius : 8f);
+        facilityLight.pointLightInnerRadius = config?.InnerRadius ?? (template != null ? template.pointLightInnerRadius : .1f);
         if (template != null)
         {
             facilityLight.blendStyleIndex = template.blendStyleIndex;
@@ -48,8 +53,13 @@ public sealed partial class MechanicalDepthVisual
             facilityLight.shadowIntensity = template.shadowIntensity;
             Light2DSortingLayerUtility.SetLightLayers(facilityLight, Light2DSortingLayerUtility.GetLightLayers(template));
         }
-        else Light2DSortingLayerUtility.SetLightLayers(facilityLight,
-            Light2DSortingLayerUtility.ResolveLayerIds(((Mod_LightSource)lighting.Authoring).TargetSortingLayers));
+        else
+        {
+            facilityLight.shadowsEnabled = true;
+            facilityLight.shadowIntensity = .75f;
+            Light2DSortingLayerUtility.SetLightLayers(facilityLight,
+                Light2DSortingLayerUtility.ResolveLayerIds(lightingAuthoring?.TargetSortingLayers));
+        }
         facilityLight.enabled = facilityLight.intensity > 0f && facilityLight.pointLightOuterRadius > 0f;
     }
 
