@@ -258,6 +258,17 @@
             }
           }
         },
+        "temperature": {
+          "prefab": "Module_Temperature",
+          "id": "体温模块",
+          "enabled": true,
+          "parameters": {
+            "Data": {
+              "SafeTemperatureMin": 5.0,
+              "SafeTemperatureMax": 50.0
+            }
+          }
+        },
         "detector": {
           "prefab": "Module_Detector",
           "id": "物品检测模块",
@@ -1331,6 +1342,17 @@
             }
           }
         },
+        "temperature": {
+          "prefab": "Module_Temperature",
+          "id": "体温模块",
+          "enabled": true,
+          "parameters": {
+            "Data": {
+              "SafeTemperatureMin": 5.0,
+              "SafeTemperatureMax": 50.0
+            }
+          }
+        },
         "animator": {
           "prefab": "Module_Animator_AI",
           "id": "Module_Animator_AI",
@@ -1948,6 +1970,17 @@
             }
           }
         },
+        "temperature": {
+          "prefab": "Module_Temperature",
+          "id": "体温模块",
+          "enabled": true,
+          "parameters": {
+            "Data": {
+              "SafeTemperatureMin": 5.0,
+              "SafeTemperatureMax": 50.0
+            }
+          }
+        },
         "转身模块": {
           "prefab": "Module_TurnBody",
           "id": "转身模块",
@@ -2386,6 +2419,17 @@
                 "y": 1.0,
                 "z": 1.0
               }
+            }
+          }
+        },
+        "temperature": {
+          "prefab": "Module_Temperature",
+          "id": "体温模块",
+          "enabled": true,
+          "parameters": {
+            "Data": {
+              "SafeTemperatureMin": -1000.0,
+              "SafeTemperatureMax": 1000.0
             }
           }
         }

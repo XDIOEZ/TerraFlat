@@ -2191,6 +2191,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: f1458bf1b0f24b6b8b4f4c523f71527e
+    m_Address: Assets/2_Prefabs/Gameplay/Modules/Managers/Module_Temperature.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 998a093c37fb0784abd9897a0e96eff4
     m_Address: Assets/2_Prefabs/Effects/Particle_BeEat.prefab
     m_ReadOnly: 0

@@ -8,10 +8,6 @@ public partial class TemperatureMgr : SingletonAutoMono<TemperatureMgr>
 #region 字段
 
     public const float DefaultAmbientTemperature = 20f; // 默认环境温度
-    public const float ColdDamageTickIntervalSeconds = 5f; // 低温伤害间隔
-    public const float ColdDamagePerTick = 2f; // 每次低温伤害
-    public const float DamageTickIntervalSeconds = 20f; // 高温伤害结算间隔
-
     public bool EnableDebugLog = false; // 是否输出温度处理调试日志
 
 #endregion
@@ -32,25 +28,19 @@ public partial class TemperatureMgr : SingletonAutoMono<TemperatureMgr>
             throw new ArgumentNullException(nameof(data));
         }
 
-        data.HotDamagePerSecond = Mathf.Max(0f, data.HotDamagePerSecond);
-        data.ColdDamagePerTick = Mathf.Max(0f, data.ColdDamagePerTick);
-
-        data.HotDamageStart = Mathf.Max(data.ColdDamageStart, data.HotDamageStart);
+        data.SafeTemperatureMax = Mathf.Max(data.SafeTemperatureMin, data.SafeTemperatureMax);
         if (data.RuntimeChangeSpeedMultiplier <= 0f)
             data.RuntimeChangeSpeedMultiplier = 1f;
         if (data.RuntimeCoolingSpeedMultiplier <= 0f)
             data.RuntimeCoolingSpeedMultiplier = 1f;
     }
 
-    /// <summary>推进体温并结算温度伤害；返回本次是否实际造成了低温伤害。</summary>
-    public bool ProcessTemperature(
+    /// <summary>推进角色体温；超出安全范围后的状态与伤害由 Buff 系统统一结算。</summary>
+    public void ProcessTemperature(
         Mod_Temperature.TemperatureData data,
         float heatConductionRate,
-        Mod_DamageReceiver damageReceiver,
         float deltaTime,
         Action<float> onTemperatureChanged,
-        ref float coldDamageTickTimer,
-        ref float hotDamageTickTimer,
         float? naturalTemperature = null)
     {
         if (data == null)
@@ -65,60 +55,6 @@ public partial class TemperatureMgr : SingletonAutoMono<TemperatureMgr>
 
         float nextTemperature = EvaluateNextTemperature(data, heatConductionRate, deltaTime, naturalTemperature);
         onTemperatureChanged(nextTemperature);
-
-        if (damageReceiver == null)
-        {
-            return false;
-        }
-
-        bool isCold = data.CurrentTemperature < data.ColdDamageStart;
-        bool isHot = data.CurrentTemperature > data.HotDamageStart;
-        float damage = 0f;
-        bool coldDamageApplied = false;
-
-        if (isCold)
-        {
-            coldDamageTickTimer += deltaTime;
-            if (coldDamageTickTimer >= ColdDamageTickIntervalSeconds)
-            {
-                coldDamageTickTimer = 0f;
-                damage += data.ColdDamagePerTick;
-                coldDamageApplied = true;
-            }
-        }
-        else
-        {
-            coldDamageTickTimer = 0f;
-        }
-
-        if (isHot)
-        {
-            hotDamageTickTimer += deltaTime;
-            if (hotDamageTickTimer >= DamageTickIntervalSeconds)
-            {
-                int tickCount = Mathf.FloorToInt(hotDamageTickTimer / DamageTickIntervalSeconds);
-                hotDamageTickTimer -= tickCount * DamageTickIntervalSeconds;
-                damage += EvaluateTemperatureDamage(data, DamageTickIntervalSeconds) * tickCount;
-            }
-        }
-        else
-        {
-            hotDamageTickTimer = 0f;
-        }
-
-        if (damage <= 0f)
-        {
-            return false;
-        }
-
-        damageReceiver.ForceHurt(damage);
-
-        if (EnableDebugLog)
-        {
-            Debug.Log($"[TemperatureMgr] 触发温度伤害，当前体温={data.CurrentTemperature:F2}℃，伤害={damage:F3}");
-        }
-
-        return coldDamageApplied;
     }
 
     public float EvaluateNextTemperature(Mod_Temperature.TemperatureData data, float heatConductionRate, float deltaTime,
@@ -173,23 +109,6 @@ public partial class TemperatureMgr : SingletonAutoMono<TemperatureMgr>
         {
             Debug.Log($"[TemperatureMgr] 设置基础环境温度成功，基础温度={value:F1}℃，天气修正={WeatherMgr.CalculateWeatherTemperatureOffset(planetData):F1}℃，有效环境温度={GetGlobalAmbientTemperature():F1}℃");
         }
-    }
-
-    public float EvaluateTemperatureDamage(Mod_Temperature.TemperatureData data, float deltaTime)
-    {
-        if (data == null)
-        {
-            throw new ArgumentNullException(nameof(data));
-        }
-
-        float hotDamage = 0f;
-        if (data.CurrentTemperature > data.HotDamageStart)
-        {
-            float ratio = Mathf.Max(0f, data.CurrentTemperature - data.HotDamageStart);
-            hotDamage = ratio * data.HotDamagePerSecond * deltaTime;
-        }
-
-        return hotDamage;
     }
 
 #endregion

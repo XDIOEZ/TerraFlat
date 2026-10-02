@@ -305,8 +305,8 @@ public sealed class FoodUIModule : IFoodMechanic, IFoodStateObserver, IDisposabl
             return;
         }
 
-        float coldStart = temperature.Data.ColdDamageStart;
-        float hotStart = Mathf.Max(coldStart + 1f, temperature.Data.HotDamageStart);
+        float coldStart = temperature.SafeTemperatureMin;
+        float hotStart = Mathf.Max(coldStart + 1f, temperature.SafeTemperatureMax);
         float buffer = Mathf.Max(2f, (hotStart - coldStart) * 0.2f);
         if (slider != null)
             SetStatusBarValue(

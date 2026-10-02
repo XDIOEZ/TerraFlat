@@ -4,7 +4,7 @@ using UnityEngine;
 /// <summary>
 /// AI 公共移动模块。对上层保持原有目标、停止和到达接口，内部使用无限地图导航。
 /// </summary>
-public class Mod_Mover_AI : Mod_Mover, ISimulationRangeAware
+public class Mod_Mover_AI : Mod_Mover, ISimulationRangeAware, ITemperatureSafetyMovement
 {
     private const float MinimumDestinationChangeDistance = 0.5f;
 
@@ -39,6 +39,7 @@ public class Mod_Mover_AI : Mod_Mover, ISimulationRangeAware
     public WorldNavigationAgent NavigationAgent { get; private set; }
 
     private bool hasDestination;
+    private bool hasTemperatureSafetyDestination;
     private Vector2 lastSubmittedDestination;
     private float EffectiveDestinationChangeDistance =>
         Mathf.Max(MinimumDestinationChangeDistance, destinationChangeThreshold);
@@ -58,6 +59,10 @@ public class Mod_Mover_AI : Mod_Mover, ISimulationRangeAware
         NavigationAgent != null &&
         DrivenVelocity.sqrMagnitude >
         animationMoveSpeedThreshold * animationMoveSpeedThreshold;
+    public int TemperatureSafetyMovementPriority => 0;
+    public bool ShouldAdvanceTemperatureSafetyDestination =>
+        hasTemperatureSafetyDestination &&
+        (HasReachedTarget || DestinationResult == WorldNavigationDestinationResult.Failed);
 
     public override void Load()
     {
@@ -79,6 +84,7 @@ public class Mod_Mover_AI : Mod_Mover, ISimulationRangeAware
         TargetPosition = currentPosition;
         lastSubmittedDestination = currentPosition;
         hasDestination = false;
+        hasTemperatureSafetyDestination = false;
         HasReachedTarget = true;
         CanMove = true;
         NavigationAgent.Stop(clearDestination: true);
@@ -89,7 +95,9 @@ public class Mod_Mover_AI : Mod_Mover, ISimulationRangeAware
         if (NavigationAgent == null)
             return;
 
-        if (target != null)
+        if (hasTemperatureSafetyDestination)
+            CanMove = true;
+        else if (target != null)
             SetDestination(target.position);
 
         NavigationAgent.MaxSpeed = SpeedValue;
@@ -108,6 +116,8 @@ public class Mod_Mover_AI : Mod_Mover, ISimulationRangeAware
     /// <summary>提交不限制路径总代价的普通移动目标。</summary>
     public void SetDestination(Vector2 destination, bool forceRepath = false)
     {
+        if (hasTemperatureSafetyDestination)
+            return;
         SubmitDestination(destination, int.MaxValue, forceRepath);
     }
 
@@ -117,6 +127,8 @@ public class Mod_Mover_AI : Mod_Mover, ISimulationRangeAware
         int maximumPathCostExclusive,
         bool forceRepath = false)
     {
+        if (hasTemperatureSafetyDestination)
+            return DestinationResult;
         SubmitDestination(destination, Mathf.Max(1, maximumPathCostExclusive), forceRepath);
         return DestinationResult;
     }
@@ -155,10 +167,36 @@ public class Mod_Mover_AI : Mod_Mover, ISimulationRangeAware
 
     public void StopMovement()
     {
+        if (hasTemperatureSafetyDestination && CanTemperatureSafetyOverrideStop())
+            return;
+        StopMovementInternal();
+    }
+
+    private void StopMovementInternal()
+    {
         CanMove = false;
         HasReachedTarget = true;
         NavigationAgent?.Stop();
     }
+
+    #region 温度避险
+
+    public void SetTemperatureSafetyDestination(Vector2 destination)
+    {
+        hasTemperatureSafetyDestination = true;
+        SubmitDestination(destination, int.MaxValue, forceRepath: true);
+    }
+
+    public void ClearTemperatureSafetyDestination()
+    {
+        if (!hasTemperatureSafetyDestination)
+            return;
+
+        hasTemperatureSafetyDestination = false;
+        StopMovementInternal();
+    }
+
+    #endregion
 
     #region 模拟范围休眠
 
@@ -188,5 +226,21 @@ public class Mod_Mover_AI : Mod_Mover, ISimulationRangeAware
     public override void Move(Vector2 targetPosition, float deltaTime = 0f)
     {
         SetDestination(targetPosition);
+    }
+
+    public override void Unload()
+    {
+        hasTemperatureSafetyDestination = false;
+        StopMovementInternal();
+        base.Unload();
+    }
+
+    private bool CanTemperatureSafetyOverrideStop()
+    {
+        if (item == null || item.DestructionHandled)
+            return false;
+
+        Mod_DamageReceiver health = item.itemMods?.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
+        return health == null || health.Hp > 0f;
     }
 }

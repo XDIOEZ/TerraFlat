@@ -104,6 +104,17 @@
             }
           }
         },
+        "temperature": {
+          "prefab": "Module_Temperature",
+          "id": "体温模块",
+          "enabled": true,
+          "parameters": {
+            "Data": {
+              "SafeTemperatureMin": 5.0,
+              "SafeTemperatureMax": 50.0
+            }
+          }
+        },
         "health": {
           "prefab": "Module_DamageReciver",
           "id": "生命值系统模块",

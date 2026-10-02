@@ -362,6 +362,14 @@
             }
           },
           "enabled": true
+        },
+        "temperature": {
+          "parameters": {
+            "Data": {
+              "SafeTemperatureMin": -20.0,
+              "SafeTemperatureMax": 55.0
+            }
+          }
         }
       },
       "itemData": {
@@ -462,6 +470,14 @@
                 "Chopping": 0.5,
                 "Blunt": 0.5
               }
+            }
+          }
+        },
+        "temperature": {
+          "parameters": {
+            "Data": {
+              "SafeTemperatureMin": -25.0,
+              "SafeTemperatureMax": 55.0
             }
           }
         }

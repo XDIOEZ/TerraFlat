@@ -4,7 +4,7 @@ using MemoryPack;
 using UnityEngine;
 
 /// <summary>逐条鱼使用现有状态机、营养、Buff、受伤与 Item 生命周期；不建立鱼群模拟器。</summary>
-public sealed partial class Mod_AI_Fish : Module, IAIActor, IItemModuleDependencyBinder
+public sealed partial class Mod_AI_Fish : Module, IAIActor, IItemModuleDependencyBinder, ITemperatureSafetyMovement
 {
     #region 配置与持久化
     public const string ModuleId = "Mod_AI_Fish";
@@ -54,6 +54,11 @@ public sealed partial class Mod_AI_Fish : Module, IAIActor, IItemModuleDependenc
     private AquaticActorPresentation presentation;
     private Quaternion originalRotation;
     private Vector2 previousVisualPosition;
+    private bool temperatureSafetyRetreat;
+    private bool temperatureSafetyReached;
+    private Vector2 temperatureSafetyDestination;
+    public int TemperatureSafetyMovementPriority => 100;
+    public bool ShouldAdvanceTemperatureSafetyDestination => temperatureSafetyRetreat && temperatureSafetyReached;
     #endregion
 
     #region 装配与生命周期
@@ -97,6 +102,8 @@ public sealed partial class Mod_AI_Fish : Module, IAIActor, IItemModuleDependenc
         fishingRod = null;
         scanRemaining = eatElapsed = idleRemaining = visualTime = 0f;
         hasDestination = false;
+        temperatureSafetyRetreat = false;
+        temperatureSafetyReached = false;
         if (!nodesRegistered)
         {
             machine.Register(new AIStateNode<Behaviour>(Behaviour.Swim, TickSwim));
@@ -119,6 +126,8 @@ public sealed partial class Mod_AI_Fish : Module, IAIActor, IItemModuleDependenc
         target = default;
         targetTag = null;
         hasDestination = false;
+        temperatureSafetyRetreat = false;
+        temperatureSafetyReached = false;
         machine.Reset();
         buffs?.SetWaterStackExposure(false);
         if (body != null) { body.velocity = Vector2.zero; body.bodyType = originalBodyType; }
@@ -155,6 +164,12 @@ public sealed partial class Mod_AI_Fish : Module, IAIActor, IItemModuleDependenc
                 }
             }
             if (!IsAlive) return;
+            if (temperatureSafetyRetreat)
+            {
+                TickTemperatureSafetyRetreat(deltaTime);
+                UpdatePresentation(deltaTime);
+                return;
+            }
             scanRemaining -= deltaTime;
             if (!IsHooked && depth >= AquaticHabitat.MinimumDepth && NeedsFood && scanRemaining <= 0f)
             {
@@ -259,6 +274,44 @@ public sealed partial class Mod_AI_Fish : Module, IAIActor, IItemModuleDependenc
         item.transform.position = new Vector3(position.x, position.y, item.transform.position.z);
         ItemMgr.Instance?.NotifyRuntimeItemMoved(item);
     }
+
+    #region 温度避险
+
+    public void SetTemperatureSafetyDestination(Vector2 position)
+    {
+        temperatureSafetyDestination = WorldTopologyRuntime.NormalizePosition(position);
+        temperatureSafetyRetreat = true;
+        temperatureSafetyReached = false;
+        target = default;
+        targetTag = null;
+        hasDestination = false;
+        eatElapsed = 0f;
+    }
+
+    public void ClearTemperatureSafetyDestination()
+    {
+        temperatureSafetyRetreat = false;
+        temperatureSafetyReached = false;
+    }
+
+    private void TickTemperatureSafetyRetreat(float deltaTime)
+    {
+        if (WorldTopologyRuntime.SqrDistance(item.transform.position, temperatureSafetyDestination) <= 0.04f)
+        {
+            temperatureSafetyReached = true;
+            return;
+        }
+
+        if (!AquaticHabitat.CanTraverse(item.transform.position, temperatureSafetyDestination))
+        {
+            temperatureSafetyReached = true;
+            return;
+        }
+
+        SwimTowards(temperatureSafetyDestination, deltaTime);
+    }
+
+    #endregion
 
     private void UpdatePresentation(float deltaTime)
     {

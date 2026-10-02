@@ -14,6 +14,7 @@ description: "Use when: 定位或修改 FlatWorld 的稀疏网格寻路、16×16
 - 动态占地：`World/Building/BuildingOccupancyRegistry.cs`
 - Tile 桥：`World/Map/Base/Map.cs`
 - AI 移动：`Entities/Move/Mod_Mover_AI.cs`
+- `Mod_Mover_AI` 实现 `ITemperatureSafetyMovement`：温度安全目标存在时拒绝普通 AI 的目标覆盖和存活状态下的普通停止请求；目标到达或寻路失败后由体温模块选择下一条安全记录，清除温度目标后才恢复原 AI 调度。死亡/卸载必须仍能强制停止导航。
 - 调用方：`World/Chunk/Mod_ChunkLoader.cs`、`Networking/Gameplay/NetworkChunkStreamingCoordinator.cs`
 
 ## 不变量

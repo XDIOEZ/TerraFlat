@@ -20,7 +20,7 @@ public interface IBirdFlightPilot
 /// </summary>
 public sealed partial class Mod_AI_Bird : Module, IAIActor, IItemModuleDependencyBinder, IRuntimeAiPersistencePolicy,
     IIncomingDamageRule, IIncomingDamageContextRule, ICombatAirborneTarget, IVisualGroundOffset,
-    IWaterCurrentExposure
+    IWaterCurrentExposure, ITemperatureSafetyMovement
 {
     #region 配置与独立存档
     private static readonly int GroundAnimationHash = Animator.StringToHash("Base Layer.Ground");
@@ -113,6 +113,9 @@ public sealed partial class Mod_AI_Bird : Module, IAIActor, IItemModuleDependenc
     private bool restoreGroundDestination;
     private BirdFlightStaminaBar staminaDisplay;
     private IBirdFlightPilot flightPilot; // 可替换的常驻飞行行为。
+    private bool temperatureSafetyRetreat;
+    private bool temperatureSafetyReached;
+    private Vector2 temperatureSafetyDestination;
     public Item ActorItem => item;
     public bool PersistRuntimeAi => state.HomeHiveGuid == 0;
     public int HomeHiveGuid => state.HomeHiveGuid;
@@ -122,6 +125,8 @@ public sealed partial class Mod_AI_Bird : Module, IAIActor, IItemModuleDependenc
     public bool ReceivesWaterCurrent => !IsAirborne;
     public float FlightStamina => state.Stamina;
     public bool IsRecoveringFlightStamina => state.MustRecoverStamina;
+    public int TemperatureSafetyMovementPriority => 100;
+    public bool ShouldAdvanceTemperatureSafetyDestination => temperatureSafetyRetreat && temperatureSafetyReached;
     #endregion
 
     #region 装配与回收
@@ -166,8 +171,11 @@ public sealed partial class Mod_AI_Bird : Module, IAIActor, IItemModuleDependenc
         threatDetector.DetectionRadius = Mathf.Max(fleeTriggerDistance, fleeSafeDistance);
         loaded = true;
         stoppedForDeath = false;
+        temperatureSafetyRetreat = false;
+        temperatureSafetyReached = false;
         ResetForaging();
         ResetFatigueLanding();
+        ClearTemperatureSafetyDestination();
         health.OnDamageReceived -= HandleBirdDamage;
         health.OnDamageReceived += HandleBirdDamage;
         restoreGroundDestination = state.Phase == BirdFlightPhase.Ground && state.HasTarget;
@@ -187,6 +195,7 @@ public sealed partial class Mod_AI_Bird : Module, IAIActor, IItemModuleDependenc
     {
         loaded = false;
         if (health != null) health.OnDamageReceived -= HandleBirdDamage;
+        ClearTemperatureSafetyDestination();
         ResetForaging();
         ResetFatigueLanding();
         if (liftRoot != null)
@@ -226,6 +235,12 @@ public sealed partial class Mod_AI_Bird : Module, IAIActor, IItemModuleDependenc
             if (flightPilot == null)
                 TickVigilance(step);
             TickEggLaying();
+            if (temperatureSafetyRetreat)
+            {
+                TickTemperatureSafetyRetreat(step);
+                ApplyFlightPresentation();
+                return;
+            }
             if (flightPilot != null)
             {
                 flightPilot.TickFlight(step);
@@ -322,6 +337,52 @@ public sealed partial class Mod_AI_Bird : Module, IAIActor, IItemModuleDependenc
     {
         if (!permanentFlight) EnterPhase(BirdFlightPhase.Ground);
     }
+
+    #region 温度避险
+
+    public void SetTemperatureSafetyDestination(Vector2 destination)
+    {
+        temperatureSafetyDestination = WorldTopologyRuntime.NormalizePosition(destination);
+        temperatureSafetyRetreat = true;
+        temperatureSafetyReached = false;
+        state.HasTarget = false;
+        ResetForaging();
+        ResetFatigueLanding();
+    }
+
+    public void ClearTemperatureSafetyDestination()
+    {
+        temperatureSafetyRetreat = false;
+        temperatureSafetyReached = false;
+        if (mover != null)
+            mover.ClearTemperatureSafetyDestination();
+    }
+
+    private void TickTemperatureSafetyRetreat(float deltaTime)
+    {
+        Vector2 current = body.position;
+        Vector2 delta = WorldTopologyRuntime.ShortestDelta(current, temperatureSafetyDestination);
+        if (delta.sqrMagnitude <= FlightTargetArrivalDistance * FlightTargetArrivalDistance)
+        {
+            mover.StopMovement();
+            body.velocity = Vector2.zero;
+            temperatureSafetyReached = true;
+            return;
+        }
+
+        temperatureSafetyReached = false;
+        if (IsAirborne)
+        {
+            mover.ClearTemperatureSafetyDestination();
+            if (!MoveCruiseStep(delta, deltaTime))
+                temperatureSafetyReached = true;
+            return;
+        }
+
+        mover.SetTemperatureSafetyDestination(temperatureSafetyDestination);
+    }
+
+    #endregion
 
     /// <summary>巢群在创建后绑定独立巡航中心，常驻飞行目标只围绕该位置选择。</summary>
     public void SetFlightHome(Vector2 position)

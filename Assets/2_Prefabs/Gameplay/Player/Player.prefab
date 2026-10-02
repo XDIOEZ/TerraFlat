@@ -406,10 +406,8 @@ MonoBehaviour:
     CurrentTemperature: 36.5
     AmbientTemperature: 20
     Insulation: 0
-    ColdDamageStart: 5
-    HotDamageStart: 60
-    ColdDamagePerTick: 2
-    HotDamagePerSecond: 1
+    SafeTemperatureMin: 5
+    SafeTemperatureMax: 50
     RuntimeAmbientOffset: 0
     RuntimeChangeSpeedMultiplier: 1
     RuntimeCoolingSpeedMultiplier: 1

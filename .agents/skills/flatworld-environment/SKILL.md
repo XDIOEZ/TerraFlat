@@ -43,6 +43,8 @@ description: "Use when: 定位或修改 FlatWorld 的世界时间、昼夜、天
 - 新世界时间参数来自 `GameConfig/Time/time-system.json` 的 Profile；Profile ID、限时边界与日历随 `TimeData` 存档，只读取当前外层版本，不以缺失字段回退默认配置兼容旧档。
 - 入水瞬时降温由 `Mod_Temperature` 自己维护平滑目标；装备等外部系统只能通过水体降温保护通道影响速度，禁止直接改河流过渡时间。保护值 0 表示无保护、1 表示完全阻止入水降温，多来源按加法叠加并由体温模块统一限制。
 - 临时增温由 `Mod_Temperature.Warming` 按来源登记，取各来源中最强的有效增量；上限只约束该增温，不压低原本较高的体温。环境与入水变化推进基础体温，伤害/UI 读取最终有效体温；保存时制作基础体温副本，不能把增温写入存档后在 Buff 恢复时再加一次，也不能在保存时修改或清除运行态。
+- 生物安全体温范围统一由 `Mod_Temperature` 的 `SafeTemperatureMin/Max` 与按来源范围修正决定；默认玩家/普通生物为 5~50℃，特殊物种可在 Actor JSON 覆盖。温度管理器只推进体温，不直接扣血；低温冻伤/热射病由永久来源 Buff 按当前有效体温挂载和移除。
+- GameObject AI 的体温模块保留最近 4 个“体温与当地环境都安全”的移动位置；当地目标温度超界时优先返回记录中空间距离最近的位置并立即移除该记录，回到安全环境后若体温仍超界则原地恢复。位置记录和避险只在权威端推进。
 - 伤害语义联动 `flatworld-combat`，维度覆盖联动 `flatworld-dimension`，雨视觉联动 Effects Skill。
 
 - 季节日历只从 `SeasonCalendar` 取快照；调整四季长度保留年、季、进度和绝对时钟，并记录 `SeasonHistory`。植物与积雪的历史补算使用 `SampleHistorical`，不能拿新季长重算过去的温害。
