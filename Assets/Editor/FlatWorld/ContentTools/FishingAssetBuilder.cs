@@ -113,12 +113,13 @@ public static class FishingAssetBuilder
     /// <summary>小鱼当前使用静态 Idle 状态，保留独立 Animator 入口以兼容后续游动帧扩展。</summary>
     private static RuntimeAnimatorController BuildFishAnimatorController()
     {
-        AnimatorController controller = AssetDatabase.LoadAssetAtPath<AnimatorController>(FishControllerPath);
+        UnityEditor.Animations.AnimatorController controller =
+            AssetDatabase.LoadAssetAtPath<UnityEditor.Animations.AnimatorController>(FishControllerPath);
         if (controller == null)
-            controller = AnimatorController.CreateAnimatorControllerAtPath(FishControllerPath);
+            controller = UnityEditor.Animations.AnimatorController.CreateAnimatorControllerAtPath(FishControllerPath);
 
-        AnimatorStateMachine stateMachine = controller.layers[0].stateMachine;
-        AnimatorState idle = stateMachine.states
+        UnityEditor.Animations.AnimatorStateMachine stateMachine = controller.layers[0].stateMachine;
+        UnityEditor.Animations.AnimatorState idle = stateMachine.states
             .Select(value => value.state)
             .FirstOrDefault(value => value != null && value.name == "Idle");
         idle ??= stateMachine.AddState("Idle");
