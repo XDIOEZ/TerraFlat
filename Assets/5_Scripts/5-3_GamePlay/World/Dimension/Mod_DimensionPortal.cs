@@ -24,6 +24,7 @@ public sealed partial class Mod_DimensionPortal : Module, IInteractable, IItemPo
     [SerializeField] private string targetDimensionId;
     [SerializeField] private bool requiresInstalledBuilding;
     [SerializeField] private bool blocksNavigation;
+    private const float InteractionRadius = 0.75f;
 
     public string TargetDimensionId => targetDimensionId;
     public bool RequiresInstalledBuilding => requiresInstalledBuilding;
@@ -47,6 +48,8 @@ public sealed partial class Mod_DimensionPortal : Module, IInteractable, IItemPo
         CachePortalContext();
         EnsureNavigationObstacle();
         BindEntranceLifecycle();
+        runtimeLoaded = true;
+        RegisterSpatialInteraction();
     }
 
     /// <summary>维度入口当前没有额外持久化状态。</summary>
@@ -80,6 +83,7 @@ public sealed partial class Mod_DimensionPortal : Module, IInteractable, IItemPo
     private Item portalItem;
     private Mod_Building building;
     private bool transitionRequested;
+    private bool runtimeLoaded;
     private Vector2Int anchorCell;
     private bool initialized;
     private bool generatedWorldPortal;
@@ -101,8 +105,15 @@ public sealed partial class Mod_DimensionPortal : Module, IInteractable, IItemPo
     {
         // Chunk 对象池会复用父物体；若入口随旧 Chunk 被搬到新坐标，立即清理。
         if (initialized && GetCurrentCell() != anchorCell)
+        {
             Destroy(gameObject);
+            return;
+        }
+
+        RegisterSpatialInteraction();
     }
+
+    private void OnDisable() => SpatialInteractionRegistry.Unregister(this);
 
     public void Configure(string targetDimension, bool requireInstalledBuilding)
     {
@@ -177,6 +188,23 @@ public sealed partial class Mod_DimensionPortal : Module, IInteractable, IItemPo
         transitionRequested = DimensionManager.Instance.TryBeginTransition(player, targetDimensionId, portalItem);
     }
 
+    /// <summary>只有真实落地且配置完整的入口参与交互提示。</summary>
+    public bool CanInteract(Item playerItem)
+    {
+        if (!runtimeLoaded || !isActiveAndEnabled || transitionRequested ||
+            string.IsNullOrWhiteSpace(targetDimensionId))
+        {
+            return false;
+        }
+
+        CachePortalContext();
+        if (portalItem == null || portalItem.InHand)
+            return false;
+        if (building != null && (building.IsSummoner || !building.IsInstalled()))
+            return false;
+        return !requiresInstalledBuilding || building != null;
+    }
+
     public void OnInteractCancel(Item playerItem)
     {
     }
@@ -187,6 +215,17 @@ public sealed partial class Mod_DimensionPortal : Module, IInteractable, IItemPo
         portalItem ??= GetComponentInParent<Item>();
         if (portalItem != null)
             building ??= portalItem.GetComponentInChildren<Mod_Building>(true);
+    }
+
+    /// <summary>入口不依赖 Trigger 命中也能被准线、鼠标和白描边统一发现。</summary>
+    private void RegisterSpatialInteraction()
+    {
+        if (!runtimeLoaded)
+            return;
+
+        CachePortalContext();
+        if (portalItem != null)
+            SpatialInteractionRegistry.Register(this, InteractionRadius);
     }
 
     /// <summary>按入口定义为通用 Item Shell 注册导航占地。</summary>
@@ -224,6 +263,8 @@ public sealed partial class Mod_DimensionPortal : Module, IInteractable, IItemPo
 
     private void ResetRuntimeState()
     {
+        SpatialInteractionRegistry.Unregister(this);
+        runtimeLoaded = false;
         UnbindEntranceLifecycle();
         portalItem = null;
         building = null;

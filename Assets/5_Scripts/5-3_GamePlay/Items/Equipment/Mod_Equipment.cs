@@ -177,6 +177,26 @@ public class Mod_Equipment : Module, IInventory, IInteractable, IInstanceUI
         Interact_Start(playerItem);
     }
 
+    /// <summary>宿主存在其它当前可用交互时让出 E 键，装备能力不抢占传送门、机器等主玩法。</summary>
+    public bool CanInteract(Item playerItem)
+    {
+        if (item == null || playerItem == null || EquipmentInventory == null)
+            return false;
+
+        MonoBehaviour[] behaviours = item.GetComponentsInChildren<MonoBehaviour>(true);
+        for (int i = 0; i < behaviours.Length; i++)
+        {
+            MonoBehaviour behaviour = behaviours[i];
+            if (behaviour == null || behaviour is Mod_Equipment || !behaviour.gameObject.activeInHierarchy)
+                continue;
+
+            if (behaviour is IInteractable interactable && interactable.CanInteract(playerItem))
+                return false;
+        }
+
+        return true;
+    }
+
     public void OnInteractCancel(Item playerItem)
     {
         Interact_Stop(playerItem);
