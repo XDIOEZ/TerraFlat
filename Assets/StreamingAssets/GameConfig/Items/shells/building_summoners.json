@@ -279,7 +279,9 @@
       "stackable": true,
       "canBePickedUp": true,
       "tags": [
-        "35"
+        "35",
+        "Wood",
+        "Combustion.Fuel"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Building/Tileset.png[Tileset_77]",
@@ -362,6 +364,18 @@
           "data": {
             "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Chest_Wood\",\"SummonerPrefabId\":\"Chest_Wood_Summoner\"}",
             "Type": 0
+          }
+        },
+        "燃料模块": {
+          "prefab": "Module_Fuel",
+          "id": "燃料模块",
+          "enabled": true,
+          "data": { "BitData": [], "Type": 0 },
+          "parameters": {
+            "Data": { "Fuel": { "x": 50.0, "y": 50.0 }, "MaxTemperature": 500.0 },
+            "lightBaseIntensity": 1.0,
+            "burnSpeedMultiplier": 1.0,
+            "igniteWhileHeld": false
           }
         }
       },
@@ -531,7 +545,9 @@
       "stackable": true,
       "canBePickedUp": true,
       "tags": [
-        "35"
+        "35",
+        "Wood",
+        "Combustion.Fuel"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Building/Door_Wood_Close.png[Door_Wood_Close]",
@@ -614,6 +630,18 @@
           "data": {
             "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Door_Wood\",\"SummonerPrefabId\":\"Door_Wood_Summoner\"}",
             "Type": 0
+          }
+        },
+        "燃料模块": {
+          "prefab": "Module_Fuel",
+          "id": "燃料模块",
+          "enabled": true,
+          "data": { "BitData": [], "Type": 0 },
+          "parameters": {
+            "Data": { "Fuel": { "x": 50.0, "y": 50.0 }, "MaxTemperature": 500.0 },
+            "lightBaseIntensity": 1.0,
+            "burnSpeedMultiplier": 1.0,
+            "igniteWhileHeld": false
           }
         }
       },
@@ -1167,7 +1195,8 @@
       "stackable": false,
       "canBePickedUp": true,
       "tags": [
-        "35"
+        "35",
+        "Combustion.Fuel"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Tent.png[Tent]",
@@ -1250,6 +1279,18 @@
           "data": {
             "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Tent\",\"SummonerPrefabId\":\"Tent_Summoner\"}",
             "Type": 0
+          }
+        },
+        "燃料模块": {
+          "prefab": "Module_Fuel",
+          "id": "燃料模块",
+          "enabled": true,
+          "data": { "BitData": [], "Type": 0 },
+          "parameters": {
+            "Data": { "Fuel": { "x": 50.0, "y": 50.0 }, "MaxTemperature": 500.0 },
+            "lightBaseIntensity": 1.0,
+            "burnSpeedMultiplier": 1.0,
+            "igniteWhileHeld": false
           }
         }
       },
@@ -1419,7 +1460,9 @@
       "stackable": true,
       "canBePickedUp": true,
       "tags": [
-        "35"
+        "35",
+        "Wood",
+        "Combustion.Fuel"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Building/Wall_Wood_Medium.png[Wall_Wood_Medium]",
@@ -1502,6 +1545,18 @@
           "data": {
             "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Wall_Wood\",\"SummonerPrefabId\":\"Wall_Wood_Summoner\",\"TileBlockId\":\"TileBase_BuiltWoodWall\"}",
             "Type": 0
+          }
+        },
+        "燃料模块": {
+          "prefab": "Module_Fuel",
+          "id": "燃料模块",
+          "enabled": true,
+          "data": { "BitData": [], "Type": 0 },
+          "parameters": {
+            "Data": { "Fuel": { "x": 50.0, "y": 50.0 }, "MaxTemperature": 500.0 },
+            "lightBaseIntensity": 1.0,
+            "burnSpeedMultiplier": 1.0,
+            "igniteWhileHeld": false
           }
         }
       },
@@ -1671,7 +1726,9 @@
       "stackable": false,
       "canBePickedUp": true,
       "tags": [
-        "35"
+        "35",
+        "Wood",
+        "Combustion.Fuel"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/ADDSparkMaker.png[ADDSparkMaker_11]",
@@ -1750,10 +1807,13 @@
         "建筑模块": {
           "prefab": "Module_Building",
           "id": "建筑模块",
-          "enabled": false,
+          "enabled": true,
           "data": {
             "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"SparkMaker\",\"SummonerPrefabId\":\"SparkMaker_Summoner\",\"SharedModuleIds\":[\"钻木取火模块\"]}",
             "Type": 0
+          },
+          "parameters": {
+            "RequiresPlacementRequest": true
           }
         },
         "钻木取火模块": {
@@ -1763,6 +1823,18 @@
           "data": {
             "BitData": [],
             "Type": 0
+          }
+        },
+        "燃料模块": {
+          "prefab": "Module_Fuel",
+          "id": "燃料模块",
+          "enabled": true,
+          "data": { "BitData": [], "Type": 0 },
+          "parameters": {
+            "Data": { "Fuel": { "x": 50.0, "y": 50.0 }, "MaxTemperature": 500.0 },
+            "lightBaseIntensity": 1.0,
+            "burnSpeedMultiplier": 1.0,
+            "igniteWhileHeld": false
           }
         }
       },

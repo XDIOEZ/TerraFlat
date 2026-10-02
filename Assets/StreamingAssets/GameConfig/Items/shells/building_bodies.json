@@ -1571,10 +1571,13 @@
         "建筑模块": {
           "prefab": "Module_Building",
           "id": "建筑模块",
-          "enabled": false,
+          "enabled": true,
           "data": {
             "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"SparkMaker\",\"SummonerPrefabId\":\"SparkMaker_Summoner\",\"SharedModuleIds\":[\"钻木取火模块\"]}",
             "Type": 0
+          },
+          "parameters": {
+            "RequiresPlacementRequest": true
           }
         },
         "钻木取火模块": {

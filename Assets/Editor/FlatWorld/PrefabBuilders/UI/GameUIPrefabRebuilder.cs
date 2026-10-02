@@ -981,7 +981,7 @@ public static class GameUIPrefabRebuilder
     {
         float width = compact ? 646f : 726f;
         float height = compact ? 438f : 526f;
-        RectTransform frame = PrepareWindow(root, width, height, title, eyebrow, compact ? "按住操作键推进过程 · 松开即可暂停" : "放入材料 · 核对产物 · 开始制作", true);
+        RectTransform frame = PrepareWindow(root, width, height, title, eyebrow, compact ? "连续点击推进取火 · 停止操作时进度会缓慢回落" : "放入材料 · 核对产物 · 开始制作", true);
 
         float sectionHeight = height - 206f;
         float inputWidth = compact ? 220f : 398f;

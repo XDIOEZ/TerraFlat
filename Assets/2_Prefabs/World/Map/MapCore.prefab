@@ -98,6 +98,10 @@ MonoBehaviour:
     Guid: -1070873522
     FactionId: 
     CraftedDurabilityMultiplier: 1
+    MatterState:
+      Initialized: 0
+      TemperatureCelsius: 20
+      Moisture: 0
     HeatConductionRate: 1
     position: {x: 50, y: 50}
     TileLoaded: 0

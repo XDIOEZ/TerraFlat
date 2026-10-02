@@ -60,7 +60,10 @@
       "volume": 0.8,
       "stackable": true,
       "canBePickedUp": true,
-      "tags": [],
+      "tags": [
+        "Wood",
+        "Combustion.Fuel"
+      ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Tools/Item_Tool_408.png",
         "rendererLocalPosition": {
@@ -197,6 +200,18 @@
               }
             }
           }
+        },
+        "燃料模块": {
+          "prefab": "Module_Fuel",
+          "id": "燃料模块",
+          "enabled": true,
+          "data": { "BitData": [], "Type": 0 },
+          "parameters": {
+            "Data": { "Fuel": { "x": 50.0, "y": 50.0 }, "MaxTemperature": 500.0 },
+            "lightBaseIntensity": 1.0,
+            "burnSpeedMultiplier": 1.0,
+            "igniteWhileHeld": false
+          }
         }
       },
       "itemData": {
@@ -235,11 +250,27 @@
       "volume": 0.8,
       "stackable": true,
       "canBePickedUp": true,
-      "tags": [],
+      "tags": [
+        "Wood",
+        "Combustion.Fuel"
+      ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Mechanical/Items/DrilledStick_Idle.png"
       },
-      "modules": {}
+      "modules": {
+        "燃料模块": {
+          "prefab": "Module_Fuel",
+          "id": "燃料模块",
+          "enabled": true,
+          "data": { "BitData": [], "Type": 0 },
+          "parameters": {
+            "Data": { "Fuel": { "x": 50.0, "y": 50.0 }, "MaxTemperature": 500.0 },
+            "lightBaseIntensity": 1.0,
+            "burnSpeedMultiplier": 1.0,
+            "igniteWhileHeld": false
+          }
+        }
+      }
     },
     {
       "id": "Log",
