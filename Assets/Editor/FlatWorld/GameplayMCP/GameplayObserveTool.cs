@@ -58,12 +58,14 @@ namespace FlatWorld.GameplayMCP
                 // 快捷栏装备与鼠标搬运库存分开观察，避免拿着矿石也被当作挥镐。
                 Item equipped = player.itemMods.GetMod_ByID<Mod_HotBar>(ModText.Hotbar)?.CurentSelectItem;
                 Mod_ColdWeapon weapon = equipped?.GetComponentInChildren<Mod_ColdWeapon>(true);
+                Mod_Weapon_AnimationAction animated = equipped?.GetComponentInChildren<Mod_Weapon_AnimationAction>(true);
                 playerData["equippedWeapon"] = new JObject
                 {
                     ["held"] = equipped?.itemData?.IDName ?? string.Empty,
                     ["guid"] = equipped?.itemData?.Guid,
-                    ["runtimeWeapon"] = weapon != null,
-                    ["canAttack"] = weapon?.CanAttack ?? false,
+                    ["runtimeWeapon"] = weapon != null || animated != null,
+                    ["backend"] = weapon != null ? "cold_weapon" : animated != null ? "animation" : "none",
+                    ["canAttack"] = weapon != null ? new JValue(weapon.CanAttack) : animated != null ? JValue.CreateNull() : new JValue(false),
                     ["attackState"] = weapon?.CurrentState.ToString() ?? string.Empty
                 };
                 if (PlayerCarryCapacityUtility.TryGetSnapshot(player, out PlayerCarryCapacitySnapshot capacity))

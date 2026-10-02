@@ -24,6 +24,7 @@ namespace FlatWorld.GameplayMCP
         public const string ExtensionPath = "Assets/Editor/FlatWorld/GameplayMCP/";
         private const float MinimumSessionTimeoutSeconds = 2f;
         private const float MaximumSessionTimeoutSeconds = 120f;
+        private const float SessionPlayerHealth = 20000f; // GamePlayMCP 启动世界时使用的玩家生命值。
         private const float MoveToProgressDistanceEpsilon = 0.05f; // 低于此距离的微动不重置卡滞计时。
         private const float MoveToStallTimeoutSeconds = 8f; // 导航模块先执行有限重规划，MCP 保留更长的无位移保护时限。
 
@@ -178,6 +179,27 @@ namespace FlatWorld.GameplayMCP
                 };
             }
 
+            timeoutSeconds = Mathf.Clamp(
+                timeoutSeconds,
+                MinimumSessionTimeoutSeconds,
+                MaximumSessionTimeoutSeconds);
+            double deadline = Time.realtimeSinceStartupAsDouble + timeoutSeconds;
+            // 续档必须和正式入口一样等完整资源与 MOD 目录就绪后再读取存档。
+            GameRes resources = GameRes.Instance;
+            if (resources == null)
+                return BuildActionError("resources_unavailable", "游戏资源管理器不可用。", false);
+            await WaitUntilAsync(
+                () => resources == null || resources.isLoadFinish ||
+                      resources.LoadState == ResourceLoadState.Failed ||
+                      resources.LoadState == ResourceLoadState.Disposed,
+                timeoutSeconds);
+            if (resources == null || resources.LoadState == ResourceLoadState.Disposed)
+                return BuildActionError("resources_unavailable", "资源会话已结束，请重新启动播放。", false);
+            if (resources.LoadState == ResourceLoadState.Failed)
+                return BuildActionError("resource_load_failed", resources.LastLoadError, false);
+            if (!resources.isLoadFinish)
+                return BuildActionError("resources_not_ready", "游戏资源未在限定时间内完成加载。", false);
+
             string isolatedDirectory = Path.Combine(
                 Directory.GetCurrentDirectory(),
                 "Library",
@@ -225,16 +247,15 @@ namespace FlatWorld.GameplayMCP
 
             gameManager.ContinueGame(resolvedPlayerName);
             // 世界生成在冷启动/大存档下可能明显超过 20 秒；仍限制在桥接命令预算内，避免无限等待。
-            timeoutSeconds = Mathf.Clamp(
-                timeoutSeconds,
-                MinimumSessionTimeoutSeconds,
-                MaximumSessionTimeoutSeconds);
             bool ready = await WaitUntilAsync(
                 () => gameManager != null &&
                       gameManager.IsInGameWorld &&
                       gameManager.IsGameplayReady &&
                       ItemMgr.Instance?.User_Player != null,
-                timeoutSeconds);
+                Mathf.Max(0f, (float)(deadline - Time.realtimeSinceStartupAsDouble)));
+
+            if (ready && !TryInitializeSessionPlayerHealth())
+                return BuildActionError("player_health_missing", "玩家生命模块不可用，无法设置 GamePlayMCP 启动血量。", false);
 
             return new JObject
             {
@@ -350,6 +371,9 @@ namespace FlatWorld.GameplayMCP
                       ItemMgr.Instance?.User_Player != null,
                 Mathf.Max(0f, (float)(deadline - Time.realtimeSinceStartupAsDouble)));
 
+            if (ready && !TryInitializeSessionPlayerHealth())
+                return BuildActionError("player_health_missing", "玩家生命模块不可用，无法设置 GamePlayMCP 启动血量。", false);
+
             return new JObject
             {
                 ["ok"] = ready,
@@ -362,6 +386,19 @@ namespace FlatWorld.GameplayMCP
                 ["topology"] = topologyMode.ToString(),
                 ["seed"] = saveDataMgr.SaveData?.SaveSeed ?? seed ?? string.Empty
             };
+        }
+
+        /// <summary>只在 GamePlayMCP 成功启动世界后初始化一次生命，后续伤害照常结算。</summary>
+        private static bool TryInitializeSessionPlayerHealth()
+        {
+            Player player = ItemMgr.Instance?.User_Player;
+            Mod_DamageReceiver health = player?.itemMods?.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
+            if (health == null)
+                return false;
+
+            health.MaxHp = SessionPlayerHealth;
+            health.Hp = SessionPlayerHealth;
+            return true;
         }
 
         /// <summary>调用正式退出协程保存当前世界并返回 GameStartScene。</summary>
@@ -663,7 +700,7 @@ namespace FlatWorld.GameplayMCP
                 dedupe);
 
             var ordered = candidates
-                .Where(item => item != null && item.itemData != null)
+                .Where(item => item != null && item.itemData != null && !item.InHand)
                 .Select(item => new
                 {
                     Item = item,
@@ -1726,54 +1763,74 @@ namespace FlatWorld.GameplayMCP
         #region 调用反馈
 
         private static int callSequence;
+        private static readonly object CallTimingGate = new object();
+        private static int activeCalls;
+        private static long lastResultReadyAt;
+        private static int lastResultCallId;
         private static readonly string[] LoggedArguments =
         {
             "action", "command", "source", "x", "y", "seconds", "targetGuid", "targetId", "index",
             "itemId", "query", "output", "observe", "treeAfter"
         };
 
-        /// <summary>同步工具统一报告调用开始、结果与耗时，不改变生产执行链。</summary>
+        /// <summary>同步工具反馈调用和结果，Agent 间隔在下次请求进入时统计。</summary>
         public static object Invoke(string tool, JObject args, Func<JObject, object> execute, bool diagnostic = false)
         {
-            int id = BeginCall(tool, args, out long started);
+            int id = BeginCall(tool, args);
             try
             {
                 object response = execute(args);
                 object output = Finish(response, args, diagnostic);
-                EndCall(id, tool, started, DescribeOutcome(response));
+                EndCall(id, tool, DescribeOutcome(response));
                 return output;
             }
             catch (Exception exception)
             {
-                EndCall(id, tool, started, "异常 " + exception.GetType().Name + ": " + ShortText(exception.Message, 120));
+                EndCall(id, tool, "异常 " + exception.GetType().Name + ": " + ShortText(exception.Message, 120));
                 throw;
             }
         }
 
-        /// <summary>持续动作也立即显示调用开始，完成后再反馈实际等待耗时。</summary>
+        /// <summary>异步动作只反馈开始与结果，游戏等待不计入 Agent 反应间隔。</summary>
         public static async Task<object> InvokeAsync(string tool, JObject args, Func<JObject, Task<object>> execute,
             bool diagnostic = false)
         {
-            int id = BeginCall(tool, args, out long started);
+            int id = BeginCall(tool, args);
             try
             {
                 object response = await execute(args);
                 object output = Finish(response, args, diagnostic);
-                EndCall(id, tool, started, DescribeOutcome(response));
+                EndCall(id, tool, DescribeOutcome(response));
                 return output;
             }
             catch (Exception exception)
             {
-                EndCall(id, tool, started, "异常 " + exception.GetType().Name + ": " + ShortText(exception.Message, 120));
+                EndCall(id, tool, "异常 " + exception.GetType().Name + ": " + ShortText(exception.Message, 120));
                 throw;
             }
         }
 
         /// <summary>只记录短参数摘要，批次列出动作名，不序列化整包输入输出。</summary>
-        private static int BeginCall(string tool, JObject args, out long started)
+        private static int BeginCall(string tool, JObject args)
         {
             int id = System.Threading.Interlocked.Increment(ref callSequence);
-            started = System.Diagnostics.Stopwatch.GetTimestamp();
+            string reaction;
+            lock (CallTimingGate)
+            {
+                // Unity 只能观测工具间隔，不能把通信、排队或人工停顿拆成模型推理时间。
+                long now = System.Diagnostics.Stopwatch.GetTimestamp();
+                if (activeCalls > 0)
+                    reaction = "Agent反应间隔=不统计（并发调用）";
+                else if (lastResultReadyAt == 0)
+                    reaction = "Agent反应间隔=不统计（首次调用）";
+                else
+                {
+                    double milliseconds = (now - lastResultReadyAt) * 1000d / System.Diagnostics.Stopwatch.Frequency;
+                    reaction = $"Agent反应间隔≈{milliseconds.ToString("F1", CultureInfo.InvariantCulture)}ms " +
+                               $"参照=#{lastResultCallId}（上次结果就绪→本次请求进入，含通信/排队/停顿）";
+                }
+                activeCalls++;
+            }
             var summary = new System.Text.StringBuilder(192);
             foreach (string key in LoggedArguments)
             {
@@ -1793,7 +1850,7 @@ namespace FlatWorld.GameplayMCP
                 }
                 summary.Append(']');
             }
-            WriteCallLog($"[AI→MCP #{id}] 开始 {tool}{summary}");
+            WriteCallLog($"[AI→MCP #{id}] 开始 {tool}{summary} {reaction}");
             return id;
         }
 
@@ -1842,11 +1899,18 @@ namespace FlatWorld.GameplayMCP
             return text.Length <= limit ? text : text.Substring(0, limit) + "…";
         }
 
-        private static void EndCall(int id, string tool, long started, string outcome)
+        private static void EndCall(int id, string tool, string outcome)
         {
-            double milliseconds = (System.Diagnostics.Stopwatch.GetTimestamp() - started) * 1000d /
-                                  System.Diagnostics.Stopwatch.Frequency;
-            WriteCallLog($"[AI→MCP #{id}] {outcome} {tool} 耗时={milliseconds.ToString("F1", CultureInfo.InvariantCulture)}ms");
+            WriteCallLog($"[AI→MCP #{id}] {outcome} {tool} 结果就绪");
+            lock (CallTimingGate)
+            {
+                activeCalls--;
+                if (activeCalls == 0)
+                {
+                    lastResultReadyAt = System.Diagnostics.Stopwatch.GetTimestamp();
+                    lastResultCallId = id;
+                }
+            }
         }
 
         /// <summary>调用反馈不附加堆栈，也不作为游戏警告或错误污染诊断计数。</summary>

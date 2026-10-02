@@ -57,6 +57,8 @@ GamePlayMCP 复用项目已有 MCPForUnity 自定义工具发现机制，不另�
 
 创建新世界使用 `gameplay_session(action="create_world", isolated=true)`，默认把首个存档及后续保存都写入 Library 隔离目录；只有用户明确要求正式存档时才传 `isolated=false`。资源等待与世界等待共用单次调用时限，默认 60 秒、最长 120 秒；已经开始进入世界时只能查询状态，不能重复创建或改换存档目录。若返回 `world_entry_timeout`，先查 `gameplay_session(action="status")`，确认当前会话状态后再决定是否重试。需要保存并返回主菜单时使用 `gameplay_session(action="save_exit")`；它直接调用生产退出协程并保存当前世界。
 
+按用户指定的调试启动规则，`continue_save` / `create_world` 成功进入世界后，通过生命模块公开属性把本地玩家当前生命与上限初始化为 20000；只设置一次，不提供无敌或持续回血。已有世界的状态查询、控制租约和 `alreadyInWorld` 返回不改血量；普通菜单启动不经过此规则。
+
 启动期资源加载失败且尚无玩家时，使用 `gameplay_session(action="reload_resources")` 调用正式 `GameRes.RequestResourceReload()`；它等价于 Alt+R 的安全重载入口，不需要玩家控制租约，也不会保存或退出世界。
 
 脚本重编译、Domain Reload、退出世界或重新进入 Play Mode 后，旧控制租约不可假定仍有效。必须重新执行 `status -> acquire -> observe`。
@@ -65,7 +67,7 @@ GamePlayMCP 复用项目已有 MCPForUnity 自定义工具发现机制，不另�
 
 ### Agent 快速输入输出
 
-- 所有 `gameplay_*` 调用在 Unity Console 输出 `[AI→MCP #编号]` 开始与结束日志，包含接口名、短参数摘要、结果和真实耗时；批次显示动作名与已执行/剩余步数。耗时包含动作等待、采样和输出处理，不等同于业务 CPU 时间。反馈使用无堆栈普通日志，失败通过文字标明，不新增诊断 Warning/Error 计数；不打印完整输入输出。
+- 所有 `gameplay_*` 调用在 Unity Console 输出 `[AI→MCP #编号]` 开始与结果日志，包含接口名、短参数摘要和执行结果；批次显示动作名与已执行/剩余步数。下一次串行调用到达时记录 `Agent反应间隔≈`：上次结果就绪到本次工具入口的间隔，不包含上次游戏动作/采样等待，但包含通信、排队、其它工具调用及人工停顿，不能当成纯模型推理时间；首次及并发调用不统计，重载后重置基线。结果日志不再记录游戏执行耗时。反馈使用无堆栈普通日志，不新增诊断 Warning/Error 计数，也不打印完整输入输出。
 - 所有 `gameplay_*` 接口共享 `output="compact"`、`fields="字段1,字段2"`、`observe=true`；常规 Agent 调用优先精简输出。`fields` 选择返回数据的顶层字段，状态、错误、分页和批次结果始终保留；省略字段不代表空值。旧调用默认 `output="full"`。它主要压缩输出，不承诺跳过任意字段对应的业务查询。
 - `gameplay_control(acquire, observe=true)` 可把取控制权与首次精简观察合并；会话 `status` 的 compact 模式跳过附近世界查询。能力接口 compact 只列命令名，查具体命令语义时读 full；默认不缓存会话与世界状态。
 - `gameplay_ui(click/scroll/drag, treeAfter=true, output="compact")` 操作后等待一次 Editor 更新并附带新树，下一步从 `data.tree.data.semantic_tree` 选节点；compact UI 省略 path/rect/depth，但保留 ID、父节点、文本和可操作状态。分页只构造当前页完整节点，仍遍历统计总数。树读取失败时查看 `data.tree.success/error`，不要沿用旧节点。
