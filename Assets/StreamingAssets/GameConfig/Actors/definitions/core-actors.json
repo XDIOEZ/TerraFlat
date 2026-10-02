@@ -146,7 +146,7 @@
           }
         },
         "ai": {
-          "prefab": "AI_Chicken",
+          "prefab": "Module_AI_Chicken",
           "id": "Module_AI_Chicken",
           "enabled": true,
           "data": {
@@ -1154,7 +1154,7 @@
           }
         },
         "ai": {
-          "prefab": "AI_WildBoar",
+          "prefab": "Module_AI_WildBoar",
           "id": "Module_AI_WildBoar",
           "enabled": true,
           "data": {

@@ -397,7 +397,7 @@
       },
       "modules": {
         "ai": {
-          "prefab": "AI_SnowLeopard",
+          "prefab": "Module_AI_SnowLeopard",
           "id": "Module_AI_SnowLeopard",
           "parameters": {
             "debugLog": false,
