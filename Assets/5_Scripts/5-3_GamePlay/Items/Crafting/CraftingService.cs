@@ -85,12 +85,19 @@ public static class CraftingService
     /// <summary>风干、堆肥等整槽转化共用事务；只消耗指定原槽，不误用其它同类材料。</summary>
     [MethodImpl(MethodImplOptions.NoInlining)]
     public static CraftingResult TransformSlot(Inventory inventory, int slotIndex, string outputId, int outputAmount, string processId)
+        => TransformSlot(inventory, inventory, slotIndex, outputId, outputAmount, processId);
+
+    // 物质转化可进入独立输出槽，预检失败时保留原材料及其温度。
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    public static CraftingResult TransformSlot(Inventory inventory, Inventory outputInventory,
+        int slotIndex, string outputId, int outputAmount, string processId)
     {
-        if (inventory?.Data?.itemSlots == null || (uint)slotIndex >= (uint)inventory.Data.itemSlots.Count || outputAmount < 0)
+        if (inventory?.Data?.itemSlots == null || outputInventory?.Data?.itemSlots == null ||
+            (uint)slotIndex >= (uint)inventory.Data.itemSlots.Count || outputAmount < 0)
             return CraftingResult.Failed(CraftingFailureReason.InvalidInventory, "槽位转化参数无效");
-        for (int i = 0; i < inventory.Data.itemSlots.Count; i++)
-            if (inventory.IsSlotBeingDragged(i)) return CraftingResult.Failed(CraftingFailureReason.InventoryChanged, "库存正在拖拽");
-        if (!TryAcquireInventories(inventory, inventory, out var locked))
+        if (MachineInventory.IsBeingDragged(inventory) || MachineInventory.IsBeingDragged(outputInventory))
+            return CraftingResult.Failed(CraftingFailureReason.InventoryChanged, "库存正在拖拽");
+        if (!TryAcquireInventories(inventory, outputInventory, out var locked))
             return CraftingResult.Failed(CraftingFailureReason.InventoryChanged, "库存正在提交另一笔事务");
         try
         {
@@ -104,14 +111,22 @@ public static class CraftingService
             var outputs = new List<ItemData>();
             if (outputAmount > 0)
             {
-                if (!GameRes.Instance.TryGetItemDefinition(outputId, out _))
+                if (!GameRes.Instance.TryGetItemDefinition(outputId, out RuntimeItemDefinition definition))
                     return CraftingResult.Failed(CraftingFailureReason.InvalidOutput, "转化产物未注册：" + outputId, recipe);
                 ItemData output = GameRes.Instance.CreateItemData(outputId);
                 output.Stack.Amount = outputAmount;
+                if (source.MatterState?.Initialized == true)
+                    output.MatterState = new ItemMatterState
+                    {
+                        Initialized = true,
+                        TemperatureCelsius = source.MatterState.TemperatureCelsius,
+                        Moisture = definition.Matter?.InitialMoisture ?? 0f
+                    };
                 outputs.Add(output);
                 if (!CraftingOutputRules.Prepare(inventory, match, outputs, out string error))
                     return CraftingResult.Failed(CraftingFailureReason.InvalidOutput, error, recipe);
-                if (!CraftingTransaction.TryCreate(inventory, inventory, match, outputs, true, out transaction, out failure)) return failure;
+                if (!CraftingTransaction.TryCreate(inventory, outputInventory, match, outputs,
+                        ReferenceEquals(inventory, outputInventory), out transaction, out failure)) return failure;
             }
             else if (!CraftingTransaction.TryCreateInputOnly(inventory, match, out transaction, out failure)) return failure;
             if (!transaction.Commit(out failure)) return failure;

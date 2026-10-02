@@ -32,6 +32,7 @@ public sealed class MachinePanelSession : IMachinePanelSession
     private Player actor;
     private MortarInteractionView mortarView;
     private CraftingOutputPreview firePreview;
+    private TMP_Text fireTemperature;
     private bool disposed;
     public bool IsAlive => !disposed && panels.Count > 0 && panels[0] != null;
     public bool IsOpen => IsAlive && panels[0].IsOpen();
@@ -94,12 +95,13 @@ public sealed class MachinePanelSession : IMachinePanelSession
             else if (logic is FireDrillLogic fireDrill)
             {
                 BasePanel panel = CreatePanel(logic.PanelPrefab);
-                BindSlots(panel, fireDrill.Processor.Input, "输入");
-                BindSlots(panel, fireDrill.Processor.Output, "输出");
+                BindSlots(panel, fireDrill.Heater.Input, "输入");
+                BindSlots(panel, fireDrill.Heater.Output, "输出");
                 actionButton = panel.GetButton("合成按钮")
                     ?? throw new InvalidOperationException("取火面板缺少摩擦按钮。");
                 actionButton.onClick.AddListener(Act);
-                firePreview = CraftingOutputPreview.Attach(panel, fireDrill.Processor.Output.itemSlot_UI[0]);
+                firePreview = CraftingOutputPreview.Attach(panel, fireDrill.Heater.Output.itemSlot_UI[0]);
+                fireTemperature = panel.GetText("FWUI_FooterHint");
             }
             else
             {
@@ -190,9 +192,10 @@ public sealed class MachinePanelSession : IMachinePanelSession
         if (logic is MortarLogic mortar) mortarView?.SyncSlots(mortar.Bowl);
         if (logic is FireDrillLogic fireDrill && firePreview != null)
         {
-            CraftingResult result = fireDrill.Processor.Preview();
-            if (result.Success && result.Outputs.Count > 0) firePreview.Show(result.Outputs[0], fireDrill.Progress01);
+            ItemData preview = fireDrill.Heater.PreviewOutput();
+            if (preview != null) firePreview.Show(preview, fireDrill.Progress01);
             else firePreview.Clear();
+            if (fireTemperature != null) fireTemperature.text = fireDrill.Status;
         }
         if (actionButton != null) actionButton.interactable = logic.CanAct;
     }

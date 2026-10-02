@@ -102,12 +102,5 @@ MonoBehaviour:
   CloseButton: {fileID: 0}
   InputSlotUI: {fileID: 0}
   OutputSlotUI: {fileID: 0}
-  FireSeedItemID: FireSeed
-  TinderItemIds:
-  - Leaf
-  TinderTags:
-  - "\u706B\u7ED2"
-  RequiredClickCount: 20
-  ClickIncrement: 1
-  FirstClickBonus: 5
-  DecayRatePerSecond: 5
+  HeatSourceTemperature: 150
+  TemperaturePerClick: 10

@@ -280,6 +280,11 @@
         "waterAbsorptionRatePerSecond": 0.02,
         "transitions": [
           {
+            "id": "heat:leaf-ember",
+            "minTemperature": 100,
+            "outputItemId": "FireSeed"
+          },
+          {
             "id": "dry:leaf",
             "maxMoisture": 0.2,
             "outputItemId": "Tea"

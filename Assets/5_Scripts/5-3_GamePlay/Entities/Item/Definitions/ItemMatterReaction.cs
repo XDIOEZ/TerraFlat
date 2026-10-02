@@ -432,17 +432,42 @@ public static class ItemMatterReactionCompiler
 
 public static class ItemMatterRuntime
 {
+    public static bool EnsureInitialized(ItemData item, float ambientTemperature)
+    {
+        if (item == null || float.IsNaN(ambientTemperature) || float.IsInfinity(ambientTemperature)) return false;
+        ItemMatterState state = item.MatterState ??= new ItemMatterState();
+        if (state.Initialized) return false;
+        state.Initialized = true;
+        state.TemperatureCelsius = ambientTemperature;
+        state.Moisture = ResolveMatter(item)?.InitialMoisture ?? 0f;
+        return true;
+    }
+
+    // 摩擦热量分摊给整堆材料，热源上限不能反过来冷却原本更热的材料。
+    public static bool AddHeat(ItemData item, float ambientTemperature, float sourceTemperature, float temperaturePerUnit)
+    {
+        if (item?.Stack == null || item.Stack.Amount <= 0f || temperaturePerUnit <= 0f ||
+            float.IsNaN(item.Stack.Amount) || float.IsInfinity(item.Stack.Amount) ||
+            float.IsNaN(ambientTemperature) || float.IsInfinity(ambientTemperature) ||
+            float.IsNaN(temperaturePerUnit) || float.IsInfinity(temperaturePerUnit) ||
+            float.IsNaN(sourceTemperature) || float.IsInfinity(sourceTemperature)) return false;
+        bool initialized = EnsureInitialized(item, ambientTemperature);
+        if (item.MatterState?.Initialized != true) return false;
+        float before = item.MatterState.TemperatureCelsius;
+        if (before < sourceTemperature)
+            item.MatterState.TemperatureCelsius = Mathf.Min(sourceTemperature,
+                before + temperaturePerUnit / Mathf.Max(1f, item.Stack.Amount));
+        return initialized || !Mathf.Approximately(before, item.MatterState.TemperatureCelsius);
+    }
+
     public static bool Advance(ItemData item, float ambientTemperature, float airExposure, float seconds, bool submerged = false)
     {
-        if (item == null || seconds <= 0f || float.IsNaN(seconds) || float.IsInfinity(seconds)) return false;
-        ItemMatterState state = item.MatterState ??= new ItemMatterState();
+        if (item == null || seconds <= 0f || float.IsNaN(seconds) || float.IsInfinity(seconds) ||
+            float.IsNaN(ambientTemperature) || float.IsInfinity(ambientTemperature)) return false;
+        bool initialized = EnsureInitialized(item, ambientTemperature);
+        ItemMatterState state = item.MatterState;
+        if (state?.Initialized != true) return false;
         RuntimeItemMatterDefinition matter = ResolveMatter(item);
-        if (!state.Initialized)
-        {
-            state.Initialized = true;
-            state.TemperatureCelsius = ambientTemperature;
-            state.Moisture = matter?.InitialMoisture ?? 0f;
-        }
 
         float exposure = Mathf.Max(0f, airExposure);
         float beforeTemperature = state.TemperatureCelsius;
@@ -468,8 +493,18 @@ public static class ItemMatterRuntime
             }
         }
 
-        return !Mathf.Approximately(beforeTemperature, state.TemperatureCelsius) ||
+        return initialized || !Mathf.Approximately(beforeTemperature, state.TemperatureCelsius) ||
                !Mathf.Approximately(beforeMoisture, state.Moisture);
+    }
+
+    public static RuntimeItemMatterTransition GetHeatingTransition(ItemData item)
+    {
+        RuntimeItemMatterDefinition matter = ResolveMatter(item);
+        if (matter == null) return null;
+        foreach (RuntimeItemMatterTransition transition in matter.Transitions)
+            if (transition.MinTemperature.HasValue && transition.LiquidOutput == null)
+                return transition;
+        return null;
     }
 
     public static RuntimeItemMatterTransition GetMatchedTransition(ItemData item, bool liquid)
@@ -520,13 +555,18 @@ public static class ItemMatterRuntime
     }
 
     public static bool TryApplySolidTransition(Inventory inventory, int slotIndex, string processId)
+        => TransformSolidSlot(inventory, inventory, slotIndex, processId).Success;
+
+    public static CraftingResult TransformSolidSlot(Inventory inventory, Inventory output, int slotIndex, string processId)
     {
-        if (inventory?.Data?.itemSlots == null || (uint)slotIndex >= (uint)inventory.Data.itemSlots.Count) return false;
+        if (inventory?.Data?.itemSlots == null || (uint)slotIndex >= (uint)inventory.Data.itemSlots.Count)
+            return CraftingResult.Failed(CraftingFailureReason.InvalidInventory, "物质转化槽位无效");
         ItemData source = inventory.Data.itemSlots[slotIndex]?.itemData;
         RuntimeItemMatterTransition transition = GetMatchedTransition(source, liquid: false);
-        if (source?.Stack == null || transition == null || string.IsNullOrWhiteSpace(transition.OutputItemId)) return false;
+        if (source?.Stack == null || transition == null || string.IsNullOrWhiteSpace(transition.OutputItemId))
+            return CraftingResult.Failed(CraftingFailureReason.ConditionsNotMet, "材料尚未满足自身转化条件");
         int outputAmount = Mathf.Max(0, Mathf.RoundToInt(source.Stack.Amount * transition.OutputAmountMultiplier));
-        return CraftingService.TransformSlot(inventory, slotIndex, transition.OutputItemId, outputAmount, processId).Success;
+        return CraftingService.TransformSlot(inventory, output, slotIndex, transition.OutputItemId, outputAmount, processId);
     }
 
     public static float GetMinimumConsumedTemperature(Inventory inventory, CraftingRecipeMatch match, float fallback)

@@ -19,10 +19,12 @@ public static class MachineWorldContractDiagnostics
         CheckRegistryReleaseOrder();
         CheckInventorySnapshot();
         CheckRecipeProgress();
+        CheckMaterialHeating();
         CheckMechanicalMembership();
         CheckMachinePersistence();
+        CheckMachineDamage();
         CheckManagedPatchEntries();
-        Debug.Log("[MachineWorldContractDiagnostics] 6 组检查通过：MOD 注销顺序、库存快照原子应用、加工余量、设施与传动分组、冷状态保存、托管补丁入口。未执行 Harmony DLL 或游戏内验收。");
+        Debug.Log("[MachineWorldContractDiagnostics] 7 组检查通过：MOD 注销顺序、库存快照原子应用、加工余量、材料供热与保存、设施与传动分组、冷状态保存、托管补丁入口。未执行 Harmony DLL 或游戏内验收。");
     }
 
     [MenuItem(MenuPath, true)]
@@ -117,6 +119,44 @@ public static class MachineWorldContractDiagnostics
         Require(state.Progress == 0f, "切换配方必须重置旧配方进度。");
     }
 
+    // 供热只改材料温度，温度阈值、散热、堆叠与载体切换分别验证。
+    private static void CheckMaterialHeating()
+    {
+        var material = new Data_GeneralItem { Stack = new ItemStack { Amount = 1f }, HeatConductionRate = 1f };
+        Require(ItemMatterRuntime.AddHeat(material, 20f, 150f, 10f) && material.MatterState.TemperatureCelsius == 30f,
+            "首次摩擦必须从环境温度升温，不能直接初始化成热源温度。");
+        var transition = new RuntimeItemMatterTransition("diagnostic.heat", 100f, null, null, null, "FireSeed", 1f, null);
+        material.MatterState.TemperatureCelsius = 99.99f;
+        Require(!transition.Matches(material.MatterState), "材料不到 100°C 不能触发转化。");
+        material.MatterState.TemperatureCelsius = 100f;
+        Require(transition.Matches(material.MatterState), "材料恰好达到 100°C 必须能够转化。");
+        material.MatterState.TemperatureCelsius = 149f;
+        ItemMatterRuntime.AddHeat(material, 20f, 150f, 10f);
+        Require(material.MatterState.TemperatureCelsius == 150f, "连续摩擦不能超过热源上限。");
+        material.MatterState.TemperatureCelsius = 200f;
+        ItemMatterRuntime.AddHeat(material, 20f, 150f, 10f);
+        Require(material.MatterState.TemperatureCelsius == 200f, "摩擦不能冷却已经更热的材料。");
+        ItemMatterRuntime.Advance(material, 20f, 1f, 1f);
+        Require(material.MatterState.TemperatureCelsius == 199f, "停止摩擦后必须按材料传热速率向环境散热。");
+        material.Stack.Amount = 2f;
+        material.MatterState.TemperatureCelsius = 20f;
+        ItemMatterRuntime.AddHeat(material, 20f, 150f, 10f);
+        Require(material.MatterState.TemperatureCelsius == 25f, "同一次摩擦热量必须分摊给堆叠中的材料。");
+        Require(!ItemMatterRuntime.AddHeat(material, 20f, float.NaN, 10f) &&
+            material.MatterState.TemperatureCelsius == 25f, "无效热源不能污染材料状态。");
+
+        Inventory input = EmptyInventory();
+        Inventory output = EmptyInventory();
+        input.Data.itemSlots[0].itemData = material;
+        _ = new MaterialHeatingProcessor(input, output);
+        _ = new MaterialHeatingProcessor(input, output);
+        Require(material.MatterState.TemperatureCelsius == 25f, "重开面板或切换载体不能重置材料温度。");
+        byte[] bytes = MemoryPack.MemoryPackSerializer.Serialize(new FireDrillRuntimeState { Input = input.Data, Output = output.Data });
+        FireDrillRuntimeState restored = MemoryPack.MemoryPackSerializer.Deserialize<FireDrillRuntimeState>(bytes);
+        Require(restored.Input.itemSlots[0].itemData.MatterState.TemperatureCelsius == 25f &&
+            restored.Input.itemSlots[0].itemData.Stack.Amount == 2f, "共享模块快照必须保留材料自身的温度及数量。");
+    }
+
     private static void CheckMechanicalMembership()
     {
         var graph = new MechanicalNetworkGraph(new Vector2Int(16, 16), Vector2Int.zero, cell => cell);
@@ -159,6 +199,73 @@ public static class MachineWorldContractDiagnostics
         Require(CraftedDurabilityQuality.ResolveMaximumHp(100f, snapshot) == 100f,
             "无效品质倍率应复用普通 Item 的默认倍率规则。");
     }
+
+    #region 工作方块受击契约
+    private static void CheckMachineDamage()
+    {
+        var health = new ItemHealthDefinitionDto
+        {
+            Hp = 180f, MaxHp = 180f,
+            Defense = new ItemDefenseDefinitionDto { Cutting = 8f, Piercing = 8f, Chopping = 8f, Blunt = 8f },
+            Collider = new ItemColliderDefinitionDto
+            {
+                Type = nameof(BoxCollider2D), Enabled = true, IsTrigger = true,
+                Size = Vector2.one, Offset = Vector2.zero
+            }
+        };
+        MachineCombatBridge.ValidateHealth(health);
+        var hit = new FlatWorld.Combat.CombatDamageContext
+        {
+            Damage = new Unity.Mathematics.float4(0f, 0f, 0f, 12f), BuildingMultiplier = 10f
+        };
+        Require(MachineCombatBridge.CalculateDamage(health, hit, 1f) == 40f,
+            "石锤的 12 点钝击应先扣 8 点防御，再应用 10 倍建筑伤害。");
+        hit.Damage.w = 6f;
+        Require(MachineCombatBridge.CalculateDamage(health, hit, 1f) == 0f,
+            "完全被防御抵消的命中仍应是有效零伤害，不能绕过防御凭空扣血。");
+        hit.Damage.w = 12f;
+        hit.IsTrueDamage = 1;
+        Require(MachineCombatBridge.CalculateDamage(health, hit, 1f) == 120f,
+            "真实伤害应跳过防御，但仍使用建筑倍率。");
+
+        health.ModuleLocalPosition = Vector3.up;
+        health.Collider.Offset = new Vector2(3f, 2f);
+        health.Collider.Size = new Vector2(2f, 4f);
+        var shape = MachineCombatBridge.ResolveHitShape(health, new Vector2(10f, 20f), 1);
+        Require(shape.Center.x == 7f && shape.Center.y == 23f && shape.Extents.x == 2f && shape.Extents.y == 1f,
+            "偏移受击框必须连同中心和长宽一起旋转，不能回退成锚点上的一格方框。");
+        shape = MachineCombatBridge.ResolveHitShape(health, Vector2.zero, 2, true);
+        Require(shape.Center.x == -3f && shape.Center.y == 3f && shape.Extents.y == 2f,
+            "转换器左右镜像只翻转横向偏移，不能把竖直受击中心翻到地下。");
+        health.Collider.Type = nameof(CircleCollider2D);
+        health.Collider.Radius = 2f;
+        MachineCombatBridge.ValidateHealth(health);
+        shape = MachineCombatBridge.ResolveHitShape(health, Vector2.zero, 0);
+        Require(shape.IsCircle != 0 && shape.Radius == 2f && shape.Center.y == 3f,
+            "圆形和跨格偏移的受击范围必须原样进入物理查询。");
+
+        health.Collider.Enabled = false;
+        RequireInvalidMachineHealth(health, "关闭受击碰撞体的机器必须在内容加载时被拒绝。");
+        health.Collider.Enabled = true;
+        health.HasHp = false;
+        RequireInvalidMachineHealth(health, "没有生命的工作方块不能被当成有效机器加载。");
+        health.HasHp = true;
+        health.MaxHp = float.PositiveInfinity;
+        RequireInvalidMachineHealth(health, "无限耐久不能绕过机器生命校验。");
+        health.MaxHp = 180f;
+        health.Collider.Radius = 0f;
+        RequireInvalidMachineHealth(health, "零尺寸受击范围不能产生无敌的挡路建筑。");
+        Debug.Log("[MachineWorldContractDiagnostics] 工作方块受击检查通过：防御与倍率、真实伤害、旋转与镜像、圆形范围、无效生命和碰撞配置。未执行游戏内挥击验收。");
+    }
+
+    private static void RequireInvalidMachineHealth(ItemHealthDefinitionDto health, string message)
+    {
+        bool rejected = false;
+        try { MachineCombatBridge.ValidateHealth(health); }
+        catch (InvalidOperationException) { rejected = true; }
+        Require(rejected, message);
+    }
+    #endregion
 
     private static void CheckManagedPatchEntries()
     {

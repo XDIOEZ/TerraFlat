@@ -1,7 +1,7 @@
 using System;
-using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using FlatWorld.Gameplay.Progress;
+using FlatWorld.Networking;
 using MemoryPack;
 using UnityEngine;
 
@@ -11,31 +11,22 @@ public partial class FireDrillRuntimeState
     #region 取火状态
     public Inventory_Data Input;
     public Inventory_Data Output;
-    public float Progress;
-    public bool HasClicked;
-    public string RecipeId = "";
     #endregion
 }
 
-/// <summary>钻木进度、衰减和火种提交独立于面板，手持与落地共享同一模块状态。</summary>
+/// <summary>钻木器只提供摩擦热量，材料自身的物质状态决定产物。</summary>
 public class FireDrillLogic : MachineLogic
 {
     #region 摩擦取火
     public const string ModuleId = "钻木取火模块";
-    public RecipeProcessor Processor { get; }
+    public MaterialHeatingProcessor Heater { get; }
     public FireDrillRuntimeState State { get; }
     public override GameObject PanelPrefab { get; }
     public override float TickInterval => .1f;
-    public override float Progress01 => Processor.Progress01;
+    public override float Progress01 => Heater.Progress01;
     public override string ActionLabel => "摩擦";
-    private readonly List<string> ids;
-    private readonly List<string> tags;
-    private readonly string outputId;
-    private readonly int requiredClicks;
-    private readonly float increment;
-    private readonly float firstBonus;
-    private readonly float decay;
-    private string inputId;
+    public override string Status => Heater.Status;
+    public override bool CanAct => Heater.CanRub;
 
     public FireDrillLogic(MachineEntity entity) : base(entity)
     {
@@ -46,85 +37,162 @@ public class FireDrillLogic : MachineLogic
         Inventory output = Track(MachineInventory.Create(source.OutputInventory, State.Output, "输出", 1));
         State.Input = input.Data;
         State.Output = output.Data;
-        requiredClicks = Mathf.Max(1, config.Value("RequiredClickCount", source.RequiredClickCount));
-        increment = config.Value("ClickIncrement", source.ClickIncrement);
-        firstBonus = config.Value("FirstClickBonus", source.FirstClickBonus);
-        decay = config.Value("DecayRatePerSecond", source.DecayRatePerSecond);
-        ids = config.Value("TinderItemIds", source.TinderItemIds) ?? new();
-        tags = config.Value("TinderTags", source.TinderTags) ?? new();
-        outputId = config.Value("FireSeedItemID", source.FireSeedItemID);
         PanelPrefab = source.UI_Prefab != null ? source.UI_Prefab : GameRes.Instance.GetPrefab("UI_FireDrill");
-        Processor = new RecipeProcessor(input, output,
-            new CraftingCapabilities { RecipeType = RecipeType.Crafting, StationId = "fire_drill", ApplyDifficultyOutputMultiplier = false },
-            new RecipeProcessingState { Input = input.Data, Output = output.Data, Progress = State.Progress, RecipeId = State.RecipeId });
-        Processor.Changed += OnProgressChanged;
-        RefreshRecipe();
-    }
-
-    private void RefreshRecipe()
-    {
-        if (Processor == null || Processor.IsCommitting) return;
-        ItemData input = Processor.Input.Data.GetItemSlot(0)?.itemData;
-        bool valid = input != null && (ids.Contains(input.IDName) || input.Tags != null && input.Tags.ContainsAnyTag(tags));
-        if (!valid) { inputId = null; Processor.SelectRecipe(null, requiredClicks); return; }
-        if (inputId == input.IDName && Processor.Recipe != null) return;
-        inputId = input.IDName;
-        Processor.SelectRecipe(new RuntimeRecipe
+        Heater = new MaterialHeatingProcessor(input, output)
         {
-            Id = "machine.fire_drill." + inputId,
-            RequiredStation = "fire_drill",
-            inputs = new RuntimeRecipeInput { RowItems_List = new List<RuntimeRecipeIngredient> { new() { ItemName = inputId, amount = 1 } } },
-            outputs = new RuntimeRecipeOutput { results = new List<RuntimeRecipeResult> { new() { ItemName = outputId, amount = 1 } } }
-        }, requiredClicks);
+            SourceTemperature = config.Value("HeatSourceTemperature", source.HeatSourceTemperature),
+            TemperaturePerClick = config.Value("TemperaturePerClick", source.TemperaturePerClick)
+        };
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
     public bool Rub(Player actor)
     {
-        RefreshRecipe();
-        if (!Processor.Preview().Success) return false;
-        float amount = State.HasClicked ? increment : firstBonus;
-        State.HasClicked = true;
-        bool completed = Processor.Advance(Mathf.Min(amount, Mathf.Max(0f, requiredClicks - Processor.State.Progress)), actor);
-        if (completed) GameplayProgressEvents.PublishFireSeedCreated(actor, outputId);
+        if (!GameNetwork.HasStateAuthority || !Heater.CanRub) return false;
+        bool completed = Heater.Rub(GetAmbientTemperature(), actor);
+        NotifyChanged();
         return completed;
     }
 
     public override bool Execute(string operation, string argument, Player actor)
     {
-        if (operation == "begin-interaction") { State.HasClicked = false; return true; }
+        if (operation == "begin-interaction") return true;
         if (operation != "work") return false;
         Rub(actor); return true;
     }
 
     public override void Tick(float seconds)
     {
-        if (Processor.State.Progress <= 0f) return;
-        Processor.State.Progress = Mathf.Max(0f, Processor.State.Progress - Mathf.Max(0f, decay) * seconds);
-        NotifyChanged();
+        if (Heater.Tick(GetAmbientTemperature(), seconds)) NotifyChanged();
     }
 
-    protected override void OnInventoryChanged(ItemSlot slot)
-    { if (Processor?.IsCommitting == true) return; State.HasClicked = false; RefreshRecipe(); base.OnInventoryChanged(slot); }
-    private void OnProgressChanged() => NotifyChanged();
+    private float GetAmbientTemperature()
+    {
+        TemperatureMgr.Instance.TryGetAmbientTemperature(Entity.Position, out float temperature);
+        return temperature;
+    }
+
     public override void Capture()
     {
-        State.Progress = Processor.State.Progress;
-        State.RecipeId = Processor.State.RecipeId;
         MachineModuleState.Write(Entity.Snapshot, ModuleId, State);
     }
     public override bool ApplyRemoteSnapshot(ItemData snapshot)
     {
         var incoming = MachineModuleState.Read<FireDrillRuntimeState>(snapshot, ModuleId);
         if (incoming == null) return false;
-        Processor.ApplyRemoteState(new RecipeProcessingState
-        { Input = incoming.Input, Output = incoming.Output, Progress = incoming.Progress, RecipeId = incoming.RecipeId });
-        State.HasClicked = incoming.HasClicked;
-        RefreshRecipe();
+        MachineInventory.ApplySnapshot(Heater.Input, incoming.Input);
+        MachineInventory.ApplySnapshot(Heater.Output, incoming.Output);
         NotifyRemoteChanged();
         return true;
     }
-    public override void Dispose()
-    { Processor.Changed -= OnProgressChanged; Processor.Dispose(); base.Dispose(); }
+    #endregion
+}
+
+/// <summary>手持与落地共用材料加热流程，不保存配方、点击进度或材料白名单。</summary>
+public sealed class MaterialHeatingProcessor
+{
+    #region 材料热状态
+    public Inventory Input { get; }
+    public Inventory Output { get; }
+    public float SourceTemperature = 150f;
+    public float TemperaturePerClick = 10f;
+    private Player lastActor;
+    private bool isCommitting;
+    private ItemData Material => Input.Data.GetItemSlot(0)?.itemData;
+    public bool CanRub => !isCommitting && Material?.Stack?.Amount > 0f &&
+        !MachineInventory.IsBeingDragged(Input) && !MachineInventory.IsBeingDragged(Output);
+
+    public MaterialHeatingProcessor(Inventory input, Inventory output)
+    {
+        Input = input ?? throw new ArgumentNullException(nameof(input));
+        Output = output ?? throw new ArgumentNullException(nameof(output));
+    }
+
+    public float Progress01
+    {
+        get
+        {
+            ItemData material = Material;
+            if (material?.MatterState?.Initialized != true) return 0f;
+            float target = ItemMatterRuntime.GetHeatingTransition(material)?.MinTemperature ?? SourceTemperature;
+            return Mathf.InverseLerp(TemperatureMgr.DefaultAmbientTemperature, target, material.MatterState.TemperatureCelsius);
+        }
+    }
+
+    public string Status
+    {
+        get
+        {
+            ItemData material = Material;
+            if (material == null) return $"放入材料，点击摩擦升温 · 供热上限 {SourceTemperature:0}°C";
+            string current = material.MatterState?.Initialized == true
+                ? $"{material.MatterState.TemperatureCelsius:0.#}°C" : "待测温";
+            RuntimeItemMatterTransition transition = ItemMatterRuntime.GetHeatingTransition(material);
+            string target = transition == null ? "" : $" / 转化 {transition.MinTemperature:0}°C";
+            return $"材料 {current}{target} · 供热上限 {SourceTemperature:0}°C";
+        }
+    }
+
+    public ItemData PreviewOutput()
+    {
+        ItemData material = Material;
+        RuntimeItemMatterTransition transition = ItemMatterRuntime.GetMatchedTransition(material, false)
+            ?? ItemMatterRuntime.GetHeatingTransition(material);
+        if (material?.Stack == null || transition == null) return null;
+        ItemData preview = GameRes.Instance.CreateItemData(transition.OutputItemId);
+        preview.Stack.Amount = Mathf.RoundToInt(material.Stack.Amount * transition.OutputAmountMultiplier);
+        return preview;
+    }
+    #endregion
+
+    #region 供热与物质转化
+    public bool Rub(float ambientTemperature, Player actor)
+    {
+        if (!CanRub) return false;
+        lastActor = actor;
+        ItemData material = Material;
+        if (ItemMatterRuntime.AddHeat(material, ambientTemperature, SourceTemperature, TemperaturePerClick))
+            Input.Data.NotifyItemStateChanged(material);
+        return TryTransform();
+    }
+
+    public bool Tick(float ambientTemperature, float seconds)
+    {
+        if (seconds <= 0f || isCommitting) return false;
+        bool changed = TryTransform();
+        changed |= AdvanceInventory(Input, ambientTemperature, seconds);
+        changed |= AdvanceInventory(Output, ambientTemperature, seconds);
+        return TryTransform() || changed;
+    }
+
+    private static bool AdvanceInventory(Inventory inventory, float ambientTemperature, float seconds)
+    {
+        bool changed = false;
+        for (int i = 0; i < inventory.Data.itemSlots.Count; i++)
+        {
+            ItemData data = inventory.Data.itemSlots[i]?.itemData;
+            if (data == null || inventory.IsSlotBeingDragged(i)) continue;
+            if (!ItemMatterRuntime.Advance(data, ambientTemperature, 1f, seconds)) continue;
+            inventory.Data.NotifyItemStateChanged(data);
+            changed = true;
+        }
+        return changed;
+    }
+
+    private bool TryTransform()
+    {
+        if (isCommitting || ItemMatterRuntime.GetMatchedTransition(Material, false) == null) return false;
+        isCommitting = true;
+        try
+        {
+            CraftingResult result = ItemMatterRuntime.TransformSolidSlot(Input, Output, 0, "matter.heating");
+            if (!result.Success) return false;
+            foreach (ItemData product in result.Outputs)
+                if (product.Tags?.Contains(Tag.CombustionTinder) == true)
+                    GameplayProgressEvents.PublishFireSeedCreated(lastActor, product.IDName, product.Stack.Amount);
+            return true;
+        }
+        finally { isCommitting = false; }
+    }
     #endregion
 }

@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using FlatWorld.Gameplay.Progress;
+using FlatWorld.Networking;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -30,18 +30,13 @@ public class Mod_FireDrill : Module, IInteractable
     public ItemSlot_UI OutputSlotUI;
 
     [Header("钻木参数")]
-    public string FireSeedItemID = "FireSeed"; // 产出火种物品ID
-    public List<string> TinderItemIds = new List<string> { "Leaf", "FireTinder" }; // 允许作为火绒的物品ID
-    public List<string> TinderTags = new List<string> { "火绒", "树叶" }; // 允许作为火绒的标签
-    public int RequiredClickCount = 14; // 完全填满进度条所需点击次数
-    public float ClickIncrement = 1f; // 每次点击增加的进度值
-    public float FirstClickBonus = 5f; // 第一次点击的额外反馈
-    public float DecayRatePerSecond = 1f; // 每秒自动衰减的进度值（阻力）
+    [Range(100f, 200f)] public float HeatSourceTemperature = 150f; // 摩擦热源的最高温度。
+    [Min(0.01f)] public float TemperaturePerClick = 10f; // 每次摩擦提供一份材料的升温量。
 
-    float _progress; // 当前进度值（0 ~ RequiredClickCount）
-    bool _hasClickedThisSession; // 本次打开是否已点击过
+    public MaterialHeatingProcessor Heater { get; private set; }
     bool _isActBound;
     CraftingOutputPreview _outputPreview;
+    TMPro.TMP_Text _temperatureLabel;
     Player _currentInteractingPlayer;
 
 #endregion
@@ -63,11 +58,13 @@ public class Mod_FireDrill : Module, IInteractable
             if (saved?.Input == null || saved.Output == null) throw new InvalidOperationException("取火器库存快照无效。");
             InputInventory.Data = saved.Input;
             OutputInventory.Data = saved.Output;
-            _progress = saved.Progress;
-            _hasClickedThisSession = saved.HasClicked;
         }
+        MachineInventory.Rebase(InputInventory.Data);
+        MachineInventory.Rebase(OutputInventory.Data);
         InputInventory.InitData();
         OutputInventory.InitData();
+        Heater = new MaterialHeatingProcessor(InputInventory, OutputInventory);
+        SyncHeatingSettings();
         BindItemActEvent();
         BindInteractEvents();
     }
@@ -76,10 +73,7 @@ public class Mod_FireDrill : Module, IInteractable
     {
         ModSaveData.WriteData(new FireDrillRuntimeState
         {
-            Input = InputInventory.Data, Output = OutputInventory.Data,
-            Progress = _progress, HasClicked = _hasClickedThisSession,
-            RecipeId = InputInventory.Data.GetItemSlot(0)?.itemData is ItemData input
-                ? "machine.fire_drill." + input.IDName : ""
+            Input = InputInventory.Data, Output = OutputInventory.Data
         });
     }
 
@@ -90,6 +84,7 @@ public class Mod_FireDrill : Module, IInteractable
         if (InputInventory?.Data != null)
             InputInventory.Data.Event_OnDataChanged -= OnInputSlotChanged;
         DestroyUI();
+        Heater = null;
     }
 
     private void OnDestroy()
@@ -99,8 +94,9 @@ public class Mod_FireDrill : Module, IInteractable
 
     public override void ModUpdate(float deltaTime)
     {
-        // 每帧持续衰减进度
-        _progress = Mathf.Max(0, _progress - (DecayRatePerSecond * deltaTime));
+        if (!GameNetwork.HasStateAuthority || Heater == null) return;
+        SyncHeatingSettings();
+        Heater.Tick(GetAmbientTemperature(), deltaTime);
         UpdateOutputPreviewProgress();
     }
 
@@ -115,9 +111,6 @@ public class Mod_FireDrill : Module, IInteractable
         {
             OpenUI();
         }
-
-        // 重置本次会话的点击状态
-        _hasClickedThisSession = false;
 
         EnsureUIBindingsOnOpen();
 
@@ -171,6 +164,7 @@ public class Mod_FireDrill : Module, IInteractable
         FrictionButton = null;
         CloseButton = null;
         _outputPreview = null;
+        _temperatureLabel = null;
     }
 
     public void OpenUI()
@@ -224,6 +218,7 @@ public class Mod_FireDrill : Module, IInteractable
         InputInventory.BindSlotUI(InputSlotUI, 0);
         OutputInventory.BindSlotUI(OutputSlotUI, 0);
         BindOutputPreview();
+        _temperatureLabel = basePanel.GetText("FWUI_FooterHint");
 
         FrictionButton = basePanel.GetButton("合成按钮");
         if (FrictionButton == null)
@@ -283,6 +278,7 @@ public class Mod_FireDrill : Module, IInteractable
 
     private void EnsureRuntimeDefaults()
     {
+        ModSaveData ??= new Ex_ModData_MemoryPackable { ID = FireDrillLogic.ModuleId };
         if (InputInventory == null)
         {
             InputInventory = new Inventory();
@@ -321,119 +317,30 @@ public class Mod_FireDrill : Module, IInteractable
 
     private void OnFrictionButtonClick()
     {
-        // 检测火绒是否存在
-        if (!TryGetTinderSlot(out ItemSlot tinderSlot, out int tinderIndex))
-        {
-            Debug.LogWarning("[Mod_FireDrill] 摩擦失败：输入槽中没有可用火绒。需要放入树叶或带火绒标签的物品。");
-            return;
-        }
-
-        // 计算本次增加的进度值
-        float increment = ClickIncrement;
-        if (!_hasClickedThisSession)
-        {
-            increment = FirstClickBonus;
-            _hasClickedThisSession = true;
-        }
-
-        // 增加进度
-        _progress = Mathf.Min(_progress + increment, RequiredClickCount);
-        UpdateOutputPreviewProgress();
-
-        // 检查是否完成
-        if (_progress >= RequiredClickCount)
-        {
-            bool craftResult = TryConvertToFireSeed(tinderSlot, tinderIndex);
-            if (craftResult)
-            {
-                Debug.Log($"[Mod_FireDrill] 钻木成功：已将火绒转化为火种，进度={_progress:F1}/{RequiredClickCount}");
-            }
-
-            ResetProgress();
-            RefreshOutputPreview();
-            if (craftResult)
-                _outputPreview?.PlaySuccess();
-        }
+        if (!GameNetwork.HasStateAuthority || Heater == null) return;
+        SyncHeatingSettings();
+        bool transformed = Heater.Rub(GetAmbientTemperature(), _currentInteractingPlayer);
+        RefreshOutputPreview();
+        Save();
+        if (transformed) _outputPreview?.PlaySuccess();
     }
 
-    private bool TryGetTinderSlot(out ItemSlot slot, out int index)
+    private void SyncHeatingSettings()
     {
-        slot = null;
-        index = -1;
-
-        if (InputInventory == null || InputInventory.Data == null || InputInventory.Data.itemSlots == null)
-            return false;
-
-        for (int i = 0; i < InputInventory.Data.itemSlots.Count; i++)
-        {
-            var current = InputInventory.Data.itemSlots[i];
-            if (current?.itemData == null)
-                continue;
-
-            if (!IsValidTinder(current.itemData))
-                continue;
-
-            slot = current;
-            index = i;
-            return true;
-        }
-
-        return false;
+        Heater.SourceTemperature = HeatSourceTemperature;
+        Heater.TemperaturePerClick = TemperaturePerClick;
     }
 
-    private bool IsValidTinder(ItemData itemData)
+    private float GetAmbientTemperature()
     {
-        if (itemData == null)
-            return false;
-
-        if (TinderItemIds != null && TinderItemIds.Contains(itemData.IDName))
-            return true;
-
-        if (itemData.Tags == null || TinderTags == null)
-            return false;
-
-        return itemData.Tags.ContainsAnyTag(TinderTags);
-    }
-
-    private bool TryConvertToFireSeed(ItemSlot tinderSlot, int tinderIndex)
-    {
-        if (OutputInventory == null || OutputInventory.Data == null)
-            throw new InvalidOperationException("[Mod_FireDrill] 输出容器为空，无法生成火种。");
-
-        ItemData fireSeedData = CreateFireSeedData();
-        if (fireSeedData == null)
-            return false;
-
-        if (!OutputInventory.Data.TryAddItem(fireSeedData, false))
-        {
-            Debug.LogWarning("[Mod_FireDrill] 输出槽空间不足，无法放入火种。");
-            return false;
-        }
-
-        tinderSlot.itemData.Stack.Amount -= 1;
-        if (tinderSlot.itemData.Stack.Amount <= 0)
-        {
-            InputInventory.Data.RemoveItemAll(tinderSlot, tinderIndex);
-        }
-
-        OutputInventory.Data.TryAddItem(fireSeedData, true);
-        InputInventory.RefreshUI();
-        OutputInventory.RefreshUI();
-        GameplayProgressEvents.PublishFireSeedCreated(
-            _currentInteractingPlayer,
-            fireSeedData.IDName);
-        return true;
+        Vector3 position = item.Owner != null ? item.Owner.transform.position : item.transform.position;
+        TemperatureMgr.Instance.TryGetAmbientTemperature(position, out float temperature);
+        return temperature;
     }
 
     private static Player ResolvePlayer(Item actorItem)
     {
         return actorItem as Player ?? actorItem?.GetComponentInParent<Player>();
-    }
-
-    private void ResetProgress()
-    {
-        _progress = 0f;
-        UpdateOutputPreviewProgress();
     }
 
     private void BindOutputPreview()
@@ -446,52 +353,27 @@ public class Mod_FireDrill : Module, IInteractable
 
     private void OnInputSlotChanged(ItemSlot _)
     {
-        _hasClickedThisSession = false;
-        ResetProgress();
         RefreshOutputPreview();
     }
 
     private void RefreshOutputPreview()
     {
-        if (_outputPreview == null)
+        if (_outputPreview == null || Heater == null)
             return;
 
-        if (TryGetTinderSlot(out _, out _) &&
-            CreateFireSeedData() is ItemData fireSeedData &&
-            OutputInventory.Data.TryAddItem(fireSeedData, false))
-            _outputPreview.Show(fireSeedData, GetProgress01());
+        if (Heater.PreviewOutput() is ItemData preview)
+            _outputPreview.Show(preview, Heater.Progress01);
         else
             _outputPreview.Clear();
+        UpdateOutputPreviewProgress();
     }
 
     private void UpdateOutputPreviewProgress()
     {
-        _outputPreview?.SetProgress(GetProgress01());
-    }
-
-    private float GetProgress01()
-    {
-        return RequiredClickCount <= 0 ? 0f : Mathf.Clamp01(_progress / RequiredClickCount);
-    }
-
-    private ItemData CreateFireSeedData()
-    {
-        GameObject prefab = GameRes.Instance.GetPrefab(FireSeedItemID);
-        if (prefab == null)
-        {
-            Debug.LogError($"[Mod_FireDrill] 找不到火种预制体: {FireSeedItemID}");
-            return null;
-        }
-
-        ItemData fireSeedData = GameRes.Instance.CreateItemData(FireSeedItemID);
-        if (fireSeedData == null)
-            throw new InvalidOperationException($"[Mod_FireDrill] 无法创建物品数据: {FireSeedItemID}");
-        fireSeedData.Stack.Amount = 1;
-        fireSeedData.Tags ??= new List<string>();
-        if (!fireSeedData.Tags.Contains(Tag.CombustionTinder))
-            fireSeedData.Tags.Add(Tag.CombustionTinder);
-
-        return fireSeedData;
+        if (Heater == null) return;
+        _outputPreview?.SetProgress(Heater.Progress01);
+        if (_temperatureLabel != null) _temperatureLabel.text = Heater.Status;
+        if (FrictionButton != null) FrictionButton.interactable = Heater.CanRub;
     }
 
 #endregion
