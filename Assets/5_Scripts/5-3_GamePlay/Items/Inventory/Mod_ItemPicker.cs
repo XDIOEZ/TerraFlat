@@ -514,7 +514,8 @@ public class Mod_ItemPicker : Module
         root.transform.localScale = Vector3.Scale(scale, visual.LocalScale);
         SpriteRenderer sprite = root.AddComponent<SpriteRenderer>();
         sprite.sprite = visual.Sprite; sprite.color = visual.Color;
-        sprite.sortingLayerID = visual.Layer; sprite.sortingOrder = visual.Order + 1;
+        // 拾取反馈保持世界物品原排序键，移动过程继续交给 Y 轴透明排序处理。
+        sprite.sortingLayerID = visual.Layer; sprite.sortingOrder = visual.Order;
         sprite.sharedMaterial = visual.SpriteMaterial;
         Transform target = item.transform;
         Vector3 targetPoint = item.Sprite != null ? target.InverseTransformPoint(item.Sprite.bounds.center) : Vector3.zero;
@@ -570,7 +571,7 @@ public class Mod_ItemPicker : Module
             copy.maskInteraction = source.maskInteraction;
             copy.spriteSortPoint = source.spriteSortPoint;
             copy.sortingLayerID = source.sortingLayerID;
-            copy.sortingOrder = source.sortingOrder + 1;
+            copy.sortingOrder = source.sortingOrder;
             copiedRendererCount++;
         }
 
