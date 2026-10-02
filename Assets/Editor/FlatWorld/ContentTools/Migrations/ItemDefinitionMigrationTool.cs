@@ -55,7 +55,7 @@ public static class ItemDefinitionMigrationTool
         "WorldResource_Base", "MineResource_Base", "AppleTree", "Tree_Coconut", "Mine_Coal", "Mine_Copper",
         "Mine_Iron", "Mine_Stone", "Mine_Tin", "Iceberg", "Bush",
         "Tree_Pine", "Resin", "Charcoal", "Glue", "DrilledLog", "DrilledPlank", "DrilledStick", "HandDrill", "WoodHammer",
-        "Beehive", "Flower", "Scissors", "DrilledStoneSlab", "DrilledStone"
+        "Beehive", "Flower", "Scissors", "DrilledStoneSlab", "DrilledStone", "BirdEgg"
     };
 
     /// <summary>预览统计时不计入运行时物品数量的抽象定义。</summary>
@@ -520,7 +520,8 @@ public static class ItemDefinitionMigrationTool
             JObject copy = (JObject)source.DeepClone();
             if (PreservedSourcePaths.TryGetValue(id, out string sourcePath))
                 copy["sourcePrefab"] = sourcePath;
-            else if (!buildingShellDefinition)
+            // 显式空来源用于阻止继承父物品的具体 Prefab 身份，手工定义必须保留这项覆盖。
+            else if (!buildingShellDefinition && copy.Value<string>("sourcePrefab") != string.Empty)
                 copy.Remove("sourcePrefab");
             output.Add(copy);
         }

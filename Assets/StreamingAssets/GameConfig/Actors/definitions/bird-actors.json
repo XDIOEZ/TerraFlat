@@ -16,6 +16,7 @@
       },
       "weight": 0.3,
       "parent": "Chicken",
+      "removeModules": ["生产模块"],
       "lootTableId": "Chicken_Default",
       "shellPrefab": "CoreActor.Bird.Shell",
       "shellAddress": "flatworld.actor.shell.bird",
@@ -67,6 +68,10 @@
             "flightStaminaMax": 100.0,
             "flightStaminaDrainRate": 1.0,
             "flightStaminaRecoveryRate": 10.0,
+            "enableEggLaying": true,
+            "eggItemId": "BirdEgg",
+            "layEggMinimumIntervalDays": 2.0,
+            "layEggRandomDelayDays": 1.0,
             "fatigueLandingStaminaRatio": 0.5,
             "fatigueLandingSearchRadius": 4.0,
             "fleeTriggerDistance": 12.0,
@@ -184,6 +189,7 @@
         "ai": {
           "parameters": {
             "permanentFlight": true,
+            "enableEggLaying": false,
             "flightSpeed": 3.2,
             "flightHeight": 0.8,
             "flightWanderRadius": 3.0,

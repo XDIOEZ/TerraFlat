@@ -65,6 +65,7 @@ public sealed partial class Mod_AI_Bird : Module, IAIActor, IItemModuleDependenc
         public float HomeY; // 常驻飞行物种的巢位 Y。
         public bool HasHome; // 是否绑定了巢位。
         public int HomeHiveGuid; // 所属蜂巢的稳定 GUID；独立鸟类为零。
+        public AnimalEggLayingSchedule EggLaying = new(); // 产蛋截止日随同个体保存，读档不重新随机。
     }
 
     public Ex_ModData Data = new();
@@ -150,6 +151,7 @@ public sealed partial class Mod_AI_Bird : Module, IAIActor, IItemModuleDependenc
             staminaDisplay.Bind(this, liftRoot);
         }
         state = Data.GetData<FlightState>() ?? new FlightState();
+        InitializeEggLaying();
         if (!Enum.IsDefined(typeof(BirdFlightPhase), state.Phase))
             throw new InvalidOperationException("鸟存档包含无效飞行阶段。");
         if (permanentFlight)
@@ -223,6 +225,7 @@ public sealed partial class Mod_AI_Bird : Module, IAIActor, IItemModuleDependenc
                 state, step, flightStaminaMax, flightStaminaDrainRate, flightStaminaRecoveryRate);
             if (flightPilot == null)
                 TickVigilance(step);
+            TickEggLaying();
             if (flightPilot != null)
             {
                 flightPilot.TickFlight(step);

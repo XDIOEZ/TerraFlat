@@ -32,6 +32,11 @@
       "enabled": true
     },
     {
+      "id": "bird_egg",
+      "path": "shells/bird_egg.json",
+      "enabled": true
+    },
+    {
       "id": "textiles",
       "path": "shells/textiles.json",
       "enabled": true

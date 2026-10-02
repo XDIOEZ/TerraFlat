@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "items": [
+    {
+      "id": "BirdEgg",
+      "parent": "Egg",
+      "sourcePrefab": "",
+      "gameName": "鸟蛋",
+      "description": "小鸟和海鸥产下的蛋，可拾取、食用或烹饪。每只鸟最快两天产下一颗。",
+      "removeModules": ["生产模块"],
+      "reactions": [
+        {
+          "id": "core:鸟蛋=熟蛋",
+          "minTemperature": 150.0,
+          "maxTemperature": 2000.0,
+          "work": 100,
+          "inputs": [
+            { "match": "exact_item", "amount": 1, "itemId": "BirdEgg" }
+          ],
+          "outputs": [
+            { "itemId": "Egg_Cooked", "amount": 1 }
+          ]
+        }
+      ]
+    }
+  ]
+}
