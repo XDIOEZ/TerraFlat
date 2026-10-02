@@ -20,7 +20,7 @@ public interface IBirdFlightPilot
 /// </summary>
 public sealed partial class Mod_AI_Bird : Module, IAIActor, IItemModuleDependencyBinder, IRuntimeAiPersistencePolicy,
     IIncomingDamageRule, IIncomingDamageContextRule, ICombatAirborneTarget, IVisualGroundOffset,
-    IWaterCurrentExposure, ITemperatureSafetyMovement
+    IWaterCurrentExposure, ITemperatureSafetyMovement, IDamageSender
 {
     #region 配置与独立存档
     private static readonly int GroundAnimationHash = Animator.StringToHash("Base Layer.Ground");
@@ -174,6 +174,7 @@ public sealed partial class Mod_AI_Bird : Module, IAIActor, IItemModuleDependenc
         temperatureSafetyRetreat = false;
         temperatureSafetyReached = false;
         ResetForaging();
+        ResetFishHunting(releaseCaptured: false);
         ResetFatigueLanding();
         ClearTemperatureSafetyDestination();
         health.OnDamageReceived -= HandleBirdDamage;
@@ -196,6 +197,7 @@ public sealed partial class Mod_AI_Bird : Module, IAIActor, IItemModuleDependenc
         loaded = false;
         if (health != null) health.OnDamageReceived -= HandleBirdDamage;
         ClearTemperatureSafetyDestination();
+        ResetFishHunting(releaseCaptured: true);
         ResetForaging();
         ResetFatigueLanding();
         if (liftRoot != null)
@@ -218,6 +220,7 @@ public sealed partial class Mod_AI_Bird : Module, IAIActor, IItemModuleDependenc
             if (!stoppedForDeath)
             {
                 stoppedForDeath = true;
+                ResetFishHunting(releaseCaptured: true);
                 mover.StopMovement();
                 body.velocity = Vector2.zero;
                 tileReceiver.SetEffectsSuppressed(this, false);
@@ -247,6 +250,9 @@ public sealed partial class Mod_AI_Bird : Module, IAIActor, IItemModuleDependenc
                 ApplyFlightPresentation();
                 return;
             }
+            float fatigueThreshold = Mathf.Max(0.01f, flightStaminaMax) * Mathf.Clamp01(fatigueLandingStaminaRatio);
+            if (IsFishHunting && (state.MustRecoverStamina || state.Stamina <= fatigueThreshold))
+                ResetFishHunting(releaseCaptured: true);
             // 耗尽后仍把降落放在逃跑/觅食之前，但不允许在不可站立地块上硬降落。
             // 若脚下没有安全地块，就继续飞到检测到安全落点为止。
             if (exhausted && (state.Phase == BirdFlightPhase.Flying || state.Phase == BirdFlightPhase.TakingOff))
@@ -268,7 +274,7 @@ public sealed partial class Mod_AI_Bird : Module, IAIActor, IItemModuleDependenc
                 return;
             }
             if (TickEscape(step) ||
-                (!permanentFlight && (TickFatigueLanding(step, forceLanding: false) || TickForaging(step))))
+                (!permanentFlight && (TickFishHunting(step) || TickFatigueLanding(step, forceLanding: false) || TickForaging(step))))
             {
                 ApplyFlightPresentation();
                 return;
@@ -346,6 +352,7 @@ public sealed partial class Mod_AI_Bird : Module, IAIActor, IItemModuleDependenc
         temperatureSafetyRetreat = true;
         temperatureSafetyReached = false;
         state.HasTarget = false;
+        ResetFishHunting(releaseCaptured: true);
         ResetForaging();
         ResetFatigueLanding();
     }
@@ -517,7 +524,8 @@ public sealed partial class Mod_AI_Bird : Module, IAIActor, IItemModuleDependenc
 
     private void ApplyFlightPresentation()
     {
-        liftRoot.localPosition = liftOrigin + Vector3.up * CurrentFlightHeight;
+        float visualHeight = HasFishHuntVisualHeightOverride ? FishHuntVisualHeightOverride : CurrentFlightHeight;
+        liftRoot.localPosition = liftOrigin + Vector3.up * visualHeight;
         staminaDisplay?.Refresh();
         // 对象池先 Load 后激活；激活后以 Animator 的真实状态为准，避免重绑或外部播放造成飞行时残留步行动画。
         if (!birdAnimator.isActiveAndEnabled)
@@ -816,9 +824,13 @@ public sealed partial class Mod_AI_Bird : Module, IAIActor, IItemModuleDependenc
 
     /// <summary>无分配地按由近到远的方形环搜索附近可站立格，并确认飞行路径所需地形已经加载。</summary>
     private bool TryFindFatigueLandingPoint(Vector2 origin, out Vector2 landingPoint)
+        => TryFindLandingPoint(origin, fatigueLandingSearchRadius, out landingPoint);
+
+    /// <summary>按由近到远的方形环寻找已加载且飞行可达的落脚格，疲劳降落与捕食搬运共用。</summary>
+    private bool TryFindLandingPoint(Vector2 origin, float searchRadius, out Vector2 landingPoint)
     {
         landingPoint = default;
-        float radius = Mathf.Max(0f, fatigueLandingSearchRadius);
+        float radius = Mathf.Max(0f, searchRadius);
         if (radius <= 0f)
             return false;
 

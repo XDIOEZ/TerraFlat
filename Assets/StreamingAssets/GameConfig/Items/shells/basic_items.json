@@ -4585,7 +4585,8 @@
       "stackable": true,
       "canBePickedUp": true,
       "tags": [
-        "47"
+        "47",
+        "Meat"
       ],
       "matter": {
         "initialMoisture": 0.8,

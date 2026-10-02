@@ -244,6 +244,7 @@ public sealed partial class Mod_AI_Bird
     private void StartEscape(Vector2 origin, Item threat)
     {
         bool wasEscaping = escapeRemaining > 0f;
+        ResetFishHunting(releaseCaptured: true);
         ResetFatigueLanding();
         if (state.Phase == BirdFlightPhase.Ground && !wasEscaping)
             mover.StopMovement();

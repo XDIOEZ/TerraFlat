@@ -14,6 +14,7 @@ public sealed class AquaticActorPresentation : IDisposable
     private readonly Item owner;
     private readonly SpriteRenderer renderer;
     private readonly Transform visualTransform;
+    private readonly Vector3 originalLocalPosition;
     private readonly Quaternion originalLocalRotation;
     private readonly bool originalFlipX;
     private readonly Material originalMaterial;
@@ -23,6 +24,8 @@ public sealed class AquaticActorPresentation : IDisposable
     private Vector2 lastPosition;
     private float swimSwayPhase;
     private float currentSwayDegrees;
+    private bool carried;
+    private float carriedVisualHeight;
     #endregion
 
     #region 初始化
@@ -31,6 +34,7 @@ public sealed class AquaticActorPresentation : IDisposable
         this.owner = owner;
         this.renderer = renderer;
         visualTransform = renderer.transform;
+        originalLocalPosition = visualTransform.localPosition;
         originalLocalRotation = visualTransform.localRotation;
         originalFlipX = renderer.flipX;
         lastPosition = owner.transform.position;
@@ -69,8 +73,19 @@ public sealed class AquaticActorPresentation : IDisposable
     #region 水下排序与游动表现
     public void Tick(bool underwater, float deltaTime)
     {
-        SetUnderwater(underwater);
-        UpdateSwimMotion(underwater, deltaTime);
+        SetUnderwater(underwater && !carried);
+        if (visualTransform != null)
+            visualTransform.localPosition = originalLocalPosition + Vector3.up * (carried ? carriedVisualHeight : 0f);
+        UpdateSwimMotion(underwater && !carried, deltaTime);
+    }
+
+    /// <summary>被捕获时改用普通生物排序，并只抬高视觉节点，不改动权威地面坐标。</summary>
+    public void SetCarried(bool value, float visualHeight)
+    {
+        carried = value;
+        carriedVisualHeight = value ? Mathf.Max(0f, visualHeight) : 0f;
+        if (!value && visualTransform != null)
+            visualTransform.localPosition = originalLocalPosition;
     }
 
     public void SetUnderwater(bool value)
@@ -118,7 +133,11 @@ public sealed class AquaticActorPresentation : IDisposable
             renderer.sharedMaterial = originalMaterial;
             renderer.flipX = originalFlipX;
         }
-        if (visualTransform != null) visualTransform.localRotation = originalLocalRotation;
+        if (visualTransform != null)
+        {
+            visualTransform.localRotation = originalLocalRotation;
+            visualTransform.localPosition = originalLocalPosition;
+        }
         if (sorting != null && renderer != null) sorting.Bind(WorldSortingManager.CreatureCategory, renderer, owner);
         if (underwaterMaterial != null) UnityEngine.Object.Destroy(underwaterMaterial);
     }

@@ -3,8 +3,22 @@ using FlatWorld.Networking;
 using MemoryPack;
 using UnityEngine;
 
+/// <summary>允许空中捕食者暂时接管水生猎物的位置；生命与死亡仍由猎物自身 DamageReceiver 负责。</summary>
+public interface IAquaticPredatorCarryTarget
+{
+    Item ActorItem { get; }
+    bool IsAlive { get; }
+    float HealthRatio { get; }
+    bool CanBeHuntedBy(Item predator);
+    bool TryCaptureByPredator(Item predator);
+    bool IsCapturedBy(Item predator);
+    void MoveWithPredator(Item predator, Vector2 groundPosition, float visualHeight);
+    void ReleaseFromPredator(Item predator);
+}
+
 /// <summary>逐条鱼使用现有状态机、营养、Buff、受伤与 Item 生命周期；不建立鱼群模拟器。</summary>
-public sealed partial class Mod_AI_Fish : Module, IAIActor, IItemModuleDependencyBinder, ITemperatureSafetyMovement
+public sealed partial class Mod_AI_Fish : Module, IAIActor, IItemModuleDependencyBinder, ITemperatureSafetyMovement,
+    IAquaticPredatorCarryTarget
 {
     #region 配置与持久化
     public const string ModuleId = "Mod_AI_Fish";
@@ -36,6 +50,7 @@ public sealed partial class Mod_AI_Fish : Module, IAIActor, IItemModuleDependenc
     public Item ActorItem => item;
     public bool IsAlive => loaded && item != null && !item.DestructionHandled && health != null && health.Hp > 0f;
     public bool IsHooked => fishingRod != null;
+    public float HealthRatio => health == null || health.MaxHp <= 0f ? 0f : Mathf.Clamp01(health.Hp / health.MaxHp);
     private LifeState state = new();
     private Mod_Food food;
     private Mod_BuffManager buffs;
@@ -51,6 +66,8 @@ public sealed partial class Mod_AI_Fish : Module, IAIActor, IItemModuleDependenc
     private bool hasDestination, loaded, nodesRegistered;
     private float scanRemaining, eatElapsed, idleRemaining;
     private Mod_FishingRod fishingRod;
+    private Item predatorCarrier;
+    private float carriedVisualHeight;
     private AquaticActorPresentation presentation;
     private bool temperatureSafetyRetreat;
     private bool temperatureSafetyReached;
@@ -96,6 +113,8 @@ public sealed partial class Mod_AI_Fish : Module, IAIActor, IItemModuleDependenc
         target = default;
         targetTag = null;
         fishingRod = null;
+        predatorCarrier = null;
+        carriedVisualHeight = 0f;
         scanRemaining = eatElapsed = idleRemaining = 0f;
         hasDestination = false;
         temperatureSafetyRetreat = false;
@@ -119,6 +138,8 @@ public sealed partial class Mod_AI_Fish : Module, IAIActor, IItemModuleDependenc
     {
         loaded = false;
         fishingRod = null;
+        predatorCarrier = null;
+        carriedVisualHeight = 0f;
         target = default;
         targetTag = null;
         hasDestination = false;
@@ -143,6 +164,15 @@ public sealed partial class Mod_AI_Fish : Module, IAIActor, IItemModuleDependenc
         if (!IsAlive || deltaTime <= 0f || !float.IsFinite(deltaTime)) return;
         if (GameNetwork.HasStateAuthority)
         {
+            if (predatorCarrier != null)
+            {
+                buffs.SetWaterStackExposure(false);
+                target = default;
+                targetTag = null;
+                hasDestination = false;
+                UpdatePresentation(deltaTime);
+                return;
+            }
             // 未加载的地形不是干地，休眠/换区块期间不伪造离水伤害。
             if (!AquaticHabitat.TryGetDepth(item.transform.position, out float depth)) return;
             buffs.SetWaterStackExposure(depth > 0f);
@@ -320,15 +350,56 @@ public sealed partial class Mod_AI_Fish : Module, IAIActor, IItemModuleDependenc
 
     private void UpdatePresentation(float deltaTime)
     {
-        bool underwater = AquaticHabitat.CanSwimAt(item.transform.position);
+        bool carried = predatorCarrier != null;
+        presentation?.SetCarried(carried, carriedVisualHeight);
+        bool underwater = !carried && AquaticHabitat.CanSwimAt(item.transform.position);
         presentation?.Tick(underwater, deltaTime);
+    }
+    #endregion
+
+    #region 捕食者携带
+    public bool CanBeHuntedBy(Item predator) => predator != null && IsAlive && !IsHooked &&
+                                                 (predatorCarrier == null || predatorCarrier == predator);
+
+    public bool TryCaptureByPredator(Item predator)
+    {
+        if (!GameNetwork.HasStateAuthority || !CanBeHuntedBy(predator) || predatorCarrier != null)
+            return false;
+        predatorCarrier = predator;
+        target = default;
+        targetTag = null;
+        hasDestination = false;
+        temperatureSafetyRetreat = false;
+        temperatureSafetyReached = false;
+        body.velocity = Vector2.zero;
+        return true;
+    }
+
+    public bool IsCapturedBy(Item predator) => predator != null && predatorCarrier == predator && IsAlive;
+
+    public void MoveWithPredator(Item predator, Vector2 groundPosition, float visualHeight)
+    {
+        if (!GameNetwork.HasStateAuthority || !IsCapturedBy(predator)) return;
+        carriedVisualHeight = Mathf.Max(0f, visualHeight);
+        MovePosition(WorldTopologyRuntime.NormalizePosition(groundPosition));
+        UpdatePresentation(0f);
+    }
+
+    public void ReleaseFromPredator(Item predator)
+    {
+        if (predatorCarrier != predator) return;
+        predatorCarrier = null;
+        carriedVisualHeight = 0f;
+        hasDestination = false;
+        scanRemaining = 0f;
+        presentation?.SetCarried(false, 0f);
     }
     #endregion
 
     #region 钓线约束
     public bool TryHook(Mod_FishingRod rod)
     {
-        if (!GameNetwork.HasStateAuthority || !IsAlive || rod == null || IsHooked) return false;
+        if (!GameNetwork.HasStateAuthority || !IsAlive || rod == null || IsHooked || predatorCarrier != null) return false;
         fishingRod = rod;
         target = default;
         return true;

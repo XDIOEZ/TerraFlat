@@ -22,13 +22,13 @@
       "shellAddress": "flatworld.actor.shell.bird",
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/AI/Bird.prefab",
       "gameName": "小鸟",
-      "description": "在树林周围短距离步行，起飞后进行长距离巡航的小鸟。",
+      "description": "在树林周围活动的小鸟；饥饿时会起飞俯冲捕鱼，并把受伤的鱼带回陆地进食。",
       "tags": [
         "Bird",
         "Animal",
         "Blood",
         "Prey",
-        "Herbivore"
+        "Omnivore"
       ],
       "visual": {
         "spriteAddress": "Assets/8_Animations/Character/Birds/Bird/Ground_0.png",
@@ -78,6 +78,18 @@
             "fleeSafeDistance": 30.0,
             "fleeRunDistance": 30.0,
             "additionalForageTags": ["Berry", "Fruit"],
+            "fishHuntHungerRate": 0.7,
+            "fishHuntRadius": 12.0,
+            "fishDiveRange": 0.7,
+            "fishDiveSeconds": 0.45,
+            "fishDiveDamage": 8.0,
+            "fishCaptureHealthRate": 0.5,
+            "fishRecoverSeconds": 0.35,
+            "fishCarryLandSearchRadius": 12.0,
+            "fishFinishAttackInterval": 0.45,
+            "fishMeatSearchRadius": 2.0,
+            "fishMeatWaitSeconds": 3.0,
+            "fishCarryVisualGap": 0.28,
             "flightHeight": 2.0,
             "groundDuration": 8.0,
             "flightDuration": 100.0,
@@ -137,7 +149,8 @@
         "Seagull",
         "Animal",
         "Blood",
-        "Prey"
+        "Prey",
+        "Omnivore"
       ],
       "visual": {
         "spriteAddress": "Assets/8_Animations/Character/Birds/Seagull/Ground_0.png",
