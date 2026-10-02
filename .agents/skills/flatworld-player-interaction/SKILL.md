@@ -27,6 +27,7 @@ description: "Use when: 定位或修改 FlatWorld 的玩家实体、输入系统
 - 载具的按键、鼠标点选和白色描边必须共用光标落点查询；上船与下船都要求光标实际命中载具，禁止因“当前已乘坐”或“靠近船体”绕过光标选择。光标指向可触及水面且未命中载具时，交互键交给喝水等环境动作。远海登船与下船都合法：登船恢复位置优先附近安全陆地，否则保留真实登船坐标；下船优先附近安全陆地，没有陆地时落到船体外侧安全水面。
 
 - 输入链为 Input System → `Mod_GameController` → 玩家模块；不要让 UI、物理输入和玩法模块各自维护冲突状态。
+- 桌面文本输入框获得焦点时，键盘玩法输入统一由 `EventSystemGuard.IsTextInputFocused` 与 `Mod_GameController.IsGameplayInputAllowed` 拦截；`ReadMoveInput` 同时返回零以阻止 WASD 穿透。鼠标仍交给 UI 射线仲裁，不能因为正在打字就全局禁用鼠标，否则会妨碍点击离开输入框。
 - 桌面指针由 `Mod_GameController` 缓存 `Win10.Mouse` 的位置变化，需同时处理 `performed/canceled`；鼠标按键回调要读取当前鼠标坐标，避免同次输入更新中点击先于位置回调造成落点滞后。
 - `Mod_GameController` 挂在玩家根对象，模块 ID 必须是 `ModText.Controller`；若留空会退化为根对象名 `Player`，按 ID 获取控制器的地块交互将静默失败。
 - 组合键冲突由 `Mod_GameController` 暴露语义状态统一仲裁：按住丢弃快捷键期间，`Ctrl+滚轮` 镜头缩放必须让位，但普通滚轮快捷栏切换继续工作，便于玩家在 `Ctrl+F` 整组丢弃准备态中换槽位。

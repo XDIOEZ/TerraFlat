@@ -46,6 +46,10 @@ public partial class Mod_GameController : Module
         if (HasExternalGameplayControl)
             return IsExternalGameplayInputDevice(device);
 
+        // 文本输入时键盘只负责打字，禁止背包、交互、丢弃、快捷栏等玩法热键穿透。
+        if (device is Keyboard && EventSystemGuard.IsTextInputFocused)
+            return false;
+
         if (device is FlatWorldMobileDevice)
             return _preferredInputDevice == InputDeviceType.Mobile;
 
@@ -67,6 +71,9 @@ public partial class Mod_GameController : Module
         if (TryReadExternalMoveInput(out Vector2 externalInput))
             return externalInput;
 
+        // 搜索框等文本输入获得焦点后，WASD 不再继续驱动角色移动。
+        bool textInputFocused = EventSystemGuard.IsTextInputFocused;
+
         if (_preferredInputDevice == InputDeviceType.Mobile)
         {
             Vector2 mobileInput = MobileInputRuntime.State.move;
@@ -76,7 +83,7 @@ public partial class Mod_GameController : Module
             if (mobileInput.sqrMagnitude > MoveInputEpsilonSqr)
                 return mobileInput;
 
-            return _keyboardMoveInput;
+            return textInputFocused ? Vector2.zero : _keyboardMoveInput;
         }
 
         if (_preferredInputDevice == InputDeviceType.Gamepad)
@@ -84,8 +91,11 @@ public partial class Mod_GameController : Module
             if (_gamepadMoveInput.sqrMagnitude > MoveInputEpsilonSqr)
                 return _gamepadMoveInput;
 
-            return _keyboardMoveInput;
+            return textInputFocused ? Vector2.zero : _keyboardMoveInput;
         }
+
+        if (textInputFocused)
+            return Vector2.zero;
 
         return fallbackAction != null ? fallbackAction.ReadValue<Vector2>() : Vector2.zero;
     }

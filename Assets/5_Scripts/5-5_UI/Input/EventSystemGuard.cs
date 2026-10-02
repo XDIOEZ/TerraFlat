@@ -6,6 +6,7 @@ using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.UI;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using TMPro;
 
 /// <summary>
 /// Keeps one shared EventSystem alive across scene and dimension switches.
@@ -23,6 +24,24 @@ public static class EventSystemGuard
 
     /// <summary>当前 UI 是否由手柄驱动，供虚拟光标与玩法输入拦截判断。</summary>
     public static bool IsGamepadMode => gamepadMode;
+
+    /// <summary>桌面文本输入框正在编辑时，键盘玩法快捷键必须让位给文字输入。</summary>
+    public static bool IsTextInputFocused
+    {
+        get
+        {
+            GameObject selectedObject = EventSystem.current?.currentSelectedGameObject;
+            if (selectedObject == null)
+                return false;
+
+            TMP_InputField tmpInput = selectedObject.GetComponentInParent<TMP_InputField>();
+            if (tmpInput != null && tmpInput.isActiveAndEnabled && tmpInput.isFocused)
+                return true;
+
+            InputField legacyInput = selectedObject.GetComponentInParent<InputField>();
+            return legacyInput != null && legacyInput.isActiveAndEnabled && legacyInput.isFocused;
+        }
+    }
 
     /// <summary>手机方案下禁止普通手柄输入把全局 UI 切入手柄模式。</summary>
     public static void SetGamepadModeEntryAllowed(bool allowed)
