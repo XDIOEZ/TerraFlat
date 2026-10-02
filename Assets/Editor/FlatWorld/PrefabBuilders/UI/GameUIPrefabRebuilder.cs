@@ -2244,8 +2244,22 @@ public static class GameUIPrefabRebuilder
 
         AddCornerTicks(chrome, width, height);
         PlaceCloseButton(root.transform, width);
-        if (allowHotbarInput && root.GetComponent<UI_Drag>() != null)
+        if (allowHotbarInput)
         {
+            UI_Drag dragger = root.GetComponent<UI_Drag>();
+            if (dragger == null)
+                dragger = root.AddComponent<UI_Drag>();
+            dragger.rectTransform = rootRect;
+            dragger.draggableImage = rootImage;
+
+            BasePanel basePanel = root.GetComponent<BasePanel>();
+            if (basePanel != null)
+            {
+                basePanel.CanDrag = true;
+                basePanel.Dragger = dragger;
+                basePanel.rectTransform = rootRect;
+            }
+
             RectTransform hitRect = root.transform.Find("FWUI_DragSurface") as RectTransform;
             if (hitRect == null)
                 hitRect = CreateRect("FWUI_DragSurface", root.transform);

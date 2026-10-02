@@ -66,8 +66,11 @@ public static class PortableBuildingPanelBuilder
 
     /// <summary>放在操作提示下方、石碗上方，避免被底部快捷栏遮住。</summary>
     public static void ConfigureMortar(GameObject root)
-        => Configure(root, FindButton(root, "关闭"), root.transform,
+    {
+        Configure(root, FindButton(root, "关闭"), root.transform,
             new Vector2(160f, 60f), new Vector2(-225f, 185f));
+        EnsureWindowDragging(root);
+    }
 
     /// <summary>钻木取火面板左下角与“摩擦”按钮并排，只显示当前角色对应的一项建筑操作。</summary>
     public static void ConfigureFireDrill(GameObject root)
@@ -109,6 +112,42 @@ public static class PortableBuildingPanelBuilder
             actions.DismantleButton = dismantle;
         }
         finally { root.SetActive(active); }
+    }
+
+    /// <summary>工作方块窗口统一只允许从标题栏和窄边框拖动。</summary>
+    private static void EnsureWindowDragging(GameObject root)
+    {
+        RectTransform rootRect = root.GetComponent<RectTransform>();
+        Image rootImage = root.GetComponent<Image>();
+        BasePanel panel = root.GetComponent<BasePanel>();
+        if (rootRect == null || rootImage == null || panel == null)
+            throw new InvalidOperationException($"面板 {root.name} 缺少拖动所需的根组件。");
+
+        UI_Drag dragger = root.GetComponent<UI_Drag>() ?? root.AddComponent<UI_Drag>();
+        dragger.rectTransform = rootRect;
+        dragger.draggableImage = rootImage;
+        panel.CanDrag = true;
+        panel.Dragger = dragger;
+        panel.rectTransform = rootRect;
+
+        UIWindowDragSurface surface = root.GetComponentInChildren<UIWindowDragSurface>(true);
+        if (surface == null)
+        {
+            GameObject hitObject = new GameObject("FWUI_DragSurface", typeof(RectTransform), typeof(CanvasRenderer));
+            hitObject.layer = root.layer;
+            hitObject.transform.SetParent(root.transform, false);
+            surface = hitObject.AddComponent<UIWindowDragSurface>();
+        }
+
+        RectTransform hitRect = surface.rectTransform;
+        hitRect.anchorMin = Vector2.zero;
+        hitRect.anchorMax = Vector2.one;
+        hitRect.offsetMin = Vector2.zero;
+        hitRect.offsetMax = Vector2.zero;
+        hitRect.SetAsFirstSibling();
+        surface.color = Color.clear;
+        surface.raycastTarget = true;
+        surface.Configure(rootRect);
     }
 
     private static Button CreateButton(GameObject root, Button template, Transform parent,
