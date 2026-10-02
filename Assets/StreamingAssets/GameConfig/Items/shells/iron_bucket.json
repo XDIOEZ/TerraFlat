@@ -15,7 +15,7 @@
       "canBePickedUp": true,
       "tags": ["Container", "Iron"],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]",
+        "spriteAddress": "Assets/6_Art/Generated/WaterVessel/IronBucket/IronBucket_Icon.png",
         "color": { "r": 1, "g": 1, "b": 1, "a": 1 }
       },
       "modules": {

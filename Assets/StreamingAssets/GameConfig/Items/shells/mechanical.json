@@ -1669,7 +1669,7 @@
       "canBePickedUp": false,
       "tags": ["35", "InventoryGroup.MechanicalPower"],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]",
+        "spriteAddress": "Assets/6_Art/Generated/Mechanical/MechanicalLoom/MechanicalLoom_Idle.png",
         "spriteStates": {
           "axisPorts": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Shaft_Wood_Linked_EndRings.png"
         },
@@ -1734,7 +1734,7 @@
       "canBePickedUp": true,
       "tags": ["35", "InventoryGroup.MechanicalPower"],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]",
+        "spriteAddress": "Assets/6_Art/Generated/Mechanical/MechanicalLoom/MechanicalLoom_Idle.png",
         "spriteStates": {
           "axisPorts": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Shaft_Wood_Linked_EndRings.png"
         }

@@ -12,7 +12,7 @@
       "canBePickedUp": true,
       "tags": ["Mineral", "Obsidian"],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]",
+        "spriteAddress": "Assets/6_Art/Generated/Environment/Obsidian/Obsidian_Icon.png",
         "rendererLocalScale": { "x": 0.6, "y": 0.6, "z": 1 },
         "color": { "r": 1, "g": 1, "b": 1, "a": 1 }
       },
@@ -27,7 +27,7 @@
       "stackable": false,
       "lootTableId": "Mine_Obsidian_Default",
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]",
+        "spriteAddress": "Assets/6_Art/Generated/Environment/Mine_Obsidian/Mine_Obsidian_Idle.png",
         "color": { "r": 1, "g": 1, "b": 1, "a": 1 }
       },
       "modules": {
@@ -55,7 +55,9 @@
       "stackable": false,
       "tags": ["Knife", "Obsidian", "Modern"],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]",
+        "spriteAddress": "Assets/6_Art/Generated/Combat/Dagger_Obsidian/Dagger_Obsidian_Icon.png",
+        "rendererLocalEulerAngles": { "x": 0, "y": 0, "z": 0 },
+        "flipX": true,
         "rendererLocalScale": { "x": 0.6, "y": 0.6, "z": 1 },
         "color": { "r": 1, "g": 1, "b": 1, "a": 1 }
       },
@@ -77,7 +79,9 @@
       "stackable": false,
       "tags": ["Spear", "Obsidian", "Modern"],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]",
+        "spriteAddress": "Assets/6_Art/Generated/Combat/Spear_Obsidian/Spear_Obsidian_Icon.png",
+        "rendererLocalEulerAngles": { "x": 0, "y": 0, "z": 0 },
+        "flipX": true,
         "color": { "r": 1, "g": 1, "b": 1, "a": 1 }
       },
       "modules": {

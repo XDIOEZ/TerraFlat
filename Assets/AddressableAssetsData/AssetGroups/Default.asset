@@ -3634,6 +3634,96 @@ MonoBehaviour:
     m_SerializedLabels:
     - ActorVisual
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 0e0e558be9404c63a75369a27f4ba696
+    m_Address: Assets/6_Art/Generated/Combat/Spear_Obsidian/Spear_Obsidian_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 16d8806f858e4bebac8b42c0a4e71fbc
+    m_Address: Assets/6_Art/Generated/InventoryCrafting/SilkFiber/SilkFiber_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 1819d2e5e5b7464a8b693fafce330e38
+    m_Address: Assets/6_Art/Generated/Environment/Ore_Diamond/Ore_Diamond_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 1ea01a5f59db4d33b505a2143712896f
+    m_Address: Assets/6_Art/Generated/Environment/Mine_Sulfur/Mine_Sulfur_Idle.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 29da8d3884224a25bd073d23ac56143e
+    m_Address: Assets/6_Art/Generated/Environment/Ore_Sulfur/Ore_Sulfur_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 2ee5d880c0f8415faa5558a4832697b3
+    m_Address: Assets/6_Art/Generated/InventoryCrafting/Silk/Silk_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 34bf5cc001b443bc977a27ba00fecf8c
+    m_Address: Assets/6_Art/Generated/InventoryCrafting/CactusPiece/CactusPiece_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 5d3aeaee32594997bcdf5c00d3eca4c5
+    m_Address: Assets/6_Art/Generated/Combat/Dagger_Obsidian/Dagger_Obsidian_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 6b7ce6d01db941f2bf5f5470049918e3
+    m_Address: Assets/6_Art/Generated/Farming/Cactus/Cactus_Idle.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 76bc5975c48d474ab2681e550f416d0f
+    m_Address: Assets/6_Art/Generated/Environment/Mine_Obsidian/Mine_Obsidian_Idle.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 7ab8427981814142be9b63bc4c254989
+    m_Address: Assets/6_Art/Generated/Environment/Obsidian/Obsidian_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: add3cbe8af1e42ec9d8341306174dfc5
+    m_Address: Assets/6_Art/Generated/Environment/Mine_Diamond/Mine_Diamond_Idle.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: af075c8f242c4394a0186cc839ebe892
+    m_Address: Assets/6_Art/Generated/Mechanical/MechanicalLoom/MechanicalLoom_Idle.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: cbc0a0a4859846f990cf139f677a7ab9
+    m_Address: Assets/6_Art/Generated/InventoryCrafting/Cloth/Cloth_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: ee437890accf4af5ba802ee287c25381
+    m_Address: Assets/6_Art/Generated/WaterVessel/IronBucket/IronBucket_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
   m_ReadOnly: 0
   m_Settings: {fileID: 11400000, guid: fc59728ab6aa9b54ba0a5f7cc69fc0d8, type: 2}
   m_SchemaSet:

@@ -15,7 +15,7 @@
       "canBePickedUp": true,
       "tags": ["Ore", "Mineral"],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]",
+        "spriteAddress": "Assets/6_Art/Generated/Environment/Ore_Diamond/Ore_Diamond_Icon.png",
         "rendererLocalScale": { "x": 0.7, "y": 0.7, "z": 1 },
         "color": { "r": 1, "g": 1, "b": 1, "a": 1 },
         "collider": {
@@ -37,7 +37,7 @@
       "canBePickedUp": false,
       "lootTableId": "Mine_Diamond_Default",
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]",
+        "spriteAddress": "Assets/6_Art/Generated/Environment/Mine_Diamond/Mine_Diamond_Idle.png",
         "color": { "r": 1, "g": 1, "b": 1, "a": 1 }
       },
       "modules": {

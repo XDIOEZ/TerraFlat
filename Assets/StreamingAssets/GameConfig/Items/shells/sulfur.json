@@ -12,7 +12,7 @@
       "canBePickedUp": true,
       "tags": ["Mineral", "Sulfur"],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]",
+        "spriteAddress": "Assets/6_Art/Generated/Environment/Ore_Sulfur/Ore_Sulfur_Icon.png",
         "rendererLocalScale": { "x": 0.5, "y": 0.5, "z": 1 },
         "color": { "r": 1, "g": 1, "b": 1, "a": 1 }
       },
@@ -28,7 +28,7 @@
       "tags": ["35", "Mineral", "Sulfur"],
       "lootTableId": "Mine_Sulfur_Default",
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]",
+        "spriteAddress": "Assets/6_Art/Generated/Environment/Mine_Sulfur/Mine_Sulfur_Idle.png",
         "color": { "r": 1, "g": 1, "b": 1, "a": 1 }
       },
       "modules": {

@@ -15,7 +15,7 @@
       "canBePickedUp": true,
       "tags": ["Material"],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Cloth/Cloth_Icon.png"
       },
       "modules": {}
     },
@@ -40,7 +40,7 @@
         }
       },
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/SilkFiber/SilkFiber_Icon.png"
       },
       "modules": {}
     },
@@ -58,7 +58,7 @@
       "canBePickedUp": true,
       "tags": ["Material"],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Silk/Silk_Icon.png"
       },
       "modules": {}
     }

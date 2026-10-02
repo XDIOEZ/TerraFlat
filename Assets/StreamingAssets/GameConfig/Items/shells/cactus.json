@@ -15,7 +15,7 @@
       "canBePickedUp": true,
       "tags": ["47", "InventoryGroup.Food"],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]",
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/CactusPiece/CactusPiece_Icon.png",
         "rendererLocalScale": { "x": 0.45, "y": 0.45, "z": 1.0 },
         "color": { "r": 1.0, "g": 1.0, "b": 1.0, "a": 1.0 },
         "collider": {
@@ -54,14 +54,14 @@
       "parent": "WildCrop_Base",
       "entityRuntime": "resource",
       "gameName": "仙人掌",
-      "description": "生长在干旱沙漠中的耐旱植物，不会自然出现在潮湿海滩或河岸湿地。碰触植株会受到穿刺伤害；成熟后可采集能食用补水的仙人掌块，也可用武器清除。当前外观使用统一占位素材。",
+      "description": "生长在干旱沙漠中的耐旱植物，不会自然出现在潮湿海滩或河岸湿地。碰触植株会受到穿刺伤害；成熟后可采集能食用补水的仙人掌块，也可用武器清除。",
       "weight": 3.0,
       "volume": 5.0,
       "stackable": false,
       "canBePickedUp": false,
       "tags": [],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]",
+        "spriteAddress": "Assets/6_Art/Generated/Farming/Cactus/Cactus_Idle.png",
         "rendererLocalPosition": { "x": 0.0, "y": 0.5, "z": 0.0 },
         "rendererLocalScale": { "x": 0.8, "y": 1.0, "z": 1.0 },
         "collider": {
