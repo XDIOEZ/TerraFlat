@@ -81,6 +81,7 @@ public partial class Mod_Mover : Module
     private const float InputMoveThresholdSqr = 0.001f;
     private const float ArriveThreshold = 0.1f;
     private const float MinimumTransitionDuration = 0.01f;
+    private const float PlayerAccelerationMultiplier = 1.3f; // 玩家主动加速度提升 30%，不影响停止减速度。
 
     public Mod_Stamina stamina;                         // 体力模块
 
@@ -492,10 +493,13 @@ public partial class Mod_Mover : Module
         float surfaceMultiplier = isStopping
             ? surfaceDecelerationMultiplier
             : surfaceAccelerationMultiplier;
+        float actorAccelerationMultiplier = !isStopping && item is Player
+            ? PlayerAccelerationMultiplier
+            : 1f;
         Vector2 nextVelocity = Vector2.MoveTowards(
             currentVelocity,
             targetVelocity,
-            speedChangeRate * surfaceMultiplier * Mathf.Max(0f, deltaTime));
+            speedChangeRate * surfaceMultiplier * actorAccelerationMultiplier * Mathf.Max(0f, deltaTime));
 
         float stopThreshold = Mathf.Max(0.001f, endSpeed);
         return isStopping && nextVelocity.sqrMagnitude <= stopThreshold * stopThreshold
