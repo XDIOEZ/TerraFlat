@@ -141,7 +141,7 @@
           "waterValue": 40, "maxWater": 100
         }
       },
-      "behaviours": [],
+      "behaviours": [ { "type": "farmland", "parameters": {} } ],
       "damageProfile": {
         "damageable": false, "maxHealth": 100,
         "defenseValues": { "cutting": 0, "piercing": 0, "chopping": 0, "blunt": 0 },

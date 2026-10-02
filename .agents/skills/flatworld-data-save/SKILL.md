@@ -41,7 +41,7 @@ description: "Use when: 定位或修改 FlatWorld 的数据模型、MemoryPack �
 - 任务 `flatworld.quests` 等未来版本必须拒绝写回；未知 MOD 记录应保留。
 - 玩家创建 JSON 位于 `StreamingAssets/GameConfig/Players`，不进入 MemoryPack 存档；创建期属性只在无存档阶段注入，并在模块加载前同步到 `Data_Player.ModuleDataDic`。`core.heatConductionRate` 是当前内容配置，重新加载已有玩家时仍覆盖存档中的该静态速率，其他玩家状态仍以存档为准。
 
-- `ChunkSaveRecord.HasChanges` 必须计入独立的农业和平台状态；恢复支撑必须在导航及表现绑定之前，不能只有当前帧可行走、重载后丢失平台。
+- `ChunkSaveRecord.HasChanges` 必须计入独立的农业和平台状态；农业存档只保存需要持久化的水肥与作物，未完成锄地是纯运行时视觉/输入进度，不进入农业差量；真正耕完后由 `RuntimeTileDeltas` 保存正式 `Tile_Farmland`。恢复支撑必须在导航及表现绑定之前，不能只有当前帧可行走、重载后丢失平台。
 - 地块污染使用 `ChunkSaveRecord.ContaminationCells` 保存偏离定义默认值的稀疏差量；污染定义 ID 与数值一起持久化，恢复时必须要求当前本体/MOD 已注册该定义，禁止静默丢弃未知污染状态。
 - 时间保存同时复制季节配置和历史区间；积雪、植物冷热暴露、自然补位年份、陶罐水质／加工进度、盐分负担各有独立状态，不能在渲染绑定或 UI 打开时重置。
 - 通用液体容器的 `LiquidContainerState.Amount` 以 `0.1` 份为最小持久化单位；运行时读入高精度浮点余量时先归一到一位小数，后续装液、倾倒、转移与加工不得重新写入更高精度的数量。

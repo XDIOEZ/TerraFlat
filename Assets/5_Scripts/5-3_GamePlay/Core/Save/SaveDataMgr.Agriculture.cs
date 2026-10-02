@@ -6,7 +6,7 @@ using MemoryPack;
 using UnityEngine;
 using RuntimeWorldAddress = FlatWorld.WorldModel.WorldAddress;
 
-/// <summary>农业独立差量：同一格保存耕作进度、水肥及一株作物，避免挤入建筑存档规则。</summary>
+/// <summary>农业独立差量：同一格只保存水肥及作物；未完成耕作属于临时视觉，不进入存档。</summary>
 public partial class SaveDataMgr
 {
     #region 农业差量
@@ -24,7 +24,7 @@ public partial class SaveDataMgr
         return record;
     }
 
-    /// <summary>每次有效耕作或水肥结算立即记录，区块回收不会丢失半成品。</summary>
+    /// <summary>只记录需要持久化的水肥状态；未完成耕作不会调用这里。</summary>
     public void RecordAgricultureCell(RuntimeTerrainTileSample sample)
     {
         if (!GameNetwork.HasStateAuthority || SaveData == null)
@@ -36,7 +36,6 @@ public partial class SaveDataMgr
             cell = new AgricultureCellSaveData { LocalPosition = sample.LocalCell };
             record.AgricultureCells.Add(cell);
         }
-        cell.Progress = FarmlandSystem.Read(sample.Terrain, sample.LocalCell, FarmlandSystem.ProgressLayer);
         cell.SourceTileId = (int)FarmlandSystem.Read(sample.Terrain, sample.LocalCell, FarmlandSystem.SourceLayer);
         cell.Water = FarmlandSystem.Read(sample.Terrain, sample.LocalCell, FarmlandSystem.WaterLayer);
         cell.Fertility = FarmlandSystem.Read(sample.Terrain, sample.LocalCell, FarmlandSystem.FertilityLayer);
@@ -82,10 +81,7 @@ public partial class SaveDataMgr
         {
             int x = cell.LocalPosition.x;
             int y = cell.LocalPosition.y;
-            if (cell.Progress > 0f)
-                chunk.Terrain.SetGrass(x, y, 0);
             chunk.Terrain.SetEnvironmentValue(FarmlandSystem.SourceLayer, x, y, cell.SourceTileId);
-            chunk.Terrain.SetEnvironmentValue(FarmlandSystem.ProgressLayer, x, y, cell.Progress);
             chunk.Terrain.SetEnvironmentValue(FarmlandSystem.WaterLayer, x, y, cell.Water);
             chunk.Terrain.SetEnvironmentValue(FarmlandSystem.FertilityLayer, x, y, cell.Fertility);
             if (cell.SourceTileId != 0)
@@ -101,8 +97,7 @@ public partial class SaveDataMgr
 public partial class AgricultureCellSaveData
 {
     public Vector2Int LocalPosition; // 区块内格坐标
-    public float Progress; // 0～1 的耕作进度
-    public int SourceTileId; // 开始耕作时的来源地表
+    public int SourceTileId; // 水肥状态关联的当前地表
     public float Water; // 当前水分
     public float Fertility; // 当前肥力
     public ItemData Crop; // 唯一作物快照

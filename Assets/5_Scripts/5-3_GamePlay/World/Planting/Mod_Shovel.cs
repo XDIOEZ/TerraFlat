@@ -13,7 +13,6 @@ public sealed class Mod_Shovel : Mod_ResourceToolBase, IItemModuleDependencyBind
     private IWeaponActionAnimation actionAnimation;
     private Mod_GameController ownerController;
     private WorldTileTargetOutline targetOutline;
-    private GroundHarvestCrackOverlay crackOverlay;
     private bool actBound;
     private bool continuousUseArmed;
 
@@ -84,7 +83,6 @@ public sealed class Mod_Shovel : Mod_ResourceToolBase, IItemModuleDependencyBind
             continuousUseArmed = false;
             ownerController = null;
             targetOutline?.Hide();
-            crackOverlay?.Hide();
             return;
         }
 
@@ -116,7 +114,7 @@ public sealed class Mod_Shovel : Mod_ResourceToolBase, IItemModuleDependencyBind
         if (!actionAnimation.TryRequestAction(queueIfBusy: false))
             return;
 
-        if (!GroundTileHarvestSystem.TryWork(this, out bool completed, out Vector2Int worldCell,
+        if (!GroundTileHarvestSystem.TryWork(this, out _, out Vector2Int worldCell,
                 out _, out failureReason))
         {
             if (showFailureFeedback && !string.IsNullOrEmpty(failureReason))
@@ -126,50 +124,25 @@ public sealed class Mod_Shovel : Mod_ResourceToolBase, IItemModuleDependencyBind
 
         HoeTillingFeedback.PlayDigging(item, worldCell);
         UpdateTargetVisuals();
-        if (!completed && GroundTileHarvestSystem.TryResolveTarget(this, out RuntimeTerrainTileSample sample,
-                out _, out GroundTileHarvestRule rule))
-        {
-            int requiredUses = GroundTileHarvestSystem.ResolveRequiredUses(this, rule);
-            int completedUses = Mathf.CeilToInt(GroundTileHarvestSystem.ReadProgress(sample) * requiredUses);
-            ItemActionFeedback.Show(item.Owner, $"挖掘进度：{completedUses}/{requiredUses}");
-        }
     }
 
-    /// <summary>白框始终跟随当前指针地格，裂纹只显示可挖地面的累计进度。</summary>
+    /// <summary>白框始终跟随当前指针地格；挖掘进度由区块表现层渐显目标地块。</summary>
     private void UpdateTargetVisuals()
     {
         if (!GroundTileHarvestSystem.TryResolvePreview(this, out RuntimeTerrainTileSample sample))
         {
             targetOutline?.Hide();
-            crackOverlay?.Hide();
             return;
         }
 
         targetOutline ??= WorldTileTargetOutline.Create("Shovel Ground Target Outline");
         targetOutline.Show(sample.WorldCell);
-        if (!GroundTileHarvestSystem.IsHarvestableGround(sample.Cell.GroundTileId))
-        {
-            crackOverlay?.Hide();
-            return;
-        }
-
-        float progress = GroundTileHarvestSystem.ReadProgress(sample);
-        if (progress <= 0f)
-        {
-            crackOverlay?.Hide();
-            return;
-        }
-
-        crackOverlay ??= GroundHarvestCrackOverlay.Create();
-        crackOverlay.Show(sample.WorldCell, progress);
     }
 
     private void ReleaseTargetVisuals()
     {
         if (targetOutline != null) Destroy(targetOutline.gameObject);
-        if (crackOverlay != null) Destroy(crackOverlay.gameObject);
         targetOutline = null;
-        crackOverlay = null;
     }
 
     #endregion

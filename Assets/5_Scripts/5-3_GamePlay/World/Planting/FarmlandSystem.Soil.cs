@@ -25,7 +25,7 @@ public static partial class FarmlandSystem
     /// <summary>普通土地尚无农业差量时，读取生成环境；已有浇水、施肥或耕作则保留当前值。</summary>
     public static TileData_Farmland ReadSoilSnapshot(RuntimeTerrainTileSample sample)
     {
-        var soil = (TileData_Farmland)GameRes.Instance.GetTileBlock(TileBlockId).tileDataTemplate.Clone();
+        var soil = (TileData_Farmland)RequireFarmlandDefinition().TileDataTemplate.Clone();
         soil.position = (Vector3Int)sample.WorldCell;
         if (HasSoilState(sample))
         {
@@ -58,7 +58,7 @@ public static partial class FarmlandSystem
     /// <summary>普通土地的湿润度继续使用生成环境的 0～1 单位；农业水量为 0～100 点。</summary>
     public static void SyncSoilEnvironment(ChunkTerrainData terrain, int x, int y, float water, float fertility)
     {
-        var template = (TileData_Farmland)GameRes.Instance.GetTileBlock(TileBlockId).tileDataTemplate;
+        var template = (TileData_Farmland)RequireFarmlandDefinition().TileDataTemplate;
         terrain.SetEnvironmentValue("moisture", x, y, Mathf.Clamp01(water / Mathf.Max(0.01f, template.maxWater)));
         terrain.SetEnvironmentValue("fertility", x, y, Mathf.Clamp(fertility, 0f, template.maxFertility));
     }

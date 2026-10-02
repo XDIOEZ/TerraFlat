@@ -419,7 +419,7 @@ public class EnvironmentInfoDisplay : MonoBehaviour
         }
     }
 
-    /// <summary>耕地或已有农业状态时显示真实水分、肥力和耕作进度。</summary>
+    /// <summary>耕地或已有农业状态时只显示可持久化的地块、水分与肥力。</summary>
     private void DrawAgricultureSummary(RuntimeTerrainTileSample sample)
     {
         ChunkTerrainData terrain = sample.Terrain;
@@ -431,13 +431,12 @@ public class EnvironmentInfoDisplay : MonoBehaviour
             return;
 
         TileData_Farmland soil = FarmlandSystem.ReadSoilSnapshot(sample);
-        float progress = FarmlandSystem.Read(terrain, local, FarmlandSystem.ProgressLayer);
         float waterPercent = soil.maxWater > 0f ? soil.waterValue / soil.maxWater * 100f : 0f;
         float fertilityPercent = soil.maxFertility > 0f ? soil.Fertility / soil.maxFertility * 100f : 0f;
 
         GUILayout.Label("<b>农业状态</b>", labelStyle);
         GUILayout.Label(
-            $"耕地: {isFarmland}  耕作进度: {progress * 100f:F1}%  原地表ID: {Mathf.RoundToInt(sourceTileId)}",
+            $"耕地: {isFarmland}  水肥状态地块ID: {Mathf.RoundToInt(sourceTileId)}",
             labelStyle);
         GUILayout.Label(
             $"水分: {soil.waterValue:F2}/{soil.maxWater:F2} ({waterPercent:F1}%)",

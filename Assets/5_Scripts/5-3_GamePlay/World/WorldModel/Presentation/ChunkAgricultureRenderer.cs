@@ -5,28 +5,31 @@ using FlatWorld.Networking;
 using FlatWorld.WorldModel;
 using UnityEngine;
 using Unity.Profiling;
+using UnityEngine.Tilemaps;
+using RuntimeWorldAddress = FlatWorld.WorldModel.WorldAddress;
 
 /// <summary>
-/// 区块农业表现：按权威进度透明渐显耕地，同时管理玩家播种的作物生命周期。
+/// 区块农业表现：未完成锄地只画临时耕地覆盖层，铲挖则按权威进度渐显目标地块。
 /// 作物在自动保存和区块解绑时抓取快照，收获时清除快照；不复用自然生态或临时掉落登记。
 /// </summary>
 public sealed class ChunkAgricultureRenderer : MonoBehaviour, IChunkViewRenderer
 {
     #region 配置与状态
 
-    [SerializeField] private Sprite farmlandSprite; // 与最终地块一致的耕地精灵
     [SerializeField] private Material progressMaterial; // 支持 SpriteRenderer 透明度的耕地渐显材质
     [SerializeField, Min(0.01f)] private float tillingFadeDuration = 0.18f;
     [SerializeField, Range(0f, 1f)] private float minimumProgressAlpha = 0.12f;
     [SerializeField, Range(0f, 1f)] private float maximumProgressAlpha = 0.9f;
 
-    private sealed class TillingOverlay
+    private sealed class ProgressOverlay
     {
         public SpriteRenderer Renderer;
         public float TargetAlpha;
     }
 
-    private readonly Dictionary<Vector2Int, TillingOverlay> overlays = new();
+    private readonly Dictionary<Vector2Int, ProgressOverlay> tillingOverlays = new();
+    private readonly Dictionary<Vector2Int, ProgressOverlay> groundHarvestOverlays = new();
+    private readonly List<Vector2Int> tillingCellBuffer = new();
     private readonly Dictionary<Vector2Int, Item> crops = new();
     private readonly Dictionary<Vector2Int, NaturalEntityHandle> entityCrops = new();
     private readonly Dictionary<int, Vector2Int> entityCropCells = new();
@@ -60,6 +63,7 @@ public sealed class ChunkAgricultureRenderer : MonoBehaviour, IChunkViewRenderer
         terrainOwner = GetComponentInParent<ChunkView>()?.GetComponentInChildren<ChunkTilemapRenderer>(true);
         if (terrainOwner != null) terrainOwner.BatchPresentationRebuilt += RefreshEntityPresentation;
         chunk.Terrain.Changed += HandleChanged;
+        FarmlandSystem.TillingVisualChanged += HandleTillingVisualChanged;
         bindingInitialState = true;
         try
         {
@@ -107,6 +111,8 @@ public sealed class ChunkAgricultureRenderer : MonoBehaviour, IChunkViewRenderer
         using (CropCaptureMarker.Auto())
             CaptureState();
         chunk.Terrain.Changed -= HandleChanged;
+        FarmlandSystem.TillingVisualChanged -= HandleTillingVisualChanged;
+        FarmlandSystem.ClearTillingProgress(chunk.Address);
         if (terrainOwner != null) terrainOwner.BatchPresentationRebuilt -= RefreshEntityPresentation;
         using (CropDespawnMarker.Auto())
         {
@@ -125,9 +131,15 @@ public sealed class ChunkAgricultureRenderer : MonoBehaviour, IChunkViewRenderer
         entityCropCells.Clear();
         terrainOwner = null;
         using (OverlayClearMarker.Auto())
-            foreach (TillingOverlay overlay in overlays.Values)
+        {
+            foreach (ProgressOverlay overlay in tillingOverlays.Values)
                 DisposeOverlay(overlay);
-        overlays.Clear();
+            foreach (ProgressOverlay overlay in groundHarvestOverlays.Values)
+                DisposeOverlay(overlay);
+        }
+        tillingOverlays.Clear();
+        groundHarvestOverlays.Clear();
+        tillingCellBuffer.Clear();
         hasActiveFade = false;
         chunk = null;
         unbinding = false;
@@ -265,6 +277,13 @@ public sealed class ChunkAgricultureRenderer : MonoBehaviour, IChunkViewRenderer
 
     private void OnApplicationQuit() => applicationQuitting = true;
 
+    private void OnDestroy()
+    {
+        FarmlandSystem.TillingVisualChanged -= HandleTillingVisualChanged;
+        if (chunk != null)
+            FarmlandSystem.ClearTillingProgress(chunk.Address);
+    }
+
     #endregion
 
     #region 地块渐变
@@ -278,12 +297,19 @@ public sealed class ChunkAgricultureRenderer : MonoBehaviour, IChunkViewRenderer
 
     private void Update()
     {
-        if (!hasActiveFade || overlays.Count == 0)
+        RefreshTillingRuntimeOverlays();
+        if (!hasActiveFade)
             return;
 
         float alphaStep = Time.deltaTime / Mathf.Max(0.01f, tillingFadeDuration);
+        hasActiveFade = FadeOverlays(tillingOverlays.Values, alphaStep) |
+                        FadeOverlays(groundHarvestOverlays.Values, alphaStep);
+    }
+
+    private static bool FadeOverlays(IEnumerable<ProgressOverlay> overlays, float alphaStep)
+    {
         bool stillFading = false;
-        foreach (TillingOverlay overlay in overlays.Values)
+        foreach (ProgressOverlay overlay in overlays)
         {
             if (overlay?.Renderer == null)
                 continue;
@@ -300,62 +326,192 @@ public sealed class ChunkAgricultureRenderer : MonoBehaviour, IChunkViewRenderer
                 stillFading = true;
         }
 
-        hasActiveFade = stillFading;
+        return stillFading;
     }
 
-    /// <summary>每次耕作提高整格耕地的目标透明度，并在短时间内平滑渐显。</summary>
+    private void RefreshTillingRuntimeOverlays()
+    {
+        if (chunk == null || tillingOverlays.Count == 0)
+            return;
+
+        tillingCellBuffer.Clear();
+        foreach (Vector2Int local in tillingOverlays.Keys)
+            tillingCellBuffer.Add(local);
+        for (int i = 0; i < tillingCellBuffer.Count; i++)
+        {
+            Vector2Int local = tillingCellBuffer[i];
+            RefreshTillingOverlay(local, chunk.Terrain.GetCell(local.x, local.y));
+        }
+        tillingCellBuffer.Clear();
+    }
+
+    private void HandleTillingVisualChanged(RuntimeWorldAddress address, Vector2Int local)
+    {
+        if (chunk == null || !chunk.Address.Equals(address) ||
+            (uint)local.x >= (uint)chunk.Terrain.Width || (uint)local.y >= (uint)chunk.Terrain.Height)
+            return;
+        RefreshTillingOverlay(local, chunk.Terrain.GetCell(local.x, local.y));
+    }
+
+    /// <summary>正式地形变化只负责收尾临时锄地表现，并刷新铲挖渐显。</summary>
     private void RefreshCell(Vector2Int local)
     {
         TerrainCell cell = chunk.Terrain.GetCell(local.x, local.y);
-        float progress = FarmlandSystem.Read(chunk.Terrain, local, FarmlandSystem.ProgressLayer);
-        bool valid = progress > 0f && !FarmlandSystem.IsFarmland(cell) && cell.BlockingTileId == 0 &&
-            FarmlandSystem.Read(chunk.Terrain, local, FarmlandSystem.SourceLayer) == cell.GroundTileId;
-        if (!valid)
+        RefreshTillingOverlay(local, cell);
+        RefreshGroundHarvestOverlay(local, cell);
+    }
+
+    /// <summary>锄地进度只来自当前会话临时状态；停工十秒后会逐渐退回底下原本的草地。</summary>
+    private void RefreshTillingOverlay(Vector2Int local, TerrainCell cell)
+    {
+        if (FarmlandSystem.IsFarmland(cell) || cell.BlockingTileId != 0)
         {
-            if (overlays.Remove(local, out TillingOverlay previous))
+            if (tillingOverlays.Remove(local, out ProgressOverlay previous))
                 DisposeOverlay(previous);
-            if (overlays.Count == 0)
-                hasActiveFade = false;
             return;
         }
 
-        float targetAlpha = Mathf.Lerp(
-            Mathf.Clamp01(minimumProgressAlpha),
-            Mathf.Clamp01(Mathf.Max(minimumProgressAlpha, maximumProgressAlpha)),
-            Mathf.Clamp01(progress));
-
-        if (!overlays.TryGetValue(local, out TillingOverlay overlay))
+        float progress = FarmlandSystem.GetTillingVisualProgress(chunk.Address, local, cell.GroundTileId);
+        if (progress <= 0f)
         {
-            var root = new GameObject("TillingProgress");
-            root.transform.SetParent(transform, false);
-            root.transform.localPosition = new Vector3(local.x + 0.5f, local.y + 0.5f, 0f);
-            SpriteRenderer renderer = root.AddComponent<SpriteRenderer>();
-            renderer.sprite = farmlandSprite;
-            renderer.sharedMaterial = progressMaterial;
-            WorldSortingManager.GetInstance().ApplyRenderer(renderer, WorldSortingManager.GroundMarkCategory);
-            renderer.spriteSortPoint = SpriteSortPoint.Center;
-            renderer.color = new Color(1f, 1f, 1f, bindingInitialState ? targetAlpha : 0f);
-            overlay = new TillingOverlay { Renderer = renderer, TargetAlpha = targetAlpha };
-            overlays.Add(local, overlay);
-            if (!bindingInitialState)
-                hasActiveFade = true;
+            if (!tillingOverlays.TryGetValue(local, out ProgressOverlay fading))
+                return;
+            SetOverlayTargetAlpha(fading, 0f);
+            if (fading.Renderer == null || fading.Renderer.color.a <= 0.001f)
+            {
+                tillingOverlays.Remove(local);
+                DisposeOverlay(fading);
+            }
             return;
         }
 
-        overlay.TargetAlpha = targetAlpha;
-        if (bindingInitialState && overlay.Renderer != null)
+        if (!tillingOverlays.TryGetValue(local, out ProgressOverlay overlay))
+        {
+            if (!TryResolveFarmlandVisual(out Sprite sprite, out Color color, out Matrix4x4 tileTransform))
+                return;
+            overlay = CreateOverlay("TillingProgress", local, sprite, color, tileTransform);
+            tillingOverlays.Add(local, overlay);
+        }
+
+        SetOverlayProgress(overlay, progress, useMinimumAlpha: false);
+    }
+
+    /// <summary>铲地时像锄地一样逐步显现挖完后的底层地块，不再额外画裂纹。</summary>
+    private void RefreshGroundHarvestOverlay(Vector2Int local, TerrainCell cell)
+    {
+        float progress = chunk.Terrain.TryGetEnvironmentValue(TileBuildingSystem.RuntimeDamageLayerId,
+            local.x, local.y, out float value) ? Mathf.Clamp01(value) : 0f;
+        if (progress <= 0f || cell.BlockingTileId != 0)
+        {
+            if (groundHarvestOverlays.Remove(local, out ProgressOverlay previous))
+                DisposeOverlay(previous);
+            return;
+        }
+
+        if (!TryResolveGroundHarvestVisual(cell.GroundTileId, out Sprite sprite, out Color color,
+                out Matrix4x4 tileTransform))
+        {
+            if (groundHarvestOverlays.Remove(local, out ProgressOverlay previous))
+                DisposeOverlay(previous);
+            return;
+        }
+
+        if (!groundHarvestOverlays.TryGetValue(local, out ProgressOverlay overlay))
+        {
+            overlay = CreateOverlay("GroundHarvestProgress", local, sprite, color, tileTransform);
+            groundHarvestOverlays.Add(local, overlay);
+        }
+
+        SetOverlayProgress(overlay, progress, useMinimumAlpha: true);
+    }
+
+    private ProgressOverlay CreateOverlay(string name, Vector2Int local, Sprite sprite, Color color,
+        Matrix4x4 tileTransform)
+    {
+        var root = new GameObject(name);
+        root.transform.SetParent(transform, false);
+        Vector3 offset = tileTransform.MultiplyPoint3x4(Vector3.zero);
+        root.transform.localPosition = new Vector3(local.x + 0.5f + offset.x, local.y + 0.5f + offset.y, offset.z);
+        root.transform.localRotation = tileTransform.rotation;
+        root.transform.localScale = tileTransform.lossyScale;
+        SpriteRenderer renderer = root.AddComponent<SpriteRenderer>();
+        renderer.sprite = sprite;
+        renderer.sharedMaterial = progressMaterial;
+        WorldSortingManager.GetInstance().ApplyRenderer(renderer, WorldSortingManager.GroundMarkCategory);
+        renderer.spriteSortPoint = SpriteSortPoint.Center;
+        renderer.color = new Color(color.r, color.g, color.b, 0f);
+        return new ProgressOverlay { Renderer = renderer };
+    }
+
+    private void SetOverlayProgress(ProgressOverlay overlay, float progress, bool useMinimumAlpha)
+    {
+        float minimumAlpha = useMinimumAlpha ? Mathf.Clamp01(minimumProgressAlpha) : 0f;
+        float targetAlpha = Mathf.Lerp(minimumAlpha,
+            Mathf.Clamp01(Mathf.Max(minimumAlpha, maximumProgressAlpha)), Mathf.Clamp01(progress));
+        SetOverlayTargetAlpha(overlay, targetAlpha);
+    }
+
+    private void SetOverlayTargetAlpha(ProgressOverlay overlay, float targetAlpha)
+    {
+        overlay.TargetAlpha = Mathf.Clamp01(targetAlpha);
+        if (overlay.Renderer == null)
+            return;
+
+        if (bindingInitialState)
         {
             Color color = overlay.Renderer.color;
-            color.a = targetAlpha;
+            color.a = overlay.TargetAlpha;
             overlay.Renderer.color = color;
         }
-        else if (overlay.Renderer != null && !Mathf.Approximately(overlay.Renderer.color.a, targetAlpha))
+        else if (!Mathf.Approximately(overlay.Renderer.color.a, overlay.TargetAlpha))
         {
             hasActiveFade = true;
         }
     }
 
-    private static void DisposeOverlay(TillingOverlay overlay)
+    private static bool TryResolveFarmlandVisual(out Sprite sprite, out Color color,
+        out Matrix4x4 tileTransform)
+    {
+        sprite = null;
+        color = Color.white;
+        tileTransform = Matrix4x4.identity;
+        GameRes resources = GameRes.ExistingInstance;
+        if (resources == null ||
+            !resources.TryGetTileDefinition(FarmlandSystem.TileBlockId, out RuntimeTileDefinition farmland))
+            return false;
+        return TryResolveTileVisual(farmland, out sprite, out color, out tileTransform);
+    }
+
+    private static bool TryResolveGroundHarvestVisual(int sourceTileId, out Sprite sprite, out Color color,
+        out Matrix4x4 tileTransform)
+    {
+        sprite = null;
+        color = Color.white;
+        tileTransform = Matrix4x4.identity;
+        GameRes resources = GameRes.ExistingInstance;
+        if (resources == null || !resources.TryGetTileDefinition(sourceTileId, out RuntimeTileDefinition source) ||
+            source.GroundHarvest == null ||
+            !resources.TryGetTileDefinition(source.GroundHarvest.ReplacementTileId, out RuntimeTileDefinition target))
+            return false;
+
+        return TryResolveTileVisual(target, out sprite, out color, out tileTransform);
+    }
+
+    private static bool TryResolveTileVisual(RuntimeTileDefinition definition, out Sprite sprite, out Color color,
+        out Matrix4x4 tileTransform)
+    {
+        sprite = null;
+        color = Color.white;
+        tileTransform = Matrix4x4.identity;
+        if (definition?.TileBase is not Tile tile || tile.sprite == null)
+            return false;
+        sprite = tile.sprite;
+        color = tile.color;
+        tileTransform = tile.transform;
+        return true;
+    }
+
+    private static void DisposeOverlay(ProgressOverlay overlay)
     {
         if (overlay?.Renderer == null)
             return;

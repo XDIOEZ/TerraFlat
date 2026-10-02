@@ -81,7 +81,7 @@ description: "Use when: 定位或修改 FlatWorld 的背包、槽位、快捷栏
 - `Inventory.BindController/UnbindController` 只管理输入绑定，不能顺带解除 `Inventory_Data.Event_RefreshUI` 或槽位 `onSlotDataChanged`；这些数据/UI 监听只在库存真正退出运行时生命周期时通过 `UnbindRuntimeDataEvents` 清理。否则快捷栏在控制器重绑后会失去滚轮转移等事务的自动刷新，只在切换选中槽时才重画图标。
 - `Mod_Plantable` 对 `entityRuntime: "resource"` 的作物调用 `ChunkAgricultureRenderer.CreateEntityCrop`，先装配 Entity 再扣真实库存种子，失败通过 `RollbackEntityCrop` 回滚，禁止临时创建 Item 提取状态。`PlantingSummoner` 仅是共享种植预览；未迁移定义仍有明确的 `IPlantableCrop` 入口，不得拿它给已声明资源后端的作物兜底。
 - 同一物品同时挂 `Mod_Plantable` 与 `Mod_Food` 时，右键动作按目标上下文仲裁：有效耕地由种植优先，无效种植目标则静默让给食用，不能一次动作同时播种和进食，也不能在正常进食时刷种植警告。
-- 新版农业统一通过 `FarmlandSystem` 查询 `ChunkTerrainData`，禁止返回旧 `Chunk.Map`；锄地进度属于地格而非锄头实例。水肥计算使用临时 `TileData_Farmland` 快照，成长或施肥后必须 `CommitSoil`，否则数据修改不会进入权威环境层。
+- 新版农业统一通过 `FarmlandSystem` 查询 `ChunkTerrainData`，禁止返回旧 `Chunk.Map`；未完成锄地只保留当前会话的临时进度和覆盖层，不写 `ChunkTerrainData`/存档，停工 10 秒后逐渐恢复，只有完成时才把 Ground Tile 正式替换为 `Tile_Farmland`。水肥计算使用临时 `TileData_Farmland` 快照，成长或施肥后必须 `CommitSoil`，否则数据修改不会进入权威环境层。
 - 锄头持续使用由 `Mod_GameController.IsRightClickHeld` 提供按住状态；`Mod_Hoe`、`Mod_GroundCoverHarvest` 等右键工具只依赖 `IWeaponActionAnimation.TryRequestAction(false)` 确认一段挥动真实开始后才结算，不直接绑定具体伤害模块。锄地间隔由动作动画长度和 AttackSpeed 决定，禁止再叠加独立的固定使用冷却。
 - 玩家播种的 Entity 作物由 `ChunkAgricultureRenderer` 登记句柄，纯数据通过 `SaveDataMgr.RecordCultivatedCropData` 保存到 `ChunkSaveRecord.AgricultureCells`；天然植物仍使用生态 GUID 与差量，不能交叉登记或同时保存两份。保存前提交待结算土壤与真实死亡，解绑本身不删除农业快照。`FarmlandSystem.HasWorldPlant` 与 AI 采蜜均须包含资源实体查询，不能只看 ItemManager。
 - 耕地植株保存已结算的绝对游戏秒，由 `IWorldTimePlant` 在区块恢复后按 `DayTimeSystem` 的时钟补算；退出游戏和暂停期间不补现实时间，历史段不能沿用重载时的短时天气。`Mod_Grow` 与 `Mod_PlantClimate` 组合时由成长模块统一推进气候，避免冷热暴露重复结算；`GrowData` 的 MemoryPack 成员只能在末尾追加，不能调换既有字段顺序。
