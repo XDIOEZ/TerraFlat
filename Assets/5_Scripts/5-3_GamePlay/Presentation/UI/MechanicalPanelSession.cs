@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using FlatWorld.Localization;
 using TMPro;
 using UnityEngine;
@@ -16,16 +17,20 @@ public sealed class MechanicalPanelSession : IMachinePanelSession
     private readonly Func<string> status;
     private readonly Func<string> actionLabel;
     private readonly Func<bool> actionAvailable; // 操作资格由机械域判断，面板只呈现按钮禁用态。
+    private readonly bool refreshStatusPeriodically;
     private readonly CraftingOutputPreview preview;
     private Player actor;
-    public bool IsAlive => panel != null;
-    public bool IsOpen => panel != null && panel.IsOpen();
+    private bool disposed;
+    public bool IsAlive => !disposed && panel != null;
+    public bool IsOpen => IsAlive && panel.IsOpen();
 
     public MechanicalPanelSession(string prefabId, Item owner, RecipeProcessor processor, Action<Player> action,
-        Func<string> status, Func<string> actionLabel, Func<bool> actionAvailable = null)
+        Func<string> status, Func<string> actionLabel, Func<bool> actionAvailable = null,
+        bool refreshStatusPeriodically = false)
     {
         this.owner = owner; this.processor = processor; this.action = action; this.status = status;
         this.actionLabel = actionLabel; this.actionAvailable = actionAvailable;
+        this.refreshStatusPeriodically = refreshStatusPeriodically;
         panel = UIManager.Instance.CreatePanelFromGameObject(GameRes.Instance.GetPrefab(prefabId));
         view = panel.GetComponent<MechanicalPanelView>() ?? throw new InvalidOperationException(prefabId + " 缺少正式视图绑定。");
         view.SetProcessingVisible(processor != null);
@@ -41,18 +46,22 @@ public sealed class MechanicalPanelSession : IMachinePanelSession
             preview = CraftingOutputPreview.Attach(panel, view.OutputSlot);
             processor.Changed += Refresh;
         }
-        panel.Close();
+        panel.InitClosed();
+        panel.Opened += OnPanelOpened;
+        panel.Closed += StopStatusRefresh;
     }
 
     /// <summary>纯数据机械节点使用相同面板，不需要对应世界 Item。</summary>
     public MechanicalPanelSession(string prefabId, MachineEntity owner, RecipeProcessor processor,
-        Action<Player> action, Func<string> status, Func<string> actionLabel, Func<bool> actionAvailable = null)
-        : this(prefabId, (Item)null, processor, action, status, actionLabel, actionAvailable)
+        Action<Player> action, Func<string> status, Func<string> actionLabel, Func<bool> actionAvailable = null,
+        bool refreshStatusPeriodically = false)
+        : this(prefabId, (Item)null, processor, action, status, actionLabel, actionAvailable, refreshStatusPeriodically)
     {
         mechanicalOwner = owner;
     }
     public void Toggle(Item playerItem)
     {
+        if (!IsAlive) return;
         if (panel.IsOpen()) { Close(); return; }
         actor = playerItem as Player ?? playerItem?.GetComponentInParent<Player>();
         var hand = playerItem?.GetComponentInChildren<Mod_Hand>()?.HandInventory;
@@ -65,7 +74,7 @@ public sealed class MechanicalPanelSession : IMachinePanelSession
             processor.Input.DefaultTarget_Inventory = processor.Output.DefaultTarget_Inventory = hand;
             processor.Input.RefreshUI(); processor.Output.RefreshUI();
         }
-        panel.Toggle(); processor?.Input.SyncQuickTransferTarget(panel); Refresh();
+        panel.Toggle(); processor?.Input.SyncQuickTransferTarget(panel);
     }
     private void OnAction()
     {
@@ -74,11 +83,11 @@ public sealed class MechanicalPanelSession : IMachinePanelSession
     }
     public void Refresh()
     {
-        if (panel == null || !panel.IsOpen()) return;
+        if (!IsOpen) return;
         string itemId = mechanicalOwner?.Definition.Id ?? owner?.itemData?.IDName;
         if (itemId != null && GameRes.Instance.TryGetItemDefinition(itemId, out var definition))
             view.Title.text = definition.DisplayName;
-        view.Status.text = (status?.Invoke() ?? string.Empty).Replace(" · ", "\n");
+        RefreshStatus();
         string caption = actionLabel?.Invoke() ?? string.Empty;
         view.SetActionVisible(!string.IsNullOrWhiteSpace(caption));
         view.ActionButton.interactable = !string.IsNullOrWhiteSpace(caption) && actionAvailable?.Invoke() != false;
@@ -89,6 +98,7 @@ public sealed class MechanicalPanelSession : IMachinePanelSession
     }
     public void Close()
     {
+        StopStatusRefresh();
         actor = null;
         if (processor != null) processor.Input.DefaultTarget_Inventory = processor.Output.DefaultTarget_Inventory = null;
         if (panel != null) panel.Close();
@@ -96,14 +106,62 @@ public sealed class MechanicalPanelSession : IMachinePanelSession
     }
     public void Dispose()
     {
+        if (disposed) return;
         Close();
+        disposed = true;
         if (processor != null)
         {
             processor.Changed -= Refresh;
             processor.Input.itemSlot_UI.Clear(); processor.Output.itemSlot_UI.Clear();
             processor.Input.item = processor.Output.item = null;
         }
-        if (panel != null) UIManager.ExistingInstance?.DestroyPanel(panel);
+        if (panel != null)
+        {
+            panel.Opened -= OnPanelOpened;
+            panel.Closed -= StopStatusRefresh;
+            view.ActionButton.onClick.RemoveListener(OnAction);
+            view.CloseButton.onClick.RemoveListener(Close);
+            UIManager.ExistingInstance?.DestroyPanel(panel);
+        }
+    }
+    #endregion
+
+    #region 可见状态定频刷新
+    private const float StatusRefreshIntervalSeconds = 0.2f;
+    private Coroutine statusRefreshCoroutine;
+
+    private void OnPanelOpened()
+    {
+        Refresh();
+        StopStatusRefresh();
+        if (refreshStatusPeriodically && IsOpen)
+            statusRefreshCoroutine = panel.StartCoroutine(RefreshStatusPeriodically());
+    }
+
+    // 仅显式启用的可见面板定时读取状态，不重刷库存、按钮或布局。
+    private IEnumerator RefreshStatusPeriodically()
+    {
+        var wait = new WaitForSecondsRealtime(StatusRefreshIntervalSeconds);
+        while (IsOpen)
+        {
+            yield return wait;
+            RefreshStatus();
+        }
+        statusRefreshCoroutine = null;
+    }
+
+    private void RefreshStatus()
+    {
+        if (!IsOpen) return;
+        string text = (status?.Invoke() ?? string.Empty).Replace(" · ", "\n");
+        if (view.Status.text != text) view.Status.text = text;
+    }
+
+    private void StopStatusRefresh()
+    {
+        if (statusRefreshCoroutine == null) return;
+        if (panel != null) panel.StopCoroutine(statusRefreshCoroutine);
+        statusRefreshCoroutine = null;
     }
     #endregion
 }

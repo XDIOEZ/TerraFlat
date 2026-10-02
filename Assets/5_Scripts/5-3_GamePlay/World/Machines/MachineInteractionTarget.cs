@@ -98,7 +98,8 @@ public sealed class MachineInteractionTarget : IWorldInteractionTarget, IWorldIn
         }
         panel ??= new MechanicalPanelSession("UI_Mechanical", node,
             node.Processor,
-            PerformOperation, GetStatus, GetActionLabel, CanPerformOperation);
+            PerformOperation, GetStatus, GetActionLabel, CanPerformOperation,
+            refreshStatusPeriodically: node.Definition.Electrical?.IsBattery == true);
         panel.Toggle(actor);
     }
 
@@ -176,11 +177,12 @@ public sealed class MachineInteractionTarget : IWorldInteractionTarget, IWorldIn
                 " · 电网 {0:0.#}V {1:0.#}A · 功率 {2:0.#}/{3:0.#}W · {4}",
                 electrical.Voltage, electrical.CurrentAmps, electrical.DeliveredWatts,
                 electrical.DemandWatts, electrical.Status);
-            if (node.Definition.Electrical.IsBattery)
-                status += FlatWorldLocalizationService.GetUiFormat(
-                    " · 储能 {0:0}/{1:0}J", node.ElectricalStoredJoules,
-                    node.Definition.Electrical.CapacityJoules);
         }
+        // 储能属于电池本身，未接入电网时也必须显示真实余量。
+        if (node.Definition.Electrical?.IsBattery == true)
+            status += FlatWorldLocalizationService.GetUiFormat(
+                " · 储能 {0:0}/{1:0}J", node.ElectricalStoredJoules,
+                node.Definition.Electrical.CapacityJoules);
         return status;
     }
 
