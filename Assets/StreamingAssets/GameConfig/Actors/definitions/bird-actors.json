@@ -168,7 +168,7 @@
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/AI/Bee/Bee_Flying_Left.png",
         "animatorControllerAddress": "flatworld.actor.animator.bee",
-        "flipX": false,
+        "flipX": true,
         "collider": {
           "type": "BoxCollider2D",
           "enabled": true,
