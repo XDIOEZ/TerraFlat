@@ -156,7 +156,7 @@ public static partial class MachineWorld
         if (electrical == null) return 0f;
         if (electrical.IsConverter)
             return node.ConversionMode == ElectricalConversionMode.Generator && node.LoadSatisfied
-                ? Mathf.Clamp01(MechanicalNetworkGraph.RoundLoadTorqueToTens(node.LoadTorque) * node.Rpm *
+                ? Mathf.Clamp01(MechanicalNetworkGraph.RoundLoadTorqueToTens(node.LoadTorque) * node.SpeedRpm *
                     MachineCatalog.Settings.WattsPerTorqueRpm * electrical.ConversionEfficiency / electrical.PowerWatts)
                     * (node.Network?.ConversionGenerationFactor ?? 0f)
                 : 0f;
@@ -201,15 +201,15 @@ public static partial class MachineWorld
         float wattsScale = MachineCatalog.Settings.WattsPerTorqueRpm;
         foreach (MachineEntity node in network.Nodes)
         {
-            if (node.SourceFactor > 0f && node.Rpm > 0f)
+            if (node.SourceFactor > 0f && node.SpeedRpm > 0f)
             {
                 float torque = node.Definition.IsConverter
                     ? Mathf.Floor((node.SourceTorque * node.SourceFactor + .0001f) / 10f) * 10f
                     : MechanicalNetworkGraph.RoundTorqueToTens(node.SourceTorque * node.SourceFactor);
-                inputs += torque * node.SourceRpm * wattsScale;
+                inputs += torque * Mathf.Abs(node.SourceRpm) * wattsScale;
             }
-            if (node.LoadTorque <= 0f || !node.LoadSatisfied || node.Rpm <= 0f) continue;
-            float work = MechanicalNetworkGraph.RoundLoadTorqueToTens(node.LoadTorque) * node.Rpm * wattsScale;
+            if (node.LoadTorque <= 0f || !node.LoadSatisfied || node.SpeedRpm <= 0f) continue;
+            float work = MechanicalNetworkGraph.RoundLoadTorqueToTens(node.LoadTorque) * node.SpeedRpm * wattsScale;
             if (node.Definition.IsConverter)
                 generation += Mathf.Min(node.Definition.Electrical.PowerWatts,
                     work * node.Definition.Electrical.ConversionEfficiency);

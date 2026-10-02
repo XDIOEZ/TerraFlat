@@ -31,7 +31,9 @@ description: "Use when: 定位或修改 FlatWorld 的机器世界、工作台、
 - 热加工同样遵循“设备给条件、材料定义结果”：晾架只提高空气暴露并读取 `TemperatureMgr` 的实际环境温度；炉体与坩埚优先解析物品 `reactions`，反应温度判断使用参与材料自身的 `MatterState.TemperatureCelsius`，不能把炉温直接当作材料温度。
 - 钻木器手持/落地共用 `MaterialHeatingProcessor`，只配置热源上限与每次供热量；温度存于输入材料 `MatterState`，不存点击进度、固定产物或火绒白名单。单物料受热结果读取材料 `matter.transitions`，达到条件后经库存事务转入输出槽；新材料从实际环境温度初始化，禁止初始化成热源温度或冷却原本更热的材料。堆叠共用温度且平分单次供热，整槽转化必须先检查输出容量。
 - 炉体先用 `Combustion.Fuel` Tag 判断物品是否允许作为燃料，再走 `Mod_Fuel.TryResolveItemData` 读取数值；冷 `ItemData` 先读保存态 BitData，缺失时回退当前物品定义的 `parameters.Data`。Tag 负责语义资格，FuelData 负责燃值与最高温度。
-- 机械最终 RPM 决定工作效率，扭矩是供给门槛；风箱通过 `Airflow` 输入影响炉体，炉体不遍历网络拓扑。
+- 机械运行态 `Rpm/SourceRpm/SpeedRatio` 带符号：世界 XY 平面正值为正转（逆时针）、负值为反转（顺时针）、零为停止；`RotationDirection` 从 RPM 派生，不另存或另同步方向。配置 `Rpm/ManualDriveRpm` 仍是正数大小，内建动力源读取 `SourceRotationDirection=1/-1`，RPM Provider 直接返回最终有符号转速。
+- 轴、离合器、跨轴器与齿轮轴口保持转向，齿轮齿牙啮合及穿过齿轮箱翻转转向；多动力源核对抵达自身后的有符号转速，闭环转向不一致必须整网停转。放置朝向、输入端与坐标奇偶不能代替转向；坐标奇偶只保留齿牙初相位，箱内动画复用 `GetGearboxRpm`。
+- 工作效率、风箱与发电功率只读取 `SpeedRpm`（RPM 绝对值），扭矩仍为非负供给门槛；反转不能变成零效率、负功率或倒扣加工进度。联机沿用有符号 RPM 增量，方向翻转和停转即使低于速度阈值也必须刷新相位并同步；风箱通过 `Airflow` 输入影响炉体，炉体不遍历网络拓扑。
 - 机器库存只能由权威端修改。拖放、快捷转移、排序/整理都走正式命令和现有库存事务；服务端校验玩家归属、距离与物品身份。客户端快照先校验候选，再更新同格 ItemSlot 的内容；保留库存和槽位身份、本地 UI 布局，并同步禁止放入状态，不能因定期同步使拖拽来源失效。
 - 每名玩家独占、跨多个箱体共享的库存用 `MachineInventoryCommands.RegisterPrivateInventory` 注册角色与机器双键解析；不要放进公开的 `MachineLogic.Inventories` 或箱体快照。服务端用现有搬运/整理事务，私有库存只回给发起交互的连接；公共角色状态与联机全量存档快照也要剔除已注册的私有键。
 - 放置提交失败不得消费召唤器；拆回先捕获全部状态、成功生成返还物再删除。便携设施继续按 SharedModuleIds 迁移同一状态，不能另存手持/落地两份进度。

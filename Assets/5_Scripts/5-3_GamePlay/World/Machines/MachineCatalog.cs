@@ -196,6 +196,7 @@ public sealed class MachineDefinition
     public string PortMode = "auto"; // auto/input/output/relay；MOD 可显式覆盖默认端口流向。
     public string[] AxlePorts; // 与非齿轮节点直连的局部传动轴方向；未声明时四向均可连接。
     public string Source = ""; // manual/water/wind 或 MOD 条件
+    public int SourceRotationDirection = 1; // 默认动力源方向：1 正转、-1 反转；RPM 配置仍为正数大小。
     public float SourceRadius; // 由水流线速度换算转速时使用的动力轮半径，单位为世界格。
     public string Station = "";
     public string ProcessCapability = ""; // grind 等物品加工能力；填写后具体产物从输入物品自身解析。
@@ -236,7 +237,7 @@ public sealed class MachineDefinition
         if (Kind == "consumer" || Kind == "bellows" || !string.IsNullOrEmpty(Station)) return "input";
         return Kind == "source" || Torque > 0 ? "output" : "relay";
     }
-    /// <summary>从左/下侧输入为正向；从右/上侧输入为逆向，倍率由配置提供。</summary>
+    /// <summary>按输入侧换算转速大小与扭矩倍率；旋转方向由网络的啮合关系计算。</summary>
     public void GetTransmission(bool highSideInput, int ratioIndex, out float speedRatio, out float torqueRatio)
     {
         float forward = Ratios[Mathf.Clamp(ratioIndex, 0, Ratios.Length - 1)];
@@ -258,6 +259,7 @@ public sealed class MachineDefinition
         if (string.IsNullOrWhiteSpace(Id) || (Ports != "axis" && Ports != "all" && Ports != "none") ||
             (PortMode != "auto" && PortMode != "input" && PortMode != "output" && PortMode != "relay") ||
             !NonNegative(Torque) || !Positive(Rpm) || !Positive(RequiredRpm) || !NonNegative(TorqueLoad) ||
+            (SourceRotationDirection != 1 && SourceRotationDirection != -1) ||
             (Source == "water" && !Positive(SourceRadius)) ||
             !Positive(PlayerMoveSpeedMultiplier) || PlayerMoveSpeedMultiplier > 1f || !NonNegative(ManualWorkSecondsPerPress) ||
             !NonNegative(ManualDriveTorque) || !NonNegative(ManualDriveRpm) || !NonNegative(ManualDriveSecondsPerPress) ||

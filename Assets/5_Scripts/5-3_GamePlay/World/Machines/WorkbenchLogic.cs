@@ -91,7 +91,7 @@ public class WorkbenchLogic : MachineLogic
 
     public override void Tick(float seconds)
     {
-        if (Entity.Definition.HasMechanicalPorts && Entity.Rpm > 0f)
+        if (Entity.Definition.HasMechanicalPorts && Entity.SpeedRpm > 0f)
             PerformWork(MachineWorld.CalculateWorkAmount(Entity, seconds), null);
     }
 

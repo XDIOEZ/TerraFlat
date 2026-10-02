@@ -1073,37 +1073,23 @@ public sealed partial class Mod_MechanicalNode : Module, IInteractable, IBuildin
         float rpm = Node?.Rpm ?? 0f;
         if (Mathf.Approximately(rpm, 0f) || spriteRenderer == null) return;
         if (Definition.Kind == "gearbox" && gearboxGearSprite != null)
-            AdvanceGearboxVisual(Mathf.Abs(rpm), deltaTime);
-        if (rpm > 0f && Definition.Kind == "gear" && inputShaftSprite != null) AdvanceGearVisual(rpm, deltaTime);
+            AdvanceGearboxVisual(deltaTime);
+        if (Definition.Kind == "gear" && inputShaftSprite != null) AdvanceGearVisual(rpm, deltaTime);
         if ((shaftCoreRenderer != null && shaftCoreRenderer.enabled) ||
             (crossShaftLeftCoreRenderer != null && crossShaftLeftCoreRenderer.enabled) ||
             (crossShaftRightCoreRenderer != null && crossShaftRightCoreRenderer.enabled))
-            AdvanceShaftVisual(Mathf.Abs(rpm), deltaTime);
-        if (rpm > 0f && rotorRenderer != null && rotorRenderer.enabled) AdvanceRotorVisual(rpm, deltaTime);
+            AdvanceShaftVisual(rpm, deltaTime);
+        if (rotorRenderer != null && rotorRenderer.enabled) AdvanceRotorVisual(rpm, deltaTime);
         ApplyVisual();
     }
 
-    /// <summary>输入侧齿轮跟随节点输入转速，另一侧按 2:1 半径比反向转动。</summary>
-    private void AdvanceGearboxVisual(float inputRpm, float deltaTime)
+    /// <summary>两侧齿轮复用权威转向和当前速比，不再单独推断动画方向。</summary>
+    private void AdvanceGearboxVisual(float deltaTime)
     {
-        if (Node == null || Node.EntryDirection < 0) return;
-        int localInputDirection = (Node.EntryDirection - Node.RotationQuarterTurns + 4) % 4;
-        bool inputOnLargeGear = localInputDirection == 2;
-        bool inputOnSmallGear = localInputDirection == 0;
-        if (!inputOnLargeGear && !inputOnSmallGear) return;
-
-        float inputDegrees = inputRpm * 6f * deltaTime;
-        float gearRatio = GearboxLargeGearScale / GearboxSmallGearScale;
-        if (inputOnLargeGear)
-        {
-            gearboxLargeGearAngleDegrees = Mathf.Repeat(gearboxLargeGearAngleDegrees + inputDegrees, 360f);
-            gearboxSmallGearAngleDegrees = Mathf.Repeat(gearboxSmallGearAngleDegrees - inputDegrees * gearRatio, 360f);
-        }
-        else
-        {
-            gearboxSmallGearAngleDegrees = Mathf.Repeat(gearboxSmallGearAngleDegrees + inputDegrees, 360f);
-            gearboxLargeGearAngleDegrees = Mathf.Repeat(gearboxLargeGearAngleDegrees - inputDegrees / gearRatio, 360f);
-        }
+        if (Node == null) return;
+        Node.GetGearboxRpm(out float large, out float small);
+        gearboxLargeGearAngleDegrees = Mathf.Repeat(gearboxLargeGearAngleDegrees + large * 6f * deltaTime, 360f);
+        gearboxSmallGearAngleDegrees = Mathf.Repeat(gearboxSmallGearAngleDegrees + small * 6f * deltaTime, 360f);
     }
 
     /// <summary>每转一圈滚过一个木纹周期，供传动轴和跨轴器共用。</summary>
@@ -1113,18 +1099,16 @@ public sealed partial class Mod_MechanicalNode : Module, IInteractable, IBuildin
         SetShaftTextureOffset(shaftTextureOffset);
     }
 
-    /// <summary>相邻齿轮反向转动，保持现有齿距相位。</summary>
+    /// <summary>齿轮按权威有符号 RPM 转动，坐标只用于初始齿距相位。</summary>
     private void AdvanceGearVisual(float rpm, float deltaTime)
     {
-        Vector2Int cell = Node.Cell;
-        float direction = ((cell.x + cell.y) & 1) == 0 ? 1f : -1f;
-        gearAngleDegrees = Mathf.Repeat(gearAngleDegrees + direction * rpm * 6f * deltaTime, 360f);
+        gearAngleDegrees = Mathf.Repeat(gearAngleDegrees + rpm * 6f * deltaTime, 360f);
     }
 
-    /// <summary>叶轮按节点每分钟转数顺时针旋转，塔体不参与。</summary>
+    /// <summary>叶轮跟随节点转向，塔体不参与旋转。</summary>
     private void AdvanceRotorVisual(float rpm, float deltaTime)
     {
-        rotorAngleDegrees = Mathf.Repeat(rotorAngleDegrees - rpm * 6f * deltaTime, 360f);
+        rotorAngleDegrees = Mathf.Repeat(rotorAngleDegrees + rpm * 6f * deltaTime, 360f);
     }
     #endregion
 
@@ -1231,7 +1215,8 @@ public sealed partial class Mod_MechanicalNode : Module, IInteractable, IBuildin
         float torqueSupply = 0f, torqueDemand = 0f;
         if (Node != null) Node.GetLocalTorque(out torqueSupply, out torqueDemand);
         string status = FlatWorldLocalizationService.GetUiFormat("{0} · 转速 {1:0} · 扭矩 {2:0.#}/{3:0.#}", state,
-            Node?.Rpm ?? 0, torqueSupply, torqueDemand);
+            Node?.SpeedRpm ?? 0, torqueSupply, torqueDemand);
+        status += " · " + FlatWorldLocalizationService.GetUiText(Node?.GetRotationStatus() ?? "停止");
         if (Definition.Kind == "consumer" || Definition.Kind == "bellows")
             status += FlatWorldLocalizationService.GetUiFormat(" · 工作效率 {0:0.#}%（需求 {1:0} RPM）",
                 MachineWorld.GetWorkEfficiency(Node) * 100f, Definition.RequiredRpm);

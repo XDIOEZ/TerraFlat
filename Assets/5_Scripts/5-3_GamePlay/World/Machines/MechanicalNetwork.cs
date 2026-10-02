@@ -5,6 +5,9 @@ using UnityEngine;
 
 public enum ElectricalConversionMode { Idle, Motor, Generator }
 
+// 转向统一以世界 XY 平面观察：正转为逆时针，反转为顺时针，与放置朝向和供能入口无关。
+public enum MechanicalRotationDirection { Reverse = -1, Stopped = 0, Forward = 1 }
+
 /// <summary>机械网络的轻量拓扑节点。冷状态只保留端口信息和物品快照，活动状态才持有加工器与可变运行数据。</summary>
 public sealed class MachineEntity
 {
@@ -26,10 +29,10 @@ public sealed class MachineEntity
     public int RotationQuarterTurns; // 已安装机械节点的逆时针九十度步数。
     public bool Engaged = true;
     public int RatioIndex = 1;
-    public float SpeedRatio = 1f;
+    public float SpeedRatio = 1f; // 相对根动力源的有符号速比，扭矩倍率仍保持为正数。
     public float TorqueRatio = 1f;
     public float SourceFactor;
-    public float SourceRpm; // 当前动力源按其环境输入计算出的实际转速。
+    public float SourceRpm; // 当前动力源的有符号转速，正负分别表示正转与反转。
     public bool IncomingPower; // 所在机械网已接入其他有效动力源，手推按钮据此置灰。
     public int EntryDirection = -1;
     public int GearboxCrossings;
@@ -38,7 +41,10 @@ public sealed class MachineEntity
     public bool LoadSatisfied; // 当前用力器是否取得全部固定需求。
     public float AvailableTorque; // 当前节点在本次分配时可取得的本地扭矩。
     public float RemainingSourceTorque; // 按根侧单位记录尚未分配的动力源扭矩。
-    public float Rpm;
+    public float Rpm; // 权威有符号 RPM；加工与功率计算只取 SpeedRpm。
+    public float SpeedRpm => Mathf.Abs(Rpm);
+    public MechanicalRotationDirection RotationDirection => Rpm > 0f ? MechanicalRotationDirection.Forward
+        : Rpm < 0f ? MechanicalRotationDirection.Reverse : MechanicalRotationDirection.Stopped;
     public float VisualRpm; // 上次提交给 BRG 的转速。
     public float VisualPhase; // 上次转速变化时的连续动画相位，单位弧度。
     public float VisualTime; // 相位采样时的 Unity 时间。
@@ -100,6 +106,24 @@ public sealed class MachineEntity
     /// <summary>按箱体朝向把世界输入方向换回局部方向，右侧小齿轮输入时使用逆向传动比。</summary>
     public bool IsGearboxSmallGearInput()
         => EntryDirection >= 0 && ((EntryDirection - RotationQuarterTurns + 4) & 3) == 0;
+    /// <summary>箱内两齿轮共用权威输入转速与当前传动比，客户端无需重新解算网络。</summary>
+    public void GetGearboxRpm(out float large, out float small)
+    {
+        large = small = 0f;
+        if (Definition.Kind != "gearbox" || EntryDirection < 0) return;
+        int input = (EntryDirection - RotationQuarterTurns + 4) & 3;
+        if (input != 0 && input != 2) return;
+        Definition.GetTransmission(input == 0, RatioIndex, out float ratio, out _);
+        large = input == 2 ? Rpm : -Rpm * ratio;
+        small = input == 0 ? Rpm : -Rpm * ratio;
+    }
+    /// <summary>面板转向直接读取最终 RPM，停止时不保留虚假的运行方向。</summary>
+    public string GetRotationStatus() => RotationDirection switch
+    {
+        MechanicalRotationDirection.Forward => "正转",
+        MechanicalRotationDirection.Reverse => "反转",
+        _ => "停止"
+    };
     /// <summary>供给显示为沿传动路径实际可取得的扭矩；用力器始终显示自身固定需求。</summary>
     public void GetLocalTorque(out float supply, out float demand)
     {
@@ -146,6 +170,7 @@ public sealed class MechanicalNetwork
     public bool Active;
     public float AwaySeconds;
     public bool RatioConflict;
+    public bool RotationConflict;
     public bool OutputConflict;
     public string Status = "停止";
     public float TorqueSupply;
@@ -382,16 +407,18 @@ public sealed class MechanicalNetworkGraph
     /// <summary>同速扭矩源沿连接合流；输入端不转送扭矩，转速或闭环倍率冲突时整网停转。</summary>
     [MethodImpl(MethodImplOptions.NoInlining)]
     public static void Solve(MechanicalNetwork network, Func<MachineEntity, float> sourceFactor, float referenceRpm)
-        => Solve(network, sourceFactor, node => node?.Definition?.Rpm ?? 0f, referenceRpm);
+        => Solve(network, sourceFactor,
+            node => node?.Definition == null ? 0f : node.Definition.Rpm * node.Definition.SourceRotationDirection,
+            referenceRpm);
 
-    /// <summary>动力源分别提供可用扭矩比例与实际转速；动态水流源可按采样速度驱动整网。</summary>
+    /// <summary>动力源提供扭矩比例与有符号 RPM，转向沿真实传动路径传播。</summary>
     [MethodImpl(MethodImplOptions.NoInlining)]
     public static void Solve(MechanicalNetwork network, Func<MachineEntity, float> sourceFactor,
         Func<MachineEntity, float> sourceRpm, float referenceRpm)
     {
         // 保留 referenceRpm 公开参数供旧 MOD 调用；固定扭矩需求不再依赖基准转速。
         network.TorqueSupply = 0; network.TorqueDemand = 0;
-        network.RatioConflict = false; network.OutputConflict = false;
+        network.RatioConflict = false; network.RotationConflict = false; network.OutputConflict = false;
         MachineEntity root = null;
         foreach (var node in network.Nodes)
         {
@@ -403,9 +430,9 @@ public sealed class MechanicalNetworkGraph
             node.RemainingSourceTorque = 0f;
             node.SourceFactor = node.SourceTorque > 0 ? Mathf.Clamp01(sourceFactor(node)) : 0f;
             float suppliedRpm = node.SourceFactor > 0f ? sourceRpm(node) : 0f;
-            node.SourceRpm = MachineDefinition.Positive(suppliedRpm) ? suppliedRpm : 0f;
+            node.SourceRpm = MachineDefinition.Positive(Mathf.Abs(suppliedRpm)) ? suppliedRpm : 0f;
             // 不足半档的环境动力不参与同速源冲突，也不阻止手推石磨接管。
-            if (node.SourceRpm <= 0f || GetSourceTorque(node) <= 0f)
+            if (node.SourceRpm == 0f || GetSourceTorque(node) <= 0f)
             { node.SourceFactor = 0f; node.SourceRpm = 0f; }
             if (root == null && node.SourceFactor > 0 && node.SourceTorque > 0) root = node;
         }
@@ -415,13 +442,15 @@ public sealed class MechanicalNetworkGraph
         foreach (var node in network.Nodes)
         {
             if (node.SourceFactor <= 0 || node.SourceTorque <= 0 || node.FlowVisited) continue;
-            if (!SameSpeed(node.SourceRpm, root.SourceRpm))
+            if (!SameSpeed(Mathf.Abs(node.SourceRpm), Mathf.Abs(root.SourceRpm)))
             { network.OutputConflict = true; continue; }
+            node.SpeedRatio = Mathf.Sign(node.SourceRpm) * Mathf.Sign(root.SourceRpm);
             PropagateTransmission(network, root, node);
         }
         foreach (var node in network.Nodes)
             if (node.SourceFactor > 0 && node.SourceTorque > 0 && !node.FlowVisited)
                 network.OutputConflict = true;
+        if (network.RotationConflict) { network.Status = "转向冲突"; return; }
         if (network.OutputConflict) { network.Status = "机械卡死"; return; }
         if (network.RatioConflict) { network.Status = "传动比冲突"; return; }
         float rootRpm = root.SourceRpm;
@@ -487,30 +516,39 @@ public sealed class MechanicalNetworkGraph
                 float speed = from.SpeedRatio;
                 float torque = from.TorqueRatio;
                 int crossings = from.GearboxCrossings;
+                // 齿牙啮合反向，齿轮与轴直连保持方向；坐标奇偶不参与权威传动。
+                if (from.Definition.Kind == "gear" && to.Definition.Kind == "gear") speed = -speed;
                 if (from.Definition.Kind == "gearbox" && from.EntryDirection >= 0 && link.Direction != from.EntryDirection)
                 {
                     from.Definition.GetTransmission(from.IsGearboxSmallGearInput(), from.RatioIndex,
                         out float speedStep, out float torqueStep);
-                    speed *= speedStep; torque *= torqueStep; crossings++;
+                    speed *= -speedStep; torque *= torqueStep; crossings++;
                 }
-                if (!MachineDefinition.Positive(speed) || !MachineDefinition.Positive(torque) ||
-                    speed > 10000f || speed < .0001f || torque > 10000f || torque < .0001f)
+                float speedMagnitude = Mathf.Abs(speed);
+                if (!MachineDefinition.Positive(speedMagnitude) || !MachineDefinition.Positive(torque) ||
+                    speedMagnitude > 10000f || speedMagnitude < .0001f || torque > 10000f || torque < .0001f)
                 { network.RatioConflict = true; continue; }
-                if (to.GetPortMode(entry) == "output" && to.SourceTorque <= 0)
-                { network.OutputConflict = true; continue; }
-                // 扭矩源既能受同网带动，也能叠加扭矩；必须与根源及到达自身的实际转速一致。
-                if (to.SourceFactor > 0 && to.SourceTorque > 0 &&
-                    (!SameSpeed(to.SourceRpm, referenceSource.SourceRpm) ||
-                     !SameSpeed(to.SourceRpm, referenceSource.SourceRpm * speed)))
-                { network.OutputConflict = true; continue; }
+                // 多动力源只核对传动到自身后的本地转速，不能直接比较传动前的方向。
+                if (to.SourceFactor > 0 && to.SourceTorque > 0)
+                {
+                    float expectedRpm = referenceSource.SourceRpm * speed;
+                    if (Mathf.Sign(to.SourceRpm) != Mathf.Sign(expectedRpm))
+                    { network.RotationConflict = true; continue; }
+                    if (!SameSpeed(to.SourceRpm, expectedRpm))
+                    { network.OutputConflict = true; continue; }
+                }
                 if (to.FlowVisited)
                 {
+                    if (Mathf.Sign(to.SpeedRatio) != Mathf.Sign(speed))
+                    { network.RotationConflict = true; continue; }
                     if (!SameRatio(to.SpeedRatio, speed) || !SameRatio(to.TorqueRatio, torque) ||
                         to.GearboxCrossings != crossings ||
                         (to.Definition.Kind == "gearbox" && to.EntryDirection != entry))
                         network.RatioConflict = true;
                     continue;
                 }
+                if (to.GetPortMode(entry) == "output" && to.SourceTorque <= 0)
+                { network.OutputConflict = true; continue; }
                 to.FlowVisited = true;
                 to.SpeedRatio = speed; to.TorqueRatio = torque;
                 to.EntryDirection = entry; to.GearboxCrossings = crossings;

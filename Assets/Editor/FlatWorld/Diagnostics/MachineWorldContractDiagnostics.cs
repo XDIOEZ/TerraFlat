@@ -21,10 +21,11 @@ public static class MachineWorldContractDiagnostics
         CheckRecipeProgress();
         CheckMaterialHeating();
         CheckMechanicalMembership();
+        CheckMechanicalRotation();
         CheckMachinePersistence();
         CheckMachineDamage();
         CheckManagedPatchEntries();
-        Debug.Log("[MachineWorldContractDiagnostics] 7 组检查通过：MOD 注销顺序、库存快照原子应用、加工余量、材料供热与保存、设施与传动分组、冷状态保存、托管补丁入口。未执行 Harmony DLL 或游戏内验收。");
+        Debug.Log("[MachineWorldContractDiagnostics] 检查通过：MOD 注销顺序、库存快照原子应用、加工余量、材料供热与保存、设施与传动分组、机械正反转、冷状态保存、机器受击、托管补丁入口。未执行 Harmony DLL 或游戏内验收。");
     }
 
     [MenuItem(MenuPath, true)]
@@ -178,6 +179,136 @@ public static class MachineWorldContractDiagnostics
 
     private static MachineEntity Node(int id, Vector2Int cell, MachineDefinition definition)
         => new MachineEntity { Id = id, Cell = cell, Definition = definition, State = new MachineState() };
+    #endregion
+
+    #region 机械转向契约
+    // 仅创建独立拓扑，覆盖反转、齿牙与轴口、四向齿轮箱、多源冲突及闭环。
+    private static void CheckMechanicalRotation()
+    {
+        var graph = new MechanicalNetworkGraph(new Vector2Int(16, 16), Vector2Int.zero, cell => cell);
+        var source = Node(1, Vector2Int.zero, new MachineDefinition
+            { Id = "diagnostic.source", Kind = "source", Torque = 60f, Rpm = 20f });
+        var shaft = Node(2, Vector2Int.right, new MachineDefinition { Id = "diagnostic.shaft" });
+        var gear = Node(3, new Vector2Int(2, 0), new MachineDefinition
+            { Id = "diagnostic.gear", Kind = "gear", Ports = "all" });
+        var nextGear = Node(4, new Vector2Int(3, 0), gear.Definition);
+        var consumer = Node(5, new Vector2Int(4, 0), new MachineDefinition
+            { Id = "diagnostic.consumer", Kind = "consumer", TorqueLoad = 10f, RequiredRpm = 20f });
+        graph.Rebuild(new[] { source, shaft, gear, nextGear, consumer });
+        MechanicalNetwork network = graph.Networks[0];
+        MechanicalNetworkGraph.Solve(network, _ => 1f, 20f);
+        Require(source.Rpm == 20f && shaft.Rpm == 20f && gear.Rpm == 20f &&
+            nextGear.Rpm == -20f && consumer.Rpm == -20f,
+            "轴口保持方向，只有两齿轮齿牙啮合翻转方向，不能按所在格奇偶猜测。");
+        Require(consumer.RotationDirection == MechanicalRotationDirection.Reverse &&
+            consumer.SpeedRpm == 20f && MachineWorld.GetWorkEfficiency(consumer) == 1f,
+            "反转加工必须保持正工作量。");
+        source.Definition.SourceRotationDirection = -1;
+        source.Definition.Validate();
+        MechanicalNetworkGraph.Solve(network, _ => 1f, 20f);
+        Require(source.Rpm == -20f && shaft.Rpm == -20f && consumer.Rpm == 20f,
+            "动力源反转必须逐级翻转整条传动链。");
+        MechanicalNetworkGraph.Solve(network, _ => 1f, _ => -.005f, 20f);
+        Require(source.Rpm == -.005f && consumer.Rpm == .005f,
+            "RPM Provider 的负转速和低速方向不能被归零。");
+        MechanicalNetworkGraph.Solve(network, _ => 1f, _ => float.NaN, 20f);
+        Require(source.Rpm == 0f && consumer.RotationDirection == MechanicalRotationDirection.Stopped,
+            "非有限转速必须拒绝，不得污染网络或动画。");
+        MechanicalNetworkGraph.Solve(network, _ => 0f, 20f);
+        Require(consumer.Rpm == 0f && consumer.SpeedRpm == 0f && network.Status == "无扭矩",
+            "失去动力必须清除旧转速与运行方向。");
+        source.Definition.SourceRotationDirection = 0;
+        bool rejected = false;
+        try { source.Definition.Validate(); } catch (ArgumentException) { rejected = true; }
+        Require(rejected, "动力源方向只允许 1 或 -1，停机由实际动力控制。");
+        source.Definition.SourceRotationDirection = 1;
+
+        var box = Node(6, Vector2Int.zero, new MachineDefinition
+        {
+            Id = "diagnostic.gearbox", Kind = "gearbox", Ratios = new[] { 2f },
+            ReverseSpeedRatio = .5f, ForwardTorqueRatio = .5f, ReverseTorqueRatio = 2f
+        });
+        for (int rotation = 0; rotation < 4; rotation++)
+        {
+            Vector2Int direction = MechanicalNetworkGraph.Directions[rotation];
+            source.Cell = -direction; consumer.Cell = direction;
+            source.RotationQuarterTurns = box.RotationQuarterTurns = consumer.RotationQuarterTurns = rotation;
+            source.Definition.SourceRotationDirection = 1;
+            graph.Rebuild(new[] { source, box, consumer });
+            MechanicalNetworkGraph.Solve(graph.Networks[0], _ => 1f, 20f);
+            box.GetGearboxRpm(out float large, out float small);
+            Require(box.Rpm == 20f && consumer.Rpm == -40f && large == 20f && small == -40f,
+                "齿轮箱任意放置朝向都必须从大齿轮输入、反向倍速输出。");
+            source.Cell = direction; consumer.Cell = -direction;
+            source.Definition.SourceRotationDirection = -1;
+            graph.Rebuild(new[] { source, box, consumer });
+            MechanicalNetworkGraph.Solve(graph.Networks[0], _ => 1f, 20f);
+            box.GetGearboxRpm(out large, out small);
+            Require(box.Rpm == -20f && consumer.Rpm == 10f && large == 10f && small == -20f,
+                "从小齿轮反转输入时应正转减速输出，动画与权威结果一致。");
+        }
+
+        source.Cell = Vector2Int.zero; source.RotationQuarterTurns = 0;
+        source.Definition.SourceRotationDirection = 1;
+        gear.Cell = Vector2Int.right; nextGear.Cell = new Vector2Int(2, 0);
+        var otherSource = Node(7, new Vector2Int(3, 0), new MachineDefinition
+        {
+            Id = "diagnostic.otherSource", Kind = "source", Torque = 60f,
+            Rpm = 20f, SourceRotationDirection = -1
+        });
+        graph.Rebuild(new[] { source, gear, nextGear, otherSource });
+        network = graph.Networks[0];
+        MechanicalNetworkGraph.Solve(network, _ => 1f, 20f);
+        Require(network.Status == "运行中" && source.Rpm == 20f && otherSource.Rpm == -20f,
+            "经过一次齿牙啮合后，本地方向相反的动力源应能同网合流。");
+        otherSource.Definition.SourceRotationDirection = 1;
+        MechanicalNetworkGraph.Solve(network, _ => 1f, 20f);
+        Require(network.RotationConflict && network.Status == "转向冲突" && source.Rpm == 0f && nextGear.Rpm == 0f,
+            "方向互相顶住的动力源必须整网停转。");
+        otherSource.Definition.SourceRotationDirection = -1;
+        otherSource.Definition.Rpm = 30f;
+        MechanicalNetworkGraph.Solve(network, _ => 1f, 20f);
+        Require(network.OutputConflict && network.Status == "机械卡死",
+            "方向匹配但转速不匹配仍须保留原有卡死规则。");
+
+        consumer.Cell = Vector2Int.right; consumer.RotationQuarterTurns = 0;
+        otherSource.Cell = new Vector2Int(2, 0); otherSource.Definition.Rpm = 20f;
+        graph.Rebuild(new[] { source, consumer, otherSource });
+        network = graph.Networks[0];
+        MechanicalNetworkGraph.Solve(network, _ => 1f, 20f);
+        Require(network.RotationConflict && consumer.Rpm == 0f,
+            "从输入终点两侧分别抵达的动力源也必须核对转向。");
+        source.Definition.SourceRotationDirection = -1;
+        MechanicalNetworkGraph.Solve(network, _ => 1f, 20f);
+        Require(network.Status == "运行中" && consumer.Rpm == -20f && consumer.LoadSatisfied,
+            "输入终点两侧同向反转的动力源应正常合流。");
+        consumer.Definition.TorqueLoad = 200f;
+        MechanicalNetworkGraph.Solve(network, _ => 1f, 20f);
+        Require(consumer.RotationDirection == MechanicalRotationDirection.Stopped && source.Rpm == -20f &&
+            MachineWorld.GetWorkEfficiency(consumer) == 0f,
+            "反转网络的局部负载不足仍只停止用力器，不能停掉整条轴。");
+        consumer.Definition.TorqueLoad = 10f;
+        source.Definition.SourceRotationDirection = 1;
+        source.Cell = Vector2Int.left;
+        var ring = new[]
+        {
+            Node(8, Vector2Int.zero, gear.Definition), Node(9, Vector2Int.right, gear.Definition),
+            Node(10, Vector2Int.one, gear.Definition), Node(11, Vector2Int.up, gear.Definition)
+        };
+        graph.Rebuild(new[] { source, ring[0], ring[1], ring[2], ring[3] });
+        network = graph.Networks[0];
+        MechanicalNetworkGraph.Solve(network, _ => 1f, 20f);
+        Require(network.Status == "运行中" && ring[0].Rpm == 20f && ring[1].Rpm == -20f &&
+            ring[2].Rpm == 20f && ring[3].Rpm == -20f,
+            "转向一致的偶数啮合闭环不能被误判成两个输出端顶住。");
+        ring[2].Definition = ring[3].Definition = new MachineDefinition
+            { Id = "diagnostic.relay", Kind = "shaft", Ports = "all" };
+        graph.Rebuild(new[] { source, ring[0], ring[1], ring[2], ring[3] });
+        network = graph.Networks[0];
+        MechanicalNetworkGraph.Solve(network, _ => 1f, 20f);
+        Require(network.RotationConflict && network.Status == "转向冲突" && ring[0].Rpm == 0f,
+            "闭环要求同一节点同时正反转时必须停转。");
+    }
     #endregion
 
     #region 冷状态与补丁入口

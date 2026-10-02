@@ -193,9 +193,9 @@ public sealed partial class ChunkTilemapRenderer
         {
             Part(node, x, y, 0, State(def, "inputShaft"), material, origin, rotation,
                 new Vector3(config.InputShaftOffsetX, 0f), Vector3.one, 0, 0f);
-            float sign = ((node.Cell.x + node.Cell.y) & 1) == 0 ? 1f : -1f;
+            float toothPhase = ((node.Cell.x + node.Cell.y) & 1) == 0 ? 0f : Mathf.PI / 8f;
             Part(node, x, y, 1, def.Sprite, material, origin, rotation, Vector3.zero,
-                Vector3.one, 1, sign, sign < 0f ? Mathf.PI / 8f : 0f);
+                Vector3.one, 1, 1f, toothPhase);
             return;
         }
         if (kind == "bellows")
@@ -284,7 +284,7 @@ public sealed partial class ChunkTilemapRenderer
             if (config.RotorBehindBody)
             {
                 Part(node, x, y, 0, rotor, material, origin, rotation,
-                    config.RotorLocalPosition, Vector3.one, 1, -1f);
+                    config.RotorLocalPosition, Vector3.one, 1, 1f);
                 Part(node, x, y, 1, def.Sprite, material, origin, rotation,
                     Vector3.zero, Vector3.one, 0, 0f);
                 return;
@@ -293,7 +293,7 @@ public sealed partial class ChunkTilemapRenderer
                 Vector3.zero, Vector3.one, 0, 0f);
             int rotorPart = config.AxisPortDrawOnTop ? 1 : 3;
             Part(node, x, y, rotorPart, rotor, material, origin, rotation,
-                config.RotorLocalPosition, Vector3.one, 1, -1f);
+                config.RotorLocalPosition, Vector3.one, 1, 1f);
             if (def.TryGetVisualStateSprite("axisPorts", out Sprite port))
                 Part(node, x, y, config.AxisPortDrawOnTop ? 3 : 1, port, material, origin, rotation,
                     new Vector3(0f, config.AxisPortOffsetY), Vector3.one, 0, 0f);

@@ -665,7 +665,7 @@ public static partial class MachineWorld
             return;
         }
         // 手推石磨虽临时向外供能，仍按自身解算后的转速执行研磨。
-        if (node.Rpm > 0)
+        if (node.SpeedRpm > 0)
             node.Processor?.Advance(CalculateWorkAmount(node, step));
         if (interactions.TryGetValue(node.Id, out MachineInteractionTarget interaction))
             interaction.RefreshPanel();
@@ -675,8 +675,8 @@ public static partial class MachineWorld
     [MethodImpl(MethodImplOptions.NoInlining)]
     public static float GetWorkEfficiency(MachineEntity node)
     {
-        if (node?.Definition == null || node.Rpm <= 0) return 0;
-        return node.Rpm / node.Definition.RequiredRpm;
+        if (node?.Definition == null || node.SpeedRpm <= 0) return 0;
+        return node.SpeedRpm / node.Definition.RequiredRpm;
     }
 
     /// <summary>加工工作量由最终分配的转速决定，扭矩只作为解算门槛。</summary>
@@ -700,16 +700,17 @@ public static partial class MachineWorld
         return 0;
     }
 
-    /// <summary>固定转速沿用机械定义；水车和 MOD 动力源可按实际环境速度提供 RPM。</summary>
+    /// <summary>内建动力源应用配置转向，MOD 的 RPM Provider 直接提供最终有符号转速。</summary>
     [MethodImpl(MethodImplOptions.NoInlining)]
     public static float GetSourceRpm(MachineEntity node)
     {
         if (node?.Definition == null) return 0f;
-        if (node.Definition.ManualDriveTorque > 0) return node.Definition.ManualDriveRpm;
+        if (node.Definition.ManualDriveTorque > 0)
+            return node.Definition.ManualDriveRpm * node.Definition.SourceRotationDirection;
         string source = node.Definition.Source;
         if (sourceRpmProviders.TryGetValue(source, out var provider)) return provider(node);
-        if (source == "water") return GetWaterSourceRpm(node);
-        return node.Definition.Rpm;
+        if (source == "water") return GetWaterSourceRpm(node) * node.Definition.SourceRotationDirection;
+        return node.Definition.Rpm * node.Definition.SourceRotationDirection;
     }
 
     /// <summary>水车扭矩随自身水格的实际表层流速变化；湖泊和无流河段不供能。</summary>
@@ -746,7 +747,7 @@ public static partial class MachineWorld
     {
         float now = Time.time;
         bool changed = false;
-        if (Mathf.Abs(node.VisualRpm - node.Rpm) >= .01f)
+        if (Mathf.Abs(node.VisualRpm - node.Rpm) >= .01f || Math.Sign(node.VisualRpm) != Math.Sign(node.Rpm))
         {
             node.VisualPhase = Mathf.Repeat(node.VisualPhase +
                 (now - node.VisualTime) * node.VisualRpm * Mathf.PI * 2f / 60f, Mathf.PI * 2f);
@@ -756,14 +757,12 @@ public static partial class MachineWorld
         }
         if (node.Definition.Kind == "gearbox")
         {
-            int input = (node.EntryDirection - node.RotationQuarterTurns + 4) & 3;
-            float large = input == 2 ? 1f : input == 0 ? -.5f : 0f;
-            float small = input == 2 ? -2f : input == 0 ? 1f : 0f;
-            float radians = node.Rpm * Mathf.PI * 2f / 60f;
+            node.GetGearboxRpm(out float large, out float small);
+            float radiansPerRpm = Mathf.PI * 2f / 60f;
             changed |= UpdateGearboxTrack(ref node.GearboxLargePhase, ref node.GearboxLargeSpeed,
-                ref node.GearboxLargeTime, radians * large, now);
+                ref node.GearboxLargeTime, radiansPerRpm * large, now);
             changed |= UpdateGearboxTrack(ref node.GearboxSmallPhase, ref node.GearboxSmallSpeed,
-                ref node.GearboxSmallTime, radians * small, now);
+                ref node.GearboxSmallTime, radiansPerRpm * small, now);
         }
         if (!changed) return;
         CellChanged?.Invoke(node.Cell);
@@ -774,7 +773,7 @@ public static partial class MachineWorld
     private static bool UpdateGearboxTrack(ref float phase, ref float speed,
         ref float sampleTime, float nextSpeed, float now)
     {
-        if (Mathf.Abs(speed - nextSpeed) < .001f) return false;
+        if (Mathf.Abs(speed - nextSpeed) < .001f && Math.Sign(speed) == Math.Sign(nextSpeed)) return false;
         phase = Mathf.Repeat(phase + (now - sampleTime) * speed, Mathf.PI * 2f);
         sampleTime = now;
         speed = nextSpeed;

@@ -155,7 +155,8 @@ public sealed class MachineInteractionTarget : IWorldInteractionTarget, IWorldIn
             node.GetLocalTorque(out float torqueSupply, out float torqueDemand);
             status = FlatWorldLocalizationService.GetUiFormat(
                 "{0} · 转速 {1:0} · 扭矩 {2:0.#}/{3:0.#}",
-                state, node.Rpm, torqueSupply, torqueDemand);
+                state, node.SpeedRpm, torqueSupply, torqueDemand);
+            status += " · " + FlatWorldLocalizationService.GetUiText(node.GetRotationStatus());
         }
         if (node.Definition.HasMechanicalPorts &&
             (node.Definition.Kind == "consumer" || node.Definition.Kind == "bellows"))
