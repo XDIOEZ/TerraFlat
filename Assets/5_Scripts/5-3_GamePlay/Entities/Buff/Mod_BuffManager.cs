@@ -453,6 +453,7 @@ public partial class Mod_BuffManager : Module
     public void ClearAllBuffs()
     {
         ResetWaterStackClock();
+        ResetRainStackClock();
         if (ActiveBuffs.Count == 0)
             return;
 
@@ -474,7 +475,12 @@ public partial class Mod_BuffManager : Module
 
     public void Tick(float deltaTime)
     {
-        if (ActiveBuffs.Count == 0 || deltaTime <= 0f)
+        if (deltaTime <= 0f || float.IsNaN(deltaTime) || float.IsInfinity(deltaTime))
+            return;
+
+        // 空 Buff 的生物也必须累计淋雨，不能被下面的空集合提前返回挡住。
+        bool rainExposed = AdvanceRainWetness(deltaTime);
+        if (ActiveBuffs.Count == 0)
         {
             return;
         }
@@ -497,7 +503,10 @@ public partial class Mod_BuffManager : Module
                 ? GetCountdownDisplaySeconds(runtime)
                 : -1;
             int previousStackCount = runtime.StackCount;
-            if (runtime.Tick(deltaTime))
+            float previousDuration = runtime.RemainingDurationSeconds;
+            bool keepWetDuration = rainExposed &&
+                string.Equals(runtime.DefinitionId, WetBuffIds.Wet, StringComparison.OrdinalIgnoreCase);
+            if (runtime.Tick(deltaTime, keepWetDuration))
             {
                 expiredIds.Add(buffId);
                 continue;
@@ -506,6 +515,10 @@ public partial class Mod_BuffManager : Module
             if (runtime.StackCount != previousStackCount)
             {
                 BuffStacksChanged?.Invoke(runtime);
+                BuffDurationChanged?.Invoke(runtime);
+            }
+            else if (runtime.RemainingDurationSeconds > previousDuration)
+            {
                 BuffDurationChanged?.Invoke(runtime);
             }
 

@@ -22,6 +22,7 @@ description: "Use when: 定位或修改 FlatWorld 的 Buff 定义、JSON 目录�
 - `add_stacks` 只改变单实例 `StackCount` 并续期，不重放 Start/Stop、不重置 Tick 相位；冷却/移速等登记型倍率仍只登记一次。按层伤害由效果 `scaleWithStacks` 显式声明，不能把整个效果集合一律乘层数。
 - 层数必须追加在 BuffInstance 原有持久化字段后；恢复时按当前定义把缺失/越界层数归一到 `1..MaxStacks`。表现订阅 `BuffStacksChanged`，不能靠重建 Buff 或反复触发布局表达层数变化。
 - 水体叠层时钟由每个 Mod_BuffManager 独享，不能放入共享 LiquidDefinition/WorldLiquidBehaviour；使用真实地形深度而不是漂浮后的视觉浸没深度。同帧跨水格保留计时，进入浅水只限制后续增长，不削掉已有层数；潮湿通过 `decayStacksOnExpiry` 每次到期脱落一层并重新计时，最后一层才执行 Stop，定义与 Wiki 校验必须同步。
+- 淋雨由 `Mod_BuffManager.Rain` 在每个生物的权威 Tick 中独立累计，空 Buff 也须推进；`RainWetnessClock` 按 `雨量 / rainReferenceIntensity` 折算 `rainStackIntervalSeconds`，`rainMaxStacks` 只限制淋雨新增，不削减浸水层数。持续淋雨保持潮湿时限但不暂停周期效果，雨停/死亡/回池/清空状态重置未满层进度；雨量切换不重置。天气查询使用现有天气管理器与生物当地雨雪判定，不依赖镜头或雨粒子，非生物、Client 和抑制天气的维度不施加。
 - 火焰施加先比较完整候选层数：同层潮湿阻止点燃，强火成功施加后才蒸发弱潮湿。燃烧期间重新浸水允许潮湿累计到灭火阈值，不能每次把新加的单层水立即删除而导致永久无法灭火。
 - Wiki BUFF 页与 Item 共用内联编辑、文件指纹、备份及原子写回事务；BuffManifest 是可写目标白名单，校验器须与 BuffDefinitionFactory 同步。保存不代表正在运行的 GameRes 已热重载，页面必须说明生效边界；公开模式只读。
 - 新效果需同时增加稳定 typeId、Dispatcher 注册和参数校验。

@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+    <RepoRoot>$(MSBuildThisFileDirectory)../../../</RepoRoot>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- 直接编译生产代码；Unity/世界输入由测试替身提供，不启动或暂停编辑器。 -->
+    <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/Entities/Buff/BuffDefinition.cs" />
+    <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/Entities/Buff/BuffDefinitionDto.cs" />
+    <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/Entities/Buff/BuffDefinitionFactory.cs" />
+    <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/Entities/Buff/BuffInstance.cs" />
+    <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/Entities/Buff/Mod_BuffManager.cs" />
+    <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/Entities/Buff/Mod_BuffManager.Stacks.cs" />
+    <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/Entities/Buff/Mod_BuffManager.Rain.cs" />
+    <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/Entities/Buff/RainWetnessClock.cs" />
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>$(MSBuildSDKsPath)/../Newtonsoft.Json.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+</Project>

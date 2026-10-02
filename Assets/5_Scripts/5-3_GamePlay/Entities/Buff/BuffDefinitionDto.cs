@@ -87,6 +87,15 @@ public sealed class BuffDefinitionDto
     [JsonProperty("waterStacksPerDepthLevel")]
     public int WaterStacksPerDepthLevel;
 
+    [JsonProperty("rainStackIntervalSeconds")]
+    public float RainStackIntervalSeconds;
+
+    [JsonProperty("rainMaxStacks")]
+    public int RainMaxStacks;
+
+    [JsonProperty("rainReferenceIntensity")]
+    public float RainReferenceIntensity;
+
     [JsonProperty("drinkDurationExtensionSeconds")]
     public float DrinkDurationExtensionSeconds;
 

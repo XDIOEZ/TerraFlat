@@ -98,10 +98,24 @@ public partial class BuffInstance
     /// </summary>
     public bool Tick(float deltaTime)
     {
-        if (Definition == null || float.IsNaN(deltaTime) || deltaTime <= 0f)
+        return Tick(deltaTime, keepDurationRefreshed: false);
+    }
+
+    /// <summary>持续暴露只保持有效 Buff 的持续时间，周期效果仍正常推进，不重放 Start/Stop。</summary>
+    public bool Tick(float deltaTime, bool keepDurationRefreshed)
+    {
+        if (Definition == null || float.IsNaN(deltaTime) || float.IsInfinity(deltaTime) || deltaTime <= 0f)
             return IsExpired;
 
         EnsureStarted();
+        if (keepDurationRefreshed && !IsExpired)
+        {
+            RefreshDuration();
+            TickElapsedSeconds += deltaTime;
+            ExecuteTicks();
+            return false;
+        }
+
         float remainingDelta = deltaTime;
         while (remainingDelta > 0f)
         {
