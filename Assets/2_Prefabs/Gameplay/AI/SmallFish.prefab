@@ -51,7 +51,7 @@ MonoBehaviour:
   eatRange: 0.45
   eatSeconds: 0.8
   scanInterval: 0.5
-  eatAvailableFoodThreshold: 0.9
+  eatAvailableFoodThreshold: 1
   activeForageThreshold: 0.7
   edibleTags:
   - Food

@@ -8,7 +8,7 @@
       "shellAddress": "flatworld.actor.shell.smallfish",
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/AI/SmallFish.prefab",
       "gameName": "小鱼",
-      "description": "生活在水下的小鱼。饱食度低于90%会吃嘴边现成食物，低于70%才主动寻找水中食物；潮湿低于3层时每10秒失去10点生命，浸水每秒增加1层潮湿。",
+      "description": "生活在水下的小鱼。饱食度低于100%会吃嘴边现成食物，低于70%才主动寻找水中食物；潮湿低于3层时每10秒失去10点生命，浸水每秒增加1层潮湿。",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
@@ -301,7 +301,7 @@
             "eatRange": 0.45,
             "eatSeconds": 0.8,
             "scanInterval": 0.5,
-            "eatAvailableFoodThreshold": 0.9,
+            "eatAvailableFoodThreshold": 1.0,
             "activeForageThreshold": 0.7,
             "edibleTags": [
               "Food",

@@ -15,7 +15,7 @@ public sealed partial class Mod_AI_Fish : Module, IAIActor, IItemModuleDependenc
     [Min(0.05f)] public float eatRange = 0.45f;
     [Min(0.1f)] public float eatSeconds = 0.8f;
     [Min(0.1f)] public float scanInterval = 0.5f;
-    [Range(0f, 1f)] public float eatAvailableFoodThreshold = 0.9f;
+    [Range(0f, 1f)] public float eatAvailableFoodThreshold = 1f;
     [Range(0f, 1f)] public float activeForageThreshold = 0.7f;
     public string[] edibleTags = { "Food", "47", "Meat", "Worm" };
     [Min(1)] public int minimumWetStacks = 3;
