@@ -35,7 +35,7 @@ description: "Use when: 定位或修改 FlatWorld 的动物、怪物、蜂群、
 
 ## 新增物种
 
-1. 默认新增 Actor JSON，复用具备 `IAIActor` 的合法外壳，配置模块与 Animator；生成规则选择 `gameObject`，`config.id` 作为存档身份不能随意改名。
+1. 默认新增 Actor JSON，复用具备 `IAIActor` 的合法外壳并配置模块；需要动画时声明 Animator Controller，无动画 Actor 可直接保留外壳上的静态 Sprite。生成规则选择 `gameObject`，`config.id` 作为存档身份不能随意改名。
 2. 只有用户明确选择的物种才配置 `entities`，再补齐 ECS 能力与图集并打开总开关；不能靠物种名硬编码后端，也不能直接全量启用。
 3. 修改代码与配置后说明未完成项；Unity 编译、运行、画面与性能验收交给用户，不主动操作当前游戏现场。
 

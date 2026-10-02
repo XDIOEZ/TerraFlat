@@ -10,7 +10,7 @@ using UnityEngine.ResourceManagement.AsyncOperations;
 
 /// <summary>
 /// 加载本体 Actor JSON 目录，并把数据配置绑定到保留行为组件的 AI 外壳 Prefab。
-/// 外壳、Sprite 与动画控制器均使用稳定 Addressables 地址，移动资源文件不会破坏引用。
+/// 外壳与可选动画控制器使用稳定 Addressables 地址；无动画 Actor 保留外壳上的静态 Sprite。
 /// </summary>
 public static class ActorDefinitionCatalogLoader
 {
@@ -217,8 +217,6 @@ public static class ActorDefinitionCatalogLoader
                     throw new InvalidDataException($"Actor {id} 必须声明 shellPrefab 与 shellAddress");
                 if (gameRes.ItemDefinitions.ContainsKey(id))
                     throw new InvalidDataException($"Actor ID 与 ItemDefinition 冲突：{id}");
-                if (string.IsNullOrWhiteSpace(controllerAddress))
-                    throw new InvalidDataException($"Actor {id} 必须声明 visual.animatorControllerAddress");
                 if (shellAddresses.TryGetValue(shellId, out string existing) &&
                     !string.Equals(existing, address, StringComparison.OrdinalIgnoreCase))
                     throw new InvalidDataException($"Actor 外壳 {shellId} 同时绑定了不同地址：{existing} / {address}");
@@ -227,7 +225,8 @@ public static class ActorDefinitionCatalogLoader
 
                 candidates.Add(definition);
                 shellAddresses[shellId] = address;
-                controllerAddresses.Add(controllerAddress);
+                if (!string.IsNullOrWhiteSpace(controllerAddress))
+                    controllerAddresses.Add(controllerAddress);
             }
             catch (Exception exception)
             {
@@ -303,9 +302,13 @@ public static class ActorDefinitionCatalogLoader
                 try
                 {
                     string shellId = definition.ShellPrefab.Trim();
-                    string controllerAddress = definition.Visual.AnimatorControllerAddress.Trim();
+                    string controllerAddress = definition.Visual?.AnimatorControllerAddress?.Trim();
                     if (shellErrors.TryGetValue(shellId, out Exception shellError)) throw shellError;
-                    if (controllerErrors.TryGetValue(controllerAddress, out Exception controllerError)) throw controllerError;
+                    if (!string.IsNullOrWhiteSpace(controllerAddress) &&
+                        controllerErrors.TryGetValue(controllerAddress, out Exception controllerError))
+                    {
+                        throw controllerError;
+                    }
                     selected.Add(id, ItemDefinitionCatalogLoader.BuildRuntimeDefinition(
                         gameRes, definition, LoadedSprites, LoadedControllers,
                         isActor: true, preloadedShells: loadedShells));
