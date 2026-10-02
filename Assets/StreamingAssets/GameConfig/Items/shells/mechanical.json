@@ -1656,6 +1656,127 @@
       }
     },
     {
+      "id": "MechanicalLoom",
+      "parent": "BuildingBody_Base",
+      "gameName": "机械动力织布机",
+      "description": "接入机械动力后提供纺织操作，产物由投入材料自身决定。棉花可织成布，蚕丝可织成丝绸；转速越高，加工越快。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 80,
+      "volume": 120,
+      "stackable": false,
+      "canBePickedUp": false,
+      "tags": ["35", "InventoryGroup.MechanicalPower"],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]",
+        "spriteStates": {
+          "axisPorts": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Shaft_Wood_Linked_EndRings.png"
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": false,
+          "offset": { "x": 0, "y": 0 },
+          "size": { "x": 1, "y": 1 },
+          "edgeRadius": 0
+        }
+      },
+      "health": {
+        "hasHp": true,
+        "hp": 180,
+        "maxHp": 180,
+        "defense": { "cutting": 8, "piercing": 8, "chopping": 8, "blunt": 8 },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": { "x": 0, "y": 0 },
+          "size": { "x": 1, "y": 1 },
+          "edgeRadius": 0
+        }
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"MechanicalLoom\",\"SummonerPrefabId\":\"MechanicalLoom_Summoner\"}",
+            "Type": 0
+          }
+        },
+        "机械扭矩模块": {
+          "prefab": "Module_MechanicalNode",
+          "id": "机械扭矩模块",
+          "enabled": true,
+          "data": { "BitData": [], "Type": 0 },
+          "parameters": {
+            "DefinitionId": "MechanicalLoom",
+            "AxisPortLayout": "centeredShaftRings",
+            "AxisPortOffsetY": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "MechanicalLoom_Summoner",
+      "worldDropBehavior": "interactive",
+      "parent": "BuildingSummoner_Base",
+      "gameName": "机械动力织布机",
+      "description": "放置后接入机械动力即可自动纺织。机器只提供纺织操作，具体产物与工作量由投入材料决定。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 24,
+      "volume": 48,
+      "stackable": false,
+      "canBePickedUp": true,
+      "tags": ["35", "InventoryGroup.MechanicalPower"],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]",
+        "spriteStates": {
+          "axisPorts": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Shaft_Wood_Linked_EndRings.png"
+        }
+      },
+      "health": {
+        "hasHp": true,
+        "hp": 180,
+        "maxHp": 180,
+        "defense": { "cutting": 8, "piercing": 8, "chopping": 8, "blunt": 8 },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": { "x": 0, "y": 0 },
+          "size": { "x": 1, "y": 1 },
+          "edgeRadius": 0
+        }
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"MechanicalLoom\",\"SummonerPrefabId\":\"MechanicalLoom_Summoner\"}",
+            "Type": 0
+          }
+        },
+        "机械扭矩模块": {
+          "prefab": "Module_MechanicalNode",
+          "id": "机械扭矩模块",
+          "enabled": true,
+          "data": { "BitData": [], "Type": 0 },
+          "parameters": {
+            "DefinitionId": "MechanicalLoom",
+            "AxisPortLayout": "centeredShaftRings",
+            "AxisPortOffsetY": 0
+          }
+        }
+      }
+    },
+    {
       "id": "MechanicalHammer",
       "parent": "BuildingBody_Base",
       "gameName": "机械锻锤-建筑",
