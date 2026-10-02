@@ -291,6 +291,10 @@ public sealed class ItemShadowVisualDefinitionDto
 {
     #region 落地点与底座尺寸
 
+    /// <summary>关闭后该物品不参与任何世界阴影绘制。</summary>
+    [JsonProperty("enabled", NullValueHandling = NullValueHandling.Ignore)]
+    public bool? Enabled;
+
     /// <summary>椭圆底座阴影宽度；未填写时不额外注册底座阴影。</summary>
     [JsonProperty("contactWidth", NullValueHandling = NullValueHandling.Ignore)]
     public float? ContactWidth;

@@ -279,6 +279,7 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
         if (resources != null &&
             resources.TryGetItemDefinition(item.itemData.IDName, out RuntimeItemDefinition definition))
             shadowVisual = definition.Visual?.Shadows;
+        if (shadowVisual?.Enabled == false) return;
         Mod_Building building = item.GetComponentInChildren<Mod_Building>(true);
         bool actor = item is Player || RuntimeAiEntityUtility.IsAiEntity(item);
         if (authoring == null && !actor && building == null &&

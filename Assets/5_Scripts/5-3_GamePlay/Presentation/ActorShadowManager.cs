@@ -380,6 +380,8 @@ public sealed class ActorShadowManager : SingletonMono<ActorShadowManager>
         if (resources != null && item.itemData != null &&
             resources.TryGetItemDefinition(item.itemData.IDName, out RuntimeItemDefinition definition))
             shadowVisual = definition.Visual?.Shadows;
+        if (shadowVisual?.Enabled == false)
+            return false;
 
         if (item is Player || RuntimeAiEntityUtility.IsAiEntity(item))
             return true;

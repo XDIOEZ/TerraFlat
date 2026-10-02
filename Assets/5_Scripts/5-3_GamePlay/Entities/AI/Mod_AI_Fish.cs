@@ -20,7 +20,6 @@ public sealed partial class Mod_AI_Fish : Module, IAIActor, IItemModuleDependenc
     [Min(0.1f)] public float dryDamageInterval = 10f;
     [Min(0f)] public float dryDamage = 10f;
     public SpriteRenderer fishRenderer;
-    public float spriteForwardAngle = 135f;
     public Ex_ModData_MemoryPackable Data = new();
     public override ModuleData _Data { get => Data; set => Data = (Ex_ModData_MemoryPackable)value; }
     public override string CanonicalModuleId => ModuleId;
@@ -30,7 +29,6 @@ public sealed partial class Mod_AI_Fish : Module, IAIActor, IItemModuleDependenc
     public partial class LifeState
     {
         public float DryElapsed;
-        public float Heading = 135f;
     }
 
     public Item ActorItem => item;
@@ -49,11 +47,9 @@ public sealed partial class Mod_AI_Fish : Module, IAIActor, IItemModuleDependenc
     private string targetTag;
     private Vector2 destination;
     private bool hasDestination, loaded, nodesRegistered;
-    private float scanRemaining, eatElapsed, idleRemaining, visualTime;
+    private float scanRemaining, eatElapsed, idleRemaining;
     private Mod_FishingRod fishingRod;
     private AquaticActorPresentation presentation;
-    private Quaternion originalRotation;
-    private Vector2 previousVisualPosition;
     private bool temperatureSafetyRetreat;
     private bool temperatureSafetyReached;
     private Vector2 temperatureSafetyDestination;
@@ -94,13 +90,11 @@ public sealed partial class Mod_AI_Fish : Module, IAIActor, IItemModuleDependenc
             // 只保留受击等 Trigger，不和玩家、船只发生实体碰撞。
             if (!colliders[index].isTrigger) colliders[index].enabled = false;
         }
-        originalRotation = fishRenderer.transform.localRotation;
-        previousVisualPosition = item.transform.position;
         presentation = new AquaticActorPresentation(item, fishRenderer);
         target = default;
         targetTag = null;
         fishingRod = null;
-        scanRemaining = eatElapsed = idleRemaining = visualTime = 0f;
+        scanRemaining = eatElapsed = idleRemaining = 0f;
         hasDestination = false;
         temperatureSafetyRetreat = false;
         temperatureSafetyReached = false;
@@ -114,7 +108,7 @@ public sealed partial class Mod_AI_Fish : Module, IAIActor, IItemModuleDependenc
         }
         machine.Initialize(Behaviour.Swim);
         loaded = true;
-        UpdatePresentation(0f);
+        UpdatePresentation();
     }
 
     public override void Save() => Data.WriteData(state);
@@ -138,7 +132,6 @@ public sealed partial class Mod_AI_Fish : Module, IAIActor, IItemModuleDependenc
         originalColliderEnabled = null;
         presentation?.Dispose();
         presentation = null;
-        if (fishRenderer != null) fishRenderer.transform.localRotation = originalRotation;
     }
     #endregion
 
@@ -167,7 +160,7 @@ public sealed partial class Mod_AI_Fish : Module, IAIActor, IItemModuleDependenc
             if (temperatureSafetyRetreat)
             {
                 TickTemperatureSafetyRetreat(deltaTime);
-                UpdatePresentation(deltaTime);
+                UpdatePresentation();
                 return;
             }
             scanRemaining -= deltaTime;
@@ -182,7 +175,7 @@ public sealed partial class Mod_AI_Fish : Module, IAIActor, IItemModuleDependenc
             machine.TransitionTo(next, null);
             machine.Tick(deltaTime);
         }
-        UpdatePresentation(deltaTime);
+        UpdatePresentation();
     }
 
     private bool NeedsFood => food.Data?.nutrition != null && food.Data.nutrition.GetFoodRate() < 1f;
@@ -263,7 +256,6 @@ public sealed partial class Mod_AI_Fish : Module, IAIActor, IItemModuleDependenc
         Vector2 next = WorldTopologyRuntime.NormalizePosition(origin + step);
         if (!AquaticHabitat.CanTraverse(origin, next)) return false;
         MovePosition(next);
-        if (step.sqrMagnitude > 0.00001f) state.Heading = Mathf.Atan2(step.y, step.x) * Mathf.Rad2Deg;
         return true;
     }
 
@@ -313,18 +305,10 @@ public sealed partial class Mod_AI_Fish : Module, IAIActor, IItemModuleDependenc
 
     #endregion
 
-    private void UpdatePresentation(float deltaTime)
+    private void UpdatePresentation()
     {
-        Vector2 position = item.transform.position;
-        Vector2 movement = WorldTopologyRuntime.ShortestDelta(previousVisualPosition, position);
-        if (!GameNetwork.HasStateAuthority && movement.sqrMagnitude > 0.00001f)
-            state.Heading = Mathf.Atan2(movement.y, movement.x) * Mathf.Rad2Deg;
-        previousVisualPosition = position;
-        visualTime += deltaTime;
         bool underwater = AquaticHabitat.CanSwimAt(item.transform.position);
         presentation?.SetUnderwater(underwater);
-        float wiggle = underwater ? Mathf.Sin(visualTime * 9f) * 5f : 0f;
-        fishRenderer.transform.localRotation = Quaternion.Euler(0f, 0f, state.Heading - spriteForwardAngle + wiggle);
     }
     #endregion
 

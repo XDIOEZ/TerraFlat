@@ -60,7 +60,6 @@ MonoBehaviour:
   dryDamageInterval: 10
   dryDamage: 10
   fishRenderer: {fileID: 5900223114668246490}
-  spriteForwardAngle: 135
   Data:
     StableName: ai
     ModuleId: Mod_AI_Fish

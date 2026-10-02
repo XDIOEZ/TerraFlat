@@ -26,6 +26,9 @@
         "animatorPath": "FishVisual",
         "animationState": "Idle",
         "animatorControllerAddress": "flatworld.actor.animator.smallfish",
+        "shadows": {
+          "enabled": false
+        },
         "color": {
           "r": 1.0,
           "g": 1.0,
@@ -306,8 +309,7 @@
             ],
             "minimumWetStacks": 5,
             "dryDamageInterval": 10.0,
-            "dryDamage": 10.0,
-            "spriteForwardAngle": 135.0
+            "dryDamage": 10.0
           }
         }
       },
