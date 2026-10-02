@@ -51,6 +51,7 @@ public static class ItemDefinitionMigrationTool
     /// <summary>已经以 JSON 为权威、无需再从具体 Prefab 导出的定义。</summary>
     private static readonly HashSet<string> PreservedIds = new(StringComparer.OrdinalIgnoreCase)
     {
+        "Ore_Diamond", "Mine_Diamond",
         "Knife_Base", "Dagger_Stone", "Dagger_Copper", "Dagger_Bone", "Knife_Flint", "Torch_Base",
         "WorldResource_Base", "MineResource_Base", "AppleTree", "Tree_Coconut", "Mine_Coal", "Mine_Copper",
         "Mine_Iron", "Mine_Stone", "Mine_Tin", "Iceberg", "Bush",

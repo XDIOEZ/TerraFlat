@@ -142,6 +142,7 @@ MonoBehaviour:
   ecologyRuleIds:
   - cave.flora.mushroom
   caveResourceRuleIds:
+  - cave.resource.diamond
   - cave.resource.gold
   - cave.resource.niter
   - cave.resource.tin

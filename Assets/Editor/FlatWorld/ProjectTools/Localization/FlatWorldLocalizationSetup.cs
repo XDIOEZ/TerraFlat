@@ -32,6 +32,8 @@ namespace FlatWorld.Localization.Editor
         private static readonly Dictionary<string, string> EnglishDescriptionOverrides =
             new Dictionary<string, string>(StringComparer.Ordinal)
             {
+                { "Ore_Diamond", "Rare ore mined from a diamond deposit. Can be picked up, stacked and stored as a material." },
+                { "Mine_Diamond", "A rare diamond vein in underground caves. Drops diamond ore when mined. No tool tier is required; mining efficiency depends on damage, defense and tool harvesting bonuses." },
                 { "ClayJar", "Holds 8 servings. Fill it at a water source; boil fresh water or evaporate seawater in a furnace." },
                 { "ClayJarBlank", "Fire in a furnace at 600 degrees Celsius to make a clay jar." },
                 { "Salt", "Eases salt deficiency gradually and is used to cure meat. Does not replace water." },

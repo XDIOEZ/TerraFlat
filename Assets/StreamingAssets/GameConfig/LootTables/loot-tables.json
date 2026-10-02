@@ -271,6 +271,23 @@
       ]
     },
     {
+      "id": "Mine_Diamond_Default",
+      "entries": [
+        {
+          "itemId": "Ore_Diamond",
+          "probability": 1.0,
+          "minAmount": 1,
+          "maxAmount": 2
+        },
+        {
+          "itemId": "Ore_Stone",
+          "probability": 1.0,
+          "minAmount": 1,
+          "maxAmount": 2
+        }
+      ]
+    },
+    {
       "id": "Mine_Iron_Default",
       "entries": [
         {

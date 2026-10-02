@@ -3,6 +3,13 @@
   "ecologyRules": [],
   "caveResourceRules": [
     {
+      "ruleId": "cave.resource.diamond",
+      "itemId": "Mine_Diamond",
+      "veinThreshold": 0.95,
+      "veinScale": 0.03,
+      "noiseOffset": 8819
+    },
+    {
       "ruleId": "cave.resource.gold",
       "itemId": "Mine_Gold",
       "veinThreshold": 0.92,
