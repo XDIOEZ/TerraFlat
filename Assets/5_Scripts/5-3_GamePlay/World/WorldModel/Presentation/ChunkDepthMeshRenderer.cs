@@ -13,6 +13,8 @@ internal sealed partial class ChunkDepthMeshRenderer : IDisposable
     internal const int BuildingDomain = 2;
     internal const int FireDomain = 3;
     private readonly Transform parent;
+    private readonly int? sortingLayerOverrideId;
+    private readonly int sortingOrderOverride;
     private readonly Dictionary<PartKey, Entry> entries = new();
     private readonly Dictionary<int, Row> rows = new();
     private readonly HashSet<Group> dirtyGroups = new();
@@ -27,9 +29,11 @@ internal sealed partial class ChunkDepthMeshRenderer : IDisposable
     internal int DrawGroupCount { get; private set; }
     internal static event Action BeforeFlush;
 
-    internal ChunkDepthMeshRenderer(Transform parent)
+    internal ChunkDepthMeshRenderer(Transform parent, int? sortingLayerOverrideId = null, int sortingOrderOverride = 0)
     {
         this.parent = parent != null ? parent : throw new ArgumentNullException(nameof(parent));
+        this.sortingLayerOverrideId = sortingLayerOverrideId;
+        this.sortingOrderOverride = sortingOrderOverride;
         active.Add(this);
         EnsureDispatcher();
     }
@@ -85,7 +89,7 @@ internal sealed partial class ChunkDepthMeshRenderer : IDisposable
             return;
         }
         if (!rows.TryGetValue(rowIndex, out Row row))
-            rows.Add(rowIndex, row = new Row(parent, rowIndex));
+            rows.Add(rowIndex, row = new Row(parent, rowIndex, sortingLayerOverrideId, sortingOrderOverride));
         if (!row.Groups.TryGetValue(groupKey, out Group group))
         {
             try { row.Groups.Add(groupKey, group = new Group(row, groupKey)); }
@@ -202,15 +206,23 @@ internal sealed partial class ChunkDepthMeshRenderer : IDisposable
         internal readonly Transform Root;
         internal readonly int Layer;
         internal readonly Dictionary<GroupKey, Group> Groups = new();
-        internal Row(Transform parent, int index)
+        internal Row(Transform parent, int index, int? sortingLayerOverrideId, int sortingOrderOverride)
         {
             Index = index;
             Root = CreateNode("DepthRow_" + index, parent);
             Root.localPosition = new Vector3(0f, index + .5f, 0f);
-            WorldSortingManager manager = WorldSortingManager.GetInstance();
             int layer, order;
-            if (manager != null) manager.GetSortingKey(WorldSortingManager.WorldItemCategory, out layer, out order);
-            else WorldSortingManager.GetResourceSortingKey(WorldSortingManager.WorldItemCategory, out layer, out order);
+            if (sortingLayerOverrideId.HasValue)
+            {
+                layer = sortingLayerOverrideId.Value;
+                order = sortingOrderOverride;
+            }
+            else
+            {
+                WorldSortingManager manager = WorldSortingManager.GetInstance();
+                if (manager != null) manager.GetSortingKey(WorldSortingManager.WorldItemCategory, out layer, out order);
+                else WorldSortingManager.GetResourceSortingKey(WorldSortingManager.WorldItemCategory, out layer, out order);
+            }
             Layer = layer;
             SortingGroup sorting = Root.gameObject.AddComponent<SortingGroup>();
             sorting.sortAtRoot = true;

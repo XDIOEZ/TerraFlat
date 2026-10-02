@@ -14,7 +14,7 @@ public sealed partial class MechanicalDepthVisual : MonoBehaviour, ISpatialInter
         internal Color Tint;
         internal Vector4 Animation;
         internal int Id, Order;
-        internal bool Touched, Visible;
+        internal bool Touched, Visible, DrawBelowMechanical;
     }
     private readonly PartVisual[] parts = new PartVisual[4];
     private ChunkTilemapRenderer owner;
@@ -40,12 +40,14 @@ public sealed partial class MechanicalDepthVisual : MonoBehaviour, ISpatialInter
     }
 
     internal void SetPart(int index, Sprite sprite, Material material, Quaternion rotation,
-        Vector3 offset, Vector3 scale, int mode, Vector4 animation)
+        Vector3 offset, Vector3 scale, int mode, Vector4 animation, bool drawBelowMechanical = false)
     {
         if ((uint)index >= (uint)parts.Length) throw new ArgumentOutOfRangeException(nameof(index));
         PartVisual part = parts[index] ??= new PartVisual { Id = index, Order = occupancy * 32 + index };
+        if (part.DrawBelowMechanical != drawBelowMechanical) owner?.RemoveMachineDepthPart(entityId, part.Id);
         part.Sprite = sprite; part.Material = material; part.Rotation = rotation;
         part.Offset = rotation * offset; part.Scale = scale; part.Animation = animation;
+        part.DrawBelowMechanical = drawBelowMechanical;
         part.Tint = Color.white; part.Touched = part.Visible = true;
         Submit(part);
     }
@@ -59,7 +61,9 @@ public sealed partial class MechanicalDepthVisual : MonoBehaviour, ISpatialInter
     private void Submit(PartVisual part)
     {
         if (owner == null || disposed || !part.Visible || !owner.IsBatchPresentationRegistered) return;
-        owner.DepthMesh.Set(ChunkDepthMeshRenderer.MachineDomain, entityId, part.Id,
+        ChunkDepthMeshRenderer renderer = part.DrawBelowMechanical
+            ? owner.MechanicalConnectorDepthMesh : owner.DepthMesh;
+        renderer.Set(ChunkDepthMeshRenderer.MachineDomain, entityId, part.Id,
             part.Sprite, part.Material,
             Matrix4x4.TRS(transform.position + part.Offset, part.Rotation, part.Scale),
             transform.position, part.Order, part.Tint, animation: part.Animation, highlighted: highlighted);

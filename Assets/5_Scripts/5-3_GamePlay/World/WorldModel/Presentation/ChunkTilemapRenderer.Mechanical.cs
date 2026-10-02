@@ -184,15 +184,15 @@ public sealed partial class ChunkTilemapRenderer
         {
             Sprite core = State(def, "shaftRollingCore");
             Part(node, x, y, 0, core, material, origin, rotation, Vector3.zero,
-                Fit(core, 116f / 128f, 28f / 128f), 2, 1f);
+                Fit(core, 116f / 128f, 28f / 128f), 2, 1f, drawBelowMechanical: true);
             Part(node, x, y, 3, State(def, "shaftEndRings"), material, origin, rotation,
-                Vector3.zero, Vector3.one, 0, 0f);
+                Vector3.zero, Vector3.one, 0, 0f, drawBelowMechanical: true);
             return;
         }
         if (kind == "gear")
         {
             Part(node, x, y, 0, State(def, "inputShaft"), material, origin, rotation,
-                new Vector3(config.InputShaftOffsetX, 0f), Vector3.one, 0, 0f);
+                new Vector3(config.InputShaftOffsetX, 0f), Vector3.one, 0, 0f, drawBelowMechanical: true);
             float toothPhase = ((node.Cell.x + node.Cell.y) & 1) == 0 ? 0f : Mathf.PI / 8f;
             Part(node, x, y, 1, def.Sprite, material, origin, rotation, Vector3.zero,
                 Vector3.one, 1, 1f, toothPhase);
@@ -201,7 +201,7 @@ public sealed partial class ChunkTilemapRenderer
         if (kind == "bellows")
         {
             Part(node, x, y, 0, State(def, "inputShaft"), material, origin, rotation,
-                config.InputShaftLocalPosition, Vector3.one, 0, 0f);
+                config.InputShaftLocalPosition, Vector3.one, 0, 0f, drawBelowMechanical: true);
             Part(node, x, y, 1, def.Sprite, material, origin, rotation,
                 Vector3.zero, Vector3.one, 0, 0f);
             Part(node, x, y, 2, State(def, BellowsLeatherSpriteState), material, origin, rotation,
@@ -215,13 +215,13 @@ public sealed partial class ChunkTilemapRenderer
             Sprite core = State(def, "shaftRollingCore");
             Vector3 scale = Fit(core, 24f / 128f, 28f / 128f);
             Part(node, x, y, 0, core, material, origin, rotation,
-                new Vector3(-44f / 128f, 0f), scale, 2, 1f);
+                new Vector3(-44f / 128f, 0f), scale, 2, 1f, drawBelowMechanical: true);
             Part(node, x, y, 1, core, material, origin, rotation,
-                new Vector3(44f / 128f, 0f), scale, 2, 1f);
+                new Vector3(44f / 128f, 0f), scale, 2, 1f, drawBelowMechanical: true);
             Part(node, x, y, 2, def.Sprite, material, origin, rotation,
-                Vector3.zero, Vector3.one, 0, 0f);
+                Vector3.zero, Vector3.one, 0, 0f, drawBelowMechanical: true);
             Part(node, x, y, 3, State(def, "shaftEndRings"), material, origin, rotation,
-                Vector3.zero, Vector3.one, 0, 0f);
+                Vector3.zero, Vector3.one, 0, 0f, drawBelowMechanical: true);
             return;
         }
 
@@ -316,16 +316,16 @@ public sealed partial class ChunkTilemapRenderer
         if (!def.TryGetVisualStateSprite("axisPorts", out Sprite port)) return;
         if (config.AxisPortLayout == "single")
             Part(node, x, y, part, port, material, origin, rotation,
-                config.AxisPortLocalPosition, Vector3.one, 0, 0f);
+                config.AxisPortLocalPosition, Vector3.one, 0, 0f, drawBelowMechanical: true);
         else if (config.AxisPortLayout == "centeredShaftRings")
             Part(node, x, y, part, port, material, origin, rotation,
-                new Vector3(0f, config.AxisPortOffsetY), Vector3.one, 0, 0f);
+                new Vector3(0f, config.AxisPortOffsetY), Vector3.one, 0, 0f, drawBelowMechanical: true);
         else if (config.AxisPortLayout == "mirroredSingle")
         {
             Part(node, x, y, 1, port, material, origin, rotation,
-                new Vector3(-config.AxisPortOffset, config.AxisPortOffsetY), Vector3.one, 0, 0f);
+                new Vector3(-config.AxisPortOffset, config.AxisPortOffsetY), Vector3.one, 0, 0f, drawBelowMechanical: true);
             Part(node, x, y, 2, port, material, origin, rotation,
-                new Vector3(config.AxisPortOffset, config.AxisPortOffsetY), Vector3.one, 0, 0f);
+                new Vector3(config.AxisPortOffset, config.AxisPortOffsetY), Vector3.one, 0, 0f, drawBelowMechanical: true);
         }
         else throw new InvalidOperationException("机械端口图层布局无效：" + node.Definition.Id);
     }
@@ -333,7 +333,8 @@ public sealed partial class ChunkTilemapRenderer
     /// <summary>写入 GPU 动画速度和相位，零转速时停在当前角度。</summary>
     private void Part(MachineEntity node, int x, int y, int part, Sprite sprite, Material material,
         Vector3 origin, Quaternion rotation, Vector3 offset, Vector3 scale,
-        int mode, float multiplier, float phase = 0f, int track = 0, float stroke = 0f)
+        int mode, float multiplier, float phase = 0f, int track = 0, float stroke = 0f,
+        bool drawBelowMechanical = false)
     {
         // 电机反向只做水平镜像，避免 180 度旋转把支脚和顶部结构倒置。
         if (node.Definition.IsConverter && (node.RotationQuarterTurns & 3) == 2)
@@ -353,7 +354,7 @@ public sealed partial class ChunkTilemapRenderer
         MechanicalShadowRegistry.SetPart(this, new Vector3Int(x, y, node.Definition.Layer),
             part, sprite, origin, rotation, offset, scale, mode, animation);
         mechanicalDepthVisuals[new Vector3Int(x, y, node.Definition.Layer)]
-            .SetPart(part, sprite, material, rotation, offset, scale, mode, animation);
+            .SetPart(part, sprite, material, rotation, offset, scale, mode, animation, drawBelowMechanical);
     }
 
     /// <summary>每台机械只保留交互与必要灯光；图像通过共享行网格绘制。</summary>
