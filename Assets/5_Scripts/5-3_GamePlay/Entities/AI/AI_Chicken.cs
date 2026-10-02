@@ -37,6 +37,8 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 		public float Fatigue01 = 0f;
 		public bool GrassSustenanceInitialized;
 		public float GrassSustenanceRemaining;
+		public bool SleepSuppressedByDamage;
+		public double SleepAllowedFromGameDay = -1d;
 	}
 	#endregion
 
@@ -212,8 +214,12 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 	#region Lifecycle
 	public override void Load()
 	{
+		Data ??= new AI_ChickenSaveData();
+		Data.SleepSuppressedByDamage = false;
+		Data.SleepAllowedFromGameDay = -1d;
 		ModData.ReadData(ref Data);
-		_currentState = Data.State;
+		_currentState = Data.State == ChickenState.Sleep && IsSleepSuppressedByDamage()
+			? ChickenState.Idle : Data.State;
 		_idleRemainTimer = GetIdleDuration();
 		InitializeAI();
 		BindEggWorldTime();
@@ -266,6 +272,7 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 		if (item == null || damageInfo == null || damageInfo.DamageValue <= 0f)
 			return;
 
+		SuppressSleepUntilNextNight();
 		Mod_BuffManager buffManager = item.itemMods?.GetMod_ByID<Mod_BuffManager>(ModText.Mod_BuffManager);
 		buffManager?.AddBuff(SpeedOneBuffId);
 	}
@@ -527,6 +534,7 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 
 	private bool ShouldSleep()
 	{
+		if (IsSleepSuppressedByDamage()) return false;
 		float hpRate = GetHpRate();
 
 		if (_currentState == ChickenState.Sleep)
@@ -571,6 +579,50 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 			if (_currentFoodTarget == null) return false;
 		}
 		return DistanceTo(_currentFoodTarget.transform) > eatDistance;
+	}
+	#endregion
+
+	#region 受伤后保持清醒
+	/// <summary>受伤后禁睡到下一次夜晚开始，白天低血量也不能提前补觉。</summary>
+	private void SuppressSleepUntilNextNight()
+	{
+		Data.SleepSuppressedByDamage = true;
+		Data.SleepAllowedFromGameDay = TryGetCurrentGameDay(out double gameDay)
+			? GetNextNightGameDay(gameDay) : -1d;
+	}
+
+	/// <summary>使用存档中的绝对游戏日比较，跨午夜、跳时和远距休眠都不会提前解除警戒。</summary>
+	private bool IsSleepSuppressedByDamage()
+	{
+		if (!Data.SleepSuppressedByDamage) return false;
+		if (!TryGetCurrentGameDay(out double gameDay)) return true;
+		if (Data.SleepAllowedFromGameDay < 0d)
+			Data.SleepAllowedFromGameDay = GetNextNightGameDay(gameDay);
+		if (gameDay < Data.SleepAllowedFromGameDay) return true;
+
+		Data.SleepSuppressedByDamage = false;
+		Data.SleepAllowedFromGameDay = -1d;
+		return false;
+	}
+
+	private double GetNextNightGameDay(double gameDay)
+	{
+		double nextNight = Math.Floor(gameDay) + Mathf.Clamp01(dayEndRatio);
+		return nextNight > gameDay ? nextNight : nextNight + 1d;
+	}
+
+	private bool TryGetCurrentGameDay(out double gameDay)
+	{
+		gameDay = 0d;
+		DayTimeSystem timeSystem = DayTimeSystem.GetInstance();
+		if (timeSystem == null ||
+			!timeSystem.WorldTimeDict.TryGetValue(gameObject.scene.name, out TimeData timeData) || timeData == null)
+			return false;
+
+		float dayLength = Mathf.Max(1f, timeData.DayLength);
+		gameDay = Math.Max(0, timeData.TotalDays) +
+			(double)Mathf.Repeat(timeData.CurrentTime, dayLength) / dayLength;
+		return true;
 	}
 	#endregion
 

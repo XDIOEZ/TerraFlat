@@ -49,6 +49,7 @@ description: "Use when: 定位或修改 FlatWorld 的动物、怪物、蜂群、
 - 水深和水流从共享导航快照进入 `AiecsFlowAgent`；飞行态不接受地面水流推动。环境、觅食、产蛋、蜂群等托管桥只提交少量结算或外部数据，不允许逐实体恢复旧 AI 状态机。
 - GameObject 鸟的 `BirdFlightNavigationProfile` 只检查飞行线路经过的地形是否已加载；它的区块寻址必须和 `ChunkMgr.ResolveWorldAddress` 使用同一份当前 `ActiveGenerationProfile` 区块尺寸，不能退回默认生成尺寸，否则自定义区块大小会让空中移动被误判为未加载。
 - `AI_Base`、`Mod_AI_Bird`、`Module_AI_BehaviorGraph` 等原生脚本和 Prefab 是当前正式运行时，不能按“仅作者数据”删除或禁用。
+- 小鸡受伤后的禁睡期使用 `AI_ChickenSaveData` 保存的绝对游戏日截止值，直到下一次夜晚开始才解除；逃跑结束、低血量、跨午夜和远距重载都不能提前恢复睡眠。逃跑威胁记忆与睡眠警戒是两个独立状态。
 
 ## 相关 Skill
 

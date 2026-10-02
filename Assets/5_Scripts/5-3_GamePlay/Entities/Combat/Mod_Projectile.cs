@@ -24,6 +24,9 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
     [Range(0f, 1f), Tooltip("投射物撞到实体墙面时由 Physics2D 计算的反弹系数。")]
     public float CollisionBounciness = 0.35f;
 
+    [Range(0.1f, 1f), Tooltip("实体碰撞盒相对伤害盒的尺寸倍率；小于 1 可保留先判伤害的接触余量。")]
+    public float SolidColliderSizeMultiplier = 1f;
+
     [Min(0f), Tooltip("投射物被防御弹开时的视觉旋转速度。")]
     public float BounceSpinDegreesPerSecond = 900f;
 
@@ -99,7 +102,8 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
     private bool _arcVisualBaseCaptured;
     private float _flightDuration;
     private readonly RaycastHit2D[] _sweepHits = new RaycastHit2D[16];
-    private readonly List<Collider2D> _ignoredShooterColliders = new();
+    private readonly List<RaycastHit2D> _physicalSweepHits = new(16);
+    private readonly List<Collider2D> _ignoredFlightColliders = new();
     private Vector2 _pendingImpactPosition;
     private Vector2 _pendingImpactNormal;
     private bool _hasPendingImpact;
@@ -146,11 +150,13 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
 
         _damage.OnReceiverDamageResolved -= HandleReceiverDamageResolved;
         _damage.OnReceiverDamageResolved += HandleReceiverDamageResolved;
+        _damage.OnReceiverLogicalMissed -= HandleReceiverLogicalMissed;
+        _damage.OnReceiverLogicalMissed += HandleReceiverLogicalMissed;
         _damage.OnExternalDamageResolved -= HandleExternalDamageResolved;
         _damage.OnExternalDamageResolved += HandleExternalDamageResolved;
         _baseDamage = _damage.ResolveDamageValues().Scaled(1f);
         _damage.StopAttack();
-        RestoreShooterCollisions();
+        RestoreFlightCollisions();
         ConfigureBodyForRest();
         _isFlying = false;
         _endingFlight = false;
@@ -226,6 +232,7 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
         if (_damage != null)
         {
             _damage.OnReceiverDamageResolved -= HandleReceiverDamageResolved;
+            _damage.OnReceiverLogicalMissed -= HandleReceiverLogicalMissed;
             _damage.OnExternalDamageResolved -= HandleExternalDamageResolved;
             _damage.SetExplicitProjectileSweep(false);
         }
@@ -240,7 +247,7 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
         ResetBounceSpin();
         ClearEmbeddedState();
         UpdateArcPresentation(0f);
-        RestoreShooterCollisions();
+        RestoreFlightCollisions();
         if (_flightMaterial != null)
         {
             Object.Destroy(_flightMaterial);
@@ -408,9 +415,68 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
     {
         var capabilities = FlatWorld.Combat.CombatDeliveryCapabilities.Projectile |
             FlatWorld.Combat.CombatDeliveryCapabilities.AirborneTargets;
-        if (UseVisibleArc && _flightElapsed < _flightDuration * (1f - Mathf.Clamp01(GroundImpactFraction)))
+        bool airborneOnly = UseVisibleArc &&
+            _flightElapsed < _flightDuration * (1f - Mathf.Clamp01(GroundImpactFraction));
+        if (airborneOnly)
             capabilities |= FlatWorld.Combat.CombatDeliveryCapabilities.AirborneOnly;
         _damage.SetDeliveryCapabilities(capabilities);
+
+        // 高空段的地面投影不能推动地面实体；落地段重新启用时恢复本次飞行的碰撞排除。
+        if (_solidCollider != null && _solidCollider.enabled == airborneOnly)
+        {
+            _solidCollider.enabled = !airborneOnly;
+            if (_solidCollider.enabled)
+                for (int i = 0; i < _ignoredFlightColliders.Count; i++)
+                    if (_ignoredFlightColliders[i] != null)
+                        Physics2D.IgnoreCollision(_solidCollider, _ignoredFlightColliders[i], true);
+        }
+    }
+
+    /// <summary>在刚体解算前检测即将发生的实体接触，防止目标先被推离伤害盒。</summary>
+    public void PreparePhysicsStep(float deltaTime)
+    {
+        if (!_isFlying || _endingFlight || !Enabled ||
+            !FlatWorld.Networking.GameNetwork.HasStateAuthority ||
+            _body == null || !_body.simulated || _solidCollider == null || !_solidCollider.enabled ||
+            _damage == null || _damage.DamageCollider == null || !_damage.DamageCollider.enabled)
+            return;
+
+        Vector2 displacement = _body.velocity * Mathf.Min(Mathf.Max(0f, deltaTime), Mathf.Max(0f, _flightRemain));
+        float distance = displacement.magnitude;
+        if (distance <= 0.0001f)
+            return;
+
+        Vector2 origin = (Vector2)_solidCollider.transform.TransformPoint(_solidCollider.offset) +
+            _body.position - (Vector2)item.transform.position;
+        Vector3 scale = _solidCollider.transform.lossyScale;
+        Vector2 size = new Vector2(_solidCollider.size.x * Mathf.Abs(scale.x),
+            _solidCollider.size.y * Mathf.Abs(scale.y));
+        var filter = new ContactFilter2D { useTriggers = false };
+        filter.SetLayerMask(Physics2D.GetLayerCollisionMask(_solidCollider.gameObject.layer));
+        _physicalSweepHits.Clear();
+        Physics2D.BoxCast(origin, size, _solidCollider.transform.eulerAngles.z,
+            displacement / distance, filter, _physicalSweepHits, distance);
+        _physicalSweepHits.Sort((left, right) => left.distance.CompareTo(right.distance));
+
+        for (int i = 0; i < _physicalSweepHits.Count && _isFlying; i++)
+        {
+            RaycastHit2D hit = _physicalSweepHits[i];
+            Collider2D other = hit.collider;
+            if (other == null || other.attachedRigidbody == _body ||
+                _ignoredFlightColliders.Contains(other) || Physics2D.GetIgnoreCollision(_solidCollider, other))
+                continue;
+
+            Mod_DamageReceiver receiver = GameplayPhysics2D.ResolveComponent<Mod_DamageReceiver>(other);
+            Collider2D receiverCollider = ResolveDamageReceiverCollider(receiver);
+            if (receiverCollider != null)
+            {
+                Vector2 impactPosition = _body.position + displacement * Mathf.Clamp01(hit.distance / distance);
+                ResolvePhysicalReceiverHit(receiverCollider, impactPosition, hit.point, hit.normal, false);
+            }
+
+            // 最近的实体阻挡之后不再预判，墙体等无接收器目标仍交给原有物理碰撞处理。
+            return;
+        }
     }
 
     /// <summary>用伤害盒扫过上一帧到当前帧的完整路径，补足高速 Trigger 可能漏掉的目标。</summary>
@@ -559,6 +625,13 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
         BounceFromBlockedHit(_pendingImpactNormal, _processingPhysicalContact);
     }
 
+    /// <summary>逻辑闪避仍然不扣血，同时排除该目标的实体接触，不能把未命中表现成推走目标。</summary>
+    private void HandleReceiverLogicalMissed(Mod_DamageReceiver receiver, float chance)
+    {
+        if (_isFlying && receiver != null)
+            IgnoreSolidCollisions(receiver.item);
+    }
+
     /// <summary>ECS 结算回执同样结束投射物，不能因没有 DamageReceiver 组件而穿过狼继续飞。</summary>
     private void HandleExternalDamageResolved(FlatWorld.Combat.CombatDamageContext context, float resolvedDamage)
     {
@@ -612,10 +685,19 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
             return;
         }
 
-        _pendingImpactPosition = contactPoint;
+        ResolvePhysicalReceiverHit(receiverCollider,
+            _body != null ? _body.position : (Vector2)item.transform.position,
+            contactPoint, contactNormal, true);
+    }
+
+    /// <summary>实体预判与实际接触都转交目标的专用伤害接收器，不直接扣血或重掷命中概率。</summary>
+    private void ResolvePhysicalReceiverHit(Collider2D receiverCollider, Vector2 impactPosition,
+        Vector2 contactPoint, Vector2 contactNormal, bool physicsAlreadyResolved)
+    {
+        _pendingImpactPosition = impactPosition;
         _pendingImpactNormal = contactNormal;
         _hasPendingImpact = true;
-        _processingPhysicalContact = true;
+        _processingPhysicalContact = physicsAlreadyResolved;
         _physicalContactResolved = false;
         try
         {
@@ -631,7 +713,7 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
         }
 
         // 无法进入伤害结算的普通物理反弹也给出旋转反馈；有效伤害已在回调里结束飞行。
-        if (_isFlying && !_physicalContactResolved)
+        if (physicsAlreadyResolved && _isFlying && !_physicalContactResolved)
             StartBounceSpin(contactNormal);
     }
 
@@ -791,7 +873,7 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
         _damage.SetExplicitProjectileSweep(false);
         _damage.SetDamageValues(_baseDamage.Scaled(1f));
         _damage.SetDeliveryCapabilities(FlatWorld.Combat.CombatDeliveryCapabilities.None);
-        RestoreShooterCollisions();
+        RestoreFlightCollisions();
 
         if (_body != null)
         {
@@ -851,7 +933,7 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
         _damage.SetExplicitProjectileSweep(false);
         _damage.SetDamageValues(_baseDamage.Scaled(1f));
         _damage.SetDeliveryCapabilities(FlatWorld.Combat.CombatDeliveryCapabilities.None);
-        RestoreShooterCollisions();
+        RestoreFlightCollisions();
 
         if (_body != null)
         {
@@ -1062,7 +1144,7 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
                 _solidCollider = item.gameObject.AddComponent<BoxCollider2D>();
         }
         if (_damage.DamageCollider is BoxCollider2D hitbox)
-            _solidCollider.size = hitbox.size;
+            _solidCollider.size = hitbox.size * Mathf.Clamp(SolidColliderSizeMultiplier, 0.1f, 1f);
         if (_flightMaterial == null)
         {
             _flightMaterial = new PhysicsMaterial2D("Projectile Collision");
@@ -1082,26 +1164,34 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
     /// <summary>发射点可能还在射手身体内，飞行期间只排除这一组实体碰撞。</summary>
     private void IgnoreShooterCollisions(Item shooter)
     {
-        RestoreShooterCollisions();
-        if (shooter == null || _solidCollider == null) return;
-        Collider2D[] colliders = shooter.GetComponentsInChildren<Collider2D>(true);
+        RestoreFlightCollisions();
+        IgnoreSolidCollisions(shooter);
+    }
+
+    /// <summary>射手和本次逻辑闪避的目标共享飞行期碰撞排除，回收时统一撤销。</summary>
+    private void IgnoreSolidCollisions(Item target)
+    {
+        if (target == null || _solidCollider == null) return;
+        Collider2D[] colliders = target.GetComponentsInChildren<Collider2D>(true);
         for (int i = 0; i < colliders.Length; i++)
         {
             Collider2D collider = colliders[i];
-            if (collider == null || collider.isTrigger || collider == _solidCollider) continue;
-            Physics2D.IgnoreCollision(_solidCollider, collider, true);
-            _ignoredShooterColliders.Add(collider);
+            if (collider == null || collider.isTrigger || collider == _solidCollider ||
+                _ignoredFlightColliders.Contains(collider)) continue;
+            if (_solidCollider.enabled && collider.enabled)
+                Physics2D.IgnoreCollision(_solidCollider, collider, true);
+            _ignoredFlightColliders.Add(collider);
         }
     }
 
-    /// <summary>回收或重复发射时撤销上一位射手的临时碰撞排除。</summary>
-    private void RestoreShooterCollisions()
+    /// <summary>回收或重复发射时撤销上一轮飞行的临时碰撞排除。</summary>
+    private void RestoreFlightCollisions()
     {
         if (_solidCollider != null)
-            for (int i = 0; i < _ignoredShooterColliders.Count; i++)
-                if (_ignoredShooterColliders[i] != null)
-                    Physics2D.IgnoreCollision(_solidCollider, _ignoredShooterColliders[i], false);
-        _ignoredShooterColliders.Clear();
+            for (int i = 0; i < _ignoredFlightColliders.Count; i++)
+                if (_ignoredFlightColliders[i] != null)
+                    Physics2D.IgnoreCollision(_solidCollider, _ignoredFlightColliders[i], false);
+        _ignoredFlightColliders.Clear();
     }
 
     private void BindArcPresentation()
@@ -1162,6 +1252,8 @@ public sealed class ProjectilePhysicsContact2D : MonoBehaviour
     private Mod_Projectile projectile;
 
     public void Bind(Mod_Projectile target) => projectile = target;
+
+    private void FixedUpdate() => projectile?.PreparePhysicsStep(Time.fixedDeltaTime);
 
     private void OnCollisionEnter2D(Collision2D collision) => projectile?.HandlePhysicalContact(collision);
 }
