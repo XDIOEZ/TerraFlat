@@ -8,8 +8,7 @@ public sealed class MechanicalPanelView : MonoBehaviour
     #region 正式面板引用
     private const float FullPanelHeight = 480f; // 完整加工面板为状态与按钮分出独立底栏。
     private const float CompactPanelHeight = 250f; // 纯机械状态面板只保留状态卡和操作区。
-    private const float FullInnerFieldHeight = 280f; // 加工槽区沿用正式加工面板高度。
-    private const float CompactInnerFieldHeight = 100f; // 紧凑面板内容底板贴合状态卡。
+    private const float StatusPadding = 12f; // 状态区始终留在正文框内，不再按整个窗口居中。
 
     public TMP_Text Title;
     public TMP_Text Status;
@@ -32,18 +31,23 @@ public sealed class MechanicalPanelView : MonoBehaviour
         InnerField.gameObject.SetActive(true);
 
         var panelRect = (RectTransform)transform;
-        RectTransform statusRect = StatusScroll != null ? (RectTransform)StatusScroll.transform : Status.rectTransform;
+        var statusRect = (RectTransform)StatusScroll.transform;
         var buttonRect = (RectTransform)ActionButton.transform;
         var dismantleRect = (RectTransform)DismantleButton.transform;
+        panelRect.sizeDelta = new Vector2(panelRect.sizeDelta.x, visible ? FullPanelHeight : CompactPanelHeight);
+        InnerField.anchorMin = Vector2.zero;
+        InnerField.anchorMax = Vector2.one;
+        InnerField.pivot = new Vector2(0.5f, 0.5f);
+        InnerField.offsetMin = new Vector2(14, 64);
+        InnerField.offsetMax = new Vector2(-14, -72);
+
         if (visible)
         {
-            panelRect.sizeDelta = new Vector2(panelRect.sizeDelta.x, FullPanelHeight);
-            InnerField.sizeDelta = new Vector2(InnerField.sizeDelta.x, FullInnerFieldHeight);
-
-            statusRect.anchorMin = statusRect.anchorMax = new Vector2(0, 0);
-            statusRect.pivot = new Vector2(0, 0.5f);
-            statusRect.anchoredPosition = new Vector2(24, 84);
-            statusRect.sizeDelta = new Vector2(598, StatusScroll != null ? 64 : 42);
+            statusRect.anchorMin = Vector2.zero;
+            statusRect.anchorMax = new Vector2(1, 0);
+            statusRect.pivot = new Vector2(0.5f, 0);
+            statusRect.anchoredPosition = new Vector2(0, StatusPadding);
+            statusRect.sizeDelta = new Vector2(-2 * StatusPadding, 64);
 
             buttonRect.anchorMin = buttonRect.anchorMax = new Vector2(1, 0);
             buttonRect.pivot = new Vector2(1, 0.5f);
@@ -58,17 +62,16 @@ public sealed class MechanicalPanelView : MonoBehaviour
             return;
         }
 
-        panelRect.sizeDelta = new Vector2(panelRect.sizeDelta.x, CompactPanelHeight);
-        InnerField.sizeDelta = new Vector2(InnerField.sizeDelta.x, CompactInnerFieldHeight);
-        statusRect.anchorMin = statusRect.anchorMax = new Vector2(0.5f, 0.5f);
+        statusRect.anchorMin = Vector2.zero;
+        statusRect.anchorMax = Vector2.one;
         statusRect.pivot = new Vector2(0.5f, 0.5f);
-        statusRect.sizeDelta = new Vector2(580, StatusScroll != null ? 104 : 36);
-        statusRect.anchoredPosition = Vector2.zero;
+        statusRect.offsetMin = new Vector2(StatusPadding, StatusPadding);
+        statusRect.offsetMax = new Vector2(-StatusPadding, -StatusPadding);
 
-        buttonRect.anchorMin = buttonRect.anchorMax = new Vector2(.5f, .5f);
+        buttonRect.anchorMin = buttonRect.anchorMax = new Vector2(0.5f, 0);
         buttonRect.pivot = new Vector2(0.5f, 0.5f);
-        buttonRect.sizeDelta = new Vector2(172, 48);
-        buttonRect.anchoredPosition = new Vector2(0, -39);
+        buttonRect.sizeDelta = new Vector2(160, 46);
+        buttonRect.anchoredPosition = new Vector2(86, 29);
 
         dismantleRect.anchorMin = dismantleRect.anchorMax = new Vector2(0.5f, 0);
         dismantleRect.pivot = new Vector2(0.5f, 0.5f);
@@ -77,19 +80,13 @@ public sealed class MechanicalPanelView : MonoBehaviour
         SetActionVisible(false);
     }
 
-    /// <summary>按操作是否可用切换按钮，并为紧凑面板留出清晰的状态与操作行。</summary>
+    /// <summary>操作与拆回按钮共用独立底栏，显隐不再挤压或移动正文。</summary>
     public void SetActionVisible(bool visible)
     {
         ActionButton.gameObject.SetActive(visible);
         if (processingVisible) return;
 
-        if (StatusScroll != null)
-        {
-            var statusRect = (RectTransform)StatusScroll.transform;
-            statusRect.anchoredPosition = new Vector2(0, visible ? 22 : 0);
-            statusRect.sizeDelta = new Vector2(580, visible ? 72 : 104);
-        }
-        else Status.rectTransform.anchoredPosition = new Vector2(0, visible ? 12 : -17);
+        ((RectTransform)DismantleButton.transform).anchoredPosition = new Vector2(visible ? -86 : 0, 29);
     }
     #endregion
 }

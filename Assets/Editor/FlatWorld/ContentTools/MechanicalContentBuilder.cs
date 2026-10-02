@@ -60,8 +60,8 @@ public static class MechanicalContentBuilder
             var view = root.GetComponent<MechanicalPanelView>() ?? root.AddComponent<MechanicalPanelView>();
             view.Title = Find<TMP_Text>(root, "FWUI_标题");
             view.Status = Find<TMP_Text>(root, "FWUI_FooterHint");
-            view.StatusScroll = EnsureStatusScroll(root, view.Status);
             view.InnerField = Find<RectTransform>(root, "FWUI_InnerField");
+            view.StatusScroll = EnsureStatusScroll(root, view.Status, view.InnerField);
             view.ActionButton = Find<Button>(root, "合成按钮");
             var buildingActions = root.GetComponent<BuildingPanelActions>()
                 ?? throw new InvalidOperationException(name + " 缺少建筑操作组件。");
@@ -80,34 +80,16 @@ public static class MechanicalContentBuilder
                 var binder = text.GetComponent<LocalizedTextBinder>();
                 if (binder != null) UnityEngine.Object.DestroyImmediate(binder);
             }
-            view.Title.text = title; view.Status.text = ""; view.Status.fontSize = 16;
+            view.Title.text = title; view.Status.text = ""; view.Status.fontSize = 17;
             view.Status.enableAutoSizing = false;
             view.Status.enableWordWrapping = true;
             view.Status.overflowMode = TextOverflowModes.Overflow;
             view.Status.verticalAlignment = VerticalAlignmentOptions.Top;
             view.ActionButton.GetComponentInChildren<TMP_Text>(true).text = caption;
 
-            var panelRect = (RectTransform)root.transform;
-            panelRect.sizeDelta = new Vector2(panelRect.sizeDelta.x, 480);
-            view.InnerField.sizeDelta = new Vector2(view.InnerField.sizeDelta.x, 280);
-
-            RectTransform statusRect = (RectTransform)view.StatusScroll.transform;
-            statusRect.anchorMin = statusRect.anchorMax = new Vector2(0, 0);
-            statusRect.pivot = new Vector2(0, 0.5f);
-            statusRect.anchoredPosition = new Vector2(24, 84);
-            statusRect.sizeDelta = new Vector2(598, 64);
-
-            var actionRect = (RectTransform)view.ActionButton.transform;
-            actionRect.anchorMin = actionRect.anchorMax = new Vector2(1, 0);
-            actionRect.pivot = new Vector2(1, 0.5f);
-            actionRect.anchoredPosition = new Vector2(-24, 29);
-            actionRect.sizeDelta = new Vector2(160, 46);
-
-            var dismantleRect = (RectTransform)view.DismantleButton.transform;
-            dismantleRect.anchorMin = dismantleRect.anchorMax = new Vector2(1, 0);
-            dismantleRect.pivot = new Vector2(1, 0.5f);
-            dismantleRect.anchoredPosition = new Vector2(-196, 29);
-            dismantleRect.sizeDelta = new Vector2(160, 46);
+            ConfigureHeader(root, view);
+            view.SetProcessingVisible(true);
+            view.SetActionVisible(true);
 
             // 清理模板中不属于钻孔/机械操作的装饰说明。
             foreach (var text in root.GetComponentsInChildren<TMP_Text>(true))
@@ -124,8 +106,44 @@ public static class MechanicalContentBuilder
         => root.GetComponentsInChildren<T>(true).FirstOrDefault(value => value.name == name)
            ?? throw new InvalidOperationException(root.name + " 缺少控件 " + name);
 
+    /// <summary>标题与关闭按钮在紧凑标题栏内居中，拖动热区同步使用同一高度。</summary>
+    private static void ConfigureHeader(GameObject root, MechanicalPanelView view)
+    {
+        const float headerHeight = 60f;
+        RectTransform header = Find<RectTransform>(root, "FWUI_Header");
+        header.anchorMin = new Vector2(0, 1);
+        header.anchorMax = Vector2.one;
+        header.pivot = new Vector2(0, 1);
+        header.anchoredPosition = Vector2.zero;
+        header.sizeDelta = new Vector2(0, headerHeight);
+
+        RectTransform rule = Find<RectTransform>(root, "FWUI_HeaderRule");
+        rule.anchorMin = new Vector2(0, 1);
+        rule.anchorMax = Vector2.one;
+        rule.pivot = new Vector2(0, 1);
+        rule.anchoredPosition = new Vector2(0, 1 - headerHeight);
+        rule.sizeDelta = new Vector2(0, 1);
+        RectTransform accent = Find<RectTransform>(root, "FWUI_AccentRail");
+        accent.sizeDelta = new Vector2(accent.sizeDelta.x, headerHeight);
+
+        RectTransform titleRect = view.Title.rectTransform;
+        titleRect.anchorMin = new Vector2(0, 1);
+        titleRect.anchorMax = Vector2.one;
+        titleRect.pivot = new Vector2(0, 1);
+        titleRect.anchoredPosition = new Vector2(24, -12);
+        titleRect.sizeDelta = new Vector2(-100, 36);
+        view.Title.verticalAlignment = VerticalAlignmentOptions.Middle;
+        view.Title.enableWordWrapping = false;
+        view.Title.overflowMode = TextOverflowModes.Ellipsis;
+
+        var closeRect = (RectTransform)view.CloseButton.transform;
+        closeRect.anchoredPosition = new Vector2(-16, -8);
+        foreach (var surface in root.GetComponentsInChildren<UIWindowDragSurface>(true))
+            surface.Configure((RectTransform)root.transform, headerHeight);
+    }
+
     /// <summary>状态信息使用正式滚动区承载多行文本，避免参数增多后横向挤压或截断。</summary>
-    private static ScrollRect EnsureStatusScroll(GameObject root, TMP_Text status)
+    private static ScrollRect EnsureStatusScroll(GameObject root, TMP_Text status, RectTransform innerField)
     {
         Transform existing = root.GetComponentsInChildren<Transform>(true)
             .FirstOrDefault(value => value.name == "FWUI_StatusScroll");
@@ -133,13 +151,10 @@ public static class MechanicalContentBuilder
         RectTransform viewport;
         if (existing == null)
         {
-            Transform originalParent = status.transform.parent;
-            int siblingIndex = status.transform.GetSiblingIndex();
             var scrollObject = new GameObject("FWUI_StatusScroll", typeof(RectTransform), typeof(CanvasRenderer),
-                typeof(Image), typeof(ScrollRect));
+                typeof(Image), typeof(ItemStepScrollRect));
             scrollRect = (RectTransform)scrollObject.transform;
-            scrollRect.SetParent(originalParent, false);
-            scrollRect.SetSiblingIndex(siblingIndex);
+            scrollRect.SetParent(innerField, false);
 
             var viewportObject = new GameObject("Viewport", typeof(RectTransform), typeof(CanvasRenderer),
                 typeof(Image), typeof(Mask));
@@ -154,6 +169,7 @@ public static class MechanicalContentBuilder
                 ?? throw new InvalidOperationException(root.name + " 的状态滚动区缺少 Viewport。");
         }
 
+        scrollRect.SetParent(innerField, false);
         scrollRect.anchorMin = scrollRect.anchorMax = new Vector2(0, 0);
         scrollRect.pivot = new Vector2(0, 0.5f);
         var hitImage = scrollRect.GetComponent<Image>();
@@ -215,6 +231,10 @@ public static class MechanicalContentBuilder
                 view.CloseButton == null || view.InputSlot == null || view.OutputSlot == null ||
                 view.ProcessingVisuals == null || view.ProcessingVisuals.Length != 11 || view.ProcessingVisuals.Any(value => value == null) ||
                 asset.GetComponent<BuildingPanelActions>() == null) throw new InvalidOperationException(id + " 引用不完整。");
+            if (view.StatusScroll.transform.parent != view.InnerField ||
+                view.StatusScroll.content != view.Status.rectTransform ||
+                view.StatusScroll.viewport == null || !view.Status.transform.IsChildOf(view.StatusScroll.viewport))
+                throw new InvalidOperationException(id + " 状态滚动区必须位于正文框内并持有正确的内容与视口。");
         }
         MachineCatalog.EnsureLoaded();
         Debug.Log("[Mechanical] 正式 Prefab 引用与机械目录校验通过。");

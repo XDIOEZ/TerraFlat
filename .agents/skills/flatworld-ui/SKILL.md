@@ -137,6 +137,7 @@ description: "Use when: 定位或修改 FlatWorld 的 UIManager、BasePanel、�
 - 角色参数 HUD 由 FoodUIModule 随模块生命周期创建/释放，只为已设定 IsLocalProfile 的本地 Player 创建；Food 模块也用于动物和静态食物，不能按模块存在或保存的 UI 显隐状态决定是否创建 HUD。
 - 常驻组件事件驱动；禁止等待绑定或比较静态状态的 Update/LateUpdate 和逐帧 `GetComponent*`。
 - 面板切换紧凑/完整布局时，必须同步缩放内容底板、状态区和底栏控件；只缩小根 RectTransform 会让固定坐标的按钮或背景溢出面板，动态尺寸应在视图的统一布局切换入口内成组调整。
+- `UI_Mechanical` 与 `UI_HandDrill` 的状态滚动区必须是 `FWUI_InnerField` 的子节点：紧凑态按正文内边距拉伸，完整态位于正文底部；操作按钮只占独立底栏，不能把正文向标题推移。60 像素标题栏、标题/关闭按钮位置与拖动热区须同步维护正式 Prefab 和 `MechanicalContentBuilder`，两种正文布局统一调用 `MechanicalPanelView.SetProcessingVisible`。
 - 动态列表复用条目；结构变化才局部 MarkLayoutForRebuild，数值/颜色更新不强制布局。热路径禁止 ForceUpdateCanvases/ForceRebuild。
 - 动态列表的通用节点名（如 `Content`）不得在整个面板全局查找；必须从所属 `ScrollRect` 或业务容器取引用，避免与 Dropdown 模板等同名节点串容器。
 - EventSystem 反馈保持唯一非缩放 Tween，重入先 Kill，失活/销毁清理。
