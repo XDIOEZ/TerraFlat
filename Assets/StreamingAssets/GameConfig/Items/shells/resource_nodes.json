@@ -21,7 +21,12 @@
       "weight": 2000.0,
       "volume": 800.0,
       "stackable": true,
-      "shellPrefab": "MineResource"
+      "shellPrefab": "MineResource",
+      "worldGridOccupancy": {
+        "cells": [
+          { "x": 0, "y": 0 }
+        ]
+      }
     },
     {
       "id": "Beehive",

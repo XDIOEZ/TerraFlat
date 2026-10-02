@@ -32,6 +32,7 @@ description: "Use when: 定位或修改 FlatWorld 的稀疏网格寻路、16×16
 - 玩家目标移动模块 `Mod_GameMCP_LLM` 复用 `WorldNavigationManager` 的路径与修订号，并通过外部控制租约注入 `Mod_GameController` 输入；它不拥有第二套网格、刚体驱动或寻路服务，编辑器 GameMCP 只是该运行时接口的一个调用方。
 - 动态可交互建筑的导航占地与放置占用共用 `BuildingOccupancyRegistry` 的离散世界格记录；实体 Collider 的尺寸/接触状态不能改变导航占格，避免相邻建筑因物理接触污染逻辑层。
 - 世界物品的离散占格写在定义的 `worldGridOccupancy.cells` 中，纯 DTO `WorldGridOccupancyData` 与校验后的 `GridCellOffset` 位于 `noEngineReferences` 的 WorldModel 程序集，可供非 Unity 模拟直接读取。普通 C# 生命周期桥接器只在实时适配边界读取 Transform 格锚点并消费 Item 注册、注销、移动事件；导航占格不得由 Collider bounds 推算，避免 Mono 组件和物理形状成为数据层依赖。
+- 实心静态资源必须同时声明导航占格；物理碰撞箱不会自动进入导航图。矿点通过 `MineResource_Base.worldGridOccupancy` 继承一格占地，资源 ECS 与完整 Item 都消费同一定义；可拾取的小石头不继承矿点占地。遇到 AI 顶住资源反复重寻路时先检查合并后的占格配置，不要用缩小碰撞箱、扩大感知或额外 Physics2D 扫描掩盖漏登记。
 - 移除覆盖层后恢复基础层权重；建筑不改 TileData。
 - 失败/未表现完成的 Chunk 不注册导航；View 入池或销毁前先 Unbind。
 - 本地导航窗口只跟随 owned 玩家；远程副本不移动它。
