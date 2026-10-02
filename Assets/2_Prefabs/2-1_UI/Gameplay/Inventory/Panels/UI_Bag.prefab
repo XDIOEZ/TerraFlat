@@ -58,8 +58,8 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
+  m_Name:
+  m_EditorClassIdentifier:
   m_Material: {fileID: 0}
   m_Color: {r: 0.28627452, g: 0.28627452, b: 0.28627452, a: 0.98}
   m_RaycastTarget: 1
@@ -88,8 +88,8 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 31a19414c41e5ae4aae2af33fee712f6, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
+  m_Name:
+  m_EditorClassIdentifier:
   m_ShowMaskGraphic: 0
 --- !u!114 &7182922683127653983
 MonoBehaviour:
@@ -979,6 +979,7 @@ GameObject:
   - component: {fileID: 2988273638983469127}
   - component: {fileID: 7000000000000000000}
   - component: {fileID: 9090000000000015011}
+  - component: {fileID: 8800000000000000123}
   m_Layer: 5
   m_Name: UI_Bag
   m_TagString: Untagged
@@ -11298,6 +11299,19 @@ MonoBehaviour:
   m_EditorClassIdentifier:
   animationId: panel.scale
   motionRoot: {fileID: 1019407897883900610}
+--- !u!114 &8800000000000000123
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5019330763773049737}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b2ec7a4c1144ba0a4e4ef7d8c9b2a31, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  bufferRows: 1
 --- !u!1001 &9000000000000000301
 PrefabInstance:
   m_ObjectHideFlags: 0

@@ -66,17 +66,6 @@ public sealed class InventoryBagSearch : MonoBehaviour
 
         slotGroups.Clear();
         englishNames.Clear();
-        foreach (ItemSlot_UI slot in inventory.itemSlot_UI)
-        {
-            if (slot == null)
-                continue;
-
-            CanvasGroup group = slot.GetComponent<CanvasGroup>();
-            if (group == null)
-                group = slot.gameObject.AddComponent<CanvasGroup>();
-            slotGroups.Add(slot, group);
-        }
-
         OnSearchTextChanged(searchInput.text);
     }
 
@@ -118,11 +107,22 @@ public sealed class InventoryBagSearch : MonoBehaviour
             return;
 
         ItemSlot_UI slot = inventory.itemSlot_UI[index];
-        if (slot == null || !slotGroups.TryGetValue(slot, out CanvasGroup group))
+        if (slot == null)
             return;
 
-        ItemData item = inventory.Data.itemSlots[index]?.itemData;
-        group.alpha = query.Length == 0 || Matches(item) ? 1f : UnmatchedAlpha;
+        RefreshSlotView(slot, index);
+    }
+
+    /// <summary>虚拟化网格滚动重绑后只刷新实际存在的槽位表现。</summary>
+    public void RefreshRenderedSlots()
+    {
+        RefreshAllSlots();
+    }
+
+    /// <summary>虚拟化槽位发生单格数据刷新时只更新当前渲染格。</summary>
+    public void RefreshRenderedSlot(ItemSlot_UI slot, int index)
+    {
+        RefreshSlotView(slot, index);
     }
 
     /// <summary>保留空格和拖拽目标，仅改变未命中槽位的视觉透明度。</summary>
@@ -131,8 +131,42 @@ public sealed class InventoryBagSearch : MonoBehaviour
         if (inventory?.Data?.itemSlots == null)
             return;
 
+        InventoryVirtualizedSlotGrid virtualizedGrid = inventory.basePanel != null
+            ? inventory.basePanel.GetComponent<InventoryVirtualizedSlotGrid>()
+            : null;
+        if (virtualizedGrid != null)
+        {
+            foreach (ItemSlot_UI slot in virtualizedGrid.PooledSlots)
+            {
+                if (slot == null || !slot.gameObject.activeSelf)
+                    continue;
+
+                RefreshSlotView(slot, slot.slotIndex);
+            }
+            return;
+        }
+
         for (int index = 0; index < inventory.itemSlot_UI.Count; index++)
             OnSlotRefreshed(index);
+    }
+
+    /// <summary>按当前绑定索引刷新单个渲染槽，CanvasGroup 只按实际池大小缓存。</summary>
+    private void RefreshSlotView(ItemSlot_UI slot, int index)
+    {
+        if (slot == null || inventory?.Data?.itemSlots == null ||
+            index < 0 || index >= inventory.Data.itemSlots.Count)
+            return;
+
+        if (!slotGroups.TryGetValue(slot, out CanvasGroup group))
+        {
+            group = slot.GetComponent<CanvasGroup>();
+            if (group == null)
+                group = slot.gameObject.AddComponent<CanvasGroup>();
+            slotGroups[slot] = group;
+        }
+
+        ItemData item = inventory.Data.itemSlots[index]?.itemData;
+        group.alpha = query.Length == 0 || Matches(item) ? 1f : UnmatchedAlpha;
     }
 
     /// <summary>中文、英文和标签均按不区分大小写的片段匹配。</summary>

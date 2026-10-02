@@ -172,6 +172,7 @@ public class Inventory
     // 运行时赋值，不序列化
     GameObject ItemSlot_Prefab;
     Transform ItemSlot_Parent;
+    [NonSerialized] private InventoryVirtualizedSlotGrid _virtualizedSlotGrid; // UI_Bag 只实例化可视区域附近的槽位。
 
     // 玩家行囊或受限容器的容量显示节点；正式节点由 UI_Bag Prefab 提供。
     private TextMeshProUGUI _carryWeightValueText;
@@ -640,6 +641,16 @@ public class Inventory
         // 加载Slot UI预制体
         ItemSlot_Prefab = GameRes.Instance.GetPrefab("UI_Slot");
 
+        // UI_Bag 使用虚拟化网格，数据槽位数量不再等于实际 GameObject 数量。
+        InventorySlotVisualProfile visualProfile = basePanel.GetComponentInChildren<InventorySlotVisualProfile>(true);
+        _virtualizedSlotGrid = basePanel.GetComponent<InventoryVirtualizedSlotGrid>();
+        if (_virtualizedSlotGrid != null)
+        {
+            _virtualizedSlotGrid.Bind(this, ItemSlot_Parent, ItemSlot_Prefab, visualProfile);
+            CompleteUIInitialization(syncData: false);
+            return;
+        }
+
         // 只管理实际槽位，名称提示等附属 UI 不参与数量同步。
         int targetCount = Data.itemSlots.Count;
         int currentCount = 0;
@@ -667,20 +678,23 @@ public class Inventory
         }
 
         // 面板可声明自己的槽位视觉主题；仅覆盖表现，不改变通用 UI_Slot 或库存交互逻辑。
-        InventorySlotVisualProfile visualProfile = basePanel.GetComponentInChildren<InventorySlotVisualProfile>(true);
         if (visualProfile != null)
         {
             foreach (ItemSlot_UI slot in itemSlot_UI)
                 visualProfile.Apply(slot);
         }
 
-        // 同步 UI 数据
+        CompleteUIInitialization(syncData: true);
+    }
+
+    /// <summary>统一完成库存面板的容量、搜索、排序和手柄导航绑定。</summary>
+    private void CompleteUIInitialization(bool syncData)
+    {
         BindCarryCapacityUI();
-        SyncData();
+        if (syncData)
+            SyncData();
 
-        //初始化时自动同步UI显示
         RefreshUI();
-
         InventorySortButton.EnsureFor(this);
         basePanel.GetComponent<InventoryBagSearch>()?.Bind(this);
 
@@ -856,6 +870,39 @@ public class Inventory
         slotUI.RefreshUI();
     }
 
+    /// <summary>虚拟化 UI 预分配索引映射，但不创建与数据槽位等量的 GameObject。</summary>
+    public void PrepareVirtualizedSlotUIMap(int slotCount)
+    {
+        itemSlot_UI.Clear();
+        for (int i = 0; i < Mathf.Max(0, slotCount); i++)
+            itemSlot_UI.Add(null);
+
+        if (Data?.itemSlots == null)
+            return;
+
+        // 数据槽刷新监听与 UI 实例数量解耦，未渲染槽位也保持原有刷新语义。
+        for (int i = 0; i < Data.itemSlots.Count; i++)
+        {
+            ItemSlot slot = Data.itemSlots[i];
+            if (slot == null)
+                continue;
+
+            slot.Index = i;
+            slot.onSlotDataChanged.Clear();
+            slot.onSlotDataChanged += OnItemSlotChanged;
+        }
+    }
+
+    /// <summary>复用槽位离开原数据索引时解除映射，避免旧索引刷新到错误的 UI。</summary>
+    public void UnbindVirtualSlotUI(ItemSlot_UI slotUI, int bindIndex)
+    {
+        if (slotUI == null || bindIndex < 0 || bindIndex >= itemSlot_UI.Count)
+            return;
+
+        if (ReferenceEquals(itemSlot_UI[bindIndex], slotUI))
+            itemSlot_UI[bindIndex] = null;
+    }
+
     private void RegisterSlotUI(ItemSlot_UI slotUI, int bindIndex)
     {
         if (bindIndex < itemSlot_UI.Count)
@@ -883,7 +930,16 @@ public class Inventory
             return;
         }
 
-        // 找到对应的UI并刷新
+        // 动态大背包优先直接使用稳定索引，避免每次槽位变化都线性扫描整个库存。
+        int directIndex = slot.Index;
+        if (directIndex >= 0 && directIndex < Data.itemSlots.Count &&
+            ReferenceEquals(Data.itemSlots[directIndex], slot))
+        {
+            RefreshUI(directIndex);
+            return;
+        }
+
+        // 兼容外部槽位索引尚未同步的情况。
         for (int i = 0; i < Data.itemSlots.Count; i++)
         {
             if (Data.itemSlots[i] != null && Data.itemSlots[i] == slot)
@@ -933,6 +989,13 @@ public class Inventory
 
     public void RefreshUI(int index)
     {
+        if (_virtualizedSlotGrid != null)
+        {
+            _virtualizedSlotGrid.RefreshSlot(index);
+            RefreshCarryCapacityUI();
+            return;
+        }
+
         if (itemSlot_UI == null || index < 0 || index >= itemSlot_UI.Count)
             return;
 
@@ -955,6 +1018,13 @@ public class Inventory
 
         if (itemSlot_UI == null)
         {
+            RefreshCarryCapacityUI();
+            return;
+        }
+
+        if (_virtualizedSlotGrid != null)
+        {
+            _virtualizedSlotGrid.RefreshVisibleSlots();
             RefreshCarryCapacityUI();
             return;
         }
@@ -1387,6 +1457,9 @@ public class Inventory
                _activeDragSourceCounts != null &&
                _activeDragSourceCounts.ContainsKey(Data.itemSlots[index]);
     }
+
+    /// <summary>虚拟化网格在任意槽位拖拽期间暂停重绑，避免来源索引被滚动复用。</summary>
+    public bool HasActiveSlotDrag => _activeDragSourceCounts != null && _activeDragSourceCounts.Count > 0;
 
     /// <summary>登记一次来源槽拖拽，支持多指同时起手。</summary>
     private void BeginSlotDrag(ItemSlot slot)
