@@ -48,6 +48,7 @@ public static partial class MachineWorld
         if (!dirty) return;
         graph.Rebuild(nodes.Values);
         electricalGraph?.Rebuild(nodes.Values);
+        RebuildCombatSearchPadding();
         dirty = false;
     }
 

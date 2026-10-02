@@ -33,6 +33,7 @@ public static partial class MachineWorld
     private static bool dirty;
     private static bool suppressRemoval;
     private static float elapsed;
+    private static Vector2 combatSearchPadding = Vector2.one; // 当前节点受击范围的最大外延，只在拓扑或资源变化时重算。
     private const int MaxCatchUpStepsPerFrame = 8;
     public static IReadOnlyList<MechanicalNetwork> Networks => graph?.Networks;
     public static string WorldKey => worldKey;
@@ -331,6 +332,31 @@ public static partial class MachineWorld
         if (graph == null) return null;
         RebuildGraphsIfDirty();
         return graph.At(cell, layer);
+    }
+
+    /// <summary>攻击候选查询涵盖完整受击范围，而不是把所有机器假定为一格大小。</summary>
+    public static Vector2 GetCombatSearchPadding()
+    {
+        if (graph == null) return Vector2.one;
+        RebuildGraphsIfDirty();
+        return combatSearchPadding;
+    }
+
+    private static void RebuildCombatSearchPadding()
+    {
+        combatSearchPadding = Vector2.one;
+        foreach (MachineEntity node in nodes.Values)
+        {
+            if (GameRes.ExistingInstance == null ||
+                !GameRes.ExistingInstance.TryGetItemDefinition(node.Definition.Id, out RuntimeItemDefinition definition))
+                throw new InvalidOperationException("机器受击定义缺失：" + node.Definition.Id);
+            MachineCombatBridge.ValidateHealth(definition.Health);
+            FlatWorld.Geometry.PerceptionShape2D shape = MachineCombatBridge.ResolveHitShape(
+                definition.Health, Vector2.zero, node.RotationQuarterTurns, node.Definition.IsConverter);
+            float2 extents = shape.IsCircle != 0 ? new float2(shape.Radius) : shape.Extents;
+            float2 padding = math.abs(shape.Center) + extents;
+            combatSearchPadding = Vector2.Max(combatSearchPadding, new Vector2(padding.x, padding.y));
+        }
     }
 
     /// <summary>交互半径内按数据格索引机械目标，查询量与玩家附近格数相关。</summary>

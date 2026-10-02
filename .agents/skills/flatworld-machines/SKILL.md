@@ -37,6 +37,7 @@ description: "Use when: 定位或修改 FlatWorld 的机器世界、工作台、
 - 放置提交失败不得消费召唤器；拆回先捕获全部状态、成功生成返还物再删除。便携设施继续按 SharedModuleIds 迁移同一状态，不能另存手持/落地两份进度。
 - 箱子首次创建须接收当前配置/结构生成载荷中的库存及 InventoryInitName，后续只恢复 MachineStorageState；随机空结果也视为初始化完成，休眠、读档、F5 都不能重抽战利品。
 - 机器最大生命按当前定义 MaxHp 与快照 CraftedDurabilityMultiplier 共用 CraftedDurabilityQuality 换算；只在未初始化时赋当前生命，读档/唤醒不得重复叠乘已有受损生命。受损表现阈值同样使用实例最大生命。
+- 全部落地机器通过 `MachineCombatBridge` 消费真实武器窗口：目录必须校验有限正生命与启用的独立受击 Trigger，不能静默跳过关闭的 `health.collider`。候选格范围由当前全部节点的受击外延缓存派生，拓扑或资源变化后重建；偏移、朝向与转换器镜像和物理投影共用同一形状。提交耐久/拆除后必须调用 `PublishExternalDamage` 回传实际生命损失，防御抵消仍回传有效 0，不能只扣内部 HP 而漏掉武器命中反馈。
 - `MachineArchive` 使用现有外层 `MechanicalNetworks` 载荷；保留缺失 MOD 的冷快照，避免卸载显示或暂缺资源导致存档丢失。不建立旧运行架构兼容层。
 - 新增设施必须通过资源目录预检：稳定身份、主领域工厂、必要库存/燃料配置与正式面板。预检不创建 MachineLogic、面板或世界节点，不污染 F5 候选会话。
 - 机械图形代理不保存 HP、库存、炉温等权威数据；主体和运动部件合入所属区块的 Y 行网格，轻量 `MechanicalDepthVisual` 只负责交互与灯光，阴影继续走 BRG。

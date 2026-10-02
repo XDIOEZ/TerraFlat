@@ -58,7 +58,18 @@
       "volume": 12,
       "stackable": false,
       "canBePickedUp": false,
-      "health": { "hasHp": true, "hp": 60, "maxHp": 60 },
+      "health": {
+        "hasHp": true,
+        "hp": 60,
+        "maxHp": 60,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": { "x": 0, "y": 0 },
+          "size": { "x": 1, "y": 1 }
+        }
+      },
       "modules": {
         "建筑模块": {
           "prefab": "Module_Building",

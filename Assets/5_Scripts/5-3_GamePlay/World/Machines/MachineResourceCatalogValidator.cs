@@ -29,8 +29,8 @@ public sealed class MachineResourceCatalogValidator : IResourceCatalogValidator
                 MachineDefinition definition = MachineCatalog.Get(pair.Key);
                 if (definition == null) continue;
                 definition.Validate();
-                if (pair.Value.Health?.HasHp != true || !MachineDefinition.Positive(pair.Value.Health.MaxHp))
-                    errors.Add("机器耐久定义缺失或无效：" + pair.Key);
+                try { MachineCombatBridge.ValidateHealth(pair.Value.Health); }
+                catch (InvalidOperationException error) { errors.Add("机器受击配置无效：" + pair.Key + "，" + error.Message); }
                 if (!string.IsNullOrWhiteSpace(definition.LogicId) && !MachineLogicRegistry.IsRegistered(definition.LogicId))
                     errors.Add("机器领域工厂未注册：" + pair.Key + " -> " + definition.LogicId);
                 ValidateAuthoring(pair.Key, new MachineContent(pair.Value, resources), errors);
