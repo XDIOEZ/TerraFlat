@@ -74,7 +74,15 @@ public static partial class RuntimeUIPrefabBuilder
         panel.Liquid = liquid;
         panel.LeftPourOutlet = leftPourOutlet;
         panel.RightPourOutlet = rightPourOutlet;
-        panel.Appearances = new[]
+        panel.Appearances = CreateWaterVesselAppearances();
+        root.SetActive(true);
+        return root;
+    }
+
+    #region 容器外观配置
+
+    // 正式面板与重建器保持同一套容器剖面、内腔和桶口坐标。
+    private static WaterVesselPanel.VesselAppearance[] CreateWaterVesselAppearances() => new[]
         {
             new WaterVesselPanel.VesselAppearance
             {
@@ -83,12 +91,32 @@ public static partial class RuntimeUIPrefabBuilder
                 Interior = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/6_Art/Generated/WaterVessel/CoconutShellUI/CoconutShell_Interior.png"),
                 FillRange = new Vector2(44f / 128f, 88f / 128f),
                 LeftOutlet = new Vector2(14f / 128f, 84f / 128f),
-                RightOutlet = new Vector2(114f / 128f, 84f / 128f)
+                RightOutlet = new Vector2(114f / 128f, 84f / 128f),
+                MouthWidth = 100f / 128f
+            },
+            new WaterVesselPanel.VesselAppearance
+            {
+                ItemId = "WoodenBarrel",
+                Cutaway = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/6_Art/Generated/WaterVessel/WoodenBarrelUI/WoodenBarrel_Cutaway.png"),
+                Interior = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/6_Art/Generated/WaterVessel/WoodenBarrelUI/WoodenBarrel_Interior.png"),
+                FillRange = new Vector2(14f / 128f, 100f / 128f),
+                LeftOutlet = new Vector2(32f / 128f, 104f / 128f),
+                RightOutlet = new Vector2(96f / 128f, 104f / 128f),
+                MouthWidth = 80f / 128f
+            },
+            new WaterVesselPanel.VesselAppearance
+            {
+                ItemId = "IronBucket",
+                Cutaway = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/6_Art/Generated/WaterVessel/IronBucketUI/IronBucket_Cutaway.png"),
+                Interior = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/6_Art/Generated/WaterVessel/IronBucketUI/IronBucket_Interior.png"),
+                FillRange = new Vector2(21f / 128f, 77f / 128f),
+                LeftOutlet = new Vector2(35f / 128f, 76.5f / 128f),
+                RightOutlet = new Vector2(93f / 128f, 76.5f / 128f),
+                MouthWidth = 58f / 128f
             }
         };
-        root.SetActive(true);
-        return root;
-    }
+
+    #endregion
 
     /// <summary>只更新已有正式 Prefab 的液体样式，不重建容器外形、布局或用户已配置的引用。</summary>
     [MenuItem("FlatWorld/UI/Sync Water Vessel Liquid Styles")]
