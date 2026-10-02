@@ -27,7 +27,7 @@ public sealed class InventoryVirtualizedSlotGrid : MonoBehaviour
 
     private Vector2 cellSize = new(80f, 80f);
     private Vector2 spacing = new(4f, 4f);
-    private RectOffset padding = new(8, 8, 8, 8);
+    private RectOffset padding;
     private int columns = 1;
     private int firstBoundRow = -1;
     private Vector2 lastViewportSize;
@@ -116,6 +116,7 @@ public sealed class InventoryVirtualizedSlotGrid : MonoBehaviour
 
     private void CacheGridSettings()
     {
+        padding ??= new RectOffset(8, 8, 8, 8);
         gridLayout = content.GetComponent<GridLayoutGroup>();
         if (gridLayout != null)
         {
