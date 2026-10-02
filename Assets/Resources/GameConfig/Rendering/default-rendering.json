@@ -118,7 +118,7 @@
       { "visualLayer": "Water", "batchOrder": 1, "renderQueueOffset": 1 },
       { "visualLayer": "Support", "batchOrder": 2, "renderQueueOffset": 2 },
       { "visualLayer": "Environment", "batchOrder": 2, "renderQueueOffset": 2 },
-      { "visualLayer": "Grass", "batchOrder": 2, "renderQueueOffset": 2 },
+      { "visualLayer": "Grass", "batchOrder": 2, "renderQueueOffset": 1 },
       { "visualLayer": "Snow", "batchOrder": 3, "renderQueueOffset": 3 },
       { "visualLayer": "Blocking", "batchOrder": 4, "renderQueueOffset": 4 },
       { "visualLayer": "SnowWall", "batchOrder": 5, "renderQueueOffset": 5 },

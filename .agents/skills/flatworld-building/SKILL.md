@@ -53,6 +53,7 @@ description: "Use when: 定位或修改 FlatWorld 的建筑放置预览、安装
 - 手持物的根 Transform 会被拖拽、倾倒等表现逻辑临时旋转；创建 PlacedBuilding 时必须把世界建筑根旋转重置为 `Quaternion.identity`，禁止继承 Summoner 或拆除快照的根旋转。建筑自身需要的固定朝向应写在最终视觉资源/Renderer 的局部变换中。
 - 建筑本体 JSON 的 `visual.collider` 只描述最终实体的物理碰撞范围，不再参与放置合法性或导航占地计算；当前动态可交互建筑和格子墙一样以吸附后的世界格作为放置槽。
 - 带 `Building_Data.TileBlockId` 的建筑最终由 `TileBuildingSystem` 写入 Tilemap；预览根与一格占地以格心为锚点，图片直接读取目标静态 `Tile` 的 Sprite 和 transform，禁止继承动态本体或召唤器图标的偏移。高墙图片应将 Pivot 放在底部占地格的中心，避免用 Tile transform 平移同时移动 Grid Collider；虚影同步 Tile 的缩放与旋转。
+- `Blocking` Chunk Mesh 首次按某张纹理增量建批时必须先把未使用顶点清零，不能依赖 GPU 新缓冲区的初始内容；阻挡墙体排序放在地表阴影/痕迹之上、玩家与树木等动态实体之下，避免树影盖住墙体。
 - 新增玩家格子墙需同时配置召唤器 `TileBlockId`、`Tile_Block` 伤害与掉落、Unity Tile、生成 Profile 的 `tile.block.*` 和 `ChunkTilePaletteSO`；权威落地生命来自 `Tile_Block.damageProfile`，不能按召唤器的 `health` 推断。保留的迁移源 Prefab 也需声明 `Data.TileBlockId` 与 `BitData.TileBlockId`，并在 `BuildingShellMigrationTool` 标记为 Tilemap 建筑，否则重新导出会恢复动态本体链路。
 - 资源装配脚本只是编辑器工具，新增格子建筑交付时必须包含实际生成的 Tile、Tile_Block、图片导入设置、Profile/Palette 映射与 Addressables 注册，不能只交付脚本和可制作的召唤器。`GameRes.TileBlockDict` 在资源会话中加载；补齐资源后可返回主菜单按 F5 重载。世界生成仍使用存档冻结 Profile，但玩家可建造 Tile 的 `tile.block.*` 映射读取当前内容目录并在旧快照缺失时补充，因此新增地板/建筑不得要求玩家重开世界；数字 TileId 必须保持稳定且不能与旧快照已有映射冲突。建筑关系的权威配置位于模块 `data.BitData`；`BuildingResourceCatalogValidator` 与静态目录检查必须读取该字段，不能只查 `parameters.Data`。
 - 手机准星可以停在最大建造半径；格心吸附会产生每轴最多半格的偏差，距离校验应按目标格最近边缘判断，禁止直接用吸附后格心距离或 `Ceil` 取整决定预览与放置资格。

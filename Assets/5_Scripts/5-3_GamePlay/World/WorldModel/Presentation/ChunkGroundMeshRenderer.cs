@@ -314,6 +314,11 @@ internal sealed class ChunkGroundMeshRenderer : IDisposable
             mesh.SetSubMesh(0, new SubMeshDescriptor(0, indexCount), UploadFlags);
             if (!singleQuad)
             {
+                // 新增逐格纹理批次时先把未使用格清零，避免首次增量写入后 GPU 未初始化顶点铺满整个区块。
+                mesh.SetVertexBufferData(vertices, 0, 0, vertices.Length, 0, UploadFlags);
+            }
+            if (!singleQuad)
+            {
                 mesh.bounds = new Bounds(new Vector3(width * 0.5f, height * 0.5f),
                     new Vector3(width + 6f, height + 6f, 2f));
             }
@@ -346,6 +351,14 @@ internal sealed class ChunkGroundMeshRenderer : IDisposable
             renderer.receiveShadows = false;
             renderer.lightProbeUsage = LightProbeUsage.Off;
             renderer.reflectionProbeUsage = ReflectionProbeUsage.Off;
+            if (layer == ChunkBatchRendererGroupService.VisualLayer.Blocking)
+            {
+                // 墙体位于地表阴影与地表痕迹之上，但仍保持在玩家和树木等动态实体之后。
+                WorldSortingManager.GetResourceSortingKey(WorldSortingManager.GroundMarkCategory,
+                    out int sortingLayerId, out int sortingOrder);
+                renderer.sortingLayerID = sortingLayerId;
+                renderer.sortingOrder = checked(sortingOrder + 1);
+            }
         }
 
         public void Write(int index, int x, int y, Vector2[] corners, Vector2[] uvs,
