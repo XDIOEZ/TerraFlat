@@ -94,7 +94,6 @@
             "Acceleration": 3,
             "Braking": 6,
             "FacingTurnSpeed": 30,
-            "LandPushTurnSpeed": 15,
             "Radius": 0.35,
             "LandSpeedMultiplier": 0.1,
             "LandPushSpeedMultiplier": 0.2,

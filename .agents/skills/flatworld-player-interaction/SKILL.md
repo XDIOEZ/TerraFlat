@@ -23,7 +23,7 @@ description: "Use when: 定位或修改 FlatWorld 的玩家实体、输入系统
 - 依赖玩家离散位置变化的系统统一订阅 `Mod_Mover.WorldUnitChanged`；该事件按拓扑规范化后的 `Rigidbody2D` 实际位置进入新的 1×1 世界单位格时触发，消费方禁止各自累计移动距离或重复轮询坐标。
 - `Mod_Mover` 只向 Dynamic Rigidbody2D 提交主动速度与水流速度；地块、资源、机器的接触由 Chunk 静态 Collider 投影和 Physics2D 求解。`WorldUnitChanged` 仍按刚体实际到达位置发布，不能用期望速度代替。
 - 玩家脚下动态建筑造成的移速惩罚由 `BuildingOccupancyRegistry.GetPlayerMoveSpeedMultiplier` 按离散格读取，并只乘入 `Mod_Mover` 的主动目标速度；不要把这类地块惩罚写进永久 `Speed.MultiplicativeModifier`，否则进出地块时容易与 Buff、奔跑倍率互相污染。
-- 载具接触由 Dynamic Rigidbody2D + 非 Trigger 船体 Collider 求解；`CarrierPhysicsContact2D` 只报告接触，`Mod_Carrier` 仍按数据规则决定玩家推动速度。船的水流、划行与推动先合成，再统一限制航向；乘员承载仍由 `ICarrierMotionSource` 传递，禁止乘员反推自身载具。
+- 载具接触由 Dynamic Rigidbody2D + 非 Trigger 船体 Collider 求解；`CarrierPhysicsContact2D` 只报告接触，`Mod_Carrier` 仍通过 `PushSource`、推动速度和有效期记录权威推动关系，实际位移由 Physics2D 求解。船头只按有效乘员经 `ICarrierMotionSource.AdvanceMotion` 提交的划行输入，以 `FacingTurnSpeed` 固定角速度改变；松手、输入锁定或离船后保留朝向。推动、水流与滑行只改变平移，合速度直接提交刚体，禁止把合速度转向船头或从实际速度反推朝向；根刚体保持 FreezeRotation，只旋转视觉子节点。乘员承载仍由同一契约传递，禁止乘员反推自身载具。
 - 载具的按键、鼠标点选和白色描边必须共用光标落点查询；上船与下船都要求光标实际命中载具，禁止因“当前已乘坐”或“靠近船体”绕过光标选择。光标指向可触及水面且未命中载具时，交互键交给喝水等环境动作。远海登船与下船都合法：登船恢复位置优先附近安全陆地，否则保留真实登船坐标；下船优先附近安全陆地，没有陆地时落到船体外侧安全水面。
 
 - 输入链为 Input System → `Mod_GameController` → 玩家模块；不要让 UI、物理输入和玩法模块各自维护冲突状态。

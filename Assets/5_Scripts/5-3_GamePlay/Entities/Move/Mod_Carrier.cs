@@ -4,7 +4,7 @@ using FlatWorld.WorldModel;
 using UnityEngine;
 
 /// <summary>
-/// 可配置单座承载源：默认速度 5 格/秒、Shift 加速倍率 1.5、加速 3 格/秒²、制动 6 格/秒²、海上航向转速 30°/秒、陆地推动转速 15°/秒、质量 60。
+/// 可配置单座承载源：默认速度 5 格/秒、Shift 加速倍率 1.5、加速 3 格/秒²、制动 6 格/秒²、操作者转向速度 30°/秒、质量 60。
 /// 船与未来车辆使用同一输入/力溯源契约；刚体负责接触，不改变乘员层级。
 /// 座位和速度是会话租约，不写存档；位置由 Item 快照保存，读档为空船且静止。
 /// </summary>
@@ -17,8 +17,7 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, IInteractable, I
     [Min(1f)] public float BoostSpeedMultiplier = 1.5f; // 乘员主动加速时的最高速度倍率。
     [Min(0.1f)] public float Acceleration = 3f; // 加速度。
     [Min(0.1f)] public float Braking = 6f; // 松杆减速度。
-    [Min(1f)] public float FacingTurnSpeed = 30f; // 海上及普通运动来源合成后的最大航向转速（度/秒）。
-    [Min(1f)] public float LandPushTurnSpeed = 15f; // 木筏位于陆地且由玩家推动时的最大航向转速（度/秒）。
+    [Min(1f)] public float FacingTurnSpeed = 30f; // 船上操作者划行时的固定船头转速（度/秒），与平移速度无关。
     [Min(0.05f)] public float Radius = 0.35f; // 交互与下船安全半径。
     [Range(0.01f, 1f)] public float LandSpeedMultiplier = 0.1f; // 陆地最高速度相对水面的倍率。
     [Range(0.01f, 1f)] public float LandPushSpeedMultiplier = 0.2f; // 陆地推动按推动者当前速度的五分之一。
@@ -54,7 +53,7 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, IInteractable, I
     private Vector2 lastPhysicsPosition;
     private bool loaded, activated;
     private Vector2 pushedVelocity;
-    private Vector2 motionHeading = Vector2.up; // 唯一船头航向；停止时保留，重新受力也不能瞬间掉头。
+    private Vector2 facingHeading = Vector2.up; // 船头只由操作者划行输入改变，推动、水流和滑行都保留朝向。
     private float pushValidUntil;
     private CarrierWaterWake waterWake;
     #endregion
@@ -70,11 +69,11 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, IInteractable, I
     /// <summary>只恢复空座位，不迁移任何启动资产或旧存档。</summary>
     public override void Load()
     {
-        if (!(MaxSpeed > 0 && BoostSpeedMultiplier >= 1f && Acceleration > 0 && Braking > 0 && FacingTurnSpeed > 0 && LandPushTurnSpeed > 0 && Radius > 0) ||
+        if (!(MaxSpeed > 0 && BoostSpeedMultiplier >= 1f && Acceleration > 0 && Braking > 0 && FacingTurnSpeed > 0 && Radius > 0) ||
             !(LandSpeedMultiplier > 0f && LandSpeedMultiplier <= 1f) ||
             !(LandPushSpeedMultiplier > 0f && LandPushSpeedMultiplier <= 1f) ||
             !(HullSize.x > 0f && HullSize.y > 0f) ||
-            float.IsInfinity(MaxSpeed + BoostSpeedMultiplier + Acceleration + Braking + FacingTurnSpeed + LandPushTurnSpeed + Radius) ||
+            float.IsInfinity(MaxSpeed + BoostSpeedMultiplier + Acceleration + Braking + FacingTurnSpeed + Radius) ||
             float.IsNaN(SeatOffset.sqrMagnitude) || float.IsInfinity(SeatOffset.sqrMagnitude))
             throw new InvalidOperationException("载具速度、加速倍率、加速度、制动、转向、半径和陆地速度倍率必须有效。");
         CarrierSaveState state = Data.GetData<CarrierSaveState>();
@@ -83,7 +82,7 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, IInteractable, I
         loaded = true;
         activated = false;
         CurrentVelocity = CurrentForce = DrivenVelocity = ExternalVelocity = Vector2.zero;
-        motionHeading = Vector2.up;
+        facingHeading = Vector2.up;
         PushSource = null;
         body = item.GetComponent<Rigidbody2D>();
         physicalCollider = item.GetComponent<BoxCollider2D>();
@@ -291,7 +290,8 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, IInteractable, I
     /// <summary>只接收乘员输入；水流、划船与外部推动在同一固定步结算。</summary>
     public void AdvanceMotion(Mod_Mover rider, Vector2 input, float deltaTime, bool controlsLocked, bool boostRequested)
     {
-        if (rider != Rider || !IsAvailable || !GameNetwork.HasStateAuthority) return;
+        if (rider == null || rider != Rider || rider.CarrierSource != this ||
+            !IsAvailable || !GameNetwork.HasStateAuthority) return;
         requestedControlsLocked = controlsLocked;
         requestedInput = controlsLocked ? Vector2.zero : Vector2.ClampMagnitude(input, 1f);
         requestedBoost = !controlsLocked && boostRequested && requestedInput.sqrMagnitude > 0.001f;
@@ -304,7 +304,8 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, IInteractable, I
             return;
         float deltaTime = Time.fixedDeltaTime;
         RefreshPushSource();
-        Vector2 input = Rider != null && !requestedControlsLocked ? requestedInput : Vector2.zero;
+        Vector2 input = Rider != null && Rider.isActiveAndEnabled && Rider.CarrierSource == this &&
+            !requestedControlsLocked ? requestedInput : Vector2.zero;
         float speedLimit = ResolveSurfaceSpeedLimit(body.position);
         if (Rider != null && requestedBoost)
             speedLimit *= BoostSpeedMultiplier;
@@ -320,12 +321,9 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, IInteractable, I
             DrivenVelocity = Vector2.MoveTowards(DrivenVelocity, desiredVelocity, rate * deltaTime);
         }
         ExternalVelocity = WorldMotionSystem.SampleWaterVelocity(body.position, WaterCurrentSpeed);
-        Vector2 requestedVelocity = DrivenVelocity + ExternalVelocity;
-        float turnSpeed = PushSource != null && !IsWaterSurface(body.position)
-            ? LandPushTurnSpeed
-            : FacingTurnSpeed;
-        Vector2 steeredVelocity = ResolveSteeredVelocity(requestedVelocity, deltaTime, true, turnSpeed);
-        body.velocity = steeredVelocity;
+        // 平移保留划行、推动与水流的真实方向，不能为了船头朝向重定向合速度。
+        body.velocity = DrivenVelocity + ExternalVelocity;
+        UpdateOperatorHeading(input, deltaTime);
         UpdateVisualFacing();
     }
 
@@ -436,30 +434,24 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, IInteractable, I
         }
     }
 
-    /// <summary>所有主动/被动力先合成，再统一限制船头航向变化；速度大小不受转向器额外衰减。</summary>
-    private Vector2 ResolveSteeredVelocity(Vector2 requestedVelocity, float deltaTime, bool commitHeading, float turnSpeed)
+    /// <summary>只按船上操作者的有效划行输入匀速转向；松手、输入锁定或离船后立即保留当前船头。</summary>
+    private void UpdateOperatorHeading(Vector2 input, float deltaTime)
     {
-        if (requestedVelocity.sqrMagnitude <= 0.0001f)
-            return Vector2.zero;
+        if (input.sqrMagnitude <= 0.001f)
+            return;
 
-        Vector2 targetHeading = requestedVelocity.normalized;
-        Vector2 currentHeading = motionHeading.sqrMagnitude > 0.0001f ? motionHeading.normalized : Vector2.up;
-        float maxStep = turnSpeed * Mathf.Max(0f, deltaTime);
-        float signedAngle = Vector2.SignedAngle(currentHeading, targetHeading);
-        float step = Mathf.Clamp(signedAngle, -maxStep, maxStep);
-        Vector3 rotatedHeading = Quaternion.Euler(0f, 0f, step) * (Vector3)currentHeading;
-        Vector2 nextHeading = new(rotatedHeading.x, rotatedHeading.y);
-        nextHeading.Normalize();
-        if (commitHeading)
-            motionHeading = nextHeading;
-        return nextHeading * requestedVelocity.magnitude;
+        float currentAngle = Mathf.Atan2(facingHeading.y, facingHeading.x) * Mathf.Rad2Deg;
+        float targetAngle = Mathf.Atan2(input.y, input.x) * Mathf.Rad2Deg;
+        float nextAngle = Mathf.MoveTowardsAngle(currentAngle, targetAngle,
+            FacingTurnSpeed * Mathf.Max(0f, deltaTime)) * Mathf.Deg2Rad;
+        facingHeading = new Vector2(Mathf.Cos(nextAngle), Mathf.Sin(nextAngle));
     }
 
-    /// <summary>视觉严格跟随已经受限的统一船头航向，不再对划船、推动或海流分别处理。</summary>
+    /// <summary>视觉只跟随操作者控制的船头，不能从刚体实际速度反推朝向。</summary>
     private void UpdateVisualFacing()
     {
-        if (visualTransform == null || motionHeading.sqrMagnitude <= 0.0001f) return;
-        float angle = Mathf.Atan2(motionHeading.y, motionHeading.x) * Mathf.Rad2Deg - 90f;
+        if (visualTransform == null || facingHeading.sqrMagnitude <= 0.0001f) return;
+        float angle = Mathf.Atan2(facingHeading.y, facingHeading.x) * Mathf.Rad2Deg - 90f;
         visualTransform.localRotation = visualBaseLocalRotation * Quaternion.Euler(0f, 0f, angle);
     }
 
@@ -471,7 +463,7 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, IInteractable, I
         return MaxSpeed * LandSpeedMultiplier;
     }
 
-    /// <summary>统一读取载具当前位置是否处于真实水面，用于速度与转向上下文判定。</summary>
+    /// <summary>统一读取载具当前位置是否处于真实水面，只影响平移限速。</summary>
     private static bool IsWaterSurface(Vector2 position)
     {
         ChunkMgr manager = ChunkMgr.ExistingInstance;
