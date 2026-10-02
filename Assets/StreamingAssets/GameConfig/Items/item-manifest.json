@@ -32,6 +32,11 @@
       "enabled": true
     },
     {
+      "id": "textiles",
+      "path": "shells/textiles.json",
+      "enabled": true
+    },
+    {
       "id": "gold",
       "path": "shells/gold.json",
       "enabled": true

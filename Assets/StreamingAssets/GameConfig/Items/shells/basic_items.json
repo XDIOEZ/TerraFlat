@@ -6463,11 +6463,18 @@
       "id": "Cotton",
       "parent": "BasicItem_Base",
       "gameName": "棉花",
-      "description": "柔软的天然纤维，可用于制作布料。",
+      "description": "柔软的天然纤维，可通过纺织加工制成布。",
       "weight": 0.1,
       "volume": 0.2,
       "stackable": true,
       "tags": ["Material", "Fiber"],
+      "processing": {
+        "weave": {
+          "inputAmount": 2,
+          "work": 2,
+          "outputs": [{ "itemId": "Cloth", "amount": 1 }]
+        }
+      },
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Cotton/Cotton_Icon.png"
       }

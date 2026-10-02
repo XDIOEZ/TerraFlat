@@ -2,6 +2,10 @@
   "schemaVersion": 1,
   "locale": "en",
   "names": {
+    "Cotton": "Cotton",
+    "Cloth": "Cloth",
+    "SilkFiber": "Silk Fiber",
+    "Silk": "Silk",
     "Beehive": "Beehive",
     "Flower": "Flower",
     "Boat": "Simple Raft",
