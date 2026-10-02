@@ -244,6 +244,12 @@ public class ItemSlot_UI : MonoBehaviour,
         ClearSlotDataAction = clearAction;
     }
 
+    /// <summary>获取这个 UI 当前实际绑定的槽位，外部逻辑不要直接调用槽位委托。</summary>
+    public ItemSlot GetBoundSlotData()
+    {
+        return GetSlotData();
+    }
+
 #if UNITY_EDITOR
     /// <summary>编辑器构建器绑定正式 Prefab 内的长按进度视觉。</summary>
     public void ConfigureTouchLongPressProgressVisuals(

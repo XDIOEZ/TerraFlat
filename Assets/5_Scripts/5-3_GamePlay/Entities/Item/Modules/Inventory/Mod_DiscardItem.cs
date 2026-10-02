@@ -151,7 +151,7 @@ public class Mod_DiscardItem : Mod_BaseDroper
     private void HandleRepeatDrop()
     {
         // 检查手上是否有物品
-        ItemSlot handSlot = hand?.HandInventory?.Data?.itemSlots?[hand.HandInventory.Data.Index];
+        ItemSlot handSlot = GetHandSlot();
         if (handSlot != null && handSlot.itemData != null && handSlot.Amount > 0)
         {
             if (isCtrlPressed)
@@ -194,9 +194,9 @@ public class Mod_DiscardItem : Mod_BaseDroper
         }
 
         // 只有当手上和快捷栏都没有物品时，才处理UI悬停的物品
-        if (hoveredSlot != null && hoveredSlot.GetSlotDataFunc != null)
+        if (hoveredSlot != null)
         {
-            ItemSlot hoveredSlotData = hoveredSlot.GetSlotDataFunc?.Invoke(-1);
+            ItemSlot hoveredSlotData = hoveredSlot.GetBoundSlotData();
             if (hoveredSlotData != null && hoveredSlotData.Amount > 0)
             {
                 if (isCtrlPressed)
@@ -243,9 +243,9 @@ public class Mod_DiscardItem : Mod_BaseDroper
 
         // 松开按键时执行一次丢弃操作
         // 松开按键时执行一次丢弃操作
-        if (hand.HandInventory.Data.itemSlots[hand.HandInventory.Data.Index].itemData != null)
+        ItemSlot handSlot = GetHandSlot();
+        if (handSlot?.itemData != null)
         {
-            ItemSlot handSlot = hand.HandInventory.Data.itemSlots[hand.HandInventory.Data.Index];
             if (isCtrlPressed)
             {
                 // Ctrl+F 丢弃整组
@@ -321,6 +321,16 @@ public class Mod_DiscardItem : Mod_BaseDroper
         return Mod_GameController == null || Mod_GameController.IsGameplayInputAllowed(context);
     }
 
+    /// <summary>安全获取当前手部槽位，库存结构变化时不让输入回调访问越界索引。</summary>
+    private ItemSlot GetHandSlot()
+    {
+        Inventory_Data data = hand?.HandInventory?.Data;
+        if (data?.itemSlots == null || data.Index < 0 || data.Index >= data.itemSlots.Count)
+            return null;
+
+        return data.itemSlots[data.Index];
+    }
+
     public void OnDestroy()
     {
         StopHeldDropAnimation(true);
@@ -340,11 +350,7 @@ public class Mod_DiscardItem : Mod_BaseDroper
     /// <summary>在指定世界落点丢弃手部携带物；count 为空时丢整组，指定数量时最多扣减现有数量。</summary>
     public bool TryDropHeldItemAtScreenPosition(Vector2 screenPosition, int? count = null)
     {
-        ItemSlot handSlot = hand?.HandInventory?.Data?.itemSlots != null &&
-                            hand.HandInventory.Data.Index >= 0 &&
-                            hand.HandInventory.Data.Index < hand.HandInventory.Data.itemSlots.Count
-            ? hand.HandInventory.Data.itemSlots[hand.HandInventory.Data.Index]
-            : null;
+        ItemSlot handSlot = GetHandSlot();
         if (handSlot?.itemData == null || handSlot.Amount <= 0)
             return false;
 
@@ -546,9 +552,9 @@ public class Mod_DiscardItem : Mod_BaseDroper
         {
             var uiItemSlot = results[0].gameObject.GetComponent<ItemSlot_UI>();
 
-            if (uiItemSlot != null && uiItemSlot.GetSlotDataFunc != null)
+            if (uiItemSlot != null)
             {
-                ItemSlot slotData = uiItemSlot.GetSlotDataFunc?.Invoke(-1);
+                ItemSlot slotData = uiItemSlot.GetBoundSlotData();
                 if (slotData != null)
                 {
                     DropItemByCount(slotData, count);
@@ -576,9 +582,9 @@ public class Mod_DiscardItem : Mod_BaseDroper
         {
             var uiItemSlot = results[0].gameObject.GetComponent<ItemSlot_UI>();
 
-            if (uiItemSlot != null && uiItemSlot.GetSlotDataFunc != null)
+            if (uiItemSlot != null)
             {
-                ItemSlot slotData = uiItemSlot.GetSlotDataFunc?.Invoke(-1);
+                ItemSlot slotData = uiItemSlot.GetBoundSlotData();
                 if (slotData != null)
                 {
                     DropItemByCount(slotData, slotData.Amount);
