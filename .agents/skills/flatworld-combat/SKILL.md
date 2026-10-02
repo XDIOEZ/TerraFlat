@@ -40,7 +40,7 @@ description: "Use when: 定位或修改 FlatWorld 的伤害、生命值、身体
 - 武器的 `Mod_Damage` 必须是武器实例内的直接子物体，禁止再嵌套 `Mod_Damage.prefab` 实例；Prefab 组合可显式序列化跨模块引用，JSON 组合则必须在所有模块注册后通过 `IItemModuleDependencyBinder` 按唯一稳定 ID 绑定，禁止层级搜索或静默补建。攻击动画曲线只负责开关已存在的碰撞体。
 - 玩家手持的动画近战/工具统一由 `Mod_Weapon_AnimationAction` 在每一段实际 `StartAttack` 时通过持有者 `Mod_Stamina.TryConsumeStamina` 结算 `staminaCostPerAttack`；按住连击必须每段单独扣除，体力不足则不启动该段。基础消耗由 Item JSON 的模块参数配置并继续受全局体力消耗难度倍率影响，禁止按物品 ID 在战斗代码里硬编码；仍保留 `sourcePrefab` 的现行内容同步对应序列化值，避免后续迁移覆盖经济配置。
 - 旧式 `Mod_ColdWeapon` 仍通过 `ColdWeaponStaminaObserver.state.StaminaConsumeSpeed` 按秒扣除体力，基础值序列化在 `Assets/2_Prefabs/Gameplay/Modules/Combat/Mod_ColdWeapon.prefab`；批量调整“所有武器体力消耗”时必须同时覆盖动画武器、弓与该旧链路。`StaminaConsumeSpeedRate` 是独立倍率，不要在降低基础消耗时同时缩放两者而造成重复倍率。
-- 动画武器的伤害盒必须跟随 `Render` 下实际武器 `SpriteRenderer` 的局部位置、旋转、缩放与 Sprite 边界；同时处理 `flipX/flipY` 对 Pivot 偏移的反转。禁止把 `Mod_Damage` 固定在 `Render` 原点并沿用模板的默认 1×1 BoxCollider，否则武器旋转后会出现大面积错位。
+- 动画武器的伤害盒必须跟随 `Render` 下实际武器 `SpriteRenderer` 的局部位置、旋转、缩放，并优先用 Sprite 物理轮廓/紧致网格计算最小包围矩形；只有拿不到轮廓时才回退 Sprite bounds，同时处理 `flipX/flipY`。禁止把 `Mod_Damage` 固定在 `Render` 原点或直接沿用整张透明画布的默认方框，否则细长、斜向武器会出现明显超出贴图的伤害区域。
 - `Mod_Damage` 开启伤害窗口时必须主动扫描当前重叠目标，不能只依赖 `OnTriggerEnter2D`；玩家、AI 与技能统一走公共伤害窗口，避免碰撞体后开时漏掉已经重叠的接收器。
 - 标准物品武器的 `Mod_Damage.MaxAttackTargets` 默认统一为 `3`；特殊单体攻击可显式调低。Prefab 与 Item JSON 都可能覆盖 C# 默认值，调整默认目标数时必须同步检查这两类序列化配置。
 - `DamageSender` 与 `DamageReciver` 是战斗专用 Trigger 对，Physics2D 矩阵中两层都只能与彼此接触；交互、拾取、玩家身体和普通阻挡不得与任一伤害层建立接触对。`DamageReceiver` 必须自带同节点专用 Trigger Collider，禁止借用 Item 根的普通阻挡 Collider；冲撞技能等物理伤害发送器也必须归入 `DamageSender`。Tile/建筑伤害继续使用不依赖接触矩阵的显式空间查询。

@@ -4,7 +4,7 @@ using FlatWorld.WorldModel;
 using UnityEngine;
 
 /// <summary>
-/// 手持铲子右键逐次采挖地表资源。进度存在区块格子差量中，换工具和读档后仍可继续；
+/// 手持铲子持续右键逐次采挖地表资源。进度存在区块格子差量中，换工具和读档后仍可继续；
 /// 完成时先创建掉落物，再替换 TerrainCell，避免产物创建失败造成资源丢失。
 /// </summary>
 public static class GroundTileHarvestSystem
@@ -125,7 +125,7 @@ public static class GroundTileHarvestSystem
             local.x, local.y, out float value) ? Mathf.Clamp01(value) : 0f;
     }
 
-    /// <summary>一次右键只增加一次工作量；完成时才产出物品并替换地块。</summary>
+    /// <summary>一次有效挥动只增加一次工作量；完成时才产出物品并替换地块。</summary>
     public static bool TryWork(Mod_Damage tool, out bool completed, out Vector2Int worldCell,
         out float useInterval)
         => TryWork(tool, out completed, out worldCell, out useInterval, out _);

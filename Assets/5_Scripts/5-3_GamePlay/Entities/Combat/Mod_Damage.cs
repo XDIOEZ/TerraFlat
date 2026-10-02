@@ -13,9 +13,11 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
     public ResourceToolKind HarvestKind => harvestKind;
     public int HarvestTier => harvestTier;
     public float HarvestEfficiency => harvestEfficiency;
-    private float nextGroundHarvestUseTime; // 右键采挖的最早再次使用时间。
     private WorldTileTargetOutline groundHarvestOutline; // 当前铲子指向的地格提示。
     private GroundHarvestCrackOverlay groundHarvestCracks; // 当前地格的累积裂纹。
+    private Mod_GameController groundHarvestController; // 铲子持续右键读取玩家统一输入状态。
+    private Mod_Weapon_AnimationAction groundHarvestAttackAction; // 每次真实挥动只结算一次挖掘。
+    private bool groundHarvestContinuousUseArmed; // 本次按下右键后才允许持续挖掘。
     #endregion
 
     #region 伤害相关数据
@@ -82,6 +84,11 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
     private Sprite boundWeaponSprite;
     private bool boundWeaponFlipX;
     private bool boundWeaponFlipY;
+    private Vector2 boundWeaponHitboxCenter;
+    private Vector2 boundWeaponHitboxSize;
+    private float boundWeaponHitboxAngle;
+    private readonly List<Vector2> boundWeaponShapePoints = new List<Vector2>(32);
+    private readonly List<Vector2> boundWeaponShapeBuffer = new List<Vector2>(32);
 
     // 定时伤害相关
     [SerializeField]
@@ -245,7 +252,9 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
         lastColliderEnabled = damageCollider != null && damageCollider.enabled;
         tileDamageAppliedThisWindow = false;
         nonDamageableImpactAppliedThisWindow = false;
-        nextGroundHarvestUseTime = 0f;
+        groundHarvestController = null;
+        groundHarvestAttackAction = item?.itemMods?.GetMod_ByID<Mod_Weapon_AnimationAction>("Module_Weapon_AnimationAction");
+        groundHarvestContinuousUseArmed = false;
         SynchronizeGroundHarvestAct();
     }
 
@@ -265,28 +274,83 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
     public override void Unload()
     {
         if (item != null) item.OnAct -= HandleGroundHarvestAct;
+        groundHarvestContinuousUseArmed = false;
+        groundHarvestController = null;
+        groundHarvestAttackAction = null;
         ReleaseGroundHarvestOutline();
     }
 
-    private void OnDisable() => ReleaseGroundHarvestOutline();
+    private void OnDisable()
+    {
+        groundHarvestContinuousUseArmed = false;
+        groundHarvestController = null;
+        ReleaseGroundHarvestOutline();
+    }
     private void OnDestroy() => Unload();
 
-    /// <summary>铲子右键每次只提交一次挖掘工作量，并播放泥土反馈。</summary>
+    /// <summary>右键按下立即尝试第一铲，并武装持续使用；后续由 LateUpdate 按挥动节拍继续。</summary>
     private void HandleGroundHarvestAct()
     {
-        if (harvestKind == ResourceToolKind.None || Time.time < nextGroundHarvestUseTime)
+        if (harvestKind == ResourceToolKind.None || item?.Owner == null)
             return;
 
-        if (!GroundTileHarvestSystem.TryWork(this, out bool completed, out Vector2Int worldCell,
-                out float interval, out string failureReason))
+        groundHarvestController ??= item.Owner.itemMods.GetMod_ByID<Mod_GameController>(ModText.Controller);
+        groundHarvestContinuousUseArmed = groundHarvestController?.IsRightClickHeld == true;
+        TryPerformGroundHarvestSwing(groundHarvestController, true);
+    }
+
+    /// <summary>像锄头一样持续读取右键；只有本次挥动动画真正开始后才结算一份地块进度。</summary>
+    private void UpdateGroundHarvestContinuousUse()
+    {
+        if (harvestKind == ResourceToolKind.None || item == null || !item.InHand ||
+            item.Owner is not Player player || !player.IsLocalProfile)
         {
-            if (!string.IsNullOrEmpty(failureReason))
+            groundHarvestContinuousUseArmed = false;
+            groundHarvestController = null;
+            return;
+        }
+
+        groundHarvestController ??= player.itemMods.GetMod_ByID<Mod_GameController>(ModText.Controller);
+        if (groundHarvestController == null)
+        {
+            groundHarvestContinuousUseArmed = false;
+            return;
+        }
+
+        if (!groundHarvestController.IsRightClickHeld)
+            groundHarvestContinuousUseArmed = false;
+
+        if (groundHarvestContinuousUseArmed)
+            TryPerformGroundHarvestSwing(groundHarvestController, false);
+    }
+
+    /// <summary>单次挥铲：先确认目标，再等待攻击动画取得本次节拍，最后提交地块工作量。</summary>
+    private void TryPerformGroundHarvestSwing(Mod_GameController controller, bool showFailureFeedback)
+    {
+        if (controller == null || item == null || !item.InHand)
+            return;
+
+        if (!GroundTileHarvestSystem.TryResolveTarget(this, out _, out _, out _, out string failureReason))
+        {
+            if (showFailureFeedback && !string.IsNullOrEmpty(failureReason))
                 ItemActionFeedback.Show(item.Owner, failureReason);
             return;
         }
 
-        nextGroundHarvestUseTime = Time.time + interval;
-        item.itemMods.GetMod_ByID<Mod_Weapon_AnimationAction>("Module_Weapon_AnimationAction")?.RequestAttack();
+        groundHarvestAttackAction ??=
+            item.itemMods.GetMod_ByID<Mod_Weapon_AnimationAction>("Module_Weapon_AnimationAction");
+        if (groundHarvestAttackAction == null ||
+            !groundHarvestAttackAction.TryRequestAttack(queueIfBusy: false))
+            return;
+
+        if (!GroundTileHarvestSystem.TryWork(this, out bool completed, out Vector2Int worldCell,
+                out _, out failureReason))
+        {
+            if (showFailureFeedback && !string.IsNullOrEmpty(failureReason))
+                ItemActionFeedback.Show(item.Owner, failureReason);
+            return;
+        }
+
         HoeTillingFeedback.PlayDigging(item, worldCell);
         UpdateGroundHarvestOutline();
 
@@ -346,6 +410,7 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
     private void LateUpdate()
     {
         SyncBoundWeaponHitbox();
+        UpdateGroundHarvestContinuousUse();
         UpdateGroundHarvestOutline();
         // 动画开启的一次窗口会移动：每帧检测新进入 OBB 的 ECS 目标，窗口集合仍保证每目标只受击一次。
         if (!explicitProjectileSweep && EnableOnTriggerEnterDamage && DamageInterval < 0f &&
@@ -838,6 +903,13 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
         if (Mathf.Approximately(damageRangeMultiplier, targetMultiplier))
             return;
 
+        if (boundWeaponRenderer != null)
+        {
+            damageRangeMultiplier = targetMultiplier;
+            SyncBoundWeaponHitbox(forceShapeSync: true);
+            return;
+        }
+
         float relativeMultiplier = targetMultiplier / damageRangeMultiplier;
         boxCollider.size *= relativeMultiplier;
         boxCollider.edgeRadius *= relativeMultiplier;
@@ -857,23 +929,40 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
         SyncBoundWeaponHitbox(forceShapeSync: true);
     }
 
-    /// <summary>同步动画武器伤害盒的空间姿态，并在 Sprite/翻转变化时刷新盒体边界。</summary>
+    /// <summary>同步动画武器伤害盒的空间姿态，并用贴图紧致轮廓刷新盒体边界。</summary>
     private void SyncBoundWeaponHitbox(bool forceShapeSync = false)
     {
         if (boundWeaponRenderer == null || damageCollider is not BoxCollider2D boxCollider)
             return;
 
         Transform rendererTransform = boundWeaponRenderer.transform;
+        Sprite sprite = boundWeaponRenderer.sprite;
+        bool flipX = boundWeaponRenderer.flipX;
+        bool flipY = boundWeaponRenderer.flipY;
+        if (sprite == null)
+            throw new System.InvalidOperationException($"{name} 绑定的武器 Sprite 在运行时变为空。");
+
+        if (forceShapeSync || sprite != boundWeaponSprite || flipX != boundWeaponFlipX || flipY != boundWeaponFlipY)
+        {
+            CalculateTightWeaponBox(sprite, flipX, flipY, out boundWeaponHitboxCenter, out boundWeaponHitboxSize, out boundWeaponHitboxAngle);
+            boundWeaponSprite = sprite;
+            boundWeaponFlipX = flipX;
+            boundWeaponFlipY = flipY;
+        }
+
+        Vector3 localCenter = new Vector3(boundWeaponHitboxCenter.x, boundWeaponHitboxCenter.y, 0f);
+        Quaternion localBoxRotation = Quaternion.Euler(0f, 0f, boundWeaponHitboxAngle);
         Transform damageParent = transform.parent;
         if (damageParent == rendererTransform.parent)
         {
-            transform.localPosition = rendererTransform.localPosition;
-            transform.localRotation = rendererTransform.localRotation;
+            transform.localPosition = rendererTransform.localPosition +
+                                      rendererTransform.localRotation * Vector3.Scale(localCenter, rendererTransform.localScale);
+            transform.localRotation = rendererTransform.localRotation * localBoxRotation;
             transform.localScale = rendererTransform.localScale;
         }
         else
         {
-            transform.SetPositionAndRotation(rendererTransform.position, rendererTransform.rotation);
+            transform.SetPositionAndRotation(rendererTransform.TransformPoint(localCenter), rendererTransform.rotation * localBoxRotation);
             Vector3 rendererWorldScale = rendererTransform.lossyScale;
             Vector3 parentWorldScale = damageParent != null ? damageParent.lossyScale : Vector3.one;
             transform.localScale = new Vector3(
@@ -882,25 +971,102 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
                 DivideScale(rendererWorldScale.z, parentWorldScale.z));
         }
 
-        Sprite sprite = boundWeaponRenderer.sprite;
-        bool flipX = boundWeaponRenderer.flipX;
-        bool flipY = boundWeaponRenderer.flipY;
-        if (!forceShapeSync && sprite == boundWeaponSprite && flipX == boundWeaponFlipX && flipY == boundWeaponFlipY)
-            return;
+        boxCollider.offset = Vector2.zero;
+        boxCollider.size = boundWeaponHitboxSize * damageRangeMultiplier;
+    }
 
-        if (sprite == null)
-            throw new System.InvalidOperationException($"{name} 绑定的武器 Sprite 在运行时变为空。");
+    /// <summary>优先使用 Sprite 物理轮廓计算最小包围矩形，避免透明画布把细长武器伤害盒撑成大方框。</summary>
+    private void CalculateTightWeaponBox(Sprite sprite, bool flipX, bool flipY, out Vector2 center, out Vector2 size, out float angle)
+    {
+        boundWeaponShapePoints.Clear();
+        int physicsShapeCount = sprite.GetPhysicsShapeCount();
+        for (int shapeIndex = 0; shapeIndex < physicsShapeCount; shapeIndex++)
+        {
+            boundWeaponShapeBuffer.Clear();
+            sprite.GetPhysicsShape(shapeIndex, boundWeaponShapeBuffer);
+            for (int pointIndex = 0; pointIndex < boundWeaponShapeBuffer.Count; pointIndex++)
+                boundWeaponShapePoints.Add(ApplySpriteFlip(boundWeaponShapeBuffer[pointIndex], flipX, flipY));
+        }
+
+        if (boundWeaponShapePoints.Count < 2)
+        {
+            Vector2[] vertices = sprite.vertices;
+            for (int i = 0; i < vertices.Length; i++)
+                boundWeaponShapePoints.Add(ApplySpriteFlip(vertices[i], flipX, flipY));
+        }
+
+        if (boundWeaponShapePoints.Count >= 2 && TryCalculateMinimumAreaBox(boundWeaponShapePoints, out center, out size, out angle))
+        {
+            float minimumPixelSize = sprite.pixelsPerUnit > 0f ? 1f / sprite.pixelsPerUnit : 0.01f;
+            size.x = Mathf.Max(size.x, minimumPixelSize);
+            size.y = Mathf.Max(size.y, minimumPixelSize);
+            return;
+        }
 
         Bounds spriteBounds = sprite.bounds;
-        Vector2 center = spriteBounds.center;
-        if (flipX) center.x = -center.x;
-        if (flipY) center.y = -center.y;
+        center = ApplySpriteFlip(spriteBounds.center, flipX, flipY);
+        size = spriteBounds.size;
+        angle = 0f;
+    }
 
-        boxCollider.offset = center;
-        boxCollider.size = (Vector2)spriteBounds.size * damageRangeMultiplier;
-        boundWeaponSprite = sprite;
-        boundWeaponFlipX = flipX;
-        boundWeaponFlipY = flipY;
+    /// <summary>从轮廓点计算二维最小面积包围盒，使 BoxCollider 尽量贴住实际武器轮廓。</summary>
+    private static bool TryCalculateMinimumAreaBox(List<Vector2> points, out Vector2 center, out Vector2 size, out float angle)
+    {
+        center = Vector2.zero;
+        size = Vector2.zero;
+        angle = 0f;
+        float bestArea = float.PositiveInfinity;
+        bool found = false;
+
+        for (int i = 0; i < points.Count - 1; i++)
+        {
+            for (int j = i + 1; j < points.Count; j++)
+            {
+                Vector2 edge = points[j] - points[i];
+                if (edge.sqrMagnitude <= 0.000001f)
+                    continue;
+
+                Vector2 axisX = edge.normalized;
+                Vector2 axisY = new Vector2(-axisX.y, axisX.x);
+                float minX = float.PositiveInfinity;
+                float maxX = float.NegativeInfinity;
+                float minY = float.PositiveInfinity;
+                float maxY = float.NegativeInfinity;
+
+                for (int pointIndex = 0; pointIndex < points.Count; pointIndex++)
+                {
+                    Vector2 point = points[pointIndex];
+                    float projectionX = Vector2.Dot(point, axisX);
+                    float projectionY = Vector2.Dot(point, axisY);
+                    minX = Mathf.Min(minX, projectionX);
+                    maxX = Mathf.Max(maxX, projectionX);
+                    minY = Mathf.Min(minY, projectionY);
+                    maxY = Mathf.Max(maxY, projectionY);
+                }
+
+                float width = maxX - minX;
+                float height = maxY - minY;
+                float area = width * height;
+                if (area >= bestArea)
+                    continue;
+
+                bestArea = area;
+                center = axisX * ((minX + maxX) * 0.5f) + axisY * ((minY + maxY) * 0.5f);
+                size = new Vector2(width, height);
+                angle = Mathf.Atan2(axisX.y, axisX.x) * Mathf.Rad2Deg;
+                found = true;
+            }
+        }
+
+        return found;
+    }
+
+    /// <summary>把 SpriteRenderer 的翻转直接折算进局部轮廓点。</summary>
+    private static Vector2 ApplySpriteFlip(Vector2 point, bool flipX, bool flipY)
+    {
+        if (flipX) point.x = -point.x;
+        if (flipY) point.y = -point.y;
+        return point;
     }
 
     /// <summary>把世界缩放转换成当前父节点下的局部缩放。</summary>
