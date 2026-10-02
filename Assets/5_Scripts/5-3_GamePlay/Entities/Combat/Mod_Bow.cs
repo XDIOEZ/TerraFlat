@@ -28,6 +28,9 @@ public sealed class Mod_Bow : Module, IItemModuleDependencyBinder
     [Min(0f), Tooltip("弓身对箭矢最终伤害的倍率；1 表示保持箭矢原始伤害。")]
     public float ProjectileDamageMultiplier = 1f;
 
+    [Min(0f), Tooltip("武器对弹药飞行速度的倍率；不改变飞行时间，可见抛物线射程同比变化。")]
+    public float ProjectileSpeedMultiplier = 1f;
+
     [Min(0.1f), Tooltip("瞄准点允许的最大世界距离。")]
     public float MaxAimDistance = 24f;
 
@@ -275,7 +278,7 @@ public sealed class Mod_Bow : Module, IItemModuleDependencyBinder
 
         float charge01 = GetCharge01();
         float sourceDamageMultiplier = ProjectileDamageMultiplier;
-        float sourceSpeedMultiplier = 1f;
+        float sourceSpeedMultiplier = Mathf.Max(0f, ProjectileSpeedMultiplier);
         foreach (IProjectileChargeModifier modifier in _chargeModifiers)
         {
             ProjectileLaunchMultipliers multipliers = modifier.CompleteCharge();
@@ -467,7 +470,7 @@ public sealed class Mod_Bow : Module, IItemModuleDependencyBinder
         {
             float t = i / (float)segmentCount;
             Vector2 point = trajectory.EvaluateVisibleTrajectoryPoint(
-                launchPosition, direction, charge01, t);
+                launchPosition, direction, charge01, t, ProjectileSpeedMultiplier);
             _trajectoryLine.SetPosition(i, new Vector3(point.x, point.y, -0.06f));
             landingPosition = point;
         }
@@ -675,9 +678,9 @@ public sealed class Mod_Bow : Module, IItemModuleDependencyBinder
         if (!TryResolvePreviewTrajectory(out Mod_Projectile.TrajectorySettings trajectory))
             return Mathf.Clamp01(charge01);
 
-        float minRange = trajectory.ResolveLaunchSpeed(0f) * trajectory.ResolveFlightDuration(0f);
-        float maxRange = trajectory.ResolveLaunchSpeed(1f) * trajectory.ResolveFlightDuration(1f);
-        float currentRange = trajectory.ResolveLaunchSpeed(charge01) * trajectory.ResolveFlightDuration(charge01);
+        float minRange = trajectory.ResolveLaunchSpeed(0f, ProjectileSpeedMultiplier) * trajectory.ResolveFlightDuration(0f);
+        float maxRange = trajectory.ResolveLaunchSpeed(1f, ProjectileSpeedMultiplier) * trajectory.ResolveFlightDuration(1f);
+        float currentRange = trajectory.ResolveLaunchSpeed(charge01, ProjectileSpeedMultiplier) * trajectory.ResolveFlightDuration(charge01);
         if (Mathf.Abs(maxRange - minRange) <= 0.0001f)
             return Mathf.Clamp01(charge01);
         return Mathf.InverseLerp(minRange, maxRange, currentRange);
