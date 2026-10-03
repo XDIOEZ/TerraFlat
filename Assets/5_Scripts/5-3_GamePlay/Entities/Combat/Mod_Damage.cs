@@ -2,6 +2,12 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+public enum WeaponHitboxRegion
+{
+    TightSprite = 0,
+    UpperRightQuadrant = 1
+}
+
 [RequireComponent(typeof(BoxCollider2D))]
 public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlowdownSource, IBuildingDamageSource, ICombatDamageContextModifier
 {
@@ -62,6 +68,9 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
     [SerializeField, Tooltip("命中没有伤害接收器的碰撞体时，是否仍播放一次零伤害反馈。")]
     private bool playImpactFeedbackOnNonDamageableHit;
 
+    [Header("动画武器伤害区域")]
+    [SerializeField, Tooltip("紧贴整张武器轮廓，或只使用最终朝向右上角的四分之一象限。")]
+    private WeaponHitboxRegion weaponHitboxRegion = WeaponHitboxRegion.TightSprite;
     [SerializeField] private Collider2D damageCollider;
 
     // 动画武器命中盒绑定：以实际武器 SpriteRenderer 为唯一空间权威。
@@ -69,6 +78,7 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
     private Sprite boundWeaponSprite;
     private bool boundWeaponFlipX;
     private bool boundWeaponFlipY;
+    private WeaponHitboxRegion boundWeaponHitboxRegion;
     private Vector2 boundWeaponHitboxCenter;
     private Vector2 boundWeaponHitboxSize;
     private float boundWeaponHitboxAngle;
@@ -780,17 +790,29 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
         if (sprite == null)
             throw new System.InvalidOperationException($"{name} 绑定的武器 Sprite 在运行时变为空。");
 
-        if (forceShapeSync || sprite != boundWeaponSprite || flipX != boundWeaponFlipX || flipY != boundWeaponFlipY)
+        Transform damageParent = transform.parent;
+        if (forceShapeSync || sprite != boundWeaponSprite || flipX != boundWeaponFlipX || flipY != boundWeaponFlipY ||
+            weaponHitboxRegion != boundWeaponHitboxRegion)
         {
-            CalculateTightWeaponBox(sprite, flipX, flipY, out boundWeaponHitboxCenter, out boundWeaponHitboxSize, out boundWeaponHitboxAngle);
+            if (weaponHitboxRegion == WeaponHitboxRegion.UpperRightQuadrant)
+            {
+                CalculateUpperRightQuadrantWeaponBox(sprite, rendererTransform, damageParent, flipX, flipY,
+                    out boundWeaponHitboxCenter, out boundWeaponHitboxSize, out boundWeaponHitboxAngle);
+            }
+            else
+            {
+                CalculateTightWeaponBox(sprite, flipX, flipY,
+                    out boundWeaponHitboxCenter, out boundWeaponHitboxSize, out boundWeaponHitboxAngle);
+            }
+
             boundWeaponSprite = sprite;
             boundWeaponFlipX = flipX;
             boundWeaponFlipY = flipY;
+            boundWeaponHitboxRegion = weaponHitboxRegion;
         }
 
         Vector3 localCenter = new Vector3(boundWeaponHitboxCenter.x, boundWeaponHitboxCenter.y, 0f);
         Quaternion localBoxRotation = Quaternion.Euler(0f, 0f, boundWeaponHitboxAngle);
-        Transform damageParent = transform.parent;
         if (damageParent == rendererTransform.parent)
         {
             transform.localPosition = rendererTransform.localPosition +
@@ -816,22 +838,7 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
     /// <summary>优先使用 Sprite 物理轮廓计算最小包围矩形，避免透明画布把细长武器伤害盒撑成大方框。</summary>
     private void CalculateTightWeaponBox(Sprite sprite, bool flipX, bool flipY, out Vector2 center, out Vector2 size, out float angle)
     {
-        boundWeaponShapePoints.Clear();
-        int physicsShapeCount = sprite.GetPhysicsShapeCount();
-        for (int shapeIndex = 0; shapeIndex < physicsShapeCount; shapeIndex++)
-        {
-            boundWeaponShapeBuffer.Clear();
-            sprite.GetPhysicsShape(shapeIndex, boundWeaponShapeBuffer);
-            for (int pointIndex = 0; pointIndex < boundWeaponShapeBuffer.Count; pointIndex++)
-                boundWeaponShapePoints.Add(ApplySpriteFlip(boundWeaponShapeBuffer[pointIndex], flipX, flipY));
-        }
-
-        if (boundWeaponShapePoints.Count < 2)
-        {
-            Vector2[] vertices = sprite.vertices;
-            for (int i = 0; i < vertices.Length; i++)
-                boundWeaponShapePoints.Add(ApplySpriteFlip(vertices[i], flipX, flipY));
-        }
+        CollectWeaponShapePoints(sprite, flipX, flipY);
 
         if (boundWeaponShapePoints.Count >= 2 && TryCalculateMinimumAreaBox(boundWeaponShapePoints, out center, out size, out angle))
         {
@@ -845,6 +852,89 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
         center = ApplySpriteFlip(spriteBounds.center, flipX, flipY);
         size = spriteBounds.size;
         angle = 0f;
+    }
+
+    /// <summary>把工具伤害区域限制在当前标准姿势的右上四分之一，并继续跟随整段挥动动画。</summary>
+    private void CalculateUpperRightQuadrantWeaponBox(
+        Sprite sprite,
+        Transform rendererTransform,
+        Transform damageParent,
+        bool flipX,
+        bool flipY,
+        out Vector2 center,
+        out Vector2 size,
+        out float angle)
+    {
+        CollectWeaponShapePoints(sprite, flipX, flipY);
+        if (boundWeaponShapePoints.Count < 2)
+        {
+            CalculateTightWeaponBox(sprite, flipX, flipY, out center, out size, out angle);
+            return;
+        }
+
+        Matrix4x4 rendererToParent = damageParent != null
+            ? damageParent.worldToLocalMatrix * rendererTransform.localToWorldMatrix
+            : rendererTransform.localToWorldMatrix;
+        Matrix4x4 parentToRenderer = rendererToParent.inverse;
+        float minX = float.PositiveInfinity;
+        float maxX = float.NegativeInfinity;
+        float minY = float.PositiveInfinity;
+        float maxY = float.NegativeInfinity;
+
+        for (int i = 0; i < boundWeaponShapePoints.Count; i++)
+        {
+            Vector3 point = rendererToParent.MultiplyPoint3x4(boundWeaponShapePoints[i]);
+            minX = Mathf.Min(minX, point.x);
+            maxX = Mathf.Max(maxX, point.x);
+            minY = Mathf.Min(minY, point.y);
+            maxY = Mathf.Max(maxY, point.y);
+        }
+
+        float middleX = (minX + maxX) * 0.5f;
+        float middleY = (minY + maxY) * 0.5f;
+        boundWeaponShapeBuffer.Clear();
+        AddParentPointInRendererSpace(parentToRenderer, new Vector2(middleX, middleY));
+        AddParentPointInRendererSpace(parentToRenderer, new Vector2(maxX, middleY));
+        AddParentPointInRendererSpace(parentToRenderer, new Vector2(maxX, maxY));
+        AddParentPointInRendererSpace(parentToRenderer, new Vector2(middleX, maxY));
+
+        if (TryCalculateMinimumAreaBox(boundWeaponShapeBuffer, out center, out size, out angle))
+        {
+            float minimumPixelSize = sprite.pixelsPerUnit > 0f ? 1f / sprite.pixelsPerUnit : 0.01f;
+            size.x = Mathf.Max(size.x, minimumPixelSize);
+            size.y = Mathf.Max(size.y, minimumPixelSize);
+            return;
+        }
+
+        CalculateTightWeaponBox(sprite, flipX, flipY, out center, out size, out angle);
+    }
+
+    /// <summary>收集武器真实轮廓；没有物理轮廓时回退 Sprite 网格。</summary>
+    private void CollectWeaponShapePoints(Sprite sprite, bool flipX, bool flipY)
+    {
+        boundWeaponShapePoints.Clear();
+        int physicsShapeCount = sprite.GetPhysicsShapeCount();
+        for (int shapeIndex = 0; shapeIndex < physicsShapeCount; shapeIndex++)
+        {
+            boundWeaponShapeBuffer.Clear();
+            sprite.GetPhysicsShape(shapeIndex, boundWeaponShapeBuffer);
+            for (int pointIndex = 0; pointIndex < boundWeaponShapeBuffer.Count; pointIndex++)
+                boundWeaponShapePoints.Add(ApplySpriteFlip(boundWeaponShapeBuffer[pointIndex], flipX, flipY));
+        }
+
+        if (boundWeaponShapePoints.Count >= 2)
+            return;
+
+        Vector2[] vertices = sprite.vertices;
+        for (int i = 0; i < vertices.Length; i++)
+            boundWeaponShapePoints.Add(ApplySpriteFlip(vertices[i], flipX, flipY));
+    }
+
+    /// <summary>把父节点空间的象限角点转换回 SpriteRenderer 局部空间。</summary>
+    private void AddParentPointInRendererSpace(Matrix4x4 parentToRenderer, Vector2 point)
+    {
+        Vector3 rendererPoint = parentToRenderer.MultiplyPoint3x4(point);
+        boundWeaponShapeBuffer.Add(new Vector2(rendererPoint.x, rendererPoint.y));
     }
 
     /// <summary>从轮廓点计算二维最小面积包围盒，使 BoxCollider 尽量贴住实际武器轮廓。</summary>

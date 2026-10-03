@@ -57,6 +57,7 @@
             "DamageInterval": 0.2,
             "EnableOnTriggerEnterDamage": true,
             "OnlyDealDamageWhenInHand": false,
+            "weaponHitboxRegion": 1,
             "MaxAttackTargets": 3,
             "EnableHitSlowdown": true,
             "HitSlowMultiplier": 0.5,
