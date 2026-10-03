@@ -35,6 +35,9 @@ public static class AutomaticAssetRefresher
     // 标记主线程需要执行资源刷新。
     private static int mainThreadRefreshPending;
 
+    // PlayMode 内禁止脚本域重载，避免 Ctrl+R/自动 Refresh 把运行中的世界模型和地形表现拆散。
+    private static bool playModeAssemblyReloadLocked;
+
     // 监听 Assets 目录的文件变化。
     private static FileSystemWatcher watcher;
 
@@ -62,8 +65,14 @@ public static class AutomaticAssetRefresher
         }
 
         EditorApplication.update += OnEditorUpdate;
+        EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
         AssemblyReloadEvents.beforeAssemblyReload += Shutdown;
         EditorApplication.quitting += Shutdown;
+
+        if (EditorApplication.isPlaying)
+        {
+            LockAssemblyReloadForPlayMode();
+        }
     }
 
     /// <summary>
@@ -142,10 +151,52 @@ public static class AutomaticAssetRefresher
     /// </summary>
     private static void Shutdown()
     {
+        UnlockAssemblyReloadForPlayMode();
         StopPolling();
         EditorApplication.update -= OnEditorUpdate;
+        EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
         AssemblyReloadEvents.beforeAssemblyReload -= Shutdown;
         EditorApplication.quitting -= Shutdown;
+    }
+
+    /// <summary>
+    /// PlayMode 中资源仍允许导入，但 C# 程序集只在退出 PlayMode 后统一重载。
+    /// </summary>
+    private static void OnPlayModeStateChanged(PlayModeStateChange state)
+    {
+        if (state == PlayModeStateChange.EnteredPlayMode)
+        {
+            LockAssemblyReloadForPlayMode();
+            return;
+        }
+
+        if (state == PlayModeStateChange.ExitingPlayMode || state == PlayModeStateChange.EnteredEditMode)
+        {
+            UnlockAssemblyReloadForPlayMode();
+        }
+    }
+
+    private static void LockAssemblyReloadForPlayMode()
+    {
+        if (playModeAssemblyReloadLocked)
+        {
+            return;
+        }
+
+        EditorApplication.LockReloadAssemblies();
+        playModeAssemblyReloadLocked = true;
+        Debug.Log("[AutoAssetRefresh] PlayMode 已锁定脚本域重载；资源可继续刷新，脚本改动会在退出 PlayMode 后应用。");
+    }
+
+    private static void UnlockAssemblyReloadForPlayMode()
+    {
+        if (!playModeAssemblyReloadLocked)
+        {
+            return;
+        }
+
+        playModeAssemblyReloadLocked = false;
+        EditorApplication.UnlockReloadAssemblies();
     }
 
     #endregion
