@@ -16,7 +16,7 @@ namespace FlatWorld.WorldModel
         IChunkEcologyNeighborhoodTagResolver
     {
         /// <summary>纯区块生成规则版本；气候、群系、河流或生态空间分布规则改变时递增。</summary>
-        public const int CurrentGenerationSignature = 57;
+        public const int CurrentGenerationSignature = 58;
 
         private const double RockySeabedHeight = 0.49d;
 
@@ -945,6 +945,7 @@ namespace FlatWorld.WorldModel
                     if (!river && initialLiquidDepth <= 0f) lavaShore = Math.Max(lavaShore, shore);
                 }
             }
+            initialLiquidDepth = QuantizeGeneratedLiquidDepth(initialLiquidDepth);
 
             // 草先过较宽松的气候门槛，再由湿度决定局部密度；全程只依赖种子和环境层。
             bool snowSurface = biome == SurfaceBiomeKind.Snow &&
@@ -2645,8 +2646,8 @@ namespace FlatWorld.WorldModel
                 : 0d;
             bool groundwater = groundliquidDepth > 0d;
             bool river = caveRiver.IsRiver;
-            double liquidDepth = Math.Max(groundliquidDepth, caveRiver.Depth);
-            bool water = liquidDepth > 0d;
+            float liquidDepth = QuantizeGeneratedLiquidDepth(Math.Max(groundliquidDepth, caveRiver.Depth));
+            bool water = liquidDepth > 0f;
             bool dirtWall = open && !water && CaveLayoutKernel.ShouldPlaceDirtWall(
                 request, settings, worldX, worldY);
             TerrainCellFlags flags = !open || dirtWall
@@ -2663,7 +2664,7 @@ namespace FlatWorld.WorldModel
                 blockingTileId, 100,
                 navigationCost, flags));
             terrain.SetLiquid(x, y, water ? terrain.LiquidTypes.GetIndex(LiquidTypeCatalog.DirtyWaterId) : 0,
-                (float)liquidDepth);
+                liquidDepth);
             terrain.SetEnvironmentValue("temperature", x, y, 0.38f);
             terrain.SetEnvironmentValue("temperature.celsius", x, y, 8f);
             terrain.SetEnvironmentValue("precipitation", x, y, 0f);
@@ -2863,6 +2864,17 @@ namespace FlatWorld.WorldModel
         private static double Smooth(double value) => value * value * (3d - 2d * value);
         /// <summary>按比例计算两个数之间的中间值。</summary>
         private static double Lerp(double left, double right, double t) => left + (right - left) * t;
+        /// <summary>天然液深统一向上量化为十分位；只要原始值大于零就至少保留 0.1。</summary>
+        private static float QuantizeGeneratedLiquidDepth(double depth)
+        {
+            if (depth <= 0d)
+                return 0f;
+
+            double clamped = Clamp01(depth);
+            double roundedUp = Math.Ceiling(clamped * 10d - 0.000000001d) / 10d;
+            return (float)Math.Max(0.1d, roundedUp);
+        }
+
         /// <summary>把数值限制在 0 到 1 之间。</summary>
         private static double Clamp01(double value) => value < 0d ? 0d : value > 1d ? 1d : value;
         /// <summary>执行真正的向下取整除法，确保负坐标也能正确划分区域。</summary>
