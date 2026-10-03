@@ -522,6 +522,39 @@
         }
       ],
       "actions": []
+    },
+    {
+      "id": "core:mechanical_Conveyor_Cloth",
+      "displayName": "布制传送带",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Cloth",
+          "amount": 4
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Plank",
+          "amount": 2
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Shaft_Wood_Summoner",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Conveyor_Cloth_Summoner",
+          "amount": 1
+        }
+      ],
+      "actions": []
     }
   ]
 }
