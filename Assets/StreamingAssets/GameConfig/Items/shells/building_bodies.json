@@ -259,6 +259,7 @@
             "Type": 0
           },
           "parameters": {
+            "absorbDroppedFuel": true,
             "fuelByproductRules": [
               {
                 "id": "wood-ash",

@@ -22,6 +22,8 @@ public class Mod_Furnace : Mod_MachineAuthoring
     public Inventory OutputInventory;
     public Inventory FuelInventory;
     public bool acceptsMechanicalBellows;
+    [Tooltip("是否自动吸收落在同一格的燃料掉落物到燃料槽。")]
+    public bool absorbDroppedFuel;
     public List<FurnaceFuelByproductRule> fuelByproductRules = new();
     public List<string> ignitionItemIds = new() { "FireSeed" };
     public List<string> ignitionTags = new() { Tag.CombustionTinder };

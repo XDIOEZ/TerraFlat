@@ -45,7 +45,9 @@ public sealed class Mod_FuelInteraction : Module, IInteractable, IItemModuleDepe
     }
 
     public bool IsBurning => combustion?.IsBurning == true;
-    public float CurrentFuel => fuel?.Data?.Fuel.x ?? 0f;
+    public float CurrentFuel => fuel?.Data != null
+        ? Mathf.Clamp(fuel.Data.Fuel.x, 0f, Mathf.Max(0f, fuel.Data.Fuel.y))
+        : 0f;
     public float MaxFuel => fuel?.Data?.Fuel.y ?? 0f;
     public float FuelRatio => fuel?.GetFuelRatio() ?? 0f;
 

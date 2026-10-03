@@ -38,6 +38,7 @@ public class FurnaceLogic : MachineLogic
     public override string Status => FurnaceTemperatureFeedback.GetDisplayedTemperature(Data.Temperature);
 
     private readonly float burnSpeed;
+    private readonly bool absorbDroppedFuel;
     private readonly List<FurnaceFuelByproductRule> byproducts;
     private readonly List<string> ignitionIds;
     private readonly List<string> ignitionTags;
@@ -72,9 +73,11 @@ public class FurnaceLogic : MachineLogic
         Data.MaxTemperatureLimit = configured.MaxTemperatureLimit;
         Data.TemperatureUpSpeed = configured.TemperatureUpSpeed;
         Data.TemperatureDownSpeed = configured.TemperatureDownSpeed;
-        Fuel.Fuel = new Vector2(Mathf.Clamp(Fuel.Fuel.x, 0f, configuredFuel.Fuel.y), configuredFuel.Fuel.y);
+        // x 保存真实燃值，可高于 y；y 只作为面板显示容量和自动补充阈值。
+        Fuel.Fuel = new Vector2(Mathf.Max(0f, Fuel.Fuel.x), configuredFuel.Fuel.y);
         burnSpeed = fuelConfig.Value("burnSpeedMultiplier", fuelAuthoring.burnSpeedMultiplier);
         AcceptsAirflow = config.Value("acceptsMechanicalBellows", authoring.acceptsMechanicalBellows);
+        absorbDroppedFuel = config.Value("absorbDroppedFuel", authoring.absorbDroppedFuel);
         byproducts = config.Value("fuelByproductRules", authoring.fuelByproductRules) ?? new();
         FurnaceFuelByproductProcessor.ValidateRules(byproducts);
         ignitionIds = config.Value("ignitionItemIds", authoring.ignitionItemIds) ?? new();
@@ -145,16 +148,19 @@ public class FurnaceLogic : MachineLogic
     [MethodImpl(MethodImplOptions.NoInlining)]
     public override void Tick(float seconds)
     {
+        if (absorbDroppedFuel) AbsorbDroppedFuelFromCell();
         bool wasBurning = IsBurning;
         if (Data.IsSmelting)
         {
+            RefillFuelToVisibleCapacity();
             float remaining = seconds;
             int refills = 0;
             while (remaining > .00001f && refills < 64)
             {
                 if (Fuel.Fuel.x <= .01f)
                 {
-                    if (!TryFeedFuel(false, null)) { Data.IsSmelting = false; break; }
+                    RefillFuelToVisibleCapacity();
+                    if (Fuel.Fuel.x <= .01f) { Data.IsSmelting = false; break; }
                     refills++;
                 }
                 float rate = Mathf.Max(0f, burnSpeed * GameDifficultyService.Current.Production.FuelConsumptionMultiplier);
@@ -163,6 +169,12 @@ public class FurnaceLogic : MachineLogic
                 HeatAndProcess(step);
                 ConsumeFuel(step);
                 remaining -= step;
+            }
+            if (Data.IsSmelting)
+            {
+                // 每个 Tick 结束前重新补到显示上限以上，避免燃料条归零和火光闪灭。
+                RefillFuelToVisibleCapacity();
+                if (Fuel.Fuel.x <= .01f) Data.IsSmelting = false;
             }
             if (!Data.IsSmelting && remaining > 0f) Cool(remaining);
         }
@@ -190,6 +202,61 @@ public class FurnaceLogic : MachineLogic
     {
         float consumed = Mathf.Max(0f, seconds * burnSpeed * GameDifficultyService.Current.Production.FuelConsumptionMultiplier);
         Fuel.Fuel.x = Mathf.Max(0f, Fuel.Fuel.x - consumed);
+    }
+
+    /// <summary>燃值低于显示容量时持续补料，最后一份燃料允许完整越过容量并作为隐藏储备保留。</summary>
+    private void RefillFuelToVisibleCapacity()
+    {
+        if (Fuel.Fuel.y <= 0f) return;
+        int safety = 0;
+        while (Fuel.Fuel.x + .01f < Fuel.Fuel.y && safety++ < 4096)
+        {
+            if (!TryFeedFuel(false, null)) break;
+        }
+    }
+
+    /// <summary>把落在炉体同一格的有效燃料转入燃料库存，供自动补燃逻辑继续消费。</summary>
+    private void AbsorbDroppedFuelFromCell()
+    {
+        if (FuelInventory?.Data?.itemSlots == null || FuelInventory.Data.itemSlots.Count == 0) return;
+
+        Vector2 center = new(Entity.Cell.x + .5f, Entity.Cell.y + .5f);
+        const float sameCellRadius = .72f;
+        int safety = 0;
+        while (safety++ < 64 && DroppedItemService.TryFindNearestTagged(
+                   center,
+                   sameCellRadius,
+                   Tag.CombustionFuel,
+                   out DroppedItemHandle handle,
+                   position => MachineWorld.CellOf(position) == Entity.Cell))
+        {
+            if (!DroppedItemService.TryGetSnapshot(handle, out ItemData dropped) || dropped?.Stack == null ||
+                !Mod_Fuel.TryResolveItemData(dropped, out FuelData fuelData) ||
+                !MachineDefinition.Positive(fuelData.Fuel.x) ||
+                !FuelInventory.Data.TryAddItem(dropped, false, out float availableAmount))
+            {
+                break;
+            }
+
+            int transferAmount = Mathf.FloorToInt(Mathf.Min(dropped.Stack.Amount, availableAmount) + .0001f);
+            if (transferAmount <= 0) break;
+
+            dropped.Stack.Amount = transferAmount;
+            if (!DroppedItemService.TryConsumeTagged(handle, center, sameCellRadius, Tag.CombustionFuel, transferAmount))
+                continue;
+
+            if (!FuelInventory.Data.TryAddItem(dropped, true, out float addedAmount) || addedAmount + .0001f < transferAmount)
+            {
+                // 预检后正常不会失败；异常时把未入槽的部分重新放回原格，避免吞物品。
+                float missing = Mathf.Max(0f, transferAmount - addedAmount);
+                if (missing > .0001f)
+                {
+                    dropped.Stack.Amount = missing;
+                    DroppedItemService.Spawn(dropped, center, randomizeRotation: true);
+                }
+                break;
+            }
+        }
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
@@ -226,7 +293,7 @@ public class FurnaceLogic : MachineLogic
         float limit = tinder ? Mathf.Min(offered.MaxTemperature, ignitionTemperature) : offered.MaxTemperature;
         if (!MachineDefinition.Positive(value) || !MachineDefinition.Positive(limit) || Fuel.Fuel.y <= 0f) return false;
         if (!FuelInventory.Data.TryConsumeFromSlot(slot, 1, out ItemData consumed)) return false;
-        Fuel.Fuel.x = Mathf.Min(Fuel.Fuel.y, Fuel.Fuel.x + value);
+        Fuel.Fuel.x += value;
         Data.MaxTemperature = limit;
         FurnaceFuelByproductProcessor.RecordConsumedFuel(consumed, byproducts, Data);
         FurnaceFuelByproductProcessor.TryFlushPendingOutputs(FuelInventory.Data, byproducts, Data, GameRes.Instance);

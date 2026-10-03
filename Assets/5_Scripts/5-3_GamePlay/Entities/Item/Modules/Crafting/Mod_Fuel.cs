@@ -79,7 +79,9 @@ public class Mod_Fuel : Module
     /// </summary>
     public void AddFuel(float amount)
     {
-        Data.Fuel.x = Mathf.Min(Data.Fuel.x + amount, Data.Fuel.y);
+        if (amount <= 0f) return;
+        // 完整保留最后一份燃料的热值，超过显示容量的部分作为隐藏储备继续燃烧。
+        Data.Fuel.x += amount;
     }
 
     /// <summary>
@@ -297,7 +299,7 @@ public class Mod_Fuel : Module
 public partial class FuelData
 {
     /// <summary>
-    /// x = 当前燃料值, y = 最大燃料值
+    /// x = 实际燃料值（允许高于显示容量）, y = 显示容量/自动补充阈值
     /// </summary>
     public Vector2 Fuel = new Vector2(100f, 100f);
     [Tooltip("燃烧时提供的最大温度")]
