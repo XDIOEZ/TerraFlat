@@ -16,6 +16,43 @@ public readonly struct DroppedItemHandle
     public bool IsValid => Legacy != null || (Id != 0 && Epoch == DroppedItemService.Epoch && DroppedItemService.Contains(Id));
 }
 
+/// <summary>掉落生成原因只描述通用来源，不承载具体物品业务。</summary>
+public enum DroppedItemSpawnReason
+{
+    Generic = 0,
+    PlayerDiscard = 1
+}
+
+/// <summary>完整 Item 掉落生成时向物品自身提供的通用上下文。</summary>
+public readonly struct DroppedItemSpawnContext
+{
+    public readonly DroppedItemSpawnReason Reason;
+    public readonly Item SourceItem;
+    public readonly Vector2 Start;
+    public readonly Vector2 End;
+    public readonly float Duration;
+
+    public DroppedItemSpawnContext(
+        DroppedItemSpawnReason reason,
+        Item sourceItem,
+        Vector2 start,
+        Vector2 end,
+        float duration)
+    {
+        Reason = reason;
+        SourceItem = sourceItem;
+        Start = start;
+        End = end;
+        Duration = duration;
+    }
+}
+
+/// <summary>需要感知自身被丢出的完整物品实现该接口，具体效果由物品自己维护。</summary>
+public interface IDroppedItemSpawnContextReceiver
+{
+    void OnDroppedItemSpawned(in DroppedItemSpawnContext context);
+}
+
 /// <summary>
 /// 掉落态入口：passive 使用轻量 GameObject 模拟器，interactive 保留完整 Item。ItemData 只作轻量掉落物冷载荷，
 /// 树木、矿石节点、安装中的建筑、手持物和战斗中的投射物仍由各自原系统管理。
@@ -58,7 +95,8 @@ public static partial class DroppedItemService
     /// <summary>先成功创建掉落态，再由调用者提交库存扣减；passive 不实例化完整 Item。</summary>
     public static DroppedItemHandle Spawn(ItemData source, Vector2 position, Vector2? destination = null,
         float duration = 0f, float rotation = 0f, float bezierOffset = 1f,
-        float arcHeight = 1f, float rotationSpeed = 720f, bool randomizeRotation = true)
+        float arcHeight = 1f, float rotationSpeed = 720f, bool randomizeRotation = true,
+        DroppedItemSpawnReason spawnReason = DroppedItemSpawnReason.Generic, Item sourceItem = null)
     {
         if (source?.Stack == null || source.Stack.Amount <= 0f ||
             float.IsNaN(source.Stack.Amount) || float.IsInfinity(source.Stack.Amount))
@@ -80,7 +118,7 @@ public static partial class DroppedItemService
             : rotation;
         if (!definition.UsesLightweightWorldDrop || !UsesLightweightDrops)
             return SpawnItemBacked(source, spawnPosition, destination, duration, finalRotation,
-                bezierOffset, arcHeight, rotationSpeed);
+                bezierOffset, arcHeight, rotationSpeed, spawnReason, sourceItem);
         EnsureContext();
         ItemData payload = FastCloner.FastCloner.DeepClone(source);
         payload.inHand = false; payload.Stack.CanBePickedUp = true;
@@ -253,7 +291,8 @@ public static partial class DroppedItemService
     }
 
     private static DroppedItemHandle SpawnItemBacked(ItemData source, Vector2 position, Vector2? destination,
-        float duration, float rotation, float bezier, float arc, float spin)
+        float duration, float rotation, float bezier, float arc, float spin,
+        DroppedItemSpawnReason spawnReason, Item sourceItem)
     {
         ItemData data = FastCloner.FastCloner.DeepClone(source); data.inHand = false;
         data.Stack.CanBePickedUp = duration <= 0f;
@@ -265,6 +304,8 @@ public static partial class DroppedItemService
             item.Load(); item.SetInHand(false);
             if (duration > 0f) Mod_BaseDroper.StaticDropItem_Pos(item, position, destination ?? position, duration,
                 Mod_BaseDroper.MoveMode.BezierCurve, bezier, arc, spin, spin);
+            NotifySpawnContext(item, new DroppedItemSpawnContext(
+                spawnReason, sourceItem, position, destination ?? position, duration));
             return new DroppedItemHandle(item.itemData.Guid, 0, item);
         }
         catch
@@ -272,6 +313,17 @@ public static partial class DroppedItemService
             if (item != null) ItemMgr.Instance.DespawnItem(item, saveData: false);
             throw;
         }
+    }
+
+    /// <summary>只向完整掉落物分发通用上下文，掉落系统本身不识别任何具体物品类型。</summary>
+    private static void NotifySpawnContext(Item item, in DroppedItemSpawnContext context)
+    {
+        if (item == null) return;
+
+        MonoBehaviour[] components = item.GetComponentsInChildren<MonoBehaviour>(true);
+        for (int i = 0; i < components.Length; i++)
+            if (components[i] is IDroppedItemSpawnContextReceiver receiver)
+                receiver.OnDroppedItemSpawned(context);
     }
 
     #endregion

@@ -190,9 +190,3 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5ca6ce708ec2475aa9235db9afbcf0be, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  stoneBulletPrefab: {fileID: 4926578369279844245, guid: 02227e6017399414abaa0ef5e37adbe1, type: 3}
-  throwSpeed: 16
-  spawnOffset: 0.35
-  pickupDelay: 0.8
-  projectileLifeTime: 3
-  ignoreOwnerCollision: 1

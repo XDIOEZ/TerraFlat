@@ -125,6 +125,7 @@ description: "Use when: 定位或修改 FlatWorld 的背包、槽位、快捷栏
 - Tag 材料图标来自当前输入槽中实际符合 `CraftingIngredientMatcher.MatchesIdentity` 的物品；精确材料通过目录读取图标，不实例化 Item，也不根据显示名字猜测身份。数量为零的工具需求只标工具，不累计为消耗。
 
 - ECS 掉落生成成功后才扣减原槽位；拾取使用从冷载荷克隆的候选数据进入 `Mod_ItemPicker.TryAcceptNetworkPickup`，成功后把剩余数量写回组件，整组入包才销毁实体。失败预检不得把改写后的候选数量覆盖世界权威数量。
+- 玩家主动丢弃的特殊效果通过 `DroppedItemSpawnContext` / `IDroppedItemSpawnContextReceiver` 由物品自身扩展；`Mod_DiscardItem` 只标记通用 `PlayerDiscard` 来源，不按物品 ID 写特判。需要落地后继续保留运行时模块的物品应声明 `worldDropBehavior: interactive`。
 - ECS 拾取仅查询玩家拾取器附近空间桶，复用拾取器 Collider 的接触范围；同一接触只尝试一次，离开或关闭拾取后重置。临时吸入精灵只在库存提交后创建，表现失败不得复活已拾取实体。
 
 - 覆盖满包、回滚、普通合成多候选精确选择、Tag 全局分配、加热镜像/紧凑网格、快捷栏/手持同步、输入锁和作物存档往返。

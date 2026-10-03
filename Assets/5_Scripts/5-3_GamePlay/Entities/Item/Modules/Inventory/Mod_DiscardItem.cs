@@ -420,7 +420,8 @@ public class Mod_DiscardItem : Mod_BaseDroper
                 float distance = WorldTopologyRuntime.Distance(startPos, endPos);
                 float animTime = baseDropDuration + distance * distanceSensitivity;
                 newDrop = DroppedItemService.Spawn(newItemData, startPos, endPos, animTime,
-                    bezierOffset: defaultMoveMode == MoveMode.BezierCurve ? bezierOffset : 0f, arcHeight: arcHeight);
+                    bezierOffset: defaultMoveMode == MoveMode.BezierCurve ? bezierOffset : 0f, arcHeight: arcHeight,
+                    spawnReason: DroppedItemSpawnReason.PlayerDiscard, sourceItem: item);
 
                 // 生成和掉落动画都成功后才提交背包扣减，失败时不会丢失玩家物品。
                 slot.Amount -= count;

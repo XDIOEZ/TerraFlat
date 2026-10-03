@@ -6150,7 +6150,8 @@
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Minerals/Ore/Ore_Stone.prefab",
       "shellPrefab": "Prop",
       "gameName": "石头",
-      "description": "可用于制作和建造。按住攻击键蓄力，松开后沿抛物线投掷；蓄力越久投得越远，可击中飞鸟，并在落点附近伤害地面目标。",
+      "description": "可用于制作和建造。按 F 丢出时会在飞行阶段造成钝击伤害，落地后恢复为普通可拾取石头。",
+      "worldDropBehavior": "interactive",
       "weight": 1.5,
       "volume": 0.7,
       "stackable": true,
@@ -6166,14 +6167,6 @@
         "spriteAddress": "Assets/6_Art/Items/Tools/Item_Tool_404.png"
       },
       "modules": {
-        "bow": {
-          "prefab": "Mod_Bow", "id": "Mod_Bow", "enabled": true,
-          "data": {"BitData": [], "Type": 0},
-          "parameters": {"UseHeldItemAsAmmo": true, "ShowNockedAmmo": false, "FullChargeSeconds": 1.2,
-            "MaxAimDistance": 16.0, "SpawnForwardOffset": 0.45, "StaminaConsumePerSecond": 1.0,
-            "ShowTrajectoryPreview": true, "TrajectoryPreviewSegments": 28,
-            "TrajectoryPreviewLineWidth": 0.04, "TrajectoryLandingRingRadius": 0.22}
-        },
         "damage": {
           "prefab": "Mod_Damage", "id": "Mod_Damage", "enabled": true,
           "parameters": {
@@ -6183,16 +6176,6 @@
             "$collider2D": {"type": "BoxCollider2D", "enabled": false, "isTrigger": true,
               "offset": {"x": 0.0, "y": 0.0}, "size": {"x": 0.4375, "y": 0.4375}}
           }
-        },
-        "projectile": {
-          "prefab": "Mod_Projectile", "id": "Mod_Projectile", "enabled": true,
-          "data": {"BitData": [], "Type": 0},
-          "parameters": {"UseVisibleArc": true, "GroundImpactFraction": 0.15, "SpinDegreesPerSecond": 480.0,
-            "SolidColliderSizeMultiplier": 0.8,
-            "MinSpeed": 3.0, "MaxSpeed": 8.0, "FlightLinearDrag": 0.0, "VirtualGravity": 8.0,
-            "MinDamageMultiplier": 0.35, "MaxDamageMultiplier": 1.0, "MaxFlightSeconds": 1.5,
-            "RecoveryChance": 1.0, "EmbedOnDamageReceiverWhenRecovered": false, "BrokenSalvageChance": 0.0,
-            "SpriteForwardAngleDegrees": 0.0}
         }
       }
     },
