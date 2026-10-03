@@ -71,13 +71,14 @@ namespace FlatWorld.WorldModel
             double temperature,
             double precipitation,
             double moisture,
-            bool river)
+            bool river,
+            bool snowAllowed = true)
         {
             if (height < settings.SeaLevel)
                 return SurfaceBiomeKind.Ocean;
             if (river)
                 return SurfaceBiomeKind.River;
-            if (IsSnowClimate(settings, temperature, precipitation))
+            if (snowAllowed && IsSnowClimate(settings, temperature, precipitation))
                 return SurfaceBiomeKind.Snow;
             if (height >= settings.MountainLevel)
                 return SurfaceBiomeKind.Stone;
@@ -216,6 +217,18 @@ namespace FlatWorld.WorldModel
             SnowTemperature = Clamp01(GetDouble(numbers, "terrain.snowTemperature", 0.18d));
             SnowMinimumPrecipitation = Clamp01(
                 GetDouble(numbers, "terrain.snowMinimumPrecipitation", 0.55d));
+            SnowRegionsEnabled = GetBool(numbers, "biome.snow.regions.enabled", false);
+            SnowRegionSize = Clamp(GetInt(numbers, "biome.snow.regions.size", 768), 32, 8192);
+            SnowRegionChance = Clamp01(GetDouble(numbers, "biome.snow.regions.chance", 0.1d));
+            SnowLargeRegionRatio = Clamp01(GetDouble(numbers, "biome.snow.regions.largeRatio", 0.9d));
+            SnowLargeMinRadius = FinitePositive(GetDouble(numbers, "biome.snow.large.minRadius", 192d), 192d);
+            SnowLargeMaxRadius = Math.Max(SnowLargeMinRadius,
+                FinitePositive(GetDouble(numbers, "biome.snow.large.maxRadius", 320d), 320d));
+            SnowPeakMinRadius = FinitePositive(GetDouble(numbers, "biome.snow.peak.minRadius", 12d), 12d);
+            SnowPeakMaxRadius = Math.Max(SnowPeakMinRadius,
+                FinitePositive(GetDouble(numbers, "biome.snow.peak.maxRadius", 28d), 28d));
+            SnowPeakMinimumHeight = Math.Max(MountainLevel,
+                Clamp01(GetDouble(numbers, "biome.snow.peak.minimumHeight", 0.78d)));
             SnowIceLakeChance = Clamp01(
                 GetDouble(numbers, "biome.snow.iceLakeChance", 0.08d));
             SnowGrassDensityMultiplier = Clamp01(
@@ -567,6 +580,16 @@ namespace FlatWorld.WorldModel
         public double SnowTemperature { get; }
         /// <summary>降水高于这个数时才能形成雪地。</summary>
         public double SnowMinimumPrecipitation { get; }
+
+        public bool SnowRegionsEnabled { get; }
+        public int SnowRegionSize { get; }
+        public double SnowRegionChance { get; }
+        public double SnowLargeRegionRatio { get; }
+        public double SnowLargeMinRadius { get; }
+        public double SnowLargeMaxRadius { get; }
+        public double SnowPeakMinRadius { get; }
+        public double SnowPeakMaxRadius { get; }
+        public double SnowPeakMinimumHeight { get; }
         /// <summary>雪地低洼处生成冰面的基础概率。</summary>
         public double SnowIceLakeChance { get; }
         /// <summary>雪地草地相对于普通草地的生成密度倍率。</summary>

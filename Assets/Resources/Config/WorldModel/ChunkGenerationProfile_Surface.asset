@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: ChunkGenerationProfile_Surface
   m_EditorClassIdentifier: 
   profileId: surface.default
-  generationSignature: 61
+  generationSignature: 62
   chunkWidth: 16
   chunkHeight: 16
   numericParameters:
@@ -54,9 +54,27 @@ MonoBehaviour:
   - Id: biome.mountain.dirtMinimumMoisture
     Value: 0.5
   - Id: terrain.snowTemperature
-    Value: 0.22
+    Value: 0.32
   - Id: terrain.snowMinimumPrecipitation
-    Value: 0.55
+    Value: 0.4
+  - Id: biome.snow.regions.enabled
+    Value: 1
+  - Id: biome.snow.regions.size
+    Value: 768
+  - Id: biome.snow.regions.chance
+    Value: 0.1
+  - Id: biome.snow.regions.largeRatio
+    Value: 0.9
+  - Id: biome.snow.large.minRadius
+    Value: 192
+  - Id: biome.snow.large.maxRadius
+    Value: 320
+  - Id: biome.snow.peak.minRadius
+    Value: 12
+  - Id: biome.snow.peak.maxRadius
+    Value: 28
+  - Id: biome.snow.peak.minimumHeight
+    Value: 0.78
   - Id: terrain.noiseScale
     Value: 0.0085
   - Id: terrain.octaves

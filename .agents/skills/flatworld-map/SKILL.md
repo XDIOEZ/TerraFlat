@@ -39,6 +39,7 @@ description: "Use when: 定位或修改 FlatWorld 的地图内容、Tilemap、�
 - 世界生成里“数量、尺寸、区段长度”等需要常见值与少量惊喜长尾的随机量，优先使用固定种子驱动的二次峰值权重分布，不要默认用均匀分布；纯二元开关仍可保留显式概率。
 - 修改算法时考虑生成签名、旧存档、联机指纹和 Wrapped 坐标。
 - 雪不占用 Ground 地块身份：雪地群系底层按高度保留 `Tile_Grass` 或 `Tile_Stone`，天然积雪写入独立 `snow.depth` 环境层；深度固定为 0～1 的十档，每 0.1 为一层。冰仍是独立 Ground。
+- 雪原分布由 Surface Profile 的 `biome.snow.regions.* / large.* / peak.*` 控制；先按稳定区域抽出现概率，再按 `largeRatio` 分流，半径使用峰值在区间中点的二次权重。小片积雪额外要求山顶海拔，大、小雪原都须满足实际温度与最终降水。区域判定必须覆盖 Burst 批次、单格出生、邻区生态、温度过渡及冰河，并按环绕坐标取最短距离；旧冻结 Profile 缺少 `regions.enabled` 时保留旧分布。
 - 萝卜聚落由 `surface.forest.radish` 与 `surface.grassland.radish` 两条独立规则控制；全局调整时必须同步审计两条，`PatchChance` 控制聚落数量，`SpawnChance` 与 `PatchRadius` 控制聚落内部密度。
 - 自然作物需要通用可种植基质时，用 Tile JSON 的 `naturalPlantable` 声明能力，并在生态规则启用 `requireNaturalPlantableGround`；不要把草地/泥土 ID 写死进单个作物。摄氏温度硬范围用 `requiredEnvironmentLayer=temperature.celsius` 配合 `minimumEnvironmentValue/maximumEnvironmentValue`。
 - 泥炭只生成在草原一侧的石地交界带；`biome.peat.spawnChance` 按斑块区域控制整体出现概率，河流 floodplain 范围一律排除，禁止再用“潮湿低地/河岸”规则生成泥炭。

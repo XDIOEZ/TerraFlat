@@ -172,7 +172,8 @@ namespace FlatWorld.WorldModel
                 (int)Math.Floor(position.x), (int)Math.Floor(position.y));
             height = climate.Height;
             return SurfaceBiomeClassifier.Resolve(request.Profile.Settings, climate.Height, climate.Temperature,
-                climate.Precipitation, Clamp01(climate.Precipitation * 0.78d + (1d - climate.Height) * 0.22d), false)
+                climate.Precipitation, Clamp01(climate.Precipitation * 0.78d + (1d - climate.Height) * 0.22d),
+                false, climate.SnowAllowed)
                 == SurfaceBiomeKind.Stone;
         }
 

@@ -142,6 +142,15 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
         "terrain.mountainLevel",
         "terrain.snowTemperature",
         "terrain.snowMinimumPrecipitation",
+        "biome.snow.regions.enabled",
+        "biome.snow.regions.size",
+        "biome.snow.regions.chance",
+        "biome.snow.regions.largeRatio",
+        "biome.snow.large.minRadius",
+        "biome.snow.large.maxRadius",
+        "biome.snow.peak.minRadius",
+        "biome.snow.peak.maxRadius",
+        "biome.snow.peak.minimumHeight",
         "terrain.height.coordScale",
         "terrain.height.frequency",
         "terrain.height.octaves",
@@ -181,6 +190,15 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
             ["terrain.mountainLevel"] = "越低石质山地越多，越高山地越少",
             ["terrain.snowTemperature"] = "实际温度低于该值时具备积雪条件；越高雪地越多",
             ["terrain.snowMinimumPrecipitation"] = "降水高于该值才生成雪地；越高雪地越集中在湿润区",
+            ["biome.snow.regions.enabled"] = "启用稀有大片雪原与少量山顶积雪；旧冻结规则缺少此参数时沿用旧分布",
+            ["biome.snow.regions.size"] = "每个候选区域的边长；越大候选越稀疏，半径最多为区域短边的 42%",
+            ["biome.snow.regions.chance"] = "每个候选区域出现雪原的概率；仍须满足实际温度与最终降水条件",
+            ["biome.snow.regions.largeRatio"] = "出现雪原后选择大片的比例；剩余比例只尝试高山上的小片积雪",
+            ["biome.snow.large.minRadius"] = "大片雪原的最小半径，单位为世界格",
+            ["biome.snow.large.maxRadius"] = "大片雪原的最大半径；二次权重让尺寸集中在上下限中间",
+            ["biome.snow.peak.minRadius"] = "山顶积雪的最小半径，单位为世界格",
+            ["biome.snow.peak.maxRadius"] = "山顶积雪的最大半径；同样使用二次权重抽大小",
+            ["biome.snow.peak.minimumHeight"] = "小片积雪的最低海拔，至少达到山地阈值",
             ["terrain.noiseScale"] = "简化地形模式的起伏密度；越大变化越快",
             ["terrain.octaves"] = "简化地形模式的细节层数；越高越细、计算越慢",
             ["climate.noiseScale"] = "简化气候模式的区域密度；越大冷热干湿变化越快",
@@ -653,6 +671,15 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
             DrawSlider("terrain.mountainLevel", "山地阈值", 0f, 1f);
             DrawSlider("terrain.snowTemperature", "雪地温度阈值", 0f, 1f);
             DrawSlider("terrain.snowMinimumPrecipitation", "雪地最低降水", 0f, 1f);
+            DrawToggle("biome.snow.regions.enabled", "稀有雪原区域");
+            DrawDoubleField("biome.snow.regions.size", "雪原候选区域边长（格）");
+            DrawSlider("biome.snow.regions.chance", "雪原出现概率（每候选区域）", 0f, 1f);
+            DrawSlider("biome.snow.regions.largeRatio", "雪原中大片的比例", 0f, 1f);
+            DrawDoubleField("biome.snow.large.minRadius", "大片雪原最小半径（格）");
+            DrawDoubleField("biome.snow.large.maxRadius", "大片雪原最大半径（格）");
+            DrawDoubleField("biome.snow.peak.minRadius", "山顶积雪最小半径（格）");
+            DrawDoubleField("biome.snow.peak.maxRadius", "山顶积雪最大半径（格）");
+            DrawSlider("biome.snow.peak.minimumHeight", "山顶积雪最低海拔", 0f, 1f);
 
             EditorGUILayout.Space(3f);
             EditorGUILayout.LabelField("高度噪声", EditorStyles.miniBoldLabel);
