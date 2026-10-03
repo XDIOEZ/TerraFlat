@@ -48,6 +48,28 @@ Shader "FlatWorld/2D/Chunk Mesh Water Lit"
         _ShoreStrength("岸线亮部强度", Range(0, 1)) = 0.035
         _ShoreFoamStrength("岸边泡沫强度", Range(0, 1)) = 0.3
         _FoamSpeed("岸边泡沫速度", Range(0, 3)) = 0.52
+        [Header(Lava)]
+        [HDR] _LavaCrustColor("冷却壳颜色", Color) = (0.07, 0.008, 0.003, 1)
+        [HDR] _LavaMoltenColor("熔融颜色", Color) = (1.0, 0.11, 0.008, 1)
+        [HDR] _LavaHotColor("高温高光", Color) = (1.0, 0.68, 0.055, 1)
+        _LavaFlowDirection("流动方向", Vector) = (0.82, 0.57, 0, 0)
+        _LavaScale("大纹理尺度", Range(0.2, 6)) = 1.35
+        _LavaDetailScale("细节尺度", Range(1, 8)) = 2.8
+        _LavaFlowSpeed("流动速度", Range(0, 1.5)) = 0.18
+        _LavaDistortion("流动扭曲", Range(0, 2)) = 0.58
+        _LavaHotThreshold("熔融阈值", Range(0, 1)) = 0.55
+        _LavaHotSoftness("熔融过渡", Range(0.01, 0.4)) = 0.12
+        _LavaCoreThreshold("高光阈值", Range(0, 1)) = 0.78
+        _LavaCoreSoftness("高光过渡", Range(0.01, 0.3)) = 0.085
+        _LavaCrustStrength("冷却壳强度", Range(0, 1.5)) = 0.76
+        _LavaShoreCrust("岸边冷却", Range(0, 1.5)) = 0.9
+        _LavaShallowCrust("浅层冷却", Range(0, 1)) = 0.24
+        _LavaEmissionStrength("自发光强度", Range(0, 4)) = 1.7
+        _LavaPulseSpeed("高光脉动速度", Range(0, 4)) = 1.1
+        _LavaPulseStrength("高光脉动幅度", Range(0, 0.3)) = 0.07
+        _LavaShallowAlpha("浅层透明度", Range(0, 1)) = 0.94
+        _LavaDeepAlpha("深层透明度", Range(0, 1)) = 0.99
+        [HideInInspector] _LavaMode("Lava Mode", Float) = 0
         [HideInInspector] _Color("Tint", Color) = (1,1,1,1)
         [HideInInspector] _RendererColor("Renderer Color", Color) = (1,1,1,1)
     }
@@ -71,6 +93,10 @@ Shader "FlatWorld/2D/Chunk Mesh Water Lit"
             float4 _ReflectionDirection;
             float4 _SunDirection;
             float4 _MoonReflectionPosition;
+            float4 _LavaCrustColor;
+            float4 _LavaMoltenColor;
+            float4 _LavaHotColor;
+            float4 _LavaFlowDirection;
             float _TideCyclesPerDay;
             float _SurfaceTint;
             float _SwellScale;
@@ -98,6 +124,23 @@ Shader "FlatWorld/2D/Chunk Mesh Water Lit"
             float _ShoreStrength;
             float _ShoreFoamStrength;
             float _FoamSpeed;
+            float _LavaScale;
+            float _LavaDetailScale;
+            float _LavaFlowSpeed;
+            float _LavaDistortion;
+            float _LavaHotThreshold;
+            float _LavaHotSoftness;
+            float _LavaCoreThreshold;
+            float _LavaCoreSoftness;
+            float _LavaCrustStrength;
+            float _LavaShoreCrust;
+            float _LavaShallowCrust;
+            float _LavaEmissionStrength;
+            float _LavaPulseSpeed;
+            float _LavaPulseStrength;
+            float _LavaShallowAlpha;
+            float _LavaDeepAlpha;
+            float _LavaMode;
         CBUFFER_END
         struct ChunkMeshWaterData
         {
@@ -108,6 +151,7 @@ Shader "FlatWorld/2D/Chunk Mesh Water Lit"
             float4 flowY;
         };
         #include "WaterSurfaceCommon.hlsl"
+        #include "LavaSurfaceCommon.hlsl"
         #if defined(FLATWORLD_WATER_STYLIZED)
             #include "WaterSurfaceStylized.hlsl"
         #else
@@ -262,11 +306,28 @@ Shader "FlatWorld/2D/Chunk Mesh Water Lit"
                 data.flowY = input.flowY;
                 half4 main = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv) * input.tint * _Color * _RendererColor;
                 half liquidDepth = SampleLiquidDepthCorners(input.positionWS, input.depth);
+                half recess = ComputeShoreRecess(input.positionWS, DecodeWaterShoreMask(input.shore));
+                UNITY_BRANCH
+                if (_LavaMode > 0.5)
+                {
+                    LavaSurfaceData lava = CalculateLavaSurface(
+                        input.positionWS,
+                        liquidDepth,
+                        recess,
+                        main.a);
+                    half4 mask = SAMPLE_TEXTURE2D(_MaskTex, sampler_MaskTex, input.uv);
+                    SurfaceData2D surfaceData; InputData2D inputData;
+                    InitializeSurfaceData(lava.albedo, lava.alpha, mask, surfaceData);
+                    InitializeInputData(input.uv, input.lightingUV, inputData);
+                    half4 lit = CombinedShapeLightShared(surfaceData, inputData);
+                    lit.rgb += lava.emission;
+                    lit.a = lava.alpha;
+                    return lit;
+                }
                 // 保留水下生物与海床可见度，水面波纹仍完整覆盖其上。
                 main.a *= lerp(0.60h, 0.80h, saturate(liquidDepth));
                 WaterSurfaceData surface = CalculateChunkWaterSurface(input.positionWS, input.lightingUV, liquidDepth, data);
                 main.rgb = ApplyWaterSurface(main.rgb, surface);
-                half recess = ComputeShoreRecess(input.positionWS, DecodeWaterShoreMask(input.shore));
                 main.rgb = ApplyChunkWaterShore(main.rgb, recess, input.positionWS, data);
                 half4 mask = SAMPLE_TEXTURE2D(_MaskTex, sampler_MaskTex, input.uv);
                 SurfaceData2D surfaceData; InputData2D inputData;
@@ -323,11 +384,21 @@ Shader "FlatWorld/2D/Chunk Mesh Water Lit"
                 data.flowY = input.flowY;
                 half4 main = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv) * input.tint * _Color * _RendererColor;
                 half liquidDepth = SampleLiquidDepthCorners(input.positionWS, input.depth);
+                half recess = ComputeShoreRecess(input.positionWS, DecodeWaterShoreMask(input.shore));
+                UNITY_BRANCH
+                if (_LavaMode > 0.5)
+                {
+                    LavaSurfaceData lava = CalculateLavaSurface(
+                        input.positionWS,
+                        liquidDepth,
+                        recess,
+                        main.a);
+                    return half4(lava.albedo + lava.emission, lava.alpha);
+                }
                 // 保留水下生物与海床可见度，水面波纹仍完整覆盖其上。
                 main.a *= lerp(0.60h, 0.80h, saturate(liquidDepth));
                 WaterSurfaceData surface = CalculateChunkWaterSurface(input.positionWS, input.screenUV, liquidDepth, data);
                 main.rgb = ApplyWaterSurface(main.rgb, surface);
-                half recess = ComputeShoreRecess(input.positionWS, DecodeWaterShoreMask(input.shore));
                 main.rgb = ApplyChunkWaterShore(main.rgb, recess, input.positionWS, data);
                 main.rgb = ApplyMoonReflection(main.rgb, surface.moonReflection);
                 return main;

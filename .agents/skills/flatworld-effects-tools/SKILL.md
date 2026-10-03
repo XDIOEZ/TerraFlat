@@ -53,6 +53,7 @@ description: "Use when: 定位或修改 FlatWorld 的运行时特效、粒子、
 - `Light2DSortingLayerUtility` 集中适配 URP 14 的接收排序层字段。`Mod_LightSource.TargetSortingLayers` 空列表保留原光源 Prefab 配置，`SetTargetSortingLayers` 支持运行时设置与恢复；`Mod_Building.ShadowTargetSortingLayers` 空列表表示全部接收层。层名称必须校验，不能把未知名称默默转换成 Default；环绕世界的镜像 Light2D 必须同步源光的层集合。这些字段只过滤接收者，不代表物理高度或逐灯的 Owner 排除，不能靠调整 Z、Light Order 或关掉 `selfShadows` 宣称解决内嵌光源的外投影问题。
 - 共用海水 `UsePass` 的包装 Shader 必须声明公共 Pass 新增的同名材质属性；月光等夜间自发光倒影应在 `CombinedShapeLightShared` 之后合成，避免全局夜间光照被重复相乘。月亮出现动画读取 `DayTimeSystem` 发布的 `_GlobalMoonAppearance`，尺寸/渐亮与 `_GlobalMoonlightIntensity` 的月相亮度分离，避免新月把月面永久缩小。
 - 正式 Ground/Liquid 由 BRG 独立提交，液体外观来自 `LiquidDefinition.WorldWater`，禁止按 GroundTileId 查水面贴图。岸线以 LiquidDepth > 0 判断，深度用每格四角插值；任一边界格液深变化须更新八方向邻区的共享边/角，不能只监听 TerrainCell 改动。旧 Tilemap 的颜色仍只编码岸线，兼容深度纹理与 BRG 共用连续液深语义。
+- 岩浆源材质使用独立 `Tilemap Lava Lit` Shader；正式 Chunk Mesh 会把源材质属性复制到共用 `Chunk Mesh Water Lit`，因此岩浆必须通过 `_LavaMode=1` 和同名参数复用 `LavaSurfaceCommon.hlsl`，只替换源材质 Shader 不会让正式世界自动切换算法。
 - 水面视觉把双线性采样后的连续水深离散为 `0.1~1.0` 共十档，真实 `LiquidDepth` 与水深纹理仍保持连续；两种正式水面风格的基础深浅色权重按十档等距变化，避免深水段相邻层级难以分辨。
 - Tilemap 合批后 `POSITION` 不保证是 Chunk 局部坐标；水深与岸线使用世界坐标，MPB 的 `_LiquidDepthUvScaleOffset` 必须扣除水层原点再加入一格纹理边框。当前世界网格每格为 1 单位且原点对齐整数，不要用 `unity_WorldToObject` 恢复已被合批丢失的局部坐标。
 - 水面潮流使用 `DayTimeSystem` 发布的 `_GlobalGameDay` 驱动，并沿材质 `_FlowDirection` 轴按 `_TideCyclesPerDay` 往返；方向性水纹不要改回基于 `_Time` 的持续旋转，否则跳时、读档与游戏时间倍率会和潮汐表现脱节。
