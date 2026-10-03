@@ -853,9 +853,11 @@ namespace FlatWorld.WorldModel
             }
             else if (biome == SurfaceBiomeKind.Stone)
             {
-                // 旧版石地群系从 0.72 高度开始；二维地图直接用石头地面表达山体。
+                // 山地继续保留石地群系身份，湿润区域只把表层底材换成泥土。
                 biomeId = (int)biome;
-                groundTileId = settings.StoneTileId;
+                groundTileId = moisture >= settings.MountainDirtMinimumMoisture
+                    ? settings.DirtTileId
+                    : settings.StoneTileId;
                 flags = TerrainCellFlags.Walkable;
 
                 // 山地基础气温固定为 10℃，天气与局部冷热源仍由环境温度系统叠加。

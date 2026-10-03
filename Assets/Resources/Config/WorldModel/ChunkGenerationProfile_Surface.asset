@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: ChunkGenerationProfile_Surface
   m_EditorClassIdentifier: 
   profileId: surface.default
-  generationSignature: 57
+  generationSignature: 58
   chunkWidth: 16
   chunkHeight: 16
   numericParameters:
@@ -29,6 +29,8 @@ MonoBehaviour:
     Value: 3
   - Id: terrain.stoneTileId
     Value: 4
+  - Id: terrain.dirtTileId
+    Value: 29
   - Id: terrain.snowTileId
     Value: 5
   - Id: terrain.iceTileId
@@ -49,6 +51,8 @@ MonoBehaviour:
     Value: 0.51
   - Id: terrain.mountainLevel
     Value: 0.72
+  - Id: biome.mountain.dirtMinimumMoisture
+    Value: 0.5
   - Id: terrain.snowTemperature
     Value: 0.22
   - Id: terrain.snowMinimumPrecipitation
@@ -268,6 +272,8 @@ MonoBehaviour:
     Value: Tile_Floor_Bronze
   - Id: tile.block.28
     Value: Tile_Peat
+  - Id: tile.block.29
+    Value: Tile_Dirt
   ecologyGlobalMultiplier: 1
   ecologyRuleIds:
   - surface.forest.appleTree

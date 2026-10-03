@@ -174,6 +174,7 @@ namespace FlatWorld.WorldModel
             SeabedTileId = GetInt(numbers, "terrain.seabedTileId", SandTileId);
             RiverbedTileId = GetInt(numbers, "terrain.riverbedTileId", SandTileId);
             StoneTileId = GetInt(numbers, "terrain.stoneTileId", GroundTileId);
+            DirtTileId = GetInt(numbers, "terrain.dirtTileId", GroundTileId);
             SnowTileId = GetInt(numbers, "terrain.snowTileId", GroundTileId);
             IceTileId = GetInt(numbers, "terrain.iceTileId", SnowTileId);
             PeatTileId = GetInt(numbers, "terrain.peatTileId", 0);
@@ -190,6 +191,8 @@ namespace FlatWorld.WorldModel
                 GetDouble(numbers, "terrain.mountainLevel", 0.72d),
                 BeachLevel,
                 1d);
+            MountainDirtMinimumMoisture = Clamp01(
+                GetDouble(numbers, "biome.mountain.dirtMinimumMoisture", 0.5d));
             SnowTemperature = Clamp01(GetDouble(numbers, "terrain.snowTemperature", 0.18d));
             SnowMinimumPrecipitation = Clamp01(
                 GetDouble(numbers, "terrain.snowMinimumPrecipitation", 0.55d));
@@ -495,6 +498,7 @@ namespace FlatWorld.WorldModel
         public int SeabedTileId { get; }
         public int RiverbedTileId { get; }
         public int StoneTileId { get; }
+        public int DirtTileId { get; }
         public int SnowTileId { get; }
         public int IceTileId { get; }
         public int PeatTileId { get; }
@@ -504,8 +508,10 @@ namespace FlatWorld.WorldModel
         public double SeaLevel { get; }
         /// <summary>高于海面但低于这个数时生成沙滩。</summary>
         public double BeachLevel { get; }
-        /// <summary>高度达到这个数时使用可行走的石地表现二维山地。</summary>
+        /// <summary>高度达到这个数时进入二维山地群系。</summary>
         public double MountainLevel { get; }
+        /// <summary>山地湿度达到这个数时改铺泥土，但仍保留山地群系。</summary>
+        public double MountainDirtMinimumMoisture { get; }
         /// <summary>实际温度低于这个数时具备积雪条件。</summary>
         public double SnowTemperature { get; }
         /// <summary>降水高于这个数时才能形成雪地。</summary>
