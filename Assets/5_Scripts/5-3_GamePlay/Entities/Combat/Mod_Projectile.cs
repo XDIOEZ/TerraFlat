@@ -435,10 +435,16 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
 
             Mod_DamageReceiver receiver = GameplayPhysics2D.ResolveComponent<Mod_DamageReceiver>(other);
             Collider2D receiverCollider = ResolveDamageReceiverCollider(receiver);
+            Vector2 impactPosition = _body.position + displacement * Mathf.Clamp01(hit.distance / distance);
             if (receiverCollider != null)
             {
-                Vector2 impactPosition = _body.position + displacement * Mathf.Clamp01(hit.distance / distance);
                 ResolvePhysicalReceiverHit(receiverCollider, impactPosition, hit.point, hit.normal, false);
+            }
+            else
+            {
+                // 只查询最近阻挡以内的路径，接触余量补偿物理解算保留的边缘间隙。
+                float contactDistance = Mathf.Min(distance, hit.distance + Physics2D.defaultContactOffset);
+                ResolvePhysicalDataHit(displacement / distance * contactDistance, impactPosition, hit.normal, false);
             }
 
             // 最近的实体阻挡之后不再预判，墙体等无接收器目标仍交给原有物理碰撞处理。
@@ -596,12 +602,20 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
     private void HandleExternalDamageResolved(FlatWorld.Combat.CombatDamageContext context, float resolvedDamage)
     {
         if (!_isFlying || resolvedDamage < 0f) return;
-        Vector2 offset = _damage.DamageCollider is BoxCollider2D box
-            ? (Vector2)box.transform.TransformPoint(box.offset) - (Vector2)item.transform.position : Vector2.zero;
-        SetProjectilePosition(WorldTopologyRuntime.NormalizePosition((Vector2)context.HitPoint - offset));
+        _physicalContactResolved = true;
+        if (_hasPendingImpact)
+        {
+            SetProjectilePosition(_pendingImpactPosition);
+        }
+        else
+        {
+            Vector2 offset = _damage.DamageCollider is BoxCollider2D box
+                ? (Vector2)box.transform.TransformPoint(box.offset) - (Vector2)item.transform.position : Vector2.zero;
+            SetProjectilePosition(WorldTopologyRuntime.NormalizePosition((Vector2)context.HitPoint - offset));
+        }
         if (resolvedDamage == 0f)
         {
-            BounceFromBlockedHit(Vector2.zero, false);
+            BounceFromBlockedHit(_hasPendingImpact ? _pendingImpactNormal : Vector2.zero, _processingPhysicalContact);
             return;
         }
         FinishFlight();
@@ -631,7 +645,10 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
         Collider2D receiverCollider = ResolveDamageReceiverCollider(receiver);
         if (receiverCollider == null)
         {
-            StartBounceSpin(contactNormal);
+            // ECS 障碍没有接收器组件，仍通过真实伤害盒和共享后端结算，不能直接当墙反弹。
+            if (!ResolvePhysicalDataHit(-contactNormal * Physics2D.defaultContactOffset,
+                    _body != null ? _body.position : (Vector2)item.transform.position, contactNormal, true))
+                StartBounceSpin(contactNormal);
             return;
         }
 
@@ -665,6 +682,31 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
         // 无法进入伤害结算的普通物理反弹也给出旋转反馈；有效伤害已在回调里结束飞行。
         if (physicsAlreadyResolved && _isFlying && !_physicalContactResolved)
             StartBounceSpin(contactNormal);
+    }
+
+    /// <summary>无接收器组件的物理接触交回数据后端，保留统一身份、伤害规则和窗口去重。</summary>
+    private bool ResolvePhysicalDataHit(Vector2 displacement, Vector2 impactPosition,
+        Vector2 contactNormal, bool physicsAlreadyResolved)
+    {
+        if (_damage == null || _body == null)
+            return false;
+
+        _pendingImpactPosition = impactPosition;
+        _pendingImpactNormal = contactNormal;
+        _hasPendingImpact = true;
+        _processingPhysicalContact = physicsAlreadyResolved;
+        _physicalContactResolved = false;
+        try
+        {
+            Vector2 positionOffset = _body.position - (Vector2)item.transform.position;
+            _damage.QueryProjectilePhysicsSweep(displacement, positionOffset);
+            return _physicalContactResolved || !_isFlying;
+        }
+        finally
+        {
+            _processingPhysicalContact = false;
+            _hasPendingImpact = false;
+        }
     }
 
     private static Collider2D ResolveDamageReceiverCollider(Mod_DamageReceiver receiver)

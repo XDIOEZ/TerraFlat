@@ -176,6 +176,12 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
         EmitDataShape(displacement * fraction, -displacement * (1f - fraction));
     }
 
+    /// <summary>物理接触前从当前伤害盒向接触位置扫掠，位置修正只用于对齐刚体与插值表现。</summary>
+    internal void QueryProjectilePhysicsSweep(Vector2 displacement, Vector2 positionOffset)
+    {
+        EmitDataShape(displacement, positionOffset + displacement);
+    }
+
     private void EmitDataShape(Vector2 displacement, Vector2 centerOffset = default)
     {
         if (!(damageCollider is BoxCollider2D box) || !box.enabled || !CanDealDamageNow() || RemainingAttackTargets == 0) return;
