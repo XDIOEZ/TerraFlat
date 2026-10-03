@@ -69,11 +69,15 @@ public partial class TemperatureMgr : SingletonAutoMono<TemperatureMgr>
             data.AmbientTemperature + data.Insulation + data.RuntimeAmbientOffset;
         // 临时 Buff 增温不参与环境趋近计算，伤害仍读取回调提交后的有效体温。
         float currentTemperature = naturalTemperature ?? data.CurrentTemperature;
-        float changeSpeed = heatConductionRate * Mathf.Max(0f, data.RuntimeChangeSpeedMultiplier);
-        if (targetTemperature < currentTemperature)
-            changeSpeed *= Mathf.Max(0f, data.RuntimeCoolingSpeedMultiplier);
-
-        return Mathf.MoveTowards(currentTemperature, targetTemperature, changeSpeed * deltaTime);
+        float directionMultiplier = targetTemperature < currentTemperature
+            ? data.RuntimeCoolingSpeedMultiplier
+            : 1f;
+        return ThermalRuntime.AdvanceTowards(
+            currentTemperature,
+            targetTemperature,
+            heatConductionRate,
+            deltaTime,
+            Mathf.Max(0f, data.RuntimeChangeSpeedMultiplier) * Mathf.Max(0f, directionMultiplier));
     }
 
     public float GetGlobalAmbientTemperature()
@@ -109,6 +113,26 @@ public partial class TemperatureMgr : SingletonAutoMono<TemperatureMgr>
         {
             Debug.Log($"[TemperatureMgr] 设置基础环境温度成功，基础温度={value:F1}℃，天气修正={WeatherMgr.CalculateWeatherTemperatureOffset(planetData):F1}℃，有效环境温度={GetGlobalAmbientTemperature():F1}℃");
         }
+    }
+
+#endregion
+}
+
+/// <summary>统一处理生物、物质与液体按传热速率向目标温度趋近的基础计算。</summary>
+public static class ThermalRuntime
+{
+#region 温度推进
+
+    /// <summary>按每秒传热速率推进当前温度；速率、倍率与时间均不允许产生反向传热。</summary>
+    public static float AdvanceTowards(
+        float currentTemperature,
+        float targetTemperature,
+        float transferPerSecond,
+        float seconds,
+        float transferMultiplier = 1f)
+    {
+        float speed = Mathf.Max(0f, transferPerSecond) * Mathf.Max(0f, transferMultiplier);
+        return Mathf.MoveTowards(currentTemperature, targetTemperature, speed * Mathf.Max(0f, seconds));
     }
 
 #endregion

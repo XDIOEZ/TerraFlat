@@ -19,6 +19,7 @@ description: "Use when: 定位或修改 FlatWorld 的世界时间、昼夜、天
 - 低温、过热与缺氧必须使用独立伤害时钟；解除对应危险、死亡或回收时清除该来源的时间债务。低温和缺氧用固定每次伤害，不以温差或累计秒数放大成一次大额伤害；高温保留独立规则。
 - 玩家显式重生统一调用 `Mod_Temperature.RestoreOnRespawn` 恢复正常基础体温，并清除上一条生命的入水降温目标与冷热伤计时；死亡/重生模块不得直接改写 `TemperatureData.CurrentTemperature`。
 - 体温向环境温度变化的基础速率读取宿主 `ItemData.HeatConductionRate`（℃/s），默认值在代码中；玩家由当前玩家 JSON 配置，物品、动物和建筑由定义的 `itemData.heatConductionRate` 覆盖，不能放在体温模块或外壳 Prefab。冷热方向由温差决定，运行时倍率独立叠加。
+- 生物体温、物质温度与容器液体向目标温度趋近时统一调用 `ThermalRuntime.AdvanceTowards`；各系统只提供自己的目标温度、传热速率和倍率，入水瞬时降温、直接热量注入等特殊玩法不要伪装成环境传热。
 - `TemperatureData` 的 MemoryPack 字段顺序属于存档布局，改冷伤语义不能删掉中间 float 槽位。规则参数在加载旧存档后恢复当前内容配置，运行态体温仍由存档恢复。
 
 - 当前跨场景时间与存档主入口是 `DayTimeSystem`；季节改动前确认场景是否使用 `DayNightTimeManager`。

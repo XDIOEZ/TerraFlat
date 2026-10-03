@@ -472,8 +472,12 @@ public static class ItemMatterRuntime
         float exposure = Mathf.Max(0f, airExposure);
         float beforeTemperature = state.TemperatureCelsius;
         float beforeMoisture = state.Moisture;
-        float conduction = Mathf.Max(0f, item.HeatConductionRate) * Mathf.Max(0.01f, exposure);
-        state.TemperatureCelsius = Mathf.MoveTowards(state.TemperatureCelsius, ambientTemperature, conduction * seconds);
+        state.TemperatureCelsius = ThermalRuntime.AdvanceTowards(
+            state.TemperatureCelsius,
+            ambientTemperature,
+            item.HeatConductionRate,
+            seconds,
+            Mathf.Max(0.01f, exposure));
 
         if (matter != null)
         {

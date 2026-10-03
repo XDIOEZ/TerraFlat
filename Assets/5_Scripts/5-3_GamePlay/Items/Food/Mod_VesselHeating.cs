@@ -160,10 +160,11 @@ public static class InventoryVesselHeating
     {
         float before = state.Temperature;
         float target = Mathf.Max(0f, temperature);
-        state.Temperature = Mathf.MoveTowards(
+        state.Temperature = ThermalRuntime.AdvanceTowards(
             state.Temperature,
             target,
-            TemperatureTransferPerSecond * Mathf.Max(0f, seconds));
+            TemperatureTransferPerSecond,
+            seconds);
         return !Mathf.Approximately(before, state.Temperature);
     }
 
