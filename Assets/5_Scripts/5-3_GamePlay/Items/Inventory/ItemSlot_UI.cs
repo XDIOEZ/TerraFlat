@@ -366,20 +366,16 @@ public class ItemSlot_UI : MonoBehaviour,
     {
         if (!isPointerOver) return;
 
-        ScrollRect parentScrollRect = FindParentScrollRect();
-        if (parentScrollRect != null)
-        {
-            // 滚动容器里的槽位把滚轮交给父级列表，避免背包滚轮被槽位取放逻辑吃掉。
-            parentScrollRect.OnScroll(eventData);
-            return;
-        }
-
         float scrollY = eventData.scrollDelta.y;
 
         if (scrollY > 0)
             HandleScrollUp();
         else if (scrollY < 0)
             HandleScrollDown();
+
+        // 指针命中槽位时滚轮专用于逐件取放，只有槽位外区域才交给父级页面滚动。
+        if (!Mathf.Approximately(scrollY, 0f))
+            eventData.Use();
     }
 
     private void HandleScrollUp()
