@@ -27,6 +27,7 @@ description: "Use when: 定位或修改 FlatWorld 的运行时特效、粒子、
 - 先确认触发系统及 Prefab/材质/Shader 的真实引用来源，再改表现。
 - 陶罐 UI 的水面摇晃和罐口液流属于表现层：水面使用固定步长的连续网格波面，只读取罐体运动并自行衰减；罐口液流只在 `Mod_WaterVessel` 实际移除液体后触发，并使用独立连续条带网格按重力弹道和流速收细。不得让 Graphic 帧率参与液体数量结算；液流 Graphic 必须位于罐体外 Mask，避免被内腔裁剪。
 - 池化特效每次取出时重置 Transform、Animator、颜色和生命周期；回收/禁用时清理订阅与状态。
+- 通用投射物飞行拖尾由 `ProjectileFlightTrailPresenter` 挂在 `Mod_Projectile` Prefab 上负责，只读取投射物飞行态和 Sprite 表现；不要把拖尾生命周期写进 `Mod_Bow`、伤害或碰撞结算。
 - 源实体会在触发特效的同帧被回收时，一次性粒子根节点必须先脱离源实体并放到同一场景独立播放；否则 `PrepareForDespawn/OnDisable` 会把粒子提前清空。
 - 需要在角色 `OnDisable` 中立即回收的池化特效不能挂到该角色层级下，否则归池 `SetParent` 会与父级激活/停用过程冲突；Owner 登记与 Transform 父级分开，睡眠 ZZZ 由单位缩放的独立特效根节点持有并在 `LateUpdate` 跟随。区块休眠不等于退出 AI 睡眠状态，停用时只释放可见实例，重新激活时恢复仍有效的表现请求。
 - 粒子 `VelocityModule` 的线性 X/Y/Z 必须使用同一种 `minMaxState`；2D 特效即使 Z 速度恒为零，也应使用与 X/Y 相同的模式并把上下限都设为零，避免 `Particle Velocity curves must all be in the same mode`。

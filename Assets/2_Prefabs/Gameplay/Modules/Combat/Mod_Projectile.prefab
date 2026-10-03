@@ -10,6 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 6974319548207316411}
   - component: {fileID: 6974319548207316412}
+  - component: {fileID: 6974319548207316413}
   m_Layer: 0
   m_Name: Mod_Projectile
   m_TagString: Untagged
@@ -60,3 +61,21 @@ MonoBehaviour:
     isRunning: 1
     Type: 0
     BitData: 
+--- !u!114 &6974319548207316413
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6974319548207316410}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 52d752bc6ef049bea5b52802f4ae7207, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  TrailTime: 0.08
+  StartWidth: 0.065
+  EndWidth: 0.008
+  MinVertexDistance: 0.035
+  TrailColor: {r: 1, g: 0.93, b: 0.72, a: 0.62}
+  TailAnchorRatio: 0.82
