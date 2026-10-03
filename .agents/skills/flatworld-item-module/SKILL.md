@@ -17,7 +17,7 @@ description: "Use when: 定位或修改 FlatWorld 的 Item/Module 组合架构�
 
 ## 主链与不变量
 
-- 定义实体装配存档模块之前先建立通用装备组件；不能依赖稍后的 `Item.Load`，也不能把模块能力 ID 当作具体 Prefab 地址。
+- 实体能力只来自 Prefab 或 JSON 的显式模块组合；`Item` 基类不得自动补齐装备等玩法模块。定义实体按当前 `ModuleData` 装配具体 Prefab，不能把模块能力 ID 当作具体 Prefab 地址。
 
 - `Item.RuntimeGeneration` 是每次 Load 更新的运行态代际，不进存档；纯数据战斗 Bridge 将其与持久 UID、world/dimension 一起构成外部身份。对象池复用、读档重载后即使 UID 相同，也不能接收上一代事件；它与 ItemMgr 感知索引自身的注册代际不是同一个生命周期。
 

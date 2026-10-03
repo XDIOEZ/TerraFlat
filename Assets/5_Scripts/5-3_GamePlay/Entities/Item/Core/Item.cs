@@ -423,7 +423,6 @@ public abstract class Item : MonoBehaviour
         modulesLoaded = true;
         itemMods.BindOwner(this);
         MarkModuleScheduleDirty();
-        EnsureUniversalEquipmentModule();
         bool firstStart = itemData.ModuleDataDic.Count == 0;
 
         // 模板数据会收集停用模块，加载时也必须使用同一范围，避免矿物等 Prefab 被误判为缺失模块。
@@ -565,31 +564,6 @@ public abstract class Item : MonoBehaviour
         }
 
         MarkModuleScheduleDirty();
-    }
-
-    /// <summary>装备能力属于 Item 的通用组合能力，按需补齐模块而不是复制到每个物品 Prefab。</summary>
-    internal void EnsureUniversalEquipmentModule()
-    {
-        if (GetComponentInChildren<Mod_Equipment>(true) != null)
-            return;
-
-        GameRes gameRes = GameRes.Instance;
-        if (gameRes == null)
-            return;
-
-        // 实例化使用当前 Prefab 地址，模块对象名继续保留原有稳定身份。
-        const string equipmentPrefabId = "Mod_EquipmentRuntime";
-        GameObject moduleObject = gameRes.InstantiatePrefab(equipmentPrefabId, parent: transform);
-        if (moduleObject == null)
-        {
-            Debug.LogError($"[Item] {name} 无法补齐通用装备模块 {equipmentPrefabId}", this);
-            return;
-        }
-
-        moduleObject.name = "Module_Equipment";
-        moduleObject.transform.localPosition = Vector3.zero;
-        moduleObject.transform.localRotation = Quaternion.identity;
-        moduleObject.transform.localScale = Vector3.one;
     }
 
     /// <summary>模块注册完成后统一解析显式依赖，确保初始化顺序不影响组合结果。</summary>
