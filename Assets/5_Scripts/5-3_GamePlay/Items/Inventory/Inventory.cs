@@ -1145,18 +1145,18 @@ public class Inventory
             PlayerCarryCapacityUtility.TryGetSnapshot(player, out PlayerCarryCapacitySnapshot snapshot))
         {
             currentWeight = snapshot.CurrentWeight;
-            currentVolume = snapshot.CurrentVolume / Inventory_Data.LitersPerCubicMeter;
+            currentVolume = snapshot.CurrentVolume;
             maxWeight = snapshot.IsUnlimited ? "INF" : snapshot.MaxWeight.ToString("0.##");
             maxVolume = snapshot.IsUnlimited
                 ? "INF"
-                : (snapshot.MaxVolume / Inventory_Data.LitersPerCubicMeter).ToString("0.######");
+                : snapshot.MaxVolume.ToString("0.##");
         }
         else if (Data?.HasCarryCapacity == true)
         {
             currentWeight = Data.CurrentCarryWeight;
-            currentVolume = Data.CurrentCarryVolume / Inventory_Data.LitersPerCubicMeter;
+            currentVolume = Data.CurrentCarryVolume;
             maxWeight = Data.MaxCarryWeight.ToString("0.##");
-            maxVolume = (Data.MaxCarryVolume / Inventory_Data.LitersPerCubicMeter).ToString("0.######");
+            maxVolume = Data.MaxCarryVolume.ToString("0.##");
         }
         else
         {
@@ -1166,7 +1166,7 @@ public class Inventory
         if (_carryWeightValueText != null)
             _carryWeightValueText.text = $"{currentWeight:0.##} / {maxWeight} kg";
         if (_carryVolumeValueText != null)
-            _carryVolumeValueText.text = $"{currentVolume:0.######} / {maxVolume} m³";
+            _carryVolumeValueText.text = $"{currentVolume:0.##} / {maxVolume} L";
     }
 
     #endregion
