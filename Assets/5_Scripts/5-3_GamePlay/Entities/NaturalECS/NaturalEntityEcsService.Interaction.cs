@@ -153,6 +153,9 @@ namespace FlatWorld.NaturalEntities
                 Quaternion.Euler(transform?["localEulerAngles"]?.ToObject<Vector3>() ?? Vector3.zero),
                 transform?["localScale"]?.ToObject<Vector3>() ?? Vector3.one);
             record.HitBounds = TransformBounds(hitMatrix, hitOffset, hitSize);
+            // 树的受击范围至少覆盖实体阻挡范围，避免投射物先撞树干物理盒却没有进入伤害结算。
+            if (record.HitColliderEnabled && record.BlocksMovement && record.Profile.Definition.HasTag(Tag.Tree))
+                record.HitBounds.Encapsulate(record.BodyBounds);
             ResolveBodyVisual(record, body, out Sprite sprite, out Matrix4x4 matrix, out _, out _);
             record.VisualBounds = sprite != null ? TransformBounds(matrix, sprite.bounds.center, sprite.bounds.size) : record.HitBounds;
             Bounds bounds = record.HitBounds;

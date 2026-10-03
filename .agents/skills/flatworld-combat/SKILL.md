@@ -51,6 +51,7 @@ description: "Use when: 定位或修改 FlatWorld 的伤害、生命值、身体
 - 远程武器贴图主轴或握持锚点不在 Sprite 中心时，用 `Mod_Bow` 的手持视觉局部姿态只校正手持实例，并用局部管口坐标统一驱动真实投射物与轨迹预览生成点；禁止为了修手持锚点直接改世界 Sprite Pivot，避免落地坐标、拾取范围和对象池复用一起偏移。
 - 蓄力武器的额外发射效果由同一物品上的 `IProjectileChargeModifier` 模块组合提供；`Mod_Bow` 只在有效弹药开始蓄力后通知模块，并在松开或取消时收束其运行态，`Mod_Projectile` 分别接收速度和伤害倍率。麦克风采集只能由本地玩家的修饰模块在蓄力期间持有，结束、失焦、卸载时立即停止；音量状态不存档，也不复制一套箭矢定义。
 - 高速箭矢不能只依赖 Trigger 回调和 Rigidbody2D Continuous；`Mod_Projectile` 应使用 `Mod_Damage` 的实际伤害盒对上一帧到当前帧做 NonAlloc 形状扫掠，再把命中交回 `Mod_Damage` 的统一结算入口，避免高速穿过窄目标时漏伤害。
+- 自然资源树木的纯数据受击 `HitBounds` 必须至少覆盖其阻挡 `BodyBounds`；树干物理范围变大时不能留下“能撞到但打不到”的边缘区域，否则投射物会先被静态阻挡反弹而没有进入伤害结算。
 - 箭矢损坏回收材料由 `Mod_Projectile` 读取当前物品对应的普通合成配方并从 `ExactItem` 输入中按用量权重选一份，禁止在战斗代码里硬编码木棍、石料或金属；Tag 输入无法还原本次实际消耗的具体物品，因此没有可确定的精确材料时应跳过回收，不允许猜测生成物。
 - “命中硬目标后变成其他物品”属于具体丢弃物能力，当前由 `Mod_DiscardFlightDamage` 的显式参数开启；禁止再用 `Stone` 等材质 Tag 在通用 `Mod_Projectile` 内隐式触发，否则石箭等同材质投射物会串行为。
 - 可回收箭矢命中 `DamageReceiver` 后的“插在目标身上”状态由 `Mod_Projectile` 保存相对目标 Item 根节点的局部姿态并逐帧同步；箭矢仍保持独立 Runtime Item，不改挂到 Actor 层级。跟随移动时必须调用 `ItemMgr.NotifyRuntimeItemMoved` 刷新空间索引，目标失效后解除附着并保留箭矢最后世界位置，确保拾取、对象池和世界索引不被父子层级关系破坏。
