@@ -79,8 +79,10 @@
       ],
       "health": {
         "hasHp": true,
-        "hp": 80.0,
-        "maxHp": 80.0
+        "hp": 60,
+        "maxHp": 60,
+        "weakTool": 4,
+        "combatBalanceVersion": 1
       },
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/crucible.png[crucible]",

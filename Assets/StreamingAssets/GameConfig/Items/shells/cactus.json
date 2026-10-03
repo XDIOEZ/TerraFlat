@@ -87,7 +87,11 @@
         },
         "生命值系统模块": {
           "parameters": {
-            "Data": { "Hp": 45.0, "MaxHp": 45.0 },
+            "Data": {
+              "Hp": 45.0,
+              "MaxHp": 45.0,
+              "CombatBalanceVersion": 1
+            },
             "$collider2D": {
               "offset": { "x": 0.0, "y": 0.5 },
               "size": { "x": 0.8, "y": 1.0 }

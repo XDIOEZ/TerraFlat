@@ -2,9 +2,9 @@ using System;
 using UnityEngine;
 
 /// <summary>资源工具类别；只表达擅长的采集方式，不再作为伤害资格门槛。</summary>
-public enum ResourceToolKind { None, Pickaxe, Shovel, Axe }
+public enum ResourceToolKind { None, Pickaxe, Shovel, Axe, Hammer }
 
-/// <summary>工具声明的采集能力；等级和效率只提供资源伤害加成。</summary>
+/// <summary>工具声明的采集身份；旧等级和效率字段保留配置兼容。</summary>
 public interface IResourceHarvestTool
 {
     ResourceToolKind HarvestKind { get; }
@@ -12,13 +12,13 @@ public interface IResourceHarvestTool
     float HarvestEfficiency { get; }
 }
 
-/// <summary>资源节点的采集专精。所有有效攻击都可伤害资源，匹配工具只获得额外效率。</summary>
+/// <summary>资源节点的工具弱点；全部攻击按物理防御结算，匹配工具在防御后乘二。</summary>
 public sealed class Mod_ResourceHarvest : Module, IIncomingDamageRule, IIncomingDamageContextRule
 {
     #region 配置与生命周期
     public Ex_ModData ModData = new(); // 无独立运行状态。
     public ResourceToolKind requiredTool = ResourceToolKind.Pickaxe; // 最适合的工具类别；旧字段名保留给现有内容配置。
-    [Min(1)] public int minimumTier = 1; // 获得完整专精加成的推荐等级。
+    [Min(1)] public int minimumTier = 1; // 旧配置兼容，不参与弱点倍率。
     public override string CanonicalModuleId => "Mod_ResourceHarvest";
     public override ModuleTickMode TickMode => ModuleTickMode.Disabled;
     public override ModuleData _Data
@@ -38,7 +38,7 @@ public sealed class Mod_ResourceHarvest : Module, IIncomingDamageRule, IIncoming
     public override void Save() { }
     #endregion
 
-    /// <summary>普通武器保持原始伤害；匹配工具按等级逐步获得采集效率加成。</summary>
+    /// <summary>普通武器倍率为一，匹配工具固定为两倍。</summary>
     public float GetDamageMultiplier(IDamageSender sender)
     {
         IResourceHarvestTool tool = ResolveTool(sender);
@@ -84,18 +84,12 @@ public sealed class Mod_ResourceHarvest : Module, IIncomingDamageRule, IIncoming
             (ResourceToolKind)context.ResourceToolKind, context.ResourceToolTier, context.ResourceToolEfficiency);
     }
 
-    /// <summary>专精倍率永远不低于 1；硬度差异继续由伤害类型与目标防御自然结算。</summary>
+    /// <summary>匹配弱点固定在防御后乘二；旧等级和效率字段仅保留内容兼容。</summary>
     public static float ResolveAffinityMultiplier(ResourceToolKind preferredTool, int fullEfficiencyTier,
         ResourceToolKind toolKind, int toolTier, float toolEfficiency)
     {
         if (preferredTool == ResourceToolKind.None || toolKind != preferredTool)
             return 1f;
-        if (float.IsNaN(toolEfficiency) || float.IsInfinity(toolEfficiency))
-            return float.NaN;
-
-        float tierFactor = fullEfficiencyTier <= 1
-            ? 1f
-            : Mathf.Clamp01((float)Mathf.Max(0, toolTier) / fullEfficiencyTier);
-        return Mathf.Lerp(1f, Mathf.Max(1f, toolEfficiency), tierFactor);
+        return 2f;
     }
 }

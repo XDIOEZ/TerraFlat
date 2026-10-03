@@ -37,6 +37,8 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
 
     [SerializeField]
     public DamageReceiver_SaveData Data = new DamageReceiver_SaveData();
+    [SerializeField, Tooltip("匹配工具在减去防御后固定乘二；None 表示没有工具弱点。")]
+    private ResourceToolKind weakTool;
 
     public float MaxHp
     {
@@ -135,8 +137,9 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
     public class DamageReceiver_SaveData
     {
         [Header("生命值设置")]
-        public float Hp = 100;
-        public float MaxHp = 100;
+        public float Hp = 50;
+        public float MaxHp = 50;
+        public int CombatBalanceVersion;
 
         [Header("Body part health")]
         [Tooltip("Characters can use independent body-part health. Non-character receivers keep legacy total health.")]
@@ -154,7 +157,7 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
         public List<BodyPartHealth> BodyParts = new List<BodyPartHealth>();
 
         [Header("防御设置")]
-        [Tooltip("切割、穿刺、劈砍、钝击防御分别只抵消同类型伤害。")]
+        [Tooltip("物理攻击力只减一次物理防御；弱点倍率在防御后应用。")]
         public CombatDefense DefenseValues = new CombatDefense();
         [Header("伤害者的UID列表")]
         public List<int> AttackersUIDs = new List<int>();
@@ -333,7 +336,9 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
         ClearBodyPartPenalties();
         ClearHitSlowdown();
         damageTakenMultiplier = 1f;
+        DamageReceiver_SaveData configuredBalance = Data;
         modData.ReadData(ref Data);
+        MigrateCombatBalance(Data, configuredBalance);
         UpgradeBodyPartData();
         NormalizeStatRanges();
         BindHandStateEvent();
@@ -697,7 +702,7 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
             $"target={item?.itemData?.IDName}:{item?.itemData?.Guid} factionBytes={faction.Length} prefixHex={prefix}", this);
     }
 
-    /// <summary>新旧攻击共享间隔、四类数值、难度、归因和原有生命提交/反馈链。</summary>
+    /// <summary>新旧攻击共享间隔、物理伤害、难度、归因和原有生命提交/反馈链。</summary>
     private float HurtContext(in FlatWorld.Combat.CombatDamageContext context, float rules, IDamageSender legacySender = null, BodyPartType? targetPart = null)
     {
         if (!Unity.Mathematics.math.all(Unity.Mathematics.math.isfinite(context.Damage)) ||
@@ -705,6 +710,9 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
         if (context.Clock.Time - lastDamageTime < Data.DamageInterval) return -1f;
         lastDamageTime = context.Clock.Time;
         float difficulty = GameplayCombatBridge.Difficulty().Resolve(context.SourceIsPlayer != 0, GameDifficultyService.IsPlayer(item));
+        if (context.IsTrueDamage == 0)
+            rules *= Mod_ResourceHarvest.ResolveAffinityMultiplier(weakTool, 1,
+                (ResourceToolKind)context.ResourceToolKind, context.ResourceToolTier, context.ResourceToolEfficiency);
         List<BodyPartDamageInfo> preparedHits = null;
         var values = UsesBodyPartHealth && context.IsTrueDamage == 0
             ? ResolveBodyPartAttack(context.Damage, difficulty, Mathf.Max(0f, damageTakenMultiplier) * rules, targetPart, out preparedHits)
@@ -726,6 +734,18 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
     }
 
     #region 统一伤害结算
+
+    /// <summary>版本升级按原血量比例换算新上限，不复活、不回满，也不重复覆盖后续实例改造。</summary>
+    public static void MigrateCombatBalance(DamageReceiver_SaveData saved, DamageReceiver_SaveData configured)
+    {
+        if (saved == null || configured == null || saved.CombatBalanceVersion >= configured.CombatBalanceVersion)
+            return;
+        float ratio = saved.MaxHp > 0f ? Mathf.Clamp01(saved.Hp / saved.MaxHp) : 0f;
+        saved.MaxHp = configured.MaxHp;
+        saved.Hp = configured.MaxHp * ratio;
+        saved.DefenseValues = new CombatDefense { Physical = configured.DefenseValues?.Physical ?? 0f };
+        saved.CombatBalanceVersion = configured.CombatBalanceVersion;
+    }
 
     /// <summary>先完成纯生命数值提交，再发布反馈；离开结算作用域时必须完成权威同步和死亡收尾。</summary>
     private float ResolveDamage(
@@ -1608,12 +1628,12 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
 
     #region 调试方法
 
-    [Button("重置四类防御")]
+    [Button("重置物理防御")]
     public void Debug_ResetTypedDefense()
     {
         if (!enableDebugTools)
         {
-            Debug.LogWarning($"[{item?.itemData?.GameName}] 调试开关未开启，跳过重置四类防御");
+            Debug.LogWarning($"[{item?.itemData?.GameName}] 调试开关未开启，跳过重置物理防御");
             return;
         }
 

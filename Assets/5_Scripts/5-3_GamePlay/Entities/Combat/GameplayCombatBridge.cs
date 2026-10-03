@@ -55,7 +55,7 @@ public static class GameplayCombatBridge
     public static float4 Values(CombatDamage damage) => damage == null ? float4.zero : new float4(damage.Cutting, damage.Piercing, damage.Chopping, damage.Blunt);
 
     /// <summary>旧接收器仍使用现有序列化防御对象，只在结算入口转换。</summary>
-    public static float4 Values(CombatDefense defense) => defense == null ? float4.zero : new float4(defense.Cutting, defense.Piercing, defense.Chopping, defense.Blunt);
+    public static float4 Values(CombatDefense defense) => new float4(0f, 0f, 0f, defense?.Physical ?? 0f);
 
     /// <summary>把结算分量转换成旧反馈事件所需类型，托管分配不进入 ECS 热路径。</summary>
     public static CombatDamage LegacyValues(float4 values) => new CombatDamage(values.x, values.y, values.z, values.w);

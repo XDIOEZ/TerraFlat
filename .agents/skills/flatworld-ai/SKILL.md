@@ -18,6 +18,8 @@ description: "Use when: 定位或修改 FlatWorld 的动物、怪物、蜂群、
 
 ## 运行边界
 
+- 原生 AIECS 的整体生命来自 Actor 生命配置，身体部位是独立耐久；禁止再按部位生命求和重写 `Vital.Hp/MaxHp`。一次攻击只扣一次整体血量，耗尽部位仍保留命中资格，避免缺肢后成为无敌实体。
+
 - 当前所有物种（包括 Zombie）均由完整 GameObject AI 主控；`spawner-settings.json` 的 `useAiecsBackend=false`，全部正式生成条目为 `gameObject`。未经用户再次要求，不执行旧文档中的全量 AI ECS 迁移。
 - 可选 ECS World 的唯一所有者是 `WorldEntityRuntime`，`AiecsSimulation` 只处理自身 AI 查询。停用 ECS AI 不能停用树木、作物等资源实体，也不能销毁共享 World；独立 World 仅用于诊断。
 - 退出或脚本域重载时，Unity 可能先销毁 World；居民快照与外部查询必须检查 `AiecsSimulation.IsCreated`，不能只判 Bridge 非空。快照先完整采集再替换，失效时保留冷快照；宿主在 `OnDisable` 释放自有资源，重复释放必须安全，快照失败不能阻断 BRG、镜像和 Native 内存清理。

@@ -64,13 +64,27 @@
       },
       "health": {
         "hasHp": true,
-        "hp": 180,
-        "maxHp": 180,
-        "defense": { "cutting": 8, "piercing": 8, "chopping": 8, "blunt": 8 },
+        "hp": 60,
+        "maxHp": 60,
+        "defense": {
+          "physical": 8
+        },
         "collider": {
-          "type": "BoxCollider2D", "enabled": true, "isTrigger": true,
-          "offset": { "x": 0, "y": 0 }, "size": { "x": 1, "y": 1 }, "edgeRadius": 0
-        }
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 1,
+            "y": 1
+          },
+          "edgeRadius": 0
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
       },
       "modules": {
         "建筑模块": {
@@ -124,12 +138,28 @@
         }
       },
       "health": {
-        "hasHp": true, "hp": 180, "maxHp": 180,
-        "defense": { "cutting": 8, "piercing": 8, "chopping": 8, "blunt": 8 },
+        "hasHp": true,
+        "hp": 60,
+        "maxHp": 60,
+        "defense": {
+          "physical": 8
+        },
         "collider": {
-          "type": "BoxCollider2D", "enabled": true, "isTrigger": true,
-          "offset": { "x": 0, "y": 0 }, "size": { "x": 1, "y": 1 }, "edgeRadius": 0
-        }
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 1,
+            "y": 1
+          },
+          "edgeRadius": 0
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
       },
       "modules": {
         "建筑模块": {
@@ -194,12 +224,28 @@
         }
       },
       "health": {
-        "hasHp": true, "hp": 60, "maxHp": 60,
-        "defense": { "cutting": 2, "piercing": 2, "chopping": 2, "blunt": 2 },
+        "hasHp": true,
+        "hp": 60,
+        "maxHp": 60,
+        "defense": {
+          "physical": 2
+        },
         "collider": {
-          "type": "BoxCollider2D", "enabled": true, "isTrigger": true,
-          "offset": { "x": 0, "y": 0 }, "size": { "x": 1, "y": 1 }, "edgeRadius": 0
-        }
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 1,
+            "y": 1
+          },
+          "edgeRadius": 0
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
       },
       "modules": {
         "建筑模块": {
@@ -264,12 +310,28 @@
         }
       },
       "health": {
-        "hasHp": true, "hp": 60, "maxHp": 60,
-        "defense": { "cutting": 2, "piercing": 2, "chopping": 2, "blunt": 2 },
+        "hasHp": true,
+        "hp": 60,
+        "maxHp": 60,
+        "defense": {
+          "physical": 2
+        },
         "collider": {
-          "type": "BoxCollider2D", "enabled": true, "isTrigger": true,
-          "offset": { "x": 0, "y": 0 }, "size": { "x": 1, "y": 1 }, "edgeRadius": 0
-        }
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 1,
+            "y": 1
+          },
+          "edgeRadius": 0
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
       },
       "modules": {
         "建筑模块": {
@@ -314,12 +376,28 @@
         }
       },
       "health": {
-        "hasHp": true, "hp": 160, "maxHp": 160,
-        "defense": { "cutting": 6, "piercing": 6, "chopping": 6, "blunt": 6 },
+        "hasHp": true,
+        "hp": 50,
+        "maxHp": 50,
+        "defense": {
+          "physical": 6
+        },
         "collider": {
-          "type": "BoxCollider2D", "enabled": true, "isTrigger": true,
-          "offset": { "x": 0, "y": 0 }, "size": { "x": 1, "y": 1 }, "edgeRadius": 0
-        }
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 1,
+            "y": 1
+          },
+          "edgeRadius": 0
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
       },
       "modules": {
         "建筑模块": {
@@ -366,12 +444,28 @@
         }
       },
       "health": {
-        "hasHp": true, "hp": 160, "maxHp": 160,
-        "defense": { "cutting": 6, "piercing": 6, "chopping": 6, "blunt": 6 },
+        "hasHp": true,
+        "hp": 50,
+        "maxHp": 50,
+        "defense": {
+          "physical": 6
+        },
         "collider": {
-          "type": "BoxCollider2D", "enabled": true, "isTrigger": true,
-          "offset": { "x": 0, "y": 0 }, "size": { "x": 1, "y": 1 }, "edgeRadius": 0
-        }
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 1,
+            "y": 1
+          },
+          "edgeRadius": 0
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
       },
       "modules": {
         "建筑模块": {

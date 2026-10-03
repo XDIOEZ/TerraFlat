@@ -510,15 +510,14 @@
         "生命值系统模块": {
           "parameters": {
             "Data": {
-              "Hp": 100,
-              "MaxHp": 100,
+              "Hp": 50,
+              "MaxHp": 50,
               "DefenseValues": {
-                "Cutting": 0,
-                "Piercing": 0,
-                "Chopping": 0,
-                "Blunt": 0
-              }
-            }
+                "Physical": 18
+              },
+              "CombatBalanceVersion": 1
+            },
+            "weakTool": 0
           }
         },
         "harvestRequirement": {
@@ -531,7 +530,7 @@
           },
           "parameters": {
             "requiredTool": 1,
-            "minimumTier": 4
+            "minimumTier": 1
           }
         }
       }
@@ -580,7 +579,7 @@
           "enabled": true,
           "parameters": {
             "harvestTier": 1,
-            "harvestEfficiency": 1.0
+            "harvestEfficiency": 2.0
           }
         },
         "damage": {
@@ -607,12 +606,15 @@
         "shovel": {
           "parameters": {
             "harvestTier": 1,
-            "harvestEfficiency": 1.0
+            "harvestEfficiency": 2.0
           }
         },
         "damage": {
           "parameters": {
-            "DamageValues": { "Cutting": 0.0, "Piercing": 4.0, "Chopping": 0.0, "Blunt": 2.0 }
+            "DamageValues": {
+              "Physical": 5,
+              "ImpactKind": 2
+            }
           }
         }
       }
@@ -639,7 +641,7 @@
         "shovel": {
           "parameters": {
             "harvestTier": 2,
-            "harvestEfficiency": 1.5
+            "harvestEfficiency": 2.0
           }
         },
         "damage": {
@@ -669,7 +671,10 @@
         },
         "damage": {
           "parameters": {
-            "DamageValues": { "Cutting": 0.0, "Piercing": 12.0, "Chopping": 0.0, "Blunt": 5.0 }
+            "DamageValues": {
+              "Physical": 12,
+              "ImpactKind": 2
+            }
           }
         }
       }
@@ -691,12 +696,15 @@
         "shovel": {
           "parameters": {
             "harvestTier": 3,
-            "harvestEfficiency": 2.25
+            "harvestEfficiency": 2.0
           }
         },
         "damage": {
           "parameters": {
-            "DamageValues": { "Cutting": 0.0, "Piercing": 16.0, "Chopping": 0.0, "Blunt": 6.5 }
+            "DamageValues": {
+              "Physical": 14,
+              "ImpactKind": 2
+            }
           }
         }
       }
@@ -718,12 +726,15 @@
         "shovel": {
           "parameters": {
             "harvestTier": 4,
-            "harvestEfficiency": 2.7
+            "harvestEfficiency": 2.0
           }
         },
         "damage": {
           "parameters": {
-            "DamageValues": { "Cutting": 0.0, "Piercing": 18.0, "Chopping": 0.0, "Blunt": 7.0 }
+            "DamageValues": {
+              "Physical": 16,
+              "ImpactKind": 2
+            }
           }
         }
       }
@@ -745,12 +756,15 @@
         "shovel": {
           "parameters": {
             "harvestTier": 4,
-            "harvestEfficiency": 2.5
+            "harvestEfficiency": 2.0
           }
         },
         "damage": {
           "parameters": {
-            "DamageValues": { "Cutting": 0.0, "Piercing": 25.0, "Chopping": 0.0, "Blunt": 9.0 }
+            "DamageValues": {
+              "Physical": 20,
+              "ImpactKind": 2
+            }
           }
         }
       }
@@ -1011,7 +1025,9 @@
       "health": {
         "hasHp": true,
         "hp": 40,
-        "maxHp": 40
+        "maxHp": 40,
+        "weakTool": 4,
+        "combatBalanceVersion": 1
       },
       "modules": {
         "建筑模块": {

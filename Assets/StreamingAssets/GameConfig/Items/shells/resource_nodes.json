@@ -75,21 +75,19 @@
           },
           "parameters": {
             "Data": {
-              "Hp": 30.0,
-              "MaxHp": 30.0,
+              "Hp": 40,
+              "MaxHp": 40,
               "UseBodyPartHealth": false,
               "TwoPartHitChance": 0.0,
               "BodyPartDataVersion": 0,
               "BodyParts": [],
               "DefenseValues": {
-                "Cutting": 0.0,
-                "Piercing": 0.0,
-                "Chopping": 0.0,
-                "Blunt": 0.0
+                "Physical": 1
               },
               "AttackersUIDs": [],
               "DamageInterval": 0.12,
-              "DestroyDelay": 0.0
+              "DestroyDelay": 0.0,
+              "CombatBalanceVersion": 1
             },
             "impactAudioMaterial": 0,
             "hurtAudioCueId": "",
@@ -110,7 +108,8 @@
                 "y": 0.3
               },
               "edgeRadius": 0.0
-            }
+            },
+            "weakTool": 3
           }
         },
         "Mod_HiveColony": {
@@ -246,21 +245,19 @@
           },
           "parameters": {
             "Data": {
-              "Hp": 180.0,
-              "MaxHp": 200.0,
+              "Hp": 50,
+              "MaxHp": 50,
               "UseBodyPartHealth": false,
               "TwoPartHitChance": 0.25,
               "BodyPartDataVersion": 0,
               "BodyParts": [],
               "DefenseValues": {
-                "Cutting": 2.0,
-                "Piercing": 4.0,
-                "Chopping": 0.0,
-                "Blunt": 1.5
+                "Physical": 3
               },
               "AttackersUIDs": [],
               "DamageInterval": 0.12,
-              "DestroyDelay": 0.0
+              "DestroyDelay": 0.0,
+              "CombatBalanceVersion": 1
             },
             "impactAudioMaterial": 0,
             "hurtAudioCueId": "",
@@ -311,7 +308,8 @@
                 "y": 0.91883105
               },
               "edgeRadius": 0.0
-            }
+            },
+            "weakTool": 3
           }
         },
         "生长模块": {
@@ -571,21 +569,19 @@
           },
           "parameters": {
             "Data": {
-              "Hp": 180.0,
-              "MaxHp": 180.0,
+              "Hp": 50,
+              "MaxHp": 50,
               "UseBodyPartHealth": false,
               "TwoPartHitChance": 0.25,
               "BodyPartDataVersion": 0,
               "BodyParts": [],
               "DefenseValues": {
-                "Cutting": 2.0,
-                "Piercing": 4.0,
-                "Chopping": 0.0,
-                "Blunt": 1.5
+                "Physical": 3
               },
               "AttackersUIDs": [],
               "DamageInterval": 0.12,
-              "DestroyDelay": 0.0
+              "DestroyDelay": 0.0,
+              "CombatBalanceVersion": 1
             },
             "impactAudioMaterial": 0,
             "hurtAudioCueId": "",
@@ -636,7 +632,8 @@
                 "y": 0.91883105
               },
               "edgeRadius": 0.0
-            }
+            },
+            "weakTool": 3
           }
         },
         "生长模块": {
@@ -874,21 +871,19 @@
           },
           "parameters": {
             "Data": {
-              "Hp": 300.0,
-              "MaxHp": 300.0,
+              "Hp": 50,
+              "MaxHp": 50,
               "UseBodyPartHealth": false,
               "TwoPartHitChance": 0.25,
               "BodyPartDataVersion": 0,
               "BodyParts": [],
               "DefenseValues": {
-                "Cutting": 10.0,
-                "Piercing": 3.0,
-                "Chopping": 12.0,
-                "Blunt": 3.0
+                "Physical": 6
               },
               "AttackersUIDs": [],
               "DamageInterval": 0.12,
-              "DestroyDelay": 0.0
+              "DestroyDelay": 0.0,
+              "CombatBalanceVersion": 1
             },
             "impactAudioMaterial": 0,
             "hurtAudioCueId": "",
@@ -939,7 +934,8 @@
                 "y": 1.0
               },
               "edgeRadius": 0.0
-            }
+            },
+            "weakTool": 0
           }
         },
         "harvestRequirement": {
@@ -1051,21 +1047,19 @@
           },
           "parameters": {
             "Data": {
-              "Hp": 200.0,
-              "MaxHp": 200.0,
+              "Hp": 50,
+              "MaxHp": 50,
               "UseBodyPartHealth": false,
               "TwoPartHitChance": 0.25,
               "BodyPartDataVersion": 0,
               "BodyParts": [],
               "DefenseValues": {
-                "Cutting": 14.0,
-                "Piercing": 8.0,
-                "Chopping": 16.0,
-                "Blunt": 6.0
+                "Physical": 8
               },
               "AttackersUIDs": [],
               "DamageInterval": 0.12,
-              "DestroyDelay": 0.0
+              "DestroyDelay": 0.0,
+              "CombatBalanceVersion": 1
             },
             "impactAudioMaterial": 0,
             "hurtAudioCueId": "",
@@ -1116,7 +1110,8 @@
                 "y": 1.0
               },
               "edgeRadius": 0.0
-            }
+            },
+            "weakTool": 0
           }
         },
         "harvestRequirement": {
@@ -1228,21 +1223,19 @@
           },
           "parameters": {
             "Data": {
-              "Hp": 300.0,
-              "MaxHp": 300.0,
+              "Hp": 60,
+              "MaxHp": 60,
               "UseBodyPartHealth": false,
               "TwoPartHitChance": 0.25,
               "BodyPartDataVersion": 0,
               "BodyParts": [],
               "DefenseValues": {
-                "Cutting": 18.0,
-                "Piercing": 13.0,
-                "Chopping": 20.0,
-                "Blunt": 8.0
+                "Physical": 16
               },
               "AttackersUIDs": [],
               "DamageInterval": 0.12,
-              "DestroyDelay": 0.0
+              "DestroyDelay": 0.0,
+              "CombatBalanceVersion": 1
             },
             "impactAudioMaterial": 0,
             "hurtAudioCueId": "",
@@ -1293,7 +1286,8 @@
                 "y": 1.0
               },
               "edgeRadius": 0.0
-            }
+            },
+            "weakTool": 0
           }
         },
         "harvestRequirement": {
@@ -1306,7 +1300,7 @@
           },
           "parameters": {
             "requiredTool": 1,
-            "minimumTier": 2
+            "minimumTier": 1
           }
         }
       },
@@ -1405,21 +1399,19 @@
           },
           "parameters": {
             "Data": {
-              "Hp": 180.0,
-              "MaxHp": 180.0,
+              "Hp": 50,
+              "MaxHp": 50,
               "UseBodyPartHealth": false,
               "TwoPartHitChance": 0.25,
               "BodyPartDataVersion": 0,
               "BodyParts": [],
               "DefenseValues": {
-                "Cutting": 12.0,
-                "Piercing": 2.0,
-                "Chopping": 14.0,
-                "Blunt": 2.0
+                "Physical": 4
               },
               "AttackersUIDs": [],
               "DamageInterval": 0.12,
-              "DestroyDelay": 0.0
+              "DestroyDelay": 0.0,
+              "CombatBalanceVersion": 1
             },
             "impactAudioMaterial": 0,
             "hurtAudioCueId": "",
@@ -1470,7 +1462,8 @@
                 "y": 1.0
               },
               "edgeRadius": 0.0
-            }
+            },
+            "weakTool": 4
           }
         }
       },
@@ -1569,21 +1562,19 @@
           },
           "parameters": {
             "Data": {
-              "Hp": 400.0,
-              "MaxHp": 400.0,
+              "Hp": 50,
+              "MaxHp": 50,
               "UseBodyPartHealth": false,
               "TwoPartHitChance": 0.25,
               "BodyPartDataVersion": 0,
               "BodyParts": [],
               "DefenseValues": {
-                "Cutting": 16.0,
-                "Piercing": 7.0,
-                "Chopping": 18.0,
-                "Blunt": 5.0
+                "Physical": 10
               },
               "AttackersUIDs": [],
               "DamageInterval": 0.12,
-              "DestroyDelay": 0.0
+              "DestroyDelay": 0.0,
+              "CombatBalanceVersion": 1
             },
             "impactAudioMaterial": 0,
             "hurtAudioCueId": "",
@@ -1634,7 +1625,8 @@
                 "y": 1.0
               },
               "edgeRadius": 0.0
-            }
+            },
+            "weakTool": 0
           }
         },
         "harvestRequirement": {
@@ -1647,7 +1639,7 @@
           },
           "parameters": {
             "requiredTool": 1,
-            "minimumTier": 2
+            "minimumTier": 1
           }
         }
       },
@@ -1753,21 +1745,19 @@
           },
           "parameters": {
             "Data": {
-              "Hp": 180.0,
-              "MaxHp": 180.0,
+              "Hp": 40,
+              "MaxHp": 40,
               "UseBodyPartHealth": false,
               "TwoPartHitChance": 0.25,
               "BodyPartDataVersion": 0,
               "BodyParts": [],
               "DefenseValues": {
-                "Cutting": 12.0,
-                "Piercing": 2.0,
-                "Chopping": 14.0,
-                "Blunt": 2.0
+                "Physical": 3
               },
               "AttackersUIDs": [],
               "DamageInterval": 0.12,
-              "DestroyDelay": 0.0
+              "DestroyDelay": 0.0,
+              "CombatBalanceVersion": 1
             },
             "impactAudioMaterial": 0,
             "hurtAudioCueId": "",
@@ -1818,7 +1808,8 @@
                 "y": 1.0
               },
               "edgeRadius": 0.0
-            }
+            },
+            "weakTool": 0
           }
         },
         "harvestRequirement": {
@@ -1937,21 +1928,19 @@
           },
           "parameters": {
             "Data": {
-              "Hp": 200.0,
-              "MaxHp": 200.0,
+              "Hp": 60,
+              "MaxHp": 60,
               "UseBodyPartHealth": false,
               "TwoPartHitChance": 0.25,
               "BodyPartDataVersion": 0,
               "BodyParts": [],
               "DefenseValues": {
-                "Cutting": 2.0,
-                "Piercing": 4.0,
-                "Chopping": 0.0,
-                "Blunt": 1.5
+                "Physical": 5
               },
               "AttackersUIDs": [],
               "DamageInterval": 0.12,
-              "DestroyDelay": 0.0
+              "DestroyDelay": 0.0,
+              "CombatBalanceVersion": 1
             },
             "impactAudioMaterial": 0,
             "hurtAudioCueId": "",
@@ -2002,7 +1991,8 @@
                 "y": 1.0
               },
               "edgeRadius": 0.0
-            }
+            },
+            "weakTool": 3
           }
         },
         "生长模块": {

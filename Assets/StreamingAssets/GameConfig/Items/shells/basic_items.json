@@ -1815,7 +1815,10 @@
           "id": "Mod_Damage",
           "enabled": true,
           "parameters": {
-            "DamageValues": {"Cutting": 0.0, "Piercing": 0.0, "Chopping": 0.0, "Blunt": 12.0},
+            "DamageValues": {
+              "Physical": 12.0,
+              "ImpactKind": 4
+            },
             "DamageInterval": -1.0,
             "EnableOnTriggerEnterDamage": true,
             "OnlyDealDamageWhenInHand": false,
@@ -3231,10 +3234,7 @@
         "hp": 20.0,
         "maxHp": 20.0,
         "defense": {
-          "cutting": 0.0,
-          "piercing": 0.0,
-          "chopping": 0.0,
-          "blunt": 0.0
+          "physical": 0.0
         },
         "collider": {
           "type": "BoxCollider2D",
@@ -3248,7 +3248,9 @@
             "x": 1.0,
             "y": 1.0
           }
-        }
+        },
+        "weakTool": 3,
+        "combatBalanceVersion": 1
       },
       "lootTableId": "Coconut_Green_Default",
       "tags": [],
@@ -3338,10 +3340,7 @@
         "hp": 20.0,
         "maxHp": 20.0,
         "defense": {
-          "cutting": 0.0,
-          "piercing": 0.0,
-          "chopping": 0.0,
-          "blunt": 0.0
+          "physical": 0.0
         },
         "collider": {
           "type": "BoxCollider2D",
@@ -3355,7 +3354,9 @@
             "x": 1.0,
             "y": 1.0
           }
-        }
+        },
+        "weakTool": 3,
+        "combatBalanceVersion": 1
       },
       "lootTableId": "Coconut_Half_Default",
       "tags": [
@@ -3550,10 +3551,7 @@
         "hp": 20.0,
         "maxHp": 20.0,
         "defense": {
-          "cutting": 0.0,
-          "piercing": 0.0,
-          "chopping": 0.0,
-          "blunt": 0.0
+          "physical": 0.0
         },
         "collider": {
           "type": "BoxCollider2D",
@@ -3567,7 +3565,9 @@
             "x": 1.0,
             "y": 1.0
           }
-        }
+        },
+        "weakTool": 3,
+        "combatBalanceVersion": 1
       },
       "lootTableId": "Coconut_Nude_Default",
       "tags": [],
@@ -6170,7 +6170,10 @@
         "damage": {
           "prefab": "Mod_Damage", "id": "Mod_Damage", "enabled": true,
           "parameters": {
-            "DamageValues": {"Cutting": 0.0, "Piercing": 0.0, "Chopping": 0.0, "Blunt": 12.0},
+            "DamageValues": {
+              "Physical": 12.0,
+              "ImpactKind": 4
+            },
             "DamageInterval": -1.0, "EnableOnTriggerEnterDamage": true, "OnlyDealDamageWhenInHand": false,
             "MaxAttackTargets": 1, "EnableHitSlowdown": true,
             "$collider2D": {"type": "BoxCollider2D", "enabled": false, "isTrigger": true,

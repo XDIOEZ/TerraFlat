@@ -43,7 +43,7 @@ public partial class Mod_DamageReceiver
 
     public void RemoveBodyPartArmor(object source) => bodyArmorSources.Remove(source);
 
-    /// <summary>全身基础防御与覆盖此部位的装备防御只合并一次，再按类型抵扣。</summary>
+    /// <summary>全身基础防御与覆盖此部位的装备防御只合并一次，再抵扣一次物理防御。</summary>
     public CombatDefense GetBodyPartDefense(BodyPartHealth part)
     {
         var result = new CombatDefense(Defense.Cutting, Defense.Piercing, Defense.Chopping, Defense.Blunt);
@@ -53,12 +53,12 @@ public partial class Mod_DamageReceiver
         return result;
     }
 
-    /// <summary>共享纯计算入口；先护甲，再部位倍率、难度和来源倍率，不受剩余耐久截断。</summary>
+    /// <summary>共享纯计算入口；先按难度修正攻击并减护甲，再应用部位和来源倍率，不受剩余耐久截断。</summary>
     public static float4 CalculateBodyPartDamage(float4 raw, CombatDefense armor, float partMultiplier,
         float share = 1f, float difficulty = 1f, float receivedMultiplier = 1f)
     {
-        return math.max(float4.zero, raw - GameplayCombatBridge.Values(armor)) *
-            (share * partMultiplier * difficulty * receivedMultiplier);
+        return FlatWorld.Combat.CombatRules.Resolve(raw, GameplayCombatBridge.Values(armor), difficulty,
+            share * partMultiplier * receivedMultiplier);
     }
 
     private float4 ResolveBodyPartAttack(float4 raw, float difficulty, float receivedMultiplier,

@@ -19,14 +19,14 @@ public sealed class TileBuildingDamageProfile
     [Min(1f)]
     public float MaxHealth = 100f;
 
-    [Tooltip("格子建筑的切割、穿刺、劈砍、钝击防御。")]
+    [Tooltip("格子建筑的单一物理防御。")]
     public CombatDefense DefenseValues = new CombatDefense();
 
-    [Tooltip("None 表示任意武器可攻击；天然岩壁等资源地块可配置为 Pickaxe。")]
+    [Tooltip("工具弱点；匹配时在防御后乘二，None 表示没有工具弱点。")]
     public TileDamageToolKind RequiredTool = TileDamageToolKind.None;
 
     [Min(0f)]
-    [Tooltip("通过工具限制后，任意有攻击力的武器对该建筑至少造成的伤害；0 表示不保底。")]
+    [Tooltip("历史兼容字段；物理伤害不再使用最低伤害保底。")]
     public float MinimumWeaponDamage;
 
     public CombatImpactMaterial ImpactMaterial = CombatImpactMaterial.Default;
@@ -37,7 +37,7 @@ public sealed class TileBuildingDamageProfile
     [Min(0)]
     public int DropAmount;
 
-    /// <summary>读取并校正格子建筑的四类防御。</summary>
+    /// <summary>读取并校正格子建筑的物理防御。</summary>
     public CombatDefense ResolveDefense()
     {
         DefenseValues ??= new CombatDefense();

@@ -506,10 +506,7 @@ public static class BuildingShellMigrationTool
                 ["maxHp"] = receiver.Data.MaxHp,
                 ["defense"] = new JObject
                 {
-                    ["cutting"] = receiver.Data.DefenseValues?.Cutting ?? 0f,
-                    ["piercing"] = receiver.Data.DefenseValues?.Piercing ?? 0f,
-                    ["chopping"] = receiver.Data.DefenseValues?.Chopping ?? 0f,
-                    ["blunt"] = receiver.Data.DefenseValues?.Blunt ?? 0f
+                    ["physical"] = receiver.Data.DefenseValues?.Physical ?? 0f
                 },
                 ["moduleLocalPosition"] = ItemDefinitionMigrationTool.Vector3Token(receiver.transform.localPosition)
             };

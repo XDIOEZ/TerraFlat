@@ -116,15 +116,14 @@
           "id": "生命值系统模块",
           "parameters": {
             "Data": {
-              "Hp": 20.0,
-              "MaxHp": 20.0,
+              "Hp": 30,
+              "MaxHp": 30,
               "DefenseValues": {
-                "Cutting": 1.0,
-                "Piercing": 1.0,
-                "Chopping": 1.0,
-                "Blunt": 1.0
-              }
-            }
+                "Physical": 0
+              },
+              "CombatBalanceVersion": 1
+            },
+            "weakTool": 0
           }
         }
       },
@@ -172,7 +171,10 @@
         "capabilities": ["movement", "perception", "nutrition", "feeding", "flight", "hiveMember", "combat", "chase"],
         "nutrition": { "maximum": 1440.0, "drainPerSecond": 1.0, "feedBelow": 800.0, "feedGain": 500.0, "resource": "nectar" },
         "flight": { "height": 0.8, "speed": 3.2, "staminaMaximum": 100.0, "staminaDrainPerSecond": 0.0 },
-        "combat": { "damage": { "piercing": 1.0 } }
+        "combat": { "damage": {
+          "physical": 1,
+          "ImpactKind": 2
+        } }
       },
       "weight": 0.001,
       "parent": "Bird",
@@ -235,7 +237,15 @@
         },
         "health": {
           "parameters": {
-            "Data": { "Hp": 4.0, "MaxHp": 4.0 }
+            "Data": {
+              "Hp": 6,
+              "MaxHp": 6,
+              "DefenseValues": {
+                "Physical": 0
+              },
+              "CombatBalanceVersion": 1
+            },
+            "weakTool": 0
           }
         }
       },

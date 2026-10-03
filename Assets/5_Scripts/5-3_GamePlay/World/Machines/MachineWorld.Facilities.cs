@@ -75,10 +75,13 @@ public static partial class MachineWorld
     /// <summary>普通工作方块和机械节点使用同一个快照封装，不需要伪造机械模块。</summary>
     public static MachineState ReadMachineState(ItemData snapshot)
     {
-        if (MachinePersistence.Has(snapshot, "core")) return MachinePersistence.Read<MachineState>(snapshot, "core")
-            ?? throw new InvalidOperationException("机器核心快照为空。");
-        return TryGetModuleData(snapshot, out var module) && module.BitData?.Length > 0
-            ? module.GetData<MachineState>() ?? new MachineState() : new MachineState();
+        MachineState state = MachinePersistence.Has(snapshot, "core")
+            ? MachinePersistence.Read<MachineState>(snapshot, "core") ?? throw new InvalidOperationException("机器核心快照为空。")
+            : TryGetModuleData(snapshot, out var module) && module.BitData?.Length > 0
+                ? module.GetData<MachineState>() ?? new MachineState() : new MachineState();
+        if (state.Hp >= 0f)
+            state.Hp = Mathf.Min(state.Hp, ResolveMaximumHp(snapshot)); // 旧机器快照不能超过当前定义与实例品质的耐久上限。
+        return state;
     }
 
     public static void WriteMachineState(ItemData snapshot, MachineState state)

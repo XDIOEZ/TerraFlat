@@ -61,10 +61,7 @@ namespace FlatWorld.AIECS.Gameplay
                 Recovery = Number(ai, "attackRecoveryDuration", 0.35f), Cooldown = Number(ai, "attackCooldown", 2f),
                 // 被动生态单位不会进入 Attack 规则，因此无需为了纯逃跑行为伪造旧攻击模块。
                 Damage = attack != null ? GameplayCombatBridge.Values(attack["DamageValues"]?.ToObject<CombatDamage>()) :
-                    new float4(Number(ecs?["combat"]?["damage"], "cutting", 0f),
-                        Number(ecs?["combat"]?["damage"], "piercing", 0f),
-                        Number(ecs?["combat"]?["damage"], "chopping", 0f),
-                        Number(ecs?["combat"]?["damage"], "blunt", 0f)),
+                    GameplayCombatBridge.Values(ecs?["combat"]?["damage"]?.ToObject<CombatDamage>()),
                 SlowMultiplier = Number(attack, "HitSlowMultiplier", 0.5f),
                 SlowDuration = attack == null || (bool?)attack["EnableHitSlowdown"] == false
                     ? 0f
@@ -84,11 +81,6 @@ namespace FlatWorld.AIECS.Gameplay
                     MaxHp = part.MaxHp, Weight = part.AreaRatio * part.InjuryProbability });
             }
             float hp = life.Hp, maxHp = life.MaxHp;
-            if (anatomy.Parts.Length > 0)
-            {
-                hp = 0f; maxHp = 0f;
-                foreach (var part in anatomy.Parts) { hp += part.Hp; maxHp += part.MaxHp; }
-            }
             float flightHeight = Number(ecs?["flight"], "height", 0.8f);
             float flightDrain = Number(ecs?["flight"], "staminaDrainPerSecond", 1f);
             bool permanentFlight = flightDrain <= 0f;
@@ -261,7 +253,7 @@ namespace FlatWorld.AIECS.Gameplay
         /// <summary>新物种可直接从 ECS 配置获得生命值，不要求挂旧 Mod_DamageReceiver 模块。</summary>
         private static Mod_DamageReceiver.DamageReceiver_SaveData EcsLife(JToken health)
         {
-            float maximum = math.max(0.001f, Number(health, "maxHp", 100f));
+            float maximum = math.max(0.001f, Number(health, "maxHp", 50f));
             JToken defense = health?["defense"];
             return new Mod_DamageReceiver.DamageReceiver_SaveData
             {
@@ -270,9 +262,7 @@ namespace FlatWorld.AIECS.Gameplay
                 DamageInterval = math.max(0f, Number(health, "damageInterval", 0.1f)),
                 BodyPartDataVersion = 1,
                 TwoPartHitChance = 0f,
-                DefenseValues = new CombatDefense(
-                    Number(defense, "cutting", 0f), Number(defense, "piercing", 0f),
-                    Number(defense, "chopping", 0f), Number(defense, "blunt", 0f))
+                DefenseValues = defense?.ToObject<CombatDefense>() ?? new CombatDefense()
             };
         }
 

@@ -159,20 +159,18 @@
           },
           "parameters": {
             "Data": {
-              "Hp": 30.0,
-              "MaxHp": 30.0,
+              "Hp": 30,
+              "MaxHp": 30,
               "UseBodyPartHealth": false,
               "TwoPartHitChance": 0.25,
               "BodyPartDataVersion": 0,
               "BodyParts": [],
               "DefenseValues": {
-                "Cutting": 0.0,
-                "Piercing": 0.0,
-                "Chopping": 0.0,
-                "Blunt": 0.0
+                "Physical": 0
               },
               "DamageInterval": 0.12,
-              "DestroyDelay": 0.0
+              "DestroyDelay": 0.0,
+              "CombatBalanceVersion": 1
             },
             "impactAudioMaterial": 0,
             "hurtAudioCueId": "",
@@ -223,7 +221,8 @@
                 "y": 0.25
               },
               "edgeRadius": 0.0
-            }
+            },
+            "weakTool": 0
           }
         },
         "food": {

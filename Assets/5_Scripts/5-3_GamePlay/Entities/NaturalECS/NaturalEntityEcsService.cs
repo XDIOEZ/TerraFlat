@@ -544,6 +544,7 @@ namespace FlatWorld.NaturalEntities
                     data.GetData<Mod_DamageReceiver.DamageReceiver_SaveData>();
                 if (saved != null)
                 {
+                    Mod_DamageReceiver.MigrateCombatBalance(saved, record.Profile.HealthDefaults);
                     result.Hp = saved.Hp;
                     result.MaxHp = saved.MaxHp;
                     result.AttackersUIDs = saved.AttackersUIDs;

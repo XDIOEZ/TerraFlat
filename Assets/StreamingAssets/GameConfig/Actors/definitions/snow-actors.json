@@ -452,25 +452,22 @@
         "damage": {
           "parameters": {
             "DamageValues": {
-              "Cutting": 10.0,
-              "Piercing": 10.0,
-              "Chopping": 1.0,
-              "Blunt": 1.0
+              "Physical": 14,
+              "ImpactKind": 1
             }
           }
         },
         "health": {
           "parameters": {
             "Data": {
-              "Hp": 100.0,
-              "MaxHp": 100.0,
+              "Hp": 60,
+              "MaxHp": 60,
               "DefenseValues": {
-                "Cutting": 0.5,
-                "Piercing": 0.5,
-                "Chopping": 0.5,
-                "Blunt": 0.5
-              }
-            }
+                "Physical": 3
+              },
+              "CombatBalanceVersion": 1
+            },
+            "weakTool": 0
           }
         },
         "temperature": {

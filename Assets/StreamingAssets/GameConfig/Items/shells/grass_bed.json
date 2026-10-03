@@ -58,14 +58,24 @@
         "hasHp": true,
         "hp": 60,
         "maxHp": 60,
-        "defense": { "cutting": 2, "piercing": 2, "chopping": 2, "blunt": 2 },
+        "defense": {
+          "physical": 2
+        },
         "collider": {
           "type": "BoxCollider2D",
           "enabled": true,
           "isTrigger": true,
-          "offset": { "x": 0.5, "y": 0 },
-          "size": { "x": 1.9, "y": 0.7 }
-        }
+          "offset": {
+            "x": 0.5,
+            "y": 0
+          },
+          "size": {
+            "x": 1.9,
+            "y": 0.7
+          }
+        },
+        "weakTool": 0,
+        "combatBalanceVersion": 1
       },
       "modules": {
         "建筑模块": {

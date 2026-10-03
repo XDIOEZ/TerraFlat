@@ -1213,14 +1213,13 @@ public static class ItemDefinitionCatalogLoader
             {
                 ["Hp"] = hp,
                 ["MaxHp"] = maxHp,
+                ["CombatBalanceVersion"] = health.CombatBalanceVersion,
                 ["DefenseValues"] = new JObject
                 {
-                    ["Cutting"] = defense.Cutting,
-                    ["Piercing"] = defense.Piercing,
-                    ["Chopping"] = defense.Chopping,
-                    ["Blunt"] = defense.Blunt
+                    ["Physical"] = defense.Physical
                 }
-            }
+            },
+            ["weakTool"] = (int)health.WeakTool
         };
         if (lootTable != null)
             ((JObject)parameters["Data"])["LootTable"] = lootTable.CreateDamageReceiverEntries();

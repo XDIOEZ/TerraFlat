@@ -184,10 +184,10 @@ public sealed class MachineCombatBridge : IGameplayCombatBridge
     public static float CalculateDamage(ItemHealthDefinitionDto health, CombatDamageContext context, float difficulty)
     {
         ItemDefenseDefinitionDto defense = health.Defense;
-        float4 defenses = defense == null ? float4.zero :
-            new float4(defense.Cutting, defense.Piercing, defense.Chopping, defense.Blunt);
-        return math.csum(CombatRules.Resolve(context.Damage,
-            context.IsTrueDamage != 0 ? float4.zero : defenses, difficulty, context.BuildingMultiplier));
+        float weakness = context.IsTrueDamage != 0 ? 1f : Mod_ResourceHarvest.ResolveAffinityMultiplier(
+            health.WeakTool, 1, (ResourceToolKind)context.ResourceToolKind, context.ResourceToolTier, context.ResourceToolEfficiency);
+        return CombatRules.ResolvePhysical(math.csum(context.Damage),
+            context.IsTrueDamage != 0 ? 0f : defense?.Physical ?? 0f, difficulty, weakness);
     }
     #endregion
 }

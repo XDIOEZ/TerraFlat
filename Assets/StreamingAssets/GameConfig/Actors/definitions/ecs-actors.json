@@ -40,24 +40,21 @@
         "health": {
           "parameters": {
             "Data": {
-              "Hp": 80.0,
-              "MaxHp": 80.0,
+              "Hp": 50,
+              "MaxHp": 50,
               "DefenseValues": {
-                "Cutting": 0.5,
-                "Piercing": 0.5,
-                "Chopping": 0.5,
-                "Blunt": 0.5
-              }
-            }
+                "Physical": 2
+              },
+              "CombatBalanceVersion": 1
+            },
+            "weakTool": 0
           }
         },
         "damage": {
           "parameters": {
             "DamageValues": {
-              "Cutting": 2.0,
-              "Piercing": 0.0,
-              "Chopping": 0.0,
-              "Blunt": 8.0
+              "Physical": 9,
+              "ImpactKind": 4
             }
           }
         },

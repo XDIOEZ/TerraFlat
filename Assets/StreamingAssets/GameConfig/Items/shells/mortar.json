@@ -18,8 +18,10 @@
       "tags": [],
       "health": {
         "hasHp": true,
-        "hp": 120,
-        "maxHp": 120
+        "hp": 50,
+        "maxHp": 50,
+        "weakTool": 0,
+        "combatBalanceVersion": 1
       },
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/StoneMortar/StoneMortar_Icon.png",

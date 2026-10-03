@@ -40,7 +40,7 @@ public enum BuildingPlacementLayer
 /// 建筑召唤器是持久化载体，PlacedBuilding 是快照还原后的世界实例。
 /// 拆除时先生成带快照的召唤器，成功后才删除原建筑。
 /// </summary>
-public partial class Mod_Building : Module, IIncomingDamageRule
+public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamageContextRule
 {
     private const int CurrentDataVersion = 3;
     private const string StoneWallBuildingId = "Wall_Stone";
@@ -139,16 +139,13 @@ public partial class Mod_Building : Module, IIncomingDamageRule
     public bool BlocksMovement => !IsGroundFacility && (BuildingPlacementLifecycle.GetTraversalPolicy(item)?.BlocksMovement ?? true);
     #endregion
 
-    /// <summary>落地建筑在完成自身防御结算后应用攻击方的建筑伤害倍率。</summary>
+    /// <summary>建筑工具弱点由生命模块统一结算，旧建筑倍率接口保持中性。</summary>
     public float GetDamageMultiplier(IDamageSender sender)
     {
-        if (Data?.Role != BuildingRole.PlacedBuilding)
-            return 1f;
-
-        return sender is IBuildingDamageSource buildingDamageSource
-            ? Mathf.Max(0f, buildingDamageSource.BuildingDamageMultiplier)
-            : 1f;
+        return 1f;
     }
+
+    public float GetDamageMultiplier(in FlatWorld.Combat.CombatDamageContext context) => 1f;
 
     /// <summary>
     /// 便携设施的召唤器和落地本体使用不同稳定 Item ID；当前实例角色必须与自己的载体 ID 一致，

@@ -24,9 +24,9 @@ description: "Use when: 定位或修改 FlatWorld 的伤害、生命值、身体
 - 技能由 `GameRes.SkillDict` 注册；移动资源同时检查 Addressables `Skill` 标签。
 - Buff 生命周期属于 `flatworld-buff`；伤害 API 语义变化才联动 Buff/Environment，局部数值与表现无需扩散。
 - 正式 AI 的生命、防御、攻击伤害、伤害碰撞窗静态值来自 Actor JSON modules；当前生命和攻击者等运行态仍由存档/模块维护。
-- 历史武器/Actor 大量通过 Prefab 或 JSON 继承覆盖旧单值 `Damage`；迁移到四类伤害时只能在最终运行实例 `Load` 后读取合并结果，禁止在 `OnValidate` 提前固化父模板数值。
-- 树木、矿物等世界资源的 `DamageReceiver.Data` 会进入世界存档；调整 Prefab 防御时若旧存档也必须生效，要同步提升数据版本并在 `Load` 按稳定物品 ID 迁移，不能只改 Prefab。
-- 所有矿脉（含硝石）均不以工具种类或等级拒绝有效攻击；`Mine_Stone` 不挂采集专精模块，其余矿脉可组合 `Mod_ResourceHarvest` 获得匹配工具的额外效率。GameObject 与自然资源 ECS 共用 `ResolveAffinityMultiplier`，倍率不低于 1；等级只影响额外加成，硬度继续由伤害与防御结算，禁止恢复采矿等级门槛。
+- 攻击与防御的新配置只写 `Physical`；`ImpactKind` 仅决定命中特效和刃伤出血资格。CombatDamage/CombatDefense 的旧四字段保留 MemoryPack 布局与历史 JSON 读取，攻击合计、防御取最大值；不得再逐槽抵扣，也不能把等值旧护甲加成四倍。
+- 生命配置使用 `CombatBalanceVersion`；提高版本时，GO 与自然 ECS 在读档后按旧生命比例迁移 `Hp/MaxHp` 和基础物理防御，不复活、不回满；同版本实例改造不能重复覆盖。
+- 工具弱点在防御后固定乘 2，非匹配乘 1，工具等级/效率不再影响倍率；未破防仍是 0。资源通过唯一 `Mod_ResourceHarvest` 或生命模块静态 `weakTool` 声明，禁止两处重复配置；树弱斧、矿弱镐、普通石块弱锤。所有工具仍可尝试攻击，科技门槛只由物理攻击和防御产生。
 - `DamageReceiver` 与实际受击 `Collider2D` 不保证位于同一节点；Collider 还可能位于同一 Item 的兄弟模块。组件解析在当前节点/父级/子级都失败时必须回到最近的 Item 根搜索完整子树；命中特效应优先使用碰撞回调传入的 Collider 定位，并在缺失时回退子级、父级或接收器中心，禁止直接假定 `receiver.GetComponent<Collider2D>()` 非空。
 - ItemDefinition 的模块 JSON 不应写入 `AttackEffects: []` 等 Unity 资源引用集合；运行时 `PopulateObject` 会用空数组覆盖 Prefab 引用，导致命中特效被清空。迁移器应跳过 `UnityEngine.Object` 集合。
 - 类型命中特效由 `Mod_Damage.impactEffectSet` 显式引用 `CombatImpactEffectSet`，`AttackEffects` 只放数字等每次都播放的通用反馈；不能用通用列表是否为空阻断命中形状。动画与数字统一读取攻击数值 `CombatDamage.DominantKind`，不要按武器名称分类或分别实现占比比较；映射资源留在 GamePlay 程序集，避免 Effect 反向引用战斗程序集。
@@ -58,13 +58,13 @@ description: "Use when: 定位或修改 FlatWorld 的伤害、生命值、身体
 - “命中硬目标后变成其他物品”属于具体丢弃物能力，当前由 `Mod_DiscardFlightDamage` 的显式参数开启；禁止再用 `Stone` 等材质 Tag 在通用 `Mod_Projectile` 内隐式触发，否则石箭等同材质投射物会串行为。
 - 可回收箭矢命中 `DamageReceiver` 后的“插在目标身上”状态由 `Mod_Projectile` 保存相对目标 Item 根节点的局部姿态并逐帧同步；箭矢仍保持独立 Runtime Item，不改挂到 Actor 层级。跟随移动时必须调用 `ItemMgr.NotifyRuntimeItemMoved` 刷新空间索引，目标失效后解除附着并保留箭矢最后世界位置，确保拾取、对象池和世界索引不被父子层级关系破坏。
 - 出血资格使用稳定 `Blood` 标签表达“该实体有血”，不要用 `Player`/`Animal` 类型或物种标签代替。玩家和有血动物可以同时保留自己的分类标签；幽灵、机械体等无血实体只要不声明 `Blood` 就不会触发刃伤出血规则，MOD 生物也通过同一标签接入。
-- 拆墙工具类别与建筑克制倍率是两个独立配置：`TileDamageToolKind.Hammer` 只表达工具类别/门槛，`IBuildingDamageSource.BuildingDamageMultiplier` 表达目标完成防御后的伤害倍率；木锤等锤类需在 Item JSON 显式配置建筑倍率。动态建筑在防御后应用倍率，格子建筑必须先完成自身 `MinimumWeaponDamage` 最低有效伤害规则，再对这个最终有效伤害应用倍率，因此石墙保底 1 点在木锤的 10 倍建筑克制下最终为 10 点。未被建筑规则判定为有效的 0 伤害仍不得被倍率放大。
+- Tile 的 `RequiredTool` 现为工具弱点，和 `health.weakTool` 共用防御后两倍规则；没有工具硬拒绝、最低伤害保底或旧建筑十倍倍率。`MinimumWeaponDamage`/`BuildingDamageMultiplier` 仅保留序列化与 API 兼容，禁止恢复绕过防御的拆墙规则。
 
 ## ECS 与旧战斗的共同契约
 
 - 接触伤害由独立 `Mod_ContactDamage` 的 `Settings` 组合，资源后端由 `NaturalEntityEcsProfileCompiler` 编译并仅遍历已登记的伤害源；两个后端共用 `ContactDamageRuntime`，只查询真实身体、按完整目标身份限频，再调用 `Hurt(CombatDamageContext)`。不得用武器/拾取 Trigger 代替身体、伤及空中目标、在客户端重复扣血或补算离线接触；采集、死亡、卸载与配置停用立即移除来源，冷却不进入存档。
 
-- `Shared/Combat/CombatContext.cs` 位于无 GamePlay 依赖的公共程序集，固定值身份与四类伤害可进入 Burst。两个后端共用难度/防御、实际损失裁剪与刃伤出血阈值；managed CombatDamage 只在旧入口与反馈边界转换。
+- `Shared/Combat/CombatContext.cs` 的 `CombatRules.ResolvePhysical` 是共同物理公式；旧 float4 只带表现比例，`Resolve` 先合计攻击并扣一次物理防御。两个后端共用难度、实际损失裁剪与刃伤出血阈值。
 - `Hurt(IDamageSender)` 保留原来发送端 Item 与旧规则，然后适配同一生命提交核心；`Hurt(in CombatDamageContext)` 使用明确 Source/Credit 和模拟 Tick/Time。ECS 来源不提供旧 Item 引用，消费方应读取 `DamageReceiverDamageInfo.Context`，不可把其旧 Attacker 字段为空解释成环境攻击或丢弃击杀归因。
 - 阵营配置注册仍严格校验 96 字符限制，进入 Native 目录前另查 UTF-8 字节容量；接收 Native 命中必须先验证长度再解码。非法阵营返回无效命中 `-1` 并限次记录来源身份、Tick 和有限原始字节，不截断、不改为空阵营、不消耗受伤冷却，也不能让单次坏数据中断整轮 AI 更新。
 - 武器自身 Source 与 Owner 的 Credit 分开；generation/world/dimension 必须随事件传递。模拟时间使用 double，不能把同一渲染帧的多个 ECS Tick 都改成 Time.time，否则受伤间隔与 Buff 结算会漂移。旧对象的专属 incoming rule 未提供纯上下文实现时必须显式拒绝，不能绕过资源/建筑门槛。

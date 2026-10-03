@@ -34,10 +34,14 @@
         "生命值系统模块": {
           "parameters": {
             "Data": {
-              "Hp": 180,
-              "MaxHp": 180,
-              "DefenseValues": { "Cutting": 12, "Piercing": 10, "Chopping": 12, "Blunt": 5 }
-            }
+              "Hp": 50,
+              "MaxHp": 50,
+              "DefenseValues": {
+                "Physical": 24
+              },
+              "CombatBalanceVersion": 1
+            },
+            "weakTool": 0
           }
         },
         "harvestRequirement": {
@@ -64,7 +68,10 @@
       "modules": {
         "damage": {
           "parameters": {
-            "DamageValues": { "Cutting": 8, "Piercing": 2, "Chopping": 0, "Blunt": 0 }
+            "DamageValues": {
+              "Physical": 10,
+              "ImpactKind": 1
+            }
           }
         }
       }
@@ -87,7 +94,10 @@
       "modules": {
         "damage": {
           "parameters": {
-            "DamageValues": { "Cutting": 3, "Piercing": 12, "Chopping": 0, "Blunt": 0 }
+            "DamageValues": {
+              "Physical": 15,
+              "ImpactKind": 2
+            }
           }
         }
       }

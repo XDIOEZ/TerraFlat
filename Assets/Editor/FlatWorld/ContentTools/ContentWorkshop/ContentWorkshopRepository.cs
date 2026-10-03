@@ -460,10 +460,8 @@ namespace FlatWorld.Editor.ContentWorkshop
                 JObject parameters = EnsureObject(damageModule, "parameters");
                 parameters["DamageValues"] = new JObject
                 {
-                    ["Cutting"] = Mathf.Max(0f, draft.CuttingDamage),
-                    ["Piercing"] = Mathf.Max(0f, draft.PiercingDamage),
-                    ["Chopping"] = Mathf.Max(0f, draft.ChoppingDamage),
-                    ["Blunt"] = Mathf.Max(0f, draft.BluntDamage)
+                    ["Physical"] = Mathf.Max(0f, draft.PhysicalDamage),
+                    ["ImpactKind"] = (int)draft.ImpactKind
                 };
                 parameters.Remove("Weakness");
                 parameters.Remove("Damage");

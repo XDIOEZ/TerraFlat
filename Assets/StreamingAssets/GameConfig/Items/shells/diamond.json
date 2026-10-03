@@ -46,6 +46,19 @@
             "requiredTool": 1,
             "minimumTier": 1
           }
+        },
+        "生命值系统模块": {
+          "parameters": {
+            "Data": {
+              "Hp": 50,
+              "MaxHp": 50,
+              "DefenseValues": {
+                "Physical": 26
+              },
+              "CombatBalanceVersion": 1
+            },
+            "weakTool": 0
+          }
         }
       }
     }

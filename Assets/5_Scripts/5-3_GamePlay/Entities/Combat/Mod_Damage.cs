@@ -9,17 +9,17 @@ public enum WeaponHitboxRegion
 }
 
 [RequireComponent(typeof(BoxCollider2D))]
-public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlowdownSource, IBuildingDamageSource, ICombatDamageContextModifier
+public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlowdownSource, IBuildingDamageSource, ICombatDamageContextModifier, IItemTooltipInfoProvider
 {
     #region 伤害相关数据
     [Header("攻击特效")]
-    [SerializeField, Tooltip("按本次攻击占比最大的伤害类型播放一个命中特效。")]
+    [SerializeField, Tooltip("按攻击的命中表现标签播放特效，标签不参与防御结算。")]
     private CombatImpactEffectSet impactEffectSet;
     [Tooltip("每次有效命中都播放的通用特效，例如伤害数字；不重复放入类型命中特效。")]
     public List<GameEffect> AttackEffects = new List<GameEffect>();
 
-    [Header("四类攻击伤害")]
-    [Tooltip("切割、穿刺、劈砍、钝击分别独立参与防御结算；总战斗力为四项之和。")]
+    [Header("物理攻击")]
+    [Tooltip("物理攻击力只减一次目标防御，再应用匹配工具的两倍弱点。")]
     public CombatDamage DamageValues = new CombatDamage();
 
     [Header("定时伤害设置")]
@@ -210,6 +210,15 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
     #endregion
 
     #region IDamageSender 实现
+    /// <summary>库存说明从最终物品配置读取攻击力，帮助玩家选择下一档工具。</summary>
+    public bool TryGetItemTooltipInfo(ItemTooltipInfoContext context, out string info)
+    {
+        string json = context.ModuleDefinition?.ParametersJson;
+        CombatDamage values = string.IsNullOrWhiteSpace(json) ? DamageValues :
+            Newtonsoft.Json.Linq.JObject.Parse(json)["DamageValues"]?.ToObject<CombatDamage>() ?? DamageValues;
+        info = FlatWorld.Localization.FlatWorldLocalizationService.GetUiFormat("物理攻击力：{0}", values.Physical.ToString("0.##"));
+        return values.Physical > 0f;
+    }
     /// <summary>伤害发送者保持为伤害物品自身；Owner 只用于排除自伤，不改写旧的攻击者语义。</summary>
     Item IDamageSender.attacker { get => item; set => item = value; }
     CombatDamage IDamageSender.DamageValues => ResolveDamageValues();

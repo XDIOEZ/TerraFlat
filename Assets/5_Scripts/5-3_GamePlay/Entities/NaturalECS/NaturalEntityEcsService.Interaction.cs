@@ -266,14 +266,7 @@ namespace FlatWorld.NaturalEntities
                     continue;
 
                 CombatDefense values = record.Profile.HealthDefaults.DefenseValues;
-                defense = kind switch
-                {
-                    CombatDamageKind.Cutting => values.Cutting,
-                    CombatDamageKind.Piercing => values.Piercing,
-                    CombatDamageKind.Chopping => values.Chopping,
-                    CombatDamageKind.Blunt => values.Blunt,
-                    _ => 0f
-                };
+                defense = values.Physical;
                 runtimeId = record.Handle.Id;
                 bestDistance = distance;
             }
@@ -376,6 +369,10 @@ namespace FlatWorld.NaturalEntities
             if (record.Busy || record.Profile.HealthModuleName == null ||
                 !simulation.TryGet(handle.Id, out AiecsVital vital) || vital.Dead != 0 || vital.Hp <= 0f) return -1f;
             float resourceMultiplier = 1f;
+            if (context.IsTrueDamage == 0)
+                resourceMultiplier = Mod_ResourceHarvest.ResolveAffinityMultiplier(
+                    (ResourceToolKind)(record.Profile.HealthParameters.Value<int?>("weakTool") ?? 0), 1,
+                    (ResourceToolKind)context.ResourceToolKind, context.ResourceToolTier, context.ResourceToolEfficiency);
             if (context.IsTrueDamage == 0 && simulation.TryGet(handle.Id, out EntityHarvestRequirement requirement))
             {
                 resourceMultiplier = Mod_ResourceHarvest.ResolveAffinityMultiplier(

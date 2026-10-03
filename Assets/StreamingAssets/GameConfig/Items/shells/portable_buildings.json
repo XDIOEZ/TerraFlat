@@ -27,7 +27,9 @@
             "x": 0.65,
             "y": 0.65
           }
-        }
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
       },
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/WaterVessel/ClayJar/ClayJar_Icon.png",
@@ -75,8 +77,8 @@
       ],
       "health": {
         "hasHp": true,
-        "hp": 120,
-        "maxHp": 120,
+        "hp": 50,
+        "maxHp": 50,
         "collider": {
           "type": "BoxCollider2D",
           "isTrigger": true,
@@ -84,7 +86,9 @@
             "x": 0.85,
             "y": 0.85
           }
-        }
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
       },
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/StoneMortar/StoneMortar_Icon.png",

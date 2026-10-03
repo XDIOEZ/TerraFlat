@@ -17,9 +17,13 @@
       "canBePickedUp": true,
       "health": {
         "hasHp": true,
-        "hp": 500,
-        "maxHp": 500,
-        "defense": { "cutting": 3, "piercing": 10, "chopping": 1, "blunt": 3 }
+        "hp": 60,
+        "maxHp": 60,
+        "defense": {
+          "physical": 10
+        },
+        "weakTool": 0,
+        "combatBalanceVersion": 1
       },
       "visual": { "spriteAddress": "Assets/6_Art/Generated/Vehicles/Boat/Boat_Carrier.png" },
       "modules": {
@@ -51,16 +55,26 @@
       "tags": ["35"],
       "health": {
         "hasHp": true,
-        "hp": 500,
-        "maxHp": 500,
-        "defense": { "cutting": 3, "piercing": 10, "chopping": 1, "blunt": 3 },
+        "hp": 60,
+        "maxHp": 60,
+        "defense": {
+          "physical": 10
+        },
         "collider": {
           "type": "BoxCollider2D",
           "enabled": true,
           "isTrigger": true,
-          "offset": { "x": 0, "y": 0 },
-          "size": { "x": 1.5, "y": 1.0 }
-        }
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 1.5,
+            "y": 1.0
+          }
+        },
+        "weakTool": 0,
+        "combatBalanceVersion": 1
       },
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Vehicles/Boat/Boat_Carrier.png",

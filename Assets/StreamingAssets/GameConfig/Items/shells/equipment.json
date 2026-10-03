@@ -92,10 +92,7 @@
               {
                 "DefenseBonusIncrease": 0.0,
                 "DefenseBonus": {
-                  "Cutting": 14.0,
-                  "Piercing": 12.0,
-                  "Chopping": 13.0,
-                  "Blunt": 8.0
+                  "Physical": 8
                 },
                 "Name": "[Chestplate_Iron]重型胸甲防护",
                 "$concreteType": "EquipmentInstance_Defense",
@@ -224,10 +221,7 @@
               {
                 "DefenseBonusIncrease": 0.0,
                 "DefenseBonus": {
-                  "Cutting": 7.0,
-                  "Piercing": 5.0,
-                  "Chopping": 6.0,
-                  "Blunt": 3.0
+                  "Physical": 2
                 },
                 "Name": "[Chestplate_Twine]轻型藤甲防护",
                 "$concreteType": "EquipmentInstance_Defense",
@@ -356,10 +350,7 @@
               {
                 "DefenseBonusIncrease": 0.0,
                 "DefenseBonus": {
-                  "Cutting": 5.0,
-                  "Piercing": 3.0,
-                  "Chopping": 7.0,
-                  "Blunt": 6.0
+                  "Physical": 4
                 },
                 "Name": "[Chestplate_Wood]木甲防护",
                 "$concreteType": "EquipmentInstance_Defense",

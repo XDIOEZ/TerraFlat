@@ -49,10 +49,8 @@
           },
           "parameters": {
             "DamageValues": {
-              "Cutting": 0.0,
-              "Piercing": 0.0,
-              "Chopping": 0.0,
-              "Blunt": 5.0
+              "Physical": 5.0,
+              "ImpactKind": 4
             },
             "DamageInterval": 0.2,
             "EnableOnTriggerEnterDamage": true,

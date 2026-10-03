@@ -62,13 +62,10 @@
       },
       "health": {
         "hasHp": true,
-        "hp": 180.0,
-        "maxHp": 180.0,
+        "hp": 60,
+        "maxHp": 60,
         "defense": {
-          "cutting": 8.0,
-          "piercing": 8.0,
-          "chopping": 8.0,
-          "blunt": 8.0
+          "physical": 8.0
         },
         "moduleLocalPosition": {
           "x": 0.0,
@@ -88,7 +85,9 @@
             "y": 1.0
           },
           "edgeRadius": 0.0
-        }
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
       },
       "modules": {
         "建筑模块": {
@@ -212,13 +211,10 @@
       },
       "health": {
         "hasHp": true,
-        "hp": 180.0,
-        "maxHp": 180.0,
+        "hp": 60,
+        "maxHp": 60,
         "defense": {
-          "cutting": 8.0,
-          "piercing": 8.0,
-          "chopping": 8.0,
-          "blunt": 8.0
+          "physical": 8.0
         },
         "moduleLocalPosition": {
           "x": 0.0,
@@ -238,7 +234,9 @@
             "y": 1.0
           },
           "edgeRadius": 0.0
-        }
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
       },
       "modules": {
         "建筑模块": {
@@ -397,13 +395,10 @@
       },
       "health": {
         "hasHp": true,
-        "hp": 180.0,
-        "maxHp": 180.0,
+        "hp": 50,
+        "maxHp": 50,
         "defense": {
-          "cutting": 8.0,
-          "piercing": 8.0,
-          "chopping": 8.0,
-          "blunt": 8.0
+          "physical": 3
         },
         "moduleLocalPosition": {
           "x": 0.0,
@@ -423,7 +418,9 @@
             "y": 1.0
           },
           "edgeRadius": 0.0
-        }
+        },
+        "weakTool": 3,
+        "combatBalanceVersion": 1
       },
       "modules": {
         "建筑模块": {
@@ -523,13 +520,10 @@
       },
       "health": {
         "hasHp": true,
-        "hp": 180.0,
-        "maxHp": 180.0,
+        "hp": 60,
+        "maxHp": 60,
         "defense": {
-          "cutting": 8.0,
-          "piercing": 8.0,
-          "chopping": 8.0,
-          "blunt": 8.0
+          "physical": 8.0
         },
         "moduleLocalPosition": {
           "x": 0.0,
@@ -549,7 +543,9 @@
             "y": 1.0
           },
           "edgeRadius": 0.0
-        }
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
       },
       "modules": {
         "建筑模块": {
@@ -642,13 +638,10 @@
       },
       "health": {
         "hasHp": true,
-        "hp": 180.0,
-        "maxHp": 180.0,
+        "hp": 50,
+        "maxHp": 50,
         "defense": {
-          "cutting": 8.0,
-          "piercing": 8.0,
-          "chopping": 8.0,
-          "blunt": 8.0
+          "physical": 3
         },
         "moduleLocalPosition": {
           "x": 0.0,
@@ -668,7 +661,9 @@
             "y": 1.0
           },
           "edgeRadius": 0.0
-        }
+        },
+        "weakTool": 3,
+        "combatBalanceVersion": 1
       },
       "modules": {
         "建筑模块": {
@@ -761,13 +756,10 @@
       },
       "health": {
         "hasHp": true,
-        "hp": 180.0,
-        "maxHp": 180.0,
+        "hp": 60,
+        "maxHp": 60,
         "defense": {
-          "cutting": 8.0,
-          "piercing": 8.0,
-          "chopping": 8.0,
-          "blunt": 8.0
+          "physical": 8.0
         },
         "moduleLocalPosition": {
           "x": 0.0,
@@ -787,7 +779,9 @@
             "y": 1.0
           },
           "edgeRadius": 0.0
-        }
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
       },
       "modules": {
         "建筑模块": {
@@ -889,13 +883,10 @@
       },
       "health": {
         "hasHp": true,
-        "hp": 180.0,
-        "maxHp": 180.0,
+        "hp": 60,
+        "maxHp": 60,
         "defense": {
-          "cutting": 8.0,
-          "piercing": 8.0,
-          "chopping": 8.0,
-          "blunt": 8.0
+          "physical": 8.0
         },
         "moduleLocalPosition": {
           "x": 0.0,
@@ -915,7 +906,9 @@
             "y": 1.0
           },
           "edgeRadius": 0.0
-        }
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
       },
       "modules": {
         "建筑模块": {
@@ -1023,13 +1016,10 @@
       },
       "health": {
         "hasHp": true,
-        "hp": 180.0,
-        "maxHp": 180.0,
+        "hp": 60,
+        "maxHp": 60,
         "defense": {
-          "cutting": 8.0,
-          "piercing": 8.0,
-          "chopping": 8.0,
-          "blunt": 8.0
+          "physical": 8.0
         },
         "moduleLocalPosition": {
           "x": 0.0,
@@ -1049,7 +1039,9 @@
             "y": 1.0
           },
           "edgeRadius": 0.0
-        }
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
       },
       "modules": {
         "建筑模块": {
@@ -1142,13 +1134,10 @@
       },
       "health": {
         "hasHp": true,
-        "hp": 180.0,
-        "maxHp": 180.0,
+        "hp": 60,
+        "maxHp": 60,
         "defense": {
-          "cutting": 8.0,
-          "piercing": 8.0,
-          "chopping": 8.0,
-          "blunt": 8.0
+          "physical": 8.0
         },
         "moduleLocalPosition": {
           "x": 0.0,
@@ -1168,7 +1157,9 @@
             "y": 1.0
           },
           "edgeRadius": 0.0
-        }
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
       },
       "modules": {
         "建筑模块": {
@@ -1298,13 +1289,10 @@
       },
       "health": {
         "hasHp": true,
-        "hp": 180.0,
-        "maxHp": 180.0,
+        "hp": 60,
+        "maxHp": 60,
         "defense": {
-          "cutting": 8.0,
-          "piercing": 8.0,
-          "chopping": 8.0,
-          "blunt": 8.0
+          "physical": 8.0
         },
         "moduleLocalPosition": {
           "x": 0.0,
@@ -1324,7 +1312,9 @@
             "y": 1.0
           },
           "edgeRadius": 0.0
-        }
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
       },
       "modules": {
         "建筑模块": {
@@ -1423,13 +1413,10 @@
       },
       "health": {
         "hasHp": true,
-        "hp": 180.0,
-        "maxHp": 180.0,
+        "hp": 60,
+        "maxHp": 60,
         "defense": {
-          "cutting": 8.0,
-          "piercing": 8.0,
-          "chopping": 8.0,
-          "blunt": 8.0
+          "physical": 8.0
         },
         "moduleLocalPosition": {
           "x": 0.0,
@@ -1449,7 +1436,9 @@
             "y": 1.0
           },
           "edgeRadius": 0.0
-        }
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
       },
       "modules": {
         "建筑模块": {
@@ -1542,13 +1531,10 @@
       },
       "health": {
         "hasHp": true,
-        "hp": 180.0,
-        "maxHp": 180.0,
+        "hp": 60,
+        "maxHp": 60,
         "defense": {
-          "cutting": 8.0,
-          "piercing": 8.0,
-          "chopping": 8.0,
-          "blunt": 8.0
+          "physical": 8.0
         },
         "moduleLocalPosition": {
           "x": 0.0,
@@ -1568,7 +1554,9 @@
             "y": 1.0
           },
           "edgeRadius": 0.0
-        }
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
       },
       "modules": {
         "建筑模块": {
@@ -1677,10 +1665,7 @@
         "hp": 20,
         "maxHp": 20,
         "defense": {
-          "cutting": 0,
-          "piercing": 0,
-          "chopping": 0,
-          "blunt": 0
+          "physical": 0
         },
         "moduleLocalPosition": {
           "x": 0,
@@ -1700,7 +1685,9 @@
             "y": 0.4928639
           },
           "edgeRadius": 0
-        }
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
       },
       "modules": {
         "建筑模块": {
@@ -1913,13 +1900,10 @@
       },
       "health": {
         "hasHp": true,
-        "hp": 180.0,
-        "maxHp": 180.0,
+        "hp": 60,
+        "maxHp": 60,
         "defense": {
-          "cutting": 8.0,
-          "piercing": 8.0,
-          "chopping": 8.0,
-          "blunt": 8.0
+          "physical": 8.0
         },
         "moduleLocalPosition": {
           "x": 0.0,
@@ -1939,7 +1923,9 @@
             "y": 1.0
           },
           "edgeRadius": 0.0
-        }
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
       },
       "modules": {
         "建筑模块": {

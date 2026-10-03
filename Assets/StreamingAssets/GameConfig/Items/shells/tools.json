@@ -21,10 +21,8 @@
         "damage": {
           "parameters": {
             "DamageValues": {
-              "Cutting": 9.0,
-              "Piercing": 0.0,
-              "Chopping": 0.0,
-              "Blunt": 0.0
+              "Physical": 8,
+              "ImpactKind": 1
             }
           }
         },
@@ -117,10 +115,8 @@
           },
           "parameters": {
             "DamageValues": {
-              "Cutting": 0.0,
-              "Piercing": 0.0,
-              "Chopping": 0.0,
-              "Blunt": 2.0
+              "Physical": 3,
+              "ImpactKind": 4
             },
             "DamageInterval": 0.2,
             "EnableOnTriggerEnterDamage": true,
@@ -374,10 +370,8 @@
           },
           "parameters": {
             "DamageValues": {
-              "Cutting": 0.0,
-              "Piercing": 0.0,
-              "Chopping": 2.0,
-              "Blunt": 6.0
+              "Physical": 6,
+              "ImpactKind": 4
             },
             "DamageInterval": 0.2,
             "EnableOnTriggerEnterDamage": true,
@@ -593,10 +587,8 @@
           },
           "parameters": {
             "DamageValues": {
-              "Cutting": 0.0,
-              "Piercing": 0.0,
-              "Chopping": 0.0,
-              "Blunt": 5.0
+              "Physical": 4,
+              "ImpactKind": 4
             },
             "DamageInterval": 0.2,
             "EnableOnTriggerEnterDamage": true,
@@ -755,6 +747,18 @@
       "shellPrefab": "Axe",
       "visual": {
         "rendererPath": "Render/Render_1"
+      },
+      "modules": {
+        "resourceTool": {
+          "prefab": "Module_ResourceTool",
+          "id": "Mod_ResourceTool",
+          "enabled": true,
+          "parameters": {
+            "toolKind": 3,
+            "harvestTier": 1,
+            "harvestEfficiency": 2.0
+          }
+        }
       }
     },
     {
@@ -826,10 +830,8 @@
           },
           "parameters": {
             "DamageValues": {
-              "Cutting": 1.0,
-              "Piercing": 0.0,
-              "Chopping": 10.0,
-              "Blunt": 1.0
+              "Physical": 12,
+              "ImpactKind": 3
             },
             "DamageInterval": 0.2,
             "EnableOnTriggerEnterDamage": true,
@@ -1009,10 +1011,8 @@
           },
           "parameters": {
             "DamageValues": {
-              "Cutting": 2.0,
-              "Piercing": 0.0,
-              "Chopping": 11.0,
-              "Blunt": 1.0
+              "Physical": 14,
+              "ImpactKind": 3
             },
             "DamageInterval": 0.2,
             "EnableOnTriggerEnterDamage": true,
@@ -1192,10 +1192,8 @@
           },
           "parameters": {
             "DamageValues": {
-              "Cutting": 2.0,
-              "Piercing": 0.0,
-              "Chopping": 15.0,
-              "Blunt": 1.0
+              "Physical": 18,
+              "ImpactKind": 3
             },
             "DamageInterval": 0.2,
             "EnableOnTriggerEnterDamage": true,
@@ -1375,10 +1373,8 @@
           },
           "parameters": {
             "DamageValues": {
-              "Cutting": 3.0,
-              "Piercing": 0.0,
-              "Chopping": 18.0,
-              "Blunt": 1.0
+              "Physical": 22,
+              "ImpactKind": 3
             },
             "DamageInterval": 0.2,
             "EnableOnTriggerEnterDamage": true,
@@ -1559,10 +1555,8 @@
           },
           "parameters": {
             "DamageValues": {
-              "Cutting": 3.0,
-              "Piercing": 0.0,
-              "Chopping": 20.0,
-              "Blunt": 1.0
+              "Physical": 20,
+              "ImpactKind": 3
             },
             "DamageInterval": 0.2,
             "EnableOnTriggerEnterDamage": true,
@@ -1742,10 +1736,8 @@
           },
           "parameters": {
             "DamageValues": {
-              "Cutting": 4.0,
-              "Piercing": 0.0,
-              "Chopping": 23.0,
-              "Blunt": 1.0
+              "Physical": 28,
+              "ImpactKind": 3
             },
             "DamageInterval": 0.2,
             "EnableOnTriggerEnterDamage": true,
@@ -1874,7 +1866,7 @@
           "parameters": {
             "toolKind": 1,
             "harvestTier": 1,
-            "harvestEfficiency": 1.0
+            "harvestEfficiency": 2.0
           }
         }
       }
@@ -1948,10 +1940,8 @@
           },
           "parameters": {
             "DamageValues": {
-              "Cutting": 0.0,
-              "Piercing": 10.0,
-              "Chopping": 0.0,
-              "Blunt": 4.0
+              "Physical": 12,
+              "ImpactKind": 2
             },
             "DamageInterval": 0.2,
             "EnableOnTriggerEnterDamage": true,
@@ -2122,7 +2112,7 @@
         "resourceTool": {
           "parameters": {
             "harvestTier": 2,
-            "harvestEfficiency": 1.15
+            "harvestEfficiency": 2.0
           }
         },
         "animation": {
@@ -2174,10 +2164,8 @@
           },
           "parameters": {
             "DamageValues": {
-              "Cutting": 0.0,
-              "Piercing": 15.0,
-              "Chopping": 0.0,
-              "Blunt": 6.0
+              "Physical": 18,
+              "ImpactKind": 2
             },
             "DamageInterval": 0.2,
             "EnableOnTriggerEnterDamage": true,
@@ -2307,7 +2295,7 @@
         "resourceTool": {
           "parameters": {
             "harvestTier": 4,
-            "harvestEfficiency": 2.1
+            "harvestEfficiency": 2.0
           }
         },
         "damage": {
@@ -2320,10 +2308,8 @@
           },
           "parameters": {
             "DamageValues": {
-              "Cutting": 0.0,
-              "Piercing": 18.0,
-              "Chopping": 0.0,
-              "Blunt": 7.0
+              "Physical": 22,
+              "ImpactKind": 2
             },
             "DamageInterval": 0.2,
             "EnableOnTriggerEnterDamage": true,
@@ -2494,7 +2480,7 @@
         "resourceTool": {
           "parameters": {
             "harvestTier": 3,
-            "harvestEfficiency": 1.35
+            "harvestEfficiency": 2.0
           }
         },
         "damage": {
@@ -2507,10 +2493,8 @@
           },
           "parameters": {
             "DamageValues": {
-              "Cutting": 0.0,
-              "Piercing": 16.0,
-              "Chopping": 0.0,
-              "Blunt": 6.5
+              "Physical": 20,
+              "ImpactKind": 2
             },
             "DamageInterval": 0.2,
             "EnableOnTriggerEnterDamage": true,
@@ -2681,7 +2665,7 @@
         "resourceTool": {
           "parameters": {
             "harvestTier": 4,
-            "harvestEfficiency": 1.8
+            "harvestEfficiency": 2.0
           }
         },
         "damage": {
@@ -2694,10 +2678,8 @@
           },
           "parameters": {
             "DamageValues": {
-              "Cutting": 0.0,
-              "Piercing": 25.0,
-              "Chopping": 0.0,
-              "Blunt": 9.0
+              "Physical": 28,
+              "ImpactKind": 2
             },
             "DamageInterval": 0.2,
             "EnableOnTriggerEnterDamage": true,
@@ -2839,13 +2821,21 @@
           "id": "Mod_Damage",
           "parameters": {
             "DamageValues": {
-              "Cutting": 0.0,
-              "Piercing": 0.0,
-              "Chopping": 0.0,
-              "Blunt": 6.0
+              "Physical": 6,
+              "ImpactKind": 4
             },
             "tileDamageToolKind": 3,
-            "buildingDamageMultiplier": 10.0
+            "buildingDamageMultiplier": 1.0
+          }
+        },
+        "resourceTool": {
+          "prefab": "Module_ResourceTool",
+          "id": "Mod_ResourceTool",
+          "enabled": true,
+          "parameters": {
+            "toolKind": 4,
+            "harvestTier": 1,
+            "harvestEfficiency": 2.0
           }
         }
       }
@@ -2870,10 +2860,8 @@
         "damage": {
           "parameters": {
             "DamageValues": {
-              "Cutting": 0.0,
-              "Piercing": 0.0,
-              "Chopping": 0.0,
-              "Blunt": 12.0
+              "Physical": 10,
+              "ImpactKind": 4
             }
           }
         },
@@ -2883,6 +2871,16 @@
           "enabled": true,
           "parameters": {
             "staminaCostPerAttack": 2.7
+          }
+        },
+        "resourceTool": {
+          "prefab": "Module_ResourceTool",
+          "id": "Mod_ResourceTool",
+          "enabled": true,
+          "parameters": {
+            "toolKind": 4,
+            "harvestTier": 1,
+            "harvestEfficiency": 2.0
           }
         }
       }

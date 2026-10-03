@@ -35,10 +35,14 @@
         "生命值系统模块": {
           "parameters": {
             "Data": {
-              "Hp": 120,
-              "MaxHp": 120,
-              "DefenseValues": { "Cutting": 6, "Piercing": 5, "Chopping": 6, "Blunt": 2 }
-            }
+              "Hp": 50,
+              "MaxHp": 50,
+              "DefenseValues": {
+                "Physical": 12
+              },
+              "CombatBalanceVersion": 1
+            },
+            "weakTool": 0
           }
         },
         "harvestRequirement": {

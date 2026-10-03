@@ -104,7 +104,27 @@
       "lootTableId": "Mine_Gold_Default",
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Environment/Mine_Gold/Mine_Gold_Idle.png",
-        "color": { "r": 1, "g": 1, "b": 1, "a": 1 }
+        "color": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        }
+      },
+      "modules": {
+        "生命值系统模块": {
+          "parameters": {
+            "Data": {
+              "Hp": 50,
+              "MaxHp": 50,
+              "DefenseValues": {
+                "Physical": 24
+              },
+              "CombatBalanceVersion": 1
+            },
+            "weakTool": 0
+          }
+        }
       }
     }
   ]

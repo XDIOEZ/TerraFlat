@@ -359,6 +359,12 @@ public sealed class ItemHealthDefinitionDto
     [JsonProperty("defense")]
     public ItemDefenseDefinitionDto Defense = new();
 
+    [JsonProperty("weakTool")]
+    public ResourceToolKind WeakTool;
+
+    [JsonProperty("combatBalanceVersion")]
+    public int CombatBalanceVersion;
+
     /// <summary>Mod_DamageReceiver 模块节点相对 Item 根节点的位置。</summary>
     [JsonProperty("moduleLocalPosition", NullValueHandling = NullValueHandling.Ignore)]
     public Vector3? ModuleLocalPosition;
@@ -371,10 +377,22 @@ public sealed class ItemHealthDefinitionDto
 [Serializable]
 public sealed class ItemDefenseDefinitionDto
 {
+    #region 物理防御与旧内容兼容
+    [JsonProperty("physical")]
+    public float Physical
+    {
+        get => Mathf.Max(0f, Mathf.Max(Mathf.Max(Cutting, Piercing), Mathf.Max(Chopping, Blunt)));
+        set { Cutting = Piercing = Chopping = 0f; Blunt = value; }
+    }
     [JsonProperty("cutting")] public float Cutting;
     [JsonProperty("piercing")] public float Piercing;
     [JsonProperty("chopping")] public float Chopping;
     [JsonProperty("blunt")] public float Blunt;
+    public bool ShouldSerializeCutting() => false;
+    public bool ShouldSerializePiercing() => false;
+    public bool ShouldSerializeChopping() => false;
+    public bool ShouldSerializeBlunt() => false;
+    #endregion
 }
 
 [Serializable]

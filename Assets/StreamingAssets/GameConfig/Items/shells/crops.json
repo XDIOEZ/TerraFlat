@@ -241,14 +241,12 @@
               "MaxHp": 30.0,
               "UseBodyPartHealth": false,
               "DefenseValues": {
-                "Cutting": 0.0,
-                "Piercing": 0.0,
-                "Chopping": 0.0,
-                "Blunt": 0.0
+                "Physical": 0.0
               },
               "AttackersUIDs": [],
               "DamageInterval": 0.12,
-              "DestroyDelay": 0.0
+              "DestroyDelay": 0.0,
+              "CombatBalanceVersion": 1
             },
             "impactAudioMaterial": 2,
             "healthBarTopPadding": 0.08,
@@ -535,14 +533,12 @@
               "MaxHp": 60.0,
               "UseBodyPartHealth": false,
               "DefenseValues": {
-                "Cutting": 0.0,
-                "Piercing": 0.0,
-                "Chopping": 0.0,
-                "Blunt": 0.0
+                "Physical": 0.0
               },
               "AttackersUIDs": [],
               "DamageInterval": 0.12,
-              "DestroyDelay": 0.0
+              "DestroyDelay": 0.0,
+              "CombatBalanceVersion": 1
             },
             "impactAudioMaterial": 2,
             "healthBarTopPadding": 0.08,

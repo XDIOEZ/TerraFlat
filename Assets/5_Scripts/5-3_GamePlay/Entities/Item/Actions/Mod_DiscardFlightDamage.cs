@@ -204,14 +204,7 @@ public sealed class Mod_DiscardFlightDamage : Module, IItemModuleDependencyBinde
         if (defense == null)
             return 0f;
 
-        return damageModule.ResolveDamageValues().DominantKind switch
-        {
-            CombatDamageKind.Cutting => defense.Cutting,
-            CombatDamageKind.Piercing => defense.Piercing,
-            CombatDamageKind.Chopping => defense.Chopping,
-            CombatDamageKind.Blunt => defense.Blunt,
-            _ => 0f
-        };
+        return defense.Physical;
     }
 
     /// <summary>特殊变化必须由物品配置显式开启，材质标签本身不再代表该行为。</summary>
