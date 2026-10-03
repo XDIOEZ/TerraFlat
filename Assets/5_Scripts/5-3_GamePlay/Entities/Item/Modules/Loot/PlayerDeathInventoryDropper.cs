@@ -170,10 +170,9 @@ public static class PlayerDeathInventoryDropper
             droppedData.Stack.CanBePickedUp = false;
             droppedData.inHand = false;
             droppedData.transform.position = WorldTopologyRuntime.NormalizePosition(player.transform.position);
-            droppedData.transform.scale = Vector3.one * 0.5f;
 
             spawnedDrop = DroppedItemService.Spawn(droppedData, player.transform.position,
-                endPosition, DropDuration, Vector3.one * 0.5f);
+                endPosition, DropDuration);
 
             inventoryData.RemoveItemAll(slot, slotIndex);
             inventoryData.Event_OnDataChanged_TwoSlots.Invoke(slot, null);

@@ -93,6 +93,7 @@ description: "Use when: 定位或修改 FlatWorld 的 Item/Module 组合架构�
 - 从世界装液由 `LiquidVesselOperations.FillFromWorld` 将 `DepthPerServing` 换算后有限抽取，保留来源温度；先成功提交世界侧再提交容器。往液面倾倒时拒绝异种液体、平台、阻挡和满格，失败不扣液；干地浇水仍走土壤水分入口，不能把水量加给岩浆格。
 
 - 单机世界掉落统一经 `DroppedItemService.Spawn/SpawnLoot`。定义的 `worldDropBehavior` 默认为 `passive`：进入普通 C# 轻量模拟器，只保留位置、数量、短期运动、水体与拾取数据；表现仅在镜头附近从对象池取一个无 Update/Collider/Rigidbody/Item/Module 的 SpriteRenderer GameObject。`interactive` 则始终保留完整 Item，继续运行受伤、死亡掉落、燃烧、水容器等世界交互模块。
+- 世界掉落物外层缩放统一为 0.5；无精确目标的静态掉落使用小幅随机位置偏移，所有掉落加入小角度随机初始旋转。自然生成的可拾取散落物即使走完整 Item 路径也必须沿用 0.5 缩放，并用稳定 GUID 生成偏移/旋转，避免联机或重载后漂移。钓鱼、玩家指向丢弃等需要精确落点的入口应显式传 `destination`，避免全局偏移改写目标。
 - 当前所有 AI（含 Zombie）恢复完整 GameObject/Item 模块主控。保留的可选 ECS AI 与静态资源共用 `WorldEntityRuntime`，但关闭 ECS AI 不影响资源 ECS；不可因共享底座再次强制迁移原生 AI。新增 ECS 领域能力不能另建 World，诊断隔离 World 例外。
 - 声明 `entityRuntime: "resource"` 的树、矿点和作物经 `NaturalEntityEcsProfileCompiler` 按模块组合编译，缺失能力必须报错，禁止按距离、联机状态或物种名回退完整 Item。`NaturalEntityEcsService` 持有同一 World 内的实体句柄；`ItemData/ModuleData` 仅用于定义与冷存档，不调用资源 Item.Load 或 Module Tick。
 - ECS 模块冷编译统一通过 `DeserializeConfiguration<T>` 以 `ObjectCreationHandling.Replace` 读取配置；显式集合必须替换构造默认集合，缺省字段仍保留默认值，禁止把成长阶段、采集提示点等追加到默认列表后再放宽校验。

@@ -914,7 +914,7 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
         replacement.Stack.Amount = 1f;
         replacement.Stack.CanBePickedUp = true;
         DroppedItemService.Spawn(replacement, item.transform.position,
-            scale: Vector3.one, rotation: item.transform.eulerAngles.z);
+            rotation: item.transform.eulerAngles.z);
         itemManager.DespawnItem(item, saveData: false);
     }
 

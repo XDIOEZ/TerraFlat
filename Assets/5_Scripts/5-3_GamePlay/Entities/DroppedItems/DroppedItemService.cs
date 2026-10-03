@@ -22,6 +22,10 @@ public readonly struct DroppedItemHandle
 /// </summary>
 public static partial class DroppedItemService
 {
+    private const float StandardWorldDropScale = 0.5f;
+    private const float DropPositionJitterRadius = 0.15f;
+    private const float DropRotationJitterDegrees = 15f;
+
     private sealed class LegacyDropPlan
     {
         public Vector2 Start, End;
@@ -53,7 +57,7 @@ public static partial class DroppedItemService
 
     /// <summary>先成功创建掉落态，再由调用者提交库存扣减；passive 不实例化完整 Item。</summary>
     public static DroppedItemHandle Spawn(ItemData source, Vector2 position, Vector2? destination = null,
-        float duration = 0f, Vector3? scale = null, float rotation = 0f, float bezierOffset = 1f,
+        float duration = 0f, float rotation = 0f, float bezierOffset = 1f,
         float arcHeight = 1f, float rotationSpeed = 720f)
     {
         if (source?.Stack == null || source.Stack.Amount <= 0f ||
@@ -65,9 +69,14 @@ public static partial class DroppedItemService
         if (resources == null || !resources.TryGetItemDefinition(source.IDName, out RuntimeItemDefinition definition))
             throw new InvalidOperationException($"找不到掉落物定义：{source.IDName}");
         if (definition.IsActor) throw new InvalidOperationException($"生物不是静态掉落物：{source.IDName}");
-        Vector3 finalScale = scale ?? ResolveDefaultWorldDropScale(source);
+        // 掉落物外层尺寸统一为正常物品的一半，避免各入口继续沿用实体自身缩放。
+        Vector3 finalScale = ResolveDefaultWorldDropScale(source);
+        Vector2 spawnPosition = destination.HasValue
+            ? position
+            : position + UnityEngine.Random.insideUnitCircle * DropPositionJitterRadius;
+        float finalRotation = rotation + UnityEngine.Random.Range(-DropRotationJitterDegrees, DropRotationJitterDegrees);
         if (!definition.UsesLightweightWorldDrop || !UsesLightweightDrops)
-            return SpawnItemBacked(source, position, destination, duration, finalScale, rotation,
+            return SpawnItemBacked(source, spawnPosition, destination, duration, finalRotation,
                 bezierOffset, arcHeight, rotationSpeed);
         EnsureContext();
         ItemData payload = FastCloner.FastCloner.DeepClone(source);
@@ -76,12 +85,12 @@ public static partial class DroppedItemService
         int id;
         do { id = Guid.NewGuid().GetHashCode() & int.MaxValue; } while (id == 0 || runtime.Contains(id));
         payload.Guid = id;
-        Vector2 start = WorldTopologyRuntime.NormalizePosition(position);
+        Vector2 start = WorldTopologyRuntime.NormalizePosition(spawnPosition);
         Vector2 end = WorldTopologyRuntime.NearestImagePosition(start, destination ?? start);
         LightweightDroppedBody body = new()
         {
             Id = id, Position = start, Scale = new Unity.Mathematics.float2(finalScale.x, finalScale.y),
-            Rotation = rotation, Amount = payload.Stack.Amount, Pickable = 0
+            Rotation = finalRotation, Amount = payload.Stack.Amount, Pickable = 0
         };
         LightweightDroppedFlight? flight = duration > 0f ? new LightweightDroppedFlight
         {
@@ -92,16 +101,10 @@ public static partial class DroppedItemService
         return new DroppedItemHandle(id, Epoch);
     }
 
-    /// <summary>未显式指定缩放时，建筑召唤器按普通丢弃物尺寸显示，避免沿用落地建筑的大图尺寸。</summary>
+    /// <summary>所有世界掉落物统一使用 0.5 倍外层缩放。</summary>
     public static Vector3 ResolveDefaultWorldDropScale(ItemData source)
     {
-        if (Mod_Building.TryReadBuildingData(source, out _, out Mod_Building.Building_Data buildingData) &&
-            buildingData?.Role == BuildingRole.Summoner)
-        {
-            return Vector3.one * 0.5f;
-        }
-
-        return Vector3.one;
+        return Vector3.one * StandardWorldDropScale;
     }
 
     /// <summary>标准战利品产出；生物生成回到 AI 后端，不能把动物做成可入包的静态图标。</summary>
@@ -124,7 +127,9 @@ public static partial class DroppedItemService
             return default;
         }
         ItemData data = definition.CreateItemData(); data.Stack.Amount = amount;
-        Vector2 end = destination ?? (position + UnityEngine.Random.insideUnitCircle.normalized * UnityEngine.Random.Range(radius * 0.5f, radius));
+        float scatterRadius = Mathf.Max(radius, DropPositionJitterRadius);
+        Vector2 end = destination ?? (position + UnityEngine.Random.insideUnitCircle.normalized *
+            UnityEngine.Random.Range(scatterRadius * 0.5f, scatterRadius));
         return Spawn(data, position, end, duration, bezierOffset: bezierOffset, arcHeight: arcHeight,
             rotationSpeed: UnityEngine.Random.Range(360f, 1080f));
     }
@@ -207,7 +212,7 @@ public static partial class DroppedItemService
         {
             item.ModuleSave();
             handle = Spawn(item.itemData, item.transform.position,
-                scale: item.transform.lossyScale, rotation: item.transform.eulerAngles.z);
+                rotation: item.transform.eulerAngles.z);
             if (!handle.IsValid) return false;
             ItemMgr.Instance.DespawnItem(item, saveData: false);
             return true;
@@ -230,7 +235,7 @@ public static partial class DroppedItemService
             try
             {
                 item.ModuleSave();
-                Spawn(item.itemData, plan.Start, plan.End, plan.Duration, item.transform.lossyScale,
+                Spawn(item.itemData, plan.Start, plan.End, plan.Duration,
                     item.transform.eulerAngles.z, plan.Bezier, plan.Arc, plan.Spin);
                 ItemMgr.Instance.DespawnItem(item, saveData: false);
             }
@@ -245,14 +250,15 @@ public static partial class DroppedItemService
     }
 
     private static DroppedItemHandle SpawnItemBacked(ItemData source, Vector2 position, Vector2? destination,
-        float duration, Vector3? scale, float rotation, float bezier, float arc, float spin)
+        float duration, float rotation, float bezier, float arc, float spin)
     {
         ItemData data = FastCloner.FastCloner.DeepClone(source); data.inHand = false;
         data.Stack.CanBePickedUp = duration <= 0f;
         Item item = null;
         try
         {
-            item = ItemMgr.Instance.InstantiateItem(data, position, Quaternion.Euler(0, 0, rotation), scale ?? Vector3.one);
+            item = ItemMgr.Instance.InstantiateItem(data, position, Quaternion.Euler(0, 0, rotation),
+                ResolveDefaultWorldDropScale(data));
             item.Load(); item.SetInHand(false);
             if (duration > 0f) Mod_BaseDroper.StaticDropItem_Pos(item, position, destination ?? position, duration,
                 Mod_BaseDroper.MoveMode.BezierCurve, bezier, arc, spin, spin);

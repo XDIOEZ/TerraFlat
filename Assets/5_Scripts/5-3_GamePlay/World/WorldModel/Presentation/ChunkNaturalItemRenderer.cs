@@ -20,6 +20,8 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IIncrementalChunkV
     #region 字段
 
     private const float AutoSaveFrameBudgetSeconds = 0.0025f;
+    private const float LooseItemOffsetRadius = 0.15f;
+    private const float LooseItemRotationDegrees = 15f;
     private static readonly ProfilerMarker NaturalItemSpawnMarker =
         new("FlatWorld.ChunkStreaming.SpawnNaturalItem");
     private static readonly ProfilerMarker NaturalItemCaptureMarker =
@@ -496,28 +498,37 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IIncrementalChunkV
                 if (machine != null) chunkManager.MarkNaturalItemRemoved(address, placement.Guid);
                 return true;
             }
-            // 可直接拾取的散落生成点交给统一掉落服务；passive 走轻量 GameObject，interactive 保留完整 Item。
-            ItemData looseData = changedData;
-            if (DroppedItemService.UsesLightweightDrops && !placement.IsDimensionPortal && definition != null &&
-                !definition.IsActor && definition.ShellPrefab != null &&
-                definition.ShellPrefab.GetComponentInChildren<Mod_TileEffectReceiver>(true) == null)
+            // 可直接拾取的散落生成点统一使用掉落物尺寸；能轻量化的单机实例再交给统一掉落服务。
+            ItemData looseData = changedData ?? definition?.CreateItemData();
+            bool loosePickupPresentation = false;
+            if (!placement.IsDimensionPortal && definition != null && !definition.IsActor && looseData?.Stack?.CanBePickedUp == true)
             {
-                looseData ??= definition.CreateItemData();
                 bool installed = Mod_Building.TryReadBuildingData(looseData, out _, out Mod_Building.Building_Data building) &&
                     building.Role == BuildingRole.PlacedBuilding;
-                if (looseData.Stack?.CanBePickedUp == true && !installed)
+                if (!installed)
                 {
+                    loosePickupPresentation = true;
                     if (changedData?.transform != null)
                     {
                         position = changedData.transform.position;
                         rotation = changedData.transform.rotation;
-                        scale = changedData.transform.scale;
                     }
-                    DroppedItemHandle handle = DroppedItemService.Spawn(looseData, position,
-                        scale: scale, rotation: rotation.eulerAngles.z);
-                    try { chunkManager.MarkNaturalItemRemoved(address, placement.Guid); }
-                    catch { DroppedItemService.Remove(handle); throw; }
-                    return true;
+
+                    ApplyLooseItemPresentation(placement, changedData == null, ref position, ref rotation);
+                    scale = DroppedItemService.ResolveDefaultWorldDropScale(looseData);
+
+                    bool canUseDropService = DroppedItemService.UsesLightweightDrops &&
+                        definition.ShellPrefab != null &&
+                        definition.ShellPrefab.GetComponentInChildren<Mod_TileEffectReceiver>(true) == null;
+                    if (canUseDropService)
+                    {
+                        // 已经用稳定 GUID 生成了偏移，显式传同一终点避免服务再叠一层随机位移。
+                        DroppedItemHandle handle = DroppedItemService.Spawn(looseData, position, position,
+                            rotation: rotation.eulerAngles.z);
+                        try { chunkManager.MarkNaturalItemRemoved(address, placement.Guid); }
+                        catch { DroppedItemService.Remove(handle); throw; }
+                        return true;
+                    }
                 }
             }
 
@@ -527,7 +538,8 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IIncrementalChunkV
                 {
                     position = changedData.transform.position;
                     rotation = changedData.transform.rotation;
-                    scale = changedData.transform.scale;
+                    if (!loosePickupPresentation)
+                        scale = changedData.transform.scale;
                 }
                 item = itemManager.InstantiateItem(
                     changedData, position, rotation, scale, gameObject);
@@ -578,6 +590,29 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IIncrementalChunkV
                 $"[ChunkNaturalItemRenderer] 自然物实例化失败：{placement.ItemId}，规则={placement.RuleId}，{exception.Message}",
                 this);
             return true;
+        }
+    }
+
+    /// <summary>自然散落物用稳定 GUID 生成轻微偏移和旋转，避免规则格中心整齐排布。</summary>
+    private static void ApplyLooseItemPresentation(NaturalItemPlacement placement, bool applyRandomPose,
+        ref Vector3 position, ref Quaternion rotation)
+    {
+        if (!applyRandomPose)
+            return;
+
+        unchecked
+        {
+            uint hash = (uint)placement.Guid * 747796405u + 2891336453u;
+            float angle = (hash & 0xffffu) / 65535f * Mathf.PI * 2f;
+            hash = hash * 277803737u + 1013904223u;
+            float radius = ((hash >> 16) & 0xffffu) / 65535f * LooseItemOffsetRadius;
+            position.x += Mathf.Cos(angle) * radius;
+            position.y += Mathf.Sin(angle) * radius;
+
+            hash = hash * 277803737u + 1013904223u;
+            float rotation01 = (hash & 0xffffu) / 65535f;
+            rotation = Quaternion.Euler(0f, 0f,
+                Mathf.Lerp(-LooseItemRotationDegrees, LooseItemRotationDegrees, rotation01));
         }
     }
 
