@@ -18,8 +18,8 @@ public sealed class ChunkSnowCoverRenderer : MonoBehaviour, IChunkViewRenderer
     private WeatherMgr weather; // 雨转雪状态的订阅来源。
     private float nextRefresh; // 区块错峰比较积雪状态。
     private float refreshPhase; // 降雪重新开始时保持错峰。
-    private byte[] visibleCoverage; // 只提交发生变化的格。
-    private byte[] visibleWallCoverage; // 墙体出现和拆除也触发刷新。
+    private int[] visibleCoverage; // 保存真实层数，玩家雪堆可以超过十层。
+    private int[] visibleWallCoverage; // 墙体出现和拆除也触发刷新。
     private float[] sampledCoverage; // 上次绘制时的 161 档积雪状态。
     private SnowCoverState sampledSnow; // 区分换世界或星球后的状态实例。
     private float sampledBaselineOffset; // 星球基温变化也会改变雪量。
@@ -37,8 +37,8 @@ public sealed class ChunkSnowCoverRenderer : MonoBehaviour, IChunkViewRenderer
         Unbind(); chunk = value;
         owner = GetComponent<ChunkTilemapRenderer>();
         owner.BatchPresentationRebuilt += ResubmitVisible;
-        visibleCoverage = new byte[value.Terrain.Width * value.Terrain.Height];
-        visibleWallCoverage = new byte[visibleCoverage.Length];
+        visibleCoverage = new int[value.Terrain.Width * value.Terrain.Height];
+        visibleWallCoverage = new int[visibleCoverage.Length];
         sampledCoverage ??= new float[SnowCoverState.BandCount];
         weather = WeatherMgr.Instance;
         weather.SnowingChanged += HandleSnowingChanged;
@@ -156,10 +156,10 @@ public sealed class ChunkSnowCoverRenderer : MonoBehaviour, IChunkViewRenderer
             TerrainCell surface = TerrainSupportLayer.GetSurfaceCell(chunk.Terrain, x, y);
             float coverage = WorldSnowSystem.GetSurfaceDepth(
                 chunk.Terrain, x, y, snow, baselineOffset);
-            byte value = (byte)Mathf.RoundToInt(coverage * 100f);
+            int value = Mathf.RoundToInt(coverage * SnowDepthLayer.LayerCount);
             if (value > 0) nowVisible = true;
             int index = y * chunk.Terrain.Width + x;
-            byte wallValue = surface.BlockingTileId != 0 ? value : (byte)0;
+            int wallValue = surface.BlockingTileId != 0 ? value : 0;
             if (visibleWallCoverage[index] != wallValue)
             {
                 visibleWallCoverage[index] = wallValue;
@@ -187,7 +187,7 @@ public sealed class ChunkSnowCoverRenderer : MonoBehaviour, IChunkViewRenderer
     }
 
     /// <summary>积雪覆盖与窄雪冠只更新发生变化的 BRG 槽。</summary>
-    private void SubmitSnow(int x, int y, byte coverage, bool wall)
+    private void SubmitSnow(int x, int y, int coverage, bool wall)
     {
         var layer = wall ? ChunkBatchRendererGroupService.VisualLayer.SnowWall :
             ChunkBatchRendererGroupService.VisualLayer.Snow;
@@ -202,8 +202,16 @@ public sealed class ChunkSnowCoverRenderer : MonoBehaviour, IChunkViewRenderer
         if (wall)
             matrix *= Matrix4x4.TRS(new Vector3(0f, 0.38f), Quaternion.identity,
                 new Vector3(1f, 0.24f, 1f));
+        else if (coverage > SnowDepthLayer.LayerCount)
+        {
+            // 厚雪堆只向画面上方增高表现，格子坐标与底层地形保持不变。
+            float height = Mathf.Min(0.5f, (coverage - SnowDepthLayer.LayerCount) * 0.025f);
+            matrix *= Matrix4x4.TRS(new Vector3(0f, height * 0.5f), Quaternion.identity,
+                new Vector3(1f, 1f + height, 1f));
+        }
         owner.SetLayerVisual(layer, x, y, snowTile.sprite, snowMaterial,
-            matrix * snowTile.transform, snowTile.color * new Color(1f, 1f, 1f, coverage / 100f));
+            matrix * snowTile.transform, snowTile.color * new Color(1f, 1f, 1f,
+                Mathf.Clamp01(coverage * SnowDepthLayer.LayerStep)));
     }
 
     /// <summary>保存本次采样依据，避免无雪或状态不变时重复扫完整区块。</summary>

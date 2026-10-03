@@ -34,7 +34,7 @@ public sealed class SeasonalSnowRenderEffect : ActorRenderEffectModule
         nextSample = Time.unscaledTime + 0.5f;
         bool moved = (transform.position - lastPosition).sqrMagnitude > 0.0001f;
         lastPosition = transform.position;
-        coverage = moved ? 0f : WeatherMgr.Instance.GetSnowCoverage(transform.position);
+        coverage = moved ? 0f : Mathf.Clamp01(WeatherMgr.Instance.GetSnowCoverage(transform.position));
     }
     /// <summary>雪只影响自身表面，不扩展到外部手持物。</summary>
     protected override bool AppliesToExternalRenderer() => false;

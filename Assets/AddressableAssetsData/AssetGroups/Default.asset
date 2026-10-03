@@ -17,6 +17,24 @@ MonoBehaviour:
     m_SerializedData: []
   m_GUID: 47b73bec22f621a498a1748af8eb38da
   m_SerializeEntries:
+  - m_GUID: c600dcfcd89a4269bc6076a99d17442c
+    m_Address: Assets/6_Art/Generated/Environment/Snowball/Snowball_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: f9a5f7ecc3bb46759d7029b477355b78
+    m_Address: Module_Snowball
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 66f8d7add21048c4b6dbf518ac61a227
+    m_Address: Assets/2_Prefabs/Gameplay/Items/Common/Snowball.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: eb8d3e53cbaa4497aa5644c2be743045
     m_Address: Assets/9_Shaders/Material/Ground-Facility-Lit.mat
     m_ReadOnly: 0

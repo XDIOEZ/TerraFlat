@@ -1365,6 +1365,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         RestoreContaminationTerrain(chunk, delta);
         RestoreLiquidTerrain(chunk, delta);
         RestoreGroundLayerTerrain(chunk, delta);
+        RestoreSnowTerrain(chunk, delta);
         baseline.PersistenceRestored = true;
     }
 
@@ -2876,6 +2877,7 @@ public partial class ChunkSaveRecord
     public List<ContaminationCellSaveData> ContaminationCells = new(); // 独立污染状态
     public List<LiquidCellSaveData> LiquidCells = new(); // 只保存玩家改变的液体格，与 Ground 差量独立。
     public List<GroundLayerCellSaveData> GroundLayerCells = new(); // 追加伪 Z 轴差量，旧记录缺失时按未采挖处理。
+    public List<SnowCellSaveData> SnowCells = new(); // 独立保存玩家铲除或堆放的雪，不替换底层地形。
 
     [MemoryPackIgnore]
     public bool HasChanges =>
@@ -2888,7 +2890,8 @@ public partial class ChunkSaveRecord
          (SupportCells?.Count ?? 0) > 0 ||
          (ContaminationCells?.Count ?? 0) > 0 ||
          (LiquidCells?.Count ?? 0) > 0 ||
-         (GroundLayerCells?.Count ?? 0) > 0);
+         (GroundLayerCells?.Count ?? 0) > 0 ||
+         (SnowCells?.Count ?? 0) > 0);
 }
 
 [MemoryPackable]

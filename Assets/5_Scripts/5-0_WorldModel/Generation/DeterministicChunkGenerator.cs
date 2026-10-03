@@ -16,7 +16,7 @@ namespace FlatWorld.WorldModel
         IChunkEcologyNeighborhoodTagResolver
     {
         /// <summary>纯区块生成规则版本；气候、群系、河流或生态空间分布规则改变时递增。</summary>
-        public const int CurrentGenerationSignature = 59;
+        public const int CurrentGenerationSignature = 60;
 
         private readonly LiquidTypeCatalog liquidTypes;
         /// <summary>资源就绪后注入会话液体表；离线纯算法测试可以使用本体最小目录。</summary>
@@ -567,14 +567,16 @@ namespace FlatWorld.WorldModel
             }
         }
 
-        /// <summary>邻格首次采样后留在局部窗口，泥炭边界不重复计算整套气候。</summary>
+        /// <summary>核心与邻域共用局部气候窗口，温度过渡和泥炭边界不重复计算噪声。</summary>
         private sealed class SurfaceChunkBatch : IDisposable
         {
             private readonly ChunkGenerationRequest request;
             private readonly ChunkGenerationSettingsSnapshot settings;
             private readonly int radius;
+            private readonly int peatRadius;
             private readonly int stride;
             private readonly SurfaceClimateSample[] samples;
+            private double[] temperatureSums;
             public readonly SurfaceCellOutput[] Output;
 
             public SurfaceChunkBatch(ChunkGenerationRequest request,
@@ -582,8 +584,9 @@ namespace FlatWorld.WorldModel
             {
                 this.request = request;
                 this.settings = settings;
-                radius = settings.PeatTileId > 0 && settings.PeatSpawnChance > 0d
+                peatRadius = settings.PeatTileId > 0 && settings.PeatSpawnChance > 0d
                     ? settings.PeatStoneBoundaryRadius : 0;
+                radius = Math.Max(peatRadius, BiomeTemperatureBlendRadius);
                 stride = request.Profile.Width + radius * 2;
                 int sampleCount = stride * (request.Profile.Height + radius * 2);
                 samples = ArrayPool<SurfaceClimateSample>.Shared.Rent(sampleCount);
@@ -597,17 +600,17 @@ namespace FlatWorld.WorldModel
                 if (settings.SurfaceClimateAlgorithm == SurfaceClimateAlgorithm.LegacyLand)
                 {
                     SurfaceClimateBurstKernel.ClimateSample[] batch =
-                        SurfaceClimateBurstKernel.RentAndSample(request, settings);
+                        SurfaceClimateBurstKernel.RentAndSample(request, settings, radius);
                     try
                     {
-                        for (int y = 0; y < request.Profile.Height; y++)
-                        for (int x = 0; x < request.Profile.Width; x++)
+                        for (int y = 0; y < request.Profile.Height + radius * 2; y++)
+                        for (int x = 0; x < stride; x++)
                         {
-                            int index = y * request.Profile.Width + x;
+                            int index = y * stride + x;
                             if ((index & 63) == 0)
                                 cancellationToken.ThrowIfCancellationRequested();
                             SurfaceClimateBurstKernel.ClimateSample value = batch[index];
-                            samples[(y + radius) * stride + x + radius] = new SurfaceClimateSample
+                            samples[index] = new SurfaceClimateSample
                             {
                                 Height = value.Height,
                                 Temperature = value.Temperature,
@@ -625,32 +628,33 @@ namespace FlatWorld.WorldModel
                     }
                     return;
                 }
-                for (int y = 0; y < request.Profile.Height; y++)
-                for (int x = 0; x < request.Profile.Width; x++)
+                for (int y = 0; y < request.Profile.Height + radius * 2; y++)
+                for (int x = 0; x < stride; x++)
                 {
-                    int index = y * request.Profile.Width + x;
+                    int index = y * stride + x;
                     if ((index & 63) == 0)
                         cancellationToken.ThrowIfCancellationRequested();
-                    samples[(y + radius) * stride + x + radius] =
+                    samples[index] =
                         SampleSurfaceClimate(request, settings,
-                            request.Address.ChunkOrigin.X + x,
-                            request.Address.ChunkOrigin.Y + y);
+                            request.Address.ChunkOrigin.X + x - radius,
+                            request.Address.ChunkOrigin.Y + y - radius);
                 }
             }
 
             public void ClassifyCore(CancellationToken cancellationToken)
             {
-                for (int y = 0; y < request.Profile.Height; y++)
-                for (int x = 0; x < request.Profile.Width; x++)
+                for (int y = 0; y < request.Profile.Height + radius * 2; y++)
+                for (int x = 0; x < stride; x++)
                 {
-                    int index = y * request.Profile.Width + x;
+                    int index = y * stride + x;
                     if ((index & 63) == 0)
                         cancellationToken.ThrowIfCancellationRequested();
-                    int sampleIndex = (y + radius) * stride + x + radius;
+                    int sampleIndex = index;
                     SurfaceClimateSample sample = samples[sampleIndex];
                     ClassifyBase(ref sample);
                     samples[sampleIndex] = sample;
                 }
+                PrepareTemperatureBlend(cancellationToken);
             }
 
             public SurfaceClimateSample GetCore(int x, int y) =>
@@ -658,8 +662,8 @@ namespace FlatWorld.WorldModel
 
             public bool HasStoneNeighbor(int x, int y)
             {
-                for (int offsetY = -radius; offsetY <= radius; offsetY++)
-                for (int offsetX = -radius; offsetX <= radius; offsetX++)
+                for (int offsetY = -peatRadius; offsetY <= peatRadius; offsetY++)
+                for (int offsetX = -peatRadius; offsetX <= peatRadius; offsetX++)
                 {
                     if (offsetX == 0 && offsetY == 0)
                         continue;
@@ -692,8 +696,43 @@ namespace FlatWorld.WorldModel
 
             public void Dispose()
             {
+                if (temperatureSums != null) ArrayPool<double>.Shared.Return(temperatureSums);
                 ArrayPool<SurfaceClimateSample>.Shared.Return(samples);
                 ArrayPool<SurfaceCellOutput>.Shared.Return(Output);
+            }
+
+            // 区块外八格也按相同世界坐标采样，用前缀和让每格温度混合只做四次数组读取。
+            private void PrepareTemperatureBlend(CancellationToken cancellationToken)
+            {
+                int rows = request.Profile.Height + radius * 2;
+                int sumStride = stride + 1;
+                int count = sumStride * (rows + 1);
+                temperatureSums = ArrayPool<double>.Shared.Rent(count);
+                Array.Clear(temperatureSums, 0, count);
+                for (int y = 0; y < rows; y++)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    double rowSum = 0d;
+                    for (int x = 0; x < stride; x++)
+                    {
+                        rowSum += ResolveBiomeTemperature(samples[y * stride + x]);
+                        temperatureSums[(y + 1) * sumStride + x + 1] =
+                            temperatureSums[y * sumStride + x + 1] + rowSum;
+                    }
+                }
+            }
+
+            public double GetBlendedTemperature(int x, int y)
+            {
+                int left = x + radius - BiomeTemperatureBlendRadius;
+                int bottom = y + radius - BiomeTemperatureBlendRadius;
+                int diameter = BiomeTemperatureBlendRadius * 2 + 1;
+                int right = left + diameter;
+                int top = bottom + diameter;
+                int sumStride = stride + 1;
+                return (temperatureSums[top * sumStride + right] - temperatureSums[top * sumStride + left] -
+                        temperatureSums[bottom * sumStride + right] + temperatureSums[bottom * sumStride + left]) /
+                       (diameter * diameter);
             }
         }
 
@@ -795,7 +834,6 @@ namespace FlatWorld.WorldModel
             double windX = climate.WindX;
             double windY = climate.WindY;
             double temperature = climate.Temperature;
-            double temperatureCelsius = climate.TemperatureCelsius;
             bool ocean = height < settings.SeaLevel;
             GeneratedHydrologyCell riverCell = default;
             bool river = !ocean && riverMap != null &&
@@ -845,7 +883,6 @@ namespace FlatWorld.WorldModel
                     groundTileId = settings.IceTileId;
                     flags = TerrainCellFlags.Walkable;
                     navigationCost = (short)Math.Min(short.MaxValue, navigationCost + 1);
-                    temperatureCelsius = -10d;
                 }
                 else
                 {
@@ -864,8 +901,6 @@ namespace FlatWorld.WorldModel
                     : settings.StoneTileId;
                 flags = TerrainCellFlags.Walkable;
 
-                // 山地基础气温固定为 10℃，天气与局部冷热源仍由环境温度系统叠加。
-                temperatureCelsius = 10d;
             }
             else if (biome == SurfaceBiomeKind.Beach)
             {
@@ -910,8 +945,6 @@ namespace FlatWorld.WorldModel
                 flags = TerrainCellFlags.Walkable;
                 navigationCost = (short)Math.Min(short.MaxValue, navigationCost + 1);
 
-                // 雪地的基础气温固定为零下 10 度，季节、天气等运行时修正仍由环境温度系统叠加。
-                temperatureCelsius = -10d;
             }
             else
             {
@@ -942,7 +975,6 @@ namespace FlatWorld.WorldModel
                         biomeId = (int)biome;
                         flags = TerrainCellFlags.Walkable;
                         navigationCost = settings.DefaultNavigationCost;
-                        temperatureCelsius = 10d;
                         mountain = true;
                         river = false;
                         floodplain = 0d;
@@ -953,6 +985,10 @@ namespace FlatWorld.WorldModel
                 }
             }
             initialLiquidDepth = QuantizeGeneratedLiquidDepth(initialLiquidDepth);
+
+            // 只混合摄氏气温，不改变群系判定、噪声、天然雪和地形身份。
+            double temperatureCelsius = batch != null ? batch.GetBlendedTemperature(x, y) :
+                SampleBlendedBiomeTemperature(request, settings, worldX, worldY);
 
             // 草先过较宽松的气候门槛，再由湿度决定局部密度；全程只依赖种子和环境层。
             bool snowSurface = biome == SurfaceBiomeKind.Snow &&

@@ -23,7 +23,7 @@ public partial class SnowCoverState
     }
 }
 
-/// <summary>雪层统一查询入口：天然积雪来自区块层，季节积雪叠加后仍保持十档厚度。</summary>
+/// <summary>雪层统一查询入口：天然雪最多十层，玩家堆雪按实际层数保存。</summary>
 public static class WorldSnowSystem
 {
     #region 查询
@@ -54,6 +54,15 @@ public static class WorldSnowSystem
         if (seasonalSnow != null &&
             terrain.TryGetEnvironmentValue("temperature.celsius", x, y, out float temperature))
             seasonalDepth = seasonalSnow.Sample(temperature + baselineOffset);
+
+        // 玩家编辑后的雪厚独立保存，季节只叠加编辑之后的净变化，不能重新铺回天然雪。
+        if (terrain.TryGetEnvironmentValue(WorldSnowInteraction.EditedLayer, x, y, out float edited) && edited > 0f)
+        {
+            terrain.TryGetEnvironmentValue(WorldSnowInteraction.DepthLayer, x, y, out float depth);
+            terrain.TryGetEnvironmentValue(WorldSnowInteraction.SeasonLayer, x, y, out float previousSeason);
+            return Mathf.Max(0, Mathf.RoundToInt((depth + seasonalDepth - previousSeason) * SnowDepthLayer.LayerCount)) *
+                   SnowDepthLayer.LayerStep;
+        }
 
         return SnowDepthLayer.Quantize(Mathf.Max(naturalDepth, seasonalDepth));
     }

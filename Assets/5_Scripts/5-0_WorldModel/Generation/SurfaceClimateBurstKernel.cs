@@ -43,17 +43,19 @@ namespace FlatWorld.WorldModel
             Type.GetType("UnityEngine.Application, UnityEngine.CoreModule") != null;
 
         internal static ClimateSample[] RentAndSample(ChunkGenerationRequest request,
-            ChunkGenerationSettingsSnapshot settings)
+            ChunkGenerationSettingsSnapshot settings, int padding = 0)
         {
-            int count = checked(request.Profile.Width * request.Profile.Height);
+            int width = checked(request.Profile.Width + padding * 2);
+            int height = checked(request.Profile.Height + padding * 2);
+            int count = checked(width * height);
             ClimateSample[] output = ArrayPool<ClimateSample>.Shared.Rent(count);
             Parameters parameters = new()
             {
                 Seed = request.WorldSeed == 0 ? 1 : request.WorldSeed,
-                OriginX = request.Address.ChunkOrigin.X,
-                OriginY = request.Address.ChunkOrigin.Y,
-                Width = request.Profile.Width,
-                Height = request.Profile.Height,
+                OriginX = request.Address.ChunkOrigin.X - padding,
+                OriginY = request.Address.ChunkOrigin.Y - padding,
+                Width = width,
+                Height = height,
                 Wrapped = request.Topology.IsWrapped ? 1 : 0,
                 MinX = request.Topology.Min.X,
                 MinY = request.Topology.Min.Y,

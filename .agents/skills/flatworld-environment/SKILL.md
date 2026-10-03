@@ -52,6 +52,8 @@ description: "Use when: 定位或修改 FlatWorld 的世界时间、昼夜、天
 - 季节日历只从 `SeasonCalendar` 取快照；调整四季长度保留年、季、进度和绝对时钟，并记录 `SeasonHistory`。植物与积雪的历史补算使用 `SampleHistorical`，不能拿新季长重算过去的温害。
 - `TemperatureMgr.TryGetClimateBaseline` 不含季节、动态天气和局部源；历史环境重建与积雪采样用它，角色体温仍用最终环境温度入口，避免重复叠加季节。
 - 天然积雪是 `ChunkTerrainData` 的 `snow.depth` 独立层，季节积雪仍由 `PlanetData.SeasonalSnow` 保存基温分段状态；二者查询时合并，并统一量化为 0～1 的十档（每层 0.1）。`WeatherMgr.Snow` 在天气阶段边界与日内分段推进季节覆盖量，雪停保留覆盖，暖时融化。禁用天气的维度不修改星球季节积雪状态。
+- 群系摄氏气温在生成时按世界坐标两侧各 8 格混合，区块外采样与核心使用同一气候核；前缀和只平滑 `temperature.celsius`，不能改变群系、归一化温度、泥炭邻域或噪声版本。天然雪内部仍用 -10℃、山地内部用 10℃。
+- 铲雪和雪球铺雪走 `WorldSnowInteraction`；铲子优先移除整格雪，每层产出一个 `Snowball`，铺回从真实快捷栏消耗一件并增加一层。玩家编辑雪厚独立于天然雪，允许超过十层；`snow.player.edited/depth/season` 与 `ChunkSaveRecord.SnowCells` 必须一起恢复，铲空也保留编辑标记。厚度大于 1 时只有显示强度钳制到 1，不能钳制真实产物数量。
 - 区块积雪表现直接从已绑定 `ChunkTerrainData` 读取 `temperature.celsius`，再叠加星球基温差采样 `SeasonalSnow`；禁止逐格走世界坐标温度查询。降雨且镜头当地低于冻结温度才启用无雪区块的周期刷新；停雪后仅有残雪的区块继续刷新融化，融净即停用。地形与液体变化事件可临时唤醒覆盖层；雪量与地形版本均不变时跳过整块扫描，区块刷新按 X/Y 坐标错峰。
 
 - 角色液体接触由 `Mod_TileEffectReceiver.Liquid` 独立维护，WorldLiquidBehaviour 读取当前 LiquidDepth；深水有体力时 `LiquidFloating` 仅暂停 Ground。Ground 与 Liquid 各自拥有环境效果运行器，雪地/泥地退出不能清掉潮湿、体温、游泳、氧气、液体减速或饮用动作。浮沉边界只触发一次 Ground Exit/Enter，禁止用全接收器 effectSuppressors 代替上浮状态。
