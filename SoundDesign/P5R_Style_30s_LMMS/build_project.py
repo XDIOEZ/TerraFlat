@@ -303,41 +303,57 @@ def build_music() -> dict[str, list[tuple[int, int, int, int]]]:
     }
 
     progression = [
-        ((53, 56, 60, 63, 67), 41, 48),  # Fm9
-        ((49, 53, 56, 60, 63), 37, 44),  # Dbmaj9
-        ((51, 55, 58, 60, 65), 39, 46),  # Eb13-ish
-        ((48, 52, 55, 58, 63), 36, 43),  # C7#9
-        ((53, 56, 60, 63, 67), 41, 48),
-        ((46, 49, 53, 56, 60), 34, 41),  # Bbm9
-        ((49, 53, 56, 60, 63), 37, 44),
-        ((48, 52, 55, 58, 63), 36, 43),
+        ((53, 56, 60, 63, 67), 41, 44),  # Fm9
+        ((49, 53, 56, 60, 63), 37, 41),  # Dbmaj9
+        ((51, 55, 58, 60, 65), 39, 43),  # Eb13-ish
+        ((48, 52, 55, 58, 63), 36, 39),  # C7#9
+        ((53, 56, 60, 63, 67), 41, 44),
+        ((46, 49, 53, 56, 60), 46, 49),  # Bbm9，抬高八度避免突然下坠
+        ((49, 53, 56, 60, 63), 49, 53),  # Dbmaj9，延续上行线条
+        ((48, 52, 55, 58, 63), 48, 51),  # C7#9
     ] * 2
 
     # 钢琴明确打在反拍上，把空间留给鼓和贝斯。
     chord_hits = ((72, 24, 64), (168, 20, 70))
 
-    for bar, (chord, root, fifth) in enumerate(progression, start=1):
+    for bar, (chord, root, chord_tone) in enumerate(progression, start=1):
         tracks["Piano"].extend(chord_notes(chord, bar, chord_hits))
 
         next_root = progression[bar % len(progression)][1]
-        approach = next_root - 1 if next_root >= root else next_root + 1
+        direction = 1 if next_root > root else -1 if next_root < root else 0
+        approach = next_root - direction if direction != 0 else root
+        midpoint = round((root + next_root) / 2)
+
+        # 小节内使用邻近和弦音，不再反复跳五度或八度。
         if bar % 2 == 1:
             bass_pattern = [
-                (root, 0, 20, 102),
-                (fifth, 36, 12, 78),
-                (root, 84, 14, 88),
-                (root + 12, 96, 18, 98),
-                (fifth, 132, 12, 78),
-                (approach, 174, 10, 80),
+                (root, 0, 28, 100),
+                (chord_tone, 36, 14, 70),
+                (root, 84, 12, 82),
+                (root, 96, 24, 94),
             ]
+            transition_tick = 174
         else:
             bass_pattern = [
-                (root, 0, 20, 101),
-                (fifth, 60, 14, 82),
-                (root, 96, 20, 96),
-                (root + 7, 132, 12, 76),
-                (approach, 168, 12, 82),
+                (root, 0, 28, 99),
+                (chord_tone, 60, 14, 68),
+                (root, 96, 26, 92),
             ]
+            transition_tick = 168
+
+        # 只在真正有距离时补经过音；大跳用两级过渡，小跳只用一级半音导向。
+        transition_notes: list[int] = []
+        if abs(next_root - root) >= 4 and midpoint not in (root, next_root):
+            transition_notes.append(midpoint)
+        if abs(next_root - root) >= 2 and approach not in (root, next_root) and approach not in transition_notes:
+            transition_notes.append(approach)
+
+        if len(transition_notes) == 2:
+            bass_pattern.append((transition_notes[0], 144, 12, 58))
+            bass_pattern.append((transition_notes[1], transition_tick, 10, 52))
+        elif len(transition_notes) == 1:
+            bass_pattern.append((transition_notes[0], transition_tick, 12, 54))
+
         for key, tick, length, velocity in bass_pattern:
             tracks["Slap Bass"].append((key, bar_pos(bar, tick), length, velocity))
 
