@@ -331,8 +331,8 @@ Shader "FlatWorld/2D/Chunk BRG Water Lit"
                 UNITY_SETUP_INSTANCE_ID(input);
                 half4 main = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv) * input.tint * _Color * _RendererColor;
                 half liquidDepth = SampleLiquidDepthCorners(input.positionWS, input.depth);
-                // 保留水下生物与海床可见度，水面波纹仍完整覆盖其上。
-                main.a *= lerp(0.60h, 0.80h, saturate(liquidDepth));
+                // 深水遮住重复海床纹理，浅水仍保留海床与水下实体可见度。
+                main.a = ResolveWaterSurfaceAlpha(main.a, liquidDepth);
                 WaterSurfaceData surface = CalculateChunkWaterSurface(input.positionWS, input.lightingUV, liquidDepth);
                 main.rgb = ApplyWaterSurface(main.rgb, surface);
                 half recess = ComputeShoreRecess(input.positionWS, DecodeWaterShoreMask(input.shore));
@@ -383,7 +383,7 @@ Shader "FlatWorld/2D/Chunk BRG Water Lit"
                 half4 main = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv) * input.tint * _Color * _RendererColor;
                 half liquidDepth = SampleLiquidDepthCorners(input.positionWS, input.depth);
                 // 保留水下生物与海床可见度，水面波纹仍完整覆盖其上。
-                main.a *= lerp(0.60h, 0.80h, saturate(liquidDepth));
+                main.a = ResolveWaterSurfaceAlpha(main.a, liquidDepth);
                 WaterSurfaceData surface = CalculateChunkWaterSurface(input.positionWS, input.screenUV, liquidDepth);
                 main.rgb = ApplyWaterSurface(main.rgb, surface);
                 half recess = ComputeShoreRecess(input.positionWS, DecodeWaterShoreMask(input.shore));

@@ -325,8 +325,8 @@ Shader "FlatWorld/2D/Chunk Mesh Water Lit"
                     lit.a = lava.alpha;
                     return lit;
                 }
-                // 保留水下生物与海床可见度，水面波纹仍完整覆盖其上。
-                main.a *= lerp(0.60h, 0.80h, saturate(liquidDepth));
+                // 深水遮住重复海床纹理，浅水仍保留海床与水下实体可见度。
+                main.a = ResolveWaterSurfaceAlpha(main.a, liquidDepth);
                 WaterSurfaceData surface = CalculateChunkWaterSurface(input.positionWS, input.lightingUV, liquidDepth, data);
                 main.rgb = ApplyWaterSurface(main.rgb, surface);
                 main.rgb = ApplyChunkWaterShore(main.rgb, recess, input.positionWS, data);
@@ -397,7 +397,7 @@ Shader "FlatWorld/2D/Chunk Mesh Water Lit"
                     return half4(lava.albedo + lava.emission, lava.alpha);
                 }
                 // 保留水下生物与海床可见度，水面波纹仍完整覆盖其上。
-                main.a *= lerp(0.60h, 0.80h, saturate(liquidDepth));
+                main.a = ResolveWaterSurfaceAlpha(main.a, liquidDepth);
                 WaterSurfaceData surface = CalculateChunkWaterSurface(input.positionWS, input.screenUV, liquidDepth, data);
                 main.rgb = ApplyWaterSurface(main.rgb, surface);
                 main.rgb = ApplyChunkWaterShore(main.rgb, recess, input.positionWS, data);

@@ -132,6 +132,14 @@ half QuantizeWaterVisualDepth(half liquidDepth)
     return min(1.0h, ceil(depth * 10.0h - 0.001h) * 0.1h);
 }
 
+/// <summary>深水提高遮盖率避免海床地块纹理透出格子感，浅水仍保留海床可见度。</summary>
+half ResolveWaterSurfaceAlpha(half textureAlpha, half liquidDepth)
+{
+    half depth = saturate(liquidDepth);
+    half deepWater = smoothstep(0.15h, 0.55h, depth);
+    return textureAlpha * lerp(0.78h, 0.98h, deepWater);
+}
+
 /// <summary>通过显式世界坐标映射采样 Chunk 水深，再按十分位生成十档水面表现。</summary>
 half SampleLiquidDepth(float2 positionWS)
 {
