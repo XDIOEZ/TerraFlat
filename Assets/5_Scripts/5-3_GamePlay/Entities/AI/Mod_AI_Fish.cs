@@ -1,4 +1,5 @@
 using System;
+using FlatWorld.Combat;
 using FlatWorld.Networking;
 using MemoryPack;
 using UnityEngine;
@@ -16,19 +17,32 @@ public interface IAquaticPredatorCarryTarget
     void ReleaseFromPredator(Item predator);
 }
 
+/// <summary>声明该 AI 具备主动捕食水生猎物的能力，供猎物感知复用而不硬编码物种。</summary>
+public interface IAquaticPredatorThreat
+{
+    bool ThreatensAquaticPrey(Item prey);
+}
+
 /// <summary>逐条鱼使用现有状态机、营养、Buff、受伤与 Item 生命周期；不建立鱼群模拟器。</summary>
 public sealed partial class Mod_AI_Fish : Module, IAIActor, IItemModuleDependencyBinder, ITemperatureSafetyMovement,
     IAquaticPredatorCarryTarget
 {
     #region 配置与持久化
     public const string ModuleId = "Mod_AI_Fish";
-    private enum Behaviour { Swim, Forage, Stranded, Hooked }
+    private enum Behaviour { Swim, Forage, Flee, Stranded, Hooked }
+    private static readonly float[] FleeAngles = { 0f, 30f, -30f, 60f, -60f, 90f, -90f, 135f, -135f, 180f };
     [Min(0.01f)] public float swimSpeed = 1.1f;
     [Min(0.1f)] public float wanderRadius = 3f;
     [Min(0.1f)] public float forageRadius = 8f;
     [Min(0.05f)] public float eatRange = 0.45f;
     [Min(0.1f)] public float eatSeconds = 0.8f;
     [Min(0.1f)] public float scanInterval = 0.5f;
+    [Min(0.1f)] public float fleeTriggerDistance = 6f;
+    [Min(0.1f)] public float fleeSafeDistance = 10f;
+    [Min(0.1f)] public float fleeRunDistance = 5f;
+    [Min(1f)] public float fleeSpeedMultiplier = 1.8f;
+    [Min(0.05f)] public float vigilanceInterval = 0.3f;
+    [Min(0.1f)] public float hurtEscapeSeconds = 4f;
     [Range(0f, 1f)] public float eatAvailableFoodThreshold = 1f;
     [Range(0f, 1f)] public float activeForageThreshold = 0.7f;
     public string[] edibleTags = { "Food", "47", "Meat", "Worm" };
@@ -55,6 +69,7 @@ public sealed partial class Mod_AI_Fish : Module, IAIActor, IItemModuleDependenc
     private Mod_Food food;
     private Mod_BuffManager buffs;
     private Mod_DamageReceiver health;
+    private Mod_ItemDetector threatDetector;
     private Rigidbody2D body;
     private RigidbodyType2D originalBodyType;
     private Collider2D[] colliders;
@@ -65,6 +80,11 @@ public sealed partial class Mod_AI_Fish : Module, IAIActor, IItemModuleDependenc
     private Vector2 destination;
     private bool hasDestination, loaded, nodesRegistered;
     private float scanRemaining, eatElapsed, idleRemaining;
+    private float vigilanceRemaining, damageFleeRemaining;
+    private long lastVigilanceVersion;
+    private Item sensedPredator, damageThreat;
+    private Vector2 damageThreatOrigin, fleeDestination;
+    private bool hasFleeDestination;
     private Mod_FishingRod fishingRod;
     private Item predatorCarrier;
     private float carriedVisualHeight;
@@ -88,6 +108,7 @@ public sealed partial class Mod_AI_Fish : Module, IAIActor, IItemModuleDependenc
         food = modules.RequireSingleModById<Mod_Food>(ModText.Food);
         buffs = modules.RequireSingleModById<Mod_BuffManager>(ModText.Mod_BuffManager);
         health = modules.RequireSingleModById<Mod_DamageReceiver>(ModText.Hp);
+        threatDetector = modules.RequireSingleModById<Mod_ItemDetector>(ModText.Detector);
     }
 
     public override void Load()
@@ -114,21 +135,30 @@ public sealed partial class Mod_AI_Fish : Module, IAIActor, IItemModuleDependenc
         targetTag = null;
         fishingRod = null;
         predatorCarrier = null;
+        sensedPredator = null;
+        damageThreat = null;
+        damageThreatOrigin = default;
         carriedVisualHeight = 0f;
-        scanRemaining = eatElapsed = idleRemaining = 0f;
+        scanRemaining = eatElapsed = idleRemaining = vigilanceRemaining = damageFleeRemaining = 0f;
+        lastVigilanceVersion = threatDetector.AppliedVersion;
         hasDestination = false;
+        hasFleeDestination = false;
         temperatureSafetyRetreat = false;
         temperatureSafetyReached = false;
+        threatDetector.DetectionRadius = Mathf.Max(fleeTriggerDistance, fleeSafeDistance);
         if (!nodesRegistered)
         {
             machine.Register(new AIStateNode<Behaviour>(Behaviour.Swim, TickSwim));
             machine.Register(new AIStateNode<Behaviour>(Behaviour.Forage, TickForage));
+            machine.Register(new AIStateNode<Behaviour>(Behaviour.Flee, TickFlee));
             machine.Register(new AIStateNode<Behaviour>(Behaviour.Stranded, _ => { }));
             machine.Register(new AIStateNode<Behaviour>(Behaviour.Hooked, _ => { }));
             nodesRegistered = true;
         }
         machine.Initialize(Behaviour.Swim);
         loaded = true;
+        health.OnDamageReceived -= HandleFishDamage;
+        health.OnDamageReceived += HandleFishDamage;
         UpdatePresentation(0f);
     }
 
@@ -137,12 +167,17 @@ public sealed partial class Mod_AI_Fish : Module, IAIActor, IItemModuleDependenc
     public override void Unload()
     {
         loaded = false;
+        if (health != null) health.OnDamageReceived -= HandleFishDamage;
         fishingRod = null;
         predatorCarrier = null;
+        sensedPredator = null;
+        damageThreat = null;
+        damageFleeRemaining = 0f;
         carriedVisualHeight = 0f;
         target = default;
         targetTag = null;
         hasDestination = false;
+        hasFleeDestination = false;
         temperatureSafetyRetreat = false;
         temperatureSafetyReached = false;
         machine.Reset();
@@ -196,15 +231,23 @@ public sealed partial class Mod_AI_Fish : Module, IAIActor, IItemModuleDependenc
                 UpdatePresentation(deltaTime);
                 return;
             }
+            damageFleeRemaining = Mathf.Max(0f, damageFleeRemaining - deltaTime);
+            TickVigilance(deltaTime);
             scanRemaining -= deltaTime;
-            if (!IsHooked && depth >= AquaticHabitat.MinimumDepth && WillEatAvailableFood && scanRemaining <= 0f)
+            if (HasActiveThreat)
+            {
+                target = default;
+                targetTag = null;
+                eatElapsed = 0f;
+            }
+            else if (!IsHooked && depth >= AquaticHabitat.MinimumDepth && WillEatAvailableFood && scanRemaining <= 0f)
             {
                 scanRemaining = Mathf.Max(0.1f, scanInterval);
                 FindFood(ShouldActivelyForage ? forageRadius : eatRange);
             }
             if (!WillEatAvailableFood) { target = default; targetTag = null; }
             Behaviour next = IsHooked ? Behaviour.Hooked : depth < AquaticHabitat.MinimumDepth
-                ? Behaviour.Stranded : target.IsValid ? Behaviour.Forage : Behaviour.Swim;
+                ? Behaviour.Stranded : HasActiveThreat ? Behaviour.Flee : target.IsValid ? Behaviour.Forage : Behaviour.Swim;
             machine.TransitionTo(next, null);
             machine.Tick(deltaTime);
         }
@@ -291,11 +334,11 @@ public sealed partial class Mod_AI_Fish : Module, IAIActor, IItemModuleDependenc
         }
     }
 
-    private bool SwimTowards(Vector2 position, float deltaTime)
+    private bool SwimTowards(Vector2 position, float deltaTime, float speedMultiplier = 1f)
     {
         Vector2 origin = item.transform.position;
         Vector2 delta = WorldTopologyRuntime.ShortestDelta(origin, position);
-        Vector2 step = Vector2.ClampMagnitude(delta, swimSpeed * deltaTime);
+        Vector2 step = Vector2.ClampMagnitude(delta, swimSpeed * Mathf.Max(0f, speedMultiplier) * deltaTime);
         Vector2 next = WorldTopologyRuntime.NormalizePosition(origin + step);
         if (!AquaticHabitat.CanTraverse(origin, next)) return false;
         MovePosition(next);
@@ -309,6 +352,175 @@ public sealed partial class Mod_AI_Fish : Module, IAIActor, IItemModuleDependenc
         item.transform.position = new Vector3(position.x, position.y, item.transform.position.z);
         ItemMgr.Instance?.NotifyRuntimeItemMoved(item);
     }
+
+    #region 捕食者逃离
+
+    private bool HasActiveThreat => damageFleeRemaining > 0f || sensedPredator != null;
+
+    /// <summary>按固定间隔扫描食肉动物和玩家，逃离状态使用更大的安全距离形成滞回。</summary>
+    private void TickVigilance(float deltaTime)
+    {
+        vigilanceRemaining -= deltaTime;
+        if (vigilanceRemaining <= 0f)
+        {
+            vigilanceRemaining = Mathf.Max(0.05f, vigilanceInterval);
+            threatDetector.RequestDetectorUpdate();
+        }
+
+        long appliedVersion = threatDetector.AppliedVersion;
+        if (appliedVersion <= lastVigilanceVersion) return;
+        lastVigilanceVersion = appliedVersion;
+
+        float radius = machine.CurrentState == Behaviour.Flee || damageFleeRemaining > 0f
+            ? Mathf.Max(fleeTriggerDistance, fleeSafeDistance)
+            : fleeTriggerDistance;
+        Item previous = sensedPredator;
+        sensedPredator = FindClosestPredator(radius);
+        if (previous != sensedPredator) hasFleeDestination = false;
+    }
+
+    private Item FindClosestPredator(float radius)
+    {
+        Item closest = null;
+        float closestDistanceSqr = float.PositiveInfinity;
+
+        ItemMgr itemManager = ItemMgr.Instance;
+        if (itemManager != null)
+        {
+            foreach (Player player in itemManager.Player_DIC.Values)
+                ConsiderPredator(player, radius, ref closest, ref closestDistanceSqr);
+        }
+
+        System.Collections.Generic.List<Item> detected = threatDetector.CurrentItemsInArea;
+        for (int index = 0; index < detected.Count; index++)
+        {
+            Item candidate = detected[index];
+            if (candidate == null || candidate == item || !IsFishPredator(candidate)) continue;
+            ConsiderPredator(candidate, radius, ref closest, ref closestDistanceSqr);
+        }
+        return closest;
+    }
+
+    private void ConsiderPredator(Item candidate, float radius, ref Item closest, ref float closestDistanceSqr)
+    {
+        if (candidate == null || candidate == item || !candidate.gameObject.activeInHierarchy ||
+            !AIFleeUtility.IsWithinEscapeRange(item.transform.position, candidate, threatDetector, radius)) return;
+
+        float distanceSqr = WorldTopologyRuntime.SqrDistance(item.transform.position, candidate.transform.position);
+        if (distanceSqr >= closestDistanceSqr) return;
+        closestDistanceSqr = distanceSqr;
+        closest = candidate;
+    }
+
+    private bool IsFishPredator(Item candidate)
+    {
+        if (candidate is Player || candidate.itemData?.Tags?.ContainsTag(Tag.Player) == true) return true;
+        if (candidate.itemData?.Tags?.ContainsTag(Tag.Carnivore) == true) return true;
+        if (candidate.itemMods?.Mods == null) return false;
+
+        foreach (Module module in candidate.itemMods.Mods.Values)
+            if (module is IAquaticPredatorThreat aquaticPredator && aquaticPredator.ThreatensAquaticPrey(item))
+                return true;
+        return false;
+    }
+
+    private void HandleFishDamage(DamageReceiverDamageInfo info)
+    {
+        if (!loaded || !GameNetwork.HasStateAuthority || !IsAlive || info == null || info.DamageValue <= 0f) return;
+        Item attacker = info.Attacker != null ? info.Attacker.Owner ?? info.Attacker : null;
+        if (attacker == null || attacker == item || !DamageThreatOrigin.TryResolve(info, out Vector2 origin)) return;
+
+        damageThreat = attacker;
+        damageThreatOrigin = origin;
+        damageFleeRemaining = Mathf.Max(0.1f, hurtEscapeSeconds);
+        hasFleeDestination = false;
+        target = default;
+        targetTag = null;
+        eatElapsed = 0f;
+    }
+
+    private void TickFlee(float deltaTime)
+    {
+        if (!TryResolveThreatPosition(out Vector2 threatPosition))
+        {
+            hasFleeDestination = false;
+            return;
+        }
+
+        Vector2 current = item.transform.position;
+        if (!hasFleeDestination || WorldTopologyRuntime.SqrDistance(current, fleeDestination) <= 0.09f ||
+            !AquaticHabitat.CanTraverse(current, fleeDestination))
+        {
+            if (!TryPlanFleeDestination(threatPosition, out fleeDestination))
+            {
+                hasFleeDestination = false;
+                return;
+            }
+            hasFleeDestination = true;
+        }
+
+        if (!SwimTowards(fleeDestination, deltaTime, Mathf.Max(1f, fleeSpeedMultiplier)))
+            hasFleeDestination = false;
+    }
+
+    private bool TryResolveThreatPosition(out Vector2 threatPosition)
+    {
+        if (damageFleeRemaining > 0f)
+        {
+            if (damageThreat != null && damageThreat.gameObject.activeInHierarchy)
+                damageThreatOrigin = damageThreat.transform.position;
+            threatPosition = damageThreatOrigin;
+            return true;
+        }
+
+        if (sensedPredator != null && sensedPredator.gameObject.activeInHierarchy)
+        {
+            threatPosition = sensedPredator.transform.position;
+            return true;
+        }
+
+        sensedPredator = null;
+        threatPosition = default;
+        return false;
+    }
+
+    /// <summary>优先沿背离威胁的方向选取仍完全处于连续水域中的逃生点。</summary>
+    private bool TryPlanFleeDestination(Vector2 threatPosition, out Vector2 planned)
+    {
+        Vector2 origin = item.transform.position;
+        Vector2 away = WorldTopologyRuntime.ShortestDelta(threatPosition, origin);
+        Vector2 preferred = away.sqrMagnitude > 0.0001f ? away.normalized : Vector2.right;
+        float baseDistance = Mathf.Max(0.1f, fleeRunDistance);
+        float bestScore = float.NegativeInfinity;
+        planned = default;
+        bool found = false;
+
+        for (int ring = 0; ring < 4; ring++)
+        {
+            float distance = baseDistance * (1f - ring * 0.2f);
+            for (int angleIndex = 0; angleIndex < FleeAngles.Length; angleIndex++)
+            {
+                float radians = FleeAngles[angleIndex] * Mathf.Deg2Rad;
+                float cos = Mathf.Cos(radians);
+                float sin = Mathf.Sin(radians);
+                Vector2 direction = new(preferred.x * cos - preferred.y * sin,
+                    preferred.x * sin + preferred.y * cos);
+                Vector2 candidate = WorldTopologyRuntime.NormalizePosition(origin + direction * distance);
+                if (!AquaticHabitat.CanTraverse(origin, candidate)) continue;
+
+                float score = WorldTopologyRuntime.SqrDistance(threatPosition, candidate) +
+                              Vector2.Dot(direction, preferred) * 0.25f;
+                if (score <= bestScore) continue;
+                bestScore = score;
+                planned = candidate;
+                found = true;
+            }
+            if (found) break;
+        }
+        return found;
+    }
+
+    #endregion
 
     #region 温度避险
 

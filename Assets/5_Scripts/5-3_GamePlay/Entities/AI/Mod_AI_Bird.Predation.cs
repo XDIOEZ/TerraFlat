@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-public sealed partial class Mod_AI_Bird
+public sealed partial class Mod_AI_Bird : IAquaticPredatorThreat
 {
     #region 鱼类捕食
     private const string FishPreyTag = "Fish";
@@ -49,6 +49,11 @@ public sealed partial class Mod_AI_Bird
     private bool IsFishHunting => fishHuntStage != FishHuntStage.None;
     private bool HasFishHuntVisualHeightOverride => fishHuntVisualHeightOverride >= 0f;
     private float FishHuntVisualHeightOverride => Mathf.Max(0f, fishHuntVisualHeightOverride);
+
+    public bool ThreatensAquaticPrey(Item prey)
+    {
+        return loaded && IsAlive && prey?.itemData?.Tags?.ContainsTag(FishPreyTag) == true;
+    }
 
     CombatDamage IDamageSender.DamageValues
     {

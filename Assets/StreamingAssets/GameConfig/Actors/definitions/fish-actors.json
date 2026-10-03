@@ -26,6 +26,7 @@
         "animatorPath": "FishVisual",
         "animationState": "Idle",
         "animatorControllerAddress": "flatworld.actor.animator.smallfish",
+        "flipX": true,
         "shadows": {
           "enabled": false
         },
@@ -88,6 +89,36 @@
             "Type": 0
           },
           "parameters": {
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            }
+          }
+        },
+        "detector": {
+          "prefab": "Module_Detector",
+          "id": "物品检测模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "detectionRadius": 10.0,
+            "itemLayer": 1025,
             "$transform": {
               "localPosition": {
                 "x": 0.0,
@@ -301,6 +332,12 @@
             "eatRange": 0.45,
             "eatSeconds": 0.8,
             "scanInterval": 0.5,
+            "fleeTriggerDistance": 6.0,
+            "fleeSafeDistance": 10.0,
+            "fleeRunDistance": 5.0,
+            "fleeSpeedMultiplier": 1.8,
+            "vigilanceInterval": 0.3,
+            "hurtEscapeSeconds": 4.0,
             "eatAvailableFoodThreshold": 1.0,
             "activeForageThreshold": 0.7,
             "edibleTags": [
