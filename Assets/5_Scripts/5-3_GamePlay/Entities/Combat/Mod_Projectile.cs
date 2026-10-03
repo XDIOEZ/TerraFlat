@@ -96,6 +96,7 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
     private bool _resolvedBounceThisSweep;
     private bool _bounceSpinActive;
     private float _bounceSpinDirection = 1f;
+    private float _bounceSpinReferenceSpeed;
     private bool _isFlying;
     private bool _endingFlight;
     private Transform _embeddedTarget;
@@ -717,10 +718,15 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
             return;
 
         Vector2 velocity = _body != null ? _body.velocity : Vector2.zero;
+        float speed = velocity.magnitude;
+        if (speed <= 0.01f)
+            return;
+
         float cross = velocity.x * impactNormal.y - velocity.y * impactNormal.x;
         _bounceSpinDirection = Mathf.Abs(cross) > 0.001f
             ? Mathf.Sign(cross)
             : (velocity.x >= 0f ? -1f : 1f);
+        _bounceSpinReferenceSpeed = Mathf.Max(_bounceSpinReferenceSpeed, speed);
         _bounceSpinActive = true;
     }
 
@@ -729,20 +735,24 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
         if (!_bounceSpinActive || _arcVisual == null || deltaTime <= 0f)
             return;
 
-        if (_body == null || _body.velocity.sqrMagnitude <= 0.0001f)
+        float speed = _body != null ? _body.velocity.magnitude : 0f;
+        if (speed <= 0.01f || _bounceSpinReferenceSpeed <= 0.01f)
         {
             _bounceSpinActive = false;
             return;
         }
 
+        // 弹飞后的旋转速度跟随线速度衰减，飞行停下时同步停转。
+        float speedRatio = Mathf.Clamp01(speed / _bounceSpinReferenceSpeed);
         _arcVisual.localRotation *= Quaternion.Euler(
-            0f, 0f, BounceSpinDegreesPerSecond * _bounceSpinDirection * deltaTime);
+            0f, 0f, BounceSpinDegreesPerSecond * speedRatio * _bounceSpinDirection * deltaTime);
     }
 
     private void ResetBounceSpin()
     {
         _bounceSpinActive = false;
         _bounceSpinDirection = 1f;
+        _bounceSpinReferenceSpeed = 0f;
         _pendingImpactNormal = Vector2.zero;
         _processingPhysicalContact = false;
         _physicalContactResolved = false;
