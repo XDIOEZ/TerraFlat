@@ -214,9 +214,9 @@ Shader "FlatWorld/2D/Chunk BRG Water Lit"
         }
 
         // 海洋使用世界风场写入的逐格流向，材质不再拥有独立方向。
-        float2 ResolveOceanFlowAxis(ChunkBRGInstanceData data)
+        float2 ResolveOceanFlowAxis(float2 positionWS, ChunkBRGInstanceData data)
         {
-            return ResolveWaterFlowAxis(float2(data.flowX.x, data.flowY.x));
+            return ResolveWaterFlowAxis(ResolveRiverVelocity(positionWS, data));
         }
 
         // 静水也有表面细波；物理流速为零不代表视觉冻结。河口反射波只影响渲染。
@@ -224,7 +224,7 @@ Shader "FlatWorld/2D/Chunk BRG Water Lit"
         {
             ChunkBRGInstanceData data = LoadChunkBRGInstanceData();
             if (data.transform0.w > 1.5)
-                return CalculateWaterSurface(positionWS, screenUV, depth, ResolveOceanFlowAxis(data));
+                return CalculateWaterSurface(positionWS, screenUV, depth, ResolveOceanFlowAxis(positionWS, data));
             float2 velocity = ResolveRiverVelocity(positionWS, data);
             float strength = saturate(length(velocity) / 0.45);
             float lake = 1.0 - step(0.5, data.transform0.w);
@@ -256,7 +256,7 @@ Shader "FlatWorld/2D/Chunk BRG Water Lit"
         {
             ChunkBRGInstanceData data = LoadChunkBRGInstanceData();
             if (data.transform0.w > 1.5)
-                return ApplyShore(sourceColor, recess, positionWS, ResolveOceanFlowAxis(data));
+                return ApplyShore(sourceColor, recess, positionWS, ResolveOceanFlowAxis(positionWS, data));
             half band = saturate(recess * (1.0h - recess) * 4.0h);
             float2 velocity = ResolveRiverVelocity(positionWS, data);
             float lake = 1.0 - step(0.5, data.transform0.w);

@@ -1248,9 +1248,13 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRend
             {
                 terrain.TryGetEnvironmentValue("windX", x, y, out float windX);
                 terrain.TryGetEnvironmentValue("windY", x, y, out float windY);
-                Vector2 direction = WaterEnvironmentRules.ResolveOceanCurrentDirection(new Vector2(windX, windY));
-                instanceData.FlowX = new Vector4(direction.x, direction.x, direction.x, direction.x);
-                instanceData.FlowY = new Vector4(direction.y, direction.y, direction.y, direction.y);
+                Vector2 fallback = WaterEnvironmentRules.ResolveOceanCurrentDirection(new Vector2(windX, windY));
+                Vector2 bottomLeft = ResolveOceanCornerDirection(terrain, x - 1, y - 1, fallback);
+                Vector2 bottomRight = ResolveOceanCornerDirection(terrain, x, y - 1, fallback);
+                Vector2 topLeft = ResolveOceanCornerDirection(terrain, x - 1, y, fallback);
+                Vector2 topRight = ResolveOceanCornerDirection(terrain, x, y, fallback);
+                instanceData.FlowX = new Vector4(bottomLeft.x, bottomRight.x, topLeft.x, topRight.x);
+                instanceData.FlowY = new Vector4(bottomLeft.y, bottomRight.y, topLeft.y, topRight.y);
                 return;
             }
             instanceData.Transform0.w = (float)RuntimeWaterCurrentKind.River;
@@ -1298,6 +1302,36 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRend
             }
         }
         return count > 0 ? velocity / count : Vector2.zero;
+    }
+
+    /// <summary>海面风向按共享格角平均，保证相邻水格的波纹方向连续。</summary>
+    private Vector2 ResolveOceanCornerDirection(ChunkTerrainData terrain, int left, int bottom, Vector2 fallback)
+    {
+        Vector2 direction = Vector2.zero;
+        int count = 0;
+        for (int offsetY = 0; offsetY <= 1; offsetY++)
+        {
+            for (int offsetX = 0; offsetX <= 1; offsetX++)
+            {
+                if (!TryResolveTerrainCell(terrain, left + offsetX, bottom + offsetY,
+                        out ChunkTerrainData source, out int localX, out int localY,
+                        out TerrainCell cell) ||
+                    source.GetLiquidDepth(localX, localY) <= 0f ||
+                    (SurfaceBiomeKind)cell.BiomeId != SurfaceBiomeKind.Ocean)
+                    continue;
+
+                source.TryGetEnvironmentValue("windX", localX, localY, out float windX);
+                source.TryGetEnvironmentValue("windY", localX, localY, out float windY);
+                Vector2 sample = WaterEnvironmentRules.ResolveOceanCurrentDirection(new Vector2(windX, windY));
+                if (sample.sqrMagnitude <= 0.000001f)
+                    continue;
+
+                direction += sample;
+                count++;
+            }
+        }
+
+        return count > 0 ? direction.normalized : fallback;
     }
 
     /// <summary>RGBA 分别记录左、右、下、上岸线方向。</summary>
