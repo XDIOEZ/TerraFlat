@@ -357,11 +357,19 @@ def build_music() -> dict[str, list[tuple[int, int, int, int]]]:
         for key, tick, length, velocity in bass_pattern:
             tracks["Slap Bass"].append((key, bar_pos(bar, tick), length, velocity))
 
-    # 吉他只在句尾做很短的回答，避免和钢琴抢节奏。
+    # 吉他在每个四小节段里做少量短回应，让存在感更高但仍保留呼吸感。
     melody = {
+        2: [(65, 126, 14), (68, 156, 16)],
+        3: [(67, 84, 12), (70, 126, 18)],
         4: [(68, 120, 14), (72, 150, 18)],
+        6: [(68, 120, 14), (72, 150, 18)],
+        7: [(65, 84, 12), (68, 126, 18)],
         8: [(67, 120, 14), (70, 150, 18)],
+        10: [(65, 126, 14), (68, 156, 16)],
+        11: [(67, 84, 12), (70, 126, 18)],
         12: [(68, 120, 14), (72, 150, 18)],
+        14: [(68, 120, 14), (72, 150, 18)],
+        15: [(65, 84, 12), (68, 126, 18)],
         16: [(67, 114, 14), (70, 144, 14), (72, 168, 18)],
     }
     for bar, phrases in melody.items():
@@ -397,9 +405,9 @@ def build_project() -> None:
     tracks = build_music()
 
     add_drum_beat(container)
-    add_track(container, "Slap Bass", tracks["Slap Bass"], volume=42, pan=0, sample="instruments/bassslap01.ogg")
+    add_track(container, "Slap Bass", tracks["Slap Bass"], volume=35, pan=0, sample="instruments/bassslap01.ogg")
     add_track(container, "Piano", tracks["Piano"], volume=31, pan=-8, sample="instruments/piano01.ogg")
-    add_track(container, "Guitar", tracks["Guitar"], volume=24, pan=10, sample="instruments/steel_guitar01.ogg")
+    add_track(container, "Guitar", tracks["Guitar"], volume=28, pan=10, sample="instruments/steel_guitar01.ogg")
 
     mixer = ET.SubElement(song, "fxmixer", {"visible": "0", "width": "647", "height": "332", "x": "9", "y": "441", "maximized": "0", "minimized": "0"})
     master = ET.SubElement(mixer, "fxchannel", {"num": "0", "muted": "0", "volume": "1", "name": "Master", "soloed": "0"})
