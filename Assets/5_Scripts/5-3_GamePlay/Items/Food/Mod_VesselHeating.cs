@@ -24,6 +24,8 @@ public sealed class Mod_VesselHeating : Module, IInventoryHeatTreatment
 public static class InventoryVesselHeating
 {
     #region 库存加热
+    public const float TemperatureTransferPerSecond = 10f;
+
     public static bool ProcessHeat(Inventory input, Inventory output, float temperature, float seconds)
     {
         bool handled = false;
@@ -47,14 +49,39 @@ public static class InventoryVesselHeating
 
             LiquidDefinition liquid = GameRes.ExistingInstance?.GetLiquidDefinition(state.LiquidId)
                 ?? throw new InvalidOperationException($"液体容器引用了未注册液体：{state.LiquidId}");
+            bool changed = AdvanceTemperature(state, temperature, seconds);
             LiquidHeatProcess heat = liquid.HeatProcess;
-            if (heat == null || temperature < heat.MinimumTemperature)
+            if (heat == null)
+            {
+                if (changed)
+                {
+                    storage.WriteData(state);
+                    input.Data.NotifyItemStateChanged(slot.itemData);
+                }
                 continue;
+            }
+
+            if (state.Temperature < heat.MinimumTemperature)
+            {
+                if (state.ProcessingSeconds > 0f)
+                {
+                    state.ProcessingSeconds = 0f;
+                    changed = true;
+                }
+                if (changed)
+                {
+                    storage.WriteData(state);
+                    input.Data.NotifyItemStateChanged(slot.itemData);
+                }
+                continue;
+            }
 
             state.ProcessingSeconds += Math.Max(0f, seconds);
-            if (state.ProcessingSeconds < heat.Seconds)
+            changed = true;
+            if (state.ProcessingSeconds + Mod_WaterVessel.AmountEpsilon < heat.Seconds)
             {
                 storage.WriteData(state);
+                input.Data.NotifyItemStateChanged(slot.itemData);
                 continue;
             }
 
@@ -71,6 +98,7 @@ public static class InventoryVesselHeating
                         !TryGrantOutput(output, heat.OutputItemId, heat.OutputAmount))
                     {
                         storage.WriteData(state);
+                        input.Data.NotifyItemStateChanged(slot.itemData);
                         continue;
                     }
 
@@ -92,6 +120,51 @@ public static class InventoryVesselHeating
             input.Data.NotifyItemStateChanged(slot.itemData);
         }
         return handled;
+    }
+
+    /// <summary>世界中的完整容器按所在格环境温度传热；无产物的液体转换可直接在原容器完成。</summary>
+    public static bool ProcessWorldHeat(LiquidContainerState state, float temperature, float seconds)
+    {
+        if (state == null || Mod_WaterVessel.IsEmptyAmount(state.Amount) || string.IsNullOrWhiteSpace(state.LiquidId))
+            return false;
+
+        LiquidDefinition liquid = GameRes.ExistingInstance?.GetLiquidDefinition(state.LiquidId)
+            ?? throw new InvalidOperationException($"液体容器引用了未注册液体：{state.LiquidId}");
+        bool changed = AdvanceTemperature(state, temperature, seconds);
+        LiquidHeatProcess heat = liquid.HeatProcess;
+        if (heat?.Mode != LiquidHeatProcessMode.Transform)
+            return changed;
+
+        if (state.Temperature < heat.MinimumTemperature)
+        {
+            if (state.ProcessingSeconds > 0f)
+            {
+                state.ProcessingSeconds = 0f;
+                changed = true;
+            }
+            return changed;
+        }
+
+        state.ProcessingSeconds += Mathf.Max(0f, seconds);
+        changed = true;
+        if (state.ProcessingSeconds + Mod_WaterVessel.AmountEpsilon < heat.Seconds)
+            return changed;
+
+        state.LiquidId = heat.ResultLiquidId;
+        state.ProcessingSeconds = 0f;
+        return true;
+    }
+
+    /// <summary>容器液体以每秒 10℃ 向热源温度靠拢，热源只提供目标温度而不瞬间覆写液温。</summary>
+    private static bool AdvanceTemperature(LiquidContainerState state, float temperature, float seconds)
+    {
+        float before = state.Temperature;
+        float target = Mathf.Max(0f, temperature);
+        state.Temperature = Mathf.MoveTowards(
+            state.Temperature,
+            target,
+            TemperatureTransferPerSecond * Mathf.Max(0f, seconds));
+        return !Mathf.Approximately(before, state.Temperature);
     }
 
     /// <summary>无产物规则直接视为成功；有产物时使用制作事务保证满输出不消耗液体。</summary>

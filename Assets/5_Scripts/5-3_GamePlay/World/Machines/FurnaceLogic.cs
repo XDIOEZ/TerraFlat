@@ -46,6 +46,8 @@ public class FurnaceLogic : MachineLogic
     private readonly float ignitionTemperature;
     private readonly bool heatVessels;
     private readonly bool hasLocalHeat;
+    private readonly bool publishCellTemperature;
+    private readonly float neighborTemperatureOffset;
     private readonly float heatRadius;
     private readonly float heatOffset;
     private TemperatureMgr temperatureManager;
@@ -86,8 +88,10 @@ public class FurnaceLogic : MachineLogic
         ignitionTemperature = config.Value("ignitionMaxTemperatureOverride", authoring.ignitionMaxTemperatureOverride);
         heatVessels = entity.Definition.Content.Has<Mod_VesselHeating>();
         PanelPrefab = authoring.UI_Prefab;
+        publishCellTemperature = config.Value("publishCellTemperature", authoring.publishCellTemperature);
+        neighborTemperatureOffset = config.Value("neighborTemperatureOffset", authoring.neighborTemperatureOffset);
         LocalTemperatureSource source = authoring.GetComponent<LocalTemperatureSource>();
-        hasLocalHeat = source != null;
+        hasLocalHeat = source != null || publishCellTemperature;
         heatRadius = source != null ? source.Radius : 0f;
         heatOffset = source != null ? source.CelsiusOffset : 0f;
         Input = RestoreInventory("furnace.input", authoring.InputInventory);
@@ -135,7 +139,11 @@ public class FurnaceLogic : MachineLogic
 
     public override void Dispose()
     {
-        if (temperatureManager != null) temperatureManager.RemoveLocalTemperatureSource(this);
+        if (temperatureManager != null)
+        {
+            temperatureManager.RemoveLocalTemperatureSource(this);
+            temperatureManager.RemoveCellTemperatureSource(this);
+        }
         temperatureManager = null;
         productionActor = null;
         Processor.Changed -= OnProgressChanged;
@@ -342,10 +350,32 @@ public class FurnaceLogic : MachineLogic
     {
         if (!hasLocalHeat) return;
         if (!IsBurning)
-        { if (temperatureManager != null) temperatureManager.RemoveLocalTemperatureSource(this); return; }
+        {
+            if (temperatureManager != null)
+            {
+                temperatureManager.RemoveLocalTemperatureSource(this);
+                temperatureManager.RemoveCellTemperatureSource(this);
+            }
+            return;
+        }
         temperatureManager = TemperatureMgr.Instance;
-        if (temperatureManager != null)
+        if (temperatureManager == null)
+            return;
+
+        if (publishCellTemperature)
+        {
+            temperatureManager.RemoveLocalTemperatureSource(this);
+            temperatureManager.SetCellTemperatureSource(
+                this,
+                Entity.Position,
+                Data.Temperature,
+                neighborTemperatureOffset);
+        }
+        else
+        {
+            temperatureManager.RemoveCellTemperatureSource(this);
             temperatureManager.SetLocalTemperatureSource(this, Entity.Position, heatRadius, heatOffset);
+        }
     }
     #endregion
 

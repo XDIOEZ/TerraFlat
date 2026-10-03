@@ -260,6 +260,8 @@
           },
           "parameters": {
             "absorbDroppedFuel": true,
+            "publishCellTemperature": true,
+            "neighborTemperatureOffset": 15.0,
             "fuelByproductRules": [
               {
                 "id": "wood-ash",

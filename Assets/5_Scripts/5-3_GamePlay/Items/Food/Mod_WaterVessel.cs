@@ -47,6 +47,8 @@ public sealed class Mod_WaterVessel : Module, IInteractable, ILiquidVessel
     public void CommitVessel() => Commit();
     private WorldTileTargetOutline targetOutline; // 当前准心命中的单格液体来源轮廓。
     private bool actionBound;
+    private const float WorldHeatTickInterval = 1f;
+    private float worldHeatClock;
 
     public override ModuleData _Data
     {
@@ -65,6 +67,7 @@ public sealed class Mod_WaterVessel : Module, IInteractable, ILiquidVessel
         if (normalized)
             ModData.WriteData(Data);
         RefreshVisual();
+        worldHeatClock = 0f;
         actionBound = item?.itemMods?.GetMod_ByID<Mod_Mortar>(Mod_Mortar.ModuleId)?.IsCrucible != true;
         if (actionBound)
             item.OnAct += Act;
@@ -83,6 +86,7 @@ public sealed class Mod_WaterVessel : Module, IInteractable, ILiquidVessel
     {
         if (actionBound && item != null) item.OnAct -= Act;
         actionBound = false;
+        worldHeatClock = 0f;
         ReleaseTargetOutline();
         Changed = null;
     }
@@ -90,6 +94,7 @@ public sealed class Mod_WaterVessel : Module, IInteractable, ILiquidVessel
     /// <summary>准心目标属于连续变化的表现状态，直接按帧刷新而不启用 Module Tick。</summary>
     private void LateUpdate()
     {
+        TickWorldHeat();
         if (item?.Owner is not Player ownerPlayer || !ownerPlayer.IsLocalProfile)
         {
             targetOutline?.Hide();
@@ -104,6 +109,33 @@ public sealed class Mod_WaterVessel : Module, IInteractable, ILiquidVessel
 
         targetOutline ??= WorldTileTargetOutline.Create("Liquid Tile Target Outline");
         targetOutline.Show(target.WorldCell);
+    }
+
+    /// <summary>落地完整容器每秒读取所在格温度，让液体按统一速率升温、降温并触发无产物热转换。</summary>
+    private void TickWorldHeat()
+    {
+        if (!GameNetwork.HasStateAuthority || item == null || item.DestructionHandled ||
+            item.InHand || item.Owner != null || IsEmptyAmount(Data?.Amount ?? 0f))
+        {
+            worldHeatClock = 0f;
+            return;
+        }
+
+        worldHeatClock += Time.deltaTime;
+        if (worldHeatClock < WorldHeatTickInterval)
+            return;
+
+        float seconds = worldHeatClock;
+        worldHeatClock = 0f;
+        TemperatureMgr temperatureManager = TemperatureMgr.Instance;
+        if (temperatureManager == null ||
+            !temperatureManager.TryGetAmbientTemperature(item.transform.position, out float ambientTemperature))
+        {
+            return;
+        }
+
+        if (InventoryVesselHeating.ProcessWorldHeat(Data, ambientTemperature, seconds))
+            Commit();
     }
 
     private void OnDisable() => ReleaseTargetOutline();

@@ -488,8 +488,8 @@ public static class LiquidDefinitionFactory
             throw new InvalidDataException($"液体 {liquidId} 的 heatProcess.mode 无效：{dto.Mode}");
         ValidateFinite(dto.MinimumTemperature, liquidId, nameof(dto.MinimumTemperature));
         ValidateFinite(dto.Seconds, liquidId, nameof(dto.Seconds));
-        if (dto.Seconds <= 0f)
-            throw new InvalidDataException($"液体 {liquidId} 的 heatProcess.seconds 必须大于 0");
+        if (dto.Seconds < 0f)
+            throw new InvalidDataException($"液体 {liquidId} 的 heatProcess.seconds 不能小于 0");
 
         string resultLiquidId = NormalizeOptionalContentId(dto.ResultLiquidId, $"液体 {liquidId} resultLiquidId");
         string outputItemId = dto.OutputItemId?.Trim();
