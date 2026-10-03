@@ -711,6 +711,14 @@ public class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
             return;
         }
 
+        // Ctrl+滚轮由镜头缩放独占；按住丢弃键时仍保留快捷栏滚动切换。
+        if (_inputController?._inputActions != null &&
+            !_inputController.IsDropShortcutHeld &&
+            Mathf.Abs(_inputController._inputActions.Win10.CtrlMouse.ReadValue<Vector2>().y) > 0.01f)
+        {
+            return;
+        }
+
         if (IsPointerOverUI()) return;
 
         float value = ctx.ReadValue<Vector2>().y;
