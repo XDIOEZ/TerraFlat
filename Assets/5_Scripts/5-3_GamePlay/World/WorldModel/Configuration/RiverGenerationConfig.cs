@@ -23,7 +23,10 @@ public sealed class RiverGenerationConfigCatalog
         "river.lookAheadWeight", "river.lookAheadDistance", "river.floodplainStartFlow",
         "river.floodplainMaxRadius", "river.floodplainMaxSlope",
         "river.alluvialTileThreshold", "river.bedCenterTileId", "river.bedEdgeTileId",
-        "river.bedCenterStrengthThreshold", "river.depthMin", "river.depthMax",
+        "river.bedCenterStrengthThreshold", "river.bedEdgeDepositMinimumFlow",
+        "river.bedEdgeDepositActivation", "river.bedEdgeDepositMinFraction",
+        "river.bedEdgeDepositPeakFraction", "river.bedEdgeDepositMaxFraction",
+        "river.depthMin", "river.depthMax",
         "river.minLakeCells", "river.maxLakeCells", "river.maxLakeLevelRise",
         "river.lakeMinFlow", "river.lakeChance", "river.maxCachedRegions"
     };

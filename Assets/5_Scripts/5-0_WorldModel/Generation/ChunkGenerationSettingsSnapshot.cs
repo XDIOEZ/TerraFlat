@@ -364,6 +364,21 @@ namespace FlatWorld.WorldModel
                 GetInt(numbers, "river.bedEdgeTileId", RiverbedTileId));
             RiverBedCenterStrengthThreshold = Clamp01(
                 GetDouble(numbers, "river.bedCenterStrengthThreshold", 0.35d));
+            RiverBedEdgeDepositMinimumFlow = Math.Max(
+                RiverStartFlow,
+                Positive(GetDouble(numbers, "river.bedEdgeDepositMinimumFlow", 0.28d), 0.28d));
+            RiverBedEdgeDepositActivation = Clamp01(
+                GetDouble(numbers, "river.bedEdgeDepositActivation", 0.85d));
+            RiverBedEdgeDepositMinFraction = Clamp(
+                GetDouble(numbers, "river.bedEdgeDepositMinFraction", 0.18d), 0.05d, 1d);
+            RiverBedEdgeDepositPeakFraction = Clamp(
+                GetDouble(numbers, "river.bedEdgeDepositPeakFraction", 0.3d),
+                RiverBedEdgeDepositMinFraction,
+                1d);
+            RiverBedEdgeDepositMaxFraction = Clamp(
+                GetDouble(numbers, "river.bedEdgeDepositMaxFraction", 0.62d),
+                RiverBedEdgeDepositPeakFraction,
+                1d);
             RiverDepthMin = Clamp01(GetDouble(numbers, "river.depthMin", 0.2d));
             RiverDepthMax = Math.Max(
                 RiverDepthMin,
@@ -656,6 +671,13 @@ namespace FlatWorld.WorldModel
         public int RiverBedCenterTileId { get; }
         public int RiverBedEdgeTileId { get; }
         public double RiverBedCenterStrengthThreshold { get; }
+        /// <summary>只有达到该汇流量的偏下游河段才有机会出现两侧沉积底材。</summary>
+        public double RiverBedEdgeDepositMinimumFlow { get; }
+        /// <summary>二次峰值抽样超过该阈值才启用一段两侧沉积；越高越稀有。</summary>
+        public double RiverBedEdgeDepositActivation { get; }
+        public double RiverBedEdgeDepositMinFraction { get; }
+        public double RiverBedEdgeDepositPeakFraction { get; }
+        public double RiverBedEdgeDepositMaxFraction { get; }
         public double RiverDepthMin { get; }
         public double RiverDepthMax { get; }
         /// <summary>盆地至少包含多少格才会表现成湖泊。</summary>

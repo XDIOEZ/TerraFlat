@@ -211,6 +211,10 @@ namespace FlatWorld.WorldModel
                     endX, endY, 1d / 3d, amplitude);
                 double bendB = SampleChannelBend(sampling, sourceX, sourceY,
                     endX, endY, 2d / 3d, amplitude);
+                bool bedEdgeDeposit = TryResolveBedEdgeDepositRange(
+                    request, settings, source, target,
+                    Math.Max(region.Flows[i], region.Flows[next]),
+                    out double bedEdgeDepositStart);
                 int steps = Math.Max(1, (int)Math.Ceiling(length / 0.28d));
                 double previousX = sourceX;
                 double previousY = sourceY;
@@ -250,7 +254,11 @@ namespace FlatWorld.WorldModel
                         directionY /= directionLength;
                     }
                     SetChannelCenterSample(centers, cell,
-                        new ChannelCenterSample(flow, directionX, directionY));
+                        new ChannelCenterSample(
+                            flow,
+                            directionX,
+                            directionY,
+                            bedEdgeDeposit && t >= bedEdgeDepositStart));
                     previousX = x;
                     previousY = y;
                 }
@@ -282,6 +290,91 @@ namespace FlatWorld.WorldModel
                     riverCells, cancellationToken);
             }
             return new GeneratedHydrologyMap(riverCells, floodplainCells);
+        }
+
+        /// <summary>少量偏下游宏观河段会得到一小段沉积带，出现率和长度都走确定性二次峰值分布。</summary>
+        private static bool TryResolveBedEdgeDepositRange(
+            ChunkGenerationRequest request,
+            ChunkGenerationSettingsSnapshot settings,
+            Int2 source,
+            Int2 target,
+            double downstreamFlow,
+            out double startT)
+        {
+            startT = 1d;
+            if (downstreamFlow < settings.RiverBedEdgeDepositMinimumFlow)
+                return false;
+
+            double propensity = SampleQuadraticRiverValue(
+                request.WorldSeed,
+                source,
+                target,
+                0x51ed270bu,
+                0d,
+                0.12d,
+                1d,
+                0.9d);
+            if (propensity < settings.RiverBedEdgeDepositActivation)
+                return false;
+
+            double lengthRadius = Math.Max(
+                0.02d,
+                (settings.RiverBedEdgeDepositPeakFraction -
+                 settings.RiverBedEdgeDepositMinFraction) * 1.5d);
+            double fraction = SampleQuadraticRiverValue(
+                request.WorldSeed,
+                source,
+                target,
+                0x94d049bdu,
+                settings.RiverBedEdgeDepositMinFraction,
+                settings.RiverBedEdgeDepositPeakFraction,
+                settings.RiverBedEdgeDepositMaxFraction,
+                lengthRadius);
+            startT = Clamp01(1d - fraction);
+            return true;
+        }
+
+        /// <summary>按抛物线权重抽样，峰值最常见，远端只保留很小长尾。</summary>
+        private static double SampleQuadraticRiverValue(
+            int worldSeed,
+            Int2 source,
+            Int2 target,
+            uint salt,
+            double minimum,
+            double peak,
+            double maximum,
+            double quadraticRadius)
+        {
+            const int bucketCount = 32;
+            const double tailWeight = 0.02d;
+            if (maximum <= minimum + 0.000001d)
+                return minimum;
+
+            double radius = Math.Max(0.0001d, quadraticRadius);
+            double totalWeight = 0d;
+            for (int bucket = 0; bucket <= bucketCount; bucket++)
+            {
+                double candidate = Lerp(minimum, maximum, bucket / (double)bucketCount);
+                double normalized = (candidate - peak) / radius;
+                totalWeight += Math.Max(tailWeight, 1d - normalized * normalized);
+            }
+
+            uint segmentSalt = unchecked(
+                salt ^
+                (uint)target.X * 0x9e3779b9u ^
+                (uint)target.Y * 0x85ebca6bu);
+            double targetWeight =
+                Hash01(worldSeed, source.X, source.Y, segmentSalt) * totalWeight;
+            double accumulated = 0d;
+            for (int bucket = 0; bucket <= bucketCount; bucket++)
+            {
+                double candidate = Lerp(minimum, maximum, bucket / (double)bucketCount);
+                double normalized = (candidate - peak) / radius;
+                accumulated += Math.Max(tailWeight, 1d - normalized * normalized);
+                if (targetWeight <= accumulated)
+                    return candidate;
+            }
+            return maximum;
         }
 
         /// <summary>用汇水最多的上游支流确定主河槽在汇合点的切线。</summary>
@@ -403,7 +496,8 @@ namespace FlatWorld.WorldModel
                     double depth = Lerp(settings.RiverDepthMin, centerDepth, edgeStrength);
                     SetRiverCell(riverCells, water, new GeneratedHydrologyCell(
                         GeneratedHydrologyKind.River, sample.Flow, depth, 0d,
-                        sample.DirectionX, sample.DirectionY, edgeStrength));
+                        sample.DirectionX, sample.DirectionY, edgeStrength,
+                        sample.BedEdgeDeposit));
                 }
                 AddFloodplain(request, settings, sampling, center, sample.Flow,
                     radius, floodplainCells);

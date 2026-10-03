@@ -999,16 +999,18 @@ namespace FlatWorld.WorldModel
             };
         }
 
-        /// <summary>河流横截面按配置切成中央河床和两侧河床，湖泊继续沿用普通淡水底材。</summary>
+        /// <summary>河流主体保持中央底材，只有被水文标记的局部沉积段才在两侧换成边缘底材。</summary>
         private static int ResolveRiverbedTileId(
             ChunkGenerationSettingsSnapshot settings,
             GeneratedHydrologyCell riverCell)
         {
             if (riverCell.Kind != GeneratedHydrologyKind.River)
                 return settings.RiverbedTileId;
-            return riverCell.BedCenterStrength >= settings.RiverBedCenterStrengthThreshold
-                ? settings.RiverBedCenterTileId
-                : settings.RiverBedEdgeTileId;
+            if (riverCell.BedCenterStrength >= settings.RiverBedCenterStrengthThreshold)
+                return settings.RiverBedCenterTileId;
+            return riverCell.BedEdgeDeposit
+                ? settings.RiverBedEdgeTileId
+                : settings.RiverBedCenterTileId;
         }
 
         /// <summary>判定泥炭斑块：草原石地交界、远离河漫滩，并按斑块区域概率稀疏生成。</summary>
@@ -1715,10 +1717,27 @@ namespace FlatWorld.WorldModel
             Int2 position,
             ChannelCenterSample candidate)
         {
-            if (samples.TryGetValue(position, out ChannelCenterSample existing) &&
-                existing.Flow >= candidate.Flow)
+            if (samples.TryGetValue(position, out ChannelCenterSample existing))
             {
-                return;
+                if (existing.Flow >= candidate.Flow)
+                {
+                    if (!candidate.BedEdgeDeposit || existing.BedEdgeDeposit)
+                        return;
+                    samples[position] = new ChannelCenterSample(
+                        existing.Flow,
+                        existing.DirectionX,
+                        existing.DirectionY,
+                        true);
+                    return;
+                }
+                if (existing.BedEdgeDeposit && !candidate.BedEdgeDeposit)
+                {
+                    candidate = new ChannelCenterSample(
+                        candidate.Flow,
+                        candidate.DirectionX,
+                        candidate.DirectionY,
+                        true);
+                }
             }
             samples[position] = candidate;
         }
@@ -2286,7 +2305,8 @@ namespace FlatWorld.WorldModel
             if (current.Kind == candidate.Kind &&
                 current.Depth >= candidate.Depth &&
                 current.Flow >= candidate.Flow &&
-                current.BedCenterStrength >= candidate.BedCenterStrength)
+                current.BedCenterStrength >= candidate.BedCenterStrength &&
+                (!candidate.BedEdgeDeposit || current.BedEdgeDeposit))
             {
                 return;
             }
@@ -2316,7 +2336,8 @@ namespace FlatWorld.WorldModel
                 Math.Max(current.SurfaceLevel, candidate.SurfaceLevel),
                 flowDirectionX,
                 flowDirectionY,
-                Math.Max(current.BedCenterStrength, candidate.BedCenterStrength));
+                Math.Max(current.BedCenterStrength, candidate.BedCenterStrength),
+                current.BedEdgeDeposit || candidate.BedEdgeDeposit);
         }
 
         /// <summary>记录格子的最大冲积带强度，重复计算时只保留更明显的一次。</summary>
@@ -2450,16 +2471,19 @@ namespace FlatWorld.WorldModel
             public ChannelCenterSample(
                 double flow,
                 double directionX,
-                double directionY)
+                double directionY,
+                bool bedEdgeDeposit = false)
             {
                 Flow = flow;
                 DirectionX = directionX;
                 DirectionY = directionY;
+                BedEdgeDeposit = bedEdgeDeposit;
             }
 
             public double Flow { get; }
             public double DirectionX { get; }
             public double DirectionY { get; }
+            public bool BedEdgeDeposit { get; }
         }
 
         /// <summary>按高度从高到低处理流量，保证格子出队时所有更高上游都已经汇入。</summary>

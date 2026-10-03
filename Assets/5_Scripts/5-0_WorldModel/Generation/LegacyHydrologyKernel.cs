@@ -23,7 +23,8 @@ namespace FlatWorld.WorldModel
             double surfaceLevel = 0d,
             double flowDirectionX = 0d,
             double flowDirectionY = 0d,
-            double bedCenterStrength = 1d)
+            double bedCenterStrength = 1d,
+            bool bedEdgeDeposit = false)
         {
             Kind = kind;
             Flow = Math.Max(0d, flow);
@@ -32,6 +33,7 @@ namespace FlatWorld.WorldModel
             BedCenterStrength = kind == GeneratedHydrologyKind.River
                 ? Clamp01(bedCenterStrength)
                 : 0d;
+            BedEdgeDeposit = kind == GeneratedHydrologyKind.River && bedEdgeDeposit;
             double directionLength = Math.Sqrt(
                 flowDirectionX * flowDirectionX + flowDirectionY * flowDirectionY);
             if (kind == GeneratedHydrologyKind.River && directionLength > 0.000001d)
@@ -51,6 +53,7 @@ namespace FlatWorld.WorldModel
         internal double Depth { get; }
         internal double SurfaceLevel { get; }
         internal double BedCenterStrength { get; }
+        internal bool BedEdgeDeposit { get; }
         internal double FlowDirectionX { get; }
         internal double FlowDirectionY { get; }
 

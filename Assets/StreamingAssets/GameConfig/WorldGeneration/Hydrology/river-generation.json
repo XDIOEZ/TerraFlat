@@ -101,6 +101,26 @@
           "value": 0.35
         },
         {
+          "id": "river.bedEdgeDepositMinimumFlow",
+          "value": 0.28
+        },
+        {
+          "id": "river.bedEdgeDepositActivation",
+          "value": 0.85
+        },
+        {
+          "id": "river.bedEdgeDepositMinFraction",
+          "value": 0.18
+        },
+        {
+          "id": "river.bedEdgeDepositPeakFraction",
+          "value": 0.3
+        },
+        {
+          "id": "river.bedEdgeDepositMaxFraction",
+          "value": 0.62
+        },
+        {
           "id": "river.depthMin",
           "value": 0.2
         },

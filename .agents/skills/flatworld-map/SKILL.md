@@ -14,7 +14,7 @@ description: "Use when: 定位或修改 FlatWorld 的地图内容、Tilemap、�
 - 自然物及洞穴矿脉规则的唯一真源是 `Assets/StreamingAssets/GameConfig/WorldGeneration/NaturalItems/natural-item-manifest.json` 及其分包；地表/洞穴 `ChunkGenerationProfile_*.asset` 只保存 `ecologyRuleIds`、`caveResourceRuleIds` 与全局倍率，矿脉 ID 顺序仍代表筛选优先级。新增规则先加入 JSON 分包和清单，再由 SO 引用 ID；缺失、重复或无效规则阻止资源发布。`BiomeData.TerrainConfig.ItemSpawn_NoSO` 属于旧生成链，不用于调整 WorldModel 生态数量。存档默认冻结首次使用时的生成 Profile；玩家可在存档管理页关闭“冻结世界生成规则”以显式跟随当前版本。关闭时只丢弃冻结 Profile，保留生态区块的删除 GUID、状态覆盖和恢复年份；重新开启后在下一次进入世界时冻结当时的当前配置。
 - 自然物单次数量默认由 `itemCount` 固定；需要偏置随机时使用 `itemCountDistribution=1`。此时 `itemCount` 是上限，`itemCountMin` 是下限，`itemCountPeak` 是概率峰值，`itemCountQuadraticRadius` 控制二次曲线宽度；数量采样必须保持确定性，并进入生成指纹和冻结规则存档。
 - 地表 `river.*` 和洞穴 `cave.river.*` 的生成参数唯一真源是 `Assets/StreamingAssets/GameConfig/WorldGeneration/Hydrology/river-generation.json`；Profile SO 不再保存同名参数，资源加载时合入快照。地形预览器里的河流参数修改只影响本次预览，要持久调整请编辑 JSON。
-- 河流河床横截面材质由 `river.bedCenterTileId`、`river.bedEdgeTileId` 和 `river.bedCenterStrengthThreshold` 配置；中央与两侧 Tile 不得写死在生成器里，湖泊继续使用 `terrain.riverbedTileId`。
+- 河流河床横截面材质由 `river.bedCenterTileId`、`river.bedEdgeTileId` 和 `river.bedCenterStrengthThreshold` 配置；边缘底材不是全河固定铺设，只在偏下游的局部沉积段启用，其他河段两侧回退到中央底材。沉积段范围参数继续放在 Hydrology JSON，湖泊使用 `terrain.riverbedTileId`。
 - 草和可采集地表植被分别由 `ChunkGrassRenderer` 与 `ChunkGroundCoverRenderer` 批量绘制。JSON 生态规则继续生成确定性数据点；物品定义声明 `groundCover: true` 时跳过自然 Item 实例化，采集才生成普通 Item。选格和图层共用 `GroundCoverSystem`，采集持久化复用生态删除 GUID；不得用草层消费状态记录花朵，也不得在图层解绑时把生成点标记为已采集。
 - 草层生成先受 `grass.minimumTemperature`、`grass.maximumTemperature`、`grass.minimumPrecipitation`、`grass.maximumHeight` 硬门槛限制，再由现有 moisture 公式调节密度；花朵等可采集植被继续直接用 NaturalItems JSON 的温度、降水、高度区间。
 - 耐旱植物按沙漠群系与降水区间筛选，不能仅凭沙地 Tile 生成；可选 `maxRiverFloodplainStrength` 默认 1，设为 0 可排除河岸湿地。环境上下限必须同时进入快照、冻结存档及生态指纹，不能在表现层临时删植物。
@@ -36,6 +36,7 @@ description: "Use when: 定位或修改 FlatWorld 的地图内容、Tilemap、�
 - 河流生成把真实下游单位方向保存到 `riverFlowX/riverFlowY` 环境层；运行时水流玩法统一通过 `ChunkMgr.TryGetRuntimeWaterCurrent` 读取，禁止在物品、角色等消费方重复按邻格高度猜河道方向。海洋暂无独立洋流层时使用生成环境层的 `windX/windY` 作为表层漂移方向，正式水面也消费同一方向，湖泊保持静止。
 - `heightDriven` 河网按稳定 Region 缓存低分辨率高度、下游和汇水量；每个 Chunk 只细化相关走廊与终端小湖。边界两侧必须从同一宏观图和世界坐标取样，固定 Seed 不能依赖 Chunk 加载顺序；河槽弯曲后须用局部切线写入 `riverFlowX/Y`；修改拓扑、细化或小湖规则需递增生成签名。
 - 生成保持固定种子、稳定 BiomeId/顺序和统一噪声、气候、水文规则。
+- 世界生成里“数量、尺寸、区段长度”等需要常见值与少量惊喜长尾的随机量，优先使用固定种子驱动的二次峰值权重分布，不要默认用均匀分布；纯二元开关仍可保留显式概率。
 - 修改算法时考虑生成签名、旧存档、联机指纹和 Wrapped 坐标。
 - 雪不占用 Ground 地块身份：雪地群系底层按高度保留 `Tile_Grass` 或 `Tile_Stone`，天然积雪写入独立 `snow.depth` 环境层；深度固定为 0～1 的十档，每 0.1 为一层。冰仍是独立 Ground。
 - 萝卜聚落由 `surface.forest.radish` 与 `surface.grassland.radish` 两条独立规则控制；全局调整时必须同步审计两条，`PatchChance` 控制聚落数量，`SpawnChance` 与 `PatchRadius` 控制聚落内部密度。
