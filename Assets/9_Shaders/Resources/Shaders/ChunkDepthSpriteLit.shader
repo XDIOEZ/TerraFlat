@@ -69,6 +69,7 @@ Shader "FlatWorld/2D/Chunk Depth Sprite Lit"
         #define FLATWORLD_VEGETATION_SWAY_MATERIAL_DECLARED
         #include "../../Shader/VegetationSway.hlsl"
         #include "../../Shader/InteractionOutlineCommon.hlsl"
+        #include "../../Shader/ConveyorSurface.hlsl"
         float _PlayerOcclusionEnabled, _PlayerOcclusionRadius, _PlayerOcclusionFeather;
         float _PlayerOcclusionAlpha, _PlayerOcclusionVerticalPadding;
         float4 _PlayerOcclusionCenter;
@@ -164,6 +165,9 @@ Shader "FlatWorld/2D/Chunk Depth Sprite Lit"
                 float frame = fmod(floor(_Time.y * input.animation.y + input.animation.z), frameCount);
                 uv.x += frame * max(.000001, input.region.z - input.region.x);
             }
+            if (input.animation.x > 5.5 && input.animation.x < 7.5)
+                uv = ConveyorSurfaceUv(uv, input.region, input.animation,
+                    float4(input.effects.xy, input.localClip.z, input.animation.w), _Time.y);
             return uv;
         }
         half4 Surface(Varyings input, float2 uv)

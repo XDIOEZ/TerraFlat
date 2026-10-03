@@ -160,6 +160,9 @@ internal sealed partial class ChunkDepthMeshRenderer
             Bounds spriteBounds = entry.Geometry.Bounds;
             Vector4 effects = new(spriteBounds.min.y, spriteBounds.max.y,
                 visual.Occluder ? 1f : 0f, visual.Highlighted ? 1f : 0f);
+            // 输送带复用闲置裁剪和效果通道传递 UV 带面范围，不增加顶点流。
+            bool conveyor = visual.Animation.x >= 5.5f && visual.Animation.x < 7.5f;
+            if (conveyor) { effects.x = visual.Conveyor.x; effects.y = visual.Conveyor.y; }
             Bounds bounds = default;
             for (int i = 0; i < entry.Geometry.Vertices.Length; i++)
             {
@@ -168,7 +171,7 @@ internal sealed partial class ChunkDepthMeshRenderer
                 vertices[entry.VertexStart + i] = new Vertex
                 {
                     Position = position, Tint = visual.Tint, Uv = entry.Geometry.Uv[i],
-                    LocalClip = new Vector4(local.x, local.y, visual.Crop.x, visual.Crop.w),
+                    LocalClip = new Vector4(local.x, local.y, conveyor ? visual.Conveyor.z : visual.Crop.x, visual.Crop.w),
                     Basis = basis, Origin = origin, Animation = visual.Animation,
                     Region = visual.Region, Effects = effects, State = visual.State
                 };

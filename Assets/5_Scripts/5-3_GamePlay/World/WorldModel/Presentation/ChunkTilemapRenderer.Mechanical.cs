@@ -168,6 +168,11 @@ public sealed partial class ChunkTilemapRenderer
         try
         {
 
+        if (node.Definition.Transport != null)
+        {
+            SubmitConveyor(node, x, y, def, material, origin);
+            return;
+        }
         if (node.Definition.Electrical?.IsWire == true)
         {
             int mask = MachineWorld.GetElectricalWireConnectionMask(node.Cell);
@@ -334,7 +339,7 @@ public sealed partial class ChunkTilemapRenderer
     private void Part(MachineEntity node, int x, int y, int part, Sprite sprite, Material material,
         Vector3 origin, Quaternion rotation, Vector3 offset, Vector3 scale,
         int mode, float multiplier, float phase = 0f, int track = 0, float stroke = 0f,
-        bool drawBelowMechanical = false)
+        bool drawBelowMechanical = false, Vector4 conveyorSurface = default)
     {
         // 电机反向只做水平镜像，避免 180 度旋转把支脚和顶部结构倒置。
         if (node.Definition.IsConverter && (node.RotationQuarterTurns & 3) == 2)
@@ -351,10 +356,13 @@ public sealed partial class ChunkTilemapRenderer
         else if (track == 2)
             animation = new Vector4(mode, node.GearboxSmallSpeed,
                 node.GearboxSmallPhase - node.GearboxSmallTime * node.GearboxSmallSpeed + phase, 0f);
+        if (track == 3)
+            animation = new Vector4(mode, node.ConveyorVisualSpeed,
+                node.ConveyorVisualPhase - node.ConveyorVisualTime * node.ConveyorVisualSpeed, stroke);
         MechanicalShadowRegistry.SetPart(this, new Vector3Int(x, y, node.Definition.Layer),
             part, sprite, origin, rotation, offset, scale, mode, animation);
         mechanicalDepthVisuals[new Vector3Int(x, y, node.Definition.Layer)]
-            .SetPart(part, sprite, material, rotation, offset, scale, mode, animation, drawBelowMechanical);
+            .SetPart(part, sprite, material, rotation, offset, scale, mode, animation, drawBelowMechanical, conveyorSurface);
     }
 
     /// <summary>每台机械只保留交互与必要灯光；图像通过共享行网格绘制。</summary>

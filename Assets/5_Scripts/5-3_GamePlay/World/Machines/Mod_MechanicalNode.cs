@@ -312,6 +312,7 @@ public sealed partial class Mod_MechanicalNode : Module, IInteractable, IBuildin
         ApplyAxisPortPreview(shadow, placementRotation, mirrorX);
         ApplyElectricalPortPreview(shadow, placementRotation);
         NormalizeElectricalPortPreview(shadow, placementRotation, mirrorX);
+        ApplyConveyorPreview(shadow);
     }
 
     /// <summary>电机反向时只水平镜像机身，保持支脚始终朝下。</summary>

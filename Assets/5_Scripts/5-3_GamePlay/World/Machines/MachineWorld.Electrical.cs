@@ -50,6 +50,11 @@ public static partial class MachineWorld
         electricalGraph?.Rebuild(nodes.Values);
         RebuildCombatSearchPadding();
         dirty = false;
+        foreach (MachineEntity conveyor in graph.ConveyorChanges)
+        {
+            UpdateConveyorVisualSpeed(conveyor);
+            CellChanged?.Invoke(conveyor.Cell);
+        }
     }
 
     /// <summary>从独立动力向外确定转换方向，已经过的电网不能再作为该条动力链的发电目标。</summary>

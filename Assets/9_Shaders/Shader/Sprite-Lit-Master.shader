@@ -3,6 +3,9 @@ Shader "Game/2D/Sprite-Lit-Master"
     Properties
     {
         _MainTex("Diffuse", 2D) = "white" {}
+        [HideInInspector] _ConveyorAnimation("Conveyor Animation", Vector) = (0,0,0,0)
+        [HideInInspector] _ConveyorSurface("Conveyor Surface", Vector) = (0,1,0,1)
+        [HideInInspector] _ConveyorRegion("Conveyor Region", Vector) = (0,0,1,1)
         _MaskTex("Mask", 2D) = "white" {}
         _NormalMap("Normal Map", 2D) = "bump" {}
 
@@ -78,6 +81,8 @@ Shader "Game/2D/Sprite-Lit-Master"
         ZWrite Off
 
         HLSLINCLUDE
+        #include "ConveyorSurface.hlsl"
+        float4 _ConveyorAnimation, _ConveyorSurface, _ConveyorRegion;
         float _PlayerOccluder;
         float _PlayerOcclusionEnabled;
         float4 _PlayerOcclusionCenter;
@@ -238,7 +243,8 @@ Shader "Game/2D/Sprite-Lit-Master"
 
             half4 CombinedShapeLightFragment(Varyings i) : SV_Target
             {
-                half4 main = i.color * SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, i.uv.xy);
+                float2 conveyorUv = ConveyorSurfaceUv(i.uv.xy, _ConveyorRegion, _ConveyorAnimation, _ConveyorSurface, _Time.y);
+                half4 main = i.color * SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, conveyorUv);
                 const half4 mask = SAMPLE_TEXTURE2D(_MaskTex, sampler_MaskTex, i.uv.xy);
 
                 // === 下半身剔除：根据 _BodyMinV/_BodyMaxV (实际传入 Local Y) 和 _BodyClip 控制 ===
@@ -388,7 +394,8 @@ Shader "Game/2D/Sprite-Lit-Master"
 
             half4 NormalsRenderingFragment(Varyings i) : SV_Target
             {
-                half4 mainTex = i.color * SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, i.uv);
+                float2 conveyorUv = ConveyorSurfaceUv(i.uv, _ConveyorRegion, _ConveyorAnimation, _ConveyorSurface, _Time.y);
+                half4 mainTex = i.color * SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, conveyorUv);
                 const half3 normalTS = UnpackNormal(SAMPLE_TEXTURE2D(_NormalMap, sampler_NormalMap, i.uv));
 
                 float bodyRange = max(1e-5, _BodyMaxV - _BodyMinV);
@@ -518,7 +525,8 @@ Shader "Game/2D/Sprite-Lit-Master"
 
             float4 UnlitFragment(Varyings i) : SV_Target
             {
-                float4 mainTex = i.color * SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, i.uv);
+                float2 conveyorUv = ConveyorSurfaceUv(i.uv, _ConveyorRegion, _ConveyorAnimation, _ConveyorSurface, _Time.y);
+                float4 mainTex = i.color * SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, conveyorUv);
 
                 float bodyRange = max(1e-5, _BodyMaxV - _BodyMinV);
                 float bodyV = saturate((i.localY - _BodyMinV) / bodyRange);

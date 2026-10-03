@@ -1,0 +1,42 @@
+using UnityEngine;
+
+public sealed partial class Mod_MechanicalNode
+{
+    #region 输送带放置预览
+    private readonly MaterialPropertyBlock conveyorPreviewBlock = new();
+    private static readonly int ConveyorAnimationId = Shader.PropertyToID("_ConveyorAnimation");
+    private static readonly int ConveyorSurfaceId = Shader.PropertyToID("_ConveyorSurface");
+    private static readonly int ConveyorRegionId = Shader.PropertyToID("_ConveyorRegion");
+    private static readonly string[] ConveyorPortNames = { "ConveyorPortE", "ConveyorPortN", "ConveyorPortW", "ConveyorPortS" };
+
+    private void ApplyConveyorPreview(BuildingShadow shadow)
+    {
+        if (Definition?.Transport == null) return;
+        SpriteRenderer body = shadow.ShadowRenderer;
+        ConveyorPath route = MachineWorld.GetConveyorPreviewPath(MachineWorld.CellOf(shadow.transform.position),
+            PlacementQuarterTurns, Definition.Transport.AutoConnect);
+        MachineTransportVisualDefinition visual = Definition.Transport.Visual;
+        Quaternion rotation = Quaternion.Euler(0f, 0f, route.Rotation * 90f);
+        body.transform.localRotation = rotation;
+        body.transform.localScale = ConveyorPresentation.Scale(body.sprite, route, visual);
+        body.flipX = false; body.flipY = false;
+        body.GetPropertyBlock(conveyorPreviewBlock);
+        conveyorPreviewBlock.SetVector(ConveyorAnimationId, new Vector4(route.Curved ? 7 : 6, 0f, 0f, visual.CanvasHeight));
+        conveyorPreviewBlock.SetVector(ConveyorSurfaceId, visual.Surface);
+        conveyorPreviewBlock.SetVector(ConveyorRegionId, ConveyorPresentation.Region(body.sprite));
+        body.SetPropertyBlock(conveyorPreviewBlock);
+        Sprite port = ConveyorPresentation.AxisPort();
+        for (int direction = 0; direction < 4; direction++)
+        {
+            SpriteRenderer overlay = shadow.EnsureOverlay(ConveyorPortNames[direction], port,
+                body.transform.localPosition + (Vector3)ConveyorPath.Rotate(Vector2.right * visual.SidePortOffset, direction),
+                body.sharedMaterial);
+            if (overlay == null) continue;
+            overlay.gameObject.SetActive(route.HasDrivePort(direction));
+            overlay.transform.localRotation = Quaternion.Euler(0f, 0f, direction * 90f);
+            overlay.transform.localScale = Vector3.one;
+            overlay.sortingOrder = body.sortingOrder - 1;
+        }
+    }
+    #endregion
+}

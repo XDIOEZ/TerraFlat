@@ -12,7 +12,7 @@ public sealed partial class MechanicalDepthVisual : MonoBehaviour, ISpatialInter
         internal Quaternion Rotation;
         internal Vector3 Offset, Scale;
         internal Color Tint;
-        internal Vector4 Animation;
+        internal Vector4 Animation, Conveyor;
         internal int Id, Order;
         internal bool Touched, Visible, DrawBelowMechanical;
     }
@@ -40,13 +40,13 @@ public sealed partial class MechanicalDepthVisual : MonoBehaviour, ISpatialInter
     }
 
     internal void SetPart(int index, Sprite sprite, Material material, Quaternion rotation,
-        Vector3 offset, Vector3 scale, int mode, Vector4 animation, bool drawBelowMechanical = false)
+        Vector3 offset, Vector3 scale, int mode, Vector4 animation, bool drawBelowMechanical = false, Vector4 conveyor = default)
     {
         if ((uint)index >= (uint)parts.Length) throw new ArgumentOutOfRangeException(nameof(index));
         PartVisual part = parts[index] ??= new PartVisual { Id = index, Order = occupancy * 32 + index };
         if (part.DrawBelowMechanical != drawBelowMechanical) owner?.RemoveMachineDepthPart(entityId, part.Id);
         part.Sprite = sprite; part.Material = material; part.Rotation = rotation;
-        part.Offset = rotation * offset; part.Scale = scale; part.Animation = animation;
+        part.Offset = rotation * offset; part.Scale = scale; part.Animation = animation; part.Conveyor = conveyor;
         part.DrawBelowMechanical = drawBelowMechanical;
         part.Tint = Color.white; part.Touched = part.Visible = true;
         Submit(part);
@@ -66,7 +66,7 @@ public sealed partial class MechanicalDepthVisual : MonoBehaviour, ISpatialInter
         renderer.Set(ChunkDepthMeshRenderer.MachineDomain, entityId, part.Id,
             part.Sprite, part.Material,
             Matrix4x4.TRS(transform.position + part.Offset, part.Rotation, part.Scale),
-            transform.position, part.Order, part.Tint, animation: part.Animation, highlighted: highlighted);
+            transform.position, part.Order, part.Tint, animation: part.Animation, highlighted: highlighted, conveyor: part.Conveyor);
     }
 
     private void RemoveUntouched(PartVisual part)

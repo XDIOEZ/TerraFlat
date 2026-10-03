@@ -304,11 +304,16 @@ public sealed class MachineTransportDefinition
     #region 地面输送配置
     public float Speed = .8f;
     public float HalfWidth = .45f;
+    public bool AutoConnect = true; // 相邻带格自动组成直线或拐角。
+    public bool SideDrive = true; // 非输送带设备只从线路两侧接入机械动力。
+    public MachineTransportVisualDefinition Visual = new();
     public void Validate(string id, bool hasMechanicalPorts)
     {
         if (!hasMechanicalPorts || !MachineDefinition.Positive(Speed) ||
             !MachineDefinition.Positive(HalfWidth) || HalfWidth > .5f)
             throw new ArgumentException("输送设备参数无效：" + id);
+        if (Visual == null) throw new ArgumentException("输送带表现配置缺失：" + id);
+        Visual.Validate(id);
     }
     #endregion
 }

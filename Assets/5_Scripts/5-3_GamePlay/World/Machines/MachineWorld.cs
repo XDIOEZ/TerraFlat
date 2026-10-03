@@ -751,7 +751,7 @@ public static partial class MachineWorld
     private static void UpdateVisualSpeed(MachineEntity node)
     {
         float now = Time.time;
-        bool changed = false;
+        bool changed = UpdateConveyorVisualSpeed(node);
         if (Mathf.Abs(node.VisualRpm - node.Rpm) >= .01f || Math.Sign(node.VisualRpm) != Math.Sign(node.Rpm))
         {
             node.VisualPhase = Mathf.Repeat(node.VisualPhase +

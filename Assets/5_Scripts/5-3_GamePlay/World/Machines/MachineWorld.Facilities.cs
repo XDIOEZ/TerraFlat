@@ -30,17 +30,13 @@ public static partial class MachineWorld
             MachineEntity belt = GetTransportAt(current);
             if (belt == null || !belt.Active || belt.SpeedRpm <= 0f) break;
             MachineTransportDefinition transport = belt.Definition.Transport;
-            Vector2 forward = (belt.RotationQuarterTurns & 3) switch
-            { 0 => Vector2.right, 1 => Vector2.up, 2 => Vector2.left, _ => Vector2.down };
-            forward *= Mathf.Sign(belt.Rpm);
-            Vector2 side = new(-forward.y, forward.x);
             Vector2 center = (Vector2)belt.Cell + Vector2.one * .5f;
             Vector2 offset = WorldTopologyRuntime.ShortestDelta(center, current);
-            float lateral = Vector2.Dot(offset, side);
-            if (Mathf.Abs(lateral) > transport.HalfWidth) break;
             float speed = transport.Speed * GetWorkEfficiency(belt);
             float step = Mathf.Min(remaining, .1f / speed);
-            Vector2 move = forward * (speed * step) - side * Mathf.Clamp(lateral, -speed * step, speed * step);
+            if (!belt.ConveyorRoute.TryMove(offset, speed * step * Mathf.Sign(belt.Rpm),
+                transport.HalfWidth, out Vector2 advanced)) break;
+            Vector2 move = advanced - offset;
             float distance = move.magnitude;
             // Physics2D 只给出墙体和实体的阻挡反馈，掉落物位置仍由数据系统持有。
             if (distance > .00001f && Physics2D.CircleCast(current, .06f, move / distance,

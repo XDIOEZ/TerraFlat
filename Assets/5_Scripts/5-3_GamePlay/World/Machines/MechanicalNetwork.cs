@@ -9,7 +9,7 @@ public enum ElectricalConversionMode { Idle, Motor, Generator }
 public enum MechanicalRotationDirection { Reverse = -1, Stopped = 0, Forward = 1 }
 
 /// <summary>机械网络的轻量拓扑节点。冷状态只保留端口信息和物品快照，活动状态才持有加工器与可变运行数据。</summary>
-public sealed class MachineEntity
+public sealed partial class MachineEntity
 {
     #region 节点身份
     public int Id;
@@ -100,6 +100,9 @@ public sealed class MachineEntity
     public bool CanConnectTo(MachineDefinition other, int direction)
     {
         if (other == null || !HasPort(direction)) return false;
+        if (Definition.Transport != null)
+            return other.Transport != null ? ConveyorRoute.HasPathPort(direction)
+                : !Definition.Transport.SideDrive || ConveyorRoute.HasDrivePort(direction);
         if (Definition.Kind == "gear" && other.Kind == "gear") return true;
         return Definition.HasAxlePort((direction - RotationQuarterTurns + 4) % 4);
     }
@@ -180,7 +183,7 @@ public sealed class MechanicalNetwork
 }
 
 /// <summary>确定性的分层端口构图与整网负载求解；邻块显示卸载不参与断网判断。</summary>
-public sealed class MechanicalNetworkGraph
+public sealed partial class MechanicalNetworkGraph
 {
     #region 拓扑索引
     public static readonly Vector2Int[] Directions = { Vector2Int.right, Vector2Int.up, Vector2Int.left, Vector2Int.down };
@@ -291,6 +294,7 @@ public sealed class MechanicalNetworkGraph
             node.SimulationBounds = new BoundsInt(nodeChunk.x, nodeChunk.y, 0, 1, 1, 1);
             if (!node.Definition.HasMechanicalPorts) Facilities.Add(node);
         }
+        RebuildConveyorPaths(sorted);
         var queue = new Queue<MachineEntity>();
         foreach (var root in sorted)
         {

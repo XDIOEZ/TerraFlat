@@ -50,7 +50,7 @@ internal sealed partial class ChunkDepthMeshRenderer : IDisposable
     internal void Set(int domain, int entityId, int part, Sprite sprite, Material material,
         Matrix4x4 worldMatrix, Vector3 worldAnchor, int order, Color tint,
         Vector4 crop = default, Vector4 animation = default,
-        bool occluder = false, bool highlighted = false, Vector4 state = default)
+        bool occluder = false, bool highlighted = false, Vector4 state = default, Vector4 conveyor = default)
     {
         if (IsDisposed) throw new ObjectDisposedException(nameof(ChunkDepthMeshRenderer));
         if (sprite == null || material == null) throw new ArgumentException("行合批缺少 Sprite 或共享材质。");
@@ -62,7 +62,7 @@ internal sealed partial class ChunkDepthMeshRenderer : IDisposable
         SharedSpriteMeshCache.Geometry geometry = SharedSpriteMeshCache.GetGeometry(sprite);
         Vector4 region = geometry.UvRect;
         for (int i = 0; i < 4; i++)
-            if (!Finite(crop[i]) || !Finite(animation[i]) || !Finite(state[i]) || !Finite(tint[i]))
+            if (!Finite(crop[i]) || !Finite(animation[i]) || !Finite(state[i]) || !Finite(conveyor[i]) || !Finite(tint[i]))
                 throw new ArgumentException("行合批不能提交非有限材质或动画参数。");
         // 一格一个落地实体：所属行只取根部占格，图片偏移和内部动画不改变这一行。
         int rowIndex = Mathf.FloorToInt(anchor.y);
@@ -77,7 +77,7 @@ internal sealed partial class ChunkDepthMeshRenderer : IDisposable
             previous = null;
         }
         var value = new Visual(sprite, local, tint, crop, animation, region,
-            occluder, highlighted, state);
+            occluder, highlighted, state, conveyor);
         if (previous != null)
         {
             if (previous.Visual.Equals(value)) return;
@@ -280,14 +280,14 @@ internal sealed partial class ChunkDepthMeshRenderer : IDisposable
         internal readonly Sprite Sprite;
         internal readonly Matrix4x4 Matrix;
         internal readonly Color Tint;
-        internal readonly Vector4 Crop, Animation, Region, State;
+        internal readonly Vector4 Crop, Animation, Region, State, Conveyor;
         internal readonly bool Occluder, Highlighted;
         internal Visual(Sprite sprite, Matrix4x4 matrix, Color tint, Vector4 crop, Vector4 animation,
-            Vector4 region, bool occluder, bool highlighted, Vector4 state)
-        { Sprite = sprite; Matrix = matrix; Tint = tint; Crop = crop; Animation = animation; Region = region; Occluder = occluder; Highlighted = highlighted; State = state; }
+            Vector4 region, bool occluder, bool highlighted, Vector4 state, Vector4 conveyor)
+        { Sprite = sprite; Matrix = matrix; Tint = tint; Crop = crop; Animation = animation; Region = region; Occluder = occluder; Highlighted = highlighted; State = state; Conveyor = conveyor; }
         public bool Equals(Visual other) => Sprite == other.Sprite && Matrix.Equals(other.Matrix) && Tint.Equals(other.Tint) &&
             Crop.Equals(other.Crop) && Animation.Equals(other.Animation) && Region.Equals(other.Region) &&
-            Occluder == other.Occluder && Highlighted == other.Highlighted && State.Equals(other.State);
+            Occluder == other.Occluder && Highlighted == other.Highlighted && State.Equals(other.State) && Conveyor.Equals(other.Conveyor);
     }
 
     private sealed class Entry

@@ -53,6 +53,7 @@ description: "Use when: 定位或修改 FlatWorld 的机器世界、工作台、
 ## MOD
 
 - `MechanicalShaft` 必须排在地表效果之上、`Player` 主体层之下，并加入太阳光和局部光的受光列表；新增排序层不能只改渲染器而漏掉 Global Light 的序列化范围。
+- 输送带的 `ConveyorPath` 从相邻带格派生，互选带端连通运输与动力，余下两边为供能轴口；直线/圆弧运输、安装显示和虚影共用该路径。带面模式 6/7 按实际输送距离连续积分，边框静止，GPU 只滚动中间带条；配置入口为 `Transport.AutoConnect/SideDrive/Visual`。
 - 地面输送用 `MachineDefinition.Transport` 声明额定速度和带宽，读取节点有符号 RPM；普通掉落由 `DroppedItemRuntime` 维护局部输送候选与空间索引，完整 Item 走 `DroppedItemService.TransportItemBacked`。跨带每轮只搬一次，移动后同步拾取、地形订阅、存档和联机位置，不改库存数量、不扫描全场景。
 
 - 关键规则保留普通托管、具名、禁止内联的入口；`link.xml` 保留推荐补丁类型。注册整类逻辑用 `MachineLogicRegistry.Register` 返回租约；多个 MOD 覆盖必须允许乱序卸载，不能恢复已经释放的工厂。
