@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-import math
-import struct
 import xml.etree.ElementTree as ET
 
 
@@ -138,6 +136,9 @@ def add_track(
     decay: float = 0.25,
     sustain: float = 0.5,
     release: float = 0.12,
+    pattern_len: int = SONG_LEN,
+    pattern_type: int = 1,
+    pattern_steps: int = 16,
 ) -> None:
     track = ET.SubElement(container, "track", {"type": "0", "muted": "0", "name": name, "solo": "0"})
     it = ET.SubElement(
@@ -222,7 +223,7 @@ def add_track(
     pattern = ET.SubElement(
         track,
         "pattern",
-        {"type": "1", "muted": "0", "steps": "16", "name": name, "pos": "0", "len": str(SONG_LEN)},
+        {"type": str(pattern_type), "muted": "0", "steps": str(pattern_steps), "name": name, "pos": "0", "len": str(pattern_len)},
     )
     for key, pos, length, velocity in notes:
         ET.SubElement(
@@ -245,36 +246,57 @@ def chord_notes(chord: tuple[int, ...], bar: int, hits: tuple[tuple[int, int, in
     return result
 
 
-def ogg_duration_seconds(path: Path) -> float:
-    data = path.read_bytes()
-    first_page = data.find(b"OggS")
-    if first_page < 0:
-        raise ValueError(f"Not an Ogg stream: {path}")
+def add_drum_beat(container: ET.Element) -> None:
+    # 一个顶层鼓轨里放四个真实鼓采样，避免为了节奏把 Song Editor 堆成一排鼓轨。
+    track = ET.SubElement(container, "track", {"type": "1", "muted": "0", "name": "Drums", "solo": "0"})
+    bbtrack = ET.SubElement(track, "bbtrack")
+    drum_container = ET.SubElement(
+        bbtrack,
+        "trackcontainer",
+        {"visible": "0", "width": "720", "height": "320", "type": "bbtrackcontainer", "x": "20", "y": "180", "maximized": "0", "minimized": "0"},
+    )
 
-    segment_count = data[first_page + 26]
-    header_size = 27 + segment_count
-    body_size = sum(data[first_page + 27:first_page + 27 + segment_count])
-    body = data[first_page + header_size:first_page + header_size + body_size]
-    if body[:7] != b"\x01vorbis":
-        raise ValueError(f"Unsupported Ogg codec: {path}")
+    two_bars = TICKS_PER_BAR * 2
 
-    sample_rate = struct.unpack("<I", body[12:16])[0]
-    last_page = data.rfind(b"OggS")
-    granule_position = struct.unpack("<Q", data[last_page + 6:last_page + 14])[0]
-    return granule_position / sample_rate
+    kick = [
+        (57, p, -192, v)
+        for p, v in (
+            (0, 108), (36, 84), (84, 92), (96, 105), (132, 82), (180, 78),
+            (192, 108), (252, 88), (288, 104), (324, 82), (360, 86),
+        )
+    ]
+    snare = [
+        (57, p, -192, v)
+        for p, v in (
+            (48, 112), (132, 42), (144, 116), (180, 36),
+            (240, 112), (312, 40), (336, 118),
+        )
+    ]
+
+    hat: list[tuple[int, int, int, int]] = []
+    for base in (0, 192):
+        for index, p in enumerate(range(0, 192, 24)):
+            hat.append((57, base + p, -192, 64 if index % 2 == 0 else 48))
+        # 两个很轻的 16 分音符让律动有向前感，但不把鼓写满。
+        hat.append((57, base + 36, -192, 36))
+        hat.append((57, base + 132, -192, 40))
+
+    open_hat = [(57, 180, -192, 58), (57, 372, -192, 62)]
+
+    add_track(drum_container, "Kick", kick, volume=58, sample="drums/bassdrum_acoustic01.ogg", pattern_len=two_bars, pattern_type=0, pattern_steps=32)
+    add_track(drum_container, "Snare", snare, volume=52, sample="drums/snare_acoustic01.ogg", pattern_len=two_bars, pattern_type=0, pattern_steps=32)
+    add_track(drum_container, "Closed Hat", hat, volume=34, pan=-8, sample="drums/hihat_closed02.ogg", pattern_len=two_bars, pattern_type=0, pattern_steps=32)
+    add_track(drum_container, "Open Hat", open_hat, volume=30, pan=10, sample="drums/hihat_opened01.ogg", pattern_len=two_bars, pattern_type=0, pattern_steps=32)
+
+    ET.SubElement(
+        track,
+        "bbtco",
+        {"usestyle": "1", "muted": "0", "name": "Drum Groove", "pos": "0", "len": str(SONG_LEN), "color": "4282417407"},
+    )
 
 
-def loop_key_for_bar(sample_path: Path) -> int:
-    desired_seconds = 60.0 / BPM * 4.0
-    sample_seconds = ogg_duration_seconds(sample_path)
-    playback_ratio = sample_seconds / desired_seconds
-    semitones = round(12.0 * math.log2(playback_ratio))
-    return 57 + semitones
-
-
-def build_music(drum_loop_key: int) -> dict[str, list[tuple[int, int, int, int]]]:
+def build_music() -> dict[str, list[tuple[int, int, int, int]]]:
     tracks: dict[str, list[tuple[int, int, int, int]]] = {
-        "Acoustic Drum Loop": [],
         "Slap Bass": [],
         "Piano": [],
         "Guitar": [],
@@ -291,35 +313,40 @@ def build_music(drum_loop_key: int) -> dict[str, list[tuple[int, int, int, int]]
         ((48, 52, 55, 58, 63), 36, 43),
     ] * 2
 
-    chord_hits = ((18, 34, 62), (114, 28, 68))
+    # 钢琴明确打在反拍上，把空间留给鼓和贝斯。
+    chord_hits = ((72, 24, 64), (168, 20, 70))
 
     for bar, (chord, root, fifth) in enumerate(progression, start=1):
-        tracks["Acoustic Drum Loop"].append((drum_loop_key, bar_pos(bar, 0), -192, 74))
         tracks["Piano"].extend(chord_notes(chord, bar, chord_hits))
 
         next_root = progression[bar % len(progression)][1]
         approach = next_root - 1 if next_root >= root else next_root + 1
-        bass_pattern = [
-            (root, 0, 26, 96),
-            (fifth, 54, 18, 82),
-            (root, 102, 24, 92),
-            (approach, 168, 14, 78),
-        ]
-        if bar in (4, 8, 12, 16):
-            bass_pattern[-1:] = [(approach, 174, 10, 82)]
+        if bar % 2 == 1:
+            bass_pattern = [
+                (root, 0, 20, 102),
+                (fifth, 36, 12, 78),
+                (root, 84, 14, 88),
+                (root + 12, 96, 18, 98),
+                (fifth, 132, 12, 78),
+                (approach, 174, 10, 80),
+            ]
+        else:
+            bass_pattern = [
+                (root, 0, 20, 101),
+                (fifth, 60, 14, 82),
+                (root, 96, 20, 96),
+                (root + 7, 132, 12, 76),
+                (approach, 168, 12, 82),
+            ]
         for key, tick, length, velocity in bass_pattern:
             tracks["Slap Bass"].append((key, bar_pos(bar, tick), length, velocity))
 
-    # 吉他只在两个 4 小节段落里回应钢琴，保持编曲有空气感。
+    # 吉他只在句尾做很短的回答，避免和钢琴抢节奏。
     melody = {
-        5: [(65, 48, 16), (68, 84, 12), (72, 132, 22)],
-        6: [(63, 36, 16), (67, 78, 12), (70, 126, 24)],
-        7: [(65, 48, 14), (68, 90, 16), (72, 144, 18)],
-        8: [(64, 42, 14), (67, 84, 14), (70, 138, 24)],
-        13: [(68, 36, 16), (72, 78, 16), (75, 132, 22)],
-        14: [(67, 42, 14), (70, 84, 16), (73, 138, 22)],
-        15: [(68, 36, 16), (72, 90, 16), (75, 144, 18)],
-        16: [(67, 42, 14), (70, 84, 14), (72, 126, 30)],
+        4: [(68, 120, 14), (72, 150, 18)],
+        8: [(67, 120, 14), (70, 150, 18)],
+        12: [(68, 120, 14), (72, 150, 18)],
+        16: [(67, 114, 14), (70, 144, 14), (72, 168, 18)],
     }
     for bar, phrases in melody.items():
         for key, tick, length in phrases:
@@ -351,14 +378,12 @@ def build_project() -> None:
         {"visible": "1", "width": "1200", "height": "820", "type": "song", "x": "20", "y": "20", "maximized": "0", "minimized": "0"},
     )
 
-    drum_sample_path = Path(r"G:\LMMS\data\samples\beats\break01.ogg")
-    drum_loop_key = loop_key_for_bar(drum_sample_path)
-    tracks = build_music(drum_loop_key)
+    tracks = build_music()
 
-    add_track(container, "Acoustic Drum Loop", tracks["Acoustic Drum Loop"], volume=48, sample="beats/break01.ogg")
-    add_track(container, "Slap Bass", tracks["Slap Bass"], volume=38, pan=0, sample="instruments/bassslap01.ogg")
-    add_track(container, "Piano", tracks["Piano"], volume=29, pan=-10, sample="instruments/piano01.ogg")
-    add_track(container, "Guitar", tracks["Guitar"], volume=27, pan=12, sample="instruments/steel_guitar01.ogg")
+    add_drum_beat(container)
+    add_track(container, "Slap Bass", tracks["Slap Bass"], volume=42, pan=0, sample="instruments/bassslap01.ogg")
+    add_track(container, "Piano", tracks["Piano"], volume=31, pan=-8, sample="instruments/piano01.ogg")
+    add_track(container, "Guitar", tracks["Guitar"], volume=24, pan=10, sample="instruments/steel_guitar01.ogg")
 
     mixer = ET.SubElement(song, "fxmixer", {"visible": "0", "width": "647", "height": "332", "x": "9", "y": "441", "maximized": "0", "minimized": "0"})
     master = ET.SubElement(mixer, "fxchannel", {"num": "0", "muted": "0", "volume": "1", "name": "Master", "soloed": "0"})
