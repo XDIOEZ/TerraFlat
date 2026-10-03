@@ -187,6 +187,8 @@ public partial class ItemMatterState
     public bool Initialized;
     public float TemperatureCelsius = 20f;
     public float Moisture;
+    public bool IsBurning;
+    public float CombustionElapsedSeconds;
 }
 
 /// <summary>Physics2D 回写给实体数据的瞬时结果，不承载战斗裁决。</summary>

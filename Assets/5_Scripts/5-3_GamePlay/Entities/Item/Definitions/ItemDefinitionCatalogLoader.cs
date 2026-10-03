@@ -1025,7 +1025,7 @@ public static class ItemDefinitionCatalogLoader
             ResolveProcessingDefinitions(dto.Processing, id),
             ResolveProcessingCapabilityLevels(dto.ProcessingCapabilities, id),
             dto.FormerIds,
-            ItemMatterReactionCompiler.CompileMatter(dto.Matter, id),
+            ItemMatterReactionCompiler.CompileMatter(dto.Matter, dto.Tags, id),
             ItemMatterReactionCompiler.CompileReactions(dto.Reactions, id));
     }
 

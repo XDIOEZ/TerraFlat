@@ -1422,6 +1422,9 @@
       "stackable": true,
       "abstract": true,
       "shellPrefab": "Prop",
+      "matter": {
+        "ignitionTemperature": 300.0
+      },
       "visual": {
         "rendererPath": "Render",
         "materialAddress": "Assets/9_Shaders/Material/Sprite-Lit-Master.mat"

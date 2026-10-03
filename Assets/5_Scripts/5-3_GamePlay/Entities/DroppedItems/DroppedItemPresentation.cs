@@ -75,6 +75,8 @@ internal sealed class DroppedItemPresentation : IDisposable
         public DroppedItemVisual Visual;
         public LightweightDroppedBody LastBody;
         public Vector2 LastNearestPosition;
+        public ParticleSystem CombustionParticles;
+        public bool LastBurning;
         public bool HasState;
     }
 
@@ -87,6 +89,7 @@ internal sealed class DroppedItemPresentation : IDisposable
     private readonly Scene scene;
     private readonly LightweightDroppedItemSimulation simulation;
     private readonly Dictionary<int, DroppedItemVisual> visuals;
+    private readonly Dictionary<int, ItemData> payloads;
     private readonly Dictionary<int, PooledView> active = new();
     private readonly Stack<PooledView> pool = new();
     private readonly HashSet<int> candidates = new();
@@ -101,11 +104,13 @@ internal sealed class DroppedItemPresentation : IDisposable
     public DroppedItemPresentation(
         Scene scene,
         LightweightDroppedItemSimulation simulation,
-        Dictionary<int, DroppedItemVisual> visuals)
+        Dictionary<int, DroppedItemVisual> visuals,
+        Dictionary<int, ItemData> payloads)
     {
         this.scene = scene;
         this.simulation = simulation;
         this.visuals = visuals;
+        this.payloads = payloads;
         sharedMaterial = Resources.Load<Material>("DroppedItems/DroppedItemLit");
         if (sharedMaterial == null)
             throw new InvalidOperationException("缺少轻量掉落物共享材质 DroppedItems/DroppedItemLit。");
@@ -252,8 +257,9 @@ internal sealed class DroppedItemPresentation : IDisposable
         }
 
         Vector2 nearest = new(nearestPosition.x, nearestPosition.y);
+        bool burning = payloads.TryGetValue(id, out ItemData data) && data.MatterState?.IsBurning == true;
         if (view.HasState && SamePresentationState(view.LastBody, body) &&
-            view.LastNearestPosition == nearest)
+            view.LastNearestPosition == nearest && view.LastBurning == burning)
             return;
 
         float submergedScale = WorldItemWaterRules.ResolveSubmergedScale(body.SubmergedProgress);
@@ -278,8 +284,10 @@ internal sealed class DroppedItemPresentation : IDisposable
             height,
             (id & 1023) * 0.017f));
         view.Renderer.SetPropertyBlock(view.Properties);
+        SetCombustionPlaying(view, burning, visual.Layer, visual.Order + 2);
         view.LastBody = body;
         view.LastNearestPosition = nearest;
+        view.LastBurning = burning;
         view.HasState = true;
     }
 
@@ -294,11 +302,81 @@ internal sealed class DroppedItemPresentation : IDisposable
 
     #endregion
 
+    #region 燃烧表现
+
+    /// <summary>轻量掉落物只按需创建粒子子节点，不增加逐物品脚本或 Update。</summary>
+    private static void SetCombustionPlaying(PooledView view, bool burning, int sortingLayerId, int sortingOrder)
+    {
+        if (!burning)
+        {
+            if (view.CombustionParticles != null)
+                view.CombustionParticles.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            return;
+        }
+
+        ParticleSystem particles = view.CombustionParticles ??= CreateCombustionParticles(view.Root.transform);
+        ParticleSystemRenderer renderer = particles.GetComponent<ParticleSystemRenderer>();
+        renderer.sortingLayerID = sortingLayerId;
+        renderer.sortingOrder = sortingOrder;
+        if (!particles.isPlaying)
+            particles.Play(true);
+    }
+
+    private static ParticleSystem CreateCombustionParticles(Transform parent)
+    {
+        var root = new GameObject("轻量掉落物_燃烧", typeof(ParticleSystem));
+        root.transform.SetParent(parent, false);
+        root.transform.localPosition = Vector3.zero;
+        root.transform.localRotation = Quaternion.identity;
+        root.transform.localScale = Vector3.one;
+
+        ParticleSystem particles = root.GetComponent<ParticleSystem>();
+        ParticleSystem.MainModule main = particles.main;
+        main.loop = true;
+        main.playOnAwake = false;
+        main.simulationSpace = ParticleSystemSimulationSpace.World;
+        main.startLifetime = new ParticleSystem.MinMaxCurve(0.22f, 0.42f);
+        main.startSpeed = new ParticleSystem.MinMaxCurve(0.12f, 0.28f);
+        main.startSize = new ParticleSystem.MinMaxCurve(0.07f, 0.12f);
+        main.startColor = new ParticleSystem.MinMaxGradient(
+            new Color(1f, 0.82f, 0.18f, 1f),
+            new Color(1f, 0.22f, 0.03f, 0.95f));
+        main.maxParticles = 16;
+
+        ParticleSystem.EmissionModule emission = particles.emission;
+        emission.rateOverTime = 10f;
+        ParticleSystem.ShapeModule shape = particles.shape;
+        shape.shapeType = ParticleSystemShapeType.Circle;
+        shape.radius = 0.06f;
+
+        ParticleSystem.ColorOverLifetimeModule color = particles.colorOverLifetime;
+        color.enabled = true;
+        var gradient = new Gradient();
+        gradient.SetKeys(
+            new[]
+            {
+                new GradientColorKey(new Color(1f, 0.9f, 0.25f), 0f),
+                new GradientColorKey(new Color(1f, 0.18f, 0.02f), 1f)
+            },
+            new[]
+            {
+                new GradientAlphaKey(1f, 0f),
+                new GradientAlphaKey(0f, 1f)
+            });
+        color.color = gradient;
+        return particles;
+    }
+
+    #endregion
+
     private void Release(PooledView view)
     {
         if (view?.Root == null) return;
         view.Visual = null;
         view.HasState = false;
+        view.LastBurning = false;
+        if (view.CombustionParticles != null)
+            view.CombustionParticles.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
         view.Renderer.sprite = null;
         view.Renderer.SetPropertyBlock(null);
         view.Root.SetActive(false);

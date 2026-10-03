@@ -27,10 +27,31 @@ internal sealed partial class DroppedItemRuntime
             if (temperature != null)
                 temperature.TryGetAmbientTemperature(body.Position, out ambient);
 
+            bool waterContact = false;
+            float transferPerSecond = data.HeatConductionRate;
+            if (TryResolveLiquidContact(body, out WorldLiquidSettings liquidSettings))
+            {
+                waterContact = liquidSettings.WaterContact;
+                transferPerSecond = Mathf.Max(transferPerSecond, liquidSettings.ContactHeatingPerSecond);
+            }
+
             bool changed = ItemMatterRuntime.Advance(
-                data, ambient, 1f, seconds, submerged: body.WaterKind != 0);
+                data, ambient, 1f, seconds, submerged: waterContact,
+                transferPerSecondOverride: transferPerSecond);
+            changed |= ItemMatterRuntime.AdvanceCombustion(data, seconds, waterContact, out bool consumedAll);
             if (changed)
                 presentation.Changed(id);
+            if (consumedAll)
+            {
+                Remove(id);
+                continue;
+            }
+            if (!Mathf.Approximately(body.Amount, data.Stack.Amount))
+            {
+                body.Amount = data.Stack.Amount;
+                simulation.Set(body);
+                UpdatePlacement(id);
+            }
 
             if (!ItemMatterRuntime.TryCreateSolidTransitionReplacement(data, out ItemData replacement))
                 continue;
@@ -44,5 +65,18 @@ internal sealed partial class DroppedItemRuntime
             simulation.Set(body);
             UpdatePlacement(id);
         }
+    }
+
+    /// <summary>液体身份必须来自真实地形，WaterKind 只表示浮沉状态，不能把岩浆误判成水。</summary>
+    private static bool TryResolveLiquidContact(LightweightDroppedBody body, out WorldLiquidSettings settings)
+    {
+        settings = null;
+        if (body.WaterKind == 0 || ChunkMgr.ExistingInstance == null || GameRes.ExistingInstance == null ||
+            !ChunkMgr.ExistingInstance.TryGetRuntimeTerrainTile(body.Position, out RuntimeTerrainTileSample sample) ||
+            sample.LiquidDepth <= 0f || string.IsNullOrWhiteSpace(sample.LiquidId) ||
+            !GameRes.ExistingInstance.TryGetLiquidDefinition(sample.LiquidId, out LiquidDefinition liquid))
+            return false;
+        settings = liquid.WorldWater;
+        return settings != null;
     }
 }

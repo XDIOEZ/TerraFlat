@@ -28,7 +28,7 @@ internal sealed partial class DroppedItemRuntime : IDisposable
         try
         {
             domain = WorldTopologyRuntime.GetActiveDomain();
-            presentation = new DroppedItemPresentation(scene, simulation, visuals);
+            presentation = new DroppedItemPresentation(scene, simulation, visuals, payloads);
             if (records != null)
                 foreach (DroppedItemSaveRecord record in records) Restore(record);
         }

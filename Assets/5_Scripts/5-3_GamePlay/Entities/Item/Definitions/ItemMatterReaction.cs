@@ -11,6 +11,9 @@ using UnityEngine;
 [Serializable]
 public sealed class ItemMatterDefinitionDto
 {
+    [JsonProperty("ignitionTemperature", NullValueHandling = NullValueHandling.Ignore)]
+    public float? IgnitionTemperature;
+
     [JsonProperty("initialMoisture")]
     public float InitialMoisture;
 
@@ -128,6 +131,7 @@ public sealed class ItemReactionLiquidOutputDto
 
 public sealed class RuntimeItemMatterDefinition
 {
+    public float? IgnitionTemperature { get; }
     public float InitialMoisture { get; }
     public float EvaporationRatePerSecond { get; }
     public float EvaporationStartTemperature { get; }
@@ -136,6 +140,7 @@ public sealed class RuntimeItemMatterDefinition
     public IReadOnlyList<RuntimeItemMatterTransition> Transitions { get; }
 
     public RuntimeItemMatterDefinition(
+        float? ignitionTemperature,
         float initialMoisture,
         float evaporationRatePerSecond,
         float evaporationStartTemperature,
@@ -143,6 +148,7 @@ public sealed class RuntimeItemMatterDefinition
         float waterAbsorptionRatePerSecond,
         IReadOnlyList<RuntimeItemMatterTransition> transitions)
     {
+        IgnitionTemperature = ignitionTemperature;
         InitialMoisture = initialMoisture;
         EvaporationRatePerSecond = evaporationRatePerSecond;
         EvaporationStartTemperature = evaporationStartTemperature;
@@ -236,9 +242,23 @@ public sealed class RuntimeItemReactionDefinition
 
 public static class ItemMatterReactionCompiler
 {
-    public static RuntimeItemMatterDefinition CompileMatter(ItemMatterDefinitionDto source, string itemId)
+    private const float TinderIgnitionTemperature = 180f;
+    private const float DefaultCombustibleIgnitionTemperature = 300f;
+
+    public static RuntimeItemMatterDefinition CompileMatter(
+        ItemMatterDefinitionDto source,
+        IEnumerable<string> tags,
+        string itemId)
     {
-        if (source == null) return null;
+        float? ignitionTemperature = ResolveIgnitionTemperature(source?.IgnitionTemperature, tags);
+        if (source == null && !ignitionTemperature.HasValue) return null;
+        source ??= new ItemMatterDefinitionDto();
+        if (ignitionTemperature.HasValue)
+        {
+            ValidateFinite(ignitionTemperature.Value, itemId, "matter.ignitionTemperature");
+            if (ignitionTemperature.Value <= 0f)
+                throw new InvalidDataException($"物品 {itemId} 的 matter.ignitionTemperature 必须大于 0℃");
+        }
         ValidateFinite01(source.InitialMoisture, itemId, "matter.initialMoisture");
         ValidateFiniteNonNegative(source.EvaporationRatePerSecond, itemId, "matter.evaporationRatePerSecond");
         ValidateFinite(source.EvaporationStartTemperature, itemId, "matter.evaporationStartTemperature");
@@ -267,12 +287,29 @@ public static class ItemMatterReactionCompiler
         }
 
         return new RuntimeItemMatterDefinition(
+            ignitionTemperature,
             source.InitialMoisture,
             source.EvaporationRatePerSecond,
             source.EvaporationStartTemperature,
             source.TemperatureDryingMultiplierPer10C,
             source.WaterAbsorptionRatePerSecond,
             transitions.AsReadOnly());
+    }
+
+    /// <summary>显式燃点优先；已有引火物、木材和燃料标签自动获得通用燃点。</summary>
+    private static float? ResolveIgnitionTemperature(float? configured, IEnumerable<string> tags)
+    {
+        if (configured.HasValue) return configured.Value;
+        bool combustible = false;
+        foreach (string tag in tags ?? Array.Empty<string>())
+        {
+            if (string.Equals(tag, Tag.CombustionTinder, StringComparison.OrdinalIgnoreCase))
+                return TinderIgnitionTemperature;
+            if (string.Equals(tag, "Wood", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(tag, Tag.CombustionFuel, StringComparison.OrdinalIgnoreCase))
+                combustible = true;
+        }
+        return combustible ? DefaultCombustibleIgnitionTemperature : null;
     }
 
     public static IReadOnlyList<RuntimeItemReactionDefinition> CompileReactions(
@@ -460,7 +497,13 @@ public static class ItemMatterRuntime
         return initialized || !Mathf.Approximately(before, item.MatterState.TemperatureCelsius);
     }
 
-    public static bool Advance(ItemData item, float ambientTemperature, float airExposure, float seconds, bool submerged = false)
+    public static bool Advance(
+        ItemData item,
+        float ambientTemperature,
+        float airExposure,
+        float seconds,
+        bool submerged = false,
+        float? transferPerSecondOverride = null)
     {
         if (item == null || seconds <= 0f || float.IsNaN(seconds) || float.IsInfinity(seconds) ||
             float.IsNaN(ambientTemperature) || float.IsInfinity(ambientTemperature)) return false;
@@ -475,7 +518,7 @@ public static class ItemMatterRuntime
         state.TemperatureCelsius = ThermalRuntime.AdvanceTowards(
             state.TemperatureCelsius,
             ambientTemperature,
-            item.HeatConductionRate,
+            transferPerSecondOverride ?? item.HeatConductionRate,
             seconds,
             Mathf.Max(0.01f, exposure));
 
@@ -499,6 +542,67 @@ public static class ItemMatterRuntime
 
         return initialized || !Mathf.Approximately(beforeTemperature, state.TemperatureCelsius) ||
                !Mathf.Approximately(beforeMoisture, state.Moisture);
+    }
+
+    /// <summary>温度达到燃点后持续燃烧；真实水接触会熄灭，燃尽后由世界掉落系统移除。</summary>
+    public static bool AdvanceCombustion(ItemData item, float seconds, bool waterContact, out bool consumedAll)
+    {
+        consumedAll = false;
+        if (item?.Stack == null || item.Stack.Amount <= 0f || seconds <= 0f || !float.IsFinite(seconds))
+            return false;
+
+        RuntimeItemMatterDefinition matter = ResolveMatter(item);
+        ItemMatterState state = item.MatterState;
+        if (matter?.IgnitionTemperature is not float ignitionTemperature || state?.Initialized != true)
+            return false;
+
+        bool beforeBurning = state.IsBurning;
+        float beforeElapsed = state.CombustionElapsedSeconds;
+        float beforeAmount = item.Stack.Amount;
+
+        if (waterContact)
+        {
+            state.IsBurning = false;
+            state.CombustionElapsedSeconds = 0f;
+            return beforeBurning || !Mathf.Approximately(beforeElapsed, 0f);
+        }
+
+        if (!state.IsBurning && state.TemperatureCelsius >= ignitionTemperature)
+        {
+            state.IsBurning = true;
+            state.CombustionElapsedSeconds = 0f;
+        }
+
+        if (!state.IsBurning)
+            return beforeBurning != state.IsBurning;
+
+        float secondsPerUnit = ResolveCombustionSecondsPerUnit(item);
+        state.CombustionElapsedSeconds += seconds;
+        int consumedUnits = Mathf.FloorToInt(state.CombustionElapsedSeconds / secondsPerUnit);
+        if (consumedUnits > 0)
+        {
+            float consumed = Mathf.Min(item.Stack.Amount, consumedUnits);
+            item.Stack.Amount = Mathf.Max(0f, item.Stack.Amount - consumed);
+            state.CombustionElapsedSeconds = item.Stack.Amount > 0f
+                ? Mathf.Max(0f, state.CombustionElapsedSeconds - consumedUnits * secondsPerUnit)
+                : 0f;
+        }
+
+        consumedAll = item.Stack.Amount <= 0f;
+        if (consumedAll)
+            state.IsBurning = false;
+        return beforeBurning != state.IsBurning ||
+               !Mathf.Approximately(beforeElapsed, state.CombustionElapsedSeconds) ||
+               !Mathf.Approximately(beforeAmount, item.Stack.Amount);
+    }
+
+    /// <summary>已有燃料数据直接复用其每件燃烧时长；普通可燃物使用短时默认值。</summary>
+    private static float ResolveCombustionSecondsPerUnit(ItemData item)
+    {
+        if (Mod_Fuel.TryResolveItemData(item, out FuelData fuel) && fuel != null &&
+            float.IsFinite(fuel.Fuel.x) && fuel.Fuel.x > 0f)
+            return Mathf.Max(1f, fuel.Fuel.x);
+        return 12f;
     }
 
     public static RuntimeItemMatterTransition GetHeatingTransition(ItemData item)
