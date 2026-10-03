@@ -16,6 +16,7 @@
       "tags": ["Container", "Iron"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/WaterVessel/IronBucket/IronBucket_Icon.png",
+        "liquidSurface": { "bounds": { "x": 0.234375, "y": 0.5, "width": 0.53125, "height": 0.21875 }, "maxSourceChannel": 100 },
         "color": { "r": 1, "g": 1, "b": 1, "a": 1 }
       },
       "modules": {
