@@ -32,6 +32,7 @@ description: "Use when: 定位或修改 FlatWorld 的世界时间、昼夜、天
 - 角色体温、资源产量和调试温度层必须共用 `TemperatureMgr.TryGetAmbientTemperature`：读取已加载 `ChunkTerrainData` 的 `temperature.celsius`，叠加星球基准相对 `PlanetData.DefaultGlobalTemperature` 的差值、当前维度允许的天气修正和局部源；未加载返回 false，禁止为查询触发生成或复制整层数组。角色初始化只能更新自身 `AmbientTemperature`，不能把某个出生格温度写回星球全局值。
 - 群系基础气温在 `DeterministicChunkGenerator.GenerateSurfaceCell` 完成群系分类后写入 `temperature.celsius`；不要为调整摄氏度改写归一化的 `temperature`，后者仍参与群系判定与生态分布。规则变化需递增纯生成器与地表 Profile 的生成签名，保持噪声布局版本不变。
 - 局部冷热源是可重建的影响层，来源模块负责燃料/供电/保存并在停用、回池时撤销注册；不能把临时偏移写回生成气候，否则卸载后无法恢复并会污染地图差量。修改源快照只使覆盖分区失效，查询缓存不扫描全部来源；环形边界同时归一化分区键并使用最短距离，避免世界接缝出现断层或重复贡献。
+- 世界液体的环境辐射热由 `WorldLiquidSettings.radiantHeatRadius/radiantHeatOffset` 声明，`RadiantLiquidTemperatureField` 只扫描已加载区块并按地形 Revision 缓存逐格最大温升；大片岩浆取最大贡献而不是逐格相加，抽干或流动后自动失效重算。
 - 设备组件 `LocalTemperatureSource` 的强度表示中心摄氏度增量（负值制冷），不是功率或绝对目标温度；恒温器应由设备控制器根据当前地块温度计算有效强度。当前影响层不保存热惯性，撤销源会立即撤销其环境增量；需要蓄热/热传导时应引入独立状态层，不能悄悄改变来源参数语义。
 - 污染指标统一注册为 `ContaminationDefinition`，权威值保存在 `ChunkTerrainData` 的 `flatworld.contamination.<definitionId>` 环境层；运行时修改必须走 `ContaminationSystem`，禁止直接 `SetEnvironmentValue`，否则会绕过服务器权威、污染差量存档和变化通知。脏污度与具体病原负荷是同一系统内不同指标，不能合并成单一“越脏就拥有所有疾病”的数值。
 - 维度 `FixedLighting` 是光照上限；SuppressWeather 会关闭天气与雨效。

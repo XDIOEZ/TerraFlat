@@ -23,6 +23,8 @@
         "temperature": 1100.0,
         "contactHeatingPerSecond": 12.0,
         "contactDamagePerSecond": 30.0,
+        "radiantHeatRadius": 6.0,
+        "radiantHeatOffset": 180.0,
         "depthPerServing": 0.025
       }
     },

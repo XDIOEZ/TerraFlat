@@ -13,6 +13,7 @@ public partial class TemperatureMgr
     private string fieldDimension;
     private WorldTopologyBounds fieldBounds;
     private LocalTemperatureField localTemperatureField;
+    private RadiantLiquidTemperatureField radiantLiquidTemperatureField;
     private int fieldContextFrame = -1;
     private float ambientFieldOffset;
     private int fieldChunkWidth;
@@ -67,6 +68,8 @@ public partial class TemperatureMgr
             fieldChunkHeight = height;
             localTemperatureField = world != null && planet != null && dimensionId != null && width > 0 && height > 0
                 ? new LocalTemperatureField(fieldChunkWidth, fieldChunkHeight, fieldBounds) : null;
+            radiantLiquidTemperatureField = world != null && planet != null && dimensionId != null && width > 0 && height > 0
+                ? new RadiantLiquidTemperatureField(manager, dimensionId, fieldChunkWidth, fieldChunkHeight, fieldBounds) : null;
         }
 
         float weatherOffset = dimension?.ActiveDefinition?.SuppressWeather == true
@@ -113,7 +116,8 @@ public partial class TemperatureMgr
             return false;
 
         temperature = includeTransient
-            ? baseline + ambientFieldOffset + localTemperatureField.Sample(cell)
+            ? baseline + ambientFieldOffset + localTemperatureField.Sample(cell) +
+              (radiantLiquidTemperatureField?.Sample(cell) ?? 0f)
             : baseline + (fieldPlanet.GlobalTemperature - PlanetData.DefaultGlobalTemperature);
         // 热液体的当前温度随 Liquid 身份派生，抽干即撤销，不污染地形基温或历史季节。
         if (includeTransient && WorldLiquidSystem.GetSurfaceDepth(terrain, x, y) > 0f &&
