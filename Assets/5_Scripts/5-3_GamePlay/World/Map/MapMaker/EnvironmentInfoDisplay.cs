@@ -61,6 +61,7 @@ public class EnvironmentInfoDisplay : MonoBehaviour
     private bool isVisible;
     private bool isValidPosition;
     private int currentPage;
+    private Vector2 scrollPosition;
 
     private GUIStyle boxStyle;
     private GUIStyle labelStyle;
@@ -101,6 +102,7 @@ public class EnvironmentInfoDisplay : MonoBehaviour
             return;
 
         int maxPage = isValidPosition ? 1 : 0;
+        int previousPage = currentPage;
         Keyboard keyboard = Keyboard.current;
         if (keyboard?.upArrowKey.wasPressedThisFrame == true)
         {
@@ -116,6 +118,8 @@ public class EnvironmentInfoDisplay : MonoBehaviour
         }
 
         currentPage = Mathf.Clamp(currentPage, 0, maxPage);
+        if (currentPage != previousPage)
+            scrollPosition = Vector2.zero;
     }
 
     private void OnGUI()
@@ -250,6 +254,19 @@ public class EnvironmentInfoDisplay : MonoBehaviour
         float lineHeight = Mathf.Max(fontSize + 6f, 20f);
         float wantedHeight = Mathf.Max(panelSize.y, lineCount * lineHeight + 12f);
         float panelHeight = Mathf.Min(wantedHeight, Mathf.Max(1f, Screen.height - 4f));
+        bool canScroll = wantedHeight > panelHeight + 0.5f;
+
+        // 面板跟随鼠标，滚轮直接控制当前页，避免必须把指针移进面板才能滚动。
+        Event guiEvent = Event.current;
+        if (canScroll && guiEvent.type == EventType.ScrollWheel)
+        {
+            scrollPosition.y = Mathf.Max(0f, scrollPosition.y + guiEvent.delta.y * lineHeight * 3f);
+            guiEvent.Use();
+        }
+        else if (!canScroll)
+        {
+            scrollPosition = Vector2.zero;
+        }
 
         float desiredX = mouseScreenPos.x + offset.x;
         float desiredY = Screen.height - mouseScreenPos.y + offset.y;
@@ -269,12 +286,22 @@ public class EnvironmentInfoDisplay : MonoBehaviour
             return;
         }
 
+        scrollPosition = GUILayout.BeginScrollView(
+            scrollPosition,
+            false,
+            canScroll,
+            GUILayout.ExpandHeight(true));
+
         if (currentPage == 0)
             DrawOverviewPage(sample);
         else
             DrawRawDataPage(sample);
 
-        GUILayout.Label($"按 {toggleKey} 关闭  |  第 {currentPage + 1}/{totalPages} 页（↑↓ 翻页）", labelStyle);
+        GUILayout.EndScrollView();
+
+        GUILayout.Label(
+            $"按 {toggleKey} 关闭  |  第 {currentPage + 1}/{totalPages} 页（↑↓ 翻页，滚轮滚动）",
+            labelStyle);
         GUILayout.EndArea();
     }
 
