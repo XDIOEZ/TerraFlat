@@ -114,6 +114,7 @@
           },
           "parameters": {
             "StationId": "crucible",
+            "SlotCount": 6,
             "EnableStrikeGesture": false,
             "ContainerLabel": "坩埚"
           }

@@ -25,11 +25,12 @@ public class MortarLogic : MachineLogic
         processCapability = config.Value("ProcessCapability", source.ProcessCapability);
         EnableStrikeGesture = config.Value("EnableStrikeGesture", source.EnableStrikeGesture);
         Label = config.Value("ContainerLabel", source.ContainerLabel);
+        int slotCount = Mathf.Max(1, config.Value("SlotCount", source.SlotCount));
         PanelPrefab = source.PanelPrefab;
         if (station == Mod_Mortar.CrucibleStationId)
             throw new InvalidOperationException("可落地坩埚需注册完整的热加工领域，不能当普通石臼装载。");
         state = MachineModuleState.Read<MortarState>(entity.Snapshot, Mod_Mortar.ModuleId)
-            ?? new MortarState { Bowl = MachineInventory.NewData(Label, 1) };
+            ?? new MortarState { Bowl = MachineInventory.NewData(Label, slotCount) };
         var bowl = new Mod_Mortar.MortarInventory
         {
             Data = state.Bowl,
@@ -37,7 +38,7 @@ public class MortarLogic : MachineLogic
             ProcessCapability = processCapability
         };
         MachineInventory.Rebase(bowl.Data);
-        bowl.Data.SetUnlimitedSlots(true);
+        bowl.Data.SetFixedSlotCount(slotCount);
         bowl.InitData();
         Bowl = Track(bowl);
         capabilities = new CraftingCapabilities { RecipeType = RecipeType.Crafting, StationId = station, AllowOutputIntoInput = true };

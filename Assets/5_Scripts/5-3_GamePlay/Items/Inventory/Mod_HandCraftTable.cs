@@ -7,7 +7,7 @@ using UnityEngine.UI;
 
 /// <summary>
 /// 玩家随身制作入口：读取与世界工作台相同的普通合成配方，按手工点击基准完成制作。
-/// 输入和输出库存均保留末尾空槽，正式面板根据库存槽位数量扩展滚动网格。
+/// 输入和输出使用配置中的固定格数，满槽时由制作事务拒绝产出。
 /// </summary>
 public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
 {
@@ -22,9 +22,9 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
 
     [SerializeReference]
     public List<string> RawData = new List<string>();
-    [Tooltip("手工制作输入容器；末格占用后自动增加空槽")]
+    [Tooltip("固定格数的手工制作输入容器")]
     public Inventory inputInventory;
-    [Tooltip("手工制作输出容器；末格占用后自动增加空槽")]
+    [Tooltip("固定格数的手工制作输出容器")]
     public Inventory outputInventory;
     public BasePanel basePanel;
     public GameObject InventoryPanel_Prefab;
@@ -49,8 +49,6 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
     private Mod_GameController _inputController;
     private InputAction _toggleAction;
     private Action<InputAction.CallbackContext> _toggleCallback;
-    private Inventory_Data observedInputData;
-    private Inventory_Data observedOutputData;
     private static readonly CraftingCapabilities Capabilities = new CraftingCapabilities
     {
         RecipeType = RecipeType.Crafting,
@@ -245,7 +243,6 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
     {
         _craftingController?.Dispose();
         _craftingController = null;
-        UnbindDynamicSlotEvents();
         inputInventory?.UnbindSlotDataEvents();
         outputInventory?.UnbindSlotDataEvents();
 
@@ -276,11 +273,10 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
     public void InitData()
     {
         ValidateInventoryConfig();
-        inputInventory.Data.SetUnlimitedSlots(true);
-        outputInventory.Data.SetUnlimitedSlots(true);
+        inputInventory.Data.SetUnlimitedSlots(false);
+        outputInventory.Data.SetUnlimitedSlots(false);
         InitializeInventoryData(inputInventory, nameof(inputInventory));
         InitializeInventoryData(outputInventory, nameof(outputInventory));
-        BindDynamicSlotEvents();
     }
 
     public void InitUI()
@@ -326,7 +322,7 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
         BindSlots(outputInventory, "输出", "输出槽内容");
     }
 
-    /// <summary>正式面板保留原始槽作为模板，库存增长时只克隆所需数量。</summary>
+    /// <summary>按配置中的固定格数绑定正式面板槽位。</summary>
     private void BindSlots(Inventory inventory, string prefix, string contentName)
     {
         RectTransform content = FindSlotContent(contentName);
@@ -359,43 +355,6 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
                 return rect;
 
         throw new InvalidOperationException($"[Mod_HandCraftTable] 面板缺少 {contentName}");
-    }
-
-    /// <summary>库存数据先补空格，再同步新增 UI 与输出预览绑定。</summary>
-    private void SyncDynamicSlotUI(Inventory inventory, string prefix, string contentName)
-    {
-        if (basePanel == null || inventory?.Data?.itemSlots == null ||
-            inventory.itemSlot_UI.Count == inventory.Data.itemSlots.Count)
-            return;
-
-        BindSlots(inventory, prefix, contentName);
-        inventory.SyncData();
-        basePanel.RefreshUIComponents();
-        if (ReferenceEquals(inventory, outputInventory))
-            _craftingController?.RefreshOutputSlotBindings();
-    }
-
-    private void OnInputInventoryChanged(ItemSlot _) => SyncDynamicSlotUI(inputInventory, "输入", "输入槽内容");
-    private void OnOutputInventoryChanged(ItemSlot _) => SyncDynamicSlotUI(outputInventory, "输出", "输出槽内容");
-
-    /// <summary>存档恢复可能替换库存数据引用，因此订阅始终跟随当前数据实例。</summary>
-    private void BindDynamicSlotEvents()
-    {
-        UnbindDynamicSlotEvents();
-        observedInputData = inputInventory.Data;
-        observedOutputData = outputInventory.Data;
-        observedInputData.Event_OnDataChanged += OnInputInventoryChanged;
-        observedOutputData.Event_OnDataChanged += OnOutputInventoryChanged;
-    }
-
-    private void UnbindDynamicSlotEvents()
-    {
-        if (observedInputData != null)
-            observedInputData.Event_OnDataChanged -= OnInputInventoryChanged;
-        if (observedOutputData != null)
-            observedOutputData.Event_OnDataChanged -= OnOutputInventoryChanged;
-        observedInputData = null;
-        observedOutputData = null;
     }
 
     private Inventory GetPlayerHandInventory()

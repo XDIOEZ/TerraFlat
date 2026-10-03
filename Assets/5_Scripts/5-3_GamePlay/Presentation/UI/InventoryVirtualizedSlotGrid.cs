@@ -56,6 +56,24 @@ public sealed class InventoryVirtualizedSlotGrid : MonoBehaviour, IScrollHandler
             scrollRect.onValueChanged.RemoveListener(OnScrollValueChanged);
     }
 
+    /// <summary>解除虚拟化绑定并恢复固定网格布局，供生存背包使用。</summary>
+    public void Unbind()
+    {
+        if (scrollRect != null)
+            scrollRect.onValueChanged.RemoveListener(OnScrollValueChanged);
+        for (int i = 0; i < pooledSlots.Count; i++)
+            if (boundIndices[i] >= 0 && pooledSlots[i] != null)
+                inventory?.UnbindVirtualSlotUI(pooledSlots[i], boundIndices[i]);
+        pooledSlots.Clear();
+        boundIndices.Clear();
+        inventory = null;
+        refreshPending = false;
+        if (gridLayout != null)
+            gridLayout.enabled = true;
+        if (contentSizeFitter != null)
+            contentSizeFitter.enabled = true;
+    }
+
     private void LateUpdate()
     {
         if (inventory == null || viewport == null)

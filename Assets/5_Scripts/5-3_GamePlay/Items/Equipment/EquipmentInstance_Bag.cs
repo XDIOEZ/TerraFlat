@@ -131,10 +131,13 @@ public partial class EquipmentInstance_Bag : EquipmentInstance
 
     }
 
-    /// <summary>把草笼槽位接到玩家行囊末尾，使其直接参与现有背包 UI 和取放逻辑。</summary>
+    #region 背包槽位挂接
+
+    /// <summary>只有创造背包可以挂接装备槽位，生存背包保持固定格数。</summary>
     public void AttachToPlayerInventory(Inventory ownerInventory)
     {
-        if (ownerInventory == null || BagData == null)
+        // 生存背包保持固定格数，装备不能再挂入额外槽位。
+        if (ownerInventory?.Data?.HasUnlimitedSlots != true || BagData == null)
             return;
 
         if (attachedOwnerInventory == ownerInventory)
@@ -181,5 +184,7 @@ public partial class EquipmentInstance_Bag : EquipmentInstance
 
         return null;
     }
+
+    #endregion
 
 }

@@ -58,6 +58,7 @@
           },
           "parameters": {
             "StationId": "mortar",
+            "SlotCount": 6,
             "ProcessCapability": "grind"
           }
         }

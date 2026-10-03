@@ -6,13 +6,16 @@ using UnityEngine;
 
 /// <summary>
 /// 可携带的配方加工容器：石臼通过捣击执行普通合成，坩埚通过加热执行容器配方。
-/// 两种模式共用动态库存、快捷转移、事务匹配和 ItemData 持久化；UI 只负责交互与反馈。
+/// 两种模式共用固定库存、快捷转移、事务匹配和 ItemData 持久化；UI 只负责交互与反馈。
 /// </summary>
 public sealed class Mod_Mortar : Module, IInteractable, IInventory
 {
     #region 配置与状态
     public const string ModuleId = "Mod_Mortar";
     public const string CrucibleStationId = "crucible";
+    public const int DefaultSlotCount = 6;
+    [Min(1), Tooltip("原料与产物共用的固定槽位数")]
+    public int SlotCount = DefaultSlotCount;
     public Ex_ModData_MemoryPackable Data = new Ex_ModData_MemoryPackable(); // 独立模块数据。
     public override ModuleData _Data { get => Data; set => Data = (Ex_ModData_MemoryPackable)value; }
     public override string CanonicalModuleId => ModuleId;
@@ -50,8 +53,8 @@ public sealed class Mod_Mortar : Module, IInteractable, IInventory
         bowl.ProcessCapability = ProcessCapability;
         bowl.MaterialOnly = IsCrucible;
         bowl.Data = state.Bowl;
+        bowl.Data.SetFixedSlotCount(SlotCount);
         bowl.NormalizeStoredStacks();
-        bowl.Data.SetUnlimitedSlots(true);
         bowl.InitData();
         capabilities = new CraftingCapabilities
         {
@@ -182,7 +185,6 @@ public sealed class Mod_Mortar : Module, IInteractable, IInventory
                 bowl, ProcessCapability, capabilities, out RuntimeItemProcessingDefinition processing))
         {
             batch = processing.Recipe;
-            ReserveOutputSlots(batch);
         }
         AlignManualWorkProgress(state, batch);
     }
@@ -228,17 +230,6 @@ public sealed class Mod_Mortar : Module, IInteractable, IInventory
 
         mortarState.ProcessingRecipeId = recipe.Id;
         mortarState.ProcessingStep = 0;
-    }
-
-    /// <summary>提交前为每个产物单位预留空格；实际事务优先合并同类，不同产物可同时原子写入。</summary>
-    private void ReserveOutputSlots(RuntimeRecipe recipe)
-    {
-        int required = 0;
-        foreach (RuntimeRecipeResult output in recipe.outputs.results)
-            required = checked(required + Mathf.CeilToInt(output.amount));
-        int empty = bowl.Data.itemSlots.FindAll(slot => slot.itemData == null).Count;
-        while (empty++ < required)
-            bowl.Data.itemSlots.Add(new ItemSlot(bowl.Data.itemSlots.Count) { SlotMaxVolume = Inventory_Data.DefaultSlotVolume });
     }
 
     private void OnStrike()
@@ -315,7 +306,7 @@ public sealed class Mod_Mortar : Module, IInteractable, IInventory
             MaterialOnly = true,
             Data = state.Bowl
         };
-        materialInventory.Data.SetUnlimitedSlots(true);
+        materialInventory.Data.SetUnlimitedSlots(false);
         CraftingCapabilities heatCapabilities = new CraftingCapabilities
         {
             RecipeType = RecipeType.Smelting,
@@ -415,10 +406,22 @@ public sealed class Mod_Mortar : Module, IInteractable, IInventory
             state ??= new MortarState();
             if (state.Bowl?.itemSlots == null)
                 throw new InvalidOperationException("坩埚存档缺少容器内库存。");
+            state.Bowl.SetFixedSlotCount(ResolveFixedSlotCount(itemData));
             return true;
         }
 
         return false;
+    }
+
+    /// <summary>未物化的坩埚也读取当前定义的固定格数，热加工不能临时扩容。</summary>
+    private static int ResolveFixedSlotCount(ItemData itemData)
+    {
+        if (GameRes.Instance.TryGetItemDefinition(itemData.IDName, out RuntimeItemDefinition definition))
+            foreach (KeyValuePair<string, ModuleData> pair in itemData.ModuleDataDic)
+                if (pair.Value?.ID == ModuleId &&
+                    definition.TryGetModuleParameters(pair.Key, out string json) && !string.IsNullOrWhiteSpace(json))
+                    return Mathf.Max(1, JObject.Parse(json).Value<int?>(nameof(SlotCount)) ?? DefaultSlotCount);
+        return DefaultSlotCount;
     }
 
     private bool TryUseLiquidVessel(Item playerItem)
@@ -480,14 +483,13 @@ public sealed class Mod_Mortar : Module, IInteractable, IInventory
             GameRes.ExistingInstance == null)
             return false;
 
-        state.Bowl.EnsureSpareSlot();
         var materialInventory = new MortarInventory
         {
             StationId = CrucibleStationId,
             MaterialOnly = true,
             Data = state.Bowl
         };
-        materialInventory.Data.SetUnlimitedSlots(true);
+        materialInventory.Data.SetUnlimitedSlots(false);
 
         ItemData output = GameRes.ExistingInstance.CreateItemData(solidification.OutputItemId);
         output.Stack.Amount = Mathf.Max(1, Mathf.RoundToInt(vessel.Data.Amount * solidification.OutputAmount));
@@ -509,7 +511,7 @@ public sealed class Mod_Mortar : Module, IInteractable, IInventory
         vessel.CommitExternalState();
         state.Bowl = materialInventory.Data;
         bowl.Data = state.Bowl;
-        bowl.Data.SetUnlimitedSlots(true);
+        bowl.Data.SetUnlimitedSlots(false);
         Save();
         view?.SyncSlots(bowl);
         return true;

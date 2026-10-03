@@ -69,78 +69,66 @@ MonoBehaviour:
         Data:
           Name: "\u80CC\u5305\u6A21\u5757"
           itemSlots:
-          - CanAcceptItemType:
-              Item_TypeTag:
-              - None
-              - None
-              Item_Material:
-              - None
-            SlotMaxVolume: 0
+          - CanAcceptTags: []
+            SlotMaxVolume: 100
             Index: 0
-          - CanAcceptItemType:
-              Item_TypeTag:
-              - None
-              - None
-              Item_Material:
-              - None
-            SlotMaxVolume: 0
-            Index: 0
-          - CanAcceptItemType:
-              Item_TypeTag:
-              - None
-              - None
-              Item_Material:
-              - None
-            SlotMaxVolume: 0
-            Index: 0
-          - CanAcceptItemType:
-              Item_TypeTag:
-              - None
-              - None
-              Item_Material:
-              - None
-            SlotMaxVolume: 0
-            Index: 0
-          - CanAcceptItemType:
-              Item_TypeTag:
-              - None
-              - None
-              Item_Material:
-              - None
-            SlotMaxVolume: 0
-            Index: 0
-          - CanAcceptItemType:
-              Item_TypeTag:
-              - None
-              - None
-              Item_Material:
-              - None
-            SlotMaxVolume: 0
-            Index: 0
-          - CanAcceptItemType:
-              Item_TypeTag:
-              - None
-              - None
-              Item_Material:
-              - None
-            SlotMaxVolume: 0
-            Index: 0
-          - CanAcceptItemType:
-              Item_TypeTag:
-              - None
-              - None
-              Item_Material:
-              - None
-            SlotMaxVolume: 0
-            Index: 0
-          - CanAcceptItemType:
-              Item_TypeTag:
-              - None
-              - None
-              Item_Material:
-              - None
-            SlotMaxVolume: 0
-            Index: 0
+          - CanAcceptTags: []
+            SlotMaxVolume: 100
+            Index: 1
+          - CanAcceptTags: []
+            SlotMaxVolume: 100
+            Index: 2
+          - CanAcceptTags: []
+            SlotMaxVolume: 100
+            Index: 3
+          - CanAcceptTags: []
+            SlotMaxVolume: 100
+            Index: 4
+          - CanAcceptTags: []
+            SlotMaxVolume: 100
+            Index: 5
+          - CanAcceptTags: []
+            SlotMaxVolume: 100
+            Index: 6
+          - CanAcceptTags: []
+            SlotMaxVolume: 100
+            Index: 7
+          - CanAcceptTags: []
+            SlotMaxVolume: 100
+            Index: 8
+          - CanAcceptTags: []
+            SlotMaxVolume: 100
+            Index: 9
+          - CanAcceptTags: []
+            SlotMaxVolume: 100
+            Index: 10
+          - CanAcceptTags: []
+            SlotMaxVolume: 100
+            Index: 11
+          - CanAcceptTags: []
+            SlotMaxVolume: 100
+            Index: 12
+          - CanAcceptTags: []
+            SlotMaxVolume: 100
+            Index: 13
+          - CanAcceptTags: []
+            SlotMaxVolume: 100
+            Index: 14
+          - CanAcceptTags: []
+            SlotMaxVolume: 100
+            Index: 15
+          - CanAcceptTags: []
+            SlotMaxVolume: 100
+            Index: 16
+          - CanAcceptTags: []
+            SlotMaxVolume: 100
+            Index: 17
+          - CanAcceptTags: []
+            SlotMaxVolume: 100
+            Index: 18
+          - CanAcceptTags: []
+            SlotMaxVolume: 100
+            Index: 19
           Index: 0
           IsInjected: 0
           PanelPosition: {x: 0, y: 0, z: 0}

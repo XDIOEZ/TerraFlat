@@ -212,6 +212,7 @@ public class Mod_PlayerTraits : Module
         }
 
         // 只为缺少的物品扩容，重复补充已有物品时不新增整套槽位。
+        CreativeInventoryState.Enable(target, bagMod.inventory);
         int firstCreativeSlotIndex = bagData.itemSlots.Count;
         if (creativeItems.Count > 0)
             bagMod.inventory.AddSlotsAtRuntime(creativeItems.Count);
@@ -222,14 +223,13 @@ public class Mod_PlayerTraits : Module
             data.Stack.CanBePickedUp = false;
             bagData.SetOne_ItemData(firstCreativeSlotIndex + i, data);
         }
-        CreativeInventoryState.Enable(target, bagMod.inventory);
         bagData.MaintainDynamicSlotCount();
         bagMod.inventory.RefreshUI();
 
         string summary = $"创造背包完成：新增 {creativeItems.Count} 种，补充 {replenishedCount} 种，每种增加 {amountPerItem} 个，" +
                          $"不可创建 {uncreatableItemIds.Count} 种，排除 Actor {actorCount} 种、落地建筑状态 {placedBuildingCount} 种、世界专用实体 {worldOnlyCount} 种，" +
                          $"清理旧建筑状态 {removedPlacedBuildingCount} 格、旧世界实体 {removedWorldOnlyCount} 格，共扫描 {itemIds.Count} 种物品（额外检测 MOD 道具 {detectedModItemCount} 种）；" +
-                         "已解除重量与体积上限，背包格子保持默认自动扩容。";
+                         "已解除重量与体积上限，并开启创造背包动态扩容。";
         if (uncreatableItemIds.Count > 0)
             Debug.LogError($"[Mod_PlayerTraits.InitializeCreativeInventoryForAdmin] 不可创建物品：{string.Join(", ", uncreatableItemIds)}");
         Debug.Log($"[Mod_PlayerTraits.InitializeCreativeInventoryForAdmin] {summary}");

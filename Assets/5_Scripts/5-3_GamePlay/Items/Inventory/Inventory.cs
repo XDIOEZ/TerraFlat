@@ -575,9 +575,12 @@ public class Inventory
         Player player = item as Player;
         bool isPlayerBag = player != null && string.Equals(Data.Name, ModText.Bag, StringComparison.Ordinal);
         if (isPlayerBag)
+        {
+            CreativeInventoryState.Restore(this);
             Data.ConfigurePlayerBagCapacity(
                 player.Data?.MaxCarryWeight ?? Inventory_Data.DefaultPlayerBagMaxWeight,
                 player.Data?.MaxCarryVolume ?? Inventory_Data.DefaultPlayerBagMaxVolume);
+        }
         else if (StorageMaxWeightKg > 0f &&
                  StorageMaxVolumeCubicMeters > 0f &&
                  !float.IsNaN(StorageMaxWeightKg) &&
@@ -591,6 +594,7 @@ public class Inventory
         }
         else
         {
+            Data.SetUnlimitedSlots(false);
             // 玩家手部槽与快捷栏只是主背包物品的临时/快捷承载入口，
             // 单格堆叠规则应与主背包一致；重量与体积仍由玩家统一携带容量统计负责。
             Data.SetUnlimitedStackSize(IsHandInventory() || IsHotBarInventory());
@@ -641,14 +645,22 @@ public class Inventory
         // 加载Slot UI预制体
         ItemSlot_Prefab = GameRes.Instance.GetPrefab("UI_Slot");
 
-        // UI_Bag 使用虚拟化网格，数据槽位数量不再等于实际 GameObject 数量。
+        // 只有创造背包复用虚拟化网格，生存背包使用固定槽位对象。
         InventorySlotVisualProfile visualProfile = basePanel.GetComponentInChildren<InventorySlotVisualProfile>(true);
         _virtualizedSlotGrid = basePanel.GetComponent<InventoryVirtualizedSlotGrid>();
-        if (_virtualizedSlotGrid != null)
+        if (_virtualizedSlotGrid != null && Data.HasUnlimitedSlots)
         {
+            _virtualizedSlotGrid.enabled = true;
             _virtualizedSlotGrid.Bind(this, ItemSlot_Parent, ItemSlot_Prefab, visualProfile);
             CompleteUIInitialization(syncData: false);
             return;
+        }
+
+        if (_virtualizedSlotGrid != null)
+        {
+            _virtualizedSlotGrid.Unbind();
+            _virtualizedSlotGrid.enabled = false;
+            _virtualizedSlotGrid = null;
         }
 
         // 只管理实际槽位，名称提示等附属 UI 不参与数量同步。
@@ -2086,7 +2098,7 @@ public class Inventory
     /// </summary>
     public void AppendExternalSlots(IList<ItemSlot> externalSlots)
     {
-        if (Data?.itemSlots == null || externalSlots == null || externalSlots.Count == 0)
+        if (Data?.itemSlots == null || !Data.HasUnlimitedSlots || externalSlots == null || externalSlots.Count == 0)
             return;
 
         for (int i = 0; i < externalSlots.Count; i++)
@@ -2153,6 +2165,10 @@ public class Inventory
             Debug.LogError("[Inventory.AddSlotsAtRuntime] Data.itemSlots 为空，无法添加槽位。");
             return;
         }
+
+        // 显式扩容同样遵守容量策略，固定库存不能通过此入口增加格子。
+        if (!Data.HasUnlimitedSlots)
+            return;
 
         // 显式批量扩容只负责追加槽位，不能调用 InitData：
         // 玩家主背包的动态容量自检会立刻把这些尚未填充的空槽收缩掉，
