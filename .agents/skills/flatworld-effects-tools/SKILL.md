@@ -54,7 +54,8 @@ description: "Use when: 定位或修改 FlatWorld 的运行时特效、粒子、
 - 共用海水 `UsePass` 的包装 Shader 必须声明公共 Pass 新增的同名材质属性；月光等夜间自发光倒影应在 `CombinedShapeLightShared` 之后合成，避免全局夜间光照被重复相乘。月亮出现动画读取 `DayTimeSystem` 发布的 `_GlobalMoonAppearance`，尺寸/渐亮与 `_GlobalMoonlightIntensity` 的月相亮度分离，避免新月把月面永久缩小。
 - 正式 Ground/Liquid 由 BRG 独立提交，液体外观来自 `LiquidDefinition.WorldWater`，禁止按 GroundTileId 查水面贴图。岸线以 LiquidDepth > 0 判断，深度用每格四角插值；任一边界格液深变化须更新八方向邻区的共享边/角，不能只监听 TerrainCell 改动。旧 Tilemap 的颜色仍只编码岸线，兼容深度纹理与 BRG 共用连续液深语义。
 - 岩浆源材质使用独立 `Tilemap Lava Lit` Shader；正式 Chunk Mesh 会把源材质属性复制到共用 `Chunk Mesh Water Lit`，因此岩浆必须通过 `_LavaMode=1` 和同名参数复用 `LavaSurfaceCommon.hlsl`。岩浆动态形态读取独立可平铺 `_LavaPatternTex`，RGBA 分别承载主体、扰动和两套交替高光，不能占用世界液体 Sprite 的 `_MainTex` 通道。
-- 水面视觉把双线性采样后的连续水深离散为 `0.1~1.0` 共十档，真实 `LiquidDepth` 与水深纹理仍保持连续；两种正式水面风格的基础深浅色权重按十档等距变化，避免深水段相邻层级难以分辨。
+- 风格化水面把双线性采样后的连续水深离散为 `0.1~1.0` 共十档；写实水面必须直接使用格角双线性后的连续水深着色，避免相邻水格因色阶跳档出现方块边。
+- 水面透明度不能复用十档离散水深；透明度必须读取格角双线性后的连续水深，否则相邻水格会因为透明度跳档暴露出明显方格边。
 - Tilemap 合批后 `POSITION` 不保证是 Chunk 局部坐标；水深与岸线使用世界坐标，MPB 的 `_LiquidDepthUvScaleOffset` 必须扣除水层原点再加入一格纹理边框。当前世界网格每格为 1 单位且原点对齐整数，不要用 `unity_WorldToObject` 恢复已被合批丢失的局部坐标。
 - 水面潮流使用 `DayTimeSystem` 发布的 `_GlobalGameDay` 驱动，并沿材质 `_FlowDirection` 轴按 `_TideCyclesPerDay` 往返；方向性水纹不要改回基于 `_Time` 的持续旋转，否则跳时、读档与游戏时间倍率会和潮汐表现脱节。
 - 写实水面的风浪传播与潮流平移必须分开：波相位随游戏时间连续推进，潮汐只平移水面坐标，避免潮流换向时整片海面停住；波面法线与太阳高光共用解析波斜率，缩小时通过屏幕导数衰减细浪并拓宽高光，不量化写实水面的世界坐标。风格化水面按其独立算法保留像素采样与浪纹。

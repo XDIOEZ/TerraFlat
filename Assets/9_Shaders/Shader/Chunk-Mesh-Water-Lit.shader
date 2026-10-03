@@ -306,7 +306,12 @@ Shader "FlatWorld/2D/Chunk Mesh Water Lit"
                 data.flowX = input.flowX;
                 data.flowY = input.flowY;
                 half4 main = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv) * input.tint * _Color * _RendererColor;
-                half liquidDepth = SampleLiquidDepthCorners(input.positionWS, input.depth);
+                half continuousDepth = SampleContinuousLiquidDepthCorners(input.positionWS, input.depth);
+                #if defined(FLATWORLD_WATER_STYLIZED)
+                half liquidDepth = QuantizeWaterVisualDepth(continuousDepth);
+                #else
+                half liquidDepth = continuousDepth;
+                #endif
                 half recess = ComputeShoreRecess(input.positionWS, DecodeWaterShoreMask(input.shore));
                 UNITY_BRANCH
                 if (_LavaMode > 0.5)
@@ -325,8 +330,8 @@ Shader "FlatWorld/2D/Chunk Mesh Water Lit"
                     lit.a = lava.alpha;
                     return lit;
                 }
-                // 深水遮住重复海床纹理，浅水仍保留海床与水下实体可见度。
-                main.a = ResolveWaterSurfaceAlpha(main.a, liquidDepth);
+                // 保留原透明度，同时让透明度跟随连续水深跨格平滑变化。
+                main.a = ResolveWaterSurfaceAlpha(main.a, continuousDepth);
                 WaterSurfaceData surface = CalculateChunkWaterSurface(input.positionWS, input.lightingUV, liquidDepth, data);
                 main.rgb = ApplyWaterSurface(main.rgb, surface);
                 main.rgb = ApplyChunkWaterShore(main.rgb, recess, input.positionWS, data);
@@ -384,7 +389,12 @@ Shader "FlatWorld/2D/Chunk Mesh Water Lit"
                 data.flowX = input.flowX;
                 data.flowY = input.flowY;
                 half4 main = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv) * input.tint * _Color * _RendererColor;
-                half liquidDepth = SampleLiquidDepthCorners(input.positionWS, input.depth);
+                half continuousDepth = SampleContinuousLiquidDepthCorners(input.positionWS, input.depth);
+                #if defined(FLATWORLD_WATER_STYLIZED)
+                half liquidDepth = QuantizeWaterVisualDepth(continuousDepth);
+                #else
+                half liquidDepth = continuousDepth;
+                #endif
                 half recess = ComputeShoreRecess(input.positionWS, DecodeWaterShoreMask(input.shore));
                 UNITY_BRANCH
                 if (_LavaMode > 0.5)
@@ -396,8 +406,8 @@ Shader "FlatWorld/2D/Chunk Mesh Water Lit"
                         main.a);
                     return half4(lava.albedo + lava.emission, lava.alpha);
                 }
-                // 保留水下生物与海床可见度，水面波纹仍完整覆盖其上。
-                main.a = ResolveWaterSurfaceAlpha(main.a, liquidDepth);
+                // 保留原透明度，同时让透明度跟随连续水深跨格平滑变化。
+                main.a = ResolveWaterSurfaceAlpha(main.a, continuousDepth);
                 WaterSurfaceData surface = CalculateChunkWaterSurface(input.positionWS, input.screenUV, liquidDepth, data);
                 main.rgb = ApplyWaterSurface(main.rgb, surface);
                 main.rgb = ApplyChunkWaterShore(main.rgb, recess, input.positionWS, data);

@@ -330,9 +330,14 @@ Shader "FlatWorld/2D/Chunk BRG Water Lit"
             {
                 UNITY_SETUP_INSTANCE_ID(input);
                 half4 main = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv) * input.tint * _Color * _RendererColor;
-                half liquidDepth = SampleLiquidDepthCorners(input.positionWS, input.depth);
-                // 深水遮住重复海床纹理，浅水仍保留海床与水下实体可见度。
-                main.a = ResolveWaterSurfaceAlpha(main.a, liquidDepth);
+                half continuousDepth = SampleContinuousLiquidDepthCorners(input.positionWS, input.depth);
+                #if defined(FLATWORLD_WATER_STYLIZED)
+                half liquidDepth = QuantizeWaterVisualDepth(continuousDepth);
+                #else
+                half liquidDepth = continuousDepth;
+                #endif
+                // 保留原透明度，同时让透明度跟随连续水深跨格平滑变化。
+                main.a = ResolveWaterSurfaceAlpha(main.a, continuousDepth);
                 WaterSurfaceData surface = CalculateChunkWaterSurface(input.positionWS, input.lightingUV, liquidDepth);
                 main.rgb = ApplyWaterSurface(main.rgb, surface);
                 half recess = ComputeShoreRecess(input.positionWS, DecodeWaterShoreMask(input.shore));
@@ -381,9 +386,14 @@ Shader "FlatWorld/2D/Chunk BRG Water Lit"
             {
                 UNITY_SETUP_INSTANCE_ID(input);
                 half4 main = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv) * input.tint * _Color * _RendererColor;
-                half liquidDepth = SampleLiquidDepthCorners(input.positionWS, input.depth);
-                // 保留水下生物与海床可见度，水面波纹仍完整覆盖其上。
-                main.a = ResolveWaterSurfaceAlpha(main.a, liquidDepth);
+                half continuousDepth = SampleContinuousLiquidDepthCorners(input.positionWS, input.depth);
+                #if defined(FLATWORLD_WATER_STYLIZED)
+                half liquidDepth = QuantizeWaterVisualDepth(continuousDepth);
+                #else
+                half liquidDepth = continuousDepth;
+                #endif
+                // 保留原透明度，同时让透明度跟随连续水深跨格平滑变化。
+                main.a = ResolveWaterSurfaceAlpha(main.a, continuousDepth);
                 WaterSurfaceData surface = CalculateChunkWaterSurface(input.positionWS, input.screenUV, liquidDepth);
                 main.rgb = ApplyWaterSurface(main.rgb, surface);
                 half recess = ComputeShoreRecess(input.positionWS, DecodeWaterShoreMask(input.shore));

@@ -155,7 +155,12 @@ Shader "FlatWorld/2D/Tilemap Water Lit"
                 half4 main = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv);
                 main *= _Color * _RendererColor;
                 half4 shoreMask = DecodeWaterShoreMask(input.waterTileData);
-                half liquidDepth = SampleLiquidDepth(input.positionWS);
+                half continuousDepth = SampleContinuousLiquidDepth(input.positionWS);
+                #if defined(FLATWORLD_WATER_STYLIZED)
+                half liquidDepth = QuantizeWaterVisualDepth(continuousDepth);
+                #else
+                half liquidDepth = continuousDepth;
+                #endif
                 WaterSurfaceData waterSurface = CalculateWaterSurface(
                     input.positionWS,
                     input.lightingUV,
@@ -229,7 +234,12 @@ Shader "FlatWorld/2D/Tilemap Water Lit"
                 half4 main = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv);
                 main *= _Color * _RendererColor;
                 half4 shoreMask = DecodeWaterShoreMask(input.waterTileData);
-                half liquidDepth = SampleLiquidDepth(input.positionWS);
+                half continuousDepth = SampleContinuousLiquidDepth(input.positionWS);
+                #if defined(FLATWORLD_WATER_STYLIZED)
+                half liquidDepth = QuantizeWaterVisualDepth(continuousDepth);
+                #else
+                half liquidDepth = continuousDepth;
+                #endif
                 WaterSurfaceData waterSurface = CalculateWaterSurface(
                     input.positionWS,
                     input.screenUV,
