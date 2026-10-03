@@ -37,6 +37,7 @@ description: "Use when: 定位或修改 FlatWorld 的机器世界、工作台、
 - 机器库存只能由权威端修改。拖放、快捷转移、排序/整理都走正式命令和现有库存事务；服务端校验玩家归属、距离与物品身份。客户端快照先校验候选，再更新同格 ItemSlot 的内容；保留库存和槽位身份、本地 UI 布局，并同步禁止放入状态，不能因定期同步使拖拽来源失效。
 - 每名玩家独占、跨多个箱体共享的库存用 `MachineInventoryCommands.RegisterPrivateInventory` 注册角色与机器双键解析；不要放进公开的 `MachineLogic.Inventories` 或箱体快照。服务端用现有搬运/整理事务，私有库存只回给发起交互的连接；公共角色状态与联机全量存档快照也要剔除已注册的私有键。
 - 放置提交失败不得消费召唤器；拆回先捕获全部状态、成功生成返还物再删除。便携设施继续按 SharedModuleIds 迁移同一状态，不能另存手持/落地两份进度。
+- 砧台等重型手动加工设施的召唤器默认走放置，`RequiresPlacementRequest=false`；`Mod_ManualProcessor` 只保存和转移载体加工状态，不订阅手持使用动作，交互和加工必须检查已安装建筑。地面掉落的 Summoner 仍是待放置物，不能冒充已安装设施；手钻等便携工具继续使用独立模块。
 - 箱子首次创建须接收当前配置/结构生成载荷中的库存及 InventoryInitName，后续只恢复 MachineStorageState；随机空结果也视为初始化完成，休眠、读档、F5 都不能重抽战利品。
 - 机器最大生命按当前定义 MaxHp 与快照 CraftedDurabilityMultiplier 共用 CraftedDurabilityQuality 换算；只在未初始化时赋当前生命，读档/唤醒不得重复叠乘已有受损生命。受损表现阈值同样使用实例最大生命。
 - 全部落地机器通过 `MachineCombatBridge` 消费真实武器窗口：目录必须校验有限正生命与启用的独立受击 Trigger，不能静默跳过关闭的 `health.collider`。候选格范围由当前全部节点的受击外延缓存派生，拓扑或资源变化后重建；偏移、朝向与转换器镜像和物理投影共用同一形状。提交耐久/拆除后必须调用 `PublishExternalDamage` 回传实际生命损失，防御抵消仍回传有效 0，不能只扣内部 HP 而漏掉武器命中反馈。
