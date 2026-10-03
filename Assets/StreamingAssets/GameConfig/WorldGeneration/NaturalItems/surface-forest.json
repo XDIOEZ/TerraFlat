@@ -361,7 +361,7 @@
       "companionOffsetX": 0,
       "companionOffsetY": 0,
       "companionMinRadius": 0.15,
-      "companionMaxRadius": 0.55,
+      "companionMaxRadius": 1.25,
       "requiredChunkTag": "",
       "requiredTagChunkRadius": 0
     }
