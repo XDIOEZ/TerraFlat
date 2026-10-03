@@ -4,32 +4,33 @@ Shader "FlatWorld/2D/Tilemap Lava Lit"
     {
         [PerRendererData] _MainTex("岩浆遮罩", 2D) = "white" {}
         _MaskTex("灯光遮罩", 2D) = "white" {}
+        [NoScaleOffset] _LavaPatternTex("岩浆RGBA图(R主体/G扰动/B-A高光)", 2D) = "gray" {}
         [PerRendererData] _LiquidDepthTexture("液深场", 2D) = "black" {}
         [HideInInspector] _LiquidDepthUvScaleOffset("液深UV", Vector) = (1,1,0,0)
 
         [Header(Lava Color)]
-        [HDR] _LavaCrustColor("冷却壳颜色", Color) = (0.07, 0.008, 0.003, 1)
-        [HDR] _LavaMoltenColor("熔融颜色", Color) = (1.0, 0.11, 0.008, 1)
-        [HDR] _LavaHotColor("高温高光", Color) = (1.0, 0.68, 0.055, 1)
-        _LavaEmissionStrength("自发光强度", Range(0, 4)) = 1.7
+        [HDR] _LavaCrustColor("冷却壳颜色", Color) = (0.12, 0.012, 0.004, 1)
+        [HDR] _LavaMoltenColor("熔融颜色", Color) = (0.92, 0.085, 0.006, 1)
+        [HDR] _LavaHotColor("高温高光", Color) = (1.25, 0.72, 0.055, 1)
+        _LavaEmissionStrength("自发光强度", Range(0, 4)) = 1.55
 
         [Header(Lava Flow)]
         _LavaFlowDirection("流动方向", Vector) = (0.82, 0.57, 0, 0)
-        _LavaScale("大纹理尺度", Range(0.2, 6)) = 1.35
-        _LavaDetailScale("细节尺度", Range(1, 8)) = 2.8
-        _LavaFlowSpeed("流动速度", Range(0, 1.5)) = 0.18
-        _LavaDistortion("流动扭曲", Range(0, 2)) = 0.58
-        _LavaHotThreshold("熔融阈值", Range(0, 1)) = 0.55
-        _LavaHotSoftness("熔融过渡", Range(0.01, 0.4)) = 0.12
+        _LavaScale("大纹理尺度", Range(0.02, 1)) = 0.11
+        _LavaDetailScale("细节尺度", Range(1, 8)) = 1.85
+        _LavaFlowSpeed("流动速度", Range(0, 1.5)) = 0.025
+        _LavaDistortion("流动扭曲", Range(0, 2)) = 0.12
+        _LavaHotThreshold("熔融阈值", Range(0, 1)) = 0.5
+        _LavaHotSoftness("熔融过渡", Range(0.01, 0.4)) = 0.1
         _LavaCoreThreshold("高光阈值", Range(0, 1)) = 0.78
         _LavaCoreSoftness("高光过渡", Range(0.01, 0.3)) = 0.085
-        _LavaPulseSpeed("高光脉动速度", Range(0, 4)) = 1.1
-        _LavaPulseStrength("高光脉动幅度", Range(0, 0.3)) = 0.07
+        _LavaPulseSpeed("高光交替速度", Range(0, 4)) = 0.35
+        _LavaPulseStrength("高光脉动幅度", Range(0, 0.3)) = 0.045
 
         [Header(Lava Crust)]
-        _LavaCrustStrength("冷却壳强度", Range(0, 1.5)) = 0.76
-        _LavaShoreCrust("岸边冷却", Range(0, 1.5)) = 0.9
-        _LavaShallowCrust("浅层冷却", Range(0, 1)) = 0.24
+        _LavaCrustStrength("次级深红强度", Range(0, 1.5)) = 0.52
+        _LavaShoreCrust("岸边冷却", Range(0, 1.5)) = 0.72
+        _LavaShallowCrust("浅层冷却", Range(0, 1)) = 0.18
         _LavaShallowAlpha("浅层透明度", Range(0, 1)) = 0.94
         _LavaDeepAlpha("深层透明度", Range(0, 1)) = 0.99
         _EdgeWidth("岸线宽度", Range(0.03, 0.45)) = 0.22

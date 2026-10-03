@@ -23,6 +23,10 @@ Material:
   m_SavedProperties:
     serializedVersion: 3
     m_TexEnvs:
+    - _LavaPatternTex:
+        m_Texture: {fileID: 2800000, guid: 5e88c0f4f0c74cb2a2c74c1e5ef4b611, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     - _MainTex:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
@@ -33,26 +37,26 @@ Material:
     - _EdgeWidth: 0.22
     - _LavaCoreSoftness: 0.085
     - _LavaCoreThreshold: 0.78
-    - _LavaCrustStrength: 0.76
+    - _LavaCrustStrength: 0.52
     - _LavaDeepAlpha: 0.99
-    - _LavaDetailScale: 2.8
-    - _LavaDistortion: 0.58
-    - _LavaEmissionStrength: 1.7
-    - _LavaFlowSpeed: 0.18
-    - _LavaHotSoftness: 0.12
-    - _LavaHotThreshold: 0.55
+    - _LavaDetailScale: 1.85
+    - _LavaDistortion: 0.12
+    - _LavaEmissionStrength: 1.55
+    - _LavaFlowSpeed: 0.025
+    - _LavaHotSoftness: 0.1
+    - _LavaHotThreshold: 0.5
     - _LavaMode: 1
-    - _LavaPulseSpeed: 1.1
-    - _LavaPulseStrength: 0.07
-    - _LavaScale: 1.35
+    - _LavaPulseSpeed: 0.35
+    - _LavaPulseStrength: 0.045
+    - _LavaScale: 0.11
     - _LavaShallowAlpha: 0.94
-    - _LavaShallowCrust: 0.24
-    - _LavaShoreCrust: 0.9
+    - _LavaShallowCrust: 0.18
+    - _LavaShoreCrust: 0.72
     m_Colors:
     - _Color: {r: 1, g: 1, b: 1, a: 1}
-    - _LavaCrustColor: {r: 0.07, g: 0.008, b: 0.003, a: 1}
+    - _LavaCrustColor: {r: 0.12, g: 0.012, b: 0.004, a: 1}
     - _LavaFlowDirection: {r: 0.82, g: 0.57, b: 0, a: 0}
-    - _LavaHotColor: {r: 1, g: 0.68, b: 0.055, a: 1}
-    - _LavaMoltenColor: {r: 1, g: 0.11, b: 0.008, a: 1}
+    - _LavaHotColor: {r: 1.25, g: 0.72, b: 0.055, a: 1}
+    - _LavaMoltenColor: {r: 0.92, g: 0.085, b: 0.006, a: 1}
     - _RendererColor: {r: 1, g: 1, b: 1, a: 1}
   m_BuildTextureStacks: []

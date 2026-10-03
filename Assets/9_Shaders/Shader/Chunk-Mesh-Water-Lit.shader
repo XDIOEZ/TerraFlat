@@ -5,6 +5,7 @@ Shader "FlatWorld/2D/Chunk Mesh Water Lit"
     {
         [PerRendererData] _MainTex("水面贴图", 2D) = "white" {}
         _MaskTex("灯光遮罩", 2D) = "white" {}
+        [NoScaleOffset] _LavaPatternTex("岩浆RGBA图(R主体/G扰动/B-A高光)", 2D) = "gray" {}
         [Header(Ocean Surface)]
         _DeepColor("深海颜色", Color) = (0.035, 0.13, 0.19, 1)
         _ShallowColor("浅海颜色", Color) = (0.19, 0.42, 0.4, 1)
@@ -49,24 +50,24 @@ Shader "FlatWorld/2D/Chunk Mesh Water Lit"
         _ShoreFoamStrength("岸边泡沫强度", Range(0, 1)) = 0.3
         _FoamSpeed("岸边泡沫速度", Range(0, 3)) = 0.52
         [Header(Lava)]
-        [HDR] _LavaCrustColor("冷却壳颜色", Color) = (0.07, 0.008, 0.003, 1)
-        [HDR] _LavaMoltenColor("熔融颜色", Color) = (1.0, 0.11, 0.008, 1)
-        [HDR] _LavaHotColor("高温高光", Color) = (1.0, 0.68, 0.055, 1)
+        [HDR] _LavaCrustColor("冷却壳颜色", Color) = (0.12, 0.012, 0.004, 1)
+        [HDR] _LavaMoltenColor("熔融颜色", Color) = (0.92, 0.085, 0.006, 1)
+        [HDR] _LavaHotColor("高温高光", Color) = (1.25, 0.72, 0.055, 1)
         _LavaFlowDirection("流动方向", Vector) = (0.82, 0.57, 0, 0)
-        _LavaScale("大纹理尺度", Range(0.2, 6)) = 1.35
-        _LavaDetailScale("细节尺度", Range(1, 8)) = 2.8
-        _LavaFlowSpeed("流动速度", Range(0, 1.5)) = 0.18
-        _LavaDistortion("流动扭曲", Range(0, 2)) = 0.58
-        _LavaHotThreshold("熔融阈值", Range(0, 1)) = 0.55
-        _LavaHotSoftness("熔融过渡", Range(0.01, 0.4)) = 0.12
+        _LavaScale("大纹理尺度", Range(0.02, 1)) = 0.11
+        _LavaDetailScale("细节尺度", Range(1, 8)) = 1.85
+        _LavaFlowSpeed("流动速度", Range(0, 1.5)) = 0.025
+        _LavaDistortion("流动扭曲", Range(0, 2)) = 0.12
+        _LavaHotThreshold("熔融阈值", Range(0, 1)) = 0.5
+        _LavaHotSoftness("熔融过渡", Range(0.01, 0.4)) = 0.1
         _LavaCoreThreshold("高光阈值", Range(0, 1)) = 0.78
         _LavaCoreSoftness("高光过渡", Range(0.01, 0.3)) = 0.085
-        _LavaCrustStrength("冷却壳强度", Range(0, 1.5)) = 0.76
-        _LavaShoreCrust("岸边冷却", Range(0, 1.5)) = 0.9
-        _LavaShallowCrust("浅层冷却", Range(0, 1)) = 0.24
-        _LavaEmissionStrength("自发光强度", Range(0, 4)) = 1.7
-        _LavaPulseSpeed("高光脉动速度", Range(0, 4)) = 1.1
-        _LavaPulseStrength("高光脉动幅度", Range(0, 0.3)) = 0.07
+        _LavaCrustStrength("次级深红强度", Range(0, 1.5)) = 0.52
+        _LavaShoreCrust("岸边冷却", Range(0, 1.5)) = 0.72
+        _LavaShallowCrust("浅层冷却", Range(0, 1)) = 0.18
+        _LavaEmissionStrength("自发光强度", Range(0, 4)) = 1.55
+        _LavaPulseSpeed("高光交替速度", Range(0, 4)) = 0.35
+        _LavaPulseStrength("高光脉动幅度", Range(0, 0.3)) = 0.045
         _LavaShallowAlpha("浅层透明度", Range(0, 1)) = 0.94
         _LavaDeepAlpha("深层透明度", Range(0, 1)) = 0.99
         [HideInInspector] _LavaMode("Lava Mode", Float) = 0
