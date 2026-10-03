@@ -21,8 +21,8 @@
       "id": "热射病",
       "displayName": "热射病",
       "category": "general",
-      "description": "体温高于安全上限时持续生效，每10秒损失10点生命。",
-      "durationSeconds": null,
+      "description": "体温高于安全上限时发作4分钟，每10秒损失10点生命；持续高温不会续期，到期后若仍处于高温则再次发作。",
+      "durationSeconds": 240.0,
       "tickIntervalSeconds": 10.0,
       "stackMode": "ignore",
       "effects": [
