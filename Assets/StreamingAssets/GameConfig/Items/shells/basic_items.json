@@ -6176,6 +6176,10 @@
             "$collider2D": {"type": "BoxCollider2D", "enabled": false, "isTrigger": true,
               "offset": {"x": 0.0, "y": 0.0}, "size": {"x": 0.4375, "y": 0.4375}}
           }
+        },
+        "discardFlightDamage": {
+          "prefab": "Mod_DiscardFlightDamage", "id": "Mod_DiscardFlightDamage", "enabled": true,
+          "data": {"BitData": [], "Type": 0}
         }
       }
     },

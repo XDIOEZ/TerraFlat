@@ -1509,6 +1509,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - ActorVisual
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 6a696e2631574aaf9b5b433e45ee35d3
+    m_Address: Assets/2_Prefabs/Gameplay/Modules/Combat/Mod_DiscardFlightDamage.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 6acd77b7260baa04491cf92c6c54368e
     m_Address: Assets/6_Art/Generated/Environment/Mine_Niter/Mine_Niter_Idle.png
     m_ReadOnly: 0

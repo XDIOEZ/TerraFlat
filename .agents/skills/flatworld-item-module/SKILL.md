@@ -41,6 +41,7 @@ description: "Use when: 定位或修改 FlatWorld 的 Item/Module 组合架构�
 - 感知批次对已存在空间格的重复访问用格子内 `LastVisitedBatch` 访问戳去重，禁止恢复每批 `HashSet<long>` 已访问集合；格子回池时必须清空成员并重置访问戳。
 - `ItemMgr.NotifyRuntimeItemMoved` 完成位置索引刷新后发布通用 `RuntimeItemMoved` 适配事件；移动订阅方只维护显式声明需要跟随的状态，并按网格根格变化去重，避免轮询或给普通 Item 增加每帧扫描。
 - 新模块同时检查脚本、ModuleData、模块/Item Prefab、Addressables 与 JSON 定义。
+- 可复用的“玩家主动丢出后触发效果”应实现 `IDroppedItemSpawnContextReceiver` 并作为正式 `Module` 由 JSON 组合；不要把具体物品脚本挂在 `sourcePrefab` 上，因为 JSON 物品运行时可能使用通用 Shell 而不会实例化该源 Prefab。
 - 游戏内容分类（武器类别、生物种类、阵营语义、资源类型等）统一使用 `ItemData.Tags`，以便 JSON/MOD 扩展；Unity Tag 只用于 `MainCamera`、`MapCore`、UI/编辑器辅助等场景与开发基础设施，玩法判定不得依赖 Unity Tag。
 - `Module.Load()` 与 `Module.Save()` 均为抽象方法；无持久化运行态的模块也需显式实现空 `Save()`，说明状态由宿主或配置恢复。
 - 遇到“物品找不到模块 Prefab”时先核对 `[GameRes] Prefab 加载计划` 和失败阶段；通用 Prefab 数量为 0 时先查标签、目录与初始化，不能直接断言某个物品定义错误。
