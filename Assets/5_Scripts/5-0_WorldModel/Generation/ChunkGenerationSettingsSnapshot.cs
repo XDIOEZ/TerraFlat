@@ -392,6 +392,10 @@ namespace FlatWorld.WorldModel
             LavaLakeChance = Clamp01(GetDouble(numbers, "lake.lava.chance", 0.35d));
             LavaLakeMinRadius = Clamp(GetDouble(numbers, "lake.lava.minRadius", 3d), 1d, 12d);
             LavaLakeMaxRadius = Clamp(GetDouble(numbers, "lake.lava.maxRadius", 6d), LavaLakeMinRadius, 16d);
+            LavaLakeRareMaxRadius = Clamp(
+                GetDouble(numbers, "lake.lava.rareMaxRadius", LavaLakeMaxRadius),
+                LavaLakeMaxRadius,
+                96d);
             LavaLakeMinimumHeight = Clamp01(GetDouble(numbers, "lake.lava.minimumHeight", 0.74d));
             LavaLakeShoreWidth = Clamp(GetDouble(numbers, "lake.lava.shoreWidth", 2.5d), 0.5d, 6d);
             GrassDensity = Clamp01(GetDouble(numbers, "grass.density", 0.24d));
@@ -677,6 +681,7 @@ namespace FlatWorld.WorldModel
         public double LavaLakeChance { get; }
         public double LavaLakeMinRadius { get; }
         public double LavaLakeMaxRadius { get; }
+        public double LavaLakeRareMaxRadius { get; }
         public double LavaLakeMinimumHeight { get; }
         public double LavaLakeShoreWidth { get; }
         /// <summary>每个纯生成器实例最多保留多少个已完成水文区域。</summary>

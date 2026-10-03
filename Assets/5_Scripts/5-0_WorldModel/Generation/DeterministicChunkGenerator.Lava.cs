@@ -9,6 +9,8 @@ namespace FlatWorld.WorldModel
     public sealed partial class DeterministicChunkGenerator
     {
         private const double LavaBasinMaxReachFactor = 2.2d;
+        private const double LavaRadiusTailWeight = 0.003d;
+        private const double LavaRadiusBucketSize = 1d;
 
         #region 山顶小湖候选
 
@@ -48,9 +50,12 @@ namespace FlatWorld.WorldModel
                 var region = new Int2(rx, ry);
                 if (!visited.Add(region) || Hash01(request.WorldSeed, rx, ry, 0x1a7ab451u) >= settings.LavaLakeChance)
                     continue;
+                double regionalRareMaxRadius = Math.Min(settings.LavaLakeRareMaxRadius,
+                    Math.Min(stepX, stepY) * 0.29d);
+                double radius = ResolveLavaRadius(request.WorldSeed, region, settings, regionalRareMaxRadius);
                 double2 regionCenter = anchor + new double2((rx + 0.5d) * stepX, (ry + 0.5d) * stepY);
                 double2 delta = domain.ShortestDelta(query, regionCenter);
-                double reach = settings.LavaLakeMaxRadius * LavaBasinMaxReachFactor + settings.LavaLakeShoreWidth;
+                double reach = radius * LavaBasinMaxReachFactor + settings.LavaLakeShoreWidth;
                 if (Math.Abs(delta.x) > (stepX + request.Profile.Width) * 0.5d + reach ||
                     Math.Abs(delta.y) > (stepY + request.Profile.Height) * 0.5d + reach) continue;
                 var key = (request.WorldEpoch, request.Address.DimensionId, request.WorldSeed,
@@ -58,7 +63,7 @@ namespace FlatWorld.WorldModel
                 if (!lavaBasins.TryGetValue(key, out var candidate))
                 {
                     var created = new Lazy<LavaBasin>(() => FindLavaPeak(request, region,
-                        anchor + new double2(rx * stepX, ry * stepY), new double2(stepX, stepY)),
+                        anchor + new double2(rx * stepX, ry * stepY), new double2(stepX, stepY), radius),
                         LazyThreadSafetyMode.ExecutionAndPublication);
                     candidate = lavaBasins.GetOrAdd(key, created);
                     if (ReferenceEquals(candidate, created)) lavaBasinOrder.Enqueue(key);
@@ -73,10 +78,10 @@ namespace FlatWorld.WorldModel
         }
 
         private static LavaBasin FindLavaPeak(ChunkGenerationRequest request, Int2 region,
-            double2 origin, double2 span)
+            double2 origin, double2 span, double radius)
         {
             var settings = request.Profile.Settings;
-            double margin = settings.LavaLakeMaxRadius * 1.3d + settings.LavaLakeShoreWidth + 2d;
+            double margin = radius * 1.3d + settings.LavaLakeShoreWidth + 2d;
             if (span.x <= margin * 2d || span.y <= margin * 2d) return null;
             double2 low = origin + margin, high = origin + span - margin;
             double2 peak = default;
@@ -105,16 +110,60 @@ namespace FlatWorld.WorldModel
                 if (math.all(best == peak)) break;
                 peak = best;
             }
-            double radius = settings.LavaLakeMinRadius + (settings.LavaLakeMaxRadius - settings.LavaLakeMinRadius) *
-                Hash01(request.WorldSeed, region.X, region.Y, 0x1a7ab452u);
+            int validRingSamples = 0;
             for (int i = 0; i < 16; i++)
             {
                 double angle = i * Math.PI / 8d;
-                if (!TrySampleLavaMountain(request, peak + new double2(Math.Cos(angle), Math.Sin(angle)) *
-                    (radius * 1.3d + settings.LavaLakeShoreWidth), out _)) return null;
+                if (TrySampleLavaMountain(request, peak + new double2(Math.Cos(angle), Math.Sin(angle)) *
+                    (radius * 1.3d + settings.LavaLakeShoreWidth), out _))
+                    validRingSamples++;
             }
+            int requiredRingSamples = radius <= settings.LavaLakeMaxRadius + 0.0001d ? 16 : 12;
+            if (validRingSamples < requiredRingSamples) return null;
             return new LavaBasin(request.Topology.ToDomain().Normalize(peak), radius,
                 settings.LavaLakeShoreWidth, Hash01(request.WorldSeed, region.X, region.Y, 0x1a7ab453u) * Math.PI * 2d);
+        }
+
+        /// <summary>普通半径占绝大多数，超过常规上限后只保留二次曲线的极低概率长尾。</summary>
+        private static double ResolveLavaRadius(int worldSeed, Int2 region,
+            ChunkGenerationSettingsSnapshot settings, double regionalRareMaxRadius)
+        {
+            double minimum = settings.LavaLakeMinRadius;
+            double commonMaximum = Math.Max(minimum, settings.LavaLakeMaxRadius);
+            double rareMaximum = Math.Max(commonMaximum, regionalRareMaxRadius);
+            if (rareMaximum <= minimum + 0.0001d)
+                return minimum;
+
+            double peak = (minimum + commonMaximum) * 0.5d;
+            double quadraticRadius = Math.Max(LavaRadiusBucketSize,
+                (commonMaximum - minimum) * 0.75d);
+            int bucketCount = Math.Max(1,
+                (int)Math.Ceiling((rareMaximum - minimum) / LavaRadiusBucketSize) + 1);
+
+            double totalWeight = 0d;
+            for (int i = 0; i < bucketCount; i++)
+            {
+                double candidate = Math.Min(rareMaximum, minimum + i * LavaRadiusBucketSize);
+                totalWeight += ResolveLavaRadiusWeight(candidate, peak, quadraticRadius);
+            }
+
+            double target = Hash01(worldSeed, region.X, region.Y, 0x1a7ab452u) * totalWeight;
+            double accumulated = 0d;
+            for (int i = 0; i < bucketCount; i++)
+            {
+                double candidate = Math.Min(rareMaximum, minimum + i * LavaRadiusBucketSize);
+                accumulated += ResolveLavaRadiusWeight(candidate, peak, quadraticRadius);
+                if (target <= accumulated)
+                    return candidate;
+            }
+
+            return rareMaximum;
+        }
+
+        private static double ResolveLavaRadiusWeight(double radius, double peak, double quadraticRadius)
+        {
+            double normalized = (radius - peak) / quadraticRadius;
+            return Math.Max(LavaRadiusTailWeight, 1d - normalized * normalized);
         }
 
         private static bool TrySampleLavaMountain(ChunkGenerationRequest request, double2 position, out double height)

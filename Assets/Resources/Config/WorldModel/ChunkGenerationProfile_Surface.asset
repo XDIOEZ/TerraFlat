@@ -155,6 +155,8 @@ MonoBehaviour:
     Value: 3
   - Id: lake.lava.maxRadius
     Value: 6
+  - Id: lake.lava.rareMaxRadius
+    Value: 56
   - Id: lake.lava.minimumHeight
     Value: 0.74
   - Id: lake.lava.shoreWidth
