@@ -49,7 +49,7 @@ description: "Use when: 定位或修改 FlatWorld 的地图内容、Tilemap、�
 - 后续玩家地形工具必须经 `GroundTileLayerSystem.TryApplyPlayerCover` 压栈覆盖前的完整地块、工作进度和草层；开采优先弹出覆盖层，不能消耗天然石层计数或用固定石地覆盖原草地。现有平台/地板仍使用独立 `TerrainSupportLayer`，不混入天然深度。
 - 地块选中框只依据当前指针所指的已加载地格显示；采挖距离、占用和工具等级属于执行资格，拒绝时给出原因，不应让白框一起消失。
 - `Ground` 地块替换不会自动清除独立的草层；采挖完成后要经 `RuntimeGrassClearing.Clear` 同步草层视觉和 `GrassDeltas`，不要只写新的 `TerrainCell`。
-- 资源加载时由 JSON 构建 `RuntimeTileDefinition` 和每种定义自己的共享 Behaviour 集合；`type` 经 `TileBehaviourRegistry` 的显式工厂解析，禁止 CLR `$type` 或移动时反序列化。参数使用现有配置字段的 camelCase，私有 `[SerializeField]` 参数也须迁移；未知字段和无效数值必须失败，不得静默忽略。
+- 资源加载时由 JSON 构建 `RuntimeTileDefinition` 和每种定义自己的共享 Behaviour 集合；`type` 经 `TileBehaviourRegistry` 的显式工厂解析，禁止 CLR `$type` 或移动时反序列化。参数使用现有配置字段的 camelCase，私有 `[SerializeField]` 参数也须迁移；封装配置属性必须显式标记 `[JsonProperty]` 且可读写，不能放开所有运行时属性。未知字段和无效数值必须失败，不得静默忽略。
 - `TileData.ID/Name` 由定义 ID 注入，位置和工作进度不进入 JSON；单格读取使用 `CreateTileData/Clone`，不得修改共享模板。液体配置只来自 LiquidDefinition.worldWater，水体降温读取当前 C# 规则。
 - 地块承重是 Tile JSON 的 `loadCapacity`，由 `RuntimeTileDefinition` 按稳定 ID 查询，不写入每格 `TileData` 存档；世界液面承重来自液体定义的 `worldWater.loadCapacity`，地表覆盖会遮断液面并改用覆盖地块值。
 - 编辑器通过 `TileDefinitionEditorCatalog` 解析 ID 壳并显式保存 JSON，不可恢复 SO 与 JSON 双写。`GameRes.GetTileBlock` 返回 `RuntimeTileDefinition`；原 Behaviour 类和生命周期方法继续使用。

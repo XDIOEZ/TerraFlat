@@ -27,14 +27,14 @@ public partial class CombatDamage
     [HideInInspector] public float Blunt;
 
     #region 物理攻击配置与旧存档兼容
-    [MemoryPackIgnore, ShowInInspector, LabelText("物理攻击力"), MinValue(0f)]
+    [MemoryPackIgnore, JsonProperty, ShowInInspector, LabelText("物理攻击力"), MinValue(0f)]
     public float Physical
     {
         get => Mathf.Max(0f, Cutting) + Mathf.Max(0f, Piercing) + Mathf.Max(0f, Chopping) + Mathf.Max(0f, Blunt);
         set => SetPhysical(value, DominantKind);
     }
 
-    [MemoryPackIgnore, ShowInInspector, LabelText("命中表现")]
+    [MemoryPackIgnore, JsonProperty, ShowInInspector, LabelText("命中表现")]
     public CombatDamageKind ImpactKind
     {
         get => DominantKind;
@@ -159,7 +159,7 @@ public partial class CombatDefense
     [HideInInspector] public float Blunt;
 
     #region 物理防御配置与旧存档兼容
-    [MemoryPackIgnore, ShowInInspector, LabelText("物理防御"), MinValue(0f)]
+    [MemoryPackIgnore, JsonProperty, ShowInInspector, LabelText("物理防御"), MinValue(0f)]
     public float Physical
     {
         get => Mathf.Max(0f, Mathf.Max(Mathf.Max(Cutting, Piercing), Mathf.Max(Chopping, Blunt)));
