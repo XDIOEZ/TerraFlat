@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from pathlib import Path
+import math
+import struct
 import xml.etree.ElementTree as ET
 
 
@@ -243,17 +245,39 @@ def chord_notes(chord: tuple[int, ...], bar: int, hits: tuple[tuple[int, int, in
     return result
 
 
-def build_music() -> dict[str, list[tuple[int, int, int, int]]]:
+def ogg_duration_seconds(path: Path) -> float:
+    data = path.read_bytes()
+    first_page = data.find(b"OggS")
+    if first_page < 0:
+        raise ValueError(f"Not an Ogg stream: {path}")
+
+    segment_count = data[first_page + 26]
+    header_size = 27 + segment_count
+    body_size = sum(data[first_page + 27:first_page + 27 + segment_count])
+    body = data[first_page + header_size:first_page + header_size + body_size]
+    if body[:7] != b"\x01vorbis":
+        raise ValueError(f"Unsupported Ogg codec: {path}")
+
+    sample_rate = struct.unpack("<I", body[12:16])[0]
+    last_page = data.rfind(b"OggS")
+    granule_position = struct.unpack("<Q", data[last_page + 6:last_page + 14])[0]
+    return granule_position / sample_rate
+
+
+def loop_key_for_bar(sample_path: Path) -> int:
+    desired_seconds = 60.0 / BPM * 4.0
+    sample_seconds = ogg_duration_seconds(sample_path)
+    playback_ratio = sample_seconds / desired_seconds
+    semitones = round(12.0 * math.log2(playback_ratio))
+    return 57 + semitones
+
+
+def build_music(drum_loop_key: int) -> dict[str, list[tuple[int, int, int, int]]]:
     tracks: dict[str, list[tuple[int, int, int, int]]] = {
-        "Kick": [],
-        "Snare": [],
-        "Closed Hat": [],
-        "Open Hat": [],
-        "Crash": [],
-        "Funk Bass": [],
-        "Electric Keys": [],
-        "Funk Stab": [],
-        "Lead": [],
+        "Acoustic Drum Loop": [],
+        "Slap Bass": [],
+        "Piano": [],
+        "Guitar": [],
     }
 
     progression = [
@@ -267,68 +291,39 @@ def build_music() -> dict[str, list[tuple[int, int, int, int]]]:
         ((48, 52, 55, 58, 63), 36, 43),
     ] * 2
 
-    chord_hits = ((0, 28, 69), (72, 18, 74), (126, 24, 66), (174, 16, 78))
-    stab_hits = ((30, 10, 82), (84, 10, 76), (138, 10, 84))
+    chord_hits = ((18, 34, 62), (114, 28, 68))
 
     for bar, (chord, root, fifth) in enumerate(progression, start=1):
-        tracks["Electric Keys"].extend(chord_notes(chord, bar, chord_hits))
-        top = chord[-3:]
-        tracks["Funk Stab"].extend(chord_notes(top, bar, stab_hits))
+        tracks["Acoustic Drum Loop"].append((drum_loop_key, bar_pos(bar, 0), -192, 74))
+        tracks["Piano"].extend(chord_notes(chord, bar, chord_hits))
 
         next_root = progression[bar % len(progression)][1]
         approach = next_root - 1 if next_root >= root else next_root + 1
         bass_pattern = [
-            (root, 0, 22, 105),
-            (root + 12, 30, 12, 84),
-            (fifth, 48, 18, 92),
-            (root + 7, 78, 12, 80),
-            (root, 96, 20, 102),
-            (root + 10, 126, 12, 76),
-            (fifth, 144, 12, 88),
-            (approach, 174, 12, 82),
+            (root, 0, 26, 96),
+            (fifth, 54, 18, 82),
+            (root, 102, 24, 92),
+            (approach, 168, 14, 78),
         ]
         if bar in (4, 8, 12, 16):
-            bass_pattern[-2:] = [(root + 12, 150, 10, 91), (approach, 180, 8, 88)]
+            bass_pattern[-1:] = [(approach, 174, 10, 82)]
         for key, tick, length, velocity in bass_pattern:
-            tracks["Funk Bass"].append((key, bar_pos(bar, tick), length, velocity))
+            tracks["Slap Bass"].append((key, bar_pos(bar, tick), length, velocity))
 
-        kick_patterns = (
-            (0, 42, 96, 132),
-            (0, 36, 90, 120, 168),
-            (0, 54, 96, 138),
-            (0, 30, 84, 120, 174),
-        )
-        for tick in kick_patterns[(bar - 1) % 4]:
-            tracks["Kick"].append((57, bar_pos(bar, tick), -192, 105 if tick in (0, 96) else 90))
-
-        for tick, velocity in ((48, 108), (144, 112), (132, 42 if bar % 2 else 52)):
-            tracks["Snare"].append((57, bar_pos(bar, tick), -192, velocity))
-
-        for index, tick in enumerate((0, 27, 48, 75, 96, 123, 144, 171)):
-            velocity = 63 if index % 2 == 0 else 48
-            if bar >= 9:
-                velocity += 6
-            tracks["Closed Hat"].append((57, bar_pos(bar, tick), -192, velocity))
-        if bar not in (4, 8, 12, 16):
-            tracks["Open Hat"].append((57, bar_pos(bar, 171), -192, 61))
-
-    for bar in (1, 9, 16):
-        tracks["Crash"].append((57, bar_pos(bar, 0), -192, 90 if bar != 16 else 105))
-
-    # 主旋律只在中后段出现，留出前四小节建立律动。
+    # 吉他只在两个 4 小节段落里回应钢琴，保持编曲有空气感。
     melody = {
-        5: [(72, 24, 18), (75, 48, 12), (77, 66, 30), (72, 108, 12), (70, 132, 24), (68, 168, 18)],
-        6: [(68, 12, 18), (70, 36, 12), (72, 54, 18), (75, 84, 30), (73, 126, 18), (72, 156, 24)],
-        7: [(72, 18, 18), (68, 48, 12), (67, 66, 12), (65, 84, 30), (68, 126, 18), (72, 156, 18)],
-        8: [(70, 12, 18), (67, 42, 12), (64, 60, 12), (65, 78, 30), (63, 126, 18), (64, 156, 24)],
-        13: [(72, 18, 12), (75, 36, 12), (77, 54, 24), (80, 90, 18), (77, 126, 12), (75, 144, 30)],
-        14: [(73, 12, 18), (72, 36, 12), (70, 54, 24), (68, 90, 18), (70, 120, 12), (72, 138, 36)],
-        15: [(75, 18, 18), (72, 48, 12), (68, 66, 18), (70, 96, 18), (72, 126, 12), (73, 144, 30)],
-        16: [(72, 12, 12), (70, 30, 12), (68, 48, 12), (67, 66, 12), (65, 84, 24), (68, 120, 18), (72, 144, 36)],
+        5: [(65, 48, 16), (68, 84, 12), (72, 132, 22)],
+        6: [(63, 36, 16), (67, 78, 12), (70, 126, 24)],
+        7: [(65, 48, 14), (68, 90, 16), (72, 144, 18)],
+        8: [(64, 42, 14), (67, 84, 14), (70, 138, 24)],
+        13: [(68, 36, 16), (72, 78, 16), (75, 132, 22)],
+        14: [(67, 42, 14), (70, 84, 16), (73, 138, 22)],
+        15: [(68, 36, 16), (72, 90, 16), (75, 144, 18)],
+        16: [(67, 42, 14), (70, 84, 14), (72, 126, 30)],
     }
     for bar, phrases in melody.items():
         for key, tick, length in phrases:
-            tracks["Lead"].append((key, bar_pos(bar, tick), length, 88 if length < 24 else 96))
+            tracks["Guitar"].append((key, bar_pos(bar, tick), length, 74 if length < 20 else 80))
 
     return tracks
 
@@ -345,7 +340,7 @@ def build_project() -> None:
             "timesig_denominator": "4",
             "bpm": str(BPM),
             "masterpitch": "0",
-            "mastervol": "38",
+            "mastervol": "78",
             "timesig_numerator": "4",
         },
     )
@@ -356,70 +351,14 @@ def build_project() -> None:
         {"visible": "1", "width": "1200", "height": "820", "type": "song", "x": "20", "y": "20", "maximized": "0", "minimized": "0"},
     )
 
-    tracks = build_music()
+    drum_sample_path = Path(r"G:\LMMS\data\samples\beats\break01.ogg")
+    drum_loop_key = loop_key_for_bar(drum_sample_path)
+    tracks = build_music(drum_loop_key)
 
-    add_track(container, "Kick", tracks["Kick"], volume=72, sample="drums/kick01.ogg")
-    add_track(container, "Snare", tracks["Snare"], volume=66, sample="drums/snare_acoustic01.ogg")
-    add_track(container, "Closed Hat", tracks["Closed Hat"], volume=47, pan=-12, sample="drums/hihat_closed02.ogg")
-    add_track(container, "Open Hat", tracks["Open Hat"], volume=38, pan=18, sample="drums/hihat_opened01.ogg")
-    add_track(container, "Crash", tracks["Crash"], volume=42, pan=8, sample="drums/crash01.ogg")
-
-    add_track(
-        container,
-        "Funk Bass",
-        tracks["Funk Bass"],
-        volume=56,
-        pan=0,
-        synth={"wavetype0": 3, "wavetype1": 2, "wavetype2": 0, "vol0": 100, "vol1": 48, "vol2": 28, "coarse2": -12},
-        filter_cutoff=2200,
-        filter_resonance=1.35,
-        attack=0.0,
-        decay=0.12,
-        sustain=0.65,
-        release=0.08,
-    )
-    add_track(
-        container,
-        "Electric Keys",
-        tracks["Electric Keys"],
-        volume=37,
-        pan=-12,
-        synth={"wavetype0": 0, "wavetype1": 2, "wavetype2": 0, "vol0": 100, "vol1": 24, "vol2": 36, "finel1": -8, "finer1": 8},
-        filter_cutoff=7800,
-        filter_resonance=0.75,
-        attack=0.005,
-        decay=0.42,
-        sustain=0.34,
-        release=0.28,
-    )
-    add_track(
-        container,
-        "Funk Stab",
-        tracks["Funk Stab"],
-        volume=28,
-        pan=16,
-        synth={"wavetype0": 2, "wavetype1": 3, "wavetype2": 0, "vol0": 82, "vol1": 35, "vol2": 18},
-        filter_cutoff=5200,
-        filter_resonance=1.1,
-        attack=0.0,
-        decay=0.09,
-        sustain=0.08,
-        release=0.06,
-    )
-    add_track(
-        container,
-        "Lead",
-        tracks["Lead"],
-        volume=30,
-        pan=8,
-        synth={"wavetype0": 2, "wavetype1": 0, "wavetype2": 3, "vol0": 72, "vol1": 58, "vol2": 16, "finel1": -11, "finer1": 11},
-        filter_cutoff=6900,
-        filter_resonance=1.45,
-        attack=0.018,
-        decay=0.22,
-        sustain=0.46,
-        release=0.2,
-    )
+    add_track(container, "Acoustic Drum Loop", tracks["Acoustic Drum Loop"], volume=48, sample="beats/break01.ogg")
+    add_track(container, "Slap Bass", tracks["Slap Bass"], volume=38, pan=0, sample="instruments/bassslap01.ogg")
+    add_track(container, "Piano", tracks["Piano"], volume=29, pan=-10, sample="instruments/piano01.ogg")
+    add_track(container, "Guitar", tracks["Guitar"], volume=27, pan=12, sample="instruments/steel_guitar01.ogg")
 
     mixer = ET.SubElement(song, "fxmixer", {"visible": "0", "width": "647", "height": "332", "x": "9", "y": "441", "maximized": "0", "minimized": "0"})
     master = ET.SubElement(mixer, "fxchannel", {"num": "0", "muted": "0", "volume": "1", "name": "Master", "soloed": "0"})
