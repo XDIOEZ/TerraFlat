@@ -398,7 +398,10 @@ public sealed class WaterVesselPanel : MonoBehaviour, IPointerDownHandler, IDrag
         if (pourAmountAccumulator + Mod_WaterVessel.AmountEpsilon < requiredBatch)
             return;
 
-        float removed = vessel.PourToGround(actor, pourAmountAccumulator);
+        int horizontalCellOffset = vesselTiltDegrees > 0f ? -1 : 1;
+        float removed = vessel.Item?.InHand == true
+            ? LiquidVesselOperations.PourToGround(vessel, actor, pourAmountAccumulator, horizontalCellOffset)
+            : vessel.PourToGround(actor, pourAmountAccumulator);
         if (removed <= Mod_WaterVessel.AmountEpsilon)
             return;
         pourAmountAccumulator = Mathf.Max(0f, pourAmountAccumulator - removed);

@@ -141,19 +141,26 @@ public static class LiquidVesselOperations
     }
 
     public static float PourToGround(ILiquidVessel target, Item actor, float amount)
+        => PourToGround(target, actor, amount, 0);
+
+    /// <summary>手持容器可按左右倾倒方向把液体写入玩家相邻格，0 仍表示脚下格。</summary>
+    public static float PourToGround(ILiquidVessel target, Item actor, float amount, int horizontalCellOffset)
     {
         if (!target.CanOperate(actor) || !MachineDefinition.Positive(amount)) return 0f;
         LiquidDefinition liquid = target.CurrentLiquid;
         float moved = Quantize(Mathf.Min(amount, target.Data.Amount));
+        Vector2 pourPosition = actor.transform.position;
+        if (horizontalCellOffset < 0) pourPosition += Vector2.left;
+        else if (horizontalCellOffset > 0) pourPosition += Vector2.right;
         if (liquid == null || moved <= 0f || ChunkMgr.ExistingInstance == null ||
-            !ChunkMgr.ExistingInstance.TryGetRuntimeTerrainTile(actor.transform.position, out var sample)) return 0f;
+            !ChunkMgr.ExistingInstance.TryGetRuntimeTerrainTile(pourPosition, out var sample)) return 0f;
         float depth = sample.Terrain.GetLiquidDepth(sample.LocalCell.x, sample.LocalCell.y);
         // 容器倾倒统一写入独立 Liquid 层，水和岩浆遵循同一套世界液体守恒规则。
         if (liquid.WorldWater != null)
         {
             float unitDepth = liquid.WorldWater.DepthPerServing;
             moved = Quantize(Mathf.Min(moved, Mathf.Max(0f, 1f - depth) / unitDepth));
-            if (moved <= 0f || !WorldLiquidSystem.TryPour(actor.transform.position, liquid.Id, moved * unitDepth, out _))
+            if (moved <= 0f || !WorldLiquidSystem.TryPour(pourPosition, liquid.Id, moved * unitDepth, out _))
                 return 0f;
         }
         else return 0f;
