@@ -33,6 +33,7 @@ public sealed class ChunkAgricultureRenderer : MonoBehaviour, IChunkViewRenderer
     private readonly Dictionary<Vector2Int, Item> crops = new();
     private readonly Dictionary<Vector2Int, NaturalEntityHandle> entityCrops = new();
     private readonly Dictionary<int, Vector2Int> entityCropCells = new();
+    private readonly List<KeyValuePair<Vector2Int, NaturalEntityHandle>> entityCropCaptureBuffer = new();
     private ChunkTilemapRenderer terrainOwner;
     private static readonly ProfilerMarker CropCaptureMarker =
         new("FlatWorld.ChunkStreaming.CaptureCrops");
@@ -109,7 +110,7 @@ public sealed class ChunkAgricultureRenderer : MonoBehaviour, IChunkViewRenderer
             return;
         unbinding = true;
         using (CropCaptureMarker.Auto())
-            CaptureState();
+            CaptureStateForUnbind();
         chunk.Terrain.Changed -= HandleChanged;
         FarmlandSystem.TillingVisualChanged -= HandleTillingVisualChanged;
         FarmlandSystem.ClearTillingProgress(chunk.Address);
@@ -151,6 +152,23 @@ public sealed class ChunkAgricultureRenderer : MonoBehaviour, IChunkViewRenderer
         if (!GameNetwork.HasStateAuthority || chunk == null || applicationQuitting ||
             saveManager == null || chunkManager == null || chunkManager.IsWorldRuntimeShuttingDown)
             return;
+
+        CaptureItemCropStates();
+        entityCropCaptureBuffer.Clear();
+        entityCropCaptureBuffer.AddRange(entityCrops);
+        for (int i = 0; i < entityCropCaptureBuffer.Count; i++)
+        {
+            KeyValuePair<Vector2Int, NaturalEntityHandle> pair = entityCropCaptureBuffer[i];
+            NaturalEntityEcsService.PrepareForCapture(pair.Value);
+            if (NaturalEntityEcsService.TryCapture(pair.Value, out ItemData snapshot))
+                saveManager.RecordCultivatedCropData(chunk.Address, pair.Key, snapshot);
+        }
+        entityCropCaptureBuffer.Clear();
+    }
+
+    /// <summary>GameObject 作物解绑后会进对象池，因此仍复制其当前数据。</summary>
+    private void CaptureItemCropStates()
+    {
         foreach (var pair in crops)
         {
             if (pair.Value == null || pair.Value.DestructionHandled)
@@ -158,12 +176,27 @@ public sealed class ChunkAgricultureRenderer : MonoBehaviour, IChunkViewRenderer
             pair.Value.Save();
             saveManager.RecordCultivatedCrop(chunk.Address, pair.Key, pair.Value);
         }
-        foreach (var pair in new List<KeyValuePair<Vector2Int, NaturalEntityHandle>>(entityCrops))
+    }
+
+    /// <summary>终端解绑直接移交 Entity 作物快照，避免先深拷贝再立刻销毁实体。</summary>
+    private void CaptureStateForUnbind()
+    {
+        bool canCapture = GameNetwork.HasStateAuthority && chunk != null && !applicationQuitting &&
+                          saveManager != null && chunkManager != null && !chunkManager.IsWorldRuntimeShuttingDown;
+        if (canCapture)
+            CaptureItemCropStates();
+
+        entityCropCaptureBuffer.Clear();
+        entityCropCaptureBuffer.AddRange(entityCrops);
+        for (int i = 0; i < entityCropCaptureBuffer.Count; i++)
         {
-            NaturalEntityEcsService.PrepareForCapture(pair.Value);
-            if (NaturalEntityEcsService.TryCapture(pair.Value, out ItemData snapshot))
+            KeyValuePair<Vector2Int, NaturalEntityHandle> pair = entityCropCaptureBuffer[i];
+            if (canCapture && NaturalEntityEcsService.TryTakeSnapshotAndRemove(pair.Value, out ItemData snapshot))
                 saveManager.RecordCultivatedCropData(chunk.Address, pair.Key, snapshot);
+            else
+                NaturalEntityEcsService.Remove(pair.Value);
         }
+        entityCropCaptureBuffer.Clear();
     }
 
     public void RegisterCrop(Vector2Int worldCell, Item crop)

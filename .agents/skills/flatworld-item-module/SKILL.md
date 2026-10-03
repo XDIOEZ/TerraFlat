@@ -100,6 +100,7 @@ description: "Use when: 定位或修改 FlatWorld 的 Item/Module 组合架构�
 - 植物共用 `EntityGrowth/EntityClimate/AiecsVital`，带 `EntityPlantLifecycle` 的实体只由 `EntityPlantModuleSystem` 推进，普通通用能力查询必须排除它，避免成长和耐候重复结算；资源库存与周期生产分别使用 `EntityResourceStock/EntityStockProduction`。树冠的 `EntityCanopyFruitModule` 为托管组件，复用纯 C# 事件时间线，不代表所有树果结算已经 Burst 化。
 - 静态资源的配置刷新以当前定义为准，已保存树龄、冷热负担和实例生命保留；天然初始化只执行一次。历史耐候读取冻结季节历史，当前局部热源不能延伸到过去。自然物句柄包含 World 代际，过期 Chunk 回调不能命中新世界复用的整数 ID。
 - 资源实体持续维护纯数据导航、矩形接触阻挡和空间交互；玩家武器通过 `GameplayCombatBridge` 直接提交命中。区块解绑只保存释放，不触发采集或死亡；真实死亡/一次性收获才提交来源删除，天然续生和耕地作物快照分开管理。不得恢复近端 Item 接管；接触物理允许独立 Box 代理，由 Chunk 的静态碰撞容器统一管理，禁止给资源创建 Item/Module/逐实体更新回调。
+- 资源 Entity 在终端 ChunkView 解绑时直接把内部 `ItemData` 快照所有权移交给存档后释放实体；只有实体仍会继续运行的自动保存/手动快照才做 `DeepClone`。禁止在玩家跨区块触发的同步解绑链里批量深拷贝全部自然资源，避免把 GC 和克隆尖峰塞进 `Mod_Mover.FixedUpdate`。
 - 自然物 `VisualVersion` 不等于阻挡形状版本：果实、受击和外观变化仍刷新空间索引，只有 `BlocksMovement` 或 `BodyBounds` 改变才发布物理变更；移动/缩放需通知旧、新范围，World 重置先清理旧代理再消费新注册。
 - 资源 BRG 使用运行时实体 ID 与部件号分配负槽位，不能用格子或自然 GUID 覆盖树身、果实、阴影。静态自然物表现由 Dirty/Event 队列驱动，成长版本、采集、受击、树冠变化和环世界重投影才触发重提；禁止在 `Present` 中每帧全量遍历所有资源。接触阴影几何只在实体几何/绑定变化时重建，昼夜透明度走批次级材质参数。源材质缓存键必须区分机械与资源 Shader 变体；逻辑坐标进入存档，局部镜像变换只用于表现。渲染卸载必须清除全部部件。
 - 带 `Tag.Tree` 的资源主体与附属果实使用 `NaturalEntityEcsService.TreeSortingVisual` 纯视觉桥，以树根本地镜像为 `SortingGroup` 锚点，读取 `world-item` 排序键与玩家混排。不得同时保留主体 BRG 实例；太阳/接触阴影继续合批。视觉外壳只含 Transform、SortingGroup、SpriteRenderer，不恢复 Item、Module、Collider 或逐树 Update，解绑与换世界必须一并释放。

@@ -356,6 +356,25 @@ namespace FlatWorld.NaturalEntities
             return true;
         }
 
+        /// <summary>终端解绑直接移交内部快照所有权，避免卸载区块时再深拷贝一份 ItemData。</summary>
+        public static bool TryTakeSnapshotAndRemove(NaturalEntityHandle handle, out ItemData snapshot)
+        {
+            snapshot = null;
+            if (!Contains(handle))
+                return false;
+
+            PrepareForCapture(handle);
+            if (!Contains(handle))
+                return false;
+
+            Record record = records[handle.Id];
+            WriteHotState(record, record.Snapshot);
+            WritePlantState(record, record.Snapshot);
+            snapshot = record.Snapshot;
+            Remove(handle);
+            return snapshot != null;
+        }
+
         public static bool TryCanHostCompanion(NaturalEntityHandle handle, out bool canHost)
         {
             canHost = false;

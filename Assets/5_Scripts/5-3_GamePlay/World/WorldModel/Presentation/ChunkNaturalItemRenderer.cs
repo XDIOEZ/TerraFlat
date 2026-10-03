@@ -35,6 +35,7 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IIncrementalChunkV
     private readonly HashSet<int> generatedPortalGuids = new();
     private readonly List<NaturalItemPlacement> deferredCompanionPlacements = new();
     private readonly Dictionary<int, StaticNaturalRuntime> staticEntities = new();
+    private readonly List<StaticNaturalRuntime> staticCaptureBuffer = new();
     private ChunkRuntime boundChunk;
     private ChunkTilemapRenderer terrainOwner;
     private EnvironmentLayers environmentLayers;
@@ -209,7 +210,7 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IIncrementalChunkV
             if (terrainOwner != null)
                 terrainOwner.BatchPresentationRebuilt -= RefreshStaticVisuals;
             using (NaturalItemCaptureMarker.Auto())
-                CaptureState();
+                CaptureStateForUnbind();
             unbindItems.Clear();
             unbindItemSet.Clear();
             foreach (Item item in spawnedItems.Values)
@@ -245,6 +246,7 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IIncrementalChunkV
             foreach (StaticNaturalRuntime runtime in staticEntities.Values)
                 NaturalEntityEcsService.Remove(runtime.Handle);
             staticEntities.Clear();
+            staticCaptureBuffer.Clear();
             transientItems.Clear();
             generatedPortalGuids.Clear();
             deferredCompanionPlacements.Clear();
@@ -272,6 +274,13 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IIncrementalChunkV
             return;
         }
 
+        CaptureSpawnedItemStates();
+        CaptureStaticEntityStates();
+    }
+
+    /// <summary>普通 Item 仍需复制快照，因为解绑后的对象池实例会继续复用原 ItemData。</summary>
+    private void CaptureSpawnedItemStates()
+    {
         RuntimeWorldAddress address = boundChunk.Address;
         foreach (KeyValuePair<int, Item> pair in spawnedItems)
         {
@@ -294,7 +303,29 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IIncrementalChunkV
                     item);
             }
         }
-        CaptureStaticEntityStates();
+    }
+
+    /// <summary>区块解绑时直接移交 ECS 内部快照并释放实体，避免批量 DeepClone 造成物理帧尖峰。</summary>
+    private void CaptureStateForUnbind()
+    {
+        bool canCapture = !applicationQuitting && boundChunk != null && chunkManager != null &&
+                          !chunkManager.IsWorldRuntimeShuttingDown && GameNetwork.HasStateAuthority;
+        if (canCapture)
+            CaptureSpawnedItemStates();
+
+        staticCaptureBuffer.Clear();
+        staticCaptureBuffer.AddRange(staticEntities.Values);
+        RuntimeWorldAddress address = boundChunk != null ? boundChunk.Address : default;
+        for (int i = 0; i < staticCaptureBuffer.Count; i++)
+        {
+            NaturalEntityHandle handle = staticCaptureBuffer[i].Handle;
+            if (canCapture && NaturalEntityEcsService.TryTakeSnapshotAndRemove(handle, out ItemData snapshot))
+                chunkManager.CaptureNaturalItemState(address, snapshot);
+            else
+                NaturalEntityEcsService.Remove(handle);
+        }
+        staticCaptureBuffer.Clear();
+        staticEntities.Clear();
     }
 
     /// <summary>自动保存专用的自然物分帧快照，避免一次克隆全部表现物。</summary>
@@ -442,12 +473,16 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IIncrementalChunkV
     {
         if (boundChunk == null || chunkManager == null) return;
         // 死亡结算可能移除字典条目，快照遍历避免事件重入破坏枚举。
-        foreach (StaticNaturalRuntime runtime in new List<StaticNaturalRuntime>(staticEntities.Values))
+        staticCaptureBuffer.Clear();
+        staticCaptureBuffer.AddRange(staticEntities.Values);
+        for (int i = 0; i < staticCaptureBuffer.Count; i++)
         {
+            StaticNaturalRuntime runtime = staticCaptureBuffer[i];
             NaturalEntityEcsService.PrepareForCapture(runtime.Handle);
             if (NaturalEntityEcsService.TryCapture(runtime.Handle, out ItemData snapshot))
                 chunkManager.CaptureNaturalItemState(boundChunk.Address, snapshot);
         }
+        staticCaptureBuffer.Clear();
     }
 
     #endregion
