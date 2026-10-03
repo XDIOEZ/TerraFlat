@@ -25,7 +25,7 @@ description: "Use when: 定位或修改 FlatWorld 的运行时特效、粒子、
 - 太阳高度 `Sin(progress * PI)` 在非整数次幂前必须 Clamp01，单精度日落端点可能略为负数；`SunShadowParameters.IsValid` 同时约束可见性和全局 Shader 参数。普通物品与机械共用有限投影包围盒检查，拒绝 NaN/Infinity、负范围及排序距离溢出，异常绑定只诊断一次并低频重试，不改写实体或存档坐标。
 - BRG 原生资源不能只在 `OnDestroy` 释放；脚本域重载的 `OnDisable` 必须执行幂等 Dispose，而不是仅 Hide。接触阴影与 AIECS 主体先销毁整个 BRG，再在 finally 释放自有缓冲、Mesh 和材质；多批次地形须保证任何子批次失败后仍会执行 group.Dispose。恢复启用时按需重建批次。排查重复退出日志先比对堆栈方法名、当前 DLL 符号及 Editor.log 重载顺序，不能把修复前日志当作新代码复现。
 - 先确认触发系统及 Prefab/材质/Shader 的真实引用来源，再改表现。
-- 陶罐 UI 的水面摇晃和罐口液流属于表现层：水面扰动只读取罐体角速度并自行衰减，罐口液流只在 `Mod_WaterVessel.RemoveLiquidAmount` 实际移除液体后触发；不得让粒子/Graphic 帧率参与液体数量结算。罐口液流应作为正式 `UI_WaterVessel.prefab` 中位于罐体外 Mask 的独立 Graphic，避免被内腔裁剪。
+- 陶罐 UI 的水面摇晃和罐口液流属于表现层：水面使用固定步长的连续网格波面，只读取罐体运动并自行衰减；罐口液流只在 `Mod_WaterVessel` 实际移除液体后触发，并使用独立连续条带网格按重力弹道和流速收细。不得让 Graphic 帧率参与液体数量结算；液流 Graphic 必须位于罐体外 Mask，避免被内腔裁剪。
 - 池化特效每次取出时重置 Transform、Animator、颜色和生命周期；回收/禁用时清理订阅与状态。
 - 源实体会在触发特效的同帧被回收时，一次性粒子根节点必须先脱离源实体并放到同一场景独立播放；否则 `PrepareForDespawn/OnDisable` 会把粒子提前清空。
 - 需要在角色 `OnDisable` 中立即回收的池化特效不能挂到该角色层级下，否则归池 `SetParent` 会与父级激活/停用过程冲突；Owner 登记与 Transform 父级分开，睡眠 ZZZ 由单位缩放的独立特效根节点持有并在 `LateUpdate` 跟随。区块休眠不等于退出 AI 睡眠状态，停用时只释放可见实例，重新激活时恢复仍有效的表现请求。

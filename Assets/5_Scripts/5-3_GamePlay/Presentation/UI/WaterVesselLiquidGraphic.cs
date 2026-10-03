@@ -113,7 +113,7 @@ public sealed class WaterVesselLiquidGraphic : MaskableGraphic
         return resolved;
     }
 
-    /// <summary>把罐体角速度转成临时水面扰动；空容器不产生无意义波纹。</summary>
+    /// <summary>把额外扰动直接注入液面网格；倒液和快速摇晃都只驱动表现，不参与液量结算。</summary>
     public void AddAgitation(float normalizedImpulse)
     {
         if (level <= 0f && targetLevel <= 0f)
@@ -121,6 +121,20 @@ public sealed class WaterVesselLiquidGraphic : MaskableGraphic
 
         float impulse = Mathf.Clamp01(normalizedImpulse) * Mathf.Lerp(1f, 0.28f, style.Viscosity);
         agitation = Mathf.Clamp01(Mathf.Max(agitation, impulse));
+        if (impulse <= 0.001f)
+            return;
+
+        float direction = Mathf.Abs(lastTiltAngularVelocity) > 2f
+            ? -Mathf.Sign(lastTiltAngularVelocity)
+            : (frame & 1) == 0 ? 1f : -1f;
+        float velocityKick = rectTransform.rect.height * 0.095f * impulse;
+        for (int i = 0; i < SurfaceSampleCount; i++)
+        {
+            float x = i / (float)(SurfaceSampleCount - 1) * 2f - 1f;
+            float edgeWeight = Mathf.Lerp(0.3f, 1f, Mathf.Abs(x));
+            surfaceVelocity[i] += direction * x * edgeWeight * velocityKick;
+        }
+        surfaceAwake = true;
     }
 
     /// <summary>固定步长推进连续液面；静止后自动休眠，只保留低频装饰刷新。</summary>
@@ -167,7 +181,7 @@ public sealed class WaterVesselLiquidGraphic : MaskableGraphic
 
     #region 连续液面物理
 
-    /// <summary>罐体角速度产生横向惯性；两侧液面获得相反速度，形成可传播的真实晃荡波。</summary>
+    /// <summary>罐体角加速度产生横向惯性；反向摇摆会在两侧形成更强的传播波。</summary>
     private void InjectTiltImpulse(float angularVelocity)
     {
         if (level <= 0f && targetLevel <= 0f)
@@ -176,15 +190,21 @@ public sealed class WaterVesselLiquidGraphic : MaskableGraphic
         float currentAngularVelocity = Mathf.Clamp(angularVelocity, -720f, 720f);
         float angularAcceleration = (currentAngularVelocity - lastTiltAngularVelocity) /
                                     Mathf.Max(Time.unscaledDeltaTime, PhysicsStep);
+        bool reversed = Mathf.Abs(lastTiltAngularVelocity) > 12f &&
+                        Mathf.Abs(currentAngularVelocity) > 12f &&
+                        Mathf.Sign(lastTiltAngularVelocity) != Mathf.Sign(currentAngularVelocity);
         lastTiltAngularVelocity = currentAngularVelocity;
-        float normalized = Mathf.Clamp(angularAcceleration / 18000f, -1f, 1f);
-        float viscosityResponse = Mathf.Lerp(1f, 0.22f, style.Viscosity);
-        float impulse = rectTransform.rect.height * 0.42f * normalized * viscosityResponse;
+        float normalized = Mathf.Clamp(angularAcceleration / 8500f, -1f, 1f);
+        float viscosityResponse = Mathf.Lerp(1f, 0.18f, style.Viscosity);
+        float reversalBoost = reversed ? 1.45f : 1f;
+        float impulse = rectTransform.rect.height * 0.62f * normalized * viscosityResponse * reversalBoost;
         for (int i = 0; i < SurfaceSampleCount; i++)
         {
             float x = i / (float)(SurfaceSampleCount - 1) * 2f - 1f;
-            surfaceVelocity[i] += -x * impulse;
+            float edgeWeight = Mathf.Lerp(0.38f, 1f, Mathf.Abs(x));
+            surfaceVelocity[i] += -x * edgeWeight * impulse;
         }
+        agitation = Mathf.Max(agitation, Mathf.Clamp01(Mathf.Abs(normalized) * reversalBoost));
         surfaceAwake = true;
     }
 
@@ -195,11 +215,12 @@ public sealed class WaterVesselLiquidGraphic : MaskableGraphic
             return false;
 
         float viscosity = style.Viscosity;
-        float spring = Mathf.Lerp(34f, 15f, viscosity);
-        float coupling = Mathf.Lerp(145f, 34f, viscosity);
-        float damping = Mathf.Lerp(4.2f, 13f, viscosity);
-        float maximumAmplitude = rectTransform.rect.height * Mathf.Lerp(0.075f, 0.045f, viscosity) *
+        float spring = Mathf.Lerp(27f, 13f, viscosity);
+        float coupling = Mathf.Lerp(215f, 42f, viscosity);
+        float damping = Mathf.Lerp(2.5f, 12.5f, viscosity);
+        float maximumAmplitude = rectTransform.rect.height * Mathf.Lerp(0.115f, 0.05f, viscosity) *
                                  Mathf.Min(1f, Mathf.Max(level, targetLevel) * 4f);
+        float maximumVelocity = rectTransform.rect.height * Mathf.Lerp(2.25f, 0.8f, viscosity);
         float maxVelocity = 0f;
         float maxDisplacement = 0f;
 
@@ -210,7 +231,10 @@ public sealed class WaterVesselLiquidGraphic : MaskableGraphic
             float right = surfaceDisplacement[i + 1 < SurfaceSampleCount ? i + 1 : i];
             float laplacian = left + right - current * 2f;
             float acceleration = -spring * current + coupling * laplacian - damping * surfaceVelocity[i];
-            surfaceVelocity[i] += acceleration * deltaTime;
+            surfaceVelocity[i] = Mathf.Clamp(
+                surfaceVelocity[i] + acceleration * deltaTime,
+                -maximumVelocity,
+                maximumVelocity);
         }
 
         float mean = 0f;

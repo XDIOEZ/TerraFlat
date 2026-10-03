@@ -402,7 +402,7 @@ public sealed class WaterVesselPanel : MonoBehaviour, IPointerDownHandler, IDrag
             return;
         pourAmountAccumulator = Mathf.Max(0f, pourAmountAccumulator - removed);
 
-        float normalizedFlow = Mathf.Clamp01(0.45f + 0.55f * baseAmountPerSecond /
+        float normalizedFlow = Mathf.Clamp01(0.45f + 0.55f * amountPerSecond /
             (BasePourAmountPerSecond * HorizontalPourSpeedMultiplier));
         pourGraphic.Emit(
             normalizedFlow,
@@ -412,7 +412,8 @@ public sealed class WaterVesselPanel : MonoBehaviour, IPointerDownHandler, IDrag
             Liquid.CurrentMurkiness,
             Liquid.CurrentViscosity);
         Liquid.AddAgitation(Mathf.Clamp01(0.3f + normalizedFlow * 0.7f));
-        Liquid.SetWater(vessel.Data.Amount, vessel.Capacity, vessel.CurrentLiquid, Liquid.CurrentViscosity <= 0.01f);
+        // 倒液只更新目标水位，不重置正在传播的液面波。
+        Liquid.SetWater(vessel.Data.Amount, vessel.Capacity, vessel.CurrentLiquid);
     }
 
     /// <summary>来回快速改变倾角会显著放大水面波纹，慢速单向倾倒只产生轻微扰动。</summary>
