@@ -211,8 +211,15 @@ public class Inventory_Equipment : Inventory
         for (int i = 0; i < count; i++)
         {
             RectTransform rect = itemSlot_UI[i]?.GetComponent<RectTransform>();
-            if (rect != null)
-                rect.anchoredPosition = SlotRules[i].UiPosition;
+            if (rect == null)
+                continue;
+
+            // 动态补出的装备槽也统一以容器中心为锚点，避免沿用通用槽位的左下角锚点后整体飞出面板。
+            rect.anchorMin = new Vector2(0.5f, 0.5f);
+            rect.anchorMax = new Vector2(0.5f, 0.5f);
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.sizeDelta = new Vector2(92f, 92f);
+            rect.anchoredPosition = SlotRules[i].UiPosition;
         }
 
         RefreshOwnerPortrait();
