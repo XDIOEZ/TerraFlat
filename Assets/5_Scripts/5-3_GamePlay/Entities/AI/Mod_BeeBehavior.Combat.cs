@@ -6,6 +6,7 @@ public sealed partial class Mod_BeeBehavior
 {
     #region 目标采样与警惕
     private const int AllyHelpRadiusCells = 8; // 以受击蜂为中心横纵各八格，即十七乘十七格。
+    private const float StingColliderClearance = 0.05f; // 即使中心距离配置偏小，也要在实体碰撞前进入蜇刺范围。
 
     private sealed class MotionSample
     {
@@ -327,19 +328,35 @@ public sealed partial class Mod_BeeBehavior
     private void ChaseLockedTarget(float flightSeconds)
     {
         Vector2 position = lockedTarget.transform.position;
-        if (WorldTopologyRuntime.SqrDistance(item.transform.position, position) >
-            StingDistance * StingDistance)
+        Mod_DamageReceiver receiver = lockedTarget.itemMods.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
+        if (receiver == null)
+            return;
+        if (!IsInsideStingReach(receiver, position))
         {
             bird.FlyTo(position, flightSeconds);
             return;
         }
-        bird.FlyTo(position, flightSeconds);
         if (stingRemaining > 0f)
             return;
-        Mod_DamageReceiver receiver = lockedTarget.itemMods.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
-        if (receiver != null)
-            receiver.Hurt(this);
+        receiver.Hurt(this);
         stingRemaining = StingInterval;
+    }
+
+    /// <summary>优先使用配置距离，并保证实体碰撞体即将接触时一定已经具备攻击资格。</summary>
+    private bool IsInsideStingReach(Mod_DamageReceiver receiver, Vector2 targetPosition)
+    {
+        if (WorldTopologyRuntime.SqrDistance(item.transform.position, targetPosition) <=
+            StingDistance * StingDistance)
+            return true;
+
+        Collider2D selfCollider = item.GetComponent<Collider2D>();
+        Collider2D targetCollider = receiver.GetComponent<Collider2D>();
+        if (selfCollider == null || targetCollider == null || !selfCollider.enabled || !targetCollider.enabled)
+            return false;
+
+        ColliderDistance2D separation = selfCollider.Distance(targetCollider);
+        return separation.isValid &&
+               (separation.isOverlapped || separation.distance <= StingColliderClearance);
     }
 
     /// <summary>卸载和池复用时释放所有旧目标与位移采样。</summary>

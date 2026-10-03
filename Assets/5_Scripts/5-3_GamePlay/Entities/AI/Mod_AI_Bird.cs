@@ -99,6 +99,9 @@ public sealed partial class Mod_AI_Bird : Module, IAIActor, IItemModuleDependenc
     private Mod_TileEffectReceiver tileReceiver;
     private Mod_DamageReceiver health;
     private Rigidbody2D body;
+    private Collider2D[] flightSolidColliders = Array.Empty<Collider2D>();
+    private bool[] flightSolidColliderOriginalStates = Array.Empty<bool>();
+    private bool flightSolidCollidersBound;
     private bool loaded;
     private bool stoppedForDeath;
     private Vector3 liftOrigin;
@@ -196,6 +199,7 @@ public sealed partial class Mod_AI_Bird : Module, IAIActor, IItemModuleDependenc
     {
         loaded = false;
         if (health != null) health.OnDamageReceived -= HandleBirdDamage;
+        RestoreFlightSolidColliders();
         ClearTemperatureSafetyDestination();
         ResetFishHunting(releaseCaptured: true);
         ResetForaging();
@@ -215,6 +219,7 @@ public sealed partial class Mod_AI_Bird : Module, IAIActor, IItemModuleDependenc
     {
         if (!loaded)
             return;
+        EnsureFlightSolidColliders();
         if (!IsAlive)
         {
             if (!stoppedForDeath)
@@ -517,9 +522,70 @@ public sealed partial class Mod_AI_Bird : Module, IAIActor, IItemModuleDependenc
 
     private void ApplyFlightContact()
     {
+        EnsureFlightSolidColliders();
+        ApplyFlightSolidCollisionState();
         tileReceiver.SetEffectsSuppressed(this, IsAirborne);
         mover.Speed.BaseValue = state.Phase == BirdFlightPhase.RunUp ? takeoffRunSpeed : groundSpeed;
         if (IsAirborne) mover.StopMovement();
+    }
+
+    /// <summary>离地后关闭实体阻挡碰撞，避免位置驱动的轻型飞行生物反向推动重型角色。</summary>
+    private void EnsureFlightSolidColliders()
+    {
+        if (flightSolidCollidersBound || item == null)
+            return;
+
+        Collider2D[] rootColliders = item.GetComponents<Collider2D>();
+        int solidCount = 0;
+        for (int i = 0; i < rootColliders.Length; i++)
+            if (rootColliders[i] != null && !rootColliders[i].isTrigger)
+                solidCount++;
+        if (solidCount == 0)
+            return;
+
+        flightSolidColliders = new Collider2D[solidCount];
+        flightSolidColliderOriginalStates = new bool[solidCount];
+        int writeIndex = 0;
+        for (int i = 0; i < rootColliders.Length; i++)
+        {
+            Collider2D collider = rootColliders[i];
+            if (collider == null || collider.isTrigger)
+                continue;
+            flightSolidColliders[writeIndex] = collider;
+            flightSolidColliderOriginalStates[writeIndex] = collider.enabled;
+            writeIndex++;
+        }
+        flightSolidCollidersBound = true;
+        ApplyFlightSolidCollisionState();
+    }
+
+    /// <summary>飞行仅保留 Trigger 感知与受击盒，落地后恢复原本的实体阻挡。</summary>
+    private void ApplyFlightSolidCollisionState()
+    {
+        if (!flightSolidCollidersBound)
+            return;
+        for (int i = 0; i < flightSolidColliders.Length; i++)
+        {
+            Collider2D collider = flightSolidColliders[i];
+            if (collider != null)
+                collider.enabled = !IsAirborne && flightSolidColliderOriginalStates[i];
+        }
+    }
+
+    private void RestoreFlightSolidColliders()
+    {
+        if (flightSolidCollidersBound)
+        {
+            for (int i = 0; i < flightSolidColliders.Length; i++)
+            {
+                Collider2D collider = flightSolidColliders[i];
+                if (collider != null)
+                    collider.enabled = flightSolidColliderOriginalStates[i];
+            }
+        }
+        flightSolidColliders = Array.Empty<Collider2D>();
+        flightSolidColliderOriginalStates = Array.Empty<bool>();
+        flightSolidCollidersBound = false;
     }
 
     private void ApplyFlightPresentation()
