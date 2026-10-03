@@ -441,6 +441,15 @@ namespace FlatWorld.WorldModel
                 AddString(ref hash, rule.RuleId);
                 AddString(ref hash, rule.ItemId);
                 AddLong(ref hash, rule.ItemCount);
+                if (rule.ItemCountDistribution != EcologyItemCountDistribution.Fixed)
+                {
+                    AddString(ref hash, "itemCountDistribution");
+                    AddLong(ref hash, (int)rule.ItemCountDistribution);
+                    AddLong(ref hash, rule.ItemCountMin);
+                    AddLong(ref hash, rule.ItemCountPeak);
+                    AddLong(ref hash, BitConverter.DoubleToInt64Bits(
+                        rule.ItemCountQuadraticRadius));
+                }
                 AddLong(ref hash, BitConverter.DoubleToInt64Bits(rule.SpawnChance));
                 AddLong(ref hash, BitConverter.DoubleToInt64Bits(rule.SpawnChanceMultiplier));
                 AddLong(ref hash, (int)rule.DistributionMode);

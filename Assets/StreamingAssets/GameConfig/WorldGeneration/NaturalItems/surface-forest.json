@@ -331,7 +331,11 @@
     {
       "ruleId": "surface.forest.leaf",
       "itemId": "Leaf",
-      "itemCount": 2,
+      "itemCount": 10,
+      "itemCountDistribution": 1,
+      "itemCountMin": 1,
+      "itemCountPeak": 2,
+      "itemCountQuadraticRadius": 3,
       "spawnChance": 0,
       "spawnChanceMultiplier": 1,
       "distributionMode": 0,

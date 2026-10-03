@@ -15,6 +15,13 @@ namespace FlatWorld.WorldModel
         Patch = 1
     }
 
+    /// <summary>自然物单次生成数量的分布方式。</summary>
+    public enum EcologyItemCountDistribution : byte
+    {
+        Fixed = 0,
+        QuadraticPeak = 1
+    }
+
     /// <summary>
     /// 一条自然生态物品规则的无 Unity 配置副本。
     /// 概率按“每个候选地块一次判定”计算，所有字段都能直接转换为 JSON。
@@ -53,7 +60,11 @@ namespace FlatWorld.WorldModel
             int requiredTagChunkRadius = 0,
             double maxRiverFloodplainStrength = 1d,
             string requiredEnvironmentLayer = null,
-            double minimumEnvironmentValue = 0d)
+            double minimumEnvironmentValue = 0d,
+            EcologyItemCountDistribution itemCountDistribution = EcologyItemCountDistribution.Fixed,
+            int itemCountMin = 1,
+            int itemCountPeak = 1,
+            double itemCountQuadraticRadius = 1d)
         {
             if (string.IsNullOrWhiteSpace(ruleId))
                 throw new ArgumentException("Ecology rule id is required.", nameof(ruleId));
@@ -61,6 +72,8 @@ namespace FlatWorld.WorldModel
                 throw new ArgumentException("Ecology item id is required.", nameof(itemId));
             if (!Enum.IsDefined(typeof(EcologyDistributionMode), distributionMode))
                 throw new ArgumentOutOfRangeException(nameof(distributionMode));
+            if (!Enum.IsDefined(typeof(EcologyItemCountDistribution), itemCountDistribution))
+                throw new ArgumentOutOfRangeException(nameof(itemCountDistribution));
             if (!companionOnly && !string.IsNullOrWhiteSpace(requiredChunkTag))
                 throw new ArgumentException("Chunk tag requirements only apply to companions.",
                     nameof(requiredChunkTag));
@@ -71,6 +84,26 @@ namespace FlatWorld.WorldModel
             RuleId = ruleId.Trim();
             ItemId = itemId.Trim();
             ItemCount = Math.Max(1, itemCount);
+            ItemCountDistribution = itemCountDistribution;
+            if (itemCountDistribution == EcologyItemCountDistribution.Fixed)
+            {
+                ItemCountMin = ItemCount;
+                ItemCountPeak = ItemCount;
+                ItemCountQuadraticRadius = 1d;
+            }
+            else
+            {
+                if (itemCountMin < 1 || itemCountMin > ItemCount)
+                    throw new ArgumentOutOfRangeException(nameof(itemCountMin));
+                if (itemCountPeak < itemCountMin || itemCountPeak > ItemCount)
+                    throw new ArgumentOutOfRangeException(nameof(itemCountPeak));
+                if (double.IsNaN(itemCountQuadraticRadius) ||
+                    double.IsInfinity(itemCountQuadraticRadius) || itemCountQuadraticRadius <= 0d)
+                    throw new ArgumentOutOfRangeException(nameof(itemCountQuadraticRadius));
+                ItemCountMin = itemCountMin;
+                ItemCountPeak = itemCountPeak;
+                ItemCountQuadraticRadius = itemCountQuadraticRadius;
+            }
             SpawnChance = Clamp01(spawnChance);
             SpawnChanceMultiplier = Math.Max(0d, Finite(spawnChanceMultiplier, 1d));
             BiomeMask = biomeMask;
@@ -107,6 +140,10 @@ namespace FlatWorld.WorldModel
         public string RuleId { get; }
         public string ItemId { get; }
         public int ItemCount { get; }
+        public EcologyItemCountDistribution ItemCountDistribution { get; }
+        public int ItemCountMin { get; }
+        public int ItemCountPeak { get; }
+        public double ItemCountQuadraticRadius { get; }
         public double SpawnChance { get; }
         public double SpawnChanceMultiplier { get; }
         /// <summary>0 表示不限制群系；其他值按 SurfaceBiomeKind 的位编号匹配。</summary>
@@ -312,7 +349,9 @@ namespace FlatWorld.WorldModel
         private const uint PlacementSalt = 0x6e636f6cU;
         private const uint CompanionSalt = 0x636f6d70U;
         private const uint OffsetSalt = 0x6f666673U;
+        private const uint CountSalt = 0x636f756eU;
         private const uint PatchSalt = 0x70617463U;
+        private const double QuadraticCountTailWeight = 0.02d;
         private const string TreeTag = "Tree";
 
         #endregion
@@ -422,7 +461,8 @@ namespace FlatWorld.WorldModel
                         if (isTreeRule && treeCellClaimed)
                             continue;
 
-                        for (int itemIndex = 0; itemIndex < rule.ItemCount; itemIndex++)
+                        int itemCount = ResolveItemCount(request, rule, worldX, worldY, 0);
+                        for (int itemIndex = 0; itemIndex < itemCount; itemIndex++)
                         {
                             int guid = CreateGuid(request, worldX, worldY,
                                 rule, itemIndex, 0, claimedGuids);
@@ -638,7 +678,8 @@ namespace FlatWorld.WorldModel
             EcologySpawnRuleSnapshot rule, int localX, int localY, int worldX, int worldY,
             int hostGuid, HashSet<int> claimedGuids, List<NaturalItemPlacement> placements)
         {
-            for (int itemIndex = 0; itemIndex < rule.ItemCount; itemIndex++)
+            int itemCount = ResolveItemCount(request, rule, worldX, worldY, hostGuid);
+            for (int itemIndex = 0; itemIndex < itemCount; itemIndex++)
             {
                 int guid = CreateGuid(request, worldX, worldY,
                     rule, itemIndex, hostGuid, claimedGuids);
@@ -647,6 +688,36 @@ namespace FlatWorld.WorldModel
                 placements.Add(new NaturalItemPlacement(guid, rule.ItemId, localX, localY,
                     offsetX, offsetY, rule.RuleId, hostGuid));
             }
+        }
+
+        /// <summary>按规则确定本次生成数量；二次分布以峰值数量为最高概率并保留极低概率长尾。</summary>
+        private static int ResolveItemCount(ChunkGenerationRequest request,
+            EcologySpawnRuleSnapshot rule, int worldX, int worldY, int hostGuid)
+        {
+            if (rule.ItemCountDistribution == EcologyItemCountDistribution.Fixed)
+                return rule.ItemCount;
+
+            double totalWeight = 0d;
+            for (int count = rule.ItemCountMin; count <= rule.ItemCount; count++)
+                totalWeight += ResolveQuadraticCountWeight(rule, count);
+
+            ulong seed = CreateSeed(request, rule.RuleId, CountSalt) ^ (uint)hostGuid;
+            double target = Hash01(seed, worldX, worldY) * totalWeight;
+            double accumulated = 0d;
+            for (int count = rule.ItemCountMin; count <= rule.ItemCount; count++)
+            {
+                accumulated += ResolveQuadraticCountWeight(rule, count);
+                if (target <= accumulated)
+                    return count;
+            }
+
+            return rule.ItemCount;
+        }
+
+        private static double ResolveQuadraticCountWeight(EcologySpawnRuleSnapshot rule, int count)
+        {
+            double normalized = (count - rule.ItemCountPeak) / rule.ItemCountQuadraticRadius;
+            return Math.Max(QuadraticCountTailWeight, 1d - normalized * normalized);
         }
 
         private static bool IsValidNaturalCell(TerrainCell cell, ChunkTerrainBuffer terrain,
