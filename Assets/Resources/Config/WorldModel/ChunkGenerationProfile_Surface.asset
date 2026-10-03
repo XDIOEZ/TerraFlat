@@ -190,7 +190,7 @@ MonoBehaviour:
   - Id: biome.desert.minimumHeight
     Value: 0.51
   - Id: biome.desert.maximumPrecipitation
-    Value: 0.28
+    Value: 0.35
   - Id: biome.grassland.minimumTemperature
     Value: 0.25
   - Id: biome.grassland.maximumTemperature
