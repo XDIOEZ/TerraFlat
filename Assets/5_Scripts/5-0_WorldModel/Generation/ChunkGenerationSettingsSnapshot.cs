@@ -3,6 +3,22 @@ using System.Collections.Generic;
 
 namespace FlatWorld.WorldModel
 {
+    /// <summary>独立积雪层使用 0～1 深度，固定量化为 10 层，每层 0.1。</summary>
+    public static class SnowDepthLayer
+    {
+        public const string LayerId = "snow.depth";
+        public const int LayerCount = 10;
+        public const float LayerStep = 0.1f;
+
+        public static float Quantize(float depth)
+        {
+            if (float.IsNaN(depth) || float.IsInfinity(depth) || depth <= 0f)
+                return 0f;
+            float clamped = depth >= 1f ? 1f : depth;
+            return (float)(Math.Ceiling(clamped * LayerCount - 0.000001d) / LayerCount);
+        }
+    }
+
     /// <summary>要生成普通地表，还是地下洞穴。</summary>
     public enum ChunkGenerationMode
     {
@@ -176,8 +192,7 @@ namespace FlatWorld.WorldModel
             RiverbedTileId = GetInt(numbers, "terrain.riverbedTileId", SandTileId);
             StoneTileId = GetInt(numbers, "terrain.stoneTileId", GroundTileId);
             DirtTileId = GetInt(numbers, "terrain.dirtTileId", GroundTileId);
-            SnowTileId = GetInt(numbers, "terrain.snowTileId", GroundTileId);
-            IceTileId = GetInt(numbers, "terrain.iceTileId", SnowTileId);
+            IceTileId = GetInt(numbers, "terrain.iceTileId", StoneTileId);
             PeatTileId = GetInt(numbers, "terrain.peatTileId", 0);
             naturalPlantableGroundTileIds = ParsePositiveIntSet(
                 GetText(texts, "ecology.naturalPlantableGroundTileIds", string.Empty));
@@ -512,7 +527,6 @@ namespace FlatWorld.WorldModel
         public int RiverbedTileId { get; }
         public int StoneTileId { get; }
         public int DirtTileId { get; }
-        public int SnowTileId { get; }
         public int IceTileId { get; }
         public int PeatTileId { get; }
         /// <summary>判断地块目录是否把当前地表声明为自然可种植基质。</summary>

@@ -47,7 +47,7 @@ JSON 是静态配置唯一真源。旧 `Tile_Block.asset` 仅保留地块 ID 和
 
 数据类型：`universal`、`grass`、`farmland`、`cellBuilding`。
 
-行为类型：`universal`、`grass`、`farmland`、`ice`、`snow`。行为按数组顺序调用，具体功能仍由对应的 C# 类实现。耕地行为要求 `farmland` 数据；组合行为时仍应遵守各行为的进入、更新和清理契约。
+行为类型：`universal`、`grass`、`farmland`、`ice`。行为按数组顺序调用，具体功能仍由对应的 C# 类实现。耕地行为要求 `farmland` 数据；组合行为时仍应遵守各行为的进入、更新和清理契约。积雪不是地块行为，而是独立的 `snow.depth` 十档覆盖层。
 
 地块 `water` 数据/行为及其历史序列化入口已删除。世界水体在 `Liquids/liquids.json` 声明 `worldWater`，液体身份使用已注册的 `LiquidId`，例如 `core:dirty_water` 或 `core:sea_water`。Ground 只保存真正的底部地块，液体深度通过 `ChunkTerrainData.LiquidDepth` 读取，修改使用 `WorldLiquidSystem.TrySet/TryPump`。潮湿叠层和液深结算由现有液体/Buff 系统处理，不要额外复制一套每格计时器。
 
@@ -69,11 +69,11 @@ JSON 是静态配置唯一真源。旧 `Tile_Block.asset` 仅保留地块 ID 和
 {
   "patches": [
     {
-      "target": "tile:Tile_Snow",
+      "target": "tile:Tile_Ice",
       "operation": "replace",
-      "path": "/behaviours/0/parameters/moveSpeedMultiplier",
-      "expect": 0.9,
-      "value": 0.8
+      "path": "/loadCapacity",
+      "expect": 8,
+      "value": 7
     }
   ]
 }

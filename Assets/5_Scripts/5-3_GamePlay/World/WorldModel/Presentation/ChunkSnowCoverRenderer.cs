@@ -149,26 +149,13 @@ public sealed class ChunkSnowCoverRenderer : MonoBehaviour, IChunkViewRenderer
     /// <summary>按当前有效支撑面遮罩绘制雪，平台移除后下方水面不留悬空白块。</summary>
     private void Refresh(SnowCoverState snow, float baselineOffset)
     {
-        bool anySnow = false;
-        if (snow != null)
-            for (int i = 0; i < SnowCoverState.BandCount; i++)
-                if (snow.Coverage[i] > 0f) { anySnow = true; break; }
-        if (!anySnow && !hasVisibleSnow)
-        {
-            RememberSnapshot(snow, baselineOffset);
-            return;
-        }
-
         bool nowVisible = false;
         for (int y = 0; y < chunk.Terrain.Height; y++)
         for (int x = 0; x < chunk.Terrain.Width; x++)
         {
             TerrainCell surface = TerrainSupportLayer.GetSurfaceCell(chunk.Terrain, x, y);
-            float coverage = 0f;
-            if (snow != null && WorldLiquidSystem.GetSurfaceDepth(chunk.Terrain, x, y) <= 0f &&
-                surface.GroundTileId != 0 &&
-                chunk.Terrain.TryGetEnvironmentValue("temperature.celsius", x, y, out float temperature))
-                coverage = snow.Sample(temperature + baselineOffset);
+            float coverage = WorldSnowSystem.GetSurfaceDepth(
+                chunk.Terrain, x, y, snow, baselineOffset);
             byte value = (byte)Mathf.RoundToInt(coverage * 100f);
             if (value > 0) nowVisible = true;
             int index = y * chunk.Terrain.Width + x;

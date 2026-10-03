@@ -24,7 +24,6 @@ public static class TileBehaviourRegistry
         RegisterBehaviour("grass", Create<Tile_Grass>);
         RegisterBehaviour("farmland", Create<Tile_Farmland>);
         RegisterBehaviour("ice", Create<Tile_Ice>);
-        RegisterBehaviour("snow", Create<Tile_Snow>);
     }
 
     /// <summary>创建已知 C# 类型，再使用严格字段契约注入参数。</summary>

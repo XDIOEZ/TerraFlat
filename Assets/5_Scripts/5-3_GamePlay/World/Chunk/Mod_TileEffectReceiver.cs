@@ -63,6 +63,12 @@ public partial class Mod_TileEffectReceiver : Module
     private bool activeTileIsEdgeInteractionOnly;
     private bool isPreparedForWorldTransition;
     private EnvironmentInteractionRunner environmentInteractions;
+    private EnvironmentInteractionRunner snowEnvironmentInteractions;
+    private SnowCoverConfig snowCoverConfig;
+    private Vector2Int lastSnowGridPos = new(int.MinValue, int.MinValue);
+    private float nextSnowRefresh;
+    private float activeSnowDepth;
+    private bool snowContactActive;
     private readonly System.Collections.Generic.HashSet<object> effectSuppressors = new();
 
     /// <summary>实例级地块接触开关；起飞先退出旧地块，释放后按当前位置重新进入。</summary>
@@ -75,11 +81,14 @@ public partial class Mod_TileEffectReceiver : Module
             if (effectSuppressors.Add(owner))
             {
                 ExitLiquidContact();
+                ExitSnowContact();
                 ExitCurrentTileEffects();
             }
         }
         else if (effectSuppressors.Remove(owner) && effectSuppressors.Count == 0)
+        {
             RefreshCurrentTileEffects();
+        }
     }
 
     private Item waterVitalsItem;
@@ -153,6 +162,7 @@ public partial class Mod_TileEffectReceiver : Module
         UpdateLegacyMapReference();
         Vector2Int currentGridPos = GetCurrentGridPos();
         RefreshLiquidContact(currentGridPos, deltaTime);
+        RefreshSnowContact(currentGridPos, currentGridPos != lastSnowGridPos);
         if (!LiquidFloating && (currentGridPos != lastGridPos || !IsActiveSourceCurrent(currentGridPos)))
         {
             ExitCurrentTileEffects();
@@ -245,7 +255,7 @@ public partial class Mod_TileEffectReceiver : Module
 
         isPreparedForWorldTransition = true;
         liquidContactTransition = true;
-        try { ExitLiquidContact(); ExitCurrentTileEffects(); }
+        try { ExitLiquidContact(); ExitSnowContact(); ExitCurrentTileEffects(); }
         finally { liquidContactTransition = false; }
     }
 
@@ -261,6 +271,7 @@ public partial class Mod_TileEffectReceiver : Module
         isPreparedForWorldTransition = false;
         Vector2Int gridPos = GetCurrentGridPos();
         RefreshLiquidContact(gridPos, 0f);
+        RefreshSnowContact(gridPos, true);
         if (LiquidFloating) return true;
         if (IsActiveSourceCurrent(gridPos))
         {
@@ -271,6 +282,73 @@ public partial class Mod_TileEffectReceiver : Module
         ExitCurrentTileEffects();
         lastGridPos = gridPos;
         return EnterTile(gridPos);
+    }
+
+    #endregion
+
+    #region 独立积雪层
+
+    /// <summary>积雪层独立于 Ground 和 Liquid，厚度变化不会覆盖其他环境效果。</summary>
+    private void RefreshSnowContact(Vector2Int gridPos, bool force)
+    {
+        if (!force && Time.unscaledTime < nextSnowRefresh)
+            return;
+
+        lastSnowGridPos = gridPos;
+        nextSnowRefresh = Time.unscaledTime + 0.5f;
+        float depth = WorldSnowSystem.GetSurfaceDepth(transform.position);
+        if (depth <= 0f || item == null)
+        {
+            ExitSnowContact();
+            return;
+        }
+
+        SnowCoverConfig config = GetSnowCoverConfig();
+        float multiplier = Mathf.Lerp(1f,
+            Mathf.Clamp(config.FullDepthMoveSpeedMultiplier, 0.01f, 1f), depth);
+        EnvironmentInteractionRunner runner = EnsureSnowEnvironmentInteractions();
+        if (!snowContactActive)
+        {
+            runner.SetAvailableEffects(new MoveSpeedEnvironmentEffectDefinition(multiplier));
+            SnowFootprintTrail trail = item.GetComponent<SnowFootprintTrail>() ??
+                                      item.gameObject.AddComponent<SnowFootprintTrail>();
+            trail.ConfigureLifetime(Mathf.Max(0.1f, config.FootprintLifetime));
+            trail.SetSurfaceActive(true);
+            snowContactActive = true;
+        }
+        else
+        {
+            runner.TryUpdateMoveSpeedMultiplier(multiplier);
+        }
+
+        activeSnowDepth = depth;
+    }
+
+    private void ExitSnowContact()
+    {
+        if (!snowContactActive && activeSnowDepth <= 0f)
+            return;
+        snowEnvironmentInteractions?.ClearAvailableEffects();
+        item?.GetComponent<SnowFootprintTrail>()?.SetSurfaceActive(false);
+        activeSnowDepth = 0f;
+        snowContactActive = false;
+    }
+
+    private EnvironmentInteractionRunner EnsureSnowEnvironmentInteractions()
+    {
+        if (snowEnvironmentInteractions == null)
+            snowEnvironmentInteractions = gameObject.AddComponent<EnvironmentInteractionRunner>();
+        snowEnvironmentInteractions.Bind(item != null ? item : GetComponentInParent<Item>());
+        return snowEnvironmentInteractions;
+    }
+
+    private SnowCoverConfig GetSnowCoverConfig()
+    {
+        if (snowCoverConfig == null)
+            snowCoverConfig = Resources.Load<SnowCoverConfig>("Weather/SnowCoverConfig");
+        if (snowCoverConfig == null)
+            throw new MissingReferenceException("缺少 Weather/SnowCoverConfig 积雪配置。");
+        return snowCoverConfig;
     }
 
     #endregion

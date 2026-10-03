@@ -99,18 +99,6 @@
       "behaviours": []
     },
     {
-      "id": "Tile_Snow",
-      "runtimeTileId": 5,
-      "loadCapacity": 8,
-      "displayName": "Tile_Snow",
-      "tileAsset": "TileBase_Snow",
-      "data": {
-        "type": "universal",
-        "parameters": { "tileTag": "", "demolitionTime": 0, "penalty": 1000, "isWalkable": true }
-      },
-      "behaviours": [ { "type": "snow", "parameters": { "moveSpeedMultiplier": 0.9, "footprintLifetime": 60 } } ]
-    },
-    {
       "id": "Tile_Ice",
       "runtimeTileId": 9,
       "loadCapacity": 8,
@@ -121,30 +109,6 @@
         "parameters": { "tileTag": "", "demolitionTime": 0, "penalty": 1000, "isWalkable": true }
       },
       "behaviours": [ { "type": "ice", "parameters": { "accelerationMultiplier": 0.35, "decelerationMultiplier": 0.15 } } ]
-    },
-    {
-      "id": "Tile_Snow_Variant2",
-      "runtimeTileId": 10,
-      "loadCapacity": 8,
-      "displayName": "Tile_Snow_Variant2",
-      "tileAsset": "Winter_1",
-      "data": {
-        "type": "universal",
-        "parameters": { "tileTag": "", "demolitionTime": 0, "penalty": 1000, "isWalkable": true }
-      },
-      "behaviours": [ { "type": "snow", "parameters": { "moveSpeedMultiplier": 0.9, "footprintLifetime": 60 } } ]
-    },
-    {
-      "id": "Tile_Snow_Variant3",
-      "runtimeTileId": 11,
-      "loadCapacity": 8,
-      "displayName": "Tile_Snow_Variant3",
-      "tileAsset": "Winter_3",
-      "data": {
-        "type": "universal",
-        "parameters": { "tileTag": "", "demolitionTime": 0, "penalty": 1000, "isWalkable": true }
-      },
-      "behaviours": [ { "type": "snow", "parameters": { "moveSpeedMultiplier": 0.9, "footprintLifetime": 60 } } ]
     },
     {
       "id": "Tile_Peat",

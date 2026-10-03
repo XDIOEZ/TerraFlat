@@ -176,7 +176,6 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
             ["terrain.seabedTileId"] = "海洋使用的咸水 Tile 数字编号",
             ["terrain.sandTileId"] = "沙滩、沙漠和冲积带使用的 Tile 数字编号",
             ["terrain.stoneTileId"] = "山地石地使用的 Tile 数字编号",
-            ["terrain.snowTileId"] = "雪地使用的 Tile 数字编号",
             ["terrain.seaLevel"] = "越高水域越多，越低陆地越多",
             ["terrain.beachLevel"] = "越高海岸边的沙滩带越宽",
             ["terrain.mountainLevel"] = "越低石质山地越多，越高山地越少",

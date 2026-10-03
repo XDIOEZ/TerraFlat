@@ -15,3 +15,5 @@ MonoBehaviour:
   FreezingTemperature: 0
   AccumulationPerSecond: 0.003
   MeltPerDegreeSecond: 0.00012
+  FullDepthMoveSpeedMultiplier: 0.9
+  FootprintLifetime: 60

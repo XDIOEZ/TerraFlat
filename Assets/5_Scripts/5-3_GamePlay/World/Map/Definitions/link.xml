@@ -21,7 +21,6 @@
     <type fullname="Tile_Grass" preserve="all" />
     <type fullname="Tile_Farmland" preserve="all" />
     <type fullname="Tile_Ice" preserve="all" />
-    <type fullname="Tile_Snow" preserve="all" />
     <type fullname="CombatDefense" preserve="all" />
   </assembly>
 </linker>

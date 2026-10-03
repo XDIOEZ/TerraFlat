@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: ChunkGenerationProfile_Surface
   m_EditorClassIdentifier: 
   profileId: surface.default
-  generationSignature: 59
+  generationSignature: 60
   chunkWidth: 16
   chunkHeight: 16
   numericParameters:
@@ -31,8 +31,6 @@ MonoBehaviour:
     Value: 4
   - Id: terrain.dirtTileId
     Value: 29
-  - Id: terrain.snowTileId
-    Value: 5
   - Id: terrain.iceTileId
     Value: 9
   - Id: terrain.peatTileId
@@ -226,14 +224,8 @@ MonoBehaviour:
     Value: Tile_Sand
   - Id: tile.block.4
     Value: Tile_Stone
-  - Id: tile.block.5
-    Value: Tile_Snow
   - Id: tile.block.9
     Value: Tile_Ice
-  - Id: tile.block.10
-    Value: Tile_Snow_Variant2
-  - Id: tile.block.11
-    Value: Tile_Snow_Variant3
   - Id: tile.block.8
     Value: TileBase_BuiltStoneWall
   - Id: tile.block.12

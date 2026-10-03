@@ -477,6 +477,7 @@ namespace FlatWorld.WorldModel
             public TerrainCell Cell;
             public int LiquidTypeIndex;
             public float LiquidDepth;
+            public float SnowDepth;
             public byte Grass;
             public float Height;
             public float Temperature;
@@ -517,6 +518,7 @@ namespace FlatWorld.WorldModel
             private readonly float[] structure;
             private readonly float[] lavaShore;
             private readonly float[] grass;
+            private readonly float[] snowDepth;
 
             public SurfaceEnvironmentWriter(ChunkTerrainBuffer terrain)
             {
@@ -538,6 +540,7 @@ namespace FlatWorld.WorldModel
                 structure = terrain.GetOrCreateEnvironmentLayer("structure");
                 lavaShore = terrain.GetOrCreateEnvironmentLayer("lava.shore");
                 grass = terrain.GetOrCreateEnvironmentLayer("grass");
+                snowDepth = terrain.GetOrCreateEnvironmentLayer(SnowDepthLayer.LayerId);
             }
 
             public void Write(int index, SurfaceCellOutput value)
@@ -560,6 +563,7 @@ namespace FlatWorld.WorldModel
                 structure[index] = 0f;
                 lavaShore[index] = value.LavaShore;
                 grass[index] = value.Grass == GrassPresent ? 1f : 0f;
+                snowDepth[index] = SnowDepthLayer.Quantize(value.SnowDepth);
             }
         }
 
@@ -809,7 +813,8 @@ namespace FlatWorld.WorldModel
                     settings, height, temperature, precipitation, moisture, river);
             bool frozenRiver = river && SurfaceBiomeClassifier.IsSnowClimate(
                 settings, temperature, precipitation);
-            bool mountain = biome == SurfaceBiomeKind.Stone;
+            bool mountain = biome == SurfaceBiomeKind.Stone ||
+                            (biome == SurfaceBiomeKind.Snow && height >= settings.MountainLevel);
             bool alluvial =
                 (biome is SurfaceBiomeKind.Grassland or SurfaceBiomeKind.Forest) &&
                 floodplain >= settings.RiverAlluvialTileThreshold;
@@ -817,6 +822,7 @@ namespace FlatWorld.WorldModel
             // 一个格子可能同时符合几个条件，所以按顺序决定：先海洋、再河流，然后才是沙滩和气候地区。
             int biomeId;
             int groundTileId;
+            float snowDepth = 0f;
             TerrainCellFlags flags;
             short navigationCost = settings.DefaultNavigationCost;
             if (biome == SurfaceBiomeKind.Ocean)
@@ -895,8 +901,11 @@ namespace FlatWorld.WorldModel
                 }
                 else
                 {
-                    // 雪山地表统一使用纯白雪地；视觉差异不能再由随机哈希决定。
-                    groundTileId = settings.SnowTileId;
+                    // 雪不再占用 Ground：低地保留草地，高山保留石地，独立雪层铺满 10 层。
+                    groundTileId = height >= settings.MountainLevel
+                        ? settings.StoneTileId
+                        : settings.GroundTileId;
+                    snowDepth = 1f;
                 }
                 flags = TerrainCellFlags.Walkable;
                 navigationCost = (short)Math.Min(short.MaxValue, navigationCost + 1);
@@ -947,7 +956,8 @@ namespace FlatWorld.WorldModel
 
             // 草先过较宽松的气候门槛，再由湿度决定局部密度；全程只依赖种子和环境层。
             bool snowSurface = biome == SurfaceBiomeKind.Snow &&
-                               groundTileId != settings.IceTileId;
+                               snowDepth > 0f &&
+                               groundTileId == settings.GroundTileId;
             double grassDensity = snowSurface
                 ? settings.GrassDensity * settings.SnowGrassDensityMultiplier
                 : settings.GrassDensity;
@@ -957,7 +967,7 @@ namespace FlatWorld.WorldModel
                 precipitation >= settings.GrassMinimumPrecipitation &&
                 height <= settings.GrassMaximumHeight;
             bool grass = (flags & TerrainCellFlags.Walkable) != 0 &&
-                         (groundTileId == settings.GroundTileId || snowSurface) &&
+                         groundTileId == settings.GroundTileId &&
                          grassClimateSuitable &&
                          Hash01(request.WorldSeed, worldX, worldY, 0x165667b1u) <
                          grassDensity * (0.55d + moisture * 0.75d);
@@ -968,6 +978,7 @@ namespace FlatWorld.WorldModel
                 LiquidTypeIndex = initialLiquidDepth > 0f
                     ? lavaCell ? lava : ocean ? seaWater : dirtyWater : 0,
                 LiquidDepth = initialLiquidDepth,
+                SnowDepth = snowDepth,
                 Grass = grass ? GrassPresent : GrassEmpty,
                 Height = (float)height,
                 Temperature = (float)temperature,

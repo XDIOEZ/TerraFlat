@@ -23,8 +23,7 @@ public partial class WeatherMgr
     /// <summary>所有覆盖渲染共用持久化气候状态，查询不会加载区块。</summary>
     public float GetSnowCoverage(Vector3 position)
     {
-        if (!_weatherRuntimeAllowed || !TemperatureMgr.Instance.TryGetClimateBaseline(position, out float baseline)) return 0f;
-        return GetActivePlanetData().SeasonalSnow.Sample(baseline);
+        return WorldSnowSystem.GetSurfaceDepth(position);
     }
 
     /// <summary>区块表现一次取得积雪状态与星球基温修正，逐格采样直接读取已绑定地形。</summary>
