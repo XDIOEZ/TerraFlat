@@ -27,7 +27,7 @@ public sealed class Mod_WaterVessel : Module, IInteractable, ILiquidVessel
 
     public const string ModuleId = "Mod_WaterVessel";
     public const int DefaultCapacity = 8;
-    public const float AmountStep = 0.1f; // 液体份数的最小存储单位，只保留小数点后一位。
+    public const float AmountStep = 0.1f; // 常规转移与倾倒批次步长；不足一步的尾量按实际值处理。
     public const float AmountEpsilon = 0.0001f;
     public Ex_ModData_MemoryPackable ModData = new(); // 容器独立持久化载体。
     public LiquidContainerState Data = new(); // 液体 ID、数量、温度与加工进度。
@@ -687,7 +687,7 @@ public sealed class Mod_WaterVessel : Module, IInteractable, ILiquidVessel
     private static bool IsFinitePositive(float value) =>
         !float.IsNaN(value) && !float.IsInfinity(value) && value > AmountEpsilon;
 
-    /// <summary>把液体状态归一到 0.1 份网格；读取旧的高精度浮点余量时也会立即压到一位小数。</summary>
+    /// <summary>只清理浮点噪声和空状态，保留浅水抽取产生的真实小数余量。</summary>
     public static bool NormalizeStoredAmount(LiquidContainerState state)
     {
         if (state == null || float.IsNaN(state.Amount) || float.IsInfinity(state.Amount))
@@ -696,7 +696,7 @@ public sealed class Mod_WaterVessel : Module, IInteractable, ILiquidVessel
         float previousAmount = state.Amount;
         string previousLiquidId = state.LiquidId;
         float previousTemperature = state.Temperature;
-        state.Amount = Mathf.Round(state.Amount / AmountStep) * AmountStep;
+        state.Amount = Mathf.Max(0f, state.Amount);
         if (state.Temperature < 0f)
             state.Temperature = 0f;
         if (IsEmptyAmount(state.Amount))
@@ -710,12 +710,13 @@ public sealed class Mod_WaterVessel : Module, IInteractable, ILiquidVessel
             previousTemperature != state.Temperature;
     }
 
-    /// <summary>液体转移量向下落到 0.1 份，保证一次操作不会凭空多移动液体。</summary>
+    /// <summary>常规液量按 0.1 份批次移动，不足一步的尾量直接按真实值移动。</summary>
     private static float QuantizeMovementAmount(float amount)
     {
         if (!IsFinitePositive(amount))
             return 0f;
-        return Mathf.Floor((amount + AmountEpsilon) / AmountStep) * AmountStep;
+        float quantized = Mathf.Floor((amount + AmountEpsilon) / AmountStep) * AmountStep;
+        return quantized > AmountEpsilon ? quantized : amount;
     }
 
     private void AddLiquidInternal(string liquidId, float amount)

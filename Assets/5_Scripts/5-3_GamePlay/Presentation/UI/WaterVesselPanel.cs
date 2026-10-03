@@ -202,7 +202,7 @@ public sealed class WaterVesselPanel : MonoBehaviour, IPointerDownHandler, IDrag
             ? FlatWorldLocalizationService.GetUiText("空容器")
             : FlatWorldLocalizationService.GetUiText(liquid?.DisplayName ?? vessel.Data.LiquidId);
         status.text = FlatWorldLocalizationService.GetUiFormat("{0}　{1} / {2} 份\n加热进度：{3:0} 秒",
-            liquidName, vessel.Data.Amount.ToString("0.#"),
+            liquidName, vessel.Data.Amount.ToString("0.####"),
             vessel.Capacity, vessel.Data.ProcessingSeconds);
         drink.interactable = liquid?.Drinkable == true &&
             !Mod_WaterVessel.IsEmptyAmount(vessel.Data.Amount);
@@ -394,7 +394,8 @@ public sealed class WaterVesselPanel : MonoBehaviour, IPointerDownHandler, IDrag
         float baseAmountPerSecond = BasePourAmountPerSecond * activeMouthWidthMultiplier * speedMultiplier;
         float amountPerSecond = baseAmountPerSecond * (liquid?.PourRateMultiplier ?? 1f);
         pourAmountAccumulator = Mathf.Min(maximumSpillAmount, pourAmountAccumulator + amountPerSecond * deltaTime);
-        if (pourAmountAccumulator + Mod_WaterVessel.AmountEpsilon < Mod_WaterVessel.AmountStep)
+        float requiredBatch = Mathf.Min(Mod_WaterVessel.AmountStep, maximumSpillAmount);
+        if (pourAmountAccumulator + Mod_WaterVessel.AmountEpsilon < requiredBatch)
             return;
 
         float removed = vessel.PourToGround(actor, pourAmountAccumulator);

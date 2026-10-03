@@ -35,8 +35,15 @@ public static class LiquidVesselOperations
         => string.Equals(left?.Trim(), right?.Trim(), StringComparison.OrdinalIgnoreCase);
 
     public static float Quantize(float amount)
-        => MachineDefinition.Positive(amount)
-            ? Mathf.Floor((amount + Mod_WaterVessel.AmountEpsilon) / Mod_WaterVessel.AmountStep) * Mod_WaterVessel.AmountStep : 0f;
+    {
+        if (!MachineDefinition.Positive(amount) || amount <= Mod_WaterVessel.AmountEpsilon)
+            return 0f;
+
+        float quantized = Mathf.Floor((amount + Mod_WaterVessel.AmountEpsilon) /
+            Mod_WaterVessel.AmountStep) * Mod_WaterVessel.AmountStep;
+        // 小于标准步长的尾量也必须能完整流转，避免浅水和容器残量被卡死。
+        return quantized > Mod_WaterVessel.AmountEpsilon ? quantized : amount;
+    }
 
     public static void AddState(ILiquidVessel target, string id, float amount, float temperature = 0f)
     {
@@ -105,8 +112,14 @@ public static class LiquidVesselOperations
         var sample = source.Sample;
         float depth = sample.Terrain.GetLiquidDepth(sample.LocalCell.x, sample.LocalCell.y);
         float unitDepth = liquid.WorldWater.DepthPerServing;
-        float moved = Quantize(Mathf.Min(target.Capacity - target.Data.Amount, depth / unitDepth));
-        if (moved <= 0f || !WorldLiquidSystem.TryPump(sample, moved * unitDepth, out _, out _)) return 0f;
+        float moved = Mathf.Min(Mathf.Max(0f, target.Capacity - target.Data.Amount), depth / unitDepth);
+        if (moved <= Mod_WaterVessel.AmountEpsilon ||
+            !WorldLiquidSystem.TryPump(sample, moved * unitDepth, out _, out float removedDepth))
+            return 0f;
+
+        moved = removedDepth / unitDepth;
+        if (moved <= Mod_WaterVessel.AmountEpsilon)
+            return 0f;
         AddState(target, liquid.Id, moved, liquid.WorldWater.Temperature);
         target.CommitVessel();
         return moved;
