@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using FlatWorld.WorldModel;
 using UnityEngine;
 using Unity.Profiling;
+using UnityEngine.Rendering.Universal;
 
 /// <summary>
 /// Ground / Water / Back / Blocking 共用 Chunk Mesh，扩展表现仍借用 BRG Owner。
@@ -25,10 +26,14 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRend
     private const int FireFrameCount = 8;
     private const float FireFramesPerSecond = 12f;
     private const int FireDepthOrder = 1;
+    private const int LavaGlowBucketSize = 8;
+    private const float LavaGlowMinIntensity = 0.55f;
+    private const float LavaGlowMaxIntensity = 1.05f;
 
     private readonly List<NeighbourTerrainSubscription> neighbourTerrainSubscriptions = new(8);
     private readonly ChunkTerrainData[] neighbourTerrains = new ChunkTerrainData[9]; // 八方向邻区在订阅时解析一次。
     private readonly HashSet<int> liquidVisualDirty = new(); // 合并本块与相邻块的液体批次。
+    private readonly List<Light2D> liquidGlowLights = new();
     private static readonly ProfilerMarker BatchOwnerUnregisterMarker =
         new("FlatWorld.ChunkStreaming.UnregisterBatchOwner");
     private WorldRuntime boundWorld;
@@ -42,6 +47,7 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRend
     private bool renderGroundElevation; // 只有使用 Surface 生成语义的维度显示高度。
     private bool batchPresentationComplete;
     private bool batchBindingInProgress;
+    private bool liquidGlowDirty;
 
     /// <summary>Editor 与 Development Build 只记录 BRG 异常与手动诊断，正式非开发包保持静默。</summary>
     private static bool RenderDebugEnabled => Application.isEditor || Debug.isDebugBuild;
@@ -122,6 +128,7 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRend
             batchPresentationComplete = false;
             ChunkBatchRendererGroupService.RegisterOwner(this, GetBatchWorldBounds(chunk.Terrain));
             RefreshAllBatchVisuals(chunk.Terrain);
+            RefreshLiquidGlowLights(chunk.Terrain);
             RefreshAllFireVisuals(chunk.Terrain);
             batchPresentationComplete = true;
             BindMechanicalPresentation();
@@ -148,6 +155,8 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRend
         if (boundChunk?.Terrain != null)
             boundChunk.Terrain.LiquidBatchChanged -= HandleLiquidBatchChanged;
         liquidVisualDirty.Clear();
+        liquidGlowDirty = false;
+        ReleaseLiquidGlowLights();
         if (boundChunk?.Terrain != null)
             boundChunk.Terrain.Changed -= HandleTerrainChanged;
         ClearNeighbourTerrainSubscriptions();
@@ -187,6 +196,7 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRend
         blockingMesh = new ChunkGroundMeshRenderer(transform, boundChunk.Terrain.Width,
             boundChunk.Terrain.Height, blockingMaterial, ChunkBatchRendererGroupService.VisualLayer.Blocking);
         RefreshAllBatchVisuals(boundChunk.Terrain);
+        RefreshLiquidGlowLights(boundChunk.Terrain);
         RefreshAllFireVisuals(boundChunk.Terrain);
         BatchPresentationRebuilt?.Invoke();
     }
@@ -284,6 +294,8 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRend
             RefreshFireVisual(boundChunk.Terrain, changed.LocalCell.X, changed.LocalCell.Y);
             return;
         }
+        if (changed.Kind == TerrainChangeKind.Liquid)
+            liquidGlowDirty = true;
         if (changed.Kind != TerrainChangeKind.Cell &&
             changed.Kind != TerrainChangeKind.TileStack &&
             changed.Kind != TerrainChangeKind.Environment && changed.Kind != TerrainChangeKind.Liquid)
@@ -333,6 +345,112 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRend
         Color tint = new(1f, 1f, 1f, Mathf.Lerp(0.72f, 1f, strength));
         DepthMesh.Set(ChunkDepthMeshRenderer.FireDomain, entityId, 0, fireSprite, fireMaterial,
             matrix, world, FireDepthOrder, tint, animation: animation);
+    }
+
+    #endregion
+
+    #region 岩浆夜间发光
+
+    /// <summary>按 8x8 格聚合岩浆光源，避免大片岩浆为每个液体格创建一盏灯。</summary>
+    private void RefreshLiquidGlowLights(ChunkTerrainData terrain)
+    {
+        GameRes resources = GameRes.ExistingInstance;
+        if (terrain == null || resources == null)
+        {
+            DisableUnusedLiquidGlowLights(0);
+            return;
+        }
+        if (!resources.TryGetLiquidDefinition(LiquidTypeCatalog.LavaId, out LiquidDefinition lava) ||
+            lava.WorldWater == null)
+        {
+            DisableUnusedLiquidGlowLights(0);
+            return;
+        }
+
+        int lightIndex = 0;
+        for (int bucketY = 0; bucketY < terrain.Height; bucketY += LavaGlowBucketSize)
+        for (int bucketX = 0; bucketX < terrain.Width; bucketX += LavaGlowBucketSize)
+        {
+            float weightedX = 0f;
+            float weightedY = 0f;
+            float weightSum = 0f;
+            float maxDepth = 0f;
+            int lavaCells = 0;
+
+            int maxY = Mathf.Min(terrain.Height, bucketY + LavaGlowBucketSize);
+            int maxX = Mathf.Min(terrain.Width, bucketX + LavaGlowBucketSize);
+            for (int y = bucketY; y < maxY; y++)
+            for (int x = bucketX; x < maxX; x++)
+            {
+                float depth = WorldLiquidSystem.GetSurfaceDepth(terrain, x, y);
+                if (depth <= 0f || terrain.GetLiquidId(x, y) != LiquidTypeCatalog.LavaId)
+                    continue;
+
+                float weight = Mathf.Max(0.1f, depth);
+                weightedX += (x + 0.5f) * weight;
+                weightedY += (y + 0.5f) * weight;
+                weightSum += weight;
+                maxDepth = Mathf.Max(maxDepth, depth);
+                lavaCells++;
+            }
+
+            if (lavaCells == 0 || weightSum <= 0f)
+                continue;
+
+            Light2D glow = GetOrCreateLiquidGlowLight(lightIndex++);
+            glow.gameObject.SetActive(true);
+            glow.transform.localPosition = new Vector3(weightedX / weightSum, weightedY / weightSum, -0.1f);
+            glow.color = Color.Lerp(lava.PrimaryColor, new Color(1f, 0.55f, 0.08f, 1f), 0.35f);
+
+            int bucketCellCount = (maxX - bucketX) * (maxY - bucketY);
+            float coverage = lavaCells / (float)Mathf.Max(1, bucketCellCount);
+            float strength = Mathf.Clamp01(Mathf.Max(coverage, maxDepth));
+            glow.intensity = Mathf.Lerp(LavaGlowMinIntensity, LavaGlowMaxIntensity, strength);
+            float radius = Mathf.Clamp(lava.WorldWater.RadiantHeatRadius, 4f, 6f);
+            glow.pointLightInnerRadius = radius * 0.22f;
+            glow.pointLightOuterRadius = radius;
+        }
+
+        DisableUnusedLiquidGlowLights(lightIndex);
+    }
+
+    private Light2D GetOrCreateLiquidGlowLight(int index)
+    {
+        while (liquidGlowLights.Count <= index)
+        {
+            GameObject lightObject = new($"Lava Glow {liquidGlowLights.Count}", typeof(Light2D));
+            lightObject.layer = gameObject.layer;
+            lightObject.transform.SetParent(transform, false);
+            Light2D light = lightObject.GetComponent<Light2D>();
+            light.lightType = Light2D.LightType.Point;
+            Light2DSortingLayerUtility.SetLightLayers(light, Light2DSortingLayerUtility.ResolveLayerIds(null));
+            liquidGlowLights.Add(light);
+        }
+
+        return liquidGlowLights[index];
+    }
+
+    private void DisableUnusedLiquidGlowLights(int activeCount)
+    {
+        for (int i = activeCount; i < liquidGlowLights.Count; i++)
+            if (liquidGlowLights[i] != null)
+                liquidGlowLights[i].gameObject.SetActive(false);
+    }
+
+    private void ReleaseLiquidGlowLights()
+    {
+        for (int i = 0; i < liquidGlowLights.Count; i++)
+        {
+            Light2D light = liquidGlowLights[i];
+            if (light == null)
+                continue;
+            light.gameObject.SetActive(false);
+            if (Application.isPlaying)
+                Destroy(light.gameObject);
+            else
+                DestroyImmediate(light.gameObject);
+        }
+        liquidGlowLights.Clear();
     }
 
     #endregion
@@ -507,7 +625,11 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRend
     #region BRG 表现
 
     /// <summary>延后到本帧所有液体 Chunk 写回之后，合并处理岸线、四角液深与高度边。</summary>
-    private void HandleLiquidBatchChanged(ChunkLiquidBatchChanged changed) => QueueLiquidVisuals(changed, 0, 0);
+    private void HandleLiquidBatchChanged(ChunkLiquidBatchChanged changed)
+    {
+        liquidGlowDirty = true;
+        QueueLiquidVisuals(changed, 0, 0);
+    }
 
     /// <summary>动态流向归零时也必须更新 Shader；本块和八邻区变化仍合并到帧末。</summary>
     private void HandleLiquidFlowChanged(ChunkTerrainData terrain)
@@ -541,14 +663,22 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRend
     /// <summary>一帧最多刷新一次合并区域；空闲时没有遍历与 BRG 上传。</summary>
     private void LateUpdate()
     {
-        if (liquidVisualDirty.Count == 0 || boundChunk?.Terrain == null) return;
-        if (EnsureBatchPresentationForIncrementalRefresh("LiquidBatch"))
+        if (boundChunk?.Terrain == null)
+            return;
+
+        if (liquidVisualDirty.Count > 0 && EnsureBatchPresentationForIncrementalRefresh("LiquidBatch"))
         {
             ChunkTerrainData terrain = boundChunk.Terrain;
             foreach (int index in liquidVisualDirty)
                 RefreshBatchCell(terrain, index % terrain.Width, index / terrain.Width);
         }
         liquidVisualDirty.Clear();
+
+        if (liquidGlowDirty)
+        {
+            liquidGlowDirty = false;
+            RefreshLiquidGlowLights(boundChunk.Terrain);
+        }
     }
 
     private void RefreshAllBatchVisuals(ChunkTerrainData terrain)
