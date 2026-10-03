@@ -142,7 +142,7 @@ public sealed class InventoryItemTooltip : MonoBehaviour
             outline.effectDistance = FlatWorldUITheme.BorderOutlineDistance;
         }
         if (accent != null)
-            accent.color = FlatWorldUITheme.Accent;
+            accent.color = Color.white;
         if (titleText != null)
             titleText.color = FlatWorldUITheme.TextPrimary;
         if (bodyText != null)
