@@ -11,6 +11,15 @@ public partial class Mod_Production : Module, IEnvironmentAdjustable
 
     [System.Serializable]
     [MemoryPackable]
+    public partial class YieldGeneVariant
+    {
+        public int minAmount = 1;
+        public int maxAmount = 1;
+        [Min(0f)] public float weight = 1f;
+    }
+
+    [System.Serializable]
+    [MemoryPackable]
     public partial class ItemProductionData
     {
         public string itemName;
@@ -21,6 +30,9 @@ public partial class Mod_Production : Module, IEnvironmentAdjustable
 
         [Tooltip("生成所需时间")]
         public float MaxProductionTime = 100f;
+
+        [Tooltip("大于0时按当前世界天数作为固定生产周期，不受生产速度与难度倍率影响")]
+        public float ProductionIntervalDays;
 
         [Tooltip("当前累计生产时间")]
         public float ProductionTime = 0;
@@ -50,6 +62,10 @@ public partial class Mod_Production : Module, IEnvironmentAdjustable
         public bool IsInitialized;
         public uint EntityRandomState; // Entity 库存生产的随机流随运行态保存。
 
+        [Header("产量基因")]
+        public List<YieldGeneVariant> YieldGeneVariants = new List<YieldGeneVariant>();
+        public int YieldGeneVariantIndex = -1;
+
         public void RandomInitialize()
         {
             if (IsInitialized)
@@ -57,6 +73,98 @@ public partial class Mod_Production : Module, IEnvironmentAdjustable
 
             ProductionTime = Random.Range(Random_ProductionTime.x, Random_ProductionTime.y);
             IsInitialized = true;
+        }
+
+        /// <summary>按实例稳定种子确定一次产量基因，区间内的实际产量仍保持均匀随机。</summary>
+        public void ResolveYieldGene(uint seed, int preferredIndex, out int selectedIndex, out int minimum, out int maximum)
+        {
+            selectedIndex = -1;
+            minimum = itemCountMin;
+            maximum = itemCountMax;
+            if (YieldGeneVariants == null || YieldGeneVariants.Count == 0)
+                return;
+
+            if (IsValidYieldVariant(preferredIndex))
+            {
+                selectedIndex = preferredIndex;
+                YieldGeneVariant preferred = YieldGeneVariants[preferredIndex];
+                minimum = preferred.minAmount;
+                maximum = preferred.maxAmount;
+                return;
+            }
+
+            float totalWeight = 0f;
+            for (int i = 0; i < YieldGeneVariants.Count; i++)
+            {
+                YieldGeneVariant variant = YieldGeneVariants[i];
+                if (variant != null && IsFinitePositive(variant.weight) &&
+                    variant.minAmount >= 0 && variant.maxAmount >= variant.minAmount)
+                    totalWeight += variant.weight;
+            }
+            if (totalWeight <= 0f)
+                return;
+
+            uint mixed = MixYieldGeneSeed(seed);
+            float pick = (mixed / 4294967296f) * totalWeight;
+            float cumulative = 0f;
+            int fallback = -1;
+            for (int i = 0; i < YieldGeneVariants.Count; i++)
+            {
+                YieldGeneVariant variant = YieldGeneVariants[i];
+                if (variant == null || !IsFinitePositive(variant.weight) ||
+                    variant.minAmount < 0 || variant.maxAmount < variant.minAmount)
+                    continue;
+                fallback = i;
+                cumulative += variant.weight;
+                if (pick < cumulative)
+                {
+                    selectedIndex = i;
+                    minimum = variant.minAmount;
+                    maximum = variant.maxAmount;
+                    return;
+                }
+            }
+
+            if (fallback >= 0)
+            {
+                YieldGeneVariant variant = YieldGeneVariants[fallback];
+                selectedIndex = fallback;
+                minimum = variant.minAmount;
+                maximum = variant.maxAmount;
+            }
+        }
+
+        public void GetEffectiveYieldRange(out int minimum, out int maximum)
+        {
+            if (IsValidYieldVariant(YieldGeneVariantIndex))
+            {
+                YieldGeneVariant variant = YieldGeneVariants[YieldGeneVariantIndex];
+                minimum = variant.minAmount;
+                maximum = variant.maxAmount;
+                return;
+            }
+            minimum = itemCountMin;
+            maximum = itemCountMax;
+        }
+
+        private bool IsValidYieldVariant(int index)
+        {
+            if (YieldGeneVariants == null || index < 0 || index >= YieldGeneVariants.Count)
+                return false;
+            YieldGeneVariant variant = YieldGeneVariants[index];
+            return variant != null && IsFinitePositive(variant.weight) &&
+                   variant.minAmount >= 0 && variant.maxAmount >= variant.minAmount;
+        }
+
+        private static bool IsFinitePositive(float value) =>
+            !float.IsNaN(value) && !float.IsInfinity(value) && value > 0f;
+
+        private static uint MixYieldGeneSeed(uint value)
+        {
+            value += 0x9E3779B9u;
+            value = (value ^ (value >> 16)) * 0x85EBCA6Bu;
+            value = (value ^ (value >> 13)) * 0xC2B2AE35u;
+            return value ^ (value >> 16);
         }
     }
 
@@ -94,8 +202,12 @@ public partial class Mod_Production : Module, IEnvironmentAdjustable
         ProductionList = configuredProductionList;
 
         stockReceivers = item.GetComponentsInChildren<IProductionStockReceiver>(true);
-        foreach (ItemProductionData data in ProductionList)
+        for (int index = 0; index < ProductionList.Count; index++)
         {
+            ItemProductionData data = ProductionList[index];
+            uint geneSeed = unchecked((uint)item.itemData.Guid) ^ (0x9E3779B9u * (uint)(index + 1));
+            data.ResolveYieldGene(geneSeed, data.YieldGeneVariantIndex, out int geneIndex, out _, out _);
+            data.YieldGeneVariantIndex = geneIndex;
             if (string.IsNullOrWhiteSpace(data.itemName))
             {
                 throw new System.InvalidOperationException(
@@ -154,6 +266,7 @@ public partial class Mod_Production : Module, IEnvironmentAdjustable
             current.ProductionTime = Mathf.Max(0f, runtime.ProductionTime);
             current.CurrentProductionCount = Mathf.Max(0, runtime.CurrentProductionCount);
             current.IsInitialized = runtime.IsInitialized;
+            current.YieldGeneVariantIndex = runtime.YieldGeneVariantIndex;
         }
     }
 
@@ -206,21 +319,24 @@ public partial class Mod_Production : Module, IEnvironmentAdjustable
             if (data.MaxProductionCount != -1 && data.CurrentProductionCount >= data.MaxProductionCount)
                 continue;
 
-            if (data.StoreInModule && !HasAvailableStockReceiver(data.itemName))
+            bool calendarInterval = data.ProductionIntervalDays > 0f;
+            if (data.StoreInModule && !calendarInterval && !HasAvailableStockReceiver(data.itemName))
                 continue;
 
             // 累加生产时间
             float difficultyMultiplier = UseCropGrowthMultiplier
                 ? GameDifficultyService.Current.Production.CropGrowthMultiplier
                 : 1f;
-            data.ProductionTime += deltaTime * ProductionSpeed * difficultyMultiplier;
+            float productionRate = calendarInterval ? 1f : ProductionSpeed * difficultyMultiplier;
+            float productionDuration = GetProductionDuration(data);
+            data.ProductionTime += deltaTime * productionRate;
 
             // 使用 while 确保不会漏算
-            while (data.ProductionTime >= data.MaxProductionTime)
+            while (data.ProductionTime >= productionDuration)
             {
                 if (!ProduceItem(data))
                     break;
-                data.ProductionTime -= data.MaxProductionTime;
+                data.ProductionTime -= productionDuration;
 
                 if (data.MaxProductionCount != -1 && data.CurrentProductionCount >= data.MaxProductionCount)
                     break;
@@ -247,12 +363,25 @@ public partial class Mod_Production : Module, IEnvironmentAdjustable
             return true;
         }
 
-        int randomCount = Random.Range(data.itemCountMin, data.itemCountMax + 1);
+        data.GetEffectiveYieldRange(out int minimumAmount, out int maximumAmount);
+        int randomCount = Random.Range(minimumAmount, maximumAmount + 1);
+        if (randomCount <= 0)
+        {
+            data.CurrentProductionCount++;
+            DestroyOwnerWhenFinished(data);
+            return true;
+        }
         if (data.StoreInModule)
         {
             int accepted = StoreProducedItems(data.itemName, randomCount);
             if (accepted <= 0)
-                return false;
+            {
+                if (data.ProductionIntervalDays <= 0f)
+                    return false;
+                data.CurrentProductionCount++;
+                DestroyOwnerWhenFinished(data);
+                return true;
+            }
 
             data.CurrentProductionCount++;
             DestroyOwnerWhenFinished(data);
@@ -346,6 +475,15 @@ public partial class Mod_Production : Module, IEnvironmentAdjustable
         return 0;
     }
 
+    /// <summary>日历周期按当前世界一天长度换算，确保“每N天”不受时间配置改变影响。</summary>
+    private static float GetProductionDuration(ItemProductionData data)
+    {
+        if (data.ProductionIntervalDays > 0f && DayTimeSystem.Instance != null &&
+            DayTimeSystem.Instance.TryGetActiveTimeData(out TimeData clock) && clock.DayLength > 0f)
+            return Mathf.Max(0.01f, data.ProductionIntervalDays * clock.DayLength);
+        return Mathf.Max(0.01f, data.MaxProductionTime);
+    }
+
     private System.Collections.IEnumerator DestroyAfterFrame()
     {
         yield return null; // 等待一帧
@@ -406,6 +544,21 @@ public partial class Mod_Production : Module, IEnvironmentAdjustable
                 data.itemCountMin = 1;
             if (data.itemCountMax < 1)
                 data.itemCountMax = 1;
+
+            if (float.IsNaN(data.ProductionIntervalDays) || float.IsInfinity(data.ProductionIntervalDays) || data.ProductionIntervalDays < 0f)
+                data.ProductionIntervalDays = 0f;
+
+            if (data.YieldGeneVariants == null)
+                continue;
+            foreach (YieldGeneVariant variant in data.YieldGeneVariants)
+            {
+                if (variant == null)
+                    continue;
+                variant.minAmount = Mathf.Max(0, variant.minAmount);
+                variant.maxAmount = Mathf.Max(variant.minAmount, variant.maxAmount);
+                if (float.IsNaN(variant.weight) || float.IsInfinity(variant.weight) || variant.weight < 0f)
+                    variant.weight = 0f;
+            }
         }
     }
 

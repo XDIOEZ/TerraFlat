@@ -615,7 +615,7 @@
           },
           "parameters": {
             "CollectItemId": "Berry",
-            "MaxStock": 12,
+            "MaxStock": 16,
             "NaturalInitialStockMin": 1,
             "NaturalInitialStockMax": 2,
             "SpawnRadius": 1.2,
@@ -656,9 +656,10 @@
             "ProductionList": [
               {
                 "itemName": "Berry",
-                "itemCountMin": 6,
-                "itemCountMax": 6,
-                "MaxProductionTime": 405.0,
+                "itemCountMin": 3,
+                "itemCountMax": 9,
+                "MaxProductionTime": 4320.0,
+                "ProductionIntervalDays": 3.0,
                 "ProductionTime": 0.0,
                 "MaxProductionCount": -1,
                 "CurrentProductionCount": 0,
@@ -668,13 +669,20 @@
                 "SpawnProbability": 1.0,
                 "Random_ProductionTime": {
                   "x": 0.0,
-                  "y": 405.0
+                  "y": 0.0
                 },
-                "IsInitialized": false
+                "IsInitialized": false,
+                "YieldGeneVariants": [
+                  { "minAmount": 0, "maxAmount": 6, "weight": 0.05 },
+                  { "minAmount": 0, "maxAmount": 9, "weight": 0.15 },
+                  { "minAmount": 3, "maxAmount": 9, "weight": 0.60 },
+                  { "minAmount": 3, "maxAmount": 12, "weight": 0.15 },
+                  { "minAmount": 3, "maxAmount": 16, "weight": 0.05 }
+                ]
               }
             ],
             "ProductionSpeed": 1.0,
-            "UseCropGrowthMultiplier": true
+            "UseCropGrowthMultiplier": false
           }
         }
       }

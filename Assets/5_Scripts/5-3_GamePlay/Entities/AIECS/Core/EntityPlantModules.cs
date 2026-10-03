@@ -43,9 +43,9 @@ namespace FlatWorld.AIECS
     public struct EntityStockProduction : IBufferElementData
     {
         public FixedString64Bytes ItemId;
-        public float Progress, Duration, Speed, Probability;
+        public float Progress, Duration, IntervalDays, Speed, Probability;
         public float2 InitialProgressRange;
-        public int MinimumAmount, MaximumAmount, Limit, Completed;
+        public int MinimumAmount, MaximumAmount, Limit, Completed, GeneVariantIndex;
         public uint RandomState;
         public byte Initialized, UseGrowthDifficulty;
     }
@@ -138,7 +138,7 @@ namespace FlatWorld.AIECS
             if (!stocks.IsEmptyIgnoreFilter)
                 Dependency = new StockJob
                 {
-                    Delta = StepSeconds, Difficulty = GrowthDifficulty,
+                    Delta = StepSeconds, DayLength = math.max(0.01f, DayLength), Difficulty = GrowthDifficulty,
                     Growth = GetComponentLookup<EntityGrowth>(true), Climates = GetComponentLookup<EntityClimate>(true)
                 }.ScheduleParallel(stocks, Dependency);
         }
@@ -234,7 +234,7 @@ namespace FlatWorld.AIECS
         [BurstCompile]
         private partial struct StockJob : IJobEntity
         {
-            public float Delta, Difficulty;
+            public float Delta, DayLength, Difficulty;
             [ReadOnly] public ComponentLookup<EntityGrowth> Growth;
             [ReadOnly] public ComponentLookup<EntityClimate> Climates;
 
@@ -250,7 +250,7 @@ namespace FlatWorld.AIECS
                     stock.Count = stock.InitialMinimum + (int)(stock.Seed % (uint)(stock.InitialMaximum - stock.InitialMinimum + 1));
                     stock.Initialized = 1;
                 }
-                for (int i = 0; i < production.Length && stock.Count < stock.Capacity; i++)
+                for (int i = 0; i < production.Length; i++)
                 {
                     EntityStockProduction rule = production[i];
                     if (!stock.ItemId.Equals(rule.ItemId) || (rule.Limit >= 0 && rule.Completed >= rule.Limit)) continue;
@@ -260,12 +260,19 @@ namespace FlatWorld.AIECS
                         rule.Progress = random.NextFloat(rule.InitialProgressRange.x, rule.InitialProgressRange.y);
                         rule.Initialized = 1;
                     }
-                    rule.Progress += Delta * rule.Speed * (rule.UseGrowthDifficulty != 0 ? math.max(0f, Difficulty) : 1f);
-                    for (int work = 0; work < 64 && rule.Progress >= rule.Duration && stock.Count < stock.Capacity; work++)
+                    bool calendarInterval = rule.IntervalDays > 0f;
+                    float duration = calendarInterval ? math.max(0.01f, rule.IntervalDays * DayLength) : rule.Duration;
+                    float rate = calendarInterval ? 1f : rule.Speed * (rule.UseGrowthDifficulty != 0 ? math.max(0f, Difficulty) : 1f);
+                    rule.Progress += Delta * rate;
+                    for (int work = 0; work < 64 && rule.Progress >= duration; work++)
                     {
                         if (random.NextFloat() < rule.Probability)
-                            stock.Count = math.min(stock.Capacity, stock.Count + random.NextInt(rule.MinimumAmount, rule.MaximumAmount + 1));
-                        rule.Progress -= rule.Duration;
+                        {
+                            int amount = random.NextInt(rule.MinimumAmount, rule.MaximumAmount + 1);
+                            if (amount > 0 && stock.Count < stock.Capacity)
+                                stock.Count = math.min(stock.Capacity, stock.Count + amount);
+                        }
+                        rule.Progress -= duration;
                         rule.Completed++;
                         if (rule.Limit >= 0 && rule.Completed >= rule.Limit) break;
                     }

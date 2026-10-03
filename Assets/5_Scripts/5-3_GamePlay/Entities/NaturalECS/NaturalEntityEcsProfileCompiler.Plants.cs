@@ -196,10 +196,12 @@ namespace FlatWorld.NaturalEntities
                 foreach (Mod_Production.ItemProductionData rule in profile.Production)
                     if (rule == null || !rule.StoreInModule || rule.DestroySelf || profile.Collection == null ||
                         !string.Equals(rule.itemName, profile.Collection.CollectItemId, StringComparison.OrdinalIgnoreCase) ||
-                        !FinitePositive(rule.MaxProductionTime) || rule.itemCountMin < 1 || rule.itemCountMax < rule.itemCountMin ||
+                        !FinitePositive(rule.MaxProductionTime) || !NonNegative(rule.ProductionIntervalDays) ||
+                        rule.itemCountMin < 1 || rule.itemCountMax < rule.itemCountMin ||
                         rule.itemCountMax == int.MaxValue || !Finite(rule.SpawnProbability) || rule.SpawnProbability < 0f ||
                         rule.SpawnProbability > 1f || !NonNegative(rule.Random_ProductionTime.x) ||
-                        !NonNegative(rule.Random_ProductionTime.y) || rule.Random_ProductionTime.y < rule.Random_ProductionTime.x)
+                        !NonNegative(rule.Random_ProductionTime.y) || rule.Random_ProductionTime.y < rule.Random_ProductionTime.x ||
+                        !ValidYieldGeneVariants(rule.YieldGeneVariants))
                     { reason = "库存生产需要匹配的接收模块和有效规则；其它生产模式必须显式提供 Entity 能力。"; return false; }
             if (profile.Canopy != null)
             {
@@ -215,6 +217,16 @@ namespace FlatWorld.NaturalEntities
                  !Finite(yield.WarmTemperatureCelsius) || yield.WarmTemperatureCelsius <= yield.ColdTemperatureCelsius ||
                  !NonNegative(yield.ColdMultiplier) || !NonNegative(yield.WarmMultiplier)))
             { reason = "温度产量规则无效。"; return false; }
+            return true;
+        }
+
+        private static bool ValidYieldGeneVariants(List<Mod_Production.YieldGeneVariant> variants)
+        {
+            if (variants == null) return true;
+            foreach (Mod_Production.YieldGeneVariant variant in variants)
+                if (variant == null || variant.minAmount < 0 || variant.maxAmount < variant.minAmount ||
+                    variant.maxAmount == int.MaxValue || !FinitePositive(variant.weight))
+                    return false;
             return true;
         }
 

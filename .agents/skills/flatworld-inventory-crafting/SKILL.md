@@ -60,6 +60,7 @@ description: "Use when: 定位或修改 FlatWorld 的背包、槽位、快捷栏
 - 手机快捷栏轻触必须走独立 `OnTouchTap` 语义，只切换当前选中格或按单件规则取放；普通触屏拖放与桌面键鼠共用直接槽位事务，长按更久后的半组拖拽才以 `Inventory_Hand` 为来源。
 - 跟随指针的 `UI_Hand` 是纯视觉层：Canvas 排序固定占用全局顶层（32767），必须高于快捷栏、设置页和其它游戏 UI；CanvasGroup/子图形不得拦截目标槽位射线。直接槽位拖拽生成的 `InventoryDragGhost` 也必须使用独立顶层 Canvas，不能只靠 `SetAsLastSibling`，否则会被模态页的独立 Canvas 压住。世界手持物挂在快捷栏节点及其子节点末端；玩家根 `SortingGroup` 接收世界 Y 排序，`Player.prefab` 的 `Module_Hotbar` 子组用 `Default/1` 压过身体的 `Default/0`，不可只靠兄弟节点顺序解决手持遮挡。
 - `UI_Hand` 的桌面跟随可以读取 Input System `Pointer.current`；触屏库存与世界丢弃必须以该次手势自己的 `PointerEventData.position` 为权威，并在触点抬起后保留最后位置，直到桌面库存指针明确接管。禁止用全局 `Pointer.current` 持续覆盖触屏位置：Device Simulator、多指或触点结束时它可能切到模拟鼠标/另一触点，把手持槽钉到错误坐标。所有进入表现层的坐标仍需过滤 NaN/Infinity。
+- 通用槽位悬浮信息由 `ItemSlot_UI -> UI_ItemTooltip` 统一呈现：标题和说明读取当前 `RuntimeItemDefinition` 的本地化文本，实例参数读取槽位当前 `ItemData`；模块额外动态说明统一由模块 Prefab 实现 `IItemTooltipInfoProvider` 返回，UI 禁止按具体物品或模块写分支。虚拟化槽位重绑、停用或销毁时必须刷新或关闭悬浮面板。
 - 快捷栏选中框属于当前槽位背景层，切换时必须重新挂到目标槽位并置为首个兄弟；数量文本和物品图标保持在其上方，不能依赖独立 Canvas 的任意 `sortingOrder`。
 - `Mod_HotBar.RuntimeInventory` 在 `Player.prefab` 中以 Unity 托管引用保存，字段必须保留 `[SerializeReference]`；移除该标记会让 Prefab 中的 `rid` 数据无法恢复，连带丢失 `InventoryPanel_Prefab`，表现为整个快捷栏不创建。
 - 玩家行囊的键鼠点击和滚轮无条件使用 `Inventory_Hand`，不能因携带槽为空或上次手柄操作留下的目标而回退快捷栏；桌面指针抬起实际进入 `OnDesktopTap`，只修改 `OnLeftClick` 不会恢复鼠标点击。PC 左键整组取放：空手按携带槽容量拿取，有物品时整组放置、同类合并或异类交换；不得转入 `OnTouchTap` 的单件语义，滚轮才逐件取放。点击与拖放共用整组跨库存事务，校验双向接收规则及容量、通知双方并同步快捷栏手持物；创造背包允许超量堆叠，但取出仍按目标容量与非堆叠规则拆分，余量保留原槽。快捷栏选中槽只参与手柄确认与角色当前装备，不参与 PC 背包交换。
@@ -87,7 +88,7 @@ description: "Use when: 定位或修改 FlatWorld 的背包、槽位、快捷栏
 - 玩家播种的 Entity 作物由 `ChunkAgricultureRenderer` 登记句柄，纯数据通过 `SaveDataMgr.RecordCultivatedCropData` 保存到 `ChunkSaveRecord.AgricultureCells`；天然植物仍使用生态 GUID 与差量，不能交叉登记或同时保存两份。保存前提交待结算土壤与真实死亡，解绑本身不删除农业快照。`FarmlandSystem.HasWorldPlant` 与 AI 采蜜均须包含资源实体查询，不能只看 ItemManager。
 - 耕地植株保存已结算的绝对游戏秒，由 `IWorldTimePlant` 在区块恢复后按 `DayTimeSystem` 的时钟补算；退出游戏和暂停期间不补现实时间，历史段不能沿用重载时的短时天气。`Mod_Grow` 与 `Mod_PlantClimate` 组合时由成长模块统一推进气候，避免冷热暴露重复结算；`GrowData` 的 MemoryPack 成员只能在末尾追加，不能调换既有字段顺序。
 - 普通作物的 JSON 仍以 crop/cropYield/cropVisual 描述组合，但资源后端编译为生命周期、产出和批量表现，不实例化这些 MonoBehaviour。一次性收获先生成全部产物再标记收获并清除农业或生态来源；持续采果只扣资源库存，不销毁植株。库存与掉落事务只在主线程提交，不能由多个 Job 直接写同一库存。
-- `BerryCrop` 的野生与播种共用资源实体定义：采集模块编译成 `EntityResourceStock`，生产列表编译成 `EntityStockProduction`，成熟且库存未满才补果；一次交互严格扣 1 份库存并掉落 1 个果实，不叠加全局掉落倍率，不销毁植株。继承的 cropYield 必须禁用；药草、狗尾草等一次性植物不要继承持续采果规则。库存提示是 BRG 部件，不创建果实 GameObject。
+- `BerryCrop` 的野生与播种共用资源实体定义：采集模块编译成 `EntityResourceStock`，生产列表编译成 `EntityStockProduction`；按 `ProductionIntervalDays` 声明的日历批次使用当前世界 `DayLength`，不吃生产速度/难度倍率，库存已满也继续走批次时钟。可用 `YieldGeneVariants` 为每株按稳定 GUID 固定一个带权产量区间，区间内每批仍做整数均匀随机；一次交互严格扣 1 份库存并掉落 1 个果实，不叠加全局掉落倍率，不销毁植株。继承的 cropYield 必须禁用；药草、狗尾草等一次性植物不要继承持续采果规则。库存提示是 BRG 部件，不创建果实 GameObject。
 - 野外自然生成、允许玩家用武器清除的小型作物统一继承 `WildCrop_Base`；该抽象定义负责成熟自然初态、通用 `Mod_DamageReceiver`、植被受击材质和独立 Mod_DamageReceiver Trigger，具体作物只按外形/耐久覆盖 HP 与伤害碰撞尺寸。仅种植链使用的萝卜、水稻不因该规则自动获得生命模块；具体死亡掉落仍由各物品顶层 `lootTableId` 定义，禁止把通用掉落塞进 `WildCrop_Base`。
 - 作物需要多张成长图时，在物品 `visual.spriteStates` 同时声明 `seedling/growing/mature`，由 `Mod_CropVisual` 根据 `normalizedGrowth` 派生表现阶段；不得为了中间画面给 `CropStage` 增加持久化阶段。只要声明任一阶段图就必须三张齐全，对象池卸载时恢复外壳原 Sprite。
 - 世界植株与收获物必须保留独立 Item ID；种下时把植株重置为幼苗，一次性作物成熟交互后由动作生成食物/种子并销毁植株，持续采果植株只扣果实库存；不能把世界植株直接改成食物实例。

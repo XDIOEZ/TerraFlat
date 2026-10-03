@@ -169,14 +169,18 @@ namespace FlatWorld.NaturalEntities
                             for (int old = 0; old < savedRules.Count; old++)
                                 if (!claimedSavedRules.Contains(old) && savedRules[old]?.itemName == config.itemName)
                                 { claimedSavedRules.Add(old); saved = savedRules[old]; break; }
+                        uint randomSeed = math.hash(new uint2(stock.Seed, (uint)i + 1u)) | 1u;
+                        config.ResolveYieldGene(randomSeed ^ 0xA511E9B3u, saved?.YieldGeneVariantIndex ?? -1,
+                            out int geneVariantIndex, out int minimumAmount, out int maximumAmount);
                         buffer.Add(new EntityStockProduction
                         {
-                            ItemId = config.itemName, Duration = config.MaxProductionTime, Speed = profile.ProductionSpeed,
+                            ItemId = config.itemName, Duration = config.MaxProductionTime, IntervalDays = config.ProductionIntervalDays,
+                            Speed = profile.ProductionSpeed,
                             Probability = config.SpawnProbability, InitialProgressRange = config.Random_ProductionTime,
-                            MinimumAmount = config.itemCountMin, MaximumAmount = config.itemCountMax,
+                            MinimumAmount = minimumAmount, MaximumAmount = maximumAmount, GeneVariantIndex = geneVariantIndex,
                             Limit = config.MaxProductionCount, Progress = Mathf.Max(0f, saved?.ProductionTime ?? config.ProductionTime),
                             Completed = saved?.CurrentProductionCount ?? 0, Initialized = (byte)(saved?.IsInitialized == true ? 1 : 0),
-                            RandomState = saved?.EntityRandomState is > 0 ? saved.EntityRandomState : math.hash(new uint2(stock.Seed, (uint)i + 1u)) | 1u,
+                            RandomState = saved?.EntityRandomState is > 0 ? saved.EntityRandomState : randomSeed,
                             UseGrowthDifficulty = (byte)(profile.ProductionUsesGrowthDifficulty ? 1 : 0)
                         });
                     }
@@ -246,6 +250,7 @@ namespace FlatWorld.NaturalEntities
                         var rule = rules[i];
                         state[i].ProductionTime = rule.Progress; state[i].CurrentProductionCount = rule.Completed;
                         state[i].IsInitialized = rule.Initialized != 0; state[i].EntityRandomState = rule.RandomState;
+                        state[i].YieldGeneVariantIndex = rule.GeneVariantIndex;
                     }
                     ((Ex_ModData_MemoryPackable)snapshot.ModuleDataDic[record.Profile.ProductionModuleName]).WriteData(state);
                 }
