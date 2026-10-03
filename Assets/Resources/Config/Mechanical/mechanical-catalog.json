@@ -71,7 +71,8 @@
         "MaxChargeWatts": 600,
         "MaxDischargeWatts": 600
       }
-    }
+    },
+    { "Id": "Conveyor_Wood", "Kind": "consumer", "Ports": "all", "PortMode": "relay", "BlocksMovement": false, "CastVisualShadows": false, "RequiredRpm": 20, "TorqueLoad": 10, "Transport": { "Speed": 0.8, "HalfWidth": 0.5 } }
   ],
   "Processes": [
     { "Station": "hand_drill", "Input": "Log", "Outputs": [{ "ItemName": "DrilledLog", "amount": 1 }], "WorkSeconds": 4 },

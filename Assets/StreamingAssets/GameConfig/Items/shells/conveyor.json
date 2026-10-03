@@ -1,0 +1,146 @@
+{
+  "schemaVersion": 1,
+  "items": [
+    {
+      "id": "Conveyor_Wood",
+      "parent": "BuildingBody_Base",
+      "gameName": "木制传送带-建筑",
+      "description": "接入机械动力后运输带上的地面掉落物；旋转建筑改变方向，动力反转时反向运输。额定转速20 RPM，速度每秒0.8格。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 10,
+      "volume": 15,
+      "stackable": true,
+      "canBePickedUp": false,
+      "tags": [
+        "35",
+        "InventoryGroup.MechanicalPower"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
+      },
+      "health": {
+        "hasHp": true,
+        "hp": 180,
+        "maxHp": 180,
+        "defense": {
+          "cutting": 8,
+          "piercing": 8,
+          "chopping": 8,
+          "blunt": 8
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 1,
+            "y": 1
+          },
+          "edgeRadius": 0
+        }
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Conveyor_Wood\",\"SummonerPrefabId\":\"Conveyor_Wood_Summoner\"}",
+            "Type": 0
+          },
+          "parameters": {
+            "LightOcclusionMode": "None",
+            "CastSunShadow": false
+          }
+        },
+        "机械扭矩模块": {
+          "prefab": "Module_MechanicalNode",
+          "id": "机械扭矩模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "DefinitionId": "Conveyor_Wood"
+          }
+        }
+      }
+    },
+    {
+      "id": "Conveyor_Wood_Summoner",
+      "worldDropBehavior": "interactive",
+      "parent": "BuildingSummoner_Base",
+      "gameName": "木制传送带",
+      "description": "接入机械动力后运输带上的地面掉落物；旋转建筑改变方向，动力反转时反向运输。额定转速20 RPM，速度每秒0.8格。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 4,
+      "volume": 8,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": [
+        "35",
+        "InventoryGroup.MechanicalPower"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
+      },
+      "health": {
+        "hasHp": true,
+        "hp": 180,
+        "maxHp": 180,
+        "defense": {
+          "cutting": 8,
+          "piercing": 8,
+          "chopping": 8,
+          "blunt": 8
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 1,
+            "y": 1
+          },
+          "edgeRadius": 0
+        }
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Conveyor_Wood\",\"SummonerPrefabId\":\"Conveyor_Wood_Summoner\"}",
+            "Type": 0
+          }
+        },
+        "机械扭矩模块": {
+          "prefab": "Module_MechanicalNode",
+          "id": "机械扭矩模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "DefinitionId": "Conveyor_Wood"
+          }
+        }
+      }
+    }
+  ]
+}

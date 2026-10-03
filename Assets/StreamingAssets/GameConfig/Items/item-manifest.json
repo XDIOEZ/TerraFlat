@@ -170,6 +170,11 @@
       "id": "fishing",
       "path": "shells/fishing.json",
       "enabled": true
+    },
+    {
+      "id": "conveyor",
+      "path": "shells/conveyor.json",
+      "enabled": true
     }
   ]
 }

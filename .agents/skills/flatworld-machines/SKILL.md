@@ -52,6 +52,9 @@ description: "Use when: 定位或修改 FlatWorld 的机器世界、工作台、
 
 ## MOD
 
+- `MechanicalShaft` 必须排在地表效果之上、`Player` 主体层之下，并加入太阳光和局部光的受光列表；新增排序层不能只改渲染器而漏掉 Global Light 的序列化范围。
+- 地面输送用 `MachineDefinition.Transport` 声明额定速度和带宽，读取节点有符号 RPM；普通掉落由 `DroppedItemRuntime` 维护局部输送候选与空间索引，完整 Item 走 `DroppedItemService.TransportItemBacked`。跨带每轮只搬一次，移动后同步拾取、地形订阅、存档和联机位置，不改库存数量、不扫描全场景。
+
 - 关键规则保留普通托管、具名、禁止内联的入口；`link.xml` 保留推荐补丁类型。注册整类逻辑用 `MachineLogicRegistry.Register` 返回租约；多个 MOD 覆盖必须允许乱序卸载，不能恢复已经释放的工厂。
 - C# MOD 只从 managed 清单声明的程序集加载，先核对用户授权的代码指纹；不自动信任包，不把 DLL 当沙箱。未声明可执行文件仍拒绝加载。
 - `Initialize` 注册扩展，`ContentReady` 使用正式内容，`Dispose` 只撤销本 MOD 补丁和租约。世界切换不清除资源会话级注册；资源结束须释放配置模板缓存。

@@ -31,6 +31,7 @@ internal sealed partial class DroppedItemRuntime : IDisposable
             presentation = new DroppedItemPresentation(scene, simulation, visuals, payloads);
             if (records != null)
                 foreach (DroppedItemSaveRecord record in records) Restore(record);
+            MachineWorld.CellChanged += RefreshTransportCell;
         }
         catch
         {
@@ -77,6 +78,7 @@ internal sealed partial class DroppedItemRuntime : IDisposable
             spatialOwners.Remove(id);
         }
         DetachTerrain(id);
+        transportItems.Remove(id);
         wetItems.Remove(id); pendingEnvironmentSet.Remove(id);
         visuals.Remove(id); payloads.Remove(id); simulation.Remove(id);
     }
@@ -99,6 +101,8 @@ internal sealed partial class DroppedItemRuntime : IDisposable
             bucket.Add(id); spatialOwners[id] = cell;
         }
         presentation.Changed(id);
+        if (MachineWorld.GetTransportAt(body.Position) != null) transportItems.Add(id);
+        else transportItems.Remove(id);
     }
 
     #endregion
@@ -118,6 +122,7 @@ internal sealed partial class DroppedItemRuntime : IDisposable
             if (simulation.Contains(change.Id)) UpdatePlacement(change.Id);
         }
         TickWater(deltaTime);
+        TickTransport(deltaTime);
         TickMatter(deltaTime);
         TickPickup(deltaTime, pickers);
     }
@@ -175,11 +180,50 @@ internal sealed partial class DroppedItemRuntime : IDisposable
 
     public void Dispose()
     {
+        MachineWorld.CellChanged -= RefreshTransportCell;
+        transportItems.Clear(); transportScratch.Clear();
         ClearTerrainSubscriptions();
         presentation.Dispose(); simulation.Dispose();
         payloads.Clear(); visuals.Clear(); visualCache.Clear(); spatial.Clear(); spatialOwners.Clear();
         pickupAttempts.Clear();
     }
 
+    #endregion
+
+    #region 输送带掉落物
+    private readonly HashSet<int> transportItems = new();
+    private readonly List<int> transportScratch = new();
+
+    /// <summary>放置、拆除或转速改变时只检查这个格附近的空间桶，静止地面物不逐帧查带。</summary>
+    private void RefreshTransportCell(Vector2Int cell)
+    {
+        Vector2 center = (Vector2)cell + Vector2.one * .5f;
+        if (!spatial.TryGetValue(SpatialCell(center), out HashSet<int> bucket)) return;
+        foreach (int id in bucket)
+        {
+            LightweightDroppedBody body = simulation.Get(id);
+            Vector2Int bodyCell = new(Mathf.FloorToInt(body.Position.x), Mathf.FloorToInt(body.Position.y));
+            if (bodyCell != cell) continue;
+            if (MachineWorld.GetTransportAt(body.Position) != null) transportItems.Add(id);
+            else transportItems.Remove(id);
+        }
+    }
+
+    private void TickTransport(float seconds)
+    {
+        transportScratch.Clear(); transportScratch.AddRange(transportItems);
+        foreach (int id in transportScratch)
+        {
+            if (!simulation.Contains(id)) { transportItems.Remove(id); continue; }
+            LightweightDroppedBody body = simulation.Get(id);
+            if (body.Pickable == 0 || body.WaterKind != 0 || simulation.TryGetFlight(id, out _)) continue;
+            Vector2 position = MachineWorld.TransportGroundItem(body.Position, seconds);
+            if (WorldTopologyRuntime.ShortestDelta(body.Position, position).sqrMagnitude < .00000001f) continue;
+            body.Position = position;
+            simulation.Set(body);
+            UpdatePlacement(id);
+            CheckEnvironment(id);
+        }
+    }
     #endregion
 }

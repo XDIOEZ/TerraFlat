@@ -7,6 +7,59 @@ using UnityEngine;
 
 public static partial class MachineWorld
 {
+    #region 地面物品输送
+    private static readonly RaycastHit2D[] transportHits = new RaycastHit2D[1];
+
+    /// <summary>只读取当前世界的数据格，不因查询输送带而创建世界或加载区块。</summary>
+    public static MachineEntity GetTransportAt(Vector2 position)
+    {
+        MachineEntity node = GetAtCurrentWorld(CellOf(position), 0);
+        return node?.Definition.Transport != null ? node : null;
+    }
+
+    /// <summary>分段经过实际带格，连续带、转弯和反转都不会因节点遍历顺序重复加速。</summary>
+    public static Vector2 TransportGroundItem(Vector2 position, float seconds)
+    {
+        if (!GameNetwork.HasStateAuthority || !MachineDefinition.Positive(seconds)) return position;
+        Vector2 current = position;
+        float remaining = Mathf.Min(seconds, .5f);
+        ContactFilter2D filter = new ContactFilter2D { useTriggers = false };
+        filter.SetLayerMask(LayerMask.GetMask("Collider"));
+        for (int segment = 0; segment < 64 && remaining > .00001f; segment++)
+        {
+            MachineEntity belt = GetTransportAt(current);
+            if (belt == null || !belt.Active || belt.SpeedRpm <= 0f) break;
+            MachineTransportDefinition transport = belt.Definition.Transport;
+            Vector2 forward = (belt.RotationQuarterTurns & 3) switch
+            { 0 => Vector2.right, 1 => Vector2.up, 2 => Vector2.left, _ => Vector2.down };
+            forward *= Mathf.Sign(belt.Rpm);
+            Vector2 side = new(-forward.y, forward.x);
+            Vector2 center = (Vector2)belt.Cell + Vector2.one * .5f;
+            Vector2 offset = WorldTopologyRuntime.ShortestDelta(center, current);
+            float lateral = Vector2.Dot(offset, side);
+            if (Mathf.Abs(lateral) > transport.HalfWidth) break;
+            float speed = transport.Speed * GetWorkEfficiency(belt);
+            float step = Mathf.Min(remaining, .1f / speed);
+            Vector2 move = forward * (speed * step) - side * Mathf.Clamp(lateral, -speed * step, speed * step);
+            float distance = move.magnitude;
+            // Physics2D 只给出墙体和实体的阻挡反馈，掉落物位置仍由数据系统持有。
+            if (distance > .00001f && Physics2D.CircleCast(current, .06f, move / distance,
+                filter, transportHits, distance) > 0)
+            {
+                float allowed = Mathf.Max(0f, transportHits[0].distance - .01f);
+                current += move / distance * allowed;
+                break;
+            }
+            Vector2 destination = WorldTopologyRuntime.NormalizePosition(current + move);
+            if (ChunkMgr.ExistingInstance == null ||
+                !ChunkMgr.ExistingInstance.TryGetRuntimeTerrainTile(destination, out _)) break;
+            current = destination;
+            remaining -= step;
+        }
+        return current;
+    }
+    #endregion
+
     #region 设施状态与环境
     private static readonly Dictionary<string, Func<MachineEntity, float>> airflowProviders = new(StringComparer.Ordinal);
     public static event Func<int, string, string, bool> RemoteOperationRequested;

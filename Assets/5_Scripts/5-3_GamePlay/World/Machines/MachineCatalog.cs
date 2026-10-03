@@ -218,12 +218,13 @@ public sealed class MachineDefinition
     public float PlayerMoveSpeedMultiplier = 1f; // 可通行机械占格对玩家主动移速的倍率。
     public bool? CastVisualShadows; // MOD 可覆盖用力器与发力器的默认两类世界阴影。
     public int PlacementLayer = -1; // -1 沿用机械默认层；电线等覆盖层可显式使用独立层。
+    public MachineTransportDefinition Transport; // 输送能力独立于物品名称，MOD 可以配置自己的传送设备。
     public ElectricalDefinition Electrical; // 可选电气能力；同一机器可同时属于机械网与电网。
     public int Layer => PlacementLayer >= 0 ? PlacementLayer : Kind == "bridge" ? 1 : 0;
     public bool HasMechanicalPorts => Ports == "axis" || Ports == "all";
     public bool HasElectricalPorts => Electrical?.HasConnection == true;
     public bool IsConverter => Electrical?.IsConverter == true;
-    public bool Rotatable => Ports == "axis" || Kind == "bellows" || (Kind == "gear" && AxlePorts?.Length > 0);
+    public bool Rotatable => Transport != null || Ports == "axis" || Kind == "bellows" || (Kind == "gear" && AxlePorts?.Length > 0);
     /// <summary>动力源、加工设备与机械风箱默认投影；传动件保持原有无影表现。</summary>
     public bool ShouldCastVisualShadows()
         => CastVisualShadows ?? (Kind == "source" || Kind == "consumer" || Kind == "bellows" ||
@@ -282,6 +283,7 @@ public sealed class MachineDefinition
         if (ProcessCapabilityLevel < 0 ||
             ProcessCapabilityLevel > 0 && string.IsNullOrWhiteSpace(ProcessCapability))
             throw new ArgumentException("机械加工能力等级无效：" + Id);
+        Transport?.Validate(Id, HasMechanicalPorts);
         Electrical?.Validate(Id);
         if (FormerIds != null)
             foreach (string id in FormerIds)
@@ -292,6 +294,22 @@ public sealed class MachineDefinition
     }
     internal static bool Positive(float value) => value > 0 && !float.IsInfinity(value) && !float.IsNaN(value);
     internal static bool NonNegative(float value) => value >= 0 && !float.IsInfinity(value) && !float.IsNaN(value);
+    #endregion
+}
+
+/// <summary>额定转速下的输送速度与有效带宽，方向由放置朝向和有符号 RPM 决定。</summary>
+[Serializable]
+public sealed class MachineTransportDefinition
+{
+    #region 地面输送配置
+    public float Speed = .8f;
+    public float HalfWidth = .45f;
+    public void Validate(string id, bool hasMechanicalPorts)
+    {
+        if (!hasMechanicalPorts || !MachineDefinition.Positive(Speed) ||
+            !MachineDefinition.Positive(HalfWidth) || HalfWidth > .5f)
+            throw new ArgumentException("输送设备参数无效：" + id);
+    }
     #endregion
 }
 

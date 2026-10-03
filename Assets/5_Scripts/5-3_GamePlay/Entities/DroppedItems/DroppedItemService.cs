@@ -78,6 +78,42 @@ public static partial class DroppedItemService
     internal static uint Epoch { get; private set; } = 1;
     public static int Count => runtime?.Count ?? 0;
     public static int VisibleViewCount => runtime?.VisibleViewCount ?? 0;
+    #region 完整物品输送
+    private static readonly List<Item> transportCandidates = new();
+    private static readonly HashSet<Item> transportDedupe = new();
+    private static readonly HashSet<int> transportedItems = new();
+    private static uint transportStep = uint.MaxValue;
+
+    /// <summary>完整 Item 的掉落物复用权威空间索引，同一轮跨带只能移动一次。</summary>
+    public static void TransportItemBacked(MachineEntity belt, float seconds)
+    {
+        ItemMgr manager = ItemMgr.Instance;
+        if (!GameNetwork.HasStateAuthority || manager == null || belt?.Definition.Transport == null) return;
+        if (transportStep != MachineWorld.TransportStep) { transportStep = MachineWorld.TransportStep; transportedItems.Clear(); }
+        Vector2 center = (Vector2)belt.Cell + Vector2.one * .5f;
+        manager.QueryItemsInCircleNonAlloc(center, .72f, ~0, null, transportCandidates, transportDedupe);
+        foreach (Item item in transportCandidates)
+        {
+            if (!IsLoosePickable(item) || item is Player || RuntimeAiEntityUtility.IsAiEntity(item) ||
+                Mod_Droping.IsDropInProgress(item) || item.GetComponent<WorldItemWaterRuntime>()?.IsActive == true ||
+                Mod_Building.TryReadBuildingData(item.itemData, out _, out var building) && building.Role == BuildingRole.PlacedBuilding ||
+                MachineWorld.GetTransportAt(item.transform.position) != belt || !transportedItems.Add(item.itemData.Guid)) continue;
+            Vector2 position = MachineWorld.TransportGroundItem(item.transform.position, seconds);
+            if (WorldTopologyRuntime.ShortestDelta(item.transform.position, position).sqrMagnitude < .00000001f) continue;
+            Vector3 display = WorldTopologyRuntime.NearestImagePosition(item.transform.position, position);
+            display.z = item.transform.position.z;
+            Rigidbody2D body = item.GetComponent<Rigidbody2D>();
+            if (body != null) { body.position = display; body.velocity = Vector2.zero; }
+            item.transform.position = display;
+            item.itemData.transform.position = new Vector3(position.x, position.y, display.z);
+            manager.NotifyRuntimeItemMoved(item);
+            ItemWorldPlacement.TryAttachWorldModelTransientItem(item, display);
+            ItemNetworkStateSerialization.NotifyRuntimeStateChanged(item);
+            WorldItemWaterSystem.TryEnterWater(item, requirePickable: true);
+        }
+        transportCandidates.Clear(); transportDedupe.Clear();
+    }
+    #endregion
     // 联机仍通过现有 Item 权威事务；轻量 GameObject 掉落物当前只在单机作为本地权威运行。
     public static bool UsesLightweightDrops => !GameNetwork.IsOnline;
     internal static bool Contains(int id) => runtime != null && runtime.Contains(id);
@@ -88,6 +124,7 @@ public static partial class DroppedItemService
         runtime?.Dispose(); runtime = null; ownerSave = null; ownerWorld = null;
         pickers.Clear(); legacyPlans.Clear(); legacyScratch.Clear(); Epoch++;
         forageLegacyCandidates.Clear(); forageLegacyDedupe.Clear();
+        transportCandidates.Clear(); transportDedupe.Clear(); transportedItems.Clear(); transportStep = uint.MaxValue;
     }
 
     #region 生成与回收

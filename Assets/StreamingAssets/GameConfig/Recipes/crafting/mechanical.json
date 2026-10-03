@@ -489,6 +489,39 @@
         }
       ],
       "actions": []
+    },
+    {
+      "id": "core:mechanical_Conveyor_Wood",
+      "displayName": "木制传送带",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Plank",
+          "amount": 2
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Rope",
+          "amount": 2
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Shaft_Wood_Summoner",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Conveyor_Wood_Summoner",
+          "amount": 1
+        }
+      ],
+      "actions": []
     }
   ]
 }

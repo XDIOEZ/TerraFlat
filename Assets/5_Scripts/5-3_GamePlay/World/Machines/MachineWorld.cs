@@ -35,6 +35,7 @@ public static partial class MachineWorld
     private static float elapsed;
     private static Vector2 combatSearchPadding = Vector2.one; // 当前节点受击范围的最大外延，只在拓扑或资源变化时重算。
     private const int MaxCatchUpStepsPerFrame = 8;
+    public static uint TransportStep { get; private set; } // 同一轮机械模拟中的跨带搬运只提交一次。
     public static IReadOnlyList<MechanicalNetwork> Networks => graph?.Networks;
     public static string WorldKey => worldKey;
     /// <summary>机械数据格变化时通知区块表现与导航，不依赖世界物品实例。</summary>
@@ -52,6 +53,7 @@ public static partial class MachineWorld
         MachineInventoryCommands.Reset();
         nodes.Clear(); interactions.Clear(); processorOwners.Clear(); sourceProviders.Clear(); sourceRpmProviders.Clear(); players.Clear();
         graph = null; owner = null; worldKey = null; dirty = false; suppressRemoval = false; elapsed = 0;
+        TransportStep = 0;
         ResetElectricalRuntime();
         CellChanged = null;
         NodeStateChanged = null; NodeRemoved = null; VisualSpeedChanged = null;
@@ -510,6 +512,7 @@ public static partial class MachineWorld
         int catchUpSteps = Mathf.Min(MaxCatchUpStepsPerFrame, Mathf.FloorToInt(elapsed / step));
         for (int tick = 0; tick < catchUpSteps; tick++)
         {
+            TransportStep++;
             elapsed -= step;
             foreach (var network in graph.Networks)
             {
@@ -659,6 +662,8 @@ public static partial class MachineWorld
         // 自定义领域逻辑也必须消耗手摇供能时间，不能因提前返回变成永久动力源。
         if (node.Definition.Source == "manual" || node.Definition.ManualDriveTorque > 0)
             node.State.ManualSeconds = Mathf.Max(0, node.State.ManualSeconds - step);
+        if (node.Definition.Transport != null && node.SpeedRpm > 0f)
+            DroppedItemService.TransportItemBacked(node, step);
         if (node.Logic != null)
         {
             AdvanceFacilityLogic(node, step);
