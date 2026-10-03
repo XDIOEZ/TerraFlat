@@ -53,6 +53,7 @@ public class EnvironmentInfoDisplay : MonoBehaviour
 
     private readonly List<string> environmentLayerIds = new(24);
     private readonly List<string> rawDataLines = new(48);
+    private readonly List<string> displayLines = new(96);
     private Camera mainCamera;
     private RuntimeTerrainTileSample hoveredSample;
     private Vector2 mouseScreenPos;
@@ -61,7 +62,7 @@ public class EnvironmentInfoDisplay : MonoBehaviour
     private string hoveredBiomeName = "未知";
     private bool isVisible;
     private bool isValidPosition;
-    private int currentPage;
+    private int scrollLineOffset;
 
     private GUIStyle boxStyle;
     private GUIStyle labelStyle;
@@ -101,28 +102,21 @@ public class EnvironmentInfoDisplay : MonoBehaviour
         if (!isVisible)
             return;
 
-        int maxPage = 0;
-        if (TryGetValidHoveredSample(out RuntimeTerrainTileSample sample))
-        {
-            RefreshRawDataLines(sample);
-            maxPage = GetTotalPageCount(GetRawRowsPerPage()) - 1;
-        }
+        int maxScroll = TryGetValidHoveredSample(out _)
+            ? Mathf.Max(0, displayLines.Count - GetVisibleLineCount())
+            : 0;
 
         Keyboard keyboard = Keyboard.current;
         if (keyboard?.upArrowKey.wasPressedThisFrame == true)
         {
-            currentPage--;
-            if (currentPage < 0)
-                currentPage = maxPage;
+            scrollLineOffset = Mathf.Max(0, scrollLineOffset - 1);
         }
         else if (keyboard?.downArrowKey.wasPressedThisFrame == true)
         {
-            currentPage++;
-            if (currentPage > maxPage)
-                currentPage = 0;
+            scrollLineOffset = Mathf.Min(maxScroll, scrollLineOffset + 1);
         }
 
-        currentPage = Mathf.Clamp(currentPage, 0, maxPage);
+        scrollLineOffset = Mathf.Clamp(scrollLineOffset, 0, maxScroll);
     }
 
     private void OnGUI()
@@ -234,38 +228,12 @@ public class EnvironmentInfoDisplay : MonoBehaviour
     private void DrawInfoPanel()
     {
         bool hasSample = TryGetValidHoveredSample(out RuntimeTerrainTileSample sample);
-        int rawRowsPerPage = 1;
-        int totalPages = 1;
-        if (hasSample)
-        {
-            RefreshRawDataLines(sample);
-            rawRowsPerPage = GetRawRowsPerPage();
-            totalPages = GetTotalPageCount(rawRowsPerPage);
-        }
-
-        currentPage = Mathf.Clamp(currentPage, 0, totalPages - 1);
-
-        int lineCount;
-        if (!hasSample)
-        {
-            lineCount = 5;
-        }
-        else if (currentPage == 0)
-        {
-            lineCount = EstimateOverviewLineCount(sample);
-        }
-        else
-        {
-            int rawPageIndex = currentPage - 1;
-            int startLine = rawPageIndex * rawRowsPerPage;
-            int visibleLines = Mathf.Min(rawRowsPerPage, rawDataLines.Count - startLine);
-            lineCount = 1 + Mathf.Max(0, visibleLines);
-        }
 
         float panelWidth = Mathf.Min(Mathf.Max(320f, panelSize.x), Mathf.Max(1f, Screen.width));
         float lineHeight = Mathf.Max(fontSize + 6f, 20f);
-        float wantedHeight = Mathf.Max(panelSize.y, (lineCount + (hasSample ? 1 : 0)) * lineHeight + 20f);
-        float panelHeight = Mathf.Min(wantedHeight, Mathf.Max(1f, Screen.height - 4f));
+        float panelHeight = Mathf.Min(
+            Mathf.Max(panelSize.y, lineHeight * 5f + 20f),
+            Mathf.Max(1f, Screen.height - 4f));
 
         float desiredX = mouseScreenPos.x + offset.x;
         float desiredY = Screen.height - mouseScreenPos.y + offset.y;
@@ -285,66 +253,61 @@ public class EnvironmentInfoDisplay : MonoBehaviour
             return;
         }
 
-        if (currentPage == 0)
-            DrawOverviewPage(sample);
-        else
-            DrawRawDataPage(currentPage - 1, rawRowsPerPage);
+        RefreshDisplayLines(sample);
+        int visibleLineCount = GetVisibleLineCount(panelHeight);
+        int maxScroll = Mathf.Max(0, displayLines.Count - visibleLineCount);
+        scrollLineOffset = Mathf.Clamp(scrollLineOffset, 0, maxScroll);
+        int endLine = Mathf.Min(displayLines.Count, scrollLineOffset + visibleLineCount);
+        for (int i = scrollLineOffset; i < endLine; i++)
+            GUILayout.Label(displayLines[i], labelStyle);
 
+        GUILayout.FlexibleSpace();
         GUILayout.Label(
-            $"按 {toggleKey} 关闭  |  第 {currentPage + 1}/{totalPages} 页（↑↓ 翻页）",
+            $"按 {toggleKey} 关闭  |  ↑↓ 滚动  {scrollLineOffset + 1}-{endLine}/{displayLines.Count}",
             labelStyle);
         GUILayout.EndArea();
     }
 
-    /// <summary>第一页显示开发时最常用的地块、气候、水文和农业信息。</summary>
-    private void DrawOverviewPage(RuntimeTerrainTileSample sample)
+    /// <summary>把总览和原始环境层整理成连续文本，交给上下箭头逐行滚动。</summary>
+    private void RefreshDisplayLines(RuntimeTerrainTileSample sample)
     {
+        displayLines.Clear();
         ChunkTerrainData terrain = sample.Terrain;
         Vector2Int local = sample.LocalCell;
         TerrainCell cell = sample.Cell;
 
-        GUILayout.Label("<b>环境监测 / 地块总览</b>", labelStyle);
-        GUILayout.Label(
-            $"世界格: ({sample.WorldCell.x}, {sample.WorldCell.y})  局部格: ({local.x}, {local.y})",
-            labelStyle);
-        GUILayout.Label(
-            $"鼠标世界: ({mouseWorldPos.x:F2}, {mouseWorldPos.y:F2})  维度: {sample.Address.DimensionId}",
-            labelStyle);
-        GUILayout.Label(
-            $"区块原点: ({sample.Address.ChunkOrigin.X}, {sample.Address.ChunkOrigin.Y})  Revision: {terrain.Revision}",
-            labelStyle);
+        displayLines.Add("<b>环境监测 / 地块总览</b>");
+        displayLines.Add(
+            $"世界格: ({sample.WorldCell.x}, {sample.WorldCell.y})  局部格: ({local.x}, {local.y})");
+        displayLines.Add(
+            $"鼠标世界: ({mouseWorldPos.x:F2}, {mouseWorldPos.y:F2})  维度: {sample.Address.DimensionId}");
+        displayLines.Add(
+            $"区块原点: ({sample.Address.ChunkOrigin.X}, {sample.Address.ChunkOrigin.Y})  Revision: {terrain.Revision}");
 
-        GUILayout.Label($"地块: {FormatTile(sample.TopTileId)}", labelStyle);
-        GUILayout.Label($"群系: {hoveredBiomeName}  (ID {cell.BiomeId})", labelStyle);
-        GUILayout.Label(
-            $"可行走: {terrain.IsWalkable(local.x, local.y)}  导航代价: {cell.NavigationCost}  Flags: {cell.Flags}",
-            labelStyle);
-        GUILayout.Label(
-            $"地块层数: {terrain.GetTileLayerCount(local.x, local.y)}  草层: {FormatGrass(terrain.GetGrass(local.x, local.y))}",
-            labelStyle);
+        displayLines.Add($"地块: {FormatTile(sample.TopTileId)}");
+        displayLines.Add($"群系: {hoveredBiomeName}  (ID {cell.BiomeId})");
+        displayLines.Add(
+            $"可行走: {terrain.IsWalkable(local.x, local.y)}  导航代价: {cell.NavigationCost}  Flags: {cell.Flags}");
+        displayLines.Add(
+            $"地块层数: {terrain.GetTileLayerCount(local.x, local.y)}  草层: {FormatGrass(terrain.GetGrass(local.x, local.y))}");
 
         int supportTileId = TerrainSupportLayer.GetTileId(terrain, local.x, local.y);
         if (supportTileId != 0)
-            GUILayout.Label($"支撑表面: {FormatTile(supportTileId)}", labelStyle);
+            displayLines.Add($"支撑表面: {FormatTile(supportTileId)}");
 
-        DrawClimateSummary(sample);
-        DrawLiquidSummary(sample);
-        DrawAgricultureSummary(sample);
-        DrawTileTemplateSummary(sample.TopTileId);
-    }
+        AppendClimateSummary(sample);
+        AppendLiquidSummary(sample);
+        AppendAgricultureSummary(sample);
+        AppendTileTemplateSummary(sample.TopTileId);
 
-    /// <summary>原始数据按屏幕可容纳行数拆页，避免调试面板依赖滚轮。</summary>
-    private void DrawRawDataPage(int rawPageIndex, int rowsPerPage)
-    {
-        GUILayout.Label("<b>原始地形 / 环境层</b>", labelStyle);
-        int startLine = Mathf.Max(0, rawPageIndex) * Mathf.Max(1, rowsPerPage);
-        int endLine = Mathf.Min(rawDataLines.Count, startLine + Mathf.Max(1, rowsPerPage));
-        for (int i = startLine; i < endLine; i++)
-            GUILayout.Label(rawDataLines[i], labelStyle);
+        displayLines.Add(string.Empty);
+        displayLines.Add("<b>原始地形 / 环境层</b>");
+        RefreshRawDataLines(sample);
+        displayLines.AddRange(rawDataLines);
     }
 
     /// <summary>显示生成气候与最终环境温度；不存在的层不伪造数值。</summary>
-    private void DrawClimateSummary(RuntimeTerrainTileSample sample)
+    private void AppendClimateSummary(RuntimeTerrainTileSample sample)
     {
         ChunkTerrainData terrain = sample.Terrain;
         Vector2Int local = sample.LocalCell;
@@ -359,20 +322,20 @@ public class EnvironmentInfoDisplay : MonoBehaviour
                 out float ambientTemperature))
         {
             string generated = hasGeneratedCelsius ? $"{generatedCelsius:F2}℃" : "无";
-            GUILayout.Label($"温度: 环境 {ambientTemperature:F2}℃  生成基温 {generated}", labelStyle);
+            displayLines.Add($"温度: 环境 {ambientTemperature:F2}℃  生成基温 {generated}");
         }
         else if (hasGeneratedCelsius)
         {
-            GUILayout.Label($"温度: 生成基温 {generatedCelsius:F2}℃", labelStyle);
+            displayLines.Add($"温度: 生成基温 {generatedCelsius:F2}℃");
         }
 
         if (hasNormalizedTemperature)
-            GUILayout.Label($"温度归一值: {normalizedTemperature:F4}", labelStyle);
+            displayLines.Add($"温度归一值: {normalizedTemperature:F4}");
 
-        DrawEnvironmentValue(terrain, local, "moisture", "湿度");
-        DrawEnvironmentValue(terrain, local, "precipitation", "降水");
-        DrawEnvironmentValue(terrain, local, "fertility", "土壤肥力");
-        DrawEnvironmentValue(terrain, local, "height", "高度");
+        AppendEnvironmentValue(terrain, local, "moisture", "湿度");
+        AppendEnvironmentValue(terrain, local, "precipitation", "降水");
+        AppendEnvironmentValue(terrain, local, "fertility", "土壤肥力");
+        AppendEnvironmentValue(terrain, local, "height", "高度");
 
         bool hasWindX = terrain.TryGetEnvironmentValue("windX", local.x, local.y, out float windX);
         bool hasWindY = terrain.TryGetEnvironmentValue("windY", local.x, local.y, out float windY);
@@ -382,7 +345,7 @@ public class EnvironmentInfoDisplay : MonoBehaviour
             float angle = wind.sqrMagnitude > 0.000001f
                 ? Mathf.Atan2(wind.y, wind.x) * Mathf.Rad2Deg
                 : 0f;
-            GUILayout.Label($"风场: ({wind.x:F3}, {wind.y:F3})  角度 {angle:F1}°", labelStyle);
+            displayLines.Add($"风场: ({wind.x:F3}, {wind.y:F3})  角度 {angle:F1}°");
         }
 
         bool hasRiverKind = terrain.TryGetEnvironmentValue("riverKind", local.x, local.y, out float riverKind);
@@ -390,18 +353,16 @@ public class EnvironmentInfoDisplay : MonoBehaviour
         bool hasRiverDepth = terrain.TryGetEnvironmentValue("riverDepth", local.x, local.y, out float riverDepth);
         if (hasRiverKind || hasRiverFlow || hasRiverDepth)
         {
-            GUILayout.Label(
-                $"水文: kind={riverKind:G4}  flow={riverFlow:F4}  riverDepth={riverDepth:F4}",
-                labelStyle);
+            displayLines.Add(
+                $"水文: kind={riverKind:G4}  flow={riverFlow:F4}  riverDepth={riverDepth:F4}");
         }
     }
 
     /// <summary>显示独立 Liquid 层与当前表面流向。</summary>
-    private void DrawLiquidSummary(RuntimeTerrainTileSample sample)
+    private void AppendLiquidSummary(RuntimeTerrainTileSample sample)
     {
-        GUILayout.Label(
-            $"液体: {(string.IsNullOrWhiteSpace(sample.LiquidId) ? "无" : sample.LiquidId)}  深度 {sample.LiquidDepth:F4}  类型索引 {sample.LiquidTypeIndex}",
-            labelStyle);
+        displayLines.Add(
+            $"液体: {(string.IsNullOrWhiteSpace(sample.LiquidId) ? "无" : sample.LiquidId)}  深度 {sample.LiquidDepth:F4}  类型索引 {sample.LiquidTypeIndex}");
 
         ChunkMgr chunkManager = ChunkMgr.ExistingInstance;
         if (chunkManager != null &&
@@ -409,14 +370,13 @@ public class EnvironmentInfoDisplay : MonoBehaviour
                 new Vector2(sample.WorldCell.x + 0.5f, sample.WorldCell.y + 0.5f),
                 out RuntimeWaterCurrentSample current))
         {
-            GUILayout.Label(
-                $"水流: {current.Kind}  方向 ({current.Direction.x:F3}, {current.Direction.y:F3})  流量 {current.Flow:F4}",
-                labelStyle);
+            displayLines.Add(
+                $"水流: {current.Kind}  方向 ({current.Direction.x:F3}, {current.Direction.y:F3})  流量 {current.Flow:F4}");
         }
     }
 
     /// <summary>耕地或已有农业状态时只显示可持久化的地块、水分与肥力。</summary>
-    private void DrawAgricultureSummary(RuntimeTerrainTileSample sample)
+    private void AppendAgricultureSummary(RuntimeTerrainTileSample sample)
     {
         ChunkTerrainData terrain = sample.Terrain;
         Vector2Int local = sample.LocalCell;
@@ -430,61 +390,38 @@ public class EnvironmentInfoDisplay : MonoBehaviour
         float waterPercent = soil.maxWater > 0f ? soil.waterValue / soil.maxWater * 100f : 0f;
         float fertilityPercent = soil.maxFertility > 0f ? soil.Fertility / soil.maxFertility * 100f : 0f;
 
-        GUILayout.Label("<b>农业状态</b>", labelStyle);
-        GUILayout.Label(
-            $"耕地: {isFarmland}  水肥状态地块ID: {Mathf.RoundToInt(sourceTileId)}",
-            labelStyle);
-        GUILayout.Label(
-            $"水分: {soil.waterValue:F2}/{soil.maxWater:F2} ({waterPercent:F1}%)",
-            labelStyle);
-        GUILayout.Label(
-            $"肥力: {soil.Fertility:F4}/{soil.maxFertility:F4} ({fertilityPercent:F1}%)",
-            labelStyle);
+        displayLines.Add("<b>农业状态</b>");
+        displayLines.Add($"耕地: {isFarmland}  水肥状态地块ID: {Mathf.RoundToInt(sourceTileId)}");
+        displayLines.Add($"水分: {soil.waterValue:F2}/{soil.maxWater:F2} ({waterPercent:F1}%)");
+        displayLines.Add($"肥力: {soil.Fertility:F4}/{soil.maxFertility:F4} ({fertilityPercent:F1}%)");
     }
 
     /// <summary>显示当前有效地块定义中的模板信息，辅助排查配置与运行时状态差异。</summary>
-    private void DrawTileTemplateSummary(int tileId)
+    private void AppendTileTemplateSummary(int tileId)
     {
         if (!TryGetTileDefinition(tileId, out RuntimeTileDefinition definition) ||
             definition.TileDataTemplate == null)
             return;
 
         TileData template = definition.TileDataTemplate;
-        GUILayout.Label(
-            $"定义: {definition.Id}  显示名: {definition.DisplayName}  TileAsset: {definition.TileAssetId}",
-            labelStyle);
-        GUILayout.Label(
-            $"模板: tag={template.TileTag}  penalty={template.Penalty}  walkable={template.IsWalkable}  demolition={template.DemolitionTime:F2}",
-            labelStyle);
+        displayLines.Add(
+            $"定义: {definition.Id}  显示名: {definition.DisplayName}  TileAsset: {definition.TileAssetId}");
+        displayLines.Add(
+            $"模板: tag={template.TileTag}  penalty={template.Penalty}  walkable={template.IsWalkable}  demolition={template.DemolitionTime:F2}");
     }
 
-    private int EstimateOverviewLineCount(RuntimeTerrainTileSample sample)
-    {
-        int count = 21;
-        if (TerrainSupportLayer.GetTileId(sample.Terrain, sample.LocalCell.x, sample.LocalCell.y) != 0)
-            count++;
-
-        float source = FarmlandSystem.Read(sample.Terrain, sample.LocalCell, FarmlandSystem.SourceLayer);
-        if (FarmlandSystem.IsFarmland(sample.Cell) || source > 0f)
-            count += 4;
-
-        return count;
-    }
-
-    /// <summary>按当前屏幕高度计算原始数据每页最多显示多少行。</summary>
-    private int GetRawRowsPerPage()
+    /// <summary>按面板高度计算一次能看到多少行，滚动只移动一行，不做分页。</summary>
+    private int GetVisibleLineCount(float panelHeight = -1f)
     {
         float lineHeight = Mathf.Max(fontSize + 6f, 20f);
-        float contentHeight = Mathf.Max(1f, Screen.height - 24f);
-        int maxVisibleLines = Mathf.Max(3, Mathf.FloorToInt(contentHeight / lineHeight));
-        return Mathf.Max(1, maxVisibleLines - 2);
-    }
-
-    private int GetTotalPageCount(int rawRowsPerPage)
-    {
-        int rows = Mathf.Max(1, rawRowsPerPage);
-        int rawPageCount = Mathf.Max(1, Mathf.CeilToInt(rawDataLines.Count / (float)rows));
-        return 1 + rawPageCount;
+        float height = panelHeight > 0f
+            ? panelHeight
+            : Mathf.Min(
+                Mathf.Max(panelSize.y, lineHeight * 5f + 20f),
+                Mathf.Max(1f, Screen.height - 4f));
+        float padding = boxStyle != null ? boxStyle.padding.vertical : 20f;
+        float availableHeight = Mathf.Max(lineHeight, height - padding - lineHeight - 4f);
+        return Mathf.Max(1, Mathf.FloorToInt(availableHeight / lineHeight));
     }
 
     #endregion
@@ -556,7 +493,7 @@ public class EnvironmentInfoDisplay : MonoBehaviour
         environmentLayerIds.Sort(StringComparer.Ordinal);
     }
 
-    /// <summary>把可变长度的原始地块信息整理成行，再统一交给翻页逻辑显示。</summary>
+    /// <summary>把可变长度的原始地块信息整理成行，再统一交给逐行滚动显示。</summary>
     private void RefreshRawDataLines(RuntimeTerrainTileSample sample)
     {
         ChunkTerrainData terrain = sample.Terrain;
@@ -587,14 +524,14 @@ public class EnvironmentInfoDisplay : MonoBehaviour
         }
     }
 
-    private void DrawEnvironmentValue(
+    private void AppendEnvironmentValue(
         ChunkTerrainData terrain,
         Vector2Int local,
         string layerId,
         string displayName)
     {
         if (terrain.TryGetEnvironmentValue(layerId, local.x, local.y, out float value))
-            GUILayout.Label($"{displayName}: {value:F4}", labelStyle);
+            displayLines.Add($"{displayName}: {value:F4}");
     }
 
     private static string FormatGrass(byte value)
@@ -654,6 +591,7 @@ public class EnvironmentInfoDisplay : MonoBehaviour
     public void Show()
     {
         isVisible = true;
+        scrollLineOffset = 0;
     }
 
     public void Hide()
@@ -664,6 +602,8 @@ public class EnvironmentInfoDisplay : MonoBehaviour
     public void Toggle()
     {
         isVisible = !isVisible;
+        if (isVisible)
+            scrollLineOffset = 0;
     }
 
     public void SetToggleKey(KeyCode key)
