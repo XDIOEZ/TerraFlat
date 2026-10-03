@@ -58,7 +58,7 @@ public static partial class DroppedItemService
     /// <summary>先成功创建掉落态，再由调用者提交库存扣减；passive 不实例化完整 Item。</summary>
     public static DroppedItemHandle Spawn(ItemData source, Vector2 position, Vector2? destination = null,
         float duration = 0f, float rotation = 0f, float bezierOffset = 1f,
-        float arcHeight = 1f, float rotationSpeed = 720f)
+        float arcHeight = 1f, float rotationSpeed = 720f, bool randomizeRotation = true)
     {
         if (source?.Stack == null || source.Stack.Amount <= 0f ||
             float.IsNaN(source.Stack.Amount) || float.IsInfinity(source.Stack.Amount))
@@ -74,7 +74,10 @@ public static partial class DroppedItemService
         Vector2 spawnPosition = destination.HasValue
             ? position
             : position + UnityEngine.Random.insideUnitCircle * DropPositionJitterRadius;
-        float finalRotation = rotation + UnityEngine.Random.Range(-DropRotationJitterDegrees, DropRotationJitterDegrees);
+        // 精确姿态入口可关闭二次抖动，避免覆盖调用方已经确定好的旋转。
+        float finalRotation = randomizeRotation
+            ? rotation + UnityEngine.Random.Range(-DropRotationJitterDegrees, DropRotationJitterDegrees)
+            : rotation;
         if (!definition.UsesLightweightWorldDrop || !UsesLightweightDrops)
             return SpawnItemBacked(source, spawnPosition, destination, duration, finalRotation,
                 bezierOffset, arcHeight, rotationSpeed);

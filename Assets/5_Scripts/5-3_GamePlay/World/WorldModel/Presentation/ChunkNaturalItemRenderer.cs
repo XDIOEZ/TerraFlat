@@ -21,7 +21,6 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IIncrementalChunkV
 
     private const float AutoSaveFrameBudgetSeconds = 0.0025f;
     private const float LooseItemOffsetRadius = 0.15f;
-    private const float LooseItemRotationDegrees = 15f;
     private static readonly ProfilerMarker NaturalItemSpawnMarker =
         new("FlatWorld.ChunkStreaming.SpawnNaturalItem");
     private static readonly ProfilerMarker NaturalItemCaptureMarker =
@@ -524,7 +523,7 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IIncrementalChunkV
                     {
                         // 已经用稳定 GUID 生成了偏移，显式传同一终点避免服务再叠一层随机位移。
                         DroppedItemHandle handle = DroppedItemService.Spawn(looseData, position, position,
-                            rotation: rotation.eulerAngles.z);
+                            rotation: rotation.eulerAngles.z, randomizeRotation: false);
                         try { chunkManager.MarkNaturalItemRemoved(address, placement.Guid); }
                         catch { DroppedItemService.Remove(handle); throw; }
                         return true;
@@ -611,8 +610,7 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IIncrementalChunkV
 
             hash = hash * 277803737u + 1013904223u;
             float rotation01 = (hash & 0xffffu) / 65535f;
-            rotation = Quaternion.Euler(0f, 0f,
-                Mathf.Lerp(-LooseItemRotationDegrees, LooseItemRotationDegrees, rotation01));
+            rotation = Quaternion.Euler(0f, 0f, rotation01 * 360f);
         }
     }
 
