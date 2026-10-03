@@ -98,6 +98,7 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
     private readonly List<ICombatDamageContextModifier> contextModifiers = new List<ICombatDamageContextModifier>(); // 装配时缓存的能力。
     private bool windowOverlapScanEnabled;
     private bool lastColliderEnabled = false;
+    private bool animationDrivenDamageWindow; // 动画武器按有效窗口检测命中，不用周期伤害间隔限制采样。
     private bool tileDamageAppliedThisWindow;
     private bool nonDamageableImpactAppliedThisWindow;
     private float damageRangeMultiplier = 1f;
@@ -224,11 +225,16 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
         DeliveryCapabilities = FlatWorld.Combat.CombatDeliveryCapabilities.None;
         explicitProjectileSweep = false;
         contextModifiers.Clear();
+        animationDrivenDamageWindow = false;
         if (item != null)
             foreach (Module module in item.itemMods.Mods.Values)
+            {
+                if (module is Mod_Weapon_AnimationAction)
+                    animationDrivenDamageWindow = true;
                 // Mod_Damage 本身是上下文聚合器；同一 Item 可有多个伤害盒，聚合器之间禁止互相递归。
                 if (module is not Mod_Damage && module is ICombatDamageContextModifier modifier)
                     contextModifiers.Add(modifier);
+            }
         var contract = default(FlatWorld.Combat.CombatDamageContext);
         ModifyDamageContext(ref contract);
         NormalizeDamageValues();
@@ -264,6 +270,22 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
     private void LateUpdate()
     {
         SyncBoundWeaponHitbox();
+        if (animationDrivenDamageWindow)
+        {
+            // Animator 本帧写完姿态和开关后再登记窗口，避免第一段短挥砍只查到起始位置。
+            bool openedWindow = UpdateDamageWindowState();
+            if (openedWindow || damageCollider == null || !damageCollider.enabled || !CanDealDamageNow())
+                return;
+
+            if (!explicitProjectileSweep && EnableOnTriggerEnterDamage && RemainingAttackTargets > 0)
+            {
+                ScanCurrentOverlapsAndApplyDamageForWindow(continueWindow: true);
+                EmitDataPulse();
+            }
+            TryApplyDamageToTilemap();
+            return;
+        }
+
         // 动画开启的一次窗口会移动：每帧检测新进入 OBB 的 ECS 目标，窗口集合仍保证每目标只受击一次。
         if (!explicitProjectileSweep && EnableOnTriggerEnterDamage && DamageInterval < 0f &&
             damageCollider != null && damageCollider.enabled)
@@ -280,25 +302,10 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
             BindToWeaponRenderer(item.Sprite);
         }
 
-        if (damageCollider != null)
-        {
-            bool colliderEnabled = damageCollider.enabled;
-            if (colliderEnabled != lastColliderEnabled)
-            {
-                lastColliderEnabled = colliderEnabled;
-                if (colliderEnabled)
-                {
-                    BeginTileDamageWindow();
-                    // 动画片段会直接切换 BoxCollider2D.m_Enabled，
-                    // 因此这里也是通用的攻击动作音效入口。
-                    CombatAudioRouter.PlayWeaponAttack(this);
-                }
-                else
-                {
-                    EndDamageWindow();
-                }
-            }
-        }
+        if (animationDrivenDamageWindow)
+            return;
+
+        UpdateDamageWindowState();
 
         // TilemapCollider2D 的整层只会产生一个 Collider 回调；主动查询当前攻击触发器，
         // 才能在连续墙面内移动时仍准确选中当前格，并保证一次攻击窗只伤一格。
@@ -316,6 +323,32 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
             if (!explicitProjectileSweep && Time.timeAsDouble >= nextDataPulseTime)
                 EmitDataPulse();
         }
+    }
+
+    /// <summary>登记真实碰撞体的窗口开关，返回本次是否已完成开启时的即时查询。</summary>
+    private bool UpdateDamageWindowState()
+    {
+        if (damageCollider != null)
+        {
+            bool colliderEnabled = damageCollider.enabled;
+            if (colliderEnabled != lastColliderEnabled)
+            {
+                lastColliderEnabled = colliderEnabled;
+                if (colliderEnabled)
+                {
+                    BeginTileDamageWindow();
+                    // 动画片段会直接切换 BoxCollider2D.m_Enabled，
+                    // 因此这里也是通用的攻击动作音效入口。
+                    CombatAudioRouter.PlayWeaponAttack(this);
+                    return true;
+                }
+                else
+                {
+                    EndDamageWindow();
+                }
+            }
+        }
+        return false;
     }
     #endregion
 
@@ -382,8 +415,8 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
         // 如果启用了进入时伤害，则在尊重伤害间隔的前提下尝试立即造成一次伤害
         if (EnableOnTriggerEnterDamage && CanDealDamageNow())
         {
-            // DamageInterval < 0：仅做一次进入伤害，不参与冷却（保持旧行为）
-            if (DamageInterval < 0f)
+            // 动画窗口或非周期攻击按窗口去重，受击冷却仍交给目标自身裁定。
+            if (animationDrivenDamageWindow || DamageInterval < 0f)
             {
                 ApplyDamageToReceiver(receiver, other);
             }
@@ -627,7 +660,7 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
 
     private bool IsDamageIntervalReady()
     {
-        return DamageInterval < 0f ||
+        return animationDrivenDamageWindow || DamageInterval < 0f ||
                DamageInterval == 0f ||
                Time.time - lastDamageTime >= DamageInterval;
     }
@@ -1012,13 +1045,14 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
     /// <summary>
     /// 伤害窗口开启后主动扫描当前重叠目标，弥补碰撞体后开时缺少 Enter 事件的问题。
     /// </summary>
-    protected void ScanCurrentOverlapsAndApplyDamageForWindow()
+    protected void ScanCurrentOverlapsAndApplyDamageForWindow(bool continueWindow = false)
     {
         if (damageCollider == null || !damageCollider.enabled)
             return;
 
         windowOverlapScanEnabled = true;
-        windowScanHitReceivers.Clear();
+        if (!continueWindow)
+            windowScanHitReceivers.Clear();
         Physics2D.SyncTransforms();
         overlapColliders.Clear();
 
@@ -1045,9 +1079,7 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
             if (!EnableOnTriggerEnterDamage || !CanDealDamageNow())
                 continue;
 
-            if (DamageInterval < 0f ||
-                DamageInterval == 0f ||
-                Time.time - lastDamageTime >= DamageInterval)
+            if (IsDamageIntervalReady())
             {
                 ApplyDamageToReceiver(receiver, overlap);
             }

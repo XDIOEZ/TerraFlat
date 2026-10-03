@@ -43,6 +43,7 @@ description: "Use when: 定位或修改 FlatWorld 的伤害、生命值、身体
 - 旧式 `Mod_ColdWeapon` 仍通过 `ColdWeaponStaminaObserver.state.StaminaConsumeSpeed` 按秒扣除体力，基础值序列化在 `Assets/2_Prefabs/Gameplay/Modules/Combat/Mod_ColdWeapon.prefab`；批量调整“所有武器体力消耗”时必须同时覆盖动画武器、弓与该旧链路。`StaminaConsumeSpeedRate` 是独立倍率，不要在降低基础消耗时同时缩放两者而造成重复倍率。
 - 动画武器的伤害盒必须跟随 `Render` 下实际武器 `SpriteRenderer` 的局部位置、旋转、缩放，并优先用 Sprite 物理轮廓/紧致网格计算最小包围矩形；只有拿不到轮廓时才回退 Sprite bounds，同时处理 `flipX/flipY`。默认使用 `TightSprite`；斧、镐、矛、锄、铲这类统一朝右上姿势的工具可配置 `UpperRightQuadrant`，按标准姿势可见范围的右上四分之一生成伤害盒并继续随整段挥动动画移动。禁止为每把工具手写碰撞体偏移。
 - `Mod_Damage` 开启伤害窗口时必须主动扫描当前重叠目标，不能只依赖 `OnTriggerEnter2D`；玩家、AI 与技能统一走公共伤害窗口，避免碰撞体后开时漏掉已经重叠的接收器。
+- 动画武器按 `Mod_Weapon_AnimationAction` 模块资格在 Animator 更新后的 `LateUpdate` 登记窗口并逐帧查询 GO/ECS；`DamageInterval` 不能限制挥动采样，否则短窗口只查起始姿态。窗口命中集合跨帧保留、关闭时清空，目标受击冷却仍由接收侧裁定；非动画持续伤害保留周期 Pulse。
 - 标准物品武器的 `Mod_Damage.MaxAttackTargets` 默认统一为 `3`；特殊单体攻击可显式调低。Prefab 与 Item JSON 都可能覆盖 C# 默认值，调整默认目标数时必须同步检查这两类序列化配置。
 - `DamageSender` 与 `DamageReciver` 是战斗专用 Trigger 对，Physics2D 矩阵中两层都只能与彼此接触；交互、拾取、玩家身体和普通阻挡不得与任一伤害层建立接触对。`DamageReceiver` 必须自带同节点专用 Trigger Collider，禁止借用 Item 根的普通阻挡 Collider；冲撞技能等物理伤害发送器也必须归入 `DamageSender`。Tile/建筑伤害继续使用不依赖接触矩阵的显式空间查询。
 - 带 `Owner` 的武器、投射物仍保持伤害物品自身作为 `IDamageSender.attacker`，兼容资源节点、难度与既有结算语义；防自伤只在 Trigger、主动重叠扫描和最终结算入口额外排除 `item.Owner`，禁止为了防自伤全局改写攻击者身份。
