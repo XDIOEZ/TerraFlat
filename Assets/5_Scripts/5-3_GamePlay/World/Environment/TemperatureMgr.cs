@@ -2,7 +2,7 @@ using System;
 using Sirenix.OdinInspector;
 using UnityEngine;
 
-/// <summary>统一逐格环境温度查询与角色体温结算；局部冷热源由空间缓存独立维护，角色每 0.25 秒采样一次。</summary>
+/// <summary>统一逐格环境温度查询与角色体表温度结算；局部冷热源由空间缓存独立维护，角色每 0.25 秒采样一次。</summary>
 public partial class TemperatureMgr : SingletonAutoMono<TemperatureMgr>
 {
 #region 字段
@@ -35,10 +35,9 @@ public partial class TemperatureMgr : SingletonAutoMono<TemperatureMgr>
             data.RuntimeCoolingSpeedMultiplier = 1f;
     }
 
-    /// <summary>推进角色体温；超出安全范围后的状态与伤害由 Buff 系统统一结算。</summary>
+    /// <summary>推进角色体表温度；超出安全范围后的状态与伤害由 Buff 系统统一结算。</summary>
     public void ProcessTemperature(
         Mod_Temperature.TemperatureData data,
-        float heatConductionRate,
         float deltaTime,
         Action<float> onTemperatureChanged,
         float? naturalTemperature = null)
@@ -53,11 +52,11 @@ public partial class TemperatureMgr : SingletonAutoMono<TemperatureMgr>
             throw new ArgumentNullException(nameof(onTemperatureChanged));
         }
 
-        float nextTemperature = EvaluateNextTemperature(data, heatConductionRate, deltaTime, naturalTemperature);
+        float nextTemperature = EvaluateNextTemperature(data, deltaTime, naturalTemperature);
         onTemperatureChanged(nextTemperature);
     }
 
-    public float EvaluateNextTemperature(Mod_Temperature.TemperatureData data, float heatConductionRate, float deltaTime,
+    public float EvaluateNextTemperature(Mod_Temperature.TemperatureData data, float deltaTime,
         float? naturalTemperature = null)
     {
         if (data == null)
@@ -65,17 +64,19 @@ public partial class TemperatureMgr : SingletonAutoMono<TemperatureMgr>
             throw new ArgumentNullException(nameof(data));
         }
 
-        float targetTemperature =
-            data.AmbientTemperature + data.Insulation + data.RuntimeAmbientOffset;
+        float targetTemperature = data.AmbientTemperature + data.RuntimeAmbientOffset;
         // 临时 Buff 增温不参与环境趋近计算，伤害仍读取回调提交后的有效体温。
         float currentTemperature = naturalTemperature ?? data.CurrentTemperature;
         float directionMultiplier = targetTemperature < currentTemperature
             ? data.RuntimeCoolingSpeedMultiplier
             : 1f;
+        float transferPerSecond = Mathf.Max(
+            1f,
+            Mathf.Floor(Mathf.Abs(targetTemperature) * 0.01f + 0.5f));
         return ThermalRuntime.AdvanceTowards(
             currentTemperature,
             targetTemperature,
-            heatConductionRate,
+            transferPerSecond,
             deltaTime,
             Mathf.Max(0f, data.RuntimeChangeSpeedMultiplier) * Mathf.Max(0f, directionMultiplier));
     }

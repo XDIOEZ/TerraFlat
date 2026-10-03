@@ -16,6 +16,7 @@ description: "Use when: 定位或修改 FlatWorld 的背包、槽位、快捷栏
 - 装备：`Items/Equipment/{Mod_Equipment,Equipment_SO,EquipmentInstance*,Mod_EquipmentStore}.cs`
 - 通用装备能力挂在 `Item` 上；AI/普通 Item 的装备逻辑必须按 `EquipmentSlot.*` 标签选槽，不能依赖玩家 UI 索引，也不能回退绑定全局 `Inventory_Hand.PlayerHand`。
 - 通用 `Mod_Equipment` 只在宿主没有其它当前可用世界交互时响应 E；传送门、机器、作物等主玩法交互必须优先，避免“所有 Item 都能装备”反过来抢占宿主原有交互。
+- 温度衣物采用耐受范围语义：`EquipmentInstance_ThermalInsulation` 只降低安全体表温度下限或提高上限，不修改当前体表温度、环境目标温度或传热速度；耐寒与耐热使用独立数值。
 - 食物/农业：`Entities/Item/Mod_Food.cs`、种子/成长模块与 `Mod_Grow.AuthoritativeCrop.cs`
 - 移动营养消耗：`Entities/Move/Mod_Mover.cs` 与 `Mod_Food` 分别维护营养、水分的移动倍率。
 - Prefab：`Assets/2_Prefabs/{Inventory,Equipment,Food,Plant,Seed,Tools}/`

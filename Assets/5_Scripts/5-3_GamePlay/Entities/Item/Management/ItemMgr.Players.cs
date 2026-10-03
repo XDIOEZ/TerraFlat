@@ -158,8 +158,6 @@ public partial class ItemMgr
         Player player = CreatePlayer(playerData);
         if (wasCreated)
             ApplyPlayerCreationTemplate(player, creationTemplate);
-        else
-            creationTemplate.ApplyHeatConductionRate(playerData);
         player.SetProfileContext(
             localProfile: true,
             profileDataWasCreated: wasCreated,
@@ -353,7 +351,6 @@ public partial class ItemMgr
 
     private Player CreatePlayer(Data_Player data)
     {
-        ResolveDefaultPlayerCreationTemplate().ApplyHeatConductionRate(data);
         Player newPlayer = (Player)ItemMgr.Instance.InstantiateItem(data, Vector3.zero, Quaternion.identity, Vector3.one, new GameObject("Players"));
 
         // ✅ 将父对象设置为空（放到场景根节点下）

@@ -6,7 +6,7 @@ using FlatWorld.Networking;
 
 public partial class Mod_Temperature : Module, IEnvironmentAdjustable
 {
-    public const float NormalBodyTemperature = 36.5f; // 玩家正常体温，也是重生后的恢复目标
+    public const float NormalSurfaceTemperature = 36.5f; // 玩家默认体表温度，也是重生后的恢复目标
 
     public override ModuleTickMode TickMode => ModuleTickMode.FixedInterval;
     public override float FixedTickInterval => 0.25f;
@@ -17,17 +17,17 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable
     [MemoryPackable]
     public partial class TemperatureData
     {
-        [LabelText("当前体温"), SuffixLabel("℃", true), PropertyTooltip("角色当前体温。")]
-        public float CurrentTemperature = NormalBodyTemperature; // 当前体温(℃)
+        [LabelText("当前体表温度"), SuffixLabel("℃", true), PropertyTooltip("角色当前最外层温度。")]
+        public float CurrentTemperature = NormalSurfaceTemperature; // 当前体表温度(℃)
         [HideInInspector]
         public float AmbientTemperature = 20f; // 当前环境温度(℃)
-        [LabelText("保温系数"), SuffixLabel("℃", true), PropertyTooltip("正数偏保暖，负数偏散热。")]
-        public float Insulation = 0f; // 保温系数(℃，正数偏保暖，负数偏散热)
+        [HideInInspector]
+        public float Insulation = 0f; // 保留 MemoryPack 字段槽位，不再参与温度计算。
 
-        [LabelText("安全体温下限"), SuffixLabel("℃", true), PropertyTooltip("体温低于该值后获得低温冻伤。")]
-        public float SafeTemperatureMin = 5f; // 低于该体温获得低温冻伤(℃)
-        [LabelText("安全体温上限"), SuffixLabel("℃", true), PropertyTooltip("体温高于该值后获得热射病。")]
-        public float SafeTemperatureMax = 50f; // 高于该体温获得热射病(℃)
+        [LabelText("安全体表温度下限"), SuffixLabel("℃", true), PropertyTooltip("体表温度低于该值后获得低温冻伤。")]
+        public float SafeTemperatureMin = 5f; // 低于该体表温度获得低温冻伤(℃)
+        [LabelText("安全体表温度上限"), SuffixLabel("℃", true), PropertyTooltip("体表温度高于该值后获得热射病。")]
+        public float SafeTemperatureMax = 50f; // 高于该体表温度获得热射病(℃)
 
         [MemoryPackIgnore]
         public float RuntimeAmbientOffset = 0f; // 天气暴露、火源等运行时环境修正
@@ -121,7 +121,6 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable
         ProcessWaterEntryCooling(deltaTime);
         TemperatureMgr.Instance.ProcessTemperature(
             Data,
-            item.itemData.HeatConductionRate,
             deltaTime,
             SetNaturalTemperature,
             NaturalTemperature);
@@ -183,7 +182,7 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable
         ResetWaterExposureState();
         ClearTemperatureConditionBuffs();
         ClearTemperatureSafetyRetreat();
-        SetNaturalTemperature(NormalBodyTemperature);
+        SetNaturalTemperature(NormalSurfaceTemperature);
     }
 
     /// <summary>以连续水域入水体温为基准，只在有效浸没档位变化时更新平滑目标。</summary>

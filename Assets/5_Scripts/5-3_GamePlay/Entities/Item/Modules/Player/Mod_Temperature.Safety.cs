@@ -8,7 +8,7 @@ public static class TemperatureConditionBuffIds
     public const string Heatstroke = "热射病";
 }
 
-/// <summary>角色安全体温范围、温度疾病与 AI 安全位置回退。</summary>
+/// <summary>角色安全体表温度范围、温度疾病与 AI 安全位置回退。</summary>
 public partial class Mod_Temperature
 {
     #region 安全体温范围
@@ -145,7 +145,7 @@ public partial class Mod_Temperature
         if (temperatureSafetyMovement == null)
             return;
 
-        float effectiveAmbient = Data.AmbientTemperature + Data.Insulation + Data.RuntimeAmbientOffset;
+        float effectiveAmbient = Data.AmbientTemperature + Data.RuntimeAmbientOffset;
         bool bodySafe = IsTemperatureSafe(Data.CurrentTemperature);
         bool ambientSafe = IsTemperatureSafe(effectiveAmbient);
 
@@ -179,7 +179,7 @@ public partial class Mod_Temperature
         if (temperatureSafetyMovement == null || item == null)
             return;
 
-        float effectiveAmbient = Data.AmbientTemperature + Data.Insulation + Data.RuntimeAmbientOffset;
+        float effectiveAmbient = Data.AmbientTemperature + Data.RuntimeAmbientOffset;
         if (!IsTemperatureSafe(Data.CurrentTemperature) || !IsTemperatureSafe(effectiveAmbient))
             return;
 

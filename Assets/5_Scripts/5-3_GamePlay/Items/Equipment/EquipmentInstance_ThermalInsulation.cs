@@ -1,11 +1,15 @@
 using MemoryPack;
+using UnityEngine;
 
-/// <summary>衣物、裤装和袜子的保温效果；没有体温模块的装备宿主会自然忽略该效果。</summary>
+/// <summary>衣物、裤装和袜子的温度耐受效果；只扩展安全范围，不改变体表温度或传热速度。</summary>
 [System.Serializable]
 [MemoryPackable]
 public partial class EquipmentInstance_ThermalInsulation : EquipmentInstance
 {
-    public float InsulationIncrease;
+    [Min(0f)]
+    public float ColdToleranceIncrease;
+    [Min(0f)]
+    public float HeatToleranceIncrease;
 
     [MemoryPackIgnore]
     private Mod_Temperature appliedTemperature;
@@ -19,7 +23,10 @@ public partial class EquipmentInstance_ThermalInsulation : EquipmentInstance
         if (temperature?.Data == null)
             return;
 
-        temperature.Data.Insulation += InsulationIncrease;
+        temperature.SetSafeTemperatureRangeModifier(
+            this,
+            -Mathf.Max(0f, ColdToleranceIncrease),
+            Mathf.Max(0f, HeatToleranceIncrease));
         appliedTemperature = temperature;
     }
 
@@ -29,8 +36,7 @@ public partial class EquipmentInstance_ThermalInsulation : EquipmentInstance
 
     public override void UnEquip(Item item)
     {
-        if (appliedTemperature?.Data != null)
-            appliedTemperature.Data.Insulation -= InsulationIncrease;
+        appliedTemperature?.RemoveSafeTemperatureRangeModifier(this);
 
         appliedTemperature = null;
     }
