@@ -54,7 +54,7 @@ description: "Use when: 定位或修改 FlatWorld 的地图内容、Tilemap、�
 - 自然植物恢复资格由 `INaturalRenewalPolicy` 记录到生态存档的 `RenewalYears`；只有生成成功才清除移除标记和补位计划。玩家种植不参加自然补位，建筑、耕地及平台所在格不补野生植物。
 
 - 正式世界修改和差量存档始终通过 ChunkRuntime 的独立 Liquid 层；Ground 数字 ID 不承担任何液体身份。
-- 权威液深仍是 0～1，玩法按十分位解释为 1～10 档；海洋 Ground 不再按液深决定底材，而直接读取生成 `height`：`0.49～0.51` 为沙地海滩/浅海，`<0.49` 为石地海底。湖泊继续使用河床规则，禁止再用 `LiquidDepth` 回改 Ground。
+- 权威液深仍是 0～1，玩法按十分位解释为 1～10 档；海洋 Ground 不再按液深决定底材，而直接读取生成 `height`：`terrain.oceanSandMinimumHeight`（当前 `0.498`）到 `SeaLevel` 为沙地浅海，低于该阈值为石地海底；海面以上沙滩继续由 `BeachLevel` 控制。湖泊继续使用河床规则，禁止再用 `LiquidDepth` 回改 Ground。
 - 天然生成液体在写入 Chunk 前统一向上取整到 0.1 档位，原始深度只要大于 0 就至少写入 0.1；海洋、河流、湖泊、地下水与岩浆共用该量化规则，避免生成 0.001 等无法按玩法份数解释的液深。
 
 ## 验证

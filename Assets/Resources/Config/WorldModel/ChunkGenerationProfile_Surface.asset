@@ -47,6 +47,8 @@ MonoBehaviour:
     Value: 0.09
   - Id: terrain.seaLevel
     Value: 0.5
+  - Id: terrain.oceanSandMinimumHeight
+    Value: 0.498
   - Id: terrain.beachLevel
     Value: 0.51
   - Id: terrain.mountainLevel

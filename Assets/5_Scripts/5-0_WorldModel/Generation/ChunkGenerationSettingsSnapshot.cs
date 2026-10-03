@@ -189,6 +189,8 @@ namespace FlatWorld.WorldModel
             CaveFloorTileId = GetInt(numbers, "cave.floorTileId", StoneTileId);
             CaveWallTileId = GetInt(numbers, "cave.wallTileId", StoneTileId);
             SeaLevel = Clamp01(GetDouble(numbers, "terrain.seaLevel", 0.30d));
+            OceanSandMinimumHeight = Math.Min(SeaLevel,
+                Clamp01(GetDouble(numbers, "terrain.oceanSandMinimumHeight", 0.498d)));
             BeachLevel = Clamp01(GetDouble(numbers, "terrain.beachLevel", SeaLevel + 0.055d));
             MountainLevel = Clamp(
                 GetDouble(numbers, "terrain.mountainLevel", 0.72d),
@@ -520,6 +522,8 @@ namespace FlatWorld.WorldModel
         public int CaveWallTileId { get; }
         /// <summary>高度低于这个数时生成海洋。</summary>
         public double SeaLevel { get; }
+        /// <summary>海洋格达到这个高度后才使用沙底，更深处统一使用石底。</summary>
+        public double OceanSandMinimumHeight { get; }
         /// <summary>高于海面但低于这个数时生成沙滩。</summary>
         public double BeachLevel { get; }
         /// <summary>高度达到这个数时进入二维山地群系。</summary>

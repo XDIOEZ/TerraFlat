@@ -18,8 +18,6 @@ namespace FlatWorld.WorldModel
         /// <summary>纯区块生成规则版本；气候、群系、河流或生态空间分布规则改变时递增。</summary>
         public const int CurrentGenerationSignature = 58;
 
-        private const double RockySeabedHeight = 0.49d;
-
         private readonly LiquidTypeCatalog liquidTypes;
         /// <summary>资源就绪后注入会话液体表；离线纯算法测试可以使用本体最小目录。</summary>
         public DeterministicChunkGenerator(LiquidTypeCatalog liquidTypes = null)
@@ -824,8 +822,8 @@ namespace FlatWorld.WorldModel
             if (biome == SurfaceBiomeKind.Ocean)
             {
                 biomeId = (int)biome;
-                // 海底底材只看生成高度：0.49 以下铺石地，靠岸浅海保留沙地。
-                groundTileId = height < RockySeabedHeight
+                // 海底底材只看生成高度：低于浅海沙底阈值铺石地，靠岸浅海保留沙地。
+                groundTileId = height < settings.OceanSandMinimumHeight
                     ? settings.StoneTileId
                     : settings.SandTileId;
                 flags = TerrainCellFlags.Walkable;
