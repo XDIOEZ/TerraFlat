@@ -1,12 +1,13 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 /// <summary>
 /// 行囊虚拟化网格：只保留可视区域附近的槽位对象，滚动时复用并重绑真实库存索引。
 /// </summary>
 [DisallowMultipleComponent]
-public sealed class InventoryVirtualizedSlotGrid : MonoBehaviour
+public sealed class InventoryVirtualizedSlotGrid : MonoBehaviour, IScrollHandler
 {
     #region 配置与状态
 
@@ -169,6 +170,15 @@ public sealed class InventoryVirtualizedSlotGrid : MonoBehaviour
     private void OnScrollValueChanged(Vector2 _)
     {
         RebindVisibleSlots(false);
+    }
+
+    /// <summary>行囊空白区域收到滚轮时同样交给内部滚动列表。</summary>
+    public void OnScroll(PointerEventData eventData)
+    {
+        if (scrollRect == null || eventData == null)
+            return;
+
+        scrollRect.OnScroll(eventData);
     }
 
     private void EnsurePoolCapacity()
