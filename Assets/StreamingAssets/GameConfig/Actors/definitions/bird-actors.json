@@ -226,7 +226,7 @@
             "HoneyContributionCost": 500.0,
             "HoneyMealGain": 500.0,
             "CropGainPerSecond": 100.0,
-            "FlowerGainPerSecond": 0.5,
+            "FlowerGainPerSecond": 10.0,
             "PatrolFlightSpeedMultiplier": 0.5,
             "AngryLockRadius": 3.0,
             "AngerMaximum": 10.0,

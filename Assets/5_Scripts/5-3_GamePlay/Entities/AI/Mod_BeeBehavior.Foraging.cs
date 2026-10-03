@@ -7,11 +7,14 @@ using UnityEngine;
 public sealed partial class Mod_BeeBehavior
 {
     #region 采蜜目标
+    private static readonly Dictionary<(FlatWorld.WorldModel.WorldAddress Address, int Guid), Mod_BeeBehavior>
+        flowerReservations = new(); // 地表花采蜜占位，同一朵花只允许一只蜜蜂锁定。
     private readonly List<Item> forageCandidates = new(); // ItemMgr 空间查询缓冲。
     private readonly HashSet<Item> forageDedupe = new(); // 循环世界镜像去重。
     private readonly HashSet<Vector2Int> forageChunks = new(); // 当前九宫格区块。
     private Item forageCrop; // 有 BeeForage.Crop 标签的植株。
     private int forageFlowerGuid; // 无 Item 地表花朵的生成点身份。
+    private FlatWorld.WorldModel.WorldAddress forageFlowerAddress; // 地表花所属区块地址。
     private int forageEntityGuid; // ECS 作物的稳定身份，不为采蜜创建资源 GameObject。
     private Vector2 foragePosition;
     private float forageRate;
@@ -173,6 +176,11 @@ public sealed partial class Mod_BeeBehavior
 
         if (!HasActiveForageTarget)
             return false;
+        if (forageFlowerGuid != 0 && !TryReserveFlower())
+        {
+            ClearForageTarget();
+            return false;
+        }
         return true;
     }
 
@@ -192,7 +200,8 @@ public sealed partial class Mod_BeeBehavior
                 !definition.IsGroundCover || !definition.HasTag(FlowerNectarTag) ||
                 manager.IsNaturalItemRemoved(chunk.Address, placement.Guid) ||
                 !GroundCoverSystem.TryFindAt(chunk, placement.LocalX, placement.LocalY, manager,
-                    out GroundCoverTarget visible) || visible.Placement.Guid != placement.Guid)
+                    out GroundCoverTarget visible) || visible.Placement.Guid != placement.Guid ||
+                IsFlowerReservedByOther(chunk.Address, placement.Guid))
                 continue;
             Vector2 position = new GroundCoverTarget(chunk, placement, definition).WorldPosition;
             if (!Mod_AI_Bird.CanLand(position))
@@ -203,6 +212,7 @@ public sealed partial class Mod_BeeBehavior
             nearest = distance;
             forageCrop = null;
             forageFlowerGuid = placement.Guid;
+            forageFlowerAddress = chunk.Address;
             forageEntityGuid = 0;
             foragePosition = WorldTopologyRuntime.NormalizePosition(position);
             forageRate = FlowerGainPerSecond;
@@ -217,15 +227,74 @@ public sealed partial class Mod_BeeBehavior
         if (forageCrop != null)
             return !forageCrop.DestructionHandled && forageCrop.gameObject.activeInHierarchy &&
                 forageCrop.itemData?.Tags?.Contains(CropNectarTag) == true;
-        return GroundCoverSystem.TryResolve(foragePosition, out GroundCoverTarget flower) &&
+        return OwnsFlowerReservation() &&
+            GroundCoverSystem.TryResolve(foragePosition, out GroundCoverTarget flower) &&
             flower.Placement.Guid == forageFlowerGuid && flower.Definition.HasTag(FlowerNectarTag);
+    }
+
+    /// <summary>查询地表花是否已被其它蜜蜂锁定，避免多只蜜蜂堆在同一朵花上。</summary>
+    private bool IsFlowerReservedByOther(FlatWorld.WorldModel.WorldAddress address, int guid)
+    {
+        return TryGetFlowerReservation(address, guid, out Mod_BeeBehavior owner) &&
+            !ReferenceEquals(owner, this);
+    }
+
+    /// <summary>选中地表花后立即占位，直到离开、失效或卸载时释放。</summary>
+    private bool TryReserveFlower()
+    {
+        var key = (forageFlowerAddress, forageFlowerGuid);
+        if (TryGetFlowerReservation(forageFlowerAddress, forageFlowerGuid,
+                out Mod_BeeBehavior owner) &&
+            !ReferenceEquals(owner, this))
+            return false;
+        flowerReservations[key] = this;
+        return true;
+    }
+
+    /// <summary>采蜜过程中持续确认当前蜜蜂仍持有这朵花的占位。</summary>
+    private bool OwnsFlowerReservation()
+    {
+        return forageFlowerGuid != 0 &&
+            TryGetFlowerReservation(forageFlowerAddress, forageFlowerGuid,
+                out Mod_BeeBehavior owner) &&
+            ReferenceEquals(owner, this);
+    }
+
+    /// <summary>自动清理已经卸载或切换目标的旧占位，避免静态表残留。</summary>
+    private bool TryGetFlowerReservation(FlatWorld.WorldModel.WorldAddress address, int guid,
+        out Mod_BeeBehavior owner)
+    {
+        var key = (address, guid);
+        if (!flowerReservations.TryGetValue(key, out owner))
+            return false;
+        bool stale = owner == null || owner.forageFlowerGuid != guid ||
+            !owner.forageFlowerAddress.Equals(address) || owner.item == null ||
+            owner.item.DestructionHandled || !owner.item.gameObject.activeInHierarchy;
+        if (!stale)
+            return true;
+        flowerReservations.Remove(key);
+        owner = null;
+        return false;
+    }
+
+    /// <summary>只释放自己持有的花朵占位，避免误删其它蜜蜂的新占位。</summary>
+    private void ReleaseFlowerReservation()
+    {
+        if (forageFlowerGuid == 0)
+            return;
+        var key = (forageFlowerAddress, forageFlowerGuid);
+        if (flowerReservations.TryGetValue(key, out Mod_BeeBehavior owner) &&
+            ReferenceEquals(owner, this))
+            flowerReservations.Remove(key);
     }
 
     /// <summary>切换状态时仅抛弃临时采蜜目标，不改变本蜂饱食度。</summary>
     private void ClearForageTarget()
     {
+        ReleaseFlowerReservation();
         forageCrop = null;
         forageFlowerGuid = 0;
+        forageFlowerAddress = default;
         forageEntityGuid = 0;
         foragePosition = default;
         forageRate = 0f;

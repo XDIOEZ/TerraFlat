@@ -112,6 +112,7 @@ public sealed partial class Mod_BeeBehavior
     {
         if (!IsLivingCreature(target))
             return;
+        ClearForageTarget();
         hiveDefenseTarget = target;
         lockedTarget = target;
         lastSeenPosition = target.transform.position;

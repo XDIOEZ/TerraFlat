@@ -48,7 +48,7 @@ public sealed partial class Mod_BeeBehavior : Module, IBirdFlightPilot, IDamageS
     [Min(0f)] public float HoneyContributionCost = 500f; // 返巢贡献一蜜的饱食度成本。
     [Min(0f)] public float HoneyMealGain = 500f; // 消耗巢蜜一份的恢复值。
     [Min(0f)] public float CropGainPerSecond = 100f; // 农作物采蜜恢复速度。
-    [Min(0f)] public float FlowerGainPerSecond = 0.5f; // 花朵采蜜恢复速度。
+    [Min(0f)] public float FlowerGainPerSecond = 10f; // 花朵采蜜每秒恢复十点饱食度。
     [Min(0.01f)] public float PatrolFlightSpeedMultiplier = 0.5f; // 悠闲巡逻时使用基础飞行速度的一半。
     [Min(0.1f)] public float ForageScanInterval = 1f; // 九宫格资源扫描间隔。
     [Min(0.1f)] public float ForageLandingDistance = 0.3f; // 采蜜停落半径。
