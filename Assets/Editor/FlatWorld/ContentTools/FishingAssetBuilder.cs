@@ -281,16 +281,15 @@ public static class FishingAssetBuilder
             binding.CloseButton = root.GetComponentsInChildren<Button>(true).First(value => value.name == "关闭");
             binding.Status = FindText(root, "FWUI_FooterHint");
             SetText(root, "FWUI_标题", "钓竿配置");
-            SetText(root, "FWUI_SectionTitle_INPUT", "鱼钩 · 最多一个");
-            SetText(root, "FWUI_SectionTitle_OUTPUT", "鱼饵 · 最多一份");
             foreach (Transform node in root.GetComponentsInChildren<Transform>(true))
             {
                 if (node == null) continue;
                 if (node.name == "合成按钮" || node.name == "Progress" || node.name.StartsWith("FWUI_FlowArrow") ||
-                    node.name == "FWUI_眉题" || node.name.StartsWith("FWUI_SectionEyebrow") ||
+                    node.name == "FWUI_眉题" || node.name.StartsWith("FWUI_Section") ||
                     node.name == "Crafting Output Reveal" || node.name == "Crafting Output Ghost")
                     node.gameObject.SetActive(false);
             }
+            ConfigureFishingRigVisual(root, binding);
             binding.Status.text = "抛投距离：10 格   收线速度：8 格/秒\n鱼钩：未安装   鱼饵：未挂饵\n鱼钩与鱼饵各限一件；左键抛饵，咬钩后左键收线。";
             binding.Status.fontSize = 15f;
             binding.Status.enableAutoSizing = false;
@@ -313,6 +312,73 @@ public static class FishingAssetBuilder
         }
         finally { PrefabUtility.UnloadPrefabContents(root); }
         Register(PanelPath, "UI_FishingRod", "Prefab");
+    }
+
+    /// <summary>像石臼一样让物品本体成为界面主体，鱼钩和鱼饵按真实挂载关系排布。</summary>
+    private static void ConfigureFishingRigVisual(GameObject root, FishingRodPanelBindings binding)
+    {
+        Sprite rodSprite = AssetDatabase.LoadAssetAtPath<Sprite>(RodSpritePath);
+        if (rodSprite == null) throw new InvalidOperationException("钓鱼竿 UI 缺少本体贴图。\n" + RodSpritePath);
+
+        RectTransform rodVisual = (RectTransform)root.GetComponentsInChildren<Transform>(true)
+            .First(value => value.name == "FWUI_InnerField");
+        rodVisual.name = "FishingRodVisual";
+        SetTopLeftRect(rodVisual, new Vector2(44f, -90f), new Vector2(420f, 296f));
+        Image rodImage = rodVisual.GetComponent<Image>();
+        rodImage.sprite = rodSprite;
+        rodImage.color = Color.white;
+        rodImage.preserveAspect = true;
+        rodImage.raycastTarget = false;
+        foreach (Shadow shadow in rodVisual.GetComponents<Shadow>()) shadow.enabled = false;
+
+        RectTransform line = (RectTransform)root.GetComponentsInChildren<Transform>(true)
+            .First(value => value.name == "Image_1");
+        line.name = "FishingLineVisual";
+        SetTopLeftRect(line, new Vector2(418f, -104f), new Vector2(2f, 126f));
+        line.pivot = new Vector2(0.5f, 1f);
+        line.localEulerAngles = new Vector3(0f, 0f, 31f);
+        Image lineImage = line.GetComponent<Image>();
+        lineImage.sprite = null;
+        lineImage.type = Image.Type.Simple;
+        lineImage.color = new Color32(232, 232, 220, 150);
+        lineImage.raycastTarget = false;
+
+        RectTransform hookMount = binding.HookSlot.transform.parent as RectTransform;
+        RectTransform baitMount = binding.BaitSlot.transform.parent as RectTransform;
+        hookMount.name = "HookMount";
+        baitMount.name = "BaitMount";
+        SetTopLeftRect(hookMount, new Vector2(456f, -176f), new Vector2(82f, 82f));
+        SetTopLeftRect(baitMount, new Vector2(456f, -274f), new Vector2(82f, 82f));
+        line.SetSiblingIndex(Mathf.Min(hookMount.GetSiblingIndex(), baitMount.GetSiblingIndex()));
+        ConfigureRigSlot(binding.HookSlot, 82f);
+        ConfigureRigSlot(binding.BaitSlot, 82f);
+    }
+
+    private static void ConfigureRigSlot(ItemSlot_UI slot, float size)
+    {
+        RectTransform rect = (RectTransform)slot.transform;
+        rect.anchorMin = rect.anchorMax = new Vector2(0f, 1f);
+        rect.pivot = new Vector2(0f, 1f);
+        rect.anchoredPosition = Vector2.zero;
+        rect.sizeDelta = new Vector2(size, size);
+        Image background = slot.GetComponent<Image>();
+        background.color = new Color32(58, 58, 58, 205);
+        background.raycastTarget = true;
+        if (slot.image != null)
+        {
+            slot.image.rectTransform.anchorMin = slot.image.rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
+            slot.image.rectTransform.pivot = new Vector2(0.5f, 0.5f);
+            slot.image.rectTransform.anchoredPosition = Vector2.zero;
+            slot.image.rectTransform.sizeDelta = new Vector2(size - 10f, size - 10f);
+        }
+    }
+
+    private static void SetTopLeftRect(RectTransform rect, Vector2 position, Vector2 size)
+    {
+        rect.anchorMin = rect.anchorMax = new Vector2(0f, 1f);
+        rect.pivot = new Vector2(0f, 1f);
+        rect.anchoredPosition = position;
+        rect.sizeDelta = size;
     }
 
     private static TMP_Text FindText(GameObject root, string name) =>
