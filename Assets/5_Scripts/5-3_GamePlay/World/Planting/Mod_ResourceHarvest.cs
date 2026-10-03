@@ -38,6 +38,8 @@ public sealed class Mod_ResourceHarvest : Module, IIncomingDamageRule, IIncoming
     public override void Save() { }
     #endregion
 
+    #region 工具弱点结算
+
     /// <summary>普通武器倍率为一，匹配工具固定为两倍。</summary>
     public float GetDamageMultiplier(IDamageSender sender)
     {
@@ -92,4 +94,6 @@ public sealed class Mod_ResourceHarvest : Module, IIncomingDamageRule, IIncoming
             return 1f;
         return 2f;
     }
+
+    #endregion
 }

@@ -139,6 +139,8 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
     public bool BlocksMovement => !IsGroundFacility && (BuildingPlacementLifecycle.GetTraversalPolicy(item)?.BlocksMovement ?? true);
     #endregion
 
+    #region 建筑伤害兼容
+
     /// <summary>建筑工具弱点由生命模块统一结算，旧建筑倍率接口保持中性。</summary>
     public float GetDamageMultiplier(IDamageSender sender)
     {
@@ -146,6 +148,8 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
     }
 
     public float GetDamageMultiplier(in FlatWorld.Combat.CombatDamageContext context) => 1f;
+
+    #endregion
 
     /// <summary>
     /// 便携设施的召唤器和落地本体使用不同稳定 Item ID；当前实例角色必须与自己的载体 ID 一致，

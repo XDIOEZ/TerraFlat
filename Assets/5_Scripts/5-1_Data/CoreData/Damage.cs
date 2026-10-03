@@ -30,6 +30,8 @@ public partial class Damage
         Blunt = blunt;
     }
 
+    #region 物理伤害兼容
+
     /// <summary>旧存档的攻击分量合成物理伤害，再抵扣一次物理防御。</summary>
     public float Return_EndDamage(Defense defense = null)
     {
@@ -37,7 +39,6 @@ public partial class Damage
         return System.Math.Max(0f, Physical - defense.Physical);
     }
 
-    #region 物理伤害兼容
     [MemoryPackIgnore]
     public float Physical
     {

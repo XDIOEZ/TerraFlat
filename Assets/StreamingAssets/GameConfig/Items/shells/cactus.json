@@ -77,7 +77,10 @@
           "data": { "Type": 0, "BitData": "" },
           "parameters": {
             "Settings": {
-              "DamageValues": { "Cutting": 0.0, "Piercing": 2.0, "Chopping": 0.0, "Blunt": 0.0 },
+              "DamageValues": {
+                "Physical": 2.0,
+                "ImpactKind": 2
+              },
               "DamageInterval": 1.0,
               "Offset": { "x": 0.0, "y": 0.5 },
               "Size": { "x": 0.8, "y": 1.0 },
