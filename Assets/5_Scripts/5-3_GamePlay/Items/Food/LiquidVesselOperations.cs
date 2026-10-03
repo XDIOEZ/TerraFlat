@@ -148,19 +148,15 @@ public static class LiquidVesselOperations
         if (liquid == null || moved <= 0f || ChunkMgr.ExistingInstance == null ||
             !ChunkMgr.ExistingInstance.TryGetRuntimeTerrainTile(actor.transform.position, out var sample)) return 0f;
         float depth = sample.Terrain.GetLiquidDepth(sample.LocalCell.x, sample.LocalCell.y);
-        // 干地浇水仍交给土壤；液面倾倒则严格使用独立 Liquid 层，绝不把水加成岩浆。
-        if (liquid.Category == "water" && depth <= 0f)
-        {
-            if (!FarmlandSystem.TryAddGroundWater(actor.transform.position, moved)) return 0f;
-        }
-        else if (liquid.WorldWater != null)
+        // 容器倾倒统一写入独立 Liquid 层，水和岩浆遵循同一套世界液体守恒规则。
+        if (liquid.WorldWater != null)
         {
             float unitDepth = liquid.WorldWater.DepthPerServing;
             moved = Quantize(Mathf.Min(moved, Mathf.Max(0f, 1f - depth) / unitDepth));
             if (moved <= 0f || !WorldLiquidSystem.TryPour(actor.transform.position, liquid.Id, moved * unitDepth, out _))
                 return 0f;
         }
-        else if (liquid.Category == "water") return 0f;
+        else return 0f;
         return Remove(target, moved);
     }
 

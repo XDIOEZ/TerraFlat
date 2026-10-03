@@ -59,7 +59,7 @@
       "heatProcess": {
         "mode": "Transform",
         "minimumTemperature": 100.0,
-        "seconds": 20.0,
+        "seconds": 0.0,
         "resultLiquidId": "core:drinkable_water"
       },
       "worldWater": {
@@ -88,7 +88,20 @@
       "hydrationPerServing": 25.0,
       "ingredientReactions": [
         { "itemId": "Salt", "amount": 10, "resultLiquidId": "core:salt_water", "requireFullContainer": true }
-      ]
+      ],
+      "worldWater": {
+        "spriteAddress": "Assets/6_Art/Tilemap/Grass.png[Water_0]",
+        "materialAddress": "Assets/9_Shaders/Material/Tilemap-Water-Lit.mat",
+        "loadCapacity": 2,
+        "navigationCost": 20000,
+        "shallowMoveSpeedMultiplier": 0.5,
+        "deepMoveSpeedMultiplier": 0.2,
+        "entryTemperatureFloor": 10.0,
+        "entryTemperatureTransitionSeconds": 5.0,
+        "drinkHoldSeconds": 1.0,
+        "drinkTickSeconds": 1.0,
+        "followWaterVisualStyle": true
+      }
     },
     {
       "id": "core:salt_water",
@@ -106,7 +119,20 @@
           "chance": 1.0,
           "feedback": "这盐水含有大量盐分，喝下去反而会让我脱水。"
         }
-      ]
+      ],
+      "worldWater": {
+        "spriteAddress": "Assets/6_Art/Tilemap/Winter.png[Winter_0]",
+        "materialAddress": "Assets/9_Shaders/Material/Tilemap-Water-Lit.mat",
+        "loadCapacity": 2,
+        "navigationCost": 20000,
+        "shallowMoveSpeedMultiplier": 0.5,
+        "deepMoveSpeedMultiplier": 0.2,
+        "entryTemperatureFloor": 10.0,
+        "entryTemperatureTransitionSeconds": 5.0,
+        "drinkHoldSeconds": 1.0,
+        "drinkTickSeconds": 1.0,
+        "followWaterVisualStyle": true
+      }
     },
     {
       "id": "core:sea_water",
