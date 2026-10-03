@@ -31,7 +31,7 @@ description: "Use when: 定位或修改 FlatWorld 的游戏启动、新建世界
 - Addressables 初始化句柄属于 `GameRes` 生命周期，必须跨资源会话重载保留；`ResourceAssetScope` 只持有具体资源请求，不能释放初始化句柄，否则 Fast Mode Locator 可能保留但不再重建有效目录。
 - 本体先校验再加载 MOD，合并后再次通过 `ResourceCatalogValidation` 才发布 Ready。新系统通过 `IResourceCatalogValidator` 接入引用校验，不把玩法资源约束塞进通用加载器；静态目录检查入口为 `FlatWorld/诊断/检查 Addressables 目录`。
 - 完整资源会话在 `validate-final` 后执行 `brg-sprite-mesh-prewarm`，合并最终 TileBase/JSON/MOD 目录与 Palette，完成后才允许 Ready。原位 Alt+R 候选跳过共享缓存预热，发布后经 `GetOrCreate` 按需构建，失败候选不得清理正式 BRG/Mesh。完整卸载及旧代回收必须先解绑 BRG、清理共享 Mesh，再释放源资源；停止播放和域重载也必须显式释放隐藏 Mesh。
-- 编辑器普通 Play 与完整流程入口统一启用 Domain Reload 和 Scene Reload（`m_EnterPlayModeOptionsEnabled: 0`），由 Unity 一次性重建 Addressables、单例与静态事件；禁止反射替换 Addressables 私有实例来模拟局部重置。通用 Prefab 标签查询为 0 时必须在 `GameRes` 入口失败；排查时区分静态目录缺失与运行时 Locator 状态，不能仅凭空查询断言根因。
+- 编辑器普通 Play 与完整流程入口统一启用 Domain Reload 和 Scene Reload（`m_EnterPlayModeOptionsEnabled: 0`），由 `FullPlayModeReloadPolicy` 在编辑状态及进入播放前维护配置，当前 Play 不受影响；禁止反射替换 Addressables 私有实例来模拟局部重置。通用 Prefab 标签查询为 0 时必须在 `GameRes` 入口失败；排查时区分静态目录缺失与运行时 Locator 状态，检查 `Settings.groups` 是否存在空引用，即使磁盘组与 GUID 完整，Alt+R 也不能重建失效的编辑器组引用。
 - `GameRes` 会随 `WorldManager` Prefab 再次出现在 `GameStartScene`；跨场景存活实例已存在时，重复实例不得启动资源加载协程，否则会先清空目录、再随重复对象销毁而中断加载。时间系统 JSON 必须在 `GameRes` 允许创建新世界前完成加载，玩家覆盖文件无效时保留内建配置。
 - 启动资源采用双闸门：`GameRes.IsStartupReady` 只表示主菜单必要 UI 与基础配置已经就绪，此时启动遮罩关闭、完整内容继续在同一资源会话后台加载；`isLoadFinish/LoadState.Ready` 仍是进入世界的硬门槛。玩家在后台加载完成前点击新建或继续时，必须先显示 `UI_WorldLoading` 并等待完整 Ready，禁止先创建世界再补资源。
 - 基于 `SingletonMono<T>` 的跨场景管理器必须按 Unity null 语义恢复已销毁的静态引用，且场景副本不得覆盖有效实例，否则返回主菜单再进入时会把运行时回调发送给已销毁对象。

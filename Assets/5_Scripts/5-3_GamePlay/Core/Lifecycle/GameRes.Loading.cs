@@ -285,8 +285,18 @@ public partial class GameRes
                 .GroupBy(location => (location.InternalId, location.ProviderId, location.ResourceType))
                 .Select(group => group.First()).OrderBy(location => location.PrimaryKey, StringComparer.Ordinal).ToList();
             if (required && locations.Count == 0)
+            {
+                string editorHint = string.Empty;
+#if UNITY_EDITOR
+                // 空标签也可能来自编辑器残留目录，报出播放配置以区分资源缺失与会话失效。
+                editorHint = $"；播放配置：optionsEnabled={UnityEditor.EditorSettings.enterPlayModeOptionsEnabled}, " +
+                    $"options={UnityEditor.EditorSettings.enterPlayModeOptions}。" +
+                    "若静态目录存在对应标签，请结束当前播放并启用脚本域/场景重载后重新播放；" +
+                    "Alt+R 只重载游戏资源会话，不能重建失效的编辑器资源组引用。";
+#endif
                 throw new InvalidDataException($"必需标签 {string.Join(", ", labels)} 未解析到 {type.Name}；" +
-                    $"当前目录：{string.Join(", ", Addressables.ResourceLocators.Select(locator => locator.LocatorId))}");
+                    $"当前目录：{string.Join(", ", Addressables.ResourceLocators.Select(locator => locator.LocatorId))}{editorHint}");
+            }
             completed(locations);
         }
         finally { if (handle.IsValid()) Addressables.Release(handle); }
