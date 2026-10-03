@@ -8,6 +8,8 @@ namespace FlatWorld.WorldModel
 {
     public sealed partial class DeterministicChunkGenerator
     {
+        private const double LavaBasinMaxReachFactor = 2.2d;
+
         #region 山顶小湖候选
 
         // 只缓存不可变盆地，不保存区块引用；多个区块、出生查询和邻区生态共享同一结果。
@@ -48,7 +50,7 @@ namespace FlatWorld.WorldModel
                     continue;
                 double2 regionCenter = anchor + new double2((rx + 0.5d) * stepX, (ry + 0.5d) * stepY);
                 double2 delta = domain.ShortestDelta(query, regionCenter);
-                double reach = settings.LavaLakeMaxRadius * 1.3d + settings.LavaLakeShoreWidth;
+                double reach = settings.LavaLakeMaxRadius * LavaBasinMaxReachFactor + settings.LavaLakeShoreWidth;
                 if (Math.Abs(delta.x) > (stepX + request.Profile.Width) * 0.5d + reach ||
                     Math.Abs(delta.y) > (stepY + request.Profile.Height) * 0.5d + reach) continue;
                 var key = (request.WorldEpoch, request.Address.DimensionId, request.WorldSeed,
@@ -141,16 +143,57 @@ namespace FlatWorld.WorldModel
             {
                 depth = 0f; shore = 0f;
                 double2 delta = topology.ToDomain().ShortestDelta(center, new double2(worldX + 0.5d, worldY + 0.5d));
-                if (Math.Abs(delta.x) > radius * 1.3d + shoreWidth ||
-                    Math.Abs(delta.y) > radius * 1.3d + shoreWidth) return false;
+                if (Math.Abs(delta.x) > radius * LavaBasinMaxReachFactor + shoreWidth ||
+                    Math.Abs(delta.y) > radius * LavaBasinMaxReachFactor + shoreWidth) return false;
                 double angle = Math.Atan2(delta.y, delta.x);
                 double edge = radius * (1d + 0.12d * Math.Sin(angle * 3d + phase));
                 double distance = math.length(delta) - edge;
-                if (distance > shoreWidth) return false;
-                if (distance >= 0d) shore = 1f;
-                else depth = (float)(0.25d + 0.65d * Math.Sqrt(Math.Min(1d, -distance / radius)));
-                return true;
+                bool sampled = false;
+                if (distance <= shoreWidth)
+                {
+                    sampled = true;
+                    if (distance >= 0d) shore = 1f;
+                    else
+                    {
+                        depth = (float)(0.25d + 0.65d * Math.Sqrt(Math.Min(1d, -distance / radius)));
+                        return true;
+                    }
+                }
+
+                // 主池外追加确定性的浅小熔岩斑，让火山口边缘形成自然散落的卫星小池。
+                int satelliteCount = 4 + Math.Min(3, (int)Math.Floor(Wave01(phase * 1.137d + 0.371d) * 4d));
+                for (int i = 0; i < satelliteCount; i++)
+                {
+                    double radial = radius * (1.32d + 0.48d * Wave01(phase * 2.173d + i * 1.731d));
+                    double satelliteAngle = phase + i * 2.399963229728653d +
+                                            (Wave01(phase * 0.917d + i * 2.417d) - 0.5d) * 0.55d;
+                    double satelliteRadius = Math.Max(0.65d,
+                        radius * (0.14d + 0.20d * Wave01(phase * 1.619d + i * 3.113d)));
+                    double2 satelliteCenter = center + new double2(Math.Cos(satelliteAngle), Math.Sin(satelliteAngle)) * radial;
+                    double2 satelliteDelta = topology.ToDomain().ShortestDelta(satelliteCenter,
+                        new double2(worldX + 0.5d, worldY + 0.5d));
+                    double localAngle = Math.Atan2(satelliteDelta.y, satelliteDelta.x);
+                    double satelliteEdge = satelliteRadius *
+                        (1d + 0.18d * Math.Sin(localAngle * 2d + phase + i * 0.73d));
+                    double satelliteDistance = math.length(satelliteDelta) - satelliteEdge;
+                    double satelliteShore = Math.Min(shoreWidth, Math.Max(0.75d, satelliteRadius * 0.8d));
+                    if (satelliteDistance > satelliteShore) continue;
+
+                    sampled = true;
+                    if (satelliteDistance >= 0d)
+                    {
+                        shore = 1f;
+                        continue;
+                    }
+
+                    depth = (float)(0.18d + 0.47d * Math.Sqrt(Math.Min(1d, -satelliteDistance / satelliteRadius)));
+                    shore = 0f;
+                    return true;
+                }
+                return sampled;
             }
+
+            private static double Wave01(double value) => 0.5d + 0.5d * Math.Sin(value * 12.9898d + 78.233d);
         }
 
         #endregion
