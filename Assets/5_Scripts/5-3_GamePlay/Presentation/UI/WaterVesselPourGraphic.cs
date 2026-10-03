@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 
-/// <summary>容器倾倒时的连续液流网格；玩法液量仍只由 Mod_WaterVessel 结算。</summary>
+/// <summary>容器倾倒时的连续液流网格；表现按帧持续，玩法液量仍只由 Mod_WaterVessel 按整份结算。</summary>
 [RequireComponent(typeof(CanvasRenderer))]
 public sealed class WaterVesselPourGraphic : MaskableGraphic
 {
@@ -29,7 +29,7 @@ public sealed class WaterVesselPourGraphic : MaskableGraphic
 
     #region 液流驱动
 
-    /// <summary>只有真实扣除了液体才触发液流；连续扣液会自然合并成持续水柱。</summary>
+    /// <summary>倾倒期间按帧维持液流，离散的一份结算不会让水柱出现断帧。</summary>
     public void Emit(float normalizedFlow, Color body, Color surface, Color detail, float liquidMurkiness, float liquidViscosity = 0f)
     {
         bodyColor = body;

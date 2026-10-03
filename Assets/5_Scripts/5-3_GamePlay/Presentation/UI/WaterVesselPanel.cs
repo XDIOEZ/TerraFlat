@@ -41,7 +41,7 @@ public sealed class WaterVesselPanel : MonoBehaviour, IPointerDownHandler, IDrag
     private VesselAppearance defaultAppearance; // 首次绑定时保存的默认外观。
     private Image vesselImage, interiorImage; // 已绑定的剖面和内腔图像。
     private float activeMouthWidthMultiplier = 1f; // 当前开口相对默认容器开口的宽度倍率。
-    private float pourAmountAccumulator; // 累计不足 0.1 份的流量，避免逐帧结算时被数量精度吞掉。
+    private float pourAmountAccumulator; // 连续液流的计时累计；达到一份后才离散结算一次。
 
     /// <summary>切换容器时一次性应用完整外观，避免复用面板残留上一个容器的遮罩或出水位置。</summary>
     private void ApplyAppearance(string itemId)
@@ -202,7 +202,7 @@ public sealed class WaterVesselPanel : MonoBehaviour, IPointerDownHandler, IDrag
             ? FlatWorldLocalizationService.GetUiText("空容器")
             : FlatWorldLocalizationService.GetUiText(liquid?.DisplayName ?? vessel.Data.LiquidId);
         status.text = FlatWorldLocalizationService.GetUiFormat("{0}　{1} / {2} 份\n加热进度：{3:0} 秒",
-            liquidName, vessel.Data.Amount.ToString("0.####"),
+            liquidName, vessel.Data.Amount.ToString("0"),
             vessel.Capacity, vessel.Data.ProcessingSeconds);
         drink.interactable = liquid?.Drinkable == true &&
             !Mod_WaterVessel.IsEmptyAmount(vessel.Data.Amount);
@@ -369,7 +369,7 @@ public sealed class WaterVesselPanel : MonoBehaviour, IPointerDownHandler, IDrag
         }
     }
 
-    /// <summary>倾角决定可流出的液量与加速倍率；实际扣量按时间和容器开口累计结算。</summary>
+    /// <summary>倾角决定连续液流速度；表现持续播放，玩法层累计到一份后才扣一份。</summary>
     private void SpillForCurrentTilt(float deltaTime)
     {
         if (vessel == null || !vessel.CanOperate(actor) || Mod_WaterVessel.IsEmptyAmount(vessel.Data.Amount))
@@ -382,7 +382,8 @@ public sealed class WaterVesselPanel : MonoBehaviour, IPointerDownHandler, IDrag
         float retainedFraction = Mathf.Clamp01(1f - physicalTilt / FullEmptyTiltDegrees);
         float maxRetainedAmount = vessel.Capacity * retainedFraction;
         float maximumSpillAmount = Mathf.Max(0f, vessel.Data.Amount - maxRetainedAmount);
-        if (maximumSpillAmount <= Mod_WaterVessel.AmountEpsilon || activeMouthWidthMultiplier <= 0f)
+        if (maximumSpillAmount + Mod_WaterVessel.AmountEpsilon < Mod_WaterVessel.AmountStep ||
+            activeMouthWidthMultiplier <= 0f)
         {
             pourAmountAccumulator = 0f;
             return;
@@ -393,19 +394,6 @@ public sealed class WaterVesselPanel : MonoBehaviour, IPointerDownHandler, IDrag
         LiquidDefinition liquid = vessel.CurrentLiquid;
         float baseAmountPerSecond = BasePourAmountPerSecond * activeMouthWidthMultiplier * speedMultiplier;
         float amountPerSecond = baseAmountPerSecond * (liquid?.PourRateMultiplier ?? 1f);
-        pourAmountAccumulator = Mathf.Min(maximumSpillAmount, pourAmountAccumulator + amountPerSecond * deltaTime);
-        float requiredBatch = Mathf.Min(Mod_WaterVessel.AmountStep, maximumSpillAmount);
-        if (pourAmountAccumulator + Mod_WaterVessel.AmountEpsilon < requiredBatch)
-            return;
-
-        int horizontalCellOffset = vesselTiltDegrees > 0f ? -1 : 1;
-        float removed = vessel.Item?.InHand == true
-            ? LiquidVesselOperations.PourToGround(vessel, actor, pourAmountAccumulator, horizontalCellOffset)
-            : vessel.PourToGround(actor, pourAmountAccumulator);
-        if (removed <= Mod_WaterVessel.AmountEpsilon)
-            return;
-        pourAmountAccumulator = Mathf.Max(0f, pourAmountAccumulator - removed);
-
         float normalizedFlow = Mathf.Clamp01(0.45f + 0.55f * amountPerSecond /
             (BasePourAmountPerSecond * HorizontalPourSpeedMultiplier));
         pourGraphic.Emit(
@@ -416,6 +404,21 @@ public sealed class WaterVesselPanel : MonoBehaviour, IPointerDownHandler, IDrag
             Liquid.CurrentMurkiness,
             Liquid.CurrentViscosity);
         Liquid.AddAgitation(Mathf.Clamp01(0.3f + normalizedFlow * 0.7f));
+
+        pourAmountAccumulator = Mathf.Min(
+            Mod_WaterVessel.AmountStep,
+            pourAmountAccumulator + amountPerSecond * deltaTime);
+        if (pourAmountAccumulator + Mod_WaterVessel.AmountEpsilon < Mod_WaterVessel.AmountStep)
+            return;
+
+        int horizontalCellOffset = vesselTiltDegrees > 0f ? -1 : 1;
+        float removed = vessel.Item?.InHand == true
+            ? LiquidVesselOperations.PourToGround(vessel, actor, Mod_WaterVessel.AmountStep, horizontalCellOffset)
+            : vessel.PourToGround(actor, Mod_WaterVessel.AmountStep);
+        if (removed + Mod_WaterVessel.AmountEpsilon < Mod_WaterVessel.AmountStep)
+            return;
+        pourAmountAccumulator = 0f;
+
         // 倒液只更新目标水位，不重置正在传播的液面波。
         Liquid.SetWater(vessel.Data.Amount, vessel.Capacity, vessel.CurrentLiquid);
     }

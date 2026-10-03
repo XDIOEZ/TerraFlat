@@ -41,8 +41,7 @@ public static class LiquidVesselOperations
 
         float quantized = Mathf.Floor((amount + Mod_WaterVessel.AmountEpsilon) /
             Mod_WaterVessel.AmountStep) * Mod_WaterVessel.AmountStep;
-        // 小于标准步长的尾量也必须能完整流转，避免浅水和容器残量被卡死。
-        return quantized > Mod_WaterVessel.AmountEpsilon ? quantized : amount;
+        return quantized > Mod_WaterVessel.AmountEpsilon ? quantized : 0f;
     }
 
     public static void AddState(ILiquidVessel target, string id, float amount, float temperature = 0f)
@@ -112,12 +111,15 @@ public static class LiquidVesselOperations
         var sample = source.Sample;
         float depth = sample.Terrain.GetLiquidDepth(sample.LocalCell.x, sample.LocalCell.y);
         float unitDepth = liquid.WorldWater.DepthPerServing;
-        float moved = Mathf.Min(Mathf.Max(0f, target.Capacity - target.Data.Amount), depth / unitDepth);
+        float availableServings = Mathf.Floor(depth / unitDepth + Mod_WaterVessel.AmountEpsilon);
+        float moved = Quantize(Mathf.Min(
+            Mathf.Max(0f, target.Capacity - target.Data.Amount),
+            availableServings));
         if (moved <= Mod_WaterVessel.AmountEpsilon ||
             !WorldLiquidSystem.TryPump(sample, moved * unitDepth, out _, out float removedDepth))
             return 0f;
 
-        moved = removedDepth / unitDepth;
+        moved = Quantize(removedDepth / unitDepth);
         if (moved <= Mod_WaterVessel.AmountEpsilon)
             return 0f;
         AddState(target, liquid.Id, moved, liquid.WorldWater.Temperature);
@@ -159,7 +161,9 @@ public static class LiquidVesselOperations
         if (liquid.WorldWater != null)
         {
             float unitDepth = liquid.WorldWater.DepthPerServing;
-            moved = Quantize(Mathf.Min(moved, Mathf.Max(0f, 1f - depth) / unitDepth));
+            float availableServings = Mathf.Floor(
+                Mathf.Max(0f, 1f - depth) / unitDepth + Mod_WaterVessel.AmountEpsilon);
+            moved = Quantize(Mathf.Min(moved, availableServings));
             if (moved <= 0f || !WorldLiquidSystem.TryPour(pourPosition, liquid.Id, moved * unitDepth, out _))
                 return 0f;
         }

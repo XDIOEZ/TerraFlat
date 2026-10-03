@@ -30,7 +30,7 @@ description: "Use when: 定位或修改 FlatWorld 的背包、槽位、快捷栏
 
 - F5 原位应用模块参数不能重置生产运行态；`Mod_Production.ApplyResourceConfiguration` 复用按产物身份匹配的 `RestoreRuntimeProgress`，保留累计生产时间、次数和初始化标记，不重新 Load 或改写库存。未变化的参数集合不重新构造。
 
-- 库存液体原料通过 `LiquidDefinition.sourceItemId` 唯一映射到液体；每个完整物品对应一份，容器拖入先校验同液体与整份容量，再从真实所属库存调用 `TryConsumeFromSlot`，数量不得超过 `InventoryDragTransaction.DraggedAmount`。不能把液体原料伪装成容器变体；已有进食进度的原料不能再按完整一份装液。浮点残余容量不足一份时不扣料，容器之间仍允许按原有规则部分转液。
+- 库存液体原料通过 `LiquidDefinition.sourceItemId` 唯一映射到液体；每个完整物品对应一份，容器拖入先校验同液体与整份容量，再从真实所属库存调用 `TryConsumeFromSlot`，数量不得超过 `InventoryDragTransaction.DraggedAmount`。不能把液体原料伪装成容器变体；已有进食进度的原料不能再按完整一份装液。容器液量只保存整数份，任何不足一份的转移都不结算。
 
 - 固定/多物料配方继续以 Recipe JSON 为真源；单物料通用加工以物品 `processing` 为真源，由 `ItemProcessingResolver` 适配成临时 `RuntimeRecipe` 后继续走 `CraftingService`。通用加工可用 `minLevel/maxLevel` 声明发出者等级闭区间；有区间时缺少等级、低于下界或高于上界都拒绝。物品发出能力写在 `processingCapabilities.<capability>.level`，不要拿战斗伤害或资源采集 `HarvestTier` 代替加工等级。旧 CookRecipe/熔炼 Recipe SO 只作热加工 MOD 兼容，普通合成不再载入旧 SO。
 - 配方输出可通过可选 `durabilityMultiplier` 为同一产物定义赋予实例耐久品质；倍率必须为大于 0 的有限数，由 `CraftedDurabilityQuality` 在预览与真实提交共用的产物创建阶段应用，并写入 `ItemData.CraftedDurabilityMultiplier`。禁止为单个配方另写按配方 ID 硬编码的输出规则，否则容易与通用倍率重复叠乘。
@@ -104,16 +104,16 @@ description: "Use when: 定位或修改 FlatWorld 的背包、槽位、快捷栏
 - `Mod_HeldFood` 的咬痕只读取 `EatingProgress` 与 `Max_EatingProgress`，按物品 GUID 确定性重建当前轮廓遮罩，不重复持久化随机点；实际口数取最大进度的向上整数，最后一口直接清空残余区域。
 
 - `IInventoryHeatTreatment` 处理输入槽里的状态型液体容器，普通熔炼复用 `CraftingRecipeMatcher` 和 `CraftingTransaction`。具体液体的转化温度、时间、结果液体或副产物由 `LiquidDefinition.HeatProcess` 声明；需要产出物品时必须先确保输出事务成功再消耗液体，处理进度属于容器而非炉体。
-- 通用液体容器由 `Mod_WaterVessel` 承载，但状态只保存稳定 `LiquidId + Amount + ProcessingSeconds`，其中 `Amount` 是可持久化的浮点“份数”，用于表达连续液体余量；液体语义统一来自 `GameRes.LiquidDefinitions`。容器通过显式 `Stackable=false` 禁止堆叠，不同液体不能自动混装，部分转移保持数量守恒。新增本体或 MOD 液体不得复制容器 Item 变体，应该注册新的 `LiquidDefinition` 并复用同一容器模块。
+- 通用液体容器由 `Mod_WaterVessel` 承载，但状态只保存稳定 `LiquidId + Amount + ProcessingSeconds`，其中 `Amount` 虽沿用 float 存档字段，运行时必须量化为整数“份数”；液体语义统一来自 `GameRes.LiquidDefinitions`。容器通过显式 `Stackable=false` 禁止堆叠，不同液体不能自动混装，整份转移保持数量守恒。新增本体或 MOD 液体不得复制容器 Item 变体，应该注册新的 `LiquidDefinition` 并复用同一容器模块。
 - 木桶的固体内容由独立 `Mod_VesselContents` 六格库存持久化；手持与落地两端都要声明该模块并列入 `SharedModuleIds`，关闭水容器面板只解除 UI 槽位绑定，不清空库存。投到内腔空白处形成独立物品堆，投到同类图标才合并。`LiquidDefinition.ingredientReactions` 以当前液体、原料物品、数量和是否满桶声明投料反应；木桶库存变化与补液都要重新检查规则，数量可跨多个真实槽位累计，原料不足或液体条件不满足时保留原物品，成功时从真实槽位事务扣料后才转换液体。
 - 液体容器的“饮水”按钮只按 `LiquidDefinition.Drinkable` 与剩余量决定是否可点，不得用当前补水收益或角色水分已满来阻止玩家主动饮用；`Mod_Food.DrinkWater` 即使实际补水量为 0 也要发布一次完整饮水结果。感染、脱水等饮用后果统一声明在 `LiquidDefinition.drinkEffects`，世界水源与容器都通过 `LiquidDrinkEffectProcessor` 结算，禁止在水地块或具体容器里按液体 ID 再写一套后果逻辑。
-- 世界液体来源由 `WorldLiquidSourceResolver` 直接读取 Chunk 独立 Liquid 层，使用稳定 LiquidId 解析同一 LiquidDefinition；容器不得按水 Tile 名称或盐度猜身份。准心高亮与实际装液复用同一 WorldCell 入口；世界液深与容器份数不能隐式互换，世界抽水统一走 `WorldLiquidSystem.TryPump`。
+- 世界液体来源由 `WorldLiquidSourceResolver` 直接读取 Chunk 独立 Liquid 层，使用稳定 LiquidId 解析同一 LiquidDefinition；容器不得按水 Tile 名称或盐度猜身份。准心高亮与实际装液复用同一 WorldCell 入口；世界液深与容器份数固定按“1 份 = 0.1 液深”换算，世界抽水统一走 `WorldLiquidSystem.TryPump`。
 - 液体容器图标由 `Mod_WaterVessel` 从 `ItemData` 状态重绘 Sprite：`visual.liquidSurface.bounds` 应按基础贴图的整个内腔开口标定，绘制层不再额外缩进；`maxSourceChannel` 按贴图的内腔暗色与边沿亮色分界设置，避免染到桶沿或罐口，省略时默认 165。液体颜色读取 `LiquidDefinition.primaryColor`，填充行数按容器容量量化；木桶、陶罐启用的基础贴图必须打开 Read/Write。展示端通过 `GameRes.TryGetItemPresentation(ItemData, ...)` 与 `ItemDataPresentationResolverRegistry` 获取最终 Sprite，槽位和掉落物展示代码不得直接引用具体玩法模块或叠加液面 Graphic。
 - 容器重绘生成的运行时 Sprite 必须携带物理轮廓；落地建筑的 `ShadowCaster2D` 按当前状态 Sprite 取轮廓，没有轮廓会令建筑加载与放置事务失败。
 - 快捷栏当前手持实例会把 `Item.OnUIRefresh` 绑定到 `Mod_HotBar.RefreshUI`；手持物模块只修改内部状态而不替换 `ItemData` 引用时，除了通知真实所属库存，还必须发布 `Item.OnUIRefresh`，使当前快捷栏槽立即重画状态型图标，不能只刷新世界中的手持 Sprite。
 
 - 可放置设备若将齿轮等动态部件拆为世界独立图层，完整的背包/快捷栏静态图标声明在 `visual.spriteStates.inventoryIcon`；`visual.spriteAddress` 仍指向世界主体，由 `GameRes.TryGetItemPresentation` 优先选择库存图标，避免物品槽出现空洞或放置后重复叠图。
-- `UI_WaterVessel` 的拖拽倾倒只消费现有 `Mod_WaterVessel.PourToGround`，不保存独立玩法手势状态。声明 `LiquidDefinition.worldWater` 的液体倾倒到干地或已有同种液面时都统一写入独立 Liquid 层，水与岩浆不得再按类别分流到土壤系统。所有液体容器统一以绝对倾角 90° 为完全倒空角：绝对倾角越大，允许保留的液量上限越低，达到 90° 时取消保留量上限，但仍按逐帧流量和 `AmountStep` 结算，不能瞬间清零。实际流速按基准份数流速、容器相对开口宽度和倾角倍率持续结算，水平倾倒时加速，容量不参与流速，扶正不会恢复已倒出的液体。正式外观只通过 `VesselAppearance.MouthWidth` 声明相对剖面宽度的实际开口比例，禁止重新增加逐容器完全倒空倾角配置。空容器仍允许完整拖动和自动回正，只提供交互反馈、不产生液体扣减。手势必须按独立 `pointerId` 持有触点，并在不随罐体旋转的父级坐标系计算：外圈拖拽优先按绕罐体中心的极角变化解释，因此左右、上下、斜向及半圆轨迹均可倾倒；中心起手才退化为二维线性位移。方向契约固定为屏幕右侧手势产生负 Z（顺时针、朝右倒），屏幕左侧手势产生正 Z（逆时针、朝左倒），圆弧与线性回退必须一致。罐内液面由容器真实余量驱动；反向旋转的液层网格必须覆盖旋转内腔遮罩的轴对齐包围范围，避免露出竖直裁剪边。罐口外液流由独立 `WaterVesselPourGraphic` 只在真实移除液体后表现，禁止用视觉帧反向扣减玩法数据。
+- `UI_WaterVessel` 的拖拽倾倒只消费现有 `Mod_WaterVessel.PourToGround`，不保存独立玩法手势状态。声明 `LiquidDefinition.worldWater` 的液体倾倒到干地或已有同种液面时都统一写入独立 Liquid 层，水与岩浆不得再按类别分流到土壤系统。所有液体容器统一以绝对倾角 90° 为完全倒空角：绝对倾角越大，允许保留的液量上限越低，达到 90° 时取消保留量上限；液流表现必须连续，但玩法层累计到 `AmountStep=1` 后才一次扣一份，禁止一帧批量扣多份或产生小数份。实际流速按基准份数流速、容器相对开口宽度和倾角倍率持续结算，水平倾倒时加速，容量不参与流速，扶正不会恢复已倒出的液体。正式外观只通过 `VesselAppearance.MouthWidth` 声明相对剖面宽度的实际开口比例，禁止重新增加逐容器完全倒空倾角配置。空容器仍允许完整拖动和自动回正，只提供交互反馈、不产生液体扣减。手势必须按独立 `pointerId` 持有触点，并在不随罐体旋转的父级坐标系计算：外圈拖拽优先按绕罐体中心的极角变化解释，因此左右、上下、斜向及半圆轨迹均可倾倒；中心起手才退化为二维线性位移。方向契约固定为屏幕右侧手势产生负 Z（顺时针、朝右倒），屏幕左侧手势产生正 Z（逆时针、朝左倒），圆弧与线性回退必须一致。罐内液面由容器真实余量驱动；反向旋转的液层网格必须覆盖旋转内腔遮罩的轴对齐包围范围，避免露出竖直裁剪边。罐口外液流由独立 `WaterVesselPourGraphic` 按倾倒状态持续表现，禁止用视觉帧反向扣减玩法数据。
 - 食物机制除了目录注册，也组合消费物本身实现 `IFoodMechanic` 的模块；药品使用守卫与消费完成观察者应接入这条链，不在按钮响应时直接回血。
 - `CraftingOutputRules` 在预检和真实提交共用；防腐加工的新鲜度必须来自匹配计划实际消耗的原料，保留最差剩余比例，不能读取整份输入库存或重建全新寿命。
 - 植物环境通过 `IPlantEnvironmentCondition` 与 `PlantClimateTimeline` 结算；自主耐候树木只向成长器提供 `IPlantGrowthConstraint`，不能被两个模块重复推进。补算游标未追上当前时钟时禁止抢先收获。

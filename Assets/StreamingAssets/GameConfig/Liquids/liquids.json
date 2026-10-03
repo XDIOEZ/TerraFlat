@@ -25,7 +25,7 @@
         "contactDamagePerSecond": 30.0,
         "radiantHeatRadius": 6.0,
         "radiantHeatOffset": 180.0,
-        "depthPerServing": 0.025
+        "depthPerServing": 0.1
       }
     },
     {

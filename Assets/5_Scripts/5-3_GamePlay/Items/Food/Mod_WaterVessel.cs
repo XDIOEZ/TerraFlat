@@ -12,7 +12,7 @@ using UnityEngine;
 public partial class LiquidContainerState
 {
     public string LiquidId; // 当前液体稳定 ID；空容器必须为空。
-    public float Amount; // 当前液体份数；允许小数以支持按倾角连续倾倒。
+    public float Amount; // 当前液体份数；运行时只保存整数份，连续倾倒仅由表现层插值。
     public float ProcessingSeconds; // 当前液体加热处理的累计秒数。
     public float Temperature; // 当前液体温度；追加字段，兼容旧容器存档并由加工模块按秒冷却。
 }
@@ -27,7 +27,7 @@ public sealed class Mod_WaterVessel : Module, IInteractable, ILiquidVessel
 
     public const string ModuleId = "Mod_WaterVessel";
     public const int DefaultCapacity = 8;
-    public const float AmountStep = 0.1f; // 常规转移与倾倒批次步长；不足一步的尾量按实际值处理。
+    public const float AmountStep = 1f; // 所有容器液量只按整份流转。
     public const float AmountEpsilon = 0.0001f;
     public Ex_ModData_MemoryPackable ModData = new(); // 容器独立持久化载体。
     public LiquidContainerState Data = new(); // 液体 ID、数量、温度与加工进度。
@@ -321,11 +321,11 @@ public sealed class Mod_WaterVessel : Module, IInteractable, ILiquidVessel
         return removed;
     }
 
-    /// <summary>向容器加入可为小数的液体份数；用于世界装液和连续液体玩法。</summary>
+    /// <summary>向容器加入液体份数；输入会向下量化为整份。</summary>
     public float AddLiquidAmount(string liquidId, float amount)
         => LiquidVesselOperations.Add(this, liquidId, amount);
 
-    /// <summary>从容器移除可为小数的液体份数；返回实际移除量。</summary>
+    /// <summary>从容器移除液体份数；输入会向下量化为整份。</summary>
     public float RemoveLiquidAmount(float amount)
         => LiquidVesselOperations.Remove(this, amount);
 
@@ -719,7 +719,7 @@ public sealed class Mod_WaterVessel : Module, IInteractable, ILiquidVessel
     private static bool IsFinitePositive(float value) =>
         !float.IsNaN(value) && !float.IsInfinity(value) && value > AmountEpsilon;
 
-    /// <summary>只清理浮点噪声和空状态，保留浅水抽取产生的真实小数余量。</summary>
+    /// <summary>统一把容器液量收敛为整数份，避免任何入口留下小数余量。</summary>
     public static bool NormalizeStoredAmount(LiquidContainerState state)
     {
         if (state == null || float.IsNaN(state.Amount) || float.IsInfinity(state.Amount))
@@ -728,7 +728,7 @@ public sealed class Mod_WaterVessel : Module, IInteractable, ILiquidVessel
         float previousAmount = state.Amount;
         string previousLiquidId = state.LiquidId;
         float previousTemperature = state.Temperature;
-        state.Amount = Mathf.Max(0f, state.Amount);
+        state.Amount = Mathf.Max(0f, Mathf.Floor(state.Amount + AmountEpsilon));
         if (state.Temperature < 0f)
             state.Temperature = 0f;
         if (IsEmptyAmount(state.Amount))
@@ -742,13 +742,13 @@ public sealed class Mod_WaterVessel : Module, IInteractable, ILiquidVessel
             previousTemperature != state.Temperature;
     }
 
-    /// <summary>常规液量按 0.1 份批次移动，不足一步的尾量直接按真实值移动。</summary>
+    /// <summary>所有液量移动都只允许整份，任何不足一份的输入都不结算。</summary>
     private static float QuantizeMovementAmount(float amount)
     {
         if (!IsFinitePositive(amount))
             return 0f;
         float quantized = Mathf.Floor((amount + AmountEpsilon) / AmountStep) * AmountStep;
-        return quantized > AmountEpsilon ? quantized : amount;
+        return quantized > AmountEpsilon ? quantized : 0f;
     }
 
     private void AddLiquidInternal(string liquidId, float amount)

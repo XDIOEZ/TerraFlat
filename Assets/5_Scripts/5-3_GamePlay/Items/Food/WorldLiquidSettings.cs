@@ -10,6 +10,7 @@ using UnityEngine;
 public sealed class WorldLiquidSettings
 {
     public const float MaximumRadiantHeatRadius = 8f;
+    public const float UnifiedDepthPerServing = 0.1f;
 
     #region JSON 配置
     [JsonProperty("spriteAddress")] public string SpriteAddress;
@@ -35,7 +36,7 @@ public sealed class WorldLiquidSettings
     [JsonProperty("contactDamagePerSecond")] public float ContactDamagePerSecond;
     [JsonProperty("radiantHeatRadius")] public float RadiantHeatRadius;
     [JsonProperty("radiantHeatOffset")] public float RadiantHeatOffset;
-    [JsonProperty("depthPerServing")] public float DepthPerServing = 0.025f;
+    [JsonProperty("depthPerServing")] public float DepthPerServing = UnifiedDepthPerServing;
     #endregion
 
     #region 会话资源与校验
@@ -57,7 +58,7 @@ public sealed class WorldLiquidSettings
             !NonNegative(ContactDamagePerSecond) || !NonNegative(RadiantHeatRadius) ||
             RadiantHeatRadius > MaximumRadiantHeatRadius || !NonNegative(RadiantHeatOffset) ||
             (RadiantHeatOffset > 0f && RadiantHeatRadius <= 0f) ||
-            !Positive(DepthPerServing) || DepthPerServing > 1f ||
+            !Positive(DepthPerServing) || Mathf.Abs(DepthPerServing - UnifiedDepthPerServing) > 0.000001f ||
             float.IsNaN(DrinkHoldSeconds) || float.IsInfinity(DrinkHoldSeconds) || DrinkHoldSeconds < 0f)
             throw new InvalidDataException($"液体 {id} 的世界玩法参数无效。");
     }
