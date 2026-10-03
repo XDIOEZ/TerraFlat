@@ -19,7 +19,7 @@ description: "Use when: 定位或修改 FlatWorld 的世界时间、昼夜、天
 - 低温、过热与缺氧必须使用独立伤害时钟；解除对应危险、死亡或回收时清除该来源的时间债务。低温和缺氧用固定每次伤害，不以温差或累计秒数放大成一次大额伤害；高温保留独立规则。
 - 玩家显式重生统一调用 `Mod_Temperature.RestoreOnRespawn` 恢复正常基础体温，并清除上一条生命的入水降温目标与冷热伤计时；死亡/重生模块不得直接改写 `TemperatureData.CurrentTemperature`。
 - 体温向环境温度变化的基础速率读取宿主 `ItemData.HeatConductionRate`（℃/s），默认值在代码中；玩家由当前玩家 JSON 配置，物品、动物和建筑由定义的 `itemData.heatConductionRate` 覆盖，不能放在体温模块或外壳 Prefab。冷热方向由温差决定，运行时倍率独立叠加。
-- 生物体温、物质温度与容器液体向目标温度趋近时统一调用 `ThermalRuntime.AdvanceTowards`；各系统只提供自己的目标温度、传热速率和倍率，入水瞬时降温、直接热量注入等特殊玩法不要伪装成环境传热。
+- 生物体温、物质温度、容器液体以及入水后的渐进降温向目标温度趋近时统一调用 `ThermalRuntime.AdvanceTowards`；各系统只提供自己的目标温度、传热速率和倍率，直接热量注入等非趋近式玩法保持独立。
 - `TemperatureData` 的 MemoryPack 字段顺序属于存档布局，改冷伤语义不能删掉中间 float 槽位。规则参数在加载旧存档后恢复当前内容配置，运行态体温仍由存档恢复。
 
 - 当前跨场景时间与存档主入口是 `DayTimeSystem`；季节改动前确认场景是否使用 `DayNightTimeManager`。
@@ -43,7 +43,7 @@ description: "Use when: 定位或修改 FlatWorld 的世界时间、昼夜、天
 - 向 Shader 发布月光表现值时应保留 `GetLighting` 已应用的场景采光率与维度上限，并在系统禁用或退出世界时清零全局参数，避免关闭域重载后残留上一局状态。`_GlobalMoonlightIntensity` 只表达月相/场景后的最终亮度，黄昏到夜晚的出现进度由独立 `_GlobalMoonAppearance` 发布，避免把月相强度误当成尺寸动画进度。
 - `LightLayerMgr.TryGetLightLevel` 属于怪物生成等高频查询热路径，只能读取已缓存的 Light2D 成员并实时采样其强度/位置；禁止在单次格子查询里调用 `FindObjectsOfType/FindObjectsByType`，光源成员集合统一由低频刷新维护。
 - 新世界时间参数来自 `GameConfig/Time/time-system.json` 的 Profile；Profile ID、限时边界与日历随 `TimeData` 存档，只读取当前外层版本，不以缺失字段回退默认配置兼容旧档。
-- 入水瞬时降温由 `Mod_Temperature` 自己维护平滑目标；装备等外部系统只能通过水体降温保护通道影响速度，禁止直接改河流过渡时间。保护值 0 表示无保护、1 表示完全阻止入水降温，多来源按加法叠加并由体温模块统一限制。
+- 入水降温由世界液体行为按有效浸没深度给出降温目标，`Mod_Temperature` 维护平滑目标并通过统一热推进逐步降温；装备等外部系统只能通过水体降温保护通道影响速度，禁止直接改水体过渡时间。保护值 0 表示无保护、1 表示完全阻止入水降温，多来源按加法叠加并由体温模块统一限制。
 - 临时增温由 `Mod_Temperature.Warming` 按来源登记，取各来源中最强的有效增量；上限只约束该增温，不压低原本较高的体温。环境与入水变化推进基础体温，伤害/UI 读取最终有效体温；保存时制作基础体温副本，不能把增温写入存档后在 Buff 恢复时再加一次，也不能在保存时修改或清除运行态。
 - 生物安全体温范围统一由 `Mod_Temperature` 的 `SafeTemperatureMin/Max` 与按来源范围修正决定；默认玩家/普通生物为 5~50℃，特殊物种可在 Actor JSON 覆盖。温度管理器只推进体温，不直接扣血；低温冻伤/热射病由永久来源 Buff 按当前有效体温挂载和移除。
 - GameObject AI 的体温模块保留最近 4 个“体温与当地环境都安全”的移动位置；当地目标温度超界时优先返回记录中空间距离最近的位置并立即移除该记录，回到安全环境后若体温仍超界则原地恢复。位置记录和避险只在权威端推进。

@@ -315,10 +315,12 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable
         if (waterCoolingSpeedMultiplier <= 0f)
             return;
 
-        float nextTemperature = Mathf.MoveTowards(
+        float nextTemperature = ThermalRuntime.AdvanceTowards(
             NaturalTemperature,
             _waterEntryCoolingTargetTemperature,
-            _waterEntryCoolingSpeed * waterCoolingSpeedMultiplier * Mathf.Max(0f, deltaTime));
+            _waterEntryCoolingSpeed,
+            deltaTime,
+            waterCoolingSpeedMultiplier);
         SetNaturalTemperature(nextTemperature);
 
         if (NaturalTemperature <= _waterEntryCoolingTargetTemperature)
