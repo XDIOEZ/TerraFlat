@@ -403,7 +403,7 @@ namespace FlatWorld.WorldModel
                     double depth = Lerp(settings.RiverDepthMin, centerDepth, edgeStrength);
                     SetRiverCell(riverCells, water, new GeneratedHydrologyCell(
                         GeneratedHydrologyKind.River, sample.Flow, depth, 0d,
-                        sample.DirectionX, sample.DirectionY));
+                        sample.DirectionX, sample.DirectionY, edgeStrength));
                 }
                 AddFloodplain(request, settings, sampling, center, sample.Flow,
                     radius, floodplainCells);

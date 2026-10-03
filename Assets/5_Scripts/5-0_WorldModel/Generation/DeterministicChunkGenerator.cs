@@ -845,7 +845,7 @@ namespace FlatWorld.WorldModel
                 }
                 else
                 {
-                    groundTileId = settings.RiverbedTileId;
+                    groundTileId = ResolveRiverbedTileId(settings, riverCell);
                     // 水域只是高代价地形：有陆路时 A* 优先绕行，唯一通路是水面时仍可通过。
                     flags = TerrainCellFlags.Walkable;
                     // 液体导航代价由消费层单独叠加，底部 Ground 保留陆地成本。
@@ -988,6 +988,18 @@ namespace FlatWorld.WorldModel
                 RiverKind = river ? (float)riverCell.Kind : 0f,
                 LavaShore = lavaShore
             };
+        }
+
+        /// <summary>河流横截面按配置切成中央河床和两侧河床，湖泊继续沿用普通淡水底材。</summary>
+        private static int ResolveRiverbedTileId(
+            ChunkGenerationSettingsSnapshot settings,
+            GeneratedHydrologyCell riverCell)
+        {
+            if (riverCell.Kind != GeneratedHydrologyKind.River)
+                return settings.RiverbedTileId;
+            return riverCell.BedCenterStrength >= settings.RiverBedCenterStrengthThreshold
+                ? settings.RiverBedCenterTileId
+                : settings.RiverBedEdgeTileId;
         }
 
         /// <summary>判定泥炭斑块：草原石地交界、远离河漫滩，并按斑块区域概率稀疏生成。</summary>
@@ -1420,7 +1432,8 @@ namespace FlatWorld.WorldModel
                             depth,
                             0d,
                             sample.DirectionX,
-                            sample.DirectionY));
+                            sample.DirectionY,
+                            edgeStrength));
                     }
                 }
 
@@ -2251,9 +2264,20 @@ namespace FlatWorld.WorldModel
             Int2 position,
             GeneratedHydrologyCell candidate)
         {
-            if (cells.TryGetValue(position, out GeneratedHydrologyCell current) &&
-                current.Kind >= candidate.Kind &&
-                current.Depth >= candidate.Depth && current.Flow >= candidate.Flow)
+            if (!cells.TryGetValue(position, out GeneratedHydrologyCell current))
+            {
+                cells[position] = candidate;
+                return;
+            }
+            if (current.Kind == GeneratedHydrologyKind.Lake &&
+                candidate.Kind != GeneratedHydrologyKind.Lake)
+            {
+                return;
+            }
+            if (current.Kind == candidate.Kind &&
+                current.Depth >= candidate.Depth &&
+                current.Flow >= candidate.Flow &&
+                current.BedCenterStrength >= candidate.BedCenterStrength)
             {
                 return;
             }
@@ -2282,7 +2306,8 @@ namespace FlatWorld.WorldModel
                 Math.Max(current.Depth, candidate.Depth),
                 Math.Max(current.SurfaceLevel, candidate.SurfaceLevel),
                 flowDirectionX,
-                flowDirectionY);
+                flowDirectionY,
+                Math.Max(current.BedCenterStrength, candidate.BedCenterStrength));
         }
 
         /// <summary>记录格子的最大冲积带强度，重复计算时只保留更明显的一次。</summary>

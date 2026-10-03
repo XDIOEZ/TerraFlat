@@ -89,6 +89,18 @@
           "value": 0.62
         },
         {
+          "id": "river.bedCenterTileId",
+          "value": 4
+        },
+        {
+          "id": "river.bedEdgeTileId",
+          "value": 30
+        },
+        {
+          "id": "river.bedCenterStrengthThreshold",
+          "value": 0.35
+        },
+        {
           "id": "river.depthMin",
           "value": 0.2
         },

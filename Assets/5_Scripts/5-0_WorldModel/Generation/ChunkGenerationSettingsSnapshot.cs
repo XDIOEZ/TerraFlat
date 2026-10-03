@@ -339,6 +339,14 @@ namespace FlatWorld.WorldModel
                 GetDouble(numbers, "river.floodplainMaxSlope", 0.08d), 0.08d);
             RiverAlluvialTileThreshold = Clamp01(
                 GetDouble(numbers, "river.alluvialTileThreshold", 0.62d));
+            RiverBedCenterTileId = Math.Max(
+                1,
+                GetInt(numbers, "river.bedCenterTileId", StoneTileId));
+            RiverBedEdgeTileId = Math.Max(
+                1,
+                GetInt(numbers, "river.bedEdgeTileId", RiverbedTileId));
+            RiverBedCenterStrengthThreshold = Clamp01(
+                GetDouble(numbers, "river.bedCenterStrengthThreshold", 0.35d));
             RiverDepthMin = Clamp01(GetDouble(numbers, "river.depthMin", 0.2d));
             RiverDepthMax = Math.Max(
                 RiverDepthMin,
@@ -622,6 +630,10 @@ namespace FlatWorld.WorldModel
         public double RiverFloodplainMaxSlope { get; }
         /// <summary>冲积强度超过该值时使用沙土 Tile 表现沉积带。</summary>
         public double RiverAlluvialTileThreshold { get; }
+        /// <summary>河道横截面中央与两侧使用的底材，以及中央材质所需的最小横截面强度。</summary>
+        public int RiverBedCenterTileId { get; }
+        public int RiverBedEdgeTileId { get; }
+        public double RiverBedCenterStrengthThreshold { get; }
         public double RiverDepthMin { get; }
         public double RiverDepthMax { get; }
         /// <summary>盆地至少包含多少格才会表现成湖泊。</summary>

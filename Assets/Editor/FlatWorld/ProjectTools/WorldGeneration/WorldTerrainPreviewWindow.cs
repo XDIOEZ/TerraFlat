@@ -171,7 +171,7 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
         {
             ["world.coordinateScale"] = "越大地貌越密集、越碎；越小地貌越舒展",
             ["terrain.groundTileId"] = "普通陆地默认使用的 Tile 数字编号",
-            ["terrain.riverbedTileId"] = "河流和淡水使用的 Tile 数字编号",
+            ["terrain.riverbedTileId"] = "湖泊等普通淡水底材使用的 Tile 数字编号",
             ["terrain.waterThreshold"] = "旧配置兼容项，当前纯地表生成器不读取",
             ["terrain.seabedTileId"] = "海洋使用的咸水 Tile 数字编号",
             ["terrain.sandTileId"] = "沙滩、沙漠和冲积带使用的 Tile 数字编号",
@@ -240,6 +240,9 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
             ["river.floodplainMaxRadius"] = "冲积平原向河道两侧扩展的最大格数",
             ["river.floodplainMaxSlope"] = "允许生成宽冲积平原的最大坡度；越高陡坡也会铺开",
             ["river.alluvialTileThreshold"] = "冲积强度超过该值才换成沙土 Tile",
+            ["river.bedCenterTileId"] = "河流中央河床使用的 Tile 数字编号",
+            ["river.bedEdgeTileId"] = "河流两侧河床使用的 Tile 数字编号",
+            ["river.bedCenterStrengthThreshold"] = "横截面强度达到该值才铺中央河床；越高两侧河床越宽",
             ["river.depthMin"] = "小河的最浅深度表现值",
             ["river.depthMax"] = "大河的最深深度表现值",
             ["river.minLakeCells"] = "旧版水文中盆地至少多大才显示为湖泊",

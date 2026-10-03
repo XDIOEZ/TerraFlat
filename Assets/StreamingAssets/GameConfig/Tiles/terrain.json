@@ -53,6 +53,23 @@
       }
     },
     {
+      "id": "Tile_Clay",
+      "runtimeTileId": 30,
+      "loadCapacity": 7,
+      "displayName": "黏土",
+      "tileAsset": "Tile_Clay",
+      "data": {
+        "type": "universal",
+        "parameters": { "tileTag": "", "demolitionTime": 0, "penalty": 1000, "isWalkable": true }
+      },
+      "behaviours": [],
+      "groundHarvest": {
+        "requiredTool": "Shovel", "minimumTier": 1, "reach": 2,
+        "itemId": "Clay", "amount": 1, "replacementTileId": "Tile_Stone",
+        "baseUsesPerTile": 6, "minimumUsesPerTile": 2, "useInterval": 0.2
+      }
+    },
+    {
       "id": "Tile_Sand",
       "runtimeTileId": 3,
       "loadCapacity": 5,

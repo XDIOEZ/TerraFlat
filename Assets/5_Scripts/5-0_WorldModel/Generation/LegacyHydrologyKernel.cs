@@ -13,7 +13,7 @@ namespace FlatWorld.WorldModel
         Lake = 2
     }
 
-    /// <summary>一个淡水格子的类型、汇流量、水深和湖面高度。</summary>
+    /// <summary>一个淡水格子的类型、汇流量、水深、横截面位置和湖面高度。</summary>
     internal readonly struct GeneratedHydrologyCell
     {
         internal GeneratedHydrologyCell(
@@ -22,12 +22,16 @@ namespace FlatWorld.WorldModel
             double depth,
             double surfaceLevel = 0d,
             double flowDirectionX = 0d,
-            double flowDirectionY = 0d)
+            double flowDirectionY = 0d,
+            double bedCenterStrength = 1d)
         {
             Kind = kind;
             Flow = Math.Max(0d, flow);
             Depth = Clamp01(depth);
             SurfaceLevel = Clamp01(surfaceLevel);
+            BedCenterStrength = kind == GeneratedHydrologyKind.River
+                ? Clamp01(bedCenterStrength)
+                : 0d;
             double directionLength = Math.Sqrt(
                 flowDirectionX * flowDirectionX + flowDirectionY * flowDirectionY);
             if (kind == GeneratedHydrologyKind.River && directionLength > 0.000001d)
@@ -46,6 +50,7 @@ namespace FlatWorld.WorldModel
         internal double Flow { get; }
         internal double Depth { get; }
         internal double SurfaceLevel { get; }
+        internal double BedCenterStrength { get; }
         internal double FlowDirectionX { get; }
         internal double FlowDirectionY { get; }
 
@@ -160,7 +165,8 @@ namespace FlatWorld.WorldModel
                             sample.Depth,
                             sample.SurfaceLevel,
                             sample.FlowDirectionX,
-                            sample.FlowDirectionY));
+                            sample.FlowDirectionY,
+                            sample.BedCenterStrength));
                     }
 
                     double floodplain = region.GetFloodplain(position, request.Topology);
@@ -643,7 +649,7 @@ namespace FlatWorld.WorldModel
                                 settings.RiverDepthMin, centerDepth, edgeStrength);
                             SetCell(cells, waterPosition, new LegacyCellSample(
                                 GeneratedHydrologyKind.River, pair.Value, depth, 0d,
-                                flowDirectionX, flowDirectionY));
+                                flowDirectionX, flowDirectionY, edgeStrength));
                         }
                     }
 
@@ -784,6 +790,29 @@ namespace FlatWorld.WorldModel
                 {
                     return;
                 }
+                if (existing.Kind == GeneratedHydrologyKind.River &&
+                    sample.Kind == GeneratedHydrologyKind.River)
+                {
+                    float directionX = existing.FlowDirectionX;
+                    float directionY = existing.FlowDirectionY;
+                    bool existingHasDirection =
+                        Math.Abs(directionX) > 0.000001f ||
+                        Math.Abs(directionY) > 0.000001f;
+                    if (!existingHasDirection || sample.Flow > existing.Flow)
+                    {
+                        directionX = sample.FlowDirectionX;
+                        directionY = sample.FlowDirectionY;
+                    }
+                    output[index] = new LegacyCellSample(
+                        GeneratedHydrologyKind.River,
+                        Math.Max(existing.Flow, sample.Flow),
+                        Math.Max(existing.Depth, sample.Depth),
+                        Math.Max(existing.SurfaceLevel, sample.SurfaceLevel),
+                        directionX,
+                        directionY,
+                        Math.Max(existing.BedCenterStrength, sample.BedCenterStrength));
+                    return;
+                }
                 if (existing.Kind == sample.Kind && existing.Depth > sample.Depth)
                     return;
                 output[index] = sample;
@@ -909,7 +938,8 @@ namespace FlatWorld.WorldModel
                 double depth,
                 double surfaceLevel,
                 double flowDirectionX = 0d,
-                double flowDirectionY = 0d)
+                double flowDirectionY = 0d,
+                double bedCenterStrength = 1d)
             {
                 Kind = kind;
                 Flow = (float)Math.Max(0d, flow);
@@ -917,6 +947,9 @@ namespace FlatWorld.WorldModel
                 SurfaceLevel = (float)Clamp01(surfaceLevel);
                 FlowDirectionX = (float)flowDirectionX;
                 FlowDirectionY = (float)flowDirectionY;
+                BedCenterStrength = kind == GeneratedHydrologyKind.River
+                    ? (float)Clamp01(bedCenterStrength)
+                    : 0f;
             }
 
             internal GeneratedHydrologyKind Kind { get; }
@@ -925,6 +958,7 @@ namespace FlatWorld.WorldModel
             internal float SurfaceLevel { get; }
             internal float FlowDirectionX { get; }
             internal float FlowDirectionY { get; }
+            internal float BedCenterStrength { get; }
         }
 
         private readonly struct BasinResult
