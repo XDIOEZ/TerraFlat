@@ -96,7 +96,26 @@
         "type": "universal",
         "parameters": { "tileTag": "", "demolitionTime": 0, "penalty": 1000, "isWalkable": true }
       },
-      "behaviours": []
+      "behaviours": [],
+      "groundHarvest": {
+        "requiredTool": "Pickaxe", "minimumTier": 1, "reach": 2,
+        "itemId": "Ore_Stone", "amount": 1, "replacementTileId": "Tile_Stone",
+        "baseUsesPerTile": 6, "minimumUsesPerTile": 2, "useInterval": 0.2,
+        "naturalLayerCount": 5, "exhaustedTileId": "Tile_Bedrock"
+      }
+    },
+    {
+      "id": "Tile_Bedrock",
+      "runtimeTileId": 31,
+      "loadCapacity": 10,
+      "displayName": "基岩",
+      "tileAsset": "Tile_Bedrock",
+      "data": {
+        "type": "universal",
+        "parameters": { "tileTag": "Bedrock", "demolitionTime": 0, "penalty": 1000, "isWalkable": true }
+      },
+      "behaviours": [],
+      "damageProfile": { "damageable": false }
     },
     {
       "id": "Tile_Ice",

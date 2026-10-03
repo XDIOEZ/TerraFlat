@@ -44,7 +44,8 @@ description: "Use when: 定位或修改 FlatWorld 的地图内容、Tilemap、�
 - 泥炭只生成在草原一侧的石地交界带；`biome.peat.spawnChance` 按斑块区域控制整体出现概率，河流 floodplain 范围一律排除，禁止再用“潮湿低地/河岸”规则生成泥炭。
 - 洞穴入口联动 `flatworld-dimension`，可走性联动 `flatworld-navigation`，差量联动 `flatworld-data-save`。
 - 地块可提供环境动作与被动效果定义，但共享 `TileBlockBehaviour` 只保存规则；玩家长按、Tick、环境倍率等实例状态必须留在角色侧运行器。
-- 可采挖地表通过 Tile JSON 的 `groundHarvest` 声明工具类别、等级、产物、距离、工具使用次数与挖后地表；只有组合 `Mod_Shovel` 的手持物通过 `Item.OnAct` 调用 `GroundTileHarvestSystem`，逐次累积进度并保存到区块差量，完成时才创建掉落和替换完整 `TerrainCell`。表现层从同一进度绘制裂纹，不能按物品 ID/Tag 猜铲子，也不能把铲地代码塞进 `Mod_Damage`。
+- 可采挖地表通过 Tile JSON 的 `groundHarvest` 声明工具类别、等级、产物、距离、工具使用次数与挖后地表；铲子 `Mod_Shovel` 与镐类 `Mod_ResourceTool` 通过共用 `Mod_GroundHarvestToolBase` 从 `Item.OnAct` 调用 `GroundTileHarvestSystem`，逐次累积进度并保存到区块差量，完成一层时才创建掉落和提交地表。天然石地由 `naturalLayerCount/exhaustedTileId` 声明可采层数与不可破坏基底；`GroundTileLayerSystem` 单独记录深度，采挖与渐显表现共用下一层解析。不能按物品 ID/Tag 猜工具，也不能把铲地代码塞进 `Mod_Damage`。
+- 后续玩家地形工具必须经 `GroundTileLayerSystem.TryApplyPlayerCover` 压栈覆盖前的完整地块、工作进度和草层；开采优先弹出覆盖层，不能消耗天然石层计数或用固定石地覆盖原草地。现有平台/地板仍使用独立 `TerrainSupportLayer`，不混入天然深度。
 - 地块选中框只依据当前指针所指的已加载地格显示；采挖距离、占用和工具等级属于执行资格，拒绝时给出原因，不应让白框一起消失。
 - `Ground` 地块替换不会自动清除独立的草层；采挖完成后要经 `RuntimeGrassClearing.Clear` 同步草层视觉和 `GrassDeltas`，不要只写新的 `TerrainCell`。
 - 资源加载时由 JSON 构建 `RuntimeTileDefinition` 和每种定义自己的共享 Behaviour 集合；`type` 经 `TileBehaviourRegistry` 的显式工厂解析，禁止 CLR `$type` 或移动时反序列化。参数使用现有配置字段的 camelCase，私有 `[SerializeField]` 参数也须迁移；未知字段和无效数值必须失败，不得静默忽略。

@@ -441,7 +441,7 @@ public sealed class ChunkAgricultureRenderer : MonoBehaviour, IChunkViewRenderer
             return;
         }
 
-        if (!TryResolveGroundHarvestVisual(cell.GroundTileId, out Sprite sprite, out Color color,
+        if (!TryResolveGroundHarvestVisual(local, cell.GroundTileId, out Sprite sprite, out Color color,
                 out Matrix4x4 tileTransform))
         {
             if (groundHarvestOverlays.Remove(local, out ProgressOverlay previous))
@@ -515,7 +515,7 @@ public sealed class ChunkAgricultureRenderer : MonoBehaviour, IChunkViewRenderer
         return TryResolveTileVisual(farmland, out sprite, out color, out tileTransform);
     }
 
-    private static bool TryResolveGroundHarvestVisual(int sourceTileId, out Sprite sprite, out Color color,
+    private bool TryResolveGroundHarvestVisual(Vector2Int local, int sourceTileId, out Sprite sprite, out Color color,
         out Matrix4x4 tileTransform)
     {
         sprite = null;
@@ -524,10 +524,16 @@ public sealed class ChunkAgricultureRenderer : MonoBehaviour, IChunkViewRenderer
         GameRes resources = GameRes.ExistingInstance;
         if (resources == null || !resources.TryGetTileDefinition(sourceTileId, out RuntimeTileDefinition source) ||
             source.GroundHarvest == null ||
-            !resources.TryGetTileDefinition(source.GroundHarvest.ReplacementTileId, out RuntimeTileDefinition target))
+            !GroundTileHarvestSystem.TryResolveHarvestResult(new RuntimeTerrainTileSample(chunk.Address,
+                chunk.Terrain, default, local, chunk.Terrain.GetCell(local.x, local.y), sourceTileId),
+                source, out RuntimeTileDefinition target))
             return false;
 
-        return TryResolveTileVisual(target, out sprite, out color, out tileTransform);
+        if (!TryResolveTileVisual(target, out sprite, out color, out tileTransform)) return false;
+        // 连续石层使用深色开采痕迹，避免上下层同图时看不出工作进度。
+        if (source.RuntimeTileId == target.RuntimeTileId)
+            color = new Color(color.r * 0.6f, color.g * 0.6f, color.b * 0.6f, color.a);
+        return true;
     }
 
     private static bool TryResolveTileVisual(RuntimeTileDefinition definition, out Sprite sprite, out Color color,

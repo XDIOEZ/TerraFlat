@@ -55,11 +55,14 @@ public abstract class Mod_ResourceToolBase : Module, IResourceHarvestTool, IComb
     #endregion
 }
 
-/// <summary>普通资源工具能力模块，例如镐；不承载右键地块交互。</summary>
-public sealed class Mod_ResourceTool : Mod_ResourceToolBase
+/// <summary>普通资源工具提供采集加成；镐类额外复用右键地表采挖能力。</summary>
+public sealed class Mod_ResourceTool : Mod_GroundHarvestToolBase
 {
+    #region 工具身份
     public const string ModuleId = "Mod_ResourceTool";
     [SerializeField] private ResourceToolKind toolKind = ResourceToolKind.Pickaxe;
     public override string CanonicalModuleId => ModuleId;
     public override ResourceToolKind HarvestKind => toolKind;
+    protected override bool SupportsGroundHarvest => HarvestKind == ResourceToolKind.Pickaxe;
+    #endregion
 }
