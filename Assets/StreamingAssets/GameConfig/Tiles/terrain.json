@@ -40,7 +40,7 @@
       "loadCapacity": 8,
       "naturalPlantable": true,
       "displayName": "泥土",
-      "tileAsset": "TileBase_Dirt",
+      "tileAsset": "Tile_Dirt",
       "data": {
         "type": "universal",
         "parameters": { "tileTag": "", "demolitionTime": 0, "penalty": 1000, "isWalkable": true }

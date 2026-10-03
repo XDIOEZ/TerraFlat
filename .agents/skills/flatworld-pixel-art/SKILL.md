@@ -46,6 +46,7 @@ python .agents/skills/flatworld-pixel-art/scripts/validate_pixel_asset.py <sprit
 - 将继承其他物品贴图的染色占位物替换为独立成图时，同步检查 `visual.color` 与继承的 `rendererLocalScale`；原有乘色会改变新图配色，成图通常显式设为白色，尺寸则结合继承缩放和 PPU 验收。
 - 手持工具的 Pivot 必须对齐实际握柄，不能机械套用图标中心；先核对外壳 `Render` 层级和 JSON `visual.rendererLocalPosition`，避免导入 Pivot 与外壳偏移重复补偿。PNG 以左上计像素，Unity Pivot 以左下归一化；像素中心 `(x, y)` 对应 `((x + 0.5) / width, 1 - (y + 0.5) / height)`。
 - 铺满整格的地面 Tile 使用中心 Pivot、全幅不透明画布和当前地块 PPU；不要套用物品的透明四角/底部对齐检查，否则拼接时会露出原地形。其 Sprite 图标可复用同一图，运行时地面不能保留图标安全留白。
+- 地面与墙体可能共用同一个 TileBase 或共享图集切片；只重绘地面时，先检查全部消费方，必要时新增独立地面 Tile 并仅修改 terrain JSON 的外观引用，保留墙体和其他切片。
 
 - 按格连续拼接的传动轴等世界 Sprite，应先核对 Grid 格宽、Renderer 缩放、PPU 与中心 Pivot；需要首尾无缝时，轴线处的 Alpha 和接头颜色应延伸并匹配画布相对边界。用相邻两到三格及旋转 90 度的最近邻预览核对接缝；贴图的视觉相接不代替机械端口和网络拓扑校验。
 
