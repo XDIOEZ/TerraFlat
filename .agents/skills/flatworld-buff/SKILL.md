@@ -24,6 +24,7 @@ description: "Use when: 定位或修改 FlatWorld 的 Buff 定义、JSON 目录�
 - 水体叠层时钟由每个 Mod_BuffManager 独享，不能放入共享 LiquidDefinition/WorldLiquidBehaviour；使用真实地形深度而不是漂浮后的视觉浸没深度。同帧跨水格保留计时，进入浅水只限制后续增长，不削掉已有层数；潮湿通过 `decayStacksOnExpiry` 每次到期脱落一层并重新计时，最后一层才执行 Stop，定义与 Wiki 校验必须同步。
 - 淋雨由 `Mod_BuffManager.Rain` 在每个生物的权威 Tick 中独立累计，空 Buff 也须推进；`RainWetnessClock` 按 `雨量 / rainReferenceIntensity` 折算 `rainStackIntervalSeconds`，`rainMaxStacks` 只限制淋雨新增，不削减浸水层数。持续淋雨保持潮湿时限但不暂停周期效果，雨停/死亡/回池/清空状态重置未满层进度；雨量切换不重置。天气查询使用现有天气管理器与生物当地雨雪判定，不依赖镜头或雨粒子，非生物、Client 和抑制天气的维度不施加。
 - 火焰施加先比较完整候选层数：同层潮湿阻止点燃，强火成功施加后才蒸发弱潮湿。燃烧期间重新浸水允许潮湿累计到灭火阈值，不能每次把新加的单层水立即删除而导致永久无法灭火。
+- 岩浆真实接触属于最高强度火源：相邻格边缘交互不触发；真实进入时先清潮湿并直接维持燃烧最高层，离开时把燃烧剩余时间刷新为 10 秒。燃烧全局最高层由 JSON 定义，不在液体逻辑重复硬编码层数。
 - Wiki BUFF 页与 Item 共用内联编辑、文件指纹、备份及原子写回事务；BuffManifest 是可写目标白名单，校验器须与 BuffDefinitionFactory 同步。保存不代表正在运行的 GameRes 已热重载，页面必须说明生效边界；公开模式只读。
 - 新效果需同时增加稳定 typeId、Dispatcher 注册和参数校验。
 - `core:temperature_warming` 在 start/stop 按 Buff 实例登记、撤销临时增温，start 必须配置正 `value` 和 `upperLimit`；不要在 Tick 中反复加温，也不要在 Stop 固定减去配置值。受限增温和基础体温由 `Mod_Temperature` 分层结算，重复食用使用续期而不重复登记来源。

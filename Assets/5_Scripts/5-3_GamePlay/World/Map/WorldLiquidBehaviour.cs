@@ -8,6 +8,10 @@ using UnityEngine;
 public class WorldLiquidBehaviour
 {
     #region 定义配置
+    private const string LavaLiquidId = "core:lava";
+    private const float LavaBurningDurationSeconds = 10f;
+    private const float LavaBurningRefreshThresholdSeconds = 5f;
+
     public WorldLiquidBehaviour() { }
     /// <summary>每种液体只构建一次共享行为，禁止把角色状态放入液体目录。</summary>
     public WorldLiquidBehaviour(WorldLiquidSettings settings)
@@ -52,7 +56,11 @@ public class WorldLiquidBehaviour
             item.GetComponentInChildren<Mod_BuffManager>()?.SetWaterStackExposure(false);
             bool touching = receiver == null || !receiver.IsActiveTileEdgeInteractionOnly;
             SetWaterVisualState(item, touching ? source.Sample.LiquidDepth : 0f, touching);
-            if (touching) ProvideWaterEffects(receiver, source.Sample.LiquidDepth);
+            if (touching)
+            {
+                ProvideWaterEffects(receiver, source.Sample.LiquidDepth);
+                RefreshLavaBurning(item, source.Liquid, true);
+            }
             ProvideWaterActions(item, source.Liquid, receiver);
             return;
         }
@@ -85,6 +93,10 @@ public class WorldLiquidBehaviour
     {
         if (item == null)
             return;
+
+        if (receiver == null || !receiver.IsActiveTileEdgeInteractionOnly)
+            RefreshLavaBurning(item, source.Liquid, true);
+
         SetWaterTemperatureState(item, false, 0f);
         receiver?.ExitWaterSurvival(item);
         SetWaterVisualState(item, 0f, false);
@@ -106,6 +118,7 @@ public class WorldLiquidBehaviour
         if (receiver != null && receiver.IsActiveTileEdgeInteractionOnly)
             return;
 
+        RefreshLavaBurning(item, source.Liquid, false);
         receiver?.AdvanceLiquidContactHeat(source.Liquid.WorldWater, deltaTime);
         if (!waterContact)
         {
@@ -126,6 +139,35 @@ public class WorldLiquidBehaviour
         SetWaterVisualState(item, effectiveImmersion, true);
         ProvideWaterEffects(receiver, effectiveImmersion);
     }
+    #endregion
+
+    #region 岩浆燃烧
+
+    /// <summary>真实接触岩浆时蒸发潮湿并维持最高层燃烧，离开后保留完整十秒燃烧时间。</summary>
+    private static void RefreshLavaBurning(Item item, LiquidDefinition liquid, bool forceFullDuration)
+    {
+        if (item == null || liquid == null ||
+            !string.Equals(liquid.Id, LavaLiquidId, System.StringComparison.OrdinalIgnoreCase))
+            return;
+
+        Mod_BuffManager buffManager = item.itemMods?.GetMod_ByID<Mod_BuffManager>(ModText.Mod_BuffManager);
+        BuffDefinition definition = GameRes.Instance?.GetBuffDefinition(BurningBuffIds.Burning);
+        if (buffManager == null || definition == null)
+            return;
+
+        // 岩浆是最高强度火源，真实接触时潮湿不能阻止点燃。
+        buffManager.RemoveBuff(WetBuffIds.Wet);
+        if (buffManager.GetBuffStacks(BurningBuffIds.Burning) < definition.MaxStacks &&
+            !buffManager.AddBuff(BurningBuffIds.Burning, definition.MaxStacks))
+            return;
+
+        if (!buffManager.TryGetBuff(BurningBuffIds.Burning, out BuffInstance burning))
+            return;
+
+        if (forceFullDuration || burning.RemainingDurationSeconds <= LavaBurningRefreshThresholdSeconds)
+            buffManager.TrySetBuffDuration(BurningBuffIds.Burning, LavaBurningDurationSeconds);
+    }
+
     #endregion
 
     #region Temperature State
