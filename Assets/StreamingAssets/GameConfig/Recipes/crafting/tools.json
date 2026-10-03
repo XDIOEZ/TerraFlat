@@ -178,8 +178,8 @@
       "inputs": [
         {
           "match": "exact_item",
-          "itemId": "Ore_Stone",
-          "amount": 2
+          "itemId": "DrilledStoneSlab",
+          "amount": 1
         },
         {
           "match": "exact_item",
