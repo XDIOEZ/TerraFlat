@@ -18,7 +18,7 @@
         "InventoryGroup.MechanicalPower"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/Conveyor/World_Conveyor_Wood.png"
       },
       "health": {
         "hasHp": true,
@@ -91,7 +91,7 @@
         "InventoryGroup.MechanicalPower"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/Conveyor/World_Conveyor_Wood.png"
       },
       "health": {
         "hasHp": true,
