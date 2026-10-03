@@ -17,6 +17,7 @@
       "id": "Tile_Grass",
       "runtimeTileId": 1,
       "loadCapacity": 8,
+      "naturalPlantable": true,
       "displayName": "Tile_Grass",
       "tileAsset": "Tile_Grass",
       "data": {
@@ -37,6 +38,7 @@
       "id": "Tile_Dirt",
       "runtimeTileId": 29,
       "loadCapacity": 8,
+      "naturalPlantable": true,
       "displayName": "泥土",
       "tileAsset": "TileBase_Dirt",
       "data": {
@@ -131,6 +133,7 @@
       "id": "Tile_Peat",
       "runtimeTileId": 28,
       "loadCapacity": 8,
+      "naturalPlantable": true,
       "displayName": "泥炭地块",
       "tileAsset": "Tile_Peat",
       "data": {
@@ -148,6 +151,7 @@
       "id": "Tile_Farmland",
       "runtimeTileId": 14,
       "loadCapacity": 8,
+      "naturalPlantable": true,
       "displayName": "耕地",
       "tileAsset": "Tile_Farmland",
       "data": {

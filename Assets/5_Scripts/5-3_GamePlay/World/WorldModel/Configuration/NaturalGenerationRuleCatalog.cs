@@ -81,6 +81,8 @@ public sealed class NaturalGenerationRuleCatalog
             !OrderedUnitRange(rule.MinHeight, rule.MaxHeight) ||
             !OrderedUnitRange(rule.MinRiverFloodplainStrength, rule.MaxRiverFloodplainStrength) ||
             !Finite(rule.MinimumEnvironmentValue) ||
+            !Finite(rule.MaximumEnvironmentValue) ||
+            rule.MaximumEnvironmentValue < rule.MinimumEnvironmentValue ||
             !InRange(rule.CompanionSpawnChance, 0d, 1d) ||
             !Finite(rule.CompanionOffsetX) || !Finite(rule.CompanionOffsetY) ||
             !AtLeast(rule.CompanionMinRadius, 0d) ||
@@ -181,6 +183,10 @@ internal sealed class NaturalEcologyRuleDefinition
     public string RequiredEnvironmentLayer = string.Empty;
     [JsonProperty(Required = Required.DisallowNull)]
     public float MinimumEnvironmentValue;
+    [JsonProperty(Required = Required.DisallowNull)]
+    public float MaximumEnvironmentValue = float.MaxValue;
+    [JsonProperty(Required = Required.DisallowNull)]
+    public bool RequireNaturalPlantableGround;
     public List<string> ProvidedTags;
     public bool CompanionOnly;
     public string CompanionHostTag;
@@ -201,7 +207,8 @@ internal sealed class NaturalEcologyRuleDefinition
         CompanionMinRadius, CompanionMaxRadius, MinRiverFloodplainStrength,
         DistributionMode, PatchSpacing, PatchRadius, PatchChance, RequiredTagChunkRadius,
         MaxRiverFloodplainStrength, RequiredEnvironmentLayer, MinimumEnvironmentValue,
-        ItemCountDistribution, ItemCountMin, ItemCountPeak, ItemCountQuadraticRadius);
+        ItemCountDistribution, ItemCountMin, ItemCountPeak, ItemCountQuadraticRadius,
+        MaximumEnvironmentValue, RequireNaturalPlantableGround);
 }
 
 /// <summary>一条洞穴矿脉规则的 JSON 数据；优先级由 SO 引用顺序决定。</summary>

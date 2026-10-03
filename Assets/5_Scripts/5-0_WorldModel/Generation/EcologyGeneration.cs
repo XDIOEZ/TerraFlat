@@ -64,7 +64,9 @@ namespace FlatWorld.WorldModel
             EcologyItemCountDistribution itemCountDistribution = EcologyItemCountDistribution.Fixed,
             int itemCountMin = 1,
             int itemCountPeak = 1,
-            double itemCountQuadraticRadius = 1d)
+            double itemCountQuadraticRadius = 1d,
+            double maximumEnvironmentValue = double.MaxValue,
+            bool requireNaturalPlantableGround = false)
         {
             if (string.IsNullOrWhiteSpace(ruleId))
                 throw new ArgumentException("Ecology rule id is required.", nameof(ruleId));
@@ -121,7 +123,12 @@ namespace FlatWorld.WorldModel
             RequiredEnvironmentLayer = requiredEnvironmentLayer?.Trim() ?? string.Empty;
             if (double.IsNaN(minimumEnvironmentValue) || double.IsInfinity(minimumEnvironmentValue))
                 throw new ArgumentOutOfRangeException(nameof(minimumEnvironmentValue));
+            if (double.IsNaN(maximumEnvironmentValue) || double.IsInfinity(maximumEnvironmentValue) ||
+                maximumEnvironmentValue < minimumEnvironmentValue)
+                throw new ArgumentOutOfRangeException(nameof(maximumEnvironmentValue));
             MinimumEnvironmentValue = minimumEnvironmentValue;
+            MaximumEnvironmentValue = maximumEnvironmentValue;
+            RequireNaturalPlantableGround = requireNaturalPlantableGround;
             CompanionSpawnChance = Clamp01(companionSpawnChance);
             CompanionOffsetX = Finite(companionOffsetX, 0d);
             CompanionOffsetY = Finite(companionOffsetY, 0d);
@@ -173,6 +180,9 @@ namespace FlatWorld.WorldModel
         /// <summary>可选生成环境约束；缺失对应层时不生成，避免稀有伴生资源散落全地图。</summary>
         public string RequiredEnvironmentLayer { get; }
         public double MinimumEnvironmentValue { get; }
+        public double MaximumEnvironmentValue { get; }
+        /// <summary>要求脚下地块在地块目录中声明为自然可种植基质。</summary>
+        public bool RequireNaturalPlantableGround { get; }
         /// <summary>自然物逐格均匀生成，或先形成稀疏小聚落。</summary>
         public EcologyDistributionMode DistributionMode { get; }
         /// <summary>聚落候选网格的边长；相邻网格各自最多形成一个聚落。</summary>
@@ -202,6 +212,11 @@ namespace FlatWorld.WorldModel
                    riverFloodplainStrength >= MinRiverFloodplainStrength &&
                    riverFloodplainStrength <= MaxRiverFloodplainStrength;
         }
+
+        /// <summary>按冻结的地块能力判断当前自然物是否允许落在该地表。</summary>
+        public bool MatchesGround(int groundTileId, ChunkGenerationSettingsSnapshot settings) =>
+            !RequireNaturalPlantableGround ||
+            settings != null && settings.IsNaturalPlantableGround(groundTileId);
 
         private static List<string> NormalizeTags(IEnumerable<string> tags)
         {
@@ -440,7 +455,8 @@ namespace FlatWorld.WorldModel
                     for (int ruleIndex = 0; ruleIndex < hostRules.Count; ruleIndex++)
                     {
                         EcologySpawnRuleSnapshot rule = hostRules[ruleIndex];
-                        if (!MatchesEnvironmentLayer(rule, terrain, x, y) ||
+                        if (!rule.MatchesGround(cell.GroundTileId, request.Profile.Settings) ||
+                            !MatchesEnvironmentLayer(rule, terrain, x, y) ||
                             !rule.Matches(cell.BiomeId, temperature, precipitation, height,
                                 riverFloodplain))
                         {
@@ -491,6 +507,7 @@ namespace FlatWorld.WorldModel
                     {
                         EcologySpawnRuleSnapshot rule = companionRules[ruleIndex];
                         if (string.IsNullOrWhiteSpace(rule.CompanionHostTag) ||
+                            !rule.MatchesGround(cell.GroundTileId, request.Profile.Settings) ||
                             !MatchesEnvironmentLayer(rule, terrain, x, y) ||
                             !rule.Matches(cell.BiomeId, temperature, precipitation, height,
                                 riverFloodplain) ||
@@ -646,7 +663,8 @@ namespace FlatWorld.WorldModel
                 for (int ruleIndex = 0; ruleIndex < taggedRules.Count; ruleIndex++)
                 {
                     EcologySpawnRuleSnapshot rule = taggedRules[ruleIndex];
-                    if (!MatchesEnvironmentLayer(rule, terrain, x, y) ||
+                    if (!rule.MatchesGround(cell.GroundTileId, request.Profile.Settings) ||
+                        !MatchesEnvironmentLayer(rule, terrain, x, y) ||
                         !rule.Matches(cell.BiomeId, temperature, precipitation, height,
                             riverFloodplain) ||
                         !MatchesDistribution(request, worldX, worldY, rule))
@@ -738,7 +756,7 @@ namespace FlatWorld.WorldModel
             ChunkTerrainBuffer terrain, int x, int y) =>
             string.IsNullOrEmpty(rule.RequiredEnvironmentLayer) ||
             terrain.TryGetEnvironmentValue(rule.RequiredEnvironmentLayer, x, y, out float value) &&
-            value >= rule.MinimumEnvironmentValue;
+            value >= rule.MinimumEnvironmentValue && value <= rule.MaximumEnvironmentValue;
 
         private static double ReadEnvironment(ChunkTerrainBuffer terrain, string layerId,
             int x, int y)

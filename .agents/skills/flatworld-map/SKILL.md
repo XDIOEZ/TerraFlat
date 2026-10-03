@@ -38,6 +38,7 @@ description: "Use when: 定位或修改 FlatWorld 的地图内容、Tilemap、�
 - 修改算法时考虑生成签名、旧存档、联机指纹和 Wrapped 坐标。
 - 雪山地表固定使用纯白 `Tile_Snow`，禁止按随机噪声混入雪地变体；若未来恢复变体，只能按温度区间确定。
 - 萝卜聚落由 `surface.forest.radish` 与 `surface.grassland.radish` 两条独立规则控制；全局调整时必须同步审计两条，`PatchChance` 控制聚落数量，`SpawnChance` 与 `PatchRadius` 控制聚落内部密度。
+- 自然作物需要通用可种植基质时，用 Tile JSON 的 `naturalPlantable` 声明能力，并在生态规则启用 `requireNaturalPlantableGround`；不要把草地/泥土 ID 写死进单个作物。摄氏温度硬范围用 `requiredEnvironmentLayer=temperature.celsius` 配合 `minimumEnvironmentValue/maximumEnvironmentValue`。
 - 泥炭只生成在草原一侧的石地交界带；`biome.peat.spawnChance` 按斑块区域控制整体出现概率，河流 floodplain 范围一律排除，禁止再用“潮湿低地/河岸”规则生成泥炭。
 - 洞穴入口联动 `flatworld-dimension`，可走性联动 `flatworld-navigation`，差量联动 `flatworld-data-save`。
 - 地块可提供环境动作与被动效果定义，但共享 `TileBlockBehaviour` 只保存规则；玩家长按、Tick、环境倍率等实例状态必须留在角色侧运行器。

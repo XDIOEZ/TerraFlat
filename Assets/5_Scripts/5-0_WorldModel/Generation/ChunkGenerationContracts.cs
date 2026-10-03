@@ -484,6 +484,12 @@ namespace FlatWorld.WorldModel
                     AddString(ref hash, "requiredEnvironmentLayer");
                     AddString(ref hash, rule.RequiredEnvironmentLayer);
                     AddLong(ref hash, BitConverter.DoubleToInt64Bits(rule.MinimumEnvironmentValue));
+                    AddLong(ref hash, BitConverter.DoubleToInt64Bits(rule.MaximumEnvironmentValue));
+                }
+                if (rule.RequireNaturalPlantableGround)
+                {
+                    AddString(ref hash, "requireNaturalPlantableGround");
+                    AddLong(ref hash, 1);
                 }
                 if (rule.MaxRiverFloodplainStrength < 1d)
                 {

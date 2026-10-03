@@ -494,6 +494,8 @@ public partial class EcologyRuleSaveData
     public double? MaxRiverFloodplainStrength;
     public string RequiredEnvironmentLayer;
     public double MinimumEnvironmentValue;
+    public double? MaximumEnvironmentValue;
+    public bool RequireNaturalPlantableGround;
 
     #endregion
 
@@ -528,6 +530,8 @@ public partial class EcologyRuleSaveData
             MaxRiverFloodplainStrength = snapshot.MaxRiverFloodplainStrength,
             RequiredEnvironmentLayer = snapshot.RequiredEnvironmentLayer,
             MinimumEnvironmentValue = snapshot.MinimumEnvironmentValue,
+            MaximumEnvironmentValue = snapshot.MaximumEnvironmentValue,
+            RequireNaturalPlantableGround = snapshot.RequireNaturalPlantableGround,
             CompanionOnly = snapshot.CompanionOnly,
             CompanionHostTag = snapshot.CompanionHostTag,
             RequiredChunkTag = snapshot.RequiredChunkTag,
@@ -581,7 +585,9 @@ public partial class EcologyRuleSaveData
             ItemCountDistribution,
             ItemCountMin,
             ItemCountPeak,
-            ItemCountQuadraticRadius);
+            ItemCountQuadraticRadius,
+            MaximumEnvironmentValue ?? double.MaxValue,
+            RequireNaturalPlantableGround);
     }
 
     #endregion

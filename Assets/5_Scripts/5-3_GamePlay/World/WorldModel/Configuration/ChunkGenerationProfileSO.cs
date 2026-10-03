@@ -79,6 +79,7 @@ public sealed class ChunkGenerationProfileSO : ScriptableObject
 
         Dictionary<string, string> texts = CreateTextParametersSnapshot();
         riverConfigs.ApplyTo(profileId, numbers, texts);
+        AppendNaturalPlantableGroundTileIds(texts);
 
         var ecologySnapshots = new List<EcologySpawnRuleSnapshot>(ecologyRuleIds.Count);
         var ruleIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -103,6 +104,22 @@ public sealed class ChunkGenerationProfileSO : ScriptableObject
         return new ChunkGenerationProfileSnapshot(
             profileId, generationSignature, chunkWidth, chunkHeight, numbers, texts,
             ecologyGlobalMultiplier, ecologySnapshots, caveResourceSnapshots);
+    }
+
+    /// <summary>把地块目录里的自然可种植能力冻结进纯生成快照，后台线程不读取 GameRes。</summary>
+    private static void AppendNaturalPlantableGroundTileIds(Dictionary<string, string> texts)
+    {
+        GameRes resources = GameRes.ExistingInstance;
+        if (resources == null)
+            return;
+
+        var tileIds = new SortedSet<int>();
+        foreach (RuntimeTileDefinition definition in resources.TileBlockDict.Values)
+            if (definition != null && definition.NaturalPlantable && definition.RuntimeTileId > 0)
+                tileIds.Add(definition.RuntimeTileId);
+
+        if (tileIds.Count > 0)
+            texts["ecology.naturalPlantableGroundTileIds"] = string.Join(",", tileIds);
     }
 
     /// <summary>独立读取地块 ID 等文本参数，供编辑器校验使用且不依赖自然物目录。</summary>

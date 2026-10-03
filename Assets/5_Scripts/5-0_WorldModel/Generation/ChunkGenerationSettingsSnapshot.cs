@@ -161,6 +161,7 @@ namespace FlatWorld.WorldModel
         private const double DefaultWorldCoordinateScale = 0.01d;
         private const double MinimumWorldDistanceScale = 0.25d;
         private const double MaximumWorldDistanceScale = 4d;
+        private readonly HashSet<int> naturalPlantableGroundTileIds;
 
         /// <summary>把配置表里的原始参数整理成生成器可以直接使用的安全数值。</summary>
         internal ChunkGenerationSettingsSnapshot(IReadOnlyDictionary<string, double> numbers,
@@ -178,6 +179,8 @@ namespace FlatWorld.WorldModel
             SnowTileId = GetInt(numbers, "terrain.snowTileId", GroundTileId);
             IceTileId = GetInt(numbers, "terrain.iceTileId", SnowTileId);
             PeatTileId = GetInt(numbers, "terrain.peatTileId", 0);
+            naturalPlantableGroundTileIds = ParsePositiveIntSet(
+                GetText(texts, "ecology.naturalPlantableGroundTileIds", string.Empty));
             PeatSpawnChance = Clamp01(GetDouble(numbers, "biome.peat.spawnChance", 0.1d));
             PeatStoneBoundaryRadius = Math.Min(8, Math.Max(1,
                 GetInt(numbers, "biome.peat.stoneBoundaryRadius", 2)));
@@ -502,6 +505,9 @@ namespace FlatWorld.WorldModel
         public int SnowTileId { get; }
         public int IceTileId { get; }
         public int PeatTileId { get; }
+        /// <summary>判断地块目录是否把当前地表声明为自然可种植基质。</summary>
+        public bool IsNaturalPlantableGround(int tileId) =>
+            tileId > 0 && naturalPlantableGroundTileIds.Contains(tileId);
         public int CaveFloorTileId { get; }
         public int CaveWallTileId { get; }
         /// <summary>高度低于这个数时生成海洋。</summary>
@@ -763,6 +769,20 @@ namespace FlatWorld.WorldModel
         private static string GetText(IReadOnlyDictionary<string, string> values, string key,
             string fallback) => values.TryGetValue(key, out string value) &&
                                !string.IsNullOrWhiteSpace(value) ? value : fallback;
+
+        /// <summary>解析由资源目录冻结的稳定数字地块 ID 列表。</summary>
+        private static HashSet<int> ParsePositiveIntSet(string value)
+        {
+            var result = new HashSet<int>();
+            if (string.IsNullOrWhiteSpace(value))
+                return result;
+
+            string[] parts = value.Split(',');
+            for (int i = 0; i < parts.Length; i++)
+                if (int.TryParse(parts[i], out int id) && id > 0)
+                    result.Add(id);
+            return result;
+        }
 
         /// <summary>读取必填文本参数；缺失时直接拒绝构造当前生成配置。</summary>
         private static string GetRequiredText(
