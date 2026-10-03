@@ -1249,12 +1249,12 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRend
                 terrain.TryGetEnvironmentValue("windX", x, y, out float windX);
                 terrain.TryGetEnvironmentValue("windY", x, y, out float windY);
                 Vector2 fallback = WaterEnvironmentRules.ResolveOceanCurrentDirection(new Vector2(windX, windY));
-                Vector2 bottomLeft = ResolveOceanCornerDirection(terrain, x - 1, y - 1, fallback);
-                Vector2 bottomRight = ResolveOceanCornerDirection(terrain, x, y - 1, fallback);
-                Vector2 topLeft = ResolveOceanCornerDirection(terrain, x - 1, y, fallback);
-                Vector2 topRight = ResolveOceanCornerDirection(terrain, x, y, fallback);
-                instanceData.FlowX = new Vector4(bottomLeft.x, bottomRight.x, topLeft.x, topRight.x);
-                instanceData.FlowY = new Vector4(bottomLeft.y, bottomRight.y, topLeft.y, topRight.y);
+                Vector2 oceanBottomLeft = ResolveOceanCornerDirection(terrain, x - 1, y - 1, fallback);
+                Vector2 oceanBottomRight = ResolveOceanCornerDirection(terrain, x, y - 1, fallback);
+                Vector2 oceanTopLeft = ResolveOceanCornerDirection(terrain, x - 1, y, fallback);
+                Vector2 oceanTopRight = ResolveOceanCornerDirection(terrain, x, y, fallback);
+                instanceData.FlowX = new Vector4(oceanBottomLeft.x, oceanBottomRight.x, oceanTopLeft.x, oceanTopRight.x);
+                instanceData.FlowY = new Vector4(oceanBottomLeft.y, oceanBottomRight.y, oceanTopLeft.y, oceanTopRight.y);
                 return;
             }
             instanceData.Transform0.w = (float)RuntimeWaterCurrentKind.River;
