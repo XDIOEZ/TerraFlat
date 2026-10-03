@@ -30,9 +30,6 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
     [Min(0f), Tooltip("投射物被防御弹开时的视觉旋转速度。")]
     public float BounceSpinDegreesPerSecond = 900f;
 
-    [Min(0f), Tooltip("投射物被防御弹开后的视觉旋转持续时间。")]
-    public float BounceSpinDuration = 0.35f;
-
     [Min(0.01f), Tooltip("虚拟抛物线使用的重力；仅用于计算箭矢离地高度与落地时机。")]
     public float VirtualGravity = 9.8f;
 
@@ -110,7 +107,7 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
     private bool _processingPhysicalContact;
     private bool _physicalContactResolved;
     private bool _resolvedBounceThisSweep;
-    private float _bounceSpinRemaining;
+    private bool _bounceSpinActive;
     private float _bounceSpinDirection = 1f;
     private bool _isFlying;
     private bool _endingFlight;
@@ -764,7 +761,7 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
 
     private void StartBounceSpin(Vector2 impactNormal)
     {
-        if (BounceSpinDuration <= 0f || BounceSpinDegreesPerSecond <= 0f)
+        if (BounceSpinDegreesPerSecond <= 0f)
             return;
 
         Vector2 velocity = _body != null ? _body.velocity : Vector2.zero;
@@ -772,24 +769,27 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
         _bounceSpinDirection = Mathf.Abs(cross) > 0.001f
             ? Mathf.Sign(cross)
             : (velocity.x >= 0f ? -1f : 1f);
-        _bounceSpinRemaining = BounceSpinDuration;
+        _bounceSpinActive = true;
     }
 
     private void UpdateBounceSpin(float deltaTime)
     {
-        if (_bounceSpinRemaining <= 0f || _arcVisual == null || deltaTime <= 0f)
+        if (!_bounceSpinActive || _arcVisual == null || deltaTime <= 0f)
             return;
 
-        float duration = Mathf.Max(0.0001f, BounceSpinDuration);
-        float strength = Mathf.Clamp01(_bounceSpinRemaining / duration);
+        if (_body == null || _body.velocity.sqrMagnitude <= 0.0001f)
+        {
+            _bounceSpinActive = false;
+            return;
+        }
+
         _arcVisual.localRotation *= Quaternion.Euler(
-            0f, 0f, BounceSpinDegreesPerSecond * _bounceSpinDirection * strength * deltaTime);
-        _bounceSpinRemaining = Mathf.Max(0f, _bounceSpinRemaining - deltaTime);
+            0f, 0f, BounceSpinDegreesPerSecond * _bounceSpinDirection * deltaTime);
     }
 
     private void ResetBounceSpin()
     {
-        _bounceSpinRemaining = 0f;
+        _bounceSpinActive = false;
         _bounceSpinDirection = 1f;
         _pendingImpactNormal = Vector2.zero;
         _processingPhysicalContact = false;
