@@ -6179,7 +6179,12 @@
         },
         "discardFlightDamage": {
           "prefab": "Mod_DiscardFlightDamage", "id": "Mod_DiscardFlightDamage", "enabled": true,
-          "data": {"BitData": [], "Type": 0}
+          "data": {"BitData": [], "Type": 0},
+          "parameters": {
+            "HardImpactTransformItemId": "ChippedTool",
+            "HardImpactTransformChance": 0.1,
+            "HardImpactMinimumDefense": 2.0
+          }
         }
       }
     },
