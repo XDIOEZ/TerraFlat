@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using FlatWorld.Combat;
 using FlatWorld.Networking;
 using UnityEngine;
@@ -29,13 +30,7 @@ public sealed partial class Mod_AI_Bird : Module, IAIActor, IItemModuleDependenc
     private static readonly int FlyingAnimationHash = Animator.StringToHash("Base Layer.Flying");
     private static readonly int LandingAnimationHash = Animator.StringToHash("Base Layer.Landing");
     private static readonly float[] RunUpDirectionOffsets = { 0f, 45f, -45f, 90f, -90f, 135f, -135f, 180f };
-    private static readonly Quaternion[] FlightTurnRotations =
-    {
-        Quaternion.Euler(0f, 0f, 45f), Quaternion.Euler(0f, 0f, -45f),
-        Quaternion.Euler(0f, 0f, 90f), Quaternion.Euler(0f, 0f, -90f),
-        Quaternion.Euler(0f, 0f, 135f), Quaternion.Euler(0f, 0f, -135f),
-        Quaternion.Euler(0f, 0f, 180f)
-    }; // 巡航转向角只在类型初始化时计算一次。
+    private const float FlightSteeringStepSeconds = 0.05f;
     private const float RunUpSampleSpacing = 0.25f;
     private const float RunUpStallSeconds = 1.5f;
     private const float FlightTargetArrivalDistance = 0.2f; // 到达目标后须立即接续下一段飞行。
@@ -59,6 +54,8 @@ public sealed partial class Mod_AI_Bird : Module, IAIActor, IItemModuleDependenc
         public float TakeoffDirectionX;
         /// <summary>离地时延续的水平前进方向 Y。</summary>
         public float TakeoffDirectionY;
+        public float FlightDirectionX; // 巡航方向随个体保存，换目标不重置朝向。
+        public float FlightDirectionY;
         /// <summary>本次助跑已经完成的前进距离。</summary>
         public float RunUpDistance;
         public float HomeX; // 常驻飞行物种的巢位 X。
@@ -76,6 +73,9 @@ public sealed partial class Mod_AI_Bird : Module, IAIActor, IItemModuleDependenc
     [Tooltip("离地前在地面助跑的速度。"), Min(0.1f)] public float takeoffRunSpeed = 2.6f;
     [Tooltip("实际向前跑满此距离后才允许离地。"), Min(0.1f)] public float takeoffRunDistance = 1.2f;
     public float flightSpeed = 6.3f;
+    [Tooltip("巡航速度下的最小转弯半径，低速接近落点时允许收小。"), Min(0.1f)]
+    public float flightTurnRadius = 2.5f;
+    [Tooltip("飞行方向每秒最多转过的角度。"), Min(1f)] public float flightMaxTurnSpeed = 150f;
     public float flightHeight = 2f;
     public float groundDuration = 8f;
     public float flightDuration = 100f;
@@ -182,6 +182,9 @@ public sealed partial class Mod_AI_Bird : Module, IAIActor, IItemModuleDependenc
         ClearTemperatureSafetyDestination();
         health.OnDamageReceived -= HandleBirdDamage;
         health.OnDamageReceived += HandleBirdDamage;
+        health.DeathStarted -= HandleBirdDeath;
+        health.DeathStarted += HandleBirdDeath;
+        BindFlightHitbox();
         restoreGroundDestination = state.Phase == BirdFlightPhase.Ground && state.HasTarget;
         ApplyFlightContact();
         if (state.Phase == BirdFlightPhase.RunUp)
@@ -198,7 +201,12 @@ public sealed partial class Mod_AI_Bird : Module, IAIActor, IItemModuleDependenc
     public override void Unload()
     {
         loaded = false;
-        if (health != null) health.OnDamageReceived -= HandleBirdDamage;
+        if (health != null)
+        {
+            health.OnDamageReceived -= HandleBirdDamage;
+            health.DeathStarted -= HandleBirdDeath;
+        }
+        ReleaseFlightHitbox();
         RestoreFlightSolidColliders();
         ClearTemperatureSafetyDestination();
         ResetFishHunting(releaseCaptured: true);
@@ -330,9 +338,9 @@ public sealed partial class Mod_AI_Bird : Module, IAIActor, IItemModuleDependenc
             SetRunUpDestination();
             return;
         }
-        Vector2 airborneDirection = escapeRemaining > 0f
-            ? escapeDirection
-            : new Vector2(state.TakeoffDirectionX, state.TakeoffDirectionY);
+        Vector2 airborneDirection = new(state.FlightDirectionX, state.FlightDirectionY);
+        if (airborneDirection.sqrMagnitude < 0.0001f)
+            airborneDirection = new Vector2(state.TakeoffDirectionX, state.TakeoffDirectionY);
         if (airborneDirection.sqrMagnitude < 0.0001f) airborneDirection = UnityEngine.Random.insideUnitCircle;
         airborneDirection = airborneDirection.sqrMagnitude > 0.0001f ? airborneDirection.normalized : Vector2.right;
         EnterPhase(BirdFlightPhase.TakingOff);
@@ -514,6 +522,11 @@ public sealed partial class Mod_AI_Bird : Module, IAIActor, IItemModuleDependenc
         state.Elapsed = 0f;
         state.HasTarget = false;
         state.PauseRemaining = 0f;
+        if (phase == BirdFlightPhase.Ground || phase == BirdFlightPhase.RunUp)
+        {
+            state.FlightDirectionX = 0f;
+            state.FlightDirectionY = 0f;
+        }
         if (phase != BirdFlightPhase.Flying)
             ResetFatigueLanding();
         ApplyFlightContact();
@@ -592,6 +605,7 @@ public sealed partial class Mod_AI_Bird : Module, IAIActor, IItemModuleDependenc
     {
         float visualHeight = HasFishHuntVisualHeightOverride ? FishHuntVisualHeightOverride : CurrentFlightHeight;
         liftRoot.localPosition = liftOrigin + Vector3.up * visualHeight;
+        RefreshFlightHitbox();
         staminaDisplay?.Refresh();
         // 对象池先 Load 后激活；激活后以 Animator 的真实状态为准，避免重绑或外部播放造成飞行时残留步行动画。
         if (!birdAnimator.isActiveAndEnabled)
@@ -773,10 +787,15 @@ public sealed partial class Mod_AI_Bird : Module, IAIActor, IItemModuleDependenc
         Vector2 position = body.position;
         Vector2 destination = new(state.TargetX, state.TargetY);
         Vector2 delta = WorldTopologyRuntime.ShortestDelta(position, destination);
-        if (!state.HasTarget || delta.sqrMagnitude <= FlightTargetArrivalDistance * FlightTargetArrivalDistance)
+        float arrival = permanentFlight ? FlightTargetArrivalDistance : Mathf.Max(FlightTargetArrivalDistance, flightTurnRadius * 0.65f);
+        if (!state.HasTarget || delta.sqrMagnitude <= arrival * arrival)
         {
-            float angle = UnityEngine.Random.value * Mathf.PI * 2f;
-            float distance = UnityEngine.Random.Range(1f, Mathf.Max(1f, flightWanderRadius));
+            Vector2 heading = new(state.FlightDirectionX, state.FlightDirectionY);
+            float angle = !permanentFlight && heading.sqrMagnitude > 0.0001f
+                ? Mathf.Atan2(heading.y, heading.x) + UnityEngine.Random.Range(-65f, 65f) * Mathf.Deg2Rad
+                : UnityEngine.Random.value * Mathf.PI * 2f;
+            float minimumDistance = permanentFlight ? 1f : Mathf.Max(1f, flightTurnRadius * 2f);
+            float distance = UnityEngine.Random.Range(minimumDistance, Mathf.Max(minimumDistance, flightWanderRadius));
             Vector2 direction = new(Mathf.Cos(angle), Mathf.Sin(angle));
             Vector2 center = permanentFlight && state.HasHome
                 ? new Vector2(state.HomeX, state.HomeY)
@@ -950,31 +969,94 @@ public sealed partial class Mod_AI_Bird : Module, IAIActor, IItemModuleDependenc
         fatigueSafetyVersion = -1;
     }
 
-    /// <summary>巡航直线受阻时沿已加载地形转向；没有空中出口但可落脚时结束飞行。</summary>
+    /// <summary>目标只决定期望方向，实际飞行沿有半径的弧线逐步转向。</summary>
     private bool MoveCruiseStep(Vector2 desiredDisplacement, float deltaTime)
         => MoveCruiseStep(desiredDisplacement, flightSpeed, deltaTime);
 
     /// <summary>允许具体飞行行为覆写本次巡航速度，同时复用统一通行和转向逻辑。</summary>
     private bool MoveCruiseStep(Vector2 desiredDisplacement, float speed, float deltaTime)
     {
-        if (desiredDisplacement.sqrMagnitude <= 0.0001f || speed <= 0f) return false;
+        if (desiredDisplacement.sqrMagnitude <= 0.0001f || speed <= 0f || deltaTime <= 0f) return false;
         ChunkMgr chunks = ChunkMgr.Instance;
         if (chunks == null || !chunks.TryCreateTerrainPresenceQuery(out ChunkMgr.RuntimeTerrainPresenceQuery query))
         {
             if (!permanentFlight && CanLand(body.position)) BeginLanding();
             return false;
         }
-        if (MoveFlightStep(desiredDisplacement, speed, deltaTime, ref query)) return true;
-
-        Vector2 forward = desiredDisplacement.normalized;
-        for (int index = 0; index < FlightTurnRotations.Length; index++)
+        Vector2 destination = query.NormalizePosition(body.position + desiredDisplacement);
+        float remainingTime = deltaTime;
+        bool moved = false;
+        while (remainingTime > 0.0001f)
         {
-            Vector2 direction = FlightTurnRotations[index] * forward;
-            if (MoveFlightStep(direction * (speed * deltaTime), speed, deltaTime, ref query)) return true;
+            Vector2 delta = query.ShortestDelta(body.position, destination);
+            if (delta.sqrMagnitude <= 0.0001f) break;
+            float step = Mathf.Min(remainingTime, FlightSteeringStepSeconds);
+            // 靠近落点先减速，再以更小半径接近，避免围着近目标不停盘旋。
+            float approachSpeed = Mathf.Min(speed, Mathf.Max(speed * 0.15f,
+                delta.magnitude * speed / Mathf.Max(0.1f, flightTurnRadius)));
+            Vector2 forward = new(state.FlightDirectionX, state.FlightDirectionY);
+            if (forward.sqrMagnitude <= 0.0001f)
+                forward = new Vector2(state.TakeoffDirectionX, state.TakeoffDirectionY);
+            if (forward.sqrMagnitude <= 0.0001f) forward = delta.normalized;
+            float currentAngle = Mathf.Atan2(forward.y, forward.x) * Mathf.Rad2Deg;
+            float desiredAngle = Mathf.Atan2(delta.y, delta.x) * Mathf.Rad2Deg;
+            float speedRatio = approachSpeed / Mathf.Max(0.01f, flightSpeed);
+            float radius = Mathf.Max(0.1f, flightTurnRadius * speedRatio * speedRatio);
+            float turnSpeed = Mathf.Min(flightMaxTurnSpeed, approachSpeed / radius * Mathf.Rad2Deg);
+            if (!TryMoveFlightArc(currentAngle, desiredAngle, approachSpeed, turnSpeed, step, delta.magnitude, ref query) &&
+                !TryMoveFlightArc(currentAngle, currentAngle, approachSpeed, turnSpeed, step, delta.magnitude, ref query) &&
+                !TryMoveFlightArc(currentAngle, currentAngle + 90f, approachSpeed, turnSpeed, step, delta.magnitude, ref query) &&
+                !TryMoveFlightArc(currentAngle, currentAngle - 90f, approachSpeed, turnSpeed, step, delta.magnitude, ref query))
+            {
+                if (!permanentFlight && CanLand(body.position)) BeginLanding();
+                return moved;
+            }
+            moved = true;
+            remainingTime -= step;
         }
+        return moved;
+    }
 
-        if (!permanentFlight && CanLand(body.position)) BeginLanding();
-        return false;
+    /// <summary>提前检查将要经过的弧线，在已加载地形边界前开始拐弯。</summary>
+    private bool TryMoveFlightArc(float angle, float targetAngle, float speed, float turnSpeed,
+        float deltaTime, float targetDistance, ref ChunkMgr.RuntimeTerrainPresenceQuery query)
+    {
+        float lookAhead = Mathf.Min(targetDistance, Mathf.Max(flightTurnRadius * 1.5f, speed * 0.35f));
+        float previewRemaining = Mathf.Min(0.75f, lookAhead / Mathf.Max(0.01f, speed));
+        Vector2 preview = body.position;
+        float previewAngle = angle;
+        while (previewRemaining > 0.0001f)
+        {
+            float step = Mathf.Min(previewRemaining, 0.1f);
+            Vector2 offset = ResolveFlightArc(previewAngle, targetAngle, speed, turnSpeed, step, out previewAngle);
+            Vector2 next = query.NormalizePosition(preview + offset);
+            if (!flightNavigation.CanTraverse(preview, next, ref query)) return false;
+            preview = next;
+            previewRemaining -= step;
+        }
+        Vector2 displacement = ResolveFlightArc(angle, targetAngle, speed, turnSpeed, deltaTime, out float nextAngle);
+        if (Mathf.Abs(Mathf.DeltaAngle(angle, targetAngle)) < 45f)
+            displacement = Vector2.ClampMagnitude(displacement, targetDistance);
+        if (!MoveFlightStep(displacement, speed, deltaTime, ref query)) return false;
+        state.FlightDirectionX = Mathf.Cos(nextAngle * Mathf.Deg2Rad);
+        state.FlightDirectionY = Mathf.Sin(nextAngle * Mathf.Deg2Rad);
+        return true;
+    }
+
+    /// <summary>积分限速转向的圆弧，达到目标朝向后再沿直线走完剩余时间。</summary>
+    public static Vector2 ResolveFlightArc(float angle, float targetAngle, float speed, float turnSpeed,
+        float deltaTime, out float nextAngle)
+    {
+        float step = Mathf.Max(0f, deltaTime);
+        float turn = Mathf.Clamp(Mathf.DeltaAngle(angle, targetAngle), -turnSpeed * step, turnSpeed * step);
+        nextAngle = angle + turn;
+        float turnTime = turnSpeed > 0f ? Mathf.Min(step, Mathf.Abs(turn) / turnSpeed) : 0f;
+        float halfTurn = turn * Mathf.Deg2Rad * 0.5f;
+        float arcScale = Mathf.Abs(halfTurn) > 0.0001f ? Mathf.Sin(halfTurn) / halfTurn : 1f;
+        float middle = (angle + turn * 0.5f) * Mathf.Deg2Rad;
+        float end = nextAngle * Mathf.Deg2Rad;
+        return new Vector2(Mathf.Cos(middle), Mathf.Sin(middle)) * (speed * turnTime * arcScale) +
+               new Vector2(Mathf.Cos(end), Mathf.Sin(end)) * (speed * (step - turnTime));
     }
 
     /// <summary>飞行与离地共用同一段通行检查和位置通知。</summary>
@@ -994,6 +1076,12 @@ public sealed partial class Mod_AI_Bird : Module, IAIActor, IItemModuleDependenc
             position + Vector2.ClampMagnitude(direction, speed * deltaTime));
         if (!flightNavigation.CanTraverse(position, next, ref query)) return false;
         body.position = next;
+        if (direction.sqrMagnitude > 0.0001f)
+        {
+            Vector2 forward = direction.normalized;
+            state.FlightDirectionX = forward.x;
+            state.FlightDirectionY = forward.y;
+        }
         ItemMgr.Instance?.NotifyRuntimeItemMoved(item);
         return true;
     }
@@ -1010,6 +1098,116 @@ public sealed partial class Mod_AI_Bird : Module, IAIActor, IItemModuleDependenc
     {
         WorldNavigationManager navigation = WorldNavigationManager.ExistingInstance;
         return navigation != null && navigation.TryGetCell(position, out _, out bool walkable) && walkable;
+    }
+    #endregion
+
+    #region 跟随贴图的独立受击盒
+    private BoxCollider2D flightHitbox;
+    private Rigidbody2D flightHitboxBody;
+    private Vector2 flightHitboxOriginalOffset;
+    private Vector2 flightHitboxOriginalSize;
+    private readonly Dictionary<Sprite, Bounds> flightSpriteBounds = new();
+    private readonly List<Vector2> flightShapePoints = new();
+
+    /// <summary>受击 Trigger 使用独立运动学刚体，根部阻挡关闭或远距休眠时仍能被投射物查询。</summary>
+    private void BindFlightHitbox()
+    {
+        if (!health.transform.IsChildOf(liftRoot))
+            throw new InvalidOperationException("鸟的生命模块必须位于 BirdLift 下，随贴图一起升高。");
+        flightHitbox = health.GetComponent<BoxCollider2D>();
+        if (flightHitbox == null)
+            throw new InvalidOperationException("鸟的生命模块缺少专用 BoxCollider2D 受击盒。");
+        flightHitboxOriginalOffset = flightHitbox.offset;
+        flightHitboxOriginalSize = flightHitbox.size;
+        flightHitboxBody = health.GetComponent<Rigidbody2D>();
+        if (flightHitboxBody == null)
+            flightHitboxBody = health.gameObject.AddComponent<Rigidbody2D>();
+        flightHitboxBody.bodyType = RigidbodyType2D.Kinematic;
+        flightHitboxBody.gravityScale = 0f;
+        flightHitboxBody.constraints = RigidbodyConstraints2D.FreezeRotation;
+        flightHitboxBody.simulated = true;
+        CombatPhysicsChannels.AssignDamageReceiver(health);
+    }
+
+    /// <summary>动画更新后再对齐一次，让翅膀轮廓、镜像和升降高度都进入受击几何。</summary>
+    private void LateUpdate()
+    {
+        if (loaded) RefreshFlightHitbox();
+    }
+
+    private void RefreshFlightHitbox()
+    {
+        SpriteRenderer renderer = item != null ? item.Sprite : null;
+        if (flightHitbox == null || flightHitboxBody == null || renderer == null || renderer.sprite == null)
+            return;
+        Sprite sprite = renderer.sprite;
+        if (!flightSpriteBounds.TryGetValue(sprite, out Bounds bounds))
+        {
+            bool hasPoint = false;
+            bounds = sprite.bounds;
+            for (int shape = 0; shape < sprite.GetPhysicsShapeCount(); shape++)
+            {
+                flightShapePoints.Clear();
+                sprite.GetPhysicsShape(shape, flightShapePoints);
+                foreach (Vector2 point in flightShapePoints)
+                {
+                    if (!hasPoint) bounds = new Bounds(point, Vector3.zero);
+                    else bounds.Encapsulate(point);
+                    hasPoint = true;
+                }
+            }
+            flightSpriteBounds.Add(sprite, bounds);
+        }
+        Bounds localBounds = default;
+        Matrix4x4 spriteToHitbox = flightHitbox.transform.worldToLocalMatrix * renderer.transform.localToWorldMatrix;
+        for (int corner = 0; corner < 4; corner++)
+        {
+            Vector3 point = new((corner & 1) == 0 ? bounds.min.x : bounds.max.x,
+                (corner & 2) == 0 ? bounds.min.y : bounds.max.y, 0f);
+            if (renderer.flipX) point.x = -point.x;
+            if (renderer.flipY) point.y = -point.y;
+            point = spriteToHitbox.MultiplyPoint3x4(point);
+            if (corner == 0) localBounds = new Bounds(point, Vector3.zero);
+            else localBounds.Encapsulate(point);
+        }
+        Vector2 offset = localBounds.center;
+        Vector2 size = new(Mathf.Max(0.01f, localBounds.size.x), Mathf.Max(0.01f, localBounds.size.y));
+        if (flightHitbox.offset != offset) flightHitbox.offset = offset;
+        if (flightHitbox.size != size) flightHitbox.size = size;
+        // 直接提交受击刚体姿态，避免空中贴图已移动而物理查询仍使用旧位置。
+        Vector2 position = flightHitbox.transform.position;
+        float rotation = flightHitbox.transform.eulerAngles.z;
+        if (flightHitboxBody.position != position) flightHitboxBody.position = position;
+        if (!Mathf.Approximately(flightHitboxBody.rotation, rotation)) flightHitboxBody.rotation = rotation;
+    }
+
+    private void ReleaseFlightHitbox()
+    {
+        if (flightHitboxBody != null) flightHitboxBody.simulated = false;
+        if (flightHitbox != null)
+        {
+            flightHitbox.offset = flightHitboxOriginalOffset;
+            flightHitbox.size = flightHitboxOriginalSize;
+        }
+        flightHitbox = null;
+        flightHitboxBody = null;
+        flightSpriteBounds.Clear();
+        flightShapePoints.Clear();
+    }
+
+    /// <summary>空中死亡先落回地面映射位置，再交给生命模块执行唯一死亡与掉落结算。</summary>
+    private void HandleBirdDeath(Mod_DamageReceiver receiver)
+    {
+        stoppedForDeath = true;
+        ResetFishHunting(releaseCaptured: true);
+        mover.StopMovement();
+        body.velocity = Vector2.zero;
+        state.Phase = BirdFlightPhase.Ground;
+        state.HasTarget = false;
+        state.HasTransitionStartHeight = false;
+        liftRoot.localPosition = liftOrigin;
+        RefreshFlightHitbox();
+        staminaDisplay?.SetVisible(false);
     }
     #endregion
 
