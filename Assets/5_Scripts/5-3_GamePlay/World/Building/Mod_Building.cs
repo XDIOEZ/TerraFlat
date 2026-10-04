@@ -501,10 +501,11 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
     }
 
     /// <summary>服务端在候选建筑生成后调用，不依赖客户端预览。</summary>
-    public bool ValidateAuthoritativePlacement(Vector3 authorityPosition, out string reason)
+    public bool ValidateAuthoritativePlacement(Vector3 authorityPosition, out string reason,
+        Player placementActor = null)
     {
         Vector3 position = item != null ? item.transform.position : transform.position;
-        return ValidatePlacement(position, authorityPosition, out reason);
+        return ValidatePlacement(position, authorityPosition, out reason, out _, placementActor);
     }
 
     public void CompleteNetworkPlacement(float authoritativeRemainingAmount)
@@ -1272,7 +1273,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
         => ValidatePlacement(position, authorityPosition, out reason, out _);
 
     private bool ValidatePlacement(Vector3 position, Vector3 authorityPosition,
-        out string reason, out BuildingPlacementFailureReason failureReason)
+        out string reason, out BuildingPlacementFailureReason failureReason, Player placementActor = null)
     {
         reason = null;
         failureReason = BuildingPlacementFailureReason.InvalidPosition;
@@ -1290,7 +1291,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
             return false;
         }
 
-        float maximumPlacementDistance = GetMaxPlacementDistance();
+        float maximumPlacementDistance = GetMaxPlacementDistance(placementActor);
         if (!IsWithinPlacementDistance(authorityPosition, position, maximumPlacementDistance))
         {
             reason = "目标超出建造距离";
@@ -2186,14 +2187,24 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
     private Vector3 GetAuthorityPosition()
         => item?.Owner != null ? item.Owner.transform.position : item != null ? item.transform.position : transform.position;
 
-    /// <summary>建筑预览、放置校验和玩家准星统一使用同一最大建造距离。</summary>
-    public float GetMaxPlacementDistance()
+    #region 放置距离
+
+    /// <summary>建筑预览和提交共用放置距离，创造背包启用后解除距离上限。</summary>
+    public float GetMaxPlacementDistance(Player placementActor = null)
     {
-        Mod_InteractSender interactionSender = item?.Owner?.GetComponentInChildren<Mod_InteractSender>(true);
+        Player actor = placementActor != null ? placementActor : item?.Owner as Player;
+        if (CreativeInventoryState.IsEnabled(actor))
+            return float.PositiveInfinity;
+
+        Mod_InteractSender interactionSender = actor != null
+            ? actor.GetComponentInChildren<Mod_InteractSender>(true)
+            : item?.Owner?.GetComponentInChildren<Mod_InteractSender>(true);
         return interactionSender != null
             ? Mathf.Max(0.01f, interactionSender.maxInteractDistance * 2f)
             : Mathf.Max(0.01f, (Data?.maxVisibleDistance ?? Mod_InteractSender.DefaultMaxInteractDistance) * 2f);
     }
+
+    #endregion
 
     private void SyncNavigationOccupancy()
     {

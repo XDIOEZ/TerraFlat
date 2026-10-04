@@ -21,7 +21,7 @@ description: "Use when: 定位或修改 FlatWorld 的建筑放置预览、安装
 - 贴地可交互设施使用建筑模块静态参数 `PlacementLayer=Ground`，召唤器与本体须一致；占用 Layer2，仅拒绝同层重复放置，允许 Layer0 墙体/实体建筑共格。根 Collider 保留 Trigger，导航与动态 LOS 不阻挡，三类阴影全部排除，维度交互/安装状态仍走原建筑模块。世界排序使用 `ground-building`（Default/0），配套 `Ground-Facility-Lit.mat` 的 Queue2991 位于地表覆盖之后、Blocking 墙体 Queue2992 之前；不可并入玩家层的 `BuildingDepthMeshBridge`。配置不写入安装快照，资源重载需同步占地、碰撞与排序。
 
 - 门模块必须绑定所属 Item 的主 SpriteRenderer 与根实体碰撞体；Unity 缺失组件的假 null 不能用 `??=` 判定。打开时交互注册仍须保留，导航通行通过 `BuildingOccupancyRegistry.SetPassable` 更新，但建筑放置占格不撤销；安装流程完成后再次同步开门状态。
-- 放置范围由交互半径的两倍统一派生，虚影与提交复用同一格边距离校验。越界隐藏虚影；仅在实际提交时以 `BuildingPlacementFailureReason` 向表现层区分越界和其它非法位置，不能逐帧发提示。
+- 普通放置范围由交互半径的两倍统一派生；`CreativeInventoryState.IsEnabled` 为真时放置距离无限，虚影与提交共用 `GetMaxPlacementDistance`。联机校验必须读取服务端实际放置玩家的创造状态；手机准星用有限的可见范围映射摇杆，禁止把无限距离用于坐标插值。虚影与提交复用同一格边距离校验，普通模式越界隐藏虚影；仅在实际提交时以 `BuildingPlacementFailureReason` 区分越界和其它非法位置，不能逐帧发提示。
 - 放置模式的右键所有权不等于位置有效性；虚影因越界隐藏后，仍需根据当前准线先做范围校验并发拒绝反馈，不能被“预览为空”提前返回吞掉。
 - 建筑提交以当前准线吸附坐标和权威格校验为准；`BuildingShadow` 只负责逐帧视觉反馈，不能成为安装资格或坐标来源，否则可见虚影与点击时的实例生命周期不同步会阻断有效放置。
 

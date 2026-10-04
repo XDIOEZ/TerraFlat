@@ -1064,7 +1064,21 @@ public partial class Mod_GameController : Module
         Item heldItem = _playerHotBar?.CurentSelectItem;
         Mod_Building building = heldItem?.itemMods?.GetMod_ByID<Mod_Building>(ModText.Building);
         if (building != null && building.IsItemInInventory && building.Data != null)
-            return building.GetMaxPlacementDistance();
+        {
+            float placementDistance = building.GetMaxPlacementDistance();
+            if (!float.IsPositiveInfinity(placementDistance))
+                return placementDistance;
+
+            // 无限建造时用当前可见范围映射摇杆，避免无穷大参与准星坐标插值。
+            if (_mainCamera != null && _mainCamera.orthographic)
+            {
+                float visibleRadius = _mainCamera.orthographicSize *
+                    Mathf.Sqrt(1f + _mainCamera.aspect * _mainCamera.aspect);
+                return visibleRadius + Vector2.Distance(transform.position, _mainCamera.transform.position);
+            }
+
+            return interactionDistance * 2f;
+        }
 
         return interactionDistance;
     }

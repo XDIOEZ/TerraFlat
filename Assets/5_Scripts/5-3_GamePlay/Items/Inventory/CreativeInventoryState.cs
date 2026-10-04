@@ -7,6 +7,15 @@ using Newtonsoft.Json.Linq;
 /// </summary>
 public static class CreativeInventoryState
 {
+    #region 运行时状态
+
+    /// <summary>读取主背包已启用或恢复的创造状态，避免放置预览逐帧解析存档 JSON。</summary>
+    public static bool IsEnabled(Player player)
+        => player?.itemMods?.GetMod_ByID<Mod_Inventory>(ModText.Bag)?.GetDefaultTargetInventory()
+            ?.Data?.HasUnlimitedCarryCapacity == true;
+
+    #endregion
+
     #region 持久化状态
 
     private const string NamespaceKey = "flatworld.creativeInventory";

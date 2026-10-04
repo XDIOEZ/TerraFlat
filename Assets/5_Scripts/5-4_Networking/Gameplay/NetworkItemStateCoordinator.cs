@@ -1127,8 +1127,11 @@ namespace FlatWorld.Networking.Gameplay
                         ? request.RotationQuarterTurns & 3 : 0;
                     MachineWorld.WriteMachineState(placedData, state);
                     Mod_Building.SetInstalledDataState(placedData);
+                    // 联机创造距离只读取服务端玩家的真实背包状态。
+                    float maximumDistance = CreativeInventoryState.IsEnabled(authoritativePlayer)
+                        ? float.PositiveInfinity : MaxBuildingRequestDistance;
                     if (!Mod_Building.ValidateMechanicalDataPlacement(placedData,
-                            GetConnectionLogicalPosition(connection), MaxBuildingRequestDistance, out reason))
+                            GetConnectionLogicalPosition(connection), maximumDistance, out reason))
                         throw new InvalidOperationException(reason);
                     materialConsumed = true;
                     response.RemainingAmount = ConsumeAuthoritativeBuildingMaterial(
@@ -1154,7 +1157,8 @@ namespace FlatWorld.Networking.Gameplay
                     if (building == null)
                         throw new MissingComponentException($"{request.ItemId} 缺少建筑模块");
 
-                    if (!building.ValidateAuthoritativePlacement(GetConnectionLogicalPosition(connection), out reason))
+                    if (!building.ValidateAuthoritativePlacement(GetConnectionLogicalPosition(connection), out reason,
+                            authoritativePlayer))
                         throw new InvalidOperationException(reason);
 
                     materialConsumed = true;
@@ -1465,6 +1469,8 @@ namespace FlatWorld.Networking.Gameplay
                 requests[i].Building?.RejectNetworkDismantle(reason);
         }
 
+        #region 联机建造请求校验
+
         private static bool TryValidateBuildingRequest(
             NetworkConnectionToClient connection,
             NetworkBuildingPlaceRequest request,
@@ -1479,8 +1485,7 @@ namespace FlatWorld.Networking.Gameplay
             reason = null;
             if (connection?.identity == null || request.RequestToken == 0 || request.SourceItemGuid == 0 ||
                 string.IsNullOrWhiteSpace(request.ItemId) || request.ItemId.Length > 128 ||
-                !IsFinite(request.Position) ||
-                WorldTopologyRuntime.Distance(GetConnectionLogicalPosition(connection), request.Position) > MaxBuildingRequestDistance)
+                !IsFinite(request.Position))
             {
                 reason = "身份、坐标或距离校验失败";
                 return false;
@@ -1523,6 +1528,13 @@ namespace FlatWorld.Networking.Gameplay
 
             NetworkWorldPlayer networkPlayer = connection.identity.GetComponent<NetworkWorldPlayer>();
             authoritativePlayer = networkPlayer?.CorePlayer;
+            if (!CreativeInventoryState.IsEnabled(authoritativePlayer) &&
+                WorldTopologyRuntime.Distance(GetConnectionLogicalPosition(connection), request.Position) > MaxBuildingRequestDistance)
+            {
+                reason = "建筑超出建造距离";
+                return false;
+            }
+
             Mod_HotBar hotBar = authoritativePlayer?.itemMods?
                 .GetMod_ByID<Mod_HotBar>(ModText.Hotbar);
             if (hotBar?.Data?.itemSlots == null || hotBar.CurrentIndex < 0 ||
@@ -1549,6 +1561,8 @@ namespace FlatWorld.Networking.Gameplay
             sourceData = authoritativeData;
             return true;
         }
+
+        #endregion
 
         private static float ConsumeAuthoritativeBuildingMaterial(ItemSlot slot, Player player)
         {
