@@ -18,7 +18,7 @@ namespace FlatWorld.WorldModel
             double baseline = sample.TemperatureCelsius;
             if (polarEnabled)
             {
-                baseline = SampleLatitudeTemperature(request, settings, polarDistance) +
+                baseline = SampleLatitudeTemperature(request, settings, worldX, polarDistance) +
                     (sample.Temperature * 2d - 1d) * settings.RegionalTemperatureVariationCelsius;
             }
             double rainOffset = -Clamp01(sample.Precipitation) * settings.RainTemperatureCoolingCelsius;
@@ -35,23 +35,24 @@ namespace FlatWorld.WorldModel
         }
 
         private static double SampleLatitudeTemperature(ChunkGenerationRequest request,
-            ChunkGenerationSettingsSnapshot settings, double distance)
+            ChunkGenerationSettingsSnapshot settings, int worldX, double distance)
         {
             double halfSpan = request.Topology.Span.Y * 0.5d;
             double halfWidth = halfSpan * settings.PolarBandHalfWidth;
             if (distance <= halfWidth)
-                return SamplePolarQuadraticTemperature(settings.PolarBandCelsius,
+                return SampleQuadraticPeakTemperature(settings.PolarBandCelsius,
                     settings.PolarBandPeakCelsius, settings.PolarBandEdgeCelsius, Clamp01(distance / halfWidth));
             double remainingSpan = halfSpan - halfWidth;
             double transition = Math.Min(settings.PolarBandTransitionTiles, remainingSpan);
+            double equatorCelsius = SampleEquatorTemperature(request, settings, worldX);
             double temperateCelsius = transition >= remainingSpan
-                ? settings.EquatorTemperatureCelsius : settings.PolarBandTransitionCelsius;
+                ? equatorCelsius : settings.PolarBandTransitionCelsius;
             double outsideDistance = distance - halfWidth;
             // 极圈外先在短距离内回到温带底温，随后继续保留朝赤道渐暖的纬度变化。
             if (outsideDistance <= transition)
                 return Lerp(settings.PolarBandEdgeCelsius, temperateCelsius,
                     Smooth(Clamp01(outsideDistance / Math.Max(0.000001d, transition))));
-            return Lerp(temperateCelsius, settings.EquatorTemperatureCelsius,
+            return Lerp(temperateCelsius, equatorCelsius,
                 Smooth(Clamp01((outsideDistance - transition) /
                     Math.Max(0.000001d, remainingSpan - transition))));
         }
@@ -76,6 +77,20 @@ namespace FlatWorld.WorldModel
 
         #endregion
 
+        #region 赤道二次峰值底温
+
+        // 赤道底温按固定种子随机控制点平滑变化，二次概率峰默认位于 45℃。
+        private static double SampleEquatorTemperature(ChunkGenerationRequest request,
+            ChunkGenerationSettingsSnapshot settings, int worldX)
+        {
+            double probability = SampleWrappedRandomControlPoints(request, worldX,
+                settings.EquatorSpacingTiles, 0x4a68b923u, true);
+            return SampleQuadraticPeakTemperature(settings.EquatorMinimumCelsius,
+                settings.EquatorPeakCelsius, settings.EquatorMaximumCelsius, probability);
+        }
+
+        #endregion
+
         #region 极圈边界随机偏移
 
         private static double SamplePolarBoundaryOffset(ChunkGenerationRequest request,
@@ -87,14 +102,14 @@ namespace FlatWorld.WorldModel
             double halfWidth = halfSpan * settings.PolarBandHalfWidth;
             double amplitude = Math.Min(settings.PolarBoundaryOffsetTiles,
                 Math.Min(halfWidth, halfSpan - halfWidth) * 0.5d);
-            double coarse = SamplePolarBoundaryRandom(request, worldX, settings.PolarBoundarySpacingTiles, 0x832f91a7u);
-            double detail = SamplePolarBoundaryRandom(request, worldX, settings.PolarBoundarySpacingTiles * 0.25d, 0xc7b35e29u);
+            double coarse = SampleWrappedRandomControlPoints(request, worldX, settings.PolarBoundarySpacingTiles, 0x832f91a7u);
+            double detail = SampleWrappedRandomControlPoints(request, worldX, settings.PolarBoundarySpacingTiles * 0.25d, 0xc7b35e29u);
             // 大小两组固定种子随机偏移平滑连接，整条冷带只平移而不扩大配置宽度。
             return amplitude * Lerp(coarse, detail, settings.PolarBoundaryDetailStrength);
         }
 
-        private static double SamplePolarBoundaryRandom(ChunkGenerationRequest request,
-            int worldX, double spacing, uint salt)
+        private static double SampleWrappedRandomControlPoints(ChunkGenerationRequest request,
+            int worldX, double spacing, uint salt, bool uniformProbability = false)
         {
             int span = request.Topology.Span.X;
             int repeat = Math.Max(2, (int)Math.Ceiling(span / Math.Max(8d, spacing)));
@@ -104,15 +119,29 @@ namespace FlatWorld.WorldModel
             double a = Hash01(request.WorldSeed, left, 0, salt) * 2d - 1d;
             double b = Hash01(request.WorldSeed, right, 0, salt) * 2d - 1d;
             // 首尾控制点共用同一随机值，跨区块和地图环绕处也连续。
-            return Lerp(a, b, Smooth(position - left));
+            double weight = Smooth(position - left);
+            double value = Lerp(a, b, weight);
+            if (!uniformProbability)
+                return value;
+            // 校正随机插值的累计概率，避免平滑过程把温度概率峰推离配置值。
+            double probability = Clamp01((value + 1d) * 0.5d);
+            double smaller = Math.Min(weight, 1d - weight);
+            double larger = 1d - smaller;
+            if (smaller <= 0.000000001d)
+                return probability;
+            if (probability < smaller)
+                return probability * probability / (2d * smaller * larger);
+            if (probability <= larger)
+                return (probability - smaller * 0.5d) / larger;
+            return 1d - (1d - probability) * (1d - probability) / (2d * smaller * larger);
         }
 
         #endregion
 
-        #region 极圈二次峰值温度分布
+        #region 共用二次峰值温度分布
 
         // 对二次权重 1-((T-峰值)/半径)² 的累计概率解析反解，避免逐格循环抽样。
-        private static double SamplePolarQuadraticTemperature(double minimum, double peak,
+        private static double SampleQuadraticPeakTemperature(double minimum, double peak,
             double maximum, double probability)
         {
             if (maximum <= minimum + 0.000001d || probability <= 0d)

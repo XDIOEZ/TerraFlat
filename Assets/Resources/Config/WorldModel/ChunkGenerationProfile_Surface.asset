@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: ChunkGenerationProfile_Surface
   m_EditorClassIdentifier: 
   profileId: surface.default
-  generationSignature: 70
+  generationSignature: 71
   chunkWidth: 16
   chunkHeight: 16
   numericParameters:
@@ -133,8 +133,14 @@ MonoBehaviour:
     Value: 0
   - Id: climate.temperature.celsiusMax
     Value: 50
-  - Id: climate.equator.celsius
-    Value: 35
+  - Id: climate.equator.minimumCelsius
+    Value: 40
+  - Id: climate.equator.maximumCelsius
+    Value: 60
+  - Id: climate.equator.peakCelsius
+    Value: 45
+  - Id: climate.equator.spacingTiles
+    Value: 256
   - Id: climate.temperature.regionalVariationCelsius
     Value: 2
   - Id: climate.temperature.rainCoolingCelsius

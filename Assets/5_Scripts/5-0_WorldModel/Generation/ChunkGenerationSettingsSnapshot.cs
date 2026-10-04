@@ -339,8 +339,15 @@ namespace FlatWorld.WorldModel
             TemperatureCelsiusMax = Math.Max(
                 TemperatureCelsiusMin,
                 Finite(GetDouble(numbers, "climate.temperature.celsiusMax", 50d), 50d));
-            EquatorTemperatureCelsius = Finite(
-                GetDouble(numbers, "climate.equator.celsius", 35d), 35d);
+            EquatorMinimumCelsius = Finite(
+                GetDouble(numbers, "climate.equator.minimumCelsius", 40d), 40d);
+            EquatorMaximumCelsius = Math.Max(EquatorMinimumCelsius, Finite(
+                GetDouble(numbers, "climate.equator.maximumCelsius", 60d), 60d));
+            EquatorPeakCelsius = Clamp(Finite(
+                GetDouble(numbers, "climate.equator.peakCelsius", 45d), 45d),
+                EquatorMinimumCelsius, EquatorMaximumCelsius);
+            EquatorSpacingTiles = Math.Max(8d, FinitePositive(
+                GetDouble(numbers, "climate.equator.spacingTiles", 256d), 256d));
             RegionalTemperatureVariationCelsius = NonNegativeFinite(
                 GetDouble(numbers, "climate.temperature.regionalVariationCelsius", 2d), 2d);
             RainTemperatureCoolingCelsius = NonNegativeFinite(
@@ -366,8 +373,8 @@ namespace FlatWorld.WorldModel
                 GetDouble(numbers, "climate.polarBand.transitionTiles", 32d), 32d));
             PolarBandTransitionCelsius = Clamp(Finite(
                 GetDouble(numbers, "climate.polarBand.transitionCelsius", 15d), 15d),
-                Math.Min(PolarBandEdgeCelsius, EquatorTemperatureCelsius),
-                Math.Max(PolarBandEdgeCelsius, EquatorTemperatureCelsius));
+                Math.Min(PolarBandEdgeCelsius, EquatorMinimumCelsius),
+                Math.Max(PolarBandEdgeCelsius, EquatorMaximumCelsius));
             BiomeTemperatureBlendRadius = Clamp(GetInt(numbers, "climate.temperature.blendRadius", 2), 0, 32);
             PolarBoundaryOffsetTiles = NonNegativeFinite(
                 GetDouble(numbers, "climate.polarBand.boundary.offsetTiles", 32d), 32d);
@@ -801,7 +808,10 @@ namespace FlatWorld.WorldModel
         public double TemperatureCelsiusMax { get; }
         /// <summary>环世界唯一极点带：位置占纵向一周的比例，半宽占半周的比例。</summary>
         public bool PolarBandEnabled { get; }
-        public double EquatorTemperatureCelsius { get; }
+        public double EquatorMinimumCelsius { get; }
+        public double EquatorMaximumCelsius { get; }
+        public double EquatorPeakCelsius { get; }
+        public double EquatorSpacingTiles { get; }
         public double RegionalTemperatureVariationCelsius { get; }
         public double RainTemperatureCoolingCelsius { get; }
         public double WindwardTemperatureCoolingCelsius { get; }

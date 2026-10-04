@@ -45,14 +45,14 @@ description: "Use when: 定位或修改 FlatWorld 的世界时间、昼夜、天
 - 新世界时间参数来自 `GameConfig/Time/time-system.json` 的 Profile；Profile ID、限时边界与日历随 `TimeData` 存档，只读取当前外层版本，不以缺失字段回退默认配置兼容旧档。
 - 入水降温由世界液体行为按有效浸没深度给出降温目标，`Mod_Temperature` 维护平滑目标并通过统一热推进逐步降温；装备等外部系统只能通过水体降温保护通道影响速度，禁止直接改水体过渡时间。保护值 0 表示无保护、1 表示完全阻止入水降温，多来源按加法叠加并由体温模块统一限制。
 - 临时增温由 `Mod_Temperature.Warming` 按来源登记，取各来源中最强的有效增量；上限只约束该增温，不压低原本较高的体温。环境与入水变化推进基础体温，伤害/UI 读取最终有效体温；保存时制作基础体温副本，不能把增温写入存档后在 Buff 恢复时再加一次，也不能在保存时修改或清除运行态。
-- 生物安全体表温度范围统一由 `Mod_Temperature` 的 `SafeTemperatureMin/Max` 与按来源范围修正决定；默认玩家/普通生物为 5~50℃，衣物通过 `SetSafeTemperatureRangeModifier` 扩展耐寒/耐热范围，特殊物种可在 Actor JSON 覆盖。温度管理器只推进体表温度，不直接扣血；当前体表温度越界且缓冲耗尽后才挂载低温冻伤/热射病来源 Buff，安全时立即移除。
+- 生物安全体表温度范围统一由 `Mod_Temperature` 的 `SafeTemperatureMin/Max` 与按来源范围修正决定；玩家 Prefab 默认 5~40℃，普通生物模块默认 5~50℃，衣物通过 `SetSafeTemperatureRangeModifier` 扩展耐寒/耐热范围，特殊物种可在 Actor JSON 覆盖。温度管理器只推进体表温度，不直接扣血；当前体表温度越界且缓冲耗尽后才挂载低温冻伤/热射病来源 Buff，安全时立即移除。
 - 冷热共用 `TemperatureData.RemainingTemperatureBufferSeconds`，危险时每秒扣 1 秒，安全时按 `TemperatureBufferRecoveryPerSecond`（默认 1）补回，最多 `DangerTemperatureBufferSeconds`（默认 60）。用模块传入的 deltaTime 在权威端推进；短暂安全、冷热切换、清 Buff 不重置，剩余时间随角色保存并在重生时补满；加载当前配置覆盖容量与恢复速率，不能覆盖已保存的剩余时间。
 - GameObject AI 的体温模块保留最近 4 个“体温与当地环境都安全”的移动位置；当地目标温度超界时优先返回记录中空间距离最近的位置并立即移除该记录，回到安全环境后若体温仍超界则原地恢复。位置记录和避险只在权威端推进。
 - 伤害语义联动 `flatworld-combat`，维度覆盖联动 `flatworld-dimension`，雨视觉联动 Effects Skill。
 
 - 季节日历只从 `SeasonCalendar` 取快照；调整四季长度保留年、季、进度和绝对时钟，并记录 `SeasonHistory`。植物与积雪的历史补算使用 `SampleHistorical`，不能拿新季长重算过去的温害。
 - `TemperatureMgr.TryGetClimateBaseline` 不含季节、动态天气和局部源；历史环境重建与积雪采样用它，角色体温仍用最终环境温度入口，避免重复叠加季节。
-- 环世界地理温度先按纬度求底温：`climate.polarBand.*` 冷带到 `climate.equator.celsius` 赤道平滑过渡，再加 `climate.temperature.regionalVariationCelsius` 局部噪声、`altitudeCooling*` 海拔降温、`rainCoolingCelsius` 降雨降温和 `windwardCoolingCelsius/leewardWarmingCelsius` 迎风/背风温差。风向通过既有地形降水差参与，单位风向不能冒充风速。海拔只在 `FinishSurfaceClimate` 叠加一次，Legacy/Burst 核只返回原始温度噪声；最终温度允许因环境修正超出纬度底温范围。
+- 环世界地理温度先按纬度求底温：`climate.polarBand.*` 冷带到 `climate.equator.minimumCelsius/maximumCelsius/peakCelsius` 赤道二次概率底温平滑过渡（默认 40~60℃，45℃概率最高），再加 `climate.temperature.regionalVariationCelsius` 局部噪声、`altitudeCooling*` 海拔降温、`rainCoolingCelsius` 降雨降温和 `windwardCoolingCelsius/leewardWarmingCelsius` 迎风/背风温差。赤道随机底温通过 `spacingTiles` 控制横向区域大小，不随当前天气重抽；风向通过既有地形降水差参与，单位风向不能冒充风速。海拔只在 `FinishSurfaceClimate` 叠加一次，Legacy/Burst 核只返回原始温度噪声；最终温度允许因环境修正超出纬度底温范围。
 - 静态气候降雨与风向修正随 Profile 固定，不能混入当前动态天气或季节；运行时查询继续叠加实时偏移。`TryGetGeographicTemperature` 只返回固定 `temperature.celsius`，连星球全局调温也不叠加。
 - 天然积雪是 `ChunkTerrainData` 的 `snow.depth` 独立层，季节积雪仍由 `PlanetData.SeasonalSnow` 保存基温分段状态；二者查询时合并，并统一量化为 0～1 的十档（每层 0.1）。`WeatherMgr.Snow` 在天气阶段边界与日内分段推进季节覆盖量，雪停保留覆盖，暖时融化。禁用天气的维度不修改星球季节积雪状态。
 - 合成的地理摄氏气温按世界坐标两侧各 8 格混合，区块外采样与核心使用同一气候核；前缀和只平滑温度，群系与归一化温度读取平滑结果。雪地和山地不能再分别写死为 -10℃、10℃，否则会倒过来覆盖海拔与纬度气候。

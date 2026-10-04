@@ -408,7 +408,7 @@ MonoBehaviour:
     AmbientTemperature: 20
     Insulation: 0
     SafeTemperatureMin: 5
-    SafeTemperatureMax: 50
+    SafeTemperatureMax: 40
     RuntimeAmbientOffset: 0
     RuntimeChangeSpeedMultiplier: 1
     RuntimeCoolingSpeedMultiplier: 1

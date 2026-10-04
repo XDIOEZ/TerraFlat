@@ -168,7 +168,10 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
         "climate.temperature.coordScale",
         "climate.temperature.altitudeCoolingStart",
         "climate.temperature.altitudeCoolingStrength",
-        "climate.equator.celsius",
+        "climate.equator.minimumCelsius",
+        "climate.equator.maximumCelsius",
+        "climate.equator.peakCelsius",
+        "climate.equator.spacingTiles",
         "climate.polarBand.halfWidth",
         "climate.polarBand.transitionTiles",
         "climate.polarBand.transitionCelsius",
@@ -239,7 +242,10 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
             ["climate.temperature.coordScale"] = "温度图坐标倍率；越大冷热区域越密集",
             ["climate.temperature.altitudeCoolingStart"] = "超过该高度后开始按海拔降温",
             ["climate.temperature.altitudeCoolingStrength"] = "海拔对温度的影响强度；越高山区越冷",
-            ["climate.equator.celsius"] = "赤道纬度底温，实际温度还会叠加海拔、降雨和风向修正",
+            ["climate.equator.minimumCelsius"] = "赤道二次概率底温下限，默认 40℃；实际温度继续叠加环境修正",
+            ["climate.equator.maximumCelsius"] = "赤道二次概率底温上限，默认 60℃",
+            ["climate.equator.peakCelsius"] = "赤道底温概率最高值，默认 45℃",
+            ["climate.equator.spacingTiles"] = "赤道随机底温控制点间距，默认 256 格；相邻区域平滑连接",
             ["climate.polarBand.halfWidth"] = "整条寒带占地图的比例；0.1 表示 10%",
             ["climate.polarBand.transitionTiles"] = "极圈边缘回到温带底温的距离，单位为格",
             ["climate.polarBand.transitionCelsius"] = "离开极圈短过渡后的温带底温，随后继续向赤道渐暖",
@@ -728,7 +734,10 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
 
             EditorGUILayout.Space(3f);
             EditorGUILayout.LabelField("气候与附加层", EditorStyles.miniBoldLabel);
-            DrawDoubleField("climate.equator.celsius", "赤道底温（°C）");
+            DrawDoubleField("climate.equator.minimumCelsius", "赤道底温下限（°C）");
+            DrawDoubleField("climate.equator.maximumCelsius", "赤道底温上限（°C）");
+            DrawDoubleField("climate.equator.peakCelsius", "赤道底温概率峰（°C）");
+            DrawDoubleField("climate.equator.spacingTiles", "赤道底温控制点间距（格）");
             DrawSlider("climate.polarBand.halfWidth", "寒带占地图比例（0.1 = 10%）", 0.001f, 1f);
             DrawDoubleField("climate.polarBand.transitionTiles", "寒带外温度过渡距离（格）");
             DrawDoubleField("climate.polarBand.transitionCelsius", "寒带外温带底温（°C）");
