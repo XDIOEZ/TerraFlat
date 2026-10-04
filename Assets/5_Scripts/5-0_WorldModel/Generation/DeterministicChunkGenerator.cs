@@ -187,6 +187,97 @@ namespace FlatWorld.WorldModel
 
         #region 地表位置查询
 
+        public readonly struct BiomeSearchResult
+        {
+            public BiomeSearchResult(bool found, Int2 cell, int sampledCount)
+            {
+                Found = found;
+                Cell = cell;
+                SampledCount = sampledCount;
+            }
+
+            public bool Found { get; }
+            public Int2 Cell { get; }
+            public int SampledCount { get; }
+        }
+
+        /// <summary>群系调试查询复用正式单格规则，分级扩大采样范围且不创建生态或注册区块。</summary>
+        public BiomeSearchResult FindSurfaceBiome(string dimensionId, int worldSeed,
+            ChunkGenerationProfileSnapshot profile, ChunkGenerationTopologySnapshot topology,
+            Int2 anchor, SurfaceBiomeKind biome, CancellationToken cancellationToken, long worldEpoch)
+        {
+            if (profile == null)
+                throw new ArgumentNullException(nameof(profile));
+            if (worldEpoch <= 0)
+                throw new ArgumentOutOfRangeException(nameof(worldEpoch));
+            if (!Enum.IsDefined(typeof(SurfaceBiomeKind), biome))
+                throw new ArgumentOutOfRangeException(nameof(biome));
+            dimensionId = string.IsNullOrWhiteSpace(dimensionId) ? "surface" : dimensionId;
+            worldSeed = worldSeed == 0 ? 1 : worldSeed;
+            if (profile.Settings.Mode != ChunkGenerationMode.Surface ||
+                dimensionId.IndexOf("cave", StringComparison.OrdinalIgnoreCase) >= 0)
+                return new BiomeSearchResult(false, anchor, 0);
+
+            int sampledCount = 0;
+            var visited = new HashSet<Int2>();
+            var visitedRiverChunks = new HashSet<Int2>();
+            foreach (int radius in new[] { 256, 1024, 4096, 8192 })
+            {
+                foreach (Int2 candidate in BuildSurfaceSearchCandidates(anchor, topology, radius, 2048))
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    if (!visited.Add(candidate))
+                        continue;
+                    sampledCount++;
+                    Int2 origin = ResolveSearchChunkOrigin(candidate, profile, topology);
+                    var request = new ChunkGenerationRequest(worldEpoch,
+                        new WorldAddress(dimensionId, origin), worldSeed, 1, profile, topology);
+                    SurfaceBiomeKind baseBiome = SampleBaseSurfaceBiome(
+                        request, profile.Settings, candidate.X, candidate.Y, out _, out _);
+                    if (biome == SurfaceBiomeKind.River)
+                    {
+                        if (baseBiome == SurfaceBiomeKind.Ocean || !visitedRiverChunks.Add(origin))
+                            continue;
+                    }
+                    else if (baseBiome != biome &&
+                             !(biome is SurfaceBiomeKind.Forest or SurfaceBiomeKind.Grassland &&
+                               baseBiome is SurfaceBiomeKind.Forest or SurfaceBiomeKind.Grassland))
+                        continue;
+
+                    GeneratedHydrologyMap riverMap = BuildSurfaceHydrologyMap(
+                        request, profile.Settings, cancellationToken);
+                    if (biome == SurfaceBiomeKind.River)
+                    {
+                        // 河道很窄，检查候选区块里的真实河格，不能只靠稀疏采样碰运气。
+                        for (int y = 0; y < profile.Height; y++)
+                        for (int x = 0; x < profile.Width; x++)
+                        {
+                            cancellationToken.ThrowIfCancellationRequested();
+                            var riverCell = new Int2(topology.NormalizeX(origin.X + x),
+                                topology.NormalizeY(origin.Y + y));
+                            if (riverMap == null || !riverMap.TryGet(riverCell.X, riverCell.Y,
+                                    out GeneratedHydrologyCell hydrology) ||
+                                hydrology.Kind != GeneratedHydrologyKind.River)
+                                continue;
+                            if (MatchesBiome(riverCell))
+                                return new BiomeSearchResult(true, riverCell, sampledCount);
+                        }
+                    }
+                    else if (MatchesBiome(candidate))
+                        return new BiomeSearchResult(true, candidate, sampledCount);
+
+                    bool MatchesBiome(Int2 cell)
+                    {
+                        SurfaceCellOutput output = SampleSurfaceCellOutput(request,
+                            profile.Settings, riverMap, 0, 0, cell.X, cell.Y, liquidTypes);
+                        return output.Cell.BiomeId == (int)biome && output.Cell.IsWalkable &&
+                               liquidTypes.GetId(output.LiquidTypeIndex) != LiquidTypeCatalog.LavaId;
+                    }
+                }
+            }
+            return new BiomeSearchResult(false, anchor, sampledCount);
+        }
+
         /// <summary>
         /// 使用与正式区块相同的 Profile、水文和单格地形规则寻找可走陆地。
         /// 结构不修改液体和可走标记，生态只生成物品放置记录，因此无需生成完整区块。
@@ -799,6 +890,19 @@ namespace FlatWorld.WorldModel
             int worldX,
             int worldY)
         {
+            SurfaceCellOutput output = SampleSurfaceCellOutput(request, settings, riverMap,
+                x, y, worldX, worldY, terrain.LiquidTypes);
+            terrain.SetCell(x, y, output.Cell);
+            terrain.SetLiquid(x, y, output.LiquidTypeIndex, output.LiquidDepth);
+            terrain.SetGrass(x, y, output.Grass);
+            new SurfaceEnvironmentWriter(terrain).Write(y * terrain.Width + x, output);
+        }
+
+        /// <summary>正式单格生成与群系查询共享最终分类和液体结果。</summary>
+        private SurfaceCellOutput SampleSurfaceCellOutput(ChunkGenerationRequest request,
+            ChunkGenerationSettingsSnapshot settings, GeneratedHydrologyMap riverMap,
+            int x, int y, int worldX, int worldY, LiquidTypeCatalog types)
+        {
             SurfaceClimateSample climate = SampleSurfaceClimate(
                 request, settings, worldX, worldY);
             double baseMoisture = Clamp01(climate.Precipitation * 0.78d +
@@ -808,15 +912,11 @@ namespace FlatWorld.WorldModel
                 baseMoisture, false, climate.SnowAllowed);
             climate.Classified = true;
             IReadOnlyList<LavaBasin> volcanic = ResolveLavaBasins(request);
-            SurfaceCellOutput output = BuildSurfaceCell(request, settings, riverMap,
+            return BuildSurfaceCell(request, settings, riverMap,
                 climate, null, x, y, worldX, worldY,
-                terrain.LiquidTypes.GetIndex(LiquidTypeCatalog.SeaWaterId),
-                terrain.LiquidTypes.GetIndex(LiquidTypeCatalog.DirtyWaterId),
-                volcanic.Count > 0 ? terrain.LiquidTypes.GetIndex(LiquidTypeCatalog.LavaId) : 0, volcanic);
-            terrain.SetCell(x, y, output.Cell);
-            terrain.SetLiquid(x, y, output.LiquidTypeIndex, output.LiquidDepth);
-            terrain.SetGrass(x, y, output.Grass);
-            new SurfaceEnvironmentWriter(terrain).Write(y * terrain.Width + x, output);
+                types.GetIndex(LiquidTypeCatalog.SeaWaterId),
+                types.GetIndex(LiquidTypeCatalog.DirtyWaterId),
+                volcanic.Count > 0 ? types.GetIndex(LiquidTypeCatalog.LavaId) : 0, volcanic);
         }
 
         private static SurfaceCellOutput BuildSurfaceCell(

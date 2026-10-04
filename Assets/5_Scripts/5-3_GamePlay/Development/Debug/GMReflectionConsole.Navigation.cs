@@ -175,7 +175,7 @@ public sealed partial class GMReflectionConsole
         BuildWorldPage();
         BuildLayersPage();
         BuildAiecsPage();
-        BuildStructurePage();
+        BuildTeleportPage();
         gameEventPageContent = CreatePage(GmPageId.GameEvents).Content;
         commandPageContent = CreatePage(GmPageId.Commands).Content;
 
@@ -346,7 +346,7 @@ public sealed partial class GMReflectionConsole
         CreateTab(content.transform, GmPageId.World, "世界", 100f);
         CreateTab(content.transform, GmPageId.Layers, "层级显示", 128f);
         CreateTab(content.transform, GmPageId.Aiecs, "AIECS", 110f);
-        CreateTab(content.transform, GmPageId.Structures, "遗迹", 100f);
+        CreateTab(content.transform, GmPageId.Structures, "传送", 100f);
         CreateTab(content.transform, GmPageId.GameEvents, "事件", 110f);
         CreateTab(content.transform, GmPageId.Commands, "命令", 110f);
         // 页签总宽从实际子项计算，新增分页后仍可横向滚动到最后一页。
@@ -1291,7 +1291,9 @@ public sealed partial class GMReflectionConsole
 
     #endregion
 
-    private void BuildStructurePage()
+    #region 传送分页
+
+    private void BuildTeleportPage()
     {
         GmPageView page = CreatePage(GmPageId.Structures);
         AddPageIntro(page.Content, "遗迹传送", "按当前世界种子推算未探索区域中的最近遗迹生成点。 ");
@@ -1321,7 +1323,10 @@ public sealed partial class GMReflectionConsole
             "传送到最近遗迹",
             "遗迹 建筑 structure ruin 传送",
             teleportButton.transform as RectTransform);
+        BuildBiomeTeleportRow(page.Content);
     }
+
+    #endregion
 
     private Transform CreateActionGrid(
         Transform parent,
@@ -1504,6 +1509,8 @@ public sealed partial class GMReflectionConsole
             return;
 
         GMConsolePreferences.SetActivePageIndex((int)pageId);
+        if (pageId != GmPageId.Structures)
+            CancelBiomeSearch();
         activeGmPage = pageId;
 
         foreach (KeyValuePair<GmPageId, GmPageView> pair in gmPages)
@@ -2070,7 +2077,7 @@ public sealed partial class GMReflectionConsole
             GmPageId.Buff => "Buff",
             GmPageId.Spawn => "生成与召唤",
             GmPageId.World => "世界",
-            GmPageId.Structures => "遗迹",
+            GmPageId.Structures => "传送",
             GmPageId.GameEvents => "游戏事件",
             GmPageId.Commands => "调试命令",
             GmPageId.Quests => "任务",

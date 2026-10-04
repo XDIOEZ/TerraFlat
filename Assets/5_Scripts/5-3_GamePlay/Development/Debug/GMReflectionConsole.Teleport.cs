@@ -1,3 +1,8 @@
+using System;
+using System.Collections;
+using System.Threading;
+using System.Threading.Tasks;
+using FlatWorld.WorldModel;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -97,7 +102,11 @@ public sealed partial class GMReflectionConsole
     }
 
     /// <summary>禁用 GM 时结束未完成的点选。</summary>
-    private void OnDisable() => CancelTeleportTargeting();
+    private void OnDisable()
+    {
+        CancelTeleportTargeting();
+        CancelBiomeSearch();
+    }
 
     /// <summary>失焦时释放触点及输入锁。</summary>
     private void OnApplicationFocus(bool hasFocus)
@@ -152,6 +161,188 @@ public sealed partial class GMReflectionConsole
         CreateButton(toolbar.transform, "取消", () => SetWindowVisible(true), 120f, 60f);
         teleportTargetRoot.SetActive(false);
     }
+
+    #endregion
+
+    #region 群系传送
+
+    private readonly SurfaceBiomeKind[] teleportBiomes =
+        (SurfaceBiomeKind[])Enum.GetValues(typeof(SurfaceBiomeKind));
+    private int selectedBiomeIndex;
+    private TextMeshProUGUI biomeSelectionText;
+    private TextMeshProUGUI biomeHintText;
+    private Button biomeTeleportButton;
+    private CancellationTokenSource biomeSearchCancellation;
+
+    // GM 调试分页沿用现有遗迹选择行的布局和主题。
+    private void BuildBiomeTeleportRow(Transform content)
+    {
+        CreateSectionTitle(content, "群系传送");
+        GameObject row = CreateUiObject("Biome Teleport Row", content);
+        row.AddComponent<LayoutElement>().preferredHeight = 44f;
+        HorizontalLayoutGroup layout = row.AddComponent<HorizontalLayoutGroup>();
+        layout.spacing = 8f;
+        layout.childAlignment = TextAnchor.MiddleLeft;
+        layout.childControlWidth = layout.childControlHeight = true;
+        layout.childForceExpandWidth = false;
+        CreateButton(row.transform, "‹", () => CycleBiome(-1), 40f, 40f);
+        biomeSelectionText = CreateValueDisplay(row.transform, "", 540f, 40f);
+        LayoutElement selection = biomeSelectionText.transform.parent.GetComponent<LayoutElement>();
+        selection.minWidth = 180f;
+        selection.flexibleWidth = 1f;
+        CreateButton(row.transform, "›", () => CycleBiome(1), 40f, 40f);
+        biomeTeleportButton = CreateButton(row.transform, "传送到群系", TeleportToSelectedBiome, 190f, 40f);
+        SetGmButtonVisual(biomeTeleportButton, GmSurfaceRaised, true);
+        CreateButton(row.transform, "取消", CancelBiomeSearch, 82f, 40f);
+        biomeHintText = AddPageHint(content,
+            "按当前世界生成规则定位，未探索区域也能搜索；河流和海洋直接传送到水域。", 26f);
+        RegisterSearchEntry(GmPageId.Structures, "群系传送",
+            "群系 biome 传送 海洋 河流 沙滩 沙漠 草原 森林 雪原 雪地 石地 山地", row.transform as RectTransform);
+        RefreshBiomeSelection();
+    }
+
+    private void CycleBiome(int direction)
+    {
+        CancelBiomeSearch();
+        selectedBiomeIndex = (selectedBiomeIndex + direction + teleportBiomes.Length) % teleportBiomes.Length;
+        RefreshBiomeSelection();
+    }
+
+    private void RefreshBiomeSelection()
+    {
+        if (biomeSelectionText == null)
+            return;
+        SurfaceBiomeKind biome = teleportBiomes[selectedBiomeIndex];
+        string name = biome == SurfaceBiomeKind.Snow
+            ? "雪原" : SurfaceBiomeClassifier.GetLegacyName((int)biome);
+        biomeSelectionText.text = $"{selectedBiomeIndex + 1}/{teleportBiomes.Length}  {name}  /  {biome}";
+    }
+
+    private void TeleportToSelectedBiome()
+    {
+        if (biomeSearchCancellation != null)
+        {
+            SetStatus("正在定位群系，请等待或取消搜索。", Color.yellow);
+            return;
+        }
+        Player player = ItemMgr.GetInstance()?.User_Player;
+        ChunkMgr manager = ChunkMgr.ExistingInstance;
+        if (player == null || !player.IsLocalProfile || player.Data == null ||
+            manager == null || !manager.IsWorldModelRuntimeActive || !manager.IsAuthoritativeSimulation)
+        {
+            SetStatus("请先进入单机或主机世界，再执行群系传送。", Color.yellow);
+            return;
+        }
+        if (manager.ActiveGenerationProfile?.Settings.Mode != ChunkGenerationMode.Surface)
+        {
+            SetStatus("群系传送用于星球地表，请先返回地表。", Color.yellow);
+            return;
+        }
+        var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        biomeSearchCancellation = cancellation;
+        StartCoroutine(LocateBiomeAndTeleport(player, manager,
+            teleportBiomes[selectedBiomeIndex], cancellation));
+    }
+
+    // 等待后台任务时只在主线程更新 UI，并在落点应用前核对世界和玩家身份。
+    private IEnumerator LocateBiomeAndTeleport(Player player, ChunkMgr manager,
+        SurfaceBiomeKind biome, CancellationTokenSource cancellation)
+    {
+        bool teleported = false;
+        try
+        {
+            biomeTeleportButton.interactable = false;
+            string name = biome == SurfaceBiomeKind.Snow
+                ? "雪原" : SurfaceBiomeClassifier.GetLegacyName((int)biome);
+            biomeHintText.text = $"正在定位{name}，搜索范围逐步扩大到 8192 格；可取消，最多等待 30 秒。";
+            var anchor = new Int2(Mathf.FloorToInt(player.transform.position.x),
+                Mathf.FloorToInt(player.transform.position.y));
+            string dimension = manager.ResolveWorldAddress(player.transform.position).DimensionId;
+            long epoch = manager.WorldRuntime.Epoch;
+            Task<DeterministicChunkGenerator.BiomeSearchResult> task = null;
+            try
+            {
+                task = manager.FindSurfaceBiomeAsync(anchor, biome, cancellation.Token);
+            }
+            catch (Exception exception)
+            {
+                Debug.LogException(exception);
+                biomeHintText.text = "生成配置尚未就绪或存在错误，请查看 Console 日志。";
+                SetStatus("无法开始群系定位，详细原因已写入日志。", Color.yellow);
+            }
+            if (task == null)
+                yield break;
+            // 取消后不再等待的任务仍需观察异常，避免遗失后台失败信息。
+            _ = task.ContinueWith(completed => { _ = completed.Exception; },
+                TaskContinuationOptions.OnlyOnFaulted);
+            yield return null;
+            while (!task.IsCompleted)
+            {
+                if (cancellation.IsCancellationRequested || !IsSameWorld())
+                {
+                    cancellation.Cancel();
+                    biomeHintText.text = "搜索已取消或超时，可重新选择群系再试。";
+                    yield break;
+                }
+                yield return null;
+            }
+            if (task.IsCanceled || cancellation.IsCancellationRequested || !IsSameWorld())
+            {
+                biomeHintText.text = "搜索已取消或超时，可重新选择群系再试。";
+                yield break;
+            }
+            if (task.IsFaulted)
+            {
+                Debug.LogException(task.Exception.GetBaseException());
+                SetStatus("群系定位失败，详细原因已写入日志。", Color.yellow);
+                biomeHintText.text = "定位失败，请查看 Console 日志。";
+                yield break;
+            }
+            DeterministicChunkGenerator.BiomeSearchResult result = task.Result;
+            if (!result.Found)
+            {
+                biomeHintText.text = $"已检查 {result.SampledCount} 个采样位置，8192 格范围内未定位到{name}；可换位置重试。";
+                SetStatus("本次采样没有找到目标群系，不代表整个世界没有该群系。", Color.yellow);
+                yield break;
+            }
+            Vector3 destination = new(result.Cell.X + 0.5f, result.Cell.Y + 0.5f,
+                player.transform.position.z);
+            Rigidbody2D body = player.GetComponent<Rigidbody2D>();
+            if (body != null)
+            {
+                body.velocity = Vector2.zero;
+                body.angularVelocity = 0f;
+                body.position = destination;
+            }
+            player.transform.position = destination;
+            player.Data.transform.position = destination;
+            manager.ResetChunkLoadQueue();
+            Mod_ChunkLoader loader = player.GetComponentInChildren<Mod_ChunkLoader>(true) ??
+                player.GetComponentInParent<Mod_ChunkLoader>();
+            loader?.RefreshChunksAroundPlayer();
+            biomeHintText.text = $"已定位{name}：({result.Cell.X}, {result.Cell.Y})，检查 {result.SampledCount} 个采样位置。";
+            Debug.Log($"[GM] 已按正式生成规则传送到群系 {name} ({biome})，落点={destination}，采样={result.SampledCount}");
+            teleported = true;
+
+            bool IsSameWorld() => player != null && manager != null &&
+                ItemMgr.GetInstance()?.User_Player == player && player.Data != null &&
+                manager.WorldRuntime?.Epoch == epoch && manager.IsWorldModelRuntimeActive &&
+                manager.ResolveWorldAddress(player.transform.position).DimensionId == dimension;
+        }
+        finally
+        {
+            cancellation.Cancel();
+            cancellation.Dispose();
+            if (biomeSearchCancellation == cancellation)
+                biomeSearchCancellation = null;
+            if (biomeTeleportButton != null)
+                biomeTeleportButton.interactable = true;
+        }
+        if (teleported)
+            SetWindowVisible(false);
+    }
+
+    private void CancelBiomeSearch() => biomeSearchCancellation?.Cancel();
 
     #endregion
 }

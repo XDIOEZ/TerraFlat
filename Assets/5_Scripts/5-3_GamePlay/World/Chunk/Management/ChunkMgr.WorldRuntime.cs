@@ -135,6 +135,27 @@ public partial class ChunkMgr
             ? (Int2?)found : null, cancellationToken);
     }
 
+    #region 群系调试定位
+
+    /// <summary>在主线程冻结当前世界上下文，后台仅使用正式生成器和纯数据查询群系。</summary>
+    public Task<DeterministicChunkGenerator.BiomeSearchResult> FindSurfaceBiomeAsync(
+        Int2 anchor, SurfaceBiomeKind biome, CancellationToken cancellationToken)
+    {
+        EnsureWorldRuntime();
+        ChunkGenerationProfileSnapshot profile = PrepareActiveGenerationSnapshot(out int baseSeed);
+        ChunkGenerationTopologySnapshot topology = ResolveActiveGenerationTopology();
+        string dimensionId = ResolveCurrentDimensionId();
+        int seed = DimensionManager.Instance != null
+            ? DimensionManager.Instance.GetActiveGenerationSeed(baseSeed)
+            : baseSeed;
+        long epoch = runtimeChunkManager.World.Epoch;
+        DeterministicChunkGenerator generator = runtimeGenerator;
+        return Task.Run(() => generator.FindSurfaceBiome(dimensionId, seed, profile,
+            topology, anchor, biome, cancellationToken, epoch), cancellationToken);
+    }
+
+    #endregion
+
     /// <summary>尝试从当前运行时缓存中找到指定地址的区块。</summary>
     public bool TryGetChunkRuntime(RuntimeWorldAddress address, out ChunkRuntime chunk)
     {
