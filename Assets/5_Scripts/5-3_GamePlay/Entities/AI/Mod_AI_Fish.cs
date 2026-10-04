@@ -49,6 +49,13 @@ public sealed partial class Mod_AI_Fish : Module, IAIActor, IItemModuleDependenc
     [Min(1)] public int minimumWetStacks = 3;
     [Min(0.1f)] public float dryDamageInterval = 10f;
     [Min(0f)] public float dryDamage = 10f;
+    [Min(0.5f)] public float returnWaterSearchRadius = 8f;
+    [Min(0.1f)] public float returnWaterScanInterval = 1f;
+    [Min(0.05f)] public float strandedHopDistance = 0.65f;
+    [Min(0.1f)] public float strandedHopSeconds = 0.32f;
+    [Min(0.05f)] public float strandedHopPause = 0.28f;
+    [Min(0f)] public float strandedHopHeight = 0.18f;
+    [Range(0f, 90f)] public float strandedHopTilt = 28f;
     public SpriteRenderer fishRenderer;
     public Ex_ModData_MemoryPackable Data = new();
     public override ModuleData _Data { get => Data; set => Data = (Ex_ModData_MemoryPackable)value; }
@@ -92,6 +99,10 @@ public sealed partial class Mod_AI_Fish : Module, IAIActor, IItemModuleDependenc
     private bool temperatureSafetyRetreat;
     private bool temperatureSafetyReached;
     private Vector2 temperatureSafetyDestination;
+    private Vector2 returnWaterDestination, hopOrigin, hopDelta;
+    private bool hasReturnWaterDestination, hopping;
+    private float returnWaterScanRemaining, hopElapsed, hopDuration, hopPauseRemaining;
+    private float hopVisualHeight, hopVisualTilt, hopTiltDirection;
     public int TemperatureSafetyMovementPriority => 100;
     public bool ShouldAdvanceTemperatureSafetyDestination => temperatureSafetyRetreat && temperatureSafetyReached;
     #endregion
@@ -145,13 +156,15 @@ public sealed partial class Mod_AI_Fish : Module, IAIActor, IItemModuleDependenc
         hasFleeDestination = false;
         temperatureSafetyRetreat = false;
         temperatureSafetyReached = false;
+        ResetStrandedMotion();
         threatDetector.DetectionRadius = Mathf.Max(fleeTriggerDistance, fleeSafeDistance);
         if (!nodesRegistered)
         {
             machine.Register(new AIStateNode<Behaviour>(Behaviour.Swim, TickSwim));
             machine.Register(new AIStateNode<Behaviour>(Behaviour.Forage, TickForage));
             machine.Register(new AIStateNode<Behaviour>(Behaviour.Flee, TickFlee));
-            machine.Register(new AIStateNode<Behaviour>(Behaviour.Stranded, _ => { }));
+            machine.Register(new AIStateNode<Behaviour>(Behaviour.Stranded, TickStranded,
+                ResetStrandedMotion, ResetStrandedMotion));
             machine.Register(new AIStateNode<Behaviour>(Behaviour.Hooked, _ => { }));
             nodesRegistered = true;
         }
@@ -181,6 +194,7 @@ public sealed partial class Mod_AI_Fish : Module, IAIActor, IItemModuleDependenc
         temperatureSafetyRetreat = false;
         temperatureSafetyReached = false;
         machine.Reset();
+        ResetStrandedMotion();
         buffs?.SetWaterStackExposure(false);
         if (body != null) { body.velocity = Vector2.zero; body.bodyType = originalBodyType; }
         if (colliders != null)
@@ -225,6 +239,16 @@ public sealed partial class Mod_AI_Fish : Module, IAIActor, IItemModuleDependenc
                 }
             }
             if (!IsAlive) return;
+            // 离水先靠蹦跳回水，不能被温度避险的游动分支卡在岸上。
+            if (!IsHooked && depth < AquaticHabitat.MinimumDepth)
+            {
+                machine.TransitionTo(Behaviour.Stranded, null);
+                machine.Tick(deltaTime);
+                UpdatePresentation(deltaTime);
+                return;
+            }
+            if (machine.CurrentState == Behaviour.Stranded)
+                machine.TransitionTo(IsHooked ? Behaviour.Hooked : Behaviour.Swim, null);
             if (temperatureSafetyRetreat)
             {
                 TickTemperatureSafetyRetreat(deltaTime);
@@ -352,6 +376,133 @@ public sealed partial class Mod_AI_Fish : Module, IAIActor, IItemModuleDependenc
         item.transform.position = new Vector3(position.x, position.y, item.transform.position.z);
         ItemMgr.Instance?.NotifyRuntimeItemMoved(item);
     }
+
+    #region 离水蹦跳与回水
+    private void ResetStrandedMotion()
+    {
+        hasReturnWaterDestination = hopping = false;
+        returnWaterScanRemaining = hopElapsed = hopPauseRemaining = 0f;
+        hopVisualHeight = hopVisualTilt = 0f;
+        target = default;
+        targetTag = null;
+        hasDestination = hasFleeDestination = false;
+        eatElapsed = 0f;
+    }
+
+    private void TickStranded(float deltaTime)
+    {
+        returnWaterScanRemaining -= deltaTime;
+        if (!hopping)
+        {
+            hopPauseRemaining -= deltaTime;
+            if (hopPauseRemaining > 0f) return;
+            Vector2 origin = item.transform.position;
+            if (returnWaterScanRemaining <= 0f ||
+                (hasReturnWaterDestination && !AquaticHabitat.CanSwimAt(returnWaterDestination)))
+            {
+                returnWaterScanRemaining = Mathf.Max(0.1f, returnWaterScanInterval);
+                hasReturnWaterDestination = TryFindReturnWater(origin, out returnWaterDestination);
+            }
+            hopOrigin = origin;
+            hopDelta = PlanStrandedHop(origin);
+            hopElapsed = 0f;
+            hopDuration = Mathf.Max(0.1f, strandedHopSeconds) * UnityEngine.Random.Range(0.9f, 1.1f);
+            hopTiltDirection = UnityEngine.Random.value < 0.5f ? -1f : 1f;
+            hopping = true;
+        }
+
+        hopElapsed = Mathf.Min(hopDuration, hopElapsed + deltaTime);
+        float progress = hopElapsed / hopDuration;
+        Vector2 next = WorldTopologyRuntime.NormalizePosition(hopOrigin + hopDelta * progress);
+        if (hopDelta.sqrMagnitude > 0.000001f && !CanHopAcross(item.transform.position, next))
+        {
+            FinishStrandedHop();
+            returnWaterScanRemaining = 0f;
+            return;
+        }
+        if (hopDelta.sqrMagnitude > 0.000001f) MovePosition(next);
+        // 地面位置只在起跳期间前进，抛物线高度和甩身只作用于鱼的视觉节点。
+        hopVisualHeight = 4f * progress * (1f - progress) * Mathf.Max(0f, strandedHopHeight);
+        hopVisualTilt = Mathf.Sin(progress * Mathf.PI * 2f) * strandedHopTilt * hopTiltDirection;
+        if (progress >= 1f || AquaticHabitat.CanSwimAt(next)) FinishStrandedHop();
+    }
+
+    private void FinishStrandedHop()
+    {
+        hopping = false;
+        hopVisualHeight = hopVisualTilt = 0f;
+        hopPauseRemaining = Mathf.Max(0.05f, strandedHopPause) * UnityEngine.Random.Range(0.7f, 1.3f);
+    }
+
+    private bool TryFindReturnWater(Vector2 origin, out Vector2 water)
+    {
+        float radius = Mathf.Clamp(returnWaterSearchRadius, 0.5f, 32f);
+        float bestDistance = radius * radius;
+        int range = Mathf.CeilToInt(radius);
+        Vector2Int cell = WorldNavigationGrid.WorldToCell(origin);
+        water = default;
+        bool found = false;
+        for (int y = -range; y <= range; y++)
+        for (int x = -range; x <= range; x++)
+        {
+            Vector2 candidate = WorldTopologyRuntime.NormalizePosition(
+                new Vector2(cell.x + x + 0.5f, cell.y + y + 0.5f));
+            float distance = WorldTopologyRuntime.SqrDistance(origin, candidate);
+            if (distance > bestDistance || !AquaticHabitat.CanSwimAt(candidate) ||
+                !CanHopAcross(origin, candidate)) continue;
+            bestDistance = distance;
+            water = candidate;
+            found = true;
+        }
+        return found;
+    }
+
+    private Vector2 PlanStrandedHop(Vector2 origin)
+    {
+        Vector2 preferred = hasReturnWaterDestination
+            ? WorldTopologyRuntime.ShortestDelta(origin, returnWaterDestination).normalized
+            : UnityEngine.Random.insideUnitCircle.normalized;
+        if (preferred.sqrMagnitude < 0.0001f) preferred = Vector2.right;
+        float distance = Mathf.Max(0.05f, strandedHopDistance) * UnityEngine.Random.Range(0.8f, 1.15f);
+        if (hasReturnWaterDestination)
+            distance = Mathf.Min(distance, WorldTopologyRuntime.ShortestDelta(origin, returnWaterDestination).magnitude);
+        for (int ring = 0; ring < 3; ring++)
+        for (int index = 0; index < FleeAngles.Length; index++)
+        {
+            float radians = FleeAngles[index] * Mathf.Deg2Rad;
+            Vector2 direction = new(preferred.x * Mathf.Cos(radians) - preferred.y * Mathf.Sin(radians),
+                preferred.x * Mathf.Sin(radians) + preferred.y * Mathf.Cos(radians));
+            Vector2 step = direction * (distance * (1f - ring * 0.3f));
+            Vector2 candidate = WorldTopologyRuntime.NormalizePosition(origin + step);
+            if (hasReturnWaterDestination && WorldTopologyRuntime.SqrDistance(candidate, returnWaterDestination) >=
+                WorldTopologyRuntime.SqrDistance(origin, returnWaterDestination)) continue;
+            if (CanHopAcross(origin, candidate)) return step;
+        }
+        return Vector2.zero;
+    }
+
+    private static bool CanHopAcross(Vector2 origin, Vector2 target)
+    {
+        WorldNavigationManager navigation = WorldNavigationManager.ExistingInstance;
+        if (navigation == null) return false;
+        Vector2 delta = WorldTopologyRuntime.ShortestDelta(origin, target);
+        int samples = Mathf.Max(1, Mathf.CeilToInt(delta.magnitude / 0.2f));
+        Vector2 previous = origin;
+        for (int index = 1; index <= samples; index++)
+        {
+            Vector2 position = WorldTopologyRuntime.NormalizePosition(origin + delta * ((float)index / samples));
+            if (!AquaticHabitat.TryGetDepth(position, out _) || !navigation.IsWalkable(position)) return false;
+            Vector2Int previousCell = WorldNavigationGrid.WorldToCell(previous);
+            Vector2Int cell = WorldNavigationGrid.WorldToCell(position);
+            Vector2Int cellDelta = WorldTopologyRuntime.ShortestDelta(previousCell, cell);
+            if (cellDelta.x != 0 && cellDelta.y != 0 &&
+                (!navigation.IsWalkable(previous + new Vector2(cellDelta.x, 0f)) ||
+                 !navigation.IsWalkable(previous + new Vector2(0f, cellDelta.y)))) return false;
+            previous = position;
+        }
+        return true;
+    }
+    #endregion
 
     #region 捕食者逃离
 
@@ -565,6 +716,8 @@ public sealed partial class Mod_AI_Fish : Module, IAIActor, IItemModuleDependenc
         bool carried = predatorCarrier != null;
         presentation?.SetCarried(carried, carriedVisualHeight);
         bool underwater = !carried && AquaticHabitat.CanSwimAt(item.transform.position);
+        bool stranded = !underwater && !carried && !IsHooked;
+        presentation?.SetStrandedHop(stranded ? hopVisualHeight : 0f, stranded ? hopVisualTilt : 0f);
         presentation?.Tick(underwater, deltaTime);
     }
     #endregion
@@ -578,6 +731,7 @@ public sealed partial class Mod_AI_Fish : Module, IAIActor, IItemModuleDependenc
         if (!GameNetwork.HasStateAuthority || !CanBeHuntedBy(predator) || predatorCarrier != null)
             return false;
         predatorCarrier = predator;
+        ResetStrandedMotion();
         target = default;
         targetTag = null;
         hasDestination = false;
@@ -613,6 +767,7 @@ public sealed partial class Mod_AI_Fish : Module, IAIActor, IItemModuleDependenc
     {
         if (!GameNetwork.HasStateAuthority || !IsAlive || rod == null || IsHooked || predatorCarrier != null) return false;
         fishingRod = rod;
+        ResetStrandedMotion();
         target = default;
         return true;
     }

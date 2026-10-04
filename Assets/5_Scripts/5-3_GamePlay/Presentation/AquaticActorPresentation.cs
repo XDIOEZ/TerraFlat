@@ -26,6 +26,8 @@ public sealed class AquaticActorPresentation : IDisposable
     private float currentSwayDegrees;
     private bool carried;
     private float carriedVisualHeight;
+    private float strandedHopHeight;
+    private float strandedHopTilt;
     #endregion
 
     #region 初始化
@@ -75,8 +77,15 @@ public sealed class AquaticActorPresentation : IDisposable
     {
         SetUnderwater(underwater && !carried);
         if (visualTransform != null)
-            visualTransform.localPosition = originalLocalPosition + Vector3.up * (carried ? carriedVisualHeight : 0f);
+            visualTransform.localPosition = originalLocalPosition + Vector3.up *
+                (carried ? carriedVisualHeight : underwater ? 0f : strandedHopHeight);
         UpdateSwimMotion(underwater && !carried, deltaTime);
+    }
+
+    public void SetStrandedHop(float height, float tilt)
+    {
+        strandedHopHeight = Mathf.Max(0f, height);
+        strandedHopTilt = tilt;
     }
 
     /// <summary>被捕获时改用普通生物排序，并只抬高视觉节点，不改动权威地面坐标。</summary>
@@ -121,7 +130,8 @@ public sealed class AquaticActorPresentation : IDisposable
             if (Mathf.Approximately(currentSwayDegrees, 0f)) swimSwayPhase = 0f;
         }
 
-        visualTransform.localRotation = Quaternion.AngleAxis(currentSwayDegrees, Vector3.forward) * originalLocalRotation;
+        float hopTilt = underwater || carried ? 0f : strandedHopTilt;
+        visualTransform.localRotation = Quaternion.AngleAxis(currentSwayDegrees + hopTilt, Vector3.forward) * originalLocalRotation;
     }
     #endregion
 
