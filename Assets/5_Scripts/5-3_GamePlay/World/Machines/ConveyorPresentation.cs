@@ -5,7 +5,7 @@ using UnityEngine;
 public sealed class MachineTransportVisualDefinition
 {
     #region 输送带图层配置
-    public float SurfaceUvMin = .26f, SurfaceUvMax = .74f;
+    public float SurfaceUvMin = .25f, SurfaceUvMax = .75f;
     public float TextureInsetX = .023f, CanvasHeight = .84f, SidePortOffset = .25f;
     public Vector4 Surface => new(SurfaceUvMin, SurfaceUvMax, TextureInsetX, CanvasHeight);
     public void Validate(string id)
@@ -39,6 +39,9 @@ public static class ConveyorPresentation
     public static Vector4 Surface(Sprite sprite, MachineTransportVisualDefinition visual)
     {
         Vector4 surface = visual.Surface;
+        // 动态带面向外对齐完整像素行，带条两端不会残留静止细边。
+        surface.x = Mathf.Floor(surface.x * sprite.rect.height) / sprite.rect.height;
+        surface.y = Mathf.Ceil(surface.y * sprite.rect.height) / sprite.rect.height;
         surface.z = Mathf.Min(.499f, (Mathf.Ceil(visual.TextureInsetX * sprite.rect.width) + .5f) / sprite.rect.width);
         return surface;
     }
