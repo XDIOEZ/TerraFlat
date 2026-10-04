@@ -19,14 +19,15 @@ namespace FlatWorld.Audio
         [SerializeField] private bool loop;
         [SerializeField] private AudioFloatRange volume = new AudioFloatRange(1f);
         [SerializeField] private AudioFloatRange pitch = new AudioFloatRange(1f);
-        [SerializeField, Range(0f, 1f)] private float spatialBlend;
+        [SerializeField, Range(0f, 1f), Tooltip("0 为全局音；大于 0 且指定位置时使用完整世界空间混音")]
+        private float spatialBlend;
         [SerializeField, Min(0.01f)] private float minDistance = 1f;
         [SerializeField, Min(0.02f)] private float maxDistance = 20f;
         [SerializeField, Range(0, 256)] private int priority = 128;
         [SerializeField, Min(0f)] private float cooldown;
         [SerializeField, Min(1)] private int maxInstances = 4;
         [SerializeField] private AudioConcurrencyPolicy concurrencyPolicy = AudioConcurrencyPolicy.StopOldest;
-        [SerializeField] private AudioRolloffMode rolloffMode = AudioRolloffMode.Logarithmic;
+        [SerializeField] private AudioRolloffMode rolloffMode = AudioRolloffMode.Linear;
         [SerializeField] private AudioMixerGroup outputOverride;
 
         private int lastClipIndex = -1;

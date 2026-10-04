@@ -1,4 +1,5 @@
 using Cinemachine;
+using FlatWorld.Audio;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -85,11 +86,13 @@ public class Mod_Cam : Module
     {
         CameraUserSettings.Changed -= HandleCameraSettingsChanged;
         CameraUserSettings.Changed += HandleCameraSettingsChanged;
+        BindWorldAudioListener();
     }
 
     private void OnDisable()
     {
         CameraUserSettings.Changed -= HandleCameraSettingsChanged;
+        ClearWorldAudioListener();
     }
 
     // 在Load方法中实例化相机逻辑
@@ -151,6 +154,7 @@ public class Mod_Cam : Module
             ApplyCameraFollowSettings();
         }
         GameController._mainCamera = ControllerCamera;
+        BindWorldAudioListener();
     
         // 重置旋转
         transform.rotation = Quaternion.identity;
@@ -165,6 +169,7 @@ public class Mod_Cam : Module
     private void OnDestroy()
     {
         CameraUserSettings.Changed -= HandleCameraSettingsChanged;
+        ClearWorldAudioListener();
 
         // 注销事件
         if (GameController != null && GameController._inputActions != null)
@@ -178,6 +183,27 @@ public class Mod_Cam : Module
             Destroy(instantiatedCamera);
         }
     }
+    #endregion
+
+    #region 玩家听音位置
+
+    // 本机玩家拥有世界听音中心，相机只提供屏幕左右方向和音频输出监听器。
+    private void BindWorldAudioListener()
+    {
+        if (Player == null || !Player.IsLocalProfile || ControllerCamera == null)
+            return;
+
+        AudioListener listener = ControllerCamera.GetComponent<AudioListener>();
+        if (listener != null)
+            AudioService.Instance.SetWorldListener(Player.transform, listener);
+    }
+
+    private void ClearWorldAudioListener()
+    {
+        if (Player != null && AudioService.HasInstance)
+            AudioService.Instance.ClearWorldListener(Player.transform);
+    }
+
     #endregion
 
     #region 镜头预判设置

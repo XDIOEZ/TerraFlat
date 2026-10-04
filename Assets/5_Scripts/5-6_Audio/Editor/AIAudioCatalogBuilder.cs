@@ -140,6 +140,9 @@ namespace FlatWorld.Audio.Editor
             EditorUtility.SetDirty(cue);
         }
 
+        #region 音效播放默认值
+
+        // 世界事件采用完整空间混音和有限传播范围，全局音乐、UI 与雨声保持居中。
         private static void ApplyPlaybackDefaults(SerializedObject cueObject, string eventId)
         {
             bool isUi = eventId.StartsWith("ui.", StringComparison.OrdinalIgnoreCase);
@@ -148,9 +151,11 @@ namespace FlatWorld.Audio.Editor
             bool isWorldSfx = eventId.StartsWith("door.", StringComparison.OrdinalIgnoreCase) ||
                               eventId.StartsWith("item.", StringComparison.OrdinalIgnoreCase) ||
                               eventId.StartsWith("combat.", StringComparison.OrdinalIgnoreCase) ||
+                              eventId.StartsWith("food.", StringComparison.OrdinalIgnoreCase) ||
                               eventId.StartsWith("player.", StringComparison.OrdinalIgnoreCase);
 
-            cueObject.FindProperty("spatialBlend").floatValue = isWorldSfx ? 0.72f : 0f;
+            cueObject.FindProperty("spatialBlend").floatValue = isWorldSfx ? 1f : 0f;
+            cueObject.FindProperty("rolloffMode").enumValueIndex = (int)AudioRolloffMode.Linear;
             cueObject.FindProperty("minDistance").floatValue = isWorldSfx ? 1.5f : 1f;
             cueObject.FindProperty("maxDistance").floatValue = isWorldSfx ? 14f : 20f;
             cueObject.FindProperty("priority").intValue = isUi ? 48 : isWeatherAmbient ? 96 : 128;
@@ -158,6 +163,8 @@ namespace FlatWorld.Audio.Editor
             cueObject.FindProperty("maxInstances").intValue = isWeatherAmbient ? 1 : isUi ? 3 : 5;
             cueObject.FindProperty("loop").boolValue = isLooping;
         }
+
+        #endregion
 
         private static AudioBus InferBus(string eventId)
         {
