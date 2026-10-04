@@ -909,7 +909,7 @@ public abstract class Item : MonoBehaviour
                 if (module is ISimulationRangeAware aware)
                     aware.OnSimulationRangePaused();
 
-            pausedSimulationBody = GetComponent<Rigidbody2D>();
+            TryGetComponent(out pausedSimulationBody);
             if (pausedSimulationBody == null) return;
             pausedBodyWasSimulated = pausedSimulationBody.simulated;
             pausedSimulationBody.velocity = Vector2.zero;

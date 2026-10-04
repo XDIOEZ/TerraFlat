@@ -120,7 +120,7 @@ internal sealed class ItemTickScheduler
     public void Update(IReadOnlyList<Item> runtimeItems, float deltaTime, Action<Item> beforeEveryFrameTick,
         IReadOnlyList<Transform> players, WorldTopologyDomain topology)
     {
-        FlushDirty(runtimeItems);
+        FlushDirty();
 
         snapshot.Clear();
         snapshot.AddRange(everyFrameItems);
@@ -207,7 +207,7 @@ internal sealed class ItemTickScheduler
         }
     }
 
-    private void FlushDirty(IReadOnlyList<Item> runtimeItems)
+    private void FlushDirty()
     {
         if (dirtyItems.Count == 0)
         {
@@ -224,24 +224,12 @@ internal sealed class ItemTickScheduler
         for (int i = 0; i < snapshot.Count; i++)
         {
             Item item = snapshot[i];
-            if (item != null && Contains(runtimeItems, item))
+            // 登记表同时保存休眠实体，批量切档时无需逐个重扫完整物品列表。
+            if (item != null && locations.ContainsKey(item))
             {
                 Register(item);
             }
         }
-    }
-
-    private static bool Contains(IReadOnlyList<Item> items, Item target)
-    {
-        for (int i = 0; i < items.Count; i++)
-        {
-            if (items[i] == target)
-            {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     private static List<Item>[] CreateBuckets()

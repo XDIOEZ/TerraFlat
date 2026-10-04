@@ -5,13 +5,12 @@ using UnityEngine.SceneManagement;
 /// <summary>
 /// 统一管理玩家、生物、落地植物与显式配置的世界物品的接触阴影。
 /// 所有旧 Item 接触阴影共用一个 BRG 网格和材质，按可见轮廓定位脚点并绘制扁椭圆。
-/// 漏注册实体每 0.5 秒补扫；水态和昼夜光照只改变表现，不写回物品状态。
+/// 通过完整注册和结构变化事件维护绑定；水态和昼夜光照只改变表现，不写回物品状态。
 /// </summary>
 public sealed class ActorShadowManager : SingletonMono<ActorShadowManager>
 {
     #region 阴影配置与运行状态
 
-    private const float RegistrationScanInterval = 0.5f;
     private const int MechanicalShadowQueue = 2993; // 机械主体为 2994，底影必须先于主体绘制。
     private static WorldRenderingConfig.ContactShadow Defaults => WorldRenderingConfigCatalog.Default.shadows.contact;
 
@@ -23,7 +22,6 @@ public sealed class ActorShadowManager : SingletonMono<ActorShadowManager>
     private int lightingFrame = -1;
     private int lightingSceneHandle = int.MinValue;
     private float cachedShadowOpacity; // 本帧光照与晨昏进度合成后的透明度。
-    private float nextRegistrationScanTime;
 
     #endregion
 
@@ -32,14 +30,14 @@ public sealed class ActorShadowManager : SingletonMono<ActorShadowManager>
     /// <summary>订阅 Item 生命周期事件；场景中已有实体和植物由 Start 补注册。</summary>
     private void OnEnable()
     {
-        ItemMgr.RuntimeItemInstantiated -= RegisterActor;
-        ItemMgr.RuntimeItemInstantiated += RegisterActor;
-        ItemMgr.RuntimeItemDespawning -= UnregisterActor;
-        ItemMgr.RuntimeItemDespawning += UnregisterActor;
+        ItemMgr.RuntimeItemRegistered -= RegisterActor;
+        ItemMgr.RuntimeItemRegistered += RegisterActor;
+        ItemMgr.RuntimeItemUnregistered -= UnregisterActor;
+        ItemMgr.RuntimeItemUnregistered += UnregisterActor;
         Item.RuntimeStructureChanged -= RefreshActor;
         Item.RuntimeStructureChanged += RefreshActor;
         SunShadowParametersProvider.PublishContactAppearance();
-        nextRegistrationScanTime = 0f;
+        RegisterRuntimeActors();
     }
 
     /// <summary>补注册管理器启动前已经存在的玩家、生物与植物。</summary>
@@ -51,12 +49,6 @@ public sealed class ActorShadowManager : SingletonMono<ActorShadowManager>
     /// <summary>每帧末尾同步阴影位置、尺寸和光照透明度。</summary>
     private void LateUpdate()
     {
-        if (Time.unscaledTime >= nextRegistrationScanTime)
-        {
-            nextRegistrationScanTime = Time.unscaledTime + RegistrationScanInterval;
-            RegisterRuntimeActors();
-        }
-
         if (bindings.Count == 0 && MechanicalShadowRegistry.Count == 0)
         {
             shadowBatch?.Hide();
@@ -105,8 +97,8 @@ public sealed class ActorShadowManager : SingletonMono<ActorShadowManager>
     /// <summary>解除事件并释放 BRG 原生资源。</summary>
     protected override void OnDestroy()
     {
-        ItemMgr.RuntimeItemInstantiated -= RegisterActor;
-        ItemMgr.RuntimeItemDespawning -= UnregisterActor;
+        ItemMgr.RuntimeItemRegistered -= RegisterActor;
+        ItemMgr.RuntimeItemUnregistered -= UnregisterActor;
         Item.RuntimeStructureChanged -= RefreshActor;
         ClearBindings();
         ReleaseBatches();
@@ -117,9 +109,10 @@ public sealed class ActorShadowManager : SingletonMono<ActorShadowManager>
     /// <summary>脚本重载可能不调用 OnDestroy，停用时必须释放原生 BRG 而不是只隐藏。</summary>
     private void OnDisable()
     {
-        ItemMgr.RuntimeItemInstantiated -= RegisterActor;
-        ItemMgr.RuntimeItemDespawning -= UnregisterActor;
+        ItemMgr.RuntimeItemRegistered -= RegisterActor;
+        ItemMgr.RuntimeItemUnregistered -= UnregisterActor;
         Item.RuntimeStructureChanged -= RefreshActor;
+        ClearBindings();
         ReleaseBatches();
     }
 
@@ -259,7 +252,7 @@ public sealed class ActorShadowManager : SingletonMono<ActorShadowManager>
     private static void ResolveRootedPlantFootprint(Item item, Vector3 visualFoot,
         float visualWidth, out Vector3 rootAnchor, out float shadowWidth)
     {
-        Collider2D rootCollider = item.GetComponent<Collider2D>();
+        item.TryGetComponent(out Collider2D rootCollider);
         if (rootCollider != null && rootCollider.enabled)
         {
             Bounds bodyBounds = rootCollider.bounds;

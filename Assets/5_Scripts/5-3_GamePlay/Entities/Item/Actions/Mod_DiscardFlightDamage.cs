@@ -29,7 +29,8 @@ public sealed class Mod_DiscardFlightDamage : Module, IItemModuleDependencyBinde
     }
 
     public override string CanonicalModuleId => PersistedModuleId;
-    public override ModuleTickMode TickMode => ModuleTickMode.EveryFrame;
+    public override ModuleTickMode TickMode => armedByDiscard || damageActive || hardImpactTransformPending
+        ? ModuleTickMode.EveryFrame : ModuleTickMode.Disabled;
 
     public void BindModuleDependencies(ItemMods modules)
     {
@@ -66,6 +67,7 @@ public sealed class Mod_DiscardFlightDamage : Module, IItemModuleDependencyBinde
         damageModule.OnExternalDamageResolved -= HandleExternalDamageResolved;
         damageModule.OnExternalDamageResolved += HandleExternalDamageResolved;
         ResetRuntimeState();
+        damageModule.SetIdleTickSuppressed(true);
     }
 
     public override void Save()
@@ -81,6 +83,7 @@ public sealed class Mod_DiscardFlightDamage : Module, IItemModuleDependencyBinde
         }
 
         StopDamage();
+        damageModule?.SetIdleTickSuppressed(false);
     }
 
     public override void ModUpdate(float deltaTime)
@@ -123,6 +126,7 @@ public sealed class Mod_DiscardFlightDamage : Module, IItemModuleDependencyBinde
         thrower = context.SourceItem;
         damageEndTime = Time.timeAsDouble + context.Duration;
         armedByDiscard = true;
+        item?.MarkModuleScheduleDirty();
         TryStartDamage();
     }
 
@@ -159,6 +163,7 @@ public sealed class Mod_DiscardFlightDamage : Module, IItemModuleDependencyBinde
 
     private void ResetRuntimeState()
     {
+        bool wasTicking = armedByDiscard || damageActive || hardImpactTransformPending;
         thrower = null;
         armedByDiscard = false;
         damageActive = false;
@@ -166,6 +171,7 @@ public sealed class Mod_DiscardFlightDamage : Module, IItemModuleDependencyBinde
         hardImpactTransformPending = false;
         lastHardImpactTargetKey = long.MinValue;
         lastHardImpactTime = double.NegativeInfinity;
+        if (wasTicking) item?.MarkModuleScheduleDirty();
     }
 
     #endregion

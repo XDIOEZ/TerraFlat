@@ -99,6 +99,32 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
     private bool windowOverlapScanEnabled;
     private bool lastColliderEnabled = false;
     private bool animationDrivenDamageWindow; // 动画武器按有效窗口检测命中，不用周期伤害间隔限制采样。
+    private bool idleTickSuppressed;
+
+    public override ModuleTickMode TickMode => idleTickSuppressed && !animationDrivenDamageWindow &&
+        item != null && !item.InHand && !IsDamageEnabled()
+        ? ModuleTickMode.Disabled : ModuleTickMode.EveryFrame;
+
+    /// <summary>显式窗口驱动的伤害源可以休眠空闲 Tick，攻击和手持时仍保持原频率。</summary>
+    public void SetIdleTickSuppressed(bool suppressed)
+    {
+        if (idleTickSuppressed == suppressed) return;
+        idleTickSuppressed = suppressed;
+        if (item != null)
+        {
+            item.OnInHandChanged -= OnHandTickStateChanged;
+            if (suppressed) item.OnInHandChanged += OnHandTickStateChanged;
+            item.MarkModuleScheduleDirty();
+        }
+    }
+
+    private void OnHandTickStateChanged(bool inHand) => item?.MarkModuleScheduleDirty();
+
+    public override void Unload()
+    {
+        SetIdleTickSuppressed(false);
+        base.Unload();
+    }
     private bool tileDamageAppliedThisWindow;
     private bool nonDamageableImpactAppliedThisWindow;
     private float damageRangeMultiplier = 1f;
@@ -1131,6 +1157,7 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
         }
 
         lastColliderEnabled = damageCollider.enabled;
+        if (wasEnabled != enabled) item?.MarkModuleScheduleDirty();
         if (enabled && !wasEnabled)
         {
             BeginTileDamageWindow();

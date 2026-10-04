@@ -27,6 +27,7 @@ description: "Use when: 定位或修改 FlatWorld 的 Item/Module 组合架构�
 
 - `ModuleData` 的权威身份字段是 `StableName / ModuleId / Enabled`：`StableName` 是单个 Item 内唯一实例键，`ModuleId` 是可一对多复用的能力 ID，`PrefabId` 只描述当前定义选用的具体实现且不进入实例存档。禁止再生成随机模块名；重复 StableName 必须直接报错。
 - 会覆写 `ModUpdate` 的模块必须显式选择 EveryFrame、FixedInterval 或 Disabled；`Module.TickMode` 默认 Unspecified，新模块不得依赖隐式 EveryFrame。增删模块、启停、配置变化和池复用必须使调度缓存失效。
+- 事件驱动的临时能力在空闲时返回 `Disabled`，开始、结束和延迟收尾状态切换必须调用 `MarkModuleScheduleDirty`；投掷伤害通过 `Mod_Damage.SetIdleTickSuppressed` 显式选择窗口调度，手持与动画武器仍保留完整更新，不能对普通伤害源全局降频。
 - JSON `enabled` 统一写入 `ModuleData.Enabled`；运行中切换必须走 `Module.SetEnabled`，由框架负责 Load/Unload 与 Tick 参与资格，禁止各模块各自维护第二套启用状态。
 - 距离模拟档只限制 `ItemMgr` 驱动的玩法 Tick 频率，不改变模块自身更慢的 FixedInterval；以同场景最近玩家和循环世界最短距离判定，玩家、地图、手持物保持完整更新。`Owner` 不能作为免降频条件，因为在飞投射物也会保留发射者引用。范围外暂停时重置调度时钟，停用根刚体并回调 `ISimulationRangeAware` 模块释放导航运行态；重入时先恢复原 `Rigidbody2D.simulated` 值再重提目标，不能补算休眠期间的 Tick。对象池或模块卸载也须恢复刚体开关；不要把摄像机缩放当模拟距离。
 - 世界内 F5 经 `ItemDefinitionRuntime.RefreshLiveConfiguration` 只更新现有模块的已改变显式参数，以及仍由原定义控制的 Sprite/材质；不替换 ItemData、模块集合或调用 Load。外壳/模块结构变化与删除参数后的 Prefab 默认值由后续新实例应用，不能把旧实例伪装为已完整迁移。
