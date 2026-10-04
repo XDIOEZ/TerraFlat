@@ -95,6 +95,10 @@ public partial class TemperatureMgr
 
     #region 统一逐格采样
 
+    /// <summary>只读生成时确定的地理温度，不叠加星球调温、季节、天气或局部热源。</summary>
+    public bool TryGetGeographicTemperature(Vector2 worldPosition, out float temperature)
+        => TrySampleTemperature(worldPosition, false, out temperature, false);
+
     /// <summary>只读已加载区块的生成温度并叠加天气和局部冷热源；不生成区块、不复制环境数组。</summary>
     public bool TryGetAmbientTemperature(Vector2 worldPosition, out float temperature)
         => TrySampleTemperature(worldPosition, true, out temperature);
@@ -104,7 +108,8 @@ public partial class TemperatureMgr
         => TrySampleTemperature(worldPosition, false, out temperature);
 
     /// <summary>共用地块查询，按需要叠加当前季节、天气及局部热源。</summary>
-    private bool TrySampleTemperature(Vector2 worldPosition, bool includeTransient, out float temperature)
+    private bool TrySampleTemperature(Vector2 worldPosition, bool includeTransient, out float temperature,
+        bool includePlanetOffset = true)
     {
         PrepareFieldContext();
         temperature = 0f;
@@ -131,7 +136,7 @@ public partial class TemperatureMgr
         temperature = includeTransient
             ? baseline + ambientFieldOffset + localTemperatureField.Sample(cell) +
               (radiantLiquidTemperatureField?.Sample(cell) ?? 0f)
-            : baseline + (fieldPlanet.GlobalTemperature - PlanetData.DefaultGlobalTemperature);
+            : baseline + (includePlanetOffset ? fieldPlanet.GlobalTemperature - PlanetData.DefaultGlobalTemperature : 0f);
         if (includeTransient)
             temperature = ApplyCellTemperatureSources(cell, temperature);
         // 热液体的当前温度随 Liquid 身份派生，抽干即撤销，不污染地形基温或历史季节。

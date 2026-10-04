@@ -280,6 +280,13 @@ namespace FlatWorld.WorldModel
             TemperatureCelsiusMax = Math.Max(
                 TemperatureCelsiusMin,
                 Finite(GetDouble(numbers, "climate.temperature.celsiusMax", 50d), 50d));
+            PolarBandEnabled = GetBool(numbers, "climate.polarBand.enabled", true);
+            PolarBandPosition = Clamp01(Finite(
+                GetDouble(numbers, "climate.polarBand.position", 0d), 0d));
+            PolarBandCelsius = Finite(
+                GetDouble(numbers, "climate.polarBand.celsius", -25d), -25d);
+            PolarBandHalfWidth = Clamp(Finite(
+                GetDouble(numbers, "climate.polarBand.halfWidth", 1d), 1d), 0.001d, 1d);
             TemperatureAltitudeCoolingStart = Clamp01(GetDouble(
                 numbers, "climate.temperature.altitudeCoolingStart", SeaLevel));
             TemperatureAltitudeCoolingStrength = Clamp(
@@ -630,6 +637,11 @@ namespace FlatWorld.WorldModel
         public TerrainNoiseChannelSettings TemperatureNoise { get; }
         public double TemperatureCelsiusMin { get; }
         public double TemperatureCelsiusMax { get; }
+        /// <summary>环世界唯一极点带：位置占纵向一周的比例，半宽占半周的比例。</summary>
+        public bool PolarBandEnabled { get; }
+        public double PolarBandPosition { get; }
+        public double PolarBandCelsius { get; }
+        public double PolarBandHalfWidth { get; }
         /// <summary>从这个高度开始按海拔降低实际温度。</summary>
         public double TemperatureAltitudeCoolingStart { get; }
         /// <summary>高度每上升 1 对归一化温度的降温强度。</summary>

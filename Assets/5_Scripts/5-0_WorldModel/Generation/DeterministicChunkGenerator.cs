@@ -16,7 +16,7 @@ namespace FlatWorld.WorldModel
         IChunkEcologyNeighborhoodTagResolver
     {
         /// <summary>纯区块生成规则版本；气候、群系、河流或生态空间分布规则改变时递增。</summary>
-        public const int CurrentGenerationSignature = 62;
+        public const int CurrentGenerationSignature = 63;
 
         private readonly LiquidTypeCatalog liquidTypes;
         /// <summary>资源就绪后注入会话液体表；离线纯算法测试可以使用本体最小目录。</summary>
@@ -555,6 +555,7 @@ namespace FlatWorld.WorldModel
             public double Height;
             public double Temperature;
             public double TemperatureCelsius;
+            public double PolarInfluence;
             public double BasePrecipitation;
             public double Precipitation;
             public double WindX;
@@ -702,7 +703,9 @@ namespace FlatWorld.WorldModel
                             if ((index & 63) == 0)
                                 cancellationToken.ThrowIfCancellationRequested();
                             SurfaceClimateBurstKernel.ClimateSample value = batch[index];
-                            samples[index] = new SurfaceClimateSample
+                            samples[index] = FinishSurfaceClimate(request, settings,
+                                request.Address.ChunkOrigin.X + x - radius,
+                                request.Address.ChunkOrigin.Y + y - radius, new SurfaceClimateSample
                             {
                                 Height = value.Height,
                                 Temperature = value.Temperature,
@@ -710,12 +713,8 @@ namespace FlatWorld.WorldModel
                                 BasePrecipitation = value.BasePrecipitation,
                                 Precipitation = value.Precipitation,
                                 WindX = value.WindX,
-                                WindY = value.WindY,
-                                SnowAllowed = IsSnowRegionAllowed(request, settings, value.Height,
-                                    value.Temperature, value.Precipitation,
-                                    request.Address.ChunkOrigin.X + x - radius,
-                                    request.Address.ChunkOrigin.Y + y - radius)
-                            };
+                                WindY = value.WindY
+                            });
                         }
                     }
                     finally
@@ -811,7 +810,7 @@ namespace FlatWorld.WorldModel
                     double rowSum = 0d;
                     for (int x = 0; x < stride; x++)
                     {
-                        rowSum += ResolveBiomeTemperature(samples[y * stride + x]);
+                        rowSum += ResolveBiomeTemperature(samples[y * stride + x], settings);
                         temperatureSums[(y + 1) * sumStride + x + 1] =
                             temperatureSums[y * sumStride + x + 1] + rowSum;
                     }
@@ -842,7 +841,7 @@ namespace FlatWorld.WorldModel
             {
                 LegacyClimateSample climate = LegacyTerrainClimateKernel.SampleClimate(
                     request, settings, worldX, worldY);
-                return new SurfaceClimateSample
+                return FinishSurfaceClimate(request, settings, worldX, worldY, new SurfaceClimateSample
                 {
                     Height = climate.Height,
                     Temperature = climate.Temperature,
@@ -850,20 +849,19 @@ namespace FlatWorld.WorldModel
                     BasePrecipitation = climate.BasePrecipitation,
                     Precipitation = climate.Precipitation,
                     WindX = climate.WindX,
-                    WindY = climate.WindY,
-                    SnowAllowed = IsSnowRegionAllowed(request, settings, climate.Height,
-                        climate.Temperature, climate.Precipitation, worldX, worldY)
-                };
+                    WindY = climate.WindY
+                });
             }
             double height = SampleHeight(request, settings, worldX, worldY);
             double precipitation = SamplePrecipitation(request, settings, worldX, worldY);
             double temperatureNoise = Fractal(CreateSeed(request, 0x85ebca6bu),
                 worldX, worldY, settings.ClimateScale, settings.ClimateOctaves,
                 2.07d, 0.5d, request.Topology);
-            double latitudeCooling = Math.Min(0.34d, Math.Abs(worldY) * 0.000025d);
+            double latitudeCooling = request.Topology.IsWrapped ? 0d :
+                Math.Min(0.34d, Math.Abs(worldY) * 0.000025d);
             double temperature = settings.ApplyAltitudeTemperatureCooling(
                 height, temperatureNoise - latitudeCooling);
-            return new SurfaceClimateSample
+            return FinishSurfaceClimate(request, settings, worldX, worldY, new SurfaceClimateSample
             {
                 Height = height,
                 Temperature = temperature,
@@ -871,10 +869,8 @@ namespace FlatWorld.WorldModel
                 BasePrecipitation = precipitation,
                 Precipitation = precipitation,
                 WindX = 1d,
-                WindY = 0d,
-                SnowAllowed = IsSnowRegionAllowed(request, settings, height, temperature,
-                    precipitation, worldX, worldY)
-            };
+                WindY = 0d
+            });
         }
 
         #endregion
