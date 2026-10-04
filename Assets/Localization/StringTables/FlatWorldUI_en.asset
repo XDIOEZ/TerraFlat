@@ -2874,6 +2874,46 @@ MonoBehaviour:
     m_Localized: Miss
     m_Metadata:
       m_Items: []
+  - m_Id: 17033120237740060
+    m_Localized: "Change Orientation"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740061
+    m_Localized: "Automatic Connection"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740062
+    m_Localized: "Manual Connection"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740063
+    m_Localized: "Straight"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740064
+    m_Localized: "Corner"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740065
+    m_Localized: "East"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740066
+    m_Localized: "North"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740067
+    m_Localized: "West"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740068
+    m_Localized: "South"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740069
+    m_Localized: " \u00b7 {0}: {1} ({2} \u2192 {3})"
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

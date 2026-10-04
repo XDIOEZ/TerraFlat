@@ -14,6 +14,15 @@ public readonly struct ConveyorPath
     public int CanonicalSign => Output == ((Rotation + (Curved ? 1 : 0)) & 3) ? 1 : -1;
     public float Length => Curved ? Mathf.PI * .25f : 1f;
     public static ConveyorPath Straight(int rotation) => new(rotation + 2, rotation);
+    // 手动模式包含四个直线朝向和八个有方向的拐角。
+    public static ConveyorPath FromManualMode(int mode)
+    {
+        if (mode < 1 || mode > 12) return default;
+        int output = (mode - 1) & 3;
+        int turn = mode <= 4 ? 2 : mode <= 8 ? 1 : 3;
+        return new ConveyorPath(output + turn, output);
+    }
+    public int ManualMode => 1 + Output + (((Input - Output) & 3) switch { 2 => 0, 1 => 4, _ => 8 });
     public bool HasPathPort(int direction) => (Mask & (1 << direction)) != 0;
     public bool HasDrivePort(int direction) => (DriveMask & (1 << direction)) != 0;
     public bool Same(ConveyorPath other) => Input == other.Input && Output == other.Output;

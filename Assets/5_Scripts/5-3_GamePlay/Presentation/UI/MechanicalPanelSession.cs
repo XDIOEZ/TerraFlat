@@ -91,7 +91,13 @@ public sealed class MechanicalPanelSession : IMachinePanelSession
         string caption = actionLabel?.Invoke() ?? string.Empty;
         view.SetActionVisible(!string.IsNullOrWhiteSpace(caption));
         view.ActionButton.interactable = !string.IsNullOrWhiteSpace(caption) && actionAvailable?.Invoke() != false;
-        view.ActionButton.GetComponentInChildren<TMP_Text>(true).text = FlatWorldLocalizationService.GetUiText(caption);
+        TMP_Text actionText = view.ActionButton.GetComponentInChildren<TMP_Text>(true);
+        // 共用按钮切换用途时同步本地化绑定，避免重新显示后恢复旧文案。
+        LocalizedTextBinder actionBinder = actionText.GetComponent<LocalizedTextBinder>();
+        if (actionBinder != null)
+            actionBinder.Configure(FlatWorldLocalizationService.UiTable,
+                FlatWorldLocalizationService.GetUiTextKey(caption), caption);
+        else actionText.text = FlatWorldLocalizationService.GetUiText(caption);
         if (processor == null) return;
         var result = processor.Preview();
         if (result.Success) preview?.ShowOverOccupiedSlot(result.PrimaryOutput, processor.Progress01); else preview?.Clear();

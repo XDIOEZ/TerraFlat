@@ -110,6 +110,7 @@ public sealed class MachineInteractionTarget : IWorldInteractionTarget, IWorldIn
     private string GetActionLabel()
     {
         if (node.State == null) return string.Empty;
+        if (node.Definition.Transport != null) return "切换朝向";
         if (node.Definition.Kind == "clutch") return node.State.Engaged ? "断开" : "接合";
         if (node.Definition.Kind == "gearbox" && node.Definition.Ratios.Length > 1) return "切换传动比";
         if (node.Definition.ManualDriveTorque > 0) return "手动研磨";
@@ -124,6 +125,12 @@ public sealed class MachineInteractionTarget : IWorldInteractionTarget, IWorldIn
     /// <summary>面板操作直接修改权威节点，拓扑变更在下一次机械 Tick 重构。</summary>
     private void PerformOperation(Player actor)
     {
+        if (node.Definition.Transport != null)
+        {
+            MachineWorld.RequestOperation(node, "conveyor.orientation", "", actor);
+            panel?.Refresh();
+            return;
+        }
         if (!GameNetwork.HasStateAuthority)
         { MachineWorld.RequestOperation(node, "work", "", actor); return; }
         if (!IsValid || !GameNetwork.HasStateAuthority || node.State == null) return;
@@ -150,12 +157,13 @@ public sealed class MachineInteractionTarget : IWorldInteractionTarget, IWorldIn
     {
         string state = FlatWorldLocalizationService.GetUiText(node.GetOperatingStatus());
         string status = state;
+        if (node.Definition.Transport != null) status += MachineWorld.GetConveyorConnectionStatus(node);
         if (node.Definition.HasMechanicalPorts)
         {
             node.GetLocalTorque(out float torqueSupply, out float torqueDemand);
             status = FlatWorldLocalizationService.GetUiFormat(
                 "{0} · 转速 {1:0} · 扭矩 {2:0.#}/{3:0.#}",
-                state, node.SpeedRpm, torqueSupply, torqueDemand);
+                status, node.SpeedRpm, torqueSupply, torqueDemand);
             status += " · " + FlatWorldLocalizationService.GetUiText(node.GetRotationStatus());
         }
         if (node.Definition.HasMechanicalPorts &&

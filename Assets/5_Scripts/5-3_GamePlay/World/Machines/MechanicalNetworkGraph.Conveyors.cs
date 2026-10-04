@@ -5,6 +5,7 @@ public sealed partial class MachineEntity
 {
     #region 输送带派生状态
     public ConveyorPath Conveyor, PreviousConveyor;
+    public int ConveyorMode; // 冷节点也保留手动连接方式，重建拓扑时无需唤醒库存。
     public float ConveyorVisualPhase, ConveyorVisualSpeed, ConveyorVisualTime;
     public ConveyorPath ConveyorRoute => Conveyor.Valid ? Conveyor : ConveyorPath.Straight(RotationQuarterTurns);
     #endregion
@@ -25,14 +26,17 @@ public sealed partial class MechanicalNetworkGraph
         {
             if (node.Definition.Transport == null) continue;
             node.PreviousConveyor = node.Conveyor;
-            node.Conveyor = SelectConveyorPath(node.Cell, node.RotationQuarterTurns, node.Definition.Transport.AutoConnect);
+            node.Conveyor = node.ConveyorMode == 0
+                ? SelectConveyorPath(node.Cell, node.RotationQuarterTurns, node.Definition.Transport.AutoConnect)
+                : ConveyorPath.FromManualMode(node.ConveyorMode);
         }
-        // 从线路端点开始统一方向，闭合线路再使用稳定节点顺序选起点。
-        for (int pass = 0; pass < 2; pass++)
+        // 优先从手动段传播方向，自动段跟随线路，手动段自身不会被覆盖。
+        for (int pass = 0; pass < 3; pass++)
         foreach (MachineEntity root in sorted)
         {
             if (root.Definition.Transport == null || conveyorVisited.Contains(root) ||
-                pass == 0 && CountConveyorLinks(root) == 2) continue;
+                pass == 0 && root.ConveyorMode == 0 ||
+                pass == 1 && CountConveyorLinks(root) == 2) continue;
             conveyorVisited.Add(root); conveyorQueue.Enqueue(root);
             while (conveyorQueue.Count > 0)
             {
@@ -43,7 +47,7 @@ public sealed partial class MechanicalNetworkGraph
                     if (next == null || !conveyorVisited.Add(next)) continue;
                     int opposite = (direction + 2) & 3;
                     int other = next.Conveyor.Input == opposite ? next.Conveyor.Output : next.Conveyor.Input;
-                    if (next.Definition.Transport.AutoConnect)
+                    if (next.Definition.Transport.AutoConnect && next.ConveyorMode == 0)
                         next.Conveyor = node.Conveyor.Output == direction
                             ? new ConveyorPath(opposite, other) : new ConveyorPath(other, opposite);
                     conveyorQueue.Enqueue(next);

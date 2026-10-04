@@ -138,6 +138,7 @@ public static partial class MachineWorld
         if (operation == "inventory.layout") return MachineInventoryCommands.ExecuteLayout(entity, argument);
         if (operation == "inventory.private-layout")
             return MachineInventoryCommands.ExecutePrivateLayout(entity, argument, actor);
+        if (operation == "conveyor.orientation") return CycleConveyorOrientation(entity);
         if (entity.Logic != null) return entity.Logic.Execute(operation, argument, actor);
         if (operation == "crank" && entity.Definition.Source == "manual")
         {

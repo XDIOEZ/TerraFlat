@@ -410,6 +410,7 @@ public sealed partial class Mod_MechanicalNode : Module, IInteractable, IBuildin
     {
         var state = MachineWorld.ReadMachineState(data);
         state.RotationQuarterTurns = PlacementQuarterTurns;
+        state.ConveyorMode = 0; // 重新放置从自动连接开始，与放置预览保持一致。
         MachineWorld.WriteMachineState(data, state);
     }
     /// <summary>拆回快照只重置世界朝向，不改动仍在世界中的节点，也不丢弃机器库存。</summary>

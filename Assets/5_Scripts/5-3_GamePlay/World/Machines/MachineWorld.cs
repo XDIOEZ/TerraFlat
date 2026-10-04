@@ -112,7 +112,8 @@ public static partial class MachineWorld
         var node = new MachineEntity
         {
             Id = snapshot.Guid, Cell = CellOf(snapshot.transform.position), Definition = definition, Snapshot = snapshot,
-            RotationQuarterTurns = state.RotationQuarterTurns, Engaged = state.Engaged, RatioIndex = state.RatioIndex
+            RotationQuarterTurns = state.RotationQuarterTurns, ConveyorMode = state.ConveyorMode,
+            Engaged = state.Engaged, RatioIndex = state.RatioIndex
         };
         InitializeElectricalState(node, state);
         nodes.Add(snapshot.Guid, node);
@@ -475,7 +476,11 @@ public static partial class MachineWorld
         StateChanged(node);
     }
     private static void CopyTopology(MachineEntity node)
-    { node.RotationQuarterTurns = node.State.RotationQuarterTurns; node.Engaged = node.State.Engaged; node.RatioIndex = node.State.RatioIndex; }
+    {
+        node.RotationQuarterTurns = node.State.RotationQuarterTurns;
+        node.ConveyorMode = node.State.ConveyorMode;
+        node.Engaged = node.State.Engaged; node.RatioIndex = node.State.RatioIndex;
+    }
 
     /// <summary>真实销毁/拆除删除拓扑；表现回收和退出世界由独立抑制范围保留权威记录。</summary>
     public static void BeforeDespawn(Item item)

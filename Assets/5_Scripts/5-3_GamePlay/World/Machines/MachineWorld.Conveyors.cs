@@ -1,8 +1,38 @@
 using System;
+using FlatWorld.Localization;
 using UnityEngine;
 
 public static partial class MachineWorld
 {
+    #region 输送带手动朝向
+    private static readonly string[] conveyorDirections = { "东", "北", "西", "南" };
+    /// <summary>切换当前段的固定连接形状与方向，完成一轮后恢复自动连接。</summary>
+    public static bool CycleConveyorOrientation(MachineEntity node)
+    {
+        if (!FlatWorld.Networking.GameNetwork.HasStateAuthority || !Contains(node) ||
+            node.Definition.Transport == null) return false;
+        WakeForInteraction(node);
+        RebuildGraphsIfDirty();
+        node.State.ConveyorMode = (node.State.ConveyorMode + 1) % 13;
+        if (node.State.ConveyorMode != 0)
+            node.State.RotationQuarterTurns = ConveyorPath.FromManualMode(node.State.ConveyorMode).Output;
+        TopologyChanged(node);
+        RebuildGraphsIfDirty();
+        GetOrCreateInteractionTarget(node)?.RefreshPanel();
+        return true;
+    }
+
+    public static string GetConveyorConnectionStatus(MachineEntity node)
+    {
+        ConveyorPath route = node.ConveyorRoute;
+        return FlatWorldLocalizationService.GetUiFormat(" · {0}：{1}（{2} → {3}）",
+            FlatWorldLocalizationService.GetUiText(node.ConveyorMode == 0 ? "自动连接" : "手动连接"),
+            FlatWorldLocalizationService.GetUiText(route.Curved ? "拐角" : "直线"),
+            FlatWorldLocalizationService.GetUiText(conveyorDirections[route.Input]),
+            FlatWorldLocalizationService.GetUiText(conveyorDirections[route.Output]));
+    }
+    #endregion
+
     #region 输送带表面推动
     /// <summary>只采样带面速度，角色位移与阻挡仍交给自身刚体，不修改机械状态。</summary>
     public static Vector2 SampleConveyorVelocity(Vector2 position, float seconds)

@@ -20,6 +20,7 @@ public partial class MachineState
 {
     #region 节点状态
     public int RotationQuarterTurns;
+    public int ConveyorMode; // 0 自动连接，1~12 固定直线或拐角的输入输出朝向。
     public bool Engaged = true;
     public int RatioIndex = 1;
     public float ManualSeconds;
