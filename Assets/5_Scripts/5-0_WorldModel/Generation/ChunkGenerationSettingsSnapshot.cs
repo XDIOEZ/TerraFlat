@@ -269,8 +269,6 @@ namespace FlatWorld.WorldModel
                 FinitePositive(GetDouble(numbers, "biome.snow.peak.maxRadius", 28d), 28d));
             SnowPeakMinimumHeight = Math.Max(MountainLevel,
                 Clamp01(GetDouble(numbers, "biome.snow.peak.minimumHeight", 0.78d)));
-            SnowIceLakeChance = Clamp01(
-                GetDouble(numbers, "biome.snow.iceLakeChance", 0.08d));
             SnowGrassDensityMultiplier = Clamp01(
                 GetDouble(numbers, "biome.snow.grassDensityMultiplier", 0.08d));
             DesertMinimumHeight = Clamp01(
@@ -715,8 +713,6 @@ namespace FlatWorld.WorldModel
         public double SnowPeakMinRadius { get; }
         public double SnowPeakMaxRadius { get; }
         public double SnowPeakMinimumHeight { get; }
-        /// <summary>雪地低洼处生成冰面的基础概率。</summary>
-        public double SnowIceLakeChance { get; }
         /// <summary>雪地草地相对于普通草地的生成密度倍率。</summary>
         public double SnowGrassDensityMultiplier { get; }
         public double PeatSpawnChance { get; } // 每个泥炭斑块区域被保留的概率。

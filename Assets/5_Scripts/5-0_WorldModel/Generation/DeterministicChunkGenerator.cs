@@ -16,7 +16,7 @@ namespace FlatWorld.WorldModel
         IChunkEcologyNeighborhoodTagResolver
     {
         /// <summary>纯区块生成规则版本；气候、群系、河流或生态空间分布规则改变时递增。</summary>
-        public const int CurrentGenerationSignature = 66;
+        public const int CurrentGenerationSignature = 67;
 
         private readonly LiquidTypeCatalog liquidTypes;
         /// <summary>资源就绪后注入会话液体表；离线纯算法测试可以使用本体最小目录。</summary>
@@ -948,21 +948,11 @@ namespace FlatWorld.WorldModel
             else if (biome == SurfaceBiomeKind.Snow)
             {
                 biomeId = (int)biome;
-                bool iceLake = !climate.IsPolarBand && height <= settings.BeachLevel + 0.1d &&
-                               Hash01(request.WorldSeed, worldX, worldY, 0x7f4a7c15u) <
-                               settings.SnowIceLakeChance;
-                if (iceLake)
-                {
-                    groundTileId = settings.IceTileId;
-                }
-                else
-                {
-                    // 雪不占用 Ground：低地保留草地、高山保留石地，极圈雪厚在温度过渡后计算。
-                    groundTileId = height >= settings.MountainLevel
-                        ? settings.StoneTileId
-                        : settings.GroundTileId;
-                    snowDepth = 1f;
-                }
+                // 雪地陆地统一保留草地或石地并覆盖积雪，冰地块只由真实水体的冻结规则生成。
+                groundTileId = height >= settings.MountainLevel
+                    ? settings.StoneTileId
+                    : settings.GroundTileId;
+                snowDepth = 1f;
                 flags = TerrainCellFlags.Walkable;
                 navigationCost = (short)Math.Min(short.MaxValue, navigationCost + 1);
 
