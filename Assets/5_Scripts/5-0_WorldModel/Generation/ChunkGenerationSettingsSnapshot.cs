@@ -56,10 +56,75 @@ namespace FlatWorld.WorldModel
         Stone = 7
     }
 
-    /// <summary>
-    /// 纯数据地表群系判定器。LegacyLand 模式适配旧版“石地→沙漠→沙滩→草原→森林→海洋”
-    /// 的优先级；河流仍作为新版水文覆盖层优先于陆地群系。
-    /// </summary>
+    /// <summary>一条由群系配置冻结的出现规则，后台生成只做范围匹配。</summary>
+    public sealed class SurfaceBiomeRuleSnapshot
+    {
+        #region 群系出现条件
+
+        internal SurfaceBiomeRuleSnapshot(SurfaceBiomeKind biome, bool enabled, int priority,
+            double minimumHeight, double maximumHeight, double minimumCelsius, double maximumCelsius,
+            bool includeMaximumCelsius, double minimumPrecipitation, double maximumPrecipitation,
+            double minimumMoisture, double maximumMoisture, bool requiresOcean, bool requiresRiver,
+            bool requiresSnowRegion, bool polarIgnoresRegions, bool polarIgnoresPrecipitation)
+        {
+            Biome = biome;
+            Enabled = enabled;
+            Priority = priority;
+            MinimumHeight = minimumHeight;
+            MaximumHeight = maximumHeight;
+            MinimumCelsius = minimumCelsius;
+            MaximumCelsius = maximumCelsius;
+            IncludeMaximumCelsius = includeMaximumCelsius;
+            MinimumPrecipitation = minimumPrecipitation;
+            MaximumPrecipitation = maximumPrecipitation;
+            MinimumMoisture = minimumMoisture;
+            MaximumMoisture = maximumMoisture;
+            RequiresOcean = requiresOcean;
+            RequiresRiver = requiresRiver;
+            RequiresSnowRegion = requiresSnowRegion;
+            PolarIgnoresRegions = polarIgnoresRegions;
+            PolarIgnoresPrecipitation = polarIgnoresPrecipitation;
+        }
+
+        public SurfaceBiomeKind Biome { get; }
+        public bool Enabled { get; }
+        public int Priority { get; }
+        public double MinimumHeight { get; }
+        public double MaximumHeight { get; }
+        public double MinimumCelsius { get; }
+        public double MaximumCelsius { get; }
+        public bool IncludeMaximumCelsius { get; }
+        public double MinimumPrecipitation { get; }
+        public double MaximumPrecipitation { get; }
+        public double MinimumMoisture { get; }
+        public double MaximumMoisture { get; }
+        public bool RequiresOcean { get; }
+        public bool RequiresRiver { get; }
+        public bool RequiresSnowRegion { get; }
+        public bool PolarIgnoresRegions { get; }
+        public bool PolarIgnoresPrecipitation { get; }
+
+        internal bool MatchesClimate(double celsius, double precipitation, bool polar) =>
+            Enabled && celsius >= MinimumCelsius &&
+            (IncludeMaximumCelsius ? celsius <= MaximumCelsius : celsius < MaximumCelsius) &&
+            (polar && PolarIgnoresPrecipitation ||
+             precipitation >= MinimumPrecipitation && precipitation <= MaximumPrecipitation);
+
+        internal bool Matches(double height, double celsius, double precipitation, double moisture,
+            bool ocean, bool river, bool snowAllowed, bool polar)
+        {
+            // 物理水文资格与气候范围一起匹配，极地例外也从本条配置读取。
+            return height >= MinimumHeight && height <= MaximumHeight &&
+                   moisture >= MinimumMoisture && moisture <= MaximumMoisture &&
+                   (!RequiresOcean || ocean) && (!RequiresRiver || river) &&
+                   (!RequiresSnowRegion || snowAllowed || polar && PolarIgnoresRegions) &&
+                   MatchesClimate(celsius, precipitation, polar);
+        }
+
+        #endregion
+    }
+
+    /// <summary>地表群系唯一判定出口；气候算法只提供输入，群系配置决定匹配顺序与结果。</summary>
     public static class SurfaceBiomeClassifier
     {
         #region 判定
@@ -78,52 +143,23 @@ namespace FlatWorld.WorldModel
         {
             if (double.IsNaN(temperatureCelsius))
                 temperatureCelsius = settings.ResolveTemperatureCelsius(temperature);
-            if (height < settings.SeaLevel)
-                return SurfaceBiomeKind.Ocean;
-            if (river)
-                return SurfaceBiomeKind.River;
-            if (snowAllowed && temperatureCelsius < 0d &&
-                (polarSnow || IsSnowClimate(settings, temperature, precipitation)))
-                return SurfaceBiomeKind.Snow;
-            if (height >= settings.MountainLevel)
-                return SurfaceBiomeKind.Stone;
-
-            if (settings.SurfaceClimateAlgorithm == SurfaceClimateAlgorithm.LegacyLand)
+            for (int i = 0; i < settings.SurfaceBiomeRules.Count; i++)
             {
-                if (temperatureCelsius >= settings.DesertMinimumTemperatureCelsius &&
-                    height >= settings.DesertMinimumHeight &&
-                    precipitation <= settings.DesertMaximumPrecipitation)
-                {
-                    return SurfaceBiomeKind.Desert;
-                }
-
-                if (height <= settings.BeachLevel)
-                    return SurfaceBiomeKind.Beach;
-
-                bool grassland =
-                    temperature >= settings.GrasslandMinimumTemperature &&
-                    temperature <= settings.GrasslandMaximumTemperature &&
-                    precipitation >= settings.GrasslandMinimumPrecipitation &&
-                    precipitation <= settings.GrasslandMaximumPrecipitation;
-                return grassland ? SurfaceBiomeKind.Grassland : SurfaceBiomeKind.Forest;
+                SurfaceBiomeRuleSnapshot rule = settings.SurfaceBiomeRules[i];
+                if (rule.Matches(height, temperatureCelsius, precipitation, moisture,
+                        height < settings.SeaLevel, river, snowAllowed, polarSnow))
+                    return rule.Biome;
             }
-
-            if (height <= settings.BeachLevel)
-                return SurfaceBiomeKind.Beach;
-            if (temperatureCelsius >= settings.DesertMinimumTemperatureCelsius &&
-                precipitation < settings.DesertMaximumPrecipitation)
-                return SurfaceBiomeKind.Desert;
-            return moisture > 0.62d ? SurfaceBiomeKind.Forest : SurfaceBiomeKind.Grassland;
+            return settings.SurfaceFallbackBiome;
         }
 
         /// <summary>判断当前气候是否属于雪地条件，供河流等覆盖层读取其底层气候。</summary>
         internal static bool IsSnowClimate(
             ChunkGenerationSettingsSnapshot settings,
-            double temperature,
+            double temperatureCelsius,
             double precipitation)
         {
-            return temperature <= settings.SnowTemperature &&
-                   precipitation >= settings.SnowMinimumPrecipitation;
+            return settings.SnowBiomeRule.MatchesClimate(temperatureCelsius, precipitation, false);
         }
 
         #endregion
@@ -221,9 +257,6 @@ namespace FlatWorld.WorldModel
                 1d);
             MountainDirtMinimumMoisture = Clamp01(
                 GetDouble(numbers, "biome.mountain.dirtMinimumMoisture", 0.5d));
-            SnowTemperature = Clamp01(GetDouble(numbers, "terrain.snowTemperature", 0.18d));
-            SnowMinimumPrecipitation = Clamp01(
-                GetDouble(numbers, "terrain.snowMinimumPrecipitation", 0.55d));
             SnowRegionsEnabled = GetBool(numbers, "biome.snow.regions.enabled", false);
             SnowRegionSize = Clamp(GetInt(numbers, "biome.snow.regions.size", 768), 32, 8192);
             SnowRegionChance = Clamp01(GetDouble(numbers, "biome.snow.regions.chance", 0.1d));
@@ -247,11 +280,6 @@ namespace FlatWorld.WorldModel
             // 沙漠同时要求足够温暖，低温少雨的陆地不能被判为沙漠。
             DesertMinimumTemperatureCelsius = Finite(
                 GetDouble(numbers, "biome.desert.minimumCelsius", 20d), 20d);
-            GrasslandMinimumTemperature = Clamp01(
-                GetDouble(numbers, "biome.grassland.minimumTemperature", 0.25d));
-            GrasslandMaximumTemperature = Math.Max(
-                GrasslandMinimumTemperature,
-                Clamp01(GetDouble(numbers, "biome.grassland.maximumTemperature", 0.75d)));
             GrasslandMinimumPrecipitation = Clamp01(
                 GetDouble(numbers, "biome.grassland.minimumPrecipitation", 0.25d));
             GrasslandMaximumPrecipitation = Math.Max(
@@ -583,7 +611,74 @@ namespace FlatWorld.WorldModel
                 Mode == ChunkGenerationMode.Cave ? "surface" : "cave");
             DefaultNavigationCost = (short)Clamp(GetInt(numbers,
                 "navigation.defaultCost", 1), 1, short.MaxValue);
+            SurfaceBiomeRules = CreateSurfaceBiomeRules(numbers);
+            for (int i = 0; i < SurfaceBiomeRules.Count; i++)
+                if (SurfaceBiomeRules[i].Biome == SurfaceBiomeKind.Snow)
+                    SnowBiomeRule = SurfaceBiomeRules[i];
+            int fallback = GetInt(numbers, "biome.fallback.id", (int)SurfaceBiomeKind.Stone);
+            if (!Enum.IsDefined(typeof(SurfaceBiomeKind), fallback))
+                throw new ArgumentException("biome.fallback.id 必须是已定义的群系编号。", nameof(numbers));
+            SurfaceFallbackBiome = (SurfaceBiomeKind)fallback;
         }
+
+        #region 群系配置冻结
+
+        public IReadOnlyList<SurfaceBiomeRuleSnapshot> SurfaceBiomeRules { get; }
+        public SurfaceBiomeRuleSnapshot SnowBiomeRule { get; }
+        public SurfaceBiomeKind SurfaceFallbackBiome { get; }
+
+        private IReadOnlyList<SurfaceBiomeRuleSnapshot> CreateSurfaceBiomeRules(
+            IReadOnlyDictionary<string, double> numbers)
+        {
+            var rules = new List<SurfaceBiomeRuleSnapshot>(8);
+            Add("ocean", SurfaceBiomeKind.Ocean, 800, 0d, 1d, requiresOcean: true);
+            Add("river", SurfaceBiomeKind.River, 700, SeaLevel, 1d, requiresRiver: true);
+            Add("snow", SurfaceBiomeKind.Snow, 600, SeaLevel, 1d,
+                maximumCelsius: 0d,
+                includeMaximumCelsius: false, minimumPrecipitation: 0.55d,
+                requiresSnowRegion: true, polarIgnoresRegions: true, polarIgnoresPrecipitation: true);
+            Add("stone", SurfaceBiomeKind.Stone, 500, MountainLevel, 1d);
+            Add("desert", SurfaceBiomeKind.Desert, 400, Math.Max(SeaLevel, DesertMinimumHeight), 1d,
+                minimumCelsius: DesertMinimumTemperatureCelsius, maximumPrecipitation: DesertMaximumPrecipitation);
+            Add("beach", SurfaceBiomeKind.Beach, 300, SeaLevel, Math.Max(SeaLevel, BeachLevel));
+            Add("grassland", SurfaceBiomeKind.Grassland, 200, SeaLevel, 1d,
+                minimumCelsius: 12.5d, maximumCelsius: 37.5d,
+                minimumPrecipitation: GrasslandMinimumPrecipitation,
+                maximumPrecipitation: GrasslandMaximumPrecipitation);
+            Add("forest", SurfaceBiomeKind.Forest, 100, SeaLevel, 1d);
+            // 优先级高者先匹配，同优先级按稳定群系编号排序，不依赖字典或加载顺序。
+            rules.Sort((a, b) => a.Priority != b.Priority
+                ? b.Priority.CompareTo(a.Priority) : a.Biome.CompareTo(b.Biome));
+            return rules.AsReadOnly();
+
+            void Add(string id, SurfaceBiomeKind kind, int priority, double minimumHeight, double maximumHeight,
+                double minimumCelsius = double.NegativeInfinity, double maximumCelsius = double.PositiveInfinity,
+                bool includeMaximumCelsius = true, double minimumPrecipitation = 0d,
+                double maximumPrecipitation = 1d, bool requiresOcean = false, bool requiresRiver = false,
+                bool requiresSnowRegion = false, bool polarIgnoresRegions = false,
+                bool polarIgnoresPrecipitation = false)
+            {
+                string prefix = "biome." + id + ".";
+                double minHeight = Clamp01(GetDouble(numbers, prefix + "minimumHeight", minimumHeight));
+                double maxHeight = Clamp01(GetDouble(numbers, prefix + "maximumHeight", maximumHeight));
+                double minCelsius = Finite(GetDouble(numbers, prefix + "minimumCelsius", minimumCelsius), minimumCelsius);
+                double maxCelsius = Finite(GetDouble(numbers, prefix + "maximumCelsius", maximumCelsius), maximumCelsius);
+                double minRain = Clamp01(GetDouble(numbers, prefix + "minimumPrecipitation", minimumPrecipitation));
+                double maxRain = Clamp01(GetDouble(numbers, prefix + "maximumPrecipitation", maximumPrecipitation));
+                double minMoisture = Clamp01(GetDouble(numbers, prefix + "minimumMoisture", 0d));
+                double maxMoisture = Clamp01(GetDouble(numbers, prefix + "maximumMoisture", 1d));
+                if (minHeight > maxHeight || minCelsius > maxCelsius || minRain > maxRain || minMoisture > maxMoisture)
+                    throw new ArgumentException(prefix + "的最小范围不能大于最大范围。", nameof(numbers));
+                rules.Add(new SurfaceBiomeRuleSnapshot(kind, GetBool(numbers, prefix + "enabled", true),
+                    GetInt(numbers, prefix + "priority", priority), minHeight, maxHeight, minCelsius, maxCelsius,
+                    GetBool(numbers, prefix + "includeMaximumCelsius", includeMaximumCelsius), minRain, maxRain,
+                    minMoisture, maxMoisture, requiresOcean, requiresRiver, requiresSnowRegion,
+                    GetBool(numbers, prefix + "polar.ignoreRegions", polarIgnoresRegions),
+                    GetBool(numbers, prefix + "polar.ignorePrecipitation", polarIgnoresPrecipitation)));
+            }
+        }
+
+        #endregion
 
         /// <summary>生成地表还是洞穴。</summary>
         public ChunkGenerationMode Mode { get; }
@@ -611,11 +706,6 @@ namespace FlatWorld.WorldModel
         public double MountainLevel { get; }
         /// <summary>山地湿度达到这个数时改铺泥土，但仍保留山地群系。</summary>
         public double MountainDirtMinimumMoisture { get; }
-        /// <summary>实际温度低于这个数时具备积雪条件。</summary>
-        public double SnowTemperature { get; }
-        /// <summary>降水高于这个数时才能形成雪地。</summary>
-        public double SnowMinimumPrecipitation { get; }
-
         public bool SnowRegionsEnabled { get; }
         public int SnowRegionSize { get; }
         public double SnowRegionChance { get; }
@@ -637,9 +727,7 @@ namespace FlatWorld.WorldModel
         public double DesertMinimumHeight { get; }
         public double DesertMaximumPrecipitation { get; }
         public double DesertMinimumTemperatureCelsius { get; }
-        /// <summary>旧版温带草原允许的温度与降水闭区间。</summary>
-        public double GrasslandMinimumTemperature { get; }
-        public double GrasslandMaximumTemperature { get; }
+        /// <summary>温带草原默认降水区间，最终规则由 biome.grassland 配置冻结。</summary>
         public double GrasslandMinimumPrecipitation { get; }
         public double GrasslandMaximumPrecipitation { get; }
         /// <summary>玩家为当前世界选择的坐标倍率；默认 0.01。</summary>

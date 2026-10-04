@@ -140,8 +140,9 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
         "terrain.seaLevel",
         "terrain.beachLevel",
         "terrain.mountainLevel",
-        "terrain.snowTemperature",
-        "terrain.snowMinimumPrecipitation",
+        "biome.snow.maximumCelsius",
+        "biome.snow.minimumPrecipitation",
+        "biome.desert.minimumCelsius",
         "biome.snow.regions.enabled",
         "biome.snow.regions.size",
         "biome.snow.regions.chance",
@@ -164,6 +165,11 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
         "climate.temperature.coordScale",
         "climate.temperature.altitudeCoolingStart",
         "climate.temperature.altitudeCoolingStrength",
+        "climate.equator.celsius",
+        "climate.temperature.regionalVariationCelsius",
+        "climate.temperature.rainCoolingCelsius",
+        "climate.temperature.windwardCoolingCelsius",
+        "climate.temperature.leewardWarmingCelsius",
         "river.enabled",
         "structure.enabled"
     };
@@ -188,8 +194,9 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
             ["terrain.seaLevel"] = "越高水域越多，越低陆地越多",
             ["terrain.beachLevel"] = "越高海岸边的沙滩带越宽",
             ["terrain.mountainLevel"] = "越低石质山地越多，越高山地越少",
-            ["terrain.snowTemperature"] = "实际温度低于该值时具备积雪条件；越高雪地越多",
-            ["terrain.snowMinimumPrecipitation"] = "降水高于该值才生成雪地；越高雪地越集中在湿润区",
+            ["biome.snow.maximumCelsius"] = "雪地允许的最高摄氏气温，默认只在零下生成",
+            ["biome.snow.minimumPrecipitation"] = "雪地最低降水；极圈是否跳过此条件由雪地规则控制",
+            ["biome.desert.minimumCelsius"] = "沙漠最低摄氏气温，低温干燥区域不会判成沙漠",
             ["biome.snow.regions.enabled"] = "启用稀有大片雪原与少量山顶积雪；旧冻结规则缺少此参数时沿用旧分布",
             ["biome.snow.regions.size"] = "每个候选区域的边长；越大候选越稀疏，半径最多为区域短边的 42%",
             ["biome.snow.regions.chance"] = "每个候选区域出现雪原的概率；仍须满足实际温度与最终降水条件",
@@ -222,14 +229,19 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
             ["climate.temperature.coordScale"] = "温度图坐标倍率；越大冷热区域越密集",
             ["climate.temperature.altitudeCoolingStart"] = "超过该高度后开始按海拔降温",
             ["climate.temperature.altitudeCoolingStrength"] = "海拔对温度的影响强度；越高山区越冷",
+            ["climate.equator.celsius"] = "赤道纬度底温，实际温度还会叠加海拔、降雨和风向修正",
+            ["climate.temperature.regionalVariationCelsius"] = "局部温度噪声的最大正负温差，单位为摄氏度",
+            ["climate.temperature.rainCoolingCelsius"] = "静态气候降水量为 1 时的降温幅度",
+            ["climate.temperature.windwardCoolingCelsius"] = "迎风地形增雨造成的额外降温幅度",
+            ["climate.temperature.leewardWarmingCelsius"] = "背风雨影造成的额外升温幅度",
             ["climate.temperature.frequency"] = "温度图基础频率；越大冷热变化越快",
             ["climate.temperature.octaves"] = "温度图细节层数；越高局部温差越细碎",
             ["climate.temperature.lacunarity"] = "温度每层细节缩小的速度",
             ["climate.temperature.persistence"] = "温度小细节保留强度；越大温度分布越碎",
             ["climate.temperature.offsetX"] = "沿 X 方向平移整张温度噪声图",
             ["climate.temperature.offsetY"] = "沿 Y 方向平移整张温度噪声图",
-            ["climate.temperature.celsiusMin"] = "归一化最低温对应的摄氏温度，仅影响环境温度数值",
-            ["climate.temperature.celsiusMax"] = "归一化最高温对应的摄氏温度，仅影响环境温度数值",
+            ["climate.temperature.celsiusMin"] = "原始温度噪声下界，也用于归一化温度与海拔降温换算",
+            ["climate.temperature.celsiusMax"] = "原始温度噪声上界，实际合成气候允许超出此范围",
             ["climate.wind.regionSize"] = "一块稳定风向区域的大小；越大风向变化越缓",
             ["climate.wind.seedSalt"] = "改变风场排列，不改变世界种子和高度图",
             ["climate.orographic.sampleDistance"] = "向上风方向检查山体的距离；越大雨影影响更远",
@@ -276,8 +288,8 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
             ["terrain.biomeCount"] = "旧配置兼容项，当前群系编号固定为 0～7",
             ["biome.desert.minimumHeight"] = "低于该高度不判定沙漠，避免沙漠贴进海里",
             ["biome.desert.maximumPrecipitation"] = "降水高于该值不判定沙漠；越低沙漠越少",
-            ["biome.grassland.minimumTemperature"] = "温度低于该值不判定温带草原",
-            ["biome.grassland.maximumTemperature"] = "温度高于该值不判定温带草原",
+            ["biome.grassland.minimumCelsius"] = "温带草原允许的最低摄氏气温",
+            ["biome.grassland.maximumCelsius"] = "温带草原允许的最高摄氏气温",
             ["biome.grassland.minimumPrecipitation"] = "降水低于该值不判定温带草原",
             ["biome.grassland.maximumPrecipitation"] = "降水高于该值不判定温带草原，通常转森林",
             ["river.lakeChance"] = "内陆汇流终点形成淡水湖的确定性概率",
@@ -669,8 +681,9 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
             DrawSlider("terrain.seaLevel", "海平面", 0f, 1f);
             DrawSlider("terrain.beachLevel", "沙滩上限", 0f, 1f);
             DrawSlider("terrain.mountainLevel", "山地阈值", 0f, 1f);
-            DrawSlider("terrain.snowTemperature", "雪地温度阈值", 0f, 1f);
-            DrawSlider("terrain.snowMinimumPrecipitation", "雪地最低降水", 0f, 1f);
+            DrawDoubleField("biome.snow.maximumCelsius", "雪地最高温度（°C）");
+            DrawSlider("biome.snow.minimumPrecipitation", "雪地最低降水", 0f, 1f);
+            DrawDoubleField("biome.desert.minimumCelsius", "沙漠最低温度（°C）");
             DrawToggle("biome.snow.regions.enabled", "稀有雪原区域");
             DrawDoubleField("biome.snow.regions.size", "雪原候选区域边长（格）");
             DrawSlider("biome.snow.regions.chance", "雪原出现概率（每候选区域）", 0f, 1f);
@@ -695,10 +708,15 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
 
             EditorGUILayout.Space(3f);
             EditorGUILayout.LabelField("气候与附加层", EditorStyles.miniBoldLabel);
+            DrawDoubleField("climate.equator.celsius", "赤道底温（°C）");
+            DrawDoubleField("climate.temperature.regionalVariationCelsius", "局部温差幅度（°C）");
             DrawDoubleField("climate.precipitation.coordScale", "降水坐标倍率");
             DrawDoubleField("climate.temperature.coordScale", "温度坐标倍率");
             DrawSlider("climate.temperature.altitudeCoolingStart", "海拔降温起点", 0f, 1f);
             DrawDoubleField("climate.temperature.altitudeCoolingStrength", "海拔降温强度");
+            DrawDoubleField("climate.temperature.rainCoolingCelsius", "降雨降温幅度（°C）");
+            DrawDoubleField("climate.temperature.windwardCoolingCelsius", "迎风降温幅度（°C）");
+            DrawDoubleField("climate.temperature.leewardWarmingCelsius", "背风升温幅度（°C）");
             DrawToggle("river.enabled", "生成河流");
             DrawToggle("structure.enabled", "生成结构");
         }
@@ -1214,10 +1232,31 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
     /// <summary>读取参数说明；MOD 自定义键没有内置说明时返回空文本。</summary>
     private static string GetParameterDescription(string id)
     {
-        return !string.IsNullOrWhiteSpace(id) &&
-               ParameterDescriptions.TryGetValue(id, out string description)
-            ? description
-            : string.Empty;
+        if (string.IsNullOrWhiteSpace(id)) return string.Empty;
+        if (ParameterDescriptions.TryGetValue(id, out string description)) return description;
+        // 通用群系条件共用中文说明，新增规则参数无需逐个硬编码文案。
+        if (id.StartsWith("biome.", StringComparison.Ordinal))
+        {
+            string suffix = id.Substring(id.LastIndexOf('.') + 1);
+            return suffix switch
+            {
+                "enabled" => "是否启用这条群系规则",
+                "priority" => "越大越先匹配，同优先级按稳定群系编号排序",
+                "minimumHeight" => "群系允许的最低地形高度",
+                "maximumHeight" => "群系允许的最高地形高度",
+                "minimumCelsius" => "群系允许的最低摄氏气温",
+                "maximumCelsius" => "群系允许的最高摄氏气温",
+                "includeMaximumCelsius" => "最高气温是否允许等号；0 表示严格低于",
+                "minimumPrecipitation" => "群系允许的最低降水",
+                "maximumPrecipitation" => "群系允许的最高降水",
+                "minimumMoisture" => "群系允许的最低湿度",
+                "maximumMoisture" => "群系允许的最高湿度",
+                "ignoreRegions" => "极圈内是否跳过零散雪原资格",
+                "ignorePrecipitation" => "极圈内是否跳过降水范围条件",
+                _ => string.Empty
+            };
+        }
+        return string.Empty;
     }
 
     /// <summary>判断右侧生成输入是否已经不同于左侧画面对应的输入。</summary>

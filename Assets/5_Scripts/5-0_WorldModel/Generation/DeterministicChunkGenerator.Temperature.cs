@@ -25,10 +25,9 @@ namespace FlatWorld.WorldModel
             sample.TemperatureCelsius = baseline + settings.GetAltitudeTemperatureOffsetCelsius(sample.Height) +
                                         rainOffset + windOffset;
             sample.Temperature = settings.NormalizeTemperatureCelsius(sample.TemperatureCelsius);
-            // 极圈寒冷陆地不受零散雪原概率和降水门槛限制。
-            sample.SnowAllowed = sample.IsPolarBand ||
-                IsSnowRegionAllowed(request, settings, sample.Height,
-                    sample.Temperature, sample.Precipitation, worldX, worldY);
+            // 此处只采样零散雪原资格，极圈是否跳过资格由雪地群系配置决定。
+            sample.SnowAllowed = IsSnowRegionAllowed(request, settings, sample.Height,
+                sample.TemperatureCelsius, sample.Precipitation, worldX, worldY);
             return sample;
         }
 

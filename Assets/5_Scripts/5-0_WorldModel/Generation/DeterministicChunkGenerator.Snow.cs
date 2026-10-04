@@ -9,13 +9,13 @@ namespace FlatWorld.WorldModel
 
         // 先按稳定区域决定出现概率，再抽大小；同一片雪原跨区块和环绕边界时共用种子。
         private static bool IsSnowRegionAllowed(ChunkGenerationRequest request,
-            ChunkGenerationSettingsSnapshot settings, double height, double temperature,
+            ChunkGenerationSettingsSnapshot settings, double height, double temperatureCelsius,
             double precipitation, int worldX, int worldY)
         {
             if (!settings.SnowRegionsEnabled)
                 return true;
             if (height < settings.SeaLevel || settings.SnowRegionChance <= 0d ||
-                !SurfaceBiomeClassifier.IsSnowClimate(settings, temperature, precipitation))
+                !SurfaceBiomeClassifier.IsSnowClimate(settings, temperatureCelsius, precipitation))
                 return false;
 
             var domain = request.Topology.ToDomain();

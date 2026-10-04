@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: ChunkGenerationProfile_Surface
   m_EditorClassIdentifier: 
   profileId: surface.default
-  generationSignature: 65
+  generationSignature: 66
   chunkWidth: 16
   chunkHeight: 16
   numericParameters:
@@ -53,9 +53,7 @@ MonoBehaviour:
     Value: 0.72
   - Id: biome.mountain.dirtMinimumMoisture
     Value: 0.5
-  - Id: terrain.snowTemperature
-    Value: 0.32
-  - Id: terrain.snowMinimumPrecipitation
+  - Id: biome.snow.minimumPrecipitation
     Value: 0.4
   - Id: biome.snow.regions.enabled
     Value: 1
@@ -227,16 +225,60 @@ MonoBehaviour:
     Value: 3
   - Id: terrain.biomeCount
     Value: 8
+  - Id: biome.fallback.id
+    Value: 7
+  - Id: biome.ocean.enabled
+    Value: 1
+  - Id: biome.ocean.priority
+    Value: 800
+  - Id: biome.river.enabled
+    Value: 1
+  - Id: biome.river.priority
+    Value: 700
+  - Id: biome.snow.enabled
+    Value: 1
+  - Id: biome.snow.priority
+    Value: 600
+  - Id: biome.snow.maximumCelsius
+    Value: 0
+  - Id: biome.snow.includeMaximumCelsius
+    Value: 0
+  - Id: biome.snow.polar.ignoreRegions
+    Value: 1
+  - Id: biome.snow.polar.ignorePrecipitation
+    Value: 1
+  - Id: biome.stone.enabled
+    Value: 1
+  - Id: biome.stone.priority
+    Value: 500
+  - Id: biome.desert.enabled
+    Value: 1
+  - Id: biome.desert.priority
+    Value: 400
+  - Id: biome.beach.enabled
+    Value: 1
+  - Id: biome.beach.priority
+    Value: 300
+  - Id: biome.grassland.enabled
+    Value: 1
+  - Id: biome.grassland.priority
+    Value: 200
+  - Id: biome.grassland.minimumCelsius
+    Value: 12.5
+  - Id: biome.grassland.maximumCelsius
+    Value: 37.5
+  - Id: biome.forest.enabled
+    Value: 1
+  - Id: biome.forest.priority
+    Value: 100
+  - Id: biome.forest.minimumMoisture
+    Value: 0
   - Id: biome.desert.minimumHeight
     Value: 0.51
   - Id: biome.desert.minimumCelsius
     Value: 20
   - Id: biome.desert.maximumPrecipitation
     Value: 0.35
-  - Id: biome.grassland.minimumTemperature
-    Value: 0.25
-  - Id: biome.grassland.maximumTemperature
-    Value: 0.75
   - Id: biome.grassland.minimumPrecipitation
     Value: 0.25
   - Id: biome.grassland.maximumPrecipitation
