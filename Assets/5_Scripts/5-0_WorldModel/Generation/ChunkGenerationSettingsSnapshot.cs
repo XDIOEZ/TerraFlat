@@ -285,6 +285,11 @@ namespace FlatWorld.WorldModel
                 GetDouble(numbers, "climate.polarBand.position", 0d), 0d));
             PolarBandCelsius = Finite(
                 GetDouble(numbers, "climate.polarBand.celsius", -30d), -30d);
+            PolarBandEdgeCelsius = Math.Max(PolarBandCelsius, Finite(
+                GetDouble(numbers, "climate.polarBand.edgeCelsius", -10d), -10d));
+            PolarBandPeakCelsius = Clamp(Finite(
+                GetDouble(numbers, "climate.polarBand.peakCelsius", -25d), -25d),
+                PolarBandCelsius, PolarBandEdgeCelsius);
             // 极圈总宽度默认占地图的 25%，半宽按地图高度的一半归一化。
             PolarBandHalfWidth = Clamp(Finite(
                 GetDouble(numbers, "climate.polarBand.halfWidth", 0.25d), 0.25d), 0.001d, 1d);
@@ -310,6 +315,8 @@ namespace FlatWorld.WorldModel
             LeewardRainLoss = NonNegativeFinite(
                 GetDouble(numbers, "climate.orographic.leewardLoss", 0.6d), 0.6d);
             RiverEnabled = GetBool(numbers, "river.enabled", true);
+            PolarRiverSourceChanceMultiplier = Clamp01(Finite(
+                GetDouble(numbers, "river.polarSourceChanceMultiplier", 0.05d), 0.05d));
             RiverAlgorithm = ParseRiverAlgorithm(
                 GetText(texts, "river.algorithm", "heightDriven"));
             RiverHydrologyRegionSize = Clamp(
@@ -642,6 +649,8 @@ namespace FlatWorld.WorldModel
         public bool PolarBandEnabled { get; }
         public double PolarBandPosition { get; }
         public double PolarBandCelsius { get; }
+        public double PolarBandEdgeCelsius { get; }
+        public double PolarBandPeakCelsius { get; }
         public double PolarBandHalfWidth { get; }
         /// <summary>从这个高度开始按海拔降低实际温度。</summary>
         public double TemperatureAltitudeCoolingStart { get; }
@@ -661,6 +670,7 @@ namespace FlatWorld.WorldModel
         public double LeewardRainLoss { get; }
         /// <summary>地表要不要生成河流。</summary>
         public bool RiverEnabled { get; }
+        public double PolarRiverSourceChanceMultiplier { get; }
         /// <summary>河流算法；默认保留新版高度汇流，正式地表可显式选择旧版区域水文。</summary>
         public RiverGenerationAlgorithm RiverAlgorithm { get; }
         /// <summary>旧版区域水文一次生成并缓存的正方形边长。</summary>

@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: ChunkGenerationProfile_Surface
   m_EditorClassIdentifier: 
   profileId: surface.default
-  generationSignature: 63
+  generationSignature: 64
   chunkWidth: 16
   chunkHeight: 16
   numericParameters:
@@ -141,6 +141,10 @@ MonoBehaviour:
     Value: 0
   - Id: climate.polarBand.celsius
     Value: -30
+  - Id: climate.polarBand.edgeCelsius
+    Value: -10
+  - Id: climate.polarBand.peakCelsius
+    Value: -25
   - Id: climate.polarBand.halfWidth
     Value: 0.25
   - Id: climate.temperature.altitudeCoolingStart

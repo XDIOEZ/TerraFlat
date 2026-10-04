@@ -412,6 +412,8 @@ namespace FlatWorld.WorldModel
                 double contribution = runoffSum / sampleCount;
                 if (contribution <= 0.0001d)
                     return;
+                if (!DeterministicChunkGenerator.ShouldGeneratePolarRiverSource(request, settings, source))
+                    return;
                 TraceRunoff(source, contribution);
             }
 
@@ -1083,6 +1085,8 @@ namespace FlatWorld.WorldModel
         {
             ulong hash = 14695981039346656037UL;
             AddHash(ref hash, request.Profile.Signature);
+            // 极圈范围和源点概率参与缓存身份，配置变化后不能复用旧河网。
+            AddHash(ref hash, request.Profile.GenerationFingerprint);
             AddHash(ref hash, settings.RiverHydrologyRegionSize);
             AddHash(ref hash, settings.RiverRunoffCellSize);
             AddHash(ref hash, settings.RiverRunoffSampleStride);

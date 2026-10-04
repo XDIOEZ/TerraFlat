@@ -16,7 +16,7 @@ namespace FlatWorld.WorldModel
         IChunkEcologyNeighborhoodTagResolver
     {
         /// <summary>纯区块生成规则版本；气候、群系、河流或生态空间分布规则改变时递增。</summary>
-        public const int CurrentGenerationSignature = 63;
+        public const int CurrentGenerationSignature = 64;
 
         private readonly LiquidTypeCatalog liquidTypes;
         /// <summary>资源就绪后注入会话液体表；离线纯算法测试可以使用本体最小目录。</summary>
@@ -862,6 +862,9 @@ namespace FlatWorld.WorldModel
             double windX = climate.WindX;
             double windY = climate.WindY;
             double temperature = climate.Temperature;
+            // 摄氏基温先完成群系过渡，结冰和雪厚共用实际写入环境层的浮点值。
+            float temperatureCelsius = (float)(batch != null ? batch.GetBlendedTemperature(x, y) :
+                SampleBlendedBiomeTemperature(request, settings, worldX, worldY));
             bool ocean = height < settings.SeaLevel;
             GeneratedHydrologyCell riverCell = default;
             bool river = !ocean && riverMap != null &&
@@ -877,8 +880,7 @@ namespace FlatWorld.WorldModel
                 ? climate.BaseBiome
                 : SurfaceBiomeClassifier.Resolve(
                     settings, height, temperature, precipitation, moisture, river, climate.SnowAllowed);
-            bool frozenRiver = river && climate.SnowAllowed && SurfaceBiomeClassifier.IsSnowClimate(
-                settings, temperature, precipitation);
+            bool frozenRiver = river && temperatureCelsius < 0f;
             bool mountain = biome == SurfaceBiomeKind.Stone ||
                             (biome == SurfaceBiomeKind.Snow && height >= settings.MountainLevel);
             bool alluvial =
@@ -906,8 +908,7 @@ namespace FlatWorld.WorldModel
                 biomeId = (int)biome;
                 if (frozenRiver)
                 {
-                    // 河流仍保留 River 群系编号和水文数据，但雪地气候下改用真正的冰地块；
-                    // 生成冰面时不写入液体，避免冰块继续触发水面表现和液体玩法效果。
+                    // 河流和湖泊在零下改用冰地块并清空液体，群系和水文身份继续保留。
                     groundTileId = settings.IceTileId;
                     flags = TerrainCellFlags.Walkable;
                     navigationCost = (short)Math.Min(short.MaxValue, navigationCost + 1);
@@ -964,7 +965,7 @@ namespace FlatWorld.WorldModel
                 }
                 else
                 {
-                    // 雪不再占用 Ground：低地保留草地，高山保留石地，独立雪层铺满 10 层。
+                    // 雪不占用 Ground：低地保留草地、高山保留石地，极圈雪厚在温度过渡后计算。
                     groundTileId = height >= settings.MountainLevel
                         ? settings.StoneTileId
                         : settings.GroundTileId;
@@ -1014,9 +1015,17 @@ namespace FlatWorld.WorldModel
             }
             initialLiquidDepth = QuantizeGeneratedLiquidDepth(initialLiquidDepth);
 
-            // 只混合摄氏气温，不改变群系判定、噪声、天然雪和地形身份。
-            double temperatureCelsius = batch != null ? batch.GetBlendedTemperature(x, y) :
-                SampleBlendedBiomeTemperature(request, settings, worldX, worldY);
+            // 海水同样按零下基温结冰，岩浆不参加水体结冰规则。
+            if (!lavaCell && initialLiquidDepth > 0f && temperatureCelsius < 0f)
+            {
+                groundTileId = settings.IceTileId;
+                initialLiquidDepth = 0f;
+                snowDepth = 0f;
+                flags = TerrainCellFlags.Walkable;
+                navigationCost = (short)Math.Min(short.MaxValue, settings.DefaultNavigationCost + 1);
+            }
+            if (snowDepth > 0f && climate.PolarInfluence > 0d)
+                snowDepth = ResolvePolarSnowDepth(temperatureCelsius);
 
             // 草先过较宽松的气候门槛，再由湿度决定局部密度；全程只依赖种子和环境层。
             bool snowSurface = biome == SurfaceBiomeKind.Snow &&
@@ -1046,7 +1055,7 @@ namespace FlatWorld.WorldModel
                 Grass = grass ? GrassPresent : GrassEmpty,
                 Height = (float)height,
                 Temperature = (float)temperature,
-                TemperatureCelsius = (float)temperatureCelsius,
+                TemperatureCelsius = temperatureCelsius,
                 BasePrecipitation = (float)basePrecipitation,
                 Precipitation = (float)precipitation,
                 WindX = (float)windX,

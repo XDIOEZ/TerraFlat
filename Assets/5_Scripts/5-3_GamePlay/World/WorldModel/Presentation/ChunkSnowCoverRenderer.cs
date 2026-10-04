@@ -209,9 +209,11 @@ public sealed class ChunkSnowCoverRenderer : MonoBehaviour, IChunkViewRenderer
             matrix *= Matrix4x4.TRS(new Vector3(0f, height * 0.5f), Quaternion.identity,
                 new Vector3(1f, 1f + height, 1f));
         }
+        // 一层雪从 55% 不透明度开始，每层增加 5%，十层及以上完全不透明。
+        float opacity = Mathf.Clamp01(0.5f + coverage * 0.05f);
         owner.SetLayerVisual(layer, x, y, snowTile.sprite, snowMaterial,
             matrix * snowTile.transform, snowTile.color * new Color(1f, 1f, 1f,
-                Mathf.Clamp01(coverage * SnowDepthLayer.LayerStep)));
+                opacity));
     }
 
     /// <summary>保存本次采样依据，避免无雪或状态不变时重复扫完整区块。</summary>

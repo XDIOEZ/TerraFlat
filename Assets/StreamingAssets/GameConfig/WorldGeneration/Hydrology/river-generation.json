@@ -9,6 +9,10 @@
           "value": 1
         },
         {
+          "id": "river.polarSourceChanceMultiplier",
+          "value": 0.05
+        },
+        {
           "id": "river.hydrologyRegionSize",
           "value": 256
         },

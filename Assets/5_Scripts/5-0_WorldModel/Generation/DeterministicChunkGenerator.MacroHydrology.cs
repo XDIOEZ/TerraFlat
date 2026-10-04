@@ -64,7 +64,8 @@ namespace FlatWorld.WorldModel
                 double height = sampling.Height(position);
                 double source = 0d;
                 if (height > settings.SeaLevel && ShouldTraceRunoffSource(
-                        request.WorldSeed, origin, anchorX, anchorY, cellSize))
+                        request.WorldSeed, origin, anchorX, anchorY, cellSize) &&
+                    ShouldGeneratePolarRiverSource(request, settings, position))
                 {
                     double precipitation = sampling.Precipitation(position, height);
                     source = Clamp01((precipitation - settings.RiverInfiltrationFloor) /

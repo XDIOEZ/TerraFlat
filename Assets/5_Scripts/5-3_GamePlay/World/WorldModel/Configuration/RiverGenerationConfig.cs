@@ -15,7 +15,7 @@ public sealed class RiverGenerationConfigCatalog
 
     private static readonly string[] SurfaceNumericIds =
     {
-        "river.enabled", "river.hydrologyRegionSize", "river.runoffCellSize",
+        "river.enabled", "river.polarSourceChanceMultiplier", "river.hydrologyRegionSize", "river.runoffCellSize",
         "river.runoffSampleStride", "river.maxTraceSteps", "river.minimumVisibleCourseLength",
         "river.infiltrationFloor", "river.startFlow", "river.tributaryStartFlow",
         "river.fullWidthFlow", "river.maxWidth", "river.meanderTieTolerance",
