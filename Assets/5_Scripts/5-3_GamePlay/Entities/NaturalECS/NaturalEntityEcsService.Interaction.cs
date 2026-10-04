@@ -14,7 +14,8 @@ namespace FlatWorld.NaturalEntities
     {
         #region 空间索引与无外壳目标
 
-        private sealed partial class Record : IWorldInteractionTarget, ISpatialInteractionShape, IWorldInteractionPreview
+        private sealed partial class Record : IWorldInteractionTarget, ISpatialInteractionShape, IWorldInteractionPreview,
+            IGameplayPhysicsDamageTarget
         {
             public readonly List<Vector2Int> SpatialCells = new();
             public ulong LastSpatialQuery;
@@ -29,6 +30,8 @@ namespace FlatWorld.NaturalEntities
             public void OnInteractStart(Item actor) => TryHarvest(Handle, actor);
             public void OnInteractCancel(Item actor) { }
             public void SetInteractionHighlighted(bool highlighted) { Highlighted = highlighted; RefreshPresentation(Handle); }
+            public void ReceivePhysicsDamage(Mod_Damage weapon, in CombatDamageContext context)
+                => ApplyWeaponHit(this, weapon, context);
         }
 
         private static readonly Dictionary<Vector2Int, HashSet<int>> spatialCells = new();
@@ -52,6 +55,12 @@ namespace FlatWorld.NaturalEntities
 
         private static BlockingBodySnapshot CaptureBlockingBody(Record record)
             => new(record.Handle.Id, record.Snapshot.Guid, record.Profile.Definition.Id, record.BodyBounds);
+
+        /// <summary>树木受击已覆盖树干阻挡，复用现有区块 Collider 转接；其它资源仍用独立受击形状。</summary>
+        internal static IGameplayPhysicsDamageTarget GetBlockingDamageTarget(int runtimeId)
+            => records.TryGetValue(runtimeId, out Record record) && record.IsValid && record.BlocksMovement &&
+               record.HitColliderEnabled && record.Profile.HealthModuleName != null &&
+               record.Profile.Definition.HasTag(Tag.Tree) ? record : null;
 
         private static void PublishPhysicsBodyChanged(Record record, PhysicsBodyChangeReason reason, bool exists)
         {
@@ -349,15 +358,24 @@ namespace FlatWorld.NaturalEntities
             foreach (var candidate in candidatesByDistance)
             {
                 if (weapon == null || weapon.RemainingAttackTargets <= 0) break;
-                if (!candidate.Record.IsValid) continue;
-                var target = new CombatIdentity { Backend = CombatBackend.Entity, Value = (1UL << 63) | (uint)candidate.Record.Handle.Id,
-                    Generation = (uint)candidate.Record.Handle.Generation, World = context.Attack.Source.World, Dimension = context.Attack.Source.Dimension };
-                if (!weapon.TryReserveExternalTarget(target)) continue;
                 CombatDamageContext hit = context;
                 hit.HitPoint = candidate.Point;
-                float damage = ApplyDamage(candidate.Record.Handle, hit);
-                if (damage >= 0f && weapon != null) weapon.PublishExternalDamage(hit, damage);
+                ApplyWeaponHit(candidate.Record, weapon, hit);
             }
+        }
+
+        /// <summary>受击盒查询与真实物理接触共用资格、窗口预约和 ECS 生命提交，禁止重复扣血。</summary>
+        private static void ApplyWeaponHit(Record record, Mod_Damage weapon, in CombatDamageContext context)
+        {
+            if (!GameNetwork.HasStateAuthority || weapon == null || !record.IsValid ||
+                !record.HitColliderEnabled || record.Profile.HealthModuleName == null ||
+                WorldEntityRuntime.DimensionId != record.DimensionId ||
+                (context.DeliveryCapabilities & CombatDeliveryCapabilities.AirborneOnly) != 0) return;
+            var target = new CombatIdentity { Backend = CombatBackend.Entity, Value = (1UL << 63) | (uint)record.Handle.Id,
+                Generation = (uint)record.Handle.Generation, World = context.Attack.Source.World, Dimension = context.Attack.Source.Dimension };
+            if (!weapon.TryReserveExternalTarget(target)) return;
+            float damage = ApplyDamage(record.Handle, context);
+            if (damage >= 0f && weapon != null) weapon.PublishExternalDamage(context, damage);
         }
 
         /// <summary>生命只写回同一 Entity，MOD 可修补这个命令边界；不会创建 Mod_DamageReceiver。</summary>

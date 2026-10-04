@@ -379,7 +379,8 @@ public sealed class ChunkCollisionRenderer : MonoBehaviour, IChunkViewRenderer
     private int SyncNaturalBody(NaturalEntityEcsService.BlockingBodySnapshot body, bool exists)
     {
         long key = ChunkObstacleColliderSet.Key(ChunkObstacleColliderSet.NaturalKind, body.RuntimeId);
-        return exists ? SyncObstacle(key, body.Bounds.center, body.Bounds.extents)
+        return exists ? SyncObstacle(key, body.Bounds.center, body.Bounds.extents,
+                NaturalEntityEcsService.GetBlockingDamageTarget(body.RuntimeId))
             : obstacleColliders.Remove(key) ? 1 : 0;
     }
 
@@ -403,11 +404,12 @@ public sealed class ChunkCollisionRenderer : MonoBehaviour, IChunkViewRenderer
         return changed;
     }
 
-    private int SyncObstacle(long key, Vector2 worldCenter, Vector2 halfExtents)
+    private int SyncObstacle(long key, Vector2 worldCenter, Vector2 halfExtents,
+        IGameplayPhysicsDamageTarget damageTarget = null)
     {
         if (!TryResolveLocalBox(worldCenter, halfExtents, out Vector2 center, out Vector2 size))
             return obstacleColliders.Remove(key) ? 1 : 0;
-        return obstacleColliders.Set(key, center, size, SourceCollider) ? 1 : 0;
+        return obstacleColliders.Set(key, center, size, SourceCollider, damageTarget: damageTarget) ? 1 : 0;
     }
 
     /// <summary>保留既有矩形与跨 Chunk 裁剪语义，不改变数据占地、导航或受击形状。</summary>

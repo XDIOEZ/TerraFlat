@@ -183,6 +183,23 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
         EmitDataShape(displacement, positionOffset + displacement);
     }
 
+    /// <summary>直接转交 Unity 已确认的碰撞目标和世界接触点，已映射目标不再进行附近范围查询。</summary>
+    internal bool ProcessPhysicsDataColliderHit(Collider2D other, Vector2 sourceOrigin, Vector2 hitPoint)
+    {
+        if (!GameplayCombatBridge.TryGetPhysicsDamageTarget(other, out var target)) return false;
+        if (damageCollider == null || !damageCollider.enabled || !CanDealDamageNow() || RemainingAttackTargets == 0)
+            return true;
+        var context = GameplayCombatBridge.Context(this, new FlatWorld.Combat.CombatClock {
+            Tick = (ulong)Time.frameCount, Time = Time.timeAsDouble, DeltaTime = Time.fixedDeltaTime });
+        context.Attack.Sequence = attackSequence;
+        context.Attack.Window = 1;
+        context.Attack.Pulse = ++attackPulse;
+        context.Origin = sourceOrigin;
+        context.HitPoint = hitPoint;
+        target.ReceivePhysicsDamage(this, context);
+        return true;
+    }
+
     private void EmitDataShape(Vector2 displacement, Vector2 centerOffset = default)
     {
         if (!(damageCollider is BoxCollider2D box) || !box.enabled || !CanDealDamageNow() || RemainingAttackTargets == 0) return;

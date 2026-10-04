@@ -51,6 +51,7 @@ internal sealed class ChunkObstacleColliderSet
         copiedStates.Remove(key);
         if (collider != null)
         {
+            GameplayCombatBridge.BindPhysicsDamageTarget(collider, null);
             collider.enabled = false;
             pool.Push(collider);
         }
@@ -86,6 +87,7 @@ internal sealed class ChunkObstacleColliderSet
         foreach (BoxCollider2D collider in colliders.Values)
             if (collider != null)
             {
+                GameplayCombatBridge.BindPhysicsDamageTarget(collider, null);
                 collider.enabled = false;
                 pool.Push(collider);
             }
@@ -111,7 +113,7 @@ internal sealed class ChunkObstacleColliderSet
 
     /// <summary>只写实际变化的物理属性；纯视觉、库存和其它状态变化不重建原生形状。</summary>
     internal bool Set(long key, Vector2 center, Vector2 size, Collider2D template,
-        Collider2D source = null, Vector2 imageOffset = default)
+        Collider2D source = null, Vector2 imageOffset = default, IGameplayPhysicsDamageTarget damageTarget = null)
     {
         bool changed = false;
         if (!colliders.TryGetValue(key, out BoxCollider2D collider) || collider == null)
@@ -152,7 +154,9 @@ internal sealed class ChunkObstacleColliderSet
             if (marker == null) marker = collider.gameObject.AddComponent<ColliderSource2D>();
             if (marker.SourceCollider != source || !marker.ImageOffset.Equals(imageOffset))
             { marker.Bind(source, imageOffset); changed = true; }
+            GameplayCombatBridge.TryGetPhysicsDamageTarget(source, out damageTarget);
         }
+        if (GameplayCombatBridge.BindPhysicsDamageTarget(collider, damageTarget)) changed = true;
         if (!collider.enabled) { collider.enabled = true; changed = true; }
         if (changed) revisions[key] = ++nextRevision;
         return changed;

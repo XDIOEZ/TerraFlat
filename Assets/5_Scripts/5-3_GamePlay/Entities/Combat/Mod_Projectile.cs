@@ -442,9 +442,10 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
             }
             else
             {
-                // 只查询最近阻挡以内的路径，接触余量补偿物理解算保留的边缘间隙。
+                // 已绑定目标直接转交接触点；其它障碍的后备扫掠止于最近阻挡的接触余量。
                 float contactDistance = Mathf.Min(distance, hit.distance + Physics2D.defaultContactOffset);
-                ResolvePhysicalDataHit(displacement / distance * contactDistance, impactPosition, hit.normal, false);
+                ResolvePhysicalDataHit(other, displacement / distance * contactDistance,
+                    impactPosition, hit.point, hit.normal, false);
             }
 
             // 最近的实体阻挡之后不再预判，墙体等无接收器目标仍交给原有物理碰撞处理。
@@ -645,9 +646,10 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
         Collider2D receiverCollider = ResolveDamageReceiverCollider(receiver);
         if (receiverCollider == null)
         {
-            // ECS 障碍没有接收器组件，仍通过真实伤害盒和共享后端结算，不能直接当墙反弹。
-            if (!ResolvePhysicalDataHit(-contactNormal * Physics2D.defaultContactOffset,
-                    _body != null ? _body.position : (Vector2)item.transform.position, contactNormal, true))
+            // ECS 障碍没有接收器组件，由物理目标映射转接伤害，不能直接当墙反弹。
+            if (!ResolvePhysicalDataHit(otherCollider, -contactNormal * Physics2D.defaultContactOffset,
+                    _body != null ? _body.position : (Vector2)item.transform.position,
+                    contactPoint, contactNormal, true))
                 StartBounceSpin(contactNormal);
             return;
         }
@@ -685,8 +687,8 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
     }
 
     /// <summary>无接收器组件的物理接触交回数据后端，保留统一身份、伤害规则和窗口去重。</summary>
-    private bool ResolvePhysicalDataHit(Vector2 displacement, Vector2 impactPosition,
-        Vector2 contactNormal, bool physicsAlreadyResolved)
+    private bool ResolvePhysicalDataHit(Collider2D collider, Vector2 displacement, Vector2 impactPosition,
+        Vector2 contactPoint, Vector2 contactNormal, bool physicsAlreadyResolved)
     {
         if (_damage == null || _body == null)
             return false;
@@ -698,8 +700,12 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
         _physicalContactResolved = false;
         try
         {
-            Vector2 positionOffset = _body.position - (Vector2)item.transform.position;
-            _damage.QueryProjectilePhysicsSweep(displacement, positionOffset);
+            if (!_damage.ProcessPhysicsDataColliderHit(collider, _body.position, contactPoint))
+            {
+                // 尚未登记直接身份的其它数据障碍保留现行真实伤害盒查询。
+                Vector2 positionOffset = _body.position - (Vector2)item.transform.position;
+                _damage.QueryProjectilePhysicsSweep(displacement, positionOffset);
+            }
             return _physicalContactResolved || !_isFlying;
         }
         finally

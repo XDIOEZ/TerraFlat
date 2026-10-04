@@ -20,10 +20,41 @@ public interface ICombatDamageContextModifier
     void ModifyDamageContext(ref CombatDamageContext context);
 }
 
+/// <summary>物理投影只转交 Unity 确认的目标与接触点，生命和命中资格仍由数据后端裁定。</summary>
+internal interface IGameplayPhysicsDamageTarget
+{
+    /// <summary>消费真实碰撞命中，沿用武器窗口预约和后端伤害入口。</summary>
+    void ReceivePhysicsDamage(Mod_Damage weapon, in CombatDamageContext context);
+}
+
 /// <summary>旧对象与纯值战斗的单向适配；不引用 AIECS，任意数据后端均可接入。</summary>
 public static class GameplayCombatBridge
 {
     private static readonly List<IGameplayCombatBridge> Bridges = new List<IGameplayCombatBridge>();
+
+    #region 物理碰撞目标映射
+
+    // 只登记已有物理投影，不为 ECS 实体额外创建刚体或逐帧回调。
+    private static readonly Dictionary<Collider2D, IGameplayPhysicsDamageTarget> PhysicsTargets = new();
+
+    /// <summary>物理投影装卸和池复用时绑定身份，返回身份变化以驱动镜像同步。</summary>
+    internal static bool BindPhysicsDamageTarget(Collider2D collider, IGameplayPhysicsDamageTarget target)
+    {
+        if (collider == null) return false;
+        if (target == null) return PhysicsTargets.Remove(collider);
+        if (PhysicsTargets.TryGetValue(collider, out var previous) && ReferenceEquals(previous, target)) return false;
+        PhysicsTargets[collider] = target;
+        return true;
+    }
+
+    /// <summary>按 Unity 返回的具体 Collider 读取目标，不按接触点猜测附近实体。</summary>
+    internal static bool TryGetPhysicsDamageTarget(Collider2D collider, out IGameplayPhysicsDamageTarget target)
+    {
+        target = null;
+        return collider != null && PhysicsTargets.TryGetValue(collider, out target);
+    }
+
+    #endregion
 
     /// <summary>注册后端；调用方在世界退出时注销。</summary>
     public static void Register(IGameplayCombatBridge bridge) { if (bridge != null && !Bridges.Contains(bridge)) Bridges.Add(bridge); }
@@ -33,7 +64,11 @@ public static class GameplayCombatBridge
 
     /// <summary>关闭域重载时也清除上一次 Play 的后端引用。</summary>
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void Reset() => Bridges.Clear();
+    private static void Reset()
+    {
+        Bridges.Clear();
+        PhysicsTargets.Clear();
+    }
 
     /// <summary>优先读取后端世界身份，旧后端独立运行时仍保存 UID 和对象代际。</summary>
     public static CombatIdentity Identity(Item item)
