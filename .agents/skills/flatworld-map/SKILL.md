@@ -40,6 +40,7 @@ description: "Use when: 定位或修改 FlatWorld 的地图内容、Tilemap、�
 - 命中的陆地规则可配置 `groundTileId/wetGroundTileId/wetGroundMinimumMoisture`；湿度达到门槛用湿底材，否则用干底材，零编号表示沿用默认。`biome.cold` 默认在最终平滑气温 ≤5°C 时匹配石地群系，优先级低于雪地、高于山地；冷地与雪地下方默认湿度 ≥0.5 铺 `Tile_Dirt`，其余铺 `Tile_Stone`。湿度复用降水、低地和河岸的合成值，不按现存冰地块猜水分；低温石地平原不能因此标记成山地。
 - 群系温度配置直接使用 `minimumCelsius/maximumCelsius`；零散雪原也读取同一条雪地规则的气温与降水条件，不再另读归一化雪地/草原温度阈值。调整参数名需同步 `WorldTerrainPreviewWindow` 的常用项与说明，预览继续走正式生成器。
 - 环绕地图极圈由 Surface Profile 的 `climate.polarBand.*` 控制；`halfWidth` 就是整条冷带的地图占比（默认 0.25），`position=0` 时上下边缘各占一半。纬度底温的 `celsius/edgeCelsius/peakCelsius` 默认 -30/-10/-25°C，环绕最短距离映射二次峰值分布的累计概率，保持向极线渐冷并让底温 -25°C 附近占地最多；区外平滑升至 `climate.equator.celsius`（默认 35°C）。最终气候再叠加局部噪声、海拔、降雨与迎风/背风温差，不能逐格随机或用群系固定温度覆盖。
+- 极圈边界通过 `climate.polarBand.boundary.offsetTiles/spacingTiles/detailStrength` 采样两组固定种子随机控制点并平滑插值；默认最大偏移 32 格、大点间距 128 格、细节占比 0.25，不用三角波或逐格随机。整条温度带按 X 偏移中心，保持每列冷带宽度与总面积占比；气候底温、极圈积雪资格和河流源点筛选必须共用偏移，地图左右环绕处共用首尾控制点。
 - 地表群系与草、生态的归一化 `temperature` 从合成后、八格平滑的 `temperature.celsius` 派生；沙漠必须同时满足 `biome.desert.minimumCelsius`（默认 20°C）与原有高度、干燥条件，不能仅凭少雨把寒冷区域判成沙漠。批次、单格与邻区查询共用气候收尾和判定器。
 - 极圈河流源点由 Hydrology JSON 的 `river.polarSourceChanceMultiplier` 固定种子筛选（默认 0.05）；新版宏观图与旧区域水文都先筛源点再整条追踪，不逐格删河道。非极圈源点保持原规则，来自区外的完整河流仍可流入极圈。
 - 天然地表水体按最终写入的 `temperature.celsius < 0` 生成冰 Ground 并清空 Liquid，河流、湖泊、海洋保留原群系与水文身份，不再依赖雪原资格或降水门槛；0°C 不结冰，岩浆不参与此规则。雪地陆地按群系配置保留石地/泥土并写入积雪，不能逐格随机换成冰地面；冰湖形状必须来自真实水文，禁止恢复 `biome.snow.iceLakeChance` 这类散点伪水体。

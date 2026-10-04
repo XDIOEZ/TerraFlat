@@ -11,11 +11,14 @@ namespace FlatWorld.WorldModel
         private static SurfaceClimateSample FinishSurfaceClimate(ChunkGenerationRequest request,
             ChunkGenerationSettingsSnapshot settings, int worldX, int worldY, SurfaceClimateSample sample)
         {
-            sample.IsPolarBand = IsInsidePolarBand(request, settings, worldY);
+            bool polarEnabled = request.Topology.IsWrapped && settings.PolarBandEnabled;
+            double polarDistance = polarEnabled ? SamplePolarDistance(request, settings, worldX, worldY) : 0d;
+            sample.IsPolarBand = polarEnabled &&
+                                 polarDistance <= request.Topology.Span.Y * 0.5d * settings.PolarBandHalfWidth;
             double baseline = sample.TemperatureCelsius;
-            if (request.Topology.IsWrapped && settings.PolarBandEnabled)
+            if (polarEnabled)
             {
-                baseline = SampleLatitudeTemperature(request, settings, worldY) +
+                baseline = SampleLatitudeTemperature(request, settings, polarDistance) +
                     (sample.Temperature * 2d - 1d) * settings.RegionalTemperatureVariationCelsius;
             }
             double rainOffset = -Clamp01(sample.Precipitation) * settings.RainTemperatureCoolingCelsius;
@@ -32,9 +35,8 @@ namespace FlatWorld.WorldModel
         }
 
         private static double SampleLatitudeTemperature(ChunkGenerationRequest request,
-            ChunkGenerationSettingsSnapshot settings, int worldY)
+            ChunkGenerationSettingsSnapshot settings, double distance)
         {
-            double distance = SamplePolarDistance(request, settings, worldY);
             double halfSpan = request.Topology.Span.Y * 0.5d;
             double halfWidth = halfSpan * settings.PolarBandHalfWidth;
             if (distance <= halfWidth)
@@ -47,21 +49,59 @@ namespace FlatWorld.WorldModel
         }
 
         private static double SamplePolarDistance(ChunkGenerationRequest request,
-            ChunkGenerationSettingsSnapshot settings, int worldY)
+            ChunkGenerationSettingsSnapshot settings, int worldX, int worldY)
         {
-            double centerY = request.Topology.Min.Y + request.Topology.Span.Y * settings.PolarBandPosition;
+            double centerY = request.Topology.Min.Y + request.Topology.Span.Y * settings.PolarBandPosition +
+                             SamplePolarBoundaryOffset(request, settings, worldX);
             return Math.Abs(request.Topology.ToDomain().ShortestDelta(
                 new double2(0d, centerY), new double2(0d, worldY)).y);
         }
 
         private static bool IsInsidePolarBand(ChunkGenerationRequest request,
-            ChunkGenerationSettingsSnapshot settings, int worldY)
+            ChunkGenerationSettingsSnapshot settings, int worldX, int worldY)
         {
             if (!request.Topology.IsWrapped || !settings.PolarBandEnabled)
                 return false;
             double halfWidth = request.Topology.Span.Y * 0.5d * settings.PolarBandHalfWidth;
-            return SamplePolarDistance(request, settings, worldY) <= halfWidth;
+            return SamplePolarDistance(request, settings, worldX, worldY) <= halfWidth;
         }
+
+        #endregion
+
+        #region 极圈边界随机偏移
+
+        private static double SamplePolarBoundaryOffset(ChunkGenerationRequest request,
+            ChunkGenerationSettingsSnapshot settings, int worldX)
+        {
+            if (!request.Topology.IsWrapped || !settings.PolarBandEnabled || settings.PolarBoundaryOffsetTiles <= 0d)
+                return 0d;
+            double halfSpan = request.Topology.Span.Y * 0.5d;
+            double halfWidth = halfSpan * settings.PolarBandHalfWidth;
+            double amplitude = Math.Min(settings.PolarBoundaryOffsetTiles,
+                Math.Min(halfWidth, halfSpan - halfWidth) * 0.5d);
+            double coarse = SamplePolarBoundaryRandom(request, worldX, settings.PolarBoundarySpacingTiles, 0x832f91a7u);
+            double detail = SamplePolarBoundaryRandom(request, worldX, settings.PolarBoundarySpacingTiles * 0.25d, 0xc7b35e29u);
+            // 大小两组固定种子随机偏移平滑连接，整条冷带只平移而不扩大其 25% 宽度。
+            return amplitude * Lerp(coarse, detail, settings.PolarBoundaryDetailStrength);
+        }
+
+        private static double SamplePolarBoundaryRandom(ChunkGenerationRequest request,
+            int worldX, double spacing, uint salt)
+        {
+            int span = request.Topology.Span.X;
+            int repeat = Math.Max(2, (int)Math.Ceiling(span / Math.Max(8d, spacing)));
+            double position = (request.Topology.NormalizeX(worldX) - (double)request.Topology.Min.X) / span * repeat;
+            int left = (int)Math.Floor(position);
+            int right = (left + 1) % repeat;
+            double a = Hash01(request.WorldSeed, left, 0, salt) * 2d - 1d;
+            double b = Hash01(request.WorldSeed, right, 0, salt) * 2d - 1d;
+            // 首尾控制点共用同一随机值，跨区块和地图环绕处也连续。
+            return Lerp(a, b, Smooth(position - left));
+        }
+
+        #endregion
+
+        #region 极圈二次峰值温度分布
 
         // 对二次权重 1-((T-峰值)/半径)² 的累计概率解析反解，避免逐格循环抽样。
         private static double SamplePolarQuadraticTemperature(double minimum, double peak,
@@ -91,7 +131,7 @@ namespace FlatWorld.WorldModel
             ChunkGenerationSettingsSnapshot settings, Int2 source)
         {
             if (settings.PolarRiverSourceChanceMultiplier >= 1d ||
-                !IsInsidePolarBand(request, settings, source.Y))
+                !IsInsidePolarBand(request, settings, source.X, source.Y))
                 return true;
             return Hash01(request.WorldSeed, request.Topology.NormalizeX(source.X),
                 request.Topology.NormalizeY(source.Y), 0x724fa8d3u) <

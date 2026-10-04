@@ -362,6 +362,12 @@ namespace FlatWorld.WorldModel
             // 极圈总宽度默认占地图的 25%，半宽按地图高度的一半归一化。
             PolarBandHalfWidth = Clamp(Finite(
                 GetDouble(numbers, "climate.polarBand.halfWidth", 0.25d), 0.25d), 0.001d, 1d);
+            PolarBoundaryOffsetTiles = NonNegativeFinite(
+                GetDouble(numbers, "climate.polarBand.boundary.offsetTiles", 32d), 32d);
+            PolarBoundarySpacingTiles = Math.Max(8d, FinitePositive(
+                GetDouble(numbers, "climate.polarBand.boundary.spacingTiles", 128d), 128d));
+            PolarBoundaryDetailStrength = Clamp01(Finite(
+                GetDouble(numbers, "climate.polarBand.boundary.detailStrength", 0.25d), 0.25d));
             TemperatureAltitudeCoolingStart = Clamp01(GetDouble(
                 numbers, "climate.temperature.altitudeCoolingStart", SeaLevel));
             TemperatureAltitudeCoolingStrength = Clamp(
@@ -798,6 +804,10 @@ namespace FlatWorld.WorldModel
         public double PolarBandEdgeCelsius { get; }
         public double PolarBandPeakCelsius { get; }
         public double PolarBandHalfWidth { get; }
+        /// <summary>极圈边界随机偏移的最大格数；零表示关闭起伏。</summary>
+        public double PolarBoundaryOffsetTiles { get; }
+        public double PolarBoundarySpacingTiles { get; }
+        public double PolarBoundaryDetailStrength { get; }
         /// <summary>从这个高度开始按海拔降低实际温度。</summary>
         public double TemperatureAltitudeCoolingStart { get; }
         /// <summary>高度每上升 1 对归一化温度的降温强度。</summary>
