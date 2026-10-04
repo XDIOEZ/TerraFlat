@@ -1925,7 +1925,7 @@
       "id": "CopperAnvil",
       "parent": "BuildingBody_Base",
       "gameName": "铜砧-建筑",
-      "description": "铜砧可手动锻打各类金属锭；每次锻打推进 0.7 工作秒。",
+      "description": "铜砧必须先放置在地上，再交互锻打各类金属锭；每次锻打推进 0.7 工作秒。",
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,
@@ -1970,7 +1970,7 @@
             "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"CopperAnvil\",\"SummonerPrefabId\":\"CopperAnvil_Summoner\",\"SharedModuleIds\":[\"手动加工模块\"]}",
             "Type": 0
           },
-          "parameters": { "RequiresPlacementRequest": true }
+          "parameters": { "RequiresPlacementRequest": false }
         },
         "手动加工模块": {
           "prefab": "Module_ManualProcessor",
@@ -1986,7 +1986,7 @@
       "worldDropBehavior": "interactive",
       "parent": "BuildingSummoner_Base",
       "gameName": "铜砧",
-      "description": "铜砧可手动锻打各类金属锭；每次锻打推进 0.7 工作秒。",
+      "description": "使用时直接进入放置操作；必须放在地上才能交互锻打金属，不能手持加工。",
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,
@@ -2031,7 +2031,7 @@
             "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"CopperAnvil\",\"SummonerPrefabId\":\"CopperAnvil_Summoner\",\"SharedModuleIds\":[\"手动加工模块\"]}",
             "Type": 0
           },
-          "parameters": { "RequiresPlacementRequest": true }
+          "parameters": { "RequiresPlacementRequest": false }
         },
         "手动加工模块": {
           "prefab": "Module_ManualProcessor",

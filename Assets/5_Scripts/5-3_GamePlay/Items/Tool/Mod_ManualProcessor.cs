@@ -3,7 +3,7 @@ using FlatWorld.Localization;
 using FlatWorld.Networking;
 using UnityEngine;
 
-/// <summary>通用手动加工台模块；站点配方来自 MachineCatalog，WorkPerClick 由物品定义独立配置，便携物与建筑共用进度。</summary>
+/// <summary>落地手动加工台模块；站点配方来自 MachineCatalog，WorkPerClick 表示单次工作秒数。召唤器只携带加工状态用于放置和拆回，完成安装的建筑才能打开面板与加工。</summary>
 public sealed class Mod_ManualProcessor : Module, IInteractable
 {
     #region 配置与状态
@@ -31,7 +31,6 @@ public sealed class Mod_ManualProcessor : Module, IInteractable
             ? Data.GetData<RecipeProcessingState>()
             : new RecipeProcessingState();
         Processor = new RecipeProcessor(Station, state ?? new RecipeProcessingState());
-        item.OnAct += OnItemAct;
     }
 
     public override void Save()
@@ -42,9 +41,6 @@ public sealed class Mod_ManualProcessor : Module, IInteractable
 
     public override void Unload()
     {
-        if (item != null)
-            item.OnAct -= OnItemAct;
-
         panel?.Dispose();
         panel = null;
         Save();
@@ -52,18 +48,18 @@ public sealed class Mod_ManualProcessor : Module, IInteractable
         Processor = null;
     }
 
-    /// <summary>放置请求优先于打开加工面板。</summary>
-    private void OnItemAct()
+    /// <summary>重型加工台必须完成安装，手持和地面掉落的召唤器都不能加工。</summary>
+    private bool CanUsePlacedStation()
     {
-        if (item.itemMods.GetMod_ByID<Mod_Building>(ModText.Building)?.TryHandlePlacementAction() == true)
-            return;
-        if (item.Owner != null)
-            OnInteractStart(item.Owner);
+        if (item == null || item.InHand)
+            return false;
+        Mod_Building building = item.itemMods.GetMod_ByID<Mod_Building>(ModText.Building);
+        return building != null && building.IsInstalled();
     }
 
     public void OnInteractStart(Item actor)
     {
-        if (!GameNetwork.HasStateAuthority)
+        if (!GameNetwork.HasStateAuthority || !CanUsePlacedStation())
             return;
 
         panel ??= new MechanicalPanelSession("UI_HandDrill", item, Processor, PerformWork, GetStatus, GetActionLabel);
@@ -75,7 +71,7 @@ public sealed class Mod_ManualProcessor : Module, IInteractable
     /// <summary>手动锻打只推进目录已声明且输出可容纳的加工配方。</summary>
     private void PerformWork(Player actor)
     {
-        if (!GameNetwork.HasStateAuthority || Processor == null)
+        if (!GameNetwork.HasStateAuthority || Processor == null || !CanUsePlacedStation())
             return;
 
         Processor.AdvanceManually(WorkPerClick, actor);
