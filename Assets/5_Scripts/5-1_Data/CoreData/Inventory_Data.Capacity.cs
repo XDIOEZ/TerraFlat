@@ -8,8 +8,8 @@ public partial class Inventory_Data
 {
     #region 动态槽位容量
 
-    /// <summary>普通库存单格默认最多 100 件；字段名沿用旧 SlotMaxVolume 以避免破坏现有 Prefab。</summary>
-    public const float DefaultSlotVolume = 100f;
+    /// <summary>普通库存使用整型最大值作为无限堆叠上限，重量和体积限制独立生效。</summary>
+    public const float DefaultSlotVolume = int.MaxValue;
 
     /// <summary>一立方米对应的升数；物品库存内部体积单位为 L。</summary>
     public const float LitersPerCubicMeter = 1000f;
@@ -134,7 +134,7 @@ public partial class Inventory_Data
                 continue;
 
             if (enabled)
-                slot.SlotMaxVolume = float.MaxValue;
+                slot.SlotMaxVolume = DefaultSlotVolume;
             else if (slot.SlotMaxVolume == float.MaxValue)
                 slot.SlotMaxVolume = DefaultSlotVolume;
         }
@@ -237,7 +237,7 @@ public partial class Inventory_Data
         {
             itemSlots.Add(new ItemSlot(itemSlots.Count)
             {
-                SlotMaxVolume = HasUnlimitedStackSize ? float.MaxValue : DefaultSlotVolume
+                SlotMaxVolume = DefaultSlotVolume
             });
         }
     }

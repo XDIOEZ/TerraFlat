@@ -85,7 +85,7 @@ public static class MachineInventory
     {
         if (count < 1) throw new ArgumentOutOfRangeException(nameof(count));
         var slots = new List<ItemSlot>(count);
-        for (int i = 0; i < count; i++) slots.Add(new ItemSlot(i) { SlotMaxVolume = 100f });
+        for (int i = 0; i < count; i++) slots.Add(new ItemSlot(i) { SlotMaxVolume = Inventory_Data.DefaultSlotVolume });
         return new Inventory_Data(slots, name);
     }
 
@@ -99,7 +99,7 @@ public static class MachineInventory
             InventoryPanel_Prefab = template?.InventoryPanel_Prefab
         };
         while (inventory.Data.itemSlots.Count < count)
-            inventory.Data.itemSlots.Add(new ItemSlot(inventory.Data.itemSlots.Count) { SlotMaxVolume = 100f });
+            inventory.Data.itemSlots.Add(new ItemSlot(inventory.Data.itemSlots.Count) { SlotMaxVolume = Inventory_Data.DefaultSlotVolume });
         Rebase(inventory.Data);
         inventory.InitData();
         inventory.DefaultTarget_Inventory = null;

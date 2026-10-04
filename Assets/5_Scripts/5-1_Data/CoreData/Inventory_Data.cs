@@ -153,9 +153,7 @@ public partial class Inventory_Data
 
         itemSlots[index] = new ItemSlot(index)
         {
-            SlotMaxVolume = HasUnlimitedStackSize
-                ? float.MaxValue
-                : Inventory_Data.DefaultSlotVolume
+            SlotMaxVolume = Inventory_Data.DefaultSlotVolume
         };
         Debug.LogError($"[Inventory_Data] 检测到空槽位引用，已在索引 {index} 处自动补齐 ItemSlot 实例");
         return itemSlots[index];
@@ -565,7 +563,7 @@ public partial class Inventory_Data
             return addedAmount > 0f;
         }
 
-        // 可堆叠物品优先合并同类；玩家主背包运行时把 SlotMaxVolume 设为 float.MaxValue。
+        // 可堆叠物品优先合并同类，普通槽位统一使用整型最大值上限。
         // 优先填充已有的同类堆叠槽位，其次才占用新的空槽位
 
         // 第一轮：只尝试向已有的同类物品堆叠
@@ -749,20 +747,18 @@ public partial class Inventory_Data
         }
 
         // 堆叠逻辑处理
-        int availableSourceCount = Mathf.FloorToInt(dataFrom.Stack.Amount);
+        int availableSourceCount = GetWholeStackAmount(dataFrom.Stack.Amount);
         int transferCount = Mathf.Min(upToCount, availableSourceCount);
         if (transferCount <= 0)
             return false;
 
         float currentTargetAmount = dataTo?.Stack?.Amount ?? 0f;
-        int targetCapacity = targetInventory.HasUnlimitedStackSize
-            ? transferCount
-            : Mathf.FloorToInt(Mathf.Max(0f, slotTo.SlotMaxVolume - currentTargetAmount) + 0.0001f);
+        int targetCapacity = GetWholeStackAmount(Mathf.Max(0f, slotTo.SlotMaxVolume - currentTargetAmount) + 0.0001f);
         transferCount = Mathf.Min(transferCount, targetCapacity);
         if (!ReferenceEquals(this, targetInventory))
         {
             float capacityAmount = targetInventory.GetCapacityLimitedAmount(dataFrom, transferCount);
-            transferCount = Mathf.Min(transferCount, Mathf.FloorToInt(capacityAmount + 0.0001f));
+            transferCount = Mathf.Min(transferCount, GetWholeStackAmount(capacityAmount + 0.0001f));
         }
         if (transferCount <= 0)
             return false;
@@ -798,6 +794,12 @@ public partial class Inventory_Data
         slotTo.RefreshUI();
 
         return true;
+    }
+
+    /// <summary>大容量先钳制到整型范围，避免浮点上限转整数时溢出。</summary>
+    public static int GetWholeStackAmount(float amount)
+    {
+        return amount >= int.MaxValue ? int.MaxValue : Mathf.FloorToInt(Mathf.Max(0f, amount));
     }
 
     private static ItemData CloneForStackSplit(ItemData source)
@@ -1177,8 +1179,6 @@ public partial class Inventory_Data
         if (slot == null || itemData?.Stack == null)
             return 0f;
 
-        if (HasUnlimitedStackSize)
-            return float.MaxValue;
         return Mathf.Max(0f, slot.SlotMaxVolume - itemData.Stack.Amount);
     }
 

@@ -87,7 +87,7 @@ MonoBehaviour:
           - None
           Item_Material:
           - None
-        SlotMaxVolume: 0
+        SlotMaxVolume: 2147483647
         Index: 0
       Index: 0
       IsInjected: 0

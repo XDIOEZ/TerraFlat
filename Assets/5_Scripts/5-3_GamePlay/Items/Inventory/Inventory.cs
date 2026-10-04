@@ -613,9 +613,7 @@ public class Inventory
             // Inventory 可能复用存档中的 ItemSlot，先清理上一轮玩家/UI 的旧监听。
             slot.onSlotDataChanged.Clear();
             slot.Index = i;
-            slot.SlotMaxVolume = Data.HasUnlimitedStackSize
-                ? float.MaxValue
-                : Inventory_Data.DefaultSlotVolume;
+            slot.SlotMaxVolume = Inventory_Data.DefaultSlotVolume;
         }
 
         // 初始化事件系统
@@ -1366,7 +1364,7 @@ public class Inventory
             return OnMouseDragBegin(index);
 
         DefaultTarget_Inventory = handInventory;
-        int sourceAmount = Mathf.FloorToInt(localSlot.itemData.Stack.Amount);
+        int sourceAmount = Inventory_Data.GetWholeStackAmount(localSlot.itemData.Stack.Amount);
         int halfAmount = Mathf.Max(1, Mathf.CeilToInt(sourceAmount * 0.5f));
         if (!Data.TransferItemQuantityTo(localSlot, handInventory.Data, handSlot, halfAmount))
             return null;
@@ -1619,8 +1617,7 @@ public class Inventory
             return false;
         if (!itemData.Stack.Stackable)
             return itemData.Stack.Amount <= 1.0001f;
-        return Data != null &&
-               (Data.HasUnlimitedStackSize || itemData.Stack.Amount <= slot.SlotMaxVolume + 0.0001f);
+        return Data != null && itemData.Stack.Amount <= slot.SlotMaxVolume + 0.0001f;
     }
 
     /// <summary>拖拽改变快捷栏槽位后立即刷新玩家手持实例。</summary>
@@ -2177,9 +2174,7 @@ public class Inventory
         {
             Data.itemSlots.Add(new ItemSlot(Data.itemSlots.Count)
             {
-                SlotMaxVolume = Data.HasUnlimitedStackSize
-                    ? float.MaxValue
-                    : Inventory_Data.DefaultSlotVolume
+                SlotMaxVolume = Inventory_Data.DefaultSlotVolume
             });
         }
 

@@ -60,31 +60,31 @@ MonoBehaviour:
       Name: "UI_\u5FEB\u6377\u680F"
       itemSlots:
       - CanAcceptTags: []
-        SlotMaxVolume: 0
+        SlotMaxVolume: 2147483647
         Index: 0
       - CanAcceptTags: []
-        SlotMaxVolume: 0
+        SlotMaxVolume: 2147483647
         Index: 0
       - CanAcceptTags: []
-        SlotMaxVolume: 0
+        SlotMaxVolume: 2147483647
         Index: 0
       - CanAcceptTags: []
-        SlotMaxVolume: 0
+        SlotMaxVolume: 2147483647
         Index: 0
       - CanAcceptTags: []
-        SlotMaxVolume: 0
+        SlotMaxVolume: 2147483647
         Index: 0
       - CanAcceptTags: []
-        SlotMaxVolume: 0
+        SlotMaxVolume: 2147483647
         Index: 0
       - CanAcceptTags: []
-        SlotMaxVolume: 0
+        SlotMaxVolume: 2147483647
         Index: 0
       - CanAcceptTags: []
-        SlotMaxVolume: 0
+        SlotMaxVolume: 2147483647
         Index: 0
       - CanAcceptTags: []
-        SlotMaxVolume: 0
+        SlotMaxVolume: 2147483647
         Index: 0
       Index: 0
       IsInjected: 0
@@ -108,7 +108,7 @@ MonoBehaviour:
   SelectBox: {fileID: 0}
   CurrentSelectItemSlot:
     CanAcceptTags: []
-    SlotMaxVolume: 0
+    SlotMaxVolume: 2147483647
     Index: 0
   CurentSelectItem: {fileID: 0}
   currentObject: {fileID: 0}

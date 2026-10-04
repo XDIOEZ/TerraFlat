@@ -375,7 +375,7 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
         for (int i = 0; i < inventory.Data.itemSlots.Count; i++)
         {
             inventory.Data.itemSlots[i].Index = i;
-            inventory.Data.itemSlots[i].SlotMaxVolume = 100;
+            inventory.Data.itemSlots[i].SlotMaxVolume = Inventory_Data.DefaultSlotVolume;
         }
 
         inventory.Data.Event_RefreshUI = new();
