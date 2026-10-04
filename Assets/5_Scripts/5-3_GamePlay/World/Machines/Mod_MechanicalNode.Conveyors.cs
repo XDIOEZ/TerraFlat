@@ -35,7 +35,7 @@ public sealed partial class Mod_MechanicalNode
                 (Vector3)ConveyorPath.Rotate(ConveyorPresentation.SidePortPosition(route, visual), direction),
                 body.sharedMaterial);
             if (overlay == null) continue;
-            overlay.gameObject.SetActive(route.HasDrivePort(direction));
+            overlay.gameObject.SetActive(ConveyorPresentation.HasVisibleSidePort(route, direction));
             overlay.transform.localRotation = Quaternion.Euler(0f, 0f, direction * 90f);
             overlay.transform.localScale = Vector3.one;
             overlay.sortingOrder = body.sortingOrder - 1;

@@ -39,7 +39,7 @@ description: "Use when: 定位或修改 FlatWorld 的运行时特效、粒子、
 - Unity 2D 使用 URP/Light2D；修改 Shader 前核对材质实际 Shader 与 Pass。
 - 输送带圆弧 UV 必须使用 FullRect Sprite 网格；尺寸与格心偏移按 `sprite.rect/pivot/pixelsPerUnit` 计算，预览和行合批共用 `ConveyorPresentation`，不能用透明裁边后的网格范围代替完整画布。横向采样内缩要落在有效 texel 中心，避免带端采到透明留白。
 - 输送带主体与侧轴统一走 `MechanicalConnectorDepthMesh` 的 `MechanicalShaft` 层，始终位于玩家下方；动态带面上下界按完整画布向外对齐 texel 行，覆盖完整带条并保留静止边框。
-- 输送带侧铁环的图片内容偏在 Sprite 外端，安装与预览统一用 `ConveyorPresentation.SidePortPosition` 定位；直带与拐角分别读取 `SidePortOffset/CurvedSidePortOffset`，内侧伸入主体下方，只露出外侧铁环，不能按整张透明画布居中后再外推。
+- 输送带仅直带显示侧铁环，安装与预览共用 `ConveyorPresentation.HasVisibleSidePort`，拐角隐藏图片但不改权威供能端口；直带用 `SidePortPosition/SidePortOffset` 定位，内侧伸入主体下方，只露出外侧铁环，不能按整张透明画布居中后再外推。
 - 正式 BRG 地形占用 `Default/0` 的 Queue 2987~2994，其中 Ground/Water 为 2988/2989、Blocking 为 2992，草为 2993；旧 Item 接触阴影 BRG 使用 Default/2995，太阳投影与 ECS 接触阴影使用更高的 `Shadow/0`。耕地渐显、地格裂纹、脚印、水花也使用 `Shadow`；玩家等动态世界实体由 `WorldSorting` JSON 放在更高的 `Player`，同层按 Y 轴互相遮挡。BRG 无 SpriteRenderer 的 Sorting Layer，必须靠 Default 材质队列安排与地形的关系，不能仅靠旧 Tilemap Order 推断跨系统可见次序。Shader 位移后的 CPU 包围盒必须同步扩大，屏幕外投影源仍可能把阴影投进视口；逐 Renderer MPB 必须显式恢复 `_MainTex` 及 Android 分离 Alpha。
 - `WorldSorting` 的 `vehicle` 类别用于木筏及未来交通工具；它与其它动态实体共用 `Player` Sorting Layer，但允许通过 JSON 使用更低的 Order，使低矮载具不会盖住玩家。`ResolveCategory` 必须先判定 `Mod_Carrier` 再判定 `Mod_Building`，否则载具会被错误归入建筑类别。
 - 太阳长投影对低枢轴高 Sprite 的落点需收入可见根部，透明底边经长距离投影会被放大成树干与阴影之间的断缝；特殊对象仍用 `SunShadowCaster.FootOffset` 校正。共享投影 Shader 柔化采样时，普通 Sprite 通过 MPB 传贴图 texel 与当前 Sprite UV 边界，AIECS 则由图集材质和逐顶点 UV 边界提供同一契约，避免采到邻近帧；柔化步长必须按世界 PPU 归一，高分辨率 Sprite 不能直接按源纹理 texel 计算，否则同世界尺寸下会显著更锐。

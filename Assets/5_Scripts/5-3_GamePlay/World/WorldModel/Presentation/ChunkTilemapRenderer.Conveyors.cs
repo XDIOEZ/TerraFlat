@@ -10,10 +10,10 @@ public sealed partial class ChunkTilemapRenderer
         MachineTransportVisualDefinition visual = node.Definition.Transport.Visual;
         Sprite port = ConveyorPresentation.AxisPort();
         int part = 0;
-        // 两个未用于输送的格边是轴口，带端只连接下一段带。
+        // 直带显示供能侧轴，拐角隐藏侧轴图片。
         for (int direction = 0; direction < 4; direction++)
         {
-            if (!route.HasDrivePort(direction)) continue;
+            if (!ConveyorPresentation.HasVisibleSidePort(route, direction)) continue;
             Part(node, x, y, part++, port, material, origin, Quaternion.Euler(0f, 0f, direction * 90f),
                 ConveyorPresentation.SidePortPosition(route, visual), Vector3.one, 0, 0f, drawBelowMechanical: true);
         }

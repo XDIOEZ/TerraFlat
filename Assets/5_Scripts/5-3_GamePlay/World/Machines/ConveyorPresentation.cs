@@ -32,7 +32,10 @@ public static class ConveyorPresentation
             throw new InvalidOperationException("输送带侧轴接口贴图缺失。");
         return port;
     }
-    // 铁环图片自身偏向外端，拐角接口额外内收，让内侧压在带框下面。
+    // 拐角只隐藏侧轴图片，供能端口仍由权威路径管理。
+    public static bool HasVisibleSidePort(ConveyorPath route, int direction)
+        => !route.Curved && route.HasDrivePort(direction);
+    // 铁环图片自身偏向外端，让内侧压在带框下面。
     public static Vector3 SidePortPosition(ConveyorPath route, MachineTransportVisualDefinition visual)
         => Vector3.right * (route.Curved ? visual.CurvedSidePortOffset : visual.SidePortOffset);
     public static Vector3 Scale(Sprite sprite, ConveyorPath route, MachineTransportVisualDefinition visual)
