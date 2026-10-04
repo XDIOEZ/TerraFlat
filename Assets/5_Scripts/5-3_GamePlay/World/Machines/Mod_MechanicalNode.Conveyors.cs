@@ -19,19 +19,20 @@ public sealed partial class Mod_MechanicalNode
         Quaternion rotation = Quaternion.Euler(0f, 0f, route.Rotation * 90f);
         body.transform.localRotation = rotation;
         body.transform.localScale = ConveyorPresentation.Scale(body.sprite, route, visual);
+        body.transform.localPosition = rotation * ConveyorPresentation.Offset(body.sprite, body.transform.localScale);
         body.flipX = false; body.flipY = false;
         // 首次更新预览时再创建属性块，避免组件构造期间调用 Unity 原生接口。
         conveyorPreviewBlock ??= new MaterialPropertyBlock();
         body.GetPropertyBlock(conveyorPreviewBlock);
         conveyorPreviewBlock.SetVector(ConveyorAnimationId, new Vector4(route.Curved ? 7 : 6, 0f, 0f, visual.CanvasHeight));
-        conveyorPreviewBlock.SetVector(ConveyorSurfaceId, visual.Surface);
+        conveyorPreviewBlock.SetVector(ConveyorSurfaceId, ConveyorPresentation.Surface(body.sprite, visual));
         conveyorPreviewBlock.SetVector(ConveyorRegionId, ConveyorPresentation.Region(body.sprite));
         body.SetPropertyBlock(conveyorPreviewBlock);
         Sprite port = ConveyorPresentation.AxisPort();
         for (int direction = 0; direction < 4; direction++)
         {
             SpriteRenderer overlay = shadow.EnsureOverlay(ConveyorPortNames[direction], port,
-                body.transform.localPosition + (Vector3)ConveyorPath.Rotate(Vector2.right * visual.SidePortOffset, direction),
+                (Vector3)ConveyorPath.Rotate(Vector2.right * visual.SidePortOffset, direction),
                 body.sharedMaterial);
             if (overlay == null) continue;
             overlay.gameObject.SetActive(route.HasDrivePort(direction));

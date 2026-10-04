@@ -19,8 +19,8 @@ public sealed partial class ChunkTilemapRenderer
         }
         Vector3 scale = ConveyorPresentation.Scale(def.Sprite, route, visual);
         Part(node, x, y, part, def.Sprite, material, origin, Quaternion.Euler(0f, 0f, route.Rotation * 90f),
-            -Vector3.Scale(def.Sprite.bounds.center, scale), scale, route.Curved ? 7 : 6, 1f,
-            track: 3, stroke: visual.CanvasHeight, conveyorSurface: visual.Surface);
+            ConveyorPresentation.Offset(def.Sprite, scale), scale, route.Curved ? 7 : 6, 1f,
+            track: 3, stroke: visual.CanvasHeight, conveyorSurface: ConveyorPresentation.Surface(def.Sprite, visual));
     }
     #endregion
 }

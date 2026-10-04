@@ -31,7 +31,17 @@ public static class ConveyorPresentation
         return port;
     }
     public static Vector3 Scale(Sprite sprite, ConveyorPath route, MachineTransportVisualDefinition visual)
-        => new(1f / sprite.bounds.size.x, (route.Curved ? 1f : visual.CanvasHeight) / sprite.bounds.size.y, 1f);
+        => new(sprite.pixelsPerUnit / sprite.rect.width,
+            (route.Curved ? 1f : visual.CanvasHeight) * sprite.pixelsPerUnit / sprite.rect.height, 1f);
+    // 完整画布对齐格心，不让透明裁边和非中心 Pivot 改变圆弧端点。
+    public static Vector3 Offset(Sprite sprite, Vector3 scale)
+        => -Vector3.Scale((Vector3)(sprite.rect.size * .5f - sprite.pivot) / sprite.pixelsPerUnit, scale);
+    public static Vector4 Surface(Sprite sprite, MachineTransportVisualDefinition visual)
+    {
+        Vector4 surface = visual.Surface;
+        surface.z = Mathf.Min(.499f, (Mathf.Ceil(visual.TextureInsetX * sprite.rect.width) + .5f) / sprite.rect.width);
+        return surface;
+    }
     public static Vector4 Region(Sprite sprite)
     {
         Rect rect = sprite.textureRect;
