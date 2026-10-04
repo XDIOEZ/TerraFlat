@@ -35,7 +35,7 @@ public class EnvironmentInfoDisplay : MonoBehaviour
 
     [Header("显示设置")]
     public KeyCode toggleKey = KeyCode.F3;
-    public Vector2 panelSize = new(560f, 240f);
+    public Vector2 panelSize = new(720f, 640f);
     public Vector2 offset = new(20f, 20f);
 
     [Header("悬停指示器设置")]
@@ -54,6 +54,9 @@ public class EnvironmentInfoDisplay : MonoBehaviour
     private readonly List<string> environmentLayerIds = new(24);
     private readonly List<string> rawDataLines = new(48);
     private readonly List<string> displayLines = new(96);
+    private readonly List<float> displayLineHeights = new(96);
+    private readonly List<int> pageStartLines = new(8);
+    private readonly GUIContent measurementContent = new();
     private Camera mainCamera;
     private RuntimeTerrainTileSample hoveredSample;
     private Vector2 mouseScreenPos;
@@ -62,7 +65,8 @@ public class EnvironmentInfoDisplay : MonoBehaviour
     private string hoveredBiomeName = "未知";
     private bool isVisible;
     private bool isValidPosition;
-    private int scrollLineOffset;
+    private int pageIndex;
+    private int pendingPageStep;
 
     private GUIStyle boxStyle;
     private GUIStyle labelStyle;
@@ -102,21 +106,18 @@ public class EnvironmentInfoDisplay : MonoBehaviour
         if (!isVisible)
             return;
 
-        int maxScroll = TryGetValidHoveredSample(out _)
-            ? Mathf.Max(0, displayLines.Count - GetVisibleLineCount())
-            : 0;
-
         Keyboard keyboard = Keyboard.current;
-        if (keyboard?.upArrowKey.wasPressedThisFrame == true)
+        float wheel = Mouse.current != null ? Mouse.current.scroll.ReadValue().y : 0f;
+        if (keyboard?.upArrowKey.wasPressedThisFrame == true ||
+            keyboard?.pageUpKey.wasPressedThisFrame == true || wheel > 0f)
         {
-            scrollLineOffset = Mathf.Max(0, scrollLineOffset - 1);
+            pendingPageStep = -1;
         }
-        else if (keyboard?.downArrowKey.wasPressedThisFrame == true)
+        else if (keyboard?.downArrowKey.wasPressedThisFrame == true ||
+                 keyboard?.pageDownKey.wasPressedThisFrame == true || wheel < 0f)
         {
-            scrollLineOffset = Mathf.Min(maxScroll, scrollLineOffset + 1);
+            pendingPageStep = 1;
         }
-
-        scrollLineOffset = Mathf.Clamp(scrollLineOffset, 0, maxScroll);
     }
 
     private void OnGUI()
@@ -229,46 +230,63 @@ public class EnvironmentInfoDisplay : MonoBehaviour
     {
         bool hasSample = TryGetValidHoveredSample(out RuntimeTerrainTileSample sample);
 
-        float panelWidth = Mathf.Min(Mathf.Max(320f, panelSize.x), Mathf.Max(1f, Screen.width));
+        const float screenMargin = 4f;
+        const float footerGap = 10f;
+        float panelWidth = Mathf.Min(Mathf.Max(320f, panelSize.x), Mathf.Max(1f, Screen.width - screenMargin * 2f));
         float lineHeight = Mathf.Max(fontSize + 6f, 20f);
         float panelHeight = Mathf.Min(
-            Mathf.Max(panelSize.y, lineHeight * 5f + 20f),
-            Mathf.Max(1f, Screen.height - 4f));
+            Mathf.Max(panelSize.y, lineHeight * 8f + 40f),
+            Mathf.Max(1f, Screen.height - screenMargin * 2f));
 
         float desiredX = mouseScreenPos.x + offset.x;
         float desiredY = Screen.height - mouseScreenPos.y + offset.y;
-        float guiX = Mathf.Clamp(desiredX, 0f, Mathf.Max(0f, Screen.width - panelWidth));
-        float guiY = Mathf.Clamp(desiredY, 0f, Mathf.Max(0f, Screen.height - panelHeight));
-
-        GUILayout.BeginArea(new Rect(guiX, guiY, panelWidth, panelHeight), boxStyle);
+        float guiX = Mathf.Clamp(desiredX, screenMargin, Mathf.Max(screenMargin, Screen.width - panelWidth - screenMargin));
+        float guiY = Mathf.Clamp(desiredY, screenMargin, Mathf.Max(screenMargin, Screen.height - panelHeight - screenMargin));
+        var panelRect = new Rect(guiX, guiY, panelWidth, panelHeight);
+        GUI.Box(panelRect, GUIContent.none, boxStyle);
+        DrawOutline(panelRect, Color.white, 2f);
 
         if (!hasSample)
         {
-            GUILayout.Label("<b>环境监测</b>", labelStyle);
-            GUILayout.Label($"鼠标世界坐标: ({mouseWorldPos.x:F2}, {mouseWorldPos.y:F2})", labelStyle);
-            GUILayout.Label("当前指向位置没有已加载的 WorldModel 地块数据。", labelStyle);
-            GUILayout.Label("移动鼠标到已加载地形上即可查看。", labelStyle);
-            GUILayout.Label($"按 {toggleKey} 关闭", labelStyle);
-            GUILayout.EndArea();
-            return;
+            displayLines.Clear();
+            displayLines.Add("<b>环境监测</b>");
+            displayLines.Add($"鼠标世界坐标: ({mouseWorldPos.x:F2}, {mouseWorldPos.y:F2})");
+            displayLines.Add("当前指向位置没有已加载的 WorldModel 地块数据。");
+            displayLines.Add("移动鼠标到已加载地形上即可查看。");
+        }
+        else
+        {
+            RefreshDisplayLines(sample);
         }
 
-        RefreshDisplayLines(sample);
-        int visibleLineCount = GetVisibleLineCount(panelHeight);
-        int maxScroll = Mathf.Max(0, displayLines.Count - visibleLineCount);
-        scrollLineOffset = Mathf.Clamp(scrollLineOffset, 0, maxScroll);
-        int endLine = Mathf.Min(displayLines.Count, scrollLineOffset + visibleLineCount);
-        for (int i = scrollLineOffset; i < endLine; i++)
-            GUILayout.Label(displayLines[i], labelStyle);
+        float contentWidth = Mathf.Max(1f, panelWidth - boxStyle.padding.horizontal);
+        string instructions = $"按 {toggleKey} 关闭  |  ↑↓ / PgUp/PgDn / 滚轮 翻页";
+        float footerHeight = MeasureLineHeight($"{instructions}\n第 {displayLines.Count}/{displayLines.Count} 页", contentWidth);
+        float contentHeight = Mathf.Max(lineHeight,
+            panelHeight - boxStyle.padding.vertical - footerHeight - footerGap);
+        RefreshPages(contentWidth, contentHeight);
+        pageIndex = Mathf.Clamp(pageIndex + pendingPageStep, 0, pageStartLines.Count - 1);
+        pendingPageStep = 0;
 
-        GUILayout.FlexibleSpace();
-        GUILayout.Label(
-            $"按 {toggleKey} 关闭  |  ↑↓ 滚动  {scrollLineOffset + 1}-{endLine}/{displayLines.Count}",
+        int startLine = pageStartLines[pageIndex];
+        int endLine = pageIndex + 1 < pageStartLines.Count
+            ? pageStartLines[pageIndex + 1]
+            : displayLines.Count;
+        float textX = guiX + boxStyle.padding.left;
+        float textY = guiY + boxStyle.padding.top;
+        for (int i = startLine; i < endLine; i++)
+        {
+            GUI.Label(new Rect(textX, textY, contentWidth, displayLineHeights[i]), displayLines[i], labelStyle);
+            textY += displayLineHeights[i];
+        }
+
+        GUI.Label(
+            new Rect(textX, guiY + panelHeight - boxStyle.padding.bottom - footerHeight, contentWidth, footerHeight),
+            $"{instructions}\n第 {pageIndex + 1}/{pageStartLines.Count} 页",
             labelStyle);
-        GUILayout.EndArea();
     }
 
-    /// <summary>把总览和原始环境层整理成连续文本，交给上下箭头逐行滚动。</summary>
+    /// <summary>把总览和原始环境层整理成连续文本，再按实际文字高度分页。</summary>
     private void RefreshDisplayLines(RuntimeTerrainTileSample sample)
     {
         displayLines.Clear();
@@ -410,18 +428,31 @@ public class EnvironmentInfoDisplay : MonoBehaviour
             $"模板: tag={template.TileTag}  penalty={template.Penalty}  walkable={template.IsWalkable}  demolition={template.DemolitionTime:F2}");
     }
 
-    /// <summary>按面板高度计算一次能看到多少行，滚动只移动一行，不做分页。</summary>
-    private int GetVisibleLineCount(float panelHeight = -1f)
+    /// <summary>完整字段放不下时移到下一页，避免换行文字与底部提示重叠。</summary>
+    private void RefreshPages(float contentWidth, float contentHeight)
     {
-        float lineHeight = Mathf.Max(fontSize + 6f, 20f);
-        float height = panelHeight > 0f
-            ? panelHeight
-            : Mathf.Min(
-                Mathf.Max(panelSize.y, lineHeight * 5f + 20f),
-                Mathf.Max(1f, Screen.height - 4f));
-        float padding = boxStyle != null ? boxStyle.padding.vertical : 20f;
-        float availableHeight = Mathf.Max(lineHeight, height - padding - lineHeight - 4f);
-        return Mathf.Max(1, Mathf.FloorToInt(availableHeight / lineHeight));
+        displayLineHeights.Clear();
+        pageStartLines.Clear();
+        pageStartLines.Add(0);
+        float usedHeight = 0f;
+        for (int i = 0; i < displayLines.Count; i++)
+        {
+            float height = MeasureLineHeight(displayLines[i], contentWidth);
+            if (usedHeight > 0f && usedHeight + height > contentHeight)
+            {
+                pageStartLines.Add(i);
+                usedHeight = 0f;
+            }
+
+            displayLineHeights.Add(height);
+            usedHeight += height;
+        }
+    }
+
+    private float MeasureLineHeight(string text, float width)
+    {
+        measurementContent.text = text;
+        return Mathf.Max(fontSize + 6f, Mathf.Ceil(labelStyle.CalcHeight(measurementContent, width)) + 2f);
     }
 
     #endregion
@@ -452,14 +483,19 @@ public class EnvironmentInfoDisplay : MonoBehaviour
         if (width <= 0f || height <= 0f)
             return;
 
+        DrawOutline(new Rect(x, y, width, height), hoverIndicatorColor, hoverIndicatorThickness);
+    }
+
+    private static void DrawOutline(Rect rect, Color color, float thickness)
+    {
         Texture2D tex = GetOverlayPixelTexture();
         Color oldColor = GUI.color;
-        GUI.color = hoverIndicatorColor;
-        float line = Mathf.Max(1f, hoverIndicatorThickness);
-        GUI.DrawTexture(new Rect(x, y, width, line), tex);
-        GUI.DrawTexture(new Rect(x, y + height - line, width, line), tex);
-        GUI.DrawTexture(new Rect(x, y, line, height), tex);
-        GUI.DrawTexture(new Rect(x + width - line, y, line, height), tex);
+        GUI.color = color;
+        float line = Mathf.Max(1f, thickness);
+        GUI.DrawTexture(new Rect(rect.x, rect.y, rect.width, line), tex);
+        GUI.DrawTexture(new Rect(rect.x, rect.yMax - line, rect.width, line), tex);
+        GUI.DrawTexture(new Rect(rect.x, rect.y, line, rect.height), tex);
+        GUI.DrawTexture(new Rect(rect.xMax - line, rect.y, line, rect.height), tex);
         GUI.color = oldColor;
     }
 
@@ -493,7 +529,7 @@ public class EnvironmentInfoDisplay : MonoBehaviour
         environmentLayerIds.Sort(StringComparer.Ordinal);
     }
 
-    /// <summary>把可变长度的原始地块信息整理成行，再统一交给逐行滚动显示。</summary>
+    /// <summary>把可变长度的原始地块信息整理成行，再统一交给整页显示。</summary>
     private void RefreshRawDataLines(RuntimeTerrainTileSample sample)
     {
         ChunkTerrainData terrain = sample.Terrain;
@@ -575,13 +611,16 @@ public class EnvironmentInfoDisplay : MonoBehaviour
 
         boxStyle = new GUIStyle(GUI.skin.box);
         boxStyle.normal.background = backgroundTexture;
-        boxStyle.padding = new RectOffset(12, 12, 10, 10);
+        boxStyle.padding = new RectOffset(14, 14, 12, 12);
 
         labelStyle = new GUIStyle(GUI.skin.label);
         labelStyle.normal.textColor = textColor;
         labelStyle.fontSize = fontSize;
         labelStyle.richText = true;
-        labelStyle.wordWrap = false;
+        labelStyle.wordWrap = true;
+        labelStyle.alignment = TextAnchor.UpperLeft;
+        labelStyle.padding = new RectOffset();
+        labelStyle.margin = new RectOffset();
     }
 
     #endregion
@@ -591,19 +630,22 @@ public class EnvironmentInfoDisplay : MonoBehaviour
     public void Show()
     {
         isVisible = true;
-        scrollLineOffset = 0;
+        pageIndex = 0;
+        pendingPageStep = 0;
     }
 
     public void Hide()
     {
         isVisible = false;
+        pendingPageStep = 0;
     }
 
     public void Toggle()
     {
         isVisible = !isVisible;
+        pendingPageStep = 0;
         if (isVisible)
-            scrollLineOffset = 0;
+            pageIndex = 0;
     }
 
     public void SetToggleKey(KeyCode key)
