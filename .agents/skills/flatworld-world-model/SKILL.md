@@ -41,6 +41,7 @@ description: "Use when: 定位或修改 FlatWorld 的纯 WorldModel、Chunk 运�
 - `ChunkMgr` 随 `WorldManager` 常驻 DDOL；`ChunkView` 及其自然物表现必须挂到当前世界场景的独立根节，禁止以 `ChunkMgr.transform` 作为活动或池化 View 的父级。
 - `ChunkView` Prefab 必须直接装配 `NaturalItems/ChunkNaturalItemRenderer` 与 `LightOccluders/ChunkLightOccluderRenderer`，并由根组件序列化引用；流送时不在 `Awake` 动态添加表现组件，缺失时明确报错。
 - 循环世界中 `ChunkRuntime.Address/ChunkOrigin` 永远是规范逻辑坐标；`ChunkView` 根 Transform 只由 `WorldLocalPresentation` 选择离本地玩家最近的显示/碰撞镜像。窗口变化或本地玩家跨周时可事件式重投影 View，禁止把投影后的 Transform 写回 WorldModel，也禁止为同一 Chunk 复制整套物理对象。
+- 玩家坐标 HUD 等描述星球位置的读数，先经 `WorldLocalPresentation.ToLogical` 还原规范逻辑坐标，再做显示取整与缓存比较；不能直接显示 Unity Transform 的表现镜像位置。
 - 相机驱动的本地区块窗口必须覆盖真实视口，并按相机半宽/半高分别计算 X/Y 距离；禁止为超宽屏取最大边后构造巨大正方形窗口。普通玩法可以受自动视距上限保护，但管理员无限视野不能继续被普通上限截断；管理员手动增加加载距离只作为最低加载圈数，不能关闭相机自动扩圈。
 - 区块窗口变化时必须取消已经离开当前数据窗口、但仍处于 pending/后台队列中的旧生成请求；不能只逐出已完成 Chunk。否则 FIFO 生成队列会持续计算过期区块，导致新进入视野的区块长期饥饿并显示为黑块。
 - 已经排队但仍属于当前窗口的生成请求也必须随玩家当前位置重新排序；只在首次入队时按距离排序会让后来进入镜头的新区块卡在历史队列尾部。

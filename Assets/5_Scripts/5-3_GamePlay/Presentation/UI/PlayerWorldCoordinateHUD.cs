@@ -249,7 +249,8 @@ public sealed class PlayerWorldCoordinateHUD : MonoBehaviour
     /// <summary>仅在显示值改变时写入 TMP，避免静止状态产生无效刷新和字符串分配。</summary>
     private void RefreshCoordinateText()
     {
-        Vector3 position = player.transform.position;
+        // 先还原星球逻辑坐标，避免 HUD 显示循环世界的 Unity 表现镜像位置。
+        Vector3 position = WorldLocalPresentation.ToLogical(player.transform.position);
         int coordinateX = Mathf.RoundToInt(position.x * 10f);
         int coordinateY = Mathf.RoundToInt(position.y * 10f);
         PlayerWorldCoordinateDisplayMode displayMode =
