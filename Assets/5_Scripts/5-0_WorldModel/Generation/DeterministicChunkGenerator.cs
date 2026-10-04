@@ -189,7 +189,7 @@ namespace FlatWorld.WorldModel
 
         public readonly struct BiomeSearchResult
         {
-            public BiomeSearchResult(bool found, Int2 cell, int sampledCount)
+            public BiomeSearchResult(bool found, Int2 cell, long sampledCount)
             {
                 Found = found;
                 Cell = cell;
@@ -198,84 +198,7 @@ namespace FlatWorld.WorldModel
 
             public bool Found { get; }
             public Int2 Cell { get; }
-            public int SampledCount { get; }
-        }
-
-        /// <summary>群系调试查询复用正式单格规则，分级扩大采样范围且不创建生态或注册区块。</summary>
-        public BiomeSearchResult FindSurfaceBiome(string dimensionId, int worldSeed,
-            ChunkGenerationProfileSnapshot profile, ChunkGenerationTopologySnapshot topology,
-            Int2 anchor, SurfaceBiomeKind biome, CancellationToken cancellationToken, long worldEpoch)
-        {
-            if (profile == null)
-                throw new ArgumentNullException(nameof(profile));
-            if (worldEpoch <= 0)
-                throw new ArgumentOutOfRangeException(nameof(worldEpoch));
-            if (!Enum.IsDefined(typeof(SurfaceBiomeKind), biome))
-                throw new ArgumentOutOfRangeException(nameof(biome));
-            dimensionId = string.IsNullOrWhiteSpace(dimensionId) ? "surface" : dimensionId;
-            worldSeed = worldSeed == 0 ? 1 : worldSeed;
-            if (profile.Settings.Mode != ChunkGenerationMode.Surface ||
-                dimensionId.IndexOf("cave", StringComparison.OrdinalIgnoreCase) >= 0)
-                return new BiomeSearchResult(false, anchor, 0);
-
-            int sampledCount = 0;
-            var visited = new HashSet<Int2>();
-            var visitedRiverChunks = new HashSet<Int2>();
-            foreach (int radius in new[] { 256, 1024, 4096, 8192 })
-            {
-                foreach (Int2 candidate in BuildSurfaceSearchCandidates(anchor, topology, radius, 2048))
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    if (!visited.Add(candidate))
-                        continue;
-                    sampledCount++;
-                    Int2 origin = ResolveSearchChunkOrigin(candidate, profile, topology);
-                    var request = new ChunkGenerationRequest(worldEpoch,
-                        new WorldAddress(dimensionId, origin), worldSeed, 1, profile, topology);
-                    SurfaceBiomeKind baseBiome = SampleBaseSurfaceBiome(
-                        request, profile.Settings, candidate.X, candidate.Y, out _, out _);
-                    if (biome == SurfaceBiomeKind.River)
-                    {
-                        if (baseBiome == SurfaceBiomeKind.Ocean || !visitedRiverChunks.Add(origin))
-                            continue;
-                    }
-                    else if (baseBiome != biome &&
-                             !(biome is SurfaceBiomeKind.Forest or SurfaceBiomeKind.Grassland &&
-                               baseBiome is SurfaceBiomeKind.Forest or SurfaceBiomeKind.Grassland))
-                        continue;
-
-                    GeneratedHydrologyMap riverMap = BuildSurfaceHydrologyMap(
-                        request, profile.Settings, cancellationToken);
-                    if (biome == SurfaceBiomeKind.River)
-                    {
-                        // 河道很窄，检查候选区块里的真实河格，不能只靠稀疏采样碰运气。
-                        for (int y = 0; y < profile.Height; y++)
-                        for (int x = 0; x < profile.Width; x++)
-                        {
-                            cancellationToken.ThrowIfCancellationRequested();
-                            var riverCell = new Int2(topology.NormalizeX(origin.X + x),
-                                topology.NormalizeY(origin.Y + y));
-                            if (riverMap == null || !riverMap.TryGet(riverCell.X, riverCell.Y,
-                                    out GeneratedHydrologyCell hydrology) ||
-                                hydrology.Kind != GeneratedHydrologyKind.River)
-                                continue;
-                            if (MatchesBiome(riverCell))
-                                return new BiomeSearchResult(true, riverCell, sampledCount);
-                        }
-                    }
-                    else if (MatchesBiome(candidate))
-                        return new BiomeSearchResult(true, candidate, sampledCount);
-
-                    bool MatchesBiome(Int2 cell)
-                    {
-                        SurfaceCellOutput output = SampleSurfaceCellOutput(request,
-                            profile.Settings, riverMap, 0, 0, cell.X, cell.Y, liquidTypes);
-                        return output.Cell.BiomeId == (int)biome && output.Cell.IsWalkable &&
-                               liquidTypes.GetId(output.LiquidTypeIndex) != LiquidTypeCatalog.LavaId;
-                    }
-                }
-            }
-            return new BiomeSearchResult(false, anchor, sampledCount);
+            public long SampledCount { get; }
         }
 
         /// <summary>
@@ -1328,6 +1251,19 @@ namespace FlatWorld.WorldModel
             ChunkGenerationSettingsSnapshot settings,
             CancellationToken cancellationToken, ChunkGenerationTiming timing)
         {
+            MacroHydrologyRegion macro = GetHeightDrivenMacroRegion(request, settings,
+                cancellationToken, timing);
+            if (!isBiomeSearchGenerator)
+                QueueNeighbourHydrologyPrewarm(request, settings, ResolveHeightDrivenRegion(request, settings));
+            using (timing?.MeasureStage("river.local_refine") ?? default)
+                return BuildMacroRiverChunk(request, settings, macro, cancellationToken);
+        }
+
+        /// <summary>河流定位和正式区块生成共享宏观河网入口。</summary>
+        private MacroHydrologyRegion GetHeightDrivenMacroRegion(ChunkGenerationRequest request,
+            ChunkGenerationSettingsSnapshot settings, CancellationToken cancellationToken,
+            ChunkGenerationTiming timing = null)
+        {
             cancellationToken.ThrowIfCancellationRequested();
             if (request.WorldEpoch <= Volatile.Read(ref retiredWorldEpoch))
                 throw new OperationCanceledException("旧世界的水文请求已经失效。");
@@ -1357,9 +1293,7 @@ namespace FlatWorld.WorldModel
                 cancellationToken.ThrowIfCancellationRequested();
                 if (request.WorldEpoch <= Volatile.Read(ref retiredWorldEpoch))
                     throw new OperationCanceledException("旧世界的水文请求已经失效。");
-                QueueNeighbourHydrologyPrewarm(request, settings, region);
-                using (timing?.MeasureStage("river.local_refine") ?? default)
-                    return BuildMacroRiverChunk(request, settings, macro, cancellationToken);
+                return macro;
             }
             catch
             {

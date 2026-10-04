@@ -139,7 +139,8 @@ public partial class ChunkMgr
 
     /// <summary>在主线程冻结当前世界上下文，后台仅使用正式生成器和纯数据查询群系。</summary>
     public Task<DeterministicChunkGenerator.BiomeSearchResult> FindSurfaceBiomeAsync(
-        Int2 anchor, SurfaceBiomeKind biome, CancellationToken cancellationToken)
+        Int2 anchor, SurfaceBiomeKind biome, CancellationToken cancellationToken,
+        DeterministicChunkGenerator.BiomeSearchProgress progress = null)
     {
         EnsureWorldRuntime();
         ChunkGenerationProfileSnapshot profile = PrepareActiveGenerationSnapshot(out int baseSeed);
@@ -151,7 +152,7 @@ public partial class ChunkMgr
         long epoch = runtimeChunkManager.World.Epoch;
         DeterministicChunkGenerator generator = runtimeGenerator;
         return Task.Run(() => generator.FindSurfaceBiome(dimensionId, seed, profile,
-            topology, anchor, biome, cancellationToken, epoch), cancellationToken);
+            topology, anchor, biome, cancellationToken, epoch, progress), cancellationToken);
     }
 
     #endregion

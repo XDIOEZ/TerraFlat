@@ -28,25 +28,17 @@ namespace FlatWorld.WorldModel
             double2 query = domain.Normalize(new double2(worldX, worldY));
             int baseX = (int)Math.Floor((query.x - anchor.x) / stepX);
             int baseY = (int)Math.Floor((query.y - anchor.y) / stepY);
-            double maximumRadius = Math.Min(stepX, stepY) * 0.42d;
 
             for (int dy = -1; dy <= 1; dy++)
             for (int dx = -1; dx <= 1; dx++)
             {
                 int rx = wrapped ? ((baseX + dx) % countX + countX) % countX : baseX + dx;
                 int ry = wrapped ? ((baseY + dy) % countY + countY) % countY : baseY + dy;
-                if (Hash01(request.WorldSeed, rx, ry, 0x5a0f0011u) >= settings.SnowRegionChance)
+                if (!TryResolveSnowRegion(request, settings, rx, ry,
+                        out double2 center, out double radius, out bool large))
                     continue;
-                bool large = Hash01(request.WorldSeed, rx, ry, 0x5a0f0012u) < settings.SnowLargeRegionRatio;
                 if (!large && height < settings.SnowPeakMinimumHeight)
                     continue;
-                double radius = Math.Min(maximumRadius, SampleSnowQuadraticRadius(
-                    large ? settings.SnowLargeMinRadius : settings.SnowPeakMinRadius,
-                    large ? settings.SnowLargeMaxRadius : settings.SnowPeakMaxRadius,
-                    Hash01(request.WorldSeed, rx, ry, 0x5a0f0013u)));
-                double2 center = anchor + new double2(
-                    (rx + 0.15d + Hash01(request.WorldSeed, rx, ry, 0x5a0f0014u) * 0.7d) * stepX,
-                    (ry + 0.15d + Hash01(request.WorldSeed, rx, ry, 0x5a0f0015u) * 0.7d) * stepY);
                 double2 delta = domain.ShortestDelta(query, center);
                 if (Math.Abs(delta.x) > radius * 1.08d || Math.Abs(delta.y) > radius * 1.08d)
                     continue;
@@ -57,6 +49,33 @@ namespace FlatWorld.WorldModel
                     return true;
             }
             return false;
+        }
+
+        // 正式积雪判定与调试定位共用区域计划，避免复制一套概率和中心算法。
+        private static bool TryResolveSnowRegion(ChunkGenerationRequest request,
+            ChunkGenerationSettingsSnapshot settings, int rx, int ry,
+            out double2 center, out double radius, out bool large)
+        {
+            center = default;
+            radius = 0d;
+            large = false;
+            if (Hash01(request.WorldSeed, rx, ry, 0x5a0f0011u) >= settings.SnowRegionChance)
+                return false;
+            bool wrapped = request.Topology.IsWrapped;
+            int countX = wrapped ? Math.Max(1, request.Topology.Span.X / settings.SnowRegionSize) : 0;
+            int countY = wrapped ? Math.Max(1, request.Topology.Span.Y / settings.SnowRegionSize) : 0;
+            double stepX = wrapped ? request.Topology.Span.X / (double)countX : settings.SnowRegionSize;
+            double stepY = wrapped ? request.Topology.Span.Y / (double)countY : settings.SnowRegionSize;
+            double2 anchor = wrapped ? new double2(request.Topology.Min.X, request.Topology.Min.Y) : default;
+            large = Hash01(request.WorldSeed, rx, ry, 0x5a0f0012u) < settings.SnowLargeRegionRatio;
+            radius = Math.Min(Math.Min(stepX, stepY) * 0.42d, SampleSnowQuadraticRadius(
+                large ? settings.SnowLargeMinRadius : settings.SnowPeakMinRadius,
+                large ? settings.SnowLargeMaxRadius : settings.SnowPeakMaxRadius,
+                Hash01(request.WorldSeed, rx, ry, 0x5a0f0013u)));
+            center = anchor + new double2(
+                (rx + 0.15d + Hash01(request.WorldSeed, rx, ry, 0x5a0f0014u) * 0.7d) * stepX,
+                (ry + 0.15d + Hash01(request.WorldSeed, rx, ry, 0x5a0f0015u) * 0.7d) * stepY);
+            return true;
         }
 
         // 权重为 1-t²，反解累计概率可直接抽样，尺寸更常落在区间中间而不是两端。
