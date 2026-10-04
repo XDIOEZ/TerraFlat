@@ -1008,7 +1008,8 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRend
     {
         Int2 origin = boundChunk.Address.ChunkOrigin;
         return new Bounds(
-            new Vector3(origin.X + terrain.Width * 0.5f, origin.Y + terrain.Height * 0.5f, 0f),
+            new Vector3(origin.X + terrain.Width * 0.5f, origin.Y + terrain.Height * 0.5f, 0f) +
+            DepthPresentationOffset,
             new Vector3(terrain.Width + 6f, terrain.Height + 6f, 4f));
     }
 

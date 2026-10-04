@@ -68,7 +68,9 @@ public sealed partial class ChunkTilemapRenderer
     /// <summary>区块重选镜像后同步绝对坐标阴影和交互桥，行网格仍由同一 View 持有。</summary>
     internal void RefreshDepthProjection()
     {
-        if (boundChunk != null && batchPresentationComplete) RefreshMechanicalPresentation();
+        if (boundChunk == null) return;
+        ChunkBatchRendererGroupService.RefreshOwnerProjection(this);
+        if (batchPresentationComplete) RefreshMechanicalPresentation();
     }
 
     private static int ResolveMechanicalConnectorSortingLayerId()

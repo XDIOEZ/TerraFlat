@@ -22,6 +22,8 @@ description: "Use when: 定位或修改 FlatWorld 的运行时特效、粒子、
 
 ## 不变量
 
+- 草与花的 BRG 实例必须由后端按 Owner 的 `DepthPresentationOffset` 投影到本机区块镜像；区块切换镜像时同步已有实例和 Owner 裁剪边界，增量提交仍传规范坐标。不能依赖后续 Overlay 补绘相机绘制草花，否则会覆盖主相机已经绘制的角色；自然物阴影已提交表现坐标，不得重复投影。
+
 - 太阳高度 `Sin(progress * PI)` 在非整数次幂前必须 Clamp01，单精度日落端点可能略为负数；`SunShadowParameters.IsValid` 同时约束可见性和全局 Shader 参数。普通物品与机械共用有限投影包围盒检查，拒绝 NaN/Infinity、负范围及排序距离溢出，异常绑定只诊断一次并低频重试，不改写实体或存档坐标。
 - BRG 原生资源不能只在 `OnDestroy` 释放；脚本域重载的 `OnDisable` 必须执行幂等 Dispose，而不是仅 Hide。接触阴影与 AIECS 主体先销毁整个 BRG，再在 finally 释放自有缓冲、Mesh 和材质；多批次地形须保证任何子批次失败后仍会执行 group.Dispose。恢复启用时按需重建批次。排查重复退出日志先比对堆栈方法名、当前 DLL 符号及 Editor.log 重载顺序，不能把修复前日志当作新代码复现。
 - 先确认触发系统及 Prefab/材质/Shader 的真实引用来源，再改表现。

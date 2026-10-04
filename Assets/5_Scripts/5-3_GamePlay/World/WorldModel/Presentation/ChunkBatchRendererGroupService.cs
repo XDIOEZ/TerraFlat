@@ -123,6 +123,10 @@ internal static class ChunkBatchRendererGroupService
         backend?.UnregisterOwner(owner);
     }
 
+    /// <summary>草花与区块共用本机镜像，避免由后续补绘相机覆盖已绘制的角色。</summary>
+    internal static void RefreshOwnerProjection(ChunkTilemapRenderer owner)
+        => backend?.RefreshOwnerProjection(owner);
+
     /// <summary>
     /// 世界窗口彻底关闭后再释放空闲后端。
     /// 普通区块流送期间即使短暂没有 Owner，也保留 BRG，避免反复销毁/重建共享批次。
@@ -282,13 +286,15 @@ internal static class ChunkBatchRendererGroupService
                 if (!ownerHandles.ContainsKey(owner))
                     ownerHandles.Add(owner, new Dictionary<int, InstanceHandle>());
                 int ownerId = owner.GetInstanceID();
-                RegisterOwnerCullingState(ownerId, worldBounds);
+                RegisterOwnerCullingState(ownerId, worldBounds, owner.DepthPresentationOffset);
+                RefreshOwnerProjection(owner);
+                ownerCullingById[ownerId].Bounds = worldBounds;
                 warnedMissingOwnerIds.Remove(ownerId);
             }
         }
 
         /// <summary>复用区块状态，使已有实例自动读取最新边界。</summary>
-        private void RegisterOwnerCullingState(int ownerId, Bounds worldBounds)
+        private void RegisterOwnerCullingState(int ownerId, Bounds worldBounds, Vector3 projectionOffset)
         {
             if (ownerCullingById.TryGetValue(ownerId, out OwnerCullingState state))
             {
@@ -296,11 +302,49 @@ internal static class ChunkBatchRendererGroupService
                 return;
             }
 
-            state = new OwnerCullingState(worldBounds, activeOwnerCullingStates.Count);
+            state = new OwnerCullingState(worldBounds, activeOwnerCullingStates.Count)
+            {
+                ProjectionOffset = projectionOffset
+            };
             ownerCullingById.Add(ownerId, state);
             activeOwnerCullingStates.Add(state);
             visibleInstanceListsDirty = true;
         }
+
+        /// <summary>只在区块切换镜像时平移已有草花实例，并合并同批次的 GPU 上传。</summary>
+        public void RefreshOwnerProjection(ChunkTilemapRenderer owner)
+        {
+            lock (syncRoot)
+            {
+                if (owner == null || !ownerHandles.TryGetValue(owner, out var handles) ||
+                    !ownerCullingById.TryGetValue(owner.GetInstanceID(), out var state))
+                    return;
+
+                Vector3 offset = owner.DepthPresentationOffset;
+                Vector3 delta = offset - state.ProjectionOffset;
+                if (delta == Vector3.zero) return;
+                state.ProjectionOffset = offset;
+                Bounds bounds = state.Bounds;
+                bounds.center += delta;
+                state.Bounds = bounds;
+                visibleInstanceListsDirty = true;
+
+                BeginBulkSubmit();
+                try
+                {
+                    foreach (InstanceHandle handle in handles.Values)
+                    {
+                        if (!UsesOwnerProjection(handle.Batch.Key.Layer)) continue;
+                        handle.Batch.Translate(handle.Index, delta);
+                        bulkSubmitBatches.Add(handle.Batch);
+                    }
+                }
+                finally { EndBulkSubmit(); }
+            }
+        }
+
+        private static bool UsesOwnerProjection(VisualLayer layer)
+            => layer == VisualLayer.Grass || layer == VisualLayer.GroundCover;
 
         public bool IsOwnerRegistered(ChunkTilemapRenderer owner)
         {
@@ -431,12 +475,22 @@ internal static class ChunkBatchRendererGroupService
                     return;
                 }
 
+                OwnerCullingState cullingState = ownerCullingById[owner.GetInstanceID()];
+                InstanceData data = visual.Data;
+                Vector3 sortingPosition = visual.SortingPosition;
+                if (UsesOwnerProjection(visual.Layer))
+                {
+                    data.Transform0.z += cullingState.ProjectionOffset.x;
+                    data.Transform1.z += cullingState.ProjectionOffset.y;
+                    data.Transform1.w += cullingState.ProjectionOffset.z;
+                    sortingPosition += cullingState.ProjectionOffset;
+                }
                 VisualKey key = new(visual.Layer, visual.Sprite, visual.SourceMaterial);
                 if (handles.TryGetValue(slotKey, out InstanceHandle current))
                 {
                     if (current.Batch.Key.Equals(key))
                     {
-                        current.Batch.Update(current.Index, visual.Data, visual.SortingPosition);
+                        current.Batch.Update(current.Index, data, sortingPosition);
                         if (bulkSubmitDepth > 0) bulkSubmitBatches.Add(current.Batch);
                         return;
                     }
@@ -445,8 +499,7 @@ internal static class ChunkBatchRendererGroupService
                 }
 
                 TileBatch batch = GetOrCreateBatch(key, visual);
-                OwnerCullingState cullingState = ownerCullingById[owner.GetInstanceID()];
-                int index = batch.Add(owner, slotKey, cullingState, visual.Data, visual.SortingPosition);
+                int index = batch.Add(owner, slotKey, cullingState, data, sortingPosition);
                 if (bulkSubmitDepth > 0) bulkSubmitBatches.Add(batch);
                 handles[slotKey] = new InstanceHandle(batch, index);
                 visibleInstanceListsDirty = true;
@@ -1000,6 +1053,15 @@ internal static class ChunkBatchRendererGroupService
                 else Upload(index, data);
             }
 
+            public void Translate(int index, Vector3 delta)
+            {
+                InstanceData data = gpuData[index];
+                data.Transform0.z += delta.x;
+                data.Transform1.z += delta.y;
+                data.Transform1.w += delta.z;
+                Update(index, data, sortingPositions[index] + delta);
+            }
+
             public void FlushBulkSubmit()
             {
                 bulkSubmitIndices.Sort();
@@ -1165,6 +1227,7 @@ internal static class ChunkBatchRendererGroupService
             }
 
             public Bounds Bounds { get; set; }
+            public Vector3 ProjectionOffset { get; set; }
             public int Index { get; set; }
             public bool Visible { get; set; }
         }
