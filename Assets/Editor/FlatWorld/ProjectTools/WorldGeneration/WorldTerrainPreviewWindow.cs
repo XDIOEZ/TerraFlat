@@ -240,7 +240,7 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
             ["climate.temperature.altitudeCoolingStart"] = "超过该高度后开始按海拔降温",
             ["climate.temperature.altitudeCoolingStrength"] = "海拔对温度的影响强度；越高山区越冷",
             ["climate.equator.celsius"] = "赤道纬度底温，实际温度还会叠加海拔、降雨和风向修正",
-            ["climate.polarBand.halfWidth"] = "整条寒带占地图的比例；0.05 表示 5%",
+            ["climate.polarBand.halfWidth"] = "整条寒带占地图的比例；0.1 表示 10%",
             ["climate.polarBand.transitionTiles"] = "极圈边缘回到温带底温的距离，单位为格",
             ["climate.polarBand.transitionCelsius"] = "离开极圈短过渡后的温带底温，随后继续向赤道渐暖",
             ["climate.temperature.blendRadius"] = "邻格气温平滑半径；0 关闭，默认 2 格",
@@ -729,7 +729,7 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
             EditorGUILayout.Space(3f);
             EditorGUILayout.LabelField("气候与附加层", EditorStyles.miniBoldLabel);
             DrawDoubleField("climate.equator.celsius", "赤道底温（°C）");
-            DrawSlider("climate.polarBand.halfWidth", "寒带占地图比例（0.05 = 5%）", 0.001f, 1f);
+            DrawSlider("climate.polarBand.halfWidth", "寒带占地图比例（0.1 = 10%）", 0.001f, 1f);
             DrawDoubleField("climate.polarBand.transitionTiles", "寒带外温度过渡距离（格）");
             DrawDoubleField("climate.polarBand.transitionCelsius", "寒带外温带底温（°C）");
             DrawIntegerSlider("climate.temperature.blendRadius", "邻格温度平滑半径（格）", 0, 32);

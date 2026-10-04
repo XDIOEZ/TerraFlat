@@ -359,9 +359,9 @@ namespace FlatWorld.WorldModel
             PolarBandPeakCelsius = Clamp(Finite(
                 GetDouble(numbers, "climate.polarBand.peakCelsius", -25d), -25d),
                 PolarBandCelsius, PolarBandEdgeCelsius);
-            // 极圈总宽度默认占地图的 5%，区外冷暖过渡单独限制距离。
+            // 极圈总宽度默认占地图的 10%，区外冷暖过渡单独限制距离。
             PolarBandHalfWidth = Clamp(Finite(
-                GetDouble(numbers, "climate.polarBand.halfWidth", 0.05d), 0.05d), 0.001d, 1d);
+                GetDouble(numbers, "climate.polarBand.halfWidth", 0.1d), 0.1d), 0.001d, 1d);
             PolarBandTransitionTiles = Math.Max(1d, FinitePositive(
                 GetDouble(numbers, "climate.polarBand.transitionTiles", 32d), 32d));
             PolarBandTransitionCelsius = Clamp(Finite(

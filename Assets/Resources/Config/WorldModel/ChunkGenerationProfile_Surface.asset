@@ -154,7 +154,7 @@ MonoBehaviour:
   - Id: climate.polarBand.peakCelsius
     Value: -25
   - Id: climate.polarBand.halfWidth
-    Value: 0.05
+    Value: 0.1
   - Id: climate.polarBand.transitionTiles
     Value: 32
   - Id: climate.polarBand.transitionCelsius
