@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -8,7 +9,7 @@ using UnityEngine.Tilemaps;
 /// 建筑资源接线校验。检查召唤器到本体或 TileBlock、Tile/Sprite、地图数字 ID 和调色板的完整引用链，
 /// 在资源发布前报告缺失，避免直到玩家手持建筑时才失败；与编辑器目录检查共用规则。
 /// </summary>
-public sealed class BuildingResourceCatalogValidator : IResourceCatalogValidator
+public sealed class BuildingResourceCatalogValidator : IIncrementalResourceCatalogValidator
 {
     #region 引用检查
 
@@ -16,9 +17,19 @@ public sealed class BuildingResourceCatalogValidator : IResourceCatalogValidator
 
     public void Validate(GameRes resources, List<string> errors)
     {
+        IEnumerator routine = ValidateAsync(resources, errors);
+        try { while (routine.MoveNext()) { } }
+        finally { (routine as IDisposable)?.Dispose(); }
+    }
+
+    /// <summary>建筑检查逐物品归还预算，避免批量复制模块模板阻塞菜单。</summary>
+    public IEnumerator ValidateAsync(GameRes resources, List<string> errors)
+    {
         var tileRequests = new Dictionary<string, string>(StringComparer.Ordinal);
         foreach (RuntimeItemDefinition definition in resources.ItemDefinitions.Values)
         {
+            if (resources.ShouldYieldResourceWork()) yield return null;
+            if (!definition.HasModule(ModText.Building)) continue;
             ItemData data = definition.CreateItemData();
             if (!Mod_Building.TryReadBuildingData(data, out Ex_ModData module, out Mod_Building.Building_Data state)) continue;
             if (string.IsNullOrWhiteSpace(module.BitData))
@@ -32,6 +43,7 @@ public sealed class BuildingResourceCatalogValidator : IResourceCatalogValidator
         ValidateTiles(tileRequests, resources.TileBlockDict, errors);
         foreach (RuntimeTileDefinition block in resources.TileBlockDict.Values.Distinct())
         {
+            if (resources.ShouldYieldResourceWork()) yield return null;
             string drop = block.damageProfile?.DropItemId;
             if (!string.IsNullOrWhiteSpace(drop) && !resources.ItemDefinitions.ContainsKey(drop))
                 errors.Add($"地块 {block.name} -> 掉落物品 {drop} 未注册");

@@ -1,14 +1,23 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>资源 Ready 前检查机械配方及落地设施定义，不创建实体、运行逻辑或面板。</summary>
-public sealed class MachineResourceCatalogValidator : IResourceCatalogValidator
+public sealed class MachineResourceCatalogValidator : IIncrementalResourceCatalogValidator
 {
     #region 目录校验
     public string Id => "mechanical";
     public void Validate(GameRes resources, List<string> errors)
+    {
+        IEnumerator routine = ValidateAsync(resources, errors);
+        try { while (routine.MoveNext()) { } }
+        finally { (routine as IDisposable)?.Dispose(); }
+    }
+
+    /// <summary>机械内容编译逐定义让出预算，运行时启动与编辑器诊断共用检查逻辑。</summary>
+    public IEnumerator ValidateAsync(GameRes resources, List<string> errors)
     {
         foreach (var process in MachineCatalog.Processes)
         {
@@ -21,6 +30,8 @@ public sealed class MachineResourceCatalogValidator : IResourceCatalogValidator
 
         foreach (var pair in resources.ItemDefinitions)
         {
+            if (resources.ShouldYieldResourceWork()) yield return null;
+            if (!pair.Value.HasModule(ModText.Building)) continue;
             try
             {
                 ItemData data = pair.Value.CreateItemData();

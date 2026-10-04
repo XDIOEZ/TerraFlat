@@ -39,6 +39,31 @@ public partial class GameRes
     internal ResourceAssetScope ResourceAssets => resourceAssets;
     /// <summary>启动阶段已经持有的 Prefab 位置，完整 Prefab 阶段不再重复申请句柄。</summary>
     private HashSet<string> startupPrefabLocationIds = new(StringComparer.Ordinal);
+    private bool backgroundLoadingPolicyActive;
+    private ThreadPriority previousLoadingPriority;
+    private int previousUploadTimeSlice;
+
+    /// <summary>定义构建和请求发出使用统一帧预算，不能让同帧的多个阶段各自重新计时。</summary>
+    internal bool ShouldYieldResourceWork() => loadPipeline?.ShouldYield() == true;
+
+    /// <summary>菜单开放期间收紧 Player 的资源接入和 GPU 上传时间，结束会话后恢复原设置。</summary>
+    private void BeginMenuBackgroundLoading()
+    {
+        if (backgroundLoadingPolicyActive) return;
+        previousLoadingPriority = Application.backgroundLoadingPriority;
+        previousUploadTimeSlice = QualitySettings.asyncUploadTimeSlice;
+        backgroundLoadingPolicyActive = true;
+        Application.backgroundLoadingPriority = ThreadPriority.Low;
+        QualitySettings.asyncUploadTimeSlice = 1;
+    }
+
+    private void RestoreBackgroundLoadingPolicy()
+    {
+        if (!backgroundLoadingPolicyActive) return;
+        Application.backgroundLoadingPriority = previousLoadingPriority;
+        QualitySettings.asyncUploadTimeSlice = previousUploadTimeSlice;
+        backgroundLoadingPolicyActive = false;
+    }
 
     /// <summary>
     /// 主菜单显示后仍可能立即被访问的运行时 UI。
@@ -153,6 +178,7 @@ public partial class GameRes
             yield break;
         }
         LoadState = ResourceLoadState.Ready;
+        RestoreBackgroundLoadingPolicy();
         IsStartupReady = true;
         loadCoroutine = null;
         loadingProgress = 1;
@@ -196,6 +222,7 @@ public partial class GameRes
     /// <summary>依赖方先卸载，目录再清空，最后释放底层资源；每项清理都独立执行。</summary>
     private void ClearResourceSession()
     {
+        RestoreBackgroundLoadingPolicy();
         var errors = new List<Exception>();
         void Clear(Action action) { try { action(); } catch (Exception exception) { errors.Add(exception); } }
         // 先让使用者释放 BRG 注册/材质，再销毁共享 Mesh，最后卸载源 Sprite/Tile/MOD。
@@ -203,6 +230,7 @@ public partial class GameRes
         Clear(() => ModRuntimeManager.Instance?.UnloadForResourceReload());
         Clear(ReleaseRetiredResourceSessions);
         Clear(ClearAllDictionaries);
+        worldAuthoringResources.Clear();
         Clear(PlayerCreationTemplateCatalogService.Reset);
         Clear(TimeSystemConfigService.Reset);
         Clear(WaterCurrentPushConfigService.Reset);
@@ -309,15 +337,16 @@ public partial class GameRes
         List<IResourceLocation> locations = null;
         yield return ResolveLocations(new[] { label }, typeof(T), required, value => locations = value);
         if (locations.Count == 0) yield break;
-        var handle = resourceAssets.Own(Addressables.LoadAssetsAsync<T>(locations, null, true));
-        while (!handle.IsDone) { loadPipeline.Report(handle.PercentComplete * 0.8f); yield return null; }
-        foreach (T asset in ResourceAssetScope.Require(handle, $"标签 {label}"))
+        var loaded = new List<T>(locations.Count);
+        yield return LoadResourceLocations(locations, loaded, $"标签 {label}");
+        foreach (T asset in loaded)
         {
             if (asset == null) throw new InvalidDataException($"标签 {label} 加载出空资源。");
             string id = key(asset);
             if (string.IsNullOrWhiteSpace(id)) throw new InvalidDataException($"{label} 资源 {asset.name} 缺少稳定 ID。");
             if (!target.TryAdd(id, asset)) throw new InvalidDataException($"{label} ID 重复：{id} ({target[id].name} / {asset.name})");
             LoadedCount++;
+            if (ShouldYieldResourceWork()) yield return null;
         }
     }
 
@@ -392,6 +421,7 @@ public partial class GameRes
     {
         IsStartupReady = true;
         if (preparingInPlaceReload) return;
+        BeginMenuBackgroundLoading();
         showLoadingGUI = false;
         Debug.Log("[GameRes] 启动必要资源已就绪，主菜单开放；剩余游戏资源继续后台加载。");
         StartupResourcesReady?.Invoke(this);
@@ -439,9 +469,8 @@ public partial class GameRes
             !actorIds.Contains(location.InternalId) &&
             !startupPrefabLocationIds.Contains(GetLocationIdentity(location))).ToList();
         if (selected.Count == 0) throw new InvalidDataException("Prefab 计划过滤后为空，缺少运行时模块与通用外壳。");
-        var handle = resourceAssets.Own(Addressables.LoadAssetsAsync<GameObject>(selected, null, true));
-        while (!handle.IsDone) { loadPipeline.Report(handle.PercentComplete * 0.8f); yield return null; }
-        IList<GameObject> loaded = ResourceAssetScope.Require(handle, "运行时 Prefab");
+        var loaded = new List<GameObject>(selected.Count);
+        yield return LoadResourceLocations(selected, loaded, "运行时 Prefab");
         var moduleAliases = new Dictionary<string, GameObject>(StringComparer.Ordinal);
         // 先登记全部主名称，再处理模块别名，避免顺序决定最终命中资源。
         foreach (GameObject prefab in loaded)
@@ -449,10 +478,44 @@ public partial class GameRes
             if (prefab == null) throw new InvalidDataException("Prefab 计划包含空资源。");
             RegisterPrefabAlias(prefab.name, prefab);
             LoadedCount++;
+            if (ShouldYieldResourceWork()) yield return null;
         }
-        foreach (GameObject prefab in loaded) CollectPrefabAliases(prefab, moduleAliases);
+        foreach (GameObject prefab in loaded)
+        {
+            CollectPrefabAliases(prefab, moduleAliases);
+            if (ShouldYieldResourceWork()) yield return null;
+        }
         RegisterUniqueModuleAliases(moduleAliases);
         Debug.Log($"[GameRes] Prefab 加载计划：后台加载 {selected.Count}，启动阶段已预载 {startupPrefabLocationIds.Count} 个 UI Prefab。");
+    }
+
+    /// <summary>位置资源最多四个在途请求，发出与收尾都让出预算，避免 Fast Mode 同步加载挤在一帧。</summary>
+    private IEnumerator LoadResourceLocations<T>(IList<IResourceLocation> locations, List<T> loaded, string context)
+        where T : UnityEngine.Object
+    {
+        const int batchSize = 4;
+        for (int start = 0; start < locations.Count; start += batchSize)
+        {
+            int count = Math.Min(batchSize, locations.Count - start);
+            var batch = new List<AsyncOperationHandle<T>>(count);
+            for (int i = 0; i < count; i++)
+            {
+                batch.Add(resourceAssets.Own(Addressables.LoadAssetAsync<T>(locations[start + i])));
+                if (ShouldYieldResourceWork()) yield return null;
+            }
+            while (batch.Any(handle => !handle.IsDone))
+            {
+                loadPipeline.Report(0.8f * (start + batch.Sum(handle => handle.PercentComplete)) / locations.Count);
+                yield return null;
+            }
+            foreach (AsyncOperationHandle<T> handle in batch)
+            {
+                loaded.Add(ResourceAssetScope.Require(handle, context));
+                if (ShouldYieldResourceWork()) yield return null;
+            }
+            loadPipeline.Report(0.8f * (start + count) / locations.Count);
+            yield return null;
+        }
     }
 
     #endregion

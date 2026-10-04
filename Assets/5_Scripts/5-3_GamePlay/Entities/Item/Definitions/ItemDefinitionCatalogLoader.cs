@@ -150,29 +150,22 @@ public static class ItemDefinitionCatalogLoader
                 yield break;
             }
 
-            try
-            {
-                loadedPackages.Add(new LoadedItemPackage(package, packageJson));
-            }
-            catch (Exception exception)
-            {
-                failed?.Invoke(exception);
-                yield break;
-            }
+            LoadedItemPackage loadedPackage = null;
+            yield return StreamingAssetsTextLoader.RunPureDataAsync(
+                () => new LoadedItemPackage(package, packageJson),
+                value => loadedPackage = value, exception => readError = exception);
+            if (readError != null) { failed?.Invoke(readError); yield break; }
+            loadedPackages.Add(loadedPackage);
 
             progress?.Invoke(0.2f * (i + 1) / enabledPackages.Length);
         }
 
-        List<ItemDefinitionDto> dtos;
-        try
-        {
-            dtos = ResolveLoadedPackages(loadedPackages);
-        }
-        catch (Exception exception)
-        {
-            failed?.Invoke(exception);
-            yield break;
-        }
+        List<ItemDefinitionDto> dtos = null;
+        // 继承合并只访问本次读取的私有 JSON，不在工作线程访问 Unity 或正式目录。
+        yield return StreamingAssetsTextLoader.RunPureDataAsync(
+            () => ResolveLoadedPackages(loadedPackages),
+            value => dtos = value, exception => readError = exception);
+        if (readError != null) { failed?.Invoke(readError); yield break; }
 
         completed(dtos);
     }
@@ -221,9 +214,9 @@ public static class ItemDefinitionCatalogLoader
         yield return LoadVisualAssets(gameRes, dtos, controllers, dto => SelectOptionalAddress(dto.Visual?.AnimatorControllerAddress), progress);
 
         var definitions = new List<RuntimeItemDefinition>(dtos.Count);
-        try
+        foreach (ItemDefinitionDto dto in dtos)
         {
-            foreach (ItemDefinitionDto dto in dtos)
+            try
             {
                 if (!dto.Abstract)
                     definitions.Add(BuildRuntimeDefinition(
@@ -233,13 +226,14 @@ public static class ItemDefinitionCatalogLoader
                         controllers,
                         preloadedMaterials: materials));
             }
-            foreach (RuntimeItemDefinition definition in definitions)
-                gameRes.RegisterItemDefinition(definition);
+            catch (Exception exception) { failed?.Invoke(exception); yield break; }
+            if (gameRes.ShouldYieldResourceWork()) yield return null;
         }
-        catch (Exception exception)
+        foreach (RuntimeItemDefinition definition in definitions)
         {
-            failed?.Invoke(exception);
-            yield break;
+            try { gameRes.RegisterItemDefinition(definition); }
+            catch (Exception exception) { failed?.Invoke(exception); yield break; }
+            if (gameRes.ShouldYieldResourceWork()) yield return null;
         }
 
         progress?.Invoke(1f);
@@ -257,8 +251,8 @@ public static class ItemDefinitionCatalogLoader
             .SelectMany(dto => select(dto) ?? Enumerable.Empty<string>())
             .Where(address => !string.IsNullOrWhiteSpace(address)).Select(address => address.Trim())
             .Distinct(StringComparer.Ordinal).ToArray();
-        // 每批最多 16 个请求，兼顾移动端内存峰值与本地/远程资源吞吐。
-        const int batchSize = 16;
+        // 小批请求配合统一帧预算，编辑器同步资源提供器也不能连续挤占一帧。
+        const int batchSize = 4;
         for (int start = 0; start < addresses.Length; start += batchSize)
         {
             int count = Math.Min(batchSize, addresses.Length - start);
@@ -273,6 +267,7 @@ public static class ItemDefinitionCatalogLoader
                     throw new InvalidDataException(error);
 #endif
                 batch.Add(gameRes.ResourceAssets.Load<T>(address));
+                if (gameRes.ShouldYieldResourceWork()) yield return null;
             }
             while (batch.Any(handle => !handle.IsDone))
             {
@@ -280,8 +275,12 @@ public static class ItemDefinitionCatalogLoader
                 yield return null;
             }
             for (int i = 0; i < count; i++)
+            {
                 output.Add(addresses[start + i], ResourceAssetScope.Require(batch[i], $"{typeof(T).Name} -> {addresses[start + i]}"));
+                if (gameRes.ShouldYieldResourceWork()) yield return null;
+            }
             progress?.Invoke(0.2f + 0.6f * (start + count) / addresses.Length);
+            yield return null;
         }
     }
 

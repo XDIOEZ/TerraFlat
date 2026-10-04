@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -9,6 +10,12 @@ public interface IResourceCatalogValidator
 {
     string Id { get; }
     void Validate(GameRes resources, List<string> errors);
+}
+
+/// <summary>大目录可扩展为分步校验，每个条目结束后归还主线程预算。</summary>
+public interface IIncrementalResourceCatalogValidator : IResourceCatalogValidator
+{
+    IEnumerator ValidateAsync(GameRes resources, List<string> errors);
 }
 
 /// <summary>资源校验注册表；本体与 MOD 合并后共用同一组校验，任何错误都会阻止 Ready。</summary>
@@ -46,15 +53,56 @@ public static class ResourceCatalogValidation
         if (errors.Count > 0) throw new InvalidDataException($"资源引用校验发现 {errors.Count} 个问题：\n" + string.Join("\n", errors));
     }
 
+    /// <summary>启动校验按条目分帧，原同步入口继续供编辑器静态诊断使用。</summary>
+    public static IEnumerator ValidateAsync(GameRes resources)
+    {
+        var errors = new List<string>();
+        foreach (IResourceCatalogValidator validator in validators.Values.ToArray())
+        {
+            IEnumerator routine = null;
+            try
+            {
+                if (validator is IIncrementalResourceCatalogValidator incremental)
+                    routine = incremental.ValidateAsync(resources, errors);
+                else validator.Validate(resources, errors);
+            }
+            catch (Exception exception) { errors.Add($"[{validator.Id}] {exception}"); }
+            if (routine != null)
+            {
+                try
+                {
+                    while (true)
+                    {
+                        bool moved = false;
+                        try { moved = routine.MoveNext(); }
+                        catch (Exception exception) { errors.Add($"[{validator.Id}] {exception}"); }
+                        if (!moved) break;
+                        yield return routine.Current;
+                    }
+                }
+                finally { (routine as IDisposable)?.Dispose(); }
+            }
+            yield return null;
+        }
+        if (errors.Count > 0) throw new InvalidDataException($"资源引用校验发现 {errors.Count} 个问题：\n" + string.Join("\n", errors));
+    }
+
     #endregion
 }
 
 /// <summary>物品外观、模块参数及战利品引用校验；覆盖本体定义与 MOD 定义。</summary>
-internal sealed class ItemResourceCatalogValidator : IResourceCatalogValidator
+internal sealed class ItemResourceCatalogValidator : IIncrementalResourceCatalogValidator
 {
     public string Id => "items";
 
     public void Validate(GameRes resources, List<string> errors)
+    {
+        IEnumerator routine = ValidateAsync(resources, errors);
+        try { while (routine.MoveNext()) { } }
+        finally { (routine as IDisposable)?.Dispose(); }
+    }
+
+    public IEnumerator ValidateAsync(GameRes resources, List<string> errors)
     {
         foreach (RuntimeItemDefinition definition in resources.ItemDefinitions.Values)
         {
@@ -83,10 +131,14 @@ internal sealed class ItemResourceCatalogValidator : IResourceCatalogValidator
                 }
             }
             catch (Exception exception) { errors.Add($"物品 {definition.Id}：{exception.Message}"); }
+            if (resources.ShouldYieldResourceWork()) yield return null;
         }
         foreach (RuntimeLootTable table in resources.LootTables.Values)
             foreach (RuntimeLootTableEntry entry in table.Entries)
+            {
                 if (!resources.ItemDefinitions.ContainsKey(entry.ItemId))
                     errors.Add($"战利品表 {table.Id} -> 物品 {entry.ItemId} 未注册");
+                if (resources.ShouldYieldResourceWork()) yield return null;
+            }
     }
 }

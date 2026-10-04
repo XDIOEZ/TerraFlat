@@ -675,6 +675,19 @@ public sealed class RuntimeItemDefinition
         return FastCloner.FastCloner.DeepClone(templateData);
     }
 
+    #region 定义模块查询
+
+    /// <summary>只读模板判断模块身份，筛选目录时无需克隆整份 ItemData。</summary>
+    public bool HasModule(string moduleId)
+    {
+        if (string.IsNullOrWhiteSpace(moduleId) || templateData?.ModuleDataDic == null) return false;
+        foreach (ModuleData module in templateData.ModuleDataDic.Values)
+            if (module != null && string.Equals(module.ID, moduleId, StringComparison.Ordinal)) return true;
+        return false;
+    }
+
+    #endregion
+
     #region 模块配置计划
 
     // 同一定义中的 JSON 与模块类型固定；配置计划随资源定义一起释放。

@@ -32,10 +32,30 @@ internal sealed class ResourceLoadPipeline : IDisposable
     private float completedWeight, totalWeight, stepProgress;
     private Step currentStep;
     private bool disposed;
+    private readonly Func<bool> isInteractive;
+    private int workFrame = -1;
+    private long workStarted;
     public string CurrentStage => currentStep?.Id ?? "plan";
     public Exception Failure { get; private set; }
 
-    public ResourceLoadPipeline(Action<string, float> report) => this.report = report;
+    public ResourceLoadPipeline(Action<string, float> report, Func<bool> isInteractive = null)
+    {
+        this.report = report;
+        this.isInteractive = isInteractive;
+    }
+
+    /// <summary>所有嵌套阶段共用同帧预算，菜单显示后累计工作超过 1ms 就让出下一帧。</summary>
+    public bool ShouldYield()
+    {
+        int frame = UnityEngine.Time.frameCount;
+        if (workFrame != frame)
+        {
+            workFrame = frame;
+            workStarted = Stopwatch.GetTimestamp();
+        }
+        double budget = isInteractive?.Invoke() == true ? 1 : 4;
+        return (Stopwatch.GetTimestamp() - workStarted) * 1000.0 / Stopwatch.Frequency >= budget;
+    }
 
     /// <summary>注册阶段；依赖通过 ID 解析，不依赖文件或注册顺序。</summary>
     public void Add(string id, string title, float weight, Func<IEnumerator> load, params string[] dependencies)
@@ -75,10 +95,12 @@ internal sealed class ResourceLoadPipeline : IDisposable
                 stepProgress = 0;
                 Report(0);
                 var timer = Stopwatch.StartNew();
+                double longestMoveMilliseconds = 0;
                 try { routines.Push(step.Load() ?? throw new InvalidOperationException($"阶段 {step.Id} 没有返回加载流程。")); }
                 catch (Exception exception) { Failure = exception; yield break; }
                 while (!disposed && routines.Count > 0)
                 {
+                    if (ShouldYield()) yield return null;
                     if (timer.Elapsed.TotalSeconds > StageTimeoutSeconds)
                     {
                         Failure = new TimeoutException($"资源阶段 {step.Id} 超过 {StageTimeoutSeconds} 秒仍未完成。");
@@ -88,7 +110,11 @@ internal sealed class ResourceLoadPipeline : IDisposable
                     try
                     {
                         IEnumerator routine = routines.Peek();
-                        if (!routine.MoveNext())
+                        long started = Stopwatch.GetTimestamp();
+                        bool moved = routine.MoveNext();
+                        longestMoveMilliseconds = Math.Max(longestMoveMilliseconds,
+                            (Stopwatch.GetTimestamp() - started) * 1000.0 / Stopwatch.Frequency);
+                        if (!moved)
                         {
                             routines.Pop();
                             (routine as IDisposable)?.Dispose();
@@ -107,7 +133,7 @@ internal sealed class ResourceLoadPipeline : IDisposable
                 if (disposed) yield break;
                 Report(1);
                 completedWeight += step.Weight;
-                UnityEngine.Debug.Log($"[GameRes] 阶段完成：{step.Id}，{timer.ElapsedMilliseconds} ms");
+                UnityEngine.Debug.Log($"[GameRes] 阶段完成：{step.Id}，{timer.ElapsedMilliseconds} ms，主线程最慢单步 {longestMoveMilliseconds:F2} ms");
             }
         }
         finally { Dispose(); }

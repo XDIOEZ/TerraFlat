@@ -157,24 +157,25 @@ public static class ActorDefinitionCatalogLoader
                 yield break;
             }
 
-            try
-            {
-                catalogs.Add(ConvertActorCatalogToItemCatalog(packageJson, package.Id));
-            }
-            catch (Exception exception)
-            {
-                failed?.Invoke(exception);
-                yield break;
-            }
+            string converted = null;
+            yield return StreamingAssetsTextLoader.RunPureDataAsync(
+                () => ConvertActorCatalogToItemCatalog(packageJson, package.Id),
+                value => converted = value, exception => readError = exception);
+            if (readError != null) { failed?.Invoke(readError); yield break; }
+            catalogs.Add(converted);
 
             progress?.Invoke(packages.Length == 0 ? 0.15f : 0.15f * (index + 1) / packages.Length);
         }
 
+        List<JObject> resolved = null;
+        yield return StreamingAssetsTextLoader.RunPureDataAsync(
+            () => ItemDefinitionCatalogLoader.ResolveDefinitionObjects(catalogs),
+            value => resolved = value, exception => readError = exception);
+        if (readError != null) { failed?.Invoke(readError); yield break; }
         List<ItemDefinitionDto> definitions;
         var rejected = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         try
         {
-            List<JObject> resolved = ItemDefinitionCatalogLoader.ResolveDefinitionObjects(catalogs);
             CacheResolvedSources(resolved);
             definitions = previous == null
                 ? ConvertResolvedDefinitions(resolved)
@@ -245,11 +246,24 @@ public static class ActorDefinitionCatalogLoader
         {
             try { shellHandles.Add(pair.Key, gameRes.ResourceAssets.Load<GameObject>(pair.Value)); }
             catch (Exception exception) { shellErrors.Add(pair.Key, exception); }
+            if (gameRes.ShouldYieldResourceWork()) yield return null;
+            if (shellHandles.Count % 4 == 0)
+            {
+                while (shellHandles.Values.Any(handle => !handle.IsDone)) yield return null;
+                yield return null;
+            }
         }
         foreach (string address in controllerAddresses)
         {
             try { controllerHandles.Add(address, gameRes.ResourceAssets.Load<RuntimeAnimatorController>(address)); }
             catch (Exception exception) { controllerErrors.Add(address, exception); }
+            if (gameRes.ShouldYieldResourceWork()) yield return null;
+            if ((shellHandles.Count + controllerHandles.Count) % 4 == 0)
+            {
+                while (shellHandles.Values.Any(handle => !handle.IsDone) ||
+                       controllerHandles.Values.Any(handle => !handle.IsDone)) yield return null;
+                yield return null;
+            }
         }
 
         while (shellHandles.Values.Any(handle => !handle.IsDone) ||
@@ -262,7 +276,7 @@ public static class ActorDefinitionCatalogLoader
             yield return null;
         }
 
-        try
+        IEnumerator BuildRuntimeActors()
         {
             var loadedShells = new Dictionary<string, GameObject>(StringComparer.OrdinalIgnoreCase);
             foreach (KeyValuePair<string, AsyncOperationHandle<GameObject>> pair in shellHandles)
@@ -276,6 +290,7 @@ public static class ActorDefinitionCatalogLoader
                     loadedShells[pair.Key] = pair.Value.Result;
                 }
                 catch (Exception exception) { shellErrors[pair.Key] = exception; }
+                if (gameRes.ShouldYieldResourceWork()) yield return null;
             }
 
             LoadedSprites.Clear();
@@ -318,6 +333,7 @@ public static class ActorDefinitionCatalogLoader
                     if (previous == null) throw;
                     RejectActorUpdate(previous, id, exception, rejected);
                 }
+                if (gameRes.ShouldYieldResourceWork()) yield return null;
             }
 
             if (previous != null)
@@ -372,10 +388,21 @@ public static class ActorDefinitionCatalogLoader
             Debug.Log($"[ActorDefinitionCatalog] 已加载 {runtimeDefinitions.Length} 个 JSON Actor");
             completed?.Invoke(runtimeDefinitions.Length);
         }
-        catch (Exception exception)
+
+        // 手动转发本地迭代器异常，保留目录加载器的失败回调契约。
+        IEnumerator build = BuildRuntimeActors();
+        try
         {
-            failed?.Invoke(exception);
+            while (true)
+            {
+                bool moved = false;
+                try { moved = build.MoveNext(); }
+                catch (Exception exception) { failed?.Invoke(exception); }
+                if (!moved) break;
+                yield return build.Current;
+            }
         }
+        finally { (build as IDisposable)?.Dispose(); }
     }
 
     #endregion
