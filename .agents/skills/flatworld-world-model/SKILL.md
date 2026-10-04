@@ -91,6 +91,7 @@ description: "Use when: 定位或修改 FlatWorld 的纯 WorldModel、Chunk 运�
 - Liquid 独立持有池化的 `LiquidDepth[]/LiquidTypeIndex[]`，Seal 移交唯一所有权、取消或逐出时归还；编号来自资源会话冻结的 `LiquidTypeCatalog`，稳定哈希与持久化使用 LiquidId，不能使用会话编号。`height` 在 Seal 时随环境数组移交给正式区块，供 Surface Ground 高度分层读取，直到区块 Dispose 才归还；它不参与玩法内容指纹，不增加存档字段，也不能用于反算液深。
 - 高度分层只读取原生成高度：Ground Mesh 顶点保存当前高度（负值禁用）及左、右、下、上邻高。缺失邻区、非法高度、无 Ground 或有 Liquid 的邻格回退为本格同高；本格非 Surface 或有 Liquid 时禁用。响应地址定向的 ChunkCommitted / ChunkEvicted 与邻区变化补边界。
 - `TerrainChangeKind.Liquid` 必须驱动当前格、八方向邻区的岸线/四角液深和导航刷新。TerrainCell 不保存液体标记，SetLiquid 不能修改任何 Ground 字段；生成筛选读取 LiquidDepth，有效表面接触额外考虑 TerrainSupportLayer，纯液体变化不得产生 Ground 差量。
+- 液深统一经 `LiquidCellValue.NormalizeDepth` 清理不超过 `DepthEpsilon` 的浮点尾数，并同步清空类型；生成、单格、批写和流动结果共用该规则，不能把流动的平衡或最小转移阈值当作干涸阈值。抽取量读取写入前后的权威深度差，调试深度使用 `G9` 避免正值被四位小数显示为零。
 
 ## Skill 维护原则
 

@@ -380,7 +380,7 @@ public class EnvironmentInfoDisplay : MonoBehaviour
     private void AppendLiquidSummary(RuntimeTerrainTileSample sample)
     {
         displayLines.Add(
-            $"液体: {(string.IsNullOrWhiteSpace(sample.LiquidId) ? "无" : sample.LiquidId)}  深度 {sample.LiquidDepth:F4}  类型索引 {sample.LiquidTypeIndex}");
+            $"液体: {(string.IsNullOrWhiteSpace(sample.LiquidId) ? "无" : sample.LiquidId)}  深度 {sample.LiquidDepth:G9}  类型索引 {sample.LiquidTypeIndex}");
 
         ChunkMgr chunkManager = ChunkMgr.ExistingInstance;
         if (chunkManager != null &&

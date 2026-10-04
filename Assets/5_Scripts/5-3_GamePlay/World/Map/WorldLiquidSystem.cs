@@ -69,7 +69,7 @@ public static class WorldLiquidSystem
     {
         if (!GameNetwork.HasStateAuthority || sample.Terrain == null || sample.Terrain.IsDisposed ||
             float.IsNaN(liquidDepth) || float.IsInfinity(liquidDepth)) return false;
-        float depth = Mathf.Clamp01(liquidDepth);
+        float depth = LiquidCellValue.NormalizeDepth(liquidDepth);
         if (depth > 0f && (GameRes.ExistingInstance == null ||
             !GameRes.ExistingInstance.TryGetLiquidDefinition(liquidId, out var definition) || definition.WorldWater == null)) return false;
         int index = depth > 0f ? sample.Terrain.LiquidTypes.GetIndex(liquidId) : 0;
@@ -99,7 +99,8 @@ public static class WorldLiquidSystem
         liquidId = sample.Terrain.GetLiquidId(sample.LocalCell.x, sample.LocalCell.y);
         float removed = Mathf.Min(requestedDepth, depth);
         if (!TrySet(sample, liquidId, depth - removed)) return false;
-        removedDepth = removed;
+        // 返回权威层实际扣除量，包含一并清掉的浮点尾数。
+        removedDepth = depth - sample.Terrain.GetLiquidDepth(sample.LocalCell.x, sample.LocalCell.y);
         return true;
     }
     #endregion
