@@ -32,7 +32,7 @@ public sealed partial class Mod_MechanicalNode
         for (int direction = 0; direction < 4; direction++)
         {
             SpriteRenderer overlay = shadow.EnsureOverlay(ConveyorPortNames[direction], port,
-                (Vector3)ConveyorPath.Rotate(Vector2.right * visual.SidePortOffset, direction),
+                (Vector3)ConveyorPath.Rotate(ConveyorPresentation.SidePortPosition(route, visual), direction),
                 body.sharedMaterial);
             if (overlay == null) continue;
             overlay.gameObject.SetActive(route.HasDrivePort(direction));

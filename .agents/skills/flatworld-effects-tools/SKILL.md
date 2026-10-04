@@ -10,6 +10,7 @@ description: "Use when: 定位或修改 FlatWorld 的运行时特效、粒子、
 - 项目自有 Shader 资源统一放在 `Assets/9_Shaders/`：Shader 源文件放 `Shader/`，材质放 `Material/`，Volume 配置放 `Volume/`；必须依赖 `Resources.Load` 的 Shader/材质放在 `Assets/9_Shaders/Resources/` 下并保持原逻辑资源路径。不要再创建 `Assets/Shaders`、`Assets/Resources/Shaders` 或其它散落的项目自有 Shader 资源目录；第三方插件资源保持原目录不移动。
 - 运行时视觉：`Assets/5_Scripts/5-3_GamePlay/Presentation/Effects/Management/VisualEffectManager.cs`、`Assets/5_Scripts/5-3_GamePlay/Presentation/Effects/Runtime/`
 - 角色渲染：`Assets/5_Scripts/5-3_GamePlay/Presentation/{ActorRenderEffectController,ActorRenderColorEffect,WaterImmersionRenderEffect}.cs`
+- 静态 MPB 效果覆写 `RequiresContinuousRendering=false`，仅在参数变化时调用 `MarkRenderStateDirty`；控制器仍响应换图、重新绑定和启停，水体/受击等连续效果默认逐帧提交。接触阴影通过完整 `RuntimeItemRegistered/Unregistered` 和结构事件维护，禁止定时重扫所有不投影的物品。
 - 世界排序统一由 `Presentation/{WorldSortingManager,WorldSortingMember}.cs` 和 `Resources/GameConfig/Rendering/default-rendering.json` 的 `sorting` 段管理，管理器挂在 `WorldManager.prefab`。BRG 地形为 `Default`；阴影、印记、水花和预览按各自地表类别使用 `Shadow`；动态实体类别共用 `Player/100`；脱离实体的天气/世界特效使用 `world-effect`。AIECS 批量主体与阴影从 GamePlay 桥接注入相同类别键。带 `SortingGroup` 的主体只设置外层组；内部子表现仍使用组内相对排序，离体代理则读取最外层有效组的键，不能直接继承子 Sprite 的原始 `Default/0`。BRG 材质队列独立保留。
 - 贴地建筑使用 `ground-building` 类别（Default/0）与 `Ground-Facility-Lit.mat`（Queue2991），避开玩家深度行网格；必须在地面/平台之上、Blocking 墙体之下，不能仅改成 Shadow 排序层，否则会反盖同格墙体。`PlacementLayer=Ground` 同时排除接触阴影、太阳投影与局部光遮挡。
 - 实体脚底阴影：`ActorShadowManager` 只登记 Item 状态，`ContactShadowBatchRenderer` 把旧 Item 的扁椭圆接触阴影汇为一个 BRG 批次；BRG 无 SpriteRenderer Sorting Layer，用 Default/Queue 2995 排在地形 BRG（最高 2994）之后，动态实体仍在更高的 Player 层。ECS 保留独立的 4096 只网格批次，不注册逐实体对象；两种接触阴影与太阳投影共用 `_WorldSunShadowColor`。
@@ -39,6 +40,7 @@ description: "Use when: 定位或修改 FlatWorld 的运行时特效、粒子、
 - Unity 2D 使用 URP/Light2D；修改 Shader 前核对材质实际 Shader 与 Pass。
 - 输送带圆弧 UV 必须使用 FullRect Sprite 网格；尺寸与格心偏移按 `sprite.rect/pivot/pixelsPerUnit` 计算，预览和行合批共用 `ConveyorPresentation`，不能用透明裁边后的网格范围代替完整画布。横向采样内缩要落在有效 texel 中心，避免带端采到透明留白。
 - 输送带主体与侧轴统一走 `MechanicalConnectorDepthMesh` 的 `MechanicalShaft` 层，始终位于玩家下方；动态带面上下界按完整画布向外对齐 texel 行，覆盖完整带条并保留静止边框。
+- 输送带侧铁环的图片内容偏在 Sprite 外端，安装与预览统一用 `ConveyorPresentation.SidePortPosition` 定位；直带与拐角分别读取 `SidePortOffset/CurvedSidePortOffset`，内侧伸入主体下方，只露出外侧铁环，不能按整张透明画布居中后再外推。
 - 正式 BRG 地形占用 `Default/0` 的 Queue 2987~2994，其中 Ground/Water 为 2988/2989、Blocking 为 2992，草为 2993；旧 Item 接触阴影 BRG 使用 Default/2995，太阳投影与 ECS 接触阴影使用更高的 `Shadow/0`。耕地渐显、地格裂纹、脚印、水花也使用 `Shadow`；玩家等动态世界实体由 `WorldSorting` JSON 放在更高的 `Player`，同层按 Y 轴互相遮挡。BRG 无 SpriteRenderer 的 Sorting Layer，必须靠 Default 材质队列安排与地形的关系，不能仅靠旧 Tilemap Order 推断跨系统可见次序。Shader 位移后的 CPU 包围盒必须同步扩大，屏幕外投影源仍可能把阴影投进视口；逐 Renderer MPB 必须显式恢复 `_MainTex` 及 Android 分离 Alpha。
 - `WorldSorting` 的 `vehicle` 类别用于木筏及未来交通工具；它与其它动态实体共用 `Player` Sorting Layer，但允许通过 JSON 使用更低的 Order，使低矮载具不会盖住玩家。`ResolveCategory` 必须先判定 `Mod_Carrier` 再判定 `Mod_Building`，否则载具会被错误归入建筑类别。
 - 太阳长投影对低枢轴高 Sprite 的落点需收入可见根部，透明底边经长距离投影会被放大成树干与阴影之间的断缝；特殊对象仍用 `SunShadowCaster.FootOffset` 校正。共享投影 Shader 柔化采样时，普通 Sprite 通过 MPB 传贴图 texel 与当前 Sprite UV 边界，AIECS 则由图集材质和逐顶点 UV 边界提供同一契约，避免采到邻近帧；柔化步长必须按世界 PPU 归一，高分辨率 Sprite 不能直接按源纹理 texel 计算，否则同世界尺寸下会显著更锐。
