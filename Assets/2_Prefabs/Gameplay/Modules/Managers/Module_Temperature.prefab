@@ -57,6 +57,9 @@ MonoBehaviour:
     Insulation: 0
     SafeTemperatureMin: 5
     SafeTemperatureMax: 50
+    DangerTemperatureBufferSeconds: 60
+    TemperatureBufferRecoveryPerSecond: 1
+    RemainingTemperatureBufferSeconds: 60
     RuntimeAmbientOffset: 0
     RuntimeChangeSpeedMultiplier: 1
     RuntimeCoolingSpeedMultiplier: 1

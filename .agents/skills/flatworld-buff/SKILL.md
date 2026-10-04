@@ -28,7 +28,7 @@ description: "Use when: 定位或修改 FlatWorld 的 Buff 定义、JSON 目录�
 - Wiki BUFF 页与 Item 共用内联编辑、文件指纹、备份及原子写回事务；BuffManifest 是可写目标白名单，校验器须与 BuffDefinitionFactory 同步。保存不代表正在运行的 GameRes 已热重载，页面必须说明生效边界；公开模式只读。
 - 新效果需同时增加稳定 typeId、Dispatcher 注册和参数校验。
 - `core:temperature_warming` 在 start/stop 按 Buff 实例登记、撤销临时增温，start 必须配置正 `value` 和 `upperLimit`；不要在 Tick 中反复加温，也不要在 Stop 固定减去配置值。受限增温和基础体温由 `Mod_Temperature` 分层结算，重复食用使用续期而不重复登记来源。
-- `低温冻伤` 是永久派生 Buff；`热射病` 是 240 秒限时派生 Buff。两者由 `Mod_Temperature` 通过来源键持有，安全时立即移除，且都每 10 秒执行一次 `core:true_damage=10`。持续高温时 `EnsureSourceBuff` 不刷新热射病剩余时间；自然到期移除后若仍高温，下一次安全检查重新施加完整 240 秒。派生温度 Buff 不写角色存档，不能重新在 `TemperatureMgr` 中维护独立伤害计时器。
+- `低温冻伤` 是永久派生 Buff；`热射病` 是 240 秒限时派生 Buff。两者由 `Mod_Temperature` 在体表温度越界且共用危险温度缓冲耗尽后通过来源键持有，安全时立即移除，且都每 10 秒执行一次 `core:true_damage=10`。缓冲默认 60 秒，安全时每秒补回 1 秒，由体温模块保存剩余量，不能靠清 Buff 补满。持续高温时 `EnsureSourceBuff` 不刷新热射病剩余时间；自然到期移除后若仍高温，下一次安全检查重新施加完整 240 秒。派生温度 Buff 不写角色存档，不能重新在 `TemperatureMgr` 中维护独立伤害计时器。
 - 内容分包只决定归档；运行时语义仍由 `category`/effects 决定。
 - “当前位于某环境、可执行某操作”以及只在环境内生效的减速等被动影响，不使用可清除 Buff；只有潮湿、感染、中毒等角色状态进入 Mod_BuffManager。
 - 玩家正式重生视为新的角色生命周期，必须在 `Mod_PlayerDeathState.CompleteRespawnState` 的统一重生收口调用 `Mod_BuffManager.ClearAllBuffs()`；同世界重生与跨维度重生都走这一规则，不能只清 UI 或只清部分 Buff 类别。

@@ -29,6 +29,12 @@ public partial class TemperatureMgr : SingletonAutoMono<TemperatureMgr>
         }
 
         data.SafeTemperatureMax = Mathf.Max(data.SafeTemperatureMin, data.SafeTemperatureMax);
+        if (!float.IsFinite(data.DangerTemperatureBufferSeconds) || data.DangerTemperatureBufferSeconds < 0f ||
+            !float.IsFinite(data.TemperatureBufferRecoveryPerSecond) || data.TemperatureBufferRecoveryPerSecond < 0f ||
+            !float.IsFinite(data.RemainingTemperatureBufferSeconds))
+            throw new ArgumentOutOfRangeException(nameof(data), "危险温度缓冲参数必须是有限非负数，剩余时间必须是有限数值。");
+        data.RemainingTemperatureBufferSeconds = Mathf.Clamp(
+            data.RemainingTemperatureBufferSeconds, 0f, data.DangerTemperatureBufferSeconds);
         if (data.RuntimeChangeSpeedMultiplier <= 0f)
             data.RuntimeChangeSpeedMultiplier = 1f;
         if (data.RuntimeCoolingSpeedMultiplier <= 0f)

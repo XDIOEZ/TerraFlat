@@ -24,10 +24,17 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable
         [HideInInspector]
         public float Insulation = 0f; // 保留 MemoryPack 字段槽位，不再参与温度计算。
 
-        [LabelText("安全体表温度下限"), SuffixLabel("℃", true), PropertyTooltip("体表温度低于该值后获得低温冻伤。")]
-        public float SafeTemperatureMin = 5f; // 低于该体表温度获得低温冻伤(℃)
-        [LabelText("安全体表温度上限"), SuffixLabel("℃", true), PropertyTooltip("体表温度高于该值后获得热射病。")]
-        public float SafeTemperatureMax = 50f; // 高于该体表温度获得热射病(℃)
+        [LabelText("安全体表温度下限"), SuffixLabel("℃", true), PropertyTooltip("体表温度低于该值时消耗缓冲，耗尽后获得低温冻伤。")]
+        public float SafeTemperatureMin = 5f; // 危险低温的体表温度下限(℃)
+        [LabelText("安全体表温度上限"), SuffixLabel("℃", true), PropertyTooltip("体表温度高于该值时消耗缓冲，耗尽后获得热射病。")]
+        public float SafeTemperatureMax = 50f; // 危险高温的体表温度上限(℃)
+
+        [LabelText("危险温度缓冲时长"), MinValue(0f), SuffixLabel("秒", true)]
+        public float DangerTemperatureBufferSeconds = 60f; // 冷热共用的最大缓冲时间。
+        [LabelText("安全温度缓冲恢复速度"), MinValue(0f), SuffixLabel("秒/秒", true)]
+        public float TemperatureBufferRecoveryPerSecond = 1f; // 安全时每秒补回的缓冲时间。
+        [LabelText("危险温度剩余缓冲"), ReadOnly, SuffixLabel("秒", true)]
+        public float RemainingTemperatureBufferSeconds = 60f; // 剩余缓冲随角色保存，不能靠重载补满。
 
         [MemoryPackIgnore]
         public float RuntimeAmbientOffset = 0f; // 天气暴露、火源等运行时环境修正
@@ -93,9 +100,14 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable
         ResetTemporaryWarming();
         float configuredSafeTemperatureMin = Data.SafeTemperatureMin;
         float configuredSafeTemperatureMax = Data.SafeTemperatureMax;
+        float configuredBufferSeconds = Data.DangerTemperatureBufferSeconds;
+        float configuredBufferRecovery = Data.TemperatureBufferRecoveryPerSecond;
+        Data.RemainingTemperatureBufferSeconds = configuredBufferSeconds;
         modData.ReadData(ref Data);
         Data.SafeTemperatureMin = configuredSafeTemperatureMin;
         Data.SafeTemperatureMax = configuredSafeTemperatureMax; // 安全范围属于当前玩法配置，不由角色存档覆盖。
+        Data.DangerTemperatureBufferSeconds = configuredBufferSeconds;
+        Data.TemperatureBufferRecoveryPerSecond = configuredBufferRecovery;
         TemperatureMgr.Instance.NormalizeData(Data);
         ResetWaterExposureState();
 
@@ -124,7 +136,7 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable
             deltaTime,
             SetNaturalTemperature,
             NaturalTemperature);
-        UpdateTemperatureSafety();
+        UpdateTemperatureSafety(deltaTime);
     }
 
     public override void Unload()
@@ -181,6 +193,7 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable
     {
         ResetWaterExposureState();
         ClearTemperatureConditionBuffs();
+        Data.RemainingTemperatureBufferSeconds = Data.DangerTemperatureBufferSeconds;
         ClearTemperatureSafetyRetreat();
         SetNaturalTemperature(NormalSurfaceTemperature);
     }
