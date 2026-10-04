@@ -64,6 +64,7 @@ MonoBehaviour:
   ForageLandingDistance: 0.3
   HomeArrivalDistance: 0.45
   AngryLockRadius: 3
+  LostTargetAngerSeconds: 10
   AlertSeconds: 10
   AngerMaximum: 10
   AngerDecayPerSecond: 0.1

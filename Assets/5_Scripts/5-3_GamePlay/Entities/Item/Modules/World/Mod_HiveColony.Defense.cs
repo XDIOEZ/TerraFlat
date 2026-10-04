@@ -59,7 +59,7 @@ public sealed partial class Mod_HiveColony
         return current;
     }
 
-    /// <summary>护巢仇恨不受领地、距离或昼夜限制。</summary>
+    /// <summary>向全巢下达护巢目标，实际追击与丢失后的搜索由蜜蜂模块处理。</summary>
     private void AlertAllResidentsToAttacker(Item attacker)
     {
         foreach (Item resident in residents.Values)

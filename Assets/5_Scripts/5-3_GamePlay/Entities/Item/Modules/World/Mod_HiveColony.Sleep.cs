@@ -34,6 +34,8 @@ public sealed partial class Mod_HiveColony
             if (bee == null)
                 continue;
             bee.SetNightSleepRequested(true);
+            if (bee.HasActiveAngryPursuit)
+                continue; // 正在追击或十秒搜索的蜜蜂不能被提前收回蜂巢。
 
             float arrivalRadius = bee.HomeArrivalRadius;
             if (WorldTopologyRuntime.SqrDistance(resident.transform.position, HomePosition) >

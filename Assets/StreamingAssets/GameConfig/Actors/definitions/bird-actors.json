@@ -231,6 +231,7 @@
             "FlowerGainPerSecond": 10.0,
             "PatrolFlightSpeedMultiplier": 0.5,
             "AngryLockRadius": 3.0,
+            "LostTargetAngerSeconds": 10.0,
             "AngerMaximum": 10.0,
             "AngerDecayPerSecond": 0.1
           }

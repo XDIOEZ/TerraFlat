@@ -25,6 +25,8 @@ public sealed partial class Mod_BeeBehavior
     private Item hiveDefenseTarget; // 蜂巢受击后最高优先级的攻击者/持有者。
     private Vector2 lastSeenPosition; // 失去目标时前往确认的位置。
     private bool searchingLastPosition; // 正在确认目标最后出现点。
+    private Item lastSeenTarget; // 搜索期间可重新锁定原目标，包括已经停下的生物。
+    private float lostTargetAngerRemaining; // 丢失目标后剩余的愤怒搜索秒数。
     private float targetScanElapsed; // 位移采样累计游戏秒。
     private int scanGeneration; // 目标采样轮次。
     private float colonyAlertAnger; // 蜂巢领地共享警戒换算出的当前愤怒值，不持久化。
@@ -118,6 +120,8 @@ public sealed partial class Mod_BeeBehavior
         lockedTarget = target;
         lastSeenPosition = target.transform.position;
         searchingLastPosition = false;
+        lastSeenTarget = null;
+        lostTargetAngerRemaining = 0f;
         state.Anger = AngerMaximum;
         state.Angry = true;
         state.ReturningHome = false;
@@ -135,13 +139,9 @@ public sealed partial class Mod_BeeBehavior
     {
         if (hiveDefenseTarget == null)
             return false;
-        if (!IsLivingCreature(hiveDefenseTarget))
+        if (!CanKeepLockedTarget(hiveDefenseTarget))
         {
-            hiveDefenseTarget = null;
-            lockedTarget = null;
-            state.Anger = 0f;
-            state.Angry = false;
-            searchingLastPosition = false;
+            BeginLastPositionSearch();
             return false;
         }
 
@@ -158,6 +158,8 @@ public sealed partial class Mod_BeeBehavior
         nearestMoving = null;
         lockedTarget = null;
         searchingLastPosition = false;
+        lastSeenTarget = null;
+        lostTargetAngerRemaining = 0f;
         overlapSeconds.Clear();
         motionSamples.Clear();
         expiredSamples.Clear();
@@ -270,6 +272,8 @@ public sealed partial class Mod_BeeBehavior
         state.Angry = true;
         overlapSeconds.Clear();
         searchingLastPosition = false;
+        lastSeenTarget = null;
+        lostTargetAngerRemaining = 0f;
     }
     #endregion
 
@@ -279,6 +283,8 @@ public sealed partial class Mod_BeeBehavior
     {
         if (nearestMoving != null && CanKeepLockedTarget(nearestMoving))
             LockMovingTarget(nearestMoving);
+        else if (searchingLastPosition && CanKeepLockedTarget(lastSeenTarget))
+            LockMovingTarget(lastSeenTarget);
         if (lockedTarget != null)
         {
             if (CanKeepLockedTarget(lockedTarget))
@@ -287,25 +293,43 @@ public sealed partial class Mod_BeeBehavior
                 ChaseLockedTarget(flightSeconds);
                 return;
             }
-            lockedTarget = null;
-            searchingLastPosition = true;
+            BeginLastPositionSearch();
         }
         if (searchingLastPosition)
         {
-            if (WorldTopologyRuntime.SqrDistance(item.transform.position, lastSeenPosition) >
-                StingDistance * StingDistance)
+            lostTargetAngerRemaining = Mathf.Max(0f, lostTargetAngerRemaining - gameSeconds);
+            if (lostTargetAngerRemaining <= 0f)
             {
-                bird.FlyTo(lastSeenPosition, flightSeconds);
+                searchingLastPosition = false;
+                lastSeenTarget = null;
+                state.Anger = 0f;
+                state.Angry = false;
                 return;
             }
-            searchingLastPosition = false;
+            if (WorldTopologyRuntime.SqrDistance(item.transform.position, lastSeenPosition) >
+                StingDistance * StingDistance)
+                bird.FlyTo(lastSeenPosition, flightSeconds);
+            return; // 到达最后位置仍等待，不能提前结束十秒搜索。
         }
-        // 只有无目标且最后位置确认完成，愤怒值才以每秒零点一下降。
+        // 尚未锁定过目标的愤怒巡航沿用缓慢衰减，丢失目标则由十秒搜索负责结束。
         state.Anger = Mathf.Max(0f, state.Anger - AngerDecayPerSecond * gameSeconds);
         if (state.Anger <= 0f)
             state.Angry = false;
         // 愤怒巡航仍限制在蜂巢领地内，但保持正常飞行速度，不表现为悠闲巡逻。
-        TickTerritoryPatrol(flightSeconds, state.Angry ? 1f : PatrolFlightSpeedMultiplier);
+        if (colony != null)
+            TickTerritoryPatrol(flightSeconds, state.Angry ? 1f : PatrolFlightSpeedMultiplier);
+        else
+            bird.WanderAroundHome(flightSeconds);
+    }
+
+    /// <summary>普通追击和护巢追击共用丢失目标后的愤怒记忆，不再读取范围外目标的新位置。</summary>
+    private void BeginLastPositionSearch()
+    {
+        lastSeenTarget = lockedTarget;
+        lockedTarget = null;
+        hiveDefenseTarget = null;
+        searchingLastPosition = true;
+        lostTargetAngerRemaining = LostTargetAngerSeconds;
     }
 
     /// <summary>更近的移动目标替换原目标；激怒者没有优先权。</summary>
@@ -314,6 +338,8 @@ public sealed partial class Mod_BeeBehavior
         lockedTarget = target;
         lastSeenPosition = target.transform.position;
         searchingLastPosition = false;
+        lastSeenTarget = null;
+        lostTargetAngerRemaining = 0f;
     }
 
     /// <summary>愤怒时三格内且视线可达的已锁定目标，停下后仍保持追击资格。</summary>
@@ -372,6 +398,8 @@ public sealed partial class Mod_BeeBehavior
         hiveDefenseTarget = null;
         lastSeenPosition = default;
         searchingLastPosition = false;
+        lastSeenTarget = null;
+        lostTargetAngerRemaining = 0f;
         targetScanElapsed = 0f;
         scanGeneration = 0;
         colonyAlertAnger = 0f;

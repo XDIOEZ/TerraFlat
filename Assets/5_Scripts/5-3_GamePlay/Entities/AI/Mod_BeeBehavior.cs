@@ -54,6 +54,7 @@ public sealed partial class Mod_BeeBehavior : Module, IBirdFlightPilot, IDamageS
     [Min(0.1f)] public float ForageLandingDistance = 0.3f; // 采蜜停落半径。
     [Min(0.1f)] public float HomeArrivalDistance = 0.45f; // 返巢交易半径。
     [Min(0.1f)] public float AngryLockRadius = 3f; // 愤怒状态的移动目标锁定半径。
+    [Min(0.1f)] public float LostTargetAngerSeconds = 10f; // 丢失目标后保持愤怒并搜索最后位置的时长。
     [Min(0.1f)] public float AlertSeconds = 10f; // 与生物同格持续多久激怒蜜蜂。
     [Min(0.1f)] public float AngerMaximum = 10f; // 警惕与愤怒共用的上限。
     [Min(0f)] public float AngerDecayPerSecond = 0.1f; // 无目标时百秒归零。
@@ -75,6 +76,7 @@ public sealed partial class Mod_BeeBehavior : Module, IBirdFlightPilot, IDamageS
     public override ModuleTickMode TickMode => ModuleTickMode.Disabled;
     public float Satiety => state.Satiety;
     public float Anger => state.Anger;
+    public bool HasActiveAngryPursuit => state.Angry && (lockedTarget != null || searchingLastPosition);
     public float SatietyDrainRate => SatietyDrainPerSecond;
     public float HomeArrivalRadius => HomeArrivalDistance;
     public bool IsOrphaned => state.Orphaned;
@@ -88,7 +90,7 @@ public sealed partial class Mod_BeeBehavior : Module, IBirdFlightPilot, IDamageS
         damageReceiver = item.itemMods.RequireSingleModById<Mod_DamageReceiver>(ModText.Hp);
         if (!bird.permanentFlight || SatietyMaximum <= ReturnAbove || ReturnAbove <= ForageBelow ||
             HoneyContributionCost < 0f || HoneyMealGain < 0f || CropGainPerSecond <= 0f ||
-            FlowerGainPerSecond <= 0f || PatrolFlightSpeedMultiplier <= 0f)
+            FlowerGainPerSecond <= 0f || PatrolFlightSpeedMultiplier <= 0f || LostTargetAngerSeconds <= 0f)
             throw new InvalidOperationException("蜜蜂行为配置无效。");
         state = ModData.GetData<BeeState>() ?? new BeeState();
         state.Satiety = Mathf.Clamp(state.Satiety, 0f, SatietyMaximum);
@@ -159,7 +161,7 @@ public sealed partial class Mod_BeeBehavior : Module, IBirdFlightPilot, IDamageS
             DrainSatiety(step);
             return;
         }
-        if (nightSleepRequested && colony != null)
+        if (nightSleepRequested && colony != null && !HasActiveAngryPursuit)
         {
             DrainSatiety(step);
             bird.FlyTo(colony.HomePosition, step);
@@ -203,7 +205,7 @@ public sealed partial class Mod_BeeBehavior : Module, IBirdFlightPilot, IDamageS
         state.Satiety = Mathf.Max(0f, state.Satiety - SatietyDrainPerSecond * Mathf.Max(0f, seconds));
     }
 
-    /// <summary>蜂巢下达或取消夜间归巢请求；普通警戒不能打断睡眠流程。</summary>
+    /// <summary>蜂巢下达或取消夜间归巢请求；已有追击与最后位置搜索结束后才执行归巢。</summary>
     public void SetNightSleepRequested(bool requested)
     {
         if (nightSleepRequested == requested)
@@ -213,7 +215,8 @@ public sealed partial class Mod_BeeBehavior : Module, IBirdFlightPilot, IDamageS
             return;
         state.ReturningHome = false;
         ClearForageTarget();
-        ClearLocalCombatForSleep();
+        if (!HasActiveAngryPursuit)
+            ClearLocalCombatForSleep();
         ResetPatrol();
     }
 
@@ -342,7 +345,7 @@ public sealed partial class Mod_BeeBehavior : Module, IBirdFlightPilot, IDamageS
         {
             if (lockedTarget != null)
                 return "愤怒追击";
-            return searchingLastPosition ? "搜索目标" : "愤怒巡航";
+            return searchingLastPosition ? $"搜索目标({lostTargetAngerRemaining:F1}秒)" : "愤怒巡航";
         }
 
         if (state.ReturningHome)
