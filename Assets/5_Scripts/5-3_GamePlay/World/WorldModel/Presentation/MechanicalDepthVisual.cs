@@ -16,7 +16,7 @@ public sealed partial class MechanicalDepthVisual : MonoBehaviour, ISpatialInter
         internal int Id, Order;
         internal bool Touched, Visible, DrawBelowMechanical;
     }
-    private readonly PartVisual[] parts = new PartVisual[4];
+    private readonly PartVisual[] parts = new PartVisual[6];
     private ChunkTilemapRenderer owner;
     private int entityId, occupancy;
     private bool highlighted, disposed;

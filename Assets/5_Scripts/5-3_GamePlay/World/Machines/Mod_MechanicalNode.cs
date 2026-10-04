@@ -15,12 +15,10 @@ public sealed partial class Mod_MechanicalNode : Module, IInteractable, IBuildin
     private const string GearboxGearState = "gearboxGear";
     private const string GearboxLargeGearObjectName = "MechanicalGearboxLargeGear";
     private const string GearboxSmallGearObjectName = "MechanicalGearboxSmallGear";
-    private const string AxisPortState = "axisPorts";
-    private const string MirroredAxisPortLayout = "mirroredSingle";
-    private const string CenteredShaftRingLayout = "centeredShaftRings";
+    public const string StandardAxisPortItemId = "Shaft_Wood";
+    public const string StandardAxisPortState = "axisPort";
     private const string AxisPortLeftObjectName = "MechanicalAxisPortLeft";
     private const string AxisPortRightObjectName = "MechanicalAxisPortRight";
-    private const string AxisPortRingsObjectName = "MechanicalAxisPortRings";
     private const string RotorState = "rotor";
     private const string RotorObjectName = "MechanicalRotor";
     private const string ShaftCoreState = "shaftRollingCore";
@@ -39,10 +37,6 @@ public sealed partial class Mod_MechanicalNode : Module, IInteractable, IBuildin
     private static readonly int MainTextureScaleOffset = Shader.PropertyToID("_MainTex_ST");
     public string DefinitionId; // 对应机械配置目录的稳定节点 ID
     public float InputShaftOffsetX = -0.45f; // 固定输入杆中心的局部横向偏移，保留轮盘下的隐藏连接段。
-    public string AxisPortLayout; // 选择镜像接头、居中双端铁环或独立单端接口。
-    public float AxisPortOffset = 0.45f; // 镜像单端接头各自相对建筑中心的偏移。
-    public float AxisPortOffsetY; // 轴端口相对主体锚点的纵向偏移。
-    public bool AxisPortDrawOnTop; // 外露轴环安装在支架表面时，绘制在主体前方。
     public Vector3 InputShaftLocalPosition = new Vector3(-0.55f, 0f, 0f); // 风箱轴口坐标，按风车独立图层方式贴合主体轴心。
     public float BellowsCompression = 0.32f; // 风囊皮革相对展开高度的最大收缩比例，和机械相位同步。
     public Vector3 RotorLocalPosition; // 叶轮中心相对主体轴心锚点的位置，由物品配置提供。
@@ -96,7 +90,6 @@ public sealed partial class Mod_MechanicalNode : Module, IInteractable, IBuildin
     private Sprite axisPortSprite; // 由物品 visual.spriteStates 预载的轴端图层。
     private SpriteRenderer axisPortLeftRenderer; // 镜像单端接头的局部负向图层。
     private SpriteRenderer axisPortRightRenderer; // 镜像单端接头的局部正向图层。
-    private SpriteRenderer axisPortRingsRenderer; // 居中整格传动杆的双端铁环图层。
     private float gearAngleDegrees; // 本地表现相位，不参与机械网络存档。
     private Sprite shaftCoreSprite; // 可平铺的木杆纹理周期。
     private Sprite shaftRingsSprite; // 固定在传动轴两端的金属环。
@@ -189,7 +182,6 @@ public sealed partial class Mod_MechanicalNode : Module, IInteractable, IBuildin
         if (inputShaftRenderer != null) inputShaftRenderer.enabled = false;
         if (axisPortLeftRenderer != null) axisPortLeftRenderer.enabled = false;
         if (axisPortRightRenderer != null) axisPortRightRenderer.enabled = false;
-        if (axisPortRingsRenderer != null) axisPortRingsRenderer.enabled = false;
         ClearElectricalPortVisual();
         if (gearboxLargeGearRenderer != null) gearboxLargeGearRenderer.enabled = false;
         if (gearboxSmallGearRenderer != null) gearboxSmallGearRenderer.enabled = false;
@@ -210,7 +202,6 @@ public sealed partial class Mod_MechanicalNode : Module, IInteractable, IBuildin
         axisPortSprite = null;
         axisPortLeftRenderer = null;
         axisPortRightRenderer = null;
-        axisPortRingsRenderer = null;
         gearAngleDegrees = 0f;
         shaftCoreSprite = null;
         shaftRingsSprite = null;
@@ -369,37 +360,30 @@ public sealed partial class Mod_MechanicalNode : Module, IInteractable, IBuildin
     /// <summary>按配置把轴端口叠加到建筑虚影，并与主体预览使用相同朝向。</summary>
     private void ApplyAxisPortPreview(BuildingShadow shadow, Quaternion placementRotation, bool mirrorX)
     {
-        if (axisPortSprite == null) return;
+        SetPreviewAxisPortActive(shadow, AxisPortLeftObjectName, false);
+        SetPreviewAxisPortActive(shadow, AxisPortRightObjectName, false);
+        MechanicalAxisPortVisualDefinition visual = Definition?.AxisPortVisual;
+        if (axisPortSprite == null || visual == null) return;
         Vector3 basePosition = shadow.ShadowRenderer.transform.localPosition;
-        if (AxisPortLayout == CenteredShaftRingLayout || AxisPortLayout == SingleAxisPortLayout)
+        for (int i = 0; i < visual.Count; i++)
         {
-            SpriteRenderer portRings = shadow.EnsureOverlay(AxisPortRingsObjectName, axisPortSprite,
-                basePosition + ResolvePlacementVisualOffset(ResolveSingleAxisPortPosition()), spriteRenderer?.sharedMaterial);
-            if (portRings != null)
-            {
-                portRings.transform.localRotation = placementRotation;
-                portRings.transform.localScale = Vector3.one;
-                portRings.flipX = (spriteRenderer != null && spriteRenderer.flipX) ^ mirrorX;
-                portRings.sortingOrder = shadow.ShadowRenderer.sortingOrder + (AxisPortDrawOnTop ? 1 : -1);
-            }
-            return;
+            Vector3 localPosition = visual.GetLocalPosition(i);
+            string objectName = localPosition.x < 0f ? AxisPortLeftObjectName : AxisPortRightObjectName;
+            SpriteRenderer port = shadow.EnsureOverlay(objectName, axisPortSprite,
+                basePosition + ResolvePlacementVisualOffset(localPosition), spriteRenderer?.sharedMaterial);
+            if (port == null) continue;
+            port.gameObject.SetActive(true);
+            port.transform.localRotation = placementRotation;
+            port.transform.localScale = Vector3.one;
+            port.flipX = (spriteRenderer != null && spriteRenderer.flipX) ^ mirrorX ^ visual.IsLeftPort(i);
+            port.sortingOrder = shadow.ShadowRenderer.sortingOrder - 1;
         }
+    }
 
-        float offset = Mathf.Abs(AxisPortOffset);
-        SpriteRenderer leftPort = shadow.EnsureOverlay(AxisPortLeftObjectName, axisPortSprite,
-            basePosition + ResolvePlacementVisualOffset(new Vector3(-offset, AxisPortOffsetY, 0f)), spriteRenderer?.sharedMaterial);
-        SpriteRenderer rightPort = shadow.EnsureOverlay(AxisPortRightObjectName, axisPortSprite,
-            basePosition + ResolvePlacementVisualOffset(new Vector3(offset, AxisPortOffsetY, 0f)), spriteRenderer?.sharedMaterial);
-        if (leftPort != null)
-        {
-            leftPort.transform.localRotation = placementRotation;
-            leftPort.flipX = (spriteRenderer != null && spriteRenderer.flipX) ^ mirrorX;
-        }
-        if (rightPort != null)
-        {
-            rightPort.transform.localRotation = placementRotation;
-            rightPort.flipX = (spriteRenderer == null || !spriteRenderer.flipX) ^ mirrorX;
-        }
+    private static void SetPreviewAxisPortActive(BuildingShadow shadow, string objectName, bool active)
+    {
+        Transform existing = shadow.transform.Find(objectName);
+        if (existing != null) existing.gameObject.SetActive(active);
     }
 
     public bool ValidatePlacement(Vector2Int cell, out string reason)
@@ -739,28 +723,18 @@ public sealed partial class Mod_MechanicalNode : Module, IInteractable, IBuildin
         axisPortSprite = null;
         if (axisPortLeftRenderer != null) axisPortLeftRenderer.enabled = false;
         if (axisPortRightRenderer != null) axisPortRightRenderer.enabled = false;
-        if (axisPortRingsRenderer != null) axisPortRingsRenderer.enabled = false;
-        if (Definition?.Ports != "axis" || spriteRenderer == null || GameRes.Instance == null ||
-            !GameRes.Instance.TryGetItemDefinition(item.itemData.IDName, out RuntimeItemDefinition definition) ||
-            !definition.TryGetVisualStateSprite(AxisPortState, out axisPortSprite)) return;
+        if (Definition?.AxisPortVisual == null || spriteRenderer == null || GameRes.Instance == null ||
+            !GameRes.Instance.TryGetItemDefinition(StandardAxisPortItemId, out RuntimeItemDefinition definition) ||
+            !definition.TryGetVisualStateSprite(StandardAxisPortState, out axisPortSprite)) return;
 
-        if (AxisPortLayout != MirroredAxisPortLayout && AxisPortLayout != CenteredShaftRingLayout &&
-            AxisPortLayout != SingleAxisPortLayout)
-            throw new InvalidOperationException($"机械端口图层布局未配置或无效：{item.itemData.IDName} / {AxisPortLayout}");
         if (!placed) return;
-        switch (AxisPortLayout)
+        MechanicalAxisPortVisualDefinition visual = Definition.AxisPortVisual;
+        for (int i = 0; i < visual.Count; i++)
         {
-            case MirroredAxisPortLayout:
-                RemoveAxisPortRenderer(AxisPortRingsObjectName, ref axisPortRingsRenderer);
-                axisPortLeftRenderer = GetOrCreateAxisPortRenderer(AxisPortLeftObjectName, spriteRenderer.flipX);
-                axisPortRightRenderer = GetOrCreateAxisPortRenderer(AxisPortRightObjectName, !spriteRenderer.flipX);
-                break;
-            case CenteredShaftRingLayout:
-            case SingleAxisPortLayout:
-                RemoveAxisPortRenderer(AxisPortLeftObjectName, ref axisPortLeftRenderer);
-                RemoveAxisPortRenderer(AxisPortRightObjectName, ref axisPortRightRenderer);
-                axisPortRingsRenderer = GetOrCreateAxisPortRenderer(AxisPortRingsObjectName, spriteRenderer.flipX);
-                break;
+            if (visual.IsLeftPort(i))
+                axisPortLeftRenderer = GetOrCreateAxisPortRenderer(AxisPortLeftObjectName, !spriteRenderer.flipX);
+            else
+                axisPortRightRenderer = GetOrCreateAxisPortRenderer(AxisPortRightObjectName, spriteRenderer.flipX);
         }
     }
 
@@ -803,31 +777,19 @@ public sealed partial class Mod_MechanicalNode : Module, IInteractable, IBuildin
     /// <summary>按布局居中隐藏整格传动杆，或把镜像单端接头挂在轴线两侧。</summary>
     private void ApplyAxisPortVisual()
     {
-        if (axisPortSprite == null || spriteRenderer == null) return;
-        if (AxisPortLayout == CenteredShaftRingLayout || AxisPortLayout == SingleAxisPortLayout)
-        {
-            if (axisPortRingsRenderer == null || !axisPortRingsRenderer.enabled) return;
-            if (!AxisPortDrawOnTop)
-                spriteRenderer.sortingOrder = Mathf.Max(spriteRenderer.sortingOrder, originalSortingOrder + 1);
-            axisPortRingsRenderer.transform.localPosition = ResolveSingleAxisPortPosition();
-            axisPortRingsRenderer.transform.localRotation = Quaternion.identity;
-            axisPortRingsRenderer.transform.localScale = Vector3.one;
-            ApplyAxisPortSorting(axisPortRingsRenderer, AxisPortDrawOnTop ? 1 : -1);
-            return;
-        }
-
-        if (axisPortLeftRenderer == null || axisPortRightRenderer == null ||
-            !axisPortLeftRenderer.enabled || !axisPortRightRenderer.enabled) return;
+        MechanicalAxisPortVisualDefinition visual = Definition?.AxisPortVisual;
+        if (axisPortSprite == null || spriteRenderer == null || visual == null) return;
         spriteRenderer.sortingOrder = Mathf.Max(spriteRenderer.sortingOrder, originalSortingOrder + 1);
-        float offset = Mathf.Abs(AxisPortOffset);
-        axisPortLeftRenderer.transform.localPosition = new Vector3(-offset, AxisPortOffsetY, 0f);
-        axisPortRightRenderer.transform.localPosition = new Vector3(offset, AxisPortOffsetY, 0f);
-        axisPortLeftRenderer.transform.localRotation = Quaternion.identity;
-        axisPortRightRenderer.transform.localRotation = Quaternion.identity;
-        axisPortLeftRenderer.flipX = spriteRenderer.flipX;
-        axisPortRightRenderer.flipX = !spriteRenderer.flipX;
-        ApplyAxisPortSorting(axisPortLeftRenderer);
-        ApplyAxisPortSorting(axisPortRightRenderer);
+        for (int i = 0; i < visual.Count; i++)
+        {
+            SpriteRenderer renderer = visual.IsLeftPort(i) ? axisPortLeftRenderer : axisPortRightRenderer;
+            if (renderer == null || !renderer.enabled) continue;
+            renderer.transform.localPosition = visual.GetLocalPosition(i);
+            renderer.transform.localRotation = Quaternion.identity;
+            renderer.transform.localScale = Vector3.one;
+            renderer.flipX = spriteRenderer.flipX ^ visual.IsLeftPort(i);
+            ApplyAxisPortSorting(renderer);
+        }
     }
 
     /// <summary>轴端图层保持低于箱体，并沿用箱体的 SortingLayer。</summary>

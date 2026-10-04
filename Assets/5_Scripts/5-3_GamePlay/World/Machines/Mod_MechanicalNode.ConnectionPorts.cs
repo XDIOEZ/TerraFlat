@@ -2,18 +2,12 @@ using UnityEngine;
 
 public sealed partial class Mod_MechanicalNode
 {
-    #region 单端机械与电线接口
-    private const string SingleAxisPortLayout = "single";
+    #region 电线接口
     private const string ElectricalPortState = "electricalPort";
     private const string ElectricalPortObjectName = "MechanicalElectricalPort";
-    public Vector3 AxisPortLocalPosition; // 单端轴口的位置独立于机身尺寸配置。
     public Vector3 ElectricalPortLocalPosition; // 电线口使用标准导线切片并由机身遮住内侧。
     private Sprite electricalPortSprite;
     private SpriteRenderer electricalPortRenderer;
-
-    private Vector3 ResolveSingleAxisPortPosition()
-        => AxisPortLayout == SingleAxisPortLayout
-            ? AxisPortLocalPosition : new Vector3(0f, AxisPortOffsetY, 0f);
 
     /// <summary>资源重载时同步更新电线口，召唤器只预载贴图供放置虚影使用。</summary>
     private void ConfigureElectricalPortVisual()

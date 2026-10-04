@@ -22,11 +22,6 @@ public sealed partial class ChunkTilemapRenderer
     private sealed class MechanicalVisualConfig
     {
         public float InputShaftOffsetX = -.45f;
-        public string AxisPortLayout;
-        public float AxisPortOffset = .45f;
-        public float AxisPortOffsetY;
-        public bool AxisPortDrawOnTop;
-        public Vector3 AxisPortLocalPosition; // 单端轴口独立定位，保持标准传动轴的原始比例。
         public Vector3 ElectricalPortLocalPosition; // 电线口沿用机身遮挡独立接头的分层方式。
         public Vector3 InputShaftLocalPosition = new(-.55f, 0f, 0f);
         public Vector3 RotorLocalPosition;
@@ -47,12 +42,14 @@ public sealed partial class ChunkTilemapRenderer
     private readonly Dictionary<Vector3Int, int> submittedWireMasks = new(); // 相邻事件只重提连接发生变化的电线。
     internal HashSet<Vector3Int> MechanicalShadowKeys => submittedMechanicalCells; // 供阴影注册表按区块卸载。
     private static Material mechanicalFallbackMaterial;
+    private static Sprite mechanicalAxisPortSprite;
 
     /// <summary>新资源会话重新解析 MOD 多图层参数。</summary>
     private static void ResetMechanicalVisualCache()
     {
         mechanicalVisualConfigs.Clear();
         mechanicalFallbackMaterial = null;
+        mechanicalAxisPortSprite = null;
     }
 
     /// <summary>基础地形建立后接入机械数据变化和表现重建通知。</summary>
@@ -232,18 +229,16 @@ public sealed partial class ChunkTilemapRenderer
 
         if (kind == "gearbox")
         {
-            bool frontPorts = config.AxisPortDrawOnTop;
-            if (!frontPorts) Ports(node, x, y, 0, def, material, origin, rotation, config);
-            Part(node, x, y, frontPorts ? 0 : 1, def.Sprite, material, origin, rotation,
+            int part = Ports(node, x, y, 0, material, origin, rotation);
+            Part(node, x, y, part++, def.Sprite, material, origin, rotation,
                 Vector3.zero, Vector3.one, 0, 0f);
             Sprite gear = State(def, "gearboxGear");
-            Part(node, x, y, frontPorts ? 1 : 2, gear, material, origin, rotation,
+            Part(node, x, y, part++, gear, material, origin, rotation,
                 config.GearboxLargeGearLocalPosition, Vector3.one * config.GearboxLargeGearScale, 1, 1f,
                 track: 1);
-            Part(node, x, y, frontPorts ? 2 : 3, gear, material, origin, rotation,
+            Part(node, x, y, part++, gear, material, origin, rotation,
                 config.GearboxSmallGearLocalPosition, Vector3.one * config.GearboxSmallGearScale,
                 1, 1f, Mathf.PI / 8f, track: 2);
-            if (frontPorts) Ports(node, x, y, 3, def, material, origin, rotation, config);
             return;
         }
 
@@ -256,83 +251,85 @@ public sealed partial class ChunkTilemapRenderer
             return;
         }
 
-        if (config.AxisPortLayout == "single" ||
-            def.TryGetVisualStateSprite("electricalPort", out _))
+        if (def.TryGetVisualStateSprite("electricalPort", out _))
         {
             // 接头保持原始 PPU，伸入机身的部分由上层外壳遮住。
-            if (!config.AxisPortDrawOnTop) Ports(node, x, y, 0, def, material, origin, rotation, config);
+            int part = Ports(node, x, y, 0, material, origin, rotation);
             if (def.TryGetVisualStateSprite("electricalPort", out Sprite cablePort))
-                Part(node, x, y, 1, cablePort, material, origin, rotation,
+                Part(node, x, y, part++, cablePort, material, origin, rotation,
                     config.ElectricalPortLocalPosition, Vector3.one, 0, 0f);
-            Part(node, x, y, 2, def.Sprite, material, origin, rotation,
+            Part(node, x, y, part++, def.Sprite, material, origin, rotation,
                 Vector3.zero, Vector3.one, 0, 0f);
-            if (config.AxisPortDrawOnTop) Ports(node, x, y, 3, def, material, origin, rotation, config);
             depthVisual.UpdateFacility(node);
             return;
         }
 
         if (def.TryGetVisualStateSprite(ReciprocatingSpriteState, out Sprite reciprocating))
         {
-            Part(node, x, y, 0, def.Sprite, material, origin, rotation,
+            int part = Ports(node, x, y, 0, material, origin, rotation);
+            Part(node, x, y, part++, def.Sprite, material, origin, rotation,
                 Vector3.zero, Vector3.one, 0, 0f);
-            int movingPart = config.AxisPortDrawOnTop ? 1 : 3;
-            Part(node, x, y, movingPart, reciprocating, material, origin, rotation,
+            Part(node, x, y, part++, reciprocating, material, origin, rotation,
                 config.ReciprocatingLocalPosition, Vector3.one, 3, 1f,
                 stroke: config.ReciprocatingStroke);
-            Ports(node, x, y, config.AxisPortDrawOnTop ? 3 : 1,
-                def, material, origin, rotation, config);
             return;
         }
 
         if (def.TryGetVisualStateSprite("rotor", out Sprite rotor))
         {
+            int part = Ports(node, x, y, 0, material, origin, rotation);
             if (config.RotorBehindBody)
             {
-                Part(node, x, y, 0, rotor, material, origin, rotation,
+                Part(node, x, y, part++, rotor, material, origin, rotation,
                     config.RotorLocalPosition, Vector3.one, 1, 1f);
-                Part(node, x, y, 1, def.Sprite, material, origin, rotation,
+                Part(node, x, y, part++, def.Sprite, material, origin, rotation,
                     Vector3.zero, Vector3.one, 0, 0f);
-                return;
             }
-            Part(node, x, y, 0, def.Sprite, material, origin, rotation,
-                Vector3.zero, Vector3.one, 0, 0f);
-            int rotorPart = config.AxisPortDrawOnTop ? 1 : 3;
-            Part(node, x, y, rotorPart, rotor, material, origin, rotation,
-                config.RotorLocalPosition, Vector3.one, 1, 1f);
-            if (def.TryGetVisualStateSprite("axisPorts", out Sprite port))
-                Part(node, x, y, config.AxisPortDrawOnTop ? 3 : 1, port, material, origin, rotation,
-                    new Vector3(0f, config.AxisPortOffsetY), Vector3.one, 0, 0f);
+            else
+            {
+                Part(node, x, y, part++, def.Sprite, material, origin, rotation,
+                    Vector3.zero, Vector3.one, 0, 0f);
+                Part(node, x, y, part++, rotor, material, origin, rotation,
+                    config.RotorLocalPosition, Vector3.one, 1, 1f);
+            }
             return;
         }
         Sprite body = def.Sprite;
         if (node.Definition.LogicId == "vessel" && Mod_WaterVessel.TryResolvePresentationSprite(node.Snapshot, out Sprite vessel)) body = vessel;
         // 设施本体沿用预览的图片局部偏移，让 Sprite Pivot 落在同一建造锚点上。
-        Part(node, x, y, 0, body, material, origin, rotation, facilityBodyOffset, Vector3.one, 0, 0f);
+        int facilityPart = Ports(node, x, y, 0, material, origin, rotation);
+        Part(node, x, y, facilityPart++, body, material, origin, rotation, facilityBodyOffset, Vector3.one, 0, 0f);
         depthVisual.UpdateFacility(node);
-        Ports(node, x, y, 3, def, material, origin, rotation, config);
         }
         finally { depthVisual.EndUpdate(); }
     }
 
     /// <summary>声明了端口贴图的设备按配置叠加轴环或镜像接头。</summary>
-    private void Ports(MachineEntity node, int x, int y, int part, RuntimeItemDefinition def,
-        Material material, Vector3 origin, Quaternion rotation, MechanicalVisualConfig config)
+    private int Ports(MachineEntity node, int x, int y, int part,
+        Material material, Vector3 origin, Quaternion rotation)
     {
-        if (!def.TryGetVisualStateSprite("axisPorts", out Sprite port)) return;
-        if (config.AxisPortLayout == "single")
-            Part(node, x, y, part, port, material, origin, rotation,
-                config.AxisPortLocalPosition, Vector3.one, 0, 0f, drawBelowMechanical: true);
-        else if (config.AxisPortLayout == "centeredShaftRings")
-            Part(node, x, y, part, port, material, origin, rotation,
-                new Vector3(0f, config.AxisPortOffsetY), Vector3.one, 0, 0f, drawBelowMechanical: true);
-        else if (config.AxisPortLayout == "mirroredSingle")
+        MechanicalAxisPortVisualDefinition visual = node.Definition.AxisPortVisual;
+        if (visual == null) return part;
+        Sprite port = StandardAxisPortSprite();
+        for (int i = 0; i < visual.Count; i++)
         {
-            Part(node, x, y, 1, port, material, origin, rotation,
-                new Vector3(-config.AxisPortOffset, config.AxisPortOffsetY), Vector3.one, 0, 0f, drawBelowMechanical: true);
-            Part(node, x, y, 2, port, material, origin, rotation,
-                new Vector3(config.AxisPortOffset, config.AxisPortOffsetY), Vector3.one, 0, 0f, drawBelowMechanical: true);
+            Vector3 scale = visual.IsLeftPort(i) ? new Vector3(-1f, 1f, 1f) : Vector3.one;
+            Part(node, x, y, part + i, port, material, origin, rotation,
+                visual.GetLocalPosition(i), scale, 0, 0f, drawBelowMechanical: true);
         }
-        else throw new InvalidOperationException("机械端口图层布局无效：" + node.Definition.Id);
+        return part + visual.Count;
+    }
+
+    private static Sprite StandardAxisPortSprite()
+    {
+        if (mechanicalAxisPortSprite != null) return mechanicalAxisPortSprite;
+        GameRes resources = GameRes.ExistingInstance;
+        if (resources == null ||
+            !resources.TryGetItemDefinition(Mod_MechanicalNode.StandardAxisPortItemId, out RuntimeItemDefinition definition) ||
+            !definition.TryGetVisualStateSprite(Mod_MechanicalNode.StandardAxisPortState, out mechanicalAxisPortSprite) ||
+            mechanicalAxisPortSprite == null)
+            throw new InvalidOperationException("机械标准连接杆端口贴图缺失。");
+        return mechanicalAxisPortSprite;
     }
 
     /// <summary>写入 GPU 动画速度和相位，零转速时停在当前角度。</summary>

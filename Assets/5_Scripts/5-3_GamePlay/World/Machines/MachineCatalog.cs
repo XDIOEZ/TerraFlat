@@ -218,6 +218,7 @@ public sealed class MachineDefinition
     public float PlayerMoveSpeedMultiplier = 1f; // 可通行机械占格对玩家主动移速的倍率。
     public bool? CastVisualShadows; // MOD 可覆盖用力器与发力器的默认两类世界阴影。
     public int PlacementLayer = -1; // -1 沿用机械默认层；电线等覆盖层可显式使用独立层。
+    public MechanicalAxisPortVisualDefinition AxisPortVisual; // 标准连接杆端口由目录统一控制。
     public MachineTransportDefinition Transport; // 输送能力独立于物品名称，MOD 可以配置自己的传送设备。
     public ElectricalDefinition Electrical; // 可选电气能力；同一机器可同时属于机械网与电网。
     public int Layer => PlacementLayer >= 0 ? PlacementLayer : Kind == "bridge" ? 1 : 0;
@@ -283,6 +284,7 @@ public sealed class MachineDefinition
         if (ProcessCapabilityLevel < 0 ||
             ProcessCapabilityLevel > 0 && string.IsNullOrWhiteSpace(ProcessCapability))
             throw new ArgumentException("机械加工能力等级无效：" + Id);
+        AxisPortVisual?.Validate(Id, HasMechanicalPorts);
         Transport?.Validate(Id, HasMechanicalPorts);
         Electrical?.Validate(Id);
         if (FormerIds != null)
@@ -294,6 +296,7 @@ public sealed class MachineDefinition
     }
     internal static bool Positive(float value) => value > 0 && !float.IsInfinity(value) && !float.IsNaN(value);
     internal static bool NonNegative(float value) => value >= 0 && !float.IsInfinity(value) && !float.IsNaN(value);
+    internal static bool Finite(float value) => !float.IsInfinity(value) && !float.IsNaN(value);
     #endregion
 }
 
@@ -314,6 +317,35 @@ public sealed class MachineTransportDefinition
             throw new ArgumentException("输送设备参数无效：" + id);
         if (Visual == null) throw new ArgumentException("输送带表现配置缺失：" + id);
         Visual.Validate(id);
+    }
+    #endregion
+}
+
+/// <summary>机械建筑统一连接杆端口表现；双端口左右镜像，单端口由 StartX 正负决定左右。</summary>
+[Serializable]
+public sealed class MechanicalAxisPortVisualDefinition
+{
+    #region 标准连接杆端口
+    public int Count;
+    public float StartX = 0.45f;
+    public float Y;
+
+    public Vector3 GetLocalPosition(int index)
+    {
+        if ((uint)index >= (uint)Count) throw new ArgumentOutOfRangeException(nameof(index));
+        if (Count == 1) return new Vector3(StartX, Y, 0f);
+        float x = Mathf.Abs(StartX);
+        return new Vector3(index == 0 ? -x : x, Y, 0f);
+    }
+
+    public bool IsLeftPort(int index) => GetLocalPosition(index).x < 0f;
+
+    public void Validate(string ownerId, bool hasMechanicalPorts)
+    {
+        if (!hasMechanicalPorts || (Count != 1 && Count != 2) ||
+            !MachineDefinition.Finite(StartX) || !MachineDefinition.Finite(Y) ||
+            (Count == 2 && Mathf.Approximately(StartX, 0f)))
+            throw new ArgumentException("机械连接杆端口表现参数无效：" + ownerId);
     }
     #endregion
 }

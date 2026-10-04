@@ -15,7 +15,7 @@ internal static class MechanicalShadowRegistry
         public float ContactWidth; // 底部椭圆的世界宽度。
         public Sprite PrimarySprite; // 主体贴图；端口等小附件不重复投影。
         public bool Active; // 区块卸载后立即失效。
-        public readonly Part[] Parts = new Part[4]; // 与机械主体子层一一对应。
+        public readonly Part[] Parts = new Part[6]; // 与机械主体子层一一对应。
     }
 
     internal sealed class Part

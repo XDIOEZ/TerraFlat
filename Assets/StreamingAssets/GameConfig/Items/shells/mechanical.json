@@ -20,8 +20,7 @@
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/HandCrank/HandCrank_Body.png",
         "spriteStates": {
-          "rotor": "Assets/6_Art/Generated/Mechanical/World/HandCrank/HandCrank_Rotor.png",
-          "axisPorts": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Shaft_Wood_Linked_EndRings.png"
+          "rotor": "Assets/6_Art/Generated/Mechanical/World/HandCrank/HandCrank_Rotor.png"
         }
       },
       "health": {
@@ -72,8 +71,6 @@
           },
           "parameters": {
             "DefinitionId": "HandCrank",
-            "AxisPortLayout": "centeredShaftRings",
-            "AxisPortDrawOnTop": true,
             "RotorLocalPosition": { "x": 0, "y": 0.3046875, "z": 0 }
           }
         }
@@ -99,8 +96,7 @@
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/HandCrank/HandCrank_Building.png",
         "spriteStates": {
-          "rotor": "Assets/6_Art/Generated/Mechanical/World/HandCrank/HandCrank_Rotor.png",
-          "axisPorts": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Shaft_Wood_Linked_EndRings.png"
+          "rotor": "Assets/6_Art/Generated/Mechanical/World/HandCrank/HandCrank_Rotor.png"
         }
       },
       "health": {
@@ -147,8 +143,6 @@
           },
           "parameters": {
             "DefinitionId": "HandCrank",
-            "AxisPortLayout": "centeredShaftRings",
-            "AxisPortDrawOnTop": true,
             "RotorLocalPosition": { "x": 0, "y": 0.3046875, "z": 0 }
           }
         }
@@ -472,7 +466,8 @@
         "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Shaft_Wood_Linked.png",
         "spriteStates": {
           "shaftRollingCore": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Shaft_Wood_Linked_RollingCore.png",
-          "shaftEndRings": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Shaft_Wood_Linked_EndRings.png"
+          "shaftEndRings": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Shaft_Wood_Linked_EndRings.png",
+          "axisPort": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Shaft_Wood_RightPort.png[AxlePort_Right]"
         }
       },
       "health": {
@@ -765,7 +760,6 @@
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Gearbox_Wood_Housing.png",
         "spriteStates": {
-          "axisPorts": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Shaft_Wood_Linked.png",
           "gearboxGear": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Gearbox_Wood_Gear.png"
         }
       },
@@ -817,7 +811,6 @@
           },
           "parameters": {
             "DefinitionId": "Gearbox_Wood",
-            "AxisPortLayout": "centeredShaftRings",
             "GearboxLargeGearLocalPosition": { "x": -0.09375, "y": 0, "z": 0 },
             "GearboxSmallGearLocalPosition": { "x": 0.1875, "y": 0, "z": 0 },
             "GearboxLargeGearScale": 0.875,
@@ -847,7 +840,6 @@
         "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Gearbox_Wood_Housing.png",
         "spriteStates": {
           "inventoryIcon": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Gearbox_Wood.png",
-          "axisPorts": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Shaft_Wood_Linked.png",
           "gearboxGear": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Gearbox_Wood_Gear.png"
         }
       },
@@ -895,7 +887,6 @@
           },
           "parameters": {
             "DefinitionId": "Gearbox_Wood",
-            "AxisPortLayout": "centeredShaftRings",
             "GearboxLargeGearLocalPosition": { "x": -0.09375, "y": 0, "z": 0 },
             "GearboxSmallGearLocalPosition": { "x": 0.1875, "y": 0, "z": 0 },
             "GearboxLargeGearScale": 0.875,
@@ -1213,8 +1204,7 @@
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/Millstone_Idle.png",
         "spriteStates": {
-          "rotor": "Assets/6_Art/Generated/Mechanical/World/Millstone_Rotor.png",
-          "axisPorts": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Shaft_Wood_Linked.png"
+          "rotor": "Assets/6_Art/Generated/Mechanical/World/Millstone_Rotor.png"
         }
       },
       "health": {
@@ -1261,8 +1251,6 @@
           },
           "parameters": {
             "DefinitionId": "Millstone",
-            "AxisPortLayout": "centeredShaftRings",
-            "AxisPortOffsetY": 0,
             "RotorLocalPosition": { "x": 0, "y": 0, "z": 0 }
           }
         }
@@ -1288,8 +1276,7 @@
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/Millstone_Idle.png",
         "spriteStates": {
-          "rotor": "Assets/6_Art/Generated/Mechanical/World/Millstone_Rotor.png",
-          "axisPorts": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Shaft_Wood_Linked.png"
+          "rotor": "Assets/6_Art/Generated/Mechanical/World/Millstone_Rotor.png"
         }
       },
       "health": {
@@ -1336,8 +1323,6 @@
           },
           "parameters": {
             "DefinitionId": "Millstone",
-            "AxisPortLayout": "centeredShaftRings",
-            "AxisPortOffsetY": 0,
             "RotorLocalPosition": { "x": 0, "y": 0, "z": 0 }
           }
         }
@@ -1649,7 +1634,6 @@
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Mechanical/MechanicalLoom/MechanicalLoom_Idle.png",
         "spriteStates": {
-          "axisPorts": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Shaft_Wood_Linked_EndRings.png"
         },
         "collider": {
           "type": "BoxCollider2D",
@@ -1700,9 +1684,7 @@
           "enabled": true,
           "data": { "BitData": [], "Type": 0 },
           "parameters": {
-            "DefinitionId": "MechanicalLoom",
-            "AxisPortLayout": "centeredShaftRings",
-            "AxisPortOffsetY": 0
+            "DefinitionId": "MechanicalLoom"
           }
         }
       }
@@ -1724,7 +1706,6 @@
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Mechanical/MechanicalLoom/MechanicalLoom_Idle.png",
         "spriteStates": {
-          "axisPorts": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Shaft_Wood_Linked_EndRings.png"
         }
       },
       "health": {
@@ -1767,9 +1748,7 @@
           "enabled": true,
           "data": { "BitData": [], "Type": 0 },
           "parameters": {
-            "DefinitionId": "MechanicalLoom",
-            "AxisPortLayout": "centeredShaftRings",
-            "AxisPortOffsetY": 0
+            "DefinitionId": "MechanicalLoom"
           }
         }
       }
@@ -1793,7 +1772,6 @@
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/MechanicalHammer_Body.png",
         "spriteStates": {
-          "axisPorts": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Shaft_Wood_Linked_EndRings.png",
           "reciprocating": "Assets/6_Art/Generated/Mechanical/World/MechanicalHammer_Ram.png"
         }
       },
@@ -1841,8 +1819,6 @@
           },
           "parameters": {
             "DefinitionId": "MechanicalHammer",
-            "AxisPortLayout": "centeredShaftRings",
-            "AxisPortDrawOnTop": true,
             "ReciprocatingStroke": 0.15625
           }
         }
@@ -1868,7 +1844,6 @@
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/MechanicalHammer_Building.png",
         "spriteStates": {
-          "axisPorts": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Shaft_Wood_Linked_EndRings.png"
         }
       },
       "health": {
@@ -1914,9 +1889,7 @@
             "Type": 0
           },
           "parameters": {
-            "DefinitionId": "MechanicalHammer",
-            "AxisPortLayout": "centeredShaftRings",
-            "AxisPortDrawOnTop": true
+            "DefinitionId": "MechanicalHammer"
           }
         }
       }

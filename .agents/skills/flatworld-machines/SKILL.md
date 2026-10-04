@@ -21,7 +21,7 @@ description: "Use when: 定位或修改 FlatWorld 的机器世界、工作台、
 - 机械网与电网是同一批 `MachineEntity` 上的两张独立拓扑图；电线使用独立覆盖层。`Electrical.Connection=cell` 接同格线，方向名接旋转后的邻格；双向电机 `Role=converter` 的电气接口和唯一 `AxlePorts` 必须分开，默认左线右轴，不要求世界布线区分正负极。
 - 双向电机每轮先排除电驱动力探测机械输入，再从独立电源向外确定方向；机械输入优先，转换链的上游电网不能成为发电回流目标。电池探算不写储能，正式结算每轮一次；输出按实际功率预算限制，电驱扭矩向下取整，不能将上一轮输出或四舍五入增量当作新能量。转换效率与游戏功率换算统一取目录配置。
 - 电线 `visual.spriteStates` 使用 `wire0..wire15`，连接位为北1、东2、南4、西8；朝向只读取权威电线格与方向端口索引，同格设备不产生额外支路。邻格增删须刷新跨区块/循环边界的连接形状，连接未变化不重提网格，不能按召唤器旋转或每帧轮询选图。
-- 混合电力/机械设备的接口属于独立表现层：`axisPorts + AxisPortLayout=single + AxisPortLocalPosition` 配置单端轴口，`electricalPort + ElectricalPortLocalPosition` 配置电线口；两者复用标准杆/线切片与原 PPU，放在机身后方，预览和行网格使用同一局部位置。机身不得重复烘入接头，召唤器图标可静态合成；端口方向不对称的电机按四个朝向放置。
+- 混合电力/机械设备的接口属于独立表现层：机械轴口由 `MachineDefinition.AxisPortVisual` 配置 `Count=1/2`、`StartX`、`Y`，统一复用 `Shaft_Wood/axisPort` 标准贴图并始终绘制在机械主体下层；单端保留 `StartX` 正负决定左右，双端按 `±abs(StartX)` 镜像。电线口仍用 `electricalPort + ElectricalPortLocalPosition`；机身美术不得烘入机械连接杆或轴口。
 - 电网首版按整网功率求解：W 表示功率、J 表示储能；电压参与兼容性，电流由 `P/V` 推导，电阻只保留正式数据接口，未实现逐段压降/基尔霍夫仿真。
 - 电池面板由交互入口显式启用 `MechanicalPanelSession` 的 0.2 秒非缩放状态刷新：打开立即读数，关闭/销毁停协程，仅更新有变化的状态文本，不轮询库存或重排布局；其他面板默认仍走事件。储能读取节点当前 `ElectricalStoredJoules`，未接电网也要显示，不依赖加工 Tick、不在 UI 累加或预测电量。
 - 召唤器、玩家库存和手持玩法保留 Item；落地设施走 `Place/SpawnGenerated/RestoreMachine`，`ItemMgr` 拒绝再实例化其完整 Item。`Mod_MachineAuthoring` 只保存配置，禁止重新启用其 Load/Tick 做运行时兜底。
@@ -44,7 +44,7 @@ description: "Use when: 定位或修改 FlatWorld 的机器世界、工作台、
 - `MachineArchive` 使用现有外层 `MechanicalNetworks` 载荷；保留缺失 MOD 的冷快照，避免卸载显示或暂缺资源导致存档丢失。不建立旧运行架构兼容层。
 - 新增设施必须通过资源目录预检：稳定身份、主领域工厂、必要库存/燃料配置与正式面板。预检不创建 MachineLogic、面板或世界节点，不污染 F5 候选会话。
 - 机械图形代理不保存 HP、库存、炉温等权威数据；主体和运动部件合入所属区块的 Y 行网格，轻量 `MechanicalDepthVisual` 只负责交互与灯光，阴影继续走 BRG。
-- 传动轴、齿轮输入短轴和 `axisPorts` 这类连接件统一走 `MechanicalShaft` 下层合批，固定压在机械主体下面；它们不再因为所在格的 Y 行跑到相邻机械主体上方。
+- 传动轴、齿轮输入短轴和标准 `axisPort` 连接件统一走 `MechanicalShaft` 下层合批，固定压在机械主体下面；它们不再因为所在格的 Y 行跑到相邻机械主体上方。
 - 带 `Mod_Fuel` 的燃烧工作方块，其运行时灯光只跟随 `MachineLogic.IsBurning` 与燃料余量，不依赖加工进度；`MechanicalDepthVisual` 统一使用火把的橙红 Light2D 颜色，没有专用 `Mod_LightSource`/Light2D 模板时再补默认强度与范围。
 - 普通设施本体的 `visual.rendererLocalPosition` 要同时用于放置预览、落地 Sprite 和阴影落点；格心仍是建造与动态排序锚点，不要用图片偏移改动权威占格。
 - 工作设施库存/加工面板保持非模态，不主动获取玩法输入锁；交互发送器会在锁定时取消当前目标，面板自行加锁会形成“刚打开就关闭”的循环。距离失效、切换目标和关闭按钮继续走原清理链。
