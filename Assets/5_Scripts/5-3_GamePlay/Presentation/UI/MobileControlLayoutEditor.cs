@@ -304,9 +304,7 @@ public sealed class MobileControlLayoutEditor : MonoBehaviour
             return;
 
         statusText.text = FlatWorldLocalizationService.GetUiText(sourceText);
-        statusText.color = isError
-            ? new Color(1f, 0.48f, 0.35f)
-            : FlatWorldUITheme.TextSecondary;
+        statusText.color = isError ? FlatWorldUITheme.Danger : FlatWorldUITheme.TextSecondary;
     }
 
     private static void SetNamedObjectActive(Transform root, string objectName, bool active)

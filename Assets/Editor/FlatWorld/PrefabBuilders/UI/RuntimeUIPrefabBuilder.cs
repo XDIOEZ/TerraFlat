@@ -33,15 +33,15 @@ public static partial class RuntimeUIPrefabBuilder
     private const string NetworkPlayerPrefab = "Assets/Resources/Networking/FlatWorldNetworkPlayer.prefab";
     private const string PlayerPrefab = "Assets/2_Prefabs/Gameplay/Player/Player.prefab";
 
-    private static readonly Color Canvas = new Color32(52, 52, 52, 252);
-    private static readonly Color Surface = new Color32(61, 61, 61, 252);
-    private static readonly Color SurfaceRaised = new Color32(89, 89, 89, 252);
-    private static readonly Color Cream = new Color32(238, 238, 238, 255);
-    private static readonly Color Muted = new Color32(200, 200, 200, 255);
-    private static readonly Color Amber = new Color32(215, 197, 106, 255);
-    private static readonly Color Teal = new Color32(164, 164, 164, 255);
-    private static readonly Color Danger = new Color32(138, 102, 98, 255);
-    private static readonly Color Border = new Color32(255, 255, 255, 33);
+    private static Color Canvas => FlatWorldUITheme.Canvas;
+    private static Color Surface => FlatWorldUITheme.SurfaceLow;
+    private static Color SurfaceRaised => FlatWorldUITheme.SurfaceRaised;
+    private static Color Cream => FlatWorldUITheme.TextPrimary;
+    private static Color Muted => FlatWorldUITheme.TextSecondary;
+    private static Color Amber => FlatWorldUITheme.Accent;
+    private static Color Teal => FlatWorldUITheme.Teal;
+    private static Color Danger => FlatWorldUITheme.Danger;
+    private static Color Border => FlatWorldUITheme.Border;
     // 手机右侧操作组统一使用同一套安全边距与间距，避免摇杆和按钮各自漂移。
     private const float MobileActionRightMargin = 76f;
     private const float MobileActionBottomMargin = 54f;
@@ -57,8 +57,8 @@ public static partial class RuntimeUIPrefabBuilder
     private const float MobileDrawerButtonHeight = 76f;
     private const float MobileDrawerToggleWidth = 60f;
     // 主菜单设置与游戏内设置共用灰阶材质语言，只保留层级明度差。
-    private static readonly Color MainMenuSettingsCanvas = new Color32(46, 46, 46, 255);
-    private static readonly Color MainMenuSettingsSurface = new Color32(58, 58, 58, 255);
+    private static Color MainMenuSettingsCanvas => FlatWorldUITheme.Canvas;
+    private static Color MainMenuSettingsSurface => FlatWorldUITheme.SurfaceLow;
 
     private static TMP_FontAsset font;
 

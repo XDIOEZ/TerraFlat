@@ -238,7 +238,7 @@ public static class StoneMortarAssetBuilder
         text.text = value;
         text.fontSize = fontSize;
         text.alignment = TextAlignmentOptions.Center;
-        text.color = new Color32(238, 238, 238, 255);
+        text.color = FlatWorldUITheme.TextPrimary;
         text.raycastTarget = false;
         return text;
     }

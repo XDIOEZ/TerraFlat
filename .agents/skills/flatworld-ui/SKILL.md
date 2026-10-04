@@ -14,6 +14,7 @@ description: "Use when: 定位或修改 FlatWorld 的 UIManager、BasePanel、�
 - 文字继续使用现有 TMP/本地化字体与移动端字号、触控尺寸约束；标题、正文、说明只靠字号/明度/字重分级，禁止为填充视觉新增装饰性英文眉题、重复说明或无意义标签。
 - 所有确认窗、改名窗、二次确认等弹窗只显示悬浮窗口本体，禁止使用可见的全屏暗幕、半透明背景蒙板或大面积背景卡片/投影遮挡原界面。需要阻断底层点击时保留 `Color.clear + raycastTarget=true` 的透明输入层即可；世界加载黑幕等非弹窗流程不受此规则影响。
 - 正式视觉必须落在可复用控件/Prefab 与 `FlatWorldUITheme` 中；Prefab 构建器保存前应重新应用统一主题，避免未来重建时恢复旧蓝绿/图集皮肤。仅修改业务行为时，不顺带整体翻修既有界面。
+- 全局 UI 拼色色块以 `Assets/Resources/GameConfig/UI/ui-theme.json` 为唯一配色源；`FlatWorldUIThemeConfigCatalog` 负责严格解析，`FlatWorldUITheme`、运行时 BasePanel 色块刷新和 Prefab 构建器都只能从这里取共享颜色。业务脚本不得再写死普通 UI 的灰阶、暖黄、状态条、页签或存档选中颜色；液体、维度等内容语义色不归该主题配置管理。
 - `FlatWorldUIThemeMigrator` 只能通过 `FlatWorld/UI/主题迁移/` 菜单显式执行；禁止使用 `[InitializeOnLoad]`、`delayCall`、`EditorApplication.update` 等启动/重载钩子自动遍历并保存全部 UI Prefab，避免仅打开 Unity 就污染 Git 工作区。迁移版本升级后由开发者主动执行“执行当前版本迁移”，需要覆盖重烘焙时再使用“强制重新应用统一主题”。
 
 ## 入口
@@ -179,7 +180,7 @@ description: "Use when: 定位或修改 FlatWorld 的 UIManager、BasePanel、�
 
 - 公共控件位于 `Common/Controls/UI_Button、UI_CloseButton、UI_TabButton、UI_Toggle、UI_SwitchOption、UI_Switch、UI_SliderControl、UI_ProgressBar、UI_Dropdown、UI_InputField.prefab`。窗口应使用真正的嵌套实例；关闭按钮/页签继承按钮，进度条继承滑块，互斥选项继承开关。不要 Unpack 或复制层级来复用。
 - 普通 `BasePanel` 与标准设置页的可见底板统一使用 `Common/Controls/UI_PanelBackground.prefab`，并作为业务内容之前的第一个嵌套 Prefab；面板根 `Image` 只保留原有射线职责且视觉透明。HUD、加载黑幕、主菜单、透明弹窗根和明确无底板/专属视觉面板不得强制套用该底板。
-- `ReusableUIControl` 标记子树的外观所有权；主题兼容层不得覆盖公共控件的颜色、字体、内部几何。使用处只保存文案、业务事件/数值、选项及外部布局差异，颜色等外观应编辑源 Prefab 或有明确用途的 Variant，否则会阻断统一风格传播。
+- `ReusableUIControl` 标记子树的结构外观所有权；主题兼容层不得覆盖公共控件的字体、Sprite 与内部几何，但共享色块统一由 `ui-theme.json` 驱动。使用处只保存文案、业务事件/数值、选项及外部布局差异；独立 Variant 只有在明确需要脱离全局配色时才保留专属颜色。
 - 页签业务选中状态由 `ReusableUITabVisual` 的 Prefab 字段决定，分页控制器只调用 `SetSelected`，不在业务脚本中重新写死公共页签配色。原位转换使用 `ObjectMatchMode.ByHierarchy` 保留未匹配原组件；清理嵌套实例覆盖时只处理 `ReusableUIControl` 所有的目标，因为 Unity 可能返回整个外层面板的覆盖集合。
 - `FlatWorld/UI/Shared Controls/` 提供补建缺失资产、显式迁移和验证菜单；补建不覆盖已有公共 Prefab 的人工编辑。`RuntimeUIPrefabBuilder` 保存前应执行公共控件准备流程，避免重建重新生成独立控件。迁移不重建整个窗口，专用图标/复杂卡片与不匹配层级不强制替换。
 - 可交互滑块和只读进度条使用不同资产。滑块根 Image 是透明命中区，Background/Fill/Handle 管理可见部分；根布局不得被主题当作轨道改锚点，手柄必须有非零高度。音量行预留 72 像素，滑块命中区为 60 像素；进度条禁用交互和导航。

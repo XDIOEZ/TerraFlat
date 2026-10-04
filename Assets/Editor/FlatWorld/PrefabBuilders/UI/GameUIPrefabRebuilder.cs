@@ -39,22 +39,22 @@ public static class GameUIPrefabRebuilder
         CraftingRoot + "UI_FlintStrike.prefab"
     };
 
-    private static readonly Color Ink = new Color32(52, 52, 52, 251);
-    private static readonly Color InkSoft = new Color32(61, 61, 61, 251);
-    private static readonly Color Surface = new Color32(73, 73, 73, 251);
-    private static readonly Color SurfaceRaised = new Color32(89, 89, 89, 252);
-    private static readonly Color Cream = new Color32(238, 238, 238, 255);
-    private static readonly Color Muted = new Color32(200, 200, 200, 255);
-    private static readonly Color Amber = new Color32(215, 197, 106, 255);
-    private static readonly Color Teal = new Color32(164, 164, 164, 255);
-    private static readonly Color Border = new Color32(255, 255, 255, 33);
+    private static Color Ink => FlatWorldUITheme.Canvas;
+    private static Color InkSoft => FlatWorldUITheme.SurfaceLow;
+    private static Color Surface => FlatWorldUITheme.Surface;
+    private static Color SurfaceRaised => FlatWorldUITheme.SurfaceRaised;
+    private static Color Cream => FlatWorldUITheme.TextPrimary;
+    private static Color Muted => FlatWorldUITheme.TextSecondary;
+    private static Color Amber => FlatWorldUITheme.Accent;
+    private static Color Teal => FlatWorldUITheme.Teal;
+    private static Color Border => FlatWorldUITheme.Border;
 
     // 行囊保留原布局，但视觉跟随全局灰阶主题，不再使用独立彩色槽位皮肤。
-    private static readonly Color ModularBagOuter = new Color32(52, 52, 52, 255);
-    private static readonly Color ModularBagSurface = new Color32(73, 73, 73, 255);
-    private static readonly Color ModularBagField = new Color32(61, 61, 61, 255);
-    private static readonly Color ModularBagLine = new Color32(255, 255, 255, 34);
-    private static readonly Color ModularBagText = new Color32(238, 238, 238, 255);
+    private static Color ModularBagOuter => FlatWorldUITheme.Canvas;
+    private static Color ModularBagSurface => FlatWorldUITheme.Surface;
+    private static Color ModularBagField => FlatWorldUITheme.SurfaceLow;
+    private static Color ModularBagLine => FlatWorldUITheme.Border;
+    private static Color ModularBagText => FlatWorldUITheme.TextPrimary;
 
     private static TMP_FontAsset font;
 

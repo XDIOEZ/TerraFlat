@@ -14,13 +14,13 @@ public static class GameSavePrefabBuilder
     private const string GenerationFreezeDescription =
         "开启：保持存档原有生成规则。关闭：跟随当前版本并升级生成基线；已探索与未探索区域的基础地形和自然生成都可能变化，玩家差量仍保留。重新开启后会在下次进入世界重新冻结。";
 
-    private static readonly Color Ink = new Color32(52, 52, 52, 251);
-    private static readonly Color InkSoft = new Color32(61, 61, 61, 250);
-    private static readonly Color Surface = new Color32(73, 73, 73, 250);
-    private static readonly Color Cream = new Color32(238, 238, 238, 255);
-    private static readonly Color Muted = new Color32(200, 200, 200, 255);
-    private static readonly Color Amber = new Color32(215, 197, 106, 255);
-    private static readonly Color Teal = new Color32(164, 164, 164, 255);
+    private static Color Ink => FlatWorldUITheme.Canvas;
+    private static Color InkSoft => FlatWorldUITheme.SurfaceLow;
+    private static Color Surface => FlatWorldUITheme.Surface;
+    private static Color Cream => FlatWorldUITheme.TextPrimary;
+    private static Color Muted => FlatWorldUITheme.TextSecondary;
+    private static Color Amber => FlatWorldUITheme.Accent;
+    private static Color Teal => FlatWorldUITheme.Teal;
 
     [MenuItem("FlatWorld/UI/Rebuild Save UI")]
     public static void RebuildSaveInterface()

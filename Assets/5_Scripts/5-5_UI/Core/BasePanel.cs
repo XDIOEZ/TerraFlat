@@ -134,6 +134,7 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
     {
         EnsureRuntimeReferences();
         EnsureHierarchySnapshot();
+        FlatWorldUITheme.ApplyRuntimePalette(transform);
         FlatWorldUITheme.ApplyGamepadNavigationPolicy(cachedSelectables);
     }
 

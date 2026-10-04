@@ -2,7 +2,7 @@ using UnityEngine;
 
 /// <summary>
 /// 标记由公共控件 Prefab 管理外观的子树。自身不修改视觉、不轮询状态；
-/// 窗口只覆盖文案、布局、数值和业务事件，主题兼容层不得重写这里的颜色、字体与内部结构。
+/// 窗口只覆盖文案、布局、数值和业务事件；字体、Sprite 与内部结构归公共控件，共享颜色统一读取全局 JSON 配色。
 /// </summary>
 [DisallowMultipleComponent]
 public sealed class ReusableUIControl : MonoBehaviour

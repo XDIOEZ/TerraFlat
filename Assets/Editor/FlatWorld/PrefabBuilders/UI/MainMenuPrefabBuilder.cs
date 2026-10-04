@@ -19,7 +19,7 @@ public static class MainMenuPrefabBuilder
     private static readonly Color ButtonBorder = new Color32(55, 55, 55, 255);
     private static readonly Color Label = new Color32(236, 238, 239, 255);
     private static readonly Color Muted = new Color32(207, 207, 207, 255);
-    private static readonly Color Accent = new Color32(215, 197, 106, 255);
+    private static Color Accent => FlatWorldUITheme.Accent;
     private static readonly Color TitleShadow = new Color32(12, 17, 20, 200);
     private static readonly Color Atmosphere = new Color(0.025f, 0.04f, 0.035f, 0.08f);
 

@@ -10,19 +10,6 @@ using UnityEngine.UI;
 /// </summary>
 public sealed class GameSaveItemView : MonoBehaviour, ISelectHandler, IDeselectHandler
 {
-    #region 视觉参数
-
-    private static readonly Color NormalColor = new Color32(73, 73, 73, 255);
-    private static readonly Color SelectedColor = new Color32(96, 96, 96, 255);
-    private static readonly Color FocusedColor = new Color32(108, 108, 108, 255);
-    private static readonly Color NormalTextColor = new Color32(238, 238, 238, 255);
-    private static readonly Color SelectedTextColor = new Color32(245, 245, 245, 255);
-    private static readonly Color FocusedTextColor = new Color32(255, 255, 255, 255);
-    private static readonly Color SelectedAccentColor = new Color32(215, 197, 106, 210);
-    private static readonly Color FocusedAccentColor = new Color32(228, 217, 134, 255);
-
-    #endregion
-
     #region 引用与状态
 
     public Image Background;
@@ -101,14 +88,20 @@ public sealed class GameSaveItemView : MonoBehaviour, ISelectHandler, IDeselectH
         bool focused = navigationFocused;
         bool highlighted = dataSelected || focused;
         if (Background != null)
-            Background.color = focused ? FocusedColor : dataSelected ? SelectedColor : NormalColor;
+            Background.color = focused
+                ? FlatWorldUITheme.SaveItemFocused
+                : dataSelected ? FlatWorldUITheme.SaveItemSelected : FlatWorldUITheme.SaveItemNormal;
         if (SelectionAccent != null)
         {
             SelectionAccent.enabled = highlighted;
-            SelectionAccent.color = focused ? FocusedAccentColor : SelectedAccentColor;
+            SelectionAccent.color = focused
+                ? FlatWorldUITheme.SaveItemAccentFocused
+                : FlatWorldUITheme.SaveItemAccentSelected;
         }
         if (Label != null)
-            Label.color = focused ? FocusedTextColor : dataSelected ? SelectedTextColor : NormalTextColor;
+            Label.color = focused
+                ? FlatWorldUITheme.SaveItemTextFocused
+                : dataSelected ? FlatWorldUITheme.SaveItemTextSelected : FlatWorldUITheme.SaveItemTextNormal;
     }
 
     #endregion

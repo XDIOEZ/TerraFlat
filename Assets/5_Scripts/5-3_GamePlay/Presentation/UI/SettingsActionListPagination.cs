@@ -147,11 +147,6 @@ public sealed class SettingsActionListPagination : MonoBehaviour
         GameSettingsPanel.WidthSliderName
     };
 
-    private static readonly Color ActiveTabColor = new Color32(103, 103, 103, 255);
-    private static readonly Color InactiveTabColor = new Color32(76, 76, 76, 252);
-    private static readonly Color ActiveLabelColor = new Color32(238, 238, 238, 255);
-    private static readonly Color InactiveLabelColor = new Color32(198, 198, 198, 255);
-
     #endregion
 
     #region 运行时状态
@@ -475,8 +470,8 @@ public sealed class SettingsActionListPagination : MonoBehaviour
                 sharedVisual.SetSelected(active);
                 continue;
             }
-            tabBackgrounds[index].color = active ? ActiveTabColor : InactiveTabColor;
-            tabLabels[index].color = active ? ActiveLabelColor : InactiveLabelColor;
+            tabBackgrounds[index].color = active ? FlatWorldUITheme.TabActive : FlatWorldUITheme.TabInactive;
+            tabLabels[index].color = active ? FlatWorldUITheme.TabLabelActive : FlatWorldUITheme.TabLabelInactive;
         }
     }
 

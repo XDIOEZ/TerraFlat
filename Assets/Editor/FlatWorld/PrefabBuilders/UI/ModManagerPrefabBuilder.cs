@@ -139,7 +139,7 @@ public static class ModManagerPrefabBuilder
             line.anchorMin = line.anchorMax = line.pivot = new Vector2(0.5f, 0.5f);
             line.sizeDelta = new Vector2(600f, 3f);
             Image lineImage = line.GetComponent<Image>() ?? line.gameObject.AddComponent<Image>();
-            lineImage.color = new Color32(215, 197, 106, 255);
+            lineImage.color = FlatWorldUITheme.Accent;
             lineImage.raycastTarget = false;
             line.gameObject.SetActive(false);
 

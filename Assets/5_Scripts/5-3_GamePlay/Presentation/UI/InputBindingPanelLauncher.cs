@@ -640,9 +640,7 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour, ISettingsPageLife
             return;
 
         statusText.text = message;
-        statusText.color = isError
-            ? new Color(1f, 0.48f, 0.35f)
-            : new Color(0.69f, 0.78f, 0.79f);
+        statusText.color = isError ? FlatWorldUITheme.Danger : FlatWorldUITheme.Teal;
     }
 
     /// <summary>取得当前设备分页的操作提示。</summary>

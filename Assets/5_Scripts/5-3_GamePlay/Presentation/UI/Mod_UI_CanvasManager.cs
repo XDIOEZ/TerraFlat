@@ -1,4 +1,4 @@
-﻿using MemoryPack;
+using MemoryPack;
 using Newtonsoft.Json;
 using Sirenix.OdinInspector;
 using System;
@@ -231,7 +231,7 @@ public partial class Mod_UI_CanvasManager : Module, IInstanceUI
         if (panelButtonTexts.TryGetValue(panelName, out var tmpText))
         {
             tmpText.text = panelName;
-            tmpText.color = isOpen ? Color.green : Color.red;
+            tmpText.color = isOpen ? FlatWorldUITheme.Teal : FlatWorldUITheme.Danger;
         }
     }
 

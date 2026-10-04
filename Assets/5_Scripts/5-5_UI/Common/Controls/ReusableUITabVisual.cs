@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// 页签的业务选中状态表现。普通状态取自 Prefab 图形本身，选中颜色也由 Prefab 配置；
+/// 页签的业务选中状态表现。普通状态取自 Prefab 图形本身，选中颜色统一读取全局 JSON 配色；
 /// 不依赖设置页控制器，不与鼠标/手柄的 Selectable 焦点状态混用。
 /// </summary>
 [DisallowMultipleComponent]
@@ -13,8 +13,6 @@ public sealed class ReusableUITabVisual : MonoBehaviour
 
     [SerializeField] private Image surface;
     [SerializeField] private TMP_Text caption;
-    [SerializeField] private Color selectedSurface = new Color32(103, 103, 103, 255);
-    [SerializeField] private Color selectedCaption = new Color32(238, 238, 238, 255);
     private Color normalSurface;
     private Color normalCaption;
     private bool captured;
@@ -38,8 +36,8 @@ public sealed class ReusableUITabVisual : MonoBehaviour
             normalCaption = caption.color;
             captured = true;
         }
-        surface.color = selected ? selectedSurface : normalSurface;
-        caption.color = selected ? selectedCaption : normalCaption;
+        surface.color = selected ? FlatWorldUITheme.TabActive : normalSurface;
+        caption.color = selected ? FlatWorldUITheme.TabLabelActive : normalCaption;
     }
 
     #endregion

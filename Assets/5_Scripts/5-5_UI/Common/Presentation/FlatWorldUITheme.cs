@@ -16,27 +16,69 @@ public static class FlatWorldUITheme
 {
     private const string SharedPanelBackgroundName = "UI_PanelBackground";
 
-    public static readonly Color Canvas = Hex("343434", 0.97f);
-    public static readonly Color SurfaceLow = Hex("3D3D3D", 0.98f);
-    public static readonly Color Surface = Hex("494949", 0.98f);
-    public static readonly Color SurfaceRaised = Hex("595959", 0.99f);
-    public static readonly Color Border = Hex("FFFFFF", 0.13f);
-    public static readonly Color TextPrimary = Hex("EEEEEE");
-    public static readonly Color TextSecondary = Hex("C8C8C8");
-    public static readonly Color Accent = Hex("D7C56A");
-    public static readonly Color AccentHover = Hex("E4D986");
+    public static Color Canvas => ThemeColor("canvas");
+    public static Color SurfaceLow => ThemeColor("surfaceLow");
+    public static Color Surface => ThemeColor("surface");
+    public static Color SurfaceRaised => ThemeColor("surfaceRaised");
+    public static Color Border => ThemeColor("border");
+    public static Color TextPrimary => ThemeColor("textPrimary");
+    public static Color TextSecondary => ThemeColor("textSecondary");
+    public static Color Accent => ThemeColor("accent");
+    public static Color AccentHover => ThemeColor("accentHover");
     // 手柄/键盘导航选中态保持灰阶，只用细暖黄描边区分焦点，避免整块控件变成彩色。
-    public static readonly Color Selection = Hex("707070");
-    public static readonly Color SelectionOutline = Hex("E1D57C", 0.96f);
+    public static Color Selection => ThemeColor("selection");
+    public static Color SelectionOutline => ThemeColor("selectionOutline");
     public static readonly Vector2 SelectionOutlineDistance = new Vector2(3f, -3f);
     // 普通 UI 边框统一使用 2 个参考像素，提高手机与高分辨率屏幕下的可辨识度。
     public static readonly Vector2 BorderOutlineDistance = new Vector2(2f, -2f);
     // 文字描边保持 1 个参考像素，避免像素字体被加粗成糊边。
     public static readonly Vector2 TextOutlineDistance = new Vector2(1f, -1f);
     // 手机玩法准线固定为纯白，不与暖黄的导航焦点视觉混用。
-    public static readonly Color AimCursor = Color.white;
-    public static readonly Color Teal = Hex("A4A4A4");
-    public static readonly Color Danger = Hex("8A6662");
+    public static Color AimCursor => ThemeColor("aimCursor");
+    public static Color Teal => ThemeColor("teal");
+    public static Color Danger => ThemeColor("danger");
+    public static Color StatusBarBackground => ThemeColor("statusBarBackground");
+    public static Color StatusBarDefault => ThemeColor("statusBarDefault");
+    public static Color StatusBarHealth => ThemeColor("statusBarHealth");
+    public static Color SaveItemNormal => ThemeColor("saveNormal");
+    public static Color SaveItemSelected => ThemeColor("saveSelected");
+    public static Color SaveItemFocused => ThemeColor("saveFocused");
+    public static Color SaveItemTextNormal => ThemeColor("saveTextNormal");
+    public static Color SaveItemTextSelected => ThemeColor("saveTextSelected");
+    public static Color SaveItemTextFocused => ThemeColor("saveTextFocused");
+    public static Color SaveItemAccentSelected => ThemeColor("saveAccentSelected");
+    public static Color SaveItemAccentFocused => ThemeColor("saveAccentFocused");
+    public static Color TabActive => ThemeColor("tabActive");
+    public static Color TabInactive => ThemeColor("tabInactive");
+    public static Color TabLabelActive => ThemeColor("tabLabelActive");
+    public static Color TabLabelInactive => ThemeColor("tabLabelInactive");
+    public static Color ItemTooltipAccent => ThemeColor("itemTooltipAccent");
+
+    private static Color ThemeColor(string id) => FlatWorldUIThemeConfigCatalog.GetColor(id);
+    private static Color Overlay => ThemeColor("overlay");
+    private static Color WorldLoading => ThemeColor("worldLoading");
+    private static Color HotBar => ThemeColor("hotBar");
+    private static Color AccentOutline => ThemeColor("accentOutline");
+    private static Color SectionAccent => ThemeColor("sectionAccent");
+    private static Color StackBadge => ThemeColor("stackBadge");
+    private static Color StackBadgeBorder => ThemeColor("stackBadgeBorder");
+    private static Color ButtonDestructive => ThemeColor("buttonDestructive");
+    private static Color ButtonPrimary => ThemeColor("buttonPrimary");
+    private static Color ButtonClose => ThemeColor("buttonClose");
+    private static Color TintNormal => ThemeColor("tintNormal");
+    private static Color TintHighlight => ThemeColor("tintHighlight");
+    private static Color TintPressed => ThemeColor("tintPressed");
+    private static Color TintSelected => ThemeColor("tintSelected");
+    private static Color TintDisabled => ThemeColor("tintDisabled");
+    private static Color InputPlaceholder => ThemeColor("inputPlaceholder");
+    private static Color InputSelection => ThemeColor("inputSelection");
+    private static Color InputHighlight => ThemeColor("inputHighlight");
+    private static Color InputDisabled => ThemeColor("inputDisabled");
+    private static Color SliderHandleOutline => ThemeColor("sliderHandleOutline");
+    private static Color ScrollbarHandle => ThemeColor("scrollbarHandle");
+    private static Color TextShadow => ThemeColor("textShadow");
+    private static Color LongPressFill => ThemeColor("longPressFill");
+    private static Color DeathVeil => ThemeColor("deathVeil");
 
     private static readonly string[] BespokePanelNames =
     {
@@ -126,6 +168,80 @@ public static class FlatWorldUITheme
         StyleExistingEffects(root);
         DecoratePanel(root, isHud);
     }
+
+    #region 运行时配色
+
+    /// <summary>运行时只刷新主题拥有的色块，不改 Prefab 结构、Sprite、布局或射线。</summary>
+    public static void ApplyRuntimePalette(Transform root)
+    {
+        if (root == null)
+            return;
+
+        Image[] images = root.GetComponentsInChildren<Image>(true);
+        foreach (Image image in images)
+        {
+            if (image == null)
+                continue;
+
+            string objectName = image.name;
+            if (IsItemTooltipAccent(root, image))
+            {
+                image.color = ItemTooltipAccent;
+                continue;
+            }
+
+            if (ContainsAny(objectName, "FWUI_SectionMarker_"))
+            {
+                image.color = SectionAccent;
+                continue;
+            }
+
+            if (ContainsAny(
+                    objectName,
+                    "强调线", "状态线", "DeathAccent", "ModuleAccent", "AccentRail", "CardAccent", "UITheme_Accent") ||
+                string.Equals(objectName, "Accent", StringComparison.OrdinalIgnoreCase))
+            {
+                image.color = Accent;
+                continue;
+            }
+
+            if (ContainsAny(objectName, "分隔线", "Divider", "HeaderRule", "SectionRule"))
+            {
+                image.color = Border;
+                continue;
+            }
+
+            if (IsFillGraphic(image) && image.GetComponentInParent<Slider>() == null)
+                StyleSemanticFill(image);
+        }
+
+        Slider[] sliders = root.GetComponentsInChildren<Slider>(true);
+        foreach (Slider slider in sliders)
+        {
+            if (slider == null)
+                continue;
+
+            Image background = FindNamedImage(slider.transform, "Background", "背景", "底板");
+            if (background != null)
+                background.color = StatusBarBackground;
+
+            if (slider.fillRect == null)
+                continue;
+
+            Image fill = slider.fillRect.GetComponent<Image>();
+            if (fill != null)
+                fill.color = IsHealthName(BuildPath(slider.transform)) ? StatusBarHealth : StatusBarDefault;
+        }
+    }
+
+    private static bool IsItemTooltipAccent(Transform root, Image image)
+    {
+        return root != null && image != null &&
+               root.name.IndexOf("ItemTooltip", StringComparison.OrdinalIgnoreCase) >= 0 &&
+               string.Equals(image.name, "Accent", StringComparison.OrdinalIgnoreCase);
+    }
+
+    #endregion
 
     /// <summary>只同步现有 UI Outline 的厚度；供保留专属视觉的主菜单等 Prefab 使用。</summary>
     public static void ApplyBorderThickness(Transform root)
@@ -388,7 +504,7 @@ public static class FlatWorldUITheme
                 image.sprite = null;
                 image.type = Image.Type.Simple;
                 image.preserveAspect = false;
-                image.color = Hex("242424", 0.72f);
+                image.color = Overlay;
                 continue;
             }
 
@@ -418,9 +534,7 @@ public static class FlatWorldUITheme
                 image.type = Image.Type.Simple;
                 image.preserveAspect = false;
                 // 世界加载页是黑幕硬遮挡层，根图必须保持完全不透明。
-                image.color = IsOpaqueLoadingRoot(root)
-                    ? new Color(0.012f, 0.012f, 0.014f, 1f)
-                    : Canvas;
+                image.color = IsOpaqueLoadingRoot(root) ? WorldLoading : Canvas;
                 AddOutline(image, Border);
                 continue;
             }
@@ -430,7 +544,7 @@ public static class FlatWorldUITheme
                 image.sprite = null;
                 image.type = Image.Type.Simple;
                 image.preserveAspect = false;
-                image.color = Hex("343434", 0.82f);
+                image.color = HotBar;
                 AddOutline(image, Border);
                 continue;
             }
@@ -441,7 +555,7 @@ public static class FlatWorldUITheme
                 image.type = Image.Type.Simple;
                 image.preserveAspect = false;
                 image.color = Accent;
-                AddOutline(image, Hex("D7C56A", 0.24f));
+                AddOutline(image, AccentOutline);
                 continue;
             }
 
@@ -467,7 +581,7 @@ public static class FlatWorldUITheme
                 image.sprite = null;
                 image.type = Image.Type.Simple;
                 image.preserveAspect = false;
-                image.color = Hex("D7C56A", 0.62f);
+                image.color = SectionAccent;
                 continue;
             }
 
@@ -526,8 +640,8 @@ public static class FlatWorldUITheme
                 image.sprite = null;
                 image.type = Image.Type.Simple;
                 image.preserveAspect = false;
-                image.color = Hex("1A1A1A", 0.96f);
-                AddOutline(image, Hex("FFFFFF", 0.28f));
+                image.color = StackBadge;
+                AddOutline(image, StackBadgeBorder);
                 continue;
             }
 
@@ -593,15 +707,15 @@ public static class FlatWorldUITheme
                 if (slotButton)
                     target.color = Surface;
                 else if (destructive)
-                    target.color = Hex("505050", 0.98f);
+                    target.color = ButtonDestructive;
                 else if (primary)
-                    target.color = Hex("626262", 0.99f);
+                    target.color = ButtonPrimary;
                 else if (close)
-                    target.color = Hex("444444", 0.98f);
+                    target.color = ButtonClose;
                 else
                     target.color = SurfaceRaised;
 
-                AddOutline(target, primary ? Hex("D7C56A", 0.24f) : Border);
+                AddOutline(target, primary ? AccentOutline : Border);
             }
 
             // 某些旧按钮把交互 targetGraphic 指向子节点，根节点自身还残留一层旧色 Image。
@@ -614,11 +728,11 @@ public static class FlatWorldUITheme
                 buttonRootImage.preserveAspect = false;
                 buttonRootImage.color = slotButton
                     ? Surface
-                    : destructive ? Hex("505050", 0.98f)
-                    : primary ? Hex("626262", 0.99f)
-                    : close ? Hex("444444", 0.98f)
+                    : destructive ? ButtonDestructive
+                    : primary ? ButtonPrimary
+                    : close ? ButtonClose
                     : SurfaceRaised;
-                AddOutline(buttonRootImage, primary ? Hex("D7C56A", 0.24f) : Border);
+                AddOutline(buttonRootImage, primary ? AccentOutline : Border);
             }
 
             // 存档条目的焦点/业务选中由 GameSaveItemView 自己维护；不能让 Button 再叠一层 Tint 状态。
@@ -626,11 +740,11 @@ public static class FlatWorldUITheme
             if (!hasDedicatedVisualState)
                 button.spriteState = default;
             ColorBlock colors = button.colors;
-            colors.normalColor = Color.white;
-            colors.highlightedColor = Hex("F0F0F0");
-            colors.pressedColor = Hex("BEBEBE");
-            colors.selectedColor = slotButton ? Hex("E4D986") : Hex("E8E8E8");
-            colors.disabledColor = Hex("777777", 0.50f);
+            colors.normalColor = TintNormal;
+            colors.highlightedColor = TintHighlight;
+            colors.pressedColor = TintPressed;
+            colors.selectedColor = slotButton ? AccentHover : TintSelected;
+            colors.disabledColor = TintDisabled;
             colors.colorMultiplier = 1f;
             colors.fadeDuration = 0.11f;
             button.colors = colors;
@@ -673,17 +787,17 @@ public static class FlatWorldUITheme
                 field.textComponent.color = TextPrimary;
 
             if (field.placeholder is TextMeshProUGUI placeholder)
-                placeholder.color = Hex("A8A8A8", 0.82f);
+                placeholder.color = InputPlaceholder;
 
             field.caretColor = TextPrimary;
-            field.selectionColor = Hex("D7C56A", 0.32f);
+            field.selectionColor = InputSelection;
             field.customCaretColor = true;
 
             ColorBlock colors = field.colors;
-            colors.normalColor = Color.white;
-            colors.highlightedColor = Hex("E5E5E5");
+            colors.normalColor = TintNormal;
+            colors.highlightedColor = InputHighlight;
             colors.selectedColor = Selection;
-            colors.disabledColor = Hex("777777", 0.52f);
+            colors.disabledColor = InputDisabled;
             colors.fadeDuration = 0.11f;
             field.colors = colors;
         }
@@ -721,11 +835,11 @@ public static class FlatWorldUITheme
                 : null);
 
             ColorBlock colors = dropdown.colors;
-            colors.normalColor = Color.white;
-            colors.highlightedColor = Hex("F0F0F0");
-            colors.pressedColor = Hex("BEBEBE");
-            colors.selectedColor = Hex("E8E8E8");
-            colors.disabledColor = Hex("777777", 0.50f);
+            colors.normalColor = TintNormal;
+            colors.highlightedColor = TintHighlight;
+            colors.pressedColor = TintPressed;
+            colors.selectedColor = TintSelected;
+            colors.disabledColor = TintDisabled;
             colors.colorMultiplier = 1f;
             colors.fadeDuration = 0.11f;
             dropdown.colors = colors;
@@ -776,11 +890,11 @@ public static class FlatWorldUITheme
                 : null);
 
             ColorBlock colors = dropdown.colors;
-            colors.normalColor = Color.white;
-            colors.highlightedColor = Hex("F0F0F0");
-            colors.pressedColor = Hex("BEBEBE");
-            colors.selectedColor = Hex("E8E8E8");
-            colors.disabledColor = Hex("777777", 0.50f);
+            colors.normalColor = TintNormal;
+            colors.highlightedColor = TintHighlight;
+            colors.pressedColor = TintPressed;
+            colors.selectedColor = TintSelected;
+            colors.disabledColor = TintDisabled;
             colors.colorMultiplier = 1f;
             colors.fadeDuration = 0.11f;
             dropdown.colors = colors;
@@ -829,7 +943,7 @@ public static class FlatWorldUITheme
                 background = slider.GetComponent<Image>();
             if (background != null)
             {
-                background.color = SurfaceLow;
+                background.color = StatusBarBackground;
                 background.sprite = null;
                 background.type = Image.Type.Simple;
                 background.preserveAspect = false;
@@ -850,7 +964,7 @@ public static class FlatWorldUITheme
                 Image fill = slider.fillRect.GetComponent<Image>();
                 if (fill != null)
                 {
-                    fill.color = IsHealthName(slider.name) ? Danger : Accent;
+                    fill.color = IsHealthName(slider.name) ? StatusBarHealth : StatusBarDefault;
                     fill.sprite = null;
                     fill.type = Image.Type.Simple;
                     fill.preserveAspect = false;
@@ -893,7 +1007,7 @@ public static class FlatWorldUITheme
                     handle.type = Image.Type.Simple;
                     handle.preserveAspect = false;
                     handle.raycastTarget = false;
-                    AddOutline(handle, Hex("2A2A2A", 0.54f));
+                    AddOutline(handle, SliderHandleOutline);
                 }
             }
         }
@@ -950,7 +1064,7 @@ public static class FlatWorldUITheme
                     handle.type = Image.Type.Simple;
                     handle.preserveAspect = false;
                 }
-                scrollbar.targetGraphic.color = Hex("8A8A8A", 0.94f);
+                scrollbar.targetGraphic.color = ScrollbarHandle;
             }
         }
     }
@@ -999,12 +1113,12 @@ public static class FlatWorldUITheme
 
             if (graphic is TextMeshProUGUI)
             {
-                outline.effectColor = Hex("242424", 0.72f);
+                outline.effectColor = TextShadow;
             }
             else if (ContainsAny(outline.name, PrimaryActionWords) ||
                      ContainsAny(outline.name, "Accent", "强调", "UI_SelectBox"))
             {
-                outline.effectColor = Hex("D7C56A", 0.24f);
+                outline.effectColor = AccentOutline;
             }
             else
             {
@@ -1022,15 +1136,15 @@ public static class FlatWorldUITheme
     {
         string fullName = BuildPath(image.transform);
         if (IsHealthName(fullName))
-            image.color = Danger;
+            image.color = StatusBarHealth;
         else if (ContainsAny(fullName, "LongPress Hold", "长按放置"))
-            image.color = Hex("D7C56A", 0.46f);
+            image.color = LongPressFill;
         else if (ContainsAny(fullName, "食物", "饱食", "饥饿", "Food"))
-            image.color = Accent;
+            image.color = StatusBarDefault;
         else if (ContainsAny(fullName, "体力", "耐力", "Stamina", "睡眠"))
             image.color = Teal;
         else
-            image.color = Accent;
+            image.color = StatusBarDefault;
     }
 
     private static void DecoratePanel(Transform root, bool isHud)
@@ -1164,7 +1278,7 @@ public static class FlatWorldUITheme
         Stretch(chrome);
         chrome.SetAsLastSibling();
 
-        Image veil = CreateImage("UITheme_DeathVeil", chrome, Hex("071219", 0.38f));
+        Image veil = CreateImage("UITheme_DeathVeil", chrome, DeathVeil);
         Stretch(veil.rectTransform);
         veil.raycastTarget = false;
 
@@ -1539,14 +1653,4 @@ public static class FlatWorldUITheme
         return result;
     }
 
-    private static Color Hex(string rgb, float alpha = 1f)
-    {
-        if (ColorUtility.TryParseHtmlString("#" + rgb, out Color color))
-        {
-            color.a = alpha;
-            return color;
-        }
-
-        return Color.white;
-    }
 }
