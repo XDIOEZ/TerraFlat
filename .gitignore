@@ -108,3 +108,7 @@ crashlytics-build.properties
 /hidden_changes.conf
 /ignore.conf
 /Assets/Screenshots
+
+# Python 自动字节码缓存及 Unity 为缓存目录生成的 meta
+__pycache__/
+__pycache__.meta
