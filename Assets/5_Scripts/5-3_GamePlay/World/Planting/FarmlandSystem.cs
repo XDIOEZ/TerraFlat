@@ -228,9 +228,11 @@ public static partial class FarmlandSystem
         ChunkMgr manager = ChunkMgr.ExistingInstance;
         if (manager == null || !manager.TryGetRuntimeTerrainTile(
                 new Vector2(worldCell.x + 0.5f, worldCell.y + 0.5f), out sample) ||
-            !IsOpen(sample) || (!IsFarmland(sample.Cell) && !HasSoilState(sample)))
+            !CanUseSoilCell(sample) || (!IsFarmland(sample.Cell) && !HasSoilState(sample)))
             return false;
         soil = ReadSoilSnapshot(sample);
+        if (TryAbsorbNearbyLiquid(sample, soil))
+            CommitSoil(soil);
         return true;
     }
 
@@ -239,7 +241,7 @@ public static partial class FarmlandSystem
     {
         if (!ChunkMgr.ExistingInstance.TryGetRuntimeTerrainTile(
                 new Vector2(soil.position.x + 0.5f, soil.position.y + 0.5f), out var sample) ||
-            !IsOpen(sample) || (!IsFarmland(sample.Cell) && !HasSoilState(sample)))
+            !CanUseSoilCell(sample) || (!IsFarmland(sample.Cell) && !HasSoilState(sample)))
             return;
         soil.NormalizeValues();
         if (Read(sample.Terrain, sample.LocalCell, SourceLayer) <= 0f)

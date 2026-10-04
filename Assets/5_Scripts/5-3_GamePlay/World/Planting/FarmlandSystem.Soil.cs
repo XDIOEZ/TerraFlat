@@ -1,3 +1,5 @@
+using System;
+using FlatWorld.Networking;
 using FlatWorld.WorldModel;
 using UnityEngine;
 
@@ -21,6 +23,15 @@ public static partial class FarmlandSystem
 
     private static bool HasSoilState(RuntimeTerrainTileSample sample) =>
         Read(sample.Terrain, sample.LocalCell, SourceLayer) > 0f;
+
+    /// <summary>耕地已有液体覆盖时仍允许结算土壤，供九宫格灌溉吸收自身格液体。</summary>
+    private static bool CanUseSoilCell(RuntimeTerrainTileSample sample) =>
+        sample.Terrain != null && !sample.Terrain.IsDisposed &&
+        TerrainSupportLayer.GetTileId(sample.Terrain, sample.LocalCell.x, sample.LocalCell.y) == 0 &&
+        sample.Cell.GroundTileId != 0 && sample.Cell.BackTileId == 0 && sample.Cell.BlockingTileId == 0 &&
+        (sample.Cell.Flags & (TerrainCellFlags.Blocking | TerrainCellFlags.Occupied)) == 0 &&
+        sample.Terrain.GetTileLayerCount(sample.LocalCell.x, sample.LocalCell.y) == 1 &&
+        !BuildingOccupancyRegistry.IsOccupied(sample.WorldCell);
 
     /// <summary>普通土地尚无农业差量时，读取生成环境；已有浇水、施肥或耕作则保留当前值。</summary>
     public static TileData_Farmland ReadSoilSnapshot(RuntimeTerrainTileSample sample)
@@ -65,25 +76,46 @@ public static partial class FarmlandSystem
 
     #endregion
 
-    #region 倾倒液体的世界提交
+    #region 九宫格液体灌溉
 
-    /// <summary>一份水增加一点地面水分；水格增加原水深。只更新已有格子，不生成水面或替换地形。</summary>
-    public static bool TryAddGroundWater(Vector2 worldPosition, float amount)
+    /// <summary>农田从自身及周围八格的世界水体吸水，一份世界液体对应一点土壤水分。</summary>
+    private static bool TryAbsorbNearbyLiquid(RuntimeTerrainTileSample farmland, TileData_Farmland soil)
     {
-        if (!FlatWorld.Networking.GameNetwork.HasStateAuthority || amount <= 0f ||
-            float.IsNaN(amount) || float.IsInfinity(amount) || ChunkMgr.ExistingInstance == null ||
-            !ChunkMgr.ExistingInstance.TryGetRuntimeTerrainTile(worldPosition, out var sample))
+        if (!GameNetwork.HasStateAuthority || soil == null || ChunkMgr.ExistingInstance == null)
             return false;
-        int x = sample.LocalCell.x, y = sample.LocalCell.y;
-        float liquidDepth = sample.Terrain.GetLiquidDepth(x, y);
-        if (liquidDepth > 0f)
-            return WorldLiquidSystem.TrySet(sample, sample.Terrain.GetLiquidId(x, y), liquidDepth + amount);
-        if (!IsOpen(sample)) return false;
-        EnsureSoilState(sample);
-        TileData_Farmland soil = ReadSoilSnapshot(sample);
-        soil.AddWater(amount);
-        CommitSoil(soil);
-        return true;
+
+        soil.NormalizeValues();
+        float missingWater = Mathf.Max(0f, soil.maxWater - soil.waterValue);
+        if (missingWater <= 0.0001f) return false;
+
+        bool absorbedAny = false;
+        Vector2Int center = WorldTopologyRuntime.NormalizeCell(farmland.WorldCell);
+        for (int dy = -1; dy <= 1 && missingWater > 0.0001f; dy++)
+        for (int dx = -1; dx <= 1 && missingWater > 0.0001f; dx++)
+        {
+            Vector2Int cell = WorldTopologyRuntime.NormalizeCell(center + new Vector2Int(dx, dy));
+            if (!ChunkMgr.ExistingInstance.TryGetRuntimeTerrainTile(
+                    new Vector2(cell.x + 0.5f, cell.y + 0.5f), out RuntimeTerrainTileSample source) ||
+                source.Terrain == null || source.Terrain.IsDisposed ||
+                !WorldLiquidSystem.TryGetDefinition(source, out LiquidDefinition liquid) ||
+                !string.Equals(liquid.Category, "water", StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            float depth = source.Terrain.GetLiquidDepth(source.LocalCell.x, source.LocalCell.y);
+            float depthPerServing = liquid.WorldWater.DepthPerServing;
+            float servings = Mathf.Min(missingWater, depth / depthPerServing);
+            if (servings <= 0.0001f ||
+                !WorldLiquidSystem.TryPump(source, servings * depthPerServing, out _, out float removedDepth))
+                continue;
+
+            float absorbed = removedDepth / depthPerServing;
+            if (absorbed <= 0f) continue;
+            soil.AddWater(absorbed);
+            missingWater = Mathf.Max(0f, soil.maxWater - soil.waterValue);
+            absorbedAny = true;
+        }
+
+        return absorbedAny;
     }
 
     #endregion
