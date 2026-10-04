@@ -20,8 +20,9 @@ description: "Use when: 定位或修改 FlatWorld 的玩家实体、输入系统
 
 - 单机世界内 F5 成功发布资源后会保存当前本地玩家 Data，注销旧 Player 运行时外壳，清空旧运行时 UI 实例，并从最新资源目录的 Player Prefab 重新实例化同一档案；世界、区块和存档会话不重建。外部系统需要重新绑定玩家引用时订阅 `GameManager.Event_LocalPlayerRuntimeReloaded`，禁止复用 `Event_PlayerEnterWorld` 制造重复世界进入语义。
 - 玩家主动速度与环境速度必须分开：`Mod_Mover.DrivenVelocity` 决定步行动画，水流和承载只写 `ExternalVelocity`；不能把上一帧总刚体速度重新当作主动移动的缓动起点。玩家和 GameObject 生物的推动速度统一读取 `StreamingAssets/GameConfig/Movement/water-current.json`：已列 Actor 用指定速度，未列实体按 `ItemData.Stack.Weight` 与 `weightRule` 换算；河流推动读取权威 `Flow` 并经 `WaterEnvironmentRules.ResolveRiverStrength` 换算，不能用 `Clamp01(Flow)` 抹平大流量河段的速度差。
+- 玩家输送带推动经 `MachineWorld.SampleConveyorVelocity` 复用有符号 RPM 与 `ConveyorPath`，只在实际动态带面内生效且不收拢侧向位置；本机玩家在物理步把带速合入 `ExternalVelocity`，碰撞由自身 Dynamic Rigidbody2D 求解。输入锁只停止主动步行，带面仍推动；远程副本、乘坐载具和其它世界不重复结算，不把被动拖动计入步行动画或体力。
 - 依赖玩家离散位置变化的系统统一订阅 `Mod_Mover.WorldUnitChanged`；该事件按拓扑规范化后的 `Rigidbody2D` 实际位置进入新的 1×1 世界单位格时触发，消费方禁止各自累计移动距离或重复轮询坐标。
-- `Mod_Mover` 只向 Dynamic Rigidbody2D 提交主动速度与水流速度；地块、资源、机器的接触由 Chunk 静态 Collider 投影和 Physics2D 求解。`WorldUnitChanged` 仍按刚体实际到达位置发布，不能用期望速度代替。
+- `Mod_Mover` 只向 Dynamic Rigidbody2D 提交主动速度与环境推动速度；地块、资源、机器的接触由 Chunk 静态 Collider 投影和 Physics2D 求解。`WorldUnitChanged` 仍按刚体实际到达位置发布，不能用期望速度代替。
 - 玩家脚下动态建筑造成的移速惩罚由 `BuildingOccupancyRegistry.GetPlayerMoveSpeedMultiplier` 按离散格读取，并只乘入 `Mod_Mover` 的主动目标速度；不要把这类地块惩罚写进永久 `Speed.MultiplicativeModifier`，否则进出地块时容易与 Buff、奔跑倍率互相污染。
 - 载具接触由 Dynamic Rigidbody2D + 非 Trigger 船体 Collider 求解；`CarrierPhysicsContact2D` 只报告接触，`Mod_Carrier` 仍通过 `PushSource`、推动速度和有效期记录权威推动关系，实际位移由 Physics2D 求解。船头只按有效乘员经 `ICarrierMotionSource.AdvanceMotion` 提交的划行输入，以 `FacingTurnSpeed` 固定角速度改变；松手、输入锁定或离船后保留朝向。推动、水流与滑行只改变平移，合速度直接提交刚体，禁止把合速度转向船头或从实际速度反推朝向；根刚体保持 FreezeRotation，只旋转视觉子节点。乘员承载仍由同一契约传递，禁止乘员反推自身载具。
 - 载具的按键、鼠标点选和白色描边必须共用光标落点查询；上船与下船都要求光标实际命中载具，禁止因“当前已乘坐”或“靠近船体”绕过光标选择。光标指向可触及水面且未命中载具时，交互键交给喝水等环境动作。远海登船与下船都合法：登船恢复位置优先附近安全陆地，否则保留真实登船坐标；下船优先附近安全陆地，没有陆地时落到船体外侧安全水面。

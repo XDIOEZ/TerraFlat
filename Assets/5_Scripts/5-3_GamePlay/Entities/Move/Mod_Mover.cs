@@ -66,7 +66,7 @@ public partial class Mod_Mover : Module
 
     [Min(0.01f)] public float pushContactRadius = 0.2f; // 玩法推动占地，不依赖物理碰撞体。
     public Vector2 DrivenVelocity { get; private set; } // 只有主动移动贡献驱动行走动画。
-    public Vector2 ExternalVelocity { get; private set; } // 水流/承载等被动速度贡献。
+    public Vector2 ExternalVelocity { get; private set; } // 水流、输送带与承载等被动速度贡献。
     public Vector2 RequestedMoveInput { get; private set; } // 当前真实输入，推动来源失效时可立即撤销。
 
     private InputAction moveAction;
@@ -240,11 +240,18 @@ public partial class Mod_Mover : Module
 
     private bool _wasMoving = false;
 
-    /// <summary>物理接触由 Rigidbody2D 结算，这里只检测实际到达的世界单位格。</summary>
+    /// <summary>物理步刷新玩家脚下推动速度，并按刚体实际到达位置发布世界格变化。</summary>
     private void FixedUpdate()
     {
         if (rb == null)
             return;
+
+        if (item is Player player && player.IsLocalProfile && Enabled && !item.DestructionHandled &&
+            CarrierSource == null && rb.simulated && rb.bodyType == RigidbodyType2D.Dynamic)
+        {
+            ExternalVelocity = ResolveExternalVelocity();
+            rb.velocity = DrivenVelocity + ExternalVelocity;
+        }
 
         if (WorldUnitChanged == null)
             return;
@@ -408,7 +415,7 @@ public partial class Mod_Mover : Module
             ? Vector2.zero
             : delta.normalized * moveSpeed;
         DrivenVelocity = SmoothSurfaceVelocity(DrivenVelocity, targetVelocity, deltaTime);
-        ExternalVelocity = ResolveWaterCurrentVelocity();
+        ExternalVelocity = ResolveExternalVelocity();
         rb.velocity = DrivenVelocity + ExternalVelocity;
         UpdateMovementState();
     }
@@ -431,7 +438,7 @@ public partial class Mod_Mover : Module
             : Vector2.zero;
         // 主动速度独立缓动，不能把上帧水流当作下帧主动移动的初速度。
         DrivenVelocity = SmoothSurfaceVelocity(DrivenVelocity, targetVelocity, deltaTime);
-        ExternalVelocity = ResolveWaterCurrentVelocity();
+        ExternalVelocity = ResolveExternalVelocity();
         rb.velocity = DrivenVelocity + ExternalVelocity;
         UpdateMovementState();
     }
@@ -451,7 +458,7 @@ public partial class Mod_Mover : Module
         }
 
         DrivenVelocity = SmoothSurfaceVelocity(DrivenVelocity, targetVelocity, deltaTime);
-        ExternalVelocity = ResolveWaterCurrentVelocity();
+        ExternalVelocity = ResolveExternalVelocity();
         rb.velocity = DrivenVelocity + ExternalVelocity;
         UpdateMovementState();
     }
@@ -507,14 +514,15 @@ public partial class Mod_Mover : Module
             : nextVelocity;
     }
 
-    /// <summary>输入锁定时立即停止，避免模态界面打开后角色继续滑行。</summary>
+    /// <summary>输入锁定时停止主动走路，站在运行带面上仍由传送带推动。</summary>
     private void StopImmediately()
     {
         if (rb == null)
             return;
 
-        rb.velocity = Vector2.zero;
-        DrivenVelocity = ExternalVelocity = RequestedMoveInput = Vector2.zero;
+        DrivenVelocity = RequestedMoveInput = Vector2.zero;
+        ExternalVelocity = ResolveExternalVelocity();
+        rb.velocity = ExternalVelocity;
         UpdateMovementState();
     }
 
@@ -537,6 +545,18 @@ public partial class Mod_Mover : Module
         _wasMoving = isActuallyMoving;
     }
 
+    #endregion
+
+    #region 环境推动
+    private Vector2 ResolveExternalVelocity()
+    {
+        Vector2 velocity = inputController?.IsGameplayInputLocked == true
+            ? Vector2.zero : ResolveWaterCurrentVelocity();
+        if (item is Player player && player.IsLocalProfile && !item.DestructionHandled &&
+            rb != null && rb.simulated && CarrierSource == null && item.gameObject.scene.name == MachineWorld.WorldKey)
+            velocity += MachineWorld.SampleConveyorVelocity(rb.position, Time.fixedDeltaTime);
+        return velocity;
+    }
     #endregion
 
     #region 数据存取

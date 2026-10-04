@@ -49,8 +49,8 @@ public readonly struct ConveyorPath
         return new ConveyorPath(input, output);
     }
 
-    /// <summary>按带长推进并逐步收拢侧向偏移，转弯不会瞬移到格心。</summary>
-    public bool TryMove(Vector2 offset, float distance, float halfWidth, out Vector2 destination)
+    /// <summary>按带长推进，掉落物可收拢侧向偏移，角色保留站位沿弧线移动。</summary>
+    public bool TryMove(Vector2 offset, float distance, float halfWidth, out Vector2 destination, bool centerLateral = true)
     {
         Vector2 local = Rotate(offset, -Rotation);
         float progress, lateral;
@@ -64,7 +64,7 @@ public readonly struct ConveyorPath
         destination = offset;
         if (Mathf.Abs(lateral) > halfWidth) return false;
         progress += distance * CanonicalSign;
-        lateral = Mathf.MoveTowards(lateral, 0f, Mathf.Abs(distance));
+        if (centerLateral) lateral = Mathf.MoveTowards(lateral, 0f, Mathf.Abs(distance));
         Vector2 point, normal;
         if (!Curved) { point = new Vector2(progress - .5f, 0f); normal = Vector2.up; }
         else if (progress < 0f) { point = new Vector2(-.5f + progress, 0f); normal = Vector2.down; }
