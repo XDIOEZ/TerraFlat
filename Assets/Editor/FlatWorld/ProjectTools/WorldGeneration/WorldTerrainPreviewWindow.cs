@@ -169,6 +169,10 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
         "climate.temperature.altitudeCoolingStart",
         "climate.temperature.altitudeCoolingStrength",
         "climate.equator.celsius",
+        "climate.polarBand.halfWidth",
+        "climate.polarBand.transitionTiles",
+        "climate.polarBand.transitionCelsius",
+        "climate.temperature.blendRadius",
         "climate.polarBand.boundary.offsetTiles",
         "climate.polarBand.boundary.spacingTiles",
         "climate.polarBand.boundary.detailStrength",
@@ -236,6 +240,10 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
             ["climate.temperature.altitudeCoolingStart"] = "超过该高度后开始按海拔降温",
             ["climate.temperature.altitudeCoolingStrength"] = "海拔对温度的影响强度；越高山区越冷",
             ["climate.equator.celsius"] = "赤道纬度底温，实际温度还会叠加海拔、降雨和风向修正",
+            ["climate.polarBand.halfWidth"] = "整条寒带占地图的比例；0.05 表示 5%",
+            ["climate.polarBand.transitionTiles"] = "极圈边缘回到温带底温的距离，单位为格",
+            ["climate.polarBand.transitionCelsius"] = "离开极圈短过渡后的温带底温，随后继续向赤道渐暖",
+            ["climate.temperature.blendRadius"] = "邻格气温平滑半径；0 关闭，默认 2 格",
             ["climate.polarBand.boundary.offsetTiles"] = "极圈边界随机上下偏移的最大格数；0 关闭起伏",
             ["climate.polarBand.boundary.spacingTiles"] = "边界随机控制点的大致间距；越大起伏越宽缓",
             ["climate.polarBand.boundary.detailStrength"] = "小范围随机起伏的占比，温度和积雪范围共用偏移",
@@ -721,6 +729,10 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
             EditorGUILayout.Space(3f);
             EditorGUILayout.LabelField("气候与附加层", EditorStyles.miniBoldLabel);
             DrawDoubleField("climate.equator.celsius", "赤道底温（°C）");
+            DrawSlider("climate.polarBand.halfWidth", "寒带占地图比例（0.05 = 5%）", 0.001f, 1f);
+            DrawDoubleField("climate.polarBand.transitionTiles", "寒带外温度过渡距离（格）");
+            DrawDoubleField("climate.polarBand.transitionCelsius", "寒带外温带底温（°C）");
+            DrawIntegerSlider("climate.temperature.blendRadius", "邻格温度平滑半径（格）", 0, 32);
             DrawDoubleField("climate.polarBand.boundary.offsetTiles", "极圈边界最大随机偏移（格）");
             DrawDoubleField("climate.polarBand.boundary.spacingTiles", "极圈边界随机点间距（格）");
             DrawSlider("climate.polarBand.boundary.detailStrength", "极圈边界细节起伏占比", 0f, 1f);

@@ -359,9 +359,16 @@ namespace FlatWorld.WorldModel
             PolarBandPeakCelsius = Clamp(Finite(
                 GetDouble(numbers, "climate.polarBand.peakCelsius", -25d), -25d),
                 PolarBandCelsius, PolarBandEdgeCelsius);
-            // 极圈总宽度默认占地图的 25%，半宽按地图高度的一半归一化。
+            // 极圈总宽度默认占地图的 5%，区外冷暖过渡单独限制距离。
             PolarBandHalfWidth = Clamp(Finite(
-                GetDouble(numbers, "climate.polarBand.halfWidth", 0.25d), 0.25d), 0.001d, 1d);
+                GetDouble(numbers, "climate.polarBand.halfWidth", 0.05d), 0.05d), 0.001d, 1d);
+            PolarBandTransitionTiles = Math.Max(1d, FinitePositive(
+                GetDouble(numbers, "climate.polarBand.transitionTiles", 32d), 32d));
+            PolarBandTransitionCelsius = Clamp(Finite(
+                GetDouble(numbers, "climate.polarBand.transitionCelsius", 15d), 15d),
+                Math.Min(PolarBandEdgeCelsius, EquatorTemperatureCelsius),
+                Math.Max(PolarBandEdgeCelsius, EquatorTemperatureCelsius));
+            BiomeTemperatureBlendRadius = Clamp(GetInt(numbers, "climate.temperature.blendRadius", 2), 0, 32);
             PolarBoundaryOffsetTiles = NonNegativeFinite(
                 GetDouble(numbers, "climate.polarBand.boundary.offsetTiles", 32d), 32d);
             PolarBoundarySpacingTiles = Math.Max(8d, FinitePositive(
@@ -804,6 +811,9 @@ namespace FlatWorld.WorldModel
         public double PolarBandEdgeCelsius { get; }
         public double PolarBandPeakCelsius { get; }
         public double PolarBandHalfWidth { get; }
+        public double PolarBandTransitionTiles { get; }
+        public double PolarBandTransitionCelsius { get; }
+        public int BiomeTemperatureBlendRadius { get; }
         /// <summary>极圈边界随机偏移的最大格数；零表示关闭起伏。</summary>
         public double PolarBoundaryOffsetTiles { get; }
         public double PolarBoundarySpacingTiles { get; }

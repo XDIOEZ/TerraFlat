@@ -42,10 +42,18 @@ namespace FlatWorld.WorldModel
             if (distance <= halfWidth)
                 return SamplePolarQuadraticTemperature(settings.PolarBandCelsius,
                     settings.PolarBandPeakCelsius, settings.PolarBandEdgeCelsius, Clamp01(distance / halfWidth));
-            double progress = Clamp01((distance - halfWidth) / Math.Max(0.000001d, halfSpan - halfWidth));
-            double smooth = progress * progress * (3d - 2d * progress);
-            return settings.PolarBandEdgeCelsius +
-                   (settings.EquatorTemperatureCelsius - settings.PolarBandEdgeCelsius) * smooth;
+            double remainingSpan = halfSpan - halfWidth;
+            double transition = Math.Min(settings.PolarBandTransitionTiles, remainingSpan);
+            double temperateCelsius = transition >= remainingSpan
+                ? settings.EquatorTemperatureCelsius : settings.PolarBandTransitionCelsius;
+            double outsideDistance = distance - halfWidth;
+            // 极圈外先在短距离内回到温带底温，随后继续保留朝赤道渐暖的纬度变化。
+            if (outsideDistance <= transition)
+                return Lerp(settings.PolarBandEdgeCelsius, temperateCelsius,
+                    Smooth(Clamp01(outsideDistance / Math.Max(0.000001d, transition))));
+            return Lerp(temperateCelsius, settings.EquatorTemperatureCelsius,
+                Smooth(Clamp01((outsideDistance - transition) /
+                    Math.Max(0.000001d, remainingSpan - transition))));
         }
 
         private static double SamplePolarDistance(ChunkGenerationRequest request,
@@ -81,7 +89,7 @@ namespace FlatWorld.WorldModel
                 Math.Min(halfWidth, halfSpan - halfWidth) * 0.5d);
             double coarse = SamplePolarBoundaryRandom(request, worldX, settings.PolarBoundarySpacingTiles, 0x832f91a7u);
             double detail = SamplePolarBoundaryRandom(request, worldX, settings.PolarBoundarySpacingTiles * 0.25d, 0xc7b35e29u);
-            // 大小两组固定种子随机偏移平滑连接，整条冷带只平移而不扩大其 25% 宽度。
+            // 大小两组固定种子随机偏移平滑连接，整条冷带只平移而不扩大配置宽度。
             return amplitude * Lerp(coarse, detail, settings.PolarBoundaryDetailStrength);
         }
 
@@ -157,8 +165,6 @@ namespace FlatWorld.WorldModel
         #endregion
 
         #region 群系温度过渡
-        private const int BiomeTemperatureBlendRadius = 8;
-
         private static SurfaceBiomeKind ResolveSurfaceBiome(ChunkGenerationSettingsSnapshot settings,
             SurfaceClimateSample sample, double moisture, bool river, double? blendedCelsius = null)
         {
@@ -180,13 +186,14 @@ namespace FlatWorld.WorldModel
             ChunkGenerationSettingsSnapshot settings, int worldX, int worldY)
         {
             double total = 0d;
-            for (int y = -BiomeTemperatureBlendRadius; y <= BiomeTemperatureBlendRadius; y++)
-            for (int x = -BiomeTemperatureBlendRadius; x <= BiomeTemperatureBlendRadius; x++)
+            int radius = settings.BiomeTemperatureBlendRadius;
+            for (int y = -radius; y <= radius; y++)
+            for (int x = -radius; x <= radius; x++)
             {
                 var sample = SampleSurfaceClimate(request, settings, worldX + x, worldY + y);
                 total += sample.TemperatureCelsius;
             }
-            int diameter = BiomeTemperatureBlendRadius * 2 + 1;
+            int diameter = radius * 2 + 1;
             return total / (diameter * diameter);
         }
         #endregion

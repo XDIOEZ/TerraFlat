@@ -16,7 +16,7 @@ namespace FlatWorld.WorldModel
         IChunkEcologyNeighborhoodTagResolver
     {
         /// <summary>纯区块生成规则版本；气候、群系、河流或生态空间分布规则改变时递增。</summary>
-        public const int CurrentGenerationSignature = 69;
+        public const int CurrentGenerationSignature = 70;
 
         private readonly LiquidTypeCatalog liquidTypes;
         /// <summary>资源就绪后注入会话液体表；离线纯算法测试可以使用本体最小目录。</summary>
@@ -602,7 +602,7 @@ namespace FlatWorld.WorldModel
                 this.settings = settings;
                 peatRadius = settings.PeatTileId > 0 && settings.PeatSpawnChance > 0d
                     ? settings.PeatStoneBoundaryRadius : 0;
-                radius = Math.Max(peatRadius, BiomeTemperatureBlendRadius);
+                radius = Math.Max(peatRadius, settings.BiomeTemperatureBlendRadius);
                 stride = request.Profile.Width + radius * 2;
                 int sampleCount = stride * (request.Profile.Height + radius * 2);
                 samples = ArrayPool<SurfaceClimateSample>.Shared.Rent(sampleCount);
@@ -740,9 +740,9 @@ namespace FlatWorld.WorldModel
 
             public double GetBlendedTemperature(int x, int y)
             {
-                int left = x + radius - BiomeTemperatureBlendRadius;
-                int bottom = y + radius - BiomeTemperatureBlendRadius;
-                int diameter = BiomeTemperatureBlendRadius * 2 + 1;
+                int left = x + radius - settings.BiomeTemperatureBlendRadius;
+                int bottom = y + radius - settings.BiomeTemperatureBlendRadius;
+                int diameter = settings.BiomeTemperatureBlendRadius * 2 + 1;
                 int right = left + diameter;
                 int top = bottom + diameter;
                 int sumStride = stride + 1;
