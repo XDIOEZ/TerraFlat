@@ -162,7 +162,7 @@ public abstract class Mod_GroundHarvestToolBase : Mod_ResourceToolBase, IItemMod
         UpdateTargetVisuals();
     }
 
-    /// <summary>白框始终跟随当前指针地格；挖掘进度由区块表现层渐显目标地块。</summary>
+    /// <summary>白框只显示当前可采集覆盖层或可挖掘地块，失效时立即隐藏。</summary>
     private void UpdateTargetVisuals()
     {
         if (!TryResolveOverlayTarget(out RuntimeTerrainTileSample sample) &&

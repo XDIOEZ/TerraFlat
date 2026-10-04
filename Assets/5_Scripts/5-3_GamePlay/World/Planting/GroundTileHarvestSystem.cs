@@ -92,23 +92,9 @@ public static class GroundTileHarvestSystem
         return true;
     }
 
-    /// <summary>预览工具指向的地表；采挖资格只影响实际操作，不隐藏所选地块。</summary>
+    /// <summary>白框与正式采挖共用资格判断，只提示当前工具能作用的地块。</summary>
     public static bool TryResolvePreview(Mod_ResourceToolBase tool, out RuntimeTerrainTileSample sample)
-    {
-        sample = default;
-        if (tool?.item == null || tool.HarvestKind == ResourceToolKind.None ||
-            !tool.item.InHand || tool.item.Owner is not Player actor || !actor.IsLocalProfile)
-            return false;
-
-        Mod_GameController controller = actor.itemMods.GetMod_ByID<Mod_GameController>(ModText.Controller);
-        ChunkMgr manager = ChunkMgr.ExistingInstance;
-        if (controller == null || controller.IsGameplayInputLocked ||
-            (!controller.IsUsingMobile && controller.IsPointerOverUI()) || manager == null ||
-            !manager.TryGetRuntimeTerrainTile(controller.GetMouseWorldPosition(), out sample))
-            return false;
-
-        return sample.Cell.GroundTileId > 0;
-    }
+        => TryResolveTarget(tool, out sample, out _, out _);
     #endregion
 
     #region 权威提交
