@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: ChunkGenerationProfile_Surface
   m_EditorClassIdentifier: 
   profileId: surface.default
-  generationSignature: 64
+  generationSignature: 65
   chunkWidth: 16
   chunkHeight: 16
   numericParameters:
@@ -135,6 +135,16 @@ MonoBehaviour:
     Value: 0
   - Id: climate.temperature.celsiusMax
     Value: 50
+  - Id: climate.equator.celsius
+    Value: 35
+  - Id: climate.temperature.regionalVariationCelsius
+    Value: 2
+  - Id: climate.temperature.rainCoolingCelsius
+    Value: 3
+  - Id: climate.temperature.windwardCoolingCelsius
+    Value: 4
+  - Id: climate.temperature.leewardWarmingCelsius
+    Value: 2
   - Id: climate.polarBand.enabled
     Value: 1
   - Id: climate.polarBand.position
@@ -219,6 +229,8 @@ MonoBehaviour:
     Value: 8
   - Id: biome.desert.minimumHeight
     Value: 0.51
+  - Id: biome.desert.minimumCelsius
+    Value: 20
   - Id: biome.desert.maximumPrecipitation
     Value: 0.35
   - Id: biome.grassland.minimumTemperature

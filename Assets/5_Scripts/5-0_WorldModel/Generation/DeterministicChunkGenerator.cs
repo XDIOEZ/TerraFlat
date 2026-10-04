@@ -16,7 +16,7 @@ namespace FlatWorld.WorldModel
         IChunkEcologyNeighborhoodTagResolver
     {
         /// <summary>纯区块生成规则版本；气候、群系、河流或生态空间分布规则改变时递增。</summary>
-        public const int CurrentGenerationSignature = 64;
+        public const int CurrentGenerationSignature = 65;
 
         private readonly LiquidTypeCatalog liquidTypes;
         /// <summary>资源就绪后注入会话液体表；离线纯算法测试可以使用本体最小目录。</summary>
@@ -478,7 +478,7 @@ namespace FlatWorld.WorldModel
             public double Height;
             public double Temperature;
             public double TemperatureCelsius;
-            public double PolarInfluence;
+            public bool IsPolarBand;
             public double BasePrecipitation;
             public double Precipitation;
             public double WindX;
@@ -706,9 +706,7 @@ namespace FlatWorld.WorldModel
             {
                 double moisture = Clamp01(sample.Precipitation * 0.78d +
                                           (1d - sample.Height) * 0.22d);
-                sample.BaseBiome = SurfaceBiomeClassifier.Resolve(settings,
-                    sample.Height, sample.Temperature, sample.Precipitation,
-                    moisture, false, sample.SnowAllowed);
+                sample.BaseBiome = ResolveSurfaceBiome(settings, sample, moisture, false);
                 sample.Classified = true;
             }
 
@@ -733,7 +731,7 @@ namespace FlatWorld.WorldModel
                     double rowSum = 0d;
                     for (int x = 0; x < stride; x++)
                     {
-                        rowSum += ResolveBiomeTemperature(samples[y * stride + x], settings);
+                        rowSum += samples[y * stride + x].TemperatureCelsius;
                         temperatureSums[(y + 1) * sumStride + x + 1] =
                             temperatureSums[y * sumStride + x + 1] + rowSum;
                     }
@@ -782,8 +780,7 @@ namespace FlatWorld.WorldModel
                 2.07d, 0.5d, request.Topology);
             double latitudeCooling = request.Topology.IsWrapped ? 0d :
                 Math.Min(0.34d, Math.Abs(worldY) * 0.000025d);
-            double temperature = settings.ApplyAltitudeTemperatureCooling(
-                height, temperatureNoise - latitudeCooling);
+            double temperature = Clamp01(temperatureNoise - latitudeCooling);
             return FinishSurfaceClimate(request, settings, worldX, worldY, new SurfaceClimateSample
             {
                 Height = height,
@@ -826,9 +823,7 @@ namespace FlatWorld.WorldModel
                 request, settings, worldX, worldY);
             double baseMoisture = Clamp01(climate.Precipitation * 0.78d +
                                           (1d - climate.Height) * 0.22d);
-            climate.BaseBiome = SurfaceBiomeClassifier.Resolve(settings,
-                climate.Height, climate.Temperature, climate.Precipitation,
-                baseMoisture, false, climate.SnowAllowed);
+            climate.BaseBiome = ResolveSurfaceBiome(settings, climate, baseMoisture, false);
             climate.Classified = true;
             IReadOnlyList<LavaBasin> volcanic = ResolveLavaBasins(request);
             return BuildSurfaceCell(request, settings, riverMap,
@@ -861,10 +856,10 @@ namespace FlatWorld.WorldModel
             double precipitation = climate.Precipitation;
             double windX = climate.WindX;
             double windY = climate.WindY;
-            double temperature = climate.Temperature;
             // 摄氏基温先完成群系过渡，结冰和雪厚共用实际写入环境层的浮点值。
             float temperatureCelsius = (float)(batch != null ? batch.GetBlendedTemperature(x, y) :
                 SampleBlendedBiomeTemperature(request, settings, worldX, worldY));
+            double temperature = settings.NormalizeTemperatureCelsius(temperatureCelsius);
             bool ocean = height < settings.SeaLevel;
             GeneratedHydrologyCell riverCell = default;
             bool river = !ocean && riverMap != null &&
@@ -876,10 +871,7 @@ namespace FlatWorld.WorldModel
                 precipitation * 0.78d + (1d - height) * 0.22d + floodplain * 0.18d);
             if (ocean)
                 moisture = Math.Max(moisture, settings.OceanMoistureFloor);
-            SurfaceBiomeKind biome = !river && floodplain == 0d
-                ? climate.BaseBiome
-                : SurfaceBiomeClassifier.Resolve(
-                    settings, height, temperature, precipitation, moisture, river, climate.SnowAllowed);
+            SurfaceBiomeKind biome = ResolveSurfaceBiome(settings, climate, moisture, river, temperatureCelsius);
             bool frozenRiver = river && temperatureCelsius < 0f;
             bool mountain = biome == SurfaceBiomeKind.Stone ||
                             (biome == SurfaceBiomeKind.Snow && height >= settings.MountainLevel);
@@ -956,7 +948,7 @@ namespace FlatWorld.WorldModel
             else if (biome == SurfaceBiomeKind.Snow)
             {
                 biomeId = (int)biome;
-                bool iceLake = height <= settings.BeachLevel + 0.1d &&
+                bool iceLake = !climate.IsPolarBand && height <= settings.BeachLevel + 0.1d &&
                                Hash01(request.WorldSeed, worldX, worldY, 0x7f4a7c15u) <
                                settings.SnowIceLakeChance;
                 if (iceLake)
@@ -1024,7 +1016,7 @@ namespace FlatWorld.WorldModel
                 flags = TerrainCellFlags.Walkable;
                 navigationCost = (short)Math.Min(short.MaxValue, settings.DefaultNavigationCost + 1);
             }
-            if (snowDepth > 0f && climate.PolarInfluence > 0d)
+            if (snowDepth > 0f && climate.IsPolarBand)
                 snowDepth = ResolvePolarSnowDepth(temperatureCelsius);
 
             // 草先过较宽松的气候门槛，再由湿度决定局部密度；全程只依赖种子和环境层。
@@ -1176,8 +1168,7 @@ namespace FlatWorld.WorldModel
             precipitation = climate.Precipitation;
 
             double moisture = Clamp01(precipitation * 0.78d + (1d - height) * 0.22d);
-            return SurfaceBiomeClassifier.Resolve(
-                settings, height, climate.Temperature, precipitation, moisture, false, climate.SnowAllowed);
+            return ResolveSurfaceBiome(settings, climate, moisture, false);
         }
 
         /// <summary>按世界种子和坐标采样地形高度，供地表生成与洞穴地表参考共同复用。</summary>

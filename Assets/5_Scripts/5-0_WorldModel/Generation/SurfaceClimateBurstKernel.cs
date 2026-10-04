@@ -30,7 +30,7 @@ namespace FlatWorld.WorldModel
             public int Wrapped, MinX, MinY, SpanX, SpanY;
             public float WorldCoordinateScale;
             public NoiseChannel HeightNoise, TemperatureNoise, PrecipitationNoise;
-            public float HeightBoost, CoolingStart, CoolingStrength, CelsiusMin, CelsiusMax;
+            public float HeightBoost, CelsiusMin, CelsiusMax;
             public float WindRegionSize, OrographicDistance, WindwardGain, LeewardLoss;
             public int WindSeedSalt, OrographicSamples;
         }
@@ -67,8 +67,6 @@ namespace FlatWorld.WorldModel
                 PrecipitationNoise = Freeze(settings.PrecipitationNoise, request.WorldSeed, 2),
                 HeightBoost = settings.HeightSecondaryBoostEnabled
                     ? (float)settings.HeightSecondaryBoostStrength : 0f,
-                CoolingStart = (float)settings.TemperatureAltitudeCoolingStart,
-                CoolingStrength = (float)settings.TemperatureAltitudeCoolingStrength,
                 CelsiusMin = (float)settings.TemperatureCelsiusMin,
                 CelsiusMax = (float)settings.TemperatureCelsiusMax,
                 WindRegionSize = (float)settings.WindRegionSize,
@@ -131,8 +129,8 @@ namespace FlatWorld.WorldModel
                 }
                 float height = SampleHeight(p, worldX, worldY);
                 float baseTemperature = SampleChannel(p, p.TemperatureNoise, worldX, worldY);
-                float temperature = math.saturate(baseTemperature -
-                    math.max(0f, math.saturate(height) - p.CoolingStart) * p.CoolingStrength);
+                // 海拔、降雨和风向的温差统一在批次与单格共用的收尾阶段叠加。
+                float temperature = baseTemperature;
                 float basePrecipitation = SampleChannel(p, p.PrecipitationNoise, worldX, worldY);
                 SampleWind(p, worldX, worldY, out float windX, out float windY);
                 float mean = 0f, maximum = 0f;

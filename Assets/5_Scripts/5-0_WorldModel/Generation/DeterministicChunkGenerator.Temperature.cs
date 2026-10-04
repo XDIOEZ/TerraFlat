@@ -7,43 +7,61 @@ namespace FlatWorld.WorldModel
     {
         #region 环世界地理温度带
 
-        // 极点带沿 X 绕世界一周，Y 按环绕最短距离降温，上下接缝属于同一条带。
+        // 地理温度按纬度底温、局部变化、海拔、降雨和风向共同合成，不由群系反向指定。
         private static SurfaceClimateSample FinishSurfaceClimate(ChunkGenerationRequest request,
             ChunkGenerationSettingsSnapshot settings, int worldX, int worldY, SurfaceClimateSample sample)
         {
-            sample.PolarInfluence = SamplePolarInfluence(request, settings, worldY);
-            if (sample.PolarInfluence > 0d)
+            sample.IsPolarBand = IsInsidePolarBand(request, settings, worldY);
+            double baseline = sample.TemperatureCelsius;
+            if (request.Topology.IsWrapped && settings.PolarBandEnabled)
             {
-                double min = settings.SurfaceClimateAlgorithm == SurfaceClimateAlgorithm.LegacyLand
-                    ? settings.TemperatureCelsiusMin : -20d;
-                double range = settings.SurfaceClimateAlgorithm == SurfaceClimateAlgorithm.LegacyLand
-                    ? settings.TemperatureCelsiusMax - min : 65d;
-                double polarTemperature = (settings.PolarBandCelsius - min) / Math.Max(0.000001d, range);
-                sample.Temperature = Clamp01(CoolTowardsPolarBand(sample.Temperature,
-                    polarTemperature, sample.PolarInfluence));
+                baseline = SampleLatitudeTemperature(request, settings, worldY) +
+                    (sample.Temperature * 2d - 1d) * settings.RegionalTemperatureVariationCelsius;
             }
-            sample.SnowAllowed = IsSnowRegionAllowed(request, settings, sample.Height,
-                sample.Temperature, sample.Precipitation, worldX, worldY);
+            double rainOffset = -Clamp01(sample.Precipitation) * settings.RainTemperatureCoolingCelsius;
+            double windRainDifference = sample.Precipitation - sample.BasePrecipitation;
+            double windOffset = -Math.Max(0d, windRainDifference) * settings.WindwardTemperatureCoolingCelsius +
+                                Math.Max(0d, -windRainDifference) * settings.LeewardTemperatureWarmingCelsius;
+            sample.TemperatureCelsius = baseline + settings.GetAltitudeTemperatureOffsetCelsius(sample.Height) +
+                                        rainOffset + windOffset;
+            sample.Temperature = settings.NormalizeTemperatureCelsius(sample.TemperatureCelsius);
+            // 极圈寒冷陆地不受零散雪原概率和降水门槛限制。
+            sample.SnowAllowed = sample.IsPolarBand ||
+                IsSnowRegionAllowed(request, settings, sample.Height,
+                    sample.Temperature, sample.Precipitation, worldX, worldY);
             return sample;
         }
 
-        private static double SamplePolarInfluence(ChunkGenerationRequest request,
+        private static double SampleLatitudeTemperature(ChunkGenerationRequest request,
+            ChunkGenerationSettingsSnapshot settings, int worldY)
+        {
+            double distance = SamplePolarDistance(request, settings, worldY);
+            double halfSpan = request.Topology.Span.Y * 0.5d;
+            double halfWidth = halfSpan * settings.PolarBandHalfWidth;
+            if (distance <= halfWidth)
+                return SamplePolarQuadraticTemperature(settings.PolarBandCelsius,
+                    settings.PolarBandPeakCelsius, settings.PolarBandEdgeCelsius, Clamp01(distance / halfWidth));
+            double progress = Clamp01((distance - halfWidth) / Math.Max(0.000001d, halfSpan - halfWidth));
+            double smooth = progress * progress * (3d - 2d * progress);
+            return settings.PolarBandEdgeCelsius +
+                   (settings.EquatorTemperatureCelsius - settings.PolarBandEdgeCelsius) * smooth;
+        }
+
+        private static double SamplePolarDistance(ChunkGenerationRequest request,
+            ChunkGenerationSettingsSnapshot settings, int worldY)
+        {
+            double centerY = request.Topology.Min.Y + request.Topology.Span.Y * settings.PolarBandPosition;
+            return Math.Abs(request.Topology.ToDomain().ShortestDelta(
+                new double2(0d, centerY), new double2(0d, worldY)).y);
+        }
+
+        private static bool IsInsidePolarBand(ChunkGenerationRequest request,
             ChunkGenerationSettingsSnapshot settings, int worldY)
         {
             if (!request.Topology.IsWrapped || !settings.PolarBandEnabled)
-                return 0d;
-            double centerY = request.Topology.Min.Y + request.Topology.Span.Y * settings.PolarBandPosition;
-            double distance = Math.Abs(request.Topology.ToDomain().ShortestDelta(
-                new double2(0d, centerY), new double2(0d, worldY)).y);
+                return false;
             double halfWidth = request.Topology.Span.Y * 0.5d * settings.PolarBandHalfWidth;
-            double progress = Clamp01(distance / halfWidth);
-            double range = settings.PolarBandEdgeCelsius - settings.PolarBandCelsius;
-            if (range <= 0.000001d)
-                return 1d - progress * progress * (3d - 2d * progress);
-            // 纬向距离作为累计概率，让 -25°C 附近占地最多，同时保持靠近极线更冷。
-            double temperature = SamplePolarQuadraticTemperature(settings.PolarBandCelsius,
-                settings.PolarBandPeakCelsius, settings.PolarBandEdgeCelsius, progress);
-            return Clamp01((settings.PolarBandEdgeCelsius - temperature) / range);
+            return SamplePolarDistance(request, settings, worldY) <= halfWidth;
         }
 
         // 对二次权重 1-((T-峰值)/半径)² 的累计概率解析反解，避免逐格循环抽样。
@@ -65,9 +83,6 @@ namespace FlatWorld.WorldModel
             return Math.Max(minimum, Math.Min(maximum, peak + radius * normalized));
         }
 
-        private static double CoolTowardsPolarBand(double temperature, double polarTemperature,
-            double influence) => temperature + Math.Min(0d, polarTemperature - temperature) * influence;
-
         #endregion
 
         #region 极圈河流源点
@@ -77,7 +92,7 @@ namespace FlatWorld.WorldModel
             ChunkGenerationSettingsSnapshot settings, Int2 source)
         {
             if (settings.PolarRiverSourceChanceMultiplier >= 1d ||
-                SamplePolarInfluence(request, settings, source.Y) <= 0d)
+                !IsInsidePolarBand(request, settings, source.Y))
                 return true;
             return Hash01(request.WorldSeed, request.Topology.NormalizeX(source.X),
                 request.Topology.NormalizeY(source.Y), 0x724fa8d3u) <
@@ -105,17 +120,13 @@ namespace FlatWorld.WorldModel
         #region 群系温度过渡
         private const int BiomeTemperatureBlendRadius = 8;
 
-        private static double ResolveBiomeTemperature(SurfaceClimateSample sample,
-            ChunkGenerationSettingsSnapshot settings)
+        private static SurfaceBiomeKind ResolveSurfaceBiome(ChunkGenerationSettingsSnapshot settings,
+            SurfaceClimateSample sample, double moisture, bool river, double? blendedCelsius = null)
         {
-            // 雪地从外缘向极线按二次峰值分布渐冷，交界温度再由共用邻格窗口混合。
-            double baseline = sample.BaseBiome switch
-            {
-                SurfaceBiomeKind.Snow => settings.PolarBandEdgeCelsius,
-                SurfaceBiomeKind.Stone => 10d,
-                _ => sample.TemperatureCelsius
-            };
-            return CoolTowardsPolarBand(baseline, settings.PolarBandCelsius, sample.PolarInfluence);
+            double celsius = blendedCelsius ?? sample.TemperatureCelsius;
+            return SurfaceBiomeClassifier.Resolve(settings, sample.Height,
+                settings.NormalizeTemperatureCelsius(celsius), sample.Precipitation, moisture, river,
+                sample.SnowAllowed, celsius, sample.IsPolarBand);
         }
 
         // 单格出生查询与完整区块使用同一个世界坐标窗口，环绕边界由气候采样归一化。
@@ -127,9 +138,7 @@ namespace FlatWorld.WorldModel
             for (int x = -BiomeTemperatureBlendRadius; x <= BiomeTemperatureBlendRadius; x++)
             {
                 var sample = SampleSurfaceClimate(request, settings, worldX + x, worldY + y);
-                sample.BaseBiome = SampleBaseSurfaceBiome(request, settings, worldX + x, worldY + y,
-                    out _, out _);
-                total += ResolveBiomeTemperature(sample, settings);
+                total += sample.TemperatureCelsius;
             }
             int diameter = BiomeTemperatureBlendRadius * 2 + 1;
             return total / (diameter * diameter);

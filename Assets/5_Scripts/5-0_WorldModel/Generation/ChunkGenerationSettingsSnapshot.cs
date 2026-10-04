@@ -72,20 +72,26 @@ namespace FlatWorld.WorldModel
             double precipitation,
             double moisture,
             bool river,
-            bool snowAllowed = true)
+            bool snowAllowed = true,
+            double temperatureCelsius = double.NaN,
+            bool polarSnow = false)
         {
+            if (double.IsNaN(temperatureCelsius))
+                temperatureCelsius = settings.ResolveTemperatureCelsius(temperature);
             if (height < settings.SeaLevel)
                 return SurfaceBiomeKind.Ocean;
             if (river)
                 return SurfaceBiomeKind.River;
-            if (snowAllowed && IsSnowClimate(settings, temperature, precipitation))
+            if (snowAllowed && temperatureCelsius < 0d &&
+                (polarSnow || IsSnowClimate(settings, temperature, precipitation)))
                 return SurfaceBiomeKind.Snow;
             if (height >= settings.MountainLevel)
                 return SurfaceBiomeKind.Stone;
 
             if (settings.SurfaceClimateAlgorithm == SurfaceClimateAlgorithm.LegacyLand)
             {
-                if (height >= settings.DesertMinimumHeight &&
+                if (temperatureCelsius >= settings.DesertMinimumTemperatureCelsius &&
+                    height >= settings.DesertMinimumHeight &&
                     precipitation <= settings.DesertMaximumPrecipitation)
                 {
                     return SurfaceBiomeKind.Desert;
@@ -104,7 +110,8 @@ namespace FlatWorld.WorldModel
 
             if (height <= settings.BeachLevel)
                 return SurfaceBiomeKind.Beach;
-            if (precipitation < settings.DesertMaximumPrecipitation)
+            if (temperatureCelsius >= settings.DesertMinimumTemperatureCelsius &&
+                precipitation < settings.DesertMaximumPrecipitation)
                 return SurfaceBiomeKind.Desert;
             return moisture > 0.62d ? SurfaceBiomeKind.Forest : SurfaceBiomeKind.Grassland;
         }
@@ -237,6 +244,9 @@ namespace FlatWorld.WorldModel
                 GetDouble(numbers, "biome.desert.minimumHeight", 0.51d));
             DesertMaximumPrecipitation = Clamp01(
                 GetDouble(numbers, "biome.desert.maximumPrecipitation", 0.28d));
+            // 沙漠同时要求足够温暖，低温少雨的陆地不能被判为沙漠。
+            DesertMinimumTemperatureCelsius = Finite(
+                GetDouble(numbers, "biome.desert.minimumCelsius", 20d), 20d);
             GrasslandMinimumTemperature = Clamp01(
                 GetDouble(numbers, "biome.grassland.minimumTemperature", 0.25d));
             GrasslandMaximumTemperature = Math.Max(
@@ -280,6 +290,16 @@ namespace FlatWorld.WorldModel
             TemperatureCelsiusMax = Math.Max(
                 TemperatureCelsiusMin,
                 Finite(GetDouble(numbers, "climate.temperature.celsiusMax", 50d), 50d));
+            EquatorTemperatureCelsius = Finite(
+                GetDouble(numbers, "climate.equator.celsius", 35d), 35d);
+            RegionalTemperatureVariationCelsius = NonNegativeFinite(
+                GetDouble(numbers, "climate.temperature.regionalVariationCelsius", 2d), 2d);
+            RainTemperatureCoolingCelsius = NonNegativeFinite(
+                GetDouble(numbers, "climate.temperature.rainCoolingCelsius", 3d), 3d);
+            WindwardTemperatureCoolingCelsius = NonNegativeFinite(
+                GetDouble(numbers, "climate.temperature.windwardCoolingCelsius", 4d), 4d);
+            LeewardTemperatureWarmingCelsius = NonNegativeFinite(
+                GetDouble(numbers, "climate.temperature.leewardWarmingCelsius", 2d), 2d);
             PolarBandEnabled = GetBool(numbers, "climate.polarBand.enabled", true);
             PolarBandPosition = Clamp01(Finite(
                 GetDouble(numbers, "climate.polarBand.position", 0d), 0d));
@@ -616,6 +636,7 @@ namespace FlatWorld.WorldModel
         /// <summary>旧版有序群系判定中沙漠允许的最低高度和最高降水。</summary>
         public double DesertMinimumHeight { get; }
         public double DesertMaximumPrecipitation { get; }
+        public double DesertMinimumTemperatureCelsius { get; }
         /// <summary>旧版温带草原允许的温度与降水闭区间。</summary>
         public double GrasslandMinimumTemperature { get; }
         public double GrasslandMaximumTemperature { get; }
@@ -647,6 +668,11 @@ namespace FlatWorld.WorldModel
         public double TemperatureCelsiusMax { get; }
         /// <summary>环世界唯一极点带：位置占纵向一周的比例，半宽占半周的比例。</summary>
         public bool PolarBandEnabled { get; }
+        public double EquatorTemperatureCelsius { get; }
+        public double RegionalTemperatureVariationCelsius { get; }
+        public double RainTemperatureCoolingCelsius { get; }
+        public double WindwardTemperatureCoolingCelsius { get; }
+        public double LeewardTemperatureWarmingCelsius { get; }
         public double PolarBandPosition { get; }
         public double PolarBandCelsius { get; }
         public double PolarBandEdgeCelsius { get; }
@@ -847,13 +873,29 @@ namespace FlatWorld.WorldModel
         public short DefaultNavigationCost { get; }
         /// <summary>水域的有限寻路代价；高于陆地，但所有水格仍参与带权寻路。</summary>
 
-        /// <summary>把气候通道的基础温度换算成受海拔影响的实际温度。</summary>
-        public double ApplyAltitudeTemperatureCooling(double height, double baseTemperature)
+        #region 地理温度换算
+
+        /// <summary>只返回海拔造成的摄氏温差，避免各气候核重复降温。</summary>
+        public double GetAltitudeTemperatureOffsetCelsius(double height)
         {
             double elevation = Math.Max(0d,
                 Clamp01(height) - TemperatureAltitudeCoolingStart);
-            return Clamp01(baseTemperature - elevation * TemperatureAltitudeCoolingStrength);
+            return -elevation * TemperatureAltitudeCoolingStrength *
+                   (ResolveTemperatureCelsius(1d) - ResolveTemperatureCelsius(0d));
         }
+
+        /// <summary>把归一化噪声温度转换为摄氏度，实际气候允许低于此噪声范围。</summary>
+        public double ResolveTemperatureCelsius(double normalized) =>
+            SurfaceClimateAlgorithm == SurfaceClimateAlgorithm.LegacyLand
+                ? TemperatureCelsiusMin + normalized * (TemperatureCelsiusMax - TemperatureCelsiusMin)
+                : -20d + normalized * 65d;
+
+        /// <summary>群系与生态的归一化温度由最终摄氏温度统一派生。</summary>
+        public double NormalizeTemperatureCelsius(double celsius) => Clamp01(
+            (celsius - ResolveTemperatureCelsius(0d)) /
+            Math.Max(0.000001d, ResolveTemperatureCelsius(1d) - ResolveTemperatureCelsius(0d)));
+
+        #endregion
 
         // 这些小方法只从当前这份设置里取值，不会偷偷读取全局设置。
         /// <summary>读取一个整数参数；找不到时返回默认值。</summary>
