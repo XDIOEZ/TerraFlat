@@ -115,7 +115,12 @@
         {
           "match": "exact_item",
           "itemId": "Plank",
-          "amount": 8
+          "amount": 6
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Rope",
+          "amount": 4
         }
       ],
       "outputs": [
