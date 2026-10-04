@@ -248,12 +248,16 @@ public static class GroundTileHarvestSystem
             RuntimeGrassClearing.Clear(sample);
         SaveDataMgr.Instance.RecordGroundLayerCell(sample);
 
-        string layerFeedback = !hasPlayerCover && rule.NaturalLayerCount > 1
-            ? previousLayers.ExcavatedLayers + 1 >= rule.NaturalLayerCount
-                ? " 已露出无法开采的基岩。"
-                : $" 下方还剩 {rule.NaturalLayerCount - previousLayers.ExcavatedLayers - 1} 层。"
-            : string.Empty;
-        ItemActionFeedback.Show(tool.item.Owner, $"挖掘完成，获得{product.DisplayName} ×{rule.Amount}。{layerFeedback}");
+        // 泥土是常规采挖结果，不再用角色自言自语气泡播报。
+        if (!string.Equals(rule.ItemId, "Earth", StringComparison.OrdinalIgnoreCase))
+        {
+            string layerFeedback = !hasPlayerCover && rule.NaturalLayerCount > 1
+                ? previousLayers.ExcavatedLayers + 1 >= rule.NaturalLayerCount
+                    ? " 已露出无法开采的基岩。"
+                    : $" 下方还剩 {rule.NaturalLayerCount - previousLayers.ExcavatedLayers - 1} 层。"
+                : string.Empty;
+            ItemActionFeedback.Show(tool.item.Owner, $"挖掘完成，获得{product.DisplayName} ×{rule.Amount}。{layerFeedback}");
+        }
         return true;
     }
     #endregion
