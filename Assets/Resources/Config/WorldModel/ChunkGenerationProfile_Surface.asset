@@ -140,7 +140,7 @@ MonoBehaviour:
   - Id: climate.polarBand.position
     Value: 0
   - Id: climate.polarBand.celsius
-    Value: -10
+    Value: -30
   - Id: climate.polarBand.halfWidth
     Value: 0.25
   - Id: climate.temperature.altitudeCoolingStart

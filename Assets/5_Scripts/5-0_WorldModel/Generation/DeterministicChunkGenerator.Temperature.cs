@@ -37,6 +37,7 @@ namespace FlatWorld.WorldModel
                 new double2(0d, centerY), new double2(0d, worldY)).y);
             double halfWidth = request.Topology.Span.Y * 0.5d * settings.PolarBandHalfWidth;
             double progress = Clamp01(distance / halfWidth);
+            // 极线影响为 1、极圈外缘为 0，平滑曲线让两端降温变化逐渐放缓。
             return 1d - progress * progress * (3d - 2d * progress);
         }
 
@@ -51,6 +52,7 @@ namespace FlatWorld.WorldModel
         private static double ResolveBiomeTemperature(SurfaceClimateSample sample,
             ChunkGenerationSettingsSnapshot settings)
         {
+            // 雪地从外缘 -10°C 向极线 -30°C 渐冷，交界温度再由共用邻格窗口混合。
             double baseline = sample.BaseBiome switch
             {
                 SurfaceBiomeKind.Snow => -10d,
