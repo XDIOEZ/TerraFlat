@@ -122,8 +122,15 @@ namespace FlatWorld.WorldModel
         private static SurfaceBiomeKind ResolveSurfaceBiome(ChunkGenerationSettingsSnapshot settings,
             SurfaceClimateSample sample, double moisture, bool river, double? blendedCelsius = null)
         {
+            return ResolveSurfaceBiomeRule(settings, sample, moisture, river, blendedCelsius)?.Biome
+                   ?? settings.SurfaceFallbackBiome;
+        }
+
+        private static SurfaceBiomeRuleSnapshot ResolveSurfaceBiomeRule(ChunkGenerationSettingsSnapshot settings,
+            SurfaceClimateSample sample, double moisture, bool river, double? blendedCelsius = null)
+        {
             double celsius = blendedCelsius ?? sample.TemperatureCelsius;
-            return SurfaceBiomeClassifier.Resolve(settings, sample.Height,
+            return SurfaceBiomeClassifier.ResolveRule(settings, sample.Height,
                 settings.NormalizeTemperatureCelsius(celsius), sample.Precipitation, moisture, river,
                 sample.SnowAllowed, celsius, sample.IsPolarBand);
         }

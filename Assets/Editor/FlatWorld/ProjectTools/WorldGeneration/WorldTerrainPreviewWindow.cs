@@ -142,6 +142,9 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
         "terrain.mountainLevel",
         "biome.snow.maximumCelsius",
         "biome.snow.minimumPrecipitation",
+        "biome.snow.wetGroundMinimumMoisture",
+        "biome.cold.maximumCelsius",
+        "biome.cold.wetGroundMinimumMoisture",
         "biome.desert.minimumCelsius",
         "biome.snow.regions.enabled",
         "biome.snow.regions.size",
@@ -683,6 +686,9 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
             DrawSlider("terrain.mountainLevel", "山地阈值", 0f, 1f);
             DrawDoubleField("biome.snow.maximumCelsius", "雪地最高温度（°C）");
             DrawSlider("biome.snow.minimumPrecipitation", "雪地最低降水", 0f, 1f);
+            DrawSlider("biome.snow.wetGroundMinimumMoisture", "雪下泥土最低湿度", 0f, 1f);
+            DrawDoubleField("biome.cold.maximumCelsius", "寒冷裸地最高温度（°C）");
+            DrawSlider("biome.cold.wetGroundMinimumMoisture", "寒冷裸地泥土最低湿度", 0f, 1f);
             DrawDoubleField("biome.desert.minimumCelsius", "沙漠最低温度（°C）");
             DrawToggle("biome.snow.regions.enabled", "稀有雪原区域");
             DrawDoubleField("biome.snow.regions.size", "雪原候选区域边长（格）");
@@ -1251,6 +1257,9 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
                 "maximumPrecipitation" => "群系允许的最高降水",
                 "minimumMoisture" => "群系允许的最低湿度",
                 "maximumMoisture" => "群系允许的最高湿度",
+                "groundTileId" => "干燥陆地底材编号；0 表示沿用物理地形底材",
+                "wetGroundTileId" => "湿润陆地底材编号；0 表示沿用干燥底材",
+                "wetGroundMinimumMoisture" => "湿度达到此值时采用湿润底材，含等号",
                 "ignoreRegions" => "极圈内是否跳过零散雪原资格",
                 "ignorePrecipitation" => "极圈内是否跳过降水范围条件",
                 _ => string.Empty

@@ -36,16 +36,17 @@ description: "Use when: 定位或修改 FlatWorld 的地图内容、Tilemap、�
 - 河流生成把真实下游单位方向保存到 `riverFlowX/riverFlowY` 环境层；运行时水流玩法统一通过 `ChunkMgr.TryGetRuntimeWaterCurrent` 读取，禁止在物品、角色等消费方重复按邻格高度猜河道方向。海洋暂无独立洋流层时使用生成环境层的 `windX/windY` 作为表层漂移方向，正式水面也消费同一方向，湖泊保持静止。
 - `heightDriven` 河网按稳定 Region 缓存低分辨率高度、下游和汇水量；每个 Chunk 只细化相关走廊与终端小湖。边界两侧必须从同一宏观图和世界坐标取样，固定 Seed 不能依赖 Chunk 加载顺序；河槽弯曲后须用局部切线写入 `riverFlowX/Y`；修改拓扑、细化或小湖规则需递增生成签名。
 - 生成保持固定种子、稳定 BiomeId/顺序和统一噪声、气候、水文规则。
-- 地表群系唯一出口是 `SurfaceBiomeClassifier.Resolve`：Profile 的 `climate.*` 先合成气候，`biome.<名称>.*` 冻结为只读规则，按 `priority` 从高到低匹配，平级按稳定编号。每条规则支持 `enabled`、高度、摄氏温度、降水、湿度上下限；`includeMaximumCelsius` 控制温度上界是否含等号，无匹配用 `biome.fallback.id`。气候算法选择不能另建一套群系分支；正式区块、单格、邻区及定位的最终结果都复用此出口。
+- 地表群系唯一出口是 `SurfaceBiomeClassifier.Resolve/ResolveRule`：Profile 的 `climate.*` 先合成气候，`biome.<名称>.*` 冻结为只读规则，按 `priority` 从高到低匹配，平级按稳定编号再按规则名排序。每条规则支持 `enabled`、高度、摄氏温度、降水、湿度上下限；`includeMaximumCelsius` 控制温度上界是否含等号，无匹配用 `biome.fallback.id`。气候算法选择不能另建一套群系分支；正式区块、单格、邻区及定位的最终结果都复用此出口。
+- 命中的陆地规则可配置 `groundTileId/wetGroundTileId/wetGroundMinimumMoisture`；湿度达到门槛用湿底材，否则用干底材，零编号表示沿用默认。`biome.cold` 默认在最终平滑气温 ≤5°C 时匹配石地群系，优先级低于雪地、高于山地；冷地与雪地下方默认湿度 ≥0.5 铺 `Tile_Dirt`，其余铺 `Tile_Stone`。湿度复用降水、低地和河岸的合成值，不按现存冰地块猜水分；低温石地平原不能因此标记成山地。
 - 群系温度配置直接使用 `minimumCelsius/maximumCelsius`；零散雪原也读取同一条雪地规则的气温与降水条件，不再另读归一化雪地/草原温度阈值。调整参数名需同步 `WorldTerrainPreviewWindow` 的常用项与说明，预览继续走正式生成器。
 - 环绕地图极圈由 Surface Profile 的 `climate.polarBand.*` 控制；`halfWidth` 就是整条冷带的地图占比（默认 0.25），`position=0` 时上下边缘各占一半。纬度底温的 `celsius/edgeCelsius/peakCelsius` 默认 -30/-10/-25°C，环绕最短距离映射二次峰值分布的累计概率，保持向极线渐冷并让底温 -25°C 附近占地最多；区外平滑升至 `climate.equator.celsius`（默认 35°C）。最终气候再叠加局部噪声、海拔、降雨与迎风/背风温差，不能逐格随机或用群系固定温度覆盖。
 - 地表群系与草、生态的归一化 `temperature` 从合成后、八格平滑的 `temperature.celsius` 派生；沙漠必须同时满足 `biome.desert.minimumCelsius`（默认 20°C）与原有高度、干燥条件，不能仅凭少雨把寒冷区域判成沙漠。批次、单格与邻区查询共用气候收尾和判定器。
 - 极圈河流源点由 Hydrology JSON 的 `river.polarSourceChanceMultiplier` 固定种子筛选（默认 0.05）；新版宏观图与旧区域水文都先筛源点再整条追踪，不逐格删河道。非极圈源点保持原规则，来自区外的完整河流仍可流入极圈。
-- 天然地表水体按最终写入的 `temperature.celsius < 0` 生成冰 Ground 并清空 Liquid，河流、湖泊、海洋保留原群系与水文身份，不再依赖雪原资格或降水门槛；0°C 不结冰，岩浆不参与此规则。雪地陆地只保留草地/石地并写入积雪，不能逐格随机换成冰地面；冰湖形状必须来自真实水文，禁止恢复 `biome.snow.iceLakeChance` 这类散点伪水体。
+- 天然地表水体按最终写入的 `temperature.celsius < 0` 生成冰 Ground 并清空 Liquid，河流、湖泊、海洋保留原群系与水文身份，不再依赖雪原资格或降水门槛；0°C 不结冰，岩浆不参与此规则。雪地陆地按群系配置保留石地/泥土并写入积雪，不能逐格随机换成冰地面；冰湖形状必须来自真实水文，禁止恢复 `biome.snow.iceLakeChance` 这类散点伪水体。
 - GM 群系定位通过 `ChunkMgr.FindSurfaceBiomeAsync` 使用当前生效的 Profile、维度种子、拓扑和世界纪元，后台搜索找到后自动传送；不设时间/采样数量上限，有限世界逐级加密至逐格覆盖，无限世界持续扩圈。雪原复用正式区域计划，河流沿宏观河网找真实 River 格，不能用旧预览或地块材质猜身份。定位只复用已完成的河网，新计算独立取消且禁止预热，局部缓存有界；进度用不可变快照供 UI 读取，关闭面板/换世界取消，应用落点前核对玩家与世界身份。
 - 世界生成里“数量、尺寸、区段长度”等需要常见值与少量惊喜长尾的随机量，优先使用固定种子驱动的二次峰值权重分布，不要默认用均匀分布；纯二元开关仍可保留显式概率。
 - 修改算法时考虑生成签名、旧存档、联机指纹和 Wrapped 坐标。
-- 雪不占用 Ground 地块身份：雪地群系底层按高度保留 `Tile_Grass` 或 `Tile_Stone`，天然积雪写入独立 `snow.depth` 环境层；深度固定为 0～1 的十档，每 0.1 为一层。雪地默认 `maximumCelsius=0/includeMaximumCelsius=0`，极圈的 `biome.snow.polar.ignoreRegions/ignorePrecipitation=1` 使零下陆地直接匹配雪地，不受零散雪原或降水限制；不能在气候收尾直接覆盖雪原资格，否则关闭配置无效。极圈不随机改陆地为冰湖，真实水体继续按气温结冰。天然雪按最终气温计算层数：`ceil(1 + clamp((-10 - T) / 20, 0, 1) * 9)`，-10°C 为一层、-30°C 为十层，超出温区钳制到一至十层；非极圈、季节雪和玩家堆雪沿用各自规则。
+- 雪不占用 Ground 地块身份：雪地群系底层按湿度保留 `Tile_Dirt` 或 `Tile_Stone`，天然积雪写入独立 `snow.depth` 环境层；深度固定为 0～1 的十档，每 0.1 为一层。雪地默认 `maximumCelsius=0/includeMaximumCelsius=0`，极圈的 `biome.snow.polar.ignoreRegions/ignorePrecipitation=1` 使零下陆地直接匹配雪地，不受零散雪原或降水限制；不能在气候收尾直接覆盖雪原资格，否则关闭配置无效。极圈不随机改陆地为冰湖，真实水体继续按气温结冰。天然雪按最终气温计算层数：`ceil(1 + clamp((-10 - T) / 20, 0, 1) * 9)`，-10°C 为一层、-30°C 为十层，超出温区钳制到一至十层；非极圈、季节雪和玩家堆雪沿用各自规则。
 - 雪层显示透明度与真实厚度分开：`ChunkSnowCoverRenderer` 的不透明度为 `clamp(0.5 + 层数 * 0.05, 0, 1)`，一层 55%、十层 100%；零层不提交表现，超过十层只限制显示，不限制实际雪厚和铲雪产物。
 - 极圈外零散雪原由 Surface Profile 的 `biome.snow.regions.* / large.* / peak.*` 控制；先按稳定区域抽出现概率，再按 `largeRatio` 分流，半径使用峰值在区间中点的二次权重。小片积雪额外要求山顶海拔，大、小雪原都须满足零下气温与最终降水。区域判定必须覆盖 Burst 批次、单格出生与邻区生态，并按环绕坐标取最短距离；不能把此概率门槛套到极圈天然积雪或水体结冰。
 - 萝卜聚落由 `surface.forest.radish` 与 `surface.grassland.radish` 两条独立规则控制；全局调整时必须同步审计两条，`PatchChance` 控制聚落数量，`SpawnChance` 与 `PatchRadius` 控制聚落内部密度。

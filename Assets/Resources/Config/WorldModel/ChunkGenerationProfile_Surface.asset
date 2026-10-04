@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: ChunkGenerationProfile_Surface
   m_EditorClassIdentifier: 
   profileId: surface.default
-  generationSignature: 67
+  generationSignature: 68
   chunkWidth: 16
   chunkHeight: 16
   numericParameters:
@@ -245,6 +245,26 @@ MonoBehaviour:
     Value: 1
   - Id: biome.snow.polar.ignorePrecipitation
     Value: 1
+  - Id: biome.snow.groundTileId
+    Value: 4
+  - Id: biome.snow.wetGroundTileId
+    Value: 29
+  - Id: biome.snow.wetGroundMinimumMoisture
+    Value: 0.5
+  - Id: biome.cold.enabled
+    Value: 1
+  - Id: biome.cold.priority
+    Value: 550
+  - Id: biome.cold.maximumCelsius
+    Value: 5
+  - Id: biome.cold.includeMaximumCelsius
+    Value: 1
+  - Id: biome.cold.groundTileId
+    Value: 4
+  - Id: biome.cold.wetGroundTileId
+    Value: 29
+  - Id: biome.cold.wetGroundMinimumMoisture
+    Value: 0.5
   - Id: biome.stone.enabled
     Value: 1
   - Id: biome.stone.priority

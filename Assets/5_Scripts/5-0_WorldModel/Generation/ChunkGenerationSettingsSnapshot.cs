@@ -61,12 +61,14 @@ namespace FlatWorld.WorldModel
     {
         #region 群系出现条件
 
-        internal SurfaceBiomeRuleSnapshot(SurfaceBiomeKind biome, bool enabled, int priority,
+        internal SurfaceBiomeRuleSnapshot(string ruleId, SurfaceBiomeKind biome, bool enabled, int priority,
             double minimumHeight, double maximumHeight, double minimumCelsius, double maximumCelsius,
             bool includeMaximumCelsius, double minimumPrecipitation, double maximumPrecipitation,
             double minimumMoisture, double maximumMoisture, bool requiresOcean, bool requiresRiver,
-            bool requiresSnowRegion, bool polarIgnoresRegions, bool polarIgnoresPrecipitation)
+            bool requiresSnowRegion, bool polarIgnoresRegions, bool polarIgnoresPrecipitation,
+            int groundTileId, int wetGroundTileId, double wetGroundMinimumMoisture)
         {
+            RuleId = ruleId;
             Biome = biome;
             Enabled = enabled;
             Priority = priority;
@@ -84,8 +86,12 @@ namespace FlatWorld.WorldModel
             RequiresSnowRegion = requiresSnowRegion;
             PolarIgnoresRegions = polarIgnoresRegions;
             PolarIgnoresPrecipitation = polarIgnoresPrecipitation;
+            GroundTileId = groundTileId;
+            WetGroundTileId = wetGroundTileId;
+            WetGroundMinimumMoisture = wetGroundMinimumMoisture;
         }
 
+        public string RuleId { get; }
         public SurfaceBiomeKind Biome { get; }
         public bool Enabled { get; }
         public int Priority { get; }
@@ -103,6 +109,13 @@ namespace FlatWorld.WorldModel
         public bool RequiresSnowRegion { get; }
         public bool PolarIgnoresRegions { get; }
         public bool PolarIgnoresPrecipitation { get; }
+        public int GroundTileId { get; }
+        public int WetGroundTileId { get; }
+        public double WetGroundMinimumMoisture { get; }
+
+        // 同一条群系规则按湿度选择干湿底材，编号为零时保留物理地形的默认底材。
+        public int ResolveGroundTileId(double moisture) =>
+            WetGroundTileId > 0 && moisture >= WetGroundMinimumMoisture ? WetGroundTileId : GroundTileId;
 
         internal bool MatchesClimate(double celsius, double precipitation, bool polar) =>
             Enabled && celsius >= MinimumCelsius &&
@@ -141,6 +154,16 @@ namespace FlatWorld.WorldModel
             double temperatureCelsius = double.NaN,
             bool polarSnow = false)
         {
+            return ResolveRule(settings, height, temperature, precipitation, moisture, river,
+                snowAllowed, temperatureCelsius, polarSnow)?.Biome ?? settings.SurfaceFallbackBiome;
+        }
+
+        /// <summary>返回实际命中的配置规则，群系身份与底材共用本次判定。</summary>
+        public static SurfaceBiomeRuleSnapshot ResolveRule(
+            ChunkGenerationSettingsSnapshot settings, double height, double temperature,
+            double precipitation, double moisture, bool river, bool snowAllowed = true,
+            double temperatureCelsius = double.NaN, bool polarSnow = false)
+        {
             if (double.IsNaN(temperatureCelsius))
                 temperatureCelsius = settings.ResolveTemperatureCelsius(temperature);
             for (int i = 0; i < settings.SurfaceBiomeRules.Count; i++)
@@ -148,9 +171,9 @@ namespace FlatWorld.WorldModel
                 SurfaceBiomeRuleSnapshot rule = settings.SurfaceBiomeRules[i];
                 if (rule.Matches(height, temperatureCelsius, precipitation, moisture,
                         height < settings.SeaLevel, river, snowAllowed, polarSnow))
-                    return rule.Biome;
+                    return rule;
             }
-            return settings.SurfaceFallbackBiome;
+            return null;
         }
 
         /// <summary>判断当前气候是否属于雪地条件，供河流等覆盖层读取其底层气候。</summary>
@@ -628,14 +651,19 @@ namespace FlatWorld.WorldModel
         private IReadOnlyList<SurfaceBiomeRuleSnapshot> CreateSurfaceBiomeRules(
             IReadOnlyDictionary<string, double> numbers)
         {
-            var rules = new List<SurfaceBiomeRuleSnapshot>(8);
+            var rules = new List<SurfaceBiomeRuleSnapshot>(9);
             Add("ocean", SurfaceBiomeKind.Ocean, 800, 0d, 1d, requiresOcean: true);
             Add("river", SurfaceBiomeKind.River, 700, SeaLevel, 1d, requiresRiver: true);
             Add("snow", SurfaceBiomeKind.Snow, 600, SeaLevel, 1d,
                 maximumCelsius: 0d,
                 includeMaximumCelsius: false, minimumPrecipitation: 0.55d,
-                requiresSnowRegion: true, polarIgnoresRegions: true, polarIgnoresPrecipitation: true);
-            Add("stone", SurfaceBiomeKind.Stone, 500, MountainLevel, 1d);
+                requiresSnowRegion: true, polarIgnoresRegions: true, polarIgnoresPrecipitation: true,
+                groundTileId: StoneTileId, wetGroundTileId: DirtTileId);
+            Add("cold", SurfaceBiomeKind.Stone, 550, SeaLevel, 1d, maximumCelsius: 5d,
+                groundTileId: StoneTileId, wetGroundTileId: DirtTileId);
+            Add("stone", SurfaceBiomeKind.Stone, 500, MountainLevel, 1d,
+                groundTileId: StoneTileId, wetGroundTileId: DirtTileId,
+                wetGroundMinimumMoisture: MountainDirtMinimumMoisture);
             Add("desert", SurfaceBiomeKind.Desert, 400, Math.Max(SeaLevel, DesertMinimumHeight), 1d,
                 minimumCelsius: DesertMinimumTemperatureCelsius, maximumPrecipitation: DesertMaximumPrecipitation);
             Add("beach", SurfaceBiomeKind.Beach, 300, SeaLevel, Math.Max(SeaLevel, BeachLevel));
@@ -644,9 +672,10 @@ namespace FlatWorld.WorldModel
                 minimumPrecipitation: GrasslandMinimumPrecipitation,
                 maximumPrecipitation: GrasslandMaximumPrecipitation);
             Add("forest", SurfaceBiomeKind.Forest, 100, SeaLevel, 1d);
-            // 优先级高者先匹配，同优先级按稳定群系编号排序，不依赖字典或加载顺序。
+            // 优先级、群系编号和规则名称依次排序，多个规则共用群系时也保持确定性。
             rules.Sort((a, b) => a.Priority != b.Priority
-                ? b.Priority.CompareTo(a.Priority) : a.Biome.CompareTo(b.Biome));
+                ? b.Priority.CompareTo(a.Priority) : a.Biome != b.Biome
+                    ? a.Biome.CompareTo(b.Biome) : string.CompareOrdinal(a.RuleId, b.RuleId));
             return rules.AsReadOnly();
 
             void Add(string id, SurfaceBiomeKind kind, int priority, double minimumHeight, double maximumHeight,
@@ -654,7 +683,8 @@ namespace FlatWorld.WorldModel
                 bool includeMaximumCelsius = true, double minimumPrecipitation = 0d,
                 double maximumPrecipitation = 1d, bool requiresOcean = false, bool requiresRiver = false,
                 bool requiresSnowRegion = false, bool polarIgnoresRegions = false,
-                bool polarIgnoresPrecipitation = false)
+                bool polarIgnoresPrecipitation = false, int groundTileId = 0, int wetGroundTileId = 0,
+                double wetGroundMinimumMoisture = 0.5d)
             {
                 string prefix = "biome." + id + ".";
                 double minHeight = Clamp01(GetDouble(numbers, prefix + "minimumHeight", minimumHeight));
@@ -667,12 +697,18 @@ namespace FlatWorld.WorldModel
                 double maxMoisture = Clamp01(GetDouble(numbers, prefix + "maximumMoisture", 1d));
                 if (minHeight > maxHeight || minCelsius > maxCelsius || minRain > maxRain || minMoisture > maxMoisture)
                     throw new ArgumentException(prefix + "的最小范围不能大于最大范围。", nameof(numbers));
-                rules.Add(new SurfaceBiomeRuleSnapshot(kind, GetBool(numbers, prefix + "enabled", true),
+                int dryGround = GetInt(numbers, prefix + "groundTileId", groundTileId);
+                int wetGround = GetInt(numbers, prefix + "wetGroundTileId", wetGroundTileId);
+                if (dryGround < 0 || wetGround < 0)
+                    throw new ArgumentException(prefix + "的底材编号不能为负数。", nameof(numbers));
+                rules.Add(new SurfaceBiomeRuleSnapshot(id, kind, GetBool(numbers, prefix + "enabled", true),
                     GetInt(numbers, prefix + "priority", priority), minHeight, maxHeight, minCelsius, maxCelsius,
                     GetBool(numbers, prefix + "includeMaximumCelsius", includeMaximumCelsius), minRain, maxRain,
                     minMoisture, maxMoisture, requiresOcean, requiresRiver, requiresSnowRegion,
                     GetBool(numbers, prefix + "polar.ignoreRegions", polarIgnoresRegions),
-                    GetBool(numbers, prefix + "polar.ignorePrecipitation", polarIgnoresPrecipitation)));
+                    GetBool(numbers, prefix + "polar.ignorePrecipitation", polarIgnoresPrecipitation),
+                    dryGround, wetGround,
+                    Clamp01(GetDouble(numbers, prefix + "wetGroundMinimumMoisture", wetGroundMinimumMoisture))));
             }
         }
 

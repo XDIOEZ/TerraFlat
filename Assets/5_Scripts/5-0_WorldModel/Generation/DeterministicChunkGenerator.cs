@@ -16,7 +16,7 @@ namespace FlatWorld.WorldModel
         IChunkEcologyNeighborhoodTagResolver
     {
         /// <summary>纯区块生成规则版本；气候、群系、河流或生态空间分布规则改变时递增。</summary>
-        public const int CurrentGenerationSignature = 67;
+        public const int CurrentGenerationSignature = 68;
 
         private readonly LiquidTypeCatalog liquidTypes;
         /// <summary>资源就绪后注入会话液体表；离线纯算法测试可以使用本体最小目录。</summary>
@@ -871,10 +871,11 @@ namespace FlatWorld.WorldModel
                 precipitation * 0.78d + (1d - height) * 0.22d + floodplain * 0.18d);
             if (ocean)
                 moisture = Math.Max(moisture, settings.OceanMoistureFloor);
-            SurfaceBiomeKind biome = ResolveSurfaceBiome(settings, climate, moisture, river, temperatureCelsius);
+            SurfaceBiomeRuleSnapshot biomeRule = ResolveSurfaceBiomeRule(settings, climate, moisture, river, temperatureCelsius);
+            SurfaceBiomeKind biome = biomeRule?.Biome ?? settings.SurfaceFallbackBiome;
             bool frozenRiver = river && temperatureCelsius < 0f;
-            bool mountain = biome == SurfaceBiomeKind.Stone ||
-                            (biome == SurfaceBiomeKind.Snow && height >= settings.MountainLevel);
+            bool mountain = height >= settings.MountainLevel &&
+                            (biome is SurfaceBiomeKind.Stone or SurfaceBiomeKind.Snow);
             bool alluvial =
                 (biome is SurfaceBiomeKind.Grassland or SurfaceBiomeKind.Forest) &&
                 floodplain >= settings.RiverAlluvialTileThreshold;
@@ -948,10 +949,8 @@ namespace FlatWorld.WorldModel
             else if (biome == SurfaceBiomeKind.Snow)
             {
                 biomeId = (int)biome;
-                // 雪地陆地统一保留草地或石地并覆盖积雪，冰地块只由真实水体的冻结规则生成。
-                groundTileId = height >= settings.MountainLevel
-                    ? settings.StoneTileId
-                    : settings.GroundTileId;
+                // 积雪独立覆盖底材，寒冷陆地的石地和泥土由命中的群系配置选择。
+                groundTileId = settings.StoneTileId;
                 snowDepth = 1f;
                 flags = TerrainCellFlags.Walkable;
                 navigationCost = (short)Math.Min(short.MaxValue, navigationCost + 1);
@@ -964,6 +963,13 @@ namespace FlatWorld.WorldModel
                     ? settings.SandTileId
                     : settings.GroundTileId;
                 flags = TerrainCellFlags.Walkable;
+            }
+
+            // 陆地统一读取群系底材配置，海洋和河湖继续保留各自的真实水文底材。
+            if (!ocean && !river && biomeRule != null)
+            {
+                int configuredGround = biomeRule.ResolveGroundTileId(moisture);
+                if (configuredGround > 0) groundTileId = configuredGround;
             }
 
             // 地面与液体在同一批次提交，height 继续随权威区块移交。
