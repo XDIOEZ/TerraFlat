@@ -285,8 +285,9 @@ namespace FlatWorld.WorldModel
                 GetDouble(numbers, "climate.polarBand.position", 0d), 0d));
             PolarBandCelsius = Finite(
                 GetDouble(numbers, "climate.polarBand.celsius", -25d), -25d);
+            // 极圈总宽度默认占地图的 25%，半宽按地图高度的一半归一化。
             PolarBandHalfWidth = Clamp(Finite(
-                GetDouble(numbers, "climate.polarBand.halfWidth", 1d), 1d), 0.001d, 1d);
+                GetDouble(numbers, "climate.polarBand.halfWidth", 0.25d), 0.25d), 0.001d, 1d);
             TemperatureAltitudeCoolingStart = Clamp01(GetDouble(
                 numbers, "climate.temperature.altitudeCoolingStart", SeaLevel));
             TemperatureAltitudeCoolingStrength = Clamp(
