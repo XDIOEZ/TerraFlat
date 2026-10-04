@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using FlatWorld.DroppedItems;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using Unity.Profiling;
 
 /// <summary>主线程统一驱动轻量掉落物；没有 Entity、逐物品 Update、Rigidbody2D 或完整 Item 模块。</summary>
 internal sealed partial class DroppedItemRuntime : IDisposable
@@ -60,6 +61,7 @@ internal sealed partial class DroppedItemRuntime : IDisposable
         try
         {
             payloads.Add(body.Id, data); visuals.Add(body.Id, visual);
+            lastMatterTimes.Add(body.Id, matterTime);
             UpdatePlacement(body.Id);
             if (body.WaterKind != 0) wetItems.Add(body.Id);
             if (!flight.HasValue) QueueEnvironment(body.Id);
@@ -80,6 +82,7 @@ internal sealed partial class DroppedItemRuntime : IDisposable
         DetachTerrain(id);
         transportItems.Remove(id);
         wetItems.Remove(id); pendingEnvironmentSet.Remove(id);
+        lastMatterTimes.Remove(id);
         visuals.Remove(id); payloads.Remove(id); simulation.Remove(id);
     }
 
@@ -109,22 +112,32 @@ internal sealed partial class DroppedItemRuntime : IDisposable
 
     #region 驱动与保存
 
+    // 集中驱动也分阶段记账，区分运动、入水、输送、物质与拾取的实际开销。
+    private static readonly ProfilerMarker MotionTickMarker = new("DroppedItems.Tick.Motion");
+    private static readonly ProfilerMarker WaterTickMarker = new("DroppedItems.Tick.Water");
+    private static readonly ProfilerMarker TransportTickMarker = new("DroppedItems.Tick.Transport");
+    private static readonly ProfilerMarker MatterTickMarker = new("DroppedItems.Tick.Matter");
+    private static readonly ProfilerMarker PickupTickMarker = new("DroppedItems.Tick.Pickup");
+
     public void Tick(float deltaTime, IEnumerable<Mod_ItemPicker> pickers)
     {
         if (deltaTime <= 0f) return;
         domain = WorldTopologyRuntime.GetActiveDomain();
-        simulation.Step(deltaTime, domain, changes);
-        foreach (LightweightDroppedChange change in changes)
+        using (MotionTickMarker.Auto())
         {
-            if (!simulation.Contains(change.Id)) continue;
-            if (change.Kind == 3) { Remove(change.Id); continue; }
-            if (change.Kind == 1) CheckEnvironment(change.Id);
-            if (simulation.Contains(change.Id)) UpdatePlacement(change.Id);
+            simulation.Step(deltaTime, domain, changes);
+            foreach (LightweightDroppedChange change in changes)
+            {
+                if (!simulation.Contains(change.Id)) continue;
+                if (change.Kind == 3) { Remove(change.Id); continue; }
+                if (change.Kind == 1) CheckEnvironment(change.Id);
+                if (simulation.Contains(change.Id)) UpdatePlacement(change.Id);
+            }
         }
-        TickWater(deltaTime);
-        TickTransport(deltaTime);
-        TickMatter(deltaTime);
-        TickPickup(deltaTime, pickers);
+        using (WaterTickMarker.Auto()) TickWater(deltaTime);
+        using (TransportTickMarker.Auto()) TickTransport(deltaTime);
+        using (MatterTickMarker.Auto()) TickMatter(deltaTime);
+        using (PickupTickMarker.Auto()) TickPickup(deltaTime, pickers);
     }
 
     public void Present(Camera camera) => presentation.Present(camera, domain, spatial, SpatialCellSize);
@@ -186,6 +199,7 @@ internal sealed partial class DroppedItemRuntime : IDisposable
         presentation.Dispose(); simulation.Dispose();
         payloads.Clear(); visuals.Clear(); visualCache.Clear(); spatial.Clear(); spatialOwners.Clear();
         pickupAttempts.Clear();
+        matterScratch.Clear(); lastMatterTimes.Clear();
     }
 
     #endregion

@@ -79,7 +79,7 @@ namespace FlatWorld.NaturalEntities
         public EntityManager Manager => world.EntityManager;
         public bool Contains(int id) => IsCreated && entities.TryGetValue(id, out Entity entity) && Manager.Exists(entity);
         public World World => world;
-        public Entity GetEntity(int id) { Complete(); return entities[id]; }
+        public Entity GetEntity(int id) => entities[id];
 
         public DynamicBuffer<T> Buffer<T>(int id) where T : unmanaged, IBufferElementData
         {
@@ -145,7 +145,7 @@ namespace FlatWorld.NaturalEntities
 
         public NaturalEntityBody GetBody(int id)
         {
-            Complete();
+            // EntityManager 按组件完成写依赖，读取单棵树不再等待整个 World 的所有 Job。
             Entity entity = entities[id];
             NaturalEntityLocation source = Manager.GetComponentData<NaturalEntityLocation>(entity);
             EntityModuleAppearance visual = Manager.GetComponentData<EntityModuleAppearance>(entity);
@@ -171,7 +171,6 @@ namespace FlatWorld.NaturalEntities
 
         public bool TryGet<T>(int id, out T value) where T : unmanaged, IComponentData
         {
-            Complete();
             if (IsCreated && entities.TryGetValue(id, out Entity entity) && Manager.HasComponent<T>(entity))
             { value = Manager.GetComponentData<T>(entity); return true; }
             value = default;

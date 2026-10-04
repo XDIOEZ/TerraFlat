@@ -80,6 +80,9 @@ public sealed partial class Mod_HiveColony : Module
     /// <summary>独立显示蜂巢库存、成员、繁殖与领地警戒参数。</summary>
     private void OnGUI()
     {
+        // 调试文字只在实际绘制时计算，跳过 IMGUI 的布局与输入事件。
+        if (Event.current.type != EventType.Repaint)
+            return;
         if (!HiveColonyDebugOverlay.Visible || !Application.isPlaying || item == null)
             return;
 

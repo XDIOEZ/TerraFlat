@@ -45,6 +45,7 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRend
     private ChunkGroundMeshRenderer blockingMesh;
     private readonly List<IDisposable> neighbourChunkEventSubscriptions = new(16);
     private bool renderGroundElevation; // 只有使用 Surface 生成语义的维度显示高度。
+    private bool caveContactShadows; // 区块维度在绑定时固定，逐格阴影不重复查询目录。
     private bool batchPresentationComplete;
     private bool batchBindingInProgress;
     private bool liquidGlowDirty;
@@ -121,6 +122,7 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRend
             if (boundResources != null) boundResources.ResourcesReloaded += HandleResourcesReloaded;
             WaterVisualSettings.Changed += HandleWaterVisualStyleChanged;
             renderGroundElevation = IsSurfaceDimension(chunk.Address.DimensionId);
+            caveContactShadows = IsCaveDimension(chunk.Address.DimensionId);
             boundChunk.Terrain.Changed += HandleTerrainChanged;
             boundChunk.Terrain.LiquidBatchChanged += HandleLiquidBatchChanged;
             WorldLiquidFlowExperiment.FlowChanged += HandleLiquidFlowChanged;
@@ -174,13 +176,17 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRend
         using (BatchOwnerUnregisterMarker.Auto())
             ChunkBatchRendererGroupService.UnregisterOwner(this);
         renderGroundElevation = false;
+        caveContactShadows = false;
         boundChunk = null;
     }
 
     /// <summary>F5 只从原权威地形重建视觉与碰撞映射，保留区块、液体、自然物及世界租约。</summary>
     private void HandleResourcesReloaded()
     {
-        if (boundChunk?.Terrain == null || !batchPresentationComplete) return;
+        if (boundChunk?.Terrain == null) return;
+        renderGroundElevation = IsSurfaceDimension(boundChunk.Address.DimensionId);
+        caveContactShadows = IsCaveDimension(boundChunk.Address.DimensionId);
+        if (!batchPresentationComplete) return;
         ClearDepthPresentation();
         ResetMechanicalVisualCache();
         groundMesh?.Dispose();
@@ -1142,8 +1148,7 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRend
 
     private Vector4 BuildBatchGroundContactMask(ChunkTerrainData terrain, int x, int y, TerrainCell cell)
     {
-        bool cave = IsCaveDimension(boundChunk?.Address.DimensionId);
-        if (cave)
+        if (caveContactShadows)
         {
             bool receivesShadow = !IsBlocking(cell) && terrain.GetLiquidDepth(x, y) <= 0f;
             return receivesShadow ? (Vector4)BuildContactMask(terrain, x, y, ContactKind.Wall) : Vector4.zero;

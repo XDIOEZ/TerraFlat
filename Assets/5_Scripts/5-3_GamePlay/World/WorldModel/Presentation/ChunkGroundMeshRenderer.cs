@@ -109,7 +109,7 @@ internal sealed class ChunkGroundMeshRenderer : IDisposable
             previous.Clear(index, bulkUpdating);
         if (previous == null) ActiveCellCount++;
         cellGroups[index] = group;
-        group.Write(index, x, y, quad.Corners, quad.Uvs, tint, tileTransform,
+        group.Write(index, x, y, quad, tint, tileTransform,
             contact, elevation, neighbours, flowX, flowY, waterKind, bulkUpdating);
         return true;
     }
@@ -158,17 +158,18 @@ internal sealed class ChunkGroundMeshRenderer : IDisposable
     private bool TryReadQuad(Sprite sprite, out Quad quad)
     {
         if (quads.TryGetValue(sprite, out quad)) return quad.Valid;
-        Vector2[] source = sprite.vertices;
-        Vector2[] sourceUv = sprite.uv;
+        SharedSpriteMeshCache.Geometry geometry = SharedSpriteMeshCache.GetGeometry(sprite);
+        Vector3[] source = geometry.Vertices;
+        Vector2[] sourceUv = geometry.Uv;
         if (source.Length != 4 || sourceUv.Length != 4)
         {
             quads.Add(sprite, default);
             return false;
         }
-        float minX = Mathf.Min(source[0].x, source[1].x, source[2].x, source[3].x);
-        float maxX = Mathf.Max(source[0].x, source[1].x, source[2].x, source[3].x);
-        float minY = Mathf.Min(source[0].y, source[1].y, source[2].y, source[3].y);
-        float maxY = Mathf.Max(source[0].y, source[1].y, source[2].y, source[3].y);
+        float minX = Mathf.Min(Mathf.Min(source[0].x, source[1].x), Mathf.Min(source[2].x, source[3].x));
+        float maxX = Mathf.Max(Mathf.Max(source[0].x, source[1].x), Mathf.Max(source[2].x, source[3].x));
+        float minY = Mathf.Min(Mathf.Min(source[0].y, source[1].y), Mathf.Min(source[2].y, source[3].y));
+        float maxY = Mathf.Max(Mathf.Max(source[0].y, source[1].y), Mathf.Max(source[2].y, source[3].y));
         if (maxX <= minX || maxY <= minY)
         {
             quads.Add(sprite, default);
@@ -191,17 +192,19 @@ internal sealed class ChunkGroundMeshRenderer : IDisposable
             corners[corner] = source[i];
             uvs[corner] = sourceUv[i];
         }
-        quad = seen == 15 ? new Quad(corners, uvs) : default;
+        quad = seen == 15 ? new Quad(corners, uvs,
+            new Vector4(minX, minY, 1f / (maxX - minX), 1f / (maxY - minY))) : default;
         quads.Add(sprite, quad);
         return quad.Valid;
     }
 
     private readonly struct Quad
     {
-        public Quad(Vector2[] corners, Vector2[] uvs)
-        { Corners = corners; Uvs = uvs; }
+        public Quad(Vector2[] corners, Vector2[] uvs, Vector4 spriteBounds)
+        { Corners = corners; Uvs = uvs; SpriteBounds = spriteBounds; }
         public Vector2[] Corners { get; }
         public Vector2[] Uvs { get; }
+        public Vector4 SpriteBounds { get; } // 同一 Sprite 的边界只计算一次，逐格提交不再创建 params 数组。
         public bool Valid => Corners != null && Uvs != null;
     }
 
@@ -361,17 +364,18 @@ internal sealed class ChunkGroundMeshRenderer : IDisposable
             }
         }
 
-        public void Write(int index, int x, int y, Vector2[] corners, Vector2[] uvs,
+        public void Write(int index, int x, int y, Quad quad,
             Color tint, Matrix4x4 transform, Vector4 contact, float elevation,
             Vector4 neighbours, Vector4 flowX, Vector4 flowY, float waterKind, bool bulk)
         {
             if (singleQuad)
             {
-                WriteSingleQuad(index, corners, uvs, tint, transform, contact, elevation, neighbours, bulk);
+                WriteSingleQuad(index, quad, tint, transform, contact, elevation, neighbours, bulk);
                 return;
             }
 
             int start = index * 4;
+            Vector2[] corners = quad.Corners, uvs = quad.Uvs;
             for (int corner = 0; corner < 4; corner++)
             {
                 Vector3 local = transform.MultiplyPoint3x4(corners[corner]);
@@ -407,15 +411,12 @@ internal sealed class ChunkGroundMeshRenderer : IDisposable
             Upload(index, bulk);
         }
 
-        private void WriteSingleQuad(int index, Vector2[] corners, Vector2[] uvs, Color tint,
+        private void WriteSingleQuad(int index, Quad quad, Color tint,
             Matrix4x4 transform, Vector4 contact, float elevation, Vector4 neighbours, bool bulk)
         {
             bool wasActive = groundCells[index].Meta.y > 0.5f;
             Matrix4x4 inverse = transform.inverse;
-            float minX = Mathf.Min(corners[0].x, corners[1].x, corners[2].x, corners[3].x);
-            float maxX = Mathf.Max(corners[0].x, corners[1].x, corners[2].x, corners[3].x);
-            float minY = Mathf.Min(corners[0].y, corners[1].y, corners[2].y, corners[3].y);
-            float maxY = Mathf.Max(corners[0].y, corners[1].y, corners[2].y, corners[3].y);
+            Vector2[] uvs = quad.Uvs;
             groundCells[index] = new GroundCellData
             {
                 Uv01 = new Vector4(uvs[0].x, uvs[0].y, uvs[1].x, uvs[1].y),
@@ -426,9 +427,7 @@ internal sealed class ChunkGroundMeshRenderer : IDisposable
                 Meta = new Vector4(elevation, 1f, 0f, 0f),
                 Inverse0 = new Vector4(inverse.m00, inverse.m01, inverse.m03, 0f),
                 Inverse1 = new Vector4(inverse.m10, inverse.m11, inverse.m13, 0f),
-                SpriteBounds = new Vector4(minX, minY,
-                    maxX > minX ? 1f / (maxX - minX) : 0f,
-                    maxY > minY ? 1f / (maxY - minY) : 0f)
+                SpriteBounds = quad.SpriteBounds
             };
             if (!wasActive)
                 geometryDirty = true;

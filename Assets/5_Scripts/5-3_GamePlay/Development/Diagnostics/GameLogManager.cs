@@ -44,6 +44,12 @@ public sealed class GameLogManager : MonoBehaviour
     private static int partIndex;
     private static volatile int lastFrame;
     private static bool subscribed;
+    private static int periodicFlushPending;
+    private static readonly WaitCallback PeriodicFlushCallback = _ =>
+    {
+        try { Flush(); }
+        finally { Volatile.Write(ref periodicFlushPending, 0); }
+    };
     private static int runtimeLogCharacters;
     private static int runtimeLogVersion;
     private static int runtimeWarningCount;
@@ -297,7 +303,12 @@ public sealed class GameLogManager : MonoBehaviour
             return;
 
         nextFlushTime = Time.unscaledTime + FlushIntervalSeconds;
-        Flush();
+        // 定时刷盘交给线程池，主线程只提交一次；退出和手动 Flush 仍同步保证落盘。
+        if (Interlocked.CompareExchange(ref periodicFlushPending, 1, 0) == 0)
+        {
+            if (!ThreadPool.QueueUserWorkItem(PeriodicFlushCallback))
+                Volatile.Write(ref periodicFlushPending, 0);
+        }
     }
 
     private void OnApplicationPause(bool pauseStatus)

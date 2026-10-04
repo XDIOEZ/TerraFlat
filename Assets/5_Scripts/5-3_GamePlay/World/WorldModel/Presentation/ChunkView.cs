@@ -15,6 +15,7 @@ public sealed class ChunkView : MonoBehaviour
         new("FlatWorld.ChunkStreaming.BindRendererStep");
     private readonly List<IChunkViewRenderer> renderers = new();
     private readonly List<string> rendererTimingNames = new();
+    private readonly List<ProfilerMarker> rendererBindMarkers = new(); // 每个表现器单独记账，避免所有开销挤在同一个标记下。
     /// <summary>最后推进的表现器；停住时可区分地形、草地、导航和自然物。</summary>
     public string LastBindingRenderer { get; private set; }
     private WorldRuntime world;
@@ -111,6 +112,7 @@ public sealed class ChunkView : MonoBehaviour
                 continue;
             EnsureBaseTerrainPresentation(renderers[i]);
             LastBindingRenderer = rendererTimingNames[i];
+            using (rendererBindMarkers[i].Auto())
             using (world.StreamingDiagnostics.Measure(LastBindingRenderer))
                 renderers[i].Bind(chunk);
         }
@@ -156,6 +158,7 @@ public sealed class ChunkView : MonoBehaviour
                         EnsureBaseTerrainPresentation(renderers[i]);
                         bool hasNext;
                         using (RendererBindMarker.Auto())
+                        using (rendererBindMarkers[i].Auto())
                         using (worldRuntime.StreamingDiagnostics.Measure(LastBindingRenderer))
                             hasNext = steps.MoveNext();
                         if (!hasNext)
@@ -173,6 +176,7 @@ public sealed class ChunkView : MonoBehaviour
             else
             {
                 using (RendererBindMarker.Auto())
+                using (rendererBindMarkers[i].Auto())
                 using (worldRuntime.StreamingDiagnostics.Measure(LastBindingRenderer))
                     renderers[i].Bind(chunk);
             }
@@ -227,6 +231,7 @@ public sealed class ChunkView : MonoBehaviour
                     worldAware.SetWorld(null);
             renderers.Clear();
             rendererTimingNames.Clear();
+            rendererBindMarkers.Clear();
             LastBindingRenderer = null;
             terrainRenderer = null;
             navigationLease?.Dispose();
@@ -309,8 +314,12 @@ public sealed class ChunkView : MonoBehaviour
         renderers.Sort((left, right) =>
             ResolveRendererPriority(left).CompareTo(ResolveRendererPriority(right)));
         rendererTimingNames.Clear();
+        rendererBindMarkers.Clear();
         for (int i = 0; i < renderers.Count; i++)
+        {
             rendererTimingNames.Add("renderer." + renderers[i].GetType().Name);
+            rendererBindMarkers.Add(new ProfilerMarker("FlatWorld.ChunkStreaming.Bind." + renderers[i].GetType().Name));
+        }
     }
 
     /// <summary>建立租约和事件，再由同步或分帧入口绑定各表现组件。</summary>

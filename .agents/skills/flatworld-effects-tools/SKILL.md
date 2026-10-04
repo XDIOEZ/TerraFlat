@@ -86,6 +86,7 @@ description: "Use when: 定位或修改 FlatWorld 的运行时特效、粒子、
 - 运行时世界由 `SceneManager.CreateScene` 动态创建，不会触发 `SceneManager.sceneLoaded`；监听运行时 Hierarchy 的 Editor 工具必须同时处理旧场景卸载与后续 `hierarchyChanged`，且不能用无界切换标记长期屏蔽用户操作。`hierarchyChanged` 热路径必须从少量已保存记录定向解析对象，禁止组合 `Resources.FindObjectsOfTypeAll` 与 `GlobalObjectId.GetGlobalObjectIdSlow` 全场景扫描，否则跨场景引用会制造警告并造成 `EditorLoop` 尖峰；调用 `GlobalObjectIdentifierToObjectSlow` 前必须确认 ID 所属场景已加载，场景切换空窗直接跳过，否则 Unity 原生层会触发 `manager != NULL` 断言。
 - 内容工坊保持在 `Assets/Editor/FlatWorld/ContentTools/ContentWorkshop/`，只把可验证的差异写回 JSON，不在运行时程序集引入编辑器依赖。
 - 业务日志用 `GameLogManager` 的 `[WORK]` 接口；不要制造每帧重复警告。
+- `GameLogManager` 定时刷盘允许线程池执行，同一时刻最多一个待处理请求；后台只操作受锁保护的日志流，不调用 Unity API。暂停、退出、错误与显式 Flush 仍同步落盘；日志写入与刷盘共享锁，不能宣称所有日志路径都不会阻塞主线程。
 - `GMReflectionConsole` 独占 F4 作为 GM 调试面板开关；管理员手持物品加量由面板按钮调用，`GameDebugManager` 的晴天快捷键必须在脚本默认值与 `WorldManager.prefab` 序列化值中都使用 F6，禁止运行时反射改键。
 - F3 环境监测由 `GameDebugManager` 切换；`EnvironmentInfoDisplay` 必须通过 `ChunkMgr.TryGetRuntimeTerrainTile` 读取当前 WorldModel 权威格子，并从 `ChunkTerrainData.EnvironmentLayerIds` 枚举原始环境层，禁止重新依赖旧 `Chunk.Map/Map.Data.EnvironmentLayers`。耕地水肥读取 `FarmlandSystem` 的农业层，最终环境温度使用 `TemperatureMgr.TryGetAmbientTemperature`。
 - F3 面板沿用 IMGUI，长字段开启换行并用 `GUIStyle.CalcHeight` 的实际高度分页；底部操作提示与页码单独预留空间。上下键、PageUp/PageDown 和滚轮每次翻一整页，不恢复固定行数估算或逐行滚动。

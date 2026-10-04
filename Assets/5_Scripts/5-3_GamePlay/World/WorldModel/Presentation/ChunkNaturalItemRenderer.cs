@@ -7,13 +7,14 @@ using FlatWorld.WorldModel;
 using UnityEngine;
 using Unity.Profiling;
 using RuntimeWorldAddress = FlatWorld.WorldModel.WorldAddress;
+using Stopwatch = System.Diagnostics.Stopwatch;
 
 /// <summary>
 /// ChunkView 的自然生态与临时掉落物表现适配器。
 /// 后台只返回 NaturalItemPlacement；资源生成直接装配 Entity 并绑定区块 BRG。
 /// 未纳入本轮迁移的传送门、蜂巢等独立玩法仍走原入口，资源不会退回完整 Item。
 /// 应用退出不保存生态差量；已有管理器仍存活时正常注销物品，依赖引用仅在绑定和登记时获取。
-/// 初次分帧绑定每步最多尝试创建一个实体，宿主全部处理完后才处理伴生物。
+/// 初次绑定同时限制单步数量和耗时，宿主全部处理完后才处理伴生物。
 /// </summary>
 public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IIncrementalChunkViewRenderer
 {
@@ -21,6 +22,10 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IIncrementalChunkV
 
     private const float AutoSaveFrameBudgetSeconds = 0.0025f;
     private const float LooseItemOffsetRadius = 0.15f;
+    private const int InitialPlacementsPerStep = 16;
+    private static readonly long InitialStepBudgetTicks = Math.Max(1L, Stopwatch.Frequency / 500L);
+    private static readonly ProfilerMarker StaticEntityBindMarker =
+        new("FlatWorld.ChunkStreaming.BindNaturalEntity");
     private static readonly ProfilerMarker NaturalItemSpawnMarker =
         new("FlatWorld.ChunkStreaming.SpawnNaturalItem");
     private static readonly ProfilerMarker NaturalItemCaptureMarker =
@@ -113,7 +118,7 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IIncrementalChunkV
         }
     }
 
-    /// <summary>先创建宿主再创建伴生物，每步最多实例化一个自然实体。</summary>
+    /// <summary>先创建宿主再创建伴生物，每步按两毫秒和数量上限让出主线程。</summary>
     public IEnumerator BindIncremental(ChunkRuntime chunk)
     {
         if (chunk == null)
@@ -144,38 +149,51 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IIncrementalChunkV
                 throw new InvalidOperationException("绑定自然物需要有效的 ItemMgr 和 ChunkMgr。");
 
             // 宿主必须先完成生成，伴生物才能按宿主状态决定是否出现。
-            int dataEntityBatch = 0;
+            int checkedPlacements = 0;
+            long deadline = Stopwatch.GetTimestamp() + InitialStepBudgetTicks;
             for (int i = 0; i < placements.Count; i++)
             {
                 NaturalItemPlacement placement = placements[i];
-                if (!placement.IsCompanion && TryBindStaticEntity(placement))
+                bool spawnedItem = false;
+                if (!placement.IsCompanion)
                 {
-                    if (++dataEntityBatch >= 16)
-                    {
-                        dataEntityBatch = 0;
-                        yield return null;
-                    }
-                    continue;
+                    bool boundStatic;
+                    using (StaticEntityBindMarker.Auto())
+                        boundStatic = TryBindStaticEntity(placement);
+                    if (!boundStatic) spawnedItem = SpawnInitialPlacement(placement);
                 }
-                if (!placement.IsCompanion && SpawnInitialPlacement(placement))
+                // 跳过的点也计入预算，避免已采集或伴生点扫描绕过分帧限制。
+                if (++checkedPlacements >= InitialPlacementsPerStep || spawnedItem ||
+                    Stopwatch.GetTimestamp() >= deadline)
+                {
                     yield return null;
+                    checkedPlacements = 0;
+                    deadline = Stopwatch.GetTimestamp() + InitialStepBudgetTicks;
+                }
             }
 
+            checkedPlacements = 0;
+            deadline = Stopwatch.GetTimestamp() + InitialStepBudgetTicks;
             for (int i = 0; i < placements.Count; i++)
             {
                 NaturalItemPlacement placement = placements[i];
-                if (!placement.IsCompanion)
-                    continue;
-
-                if (!CanSpawnCompanionForHost(placement))
+                bool spawnedItem = false;
+                if (placement.IsCompanion)
                 {
-                    if (!chunkManager.IsNaturalItemRemoved(chunk.Address, placement.Guid))
-                        deferredCompanionPlacements.Add(placement);
-                    continue;
+                    if (!CanSpawnCompanionForHost(placement))
+                    {
+                        if (!chunkManager.IsNaturalItemRemoved(chunk.Address, placement.Guid))
+                            deferredCompanionPlacements.Add(placement);
+                    }
+                    else spawnedItem = SpawnInitialPlacement(placement);
                 }
-
-                if (SpawnInitialPlacement(placement))
+                if (++checkedPlacements >= InitialPlacementsPerStep || spawnedItem ||
+                    Stopwatch.GetTimestamp() >= deadline)
+                {
                     yield return null;
+                    checkedPlacements = 0;
+                    deadline = Stopwatch.GetTimestamp() + InitialStepBudgetTicks;
+                }
             }
         }
         finally

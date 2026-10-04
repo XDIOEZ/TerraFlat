@@ -292,13 +292,14 @@ namespace FlatWorld.NaturalEntities
         private static void PublishEntities(float deltaTime)
         {
             if (simulation == null || !GameNetwork.HasStateAuthority) return;
+            bool hasClock = ReadClock(out _, out double now);
             endedPlants.Clear();
             foreach (Record record in records.Values)
             {
                 CommitSoil(record);
                 NaturalEntityBody body = simulation.GetBody(record.Handle.Id);
                 if (body.Dead != 0) { endedPlants.Add(record.Handle.Id); continue; }
-                if (record.Profile.Canopy != null) AdvanceCanopy(record);
+                if (hasClock && record.Profile.Canopy != null) AdvanceCanopy(record, now);
                 if (body.VisualVersion != record.PresentedRevision)
                     MarkPresentationDirty(record);
                 if (body.VisualVersion != record.IndexedRevision)

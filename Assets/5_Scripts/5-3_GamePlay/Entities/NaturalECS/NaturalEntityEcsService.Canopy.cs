@@ -45,9 +45,9 @@ namespace FlatWorld.NaturalEntities
             return simulation.Manager.GetComponentObject<EntityCanopyFruitModule>(entity).State;
         }
 
-        private static void AdvanceCanopy(Record record)
+        private static void AdvanceCanopy(Record record, double now)
         {
-            if (!ReadClock(out _, out double now)) return;
+            // 同一批树共用已经冻结的世界时间，避免逐树重复查时钟。
             CanopyFruitState state = GetCanopy(record);
             if (state.Stopped) return;
             if (!state.Initialized)

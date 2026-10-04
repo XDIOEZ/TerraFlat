@@ -1103,8 +1103,7 @@ internal static class ChunkBatchRendererGroupService
                 BatchId = backend.CreateBatch(buffer);
                 if (gpuData.Count > 0)
                 {
-                    InstanceData[] all = gpuData.ToArray();
-                    buffer.SetData(all, 0, 1, all.Length);
+                    buffer.SetData(gpuData, 0, 1, gpuData.Count);
                 }
             }
 

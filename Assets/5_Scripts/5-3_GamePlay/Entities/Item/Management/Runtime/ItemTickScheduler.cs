@@ -77,7 +77,7 @@ internal sealed class ItemTickScheduler
                 item.ResetScheduledTickClock(Time.time);
                 break;
             case ItemTickTier.Dormant:
-                if (item.GetComponent<Rigidbody2D>() != null)
+                if (item.TryGetComponent<Rigidbody2D>(out _))
                     bucket = AddToBucket(dormantPhysicsBuckets, item);
                 break;
         }
