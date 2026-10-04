@@ -13,7 +13,9 @@ public sealed class ChunkSnowCoverRenderer : MonoBehaviour, IChunkViewRenderer
 
     [SerializeField] private Tile snowTile; // 可透明叠加的地表外观。
     [SerializeField] private Material snowMaterial; // 与地面同域的雪层材质。
-    private ChunkTilemapRenderer owner; // 共用区块 BRG Owner。
+    private ChunkTilemapRenderer owner; // 跟随区块地形资源重建。
+    private ChunkDepthMeshRenderer groundSnowMesh; // 地面雪保留明确的 Unity 排序层。
+    private ChunkDepthMeshRenderer wallSnowMesh; // 墙顶雪单独排在墙体上方。
     private ChunkRuntime chunk; // 当前区块。
     private WeatherMgr weather; // 雨转雪状态的订阅来源。
     private float nextRefresh; // 区块错峰比较积雪状态。
@@ -66,14 +68,10 @@ public sealed class ChunkSnowCoverRenderer : MonoBehaviour, IChunkViewRenderer
         if (owner != null)
         {
             owner.BatchPresentationRebuilt -= ResubmitVisible;
-            if (chunk?.Terrain != null && owner.IsBatchPresentationRegistered)
-                for (int y = 0; y < chunk.Terrain.Height; y++)
-                for (int x = 0; x < chunk.Terrain.Width; x++)
-                {
-                    owner.ClearLayerVisual(ChunkBatchRendererGroupService.VisualLayer.Snow, x, y);
-                    owner.ClearLayerVisual(ChunkBatchRendererGroupService.VisualLayer.SnowWall, x, y);
-                }
         }
+        groundSnowMesh?.Dispose(); groundSnowMesh = null;
+        wallSnowMesh?.Dispose(); wallSnowMesh = null;
+        owner = null;
         weather = null;
         chunk = null; visibleCoverage = null; visibleWallCoverage = null;
         sampledSnow = null;
@@ -186,19 +184,28 @@ public sealed class ChunkSnowCoverRenderer : MonoBehaviour, IChunkViewRenderer
         }
     }
 
-    /// <summary>积雪覆盖与窄雪冠只更新发生变化的 BRG 槽。</summary>
+    /// <summary>积雪覆盖与窄雪冠按行合批，排序层明确低于玩家等动态实体。</summary>
     private void SubmitSnow(int x, int y, int coverage, bool wall)
     {
-        var layer = wall ? ChunkBatchRendererGroupService.VisualLayer.SnowWall :
-            ChunkBatchRendererGroupService.VisualLayer.Snow;
+        int slot = y * chunk.Terrain.Width + x;
+        ChunkDepthMeshRenderer mesh = wall ? wallSnowMesh : groundSnowMesh;
         if (coverage == 0)
         {
-            owner.ClearLayerVisual(layer, x, y);
+            if (mesh != null && !mesh.IsDisposed) mesh.Remove(0, slot, 0);
             return;
         }
-        Int2 origin = chunk.Address.ChunkOrigin;
-        Matrix4x4 matrix = Matrix4x4.Translate(new Vector3(origin.X + x + 0.5f,
-            origin.Y + y + 0.5f));
+        if (mesh == null || mesh.IsDisposed)
+        {
+            WorldSortingManager.GetResourceSortingKey(wall
+                    ? WorldSortingManager.GroundMarkCategory : WorldSortingManager.GroundBuildingCategory,
+                out int sortingLayerId, out int sortingOrder);
+            // 地面雪高于地面，墙冠高于 Blocking，两个排序域都低于 Player。
+            mesh = new ChunkDepthMeshRenderer(transform, sortingLayerId, checked(sortingOrder + (wall ? 2 : 1)));
+            if (wall) wallSnowMesh = mesh;
+            else groundSnowMesh = mesh;
+        }
+        Vector3 anchor = new Vector3(x + 0.5f, y + 0.5f);
+        Matrix4x4 matrix = Matrix4x4.Translate(anchor);
         if (wall)
             matrix *= Matrix4x4.TRS(new Vector3(0f, 0.38f), Quaternion.identity,
                 new Vector3(1f, 0.24f, 1f));
@@ -211,9 +218,9 @@ public sealed class ChunkSnowCoverRenderer : MonoBehaviour, IChunkViewRenderer
         }
         // 一层雪从 55% 不透明度开始，每层增加 5%，十层及以上完全不透明。
         float opacity = Mathf.Clamp01(0.5f + coverage * 0.05f);
-        owner.SetLayerVisual(layer, x, y, snowTile.sprite, snowMaterial,
-            matrix * snowTile.transform, snowTile.color * new Color(1f, 1f, 1f,
-                opacity));
+        mesh.Set(0, slot, 0, snowTile.sprite, snowMaterial,
+            transform.localToWorldMatrix * matrix * snowTile.transform,
+            transform.TransformPoint(anchor), 0, snowTile.color * new Color(1f, 1f, 1f, opacity));
     }
 
     /// <summary>保存本次采样依据，避免无雪或状态不变时重复扫完整区块。</summary>
