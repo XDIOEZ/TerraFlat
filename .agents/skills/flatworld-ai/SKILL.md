@@ -53,6 +53,8 @@ description: "Use when: 定位或修改 FlatWorld 的动物、怪物、蜂群、
 - 水深和水流从共享导航快照进入 `AiecsFlowAgent`；飞行态不接受地面水流推动。环境、觅食、产蛋、蜂群等托管桥只提交少量结算或外部数据，不允许逐实体恢复旧 AI 状态机。
 - GameObject 鸟的 `BirdFlightNavigationProfile` 只检查飞行线路经过的地形是否已加载；它的区块寻址必须和 `ChunkMgr.ResolveWorldAddress` 使用同一份当前 `ActiveGenerationProfile` 区块尺寸，不能退回默认生成尺寸，否则自定义区块大小会让空中移动被误判为未加载。
 - `AI_Base`、`Mod_AI_Bird`、`Module_AI_BehaviorGraph` 等原生脚本和 Prefab 是当前正式运行时，不能按“仅作者数据”删除或禁用。
+- `AI_Base` 的头顶参数由 `AI_DebugOverlayRenderer` 集中绘制，关闭时停用唯一绘制器；模块加载注册，卸载/销毁注销，禁止给每个动物重新增加空转 `OnGUI`。状态采样读取运行时 `_currentState`，`AI_Chicken.Data.State` 仅在加载/保存时同步，不能当实时状态。
+- 小鸡只按所属 `Scene.handle` 缓存场景名称，回池清空、重新加载或迁移后重建；产蛋、昼夜与禁睡仍实时读取本世界时钟，不缓存时间或用活动场景替代所属世界。
 - 小鸡受伤后的禁睡期使用 `AI_ChickenSaveData` 保存的绝对游戏日截止值，直到下一次夜晚开始才解除；逃跑结束、低血量、跨午夜和远距重载都不能提前恢复睡眠。逃跑威胁记忆与睡眠警戒是两个独立状态。
 - 鸟类产蛋由 `Mod_AI_Bird.EggLaying` 驱动，`AnimalEggLayingSchedule` 随个体保存绝对游戏日；成功落下一颗后重新计算至少两天的冷却，不能追补休眠或跳时积压。`Bird` 必须移除继承自鸡的通用生产模块，`Bee` 显式关闭产蛋；产物和随机延迟由 Actor JSON 配置，联机仅权威端生成。
 - GameObject 鸟类捕鱼由 `Mod_AI_Bird.Predation` 驱动：饥饿时只锁定水中的 `Fish`，俯冲伤害必须走 `DamageReceiver`，低于抓取血线后通过 `IAquaticPredatorCarryTarget` 临时携带到可站立陆地，再继续攻击并消费死亡掉落的 `Meat`；携带状态不持久化，受惊、温度避险、进入疲劳降落或卸载时必须释放猎物。蜜蜂等注册独立 `IBirdFlightPilot` 的常驻飞行物种不进入该链路。

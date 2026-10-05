@@ -126,6 +126,7 @@ GM 使用独立的 `gameplay_gm` 白名单：
 
 - 给当前受控玩家施加已注册 Buff 时使用 `command=apply_self_buff:<buffId>`，例如 `apply_self_buff:core:night_vision`；内部先校验当前 GameRes 的 BuffDefinition，再走正式 `Mod_BuffManager.AddBuff`，不直接改运行时字典。
 - GM 命令仍要求当前世界就绪且已取得 GamePlayMCP 控制租约；具体命令始终以 `gameplay_capabilities.gmCommands` 为准。
+- 白名单没有生物生成命令时，通过 F4 → 生成 → AI 生物目录操作正式 UI；数量输入每批最多 20，大批量拆批并核对成功提示和实际活跃数。生成数、含原生动物的总数、随区块加载变化的活跃数分别记录，不能混用为性能样本数量。
 
 已有 `interact`、`select_hotbar`、`use` 等专用玩法语义时仍优先使用这些动作；`press_key` 主要服务桌面面板快捷键、返回/聊天等 InputAction，以及确实只通过键盘暴露的行为，不应退化成用按键猜测替代结构化玩法 API。
 

@@ -70,6 +70,8 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 	private bool _layEggTriggered;
 	private DayTimeSystem _eggTimeSystem;
 	private string _eggTimeSceneName;
+	private int _worldSceneHandle = int.MinValue;
+	private string _worldSceneName;
 	#endregion
 
 	#region CachedModules - Chicken 特有
@@ -214,6 +216,7 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 	#region Lifecycle
 	public override void Load()
 	{
+		_worldSceneHandle = int.MinValue;
 		Data ??= new AI_ChickenSaveData();
 		Data.SleepSuppressedByDamage = false;
 		Data.SleepAllowedFromGameDay = -1d;
@@ -228,6 +231,8 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 	public override void Unload()
 	{
 		UnbindEggWorldTime();
+		_worldSceneHandle = int.MinValue;
+		_worldSceneName = null;
 		base.Unload();
 	}
 
@@ -616,7 +621,7 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 		gameDay = 0d;
 		DayTimeSystem timeSystem = DayTimeSystem.GetInstance();
 		if (timeSystem == null ||
-			!timeSystem.WorldTimeDict.TryGetValue(gameObject.scene.name, out TimeData timeData) || timeData == null)
+			!timeSystem.WorldTimeDict.TryGetValue(GetWorldSceneName(), out TimeData timeData) || timeData == null)
 			return false;
 
 		float dayLength = Mathf.Max(1f, timeData.DayLength);
@@ -627,6 +632,18 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 	#endregion
 
 	#region Helpers - Chicken 特有
+	private string GetWorldSceneName()
+	{
+		var scene = gameObject.scene;
+		if (_worldSceneHandle != scene.handle)
+		{
+			// 只缓存所属场景名称，回池和迁移后重新读取，时钟状态保持实时。
+			_worldSceneHandle = scene.handle;
+			_worldSceneName = scene.name;
+		}
+		return _worldSceneName;
+	}
+
 	private Item FindClosestThreat()
 	{
 		return _detector.FindClosestItemByTags(
@@ -769,7 +786,7 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 	private void EnsureEggWorldTimeBinding()
 	{
 		DayTimeSystem current = DayTimeSystem.Instance;
-		string sceneName = gameObject.scene.name;
+		string sceneName = GetWorldSceneName();
 		if (_eggTimeSystem == current && string.Equals(_eggTimeSceneName, sceneName, StringComparison.Ordinal))
 			return;
 
@@ -784,7 +801,7 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 		if (_eggTimeSystem == null)
 			return;
 
-		_eggTimeSceneName = gameObject.scene.name;
+		_eggTimeSceneName = GetWorldSceneName();
 		_eggTimeSystem.TimeAdvanced += HandleEggWorldTimeAdvanced;
 	}
 
@@ -821,7 +838,7 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 	{
 		const float fallbackDayLength = 1440f;
 		if (DayTimeSystem.Instance == null ||
-		    !DayTimeSystem.Instance.WorldTimeDict.TryGetValue(gameObject.scene.name, out TimeData timeData) ||
+		    !DayTimeSystem.Instance.WorldTimeDict.TryGetValue(GetWorldSceneName(), out TimeData timeData) ||
 		    timeData == null)
 		{
 			return fallbackDayLength;
@@ -844,7 +861,7 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 	{
 		if (DayTimeSystem.Instance == null) return true;
 
-		string sceneName = gameObject.scene.name;
+		string sceneName = GetWorldSceneName();
 		if (!DayTimeSystem.Instance.WorldTimeDict.TryGetValue(sceneName, out TimeData timeData)) return true;
 
 		float dayLength = Mathf.Max(1f, timeData.DayLength);

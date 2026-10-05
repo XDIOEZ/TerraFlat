@@ -69,6 +69,8 @@ public sealed class FoodRulePipeline : IDisposable
     public void OnUse(FoodUseContext value) => Each("使用", rule =>
         (rule as IFoodUseRule)?.OnFoodUse(value));
 
+    #region 规则通知
+
     /// <summary>判断当前规则集合是否存在需要持续调度的 Tick 观察者。</summary>
     public bool HasActiveTickObservers()
     {
@@ -82,20 +84,49 @@ public sealed class FoodRulePipeline : IDisposable
     }
 
     /// <summary>只推进当前声明为活跃的 Tick 观察者。</summary>
-    public void OnTick(FoodTickContext value) => Each("Tick", rule =>
+    public void OnTick(FoodTickContext value)
     {
-        if (ShouldTick(rule))
-            ((IFoodTickObserver)rule).OnFoodTick(value);
-    });
+        // 高频通知直接遍历规则，避免捕获上下文的闭包分配。
+        for (int i = 0; i < rules.Count; i++)
+        {
+            IFoodMechanic rule = rules[i];
+            try
+            {
+                if (ShouldTick(rule))
+                    ((IFoodTickObserver)rule).OnFoodTick(value);
+            }
+            catch (Exception exception)
+            {
+                LogFailure(rule, "Tick", exception);
+            }
+        }
+    }
 
     public void OnConsumed(FoodConsumeResult value) => Each("吃完", rule =>
         (rule as IFoodConsumptionObserver)?.OnFoodConsumed(value));
 
-    public void OnStateChanged(FoodStateChangedContext value) => Each("状态刷新", rule =>
-        (rule as IFoodStateObserver)?.OnFoodStateChanged(value));
+    public void OnStateChanged(FoodStateChangedContext value)
+    {
+        for (int i = 0; i < rules.Count; i++)
+        {
+            IFoodMechanic rule = rules[i];
+            if (!(rule is IFoodStateObserver observer))
+                continue;
+            try
+            {
+                observer.OnFoodStateChanged(value);
+            }
+            catch (Exception exception)
+            {
+                LogFailure(rule, "状态刷新", exception);
+            }
+        }
+    }
 
     public void OnRespawn() => Each("复活", rule =>
         (rule as IFoodRespawnRule)?.OnFoodRespawn());
+
+    #endregion
 
     /// <summary>保存每条规则自己的负载。</summary>
     public void Save()

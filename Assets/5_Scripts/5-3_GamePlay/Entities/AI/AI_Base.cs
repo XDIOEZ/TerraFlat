@@ -34,18 +34,68 @@ public struct AI_IdleConfig
 
 public static class AI_DebugOverlay
 {
+	#region 集中绘制
+	private static readonly Dictionary<MonoBehaviour, Action<Camera>> sources = new();
+	private static AI_DebugOverlayRenderer renderer;
 	public static bool Visible { get; private set; }
 
 	public static void SetVisible(bool visible)
 	{
 		Visible = visible;
+		RefreshRenderer();
 	}
 
 	public static bool Toggle()
 	{
-		Visible = !Visible;
+		SetVisible(!Visible);
 		return Visible;
 	}
+
+	public static void Register(MonoBehaviour source, Action<Camera> draw)
+	{
+		sources[source] = draw;
+		RefreshRenderer();
+	}
+
+	public static void Unregister(MonoBehaviour source)
+	{
+		sources.Remove(source);
+		RefreshRenderer(false);
+	}
+
+	private static void RefreshRenderer(bool allowCreation = true)
+	{
+		// 关闭调试时不保留任何 AI 的 OnGUI 入口，开启后共用一个绘制器。
+		if (allowCreation && renderer == null && Visible && sources.Count > 0)
+		{
+			GameObject host = new GameObject("[AI Debug Overlay]");
+			UnityEngine.Object.DontDestroyOnLoad(host);
+			renderer = host.AddComponent<AI_DebugOverlayRenderer>();
+		}
+		if (renderer != null)
+			renderer.enabled = Visible && sources.Count > 0;
+	}
+
+	public static void Draw()
+	{
+		if (!Visible || !Application.isPlaying)
+			return;
+		Camera camera = Camera.main;
+		if (camera == null)
+			return;
+		foreach (var source in sources)
+			if (source.Key != null && source.Key.isActiveAndEnabled)
+				source.Value(camera);
+	}
+
+	[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+	private static void ResetRuntime()
+	{
+		sources.Clear();
+		renderer = null;
+		Visible = false;
+	}
+	#endregion
 }
 
 /// <summary>
@@ -256,6 +306,7 @@ public abstract class AI_Base<TState> : Module, IAIActor where TState : struct, 
 		OnPreEvaluate();
 		PlayStateAnimation(_currentState, true);
 		SynchronizeSleepVisual(_currentState);
+		AI_DebugOverlay.Register(this, DrawDebugOverlay);
 	}
 
 	public override void ModUpdate(float deltaTime)
@@ -304,6 +355,7 @@ public abstract class AI_Base<TState> : Module, IAIActor where TState : struct, 
 	/// <summary>回池与销毁共用模块卸载边界，解除伤害事件并释放本轮状态机运行态。</summary>
 	public override void Unload()
 	{
+		AI_DebugOverlay.Unregister(this);
 		UnbindDamageThreatEvents();
 		_stateMachine?.Reset();
 		_isReady = false;
@@ -1136,20 +1188,16 @@ public abstract class AI_Base<TState> : Module, IAIActor where TState : struct, 
 
 	private void OnDestroy()
 	{
+		AI_DebugOverlay.Unregister(this);
 		UnbindDamageThreatEvents();
 	}
 #endregion
 
 #region Debug
-	private void OnGUI()
+	private void DrawDebugOverlay(Camera camera)
 	{
-		if (!AI_DebugOverlay.Visible || !Application.isPlaying || Camera.main == null)
-		{
-			return;
-		}
-
 		Vector3 worldPos = transform.position + new Vector3(0f, 1.4f, 0f);
-		Vector3 screenPos = Camera.main.WorldToScreenPoint(worldPos);
+		Vector3 screenPos = camera.WorldToScreenPoint(worldPos);
 		if (screenPos.z <= 0f)
 		{
 			return;
