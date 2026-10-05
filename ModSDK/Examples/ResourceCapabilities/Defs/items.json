@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "items": [
+    {
+      "id": "example.resourcecapabilities:resin_tree",
+      "parent": "AppleTree",
+      "gameName": "树脂苹果树",
+      "entityRuntime": "resource",
+      "modules": {
+        "resin": {
+          "prefab": "example.resourcecapabilities:resin",
+          "parameters": { "capacity": 20, "perSecond": 1 }
+        }
+      }
+    }
+  ]
+}

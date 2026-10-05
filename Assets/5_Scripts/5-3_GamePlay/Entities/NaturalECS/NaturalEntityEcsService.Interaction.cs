@@ -325,43 +325,59 @@ namespace FlatWorld.NaturalEntities
 
         #region 共享伤害数值与采集命令
 
+        private sealed class WeaponQueryBuffers
+        {
+            public readonly List<Record> Records = new(32);
+            public readonly List<CombatColliderHit2D> Hits = new(32);
+            public readonly List<(Record Record, float Fraction, float Distance, Vector2 Point)> Candidates = new(32);
+            public void Clear() { Records.Clear(); Hits.Clear(); Candidates.Clear(); }
+        }
+
+        private static readonly Stack<WeaponQueryBuffers> weaponQueryPool = new();
+
         private static void QueryWeapon(Mod_Damage weapon, AttackShape2D shape, CombatDamageContext context)
         {
             if (!GameNetwork.HasStateAuthority || weapon == null || weapon.RemainingAttackTargets <= 0 ||
                 (context.DeliveryCapabilities & CombatDeliveryCapabilities.AirborneOnly) != 0) return;
-            var recordsByCollider = new List<Record>();
-            var colliderHits = new List<CombatColliderHit2D>();
-            using (CombatColliderQuery2D physics = CombatColliderQuery2D.Rent())
+            // 一次查询独占一组缓冲，嵌套攻击和异常退出都不会覆盖其它查询。
+            WeaponQueryBuffers buffers = weaponQueryPool.Count > 0 ? weaponQueryPool.Pop() : new WeaponQueryBuffers();
+            try
             {
-                using ResourceQuery candidates = QueryBounds(shape.BoundsCenter, shape.BoundsExtents);
-                foreach (Record record in candidates)
+                var recordsByCollider = buffers.Records;
+                var colliderHits = buffers.Hits;
+                using (CombatColliderQuery2D physics = CombatColliderQuery2D.Rent())
                 {
-                    if (record.Profile.HealthModuleName == null || !record.HitColliderEnabled || !record.IsValid) continue;
-                    Vector2 center = WorldTopologyRuntime.NearestImagePosition((Vector2)shape.BoundsCenter,
-                        record.HitBounds.center);
-                    physics.Add(recordsByCollider.Count, PerceptionShape2D.Aabb(center,
-                        new float2(record.HitBounds.extents.x, record.HitBounds.extents.y)));
-                    recordsByCollider.Add(record);
+                    using ResourceQuery candidates = QueryBounds(shape.BoundsCenter, shape.BoundsExtents);
+                    foreach (Record record in candidates)
+                    {
+                        if (record.Profile.HealthModuleName == null || !record.HitColliderEnabled || !record.IsValid) continue;
+                        Vector2 center = WorldTopologyRuntime.NearestImagePosition((Vector2)shape.BoundsCenter,
+                            record.HitBounds.center);
+                        physics.Add(recordsByCollider.Count, PerceptionShape2D.Aabb(center,
+                            new float2(record.HitBounds.extents.x, record.HitBounds.extents.y)));
+                        recordsByCollider.Add(record);
+                    }
+                    physics.Query(shape, colliderHits);
                 }
-                physics.Query(shape, colliderHits);
+                var candidatesByDistance = buffers.Candidates;
+                for (int i = 0; i < colliderHits.Count; i++)
+                {
+                    CombatColliderHit2D hit = colliderHits[i];
+                    Record record = recordsByCollider[hit.CandidateId];
+                    candidatesByDistance.Add((record, hit.Fraction,
+                        WorldTopologyRuntime.SqrDistance((Vector2)shape.BoundsCenter, hit.Point), hit.Point));
+                }
+                candidatesByDistance.Sort((a, b) => a.Fraction != b.Fraction ? a.Fraction.CompareTo(b.Fraction) :
+                    a.Distance != b.Distance ? a.Distance.CompareTo(b.Distance) : a.Record.Handle.Id.CompareTo(b.Record.Handle.Id));
+                foreach (var candidate in candidatesByDistance)
+                {
+                    if (weapon == null || weapon.RemainingAttackTargets <= 0) break;
+                    CombatDamageContext hit = context;
+                    hit.HitPoint = candidate.Point;
+                    ApplyWeaponHit(candidate.Record, weapon, hit);
+                }
             }
-            var candidatesByDistance = new List<(Record Record, float Fraction, float Distance, Vector2 Point)>();
-            for (int i = 0; i < colliderHits.Count; i++)
-            {
-                CombatColliderHit2D hit = colliderHits[i];
-                Record record = recordsByCollider[hit.CandidateId];
-                candidatesByDistance.Add((record, hit.Fraction,
-                    WorldTopologyRuntime.SqrDistance((Vector2)shape.BoundsCenter, hit.Point), hit.Point));
-            }
-            candidatesByDistance.Sort((a, b) => a.Fraction != b.Fraction ? a.Fraction.CompareTo(b.Fraction) :
-                a.Distance != b.Distance ? a.Distance.CompareTo(b.Distance) : a.Record.Handle.Id.CompareTo(b.Record.Handle.Id));
-            foreach (var candidate in candidatesByDistance)
-            {
-                if (weapon == null || weapon.RemainingAttackTargets <= 0) break;
-                CombatDamageContext hit = context;
-                hit.HitPoint = candidate.Point;
-                ApplyWeaponHit(candidate.Record, weapon, hit);
-            }
+            finally { buffers.Clear(); weaponQueryPool.Push(buffers); }
         }
 
         /// <summary>受击盒查询与真实物理接触共用资格、窗口预约和 ECS 生命提交，禁止重复扣血。</summary>

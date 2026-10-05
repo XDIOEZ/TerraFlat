@@ -31,6 +31,11 @@ namespace FlatWorld.NaturalEntities
         }
 
         private static readonly List<int> endedPlants = new();
+        private static readonly HashSet<int> pendingPublications = new();
+        private static readonly List<int> publicationBatch = new();
+        private static readonly HashSet<Record> canopySources = new();
+        private static readonly List<Record> canopyBatch = new();
+        private static ulong lastCapabilityVersion = ulong.MaxValue;
         private static readonly Dictionary<Vector2Int, int> cultivatedCells = new();
 
         public static void BindRemovalHandler(NaturalEntityHandle handle, Action<NaturalEntityHandle> removed)
@@ -201,15 +206,17 @@ namespace FlatWorld.NaturalEntities
                 Entity entity = simulation.GetEntity(id);
                 var component = new EntityCanopyFruitModule { State = state ?? new CanopyFruitState() };
                 if (simulation.Manager.HasComponent<EntityCanopyFruitModule>(entity))
-                    simulation.Manager.GetComponentObject<EntityCanopyFruitModule>(entity).State = component.State;
+                    simulation.Manager.SetComponentData(entity, component);
                 else simulation.Manager.AddComponentObject(entity, component);
                 record.CanopyWasLive = false;
+                canopySources.Add(record);
             }
             else
             {
                 Entity entity = simulation.GetEntity(id);
                 if (simulation.Manager.HasComponent<EntityCanopyFruitModule>(entity))
                     simulation.Manager.RemoveComponent<EntityCanopyFruitModule>(entity);
+                canopySources.Remove(record);
             }
         }
 
@@ -272,7 +279,7 @@ namespace FlatWorld.NaturalEntities
                 soil.Available = 1; soil.Water = source.waterValue; soil.MaxWater = source.maxWater;
                 soil.Fertility = source.Fertility; soil.MaxFertility = source.maxFertility;
             }
-            simulation.Set(record.Handle.Id, soil);
+            simulation.Set(record.Handle.Id, soil, notifyChanged: false);
         }
 
         private static void CommitSoil(Record record)
@@ -286,7 +293,7 @@ namespace FlatWorld.NaturalEntities
                 target.ConsumeFertility(soil.UsedFertility); FarmlandSystem.CommitSoil(target);
             }
             soil.AddedWater = soil.UsedWater = soil.UsedFertility = 0f;
-            simulation.Set(record.Handle.Id, soil);
+            simulation.Set(record.Handle.Id, soil, notifyChanged: false);
         }
 
         private static void PublishEntities(float deltaTime)
@@ -294,12 +301,21 @@ namespace FlatWorld.NaturalEntities
             if (simulation == null || !GameNetwork.HasStateAuthority) return;
             bool hasClock = ReadClock(out _, out double now);
             endedPlants.Clear();
-            foreach (Record record in records.Values)
+            // Job 批次才扫描资源结果，其余帧只消费即时写入和短期树冠事件。
+            if (lastCapabilityVersion != WorldEntityRuntime.CapabilityVersion)
             {
+                lastCapabilityVersion = WorldEntityRuntime.CapabilityVersion;
+                foreach (int id in records.Keys) pendingPublications.Add(id);
+            }
+            publicationBatch.Clear();
+            publicationBatch.AddRange(pendingPublications);
+            pendingPublications.Clear();
+            foreach (int id in publicationBatch)
+            {
+                if (!records.TryGetValue(id, out Record record)) continue;
                 CommitSoil(record);
                 NaturalEntityBody body = simulation.GetBody(record.Handle.Id);
                 if (body.Dead != 0) { endedPlants.Add(record.Handle.Id); continue; }
-                if (hasClock && record.Profile.Canopy != null) AdvanceCanopy(record, now);
                 if (body.VisualVersion != record.PresentedRevision)
                     MarkPresentationDirty(record);
                 if (body.VisualVersion != record.IndexedRevision)
@@ -323,12 +339,31 @@ namespace FlatWorld.NaturalEntities
                     }
                 }
             }
+            publicationBatch.Clear();
+            if (hasClock && canopySources.Count > 0)
+            {
+                canopyBatch.Clear();
+                canopyBatch.AddRange(canopySources);
+                foreach (Record record in canopyBatch)
+                    if (Contains(record.Handle) && simulation.GetBody(record.Handle.Id).Dead == 0)
+                        AdvanceCanopy(record, now);
+                canopyBatch.Clear();
+            }
             foreach (int id in endedPlants)
             {
                 if (!records.TryGetValue(id, out Record record)) continue;
                 PublishDeath(record);
+                if (Contains(record.Handle)) QueuePublication(id);
             }
             endedPlants.Clear();
+        }
+
+        private static void QueuePublication(int id) => pendingPublications.Add(id);
+
+        /// <summary>外部能力修改生命、位置或外观后通知桥接，只提交该实体的变化。</summary>
+        public static void NotifyChanged(NaturalEntityHandle handle)
+        {
+            if (Contains(handle)) QueuePublication(handle.Id);
         }
 
         private static void ValidateOutputDefinitions(NaturalEntityEcsProfile profile)
@@ -352,6 +387,7 @@ namespace FlatWorld.NaturalEntities
 
         private static void ClearResourceQueries()
         {
+            weaponQueryPool.Clear();
             spatialCells.Clear(); cultivatedCells.Clear(); endedPlants.Clear();
             queryLists.Clear(); spatialQuerySequence = 0;
             canopyHits.Clear(); canopyReceivers.Clear();

@@ -64,67 +64,77 @@ namespace FlatWorld.NaturalEntities
     {
         #region 能力配置编译
 
-        private static bool TryCompilePlantModule(RuntimeItemModuleDefinition module, NaturalEntityEcsProfile profile,
-            out bool recognized, out string reason)
+        private static bool CompileCrop(RuntimeItemModuleDefinition module, NaturalEntityEcsProfile profile, out string reason)
         {
             reason = null;
-            recognized = true;
-            string id = module.PrefabId;
-            switch (id)
+            if (profile.HasGrowth) { reason = "同一植物只能有一个成长权威。"; return false; }
+            JObject p = ParseParameters(module, out reason);
+            if (p == null) return false;
+            float duration = p.Value<float?>("growthDurationSeconds") ?? 500f;
+            if (!FinitePositive(duration)) { reason = "作物成熟时间必须为有限正数。"; return false; }
+            profile.CropModuleName = module.StableName;
+            profile.CropDefaults = DeserializeConfiguration<CropRuntimeData>(p["Data"]) ?? new CropRuntimeData();
+            profile.GrowthDefaults = new GrowData
             {
-                case "Module_Crop":
-                {
-                    if (profile.HasGrowth) { reason = "同一植物只能有一个成长权威。"; return false; }
-                    JObject p = ParseParameters(module, out reason);
-                    if (p == null) return false;
-                    float duration = p.Value<float?>("growthDurationSeconds") ?? 500f;
-                    if (!FinitePositive(duration)) { reason = "作物成熟时间必须为有限正数。"; return false; }
-                    profile.CropModuleName = module.StableName;
-                    profile.CropDefaults = DeserializeConfiguration<CropRuntimeData>(p["Data"]) ?? new CropRuntimeData();
-                    profile.GrowthDefaults = new GrowData
-                    {
-                        MaxGrowProgress = 1f, GrowSpeed = 1f / duration,
-                        GrowProgress = profile.CropDefaults.stage == CropStage.Mature ? 1f : profile.CropDefaults.normalizedGrowth,
-                        growState_Value = new List<float> { 0f, 1f }, growState_Scale = new List<float> { 1f, 1f }
-                    };
-                    profile.GrowthHealthRatios = new[] { 1f, 1f };
-                    profile.RainGrowthBonus = p.Value<float?>("rainGrowthBonus") ?? 0.15f;
-                    profile.Soil = ReadSoil(p);
-                    profile.Capabilities |= NaturalEntityCapability.Growth;
-                    return true;
-                }
-                case "Module_CropYield":
-                    profile.HarvestOutputs = DeserializeConfiguration<List<CropYieldEntry>>(ParseParameters(module, out reason)?["outputs"]);
-                    return profile.HarvestOutputs != null;
-                case "Module_CropVisual":
-                    profile.CropVisual = DeserializeConfiguration<ResourceCropVisualDefinition>(ParseParameters(module, out reason));
-                    return profile.CropVisual != null;
-                case "Module_Collectable":
-                    if (profile.Collection != null) { reason = "资源库存能力重复。"; return false; }
-                    profile.Collection = DeserializeConfiguration<ResourceCollectionDefinition>(ParseParameters(module, out reason));
-                    profile.StockModuleName = module.StableName;
-                    return profile.Collection != null;
-                case "Module_Production":
-                {
-                    if (profile.Production != null) { reason = "生产能力重复。"; return false; }
-                    JObject p = ParseParameters(module, out reason);
-                    profile.Production = DeserializeConfiguration<List<Mod_Production.ItemProductionData>>(p?["ProductionList"]);
-                    profile.ProductionSpeed = p?.Value<float?>("ProductionSpeed") ?? 1f;
-                    profile.ProductionUsesGrowthDifficulty = p?.Value<bool?>("UseCropGrowthMultiplier") ?? false;
-                    profile.ProductionModuleName = module.StableName;
-                    return profile.Production != null;
-                }
-                case "Module_CanopyFruit":
-                    profile.Canopy = DeserializeConfiguration<ResourceCanopyDefinition>(ParseParameters(module, out reason));
-                    profile.CanopyModuleName = module.StableName;
-                    return profile.Canopy != null;
-                case "Module_TemperatureYield":
-                    profile.TemperatureYield = DeserializeConfiguration<ResourceTemperatureYieldDefinition>(ParseParameters(module, out reason));
-                    return profile.TemperatureYield != null;
-                default:
-                    recognized = false;
-                    return false;
-            }
+                MaxGrowProgress = 1f, GrowSpeed = 1f / duration,
+                GrowProgress = profile.CropDefaults.stage == CropStage.Mature ? 1f : profile.CropDefaults.normalizedGrowth,
+                growState_Value = new List<float> { 0f, 1f }, growState_Scale = new List<float> { 1f, 1f }
+            };
+            profile.GrowthHealthRatios = new[] { 1f, 1f };
+            profile.RainGrowthBonus = p.Value<float?>("rainGrowthBonus") ?? 0.15f;
+            profile.Soil = ReadSoil(p);
+            profile.Capabilities |= NaturalEntityCapability.Growth;
+            return true;
+        }
+
+        private static bool CompileCropYield(RuntimeItemModuleDefinition module, NaturalEntityEcsProfile profile, out string reason)
+        {
+            reason = null;
+            profile.HarvestOutputs = DeserializeConfiguration<List<CropYieldEntry>>(ParseParameters(module, out reason)?["outputs"]);
+            return profile.HarvestOutputs != null;
+        }
+
+        private static bool CompileCropVisual(RuntimeItemModuleDefinition module, NaturalEntityEcsProfile profile, out string reason)
+        {
+            reason = null;
+            profile.CropVisual = DeserializeConfiguration<ResourceCropVisualDefinition>(ParseParameters(module, out reason));
+            return profile.CropVisual != null;
+        }
+
+        private static bool CompileCollectable(RuntimeItemModuleDefinition module, NaturalEntityEcsProfile profile, out string reason)
+        {
+            reason = null;
+            if (profile.Collection != null) { reason = "资源库存能力重复。"; return false; }
+            profile.Collection = DeserializeConfiguration<ResourceCollectionDefinition>(ParseParameters(module, out reason));
+            profile.StockModuleName = module.StableName;
+            return profile.Collection != null;
+        }
+
+        private static bool CompileProduction(RuntimeItemModuleDefinition module, NaturalEntityEcsProfile profile, out string reason)
+        {
+            reason = null;
+            if (profile.Production != null) { reason = "生产能力重复。"; return false; }
+            JObject p = ParseParameters(module, out reason);
+            profile.Production = DeserializeConfiguration<List<Mod_Production.ItemProductionData>>(p?["ProductionList"]);
+            profile.ProductionSpeed = p?.Value<float?>("ProductionSpeed") ?? 1f;
+            profile.ProductionUsesGrowthDifficulty = p?.Value<bool?>("UseCropGrowthMultiplier") ?? false;
+            profile.ProductionModuleName = module.StableName;
+            return profile.Production != null;
+        }
+
+        private static bool CompileCanopyFruit(RuntimeItemModuleDefinition module, NaturalEntityEcsProfile profile, out string reason)
+        {
+            reason = null;
+            profile.Canopy = DeserializeConfiguration<ResourceCanopyDefinition>(ParseParameters(module, out reason));
+            profile.CanopyModuleName = module.StableName;
+            return profile.Canopy != null;
+        }
+
+        private static bool CompileTemperatureYield(RuntimeItemModuleDefinition module, NaturalEntityEcsProfile profile, out string reason)
+        {
+            reason = null;
+            profile.TemperatureYield = DeserializeConfiguration<ResourceTemperatureYieldDefinition>(ParseParameters(module, out reason));
+            return profile.TemperatureYield != null;
         }
 
         private static EntityPlantSoil ReadSoil(JObject p) => new()

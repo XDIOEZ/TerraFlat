@@ -8,6 +8,7 @@ using Newtonsoft.Json.Linq;
 using UnityEngine;
 using UnityEngine.ResourceManagement.AsyncOperations;
 using FlatWorld.Localization;
+using FlatWorld.NaturalEntities;
 using FlatWorld.WorldModel;
 #if UNITY_EDITOR
 using UnityEditor;
@@ -932,19 +933,29 @@ public static class ItemDefinitionCatalogLoader
             if (string.IsNullOrWhiteSpace(moduleName) || string.IsNullOrWhiteSpace(moduleId))
                 throw new InvalidDataException($"物品 {id} 包含空模块名或 prefab");
 
-            Module prototype = ResolveModulePrototype(gameRes, shell, moduleId);
-            if (prototype?._Data == null)
-                throw new InvalidDataException($"物品 {id} 找不到模块 Prefab/外壳模块：{moduleId}");
-
-            // 以 object 作为泛型实参，避免深拷贝按 ModuleData 静态类型退化为错误的 Ex_ModData。
-            ModuleData moduleData = FastCloner.FastCloner.DeepClone<object>(prototype._Data) as ModuleData;
-            if (moduleData == null || moduleData.GetType() != prototype._Data.GetType())
-                throw new InvalidDataException(
-                    $"物品 {id} 的模块 {moduleName} 数据类型复制失败：期望 {prototype._Data.GetType().Name}，实际 {moduleData?.GetType().Name ?? "null"}");
+            bool resourceExtension = string.Equals(dto.EntityRuntime?.Trim(), "resource", StringComparison.OrdinalIgnoreCase) &&
+                ResourceEntityCapabilityRegistry.IsRegistered(moduleId);
+            Module prototype = resourceExtension ? null : ResolveModulePrototype(gameRes, shell, moduleId);
+            ModuleData moduleData;
+            if (resourceExtension)
+            {
+                // 纯 ECS 扩展使用本体已支持存档的通用状态，无需制作 Module GameObject。
+                moduleData = new Ex_ModData();
+            }
+            else
+            {
+                if (prototype?._Data == null)
+                    throw new InvalidDataException($"物品 {id} 找不到模块 Prefab/外壳模块：{moduleId}");
+                // 以 object 作为泛型实参，避免深拷贝按 ModuleData 静态类型退化为错误的 Ex_ModData。
+                moduleData = FastCloner.FastCloner.DeepClone<object>(prototype._Data) as ModuleData;
+                if (moduleData == null || moduleData.GetType() != prototype._Data.GetType())
+                    throw new InvalidDataException(
+                        $"物品 {id} 的模块 {moduleName} 数据类型复制失败：期望 {prototype._Data.GetType().Name}，实际 {moduleData?.GetType().Name ?? "null"}");
+            }
             PopulateModuleData(moduleDto.Data, moduleData, id, moduleName);
             moduleData.StableName = moduleName;
             moduleData.ModuleId = string.IsNullOrWhiteSpace(moduleDto.Id)
-                ? (!string.IsNullOrWhiteSpace(prototype._Data.ModuleId) ? prototype._Data.ModuleId : moduleId)
+                ? (!string.IsNullOrWhiteSpace(prototype?._Data?.ModuleId) ? prototype._Data.ModuleId : moduleId)
                 : moduleDto.Id.Trim();
             if (moduleDto.Enabled.HasValue)
                 moduleData.Enabled = moduleDto.Enabled.Value;
@@ -962,7 +973,8 @@ public static class ItemDefinitionCatalogLoader
                 lootTableBound = true;
             }
 
-            ModuleJsonConfigurator.Validate(prototype, id, moduleName, moduleData.ModuleId, parameters?.ToString(Formatting.None));
+            if (!resourceExtension)
+                ModuleJsonConfigurator.Validate(prototype, id, moduleName, moduleData.ModuleId, parameters?.ToString(Formatting.None));
             moduleParameters.Add(moduleName, parameters?.ToString(Formatting.None));
             modulePrefabIds.Add(moduleName, moduleId);
         }

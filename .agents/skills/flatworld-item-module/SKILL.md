@@ -111,7 +111,9 @@ description: "Use when: 定位或修改 FlatWorld 的 Item/Module 组合架构�
 - 旧 Item 返回型扩展只有在定义为 `passive` 时才通过 `ScheduleLegacyDrop` 在本轮模块更新完成后移交；`interactive` 不得被转换，避免在 Item.Load 的模块栈内丢失玩法能力。联机仍使用已有 Item 权威链。
 - 轻量掉落与完整 Item 的浮沉数值统一读取 `WorldItemWaterRules`；达到有效阈值即下沉，液体倍率只改变浮力阈值，水线、时长和水花曲线保持同一来源。
 - 轻量掉落物的物质温度与燃烧统一由 `DroppedItemRuntime.Matter` 低频分帧推进，按每个物品自己的实际间隔补算，新增/删除同步登记/清理时钟；不能用统一批次间隔少算后处理的物品。`DroppedItems.Tick.*` 区分运动、入水、输送、物质与拾取阶段。`matter.ignitionTemperature` 是显式燃点，已有引火物、木材和燃料标签可取得默认燃点。液体浮沉的 `WaterKind` 不能代表真实水接触，潮湿/灭火必须读取液体 `waterContact`，高温液体接触传热复用 `contactHeatingPerSecond`；燃烧表现只能挂池化粒子，禁止恢复逐物品脚本或 Update。
-- 自然实体的 `EntityManager.GetComponentData` 会完成对应组件写依赖，普通组件读取不要逐实体重复 `CompleteAllTrackedJobs`；生命周期、写入和可变 Buffer 的显式同步边界仍须保留。树冠批量发布共用一次世界时间采样。
+- 自然实体普通组件读写与 `GetBuffer` 使用 EntityManager 的组件依赖同步，不要逐实体 `CompleteAllTrackedJobs`；完整同步保留在创建、销毁和释放边界。资源输入运行器不调度 Job，不应等待整个 World；通用/植物 Job 在 `OnUpdate` 内合并本轮依赖后统一完成，不能在 `SystemBase.Update` 前写入新 Dependency，否则前置更新会提前等待。
+- 资源定义编译完整组件组合并缓存 Archetype，创建时一次配齐。结果发布按通用能力批次版本和即时脏实体队列处理，托管树冠时间线保持逐帧；外部改写本体生命、位置或外观后调用 `NaturalEntityEcsService.NotifyChanged(handle)`。
+- 自定义资源能力经 `ResourceEntityCapabilityRegistry.Register` 注册稳定模块地址，初始化/捕获/释放使用冻结定义与实例快照，运行器共用当前 World。原生组件不得覆盖本体权威；启动后加载的普通 C# MOD 状态用 `context.SetState/GetState<T>`，不能假设 Unity 已初始化的类型表会自动注册 DLL 新组件。示例见 `ModSDK/Examples/ResourceCapabilities/`。
 - 河流漂移的物品加速统一调用 `WorldItemWaterRules.ResolveDriftSpeed(kind, flow, stack)`，按 `Stack.CurrentWeight` 总重量只增加速度、不低于原速；浮沉仍用单件重量/体积比。双参数重载保留无重量基础流速供水面表现使用，不能把物品加速扩散到海流、角色或载具。
 - `Entities/DroppedItems/Core` 的旧 ECS 掉落实现保留为 Editor-only 学习参考，不参与正式游戏运行；菜单 `FlatWorld/诊断/学习参考/验证旧掉落物 ECS` 只验证这份参考实现。
 

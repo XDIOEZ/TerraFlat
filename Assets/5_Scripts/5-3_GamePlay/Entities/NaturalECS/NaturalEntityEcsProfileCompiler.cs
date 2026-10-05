@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using FlatWorld.AIECS;
+using Unity.Entities;
 
 namespace FlatWorld.NaturalEntities
 {
@@ -21,6 +23,9 @@ namespace FlatWorld.NaturalEntities
         public PlantClimateConfig Climate;
         public ResourceHarvestConfig Harvest;
         public ContactDamageSettings ContactDamage;
+        public ComponentType[] ComponentTypes;
+        public ulong RegistryRevision;
+        public readonly List<CompiledResourceCapability> Extensions = new();
         public bool HasGrowth => (Capabilities & NaturalEntityCapability.Growth) != 0;
         public bool HasClimate => (Capabilities & NaturalEntityCapability.Climate) != 0;
     }
@@ -66,6 +71,25 @@ namespace FlatWorld.NaturalEntities
     {
         #region 编译入口
 
+        private delegate bool BuiltinCompiler(RuntimeItemModuleDefinition module, NaturalEntityEcsProfile profile, out string reason);
+        private static readonly Dictionary<string, BuiltinCompiler> builtins = new(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Module_DamageReciver"] = CompileHealth,
+            ["Module_Growth"] = CompileGrowth,
+            ["Module_PlantClimate"] = CompileClimate,
+            ["Module_ResourceHarvest"] = CompileHarvest,
+            ["Module_ContactDamage"] = CompileContactDamage,
+            ["Module_Crop"] = CompileCrop,
+            ["Module_CropYield"] = CompileCropYield,
+            ["Module_CropVisual"] = CompileCropVisual,
+            ["Module_Collectable"] = CompileCollectable,
+            ["Module_Production"] = CompileProduction,
+            ["Module_CanopyFruit"] = CompileCanopyFruit,
+            ["Module_TemperatureYield"] = CompileTemperatureYield
+        };
+
+        internal static bool HasBuiltin(string prefabId) => builtins.ContainsKey(prefabId);
+
         public static bool TryCompile(RuntimeItemDefinition definition,
             out NaturalEntityEcsProfile profile, out string reason)
         {
@@ -93,48 +117,22 @@ namespace FlatWorld.NaturalEntities
                     continue;
 
                 string prefab = module.PrefabId?.Trim() ?? string.Empty;
-                if (TryCompilePlantModule(module, result, out bool recognized, out reason)) continue;
-                if (recognized) return false;
-                if (string.Equals(prefab, "Module_DamageReciver", StringComparison.OrdinalIgnoreCase))
+                if (builtins.TryGetValue(prefab, out BuiltinCompiler compile))
                 {
-                    if (!CompileHealth(module, result, out reason))
+                    if (!compile(module, result, out reason))
+                    {
+                        reason = $"模块 {module.StableName}/{prefab} 配置无效：{reason}";
                         return false;
+                    }
                     continue;
                 }
-
-                if (string.Equals(prefab, "Module_Growth", StringComparison.OrdinalIgnoreCase))
+                if (ResourceEntityCapabilityRegistry.TryCompile(module, out CompiledResourceCapability extension,
+                    out bool recognized, out reason))
                 {
-                    if (!CompileGrowth(module, result, out reason))
-                        return false;
+                    result.Extensions.Add(extension);
                     continue;
                 }
-
-                if (string.Equals(prefab, "Module_PlantClimate", StringComparison.OrdinalIgnoreCase))
-                {
-                    if (!CompileClimate(module, result, out reason))
-                        return false;
-                    continue;
-                }
-
-                if (string.Equals(prefab, "Module_ResourceHarvest", StringComparison.OrdinalIgnoreCase))
-                {
-                    if (!CompileHarvest(module, result, out reason))
-                        return false;
-                    continue;
-                }
-
-                if (string.Equals(prefab, "Module_ContactDamage", StringComparison.OrdinalIgnoreCase))
-                {
-                    if (result.ContactDamage != null) { reason = "接触伤害能力重复。"; return false; }
-                    JObject parameters = ParseParameters(module, out reason);
-                    if (parameters == null) return false;
-                    result.ContactDamage = DeserializeConfiguration<ContactDamageSettings>(parameters["Settings"])
-                        ?? new ContactDamageSettings();
-                    if (!result.ContactDamage.TryValidate(out reason)) return false;
-                    continue;
-                }
-
-                reason = $"模块 {module.StableName}/{prefab} 尚未提供 ECS 能力实现";
+                if (!recognized) reason = $"模块 {module.StableName}/{prefab} 尚未提供 ECS 能力实现";
                 return false;
             }
 
@@ -154,6 +152,8 @@ namespace FlatWorld.NaturalEntities
             }
 
             if (!ValidatePlantComposition(result, out reason)) return false;
+            if (!BuildComponentTypes(result, out reason)) return false;
+            result.RegistryRevision = ResourceEntityCapabilityRegistry.Revision;
             profile = result;
             return true;
         }
@@ -161,6 +161,65 @@ namespace FlatWorld.NaturalEntities
         #endregion
 
         #region 模块编译
+
+        private static bool CompileContactDamage(RuntimeItemModuleDefinition module, NaturalEntityEcsProfile profile, out string reason)
+        {
+            reason = null;
+            if (profile.ContactDamage != null) { reason = "接触伤害能力重复。"; return false; }
+            JObject parameters = ParseParameters(module, out reason);
+            if (parameters == null) return false;
+            profile.ContactDamage = DeserializeConfiguration<ContactDamageSettings>(parameters["Settings"]) ?? new ContactDamageSettings();
+            return profile.ContactDamage.TryValidate(out reason);
+        }
+
+        private static bool BuildComponentTypes(NaturalEntityEcsProfile profile, out string reason)
+        {
+            reason = null;
+            var types = new List<ComponentType>
+            {
+                ComponentType.ReadWrite<NaturalEntityLocation>(), ComponentType.ReadWrite<EntityModuleAppearance>(),
+                ComponentType.ReadWrite<EntityModuleActive>()
+            };
+            if (profile.HealthDefaults != null) types.Add(ComponentType.ReadWrite<AiecsVital>());
+            if (profile.HasGrowth)
+            {
+                types.Add(ComponentType.ReadWrite<EntityGrowth>());
+                types.Add(ComponentType.ReadWrite<EntityPlantLifecycle>());
+                types.Add(ComponentType.ReadWrite<EntityPlantSoil>());
+            }
+            if (profile.HasClimate) types.Add(ComponentType.ReadWrite<EntityClimate>());
+            if ((profile.Capabilities & NaturalEntityCapability.Harvest) != 0) types.Add(ComponentType.ReadWrite<EntityHarvestRequirement>());
+            if (profile.Collection != null)
+            {
+                types.Add(ComponentType.ReadWrite<EntityResourceStock>());
+                types.Add(ComponentType.ReadWrite<EntityStockProduction>());
+            }
+            if (profile.Canopy != null) types.Add(ComponentType.ReadWrite<EntityCanopyFruitModule>());
+            if (profile.Extensions.Count > 0) types.Add(ComponentType.ReadWrite<ResourceEntityExtensionState>());
+            var reserved = new HashSet<Type>
+            {
+                typeof(NaturalEntityLocation), typeof(EntityModuleAppearance), typeof(EntityModuleActive), typeof(AiecsVital),
+                typeof(EntityGrowth), typeof(EntityClimate), typeof(EntityHarvestRequirement), typeof(EntityPlantLifecycle),
+                typeof(EntityPlantSoil), typeof(EntityResourceStock), typeof(EntityStockProduction), typeof(EntityCanopyFruitModule),
+                typeof(ResourceEntityExtensionState)
+            };
+            var extensionTypes = new HashSet<Type>();
+            foreach (CompiledResourceCapability extension in profile.Extensions)
+                foreach (ComponentType type in extension.Capability.Types)
+                {
+                    Type managed = type.GetManagedType();
+                    if (type.AccessModeType == ComponentType.AccessMode.Exclude || managed == null ||
+                        (!typeof(IComponentData).IsAssignableFrom(managed) && !typeof(IBufferElementData).IsAssignableFrom(managed)) ||
+                        reserved.Contains(managed) || !extensionTypes.Add(managed))
+                    {
+                        reason = $"扩展 {extension.Module.StableName} 的组件 {managed?.Name} 无效、重复或覆盖本体权威。";
+                        return false;
+                    }
+                    types.Add(ComponentType.ReadWrite(managed));
+                }
+            profile.ComponentTypes = types.ToArray();
+            return true;
+        }
 
         private static bool CompileHealth(RuntimeItemModuleDefinition module,
             NaturalEntityEcsProfile profile, out string reason)

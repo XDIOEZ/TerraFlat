@@ -41,6 +41,7 @@ public static class WorldEntityRuntime
     private static float capabilitySeconds;
     private const float CapabilityInterval = 0.25f;
     public static ulong Generation { get; private set; } = 1;
+    public static ulong CapabilityVersion { get; private set; }
     public static World Current => world != null && world.IsCreated ? world : null;
     public static int ModuleCount => modules.Count;
     public static int FailedModuleCount => failed.Count;
@@ -85,7 +86,7 @@ public static class WorldEntityRuntime
             throw new InvalidOperationException("不能把能力运行器登记到已经失效的实体世界。");
         if (modules.Contains(module)) return;
         foreach (IWorldEntityRuntimeModule existing in modules)
-            if (existing.RuntimeModuleId == module.RuntimeModuleId)
+            if (string.Equals(existing.RuntimeModuleId, module.RuntimeModuleId, StringComparison.OrdinalIgnoreCase))
                 throw new InvalidOperationException("实体能力运行器重复：" + module.RuntimeModuleId);
         modules.Add(module);
         dispatch = modules.ToArray();
@@ -119,13 +120,22 @@ public static class WorldEntityRuntime
             try
             {
                 module.TickEntities(deltaTime);
-                module.CompleteEntityJobs();
             }
             catch (Exception exception)
             {
                 // 失败能力保留状态供保存/排查，只停止它的后续 Tick，避免反复错误和静默丢实体。
                 failed.Add(module);
                 Debug.LogError($"[WorldEntityRuntime] 能力 {module.RuntimeModuleId} 已停止推进：{exception}");
+            }
+        }
+        // 全部运行器提交后才进入共同完成边界，允许无冲突任务先排入依赖链。
+        foreach (IWorldEntityRuntimeModule module in currentDispatch)
+        {
+            if (!modules.Contains(module)) continue;
+            try { module.CompleteEntityJobs(); }
+            catch (Exception exception)
+            {
+                if (failed.Add(module)) Debug.LogError($"[WorldEntityRuntime] 能力收尾失败 {module.RuntimeModuleId}：{exception}");
             }
         }
         TickCommonCapabilities(deltaTime);
@@ -169,7 +179,6 @@ public static class WorldEntityRuntime
         };
         UpdateSeasonSnapshot(clock);
         capabilities.Update();
-        capabilities.Complete();
         plants.StepSeconds = capabilities.StepSeconds;
         plants.GameTime = capabilities.GameTime;
         plants.DayLength = capabilities.DayLength;
@@ -178,8 +187,10 @@ public static class WorldEntityRuntime
         plants.WeatherMultiplier = capabilities.WeatherMultiplier;
         plants.RainGrowthIntensity = capabilities.RainIntensity;
         plants.RainIntensity = weather != null && (weather.CurrentWeather == WeatherType.Rain || weather.CurrentWeather == WeatherType.Storm) ? intensity : 0f;
-        plants.Update();
-        plants.Complete();
+        plants.DependOn(capabilities.PendingJobs);
+        try { plants.Update(); }
+        finally { plants.Complete(); }
+        CapabilityVersion++;
     }
 
     private static void UpdateSeasonSnapshot(TimeData clock)
@@ -232,6 +243,7 @@ public static class WorldEntityRuntime
             plants = null;
             seasonPeriods = null;
             capabilitySeconds = 0f;
+            CapabilityVersion = 0;
             DevelopmentSuspended = false;
             terrainWorld = null;
             save = null;

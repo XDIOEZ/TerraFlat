@@ -127,6 +127,9 @@ namespace FlatWorld.AIECS
 
         protected override void OnUpdate()
         {
+            // 在 OnUpdate 内合并本轮输入，避免 SystemBase 的前置更新把新任务提前 Complete。
+            Dependency = Unity.Jobs.JobHandle.CombineDependencies(Dependency, inputDependency);
+            inputDependency = default;
             if (!plants.IsEmptyIgnoreFilter)
                 Dependency = new PlantJob
                 {
@@ -143,7 +146,10 @@ namespace FlatWorld.AIECS
                 }.ScheduleParallel(stocks, Dependency);
         }
 
-        public void Complete() => Dependency.Complete();
+        private Unity.Jobs.JobHandle inputDependency;
+        public void Complete() => Unity.Jobs.JobHandle.CombineDependencies(Dependency, inputDependency).Complete();
+        public void DependOn(Unity.Jobs.JobHandle jobs) =>
+            inputDependency = Unity.Jobs.JobHandle.CombineDependencies(inputDependency, jobs);
         protected override void OnDestroy() { Complete(); if (seasons.IsCreated) seasons.Dispose(); }
 
         [BurstCompile]

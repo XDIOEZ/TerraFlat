@@ -38,6 +38,7 @@ namespace FlatWorld.NaturalEntities
         {
             public NaturalEntityEcsProfile Profile;
             public string Reason;
+            public ulong RegistryRevision;
             public bool Supported => Profile != null;
         }
 
@@ -52,7 +53,8 @@ namespace FlatWorld.NaturalEntities
         {
             public string RuntimeModuleId => "entity.resource-inputs";
             public void TickEntities(float deltaTime) => Tick(deltaTime);
-            public void CompleteEntityJobs() => simulation?.Complete();
+            // 输入准备只使用同步 EntityManager API，没有独立 Job 需要等待。
+            public void CompleteEntityJobs() { }
             public void ReleaseEntities() => ReleaseWorld();
             public void AfterEntitySimulation(float deltaTime)
             {
@@ -107,11 +109,17 @@ namespace FlatWorld.NaturalEntities
             GameplayCombatBridge.Unregister(runtimeModule);
             foreach (Record record in records.Values)
             {
+                ReleaseExtensionModules(record);
                 UnregisterNavigation(record);
                 ReleasePresentation(record);
             }
             records.Clear();
             ClearContactDamageSources();
+            pendingPublications.Clear();
+            publicationBatch.Clear();
+            canopySources.Clear();
+            canopyBatch.Clear();
+            lastCapabilityVersion = ulong.MaxValue;
             simulation?.Dispose();
             simulation = null;
             profiles.Clear();
@@ -161,6 +169,7 @@ namespace FlatWorld.NaturalEntities
             {
                 var world = WorldEntityRuntime.GetOrCreate(dimensionId);
                 simulation = new NaturalEntitySimulation(world);
+                simulation.Changed += QueuePublication;
                 WorldEntityRuntime.Register(world, runtimeModule);
                 GameplayCombatBridge.Register(runtimeModule);
             }
@@ -187,13 +196,15 @@ namespace FlatWorld.NaturalEntities
                     out NaturalEntityClimate? climate,
                     out NaturalEntityHarvest? harvest);
                 body.Suspended = (byte)(GameNetwork.HasStateAuthority ? 0 : 1);
-                simulation.Create(runtimeId, body, health, growth, climate, harvest);
+                simulation.Create(profile, runtimeId, body, health, growth, climate, harvest);
                 records.Add(runtimeId, record);
                 InstallPlantModules(record, persistedData, plantedCell.HasValue);
+                InstallExtensionModules(record, plantedCell.HasValue);
                 FreezeEnvironment(record);
                 FreezeSoil(record);
                 TryRegisterNavigation(record);
                 RegisterSpatial(record);
+                QueuePublication(runtimeId);
                 return true;
             }
             catch
@@ -213,9 +224,12 @@ namespace FlatWorld.NaturalEntities
         {
             if (!Contains(handle) || !records.TryGetValue(handle.Id, out Record record))
                 return;
+            ReleaseExtensionModules(record);
             UnregisterNavigation(record);
             UnregisterSpatial(record);
             RemoveContactDamageSource(record);
+            canopySources.Remove(record);
+            pendingPublications.Remove(handle.Id);
             ReleasePresentation(record);
             if (simulation.TryGet(handle.Id, out EntityPlantLifecycle plant) && plant.Cultivated != 0)
             {
@@ -279,6 +293,7 @@ namespace FlatWorld.NaturalEntities
             if (harvest.HasValue) simulation.Set(handle.Id, harvest.Value);
             else simulation.RemoveComponent<NaturalEntityHarvest>(handle.Id);
             InstallPlantModules(record, snapshot, false);
+            InstallExtensionModules(record, false);
             MarkPresentationDirty(record);
 
             if (nextBody.Suspended == 0)
@@ -295,7 +310,8 @@ namespace FlatWorld.NaturalEntities
         {
             if (!Contains(handle)) return false;
             Record record = records[handle.Id];
-            if (ReferenceEquals(record.Profile.Definition, definition)) return true;
+            if (ReferenceEquals(record.Profile.Definition, definition) &&
+                record.Profile.RegistryRevision == ResourceEntityCapabilityRegistry.Revision) return true;
             if (!TryGetProfile(definition, out NaturalEntityEcsProfile replacement, out _)) return false;
             ValidateOutputDefinitions(replacement);
             if (!TryCapture(handle, out ItemData snapshot)) return false;
@@ -352,6 +368,7 @@ namespace FlatWorld.NaturalEntities
             Record record = records[handle.Id];
             WriteHotState(record, record.Snapshot);
             WritePlantState(record, record.Snapshot);
+            CaptureExtensionModules(record);
             snapshot = FastCloner.FastCloner.DeepClone(record.Snapshot);
             return true;
         }
@@ -370,6 +387,7 @@ namespace FlatWorld.NaturalEntities
             Record record = records[handle.Id];
             WriteHotState(record, record.Snapshot);
             WritePlantState(record, record.Snapshot);
+            CaptureExtensionModules(record);
             snapshot = record.Snapshot;
             Remove(handle);
             return snapshot != null;
@@ -625,7 +643,7 @@ namespace FlatWorld.NaturalEntities
                 climate.BaselineCelsius = baseline;
                 climate.EnvironmentReady = 1;
             }
-            simulation.Set(record.Handle.Id, climate);
+            simulation.Set(record.Handle.Id, climate, notifyChanged: false);
         }
 
         private static void WriteHotState(Record record, ItemData data)
@@ -757,16 +775,18 @@ namespace FlatWorld.NaturalEntities
             reason = null;
             if (definition == null)
                 return false;
-            if (!profiles.TryGetValue(definition, out CompileCacheEntry entry))
+            if (!profiles.TryGetValue(definition, out CompileCacheEntry entry) ||
+                entry.RegistryRevision != ResourceEntityCapabilityRegistry.Revision)
             {
                 bool supported = NaturalEntityEcsProfileCompiler.TryCompile(
                     definition, out NaturalEntityEcsProfile compiled, out string failure);
                 entry = new CompileCacheEntry
                 {
                     Profile = supported ? compiled : null,
-                    Reason = supported ? null : failure
+                    Reason = supported ? null : failure,
+                    RegistryRevision = ResourceEntityCapabilityRegistry.Revision
                 };
-                profiles.Add(definition, entry);
+                profiles[definition] = entry;
             }
             profile = entry.Profile;
             reason = entry.Reason;

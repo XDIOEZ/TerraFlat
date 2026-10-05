@@ -138,6 +138,7 @@ namespace FlatWorld.AIECS
         }
 
         public void Complete() => Dependency.Complete();
+        public Unity.Jobs.JobHandle PendingJobs => Dependency;
 
         protected override void OnDestroy()
         {

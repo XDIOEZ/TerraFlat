@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <AssemblyName>Example.ResourceCapabilities</AssemblyName>
+    <GameManagedDirectory Condition="'$(GameManagedDirectory)' == ''">$(MSBuildThisFileDirectory)..\..\..\Library\ScriptAssemblies</GameManagedDirectory>
+    <GamePlayDllPath Condition="'$(GamePlayDllPath)' == ''">$(GameManagedDirectory)\GamePlay.dll</GamePlayDllPath>
+    <NewtonsoftJsonPath Condition="'$(NewtonsoftJsonPath)' == ''">$(GameManagedDirectory)\Newtonsoft.Json.dll</NewtonsoftJsonPath>
+    <UnityEngineCorePath Condition="'$(UnityEngineCorePath)' == ''">$(GameManagedDirectory)\UnityEngine.CoreModule.dll</UnityEngineCorePath>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="GamePlay"><HintPath>$(GamePlayDllPath)</HintPath><Private>false</Private></Reference>
+    <Reference Include="Data"><HintPath>$(GameManagedDirectory)\Data.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Unity.Entities"><HintPath>$(GameManagedDirectory)\Unity.Entities.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Newtonsoft.Json"><HintPath>$(NewtonsoftJsonPath)</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.CoreModule"><HintPath>$(UnityEngineCorePath)</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
+  <Target Name="CreateModPackage" AfterTargets="Build">
+    <MakeDir Directories="$(MSBuildProjectDirectory)\package\lib;$(MSBuildProjectDirectory)\package\Defs" />
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(MSBuildProjectDirectory)\package\lib" />
+    <Copy SourceFiles="$(MSBuildProjectDirectory)\manifest.json" DestinationFolder="$(MSBuildProjectDirectory)\package" />
+    <Copy SourceFiles="$(MSBuildProjectDirectory)\Defs\items.json" DestinationFolder="$(MSBuildProjectDirectory)\package\Defs" />
+  </Target>
+</Project>

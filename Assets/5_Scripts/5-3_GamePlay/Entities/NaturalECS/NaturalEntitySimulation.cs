@@ -69,6 +69,8 @@ namespace FlatWorld.NaturalEntities
 
         private readonly World world;
         private readonly Dictionary<int, Entity> entities = new();
+        private readonly Dictionary<NaturalEntityEcsProfile, EntityArchetype> archetypes = new();
+        public event Action<int> Changed;
         public NaturalEntitySimulation(World sharedWorld)
         {
             world = sharedWorld ?? throw new ArgumentNullException(nameof(sharedWorld));
@@ -83,12 +85,11 @@ namespace FlatWorld.NaturalEntities
 
         public DynamicBuffer<T> Buffer<T>(int id) where T : unmanaged, IBufferElementData
         {
-            Complete();
             Entity entity = entities[id];
             return Manager.HasComponent<T>(entity) ? Manager.GetBuffer<T>(entity) : Manager.AddBuffer<T>(entity);
         }
 
-        public void Create(int runtimeId, NaturalEntityBody body, AiecsVital? health,
+        public void Create(NaturalEntityEcsProfile profile, int runtimeId, NaturalEntityBody body, AiecsVital? health,
             EntityGrowth? growth, EntityClimate? climate, EntityHarvestRequirement? harvest)
         {
             Complete();
@@ -96,8 +97,13 @@ namespace FlatWorld.NaturalEntities
                 throw new ArgumentException("自然物运行时 ID 为空或重复。", nameof(runtimeId));
             if (!math.all(math.isfinite(body.Position)) || !math.all(math.isfinite(body.Scale)) ||
                 !math.isfinite(body.Rotation)) throw new ArgumentException("自然物姿态包含无效数值。");
-            Entity entity = Manager.CreateEntity(typeof(NaturalEntityLocation),
-                typeof(EntityModuleAppearance), typeof(EntityModuleActive));
+            // 模板缓存完整组件组合，新资源不再逐个追加能力造成多次结构搬移。
+            if (!archetypes.TryGetValue(profile, out EntityArchetype archetype))
+            {
+                archetype = Manager.CreateArchetype(profile.ComponentTypes);
+                archetypes.Add(profile, archetype);
+            }
+            Entity entity = Manager.CreateEntity(archetype);
             try
             {
                 Manager.SetComponentData(entity, new NaturalEntityLocation
@@ -109,11 +115,11 @@ namespace FlatWorld.NaturalEntities
                 {
                     AiecsVital vital = health.Value;
                     if (body.Dead != 0) { vital.Dead = 1; vital.Hp = 0f; }
-                    Manager.AddComponentData(entity, vital);
+                    Manager.SetComponentData(entity, vital);
                 }
-                if (growth.HasValue) Manager.AddComponentData(entity, growth.Value);
-                if (climate.HasValue) Manager.AddComponentData(entity, climate.Value);
-                if (harvest.HasValue) Manager.AddComponentData(entity, harvest.Value);
+                if (growth.HasValue) Manager.SetComponentData(entity, growth.Value);
+                if (climate.HasValue) Manager.SetComponentData(entity, climate.Value);
+                if (harvest.HasValue) Manager.SetComponentData(entity, harvest.Value);
                 entities.Add(runtimeId, entity);
             }
             catch { Manager.DestroyEntity(entity); throw; }
@@ -137,6 +143,8 @@ namespace FlatWorld.NaturalEntities
                 if (removed.Length > 0) Manager.DestroyEntity(removed.AsArray());
             }
             entities.Clear();
+            archetypes.Clear();
+            Changed = null;
         }
 
         #endregion
@@ -160,13 +168,13 @@ namespace FlatWorld.NaturalEntities
 
         public void SetBody(int id, NaturalEntityBody body)
         {
-            Complete();
             Entity entity = entities[id];
             Manager.SetComponentData(entity, new NaturalEntityLocation
             { RuntimeId = id, NaturalGuid = body.NaturalGuid, Position = body.Position });
             Manager.SetComponentData(entity, new EntityModuleAppearance
             { Scale = body.Scale, Rotation = body.Rotation, Revision = body.VisualVersion });
             Manager.SetComponentEnabled<EntityModuleActive>(entity, body.Suspended == 0);
+            Changed?.Invoke(id);
         }
 
         public bool TryGet<T>(int id, out T value) where T : unmanaged, IComponentData
@@ -177,19 +185,23 @@ namespace FlatWorld.NaturalEntities
             return false;
         }
 
-        public void Set<T>(int id, T value) where T : unmanaged, IComponentData
+        public void Set<T>(int id, T value, bool notifyChanged = true) where T : unmanaged, IComponentData
         {
-            Complete();
+            // EntityManager 自行完成对应组件的读写依赖，结构变更仍使用其同步边界。
             Entity entity = entities[id];
             if (Manager.HasComponent<T>(entity)) Manager.SetComponentData(entity, value);
             else Manager.AddComponentData(entity, value);
+            if (notifyChanged) Changed?.Invoke(id);
         }
 
         public void RemoveComponent<T>(int id) where T : unmanaged, IComponentData
         {
-            Complete();
             Entity entity = entities[id];
-            if (Manager.HasComponent<T>(entity)) Manager.RemoveComponent<T>(entity);
+            if (Manager.HasComponent<T>(entity))
+            {
+                Manager.RemoveComponent<T>(entity);
+                Changed?.Invoke(id);
+            }
         }
 
         public void Complete()

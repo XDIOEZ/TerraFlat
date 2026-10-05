@@ -1,0 +1,12 @@
+{
+  "apiVersion": 1,
+  "id": "example.resourcecapabilities",
+  "name": "资源 ECS 能力示例",
+  "version": "1.0.0",
+  "description": "给苹果树增加可保存的树脂状态，用同一个世界运行器批次推进。",
+  "definitionFiles": ["Defs/items.json"],
+  "managed": {
+    "entryAssembly": "lib/Example.ResourceCapabilities.dll",
+    "entryType": "Example.ResourceCapabilities.ModEntry"
+  }
+}
