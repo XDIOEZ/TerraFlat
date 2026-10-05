@@ -64,7 +64,7 @@ public sealed class BodyPartDamageInfo
 /// </summary>
 public sealed class BodyPartHealthChangeInfo
 {
-    public DamageReceiver Receiver;
+    public Mod_DamageReceiver Receiver;
     public BodyPartType Part;
     public float HpBefore;
     public float HpAfter;

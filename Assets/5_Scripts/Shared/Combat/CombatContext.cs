@@ -70,14 +70,16 @@ namespace FlatWorld.Combat
     /// <summary>飞行身份是可组合目标能力，不按鸟类物品 ID 或伤害材质写特判。</summary>
     public interface ICombatAirborneTarget { bool IsAirborne { get; } }
 
-    /// <summary>四类伤害按切割/穿刺/劈砍/钝击的固定顺序存储；该顺序同时用于防御和结算结果。</summary>
+    /// <summary>物理伤害上下文；旧四槽只保留命中表现与出血资格，不再分别抵扣防御。</summary>
     public struct CombatDamageContext
     {
+        public int ResourceToolKind, ResourceToolTier;
+        public float ResourceToolEfficiency;
         public CombatDeliveryCapabilities DeliveryCapabilities;
         public CombatAttackKey Attack; // 去重与攻击者身份。
         public CombatIdentity Credit; // 击杀归因；武器可以与 Attack.Source 不同。
         public FixedString128Bytes Faction; // 来源阵营的稳定 ID。
-        public float4 Damage; // 四类基础伤害。
+        public float4 Damage; // 合计为物理攻击力，分槽仅保留旧表现标签。
         public float2 Origin, HitPoint; // 来源与最终命中位置。
         public CombatClock Clock; // 生效 Tick/时间。
         public byte SourceIsPlayer, IsTrueDamage; // 难度身份与是否跳过类型防御。
@@ -108,9 +110,18 @@ namespace FlatWorld.Combat
     /// <summary>无托管伤害对象的共同数值核心；生命提交、事件与掉落由各后端的结算层负责。</summary>
     public static class CombatRules
     {
-        /// <summary>先应用难度，再逐类减防御，最后应用目标受击倍率。</summary>
-        public static float4 Resolve(float4 damage, float4 defense, float difficulty, float receivedMultiplier) =>
-            math.max(0f, math.max(0f, damage) * math.max(0f, difficulty) - math.max(0f, defense)) * math.max(0f, receivedMultiplier);
+        /// <summary>物理攻击只扣一次防御，再应用弱点等受击倍率；旧分槽仅分配反馈。</summary>
+        public static float4 Resolve(float4 damage, float4 defense, float difficulty, float receivedMultiplier)
+        {
+            float4 positive = math.max(0f, damage);
+            float attack = math.csum(positive);
+            float loss = ResolvePhysical(attack, math.cmax(math.max(0f, defense)), difficulty, receivedMultiplier);
+            return attack > 0f ? positive * (loss / attack) : float4.zero;
+        }
+
+        /// <summary>全部后端共用一个物理结算公式；未破防时弱点不能制造伤害。</summary>
+        public static float ResolvePhysical(float attack, float defense, float difficulty = 1f, float receivedMultiplier = 1f) =>
+            math.max(0f, math.max(0f, attack) * math.max(0f, difficulty) - math.max(0f, defense)) * math.max(0f, receivedMultiplier);
 
         /// <summary>把结算分量按实际生命损失裁掉过量伤害。</summary>
         public static float4 ActualLoss(float4 resolved, float loss)

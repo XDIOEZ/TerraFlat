@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using FlatWorld.WorldModel;
 using UnityEngine;
 using Unity.Profiling;
 
@@ -168,6 +169,179 @@ internal sealed class LocalTemperatureField
 
     private Vector2 Normalize(Vector2 position) => bounds.IsWrapped ? bounds.NormalizePosition(position) : position;
     private static bool IsFinite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);
+
+    #endregion
+}
+
+/// <summary>把已加载世界液体的辐射热缓存成逐格最大温升，避免大面积岩浆按格叠加到失控。</summary>
+internal sealed class RadiantLiquidTemperatureField
+{
+    #region 分区缓存
+
+    private sealed class Dependency
+    {
+        public Vector2Int Origin;
+        public ChunkTerrainData Terrain;
+        public long Revision;
+    }
+
+    private sealed class Bucket
+    {
+        public float[] Offsets;
+        public readonly List<Dependency> Dependencies = new(9);
+    }
+
+    private readonly Dictionary<Vector2Int, Bucket> buckets = new();
+    private readonly ChunkMgr chunkManager;
+    private readonly string dimensionId;
+    private readonly int width;
+    private readonly int height;
+    private readonly WorldTopologyBounds bounds;
+
+    public RadiantLiquidTemperatureField(ChunkMgr chunkManager, string dimensionId,
+        int width, int height, WorldTopologyBounds bounds)
+    {
+        this.chunkManager = chunkManager;
+        this.dimensionId = dimensionId;
+        this.width = width;
+        this.height = height;
+        this.bounds = bounds;
+    }
+
+    #endregion
+
+    #region 查询与重建
+
+    public float Sample(Vector2Int cell)
+    {
+        if (chunkManager == null || GameRes.ExistingInstance == null)
+            return 0f;
+
+        Vector2Int origin = ResolveChunkOrigin(cell);
+        if (!buckets.TryGetValue(origin, out Bucket bucket))
+        {
+            bucket = new Bucket();
+            buckets.Add(origin, bucket);
+            Rebuild(origin, bucket);
+        }
+        else if (!DependenciesAreCurrent(bucket))
+        {
+            Rebuild(origin, bucket);
+        }
+
+        int x = cell.x - origin.x;
+        int y = cell.y - origin.y;
+        if ((uint)x >= (uint)width || (uint)y >= (uint)height)
+            return 0f;
+        return bucket.Offsets[y * width + x];
+    }
+
+    private bool DependenciesAreCurrent(Bucket bucket)
+    {
+        foreach (Dependency dependency in bucket.Dependencies)
+        {
+            ChunkTerrainData current = ResolveTerrain(dependency.Origin);
+            if (!ReferenceEquals(current, dependency.Terrain) ||
+                current != null && current.Revision != dependency.Revision)
+                return false;
+        }
+        return true;
+    }
+
+    private void Rebuild(Vector2Int targetOrigin, Bucket bucket)
+    {
+        bucket.Offsets ??= new float[width * height];
+        Array.Clear(bucket.Offsets, 0, bucket.Offsets.Length);
+        bucket.Dependencies.Clear();
+
+        int radius = Mathf.CeilToInt(WorldLiquidSettings.MaximumRadiantHeatRadius);
+        int minOriginX = Mathf.FloorToInt((float)(targetOrigin.x - radius) / width) * width;
+        int minOriginY = Mathf.FloorToInt((float)(targetOrigin.y - radius) / height) * height;
+        int maxOriginX = Mathf.FloorToInt((float)(targetOrigin.x + width - 1 + radius) / width) * width;
+        int maxOriginY = Mathf.FloorToInt((float)(targetOrigin.y + height - 1 + radius) / height) * height;
+
+        for (int y = minOriginY; y <= maxOriginY; y += height)
+        for (int x = minOriginX; x <= maxOriginX; x += width)
+        {
+            Vector2Int sourceOrigin = new(x, y);
+            if (bounds.IsWrapped)
+                sourceOrigin = bounds.NormalizeChunkOrigin(sourceOrigin);
+            if (ContainsDependency(bucket, sourceOrigin))
+                continue;
+
+            ChunkTerrainData terrain = ResolveTerrain(sourceOrigin);
+            bucket.Dependencies.Add(new Dependency
+            {
+                Origin = sourceOrigin,
+                Terrain = terrain,
+                Revision = terrain?.Revision ?? -1
+            });
+            if (terrain != null)
+                AccumulateTerrain(targetOrigin, sourceOrigin, terrain, bucket.Offsets);
+        }
+    }
+
+    private void AccumulateTerrain(Vector2Int targetOrigin, Vector2Int sourceOrigin,
+        ChunkTerrainData terrain, float[] offsets)
+    {
+        GameRes resources = GameRes.ExistingInstance;
+        for (int sourceY = 0; sourceY < terrain.Height; sourceY++)
+        for (int sourceX = 0; sourceX < terrain.Width; sourceX++)
+        {
+            if (WorldLiquidSystem.GetSurfaceDepth(terrain, sourceX, sourceY) <= 0f ||
+                !resources.TryGetLiquidDefinition(terrain.GetLiquidId(sourceX, sourceY), out LiquidDefinition liquid))
+                continue;
+
+            WorldLiquidSettings settings = liquid.WorldWater;
+            if (settings == null || settings.RadiantHeatRadius <= 0f || settings.RadiantHeatOffset <= 0f)
+                continue;
+
+            Vector2 sourceCenter = new(sourceOrigin.x + sourceX + 0.5f, sourceOrigin.y + sourceY + 0.5f);
+            float radiusSquared = settings.RadiantHeatRadius * settings.RadiantHeatRadius;
+            for (int targetY = 0; targetY < height; targetY++)
+            for (int targetX = 0; targetX < width; targetX++)
+            {
+                Vector2 targetCenter = new(targetOrigin.x + targetX + 0.5f, targetOrigin.y + targetY + 0.5f);
+                Vector2 delta = bounds.IsWrapped
+                    ? bounds.ShortestDelta(sourceCenter, targetCenter)
+                    : targetCenter - sourceCenter;
+                if (delta.sqrMagnitude >= radiusSquared)
+                    continue;
+
+                float weight = Mathf.Max(0f, 1f - delta.sqrMagnitude / radiusSquared);
+                float offset = settings.RadiantHeatOffset * weight * weight;
+                int index = targetY * width + targetX;
+                if (offset > offsets[index])
+                    offsets[index] = offset;
+            }
+        }
+    }
+
+    private ChunkTerrainData ResolveTerrain(Vector2Int origin)
+    {
+        var address = new FlatWorld.WorldModel.WorldAddress(dimensionId,
+            new Int2(origin.x, origin.y));
+        return chunkManager.TryGetChunkRuntime(address, out ChunkRuntime chunk) &&
+               chunk.DataStatus == ChunkDataStatus.Ready && chunk.Terrain != null && !chunk.Terrain.IsDisposed
+            ? chunk.Terrain
+            : null;
+    }
+
+    private Vector2Int ResolveChunkOrigin(Vector2Int cell)
+    {
+        Vector2Int origin = new(
+            Mathf.FloorToInt((float)cell.x / width) * width,
+            Mathf.FloorToInt((float)cell.y / height) * height);
+        return bounds.IsWrapped ? bounds.NormalizeChunkOrigin(origin) : origin;
+    }
+
+    private static bool ContainsDependency(Bucket bucket, Vector2Int origin)
+    {
+        foreach (Dependency dependency in bucket.Dependencies)
+            if (dependency.Origin == origin)
+                return true;
+        return false;
+    }
 
     #endregion
 }

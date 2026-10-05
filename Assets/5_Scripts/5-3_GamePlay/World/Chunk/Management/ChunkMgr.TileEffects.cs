@@ -1,4 +1,5 @@
 using FlatWorld.WorldModel;
+using Unity.Mathematics;
 using UnityEngine;
 using RuntimeWorldAddress = FlatWorld.WorldModel.WorldAddress;
 
@@ -31,7 +32,7 @@ public readonly struct RuntimeTerrainTileSample
     public int LiquidTypeIndex => Terrain?.GetLiquidTypeIndex(LocalCell.x, LocalCell.y) ?? 0;
 }
 
-/// <summary>运行时水面流动类型；河流使用水文下游方向，海洋使用风场近似表层漂移。</summary>
+/// <summary>运行时水面流动类型；河流使用水文下游方向，海洋使用世界风场方向。</summary>
 public enum RuntimeWaterCurrentKind : byte
 {
     None = 0,
@@ -145,6 +146,90 @@ public partial class ChunkMgr
 {
     #region 运行时地块查询
 
+    /// <summary>单次飞行判定共用世界地址和区块缓存，不读取不需要的地块表面数据。</summary>
+    internal struct RuntimeTerrainPresenceQuery
+    {
+        private readonly WorldRuntime world;
+        private readonly WorldTopologyDomain topology;
+        private readonly string dimensionId;
+        private readonly int chunkWidth;
+        private readonly int chunkHeight;
+        private int cachedOriginX;
+        private int cachedOriginY;
+        private bool hasCachedOrigin;
+        private ChunkRuntime cachedChunk;
+
+        internal RuntimeTerrainPresenceQuery(WorldRuntime world, WorldTopologyDomain topology,
+            string dimensionId, int chunkWidth, int chunkHeight)
+        {
+            this.world = world;
+            this.topology = topology;
+            this.dimensionId = dimensionId;
+            this.chunkWidth = chunkWidth;
+            this.chunkHeight = chunkHeight;
+            cachedOriginX = 0;
+            cachedOriginY = 0;
+            hasCachedOrigin = false;
+            cachedChunk = null;
+        }
+
+        internal Vector2 NormalizePosition(Vector2 position)
+        {
+            float2 normalized = topology.Normalize(new float2(position.x, position.y));
+            return new Vector2(normalized.x, normalized.y);
+        }
+
+        internal Vector2 ShortestDelta(Vector2 origin, Vector2 target)
+        {
+            float2 delta = topology.ShortestDelta(
+                new float2(origin.x, origin.y), new float2(target.x, target.y));
+            return new Vector2(delta.x, delta.y);
+        }
+
+        internal bool IsLoadedNormalized(Vector2 position)
+        {
+            if (world == null)
+                return false;
+
+            int worldX = Mathf.FloorToInt(position.x);
+            int worldY = Mathf.FloorToInt(position.y);
+            int originX = topology.NormalizeX(Mathf.FloorToInt(position.x / chunkWidth) * chunkWidth);
+            int originY = topology.NormalizeY(Mathf.FloorToInt(position.y / chunkHeight) * chunkHeight);
+            if (!hasCachedOrigin || cachedOriginX != originX || cachedOriginY != originY)
+            {
+                cachedOriginX = originX;
+                cachedOriginY = originY;
+                hasCachedOrigin = true;
+                world.TryGetChunk(new RuntimeWorldAddress(dimensionId, new Int2(originX, originY)),
+                    out cachedChunk);
+            }
+
+            if (cachedChunk == null || cachedChunk.DataStatus != ChunkDataStatus.Ready ||
+                cachedChunk.Terrain == null || cachedChunk.Terrain.IsDisposed)
+                return false;
+
+            ChunkTerrainData terrain = cachedChunk.Terrain;
+            int localX = worldX - originX;
+            int localY = worldY - originY;
+            return (uint)localX < (uint)terrain.Width && (uint)localY < (uint)terrain.Height;
+        }
+    }
+
+    internal bool TryCreateTerrainPresenceQuery(out RuntimeTerrainPresenceQuery query)
+    {
+        query = default;
+        ChunkGenerationProfileSnapshot profile = ActiveGenerationProfile ?? defaultGenerationSnapshot;
+        if (runtimeChunkManager == null || profile == null)
+            return false;
+
+        // 飞行导航必须和正式世界寻址使用同一份当前世界区块尺寸，否则自定义区块大小会被误判为未加载。
+        query = new RuntimeTerrainPresenceQuery(runtimeChunkManager.World,
+            WorldTopologyRuntime.GetActiveDomain(), ResolveCurrentDimensionId(),
+            Mathf.Max(1, profile.Width),
+            Mathf.Max(1, profile.Height));
+        return true;
+    }
+
     /// <summary>按世界坐标读取新版权威区块中的顶层地块。</summary>
     public bool TryGetRuntimeTerrainTile(Vector2 worldPosition, out RuntimeTerrainTileSample sample)
     {
@@ -194,7 +279,7 @@ public partial class ChunkMgr
 
     /// <summary>
     /// 读取当前水格的表层流向。河流使用生成阶段保存的真实下游方向；
-    /// 海洋没有独立洋流数据时使用现有风场近似较弱的表层漂移，湖泊保持静止。
+    /// 海洋没有独立洋流数据时使用地形风场方向，湖泊保持静止。
     /// </summary>
     public bool TryGetRuntimeWaterCurrent(Vector2 worldPosition,
         out RuntimeWaterCurrentSample current)
@@ -235,12 +320,12 @@ public partial class ChunkMgr
 
         terrain.TryGetEnvironmentValue("windX", local.x, local.y, out float windX);
         terrain.TryGetEnvironmentValue("windY", local.x, local.y, out float windY);
-        Vector2 windDirection = new(windX, windY);
-        if (windDirection.sqrMagnitude <= 0.000001f)
+        Vector2 oceanDirection = WaterEnvironmentRules.ResolveOceanCurrentDirection(new Vector2(windX, windY));
+        if (oceanDirection == Vector2.zero)
             return false;
 
         current = new RuntimeWaterCurrentSample(
-            RuntimeWaterCurrentKind.Ocean, windDirection, 1f);
+            RuntimeWaterCurrentKind.Ocean, oceanDirection, 1f);
         return true;
     }
 
@@ -290,7 +375,9 @@ public partial class ChunkMgr
 
             if (!TryGetRuntimeTerrainTile(candidateCenter, out RuntimeTerrainTileSample candidate) ||
                 candidate.Terrain.GetGrass(candidate.LocalCell.x, candidate.LocalCell.y) !=
-                ChunkTerrainData.GrassPresent)
+                ChunkTerrainData.GrassPresent ||
+                candidate.LiquidDepth > 0f ||
+                !candidate.Terrain.IsWalkable(candidate.LocalCell.x, candidate.LocalCell.y))
                 continue;
 
             sample = candidate;

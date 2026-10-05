@@ -1,0 +1,131 @@
+{
+  "schemaVersion": 1,
+  "items": [
+    {
+      "id": "FishingRod",
+      "parent": "BasicItem_Base",
+      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Common/Prop.prefab",
+      "gameName": "钓鱼竿",
+      "description": "右键配置鱼钩和一份鱼饵；左键抛饵，小鱼吃饵后再按左键收线。",
+      "durability": 100.0,
+      "maxDurability": 100.0,
+      "amount": 1.0,
+      "weight": 0.6,
+      "volume": 1.5,
+      "stackable": false,
+      "canBePickedUp": true,
+      "tags": [
+        "Tool",
+        "FishingRod",
+        "Wood"
+      ],
+      "worldDropBehavior": "interactive",
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Items/Tools/Item_Tool_389.png"
+      },
+      "modules": {
+        "fishing": {
+          "prefab": "Mod_FishingRod",
+          "id": "Mod_FishingRod",
+          "enabled": true,
+          "data": {
+            "BitData": null,
+            "Type": 0
+          },
+          "parameters": {
+            "maxCastDistance": 10.0,
+            "castSpeed": 12.0,
+            "reelSpeed": 8.0
+          }
+        }
+      }
+    },
+    {
+      "id": "FishingHook_Bone",
+      "parent": "BasicItem_Base",
+      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Common/Prop.prefab",
+      "gameName": "骨质鱼钩",
+      "description": "装在钓竿的鱼钩槽上，可以挂一份食物作为鱼饵。",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "weight": 0.02,
+      "volume": 0.01,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": [
+        "FishingHook",
+        "Material",
+        "Bone"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Items/Fishing/FishingHook.png",
+        "color": {
+          "r": 0.92,
+          "g": 0.87,
+          "b": 0.7,
+          "a": 1.0
+        }
+      },
+      "modules": {}
+    },
+    {
+      "id": "FishingHook_Iron",
+      "parent": "BasicItem_Base",
+      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Common/Prop.prefab",
+      "gameName": "铁质鱼钩",
+      "description": "装在钓竿的鱼钩槽上，可以挂一份食物作为鱼饵。",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "weight": 0.04,
+      "volume": 0.01,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": [
+        "FishingHook",
+        "Material",
+        "Iron"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Items/Fishing/FishingHook.png",
+        "color": {
+          "r": 0.7,
+          "g": 0.79,
+          "b": 0.87,
+          "a": 1.0
+        }
+      },
+      "modules": {}
+    },
+    {
+      "id": "FishingHook_Gold",
+      "parent": "BasicItem_Base",
+      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Common/Prop.prefab",
+      "gameName": "金鱼钩",
+      "description": "装在钓竿的鱼钩槽上，可以挂一份食物作为鱼饵。",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "weight": 0.08,
+      "volume": 0.01,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": [
+        "FishingHook",
+        "Material",
+        "Gold"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Items/Fishing/FishingHook.png",
+        "color": {
+          "r": 1.0,
+          "g": 0.75,
+          "b": 0.25,
+          "a": 1.0
+        }
+      },
+      "modules": {}
+    }
+  ]
+}

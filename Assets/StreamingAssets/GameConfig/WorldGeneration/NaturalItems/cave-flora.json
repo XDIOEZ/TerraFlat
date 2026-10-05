@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "ecologyRules": [
+    {
+      "ruleId": "cave.flora.mushroom",
+      "itemId": "MushroomCrop",
+      "itemCount": 1,
+      "spawnChance": 0.42,
+      "spawnChanceMultiplier": 1,
+      "distributionMode": 1,
+      "patchSpacing": 12,
+      "patchRadius": 2.5,
+      "patchChance": 0.04,
+      "biomeMask": 0,
+      "minTemperature": 0,
+      "maxTemperature": 1,
+      "minPrecipitation": 0,
+      "maxPrecipitation": 1,
+      "minHeight": 0,
+      "maxHeight": 1,
+      "minRiverFloodplainStrength": 0,
+      "providedTags": [],
+      "companionOnly": false,
+      "companionHostTag": "",
+      "companionSpawnChance": 0,
+      "companionOffsetX": 0,
+      "companionOffsetY": 0,
+      "companionMinRadius": 0,
+      "companionMaxRadius": 0,
+      "requiredChunkTag": "",
+      "requiredTagChunkRadius": 0
+    }
+  ],
+  "caveResourceRules": []
+}

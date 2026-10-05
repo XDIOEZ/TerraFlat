@@ -11,7 +11,7 @@ namespace FlatWorld.WorldModel
         public float TickRate = 5f; // 独立液体时钟，最高 10Hz。
         public float FlowSpeed = 0.5f; // 每 Tick 液面差转移倍率。
         public float SurfaceEpsilon = 0.0005f; // 液面接近平衡时停止。
-        public float MinimumTransfer = 0.00001f; // 小流量不参与交换，不能删除残余液体。
+        public float MinimumTransfer = 0.00001f; // 小流量不参与交换，残值清理只使用统一液深精度。
         public int SleepTicks = 3; // 连续无变化后休眠。
         public float DenseThreshold = 0.5f; // 活动格占比达到此值时扫描全块。
         public int RegionRadiusChunks = 2; // 外部修改点周围最多两圈区块。
@@ -53,7 +53,7 @@ namespace FlatWorld.WorldModel
 
     /// <summary>
     /// 无 Unity 依赖的四邻格实验求解器。先冻结候选边，再同时限制来源总流出和目标总流入，最后生成写回值。
-    /// 复用缓冲；不持有世界权威数据、不调用渲染或存档。浮点舍入允许机器精度误差，绝不按阈值删除残液。
+    /// 复用缓冲；不持有世界权威数据、不调用渲染或存档。结果使用权威层的统一液深精度清理计算尾数。
     /// </summary>
     public sealed class LiquidFlowSolver
     {
@@ -97,7 +97,7 @@ namespace FlatWorld.WorldModel
             ApplyTransfers(cells, settings);
             for (int i = 0; i < cells.Count; i++)
             {
-                ResultDepth[i] = (float)Math.Clamp(cells[i].Depth + delta[i], 0d, 1d);
+                ResultDepth[i] = LiquidCellValue.NormalizeDepth((float)Math.Clamp(cells[i].Depth + delta[i], 0d, 1d));
                 ResultType[i] = ResultDepth[i] == 0f ? 0 : cells[i].TypeIndex;
                 if (ResultType[i] == 0 && ResultDepth[i] > 0f && selectedSource[i] >= 0)
                     ResultType[i] = cells[selectedSource[i]].TypeIndex;

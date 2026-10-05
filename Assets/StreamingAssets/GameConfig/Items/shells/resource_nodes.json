@@ -15,12 +15,18 @@
     },
     {
       "id": "MineResource_Base",
+      "entityRuntime": "resource",
       "abstract": true,
       "parent": "WorldResource_Base",
       "weight": 2000.0,
       "volume": 800.0,
       "stackable": true,
-      "shellPrefab": "MineResource"
+      "shellPrefab": "MineResource",
+      "worldGridOccupancy": {
+        "cells": [
+          { "x": 0, "y": 0 }
+        ]
+      }
     },
     {
       "id": "Beehive",
@@ -34,6 +40,7 @@
       "volume": 4.0,
       "stackable": false,
       "canBePickedUp": false,
+      "lootTableId": "Beehive_Default",
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Environment/Beehive.png",
         "color": {
@@ -56,6 +63,73 @@
             "y": 0.3
           }
         }
+      },
+      "modules": {
+        "生命值系统模块": {
+          "prefab": "Module_DamageReciver",
+          "id": "生命值系统模块",
+          "enabled": true,
+          "data": {
+            "BitData": "",
+            "Type": 0
+          },
+          "parameters": {
+            "Data": {
+              "Hp": 40,
+              "MaxHp": 40,
+              "UseBodyPartHealth": false,
+              "TwoPartHitChance": 0.0,
+              "BodyPartDataVersion": 0,
+              "BodyParts": [],
+              "DefenseValues": {
+                "Physical": 1
+              },
+              "AttackersUIDs": [],
+              "DamageInterval": 0.12,
+              "DestroyDelay": 0.0,
+              "CombatBalanceVersion": 1
+            },
+            "impactAudioMaterial": 0,
+            "hurtAudioCueId": "",
+            "enableHitSlowdown": false,
+            "HideUiDelayAfterLastDamage": 4.0,
+            "healthBarTopPadding": 0.08,
+            "healthBarWorldScale": 0.35,
+            "$collider2D": {
+              "type": "BoxCollider2D",
+              "enabled": true,
+              "isTrigger": true,
+              "offset": {
+                "x": 0.0,
+                "y": 0.15
+              },
+              "size": {
+                "x": 0.4,
+                "y": 0.3
+              },
+              "edgeRadius": 0.0
+            },
+            "weakTool": 3
+          }
+        },
+        "Mod_HiveColony": {
+          "prefab": "Module_HiveColony",
+          "id": "Mod_HiveColony",
+          "enabled": true,
+          "data": { "BitData": null, "Type": 0 },
+          "parameters": {
+            "ActorId": "Bee",
+            "MinimumResidents": 3,
+            "MaximumResidents": 10,
+            "SpawnRadius": 0.45,
+            "ReconcileInterval": 1.0,
+            "TerritoryBaseRadiusCells": 2,
+            "AlarmSeconds": 10.0,
+            "DayStartRatio": 0.25,
+            "DayEndRatio": 0.75,
+            "SleepingSatietyDrainMultiplier": 0.5
+          }
+        }
       }
     },
     {
@@ -72,7 +146,8 @@
       "canBePickedUp": true,
       "groundCover": true,
       "tags": [
-        "Plant"
+        "Plant",
+        "BeeForage.Flower"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Plants/Flower.png",
@@ -94,6 +169,7 @@
     },
     {
       "id": "AppleTree",
+      "entityRuntime": "resource",
       "parent": "WorldResource_Base",
       "gameName": "苹果树",
       "description": "一颗可以生产苹果的树",
@@ -115,6 +191,7 @@
       },
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Plants/Tree/tree-set1/64x64/trees-set1-64_6.png[trees-set1-64_6]",
+        "materialAddress": "Assets/9_Shaders/Material/Tree-Broadleaf-Sway-Lit.mat",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -168,21 +245,19 @@
           },
           "parameters": {
             "Data": {
-              "Hp": 180.0,
-              "MaxHp": 200.0,
+              "Hp": 50,
+              "MaxHp": 50,
               "UseBodyPartHealth": false,
               "TwoPartHitChance": 0.25,
               "BodyPartDataVersion": 0,
               "BodyParts": [],
               "DefenseValues": {
-                "Cutting": 2.0,
-                "Piercing": 4.0,
-                "Chopping": 0.0,
-                "Blunt": 1.5
+                "Physical": 3
               },
               "AttackersUIDs": [],
               "DamageInterval": 0.12,
-              "DestroyDelay": 0.0
+              "DestroyDelay": 0.0,
+              "CombatBalanceVersion": 1
             },
             "impactAudioMaterial": 0,
             "hurtAudioCueId": "",
@@ -233,7 +308,8 @@
                 "y": 0.91883105
               },
               "edgeRadius": 0.0
-            }
+            },
+            "weakTool": 3
           }
         },
         "生长模块": {
@@ -418,6 +494,7 @@
     },
     {
       "id": "Tree_Coconut",
+      "entityRuntime": "resource",
       "parent": "WorldResource_Base",
       "gameName": "椰子树",
       "description": "树冠会长出椰子。成熟果可能自行坠落；砍伐只掉落已经成熟的果实。",
@@ -438,6 +515,7 @@
       },
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Farming/CoconutTree/FruitlessCoconutTree.png",
+        "materialAddress": "Assets/9_Shaders/Material/Tree-Palm-Sway-Lit.mat",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -491,21 +569,19 @@
           },
           "parameters": {
             "Data": {
-              "Hp": 180.0,
-              "MaxHp": 180.0,
+              "Hp": 50,
+              "MaxHp": 50,
               "UseBodyPartHealth": false,
               "TwoPartHitChance": 0.25,
               "BodyPartDataVersion": 0,
               "BodyParts": [],
               "DefenseValues": {
-                "Cutting": 2.0,
-                "Piercing": 4.0,
-                "Chopping": 0.0,
-                "Blunt": 1.5
+                "Physical": 3
               },
               "AttackersUIDs": [],
               "DamageInterval": 0.12,
-              "DestroyDelay": 0.0
+              "DestroyDelay": 0.0,
+              "CombatBalanceVersion": 1
             },
             "impactAudioMaterial": 0,
             "hurtAudioCueId": "",
@@ -556,7 +632,8 @@
                 "y": 0.91883105
               },
               "edgeRadius": 0.0
-            }
+            },
+            "weakTool": 3
           }
         },
         "生长模块": {
@@ -794,21 +871,19 @@
           },
           "parameters": {
             "Data": {
-              "Hp": 300.0,
-              "MaxHp": 300.0,
+              "Hp": 50,
+              "MaxHp": 50,
               "UseBodyPartHealth": false,
               "TwoPartHitChance": 0.25,
               "BodyPartDataVersion": 0,
               "BodyParts": [],
               "DefenseValues": {
-                "Cutting": 10.0,
-                "Piercing": 3.0,
-                "Chopping": 12.0,
-                "Blunt": 3.0
+                "Physical": 6
               },
               "AttackersUIDs": [],
               "DamageInterval": 0.12,
-              "DestroyDelay": 0.0
+              "DestroyDelay": 0.0,
+              "CombatBalanceVersion": 1
             },
             "impactAudioMaterial": 0,
             "hurtAudioCueId": "",
@@ -859,7 +934,8 @@
                 "y": 1.0
               },
               "edgeRadius": 0.0
-            }
+            },
+            "weakTool": 0
           }
         },
         "harvestRequirement": {
@@ -971,21 +1047,19 @@
           },
           "parameters": {
             "Data": {
-              "Hp": 200.0,
-              "MaxHp": 200.0,
+              "Hp": 50,
+              "MaxHp": 50,
               "UseBodyPartHealth": false,
               "TwoPartHitChance": 0.25,
               "BodyPartDataVersion": 0,
               "BodyParts": [],
               "DefenseValues": {
-                "Cutting": 14.0,
-                "Piercing": 8.0,
-                "Chopping": 16.0,
-                "Blunt": 6.0
+                "Physical": 8
               },
               "AttackersUIDs": [],
               "DamageInterval": 0.12,
-              "DestroyDelay": 0.0
+              "DestroyDelay": 0.0,
+              "CombatBalanceVersion": 1
             },
             "impactAudioMaterial": 0,
             "hurtAudioCueId": "",
@@ -1036,7 +1110,8 @@
                 "y": 1.0
               },
               "edgeRadius": 0.0
-            }
+            },
+            "weakTool": 0
           }
         },
         "harvestRequirement": {
@@ -1148,21 +1223,19 @@
           },
           "parameters": {
             "Data": {
-              "Hp": 300.0,
-              "MaxHp": 300.0,
+              "Hp": 60,
+              "MaxHp": 60,
               "UseBodyPartHealth": false,
               "TwoPartHitChance": 0.25,
               "BodyPartDataVersion": 0,
               "BodyParts": [],
               "DefenseValues": {
-                "Cutting": 18.0,
-                "Piercing": 13.0,
-                "Chopping": 20.0,
-                "Blunt": 8.0
+                "Physical": 16
               },
               "AttackersUIDs": [],
               "DamageInterval": 0.12,
-              "DestroyDelay": 0.0
+              "DestroyDelay": 0.0,
+              "CombatBalanceVersion": 1
             },
             "impactAudioMaterial": 0,
             "hurtAudioCueId": "",
@@ -1213,7 +1286,8 @@
                 "y": 1.0
               },
               "edgeRadius": 0.0
-            }
+            },
+            "weakTool": 0
           }
         },
         "harvestRequirement": {
@@ -1226,7 +1300,7 @@
           },
           "parameters": {
             "requiredTool": 1,
-            "minimumTier": 2
+            "minimumTier": 1
           }
         }
       },
@@ -1325,21 +1399,19 @@
           },
           "parameters": {
             "Data": {
-              "Hp": 180.0,
-              "MaxHp": 180.0,
+              "Hp": 50,
+              "MaxHp": 50,
               "UseBodyPartHealth": false,
               "TwoPartHitChance": 0.25,
               "BodyPartDataVersion": 0,
               "BodyParts": [],
               "DefenseValues": {
-                "Cutting": 12.0,
-                "Piercing": 2.0,
-                "Chopping": 14.0,
-                "Blunt": 2.0
+                "Physical": 4
               },
               "AttackersUIDs": [],
               "DamageInterval": 0.12,
-              "DestroyDelay": 0.0
+              "DestroyDelay": 0.0,
+              "CombatBalanceVersion": 1
             },
             "impactAudioMaterial": 0,
             "hurtAudioCueId": "",
@@ -1390,20 +1462,8 @@
                 "y": 1.0
               },
               "edgeRadius": 0.0
-            }
-          }
-        },
-        "harvestRequirement": {
-          "prefab": "Module_ResourceHarvest",
-          "id": "Mod_ResourceHarvest",
-          "enabled": true,
-          "data": {
-            "BitData": "",
-            "Type": 0
-          },
-          "parameters": {
-            "requiredTool": 1,
-            "minimumTier": 1
+            },
+            "weakTool": 4
           }
         }
       },
@@ -1502,21 +1562,19 @@
           },
           "parameters": {
             "Data": {
-              "Hp": 400.0,
-              "MaxHp": 400.0,
+              "Hp": 50,
+              "MaxHp": 50,
               "UseBodyPartHealth": false,
               "TwoPartHitChance": 0.25,
               "BodyPartDataVersion": 0,
               "BodyParts": [],
               "DefenseValues": {
-                "Cutting": 16.0,
-                "Piercing": 7.0,
-                "Chopping": 18.0,
-                "Blunt": 5.0
+                "Physical": 10
               },
               "AttackersUIDs": [],
               "DamageInterval": 0.12,
-              "DestroyDelay": 0.0
+              "DestroyDelay": 0.0,
+              "CombatBalanceVersion": 1
             },
             "impactAudioMaterial": 0,
             "hurtAudioCueId": "",
@@ -1567,7 +1625,8 @@
                 "y": 1.0
               },
               "edgeRadius": 0.0
-            }
+            },
+            "weakTool": 0
           }
         },
         "harvestRequirement": {
@@ -1580,7 +1639,7 @@
           },
           "parameters": {
             "requiredTool": 1,
-            "minimumTier": 2
+            "minimumTier": 1
           }
         }
       },
@@ -1627,6 +1686,13 @@
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Environment/Iceberg/Iceberg_Idle.png",
+        "shadows": {
+          "contactWidth": 0.8,
+          "footLocalPosition": {
+            "x": 0.0,
+            "y": 0.0
+          }
+        },
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -1638,8 +1704,8 @@
           "z": 0.0
         },
         "rendererLocalScale": {
-          "x": 1.0,
-          "y": 1.0,
+          "x": 1.2,
+          "y": 1.2,
           "z": 1.0
         },
         "color": {
@@ -1679,21 +1745,19 @@
           },
           "parameters": {
             "Data": {
-              "Hp": 180.0,
-              "MaxHp": 180.0,
+              "Hp": 40,
+              "MaxHp": 40,
               "UseBodyPartHealth": false,
               "TwoPartHitChance": 0.25,
               "BodyPartDataVersion": 0,
               "BodyParts": [],
               "DefenseValues": {
-                "Cutting": 12.0,
-                "Piercing": 2.0,
-                "Chopping": 14.0,
-                "Blunt": 2.0
+                "Physical": 3
               },
               "AttackersUIDs": [],
               "DamageInterval": 0.12,
-              "DestroyDelay": 0.0
+              "DestroyDelay": 0.0,
+              "CombatBalanceVersion": 1
             },
             "impactAudioMaterial": 0,
             "hurtAudioCueId": "",
@@ -1744,7 +1808,8 @@
                 "y": 1.0
               },
               "edgeRadius": 0.0
-            }
+            },
+            "weakTool": 0
           }
         },
         "harvestRequirement": {
@@ -1788,6 +1853,7 @@
     },
     {
       "id": "Tree_Pine",
+      "entityRuntime": "resource",
       "parent": "WorldResource_Base",
       "gameName": "松树",
       "description": "森林中生长的松树，砍伐后可获得原木和树脂；所在地越温暖，树脂产量越高。",
@@ -1808,6 +1874,7 @@
       },
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Environment/PineTree/PineTree_Idle.png",
+        "materialAddress": "Assets/9_Shaders/Material/Tree-Pine-Sway-Lit.mat",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -1861,21 +1928,19 @@
           },
           "parameters": {
             "Data": {
-              "Hp": 200.0,
-              "MaxHp": 200.0,
+              "Hp": 60,
+              "MaxHp": 60,
               "UseBodyPartHealth": false,
               "TwoPartHitChance": 0.25,
               "BodyPartDataVersion": 0,
               "BodyParts": [],
               "DefenseValues": {
-                "Cutting": 2.0,
-                "Piercing": 4.0,
-                "Chopping": 0.0,
-                "Blunt": 1.5
+                "Physical": 5
               },
               "AttackersUIDs": [],
               "DamageInterval": 0.12,
-              "DestroyDelay": 0.0
+              "DestroyDelay": 0.0,
+              "CombatBalanceVersion": 1
             },
             "impactAudioMaterial": 0,
             "hurtAudioCueId": "",
@@ -1926,7 +1991,8 @@
                 "y": 1.0
               },
               "edgeRadius": 0.0
-            }
+            },
+            "weakTool": 3
           }
         },
         "生长模块": {

@@ -4,6 +4,7 @@
     {
       "id": "TileBase_Stone",
       "runtimeTileId": 0,
+      "loadCapacity": 10,
       "displayName": "矿洞石地",
       "tileAsset": "TileBase_Stone",
       "data": {
@@ -15,6 +16,8 @@
     {
       "id": "Tile_Grass",
       "runtimeTileId": 1,
+      "loadCapacity": 8,
+      "naturalPlantable": true,
       "displayName": "Tile_Grass",
       "tileAsset": "Tile_Grass",
       "data": {
@@ -24,44 +27,100 @@
           "fertileValue": { "baseValue": 1, "baseAdditive": 0, "additiveModifier": 0, "multiplicativeModifier": 1, "finalAdditive": 0 }
         }
       },
-      "behaviours": [ { "type": "grass", "parameters": { "buffInfo": [] } } ]
+      "behaviours": [ { "type": "grass", "parameters": { "buffInfo": [] } } ],
+      "groundHarvest": {
+        "requiredTool": "Shovel", "minimumTier": 1, "reach": 2,
+        "itemId": "Earth", "amount": 1, "replacementTileId": "Tile_Stone",
+        "baseUsesPerTile": 6, "minimumUsesPerTile": 2, "useInterval": 0.2
+      }
+    },
+    {
+      "id": "Tile_Dirt",
+      "runtimeTileId": 29,
+      "loadCapacity": 8,
+      "naturalPlantable": true,
+      "displayName": "泥土",
+      "tileAsset": "Tile_Dirt",
+      "data": {
+        "type": "universal",
+        "parameters": { "tileTag": "", "demolitionTime": 0, "penalty": 1000, "isWalkable": true }
+      },
+      "behaviours": [],
+      "groundHarvest": {
+        "requiredTool": "Shovel", "minimumTier": 1, "reach": 2,
+        "itemId": "Earth", "amount": 1, "replacementTileId": "Tile_Stone",
+        "baseUsesPerTile": 6, "minimumUsesPerTile": 2, "useInterval": 0.2
+      }
+    },
+    {
+      "id": "Tile_Clay",
+      "runtimeTileId": 30,
+      "loadCapacity": 7,
+      "displayName": "黏土",
+      "tileAsset": "Tile_Clay",
+      "data": {
+        "type": "universal",
+        "parameters": { "tileTag": "", "demolitionTime": 0, "penalty": 1000, "isWalkable": true }
+      },
+      "behaviours": [],
+      "groundHarvest": {
+        "requiredTool": "Shovel", "minimumTier": 1, "reach": 2,
+        "itemId": "Clay", "amount": 1, "replacementTileId": "Tile_Stone",
+        "baseUsesPerTile": 6, "minimumUsesPerTile": 2, "useInterval": 0.2
+      }
     },
     {
       "id": "Tile_Sand",
       "runtimeTileId": 3,
+      "loadCapacity": 5,
       "displayName": "Tile_Sand",
       "tileAsset": "Tile_Sand",
       "data": {
         "type": "universal",
         "parameters": { "tileTag": "", "demolitionTime": 0, "penalty": 1000, "isWalkable": true }
       },
-      "behaviours": []
+      "behaviours": [],
+      "groundHarvest": {
+        "requiredTool": "Shovel", "minimumTier": 1, "reach": 2,
+        "itemId": "Sand", "amount": 1, "replacementTileId": "Tile_Stone",
+        "baseUsesPerTile": 6, "minimumUsesPerTile": 2, "useInterval": 0.2
+      }
     },
     {
       "id": "Tile_Stone",
       "runtimeTileId": 4,
+      "loadCapacity": 10,
       "displayName": "Tile_Stone",
       "tileAsset": "Tile_Stone",
       "data": {
         "type": "universal",
         "parameters": { "tileTag": "", "demolitionTime": 0, "penalty": 1000, "isWalkable": true }
       },
-      "behaviours": []
+      "behaviours": [],
+      "groundHarvest": {
+        "requiredTool": "Pickaxe", "minimumTier": 1, "reach": 2,
+        "itemId": "Ore_Stone", "amount": 1, "replacementTileId": "Tile_Stone",
+        "baseUsesPerTile": 6, "minimumUsesPerTile": 2, "useInterval": 0.2,
+        "naturalLayerCount": 5, "exhaustedTileId": "Tile_Bedrock"
+      }
     },
     {
-      "id": "Tile_Snow",
-      "runtimeTileId": 5,
-      "displayName": "Tile_Snow",
-      "tileAsset": "TileBase_Snow",
+      "id": "Tile_Bedrock",
+      "runtimeTileId": 31,
+      "loadCapacity": 10,
+      "displayName": "基岩",
+      "tileAsset": "Tile_Bedrock",
       "data": {
         "type": "universal",
-        "parameters": { "tileTag": "", "demolitionTime": 0, "penalty": 1000, "isWalkable": true }
+        "parameters": { "tileTag": "Bedrock", "demolitionTime": 0, "penalty": 1000, "isWalkable": true }
       },
-      "behaviours": [ { "type": "snow", "parameters": { "moveSpeedMultiplier": 0.9, "footprintLifetime": 60 } } ]
+      "behaviours": [],
+      "damageProfile": { "damageable": false }
     },
     {
       "id": "Tile_Ice",
       "runtimeTileId": 9,
+      "loadCapacity": 8,
       "displayName": "Tile_Ice",
       "tileAsset": "TileBase_Ice",
       "data": {
@@ -71,30 +130,10 @@
       "behaviours": [ { "type": "ice", "parameters": { "accelerationMultiplier": 0.35, "decelerationMultiplier": 0.15 } } ]
     },
     {
-      "id": "Tile_Snow_Variant2",
-      "runtimeTileId": 10,
-      "displayName": "Tile_Snow_Variant2",
-      "tileAsset": "Winter_1",
-      "data": {
-        "type": "universal",
-        "parameters": { "tileTag": "", "demolitionTime": 0, "penalty": 1000, "isWalkable": true }
-      },
-      "behaviours": [ { "type": "snow", "parameters": { "moveSpeedMultiplier": 0.9, "footprintLifetime": 60 } } ]
-    },
-    {
-      "id": "Tile_Snow_Variant3",
-      "runtimeTileId": 11,
-      "displayName": "Tile_Snow_Variant3",
-      "tileAsset": "Winter_3",
-      "data": {
-        "type": "universal",
-        "parameters": { "tileTag": "", "demolitionTime": 0, "penalty": 1000, "isWalkable": true }
-      },
-      "behaviours": [ { "type": "snow", "parameters": { "moveSpeedMultiplier": 0.9, "footprintLifetime": 60 } } ]
-    },
-    {
       "id": "Tile_Peat",
       "runtimeTileId": 28,
+      "loadCapacity": 8,
+      "naturalPlantable": true,
       "displayName": "泥炭地块",
       "tileAsset": "Tile_Peat",
       "data": {
@@ -105,12 +144,14 @@
       "groundHarvest": {
         "requiredTool": "Shovel", "minimumTier": 1, "reach": 2,
         "itemId": "Peat", "amount": 1, "replacementTileId": "Tile_Grass",
-        "baseUsesPerTile": 4, "minimumUsesPerTile": 2, "useInterval": 0.2
+        "baseUsesPerTile": 6, "minimumUsesPerTile": 2, "useInterval": 0.2
       }
     },
     {
       "id": "Tile_Farmland",
       "runtimeTileId": 14,
+      "loadCapacity": 8,
+      "naturalPlantable": true,
       "displayName": "耕地",
       "tileAsset": "Tile_Farmland",
       "data": {
@@ -121,10 +162,12 @@
           "waterValue": 40, "maxWater": 100
         }
       },
-      "behaviours": [],
+      "behaviours": [ { "type": "farmland", "parameters": {} } ],
       "damageProfile": {
         "damageable": false, "maxHealth": 100,
-        "defenseValues": { "cutting": 0, "piercing": 0, "chopping": 0, "blunt": 0 },
+        "defenseValues": {
+          "physical": 0
+        },
         "requiredTool": 0, "minimumWeaponDamage": 0, "impactMaterial": 1, "dropItemId": null, "dropAmount": 0
       }
     }

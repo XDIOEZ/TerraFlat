@@ -12,9 +12,35 @@ public interface IInteractable
         return true;
     }
 
+    /// <summary>判断鼠标左键落点能否直接触发目标；关闭时仍可通过交互键操作。</summary>
+    bool CanPointerInteract(Item playerItem)
+    {
+        return true;
+    }
+
     void OnInteractUpdate(Item playerItem)
     {
         
     }
+
+    /// <summary>通知持续交互由按住状态正常释放；单次点击可在此结束沿触发。</summary>
+    void OnInteractEnd(Item playerItem)
+    {
+    }
+
     void OnInteractCancel(Item playerItem);
+}
+
+/// <summary>无 GameObject 的世界数据交互目标；位置和身份由权威世界模型提供。</summary>
+public interface IWorldInteractionTarget : IInteractable
+{
+    Vector3 WorldPosition { get; }
+    int TargetGuid { get; }
+    bool IsValid { get; }
+}
+
+/// <summary>Entity 目标直接请求批量表现高亮，不需要伪造用于描边的 GameObject。</summary>
+public interface IWorldInteractionPreview
+{
+    void SetInteractionHighlighted(bool highlighted);
 }

@@ -14,13 +14,13 @@ public static class GameSavePrefabBuilder
     private const string GenerationFreezeDescription =
         "开启：保持存档原有生成规则。关闭：跟随当前版本并升级生成基线；已探索与未探索区域的基础地形和自然生成都可能变化，玩家差量仍保留。重新开启后会在下次进入世界重新冻结。";
 
-    private static readonly Color Ink = new Color32(52, 52, 52, 251);
-    private static readonly Color InkSoft = new Color32(61, 61, 61, 250);
-    private static readonly Color Surface = new Color32(73, 73, 73, 250);
-    private static readonly Color Cream = new Color32(238, 238, 238, 255);
-    private static readonly Color Muted = new Color32(200, 200, 200, 255);
-    private static readonly Color Amber = new Color32(215, 197, 106, 255);
-    private static readonly Color Teal = new Color32(164, 164, 164, 255);
+    private static Color Ink => FlatWorldUITheme.Canvas;
+    private static Color InkSoft => FlatWorldUITheme.SurfaceLow;
+    private static Color Surface => FlatWorldUITheme.Surface;
+    private static Color Cream => FlatWorldUITheme.TextPrimary;
+    private static Color Muted => FlatWorldUITheme.TextSecondary;
+    private static Color Amber => FlatWorldUITheme.Accent;
+    private static Color Teal => FlatWorldUITheme.Teal;
 
     [MenuItem("FlatWorld/UI/Rebuild Save UI")]
     public static void RebuildSaveInterface()
@@ -104,11 +104,12 @@ public static class GameSavePrefabBuilder
         panel.canvasGroup = group;
         panel.rectTransform = rect;
         panel.PanelName = GameManager.GameSavePanelKey;
+        RuntimeUIPrefabBuilder.ConfigureScaleAnimation(panel);
     }
 
     private static void BuildScrim(Transform root)
     {
-        Image scrim = CreateImage("存档界面遮罩", root, new Color(0.006f, 0.016f, 0.024f, 0.76f));
+        Image scrim = CreateImage("存档界面遮罩", root, Color.clear);
         Stretch(scrim.rectTransform);
         scrim.gameObject.AddComponent<FullScreenRectController>();
         scrim.raycastTarget = true;
@@ -292,10 +293,10 @@ public static class GameSavePrefabBuilder
         return actions;
     }
 
-    /// <summary>构建覆盖主卡的二次确认层；遮罩阻断点击，默认焦点落在安全的取消按钮。</summary>
+    /// <summary>构建覆盖主卡的二次确认层；透明输入层阻断点击，默认焦点落在安全的取消按钮。</summary>
     private static GameObject BuildBatchDeleteConfirmation(Transform card, TMP_FontAsset font)
     {
-        Image overlay = CreateImage("批量删除二次确认界面", card, new Color(0.003f, 0.008f, 0.012f, 0.88f));
+        Image overlay = CreateImage("批量删除二次确认界面", card, Color.clear);
         Stretch(overlay.rectTransform);
         overlay.raycastTarget = true;
 

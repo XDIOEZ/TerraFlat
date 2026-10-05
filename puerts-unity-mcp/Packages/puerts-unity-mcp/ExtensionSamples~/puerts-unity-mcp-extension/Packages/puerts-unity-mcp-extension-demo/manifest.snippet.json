@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "puerts-unity-mcp-extension-demo": "file:../puerts-unity-mcp-extension/Packages/puerts-unity-mcp-extension-demo"
+  }
+}

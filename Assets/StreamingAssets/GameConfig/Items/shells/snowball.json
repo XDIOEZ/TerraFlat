@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "items": [
+    {
+      "id": "Snowball",
+      "parent": "BasicItem_Base",
+      "shellPrefab": "Snowball",
+      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Common/Snowball.prefab",
+      "gameName": "雪球",
+      "description": "铲起积雪得到的雪团。右键放回地面，每个雪球增加一层积雪，可以反复堆厚再铲回。",
+      "weight": 0.1,
+      "volume": 0.15,
+      "stackable": true,
+      "canBePickedUp": true,
+      "amount": 1,
+      "durability": 1,
+      "maxDurability": 1,
+      "tags": [
+        "InventoryGroup.Material"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Environment/Snowball/Snowball_Icon.png",
+        "color": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        }
+      },
+      "modules": {
+        "snow": {
+          "prefab": "Module_Snowball",
+          "id": "Mod_Snowball",
+          "parameters": {
+            "reach": 2
+          }
+        }
+      }
+    }
+  ]
+}

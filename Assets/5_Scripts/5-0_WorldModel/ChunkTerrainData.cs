@@ -65,18 +65,21 @@ namespace FlatWorld.WorldModel
         /// </summary>
         public void SetEnvironmentValue(string layerId, int x, int y, float value)
         {
+            GetOrCreateEnvironmentLayer(layerId)[GetIndex(x, y)] = value;
+        }
+
+        /// <summary>生成批次只在开始时解析层名，格子热循环直接按数组索引写入。</summary>
+        internal float[] GetOrCreateEnvironmentLayer(string layerId)
+        {
             ThrowIfUnavailable();
             if (string.IsNullOrWhiteSpace(layerId))
                 throw new ArgumentException("Environment layer id is required.", nameof(layerId));
-
-            if (!_environmentLayers.TryGetValue(layerId, out float[] values))
-            {
-                values = ArrayPool<float>.Shared.Rent(CellCount);
-                Array.Clear(values, 0, CellCount);
-                _environmentLayers.Add(layerId, values);
-            }
-
-            values[GetIndex(x, y)] = value;
+            if (_environmentLayers.TryGetValue(layerId, out float[] values))
+                return values;
+            values = ArrayPool<float>.Shared.Rent(CellCount);
+            Array.Clear(values, 0, CellCount);
+            _environmentLayers.Add(layerId, values);
+            return values;
         }
 
         /// <summary>读取生成阶段已经写入的环境值，供后续纯生成阶段复用。</summary>
@@ -217,10 +220,14 @@ namespace FlatWorld.WorldModel
         public const byte GrassPresent = 2;
 
         private TerrainCell[] _cells;
+        private uint[] _terrainSightBlockingBits;
+        private uint[] _dynamicSightBlockingBits;
         private Dictionary<string, float[]> _environmentLayers;
         private Dictionary<int, int[]> _extendedTileStacks;
         private byte[] _grass;
+        private byte[] _fire;
         private long _revision;
+        private long _blockingRevision;
 
         internal ChunkTerrainData(int width, int height, TerrainCell[] cells,
             Dictionary<string, float[]> environmentLayers, byte[] grass = null,
@@ -230,6 +237,13 @@ namespace FlatWorld.WorldModel
             Height = height;
             CellCount = checked(width * height);
             _cells = cells ?? throw new ArgumentNullException(nameof(cells));
+            _terrainSightBlockingBits = new uint[(CellCount + 31) >> 5];
+            _dynamicSightBlockingBits = new uint[_terrainSightBlockingBits.Length];
+            for (int index = 0; index < CellCount; index++)
+            {
+                if (_cells[index].BlocksLineOfSight)
+                    _terrainSightBlockingBits[index >> 5] |= 1u << (index & 31);
+            }
             this.liquid = liquid ?? new LiquidCellStorage(CellCount, LiquidTypeCatalog.BuiltIn);
             _environmentLayers = environmentLayers ??
                 new Dictionary<string, float[]>(StringComparer.Ordinal);
@@ -249,6 +263,8 @@ namespace FlatWorld.WorldModel
         public bool IsDisposed => _cells == null;
         /// <summary>生成完成后又被修改了多少次；刚生成时是 0。</summary>
         public long Revision => _revision;
+        /// <summary>视线阻挡状态的版本；水、草和环境变化不会使遮挡快照失效。</summary>
+        public long BlockingRevision => _blockingRevision;
         /// <summary>这里目前保存了哪些环境数据，例如 temperature 或 riverFlow。</summary>
         public IEnumerable<string> EnvironmentLayerIds =>
             _environmentLayers == null
@@ -265,15 +281,40 @@ namespace FlatWorld.WorldModel
             return _cells[GetIndex(x, y)];
         }
 
+        #region 视线遮挡层
+
+        /// <summary>读取固定地块和动态占地合成后的视线遮挡位。</summary>
+        public bool IsSightBlockingCell(int x, int y)
+        {
+            ThrowIfDisposed();
+            int index = GetIndex(x, y);
+            uint mask = 1u << (index & 31);
+            return ((_terrainSightBlockingBits[index >> 5] | _dynamicSightBlockingBits[index >> 5]) & mask) != 0;
+        }
+
+        /// <summary>建筑与机械占地变化时只更新对应格的动态遮挡位。</summary>
+        public void SetDynamicSightBlockingCell(int x, int y, bool blocking)
+        {
+            ThrowIfDisposed();
+            int index = GetIndex(x, y);
+            uint mask = 1u << (index & 31);
+            if (blocking)
+                _dynamicSightBlockingBits[index >> 5] |= mask;
+            else
+                _dynamicSightBlockingBits[index >> 5] &= ~mask;
+        }
+
+        #endregion
+
         /// <summary>修改某个格子的核心数据；新旧完全一样时就不做无用更新。</summary>
         public void SetCell(int x, int y, TerrainCell value)
         {
             ThrowIfDisposed();
             int index = GetIndex(x, y);
-            if (_cells[index].Equals(value))
+            TerrainCell previous = _cells[index];
+            if (previous.Equals(value))
                 return;
-            _cells[index] = value;
-            MarkChanged(x, y, TerrainChangeKind.Cell);
+            WriteCell(x, y, index, value, TerrainChangeKind.Cell);
         }
 
         /// <summary>
@@ -282,9 +323,7 @@ namespace FlatWorld.WorldModel
         /// </summary>
         public bool IsWalkable(int x, int y)
         {
-            TerrainCell cell = GetCell(x, y);
-            return (cell.Flags & TerrainCellFlags.Walkable) != 0 &&
-                   (cell.Flags & (TerrainCellFlags.Blocking | TerrainCellFlags.Occupied)) == 0;
+            return GetCell(x, y).IsWalkable;
         }
 
         /// <summary>看看这个格子从下到上一共叠了几层非空地块。</summary>
@@ -375,9 +414,8 @@ namespace FlatWorld.WorldModel
                 return true;
 
             TerrainCellFlags flags = previous.Flags | TerrainCellFlags.Blocking;
-            _cells[index] = new TerrainCell(previous.GroundTileId, previous.BackTileId,
-                tileId, previous.BiomeId, previous.NavigationCost, flags);
-            MarkChanged(x, y, TerrainChangeKind.TileStack);
+            WriteCell(x, y, index, new TerrainCell(previous.GroundTileId, previous.BackTileId,
+                tileId, previous.BiomeId, previous.NavigationCost, flags), TerrainChangeKind.TileStack);
             return true;
         }
 
@@ -395,9 +433,8 @@ namespace FlatWorld.WorldModel
                 return false;
 
             TerrainCellFlags flags = previous.Flags & ~TerrainCellFlags.Blocking;
-            _cells[index] = new TerrainCell(previous.GroundTileId, previous.BackTileId,
-                0, previous.BiomeId, previous.NavigationCost, flags);
-            MarkChanged(x, y, TerrainChangeKind.TileStack);
+            WriteCell(x, y, index, new TerrainCell(previous.GroundTileId, previous.BackTileId,
+                0, previous.BiomeId, previous.NavigationCost, flags), TerrainChangeKind.TileStack);
             return true;
         }
 
@@ -435,9 +472,8 @@ namespace FlatWorld.WorldModel
             flags = blocking == 0
                 ? flags & ~TerrainCellFlags.Blocking
                 : flags | TerrainCellFlags.Blocking;
-            _cells[index] = new TerrainCell(ground, back, blocking, previous.BiomeId,
-                previous.NavigationCost, flags);
-            MarkChanged(x, y, TerrainChangeKind.TileStack);
+            WriteCell(x, y, index, new TerrainCell(ground, back, blocking, previous.BiomeId,
+                previous.NavigationCost, flags), TerrainChangeKind.TileStack);
         }
 
         /// <summary>读取某个格子的草地状态。</summary>
@@ -479,6 +515,36 @@ namespace FlatWorld.WorldModel
             Array.Copy(_grass, copy, CellCount);
             return copy;
         }
+
+        #region 火层
+
+        /// <summary>读取格子火势；0 表示没有世界火焰，1~255 表示火势强度。</summary>
+        public byte GetFire(int x, int y)
+        {
+            ThrowIfDisposed();
+            return _fire == null ? (byte)0 : _fire[GetIndex(x, y)];
+        }
+
+        /// <summary>修改格子火势；首次出现火焰时才租用整块数组，空区块不承担常驻火层内存。</summary>
+        public void SetFire(int x, int y, byte intensity)
+        {
+            ThrowIfDisposed();
+            int index = GetIndex(x, y);
+            if (_fire == null)
+            {
+                if (intensity == 0)
+                    return;
+                _fire = ArrayPool<byte>.Shared.Rent(CellCount);
+                Array.Clear(_fire, 0, CellCount);
+            }
+
+            if (_fire[index] == intensity)
+                return;
+            _fire[index] = intensity;
+            MarkChanged(x, y, TerrainChangeKind.Fire);
+        }
+
+        #endregion
 
         /// <summary>把所有超过三层的地块列表完整复制一份，防止外部改到原数据。</summary>
         public IReadOnlyDictionary<int, int[]> CopyExtendedTileStacks()
@@ -624,6 +690,8 @@ namespace FlatWorld.WorldModel
                 ArrayPool<TerrainCell>.Shared.Return(_cells);
                 _cells = null;
             }
+            _terrainSightBlockingBits = null;
+            _dynamicSightBlockingBits = null;
 
             if (_environmentLayers == null)
                 return;
@@ -642,6 +710,12 @@ namespace FlatWorld.WorldModel
                 Array.Clear(_grass, 0, Math.Min(CellCount, _grass.Length));
                 ArrayPool<byte>.Shared.Return(_grass);
                 _grass = null;
+            }
+            if (_fire != null)
+            {
+                Array.Clear(_fire, 0, Math.Min(CellCount, _fire.Length));
+                ArrayPool<byte>.Shared.Return(_fire);
+                _fire = null;
             }
             Changed = null;
             LiquidBatchChanged = null;
@@ -667,6 +741,28 @@ namespace FlatWorld.WorldModel
             _revision++;
             Changed?.Invoke(new ChunkTerrainChanged(new Int2(x, y), kind, _revision));
         }
+
+        #region 地块核心变更
+
+        /// <summary>所有正式地块写入都在这里同步视线位、版本和变更通知。</summary>
+        private void WriteCell(int x, int y, int index, TerrainCell value, TerrainChangeKind kind)
+        {
+            bool wasBlocking = _cells[index].BlocksLineOfSight;
+            bool isBlocking = value.BlocksLineOfSight;
+            _cells[index] = value;
+            if (wasBlocking != isBlocking)
+            {
+                uint mask = 1u << (index & 31);
+                if (isBlocking)
+                    _terrainSightBlockingBits[index >> 5] |= mask;
+                else
+                    _terrainSightBlockingBits[index >> 5] &= ~mask;
+                _blockingRevision++;
+            }
+            MarkChanged(x, y, kind);
+        }
+
+        #endregion
 
         private static void Hash(ref ulong hash, int value, ulong prime)
         {
@@ -698,7 +794,9 @@ namespace FlatWorld.WorldModel
         /// <summary>格子是否被物体占用发生了变化；目前这类通知由 ChunkOccupancyData 单独负责。</summary>
         Occupancy,
         /// <summary>液体身份或深度改变，显示、导航和玩法应重新读取同一权威格。</summary>
-        Liquid
+        Liquid,
+        /// <summary>世界格子火焰强度改变；实体自身燃烧状态不属于这里。</summary>
+        Fire
     }
 
     /// <summary>一次“某个地形格子发生变化”的通知内容。</summary>

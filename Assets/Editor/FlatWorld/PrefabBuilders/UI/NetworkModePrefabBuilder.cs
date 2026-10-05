@@ -11,12 +11,12 @@ public static class NetworkModePrefabBuilder
     private const string PrefabPath = "Assets/2_Prefabs/2-1_UI/MainMenu/WorldSetup/UI_NetworkMode.prefab";
     private const string FontPath = "Assets/Plugins/TextMesh Pro/Fonts/fusion-pixel-12px-monospaced-zh_hans.asset";
 
-    private static readonly Color Ink = new Color32(52, 52, 52, 250);
-    private static readonly Color InkSoft = new Color32(61, 61, 61, 250);
-    private static readonly Color Cream = new Color32(238, 238, 238, 255);
-    private static readonly Color Muted = new Color32(200, 200, 200, 255);
-    private static readonly Color Amber = new Color32(215, 197, 106, 255);
-    private static readonly Color Teal = new Color32(164, 164, 164, 255);
+    private static Color Ink => FlatWorldUITheme.Canvas;
+    private static Color InkSoft => FlatWorldUITheme.SurfaceLow;
+    private static Color Cream => FlatWorldUITheme.TextPrimary;
+    private static Color Muted => FlatWorldUITheme.TextSecondary;
+    private static Color Amber => FlatWorldUITheme.Accent;
+    private static Color Teal => FlatWorldUITheme.Teal;
 
     #region Prefab 重建入口
 
@@ -54,12 +54,9 @@ public static class NetworkModePrefabBuilder
             typeof(RectTransform),
             typeof(Canvas),
             typeof(CanvasGroup),
-            typeof(CanvasRenderer),
-            typeof(Image),
             typeof(GraphicRaycaster),
             typeof(BasePanel));
         root.layer = LayerMask.NameToLayer("UI");
-        root.AddComponent<FullScreenRectController>();
 
         RectTransform rect = root.GetComponent<RectTransform>();
         Stretch(rect);
@@ -70,18 +67,16 @@ public static class NetworkModePrefabBuilder
         canvas.sortingOrder = 500;
 
         CanvasGroup canvasGroup = root.GetComponent<CanvasGroup>();
+        // Prefab 模式保留完整外观；运行时由 BasePanel.InitClosed 设为初始隐藏。
         canvasGroup.alpha = 1f;
-        canvasGroup.interactable = true;
-        canvasGroup.blocksRaycasts = true;
-
-        Image scrim = root.GetComponent<Image>();
-        scrim.color = new Color(0.006f, 0.016f, 0.024f, 0.68f);
-        scrim.raycastTarget = true;
+        canvasGroup.interactable = false;
+        canvasGroup.blocksRaycasts = false;
 
         BasePanel panel = root.GetComponent<BasePanel>();
         panel.PanelName = NetworkModeUIController.NetworkPanelKey;
         panel.canvasGroup = canvasGroup;
         panel.rectTransform = rect;
+        RuntimeUIPrefabBuilder.ConfigureScaleAnimation(panel);
         return root;
     }
 
@@ -91,6 +86,11 @@ public static class NetworkModePrefabBuilder
 
     private static void BuildVisualTree(Transform root, TMP_FontAsset font)
     {
+        Image scrim = CreateImage("联机界面遮罩", root, Color.clear);
+        Stretch(scrim.rectTransform);
+        scrim.gameObject.AddComponent<FullScreenRectController>();
+        scrim.raycastTarget = true;
+
         Image shadow = CreateImage("面板投影", root, new Color(0f, 0f, 0f, 0.38f));
         SetRect(shadow.rectTransform, new Vector2(12f, -14f), FlatWorldUIPanelMetrics.SharedModalCardSize, new Vector2(0.5f, 0.5f));
         shadow.raycastTarget = false;

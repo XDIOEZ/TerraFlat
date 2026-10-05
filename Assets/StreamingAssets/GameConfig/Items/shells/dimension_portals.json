@@ -28,6 +28,14 @@
       "tags": [],
       "visual": {
         "spriteAddress": "Assets/6_Art/Env/Dimension/CaveEntrance_Natural.png",
+        "shadows": {
+          "contactWidth": 1.55,
+          "footOverlap": 0.0,
+          "footLocalPosition": {
+            "x": 0.0,
+            "y": -0.5625
+          }
+        },
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -71,13 +79,10 @@
       },
       "health": {
         "hasHp": true,
-        "hp": 180.0,
-        "maxHp": 180.0,
+        "hp": 60,
+        "maxHp": 60,
         "defense": {
-          "cutting": 8.0,
-          "piercing": 8.0,
-          "chopping": 8.0,
-          "blunt": 8.0
+          "physical": 8.0
         },
         "moduleLocalPosition": {
           "x": 0.0,
@@ -97,7 +102,9 @@
             "y": 1.22
           },
           "edgeRadius": 0.0
-        }
+        },
+        "weakTool": 0,
+        "combatBalanceVersion": 1
       },
       "modules": {
         "维度入口模块": {
@@ -156,6 +163,13 @@
       "tags": [],
       "visual": {
         "spriteAddress": "Assets/6_Art/Env/Dimension/CaveEntrance_Natural.png",
+        "shadows": {
+          "footOverlap": 0.0,
+          "footLocalPosition": {
+            "x": 0.0,
+            "y": -0.5625
+          }
+        },
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,

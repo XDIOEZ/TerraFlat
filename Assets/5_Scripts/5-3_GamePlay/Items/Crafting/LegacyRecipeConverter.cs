@@ -1,9 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using UnityEngine;
 
 /// <summary>
-/// 旧配方 SO 的临时兼容桥，仅用于迁移旧资源与兼容旧 MOD AssetBundle。
+/// 旧熔炼 SO 的兼容桥；普通合成统一使用无位置的 JSON 材料清单。
 /// </summary>
 public static class LegacyRecipeConverter
 {
@@ -11,6 +12,8 @@ public static class LegacyRecipeConverter
     {
         if (legacy == null)
             throw new ArgumentNullException(nameof(legacy));
+        if (legacy is not CookRecipe && legacy.inputs?.recipeType != RecipeType.Smelting)
+            throw new InvalidDataException($"旧 Recipe SO 不再支持普通合成：{id}，请改用 JSON 的物品数量清单");
 
         int inputCount = legacy.inputs?.RowItems_List?.Count ?? 0;
         int gridWidth = InferGridWidth(inputCount);
@@ -18,7 +21,7 @@ public static class LegacyRecipeConverter
         {
             Id = id,
             DisplayName = legacy.name,
-            RecipeType = legacy.inputs != null && legacy.inputs.recipeType == RecipeType.Smelting ? "smelting" : "crafting",
+            RecipeType = "smelting",
             InputRule = legacy.inputs != null && legacy.inputs.inputOrder == RecipeInputRule.无规则合成 ? "unordered" : "ordered",
             GridWidth = gridWidth,
             GridHeight = gridWidth > 0 ? Mathf.CeilToInt((float)inputCount / gridWidth) : 0,
@@ -63,18 +66,11 @@ public static class LegacyRecipeConverter
         {
             if (legacyAction is DurabilityModifier durability)
             {
-                string targetRole = durability.lostDurabilityItemTag;
-                if (string.IsNullOrWhiteSpace(targetRole) && durability.slotIndex >= 0 &&
-                    durability.slotIndex < dto.Inputs.Count)
-                {
-                    targetRole = dto.Inputs[durability.slotIndex].Tag;
-                }
                 dto.Actions.Add(new RecipeActionDto
                 {
                     Type = RecipeActionRunner.ChangeDurabilityType,
-                    TargetRole = targetRole,
-                    Value = durability.durabilityCost,
-                    SlotIndex = durability.slotIndex
+                    TargetRole = durability.lostDurabilityItemTag,
+                    Value = durability.durabilityCost
                 });
             }
             else if (legacyAction != null)

@@ -33,7 +33,7 @@ public sealed class NewWorldCreationRequest
         string seed,
         PlanetData planetData,
         TimeData timeData,
-        GameDifficultyId difficulty = GameDifficultyId.Simple,
+        GameDifficultyId difficulty = GameDifficultyId.Level0,
         GameDifficultyRuleValues customDifficultyRules = null,
         ITextLibraryService textLibrary = null)
     {
@@ -140,6 +140,15 @@ public sealed class NewWorldCreationRequest
         if (PlanetData.Radius <= 0)
         {
             error = "星球半径必须大于 0。";
+            return false;
+        }
+
+        if (!global::PlanetData.IsValidChunkDimension(PlanetData.ChunkSize.x) ||
+            !global::PlanetData.IsValidChunkDimension(PlanetData.ChunkSize.y))
+        {
+            int minChunkDimension = global::PlanetData.MinChunkDimension;
+            int maxChunkDimension = global::PlanetData.MaxChunkDimension;
+            error = $"区块尺寸必须在 {minChunkDimension} 到 {maxChunkDimension} 之间。";
             return false;
         }
 

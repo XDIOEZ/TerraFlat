@@ -14,7 +14,7 @@ public partial class EcologyWorldSaveData
 {
     #region 世界配置
 
-    public const int CurrentDataVersion = 5;
+    public const int CurrentDataVersion = 7;
     private const string RetiredWeedItemId = "Weed";
     private const string RetiredWeedRuleId = "surface.grassland.weed";
 
@@ -460,6 +460,10 @@ public partial class EcologyRuleSaveData
     public string RuleId;
     public string ItemId;
     public int ItemCount = 1;
+    public EcologyItemCountDistribution ItemCountDistribution;
+    public int ItemCountMin = 1;
+    public int ItemCountPeak = 1;
+    public double ItemCountQuadraticRadius = 1d;
     public double SpawnChance;
     public double SpawnChanceMultiplier = 1d;
     public EcologyDistributionMode DistributionMode;
@@ -483,6 +487,15 @@ public partial class EcologyRuleSaveData
     public double CompanionMaxRadius;
     // 当前规则的河流泛滥平原限制。
     public double MinRiverFloodplainStrength;
+    // 伴生物所需的自然物标签及区块搜索半径。
+    public string RequiredChunkTag;
+    public int RequiredTagChunkRadius;
+    // 缺省与显式 0 必须分开，避免 MemoryPack 将未记录的上限读成禁止河岸。
+    public double? MaxRiverFloodplainStrength;
+    public string RequiredEnvironmentLayer;
+    public double MinimumEnvironmentValue;
+    public double? MaximumEnvironmentValue;
+    public bool RequireNaturalPlantableGround;
 
     #endregion
 
@@ -496,6 +509,10 @@ public partial class EcologyRuleSaveData
             RuleId = snapshot.RuleId,
             ItemId = snapshot.ItemId,
             ItemCount = snapshot.ItemCount,
+            ItemCountDistribution = snapshot.ItemCountDistribution,
+            ItemCountMin = snapshot.ItemCountMin,
+            ItemCountPeak = snapshot.ItemCountPeak,
+            ItemCountQuadraticRadius = snapshot.ItemCountQuadraticRadius,
             SpawnChance = snapshot.SpawnChance,
             SpawnChanceMultiplier = snapshot.SpawnChanceMultiplier,
             DistributionMode = snapshot.DistributionMode,
@@ -510,8 +527,15 @@ public partial class EcologyRuleSaveData
             MinHeight = snapshot.MinHeight,
             MaxHeight = snapshot.MaxHeight,
             MinRiverFloodplainStrength = snapshot.MinRiverFloodplainStrength,
+            MaxRiverFloodplainStrength = snapshot.MaxRiverFloodplainStrength,
+            RequiredEnvironmentLayer = snapshot.RequiredEnvironmentLayer,
+            MinimumEnvironmentValue = snapshot.MinimumEnvironmentValue,
+            MaximumEnvironmentValue = snapshot.MaximumEnvironmentValue,
+            RequireNaturalPlantableGround = snapshot.RequireNaturalPlantableGround,
             CompanionOnly = snapshot.CompanionOnly,
             CompanionHostTag = snapshot.CompanionHostTag,
+            RequiredChunkTag = snapshot.RequiredChunkTag,
+            RequiredTagChunkRadius = snapshot.RequiredTagChunkRadius,
             CompanionSpawnChance = snapshot.CompanionSpawnChance,
             CompanionOffsetX = snapshot.CompanionOffsetX,
             CompanionOffsetY = snapshot.CompanionOffsetY,
@@ -543,6 +567,7 @@ public partial class EcologyRuleSaveData
             ProvidedTags,
             CompanionOnly,
             CompanionHostTag,
+            RequiredChunkTag,
             CompanionSpawnChance,
             CompanionOffsetX,
             CompanionOffsetY,
@@ -552,7 +577,17 @@ public partial class EcologyRuleSaveData
             DistributionMode,
             PatchSpacing,
             PatchRadius,
-            PatchChance);
+            PatchChance,
+            RequiredTagChunkRadius,
+            MaxRiverFloodplainStrength ?? 1d,
+            RequiredEnvironmentLayer,
+            MinimumEnvironmentValue,
+            ItemCountDistribution,
+            ItemCountMin,
+            ItemCountPeak,
+            ItemCountQuadraticRadius,
+            MaximumEnvironmentValue ?? double.MaxValue,
+            RequireNaturalPlantableGround);
     }
 
     #endregion

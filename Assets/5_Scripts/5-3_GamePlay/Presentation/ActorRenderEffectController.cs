@@ -38,6 +38,10 @@ public sealed class ActorRenderEffectController : MonoBehaviour
     private MaterialPropertyBlock propertyBlock;
     private Material effectSpriteMaterialOverride;
     private bool bindingsDirty = true;
+    private bool renderStateDirty = true;
+    private readonly List<uint> moduleVersions = new();
+    private readonly List<bool> moduleActiveStates = new();
+    private readonly Dictionary<Renderer, Sprite> submittedSprites = new();
 
     public IReadOnlyList<Renderer> Renderers => renderers;
 
@@ -54,6 +58,7 @@ public sealed class ActorRenderEffectController : MonoBehaviour
     private void OnEnable()
     {
         bindingsDirty = true;
+        renderStateDirty = true;
     }
 
     private void LateUpdate()
@@ -65,16 +70,30 @@ public sealed class ActorRenderEffectController : MonoBehaviour
             RefreshBindings();
 
         float deltaTime = Application.isPlaying ? Time.deltaTime : 0f;
+        bool applyEffects = renderStateDirty;
         for (int i = 0; i < modules.Count; i++)
         {
-            if (modules[i] != null)
-                modules[i].UpdateFrame(deltaTime);
+            ActorRenderEffectModule module = modules[i];
+            if (module == null)
+                continue;
+            module.UpdateFrame(deltaTime);
+            bool active = module.isActiveAndEnabled;
+            applyEffects |= moduleVersions[i] != module.RenderStateVersion ||
+                moduleActiveStates[i] != active || active && module.RequiresContinuousRendering;
+            moduleVersions[i] = module.RenderStateVersion;
+            moduleActiveStates[i] = active;
         }
 
         for (int i = 0; i < renderers.Count; i++)
         {
             Renderer renderer = renderers[i];
             if (renderer == null)
+                continue;
+
+            Sprite sprite = renderer is SpriteRenderer spriteRenderer ? spriteRenderer.sprite : null;
+            // 静态参数未变化时保留已提交的 MPB，换图和动态效果仍按当前帧刷新。
+            if (!applyEffects && submittedSprites.TryGetValue(renderer, out Sprite previousSprite) &&
+                previousSprite == sprite)
                 continue;
 
             renderer.GetPropertyBlock(propertyBlock);
@@ -94,7 +113,9 @@ public sealed class ActorRenderEffectController : MonoBehaviour
             }
 
             renderer.SetPropertyBlock(propertyBlock);
+            submittedSprites[renderer] = sprite;
         }
+        renderStateDirty = false;
     }
 
     private void OnValidate()
@@ -164,6 +185,15 @@ public sealed class ActorRenderEffectController : MonoBehaviour
         }
 
         modules.Sort(CompareModules);
+        moduleVersions.Clear();
+        moduleActiveStates.Clear();
+        for (int i = 0; i < modules.Count; i++)
+        {
+            moduleVersions.Add(modules[i].RenderStateVersion);
+            moduleActiveStates.Add(modules[i].isActiveAndEnabled);
+        }
+        submittedSprites.Clear();
+        renderStateDirty = true;
         bindingsDirty = false;
     }
 
@@ -196,6 +226,7 @@ public sealed class ActorRenderEffectController : MonoBehaviour
             CaptureExternalPropertyBlock(renderer);
             AddRenderer(renderer);
             ApplyEffectMaterial(renderer, effectMaterial);
+            renderStateDirty = true;
         }
     }
 
@@ -214,6 +245,7 @@ public sealed class ActorRenderEffectController : MonoBehaviour
 
             externalRenderers.Remove(renderer);
             renderers.Remove(renderer);
+            submittedSprites.Remove(renderer);
             RestoreExternalRenderer(renderer);
         }
     }
@@ -354,6 +386,12 @@ public abstract class ActorRenderEffectModule : MonoBehaviour
     #endregion
 
     #region Module Lifecycle
+
+    /// <summary>连续效果保留逐帧提交，静态效果通过版本通知参数变化。</summary>
+    public virtual bool RequiresContinuousRendering => true;
+    internal uint RenderStateVersion { get; private set; }
+
+    protected void MarkRenderStateDirty() => RenderStateVersion++;
 
     /// <summary>更新模块的平滑状态，不直接操作 Renderer。</summary>
     internal void UpdateFrame(float deltaTime)

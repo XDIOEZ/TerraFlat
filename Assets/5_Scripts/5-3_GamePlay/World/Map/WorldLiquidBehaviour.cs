@@ -8,6 +8,10 @@ using UnityEngine;
 public class WorldLiquidBehaviour
 {
     #region 定义配置
+    private const string LavaLiquidId = "core:lava";
+    private const float LavaBurningDurationSeconds = 10f;
+    private const float LavaBurningRefreshThresholdSeconds = 5f;
+
     public WorldLiquidBehaviour() { }
     /// <summary>每种液体只构建一次共享行为，禁止把角色状态放入液体目录。</summary>
     public WorldLiquidBehaviour(WorldLiquidSettings settings)
@@ -18,6 +22,7 @@ public class WorldLiquidBehaviour
         entryTemperatureTransitionSeconds = settings.EntryTemperatureTransitionSeconds;
         drinkHoldSeconds = settings.DrinkHoldSeconds;
         drinkTickSeconds = settings.DrinkTickSeconds;
+        waterContact = settings.WaterContact;
     }
     [Header("水体环境动作")]
     [Tooltip("长按交互键达到该时长后开始饮水。")]
@@ -34,16 +39,33 @@ public class WorldLiquidBehaviour
     [Min(0f)] public float entryTemperatureFloor = 10f;
     [Tooltip("首次入水降温平滑过渡到目标体温所需的时间。")]
     [Min(0.1f)] public float entryTemperatureTransitionSeconds = 5f;
+    private bool waterContact = true;
     #endregion
 
     #region 液体接触生命周期
     /// <summary>进入液体时启用真实水体状态、动作与被动效果。</summary>
-    public virtual void OnEnter(Item item, WorldLiquidSourceTarget source, TileEffectReceiver receiver)
+    public virtual void OnEnter(Item item, WorldLiquidSourceTarget source, Mod_TileEffectReceiver receiver)
     {
         if (item == null)
             return;
 
-        BuffManager buffManager = item.GetComponentInChildren<BuffManager>();
+        if (!waterContact)
+        {
+            SetWaterTemperatureState(item, false, 0f);
+            receiver?.ExitWaterSurvival(item);
+            item.GetComponentInChildren<Mod_BuffManager>()?.SetWaterStackExposure(false);
+            bool touching = receiver == null || !receiver.IsActiveTileEdgeInteractionOnly;
+            SetWaterVisualState(item, touching ? source.Sample.LiquidDepth : 0f, touching);
+            if (touching)
+            {
+                ProvideWaterEffects(receiver, source.Sample.LiquidDepth);
+                RefreshLavaBurning(item, source.Liquid, true);
+            }
+            ProvideWaterActions(item, source.Liquid, receiver);
+            return;
+        }
+
+        Mod_BuffManager buffManager = item.GetComponentInChildren<Mod_BuffManager>();
         float depthValue = Mathf.Clamp01(source.Sample.LiquidDepth);
         bool edgeInteractionOnly = receiver != null && receiver.IsActiveTileEdgeInteractionOnly;
         buffManager?.SetWaterStackExposure(!edgeInteractionOnly && depthValue > 0f);
@@ -67,15 +89,19 @@ public class WorldLiquidBehaviour
     }
 
     /// <summary>离开液体时撤销水体状态、动作与被动效果。</summary>
-    public virtual void OnExit(Item item, WorldLiquidSourceTarget source, TileEffectReceiver receiver)
+    public virtual void OnExit(Item item, WorldLiquidSourceTarget source, Mod_TileEffectReceiver receiver)
     {
         if (item == null)
             return;
+
+        if (receiver == null || !receiver.IsActiveTileEdgeInteractionOnly)
+            RefreshLavaBurning(item, source.Liquid, true);
+
         SetWaterTemperatureState(item, false, 0f);
         receiver?.ExitWaterSurvival(item);
         SetWaterVisualState(item, 0f, false);
 
-        BuffManager buffManager = item.GetComponentInChildren<BuffManager>();
+        Mod_BuffManager buffManager = item.GetComponentInChildren<Mod_BuffManager>();
         buffManager?.SetWaterStackExposure(false);
 
         receiver?.EnvironmentInteractions.ClearAvailableActions();
@@ -83,7 +109,7 @@ public class WorldLiquidBehaviour
     }
 
     /// <summary>持续同步真实水格的水深与移动速度影响。</summary>
-    public virtual void OnUpdate(Item item, WorldLiquidSourceTarget source, TileEffectReceiver receiver, float deltaTime)
+    public virtual void OnUpdate(Item item, WorldLiquidSourceTarget source, Mod_TileEffectReceiver receiver, float deltaTime)
     {
         if (item == null)
             return;
@@ -92,9 +118,18 @@ public class WorldLiquidBehaviour
         if (receiver != null && receiver.IsActiveTileEdgeInteractionOnly)
             return;
 
+        RefreshLavaBurning(item, source.Liquid, false);
+        receiver?.AdvanceLiquidContactHeat(source.Liquid.WorldWater, deltaTime);
+        if (!waterContact)
+        {
+            SetWaterVisualState(item, source.Sample.LiquidDepth, true);
+            ProvideWaterEffects(receiver, source.Sample.LiquidDepth);
+            return;
+        }
+
         // 漂浮结算直接以 Liquid 真实液深为准；液深不超过 0.3 时不进入漂浮维持。
         float depthValue = Mathf.Clamp01(source.Sample.LiquidDepth);
-        BuffManager buffManager = item.itemMods?.GetMod_ByID<BuffManager>(ModText.BuffManager);
+        Mod_BuffManager buffManager = item.itemMods?.GetMod_ByID<Mod_BuffManager>(ModText.Mod_BuffManager);
         buffManager?.SetWaterStackExposure(depthValue > 0f);
         buffManager?.AdvanceWaterWetness(depthValue, deltaTime);
         float effectiveImmersion = receiver != null
@@ -104,6 +139,35 @@ public class WorldLiquidBehaviour
         SetWaterVisualState(item, effectiveImmersion, true);
         ProvideWaterEffects(receiver, effectiveImmersion);
     }
+    #endregion
+
+    #region 岩浆燃烧
+
+    /// <summary>真实接触岩浆时蒸发潮湿并维持最高层燃烧，离开后保留完整十秒燃烧时间。</summary>
+    private static void RefreshLavaBurning(Item item, LiquidDefinition liquid, bool forceFullDuration)
+    {
+        if (item == null || liquid == null ||
+            !string.Equals(liquid.Id, LavaLiquidId, System.StringComparison.OrdinalIgnoreCase))
+            return;
+
+        Mod_BuffManager buffManager = item.itemMods?.GetMod_ByID<Mod_BuffManager>(ModText.Mod_BuffManager);
+        BuffDefinition definition = GameRes.Instance?.GetBuffDefinition(BurningBuffIds.Burning);
+        if (buffManager == null || definition == null)
+            return;
+
+        // 岩浆是最高强度火源，真实接触时潮湿不能阻止点燃。
+        buffManager.RemoveBuff(WetBuffIds.Wet);
+        if (buffManager.GetBuffStacks(BurningBuffIds.Burning) < definition.MaxStacks &&
+            !buffManager.AddBuff(BurningBuffIds.Burning, definition.MaxStacks))
+            return;
+
+        if (!buffManager.TryGetBuff(BurningBuffIds.Burning, out BuffInstance burning))
+            return;
+
+        if (forceFullDuration || burning.RemainingDurationSeconds <= LavaBurningRefreshThresholdSeconds)
+            buffManager.TrySetBuffDuration(BurningBuffIds.Burning, LavaBurningDurationSeconds);
+    }
+
     #endregion
 
     #region Temperature State
@@ -141,7 +205,7 @@ public class WorldLiquidBehaviour
 
     /// <summary>水体只提供无角色状态的动作定义；角色侧运行器在按键时创建独立实例。</summary>
     private void ProvideWaterActions(Item item, LiquidDefinition liquid,
-        TileEffectReceiver receiver)
+        Mod_TileEffectReceiver receiver)
     {
         EnvironmentInteractionRunner runner = receiver?.EnvironmentInteractions;
         if (runner == null)
@@ -166,7 +230,7 @@ public class WorldLiquidBehaviour
     }
 
     /// <summary>根据当前有效淹没高度计算减速；漂浮时固定按 0.3，体力耗尽后随下沉程度继续增加。</summary>
-    private void ProvideWaterEffects(TileEffectReceiver receiver, float immersionLevel)
+    private void ProvideWaterEffects(Mod_TileEffectReceiver receiver, float immersionLevel)
     {
         EnvironmentInteractionRunner runner = receiver?.EnvironmentInteractions;
         if (runner == null)

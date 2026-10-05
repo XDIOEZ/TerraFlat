@@ -32,8 +32,10 @@ public static class CanopyFruitTimeline
         ICanopyFruitSink sink, int budget = 512, Func<int, int, int> random = null)
     {
         if (!state.Initialized || state.Stopped) return true;
-        if (double.IsNaN(now) || double.IsInfinity(now) || now < state.Time)
-            throw new InvalidOperationException("树果时钟不能倒退或使用非有限值。");
+        if (double.IsNaN(now) || double.IsInfinity(now) ||
+            double.IsNaN(state.Time) || double.IsInfinity(state.Time))
+            throw new InvalidOperationException("树果时钟不能使用非有限值。");
+        if (now < state.Time) RebaseAfterClockRollback(state, now);
         for (int iteration = 0; iteration < budget; iteration++)
         {
             double next = state.Fruits.Count == 0 ? state.NextBatchAt : double.PositiveInfinity;
@@ -65,6 +67,28 @@ public static class CanopyFruitTimeline
                 CreateBatch(state, settings, next, random);
         }
         return false;
+    }
+
+    /// <summary>世界时钟回退时平移未完成事件，保留各果实剩余等待时间与已结算身份。</summary>
+    private static void RebaseAfterClockRollback(CanopyFruitState state, double now)
+    {
+        double offset = now - state.Time;
+        if (double.IsInfinity(offset)) throw new InvalidOperationException("树果时钟回退幅度无效。");
+        state.Time = now;
+        state.NextBatchAt += offset;
+        foreach (CanopyFruitRecord fruit in state.Fruits)
+        {
+            fruit.BornAt += offset;
+            fruit.MatureAt += offset;
+            if (fruit.FallAt >= 0) fruit.FallAt += offset;
+        }
+        foreach (CanopyFruitRecord flight in state.Flights)
+        {
+            flight.BornAt += offset;
+            flight.MatureAt += offset;
+            flight.FallAt += offset;
+            flight.LandAt += offset;
+        }
     }
 
     /// <summary>每批果实拥有独立生长时刻和身份，数量不超过配置容量。</summary>

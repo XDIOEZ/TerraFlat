@@ -673,15 +673,7 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
             return;
         }
 
-        Vector2 worldPosition = item.transform.position;
-        if (WorldTopologyRuntime.TryGetActiveBounds(out WorldTopologyBounds bounds) &&
-            !bounds.Contains(worldPosition))
-        {
-            // A dynamic Rigidbody2D can be observed by Update between the physics
-            // integration that crossed the seam and WrappedRigidbody2DAdapter.FixedUpdate.
-            // Do not index that transient, non-canonical image into either edge Chunk.
-            return;
-        }
+        Vector2 worldPosition = WorldTopologyRuntime.NormalizePosition(item.transform.position);
 
         Vector2Int chunkPos = NormalizeChunkPosition(Chunk.GetChunkPosition(worldPosition));
         Chunk targetChunk = null;
@@ -1364,24 +1356,32 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
         if (SaveDataMgr.Instance == null)
         {
             Debug.LogWarning("SaveDataMgr.Instance is null, returning default chunk size.");
-            return new Vector2(16, 16);
+            return new Vector2(PlanetData.DefaultChunkDimension, PlanetData.DefaultChunkDimension);
         }
 
         if (SaveDataMgr.Instance.SaveData == null)
         {
             //            Debug.LogWarning("SaveDataMgr.Instance.SaveData is null, returning default chunk size.");
-            return new Vector2(16, 16);
+            return new Vector2(PlanetData.DefaultChunkDimension, PlanetData.DefaultChunkDimension);
+        }
+
+        if (SaveDataMgr.Instance.TryGetActivePlanetData(out PlanetData activePlanet) &&
+            activePlanet != null)
+        {
+            Vector2Int activeChunkSize = PlanetData.NormalizeChunkSize(activePlanet.ChunkSize);
+            return activeChunkSize;
         }
 
         var dict = SaveDataMgr.Instance.SaveData.PlanetData_Dict;
 
         if (dict != null && dict.TryGetValue(sceneName, out var planetData))
         {
-            return planetData.ChunkSize;
+            Vector2Int chunkSize = PlanetData.NormalizeChunkSize(planetData.ChunkSize);
+            return chunkSize;
         }
 
         // 找不到就返回 Vector2(100,100)
-        return new Vector2(16, 16);
+        return new Vector2(PlanetData.DefaultChunkDimension, PlanetData.DefaultChunkDimension);
     }
 
     /// <summary>

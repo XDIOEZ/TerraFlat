@@ -9,10 +9,11 @@ using UnityEngine;
 /// <summary>背包整理完成后的循环排序规则。</summary>
 public enum InventorySortMode
 {
-    Definition = 0,
-    AmountDescending = 1,
-    WeightDescending = 2,
-    VolumeDescending = 3
+    Id = 0,
+    Category = 1,
+    AmountDescending = 2,
+    WeightDescending = 3,
+    VolumeDescending = 4
 }
 
 [Serializable]
@@ -152,9 +153,7 @@ public partial class Inventory_Data
 
         itemSlots[index] = new ItemSlot(index)
         {
-            SlotMaxVolume = HasUnlimitedStackSize
-                ? float.MaxValue
-                : Inventory_Data.DefaultSlotVolume
+            SlotMaxVolume = Inventory_Data.DefaultSlotVolume
         };
         Debug.LogError($"[Inventory_Data] 检测到空槽位引用，已在索引 {index} 处自动补齐 ItemSlot 实例");
         return itemSlots[index];
@@ -564,7 +563,7 @@ public partial class Inventory_Data
             return addedAmount > 0f;
         }
 
-        // 可堆叠物品优先合并同类；玩家主背包运行时把 SlotMaxVolume 设为 float.MaxValue。
+        // 可堆叠物品优先合并同类，普通槽位统一使用整型最大值上限。
         // 优先填充已有的同类堆叠槽位，其次才占用新的空槽位
 
         // 第一轮：只尝试向已有的同类物品堆叠
@@ -748,20 +747,18 @@ public partial class Inventory_Data
         }
 
         // 堆叠逻辑处理
-        int availableSourceCount = Mathf.FloorToInt(dataFrom.Stack.Amount);
+        int availableSourceCount = GetWholeStackAmount(dataFrom.Stack.Amount);
         int transferCount = Mathf.Min(upToCount, availableSourceCount);
         if (transferCount <= 0)
             return false;
 
         float currentTargetAmount = dataTo?.Stack?.Amount ?? 0f;
-        int targetCapacity = targetInventory.HasUnlimitedStackSize
-            ? transferCount
-            : Mathf.FloorToInt(Mathf.Max(0f, slotTo.SlotMaxVolume - currentTargetAmount) + 0.0001f);
+        int targetCapacity = GetWholeStackAmount(Mathf.Max(0f, slotTo.SlotMaxVolume - currentTargetAmount) + 0.0001f);
         transferCount = Mathf.Min(transferCount, targetCapacity);
         if (!ReferenceEquals(this, targetInventory))
         {
             float capacityAmount = targetInventory.GetCapacityLimitedAmount(dataFrom, transferCount);
-            transferCount = Mathf.Min(transferCount, Mathf.FloorToInt(capacityAmount + 0.0001f));
+            transferCount = Mathf.Min(transferCount, GetWholeStackAmount(capacityAmount + 0.0001f));
         }
         if (transferCount <= 0)
             return false;
@@ -797,6 +794,12 @@ public partial class Inventory_Data
         slotTo.RefreshUI();
 
         return true;
+    }
+
+    /// <summary>大容量先钳制到整型范围，避免浮点上限转整数时溢出。</summary>
+    public static int GetWholeStackAmount(float amount)
+    {
+        return amount >= int.MaxValue ? int.MaxValue : Mathf.FloorToInt(Mathf.Max(0f, amount));
     }
 
     private static ItemData CloneForStackSplit(ItemData source)
@@ -875,6 +878,9 @@ public partial class Inventory_Data
 
     #region 背包整理与排序
 
+    // 物品定义可通过 InventoryGroup.<类别> 标签声明背包排序分组，MOD 无需修改排序代码。
+    private const string InventoryGroupTagPrefix = "InventoryGroup.";
+
     /// <summary>判断当前物品是否已经连续排列在前方，且不存在还能继续合并的堆叠。</summary>
     public bool IsOrganized()
     {
@@ -916,20 +922,35 @@ public partial class Inventory_Data
         return RepackItems(null);
     }
 
+    /// <summary>整理物品并把符合优先条件的物品稳定移动到前方，各分区内保持原有相对顺序。</summary>
+    public bool Organize(Predicate<ItemData> priorityFilter)
+    {
+        return priorityFilter == null ? Organize() : RepackItems(null, priorityFilter);
+    }
+
     /// <summary>在整理状态下按指定规则重新排序；排序始终保持空槽位于末尾。</summary>
     public bool Sort(InventorySortMode mode)
     {
         return RepackItems((left, right) => CompareItemsForSort(left, right, mode));
     }
 
-    /// <summary>保留旧调用语义：按稳定物品定义顺序整理并排序。</summary>
+    /// <summary>按指定规则排序，并把符合优先条件的物品整体排在其它物品之前。</summary>
+    public bool Sort(InventorySortMode mode, Predicate<ItemData> priorityFilter)
+    {
+        if (priorityFilter == null)
+            return Sort(mode);
+
+        return RepackItems((left, right) => CompareItemsForSort(left, right, mode), priorityFilter);
+    }
+
+    /// <summary>按稳定物品 ID 整理并排序。</summary>
     public bool SortDefault()
     {
-        return Sort(InventorySortMode.Definition);
+        return Sort(InventorySortMode.Id);
     }
 
     /// <summary>按当前顺序或指定比较器重新打包库存。</summary>
-    private bool RepackItems(Comparison<ItemData> comparison)
+    private bool RepackItems(Comparison<ItemData> comparison, Predicate<ItemData> priorityFilter = null)
     {
         EnsureRuntimeEvents();
 
@@ -954,6 +975,21 @@ public partial class Inventory_Data
 
         if (comparison != null)
             items.Sort(comparison);
+
+        if (priorityFilter != null)
+        {
+            List<ItemData> preferredItems = new List<ItemData>(items.Count);
+            List<ItemData> regularItems = new List<ItemData>(items.Count);
+            for (int i = 0; i < items.Count; i++)
+            {
+                ItemData itemData = items[i];
+                (priorityFilter(itemData) ? preferredItems : regularItems).Add(itemData);
+            }
+
+            items.Clear();
+            items.AddRange(preferredItems);
+            items.AddRange(regularItems);
+        }
 
         for (int i = 0; i < itemSlots.Count; i++)
         {
@@ -1024,6 +1060,11 @@ public partial class Inventory_Data
         int result;
         switch (mode)
         {
+            case InventorySortMode.Id:
+                return CompareItemsForDefaultSort(left, right);
+            case InventorySortMode.Category:
+                result = CompareInventoryGroups(left, right);
+                break;
             case InventorySortMode.AmountDescending:
                 result = CompareFloatDescending(GetStackAmount(left), GetStackAmount(right));
                 break;
@@ -1039,6 +1080,42 @@ public partial class Inventory_Data
         }
 
         return result != 0 ? result : CompareItemsForDefaultSort(left, right);
+    }
+
+    /// <summary>有分组标签的物品按组相邻排列，同组内继续使用当前排序规则。</summary>
+    private static int CompareInventoryGroups(ItemData left, ItemData right)
+    {
+        string leftGroup = GetInventoryGroup(left);
+        string rightGroup = GetInventoryGroup(right);
+        if (leftGroup == null)
+            return rightGroup == null ? 0 : 1;
+        if (rightGroup == null)
+            return -1;
+
+        return StringComparer.OrdinalIgnoreCase.Compare(leftGroup, rightGroup);
+    }
+
+    /// <summary>同一物品声明多个分组时，固定使用字典序最前的分组。</summary>
+    private static string GetInventoryGroup(ItemData itemData)
+    {
+        List<string> tags = itemData?.Tags;
+        if (tags == null)
+            return null;
+
+        string group = null;
+        for (int i = 0; i < tags.Count; i++)
+        {
+            string tag = tags[i];
+            if (string.IsNullOrEmpty(tag) ||
+                tag.Length <= InventoryGroupTagPrefix.Length ||
+                !tag.StartsWith(InventoryGroupTagPrefix, StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            if (group == null || StringComparer.OrdinalIgnoreCase.Compare(tag, group) < 0)
+                group = tag;
+        }
+
+        return group;
     }
 
     private static int CompareFloatDescending(float left, float right)
@@ -1102,8 +1179,6 @@ public partial class Inventory_Data
         if (slot == null || itemData?.Stack == null)
             return 0f;
 
-        if (HasUnlimitedStackSize)
-            return float.MaxValue;
         return Mathf.Max(0f, slot.SlotMaxVolume - itemData.Stack.Amount);
     }
 

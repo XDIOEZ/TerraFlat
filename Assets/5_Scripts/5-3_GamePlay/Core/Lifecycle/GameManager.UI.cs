@@ -9,6 +9,7 @@ using FlatWorld.Localization;
 using FlatWorld.Settings;
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 public partial class GameManager
@@ -20,6 +21,7 @@ public partial class GameManager
     public const string MainMenuNewGameButtonKey = "新游戏";
     public const string MainMenuMultiplayerButtonKey = "联机模式";
     public const string MainMenuSettingsButtonKey = "设置";
+    public const string MainMenuModsButtonKey = "MOD管理";
     public const string MainMenuSettingsPanelKey = RuntimeUIPrefabKeys.MainMenuSettings;
     public const string MainMenuSettingsCloseButtonKey = "关闭";
     public const string MainMenuSettingsPreferredControlKey = "界面缩放";
@@ -35,10 +37,16 @@ public partial class GameManager
     public const string NewGamePanelKey = "NewGame";
     public const string NewGameStartButtonKey = "开始新游戏";
     public const string NewGameBackButtonKey = "返回上一个界面";
+    public const string NewGameIdentityPageKey = "身份与存档区";
+    public const string NewGameWorldPageKey = "世界参数区";
+    public const string NewGameWorldSettingsButtonKey = "世界设置";
+    public const string NewGameIdentityButtonKey = "返回名称设置";
     public const string NewGamePlayerInputKey = "新增玩家名称输入框";
     public const string NewGameSaveInputKey = "新增存档名称输入框";
     public const string NewGameRadiusInputKey = "星球半径输入框";
     public const string NewGameNoiseInputKey = "噪声缩放输入框";
+    public const string NewGameChunkWidthInputKey = "区块宽度输入框";
+    public const string NewGameChunkHeightInputKey = "区块高度输入框";
     public const string NewGameSeedInputKey = "世界种子输入框";
     public const string NewGameTopologyToggleKey = "有限循环世界";
     public const string NewGameDifficultyButtonKey = "难度设置";
@@ -62,6 +70,10 @@ public partial class GameManager
     public const string NewGameDifficultyTitleTextKey = "难度选择标题";
     public const string NewGameDifficultyDescriptionTextKey = "难度选择说明";
     public const string NewGameDifficultyRuleTextKey = "难度规则摘要";
+    public const string NewGameDifficultyCombatValuesTextKey = "难度规则_战斗数值";
+    public const string NewGameDifficultySurvivalValuesTextKey = "难度规则_生存数值";
+    public const string NewGameDifficultyWorldValuesTextKey = "难度规则_世界数值";
+    public const string NewGameDifficultyProductionValuesTextKey = "难度规则_生产数值";
 
     public const string NewGameDifficultyPlayerAttackSliderKey = "难度_玩家伤害倍率";
     public const string NewGameDifficultyCreatureAttackSliderKey = "难度_生物伤害倍率";
@@ -89,14 +101,18 @@ public partial class GameManager
     public const string GameSaveBatchCancelButtonKey = "取消批量删除按钮";
     public const string GameSaveBatchDialogConfirmButtonKey = "二次确认删除按钮";
     public const string GameSaveBatchDialogCancelButtonKey = "二次确认取消按钮";
+    public const string GameSaveDeleteDialogTitleTextKey = "批量删除确认标题";
+    public const string GameSaveDeleteDialogConfirmTextKey = GameSaveBatchDialogConfirmButtonKey + "_文字";
     public const string GameSaveBatchWarningTextKey = "批量删除确认提示";
     public const string GameSaveBackButtonKey = "返回按钮";
     public const string GameSavePlayerInputKey = "选择或新增玩家名称输入框";
     public const string GameSaveSelectedTextKey = "选中的存档名称";
+    public const string GameSaveRenameButtonKey = "RenameSavePencilButton";
     public const string GameSaveTimeTextKey = "存档保存时间";
     public const string GameSaveGenerationFreezeToggleKey = "冻结世界生成规则开关";
     public const string GameSaveNoSelectionText = "尚未选择存档";
     public const string GameSaveNoTimeText = "保存时间：--";
+    public const string SaveRenameDialogPanelKey = RuntimeUIPrefabKeys.SaveRenameDialog;
 
     private const string ContextMenuPanelKey = "ContextMenu";
 
@@ -123,7 +139,7 @@ public partial class GameManager
     /// <summary>加载卡片淡入和淡出的持续秒数。</summary>
     private const float WorldLoadingContentFadeSeconds = 0.14f;
 
-    private GameDifficultyId pendingNewWorldDifficulty = GameDifficultyId.Simple;
+    private GameDifficultyId pendingNewWorldDifficulty = GameDifficultyId.Level0;
     private GameDifficultyRuleValues pendingCustomDifficultyRules = new GameDifficultyRuleValues();
     private WorldTopologyMode pendingNewWorldTopology = WorldTopologyMode.Wrapped;
 
@@ -199,6 +215,7 @@ public partial class GameManager
     partial void DisposeWorldEntryPresentation()
     {
         WorldEntryProgressChanged -= OnWorldEntryProgressChanged;
+        saveStatusHUD?.CancelResourceReload();
         activeSaveOperationCount = 0;
         saveOperationFailed = false;
         saveStatusHUD = null;
@@ -235,6 +252,33 @@ public partial class GameManager
 
         saveStatusHUD?.EndSave(!saveOperationFailed);
         saveOperationFailed = false;
+    }
+
+    /// <summary>开始显示游戏内 F5 资源更新进度。</summary>
+    internal void BeginResourceReloadStatus()
+    {
+        saveStatusHUD ??= GameSaveStatusHUD.Ensure(this);
+        saveStatusHUD?.BeginResourceReload();
+    }
+
+    /// <summary>把资源加载计划的总进度交给常驻状态 HUD。</summary>
+    internal void UpdateResourceReloadStatus(float progress)
+    {
+        saveStatusHUD ??= GameSaveStatusHUD.Ensure(this);
+        saveStatusHUD?.UpdateResourceReloadProgress(progress);
+    }
+
+    /// <summary>显示 F5 热更新结果。</summary>
+    internal void EndResourceReloadStatus(bool succeeded)
+    {
+        saveStatusHUD ??= GameSaveStatusHUD.Ensure(this);
+        saveStatusHUD?.EndResourceReload(succeeded);
+    }
+
+    /// <summary>世界退出或热更新取消时收起进度提示。</summary>
+    internal void CancelResourceReloadStatus()
+    {
+        saveStatusHUD?.CancelResourceReload();
     }
 
     #endregion
@@ -753,6 +797,7 @@ public partial class GameManager
         panel.SetButtonOnClick(MainMenuContinueButtonKey, OpenGameSaveManager);
         panel.SetButtonOnClick(MainMenuNewGameButtonKey, OpenNewGame);
         panel.SetButtonOnClick(MainMenuSettingsButtonKey, OpenMainMenuSettings);
+        panel.SetButtonOnClick(MainMenuModsButtonKey, OpenMainMenuMods);
         panel.CancelShortcutOverride = OpenMainMenuExitConfirmation;
         panel.PrepareForGamepadNavigation(MainMenuContinueButtonKey, false);
         panel.Open();
@@ -864,6 +909,7 @@ public partial class GameManager
             null);
         BindMainMenuSettingsQuality(panel);
         BindMainMenuSettingsLanguage(panel);
+        SettingsEditSessionController.Ensure(panel);
         panel.RefreshUIComponents();
         pagination?.RefreshPageLifecycles();
         panel.PrepareForGamepadNavigation(MainMenuSettingsPreferredControlKey);
@@ -931,7 +977,9 @@ public partial class GameManager
         }
 
         RefreshMainMenuSettingsQuality(panel);
-        SetMainMenuSettingsStatus(panel, "画质设置已保存");
+        SetMainMenuSettingsStatus(
+            panel,
+            FlatWorldLocalizationService.GetUiText("画质设置已修改，请点击保存"));
     }
 
     /// <summary>应用主菜单的后处理特效质量。</summary>
@@ -948,7 +996,9 @@ public partial class GameManager
         }
 
         RefreshMainMenuSettingsQuality(panel);
-        SetMainMenuSettingsStatus(panel, "特效质量设置已保存");
+        SetMainMenuSettingsStatus(
+            panel,
+            FlatWorldLocalizationService.GetUiText("特效质量设置已修改，请点击保存"));
     }
 
     /// <summary>恢复主菜单当前已注册的全部设置默认值。</summary>
@@ -1143,10 +1193,50 @@ public partial class GameManager
         panel.Open();
     }
 
+    /// <summary>从存档标题铅笔打开独立的改名弹窗。</summary>
+    public void OpenSaveRenameDialogForSave(string saveName, string displayName)
+    {
+        GetOrCreateSaveRenameDialog()?.OpenForSave(saveName, displayName);
+    }
+
+    /// <summary>从角色条目铅笔打开同一个改名弹窗。</summary>
+    public void OpenSaveRenameDialogForPlayer(string profileId, string displayName)
+    {
+        GetOrCreateSaveRenameDialog()?.OpenForPlayer(profileId, displayName);
+    }
+
+    /// <summary>复用已经创建的弹窗；首次打开从 Prefab 目录加载正式资源。</summary>
+    private SaveRenameDialogUI GetOrCreateSaveRenameDialog()
+    {
+        UIManager uiManager = UIManager.Instance;
+        if (uiManager == null)
+            return null;
+        if (uiManager.TryGetPanel(SaveRenameDialogPanelKey, out BasePanel existingPanel))
+            return existingPanel.GetComponent<SaveRenameDialogUI>();
+
+        GameObject prefab = GameRes.Instance?.GetPrefab(SaveRenameDialogPanelKey, false);
+        if (prefab == null)
+        {
+            Debug.LogError($"[GameManager] 缺少改名弹窗 Prefab：{SaveRenameDialogPanelKey}。", this);
+            return null;
+        }
+
+        BasePanel panel = uiManager.CreatePanelFromGameObject(
+            prefab, SaveRenameDialogPanelKey, initializeClosed: true);
+        SaveRenameDialogUI dialog = panel?.GetComponent<SaveRenameDialogUI>();
+        if (dialog == null)
+            Debug.LogError("[GameManager] 改名弹窗 Prefab 缺少 SaveRenameDialogUI。", this);
+        return dialog;
+    }
+
     public void OpenNewGame()
     {
-        if (TryOpenExistingPanel(NewGamePanelKey))
+        if (UIManager.Instance.TryGetPanel(NewGamePanelKey, out BasePanel existingPanel))
+        {
+            ApplyNewWorldChunkDefaults(existingPanel);
+            existingPanel.Open();
             return;
+        }
 
         if (UIPrefab_NewGame == null)
             return;
@@ -1162,23 +1252,100 @@ public partial class GameManager
 
         ReadyPlanetData.Radius = Mathf.Max(1, ReadyPlanetData.Radius);
         ReadyPlanetData.NoiseScale = PlanetData.NormalizeNoiseScale(ReadyPlanetData.NoiseScale);
+        ReadyPlanetData.ChunkSize = PlanetData.NormalizeChunkSize(ReadyPlanetData.ChunkSize);
 
         TMP_InputField radiusInput = panel.GetInputField(NewGameRadiusInputKey);
         TMP_InputField noiseInput = panel.GetInputField(NewGameNoiseInputKey);
+        TMP_InputField chunkWidthInput = panel.GetInputField(NewGameChunkWidthInputKey);
+        TMP_InputField chunkHeightInput = panel.GetInputField(NewGameChunkHeightInputKey);
         Toggle topologyToggle = panel.GetToggle(NewGameTopologyToggleKey);
         radiusInput?.SetTextWithoutNotify(ReadyPlanetData.Radius.ToString(CultureInfo.InvariantCulture));
         noiseInput?.SetTextWithoutNotify(ReadyPlanetData.NoiseScale.ToString("0.########", CultureInfo.InvariantCulture));
+        ApplyNewWorldChunkDefaults(panel);
         radiusInput?.onValueChanged.AddListener(OnPlanetRadiusChanged);
         noiseInput?.onValueChanged.AddListener(OnPlanetNoiseScaleChanged);
+        chunkWidthInput?.onValueChanged.AddListener(OnPlanetChunkWidthChanged);
+        chunkHeightInput?.onValueChanged.AddListener(OnPlanetChunkHeightChanged);
         topologyToggle?.SetIsOnWithoutNotify(pendingNewWorldTopology == WorldTopologyMode.Wrapped);
         if (radiusInput != null)
             radiusInput.interactable = pendingNewWorldTopology == WorldTopologyMode.Wrapped;
         topologyToggle?.onValueChanged.AddListener(isOn => OnWorldTopologyChanged(panel, isOn));
         ReadyPlanetData.TopologyMode = pendingNewWorldTopology;
         BindNewGameDifficultyControls(panel);
-        panel.PrepareForGamepadNavigation(NewGameStartButtonKey);
+        BindNewGamePageControls(panel);
+        panel.PrepareForGamepadNavigation(NewGamePlayerInputKey);
         panel.Open();
     }
+
+    /// <summary>重新打开新世界窗口时回填全局偏好，本次创建中的手动修改仍只作用于当前请求。</summary>
+    private void ApplyNewWorldChunkDefaults(BasePanel panel)
+    {
+        Vector2Int chunkSize = NewWorldUserSettings.DefaultChunkSize;
+        panel.GetInputField(NewGameChunkWidthInputKey)?.SetTextWithoutNotify(
+            chunkSize.x.ToString(CultureInfo.InvariantCulture));
+        panel.GetInputField(NewGameChunkHeightInputKey)?.SetTextWithoutNotify(
+            chunkSize.y.ToString(CultureInfo.InvariantCulture));
+    }
+
+    #region 新世界内容分页
+
+    /// <summary>名称页和世界页复用同一面板，切页只改变显隐，不重建或清空输入框。</summary>
+    private static void BindNewGamePageControls(BasePanel panel)
+    {
+        panel.SetButtonOnClick(NewGameWorldSettingsButtonKey, () => ShowNewGamePage(panel, true, true));
+        panel.SetButtonOnClick(NewGameIdentityButtonKey, () => ShowNewGamePage(panel, false, true));
+        panel.Opened += () => ShowNewGamePage(panel, false, false);
+        panel.CancelOverride = eventData =>
+        {
+            bool handled = TryReturnFromNewGameDetailPage(panel);
+            if (handled)
+                eventData?.Use();
+            return handled;
+        };
+        panel.CancelShortcutOverride = () => TryReturnFromNewGameDetailPage(panel);
+    }
+
+    private static void ShowNewGamePage(BasePanel panel, bool worldSettings, bool focusFirstControl)
+    {
+        SetChildVisible(panel, NewGameIdentityPageKey, !worldSettings);
+        SetChildVisible(panel, NewGameWorldPageKey, worldSettings);
+        panel.SetButtonVisible(NewGameWorldSettingsButtonKey, !worldSettings);
+        panel.SetButtonVisible(NewGameIdentityButtonKey, worldSettings);
+        panel.RefreshGamepadNavigationState();
+
+        if (!focusFirstControl || !panel.IsOpen() || EventSystem.current == null)
+            return;
+
+        Selectable target = panel.GetInputField(worldSettings ? NewGameRadiusInputKey : NewGamePlayerInputKey);
+        if (worldSettings && target != null && !target.IsInteractable())
+            target = panel.GetInputField(NewGameNoiseInputKey);
+        if (target == null || !target.IsInteractable())
+            return;
+        EventSystem.current.SetSelectedGameObject(null);
+        EventSystem.current.SetSelectedGameObject(target.gameObject);
+    }
+
+    /// <summary>返回键先收起难度设置，再从世界页回到名称页，最后才关闭新世界面板。</summary>
+    private static bool TryReturnFromNewGameDetailPage(BasePanel panel)
+    {
+        Transform difficultyPage = FindChildRecursive(panel.transform, NewGameDifficultyPanelKey);
+        if (difficultyPage != null && difficultyPage.gameObject.activeSelf)
+        {
+            CloseNewGameDifficultyPanel(panel);
+            panel.RefreshGamepadNavigationState();
+            if (EventSystem.current != null)
+                EventSystem.current.SetSelectedGameObject(panel.GetButton(NewGameDifficultyButtonKey)?.gameObject);
+            return true;
+        }
+
+        Transform worldPage = FindChildRecursive(panel.transform, NewGameWorldPageKey);
+        if (worldPage == null || !worldPage.gameObject.activeSelf)
+            return false;
+        ShowNewGamePage(panel, false, true);
+        return true;
+    }
+
+    #endregion
 
     public void OpenGameSaveManager()
     {
@@ -1197,17 +1364,19 @@ public partial class GameManager
         panel.SetButtonOnClick(GameSaveStartButtonKey, OnClick_StartGame_Button);
         panel.SetButtonOnClick(GameSaveLoadButtonKey, OnClick_LoadSaveData_Button);
         panel.SetButtonOnClick(GameSaveDeleteButtonKey, OnClick_DeleteSave_Button);
+        panel.SetButtonOnClick(GameSaveRenameButtonKey, () => saveList?.BeginRenameSelectedSave());
         panel.SetButtonOnClick(GameSaveBatchDeleteButtonKey, () => saveList?.BeginBatchDeleteMode());
         panel.SetButtonOnClick(GameSaveBatchConfirmButtonKey, () => saveList?.OpenBatchDeleteConfirmation());
         panel.SetButtonOnClick(GameSaveBatchCancelButtonKey, () => saveList?.CancelBatchDeleteMode());
-        panel.SetButtonOnClick(GameSaveBatchDialogConfirmButtonKey, () => saveList?.ConfirmBatchDelete());
-        panel.SetButtonOnClick(GameSaveBatchDialogCancelButtonKey, () => saveList?.CancelBatchDeleteConfirmation());
+        panel.SetButtonOnClick(GameSaveBatchDialogConfirmButtonKey, () => saveList?.ConfirmDelete());
+        panel.SetButtonOnClick(GameSaveBatchDialogCancelButtonKey, () => saveList?.CancelDeleteConfirmation());
         panel.SetButtonOnClick(GameSaveBackButtonKey, () =>
         {
             saveList?.ResetBatchDeleteState();
             panel.Close();
         });
-        panel.GetInputField(GameSavePlayerInputKey)?.onValueChanged.AddListener(OnUpdatePlayerNameChanged);
+        panel.GetInputField(GameSavePlayerInputKey)?.onValueChanged.AddListener(
+            value => saveList?.OnPlayerNameInputChanged(value));
         Toggle generationFreezeToggle = panel.GetToggle(GameSaveGenerationFreezeToggleKey);
         if (generationFreezeToggle != null)
         {
@@ -1257,6 +1426,8 @@ public partial class GameManager
 
         TMP_InputField radiusInput = panel.GetInputField(NewGameRadiusInputKey);
         TMP_InputField noiseInput = panel.GetInputField(NewGameNoiseInputKey);
+        TMP_InputField chunkWidthInput = panel.GetInputField(NewGameChunkWidthInputKey);
+        TMP_InputField chunkHeightInput = panel.GetInputField(NewGameChunkHeightInputKey);
         Toggle topologyToggle = panel.GetToggle(NewGameTopologyToggleKey);
         WorldTopologyMode topologyMode = topologyToggle != null
             ? (topologyToggle.isOn ? WorldTopologyMode.Wrapped : WorldTopologyMode.Infinite)
@@ -1276,13 +1447,40 @@ public partial class GameManager
             return false;
         }
 
+        Vector2Int chunkSize = PlanetData.NormalizeChunkSize(
+            ReadyPlanetData?.ChunkSize ?? new Vector2Int(
+                PlanetData.DefaultChunkDimension, PlanetData.DefaultChunkDimension));
+        if (chunkWidthInput != null)
+        {
+            if (!TryParseChunkDimension(chunkWidthInput.text, out int chunkWidth))
+            {
+                Debug.LogWarning(
+                    $"[GameManager] 区块宽度无效：{chunkWidthInput.text}。请输入 {PlanetData.MinChunkDimension} 到 {PlanetData.MaxChunkDimension} 的整数。");
+                return false;
+            }
+            chunkSize.x = chunkWidth;
+        }
+        if (chunkHeightInput != null)
+        {
+            if (!TryParseChunkDimension(chunkHeightInput.text, out int chunkHeight))
+            {
+                Debug.LogWarning(
+                    $"[GameManager] 区块高度无效：{chunkHeightInput.text}。请输入 {PlanetData.MinChunkDimension} 到 {PlanetData.MaxChunkDimension} 的整数。");
+                return false;
+            }
+            chunkSize.y = chunkHeight;
+        }
+
         ReadyPlanetData ??= new PlanetData();
         ReadyPlanetData.Radius = radius;
         ReadyPlanetData.NoiseScale = noiseScale;
+        ReadyPlanetData.ChunkSize = chunkSize;
         ReadyPlanetData.TopologyMode = topologyMode;
         pendingNewWorldTopology = topologyMode;
         radiusInput?.SetTextWithoutNotify(radius.ToString(CultureInfo.InvariantCulture));
         noiseInput.SetTextWithoutNotify(noiseScale.ToString("0.########", CultureInfo.InvariantCulture));
+        chunkWidthInput?.SetTextWithoutNotify(chunkSize.x.ToString(CultureInfo.InvariantCulture));
+        chunkHeightInput?.SetTextWithoutNotify(chunkSize.y.ToString(CultureInfo.InvariantCulture));
 
         request = new NewWorldCreationRequest(
             saveName,
@@ -1305,24 +1503,12 @@ public partial class GameManager
 
     private void BindNewGameDifficultyControls(BasePanel panel)
     {
-        pendingNewWorldDifficulty = GameDifficultyId.Simple;
+        pendingNewWorldDifficulty = GameDifficultyId.Level0;
         pendingCustomDifficultyRules = new GameDifficultyRuleValues();
 
         panel.SetButtonOnClick(NewGameDifficultyButtonKey, () => OpenNewGameDifficultyPanel(panel));
         panel.SetButtonOnClick(NewGameDifficultyCloseButtonKey, () => CloseNewGameDifficultyPanel(panel));
         panel.SetButtonOnClick(NewGameDifficultyConfirmButtonKey, () => ConfirmNewGameDifficulty(panel));
-        panel.SetButtonOnClick(NewGameDifficultyOfficialTabKey, () => ShowNewGameDifficultyPage(panel, false));
-        panel.SetButtonOnClick(NewGameDifficultyCustomTabKey, () =>
-        {
-            pendingNewWorldDifficulty = GameDifficultyId.Custom;
-            ShowNewGameDifficultyPage(panel, true);
-            RefreshNewGameDifficultyDetails(panel);
-            RefreshNewGameDifficultySummary(panel);
-        });
-        panel.SetButtonOnClick(NewGameDifficultyCombatCategoryKey, () => ShowCustomDifficultyCategory(panel, NewGameDifficultyCombatPageKey));
-        panel.SetButtonOnClick(NewGameDifficultySurvivalCategoryKey, () => ShowCustomDifficultyCategory(panel, NewGameDifficultySurvivalPageKey));
-        panel.SetButtonOnClick(NewGameDifficultyWorldCategoryKey, () => ShowCustomDifficultyCategory(panel, NewGameDifficultyWorldPageKey));
-        panel.SetButtonOnClick(NewGameDifficultyProductionCategoryKey, () => ShowCustomDifficultyCategory(panel, NewGameDifficultyProductionPageKey));
         for (int i = 0; i < GameDifficultyCatalog.All.Count; i++)
         {
             GameDifficultyId difficulty = GameDifficultyCatalog.All[i].Id;
@@ -1331,23 +1517,6 @@ public partial class GameManager
                 () => SelectNewGameDifficulty(panel, difficulty));
         }
 
-        Toggle customDropToggle = panel.GetToggle(NewGameDifficultyDropToggleKey);
-        if (customDropToggle != null)
-        {
-            customDropToggle.SetIsOnWithoutNotify(false);
-            customDropToggle.onValueChanged.AddListener(value =>
-            {
-                pendingCustomDifficultyRules.DropAllCarriedItems = value;
-                pendingNewWorldDifficulty = GameDifficultyId.Custom;
-                RefreshNewGameDifficultyDetails(panel);
-                RefreshNewGameDifficultySummary(panel);
-            });
-        }
-
-        BindCustomDifficultySliders(panel);
-
-        ShowNewGameDifficultyPage(panel, false);
-        ShowCustomDifficultyCategory(panel, NewGameDifficultyCombatPageKey);
         CloseNewGameDifficultyPanel(panel);
         RefreshNewGameDifficultyDetails(panel);
         RefreshNewGameDifficultySummary(panel);
@@ -1356,7 +1525,6 @@ public partial class GameManager
     private void OpenNewGameDifficultyPanel(BasePanel panel)
     {
         SetNewGameDifficultyPanelVisible(panel, true);
-        ShowNewGameDifficultyPage(panel, pendingNewWorldDifficulty == GameDifficultyId.Custom);
         RefreshNewGameDifficultyDetails(panel);
     }
 
@@ -1371,125 +1539,6 @@ public partial class GameManager
         CloseNewGameDifficultyPanel(panel);
     }
 
-    private static void ShowNewGameDifficultyPage(BasePanel panel, bool showCustom)
-    {
-        SetChildVisible(panel, NewGameDifficultyOfficialPageKey, !showCustom);
-        SetChildVisible(panel, NewGameDifficultyCustomPageKey, showCustom);
-        SetButtonSelected(panel.GetButton(NewGameDifficultyOfficialTabKey), !showCustom);
-        SetButtonSelected(panel.GetButton(NewGameDifficultyCustomTabKey), showCustom);
-    }
-
-    private static void ShowCustomDifficultyCategory(BasePanel panel, string selectedPage)
-    {
-        string[] pages =
-        {
-            NewGameDifficultyCombatPageKey,
-            NewGameDifficultySurvivalPageKey,
-            NewGameDifficultyWorldPageKey,
-            NewGameDifficultyProductionPageKey
-        };
-        string[] buttons =
-        {
-            NewGameDifficultyCombatCategoryKey,
-            NewGameDifficultySurvivalCategoryKey,
-            NewGameDifficultyWorldCategoryKey,
-            NewGameDifficultyProductionCategoryKey
-        };
-
-        for (int i = 0; i < pages.Length; i++)
-        {
-            bool selected = pages[i] == selectedPage;
-            SetChildVisible(panel, pages[i], selected);
-            SetButtonSelected(panel.GetButton(buttons[i]), selected);
-        }
-    }
-
-    private void BindCustomDifficultySliders(BasePanel panel)
-    {
-        BindMultiplierSlider(panel, NewGameDifficultyPlayerAttackSliderKey, 0f, 3f,
-            () => pendingCustomDifficultyRules.PlayerAttackMultiplier,
-            value => pendingCustomDifficultyRules.PlayerAttackMultiplier = value);
-        BindMultiplierSlider(panel, NewGameDifficultyCreatureAttackSliderKey, 0f, 3f,
-            () => pendingCustomDifficultyRules.CreatureAttackMultiplier,
-            value => pendingCustomDifficultyRules.CreatureAttackMultiplier = value);
-        BindMultiplierSlider(panel, NewGameDifficultyCreatureHealthSliderKey, 0.25f, 4f,
-            () => pendingCustomDifficultyRules.CreatureHealthMultiplier,
-            value => pendingCustomDifficultyRules.CreatureHealthMultiplier = value);
-        BindMultiplierSlider(panel, NewGameDifficultyEnvironmentalDamageSliderKey, 0f, 3f,
-            () => pendingCustomDifficultyRules.EnvironmentalDamageMultiplier,
-            value => pendingCustomDifficultyRules.EnvironmentalDamageMultiplier = value);
-        BindMultiplierSlider(panel, NewGameDifficultyHungerDrainSliderKey, 0f, 3f,
-            () => pendingCustomDifficultyRules.HungerDrainMultiplier,
-            value => pendingCustomDifficultyRules.HungerDrainMultiplier = value);
-        BindMultiplierSlider(panel, NewGameDifficultyStaminaConsumptionSliderKey, 0f, 3f,
-            () => pendingCustomDifficultyRules.StaminaConsumptionMultiplier,
-            value => pendingCustomDifficultyRules.StaminaConsumptionMultiplier = value);
-        BindMultiplierSlider(panel, NewGameDifficultyStaminaRecoverySliderKey, 0f, 3f,
-            () => pendingCustomDifficultyRules.StaminaRecoveryMultiplier,
-            value => pendingCustomDifficultyRules.StaminaRecoveryMultiplier = value);
-        BindMultiplierSlider(panel, NewGameDifficultyHealingSliderKey, 0f, 3f,
-            () => pendingCustomDifficultyRules.HealingMultiplier,
-            value => pendingCustomDifficultyRules.HealingMultiplier = value);
-        BindMultiplierSlider(panel, NewGameDifficultyTimeSpeedSliderKey, 0f, 3f,
-            () => pendingCustomDifficultyRules.TimeSpeedMultiplier,
-            value => pendingCustomDifficultyRules.TimeSpeedMultiplier = value);
-        BindMultiplierSlider(panel, NewGameDifficultySpawnFrequencySliderKey, 0f, 3f,
-            () => pendingCustomDifficultyRules.SpawnFrequencyMultiplier,
-            value => pendingCustomDifficultyRules.SpawnFrequencyMultiplier = value);
-        BindMultiplierSlider(panel, NewGameDifficultySpawnPopulationSliderKey, 0.25f, 3f,
-            () => pendingCustomDifficultyRules.SpawnPopulationMultiplier,
-            value => pendingCustomDifficultyRules.SpawnPopulationMultiplier = value);
-        BindMultiplierSlider(panel, NewGameDifficultyLootAmountSliderKey, 0f, 3f,
-            () => pendingCustomDifficultyRules.LootAmountMultiplier,
-            value => pendingCustomDifficultyRules.LootAmountMultiplier = value);
-        BindMultiplierSlider(panel, NewGameDifficultyCropGrowthSliderKey, 0f, 4f,
-            () => pendingCustomDifficultyRules.CropGrowthMultiplier,
-            value => pendingCustomDifficultyRules.CropGrowthMultiplier = value);
-        BindMultiplierSlider(panel, NewGameDifficultySmeltingSpeedSliderKey, 0.1f, 4f,
-            () => pendingCustomDifficultyRules.SmeltingSpeedMultiplier,
-            value => pendingCustomDifficultyRules.SmeltingSpeedMultiplier = value);
-        BindMultiplierSlider(panel, NewGameDifficultyFuelConsumptionSliderKey, 0f, 3f,
-            () => pendingCustomDifficultyRules.FuelConsumptionMultiplier,
-            value => pendingCustomDifficultyRules.FuelConsumptionMultiplier = value);
-        BindMultiplierSlider(panel, NewGameDifficultyCraftingOutputSliderKey, 0.25f, 3f,
-            () => pendingCustomDifficultyRules.CraftingOutputMultiplier,
-            value => pendingCustomDifficultyRules.CraftingOutputMultiplier = value);
-    }
-
-    private void BindMultiplierSlider(
-        BasePanel panel,
-        string sliderKey,
-        float minimum,
-        float maximum,
-        System.Func<float> readValue,
-        System.Action<float> writeValue)
-    {
-        Slider slider = panel.GetSlider(sliderKey);
-        if (slider == null)
-            return;
-
-        slider.minValue = minimum;
-        slider.maxValue = maximum;
-        slider.wholeNumbers = false;
-        slider.SetValueWithoutNotify(Mathf.Clamp(readValue(), minimum, maximum));
-        UpdateMultiplierLabel(panel, sliderKey, slider.value);
-        slider.onValueChanged.AddListener(value =>
-        {
-            writeValue(value);
-            pendingNewWorldDifficulty = GameDifficultyId.Custom;
-            UpdateMultiplierLabel(panel, sliderKey, value);
-            RefreshNewGameDifficultyDetails(panel);
-            RefreshNewGameDifficultySummary(panel);
-        });
-    }
-
-    private static void UpdateMultiplierLabel(BasePanel panel, string sliderKey, float value)
-    {
-        TMP_Text valueText = panel.GetText(sliderKey + "_数值");
-        if (valueText != null)
-            valueText.text = $"{Mathf.RoundToInt(value * 100f)}%";
-    }
-
     private void SelectNewGameDifficulty(BasePanel panel, GameDifficultyId difficulty)
     {
         pendingNewWorldDifficulty = GameDifficultyCatalog.Normalize(difficulty);
@@ -1499,36 +1548,40 @@ public partial class GameManager
 
     private void RefreshNewGameDifficultyDetails(BasePanel panel)
     {
-        GameDifficultyDefinition definition = pendingNewWorldDifficulty == GameDifficultyId.Custom
-            ? GameDifficultyCatalog.CreateCustom(pendingCustomDifficultyRules)
-            : GameDifficultyCatalog.Get(pendingNewWorldDifficulty);
+        GameDifficultyDefinition definition = GameDifficultyCatalog.Get(pendingNewWorldDifficulty);
 
         TMP_Text title = panel.GetText(NewGameDifficultyTitleTextKey);
         TMP_Text description = panel.GetText(NewGameDifficultyDescriptionTextKey);
-        TMP_Text rules = panel.GetText(NewGameDifficultyRuleTextKey);
+        TMP_Text combatValues = panel.GetText(NewGameDifficultyCombatValuesTextKey);
+        TMP_Text survivalValues = panel.GetText(NewGameDifficultySurvivalValuesTextKey);
+        TMP_Text worldValues = panel.GetText(NewGameDifficultyWorldValuesTextKey);
+        TMP_Text productionValues = panel.GetText(NewGameDifficultyProductionValuesTextKey);
         string localizedName = FlatWorldLocalizationService.GetUiText(definition.DisplayName);
         if (title != null)
             title.text = localizedName;
         if (description != null)
             description.text = FlatWorldLocalizationService.GetUiText(definition.Description);
-        if (rules != null)
-        {
-            string deathRule = definition.PlayerDeath.DropAllCarriedItems ? "死亡掉落" : "死亡保留";
-            rules.text = FlatWorldLocalizationService.GetUiFormat(
-                "战斗：玩家 {0} / 生物伤害 {1} / 生物生命 {2}\n生存：饥饿 {3} / 耐力消耗 {4} / {5}\n世界：时间 {6} / 生成 {7} / 战利品 {8}\n生产：生长 {9} / 熔炼 {10} / 制作 {11}",
-                FormatMultiplier(definition.CreatureCombat.PlayerAttackMultiplier),
-                FormatMultiplier(definition.CreatureCombat.AttackMultiplier),
-                FormatMultiplier(definition.CreatureCombat.MaxHealthMultiplier),
-                FormatMultiplier(definition.PlayerSurvival.HungerDrainMultiplier),
-                FormatMultiplier(definition.PlayerSurvival.StaminaConsumptionMultiplier),
-                FlatWorldLocalizationService.GetUiText(deathRule),
-                FormatMultiplier(definition.World.TimeSpeedMultiplier),
-                FormatMultiplier(definition.World.SpawnFrequencyMultiplier),
-                FormatMultiplier(definition.World.LootAmountMultiplier),
-                FormatMultiplier(definition.Production.CropGrowthMultiplier),
-                FormatMultiplier(definition.Production.SmeltingSpeedMultiplier),
-                FormatMultiplier(definition.Production.CraftingOutputMultiplier));
-        }
+        if (combatValues != null)
+            combatValues.text =
+                $"{FormatDifficultyDelta(definition.CreatureCombat.PlayerAttackMultiplier)}\n" +
+                $"{FormatDifficultyDelta(definition.CreatureCombat.AttackMultiplier)}\n" +
+                $"{FormatDifficultyDelta(definition.CreatureCombat.MaxHealthMultiplier)}";
+        if (survivalValues != null)
+            survivalValues.text =
+                $"{FormatDifficultyDelta(definition.PlayerSurvival.HungerDrainMultiplier)}\n" +
+                $"{FormatDifficultyDelta(definition.PlayerSurvival.StaminaConsumptionMultiplier)}\n" +
+                FlatWorldLocalizationService.GetUiText(
+                    definition.PlayerDeath.DropAllCarriedItems ? "全部掉落" : "保留物品");
+        if (worldValues != null)
+            worldValues.text =
+                $"{FormatDifficultyDelta(definition.World.TimeSpeedMultiplier)}\n" +
+                $"{FormatDifficultyDelta(definition.World.SpawnFrequencyMultiplier)}\n" +
+                $"{FormatDifficultyDelta(definition.World.LootAmountMultiplier)}";
+        if (productionValues != null)
+            productionValues.text =
+                $"{FormatDifficultyDelta(definition.Production.CropGrowthMultiplier)}\n" +
+                $"{FormatDifficultyDelta(definition.Production.SmeltingSpeedMultiplier)}\n" +
+                $"{FormatDifficultyDelta(definition.Production.CraftingOutputMultiplier)}";
 
         for (int i = 0; i < GameDifficultyCatalog.All.Count; i++)
         {
@@ -1541,9 +1594,7 @@ public partial class GameManager
 
     private void RefreshNewGameDifficultySummary(BasePanel panel)
     {
-        GameDifficultyDefinition definition = pendingNewWorldDifficulty == GameDifficultyId.Custom
-            ? GameDifficultyCatalog.CreateCustom(pendingCustomDifficultyRules)
-            : GameDifficultyCatalog.Get(pendingNewWorldDifficulty);
+        GameDifficultyDefinition definition = GameDifficultyCatalog.Get(pendingNewWorldDifficulty);
 
         TMP_Text summary = panel.GetText(NewGameDifficultySummaryTextKey);
         if (summary != null)
@@ -1552,9 +1603,13 @@ public partial class GameManager
                 FlatWorldLocalizationService.GetUiText(definition.DisplayName));
     }
 
-    private static string FormatMultiplier(float multiplier)
+    private static string FormatDifficultyDelta(float multiplier)
     {
-        return $"{Mathf.RoundToInt(multiplier * 100f)}%";
+        int percent = Mathf.RoundToInt((multiplier - 1f) * 100f);
+        if (percent == 0)
+            return "0%";
+
+        return percent > 0 ? $"+{percent}%" : $"{percent}%";
     }
 
     private static void SetNewGameDifficultyPanelVisible(BasePanel panel, bool visible)
@@ -1609,7 +1664,8 @@ public partial class GameManager
     public void OnClick_StartGame_Button()
     {
         BasePanel panel = GetSaveManagerPanel();
-        string selectedSaveName = panel?.GetText(GameSaveSelectedTextKey)?.text;
+        SaveDataManager_UI saveList = SaveDataManager_UI.Instance;
+        string selectedSaveName = saveList?.SelectedSaveName;
         if (SaveDataMgr.Instance?.SaveData == null || SaveDataMgr.Instance.SaveData.Seed == 0 ||
             string.IsNullOrWhiteSpace(selectedSaveName) ||
             string.Equals(selectedSaveName, GameSaveNoSelectionText, StringComparison.Ordinal))
@@ -1619,13 +1675,17 @@ public partial class GameManager
         }
 
         string playerName = panel?.GetInputField(GameSavePlayerInputKey)?.text;
-        if (string.IsNullOrWhiteSpace(playerName))
+        if (saveList == null ||
+            !saveList.TryResolveStartPlayer(playerName, out string profileId, out string newDisplayName))
         {
-            Debug.LogWarning("请先选择或输入玩家名称");
+            Debug.LogWarning("请先选择角色或输入有效的新角色名称");
             return;
         }
 
-        ContinueGame(playerName);
+        if (newDisplayName == null)
+            ContinueGame(profileId);
+        else
+            ContinueGame(profileId, newDisplayName);
     }
 
     public void OnClick_LoadSaveData_Button()
@@ -1637,7 +1697,7 @@ public partial class GameManager
         }
 
         BasePanel panel = GetSaveManagerPanel();
-        string selectedSaveName = panel?.GetText(GameSaveSelectedTextKey)?.text;
+        string selectedSaveName = SaveDataManager_UI.Instance?.SelectedSaveName;
         if (string.IsNullOrWhiteSpace(selectedSaveName) ||
             string.Equals(selectedSaveName, GameSaveNoSelectionText, StringComparison.Ordinal))
         {
@@ -1660,44 +1720,15 @@ public partial class GameManager
 
     public void OnClick_DeleteSave_Button()
     {
-        SaveDataMgr saveDataMgr = SaveDataMgr.Instance;
-        if (saveDataMgr == null)
-        {
-            Debug.LogWarning("SaveAndLoad组件未绑定！");
-            return;
-        }
-
-        BasePanel panel = GetSaveManagerPanel();
-        string selectedSaveName = panel?.GetText(GameSaveSelectedTextKey)?.text;
-        if (string.IsNullOrWhiteSpace(selectedSaveName) ||
-            string.Equals(selectedSaveName, GameSaveNoSelectionText, StringComparison.Ordinal))
-        {
-            Debug.LogWarning("请先选择要删除的存档");
-            return;
-        }
-
-        saveDataMgr.DeleteSave(saveDataMgr.UserSavePath, selectedSaveName);
-        if (saveDataMgr.SaveData != null &&
-            string.Equals(saveDataMgr.SaveData.saveName, selectedSaveName, StringComparison.Ordinal))
-        {
-            saveDataMgr.SaveData = null;
-            saveDataMgr.CurrentContrrolPlayerName = string.Empty;
-        }
-
         SaveDataManager_UI saveList = SaveDataManager_UI.Instance;
-        if (saveList != null)
+        if (saveList == null)
         {
-            saveList.Refresh();
-            saveList.ClearSaveSelection();
+            Debug.LogWarning("存档选择界面未绑定，已取消删除请求。");
+            return;
         }
-        else
-        {
-            panel?.SetText(GameSaveSelectedTextKey, GameSaveNoSelectionText);
-            panel?.SetInputFieldText(GameSavePlayerInputKey, string.Empty);
-            Button deleteButton = panel?.GetButton(GameSaveDeleteButtonKey);
-            if (deleteButton != null)
-                deleteButton.interactable = false;
-        }
+
+        // 单个存档删除必须先经过确认层，按钮本身不再直接触碰磁盘。
+        saveList.OpenSingleDeleteConfirmation();
     }
 
     // 保留旧拼写入口，避免已有 Inspector 事件丢失。
@@ -1744,6 +1775,24 @@ public partial class GameManager
         Debug.LogWarning($"输入的噪声缩放值无效：{value}");
     }
 
+    private void OnPlanetChunkWidthChanged(string value)
+    {
+        if (!TryParseChunkDimension(value, out int width))
+            return;
+        ReadyPlanetData ??= new PlanetData();
+        ReadyPlanetData.ChunkSize = new Vector2Int(width,
+            PlanetData.NormalizeChunkSize(ReadyPlanetData.ChunkSize).y);
+    }
+
+    private void OnPlanetChunkHeightChanged(string value)
+    {
+        if (!TryParseChunkDimension(value, out int height))
+            return;
+        ReadyPlanetData ??= new PlanetData();
+        ReadyPlanetData.ChunkSize = new Vector2Int(
+            PlanetData.NormalizeChunkSize(ReadyPlanetData.ChunkSize).x, height);
+    }
+
     private void OnWorldTopologyChanged(BasePanel panel, bool wrapped)
     {
         pendingNewWorldTopology = wrapped ? WorldTopologyMode.Wrapped : WorldTopologyMode.Infinite;
@@ -1765,6 +1814,12 @@ public partial class GameManager
         bool parsed = float.TryParse(value, NumberStyles.Float, CultureInfo.CurrentCulture, out noiseScale) ||
                       float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out noiseScale);
         return parsed && PlanetData.IsValidNoiseScale(noiseScale);
+    }
+
+    private static bool TryParseChunkDimension(string value, out int dimension)
+    {
+        return int.TryParse(value, NumberStyles.Integer, CultureInfo.CurrentCulture, out dimension) &&
+               PlanetData.IsValidChunkDimension(dimension);
     }
 
     #endregion

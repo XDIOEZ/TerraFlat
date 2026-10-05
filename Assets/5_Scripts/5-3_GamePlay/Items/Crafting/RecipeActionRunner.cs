@@ -56,16 +56,8 @@ public sealed class ChangeDurabilityRecipeActionHandler : IRecipeActionHandler
             return;
         }
 
-        if (action.SlotIndex >= 0 && action.SlotIndex < inventory.Data.itemSlots.Count &&
-            TryApply(inventory.Data.itemSlots[action.SlotIndex], action, recipe))
-        {
-            return;
-        }
-
         for (int i = 0; i < inventory.Data.itemSlots.Count; i++)
         {
-            if (i == action.SlotIndex)
-                continue;
             if (TryApply(inventory.Data.itemSlots[i], action, recipe))
                 return;
         }

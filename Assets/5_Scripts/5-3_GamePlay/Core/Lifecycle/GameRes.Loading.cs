@@ -20,6 +20,8 @@ public partial class GameRes
     [Sirenix.OdinInspector.ShowInInspector] public ResourceLoadState LoadState { get; private set; }
     /// <summary>主菜单交互所需的最小资源是否已经就绪；完整世界资源仍可能在后台加载。</summary>
     [Sirenix.OdinInspector.ShowInInspector] public bool IsStartupReady { get; private set; }
+    /// <summary>启动阶段所需资源已加载，供早于资源目录启动的运行时工具延后绑定依赖 Prefab。</summary>
+    public static event Action<GameRes> StartupResourcesReady;
     /// <summary>完整资源会话的当前总进度，供世界加载页在抢跑进入时复用。</summary>
     public float LoadProgress => loadingProgress;
     /// <summary>完整资源会话的当前阶段文案。</summary>
@@ -37,6 +39,31 @@ public partial class GameRes
     internal ResourceAssetScope ResourceAssets => resourceAssets;
     /// <summary>启动阶段已经持有的 Prefab 位置，完整 Prefab 阶段不再重复申请句柄。</summary>
     private HashSet<string> startupPrefabLocationIds = new(StringComparer.Ordinal);
+    private bool backgroundLoadingPolicyActive;
+    private ThreadPriority previousLoadingPriority;
+    private int previousUploadTimeSlice;
+
+    /// <summary>定义构建和请求发出使用统一帧预算，不能让同帧的多个阶段各自重新计时。</summary>
+    internal bool ShouldYieldResourceWork() => loadPipeline?.ShouldYield() == true;
+
+    /// <summary>菜单开放期间收紧 Player 的资源接入和 GPU 上传时间，结束会话后恢复原设置。</summary>
+    private void BeginMenuBackgroundLoading()
+    {
+        if (backgroundLoadingPolicyActive) return;
+        previousLoadingPriority = Application.backgroundLoadingPriority;
+        previousUploadTimeSlice = QualitySettings.asyncUploadTimeSlice;
+        backgroundLoadingPolicyActive = true;
+        Application.backgroundLoadingPriority = ThreadPriority.Low;
+        QualitySettings.asyncUploadTimeSlice = 1;
+    }
+
+    private void RestoreBackgroundLoadingPolicy()
+    {
+        if (!backgroundLoadingPolicyActive) return;
+        Application.backgroundLoadingPriority = previousLoadingPriority;
+        QualitySettings.asyncUploadTimeSlice = previousUploadTimeSlice;
+        backgroundLoadingPolicyActive = false;
+    }
 
     /// <summary>
     /// 主菜单显示后仍可能立即被访问的运行时 UI。
@@ -44,8 +71,10 @@ public partial class GameRes
     /// </summary>
     private static readonly string[] StartupPrefabKeys =
     {
+        RuntimeUIPrefabKeys.SliderControl,
         RuntimeUIPrefabKeys.MainMenuSettings,
         RuntimeUIPrefabKeys.MainMenuExitConfirmation,
+        RuntimeUIPrefabKeys.ModManager,
         RuntimeUIPrefabKeys.InputBindingRow,
         RuntimeUIPrefabKeys.WorldLoading,
         RuntimeUIPrefabKeys.MobileControls,
@@ -53,7 +82,7 @@ public partial class GameRes
     };
 
     /// <summary>
-    /// F5/调试入口统一使用这里：主菜单直接重载；单机世界内准备独立候选目录并原位发布。
+    /// Alt+R/调试入口统一使用这里：主菜单直接重载；单机世界内准备独立候选目录并原位发布。
     /// 活跃实例继续持有旧资源，不保存、不退出、不从磁盘恢复世界。
     /// </summary>
     public bool RequestResourceReload()
@@ -77,14 +106,14 @@ public partial class GameRes
 
         if (manager.IsWorldEntryInProgress)
         {
-            Debug.LogWarning("[GameRes] 正在进入世界，暂不能执行 F5 资源重载。");
+            Debug.LogWarning("[GameRes] 正在进入世界，暂不能执行 Alt+R 资源重载。");
             return false;
         }
 
         // 联机状态需要由服务器统一协调资源版本；本地单边热重载会直接造成内容目录不一致。
         if (GameNetwork.IsOnline)
         {
-            Debug.LogWarning("[GameRes] 联机世界不允许本地 F5 热重载资源，请先结束联机会话。");
+            Debug.LogWarning("[GameRes] 联机世界不允许本地 Alt+R 热重载资源，请先结束联机会话。");
             return false;
         }
 
@@ -105,7 +134,7 @@ public partial class GameRes
         if ((manager != null && (manager.IsInGameWorld || manager.IsWorldEntryInProgress)) ||
             (items != null && items.WorldRunTimeItems.Values.Any(item => item != null)))
         {
-            Debug.LogWarning("[GameRes] 底层资源会话仍有世界运行态引用；游戏内请通过 F5/RequestResourceReload 执行安全重载。");
+            Debug.LogWarning("[GameRes] 底层资源会话仍有世界运行态引用；游戏内请通过 Alt+R/RequestResourceReload 执行安全重载。");
             return false;
         }
 
@@ -149,6 +178,7 @@ public partial class GameRes
             yield break;
         }
         LoadState = ResourceLoadState.Ready;
+        RestoreBackgroundLoadingPolicy();
         IsStartupReady = true;
         loadCoroutine = null;
         loadingProgress = 1;
@@ -167,7 +197,7 @@ public partial class GameRes
         resourceLoadFailed = true;
         loadCoroutine = null;
         LastLoadError = $"阶段 {stage} 失败：{exception.Message}";
-        loadingText = $"资源加载失败（{stage}），修正配置后可按 F5 重试";
+        loadingText = $"资源加载失败（{stage}），修正配置后可按 Alt+R 重试";
         showLoadingGUI = true;
         Debug.LogError($"[GameRes] {LastLoadError}\n{exception}", this);
     }
@@ -192,6 +222,7 @@ public partial class GameRes
     /// <summary>依赖方先卸载，目录再清空，最后释放底层资源；每项清理都独立执行。</summary>
     private void ClearResourceSession()
     {
+        RestoreBackgroundLoadingPolicy();
         var errors = new List<Exception>();
         void Clear(Action action) { try { action(); } catch (Exception exception) { errors.Add(exception); } }
         // 先让使用者释放 BRG 注册/材质，再销毁共享 Mesh，最后卸载源 Sprite/Tile/MOD。
@@ -199,9 +230,11 @@ public partial class GameRes
         Clear(() => ModRuntimeManager.Instance?.UnloadForResourceReload());
         Clear(ReleaseRetiredResourceSessions);
         Clear(ClearAllDictionaries);
+        worldAuthoringResources.Clear();
         Clear(PlayerCreationTemplateCatalogService.Reset);
         Clear(TimeSystemConfigService.Reset);
-        Clear(MechanicalCatalog.Clear);
+        Clear(WaterCurrentPushConfigService.Reset);
+        Clear(MachineCatalog.Clear);
         Clear(() => resourceAssets.Dispose());
         LoadedCount = 0;
         IsStartupReady = false;
@@ -214,10 +247,13 @@ public partial class GameRes
     {
         AllPrefabs.Clear();
         ItemDefinitions.Clear();
+        itemDefinitionAliases.Clear();
         ActorDefinitions.Clear();
         LootTables.Clear();
         ActorDefinitionCatalogLoader.ResetRuntimeCatalog();
         SpawnerConfigCatalogService.Reset();
+        NaturalGenerationRuleCatalogService.Reset();
+        RiverGenerationConfigService.Reset();
         recipeDict.Clear();
         recipeCatalog.Clear();
         tileBaseDict.Clear();
@@ -277,8 +313,18 @@ public partial class GameRes
                 .GroupBy(location => (location.InternalId, location.ProviderId, location.ResourceType))
                 .Select(group => group.First()).OrderBy(location => location.PrimaryKey, StringComparer.Ordinal).ToList();
             if (required && locations.Count == 0)
+            {
+                string editorHint = string.Empty;
+#if UNITY_EDITOR
+                // 空标签也可能来自编辑器残留目录，报出播放配置以区分资源缺失与会话失效。
+                editorHint = $"；播放配置：optionsEnabled={UnityEditor.EditorSettings.enterPlayModeOptionsEnabled}, " +
+                    $"options={UnityEditor.EditorSettings.enterPlayModeOptions}。" +
+                    "若静态目录存在对应标签，请结束当前播放并启用脚本域/场景重载后重新播放；" +
+                    "Alt+R 只重载游戏资源会话，不能重建失效的编辑器资源组引用。";
+#endif
                 throw new InvalidDataException($"必需标签 {string.Join(", ", labels)} 未解析到 {type.Name}；" +
-                    $"当前目录：{string.Join(", ", Addressables.ResourceLocators.Select(locator => locator.LocatorId))}");
+                    $"当前目录：{string.Join(", ", Addressables.ResourceLocators.Select(locator => locator.LocatorId))}{editorHint}");
+            }
             completed(locations);
         }
         finally { if (handle.IsValid()) Addressables.Release(handle); }
@@ -291,15 +337,16 @@ public partial class GameRes
         List<IResourceLocation> locations = null;
         yield return ResolveLocations(new[] { label }, typeof(T), required, value => locations = value);
         if (locations.Count == 0) yield break;
-        var handle = resourceAssets.Own(Addressables.LoadAssetsAsync<T>(locations, null, true));
-        while (!handle.IsDone) { loadPipeline.Report(handle.PercentComplete * 0.8f); yield return null; }
-        foreach (T asset in ResourceAssetScope.Require(handle, $"标签 {label}"))
+        var loaded = new List<T>(locations.Count);
+        yield return LoadResourceLocations(locations, loaded, $"标签 {label}");
+        foreach (T asset in loaded)
         {
             if (asset == null) throw new InvalidDataException($"标签 {label} 加载出空资源。");
             string id = key(asset);
             if (string.IsNullOrWhiteSpace(id)) throw new InvalidDataException($"{label} 资源 {asset.name} 缺少稳定 ID。");
             if (!target.TryAdd(id, asset)) throw new InvalidDataException($"{label} ID 重复：{id} ({target[id].name} / {asset.name})");
             LoadedCount++;
+            if (ShouldYieldResourceWork()) yield return null;
         }
     }
 
@@ -374,8 +421,10 @@ public partial class GameRes
     {
         IsStartupReady = true;
         if (preparingInPlaceReload) return;
+        BeginMenuBackgroundLoading();
         showLoadingGUI = false;
         Debug.Log("[GameRes] 启动必要资源已就绪，主菜单开放；剩余游戏资源继续后台加载。");
+        StartupResourcesReady?.Invoke(this);
     }
 
     /// <summary>开放主菜单后至少让出一帧，避免紧接着的后台目录工作阻塞首次可交互画面。</summary>
@@ -420,9 +469,8 @@ public partial class GameRes
             !actorIds.Contains(location.InternalId) &&
             !startupPrefabLocationIds.Contains(GetLocationIdentity(location))).ToList();
         if (selected.Count == 0) throw new InvalidDataException("Prefab 计划过滤后为空，缺少运行时模块与通用外壳。");
-        var handle = resourceAssets.Own(Addressables.LoadAssetsAsync<GameObject>(selected, null, true));
-        while (!handle.IsDone) { loadPipeline.Report(handle.PercentComplete * 0.8f); yield return null; }
-        IList<GameObject> loaded = ResourceAssetScope.Require(handle, "运行时 Prefab");
+        var loaded = new List<GameObject>(selected.Count);
+        yield return LoadResourceLocations(selected, loaded, "运行时 Prefab");
         var moduleAliases = new Dictionary<string, GameObject>(StringComparer.Ordinal);
         // 先登记全部主名称，再处理模块别名，避免顺序决定最终命中资源。
         foreach (GameObject prefab in loaded)
@@ -430,10 +478,44 @@ public partial class GameRes
             if (prefab == null) throw new InvalidDataException("Prefab 计划包含空资源。");
             RegisterPrefabAlias(prefab.name, prefab);
             LoadedCount++;
+            if (ShouldYieldResourceWork()) yield return null;
         }
-        foreach (GameObject prefab in loaded) CollectPrefabAliases(prefab, moduleAliases);
+        foreach (GameObject prefab in loaded)
+        {
+            CollectPrefabAliases(prefab, moduleAliases);
+            if (ShouldYieldResourceWork()) yield return null;
+        }
         RegisterUniqueModuleAliases(moduleAliases);
         Debug.Log($"[GameRes] Prefab 加载计划：后台加载 {selected.Count}，启动阶段已预载 {startupPrefabLocationIds.Count} 个 UI Prefab。");
+    }
+
+    /// <summary>位置资源最多四个在途请求，发出与收尾都让出预算，避免 Fast Mode 同步加载挤在一帧。</summary>
+    private IEnumerator LoadResourceLocations<T>(IList<IResourceLocation> locations, List<T> loaded, string context)
+        where T : UnityEngine.Object
+    {
+        const int batchSize = 4;
+        for (int start = 0; start < locations.Count; start += batchSize)
+        {
+            int count = Math.Min(batchSize, locations.Count - start);
+            var batch = new List<AsyncOperationHandle<T>>(count);
+            for (int i = 0; i < count; i++)
+            {
+                batch.Add(resourceAssets.Own(Addressables.LoadAssetAsync<T>(locations[start + i])));
+                if (ShouldYieldResourceWork()) yield return null;
+            }
+            while (batch.Any(handle => !handle.IsDone))
+            {
+                loadPipeline.Report(0.8f * (start + batch.Sum(handle => handle.PercentComplete)) / locations.Count);
+                yield return null;
+            }
+            foreach (AsyncOperationHandle<T> handle in batch)
+            {
+                loaded.Add(ResourceAssetScope.Require(handle, context));
+                if (ShouldYieldResourceWork()) yield return null;
+            }
+            loadPipeline.Report(0.8f * (start + count) / locations.Count);
+            yield return null;
+        }
     }
 
     #endregion

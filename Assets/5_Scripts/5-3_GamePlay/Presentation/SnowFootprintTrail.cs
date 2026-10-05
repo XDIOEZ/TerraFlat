@@ -24,7 +24,6 @@ public sealed class SnowFootprintTrail : MonoBehaviour
 
     [Header("渲染")]
     [SerializeField] private Material footprintMaterial;
-    [SerializeField] private int sortingOrder = -1;
 
     private bool surfaceActive;
     private bool hasLastStepPosition;
@@ -193,7 +192,7 @@ public sealed class SnowFootprintTrail : MonoBehaviour
 
         footprintRenderer.renderMode = ParticleSystemRenderMode.Billboard;
         footprintRenderer.alignment = ParticleSystemRenderSpace.View;
-        footprintRenderer.sortingOrder = sortingOrder;
+        WorldSortingManager.GetInstance().ApplyRenderer(footprintRenderer, WorldSortingManager.GroundMarkCategory);
         footprintRenderer.enableGPUInstancing = true;
         footprintRenderer.sharedMaterial = ResolveFootprintMaterial();
     }

@@ -19,7 +19,7 @@ public class Skill_Laser : Skill
     private Transform laserCastingPoint;
     
     [Tooltip("移动组件引用")]
-    Mover mover;
+    Mod_Mover mover;
     private const float MovementSpeedMultiplier = 0.25f;
     private bool _movementSpeedModified;
     private bool _isUnloaded;
@@ -53,7 +53,7 @@ public class Skill_Laser : Skill
         // 获取移动组件
         if (runtimeSkill.skillSender != null)
         {
-            runtimeSkill.skillSender.itemMods.GetMod_ByID(ModText.Mover, out mover); // 获取技能数据
+            runtimeSkill.skillSender.itemMods.GetMod_ByID(ModText.Mod_Mover, out mover); // 获取技能数据
             if (mover != null)
             {
                 mover.Data.Speed.MultiplicativeModifier *= MovementSpeedMultiplier;
@@ -61,7 +61,7 @@ public class Skill_Laser : Skill
             }
             else
             {
-                Debug.LogWarning("激光技能：找不到Mover组件！");
+                Debug.LogWarning("激光技能：找不到Mod_Mover组件！");
             }
         }
         else

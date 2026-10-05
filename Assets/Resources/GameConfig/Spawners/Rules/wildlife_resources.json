@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 1,
+  "config": {
+    "id": "wildlife_resources",
+    "scheduleMode": "timedWindows",
+    "ecologyGroup": "animals",
+    "requireGlobalDarkness": false,
+    "spawnTriggerTime": 720.0,
+    "spawnsPerDay": 2,
+    "minSpawnDistance": 15.0,
+    "maxSpawnDistance": 50.0,
+    "playerVisibilityExclusionDistance": 20.0,
+    "playerPopulationRadius": 60.0,
+    "perPlayerAliveLimit": 8,
+    "spawnSearchRetryCount": 5,
+    "spawnCount": 2,
+    "spawnChance": 0.5,
+    "daysBetweenSpawns": 1,
+    "groupAliveLimit": 12,
+    "maxEcologyBudget": 12,
+    "dailyBudgetRecovery": 6,
+    "recoveryTargetPopulation": 4,
+    "recoveryCheckInterval": 8.0,
+    "growthIntervalDays": 3,
+    "maxLifetimeSpawnCount": 64,
+    "asyncSpawnInterval": 0.0,
+    "unboundedDailyGrowth": false,
+    "ignorePopulationLimits": false,
+    "requireCompletelyDarkTile": false,
+    "maxAllowedTileLight": 1.0,
+    "allowedBiomeNames": ["森林"],
+    "allowedGroundTileIds": [1],
+    "recycleDistance": 110.0,
+    "recycleGraceSeconds": 20.0,
+    "spawnEntries": [
+      {
+        "prefabName": "Chicken",
+        "runtimeBackend": "gameObject",
+        "probability": 2.5,
+        "ecologyCost": 1,
+        "speciesAliveLimit": 8,
+        "initialization": {
+          "nutrition": {
+            "enabled": true,
+            "minFoodRate": 0.7,
+            "maxFoodRate": 1.0
+          }
+        }
+      },
+      {
+        "prefabName": "WildBoar",
+        "runtimeBackend": "gameObject",
+        "probability": 0.2631579,
+        "ecologyCost": 2,
+        "speciesAliveLimit": 5
+      }
+    ],
+    "treeHabitat": {
+      "enabled": false,
+      "treesPerActor": 4,
+      "spawnRadius": 3.0
+    }
+  }
+}

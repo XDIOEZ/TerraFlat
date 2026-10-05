@@ -11,7 +11,9 @@ public enum BuildingLightOcclusionMode
     /// <summary>始终使用完整轮廓，适合不透光外壳等需要封闭光源的建筑。</summary>
     FullSilhouette,
     /// <summary>不参与局部光遮挡，适合纯火焰或透明灯罩。</summary>
-    None
+    None,
+    /// <summary>自身光源亮起时不投射局部阴影，熄灭后恢复完整轮廓。</summary>
+    DisabledWhileEmitting
 }
 
 /// <summary>
@@ -26,6 +28,9 @@ public partial class Mod_Building
     [Header("局部光照遮挡")]
     [Tooltip("自动：自身光源位于轮廓内时保留光源下方的实体遮挡；完整：封闭轮廓；无：不遮挡局部光。")]
     public BuildingLightOcclusionMode LightOcclusionMode = BuildingLightOcclusionMode.Automatic;
+
+    [Tooltip("落地建筑是否参与场景太阳长投影；小型平面传动件可在物品定义中关闭。")]
+    public bool CastSunShadow = true;
 
     [Min(0.001f), Tooltip("自身光源与实体遮挡之间的世界单位间隙，默认 0.0625；不移动真实光源。")]
     public float OwnLightClearance = 0.0625f;
@@ -66,7 +71,7 @@ public partial class Mod_Building
     {
         SpriteRenderer source = _lightOccluderSource;
         if (source == null || !source.enabled || !source.gameObject.activeInHierarchy || source.sprite == null ||
-            LightOcclusionMode == BuildingLightOcclusionMode.None)
+            IsGroundFacility || LightOcclusionMode == BuildingLightOcclusionMode.None)
         {
             _lightOccluder.enabled = false;
             _appliedOcclusionMode = LightOcclusionMode;
@@ -82,6 +87,15 @@ public partial class Mod_Building
             _occluderShapeSprite = source.sprite;
             _occluderFlipX = source.flipX;
             _occluderFlipY = source.flipY;
+        }
+
+        if (LightOcclusionMode == BuildingLightOcclusionMode.DisabledWhileEmitting &&
+            HasActiveOwnOcclusionLight())
+        {
+            _lightOccluder.enabled = false;
+            _appliedOcclusionMode = LightOcclusionMode;
+            _appliedOccluderCutY = float.NaN;
+            return;
         }
 
         float cutY = ResolveOwnLightCutHeight(source, _fullOccluderPath);
@@ -104,7 +118,8 @@ public partial class Mod_Building
         Vector3[] path = clipped ? ClipOccluderBelowHeight(_fullOccluderPath, cutY) : _fullOccluderPath;
 
         // 裁剪后不能继续用整张 Sprite 写入自阴影模板，否则光源仍会被完整轮廓盖住。
-        _lightOccluder.useRendererSilhouette = !clipped;
+        // 主体已合入行网格时，局部光阴影使用现有轮廓 Mesh，不依赖隐藏的源 SpriteRenderer。
+        _lightOccluder.useRendererSilhouette = !clipped && !BuildingDepthMeshBridge.IsProjected(source);
         _lightOccluder.selfShadows = true;
         _lightOccluder.castsShadows = true;
         ShadowCasterShapePathField.SetValue(_lightOccluder, path);
@@ -140,6 +155,24 @@ public partial class Mod_Building
         }
 
         return cutY;
+    }
+
+    /// <summary>火把等小型发光建筑亮起时可完全退出局部阴影，熄灭后由同一遮挡器自动恢复。</summary>
+    private bool HasActiveOwnOcclusionLight()
+    {
+        List<Module> lightModules = item.itemMods.GetModList_ByID(ModText.LightSource);
+        if (lightModules == null)
+            return false;
+
+        for (int i = 0; i < lightModules.Count; i++)
+        {
+            if (lightModules[i] is Mod_LightSource emitter &&
+                emitter.TryGetActiveOcclusionLight(out Light2D light) &&
+                Light2DSortingLayerUtility.SharesShadowLayers(light, _lightOccluder))
+                return true;
+        }
+
+        return false;
     }
 
     #endregion

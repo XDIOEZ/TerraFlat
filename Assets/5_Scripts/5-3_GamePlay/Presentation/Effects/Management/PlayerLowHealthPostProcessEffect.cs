@@ -21,7 +21,7 @@ public sealed class PlayerLowHealthPostProcessEffect : MonoBehaviour,
     #region 运行时状态
 
     private Player player;
-    private DamageReceiver damageReceiver;
+    private Mod_DamageReceiver damageReceiver;
     private float cachedHealth01 = 1f;
     private bool isRegistered;
 
@@ -51,7 +51,7 @@ public sealed class PlayerLowHealthPostProcessEffect : MonoBehaviour,
     }
 
     /// <summary>绑定玩家与生命模块；重复加载时先解除旧事件，避免同一血量重复提交。</summary>
-    public void Bind(Player owner, DamageReceiver receiver)
+    public void Bind(Player owner, Mod_DamageReceiver receiver)
     {
         Unbind();
         player = owner;

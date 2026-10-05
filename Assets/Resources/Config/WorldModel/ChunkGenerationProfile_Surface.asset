@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: ChunkGenerationProfile_Surface
   m_EditorClassIdentifier: 
   profileId: surface.default
-  generationSignature: 45
+  generationSignature: 71
   chunkWidth: 16
   chunkHeight: 16
   numericParameters:
@@ -29,30 +29,50 @@ MonoBehaviour:
     Value: 3
   - Id: terrain.stoneTileId
     Value: 4
-  - Id: terrain.snowTileId
-    Value: 5
+  - Id: terrain.dirtTileId
+    Value: 29
   - Id: terrain.iceTileId
     Value: 9
   - Id: terrain.peatTileId
     Value: 28
-  - Id: biome.peat.minimumMoisture
-    Value: 0.62
-  - Id: biome.peat.maximumHeight
-    Value: 0.62
+  - Id: biome.peat.spawnChance
+    Value: 0.1
+  - Id: biome.peat.stoneBoundaryRadius
+    Value: 2
   - Id: biome.peat.patchThreshold
     Value: 0.64
   - Id: biome.peat.patchScale
     Value: 0.09
   - Id: terrain.seaLevel
     Value: 0.5
+  - Id: terrain.oceanSandMinimumHeight
+    Value: 0.498
   - Id: terrain.beachLevel
     Value: 0.51
   - Id: terrain.mountainLevel
     Value: 0.72
-  - Id: terrain.snowTemperature
-    Value: 0.22
-  - Id: terrain.snowMinimumPrecipitation
-    Value: 0.55
+  - Id: biome.mountain.dirtMinimumMoisture
+    Value: 0.5
+  - Id: biome.snow.minimumPrecipitation
+    Value: 0.4
+  - Id: biome.snow.regions.enabled
+    Value: 1
+  - Id: biome.snow.regions.size
+    Value: 768
+  - Id: biome.snow.regions.chance
+    Value: 0.1
+  - Id: biome.snow.regions.largeRatio
+    Value: 0.9
+  - Id: biome.snow.large.minRadius
+    Value: 192
+  - Id: biome.snow.large.maxRadius
+    Value: 320
+  - Id: biome.snow.peak.minRadius
+    Value: 12
+  - Id: biome.snow.peak.maxRadius
+    Value: 28
+  - Id: biome.snow.peak.minimumHeight
+    Value: 0.78
   - Id: terrain.noiseScale
     Value: 0.0085
   - Id: terrain.octaves
@@ -113,6 +133,46 @@ MonoBehaviour:
     Value: 0
   - Id: climate.temperature.celsiusMax
     Value: 50
+  - Id: climate.equator.minimumCelsius
+    Value: 40
+  - Id: climate.equator.maximumCelsius
+    Value: 60
+  - Id: climate.equator.peakCelsius
+    Value: 45
+  - Id: climate.equator.spacingTiles
+    Value: 256
+  - Id: climate.temperature.regionalVariationCelsius
+    Value: 2
+  - Id: climate.temperature.rainCoolingCelsius
+    Value: 3
+  - Id: climate.temperature.windwardCoolingCelsius
+    Value: 4
+  - Id: climate.temperature.leewardWarmingCelsius
+    Value: 2
+  - Id: climate.polarBand.enabled
+    Value: 1
+  - Id: climate.polarBand.position
+    Value: 0
+  - Id: climate.polarBand.celsius
+    Value: -30
+  - Id: climate.polarBand.edgeCelsius
+    Value: -10
+  - Id: climate.polarBand.peakCelsius
+    Value: -25
+  - Id: climate.polarBand.halfWidth
+    Value: 0.1
+  - Id: climate.polarBand.transitionTiles
+    Value: 32
+  - Id: climate.polarBand.transitionCelsius
+    Value: 15
+  - Id: climate.temperature.blendRadius
+    Value: 2
+  - Id: climate.polarBand.boundary.offsetTiles
+    Value: 32
+  - Id: climate.polarBand.boundary.spacingTiles
+    Value: 128
+  - Id: climate.polarBand.boundary.detailStrength
+    Value: 0.25
   - Id: climate.temperature.altitudeCoolingStart
     Value: 0.5
   - Id: climate.temperature.altitudeCoolingStrength
@@ -129,62 +189,6 @@ MonoBehaviour:
     Value: 0.8
   - Id: climate.orographic.leewardLoss
     Value: 0.6
-  - Id: river.enabled
-    Value: 1
-  - Id: river.hydrologyRegionSize
-    Value: 256
-  - Id: river.runoffCellSize
-    Value: 64
-  - Id: river.runoffSampleStride
-    Value: 8
-  - Id: river.maxTraceSteps
-    Value: 384
-  - Id: river.minimumVisibleCourseLength
-    Value: 96
-  - Id: river.infiltrationFloor
-    Value: 0.25
-  - Id: river.startFlow
-    Value: 0.14
-  - Id: river.tributaryStartFlow
-    Value: 0.1
-  - Id: river.fullWidthFlow
-    Value: 0.45
-  - Id: river.maxWidth
-    Value: 7
-  - Id: river.meanderTieTolerance
-    Value: 0
-  - Id: river.meanderStrength
-    Value: 0.85
-  - Id: river.meanderScale
-    Value: 48
-  - Id: river.valleyDetailWeight
-    Value: 4
-  - Id: river.lookAheadWeight
-    Value: 0.55
-  - Id: river.lookAheadDistance
-    Value: 6
-  - Id: river.floodplainStartFlow
-    Value: 0.14
-  - Id: river.floodplainMaxRadius
-    Value: 8
-  - Id: river.floodplainMaxSlope
-    Value: 0.08
-  - Id: river.alluvialTileThreshold
-    Value: 0.62
-  - Id: river.depthMin
-    Value: 0.2
-  - Id: river.depthMax
-    Value: 0.9
-  - Id: river.minLakeCells
-    Value: 18
-  - Id: river.maxLakeCells
-    Value: 220
-  - Id: river.maxLakeLevelRise
-    Value: 0.045
-  - Id: river.lakeMinFlow
-    Value: 0.35
-  - Id: river.lakeChance
-    Value: 0.75
   - Id: lake.large.enabled
     Value: 1
   - Id: lake.large.regionSize
@@ -197,12 +201,32 @@ MonoBehaviour:
     Value: 104
   - Id: lake.large.islandChance
     Value: 0.7
-  - Id: river.maxCachedRegions
-    Value: 9
+  - Id: lake.lava.enabled
+    Value: 1
+  - Id: lake.lava.regionSize
+    Value: 192
+  - Id: lake.lava.chance
+    Value: 0.35
+  - Id: lake.lava.minRadius
+    Value: 3
+  - Id: lake.lava.maxRadius
+    Value: 6
+  - Id: lake.lava.rareMaxRadius
+    Value: 56
+  - Id: lake.lava.minimumHeight
+    Value: 0.74
+  - Id: lake.lava.shoreWidth
+    Value: 2.5
   - Id: grass.density
     Value: 0.24
-  - Id: biome.snow.iceLakeChance
-    Value: 0.08
+  - Id: grass.minimumTemperature
+    Value: 0.15
+  - Id: grass.maximumTemperature
+    Value: 0.9
+  - Id: grass.minimumPrecipitation
+    Value: 0.15
+  - Id: grass.maximumHeight
+    Value: 0.72
   - Id: biome.snow.grassDensityMultiplier
     Value: 0.08
   - Id: structure.enabled
@@ -217,14 +241,80 @@ MonoBehaviour:
     Value: 3
   - Id: terrain.biomeCount
     Value: 8
+  - Id: biome.fallback.id
+    Value: 7
+  - Id: biome.ocean.enabled
+    Value: 1
+  - Id: biome.ocean.priority
+    Value: 800
+  - Id: biome.river.enabled
+    Value: 1
+  - Id: biome.river.priority
+    Value: 700
+  - Id: biome.snow.enabled
+    Value: 1
+  - Id: biome.snow.priority
+    Value: 600
+  - Id: biome.snow.maximumCelsius
+    Value: 0
+  - Id: biome.snow.includeMaximumCelsius
+    Value: 0
+  - Id: biome.snow.polar.ignoreRegions
+    Value: 1
+  - Id: biome.snow.polar.ignorePrecipitation
+    Value: 1
+  - Id: biome.snow.groundTileId
+    Value: 4
+  - Id: biome.snow.wetGroundTileId
+    Value: 29
+  - Id: biome.snow.wetGroundMinimumMoisture
+    Value: 0.5
+  - Id: biome.cold.enabled
+    Value: 1
+  - Id: biome.cold.priority
+    Value: 550
+  - Id: biome.cold.maximumCelsius
+    Value: 5
+  - Id: biome.cold.includeMaximumCelsius
+    Value: 1
+  - Id: biome.cold.groundTileId
+    Value: 4
+  - Id: biome.cold.wetGroundTileId
+    Value: 29
+  - Id: biome.cold.wetGroundMinimumMoisture
+    Value: 0.5
+  - Id: biome.stone.enabled
+    Value: 1
+  - Id: biome.stone.priority
+    Value: 500
+  - Id: biome.desert.enabled
+    Value: 1
+  - Id: biome.desert.priority
+    Value: 400
+  - Id: biome.beach.enabled
+    Value: 1
+  - Id: biome.beach.priority
+    Value: 300
+  - Id: biome.grassland.enabled
+    Value: 1
+  - Id: biome.grassland.priority
+    Value: 200
+  - Id: biome.grassland.minimumCelsius
+    Value: 12.5
+  - Id: biome.grassland.maximumCelsius
+    Value: 37.5
+  - Id: biome.forest.enabled
+    Value: 1
+  - Id: biome.forest.priority
+    Value: 100
+  - Id: biome.forest.minimumMoisture
+    Value: 0
   - Id: biome.desert.minimumHeight
     Value: 0.51
+  - Id: biome.desert.minimumCelsius
+    Value: 20
   - Id: biome.desert.maximumPrecipitation
-    Value: 0.28
-  - Id: biome.grassland.minimumTemperature
-    Value: 0.25
-  - Id: biome.grassland.maximumTemperature
-    Value: 0.75
+    Value: 0.35
   - Id: biome.grassland.minimumPrecipitation
     Value: 0.25
   - Id: biome.grassland.maximumPrecipitation
@@ -250,22 +340,14 @@ MonoBehaviour:
     Value: surface
   - Id: climate.algorithm
     Value: legacyLand
-  - Id: river.algorithm
-    Value: heightDriven
   - Id: tile.block.1
     Value: Tile_Grass
   - Id: tile.block.3
     Value: Tile_Sand
   - Id: tile.block.4
     Value: Tile_Stone
-  - Id: tile.block.5
-    Value: Tile_Snow
   - Id: tile.block.9
     Value: Tile_Ice
-  - Id: tile.block.10
-    Value: Tile_Snow_Variant2
-  - Id: tile.block.11
-    Value: Tile_Snow_Variant3
   - Id: tile.block.8
     Value: TileBase_BuiltStoneWall
   - Id: tile.block.12
@@ -306,686 +388,48 @@ MonoBehaviour:
     Value: Tile_Floor_Bronze
   - Id: tile.block.28
     Value: Tile_Peat
+  - Id: tile.block.29
+    Value: Tile_Dirt
   ecologyGlobalMultiplier: 1
-  ecologyRules:
-  - RuleId: surface.forest.appleTree
-    ItemId: AppleTree
-    ItemCount: 1
-    SpawnChance: 0.0015
-    SpawnChanceMultiplier: 8
-    DistributionMode: 0
-    PatchSpacing: 24
-    PatchRadius: 2.5
-    PatchChance: 1
-    BiomeMask: 32
-    MinTemperature: 0
-    MaxTemperature: 1
-    MinPrecipitation: 0
-    MaxPrecipitation: 1
-    MinHeight: 0
-    MaxHeight: 1
-    MinRiverFloodplainStrength: 0
-    ProvidedTags:
-    - Tree
-    CompanionOnly: 0
-    CompanionHostTag: 
-    CompanionSpawnChance: 0
-    CompanionOffsetX: 0
-    CompanionOffsetY: 0
-    CompanionMinRadius: 0
-    CompanionMaxRadius: 0
-  - RuleId: surface.forest.orangeTree
-    ItemId: OrangeTree
-    ItemCount: 1
-    SpawnChance: 0.0015
-    SpawnChanceMultiplier: 3
-    DistributionMode: 0
-    PatchSpacing: 24
-    PatchRadius: 2.5
-    PatchChance: 1
-    BiomeMask: 32
-    MinTemperature: 0.55
-    MaxTemperature: 1
-    MinPrecipitation: 0.35
-    MaxPrecipitation: 1
-    MinHeight: 0
-    MaxHeight: 1
-    MinRiverFloodplainStrength: 0
-    ProvidedTags:
-    - Tree
-    CompanionOnly: 0
-    CompanionHostTag: 
-    CompanionSpawnChance: 0
-    CompanionOffsetX: 0
-    CompanionOffsetY: 0
-    CompanionMinRadius: 0
-    CompanionMaxRadius: 0
-  - RuleId: surface.forest.pineTree
-    ItemId: Tree_Pine
-    ItemCount: 1
-    SpawnChance: 0.0015
-    SpawnChanceMultiplier: 2
-    DistributionMode: 0
-    PatchSpacing: 24
-    PatchRadius: 2.5
-    PatchChance: 1
-    BiomeMask: 32
-    MinTemperature: 0
-    MaxTemperature: 1
-    MinPrecipitation: 0
-    MaxPrecipitation: 1
-    MinHeight: 0
-    MaxHeight: 1
-    MinRiverFloodplainStrength: 0
-    ProvidedTags:
-    - Tree
-    CompanionOnly: 0
-    CompanionHostTag:
-    CompanionSpawnChance: 0
-    CompanionOffsetX: 0
-    CompanionOffsetY: 0
-    CompanionMinRadius: 0
-    CompanionMaxRadius: 0
-  - RuleId: surface.forest.beehive
-    ItemId: Beehive
-    ItemCount: 1
-    SpawnChance: 0
-    SpawnChanceMultiplier: 1
-    DistributionMode: 0
-    PatchSpacing: 24
-    PatchRadius: 2.5
-    PatchChance: 1
-    BiomeMask: 32
-    MinTemperature: 0.3
-    MaxTemperature: 0.9
-    MinPrecipitation: 0.25
-    MaxPrecipitation: 1
-    MinHeight: 0
-    MaxHeight: 1
-    MinRiverFloodplainStrength: 0
-    ProvidedTags: []
-    CompanionOnly: 1
-    CompanionHostTag: Tree
-    CompanionSpawnChance: 0.05
-    CompanionOffsetX: 0
-    CompanionOffsetY: 0
-    CompanionMinRadius: 0.5
-    CompanionMaxRadius: 0.8
-  - RuleId: surface.forest.radish
-    ItemId: RadishCrop
-    ItemCount: 1
-    SpawnChance: 0.45
-    SpawnChanceMultiplier: 1
-    DistributionMode: 1
-    PatchSpacing: 24
-    PatchRadius: 2.5
-    PatchChance: 0.0126
-    BiomeMask: 32
-    MinTemperature: 0
-    MaxTemperature: 1
-    MinPrecipitation: 0
-    MaxPrecipitation: 1
-    MinHeight: 0
-    MaxHeight: 1
-    MinRiverFloodplainStrength: 0
-    ProvidedTags: []
-    CompanionOnly: 0
-    CompanionHostTag: 
-    CompanionSpawnChance: 0
-    CompanionOffsetX: 0
-    CompanionOffsetY: 0
-    CompanionMinRadius: 0
-    CompanionMaxRadius: 0
-  - RuleId: surface.forest.twine
-    ItemId: TwineCrop
-    ItemCount: 1
-    SpawnChance: 0.00028125
-    SpawnChanceMultiplier: 1
-    DistributionMode: 0
-    PatchSpacing: 24
-    PatchRadius: 2.5
-    PatchChance: 1
-    BiomeMask: 32
-    MinTemperature: 0
-    MaxTemperature: 1
-    MinPrecipitation: 0
-    MaxPrecipitation: 1
-    MinHeight: 0
-    MaxHeight: 1
-    MinRiverFloodplainStrength: 0
-    ProvidedTags: []
-    CompanionOnly: 0
-    CompanionHostTag: 
-    CompanionSpawnChance: 0
-    CompanionOffsetX: 0
-    CompanionOffsetY: 0
-    CompanionMinRadius: 0
-    CompanionMaxRadius: 0
-  - RuleId: surface.forest.berry
-    ItemId: BerryCrop
-    ItemCount: 1
-    SpawnChance: 0.00045
-    SpawnChanceMultiplier: 1
-    DistributionMode: 0
-    PatchSpacing: 24
-    PatchRadius: 2.5
-    PatchChance: 1
-    BiomeMask: 32
-    MinTemperature: 0
-    MaxTemperature: 1
-    MinPrecipitation: 0
-    MaxPrecipitation: 1
-    MinHeight: 0
-    MaxHeight: 1
-    MinRiverFloodplainStrength: 0
-    ProvidedTags: []
-    CompanionOnly: 0
-    CompanionHostTag: 
-    CompanionSpawnChance: 0
-    CompanionOffsetX: 0
-    CompanionOffsetY: 0
-    CompanionMinRadius: 0
-    CompanionMaxRadius: 0
-  - RuleId: surface.forest.stone
-    ItemId: Mine_Stone
-    ItemCount: 1
-    SpawnChance: 0.00005
-    SpawnChanceMultiplier: 5
-    DistributionMode: 0
-    PatchSpacing: 24
-    PatchRadius: 2.5
-    PatchChance: 1
-    BiomeMask: 32
-    MinTemperature: 0
-    MaxTemperature: 1
-    MinPrecipitation: 0
-    MaxPrecipitation: 1
-    MinHeight: 0
-    MaxHeight: 1
-    MinRiverFloodplainStrength: 0
-    ProvidedTags: []
-    CompanionOnly: 0
-    CompanionHostTag: 
-    CompanionSpawnChance: 0
-    CompanionOffsetX: 0
-    CompanionOffsetY: 0
-    CompanionMinRadius: 0
-    CompanionMaxRadius: 0
-  - RuleId: surface.forest.log
-    ItemId: Log
-    ItemCount: 1
-    SpawnChance: 0.0006
-    SpawnChanceMultiplier: 1
-    DistributionMode: 0
-    PatchSpacing: 24
-    PatchRadius: 2.5
-    PatchChance: 1
-    BiomeMask: 32
-    MinTemperature: 0
-    MaxTemperature: 1
-    MinPrecipitation: 0
-    MaxPrecipitation: 1
-    MinHeight: 0
-    MaxHeight: 1
-    MinRiverFloodplainStrength: 0
-    ProvidedTags: []
-    CompanionOnly: 0
-    CompanionHostTag: 
-    CompanionSpawnChance: 0
-    CompanionOffsetX: 0
-    CompanionOffsetY: 0
-    CompanionMinRadius: 0
-    CompanionMaxRadius: 0
-  - RuleId: surface.forest.stick
-    ItemId: Stick_Wood
-    ItemCount: 1
-    SpawnChance: 0.000140625
-    SpawnChanceMultiplier: 1.5
-    DistributionMode: 0
-    PatchSpacing: 24
-    PatchRadius: 2.5
-    PatchChance: 1
-    BiomeMask: 32
-    MinTemperature: 0
-    MaxTemperature: 1
-    MinPrecipitation: 0
-    MaxPrecipitation: 1
-    MinHeight: 0
-    MaxHeight: 1
-    MinRiverFloodplainStrength: 0
-    ProvidedTags: []
-    CompanionOnly: 0
-    CompanionHostTag: 
-    CompanionSpawnChance: 0
-    CompanionOffsetX: 0
-    CompanionOffsetY: 0
-    CompanionMinRadius: 0
-    CompanionMaxRadius: 0
-  - RuleId: surface.grassland.berry
-    ItemId: BerryCrop
-    ItemCount: 1
-    SpawnChance: 0.0002
-    SpawnChanceMultiplier: 1
-    DistributionMode: 0
-    PatchSpacing: 24
-    PatchRadius: 2.5
-    PatchChance: 1
-    BiomeMask: 16
-    MinTemperature: 0
-    MaxTemperature: 1
-    MinPrecipitation: 0
-    MaxPrecipitation: 1
-    MinHeight: 0
-    MaxHeight: 1
-    MinRiverFloodplainStrength: 0
-    ProvidedTags:
-    - BerryCrop
-    CompanionOnly: 0
-    CompanionHostTag: 
-    CompanionSpawnChance: 0
-    CompanionOffsetX: 0
-    CompanionOffsetY: 0
-    CompanionMinRadius: 0
-    CompanionMaxRadius: 0
-  - RuleId: surface.grassland.radish
-    ItemId: RadishCrop
-    ItemCount: 1
-    SpawnChance: 0.45
-    SpawnChanceMultiplier: 1
-    DistributionMode: 1
-    PatchSpacing: 24
-    PatchRadius: 2.5
-    PatchChance: 0.06
-    BiomeMask: 16
-    MinTemperature: 0
-    MaxTemperature: 1
-    MinPrecipitation: 0
-    MaxPrecipitation: 1
-    MinHeight: 0
-    MaxHeight: 1
-    MinRiverFloodplainStrength: 0
-    ProvidedTags: []
-    CompanionOnly: 0
-    CompanionHostTag: 
-    CompanionSpawnChance: 0
-    CompanionOffsetX: 0
-    CompanionOffsetY: 0
-    CompanionMinRadius: 0
-    CompanionMaxRadius: 0
-  - RuleId: surface.grassland.stick
-    ItemId: Stick_Wood
-    ItemCount: 1
-    SpawnChance: 0
-    SpawnChanceMultiplier: 1
-    DistributionMode: 0
-    PatchSpacing: 24
-    PatchRadius: 2.5
-    PatchChance: 1
-    BiomeMask: 16
-    MinTemperature: 0
-    MaxTemperature: 1
-    MinPrecipitation: 0
-    MaxPrecipitation: 1
-    MinHeight: 0
-    MaxHeight: 1
-    MinRiverFloodplainStrength: 0
-    ProvidedTags: []
-    CompanionOnly: 1
-    CompanionHostTag: BerryCrop
-    CompanionSpawnChance: 0.75
-    CompanionOffsetX: 0
-    CompanionOffsetY: 0
-    CompanionMinRadius: 0.45
-    CompanionMaxRadius: 1.25
-  - RuleId: surface.grassland.stone
-    ItemId: Mine_Stone
-    ItemCount: 1
-    SpawnChance: 0.00005
-    SpawnChanceMultiplier: 2
-    DistributionMode: 0
-    PatchSpacing: 24
-    PatchRadius: 2.5
-    PatchChance: 1
-    BiomeMask: 16
-    MinTemperature: 0
-    MaxTemperature: 1
-    MinPrecipitation: 0
-    MaxPrecipitation: 1
-    MinHeight: 0
-    MaxHeight: 1
-    MinRiverFloodplainStrength: 0
-    ProvidedTags: []
-    CompanionOnly: 0
-    CompanionHostTag: 
-    CompanionSpawnChance: 0
-    CompanionOffsetX: 0
-    CompanionOffsetY: 0
-    CompanionMinRadius: 0
-    CompanionMaxRadius: 0
-  - RuleId: surface.river.oreStone
-    ItemId: Ore_Stone
-    ItemCount: 1
-    SpawnChance: 0.00875
-    SpawnChanceMultiplier: 1
-    DistributionMode: 0
-    PatchSpacing: 24
-    PatchRadius: 2.5
-    PatchChance: 1
-    BiomeMask: 0
-    MinTemperature: 0
-    MaxTemperature: 1
-    MinPrecipitation: 0
-    MaxPrecipitation: 1
-    MinHeight: 0
-    MaxHeight: 1
-    MinRiverFloodplainStrength: 0.05
-    ProvidedTags: []
-    CompanionOnly: 0
-    CompanionHostTag: 
-    CompanionSpawnChance: 0
-    CompanionOffsetX: 0
-    CompanionOffsetY: 0
-    CompanionMinRadius: 0
-    CompanionMaxRadius: 0
-  - RuleId: surface.grassland.flower
-    ItemId: Flower
-    ItemCount: 1
-    SpawnChance: 0.45
-    SpawnChanceMultiplier: 1
-    DistributionMode: 1
-    PatchSpacing: 24
-    PatchRadius: 3
-    PatchChance: 0.5
-    BiomeMask: 16
-    MinTemperature: 0.3
-    MaxTemperature: 0.9
-    MinPrecipitation: 0.25
-    MaxPrecipitation: 1
-    MinHeight: 0
-    MaxHeight: 1
-    MinRiverFloodplainStrength: 0
-    ProvidedTags: []
-    CompanionOnly: 0
-    CompanionHostTag:
-    CompanionSpawnChance: 0
-    CompanionOffsetX: 0
-    CompanionOffsetY: 0
-    CompanionMinRadius: 0
-    CompanionMaxRadius: 0
-  - RuleId: surface.stone.coal
-    ItemId: Mine_Coal
-    ItemCount: 1
-    SpawnChance: 0.00004
-    SpawnChanceMultiplier: 1
-    DistributionMode: 0
-    PatchSpacing: 24
-    PatchRadius: 2.5
-    PatchChance: 1
-    BiomeMask: 128
-    MinTemperature: 0
-    MaxTemperature: 1
-    MinPrecipitation: 0
-    MaxPrecipitation: 1
-    MinHeight: 0
-    MaxHeight: 1
-    MinRiverFloodplainStrength: 0
-    ProvidedTags: []
-    CompanionOnly: 0
-    CompanionHostTag: 
-    CompanionSpawnChance: 0
-    CompanionOffsetX: 0
-    CompanionOffsetY: 0
-    CompanionMinRadius: 0
-    CompanionMaxRadius: 0
-  - RuleId: surface.stone.copper
-    ItemId: Mine_Copper
-    ItemCount: 1
-    SpawnChance: 0.00004
-    SpawnChanceMultiplier: 1
-    DistributionMode: 0
-    PatchSpacing: 24
-    PatchRadius: 2.5
-    PatchChance: 1
-    BiomeMask: 128
-    MinTemperature: 0
-    MaxTemperature: 1
-    MinPrecipitation: 0
-    MaxPrecipitation: 1
-    MinHeight: 0
-    MaxHeight: 1
-    MinRiverFloodplainStrength: 0
-    ProvidedTags: []
-    CompanionOnly: 0
-    CompanionHostTag: 
-    CompanionSpawnChance: 0
-    CompanionOffsetX: 0
-    CompanionOffsetY: 0
-    CompanionMinRadius: 0
-    CompanionMaxRadius: 0
-  - RuleId: surface.stone.iron
-    ItemId: Mine_Iron
-    ItemCount: 1
-    SpawnChance: 0.00002
-    SpawnChanceMultiplier: 1
-    DistributionMode: 0
-    PatchSpacing: 24
-    PatchRadius: 2.5
-    PatchChance: 1
-    BiomeMask: 128
-    MinTemperature: 0
-    MaxTemperature: 1
-    MinPrecipitation: 0
-    MaxPrecipitation: 1
-    MinHeight: 0
-    MaxHeight: 1
-    MinRiverFloodplainStrength: 0
-    ProvidedTags: []
-    CompanionOnly: 0
-    CompanionHostTag: 
-    CompanionSpawnChance: 0
-    CompanionOffsetX: 0
-    CompanionOffsetY: 0
-    CompanionMinRadius: 0
-    CompanionMaxRadius: 0
-  - RuleId: surface.stone.stone
-    ItemId: Mine_Stone
-    ItemCount: 1
-    SpawnChance: 0.0005
-    SpawnChanceMultiplier: 2
-    DistributionMode: 0
-    PatchSpacing: 24
-    PatchRadius: 2.5
-    PatchChance: 1
-    BiomeMask: 128
-    MinTemperature: 0
-    MaxTemperature: 1
-    MinPrecipitation: 0
-    MaxPrecipitation: 1
-    MinHeight: 0
-    MaxHeight: 1
-    MinRiverFloodplainStrength: 0
-    ProvidedTags: []
-    CompanionOnly: 0
-    CompanionHostTag: 
-    CompanionSpawnChance: 0
-    CompanionOffsetX: 0
-    CompanionOffsetY: 0
-    CompanionMinRadius: 0
-    CompanionMaxRadius: 0
-  - RuleId: surface.stone.oreStone
-    ItemId: Ore_Stone
-    ItemCount: 1
-    SpawnChance: 0.0005
-    SpawnChanceMultiplier: 1
-    DistributionMode: 0
-    PatchSpacing: 24
-    PatchRadius: 2.5
-    PatchChance: 1
-    BiomeMask: 128
-    MinTemperature: 0
-    MaxTemperature: 1
-    MinPrecipitation: 0
-    MaxPrecipitation: 1
-    MinHeight: 0
-    MaxHeight: 1
-    MinRiverFloodplainStrength: 0
-    ProvidedTags: []
-    CompanionOnly: 0
-    CompanionHostTag: 
-    CompanionSpawnChance: 0
-    CompanionOffsetX: 0
-    CompanionOffsetY: 0
-    CompanionMinRadius: 0
-    CompanionMaxRadius: 0
-  - RuleId: surface.stone.tin
-    ItemId: Mine_Tin
-    ItemCount: 1
-    SpawnChance: 0.00002
-    SpawnChanceMultiplier: 1
-    DistributionMode: 0
-    PatchSpacing: 24
-    PatchRadius: 2.5
-    PatchChance: 1
-    BiomeMask: 128
-    MinTemperature: 0
-    MaxTemperature: 1
-    MinPrecipitation: 0
-    MaxPrecipitation: 1
-    MinHeight: 0
-    MaxHeight: 1
-    MinRiverFloodplainStrength: 0
-    ProvidedTags: []
-    CompanionOnly: 0
-    CompanionHostTag: 
-    CompanionSpawnChance: 0
-    CompanionOffsetX: 0
-    CompanionOffsetY: 0
-    CompanionMinRadius: 0
-    CompanionMaxRadius: 0
-  - RuleId: surface.beach.coconut
-    ItemId: Tree_Coconut
-    ItemCount: 1
-    SpawnChance: 0.001
-    SpawnChanceMultiplier: 2
-    DistributionMode: 0
-    PatchSpacing: 24
-    PatchRadius: 2.5
-    PatchChance: 1
-    BiomeMask: 4
-    MinTemperature: 0
-    MaxTemperature: 1
-    MinPrecipitation: 0
-    MaxPrecipitation: 1
-    MinHeight: 0
-    MaxHeight: 1
-    MinRiverFloodplainStrength: 0
-    ProvidedTags:
-    - Tree
-    CompanionOnly: 0
-    CompanionHostTag: 
-    CompanionSpawnChance: 0
-    CompanionOffsetX: 0
-    CompanionOffsetY: 0
-    CompanionMinRadius: 0
-    CompanionMaxRadius: 0
-  - RuleId: surface.snow.iceberg
-    ItemId: Iceberg
-    ItemCount: 1
-    SpawnChance: 0.0003
-    SpawnChanceMultiplier: 1
-    DistributionMode: 0
-    PatchSpacing: 24
-    PatchRadius: 2.5
-    PatchChance: 1
-    BiomeMask: 64
-    MinTemperature: 0
-    MaxTemperature: 1
-    MinPrecipitation: 0
-    MaxPrecipitation: 1
-    MinHeight: 0
-    MaxHeight: 1
-    MinRiverFloodplainStrength: 0
-    ProvidedTags: []
-    CompanionOnly: 0
-    CompanionHostTag: 
-    CompanionSpawnChance: 0
-    CompanionOffsetX: 0
-    CompanionOffsetY: 0
-    CompanionMinRadius: 0
-    CompanionMaxRadius: 0
-  - RuleId: surface.ancient.herb
-    ItemId: HerbCrop
-    ItemCount: 1
-    SpawnChance: 0.00045
-    SpawnChanceMultiplier: 1
-    DistributionMode: 0
-    PatchSpacing: 24
-    PatchRadius: 2.5
-    PatchChance: 1
-    BiomeMask: 48
-    MinTemperature: 0
-    MaxTemperature: 1
-    MinPrecipitation: 0
-    MaxPrecipitation: 1
-    MinHeight: 0
-    MaxHeight: 1
-    MinRiverFloodplainStrength: 0
-    ProvidedTags: []
-    CompanionOnly: 0
-    CompanionHostTag: 
-    CompanionSpawnChance: 0
-    CompanionOffsetX: 0
-    CompanionOffsetY: 0
-    CompanionMinRadius: 0
-    CompanionMaxRadius: 0
-  - RuleId: surface.ancient.foxtail
-    ItemId: FoxtailCrop
-    ItemCount: 1
-    SpawnChance: 0.001
-    SpawnChanceMultiplier: 1
-    DistributionMode: 0
-    PatchSpacing: 24
-    PatchRadius: 2.5
-    PatchChance: 1
-    BiomeMask: 48
-    MinTemperature: 0
-    MaxTemperature: 1
-    MinPrecipitation: 0
-    MaxPrecipitation: 1
-    MinHeight: 0
-    MaxHeight: 1
-    MinRiverFloodplainStrength: 0
-    ProvidedTags: []
-    CompanionOnly: 0
-    CompanionHostTag: 
-    CompanionSpawnChance: 0
-    CompanionOffsetX: 0
-    CompanionOffsetY: 0
-    CompanionMinRadius: 0
-    CompanionMaxRadius: 0
-  - RuleId: surface.ancient.willow
-    ItemId: Tree_Willow
-    ItemCount: 1
-    SpawnChance: 0.002
-    SpawnChanceMultiplier: 1
-    DistributionMode: 0
-    PatchSpacing: 24
-    PatchRadius: 2.5
-    PatchChance: 1
-    BiomeMask: 48
-    MinTemperature: 0
-    MaxTemperature: 1
-    MinPrecipitation: 0
-    MaxPrecipitation: 1
-    MinHeight: 0
-    MaxHeight: 1
-    MinRiverFloodplainStrength: 0.1
-    ProvidedTags: []
-    CompanionOnly: 0
-    CompanionHostTag: 
-    CompanionSpawnChance: 0
-    CompanionOffsetX: 0
-    CompanionOffsetY: 0
-    CompanionMinRadius: 0
-    CompanionMaxRadius: 0
-  caveResourceRules: []
+  ecologyRuleIds:
+  - surface.forest.appleTree
+  - surface.forest.orangeTree
+  - surface.forest.pineTree
+  - surface.forest.oakTree
+  - surface.forest.beehive
+  - surface.forest.radish
+  - surface.forest.twine
+  - surface.forest.berry
+  - surface.forest.stone
+  - surface.forest.log
+  - surface.forest.stick
+  - surface.forest.leaf
+  - surface.grassland.berry
+  - surface.grassland.radish
+  - surface.grassland.stick
+  - surface.grassland.stone
+  - surface.river.oreStone
+  - surface.grassland.flower
+  - surface.stone.coal
+  - surface.stone.copper
+  - surface.stone.gold
+  - surface.stone.iron
+  - surface.stone.stone
+  - surface.stone.oreStone
+  - surface.stone.tin
+  - surface.sulfur.mountainMine
+  - surface.sulfur.mountainLoose
+  - surface.sulfur.lavaMine
+  - surface.sulfur.lavaLoose
+  - surface.stone.obsidianMine
+  - surface.stone.obsidian
+  - surface.beach.coconut
+  - surface.beach.oreStone
+  - surface.desert.cactus
+  - surface.snow.iceberg
+  - surface.ancient.herb
+  - surface.ancient.cotton
+  - surface.ancient.foxtail
+  - surface.ancient.willow
+  - surface.common.oreStone
+  caveResourceRuleIds: []

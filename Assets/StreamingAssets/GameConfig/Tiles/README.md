@@ -47,7 +47,7 @@ JSON 是静态配置唯一真源。旧 `Tile_Block.asset` 仅保留地块 ID 和
 
 数据类型：`universal`、`grass`、`farmland`、`cellBuilding`。
 
-行为类型：`universal`、`grass`、`farmland`、`ice`、`snow`。行为按数组顺序调用，具体功能仍由对应的 C# 类实现。耕地行为要求 `farmland` 数据；组合行为时仍应遵守各行为的进入、更新和清理契约。
+行为类型：`universal`、`grass`、`farmland`、`ice`。行为按数组顺序调用，具体功能仍由对应的 C# 类实现。耕地行为要求 `farmland` 数据；组合行为时仍应遵守各行为的进入、更新和清理契约。积雪不是地块行为，而是独立的 `snow.depth` 十档覆盖层。
 
 地块 `water` 数据/行为及其历史序列化入口已删除。世界水体在 `Liquids/liquids.json` 声明 `worldWater`，液体身份使用已注册的 `LiquidId`，例如 `core:dirty_water` 或 `core:sea_water`。Ground 只保存真正的底部地块，液体深度通过 `ChunkTerrainData.LiquidDepth` 读取，修改使用 `WorldLiquidSystem.TrySet/TryPump`。潮湿叠层和液深结算由现有液体/Buff 系统处理，不要额外复制一套每格计时器。
 
@@ -69,11 +69,11 @@ JSON 是静态配置唯一真源。旧 `Tile_Block.asset` 仅保留地块 ID 和
 {
   "patches": [
     {
-      "target": "tile:Tile_Snow",
+      "target": "tile:Tile_Ice",
       "operation": "replace",
-      "path": "/behaviours/0/parameters/moveSpeedMultiplier",
-      "expect": 0.9,
-      "value": 0.8
+      "path": "/loadCapacity",
+      "expect": 8,
+      "value": 7
     }
   ]
 }
@@ -87,7 +87,7 @@ Patch 不能更改 `id` 或 `runtimeTileId`。地块定义与 Patch 先完整构
 
 注册返回 `IDisposable` 租约，代码 MOD 应持有它并在卸载时释放。工厂每次必须返回当前定义自己的实例；不要返回所有定义共用、再被后续参数覆盖的可变对象。
 
-共享 Behaviour 只能保存规则参数。角色计时、环境效果实例等留在 `TileEffectReceiver / EnvironmentInteractionRunner`；格子数据留在 `ChunkTerrainData` 及其权威扩展层。自定义 TileData 的 `Clone()` 必须深复制可变成员；需要进入旧 MemoryPack TileData 存档时还需另外处理序列化类型注册。JSON 行为注册本身不会自动增加 MemoryPack Union，也没有新增任意 Lua 方法执行入口。
+共享 Behaviour 只能保存规则参数。角色计时、环境效果实例等留在 `Mod_TileEffectReceiver / EnvironmentInteractionRunner`；格子数据留在 `ChunkTerrainData` 及其权威扩展层。自定义 TileData 的 `Clone()` 必须深复制可变成员；需要进入旧 MemoryPack TileData 存档时还需另外处理序列化类型注册。JSON 行为注册本身不会自动增加 MemoryPack Union，也没有新增任意 Lua 方法执行入口。
 
 液体扩展使用 `WorldLiquidBehaviour.OnEnter/OnUpdate/OnExit`，参数直接传递 `WorldLiquidSourceTarget`，不再继承地块行为或依赖旧水地块类。代码 MOD 的相关 Harmony Patch 应定位到这些液体生命周期方法。`GameRes.GetTileBlock(string)` 返回 `RuntimeTileDefinition`，只处理地块定义；原有常用 `tileDataTemplate / behaviours / GetTileBaseAsset()` 入口继续可用。
 

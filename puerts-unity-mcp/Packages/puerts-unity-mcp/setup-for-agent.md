@@ -1,0 +1,158 @@
+# PuerTS Unity MCP Agent Setup
+
+This package does not install agent configuration files into the Unity project root.
+Configure your agent workspace manually, or let the agent edit its own config files outside the Unity project.
+
+## Unity Project Paths
+
+Use these paths after the package has been synced into a Unity project root:
+
+- MCP stdio proxy: `<UnityProject>/puerts-unity-mcp/Packages/puerts-unity-mcp/Tools~/puerts-unity-mcp-stdio-proxy.js`
+- Editor config: `<UnityProject>/puerts-unity-mcp-extension/editor-mcp-config.json`
+- Mobile/player config: `<UnityProject>/puerts-unity-mcp-extension/mobile-mcp-config.json`
+- Editor JavaScript tools: `<UnityProject>/puerts-unity-mcp-extension/js/editor`
+- Runtime JavaScript tools: `<UnityProject>/puerts-unity-mcp-extension/js/runtime`
+- Skills: `<UnityProject>/puerts-unity-mcp-extension/skills`
+- Runtime state: `<UnityProject>/.puerts-unity-mcp`
+
+The Unity project root should not contain generated `.mcp.json`, `.cursor`, `.codex`, `.claude`, `*-plugin`, or root `skills` directories from this package.
+
+## Unity Project `.gitignore`
+
+Ensure the Unity project `.gitignore` contains:
+
+```gitignore
+# PuerTS Unity MCP runtime state and generated project-local files
+.puerts-unity-mcp/
+Assets/puerts-unity-mcp/Runtime/Generated/
+Assets/puerts-unity-mcp/Runtime/Generated/Plugins/puerts_il2cpp/
+```
+
+Do not ignore the whole `puerts-unity-mcp-extension` directory. Project configs, JavaScript MCP tools, and skills under that directory are persistent project assets. Do not ignore `puerts-unity-mcp/Packages/puerts-unity-mcp/Runtime/Plugins/Android`; that folder contains the MCP Android permission library. Upstream PuerTS `.so` files come from `third_party/puerts`, not from the MCP package.
+
+The vendored PuerTS directory has its own upstream `.gitignore` at `puerts-unity-mcp/third_party/puerts/unity/.gitignore`. PuerTS `core` and `v8` UPM package `.meta` files are intentionally trackable here so ScriptedImporter GUIDs such as `MJSImporter.cs` stay stable across machines.
+
+## Codex
+
+Add this to the agent workspace Codex config, replacing `<UnityProject>` with the absolute Unity project path:
+
+```toml
+[mcp_servers."puerts-unity-mcp"]
+command = "node"
+args = [
+  "<UnityProject>/puerts-unity-mcp/Packages/puerts-unity-mcp/Tools~/puerts-unity-mcp-stdio-proxy.js",
+  "--config",
+  "<UnityProject>/puerts-unity-mcp-extension/editor-mcp-config.json"
+]
+```
+
+## Claude / Cursor JSON MCP
+
+Add this to the agent workspace MCP JSON config, replacing `<UnityProject>` with the absolute Unity project path:
+
+```json
+{
+  "mcpServers": {
+    "puerts-unity-mcp": {
+      "command": "node",
+      "args": [
+        "<UnityProject>/puerts-unity-mcp/Packages/puerts-unity-mcp/Tools~/puerts-unity-mcp-stdio-proxy.js",
+        "--config",
+        "<UnityProject>/puerts-unity-mcp-extension/editor-mcp-config.json"
+      ]
+    }
+  }
+}
+```
+
+## Direct Phone / Player Mode
+
+To connect directly to a phone or standalone Player MCP without opening Unity Editor:
+
+1. Keep the agent working directory at the Unity project root, or pass `--extension-root <UnityProject>/puerts-unity-mcp-extension`.
+2. Keep `runtimeBindAddress` as `0.0.0.0`.
+3. Set `selectedTargetKind` to `player` in `<UnityProject>/puerts-unity-mcp-extension/editor-mcp-config.json`, or pass `--target-kind player`.
+4. Set `selectedTargetUrl` to `http://PHONE_IP:18991`, or pass `--target-url http://PHONE_IP:18991`.
+
+The stdio proxy reads local extension files through the system filesystem. When it is connected directly to a phone, it still exposes local `agent.extension.*` tools and can register JavaScript tool manifests from `puerts-unity-mcp-extension/js/runtime`; those scripts execute through the phone's `runtime.js.eval` tool.
+
+Runtime MCP uses low-IO defaults for phones: `enableFileCommandPump`, `enableDiskHeartbeat`, and `enableAotMissLog` default to `false`; `screen.screenshot` defaults to in-memory PNG base64 with `screenshotWriteMode: "memory"`. There is no UDP/LAN discovery; remote Editor and phone/player connections are always explicit URL connections.
+
+For player builds, use the package tools instead of Unity Scripting Define Symbols. `add-pum-to-build.mjs` adds the PuerTS Unity MCP package dependencies, copies `<UnityProject>/puerts-unity-mcp-extension/mobile-mcp-config.json` into `Assets/StreamingAssets/PuertsUnityMcp/mobile-mcp-config.json`, verifies the upstream PuerTS Android native libraries under `third_party/puerts`, and uses the MCP permission library bundled under `Packages/puerts-unity-mcp/Runtime/Plugins/Android`. `remove-pum-from-build.mjs` removes the build dependency entries and copied `StreamingAssets` config again, but keeps the bundled MCP Android permission library in the package.
+
+PuerTS generated C# files are generated per Unity project under `<UnityProject>/Assets/puerts-unity-mcp/Runtime/Generated`; the upstream PuerTS IL2CPP bridge path is derived from that and lands under `<UnityProject>/Assets/puerts-unity-mcp/Runtime/Generated/Plugins/puerts_il2cpp`. Treat those folders as generated output: ignore them in reusable package source and regenerate them for the current Unity/IL2CPP environment.
+
+The Editor MCP can still route to local Play Mode runtime targets when the Unity Editor is open.
+
+## PuerTS JavaScript Guide For Agents
+
+Use `editor.js.eval` for Unity Editor automation and `runtime.js.eval` for Play Mode, Android, iOS, or standalone Player automation. Editor and Runtime are separate PuerTS `ScriptEnv` instances: Editor code may use `UnityEditor`, while phone/player code should stay on runtime-safe Unity APIs.
+
+Use PuerTS `CS` first:
+
+```js
+CS.UnityEngine.Debug.Log("hello from PuerTS Unity MCP");
+
+var productName = CS.UnityEngine.Application.productName;
+var sceneName = CS.UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
+
+return {
+  ok: true,
+  productName: productName,
+  sceneName: sceneName
+};
+```
+
+With `mode: "expression"`, the expression result is returned automatically:
+
+```js
+CS.UnityEngine.Application.version
+```
+
+With `mode: "script"`, return plain JSON-serializable data explicitly:
+
+```js
+var camera = CS.UnityEngine.Camera.main;
+return {
+  hasMainCamera: !!camera,
+  cameraName: camera ? camera.name : ""
+};
+```
+
+If a C# type is not available through generated PuerTS wraps, use the reflection helper injected as `__unity_mcp`:
+
+```js
+__unity_mcp.typeExists("UnityEngine.Application");
+__unity_mcp.getStatic("UnityEngine.Application", "productName");
+__unity_mcp.getStaticPath("UnityEngine.Screen", "width");
+__unity_mcp.setStatic("UnityEngine.Time", "timeScale", 1);
+__unity_mcp.invokeStatic("UnityEngine.Debug", "Log", "message from reflection");
+```
+
+For phone UI automation, observe first, then act. Useful runtime tools include `screen.screenshot`, `runtime.ui.snapshot`, `runtime.ui.find`, `runtime.ui.raycast`, `runtime.ui.click`, and `input.tap`. Stable game-specific flows should be moved into `puerts-unity-mcp-extension/js/runtime` instead of repeatedly generating one-off eval scripts.
+
+## Project Extension Authoring
+
+Use `agent.extension.instructions` to show the active project extension paths and the JavaScript MCP tool template. A project JS tool is a `*.tool.json` manifest beside an `.mjs` module under `puerts-unity-mcp-extension/js/editor` or `puerts-unity-mcp-extension/js/runtime`.
+
+Project C# MCP extensions should live in a separate local package under `puerts-unity-mcp-extension/Packages/<project-extension-package>`. That package may reference `PuertsUnityMcp` and project assemblies such as HotFix; the core `puerts-unity-mcp` package must stay project-agnostic. Enable or remove the C# extension by adding/removing its `file:../puerts-unity-mcp-extension/Packages/...` dependency in Unity `Packages/manifest.json`. Implement `IUnityMcpToolProvider`; the Editor and Runtime hosts discover providers from loaded assemblies and register them into the same `tools/list` as built-ins. Prefer `context.TryRegister(...)` and unique names such as `game.*` because project extensions do not silently replace existing tool names.
+
+If the extension folder is empty, seed non-destructive demos with `node puerts-unity-mcp/Packages/puerts-unity-mcp/Tools~/create-extension-demos.mjs --unity-project-root <UnityProject>` or the Unity menu `PuerTS Unity MCP/Create Extension Demos`. The demo includes Editor JS, Runtime JS, a skill document, and a C# provider local package sample. The C# demo package is scaffolded but only participates in `tools/list` after its `file:../puerts-unity-mcp-extension/Packages/puerts-unity-mcp-extension-demo` dependency is added to Unity `Packages/manifest.json`.
+
+The module exports `execute(argsJson, contextJson)`, parses `argsJson`, and returns JSON-serializable data. Prefer `CS.UnityEngine`/`CS.UnityEditor`; use `__unity_mcp.invokeStatic`, `getStatic`, `getStaticPath`, `setStatic`, and `typeExists` when reflection is safer or PuerTS wraps are missing.
+
+Put project-specific rules in `puerts-unity-mcp-extension/skills/*.md` with YAML frontmatter:
+
+```md
+---
+name: unicorn-automation
+description: How to write Unicorn project MCP tools
+---
+Describe HotFix assembly names, safe runtime entry points, UI conventions, and gameplay automation workflows here.
+```
+
+For Editor visual and scene context, use `editor.hierarchy.get`/`get-hierarchy` to export scene hierarchy JSON, `editor.window.screenshot`/`screenshot` to capture an EditorWindow PNG, and `editor.window.focus`/`focus-window` to bring Unity forward. Do not confuse EditorWindow `screenshot` with Runtime `screen.screenshot`; the latter captures Play Mode or phone Player screens.
+
+For performance hotspot diagnosis, use the Editor MCP Profiler workflow. Call `editor.profiler.targets.list`, optionally `editor.profiler.connect` with `target: "editor"` or `profilerTargetName`/`profilerTargetId`/`profilerTargetUrl`, then call `editor.profiler.capture` or `performance.hotspot.report` with `duration: "15s"`. The report is collected from Unity Editor Profiler frame data, works for the Editor or an attached phone/player Profiler target, and writes `profiler-analysis.json`, `top-markers.csv`, and `report.md` under `.puerts-unity-mcp/perf-reports`.
+
+In IL2CPP builds, reflection only works for types and members that survive stripping. If a reflected type is missing, preserve it with link.xml or add a small project wrapper.

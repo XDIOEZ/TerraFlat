@@ -5,11 +5,19 @@ using FlatWorld.WorldModel;
 using UnityEngine;
 using Unity.Profiling;
 
+/// <summary>
+/// 单个 ChunkRuntime 的 Unity 表现容器，按基础地形、环境与实体顺序绑定表现器。
+/// 昂贵表现器可通过增量契约继续拆分，所有步骤由 ChunkMgr 的帧预算统一推进。
+/// </summary>
 public sealed class ChunkView : MonoBehaviour
 {
     private static readonly ProfilerMarker RendererBindMarker =
         new("FlatWorld.ChunkStreaming.BindRendererStep");
     private readonly List<IChunkViewRenderer> renderers = new();
+    private readonly List<string> rendererTimingNames = new();
+    private readonly List<ProfilerMarker> rendererBindMarkers = new(); // 每个表现器单独记账，避免所有开销挤在同一个标记下。
+    /// <summary>最后推进的表现器；停住时可区分地形、草地、导航和自然物。</summary>
+    public string LastBindingRenderer { get; private set; }
     private WorldRuntime world;
     private ChunkRuntime chunk;
     private ChunkLease presentationLease;
@@ -25,7 +33,7 @@ public sealed class ChunkView : MonoBehaviour
     public ChunkRuntime Model => chunk;
     public bool IsBound => chunk != null && presentationComplete;
     public bool IsBinding => chunk != null && !presentationComplete;
-    /// <summary>基础地形已提交给 BRG，后续草地、碰撞和自然物可以继续分帧绑定。</summary>
+    /// <summary>基础地形网格已提交，后续草地、碰撞和自然物可以继续分帧绑定。</summary>
     public bool IsBaseTerrainPresented =>
         chunk != null && terrainRenderer != null && terrainRenderer.IsBatchPresentationComplete;
 
@@ -34,7 +42,7 @@ public sealed class ChunkView : MonoBehaviour
     /// <summary>当前 View 保留的阴影槽数量，供流送 Profiler 与回归检查使用。</summary>
     public int RetainedOccluderCount => lightOccluderRenderer?.RetainedOccluderCount ?? 0;
 
-    /// <summary>只读取得基础地形 BRG 状态；诊断调用不会创建、重建或修复渲染后端。</summary>
+    /// <summary>只读取得扩展表现 BRG 状态；诊断调用不会创建、重建或修复渲染后端。</summary>
     public bool TryGetTerrainBatchDebugState(out bool registered, out int visualCount)
     {
         ChunkTilemapRenderer tilemapRenderer = null;
@@ -57,7 +65,9 @@ public sealed class ChunkView : MonoBehaviour
         }
 
         registered = ChunkBatchRendererGroupService.IsOwnerRegistered(tilemapRenderer);
-        visualCount = ChunkBatchRendererGroupService.GetOwnerVisualCount(tilemapRenderer);
+        visualCount = tilemapRenderer.BaseTerrainVisualCount +
+                      tilemapRenderer.DepthMeshPartCount +
+                      ChunkBatchRendererGroupService.GetOwnerTerrainVisualCount(tilemapRenderer);
         return true;
     }
 
@@ -100,14 +110,20 @@ public sealed class ChunkView : MonoBehaviour
         {
             if (!navigationEnabled && renderers[i] is ChunkNavigationBinder)
                 continue;
-            renderers[i].Bind(chunk);
+            EnsureBaseTerrainPresentation(renderers[i]);
+            LastBindingRenderer = rendererTimingNames[i];
+            using (rendererBindMarkers[i].Auto())
+            using (world.StreamingDiagnostics.Measure(LastBindingRenderer))
+                renderers[i].Bind(chunk);
         }
         presentationComplete = true;
         chunk.MarkPresentationBound();
         PresentationChanged?.Invoke(chunk.Address);
     }
 
-    /// <summary>把同一区块的表现组件拆到多帧绑定；地面优先，草地和导航最后。</summary>
+    #region 分帧绑定
+
+    /// <summary>把同一区块的表现组件拆到多帧绑定；耗时表现器还可把自身拆成多个步骤。</summary>
     public IEnumerator BindIncremental(WorldRuntime worldRuntime, ChunkRuntime chunkRuntime,
         bool includeNavigation = true, int renderersPerFrame = 1)
     {
@@ -130,8 +146,40 @@ public sealed class ChunkView : MonoBehaviour
             if (!navigationEnabled && renderers[i] is ChunkNavigationBinder)
                 continue;
 
-            using (RendererBindMarker.Auto())
-                renderers[i].Bind(chunk);
+            EnsureBaseTerrainPresentation(renderers[i]);
+            LastBindingRenderer = rendererTimingNames[i];
+            if (renderers[i] is IIncrementalChunkViewRenderer incrementalRenderer)
+            {
+                IEnumerator steps = incrementalRenderer.BindIncremental(chunk);
+                try
+                {
+                    while (version == bindVersion && ReferenceEquals(chunk, chunkRuntime))
+                    {
+                        EnsureBaseTerrainPresentation(renderers[i]);
+                        bool hasNext;
+                        using (RendererBindMarker.Auto())
+                        using (rendererBindMarkers[i].Auto())
+                        using (worldRuntime.StreamingDiagnostics.Measure(LastBindingRenderer))
+                            hasNext = steps.MoveNext();
+                        if (!hasNext)
+                            break;
+                        yield return null;
+                    }
+                }
+                finally
+                {
+                    (steps as IDisposable)?.Dispose();
+                }
+                if (version != bindVersion || !ReferenceEquals(chunk, chunkRuntime))
+                    yield break;
+            }
+            else
+            {
+                using (RendererBindMarker.Auto())
+                using (rendererBindMarkers[i].Auto())
+                using (worldRuntime.StreamingDiagnostics.Measure(LastBindingRenderer))
+                    renderers[i].Bind(chunk);
+            }
             frameCount++;
             if (frameCount >= Math.Max(1, renderersPerFrame) && i + 1 < renderers.Count)
             {
@@ -147,6 +195,8 @@ public sealed class ChunkView : MonoBehaviour
             PresentationChanged?.Invoke(chunk.Address);
         }
     }
+
+    #endregion
 
     /// <summary>先终止绑定与事件回调，再解除表现；重复禁用、销毁不再次清理。</summary>
     public void Unbind()
@@ -180,6 +230,9 @@ public sealed class ChunkView : MonoBehaviour
                     renderers[i] is MonoBehaviour behaviour && behaviour != null)
                     worldAware.SetWorld(null);
             renderers.Clear();
+            rendererTimingNames.Clear();
+            rendererBindMarkers.Clear();
+            LastBindingRenderer = null;
             terrainRenderer = null;
             navigationLease?.Dispose();
             navigationLease = null;
@@ -260,6 +313,13 @@ public sealed class ChunkView : MonoBehaviour
         }
         renderers.Sort((left, right) =>
             ResolveRendererPriority(left).CompareTo(ResolveRendererPriority(right)));
+        rendererTimingNames.Clear();
+        rendererBindMarkers.Clear();
+        for (int i = 0; i < renderers.Count; i++)
+        {
+            rendererTimingNames.Add("renderer." + renderers[i].GetType().Name);
+            rendererBindMarkers.Add(new ProfilerMarker("FlatWorld.ChunkStreaming.Bind." + renderers[i].GetType().Name));
+        }
     }
 
     /// <summary>建立租约和事件，再由同步或分帧入口绑定各表现组件。</summary>
@@ -271,7 +331,7 @@ public sealed class ChunkView : MonoBehaviour
         chunk = chunkRuntime;
         navigationEnabled = includeNavigation;
         presentationComplete = false;
-        transform.position = new Vector3(chunk.Address.ChunkOrigin.X, chunk.Address.ChunkOrigin.Y, 0f);
+        RefreshLocalPresentationPosition();
         CacheRenderers();
         for (int i = 0; i < renderers.Count; i++)
             if (renderers[i] is IWorldAwareChunkViewRenderer worldAware)
@@ -279,7 +339,35 @@ public sealed class ChunkView : MonoBehaviour
         presentationLease = chunk.AcquireLease(ChunkLeaseKind.Presentation);
         if (includeNavigation)
             navigationLease = chunk.AcquireLease(ChunkLeaseKind.Navigation);
-        committedSubscription = world.Events.Subscribe<ChunkCommitted>(HandleChunkCommitted);
+        committedSubscription = world.Events.SubscribeChunkCommitted(chunk.Address, HandleChunkCommitted);
+    }
+
+    /// <summary>分帧绑定期间 BRG 后端可能被资源生命周期重置；继续扩展表现前先从权威地形恢复 Owner。</summary>
+    private void EnsureBaseTerrainPresentation(IChunkViewRenderer renderer)
+    {
+        if (renderer is ChunkTilemapRenderer)
+            return;
+        if (terrainRenderer == null)
+            throw new InvalidOperationException("ChunkView 缺少基础地形表现器。");
+        if (terrainRenderer.IsBatchPresentationComplete)
+            return;
+        if (!terrainRenderer.RepairBatchPresentationIfNeeded())
+            throw new InvalidOperationException(
+                $"{renderer.GetType().Name} 绑定前无法恢复基础地形 BRG Owner。");
+    }
+
+    /// <summary>ChunkRuntime 地址保持规范坐标；ChunkView 只选择离本地玩家最近的显示/碰撞镜像。</summary>
+    public void RefreshLocalPresentationPosition()
+    {
+        if (chunk == null)
+            return;
+
+        Vector2 logicalOrigin = new Vector2(chunk.Address.ChunkOrigin.X, chunk.Address.ChunkOrigin.Y);
+        Vector2 projectedOrigin = WorldLocalPresentation.ProjectPosition(logicalOrigin);
+        Vector3 projected = new(projectedOrigin.x, projectedOrigin.y, 0f);
+        if (transform.position == projected) return;
+        transform.position = projected;
+        terrainRenderer?.RefreshDepthProjection();
     }
 
     /// <summary>先让地面可见，再补环境、碰撞、草地和导航。</summary>
@@ -287,7 +375,7 @@ public sealed class ChunkView : MonoBehaviour
     {
         if (renderer is ChunkTilemapRenderer)
             return 0;
-        if (renderer is ChunkEnvironmentTilemapRenderer)
+        if (renderer is ChunkEnvironmentRenderer)
             return 1;
         if (renderer is ChunkCollisionRenderer)
             return 2;
@@ -295,12 +383,14 @@ public sealed class ChunkView : MonoBehaviour
             return 3;
         if (renderer is ChunkGrassRenderer)
             return 4;
-        if (renderer is ChunkNavigationBinder)
+        if (renderer is ChunkGroundCoverRenderer)
             return 5;
-        if (renderer is ChunkNaturalItemRenderer)
+        if (renderer is ChunkNavigationBinder)
             return 6;
-        if (renderer is ChunkAgricultureRenderer)
+        if (renderer is ChunkNaturalItemRenderer)
             return 7;
+        if (renderer is ChunkAgricultureRenderer)
+            return 8;
         return 2;
     }
 }

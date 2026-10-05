@@ -19,14 +19,17 @@
       "gameName": "铁甲",
       "description": "以钢锭锻造成的重型胸甲，牺牲少量移动速度换取可靠防护。",
       "durability": 200.0,
-      "maxDurability": 1.0,
+      "maxDurability": 200.0,
       "amount": 1.0,
       "weight": 9.0,
       "volume": 10.0,
       "stackable": false,
       "canBePickedUp": true,
       "tags": [
-        "36"
+        "36",
+        "Equipment",
+        "Armor",
+        "EquipmentSlot.TorsoOuter"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Tools/Item_Tool_077.png",
@@ -71,9 +74,9 @@
         }
       },
       "modules": {
-        "Module_Equipment_Store": {
-          "prefab": "Module_Equipment_Store",
-          "id": "Module_Equipment_Store",
+        "Mod_EquipmentStore": {
+          "prefab": "Mod_EquipmentStore",
+          "id": "装备存储模块",
           "enabled": true,
           "data": {
             "BitData": [],
@@ -87,8 +90,11 @@
                 "$concreteType": "EquipmentInstance_Speed"
               },
               {
-                "DefenseBonusIncrease": 10.0,
-                "Name": "[Chestplate_Iron]增加10点防御",
+                "DefenseBonusIncrease": 0.0,
+                "DefenseBonus": {
+                  "Physical": 8
+                },
+                "Name": "[Chestplate_Iron]重型胸甲防护",
                 "$concreteType": "EquipmentInstance_Defense",
                 "CoveredParts": [
                   "Chest",
@@ -147,14 +153,17 @@
       "gameName": "藤甲",
       "description": "以藤条和细绳编成的轻型护甲。",
       "durability": 200.0,
-      "maxDurability": 1.0,
+      "maxDurability": 200.0,
       "amount": 1.0,
       "weight": 2.0,
       "volume": 8.0,
       "stackable": false,
       "canBePickedUp": true,
       "tags": [
-        "36"
+        "36",
+        "Equipment",
+        "Armor",
+        "EquipmentSlot.TorsoOuter"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Equipment/Jade Equipment/Jade Chestplate.png",
@@ -199,9 +208,9 @@
         }
       },
       "modules": {
-        "Module_Equipment_Store": {
-          "prefab": "Module_Equipment_Store",
-          "id": "Module_Equipment_Store",
+        "Mod_EquipmentStore": {
+          "prefab": "Mod_EquipmentStore",
+          "id": "装备存储模块",
           "enabled": true,
           "data": {
             "BitData": [],
@@ -210,8 +219,11 @@
           "parameters": {
             "equipmentInstances": [
               {
-                "DefenseBonusIncrease": 5.0,
-                "Name": "[Chestplate_Iron]增加10点防御",
+                "DefenseBonusIncrease": 0.0,
+                "DefenseBonus": {
+                  "Physical": 2
+                },
+                "Name": "[Chestplate_Twine]轻型藤甲防护",
                 "$concreteType": "EquipmentInstance_Defense",
                 "CoveredParts": [
                   "Chest",
@@ -270,14 +282,17 @@
       "gameName": "木甲",
       "description": "由木板拼接而成的基础护甲。",
       "durability": 200.0,
-      "maxDurability": 1.0,
+      "maxDurability": 200.0,
       "amount": 1.0,
       "weight": 5.0,
       "volume": 12.0,
       "stackable": false,
       "canBePickedUp": true,
       "tags": [
-        "36"
+        "36",
+        "Equipment",
+        "Armor",
+        "EquipmentSlot.TorsoOuter"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Equipment/Wood Equipment/Wood Chestplate.png",
@@ -322,9 +337,9 @@
         }
       },
       "modules": {
-        "Module_Equipment_Store": {
-          "prefab": "Module_Equipment_Store",
-          "id": "Module_Equipment_Store",
+        "Mod_EquipmentStore": {
+          "prefab": "Mod_EquipmentStore",
+          "id": "装备存储模块",
           "enabled": true,
           "data": {
             "BitData": [],
@@ -333,8 +348,11 @@
           "parameters": {
             "equipmentInstances": [
               {
-                "DefenseBonusIncrease": 4.0,
-                "Name": "[Chestplate_Iron]增加10点防御",
+                "DefenseBonusIncrease": 0.0,
+                "DefenseBonus": {
+                  "Physical": 4
+                },
+                "Name": "[Chestplate_Wood]木甲防护",
                 "$concreteType": "EquipmentInstance_Defense",
                 "CoveredParts": [
                   "Chest",

@@ -126,7 +126,7 @@ TextureImporter:
       name: PiercingImpact_0
       rect:
         serializedVersion: 2
-        x: 0.0
+        x: 0
         y: 443.5
         width: 443.5
         height: 443.5
@@ -140,7 +140,7 @@ TextureImporter:
       spriteID: 4921d7562ff4449ca8743728b50c8013
       internalID: 21300000
       vertices: []
-      indices:
+      indices: 
       edges: []
       weights: []
     - serializedVersion: 2
@@ -161,14 +161,14 @@ TextureImporter:
       spriteID: 813876bc72434a60842ab86500d76466
       internalID: 21300001
       vertices: []
-      indices:
+      indices: 
       edges: []
       weights: []
     - serializedVersion: 2
       name: PiercingImpact_2
       rect:
         serializedVersion: 2
-        x: 887.0
+        x: 887
         y: 443.5
         width: 443.5
         height: 443.5
@@ -182,7 +182,7 @@ TextureImporter:
       spriteID: 120f56b6792f46c980e6b603d6efbfa7
       internalID: 21300002
       vertices: []
-      indices:
+      indices: 
       edges: []
       weights: []
     - serializedVersion: 2
@@ -203,15 +203,15 @@ TextureImporter:
       spriteID: 499ec7e0282d48d9ba612b43911e0f01
       internalID: 21300003
       vertices: []
-      indices:
+      indices: 
       edges: []
       weights: []
     - serializedVersion: 2
       name: PiercingImpact_4
       rect:
         serializedVersion: 2
-        x: 0.0
-        y: 0.0
+        x: 0
+        y: 0
         width: 443.5
         height: 443.5
       alignment: 0
@@ -224,7 +224,7 @@ TextureImporter:
       spriteID: 396ceda411a6497ba21bf8fa00b59d02
       internalID: 21300004
       vertices: []
-      indices:
+      indices: 
       edges: []
       weights: []
     - serializedVersion: 2
@@ -232,7 +232,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 443.5
-        y: 0.0
+        y: 0
         width: 443.5
         height: 443.5
       alignment: 0
@@ -245,15 +245,15 @@ TextureImporter:
       spriteID: 9584a0f6f68d426c87b9f8070b7084f9
       internalID: 21300005
       vertices: []
-      indices:
+      indices: 
       edges: []
       weights: []
     - serializedVersion: 2
       name: PiercingImpact_6
       rect:
         serializedVersion: 2
-        x: 887.0
-        y: 0.0
+        x: 887
+        y: 0
         width: 443.5
         height: 443.5
       alignment: 0
@@ -266,7 +266,7 @@ TextureImporter:
       spriteID: 843bbb393e194c0b9ec4cffeac012112
       internalID: 21300006
       vertices: []
-      indices:
+      indices: 
       edges: []
       weights: []
     - serializedVersion: 2
@@ -274,7 +274,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 1330.5
-        y: 0.0
+        y: 0
         width: 443.5
         height: 443.5
       alignment: 0
@@ -287,7 +287,7 @@ TextureImporter:
       spriteID: 9ab488fff65d45ca9041c8347b2c7187
       internalID: 21300007
       vertices: []
-      indices:
+      indices: 
       edges: []
       weights: []
     outline: []
@@ -296,7 +296,7 @@ TextureImporter:
     spriteID: d2ce798490714d72b7a062090bbbc01f
     internalID: 0
     vertices: []
-    indices:
+    indices: 
     edges: []
     weights: []
     secondaryTextures: []
@@ -309,8 +309,8 @@ TextureImporter:
       PiercingImpact_5: 21300005
       PiercingImpact_6: 21300006
       PiercingImpact_7: 21300007
-  mipmapLimitGroupName:
+  mipmapLimitGroupName: 
   pSDRemoveMatte: 0
-  userData:
-  assetBundleName:
-  assetBundleVariant:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

@@ -55,5 +55,5 @@ MonoBehaviour:
   ControllerCamera: {fileID: 0}
   CameraFollowItem: {fileID: 0}
   Player: {fileID: 0}
-  GameController: {fileID: 0}
+  Mod_GameController: {fileID: 0}
   CamPrefab: {fileID: 0}

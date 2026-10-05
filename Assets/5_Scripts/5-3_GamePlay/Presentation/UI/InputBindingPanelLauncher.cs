@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using FlatWorld.Localization;
+using FlatWorld.Settings;
 using InputSystem;
 using TMPro;
 using UnityEngine;
@@ -27,7 +28,7 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour, ISettingsPageLife
     private readonly List<BindingRow> rows = new List<BindingRow>();
     private readonly Stack<BindingRow> pooledRows = new Stack<BindingRow>();
 
-    private GameController gameController;
+    private Mod_GameController gameController;
     private InputBindingService bindingService;
     private PlayerInputActions standaloneInputActions;
     private InputBindingService standaloneBindingService;
@@ -37,6 +38,8 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour, ISettingsPageLife
     private GameObject rowPrefab;
     private TextMeshProUGUI statusText;
     private TMP_Dropdown controlModeDropdown;
+    private Toggle preciseInteractionToggle;
+    private ISettingsToggle preciseInteractionSetting;
     private Button keyboardMouseTabButton;
     private Button gamepadTabButton;
     private Button touchLayoutButton;
@@ -50,13 +53,17 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour, ISettingsPageLife
     /// <summary>当前保留的绑定行总数，供 Profiler 检查是否发生重复实例化。</summary>
     public int RetainedRowCount => rows.Count + pooledRows.Count;
 
+    /// <summary>当前按键覆盖是否存在尚未提交的修改。</summary>
+    public bool HasSettingsEditSessionChanges =>
+        bindingService != null && bindingService.HasSettingsEditSessionChanges;
+
     #region 初始化与页面生命周期
 
     /// <summary>在指定内嵌页上建立唯一按键绑定器。</summary>
     public static InputBindingPanelLauncher Ensure(
         Transform pageRoot,
         BasePanel ownerPanel,
-        GameController controller)
+        Mod_GameController controller)
     {
         if (pageRoot == null)
             return null;
@@ -71,7 +78,7 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour, ISettingsPageLife
     }
 
     /// <summary>绑定本页控件，并接入当前玩家的输入绑定服务。</summary>
-    private void Initialize(BasePanel ownerPanel, GameController controller)
+    private void Initialize(BasePanel ownerPanel, Mod_GameController controller)
     {
         parentPanel = ownerPanel;
         BindPageControls();
@@ -100,7 +107,7 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour, ISettingsPageLife
     }
 
     /// <summary>世界内复用当前玩家服务；主菜单创建只承载持久化设置的独立输入资产。</summary>
-    private InputBindingService ResolveBindingService(GameController controller)
+    private InputBindingService ResolveBindingService(Mod_GameController controller)
     {
         if (controller != null)
             return controller.InputBindings;
@@ -128,6 +135,9 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour, ISettingsPageLife
         content = bindingScrollRect != null ? bindingScrollRect.content : null;
         statusText = FindText(transform, "状态文本");
         controlModeDropdown = FindDropdown(transform, "控制模式下拉列表");
+        preciseInteractionToggle = FindComponent<Toggle>(transform, "精确交互");
+        preciseInteractionSetting = InteractionUserSettings.SettingsProvider.GetToggle(
+            InteractionUserSettings.PreciseInteractionSettingKey);
         keyboardMouseTabButton = FindButton(transform, "键鼠分页按钮");
         gamepadTabButton = FindButton(transform, "手柄分页按钮");
         touchLayoutButton = FindButton(transform, "触屏布局按钮");
@@ -135,6 +145,7 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour, ISettingsPageLife
         rowPrefab = GameRes.Instance?.GetPrefab(RuntimeUIPrefabKeys.InputBindingRow);
 
         controlModeDropdown?.onValueChanged.AddListener(HandleControlModeChanged);
+        preciseInteractionToggle?.onValueChanged.AddListener(HandlePreciseInteractionChanged);
         keyboardMouseTabButton?.onClick.AddListener(ShowKeyboardMouseBindings);
         gamepadTabButton?.onClick.AddListener(ShowGamepadBindings);
         touchLayoutButton?.onClick.AddListener(OpenTouchLayoutEditor);
@@ -142,6 +153,7 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour, ISettingsPageLife
 
         if (bindingList == null || bindingScrollRect == null || content == null ||
             statusText == null || controlModeDropdown == null ||
+            preciseInteractionToggle == null || preciseInteractionSetting == null ||
             keyboardMouseTabButton == null || gamepadTabButton == null || touchLayoutButton == null ||
             resetButton == null)
         {
@@ -157,7 +169,7 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour, ISettingsPageLife
         if (bindingService == null)
         {
             Debug.LogError(
-                "[InputBindingPanelLauncher] GameController 尚未准备好按键绑定服务。",
+                "[InputBindingPanelLauncher] Mod_GameController 尚未准备好按键绑定服务。",
                 this);
             return;
         }
@@ -174,6 +186,7 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour, ISettingsPageLife
 
         RebuildRows();
         RefreshControlModeDropdown();
+        RefreshPreciseInteractionToggle();
         SetStatus(GetDevicePageHint());
         RequestLocalLayoutRebuild();
     }
@@ -313,6 +326,19 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour, ISettingsPageLife
 
     #region 分页与绑定操作
 
+    /// <summary>按持久化偏好回填目标选择开关。</summary>
+    private void RefreshPreciseInteractionToggle()
+    {
+        if (preciseInteractionToggle != null && preciseInteractionSetting != null)
+            preciseInteractionToggle.SetIsOnWithoutNotify(preciseInteractionSetting.Value);
+    }
+
+    /// <summary>立即切换交互键与预览共用的目标选择规则。</summary>
+    private void HandlePreciseInteractionChanged(bool enabled)
+    {
+        preciseInteractionSetting?.SetValue(enabled);
+    }
+
     /// <summary>按当前语言重建控制方式选项，并保持已保存的手动选择。</summary>
     private void RefreshControlModeDropdown()
     {
@@ -329,7 +355,7 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour, ISettingsPageLife
 
         int selectedIndex = gameController != null
             ? (int)gameController.PreferredInputDevice
-            : (int)GameController.GetPreferredInputDevicePreference();
+            : (int)Mod_GameController.GetPreferredInputDevicePreference();
         controlModeDropdown.SetValueWithoutNotify(Mathf.Clamp(selectedIndex, 0, 2));
         controlModeDropdown.RefreshShownValue();
     }
@@ -342,12 +368,12 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour, ISettingsPageLife
             if (selectedIndex < 0 || selectedIndex > 2)
                 return;
 
-            GameController.SavePreferredInputDevicePreference(
-                (GameController.InputDeviceType)selectedIndex);
+            Mod_GameController.SavePreferredInputDevicePreference(
+                (Mod_GameController.InputDeviceType)selectedIndex);
         }
         else
         {
-            gameController.SetPreferredInputDevice((GameController.InputDeviceType)selectedIndex);
+            gameController.SetPreferredInputDevice((Mod_GameController.InputDeviceType)selectedIndex);
         }
 
         RefreshControlModeDropdown();
@@ -523,6 +549,8 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour, ISettingsPageLife
             return;
 
         bindingService.ResetToDefaults(currentDeviceGroup);
+        InteractionUserSettings.ResetToDefault();
+        RefreshPreciseInteractionToggle();
         RefreshRows();
         SetStatus(
             FlatWorldLocalizationService.GetUiFormat(
@@ -537,8 +565,31 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour, ISettingsPageLife
             return;
 
         bindingService.ResetToDefaults();
+        InteractionUserSettings.ResetToDefault();
+        RefreshPreciseInteractionToggle();
         RefreshRows();
         SetStatus(FlatWorldLocalizationService.GetUiText("全部按键绑定已恢复默认值。"));
+    }
+
+    /// <summary>由设置主面板开始按键修改会话。</summary>
+    public void BeginSettingsEditSession()
+    {
+        bindingService?.BeginSettingsEditSession();
+        RefreshRows();
+        SetStatus(GetDevicePageHint());
+    }
+
+    /// <summary>由设置主面板保存并更新按键修改基线。</summary>
+    public void CommitSettingsEditSession()
+    {
+        bindingService?.CommitSettingsEditSession();
+        SetStatus(GetDevicePageHint());
+    }
+
+    /// <summary>由设置主面板关闭时放弃未保存的按键修改。</summary>
+    public void DiscardSettingsEditSession()
+    {
+        bindingService?.DiscardSettingsEditSession();
     }
 
     /// <summary>刷新所有已显示行的绑定文本。</summary>
@@ -576,6 +627,8 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour, ISettingsPageLife
             touchLayoutButton.interactable = interactable;
         if (controlModeDropdown != null)
             controlModeDropdown.interactable = interactable;
+        if (preciseInteractionToggle != null)
+            preciseInteractionToggle.interactable = interactable;
         if (resetButton != null)
             resetButton.interactable = interactable;
     }
@@ -587,16 +640,16 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour, ISettingsPageLife
             return;
 
         statusText.text = message;
-        statusText.color = isError
-            ? new Color(1f, 0.48f, 0.35f)
-            : new Color(0.69f, 0.78f, 0.79f);
+        statusText.color = isError ? FlatWorldUITheme.Danger : FlatWorldUITheme.Teal;
     }
 
     /// <summary>取得当前设备分页的操作提示。</summary>
     private string GetDevicePageHint()
     {
         return FlatWorldLocalizationService.GetUiFormat(
-            "当前：{0}。选择一项后输入新控制；冲突会被拦截并自动保存。",
+            bindingService != null && bindingService.IsSettingsEditSessionActive
+                ? "当前：{0}。选择一项后输入新控制；冲突会被拦截，点击保存后保留修改。"
+                : "当前：{0}。选择一项后输入新控制；冲突会被拦截并自动保存。",
             FlatWorldLocalizationService.GetUiText(GetDevicePageName()));
     }
 
@@ -615,6 +668,12 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour, ISettingsPageLife
     /// <summary>解除页面事件，并保证销毁时没有残留重绑操作。</summary>
     private void OnDestroy()
     {
+        if (standaloneBindingService != null &&
+            standaloneBindingService.IsSettingsEditSessionActive)
+        {
+            standaloneBindingService.DiscardSettingsEditSession();
+        }
+
         if (bindingService != null)
         {
             bindingService.BindingsChanged -= RefreshRows;
@@ -627,6 +686,7 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour, ISettingsPageLife
         touchLayoutButton?.onClick.RemoveListener(OpenTouchLayoutEditor);
         resetButton?.onClick.RemoveListener(ResetToDefaults);
         controlModeDropdown?.onValueChanged.RemoveListener(HandleControlModeChanged);
+        preciseInteractionToggle?.onValueChanged.RemoveListener(HandlePreciseInteractionChanged);
         FlatWorldLocalizationService.LanguageChanged -= HandleLanguageChanged;
 
         standaloneBindingService?.Dispose();

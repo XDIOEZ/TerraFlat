@@ -476,6 +476,15 @@ public sealed class ChunkGenerator_Structures : ChunkGeneratorBase
         int guid = ResolveGuidCollision(unchecked((int)itemSeed));
         try
         {
+            if (MachineCatalog.Get(itemId) != null)
+            {
+                bool existed = MachineWorld.GetById(guid) != null;
+                ItemData data = GameRes.Instance.CreateItemData(itemId);
+                data.Guid = guid;
+                MachineEntity machine = MachineWorld.SpawnGenerated(data, new Vector3(worldPosition.x, worldPosition.y));
+                if (!existed && machine != null) ApplyMachineContainerContents(machine, stamp, itemSeed, candidate);
+                return;
+            }
             Item item = Map.chunk.InstantiateItemInChunkDeterministic(
                 itemId,
                 guid,
@@ -510,6 +519,32 @@ public sealed class ChunkGenerator_Structures : ChunkGeneratorBase
         Mod_Inventory inventoryModule =
             containerItem.GetComponentInChildren<Mod_Inventory>(true);
         Inventory targetInventory = ResolveTargetInventory(inventoryModule, contents);
+        PopulateContainer(targetInventory, contents, stamp, itemSeed, candidate);
+        inventoryModule?.Save();
+    }
+
+    private void ApplyMachineContainerContents(MachineEntity entity, StructureItemStamp stamp, uint itemSeed, Candidate candidate)
+    {
+        StructureContainerContents contents = stamp?.ContainerContents;
+        if (contents?.OverrideContents != true) return;
+        var inventories = entity.Logic?.Inventories;
+        Inventory target = null;
+        if (inventories != null)
+        {
+            foreach (Inventory inventory in inventories)
+                if (!string.IsNullOrWhiteSpace(contents.TargetInventoryName) && inventory.Data.Name == contents.TargetInventoryName)
+                { target = inventory; break; }
+            if (target == null && (uint)contents.TargetInventoryIndex < (uint)inventories.Count)
+                target = inventories[contents.TargetInventoryIndex];
+        }
+        PopulateContainer(target, contents, stamp, itemSeed, candidate);
+        entity.Logic?.Capture();
+        MachineWorld.StateChanged(entity);
+    }
+
+    private void PopulateContainer(Inventory targetInventory, StructureContainerContents contents,
+        StructureItemStamp stamp, uint itemSeed, Candidate candidate)
+    {
         if (targetInventory?.Data?.itemSlots == null)
         {
             LogContainerError(candidate, stamp, "找不到已加载的目标库存");
@@ -575,7 +610,6 @@ public sealed class ChunkGenerator_Structures : ChunkGeneratorBase
             targetInventory.Data.Event_RefreshUI?.Invoke(entry.SlotIndex);
         }
 
-        inventoryModule.Save();
     }
 
     /// <summary>按名称优先、索引兜底解析多库存容器。</summary>

@@ -67,14 +67,14 @@ public sealed class RecipeDto
     [JsonProperty("inputRule")]
     public string InputRule = "unordered";
 
-    [JsonProperty("gridWidth")]
-    public int GridWidth;
+    [JsonProperty("gridWidth", NullValueHandling = NullValueHandling.Ignore)]
+    public int? GridWidth;
 
-    [JsonProperty("gridHeight")]
-    public int GridHeight;
+    [JsonProperty("gridHeight", NullValueHandling = NullValueHandling.Ignore)]
+    public int? GridHeight;
 
-    [JsonProperty("allowMirror")]
-    public bool AllowMirror;
+    [JsonProperty("allowMirror", NullValueHandling = NullValueHandling.Ignore)]
+    public bool? AllowMirror;
 
     [JsonProperty("temperature")]
     public float Temperature;
@@ -85,6 +85,10 @@ public sealed class RecipeDto
     /// <summary>容器类加热配方的累计处理时长；普通物品配方保持默认 0。</summary>
     [JsonProperty("processingSeconds")]
     public float ProcessingSeconds;
+
+    /// <summary>手动加工配方需要完成的有效操作次数；未填写时默认一次完成。</summary>
+    [JsonProperty("manualWorkSteps")]
+    public int ManualWorkSteps = 1;
 
     [JsonProperty("inputs")]
     public List<RecipeIngredientDto> Inputs = new List<RecipeIngredientDto>();
@@ -103,8 +107,9 @@ public sealed class RecipeDto
 [Serializable]
 public sealed class RecipeIngredientDto
 {
-    [JsonProperty("slot")]
-    public int Slot;
+    // 热加工可指定位置，普通合成只写物品身份与数量。
+    [JsonProperty("slot", NullValueHandling = NullValueHandling.Ignore)]
+    public int? Slot;
 
     [JsonProperty("match")]
     public string Match = "exact_item";
@@ -155,6 +160,6 @@ public sealed class RecipeActionDto
     [JsonProperty("value")]
     public float Value;
 
-    [JsonProperty("slotIndex")]
-    public int SlotIndex = -1;
+    [JsonProperty("slotIndex", NullValueHandling = NullValueHandling.Ignore)]
+    public int? LegacySlotIndex;
 }

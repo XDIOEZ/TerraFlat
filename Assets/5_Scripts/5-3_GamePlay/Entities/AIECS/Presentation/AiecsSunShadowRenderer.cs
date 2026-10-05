@@ -20,6 +20,8 @@ namespace FlatWorld.AIECS
         private readonly List<Batch> batches = new();
         private readonly Scene scene;
         private readonly Texture atlas;
+        private readonly int sortingLayerId;
+        private readonly int sortingOrder;
         private Material material;
         private Vector4 sunlight;
         public int ShadowCount { get; private set; }
@@ -28,7 +30,13 @@ namespace FlatWorld.AIECS
         public float CullingMargin => Active ? sunlight.z : 0f;
 
         /// <summary>只保存共享资源引用；关闭功能时不创建网格或 Renderer。</summary>
-        public AiecsSunShadowRenderer(Scene scene, Texture atlas) { this.scene = scene; this.atlas = atlas; }
+        public AiecsSunShadowRenderer(Scene scene, Texture atlas, int sortingLayerId, int sortingOrder)
+        {
+            this.scene = scene;
+            this.atlas = atlas;
+            this.sortingLayerId = sortingLayerId;
+            this.sortingOrder = sortingOrder;
+        }
 
         /// <summary>每次 Draw 只读一次太阳全局参数，保持与普通实体同一时间和偏好。</summary>
         public void Begin()
@@ -48,7 +56,7 @@ namespace FlatWorld.AIECS
             {
                 if (material == null) material = Resources.Load<Material>("SunShadows/SunShadowProjection");
                 if (material == null) throw new MissingReferenceException("缺少 SunShadows/SunShadowProjection 材质。");
-                batches.Add(new Batch(scene, material, atlas));
+                batches.Add(new Batch(scene, material, atlas, sortingLayerId, sortingOrder));
             }
             Batch batch = batches[index];
             if (ShadowCount % MaxSprites == 0) { batch.Begin(); BatchCount++; }
@@ -92,13 +100,14 @@ namespace FlatWorld.AIECS
             private readonly GameObject root;
             private readonly Mesh mesh;
             private readonly MeshRenderer renderer;
+            private readonly Vector2 uvPadding; // 与共享阴影网格相同的透明外沿。
             private readonly Vertex[] vertices = new Vertex[MaxSprites * 4];
             private int count;
             private Vector3 min, max;
             private const MeshUpdateFlags Flags = MeshUpdateFlags.DontRecalculateBounds;
 
             /// <summary>分配固定索引和复用顶点缓冲，所有批次共用普通实体的太阳材质。</summary>
-            public Batch(Scene scene, Material material, Texture atlas)
+            public Batch(Scene scene, Material material, Texture atlas, int sortingLayerId, int sortingOrder)
             {
                 int layer = LayerMask.NameToLayer("AIECSRuntime");
                 if (layer < 0) throw new InvalidOperationException("缺少 AIECSRuntime Layer。");
@@ -125,12 +134,13 @@ namespace FlatWorld.AIECS
                 root.AddComponent<MeshFilter>().sharedMesh = mesh;
                 renderer = root.AddComponent<MeshRenderer>();
                 renderer.sharedMaterial = material;
-                renderer.sortingLayerName = "Default";
-                renderer.sortingOrder = 0;
+                renderer.sortingLayerID = sortingLayerId;
+                renderer.sortingOrder = sortingOrder;
                 renderer.shadowCastingMode = ShadowCastingMode.Off;
                 renderer.receiveShadows = false;
                 renderer.lightProbeUsage = LightProbeUsage.Off;
                 renderer.reflectionProbeUsage = ReflectionProbeUsage.Off;
+                uvPadding = new Vector2(5f / atlas.width, 5f / atlas.height);
                 var properties = new MaterialPropertyBlock();
                 properties.SetTexture("_MainTex", atlas);
                 properties.SetFloat("_SunShadowBatched", 1f);
@@ -156,16 +166,19 @@ namespace FlatWorld.AIECS
                 Color32 color = new Color32(255, 255, 255, (byte)Mathf.RoundToInt(Mathf.Clamp01(alpha) * 255f));
                 Rect rect = sprite.AtlasRect;
                 Vector4 uvBounds = new Vector4(rect.xMin, rect.yMin, rect.xMax, rect.yMax);
+                // 阴影四边形预留五个源像素，柔化不受动画矩形硬边限制。
+                Vector2 localPadding = new Vector2(sprite.LocalRect.width * uvPadding.x / rect.width,
+                    sprite.LocalRect.height * uvPadding.y / rect.height);
                 for (int corner = 0; corner < 4; corner++)
                 {
                     bool right = corner == 1 || corner == 2, top = corner >= 2;
-                    Vector3 local = new Vector3(right ? sprite.LocalRect.xMax : sprite.LocalRect.xMin,
-                        top ? sprite.LocalRect.yMax : sprite.LocalRect.yMin, 0f);
+                    Vector3 local = new Vector3(right ? sprite.LocalRect.xMax + localPadding.x : sprite.LocalRect.xMin - localPadding.x,
+                        top ? sprite.LocalRect.yMax + localPadding.y : sprite.LocalRect.yMin - localPadding.y, 0f);
                     Vector3 point = AiecsRenderBatch.TransformPoint(local, actor, definition, frame, mirror);
                     height = Mathf.Max(height, point.y - footY);
                     vertices[offset + corner] = new Vertex { Position = point, Color = color,
-                        UV = new Vector2(right ? sprite.AtlasRect.xMax : sprite.AtlasRect.xMin,
-                            top ? sprite.AtlasRect.yMax : sprite.AtlasRect.yMin),
+                        UV = new Vector2(right ? rect.xMax + uvPadding.x : rect.xMin - uvPadding.x,
+                            top ? rect.yMax + uvPadding.y : rect.yMin - uvPadding.y),
                         UvBounds = uvBounds };
                 }
                 Vector4 caster = new Vector4(footY, scale, height, 1f);
@@ -175,7 +188,7 @@ namespace FlatWorld.AIECS
                 {
                     vertices[offset + corner].Caster = caster;
                     Vector3 point = vertices[offset + corner].Position;
-                    Vector2 projected = new Vector2(point.x, footY) + displacement * Mathf.Max(0f, point.y - footY);
+                    Vector2 projected = new Vector2(point.x, footY) + displacement * (point.y - footY);
                     min = Vector3.Min(min, new Vector3(projected.x, projected.y, 0f));
                     max = Vector3.Max(max, new Vector3(projected.x, projected.y, 0f));
                 }

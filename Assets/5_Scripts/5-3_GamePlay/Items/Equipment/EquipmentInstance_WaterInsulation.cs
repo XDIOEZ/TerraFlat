@@ -25,7 +25,7 @@ public partial class EquipmentInstance_WaterInsulation : EquipmentInstance
 
         Mod_Temperature temperature = item?.itemMods?.GetMod_ByID<Mod_Temperature>(ModText.Temperature);
         if (temperature == null)
-            throw new MissingComponentException($"[{nameof(EquipmentInstance_WaterInsulation)}] Cannot find {nameof(Mod_Temperature)} on item {item?.name}");
+            return;
 
         temperature.AddWaterCoolingProtection(Mathf.Clamp01(WaterCoolingProtection));
         _isApplied = true;
@@ -43,10 +43,8 @@ public partial class EquipmentInstance_WaterInsulation : EquipmentInstance
             return;
 
         Mod_Temperature temperature = item?.itemMods?.GetMod_ByID<Mod_Temperature>(ModText.Temperature);
-        if (temperature == null)
-            throw new MissingComponentException($"[{nameof(EquipmentInstance_WaterInsulation)}] Cannot find {nameof(Mod_Temperature)} on item {item?.name}");
-
-        temperature.RemoveWaterCoolingProtection(Mathf.Clamp01(WaterCoolingProtection));
+        if (temperature != null)
+            temperature.RemoveWaterCoolingProtection(Mathf.Clamp01(WaterCoolingProtection));
         _isApplied = false;
     }
 }

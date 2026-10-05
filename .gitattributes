@@ -4,3 +4,6 @@
 # Windows 命令脚本保留 CRLF，确保直接由 cmd.exe 执行时行为稳定。
 *.bat text eol=crlf
 *.cmd text eol=crlf
+
+# 第三方 PuerTS MCP 与其预编译依赖按上游原始字节保存，不参与本项目文本归一化与空白检查。
+puerts-unity-mcp/** -text -whitespace

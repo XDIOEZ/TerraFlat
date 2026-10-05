@@ -743,7 +743,7 @@ namespace InputSystem
                 {
                     ""name"": """",
                     ""id"": ""01c5a0f8-87b7-44e9-b213-93371fe31660"",
-                    ""path"": ""<Keyboard>/t"",
+                    ""path"": ""<Keyboard>/enter"",
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": ""Keyboard&Mouse"",

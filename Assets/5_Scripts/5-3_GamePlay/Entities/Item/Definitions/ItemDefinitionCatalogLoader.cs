@@ -7,6 +7,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
 using UnityEngine.ResourceManagement.AsyncOperations;
+using FlatWorld.Localization;
 using FlatWorld.WorldModel;
 #if UNITY_EDITOR
 using UnityEditor;
@@ -28,7 +29,7 @@ public static class ItemDefinitionCatalogLoader
         "Assets/2_Prefabs/Gameplay/Modules/Common/Module_FocusPoint.prefab",
         "Assets/2_Prefabs/Gameplay/Modules/Managers/TileReciver.prefab",
         "Assets/2_Prefabs/Gameplay/Modules/Movement/Module_Move.prefab",
-        "Assets/2_Prefabs/Gameplay/Modules/Movement/Mover.prefab",
+        "Assets/2_Prefabs/Gameplay/Modules/Movement/Mod_Mover.prefab",
         "Assets/2_Prefabs/Gameplay/Modules/Variants/Module_SmeltingVariant.prefab",
         "Assets/2_Prefabs/World/Buildings/Wall_Stone.prefab",
         "Assets/2_Prefabs/World/Buildings/Wall_Wood.prefab"
@@ -149,29 +150,22 @@ public static class ItemDefinitionCatalogLoader
                 yield break;
             }
 
-            try
-            {
-                loadedPackages.Add(new LoadedItemPackage(package, packageJson));
-            }
-            catch (Exception exception)
-            {
-                failed?.Invoke(exception);
-                yield break;
-            }
+            LoadedItemPackage loadedPackage = null;
+            yield return StreamingAssetsTextLoader.RunPureDataAsync(
+                () => new LoadedItemPackage(package, packageJson),
+                value => loadedPackage = value, exception => readError = exception);
+            if (readError != null) { failed?.Invoke(readError); yield break; }
+            loadedPackages.Add(loadedPackage);
 
             progress?.Invoke(0.2f * (i + 1) / enabledPackages.Length);
         }
 
-        List<ItemDefinitionDto> dtos;
-        try
-        {
-            dtos = ResolveLoadedPackages(loadedPackages);
-        }
-        catch (Exception exception)
-        {
-            failed?.Invoke(exception);
-            yield break;
-        }
+        List<ItemDefinitionDto> dtos = null;
+        // 继承合并只访问本次读取的私有 JSON，不在工作线程访问 Unity 或正式目录。
+        yield return StreamingAssetsTextLoader.RunPureDataAsync(
+            () => ResolveLoadedPackages(loadedPackages),
+            value => dtos = value, exception => readError = exception);
+        if (readError != null) { failed?.Invoke(readError); yield break; }
 
         completed(dtos);
     }
@@ -220,9 +214,9 @@ public static class ItemDefinitionCatalogLoader
         yield return LoadVisualAssets(gameRes, dtos, controllers, dto => SelectOptionalAddress(dto.Visual?.AnimatorControllerAddress), progress);
 
         var definitions = new List<RuntimeItemDefinition>(dtos.Count);
-        try
+        foreach (ItemDefinitionDto dto in dtos)
         {
-            foreach (ItemDefinitionDto dto in dtos)
+            try
             {
                 if (!dto.Abstract)
                     definitions.Add(BuildRuntimeDefinition(
@@ -232,13 +226,14 @@ public static class ItemDefinitionCatalogLoader
                         controllers,
                         preloadedMaterials: materials));
             }
-            foreach (RuntimeItemDefinition definition in definitions)
-                gameRes.RegisterItemDefinition(definition);
+            catch (Exception exception) { failed?.Invoke(exception); yield break; }
+            if (gameRes.ShouldYieldResourceWork()) yield return null;
         }
-        catch (Exception exception)
+        foreach (RuntimeItemDefinition definition in definitions)
         {
-            failed?.Invoke(exception);
-            yield break;
+            try { gameRes.RegisterItemDefinition(definition); }
+            catch (Exception exception) { failed?.Invoke(exception); yield break; }
+            if (gameRes.ShouldYieldResourceWork()) yield return null;
         }
 
         progress?.Invoke(1f);
@@ -256,8 +251,8 @@ public static class ItemDefinitionCatalogLoader
             .SelectMany(dto => select(dto) ?? Enumerable.Empty<string>())
             .Where(address => !string.IsNullOrWhiteSpace(address)).Select(address => address.Trim())
             .Distinct(StringComparer.Ordinal).ToArray();
-        // 每批最多 16 个请求，兼顾移动端内存峰值与本地/远程资源吞吐。
-        const int batchSize = 16;
+        // 小批请求配合统一帧预算，编辑器同步资源提供器也不能连续挤占一帧。
+        const int batchSize = 4;
         for (int start = 0; start < addresses.Length; start += batchSize)
         {
             int count = Math.Min(batchSize, addresses.Length - start);
@@ -272,6 +267,7 @@ public static class ItemDefinitionCatalogLoader
                     throw new InvalidDataException(error);
 #endif
                 batch.Add(gameRes.ResourceAssets.Load<T>(address));
+                if (gameRes.ShouldYieldResourceWork()) yield return null;
             }
             while (batch.Any(handle => !handle.IsDone))
             {
@@ -279,8 +275,12 @@ public static class ItemDefinitionCatalogLoader
                 yield return null;
             }
             for (int i = 0; i < count; i++)
+            {
                 output.Add(addresses[start + i], ResourceAssetScope.Require(batch[i], $"{typeof(T).Name} -> {addresses[start + i]}"));
+                if (gameRes.ShouldYieldResourceWork()) yield return null;
+            }
             progress?.Invoke(0.2f + 0.6f * (start + count) / addresses.Length);
+            yield return null;
         }
     }
 
@@ -464,9 +464,16 @@ public static class ItemDefinitionCatalogLoader
         concreteItemIds.UnionWith(gameRes.ItemDefinitions.Keys);
 
         foreach (ItemDefinitionDto definition in definitions)
+            ValidateLootTableItemIds(gameRes, definition, concreteItemIds);
+    }
+
+    /// <summary>逐个校验定义的掉落引用，供世界内 F5 隔离单个无效 Actor 使用。</summary>
+    internal static void ValidateLootTableItemIds(
+        GameRes gameRes, ItemDefinitionDto definition, ISet<string> concreteItemIds)
+    {
+        if (definition == null) return;
+        if (definition.Modules != null)
         {
-            if (definition?.Modules == null)
-                continue;
             foreach (KeyValuePair<string, ItemModuleDefinitionDto> module in definition.Modules)
             {
                 if (module.Value?.Parameters == null)
@@ -487,13 +494,30 @@ public static class ItemDefinitionCatalogLoader
             }
         }
 
-        foreach (string tableId in definitions
-                     .Select(definition => definition?.LootTableId?.Trim())
-                     .Where(id => !string.IsNullOrWhiteSpace(id))
-                     .Distinct(StringComparer.OrdinalIgnoreCase))
+        if (definition.Processing != null)
+        {
+            foreach (KeyValuePair<string, ItemProcessingDefinitionDto> pair in definition.Processing)
+            {
+                ItemProcessingDefinitionDto processing = pair.Value;
+                if (processing?.Outputs == null)
+                    continue;
+                foreach (ItemProcessingOutputDto output in processing.Outputs)
+                {
+                    string outputId = output?.ItemId?.Trim();
+                    if (string.IsNullOrWhiteSpace(outputId) || !concreteItemIds.Contains(outputId))
+                    {
+                        throw new InvalidDataException(
+                            $"物品 {definition.Id} 的加工能力 {pair.Key} 引用了不存在或抽象的 ItemDefinition：{outputId}");
+                    }
+                }
+            }
+        }
+
+        string tableId = definition.LootTableId?.Trim();
+        if (!string.IsNullOrWhiteSpace(tableId))
         {
             if (!gameRes.TryGetLootTable(tableId, out RuntimeLootTable table))
-                throw new InvalidDataException($"物品定义引用了不存在的战利品表：{tableId}");
+                throw new InvalidDataException($"物品 {definition.Id} 引用了不存在的战利品表：{tableId}");
 
             foreach (RuntimeLootTableEntry entry in table.Entries)
             {
@@ -738,6 +762,9 @@ public static class ItemDefinitionCatalogLoader
             result.Remove("gameName");
             result.Remove("labelKey");
             result.Remove("descriptionKey");
+            result.Remove("formerIds");
+            // processing 描述具体物品受到加工后的结果；模板 parent 只复用静态配置，不能把加工产物串给子物品。
+            result.Remove("processing");
         }
 
         RemoveReplacedModuleBodies(result, source);
@@ -746,9 +773,11 @@ public static class ItemDefinitionCatalogLoader
             MergeArrayHandling = MergeArrayHandling.Replace,
             MergeNullValueHandling = MergeNullValueHandling.Merge
         });
+        RemoveInheritedModules(result, source, id);
         result["id"] = id;
         result["abstract"] = source.Value<bool?>("abstract") ?? false;
         result.Remove("parent");
+        result.Remove("removeModules");
 
         resolving.Remove(id);
         resolved.Add(id, result);
@@ -782,6 +811,25 @@ public static class ItemDefinitionCatalogLoader
         }
     }
 
+    /// <summary>子定义显式删除父模板物种专属模块，避免外壳与 JSON 再实例化旧机制。</summary>
+    private static void RemoveInheritedModules(JObject result, JObject source, string id)
+    {
+        JToken removalToken = source["removeModules"];
+        if (removalToken == null)
+            return;
+        if (removalToken is not JArray removals || result["modules"] is not JObject modules)
+            throw new InvalidDataException($"物品 {id} removeModules 必须是有效模块名数组。");
+
+        foreach (JToken token in removals)
+        {
+            if (token.Type != JTokenType.String || string.IsNullOrWhiteSpace(token.Value<string>()))
+                throw new InvalidDataException($"物品 {id} removeModules 包含无效模块名。");
+            string moduleName = token.Value<string>().Trim();
+            if (!modules.Remove(moduleName))
+                throw new InvalidDataException($"物品 {id} removeModules 未找到父模块：{moduleName}");
+        }
+    }
+
     #endregion
 
     internal static RuntimeItemDefinition BuildRuntimeDefinition(
@@ -799,6 +847,7 @@ public static class ItemDefinitionCatalogLoader
             throw new InvalidDataException("物品定义 ID 为空");
         if (string.IsNullOrWhiteSpace(shellId))
             throw new InvalidDataException($"物品 {id} 缺少 shellPrefab");
+        dto.Visual?.LiquidSurface?.Validate(id);
 
         RuntimeLootTable lootTable = null;
         if (!string.IsNullOrWhiteSpace(dto.LootTableId) &&
@@ -822,7 +871,12 @@ public static class ItemDefinitionCatalogLoader
             throw new InvalidDataException($"物品 {id} 的外壳不是有效 Item：{shellId}");
 
         ItemData template = FastCloner.FastCloner.DeepClone(shellItem.itemData);
+        template.HeatConductionRate = ItemData.DefaultHeatConductionRate; // 基础速率只取代码默认值或 JSON，不继承外壳 Prefab。
+        template.MatterState = new ItemMatterState(); // 连续物质状态属于实例，不继承外壳或静态定义。
         PopulateTemplateData(dto.ItemData, template, id);
+        if (float.IsNaN(template.HeatConductionRate) || float.IsInfinity(template.HeatConductionRate) ||
+            template.HeatConductionRate < 0f)
+            throw new InvalidDataException($"物品 {id} 的 itemData.heatConductionRate 必须是非负的有限速率(℃/s)。");
         template.IDName = id;
         template.Guid = 0;
         if (string.IsNullOrWhiteSpace(dto.GameName))
@@ -831,7 +885,21 @@ public static class ItemDefinitionCatalogLoader
         if (dto.Description != null) template.Description = dto.Description;
         if (dto.Durability.HasValue) template.Durability = dto.Durability.Value;
         if (dto.MaxDurability.HasValue) template.MaxDurability = dto.MaxDurability.Value;
-        if (dto.Tags != null) template.Tags = new List<string>(dto.Tags);
+        if (dto.Tags != null)
+        {
+            template.Tags = new List<string>(dto.Tags.Count);
+            for (int tagIndex = 0; tagIndex < dto.Tags.Count; tagIndex++)
+            {
+                string tagId = dto.Tags[tagIndex]?.Trim();
+                if (!ItemTagLocalizationCatalog.IsStableId(tagId))
+                {
+                    throw new InvalidDataException(
+                        $"物品 {id} 的 Tag 必须使用稳定 ASCII ID，不能直接保存本地化文本：{dto.Tags[tagIndex]}");
+                }
+
+                template.Tags.Add(tagId);
+            }
+        }
 
         template.Stack ??= new ItemStack();
         if (!isActor)
@@ -848,6 +916,8 @@ public static class ItemDefinitionCatalogLoader
         if (dto.Weight.HasValue) template.Stack.Weight = dto.Weight.Value;
         if (dto.Stackable.HasValue) template.Stack.Stackable = dto.Stackable.Value;
         if (dto.CanBePickedUp.HasValue) template.Stack.CanBePickedUp = dto.CanBePickedUp.Value;
+        if (dto.RequiredGroundSupport < 0)
+            throw new InvalidDataException($"物品 {id} 的 requiredGroundSupport 不能为负数");
 
         // JSON 是模块初始状态的唯一来源，不继承外壳 Prefab 上的 ModuleData。
         template.ModuleDataDic = new Dictionary<string, ModuleData>(StringComparer.Ordinal);
@@ -872,12 +942,12 @@ public static class ItemDefinitionCatalogLoader
                 throw new InvalidDataException(
                     $"物品 {id} 的模块 {moduleName} 数据类型复制失败：期望 {prototype._Data.GetType().Name}，实际 {moduleData?.GetType().Name ?? "null"}");
             PopulateModuleData(moduleDto.Data, moduleData, id, moduleName);
-            moduleData.Name = moduleName;
-            moduleData.ID = string.IsNullOrWhiteSpace(moduleDto.Id)
-                ? (!string.IsNullOrWhiteSpace(prototype._Data.ID) ? prototype._Data.ID : moduleId)
+            moduleData.StableName = moduleName;
+            moduleData.ModuleId = string.IsNullOrWhiteSpace(moduleDto.Id)
+                ? (!string.IsNullOrWhiteSpace(prototype._Data.ModuleId) ? prototype._Data.ModuleId : moduleId)
                 : moduleDto.Id.Trim();
             if (moduleDto.Enabled.HasValue)
-                moduleData.isRunning = moduleDto.Enabled.Value;
+                moduleData.Enabled = moduleDto.Enabled.Value;
             template.ModuleDataDic.Add(moduleName, moduleData);
 
             JObject parameters = moduleDto.Parameters == null
@@ -892,7 +962,7 @@ public static class ItemDefinitionCatalogLoader
                 lootTableBound = true;
             }
 
-            ModuleJsonConfigurator.Validate(prototype, id, moduleName, moduleData.ID, parameters?.ToString(Formatting.None));
+            ModuleJsonConfigurator.Validate(prototype, id, moduleName, moduleData.ModuleId, parameters?.ToString(Formatting.None));
             moduleParameters.Add(moduleName, parameters?.ToString(Formatting.None));
             modulePrefabIds.Add(moduleName, moduleId);
         }
@@ -908,12 +978,14 @@ public static class ItemDefinitionCatalogLoader
             modulePrefabIds);
         lootTableBound |= lootTable != null && dto.Health?.HasHp == true;
         if (lootTable != null && !lootTableBound)
-            throw new InvalidDataException($"物品 {id} 引用了战利品表 {lootTable.Id}，但没有 DamageReceiver");
+            throw new InvalidDataException($"物品 {id} 引用了战利品表 {lootTable.Id}，但没有 Mod_DamageReceiver");
 
         // Actor 由 AnimatorController 驱动 SpriteRenderer，永远不再解析 Sprite 子资源地址。
         Sprite sprite = isActor
             ? null
             : ResolveSprite(gameRes, dto.Visual?.SpriteAddress, id, preloadedSprites);
+        if (dto.Visual?.LiquidSurface != null && (sprite == null || sprite.texture == null || !sprite.texture.isReadable))
+            throw new InvalidDataException($"物品 {id} 配置了 visual.liquidSurface，但基础 Sprite 没有启用 Read/Write。");
         Dictionary<string, Sprite> stateSprites = isActor
             ? new Dictionary<string, Sprite>(StringComparer.OrdinalIgnoreCase)
             : ResolveVisualStateSprites(gameRes, dto.Visual?.SpriteStates, id, preloadedSprites);
@@ -944,7 +1016,109 @@ public static class ItemDefinitionCatalogLoader
             material,
             stateSprites,
             dto.GroundCover,
-            ResolveWorldGridOccupancy(dto.WorldGridOccupancy, id));
+            ResolveWorldGridOccupancy(dto.WorldGridOccupancy, id),
+            dto.RequiredGroundSupport,
+            dto.Ecs,
+            dto.EntityRuntime,
+            ResolveWorldDropBehavior(dto.WorldDropBehavior, id),
+            ResolveProcessingDefinitions(dto.Processing, id),
+            ResolveProcessingCapabilityLevels(dto.ProcessingCapabilities, id),
+            dto.FormerIds,
+            ItemMatterReactionCompiler.CompileMatter(dto.Matter, dto.Tags, id),
+            ItemMatterReactionCompiler.CompileReactions(dto.Reactions, id));
+    }
+
+    private static Dictionary<string, int> ResolveProcessingCapabilityLevels(
+        Dictionary<string, ItemProcessingCapabilityDto> source,
+        string itemId)
+    {
+        var result = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        if (source == null)
+            return result;
+
+        foreach (KeyValuePair<string, ItemProcessingCapabilityDto> pair in source)
+        {
+            string capability = pair.Key?.Trim();
+            int level = pair.Value?.Level ?? 0;
+            if (string.IsNullOrWhiteSpace(capability) || level < 1)
+                throw new InvalidDataException($"物品 {itemId} 包含无效加工发出能力");
+            if (!result.TryAdd(capability, level))
+                throw new InvalidDataException($"物品 {itemId} 重复声明加工发出能力：{capability}");
+        }
+        return result;
+    }
+
+    /// <summary>把物品内聚的加工响应编译为稳定 RuntimeRecipe，具体设备只负责提供能力和工作量。</summary>
+    private static Dictionary<string, RuntimeItemProcessingDefinition> ResolveProcessingDefinitions(
+        Dictionary<string, ItemProcessingDefinitionDto> source,
+        string itemId)
+    {
+        var result = new Dictionary<string, RuntimeItemProcessingDefinition>(StringComparer.OrdinalIgnoreCase);
+        if (source == null)
+            return result;
+
+        foreach (KeyValuePair<string, ItemProcessingDefinitionDto> pair in source)
+        {
+            string capability = pair.Key?.Trim();
+            ItemProcessingDefinitionDto definition = pair.Value;
+            if (string.IsNullOrWhiteSpace(capability) || definition == null)
+                throw new InvalidDataException($"物品 {itemId} 包含空加工能力定义");
+            if (definition.InputAmount < 1 || float.IsNaN(definition.Work) || float.IsInfinity(definition.Work) ||
+                definition.Work <= 0f || definition.Outputs == null || definition.Outputs.Count == 0)
+            {
+                throw new InvalidDataException($"物品 {itemId} 的加工能力 {capability} 参数无效");
+            }
+            bool hasMinLevel = definition.MinLevel.HasValue;
+            bool hasMaxLevel = definition.MaxLevel.HasValue;
+            if (hasMinLevel != hasMaxLevel ||
+                hasMinLevel && (definition.MinLevel.Value < 1 || definition.MaxLevel.Value < definition.MinLevel.Value))
+            {
+                throw new InvalidDataException(
+                    $"物品 {itemId} 的加工能力 {capability} 必须声明有效的 minLevel/maxLevel 闭区间");
+            }
+
+            var outputs = new List<RuntimeRecipeResult>(definition.Outputs.Count);
+            foreach (ItemProcessingOutputDto output in definition.Outputs)
+            {
+                string outputId = output?.ItemId?.Trim();
+                float durabilityMultiplier = output?.DurabilityMultiplier ?? CraftedDurabilityQuality.DefaultMultiplier;
+                if (output == null || string.IsNullOrWhiteSpace(outputId) || output.Amount < 1 ||
+                    float.IsNaN(durabilityMultiplier) || float.IsInfinity(durabilityMultiplier) || durabilityMultiplier <= 0f)
+                {
+                    throw new InvalidDataException($"物品 {itemId} 的加工能力 {capability} 包含无效产物");
+                }
+
+                outputs.Add(new RuntimeRecipeResult
+                {
+                    ItemName = outputId,
+                    amount = output.Amount,
+                    durabilityMultiplier = durabilityMultiplier
+                });
+            }
+
+            if (!result.TryAdd(capability, new RuntimeItemProcessingDefinition(
+                    itemId, capability, definition.InputAmount, definition.Work, outputs,
+                    definition.MinLevel, definition.MaxLevel)))
+            {
+                throw new InvalidDataException($"物品 {itemId} 重复声明加工能力：{capability}");
+            }
+        }
+
+        return result;
+    }
+
+    private static WorldDropBehavior ResolveWorldDropBehavior(string value, string itemId)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return WorldDropBehavior.Passive;
+
+        return value.Trim().ToLowerInvariant() switch
+        {
+            "passive" => WorldDropBehavior.Passive,
+            "interactive" => WorldDropBehavior.Interactive,
+            _ => throw new InvalidDataException(
+                $"物品 {itemId} 的 worldDropBehavior 只能是 passive 或 interactive：{value}")
+        };
     }
 
     /// <summary>校验并转换配置中的整数占格，禁止空格、重复格或无效条目进入运行时定义。</summary>
@@ -1023,9 +1197,9 @@ public static class ItemDefinitionCatalogLoader
         ModuleData moduleData = FastCloner.FastCloner.DeepClone<object>(prototype._Data) as ModuleData;
         if (moduleData == null || moduleData.GetType() != prototype._Data.GetType())
             throw new InvalidDataException($"物品 {itemId} 的 health 模块数据复制失败");
-        moduleData.Name = moduleName;
-        moduleData.ID = !string.IsNullOrWhiteSpace(prototype._Data.ID) ? prototype._Data.ID : moduleName;
-        moduleData.isRunning = true;
+        moduleData.StableName = moduleName;
+        moduleData.ModuleId = !string.IsNullOrWhiteSpace(prototype._Data.ModuleId) ? prototype._Data.ModuleId : moduleName;
+        moduleData.Enabled = true;
         template.ModuleDataDic.Add(moduleName, moduleData);
         modulePrefabIds.Add(moduleName, prefabId);
 
@@ -1038,14 +1212,13 @@ public static class ItemDefinitionCatalogLoader
             {
                 ["Hp"] = hp,
                 ["MaxHp"] = maxHp,
+                ["CombatBalanceVersion"] = health.CombatBalanceVersion,
                 ["DefenseValues"] = new JObject
                 {
-                    ["Cutting"] = defense.Cutting,
-                    ["Piercing"] = defense.Piercing,
-                    ["Chopping"] = defense.Chopping,
-                    ["Blunt"] = defense.Blunt
+                    ["Physical"] = defense.Physical
                 }
-            }
+            },
+            ["weakTool"] = (int)health.WeakTool
         };
         if (lootTable != null)
             ((JObject)parameters["Data"])["LootTable"] = lootTable.CreateDamageReceiverEntries();
@@ -1076,7 +1249,7 @@ public static class ItemDefinitionCatalogLoader
         moduleParameters.Add(moduleName, parameters.ToString(Formatting.None));
     }
 
-    /// <summary>把表引用展开到显式 DamageReceiver 参数，并拒绝两套掉落来源并存。</summary>
+    /// <summary>把表引用展开到显式 Mod_DamageReceiver 参数，并拒绝两套掉落来源并存。</summary>
     private static JObject BindLootTableParameters(
         JObject parameters,
         RuntimeLootTable lootTable,
@@ -1095,7 +1268,7 @@ public static class ItemDefinitionCatalogLoader
         }
         else
         {
-            throw new InvalidDataException($"物品 {itemId} 的 DamageReceiver.Data 必须是对象");
+            throw new InvalidDataException($"物品 {itemId} 的 Mod_DamageReceiver.Data 必须是对象");
         }
 
         if (data.Property("LootTable", StringComparison.OrdinalIgnoreCase) != null)

@@ -9,7 +9,8 @@ public enum WeatherType
     Clear,
     Cloudy,
     Rain,
-    Storm
+    Storm,
+    Fog = 4 // 只追加枚举值，保持已有存档和联机天气编号不变。
 }
 
 /// <summary>
@@ -30,6 +31,9 @@ public partial class PlanetData
     public SnowCoverState SeasonalSnow = new(); // 季节覆盖独立于天然雪地与地形身份。
     #region 世界生成默认值
     public const int DefaultRadius = 1000;
+    public const int DefaultChunkDimension = 16;
+    public const int MinChunkDimension = 1;
+    public const int MaxChunkDimension = 256;
     public const float DefaultNoiseScale = 0.01f;
     public const float MinNoiseScale = 0f;
     public const float MaxNoiseScale = 100f;
@@ -49,6 +53,20 @@ public partial class PlanetData
     {
         return IsValidNoiseScale(value) ? value : DefaultNoiseScale;
     }
+
+    /// <summary>区块单边尺寸允许玩家按世界配置，联机协议与生成器共用同一范围。</summary>
+    public static bool IsValidChunkDimension(int value)
+    {
+        return value >= MinChunkDimension && value <= MaxChunkDimension;
+    }
+
+    /// <summary>非法区块尺寸回退到默认 16×16，避免不同系统各自维护兜底值。</summary>
+    public static Vector2Int NormalizeChunkSize(Vector2Int value)
+    {
+        return new Vector2Int(
+            IsValidChunkDimension(value.x) ? value.x : DefaultChunkDimension,
+            IsValidChunkDimension(value.y) ? value.y : DefaultChunkDimension);
+    }
     #endregion
 
     #region 星球基础数据
@@ -62,7 +80,7 @@ public partial class PlanetData
     public float NoiseScale = DefaultNoiseScale;
 
     //星球地图大小
-    public Vector2Int ChunkSize = new Vector2Int(16, 16);
+    public Vector2Int ChunkSize = new Vector2Int(DefaultChunkDimension, DefaultChunkDimension);
     #endregion
 
     #region 地图与环境数据

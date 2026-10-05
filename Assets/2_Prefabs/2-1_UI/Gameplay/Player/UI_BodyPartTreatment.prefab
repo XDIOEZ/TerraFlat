@@ -139,6 +139,7 @@ GameObject:
   - component: {fileID: 2687227773849297364}
   - component: {fileID: 8186922995404184323}
   - component: {fileID: 7072986696451277117}
+  - component: {fileID: 7000000000000000000}
   m_Layer: 5
   m_Name: UI_BodyPartTreatment
   m_TagString: Untagged
@@ -158,6 +159,7 @@ RectTransform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
+  - {fileID: 3165951623053304127}
   - {fileID: 6961545141548893803}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -199,7 +201,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 0.20392157, g: 0.20392157, b: 0.20392157, a: 0.97}
+  m_Color: {r: 0, g: 0, b: 0, a: 0}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -1234,4 +1236,36 @@ MonoBehaviour:
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 44358415694853317, guid: 8c3e275eabc48b04c828e6162cc59129, type: 3}
   m_PrefabInstance: {fileID: 5118434865775714595}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &7000000000000000000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1691551733187086657}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a770e3391c6fbbc4c931ac2c40acd1f7, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  animationId: panel.scale
+  motionRoot: {fileID: 2769381080926505769}
+--- !u!1001 &963675681226653001
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 2769381080926505769}
+    m_Modifications: []
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 8c7d41c0b2d84a7da6c650f2413eb182, type: 3}
+--- !u!224 &3165951623053304127 stripped
+RectTransform:
+  m_CorrespondingSourceObject: {fileID: 7100000000000000002, guid: 8c7d41c0b2d84a7da6c650f2413eb182, type: 3}
+  m_PrefabInstance: {fileID: 963675681226653001}
   m_PrefabAsset: {fileID: 0}

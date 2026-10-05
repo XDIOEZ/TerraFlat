@@ -193,11 +193,23 @@ public sealed class InputBindingService : IDisposable
     private bool restoreMapAfterSuspension;
     private int suspensionDepth;
     private bool disposed;
+    /// <summary>当前按键覆盖是否正在等待设置面板提交。</summary>
+    private bool settingsEditSessionActive;
+
+    /// <summary>最近一次保存的按键覆盖 JSON。</summary>
+    private string settingsEditSessionBaselineJson;
 
     public event Action BindingsChanged;
 
     public IReadOnlyList<InputBindingEntry> Entries => entries;
     public bool IsRebinding => activeRebind != null;
+    public bool IsSettingsEditSessionActive => settingsEditSessionActive;
+    public bool HasSettingsEditSessionChanges =>
+        settingsEditSessionActive &&
+        !string.Equals(
+            settingsEditSessionBaselineJson ?? string.Empty,
+            inputAsset.SaveBindingOverridesAsJson() ?? string.Empty,
+            StringComparison.Ordinal);
 
     public IReadOnlyList<InputBindingEntry> GetEntries(InputBindingDeviceGroup deviceGroup)
     {
@@ -382,7 +394,8 @@ public sealed class InputBindingService : IDisposable
         ThrowIfDisposed();
         CancelActiveRebind();
         inputAsset.RemoveAllBindingOverrides();
-        store.Clear();
+        if (!settingsEditSessionActive)
+            store.Clear();
         BindingsChanged?.Invoke();
     }
 
@@ -401,6 +414,51 @@ public sealed class InputBindingService : IDisposable
         SaveOverrides();
         BindingsChanged?.Invoke();
     }
+
+    #region 设置编辑会话
+
+    /// <summary>记录按键页打开时的覆盖值，并延迟后续按键绑定持久化。</summary>
+    public void BeginSettingsEditSession()
+    {
+        ThrowIfDisposed();
+        if (settingsEditSessionActive)
+            return;
+
+        CancelActiveRebind();
+        settingsEditSessionBaselineJson = inputAsset.SaveBindingOverridesAsJson();
+        settingsEditSessionActive = true;
+    }
+
+    /// <summary>保存当前按键覆盖并将其设为新的放弃修改基线。</summary>
+    public void CommitSettingsEditSession()
+    {
+        ThrowIfDisposed();
+        if (!settingsEditSessionActive)
+            return;
+
+        CancelActiveRebind();
+        settingsEditSessionBaselineJson = inputAsset.SaveBindingOverridesAsJson();
+        PersistBindingOverrides(settingsEditSessionBaselineJson);
+    }
+
+    /// <summary>还原按键覆盖到最近一次保存状态，并结束按键编辑会话。</summary>
+    public void DiscardSettingsEditSession()
+    {
+        ThrowIfDisposed();
+        if (!settingsEditSessionActive)
+            return;
+
+        CancelActiveRebind();
+        inputAsset.RemoveAllBindingOverrides();
+        if (!string.IsNullOrWhiteSpace(settingsEditSessionBaselineJson))
+            inputAsset.LoadBindingOverridesFromJson(settingsEditSessionBaselineJson);
+
+        settingsEditSessionActive = false;
+        settingsEditSessionBaselineJson = null;
+        BindingsChanged?.Invoke();
+    }
+
+    #endregion
 
     #region 单项绑定操作
 
@@ -764,7 +822,19 @@ public sealed class InputBindingService : IDisposable
 
     private void SaveOverrides()
     {
+        if (settingsEditSessionActive)
+            return;
+
         store.Save(inputAsset.SaveBindingOverridesAsJson());
+    }
+
+    /// <summary>把当前按键覆盖写入配置存储；空覆盖时删除存储项。</summary>
+    private void PersistBindingOverrides(string json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+            store.Clear();
+        else
+            store.Save(json);
     }
 
     private void FinishRebind(InputRebindResult result)

@@ -8,19 +8,22 @@ using UnityEngine;
 
 namespace FlatWorld.AIECS.Gameplay
 {
-    /// <summary>TerrainCell 与建筑占地到 Native LOS 的桥；缓存按导航 Chunk 排列，地形仅在版本变化时复制。</summary>
+    /// <summary>权威遮挡位到 Native LOS 的桥；缓存按导航 Chunk 排列，遮挡改变时才复制。</summary>
     public sealed class AiecsLosBridge : IDisposable
     {
+        #region 视线快照
+
         private struct ChunkStamp
         {
             public int2 Coordinate; // 发布顺序可能随导航窗口变化。
             public ChunkTerrainData Terrain; // 主线程来源。
-            public long Revision; // 该地形版本。
+            public long Revision; // 只追踪真正改变视线阻挡的地形版本。
         }
         private readonly List<ChunkStamp> stamps = new List<ChunkStamp>();
         private readonly HashSet<int2> dirtyBuildings = new HashSet<int2>(); // 只标记实际改变占地的 Chunk。
         private WorldTopologyDomain domain;
         private uint buildingRevision;
+        private uint sightBlockingRebuildRevision;
         private NativeArray<byte> cells;
         public long ChunkCopies { get; private set; }
 
@@ -35,7 +38,8 @@ namespace FlatWorld.AIECS.Gameplay
         {
             int count = navigation.Chunks.Length;
             domain = navigation.Domain;
-            bool resetBuildings = dirtyBuildings.Count == 0 && buildingRevision != BuildingOccupancyRegistry.Revision;
+            bool resetBuildings = sightBlockingRebuildRevision != BuildingOccupancyRegistry.SightBlockingRebuildRevision ||
+                                  (dirtyBuildings.Count == 0 && buildingRevision != BuildingOccupancyRegistry.Revision);
             if (!cells.IsCreated || cells.Length != count * 256)
             {
                 if (cells.IsCreated) cells.Dispose();
@@ -49,7 +53,7 @@ namespace FlatWorld.AIECS.Gameplay
                 ChunkTerrainData terrain = null;
                 if (ChunkMgr.Instance.TryGetChunkRuntime(address, out var chunk) && chunk.DataStatus == ChunkDataStatus.Ready &&
                     chunk.Terrain != null && !chunk.Terrain.IsDisposed) terrain = chunk.Terrain;
-                var stamp = new ChunkStamp { Coordinate = coordinate, Terrain = terrain, Revision = terrain?.Revision ?? -1 };
+                var stamp = new ChunkStamp { Coordinate = coordinate, Terrain = terrain, Revision = terrain?.BlockingRevision ?? -1 };
                 bool changed = index >= stamps.Count;
                 if (!changed)
                 {
@@ -65,14 +69,13 @@ namespace FlatWorld.AIECS.Gameplay
                     bool blocking = true;
                     int x = worldCell.x - address.ChunkOrigin.X, y = worldCell.y - address.ChunkOrigin.Y;
                     if (terrain != null && (uint)x < (uint)terrain.Width && (uint)y < (uint)terrain.Height)
-                    {
-                        TerrainCell value = terrain.GetCell(x, y);
-                        blocking = value.BlockingTileId != 0 && (value.Flags & TerrainCellFlags.Blocking) != 0;
-                    }
-                    cells[index * 256 + local] = (byte)(blocking || BuildingOccupancyRegistry.IsOccupied(new Vector2Int(worldCell.x, worldCell.y)) ? 1 : 0);
+                        blocking = terrain.IsSightBlockingCell(x, y);
+                    cells[index * 256 + local] = (byte)(blocking ? 1 : 0);
                 }
             }
-            dirtyBuildings.Clear(); buildingRevision = BuildingOccupancyRegistry.Revision;
+            dirtyBuildings.Clear();
+            buildingRevision = BuildingOccupancyRegistry.Revision;
+            sightBlockingRebuildRevision = BuildingOccupancyRegistry.SightBlockingRebuildRevision;
             return new AiecsLosView { Domain = navigation.Domain, Chunks = navigation.ChunkLookup, Cells = cells };
         }
 
@@ -82,5 +85,7 @@ namespace FlatWorld.AIECS.Gameplay
             BuildingOccupancyRegistry.CellChanged -= OnBuildingChanged;
             if (cells.IsCreated) cells.Dispose(); cells = default; stamps.Clear(); dirtyBuildings.Clear();
         }
+
+        #endregion
     }
 }

@@ -15,7 +15,7 @@
         "maxCarryVolume": 100.0
       },
       "movement": {
-        "speed": 5.0,
+        "speed": 3.5,
         "slowDownSpeed": 5.0,
         "endSpeed": 0.1,
         "moveStaminaConsume": 0.0,

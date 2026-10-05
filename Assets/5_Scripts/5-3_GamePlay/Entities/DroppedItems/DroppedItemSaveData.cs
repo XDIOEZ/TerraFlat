@@ -11,7 +11,7 @@ public partial class DroppedItemArchive
     public Dictionary<string, List<DroppedItemSaveRecord>> Worlds = new();
 }
 
-/// <summary>库存载荷与短期运动状态的持久化副本；不序列化 Entity、GameObject 或表现节点。</summary>
+/// <summary>库存载荷与短期运动状态的持久化副本；不序列化轻量 GameObject 表现节点。</summary>
 [MemoryPackable]
 public partial class DroppedItemSaveRecord
 {
@@ -37,17 +37,17 @@ public partial class DroppedItemSaveRecord
     public float WaterElapsed;
 
     /// <summary>主线程复制库存数据；冷载荷中的数量不作为运行时第二份权威数量。</summary>
-    internal static DroppedItemSaveRecord Capture(ItemData payload, DroppedItemSimulation simulation, int id)
+    internal static DroppedItemSaveRecord Capture(ItemData payload, LightweightDroppedItemSimulation simulation, int id)
     {
-        DroppedBody body = simulation.Get(id);
+        LightweightDroppedBody body = simulation.Get(id);
         ItemData data = FastCloner.FastCloner.DeepClone(payload);
         data.Stack.Amount = body.Amount; data.Stack.CanBePickedUp = true; data.inHand = false;
         data.transform ??= new ItemTransform();
         data.transform.position = new Vector3(body.Position.x, body.Position.y, 0f);
         data.transform.rotation = Quaternion.Euler(0f, 0f, body.Rotation);
         data.transform.scale = new Vector3(body.Scale.x, body.Scale.y, 1f);
-        bool hasFlight = simulation.TryGetFlight(id, out DroppedFlight flight);
-        bool hasWater = simulation.TryGetWater(id, out DroppedWaterTransition water);
+        bool hasFlight = simulation.TryGetFlight(id, out LightweightDroppedFlight flight);
+        bool hasWater = simulation.TryGetWater(id, out LightweightDroppedWaterTransition water);
         return new DroppedItemSaveRecord
         {
             Data = data, Position = body.Position, Scale = body.Scale, Rotation = body.Rotation,

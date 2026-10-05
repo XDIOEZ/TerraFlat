@@ -68,7 +68,7 @@ public class Mod_FarmlandSupply : Module
             return;
         }
 
-        GameController controller = ResolveOwnerController();
+        Mod_GameController controller = ResolveOwnerController();
         if (controller == null)
             return;
         Vector3 mouseWorldPosition = controller.GetMouseWorldPosition();
@@ -121,11 +121,11 @@ public class Mod_FarmlandSupply : Module
 #region 事件绑定
 
     /// <summary>统一从持有者读取鼠标、手柄或手机径向指向。</summary>
-    private GameController ResolveOwnerController()
+    private Mod_GameController ResolveOwnerController()
     {
         Item owner = item?.Owner;
-        GameController controller = owner?.itemMods?.GetMod_ByID<GameController>(ModText.Controller);
-        return controller != null ? controller : owner?.GetComponent<GameController>();
+        Mod_GameController controller = owner?.itemMods?.GetMod_ByID<Mod_GameController>(ModText.Controller);
+        return controller != null ? controller : owner?.GetComponent<Mod_GameController>();
     }
 
     private void BindActEvent()

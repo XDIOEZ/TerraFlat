@@ -1,0 +1,51 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: ChunkMesh-Contact-Lit
+  m_Shader: {fileID: 4800000, guid: ad4e510c86b79a74aa2054eb89fee0d7, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties:
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _MainTex:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MaskTex:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - _CornerStrength: 0.18
+    - _EdgeStrength: 0.72
+    - _EdgeWidth: 0.2
+    - _ElevationDeltaForMaxStrength: 2
+    - _ElevationEdgeWidth: 0.2
+    - _ElevationHighlightStrength: 0.12
+    - _ElevationLevelCount: 20
+    - _ElevationShadowStrength: 0.72
+    - _ElevationStrength: 1
+    - _ElevationToneStrength: 0.04
+    m_Colors:
+    - _Color: {r: 1, g: 1, b: 1, a: 1}
+    - _EdgeColor: {r: 0.035, g: 0.022, b: 0.015, a: 1}
+    - _ElevationShadowColor: {r: 0.11999995, g: 0.089999996, b: 0.044999972, a: 1}
+    - _RendererColor: {r: 1, g: 1, b: 1, a: 1}
+  m_BuildTextureStacks: []

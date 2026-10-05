@@ -34,6 +34,8 @@ namespace FlatWorld.WorldModel
         public long Epoch { get; private set; }
         /// <summary>区块状态改变、生成完成或被删除时，通过这里通知其他系统。</summary>
         public WorldEventBus Events { get; }
+        /// <summary>纯只读性能遥测，生命周期随世界；不参与生成签名和存档。</summary>
+        public ChunkStreamingDiagnostics StreamingDiagnostics { get; } = new ChunkStreamingDiagnostics();
         /// <summary>查看当前世界里的所有区块；外部不能直接增删这个表。</summary>
         public IReadOnlyDictionary<WorldAddress, ChunkRuntime> Chunks => readOnlyChunks;
         /// <summary>这个世界的逻辑更新已经运行了多少次；它不一定等于画面帧数。</summary>
@@ -76,8 +78,11 @@ namespace FlatWorld.WorldModel
             ChunkEcologyData ecology = null;
             try
             {
-                terrain = result.ConsumeTerrain();
-                ecology = result.ConsumeEcology();
+                using (StreamingDiagnostics.Measure("commit.materialize"))
+                {
+                    terrain = result.ConsumeTerrain();
+                    ecology = result.ConsumeEcology();
+                }
             }
             catch (Exception exception)
             {
@@ -87,10 +92,11 @@ namespace FlatWorld.WorldModel
             }
 
             // 新地形交给区块后，临时结果就不再负责保管这份数据。
-            chunk.ApplyGeneratedData(terrain, ecology);
+            using (StreamingDiagnostics.Measure("commit.apply"))
+                chunk.ApplyGeneratedData(terrain, ecology);
             result.Dispose();
-            Events.Publish(new ChunkCommitted(request.Address, request.RequestVersion,
-                terrain.ComputeStableHash()));
+            using (StreamingDiagnostics.Measure("commit.events"))
+                Events.Publish(new ChunkCommitted(request.Address, request.RequestVersion));
             rejectionReason = null;
             return true;
         }

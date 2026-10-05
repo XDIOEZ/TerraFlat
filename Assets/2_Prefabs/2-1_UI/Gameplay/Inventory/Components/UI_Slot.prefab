@@ -98,6 +98,7 @@ MonoBehaviour:
   slotIndex: -1
   image: {fileID: 4666581393457300696}
   text: {fileID: 5987402943460504640}
+  itemTooltipPrefab: {fileID: 7200000000000000001, guid: 0f5d6e2a1c7b4a6fa2c9d8e7b3a41004, type: 3}
   OnLeftClick:
     _PersistentCalls: []
   OnGamepadSubmit:

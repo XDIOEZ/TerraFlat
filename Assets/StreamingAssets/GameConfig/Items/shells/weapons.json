@@ -16,6 +16,9 @@
         "Knife",
         "Modern"
       ],
+      "processingCapabilities": {
+        "cut": { "level": 1 }
+      },
       "visual": {
         "rendererPath": "Render/Render_1"
       },
@@ -59,10 +62,8 @@
               }
             },
             "DamageValues": {
-              "Cutting": 4.0,
-              "Piercing": 1.0,
-              "Chopping": 0.0,
-              "Blunt": 0.0
+              "Physical": 5.0,
+              "ImpactKind": 1
             },
             "DamageInterval": 0.2,
             "EnableOnTriggerEnterDamage": true,
@@ -104,10 +105,8 @@
               }
             },
             "DamageValues": {
-              "Cutting": 5.0,
-              "Piercing": 1.0,
-              "Chopping": 0.0,
-              "Blunt": 0.0
+              "Physical": 10,
+              "ImpactKind": 1
             }
           }
         }
@@ -144,10 +143,8 @@
               }
             },
             "DamageValues": {
-              "Cutting": 8.0,
-              "Piercing": 2.0,
-              "Chopping": 0.0,
-              "Blunt": 0.0
+              "Physical": 16,
+              "ImpactKind": 1
             }
           }
         }
@@ -177,10 +174,8 @@
         "damage": {
           "parameters": {
             "DamageValues": {
-              "Cutting": 5.0,
-              "Piercing": 2.0,
-              "Chopping": 0.0,
-              "Blunt": 0.0
+              "Physical": 9,
+              "ImpactKind": 1
             }
           }
         }
@@ -290,14 +285,13 @@
           },
           "parameters": {
             "DamageValues": {
-              "Cutting": 2.0,
-              "Piercing": 8.0,
-              "Chopping": 0.0,
-              "Blunt": 0.0
+              "Physical": 14,
+              "ImpactKind": 2
             },
             "DamageInterval": 1.0,
             "EnableOnTriggerEnterDamage": true,
             "OnlyDealDamageWhenInHand": false,
+            "weaponHitboxRegion": 1,
             "EnableHitSlowdown": true,
             "HitSlowMultiplier": 0.65,
             "HitSlowDuration": 0.25,
@@ -339,7 +333,7 @@
           }
         },
         "animation": {
-          "prefab": "Mod_Weapon_AnimationAction",
+          "prefab": "Module_Weapon_AnimationAction",
           "id": "Module_Weapon_AnimationAction",
           "enabled": true,
           "data": {
@@ -473,14 +467,13 @@
           },
           "parameters": {
             "DamageValues": {
-              "Cutting": 3.0,
-              "Piercing": 17.0,
-              "Chopping": 0.0,
-              "Blunt": 0.0
+              "Physical": 20,
+              "ImpactKind": 2
             },
             "DamageInterval": 0.2,
             "EnableOnTriggerEnterDamage": true,
             "OnlyDealDamageWhenInHand": false,
+            "weaponHitboxRegion": 1,
             "EnableHitSlowdown": true,
             "HitSlowMultiplier": 0.65,
             "HitSlowDuration": 0.25,
@@ -522,7 +515,7 @@
           }
         },
         "animation": {
-          "prefab": "Mod_Weapon_AnimationAction",
+          "prefab": "Module_Weapon_AnimationAction",
           "id": "Module_Weapon_AnimationAction",
           "enabled": true,
           "data": {
@@ -656,14 +649,13 @@
           },
           "parameters": {
             "DamageValues": {
-              "Cutting": 3.0,
-              "Piercing": 21.0,
-              "Chopping": 0.0,
-              "Blunt": 0.0
+              "Physical": 28,
+              "ImpactKind": 2
             },
             "DamageInterval": 0.2,
             "EnableOnTriggerEnterDamage": true,
             "OnlyDealDamageWhenInHand": false,
+            "weaponHitboxRegion": 1,
             "EnableHitSlowdown": true,
             "HitSlowMultiplier": 0.65,
             "HitSlowDuration": 0.25,
@@ -705,7 +697,7 @@
           }
         },
         "animation": {
-          "prefab": "Mod_Weapon_AnimationAction",
+          "prefab": "Module_Weapon_AnimationAction",
           "id": "Module_Weapon_AnimationAction",
           "enabled": true,
           "data": {
@@ -839,14 +831,13 @@
           },
           "parameters": {
             "DamageValues": {
-              "Cutting": 2.0,
-              "Piercing": 8.0,
-              "Chopping": 0.0,
-              "Blunt": 0.0
+              "Physical": 14,
+              "ImpactKind": 2
             },
             "DamageInterval": 0.2,
             "EnableOnTriggerEnterDamage": true,
             "OnlyDealDamageWhenInHand": false,
+            "weaponHitboxRegion": 1,
             "EnableHitSlowdown": true,
             "HitSlowMultiplier": 0.65,
             "HitSlowDuration": 0.25,
@@ -888,7 +879,7 @@
           }
         },
         "animation": {
-          "prefab": "Mod_Weapon_AnimationAction",
+          "prefab": "Module_Weapon_AnimationAction",
           "id": "Module_Weapon_AnimationAction",
           "enabled": true,
           "data": {
@@ -970,10 +961,8 @@
           "enabled": true,
           "parameters": {
             "DamageValues": {
-              "Cutting": 6.0,
-              "Piercing": 0.0,
-              "Chopping": 0.0,
-              "Blunt": 0.0
+              "Physical": 6,
+              "ImpactKind": 1
             }
           }
         }
@@ -981,6 +970,7 @@
     },
     {
       "id": "Torch_Base",
+      "worldDropBehavior": "interactive",
       "weight": 1.0,
       "volume": 2.0,
       "stackable": false,
@@ -997,10 +987,8 @@
           },
           "parameters": {
             "DamageValues": {
-              "Cutting": 0.0,
-              "Piercing": 0.0,
-              "Chopping": 0.0,
-              "Blunt": 2.0
+              "Physical": 2.0,
+              "ImpactKind": 4
             },
             "DamageInterval": 0.2,
             "EnableOnTriggerEnterDamage": true,
@@ -1043,7 +1031,7 @@
           }
         },
         "animation": {
-          "prefab": "Mod_Weapon_AnimationAction",
+          "prefab": "Module_Weapon_AnimationAction",
           "id": "Module_Weapon_AnimationAction",
           "enabled": true,
           "data": {
@@ -1192,7 +1180,7 @@
               "FireSeed"
             ],
             "ignitionTags": [
-              "火种"
+              "Combustion.Tinder"
             ],
             "ignitionFuelValueOverride": 8.0
           }
@@ -1303,12 +1291,120 @@
       }
     },
     {
+      "id": "Blowgun_Wood",
+      "parent": "Bow_Wood",
+      "gameName": "吹箭",
+      "description": "手持吹箭筒。按住攻击键蓄力并对麦克风吹气，松开后消耗同一库存中的一支箭；吹气越响，箭矢飞得越快并额外造成最多 100% 伤害。",
+      "weight": 0.5,
+      "volume": 2.0,
+      "tags": [
+        "Blowgun",
+        "RangedWeapon",
+        "Wood"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Combat/Archery/Blowgun_Wood_Icon.png",
+        "flipX": false
+      },
+      "modules": {
+        "bow": {
+          "parameters": {
+            "ShowNockedAmmo": false,
+            "OverrideHeldVisualTransform": true,
+            "HeldVisualLocalPosition": {
+              "x": 0.50,
+              "y": 0.03,
+              "z": 0.0
+            },
+            "HeldVisualLocalEulerAngles": {
+              "x": 0.0,
+              "y": 0.0,
+              "z": -45.0
+            },
+            "UseLocalMuzzlePosition": true,
+            "UseHeldRotationForLaunchDirection": true,
+            "LocalMuzzlePosition": {
+              "x": 1.00,
+              "y": 0.0
+            }
+          }
+        },
+        "microphoneCharge": {
+          "prefab": "Mod_MicrophoneCharge",
+          "id": "Mod_MicrophoneCharge",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "NoiseFloorRms": 0.015,
+            "FullBonusRms": 0.15
+          }
+        }
+      }
+    },
+    {
+      "id": "StoneThrowingRope",
+      "parent": "Bow_Base",
+      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Weapons/Ranged/StoneThrowingRope.prefab",
+      "gameName": "投石索",
+      "description": "由绳索和皮革制成的投掷工具。快捷栏中的石头或适合作为投石索弹丸的坚硬矿石都可作为弹药；按住攻击键蓄力并显示抛物线，松开后投出，落地后可以拾回。",
+      "durability": 100.0,
+      "maxDurability": 100.0,
+      "amount": 1.0,
+      "weight": 0.3,
+      "volume": 0.8,
+      "stackable": false,
+      "canBePickedUp": true,
+      "tags": [
+        "Sling",
+        "RangedWeapon",
+        "Leather"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Combat/Sling/Sling_Icon.png",
+        "color": {"r": 1.0, "g": 1.0, "b": 1.0, "a": 1.0},
+        "flipX": false
+      },
+      "modules": {
+        "bow": {
+          "prefab": "Mod_Bow",
+          "id": "Mod_Bow",
+          "enabled": true,
+          "data": {"BitData": [], "Type": 0},
+          "parameters": {
+            "AmmoTag": "SlingAmmo",
+            "AmmoItemId": "Ore_Stone",
+            "UseHeldItemAsAmmo": false,
+            "ShowNockedAmmo": false,
+            "FullChargeSeconds": 1.2,
+            "ProjectileDamageMultiplier": 1.0,
+            "ProjectileSpeedMultiplier": 2.0,
+            "MaxAimDistance": 32.0,
+            "SpawnForwardOffset": 0.45,
+            "StaminaConsumePerSecond": 1.0,
+            "ShowTrajectoryPreview": true,
+            "TrajectoryPreviewSegments": 28,
+            "TrajectoryPreviewLineWidth": 0.04,
+            "TrajectoryLandingRingRadius": 0.22,
+            "SpinHeldVisualWhileCharging": true,
+            "MinChargeSpinDegreesPerSecond": 360.0,
+            "MaxChargeSpinDegreesPerSecond": 1080.0
+          }
+        }
+      }
+    },
+    {
       "id": "Arrow_Base",
       "weight": 0.08,
       "volume": 0.12,
       "stackable": true,
       "abstract": true,
       "shellPrefab": "Prop",
+      "matter": {
+        "ignitionTemperature": 300.0
+      },
       "visual": {
         "rendererPath": "Render",
         "materialAddress": "Assets/9_Shaders/Material/Sprite-Lit-Master.mat"
@@ -1326,6 +1422,7 @@
             "MinSpeed": 25.0,
             "MaxSpeed": 60.0,
             "FlightLinearDrag": 0.12,
+            "CollisionBounciness": 0.35,
             "VirtualGravity": 9.8,
             "MinDamageMultiplier": 0.35,
             "MaxDamageMultiplier": 1.0,
@@ -1364,10 +1461,8 @@
           "enabled": true,
           "parameters": {
             "DamageValues": {
-              "Cutting": 0.0,
-              "Piercing": 3.0,
-              "Chopping": 0.0,
-              "Blunt": 0.0
+              "Physical": 6,
+              "ImpactKind": 2
             },
             "DamageInterval": -1.0,
             "EnableOnTriggerEnterDamage": true,
@@ -1417,10 +1512,8 @@
           "enabled": true,
           "parameters": {
             "DamageValues": {
-              "Cutting": 0.0,
-              "Piercing": 5.0,
-              "Chopping": 0.0,
-              "Blunt": 0.0
+              "Physical": 10,
+              "ImpactKind": 2
             },
             "DamageInterval": -1.0,
             "EnableOnTriggerEnterDamage": true,
@@ -1470,10 +1563,8 @@
           "enabled": true,
           "parameters": {
             "DamageValues": {
-              "Cutting": 0.0,
-              "Piercing": 7.0,
-              "Chopping": 0.0,
-              "Blunt": 0.0
+              "Physical": 14,
+              "ImpactKind": 2
             },
             "DamageInterval": -1.0,
             "EnableOnTriggerEnterDamage": true,
@@ -1523,10 +1614,8 @@
           "enabled": true,
           "parameters": {
             "DamageValues": {
-              "Cutting": 0.0,
-              "Piercing": 9.0,
-              "Chopping": 0.0,
-              "Blunt": 0.0
+              "Physical": 18,
+              "ImpactKind": 2
             },
             "DamageInterval": -1.0,
             "EnableOnTriggerEnterDamage": true,

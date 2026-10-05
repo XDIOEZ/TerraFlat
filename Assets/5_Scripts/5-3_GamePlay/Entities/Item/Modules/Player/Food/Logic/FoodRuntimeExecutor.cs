@@ -117,6 +117,7 @@ public sealed class FoodNutritionService
     private const float PlayerInitialFatMaximum = 100f;
     private const float PlayerNaturalVitaminLossPerSecond = 0.001f;
     private const float DefaultNaturalVitaminLossPerSecond = 0.01f;
+    private const bool PlayerFatMaximumGrowthEnabled = false; // 暂停“吃满后继续提高脂肪上限”，保留规则便于后续重新调参。
     private const float PlayerFatMaximumCap = PlayerInitialFatMaximum * 2f;
     private const float PlayerFatMaximumGrowthRatio = 0.5f;
 
@@ -257,7 +258,7 @@ public sealed class FoodNutritionService
 
         consumer.Data.nutrition = consumer.Data.nutrition + absorbed;
 
-        if (playerFatWasFull)
+        if (PlayerFatMaximumGrowthEnabled && playerFatWasFull)
         {
             float availableFatMaximumGrowth = Mathf.Max(0f, PlayerFatMaximumCap - fatMaximumBefore);
             float fatMaximumGrowth = Mathf.Min(
@@ -375,7 +376,7 @@ public sealed class FoodSurvivalRule : IFoodMechanic, IFoodTickObserver, IFoodTi
     private readonly FoodNutritionService nutritionService;
     private readonly Mod_Stamina stamina;
     private readonly Mod_Food.FoodStaminaState staminaState;
-    private readonly Mover mover;
+    private readonly Mod_Mover mover;
 
     public string MechanicId => "core.survival";
     public int Priority => 90;
@@ -387,7 +388,7 @@ public sealed class FoodSurvivalRule : IFoodMechanic, IFoodTickObserver, IFoodTi
         FoodNutritionService nutritionService,
         Mod_Stamina stamina,
         Mod_Food.FoodStaminaState staminaState,
-        Mover mover)
+        Mod_Mover mover)
     {
         this.nutritionService = nutritionService;
         this.stamina = stamina;
@@ -405,7 +406,8 @@ public sealed class FoodSurvivalRule : IFoodMechanic, IFoodTickObserver, IFoodTi
         if (stamina?.Data == null || nutritionService == null)
             return;
 
-        if (stamina.Data.CurrentStamina < stamina.Data.MaxStamina)
+        // 缺盐等状态降低可用上限后，满体力不再为无效恢复消耗营养。
+        if (stamina.CurrentValue < stamina.MaxValue)
         {
             nutritionService.ConsumeNutrition(timeDelta * staminaState.StaminaConsumeSpeed);
             float recoveryMultiplier = mover != null && !mover.IsMoving
@@ -467,7 +469,7 @@ public sealed class FoodRuntimeExecutor : IDisposable
     public FoodRuntimeExecutor(
         FoodRuntimeContext context,
         Mod_Stamina stamina,
-        DamageReceiver damageReceiver,
+        Mod_DamageReceiver damageReceiver,
         Mod_PlayerDeathState deathState,
         Mod_Food.FoodStaminaState staminaState,
         GameObject panelPrefab,
@@ -479,7 +481,7 @@ public sealed class FoodRuntimeExecutor : IDisposable
         this.context = context ?? throw new ArgumentNullException(nameof(context));
         nutritionService = new FoodNutritionService(context);
         rulePipeline = new FoodRulePipeline(context);
-        Module_HeldFood heldFood = context.Item?.itemMods?.GetMod_ByID<Module_HeldFood>(ModText.HeldFood);
+        Mod_HeldFood heldFood = context.Item?.itemMods?.GetMod_ByID<Mod_HeldFood>(ModText.HeldFood);
         if (heldFood != null)
         {
             heldFood.BindFoodContext(context);
@@ -489,7 +491,7 @@ public sealed class FoodRuntimeExecutor : IDisposable
             nutritionService,
             stamina,
             staminaState,
-            context.Item?.itemMods?.GetMod_ByID<Mover>(ModText.Mover)));
+            context.Item?.itemMods?.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover)));
         rulePipeline.Add(new FoodHealthModule(context, damageReceiver, deathState));
         rulePipeline.Add(new FoodFeedbackRule());
         rulePipeline.Add(new FoodAudioModule(context));

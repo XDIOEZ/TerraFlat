@@ -7,6 +7,12 @@ using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
 using UnityEngine;
 
+/// <summary>模块需要在普通字段校验外验证嵌套 JSON 结构时实现此契约。</summary>
+public interface IModuleJsonParameterValidator
+{
+    void ValidateJsonParameters(JObject parameters);
+}
+
 /// <summary>把 ItemDefinition 中的参数应用到模块实例。</summary>
 public static class ModuleJsonConfigurator
 {
@@ -37,6 +43,25 @@ public static class ModuleJsonConfigurator
             return;
 
         Prepare(module, itemId, moduleName, moduleId, json).Apply(module);
+    }
+
+    /// <summary>装备放在库存中时没有运行时 Module，因此直接从定义参数还原静态装备效果。</summary>
+    public static List<EquipmentInstance> ReadEquipmentInstances(
+        string itemId,
+        string moduleName,
+        string moduleId,
+        string json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+            return new List<EquipmentInstance>();
+
+        JObject parameters = ParseParameters(itemId, moduleName, moduleId, json);
+        JToken token = parameters[nameof(Mod_EquipmentStore.equipmentInstances)];
+        if (token == null || token.Type == JTokenType.Null)
+            return new List<EquipmentInstance>();
+
+        JsonSerializer serializer = JsonSerializer.Create(Settings);
+        return token.ToObject<List<EquipmentInstance>>(serializer) ?? new List<EquipmentInstance>();
     }
 
     /// <summary>
@@ -178,6 +203,9 @@ public static class ModuleJsonConfigurator
 
             property.Value.ToObject(target.PropertyType, serializer);
         }
+
+        if (module is IModuleJsonParameterValidator parameterValidator)
+            parameterValidator.ValidateJsonParameters(parameters);
     }
 
     /// <summary>校验 Transform 特殊参数的字段和类型。</summary>
@@ -338,7 +366,8 @@ public static class ModuleJsonConfigurator
                 [nameof(EquipmentInstance_Bag)] = typeof(EquipmentInstance_Bag),
                 [nameof(EquipmentInstance_Speed)] = typeof(EquipmentInstance_Speed),
                 [nameof(EquipmentInstance_Defense)] = typeof(EquipmentInstance_Defense),
-                [nameof(EquipmentInstance_WaterInsulation)] = typeof(EquipmentInstance_WaterInsulation)
+                [nameof(EquipmentInstance_WaterInsulation)] = typeof(EquipmentInstance_WaterInsulation),
+                [nameof(EquipmentInstance_ThermalInsulation)] = typeof(EquipmentInstance_ThermalInsulation)
             };
 
         public override bool CanWrite => false;

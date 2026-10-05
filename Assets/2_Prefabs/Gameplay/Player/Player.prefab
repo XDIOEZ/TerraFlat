@@ -97,10 +97,11 @@ MonoBehaviour:
     ID: "\u751F\u547D\u503C\u7CFB\u7EDF\u6A21\u5757"
     isRunning: 1
     Type: 0
-    BitData: '{"Hp":100.0,"MaxHp":100.0,"UseBodyPartHealth":true,"TwoPartHitChance":0.25,"BodyPartDataVersion":2,"BodyParts":[{"Part":0,"Hp":20.0,"MaxHp":20.0,"DefenseValues":{"Cutting":0.0,"Piercing":0.0,"Chopping":0.0,"Blunt":0.0,"TotalDefense":0.0},"DamageMultiplier":1.5,"DepletionBuffIds":["core:concussion"],"AreaRatio":0.08,"InjuryProbability":1.0},{"Part":1,"Hp":50.0,"MaxHp":50.0,"DefenseValues":{"Cutting":0.0,"Piercing":0.0,"Chopping":0.0,"Blunt":0.0,"TotalDefense":0.0},"DamageMultiplier":1.0,"DepletionBuffIds":[],"AreaRatio":0.22,"InjuryProbability":1.0},{"Part":2,"Hp":30.0,"MaxHp":30.0,"DefenseValues":{"Cutting":0.0,"Piercing":0.0,"Chopping":0.0,"Blunt":0.0,"TotalDefense":0.0},"DamageMultiplier":1.0,"DepletionBuffIds":[],"AreaRatio":0.16,"InjuryProbability":1.0},{"Part":3,"Hp":25.0,"MaxHp":25.0,"DefenseValues":{"Cutting":0.0,"Piercing":0.0,"Chopping":0.0,"Blunt":0.0,"TotalDefense":0.0},"DamageMultiplier":1.0,"DepletionBuffIds":["core:arm_fracture"],"AreaRatio":0.09,"InjuryProbability":1.0},{"Part":4,"Hp":25.0,"MaxHp":25.0,"DefenseValues":{"Cutting":0.0,"Piercing":0.0,"Chopping":0.0,"Blunt":0.0,"TotalDefense":0.0},"DamageMultiplier":1.0,"DepletionBuffIds":["core:arm_fracture"],"AreaRatio":0.09,"InjuryProbability":1.0},{"Part":5,"Hp":25.0,"MaxHp":25.0,"DefenseValues":{"Cutting":0.0,"Piercing":0.0,"Chopping":0.0,"Blunt":0.0,"TotalDefense":0.0},"DamageMultiplier":1.0,"DepletionBuffIds":[],"AreaRatio":0.1,"InjuryProbability":1.0},{"Part":6,"Hp":25.0,"MaxHp":25.0,"DefenseValues":{"Cutting":0.0,"Piercing":0.0,"Chopping":0.0,"Blunt":0.0,"TotalDefense":0.0},"DamageMultiplier":1.0,"DepletionBuffIds":["core:leg_fracture"],"AreaRatio":0.13,"InjuryProbability":1.0},{"Part":7,"Hp":25.0,"MaxHp":25.0,"DefenseValues":{"Cutting":0.0,"Piercing":0.0,"Chopping":0.0,"Blunt":0.0,"TotalDefense":0.0},"DamageMultiplier":1.0,"DepletionBuffIds":["core:leg_fracture"],"AreaRatio":0.13,"InjuryProbability":1.0}],"DefenseValues":{"Cutting":0.0,"Piercing":0.0,"Chopping":0.0,"Blunt":0.0,"TotalDefense":0.0},"AttackersUIDs":[],"DamageInterval":0.1,"DestroyDelay":0.0,"LootTable":[]}'
+    BitData: '{"Hp":50,"MaxHp":50,"UseBodyPartHealth":true,"TwoPartHitChance":0.25,"BodyPartDataVersion":2,"BodyParts":[{"Part":0,"Hp":20.0,"MaxHp":20.0,"DefenseValues":{"Cutting":0.0,"Piercing":0.0,"Chopping":0.0,"Blunt":0.0,"TotalDefense":0.0},"DamageMultiplier":1.5,"DepletionBuffIds":["core:concussion"],"AreaRatio":0.08,"InjuryProbability":1.0},{"Part":1,"Hp":50.0,"MaxHp":50.0,"DefenseValues":{"Cutting":0.0,"Piercing":0.0,"Chopping":0.0,"Blunt":0.0,"TotalDefense":0.0},"DamageMultiplier":1.0,"DepletionBuffIds":[],"AreaRatio":0.22,"InjuryProbability":1.0},{"Part":2,"Hp":30.0,"MaxHp":30.0,"DefenseValues":{"Cutting":0.0,"Piercing":0.0,"Chopping":0.0,"Blunt":0.0,"TotalDefense":0.0},"DamageMultiplier":1.0,"DepletionBuffIds":[],"AreaRatio":0.16,"InjuryProbability":1.0},{"Part":3,"Hp":25.0,"MaxHp":25.0,"DefenseValues":{"Cutting":0.0,"Piercing":0.0,"Chopping":0.0,"Blunt":0.0,"TotalDefense":0.0},"DamageMultiplier":1.0,"DepletionBuffIds":["core:arm_fracture"],"AreaRatio":0.09,"InjuryProbability":1.0},{"Part":4,"Hp":25.0,"MaxHp":25.0,"DefenseValues":{"Cutting":0.0,"Piercing":0.0,"Chopping":0.0,"Blunt":0.0,"TotalDefense":0.0},"DamageMultiplier":1.0,"DepletionBuffIds":["core:arm_fracture"],"AreaRatio":0.09,"InjuryProbability":1.0},{"Part":5,"Hp":25.0,"MaxHp":25.0,"DefenseValues":{"Cutting":0.0,"Piercing":0.0,"Chopping":0.0,"Blunt":0.0,"TotalDefense":0.0},"DamageMultiplier":1.0,"DepletionBuffIds":[],"AreaRatio":0.1,"InjuryProbability":1.0},{"Part":6,"Hp":25.0,"MaxHp":25.0,"DefenseValues":{"Cutting":0.0,"Piercing":0.0,"Chopping":0.0,"Blunt":0.0,"TotalDefense":0.0},"DamageMultiplier":1.0,"DepletionBuffIds":["core:leg_fracture"],"AreaRatio":0.13,"InjuryProbability":1.0},{"Part":7,"Hp":25.0,"MaxHp":25.0,"DefenseValues":{"Cutting":0.0,"Piercing":0.0,"Chopping":0.0,"Blunt":0.0,"TotalDefense":0.0},"DamageMultiplier":1.0,"DepletionBuffIds":["core:leg_fracture"],"AreaRatio":0.13,"InjuryProbability":1.0}],"DefenseValues":{"Cutting":0.0,"Piercing":0.0,"Chopping":0.0,"Blunt":0.0,"TotalDefense":0.0},"AttackersUIDs":[],"DamageInterval":0.1,"DestroyDelay":0.0,"LootTable":[],"CombatBalanceVersion":1}'
   Data:
-    Hp: 100
-    MaxHp: 100
+    Hp: 50
+    MaxHp: 50
+    CombatBalanceVersion: 1
     UseBodyPartHealth: 1
     TwoPartHitChance: 0.25
     BodyPartDataVersion: 2
@@ -272,7 +273,7 @@ GameObject:
   - component: {fileID: 2346054118044131776}
   - component: {fileID: 750791655451355564}
   m_Layer: 0
-  m_Name: Module_Equipment
+  m_Name: Mod_EquipmentRuntime
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -405,12 +406,9 @@ MonoBehaviour:
   Data:
     CurrentTemperature: 36.5
     AmbientTemperature: 20
-    ChangeSpeed: 0.013888889
     Insulation: 0
-    ColdDamageStart: 5
-    HotDamageStart: 60
-    ColdDamagePerTick: 2
-    HotDamagePerSecond: 1
+    SafeTemperatureMin: 5
+    SafeTemperatureMax: 40
     RuntimeAmbientOffset: 0
     RuntimeChangeSpeedMultiplier: 1
     RuntimeCoolingSpeedMultiplier: 1
@@ -426,6 +424,7 @@ GameObject:
   m_Component:
   - component: {fileID: 6639265349670268636}
   - component: {fileID: 2343211853481933686}
+  - component: {fileID: 9100000000000000202}
   m_Layer: 0
   m_Name: Module_Hotbar
   m_TagString: Untagged
@@ -448,6 +447,18 @@ Transform:
   m_Children: []
   m_Father: {fileID: 7343432311901774332}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!210 &9100000000000000202
+SortingGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4411885219965820198}
+  m_Enabled: 1
+  m_SortingLayerID: 0
+  m_SortingLayer: 0
+  m_SortingOrder: 1
+  m_SortAtRoot: 0
 --- !u!114 &2343211853481933686
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -469,7 +480,54 @@ MonoBehaviour:
     BitData: 
   RawData: []
   RuntimeInventory:
-    rid: 4916459727764848643
+    item: {fileID: 0}
+    InventoryPanel_Prefab: {fileID: 3157743334102886615, guid: 834b874f2bd43a34e95f52adb0e4a211, type: 3}
+    basePanel: {fileID: 0}
+    Data:
+      Name: "UI_\u5FEB\u6377\u680F"
+      itemSlots:
+      - CanAcceptTags: []
+        SlotMaxVolume: 0
+        Index: 0
+      - CanAcceptTags: []
+        SlotMaxVolume: 0
+        Index: 0
+      - CanAcceptTags: []
+        SlotMaxVolume: 0
+        Index: 0
+      - CanAcceptTags: []
+        SlotMaxVolume: 0
+        Index: 0
+      - CanAcceptTags: []
+        SlotMaxVolume: 0
+        Index: 0
+      - CanAcceptTags: []
+        SlotMaxVolume: 0
+        Index: 0
+      - CanAcceptTags: []
+        SlotMaxVolume: 0
+        Index: 0
+      - CanAcceptTags: []
+        SlotMaxVolume: 0
+        Index: 0
+      - CanAcceptTags: []
+        SlotMaxVolume: 0
+        Index: 0
+      Index: 0
+      IsInjected: 0
+      PanelPosition: {x: 0, y: 0, z: 0}
+      PanelIsOpen: 0
+      ToggleActionName: ""
+      UIPrefabName: ""
+      Event_RefreshUI:
+        _PersistentCalls: []
+      Event_OnBeforeDataChanged:
+        _PersistentCalls: []
+      Event_OnDataChanged:
+        _PersistentCalls: []
+      Event_OnDataChanged_TwoSlots:
+        _PersistentCalls: []
+    itemSlot_UI: []
   spawnLocation: {fileID: 6639265349670268636}
   HotBarMaxVolume: 9
   SelectBoxPrefab: {fileID: 3351078594653121284, guid: 5fd8b428d015c7044aee5e5491698e72, type: 3}
@@ -481,60 +539,6 @@ MonoBehaviour:
     Index: 0
   CurentSelectItem: {fileID: 0}
   currentObject: {fileID: 0}
-  references:
-    version: 2
-    RefIds:
-    - rid: 4916459727764848643
-      type: {class: Inventory_HotBar/HotBarRuntimeInventory, ns: , asm: GamePlay}
-      data:
-        item: {fileID: 0}
-        InventoryPanel_Prefab: {fileID: 3157743334102886615, guid: 834b874f2bd43a34e95f52adb0e4a211, type: 3}
-        basePanel: {fileID: 0}
-        Data:
-          Name: "UI_\u5FEB\u6377\u680F"
-          itemSlots:
-          - CanAcceptTags: []
-            SlotMaxVolume: 0
-            Index: 0
-          - CanAcceptTags: []
-            SlotMaxVolume: 0
-            Index: 0
-          - CanAcceptTags: []
-            SlotMaxVolume: 0
-            Index: 0
-          - CanAcceptTags: []
-            SlotMaxVolume: 0
-            Index: 0
-          - CanAcceptTags: []
-            SlotMaxVolume: 0
-            Index: 0
-          - CanAcceptTags: []
-            SlotMaxVolume: 0
-            Index: 0
-          - CanAcceptTags: []
-            SlotMaxVolume: 0
-            Index: 0
-          - CanAcceptTags: []
-            SlotMaxVolume: 0
-            Index: 0
-          - CanAcceptTags: []
-            SlotMaxVolume: 0
-            Index: 0
-          Index: 0
-          IsInjected: 0
-          PanelPosition: {x: 0, y: 0, z: 0}
-          PanelIsOpen: 0
-          ToggleActionName: 
-          UIPrefabName: 
-          Event_RefreshUI:
-            _PersistentCalls: []
-          Event_OnBeforeDataChanged:
-            _PersistentCalls: []
-          Event_OnDataChanged:
-            _PersistentCalls: []
-          Event_OnDataChanged_TwoSlots:
-            _PersistentCalls: []
-        itemSlot_UI: []
 --- !u!1 &4678875130974218576
 GameObject:
   m_ObjectHideFlags: 0
@@ -562,11 +566,11 @@ GameObject:
   - component: {fileID: 8512309475123094754}
   - component: {fileID: 3014530349160003128}
   - component: {fileID: 7771519609891206622}
-  - component: {fileID: 5448549703196689227}
   - component: {fileID: 6173150566168055718}
   - component: {fileID: 3000418337859302239}
   - component: {fileID: 6829314751203845612}
   - component: {fileID: 9162598698088840726}
+  - component: {fileID: 9100000000000000201}
   m_Layer: 10
   m_Name: Player
   m_TagString: Untagged
@@ -612,6 +616,18 @@ Transform:
   - {fileID: 9100000000000000101}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!210 &9100000000000000201
+SortingGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4678875130974218576}
+  m_Enabled: 1
+  m_SortingLayerID: 0
+  m_SortingLayer: 0
+  m_SortingOrder: 0
+  m_SortAtRoot: 0
 --- !u!50 &8862278864143937418
 Rigidbody2D:
   serializedVersion: 4
@@ -716,9 +732,9 @@ MonoBehaviour:
   RightClickUp:
     _PersistentCalls: []
   _modData:
-    Name: 
-    ID: 
-    isRunning: 0
+    Name: "Controller模块"
+    ID: "Controller模块"
+    isRunning: 1
     Type: 0
     BitData: 
 --- !u!114 &6883143605326503467
@@ -759,7 +775,7 @@ MonoBehaviour:
       Amount: 1
       Volume: 500
       CanBePickedUp: 0
-      Weight: 1
+      Weight: 70
       Stackable: 1
     transform:
       position: {x: 0, y: 0, z: 0}
@@ -1040,18 +1056,6 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e77a3372dd15b484c8046d1db5b282e2, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
---- !u!114 &5448549703196689227
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4678875130974218576}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 4bb50fe15ee5ef146a02371125734152, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
 --- !u!114 &6173150566168055718
@@ -1979,7 +1983,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4487204284434559042, guid: 3c46ab8e0ed4f064685fd412d78b98ee, type: 3}
       propertyPath: m_Name
-      value: Module_DiscardItem
+      value: Mod_DiscardItem
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

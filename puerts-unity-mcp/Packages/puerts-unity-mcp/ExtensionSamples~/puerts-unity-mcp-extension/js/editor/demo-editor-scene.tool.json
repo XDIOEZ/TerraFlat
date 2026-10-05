@@ -1,0 +1,7 @@
+{
+  "name": "demo.editor.scene.js",
+  "description": "Demo Editor JavaScript MCP tool. Returns the active scene and Build Settings scene count from the Editor PuerTS VM.",
+  "inputSchemaJson": "{\"type\":\"object\",\"additionalProperties\":true}",
+  "modulePath": "demo-editor-scene.mjs",
+  "functionName": "execute"
+}

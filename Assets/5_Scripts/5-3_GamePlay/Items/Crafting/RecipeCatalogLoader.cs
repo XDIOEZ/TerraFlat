@@ -114,6 +114,8 @@ public static class RecipeCatalogLoader
 
         var recipeIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var loadedRecipes = new List<RuntimeRecipe>();
+        // 后台配方工厂只读取稳定 ID 快照，不读取 Unity 对象或正在交换的资源目录。
+        var knownItems = new HashSet<string>(gameRes.AllPrefabs.Keys, gameRes.AllPrefabs.Comparer);
         int loadedPackageCount = 0;
         foreach (RecipePackageDto package in manifest.Packages.Where(package => package.Enabled))
         {
@@ -143,37 +145,42 @@ public static class RecipeCatalogLoader
                 yield break;
             }
 
-            try
+            List<RuntimeRecipe> recipes = null;
+            List<string> warnings = null;
+            yield return StreamingAssetsTextLoader.RunPureDataAsync(() =>
             {
                 RecipeCatalogDto catalog = RecipeRuntimeFactory.Deserialize(packageJson);
-                List<RuntimeRecipe> recipes = RecipeRuntimeFactory.BuildCatalog(
-                    catalog,
-                    itemId => gameRes.AllPrefabs.ContainsKey(itemId),
-                    out List<string> warnings);
+                return RecipeRuntimeFactory.BuildCatalog(catalog, knownItems.Contains, out warnings);
+            }, value => recipes = value, exception => readError = exception);
+            if (readError != null) { onFailed?.Invoke(readError); yield break; }
 
-                foreach (string warning in warnings)
-                    Debug.LogWarning($"[RecipeCatalog:{package.Id}] {warning}");
-                foreach (RuntimeRecipe recipe in recipes)
-                {
-                    if (!recipeIds.Add(recipe.Id))
-                        throw new InvalidDataException($"跨分包存在重复配方 ID：{recipe.Id}");
-                    loadedRecipes.Add(recipe);
-                }
-
-                loadedPackageCount++;
-            }
-            catch (Exception exception)
+            foreach (string warning in warnings)
             {
-                onFailed?.Invoke(exception);
-                yield break;
+                Debug.LogWarning($"[RecipeCatalog:{package.Id}] {warning}");
+                if (gameRes.ShouldYieldResourceWork()) yield return null;
             }
+            foreach (RuntimeRecipe recipe in recipes)
+            {
+                if (!recipeIds.Add(recipe.Id))
+                {
+                    onFailed?.Invoke(new InvalidDataException($"跨分包存在重复配方 ID：{recipe.Id}"));
+                    yield break;
+                }
+                loadedRecipes.Add(recipe);
+                if (gameRes.ShouldYieldResourceWork()) yield return null;
+            }
+            loadedPackageCount++;
+        }
+
+        foreach (RuntimeRecipe recipe in loadedRecipes)
+        {
+            try { gameRes.RegisterRecipe(recipe, true); }
+            catch (Exception exception) { onFailed?.Invoke(exception); yield break; }
+            if (gameRes.ShouldYieldResourceWork()) yield return null;
         }
 
         try
         {
-            foreach (RuntimeRecipe recipe in loadedRecipes)
-                gameRes.RegisterRecipe(recipe, true);
-
             Debug.Log($"[RecipeCatalog] 已从 {loadedPackageCount} 个业务分包加载 {loadedRecipes.Count} 条配方：{manifestPath}");
             onCompleted?.Invoke(loadedRecipes.Count);
         }

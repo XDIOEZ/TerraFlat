@@ -64,9 +64,7 @@ public static partial class AncientStageAssetBuilder
                 renderer.sharedMaterial = source.sharedMaterial; renderer.sortingLayerID = source.sortingLayerID; renderer.sortingOrder = 5;
             }
             SerializedObject fields = new(snow);
-            fields.FindProperty("tilemap").objectReferenceValue = target.GetComponent<Tilemap>();
-            fields.FindProperty("wallTilemap").objectReferenceValue = wallTarget.GetComponent<Tilemap>();
-            fields.FindProperty("snowTile").objectReferenceValue = AssetDatabase.LoadAssetAtPath<Tile_Block>("Assets/4_ScriptObjects/World/Tiles/Tile_Snow.asset").TileBase;
+            fields.FindProperty("snowTile").objectReferenceValue = AssetDatabase.LoadAssetAtPath<Tile>("Assets/7_Tiles/Base/TileBase_Snow.asset");
             fields.ApplyModifiedPropertiesWithoutUndo();
             PrefabUtility.SaveAsPrefabAsset(chunk, chunkPath);
         }

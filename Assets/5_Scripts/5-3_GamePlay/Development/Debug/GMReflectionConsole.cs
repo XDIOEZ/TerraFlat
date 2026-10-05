@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
+using System.Text;
 using TMPro;
 using UnityEngine;
 using UnityEngine.Events;
@@ -23,6 +24,12 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
     private const BindingFlags InstanceFlags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
     private const string AdministratorName = "管理员";
     private const int MaxDiscoveredCommands = 36;
+    private const float CatalogBrowserHeaderHeight = 42f;
+    private const float CatalogBrowserToolbarHeight = 34f;
+    private const float CatalogBrowserControlHeight = 30f;
+    private const int HoverInspectorHitCapacity = 32;
+    private const int HoverInspectorTextLimit = 60 * 1024;
+    private const float HoverInspectorRefreshInterval = 0.12f;
 
     private sealed class ReflectedCommand
     {
@@ -45,6 +52,8 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         public string ItemId;
         public string DisplayName;
         public Sprite Icon;
+        public Texture IconAtlas;
+        public Rect IconUv;
     }
 
     private readonly List<ReflectedCommand> commands = new List<ReflectedCommand>();
@@ -81,6 +90,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
     private Button chunkLoadSpeedUnlimitedButton;
     private Button navigationPathButton;
     private Button animalDebugOverlayButton;
+    private Button hiveDebugOverlayButton;
     private Transform commandGrid;
     private Transform airdropItemGrid;
     private Transform aiCreatureGrid;
@@ -90,6 +100,25 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
     private Coroutine restorePreferencesCoroutine;
     private int selectedStructureIndex;
     private static TMP_FontAsset uiFont;
+
+    #region F6 悬停属性观察器
+
+    private readonly Collider2D[] hoverInspectorHits = new Collider2D[HoverInspectorHitCapacity];
+    private readonly StringBuilder hoverInspectorBuilder = new StringBuilder(8192);
+    private readonly List<object> hoverInspectorObjectPath = new List<object>(8);
+    private static readonly Dictionary<Type, FieldInfo[]> hoverInspectorFieldCache = new Dictionary<Type, FieldInfo[]>();
+    private bool hoverInspectorEnabled;
+    private GameObject hoverInspectorTarget;
+    private Item hoverInspectorItem;
+    private string hoverInspectorText = string.Empty;
+    private string hoverInspectorTitle = "F6 属性观察器";
+    private Vector2 hoverInspectorScroll;
+    private float hoverInspectorNextRefreshTime;
+    private GUIStyle hoverInspectorTitleStyle;
+    private GUIStyle hoverInspectorBodyStyle;
+    private GUIStyle hoverInspectorHintStyle;
+
+    #endregion
 
     #region GM 主题
 
@@ -147,6 +176,32 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         if (FindObjectOfType<GMReflectionConsole>() != null)
             return;
 
+        GameRes resources = GameRes.ExistingInstance;
+        if (resources == null || !resources.IsStartupReady)
+        {
+            GameRes.StartupResourcesReady -= BootstrapAfterStartupResourcesReady;
+            GameRes.StartupResourcesReady += BootstrapAfterStartupResourcesReady;
+            resources = GameRes.ExistingInstance;
+            if (resources == null || !resources.IsStartupReady)
+                return;
+        }
+
+        CreateBootstrapConsole();
+    }
+
+    /// <summary>资源管理器发布启动资源后再创建依赖公共控件的 GM 界面。</summary>
+    private static void BootstrapAfterStartupResourcesReady(GameRes resources)
+    {
+        GameRes.StartupResourcesReady -= BootstrapAfterStartupResourcesReady;
+        if (FindObjectOfType<GMReflectionConsole>() != null)
+            return;
+
+        CreateBootstrapConsole();
+    }
+
+    /// <summary>创建唯一的运行时 GM 控制台。</summary>
+    private static void CreateBootstrapConsole()
+    {
         GameObject root = new GameObject("[GM Reflection Console]");
         root.AddComponent<GMReflectionConsole>();
     }
@@ -165,6 +220,8 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
 
     private void OnDestroy()
     {
+        CancelBiomeSearch();
+        GMConsolePreferences.SavePendingChanges();
         if (FlatWorld.AIECS.Gameplay.AiecsPlayground.Active != null)
             FlatWorld.AIECS.Gameplay.AiecsPlayground.Active.HealthOverlaySuppressed = false;
         CancelTeleportTargeting();
@@ -188,7 +245,10 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         UpdateBuffTargetListIfNeeded();
         RefreshResponsiveLayoutIfCanvasChanged();
         RefreshAiecsPageIfNeeded();
+        RefreshDayTimeControlIfNeeded();
+        RefreshChunkStreamingStatusIfNeeded();
         HandleTeleportInput();
+        UpdateHoverInspector();
 
         if (Keyboard.current?.f4Key.wasPressedThisFrame != true)
             return;
@@ -199,8 +259,594 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         SetWindowVisible(!anyWindowVisible);
     }
 
+    #region F6 悬停属性观察器
+
+    /// <summary>F6 开关悬停检查，并持续解析鼠标下最靠前的玩法实体。</summary>
+    private void UpdateHoverInspector()
+    {
+        Keyboard keyboard = Keyboard.current;
+        if (keyboard?.f6Key.wasPressedThisFrame == true)
+        {
+            hoverInspectorEnabled = !hoverInspectorEnabled;
+            hoverInspectorScroll = Vector2.zero;
+            hoverInspectorNextRefreshTime = 0f;
+            if (!hoverInspectorEnabled)
+                ClearHoverInspectorTarget();
+        }
+
+        if (!hoverInspectorEnabled)
+            return;
+
+        Mouse mouse = Mouse.current;
+        Camera camera = Camera.main;
+        if (mouse == null || camera == null)
+        {
+            ClearHoverInspectorTarget();
+            return;
+        }
+
+        Vector2 screenPosition = mouse.position.ReadValue();
+        Vector3 worldPosition3 = camera.ScreenToWorldPoint(
+            new Vector3(screenPosition.x, screenPosition.y, -camera.transform.position.z));
+        ResolveHoverInspectorTarget((Vector2)worldPosition3, out GameObject target, out Item item);
+
+        if (target != hoverInspectorTarget || item != hoverInspectorItem)
+        {
+            hoverInspectorTarget = target;
+            hoverInspectorItem = item;
+            hoverInspectorScroll = Vector2.zero;
+            hoverInspectorNextRefreshTime = 0f;
+        }
+
+        float scrollDelta = mouse.scroll.ReadValue().y;
+        if (Mathf.Abs(scrollDelta) > 0.01f)
+            hoverInspectorScroll.y = Mathf.Max(0f, hoverInspectorScroll.y - scrollDelta * 0.35f);
+
+        if (Time.unscaledTime < hoverInspectorNextRefreshTime)
+            return;
+
+        hoverInspectorNextRefreshTime = Time.unscaledTime + HoverInspectorRefreshInterval;
+        RefreshHoverInspectorText();
+    }
+
+    /// <summary>从重叠碰撞体中优先选择 Item，并用渲染顺序处理同点重叠对象。</summary>
+    private void ResolveHoverInspectorTarget(Vector2 worldPosition, out GameObject target, out Item item)
+    {
+        target = null;
+        item = null;
+
+        int hitCount = Physics2D.OverlapPointNonAlloc(worldPosition, hoverInspectorHits);
+        int bestScore = int.MinValue;
+        for (int i = 0; i < hitCount; i++)
+        {
+            Collider2D hit = hoverInspectorHits[i];
+            if (hit == null || !hit.enabled || !hit.gameObject.activeInHierarchy)
+                continue;
+
+            Collider2D source = ColliderSource2D.Resolve(hit);
+            if (source == null)
+                continue;
+
+            Item candidateItem = GameplayPhysics2D.ResolveComponent<Item>(hit);
+            GameObject candidateTarget = candidateItem != null
+                ? candidateItem.gameObject
+                : (source.attachedRigidbody != null ? source.attachedRigidbody.gameObject : source.gameObject);
+            int score = candidateItem != null ? 1_000_000 : 0;
+            score += ResolveHoverInspectorSortingScore(candidateTarget);
+
+            if (score <= bestScore)
+                continue;
+
+            bestScore = score;
+            target = candidateTarget;
+            item = candidateItem;
+        }
+
+        Array.Clear(hoverInspectorHits, 0, hoverInspectorHits.Length);
+    }
+
+    /// <summary>把世界排序折成稳定分数，鼠标重叠时尽量命中视觉上最靠前的对象。</summary>
+    private static int ResolveHoverInspectorSortingScore(GameObject target)
+    {
+        if (target == null)
+            return 0;
+
+        Renderer[] renderers = target.GetComponentsInChildren<Renderer>(true);
+        int best = int.MinValue;
+        for (int i = 0; i < renderers.Length; i++)
+        {
+            Renderer renderer = renderers[i];
+            if (renderer == null || !renderer.enabled)
+                continue;
+
+            int layerValue = SortingLayer.GetLayerValueFromID(renderer.sortingLayerID);
+            int score = layerValue * 10000 + renderer.sortingOrder;
+            if (score > best)
+                best = score;
+        }
+
+        return best == int.MinValue ? 0 : best;
+    }
+
+    /// <summary>低频重建文本；展示 ItemData、ModuleData 与运行时玩法组件字段。</summary>
+    private void RefreshHoverInspectorText()
+    {
+        hoverInspectorBuilder.Clear();
+
+        if (hoverInspectorTarget == null)
+        {
+            hoverInspectorTitle = "F6 属性观察器";
+            hoverInspectorText = "已开启。\n把鼠标移动到带 2D 碰撞体的游戏对象上即可查看参数。";
+            return;
+        }
+
+        string displayName = hoverInspectorItem?.itemData?.GameName;
+        if (string.IsNullOrWhiteSpace(displayName))
+            displayName = hoverInspectorTarget.name;
+        hoverInspectorTitle = $"F6 属性观察器  ·  {displayName}";
+
+        Transform root = hoverInspectorTarget.transform;
+        hoverInspectorBuilder.AppendLine($"对象: {hoverInspectorTarget.name}");
+        hoverInspectorBuilder.AppendLine($"类型: {(hoverInspectorItem != null ? hoverInspectorItem.GetType().Name : "GameObject")}");
+        hoverInspectorBuilder.AppendLine($"位置: {FormatInspectorValue(root.position)}");
+        hoverInspectorBuilder.AppendLine($"旋转Z: {root.eulerAngles.z:0.###}°");
+        hoverInspectorBuilder.AppendLine($"缩放: {FormatInspectorValue(root.lossyScale)}");
+
+        AppendUnityRuntimeSummary(hoverInspectorBuilder, hoverInspectorTarget);
+
+        if (hoverInspectorItem?.itemData != null)
+        {
+            hoverInspectorBuilder.AppendLine();
+            hoverInspectorBuilder.AppendLine("【ItemData】");
+            AppendInspectorObject(
+                hoverInspectorBuilder,
+                hoverInspectorItem.itemData,
+                "  ",
+                depth: 0,
+                maxDepth: 2);
+
+            hoverInspectorBuilder.AppendLine();
+            hoverInspectorBuilder.AppendLine($"【模块】 {hoverInspectorItem.Mods?.Count ?? 0}");
+            if (hoverInspectorItem.Mods != null)
+            {
+                foreach (KeyValuePair<string, Module> pair in hoverInspectorItem.Mods.OrderBy(entry => entry.Key))
+                {
+                    Module module = pair.Value;
+                    if (module == null)
+                        continue;
+
+                    hoverInspectorBuilder.AppendLine(
+                        $"  ▸ {pair.Key}  [{module.GetType().Name}]  ID={module.ResolvedModuleId ?? "-"}  Enabled={module.Enabled}");
+                    if (module._Data != null)
+                    {
+                        AppendInspectorObject(
+                            hoverInspectorBuilder,
+                            module._Data,
+                            "    ",
+                            depth: 0,
+                            maxDepth: 2);
+                    }
+                }
+            }
+        }
+
+        AppendGameplayComponents(hoverInspectorBuilder, hoverInspectorTarget);
+
+        if (hoverInspectorBuilder.Length > HoverInspectorTextLimit)
+        {
+            hoverInspectorBuilder.Length = HoverInspectorTextLimit;
+            hoverInspectorBuilder.AppendLine();
+            hoverInspectorBuilder.Append("……参数过多，显示已在 60KB 处截断。");
+        }
+
+        hoverInspectorText = hoverInspectorBuilder.ToString();
+    }
+
+    /// <summary>Unity 基础组件只输出少量关键运行态，避免把引擎内部字段淹没玩法参数。</summary>
+    private static void AppendUnityRuntimeSummary(StringBuilder builder, GameObject target)
+    {
+        Rigidbody2D body = target.GetComponentInChildren<Rigidbody2D>(true);
+        if (body != null)
+        {
+            builder.AppendLine(
+                $"刚体: {body.bodyType}, Simulated={body.simulated}, 速度={FormatInspectorValue(body.velocity)}, 角速度={body.angularVelocity:0.###}");
+        }
+
+        SpriteRenderer sprite = target.GetComponentInChildren<SpriteRenderer>(true);
+        if (sprite != null)
+        {
+            builder.AppendLine(
+                $"精灵: {(sprite.sprite != null ? sprite.sprite.name : "-")}, Sorting={sprite.sortingLayerName}/{sprite.sortingOrder}, 可见={sprite.isVisible}");
+        }
+
+        Collider2D[] colliders = target.GetComponentsInChildren<Collider2D>(true);
+        if (colliders.Length > 0)
+        {
+            builder.AppendLine($"碰撞体: {colliders.Length}");
+            int shown = Mathf.Min(colliders.Length, 8);
+            for (int i = 0; i < shown; i++)
+            {
+                Collider2D collider = colliders[i];
+                builder.AppendLine(
+                    $"  - {collider.GetType().Name}: Enabled={collider.enabled}, Trigger={collider.isTrigger}, Bounds={FormatInspectorValue(collider.bounds)}");
+            }
+            if (colliders.Length > shown)
+                builder.AppendLine($"  - ……其余 {colliders.Length - shown} 个");
+        }
+    }
+
+    /// <summary>反射游戏自有 MonoBehaviour 字段，补足蜜蜂 AI 等运行时内部参数。</summary>
+    private void AppendGameplayComponents(StringBuilder builder, GameObject target)
+    {
+        Component[] components = target.GetComponentsInChildren<Component>(true);
+        bool wroteHeader = false;
+        for (int i = 0; i < components.Length; i++)
+        {
+            Component component = components[i];
+            if (component == null ||
+                component is Transform ||
+                component is Renderer ||
+                component is Collider2D ||
+                component is Rigidbody2D ||
+                component is Item)
+            {
+                continue;
+            }
+
+            Type type = component.GetType();
+            if (type.Assembly == typeof(MonoBehaviour).Assembly)
+                continue;
+
+            if (!wroteHeader)
+            {
+                builder.AppendLine();
+                builder.AppendLine("【运行时玩法组件】");
+                wroteHeader = true;
+            }
+
+            string path = BuildRelativeTransformPath(target.transform, component.transform);
+            builder.AppendLine($"  ▸ {type.Name}{(string.IsNullOrEmpty(path) ? string.Empty : $"  @ {path}")}");
+            AppendInspectorObject(builder, component, "    ", depth: 0, maxDepth: 1);
+        }
+    }
+
+    /// <summary>按字段读取普通数据对象，不调用属性 Getter，避免调试器触发玩法副作用。</summary>
+    private void AppendInspectorObject(
+        StringBuilder builder,
+        object value,
+        string indent,
+        int depth,
+        int maxDepth)
+    {
+        if (value == null)
+        {
+            builder.AppendLine($"{indent}<null>");
+            return;
+        }
+
+        for (int i = 0; i < hoverInspectorObjectPath.Count; i++)
+        {
+            if (ReferenceEquals(hoverInspectorObjectPath[i], value))
+            {
+                builder.AppendLine($"{indent}<循环引用: {value.GetType().Name}>");
+                return;
+            }
+        }
+
+        hoverInspectorObjectPath.Add(value);
+        try
+        {
+            FieldInfo[] fields = GetHoverInspectorFields(value.GetType());
+            if (fields.Length == 0)
+            {
+                builder.AppendLine($"{indent}{FormatInspectorValue(value)}");
+                return;
+            }
+
+            for (int i = 0; i < fields.Length; i++)
+            {
+                if (builder.Length >= HoverInspectorTextLimit)
+                    return;
+
+                FieldInfo field = fields[i];
+                object fieldValue;
+                try
+                {
+                    fieldValue = field.GetValue(value);
+                }
+                catch (Exception exception)
+                {
+                    builder.AppendLine($"{indent}{field.Name}: <读取失败 {exception.GetType().Name}>");
+                    continue;
+                }
+
+                if (ShouldExpandInspectorValue(fieldValue, depth, maxDepth))
+                {
+                    builder.AppendLine($"{indent}{field.Name}:");
+                    AppendInspectorObject(builder, fieldValue, indent + "  ", depth + 1, maxDepth);
+                }
+                else
+                {
+                    builder.AppendLine($"{indent}{field.Name}: {FormatInspectorValue(fieldValue)}");
+                }
+            }
+        }
+        finally
+        {
+            hoverInspectorObjectPath.RemoveAt(hoverInspectorObjectPath.Count - 1);
+        }
+    }
+
+    private static FieldInfo[] GetHoverInspectorFields(Type type)
+    {
+        if (hoverInspectorFieldCache.TryGetValue(type, out FieldInfo[] cached))
+            return cached;
+
+        List<FieldInfo> fields = new List<FieldInfo>(32);
+        for (Type current = type;
+             current != null && current != typeof(object) && current != typeof(MonoBehaviour) && current != typeof(Component);
+             current = current.BaseType)
+        {
+            FieldInfo[] declared = current.GetFields(InstanceFlags | BindingFlags.DeclaredOnly);
+            Array.Sort(declared, (left, right) => left.MetadataToken.CompareTo(right.MetadataToken));
+            for (int i = 0; i < declared.Length; i++)
+            {
+                FieldInfo field = declared[i];
+                if (field.IsStatic ||
+                    field.Name.IndexOf("k__BackingField", StringComparison.Ordinal) >= 0 ||
+                    typeof(Delegate).IsAssignableFrom(field.FieldType))
+                {
+                    continue;
+                }
+
+                fields.Add(field);
+            }
+        }
+
+        cached = fields.ToArray();
+        hoverInspectorFieldCache[type] = cached;
+        return cached;
+    }
+
+    private static bool ShouldExpandInspectorValue(object value, int depth, int maxDepth)
+    {
+        if (value == null || depth >= maxDepth)
+            return false;
+
+        Type type = value.GetType();
+        if (IsSimpleInspectorType(type) ||
+            value is UnityEngine.Object ||
+            value is IDictionary ||
+            value is IEnumerable)
+        {
+            return false;
+        }
+
+        string assemblyName = type.Assembly.GetName().Name ?? string.Empty;
+        return type.IsValueType ||
+               assemblyName.Equals("Data", StringComparison.Ordinal) ||
+               assemblyName.Equals("GamePlay", StringComparison.Ordinal) ||
+               assemblyName.StartsWith("FlatWorld.", StringComparison.Ordinal);
+    }
+
+    private static bool IsSimpleInspectorType(Type type)
+    {
+        return type.IsPrimitive ||
+               type.IsEnum ||
+               type == typeof(string) ||
+               type == typeof(decimal) ||
+               type == typeof(Vector2) ||
+               type == typeof(Vector2Int) ||
+               type == typeof(Vector3) ||
+               type == typeof(Vector3Int) ||
+               type == typeof(Quaternion) ||
+               type == typeof(Color) ||
+               type == typeof(Rect) ||
+               type == typeof(Bounds);
+    }
+
+    private static string FormatInspectorValue(object value)
+    {
+        if (value == null)
+            return "<null>";
+
+        switch (value)
+        {
+            case string text:
+                return string.IsNullOrEmpty(text) ? "\"\"" : text.Replace("\n", " ↵ ");
+            case float floatValue:
+                return floatValue.ToString("0.###", CultureInfo.InvariantCulture);
+            case double doubleValue:
+                return doubleValue.ToString("0.###", CultureInfo.InvariantCulture);
+            case decimal decimalValue:
+                return decimalValue.ToString("0.###", CultureInfo.InvariantCulture);
+            case Vector2 vector2:
+                return $"({vector2.x:0.###}, {vector2.y:0.###})";
+            case Vector2Int vector2Int:
+                return $"({vector2Int.x}, {vector2Int.y})";
+            case Vector3 vector3:
+                return $"({vector3.x:0.###}, {vector3.y:0.###}, {vector3.z:0.###})";
+            case Vector3Int vector3Int:
+                return $"({vector3Int.x}, {vector3Int.y}, {vector3Int.z})";
+            case Quaternion quaternion:
+                return $"({quaternion.x:0.###}, {quaternion.y:0.###}, {quaternion.z:0.###}, {quaternion.w:0.###})";
+            case Color color:
+                return $"RGBA({color.r:0.###}, {color.g:0.###}, {color.b:0.###}, {color.a:0.###})";
+            case Rect rect:
+                return $"({rect.x:0.###}, {rect.y:0.###}, {rect.width:0.###}, {rect.height:0.###})";
+            case Bounds bounds:
+                return $"Center={FormatInspectorValue(bounds.center)}, Size={FormatInspectorValue(bounds.size)}";
+            case UnityEngine.Object unityObject:
+                return unityObject != null ? $"{unityObject.name} [{unityObject.GetType().Name}]" : "<销毁对象>";
+            case IDictionary dictionary:
+                return FormatInspectorDictionary(dictionary);
+            case IEnumerable enumerable when value is not string:
+                return FormatInspectorEnumerable(enumerable);
+            case IFormattable formattable:
+                return formattable.ToString(null, CultureInfo.InvariantCulture);
+            default:
+                return value.ToString();
+        }
+    }
+
+    private static string FormatInspectorDictionary(IDictionary dictionary)
+    {
+        if (dictionary == null)
+            return "<null>";
+
+        StringBuilder builder = new StringBuilder();
+        builder.Append($"Count={dictionary.Count}");
+        if (dictionary.Count <= 0)
+            return builder.ToString();
+
+        builder.Append(" { ");
+        int shown = 0;
+        foreach (DictionaryEntry entry in dictionary)
+        {
+            if (shown >= 8)
+            {
+                builder.Append("…");
+                break;
+            }
+
+            if (shown > 0)
+                builder.Append(", ");
+            builder.Append(FormatInspectorValue(entry.Key));
+            builder.Append(": ");
+            builder.Append(FormatInspectorValue(entry.Value));
+            shown++;
+        }
+        builder.Append(" }");
+        return builder.ToString();
+    }
+
+    private static string FormatInspectorEnumerable(IEnumerable enumerable)
+    {
+        if (enumerable == null)
+            return "<null>";
+
+        StringBuilder builder = new StringBuilder();
+        builder.Append("[");
+        int count = 0;
+        foreach (object entry in enumerable)
+        {
+            if (count >= 12)
+            {
+                builder.Append("…");
+                break;
+            }
+
+            if (count > 0)
+                builder.Append(", ");
+            builder.Append(FormatInspectorValue(entry));
+            count++;
+        }
+        builder.Append("]");
+        return builder.ToString();
+    }
+
+    private static string BuildRelativeTransformPath(Transform root, Transform target)
+    {
+        if (root == null || target == null || root == target)
+            return string.Empty;
+
+        Stack<string> names = new Stack<string>();
+        Transform current = target;
+        while (current != null && current != root)
+        {
+            names.Push(current.name);
+            current = current.parent;
+        }
+
+        return current == root ? string.Join("/", names) : target.name;
+    }
+
+    private void ClearHoverInspectorTarget()
+    {
+        hoverInspectorTarget = null;
+        hoverInspectorItem = null;
+        hoverInspectorText = string.Empty;
+        hoverInspectorTitle = "F6 属性观察器";
+        hoverInspectorScroll = Vector2.zero;
+    }
+
+    /// <summary>面板只负责显示，始终偏离光标，滚轮可在不离开目标的情况下浏览长参数。</summary>
+    private void OnGUI()
+    {
+        if (!hoverInspectorEnabled)
+            return;
+
+        EnsureHoverInspectorStyles();
+
+        Vector2 mousePosition = Event.current != null
+            ? Event.current.mousePosition
+            : new Vector2(Screen.width * 0.5f, Screen.height * 0.5f);
+        float panelWidth = Mathf.Clamp(Screen.width * 0.36f, 440f, 680f);
+        float panelHeight = Mathf.Clamp(Screen.height * 0.68f, 240f, 720f);
+        float x = mousePosition.x + 18f;
+        if (x + panelWidth > Screen.width - 8f)
+            x = mousePosition.x - panelWidth - 18f;
+        float y = mousePosition.y + 18f;
+        if (y + panelHeight > Screen.height - 8f)
+            y = Screen.height - panelHeight - 8f;
+        x = Mathf.Clamp(x, 8f, Mathf.Max(8f, Screen.width - panelWidth - 8f));
+        y = Mathf.Clamp(y, 8f, Mathf.Max(8f, Screen.height - panelHeight - 8f));
+
+        Rect panelRect = new Rect(x, y, panelWidth, panelHeight);
+        Color previousColor = GUI.color;
+        GUI.color = new Color(0.055f, 0.06f, 0.065f, 0.96f);
+        GUI.DrawTexture(panelRect, Texture2D.whiteTexture);
+        GUI.color = previousColor;
+
+        Rect titleRect = new Rect(x + 14f, y + 10f, panelWidth - 28f, 28f);
+        GUI.Label(titleRect, hoverInspectorTitle, hoverInspectorTitleStyle);
+        Rect hintRect = new Rect(x + 14f, y + 39f, panelWidth - 28f, 22f);
+        GUI.Label(hintRect, "F6 关闭 · 滚轮浏览 · 参数约 8 次/秒刷新", hoverInspectorHintStyle);
+
+        Rect viewRect = new Rect(x + 10f, y + 66f, panelWidth - 20f, panelHeight - 76f);
+        float contentWidth = Mathf.Max(100f, viewRect.width - 22f);
+        float contentHeight = Mathf.Max(
+            viewRect.height,
+            hoverInspectorBodyStyle.CalcHeight(new GUIContent(hoverInspectorText), contentWidth) + 12f);
+        hoverInspectorScroll.y = Mathf.Clamp(
+            hoverInspectorScroll.y,
+            0f,
+            Mathf.Max(0f, contentHeight - viewRect.height));
+        Rect contentRect = new Rect(0f, 0f, contentWidth, contentHeight);
+        hoverInspectorScroll = GUI.BeginScrollView(viewRect, hoverInspectorScroll, contentRect, false, true);
+        GUI.Label(new Rect(4f, 2f, contentWidth - 8f, contentHeight - 4f), hoverInspectorText, hoverInspectorBodyStyle);
+        GUI.EndScrollView();
+    }
+
+    private void EnsureHoverInspectorStyles()
+    {
+        hoverInspectorTitleStyle ??= new GUIStyle(GUI.skin.label)
+        {
+            fontSize = 18,
+            fontStyle = FontStyle.Bold,
+            normal = { textColor = new Color(1f, 0.86f, 0.42f) }
+        };
+        hoverInspectorBodyStyle ??= new GUIStyle(GUI.skin.label)
+        {
+            fontSize = 15,
+            wordWrap = true,
+            richText = false,
+            normal = { textColor = new Color(0.92f, 0.94f, 0.95f) }
+        };
+        hoverInspectorHintStyle ??= new GUIStyle(GUI.skin.label)
+        {
+            fontSize = 12,
+            normal = { textColor = new Color(0.62f, 0.66f, 0.69f) }
+        };
+    }
+
+    #endregion
+
     private void OnActiveSceneChanged(Scene previous, Scene next)
     {
+        CancelBiomeSearch();
+        activePageDataDirty = true;
+        CancelPendingDayTimeJump();
         CancelTeleportTargeting();
         HandleBuffTargetingSceneChanged();
         HandleQuestPageSceneChanged();
@@ -210,7 +856,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
             (airdropBrowserRoot != null && airdropBrowserRoot.activeSelf) ||
             (aiCreatureBrowserRoot != null && aiCreatureBrowserRoot.activeSelf))
         {
-            RefreshRuntimeData();
+            RefreshRuntimeData(true);
         }
     }
 
@@ -220,13 +866,14 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
     private void ApplyPersistedTogglePreferences()
     {
         bool teleportEnabled = GMConsolePreferences.TeleportShortcutEnabled;
-        if (PlayerAdminController.TeleportToMouseShortcutEnabled != teleportEnabled)
-            PlayerAdminController.ToggleTeleportToMouseShortcut();
+        if (Mod_PlayerAdminController.TeleportToMouseShortcutEnabled != teleportEnabled)
+            Mod_PlayerAdminController.ToggleTeleportToMouseShortcut();
 
         WorldNavigationPathDebugOverlay.SetRoutesVisible(
             GMConsolePreferences.NavigationPathVisible);
 
         AI_DebugOverlay.SetVisible(GMConsolePreferences.AnimalDebugOverlayVisible);
+        HiveColonyDebugOverlay.SetVisible(GMConsolePreferences.HiveDebugOverlayVisible);
         worldLayerOverlay.SetMode(GMConsolePreferences.WorldLayerOverlayMode);
         RefreshWorldLayerOverlayButtons();
     }
@@ -244,12 +891,13 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
     {
         bool playerSpeedRestored = false;
         bool chunkSpeedRestored = false;
+        bool chunkBudgetRestored = false;
         var retryDelay = new WaitForSecondsRealtime(0.25f);
 
-        while (!playerSpeedRestored || !chunkSpeedRestored)
+        while (!playerSpeedRestored || !chunkSpeedRestored || !chunkBudgetRestored)
         {
             if (!playerSpeedRestored &&
-                FindFirstComponent("PlayerAdminController") is PlayerAdminController controller)
+                FindFirstComponent("Mod_PlayerAdminController") is Mod_PlayerAdminController controller)
             {
                 playerSpeedRestored = controller.TrySetAdminMoveSpeedMultiplier(
                     GMConsolePreferences.PlayerMoveSpeedMultiplier,
@@ -267,19 +915,32 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
                     out _);
             }
 
-            if (!playerSpeedRestored || !chunkSpeedRestored)
+            if (!chunkBudgetRestored && chunkManager != null)
+            {
+                chunkManager.RuntimeChunkCommitBudget = GMConsolePreferences.ChunkCommitCount;
+                chunkManager.RuntimeChunkCommitMillisecondsBudget = GMConsolePreferences.ChunkCommitMilliseconds;
+                chunkManager.RuntimeChunkPresentationStartBudget = GMConsolePreferences.ChunkBaseCount;
+                chunkManager.RuntimeChunkPresentationStartMillisecondsBudget = GMConsolePreferences.ChunkBaseMilliseconds;
+                chunkManager.RuntimeChunkPresentationContinuationBudget = GMConsolePreferences.ChunkDetailCount;
+                chunkManager.RuntimeChunkPresentationContinuationMillisecondsBudget = GMConsolePreferences.ChunkDetailMilliseconds;
+                chunkBudgetRestored = true;
+            }
+
+            if (!playerSpeedRestored || !chunkSpeedRestored || !chunkBudgetRestored)
                 yield return retryDelay;
         }
 
         restorePreferencesCoroutine = null;
         if (windowRoot != null && windowRoot.activeSelf)
-            RefreshRuntimeData();
+            RefreshRuntimeData(true);
     }
 
     #endregion
 
     private void SetWindowVisible(bool visible)
     {
+        if (!visible)
+            CancelBiomeSearch();
         CancelTeleportTargeting();
         if (airdropBrowserRoot != null)
             airdropBrowserRoot.SetActive(false);
@@ -288,10 +949,14 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
 
         windowRoot.SetActive(visible);
         if (!visible)
+        {
+            CancelPendingDayTimeJump();
+            GMConsolePreferences.SavePendingChanges();
             return;
+        }
 
         ClampTabbedWindowToCanvas();
-        RefreshRuntimeData();
+        RefreshRuntimeData(activePageDataDirty);
         SetStatus("GM 窗口已打开：反射命令仅作用于当前运行场景。", new Color(0.35f, 0.95f, 0.85f));
     }
 
@@ -429,11 +1094,10 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         CreateButton(quickGrid.transform, "设为管理员", SetAdministrator, 0f, 32f);
         CreateButton(quickGrid.transform, "传送至鼠标", () => InvokeByTypeName("Mod_PlayerTraits", "TeleportToMousePosition"), 0f, 32f);
         CreateButton(quickGrid.transform, "创造背包", () => InvokeByTypeName("Mod_PlayerTraits", "InitializeCreativeInventoryForAdmin"), 0f, 32f);
-        CreateButton(quickGrid.transform, "手持 +9999", () => InvokeByTypeName("PlayerAdminController", "AddAmountToCurrentHandItem", 9999f), 0f, 32f);
-        CreateButton(quickGrid.transform, "背包 +100", () => InvokeByTypeName("PlayerAdminController", "AddAmountToAllBagItems", 100f), 0f, 32f);
-        CreateButton(quickGrid.transform, "时间 -0.5", () => InvokeByTypeName("PlayerAdminController", "TryUpdateTimeScale", -0.5f), 0f, 32f);
-        CreateButton(quickGrid.transform, "时间重置", () => InvokeByTypeName("PlayerAdminController", "ResetTimeScale"), 0f, 32f);
-        CreateButton(quickGrid.transform, "区块距离 +1", () => InvokeByTypeName("PlayerAdminController", "IncreaseAdminChunkLoadDistance"), 0f, 32f);
+        CreateButton(quickGrid.transform, "手持 +9999", () => InvokeByTypeName("Mod_PlayerAdminController", "AddAmountToCurrentHandItem", 9999f), 0f, 32f);
+        CreateButton(quickGrid.transform, "背包 +100", () => InvokeByTypeName("Mod_PlayerAdminController", "AddAmountToAllBagItems", 100f), 0f, 32f);
+        CreateButton(quickGrid.transform, "时间 -0.5", () => InvokeByTypeName("Mod_PlayerAdminController", "TryUpdateTimeScale", -0.5f), 0f, 32f);
+        CreateButton(quickGrid.transform, "时间重置", () => InvokeByTypeName("Mod_PlayerAdminController", "ResetTimeScale"), 0f, 32f);
 
         GameObject commandBox = CreateDesktopGroup(mainColumns.transform, "反射调试命令");
         LayoutElement commandBoxLayout = commandBox.AddComponent<LayoutElement>();
@@ -554,16 +1218,15 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
 
         CreateButton(quickGrid.transform, "设为管理员", SetAdministrator, 0f, 35f);
         CreateButton(quickGrid.transform, "传送至鼠标", () => InvokeByTypeName("Mod_PlayerTraits", "TeleportToMousePosition"), 0f, 35f);
-        teleportShortcutButton = CreateButton(quickGrid.transform, "Ctrl+T 传送：开", ToggleTeleportShortcut, 0f, 35f);
+        teleportShortcutButton = CreateButton(quickGrid.transform, "T 传送：开", ToggleTeleportShortcut, 0f, 35f);
         RefreshTeleportShortcutButton();
         playerMoveSpeedButton = CreateButton(quickGrid.transform, "玩家移速：1x", CyclePlayerMoveSpeed, 0f, 35f);
         RefreshPlayerMoveSpeedButton();
         CreateButton(quickGrid.transform, "创造背包", () => InvokeByTypeName("Mod_PlayerTraits", "InitializeCreativeInventoryForAdmin"), 0f, 35f);
-        CreateButton(quickGrid.transform, "手持 +9999", () => InvokeByTypeName("PlayerAdminController", "AddAmountToCurrentHandItem", 9999f), 0f, 35f);
-        CreateButton(quickGrid.transform, "背包 +100", () => InvokeByTypeName("PlayerAdminController", "AddAmountToAllBagItems", 100f), 0f, 35f);
-        CreateButton(quickGrid.transform, "时间 -0.5", () => InvokeByTypeName("PlayerAdminController", "TryUpdateTimeScale", -0.5f), 0f, 35f);
-        CreateButton(quickGrid.transform, "时间重置", () => InvokeByTypeName("PlayerAdminController", "ResetTimeScale"), 0f, 35f);
-        CreateButton(quickGrid.transform, "区块距离 +1", () => InvokeByTypeName("PlayerAdminController", "IncreaseAdminChunkLoadDistance"), 0f, 35f);
+        CreateButton(quickGrid.transform, "手持 +9999", () => InvokeByTypeName("Mod_PlayerAdminController", "AddAmountToCurrentHandItem", 9999f), 0f, 35f);
+        CreateButton(quickGrid.transform, "背包 +100", () => InvokeByTypeName("Mod_PlayerAdminController", "AddAmountToAllBagItems", 100f), 0f, 35f);
+        CreateButton(quickGrid.transform, "时间 -0.5", () => InvokeByTypeName("Mod_PlayerAdminController", "TryUpdateTimeScale", -0.5f), 0f, 35f);
+        CreateButton(quickGrid.transform, "时间重置", () => InvokeByTypeName("Mod_PlayerAdminController", "ResetTimeScale"), 0f, 35f);
         navigationPathButton = CreateButton(quickGrid.transform, "AI 路线提示：关", ToggleNavigationPathHints, 0f, 35f);
         RefreshNavigationPathButton();
 
@@ -643,18 +1306,22 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         panelLayout.childForceExpandHeight = false;
 
         GameObject header = CreateUiObject("Header", airdropBrowserRoot.transform);
-        header.AddComponent<LayoutElement>().preferredHeight = 54f;
+        LayoutElement headerElement = header.AddComponent<LayoutElement>();
+        headerElement.minHeight = CatalogBrowserHeaderHeight;
+        headerElement.preferredHeight = CatalogBrowserHeaderHeight;
+        headerElement.flexibleHeight = 0f;
         Image headerImage = header.AddComponent<Image>();
         headerImage.color = GmSurfaceRaised;
         HorizontalLayoutGroup headerLayout = header.AddComponent<HorizontalLayoutGroup>();
-        headerLayout.padding = new RectOffset(16, 12, 7, 7);
-        headerLayout.spacing = 12f;
+        headerLayout.padding = new RectOffset(12, 10, 4, 4);
+        headerLayout.spacing = 10f;
         headerLayout.childAlignment = TextAnchor.MiddleLeft;
         headerLayout.childControlWidth = true;
         headerLayout.childControlHeight = true;
         headerLayout.childForceExpandWidth = false;
+        headerLayout.childForceExpandHeight = false;
 
-        TextMeshProUGUI title = CreateText(header.transform, "物品空投", 20f, GmTextPrimary);
+        TextMeshProUGUI title = CreateText(header.transform, "物品空投", 18f, GmTextPrimary);
         title.fontStyle = FontStyles.Bold;
         title.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
 
@@ -665,18 +1332,23 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
             GmTextSecondary);
         instruction.alignment = TextAlignmentOptions.Right;
         instruction.gameObject.AddComponent<LayoutElement>().preferredWidth = 220f;
-        CreateButton(header.transform, "返回", CloseAirdropBrowser, 64f, 34f);
+        CreateButton(header.transform, "返回", CloseAirdropBrowser, 60f, CatalogBrowserControlHeight);
 
         GameObject toolbar = CreateUiObject("Toolbar", airdropBrowserRoot.transform);
-        toolbar.AddComponent<LayoutElement>().preferredHeight = 42f;
+        LayoutElement toolbarElement = toolbar.AddComponent<LayoutElement>();
+        toolbarElement.minHeight = CatalogBrowserToolbarHeight;
+        toolbarElement.preferredHeight = CatalogBrowserToolbarHeight;
+        toolbarElement.flexibleHeight = 0f;
         HorizontalLayoutGroup toolbarLayout = toolbar.AddComponent<HorizontalLayoutGroup>();
         toolbarLayout.spacing = 8f;
         toolbarLayout.childAlignment = TextAnchor.MiddleLeft;
         toolbarLayout.childControlWidth = true;
         toolbarLayout.childControlHeight = true;
         toolbarLayout.childForceExpandWidth = false;
+        toolbarLayout.childForceExpandHeight = false;
 
         airdropSearchInput = CreateInputField(toolbar.transform, "搜索物品名称或 ID", 560f, false);
+        airdropSearchInput.GetComponent<LayoutElement>().preferredHeight = CatalogBrowserControlHeight;
         airdropSearchInput.onValueChanged.AddListener(_ => RebuildAirdropItemGrid());
 
         TextMeshProUGUI amountLabel = CreateText(
@@ -688,8 +1360,9 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         amountLabel.gameObject.AddComponent<LayoutElement>().preferredWidth = 40f;
 
         amountInput = CreateInputField(toolbar.transform, "数量", 90f, true);
+        amountInput.GetComponent<LayoutElement>().preferredHeight = CatalogBrowserControlHeight;
         amountInput.text = "1";
-        CreateButton(toolbar.transform, "刷新物品", RefreshItemIds, 96f, 38f);
+        CreateButton(toolbar.transform, "刷新物品", RefreshItemIds, 92f, CatalogBrowserControlHeight);
 
         airdropBrowserCountText = CreateText(
             toolbar.transform,
@@ -742,18 +1415,22 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         panelLayout.childForceExpandHeight = false;
 
         GameObject header = CreateUiObject("Header", aiCreatureBrowserRoot.transform);
-        header.AddComponent<LayoutElement>().preferredHeight = 54f;
+        LayoutElement headerElement = header.AddComponent<LayoutElement>();
+        headerElement.minHeight = CatalogBrowserHeaderHeight;
+        headerElement.preferredHeight = CatalogBrowserHeaderHeight;
+        headerElement.flexibleHeight = 0f;
         Image headerImage = header.AddComponent<Image>();
         headerImage.color = GmSurfaceRaised;
         HorizontalLayoutGroup headerLayout = header.AddComponent<HorizontalLayoutGroup>();
-        headerLayout.padding = new RectOffset(16, 12, 7, 7);
-        headerLayout.spacing = 12f;
+        headerLayout.padding = new RectOffset(12, 10, 4, 4);
+        headerLayout.spacing = 10f;
         headerLayout.childAlignment = TextAnchor.MiddleLeft;
         headerLayout.childControlWidth = true;
         headerLayout.childControlHeight = true;
         headerLayout.childForceExpandWidth = false;
+        headerLayout.childForceExpandHeight = false;
 
-        TextMeshProUGUI title = CreateText(header.transform, "AI 生物召唤", 20f, GmTextPrimary);
+        TextMeshProUGUI title = CreateText(header.transform, "AI 生物召唤", 18f, GmTextPrimary);
         title.fontStyle = FontStyles.Bold;
         title.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
 
@@ -764,18 +1441,23 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
             GmTextSecondary);
         instruction.alignment = TextAlignmentOptions.Right;
         instruction.gameObject.AddComponent<LayoutElement>().preferredWidth = 240f;
-        CreateButton(header.transform, "返回", CloseAiCreatureBrowser, 64f, 34f);
+        CreateButton(header.transform, "返回", CloseAiCreatureBrowser, 60f, CatalogBrowserControlHeight);
 
         GameObject toolbar = CreateUiObject("Toolbar", aiCreatureBrowserRoot.transform);
-        toolbar.AddComponent<LayoutElement>().preferredHeight = 42f;
+        LayoutElement toolbarElement = toolbar.AddComponent<LayoutElement>();
+        toolbarElement.minHeight = CatalogBrowserToolbarHeight;
+        toolbarElement.preferredHeight = CatalogBrowserToolbarHeight;
+        toolbarElement.flexibleHeight = 0f;
         HorizontalLayoutGroup toolbarLayout = toolbar.AddComponent<HorizontalLayoutGroup>();
         toolbarLayout.spacing = 8f;
         toolbarLayout.childAlignment = TextAnchor.MiddleLeft;
         toolbarLayout.childControlWidth = true;
         toolbarLayout.childControlHeight = true;
         toolbarLayout.childForceExpandWidth = false;
+        toolbarLayout.childForceExpandHeight = false;
 
         aiCreatureSearchInput = CreateInputField(toolbar.transform, "搜索生物名称或 ID", 560f, false);
+        aiCreatureSearchInput.GetComponent<LayoutElement>().preferredHeight = CatalogBrowserControlHeight;
         aiCreatureSearchInput.onValueChanged.AddListener(_ => RebuildAiCreatureGrid());
 
         TextMeshProUGUI amountLabel = CreateText(
@@ -787,8 +1469,9 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         amountLabel.gameObject.AddComponent<LayoutElement>().preferredWidth = 40f;
 
         aiCreatureAmountInput = CreateInputField(toolbar.transform, "1-20", 90f, true);
+        aiCreatureAmountInput.GetComponent<LayoutElement>().preferredHeight = CatalogBrowserControlHeight;
         aiCreatureAmountInput.text = "1";
-        CreateButton(toolbar.transform, "刷新生物", RefreshAiCreatureIds, 96f, 38f);
+        CreateButton(toolbar.transform, "刷新生物", RefreshAiCreatureIds, 92f, CatalogBrowserControlHeight);
 
         aiCreatureBrowserCountText = CreateText(
             toolbar.transform,
@@ -1364,33 +2047,77 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
 
     #endregion
 
-    #region Reflection command discovery
+    #region GM 当前分页刷新
 
-    private void RefreshRuntimeData()
+    // 打开窗口只同步当前页；目录扫描与列表重建留给首次进入页面或场景切换。
+    private void RefreshRuntimeData(bool refreshCatalogs = false)
     {
-        BindGameEventManager();
-        RefreshBuffDefinitions();
-        RefreshBuffTargetList();
-        RefreshBuffTargetingControls();
-        RefreshQuestPage();
-        RefreshTeleportShortcutButton();
-        RefreshAdminInvincibilityButton();
-        RefreshPlayerMoveSpeedButton();
-        RefreshChunkLoadSpeedControl();
-        RefreshNavigationPathButton();
-        RefreshAnimalDebugOverlayButton();
-        RefreshItemIds();
-        RefreshWorldLayerOverlayButtons();
-        RefreshAiecsPage();
-        RefreshAiCreatureIds();
-        RefreshStructureOptions();
-        RebuildReflectedCommands();
-        RebuildGameEventPage();
+        switch (activeGmPage)
+        {
+            case GmPageId.Player:
+                RefreshTeleportShortcutButton();
+                RefreshAdminInvincibilityButton();
+                RefreshPlayerMoveSpeedButton();
+                break;
+            case GmPageId.Buff:
+                RefreshBuffDefinitions();
+                if (refreshCatalogs)
+                    RefreshBuffTargetList(false);
+                RefreshBuffTargetingControls();
+                break;
+            case GmPageId.Quests:
+                if (refreshCatalogs)
+                    RefreshQuestPage();
+                else
+                {
+                    BindQuestRuntime();
+                    RefreshQuestRowStates();
+                }
+                break;
+            case GmPageId.Spawn:
+                UpdateSummonHint();
+                break;
+            case GmPageId.World:
+                RefreshChunkLoadSpeedControl();
+                RefreshChunkStreamingBudgetControls();
+                RefreshWorldRangeControls();
+                RefreshWorldWindControl();
+                RefreshNavigationPathButton();
+                RefreshAnimalDebugOverlayButton();
+                RefreshHiveDebugOverlayButton();
+                break;
+            case GmPageId.Layers:
+                RefreshWorldLayerOverlayButtons();
+                break;
+            case GmPageId.Aiecs:
+                RefreshAiecsPage();
+                break;
+            case GmPageId.Structures:
+                if (refreshCatalogs)
+                    RefreshStructureOptions();
+                RefreshBiomeSelection();
+                break;
+            case GmPageId.GameEvents:
+                BindGameEventManager();
+                if (refreshCatalogs)
+                    RebuildGameEventPage();
+                break;
+            case GmPageId.Commands:
+                if (refreshCatalogs)
+                    RebuildReflectedCommands();
+                break;
+        }
+
+        activePageDataDirty = false;
     }
+
+    #endregion
+
+    #region Reflection command discovery
 
     private void CyclePlayerMoveSpeed()
     {
-        PlayerAdminController controller = FindFirstComponent("PlayerAdminController") as PlayerAdminController;
+        Mod_PlayerAdminController controller = FindFirstComponent("Mod_PlayerAdminController") as Mod_PlayerAdminController;
         if (controller == null)
         {
             SetStatus("未找到本地玩家，无法调整移动速度。", Color.yellow);
@@ -1434,7 +2161,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
             return;
         }
 
-        PlayerAdminController controller = FindFirstComponent("PlayerAdminController") as PlayerAdminController;
+        Mod_PlayerAdminController controller = FindFirstComponent("Mod_PlayerAdminController") as Mod_PlayerAdminController;
         if (controller == null)
         {
             SetStatus("未找到本地玩家，无法调整移动速度。", Color.yellow);
@@ -1462,7 +2189,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
 
     private void RefreshPlayerMoveSpeedButton()
     {
-        PlayerAdminController controller = FindFirstComponent("PlayerAdminController") as PlayerAdminController;
+        Mod_PlayerAdminController controller = FindObjectOfType<Mod_PlayerAdminController>(true);
         float multiplier = controller != null ? controller.AdminMoveSpeedMultiplier : 1f;
         if (playerMoveSpeedInput != null && !playerMoveSpeedInput.isFocused)
             playerMoveSpeedInput.SetTextWithoutNotify(multiplier.ToString("0.##", CultureInfo.InvariantCulture));
@@ -1479,36 +2206,6 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
             statusButton,
             multiplier > 1f ? GmSelection : GmSurfaceRaised,
             multiplier > 1f);
-    }
-
-    /// <summary>按当前正交视距乘倍率，并通过正式相机 API 同步刷新区块窗口。</summary>
-    private void MultiplyCameraView(float multiplier)
-    {
-        if (float.IsNaN(multiplier) || float.IsInfinity(multiplier) || multiplier <= 0f)
-        {
-            SetStatus("视距倍率必须是大于 0 的有限数值。", Color.yellow);
-            return;
-        }
-
-        Mod_Cam cameraModule = FindFirstComponent("Mod_Cam") as Mod_Cam;
-        if (cameraModule == null)
-        {
-            SetStatus("未找到玩家相机模块，无法调整视距。", Color.yellow);
-            return;
-        }
-
-        float previousSize = cameraModule.CurrentOrthographicSize;
-        if (previousSize <= 0f)
-        {
-            SetStatus("当前相机视距无效，无法应用倍率。", Color.yellow);
-            return;
-        }
-
-        cameraModule.EnableUnlimitedView();
-        cameraModule.SetOrthographicSize(previousSize * multiplier);
-        SetStatus(
-            $"相机视距已从 {previousSize:0.##} 调整为 {cameraModule.CurrentOrthographicSize:0.##}（{multiplier:0.##}x）。",
-            GmAccentHover);
     }
 
     private void ApplyChunkLoadSpeedInput()
@@ -1640,18 +2337,18 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
 
     private void ToggleTeleportShortcut()
     {
-        bool enabled = PlayerAdminController.ToggleTeleportToMouseShortcut();
+        bool enabled = Mod_PlayerAdminController.ToggleTeleportToMouseShortcut();
         GMConsolePreferences.SetTeleportShortcut(enabled);
         RefreshTeleportShortcutButton();
         SetStatus(
-            enabled ? "Ctrl+T 鼠标传送已开启。" : "Ctrl+T 鼠标传送已关闭。",
+            enabled ? "T 键鼠标传送已开启。" : "T 键鼠标传送已关闭。",
             enabled ? GmAccentHover : GmTextSecondary);
     }
 
     private void ToggleAdminInvincibility()
     {
-        PlayerAdminController controller =
-            FindFirstComponent("PlayerAdminController") as PlayerAdminController;
+        Mod_PlayerAdminController controller =
+            FindFirstComponent("Mod_PlayerAdminController") as Mod_PlayerAdminController;
         if (controller == null || !controller.TryToggleAdminInvincibility(out bool enabled))
         {
             RefreshAdminInvincibilityButton();
@@ -1670,8 +2367,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         if (adminInvincibilityButton == null)
             return;
 
-        PlayerAdminController controller =
-            FindFirstComponent("PlayerAdminController") as PlayerAdminController;
+        Mod_PlayerAdminController controller = FindObjectOfType<Mod_PlayerAdminController>(true);
         bool canToggle = controller != null && controller.IsAdministrator;
         bool enabled = canToggle && controller.IsAdminInvincibilityEnabled;
 
@@ -1695,10 +2391,10 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         if (teleportShortcutButton == null)
             return;
 
-        bool enabled = PlayerAdminController.TeleportToMouseShortcutEnabled;
+        bool enabled = Mod_PlayerAdminController.TeleportToMouseShortcutEnabled;
         TextMeshProUGUI label = teleportShortcutButton.GetComponentInChildren<TextMeshProUGUI>(true);
         if (label != null)
-            label.text = enabled ? "Ctrl+T 传送：开" : "Ctrl+T 传送：关";
+            label.text = enabled ? "T 传送：开" : "T 传送：关";
 
         SetGmButtonVisual(
             teleportShortcutButton,
@@ -1742,6 +2438,32 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
             visible);
     }
 
+    private void ToggleHiveDebugOverlay()
+    {
+        bool visible = HiveColonyDebugOverlay.Toggle();
+        GMConsolePreferences.SetHiveDebugOverlayVisible(visible);
+        RefreshHiveDebugOverlayButton();
+        SetStatus(
+            visible ? "蜂巢头顶参数已开启。" : "蜂巢头顶参数已关闭。",
+            visible ? GmAccentHover : GmTextSecondary);
+    }
+
+    private void RefreshHiveDebugOverlayButton()
+    {
+        if (hiveDebugOverlayButton == null)
+            return;
+
+        bool visible = HiveColonyDebugOverlay.Visible;
+        TextMeshProUGUI label = hiveDebugOverlayButton.GetComponentInChildren<TextMeshProUGUI>(true);
+        if (label != null)
+            label.text = visible ? "蜂巢参数：开" : "蜂巢参数：关";
+
+        SetGmButtonVisual(
+            hiveDebugOverlayButton,
+            visible ? GmSelection : GmSurfaceRaised,
+            visible);
+    }
+
     private void RefreshNavigationPathButton()
     {
         if (navigationPathButton == null)
@@ -1762,28 +2484,48 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
     {
         commands.Clear();
 
-        AddNamedCommand("环境", "晴天", "GameDebugManager", "SetClearWeather");
-        AddNamedCommand("环境", "下雨", "GameDebugManager", "SetRainWeather");
-        AddNamedCommand("环境", "环境信息", "GameDebugManager", "ToggleEnvironmentInfo");
-        AddNamedCommand("管理员", "视野无限", "Mod_Cam", "EnableUnlimitedView");
-        AddNamedCommand("管理员", "刷新区块", "Mod_ChunkLoader", "RefreshChunksAroundPlayer");
-        AddNamedCommand("管理员", "区块距离 +1", "PlayerAdminController", "IncreaseAdminChunkLoadDistance");
-        AddNamedCommand("管理员", "手持 +9999", "PlayerAdminController", "AddAmountToCurrentHandItem", 9999f);
-        AddNamedCommand("管理员", "背包 +100", "PlayerAdminController", "AddAmountToAllBagItems", 100f);
-        AddNamedCommand("管理员", "时间恢复", "PlayerAdminController", "ResetTimeScale");
-        AddNamedCommand("管理员", "时间 +0.5", "PlayerAdminController", "TryUpdateTimeScale", 0.5f);
-        AddNamedCommand("管理员", "时间 -0.5", "PlayerAdminController", "TryUpdateTimeScale", -0.5f);
-
-        foreach (MonoBehaviour behaviour in FindSceneBehaviours())
+        // 场景组件只扫描一次，命名命令和自动命令共用这份快照。
+        MonoBehaviour[] sceneBehaviours = FindObjectsOfType<MonoBehaviour>(true);
+        Dictionary<string, Component> namedTargets = new(StringComparer.Ordinal);
+        for (int i = 0; i < sceneBehaviours.Length; i++)
         {
+            MonoBehaviour behaviour = sceneBehaviours[i];
+            if (behaviour != null && behaviour.gameObject.scene.IsValid())
+                namedTargets.TryAdd(behaviour.GetType().Name, behaviour);
+        }
+
+        AddNamedCommand(namedTargets, "环境", "晴天", "GameDebugManager", "SetClearWeather");
+        AddNamedCommand(namedTargets, "环境", "下雨", "GameDebugManager", "SetRainWeather");
+        AddNamedCommand(namedTargets, "环境", "环境信息", "GameDebugManager", "ToggleEnvironmentInfo");
+        AddNamedCommand(namedTargets, "管理员", "刷新区块", "Mod_ChunkLoader", "RefreshChunksAroundPlayer");
+        AddNamedCommand(namedTargets, "管理员", "手持 +9999", "Mod_PlayerAdminController", "AddAmountToCurrentHandItem", 9999f);
+        AddNamedCommand(namedTargets, "管理员", "背包 +100", "Mod_PlayerAdminController", "AddAmountToAllBagItems", 100f);
+        AddNamedCommand(namedTargets, "管理员", "时间恢复", "Mod_PlayerAdminController", "ResetTimeScale");
+        AddNamedCommand(namedTargets, "管理员", "时间 +0.5", "Mod_PlayerAdminController", "TryUpdateTimeScale", 0.5f);
+        AddNamedCommand(namedTargets, "管理员", "时间 -0.5", "Mod_PlayerAdminController", "TryUpdateTimeScale", -0.5f);
+
+        Dictionary<Type, MethodInfo[]> safeMethodsByType = new();
+        foreach (MonoBehaviour behaviour in sceneBehaviours)
+        {
+            if (commands.Count >= MaxDiscoveredCommands)
+                break;
+            if (behaviour == null || !behaviour.gameObject.scene.IsValid())
+                continue;
+
             Type type = behaviour.GetType();
-            MethodInfo[] methods = type.GetMethods(BindingFlags.Instance | BindingFlags.Public);
+            if (!safeMethodsByType.TryGetValue(type, out MethodInfo[] methods))
+            {
+                methods = type.GetMethods(BindingFlags.Instance | BindingFlags.Public)
+                    .Where(method => method.ReturnType == typeof(void) &&
+                                     method.GetParameters().Length == 0 &&
+                                     IsSafeAutoCommand(method))
+                    .ToArray();
+                safeMethodsByType.Add(type, methods);
+            }
+
             for (int i = 0; i < methods.Length && commands.Count < MaxDiscoveredCommands; i++)
             {
                 MethodInfo method = methods[i];
-                if (method.ReturnType != typeof(void) || method.GetParameters().Length != 0 || !IsSafeAutoCommand(method))
-                    continue;
-
                 AddCommand($"扫描/{type.Name}", method.Name, behaviour, method, Array.Empty<object>());
             }
         }
@@ -1791,10 +2533,9 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         RebuildCommandButtons();
     }
 
-    private void AddNamedCommand(string category, string label, string typeName, string methodName, params object[] arguments)
+    private void AddNamedCommand(Dictionary<string, Component> namedTargets, string category, string label, string typeName, string methodName, params object[] arguments)
     {
-        Component target = FindFirstComponent(typeName);
-        if (target == null)
+        if (!namedTargets.TryGetValue(typeName, out Component target) || target == null)
             return;
 
         MethodInfo method = FindCompatibleMethod(target.GetType(), methodName, arguments);
@@ -1845,8 +2586,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
                name == "SetRainWeatherDebug" ||
                name == "ToggleDebugPanel" ||
                name == "RefreshChunksAroundPlayer" ||
-               name == "RefreshChunksForCameraView" ||
-               name == "EnableUnlimitedView" ||
+               name == "RefreshConfiguredChunkWindow" ||
                name == "InitializeCreativeInventoryForAdmin" ||
                name == "TeleportToMousePosition" ||
                name == "CleanupNullItems" ||
@@ -1946,7 +2686,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
     private void RefreshItemIds()
     {
         availableAirdropItems.Clear();
-        GameRes gameRes = FindFirstComponent("GameRes") as GameRes;
+        GameRes gameRes = GameRes.ExistingInstance;
         if (gameRes != null)
         {
             HashSet<string> discoveredIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -1996,45 +2736,25 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
     private void RefreshAiCreatureIds()
     {
         availableAiCreatures.Clear();
-        Component gameRes = FindFirstComponent("GameRes");
-        object prefabDictionary = ReadMember(gameRes, "AllPrefabs");
-        if (prefabDictionary is IDictionary dictionary)
+        GameRes resources = GameRes.ExistingInstance;
+        var ecology = FlatWorld.AIECS.Gameplay.AiecsEcologyRuntimeHost.Active;
+        if (resources != null)
         {
-            HashSet<string> discoveredIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            foreach (DictionaryEntry entry in dictionary)
+            foreach (RuntimeItemDefinition definition in resources.ActorDefinitions.Values)
             {
-                if (!(entry.Key is string itemId) ||
-                    string.IsNullOrWhiteSpace(itemId) ||
-                    !discoveredIds.Add(itemId) ||
-                    !(entry.Value is GameObject prefab) ||
-                    !IsAiCreaturePrefab(prefab))
-                {
-                    continue;
-                }
-
-                Item item = prefab.GetComponent<Item>() ?? prefab.GetComponentInChildren<Item>(true);
-                if (item == null)
-                    continue;
-
-                ItemData data = null;
-                try
-                {
-                    data = item.itemData;
-                }
-                catch (Exception exception)
-                {
-                    Debug.LogWarning($"[GM] 读取 AI 生物 {itemId} 的 ItemData 失败：{exception.Message}");
-                }
-
-                Sprite icon = item.Sprite != null ? item.Sprite.sprite : null;
-                if (icon == null)
-                    icon = prefab.GetComponentInChildren<SpriteRenderer>(true)?.sprite;
-
+                if (definition == null) continue;
+                Texture iconAtlas = null;
+                Rect iconUv = default;
+                if (!AiRuntimeBackendService.UsesEntities(definition.Id) || ecology == null ||
+                    !ecology.TryGetCatalogIcon(definition.Id, out iconAtlas, out iconUv))
+                    iconAtlas = null;
                 availableAiCreatures.Add(new AiCreatureEntry
                 {
-                    ItemId = itemId,
-                    DisplayName = !string.IsNullOrWhiteSpace(data?.GameName) ? data.GameName : itemId,
-                    Icon = icon
+                    ItemId = definition.Id,
+                    DisplayName = definition.DisplayName,
+                    Icon = iconAtlas == null ? ResolveAiCreaturePrefabIcon(definition) : null,
+                    IconAtlas = iconAtlas,
+                    IconUv = iconUv
                 });
             }
         }
@@ -2052,30 +2772,28 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
             RebuildAiCreatureGrid();
     }
 
-    private static bool IsAiCreaturePrefab(GameObject prefab)
+    /// <summary>动画图集不可用时，从 Actor 外壳的身体渲染器取目录图标。</summary>
+    private static Sprite ResolveAiCreaturePrefabIcon(RuntimeItemDefinition definition)
     {
-        if (prefab == null)
-            return false;
+        if (definition.Sprite != null)
+            return definition.Sprite;
+        GameObject shell = definition.ShellPrefab;
+        if (shell == null)
+            return null;
 
-        MonoBehaviour[] behaviours = prefab.GetComponentsInChildren<MonoBehaviour>(true);
-        for (int i = 0; i < behaviours.Length; i++)
+        if (!string.IsNullOrWhiteSpace(definition.RendererPath))
         {
-            MonoBehaviour behaviour = behaviours[i];
-            if (behaviour == null)
-                continue;
-
-            Type type = behaviour.GetType();
-            string typeName = type.Name;
-            if (string.Equals(typeName, "Mover_AI", StringComparison.Ordinal) ||
-                (typeName.StartsWith("AI_", StringComparison.Ordinal) &&
-                 !string.Equals(typeName, "AI_AttackController", StringComparison.Ordinal)) ||
-                string.Equals(type.FullName, "BehaviorDesigner.Runtime.BehaviorTree", StringComparison.Ordinal))
-            {
-                return true;
-            }
+            Transform body = shell.transform.Find(definition.RendererPath);
+            Sprite sprite = body != null ? body.GetComponent<SpriteRenderer>()?.sprite : null;
+            if (sprite != null)
+                return sprite;
         }
 
-        return false;
+        SpriteRenderer[] renderers = shell.GetComponentsInChildren<SpriteRenderer>(true);
+        for (int i = 0; i < renderers.Length; i++)
+            if (renderers[i].sprite != null)
+                return renderers[i].sprite;
+        return null;
     }
 
     private void UpdateSummonHint()
@@ -2085,7 +2803,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
 
         if (availableAirdropItems.Count == 0 && availableAiCreatures.Count == 0)
         {
-            itemHintText.text = "尚未发现可召唤内容。请等待 GameRes 加载完成，或先进入游戏世界。";
+            itemHintText.text = "打开上方目录载入可用内容；若目录为空，请先进入游戏世界。";
             return;
         }
 
@@ -2168,7 +2886,9 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
                 creature.ItemId,
                 creature.DisplayName,
                 creature.Icon,
-                () => SpawnAiCreature(creature));
+                () => SpawnAiCreature(creature),
+                creature.IconAtlas,
+                creature.IconUv);
         }
 
         if (visibleCreatures.Count == 0)
@@ -2195,7 +2915,9 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         string itemId,
         string displayName,
         Sprite icon,
-        UnityAction onClick)
+        UnityAction onClick,
+        Texture iconAtlas = null,
+        Rect iconUv = default)
     {
         GameObject tile = CreateUiObject(objectName, parent);
         Image tileImage = tile.AddComponent<Image>();
@@ -2222,13 +2944,27 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         iconRect.pivot = new Vector2(0.5f, 1f);
         iconRect.anchoredPosition = new Vector2(0f, -8f);
         iconRect.sizeDelta = new Vector2(64f, 64f);
-        Image iconImage = iconObject.AddComponent<Image>();
-        iconImage.sprite = icon;
-        iconImage.preserveAspect = true;
-        iconImage.raycastTarget = false;
-        iconImage.color = icon != null ? Color.white : Color.clear;
+        if (iconAtlas != null)
+        {
+            float aspect = iconUv.width * iconAtlas.width / (iconUv.height * iconAtlas.height);
+            iconRect.sizeDelta = aspect >= 1f
+                ? new Vector2(64f, 64f / aspect)
+                : new Vector2(64f * aspect, 64f);
+            RawImage atlasImage = iconObject.AddComponent<RawImage>();
+            atlasImage.texture = iconAtlas;
+            atlasImage.uvRect = iconUv;
+            atlasImage.raycastTarget = false;
+        }
+        else
+        {
+            Image iconImage = iconObject.AddComponent<Image>();
+            iconImage.sprite = icon;
+            iconImage.preserveAspect = true;
+            iconImage.raycastTarget = false;
+            iconImage.color = icon != null ? Color.white : Color.clear;
+        }
 
-        if (icon == null)
+        if (iconAtlas == null && icon == null)
         {
             TextMeshProUGUI placeholder = CreateText(
                 iconObject.transform,
@@ -2296,23 +3032,16 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
             return;
         }
 
-        ItemMgr itemManager = ItemMgr.Instance;
-        if (itemManager == null)
-        {
-            SetAiCreatureResult("召唤失败：未找到 ItemMgr。", new Color(1f, 0.42f, 0.38f));
-            return;
-        }
-
         int spawnedCount = 0;
         string firstFailure = null;
+        var occupiedPositions = new List<Vector3>(amount);
         for (int i = 0; i < amount; i++)
         {
-            Vector3 spawnPosition = GetAiCreatureSpawnPosition(player.position, i, amount);
-            if (TrySpawnInitializedAiCreature(
-                    itemManager,
+            if (TrySpawnCreatureNearPlayer(
                     entry.ItemId,
-                    spawnPosition,
-                    out _,
+                    player.position,
+                    i,
+                    occupiedPositions,
                     out string spawnError))
             {
                 spawnedCount++;
@@ -2337,117 +3066,68 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         SetAiCreatureResult(result, new Color(1f, 0.42f, 0.38f));
     }
 
-    private static Vector3 GetAiCreatureSpawnPosition(Vector3 playerPosition, int index, int amount)
+    private static Vector3 GetAiCreatureSpawnPosition(Vector3 playerPosition, int index, int attempt)
     {
-        const float GoldenAngleRadians = 2.39996323f;
-        float angle = index * GoldenAngleRadians;
-        float radius = amount == 1 ? 2.5f : 2.5f + Mathf.Sqrt(index) * 0.65f;
+        const float RingStepRadians = Mathf.PI * 0.25f;
+        float angle = index * 2.39996323f + attempt * RingStepRadians;
+        float radius = 2.5f + attempt / 8 * 1.25f + Mathf.Sqrt(index) * 0.4f;
         Vector3 offset = new Vector3(Mathf.Cos(angle), Mathf.Sin(angle), 0f) * radius;
         Vector3 position = playerPosition + offset;
         position.z = playerPosition.z;
         return position;
     }
 
-    /// <summary>
-    /// GM 生物必须沿用自然生成的完整链路：ItemMgr 注册后立即 Load，
-    /// 否则 AI 的状态机、感知和移动模块都不会完成初始化。
-    /// </summary>
-    private static bool TrySpawnInitializedAiCreature(
-        ItemMgr itemManager,
+    /// <summary>GM 在玩家周围生成完整生物，具体后端由统一物种路由决定。</summary>
+    private static bool TrySpawnCreatureNearPlayer(
         string itemId,
-        Vector3 spawnPosition,
-        out Item spawnedItem,
+        Vector3 playerPosition,
+        int index,
+        List<Vector3> occupiedPositions,
         out string error)
     {
-        spawnedItem = null;
-        if (itemManager == null)
+        IAiEcologyBackend backend = AiRuntimeBackendService.Ecology;
+        bool usesEntities = AiRuntimeBackendService.UsesEntities(itemId);
+        if (usesEntities && (!AiRuntimeBackendService.UseEntities || backend == null || !backend.SupportsSpecies(itemId)))
         {
-            error = "未找到 ItemMgr。";
+            error = "该物种的 ECS 后端未启用或尚未就绪。";
             return false;
         }
 
-        try
+        for (int attempt = 0; attempt < 32; attempt++)
         {
-            spawnedItem = itemManager.InstantiateItem(
-                itemId,
-                spawnPosition,
-                Quaternion.identity,
-                Vector3.one);
-            if (spawnedItem == null)
+            Vector3 position = GetAiCreatureSpawnPosition(playerPosition, index, attempt);
+            bool overlaps = false;
+            for (int i = 0; i < occupiedPositions.Count; i++)
             {
-                error = "ItemMgr 未返回 Item 实例。";
+                if ((position - occupiedPositions[i]).sqrMagnitude >= 1.44f) continue;
+                overlaps = true;
+                break;
+            }
+            if (overlaps) continue;
+
+            try
+            {
+                if (AiRuntimeBackendService.TrySpawnDirect(itemId, position, 0, out _))
+                {
+                    occupiedPositions.Add(position);
+                    error = null;
+                    return true;
+                }
+            }
+            catch (Exception exception)
+            {
+                Debug.LogException(exception);
+                error = $"生物生成异常：{exception.Message}";
                 return false;
             }
 
-            if (!TryGetRuntimeAiActor(spawnedItem, out _))
-            {
-                error = $"{itemId} 不包含可运行的 AI 模块。";
-                DespawnFailedAiCreature(itemManager, spawnedItem);
-                spawnedItem = null;
-                return false;
-            }
-
-            if (!spawnedItem.IsInitialized)
-                spawnedItem.Load();
-
-            if (!spawnedItem.IsInitialized ||
-                !TryGetRuntimeAiActor(spawnedItem, out IAIActor actor) ||
-                !ReferenceEquals(actor.ActorItem, spawnedItem))
-            {
-                error = $"{itemId} 的 AI 初始化未完成。";
-                DespawnFailedAiCreature(itemManager, spawnedItem);
-                spawnedItem = null;
-                return false;
-            }
-
-            error = null;
-            return true;
-        }
-        catch (Exception exception)
-        {
-            error = exception.Message;
-            Debug.LogException(exception);
-            DespawnFailedAiCreature(itemManager, spawnedItem);
-            spawnedItem = null;
+            if (usesEntities && backend.IsReady) continue;
+            error = "生物创建失败，请检查 Item/AI 初始化日志及世界是否就绪。";
             return false;
         }
-    }
 
-    /// <summary>从实例层级寻找真实 AI 标记，避免把仅有相似名称的普通物品当作生物生成。</summary>
-    private static bool TryGetRuntimeAiActor(Item item, out IAIActor actor)
-    {
-        actor = null;
-        if (item == null)
-            return false;
-
-        MonoBehaviour[] behaviours = item.GetComponentsInChildren<MonoBehaviour>(true);
-        for (int i = 0; i < behaviours.Length; i++)
-        {
-            if (behaviours[i] is IAIActor candidate)
-            {
-                actor = candidate;
-                return true;
-            }
-        }
-
+        error = "玩家附近没有适合该生物的已加载导航位置。";
         return false;
-    }
-
-    /// <summary>初始化或校验失败时通过 ItemMgr 回收临时实体，避免残留未完成初始化的对象。</summary>
-    private static void DespawnFailedAiCreature(ItemMgr itemManager, Item item)
-    {
-        if (item == null || item.DestructionHandled)
-            return;
-
-        try
-        {
-            itemManager?.DespawnItem(item, saveData: false);
-        }
-        catch (Exception cleanupException)
-        {
-            Debug.LogWarning($"[GM] 回收失败的 AI 生物失败：{cleanupException.Message}");
-            UnityEngine.Object.Destroy(item.gameObject);
-        }
     }
 
     private void SetAiCreatureResult(string message, Color color)
@@ -2674,7 +3354,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         SpriteRenderer renderer = marker.AddComponent<SpriteRenderer>();
         renderer.sprite = dropMarkerSprite;
         renderer.color = new Color(1f, 0.65f, 0.2f, 0.92f);
-        renderer.sortingOrder = short.MaxValue;
+        WorldSortingManager.GetInstance().ApplyRenderer(renderer, WorldSortingManager.WorldEffectCategory, short.MaxValue);
         return marker;
     }
 
@@ -2684,8 +3364,8 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
 
     private void SetAdministrator()
     {
-        PlayerAdminController adminController =
-            FindFirstComponent("PlayerAdminController") as PlayerAdminController;
+        Mod_PlayerAdminController adminController =
+            FindFirstComponent("Mod_PlayerAdminController") as Mod_PlayerAdminController;
         if (adminController != null && adminController.TryEnableAdministrator())
         {
             RefreshAdminInvincibilityButton();
@@ -2708,12 +3388,11 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
 
     private Transform GetLocalPlayerTransform()
     {
-        Component itemManager = FindFirstComponent("ItemMgr");
-        Transform transform = ReadMember(itemManager, "UserPlayerTransform") as Transform;
-        if (transform != null)
-            return transform;
+        Transform localPlayer = ItemMgr.GetInstance()?.UserPlayerTransform;
+        if (localPlayer != null)
+            return localPlayer;
 
-        Component player = FindFirstComponent("Player");
+        Component player = FindLocalPlayer() ?? FindObjectOfType<Player>(true);
         return player != null ? player.transform : null;
     }
 

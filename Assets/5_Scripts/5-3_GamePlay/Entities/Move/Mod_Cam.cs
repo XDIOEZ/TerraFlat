@@ -1,4 +1,5 @@
 using Cinemachine;
+using FlatWorld.Audio;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -13,6 +14,8 @@ public class Mod_Cam : Module
     private class CameraFollowSaveData
     {
         public float PovValue = DefaultPovValue;
+        public bool UnlimitedViewEnabled;
+        public float AdminFiniteViewMaxOverride;
     }
 
     #region 字段声明
@@ -31,8 +34,7 @@ public class Mod_Cam : Module
     [Header("跟随目标")]
     public Item CameraFollowItem;
     public Player Player;
-    public GameController GameController;
-    private Mod_ChunkLoader _chunkLoader;
+    public Mod_GameController GameController;
     private WrappedWorldCameraRenderer _wrappedWorldRenderer;
     private CinemachineFramingTransposer _framingTransposer;
     private float _baseXDamping;
@@ -50,12 +52,16 @@ public class Mod_Cam : Module
     public float CurrentOrthographicSize => vcam != null ? vcam.m_Lens.OrthographicSize : (ControllerCamera != null ? ControllerCamera.orthographicSize : 0f);
     
     [Header("视野限制")]
-    public float MaxPovValue = 20f; // 视野最大拉伸值
-    public float MinPovValue = 5f;  // 视野最小缩放值
+    public float MaxPovValue = 40f; // 视野最大拉伸值
+    public float MinPovValue = 1f;  // 视野最小缩放值，保持正交相机尺寸大于零
     private bool _unlimitedViewEnabled; // 管理员无限视野只放开运行时上限，不污染普通视野配置。
+    private float _adminFiniteViewMaxOverride; // GM 可临时扩展有限视野，不改普通玩法上限。
 
     /// <summary>当前是否启用了管理员无限视野。</summary>
     public bool IsUnlimitedViewEnabled => _unlimitedViewEnabled;
+
+    /// <summary>相机模块是否已完成虚拟相机初始化，供外部系统判断可用状态而不暴露 Cinemachine 类型依赖。</summary>
+    public bool IsCameraReady => vcam != null;
 
     /// <summary>
     /// 获取虚拟相机组件
@@ -80,18 +86,20 @@ public class Mod_Cam : Module
     {
         CameraUserSettings.Changed -= HandleCameraSettingsChanged;
         CameraUserSettings.Changed += HandleCameraSettingsChanged;
+        BindWorldAudioListener();
     }
 
     private void OnDisable()
     {
         CameraUserSettings.Changed -= HandleCameraSettingsChanged;
+        ClearWorldAudioListener();
     }
 
     // 在Load方法中实例化相机逻辑
     public override void Load()
     {
         // 获取GameController并绑定输入事件
-        GameController = GetComponentInParent<GameController>();
+        GameController = GetComponentInParent<Mod_GameController>();
         if (GameController != null && GameController._inputActions != null)
         {
             // 注意：Win10Actions是结构体，不能与null比较，直接绑定事件
@@ -101,7 +109,6 @@ public class Mod_Cam : Module
         // 获取跟随对象
         CameraFollowItem = GetComponentInParent<Item>();
         Player = CameraFollowItem as Player;
-        ResolveChunkLoader();
     
         // 直接在当前位置实例化相机预制体
         if (CamPrefab != null)
@@ -140,12 +147,14 @@ public class Mod_Cam : Module
         {
             CacheCameraFollowDefaults();
             LoadPovValue();
+            povValue = ClampPovValue(povValue);
             Vcam.m_Lens.OrthographicSize = povValue;
             if (ControllerCamera != null)
                 ControllerCamera.orthographicSize = povValue;
             ApplyCameraFollowSettings();
         }
         GameController._mainCamera = ControllerCamera;
+        BindWorldAudioListener();
     
         // 重置旋转
         transform.rotation = Quaternion.identity;
@@ -160,6 +169,7 @@ public class Mod_Cam : Module
     private void OnDestroy()
     {
         CameraUserSettings.Changed -= HandleCameraSettingsChanged;
+        ClearWorldAudioListener();
 
         // 注销事件
         if (GameController != null && GameController._inputActions != null)
@@ -173,6 +183,27 @@ public class Mod_Cam : Module
             Destroy(instantiatedCamera);
         }
     }
+    #endregion
+
+    #region 玩家听音位置
+
+    // 本机玩家拥有世界听音中心，相机只提供屏幕左右方向和音频输出监听器。
+    private void BindWorldAudioListener()
+    {
+        if (Player == null || !Player.IsLocalProfile || ControllerCamera == null)
+            return;
+
+        AudioListener listener = ControllerCamera.GetComponent<AudioListener>();
+        if (listener != null)
+            AudioService.Instance.SetWorldListener(Player.transform, listener);
+    }
+
+    private void ClearWorldAudioListener()
+    {
+        if (Player != null && AudioService.HasInstance)
+            AudioService.Instance.ClearWorldListener(Player.transform);
+    }
+
     #endregion
 
     #region 镜头预判设置
@@ -239,7 +270,8 @@ public class Mod_Cam : Module
     /// <param name="context"></param>
     public void PovValueChanged(InputAction.CallbackContext context)
     {
-        if (GameController != null && GameController.IsGameplayInputLocked)
+        if (GameController != null &&
+            (GameController.IsGameplayInputLocked || GameController.IsDropShortcutHeld))
         {
             return;
         }
@@ -258,20 +290,10 @@ public class Mod_Cam : Module
     public void ChangeCameraView(float delta)
     {
         if (Vcam == null) return;
-
-        povValue += delta;
-        povValue = ClampPovValue(povValue);
-        Vcam.m_Lens.OrthographicSize = povValue;
-        if (ControllerCamera != null)
-            ControllerCamera.orthographicSize = povValue;
-        ApplyCameraFollowSettings();
-
-        ResolveChunkLoader()?.RefreshChunksForCameraView();
-
-        // Debug.Log($"视野范围修改为：{Vcam.m_Lens.OrthographicSize}");
+        SetOrthographicSize(povValue + delta);
     }
 
-    /// <summary>Sets an absolute gameplay view size and refreshes the streamed Chunk window.</summary>
+    /// <summary>设置相机正交视野；区块加载窗口由区块配置独立控制。</summary>
     public void SetOrthographicSize(float value)
     {
         if (Vcam == null)
@@ -281,7 +303,6 @@ public class Mod_Cam : Module
         if (ControllerCamera != null)
             ControllerCamera.orthographicSize = povValue;
         ApplyCameraFollowSettings();
-        ResolveChunkLoader()?.RefreshChunksForCameraView();
     }
 
     /// <summary>按双指间距变化调整正交视野；两指分开时镜头拉近，合拢时镜头拉远。</summary>
@@ -297,27 +318,23 @@ public class Mod_Cam : Module
         SetOrthographicSize(CurrentOrthographicSize - screenDistanceDelta * safeSensitivity);
     }
 
-    public void EnableUnlimitedView()
+    /// <summary>原子设置 GM 视野上限模式和正交尺寸，有限档可独立扩展普通玩法上限。</summary>
+    public void SetViewLimitAndSize(float value, bool unlimited, float finiteMaxOverride)
     {
-        _unlimitedViewEnabled = true;
-    }
-
-    /// <summary>相机与区块加载器是玩家下的兄弟模块，通过玩家根节点解析而不是只查父级。</summary>
-    private Mod_ChunkLoader ResolveChunkLoader()
-    {
-        if (_chunkLoader != null)
-            return _chunkLoader;
-
-        Item owner = CameraFollowItem != null ? CameraFollowItem : GetComponentInParent<Item>();
-        if (owner != null)
-            _chunkLoader = owner.GetComponentInChildren<Mod_ChunkLoader>(true);
-        return _chunkLoader;
+        _unlimitedViewEnabled = unlimited;
+        _adminFiniteViewMaxOverride = unlimited
+            ? 0f
+            : Mathf.Max(MaxPovValue, finiteMaxOverride);
+        SetOrthographicSize(value);
     }
 
     /// <summary>按普通玩法上限或管理员无限权限约束镜头正交尺寸。</summary>
     private float ClampPovValue(float value)
     {
-        return Mathf.Max(MinPovValue, _unlimitedViewEnabled ? value : Mathf.Min(value, MaxPovValue));
+        float finiteMax = _adminFiniteViewMaxOverride > 0f
+            ? _adminFiniteViewMaxOverride
+            : MaxPovValue;
+        return Mathf.Max(MinPovValue, _unlimitedViewEnabled ? value : Mathf.Min(value, finiteMax));
     }
     #endregion
 
@@ -329,6 +346,8 @@ public class Mod_Cam : Module
             if (saved != null)
             {
                 povValue = saved.PovValue;
+                _unlimitedViewEnabled = saved.UnlimitedViewEnabled;
+                _adminFiniteViewMaxOverride = saved.AdminFiniteViewMaxOverride;
                 return;
             }
         }
@@ -342,6 +361,11 @@ public class Mod_Cam : Module
     private void SavePovValue()
     {
         if (ModData == null) return;
-        ModData.WriteData(new CameraFollowSaveData { PovValue = povValue });
+        ModData.WriteData(new CameraFollowSaveData
+        {
+            PovValue = povValue,
+            UnlimitedViewEnabled = _unlimitedViewEnabled,
+            AdminFiniteViewMaxOverride = _adminFiniteViewMaxOverride
+        });
     }
 }

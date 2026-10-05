@@ -10,6 +10,7 @@ namespace FlatWorld.Audio
     /// 跨场景音频服务：事件解析、声源池、并发限制、优先级抢占、淡入淡出和用户音量。
     /// </summary>
     [DisallowMultipleComponent]
+    [DefaultExecutionOrder(10000)]
     public sealed class AudioService : MonoBehaviour, ISettingsProvider
     {
         private const string RuntimeConfigResourcePath = "Audio/AudioRuntimeConfig";
@@ -46,6 +47,9 @@ namespace FlatWorld.Audio
         private int maxVoices = 48;
         private int totalVoices;
         private int nextVoiceId = 1;
+
+        private Transform listenerTarget;
+        private AudioListener worldListener;
 
         public static AudioService Instance
         {
@@ -86,6 +90,8 @@ namespace FlatWorld.Audio
             public AudioSource Source;
             public AudioCue Cue;
             public Transform FollowTarget;
+            public Vector3 WorldPosition;
+            public bool IsSpatial;
             public int Id;
             public float StartedAt;
             public float BaseGain;
@@ -117,9 +123,6 @@ namespace FlatWorld.Audio
             for (int i = activeVoices.Count - 1; i >= 0; i--)
             {
                 Voice voice = activeVoices[i];
-                if (voice.FollowTarget != null)
-                    voice.GameObject.transform.position = voice.FollowTarget.position;
-
                 if (voice.FadeSpeed > 0f)
                 {
                     float target = voice.Stopping ? 0f : 1f;
@@ -147,6 +150,59 @@ namespace FlatWorld.Audio
             if (instance == this)
                 instance = null;
         }
+
+        #region 世界音效空间定位
+
+        // 听音以玩家为中心，把声源投影到相机监听器的 XY 平面，排除镜头高度和前探偏移。
+        public void SetWorldListener(Transform target, AudioListener listener)
+        {
+            listenerTarget = target;
+            worldListener = listener;
+        }
+
+        public void ClearWorldListener(Transform target)
+        {
+            if (listenerTarget != target)
+                return;
+
+            listenerTarget = null;
+            worldListener = null;
+        }
+
+        private bool HasWorldListener => listenerTarget != null &&
+            listenerTarget.gameObject.activeInHierarchy &&
+            worldListener != null && worldListener.isActiveAndEnabled;
+
+        private static Vector3 ResolveWorldPosition(AudioPlayOptions options)
+        {
+            return options.FollowTarget != null ? options.FollowTarget.position : options.WorldPosition;
+        }
+
+        private void LateUpdate()
+        {
+            for (int i = 0; i < activeVoices.Count; i++)
+                UpdateSpatialPosition(activeVoices[i]);
+        }
+
+        private void UpdateSpatialPosition(Voice voice)
+        {
+            if (!voice.IsSpatial)
+                return;
+
+            bool hasListener = HasWorldListener;
+            voice.Source.mute = !hasListener;
+            if (!hasListener)
+                return;
+
+            if (voice.FollowTarget != null)
+                voice.WorldPosition = voice.FollowTarget.position;
+
+            Vector3 offset = voice.WorldPosition - listenerTarget.position;
+            offset.z = 0f;
+            voice.GameObject.transform.position = worldListener.transform.position + offset;
+        }
+
+        #endregion
 
         #region 设置提供者
 
@@ -284,6 +340,17 @@ namespace FlatWorld.Audio
                 return AudioHandle.Invalid;
 
             options.Normalize();
+            bool isSpatial = cue.SpatialBlend > 0f &&
+                (options.HasWorldPosition || options.FollowTarget != null);
+            bool isLooping = options.OverrideLoop ? options.Loop : cue.Loop;
+            Vector3 worldPosition = ResolveWorldPosition(options);
+            // 范围外的短音不占声源和冷却；循环音保留句柄，靠近时可以重新听见。
+            if (isSpatial && !isLooping &&
+                (!HasWorldListener || Vector2.Distance(worldPosition, listenerTarget.position) >= cue.MaxDistance))
+            {
+                return AudioHandle.Invalid;
+            }
+
             AudioClip clip = cue.SelectClip();
             if (clip == null)
             {
@@ -332,31 +399,29 @@ namespace FlatWorld.Audio
             voice.Id = voiceId;
             voice.Cue = cue;
             voice.FollowTarget = options.FollowTarget;
+            voice.WorldPosition = worldPosition;
+            voice.IsSpatial = isSpatial;
             voice.StartedAt = now;
             voice.BaseGain = Mathf.Max(0f, cue.Volume.Sample() * options.VolumeScale);
             voice.Fade = options.FadeIn > 0f ? 0f : 1f;
             voice.FadeSpeed = options.FadeIn > 0f ? 1f / options.FadeIn : 0f;
             voice.Stopping = false;
 
-            Transform voiceTransform = voice.GameObject.transform;
-            if (options.FollowTarget != null)
-                voiceTransform.position = options.FollowTarget.position;
-            else if (options.HasWorldPosition)
-                voiceTransform.position = options.WorldPosition;
-            else
-                voiceTransform.localPosition = Vector3.zero;
-
             AudioSource source = voice.Source;
             source.clip = clip;
-            source.loop = options.OverrideLoop ? options.Loop : cue.Loop;
+            source.loop = isLooping;
             source.pitch = Mathf.Clamp(cue.Pitch.Sample() * options.PitchScale, 0.01f, 3f);
-            source.spatialBlend = cue.SpatialBlend;
+            source.spatialBlend = isSpatial ? 1f : 0f;
+            source.panStereo = 0f;
+            source.spread = 0f;
+            source.mute = false;
             source.minDistance = cue.MinDistance;
             source.maxDistance = cue.MaxDistance;
             source.priority = cue.Priority;
-            source.rolloffMode = cue.RolloffMode;
+            source.rolloffMode = isSpatial ? AudioRolloffMode.Linear : cue.RolloffMode;
             source.outputAudioMixerGroup = ResolveOutput(cue);
             source.dopplerLevel = 0f;
+            UpdateSpatialPosition(voice);
             ApplyVolume(voice);
 
             activeVoices.Add(voice);
@@ -541,6 +606,10 @@ namespace FlatWorld.Audio
             voice.Source.clip = null;
             voice.Source.outputAudioMixerGroup = null;
             voice.FollowTarget = null;
+            voice.WorldPosition = Vector3.zero;
+            voice.IsSpatial = false;
+            voice.Source.mute = false;
+            voice.Source.panStereo = 0f;
             voice.Cue = null;
             voice.Id = 0;
             voice.Fade = 1f;

@@ -18,6 +18,18 @@ namespace FlatWorld.GameplayMCP
         Group = "core")]
     public static class GameplayHydrologyDebugTool
     {
+        #region 统一输入输出
+
+        /// <summary>按需返回数据，错误与分页状态保持完整。</summary>
+        public static object HandleCommand(JObject parameters)
+        {
+            return GameplayMcpOutput.Invoke("gameplay_hydrology_debug", parameters, ExecuteCommand, true);
+        }
+
+        #endregion
+
+        public sealed class Parameters : GameplayMcpOutputParameters { }
+
         private readonly struct FlowCell
         {
             public FlowCell(Int2 direction, float depth)
@@ -38,7 +50,7 @@ namespace FlatWorld.GameplayMCP
         };
 
         /// <summary>读取当前 Runtime Chunk 的 riverDepth / riverFlow 环境层。</summary>
-        public static object HandleCommand(JObject parameters)
+        private static object ExecuteCommand(JObject parameters)
         {
             ChunkMgr chunkMgr = ChunkMgr.ExistingInstance;
             if (chunkMgr == null)

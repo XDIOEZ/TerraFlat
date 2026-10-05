@@ -95,6 +95,26 @@ public class ItemMods
         return typed;
     }
 
+    /// <summary>按能力接口解析唯一模块，让玩法模块依赖能力而不是具体实现类。</summary>
+    public T RequireSingleCapability<T>() where T : class
+    {
+        T resolved = null;
+        int count = 0;
+        foreach (Module module in Mods.Values)
+        {
+            if (module is not T capability)
+                continue;
+            resolved = capability;
+            count++;
+        }
+
+        if (count == 0)
+            throw new InvalidOperationException($"物品 {_owner?.name} 缺少必需能力：{typeof(T).Name}");
+        if (count > 1)
+            throw new InvalidOperationException($"物品 {_owner?.name} 的能力 {typeof(T).Name} 必须唯一，实际数量：{count}");
+        return resolved;
+    }
+
     /// <summary>
     /// Resolves a persisted module ID. Older entity prefabs can initialize a module
     /// with a shared runtime ID (for example, the generic AI ID), while their saved
@@ -145,15 +165,22 @@ public class ItemMods
         // 所有模块索引统一从同一处建立身份，禁止空 ID/Name 进入字典。
         mod.EnsureRuntimeIdentity();
 
-        // 添加到 Mods
-        Mods[mod._Data.Name] = mod;
+        string stableName = mod._Data.StableName;
+        string moduleId = mod._Data.ModuleId;
+        if (Mods.TryGetValue(stableName, out Module existing) && existing != mod)
+            throw new InvalidOperationException(
+                $"物品 {_owner?.name} 存在重复 StableName：{stableName}。模块实例名必须稳定且唯一。");
 
-        if (Mods_List.ContainsKey(mod._Data.ID) == false)
+        // StableName 是 Item 内唯一实例键；ModuleId 只表示能力类型，可一对多。
+        Mods[stableName] = mod;
+
+        if (Mods_List.ContainsKey(moduleId) == false)
         {
-            Mods_List[mod._Data.ID] = new List<Module>();
+            Mods_List[moduleId] = new List<Module>();
         }
         // 添加到 Mods_List
-        Mods_List[mod._Data.ID].Add(mod);
+        if (!Mods_List[moduleId].Contains(mod))
+            Mods_List[moduleId].Add(mod);
         _owner?.MarkModuleScheduleDirty();
         _owner?.NotifyRuntimeStructureChanged();
     }
@@ -161,15 +188,15 @@ public class ItemMods
     public void RemoveMod(Module mod)
     {
         // 从 Mods 中移除
-        Mods.Remove(mod._Data.Name);
+        Mods.Remove(mod._Data.StableName);
 
         // 从 Mods_List 中移除
-        if (Mods_List.TryGetValue(mod._Data.ID, out var modList))
+        if (Mods_List.TryGetValue(mod._Data.ModuleId, out var modList))
         {
             modList.Remove(mod);
             // 可选：若列表为空可移除 key
             if (modList.Count == 0)
-                Mods_List.Remove(mod._Data.ID);
+                Mods_List.Remove(mod._Data.ModuleId);
         }
 
         _owner?.MarkModuleScheduleDirty();
@@ -178,9 +205,9 @@ public class ItemMods
 
     public bool HasMod(Module mod)
     {
-        if (mod == null || string.IsNullOrEmpty(mod._Data.Name))
+        if (mod == null || string.IsNullOrEmpty(mod._Data.StableName))
             return false;
 
-        return Mods.ContainsKey(mod._Data.Name);
+        return Mods.ContainsKey(mod._Data.StableName);
     }
 }

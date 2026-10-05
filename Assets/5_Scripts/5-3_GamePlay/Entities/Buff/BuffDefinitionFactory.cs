@@ -86,10 +86,14 @@ public static class BuffDefinitionFactory
             TickIntervalSeconds = dto.TickIntervalSeconds,
             StackMode = ParseStackMode(dto.StackMode, id),
             MaxStacks = dto.MaxStacks,
+            DecayStacksOnExpiry = dto.DecayStacksOnExpiry,
             VisualBaseScale = dto.VisualBaseScale,
             VisualScalePerStack = dto.VisualScalePerStack,
             WaterStackIntervalSeconds = dto.WaterStackIntervalSeconds,
             WaterStacksPerDepthLevel = dto.WaterStacksPerDepthLevel,
+            RainStackIntervalSeconds = dto.RainStackIntervalSeconds,
+            RainMaxStacks = dto.RainMaxStacks,
+            RainReferenceIntensity = dto.RainReferenceIntensity,
             DrinkDurationExtensionSeconds = dto.DrinkDurationExtensionSeconds
         };
 
@@ -104,6 +108,10 @@ public static class BuffDefinitionFactory
             throw new InvalidDataException($"Buff {id} 是永久 Buff，不能配置饮水延时");
         if (definition.StackMode == BuffStackMode.AddStacks && definition.DurationSeconds == 0f)
             throw new InvalidDataException($"Buff {id} 叠层持续时间必须为正数或 null");
+        if (definition.DecayStacksOnExpiry &&
+            (definition.StackMode != BuffStackMode.AddStacks ||
+             !definition.DurationSeconds.HasValue || definition.DurationSeconds.Value <= 0f))
+            throw new InvalidDataException($"Buff {id} 逐层脱落必须使用 add_stacks 和正持续时间");
 
         var all = new List<BuffEffectDefinition>();
         var start = new List<BuffEffectDefinition>();
@@ -295,6 +303,19 @@ public static class BuffDefinitionFactory
             (!string.Equals(id, WetBuffIds.Wet, StringComparison.OrdinalIgnoreCase) ||
              ParseStackMode(dto.StackMode, id) != BuffStackMode.AddStacks))
             throw new InvalidDataException($"Buff {id} 水体叠层参数只用于 add_stacks 潮湿定义");
+
+        ValidateFinite(dto.RainStackIntervalSeconds, $"Buff {id} rainStackIntervalSeconds");
+        ValidateFinite(dto.RainReferenceIntensity, $"Buff {id} rainReferenceIntensity");
+        if (dto.RainStackIntervalSeconds < 0f || dto.RainMaxStacks < 0 || dto.RainMaxStacks > dto.MaxStacks ||
+            dto.RainReferenceIntensity < 0f || dto.RainReferenceIntensity > 1f)
+            throw new InvalidDataException($"Buff {id} 淋雨周期、来源层数或基准雨量超出有效范围");
+        bool rainEnabled = dto.RainStackIntervalSeconds > 0f;
+        if (rainEnabled != (dto.RainMaxStacks > 0) || rainEnabled != (dto.RainReferenceIntensity > 0f))
+            throw new InvalidDataException($"Buff {id} 淋雨周期、来源层数和基准雨量必须同时启用或同时为零");
+        if (rainEnabled &&
+            (!string.Equals(id, WetBuffIds.Wet, StringComparison.OrdinalIgnoreCase) ||
+             ParseStackMode(dto.StackMode, id) != BuffStackMode.AddStacks))
+            throw new InvalidDataException($"Buff {id} 淋雨叠层参数只用于 add_stacks 潮湿定义");
     }
 
     #endregion

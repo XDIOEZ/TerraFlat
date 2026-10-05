@@ -1,36 +1,35 @@
 using UnityEngine;
 using UnityEngine.UI;
 
-/// <summary>
-/// 陶罐倾倒时的像素液流表现。只负责 UI 可视化：起点跟随罐口旋转，液流在重力作用下向下弯曲，
-/// 并以分段水片的方式逐渐衰减；真实液体扣减仍由 <see cref="Mod_WaterVessel"/> 结算。
-/// </summary>
+/// <summary>容器倾倒时的连续液流网格；表现按帧持续，玩法液量仍只由 Mod_WaterVessel 按整份结算。</summary>
 [RequireComponent(typeof(CanvasRenderer))]
 public sealed class WaterVesselPourGraphic : MaskableGraphic
 {
     private const float VisibleThreshold = 0.01f;
-    private const int StreamSegments = 18; // 原 9 段翻倍，减小折线感并保持曲线连续。
-    private const float JointOverlapRatio = 0.08f; // 相邻水片在接头处轻微重叠，消除像素栅格造成的黑缝。
-    private const float MouthBridgeLengthRatio = 0.1f; // 从嘴沿向罐内延伸一小段前景液桥，跨过厚陶土边缘连接罐内水体。
-    private const float MouthBridgeWidthRatio = 0.52f; // 液桥比外部水柱略窄，避免覆盖过多罐口像素。
-    private const float FlowHoldMinSeconds = 0.3f; // 最后一次真实扣液后继续保留的最短视觉反馈时间。
-    private const float FlowHoldMaxSeconds = 0.65f; // 大流量时延长水柱停留，数值结算仍保持即时完成。
-    private const float FlowFadeOutPerSecond = 2f; // 尾段缓慢收束，避免数值归零后水柱瞬间消失。
+    private const int StreamRows = 30; // 纵向采样足够平滑，同时保持 UI 网格很轻。
+    private const int CrossSectionColumns = 5; // 透明边缘、主体和中央高光组成有体积感的液流截面。
+    private const float FlowHoldMinSeconds = 0.22f;
+    private const float FlowHoldMaxSeconds = 0.48f;
+    private const float FlowFadeOutPerSecond = 2.8f;
+    private static readonly float[] CrossSectionOffsets = { -0.5f, -0.36f, 0f, 0.36f, 0.5f };
 
-    private Vector2 outletPosition; // 由正式 Prefab 的罐口锚点提供，不再从罐体中心猜测出水位置。
-    private Vector2 outletDirection = Vector2.up; // 罐口朝外方向，随罐体旋转同步更新。
+    private Vector2 outletPosition;
+    private Vector2 outletDirection = Vector2.up;
+    private Vector2 outletVelocity;
+    private bool hasOutletPose;
     private float flow;
     private float targetFlow;
     private float pulseUntil;
-    private float nextFrame;
-    private int frame;
+    private float phase;
     private Color bodyColor = Color.white;
     private Color surfaceColor = Color.white;
     private Color detailColor = Color.white;
     private float murkiness;
-    private float viscosity; // 与罐内液面共用的视觉黏稠度，零保持普通水流。
+    private float viscosity;
 
-    /// <summary>有真实液体流失时触发一次液流脉冲；多次连续触发会自然叠加为持续倾倒。</summary>
+    #region 液流驱动
+
+    /// <summary>倾倒期间按帧维持液流，离散的一份结算不会让水柱出现断帧。</summary>
     public void Emit(float normalizedFlow, Color body, Color surface, Color detail, float liquidMurkiness, float liquidViscosity = 0f)
     {
         bodyColor = body;
@@ -41,32 +40,41 @@ public sealed class WaterVesselPourGraphic : MaskableGraphic
 
         float strength = Mathf.Clamp01(normalizedFlow);
         targetFlow = Mathf.Max(targetFlow, strength);
-        flow = Mathf.Max(flow, Mathf.Lerp(0.22f, 0.92f, strength));
+        flow = Mathf.Max(flow, Mathf.Lerp(0.2f, 0.94f, strength));
         pulseUntil = Mathf.Max(
             pulseUntil,
-            Time.unscaledTime + Mathf.Lerp(FlowHoldMinSeconds, FlowHoldMaxSeconds, strength) * Mathf.Lerp(1f, 2f, viscosity));
+            Time.unscaledTime + Mathf.Lerp(FlowHoldMinSeconds, FlowHoldMaxSeconds, strength) * Mathf.Lerp(1f, 1.8f, viscosity));
         SetVerticesDirty();
     }
 
-    /// <summary>同步真实罐口锚点与朝向；液流始终从 Prefab 指定的嘴沿位置生成。</summary>
+    /// <summary>同步 Prefab 罐口真实位置、朝向和移动速度，让水柱继承容器运动惯性。</summary>
     public void SetOutletPose(Vector2 position, Vector2 direction)
     {
         if (direction.sqrMagnitude <= 0.0001f)
             return;
 
         direction.Normalize();
+        if (hasOutletPose)
+        {
+            float deltaTime = Mathf.Max(Time.unscaledDeltaTime, 1f / 120f);
+            Vector2 measuredVelocity = (position - outletPosition) / deltaTime;
+            outletVelocity = Vector2.Lerp(outletVelocity, measuredVelocity, 0.34f);
+        }
+        else
+        {
+            outletVelocity = Vector2.zero;
+            hasOutletPose = true;
+        }
+
         bool unchanged = (outletPosition - position).sqrMagnitude <= 0.0001f &&
                          Vector2.Dot(outletDirection, direction) >= 0.9999f;
         outletPosition = position;
         outletDirection = direction;
-        if (unchanged)
-            return;
-
-        if (flow > VisibleThreshold)
+        if (!unchanged && flow > VisibleThreshold)
             SetVerticesDirty();
     }
 
-    /// <summary>关闭/切换容器时立即清空；普通松手则让已有液流自行衰减。</summary>
+    /// <summary>切换目标时可立即清空；普通松手则让当前水柱自然收束。</summary>
     public void Clear(bool immediate)
     {
         targetFlow = 0f;
@@ -75,17 +83,24 @@ public sealed class WaterVesselPourGraphic : MaskableGraphic
             return;
 
         flow = 0f;
+        outletVelocity = Vector2.zero;
         SetVerticesDirty();
     }
 
     private void Update()
     {
+        float deltaTime = Time.unscaledDeltaTime;
+        if (deltaTime <= 0f)
+            return;
+
         if (Time.unscaledTime >= pulseUntil)
             targetFlow = 0f;
 
-        float speed = (targetFlow > flow ? 5.5f : FlowFadeOutPerSecond) * Mathf.Lerp(1f, 0.38f, viscosity);
+        float speed = (targetFlow > flow ? 6.8f : FlowFadeOutPerSecond) * Mathf.Lerp(1f, 0.42f, viscosity);
         float previous = flow;
-        flow = Mathf.MoveTowards(flow, targetFlow, speed * Time.unscaledDeltaTime);
+        flow = Mathf.MoveTowards(flow, targetFlow, speed * deltaTime);
+        outletVelocity = Vector2.Lerp(outletVelocity, Vector2.zero, 1f - Mathf.Exp(-deltaTime * 7f));
+        phase += deltaTime * Mathf.Lerp(13f, 3.5f, viscosity);
 
         if (flow <= VisibleThreshold && targetFlow <= VisibleThreshold)
         {
@@ -95,119 +110,134 @@ public sealed class WaterVesselPourGraphic : MaskableGraphic
             return;
         }
 
-        if (Time.unscaledTime < nextFrame && Mathf.Approximately(previous, flow))
-            return;
-
-        nextFrame = Time.unscaledTime + 1f / 18f;
-        frame++;
+        // 连续网格按帧更新，避免旧的 18Hz 分段水片抖动。
         SetVerticesDirty();
     }
 
-    /// <summary>先用短液桥跨过罐口厚边，再从真实嘴沿向外延伸并受重力下弯。</summary>
+    #endregion
+
+    #region 连续液流网格
+
     protected override void OnPopulateMesh(VertexHelper mesh)
     {
         mesh.Clear();
-        if (flow <= VisibleThreshold)
+        if (flow <= VisibleThreshold || !hasOutletPose)
             return;
 
         Rect rect = rectTransform.rect;
-        float size = Mathf.Min(rect.width, rect.height);
-        Vector2 mouth = outletPosition;
-        Vector2 outward = outletDirection;
-        float launchDistance = Mathf.Lerp(size * 0.1f, size * 0.26f, flow) * Mathf.Lerp(1f, 0.32f, viscosity);
-        float fallDistance = Mathf.Lerp(size * 0.32f, size * 0.68f, flow);
-        float baseWidth = Mathf.Lerp(size * 0.025f, size * 0.085f, flow) * Mathf.Lerp(1f, 1.28f, murkiness) *
-                          Mathf.Lerp(1f, 0.62f, viscosity);
+        float size = Mathf.Max(1f, Mathf.Min(rect.width, rect.height));
+        Vector2 outward = outletDirection.normalized;
+        float baseWidth = Mathf.Lerp(size * 0.026f, size * 0.082f, flow) *
+                          Mathf.Lerp(1f, 1.2f, viscosity) *
+                          Mathf.Lerp(1f, 1.12f, murkiness);
 
-        // 概念稿的罐腹与嘴沿之间有一段厚陶土边缘；液流位于前景层时，用窄液桥覆盖这段视觉断点。
-        float bridgeWidth = Mathf.Max(size * 0.012f, baseWidth * MouthBridgeWidthRatio);
-        Vector2 bridgeStart = mouth - outward * (size * MouthBridgeLengthRatio);
-        Vector2 bridgeEnd = mouth + outward * (bridgeWidth * 0.35f);
-        AddRibbon(mesh, bridgeStart, bridgeEnd, bridgeWidth, bodyColor);
+        DrawMouthBridge(mesh, size, outward, baseWidth);
+        DrawBallisticStream(mesh, size, outward, baseWidth);
+    }
 
-        // 主水柱从嘴沿本身开始，并与液桥轻微重叠，根部与第一段之间不再留空。
-        Vector2 previous = mouth - outward * (bridgeWidth * JointOverlapRatio);
-        for (int i = 1; i <= StreamSegments; i++)
+    /// <summary>用同一截面网格跨过厚罐口，保证罐内液体和外部水柱视觉连续。</summary>
+    private void DrawMouthBridge(VertexHelper mesh, float size, Vector2 outward, float baseWidth)
+    {
+        Vector2 normal = new Vector2(-outward.y, outward.x);
+        float bridgeLength = size * 0.085f;
+        Vector2 from = outletPosition - outward * bridgeLength;
+        Vector2 to = outletPosition + outward * (baseWidth * 0.16f);
+        int previousRow = -1;
+
+        for (int i = 0; i < 4; i++)
         {
-            float t = i / (float)StreamSegments;
-            // 段数翻倍后仍按整条液流的归一化位置计算波相位，避免因为细分增加而把波纹频率也翻倍。
-            float wave = Mathf.Sin(frame * 0.55f * Mathf.Lerp(1f, 0.15f, viscosity) + t * 13.05f) *
-                         size * 0.012f * flow * Mathf.Lerp(1f, 0.72f, murkiness) * Mathf.Lerp(1f, 0.15f, viscosity);
-            Vector2 current = mouth +
-                              outward * (launchDistance * t) +
-                              Vector2.down * (fallDistance * t * t) +
-                              Vector2.right * wave;
-
-            float width = baseWidth * Mathf.Lerp(1f, Mathf.Lerp(0.58f, 0.27f, viscosity), t);
-            Vector2 segmentDirection = (current - previous).normalized;
-            Vector2 start = previous - segmentDirection * width * JointOverlapRatio;
-            Color ribbonColor = viscosity <= 0.01f && i % (murkiness > 0.35f ? 10 : 6) == 0
-                ? Color.Lerp(bodyColor, surfaceColor, Mathf.Lerp(1f, 0.38f, murkiness))
-                : bodyColor;
-            AddRibbon(mesh, start, current, width, ribbonColor);
-
-            // 黏稠液流保持连续，仅用细长高光表现拉丝，不把蜜流画成断续水片。
-            if (viscosity > 0.01f)
-            {
-                Color gloss = surfaceColor;
-                gloss.a *= viscosity * 0.65f;
-                Vector2 offset = new Vector2(-segmentDirection.y, segmentDirection.x) * width * 0.18f;
-                AddRibbon(mesh, start + offset, current + offset, width * 0.18f, gloss);
-            }
-
-            if (murkiness > 0.05f && i % 4 == 0)
-            {
-                float phase = frame * 0.31f + i * 1.91f;
-                Vector2 fleckCenter = Vector2.Lerp(start, current, 0.58f) +
-                                      new Vector2(Mathf.Sin(phase), Mathf.Cos(phase * 0.73f)) * width * 0.17f;
-                float fleckSize = size * Mathf.Lerp(0.008f, 0.018f, murkiness) * (0.75f + 0.25f * Mathf.Sin(phase));
-                Color fleckColor = detailColor;
-                fleckColor.a *= 0.82f;
-                AddSquare(mesh, fleckCenter, fleckSize, fleckColor);
-            }
-            previous = current;
-        }
-
-        // 拉丝末端保留一颗下坠的厚滴，随整股液流一起收细消失。
-        if (viscosity > 0.01f)
-        {
-            float dropWidth = baseWidth * viscosity * 0.65f;
-            Vector2 tip = previous + Vector2.down * dropWidth * 1.6f;
-            AddRibbon(mesh, previous, tip, dropWidth, bodyColor);
-            AddRibbon(mesh, previous, Vector2.Lerp(previous, tip, 0.6f), dropWidth * 0.2f, surfaceColor);
+            float t = i / 3f;
+            Vector2 center = Vector2.Lerp(from, to, t);
+            float width = baseWidth * Mathf.Lerp(0.54f, 1f, t);
+            int row = AddCrossSection(mesh, center, normal, width, Mathf.Lerp(0.74f, 1f, t));
+            if (previousRow >= 0)
+                ConnectRows(mesh, previousRow, row);
+            previousRow = row;
         }
     }
 
-    /// <summary>添加一段沿路径方向旋转的无贴图水片。</summary>
-    private static void AddRibbon(VertexHelper mesh, Vector2 from, Vector2 to, float width, Color color)
+    /// <summary>沿受重力加速的弹道生成连续条带，截面根据速度自动收细，模拟真实液柱拉伸。</summary>
+    private void DrawBallisticStream(VertexHelper mesh, float size, Vector2 outward, float baseWidth)
     {
-        Vector2 direction = to - from;
-        if (direction.sqrMagnitude <= 0.0001f || width <= 0f)
-            return;
+        float launchSpeed = Mathf.Lerp(size * 0.82f, size * 1.78f, flow) * Mathf.Lerp(1f, 0.58f, viscosity);
+        Vector2 inheritedVelocity = Vector2.ClampMagnitude(outletVelocity, size * 1.2f) * Mathf.Lerp(0.22f, 0.08f, viscosity);
+        Vector2 initialVelocity = outward * launchSpeed + inheritedVelocity;
+        float initialSpeed = Mathf.Max(size * 0.2f, initialVelocity.magnitude);
+        Vector2 gravity = Vector2.down * (size * Mathf.Lerp(4.7f, 5.8f, flow));
+        float travelTime = Mathf.Lerp(0.34f, 0.52f, flow) * Mathf.Lerp(1f, 0.82f, viscosity);
+        float turbulence = size * 0.012f * flow * Mathf.Lerp(1f, 0.08f, viscosity);
+        int previousRow = -1;
 
-        Vector2 normal = new Vector2(-direction.y, direction.x).normalized * (width * 0.5f);
-        int start = mesh.currentVertCount;
-        mesh.AddVert(from - normal, color, Vector2.zero);
-        mesh.AddVert(from + normal, color, Vector2.zero);
-        mesh.AddVert(to + normal, color, Vector2.zero);
-        mesh.AddVert(to - normal, color, Vector2.zero);
-        mesh.AddTriangle(start, start + 1, start + 2);
-        mesh.AddTriangle(start, start + 2, start + 3);
+        for (int i = 0; i < StreamRows; i++)
+        {
+            float t = i / (float)(StreamRows - 1);
+            float time = travelTime * t;
+            Vector2 velocity = initialVelocity + gravity * time;
+            Vector2 direction = velocity.sqrMagnitude > 0.0001f ? velocity.normalized : outward;
+            Vector2 normal = new Vector2(-direction.y, direction.x);
+            Vector2 center = outletPosition + initialVelocity * time + gravity * (0.5f * time * time);
+
+            float wave =
+                Mathf.Sin(phase + t * 11.2f) * 0.68f +
+                Mathf.Sin(phase * 0.63f + t * 19.7f + 1.4f) * 0.32f;
+            center += normal * (wave * turbulence * Mathf.SmoothStep(0f, 1f, t));
+
+            // 二维液柱按速度增大而收细；末端少量颈缩让高速水流更自然。
+            float speedRatio = initialSpeed / Mathf.Max(initialSpeed, velocity.magnitude);
+            float conservationScale = Mathf.Sqrt(Mathf.Clamp(speedRatio, 0.18f, 1.15f));
+            float neckingProgress = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.55f, 1f, t));
+            float necking = Mathf.Lerp(1f, 0.76f + 0.08f * Mathf.Sin(phase * 1.37f + t * 24f),
+                neckingProgress * (1f - viscosity));
+            float width = baseWidth * conservationScale * necking;
+            float alpha = Mathf.Lerp(1f, 0.78f, t);
+
+            int row = AddCrossSection(mesh, center, normal, width, alpha);
+            if (previousRow >= 0)
+                ConnectRows(mesh, previousRow, row);
+            previousRow = row;
+        }
     }
 
-    /// <summary>给浑浊液流添加少量泥沙颗粒，保持纯程序化且不依赖额外贴图。</summary>
-    private static void AddSquare(VertexHelper mesh, Vector2 center, float size, Color color)
+    /// <summary>每一排使用透明边缘 + 主体 + 高光，插值后形成柔和的液体横截面。</summary>
+    private int AddCrossSection(VertexHelper mesh, Vector2 center, Vector2 normal, float width, float alpha)
     {
-        if (size <= 0f)
-            return;
-
-        float half = size * 0.5f;
         int start = mesh.currentVertCount;
-        mesh.AddVert(center + new Vector2(-half, -half), color, Vector2.zero);
-        mesh.AddVert(center + new Vector2(-half, half), color, Vector2.zero);
-        mesh.AddVert(center + new Vector2(half, half), color, Vector2.zero);
-        mesh.AddVert(center + new Vector2(half, -half), color, Vector2.zero);
-        mesh.AddTriangle(start, start + 1, start + 2);
-        mesh.AddTriangle(start, start + 2, start + 3);
+        Color edge = MultiplyAlpha(bodyColor, 0f);
+        Color body = MultiplyAlpha(bodyColor, alpha);
+        Color highlightBase = Color.Lerp(surfaceColor, detailColor, murkiness * 0.22f);
+        Color highlight = MultiplyAlpha(
+            Color.Lerp(bodyColor, highlightBase, Mathf.Lerp(0.72f, 0.3f, murkiness)),
+            alpha * Mathf.Lerp(0.9f, 0.58f, murkiness));
+
+        for (int i = 0; i < CrossSectionColumns; i++)
+        {
+            float offset = CrossSectionOffsets[i] * width;
+            Color vertexColor = i == 0 || i == CrossSectionColumns - 1
+                ? edge
+                : i == CrossSectionColumns / 2 ? highlight : body;
+            mesh.AddVert(center + normal * offset, vertexColor, Vector2.zero);
+        }
+        return start;
     }
+
+    private static void ConnectRows(VertexHelper mesh, int previousRow, int currentRow)
+    {
+        for (int i = 0; i < CrossSectionColumns - 1; i++)
+        {
+            int a = previousRow + i;
+            int b = previousRow + i + 1;
+            int c = currentRow + i + 1;
+            int d = currentRow + i;
+            mesh.AddTriangle(a, b, c);
+            mesh.AddTriangle(a, c, d);
+        }
+    }
+
+    private static Color MultiplyAlpha(Color color, float multiplier)
+    {
+        color.a *= Mathf.Clamp01(multiplier);
+        return color;
+    }
+
+    #endregion
 }

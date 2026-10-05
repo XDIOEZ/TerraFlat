@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using FlatWorld.WorldModel;
 using UnityEngine;
-using UnityEngine.Tilemaps;
 
 /// <summary>
 /// 把阻挡墙格的权威累计损伤表现为像素裂缝。
@@ -20,7 +19,6 @@ public sealed class ChunkTileDamageCrackRenderer : MonoBehaviour, IChunkViewRend
     [SerializeField, Range(0.1f, 1f)] private float minimumScale = 0.45f;
     [SerializeField, Range(0.5f, 1.5f)] private float maximumScale = 1.05f;
     [SerializeField, Range(0f, 1f)] private float minimumAlpha = 0.68f;
-    [SerializeField, Min(0)] private int sortingOrderOffset = 1;
 
     #endregion
 
@@ -53,10 +51,10 @@ public sealed class ChunkTileDamageCrackRenderer : MonoBehaviour, IChunkViewRend
 
         Unbind();
         tilemapRenderer ??= GetComponent<ChunkTilemapRenderer>();
-        if (tilemapRenderer.BlockingTilemapRenderer == null)
+        if (tilemapRenderer.BlockingMaterial == null)
         {
             throw new MissingComponentException(
-                "[ChunkTileDamageCrackRenderer] ChunkView 缺少阻挡层 TilemapRenderer。");
+                "[ChunkTileDamageCrackRenderer] ChunkView 缺少阻挡层材质。");
         }
 
         boundChunk = chunk;
@@ -159,11 +157,9 @@ public sealed class ChunkTileDamageCrackRenderer : MonoBehaviour, IChunkViewRend
 
     private void ConfigureRenderer(SpriteRenderer renderer)
     {
-        TilemapRenderer blockingRenderer = tilemapRenderer.BlockingTilemapRenderer;
         renderer.sprite = crackSprite;
-        renderer.sharedMaterial = blockingRenderer.sharedMaterial;
-        renderer.sortingLayerID = blockingRenderer.sortingLayerID;
-        renderer.sortingOrder = blockingRenderer.sortingOrder + sortingOrderOffset;
+        renderer.sharedMaterial = tilemapRenderer.BlockingMaterial;
+        WorldSortingManager.GetInstance().ApplyRenderer(renderer, WorldSortingManager.GroundMarkCategory);
     }
 
     private void HideCrack(Vector2Int localCell)

@@ -33,7 +33,7 @@ public partial class Mod_San : Module
 
     private bool _hasTriggeredDeath; // 防止重复触发死亡
     private Mod_PlayerTraits _playerTraits; // 玩家特质模块
-    private DamageReceiver _damageReceiver; // 生命模块
+    private Mod_DamageReceiver _damageReceiver; // 生命模块
 
 #endregion
 
@@ -135,7 +135,7 @@ public partial class Mod_San : Module
     private void ResolveDependencies()
     {
         _playerTraits = item.itemMods.GetMod_ByID<Mod_PlayerTraits>(Mod_PlayerTraits.ModuleId);
-        _damageReceiver = item.itemMods.GetMod_ByID<DamageReceiver>(ModText.Hp);
+        _damageReceiver = item.itemMods.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
     }
 
     private void TryTriggerDeath()
@@ -161,7 +161,7 @@ public partial class Mod_San : Module
             return;
         }
 
-        throw new MissingComponentException($"[Mod_San] 目标 {item.itemData.GameName} 缺少 Mod_PlayerTraits 与 DamageReceiver，无法执行理智归零死亡。");
+        throw new MissingComponentException($"[Mod_San] 目标 {item.itemData.GameName} 缺少 Mod_PlayerTraits 与 Mod_DamageReceiver，无法执行理智归零死亡。");
     }
 
 #endregion

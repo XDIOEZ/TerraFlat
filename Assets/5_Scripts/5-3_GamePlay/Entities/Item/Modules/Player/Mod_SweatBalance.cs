@@ -83,7 +83,7 @@ public sealed class Mod_SweatBalance : Module, IItemModuleDependencyBinder, ISta
         if (Data.HeatExposure >= heatstrokeSeconds)
         {
             // 中暑压力由持续体力流失表现，补水或降温后可恢复，吃盐不替代补水。
-            stamina.AddStamina(-deltaTime * 0.8f);
+            stamina.ConsumeStaminaPerSecond(StaminaConsumptionSources.HeatStress, 0.8f, deltaTime);
             if (!heatWarningShown) ItemActionFeedback.Show(item, "又热又渴，先补水，到凉快的地方休息。");
             heatWarningShown = true;
         }

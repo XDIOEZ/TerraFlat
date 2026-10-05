@@ -99,8 +99,8 @@ public sealed class BleedingDamageStatusRule : IDamageReceivedStatusRule
         if (tier == 0)
             return;
 
-        BuffManager buffManager = damageInfo.ReceiverItem?.itemMods?
-            .GetMod_ByID<BuffManager>(ModText.BuffManager);
+        Mod_BuffManager buffManager = damageInfo.ReceiverItem?.itemMods?
+            .GetMod_ByID<Mod_BuffManager>(ModText.Mod_BuffManager);
         if (buffManager == null)
             return;
 

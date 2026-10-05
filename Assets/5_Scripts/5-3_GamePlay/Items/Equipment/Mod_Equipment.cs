@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using MemoryPack;
 using UnityEngine;
@@ -12,7 +13,7 @@ public partial class Mod_EquipmentSaveData
 
 /// <summary>
 /// 装备系统模块 —— 独立继承 Module，统一管理装备栏 Inventory UI、交互面板与装备效果实例。
-/// 取代原先由 Mod_Inventory + Module_Equipment 分散实现的双模块方案。
+/// 取代原先由 Mod_Inventory + Mod_EquipmentRuntime 分散实现的双模块方案。
 /// </summary>
 public class Mod_Equipment : Module, IInventory, IInteractable, IInstanceUI
 {
@@ -36,6 +37,12 @@ public class Mod_Equipment : Module, IInventory, IInteractable, IInstanceUI
 
     List<ItemData> cached_ItemDatas = new();
 
+    public event Action EquipmentChanged;
+
+    public override ModuleTickMode TickMode => HasTickingEquipment()
+        ? ModuleTickMode.EveryFrame
+        : ModuleTickMode.Disabled;
+
     #endregion
 
     #region 生命周期
@@ -56,6 +63,7 @@ public class Mod_Equipment : Module, IInventory, IInteractable, IInstanceUI
 
     public override void Load()
     {
+        EquipmentInventory ??= new Inventory_Equipment();
         LoadSaveDataFromModule();
 
         // 设置所有者
@@ -63,12 +71,12 @@ public class Mod_Equipment : Module, IInventory, IInteractable, IInstanceUI
 
         // 设置默认目标背包
         var handMod = item.itemMods.GetMod_ByID(ModText.Hand);
-        EquipmentInventory.DefaultTarget_Inventory = handMod != null
-            ? handMod.GetComponent<Mod_Inventory>().inventory
-            : Inventory_Hand.PlayerHand;
+        Mod_Inventory handInventoryModule = handMod?.GetComponent<Mod_Inventory>();
+        // 通用装备模块不能偷偷绑定全局玩家手栏；AI/普通 Item 只使用自己的库存。
+        EquipmentInventory.DefaultTarget_Inventory = handInventoryModule?.inventory;
 
         // 初始化数据与控制器绑定
-        var ctrl = item.itemMods.GetMod_ByID<GameController>(ModText.Controller);
+        var ctrl = item.itemMods.GetMod_ByID<Mod_GameController>(ModText.Controller);
         EquipmentInventory.InitData();
         EquipmentInventory.BindController(ctrl);
 
@@ -79,6 +87,7 @@ public class Mod_Equipment : Module, IInventory, IInteractable, IInstanceUI
         EnsureEquipmentListSize();
         RebuildEquipmentRuntimeStateAfterLoad();
         RefreshBagStorageSlots();
+        item?.MarkModuleScheduleDirty();
 
         BindOpenPanelTrigger();
 
@@ -141,7 +150,10 @@ public class Mod_Equipment : Module, IInventory, IInteractable, IInstanceUI
         {
             if (list == null) continue;
             foreach (var equip in list)
-                equip.Update();
+            {
+                if (equip?.RequiresUpdate == true)
+                    equip.Update();
+            }
         }
     }
 
@@ -165,6 +177,26 @@ public class Mod_Equipment : Module, IInventory, IInteractable, IInstanceUI
         Interact_Start(playerItem);
     }
 
+    /// <summary>宿主存在其它当前可用交互时让出 E 键，装备能力不抢占传送门、机器等主玩法。</summary>
+    public bool CanInteract(Item playerItem)
+    {
+        if (item == null || playerItem == null || EquipmentInventory == null)
+            return false;
+
+        MonoBehaviour[] behaviours = item.GetComponentsInChildren<MonoBehaviour>(true);
+        for (int i = 0; i < behaviours.Length; i++)
+        {
+            MonoBehaviour behaviour = behaviours[i];
+            if (behaviour == null || behaviour is Mod_Equipment || !behaviour.gameObject.activeInHierarchy)
+                continue;
+
+            if (behaviour is IInteractable interactable && interactable.CanInteract(playerItem))
+                return false;
+        }
+
+        return true;
+    }
+
     public void OnInteractCancel(Item playerItem)
     {
         Interact_Stop(playerItem);
@@ -173,9 +205,9 @@ public class Mod_Equipment : Module, IInventory, IInteractable, IInstanceUI
     protected virtual void Interact_Start(Item playerItem)
     {
         EquipmentInventory.EnsurePanelCreated();
-        EquipmentInventory.basePanel.Toggle();
+        EquipmentInventory.basePanel?.Toggle();
 
-        var handInv = playerItem.GetComponentInChildren<Mod_Hand>()?.HandInventory;
+        var handInv = playerItem?.GetComponentInChildren<Mod_Hand>()?.HandInventory;
         if (handInv != null)
             EquipmentInventory.DefaultTarget_Inventory = handInv;
     }
@@ -220,6 +252,82 @@ public class Mod_Equipment : Module, IInventory, IInteractable, IInstanceUI
     #endregion
 
     #region 装备逻辑
+
+    /// <summary>AI、建筑和普通 Item 都可直接复用的装备入口，不依赖玩家输入或装备 UI。</summary>
+    public bool TryEquip(ItemData equipmentItem, string slotId, out ItemData displacedItem)
+    {
+        displacedItem = null;
+        if (equipmentItem == null || EquipmentInventory?.Data == null)
+            return false;
+
+        int index = EquipmentInventory.GetSlotIndex(slotId);
+        if (!EquipmentInventory.CanEquipAt(index, equipmentItem))
+            return false;
+
+        var transferSlot = new ItemSlot(-1) { itemData = equipmentItem };
+        EquipmentInventory.Data.ChangeItemData_Default(index, transferSlot);
+        displacedItem = transferSlot.itemData;
+        return EquipmentInventory.Data.itemSlots[index]?.itemData != null;
+    }
+
+    /// <summary>按装备自身标签自动选择兼容槽，AI 不需要知道玩家 UI 的槽位索引。</summary>
+    public bool TryEquip(ItemData equipmentItem, out string slotId, out ItemData displacedItem, bool replaceOccupied = false)
+    {
+        slotId = null;
+        displacedItem = null;
+        if (equipmentItem == null || EquipmentInventory?.Data == null)
+            return false;
+
+        int index = EquipmentInventory.FindCompatibleSlot(equipmentItem, preferEmpty: !replaceOccupied);
+        if (index < 0 || index >= EquipmentInventory.SlotRules.Count)
+            return false;
+
+        slotId = EquipmentInventory.SlotRules[index].Id;
+        return TryEquip(equipmentItem, slotId, out displacedItem);
+    }
+
+    public bool TryUnequip(string slotId, out ItemData unequippedItem)
+    {
+        unequippedItem = null;
+        if (EquipmentInventory?.Data == null)
+            return false;
+
+        int index = EquipmentInventory.GetSlotIndex(slotId);
+        if (index < 0 || index >= EquipmentInventory.Data.itemSlots.Count ||
+            EquipmentInventory.Data.itemSlots[index]?.itemData == null)
+            return false;
+
+        var transferSlot = new ItemSlot(-1);
+        EquipmentInventory.Data.ChangeItemData_Default(index, transferSlot);
+        unequippedItem = transferSlot.itemData;
+        return unequippedItem != null;
+    }
+
+    public ItemData GetEquippedItem(string slotId)
+    {
+        if (EquipmentInventory?.Data == null)
+            return null;
+
+        int index = EquipmentInventory.GetSlotIndex(slotId);
+        return index >= 0 && index < EquipmentInventory.Data.itemSlots.Count
+            ? EquipmentInventory.Data.itemSlots[index]?.itemData
+            : null;
+    }
+
+    /// <summary>是否至少穿戴了一件装备；潮湿衣物等表现只关心装备栏是否为空。</summary>
+    public bool HasAnyEquippedItem()
+    {
+        if (EquipmentInventory?.Data?.itemSlots == null)
+            return false;
+
+        foreach (ItemSlot slot in EquipmentInventory.Data.itemSlots)
+        {
+            if (slot?.itemData != null)
+                return true;
+        }
+
+        return false;
+    }
 
     /// <summary>重新挂载所有已装备收纳袋，兼容背包模块晚于装备模块恢复存档的顺序。</summary>
     public void RefreshBagStorageSlots()
@@ -321,10 +429,9 @@ public class Mod_Equipment : Module, IInventory, IInteractable, IInstanceUI
         while (equipment_Instances.Count < slotCount)
             equipment_Instances.Add(new List<EquipmentInstance>());
         while (equipment_ModuleData.Count < slotCount)
-        {
             equipment_ModuleData.Add(null);
+        while (cached_ItemDatas.Count < slotCount)
             cached_ItemDatas.Add(null);
-        }
     }
 
     void RebuildEquipmentRuntimeStateAfterLoad()
@@ -353,18 +460,14 @@ public class Mod_Equipment : Module, IInventory, IInteractable, IInstanceUI
                 continue;
             }
 
-            equipment_ModuleData[i] = slotItemData.GetModuleData_Frist(ModText.Equipment_Store) as Ex_ModData_MemoryPackable;
+            equipment_ModuleData[i] = FindEquipmentStoreData(slotItemData);
             equipment_Instances[i] ??= new List<EquipmentInstance>();
 
             if (equipment_Instances[i].Count == 0 && equipment_ModuleData[i] != null)
-            {
-                List<EquipmentInstance> loadedList = new();
-                equipment_ModuleData[i].ReadData(ref loadedList);
-                equipment_Instances[i] = loadedList ?? new List<EquipmentInstance>();
-            }
+                equipment_Instances[i] = ReadEquipmentInstances(slotItemData, equipment_ModuleData[i]);
 
             foreach (var equipment in equipment_Instances[i])
-                equipment.Equip(item);
+                equipment?.Equip(item);
         }
     }
 
@@ -421,24 +524,104 @@ public class Mod_Equipment : Module, IInventory, IInteractable, IInstanceUI
         if (LocalSlot.itemData == null)
         {
             cached_ItemDatas[index] = null;
+            item?.MarkModuleScheduleDirty();
+            EquipmentChanged?.Invoke();
             return;
         }
 
-        equipment_ModuleData[index] =
-            LocalSlot.itemData.GetModuleData_Frist(ModText.Equipment_Store) as Ex_ModData_MemoryPackable;
+        equipment_ModuleData[index] = FindEquipmentStoreData(LocalSlot.itemData);
         cached_ItemDatas[index] = LocalSlot.itemData;
 
         // 槽位有物品且还未生成实例：读取存档并装备
         if (equipment_ModuleData[index] != null && equipment_Instances[index].Count == 0)
         {
-            List<EquipmentInstance> loadedList = new();
-            equipment_ModuleData[index].ReadData(ref loadedList);
+            List<EquipmentInstance> loadedList = ReadEquipmentInstances(LocalSlot.itemData, equipment_ModuleData[index]);
 
             foreach (var equipment in loadedList)
-                equipment.Equip(item);
+                equipment?.Equip(item);
 
             equipment_Instances[index] = loadedList;
         }
+
+        item?.MarkModuleScheduleDirty();
+        EquipmentChanged?.Invoke();
+    }
+
+    private static Ex_ModData_MemoryPackable FindEquipmentStoreData(ItemData itemData)
+    {
+        if (itemData?.ModuleDataDic == null)
+            return null;
+
+        foreach (ModuleData moduleData in itemData.ModuleDataDic.Values)
+        {
+            if (moduleData is Ex_ModData_MemoryPackable equipmentData &&
+                equipmentData.ID == ModText.Equipment_Store)
+                return equipmentData;
+        }
+
+        return null;
+    }
+
+    private static List<EquipmentInstance> ReadEquipmentInstances(
+        ItemData itemData,
+        Ex_ModData_MemoryPackable equipmentData)
+    {
+        var loaded = new List<EquipmentInstance>();
+        if (equipmentData == null)
+            return loaded;
+
+        if (equipmentData.BitData != null && equipmentData.BitData.Length > 0)
+        {
+            equipmentData.ReadData(ref loaded);
+            return loaded ?? new List<EquipmentInstance>();
+        }
+
+        GameRes gameRes = GameRes.Instance;
+        if (gameRes == null || itemData == null ||
+            !gameRes.TryGetItemDefinition(itemData.IDName, out RuntimeItemDefinition definition))
+            return loaded;
+
+        string stableName = equipmentData.StableName;
+        if (string.IsNullOrWhiteSpace(stableName))
+        {
+            foreach (KeyValuePair<string, ModuleData> pair in itemData.ModuleDataDic)
+            {
+                if (!ReferenceEquals(pair.Value, equipmentData))
+                    continue;
+                stableName = pair.Key;
+                break;
+            }
+        }
+
+        if (string.IsNullOrWhiteSpace(stableName) ||
+            !definition.TryGetModuleParameters(stableName, out string json))
+            return loaded;
+
+        return ModuleJsonConfigurator.ReadEquipmentInstances(
+            itemData.IDName,
+            stableName,
+            equipmentData.ModuleId,
+            json);
+    }
+
+    private bool HasTickingEquipment()
+    {
+        if (equipment_Instances == null)
+            return false;
+
+        for (int i = 0; i < equipment_Instances.Count; i++)
+        {
+            List<EquipmentInstance> list = equipment_Instances[i];
+            if (list == null)
+                continue;
+            for (int j = 0; j < list.Count; j++)
+            {
+                if (list[j]?.RequiresUpdate == true)
+                    return true;
+            }
+        }
+
+        return false;
     }
 
     void SaveSlotEquipmentDataToPairedItem(int index, ItemData previousItemData, ItemSlot pairSlot)
@@ -457,7 +640,7 @@ public class Mod_Equipment : Module, IInventory, IInteractable, IInstanceUI
         if (!isSameLogicalItem)
             return;
 
-        var modData = pairedItemData.GetModuleData_Frist(ModText.Equipment_Store) as Ex_ModData_MemoryPackable;
+        var modData = FindEquipmentStoreData(pairedItemData);
         if (modData == null)
         {
             Debug.LogError($"[Mod_Equipment] 同步配对槽位装备数据失败：物品[{pairedItemData.IDName}]缺少模块[{ModText.Equipment_Store}]");
@@ -472,7 +655,7 @@ public class Mod_Equipment : Module, IInventory, IInteractable, IInstanceUI
         if (itemData == null)
             return;
 
-        var modData = itemData.GetModuleData_Frist(ModText.Equipment_Store) as Ex_ModData_MemoryPackable;
+        var modData = FindEquipmentStoreData(itemData);
         if (modData == null)
         {
             Debug.LogError($"[Mod_Equipment] 写入装备数据失败：物品[{itemData.IDName}]缺少模块[{ModText.Equipment_Store}]");

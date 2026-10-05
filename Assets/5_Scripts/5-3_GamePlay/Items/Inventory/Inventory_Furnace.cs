@@ -1210,5 +1210,11 @@ public partial class ModSmeltingData
 
     [Tooltip("温度下降速度")]
     public float TemperatureDownSpeed = 30f;
+
+    [Tooltip("按副产物规则 id 保存的燃料累计消费数。")]
+    public Dictionary<string, int> FuelByproductProgress = new Dictionary<string, int>();
+
+    [Tooltip("按副产物规则 id 保存的待交付数量，避免目标库存满时丢失产出。")]
+    public Dictionary<string, int> PendingFuelByproductCount = new Dictionary<string, int>();
 }
 #endregion

@@ -876,11 +876,11 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915978
-    m_Key: item.Meatrack.name
+    m_Key: item.Mod_Meatrack.name
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915979
-    m_Key: item.Meatrack.description
+    m_Key: item.Mod_Meatrack.description
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915980
@@ -1579,10 +1579,6 @@ MonoBehaviour:
     m_Key: item.Honey.name
     m_Metadata:
       m_Items: []
-  - m_Id: 13292200447172611
-    m_Key: item.BottledJam.name
-    m_Metadata:
-      m_Items: []
   - m_Id: 15838801002749952
     m_Key: item.DrilledStoneSlab.name
     m_Metadata:
@@ -1647,54 +1643,6 @@ MonoBehaviour:
     m_Key: item.Clutch_Summoner.name
     m_Metadata:
       m_Items: []
-  - m_Id: 15838801115996179
-    m_Key: item.Shaft_Copper.name
-    m_Metadata:
-      m_Items: []
-  - m_Id: 15838801115996180
-    m_Key: item.Shaft_Copper_Summoner.name
-    m_Metadata:
-      m_Items: []
-  - m_Id: 15838801115996181
-    m_Key: item.Gear_Copper.name
-    m_Metadata:
-      m_Items: []
-  - m_Id: 15838801115996182
-    m_Key: item.Gear_Copper_Summoner.name
-    m_Metadata:
-      m_Items: []
-  - m_Id: 15838801115996183
-    m_Key: item.Gearbox_Copper.name
-    m_Metadata:
-      m_Items: []
-  - m_Id: 15838801115996184
-    m_Key: item.Gearbox_Copper_Summoner.name
-    m_Metadata:
-      m_Items: []
-  - m_Id: 15838801115996185
-    m_Key: item.Shaft_Iron.name
-    m_Metadata:
-      m_Items: []
-  - m_Id: 15838801115996186
-    m_Key: item.Shaft_Iron_Summoner.name
-    m_Metadata:
-      m_Items: []
-  - m_Id: 15838801115996187
-    m_Key: item.Gear_Iron.name
-    m_Metadata:
-      m_Items: []
-  - m_Id: 15838801115996188
-    m_Key: item.Gear_Iron_Summoner.name
-    m_Metadata:
-      m_Items: []
-  - m_Id: 15838801115996189
-    m_Key: item.Gearbox_Iron.name
-    m_Metadata:
-      m_Items: []
-  - m_Id: 15838801115996190
-    m_Key: item.Gearbox_Iron_Summoner.name
-    m_Metadata:
-      m_Items: []
   - m_Id: 15838801115996191
     m_Key: item.CrossShaft.name
     m_Metadata:
@@ -1741,6 +1689,14 @@ MonoBehaviour:
       m_Items: []
   - m_Id: 15838801120190467
     m_Key: item.HandDrill_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17079721790529536
+    m_Key: item.Paper.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17079721790529537
+    m_Key: item.Sand.name
     m_Metadata:
       m_Items: []
   m_Metadata:

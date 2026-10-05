@@ -396,15 +396,14 @@ public abstract class Item : MonoBehaviour
             if (module?._Data == null)
                 continue;
 
+            module.EnsureRuntimeIdentity();
             ModuleData moduleData = FastCloner.FastCloner.DeepClone(module._Data);
-            moduleData.ID = module.CanonicalModuleId;
-            if (string.IsNullOrWhiteSpace(moduleData.Name))
-                moduleData.Name = Module.GenerateUniqueModName(moduleData.ID);
+            moduleData.ModuleId = module.ResolvedModuleId;
+            moduleData.StableName = module.StableName;
 
-            while (templateData.ModuleDataDic.ContainsKey(moduleData.Name))
-                moduleData.Name = Module.GenerateUniqueModName(moduleData.ID);
-
-            templateData.ModuleDataDic.Add(moduleData.Name, moduleData);
+            if (!templateData.ModuleDataDic.TryAdd(moduleData.StableName, moduleData))
+                throw new InvalidOperationException(
+                    $"物品 {gameObject.name} 存在重复 StableName：{moduleData.StableName}。");
         }
 
         return templateData;
@@ -433,12 +432,10 @@ public abstract class Item : MonoBehaviour
         {
             foreach (var mod in modules)
             {
-                NormalizeModuleDataId(mod, mod._Data);
-                if (string.IsNullOrWhiteSpace(mod._Data.Name))
-                    mod._Data.Name = Module.GenerateUniqueModName(mod._Data.ID);
+                NormalizeModuleIdentity(mod, mod._Data);
 
                 itemMods.AddMod(mod);
-                itemData.ModuleDataDic[mod._Data.Name] = mod._Data;
+                itemData.ModuleDataDic[mod._Data.StableName] = mod._Data;
             }
 
             // 所有模块加入Mods后统一初始化
@@ -449,7 +446,7 @@ public abstract class Item : MonoBehaviour
             }
             foreach (var mod in Mods.Values)
             {
-                mod.Load();
+                mod.LoadRuntime();
             }
         }
 
@@ -467,31 +464,29 @@ public abstract class Item : MonoBehaviour
             {
                 string stableName = pair.Key;
                 ModuleData modData = pair.Value;
-                if (modData == null || string.IsNullOrWhiteSpace(modData.ID))
+                if (modData == null || string.IsNullOrWhiteSpace(modData.ModuleId))
                 {
                     Debug.LogWarning($"物品 {gameObject.name} 包含没有有效 ID 的模块数据，已跳过自动修复。", this);
                     continue;
                 }
 
-                string modulePrefabId = ResolveModulePrefabId(stableName, modData.ID);
-                Module mod = tempMods.FindModByPersistedId(modData.ID);
-                if (mod == null &&
-                    !string.Equals(modulePrefabId, modData.ID, StringComparison.OrdinalIgnoreCase))
-                {
-                    mod = tempMods.FindModByPersistedId(modulePrefabId);
-                }
+                modData.StableName = stableName;
+                string modulePrefabId = ResolveModulePrefabId(stableName, modData.ModuleId);
+                Module mod = tempMods.Mods.TryGetValue(stableName, out Module stableModule)
+                    ? stableModule
+                    : FindModuleByIdentity(tempMods, modData.ModuleId, modulePrefabId);
 
                 // 不存在模块时，按定义中的具体 Prefab 地址修复。
                 if (mod == null)
                 {
-                    Debug.LogWarning($"物品 {gameObject.name} 丢失了模块 {modData.Name} " +
-                        $" ID: {modData.ID}，Prefab: {modulePrefabId}，下面开始尝试自动修复。");
+                    Debug.LogWarning($"物品 {gameObject.name} 丢失了模块 {stableName} " +
+                        $" ModuleId: {modData.ModuleId}，PrefabId: {modulePrefabId}，下面开始尝试自动修复。");
 
                     GameObject moduleObject = GameRes.Instance?.InstantiatePrefab(modulePrefabId, parent: transform);
                     if (moduleObject == null)
                     {
-                        Debug.LogError($"物品 {gameObject.name} 无法修复模块 {modData.Name} " +
-                            $" ID: {modData.ID}，Prefab: {modulePrefabId}：找不到对应的模块 Prefab。", this);
+                        Debug.LogError($"物品 {gameObject.name} 无法修复模块 {stableName} " +
+                            $" ModuleId: {modData.ModuleId}，PrefabId: {modulePrefabId}：找不到对应的模块 Prefab。", this);
                         continue;
                     }
 
@@ -500,17 +495,20 @@ public abstract class Item : MonoBehaviour
                     moduleObject.transform.localRotation = Quaternion.identity;
                     moduleObject.transform.localScale = Vector3.one;
 
-                    mod = FindModuleForData(moduleObject, modData.ID, modulePrefabId);
+                    mod = FindModuleForData(moduleObject, modData.ModuleId, modulePrefabId);
                     if (mod == null)
                     {
-                        Debug.LogError($"物品 {gameObject.name} 无法修复模块 {modData.Name} " +
-                            $" ID: {modData.ID}，Prefab: {modulePrefabId}：未找到匹配的 Module 组件。", moduleObject);
+                        Debug.LogError($"物品 {gameObject.name} 无法修复模块 {stableName} " +
+                            $" ModuleId: {modData.ModuleId}，PrefabId: {modulePrefabId}：未找到匹配的 Module 组件。", moduleObject);
                         Destroy(moduleObject);
                         continue;
                     }
 
-                    NormalizeModuleDataId(mod, modData);
+                    // Enabled 属于当前模块配置，不从旧存档继承；旧 isRunning 不能决定模块生命周期。
+                    bool configuredEnabled = mod._Data?.Enabled ?? true;
+                    modData.Enabled = configuredEnabled;
                     mod._Data = modData;
+                    mod.BindRuntimeIdentity(stableName, modData.ModuleId, modulePrefabId);
 
                     itemMods.AddMod(mod);
                     modsToInit.Add(mod);
@@ -519,8 +517,11 @@ public abstract class Item : MonoBehaviour
                 {
                     tempMods.RemoveMod(mod);
 
-                    NormalizeModuleDataId(mod, modData);
+                    // 存档只恢复运行态数据，模块启停以当前 Prefab/JSON 配置为准。
+                    bool configuredEnabled = mod._Data?.Enabled ?? true;
+                    modData.Enabled = configuredEnabled;
                     mod._Data = modData;
+                    mod.BindRuntimeIdentity(stableName, modData.ModuleId, modulePrefabId);
 
                     modsToInit.Add(mod);
                     itemMods.AddMod(mod);
@@ -537,16 +538,14 @@ public abstract class Item : MonoBehaviour
                         if (mod == null || mod._Data == null)
                             continue;
 
-                        NormalizeModuleDataId(mod, mod._Data);
-                        if (string.IsNullOrWhiteSpace(mod._Data.Name) ||
-                            itemMods.ContainsKey_Name(mod._Data.Name) ||
-                            itemData.ModuleDataDic.ContainsKey(mod._Data.Name))
-                        {
-                            mod._Data.Name = Module.GenerateUniqueModName(mod._Data.ID);
-                        }
+                        NormalizeModuleIdentity(mod, mod._Data);
+                        if (itemMods.ContainsKey_Name(mod._Data.StableName) ||
+                            itemData.ModuleDataDic.ContainsKey(mod._Data.StableName))
+                            throw new InvalidOperationException(
+                                $"物品 {gameObject.name} 存在重复 StableName：{mod._Data.StableName}。");
 
                         itemMods.AddMod(mod);
-                        itemData.ModuleDataDic[mod._Data.Name] = mod._Data;
+                        itemData.ModuleDataDic[mod._Data.StableName] = mod._Data;
                         modsToInit.Add(mod);
                     }
                 }
@@ -560,7 +559,7 @@ public abstract class Item : MonoBehaviour
             }
             foreach (var mod in modsToInit)
             {
-                mod.Load();
+                mod.LoadRuntime();
             }
         }
 
@@ -588,6 +587,29 @@ public abstract class Item : MonoBehaviour
         return string.IsNullOrWhiteSpace(prefabId) ? persistedId : prefabId.Trim();
     }
 
+    /// <summary>先按 ModuleId 缩小候选，再用 PrefabId 选择具体实现。</summary>
+    private static Module FindModuleByIdentity(ItemMods modules, string moduleId, string prefabId)
+    {
+        List<Module> candidates = modules?.GetModList_ByID(moduleId);
+        if (candidates == null || candidates.Count == 0)
+            return null;
+
+        for (int i = 0; i < candidates.Count; i++)
+        {
+            Module candidate = candidates[i];
+            if (candidate != null &&
+                (string.Equals(candidate.PrefabId, prefabId, StringComparison.OrdinalIgnoreCase) ||
+                 string.Equals(candidate.gameObject.name, prefabId, StringComparison.OrdinalIgnoreCase)))
+                return candidate;
+        }
+
+        // 没有独立 Prefab 变体时，ModuleId 本身就是实例化地址，可安全按能力唯一回退。
+        if (string.Equals(moduleId, prefabId, StringComparison.OrdinalIgnoreCase) && candidates.Count == 1)
+            return candidates[0];
+
+        return null;
+    }
+
     /// <summary>从修复 Prefab 中选择与逻辑 ID 或具体 Prefab ID 对应的模块。</summary>
     private static Module FindModuleForData(GameObject moduleObject, string persistedId, string prefabId)
     {
@@ -606,14 +628,13 @@ public abstract class Item : MonoBehaviour
     }
 
     /// <summary>仅在模块数据缺少 ID 时使用组件的规范 ID 补全。</summary>
-    private static void NormalizeModuleDataId(Module module, ModuleData data)
+    private static void NormalizeModuleIdentity(Module module, ModuleData data)
     {
-        if (module == null || data == null || !string.IsNullOrWhiteSpace(data.ID))
+        if (module == null || data == null)
             return;
 
-        string canonicalId = module.CanonicalModuleId;
-        if (!string.IsNullOrWhiteSpace(canonicalId))
-            data.ID = canonicalId.Trim();
+        module._Data = data;
+        module.EnsureRuntimeIdentity();
     }
 
     /// <summary>
@@ -625,7 +646,7 @@ public abstract class Item : MonoBehaviour
         var mods = GetModsSnapshot();
         foreach (Module mod in mods)
         {
-            mod.Save();
+            mod.SaveRuntime();
         }
     }
 
@@ -640,7 +661,7 @@ public abstract class Item : MonoBehaviour
         var mods = GetModsSnapshot();
         foreach (Module mod in mods)
         {
-            mod.Unload();
+            mod.UnloadRuntime();
         }
 
         modulesLoaded = false;
@@ -675,7 +696,7 @@ public abstract class Item : MonoBehaviour
 
         foreach (var inv in inventories)
         {
-            if (inv != null && inv._Data.ID == targetName)
+            if (inv != null && inv._Data.ModuleId == targetName)
             {
                 return inv;
             }
@@ -691,7 +712,14 @@ public abstract class Item : MonoBehaviour
     /// </summary>
     public void LoadDataPosition()
     {
-        transform.position = itemData.transform.position;
+        Vector3 logicalPosition = itemData.inHand
+            ? itemData.transform.position
+            : WorldLocalPresentation.ToLogical(itemData.transform.position);
+        if (!itemData.inHand)
+            itemData.transform.position = logicalPosition;
+        transform.position = itemData.inHand
+            ? logicalPosition
+            : WorldLocalPresentation.ProjectPosition(logicalPosition);
         transform.rotation = itemData.transform.rotation;
         transform.localScale = itemData.transform.scale;
         ItemMgr.GetInstance()?.NotifyItemSpatialIndexChanged(this);
@@ -703,7 +731,9 @@ public abstract class Item : MonoBehaviour
     [Button("保存模块")]
     public virtual void Save()
     {
-        itemData.transform.position = transform.position;
+        itemData.transform.position = itemData.inHand
+            ? transform.position
+            : WorldLocalPresentation.ToLogical(transform.position);
         itemData.transform.rotation = transform.rotation;
         itemData.transform.scale = transform.localScale;
         ModuleSave();
@@ -760,7 +790,7 @@ public abstract class Item : MonoBehaviour
     [Button]
     public void SetUpModeule(string modName)
     {
-        Module.ADDModTOItem(this, modName).Load();
+        Module.ADDModTOItem(this, modName)?.LoadRuntime();
     }
 
     /// <summary>
@@ -836,7 +866,7 @@ public abstract class Item : MonoBehaviour
         lastSimulationInterval = 0f;
     }
 
-    /// <summary>回到模拟范围后立即恢复，暂停期间不补算游戏时间。</summary>
+    /// <summary>回到模拟范围后立即恢复，暂停期间不补算游戏时间；单次 Tick 使用完整累计 delta，不截断模拟时间。</summary>
     internal void TickEveryFrameAt(float currentTime, float minimumInterval)
     {
         if (lastScheduledTickTime < 0f ||
@@ -845,7 +875,7 @@ public abstract class Item : MonoBehaviour
             lastScheduledTickTime = currentTime;
             nextSimulationTickTime = currentTime + minimumInterval;
             lastSimulationInterval = minimumInterval;
-            Tick(Mathf.Min(Time.deltaTime, 0.1f));
+            Tick(Mathf.Max(0f, Time.deltaTime));
             return;
         }
 
@@ -857,7 +887,7 @@ public abstract class Item : MonoBehaviour
         nextSimulationTickTime += minimumInterval;
         if (nextSimulationTickTime <= currentTime)
             nextSimulationTickTime = currentTime + minimumInterval;
-        Tick(Mathf.Min(elapsed, 0.1f));
+        Tick(elapsed);
     }
 
     /// <summary>玩家、全局管理实体或 MOD 可覆写此入口以保持完整更新。</summary>
@@ -879,7 +909,7 @@ public abstract class Item : MonoBehaviour
                 if (module is ISimulationRangeAware aware)
                     aware.OnSimulationRangePaused();
 
-            pausedSimulationBody = GetComponent<Rigidbody2D>();
+            TryGetComponent(out pausedSimulationBody);
             if (pausedSimulationBody == null) return;
             pausedBodyWasSimulated = pausedSimulationBody.simulated;
             pausedSimulationBody.velocity = Vector2.zero;
@@ -939,14 +969,15 @@ public abstract class Item : MonoBehaviour
 
         foreach (Module mod in Mods.Values)
         {
-            if (mod == null)
+            if (mod == null || !mod.Enabled)
                 continue;
 
-            ModuleTickMode mode = useLegacyItemInterval
-                ? ModuleTickMode.FixedInterval
-                : ResolveModuleTickMode(mod);
+            ModuleTickMode mode = ResolveModuleTickMode(mod);
             if (mode == ModuleTickMode.Disabled)
                 continue;
+
+            if (useLegacyItemInterval)
+                mode = ModuleTickMode.FixedInterval;
 
             if (mode == ModuleTickMode.EveryFrame)
             {
@@ -994,7 +1025,7 @@ public abstract class Item : MonoBehaviour
     private static ModuleTickMode ResolveModuleTickMode(Module mod)
     {
         ModuleTickMode mode = mod.TickMode;
-        if (mode != ModuleTickMode.EveryFrame)
+        if (mode != ModuleTickMode.Unspecified)
             return mode;
 
         Type moduleType = mod.GetType();
@@ -1005,7 +1036,16 @@ public abstract class Item : MonoBehaviour
             moduleTickImplementationCache[moduleType] = hasTickImplementation;
         }
 
-        return hasTickImplementation ? ModuleTickMode.EveryFrame : ModuleTickMode.Disabled;
+        if (!hasTickImplementation)
+            return ModuleTickMode.Disabled;
+
+        if (ModuleTickPolicyCatalog.TryGet(moduleType, out ModuleTickMode declaredMode) &&
+            declaredMode != ModuleTickMode.Unspecified)
+            return declaredMode;
+
+        throw new InvalidOperationException(
+            $"模块 {moduleType.FullName} 覆写了 ModUpdate，但没有显式 Tick 策略。" +
+            "请覆写 TickMode，或在 ModuleTickPolicyCatalog 中声明本体迁移策略。");
     }
 
     private void TickScheduledModules(float deltaTime)
@@ -1027,10 +1067,10 @@ public abstract class Item : MonoBehaviour
 
     private bool IsScheduledModuleValid(Module mod)
     {
-        if (mod == null || mod._Data == null || string.IsNullOrEmpty(mod._Data.Name))
+        if (mod == null || mod._Data == null || !mod.Enabled || string.IsNullOrEmpty(mod._Data.StableName))
             return false;
 
-        return Mods.TryGetValue(mod._Data.Name, out Module current) && current == mod;
+        return Mods.TryGetValue(mod._Data.StableName, out Module current) && current == mod;
     }
 
     private void ClearModuleSchedule()

@@ -24,7 +24,7 @@ public static class ItemDefinitionRuntime
             Module module = pair.Value;
             if (module == null || !current.TryGetModuleParameters(pair.Key, out string json)) continue;
             previous.TryGetModuleParameters(pair.Key, out string oldJson);
-            string moduleId = module._Data?.ID;
+            string moduleId = module._Data?.ModuleId;
             if (json == oldJson || current.GetModulePrefabId(pair.Key, moduleId) != previous.GetModulePrefabId(pair.Key, moduleId)) continue;
             json = GetChangedModuleParameters(oldJson, json);
             if (json == null) continue;
@@ -69,6 +69,7 @@ public static class ItemDefinitionRuntime
         item.BindData(itemData);
         item.gameObject.name = definition.Id;
         ApplyVisual(definition, item);
+        // 只按定义显式声明的模块装配能力，普通实体不会自动获得装备交互。
         EnsureModuleComponents(gameRes, definition, item, itemData);
     }
 
@@ -127,6 +128,15 @@ public static class ItemDefinitionRuntime
         currentData.inHand = persistedData.inHand;
         currentData.transform = persistedData.transform ?? currentData.transform;
         currentData.FactionId = persistedData.FactionId;
+        if (persistedData.MatterState != null)
+        {
+            currentData.MatterState = new ItemMatterState
+            {
+                Initialized = persistedData.MatterState.Initialized,
+                TemperatureCelsius = persistedData.MatterState.TemperatureCelsius,
+                Moisture = persistedData.MatterState.Moisture
+            };
+        }
         CraftedDurabilityQuality.RestorePersistedMultiplier(currentData, persistedData);
 
         if (currentData.Stack != null && persistedData.Stack != null)
@@ -408,19 +418,68 @@ public static class ItemDefinitionRuntime
         {
             string stableName = pair.Key;
             ModuleData moduleData = pair.Value;
-            if (moduleData == null || string.IsNullOrWhiteSpace(moduleData.ID))
+            if (moduleData == null || string.IsNullOrWhiteSpace(moduleData.ModuleId))
                 continue;
 
-            string prefabId = definition.GetModulePrefabId(stableName, moduleData.ID);
+            moduleData.StableName = stableName;
+            string prefabId = definition.GetModulePrefabId(stableName, moduleData.ModuleId);
             int embeddedIndex = -1;
+            Type expectedModuleType = ResolveModuleType(gameRes, prefabId, moduleData.ModuleId);
+
+            // 先按具体 PrefabId 匹配，避免同一 ModuleId 的多个实现变体互相串用。
             for (int i = 0; i < available.Count; i++)
             {
                 Module candidate = available[i];
-                if (!candidate.MatchesPersistedId(moduleData.ID) &&
-                    !candidate.MatchesPersistedId(prefabId))
+                candidate?.EnsureRuntimeIdentity();
+                if (candidate == null ||
+                    (!string.Equals(candidate.PrefabId, prefabId, StringComparison.OrdinalIgnoreCase) &&
+                     !string.Equals(candidate.gameObject.name, prefabId, StringComparison.OrdinalIgnoreCase)))
                     continue;
+                candidate.BindRuntimeIdentity(stableName, moduleData.ModuleId, prefabId);
                 embeddedIndex = i;
                 break;
+            }
+
+            // 旧 Actor 外壳会把内嵌模块节点改名；PrefabId 因此可能失真，按唯一具体类型复用原模块。
+            if (embeddedIndex < 0 && expectedModuleType != null)
+            {
+                int typedIndex = -1;
+                for (int i = 0; i < available.Count; i++)
+                {
+                    Module candidate = available[i];
+                    if (candidate == null || candidate.GetType() != expectedModuleType)
+                        continue;
+
+                    if (typedIndex >= 0)
+                    {
+                        typedIndex = -1;
+                        break;
+                    }
+
+                    typedIndex = i;
+                }
+
+                if (typedIndex >= 0)
+                {
+                    Module candidate = available[typedIndex];
+                    candidate.BindRuntimeIdentity(stableName, moduleData.ModuleId, prefabId);
+                    embeddedIndex = typedIndex;
+                }
+            }
+
+            // 没有独立变体时才允许按 ModuleId 唯一回退。
+            if (embeddedIndex < 0 && string.Equals(prefabId, moduleData.ModuleId, StringComparison.OrdinalIgnoreCase))
+            {
+                for (int i = 0; i < available.Count; i++)
+                {
+                    Module candidate = available[i];
+                    if (candidate == null ||
+                        !string.Equals(candidate.ResolvedModuleId, moduleData.ModuleId, StringComparison.OrdinalIgnoreCase))
+                        continue;
+                    candidate.BindRuntimeIdentity(stableName, moduleData.ModuleId, prefabId);
+                    embeddedIndex = i;
+                    break;
+                }
             }
             if (embeddedIndex >= 0)
             {
@@ -432,11 +491,22 @@ public static class ItemDefinitionRuntime
             Module module = moduleObject?.GetComponentInChildren<Module>(true);
             if (module == null)
                 throw new MissingComponentException(
-                    $"物品 {itemData.IDName} 无法实例化模块：{moduleData.ID}（Prefab={prefabId}）");
+                    $"物品 {itemData.IDName} 无法实例化模块：{moduleData.ModuleId}（PrefabId={prefabId}）");
             moduleObject.name = prefabId;
             moduleObject.transform.localPosition = Vector3.zero;
             moduleObject.transform.localRotation = Quaternion.identity;
             moduleObject.transform.localScale = Vector3.one;
+            module.BindRuntimeIdentity(stableName, moduleData.ModuleId, prefabId);
         }
+    }
+
+    private static Type ResolveModuleType(GameRes gameRes, string prefabId, string moduleId)
+    {
+        if (gameRes == null || string.IsNullOrWhiteSpace(prefabId))
+            return null;
+
+        GameObject modulePrefab = gameRes.GetPrefab(prefabId, false);
+        Module prototype = ItemDefinitionCatalogLoader.FindModulePrototype(null, modulePrefab, moduleId);
+        return prototype?.GetType();
     }
 }

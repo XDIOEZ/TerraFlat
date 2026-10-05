@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 1,
+  "items": [
+    {
+      "id": "Ore_Diamond",
+      "parent": "BasicItem_Base",
+      "gameName": "钻石矿石",
+      "description": "从钻石矿山中开采的稀有矿石，可拾取、堆叠并作为材料储存。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 1.5,
+      "volume": 0.6,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": ["Ore", "Mineral"],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Environment/Ore_Diamond/Ore_Diamond_Icon.png",
+        "rendererLocalScale": { "x": 0.7, "y": 0.7, "z": 1 },
+        "color": { "r": 1, "g": 1, "b": 1, "a": 1 },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": { "x": 0, "y": 0 },
+          "size": { "x": 0.7, "y": 0.63 }
+        }
+      },
+      "modules": {}
+    },
+    {
+      "id": "Mine_Diamond",
+      "parent": "Mine_Iron",
+      "gameName": "钻石矿山",
+      "description": "地下洞穴中的稀有钻石矿脉，开采后掉落钻石矿石。不设工具等级门槛，开采效率取决于伤害、防御和工具采集加成。",
+      "stackable": false,
+      "canBePickedUp": false,
+      "lootTableId": "Mine_Diamond_Default",
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Environment/Mine_Diamond/Mine_Diamond_Idle.png",
+        "color": { "r": 1, "g": 1, "b": 1, "a": 1 }
+      },
+      "modules": {
+        "harvestRequirement": {
+          "parameters": {
+            "requiredTool": 1,
+            "minimumTier": 1
+          }
+        },
+        "生命值系统模块": {
+          "parameters": {
+            "Data": {
+              "Hp": 50,
+              "MaxHp": 50,
+              "DefenseValues": {
+                "Physical": 26
+              },
+              "CombatBalanceVersion": 1
+            },
+            "weakTool": 0
+          }
+        }
+      }
+    }
+  ]
+}

@@ -89,7 +89,8 @@ public sealed class WorldTileTargetOutline : MonoBehaviour
         lineRenderer.numCapVertices = 0;
         lineRenderer.alignment = LineAlignment.View;
         lineRenderer.textureMode = LineTextureMode.Stretch;
-        lineRenderer.sortingOrder = SortingOrder;
+        // 世界目标框始终绘制在地形和角色使用的排序层之上。
+        WorldSortingManager.GetInstance().ApplyRenderer(lineRenderer, WorldSortingManager.WorldEffectCategory, SortingOrder);
         lineRenderer.shadowCastingMode = ShadowCastingMode.Off;
         lineRenderer.receiveShadows = false;
         lineRenderer.lightProbeUsage = LightProbeUsage.Off;

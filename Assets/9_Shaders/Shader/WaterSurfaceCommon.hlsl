@@ -63,14 +63,10 @@ float4 _LiquidDepthUvScaleOffset;
 half _GlobalMoonlightIntensity;
 half _GlobalMoonAppearance;
 
-/// <summary>读取材质定义的潮流轴；潮汐只沿该轴往返，不再让整片水面持续绕圈。</summary>
-float2 ResolveWaterFlowAxis()
+/// <summary>归一化世界水流数据；潮汐和浪纹共用该轴。</summary>
+float2 ResolveWaterFlowAxis(float2 flowDirection)
 {
-    float2 baseDirection = _FlowDirection.xy;
-    float baseLengthSq = dot(baseDirection, baseDirection);
-    return baseLengthSq > 0.0001
-        ? baseDirection * rsqrt(baseLengthSq)
-        : float2(1.0, 0.0);
+    return flowDirection * rsqrt(max(dot(flowDirection, flowDirection), 0.000001));
 }
 
 /// <summary>用半日潮的积分相位驱动往返流动；相位到达峰谷时流速自然降为零后反向。</summary>
@@ -136,22 +132,39 @@ half QuantizeWaterVisualDepth(half liquidDepth)
     return min(1.0h, ceil(depth * 10.0h - 0.001h) * 0.1h);
 }
 
-/// <summary>通过显式世界坐标映射采样 Chunk 水深，再按十分位生成十档水面表现。</summary>
-half SampleLiquidDepth(float2 positionWS)
+/// <summary>水面透明度保持原来的浅水 0.60、深水 0.80，并使用连续水深避免格边跳变。</summary>
+half ResolveWaterSurfaceAlpha(half textureAlpha, half liquidDepth)
+{
+    return textureAlpha * lerp(0.60h, 0.80h, saturate(liquidDepth));
+}
+
+/// <summary>通过显式世界坐标映射采样连续水深，供写实水色与透明度使用。</summary>
+half SampleContinuousLiquidDepth(float2 positionWS)
 {
     float2 depthUV = positionWS * _LiquidDepthUvScaleOffset.xy
         + _LiquidDepthUvScaleOffset.zw;
-    half sampledDepth = SAMPLE_TEXTURE2D(_LiquidDepthTexture, sampler_LiquidDepthTexture, depthUV).r;
-    return QuantizeWaterVisualDepth(sampledDepth);
+    return saturate(SAMPLE_TEXTURE2D(_LiquidDepthTexture, sampler_LiquidDepthTexture, depthUV).r);
+}
+
+/// <summary>风格化水面继续按十分位生成十档表现。</summary>
+half SampleLiquidDepth(float2 positionWS)
+{
+    return QuantizeWaterVisualDepth(SampleContinuousLiquidDepth(positionWS));
 }
 
 /// <summary>BRG 水格使用四个格角深度直接双线性插值，避免每个 Chunk 保留独立深度纹理。</summary>
-half SampleLiquidDepthCorners(float2 positionWS, half4 cornerDepths)
+half SampleContinuousLiquidDepthCorners(float2 positionWS, half4 cornerDepths)
 {
     float2 cellUV = frac(positionWS + 0.0001);
     half bottom = lerp(cornerDepths.r, cornerDepths.g, cellUV.x);
     half top = lerp(cornerDepths.b, cornerDepths.a, cellUV.x);
-    return QuantizeWaterVisualDepth(lerp(bottom, top, cellUV.y));
+    return saturate(lerp(bottom, top, cellUV.y));
+}
+
+/// <summary>水色仍按十档显示，透明度等连续表现可直接使用未离散的水深。</summary>
+half SampleLiquidDepthCorners(float2 positionWS, half4 cornerDepths)
+{
+    return QuantizeWaterVisualDepth(SampleContinuousLiquidDepthCorners(positionWS, cornerDepths));
 }
 
 /// <summary>利用屏幕位置和既有波形生成圆形月面及向下延伸的碎光带。</summary>

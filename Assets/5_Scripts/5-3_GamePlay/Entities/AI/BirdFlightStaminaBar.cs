@@ -5,12 +5,12 @@ using UnityEngine;
 public sealed class BirdFlightStaminaBar : MonoBehaviour
 {
     #region 绑定与显示
-    private AI_Bird bird;
+    private Mod_AI_Bird bird;
     private Transform anchor;
     private LineRenderer background, fill;
     private static Material sharedMaterial;
 
-    public void Bind(AI_Bird source, Transform liftRoot)
+    public void Bind(Mod_AI_Bird source, Transform liftRoot)
     {
         bird = source;
         anchor = liftRoot;

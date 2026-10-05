@@ -45,8 +45,6 @@ MonoBehaviour:
   m_Name:
   m_EditorClassIdentifier:
   _splashMaterial: {fileID: 2100000, guid: 375f5f2297d44c9a93a76b128cc52f12, type: 2}
-  _sortingLayerName: Default
-  _sortingOrder: 40
   _splashZ: 0
   _maxParticles: 80
   _lightRainSplashesPerSecond: 12

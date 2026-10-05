@@ -15,9 +15,10 @@ public static class ItemNetworkStateSerialization
 
     public static event Action<Item> RuntimeStateChanged;
     public static Func<bool> ShouldDeferLocalDestruction;
-    public static Func<ItemPicker, Item, bool> TryBeginNetworkPickup;
+    public static Func<Mod_ItemPicker, Item, bool> TryBeginNetworkPickup;
     public static Func<Mod_Building, Vector3, bool> TryBeginNetworkBuilding;
     public static Func<Mod_Building, bool> TryBeginNetworkBuildingDismantle;
+    public static Func<MachineEntity, bool> TryBeginNetworkMechanicalDismantle;
 
     public static void NotifyRuntimeStateChanged(Item item)
     {
@@ -28,7 +29,7 @@ public static class ItemNetworkStateSerialization
     public static bool DeferLocalDestruction()
         => ShouldDeferLocalDestruction?.Invoke() == true;
 
-    public static bool BeginNetworkPickup(ItemPicker picker, Item worldItem)
+    public static bool BeginNetworkPickup(Mod_ItemPicker picker, Item worldItem)
         => TryBeginNetworkPickup?.Invoke(picker, worldItem) == true;
 
     public static bool BeginNetworkBuilding(Mod_Building building, Vector3 position)
@@ -37,36 +38,44 @@ public static class ItemNetworkStateSerialization
     public static bool BeginNetworkBuildingDismantle(Mod_Building building)
         => TryBeginNetworkBuildingDismantle?.Invoke(building) == true;
 
+    /// <summary>纯数据机械的拆除请求交由联机协调器发送。</summary>
+    public static bool BeginNetworkMechanicalDismantle(MachineEntity node)
+        => TryBeginNetworkMechanicalDismantle?.Invoke(node) == true;
+
     public static byte[] Capture(Item item, bool ignoreTransform)
     {
         if (item == null || item.itemData == null)
             return Array.Empty<byte>();
 
         item.ModuleSave();
-        if (!ignoreTransform)
-            return MemoryPackSerializer.Serialize<ItemData>(item.itemData);
-
-        // 玩家移动由独立运动通道同步。临时清空位姿后只序列化一次，避免移动期间
-        // 每次状态检查都“序列化 -> 反序列化克隆 -> 再序列化”造成 GC 尖峰。
-        ItemTransform transformState = item.itemData.transform;
-        if (transformState == null)
-            return MemoryPackSerializer.Serialize<ItemData>(item.itemData);
-
-        Vector3 position = transformState.position;
-        Quaternion rotation = transformState.rotation;
-        Vector3 scale = transformState.scale;
+        ItemData data = item.itemData;
+        string privateState = data.ItemSpecialData;
+        // 玩家公共快照不携带已注册的私有库存，完整值只保留在权威存档里。
+        if (item is Player) data.ItemSpecialData = MachineInventoryCommands.PublicSpecialData(privateState);
+        ItemTransform transformState = ignoreTransform ? data.transform : null;
+        Vector3 position = transformState?.position ?? default;
+        Quaternion rotation = transformState?.rotation ?? default;
+        Vector3 scale = transformState?.scale ?? default;
         try
         {
-            transformState.position = Vector3.zero;
-            transformState.rotation = Quaternion.identity;
-            transformState.scale = Vector3.one;
-            return MemoryPackSerializer.Serialize<ItemData>(item.itemData);
+            if (transformState != null)
+            {
+                // 玩家移动由独立运动通道同步，序列化时暂时去掉位姿。
+                transformState.position = Vector3.zero;
+                transformState.rotation = Quaternion.identity;
+                transformState.scale = Vector3.one;
+            }
+            return MemoryPackSerializer.Serialize<ItemData>(data);
         }
         finally
         {
-            transformState.position = position;
-            transformState.rotation = rotation;
-            transformState.scale = scale;
+            data.ItemSpecialData = privateState;
+            if (transformState != null)
+            {
+                transformState.position = position;
+                transformState.rotation = rotation;
+                transformState.scale = scale;
+            }
         }
     }
 
@@ -123,11 +132,11 @@ public static class ItemNetworkStateSerialization
             if (module == null || module._Data == null)
                 continue;
 
-            ModuleData state = FindModuleState(current.ModuleDataDic, module._Data.Name, module._Data.ID);
+            ModuleData state = FindModuleState(current.ModuleDataDic, module.StableName);
             if (state == null)
                 continue;
 
-            ModuleData previousState = FindModuleState(previousModuleStates, module._Data.Name, module._Data.ID);
+            ModuleData previousState = FindModuleState(previousModuleStates, module.StableName);
             if (ModuleStatesEqual(previousState, state))
                 continue;
 
@@ -161,7 +170,7 @@ public static class ItemNetworkStateSerialization
             if (module == null || module._Data == null)
                 continue;
 
-            ModuleData state = FindModuleState(current.ModuleDataDic, module._Data.Name, module._Data.ID);
+            ModuleData state = FindModuleState(current.ModuleDataDic, module.StableName);
             if (state == null)
                 continue;
 
@@ -196,9 +205,9 @@ public static class ItemNetworkStateSerialization
                 return hash;
 
             hash = AppendHash(hash, state.GetType().FullName);
-            hash = AppendHash(hash, state.ID);
-            hash = AppendHash(hash, state.Name);
-            hash = (hash ^ (state.isRunning ? (byte)1 : (byte)0)) * 16777619u;
+            hash = AppendHash(hash, state.ModuleId);
+            hash = AppendHash(hash, state.StableName);
+            hash = (hash ^ (state.Enabled ? (byte)1 : (byte)0)) * 16777619u;
 
             if (state is Ex_ModData_MemoryPackable binaryState)
                 return AppendHash(hash, binaryState.BitData);
@@ -249,9 +258,13 @@ public static class ItemNetworkStateSerialization
         previousModuleStates = current.ModuleDataDic;
         ItemTransform preservedTransform = current.transform;
         int preservedGuid = current.Guid;
+        string privateState = target is Player ? current.ItemSpecialData : null;
         CopySerializableFields(incoming, current);
         current.Guid = preservedGuid;
         current.transform = preservedTransform;
+        if (target is Player)
+            current.ItemSpecialData = MachineInventoryCommands.MergePrivateSpecialData(
+                privateState, current.ItemSpecialData);
 
         if (current.ModuleDataDic == null)
             current.ModuleDataDic = new Dictionary<string, ModuleData>();
@@ -312,22 +325,12 @@ public static class ItemNetworkStateSerialization
 
     private static ModuleData FindModuleState(
         Dictionary<string, ModuleData> states,
-        string moduleName,
-        string moduleId)
+        string stableName)
     {
-        if (states == null)
+        if (states == null || string.IsNullOrWhiteSpace(stableName))
             return null;
 
-        if (!string.IsNullOrEmpty(moduleName) && states.TryGetValue(moduleName, out ModuleData exact))
-            return exact;
-
-        foreach (ModuleData state in states.Values)
-        {
-            if (state != null && string.Equals(state.ID, moduleId, StringComparison.Ordinal))
-                return state;
-        }
-
-        return null;
+        return states.TryGetValue(stableName, out ModuleData exact) ? exact : null;
     }
 
     private static bool ModuleStatesEqual(ModuleData left, ModuleData right)
@@ -335,7 +338,7 @@ public static class ItemNetworkStateSerialization
         if (ReferenceEquals(left, right))
             return true;
         if (left == null || right == null || left.GetType() != right.GetType() ||
-            left.ID != right.ID || left.Name != right.Name || left.isRunning != right.isRunning)
+            left.ModuleId != right.ModuleId || left.StableName != right.StableName || left.Enabled != right.Enabled)
         {
             return false;
         }

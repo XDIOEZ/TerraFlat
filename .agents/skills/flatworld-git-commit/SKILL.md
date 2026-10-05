@@ -12,6 +12,7 @@ description: "Use when: 操作 FlatWorld 的 Git，包括查看状态、提交�
 - 不使用 `git add .`、`git add -A` 或 `git commit -am` 把无关改动一起提交；只暂存当前任务确认过的文件。
 - Unity 新增、删除或移动资源时，必须同时检查对应 `.meta` 文件。
 - 不提交 `Library/`、`Temp/`、`Logs/`、`UserSettings/` 等生成目录或临时文件。
+- Python 的 `__pycache__/`、字节码及 Unity 为缓存目录生成的 `.meta` 属于自动产物，按 `.gitignore` 排除，不混入功能提交。
 
 ## 提交信息规范
 

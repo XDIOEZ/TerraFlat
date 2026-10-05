@@ -99,7 +99,7 @@ public partial class Mod_ColdWeapon : Module
     public Vector2 StartPosition = Vector2.zero;
     public Transform MoveTargetTransform;
 
-    private GameController cachedController;
+    private Mod_GameController cachedController;
     private Vector2 returnTarget;
 
     // 用于轨迹显示与调试
@@ -130,7 +130,7 @@ public partial class Mod_ColdWeapon : Module
         if (item.Owner != null)
         {
             faceMouse = item.Owner.itemMods.GetMod_ByID(ModText.FocusPoint) as Mod_FocusPoint;
-            cachedController = item.Owner.itemMods.GetMod_ByID(ModText.Controller).GetComponent<GameController>();
+            cachedController = item.Owner.itemMods.GetMod_ByID(ModText.Controller).GetComponent<Mod_GameController>();
             if (cachedController != null)
             {
                 // 武器只订阅攻击语义，避免手机交互/使用与攻击耦合。

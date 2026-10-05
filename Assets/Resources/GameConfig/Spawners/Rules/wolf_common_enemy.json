@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "config": {
+    "id": "wolf_common_enemy",
+    "scheduleMode": "timedWindows",
+    "ecologyGroup": "commonEnemies",
+    "requireGlobalDarkness": false,
+    "spawnTriggerTime": 1200.0,
+    "spawnsPerDay": 1,
+    "minSpawnDistance": 24.0,
+    "maxSpawnDistance": 50.0,
+    "playerVisibilityExclusionDistance": 22.0,
+    "playerPopulationRadius": 65.0,
+    "perPlayerAliveLimit": 4,
+    "spawnSearchRetryCount": 10,
+    "spawnCount": 2,
+    "spawnChance": 0.8,
+    "daysBetweenSpawns": 2,
+    "groupAliveLimit": 6,
+    "maxEcologyBudget": 8,
+    "dailyBudgetRecovery": 2,
+    "recoveryTargetPopulation": 3,
+    "recoveryCheckInterval": 10.0,
+    "growthIntervalDays": 3,
+    "maxLifetimeSpawnCount": 64,
+    "asyncSpawnInterval": 0.0,
+    "unboundedDailyGrowth": false,
+    "ignorePopulationLimits": false,
+    "requireCompletelyDarkTile": false,
+    "maxAllowedTileLight": 0.35,
+    "allowedBiomeNames": [
+      "森林",
+      "石地"
+    ],
+    "recycleDistance": 120.0,
+    "recycleGraceSeconds": 25.0,
+    "spawnEntries": [
+      {
+        "prefabName": "Wolf",
+        "runtimeBackend": "gameObject",
+        "probability": 1.0,
+        "ecologyCost": 2,
+        "speciesAliveLimit": 6
+      }
+    ],
+    "treeHabitat": {
+      "enabled": false,
+      "treesPerActor": 4,
+      "spawnRadius": 3.0
+    }
+  }
+}

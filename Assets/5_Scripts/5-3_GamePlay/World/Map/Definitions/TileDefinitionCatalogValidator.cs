@@ -24,6 +24,10 @@ public sealed class TileDefinitionCatalogValidator : IResourceCatalogValidator
                         out RuntimeTileDefinition replacement) || replacement.RuntimeTileId <= 0)
                     errors.Add($"地块 {definition.Id} -> 挖后地表 {harvest.ReplacementTileId} 未注册。");
             }
+            if (harvest?.NaturalLayerCount > 1 &&
+                (!resources.TileBlockDict.TryGetValue(harvest.ExhaustedTileId, out RuntimeTileDefinition exhausted) ||
+                 exhausted.RuntimeTileId <= 0 || exhausted.GroundHarvest != null || exhausted.DamageProfile.Damageable))
+                errors.Add($"地块 {definition.Id} -> 基底 {harvest.ExhaustedTileId} 必须登记且不可采挖或破坏。");
             foreach (TileBlockBehaviour behaviour in definition.Behaviours)
             {
                 IEnumerable<string> buffs = behaviour switch

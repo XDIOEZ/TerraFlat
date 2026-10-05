@@ -9,6 +9,8 @@ public sealed partial class WorldNavigationManager
     #region ECS 共享导航所有权
     // 只有实际使用 ECS 导航时才创建；旧 GameObject Agent 保持现有请求路径。
     private FlowNavigationCache sharedNavigation;
+    private readonly Dictionary<Vector2Int, FlowGoalHandle> portalPathGoals = new();
+    private readonly Queue<Vector2Int> portalPathGoalOrder = new();
 
     /// <summary>只验证共享缓存所有权；观察者和旧模拟检查世界时不能隐式创建新缓存。</summary>
     public bool OwnsSharedNavigation(FlowNavigationCache cache) =>
@@ -37,6 +39,8 @@ public sealed partial class WorldNavigationManager
         grid.CellChanged -= MarkSharedNavigationDirty;
         grid.Cleared -= sharedNavigation.RequestReset;
         sharedNavigation.Dispose(); sharedNavigation = null;
+        portalPathGoals.Clear();
+        portalPathGoalOrder.Clear();
     }
 
     /// <summary>主线程适配器，复用最终 WorldNavigationGrid 权重、建筑覆盖与循环坐标。</summary>
@@ -50,15 +54,19 @@ public sealed partial class WorldNavigationManager
         /// <summary>绑定当前管理器拥有的网格。</summary>
         internal SharedGridSource(WorldNavigationGrid source) { this.source = source; }
 
-        /// <summary>读取最终有效权重与水面状态；未加载格不参与导航，阻挡格以 0 表达。</summary>
+        /// <summary>输入已按共享缓存 Domain 规范化；未加载格不参与导航，阻挡格以 0 表达。</summary>
         public bool TryGetCell(int2 cell, out FlowNavigationCellData data)
         {
-            bool registered = source.TryGetCell(new Vector2Int(cell.x, cell.y), out WorldNavigationCell sourceCell);
+            bool registered = source.TryGetCanonicalCell(new Vector2Int(cell.x, cell.y), out WorldNavigationCell sourceCell);
             data = new FlowNavigationCellData
             {
                 Penalty = registered && sourceCell.Walkable ? sourceCell.Penalty : 0u,
                 Water = (byte)(registered && sourceCell.Water ? 1 : 0),
-                LiquidDepth = registered && sourceCell.Water ? sourceCell.LiquidDepth : 0f
+                LiquidDepth = registered && sourceCell.Water ? sourceCell.LiquidDepth : 0f,
+                WaterCurrent = registered && sourceCell.Walkable && sourceCell.Water
+                    ? (float2)WorldMotionSystem.SampleWaterVelocity(
+                        new Vector2(cell.x + 0.5f, cell.y + 0.5f), 1f)
+                    : float2.zero
             };
             return registered;
         }

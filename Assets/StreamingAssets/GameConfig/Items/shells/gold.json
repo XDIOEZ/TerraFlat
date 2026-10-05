@@ -1,0 +1,131 @@
+{
+  "schemaVersion": 1,
+  "items": [
+    {
+      "id": "Ingot_Gold",
+      "parent": "BasicItem_Base",
+      "gameName": "金锭",
+      "description": "由黄金铸成的金属锭，可作为制作材料。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 3.6,
+      "volume": 0.3,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": ["Ingot"],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/GoldIngot/GoldIngot_Icon.png",
+        "color": { "r": 1, "g": 1, "b": 1, "a": 1 },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": { "x": 0, "y": 0 },
+          "size": { "x": 0.7, "y": 0.63 }
+        }
+      },
+      "modules": {}
+    },
+    {
+      "id": "Ore_Gold",
+      "parent": "SlingAmmo_Base",
+      "gameName": "金矿石",
+      "description": "含金的矿石，可冶炼为金锭。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 3,
+      "volume": 0.75,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": ["Ore", "Gold", "SlingAmmo"],
+      "processing": {
+        "grind": {
+          "inputAmount": 1,
+          "work": 4,
+          "outputs": [{ "itemId": "OrePowder_Gold", "amount": 2 }]
+        }
+      },
+      "reactions": [
+        {
+          "id": "core:金矿石=金锭",
+          "minTemperature": 1064.0,
+          "maxTemperature": 2000.0,
+          "work": 100,
+          "inputs": [
+            {
+              "match": "exact_item",
+              "amount": 2,
+              "itemId": "Ore_Gold"
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "Ingot_Gold",
+              "amount": 1
+            }
+          ]
+        }
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Environment/Ore_Gold/Ore_Gold_Idle.png",
+        "color": { "r": 1, "g": 1, "b": 1, "a": 1 },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": { "x": 0, "y": 0 },
+          "size": { "x": 0.7, "y": 0.63 }
+        }
+      }
+    },
+    {
+      "id": "OrePowder_Gold",
+      "parent": "BasicItem_Base",
+      "gameName": "金矿粉",
+      "description": "用石臼捣碎金矿石得到的矿粉，可用于后续材料加工。",
+      "weight": 1.5,
+      "volume": 0.375,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": ["Material", "Powder", "Gold"],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Powders/OrePowder_Stone.png",
+        "color": { "r": 1.0, "g": 0.72, "b": 0.28, "a": 1.0 }
+      },
+      "modules": {}
+    },
+    {
+      "id": "Mine_Gold",
+      "parent": "Mine_Iron",
+      "gameName": "金矿山",
+      "description": "含金矿脉的岩体，需要镐开采，开采后掉落金矿石。",
+      "lootTableId": "Mine_Gold_Default",
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Environment/Mine_Gold/Mine_Gold_Idle.png",
+        "color": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        }
+      },
+      "modules": {
+        "生命值系统模块": {
+          "parameters": {
+            "Data": {
+              "Hp": 50,
+              "MaxHp": 50,
+              "DefenseValues": {
+                "Physical": 24
+              },
+              "CombatBalanceVersion": 1
+            },
+            "weakTool": 0
+          }
+        }
+      }
+    }
+  ]
+}

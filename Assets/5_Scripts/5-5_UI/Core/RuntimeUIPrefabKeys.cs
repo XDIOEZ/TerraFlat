@@ -3,16 +3,29 @@
 /// </summary>
 public static class RuntimeUIPrefabKeys
 {
+    #region 公共控件
+
+    /// <summary>全局通用面板背景控件。</summary>
+    public const string PanelBackground = "UI_PanelBackground";
+
+    /// <summary>全局可交互滑动条控件。</summary>
+    public const string SliderControl = "UI_SliderControl";
+
+    #endregion
+
     #region 设置面板
 
     public const string AudioSettings = "UI_AudioSettings";
     public const string UISettings = "UI_InterfaceSettings";
     public const string CameraControlSettings = "UI_CameraControlSettings";
+    public const string GameSettings = "UI_GameSettings";
     public const string VisualEffectsSettings = "UI_VisualEffectsSettings";
     public const string DebugSettings = "UI_DebugSettings";
     public const string CoordinateDisplaySettings = "UI_CoordinateDisplaySettings";
     public const string MainMenuSettings = "UI_MainMenuSettings";
     public const string MainMenuExitConfirmation = "UI_MainMenuExitConfirmation";
+    public const string ModManager = "UI_ModManager";
+    public const string SaveRenameDialog = "UI_SaveRenameDialog";
     public const string AutoSaveSettings = "UI_AutoSaveSettings";
     public const string WorldStreamingSettings = "UI_WorldStreamingSettings";
     public const string DifficultySettings = "UI_DifficultySettings";
@@ -29,8 +42,6 @@ public static class RuntimeUIPrefabKeys
     public const string SaveStatus = "UI_SaveStatus";
     public const string BuffStatus = "UI_BuffStatus";
     public const string BuffStatusItem = "UI_BuffStatusItem";
-    public const string QuestTracker = "UI_QuestTracker";
-    public const string QuestTrackerItem = "UI_QuestTrackerItem";
     public const string MobileControls = "UI_MobileControls";
     public const string MobileControlLayoutEditor = "UI_MobileControlLayoutEditor";
     /// <summary>手持可阅读物品打开的双页书籍面板。</summary>

@@ -2,16 +2,12 @@ using System;
 using Sirenix.OdinInspector;
 using UnityEngine;
 
-/// <summary>统一逐格环境温度查询与角色体温结算；局部冷热源由空间缓存独立维护，角色每 0.25 秒采样一次。</summary>
+/// <summary>统一逐格环境温度查询与角色体表温度结算；局部冷热源由空间缓存独立维护，角色每 0.25 秒采样一次。</summary>
 public partial class TemperatureMgr : SingletonAutoMono<TemperatureMgr>
 {
 #region 字段
 
     public const float DefaultAmbientTemperature = 20f; // 默认环境温度
-    public const float ColdDamageTickIntervalSeconds = 5f; // 低温伤害间隔
-    public const float ColdDamagePerTick = 2f; // 每次低温伤害
-    public const float DamageTickIntervalSeconds = 20f; // 高温伤害结算间隔
-
     public bool EnableDebugLog = false; // 是否输出温度处理调试日志
 
 #endregion
@@ -32,26 +28,24 @@ public partial class TemperatureMgr : SingletonAutoMono<TemperatureMgr>
             throw new ArgumentNullException(nameof(data));
         }
 
-        data.ChangeSpeed = Mathf.Max(0f, data.ChangeSpeed);
-
-        data.HotDamagePerSecond = Mathf.Max(0f, data.HotDamagePerSecond);
-        data.ColdDamagePerTick = Mathf.Max(0f, data.ColdDamagePerTick);
-
-        data.HotDamageStart = Mathf.Max(data.ColdDamageStart, data.HotDamageStart);
+        data.SafeTemperatureMax = Mathf.Max(data.SafeTemperatureMin, data.SafeTemperatureMax);
+        if (!float.IsFinite(data.DangerTemperatureBufferSeconds) || data.DangerTemperatureBufferSeconds < 0f ||
+            !float.IsFinite(data.TemperatureBufferRecoveryPerSecond) || data.TemperatureBufferRecoveryPerSecond < 0f ||
+            !float.IsFinite(data.RemainingTemperatureBufferSeconds))
+            throw new ArgumentOutOfRangeException(nameof(data), "危险温度缓冲参数必须是有限非负数，剩余时间必须是有限数值。");
+        data.RemainingTemperatureBufferSeconds = Mathf.Clamp(
+            data.RemainingTemperatureBufferSeconds, 0f, data.DangerTemperatureBufferSeconds);
         if (data.RuntimeChangeSpeedMultiplier <= 0f)
             data.RuntimeChangeSpeedMultiplier = 1f;
         if (data.RuntimeCoolingSpeedMultiplier <= 0f)
             data.RuntimeCoolingSpeedMultiplier = 1f;
     }
 
-    /// <summary>推进体温并结算温度伤害；返回本次是否实际造成了低温伤害。</summary>
-    public bool ProcessTemperature(
+    /// <summary>推进角色体表温度；超出安全范围后的状态与伤害由 Buff 系统统一结算。</summary>
+    public void ProcessTemperature(
         Mod_Temperature.TemperatureData data,
-        DamageReceiver damageReceiver,
         float deltaTime,
         Action<float> onTemperatureChanged,
-        ref float coldDamageTickTimer,
-        ref float hotDamageTickTimer,
         float? naturalTemperature = null)
     {
         if (data == null)
@@ -66,60 +60,6 @@ public partial class TemperatureMgr : SingletonAutoMono<TemperatureMgr>
 
         float nextTemperature = EvaluateNextTemperature(data, deltaTime, naturalTemperature);
         onTemperatureChanged(nextTemperature);
-
-        if (damageReceiver == null)
-        {
-            return false;
-        }
-
-        bool isCold = data.CurrentTemperature < data.ColdDamageStart;
-        bool isHot = data.CurrentTemperature > data.HotDamageStart;
-        float damage = 0f;
-        bool coldDamageApplied = false;
-
-        if (isCold)
-        {
-            coldDamageTickTimer += deltaTime;
-            if (coldDamageTickTimer >= ColdDamageTickIntervalSeconds)
-            {
-                coldDamageTickTimer = 0f;
-                damage += data.ColdDamagePerTick;
-                coldDamageApplied = true;
-            }
-        }
-        else
-        {
-            coldDamageTickTimer = 0f;
-        }
-
-        if (isHot)
-        {
-            hotDamageTickTimer += deltaTime;
-            if (hotDamageTickTimer >= DamageTickIntervalSeconds)
-            {
-                int tickCount = Mathf.FloorToInt(hotDamageTickTimer / DamageTickIntervalSeconds);
-                hotDamageTickTimer -= tickCount * DamageTickIntervalSeconds;
-                damage += EvaluateTemperatureDamage(data, DamageTickIntervalSeconds) * tickCount;
-            }
-        }
-        else
-        {
-            hotDamageTickTimer = 0f;
-        }
-
-        if (damage <= 0f)
-        {
-            return false;
-        }
-
-        damageReceiver.ForceHurt(damage);
-
-        if (EnableDebugLog)
-        {
-            Debug.Log($"[TemperatureMgr] 触发温度伤害，当前体温={data.CurrentTemperature:F2}℃，伤害={damage:F3}");
-        }
-
-        return coldDamageApplied;
     }
 
     public float EvaluateNextTemperature(Mod_Temperature.TemperatureData data, float deltaTime,
@@ -130,15 +70,21 @@ public partial class TemperatureMgr : SingletonAutoMono<TemperatureMgr>
             throw new ArgumentNullException(nameof(data));
         }
 
-        float targetTemperature =
-            data.AmbientTemperature + data.Insulation + data.RuntimeAmbientOffset;
+        float targetTemperature = data.AmbientTemperature + data.RuntimeAmbientOffset;
         // 临时 Buff 增温不参与环境趋近计算，伤害仍读取回调提交后的有效体温。
         float currentTemperature = naturalTemperature ?? data.CurrentTemperature;
-        float changeSpeed = data.ChangeSpeed * Mathf.Max(0f, data.RuntimeChangeSpeedMultiplier);
-        if (targetTemperature < currentTemperature)
-            changeSpeed *= Mathf.Max(0f, data.RuntimeCoolingSpeedMultiplier);
-
-        return Mathf.MoveTowards(currentTemperature, targetTemperature, changeSpeed * deltaTime);
+        float directionMultiplier = targetTemperature < currentTemperature
+            ? data.RuntimeCoolingSpeedMultiplier
+            : 1f;
+        float transferPerSecond = Mathf.Max(
+            1f,
+            Mathf.Floor(Mathf.Abs(targetTemperature) * 0.01f + 0.5f));
+        return ThermalRuntime.AdvanceTowards(
+            currentTemperature,
+            targetTemperature,
+            transferPerSecond,
+            deltaTime,
+            Mathf.Max(0f, data.RuntimeChangeSpeedMultiplier) * Mathf.Max(0f, directionMultiplier));
     }
 
     public float GetGlobalAmbientTemperature()
@@ -176,21 +122,24 @@ public partial class TemperatureMgr : SingletonAutoMono<TemperatureMgr>
         }
     }
 
-    public float EvaluateTemperatureDamage(Mod_Temperature.TemperatureData data, float deltaTime)
+#endregion
+}
+
+/// <summary>统一处理生物、物质与液体按传热速率向目标温度趋近的基础计算。</summary>
+public static class ThermalRuntime
+{
+#region 温度推进
+
+    /// <summary>按每秒传热速率推进当前温度；速率、倍率与时间均不允许产生反向传热。</summary>
+    public static float AdvanceTowards(
+        float currentTemperature,
+        float targetTemperature,
+        float transferPerSecond,
+        float seconds,
+        float transferMultiplier = 1f)
     {
-        if (data == null)
-        {
-            throw new ArgumentNullException(nameof(data));
-        }
-
-        float hotDamage = 0f;
-        if (data.CurrentTemperature > data.HotDamageStart)
-        {
-            float ratio = Mathf.Max(0f, data.CurrentTemperature - data.HotDamageStart);
-            hotDamage = ratio * data.HotDamagePerSecond * deltaTime;
-        }
-
-        return hotDamage;
+        float speed = Mathf.Max(0f, transferPerSecond) * Mathf.Max(0f, transferMultiplier);
+        return Mathf.MoveTowards(currentTemperature, targetTemperature, speed * Mathf.Max(0f, seconds));
     }
 
 #endregion

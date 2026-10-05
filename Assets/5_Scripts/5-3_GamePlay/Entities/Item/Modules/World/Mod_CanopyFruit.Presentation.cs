@@ -7,8 +7,8 @@ public sealed partial class Mod_CanopyFruit
 {
     #region 飞行碰撞
     private readonly List<RaycastHit2D> sweepHits = new(); // 无固定容量截断的短期碰撞结果。
-    private readonly HashSet<DamageReceiver> hitReceivers = new(); // 同一目标的兄弟 Collider 去重。
-    private DamageReceiver hitTarget; // 具名伤害调用的当前目标。
+    private readonly HashSet<Mod_DamageReceiver> hitReceivers = new(); // 同一目标的兄弟 Collider 去重。
+    private Mod_DamageReceiver hitTarget; // 具名伤害调用的当前目标。
     private FallingFruitDamage hitSource; // 仅查询期间存在的伤害请求。
 
     /// <summary>扫掠本帧飞行路径，临时危险不附着到任何正式掉落实体。</summary>
@@ -31,7 +31,7 @@ public sealed partial class Mod_CanopyFruit
         {
             foreach (RaycastHit2D hit in sweepHits)
             {
-                DamageReceiver target = GameplayPhysics2D.ResolveComponent<DamageReceiver>(hit.collider);
+                Mod_DamageReceiver target = GameplayPhysics2D.ResolveComponent<Mod_DamageReceiver>(hit.collider);
                 if (target == null || target.item == item || !hitReceivers.Add(target)) continue;
                 hitTarget = target;
                 double hitTime = Math.Min(stepTo, fruit.LandAt - 0.000001);

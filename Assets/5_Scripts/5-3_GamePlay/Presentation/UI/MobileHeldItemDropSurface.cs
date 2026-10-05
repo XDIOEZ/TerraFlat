@@ -6,7 +6,7 @@ using UnityEngine.UI;
 /// <summary>
 /// 手机端手持物世界丢弃触控面：轻点松手丢一个，按住 0.45 秒丢整组，移动超过 16 个 UI 像素取消。
 /// 组件只负责独立触点的手势所有权与屏幕落点，长按完成后不会再触发轻点，
-/// 最终丢弃统一转交 Module_DiscardItem；中间空白层仅在玩家手上存在物品时参与 UI 射线。
+/// 最终丢弃统一转交 Mod_DiscardItem；中间空白层仅在玩家手上存在物品时参与 UI 射线。
 /// </summary>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(Graphic))]
@@ -173,8 +173,8 @@ public sealed class MobileHeldItemDropSurface : MonoBehaviour,
         if (!itemUnchanged)
             return;
 
-        Module_DiscardItem discardModule =
-            Inventory_Hand.PlayerHand.item?.GetComponentInChildren<Module_DiscardItem>(true);
+        Mod_DiscardItem discardModule =
+            Inventory_Hand.PlayerHand.item?.GetComponentInChildren<Mod_DiscardItem>(true);
         discardModule?.TryDropHeldItemAtScreenPosition(screenPosition, entireStack ? (int?)null : 1);
     }
 

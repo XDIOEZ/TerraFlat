@@ -11,14 +11,24 @@ namespace FlatWorld.GameplayMCP
         Group = "core")]
     public static class GameplayControlTool
     {
-        public sealed class Parameters
+        #region 统一输入输出
+
+        /// <summary>按需返回数据，错误与分页状态保持完整。</summary>
+        public static object HandleCommand(JObject parameters)
+        {
+            return GameplayMcpOutput.Invoke("gameplay_control", parameters, ExecuteCommand, false);
+        }
+
+        #endregion
+
+        public sealed class Parameters : GameplayMcpOutputParameters
         {
             [ToolParameter("One of: acquire, release, status.", Required = false, DefaultValue = "status")]
             public string action { get; set; }
         }
 
         /// <summary>获取、释放或查询控制租约。</summary>
-        public static object HandleCommand(JObject parameters)
+        private static object ExecuteCommand(JObject parameters)
         {
             string action = parameters?["action"]?.ToString()?.Trim().ToLowerInvariant() ?? "status";
             if (action == "release")
@@ -30,7 +40,7 @@ namespace FlatWorld.GameplayMCP
 
             if (!GameplayMcpRuntime.TryGetPlayerContext(
                     out _,
-                    out GameController controller,
+                    out Mod_GameController controller,
                     out _,
                     out string error))
             {

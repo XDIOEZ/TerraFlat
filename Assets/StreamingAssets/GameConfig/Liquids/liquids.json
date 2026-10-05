@@ -1,12 +1,41 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "liquids": [
+    {
+      "id": "core:lava",
+      "displayName": "岩浆",
+      "description": "石地山顶小湖中的高温熔体。接触会持续升温并受到灼伤，可用铁桶盛装和倾倒，不能饮用。",
+      "category": "molten",
+      "visualState": "lava",
+      "primaryColor": { "r": 1.0, "g": 0.22, "b": 0.025, "a": 1.0 },
+      "viscosity": 6.0,
+      "drinkable": false,
+      "hydrationPerServing": 0.0,
+      "worldWater": {
+        "spriteAddress": "Assets/6_Art/Tilemap/Grass.png[Water_0]",
+        "materialAddress": "Assets/9_Shaders/Material/Tilemap-Lava-Lit.mat",
+        "loadCapacity": 2,
+        "navigationCost": 30000,
+        "shallowMoveSpeedMultiplier": 0.5,
+        "deepMoveSpeedMultiplier": 0.2,
+        "followWaterVisualStyle": false,
+        "waterContact": false,
+        "temperature": 1100.0,
+        "contactHeatingPerSecond": 12.0,
+        "contactDamagePerSecond": 30.0,
+        "radiantHeatRadius": 6.0,
+        "radiantHeatOffset": 180.0,
+        "depthPerServing": 0.1
+      }
+    },
     {
       "id": "core:honey",
       "displayName": "蜂蜜",
       "description": "金黄色的黏稠蜂蜜，只作为液体存在，可储存在液体容器中。",
       "category": "syrup",
       "visualState": "honey",
+      "primaryColor": { "r": 0.84, "g": 0.55, "b": 0.09, "a": 1.0 },
+      "viscosity": 10.0,
       "drinkable": false,
       "hydrationPerServing": 0.0
     },
@@ -16,8 +45,13 @@
       "description": "未经处理的淡水，可以直接饮用，也可以烧开处理。",
       "category": "water",
       "visualState": "dirty",
+      "primaryColor": { "r": 0.42, "g": 0.37, "b": 0.22, "a": 1.0 },
+      "viscosity": 1.25,
       "drinkable": true,
       "hydrationPerServing": 25.0,
+      "ingredientReactions": [
+        { "itemId": "Salt", "amount": 10, "resultLiquidId": "core:salt_water", "requireFullContainer": true }
+      ],
       "drinkEffects": [
         {
           "buffId": "感染",
@@ -27,12 +61,13 @@
       "heatProcess": {
         "mode": "Transform",
         "minimumTemperature": 100.0,
-        "seconds": 20.0,
+        "seconds": 0.0,
         "resultLiquidId": "core:drinkable_water"
       },
       "worldWater": {
         "spriteAddress": "Assets/6_Art/Tilemap/Grass.png[Water_0]",
         "materialAddress": "Assets/9_Shaders/Material/Tilemap-Water-Lit.mat",
+        "loadCapacity": 2,
         "navigationCost": 20000,
         "shallowMoveSpeedMultiplier": 0.5,
         "deepMoveSpeedMultiplier": 0.2,
@@ -49,8 +84,57 @@
       "description": "已经处理过的干净淡水。",
       "category": "water",
       "visualState": "drinkable",
+      "primaryColor": { "r": 0.22, "g": 0.55, "b": 0.73, "a": 1.0 },
+      "viscosity": 1.0,
       "drinkable": true,
-      "hydrationPerServing": 25.0
+      "hydrationPerServing": 25.0,
+      "ingredientReactions": [
+        { "itemId": "Salt", "amount": 10, "resultLiquidId": "core:salt_water", "requireFullContainer": true }
+      ],
+      "worldWater": {
+        "spriteAddress": "Assets/6_Art/Tilemap/Grass.png[Water_0]",
+        "materialAddress": "Assets/9_Shaders/Material/Tilemap-Water-Lit.mat",
+        "loadCapacity": 2,
+        "navigationCost": 20000,
+        "shallowMoveSpeedMultiplier": 0.5,
+        "deepMoveSpeedMultiplier": 0.2,
+        "entryTemperatureFloor": 10.0,
+        "entryTemperatureTransitionSeconds": 5.0,
+        "drinkHoldSeconds": 1.0,
+        "drinkTickSeconds": 1.0,
+        "followWaterVisualStyle": true
+      }
+    },
+    {
+      "id": "core:salt_water",
+      "displayName": "盐水",
+      "description": "将一桶淡水与十份盐混合得到的高盐度水。",
+      "category": "water",
+      "visualState": "sea",
+      "primaryColor": { "r": 0.14, "g": 0.47, "b": 0.55, "a": 1.0 },
+      "viscosity": 1.08,
+      "drinkable": true,
+      "hydrationPerServing": 10.0,
+      "drinkEffects": [
+        {
+          "buffId": "脱水",
+          "chance": 1.0,
+          "feedback": "这盐水含有大量盐分，喝下去反而会让我脱水。"
+        }
+      ],
+      "worldWater": {
+        "spriteAddress": "Assets/6_Art/Tilemap/Winter.png[Winter_0]",
+        "materialAddress": "Assets/9_Shaders/Material/Tilemap-Water-Lit.mat",
+        "loadCapacity": 2,
+        "navigationCost": 20000,
+        "shallowMoveSpeedMultiplier": 0.5,
+        "deepMoveSpeedMultiplier": 0.2,
+        "entryTemperatureFloor": 10.0,
+        "entryTemperatureTransitionSeconds": 5.0,
+        "drinkHoldSeconds": 1.0,
+        "drinkTickSeconds": 1.0,
+        "followWaterVisualStyle": true
+      }
     },
     {
       "id": "core:sea_water",
@@ -58,6 +142,8 @@
       "description": "含盐量很高的海水，可通过加热蒸发获得盐。",
       "category": "water",
       "visualState": "sea",
+      "primaryColor": { "r": 0.14, "g": 0.47, "b": 0.55, "a": 1.0 },
+      "viscosity": 1.05,
       "buoyancyThresholdMultiplier": 1.5,
       "drinkable": true,
       "hydrationPerServing": 10.0,
@@ -79,6 +165,7 @@
       "worldWater": {
         "spriteAddress": "Assets/6_Art/Tilemap/Winter.png[Winter_0]",
         "materialAddress": "Assets/9_Shaders/Material/Tilemap-Water-Lit.mat",
+        "loadCapacity": 2,
         "navigationCost": 20000,
         "shallowMoveSpeedMultiplier": 0.5,
         "deepMoveSpeedMultiplier": 0.2,
@@ -92,9 +179,11 @@
     {
       "id": "core:molten_glass",
       "displayName": "熔融玻璃",
-      "description": "砂子在坩埚中达到熔化温度后形成的高温玻璃液体。",
+      "description": "沙子在坩埚中达到熔化温度后形成的高温玻璃液体。",
       "category": "molten",
       "visualState": "molten_glass",
+      "primaryColor": { "r": 0.92, "g": 0.64, "b": 0.24, "a": 1.0 },
+      "viscosity": 14.0,
       "drinkable": false,
       "hydrationPerServing": 0.0,
       "solidification": {
@@ -109,6 +198,8 @@
       "description": "孔雀石在坩埚中熔化后的高温铜液。",
       "category": "molten",
       "visualState": "molten_copper",
+      "primaryColor": { "r": 0.82, "g": 0.28, "b": 0.10, "a": 1.0 },
+      "viscosity": 4.0,
       "drinkable": false,
       "hydrationPerServing": 0.0,
       "solidification": {
@@ -123,6 +214,8 @@
       "description": "锡矿石在坩埚中熔化后的高温锡液。",
       "category": "molten",
       "visualState": "molten_tin",
+      "primaryColor": { "r": 0.68, "g": 0.72, "b": 0.70, "a": 1.0 },
+      "viscosity": 2.2,
       "drinkable": false,
       "hydrationPerServing": 0.0,
       "solidification": {
@@ -137,6 +230,8 @@
       "description": "铁矿石在坩埚中熔化后的高温铁液。",
       "category": "molten",
       "visualState": "molten_iron",
+      "primaryColor": { "r": 0.72, "g": 0.24, "b": 0.10, "a": 1.0 },
+      "viscosity": 5.0,
       "drinkable": false,
       "hydrationPerServing": 0.0,
       "solidification": {

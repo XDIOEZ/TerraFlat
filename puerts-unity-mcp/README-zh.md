@@ -1,0 +1,536 @@
+<h1 align="center">PuerTS Unity MCP</h1>
+<p align="center">
+  <strong>通过 MCP 控制 Unity Editor、Play Mode 和真实手机游戏，并在运行中的游戏里动态执行 PuerTS JavaScript。</strong>
+  <br />
+  <em>Android · iOS · IL2CPP · Editor JS · Runtime JS · UI 自动化 · 截图 · Profiler 报告 · Domain Reload 恢复</em>
+</p>
+
+<p align="center">
+  <a href="#快速开始"><img src="https://img.shields.io/badge/Quick_Start-4CAF50?style=for-the-badge" alt="Quick Start" /></a>
+  <a href="#agent-puerts-js-速查"><img src="https://img.shields.io/badge/Agent_JS_Guide-1976D2?style=for-the-badge" alt="Agent JS Guide" /></a>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Unity-2021.3%2B-black?style=flat&logo=unity&logoColor=white" alt="Unity 2021.3+" />
+  <img src="https://img.shields.io/badge/PuerTS-3.0.2-blue?style=flat" alt="PuerTS 3.0.2" />
+  <img src="https://img.shields.io/badge/MCP-JSON--RPC-6A5ACD?style=flat" alt="MCP JSON-RPC" />
+  <img src="https://img.shields.io/badge/IL2CPP-supported-2E7D32?style=flat" alt="IL2CPP supported" />
+</p>
+
+<p align="center">
+  <a href="README.md">English</a> · 中文
+</p>
+
+---
+
+## 功能特性
+
+| 能力 | 说明 |
+|---|---|
+| 手机直连动态调试 | Agent 可以直接连接 Android、iOS 或 standalone Unity Player，在真实运行中的游戏里执行 PuerTS JavaScript。 |
+| 支持 IL2CPP Player | 构建脚本会加入 PuerTS 包、native plugin、StreamingAssets 配置、Android 权限库和保留提示，用于手机和 IL2CPP 构建。 |
+| Editor 执行 JS 不触发 Domain Reload | `editor.js.eval` 在 Editor PuerTS VM 里执行 JS，不生成 C# 文件，不调用 `AssetDatabase.Refresh`，正常自动化流程不会触发 Unity domain reload。 |
+| Runtime 执行 JS | `runtime.js.eval` 可以指向本地 Play Mode，也可以指向远程 Player MCP，包括手机。 |
+| 聚焦 Unity 窗口 | 在视觉自动化或证据采集前，将 Unity Editor 进程/窗口置前。 |
+| Editor 和 Player 截图 | 截取 Game、Scene、Inspector、Console、Hierarchy 等 Unity EditorWindow，也可以截取 Runtime Player/手机画面。 |
+| UI 测试自动化 | 用 snapshot/find/raycast 识别可见 UGUI 控件，再按 text、path、instanceId 或屏幕坐标点击，适合沉淀可重复的 QA 流程。 |
+| Profiler 性能报告 | 通过 Unity Editor Profiler 采集 Editor 或已连接 Player/手机的数据，输出包含帧、marker、GC.Alloc 证据的热点报告。 |
+| C# 和 JS 扩展 MCP Tool | 核心工具用 C# 写，项目 JS 工具可以放在 `puerts-unity-mcp-extension/js/editor` 和 `js/runtime`。 |
+| Domain Reload 稳定性 | Editor MCP 会持久化 operation、compile result、reload hint，并在 Unity domain reload 后自动恢复 HTTP endpoint。 |
+
+## 它控制什么
+
+PuerTS Unity MCP 把每个可控制的 Unity 整体都看成一个 endpoint。
+
+```text
+Agent / MCP client
+  |
+  | stdio JSON-RPC
+  v
+Node stdio proxy
+  |
+  | HTTP JSON-RPC POST /mcp
+  v
++----------------------+      direct C# route      +-----------------------+
+| Unity Editor MCP     | ------------------------> | Play Mode Runtime MCP |
+| endpointKind=editor  |                           | endpointKind=player   |
+| C# + Editor PuerTS   |                           | C# + Runtime PuerTS   |
++----------------------+                           +-----------------------+
+        |
+        | 显式 direct target URL
+        v
++----------------------+
+| Phone / Player MCP   |
+| Android, iOS, build  |
+| C# + Runtime PuerTS  |
++----------------------+
+```
+
+Editor Play Mode 不是第三种 MCP。它是运行在 Unity Editor 进程内的同一套 Runtime MCP 实现。
+
+## 快速开始
+
+### 拉取 PuerTS 依赖
+
+```bash
+node Packages/puerts-unity-mcp/Tools~/vendor-puerts.mjs
+```
+
+这个命令会下载并校验 PuerTS `Unity_v3.0.2` Core 和 V8 包，放到 `third_party/puerts`。
+
+### 同步到 Unity 工程
+
+```bash
+node Packages/puerts-unity-mcp/Tools~/sync-local-package.mjs --unity-project-root <UnityProject>
+```
+
+Unity 工程里会出现：
+
+```text
+<UnityProject>/puerts-unity-mcp
+<UnityProject>/puerts-unity-mcp-extension
+<UnityProject>/.puerts-unity-mcp
+```
+
+如果想把 demo extension 也放进去：
+
+```bash
+node Packages/puerts-unity-mcp/Tools~/create-extension-demos.mjs --unity-project-root <UnityProject>
+```
+
+`install-to-unity-project.mjs` 默认也会创建同一套 demo；需要纯安装时可传 `--skip-extension-demos`。
+
+### 注册本地 UPM 包
+
+同步脚本会在 `Packages/manifest.json` 里加入三个本地依赖：
+
+```json
+{
+  "dependencies": {
+    "com.tencent.puerts.core": "file:../puerts-unity-mcp/third_party/puerts/unity/upms/core",
+    "com.tencent.puerts.v8": "file:../puerts-unity-mcp/third_party/puerts/unity/upms/v8",
+    "puerts-unity-mcp": "file:../puerts-unity-mcp/Packages/puerts-unity-mcp"
+  }
+}
+```
+
+### 配置 Agent
+
+同步后打开 Unity 工程内的 Agent 配置说明：
+
+```text
+<UnityProject>/puerts-unity-mcp/Packages/puerts-unity-mcp/setup-for-agent.md
+```
+
+Codex 的 MCP 配置示例：
+
+```toml
+[mcp_servers."puerts-unity-mcp"]
+command = "node"
+args = [
+  "<UnityProject>/puerts-unity-mcp/Packages/puerts-unity-mcp/Tools~/puerts-unity-mcp-stdio-proxy.js",
+  "--config",
+  "<UnityProject>/puerts-unity-mcp-extension/editor-mcp-config.json"
+]
+```
+
+## 手机和 IL2CPP 构建
+
+QA 手机和真实 Player 构建需要把 Runtime MCP 编进包：
+
+```bash
+node <UnityProject>/puerts-unity-mcp/Packages/puerts-unity-mcp/Tools~/add-pum-to-build.mjs --unity-project-root <UnityProject>
+```
+
+从 Player 构建里移除：
+
+```bash
+node <UnityProject>/puerts-unity-mcp/Packages/puerts-unity-mcp/Tools~/remove-pum-from-build.mjs --unity-project-root <UnityProject>
+```
+
+`add-pum-to-build.mjs` 会做这些事：
+
+- 添加本地 PuerTS 和 PuerTS Unity MCP package 依赖
+- 把 `puerts-unity-mcp-extension/mobile-mcp-config.json` 复制到 `Assets/StreamingAssets/PuertsUnityMcp/mobile-mcp-config.json`
+- 确认 `third_party/puerts` 下官方 PuerTS Android native libraries 存在，并使用 `Packages/puerts-unity-mcp/Runtime/Plugins/Android` 下随包提供的 MCP Android 权限库
+- 使用适合手机的低 IO 默认配置
+
+`remove-pum-from-build.mjs` 会移除构建依赖和复制到 `StreamingAssets` 的配置，但不会删除 package 自带的 Android plugin 文件。
+
+手机里的 Runtime MCP 会暴露：
+
+```text
+GET  /health
+POST /mcp
+```
+
+Agent 不开 Unity Editor 也可以直接连手机：
+
+```bash
+node <UnityProject>/puerts-unity-mcp/Packages/puerts-unity-mcp/Tools~/puerts-unity-mcp-stdio-proxy.js \
+  --config <UnityProject>/puerts-unity-mcp-extension/editor-mcp-config.json \
+  --target-kind player \
+  --target-url http://PHONE_IP:18991
+```
+
+远程手机/Player 连接只走显式 URL。可以写进 `editor-mcp-config.json`，也可以启动 proxy 时传 `--target-url`：
+
+```json
+{
+  "selectedTargetKind": "player",
+  "selectedTargetUrl": "http://PHONE_IP:18991"
+}
+```
+
+## Editor JS 不触发 Domain Reload
+
+使用 `editor.js.eval` 做 Editor 自动化。它在现有 Editor PuerTS VM 中执行 JS，不创建 C# 脚本，也不触发编译。
+
+```json
+{
+  "name": "editor.js.eval",
+  "arguments": {
+    "mode": "expression",
+    "code": "CS.UnityEditor.EditorApplication.isPlaying"
+  }
+}
+```
+
+这和临时生成 C# 文件完全不同。JS eval 不调用 `AssetDatabase.Refresh`，所以常规 Editor 自动化流程不会触发 Unity domain reload，操作会更流畅。
+
+如果项目 C# 修改导致 domain reload 无法避免，Editor MCP 会把 operation 状态写到 `.puerts-unity-mcp/ops`，保存 compile result hint，并在 `afterAssemblyReload` 后恢复 HTTP endpoint。
+
+## MCP Tool 扩展
+
+核心工具由 C# 注册。项目工具可以用 JS 或 C# 写，和内置工具进入同一个 `tools/list`。同名工具不会被项目扩展静默覆盖，建议项目工具使用 `project.*`、`game.*` 或团队约定前缀。
+
+```text
+<UnityProject>/puerts-unity-mcp-extension
+  js/editor                Editor 侧 JavaScript MCP tools
+  js/runtime               Runtime / Player 侧 JavaScript MCP tools
+  Packages/<package>       可选的项目 C# MCP 扩展包
+  skills                   给 Agent 使用的项目技能
+```
+
+每个 JavaScript MCP tool 使用一个 manifest 指向模块：
+
+```json
+{
+  "name": "runtime.activeScene",
+  "description": "Return the active Unity scene through the runtime PuerTS VM.",
+  "modulePath": "active-scene.mjs",
+  "functionName": "execute",
+  "inputSchemaJson": "{\"type\":\"object\",\"additionalProperties\":true}"
+}
+```
+
+Runtime JS tool 会通过 `runtime.js.eval` 执行，所以同一套工具模型可以同时用于 Play Mode 和真实手机。
+
+模块应该导出一个 JSON 形态的函数。后续 Agent 可以从 MCP `initialize` instructions 或 stdio proxy 的 `agent.extension.instructions` 工具里看到同样的约定。
+
+```js
+export function execute(argsJson, contextJson) {
+  const args = JSON.parse(argsJson || "{}");
+  const context = JSON.parse(contextJson || "{}");
+  return {
+    ok: true,
+    endpointKind: context.endpointKind,
+    args
+  };
+}
+```
+
+安装脚本和 Unity 菜单可以把一套 demo 复制到 extension 目录，不覆盖已有文件：
+
+```bash
+node <repo>/Packages/puerts-unity-mcp/Tools~/create-extension-demos.mjs --unity-project-root <UnityProject>
+```
+
+也可以在 Unity 菜单执行 `PuerTS Unity MCP/Create Extension Demos`。Demo 包含：
+
+- `js/editor/demo-editor-scene.*`：Editor JS tool，读取当前 scene 和 Build Settings。
+- `js/runtime/demo-runtime-screen.*`：Runtime JS tool，可在 Play Mode 或手机 Player 上读取屏幕和 scene 信息。
+- `skills/puerts-unity-mcp-extension-demo.md`：教 Agent 如何写项目扩展。
+- `Packages/puerts-unity-mcp-extension-demo`：C# provider local package 示例。若要启用 C# demo，把 `Packages/manifest.json` 里加一行 `"puerts-unity-mcp-extension-demo": "file:../puerts-unity-mcp-extension/Packages/puerts-unity-mcp-extension-demo"`。
+
+把项目专属写法、游戏流程、HotFix 命名规则沉淀到 `puerts-unity-mcp-extension/skills/*.md`；Agent 可以通过 `agent.extension.skills.list`、`editor.skills.list` 或 `runtime.skills.list` 发现和加载。
+
+项目 C# MCP 扩展建议放在独立 local package：`puerts-unity-mcp-extension/Packages/<project-extension-package>`。这个包可以引用 `PuertsUnityMcp` 和项目里的 HotFix 等程序集；核心 `puerts-unity-mcp` 包保持项目无关，构建脚本只需要通过 Unity `Packages/manifest.json` 增删这个扩展包依赖即可启用或移除。C# 扩展实现 `IUnityMcpToolProvider` 后会在 Editor / Runtime host 启动时从已加载程序集自动发现：
+
+```csharp
+using System.Threading.Tasks;
+using PuertsUnityMcp;
+
+public sealed class ProjectMcpTools : IUnityMcpToolProvider
+{
+    public string EndpointKind => "runtime"; // editor, runtime/player, or all
+
+    public void RegisterTools(UnityMcpToolProviderContext context)
+    {
+        context.TryRegister(new DelegateUnityMcpTool(
+            "game.status",
+            "Return project runtime state.",
+            JsonSchemas.Object(),
+            (ctx, args) => Task.FromResult("{\"ok\":true}")));
+    }
+}
+```
+
+## 内置 MCP Tools
+
+`tools/list` 会返回当前 endpoint 实际可用的工具。下面是 package 自带的 C# 内置工具；项目自己的 JS tools 和 C# provider tools 会额外从 extension / 已加载程序集加载，例如 `game.*` 这类工具不属于通用内置工具。
+
+### Editor MCP
+
+| Tool | 用途 |
+|---|---|
+| `mcp.info` | 返回 Editor endpoint metadata、health 和 capability。 |
+| `editor.state` | 返回 Unity Editor 当前状态。 |
+| `editor.buildSettings.startupScene` | 返回 Build Settings 第一个启用场景。 |
+| `editor.js.eval` | 在 Editor PuerTS VM 中执行 JS，不生成 C#，正常情况下不触发 domain reload。 |
+| `editor.hierarchy.get` | 导出 Scene/Play Mode hierarchy JSON 到 `.puerts-unity-mcp/hierarchy-results`，返回摘要和文件路径。 |
+| `get-hierarchy` | 兼容 uLoop 的 `editor.hierarchy.get` 别名。 |
+| `editor.window.focus` | 将 Unity Editor 窗口置前。 |
+| `focus-window` | 兼容 uLoop 的 `editor.window.focus` 别名。 |
+| `editor.window.screenshot` | 截取 EditorWindow tab 到 `.puerts-unity-mcp/editor-window-screenshots`，仅 Editor 可用。 |
+| `screenshot` | 兼容 uLoop 的 EditorWindow 截图别名；Player/手机截图请用 Runtime `screen.screenshot`。 |
+| `editor.profiler.targets.list` | 列出 Unity Editor Profiler 暴露的目标，包括已连接的 Player/手机目标。 |
+| `editor.profiler.connect` | 尝试将 Unity Editor Profiler 切到 Editor 或 Player/手机目标。 |
+| `editor.profiler.capture` | 通过 Unity Editor Profiler 录制并分析 RawFrameData，输出 JSON/CSV/Markdown 到 `.puerts-unity-mcp/perf-reports`。 |
+| `editor.profiler.analyze` | 分析 Unity Editor Profiler 中已有的帧数据，不重新录制。 |
+| `editor.scriptTools.list` | 列出 `puerts-unity-mcp-extension/js/editor` 中的项目 JS tools。 |
+| `editor.scriptTools.reload` | 重新加载 Editor 项目 JS tools。 |
+| `editor.skills.list` | 列出 `puerts-unity-mcp-extension/skills` 中的项目 skills。 |
+| `editor.skill.load` | 加载一个项目 skill。 |
+| `editor.playmode.set` | 延迟进入、退出或切换 Play Mode。 |
+| `editor.playmode.state` | 返回 Play Mode 状态。 |
+| `editor.playmode.set.immediate` | 立即进入、退出或切换 Play Mode。 |
+| `editor.targets.list` | 列出当前 Editor 和配置中的直连远程 Editor target。 |
+| `runtime.targets.list` | 列出本地 Play Mode Runtime 和配置中的直连 Player target。 |
+| `targets.list` | 列出本地 Editor、本地 Play Mode Runtime 和配置中的直连远程 target。 |
+| `runtime.js.eval` | 从 Editor 转发 JS 到本地 Play Mode Runtime 或远程 Player/手机。 |
+| `runtime.tool.call` | 从 Editor 调用本地 Play Mode 或远程 Player 的 runtime MCP tool。 |
+| `performance.hotspot.report` | 兼容 AIBridge 的性能热点入口：通过 Unity Editor Profiler 采集/分析 Editor 或已连接手机/Player 数据，并输出 Markdown 报告。 |
+| `perf.hotspot.report` | `performance.hotspot.report` 的别名。 |
+| `editor.compile` | 触发 `AssetDatabase.Refresh`，并持久化编译结果 hint，用于 domain reload 恢复测试。 |
+| `op.status` | 读取持久 operation 状态或结果。 |
+
+### Runtime / Player MCP
+
+这些工具在 Editor Play Mode、Android、iOS 和 standalone Player 中可用；手机直连时 Agent 也是调用这一组。
+
+| Tool | 用途 |
+|---|---|
+| `mcp.info` | 返回 Runtime/Player endpoint metadata、health 和 capability。 |
+| `runtime.status` | 返回 Runtime/Player endpoint 状态。 |
+| `runtime.targets.list` | 列出当前 Player endpoint。 |
+| `targets.list` | `runtime.targets.list` 的别名。 |
+| `runtime.js.eval` | 在 Runtime PuerTS VM 中执行 JS。 |
+| `runtime.reflection.invoke` | 通过反射 gateway 调用静态 C# 方法。 |
+| `runtime.scriptTools.list` | 列出 `puerts-unity-mcp-extension/js/runtime` 中的项目 JS tools。 |
+| `runtime.scriptTools.reload` | 重新加载 Runtime 项目 JS tools。 |
+| `runtime.skills.list` | 列出项目 skills。 |
+| `runtime.skill.load` | 加载一个项目 skill。 |
+| `op.status` | 读取持久 operation 状态或结果。 |
+| `runtime.logs` | 返回 Runtime log ring buffer 中的最近日志。 |
+| `runtime.logs.clear` | 清空 Runtime log ring buffer。 |
+| `screen.screenshot` | 截取 Player 画面；手机默认使用 memory PNG base64，减少设备 IO。 |
+| `runtime.ui.snapshot` | 返回可见 UGUI canvas、button 和可点击控件快照。 |
+| `runtime.ui.find` | 按 text、name、path 或 canvas 查找 UGUI 控件。 |
+| `runtime.ui.raycast` | 对屏幕点或目标控件执行 UI raycast。 |
+| `runtime.ui.click` | 按坐标、path 或 instanceId 点击 UGUI 控件。 |
+| `input.tap` | `runtime.ui.click` 的别名。 |
+
+## Agent PuerTS JS 速查
+
+这一节是专门写给 Agent 的，用于生成 `editor.js.eval`、`runtime.js.eval` 或项目 JavaScript MCP tool 的代码。
+
+### 选择目标 VM
+
+| 任务 | Tool | VM |
+|---|---|---|
+| Unity Editor 自动化 | `editor.js.eval` | Editor PuerTS VM |
+| Play Mode Runtime 自动化 | `runtime.js.eval` 指向本地 Play Mode target | Runtime PuerTS VM |
+| Android、iOS、standalone 自动化 | `runtime.js.eval` 指向 `targetId` 或 `httpUrl` | 手机或 Player 里的 Runtime PuerTS VM |
+
+Editor 和 Runtime 是两个独立的 PuerTS `ScriptEnv`。Editor 代码可以使用 `UnityEditor` API。Runtime 和手机代码应使用运行时安全的 API。
+
+### 基础 PuerTS 写法
+
+优先使用 PuerTS 的 `CS` 全局对象。
+
+```js
+CS.UnityEngine.Debug.Log("hello from PuerTS Unity MCP");
+
+var productName = CS.UnityEngine.Application.productName;
+var sceneName = CS.UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
+
+return {
+  ok: true,
+  productName: productName,
+  sceneName: sceneName
+};
+```
+
+`mode: "expression"` 会自动返回表达式：
+
+```js
+CS.UnityEngine.Application.version
+```
+
+`mode: "script"` 需要显式 `return`：
+
+```js
+var go = CS.UnityEngine.GameObject.Find("Canvas");
+return {
+  found: !!go,
+  name: go ? go.name : ""
+};
+```
+
+### 反射 fallback
+
+如果某个 C# 类型没有生成 wrap，使用 `__unity_mcp`。这个项目当前走 reflection-first，适合开发阶段和项目特有的 IL2CPP 排查。
+
+```js
+return __unity_mcp.invokeStatic(
+  "UnityEngine.Debug",
+  "Log",
+  "hello through reflection"
+);
+```
+
+常用 helper：
+
+```js
+__unity_mcp.typeExists("UnityEngine.Application");
+__unity_mcp.getStatic("UnityEngine.Application", "productName");
+__unity_mcp.getStaticPath("UnityEngine.Screen", "width");
+__unity_mcp.setStatic("UnityEngine.Time", "timeScale", 1);
+__unity_mcp.invokeStatic("UnityEngine.Debug", "Log", "message");
+```
+
+在 IL2CPP 包里，反射取决于类型和成员是否被 stripping。遇到被裁剪的类型时，用 link.xml 或项目包装类补保留。
+
+### 手机 UI 自动化模式
+
+黑盒自动玩手机游戏时，先观察，再操作。
+
+```js
+var root = CS.UnityEngine.GameObject.Find("UICanvas");
+return {
+  hasUiCanvas: !!root,
+  screen: {
+    width: CS.UnityEngine.Screen.width,
+    height: CS.UnityEngine.Screen.height
+  }
+};
+```
+
+然后组合 runtime MCP 工具：
+
+- `screen.screenshot`
+- `runtime.ui.snapshot`
+- `runtime.ui.find`
+- `runtime.ui.raycast`
+- `runtime.ui.click`
+- `input.tap`
+
+稳定的项目流程不要一直生成一次性 eval 脚本，应该沉淀到 `puerts-unity-mcp-extension/js/runtime`。
+
+### Profiler 性能热点流程
+
+性能分析现在依赖 Unity Editor 自带 Profiler，而不是 Runtime 采样器。先用 `editor.profiler.targets.list` 查看 Profiler 能看到的目标；分析 Editor 时传 `target: "editor"`，分析手机或 Player 时先用 Unity Profiler 连接目标，或尝试 `editor.profiler.connect` 的 `profilerTargetName` / `profilerTargetId` / `profilerTargetUrl`。
+
+然后调用 `editor.profiler.capture` 或 `performance.hotspot.report`，例如 `duration: "15s"`。工具会用 `ProfilerDriver.GetRawFrameDataView` 读取帧数据，参考 Profile Analyzer 的思路计算 frame summary、top markers、self time 和 GC.Alloc，并写出 `profiler-analysis.json`、`top-markers.csv`、`report.md` 到 `.puerts-unity-mcp/perf-reports`。
+
+### 返回值规则
+
+返回 JSON 可序列化数据：字符串、数字、布尔值、数组和普通对象。不要直接返回 Unity 对象。
+
+```js
+var camera = CS.UnityEngine.Camera.main;
+return {
+  hasMainCamera: !!camera,
+  cameraName: camera ? camera.name : ""
+};
+```
+
+## 协议表面
+
+HTTP endpoints：
+
+| Endpoint | 用途 |
+|---|---|
+| `GET /health` | endpoint 元数据、运行状态、能力摘要 |
+| `GET /api/ping` | 轻量 health alias |
+| `POST /mcp` | 同步 JSON-RPC MCP 调用 |
+
+主要 MCP methods：
+
+- `initialize`
+- `ping`
+- `tools/list`
+- `tools/call`
+
+C# 侧 JSON 序列化只使用 Unity `JsonUtility`。项目不依赖 Newtonsoft.Json 或其他第三方 JSON 库。
+
+## 配置和状态目录
+
+持久项目配置：
+
+| 路径 | 用途 |
+|---|---|
+| `puerts-unity-mcp-extension/editor-mcp-config.json` | Editor、Agent 和显式 target 选择配置 |
+| `puerts-unity-mcp-extension/mobile-mcp-config.json` | Runtime / Player 配置，会复制进构建 |
+| `Packages/puerts-unity-mcp/Runtime/Plugins/Android` | 随包提供的 MCP Android 权限库；PuerTS native libraries 来自 `third_party/puerts` 官方 UPM 包 |
+| `Assets/puerts-unity-mcp/Runtime/Generated/Plugins/puerts_il2cpp` | 当前 Unity 工程生成的 PuerTS IL2CPP bridge 文件；应忽略并按工程重新生成，不要当成通用 package 源码提交 |
+| `puerts-unity-mcp-extension/js/editor` | 项目 Editor JS MCP tools |
+| `puerts-unity-mcp-extension/js/runtime` | 项目 Runtime JS MCP tools |
+| `puerts-unity-mcp-extension/skills` | 给 Agent 使用的项目技能 |
+
+临时状态和 operation 数据：
+
+| 路径 | 用途 |
+|---|---|
+| `.puerts-unity-mcp/editors/{editorId}/heartbeat.json` | Editor heartbeat |
+| `.puerts-unity-mcp/players/{playerId}/heartbeat.json` | 可选 Player heartbeat |
+| `.puerts-unity-mcp/ops/{operationId}` | 持久 operation 状态和结果 |
+| `.puerts-unity-mcp/temp/compile-results` | 编译结果提示 |
+
+## Unity 工程 `.gitignore`
+
+在 Unity 工程的 `.gitignore` 里加入：
+
+```gitignore
+# PuerTS Unity MCP 运行状态和工程本地生成文件
+.puerts-unity-mcp/
+Assets/puerts-unity-mcp/Runtime/Generated/
+Assets/puerts-unity-mcp/Runtime/Generated/Plugins/puerts_il2cpp/
+```
+
+不要忽略整个 `puerts-unity-mcp-extension` 目录。这个目录里的项目配置、JS tools、skills 属于持久项目资产，如果它们需要随项目走，可以提交。也不要忽略 `puerts-unity-mcp/Packages/puerts-unity-mcp/Runtime/Plugins/Android`，这里是 package 自带的 Android 权限库。PuerTS 官方 `.so` 来自 `third_party/puerts`，不要在 MCP package 里重复提交。
+
+Vendored PuerTS `core` 和 `v8` UPM 包里的 `.meta` 必须随源码提交。它们会固定 `MJSImporter.cs` 这类 ScriptedImporter 的 GUID；如果其他机器缺少这些 meta，Unity 会重新生成 importer GUID，并改写 `*.mjs.meta` 里的 `script.guid`。
+
+## 目录结构
+
+```text
+puerts-unity-mcp
+  Packages/puerts-unity-mcp
+    Editor/      Editor MCP endpoint 和 Unity 菜单
+    Runtime/     Editor Play Mode、Android、iOS 和 standalone 共用的 Runtime MCP assembly
+      Plugins/   随 package 提供的 Runtime native/plugin assets
+    Tools~/      Node 安装、构建、同步和 stdio proxy 工具
+    Tests/       Unity Editor tests
+  docs/
+    protocol.md
+  third_party/puerts/
+    Vendored PuerTS UPM packages 和 native plugins
+```
+
+## 开源协议
+
+PuerTS Unity MCP 使用 MIT License 发布，详见 [LICENSE](LICENSE)。
+
+`third_party/puerts` 下的第三方代码保留其上游 license 文件。

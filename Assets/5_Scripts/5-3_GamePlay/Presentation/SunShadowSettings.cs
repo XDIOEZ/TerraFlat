@@ -4,8 +4,8 @@ using FlatWorld.Settings;
 using UnityEngine;
 
 /// <summary>
-/// 太阳长投影的本机画质偏好：默认开启投影与柔化，柔化强度默认 30%。
-/// 强度按 1% 步进保存，只影响普通实体和 ECS 共用的投影 Shader，不写入世界存档。
+/// 实体阴影的本机画质偏好：默认值与滑块范围来自世界渲染 JSON。
+/// 强度按 1% 步进保存，同时控制脚底椭圆阴影和太阳长投影，不写入世界存档。
 /// </summary>
 public static class SunShadowSettings
 {
@@ -14,14 +14,15 @@ public static class SunShadowSettings
     public const string EnabledSettingKey = "sun-shadows"; // 稳定控件键。
     public const string BlurEnabledSettingKey = "sun-shadow-blur-enabled"; // 柔化开关。
     public const string BlurStrengthSettingKey = "sun-shadow-blur-strength"; // 柔化强度。
-    public const bool DefaultEnabled = true; // 首次启动的默认外观。
-    public const bool DefaultBlurEnabled = true; // 首次启动保留柔和边缘。
-    public const float DefaultBlurStrength = 0.30f; // 默认保留树冠结构。
-    public const float MinBlurStrength = 0f; // 清晰轮廓。
-    public const float MaxBlurStrength = 1f; // 模糊色块。
+    public static bool DefaultEnabled => WorldRenderingConfigCatalog.Default.shadows.sunEnabled;
+    public static bool DefaultBlurEnabled => WorldRenderingConfigCatalog.Default.shadows.blurEnabled;
+    public static float DefaultBlurStrength => WorldRenderingConfigCatalog.Default.shadows.blurStrength;
+    public static float MinBlurStrength => WorldRenderingConfigCatalog.Default.shadows.minimumBlurStrength;
+    public static float MaxBlurStrength => WorldRenderingConfigCatalog.Default.shadows.maximumBlurStrength;
     private const string PreferenceKey = "FlatWorld.Visual.SunShadows";
     private const string BlurEnabledPreferenceKey = "FlatWorld.Visual.SunShadowBlur"; // 本机柔化开关。
     private const string BlurStrengthPreferenceKey = "FlatWorld.Visual.SunShadowBlurStrength"; // 本机强度。
+    private static readonly int BlurId = Shader.PropertyToID("_WorldSunShadowBlur"); // 两种阴影共用的 Shader 参数。
     private static readonly ISettingsProvider provider = new SunSettingsProvider();
     private static bool initialized;
     private static bool currentEnabled;
@@ -46,7 +47,7 @@ public static class SunShadowSettings
 
     public static float EffectiveBlurStrength
     {
-        get { EnsureInitialized(); return currentEnabled && currentBlurEnabled ? currentBlurStrength : 0f; }
+        get { EnsureInitialized(); return currentBlurEnabled ? currentBlurStrength : 0f; }
     }
 
     public static ISettingsProvider SettingsProvider
@@ -65,13 +66,14 @@ public static class SunShadowSettings
         Changed?.Invoke();
     }
 
-    /// <summary>保存柔化开关，并通知设置页和投影渲染器。</summary>
+    /// <summary>保存两种阴影共用的柔化开关，并通知设置页。</summary>
     public static void SetBlurEnabled(bool value)
     {
         if (BlurEnabled == value) return;
         currentBlurEnabled = value;
         PlayerPrefs.SetInt(BlurEnabledPreferenceKey, value ? 1 : 0);
         PlayerPrefs.Save();
+        PublishBlur();
         Changed?.Invoke();
     }
 
@@ -83,8 +85,12 @@ public static class SunShadowSettings
         currentBlurStrength = next;
         PlayerPrefs.SetFloat(BlurStrengthPreferenceKey, next);
         PlayerPrefs.Save();
+        PublishBlur();
         Changed?.Invoke();
     }
+
+    /// <summary>设置变化和进入场景时刷新两种阴影共用的柔化强度。</summary>
+    public static void PublishBlur() => Shader.SetGlobalFloat(BlurId, EffectiveBlurStrength);
 
     /// <summary>在第一次访问时读取完整的本机投影偏好。</summary>
     private static void EnsureInitialized()
@@ -137,12 +143,17 @@ public static class SunShadowSettings
         SettingsProviderRegistry.Unregister(provider);
         initialized = false;
         Changed = null;
+        Shader.SetGlobalFloat(BlurId, 0f);
         SunShadowParametersProvider.ClearGlobals();
     }
 
     /// <summary>进入主菜单前注册，保证没有进入世界也能恢复默认。</summary>
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
-    private static void RegisterOnLoad() => SettingsProviderRegistry.Register(provider);
+    private static void RegisterOnLoad()
+    {
+        SettingsProviderRegistry.Register(provider);
+        PublishBlur();
+    }
 
     #endregion
 }

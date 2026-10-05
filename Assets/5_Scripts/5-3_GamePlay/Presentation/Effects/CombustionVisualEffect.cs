@@ -44,8 +44,14 @@ public sealed class CombustionVisualEffect : MonoBehaviour, IWaterEntryTransform
         ResolveReferences();
 
         Vector3 worldPosition = flameAnchor != null ? flameAnchor.position : transform.position;
-        int sortingLayerId = sourceSpriteRenderer != null ? sourceSpriteRenderer.sortingLayerID : 0;
-        int sortingOrder = sourceSpriteRenderer != null ? sourceSpriteRenderer.sortingOrder + 3 : 3;
+        int sortingLayerId = 0;
+        int sortingOrder = 3;
+        if (sourceSpriteRenderer != null)
+        {
+            WorldSortingManager.ReadExternalRendererKey(sourceSpriteRenderer,
+                out sortingLayerId, out sortingOrder);
+            sortingOrder += 3;
+        }
 
         var effectRoot = new GameObject(ExtinguishRootName);
         effectRoot.layer = gameObject.layer;

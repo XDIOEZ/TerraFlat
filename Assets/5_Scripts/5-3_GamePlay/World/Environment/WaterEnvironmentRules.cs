@@ -32,12 +32,16 @@ public static class WaterEnvironmentRules
         riverKind == 2 ? RuntimeWaterCurrentKind.None :
         oceanBiome ? RuntimeWaterCurrentKind.Ocean : RuntimeWaterCurrentKind.None;
 
-    /// <summary>流量 0 静止、1 对应原 0.45 格/秒，极大流量渐近两倍速度。</summary>
+    /// <summary>河流流量 0 静止、1 为基准倍率，极大流量渐近两倍；实际速度由玩法配置提供。</summary>
     public static float ResolveRiverStrength(float flow)
     {
         float positiveFlow = Mathf.Max(0f, flow);
         return 2f * (positiveFlow / (1f + positiveFlow));
     }
+
+    /// <summary>海洋表层流向由世界风场决定，物理和水面表现共用此单位方向。</summary>
+    public static Vector2 ResolveOceanCurrentDirection(Vector2 windDirection) =>
+        windDirection.sqrMagnitude > 0.000001f ? windDirection.normalized : Vector2.zero;
 
     /// <summary>风力只控制海浪速度、振幅和白沫，不参与潮汐相位。</summary>
     public static Vector3 ResolveOceanWaveFactors(float windStrength)

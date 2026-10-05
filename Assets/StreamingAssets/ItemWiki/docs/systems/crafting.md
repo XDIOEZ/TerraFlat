@@ -6,7 +6,7 @@
 
 ## 当前机制
 
-- Recipe JSON 是正式配方唯一真源，旧 Recipe/CookRecipe ScriptableObject 仅保留兼容用途。
+- Recipe JSON 是正式配方唯一真源；旧 Recipe/CookRecipe ScriptableObject 仅为热加工 MOD 保留兼容入口，普通合成使用 JSON 材料清单。
 - 普通制作通过 `CraftingService` 统一进入。
 - `CraftingRecipeMatcher` 负责匹配，`CraftingTransaction` 负责扣料与产出原子提交。
 - 普通合成是**无序材料集合**，同一种材料可以集中或分散在多个输入槽；额外无关材料不能屏蔽可制作候选。

@@ -5,9 +5,28 @@ using UnityEngine;
 
 public enum GameDifficultyId
 {
-    Simple = 0,
-    Hard = 1,
-    Custom = 2
+    Level0 = 0,
+    Level1 = 1,
+    Level2 = 2,
+    Level3 = 3,
+    Level4 = 4,
+    Level5 = 5,
+    Level6 = 6,
+    Level7 = 7,
+    Level8 = 8,
+    Level9 = 9,
+    Level10 = 10,
+    Level11 = 11,
+    Level12 = 12,
+    Level13 = 13,
+    Level14 = 14,
+    Level15 = 15,
+    Level16 = 16,
+    Level17 = 17,
+    Level18 = 18,
+    Level19 = 19,
+    Level20 = 20,
+    Custom = 100
 }
 
 public sealed class PlayerDeathDifficultyRules
@@ -45,8 +64,7 @@ public sealed class PlayerSurvivalDifficultyRules
 }
 
 /// <summary>
-/// 生物战斗规则的统一扩展点。当前难度不改变战斗数值，
-/// 后续攻击力、血量等系统应读取这里的倍率，而不是自行判断难度枚举。
+/// 生物战斗规则的统一扩展点；攻击与生命系统统一读取这里的倍率。
 /// </summary>
 public sealed class CreatureCombatDifficultyRules
 {
@@ -198,50 +216,94 @@ public sealed class GameDifficultyDefinition
 
 public static class GameDifficultyCatalog
 {
-    private static readonly GameDifficultyDefinition Simple = new GameDifficultyDefinition(
-        GameDifficultyId.Simple,
-        "简单",
-        "保持当前游戏配置。玩家死亡后不会掉落随身物品。",
-        new PlayerDeathDifficultyRules(dropAllCarriedItems: false),
-        new PlayerSurvivalDifficultyRules(1f, 1f, 1f, 1f, 1f),
-        new CreatureCombatDifficultyRules(1f, 1f, 1f),
-        new WorldDifficultyRules(1f, 1f, 1f, 1f),
-        new ProductionDifficultyRules(1f, 1f, 1f, 1f));
+    public const int MinLevel = 0;
+    public const int MaxLevel = 20;
 
-    private static readonly GameDifficultyDefinition Hard = new GameDifficultyDefinition(
-        GameDifficultyId.Hard,
-        "困难",
-        "敌对生物更危险、生存消耗更快、恢复更慢，且死亡会掉落全部随身物品。",
-        new PlayerDeathDifficultyRules(dropAllCarriedItems: true),
-        new PlayerSurvivalDifficultyRules(1.25f, 1.2f, 0.8f, 0.8f, 1.25f),
-        new CreatureCombatDifficultyRules(0.9f, 1.35f, 1.35f),
-        new WorldDifficultyRules(1f, 1.35f, 1.3f, 0.85f),
-        new ProductionDifficultyRules(0.9f, 0.9f, 1.2f, 0.9f));
+    private static readonly IReadOnlyList<GameDifficultyDefinition> Definitions = BuildDefinitions();
 
-    private static readonly IReadOnlyList<GameDifficultyDefinition> Definitions =
-        new[] { Simple, Hard };
-
-    /// <summary>官方预设列表，后续新增官方难度时只需追加到这里。</summary>
+    /// <summary>0 到 20 的正式难度等级列表。</summary>
     public static IReadOnlyList<GameDifficultyDefinition> All => Definitions;
 
     public static GameDifficultyDefinition Get(GameDifficultyId id)
     {
-        return id switch
-        {
-            GameDifficultyId.Hard => Hard,
-            GameDifficultyId.Custom => CreateCustom(ReadCustomRules(SaveDataMgr.Instance?.SaveData)),
-            _ => Simple
-        };
+        if (id == GameDifficultyId.Custom)
+            return CreateCustom(ReadCustomRules(SaveDataMgr.Instance?.SaveData));
+
+        int level = Mathf.Clamp((int)id, MinLevel, MaxLevel);
+        return Definitions[level];
     }
 
     public static GameDifficultyId Normalize(GameDifficultyId id)
     {
-        return id switch
-        {
-            GameDifficultyId.Hard => GameDifficultyId.Hard,
-            GameDifficultyId.Custom => GameDifficultyId.Custom,
-            _ => GameDifficultyId.Simple
-        };
+        if (id == GameDifficultyId.Custom)
+            return GameDifficultyId.Custom;
+
+        return (GameDifficultyId)Mathf.Clamp((int)id, MinLevel, MaxLevel);
+    }
+
+    public static int GetLevel(GameDifficultyId id)
+    {
+        return id == GameDifficultyId.Custom
+            ? MinLevel
+            : Mathf.Clamp((int)id, MinLevel, MaxLevel);
+    }
+
+    private static IReadOnlyList<GameDifficultyDefinition> BuildDefinitions()
+    {
+        var definitions = new GameDifficultyDefinition[MaxLevel - MinLevel + 1];
+        for (int level = MinLevel; level <= MaxLevel; level++)
+            definitions[level] = CreateLevelDefinition(level);
+
+        return definitions;
+    }
+
+    /// <summary>难度等级使用同一条连续曲线生成规则，避免维护 21 份重复配置。</summary>
+    private static GameDifficultyDefinition CreateLevelDefinition(int level)
+    {
+        level = Mathf.Clamp(level, MinLevel, MaxLevel);
+        float t = MaxLevel <= 0 ? 0f : level / (float)MaxLevel;
+
+        return new GameDifficultyDefinition(
+            (GameDifficultyId)level,
+            $"难度 {level}",
+            GetLevelDescription(level),
+            new PlayerDeathDifficultyRules(dropAllCarriedItems: level >= 10),
+            new PlayerSurvivalDifficultyRules(
+                Mathf.Lerp(1f, 1.8f, t),
+                Mathf.Lerp(1f, 1.7f, t),
+                Mathf.Lerp(1f, 0.65f, t),
+                Mathf.Lerp(1f, 0.70f, t),
+                Mathf.Lerp(1f, 1.8f, t)),
+            new CreatureCombatDifficultyRules(
+                Mathf.Lerp(1f, 0.65f, t),
+                Mathf.Lerp(1f, 2.2f, t),
+                Mathf.Lerp(1f, 2.5f, t)),
+            new WorldDifficultyRules(
+                Mathf.Lerp(1f, 1.25f, t),
+                Mathf.Lerp(1f, 1.8f, t),
+                Mathf.Lerp(1f, 1.7f, t),
+                Mathf.Lerp(1f, 0.65f, t)),
+            new ProductionDifficultyRules(
+                Mathf.Lerp(1f, 0.70f, t),
+                Mathf.Lerp(1f, 0.75f, t),
+                Mathf.Lerp(1f, 1.6f, t),
+                Mathf.Lerp(1f, 0.80f, t)));
+    }
+
+    private static string GetLevelDescription(int level)
+    {
+        if (level <= 0)
+            return "基础规则，适合熟悉世界与系统。";
+        if (level <= 4)
+            return "轻度挑战，敌人与生存压力小幅提升。";
+        if (level <= 9)
+            return "标准挑战，战斗、生存与资源压力同步提高。";
+        if (level <= 14)
+            return "高强度挑战，死亡惩罚与世界威胁明显增加。";
+        if (level < MaxLevel)
+            return "严酷挑战，资源、生产与战斗都要求更高规划。";
+
+        return "极限挑战，适合已经熟悉全部系统的玩家。";
     }
 
     public static GameDifficultyDefinition CreateCustom(GameDifficultyRuleValues values)
@@ -365,7 +427,7 @@ public static class GameDifficultyService
         {
             GameSaveData saveData = SaveDataMgr.Instance?.SaveData;
             return saveData == null
-                ? GameDifficultyId.Simple
+                ? GameDifficultyId.Level0
                 : GameDifficultyCatalog.Normalize(saveData.Difficulty);
         }
     }
@@ -376,7 +438,7 @@ public static class GameDifficultyService
         {
             GameSaveData saveData = SaveDataMgr.Instance?.SaveData;
             GameDifficultyId difficultyId = saveData == null
-                ? GameDifficultyId.Simple
+                ? GameDifficultyId.Level0
                 : GameDifficultyCatalog.Normalize(saveData.Difficulty);
 
             if (cachedDefinition != null &&
@@ -466,13 +528,7 @@ public static class GameDifficultyService
 
     private sealed class DifficultySettingsProvider : ISettingsProvider
     {
-        private static readonly IReadOnlyList<SettingOption> Options =
-            new SettingOption[]
-            {
-                new SettingOption("simple", "简单"),
-                new SettingOption("hard", "困难"),
-                new SettingOption("custom", "自定义")
-            };
+        private static readonly IReadOnlyList<SettingOption> Options = BuildOptions();
 
         private readonly IReadOnlyList<ISettingsSwitch> switches;
 
@@ -488,7 +544,7 @@ public static class GameDifficultyService
                         "world",
                         order: 0),
                     Options,
-                    () => (int)CurrentId,
+                    () => GameDifficultyCatalog.GetLevel(CurrentId),
                     TrySetDifficulty)
             };
         }
@@ -506,7 +562,7 @@ public static class GameDifficultyService
 
         public void ResetToDefaults()
         {
-            TrySetCurrent(GameDifficultyId.Simple, out _);
+            TrySetCurrent(GameDifficultyId.Level0, out _);
         }
 
         private static string TrySetDifficulty(int index)
@@ -517,6 +573,18 @@ public static class GameDifficultyService
             return TrySetCurrent((GameDifficultyId)index, out string error)
                 ? null
                 : error;
+        }
+
+        private static IReadOnlyList<SettingOption> BuildOptions()
+        {
+            var options = new SettingOption[GameDifficultyCatalog.All.Count];
+            for (int i = 0; i < options.Length; i++)
+            {
+                GameDifficultyDefinition definition = GameDifficultyCatalog.All[i];
+                options[i] = new SettingOption($"level_{i}", definition.DisplayName);
+            }
+
+            return options;
         }
     }
 

@@ -1,5 +1,4 @@
 using UnityEngine;
-[CreateAssetMenu(fileName = "DurabilityModifier", menuName = "Crafting/DurabilityModifier")]
 public class DurabilityModifier : CraftingAction
 {
     [Header("耐久度设置")]

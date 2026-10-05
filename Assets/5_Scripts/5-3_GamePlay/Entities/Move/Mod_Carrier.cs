@@ -4,24 +4,25 @@ using FlatWorld.WorldModel;
 using UnityEngine;
 
 /// <summary>
-/// 可配置单座承载源：默认速度 5 格/秒、加速 3 格/秒²、制动 6 格/秒²、质量 60。
-/// 船与未来车辆使用同一输入/力溯源契约；不使用 Collider 推人，不改变乘员层级。
+/// 可配置单座承载源：默认速度 5 格/秒、Shift 加速倍率 1.5、加速 3 格/秒²、制动 6 格/秒²、操作者转向速度 30°/秒、质量 60。
+/// 船与未来车辆使用同一输入/力溯源契约；刚体负责接触，不改变乘员层级。
 /// 座位和速度是会话租约，不写存档；位置由 Item 快照保存，读档为空船且静止。
 /// </summary>
-public sealed class Mod_Carrier : Module, ICarrierMotionSource, IWorldPushTarget, IInteractable, ISpatialInteractionShape, IItemModuleDependencyBinder, IBuildingPlacementCommitted
+public sealed class Mod_Carrier : Module, ICarrierMotionSource, IInteractable, ISpatialInteractionShape, IItemModuleDependencyBinder, IBuildingPlacementCommitted
 {
     #region 配置和状态
     public const string ModuleId = "Mod_Carrier";
     public Ex_ModData Data = new(); // 标准 JSON 模块数据。
     [Min(0.1f)] public float MaxSpeed = 5f; // 满幅速度。
+    [Min(1f)] public float BoostSpeedMultiplier = 1.5f; // 乘员主动加速时的最高速度倍率。
     [Min(0.1f)] public float Acceleration = 3f; // 加速度。
     [Min(0.1f)] public float Braking = 6f; // 松杆减速度。
-    [Min(0.1f)] public float Mass = 60f; // 力计算质量。
-    [Min(0.05f)] public float Radius = 0.35f; // 地形扫掠半径。
+    [Min(1f)] public float FacingTurnSpeed = 30f; // 船上操作者划行时的固定船头转速（度/秒），与平移速度无关。
+    [Min(0.05f)] public float Radius = 0.35f; // 交互与下船安全半径。
     [Range(0.01f, 1f)] public float LandSpeedMultiplier = 0.1f; // 陆地最高速度相对水面的倍率。
     [Range(0.01f, 1f)] public float LandPushSpeedMultiplier = 0.2f; // 陆地推动按推动者当前速度的五分之一。
     [Min(0f)] public float WaterCurrentSpeed = 0.18f; // 水流经载具继续传递到乘员。
-    public Vector2 HullSize = new(1.5f, 1f); // 作者定义的船体扫掠与推动占地。
+    public Vector2 HullSize = new(1.5f, 1f); // 作者定义的船体尺寸与下船净空。
     public Vector2 SeatOffset = new(0, 0.25f); // 座位相对船中心。
     public bool AllowsWater = true; // 水陆通行能力，不依赖具体车型继承。
     public override string CanonicalModuleId => ModuleId;
@@ -32,17 +33,14 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, IWorldPushTarget
     public Vector2 CurrentForce { get; private set; }
     public Vector2 DrivenVelocity { get; private set; } // 划船或主动推动的速度。
     public Vector2 ExternalVelocity { get; private set; } // 环境传入的被动速度。
-    public Mover PushSource { get; private set; } // 当前推动来源，瞬时关系不入存档。
-    public Component MotionComponent => this;
-    public Vector2 MotionPosition => item.transform.position;
-    public Vector2 MotionVelocity => CurrentVelocity;
+    public Mod_Mover PushSource { get; private set; } // 当前推动来源，瞬时关系不入存档。
     public Vector2 PushHalfExtents => Vector2.Scale(HullSize * 0.5f,
         new Vector2(Mathf.Abs(item.transform.lossyScale.x), Mathf.Abs(item.transform.lossyScale.y)));
     public bool IsAvailable => loaded && isActiveAndEnabled && item != null && !item.DestructionHandled &&
         health != null && health.Hp > 0f && building != null && building.IsInstalled();
-    public Mover Rider { get; private set; } // 源持有的唯一乘员。
+    public Mod_Mover Rider { get; private set; } // 源持有的唯一乘员。
     private Mod_Building building;
-    private DamageReceiver health;
+    private Mod_DamageReceiver health;
     private Rigidbody2D body;
     private BoxCollider2D physicalCollider;
     private Transform visualTransform;
@@ -51,9 +49,11 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, IWorldPushTarget
     private bool visualBaseRotationCaptured;
     private Vector2 requestedInput;
     private bool requestedControlsLocked;
+    private bool requestedBoost;
     private Vector2 lastPhysicsPosition;
     private bool loaded, activated;
     private Vector2 pushedVelocity;
+    private Vector2 facingHeading = Vector2.up; // 船头只由操作者划行输入改变，推动、水流和滑行都保留朝向。
     private float pushValidUntil;
     private CarrierWaterWake waterWake;
     #endregion
@@ -63,36 +63,38 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, IWorldPushTarget
     public void BindModuleDependencies(ItemMods modules)
     {
         building = modules.RequireSingleModById<Mod_Building>(ModText.Building);
-        health = modules.RequireSingleModById<DamageReceiver>(ModText.Hp);
+        health = modules.RequireSingleModById<Mod_DamageReceiver>(ModText.Hp);
     }
 
     /// <summary>只恢复空座位，不迁移任何启动资产或旧存档。</summary>
     public override void Load()
     {
-        if (!(MaxSpeed > 0 && Acceleration > 0 && Braking > 0 && Mass > 0 && Radius > 0) ||
+        if (!(MaxSpeed > 0 && BoostSpeedMultiplier >= 1f && Acceleration > 0 && Braking > 0 && FacingTurnSpeed > 0 && Radius > 0) ||
             !(LandSpeedMultiplier > 0f && LandSpeedMultiplier <= 1f) ||
             !(LandPushSpeedMultiplier > 0f && LandPushSpeedMultiplier <= 1f) ||
             !(HullSize.x > 0f && HullSize.y > 0f) ||
-            float.IsInfinity(MaxSpeed + Acceleration + Braking + Mass + Radius) ||
+            float.IsInfinity(MaxSpeed + BoostSpeedMultiplier + Acceleration + Braking + FacingTurnSpeed + Radius) ||
             float.IsNaN(SeatOffset.sqrMagnitude) || float.IsInfinity(SeatOffset.sqrMagnitude))
-            throw new InvalidOperationException("载具速度、加速度、制动、质量、半径和陆地速度倍率必须有效。");
+            throw new InvalidOperationException("载具速度、加速倍率、加速度、制动、转向、半径和陆地速度倍率必须有效。");
         CarrierSaveState state = Data.GetData<CarrierSaveState>();
         if (state == null || state.Version != 1)
             throw new InvalidOperationException("载具模块要求 Version=1 的显式快照。");
         loaded = true;
         activated = false;
         CurrentVelocity = CurrentForce = DrivenVelocity = ExternalVelocity = Vector2.zero;
+        facingHeading = Vector2.up;
         PushSource = null;
         body = item.GetComponent<Rigidbody2D>();
         physicalCollider = item.GetComponent<BoxCollider2D>();
         if (body == null || physicalCollider == null)
-            throw new InvalidOperationException("载具外壳必须提供根 Rigidbody2D 与禁用的查询 Collider；移动由游戏推动系统结算。");
+            throw new InvalidOperationException("载具外壳必须提供根 Rigidbody2D 与船体 Collider2D。");
         requestedInput = Vector2.zero;
         requestedControlsLocked = true;
+        requestedBoost = false;
         lastPhysicsPosition = body.position;
         BindVisualTransform();
         waterWake = item.GetComponent<CarrierWaterWake>() ?? item.gameObject.AddComponent<CarrierWaterWake>();
-        waterWake.Bind(this);
+        waterWake.Bind(this, visualRenderer);
         BindRuntimeSources();
         ActivateInstalledCarrier();
     }
@@ -113,7 +115,6 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, IWorldPushTarget
         StopMotion();
         if (health != null) health.DeathStarted -= HandleSourceDeath;
         SpatialInteractionRegistry.Unregister(this);
-        WorldMotionSystem.Unregister(this);
         waterWake?.Clear();
         activated = false;
     }
@@ -126,7 +127,9 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, IWorldPushTarget
             health.DeathStarted += HandleSourceDeath;
         }
         SpatialInteractionRegistry.Register(this, Mathf.Max(0.7f, Radius));
-        WorldMotionSystem.Register(this);
+        CarrierPhysicsContact2D relay = item.GetComponent<CarrierPhysicsContact2D>() ??
+            item.gameObject.AddComponent<CarrierPhysicsContact2D>();
+        relay.Bind(this);
     }
 
     private void OnEnable()
@@ -139,7 +142,7 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, IWorldPushTarget
     private void OnDestroy() => Unload();
 
     /// <summary>载具击沉时让乘员留在当前世界位置并恢复自身物理/水体效果，禁止传回登船点。</summary>
-    private void HandleSourceDeath(DamageReceiver receiver)
+    private void HandleSourceDeath(Mod_DamageReceiver receiver)
     {
         Rider?.DetachCarrier(null);
         Unload();
@@ -158,18 +161,18 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, IWorldPushTarget
         if (Rider != null && (!Rider.isActiveAndEnabled || !GameNetwork.HasStateAuthority)) Rider.ReleaseCarrierLease();
     }
 
-    /// <summary>安装事务提交即关闭碰撞，不等下一次物理帧。</summary>
+    /// <summary>安装事务提交即启用船体物理，不等下一次物理帧。</summary>
     public void OnBuildingPlacementCommitted() => ActivateInstalledCarrier();
 
     private void ActivateInstalledCarrier()
     {
         if (activated || !IsAvailable) return;
-        physicalCollider.enabled = false;
-        body.bodyType = RigidbodyType2D.Kinematic;
+        physicalCollider.enabled = true;
+        body.bodyType = RigidbodyType2D.Dynamic;
         body.simulated = true;
         body.gravityScale = 0f;
-        body.mass = Mass;
-        body.interpolation = RigidbodyInterpolation2D.None;
+        body.mass = Mathf.Max(0.01f, item.itemData.Stack.CurrentWeight);
+        body.interpolation = RigidbodyInterpolation2D.Interpolate;
         body.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
         body.constraints = RigidbodyConstraints2D.FreezeRotation;
         lastPhysicsPosition = body.position;
@@ -194,21 +197,22 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, IWorldPushTarget
         Player player = ResolvePlayer(actor);
         if (!IsAvailable || !GameNetwork.HasStateAuthority || player == null || !player.IsLocalProfile)
             return false;
-        Mover mover = player.itemMods.GetMod_ByID<Mover>(ModText.Mover);
+        Mod_Mover mover = player.itemMods.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover);
         return mover != null && (Rider == mover || (Rider == null && mover.CarrierSource == null));
     }
 
-    /// <summary>再次交互尝试靠岸下船；没有安全陆地时保持乘坐并停止船。</summary>
+    /// <summary>再次交互下船；优先落到附近安全陆地，远海则落到船体外侧的安全水面。</summary>
     public void OnInteractStart(Item actor)
     {
         if (!CanInteract(actor)) return;
         ActivateInstalledCarrier();
         Player player = ResolvePlayer(actor);
-        Mover mover = player.itemMods.GetMod_ByID<Mover>(ModText.Mover);
+        Mod_Mover mover = player.itemMods.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover);
         if (Rider == mover)
         {
             StopMotion();
-            if (TryFindDismount(out Vector2 destination)) mover.DetachCarrier(destination);
+            if (TryFindDismount(out Vector2 destination) || TryFindWaterDismount(mover, out destination))
+                mover.DetachCarrier(destination);
             return;
         }
         if (mover.TryAttachCarrier(this, player.transform.position)) Rider = mover;
@@ -221,7 +225,7 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, IWorldPushTarget
     /// <summary>焦点取消和临时输入锁不是下船指令。</summary>
     public void OnInteractCancel(Item actor) { }
 
-    public void ReleaseRider(Mover rider)
+    public void ReleaseRider(Mod_Mover rider)
     {
         if (Rider != rider) return;
         Rider = null;
@@ -246,27 +250,66 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, IWorldPushTarget
         destination = default;
         return false;
     }
+
+    /// <summary>远海没有陆地时，把乘员放到船体外侧的可用水格，避免 E 键被永久困在船上。</summary>
+    private bool TryFindWaterDismount(Mod_Mover rider, out Vector2 destination)
+    {
+        Vector2 origin = item.transform.position;
+        float riderRadius = rider != null ? Mathf.Max(0.05f, rider.pushContactRadius) : 0.2f;
+        float clearance = Mathf.Max(PushHalfExtents.x, PushHalfExtents.y) + riderRadius + 0.15f;
+        Vector2 preferredDirection = SeatOffset.sqrMagnitude > 0.0001f ? SeatOffset.normalized : Vector2.up;
+
+        for (int step = 0; step < 8; step++)
+        {
+            float angle = Mathf.Atan2(preferredDirection.y, preferredDirection.x) + step * Mathf.PI / 4f;
+            Vector2 candidate = WorldTopologyRuntime.NormalizePosition(
+                origin + new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * clearance);
+            if (!IsSafeWater(candidate)) continue;
+            destination = candidate;
+            return true;
+        }
+
+        destination = default;
+        return false;
+    }
+
+    /// <summary>水中下船点必须是真实液体且没有地形或其它建筑占用。</summary>
+    private bool IsSafeWater(Vector2 position)
+    {
+        ChunkMgr manager = ChunkMgr.ExistingInstance;
+        if (manager == null || !manager.TryGetRuntimeTerrainTile(position, out RuntimeTerrainTileSample tile))
+            return false;
+        return tile.LiquidDepth > 0f && tile.Cell.BlockingTileId == 0 && tile.Cell.BackTileId == 0 &&
+               tile.TopTileId != 0 &&
+               (tile.Cell.Flags & (TerrainCellFlags.Blocking | TerrainCellFlags.Occupied)) == 0 &&
+               !BuildingOccupancyRegistry.IsOccupied(tile.WorldCell, building);
+    }
     #endregion
 
     #region 源拥有的移动和力
     /// <summary>只接收乘员输入；水流、划船与外部推动在同一固定步结算。</summary>
-    public void AdvanceMotion(Mover rider, Vector2 input, float deltaTime, bool controlsLocked)
+    public void AdvanceMotion(Mod_Mover rider, Vector2 input, float deltaTime, bool controlsLocked, bool boostRequested)
     {
-        if (rider != Rider || !IsAvailable || !GameNetwork.HasStateAuthority) return;
+        if (rider == null || rider != Rider || rider.CarrierSource != this ||
+            !IsAvailable || !GameNetwork.HasStateAuthority) return;
         requestedControlsLocked = controlsLocked;
         requestedInput = controlsLocked ? Vector2.zero : Vector2.ClampMagnitude(input, 1f);
+        requestedBoost = !controlsLocked && boostRequested && requestedInput.sqrMagnitude > 0.001f;
     }
 
-    /// <summary>按来源合成速度，再用地形扫掠积分；刚体仅同步位置，禁止施加碰撞冲量。</summary>
+    /// <summary>逻辑只提交期望速度，实际位移和接触由 Physics2D 结算。</summary>
     private void FixedUpdate()
     {
         if (!IsAvailable || body == null || !body.simulated || !GameNetwork.HasStateAuthority)
             return;
         float deltaTime = Time.fixedDeltaTime;
-        Vector2 previousVelocity = CurrentVelocity;
         RefreshPushSource();
-        Vector2 input = Rider != null && !requestedControlsLocked ? requestedInput : Vector2.zero;
-        Vector2 desiredVelocity = input * ResolveSurfaceSpeedLimit(body.position);
+        Vector2 input = Rider != null && Rider.isActiveAndEnabled && Rider.CarrierSource == this &&
+            !requestedControlsLocked ? requestedInput : Vector2.zero;
+        float speedLimit = ResolveSurfaceSpeedLimit(body.position);
+        if (Rider != null && requestedBoost)
+            speedLimit *= BoostSpeedMultiplier;
+        Vector2 desiredVelocity = input * speedLimit;
         if (PushSource != null)
         {
             // 推动速度直接来自推动者当前环境移速，不再乘木筏自身的海上速度。
@@ -278,24 +321,41 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, IWorldPushTarget
             DrivenVelocity = Vector2.MoveTowards(DrivenVelocity, desiredVelocity, rate * deltaTime);
         }
         ExternalVelocity = WorldMotionSystem.SampleWaterVelocity(body.position, WaterCurrentSpeed);
-        Vector2 displacement = ResolveAllowedDisplacement(body.position, (DrivenVelocity + ExternalVelocity) * deltaTime);
-        CurrentVelocity = displacement / deltaTime;
-        CurrentForce = (CurrentVelocity - previousVelocity) * (Mass / deltaTime);
-        Vector2 next = WorldTopologyRuntime.NormalizePosition(body.position + displacement);
-        body.velocity = Vector2.zero;
-        body.position = next;
-        item.transform.position = new Vector3(next.x, next.y, item.transform.position.z);
-        UpdateVisualFacing(CurrentVelocity);
+        // 平移保留划行、推动与水流的真实方向，不能为了船头朝向重定向合速度。
+        body.velocity = DrivenVelocity + ExternalVelocity;
+        UpdateOperatorHeading(input, deltaTime);
+        UpdateVisualFacing();
+    }
+
+    /// <summary>物理步结束后读取实际速度，数据投影组件负责回写实体快照。</summary>
+    private void LateUpdate()
+    {
+        if (!IsAvailable || body == null || !body.simulated || !GameNetwork.HasStateAuthority) return;
+        Vector2 previousVelocity = CurrentVelocity;
+        CurrentVelocity = body.velocity;
+        CurrentForce = (CurrentVelocity - previousVelocity) *
+            (body.mass / Mathf.Max(0.001f, Time.deltaTime));
         TrackPhysicsMovement();
     }
 
     /// <summary>当前有效玩家输入才可推动；已乘坐同一载具的乘员不能形成循环作用链。</summary>
-    public bool CanReceivePush(Mover source)
+    public bool CanReceivePush(Mod_Mover source)
         => IsAvailable && GameNetwork.HasStateAuthority && source != null && source != Rider &&
            source.CarrierSource == null && source.RequestedMoveInput.sqrMagnitude > 0.001f;
 
-    /// <summary>登记一次有界推动并返回下一步可实现的速度，用于限制推动者穿入船体。</summary>
-    public Vector2 RequestPush(Mover source, Vector2 velocity, float deltaTime)
+    internal void HandlePhysicalContact(Collision2D collision)
+    {
+        Mod_Mover source = collision.rigidbody != null
+            ? collision.rigidbody.GetComponentInChildren<Mod_Mover>()
+            : null;
+        if (!CanReceivePush(source) || source.rb == null || body == null) return;
+        Vector2 towardCarrier = WorldTopologyRuntime.ShortestDelta(source.rb.position, body.position);
+        if (Vector2.Dot(source.DrivenVelocity, towardCarrier) <= 0.001f) return;
+        RequestPush(source, source.DrivenVelocity, Time.fixedDeltaTime);
+    }
+
+    /// <summary>物理接触产生推动意图，下一固定步交给刚体处理。</summary>
+    public Vector2 RequestPush(Mod_Mover source, Vector2 velocity, float deltaTime)
     {
         if (!CanReceivePush(source)) return CurrentVelocity;
         ChunkMgr manager = ChunkMgr.ExistingInstance;
@@ -304,8 +364,7 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, IWorldPushTarget
         PushSource = source;
         pushedVelocity = WorldMotionSystem.CalculatePushVelocity(velocity, inWater, LandPushSpeedMultiplier);
         pushValidUntil = Time.time + Mathf.Max(0.1f, deltaTime * 2f);
-        Vector2 total = pushedVelocity + WorldMotionSystem.SampleWaterVelocity(body.position, WaterCurrentSpeed);
-        return ResolveAllowedDisplacement(body.position, total * deltaTime) / Mathf.Max(0.001f, deltaTime);
+        return pushedVelocity;
     }
 
     /// <summary>松开输入、换场景、远离或来源回收立即解除推动关系。</summary>
@@ -321,24 +380,6 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, IWorldPushTarget
         }
     }
 
-    /// <summary>最多每 0.1 格检查完整船体，阻挡时保留合法的单轴滑动，防止高速穿墙或角落越界。</summary>
-    private Vector2 ResolveAllowedDisplacement(Vector2 origin, Vector2 desired)
-    {
-        int steps = Mathf.Max(1, Mathf.CeilToInt(desired.magnitude / 0.1f));
-        Vector2 increment = desired / steps;
-        Vector2 position = origin;
-        for (int index = 0; index < steps; index++)
-        {
-            Vector2 candidate = WorldTopologyRuntime.NormalizePosition(position + increment);
-            if (CanOccupyFootprint(candidate)) { position = candidate; continue; }
-            Vector2 x = WorldTopologyRuntime.NormalizePosition(position + new Vector2(increment.x, 0f));
-            if (CanOccupyFootprint(x)) position = x;
-            Vector2 y = WorldTopologyRuntime.NormalizePosition(position + new Vector2(0f, increment.y));
-            if (CanOccupyFootprint(y)) position = y;
-        }
-        return WorldTopologyRuntime.ShortestDelta(origin, position);
-    }
-
     /// <summary>物理位移后刷新 Item 空间索引；跨区块时同时标记新位置的建筑存档。</summary>
     private void TrackPhysicsMovement()
     {
@@ -346,11 +387,14 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, IWorldPushTarget
         if ((currentPosition - lastPhysicsPosition).sqrMagnitude <= 0.000001f)
             return;
 
+        Vector2 logicalCurrent = WorldTopologyRuntime.NormalizePosition(currentPosition);
+        Vector2 logicalPrevious = WorldTopologyRuntime.NormalizePosition(lastPhysicsPosition);
+
         ChunkMgr manager = ChunkMgr.ExistingInstance;
         if (manager != null &&
-            manager.ResolveRuntimeChunkOrigin(lastPhysicsPosition) != manager.ResolveRuntimeChunkOrigin(currentPosition))
+            manager.ResolveRuntimeChunkOrigin(logicalPrevious) != manager.ResolveRuntimeChunkOrigin(logicalCurrent))
         {
-            SaveDataMgr.Instance?.RecordRuntimeBuildingChangeAtPosition(item, lastPhysicsPosition);
+            SaveDataMgr.Instance?.RecordRuntimeBuildingChangeAtPosition(item, logicalPrevious);
             SaveDataMgr.Instance?.RecordRuntimeBuildingChange(item);
         }
 
@@ -362,6 +406,7 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, IWorldPushTarget
     {
         requestedInput = Vector2.zero;
         requestedControlsLocked = true;
+        requestedBoost = false;
         CurrentForce = Vector2.zero;
         PushSource = null;
         pushedVelocity = DrivenVelocity = ExternalVelocity = Vector2.zero;
@@ -389,22 +434,41 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, IWorldPushTarget
         }
     }
 
-    /// <summary>按实际移动速度更新朝向；停止时保留最后朝向，避免原地抖动。</summary>
-    private void UpdateVisualFacing(Vector2 velocity)
+    /// <summary>只按船上操作者的有效划行输入匀速转向；松手、输入锁定或离船后立即保留当前船头。</summary>
+    private void UpdateOperatorHeading(Vector2 input, float deltaTime)
     {
-        if (visualTransform == null || velocity.sqrMagnitude <= 0.0001f) return;
-        float angle = Mathf.Atan2(velocity.y, velocity.x) * Mathf.Rad2Deg - 90f;
+        if (input.sqrMagnitude <= 0.001f)
+            return;
+
+        float currentAngle = Mathf.Atan2(facingHeading.y, facingHeading.x) * Mathf.Rad2Deg;
+        float targetAngle = Mathf.Atan2(input.y, input.x) * Mathf.Rad2Deg;
+        float nextAngle = Mathf.MoveTowardsAngle(currentAngle, targetAngle,
+            FacingTurnSpeed * Mathf.Max(0f, deltaTime)) * Mathf.Deg2Rad;
+        facingHeading = new Vector2(Mathf.Cos(nextAngle), Mathf.Sin(nextAngle));
+    }
+
+    /// <summary>视觉只跟随操作者控制的船头，不能从刚体实际速度反推朝向。</summary>
+    private void UpdateVisualFacing()
+    {
+        if (visualTransform == null || facingHeading.sqrMagnitude <= 0.0001f) return;
+        float angle = Mathf.Atan2(facingHeading.y, facingHeading.x) * Mathf.Rad2Deg - 90f;
         visualTransform.localRotation = visualBaseLocalRotation * Quaternion.Euler(0f, 0f, angle);
     }
 
     /// <summary>水面使用完整 MaxSpeed；非水面统一降为水面速度的指定倍率。</summary>
     private float ResolveSurfaceSpeedLimit(Vector2 position)
     {
-        ChunkMgr manager = ChunkMgr.ExistingInstance;
-        if (manager != null && manager.TryGetRuntimeTerrainTile(position, out RuntimeTerrainTileSample tile) &&
-            tile.LiquidDepth > 0f)
+        if (IsWaterSurface(position))
             return MaxSpeed;
         return MaxSpeed * LandSpeedMultiplier;
+    }
+
+    /// <summary>统一读取载具当前位置是否处于真实水面，只影响平移限速。</summary>
+    private static bool IsWaterSurface(Vector2 position)
+    {
+        ChunkMgr manager = ChunkMgr.ExistingInstance;
+        return manager != null && manager.TryGetRuntimeTerrainTile(position, out RuntimeTerrainTileSample tile) &&
+               tile.LiquidDepth > 0f;
     }
 
     /// <summary>覆盖整个船体包围范围，不能只测中心或四个方向而漏过墙角。</summary>

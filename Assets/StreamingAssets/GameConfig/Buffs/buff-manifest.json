@@ -12,6 +12,11 @@
       "enabled": true
     },
     {
+      "id": "temperature_conditions",
+      "path": "temperature_conditions.json",
+      "enabled": true
+    },
+    {
       "id": "periodic_recovery",
       "path": "periodic_recovery.json",
       "enabled": true

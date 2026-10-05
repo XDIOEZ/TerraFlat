@@ -67,7 +67,7 @@ MonoBehaviour:
   OnAct:
     _PersistentCalls: []
   Sprite: {fileID: 0}
-  poolKey: ""
+  poolKey: 
   isInPool: 0
   poolingDisabled: 0
   OnInit_Env:
@@ -98,6 +98,11 @@ MonoBehaviour:
     Guid: -1070873522
     FactionId: 
     CraftedDurabilityMultiplier: 1
+    MatterState:
+      Initialized: 0
+      TemperatureCelsius: 20
+      Moisture: 0
+    HeatConductionRate: 1
     position: {x: 50, y: 50}
     TileLoaded: 0
     GrassLayer:
@@ -221,10 +226,6 @@ MonoBehaviour:
   pixelsPerUnit: 32
   density: 0.22
   varyDensityWithPrecipitation: 1
-  positionJitter: 0.22
-  scaleRange: {x: 0.85, y: 1.15}
-  accentVariantChance: 0.2
-  sortingOrderOffset: 1
   grassMaterial: {fileID: 2100000, guid: 14e44684465b403baf074b99152e2ff3, type: 2}
 --- !u!1 &3401113203274231406
 GameObject:

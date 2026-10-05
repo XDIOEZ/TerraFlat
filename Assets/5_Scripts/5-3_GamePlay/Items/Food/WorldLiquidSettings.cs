@@ -9,6 +9,9 @@ using UnityEngine;
 /// </summary>
 public sealed class WorldLiquidSettings
 {
+    public const float MaximumRadiantHeatRadius = 8f;
+    public const float UnifiedDepthPerServing = 0.1f;
+
     #region JSON 配置
     [JsonProperty("spriteAddress")] public string SpriteAddress;
     [JsonProperty("materialAddress")] public string MaterialAddress;
@@ -17,6 +20,8 @@ public sealed class WorldLiquidSettings
     [JsonProperty("materialBundle")] public string MaterialBundle;
     [JsonProperty("materialAsset")] public string MaterialAsset;
     [JsonProperty("navigationCost")] public int NavigationCost = 20000;
+    // 液面承重与底部地块独立；未配置的 MOD 世界液体沿用 2 点。
+    [JsonProperty("loadCapacity")] public int LoadCapacity = 2;
     [JsonProperty("shallowMoveSpeedMultiplier")] public float ShallowMoveSpeedMultiplier = 0.5f;
     [JsonProperty("deepMoveSpeedMultiplier")] public float DeepMoveSpeedMultiplier = 0.2f;
     [JsonProperty("entryTemperatureFloor")] public float EntryTemperatureFloor = 10f;
@@ -24,6 +29,14 @@ public sealed class WorldLiquidSettings
     [JsonProperty("drinkHoldSeconds")] public float DrinkHoldSeconds = 1f;
     [JsonProperty("drinkTickSeconds")] public float DrinkTickSeconds = 1f;
     [JsonProperty("followWaterVisualStyle")] public bool FollowWaterVisualStyle;
+    // 液体接触性质来自定义，不能把高温熔体当作会使角色潮湿降温的水。
+    [JsonProperty("waterContact")] public bool WaterContact = true;
+    [JsonProperty("temperature")] public float Temperature = 20f;
+    [JsonProperty("contactHeatingPerSecond")] public float ContactHeatingPerSecond;
+    [JsonProperty("contactDamagePerSecond")] public float ContactDamagePerSecond;
+    [JsonProperty("radiantHeatRadius")] public float RadiantHeatRadius;
+    [JsonProperty("radiantHeatOffset")] public float RadiantHeatOffset;
+    [JsonProperty("depthPerServing")] public float DepthPerServing = UnifiedDepthPerServing;
     #endregion
 
     #region 会话资源与校验
@@ -36,11 +49,16 @@ public sealed class WorldLiquidSettings
     {
         if (!ValidResource(SpriteAddress, SpriteBundle, SpriteAsset) || !ValidResource(MaterialAddress, MaterialBundle, MaterialAsset))
             throw new InvalidDataException($"液体 {id} 缺少世界 Sprite/Material 地址。");
-        if (NavigationCost < 1 || NavigationCost > short.MaxValue ||
+        if (NavigationCost < 1 || NavigationCost > short.MaxValue || LoadCapacity < 0 ||
             !Positive(ShallowMoveSpeedMultiplier) || ShallowMoveSpeedMultiplier > 1f ||
             !Positive(DeepMoveSpeedMultiplier) || DeepMoveSpeedMultiplier > ShallowMoveSpeedMultiplier ||
             float.IsNaN(EntryTemperatureFloor) || float.IsInfinity(EntryTemperatureFloor) ||
             !Positive(EntryTemperatureTransitionSeconds) || !Positive(DrinkTickSeconds) ||
+            !NonNegative(Temperature) || !NonNegative(ContactHeatingPerSecond) ||
+            !NonNegative(ContactDamagePerSecond) || !NonNegative(RadiantHeatRadius) ||
+            RadiantHeatRadius > MaximumRadiantHeatRadius || !NonNegative(RadiantHeatOffset) ||
+            (RadiantHeatOffset > 0f && RadiantHeatRadius <= 0f) ||
+            !Positive(DepthPerServing) || Mathf.Abs(DepthPerServing - UnifiedDepthPerServing) > 0.000001f ||
             float.IsNaN(DrinkHoldSeconds) || float.IsInfinity(DrinkHoldSeconds) || DrinkHoldSeconds < 0f)
             throw new InvalidDataException($"液体 {id} 的世界玩法参数无效。");
     }
@@ -49,5 +67,6 @@ public sealed class WorldLiquidSettings
             ? string.IsNullOrWhiteSpace(bundle) && string.IsNullOrWhiteSpace(asset)
             : !string.IsNullOrWhiteSpace(bundle) && !string.IsNullOrWhiteSpace(asset);
     private static bool Positive(float value) => !float.IsNaN(value) && !float.IsInfinity(value) && value > 0f;
+    private static bool NonNegative(float value) => !float.IsNaN(value) && !float.IsInfinity(value) && value >= 0f;
     #endregion
 }

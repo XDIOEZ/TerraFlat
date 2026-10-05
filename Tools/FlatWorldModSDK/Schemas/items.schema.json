@@ -35,6 +35,10 @@
         "amount": { "type": "number" },
         "volume": { "type": "number" },
         "canBePickedUp": { "type": "boolean" },
+        "worldDropBehavior": {
+          "enum": ["passive", "interactive"],
+          "description": "passive 使用池化轻量 GameObject 掉落物；interactive 在世界中保留完整 Item 与模块交互。省略时默认为 passive。"
+        },
         "tags": { "type": "array", "items": { "type": "string" } },
         "modules": { "type": "array", "items": { "type": "string" } },
         "spriteBundle": { "type": "string" },

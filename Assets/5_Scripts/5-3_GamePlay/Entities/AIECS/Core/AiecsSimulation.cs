@@ -33,17 +33,28 @@ namespace FlatWorld.AIECS
         public NativeArray<AiecsDefinition> Definitions;
         public NativeArray<FixedString128Bytes> Factions;
         public NativeQueue<AiecsHitEvent>.ParallelWriter HitEvents; // 技能在实际 Pulse 通过同一结算入口发射命中。
+        public float DayRatio;
+        public double GameDays;
     }
 
     /// <summary>冷路径创建模板；静态定义共享，生命和部位复制为实例运行态。</summary>
     public struct AiecsActorTemplate
     {
         public int Definition, Faction;
+        public float WaterCurrentPushSpeed; // 按 Actor ID 从统一水流 JSON 读取的推动速度。
         public AiecsBody Body;
         public AiecsVital Vital;
         public AiecsDefense Defense;
         public AiecsAnatomy Anatomy;
         public byte HasBlood;
+        public AiecsCapability Capabilities;
+        public AiecsNutrition Nutrition;
+        public AiecsSleep Sleep;
+        public AiecsFlight Flight;
+        public AiecsReproduction Reproduction;
+        public AiecsDarkness Darkness;
+        public AiecsTactics Tactics;
+        public AiecsPack Pack;
     }
     #endregion
 
@@ -298,6 +309,14 @@ namespace FlatWorld.AIECS
         private readonly EntityArchetype archetype;
         private readonly EntityQuery allQuery;
         private readonly EntityQuery activeQuery;
+        private readonly EntityQuery nutritionQuery;
+        private readonly EntityQuery sleepQuery;
+        private readonly EntityQuery hiveQuery;
+        private readonly EntityQuery reproductionQuery;
+        private readonly EntityQuery darknessQuery;
+        private readonly EntityQuery tacticsQuery;
+        private readonly EntityQuery packQuery;
+        private readonly EntityQuery flightQuery;
         private readonly AiecsSpatialIndex perceptionSpatial = new AiecsSpatialIndex();
         private readonly AiecsSpatialIndex combatSpatial = new AiecsSpatialIndex();
         private readonly AiecsFlowCrowdScheduler movement = new AiecsFlowCrowdScheduler();
@@ -322,9 +341,14 @@ namespace FlatWorld.AIECS
         private NativeList<AiecsDeathEvent> deaths;
         private NativeParallelHashMap<Entity, int2> hitRanges;
         private NativeQueue<AiecsHitEvent> abilityHits;
+        private NativeQueue<AiecsFeedRequest> feedRequests;
+        private NativeQueue<AiecsProductionRequest> productionRequests;
         private JobHandle pending;
         private bool disposed;
+        private readonly bool ownsWorld;
         private float maximumBodyExtent; // 单次世界生命周期内只扩张，覆盖动态玩家体型与偏心形状。
+        /// <summary>托管模拟仍有引用不代表共享 World 存活，读取实体前必须检查原生生命周期。</summary>
+        public bool IsCreated => !disposed && world != null && world.IsCreated;
         public EntityManager Entities => world.EntityManager;
         public CombatClock Clock { get; private set; }
         public NativeArray<AiecsDisplayRecord> Display => display;
@@ -335,6 +359,8 @@ namespace FlatWorld.AIECS
         public NativeArray<AiecsHitEvent> ExternalHits => externalHits.AsArray();
         public AiecsSpatialView Spatial { get { Complete(); return combatSpatial.View; } }
         public CombatDifficulty Difficulty { get; set; }
+        public float DayRatio { get; set; } = 0.5f;
+        public double GameDays { get; set; }
         /// <summary>开发对照开关；正式默认启用连续邻居 Steering 与密度分流，不再存在单格容量。</summary>
         public bool LocalAvoidanceEnabled { get; set; } = true;
         #endregion
@@ -342,15 +368,17 @@ namespace FlatWorld.AIECS
         #region 创建与外部输入
         /// <summary>冻结当前内容编译结果；组数是战略位置数量，不能按单位数量扩展。</summary>
         public AiecsSimulation(AiecsDefinition[] actorDefinitions, AiecsBuffDefinition[] buffDefinitions,
-            FixedString128Bytes[] factionIds, byte[] factionRelations, int groupCount, float bodyExtent, double startTime)
+            FixedString128Bytes[] factionIds, byte[] factionRelations, int groupCount, float bodyExtent, double startTime,
+            World sharedWorld = null)
         {
             if (groupCount < 1 || groupCount > 32) throw new ArgumentOutOfRangeException(nameof(groupCount));
             if (factionRelations.Length != factionIds.Length * factionIds.Length) throw new ArgumentException("阵营矩阵尺寸不匹配");
-            world = new World("AIECS 正式模拟");
+            ownsWorld = sharedWorld == null;
+            world = sharedWorld ?? new World("AIECS 隔离诊断");
             scheduler = world.GetOrCreateSystemManaged<AiecsJobSchedulerSystem>();
             var types = new ComponentType[] { typeof(AiecsIdentity), typeof(AiecsBody), typeof(AiecsVital), typeof(AiecsDefense),
                 typeof(AiecsAnatomy), typeof(AiecsBrain), typeof(AiecsBehaviorProposal), typeof(AiecsBehaviorIntent),
-                typeof(AiecsLocalMotion), typeof(AiecsAttackState), typeof(AiecsStatus), typeof(AiecsWorkCounters),
+                typeof(AiecsLocalMotion), typeof(AiecsAdvanceDirective), typeof(AiecsAttackState), typeof(AiecsStatus), typeof(AiecsWorkCounters),
                 typeof(AiecsFlowAgent), typeof(AiecsBuff), typeof(AiecsPeriodicHit),
                 typeof(AiecsSimulationPulse) };
             archetype = Entities.CreateArchetype(types);
@@ -360,6 +388,42 @@ namespace FlatWorld.AIECS
                 All = types,
                 Options = EntityQueryOptions.IgnoreComponentEnabledState
             });
+            nutritionQuery = Entities.CreateEntityQuery(ComponentType.ReadOnly<AiecsIdentity>(),
+                ComponentType.ReadOnly<AiecsVital>(), ComponentType.ReadOnly<AiecsSimulationPulse>(),
+                ComponentType.ReadOnly<AiecsFlowAgent>(), ComponentType.ReadWrite<AiecsNutrition>(),
+                ComponentType.ReadWrite<AiecsBehaviorProposal>());
+            sleepQuery = Entities.CreateEntityQuery(ComponentType.ReadOnly<AiecsIdentity>(),
+                ComponentType.ReadOnly<AiecsVital>(), ComponentType.ReadOnly<AiecsBrain>(),
+                ComponentType.ReadOnly<AiecsSimulationPulse>(), ComponentType.ReadWrite<AiecsSleep>(),
+                ComponentType.ReadWrite<AiecsBehaviorProposal>());
+            hiveQuery = Entities.CreateEntityQuery(ComponentType.ReadOnly<AiecsIdentity>(),
+                ComponentType.ReadOnly<AiecsVital>(), ComponentType.ReadOnly<AiecsSimulationPulse>(),
+                ComponentType.ReadOnly<AiecsBrain>(), ComponentType.ReadOnly<AiecsFlowAgent>(),
+                ComponentType.ReadOnly<AiecsNutrition>(),
+                ComponentType.ReadWrite<AiecsHiveMember>(), ComponentType.ReadWrite<AiecsBehaviorProposal>());
+            reproductionQuery = Entities.CreateEntityQuery(ComponentType.ReadOnly<AiecsIdentity>(),
+                ComponentType.ReadOnly<AiecsVital>(), ComponentType.ReadOnly<AiecsSimulationPulse>(),
+                ComponentType.ReadOnly<AiecsFlowAgent>(),
+                ComponentType.ReadWrite<AiecsReproduction>());
+            darknessQuery = Entities.CreateEntityQuery(ComponentType.ReadOnly<AiecsIdentity>(),
+                ComponentType.ReadOnly<AiecsVital>(), ComponentType.ReadOnly<AiecsSimulationPulse>(),
+                ComponentType.ReadOnly<AiecsFlowAgent>(),
+                ComponentType.ReadOnly<AiecsBrain>(), ComponentType.ReadWrite<AiecsDarkness>(),
+                ComponentType.ReadWrite<AiecsBehaviorProposal>());
+            tacticsQuery = Entities.CreateEntityQuery(ComponentType.ReadOnly<AiecsIdentity>(),
+                ComponentType.ReadOnly<AiecsVital>(), ComponentType.ReadOnly<AiecsSimulationPulse>(),
+                ComponentType.ReadOnly<AiecsBehaviorIntent>(), ComponentType.ReadWrite<AiecsTactics>(),
+                ComponentType.ReadWrite<AiecsFlowAgent>());
+            packQuery = Entities.CreateEntityQuery(ComponentType.ReadOnly<AiecsIdentity>(),
+                ComponentType.ReadOnly<AiecsVital>(), ComponentType.ReadOnly<AiecsSimulationPulse>(),
+                ComponentType.ReadOnly<AiecsBrain>(),
+                ComponentType.ReadOnly<AiecsFlowAgent>(), ComponentType.ReadOnly<AiecsPack>(),
+                ComponentType.ReadWrite<AiecsBehaviorProposal>());
+            flightQuery = Entities.CreateEntityQuery(ComponentType.ReadOnly<AiecsIdentity>(),
+                ComponentType.ReadOnly<AiecsVital>(), ComponentType.ReadOnly<AiecsSimulationPulse>(),
+                ComponentType.ReadOnly<AiecsBehaviorIntent>(), ComponentType.ReadWrite<AiecsBrain>(),
+                ComponentType.ReadWrite<AiecsFlight>(),
+                ComponentType.ReadWrite<AiecsFlowAgent>());
             definitions = new NativeArray<AiecsDefinition>(actorDefinitions, Allocator.Persistent);
             buffs = new NativeArray<AiecsBuffDefinition>(buffDefinitions, Allocator.Persistent);
             factions = new NativeArray<FixedString128Bytes>(factionIds, Allocator.Persistent);
@@ -378,6 +442,8 @@ namespace FlatWorld.AIECS
             deaths = new NativeList<AiecsDeathEvent>(16, Allocator.Persistent);
             hitRanges = new NativeParallelHashMap<Entity, int2>(16, Allocator.Persistent);
             abilityHits = new NativeQueue<AiecsHitEvent>(Allocator.Persistent);
+            feedRequests = new NativeQueue<AiecsFeedRequest>(Allocator.Persistent);
+            productionRequests = new NativeQueue<AiecsProductionRequest>(Allocator.Persistent);
             density = new NativeParallelHashMap<int2, int>(16, Allocator.Persistent);
             maximumBodyExtent = bodyExtent;
             Clock = new CombatClock { Time = startTime };
@@ -409,8 +475,25 @@ namespace FlatWorld.AIECS
                 NextDecision = Clock.Time + random.NextFloat() * definition.DecisionPeriod,
                 BehaviorUntil = Clock.Time + definition.IdleSeconds * random.NextFloat(0.2f, 1f), EnteredAt = Clock.Time });
             Entities.SetComponentData(entity, new AiecsFlowAgent { Position = position, Radius = template.Body.Radius,
-                Speed = definition.MoveSpeed, StopDistance = 0.15f, Mode = AiecsMoveMode.Hold });
+                Speed = definition.MoveSpeed, WaterCurrentPushSpeed = template.WaterCurrentPushSpeed,
+                StopDistance = 0.15f, Mode = AiecsMoveMode.Hold });
             Entities.SetComponentData(entity, new AiecsSimulationPulse { LastTickTime = Clock.Time });
+            if ((template.Capabilities & AiecsCapability.Nutrition) != 0)
+                Entities.AddComponentData(entity, template.Nutrition);
+            if ((template.Capabilities & AiecsCapability.Sleep) != 0)
+                Entities.AddComponentData(entity, template.Sleep);
+            if ((template.Capabilities & AiecsCapability.Flight) != 0)
+                Entities.AddComponentData(entity, template.Flight);
+            if ((template.Capabilities & AiecsCapability.Reproduction) != 0)
+                Entities.AddComponentData(entity, template.Reproduction);
+            if ((template.Capabilities & AiecsCapability.HiveMember) != 0)
+                Entities.AddComponentData(entity, new AiecsHiveMember());
+            if ((template.Capabilities & AiecsCapability.Darkness) != 0)
+                Entities.AddComponentData(entity, template.Darkness);
+            if ((template.Capabilities & (AiecsCapability.Charge | AiecsCapability.Predator)) != 0)
+                Entities.AddComponentData(entity, template.Tactics);
+            if ((template.Capabilities & AiecsCapability.Pack) != 0)
+                Entities.AddComponentData(entity, template.Pack);
             return entity;
         }
 
@@ -462,6 +545,18 @@ namespace FlatWorld.AIECS
         /// <summary>仅武器实际窗口/Pulse 提交输入，未来时间的输入保留到对应模拟 Tick。</summary>
         public void SubmitHit(AiecsHitEvent hit) { Complete(); pendingInputs.Add(hit); }
 
+        public bool TryDequeueFeedRequest(out AiecsFeedRequest request)
+        {
+            Complete();
+            return feedRequests.TryDequeue(out request);
+        }
+
+        public bool TryDequeueProductionRequest(out AiecsProductionRequest request)
+        {
+            Complete();
+            return productionRequests.TryDequeue(out request);
+        }
+
         /// <summary>桥接前检查当前 Buff 是否完整编译，防止丢弃未迁移能力。</summary>
         public bool SupportsBuff(FixedString128Bytes id)
         {
@@ -489,6 +584,8 @@ namespace FlatWorld.AIECS
             int activeCount = activeQuery.CalculateEntityCount();
             Resize(totalCount);
             inputs.Clear();
+            feedRequests.Clear();
+            productionRequests.Clear();
             for (int i = pendingInputs.Length - 1; i >= 0; i--)
             {
                 if (pendingInputs[i].Context.Clock.Time > time) continue;
@@ -503,16 +600,39 @@ namespace FlatWorld.AIECS
             results.Clear(); externalHits.Clear(); deaths.Clear();
             pending = perceptionSpatial.Build(scheduler, activeQuery, view.Domain, relations, factions.Length, maximumBodyExtent);
             var frame = new AiecsFrame { Clock = Clock, Spatial = perceptionSpatial.View, Los = los, Navigation = view, Definitions = definitions,
-                Factions = factions, HitEvents = abilityHits.AsParallelWriter() };
+                Factions = factions, HitEvents = abilityHits.AsParallelWriter(), DayRatio = DayRatio, GameDays = GameDays };
             pending = scheduler.ScheduleParallel(new AiecsPerceptionSystem { Definitions = definitions, Spatial = frame.Spatial,
-                Los = los, Time = time, Tick = (uint)Clock.Tick }, activeQuery, pending);
+                Los = los, Hives = scheduler.GetHiveLookup(), Time = time, Tick = (uint)Clock.Tick }, activeQuery, pending);
+            if (!nutritionQuery.IsEmptyIgnoreFilter)
+                pending = scheduler.ScheduleParallel(new AiecsNutritionJob { Clock = Clock, Domain = view.Domain,
+                    Requests = feedRequests.AsParallelWriter() }, nutritionQuery, pending);
+            if (!sleepQuery.IsEmptyIgnoreFilter)
+                pending = scheduler.ScheduleParallel(new AiecsSleepJob { DayRatio = DayRatio, Time = time },
+                    sleepQuery, pending);
+            if (!hiveQuery.IsEmptyIgnoreFilter)
+                pending = scheduler.ScheduleParallel(new AiecsHiveJob { Domain = view.Domain, Time = time },
+                    hiveQuery, pending);
+            if (!reproductionQuery.IsEmptyIgnoreFilter)
+                pending = scheduler.ScheduleParallel(new AiecsReproductionJob { GameDays = GameDays,
+                    Requests = productionRequests.AsParallelWriter() }, reproductionQuery, pending);
+            if (!darknessQuery.IsEmptyIgnoreFilter)
+                pending = scheduler.ScheduleParallel(new AiecsDarknessJob { Clock = Clock,
+                    Hits = abilityHits.AsParallelWriter() }, darknessQuery, pending);
+            if (!packQuery.IsEmptyIgnoreFilter)
+                pending = scheduler.ScheduleParallel(new AiecsPackJob { Spatial = frame.Spatial,
+                    Brains = scheduler.GetBrainLookup() }, packQuery, pending);
             pending = ScheduleStages(AiecsStagePhase.BeforeDecision, frame, pending);
             pending = engagement.Schedule(scheduler, activeQuery, frame.Spatial, time, pending);
             pending = scheduler.ScheduleParallel(new AiecsDecisionSystem { Definitions = definitions, Spatial = frame.Spatial,
+                Navigation = view,
                 EngagementSlots = engagement.Slots, Time = time }, activeQuery, pending);
             pending = scheduler.ScheduleParallel(new AiecsBehaviorSystem { Definitions = definitions, Spatial = frame.Spatial,
                 Navigation = view, GroupGoals = goals, EngagementSlots = engagement.Slots, Time = time }, activeQuery, pending);
             pending = ScheduleStages(AiecsStagePhase.BeforeMovement, frame, pending);
+            if (!tacticsQuery.IsEmptyIgnoreFilter)
+                pending = scheduler.ScheduleParallel(new AiecsTacticsJob { Time = time }, tacticsQuery, pending);
+            if (!flightQuery.IsEmptyIgnoreFilter)
+                pending = scheduler.ScheduleParallel(new AiecsFlightJob(), flightQuery, pending);
             perceptionSpatial.RegisterReader(pending); navigation.RegisterReader(pending);
             pending = movement.Schedule(scheduler, activeQuery, navigation, deltaTime,
                 neighbourLimit: 12,
@@ -542,6 +662,7 @@ namespace FlatWorld.AIECS
             pending = ScheduleStages(AiecsStagePhase.AfterDamage, frame, pending);
             pending = scheduler.ScheduleParallel(new AiecsDeathSystem { Clock = Clock, Events = deaths.AsParallelWriter() }, activeQuery, pending);
             pending = scheduler.ScheduleParallel(new AiecsCaptureStateJob { Definitions = definitions, Clock = Clock,
+                Flights = scheduler.GetFlightLookup(),
                 Display = display, Work = work }, allQuery, pending);
             pending = new AiecsStatisticsJob { Display = display, Work = work, Statistics = statistics, Groups = groups,
                 Anchors = groupAnchors, Nearest = groupNearest, Navigation = view, Density = density, Domain = view.Domain }.Schedule(pending);
@@ -586,14 +707,23 @@ namespace FlatWorld.AIECS
             // Unity.Entities' destroyed query registry. Native resources below are owned by this simulation and still
             // need deterministic cleanup regardless of the World state.
             bool disposeWorld = world != null && world.IsCreated;
-            if (disposeWorld) { allQuery.Dispose(); activeQuery.Dispose(); }
+            if (disposeWorld)
+            {
+                // 借用正式实体世界时只移除带 AI 组件集合的实体，不能清空树木等其它能力实体。
+                if (!ownsWorld) Entities.DestroyEntity(allQuery);
+                allQuery.Dispose(); activeQuery.Dispose();
+                nutritionQuery.Dispose(); sleepQuery.Dispose(); hiveQuery.Dispose();
+                reproductionQuery.Dispose(); flightQuery.Dispose();
+                darknessQuery.Dispose();
+                tacticsQuery.Dispose(); packQuery.Dispose();
+            }
             definitions.Dispose(); buffs.Dispose(); factions.Dispose(); relations.Dispose(); goals.Dispose();
             groups.Dispose(); groupAnchors.Dispose(); groupNearest.Dispose(); statistics.Dispose(); totalHitCount.Dispose();
             if (attacks.IsCreated) attacks.Dispose(); if (periodicCounts.IsCreated) periodicCounts.Dispose();
             if (display.IsCreated) display.Dispose(); if (work.IsCreated) work.Dispose();
             pendingInputs.Dispose(); inputs.Dispose(); hits.Dispose(); externalHits.Dispose(); results.Dispose(); deaths.Dispose();
-            hitRanges.Dispose(); abilityHits.Dispose(); density.Dispose();
-            if (disposeWorld) world.Dispose();
+            hitRanges.Dispose(); abilityHits.Dispose(); feedRequests.Dispose(); productionRequests.Dispose(); density.Dispose();
+            if (disposeWorld && ownsWorld) world.Dispose();
         }
         #endregion
     }

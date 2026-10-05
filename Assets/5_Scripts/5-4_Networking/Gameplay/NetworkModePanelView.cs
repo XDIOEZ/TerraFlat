@@ -44,7 +44,7 @@ namespace FlatWorld.Networking.Gameplay
             }
 
             basePanel.PanelName = NetworkPanelKey;
-            basePanel.Init();
+            basePanel.InitClosed();
             UIManager.Instance.RegisterPanel(basePanel, NetworkPanelKey);
             panelObject.transform.SetAsLastSibling();
             return basePanel;

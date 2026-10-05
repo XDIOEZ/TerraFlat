@@ -45,7 +45,9 @@ namespace FlatWorld.AIECS.Gameplay
         {
             if (active != null && active != this) { Destroy(gameObject); return; }
             active = this; DontDestroyOnLoad(gameObject);
-            mode = InitialMode; GameManager.Event_PlayerEnterWorld += OnPlayerEntered;
+            mode = InitialMode;
+            GameManager.Event_PlayerEnterWorld += OnPlayerEntered;
+            GameManager.Event_LocalPlayerRuntimeReloaded += OnPlayerEntered;
         }
 
         /// <summary>复用游戏本来的新建世界流程，不替用户打开或覆盖存档。</summary>
@@ -108,11 +110,15 @@ namespace FlatWorld.AIECS.Gameplay
             SetStatus("等待临时世界。");
         }
 
+        /// <summary>程序集重载可能只有停用回调，必须在丢失托管引用前归还原生批次。</summary>
+        private void OnDisable() => StopScenario();
+
         /// <summary>释放静态订阅、模拟和批次，兼容关闭 Domain Reload 的编辑器。</summary>
         private void OnDestroy()
         {
             if (active != this) return;
             GameManager.Event_PlayerEnterWorld -= OnPlayerEntered;
+            GameManager.Event_LocalPlayerRuntimeReloaded -= OnPlayerEntered;
             if (manager != null) manager.Event_GameWorldExit -= OnWorldExit;
             StopScenario(); active = null;
         }
@@ -134,7 +140,8 @@ namespace FlatWorld.AIECS.Gameplay
                     TrySpawnScenarioLootActor, removeSpawnedStaticDropsOnDispose: true);
                 bridge.Simulation.LocalAvoidanceEnabled = LocalAvoidanceEnabled;
                 bridge.PlayerParticipates = requested != AiecsPlaygroundMode.Armies;
-                display = new AiecsWorldRenderer(Catalog, ids, player.gameObject.scene);
+                display = new AiecsWorldRenderer(Catalog, ids, player.gameObject.scene,
+                    AiecsWorldSortingResolver.Resolve());
                 simulationTime = Time.timeAsDouble;
                 float2 center = (Vector2)player.transform.position;
                 if (requested == AiecsPlaygroundMode.Armies)
@@ -214,7 +221,12 @@ namespace FlatWorld.AIECS.Gameplay
         /// <summary>主动结束当前开发群体并归还所有共享资源。</summary>
         private void StopScenario()
         {
-            display?.Dispose(); display = null; bridge?.Dispose(); bridge = null;
+            AiecsWorldRenderer oldDisplay = display;
+            AiecsGameplayBridge oldBridge = bridge;
+            display = null;
+            bridge = null;
+            try { oldDisplay?.Dispose(); }
+            finally { oldBridge?.Dispose(); }
         }
         #endregion
 

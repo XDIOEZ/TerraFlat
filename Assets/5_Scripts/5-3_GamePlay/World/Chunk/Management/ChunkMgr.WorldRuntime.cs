@@ -11,13 +11,20 @@ using Unity.Profiling;
 
 public partial class ChunkMgr
 {
+    public const int MaxRuntimeChunkWorkCountPerFrame = 1024;
+    public const float MinRuntimeChunkWorkMillisecondsPerFrame = 0.5f;
+    public const float MaxRuntimeChunkWorkMillisecondsPerFrame = 16f;
+
     private static readonly ProfilerMarker WorldRuntimeAdvanceMarker =
         new("FlatWorld.ChunkStreaming.CommitAndTick");
     [Header("无头世界模型")]
     [SerializeField] private ChunkGenerationProfileSO defaultGenerationProfile;
     [SerializeField, Min(1)] private int backgroundGenerationConcurrency = 2;
-    [Tooltip("主线程每帧最多提交的后台生成结果；提交会计算哈希并发布事件，建议保持 1。")]
-    [SerializeField, Range(1, 4)] private int maxChunkCommitsPerFrame = 1;
+    [Tooltip("主线程每帧最多提交多少个后台生成结果；达到毫秒预算后仍会提前停止。")]
+    [SerializeField, Range(1, MaxRuntimeChunkWorkCountPerFrame)] private int maxChunkCommitsPerFrame = 64;
+    [Tooltip("后台结果提交每帧最多占用的主线程毫秒数；单个提交仍会完整执行。")]
+    [SerializeField, Range(MinRuntimeChunkWorkMillisecondsPerFrame, MaxRuntimeChunkWorkMillisecondsPerFrame)]
+    private float maxChunkCommitMillisecondsPerFrame = 3f;
     [SerializeField] private bool authoritativeSimulation = true;
 
     private RuntimeChunkMgr runtimeChunkManager;
@@ -27,6 +34,7 @@ public partial class ChunkMgr
     private ChunkGenerationProfileSnapshot activeGenerationSnapshot;
     private long runtimeEpoch;
     private WorldRuntimeHost runtimeHost;
+    private IDisposable sightBlockingChunkCommittedSubscription;
     /// <summary>管理器进入终止阶段后，不再保存生态快照或重新创建世界运行时。</summary>
     internal bool IsWorldRuntimeShuttingDown { get; private set; }
 
@@ -35,6 +43,27 @@ public partial class ChunkMgr
         runtimeChunkManager?.Chunks ?? EmptyChunkRuntimeDictionary.Instance;
     public bool HasPendingChunkDataLoads => runtimeChunkManager?.HasPendingChunkLoads == true;
     public RuntimeChunkMgr RuntimeChunks => runtimeChunkManager;
+    #region 区块提交预算
+
+    /// <summary>每帧允许提交的后台生成结果数，GM 修改后立即生效。</summary>
+    public int RuntimeChunkCommitBudget
+    {
+        get => Mathf.Clamp(maxChunkCommitsPerFrame, 1, MaxRuntimeChunkWorkCountPerFrame);
+        set => maxChunkCommitsPerFrame = Mathf.Clamp(value, 1, MaxRuntimeChunkWorkCountPerFrame);
+    }
+
+    /// <summary>每帧提交生成结果可用的主线程毫秒数。</summary>
+    public float RuntimeChunkCommitMillisecondsBudget
+    {
+        get => float.IsNaN(maxChunkCommitMillisecondsPerFrame) ? 3f :
+            Mathf.Clamp(maxChunkCommitMillisecondsPerFrame,
+                MinRuntimeChunkWorkMillisecondsPerFrame, MaxRuntimeChunkWorkMillisecondsPerFrame);
+        set => maxChunkCommitMillisecondsPerFrame = float.IsNaN(value) ? 3f :
+            Mathf.Clamp(value, MinRuntimeChunkWorkMillisecondsPerFrame,
+                MaxRuntimeChunkWorkMillisecondsPerFrame);
+    }
+
+    #endregion
     /// <summary>当前世界实际提交给后台区块生成器的完整参数快照。</summary>
     public ChunkGenerationProfileSnapshot ActiveGenerationProfile =>
         activeGenerationSnapshot ?? defaultGenerationSnapshot;
@@ -106,6 +135,28 @@ public partial class ChunkMgr
             ? (Int2?)found : null, cancellationToken);
     }
 
+    #region 群系调试定位
+
+    /// <summary>在主线程冻结当前世界上下文，后台仅使用正式生成器和纯数据查询群系。</summary>
+    public Task<DeterministicChunkGenerator.BiomeSearchResult> FindSurfaceBiomeAsync(
+        Int2 anchor, SurfaceBiomeKind biome, CancellationToken cancellationToken,
+        DeterministicChunkGenerator.BiomeSearchProgress progress = null)
+    {
+        EnsureWorldRuntime();
+        ChunkGenerationProfileSnapshot profile = PrepareActiveGenerationSnapshot(out int baseSeed);
+        ChunkGenerationTopologySnapshot topology = ResolveActiveGenerationTopology();
+        string dimensionId = ResolveCurrentDimensionId();
+        int seed = DimensionManager.Instance != null
+            ? DimensionManager.Instance.GetActiveGenerationSeed(baseSeed)
+            : baseSeed;
+        long epoch = runtimeChunkManager.World.Epoch;
+        DeterministicChunkGenerator generator = runtimeGenerator;
+        return Task.Run(() => generator.FindSurfaceBiome(dimensionId, seed, profile,
+            topology, anchor, biome, cancellationToken, epoch, progress), cancellationToken);
+    }
+
+    #endregion
+
     /// <summary>尝试从当前运行时缓存中找到指定地址的区块。</summary>
     public bool TryGetChunkRuntime(RuntimeWorldAddress address, out ChunkRuntime chunk)
     {
@@ -136,8 +187,9 @@ public partial class ChunkMgr
     public RuntimeWorldAddress ResolveWorldAddress(Vector2 worldPosition, string dimensionId = null)
     {
         EnsureWorldRuntime();
-        int width = Math.Max(1, defaultGenerationSnapshot.Width);
-        int height = Math.Max(1, defaultGenerationSnapshot.Height);
+        ChunkGenerationProfileSnapshot profile = ActiveGenerationProfile ?? defaultGenerationSnapshot;
+        int width = Math.Max(1, profile.Width);
+        int height = Math.Max(1, profile.Height);
         var origin = NormalizeChunkPosition(new Vector2Int(
             Mathf.FloorToInt(worldPosition.x / width) * width,
             Mathf.FloorToInt(worldPosition.y / height) * height));
@@ -181,10 +233,11 @@ public partial class ChunkMgr
         if (IsWorldRuntimeShuttingDown)
             return;
 
+        RecordStreamingAdvance();
         using (WorldRuntimeAdvanceMarker.Auto())
         {
             runtimeChunkManager?.Advance(deltaSeconds, authoritativeSimulation,
-                Mathf.Max(1, maxChunkCommitsPerFrame));
+                RuntimeChunkCommitBudget, RuntimeChunkCommitMillisecondsBudget);
         }
         ReconcileRuntimeWindowBindings();
         AdvanceLiquidFlowExperiment(deltaSeconds);
@@ -206,16 +259,35 @@ public partial class ChunkMgr
         defaultGenerationSnapshot = defaultGenerationProfile != null
             ? defaultGenerationProfile.CreateSnapshot()
             : CreateFallbackGenerationSnapshot();
+        defaultGenerationSnapshot = ApplyWorldChunkSize(defaultGenerationSnapshot);
         runtimeTileCatalogSnapshot = defaultGenerationSnapshot;
         activeGenerationSnapshot = defaultGenerationSnapshot;
         string worldId = SceneManager.GetActiveScene().name;
         if (string.IsNullOrWhiteSpace(worldId))
             worldId = "world";
         var world = new WorldRuntime(worldId, runtimeEpoch);
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        slowChunkLogCount = 0;
+        slowChunkLogWindowStart = Time.realtimeSinceStartup;
+        world.StreamingDiagnostics.SlowGenerationCompleted += LogSlowChunkGeneration;
+#endif
         runtimeGenerator = new DeterministicChunkGenerator(GameRes.ExistingInstance?.LiquidTypes);
         runtimeChunkManager = new RuntimeChunkMgr(world, runtimeGenerator,
             EffectiveBackgroundGenerationConcurrency, new UnityWorldAddressNormalizer());
+        sightBlockingChunkCommittedSubscription =
+            world.Events.Subscribe<ChunkCommitted>(HandleSightBlockingChunkCommitted);
     }
+
+    #region 视线遮挡层接入
+
+    /// <summary>区块正式就绪后一次性接入已登记的动态遮挡格。</summary>
+    private void HandleSightBlockingChunkCommitted(ChunkCommitted committed)
+    {
+        if (TryGetChunkRuntime(committed.Address, out ChunkRuntime chunk))
+            BuildingOccupancyRegistry.InitializeSightBlockingForChunk(chunk);
+    }
+
+    #endregion
 
     /// <summary>切换场景时清空旧区块，并让新场景使用新的世界纪元。</summary>
     private void ResetWorldRuntimeForSceneChange()
@@ -223,13 +295,19 @@ public partial class ChunkMgr
         StopLiquidFlowExperiment();
         WorldLiquidFlowObstacles.ClearWorld();
         ClearRuntimeWindowBindings();
+        WorldEntityRuntime.ReleaseWorld();
         if (runtimeChunkManager == null)
             return;
         runtimeChunkManager.ClearWindow();
         runtimeChunkManager.CancelAllRequests();
+        runtimeGenerator?.BeginNewWorldHydrologyEpoch(runtimeEpoch);
         runtimeChunkManager.CommitCompleted();
         runtimeEpoch++;
         runtimeChunkManager.World.BeginNewEpoch(runtimeEpoch);
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        slowChunkLogCount = 0;
+        slowChunkLogWindowStart = Time.realtimeSinceStartup;
+#endif
     }
 
     /// <summary>彻底关闭世界运行时，释放区块、任务和事件资源。</summary>
@@ -244,6 +322,7 @@ public partial class ChunkMgr
         if (runtimeHost != null)
             runtimeHost.Bind(null);
         runtimeChunkManager?.CancelAllRequests();
+        runtimeGenerator?.BeginNewWorldHydrologyEpoch(runtimeEpoch);
         try
         {
             ClearRuntimeWindowBindings();
@@ -251,9 +330,12 @@ public partial class ChunkMgr
         finally
         {
             // 表现清理发生异常时，后台任务与纯数据仍必须释放，原始异常继续上报。
+            WorldEntityRuntime.ReleaseWorld();
             RuntimeChunkMgr manager = runtimeChunkManager;
             runtimeChunkManager = null;
             runtimeGenerator = null;
+            sightBlockingChunkCommittedSubscription?.Dispose();
+            sightBlockingChunkCommittedSubscription = null;
             activeGenerationSnapshot = null;
             runtimeTileCatalogSnapshot = null;
             if (manager != null)
@@ -261,6 +343,9 @@ public partial class ChunkMgr
                 WorldRuntime world = manager.World;
                 try
                 {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                    world.StreamingDiagnostics.SlowGenerationCompleted -= LogSlowChunkGeneration;
+#endif
                     manager.Dispose();
                 }
                 finally
@@ -303,6 +388,20 @@ public partial class ChunkMgr
             throw new ArgumentNullException(nameof(profile));
         PlanetData planet = SaveDataMgr.Instance?.GetCurrentPlanetData();
         return ApplyWorldCoordinateScale(profile, planet);
+    }
+
+    /// <summary>把存档中的区块尺寸覆盖到生成 Profile，避免资源 Profile 与世界网格出现双真源。</summary>
+    private static ChunkGenerationProfileSnapshot ApplyWorldChunkSize(
+        ChunkGenerationProfileSnapshot profile, PlanetData planet = null)
+    {
+        if (profile == null)
+            throw new ArgumentNullException(nameof(profile));
+        planet ??= SaveDataMgr.Instance?.GetCurrentPlanetData();
+        if (planet == null)
+            return profile;
+
+        Vector2Int chunkSize = PlanetData.NormalizeChunkSize(planet.ChunkSize);
+        return profile.WithChunkSize(chunkSize.x, chunkSize.y);
     }
 
     /// <summary>按指定维度 PlanetData 写入坐标缩放；矿洞复核地表时不能误用当前矿洞数值。</summary>

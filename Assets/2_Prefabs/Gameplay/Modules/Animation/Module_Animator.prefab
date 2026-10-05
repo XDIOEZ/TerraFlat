@@ -241,6 +241,11 @@ MonoBehaviour:
      horizontalOffsetNormalized: 0
      verticalOffsetNormalized: 0.06
      sortingOrderOffset: 2
+   - buffId: 潮湿
+     effectName: WetStatusEffect
+     horizontalOffsetNormalized: 0
+     verticalOffsetNormalized: 0.03
+     sortingOrderOffset: 2
   glowEffects:
   - buffId: 光耀
     sprite: {fileID: 21300000, guid: 6f62c397230d6d845b87a8e53d67c0e1, type: 3}

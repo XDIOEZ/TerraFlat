@@ -53,6 +53,14 @@ public abstract partial class ItemData
     [Tooltip("物品缩放")]
     public ItemTransform transform = new();
 
+    #region 运行时物理反馈
+
+    // 物理结果只在当前世界内存中回写，存档仍由现有位置与模块数据负责。
+    [NonSerialized, MemoryPackIgnore, JsonIgnore, FastClonerIgnore]
+    public ItemPhysicsRuntimeState PhysicsState = new();
+
+    #endregion
+
     [Tooltip("物品特殊数据")]
     public string ItemSpecialData;
 
@@ -70,6 +78,19 @@ public abstract partial class ItemData
 
     [Tooltip("制作材料赋予的耐久倍率；1 表示使用物品定义中的基础耐久")]
     public float CraftedDurabilityMultiplier = 1f;
+
+    [Tooltip("物品实例当前的温度与含水率状态")]
+    public ItemMatterState MatterState = new();
+
+    #region 热量传导
+
+    public const float DefaultHeatConductionRate = 1f; // 未在 JSON 配置时的基础热量传导速率(℃/s)
+
+    [HideInInspector, JsonProperty("heatConductionRate")]
+    [Tooltip("热量传导速率（℃/s）；由物品或玩家 JSON 配置，温差决定升温或降温方向")]
+    public float HeatConductionRate = DefaultHeatConductionRate; // 实体自身的基础热量传导速率
+
+    #endregion
 
     //重写ToString方法，用于在控制台输出物品信息
     public override string ToString()
@@ -157,6 +178,28 @@ public abstract partial class ItemData
     }
 
     #endregion
+}
+
+[MemoryPackable]
+[Serializable]
+public partial class ItemMatterState
+{
+    public bool Initialized;
+    public float TemperatureCelsius = 20f;
+    public float Moisture;
+    public bool IsBurning;
+    public float CombustionElapsedSeconds;
+}
+
+/// <summary>Physics2D 回写给实体数据的瞬时结果，不承载战斗裁决。</summary>
+public sealed class ItemPhysicsRuntimeState
+{
+    public Vector2 Velocity;
+    public float AngularVelocity;
+    public Vector2 LastContactPoint;
+    public Vector2 LastContactNormal;
+    public int LastContactItemGuid;
+    public uint ContactVersion;
 }
 
 

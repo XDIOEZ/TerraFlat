@@ -300,6 +300,29 @@ namespace FlatWorld.WorldModel
                 PortalPairing);
         }
 
+        /// <summary>复制 Profile 并覆盖区块尺寸；运行时世界的 PlanetData 是区块网格唯一真源。</summary>
+        public ChunkGenerationProfileSnapshot WithChunkSize(int width, int height)
+        {
+            if (width <= 0)
+                throw new ArgumentOutOfRangeException(nameof(width));
+            if (height <= 0)
+                throw new ArgumentOutOfRangeException(nameof(height));
+            if (Width == width && Height == height)
+                return this;
+
+            return new ChunkGenerationProfileSnapshot(
+                ProfileId,
+                Signature,
+                width,
+                height,
+                new Dictionary<string, double>(numericParameters, StringComparer.Ordinal),
+                new Dictionary<string, string>(textParameters, StringComparer.Ordinal),
+                EcologyGlobalMultiplier,
+                EcologyRules,
+                CaveResourceRules,
+                PortalPairing);
+        }
+
         /// <summary>复制 Profile 并替换已经冻结的生态规则，用于存档恢复。</summary>
         public ChunkGenerationProfileSnapshot WithEcology(
             double globalMultiplier, IEnumerable<EcologySpawnRuleSnapshot> rules)
@@ -418,6 +441,15 @@ namespace FlatWorld.WorldModel
                 AddString(ref hash, rule.RuleId);
                 AddString(ref hash, rule.ItemId);
                 AddLong(ref hash, rule.ItemCount);
+                if (rule.ItemCountDistribution != EcologyItemCountDistribution.Fixed)
+                {
+                    AddString(ref hash, "itemCountDistribution");
+                    AddLong(ref hash, (int)rule.ItemCountDistribution);
+                    AddLong(ref hash, rule.ItemCountMin);
+                    AddLong(ref hash, rule.ItemCountPeak);
+                    AddLong(ref hash, BitConverter.DoubleToInt64Bits(
+                        rule.ItemCountQuadraticRadius));
+                }
                 AddLong(ref hash, BitConverter.DoubleToInt64Bits(rule.SpawnChance));
                 AddLong(ref hash, BitConverter.DoubleToInt64Bits(rule.SpawnChanceMultiplier));
                 AddLong(ref hash, (int)rule.DistributionMode);
@@ -435,6 +467,8 @@ namespace FlatWorld.WorldModel
                     rule.MinRiverFloodplainStrength));
                 AddLong(ref hash, rule.CompanionOnly ? 1 : 0);
                 AddString(ref hash, rule.CompanionHostTag);
+                AddString(ref hash, rule.RequiredChunkTag);
+                AddLong(ref hash, rule.RequiredTagChunkRadius);
                 AddLong(ref hash, BitConverter.DoubleToInt64Bits(rule.CompanionSpawnChance));
                 AddLong(ref hash, BitConverter.DoubleToInt64Bits(rule.CompanionOffsetX));
                 AddLong(ref hash, BitConverter.DoubleToInt64Bits(rule.CompanionOffsetY));
@@ -444,6 +478,25 @@ namespace FlatWorld.WorldModel
                 tags.Sort(StringComparer.OrdinalIgnoreCase);
                 for (int tagIndex = 0; tagIndex < tags.Count; tagIndex++)
                     AddString(ref hash, tags[tagIndex]);
+                // 仅显式湿地上限参与扩展指纹，不改变未使用该约束的既有规则。
+                if (!string.IsNullOrEmpty(rule.RequiredEnvironmentLayer))
+                {
+                    AddString(ref hash, "requiredEnvironmentLayer");
+                    AddString(ref hash, rule.RequiredEnvironmentLayer);
+                    AddLong(ref hash, BitConverter.DoubleToInt64Bits(rule.MinimumEnvironmentValue));
+                    AddLong(ref hash, BitConverter.DoubleToInt64Bits(rule.MaximumEnvironmentValue));
+                }
+                if (rule.RequireNaturalPlantableGround)
+                {
+                    AddString(ref hash, "requireNaturalPlantableGround");
+                    AddLong(ref hash, 1);
+                }
+                if (rule.MaxRiverFloodplainStrength < 1d)
+                {
+                    AddString(ref hash, "maxRiverFloodplainStrength");
+                    AddLong(ref hash, BitConverter.DoubleToInt64Bits(
+                        rule.MaxRiverFloodplainStrength));
+                }
             }
         }
 
@@ -588,6 +641,10 @@ namespace FlatWorld.WorldModel
     /// <summary>所有后台区块生成器都必须提供的 Generate 方法。</summary>
     public interface IChunkPureGenerator
     {
-        ChunkGenerationResult Generate(ChunkGenerationRequest request, CancellationToken cancellationToken);
+        ChunkGenerationResult Generate(ChunkGenerationRequest request, CancellationToken cancellationToken,
+            ChunkGenerationTiming timing = null);
+
+        /// <summary>返回仍需独占准备的共享生成资源；资源已就绪或没有共享资源时返回 null。</summary>
+        object GetPendingGenerationGroupKey(ChunkGenerationRequest request);
     }
 }

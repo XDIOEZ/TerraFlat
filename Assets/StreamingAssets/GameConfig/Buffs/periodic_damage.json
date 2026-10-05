@@ -74,13 +74,13 @@
       "id": "燃烧",
       "displayName": "燃烧",
       "category": "general",
-      "description": "最高5层，每层每秒受到1点真实伤害，火焰随层数增大。同层或更高潮湿阻止点燃，强火蒸发较低潮湿；浸水累计到同层潮湿时熄灭。",
+      "description": "最高10层，每层每秒受到1点真实伤害，火焰随层数增大。同层或更高潮湿阻止普通点燃，强火蒸发较低潮湿；浸水累计到同层潮湿时熄灭。岩浆接触会直接施加10层。",
       "durationSeconds": 5.0,
       "tickIntervalSeconds": 1.0,
       "stackMode": "add_stacks",
-      "maxStacks": 5,
+      "maxStacks": 10,
       "visualBaseScale": 0.6,
-      "visualScalePerStack": 0.2,
+      "visualScalePerStack": 0.09,
       "effects": [
         {
           "phase": "tick",

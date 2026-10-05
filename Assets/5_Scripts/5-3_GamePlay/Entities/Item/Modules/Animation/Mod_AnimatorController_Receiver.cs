@@ -1,4 +1,4 @@
-// AI-Context: 玩家动画接收器；本地角色读取 Mover/Rigidbody，网络远端角色由 SetNetworkPresentation 注入移动状态，避免插值位移被误判为静止。
+// AI-Context: 玩家动画接收器；本地角色读取 Mod_Mover/Rigidbody，网络远端角色由 SetNetworkPresentation 注入移动状态，避免插值位移被误判为静止。
 using UltEvents;
 using UnityEngine;
 
@@ -48,7 +48,7 @@ public class Mod_AnimatorController_Receiver : Mod_AnimatorController
     public UltEvent<int> OnSkillStart = new ();
     public UltEvent<int> OnSkillStop = new ();
 
-    private Mover _mover;
+    private Mod_Mover _mover;
     private bool _hasCachedSpritePose;
     private Vector3 _spriteBaseLocalPos;
     private float _walkPhase;
@@ -123,7 +123,7 @@ public class Mod_AnimatorController_Receiver : Mod_AnimatorController
             targetRb = GetComponentInParent<Rigidbody2D>();
         }
 
-        _mover = item.itemMods.GetMod_ByID<Mover>(ModText.Mover);
+        _mover = item.itemMods.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover);
         CacheSpritePose();
 
         // 初始化lastCanUseSkill状态
@@ -274,7 +274,7 @@ public class Mod_AnimatorController_Receiver : Mod_AnimatorController
             return _networkIsMoving;
         }
 
-        if (_mover is Mover_AI moverAI)
+        if (_mover is Mod_Mover_AI moverAI)
         {
             return moverAI.IsActuallyMoving;
         }

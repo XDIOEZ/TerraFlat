@@ -2,7 +2,7 @@ using UnityEngine;
 using UnityEngine.Rendering.Universal;
 
 /// <summary>
-/// 角色 Buff 光照控制单元：观察 BuffManager 的生命周期事件，并把指定 Buff 映射为独立的 Unity 2D 点光源。
+/// 角色 Buff 光照控制单元：观察 Mod_BuffManager 的生命周期事件，并把指定 Buff 映射为独立的 Unity 2D 点光源。
 /// 光源创建在角色子层级中，因此会自然跟随角色；本类只负责渲染表现，不参与 Buff 数值、伤害、Tick 或存档。
 /// 当前“光耀”使用暖黄色点光；“感染”通过角色统一渲染模块叠加低强度绿色染色，Buff 移除或到期时自动恢复。
 /// </summary>
@@ -41,7 +41,7 @@ public sealed class ActorBuffLightController : MonoBehaviour
 
     #region 运行时状态
 
-    private BuffManager buffManager;
+    private Mod_BuffManager buffManager;
     private Light2D runtimeLight;
     private ActorRenderColorEffect renderColorEffect;
     private bool lightActive;
@@ -82,7 +82,7 @@ public sealed class ActorBuffLightController : MonoBehaviour
         UnbindBuffManager();
     }
 
-    /// <summary>模块运行时补装 BuffManager 后重新绑定观察者。</summary>
+    /// <summary>模块运行时补装 Mod_BuffManager 后重新绑定观察者。</summary>
     private void OnTransformParentChanged()
     {
         if (!isActiveAndEnabled)
@@ -108,11 +108,11 @@ public sealed class ActorBuffLightController : MonoBehaviour
     private void BindBuffManager()
     {
         Item owner = GetComponentInParent<Item>();
-        BuffManager candidate = owner?.itemMods?.GetMod_ByID<BuffManager>(ModText.BuffManager);
+        Mod_BuffManager candidate = owner?.itemMods?.GetMod_ByID<Mod_BuffManager>(ModText.Mod_BuffManager);
         if (candidate == null && owner != null)
-            candidate = owner.GetComponentInChildren<BuffManager>(true);
+            candidate = owner.GetComponentInChildren<Mod_BuffManager>(true);
         if (candidate == null)
-            candidate = GetComponentInParent<BuffManager>();
+            candidate = GetComponentInParent<Mod_BuffManager>();
         if (candidate == buffManager)
             return;
 

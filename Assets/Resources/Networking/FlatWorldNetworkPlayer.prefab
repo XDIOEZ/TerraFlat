@@ -120,7 +120,7 @@ MonoBehaviour:
   syncDirection: 0
   syncMode: 0
   syncInterval: 0
-  movementSpeed: 5
+  movementSpeed: 3.5
   cameraOrthographicSize: 8
   networkSendInterval: 0.033
   remotePositionLerpSpeed: 18

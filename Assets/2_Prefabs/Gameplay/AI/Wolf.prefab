@@ -156,7 +156,7 @@ MonoBehaviour:
       Index: 0
     RuntimeOwnerSlotIndex: -1
     BitData: 
-  GameController: {fileID: 0}
+  Mod_GameController: {fileID: 0}
   turnBody: {fileID: 0}
   targetRotationTransforms: []
   mover: {fileID: 0}
@@ -693,7 +693,7 @@ MonoBehaviour:
   _chaseFormationTarget: {x: 0, y: 0, z: 0}
   _chaseFormationSlot: -1
   _chaseFormationMemberCount: 0
-  debugLog: 1
+  debugLog: 0
   wolfTags:
   - Wolf
   playerTags:
@@ -723,8 +723,9 @@ MonoBehaviour:
   alertKeepDuration: 2
   fleeTriggerHpRate: 0.22
   fleeSafeHpRate: 0.45
-  avoidRunDistance: 9
-  fleeRunDistance: 12
+  avoidRunDistance: 30
+  avoidSafeDistance: 30
+  fleeRunDistance: 30
   enableWander: 1
   idleMinDuration: 0.8
   idleMaxDuration: 2.2
@@ -1036,7 +1037,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 2993756592371071756, guid: 992baff2372d5b447946a74b230d5ca4, type: 3}
       propertyPath: m_Name
-      value: BuffManager
+      value: Mod_BuffManager
       objectReference: {fileID: 0}
     - target: {fileID: 6058014041233322486, guid: 992baff2372d5b447946a74b230d5ca4, type: 3}
       propertyPath: m_LocalPosition.x

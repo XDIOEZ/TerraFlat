@@ -18,28 +18,35 @@ description: "Use when: 定位或修改 FlatWorld 的数据模型、MemoryPack �
 - 开发阶段只读取当前 Envelope 版本，不保留旧版本自动升级路径。Ground/Liquid 格式边界使用 FWD8；格式头必须在反序列化内部对象之前校验，旧格式明确拒绝但不删除或覆盖原文件。
 - `SerializableTimeData` 的时间 Profile、限时边界和月相字段属于当前格式；`TimeData.EnsureTimeSystemDefaults()` 只负责当前运行时对象的合法化，不承担旧存档恢复。
 - 正式存档只写 `Application.persistentDataPath/Saves/LocalSaveData/`，并使用临时文件/原子替换；失败不得伪装为成功恢复。
+- `GameSaveData.PlayerData_Dict` 的键是不可变角色 ID，`Data_Player.Name_User` 仅是可修改的显示名；旧档保留原字典键作为兼容 ID，新角色分配独立 ID。改角色名只写 `Name_User`，改存档名要同步 `GameSaveData.saveName`、磁盘文件名和最后退出时间元数据，失败保留旧档。
 - `ItemSpecialDataJsonStore` 按命名空间更新并保留未知根属性；教程、任务、维度、出生点不得互相覆盖或改 `Data_Player` 布局。
 - Item/Recipe JSON 是唯一内容真源；Manifest 不自动扫描目录。移动资源还要核对 Address、标签和运行时字典键。
 - Tile JSON 同样由显式 Manifest 加载，定义保存稳定字符串 ID、世界整数 `runtimeTileId`、资源键及行为参数；不改变 `TileData` 的 MemoryPack 布局，也不保存角色或格子的运行时状态。已发布的地块整数编号不能重排、复用或被 Patch 修改；JSON 行为工厂注册不等同于新增 MemoryPack Union 注册。
 - Actor JSON 位于 `GameConfig/Actors`，使用独立 Manifest；外壳/Sprite/Animator 的 `flatworld.actor.*` 地址由 GUID 跟随移动，`sourcePrefab` 仅供编辑器。
 - Android/Player 构建必须启用 Addressables 随 Player 自动构建（`m_BuildAddressablesWithPlayerBuild: 1`），否则 `GameRes` 在真机包内可能拿到缺失或过期的本地 Catalog。
 - 编辑器通过 `AddressableAssetSettings` 新增或修改条目后，必须显式保存条目所属的 `AddressableAssetGroup`；只保存 Settings 可能让条目停留在内存，未进入 Git 与后续构建。
-- Editor Fast Mode 的 `AddressableAssetSettingsLocator` 会缓存键索引；外部工具直接修改 `Assets/AddressableAssetsData` 后，仅执行 `AssetDatabase.Refresh()` 不会触发 `Settings.OnModification`。导入回调必须补发 `BatchModification`（只通知、不再次写盘）使运行中的 Locator 失效并重建，否则 F5 资源会话仍可能解析旧目录并对新地址抛 `InvalidKeyException`。
+- Editor Fast Mode 的 `AddressableAssetSettingsLocator` 会缓存键索引；外部工具直接修改 `Assets/AddressableAssetsData` 后，仅执行 `AssetDatabase.Refresh()` 不会触发 `Settings.OnModification`。导入回调必须补发 `BatchModification`（只通知、不再次写盘）使运行中的 Locator 失效并重建，否则 F5 资源会话仍可能解析旧目录并对新地址抛 `InvalidKeyException`。如果 Addressables 条目先写入、对应源资源后导入，导入回调还要在该资源 GUID 已存在条目时刷新 Locator，不能只监听 `Assets/AddressableAssetsData/` 自身的导入事件。
 - Sprite 地址只有在源图是 Multiple 切片时才追加 `[子资源名]`；单 Sprite 图必须使用主资源地址。Unity 2022.3 + Addressables 1.22.3 Fast Mode 遇到无效子资源地址可能在 `AssetDatabaseProvider.LoadAssetSubObject` 抛空引用，编辑器加载路径需先做资源存在性和子资源名称校验。
 - Tile 栈只通过 `Data_TileMap` API 读写；区块差量保留基线、ChangedItems、删除 GUID 与确定性 ID 语义。
 - 新版 WorldModel 的格子建筑写入 `ChunkTerrainData.BlockingTileId`，不会进入 `MapSave.items`；必须按“确定性生成基线 → RuntimeTileDeltas 差量 → 表现绑定”的顺序持久化和恢复。
 - `RuntimeChunkBaseline` 随同一份 `ChunkRuntime` 保留在缓存时，存档差量只能应用一次；视野往返不得再次覆盖运行中的地形改动。地址复用但生成了新的 `ChunkRuntime` 时重新建立基线并恢复。
 - `RuntimeTileDeltas` 与基线保存完整 `TerrainCell`（地表、背层、阻挡层、群系、导航代价、Flags）及建筑损伤；水上平台另外通过 `SupportCells` 保存支撑层，底层水属性本就应保留。嵌套 MemoryPack 布局变化必须在解析嵌套数据前拒绝旧格式，可更换外层格式头，不能依赖完整反序列化之后才比较版本。
 - 新版 WorldModel 的动态建筑 Item 不属于旧 `Chunk.RunTimeItems`；建筑存档要复用区块 `ChangedItems` 差量，按 `Mod_Building` 角色清理旧记录并在区块数据就绪后实例化恢复。
+- 运行时 GameObject AI 远距休眠时先保存完整 `ItemData` 到区块 `ChangedItems`，再从 `ItemMgr` 卸载；自动保存跨帧采集期间暂停生态出生、休眠和唤醒。活动 AI 快照合并时须保留同区块的休眠居民，成功唤醒后才移除旧记录与休眠索引。
+- 由自然物宿主维护的临时 AI 应由宿主模块保存成员 GUID，成员自身记录宿主 GUID 并排除独立运行时 AI 快照；宿主卸载只撤回实例，死亡补位才分配新身份，避免重新装载时重复生成或改变存活成员身份。
 - 自动/手动保存可分帧采集，但后台只处理不可变快照；旧任务不得覆盖更新的手动/退出保存。
 - `IRuntimeDataLifecycle.Save()` 只抓取持久化快照，禁止解绑事件、停止行为或释放资源；Item 退出、移除模块与回池统一调用 `Unload()`，重新加载前也必须先卸载旧运行态。
+- 玩家体力存档只保存 `Mod_Stamina.StaminaData.CurrentStamina/MaxStamina` 的已结算权威值；划船加速、拉弓、奔跑、游泳等消费来源和按键状态均属于瞬时运行态，不进入存档。自动存档允许在这些动作持续期间抓取当前值，禁止为了存档暂停操作或序列化“正在消耗”状态。
 - 地表 `WorldKey=PlanetId`；非地表用 `PlanetId__dimension__DimensionId`。`TopologyMode` 的当前默认值为 `Infinite=0`，世界字段按当前版本统一读写。
 - 任务 `flatworld.quests` 等未来版本必须拒绝写回；未知 MOD 记录应保留。
-- 玩家创建 JSON 位于 `StreamingAssets/GameConfig/Players`，不进入 MemoryPack 存档；只在无存档创建阶段注入，并在模块加载前同步到 `Data_Player.ModuleDataDic`；已有玩家存档始终优先于模板。
+- 玩家创建 JSON 位于 `StreamingAssets/GameConfig/Players`，不进入 MemoryPack 存档；创建期属性只在无存档阶段注入，并在模块加载前同步到 `Data_Player.ModuleDataDic`。`core.heatConductionRate` 是当前内容配置，重新加载已有玩家时仍覆盖存档中的该静态速率，其他玩家状态仍以存档为准。
 
-- `ChunkSaveRecord.HasChanges` 必须计入独立的农业和平台状态；恢复支撑必须在导航及表现绑定之前，不能只有当前帧可行走、重载后丢失平台。
+- `ChunkSaveRecord.HasChanges` 必须计入独立的农业和平台状态；农业存档只保存需要持久化的水肥与作物，未完成锄地是纯运行时视觉/输入进度，不进入农业差量；真正耕完后由 `RuntimeTileDeltas` 保存正式 `Tile_Farmland`。恢复支撑必须在导航及表现绑定之前，不能只有当前帧可行走、重载后丢失平台。
+- 伪 Z 轴由 `ChunkSaveRecord.GroundLayerCells` 稀疏保存已采天然层数、玩家覆盖栈及表面草层，恢复必须在地形/草层差量之后、表现绑定之前；同地块 ID 的连续石层也必须保留记录。新增字段仅追加到 MemoryPack 类末尾，缺失的列表可能为 null，不能把初始值当成旧记录的缺省。
+- 玩家雪层使用独立 `SnowCells` 差量，记录编辑标记、实际厚度与编辑时季节覆盖；空雪格仍算有效变化，必须计入 `HasChanges`，并在表现绑定前恢复，不能用 Ground 差量替换原地形。
 - 地块污染使用 `ChunkSaveRecord.ContaminationCells` 保存偏离定义默认值的稀疏差量；污染定义 ID 与数值一起持久化，恢复时必须要求当前本体/MOD 已注册该定义，禁止静默丢弃未知污染状态。
 - 时间保存同时复制季节配置和历史区间；积雪、植物冷热暴露、自然补位年份、陶罐水质／加工进度、盐分负担各有独立状态，不能在渲染绑定或 UI 打开时重置。
+- MemoryPack 追加可选数值字段时，不能依赖字段初始化值表达缺省；若 0 也是有效配置，使用可空数值并在转为运行时快照时解析缺省，避免未记录字段被当成显式 0。
 - 通用液体容器的 `LiquidContainerState.Amount` 以 `0.1` 份为最小持久化单位；运行时读入高精度浮点余量时先归一到一位小数，后续装液、倾倒、转移与加工不得重新写入更高精度的数量。
 - JSON ItemDefinition 是物品静态配置真源：恢复世界实体、建筑、AI 和库存物品时先用当前定义重建重量、体积、标签、耐久上限和模块组合，再叠加 GUID、数量、位置、耐久比例及模块运行态；删除的旧模块不得被存档重新实例化。
 - `ItemData.CraftedDurabilityMultiplier` 是制作材料赋予的实例品质，作为追加字段持久化；恢复时先用当前 ItemDefinition 的基础耐久重建，再应用倍率并保留原耐久百分比，禁止把历史 `MaxDurability` 直接当成当前基础值。
@@ -61,8 +68,9 @@ description: "Use when: 定位或修改 FlatWorld 的数据模型、MemoryPack �
 
 - 液体模拟按 Chunk 调用 `RecordLiquidBatch`，只更新内存中的 `LiquidCells` 并复用已有记录；全部权威写回后再发布批次通知。稳定 ID、零深度和恢复生成值时删除差量的规则不变；实验开关、活动集合、生成高度缓存及动态流向不增加存档字段。关闭实验不能撤销已经保存的模拟结果。
 
-- 机械整网使用外层追加的 `CompactSaveEnvelope.MechanicalNetworks`；`GameSaveData.Mechanical` 保持 `MemoryPackIgnore`。机械本体不能同时写进普通建筑 Chunk 快照，远端无表现节点也必须进入独立存档；退出保存完成之后才能释放 `MechanicalWorld`。
-- 二进制加工库存由 `MechanicalProcessor` 恢复时重新挂接当前 ItemDefinition；不能假设通用 `Inventory_ModuleData` 递归会访问专用二进制载荷。缺失机械 MOD 定义的原快照仍保留在对应世界档案中。
+- 机械及工作方块统一用 `MachineArchive` 和外层 `CompactSaveEnvelope.MechanicalNetworks`；`GameSaveData.Mechanical` 保持 `MemoryPackIgnore`。落地机器不能在 Item 与机器存档中双写；无表现节点也进入独立存档，保存完成后才能释放 `MachineWorld`。
+- 落地机械节点的 `ItemData` 仅作冷快照，不创建运行时 Item；加工库存、拓扑、朝向和耐久随机械专用归档保存，拆回 Summoner 时先捕获完整快照，成功提交后才移除节点。区块表现回收不能影响节点存续。
+- 二进制加工库存由 `RecipeProcessor/MachineInventory` 恢复时重新挂接当前 ItemDefinition；不能假设通用 `Inventory_ModuleData` 递归会访问专用二进制载荷。缺失机器 MOD 定义的原快照仍保留在对应世界档案中。
 
 - 只补充后续维护可复用的易错点、隐含约束和必要注意事项。
 - 不记录修改日期、近期变更或仅描述本次改动内容的流水账。

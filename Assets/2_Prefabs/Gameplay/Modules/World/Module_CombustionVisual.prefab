@@ -46,10 +46,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   flameAnchor: {fileID: 0}
-  particleMaterial: {fileID: 0}
-  flameRate: 8
-  emberRate: 1.4
-  smokeRate: 1.1
+  particleMaterial: {fileID: 2100000, guid: b0f972e1edbb44d7a7cf9cd1d18ef3c7, type: 2}
+  flameRate: 16
+  emberRate: 2.8
+  smokeRate: 2.2
 --- !u!114 &2061740622433052266
 MonoBehaviour:
   m_ObjectHideFlags: 0

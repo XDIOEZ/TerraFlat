@@ -8,9 +8,6 @@ using UnityEngine;
 /// </summary>
 public class BuildingShadow : MonoBehaviour
 {
-    private const string PreviewSortingLayer = "Shadow";
-    // 预览必须压过 Default 世界精灵，但保持在 Player 等角色层之下。
-    private const int PreviewSortingOrder = 1000;
 
     public SpriteRenderer ShadowRenderer;
     public Color ShadowColor = new(1f, 1f, 1f, 0.7f);
@@ -49,11 +46,7 @@ public class BuildingShadow : MonoBehaviour
         if (ShadowRenderer.sharedMaterial == null)
             throw new MissingComponentException("BuildingShadow 缺少可用 Sprite 材质");
 
-        int previewLayerId = SortingLayer.NameToID(PreviewSortingLayer);
-        ShadowRenderer.sortingLayerID = previewLayerId != 0
-            ? previewLayerId
-            : sourceRenderer.sortingLayerID;
-        ShadowRenderer.sortingOrder = PreviewSortingOrder;
+        WorldSortingManager.GetInstance().ApplyRenderer(ShadowRenderer, WorldSortingManager.GroundPreviewCategory);
         ShadowRenderer.flipX = sourceRenderer.flipX;
         ShadowRenderer.flipY = sourceRenderer.flipY;
         ShadowRenderer.drawMode = sourceRenderer.drawMode;
@@ -112,6 +105,26 @@ public class BuildingShadow : MonoBehaviour
 
         visibility = nextVisibility;
         ApplyVisualState();
+    }
+
+    /// <summary>按所有可见预览图层的世界包围盒判断触点，不给放置虚影增加物理碰撞体。</summary>
+    public bool ContainsWorldPoint(Vector3 worldPosition)
+    {
+        if (!isActiveAndEnabled || visibility <= 0f)
+            return false;
+
+        foreach (SpriteRenderer renderer in GetComponentsInChildren<SpriteRenderer>())
+        {
+            if (!renderer.enabled || renderer.sprite == null)
+                continue;
+
+            Bounds bounds = renderer.bounds;
+            worldPosition.z = bounds.center.z;
+            if (bounds.Contains(worldPosition))
+                return true;
+        }
+
+        return false;
     }
 
     public void SmoothMove(Vector3 targetPosition)

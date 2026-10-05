@@ -24,7 +24,7 @@
           "id": "建筑模块",
           "enabled": false,
           "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"GrassBed\",\"SummonerPrefabId\":\"GrassBed_Summoner\",\"FootprintWidth\":2,\"FootprintHeight\":1}",
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"GrassBed\",\"SummonerPrefabId\":\"GrassBed_Summoner\",\"FootprintWidth\":2,\"FootprintHeight\":1,\"AllowHorizontalMirrorPlacement\":true}",
             "Type": 0
           }
         }
@@ -32,6 +32,7 @@
     },
     {
       "id": "GrassBed",
+      "worldDropBehavior": "interactive",
       "parent": "Tent",
       "sourcePrefab": "",
       "gameName": "草床-建筑",
@@ -57,14 +58,24 @@
         "hasHp": true,
         "hp": 60,
         "maxHp": 60,
-        "defense": { "cutting": 2, "piercing": 2, "chopping": 2, "blunt": 2 },
+        "defense": {
+          "physical": 2
+        },
         "collider": {
           "type": "BoxCollider2D",
           "enabled": true,
           "isTrigger": true,
-          "offset": { "x": 0.5, "y": 0 },
-          "size": { "x": 1.9, "y": 0.7 }
-        }
+          "offset": {
+            "x": 0.5,
+            "y": 0
+          },
+          "size": {
+            "x": 1.9,
+            "y": 0.7
+          }
+        },
+        "weakTool": 0,
+        "combatBalanceVersion": 1
       },
       "modules": {
         "建筑模块": {
@@ -72,7 +83,7 @@
           "id": "建筑模块",
           "enabled": false,
           "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"GrassBed\",\"SummonerPrefabId\":\"GrassBed_Summoner\",\"FootprintWidth\":2,\"FootprintHeight\":1}",
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"GrassBed\",\"SummonerPrefabId\":\"GrassBed_Summoner\",\"FootprintWidth\":2,\"FootprintHeight\":1,\"AllowHorizontalMirrorPlacement\":true}",
             "Type": 0
           }
         },

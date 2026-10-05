@@ -65,8 +65,9 @@
     register(["Module_DamageReciver"], "受伤、生命与死亡", "docs/systems/combat.md；DamageReceiver", body => [
         "它有自己的生命值，可以受到伤害；生命归零后会死亡或被破坏，并结算对应掉落物。"
     ]);
-    register(["Module_ResourceHarvest"], "资源采集门槛", "flatworld-item-module Skill；Mod_ResourceHarvest", body => [
-        `采集这个资源需要至少 ${field(body, "minimumTier")} 级${resourceToolName(get(body, "requiredTool"))}；使用其他武器攻击无法绕过这个要求。`
+    register(["Module_ResourceHarvest"], "资源采集专精", "Mod_ResourceHarvest.ResolveAffinityMultiplier；NaturalEntityEcsService.ApplyDamage", body => [
+        "采矿不设工具等级门槛，其他武器也按正常伤害与防御结算，不会因工具种类或等级不匹配而直接拒绝伤害。",
+        `使用${resourceToolName(get(body, "requiredTool"))}时可获得工具自身提供的额外采集效率；工具等级只影响额外加成，不会让伤害低于未加成的普通攻击。`
     ]);
     register(["Module_Food"], "营养与食物机制", "Mod_Food；FoodSpoilageObserver.cs；docs/systems/survival.md", (body, context, entry) => {
         const data = body.data || {};
@@ -78,7 +79,7 @@
         if (spoilage?.EnableSpoilage === true) lines.push(`放在库存中会逐渐腐败，大约 ${text(spoilage.SpoilageIntervalSeconds)} 秒后变成${named(context, spoilage.SpoilageTargetItemID)}。`);
         return lines;
     });
-    register(["Module_HeldFood"], "手持食物操作", "Mod_HeldFood；docs/systems/survival.md", () => ["拿在手上时可以直接进行食用操作。"]);
+    register(["Module_HeldFood"], "手持食物操作", "Module_HeldFood；docs/systems/survival.md", () => ["拿在手上时可以直接进行食用操作。"]);
     register(["Module_Equipment_Store"], "装备后效果", "docs/systems/equipment.md；EquipmentInstance_Speed / Defense / Bag", body => {
         const instances = parameters(body).equipmentInstances;
         if (!Array.isArray(instances)) return ["需要装备到角色对应的装备槽后才会生效，卸下后效果消失。"];

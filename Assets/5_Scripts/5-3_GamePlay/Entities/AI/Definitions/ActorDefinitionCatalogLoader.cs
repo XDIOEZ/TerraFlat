@@ -10,7 +10,7 @@ using UnityEngine.ResourceManagement.AsyncOperations;
 
 /// <summary>
 /// 加载本体 Actor JSON 目录，并把数据配置绑定到保留行为组件的 AI 外壳 Prefab。
-/// 外壳、Sprite 与动画控制器均使用稳定 Addressables 地址，移动资源文件不会破坏引用。
+/// 外壳与可选动画控制器使用稳定 Addressables 地址；无动画 Actor 保留外壳上的静态 Sprite。
 /// </summary>
 public static class ActorDefinitionCatalogLoader
 {
@@ -27,13 +27,27 @@ public static class ActorDefinitionCatalogLoader
     private static Dictionary<string, RuntimeAnimatorController> LoadedControllers =
         new(StringComparer.OrdinalIgnoreCase);
 
+    #region 目录读取
+
+    /// <summary>F5 候选构建时保留已发布的本体 Actor 目录和资源引用，单个定义无效时只撤销该定义的更新。</summary>
+    public sealed class ReloadSnapshot
+    {
+        internal readonly Dictionary<string, RuntimeItemDefinition> Definitions = new(StringComparer.OrdinalIgnoreCase);
+        internal readonly Dictionary<string, JObject> Sources = new(StringComparer.OrdinalIgnoreCase);
+        internal readonly Dictionary<string, Sprite> Sprites = new(StringComparer.OrdinalIgnoreCase);
+        internal readonly Dictionary<string, RuntimeAnimatorController> Controllers = new(StringComparer.OrdinalIgnoreCase);
+        private readonly List<string> issues = new();
+        public IReadOnlyList<string> Issues => issues;
+
+        /// <summary>记录未能发布的具体定义及原因。</summary>
+        internal void RecordIssue(string issue) => issues.Add(issue);
+    }
+
     public static string BuiltInActorRoot =>
         StreamingAssetsTextLoader.CombinePath(Application.streamingAssetsPath, RelativeActorRoot);
 
     public static string BuiltInManifestPath =>
         StreamingAssetsTextLoader.CombinePath(BuiltInActorRoot, ManifestFileName);
-
-    #region 目录读取
 
     /// <summary>让候选 Actor 来源与资源缓存独立于仍在运行的正式目录。</summary>
     internal static void ConfigureResourceReload(ResourceReloadContext context)
@@ -41,6 +55,21 @@ public static class ActorDefinitionCatalogLoader
         context.AddDictionary(() => ResolvedSources, value => ResolvedSources = value);
         context.AddDictionary(() => LoadedSprites, value => LoadedSprites = value);
         context.AddDictionary(() => LoadedControllers, value => LoadedControllers = value);
+    }
+
+    /// <summary>只捕获本体来源对应的 Actor，MOD Actor 留给 MOD 阶段独立处理。</summary>
+    public static ReloadSnapshot CaptureReloadSnapshot(GameRes resources)
+    {
+        var snapshot = new ReloadSnapshot();
+        foreach (KeyValuePair<string, JObject> pair in ResolvedSources)
+            snapshot.Sources.Add(pair.Key, (JObject)pair.Value.DeepClone());
+        foreach (KeyValuePair<string, RuntimeItemDefinition> pair in resources.ActorDefinitions)
+            if (snapshot.Sources.ContainsKey(pair.Key)) snapshot.Definitions.Add(pair.Key, pair.Value);
+        foreach (KeyValuePair<string, Sprite> pair in LoadedSprites)
+            snapshot.Sprites.Add(pair.Key, pair.Value);
+        foreach (KeyValuePair<string, RuntimeAnimatorController> pair in LoadedControllers)
+            snapshot.Controllers.Add(pair.Key, pair.Value);
+        return snapshot;
     }
 
     /// <summary>同步读取 Actor 定义，供编辑器迁移、静态测试和诊断使用。</summary>
@@ -67,7 +96,8 @@ public static class ActorDefinitionCatalogLoader
         GameRes gameRes,
         Action<int> completed,
         Action<Exception> failed,
-        Action<float> progress = null)
+        Action<float> progress = null,
+        ReloadSnapshot previous = null)
     {
         if (gameRes == null)
         {
@@ -127,26 +157,31 @@ public static class ActorDefinitionCatalogLoader
                 yield break;
             }
 
-            try
-            {
-                catalogs.Add(ConvertActorCatalogToItemCatalog(packageJson, package.Id));
-            }
-            catch (Exception exception)
-            {
-                failed?.Invoke(exception);
-                yield break;
-            }
+            string converted = null;
+            yield return StreamingAssetsTextLoader.RunPureDataAsync(
+                () => ConvertActorCatalogToItemCatalog(packageJson, package.Id),
+                value => converted = value, exception => readError = exception);
+            if (readError != null) { failed?.Invoke(readError); yield break; }
+            catalogs.Add(converted);
 
             progress?.Invoke(packages.Length == 0 ? 0.15f : 0.15f * (index + 1) / packages.Length);
         }
 
+        List<JObject> resolved = null;
+        yield return StreamingAssetsTextLoader.RunPureDataAsync(
+            () => ItemDefinitionCatalogLoader.ResolveDefinitionObjects(catalogs),
+            value => resolved = value, exception => readError = exception);
+        if (readError != null) { failed?.Invoke(readError); yield break; }
         List<ItemDefinitionDto> definitions;
+        var rejected = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         try
         {
-            List<JObject> resolved = ItemDefinitionCatalogLoader.ResolveDefinitionObjects(catalogs);
             CacheResolvedSources(resolved);
-            definitions = ConvertResolvedDefinitions(resolved);
-            ItemDefinitionCatalogLoader.ValidateLootTableItemIds(gameRes, definitions);
+            definitions = previous == null
+                ? ConvertResolvedDefinitions(resolved)
+                : ConvertResolvedDefinitionsForReload(resolved, previous, rejected);
+            if (previous == null)
+                ItemDefinitionCatalogLoader.ValidateLootTableItemIds(gameRes, definitions);
         }
         catch (Exception exception)
         {
@@ -155,62 +190,81 @@ public static class ActorDefinitionCatalogLoader
         }
 
         ItemDefinitionDto[] concrete = definitions.Where(definition => !definition.Abstract).ToArray();
+        var knownItemIds = new HashSet<string>(gameRes.ItemDefinitions.Keys, StringComparer.OrdinalIgnoreCase);
+        foreach (ItemDefinitionDto definition in concrete)
+            if (!string.IsNullOrWhiteSpace(definition.Id)) knownItemIds.Add(definition.Id.Trim());
+        if (previous != null) knownItemIds.UnionWith(previous.Definitions.Keys);
+
+        var candidates = new List<ItemDefinitionDto>(concrete.Length);
         var shellAddresses = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var controllerAddresses = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var actorIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (ItemDefinitionDto definition in concrete)
         {
             string id = definition.Id?.Trim();
-            string shellId = definition.ShellPrefab?.Trim();
-            string address = definition.ShellAddress?.Trim();
-            if (string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(shellId) ||
-                string.IsNullOrWhiteSpace(address))
+            if (string.IsNullOrWhiteSpace(id) || !actorIds.Add(id))
             {
-                failed?.Invoke(new InvalidDataException(
-                    $"Actor {id ?? "<empty>"} 必须声明 id、shellPrefab 与 shellAddress"));
+                failed?.Invoke(new InvalidDataException($"Actor ID 为空或重复：{id ?? "<empty>"}"));
                 yield break;
             }
 
-            if (!actorIds.Add(id))
+            Exception validationError = null;
+            try
             {
-                failed?.Invoke(new InvalidDataException($"Actor ID 冲突：{id}"));
-                yield break;
-            }
-            if (gameRes.ItemDefinitions.ContainsKey(id))
-            {
-                failed?.Invoke(new InvalidDataException($"Actor ID 与 ItemDefinition 冲突：{id}"));
-                yield break;
-            }
+                string shellId = definition.ShellPrefab?.Trim();
+                string address = definition.ShellAddress?.Trim();
+                string controllerAddress = definition.Visual?.AnimatorControllerAddress?.Trim();
+                if (string.IsNullOrWhiteSpace(shellId) || string.IsNullOrWhiteSpace(address))
+                    throw new InvalidDataException($"Actor {id} 必须声明 shellPrefab 与 shellAddress");
+                if (gameRes.ItemDefinitions.ContainsKey(id))
+                    throw new InvalidDataException($"Actor ID 与 ItemDefinition 冲突：{id}");
+                if (shellAddresses.TryGetValue(shellId, out string existing) &&
+                    !string.Equals(existing, address, StringComparison.OrdinalIgnoreCase))
+                    throw new InvalidDataException($"Actor 外壳 {shellId} 同时绑定了不同地址：{existing} / {address}");
+                if (previous != null)
+                    ItemDefinitionCatalogLoader.ValidateLootTableItemIds(gameRes, definition, knownItemIds);
 
-            if (string.IsNullOrWhiteSpace(definition.Visual?.AnimatorControllerAddress))
-            {
-                failed?.Invoke(new InvalidDataException(
-                    $"Actor {id} 必须声明 visual.animatorControllerAddress；Actor 不再绑定 Sprite 子资源"));
-                yield break;
+                candidates.Add(definition);
+                shellAddresses[shellId] = address;
+                if (!string.IsNullOrWhiteSpace(controllerAddress))
+                    controllerAddresses.Add(controllerAddress);
             }
-
-            if (shellAddresses.TryGetValue(shellId, out string existing) &&
-                !string.Equals(existing, address, StringComparison.OrdinalIgnoreCase))
+            catch (Exception exception)
             {
-                failed?.Invoke(new InvalidDataException(
-                    $"Actor 外壳 {shellId} 同时绑定了不同地址：{existing} / {address}"));
-                yield break;
+                validationError = exception;
             }
-            shellAddresses[shellId] = address;
+            if (validationError == null) continue;
+            if (previous == null) { failed?.Invoke(validationError); yield break; }
+            RejectActorUpdate(previous, id, validationError, rejected);
         }
 
-        var shellHandles = shellAddresses.ToDictionary(
-            pair => pair.Key,
-            pair => gameRes.ResourceAssets.Load<GameObject>(pair.Value),
-            StringComparer.OrdinalIgnoreCase);
-        string[] controllerAddresses = concrete
-            .Select(definition => definition.Visual?.AnimatorControllerAddress?.Trim())
-            .Where(address => !string.IsNullOrWhiteSpace(address))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToArray();
-        var controllerHandles = controllerAddresses.ToDictionary(
-            address => address,
-            address => gameRes.ResourceAssets.Load<RuntimeAnimatorController>(address),
-            StringComparer.OrdinalIgnoreCase);
+        var shellHandles = new Dictionary<string, AsyncOperationHandle<GameObject>>(StringComparer.OrdinalIgnoreCase);
+        var controllerHandles = new Dictionary<string, AsyncOperationHandle<RuntimeAnimatorController>>(StringComparer.OrdinalIgnoreCase);
+        var shellErrors = new Dictionary<string, Exception>(StringComparer.OrdinalIgnoreCase);
+        var controllerErrors = new Dictionary<string, Exception>(StringComparer.OrdinalIgnoreCase);
+        foreach (KeyValuePair<string, string> pair in shellAddresses)
+        {
+            try { shellHandles.Add(pair.Key, gameRes.ResourceAssets.Load<GameObject>(pair.Value)); }
+            catch (Exception exception) { shellErrors.Add(pair.Key, exception); }
+            if (gameRes.ShouldYieldResourceWork()) yield return null;
+            if (shellHandles.Count % 4 == 0)
+            {
+                while (shellHandles.Values.Any(handle => !handle.IsDone)) yield return null;
+                yield return null;
+            }
+        }
+        foreach (string address in controllerAddresses)
+        {
+            try { controllerHandles.Add(address, gameRes.ResourceAssets.Load<RuntimeAnimatorController>(address)); }
+            catch (Exception exception) { controllerErrors.Add(address, exception); }
+            if (gameRes.ShouldYieldResourceWork()) yield return null;
+            if ((shellHandles.Count + controllerHandles.Count) % 4 == 0)
+            {
+                while (shellHandles.Values.Any(handle => !handle.IsDone) ||
+                       controllerHandles.Values.Any(handle => !handle.IsDone)) yield return null;
+                yield return null;
+            }
+        }
 
         while (shellHandles.Values.Any(handle => !handle.IsDone) ||
                controllerHandles.Values.Any(handle => !handle.IsDone))
@@ -222,49 +276,133 @@ public static class ActorDefinitionCatalogLoader
             yield return null;
         }
 
-        try
+        IEnumerator BuildRuntimeActors()
         {
             var loadedShells = new Dictionary<string, GameObject>(StringComparer.OrdinalIgnoreCase);
             foreach (KeyValuePair<string, AsyncOperationHandle<GameObject>> pair in shellHandles)
             {
-                if (pair.Value.Status != AsyncOperationStatus.Succeeded || pair.Value.Result == null)
-                    throw new InvalidDataException(
-                        $"Actor 外壳 Addressable 无效：{pair.Key} -> {shellAddresses[pair.Key]}");
-                ValidateActorShell(pair.Value.Result, pair.Key);
-                loadedShells[pair.Key] = pair.Value.Result;
+                try
+                {
+                    if (pair.Value.Status != AsyncOperationStatus.Succeeded || pair.Value.Result == null)
+                        throw new InvalidDataException(
+                            $"Actor 外壳 Addressable 无效：{pair.Key} -> {shellAddresses[pair.Key]}");
+                    ValidateActorShell(pair.Value.Result, pair.Key);
+                    loadedShells[pair.Key] = pair.Value.Result;
+                }
+                catch (Exception exception) { shellErrors[pair.Key] = exception; }
+                if (gameRes.ShouldYieldResourceWork()) yield return null;
             }
 
             LoadedSprites.Clear();
             LoadedControllers.Clear();
+            if (previous != null)
+            {
+                foreach (KeyValuePair<string, Sprite> pair in previous.Sprites)
+                    LoadedSprites.Add(pair.Key, pair.Value);
+                foreach (KeyValuePair<string, RuntimeAnimatorController> pair in previous.Controllers)
+                    LoadedControllers.Add(pair.Key, pair.Value);
+            }
             foreach (KeyValuePair<string, AsyncOperationHandle<RuntimeAnimatorController>> pair in controllerHandles)
             {
                 if (pair.Value.Status != AsyncOperationStatus.Succeeded || pair.Value.Result == null)
-                    throw new InvalidDataException($"Actor 动画控制器 Addressable 无效：{pair.Key}");
-                LoadedControllers[pair.Key] = pair.Value.Result;
+                    controllerErrors[pair.Key] = new InvalidDataException($"Actor 动画控制器 Addressable 无效：{pair.Key}");
+                else
+                    LoadedControllers[pair.Key] = pair.Value.Result;
             }
 
-            var runtimeDefinitions = new List<RuntimeItemDefinition>(concrete.Length);
-            foreach (ItemDefinitionDto definition in concrete)
+            var selected = new Dictionary<string, RuntimeItemDefinition>(StringComparer.OrdinalIgnoreCase);
+            foreach (ItemDefinitionDto definition in candidates)
             {
-                runtimeDefinitions.Add(ItemDefinitionCatalogLoader.BuildRuntimeDefinition(
-                    gameRes,
-                    definition,
-                    LoadedSprites,
-                    LoadedControllers,
-                    isActor: true,
-                    preloadedShells: loadedShells));
+                string id = definition.Id.Trim();
+                try
+                {
+                    string shellId = definition.ShellPrefab.Trim();
+                    string controllerAddress = definition.Visual?.AnimatorControllerAddress?.Trim();
+                    if (shellErrors.TryGetValue(shellId, out Exception shellError)) throw shellError;
+                    if (!string.IsNullOrWhiteSpace(controllerAddress) &&
+                        controllerErrors.TryGetValue(controllerAddress, out Exception controllerError))
+                    {
+                        throw controllerError;
+                    }
+                    selected.Add(id, ItemDefinitionCatalogLoader.BuildRuntimeDefinition(
+                        gameRes, definition, LoadedSprites, LoadedControllers,
+                        isActor: true, preloadedShells: loadedShells));
+                }
+                catch (Exception exception)
+                {
+                    if (previous == null) throw;
+                    RejectActorUpdate(previous, id, exception, rejected);
+                }
+                if (gameRes.ShouldYieldResourceWork()) yield return null;
             }
 
-            RegisterBuiltInDefinitionsAtomically(gameRes, loadedShells, runtimeDefinitions);
+            if (previous != null)
+            {
+                foreach (KeyValuePair<string, RuntimeItemDefinition> pair in previous.Definitions)
+                {
+                    if (selected.ContainsKey(pair.Key)) continue;
+                    selected.Add(pair.Key, pair.Value);
+                    if (!rejected.Contains(pair.Key))
+                        RejectActorUpdate(previous, pair.Key,
+                            new InvalidDataException("新目录缺少已有 Actor 定义"), rejected);
+                }
+                foreach (KeyValuePair<string, JObject> pair in previous.Sources)
+                    if (!ResolvedSources.ContainsKey(pair.Key))
+                        ResolvedSources.Add(pair.Key, (JObject)pair.Value.DeepClone());
+
+                // 引用闭包按最终选中定义复核，防止健康 Actor 指向被跳过的新增 Actor。
+                bool changed;
+                do
+                {
+                    changed = false;
+                    var publishedIds = new HashSet<string>(gameRes.ItemDefinitions.Keys, StringComparer.OrdinalIgnoreCase);
+                    publishedIds.UnionWith(selected.Keys);
+                    foreach (ItemDefinitionDto definition in candidates)
+                    {
+                        string id = definition.Id.Trim();
+                        previous.Definitions.TryGetValue(id, out RuntimeItemDefinition old);
+                        if (!selected.TryGetValue(id, out RuntimeItemDefinition current) ||
+                            ReferenceEquals(current, old))
+                            continue;
+                        try
+                        {
+                            ItemDefinitionCatalogLoader.ValidateLootTableItemIds(
+                                gameRes, definition, publishedIds);
+                        }
+                        catch (Exception exception)
+                        {
+                            selected.Remove(id);
+                            if (old != null) selected.Add(id, old);
+                            RejectActorUpdate(previous, id, exception, rejected);
+                            changed = true;
+                        }
+                    }
+                } while (changed);
+            }
+
+            RuntimeItemDefinition[] runtimeDefinitions = selected.Values.ToArray();
+            RegisterBuiltInDefinitionsAtomically(gameRes,
+                BuildShellAliases(runtimeDefinitions), runtimeDefinitions);
 
             progress?.Invoke(1f);
-            Debug.Log($"[ActorDefinitionCatalog] 已加载 {runtimeDefinitions.Count} 个 JSON Actor");
-            completed?.Invoke(runtimeDefinitions.Count);
+            Debug.Log($"[ActorDefinitionCatalog] 已加载 {runtimeDefinitions.Length} 个 JSON Actor");
+            completed?.Invoke(runtimeDefinitions.Length);
         }
-        catch (Exception exception)
+
+        // 手动转发本地迭代器异常，保留目录加载器的失败回调契约。
+        IEnumerator build = BuildRuntimeActors();
+        try
         {
-            failed?.Invoke(exception);
+            while (true)
+            {
+                bool moved = false;
+                try { moved = build.MoveNext(); }
+                catch (Exception exception) { failed?.Invoke(exception); }
+                if (!moved) break;
+                yield return build.Current;
+            }
         }
+        finally { (build as IDisposable)?.Dispose(); }
     }
 
     #endregion
@@ -328,6 +466,35 @@ public static class ActorDefinitionCatalogLoader
     #endregion
 
     #region 校验与转换
+
+    /// <summary>拒绝单个无效 Actor 候选，并恢复其已发布的继承来源供 MOD 继续使用。</summary>
+    private static void RejectActorUpdate(ReloadSnapshot previous, string id,
+        Exception error, HashSet<string> rejected)
+    {
+        if (!rejected.Add(id)) return;
+        if (previous.Sources.TryGetValue(id, out JObject oldSource))
+            ResolvedSources[id] = (JObject)oldSource.DeepClone();
+        else
+            ResolvedSources.Remove(id);
+        string disposition = previous.Definitions.ContainsKey(id) ? "保留旧版" :
+            previous.Sources.ContainsKey(id) ? "保留旧来源" : "未发布新增定义";
+        previous.RecordIssue($"Actor {id} {disposition}：{error.Message}");
+    }
+
+    /// <summary>外壳别名只登记最终选中的 Actor 版本，避免无效候选覆盖旧外壳。</summary>
+    private static Dictionary<string, GameObject> BuildShellAliases(
+        IEnumerable<RuntimeItemDefinition> definitions)
+    {
+        var aliases = new Dictionary<string, GameObject>(StringComparer.OrdinalIgnoreCase);
+        foreach (RuntimeItemDefinition definition in definitions)
+        {
+            if (aliases.TryGetValue(definition.ShellPrefabId, out GameObject existing) &&
+                existing != definition.ShellPrefab)
+                throw new InvalidDataException($"Actor 外壳别名冲突：{definition.ShellPrefabId}");
+            aliases[definition.ShellPrefabId] = definition.ShellPrefab;
+        }
+        return aliases;
+    }
 
     /// <summary>任一 Actor 注册失败时撤销本批次，避免保留不可重试的半加载目录。</summary>
     private static void RegisterBuiltInDefinitionsAtomically(
@@ -421,6 +588,29 @@ public static class ActorDefinitionCatalogLoader
                                         throw new InvalidDataException(
                                             $"无法解析 Actor：{source.Value<string>("id")}"))
             .ToList();
+    }
+
+    /// <summary>F5 逐个转换 Actor；单个 DTO 格式错误不影响同目录其他定义。</summary>
+    private static List<ItemDefinitionDto> ConvertResolvedDefinitionsForReload(
+        IEnumerable<JObject> sources, ReloadSnapshot previous, HashSet<string> rejected)
+    {
+        var definitions = new List<ItemDefinitionDto>();
+        foreach (JObject source in sources)
+        {
+            string id = source.Value<string>("id")?.Trim();
+            if (string.IsNullOrWhiteSpace(id))
+                throw new InvalidDataException("Actor 定义缺少稳定 ID，无法隔离候选。");
+            try
+            {
+                definitions.Add(source.ToObject<ItemDefinitionDto>() ??
+                    throw new InvalidDataException($"Actor {id} 无法转换为配置对象。"));
+            }
+            catch (Exception exception)
+            {
+                RejectActorUpdate(previous, id, exception, rejected);
+            }
+        }
+        return definitions;
     }
 
     private static void CacheResolvedSources(IEnumerable<JObject> definitions)

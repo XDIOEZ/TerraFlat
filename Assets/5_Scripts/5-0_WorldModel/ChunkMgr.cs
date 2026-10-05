@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Threading;
 using System.Threading.Tasks;
+using Stopwatch = System.Diagnostics.Stopwatch;
 
 namespace FlatWorld.WorldModel
 {
@@ -138,6 +139,7 @@ namespace FlatWorld.WorldModel
             public ChunkGenerationRequest Request;
             public CancellationTokenSource Cancellation;
             public TaskCompletionSource<ChunkRuntime> Completion;
+            public ChunkGenerationTiming Timing;
         }
 
         /// <summary>后台任务做完后放进安全队列的一张“完成通知单”。</summary>
@@ -149,6 +151,7 @@ namespace FlatWorld.WorldModel
                 Address = address;
                 Pending = pending;
                 Task = task;
+                pending.Timing?.EnqueueCompletion();
             }
             public WorldAddress Address { get; }
             public PendingGeneration Pending { get; }
@@ -268,12 +271,13 @@ namespace FlatWorld.WorldModel
             var pending = new PendingGeneration
             {
                 Request = request,
+                Timing = World.StreamingDiagnostics.BeginRequest(request),
                 Cancellation = linked,
                 Completion = new TaskCompletionSource<ChunkRuntime>(
                     TaskCreationOptions.RunContinuationsAsynchronously)
             };
             _pending.Add(address, pending);
-            Task<ChunkGenerationResult> task = _scheduler.ScheduleAsync(request, linked.Token);
+            Task<ChunkGenerationResult> task = _scheduler.ScheduleAsync(request, linked.Token, pending.Timing);
             _generationTasks.Add(task);
             // 后台线程不直接修改世界数据，只放一张完成通知；主线程之后再来安全处理。
             task.ContinueWith(completed => _completed.Enqueue(
@@ -477,16 +481,29 @@ namespace FlatWorld.WorldModel
         /// 取回所有已经做完的后台任务，并逐个处理成功、取消或失败。
         /// 有效结果会正式交给世界；返回值表示这次一共处理了几个任务。
         /// </summary>
-        public int CommitCompleted(int maxCount = int.MaxValue)
+        public int CommitCompleted(int maxCount = int.MaxValue,
+            double maxMilliseconds = double.PositiveInfinity)
         {
             ThrowIfDisposed();
             if (maxCount <= 0)
                 return 0;
+            World.StreamingDiagnostics.Count("commit.pumps");
+            using var batchTiming = World.StreamingDiagnostics.Measure("commit.batch");
             int count = 0;
+            bool hasTimeLimit = maxMilliseconds > 0d && !double.IsInfinity(maxMilliseconds);
+            long startedAt = hasTimeLimit ? Stopwatch.GetTimestamp() : 0L;
+            double allowedTicks = hasTimeLimit
+                ? maxMilliseconds * Stopwatch.Frequency / 1000d
+                : double.PositiveInfinity;
             while (count < maxCount &&
                    _completed.TryDequeue(out GenerationCompletion completion))
             {
                 count++;
+                using var notificationTiming = World.StreamingDiagnostics.Measure("commit.process");
+                World.StreamingDiagnostics.Count("commit.notifications");
+                completion.Pending.Timing?.StartCommit();
+                string diagnosticOutcome = "failed";
+                bool retryWindowRequest = false;
                 _generationTasks.Remove(completion.Task);
                 // 同一个地址可能后来又开了新任务，所以还要确认这张通知确实属于当前任务。
                 bool current = _pending.TryGetValue(completion.Address,
@@ -502,22 +519,41 @@ namespace FlatWorld.WorldModel
                     {
                         // 旧任务迟到或已经取消，它的结果不会再使用，要在这里把内存释放掉。
                         result?.Dispose();
+                        if (current)
+                        {
+                            // 调度器完成为取消时也必须把 WorldRuntime 的 Generating 状态收口。
+                            // 否则窗口仍需要该区块时会留下“没有任务的 Generating”死状态，加载页永远等不到地形。
+                            World.CancelChunkGeneration(completion.Address);
+                            retryWindowRequest = _windowDataDemand.Contains(completion.Address);
+                        }
                         completion.Pending.Completion.TrySetCanceled();
+                        diagnosticOutcome = current ? "cancelled" : "stale";
                     }
                     else if (World.TryCommit(result, out string rejection) &&
                              World.TryGetChunk(completion.Address, out ChunkRuntime chunk))
                     {
                         completion.Pending.Completion.TrySetResult(chunk);
+                        diagnosticOutcome = "applied";
                     }
                     else
                     {
-                        completion.Pending.Completion.TrySetException(
-                            new InvalidOperationException(rejection));
+                        var failure = new InvalidOperationException(rejection);
+                        // 有效任务提交失败时不能继续假装处于 Generating；记录失败后，下一次窗口刷新可以重新请求。
+                        World.RejectFailedGeneration(completion.Pending.Request, failure);
+                        completion.Pending.Completion.TrySetException(failure);
+                        World.Events.Publish(new ChunkGenerationFailed(completion.Address, failure.Message));
+                        diagnosticOutcome = "rejected";
                     }
                 }
                 else if (completion.Task.IsCanceled)
                 {
+                    if (current)
+                    {
+                        World.CancelChunkGeneration(completion.Address);
+                        retryWindowRequest = _windowDataDemand.Contains(completion.Address);
+                    }
                     completion.Pending.Completion.TrySetCanceled();
+                    diagnosticOutcome = "cancelled";
                 }
                 else
                 {
@@ -530,15 +566,33 @@ namespace FlatWorld.WorldModel
                     World.Events.Publish(new ChunkGenerationFailed(completion.Address, failure.Message));
                 }
                 completion.Pending.Cancellation.Dispose();
+                World.StreamingDiagnostics.Complete(completion.Pending.Timing, diagnosticOutcome);
+                if (retryWindowRequest)
+                {
+                    // 单个调用者的取消不能永久取消仍在当前数据窗口里的共享区块需求。
+                    ChunkGenerationRequest request = completion.Pending.Request;
+                    World.StreamingDiagnostics.Count("generation.window_retry");
+                    _ = RequestChunkDataAsync(completion.Address, request.WorldSeed,
+                        request.Profile, topology: request.Topology);
+                }
+                // 单个提交完整执行，之后再按真实耗时决定本帧是否继续。
+                if (hasTimeLimit && Stopwatch.GetTimestamp() - startedAt >= allowedTicks)
+                {
+                    if (!_completed.IsEmpty)
+                        World.StreamingDiagnostics.Count("commit.time_limit_hits");
+                    break;
+                }
             }
+            if (count == maxCount && !_completed.IsEmpty)
+                World.StreamingDiagnostics.Count("commit.count_limit_hits");
             return count;
         }
 
         /// <summary>先处理后台结果，再让世界逻辑向前运行一步。</summary>
         public void Advance(float deltaSeconds, bool authoritativeSimulation = true,
-            int maxCompletedCommits = 1)
+            int maxCompletedCommits = 1, double maxCommitMilliseconds = double.PositiveInfinity)
         {
-            CommitCompleted(maxCompletedCommits);
+            CommitCompleted(maxCompletedCommits, maxCommitMilliseconds);
             if (authoritativeSimulation)
                 World.Tick(deltaSeconds);
         }
@@ -555,6 +609,8 @@ namespace FlatWorld.WorldModel
             if (!_pending.TryGetValue(address, out PendingGeneration pending))
                 return invalidated;
             _pending.Remove(address);
+            pending.Timing?.Cancel();
+            World.StreamingDiagnostics.Count("generation.cancel_requested");
             pending.Cancellation.Cancel();
             pending.Completion.TrySetCanceled();
             return true;
@@ -650,6 +706,40 @@ namespace FlatWorld.WorldModel
                 completion.Pending.Cancellation.Dispose();
             }
         }
+
+        #region 流送诊断
+
+        /// <summary>只读区分真正生成中与已完成待提交；旧/取消通知单独统计，不把它们称为可用区块。</summary>
+        public object CapturePendingStreamingDiagnostics(int maxSamples = 16)
+        {
+            var samples = new List<ChunkGenerationDiagnostic>();
+            var stages = new Dictionary<string, int>();
+            foreach (PendingGeneration pending in _pending.Values)
+            {
+                ChunkGenerationDiagnostic sample = pending.Timing?.Capture();
+                if (sample == null) continue;
+                samples.Add(sample);
+                stages.TryGetValue(sample.Stage, out int count);
+                stages[sample.Stage] = count + 1;
+            }
+            samples.Sort((a, b) => b.AgeMs.CompareTo(a.AgeMs));
+            int limit = Math.Max(1, Math.Min(32, maxSamples));
+            if (samples.Count > limit) samples.RemoveRange(limit, samples.Count - limit);
+            int valid = 0, stale = 0, cancelled = 0, failed = 0;
+            foreach (GenerationCompletion completion in _completed.ToArray())
+            {
+                bool current = _pending.TryGetValue(completion.Address, out PendingGeneration pending) &&
+                    ReferenceEquals(pending, completion.Pending);
+                if (!current) stale++;
+                else if (completion.Pending.Cancellation.IsCancellationRequested || completion.Task.IsCanceled) cancelled++;
+                else if (completion.Task.IsFaulted) failed++;
+                else valid++;
+            }
+            return new { pendingStages = stages, oldestRequests = samples,
+                completedValid = valid, completedStale = stale, completedCancelled = cancelled, completedFailed = failed };
+        }
+
+        #endregion
 
         private void SetPresentationDemand(WorldAddress address, bool requested)
         {

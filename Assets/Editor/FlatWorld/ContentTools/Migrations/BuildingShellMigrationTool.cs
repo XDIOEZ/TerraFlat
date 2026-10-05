@@ -41,7 +41,7 @@ public static class BuildingShellMigrationTool
         new("Chest_Wood", "木箱", "Assets/2_Prefabs/World/Buildings/Chest_Wood.prefab", "Assets/2_Prefabs/World/Buildings/Summoners/Chest_Wood_Summoner.prefab"),
         new("Door_Stone", "石门", "Assets/2_Prefabs/World/Buildings/Door_Stone.prefab", "Assets/2_Prefabs/World/Buildings/Summoners/Door_Stone_Summoner.prefab"),
         new("Door_Wood", "木门", "Assets/2_Prefabs/World/Buildings/Door_Wood.prefab", "Assets/2_Prefabs/World/Buildings/Summoners/Door_Wood_Summoner.prefab"),
-        new("Meatrack", "晾肉架", "Assets/2_Prefabs/World/Buildings/Meatrack.prefab", "Assets/2_Prefabs/World/Buildings/Summoners/Meatrack_Summoner.prefab"),
+        new("Mod_Meatrack", "晾肉架", "Assets/2_Prefabs/World/Buildings/Mod_Meatrack.prefab", "Assets/2_Prefabs/World/Buildings/Summoners/Meatrack_Summoner.prefab"),
         new("MineEntrance", "矿坑入口", "Assets/2_Prefabs/World/Buildings/MineEntrance.prefab", "Assets/2_Prefabs/World/Buildings/Summoners/MineEntrance_Summoner.prefab"),
         new("Scarecrow", "稻草人", "Assets/2_Prefabs/World/Buildings/Scarecrow.prefab", "Assets/2_Prefabs/World/Buildings/Summoners/Scarecrow_Summoner.prefab"),
         new("Smelter", "熔炉", "Assets/2_Prefabs/World/Buildings/Smelter.prefab", "Assets/2_Prefabs/World/Buildings/Summoners/Smelter_Summoner.prefab"),
@@ -259,7 +259,7 @@ public static class BuildingShellMigrationTool
     /// <summary>只克隆功能表现必需的内部组件，主建筑渲染器与碰撞体仍由通用 Shell 提供。</summary>
     private static bool ShouldCloneSupportReference(Module sourceModule, UnityEngine.Object referenced)
     {
-        return sourceModule is Meatrack && referenced is SpriteRenderer ||
+        return sourceModule is Mod_Meatrack && referenced is SpriteRenderer ||
                sourceModule is Mod_LightSource && referenced is Light2D;
     }
 
@@ -344,7 +344,7 @@ public static class BuildingShellMigrationTool
     private static bool ShouldSkipFeatureModule(Module module)
     {
         return module is Mod_Building ||
-               module is DamageReceiver ||
+               module is Mod_DamageReceiver ||
                module is Mod_InteractReciver ||
                module is Mod_Damage ||
                module is Mod_Weapon_AnimationAction;
@@ -483,21 +483,21 @@ public static class BuildingShellMigrationTool
         return result;
     }
 
-    /// <summary>把 DamageReceiver 的生命、防御与受击 Trigger 迁移到 health 配置。</summary>
+    /// <summary>把 Mod_DamageReceiver 的生命、防御与受击 Trigger 迁移到 health 配置。</summary>
     private static JObject BuildHealth(GameObject sourceRoot)
     {
-        DamageReceiver receiver = sourceRoot.GetComponentInChildren<DamageReceiver>(true);
+        Mod_DamageReceiver receiver = sourceRoot.GetComponentInChildren<Mod_DamageReceiver>(true);
         GameObject fallback = null;
         if (receiver == null)
         {
             fallback = PrefabUtility.LoadPrefabContents(DamageModulePath);
-            receiver = fallback.GetComponentInChildren<DamageReceiver>(true);
+            receiver = fallback.GetComponentInChildren<Mod_DamageReceiver>(true);
         }
 
         try
         {
             if (receiver?.Data == null)
-                throw new MissingComponentException($"建筑 {sourceRoot.name} 无法取得 DamageReceiver 配置");
+                throw new MissingComponentException($"建筑 {sourceRoot.name} 无法取得 Mod_DamageReceiver 配置");
 
             JObject health = new JObject
             {
@@ -506,10 +506,7 @@ public static class BuildingShellMigrationTool
                 ["maxHp"] = receiver.Data.MaxHp,
                 ["defense"] = new JObject
                 {
-                    ["cutting"] = receiver.Data.DefenseValues?.Cutting ?? 0f,
-                    ["piercing"] = receiver.Data.DefenseValues?.Piercing ?? 0f,
-                    ["chopping"] = receiver.Data.DefenseValues?.Chopping ?? 0f,
-                    ["blunt"] = receiver.Data.DefenseValues?.Blunt ?? 0f
+                    ["physical"] = receiver.Data.DefenseValues?.Physical ?? 0f
                 },
                 ["moduleLocalPosition"] = ItemDefinitionMigrationTool.Vector3Token(receiver.transform.localPosition)
             };
@@ -683,8 +680,8 @@ public static class BuildingShellMigrationTool
         Collider2D[] colliders = item.GetComponentsInChildren<Collider2D>(true);
         Collider2D collider = colliders.FirstOrDefault(candidate => candidate.transform == item.transform && !candidate.isTrigger);
         collider ??= colliders.FirstOrDefault(candidate =>
-            !candidate.isTrigger && candidate.GetComponentInParent<DamageReceiver>(true) == null);
-        collider ??= colliders.FirstOrDefault(candidate => candidate.GetComponentInParent<DamageReceiver>(true) == null);
+            !candidate.isTrigger && candidate.GetComponentInParent<Mod_DamageReceiver>(true) == null);
+        collider ??= colliders.FirstOrDefault(candidate => candidate.GetComponentInParent<Mod_DamageReceiver>(true) == null);
         return collider ?? throw new MissingComponentException($"建筑 {item.name} 缺少可迁移碰撞体");
     }
 

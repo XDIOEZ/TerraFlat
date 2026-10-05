@@ -1,4 +1,5 @@
 using System;
+using FlatWorld.WorldModel;
 using MemoryPack;
 using UnityEngine;
 
@@ -12,13 +13,74 @@ public partial class SnowCoverState
     public bool Initialized; // 是否建立世界时间游标。
     public float LastTotalTime; // 在其他维度度过的时间也需按原天气边界补算。
 
-    /// <summary>从相邻气候档平滑读取覆盖量，边界使用最冷或最热档。</summary>
+    /// <summary>从相邻气候档读取覆盖量，并统一量化为 0.1～1.0 的十层积雪。</summary>
     public float Sample(float baselineTemperature)
     {
         float band = Mathf.Clamp(baselineTemperature - MinimumTemperature, 0f, BandCount - 1);
         int lower = Mathf.FloorToInt(band);
-        return Mathf.Lerp(Coverage[lower], Coverage[Mathf.Min(lower + 1, BandCount - 1)], band - lower);
+        float coverage = Mathf.Lerp(Coverage[lower], Coverage[Mathf.Min(lower + 1, BandCount - 1)], band - lower);
+        return SnowDepthLayer.Quantize(coverage);
     }
+}
+
+/// <summary>雪层统一查询入口：天然雪最多十层，玩家堆雪按实际层数保存。</summary>
+public static class WorldSnowSystem
+{
+    #region 查询
+
+    public static float GetNaturalDepth(ChunkTerrainData terrain, int x, int y)
+    {
+        if (terrain == null || terrain.IsDisposed ||
+            !terrain.TryGetEnvironmentValue(SnowDepthLayer.LayerId, x, y, out float depth))
+            return 0f;
+        return SnowDepthLayer.Quantize(depth);
+    }
+
+    public static float GetSurfaceDepth(ChunkTerrainData terrain, int x, int y,
+        SnowCoverState seasonalSnow, float baselineOffset)
+    {
+        if (terrain == null || terrain.IsDisposed ||
+            WorldLiquidSystem.GetSurfaceDepth(terrain, x, y) > 0f)
+            return 0f;
+
+        TerrainCell surface = TerrainSupportLayer.GetSurfaceCell(terrain, x, y);
+        if (surface.GroundTileId == 0)
+            return 0f;
+
+        float naturalDepth = TerrainSupportLayer.GetTileId(terrain, x, y) == 0
+            ? GetNaturalDepth(terrain, x, y)
+            : 0f;
+        float seasonalDepth = 0f;
+        if (seasonalSnow != null &&
+            terrain.TryGetEnvironmentValue("temperature.celsius", x, y, out float temperature))
+            seasonalDepth = seasonalSnow.Sample(temperature + baselineOffset);
+
+        // 玩家编辑后的雪厚独立保存，季节只叠加编辑之后的净变化，不能重新铺回天然雪。
+        if (terrain.TryGetEnvironmentValue(WorldSnowInteraction.EditedLayer, x, y, out float edited) && edited > 0f)
+        {
+            terrain.TryGetEnvironmentValue(WorldSnowInteraction.DepthLayer, x, y, out float depth);
+            terrain.TryGetEnvironmentValue(WorldSnowInteraction.SeasonLayer, x, y, out float previousSeason);
+            return Mathf.Max(0, Mathf.RoundToInt((depth + seasonalDepth - previousSeason) * SnowDepthLayer.LayerCount)) *
+                   SnowDepthLayer.LayerStep;
+        }
+
+        return SnowDepthLayer.Quantize(Mathf.Max(naturalDepth, seasonalDepth));
+    }
+
+    public static float GetSurfaceDepth(Vector3 worldPosition)
+    {
+        ChunkMgr manager = ChunkMgr.ExistingInstance;
+        if (manager == null || !manager.TryGetRuntimeTerrainTile(worldPosition, out RuntimeTerrainTileSample sample))
+            return 0f;
+
+        SnowCoverState seasonalSnow = null;
+        float baselineOffset = 0f;
+        WeatherMgr.ExistingInstance?.TryGetSnowCoverageContext(out seasonalSnow, out baselineOffset);
+        return GetSurfaceDepth(sample.Terrain, sample.LocalCell.x, sample.LocalCell.y,
+            seasonalSnow, baselineOffset);
+    }
+
+    #endregion
 }
 
 /// <summary>纯积雪模拟；基础气候叠加季节和当前天气，冻结温度以下降水积雪，零度以上按温差融化。</summary>

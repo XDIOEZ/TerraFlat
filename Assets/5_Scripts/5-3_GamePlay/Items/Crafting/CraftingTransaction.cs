@@ -353,9 +353,7 @@ public sealed class CraftingTransaction
                 if (!CanStack(target, source))
                     continue;
 
-                float amountCapacity = Inventory.Data.HasUnlimitedStackSize
-                    ? remaining
-                    : Mathf.Max(0f, GetWorkingSlotCapacity(i, 0f) - target.Stack.Amount);
+                float amountCapacity = Mathf.Max(0f, GetWorkingSlotCapacity(i) - target.Stack.Amount);
                 float amountToAdd = Mathf.Min(remaining, amountCapacity);
                 if (amountToAdd <= 0f)
                     continue;
@@ -370,7 +368,7 @@ public sealed class CraftingTransaction
                 if (workingItems[i] != null)
                     continue;
 
-                float amountCapacity = GetWorkingSlotCapacity(i, remaining);
+                float amountCapacity = GetWorkingSlotCapacity(i);
                 float amountToAdd = Mathf.Min(remaining, amountCapacity);
                 if (amountToAdd <= 0f)
                     continue;
@@ -422,10 +420,8 @@ public sealed class CraftingTransaction
         }
 
         /// <summary>新增槽位沿用库存的单格堆叠规则。</summary>
-        private float GetWorkingSlotCapacity(int index, float requested)
+        private float GetWorkingSlotCapacity(int index)
         {
-            if (Inventory.Data.HasUnlimitedStackSize)
-                return requested;
             return index < Inventory.Data.itemSlots.Count
                 ? Mathf.Max(0f, Inventory.Data.itemSlots[index].SlotMaxVolume)
                 : Inventory_Data.DefaultSlotVolume;
@@ -479,9 +475,7 @@ public sealed class CraftingTransaction
             while (slots.Count < source.Count)
                 slots.Add(new ItemSlot(slots.Count)
                 {
-                    SlotMaxVolume = Inventory.Data.HasUnlimitedStackSize
-                        ? float.MaxValue
-                        : Inventory_Data.DefaultSlotVolume
+                    SlotMaxVolume = Inventory_Data.DefaultSlotVolume
                 });
 
             for (int i = 0; i < source.Count; i++)

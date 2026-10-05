@@ -18,9 +18,19 @@ namespace FlatWorld.GameplayMCP
         "Read the real monster registry and ecology limits, sample CPU for 1-20 seconds, or inspect recorded Unity Profiler frames including descendant GC.Alloc metadata. Actions: status, sample, profile_frames. Read-only; does not mutate gameplay.", Group = "core")]
     public static class GameplaySpawnerDebugTool
     {
+        #region 统一输入输出
+
+        /// <summary>按需返回数据，错误与分页状态保持完整。</summary>
+        public static async Task<object> HandleCommand(JObject parameters)
+        {
+            return await GameplayMcpOutput.InvokeAsync("gameplay_spawner_debug", parameters, ExecuteCommand, true);
+        }
+
+        #endregion
+
         #region 协议
 
-        public sealed class Parameters
+        public sealed class Parameters : GameplayMcpOutputParameters
         {
             [ToolParameter("status, sample or profile_frames", Required = false, DefaultValue = "status")]
             public string action { get; set; }
@@ -32,7 +42,7 @@ namespace FlatWorld.GameplayMCP
 
         private static bool sampling;
 
-        public static async Task<object> HandleCommand(JObject parameters)
+        private static async Task<object> ExecuteCommand(JObject parameters)
         {
             var manager = MonsterSpawnerManager.ExistingInstance;
             if (!EditorApplication.isPlaying || manager == null)

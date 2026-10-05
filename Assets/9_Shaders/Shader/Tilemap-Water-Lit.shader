@@ -13,7 +13,7 @@ Shader "FlatWorld/2D/Tilemap Water Lit"
         _SurfaceTint("海水染色强度", Range(0, 1)) = 1
         _SwellScale("涌浪尺度", Range(0.05, 4)) = 0.74
         _DetailScale("细浪尺度", Range(0.5, 12)) = 4.6
-        _WaveSpeed("海流速度", Range(-3, 3)) = 0.42
+        _WaveSpeed("海浪速度", Range(0, 3)) = 0.42
         _WaveDistortion("海流扭曲", Range(0, 4)) = 0.8
         _NormalStrength("表面起伏", Range(0, 0.8)) = 0.44
         _PixelDensity("风格化采样密度", Range(1, 128)) = 64
@@ -155,14 +155,21 @@ Shader "FlatWorld/2D/Tilemap Water Lit"
                 half4 main = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv);
                 main *= _Color * _RendererColor;
                 half4 shoreMask = DecodeWaterShoreMask(input.waterTileData);
-                half liquidDepth = SampleLiquidDepth(input.positionWS);
+                half continuousDepth = SampleContinuousLiquidDepth(input.positionWS);
+                #if defined(FLATWORLD_WATER_STYLIZED)
+                half liquidDepth = QuantizeWaterVisualDepth(continuousDepth);
+                #else
+                half liquidDepth = continuousDepth;
+                #endif
                 WaterSurfaceData waterSurface = CalculateWaterSurface(
                     input.positionWS,
                     input.lightingUV,
-                    liquidDepth);
+                    liquidDepth,
+                    ResolveWaterFlowAxis(_FlowDirection.xy));
                 main.rgb = ApplyWaterSurface(main.rgb, waterSurface);
                 half recess = ComputeShoreRecess(input.positionWS, shoreMask);
-                main.rgb = ApplyShore(main.rgb, recess, input.positionWS);
+                main.rgb = ApplyShore(main.rgb, recess, input.positionWS,
+                    ResolveWaterFlowAxis(_FlowDirection.xy));
 
                 half4 lightMask = SAMPLE_TEXTURE2D(_MaskTex, sampler_MaskTex, input.uv);
                 SurfaceData2D surfaceData;
@@ -227,14 +234,21 @@ Shader "FlatWorld/2D/Tilemap Water Lit"
                 half4 main = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv);
                 main *= _Color * _RendererColor;
                 half4 shoreMask = DecodeWaterShoreMask(input.waterTileData);
-                half liquidDepth = SampleLiquidDepth(input.positionWS);
+                half continuousDepth = SampleContinuousLiquidDepth(input.positionWS);
+                #if defined(FLATWORLD_WATER_STYLIZED)
+                half liquidDepth = QuantizeWaterVisualDepth(continuousDepth);
+                #else
+                half liquidDepth = continuousDepth;
+                #endif
                 WaterSurfaceData waterSurface = CalculateWaterSurface(
                     input.positionWS,
                     input.screenUV,
-                    liquidDepth);
+                    liquidDepth,
+                    ResolveWaterFlowAxis(_FlowDirection.xy));
                 main.rgb = ApplyWaterSurface(main.rgb, waterSurface);
                 half recess = ComputeShoreRecess(input.positionWS, shoreMask);
-                main.rgb = ApplyShore(main.rgb, recess, input.positionWS);
+                main.rgb = ApplyShore(main.rgb, recess, input.positionWS,
+                    ResolveWaterFlowAxis(_FlowDirection.xy));
                 main.rgb = ApplyMoonReflection(main.rgb, waterSurface.moonReflection);
                 return main;
             }

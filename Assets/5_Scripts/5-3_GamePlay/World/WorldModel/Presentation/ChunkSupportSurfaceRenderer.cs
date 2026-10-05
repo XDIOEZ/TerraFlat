@@ -2,24 +2,26 @@ using System;
 using System.Collections.Generic;
 using FlatWorld.WorldModel;
 using UnityEngine;
-using UnityEngine.Tilemaps;
 
 /// <summary>
-/// 地表覆盖独立 Tilemap 表现；只读取权威层，不改写底层地形数据。
-/// 平台/地板接触阴影通过 Tile Color RGBA 编码左、右、下、上四个外露方向，
-/// 相邻覆盖面之间不再绘制内部阴影，并支持跨 Chunk 连续铺设。
+/// 地表覆盖经共享 BRG Owner 表现；只读取权威层，不改写底层地形数据。
+/// 平台/地板接触阴影通过实例 Data0 RGBA 编码左、右、下、上四个外露方向，
+/// 水上平台把阴影投到覆盖面外侧，陆地地板保留内侧接触阴影，并支持跨 Chunk 连续铺设。
 /// </summary>
 public sealed class ChunkSupportSurfaceRenderer : MonoBehaviour, IChunkViewRenderer, IWorldAwareChunkViewRenderer
 {
     #region 配置与状态
 
+    private const float WaterPlatformShadowExtent = 0.12f;
+
     [SerializeField] private ChunkTilePaletteSO palette; // 材料到地块的映射。
-    [SerializeField] private Tilemap tilemap; // 原始地形上方的平台/地板图层。
+    [SerializeField] private Material material; // 平台专用接触阴影材质。
 
     private readonly List<NeighbourTerrainSubscription> neighbourTerrainSubscriptions = new(4);
     private WorldRuntime boundWorld;
     private ChunkRuntime chunk;
-    private IDisposable chunkCommittedSubscription;
+    private ChunkTilemapRenderer owner;
+    private readonly List<IDisposable> neighbourChunkSubscriptions = new(4);
 
     #endregion
 
@@ -31,11 +33,9 @@ public sealed class ChunkSupportSurfaceRenderer : MonoBehaviour, IChunkViewRende
         if (ReferenceEquals(boundWorld, worldRuntime))
             return;
 
-        chunkCommittedSubscription?.Dispose();
-        chunkCommittedSubscription = null;
+        ClearNeighbourChunkSubscriptions();
         boundWorld = worldRuntime;
-        if (boundWorld != null)
-            chunkCommittedSubscription = boundWorld.Events.Subscribe<ChunkCommitted>(HandleChunkCommitted);
+        SubscribeNeighbourChunkEvents();
         RefreshNeighbourTerrainSubscriptions();
     }
 
@@ -48,8 +48,11 @@ public sealed class ChunkSupportSurfaceRenderer : MonoBehaviour, IChunkViewRende
             throw new InvalidOperationException("Cannot bind support rendering before terrain data is ready.");
 
         Unbind();
+        owner = GetComponent<ChunkTilemapRenderer>();
         chunk = value;
+        SubscribeNeighbourChunkEvents();
         chunk.Terrain.Changed += HandleChanged;
+        owner.BatchPresentationRebuilt += HandleBatchPresentationRebuilt;
         RefreshNeighbourTerrainSubscriptions();
         RefreshAll();
     }
@@ -60,16 +63,25 @@ public sealed class ChunkSupportSurfaceRenderer : MonoBehaviour, IChunkViewRende
         if (chunk?.Terrain != null)
             chunk.Terrain.Changed -= HandleChanged;
         ClearNeighbourTerrainSubscriptions();
+        ClearNeighbourChunkSubscriptions();
+        if (owner != null)
+        {
+            owner.BatchPresentationRebuilt -= HandleBatchPresentationRebuilt;
+            if (chunk?.Terrain != null && owner.IsBatchPresentationRegistered)
+                for (int y = 0; y < chunk.Terrain.Height; y++)
+                for (int x = 0; x < chunk.Terrain.Width; x++)
+                {
+                    owner.ClearLayerVisual(ChunkBatchRendererGroupService.VisualLayer.SupportShadow, x, y);
+                    owner.ClearLayerVisual(ChunkBatchRendererGroupService.VisualLayer.Support, x, y);
+                }
+        }
         chunk = null;
-        if (tilemap != null)
-            tilemap.ClearAllTiles();
     }
 
     private void OnDestroy()
     {
         Unbind();
-        chunkCommittedSubscription?.Dispose();
-        chunkCommittedSubscription = null;
+        ClearNeighbourChunkSubscriptions();
         boundWorld = null;
     }
 
@@ -77,10 +89,14 @@ public sealed class ChunkSupportSurfaceRenderer : MonoBehaviour, IChunkViewRende
 
     #region 覆盖面绘制
 
+    /// <summary>BRG Owner 重建后补回平台覆盖。</summary>
+    private void HandleBatchPresentationRebuilt() => RefreshAll();
+
     /// <summary>支撑层改变时同步自身和四邻格的外轮廓。</summary>
     private void HandleChanged(ChunkTerrainChanged change)
     {
-        if (change.Kind != TerrainChangeKind.Environment || chunk?.Terrain == null)
+        if ((change.Kind != TerrainChangeKind.Environment && change.Kind != TerrainChangeKind.Liquid) ||
+            chunk?.Terrain == null)
             return;
 
         int x = change.LocalCell.X;
@@ -106,22 +122,49 @@ public sealed class ChunkSupportSurfaceRenderer : MonoBehaviour, IChunkViewRende
     /// <summary>按稳定地块 ID 选择覆盖外观，并只保留整体外围的接触阴影。</summary>
     private void Refresh(int x, int y)
     {
-        if (chunk?.Terrain == null || tilemap == null ||
+        if (chunk?.Terrain == null ||
             x < 0 || x >= chunk.Terrain.Width || y < 0 || y >= chunk.Terrain.Height)
         {
             return;
         }
 
         int id = TerrainSupportLayer.GetTileId(chunk.Terrain, x, y);
-        palette.TryGetTile(id, out TileBase tile);
-        Vector3Int position = new(x, y, 0);
-        tilemap.SetTile(position, tile);
-        if (id == 0 || tile == null)
+        if (id == 0 || !palette.TryGetVisual(id, out Sprite sprite, out Color color,
+                out Matrix4x4 tileTransform))
+        {
+            owner.ClearLayerVisual(ChunkBatchRendererGroupService.VisualLayer.SupportShadow, x, y);
+            owner.ClearLayerVisual(ChunkBatchRendererGroupService.VisualLayer.Support, x, y);
             return;
+        }
 
-        // Tile 默认锁定颜色；解除后用 RGBA 分别控制左、右、下、上的接触阴影。
-        tilemap.SetTileFlags(position, TileFlags.None);
-        tilemap.SetColor(position, BuildPerimeterMask(chunk.Terrain, x, y));
+        Int2 origin = chunk.Address.ChunkOrigin;
+        float centerX = origin.X + x + 0.5f;
+        float centerY = origin.Y + y + 0.5f;
+        Matrix4x4 matrix = Matrix4x4.Translate(new Vector3(centerX, centerY)) * tileTransform;
+        Color mask = BuildPerimeterMask(chunk.Terrain, x, y);
+        bool isWaterPlatform = chunk.Terrain.GetLiquidDepth(x, y) > 0.001f;
+        Vector4 bodyMask = isWaterPlatform
+            ? Vector4.zero
+            : new Vector4(mask.r, mask.g, mask.b, mask.a);
+        owner.SetLayerVisual(ChunkBatchRendererGroupService.VisualLayer.Support, x, y,
+            sprite, material, matrix, color, bodyMask, Vector4.zero);
+
+        if (!isWaterPlatform)
+        {
+            owner.ClearLayerVisual(ChunkBatchRendererGroupService.VisualLayer.SupportShadow, x, y);
+            return;
+        }
+
+        Matrix4x4 shadowMatrix = matrix;
+        float shadowScale = 1f + WaterPlatformShadowExtent * 2f;
+        shadowMatrix.m00 *= shadowScale;
+        shadowMatrix.m01 *= shadowScale;
+        shadowMatrix.m10 *= shadowScale;
+        shadowMatrix.m11 *= shadowScale;
+        owner.SetLayerVisual(ChunkBatchRendererGroupService.VisualLayer.SupportShadow, x, y,
+            sprite, material, shadowMatrix, Color.white,
+            new Vector4(mask.r, mask.g, mask.b, mask.a),
+            new Vector4(centerX, centerY, WaterPlatformShadowExtent, 0f));
     }
 
     /// <summary>RGBA 分别表示左、右、下、上是否属于平台整体的外露边缘。</summary>
@@ -206,8 +249,10 @@ public sealed class ChunkSupportSurfaceRenderer : MonoBehaviour, IChunkViewRende
         ChunkTerrainData terrain = chunk.Terrain;
         Int2 origin = chunk.Address.ChunkOrigin;
         Int2 changed = committed.Address.ChunkOrigin;
-        int deltaX = changed.X - origin.X;
-        int deltaY = changed.Y - origin.Y;
+        Vector2Int delta = WorldTopologyRuntime.ShortestDelta(
+            new Vector2Int(origin.X, origin.Y), new Vector2Int(changed.X, changed.Y));
+        int deltaX = delta.x;
+        int deltaY = delta.y;
         bool orthogonalNeighbour =
             (Math.Abs(deltaX) == terrain.Width && deltaY == 0) ||
             (Math.Abs(deltaY) == terrain.Height && deltaX == 0);
@@ -223,6 +268,36 @@ public sealed class ChunkSupportSurfaceRenderer : MonoBehaviour, IChunkViewRende
             RefreshHorizontalEdge(0);
         else
             RefreshHorizontalEdge(terrain.Height - 1);
+    }
+
+    private void SubscribeNeighbourChunkEvents()
+    {
+        ClearNeighbourChunkSubscriptions();
+        if (boundWorld == null || chunk?.Terrain == null) return;
+        Int2 origin = chunk.Address.ChunkOrigin;
+        var unique = new HashSet<FlatWorld.WorldModel.WorldAddress>();
+        Vector2Int[] offsets =
+        {
+            new(-chunk.Terrain.Width, 0), new(chunk.Terrain.Width, 0),
+            new(0, -chunk.Terrain.Height), new(0, chunk.Terrain.Height)
+        };
+        foreach (Vector2Int offset in offsets)
+        {
+            Vector2Int canonical = WorldTopologyRuntime.NormalizeCell(
+                new Vector2Int(origin.X + offset.x, origin.Y + offset.y));
+            var address = new FlatWorld.WorldModel.WorldAddress(chunk.Address.DimensionId,
+                new Int2(canonical.x, canonical.y));
+            if (address == chunk.Address || !unique.Add(address)) continue;
+            neighbourChunkSubscriptions.Add(boundWorld.Events.SubscribeChunkCommitted(
+                address, HandleChunkCommitted));
+        }
+    }
+
+    private void ClearNeighbourChunkSubscriptions()
+    {
+        for (int i = 0; i < neighbourChunkSubscriptions.Count; i++)
+            neighbourChunkSubscriptions[i].Dispose();
+        neighbourChunkSubscriptions.Clear();
     }
 
     /// <summary>订阅四个正交相邻区块，覆盖面变化时同步共享边阴影。</summary>
@@ -242,8 +317,10 @@ public sealed class ChunkSupportSurfaceRenderer : MonoBehaviour, IChunkViewRende
     private void SubscribeNeighbourTerrain(int offsetX, int offsetY)
     {
         Int2 origin = chunk.Address.ChunkOrigin;
+        Vector2Int canonical = WorldTopologyRuntime.NormalizeCell(new Vector2Int(
+            origin.X + offsetX, origin.Y + offsetY));
         var address = new FlatWorld.WorldModel.WorldAddress(chunk.Address.DimensionId,
-            new Int2(origin.X + offsetX, origin.Y + offsetY));
+            new Int2(canonical.x, canonical.y));
         if (!boundWorld.TryGetChunkTerrain(address, out ChunkTerrainData neighbourTerrain))
             return;
 

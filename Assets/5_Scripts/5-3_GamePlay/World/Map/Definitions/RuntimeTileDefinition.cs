@@ -15,6 +15,10 @@ public sealed class RuntimeTileDefinition
     public int RuntimeTileId { get; }
     public string DisplayName { get; }
     public string TileAssetId { get; }
+    /// <summary>当前地表允许放置的最低承重需求上限。</summary>
+    public int LoadCapacity { get; }
+    /// <summary>自然作物是否允许把该地块作为生长基质。</summary>
+    public bool NaturalPlantable { get; }
     public TileBase TileBase { get; }
     public TileData TileDataTemplate { get; }
     public IReadOnlyList<TileBlockBehaviour> Behaviours { get; }
@@ -30,6 +34,8 @@ public sealed class RuntimeTileDefinition
         RuntimeTileId = dto.RuntimeTileId;
         DisplayName = string.IsNullOrWhiteSpace(dto.DisplayName) ? dto.Id : dto.DisplayName;
         TileAssetId = dto.TileAsset;
+        LoadCapacity = dto.LoadCapacity;
+        NaturalPlantable = dto.NaturalPlantable;
         TileBase = tile;
         TileDataTemplate = template;
         Behaviours = behaviours.AsReadOnly();
@@ -51,6 +57,7 @@ public sealed class RuntimeTileDefinition
     public string displayName => DisplayName;
     public TileData tileDataTemplate => TileDataTemplate;
     public IReadOnlyList<TileBlockBehaviour> behaviours => Behaviours;
+    public bool naturalPlantable => NaturalPlantable;
     public TileBuildingDamageProfile damageProfile => DamageProfile;
     public GroundTilePlacementRule groundPlacement => GroundPlacement;
     public GroundTileHarvestRule groundHarvest => GroundHarvest;
@@ -59,21 +66,21 @@ public sealed class RuntimeTileDefinition
 
     #region 稳定行为入口
     /// <summary>按 JSON 顺序执行进入行为。</summary>
-    public void OnEnter(Item item, TileData tileData, Map map, TileEffectReceiver receiver)
+    public void OnEnter(Item item, TileData tileData, Map map, Mod_TileEffectReceiver receiver)
     {
         for (int i = 0; i < Behaviours.Count; i++)
             Behaviours[i].OnEnter(item, tileData, map, receiver);
     }
 
     /// <summary>按 JSON 顺序执行离开行为。</summary>
-    public void OnExit(Item item, TileData tileData, Map map, TileEffectReceiver receiver)
+    public void OnExit(Item item, TileData tileData, Map map, Mod_TileEffectReceiver receiver)
     {
         for (int i = 0; i < Behaviours.Count; i++)
             Behaviours[i].OnExit(item, tileData, map, receiver);
     }
 
     /// <summary>共享行为读取调用方上下文，不在此创建对象或解析 JSON。</summary>
-    public void OnUpdate(Item item, TileData tileData, Map map, TileEffectReceiver receiver, float deltaTime)
+    public void OnUpdate(Item item, TileData tileData, Map map, Mod_TileEffectReceiver receiver, float deltaTime)
     {
         for (int i = 0; i < Behaviours.Count; i++)
             Behaviours[i].OnUpdate(item, tileData, map, receiver, deltaTime);

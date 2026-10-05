@@ -36,6 +36,8 @@ public class BaseUIAnimation : MonoBehaviour
     protected CanvasGroup Group => group;
     protected RectTransform MotionRoot => motionRoot;
     protected UIAnimationProfile Profile => playingProfile ?? configuredProfile;
+    /// <summary>缩放类动画保持目标透明度，不额外叠加淡入淡出。</summary>
+    protected virtual bool UsesAlphaTransition => true;
     #endregion
 
     #region Unity 生命周期
@@ -160,7 +162,7 @@ public class BaseUIAnimation : MonoBehaviour
     protected virtual void ApplyVisualState(float progress)
     {
         if (group != null)
-            group.alpha = Mathf.Clamp01(progress) * targetOpenAlpha;
+            group.alpha = (UsesAlphaTransition ? Mathf.Clamp01(progress) : 1f) * targetOpenAlpha;
     }
 
     private float GetVisibility() => visibility;

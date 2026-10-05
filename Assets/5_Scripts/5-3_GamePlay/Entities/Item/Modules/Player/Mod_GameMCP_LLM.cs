@@ -3,8 +3,8 @@ using UnityEngine;
 
 /// <summary>
 /// 玩家可复用的外部智能体操作接口。
-/// 当前提供基于 WorldNavigationManager 的 MoveTo 命令；提交方必须先通过 GameController 外部控制租约，
-/// 移动始终走玩家输入链和 Mover。运行中的请求、路径与控制者仅保留在内存，不写入玩家存档。
+/// 当前提供基于 WorldNavigationManager 的 MoveTo 命令；提交方必须先通过 Mod_GameController 外部控制租约，
+/// 移动始终走玩家输入链和 Mod_Mover。运行中的请求、路径与控制者仅保留在内存，不写入玩家存档。
 /// </summary>
 public sealed class Mod_GameMCP_LLM : Module
 {
@@ -85,8 +85,8 @@ public sealed class Mod_GameMCP_LLM : Module
     }
 
     private Player player;
-    private GameController gameController;
-    private Mover mover;
+    private Mod_GameController gameController;
+    private Mod_Mover mover;
     private WorldNavigationManager navigation;
     private object operationOwner;
     private OperationState operationState;
@@ -132,8 +132,8 @@ public sealed class Mod_GameMCP_LLM : Module
     public override void Load()
     {
         player = item as Player ?? GetComponentInParent<Player>();
-        gameController = player != null ? player.GetComponentInChildren<GameController>(true) : null;
-        mover = player != null ? player.GetComponentInChildren<Mover>(true) : null;
+        gameController = player != null ? player.GetComponentInChildren<Mod_GameController>(true) : null;
+        mover = player != null ? player.GetComponentInChildren<Mod_Mover>(true) : null;
         navigation = WorldNavigationManager.ExistingInstance ?? WorldNavigationManager.Instance;
         ResetOperation();
     }

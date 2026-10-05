@@ -2,8 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Security.Cryptography;
+using System.Text;
 using FlatWorld.Gameplay.Building;
 using FlatWorld.Gameplay.Progress;
+using FlatWorld.Networking;
 using Sirenix.OdinInspector;
 using UltEvents;
 using UnityEngine;
@@ -26,11 +29,18 @@ public enum BuildingRole
     PlacedBuilding
 }
 
+/// <summary>贴地设施与实体建筑分层占地，机械扩展仍可指定自己的层。</summary>
+public enum BuildingPlacementLayer
+{
+    Structure = 0,
+    Ground = 2
+}
+
 /// <summary>
 /// 建筑召唤器是持久化载体，PlacedBuilding 是快照还原后的世界实例。
 /// 拆除时先生成带快照的召唤器，成功后才删除原建筑。
 /// </summary>
-public partial class Mod_Building : Module, IIncomingDamageRule
+public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamageContextRule
 {
     private const int CurrentDataVersion = 3;
     private const string StoneWallBuildingId = "Wall_Stone";
@@ -67,6 +77,11 @@ public partial class Mod_Building : Module, IIncomingDamageRule
         public int FootprintWidth;
         [Newtonsoft.Json.JsonProperty(DefaultValueHandling = Newtonsoft.Json.DefaultValueHandling.Ignore)]
         public int FootprintHeight;
+        // 横向长建筑可在放置前通过 R 键只切换左右朝向，不改变占地宽高。
+        [Newtonsoft.Json.JsonProperty(DefaultValueHandling = Newtonsoft.Json.DefaultValueHandling.Ignore)]
+        public bool AllowHorizontalMirrorPlacement;
+        [Newtonsoft.Json.JsonProperty(DefaultValueHandling = Newtonsoft.Json.DefaultValueHandling.Ignore)]
+        public bool HorizontalMirrorX;
     }
 
     public Building_Data Data = new();
@@ -79,7 +94,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule
     public BoxCollider2D boxCollider2D;
     // 伤害模块由 ItemMods 注册表提供，禁止序列化嵌套 Prefab 的组件引用。
     [NonSerialized]
-    private DamageReceiver damageReceiver;
+    private Mod_DamageReceiver damageReceiver;
     [NonSerialized]
     private ShadowCaster2D _lightOccluder;
     private static readonly FieldInfo ShadowCasterShapePathField = ResolveShadowCasterField("m_ShapePath");
@@ -94,8 +109,14 @@ public partial class Mod_Building : Module, IIncomingDamageRule
     private bool _placementPending;
     private bool _dismantlePending;
     private bool _ghostCreationFailed;
-    private GameController _ownerController;
+    private Mod_GameController _ownerController;
     private Player _placementActor;
+    private bool _placementMirrorX;
+    private bool _rotationInputBound;
+    private bool _ghostBaseFlipX;
+    private bool _ghostBaseFlipCaptured;
+    private bool _baseSpriteFlipX;
+    private bool _baseSpriteFlipCaptured;
 
     public override ModuleData _Data
     {
@@ -108,17 +129,27 @@ public partial class Mod_Building : Module, IIncomingDamageRule
     public bool IsPlacementPending => _placementPending;
     public bool IsDismantlePending => _dismantlePending;
     public bool IsPlacementModeActive => IsSummoner && (!RequiresPlacementRequest || _placementRequested);
+    public bool PlacementHorizontalMirrorX => _placementMirrorX;
+    public bool CanRotateHorizontalPlacement => Data?.AllowHorizontalMirrorPlacement == true && IsPlacementActionAvailable;
 
-    /// <summary>落地建筑在完成自身防御结算后应用攻击方的建筑伤害倍率。</summary>
+    #region 建筑空间层
+    [Tooltip("地板层设施允许同格放置实体建筑，不阻挡通行或视线。")]
+    public BuildingPlacementLayer PlacementLayer = BuildingPlacementLayer.Structure;
+    public bool IsGroundFacility => BuildingOccupancyRegistry.GetPlacementLayer(this) == (int)BuildingPlacementLayer.Ground;
+    public bool BlocksMovement => !IsGroundFacility && (BuildingPlacementLifecycle.GetTraversalPolicy(item)?.BlocksMovement ?? true);
+    #endregion
+
+    #region 建筑伤害兼容
+
+    /// <summary>建筑工具弱点由生命模块统一结算，旧建筑倍率接口保持中性。</summary>
     public float GetDamageMultiplier(IDamageSender sender)
     {
-        if (Data?.Role != BuildingRole.PlacedBuilding)
-            return 1f;
-
-        return sender is IBuildingDamageSource buildingDamageSource
-            ? Mathf.Max(0f, buildingDamageSource.BuildingDamageMultiplier)
-            : 1f;
+        return 1f;
     }
+
+    public float GetDamageMultiplier(in FlatWorld.Combat.CombatDamageContext context) => 1f;
+
+    #endregion
 
     /// <summary>
     /// 便携设施的召唤器和落地本体使用不同稳定 Item ID；当前实例角色必须与自己的载体 ID 一致，
@@ -204,9 +235,12 @@ public partial class Mod_Building : Module, IIncomingDamageRule
 
     public override void Load()
     {
+        UnbindPlacementRotationInput();
         _placementRequested = false;
+        _placementMirrorX = false;
         _ownerController = null;
         EnsureRuntimeReferences();
+        CaptureBaseSpriteFlip();
         Data = new Building_Data();
         BuildingData?.ReadData(ref Data);
         Data ??= new Building_Data();
@@ -232,6 +266,17 @@ public partial class Mod_Building : Module, IIncomingDamageRule
         item.itemData.ModuleDataDic[_Data.Name] = BuildingData;
         SaveDataMgr.Instance?.RecordRuntimeBuildingChange(item);
     }
+
+    #region 建筑配置刷新
+    /// <summary>资源重载后按当前空间层更新物理、占地与遮光，保留建筑的安装状态。</summary>
+    public override void OnResourcesReloaded()
+    {
+        if (!_isLoaded || item == null) return;
+        EnsureRuntimeReferences();
+        SyncRuntimeState();
+        SyncNavigationOccupancy();
+    }
+    #endregion
 
     public override void ApplyNetworkData(ModuleData data)
     {
@@ -261,11 +306,16 @@ public partial class Mod_Building : Module, IIncomingDamageRule
         if (!IsItemInInventory || _placementPending || !IsPlacementModeActive)
         {
             if (!IsItemInInventory)
+            {
                 _placementRequested = false;
+                _placementMirrorX = false;
+                UnbindPlacementRotationInput();
+            }
             CleanupGhost();
             return;
         }
 
+        BindPlacementRotationInput();
         SetColliderMode(enabled: false, trigger: true);
         if (CurrentState == BuildingState.Uninstalled)
             CurrentState = BuildingState.NotInstalled;
@@ -306,22 +356,10 @@ public partial class Mod_Building : Module, IIncomingDamageRule
         if (item == null || item.DestructionHandled || _placementPending || !IsItemInInventory || !IsPlacementModeActive)
             return;
 
-        // 越界时虚影已被销毁，必须先用当前准线判定范围，不能提前返回“预览尚未就绪”。
-        Vector3 pointedPlacement = NormalizePlacement(GetPointerWorldPosition());
-        if (!IsWithinPlacementDistance(GetAuthorityPosition(), pointedPlacement, GetMaxPlacementDistance()))
-        {
-            BuildingPlacementFeedbackEvents.PublishPlacementRejected(
-                ResolvePlacementActor(), BuildingPlacementFailureReason.OutOfRange);
-            return;
-        }
-
-        if (!TryGetGhostPlacementPosition(out Vector3 placement))
-        {
-            Debug.LogWarning("[建筑安装] 放置预览尚未就绪", item);
-            return;
-        }
-
-        if (!ValidatePlacement(placement, GetAuthorityPosition(), true, out string reason, out BuildingPlacementFailureReason failureReason))
+        // 提交以当前准线为准；虚影只是表现，不参与安装资格判定。
+        Vector3 placement = NormalizePlacement(GetPointerWorldPosition());
+        if (!ValidatePlacement(placement, GetAuthorityPosition(), out string reason,
+                out BuildingPlacementFailureReason failureReason))
         {
             BuildingPlacementFeedbackEvents.PublishPlacementRejected(
                 ResolvePlacementActor(), failureReason);
@@ -373,6 +411,13 @@ public partial class Mod_Building : Module, IIncomingDamageRule
             return;
         }
 
+        // 机械建筑直接提交权威数据节点；背包中的召唤器仍沿用通用建造入口。
+        if (MachineCatalog.Get(ResolveBuildingPrefabId(item?.itemData?.IDName, Data)) != null)
+        {
+            InstallMechanicalData(placement);
+            return;
+        }
+
         if (!TryCreateInstalledBuilding(placement, out Item building, out reason))
         {
             _placementActor = null;
@@ -385,11 +430,82 @@ public partial class Mod_Building : Module, IIncomingDamageRule
         CompletePlacementTransaction(building);
     }
 
+    /// <summary>把机械召唤器转换为纯数据世界节点，成功扣料后才发布建造结果。</summary>
+    private void InstallMechanicalData(Vector3 placement)
+    {
+        MachineEntity node = null;
+        bool sourceConsumed = false;
+        Player actor = _placementActor;
+        try
+        {
+            item.Save();
+            if (!TryCreatePlacementCandidateData(item.itemData, placement,
+                    out ItemData placedData, out _, out string reason))
+                throw new InvalidOperationException(reason);
+            BuildingPlacementLifecycle.GetExtension(item)?.PreparePlacedData(placedData);
+            SetInstalledDataState(placedData);
+            node = MachineWorld.Place(placedData);
+            CurrentState = BuildingState.NotInstalled;
+            Save();
+            if (!ConsumeOneSourceItem())
+                throw new InvalidOperationException("消耗机械建造材料失败");
+            sourceConsumed = true;
+
+            RuntimeGrassClearing.ClearAt(placement);
+            GameplayProgressEvents.PublishBuildingPlaced(actor, placedData.IDName);
+        }
+        catch (Exception exception)
+        {
+            if (node != null && !sourceConsumed) MachineWorld.Remove(node.Id);
+            Debug.LogWarning("[机械安装] " + exception.Message, item);
+        }
+        finally
+        {
+            _placementActor = null;
+            if (item != null && !item.DestructionHandled)
+            {
+                CurrentState = BuildingState.NotInstalled;
+                Save();
+            }
+        }
+    }
+
+    /// <summary>纯数据建筑沿用现有角色和状态语义，不创建 Mod_Building 实例。</summary>
+    public static void SetInstalledDataState(ItemData placedData)
+    {
+        if (!WriteBuildingData(placedData, state => state.State = BuildingState.Installed))
+            throw new InvalidOperationException("机械建筑数据缺少建筑模块。");
+    }
+
+    /// <summary>服务端无需临时 Item 即可校验机械格、地形和建造距离。</summary>
+    public static bool ValidateMechanicalDataPlacement(ItemData placedData, Vector3 authorityPosition,
+        float maximumDistance, out string reason)
+    {
+        reason = null;
+        if (placedData?.transform == null ||
+            !IsWithinPlacementDistance(authorityPosition, placedData.transform.position, maximumDistance))
+        {
+            reason = "机械建筑超出建造距离";
+            return false;
+        }
+        MachineDefinition definition = MachineCatalog.Get(placedData.IDName);
+        if (definition == null)
+        {
+            reason = "机械定义不存在：" + placedData.IDName;
+            return false;
+        }
+        Vector2Int cell = MachineWorld.CellOf(placedData.transform.position);
+        int requiredGroundSupport = GetRequiredGroundSupport(placedData.IDName);
+        return MachineWorld.ValidatePlacement(definition, cell, false, out reason) &&
+            CheckTilePenalties(cell, requiredGroundSupport, out reason);
+    }
+
     /// <summary>服务端在候选建筑生成后调用，不依赖客户端预览。</summary>
-    public bool ValidateAuthoritativePlacement(Vector3 authorityPosition, out string reason)
+    public bool ValidateAuthoritativePlacement(Vector3 authorityPosition, out string reason,
+        Player placementActor = null)
     {
         Vector3 position = item != null ? item.transform.position : transform.position;
-        return ValidatePlacement(position, authorityPosition, false, out reason);
+        return ValidatePlacement(position, authorityPosition, out reason, out _, placementActor);
     }
 
     public void CompleteNetworkPlacement(float authoritativeRemainingAmount)
@@ -439,6 +555,8 @@ public partial class Mod_Building : Module, IIncomingDamageRule
 
         try
         {
+            if (!TrySetHorizontalMirrorPlacement(placedData, _placementMirrorX))
+                throw new InvalidOperationException("建筑候选数据缺少建筑模块");
             BuildingPlacementLifecycle.GetExtension(item)?.PreparePlacedData(placedData);
             building = ItemMgr.Instance.InstantiateItem(
                 placedData,
@@ -490,9 +608,14 @@ public partial class Mod_Building : Module, IIncomingDamageRule
         }
 
         string buildingPrefabId = ResolveBuildingPrefabId(summonerData.IDName, carrierState);
-        if (string.IsNullOrWhiteSpace(buildingPrefabId) || GameRes.Instance?.GetPrefab(buildingPrefabId) == null)
+        bool mechanical = !string.IsNullOrWhiteSpace(buildingPrefabId) &&
+            MachineCatalog.Get(buildingPrefabId) != null;
+        bool definitionExists = GameRes.Instance != null &&
+            GameRes.Instance.TryGetItemDefinition(buildingPrefabId, out _);
+        if (string.IsNullOrWhiteSpace(buildingPrefabId) || !definitionExists ||
+            !mechanical && GameRes.Instance.GetPrefab(buildingPrefabId) == null)
         {
-            reason = $"找不到召唤器对应的建筑预制体：{buildingPrefabId}";
+            reason = $"找不到召唤器对应的建筑定义：{buildingPrefabId}";
             return false;
         }
 
@@ -575,10 +698,11 @@ public partial class Mod_Building : Module, IIncomingDamageRule
             return false;
         }
 
-        if ((!string.IsNullOrWhiteSpace(data.SnapshotBase64) || data.SharedModuleIds?.Length > 0) &&
-            itemData.Stack?.Amount != 1f)
+        bool carriesBuildingState = !string.IsNullOrWhiteSpace(data.SnapshotBase64) || data.SharedModuleIds?.Length > 0;
+        if (carriesBuildingState && itemData.Stack?.Amount != 1f &&
+            (itemData.Stack?.Stackable != true || !HasCanonicalSummonerStackIdentity(itemData, data)))
         {
-            reason = "带状态的建筑召唤器必须为单件";
+            reason = "带状态的建筑召唤器只能与状态相同的同类物品堆叠";
             return false;
         }
 
@@ -621,8 +745,8 @@ public partial class Mod_Building : Module, IIncomingDamageRule
 
         _dismantlePending = false;
         string reason;
-        bool created = DroppedItemService.UsesEntities
-            ? TryCreateDismantledEcsDrop(out reason)
+        bool created = DroppedItemService.UsesLightweightDrops
+            ? TryCreateDismantledDrop(out reason)
             : TryCreateDismantledSummoner(out _, out reason);
         if (!created)
         {
@@ -634,6 +758,118 @@ public partial class Mod_Building : Module, IIncomingDamageRule
 
         BuildingOccupancyRegistry.Unregister(this);
         ItemMgr.Instance.DespawnItem(item, false);
+    }
+
+    /// <summary>纯数据机械先生成返还召唤器，成功后才移除权威节点和 BRG 占格。</summary>
+    public static bool TryDismantleMechanical(MachineEntity node, out string reason)
+        => TryDismantleMechanical(node, out _, out reason);
+
+    /// <summary>服务端可取得返还物以广播正式出生消息。</summary>
+    public static bool TryDismantleMechanical(MachineEntity node, out Item summoner, out string reason)
+        => TryCreateMechanicalDismantledSummoner(node, true, out summoner, out reason);
+
+    /// <summary>联机事务先生成可发布的返还物，待广播成功后再提交机械节点删除。</summary>
+    public static bool TryPrepareMechanicalDismantle(MachineEntity node, out Item summoner, out string reason)
+        => TryCreateMechanicalDismantledSummoner(node, false, out summoner, out reason);
+
+    private static bool TryCreateMechanicalDismantledSummoner(
+        MachineEntity node, bool removeNode, out Item summoner, out string reason)
+    {
+        summoner = null;
+        reason = null;
+        if (!GameNetwork.HasStateAuthority || node == null || ItemMgr.Instance == null)
+        {
+            reason = "机械拆除需要当前世界写入权限";
+            return false;
+        }
+        ItemData placed = MachineWorld.CaptureSnapshot(node);
+        if (placed == null || !TryReadBuildingData(placed, out _, out Building_Data building))
+        {
+            reason = "机械节点快照无效";
+            return false;
+        }
+        try
+        {
+            placed.Guid = 0;
+            placed.inHand = false;
+            placed.transform.position = Vector3.zero;
+            placed.transform.rotation = Quaternion.identity;
+            placed.transform.scale = Vector3.one;
+            if (TryReadBuildingData(placed, out _, out _))
+                WriteBuildingData(placed, state => state.SnapshotBase64 = null);
+            MachineState state = MachineWorld.ReadMachineState(placed);
+            state.RotationQuarterTurns = 0;
+            state.Generated = false;
+            MachineWorld.WriteMachineState(placed, state);
+            if (!ItemNetworkStateSerialization.TrySerializeItemData(placed, out byte[] payload) ||
+                payload.Length > MaxEmbeddedSnapshotBytes)
+                throw new InvalidOperationException("机械建筑快照无法序列化");
+
+            string snapshotBase64 = Convert.ToBase64String(payload);
+            string summonerId = ResolveSummonerPrefabId(node.Definition.Id, building);
+            ItemData returned = GameRes.Instance.CreateItemData(summonerId) ??
+                throw new InvalidOperationException("机械召唤器资源缺失：" + summonerId);
+            Vector3 position = NormalizePlacement(node.Snapshot.transform.position);
+            returned.Guid = GenerateUniqueRuntimeGuid();
+            returned.inHand = false;
+            returned.Stack ??= new ItemStack();
+            returned.Stack.Amount = 1f;
+            returned.Stack.CanBePickedUp = true;
+            returned.transform ??= new ItemTransform();
+            returned.transform.position = position;
+            returned.transform.rotation = Quaternion.identity;
+            returned.transform.scale = DroppedItemService.ResolveDefaultWorldDropScale(returned);
+            BuildingModuleStateTransfer.Copy(node.Snapshot, returned, building.SharedModuleIds);
+            CopySharedDurability(node.Snapshot, returned, building.SharedModuleIds);
+            if (!WriteBuildingData(returned, state =>
+                {
+                    state.Role = BuildingRole.Summoner;
+                    state.State = BuildingState.Uninstalled;
+                    state.BuildingPrefabId = node.Definition.Id;
+                    state.SummonerPrefabId = summonerId;
+                    state.SnapshotBase64 = snapshotBase64;
+                }))
+                throw new InvalidOperationException("机械召唤器缺少建筑模块");
+            returned.ItemSpecialData = CreateStatefulSummonerIdentity(snapshotBase64);
+            summoner = ItemMgr.Instance.InstantiateItem(returned, position,
+                returned.transform.rotation, returned.transform.scale);
+            summoner.Load();
+            summoner.DropInRange();
+            summoner.Save();
+            if (removeNode && MachineWorld.Remove(node.Id) == null)
+                throw new InvalidOperationException("机械节点已失效");
+            ItemNetworkStateSerialization.NotifyRuntimeStateChanged(summoner);
+            return true;
+        }
+        catch (Exception exception)
+        {
+            if (summoner != null) ItemMgr.Instance.DespawnItem(summoner, false);
+            summoner = null;
+            reason = exception.Message;
+            return false;
+        }
+    }
+
+    /// <summary>非锤击致命伤害按原建筑材料回收规则处理纯数据机械。</summary>
+    public static void DestroyMechanical(MachineEntity node)
+    {
+        if (node == null || !GameNetwork.HasStateAuthority) return;
+        if (TryReadBuildingData(node.Snapshot, out _, out Building_Data building))
+        {
+            string summonerId = ResolveSummonerPrefabId(node.Definition.Id, building);
+            if (!BuildingMaterialSalvage.TrySpawnRandomMaterialSalvage(
+                    summonerId, NormalizePlacement(node.Snapshot.transform.position), out string reason))
+                Debug.LogWarning("[机械摧毁] " + reason);
+        }
+        MachineWorld.Remove(node.Id);
+    }
+
+    /// <summary>纯数据机械受损时同步建筑快照中的正式状态。</summary>
+    public static void SetMechanicalDamageState(ItemData snapshot, bool damaged)
+    {
+        if (!WriteBuildingData(snapshot, state =>
+                state.State = damaged ? BuildingState.Damaged : BuildingState.Installed))
+            throw new InvalidOperationException("机械建筑数据缺少建筑模块");
     }
 
     /// <summary>生成带完整建筑快照的世界召唤器，不删除当前建筑。</summary>
@@ -740,7 +976,10 @@ public partial class Mod_Building : Module, IIncomingDamageRule
         Data.BuildingPrefabId = ResolveBuildingPrefabId(item?.itemData?.IDName, Data);
         Data.SummonerPrefabId = ResolveSummonerPrefabId(Data.BuildingPrefabId, Data);
 
-        item.transform.position = NormalizePlacement(item.transform.position);
+        Vector3 logicalPlacement = NormalizePlacement(item.transform.position);
+        item.transform.position = WorldLocalPresentation.ProjectPosition(logicalPlacement);
+        if (item.itemData?.transform != null)
+            item.itemData.transform.position = logicalPlacement;
         item.transform.rotation = Quaternion.identity;
         item.transform.localScale = Vector3.one;
         item.SetInHand(false);
@@ -795,6 +1034,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule
             Destroy(GhostShadow.gameObject);
             GhostShadow = null;
         }
+        _ghostBaseFlipCaptured = false;
 
         if (_definitionPreviewSource != null)
         {
@@ -833,7 +1073,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule
         item.itemData.inHand = false;
         item.itemData.Stack.Amount = 1f;
         item.itemData.Stack.CanBePickedUp = true;
-        item.itemData.ItemSpecialData = StatefulSummonerPrefix + item.itemData.Guid;
+        item.itemData.ItemSpecialData = CreateStatefulSummonerIdentity(snapshotBase64);
         SetColliderMode(enabled: true, trigger: true, damageReceiverEnabled: false);
         BuildingOccupancyRegistry.Unregister(this);
         SyncLightOccluder();
@@ -858,6 +1098,8 @@ public partial class Mod_Building : Module, IIncomingDamageRule
                         : BuildingState.Installed;
                     state.BuildingPrefabId = ResolveBuildingPrefabId(item.itemData.IDName, Data);
                     state.SummonerPrefabId = ResolveSummonerPrefabId(state.BuildingPrefabId, Data);
+                    // 朝向是放置时的临时选择，拆回后不参与召唤器堆叠身份。
+                    state.HorizontalMirrorX = false;
                     // 防止快照递归包含自己。
                     state.SnapshotBase64 = null;
                 }))
@@ -870,10 +1112,22 @@ public partial class Mod_Building : Module, IIncomingDamageRule
             snapshot.Stack.Amount = 1f;
             snapshot.Stack.CanBePickedUp = false;
             snapshot.transform ??= new ItemTransform();
-            snapshot.transform.position = item.transform.position;
-            snapshot.transform.rotation = item.transform.rotation;
-            snapshot.transform.scale = item.transform.localScale;
+            // 安装事务会重新赋予世界坐标；快照身份只保留建筑状态，不能把位置和运行时 Guid 当成堆叠差异。
+            snapshot.Guid = 0;
+            snapshot.transform.position = Vector3.zero;
+            snapshot.transform.rotation = Quaternion.identity;
+            snapshot.transform.scale = Vector3.one;
             BuildingPlacementLifecycle.GetExtension(item)?.PrepareRepackedSnapshot(snapshot);
+
+            if (TryReadBuildingData(snapshot, out _, out Building_Data repackedBuildingData) &&
+                damageReceiver != null && Mathf.Approximately(damageReceiver.Hp, damageReceiver.MaxHp) &&
+                (repackedBuildingData.SharedModuleIds == null || repackedBuildingData.SharedModuleIds.Length == 0) &&
+                BuildingPlacementLifecycle.GetExtension(item) is IBuildingSnapshotRepackPolicy repackPolicy &&
+                repackPolicy.CanOmitRepackedSnapshot(snapshot))
+            {
+                // 扩展确认全部状态可从物品定义重建时，不附加快照身份，默认召唤器可继续合堆。
+                return true;
+            }
 
             if (!ItemNetworkStateSerialization.TrySerializeItemData(snapshot, out byte[] payload) ||
                 payload.Length > MaxEmbeddedSnapshotBytes)
@@ -929,7 +1183,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule
         if (item?.itemData?.Stack == null || item.itemData.Stack.Amount < 1f)
             return false;
 
-        if (!TryGetSourceHotBarSlot(out Inventory_HotBar hotBar, out ItemSlot sourceSlot) ||
+        if (!TryGetSourceHotBarSlot(out Mod_HotBar hotBar, out ItemSlot sourceSlot) ||
             !hotBar.Data.TryConsumeFromSlot(sourceSlot, 1, out ItemData consumedData))
         {
             return false;
@@ -962,7 +1216,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule
         if (item?.itemData?.Stack == null)
             return;
 
-        if (!TryGetSourceHotBarSlot(out Inventory_HotBar hotBar, out ItemSlot sourceSlot))
+        if (!TryGetSourceHotBarSlot(out Mod_HotBar hotBar, out ItemSlot sourceSlot))
         {
             Debug.LogError("[建筑安装] 无法解析召唤器所属快捷栏槽位，不能应用权威数量", item);
             return;
@@ -988,7 +1242,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule
     }
 
     /// <summary>建筑扣料后直接刷新快捷栏表现，不能只依赖通用库存事件等待后续 UI 同步。</summary>
-    private static void RefreshSourceHotBarSlot(Inventory_HotBar hotBar, ItemSlot sourceSlot)
+    private static void RefreshSourceHotBarSlot(Mod_HotBar hotBar, ItemSlot sourceSlot)
     {
         if (hotBar?.Data?.itemSlots == null || sourceSlot == null)
             return;
@@ -999,9 +1253,9 @@ public partial class Mod_Building : Module, IIncomingDamageRule
     }
 
     /// <summary>建筑召唤器只允许从玩家当前快捷栏真实槽位扣除。</summary>
-    private bool TryGetSourceHotBarSlot(out Inventory_HotBar hotBar, out ItemSlot sourceSlot)
+    private bool TryGetSourceHotBarSlot(out Mod_HotBar hotBar, out ItemSlot sourceSlot)
     {
-        hotBar = item?.Owner?.itemMods?.GetMod_ByID<Inventory_HotBar>(ModText.Hotbar);
+        hotBar = item?.Owner?.itemMods?.GetMod_ByID<Mod_HotBar>(ModText.Hotbar);
         sourceSlot = hotBar?.CurrentSelectItemSlot;
         if (hotBar?.Data?.itemSlots == null || sourceSlot == null || !hotBar.Data.itemSlots.Contains(sourceSlot))
             return false;
@@ -1015,12 +1269,11 @@ public partial class Mod_Building : Module, IIncomingDamageRule
     private bool ValidatePlacement(
         Vector3 position,
         Vector3 authorityPosition,
-        bool requireGhostClear,
         out string reason)
-        => ValidatePlacement(position, authorityPosition, requireGhostClear, out reason, out _);
+        => ValidatePlacement(position, authorityPosition, out reason, out _);
 
-    private bool ValidatePlacement(Vector3 position, Vector3 authorityPosition, bool requireGhostClear,
-        out string reason, out BuildingPlacementFailureReason failureReason)
+    private bool ValidatePlacement(Vector3 position, Vector3 authorityPosition,
+        out string reason, out BuildingPlacementFailureReason failureReason, Player placementActor = null)
     {
         reason = null;
         failureReason = BuildingPlacementFailureReason.InvalidPosition;
@@ -1038,17 +1291,11 @@ public partial class Mod_Building : Module, IIncomingDamageRule
             return false;
         }
 
-        float maximumPlacementDistance = GetMaxPlacementDistance();
+        float maximumPlacementDistance = GetMaxPlacementDistance(placementActor);
         if (!IsWithinPlacementDistance(authorityPosition, position, maximumPlacementDistance))
         {
             reason = "目标超出建造距离";
             failureReason = BuildingPlacementFailureReason.OutOfRange;
-            return false;
-        }
-
-        if (requireGhostClear && GhostShadow == null)
-        {
-            reason = "放置预览尚未就绪";
             return false;
         }
 
@@ -1063,20 +1310,56 @@ public partial class Mod_Building : Module, IIncomingDamageRule
                 return false;
             // 地表铺设独立校验来源格与占用，不能再用水格的原通行代价否决平台。
             if (TileBuildingSystem.IsGroundPlacement(Data.TileBlockId))
-                return true;
+                return CheckGroundLoadCapacity(placementCell,
+                    GetRequiredGroundSupport(item?.itemData?.IDName), out reason);
         }
 
         // 预览与真实提交逐格使用相同矩形占地，不能仅检查锚点格。
+        int requiredGroundSupport = GetRequiredGroundSupport(item?.itemData?.IDName);
         foreach (Vector2Int cell in GetFootprintCells(placementCell))
         {
             if (!BuildingOccupancyRegistry.CanPlace(cell, this, out reason) ||
-                !CheckTilePenalties(cell, out reason))
+                !CheckTilePenalties(cell, requiredGroundSupport, out reason))
                 return false;
         }
         return true;
     }
 
-    private bool CheckTilePenalties(Vector2Int worldCell, out string reason)
+    #region 地表承重
+
+    /// <summary>放置门槛来自当前物品定义；旧存档中的建筑模块状态不能覆盖它。</summary>
+    private static int GetRequiredGroundSupport(string itemId)
+    {
+        return GameRes.ExistingInstance != null &&
+               GameRes.ExistingInstance.TryGetItemDefinition(itemId, out RuntimeItemDefinition definition)
+            ? definition.RequiredGroundSupport
+            : 0;
+    }
+
+    /// <summary>地板和水上平台只检查来源表面的承重，保留各自独立的液体与占用规则。</summary>
+    private static bool CheckGroundLoadCapacity(Vector2Int worldCell, int requiredGroundSupport,
+        out string reason)
+    {
+        worldCell = WorldTopologyRuntime.NormalizeCell(worldCell);
+        Vector2 center = new(worldCell.x + 0.5f, worldCell.y + 0.5f);
+        ChunkMgr manager = ChunkMgr.ExistingInstance;
+        if (manager == null)
+        {
+            reason = "区块管理器尚未就绪";
+            return false;
+        }
+        if (manager.TryGetRuntimeTerrainTile(center, out RuntimeTerrainTileSample runtimeTile))
+            return CheckRuntimeTileLoadCapacity(runtimeTile, requiredGroundSupport, out reason);
+        manager.GetChunkBy_ItemPosition(center, out Chunk chunk);
+        TileData topTile = chunk?.Map?.Data?.GetTopTile(worldCell);
+        if (topTile != null)
+            return CheckLegacyTileLoadCapacity(chunk.Map, worldCell, topTile, requiredGroundSupport, out reason);
+        reason = $"地块 ({worldCell.x},{worldCell.y}) 尚未加载";
+        return false;
+    }
+
+    /// <summary>每个占地格独立校验有效表面；液面、平台和干地均读取自己的承重定义。</summary>
+    private static bool CheckTilePenalties(Vector2Int worldCell, int requiredGroundSupport, out string reason)
     {
         reason = null;
         ChunkMgr chunkManager = ChunkMgr.Instance;
@@ -1096,6 +1379,9 @@ public partial class Mod_Building : Module, IIncomingDamageRule
                 reason = $"地块 ({worldCell.x},{worldCell.y}) 不可建造";
                 return false;
             }
+
+            if (!CheckRuntimeTileLoadCapacity(runtimeTile, requiredGroundSupport, out reason))
+                return false;
 
             if (!runtimeTile.Terrain.IsWalkable(
                     runtimeTile.LocalCell.x, runtimeTile.LocalCell.y) ||
@@ -1122,6 +1408,9 @@ public partial class Mod_Building : Module, IIncomingDamageRule
                 return false;
             }
 
+            if (!CheckLegacyTileLoadCapacity(chunk.Map, worldCell, topTile, requiredGroundSupport, out reason))
+                return false;
+
             if (!topTile.IsWalkable || topTile.Penalty > BlockedTilePenalty)
             {
                 reason = $"地块 ({worldCell.x},{worldCell.y}) 不可通行";
@@ -1131,6 +1420,66 @@ public partial class Mod_Building : Module, IIncomingDamageRule
 
         return true;
     }
+
+    /// <summary>世界液面遮盖底土，独立覆盖面则使用平台自身的地块承重。</summary>
+    private static bool CheckRuntimeTileLoadCapacity(RuntimeTerrainTileSample tile,
+        int requiredGroundSupport, out string reason)
+    {
+        if (tile.LiquidDepth > 0f)
+        {
+            if (!WorldLiquidSystem.TryGetDefinition(tile, out LiquidDefinition liquid))
+            {
+                reason = $"地块 ({tile.WorldCell.x},{tile.WorldCell.y}) 的液体定义缺失";
+                return false;
+            }
+            return CheckLoadCapacity(tile.WorldCell, liquid.WorldWater.LoadCapacity, requiredGroundSupport, out reason);
+        }
+
+        if (GameRes.ExistingInstance == null ||
+            !GameRes.ExistingInstance.TryGetTileDefinition(tile.TopTileId, out RuntimeTileDefinition definition))
+        {
+            reason = $"地块 ({tile.WorldCell.x},{tile.WorldCell.y}) 的承重定义缺失";
+            return false;
+        }
+        return CheckLoadCapacity(tile.WorldCell, definition.LoadCapacity, requiredGroundSupport, out reason);
+    }
+
+    /// <summary>旧 Map 的生成期液体也按液面承重，干地从当前地块目录读取配置。</summary>
+    private static bool CheckLegacyTileLoadCapacity(Map map, Vector2Int worldCell, TileData tile,
+        int requiredGroundSupport, out string reason)
+    {
+        if (map.GetGeneratedLiquidDepth(worldCell) > 0f)
+        {
+            string liquidId = map.GetGeneratedLiquidId(worldCell);
+            if (GameRes.ExistingInstance == null ||
+                !GameRes.ExistingInstance.TryGetLiquidDefinition(liquidId, out LiquidDefinition liquid) ||
+                liquid.WorldWater == null)
+            {
+                reason = $"地块 ({worldCell.x},{worldCell.y}) 的液体定义缺失";
+                return false;
+            }
+            return CheckLoadCapacity(worldCell, liquid.WorldWater.LoadCapacity, requiredGroundSupport, out reason);
+        }
+
+        if (GameRes.ExistingInstance == null ||
+            !GameRes.ExistingInstance.TryGetTileDefinition(tile.ID, out RuntimeTileDefinition definition))
+        {
+            reason = $"地块 ({worldCell.x},{worldCell.y}) 的承重定义缺失";
+            return false;
+        }
+        return CheckLoadCapacity(worldCell, definition.LoadCapacity, requiredGroundSupport, out reason);
+    }
+
+    /// <summary>建筑需求超过地表承重时拒绝放置，等值允许。</summary>
+    private static bool CheckLoadCapacity(Vector2Int worldCell, int available, int required, out string reason)
+    {
+        reason = available >= required
+            ? null
+            : $"地块 ({worldCell.x},{worldCell.y}) 承重 {available}，建筑需要 {required}";
+        return reason == null;
+    }
+
+    #endregion
 
     private void EnsureRuntimeReferences()
     {
@@ -1143,9 +1492,9 @@ public partial class Mod_Building : Module, IIncomingDamageRule
         if (boxCollider2D == null) boxCollider2D = GetComponent<BoxCollider2D>();
         if (boxCollider2D == null) boxCollider2D = item.GetComponentInChildren<BoxCollider2D>(true);
 
-        damageReceiver = item.itemMods.GetMod_ByID<DamageReceiver>(ModText.Hp);
+        damageReceiver = item.itemMods.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
         if (damageReceiver == null)
-            throw new MissingComponentException($"[Mod_Building] {item.name} 缺少 DamageReceiver 模块");
+            throw new MissingComponentException($"[Mod_Building] {item.name} 缺少 Mod_DamageReceiver 模块");
     }
 
     #region 2D 光照遮挡
@@ -1159,6 +1508,8 @@ public partial class Mod_Building : Module, IIncomingDamageRule
         bool shouldOcclude = item != null &&
                              Data?.Role == BuildingRole.PlacedBuilding &&
                              !item.InHand &&
+                             !IsGroundFacility &&
+                             LightOcclusionMode != BuildingLightOcclusionMode.None &&
                              item.gameObject.activeInHierarchy;
 
         if (!shouldOcclude)
@@ -1297,6 +1648,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule
         damageReceiver.OnDead += OnDeath;
         if (!RequiresPlacementRequest)
             item.OnAct += Install;
+        BindPlacementRotationInput();
         _eventsBound = true;
     }
 
@@ -1313,8 +1665,73 @@ public partial class Mod_Building : Module, IIncomingDamageRule
         }
         if (item != null)
             item.OnAct -= Install;
+        UnbindPlacementRotationInput();
         _eventsBound = false;
     }
+
+    #region 放置朝向
+
+    /// <summary>横向建筑只镜像图片，不交换占地宽高。</summary>
+    private void RotateHorizontalPlacement()
+    {
+        if (!CanRotateHorizontalPlacement)
+            return;
+
+        _placementMirrorX = !_placementMirrorX;
+        ApplyHorizontalMirrorPreview();
+    }
+
+    private void BindPlacementRotationInput()
+    {
+        if (Data?.AllowHorizontalMirrorPlacement != true || item?.Owner == null)
+            return;
+
+        Mod_GameController controller = item.Owner.itemMods?.GetMod_ByID<Mod_GameController>(ModText.Controller)
+            ?? item.Owner.GetComponentInChildren<Mod_GameController>(true);
+        if (controller == null)
+            return;
+        if (_rotationInputBound && ReferenceEquals(_ownerController, controller))
+            return;
+
+        UnbindPlacementRotationInput();
+        _ownerController = controller;
+        _ownerController.BuildingRotationRequested += RotateHorizontalPlacement;
+        _rotationInputBound = true;
+    }
+
+    private void UnbindPlacementRotationInput()
+    {
+        if (_rotationInputBound && _ownerController != null)
+            _ownerController.BuildingRotationRequested -= RotateHorizontalPlacement;
+        _rotationInputBound = false;
+    }
+
+    private void CaptureBaseSpriteFlip()
+    {
+        if (_baseSpriteFlipCaptured || item?.Sprite == null)
+            return;
+        _baseSpriteFlipX = item.Sprite.flipX;
+        _baseSpriteFlipCaptured = true;
+    }
+
+    private void ApplyHorizontalMirrorVisual()
+    {
+        if (item?.Sprite == null)
+            return;
+        CaptureBaseSpriteFlip();
+        item.Sprite.flipX = _baseSpriteFlipX ^
+            (Data?.Role == BuildingRole.PlacedBuilding && Data.HorizontalMirrorX);
+    }
+
+    private void ApplyHorizontalMirrorPreview()
+    {
+        if (GhostShadow?.ShadowRenderer == null || !_ghostBaseFlipCaptured ||
+            Data?.AllowHorizontalMirrorPlacement != true)
+            return;
+        GhostShadow.ShadowRenderer.flipX = _ghostBaseFlipX ^ _placementMirrorX;
+    }
+
+    #endregion
 
     private void OnHit(float hp)
     {
@@ -1357,6 +1774,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule
 
     private void SyncRuntimeState()
     {
+        ApplyHorizontalMirrorVisual();
         if (Data.Role == BuildingRole.Summoner)
         {
             BuildingOccupancyRegistry.Unregister(this);
@@ -1405,6 +1823,8 @@ public partial class Mod_Building : Module, IIncomingDamageRule
         if (item == null)
             return;
 
+        // 可通行建筑保留 Trigger 供交互/受击查询，但不再形成角色物理阻挡。
+        bool blocksMovement = BlocksMovement;
         if (boxCollider2D != null && Data?.Role == BuildingRole.PlacedBuilding)
         {
             int colliderLayer = LayerMask.NameToLayer(BuildingCollisionLayerName);
@@ -1417,7 +1837,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule
         {
             colliders[i].enabled = enabled;
             if (colliders[i] == boxCollider2D)
-                colliders[i].isTrigger = trigger;
+                colliders[i].isTrigger = trigger || !blocksMovement;
         }
 
         if (damageReceiver == null)
@@ -1448,10 +1868,11 @@ public partial class Mod_Building : Module, IIncomingDamageRule
                 return;
         }
 
-        GhostShadow.transform.position = mouse;
+        GhostShadow.transform.position = WorldLocalPresentation.ProjectPosition(mouse);
         GhostShadow.UpdateAlpha(1f);
         BuildingPlacementLifecycle.GetExtension(item)?.ApplyPreview(GhostShadow);
-        GhostShadow.UpdateColor(!withinReach || !ValidatePlacement(mouse, authorityPosition, false, out _));
+        ApplyHorizontalMirrorPreview();
+        GhostShadow.UpdateColor(!ValidatePlacement(mouse, authorityPosition, out _));
     }
 
     /// <summary>按目标格子的最近边缘校验距离，保留每轴半格的格心吸附余量。</summary>
@@ -1491,6 +1912,9 @@ public partial class Mod_Building : Module, IIncomingDamageRule
             GhostShadow.InitShadow(
                 source,
                 sourceRoot);
+            _ghostBaseFlipX = GhostShadow.ShadowRenderer.flipX;
+            _ghostBaseFlipCaptured = true;
+            ApplyHorizontalMirrorPreview();
         }
         catch (Exception exception)
         {
@@ -1502,23 +1926,13 @@ public partial class Mod_Building : Module, IIncomingDamageRule
         }
     }
 
-    private bool TryGetGhostPlacementPosition(out Vector3 position)
-    {
-        position = default;
-        if (GhostShadow == null)
-            return false;
-
-        position = NormalizePlacement(GhostShadow.transform.position);
-        return true;
-    }
-
     private Vector3 GetPointerWorldPosition()
     {
         if (_ownerController == null && item?.Owner != null)
         {
-            _ownerController = item.Owner.itemMods?.GetMod_ByID<GameController>(ModText.Controller);
+            _ownerController = item.Owner.itemMods?.GetMod_ByID<Mod_GameController>(ModText.Controller);
             if (_ownerController == null)
-                _ownerController = item.Owner.GetComponent<GameController>();
+                _ownerController = item.Owner.GetComponent<Mod_GameController>();
         }
 
         return _ownerController != null
@@ -1773,14 +2187,24 @@ public partial class Mod_Building : Module, IIncomingDamageRule
     private Vector3 GetAuthorityPosition()
         => item?.Owner != null ? item.Owner.transform.position : item != null ? item.transform.position : transform.position;
 
-    /// <summary>建筑预览、放置校验和玩家准星统一使用同一最大建造距离。</summary>
-    public float GetMaxPlacementDistance()
+    #region 放置距离
+
+    /// <summary>建筑预览和提交共用放置距离，创造背包启用后解除距离上限。</summary>
+    public float GetMaxPlacementDistance(Player placementActor = null)
     {
-        Mod_InteractSender interactionSender = item?.Owner?.GetComponentInChildren<Mod_InteractSender>(true);
+        Player actor = placementActor != null ? placementActor : item?.Owner as Player;
+        if (CreativeInventoryState.IsEnabled(actor))
+            return float.PositiveInfinity;
+
+        Mod_InteractSender interactionSender = actor != null
+            ? actor.GetComponentInChildren<Mod_InteractSender>(true)
+            : item?.Owner?.GetComponentInChildren<Mod_InteractSender>(true);
         return interactionSender != null
             ? Mathf.Max(0.01f, interactionSender.maxInteractDistance * 2f)
             : Mathf.Max(0.01f, (Data?.maxVisibleDistance ?? Mod_InteractSender.DefaultMaxInteractDistance) * 2f);
     }
+
+    #endregion
 
     private void SyncNavigationOccupancy()
     {
@@ -1899,6 +2323,20 @@ public partial class Mod_Building : Module, IIncomingDamageRule
         return false;
     }
 
+    /// <summary>服务端只允许配置明确声明过的建筑接收左右镜像请求。</summary>
+    public static bool SupportsHorizontalMirrorPlacement(ItemData itemData)
+    {
+        if (!TryReadBuildingData(itemData, out _, out Building_Data state))
+            return false;
+        MigrateLegacyData(state, itemData?.IDName);
+        return state.AllowHorizontalMirrorPlacement;
+    }
+
+    /// <summary>把本次临时左右朝向写入已生成的世界建筑候选数据。</summary>
+    public static bool TrySetHorizontalMirrorPlacement(ItemData itemData, bool mirrorX)
+        => WriteBuildingData(itemData, state =>
+            state.HorizontalMirrorX = state.AllowHorizontalMirrorPlacement && mirrorX);
+
     private static bool WriteBuildingData(ItemData itemData, Action<Building_Data> mutate)
     {
         if (!TryReadBuildingData(itemData, out Ex_ModData moduleData, out Building_Data state))
@@ -1908,6 +2346,29 @@ public partial class Mod_Building : Module, IIncomingDamageRule
         mutate?.Invoke(state);
         moduleData.WriteData(state);
         return true;
+    }
+
+    /// <summary>以归一化建筑快照生成稳定堆叠身份；相同状态的召唤器可合堆，状态不同的快照仍分开。</summary>
+    private static string CreateStatefulSummonerIdentity(string snapshotBase64)
+    {
+        if (string.IsNullOrWhiteSpace(snapshotBase64))
+            return string.Empty;
+
+        using (SHA256 sha256 = SHA256.Create())
+        {
+            byte[] hash = sha256.ComputeHash(Encoding.UTF8.GetBytes(snapshotBase64));
+            return StatefulSummonerPrefix + BitConverter.ToString(hash).Replace("-", string.Empty);
+        }
+    }
+
+    /// <summary>验证堆叠数量对应的建筑快照身份，防止合并后丢失不同建筑的保存状态。</summary>
+    private static bool HasCanonicalSummonerStackIdentity(ItemData itemData, Building_Data state)
+    {
+        return itemData != null && state != null &&
+               !string.IsNullOrWhiteSpace(state.SnapshotBase64) &&
+               string.Equals(itemData.ItemSpecialData,
+                   CreateStatefulSummonerIdentity(state.SnapshotBase64),
+                   StringComparison.Ordinal);
     }
 
     private static void MigrateLegacyData(Building_Data state, string carrierItemId = null)

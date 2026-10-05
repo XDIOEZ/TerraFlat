@@ -2,7 +2,7 @@ using UnityEngine;
 
 /// <summary>
 /// 速度 Buff 的脚底移动粒子表现。
-/// 只要角色当前拥有大于 1 倍的移动速度效果，并且 Mover 正在产生实际速度，
+/// 只要角色当前拥有大于 1 倍的移动速度效果，并且 Mod_Mover 正在产生实际速度，
 /// 就在角色脚下发射少量向移动反方向漂移的粒子；停止移动、Buff 移除或对象禁用时立即清空粒子。
 /// 粒子使用世界空间模拟，避免跟随角色整体移动而失去“落在身后”的拖尾感。
 /// </summary>
@@ -31,8 +31,8 @@ public sealed class ActorSpeedBuffMovementTrail : MonoBehaviour
 
     private ParticleSystem trailParticles;
     private ParticleSystemRenderer trailRenderer;
-    private BuffManager buffManager;
-    private Mover mover;
+    private Mod_BuffManager buffManager;
+    private Mod_Mover mover;
     private SpriteRenderer sourceRenderer;
     private float spawnAccumulator;
     private Vector3 lastPosition;
@@ -50,7 +50,7 @@ public sealed class ActorSpeedBuffMovementTrail : MonoBehaviour
         hasLastPosition = true;
     }
 
-    /// <summary>启用时重新绑定 BuffManager，兼容对象池复用和模块延迟装配。</summary>
+    /// <summary>启用时重新绑定 Mod_BuffManager，兼容对象池复用和模块延迟装配。</summary>
     private void OnEnable()
     {
         lastPosition = transform.position;
@@ -86,10 +86,10 @@ public sealed class ActorSpeedBuffMovementTrail : MonoBehaviour
 
     #region Buff 状态
 
-    /// <summary>解析当前角色的 BuffManager，并在模块替换时切换事件订阅。</summary>
+    /// <summary>解析当前角色的 Mod_BuffManager，并在模块替换时切换事件订阅。</summary>
     private void BindBuffManager()
     {
-        BuffManager resolvedManager = ResolveBuffManager();
+        Mod_BuffManager resolvedManager = ResolveBuffManager();
         if (ReferenceEquals(buffManager, resolvedManager))
             return;
 
@@ -103,18 +103,18 @@ public sealed class ActorSpeedBuffMovementTrail : MonoBehaviour
         buffManager.BuffDurationChanged += OnBuffChanged;
     }
 
-    /// <summary>优先从 Item 模块容器查找 BuffManager，兼容角色表现节点的父级装配结构。</summary>
-    private BuffManager ResolveBuffManager()
+    /// <summary>优先从 Item 模块容器查找 Mod_BuffManager，兼容角色表现节点的父级装配结构。</summary>
+    private Mod_BuffManager ResolveBuffManager()
     {
         Item owner = GetComponentInParent<Item>();
         if (owner == null)
-            return GetComponentInParent<BuffManager>();
+            return GetComponentInParent<Mod_BuffManager>();
 
-        BuffManager module = owner.itemMods?.GetMod_ByID<BuffManager>(ModText.BuffManager);
-        return module != null ? module : owner.GetComponentInChildren<BuffManager>(true);
+        Mod_BuffManager module = owner.itemMods?.GetMod_ByID<Mod_BuffManager>(ModText.Mod_BuffManager);
+        return module != null ? module : owner.GetComponentInChildren<Mod_BuffManager>(true);
     }
 
-    /// <summary>解除旧 BuffManager 的生命周期事件订阅。</summary>
+    /// <summary>解除旧 Mod_BuffManager 的生命周期事件订阅。</summary>
     private void UnbindBuffManager()
     {
         if (buffManager == null)
@@ -166,7 +166,7 @@ public sealed class ActorSpeedBuffMovementTrail : MonoBehaviour
 
     #region 移动粒子
 
-    /// <summary>按速度 Buff、Mover 实际速度和发射累积量生成脚底反向粒子。</summary>
+    /// <summary>按速度 Buff、Mod_Mover 实际速度和发射累积量生成脚底反向粒子。</summary>
     private void UpdateMovementTrail()
     {
         if (!HasActiveSpeedBuff() || !TryGetMovementVelocity(out Vector2 velocity))
@@ -199,13 +199,13 @@ public sealed class ActorSpeedBuffMovementTrail : MonoBehaviour
             EmitTrailParticle(backward, lateral, velocity.magnitude);
     }
 
-    /// <summary>读取 Mover 或 AI 导航的实际速度；没有刚体速度时再使用表现节点位移兜底。</summary>
+    /// <summary>读取 Mod_Mover 或 AI 导航的实际速度；没有刚体速度时再使用表现节点位移兜底。</summary>
     private bool TryGetMovementVelocity(out Vector2 velocity)
     {
         velocity = Vector2.zero;
         mover = ResolveMover();
 
-        if (mover is Mover_AI ai && ai.NavigationAgent != null)
+        if (mover is Mod_Mover_AI ai && ai.NavigationAgent != null)
             velocity = ai.NavigationAgent.Velocity;
 
         if (mover?.rb != null && mover.rb.velocity.sqrMagnitude > velocity.sqrMagnitude)
@@ -223,15 +223,15 @@ public sealed class ActorSpeedBuffMovementTrail : MonoBehaviour
         return velocity.sqrMagnitude > MovementThreshold * MovementThreshold;
     }
 
-    /// <summary>解析角色的 Mover 模块，支持玩家 Mover、AI Mover_AI 和运行时延迟装配。</summary>
-    private Mover ResolveMover()
+    /// <summary>解析角色的 Mod_Mover 模块，支持玩家 Mod_Mover、AI Mod_Mover_AI 和运行时延迟装配。</summary>
+    private Mod_Mover ResolveMover()
     {
         if (mover != null)
             return mover;
 
         Item owner = GetComponentInParent<Item>();
-        Mover resolved = owner?.itemMods?.GetMod_ByID<Mover>(ModText.Mover) as Mover;
-        return resolved != null ? resolved : GetComponentInParent<Mover>();
+        Mod_Mover resolved = owner?.itemMods?.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover) as Mod_Mover;
+        return resolved != null ? resolved : GetComponentInParent<Mod_Mover>();
     }
 
     /// <summary>只创建一次世界空间粒子系统，并排除角色 MPB 对粒子材质的染色。</summary>

@@ -103,6 +103,7 @@ public abstract class AI_Base<TState> : Module, IAIActor where TState : struct, 
 	protected string _lastPlayedAnimation;
 	protected static GUIStyle _debugStateStyle;
 	protected AIStateMachine<TState> _stateMachine;
+	private readonly List<AIFleeStateNode<TState>> _fleeStateNodes = new List<AIFleeStateNode<TState>>(); // 受击重选目标时查找当前逃离节点。
 	private TState _locomotionIdleState;
 	private bool _hasLocomotionIdleState;
 
@@ -111,7 +112,7 @@ public abstract class AI_Base<TState> : Module, IAIActor where TState : struct, 
 	[SerializeField, ReadOnly] private float _damageThreatRemain;
 	private Vector3 _lastDamageThreatPosition;
 	private bool _freezeDamageThreatOrigin; // 投射物来源按命中瞬间冻结，不能跟着穿过身体的弹体翻转方向。
-	private DamageReceiver _damageEventSource;
+	private Mod_DamageReceiver _damageEventSource;
 	// 睡眠中受到有效伤害后锁存一次唤醒请求，直到真正离开睡眠状态。
 	private bool _sleepInterruptedByDamage;
 	// 路径代价拒绝后暂时屏蔽同一追击目标，避免状态机立即重复追击。
@@ -120,8 +121,8 @@ public abstract class AI_Base<TState> : Module, IAIActor where TState : struct, 
 #endregion
 
 #region CachedModules
-	[SerializeField, ReadOnly] protected Mover_AI _mover;
-	[SerializeField, ReadOnly] protected DamageReceiver _hp;
+	[SerializeField, ReadOnly] protected Mod_Mover_AI _mover;
+	[SerializeField, ReadOnly] protected Mod_DamageReceiver _hp;
 	[SerializeField, ReadOnly] protected Mod_ItemDetector _detector;
 	[SerializeField, ReadOnly] protected Mod_AnimatorController _animator;
 	[SerializeField, ReadOnly] protected Mod_TurnBack _turnBody;
@@ -363,6 +364,56 @@ public abstract class AI_Base<TState> : Module, IAIActor where TState : struct, 
 			onEnter,
 			onExit,
 			AIStateAnimationRole.Moving);
+	}
+
+	/// <summary>创建所有地面动物共用的逃离节点，物种只提供威胁位置和 JSON 配置距离。</summary>
+	protected AIStateNode<TState> CreateFleeStateNode(
+		TState state,
+		Func<Vector3?> resolveThreatPosition,
+		Func<float> getRunDistance,
+		Action onEnter = null,
+		Action onExit = null)
+	{
+		AIFleeStateNode<TState> node = new AIFleeStateNode<TState>(
+			state,
+			resolveThreatPosition,
+			ResolveFleeDestination,
+			getRunDistance,
+			MoveTowardFleeDestination,
+			StopMove,
+			() => transform.position,
+			() => _mover != null && _mover.HasReachedTarget,
+			() => _mover.DestinationResult,
+			this,
+			onEnter,
+			onExit);
+		_fleeStateNodes.Add(node);
+		return node;
+	}
+
+	/// <summary>统一选择进入逃离或保持逃离时使用的有效感知距离。</summary>
+	protected bool IsWithinFleeDistance(
+		Item threat,
+		bool alreadyFleeing,
+		float triggerDistance,
+		float safeDistance)
+	{
+		float activeDistance = alreadyFleeing ? safeDistance : triggerDistance;
+		return IsWithinEffectivePerceptionRange(threat, activeDistance);
+	}
+
+	/// <summary>在同一逃离状态接收到新伤害来源时重新规划逃离目标。</summary>
+	protected void RetargetCurrentFleeNode()
+	{
+		for (int i = 0; i < _fleeStateNodes.Count; i++)
+		{
+			AIFleeStateNode<TState> node = _fleeStateNodes[i];
+			if (!EqualityComparer<TState>.Default.Equals(node.State, _currentState))
+				continue;
+
+			node.Retarget();
+			return;
+		}
 	}
 
 	/// <summary>
@@ -878,13 +929,26 @@ public abstract class AI_Base<TState> : Module, IAIActor where TState : struct, 
 	/// <summary>远离指定位置方向移动</summary>
 	protected void MoveAwayFrom(Vector3 sourcePosition, float distance)
 	{
-		Vector2 awayDir = WorldTopologyRuntime.ShortestDelta(sourcePosition, transform.position).normalized;
-		Vector2 escapeOffset = AI_WanderUtility.PickWaterAwareEscapeOffset(
+		Vector3? targetPosition = ResolveFleeDestination(sourcePosition, distance);
+		if (targetPosition.HasValue)
+			MoveTowardFleeDestination(targetPosition.Value);
+		else
+			StopMove();
+	}
+
+	/// <summary>解析本次逃离可直达的局部目标位置。</summary>
+	private Vector3? ResolveFleeDestination(Vector3 sourcePosition, float distance)
+	{
+		return AIFleeUtility.ResolveNavigableGroundEscapeDestination(
 			transform.position,
-			awayDir,
-			distance);
-		Vector3 targetPosition = WorldTopologyRuntime.NormalizePosition(
-			transform.position + (Vector3)escapeOffset);
+			sourcePosition,
+			distance,
+			GetDirectionAwayFrom(sourcePosition));
+	}
+
+	/// <summary>移动并朝向逃离节点已选定的目标位置。</summary>
+	private void MoveTowardFleeDestination(Vector3 targetPosition)
+	{
 		MoveTo(targetPosition);
 		FaceTarget(targetPosition);
 	}
@@ -948,7 +1012,7 @@ public abstract class AI_Base<TState> : Module, IAIActor where TState : struct, 
 #region Debug
 	private string GetDebugBuffInfo()
 	{
-		BuffManager buffManager = item?.itemMods?.GetMod_ByID<BuffManager>(ModText.BuffManager);
+		Mod_BuffManager buffManager = item?.itemMods?.GetMod_ByID<Mod_BuffManager>(ModText.Mod_BuffManager);
 		if (buffManager?.ActiveBuffs == null || buffManager.ActiveBuffs.Count == 0)
 			return string.Empty;
 
@@ -979,10 +1043,10 @@ public abstract class AI_Base<TState> : Module, IAIActor where TState : struct, 
 	{
 		_isReady = true;
 
-		item.itemMods.GetMod_ByID(ModText.Mover, out _mover);
+		item.itemMods.GetMod_ByID(ModText.Mod_Mover, out _mover);
 		if (_mover == null)
 		{
-			item.itemMods.GetMod_ByID(ModText.Mover_AI, out _mover);
+			item.itemMods.GetMod_ByID(ModText.Mod_Mover_AI, out _mover);
 		}
 
 		item.itemMods.GetMod_ByID(ModText.Detector, out _detector);

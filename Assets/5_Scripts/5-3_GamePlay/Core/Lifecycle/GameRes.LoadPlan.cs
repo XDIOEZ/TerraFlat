@@ -12,13 +12,21 @@ public partial class GameRes
     #region 加载计划
 
     /// <summary>权重表示阶段工作占比，只有最后的引用校验结束后才发布目录。</summary>
-    private ResourceLoadPipeline CreateResourceLoadPlan()
+    private ResourceLoadPipeline CreateResourceLoadPlan(
+        ActorDefinitionCatalogLoader.ReloadSnapshot actorSnapshot = null)
     {
         var plan = new ResourceLoadPipeline((title, progress) =>
         {
+            if (resourceReloadInProgress)
+            {
+                resourceReloadProgress = Mathf.Max(resourceReloadProgress, Mathf.Clamp(progress, 0, 0.99f));
+                reloadWorldOwner?.UpdateResourceReloadStatus(resourceReloadProgress);
+                return;
+            }
+
             loadingText = title;
             loadingProgress = Mathf.Max(loadingProgress, Mathf.Clamp(progress, 0, 0.99f));
-        });
+        }, () => IsStartupReady || preparingInPlaceReload);
         List<ItemDefinitionDto> itemSources = null;
         plan.Add("addressables", "初始化资源目录", 2, InitializeAddressableCatalog);
         plan.Add("startup-ui", "加载主菜单必要界面", 3, LoadStartupUiPrefabs, "addressables");
@@ -27,8 +35,11 @@ public partial class GameRes
                 PlayerCreationTemplateCatalogService.ReplaceBuiltIn));
         plan.Add("time", "加载时间系统配置", 1,
             () => LoadCatalog<TimeSystemConfigCatalog>(TimeSystemConfigLoader.LoadBuiltInAsync, TimeSystemConfigService.ReplaceCatalog));
+        plan.Add("water-current", "加载水流推动配置", 1,
+            () => LoadCatalog<WaterCurrentPushCatalog>(WaterCurrentPushConfigLoader.LoadBuiltInAsync,
+                WaterCurrentPushConfigService.ReplaceCatalog));
         plan.Add("startup-ready", "开放主菜单", 0.5f,
-            PublishStartupReadyStage, "startup-ui", "players", "time");
+            PublishStartupReadyStage, "startup-ui", "players", "time", "water-current");
         plan.Add("item-manifest", "解析物品清单", 3,
             () => LoadCatalog<List<ItemDefinitionDto>>((done, fail) =>
                 ItemDefinitionCatalogLoader.LoadBuiltInDefinitionsAsync(done, fail, plan.Report), value => itemSources = value), "addressables");
@@ -45,11 +56,18 @@ public partial class GameRes
             () => LoadCatalog<int>((done, fail) => ItemDefinitionCatalogLoader.LoadBuiltInAsync(this, done, fail, plan.Report, itemSources), _ => { }),
             "prefabs", "loot", "tile-blocks");
         plan.Add("actors", "构建生物定义", 15,
-            () => LoadCatalog<int>((done, fail) => ActorDefinitionCatalogLoader.LoadBuiltInAsync(this, done, fail, plan.Report), _ => { }), "items");
+            () => LoadCatalog<int>((done, fail) => ActorDefinitionCatalogLoader.LoadBuiltInAsync(
+                this, done, fail, plan.Report, actorSnapshot), _ => { }), "items");
         plan.Add("animal-skills", "加载动物技能", 1,
             () => LoadCatalog<AnimalSkillCatalog>(AnimalSkillCatalogLoader.LoadBuiltInAsync, AnimalSkillCatalogService.Replace), "actors");
         plan.Add("spawners", "加载生物生成配置", 1,
-            () => LoadCatalog<SpawnerConfigCatalog>(SpawnerConfigCatalogLoader.LoadBuiltInAsync, SpawnerConfigCatalogService.ReplaceCatalog), "actors");
+            () => LoadCatalog<SpawnerConfigCatalog>(SpawnerConfigCatalogLoader.LoadBuiltInAsync, SpawnerConfigCatalogService.ReplaceCatalog), "actors", "water-current");
+        plan.Add("natural-items", "加载自然物生成规则", 2,
+            () => LoadCatalog<NaturalGenerationRuleCatalog>(NaturalGenerationRuleCatalogLoader.LoadBuiltInAsync,
+                NaturalGenerationRuleCatalogService.ReplaceCatalog));
+        plan.Add("river-generation", "加载河流生成配置", 1,
+            () => LoadCatalog<RiverGenerationConfigCatalog>(RiverGenerationConfigLoader.LoadBuiltInAsync,
+                RiverGenerationConfigService.ReplaceCatalog));
         plan.Add("recipes", "加载制作配方", 3,
             () => LoadCatalog<int>((done, fail) => RecipeCatalogLoader.LoadBuiltInAsync(this, done, fail), _ => { }), "items");
         plan.Add("buffs", "加载状态效果", 2,
@@ -62,21 +80,24 @@ public partial class GameRes
             () => LoadCatalog<int>(QuestCatalogLoader.LoadBuiltInAsync, _ => { }), "items");
         plan.Add("texts", "加载文字库", 1,
             () => LoadCatalog<TextLibraryService>(TextLibraryCatalogLoader.LoadBuiltInAsync, value => textLibraryService = value));
+        plan.Add("world-authoring", "加载世界生成资源", 1, LoadWorldAuthoringResources, "texts");
         plan.Add("validate-built-in", "校验本体资源引用", 3,
-            () => RunAction(() => ResourceCatalogValidation.Validate(this)),
-            "players", "time", "items", "actors", "animal-skills", "spawners", "recipes", "buffs", "liquids", "contamination", "quests", "texts", "inventory", "skills");
+            () => ResourceCatalogValidation.ValidateAsync(this),
+            "players", "time", "water-current", "items", "actors", "animal-skills", "spawners", "natural-items", "river-generation", "recipes", "buffs", "liquids", "contamination", "quests", "texts", "inventory", "skills", "world-authoring");
         plan.Add("mods", "加载扩展内容", 5, () => LoadModCatalog(plan), "validate-built-in");
         plan.Add("validate-final", "校验最终资源目录", 3,
-            () => RunAction(() =>
-            {
-                ResourceCatalogValidation.Validate(this);
-                // 候选目录校验不得修改正在运行的世界时间和主菜单准备数据。
-                if (!preparingInPlaceReload) GameManager.Instance?.ApplyDefaultTimeSystemProfile();
-            }), "mods");
+            ValidateFinalResourceCatalog, "mods");
         plan.Add("world-liquids", "加载世界液体外观", 2, LoadWorldLiquidResources, "validate-final");
         plan.Add("brg-sprite-mesh-prewarm", "预构造地形共享网格", 3,
             PrewarmTerrainSpriteMeshes, "world-liquids");
         return plan;
+    }
+
+    private IEnumerator ValidateFinalResourceCatalog()
+    {
+        yield return ResourceCatalogValidation.ValidateAsync(this);
+        // 候选目录校验不得修改正在运行的世界时间和主菜单准备数据。
+        if (!preparingInPlaceReload) GameManager.Instance?.ApplyDefaultTimeSystemProfile();
     }
 
     #endregion
@@ -95,7 +116,7 @@ public partial class GameRes
         register(result);
     }
 
-    /// <summary>同步注册与校验仍纳入阶段异常和进度管理。</summary>
+    /// <summary>轻量同步行动仍纳入资源阶段的错误和超时管理。</summary>
     private static IEnumerator RunAction(Action action) { action(); yield break; }
 
     /// <summary>扩展在本体通过校验后接入，扩展完成后还要校验最终目录。</summary>

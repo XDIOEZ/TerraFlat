@@ -1,0 +1,519 @@
+{
+  "schemaVersion": 1,
+  "items": [
+    {
+      "id": "Rubber",
+      "parent": "BasicItem_Base",
+      "gameName": "橡胶",
+      "description": "具有良好绝缘性的弹性材料，可用于制作电线。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 0.2,
+      "volume": 0.18,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": [],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Rubber/Rubber_Icon.png",
+        "color": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        },
+        "rendererLocalScale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "modules": {}
+    },
+    {
+      "id": "Generator_Basic",
+      "formerIds": ["Motor_Basic"],
+      "parent": "BuildingBody_Base",
+      "gameName": "基础电机-建筑",
+      "description": "左侧接电线，右侧接传动轴；通电输出机械动力，受机械驱动时输出电力。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 40,
+      "volume": 60,
+      "stackable": false,
+      "canBePickedUp": false,
+      "tags": ["35", "InventoryGroup.ElectricalPower"],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Electrical/Generator_Basic/Generator_Basic_Body.png",
+        "spriteStates": {
+          "electricalPort": "Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[CablePort_Left]"
+        },
+        "color": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        },
+        "rendererLocalScale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "health": {
+        "hasHp": true,
+        "hp": 60,
+        "maxHp": 60,
+        "defense": {
+          "physical": 8
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 1,
+            "y": 1
+          },
+          "edgeRadius": 0
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building", "id": "建筑模块", "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Generator_Basic\",\"SummonerPrefabId\":\"Generator_Basic_Summoner\"}",
+            "Type": 0
+          },
+          "parameters": { "LightOcclusionMode": "None", "CastSunShadow": false }
+        },
+        "机械扭矩模块": {
+          "prefab": "Module_MechanicalNode", "id": "机械扭矩模块", "enabled": true,
+          "data": { "BitData": [], "Type": 0 },
+          "parameters": { "DefinitionId": "Generator_Basic",
+            "ElectricalPortLocalPosition": { "x": -0.25, "y": 0, "z": 0 } }
+        }
+      }
+    },
+    {
+      "id": "Generator_Basic_Summoner",
+      "formerIds": ["Motor_Basic_Summoner"],
+      "worldDropBehavior": "interactive",
+      "parent": "BuildingSummoner_Base",
+      "gameName": "基础电机",
+      "description": "左侧接电线，右侧接传动轴；通电输出机械动力，受机械驱动时输出电力。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 12,
+      "volume": 24,
+      "stackable": false,
+      "canBePickedUp": true,
+      "tags": ["35", "InventoryGroup.ElectricalPower"],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Electrical/Generator_Basic/Generator_Basic_Idle.png",
+        "spriteStates": {
+          "electricalPort": "Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[CablePort_Left]"
+        },
+        "color": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        },
+        "rendererLocalScale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "health": {
+        "hasHp": true,
+        "hp": 60,
+        "maxHp": 60,
+        "defense": {
+          "physical": 8
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 1,
+            "y": 1
+          },
+          "edgeRadius": 0
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building", "id": "建筑模块", "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Generator_Basic\",\"SummonerPrefabId\":\"Generator_Basic_Summoner\"}",
+            "Type": 0
+          }
+        },
+        "机械扭矩模块": {
+          "prefab": "Module_MechanicalNode", "id": "机械扭矩模块", "enabled": true,
+          "data": { "BitData": [], "Type": 0 },
+          "parameters": { "DefinitionId": "Generator_Basic",
+            "ElectricalPortLocalPosition": { "x": -0.25, "y": 0, "z": 0 } }
+        }
+      }
+    },
+    {
+      "id": "Wire_Copper",
+      "parent": "BuildingBody_Base",
+      "gameName": "铜电线-建筑",
+      "description": "连接电气设备的铜电线。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 1,
+      "volume": 1,
+      "stackable": true,
+      "canBePickedUp": false,
+      "tags": ["35", "InventoryGroup.ElectricalPower"],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_10]",
+        "color": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        },
+        "spriteStates": {
+          "wire0": "Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_00]",
+          "wire1": "Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_01]",
+          "wire2": "Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_02]",
+          "wire3": "Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_03]",
+          "wire4": "Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_04]",
+          "wire5": "Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_05]",
+          "wire6": "Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_06]",
+          "wire7": "Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_07]",
+          "wire8": "Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_08]",
+          "wire9": "Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_09]",
+          "wire10": "Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_10]",
+          "wire11": "Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_11]",
+          "wire12": "Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_12]",
+          "wire13": "Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_13]",
+          "wire14": "Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_14]",
+          "wire15": "Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_15]"
+        },
+        "rendererLocalScale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "health": {
+        "hasHp": true,
+        "hp": 60,
+        "maxHp": 60,
+        "defense": {
+          "physical": 2
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 1,
+            "y": 1
+          },
+          "edgeRadius": 0
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building", "id": "建筑模块", "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Wire_Copper\",\"SummonerPrefabId\":\"Wire_Copper_Summoner\"}",
+            "Type": 0
+          },
+          "parameters": { "LightOcclusionMode": "None", "CastSunShadow": false }
+        },
+        "机械扭矩模块": {
+          "prefab": "Module_MechanicalNode", "id": "机械扭矩模块", "enabled": true,
+          "data": { "BitData": [], "Type": 0 },
+          "parameters": { "DefinitionId": "Wire_Copper" }
+        }
+      }
+    },
+    {
+      "id": "Wire_Copper_Summoner",
+      "worldDropBehavior": "interactive",
+      "parent": "BuildingSummoner_Base",
+      "gameName": "铜电线",
+      "description": "连接电气设备的铜电线，由铜和橡胶制成。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 0.25,
+      "volume": 0.5,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": ["35", "InventoryGroup.ElectricalPower"],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_10]",
+        "color": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        },
+        "spriteStates": {
+          "wire0": "Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_00]",
+          "wire1": "Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_01]",
+          "wire2": "Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_02]",
+          "wire3": "Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_03]",
+          "wire4": "Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_04]",
+          "wire5": "Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_05]",
+          "wire6": "Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_06]",
+          "wire7": "Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_07]",
+          "wire8": "Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_08]",
+          "wire9": "Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_09]",
+          "wire10": "Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_10]",
+          "wire11": "Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_11]",
+          "wire12": "Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_12]",
+          "wire13": "Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_13]",
+          "wire14": "Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_14]",
+          "wire15": "Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_15]"
+        },
+        "rendererLocalScale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "health": {
+        "hasHp": true,
+        "hp": 60,
+        "maxHp": 60,
+        "defense": {
+          "physical": 2
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 1,
+            "y": 1
+          },
+          "edgeRadius": 0
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building", "id": "建筑模块", "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Wire_Copper\",\"SummonerPrefabId\":\"Wire_Copper_Summoner\"}",
+            "Type": 0
+          }
+        },
+        "机械扭矩模块": {
+          "prefab": "Module_MechanicalNode", "id": "机械扭矩模块", "enabled": true,
+          "data": { "BitData": [], "Type": 0 },
+          "parameters": { "DefinitionId": "Wire_Copper" }
+        }
+      }
+    },
+    {
+      "id": "Battery_Basic",
+      "parent": "BuildingBody_Base",
+      "gameName": "基础电池-建筑",
+      "description": "储存电网多余电力，并在发电不足时自动放电。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 30,
+      "volume": 45,
+      "stackable": false,
+      "canBePickedUp": false,
+      "tags": ["35", "InventoryGroup.ElectricalPower"],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Electrical/Battery_Basic/Battery_Basic_Idle.png",
+        "color": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        },
+        "rendererLocalScale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "health": {
+        "hasHp": true,
+        "hp": 50,
+        "maxHp": 50,
+        "defense": {
+          "physical": 6
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 1,
+            "y": 1
+          },
+          "edgeRadius": 0
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building", "id": "建筑模块", "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Battery_Basic\",\"SummonerPrefabId\":\"Battery_Basic_Summoner\"}",
+            "Type": 0
+          },
+          "parameters": { "LightOcclusionMode": "None", "CastSunShadow": false }
+        },
+        "机械扭矩模块": {
+          "prefab": "Module_MechanicalNode", "id": "机械扭矩模块", "enabled": true,
+          "data": { "BitData": [], "Type": 0 },
+          "parameters": { "DefinitionId": "Battery_Basic" }
+        }
+      }
+    },
+    {
+      "id": "Battery_Basic_Summoner",
+      "worldDropBehavior": "interactive",
+      "parent": "BuildingSummoner_Base",
+      "gameName": "基础电池",
+      "description": "储存电网多余电力，并在发电不足时自动放电。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 10,
+      "volume": 18,
+      "stackable": false,
+      "canBePickedUp": true,
+      "tags": ["35", "InventoryGroup.ElectricalPower"],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Electrical/Battery_Basic/Battery_Basic_Idle.png",
+        "color": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        },
+        "rendererLocalScale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "health": {
+        "hasHp": true,
+        "hp": 50,
+        "maxHp": 50,
+        "defense": {
+          "physical": 6
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 1,
+            "y": 1
+          },
+          "edgeRadius": 0
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building", "id": "建筑模块", "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Battery_Basic\",\"SummonerPrefabId\":\"Battery_Basic_Summoner\"}",
+            "Type": 0
+          }
+        },
+        "机械扭矩模块": {
+          "prefab": "Module_MechanicalNode", "id": "机械扭矩模块", "enabled": true,
+          "data": { "BitData": [], "Type": 0 },
+          "parameters": { "DefinitionId": "Battery_Basic" }
+        }
+      }
+    },
+    {
+      "id": "Tree_Oak",
+      "parent": "Tree_Pine",
+      "gameName": "橡树",
+      "description": "森林中生长的橡树，可按树脂相同的产出逻辑获得橡胶。",
+      "lootTableId": "Tree_Oak",
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Environment/OakTree/OakTree_Idle.png",
+        "color": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": false,
+          "offset": {
+            "x": 0.0,
+            "y": 0.18
+          },
+          "size": {
+            "x": 0.9,
+            "y": 0.46
+          },
+          "edgeRadius": 0.0
+        }
+      },
+      "modules": {
+        "温度产量模块": {
+          "parameters": {
+            "OutputItemId": "Rubber"
+          }
+        }
+      }
+    }
+  ]
+}

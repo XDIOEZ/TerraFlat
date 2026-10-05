@@ -1,19 +1,16 @@
 using System;
 using System.Collections.Generic;
 using FlatWorld.DroppedItems;
+using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.SceneManagement;
 
-/// <summary>掉落物共享视觉定义；只读取资源和库存数据，不实例化 Item 外壳或业务模块。</summary>
+/// <summary>轻量掉落物共享视觉定义；只读取 Sprite 与外观参数，不实例化完整 Item。</summary>
 internal sealed class DroppedItemVisual
 {
     public Sprite Sprite;
     public Material SpriteMaterial;
-    public Vector2[] Vertices;
-    public Vector2[] Uvs;
-    public ushort[] Triangles;
-    public Matrix4x4 LocalMatrix;
     public Color Color;
     public int Layer;
     public int Order;
@@ -24,9 +21,8 @@ internal sealed class DroppedItemVisual
     public static Sprite ResolveSprite(ItemData data)
     {
         GameRes resources = GameRes.ExistingInstance;
-        if (resources == null || !resources.TryGetItemPresentation(data.IDName, out _, out Sprite sprite) || sprite == null)
+        if (resources == null || !resources.TryGetItemPresentation(data, out _, out Sprite sprite) || sprite == null)
             throw new InvalidOperationException($"掉落物缺少显示贴图：{data.IDName}");
-        if (Mod_WaterVessel.TryResolvePresentationSprite(data, out Sprite vesselSprite)) sprite = vesselSprite;
         return sprite;
     }
 
@@ -36,7 +32,8 @@ internal sealed class DroppedItemVisual
         resources.TryGetItemDefinition(data.IDName, out RuntimeItemDefinition definition);
         ItemVisualDefinitionDto visual = definition?.Visual;
         Transform shellRenderer = definition?.ShellPrefab != null && !string.IsNullOrEmpty(visual?.RendererPath)
-            ? definition.ShellPrefab.transform.Find(visual.RendererPath) : null;
+            ? definition.ShellPrefab.transform.Find(visual.RendererPath)
+            : null;
         SpriteRenderer source = shellRenderer != null ? shellRenderer.GetComponent<SpriteRenderer>() : null;
         Vector3 position = visual?.RendererLocalPosition ?? (shellRenderer != null ? shellRenderer.localPosition : Vector3.zero);
         Quaternion rotation = Quaternion.Euler(visual?.RendererLocalEulerAngles ??
@@ -44,217 +41,377 @@ internal sealed class DroppedItemVisual
         Vector3 scale = visual?.RendererLocalScale ?? (shellRenderer != null ? shellRenderer.localScale : Vector3.one);
         if (visual?.FlipX ?? (source != null && source.flipX)) scale.x *= -1f;
         if (visual?.FlipY ?? (source != null && source.flipY)) scale.y *= -1f;
+
+        WorldSortingManager sorting = WorldSortingManager.GetInstance();
+        if (sorting == null)
+            throw new InvalidOperationException("掉落物缺少世界排序管理器。");
+        sorting.GetSortingKey(WorldSortingManager.WorldItemCategory, out int sortingLayerId, out int sortingOrder);
         return new DroppedItemVisual
         {
-            Sprite = sprite, Vertices = sprite.vertices, Uvs = sprite.uv, Triangles = sprite.triangles,
-            SpriteMaterial = definition?.Material ?? (source != null ? source.sharedMaterial :
-                Resources.Load<Material>("DroppedItems/DroppedItemLit")),
-            LocalPosition = position, LocalRotation = rotation, LocalScale = scale,
-            LocalMatrix = Matrix4x4.TRS(position, rotation, scale),
+            Sprite = sprite,
+            SpriteMaterial = definition?.Material ?? source?.sharedMaterial ??
+                Resources.Load<Material>("DroppedItems/DroppedItemLit"),
             Color = visual?.Color ?? (source != null ? source.color : Color.white),
-            Layer = !string.IsNullOrWhiteSpace(visual?.SortingLayerName)
-                ? SortingLayer.NameToID(visual.SortingLayerName) : source != null ? source.sortingLayerID : 0,
-            Order = visual?.SortingOrder ?? (source != null ? source.sortingOrder : 0)
+            Layer = sortingLayerId,
+            Order = sortingOrder,
+            LocalPosition = position,
+            LocalRotation = rotation,
+            LocalScale = scale
         };
     }
 }
 
 /// <summary>
-/// 按空间行与材质合并的只读表现。每批一个 MeshRenderer，无逐掉落物 GameObject；
-/// 静态网格只在内容或水线改变时上传，循环世界通过批次根节点的最近镜像显示。
+/// 轻量 GameObject 表现池。每个可见掉落物只占一个 SpriteRenderer GameObject，
+/// 不挂 Update、Collider、Rigidbody2D、Item 或 Module；离开镜头后立即回池。
 /// </summary>
 internal sealed class DroppedItemPresentation : IDisposable
 {
-    private readonly struct BatchKey : IEquatable<BatchKey>
+    private sealed class PooledView
     {
-        public readonly int X, Y, Texture, Layer, Order;
-        public BatchKey(DroppedBody body, DroppedItemVisual visual)
-        {
-            X = Mathf.FloorToInt(body.Position.x / 8f); Y = Mathf.FloorToInt(body.Position.y);
-            Texture = visual.Sprite.texture.GetInstanceID(); Layer = visual.Layer; Order = visual.Order;
-        }
-        public bool Equals(BatchKey other) => X == other.X && Y == other.Y && Texture == other.Texture && Layer == other.Layer && Order == other.Order;
-        public override bool Equals(object obj) => obj is BatchKey other && Equals(other);
-        public override int GetHashCode() => HashCode.Combine(X, Y, Texture, Layer, Order);
-        public Vector3 Origin => new(X * 8f + 4f, Y + 0.5f, 0f);
+        public GameObject Root;
+        public SpriteRenderer Renderer;
+        public readonly MaterialPropertyBlock Properties = new();
+        public DroppedItemVisual Visual;
+        public LightweightDroppedBody LastBody;
+        public Vector2 LastNearestPosition;
+        public ParticleSystem CombustionParticles;
+        public bool LastBurning;
+        public bool HasState;
     }
 
-    private sealed class Batch
-    {
-        public readonly HashSet<int> Ids = new();
-        public bool Dirty = true;
-        public GameObject Root;
-        public Mesh Mesh;
-        public MeshRenderer Renderer;
-        public Texture Texture;
-        public readonly MaterialPropertyBlock Properties = new();
-        public float WaterOffset = float.NaN;
-    }
+    private const float CullingMargin = 4f;
+    private const int MaxRetainedViews = 512;
+    private static readonly int MainTextureId = Shader.PropertyToID("_MainTex");
+    private static readonly int UsePerRendererWaterId = Shader.PropertyToID("_UsePerRendererDroppedWater");
+    private static readonly int DroppedWaterParamsId = Shader.PropertyToID("_DroppedWaterParams");
 
     private readonly Scene scene;
-    private readonly Material template;
-    private readonly DroppedItemSimulation simulation;
+    private readonly LightweightDroppedItemSimulation simulation;
     private readonly Dictionary<int, DroppedItemVisual> visuals;
-    private readonly Dictionary<BatchKey, Batch> batches = new();
-    private readonly Dictionary<int, BatchKey> ownership = new();
-    private readonly Dictionary<int, Material> materials = new();
-    private readonly List<Vector3> vertices = new();
-    private readonly List<Vector2> uvs = new();
-    private readonly List<Color> colors = new();
-    private readonly List<Vector4> water = new();
-    private readonly List<int> triangles = new();
-    private readonly List<int> sortedIds = new();
-    public int VisibleBatchCount { get; private set; }
+    private readonly Dictionary<int, ItemData> payloads;
+    private readonly Dictionary<int, PooledView> active = new();
+    private readonly Stack<PooledView> pool = new();
+    private readonly HashSet<int> candidates = new();
+    private readonly HashSet<int> visible = new();
+    private readonly List<int> releaseScratch = new();
+    private readonly Material sharedMaterial;
+    private readonly GameObject poolRoot;
+    private bool disposed;
 
-    public DroppedItemPresentation(Scene scene, DroppedItemSimulation simulation, Dictionary<int, DroppedItemVisual> visuals)
+    public int VisibleViewCount => active.Count;
+
+    public DroppedItemPresentation(
+        Scene scene,
+        LightweightDroppedItemSimulation simulation,
+        Dictionary<int, DroppedItemVisual> visuals,
+        Dictionary<int, ItemData> payloads)
     {
-        this.scene = scene; this.simulation = simulation; this.visuals = visuals;
-        template = Resources.Load<Material>("DroppedItems/DroppedItemLit");
-        if (template == null) throw new InvalidOperationException("缺少掉落物共享材质 DroppedItems/DroppedItemLit。");
-    }
+        this.scene = scene;
+        this.simulation = simulation;
+        this.visuals = visuals;
+        this.payloads = payloads;
+        sharedMaterial = Resources.Load<Material>("DroppedItems/DroppedItemLit");
+        if (sharedMaterial == null)
+            throw new InvalidOperationException("缺少轻量掉落物共享材质 DroppedItems/DroppedItemLit。");
 
-    #region 增量登记
+        poolRoot = new GameObject("轻量掉落物_对象池") { hideFlags = HideFlags.DontSave };
+        SceneManager.MoveGameObjectToScene(poolRoot, scene);
+    }
 
     public void Changed(int id)
     {
-        DroppedBody body = simulation.Get(id);
-        BatchKey key = new(body, visuals[id]);
-        if (ownership.TryGetValue(id, out BatchKey old))
-        {
-            if (old.Equals(key)) { batches[old].Dirty = true; return; }
-            Remove(id);
-        }
-        if (!batches.TryGetValue(key, out Batch batch))
-            batches.Add(key, batch = new Batch { Texture = visuals[id].Sprite.texture });
-        batch.Ids.Add(id); batch.Dirty = true; ownership[id] = key;
+        // 表现由统一 Present 刷新；这里不产生逐物品回调或组件更新。
     }
 
     public void Remove(int id)
     {
-        if (!ownership.TryGetValue(id, out BatchKey key)) return;
-        ownership.Remove(id);
-        Batch batch = batches[key]; batch.Ids.Remove(id); batch.Dirty = true;
-        if (batch.Ids.Count != 0) return;
-        DestroyBatch(batch); batches.Remove(key);
+        if (!active.TryGetValue(id, out PooledView view)) return;
+        active.Remove(id);
+        Release(view);
     }
 
-    #endregion
-
-    #region 只读批量绘制
-
-    public void Present(Camera camera, WorldTopologyDomain domain)
+    public void Present(
+        Camera camera,
+        WorldTopologyDomain domain,
+        Dictionary<Vector2Int, HashSet<int>> spatial,
+        float spatialCellSize)
     {
-        VisibleBatchCount = 0;
-        if (camera == null) return;
-        Vector2 center = camera.transform.position;
+        if (disposed) return;
+        if (camera == null)
+        {
+            ReleaseAllActive();
+            return;
+        }
+
+        Vector2 cameraCenter = camera.transform.position;
         float halfHeight = camera.orthographic ? camera.orthographicSize : 50f;
-        foreach (KeyValuePair<BatchKey, Batch> pair in batches)
+        float halfWidth = halfHeight * Mathf.Max(0.1f, camera.aspect);
+        float xRadius = halfWidth + CullingMargin;
+        float yRadius = halfHeight + CullingMargin;
+
+        CollectCandidates(cameraCenter, xRadius, yRadius, domain, spatial, spatialCellSize);
+        visible.Clear();
+
+        foreach (int id in candidates)
         {
-            Batch batch = pair.Value;
-            Vector3 origin = pair.Key.Origin;
-            Unity.Mathematics.float2 nearest = domain.NearestImagePosition(center, (Vector2)origin);
-            bool visible = Mathf.Abs(nearest.x - center.x) <= halfHeight * camera.aspect + 12f &&
-                           Mathf.Abs(nearest.y - center.y) <= halfHeight + 12f;
-            if (!visible)
-            {
-                if (batch.Root != null) DestroyBatch(batch);
+            if (!simulation.Contains(id) || !visuals.TryGetValue(id, out DroppedItemVisual visual))
                 continue;
-            }
-            EnsureBatch(pair.Key, batch);
-            if (batch.Dirty) Rebuild(pair.Key, batch);
-            batch.Root.transform.position = new Vector3(nearest.x, nearest.y, 0f);
-            float waterOffset = nearest.y - origin.y;
-            if (batch.WaterOffset != waterOffset)
+            LightweightDroppedBody body = simulation.Get(id);
+            float2 nearest = domain.NearestImagePosition(cameraCenter, body.Position);
+            if (Mathf.Abs(nearest.x - cameraCenter.x) > xRadius ||
+                Mathf.Abs(nearest.y - cameraCenter.y) > yRadius)
+                continue;
+
+            visible.Add(id);
+            if (!active.TryGetValue(id, out PooledView view))
             {
-                batch.WaterOffset = waterOffset;
-                batch.Properties.SetFloat("_WaterLineOffset", waterOffset);
-                batch.Renderer.SetPropertyBlock(batch.Properties);
+                view = Acquire();
+                active.Add(id, view);
             }
-            batch.Renderer.enabled = true;
-            VisibleBatchCount++;
+            Apply(view, id, visual, body, nearest);
+        }
+
+        releaseScratch.Clear();
+        foreach (KeyValuePair<int, PooledView> pair in active)
+            if (!visible.Contains(pair.Key))
+                releaseScratch.Add(pair.Key);
+        for (int i = 0; i < releaseScratch.Count; i++)
+            Remove(releaseScratch[i]);
+        releaseScratch.Clear();
+    }
+
+    private void CollectCandidates(
+        Vector2 center,
+        float xRadius,
+        float yRadius,
+        WorldTopologyDomain domain,
+        Dictionary<Vector2Int, HashSet<int>> spatial,
+        float cellSize)
+    {
+        candidates.Clear();
+        if (spatial.Count == 0 || cellSize <= 0f) return;
+
+        int minX = Mathf.FloorToInt((center.x - xRadius) / cellSize);
+        int maxX = Mathf.FloorToInt((center.x + xRadius) / cellSize);
+        int minY = Mathf.FloorToInt((center.y - yRadius) / cellSize);
+        int maxY = Mathf.FloorToInt((center.y + yRadius) / cellSize);
+        for (int y = minY; y <= maxY; y++)
+        {
+            for (int x = minX; x <= maxX; x++)
+            {
+                float2 logicalPoint = domain.Normalize(new float2(
+                    (x + 0.5f) * cellSize,
+                    (y + 0.5f) * cellSize));
+                Vector2Int cell = new(
+                    Mathf.FloorToInt(logicalPoint.x / cellSize),
+                    Mathf.FloorToInt(logicalPoint.y / cellSize));
+                if (!spatial.TryGetValue(cell, out HashSet<int> bucket)) continue;
+                foreach (int id in bucket)
+                    candidates.Add(id);
+            }
         }
     }
 
-    private void EnsureBatch(BatchKey key, Batch batch)
+    private PooledView Acquire()
     {
-        if (batch.Root != null) return;
-        batch.Root = new GameObject("ECS掉落物_共享批次") { hideFlags = HideFlags.DontSave };
-        SceneManager.MoveGameObjectToScene(batch.Root, scene);
-        batch.Mesh = new Mesh { name = "ECS掉落物_增量网格", indexFormat = IndexFormat.UInt32 };
-        batch.Mesh.MarkDynamic();
-        batch.Root.AddComponent<MeshFilter>().sharedMesh = batch.Mesh;
-        batch.Renderer = batch.Root.AddComponent<MeshRenderer>();
-        if (!materials.TryGetValue(key.Texture, out Material material))
+        PooledView view;
+        if (pool.Count != 0)
         {
-            material = new Material(template) { name = "ECS掉落物_共享贴图材质", mainTexture = batch.Texture };
-            materials.Add(key.Texture, material);
+            view = pool.Pop();
+            view.Root.SetActive(true);
+            return view;
         }
-        batch.Renderer.sharedMaterial = material;
-        batch.Renderer.sortingLayerID = key.Layer; batch.Renderer.sortingOrder = key.Order;
-        batch.Renderer.shadowCastingMode = ShadowCastingMode.Off;
-        batch.Renderer.receiveShadows = false;
-        batch.Renderer.lightProbeUsage = LightProbeUsage.Off;
-        batch.Renderer.reflectionProbeUsage = ReflectionProbeUsage.Off;
-        batch.Dirty = true;
+
+        GameObject root = new("轻量掉落物");
+        root.hideFlags = HideFlags.DontSave;
+        root.transform.SetParent(poolRoot.transform, false);
+        SpriteRenderer renderer = root.AddComponent<SpriteRenderer>();
+        renderer.spriteSortPoint = SpriteSortPoint.Pivot;
+        renderer.shadowCastingMode = ShadowCastingMode.Off;
+        renderer.receiveShadows = false;
+        renderer.lightProbeUsage = LightProbeUsage.Off;
+        renderer.reflectionProbeUsage = ReflectionProbeUsage.Off;
+        return new PooledView { Root = root, Renderer = renderer };
     }
 
-    private void Rebuild(BatchKey key, Batch batch)
+    #region 每实例贴图与水线
+
+    private void Apply(
+        PooledView view,
+        int id,
+        DroppedItemVisual visual,
+        LightweightDroppedBody body,
+        float2 nearestPosition)
     {
-        vertices.Clear(); uvs.Clear(); colors.Clear(); water.Clear(); triangles.Clear();
-        sortedIds.Clear(); sortedIds.AddRange(batch.Ids);
-        sortedIds.Sort((left, right) =>
+        if (!ReferenceEquals(view.Visual, visual))
         {
-            int result = simulation.Get(right).Position.y.CompareTo(simulation.Get(left).Position.y);
-            return result != 0 ? result : left.CompareTo(right);
-        });
-        foreach (int id in sortedIds)
-        {
-            DroppedBody body = simulation.Get(id);
-            DroppedItemVisual visual = visuals[id];
-            Vector3 position = new(body.Position.x, body.Position.y + body.VisualHeight, 0f);
-            float submergedScale = WorldItemWaterRules.ResolveSubmergedScale(body.SubmergedProgress);
-            Matrix4x4 matrix = Matrix4x4.TRS(position - key.Origin, Quaternion.Euler(0f, 0f, body.Rotation),
-                new Vector3(body.Scale.x * submergedScale, body.Scale.y * submergedScale, 1f)) * visual.LocalMatrix;
-            int offset = vertices.Count;
-            float minY = float.PositiveInfinity, maxY = float.NegativeInfinity;
-            for (int i = 0; i < visual.Vertices.Length; i++)
-            {
-                Vector3 vertex = matrix.MultiplyPoint3x4(visual.Vertices[i]);
-                vertices.Add(vertex); uvs.Add(visual.Uvs[i]); colors.Add(visual.Color);
-                minY = Mathf.Min(minY, vertex.y); maxY = Mathf.Max(maxY, vertex.y);
-            }
-            float height = Mathf.Max(0.0001f, maxY - minY);
-            // 水线保持规范世界坐标；循环镜像仅通过批次 MPB 补偏移，不依赖动态合批后的 ObjectToWorld。
-            Vector4 parameters = new(body.WaterKind != 0 ? 1f : 0f,
-                key.Origin.y + minY + height * body.LiquidDepth, height, 0f);
-            for (int i = 0; i < visual.Vertices.Length; i++) water.Add(parameters);
-            for (int i = 0; i < visual.Triangles.Length; i++) triangles.Add(offset + visual.Triangles[i]);
+            view.Visual = visual;
+            view.HasState = false;
+            view.Renderer.sprite = visual.Sprite;
+            view.Renderer.sharedMaterial = sharedMaterial;
+            view.Renderer.color = visual.Color;
+            view.Renderer.sortingLayerID = visual.Layer;
+            view.Renderer.sortingOrder = visual.Order;
+            view.Renderer.spriteSortPoint = SpriteSortPoint.Pivot;
         }
-        batch.Mesh.Clear(); batch.Mesh.SetVertices(vertices); batch.Mesh.SetUVs(0, uvs);
-        batch.Mesh.SetColors(colors); batch.Mesh.SetUVs(1, water); batch.Mesh.SetTriangles(triangles, 0, true);
-        batch.Dirty = false;
+
+        Vector2 nearest = new(nearestPosition.x, nearestPosition.y);
+        bool burning = payloads.TryGetValue(id, out ItemData data) && data.MatterState?.IsBurning == true;
+        if (view.HasState && SamePresentationState(view.LastBody, body) &&
+            view.LastNearestPosition == nearest && view.LastBurning == burning)
+            return;
+
+        float submergedScale = WorldItemWaterRules.ResolveSubmergedScale(body.SubmergedProgress);
+        Vector3 bodyScale = new(body.Scale.x * submergedScale, body.Scale.y * submergedScale, 1f);
+        Quaternion bodyRotation = Quaternion.Euler(0f, 0f, body.Rotation);
+        Vector3 basePosition = new(nearestPosition.x, nearestPosition.y + body.VisualHeight, 0f);
+        view.Root.transform.SetPositionAndRotation(
+            basePosition + bodyRotation * Vector3.Scale(visual.LocalPosition, bodyScale),
+            bodyRotation * visual.LocalRotation);
+        view.Root.transform.localScale = Vector3.Scale(bodyScale, visual.LocalScale);
+
+        Bounds bounds = view.Renderer.bounds;
+        float height = Mathf.Max(0.0001f, bounds.size.y);
+        float waterLine = bounds.min.y + height * Mathf.Clamp01(body.LiquidDepth);
+        view.Properties.Clear();
+        // 自定义水线参数会覆盖 SpriteRenderer 的属性块，必须同时保留当前精灵贴图。
+        view.Properties.SetTexture(MainTextureId, visual.Sprite.texture);
+        view.Properties.SetFloat(UsePerRendererWaterId, 1f);
+        view.Properties.SetVector(DroppedWaterParamsId, new Vector4(
+            body.WaterKind != 0 ? 1f : 0f,
+            waterLine,
+            height,
+            (id & 1023) * 0.017f));
+        view.Renderer.SetPropertyBlock(view.Properties);
+        SetCombustionPlaying(view, burning, visual.Layer, visual.Order + 2);
+        view.LastBody = body;
+        view.LastNearestPosition = nearest;
+        view.LastBurning = burning;
+        view.HasState = true;
+    }
+
+    private static bool SamePresentationState(LightweightDroppedBody left, LightweightDroppedBody right)
+    {
+        return left.Position.x == right.Position.x && left.Position.y == right.Position.y &&
+               left.Scale.x == right.Scale.x && left.Scale.y == right.Scale.y &&
+               left.Rotation == right.Rotation && left.VisualHeight == right.VisualHeight &&
+               left.LiquidDepth == right.LiquidDepth && left.SubmergedProgress == right.SubmergedProgress &&
+               left.WaterKind == right.WaterKind;
     }
 
     #endregion
 
-    private static void Release(UnityEngine.Object target)
+    #region 燃烧表现
+
+    /// <summary>轻量掉落物只按需创建粒子子节点，不增加逐物品脚本或 Update。</summary>
+    private static void SetCombustionPlaying(PooledView view, bool burning, int sortingLayerId, int sortingOrder)
     {
-        if (target == null) return;
-        if (Application.isPlaying) UnityEngine.Object.Destroy(target); else UnityEngine.Object.DestroyImmediate(target);
+        if (!burning)
+        {
+            if (view.CombustionParticles != null)
+                view.CombustionParticles.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            return;
+        }
+
+        ParticleSystem particles = view.CombustionParticles ??= CreateCombustionParticles(view.Root.transform);
+        ParticleSystemRenderer renderer = particles.GetComponent<ParticleSystemRenderer>();
+        renderer.sortingLayerID = sortingLayerId;
+        renderer.sortingOrder = sortingOrder;
+        if (!particles.isPlaying)
+            particles.Play(true);
     }
 
-    private static void DestroyBatch(Batch batch)
+    private static ParticleSystem CreateCombustionParticles(Transform parent)
     {
-        if (batch.Renderer != null) batch.Renderer.enabled = false;
-        Release(batch.Mesh); Release(batch.Root);
-        batch.Mesh = null; batch.Root = null; batch.Renderer = null; batch.Dirty = true;
-        batch.WaterOffset = float.NaN;
+        var root = new GameObject("轻量掉落物_燃烧", typeof(ParticleSystem));
+        root.transform.SetParent(parent, false);
+        root.transform.localPosition = Vector3.zero;
+        root.transform.localRotation = Quaternion.identity;
+        root.transform.localScale = Vector3.one;
+
+        ParticleSystem particles = root.GetComponent<ParticleSystem>();
+        ParticleSystem.MainModule main = particles.main;
+        main.loop = true;
+        main.playOnAwake = false;
+        main.simulationSpace = ParticleSystemSimulationSpace.World;
+        main.startLifetime = new ParticleSystem.MinMaxCurve(0.22f, 0.42f);
+        main.startSpeed = new ParticleSystem.MinMaxCurve(0.12f, 0.28f);
+        main.startSize = new ParticleSystem.MinMaxCurve(0.07f, 0.12f);
+        main.startColor = new ParticleSystem.MinMaxGradient(
+            new Color(1f, 0.82f, 0.18f, 1f),
+            new Color(1f, 0.22f, 0.03f, 0.95f));
+        main.maxParticles = 16;
+
+        ParticleSystem.EmissionModule emission = particles.emission;
+        emission.rateOverTime = 10f;
+        ParticleSystem.ShapeModule shape = particles.shape;
+        shape.shapeType = ParticleSystemShapeType.Circle;
+        shape.radius = 0.06f;
+
+        ParticleSystem.ColorOverLifetimeModule color = particles.colorOverLifetime;
+        color.enabled = true;
+        var gradient = new Gradient();
+        gradient.SetKeys(
+            new[]
+            {
+                new GradientColorKey(new Color(1f, 0.9f, 0.25f), 0f),
+                new GradientColorKey(new Color(1f, 0.18f, 0.02f), 1f)
+            },
+            new[]
+            {
+                new GradientAlphaKey(1f, 0f),
+                new GradientAlphaKey(0f, 1f)
+            });
+        color.color = gradient;
+        return particles;
+    }
+
+    #endregion
+
+    private void Release(PooledView view)
+    {
+        if (view?.Root == null) return;
+        view.Visual = null;
+        view.HasState = false;
+        view.LastBurning = false;
+        if (view.CombustionParticles != null)
+            view.CombustionParticles.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+        view.Renderer.sprite = null;
+        view.Renderer.SetPropertyBlock(null);
+        view.Root.SetActive(false);
+        if (pool.Count < MaxRetainedViews)
+            pool.Push(view);
+        else
+            DestroyObject(view.Root);
+    }
+
+    private void ReleaseAllActive()
+    {
+        releaseScratch.Clear();
+        releaseScratch.AddRange(active.Keys);
+        for (int i = 0; i < releaseScratch.Count; i++)
+            Remove(releaseScratch[i]);
+        releaseScratch.Clear();
     }
 
     public void Dispose()
     {
-        foreach (Batch batch in batches.Values) DestroyBatch(batch);
-        foreach (Material material in materials.Values) Release(material);
-        batches.Clear(); ownership.Clear(); materials.Clear();
+        if (disposed) return;
+        disposed = true;
+        ReleaseAllActive();
+        while (pool.Count != 0)
+            DestroyObject(pool.Pop().Root);
+        DestroyObject(poolRoot);
+        active.Clear();
+        candidates.Clear();
+        visible.Clear();
+    }
+
+    private static void DestroyObject(UnityEngine.Object target)
+    {
+        if (target == null) return;
+        if (Application.isPlaying) UnityEngine.Object.Destroy(target);
+        else UnityEngine.Object.DestroyImmediate(target);
     }
 }

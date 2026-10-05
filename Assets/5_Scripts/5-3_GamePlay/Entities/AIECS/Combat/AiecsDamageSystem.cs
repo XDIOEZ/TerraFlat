@@ -164,9 +164,11 @@ namespace FlatWorld.AIECS
         /// <summary>普通攻击按面积权重随机命中一至两个部位；周期真实伤害按各部位剩余生命分摊。</summary>
         private static void ApplyBodyDamage(ref AiecsAnatomy anatomy, ref AiecsVital vital, float damage, bool fullBody, ref Random random)
         {
+            float previousHp = vital.Hp;
+            vital.Hp = math.max(0f, previousHp - damage);
             if (fullBody)
             {
-                float ratio = math.max(0f, vital.Hp - damage) / math.max(0.0001f, vital.Hp);
+                float ratio = vital.Hp / math.max(0.0001f, previousHp);
                 for (int i = 0; i < anatomy.Parts.Length; i++)
                 { AiecsBodyPart part = anatomy.Parts[i]; part.Hp *= ratio; anatomy.Parts[i] = part; }
             }
@@ -177,8 +179,6 @@ namespace FlatWorld.AIECS
                 float portion = second >= 0 ? damage * 0.5f : damage;
                 HurtPart(ref anatomy, first, portion); HurtPart(ref anatomy, second, portion);
             }
-            vital.Hp = 0f;
-            for (int i = 0; i < anatomy.Parts.Length; i++) vital.Hp += anatomy.Parts[i].Hp;
         }
 
         /// <summary>无可用面积权重时复用旧后端的最高剩余生命回退。</summary>
@@ -187,14 +187,14 @@ namespace FlatWorld.AIECS
             float total = 0f, hp = -1f; int fallback = -1;
             for (int i = 0; i < anatomy.Parts.Length; i++)
             {
-                AiecsBodyPart part = anatomy.Parts[i]; if (i == excluded || part.Hp <= 0f) continue;
+                AiecsBodyPart part = anatomy.Parts[i]; if (i == excluded) continue;
                 total += math.max(0f, part.Weight); if (part.Hp > hp) { hp = part.Hp; fallback = i; }
             }
             if (total <= 0f) return fallback;
             float value = random.NextFloat(total);
             for (int i = 0; i < anatomy.Parts.Length; i++)
             {
-                var part = anatomy.Parts[i]; if (i == excluded || part.Hp <= 0f) continue;
+                var part = anatomy.Parts[i]; if (i == excluded) continue;
                 value -= math.max(0f, part.Weight); if (value <= 0f) return i;
             }
             return fallback;

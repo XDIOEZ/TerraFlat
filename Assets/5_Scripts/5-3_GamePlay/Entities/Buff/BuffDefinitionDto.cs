@@ -72,6 +72,9 @@ public sealed class BuffDefinitionDto
     [JsonProperty("maxStacks")]
     public int MaxStacks = 1;
 
+    [JsonProperty("decayStacksOnExpiry")]
+    public bool DecayStacksOnExpiry;
+
     [JsonProperty("visualBaseScale")]
     public float VisualBaseScale = 1f;
 
@@ -83,6 +86,15 @@ public sealed class BuffDefinitionDto
 
     [JsonProperty("waterStacksPerDepthLevel")]
     public int WaterStacksPerDepthLevel;
+
+    [JsonProperty("rainStackIntervalSeconds")]
+    public float RainStackIntervalSeconds;
+
+    [JsonProperty("rainMaxStacks")]
+    public int RainMaxStacks;
+
+    [JsonProperty("rainReferenceIntensity")]
+    public float RainReferenceIntensity;
 
     [JsonProperty("drinkDurationExtensionSeconds")]
     public float DrinkDurationExtensionSeconds;

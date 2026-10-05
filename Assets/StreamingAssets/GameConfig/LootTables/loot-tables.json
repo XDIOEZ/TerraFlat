@@ -2,6 +2,12 @@
   "schemaVersion": 1,
   "lootTables": [
     {
+      "id": "SmallFish_Default",
+      "entries": [
+        { "itemId": "Meat", "probability": 1.0, "minAmount": 1, "maxAmount": 1 }
+      ]
+    },
+    {
       "id": "Tree_Default",
       "entries": [
         {
@@ -112,6 +118,23 @@
           "probability": 1.0,
           "minAmount": 1,
           "maxAmount": 2
+        }
+      ]
+    },
+    {
+      "id": "Rabbit_Default",
+      "entries": [
+        {
+          "itemId": "Meat",
+          "probability": 1.0,
+          "minAmount": 1,
+          "maxAmount": 1
+        },
+        {
+          "itemId": "Bone",
+          "probability": 1.0,
+          "minAmount": 1,
+          "maxAmount": 1
         }
       ]
     },
@@ -233,6 +256,62 @@
           "probability": 1.0,
           "minAmount": 1,
           "maxAmount": 2
+        }
+      ]
+    },
+    {
+      "id": "Mine_Gold_Default",
+      "entries": [
+        {
+          "itemId": "Ore_Gold",
+          "probability": 1.0,
+          "minAmount": 1,
+          "maxAmount": 2
+        },
+        {
+          "itemId": "Ore_Stone",
+          "probability": 1.0,
+          "minAmount": 1,
+          "maxAmount": 2
+        }
+      ]
+    },
+    {
+      "id": "Mine_Diamond_Default",
+      "entries": [
+        {
+          "itemId": "Ore_Diamond",
+          "probability": 1.0,
+          "minAmount": 1,
+          "maxAmount": 2
+        },
+        {
+          "itemId": "Ore_Stone",
+          "probability": 1.0,
+          "minAmount": 1,
+          "maxAmount": 2
+        }
+      ]
+    },
+    {
+      "id": "Mine_Obsidian_Default",
+      "entries": [
+        {
+          "itemId": "Obsidian",
+          "probability": 1.0,
+          "minAmount": 3,
+          "maxAmount": 5
+        }
+      ]
+    },
+    {
+      "id": "Mine_Sulfur_Default",
+      "entries": [
+        {
+          "itemId": "Ore_Sulfur",
+          "probability": 1.0,
+          "minAmount": 2,
+          "maxAmount": 4
         }
       ]
     },
@@ -443,6 +522,35 @@
       ]
     },
     {
+      "id": "Tree_Oak",
+      "entries": [
+        {
+          "itemId": "Stick_Wood",
+          "probability": 1.0,
+          "minAmount": 2,
+          "maxAmount": 2
+        },
+        {
+          "itemId": "Leaf",
+          "probability": 1.0,
+          "minAmount": 3,
+          "maxAmount": 3
+        },
+        {
+          "itemId": "Log",
+          "probability": 1.0,
+          "minAmount": 2,
+          "maxAmount": 3
+        },
+        {
+          "itemId": "Rubber",
+          "probability": 1.0,
+          "minAmount": 1,
+          "maxAmount": 1
+        }
+      ]
+    },
+    {
       "id": "BerryCrop_Default",
       "entries": [
         {
@@ -462,6 +570,17 @@
           "probability": 0.2,
           "minAmount": 1,
           "maxAmount": 2
+        }
+      ]
+    },
+    {
+      "id": "Beehive_Default",
+      "entries": [
+        {
+          "itemId": "Beeswax",
+          "probability": 1.0,
+          "minAmount": 2,
+          "maxAmount": 4
         }
       ]
     }

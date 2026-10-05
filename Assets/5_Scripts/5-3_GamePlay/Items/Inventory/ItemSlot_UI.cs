@@ -49,6 +49,10 @@ public class ItemSlot_UI : MonoBehaviour,
     [Tooltip("显示当前物体的数量")]
     public TMP_Text text;
 
+    [Header("鼠标悬浮信息")]
+    [SerializeField, Tooltip("统一物品悬浮信息面板")]
+    private GameObject itemTooltipPrefab;
+
     [Tooltip("物体被点击的事件（左键）")]
     public UltEvent<int> OnLeftClick = new UltEvent<int>();
 
@@ -203,6 +207,7 @@ public class ItemSlot_UI : MonoBehaviour,
     /// <summary>销毁槽位时收束未完成拖拽并解除所有运行时回调。</summary>
     public void OnDestroy()
     {
+        InventoryItemTooltip.Hide(this);
         CompleteActiveDrag(true, false);
         OnLeftClick.Clear();
         OnGamepadSubmit.Clear();
@@ -227,6 +232,7 @@ public class ItemSlot_UI : MonoBehaviour,
     /// <summary>槽位面板停用时收束未完成拖拽，避免事务悬挂。</summary>
     private void OnDisable()
     {
+        InventoryItemTooltip.Hide(this);
         CompleteActiveDrag(true, false);
         EndMouseDragVisual();
         CancelTouchPress();
@@ -242,6 +248,12 @@ public class ItemSlot_UI : MonoBehaviour,
         slotIndex = index;
         GetSlotDataFunc = getSlotFunc;
         ClearSlotDataAction = clearAction;
+    }
+
+    /// <summary>获取这个 UI 当前实际绑定的槽位，外部逻辑不要直接调用槽位委托。</summary>
+    public ItemSlot GetBoundSlotData()
+    {
+        return GetSlotData();
     }
 
 #if UNITY_EDITOR
@@ -275,6 +287,17 @@ public class ItemSlot_UI : MonoBehaviour,
         return GetSlotDataFunc(slotIndex);
     }
 
+    /// <summary>非标准槽位复用 UI_Slot 上的统一悬浮面板引用，避免每个库存面板重复配置。</summary>
+    private GameObject ResolveItemTooltipPrefab()
+    {
+        if (itemTooltipPrefab != null)
+            return itemTooltipPrefab;
+
+        GameObject sharedSlotPrefab = GameRes.ExistingInstance?.GetPrefab("UI_Slot", false);
+        ItemSlot_UI sharedSlot = sharedSlotPrefab != null ? sharedSlotPrefab.GetComponent<ItemSlot_UI>() : null;
+        return sharedSlot != null && sharedSlot != this ? sharedSlot.itemTooltipPrefab : null;
+    }
+
     [Button]
     public void RefreshUI()
     {
@@ -286,6 +309,8 @@ public class ItemSlot_UI : MonoBehaviour,
         UpdateItemIcon();
         if (hideSourceContentWhileDragging)
             HideSlotContent();
+        if (isPointerOver)
+            InventoryItemTooltip.Refresh(this);
     }
 
     public void Click(PointerEventData eventData)
@@ -347,6 +372,10 @@ public class ItemSlot_UI : MonoBehaviour,
             HandleScrollUp();
         else if (scrollY < 0)
             HandleScrollDown();
+
+        // 指针命中槽位时滚轮专用于逐件取放，只有槽位外区域才交给父级页面滚动。
+        if (!Mathf.Approximately(scrollY, 0f))
+            eventData.Use();
     }
 
     private void HandleScrollUp()
@@ -378,6 +407,7 @@ public class ItemSlot_UI : MonoBehaviour,
 
         if (eventData.button == PointerEventData.InputButton.Left && IsShiftPressed())
         {
+            InventoryItemTooltip.Hide(this);
             _isShiftQuickTransferDragging = true;
             _shiftQuickTransferSessionId++;
             _lastHandledShiftQuickTransferSessionId = -1;
@@ -410,6 +440,9 @@ public class ItemSlot_UI : MonoBehaviour,
     {
         isPointerOver = true;
 
+        if (eventData != null && !IsTouchPointer(eventData) && !eventData.dragging && !_isShiftQuickTransferDragging)
+            InventoryItemTooltip.Show(this, ResolveItemTooltipPrefab(), eventData.position);
+
         if (!_isShiftQuickTransferDragging)
             return;
 
@@ -425,6 +458,7 @@ public class ItemSlot_UI : MonoBehaviour,
     public void OnPointerExit(PointerEventData eventData)
     {
         isPointerOver = false;
+        InventoryItemTooltip.Hide(this);
         if (eventData == null || eventData.pointerId != touchPointerId)
             return;
 
@@ -470,6 +504,8 @@ public class ItemSlot_UI : MonoBehaviour,
     public void OnPointerMove(PointerEventData eventData)
     {
         ReportPointerToHandVisual(eventData);
+        if (eventData != null && !IsTouchPointer(eventData) && !eventData.dragging)
+            InventoryItemTooltip.Move(this, eventData.position);
         if (eventData == null || eventData.pointerId != touchPointerId || touchMovedTooFar)
             return;
 
@@ -497,6 +533,7 @@ public class ItemSlot_UI : MonoBehaviour,
     /// <summary>根据输入类型创建整组或半组拖拽事务并显示跟随图标。</summary>
     public void OnBeginDrag(PointerEventData eventData)
     {
+        InventoryItemTooltip.Hide(this);
         if (IsTouchPointer(eventData))
         {
             touchMovedTooFar = true;
@@ -579,9 +616,9 @@ public class ItemSlot_UI : MonoBehaviour,
             {
                 ItemSlot_UI touchTargetSlot = FindSlotUnderPointer(eventData);
                 bool hasTouchTarget = touchTargetSlot != null && touchTargetSlot.isActiveAndEnabled;
-                if (hasTouchTarget)
+                bool touchSlotAccepted = hasTouchTarget &&
                     touchTargetSlot.HandleMouseDragDrop(activeDragTransaction, eventData);
-                IInventoryDragDropTarget touchGameplayTarget = hasTouchTarget
+                IInventoryDragDropTarget touchGameplayTarget = touchSlotAccepted
                     ? null
                     : FindInventoryDragDropTargetUnderPointer(eventData);
                 if (touchGameplayTarget != null)
@@ -610,9 +647,8 @@ public class ItemSlot_UI : MonoBehaviour,
 
         ItemSlot_UI targetSlot = FindSlotUnderPointer(eventData);
         bool hasTarget = targetSlot != null && targetSlot.isActiveAndEnabled;
-        if (hasTarget)
-            targetSlot.HandleMouseDragDrop(activeDragTransaction, eventData);
-        IInventoryDragDropTarget gameplayTarget = hasTarget
+        bool slotAccepted = hasTarget && targetSlot.HandleMouseDragDrop(activeDragTransaction, eventData);
+        IInventoryDragDropTarget gameplayTarget = slotAccepted
             ? null
             : FindInventoryDragDropTargetUnderPointer(eventData);
         if (gameplayTarget != null)
@@ -1301,7 +1337,7 @@ public class ItemSlot_UI : MonoBehaviour,
         }
 
         if (!GameRes.Instance.TryGetItemPresentation(
-                slotData.itemData.IDName,
+                slotData.itemData,
                 out _,
                 out Sprite sprite) ||
             sprite == null)
@@ -1310,10 +1346,6 @@ public class ItemSlot_UI : MonoBehaviour,
             image.gameObject.SetActive(false);
             return;
         }
-
-        // 状态型液体容器的 Item ID 不变；图标必须从当前 ItemData 模块状态解析，而不是按 ID 写死水罐变体。
-        if (Mod_WaterVessel.TryResolvePresentationSprite(slotData.itemData, out Sprite stateSprite))
-            sprite = stateSprite;
 
         image.sprite = sprite;
         image.gameObject.SetActive(true);

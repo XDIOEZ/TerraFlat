@@ -1,5 +1,7 @@
 using MemoryPack;
+using Newtonsoft.Json;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 [MemoryPackUnion(1, typeof(Ex_ModData))]
 [MemoryPackUnion(2, typeof(Inventory_ModuleData))]
@@ -10,13 +12,27 @@ using UnityEngine;
 [MemoryPackable]
 public abstract partial class ModuleData
 {
-    [Tooltip("模块独立名称")]
-    public string Name;
-    [Tooltip("模块实例化名称")]
-    public string ID;
-    [Tooltip("是否正在运行")]
-    public bool isRunning = true;
+    [FormerlySerializedAs("Name")]
+    [Tooltip("模块在当前 Item 内的稳定实例名；同时也是 ModuleDataDic 的唯一键。")]
+    public string StableName;
+
+    [FormerlySerializedAs("ID")]
+    [Tooltip("模块能力 ID；同一能力允许由不同 Prefab 实现。")]
+    public string ModuleId;
+
+    [Tooltip("模块是否启用；由 Module 框架统一控制运行态与 Tick。")]
+    public bool Enabled = true;
     public ModuleType Type;
+
+    // 旧代码别名仅转发到唯一字段，不再形成第二套模块身份。
+    [MemoryPackIgnore, JsonIgnore]
+    public string Name { get => StableName; set => StableName = value; }
+
+    [MemoryPackIgnore, JsonIgnore]
+    public string ID { get => ModuleId; set => ModuleId = value; }
+
+    [MemoryPackIgnore, JsonIgnore]
+    public bool isRunning { get => Enabled; set => Enabled = value; }
 
     /// <summary>
     /// 模块数据更新入口，deltaTime 由外部调度层传入。
@@ -28,7 +44,7 @@ public abstract partial class ModuleData
     
     public override string ToString()
     {
-        return $"模块数据:(Name: {Name}, ID: {ID}, Type: {Type}, isRunning: {isRunning})";
+        return $"模块数据:(StableName: {StableName}, ModuleId: {ModuleId}, Type: {Type}, Enabled: {Enabled})";
     }
 }
 

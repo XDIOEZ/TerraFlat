@@ -13,7 +13,7 @@ namespace FlatWorld.Dialogue
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(Player))]
-    [RequireComponent(typeof(GameController))]
+    [RequireComponent(typeof(Mod_GameController))]
     [RequireComponent(typeof(CharacterSoliloquyController))]
     public sealed class PlayerChatInputController : MonoBehaviour
     {
@@ -39,7 +39,7 @@ namespace FlatWorld.Dialogue
             new List<IPlayerChatCommandHandler>();
 
         private Player player;
-        private GameController gameController;
+        private Mod_GameController gameController;
         private CharacterSoliloquyController speechController;
         private GameObject viewObject;
         private RectTransform viewRect;
@@ -50,6 +50,7 @@ namespace FlatWorld.Dialogue
         private Coroutine focusRoutine;
         private InputAction openChatAction;
         private InputAction cancelChatAction;
+        private int openedFrame = -1;
 
         public bool IsOpen => isOpen;
         public TMP_InputField InputField => inputField;
@@ -113,8 +114,9 @@ namespace FlatWorld.Dialogue
                 return;
             }
 
-            if (keyboard.enterKey.wasPressedThisFrame ||
-                keyboard.numpadEnterKey.wasPressedThisFrame)
+            if (Time.frameCount != openedFrame &&
+                (keyboard.enterKey.wasPressedThisFrame ||
+                 keyboard.numpadEnterKey.wasPressedThisFrame))
             {
                 if (!string.IsNullOrEmpty(Input.compositionString))
                     return;
@@ -167,14 +169,6 @@ namespace FlatWorld.Dialogue
             if (gameController != null && !gameController.IsGameplayInputAllowed(context))
                 return;
 
-            Keyboard keyboard = context.control?.device as Keyboard;
-            if (keyboard != null &&
-                context.control == keyboard.tKey &&
-                IsControlPressed(keyboard))
-            {
-                return;
-            }
-
             OpenChat();
         }
 
@@ -216,6 +210,8 @@ namespace FlatWorld.Dialogue
             inputSuspended = gameController.InputBindings != null;
 
             isOpen = true;
+            // Enter 同时负责打开与提交，记录打开帧避免同一帧立即提交空消息。
+            openedFrame = Time.frameCount;
             viewObject.SetActive(true);
             viewRect.SetAsLastSibling();
             inputField.text = string.Empty;
@@ -453,7 +449,7 @@ private bool EnsureView()
             if (player == null)
                 player = GetComponent<Player>();
             if (gameController == null)
-                gameController = GetComponent<GameController>();
+                gameController = GetComponent<Mod_GameController>();
             if (speechController == null)
                 speechController = GetComponent<CharacterSoliloquyController>();
         }
@@ -484,11 +480,6 @@ private bool EnsureView()
                 ? normalized
                 : normalized.Substring(0, limit);
         }
-
-            private static bool IsControlPressed(Keyboard keyboard)
-            {
-                return keyboard.leftCtrlKey.isPressed || keyboard.rightCtrlKey.isPressed;
-            }
 
         #endregion
     }

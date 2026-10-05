@@ -27,17 +27,13 @@
             "x": 0.65,
             "y": 0.65
           }
-        }
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
       },
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/WaterVessel/ClayJar/ClayJar_Icon.png",
-        "spriteStates": {
-          "empty": "Assets/6_Art/Generated/WaterVessel/ClayJar/ClayJar_Icon.png",
-          "filled": "Assets/6_Art/Generated/WaterVessel/ClayJar/ClayJar_Filled.png",
-          "dirty": "Assets/6_Art/Generated/WaterVessel/ClayJar/ClayJar_Dirty.png",
-          "drinkable": "Assets/6_Art/Generated/WaterVessel/ClayJar/ClayJar_Drinkable.png",
-          "sea": "Assets/6_Art/Generated/WaterVessel/ClayJar/ClayJar_Sea.png"
-        },
+        "liquidSurface": { "bounds": { "x": 0.3125, "y": 0.71875, "width": 0.375, "height": 0.125 }, "maxSourceChannel": 100 },
         "collider": {
           "size": {
             "x": 0.65,
@@ -68,7 +64,7 @@
       "id": "StoneMortar_Building",
       "parent": "BuildingBody_Base",
       "gameName": "石臼-建筑",
-      "description": "放置在地上的石臼。交互打开原有捣料面板，每次捣击按配方加工一份材料；拆回或再次放置时保留碗内全部原料与产物。",
+      "description": "放置在地上的石臼，只提供手动研磨能力；具体材料如何加工由材料自身定义。拆回或再次放置时保留碗内原料、产物与加工进度。",
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,
@@ -81,8 +77,8 @@
       ],
       "health": {
         "hasHp": true,
-        "hp": 120,
-        "maxHp": 120,
+        "hp": 50,
+        "maxHp": 50,
         "collider": {
           "type": "BoxCollider2D",
           "isTrigger": true,
@@ -90,7 +86,9 @@
             "x": 0.85,
             "y": 0.85
           }
-        }
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
       },
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/StoneMortar/StoneMortar_Icon.png",
@@ -120,7 +118,9 @@
             "Type": 0
           },
           "parameters": {
-            "StationId": "mortar"
+            "StationId": "mortar",
+            "SlotCount": 6,
+            "ProcessCapability": "grind"
           }
         }
       }

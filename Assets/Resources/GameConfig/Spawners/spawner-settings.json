@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "useAiecsBackend": false,
+  "globalAliveLimit": 40,
+  "spawnRetryInterval": 0.5,
+  "ecologyTickInterval": 0.25,
+  "maxLoadedGameObjectActors": 96,
+  "maxLoadedEntityActors": 8192,
+  "residentChecksPerTick": 8
+}

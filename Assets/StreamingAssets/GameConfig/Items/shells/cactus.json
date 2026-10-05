@@ -1,0 +1,139 @@
+{
+  "schemaVersion": 1,
+  "items": [
+    {
+      "id": "CactusPiece",
+      "parent": "Apple",
+      "gameName": "仙人掌块",
+      "description": "采集后去刺的多汁仙人掌块，可以直接食用。吃完一块补充 40 点水分，并提供少量营养。",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "weight": 0.4,
+      "volume": 0.6,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": ["47", "InventoryGroup.Food"],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/CactusPiece/CactusPiece_Icon.png",
+        "rendererLocalScale": { "x": 0.45, "y": 0.45, "z": 1.0 },
+        "color": { "r": 1.0, "g": 1.0, "b": 1.0, "a": 1.0 },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": { "x": 0.0, "y": 0.0 },
+          "path": "",
+          "size": { "x": 0.45, "y": 0.45 }
+        }
+      },
+      "modules": {
+        "food": {
+          "data": {
+            "FoodData": {
+              "nutrition": {
+                "Carbohydrates": 8.0,
+                "Max_Carbohydrates": 8.0,
+                "Fat": 0.0,
+                "Max_Fat": 0.0,
+                "Protein": 0.5,
+                "Max_Protein": 0.5,
+                "Water": 40.0,
+                "Max_Water": 40.0,
+                "Vitamins": 4.0,
+                "Max_Vitamins": 4.0
+              },
+              "Max_EatingProgress": 2.0
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "Cactus",
+      "parent": "WildCrop_Base",
+      "entityRuntime": "resource",
+      "gameName": "仙人掌",
+      "description": "生长在干旱沙漠中的耐旱植物，不会自然出现在潮湿海滩或河岸湿地。碰触植株会受到穿刺伤害；成熟后可采集能食用补水的仙人掌块，也可用武器清除。",
+      "weight": 3.0,
+      "volume": 5.0,
+      "stackable": false,
+      "canBePickedUp": false,
+      "tags": [],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Farming/Cactus/Cactus_Idle.png",
+        "rendererLocalPosition": { "x": 0.0, "y": 0.5, "z": 0.0 },
+        "rendererLocalScale": { "x": 0.8, "y": 1.0, "z": 1.0 },
+        "collider": {
+          "offset": { "x": 0.0, "y": 0.5 },
+          "size": { "x": 0.8, "y": 1.0 }
+        }
+      },
+      "modules": {
+        "contactDamage": {
+          "prefab": "Module_ContactDamage",
+          "id": "Mod_ContactDamage",
+          "enabled": true,
+          "data": { "Type": 0, "BitData": "" },
+          "parameters": {
+            "Settings": {
+              "DamageValues": {
+                "Physical": 2.0,
+                "ImpactKind": 2
+              },
+              "DamageInterval": 1.0,
+              "Offset": { "x": 0.0, "y": 0.5 },
+              "Size": { "x": 0.8, "y": 1.0 },
+              "OnlyMovers": true
+            }
+          }
+        },
+        "生命值系统模块": {
+          "parameters": {
+            "Data": {
+              "Hp": 45.0,
+              "MaxHp": 45.0,
+              "CombatBalanceVersion": 1
+            },
+            "$collider2D": {
+              "offset": { "x": 0.0, "y": 0.5 },
+              "size": { "x": 0.8, "y": 1.0 }
+            }
+          }
+        },
+        "crop": {
+          "parameters": {
+            "growthDurationSeconds": 900.0,
+            "minimumWaterGrowthMultiplier": 0.9,
+            "waterConsumePerSecond": 0.002,
+            "fertilityConsumePerSecond": 0.0001,
+            "rainGrowthBonus": 0.05
+          }
+        },
+        "cropYield": {
+          "parameters": {
+            "outputs": [
+              { "itemId": "CactusPiece", "minAmount": 1, "maxAmount": 2, "probability": 1.0 }
+            ]
+          }
+        },
+        "cropVisual": {
+          "parameters": {
+            "buriedClip": 0.0,
+            "seedlingScale": 0.3,
+            "matureScale": 1.0
+          }
+        },
+        "plantClimate": {
+          "parameters": {
+            "minimumSurvivalTemperature": -5.0,
+            "minimumGrowthTemperature": 10.0,
+            "maximumGrowthTemperature": 45.0,
+            "maximumSurvivalTemperature": 60.0,
+            "fatalExposureHours": 12.0
+          }
+        }
+      }
+    }
+  ]
+}

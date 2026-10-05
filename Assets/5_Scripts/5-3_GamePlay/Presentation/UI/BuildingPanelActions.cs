@@ -11,6 +11,7 @@ public sealed class BuildingPanelActions : MonoBehaviour
     public Button DismantleButton; // 世界建筑的拆回入口。
     private BasePanel panel;
     private Mod_Building building;
+    private MachineEntity mechanical; // 已安装机械的无物体拆除目标。
 
     private void Awake()
     {
@@ -23,12 +24,23 @@ public sealed class BuildingPanelActions : MonoBehaviour
     /// <summary>根据真实物品角色切换操作，普通地面掉落物不能临时冒充手持召唤器。</summary>
     public void Bind(Item target)
     {
+        mechanical = null;
         building = target?.itemMods?.GetMod_ByID<Mod_Building>(ModText.Building);
         building?.ReconcileCarrierRoleWithItemIdentity();
         PlaceButton.gameObject.SetActive(building != null && building.IsSummoner);
         PlaceButton.interactable = building != null && building.IsItemInInventory;
         DismantleButton.gameObject.SetActive(building != null && building.CanCommitDismantle);
         DismantleButton.interactable = building != null && !building.IsDismantlePending;
+    }
+
+    /// <summary>纯数据机械直接绑定权威节点，面板拆除按钮沿用正式外观。</summary>
+    public void BindMechanical(MachineEntity target)
+    {
+        building = null;
+        mechanical = target;
+        PlaceButton.gameObject.SetActive(false);
+        DismantleButton.gameObject.SetActive(target != null);
+        DismantleButton.interactable = target != null;
     }
 
     /// <summary>先进入放置模式，再关闭模态界面释放输入，由下一次使用提交建筑。</summary>
@@ -41,6 +53,16 @@ public sealed class BuildingPanelActions : MonoBehaviour
     /// <summary>关闭面板后走既有拆除事务，生成返还物成功后才删除建筑。</summary>
     private void Dismantle()
     {
+        if (mechanical != null)
+        {
+            MachineEntity targetNode = mechanical;
+            panel.Close();
+            if (ItemNetworkStateSerialization.BeginNetworkMechanicalDismantle(targetNode))
+                return;
+            if (!Mod_Building.TryDismantleMechanical(targetNode, out string error))
+                Debug.LogWarning("[机械拆除] " + error);
+            return;
+        }
         Mod_Building target = building;
         if (target == null || !target.CanCommitDismantle || target.IsDismantlePending)
             return;
@@ -48,7 +70,7 @@ public sealed class BuildingPanelActions : MonoBehaviour
         target.UnInstall();
     }
 
-    private void ClearTarget() => building = null;
+    private void ClearTarget() { building = null; mechanical = null; }
 
     private void OnDestroy()
     {

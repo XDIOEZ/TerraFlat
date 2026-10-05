@@ -141,13 +141,24 @@ public static class TileDefinitionJson
 
         protected override IList<JsonProperty> CreateProperties(Type type, MemberSerialization memberSerialization)
         {
-            return Fields(type).Select(field =>
+            var properties = Fields(type).Select(field =>
             {
                 JsonProperty property = CreateProperty(field, memberSerialization);
                 property.Readable = true;
                 property.Writable = !field.IsInitOnly;
                 return property;
             }).ToList();
+            // 显式声明的配置属性也参与读写，避免物理防御等封装属性被字段契约漏掉。
+            foreach (PropertyInfo member in type.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
+                         .Where(member => member.IsDefined(typeof(JsonPropertyAttribute), true) &&
+                                          member.GetIndexParameters().Length == 0 && member.CanRead && member.CanWrite))
+            {
+                JsonProperty property = CreateProperty(member, memberSerialization);
+                property.Readable = true;
+                property.Writable = true;
+                properties.Add(property);
+            }
+            return properties;
         }
     }
     #endregion

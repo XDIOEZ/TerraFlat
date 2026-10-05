@@ -18,17 +18,14 @@
         "HandDrill"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Mechanical/Items/HandDrill/HandDrill_Icon.png"
       },
       "health": {
         "hasHp": true,
-        "hp": 180,
-        "maxHp": 180,
+        "hp": 60,
+        "maxHp": 60,
         "defense": {
-          "cutting": 8,
-          "piercing": 8,
-          "chopping": 8,
-          "blunt": 8
+          "physical": 8
         },
         "collider": {
           "type": "BoxCollider2D",
@@ -43,7 +40,9 @@
             "y": 1
           },
           "edgeRadius": 0
-        }
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
       },
       "modules": {
         "建筑模块": {
@@ -74,6 +73,7 @@
     },
     {
       "id": "HandDrill_Summoner",
+      "worldDropBehavior": "interactive",
       "parent": "BuildingSummoner_Base",
       "gameName": "手钻",
       "description": "可携带的手动钻孔工具，放置后共享手钻加工状态。",
@@ -89,17 +89,14 @@
         "HandDrill"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Mechanical/Items/HandDrill/HandDrill_Icon.png"
       },
       "health": {
         "hasHp": true,
-        "hp": 180,
-        "maxHp": 180,
+        "hp": 60,
+        "maxHp": 60,
         "defense": {
-          "cutting": 8,
-          "piercing": 8,
-          "chopping": 8,
-          "blunt": 8
+          "physical": 8
         },
         "collider": {
           "type": "BoxCollider2D",
@@ -114,7 +111,9 @@
             "y": 1
           },
           "edgeRadius": 0
-        }
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
       },
       "modules": {
         "建筑模块": {

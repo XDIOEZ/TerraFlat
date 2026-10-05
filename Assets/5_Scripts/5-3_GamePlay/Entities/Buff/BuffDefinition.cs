@@ -16,10 +16,15 @@ public sealed class BuffDefinition
     public BuffStackMode StackMode { get; internal set; }
     /// <summary>同一实例的层数上限；默认 1 保持非叠层 Buff 的行为。</summary>
     public int MaxStacks { get; internal set; } = 1;
+    /// <summary>每次持续时间结束时只移除一层，并为剩余层数重新计时。</summary>
+    public bool DecayStacksOnExpiry { get; internal set; }
     public float VisualBaseScale { get; internal set; } = 1f; // 第一层特效倍率。
     public float VisualScalePerStack { get; internal set; } // 每增加一层的特效倍率增量。
     public float WaterStackIntervalSeconds { get; internal set; } // 入水叠层周期；0 表示不从水体叠加。
     public int WaterStacksPerDepthLevel { get; internal set; } // 每 1/10 真实水深允许的层数。
+    public float RainStackIntervalSeconds { get; internal set; } // 基准雨量下每层的淋雨秒数；0 表示关闭。
+    public int RainMaxStacks { get; internal set; } // 淋雨来源的上限，不削减浸水等来源已有的层数。
+    public float RainReferenceIntensity { get; internal set; } // 普通雨基准强度，实际累积速度与雨量成正比。
     public float DrinkDurationExtensionSeconds { get; internal set; }
 
     private BuffEffectDefinition[] allEffects = Array.Empty<BuffEffectDefinition>();

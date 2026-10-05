@@ -34,7 +34,7 @@ public static partial class RuntimeUIPrefabBuilder
         GameObject art = CreateUIObject("陶罐切面", picture.transform, typeof(Image));
         SetCentered((RectTransform)art.transform, new Vector2(-115f, 0f), new Vector2(350f, 350f));
         art.GetComponent<Image>().sprite = AssetDatabase.LoadAssetAtPath<Sprite>(ClayJarUIArtBuilder.Root + "ClayJar_Cutaway.png");
-        art.GetComponent<Image>().raycastTarget = false;
+        art.GetComponent<Image>().raycastTarget = true;
         RectTransform leftPourOutlet = (RectTransform)CreateUIObject("左罐口出口", art.transform).transform;
         SetCentered(leftPourOutlet, new Vector2(-58f, 120f), Vector2.zero);
         RectTransform rightPourOutlet = (RectTransform)CreateUIObject("右罐口出口", art.transform).transform;
@@ -74,7 +74,15 @@ public static partial class RuntimeUIPrefabBuilder
         panel.Liquid = liquid;
         panel.LeftPourOutlet = leftPourOutlet;
         panel.RightPourOutlet = rightPourOutlet;
-        panel.Appearances = new[]
+        panel.Appearances = CreateWaterVesselAppearances();
+        root.SetActive(true);
+        return root;
+    }
+
+    #region 容器外观配置
+
+    // 正式面板与重建器保持同一套容器剖面、内腔和桶口坐标。
+    private static WaterVesselPanel.VesselAppearance[] CreateWaterVesselAppearances() => new[]
         {
             new WaterVesselPanel.VesselAppearance
             {
@@ -83,12 +91,32 @@ public static partial class RuntimeUIPrefabBuilder
                 Interior = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/6_Art/Generated/WaterVessel/CoconutShellUI/CoconutShell_Interior.png"),
                 FillRange = new Vector2(44f / 128f, 88f / 128f),
                 LeftOutlet = new Vector2(14f / 128f, 84f / 128f),
-                RightOutlet = new Vector2(114f / 128f, 84f / 128f)
+                RightOutlet = new Vector2(114f / 128f, 84f / 128f),
+                MouthWidth = 100f / 128f
+            },
+            new WaterVesselPanel.VesselAppearance
+            {
+                ItemId = "WoodenBarrel",
+                Cutaway = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/6_Art/Generated/WaterVessel/WoodenBarrelUI/WoodenBarrel_Cutaway.png"),
+                Interior = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/6_Art/Generated/WaterVessel/WoodenBarrelUI/WoodenBarrel_Interior.png"),
+                FillRange = new Vector2(14f / 128f, 100f / 128f),
+                LeftOutlet = new Vector2(32f / 128f, 104f / 128f),
+                RightOutlet = new Vector2(96f / 128f, 104f / 128f),
+                MouthWidth = 80f / 128f
+            },
+            new WaterVesselPanel.VesselAppearance
+            {
+                ItemId = "IronBucket",
+                Cutaway = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/6_Art/Generated/WaterVessel/IronBucketUI/IronBucket_Cutaway.png"),
+                Interior = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/6_Art/Generated/WaterVessel/IronBucketUI/IronBucket_Interior.png"),
+                FillRange = new Vector2(21f / 128f, 77f / 128f),
+                LeftOutlet = new Vector2(35f / 128f, 76.5f / 128f),
+                RightOutlet = new Vector2(93f / 128f, 76.5f / 128f),
+                MouthWidth = 58f / 128f
             }
         };
-        root.SetActive(true);
-        return root;
-    }
+
+    #endregion
 
     /// <summary>只更新已有正式 Prefab 的液体样式，不重建容器外形、布局或用户已配置的引用。</summary>
     [MenuItem("FlatWorld/UI/Sync Water Vessel Liquid Styles")]
@@ -145,16 +173,16 @@ public static partial class RuntimeUIPrefabBuilder
             }
         };
 
-    /// <summary>与石臼一致移除整块灰色底板，仅保留透明射线阻挡面和独立操作按钮。</summary>
+    /// <summary>移除透明背景射线，只让罐体和操作按钮接收指针。</summary>
     private static void ConfigureBackgroundlessWaterVessel(GameObject root, Transform content)
     {
         Image rootBlocker = root.GetComponent<Image>();
         rootBlocker.color = Color.clear;
-        rootBlocker.raycastTarget = true;
+        rootBlocker.raycastTarget = false;
 
         Image contentBlocker = content.GetComponent<Image>();
         contentBlocker.color = Color.clear;
-        contentBlocker.raycastTarget = true;
+        contentBlocker.raycastTarget = false;
 
         Outline contentOutline = content.GetComponent<Outline>();
         if (contentOutline != null)

@@ -24,6 +24,7 @@ public partial class GameRes : SingletonAutoMono<GameRes>
     [ShowInInspector]
     public Dictionary<string, RuntimeItemDefinition> ItemDefinitions =
         new Dictionary<string, RuntimeItemDefinition>(System.StringComparer.OrdinalIgnoreCase);
+    private Dictionary<string, string> itemDefinitionAliases = new(System.StringComparer.OrdinalIgnoreCase);
 
     [Header("JSON Actor 定义字典")]
     [ShowInInspector]
@@ -113,13 +114,15 @@ public partial class GameRes : SingletonAutoMono<GameRes>
         TryReloadResources();
     }
 
-    /// <summary>刷新资源加载界面，并保留 F5 全局资源重载入口。</summary>
+    /// <summary>刷新资源加载界面，并保留 Alt+R 全局资源重载入口。</summary>
     public void Update()
     {
         RefreshResourceLoadingPresentation();
 
-        // F5 在主菜单重建资源会话，在世界内准备候选目录并原位发布，不触发保存或退出。
-        if (Keyboard.current?.f5Key.wasPressedThisFrame == true)
+        // Alt+R 在主菜单重建资源会话，在世界内准备候选目录并原位发布，不触发保存或退出。
+        Keyboard keyboard = Keyboard.current;
+        bool altPressed = keyboard != null && (keyboard.leftAltKey.isPressed || keyboard.rightAltKey.isPressed);
+        if (altPressed && keyboard.rKey.wasPressedThisFrame)
         {
             RequestResourceReload();
         }
@@ -235,7 +238,7 @@ public partial class GameRes : SingletonAutoMono<GameRes>
             if (ModRuntimeManager.Instance != null && ModRuntimeManager.Instance.IsRuntimeTemplate(go))
                 obj.SetActive(true);
 
-            if (ItemDefinitions.TryGetValue(prefab, out RuntimeItemDefinition definition) &&
+            if (TryGetItemDefinition(prefab, out RuntimeItemDefinition definition) &&
                 obj.TryGetComponent(out Item item))
             {
                 ItemDefinitionRuntime.ConfigureInstance(this, definition, item, definition.CreateItemData());
@@ -320,12 +323,21 @@ public partial class GameRes : SingletonAutoMono<GameRes>
     {
         if (definition == null || string.IsNullOrWhiteSpace(definition.Id) || definition.ShellPrefab == null)
             throw new InvalidDataException("注册的 ItemDefinition、ID 或外壳为空");
-        if (ItemDefinitions.ContainsKey(definition.Id))
+        if (ItemDefinitions.ContainsKey(definition.Id) || itemDefinitionAliases.ContainsKey(definition.Id))
             throw new InvalidDataException($"ItemDefinition ID 冲突：{definition.Id}");
         if (AllPrefabs.TryGetValue(definition.Id, out GameObject existing) && existing != definition.ShellPrefab)
             throw new InvalidDataException($"物品 ID 与 Prefab 名称/别名冲突：{definition.Id} -> {existing.name} / {definition.ShellPrefab.name}");
 
+        foreach (string alias in definition.FormerIds)
+            if (ItemDefinitions.ContainsKey(alias) || itemDefinitionAliases.ContainsKey(alias) ||
+                AllPrefabs.TryGetValue(alias, out GameObject aliasPrefab) && aliasPrefab != definition.ShellPrefab)
+                throw new InvalidDataException($"ItemDefinition 旧身份冲突：{alias}");
         ItemDefinitions.Add(definition.Id, definition);
+        foreach (string alias in definition.FormerIds)
+        {
+            itemDefinitionAliases.Add(alias, definition.Id);
+            AllPrefabs[alias] = definition.ShellPrefab;
+        }
         // 物品 ID 与实例化目录使用同一个权威外壳。
         AllPrefabs[definition.Id] = definition.ShellPrefab;
         LoadedCount++;
@@ -381,6 +393,7 @@ public partial class GameRes : SingletonAutoMono<GameRes>
             if (itemRegistered)
             {
                 ItemDefinitions.Remove(definition.Id);
+                UnregisterItemDefinitionAliases(definition);
                 if (AllPrefabs.TryGetValue(definition.Id, out GameObject prefab) &&
                     prefab == definition.ShellPrefab)
                 {
@@ -413,6 +426,7 @@ public partial class GameRes : SingletonAutoMono<GameRes>
         }
 
         ItemDefinitions.Remove(actorId.Trim());
+        UnregisterItemDefinitionAliases(definition);
         if (AllPrefabs.TryGetValue(actorId.Trim(), out GameObject prefab) &&
             prefab == definition.ShellPrefab)
         {
@@ -429,7 +443,18 @@ public partial class GameRes : SingletonAutoMono<GameRes>
             definition = null;
             return false;
         }
-        return ItemDefinitions.TryGetValue(itemId, out definition);
+        return ItemDefinitions.TryGetValue(itemDefinitionAliases.TryGetValue(itemId, out string canonicalId)
+            ? canonicalId : itemId, out definition);
+    }
+
+    private void UnregisterItemDefinitionAliases(RuntimeItemDefinition definition)
+    {
+        foreach (string alias in definition.FormerIds)
+        {
+            itemDefinitionAliases.Remove(alias);
+            if (AllPrefabs.TryGetValue(alias, out GameObject prefab) && prefab == definition.ShellPrefab)
+                AllPrefabs.Remove(alias);
+        }
     }
 
     /// <summary>
@@ -450,7 +475,10 @@ public partial class GameRes : SingletonAutoMono<GameRes>
         }
 
         displayName = definition.DisplayName;
-        sprite = definition.Sprite;
+        // 物品可声明独立库存图标，世界主体仍保留可供动态部件叠加的基础贴图。
+        sprite = definition.TryGetVisualStateSprite("inventoryIcon", out Sprite inventoryIcon)
+            ? inventoryIcon
+            : definition.Sprite;
         if (sprite == null)
         {
             Debug.LogError($"物品 {requestedId} 的 JSON 定义缺少 visual.spriteAddress");
@@ -458,6 +486,20 @@ public partial class GameRes : SingletonAutoMono<GameRes>
         }
 
         return true;
+    }
+
+    /// <summary>解析具体 ItemData 的通用显示 Sprite；状态变化由对应模块注册的解析器负责。</summary>
+    public bool TryGetItemPresentation(ItemData itemData, out string displayName, out Sprite sprite)
+    {
+        displayName = string.Empty;
+        sprite = null;
+        if (itemData == null || !TryGetItemPresentation(itemData.IDName, out displayName, out sprite))
+            return false;
+
+        if (ItemDataPresentationResolverRegistry.TryResolve(itemData, out Sprite stateSprite))
+            sprite = stateSprite;
+
+        return sprite != null;
     }
 
     /// <summary>按物品 ID 创建数据；JSON 目录是唯一权威来源。</summary>
@@ -488,7 +530,7 @@ public partial class GameRes : SingletonAutoMono<GameRes>
             return;
         }
 
-        definition.ApplyModuleConfiguration(module, moduleName, data?.ID);
+        definition.ApplyModuleConfiguration(module, moduleName, data?.ModuleId);
     }
 
     public void RegisterBuff(BuffDefinition definition)

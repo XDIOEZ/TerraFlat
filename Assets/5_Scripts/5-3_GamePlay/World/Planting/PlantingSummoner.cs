@@ -6,9 +6,6 @@ using UnityEngine;
 /// </summary>
 public sealed class PlantingSummoner
 {
-    private const string PreviewSortingLayer = "Shadow";
-    private const int PreviewSortingOrder = 1000;
-
     private readonly GameObject previewObject;
     private readonly SpriteRenderer previewRenderer;
 
@@ -21,8 +18,7 @@ public sealed class PlantingSummoner
         previewObject.hideFlags = HideFlags.DontSave;
         previewRenderer = previewObject.AddComponent<SpriteRenderer>();
         previewRenderer.sprite = sprite;
-        previewRenderer.sortingLayerName = PreviewSortingLayer;
-        previewRenderer.sortingOrder = PreviewSortingOrder;
+        WorldSortingManager.GetInstance().ApplyRenderer(previewRenderer, WorldSortingManager.GroundPreviewCategory);
         previewRenderer.enabled = true;
     }
 

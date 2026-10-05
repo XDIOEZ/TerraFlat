@@ -1,24 +1,72 @@
 using System;
 using System.Collections.Generic;
+using Newtonsoft.Json;
 using UnityEngine;
 
+#region 生物生成 JSON 模型
+
+/// <summary>一次加载的本体生成目录；包含全局调度预算和全部独立生成规则，世界运行时只读取内存快照。</summary>
 [Serializable]
 public sealed class SpawnerConfigCatalog
 {
     public int SchemaVersion;
+    public SpawnerRuntimeSettings Settings;
     public List<SpawnerConfigDefinition> Configs = new();
 }
 
+/// <summary>单个生成规则文件的版本和内容；新物种复制一份 JSON 后修改参数与条目即可接入。</summary>
+[Serializable]
+public sealed class SpawnerConfigFile
+{
+    [JsonProperty("schemaVersion", Required = Required.Always)]
+    public int SchemaVersion;
+
+    [JsonProperty("config", Required = Required.Always)]
+    public SpawnerConfigDefinition Config;
+}
+
+/// <summary>启动时加载的全局生态预算；所有帧限流和后端容量均由同一 JSON 提供。</summary>
+[Serializable]
+public sealed class SpawnerRuntimeSettings
+{
+    [JsonProperty("schemaVersion", Required = Required.Always)]
+    public int SchemaVersion;
+
+    [JsonProperty("useAiecsBackend", Required = Required.Always)]
+    public bool UseAiecsBackend;
+
+    [JsonProperty("globalAliveLimit", Required = Required.Always)]
+    public int GlobalAliveLimit;
+
+    [JsonProperty("spawnRetryInterval", Required = Required.Always)]
+    public float SpawnRetryInterval;
+
+    [JsonProperty("ecologyTickInterval", Required = Required.Always)]
+    public float EcologyTickInterval;
+
+    [JsonProperty("maxLoadedGameObjectActors", Required = Required.Always)]
+    public int MaxLoadedGameObjectActors;
+
+    [JsonProperty("maxLoadedEntityActors", Required = Required.Always)]
+    public int MaxLoadedEntityActors;
+
+    [JsonProperty("residentChecksPerTick", Required = Required.Always)]
+    public int ResidentChecksPerTick;
+}
+
+/// <summary>可复用的生成规则参数；数字均由规则 JSON 显式声明并在加载时校验。</summary>
+[JsonObject(ItemRequired = Required.Always)]
 [Serializable]
 public sealed class SpawnerConfigDefinition
 {
+    [JsonProperty(Required = Required.Default)]
+    public bool WaterOnly;
     public SpawnerTreeHabitat TreeHabitat = new();
     public string Id;
     public string ScheduleMode = "timedWindows";
     public string EcologyGroup = "animals";
     public bool RequireGlobalDarkness;
     public float SpawnTriggerTime = 720f;
-    public float SpawnTimeTolerance = 1f;
     public int SpawnsPerDay = 1;
     public float MinSpawnDistance = 15f;
     public float MaxSpawnDistance = 50f;
@@ -42,6 +90,8 @@ public sealed class SpawnerConfigDefinition
     public bool RequireCompletelyDarkTile = true;
     public float MaxAllowedTileLight = 1f;
     public List<string> AllowedBiomeNames = new();
+    [JsonProperty(Required = Required.Default)]
+    public List<int> AllowedGroundTileIds = new();
     public float RecycleDistance = 110f;
     public float RecycleGraceSeconds = 20f;
     public List<SpawnerSpawnEntryDefinition> SpawnEntries = new();
@@ -51,6 +101,7 @@ public sealed class SpawnerConfigDefinition
         SpawnerConfig config = ScriptableObject.CreateInstance<SpawnerConfig>();
         config.name = Id;
         config.PersistentId = Id;
+        config.WaterOnly = WaterOnly;
         config.TreeHabitat = new SpawnerTreeHabitat
         {
             Enabled = TreeHabitat.Enabled,
@@ -61,7 +112,6 @@ public sealed class SpawnerConfigDefinition
         config.EcologyGroup = ParseEcologyGroup(EcologyGroup);
         config.RequireGlobalDarkness = RequireGlobalDarkness;
         config.SpawnTriggerTime = SpawnTriggerTime;
-        config.SpawnTimeTolerance = SpawnTimeTolerance;
         config.SpawnsPerDay = SpawnsPerDay;
         config.MinSpawnDistance = MinSpawnDistance;
         config.MaxSpawnDistance = MaxSpawnDistance;
@@ -84,23 +134,16 @@ public sealed class SpawnerConfigDefinition
         config.IgnorePopulationLimits = IgnorePopulationLimits;
         config.RequireCompletelyDarkTile = RequireCompletelyDarkTile;
         config.MaxAllowedTileLight = MaxAllowedTileLight;
-        config.AllowedBiomeNames = AllowedBiomeNames != null
-            ? new List<string>(AllowedBiomeNames)
-            : new List<string>();
+        config.AllowedBiomeNames = new List<string>(AllowedBiomeNames);
+        config.AllowedGroundTileIds = new List<int>(AllowedGroundTileIds);
         config.RecycleDistance = RecycleDistance;
         config.RecycleGraceSeconds = RecycleGraceSeconds;
         config.SpawnEntries = new List<SpawnerConfig.SpawnEntry>();
 
-        if (SpawnEntries != null)
+        for (int index = 0; index < SpawnEntries.Count; index++)
         {
-            for (int index = 0; index < SpawnEntries.Count; index++)
-            {
-                SpawnerSpawnEntryDefinition source = SpawnEntries[index];
-                if (source == null)
-                    continue;
-
-                config.SpawnEntries.Add(source.CreateRuntimeEntry());
-            }
+            SpawnerSpawnEntryDefinition source = SpawnEntries[index];
+            config.SpawnEntries.Add(source.CreateRuntimeEntry());
         }
 
         return config;
@@ -138,10 +181,15 @@ public sealed class SpawnerConfigDefinition
 [Serializable]
 public sealed class SpawnerSpawnEntryDefinition
 {
+    [JsonProperty(Required = Required.Always)]
     public string PrefabName;
+    [JsonProperty(Required = Required.Always)]
     public string RuntimeBackend = "gameObject";
+    [JsonProperty(Required = Required.Always)]
     public float Probability = 0.5f;
+    [JsonProperty(Required = Required.Always)]
     public int EcologyCost = 1;
+    [JsonProperty(Required = Required.Always)]
     public int SpeciesAliveLimit;
     public SpawnerConfig.SpawnerSpawnInitialization Initialization = new();
 
@@ -176,8 +224,12 @@ public sealed class SpawnerSpawnEntryDefinition
     }
 }
 
+#endregion
+
 public static class SpawnerConfigCatalogService
 {
+    #region 目录生命周期
+
     /// <summary>隔离候选刷怪目录；正在运行的刷怪进度不属于资源上下文。</summary>
     internal static void ConfigureResourceReload(ResourceReloadContext context) =>
         context.Add(() => Catalog, value => Catalog = value, (SpawnerConfigCatalog)null);
@@ -197,17 +249,44 @@ public static class SpawnerConfigCatalogService
 
     public static List<SpawnerConfig> CreateRuntimeConfigs()
     {
-        var configs = new List<SpawnerConfig>();
-        if (Catalog?.Configs == null)
-            return configs;
+        if (Catalog == null)
+            throw new InvalidOperationException("生物生成 JSON 目录尚未加载");
+
+        var configs = new List<SpawnerConfig>(Catalog.Configs.Count);
 
         for (int index = 0; index < Catalog.Configs.Count; index++)
         {
             SpawnerConfigDefinition definition = Catalog.Configs[index];
-            if (definition != null)
-                configs.Add(definition.CreateRuntimeConfig());
+            configs.Add(definition.CreateRuntimeConfig());
         }
 
         return configs;
+    }
+
+    #endregion
+}
+
+/// <summary>启动时校验每个生成条目的 Actor 引用；新 JSON 写错 ID 时阻止发布资源目录。</summary>
+internal sealed class SpawnerResourceCatalogValidator : IResourceCatalogValidator
+{
+    public string Id => "spawners";
+
+    public void Validate(GameRes resources, List<string> errors)
+    {
+        SpawnerConfigCatalog catalog = SpawnerConfigCatalogService.Catalog;
+        if (catalog == null)
+        {
+            errors.Add("生物生成 JSON 目录尚未加载");
+            return;
+        }
+
+        foreach (SpawnerConfigDefinition config in catalog.Configs)
+        {
+            foreach (SpawnerSpawnEntryDefinition entry in config.SpawnEntries)
+            {
+                if (!resources.TryGetActorDefinition(entry.PrefabName, out _))
+                    errors.Add($"生成规则 {config.Id} -> Actor {entry.PrefabName} 未注册");
+            }
+        }
     }
 }

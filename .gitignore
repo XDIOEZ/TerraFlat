@@ -33,6 +33,8 @@
 ExportedObj/
 .consulo/
 *.csproj
+!ModSDK/Examples/HarmonyMachines/HarmonyMachines.csproj
+!ModSDK/Examples/EnderChest/EnderChest.csproj
 *.csproj.meta
 *.unityproj
 *.sln
@@ -78,16 +80,35 @@ crashlytics-build.properties
 
 # Windows/Codex accidental device-name output
 /nul
+/$null
+/~/
 
 # Codex temporary files
 /.codex-tmp/
 
+# PuerTS Unity MCP runtime state and generated project-local files
+/.puerts-unity-mcp/
+/Assets/puerts-unity-mcp/Runtime/Generated/
+/Assets/puerts-unity-mcp/Runtime/Generated/Plugins/puerts_il2cpp/
+
 # Local task outputs
 /outputs/
 /output/
+
+# MOD 示例的本地编译产物
+/ModSDK/Examples/HarmonyMachines/bin/
+/ModSDK/Examples/HarmonyMachines/obj/
+/ModSDK/Examples/HarmonyMachines/package/
+/ModSDK/Examples/EnderChest/bin/
+/ModSDK/Examples/EnderChest/obj/
+/ModSDK/Examples/EnderChest/package/
 
 # Legacy Plastic SCM workspace files
 /cloaked.conf
 /hidden_changes.conf
 /ignore.conf
 /Assets/Screenshots
+
+# Python 自动字节码缓存及 Unity 为缓存目录生成的 meta
+__pycache__/
+__pycache__.meta

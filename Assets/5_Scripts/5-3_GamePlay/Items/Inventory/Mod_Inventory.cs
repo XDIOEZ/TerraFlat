@@ -115,9 +115,7 @@ public class Mod_Inventory : Module, IInventory, IInstanceUI, IInteractable
             currentInventory.DefaultTarget_Inventory = handInventory != null ? handInventory : Inventory_Hand.PlayerHand;
 
             // 初始化库存
-            CreativeInventoryState.Restore(currentInventory);
             currentInventory.InitData();
-            BindController();
 
             // 尝试初始化物品
             GameRes.Instance.InventoryInitGet(Data.InventoryInitName, out Inventoryinit inventoryInit);
@@ -135,6 +133,9 @@ public class Mod_Inventory : Module, IInventory, IInstanceUI, IInteractable
                 NewMethod(currentInventory);
             }
         }
+        // 所有容器初始化完成后统一绑定，避免每个容器重复重绑整组输入。
+        BindController();
+
         // 获取交互模块引用
         UnbindInteractionReceiver();
         if (item != null && item.itemMods != null)
@@ -174,6 +175,7 @@ public class Mod_Inventory : Module, IInventory, IInstanceUI, IInteractable
 
             currentInventory.UnbindPlayerCarryWeightEvents();
             currentInventory.UnbindController();
+            currentInventory.UnbindRuntimeDataEvents();
             currentInventory.item = null;
         }
 
@@ -219,11 +221,11 @@ public class Mod_Inventory : Module, IInventory, IInstanceUI, IInteractable
 
     public virtual void BindController()
     {
-        GameController gameController = null;
+        Mod_GameController gameController = null;
         if (item?.itemMods?.ContainsKey_ID(ModText.Controller) == true)
-            gameController = item.itemMods.GetMod_ByID<GameController>(ModText.Controller);
+            gameController = item.itemMods.GetMod_ByID<Mod_GameController>(ModText.Controller);
         else if (item?.Owner?.itemMods?.ContainsKey_ID(ModText.Controller) == true)
-            gameController = item.Owner.itemMods.GetMod_ByID<GameController>(ModText.Controller);
+            gameController = item.Owner.itemMods.GetMod_ByID<Mod_GameController>(ModText.Controller);
 
         foreach (var currentInventory in inventoryRefDic.Values)
         {
@@ -449,7 +451,7 @@ public class Mod_Inventory : Module, IInventory, IInstanceUI, IInteractable
 
     #region 辅助方法
     /// <summary>生成库存存档键；优先使用配置名称，否则使用列表索引保证稳定唯一。</summary>
-    private static string GetInventoryKey(Inventory targetInventory, int index)
+    public static string GetInventoryKey(Inventory targetInventory, int index)
     {
         string configuredName = targetInventory?.Data?.Name;
         return string.IsNullOrWhiteSpace(configuredName)

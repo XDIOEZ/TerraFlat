@@ -55,5 +55,5 @@ MonoBehaviour:
   ignitionItemIds:
   - FireSeed
   ignitionTags:
-  - "\u706B\u79CD"
+  - Combustion.Tinder
   ignitionFuelValueOverride: 8

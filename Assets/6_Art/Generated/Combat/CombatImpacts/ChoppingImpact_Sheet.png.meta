@@ -126,7 +126,7 @@ TextureImporter:
       name: ChoppingImpact_0
       rect:
         serializedVersion: 2
-        x: 0.0
+        x: 0
         y: 443.5
         width: 443.5
         height: 443.5
@@ -140,7 +140,7 @@ TextureImporter:
       spriteID: b376d05580b8404c9f2983afdeb4d495
       internalID: 21300000
       vertices: []
-      indices:
+      indices: 
       edges: []
       weights: []
     - serializedVersion: 2
@@ -161,14 +161,14 @@ TextureImporter:
       spriteID: 12571309dfe14682b2c719524c1df548
       internalID: 21300001
       vertices: []
-      indices:
+      indices: 
       edges: []
       weights: []
     - serializedVersion: 2
       name: ChoppingImpact_2
       rect:
         serializedVersion: 2
-        x: 887.0
+        x: 887
         y: 443.5
         width: 443.5
         height: 443.5
@@ -182,7 +182,7 @@ TextureImporter:
       spriteID: b3a4d9d4390d43ba804a3d5d17152e7f
       internalID: 21300002
       vertices: []
-      indices:
+      indices: 
       edges: []
       weights: []
     - serializedVersion: 2
@@ -203,15 +203,15 @@ TextureImporter:
       spriteID: 0b700e2fa561419eb7733653737e20c7
       internalID: 21300003
       vertices: []
-      indices:
+      indices: 
       edges: []
       weights: []
     - serializedVersion: 2
       name: ChoppingImpact_4
       rect:
         serializedVersion: 2
-        x: 0.0
-        y: 0.0
+        x: 0
+        y: 0
         width: 443.5
         height: 443.5
       alignment: 0
@@ -224,7 +224,7 @@ TextureImporter:
       spriteID: 7bcd967ed6d04a6396bcab3b16c90f9c
       internalID: 21300004
       vertices: []
-      indices:
+      indices: 
       edges: []
       weights: []
     - serializedVersion: 2
@@ -232,7 +232,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 443.5
-        y: 0.0
+        y: 0
         width: 443.5
         height: 443.5
       alignment: 0
@@ -245,15 +245,15 @@ TextureImporter:
       spriteID: 104148035f3d4f89b007bac6f650e12f
       internalID: 21300005
       vertices: []
-      indices:
+      indices: 
       edges: []
       weights: []
     - serializedVersion: 2
       name: ChoppingImpact_6
       rect:
         serializedVersion: 2
-        x: 887.0
-        y: 0.0
+        x: 887
+        y: 0
         width: 443.5
         height: 443.5
       alignment: 0
@@ -266,7 +266,7 @@ TextureImporter:
       spriteID: 25d7f27c4fdc40ae85f71a86bcf31dd5
       internalID: 21300006
       vertices: []
-      indices:
+      indices: 
       edges: []
       weights: []
     - serializedVersion: 2
@@ -274,7 +274,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 1330.5
-        y: 0.0
+        y: 0
         width: 443.5
         height: 443.5
       alignment: 0
@@ -287,7 +287,7 @@ TextureImporter:
       spriteID: 151d991376eb40b8aced452797116b08
       internalID: 21300007
       vertices: []
-      indices:
+      indices: 
       edges: []
       weights: []
     outline: []
@@ -296,7 +296,7 @@ TextureImporter:
     spriteID: f1ff2ecf6f884ad59a798e9c6a0c697f
     internalID: 0
     vertices: []
-    indices:
+    indices: 
     edges: []
     weights: []
     secondaryTextures: []
@@ -309,8 +309,8 @@ TextureImporter:
       ChoppingImpact_5: 21300005
       ChoppingImpact_6: 21300006
       ChoppingImpact_7: 21300007
-  mipmapLimitGroupName:
+  mipmapLimitGroupName: 
   pSDRemoveMatte: 0
-  userData:
-  assetBundleName:
-  assetBundleVariant:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

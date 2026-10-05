@@ -467,7 +467,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7086988442357602367, guid: eae5f08c6c704a24a8bbbcb19d3dcf13, type: 3}
       propertyPath: m_Name
-      value: Module_Equipment_Store
+      value: Mod_EquipmentStore
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

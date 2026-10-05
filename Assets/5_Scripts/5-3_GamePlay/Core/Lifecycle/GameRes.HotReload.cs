@@ -9,7 +9,8 @@ using UnityEngine;
 
 /// <summary>
 /// 当前存档内的资源更新事务：跨帧准备候选目录，正式世界继续运行；校验成功后同帧切换。
-/// 不保存、不退出、不重建玩家与区块。旧代资源保留到世界彻底退出，防止活跃实例持有失效引用。
+/// 不写盘、不退出、不重建区块；发布后只重建本地 Player 运行时外壳与 UI，继续复用同一份玩家 Data。
+/// 旧代资源保留到世界彻底退出，防止其它活跃实例持有失效引用。
 /// </summary>
 public partial class GameRes
 {
@@ -17,8 +18,12 @@ public partial class GameRes
 
     private bool preparingInPlaceReload;
     private bool resourceReloadInProgress;
+    private float resourceReloadProgress;
     private Action cancelInPlaceReload;
     private readonly List<Action> retiredResourceReleases = new();
+    /// <summary>当前世界暂留的上一代物品定义，世界退出时随旧资源一起移除。</summary>
+    private readonly Dictionary<string, RuntimeItemDefinition> retiredWorldItemDefinitions =
+        new(StringComparer.OrdinalIgnoreCase);
     private GameManager reloadWorldOwner;
 
     /// <summary>候选加载期间正式 LoadState 仍为 Ready，玩法查询可继续读取旧目录。</summary>
@@ -27,6 +32,8 @@ public partial class GameRes
     public int ResourceReloadVersion { get; private set; }
     /// <summary>原位更新失败原因；失败不改变正式目录的 Ready 状态。</summary>
     public string LastResourceReloadError { get; private set; }
+    /// <summary>部分 Actor 定义未更新时保留明确原因，成功发布不隐去内容错误。</summary>
+    public string LastResourceReloadWarnings { get; private set; }
     /// <summary>成功发布后通知需要主动重建缓存的系统；不复用世界进入/退出事件。</summary>
     public event Action ResourcesReloaded;
 
@@ -39,7 +46,9 @@ public partial class GameRes
         if (resourceReloadInProgress || LoadState != ResourceLoadState.Ready || !manager.IsGameplayReady)
             return false;
         resourceReloadInProgress = true;
+        resourceReloadProgress = 0f;
         LastResourceReloadError = null;
+        LastResourceReloadWarnings = null;
         if (reloadWorldOwner != manager)
         {
             if (reloadWorldOwner != null)
@@ -47,6 +56,7 @@ public partial class GameRes
             reloadWorldOwner = manager;
             manager.BackToHelloScene_Event_End += ReleaseRetiredWorldResources;
         }
+        manager.BeginResourceReloadStatus();
         Coroutine started = StartCoroutine(ReloadResourcesInPlace(manager));
         inGameReloadCoroutine = resourceReloadInProgress ? started : null;
         return true;
@@ -61,12 +71,17 @@ public partial class GameRes
         ModRuntimeManager mods = ModRuntimeManager.Instance;
         GameSaveData world = SaveDataMgr.Instance?.SaveData;
         Dictionary<string, RuntimeItemDefinition> previousItems = ItemDefinitions;
+        ActorDefinitionCatalogLoader.ReloadSnapshot actorSnapshot = null;
+        MachineCatalog.ReloadSnapshot previousMechanical = null;
         Dictionary<string, RuntimeTileDefinition> previousTiles = TileBlockDict;
         LiquidTypeCatalog previousLiquidTypes = LiquidTypes;
         string[] previousLiquids = LiquidDefinitions.Keys.ToArray();
         ResourceAssetScope previousAssets = resourceAssets;
         bool committed = false;
         bool cleaned = false;
+        bool terminalFeedbackReported = false;
+        string[] retainedItemIds = Array.Empty<string>();
+        string[] retainedMechanicalEntries = Array.Empty<string>();
 
         // 显式清理入口同时用于正常完成、世界切换、组件销毁和协程取消，且只能执行一次。
         cancelInPlaceReload = () =>
@@ -83,6 +98,8 @@ public partial class GameRes
             mods?.FinishResourceReload();
             preparingInPlaceReload = false;
             resourceReloadInProgress = false;
+            if (!terminalFeedbackReported && manager != null)
+                manager.CancelResourceReloadStatus();
             inGameReloadCoroutine = null;
             cancelInPlaceReload = null;
         };
@@ -94,10 +111,12 @@ public partial class GameRes
             try
             {
                 if (mods == null) throw new InvalidOperationException("当前资源会话缺少 MOD 管理器。");
+                previousMechanical = MachineCatalog.CaptureReloadSnapshot();
+                actorSnapshot = ActorDefinitionCatalogLoader.CaptureReloadSnapshot(this);
                 context = CreateInPlaceReloadContext(candidateAssets, mods);
-                plan = CreateResourceLoadPlan();
+                plan = CreateResourceLoadPlan(actorSnapshot);
                 // 发布前单独验证机械目录；不清除正在运行的机械网络和动力源。
-                plan.Add("mechanical-reload", "校验机械配置", 1, () => RunAction(MechanicalCatalog.EnsureLoaded));
+                plan.Add("mechanical-reload", "校验机械配置", 1, () => RunAction(MachineCatalog.EnsureLoaded));
                 context.Add(() => loadPipeline, value => loadPipeline = value, plan);
             }
             catch (Exception exception) { error = exception; }
@@ -118,12 +137,15 @@ public partial class GameRes
                     ModSaveMetadata modState = mods.CaptureSaveMetadata();
                     context.InCandidate(() =>
                     {
+                        retainedItemIds = RetainRemovedItemDefinitions(previousItems);
+                        retainedMechanicalEntries = MachineCatalog.RetainMissingEntries(previousMechanical);
                         ValidateInPlaceCompatibility(previousItems, previousTiles, previousLiquidTypes, previousLiquids);
                         mods.PrepareReloadState(modState);
                     });
                     Action previousModRelease = mods.CaptureResourceRelease();
                     context.Commit();
                     committed = true;
+                    UpdateRetiredWorldItemDefinitions(retainedItemIds);
                     LoadState = ResourceLoadState.Ready;
                     IsStartupReady = true;
                     preparingInPlaceReload = false;
@@ -131,6 +153,8 @@ public partial class GameRes
                     retiredResourceReleases.Add(previousModRelease);
                     retiredResourceReleases.Add(previousAssets.Dispose);
                     ResourceReloadVersion++;
+                    LastResourceReloadWarnings = actorSnapshot.Issues.Count == 0
+                        ? null : string.Join("\n", actorSnapshot.Issues);
                     LastLoadError = null;
                     loadingProgress = 1f;
                     loadingText = "资源已在当前世界更新";
@@ -141,12 +165,31 @@ public partial class GameRes
             if (error != null)
             {
                 LastResourceReloadError = $"阶段 {plan?.CurrentStage ?? "prepare"}：{error.Message}";
+                if (manager != null)
+                {
+                    if (error is OperationCanceledException)
+                        manager.CancelResourceReloadStatus();
+                    else
+                        manager.EndResourceReloadStatus(false);
+                }
+                terminalFeedbackReported = true;
                 Debug.LogWarning($"[GameRes] F5 原位更新未发布，当前世界与旧资源保持运行。{LastResourceReloadError}", this);
                 yield break;
             }
 
             PublishInPlaceReload(previousItems, mods);
-            Debug.Log($"[GameRes] F5 原位更新完成：版本={ResourceReloadVersion}，玩家和世界实例保持不变。", this);
+            ItemMgr itemManager = ItemMgr.GetInstance();
+            if (itemManager != null)
+                yield return itemManager.ReloadLocalPlayerAfterResourceReload();
+
+            if (retainedItemIds.Length > 0 || retainedMechanicalEntries.Length > 0)
+                Debug.Log($"[GameRes] F5 已发布；当前世界暂时保留旧定义：物品 [{string.Join("、", retainedItemIds)}]，机械 [{string.Join("、", retainedMechanicalEntries)}]（退出世界后释放）。", this);
+            if (LastResourceReloadWarnings != null)
+                Debug.LogWarning($"[GameRes] F5 已发布有效资源，以下 Actor 定义未更新：\n{LastResourceReloadWarnings}", this);
+            if (manager != null)
+                manager.EndResourceReloadStatus(true);
+            terminalFeedbackReported = true;
+            Debug.Log($"[GameRes] F5 原位更新完成：版本={ResourceReloadVersion}，世界实例保持不变，本地玩家与运行时 UI 已按最新 Prefab 重建。", this);
         }
         finally { cancelInPlaceReload?.Invoke(); }
     }
@@ -162,6 +205,7 @@ public partial class GameRes
         context.Add(() => LoadState, value => LoadState = value, ResourceLoadState.Loading);
         context.AddDictionary(() => AllPrefabs, value => AllPrefabs = value);
         context.AddDictionary(() => ItemDefinitions, value => ItemDefinitions = value);
+        context.AddDictionary(() => itemDefinitionAliases, value => itemDefinitionAliases = value);
         context.AddDictionary(() => ActorDefinitions, value => ActorDefinitions = value);
         context.AddDictionary(() => LootTables, value => LootTables = value);
         context.AddDictionary(() => recipeDict, value => recipeDict = value);
@@ -180,10 +224,13 @@ public partial class GameRes
         ActorDefinitionCatalogLoader.ConfigureResourceReload(context);
         PlayerCreationTemplateCatalogService.ConfigureResourceReload(context);
         TimeSystemConfigService.ConfigureResourceReload(context);
+        WaterCurrentPushConfigService.ConfigureResourceReload(context);
         SpawnerConfigCatalogService.ConfigureResourceReload(context);
+        NaturalGenerationRuleCatalogService.ConfigureResourceReload(context);
+        RiverGenerationConfigService.ConfigureResourceReload(context);
         AnimalSkillCatalogService.ConfigureResourceReload(context);
         QuestCatalog.ConfigureResourceReload(context);
-        MechanicalCatalog.ConfigureResourceReload(context);
+        MachineCatalog.ConfigureResourceReload(context);
         mods.ConfigureResourceReload(context);
         return context;
     }
@@ -192,7 +239,41 @@ public partial class GameRes
 
     #region 发布与兼容
 
-    /// <summary>在用稳定身份不能被删除或重排；原世界和后台生成器仍持有原会话的液体编号表。</summary>
+    /// <summary>新目录删除或重命名物品 ID 时，当前世界继续使用上一代定义直至退出。</summary>
+    private string[] RetainRemovedItemDefinitions(IReadOnlyDictionary<string, RuntimeItemDefinition> previousItems)
+    {
+        var retainedIds = new List<string>();
+        foreach (KeyValuePair<string, RuntimeItemDefinition> pair in previousItems)
+        {
+            if (TryGetItemDefinition(pair.Key, out _)) continue;
+            ItemDefinitions.Add(pair.Key, pair.Value);
+            retainedIds.Add(pair.Key);
+        }
+        return retainedIds.ToArray();
+    }
+
+    /// <summary>记录本次候选仍缺失的身份；被新目录重新定义的身份不再视为退役。</summary>
+    private void UpdateRetiredWorldItemDefinitions(IEnumerable<string> retainedItemIds)
+    {
+        var retainedIds = new HashSet<string>(retainedItemIds ?? Array.Empty<string>(), StringComparer.OrdinalIgnoreCase);
+        foreach (string id in retiredWorldItemDefinitions.Keys.Where(id => !retainedIds.Contains(id)).ToArray())
+            retiredWorldItemDefinitions.Remove(id);
+        foreach (string id in retainedIds)
+            if (ItemDefinitions.TryGetValue(id, out RuntimeItemDefinition definition))
+                retiredWorldItemDefinitions[id] = definition;
+    }
+
+    /// <summary>先从新会话目录移除临时旧身份，再释放承载其 Prefab、Sprite 与 MOD 资源的旧代。</summary>
+    private void RemoveRetiredWorldItemDefinitions()
+    {
+        foreach (KeyValuePair<string, RuntimeItemDefinition> pair in retiredWorldItemDefinitions)
+            if (ItemDefinitions.TryGetValue(pair.Key, out RuntimeItemDefinition current) &&
+                ReferenceEquals(current, pair.Value))
+                ItemDefinitions.Remove(pair.Key);
+        retiredWorldItemDefinitions.Clear();
+    }
+
+    /// <summary>旧物品身份须已被暂留；地块稳定编号和液体编号表仍不能改变。</summary>
     private void ValidateInPlaceCompatibility(
         IReadOnlyDictionary<string, RuntimeItemDefinition> items,
         IReadOnlyDictionary<string, RuntimeTileDefinition> tiles,
@@ -200,7 +281,7 @@ public partial class GameRes
         string[] liquidIds)
     {
         foreach (string id in items.Keys)
-            if (!ItemDefinitions.ContainsKey(id)) throw new InvalidDataException($"运行中不能删除物品定义：{id}");
+            if (!TryGetItemDefinition(id, out _)) throw new InvalidDataException($"运行中不能删除物品定义：{id}");
         foreach (RuntimeTileDefinition tile in tiles.Values)
             if (!TileBlockDict.TryGetValue(tile.Id, out RuntimeTileDefinition current) || current.RuntimeTileId != tile.RuntimeTileId)
                 throw new InvalidDataException($"运行中不能删除地块或改变稳定编号：{tile.Id}");
@@ -246,6 +327,8 @@ public partial class GameRes
 
     private void ReleaseRetiredResourceSessions()
     {
+        MachineCatalog.ReleaseRetiredEntries();
+        RemoveRetiredWorldItemDefinitions();
         foreach (Action release in retiredResourceReleases)
         {
             try { release(); }

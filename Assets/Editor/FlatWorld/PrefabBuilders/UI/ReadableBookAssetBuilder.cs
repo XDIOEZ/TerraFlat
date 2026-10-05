@@ -41,6 +41,7 @@ public static class ReadableBookAssetBuilder
         basePanel.PanelName = RuntimeUIPrefabKeys.ReadableBook;
         basePanel.rectTransform = root;
         basePanel.canvasGroup = root.GetComponent<CanvasGroup>();
+        RuntimeUIPrefabBuilder.ConfigureScaleAnimation(basePanel);
         basePanel.canvasGroup.alpha = 0f;
         basePanel.canvasGroup.interactable = false;
         basePanel.canvasGroup.blocksRaycasts = false;

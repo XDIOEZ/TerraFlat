@@ -319,7 +319,7 @@ public sealed class GamepadUIRuntimeController : MonoBehaviour
     }
 
     /// <summary>
-    /// 接收 GameController 已经计算好的屏幕光标位置。
+    /// 接收 Mod_GameController 已经计算好的屏幕光标位置。
     /// </summary>
     public void NotifyCursorPosition(Vector2 screenPosition)
     {

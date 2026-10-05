@@ -1,0 +1,7 @@
+{
+  "name": "demo.runtime.screen.js",
+  "description": "Demo Runtime JavaScript MCP tool. Returns Application, Screen, and active scene data from Play Mode or a phone/player.",
+  "inputSchemaJson": "{\"type\":\"object\",\"additionalProperties\":true}",
+  "modulePath": "demo-runtime-screen.mjs",
+  "functionName": "execute"
+}

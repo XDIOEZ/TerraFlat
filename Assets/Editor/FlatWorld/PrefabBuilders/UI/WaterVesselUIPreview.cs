@@ -11,11 +11,20 @@ public static class WaterVesselUIPreview
     [MenuItem("FlatWorld/UI/Preview Water Vessel UI")]
     public static void Render()
     {
-        string[] ids = { "dirty", "drinkable", "sea" };
+        string[] ids = { LiquidIds.DirtyWater, LiquidIds.DrinkableWater, LiquidIds.SeaWater };
         string[] names = { "脏水", "淡水", "海水" };
-        for (int i = 0; i < ids.Length; i++) RenderOne(ids[i], names[i], i);
+        string catalogPath = Path.Combine(Application.streamingAssetsPath, "GameConfig/Liquids/liquids.json");
+        var definitions = LiquidDefinitionFactory.BuildCatalog(
+            LiquidDefinitionFactory.DeserializeCatalog(File.ReadAllText(catalogPath)));
+        for (int i = 0; i < ids.Length; i++)
+        {
+            LiquidDefinition liquid = definitions.Find(definition => definition.Id == ids[i]);
+            if (liquid == null)
+                throw new InvalidDataException($"液体预览找不到定义：{ids[i]}");
+            RenderOne(liquid, names[i], i);
+        }
     }
-    private static void RenderOne(string id, string name, int index)
+    private static void RenderOne(LiquidDefinition liquid, string name, int index)
     {
         var scene = EditorSceneManager.NewPreviewScene();
         var target = new RenderTexture(680, 820, 24);
@@ -31,7 +40,7 @@ public static class WaterVesselUIPreview
             var instance = (GameObject)PrefabUtility.InstantiatePrefab(asset, scene);
             instance.transform.SetParent(root.transform, false);
             instance.transform.localScale = Vector3.one;
-            instance.GetComponent<WaterVesselPanel>().Liquid.SetWater(4, 8, id, true);
+            instance.GetComponent<WaterVesselPanel>().Liquid.SetWater(4, 8, liquid, true);
             foreach (TMP_Text text in instance.GetComponentsInChildren<TMP_Text>(true))
                 if (text.name == "水量状态") text.text = name + "　4 / 8 份\n加热进度：0 秒";
             var cameraObject = new GameObject("预览相机", typeof(Camera));

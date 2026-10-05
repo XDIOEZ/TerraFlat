@@ -58,10 +58,23 @@ public sealed class CraftingOutputPreview : MonoBehaviour
 
     public void Show(Sprite sprite, float progress01 = 0f)
     {
+        ShowPreview(sprite, progress01, false);
+    }
+
+    /// <summary>持续加工时在已有产物的槽位上继续实化下一份产物。</summary>
+    public void ShowOverOccupiedSlot(ItemData itemData, float progress01 = 0f)
+    {
+        ShowPreview(ResolveSprite(itemData), progress01, true);
+    }
+
+    /// <summary>按加工入口的占槽策略展示统一的虚像与自下而上实化层。</summary>
+    private void ShowPreview(Sprite sprite, float progress01, bool showWhenOccupied)
+    {
         EnsureImages();
-        if (IsOutputOccupied())
+        bool outputOccupied = IsOutputOccupied();
+        if (outputOccupied && !showWhenOccupied)
         {
-            // 输出槽已有上一次制作结果时，真实物品优先显示，不能再叠加下一次制作虚影。
+            // 普通制作面板仍优先展示已占用槽位的真实物品。
             Clear();
             return;
         }
@@ -76,6 +89,9 @@ public sealed class CraftingOutputPreview : MonoBehaviour
         _revealImage.sprite = sprite;
         _previewVisible = true;
         SetRealImageVisible(false);
+        // 已有产物时只隐藏真实图标，让其子级数量文字仍绘制在实化层之上。
+        if (outputOccupied && _realImage != null && _realImage.transform.parent == _revealImage.transform.parent)
+            _realImage.transform.SetAsLastSibling();
         _ghostImage.gameObject.SetActive(true);
         _revealImage.gameObject.SetActive(true);
         SetProgress(progress01);

@@ -51,8 +51,8 @@ public static class PlayerDeathInventoryDropper
             }
         }
 
-        Inventory_HotBar hotbar =
-            player.itemMods.GetMod_ByID<Inventory_HotBar>(ModText.Hotbar);
+        Mod_HotBar hotbar =
+            player.itemMods.GetMod_ByID<Mod_HotBar>(ModText.Hotbar);
         if (hotbar?.CurentSelectItem != null &&
             (hotbar.CurrentSelectItemSlot == null || hotbar.CurrentSelectItemSlot.itemData == null))
         {
@@ -91,7 +91,7 @@ public static class PlayerDeathInventoryDropper
                             AddInventories(result, seenData, inventoryModule.InventoryInstances);
                             break;
 
-                        case Inventory_HotBar hotbar:
+                        case Mod_HotBar hotbar:
                             AddInventory(result, seenData, hotbar.RuntimeInventory);
                             break;
 
@@ -169,11 +169,10 @@ public static class PlayerDeathInventoryDropper
             droppedData.Stack.Amount = slot.Amount;
             droppedData.Stack.CanBePickedUp = false;
             droppedData.inHand = false;
-            droppedData.transform.position = player.transform.position;
-            droppedData.transform.scale = Vector3.one * 0.5f;
+            droppedData.transform.position = WorldTopologyRuntime.NormalizePosition(player.transform.position);
 
             spawnedDrop = DroppedItemService.Spawn(droppedData, player.transform.position,
-                endPosition, DropDuration, Vector3.one * 0.5f);
+                endPosition, DropDuration);
 
             inventoryData.RemoveItemAll(slot, slotIndex);
             inventoryData.Event_OnDataChanged_TwoSlots.Invoke(slot, null);

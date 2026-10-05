@@ -3,7 +3,7 @@ using Sirenix.OdinInspector;
 public partial class GameSaveData
 {
     [ShowInInspector]
-    public GameDifficultyId Difficulty = GameDifficultyId.Simple;
+    public GameDifficultyId Difficulty = GameDifficultyId.Level0;
 
     [ShowInInspector]
     public bool CustomDifficultyDropAllCarriedItems;

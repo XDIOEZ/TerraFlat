@@ -8,10 +8,19 @@ namespace FlatWorld.WorldModel
     public readonly struct LiquidCellValue : IEquatable<LiquidCellValue>
     {
         #region 格子值
+        public const float DepthEpsilon = 0.000001f;
         public readonly int LiquidTypeIndex;
         public readonly float LiquidDepth;
         public LiquidCellValue(int typeIndex, float depth) { LiquidTypeIndex = typeIndex; LiquidDepth = depth; }
         public bool Equals(LiquidCellValue other) => LiquidTypeIndex == other.LiquidTypeIndex && LiquidDepth.Equals(other.LiquidDepth);
+
+        public static float NormalizeDepth(float depth)
+        {
+            if (float.IsNaN(depth) || float.IsInfinity(depth)) throw new ArgumentOutOfRangeException(nameof(depth));
+            depth = Math.Clamp(depth, 0f, 1f);
+            // 统一清除计算尾数，避免几乎抽干的格子仍保留整格水面。
+            return depth <= DepthEpsilon ? 0f : depth;
+        }
         #endregion
     }
 
@@ -35,9 +44,8 @@ namespace FlatWorld.WorldModel
         internal LiquidCellValue Read(int index) => new(TypeIndex[index], Depth[index]);
         internal LiquidCellValue Normalize(int typeIndex, float depth)
         {
-            if (float.IsNaN(depth) || float.IsInfinity(depth)) throw new ArgumentOutOfRangeException(nameof(depth));
+            depth = LiquidCellValue.NormalizeDepth(depth);
             Types.GetId(typeIndex);
-            depth = Math.Clamp(depth, 0f, 1f);
             if (depth > 0f && typeIndex == 0) throw new ArgumentException("非零液深必须具有液体身份。");
             return new LiquidCellValue(depth > 0f ? typeIndex : 0, depth);
         }

@@ -39,22 +39,22 @@ public static class GameUIPrefabRebuilder
         CraftingRoot + "UI_FlintStrike.prefab"
     };
 
-    private static readonly Color Ink = new Color32(52, 52, 52, 251);
-    private static readonly Color InkSoft = new Color32(61, 61, 61, 251);
-    private static readonly Color Surface = new Color32(73, 73, 73, 251);
-    private static readonly Color SurfaceRaised = new Color32(89, 89, 89, 252);
-    private static readonly Color Cream = new Color32(238, 238, 238, 255);
-    private static readonly Color Muted = new Color32(200, 200, 200, 255);
-    private static readonly Color Amber = new Color32(215, 197, 106, 255);
-    private static readonly Color Teal = new Color32(164, 164, 164, 255);
-    private static readonly Color Border = new Color32(255, 255, 255, 33);
+    private static Color Ink => FlatWorldUITheme.Canvas;
+    private static Color InkSoft => FlatWorldUITheme.SurfaceLow;
+    private static Color Surface => FlatWorldUITheme.Surface;
+    private static Color SurfaceRaised => FlatWorldUITheme.SurfaceRaised;
+    private static Color Cream => FlatWorldUITheme.TextPrimary;
+    private static Color Muted => FlatWorldUITheme.TextSecondary;
+    private static Color Amber => FlatWorldUITheme.Accent;
+    private static Color Teal => FlatWorldUITheme.Teal;
+    private static Color Border => FlatWorldUITheme.Border;
 
     // 行囊保留原布局，但视觉跟随全局灰阶主题，不再使用独立彩色槽位皮肤。
-    private static readonly Color ModularBagOuter = new Color32(52, 52, 52, 255);
-    private static readonly Color ModularBagSurface = new Color32(73, 73, 73, 255);
-    private static readonly Color ModularBagField = new Color32(61, 61, 61, 255);
-    private static readonly Color ModularBagLine = new Color32(255, 255, 255, 34);
-    private static readonly Color ModularBagText = new Color32(238, 238, 238, 255);
+    private static Color ModularBagOuter => FlatWorldUITheme.Canvas;
+    private static Color ModularBagSurface => FlatWorldUITheme.Surface;
+    private static Color ModularBagField => FlatWorldUITheme.SurfaceLow;
+    private static Color ModularBagLine => FlatWorldUITheme.Border;
+    private static Color ModularBagText => FlatWorldUITheme.TextPrimary;
 
     private static TMP_FontAsset font;
 
@@ -657,7 +657,7 @@ public static class GameUIPrefabRebuilder
         int columns,
         Vector2 cellSize)
     {
-        RectTransform frame = PrepareWindow(root, width, height, title, eyebrow, hint);
+        RectTransform frame = PrepareWindow(root, width, height, title, eyebrow, hint, true);
         AddSection(frame, "CONTENTS", "物资清单", 24f, 104f, width - 48f, height - 184f);
 
         RectTransform scroll = FindRect(root.transform, "Scroll View");
@@ -687,14 +687,14 @@ public static class GameUIPrefabRebuilder
 
     /// <summary>
     /// 构建灰阶简约行囊版式。
-    /// 保留现有 800×640 窗口和七列滚动布局，只清理旧彩色装饰并统一内容区层级。
+    /// 保留现有 920×560 窗口和九列滚动布局，只清理旧彩色装饰并统一内容区层级。
     /// </summary>
     private static void BuildModularInventoryBagPreview(GameObject root)
     {
-        const float width = 800f;
-        const float height = 640f;
+        const float width = 920f;
+        const float height = 560f;
 
-        RectTransform chrome = PrepareWindow(root, width, height, "行囊", string.Empty, string.Empty);
+        RectTransform chrome = PrepareWindow(root, width, height, "行囊", string.Empty, string.Empty, true);
 
         // 简约主题不保留额外图标、眉题和装饰性英文。
         DestroyGeneratedElement(chrome, "FWUI_眉题");
@@ -720,7 +720,7 @@ public static class GameUIPrefabRebuilder
         RectTransform innerField = FindRect(chrome, "FWUI_InnerField");
         if (innerField != null)
         {
-            SetTopLeft(innerField, 24f, 92f, width - 48f, 484f);
+            SetTopLeft(innerField, 24f, 92f, width - 48f, height - 156f);
             Image fieldImage = innerField.GetComponent<Image>();
             if (fieldImage != null)
             {
@@ -735,7 +735,7 @@ public static class GameUIPrefabRebuilder
         RectTransform scroll = FindRect(root.transform, "Scroll View");
         if (scroll != null)
         {
-            SetTopLeft(scroll, 48f, 112f, width - 96f, 448f);
+            SetTopLeft(scroll, 48f, 112f, width - 96f, height - 192f);
             Image scrollImage = scroll.GetComponent<Image>();
             if (scrollImage != null)
             {
@@ -749,7 +749,7 @@ public static class GameUIPrefabRebuilder
         if (grid != null)
         {
             grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-            grid.constraintCount = 7;
+            grid.constraintCount = 9;
             grid.cellSize = new Vector2(80f, 80f);
             grid.spacing = new Vector2(4f, 4f);
             grid.padding = new RectOffset(8, 8, 8, 8);
@@ -981,7 +981,7 @@ public static class GameUIPrefabRebuilder
     {
         float width = compact ? 646f : 726f;
         float height = compact ? 438f : 526f;
-        RectTransform frame = PrepareWindow(root, width, height, title, eyebrow, compact ? "按住操作键推进过程 · 松开即可暂停" : "放入材料 · 核对产物 · 开始制作");
+        RectTransform frame = PrepareWindow(root, width, height, title, eyebrow, compact ? "连续点击推进取火 · 停止操作时进度会缓慢回落" : "放入材料 · 核对产物 · 开始制作", true);
 
         float sectionHeight = height - 206f;
         float inputWidth = compact ? 220f : 398f;
@@ -1032,7 +1032,7 @@ public static class GameUIPrefabRebuilder
             height,
             title,
             eyebrow,
-            "放入材料 · 选择配方 · 开始制作");
+            "放入材料 · 选择配方 · 开始制作", true);
         ResizeCraftingFooter(frame, width, height);
 
         AddSection(frame, "INPUT", "输入材料", 20f, sectionTop, 376f, sectionHeight);
@@ -1103,12 +1103,16 @@ public static class GameUIPrefabRebuilder
             }
             List<Transform> children = new List<Transform>();
             foreach (Transform child in root.transform)
-                if (child != content)
+                if (child != content && child.name != "FWUI_DragSurface")
                     children.Add(child);
             foreach (Transform child in children)
                 child.SetParent(content, false);
         }
         content.localScale = Vector3.one;
+        content.GetComponent<Image>().raycastTarget = false;
+        UIWindowDragSurface dragSurface = root.GetComponentInChildren<UIWindowDragSurface>(true);
+        if (dragSurface != null)
+            dragSurface.Configure(content);
         Stretch(outer);
         outer.localScale = Vector3.one;
         SafeAreaScaleGroup scale = root.GetComponent<SafeAreaScaleGroup>();
@@ -1167,7 +1171,7 @@ public static class GameUIPrefabRebuilder
         if (!bonfire)
             RemoveLegacyFurnaceVisuals(root.transform);
 
-        RectTransform frame = PrepareWindow(root, width, height, title, eyebrow, bonfire ? "维持燃料 · 处理食物与基础材料" : "控制燃料与温度 · 等待冶炼完成");
+        RectTransform frame = PrepareWindow(root, width, height, title, eyebrow, bonfire ? "维持燃料 · 处理食物与基础材料" : "控制燃料与温度 · 等待冶炼完成", true);
 
         AddSection(frame, "INPUT", "投入", 24f, 104f, bonfire ? 188f : 232f, 366f);
         AddSection(frame, "PROCESS", "作业状态", bonfire ? 232f : 276f, 104f, bonfire ? 276f : 296f, 366f);
@@ -1367,6 +1371,13 @@ public static class GameUIPrefabRebuilder
         RectTransform rect = root.GetComponent<RectTransform>();
         if (rect == null)
             return;
+
+        // 快捷栏跟随 PanelRoot 的普通面板层级；需要取用快捷栏的面板由背景 Image 自行放行射线。
+        Canvas canvas = root.GetComponent<Canvas>();
+        if (canvas == null)
+            throw new InvalidOperationException("UI_HotBar 缺少 Canvas，无法承载快捷栏槽位射线。");
+        canvas.overrideSorting = false;
+        canvas.sortingOrder = UIManager.GameplayHudSortingOrder;
 
         rect.anchorMin = new Vector2(0.5f, 0f);
         rect.anchorMax = new Vector2(0.5f, 0f);
@@ -2166,7 +2177,8 @@ public static class GameUIPrefabRebuilder
         }
     }
 
-    private static RectTransform PrepareWindow(GameObject root, float width, float height, string title, string eyebrow, string footerHint)
+    /// <summary>布置面板底板；需要从快捷栏拖入物品的面板不让底板接收射线。</summary>
+    private static RectTransform PrepareWindow(GameObject root, float width, float height, string title, string eyebrow, string footerHint, bool allowHotbarInput = false)
     {
         RectTransform rootRect = root.GetComponent<RectTransform>();
         if (rootRect == null)
@@ -2182,6 +2194,7 @@ public static class GameUIPrefabRebuilder
         rootImage.color = Ink;
         rootImage.sprite = null;
         rootImage.type = Image.Type.Simple;
+        rootImage.raycastTarget = !allowHotbarInput;
         AddOutline(rootImage, new Color(0.83f, 0.49f, 0.23f, 0.30f));
 
         RectTransform chrome = CreateRect("FWUI_Chrome", root.transform);
@@ -2231,6 +2244,32 @@ public static class GameUIPrefabRebuilder
 
         AddCornerTicks(chrome, width, height);
         PlaceCloseButton(root.transform, width);
+        if (allowHotbarInput)
+        {
+            UI_Drag dragger = root.GetComponent<UI_Drag>();
+            if (dragger == null)
+                dragger = root.AddComponent<UI_Drag>();
+            dragger.rectTransform = rootRect;
+            dragger.draggableImage = rootImage;
+
+            BasePanel basePanel = root.GetComponent<BasePanel>();
+            if (basePanel != null)
+            {
+                basePanel.CanDrag = true;
+                basePanel.Dragger = dragger;
+                basePanel.rectTransform = rootRect;
+            }
+
+            RectTransform hitRect = root.transform.Find("FWUI_DragSurface") as RectTransform;
+            if (hitRect == null)
+                hitRect = CreateRect("FWUI_DragSurface", root.transform);
+            Stretch(hitRect);
+            hitRect.SetAsFirstSibling();
+            UIWindowDragSurface dragSurface = hitRect.GetComponent<UIWindowDragSurface>();
+            if (dragSurface == null)
+                dragSurface = hitRect.gameObject.AddComponent<UIWindowDragSurface>();
+            dragSurface.Configure(rootRect);
+        }
         return chrome;
     }
 

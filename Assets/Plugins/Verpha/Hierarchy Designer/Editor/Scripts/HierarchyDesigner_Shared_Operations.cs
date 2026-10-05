@@ -988,7 +988,7 @@ namespace Verpha.HierarchyDesigner
 
         public static void Sort_GameObjectChildrenByTagListOrder(bool ascending, string sortingActionDescription)
         {
-            string[] predefinedOrder = new string[] { "Untagged", "Respawn", "Finish", "EditorOnly", "MainCamera", "Player", "GameController" };
+            string[] predefinedOrder = new string[] { "Untagged", "Respawn", "Finish", "EditorOnly", "MainCamera", "Player", "Mod_GameController" };
 
             List<string> allTags = new(UnityEditorInternal.InternalEditorUtility.tags);
             allTags.Sort((x, y) =>

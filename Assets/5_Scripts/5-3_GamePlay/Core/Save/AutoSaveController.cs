@@ -81,8 +81,20 @@ public static class AutoSavePreferences
         return new AutoSaveSettingsProvider();
     }
 
-    private sealed class AutoSaveSettingsProvider : ISettingsProvider
+    private sealed class AutoSaveSettingsProvider :
+        ISettingsProvider,
+        ISettingsEditSessionParticipant,
+        ISettingsEditSessionChangeTracker
     {
+        private sealed class AutoSaveState
+        {
+            /// <summary>快照时自动保存是否启用。</summary>
+            public bool Enabled;
+
+            /// <summary>快照时的自动保存分钟数。</summary>
+            public int IntervalMinutes;
+        }
+
         private static readonly IReadOnlyList<SettingOption> Options =
             new SettingOption[]
             {
@@ -127,6 +139,33 @@ public static class AutoSavePreferences
             Array.Empty<ISettingsSwitch>();
 
         public void ResetToDefaults() => Enable(DefaultIntervalMinutes);
+
+        /// <summary>保留自定义分钟数，因为它无法从下拉列表索引还原。</summary>
+        public object CaptureSettingsEditSessionState()
+        {
+            return new AutoSaveState
+            {
+                Enabled = AutoSavePreferences.Enabled,
+                IntervalMinutes = AutoSavePreferences.IntervalMinutes
+            };
+        }
+
+        /// <summary>检查自定义自动保存分钟数是否偏离设置会话基线。</summary>
+        public bool HasSettingsEditSessionChanges(object baselineState)
+        {
+            return baselineState is AutoSaveState state &&
+                   (state.Enabled != AutoSavePreferences.Enabled ||
+                    state.IntervalMinutes != AutoSavePreferences.IntervalMinutes);
+        }
+
+        /// <summary>恢复自定义自动保存间隔与启用状态。</summary>
+        public void RestoreSettingsEditSessionState(object state)
+        {
+            if (!(state is AutoSaveState autoSaveState))
+                return;
+
+            Save(autoSaveState.Enabled, autoSaveState.IntervalMinutes);
+        }
 
         private static int ResolveCurrentOptionIndex()
         {

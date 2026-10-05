@@ -1,5 +1,8 @@
 {
   "dependencies": {
+    "com.tencent.puerts.core": "file:../puerts-unity-mcp/third_party/puerts/unity/upms/core",
+    "com.tencent.puerts.v8": "file:../puerts-unity-mcp/third_party/puerts/unity/upms/v8",
+    "puerts-unity-mcp": "file:../puerts-unity-mcp/Packages/puerts-unity-mcp",
     "com.bshsf.loom": "https://github.com/Bian-Sh/Loom.git?path=Packages/Loom",
     "com.cysharp.memorypack": "https://github.com/Cysharp/MemoryPack.git?path=src/MemoryPack.Unity/Assets/MemoryPack.Unity",
     "com.github-glitchenzo.nugetforunity": "https://github.com/GlitchEnzo/NuGetForUnity.git?path=/src/NuGetForUnity",

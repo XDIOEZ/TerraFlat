@@ -76,6 +76,7 @@ namespace FlatWorld.Gameplay.Quests
             if (eventsBound)
             {
                 GameManager.Event_PlayerEnterWorld -= HandlePlayerEntered;
+                GameManager.Event_LocalPlayerRuntimeReloaded -= HandlePlayerRuntimeReloaded;
                 GameplayProgressEvents.SignalPublished -= HandleSignal;
                 eventsBound = false;
             }
@@ -111,8 +112,16 @@ namespace FlatWorld.Gameplay.Quests
                 return;
 
             GameManager.Event_PlayerEnterWorld += HandlePlayerEntered;
+            GameManager.Event_LocalPlayerRuntimeReloaded += HandlePlayerRuntimeReloaded;
             GameplayProgressEvents.SignalPublished += HandleSignal;
             eventsBound = true;
+        }
+
+        /// <summary>F5 替换 Player 外壳后丢弃旧对象键，继续使用同一份玩家任务存档重建运行时。</summary>
+        private void HandlePlayerRuntimeReloaded(Player player)
+        {
+            ClearRuntimes();
+            HandlePlayerEntered(player);
         }
 
         private void HandlePlayerEntered(Player player)

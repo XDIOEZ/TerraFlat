@@ -33,7 +33,7 @@ public class GetItemPosition : ActionNode
     public bool setBlackboardTarget = true;
     public bool doNothing = false;
 
-    public Mover mover => context.mover;
+    public Mod_Mover mover => context.mover;
     #endregion
 
     #region 重写方法

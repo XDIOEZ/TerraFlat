@@ -57,16 +57,23 @@ namespace FlatWorld.GameplayMCP
 
             float holdSeconds = ReadHoldSeconds(parameters);
             Keyboard keyboard = null;
+            InputSettings settings = UnityInputSystem.settings;
+            InputSettings.BackgroundBehavior previousBackgroundBehavior = settings.backgroundBehavior;
+            InputSettings.EditorInputBehaviorInPlayMode previousEditorBehavior = settings.editorInputBehaviorInPlayMode;
             try
             {
+                // 专用键盘短按期间接收后台输入，结束后恢复原焦点策略。
+                settings.editorInputBehaviorInPlayMode = InputSettings.EditorInputBehaviorInPlayMode.AllDeviceInputAlwaysGoesToGameView;
+                settings.backgroundBehavior = InputSettings.BackgroundBehavior.IgnoreFocus;
                 keyboard = UnityInputSystem.AddDevice<Keyboard>(VirtualKeyboardName);
-                UnityInputSystem.SetDeviceUsage(keyboard, GameController.ExternalGameplayInputDeviceUsage);
+                UnityInputSystem.SetDeviceUsage(keyboard, Mod_GameController.ExternalGameplayInputDeviceUsage);
 
-                if (!context.Controller.IsGameplayInputAllowed(keyboard))
+                bool textInputFocused = EventSystemGuard.IsTextInputFocused;
+                if (!textInputFocused && !context.Controller.IsGameplayInputAllowed(keyboard))
                 {
                     return GameplayMcpRuntime.BuildActionError(
                         "external_keyboard_rejected",
-                        "GameController 未接受 GamePlayMCP 虚拟键盘；请重新获取外部控制租约。",
+                        "Mod_GameController 未接受 GamePlayMCP 虚拟键盘；请重新获取外部控制租约。",
                         false);
                 }
 
@@ -110,12 +117,14 @@ namespace FlatWorld.GameplayMCP
             {
                 if (keyboard != null && keyboard.added)
                     UnityInputSystem.RemoveDevice(keyboard);
+                settings.backgroundBehavior = previousBackgroundBehavior;
+                settings.editorInputBehaviorInPlayMode = previousEditorBehavior;
             }
         }
 
         /// <summary>从玩家当前 InputAction 的生效绑定中选择第一个直接 Keyboard 绑定。</summary>
         private static bool TryResolveKeyboardBinding(
-            GameController controller,
+            Mod_GameController controller,
             string inputActionName,
             out string keyboardPath,
             out string error)

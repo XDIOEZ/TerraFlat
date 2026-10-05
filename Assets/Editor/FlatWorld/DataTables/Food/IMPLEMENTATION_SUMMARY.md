@@ -87,7 +87,7 @@
 
 | 方面 | 武器表 | 食物表 |
 |------|-------|-------|
-| **扫描对象** | DamageReceiver/Mod_Damage | Mod_Food |
+| **扫描对象** | Mod_DamageReceiver/Mod_Damage | Mod_Food |
 | **主要参数** | MaxHp, Damage, Defense | 营养值5种 + 特性 + 腐败 |
 | **UI布局** | 类似行式表格 | **参考布局，优化适配** |
 | **编辑方式** | 直接字段编辑 | 表格列编辑 |

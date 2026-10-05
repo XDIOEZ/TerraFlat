@@ -19,7 +19,7 @@ namespace FlatWorld.AIECS.Gameplay
         #region 所有权与外部代理
         private sealed class ExternalProxy
         {
-            public Item Item; public DamageReceiver Receiver; public Collider2D BodyCollider, HitCollider;
+            public Item Item; public Mod_DamageReceiver Receiver; public Collider2D BodyCollider, HitCollider;
             public CombatIdentity Key; public Entity Entity; public int Group;
             public string Faction; public int FactionIndex; // 只有实际身份变化时规范化字符串。
         }
@@ -27,6 +27,8 @@ namespace FlatWorld.AIECS.Gameplay
         private struct DropRecord { public string ItemId; public float2 Position; public int Remaining; } // 队列持有静态 ID，无逐掉落任务对象。
         private struct WeaponCandidate { public AiecsHitEvent Hit; public float Fraction, Distance; }
         private readonly List<WeaponCandidate> weaponCandidates = new(); // 复用候选数组，跨桶按最近碰撞排序。
+        private readonly List<CombatColliderHit2D> colliderHits = new();
+        private readonly HashSet<int> weaponVisited = new();
         private static uint worldSequence;
         private static readonly Dictionary<string, uint> DimensionIds = new Dictionary<string, uint>(StringComparer.Ordinal);
         private readonly List<ExternalProxy> proxies = new List<ExternalProxy>();
@@ -49,6 +51,8 @@ namespace FlatWorld.AIECS.Gameplay
         private readonly uint worldStamp, dimensionStamp;
         private readonly string dimensionName;
         private readonly RuntimeLootTable[] lootTables;
+        private readonly string[] actorIds; // 资源重载后按定义索引刷新现有 ECS 居民。
+        private uint waterCurrentRevision;
         public AiecsSimulation Simulation { get; private set; }
         public FlowNavigationCache Navigation { get; private set; }
         public AiecsActorTemplate[] Templates { get; private set; }
@@ -71,7 +75,7 @@ namespace FlatWorld.AIECS.Gameplay
         /// <summary>每个配置组一个战略目标，另加一个玩家目标；实际单位多少不会增加 Goal 数量。</summary>
         public AiecsGameplayBridge(Player player, FlowNavigationCache navigation, string[] actorIds, string[] actorFactions, float senseOverride,
             bool[] fleeFromHostiles = null, Func<string, float2, bool> actorLootSpawner = null,
-            bool removeSpawnedStaticDropsOnDispose = false)
+            bool removeSpawnedStaticDropsOnDispose = false, World sharedWorld = null)
         {
             this.actorLootSpawner = actorLootSpawner;
             this.removeSpawnedStaticDropsOnDispose = removeSpawnedStaticDropsOnDispose;
@@ -80,6 +84,7 @@ namespace FlatWorld.AIECS.Gameplay
             if (fleeFromHostiles != null && fleeFromHostiles.Length != actorIds.Length)
                 throw new ArgumentException("AIECS 行为策略目录必须与 Actor 目录长度一致。", nameof(fleeFromHostiles));
 
+            this.actorIds = (string[])actorIds.Clone();
             Navigation = navigation; worldStamp = ++worldSequence;
             dimensionName = ChunkMgr.Instance.ResolveWorldAddress(player.transform.position).DimensionId;
             if (!DimensionIds.TryGetValue(dimensionName, out dimensionStamp))
@@ -97,11 +102,12 @@ namespace FlatWorld.AIECS.Gameplay
                 extent = math.max(extent, math.cmax(math.abs(Templates[i].Body.Hit.Center) + Templates[i].Body.Hit.Extents));
                 GameRes.Instance.TryGetLootTable(definitions[i].LootTable.ToString(), out lootTables[i]);
             }
+            waterCurrentRevision = WaterCurrentPushConfigService.Revision;
             try
             {
                 los = new AiecsLosBridge();
                 Simulation = new AiecsSimulation(definitions, AiecsDefinitionCompiler.CompileBuffs(UnsupportedBuffs),
-                    FactionValues(), Relations(), actorIds.Length + 1, extent, Time.timeAsDouble);
+                    FactionValues(), Relations(), actorIds.Length + 1, extent, Time.timeAsDouble, sharedWorld);
                 goals = new FlowGoalHandle[actorIds.Length + 1];
                 foreach (var definition in definitions)
                     foreach (var effect in definition.OnHitBuffs)
@@ -120,7 +126,7 @@ namespace FlatWorld.AIECS.Gameplay
         /// <summary>为少量真实玩家维护受击/感知代理；引用只存在 Bridge 中。</summary>
         private void AddPlayer(Player player, int group)
         {
-            DamageReceiver receiver = player.itemMods.GetMod_ByID<DamageReceiver>(ModText.Hp);
+            Mod_DamageReceiver receiver = player.itemMods.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
             if (receiver == null) throw new InvalidOperationException("当前玩家没有生命接收器，无法建立双向战斗入口。");
             var proxy = new ExternalProxy { Item = player, Receiver = receiver, Group = group,
                 BodyCollider = player.GetComponent<Collider2D>(), HitCollider = receiver.GetComponent<Collider2D>(), Key = IdentityOf(player) };
@@ -138,12 +144,21 @@ namespace FlatWorld.AIECS.Gameplay
             if (player == null || !player.gameObject.activeInHierarchy) return;
             CombatIdentity key = IdentityOf(player);
             if (proxyLookup.ContainsKey(key)) return;
+            ReleasePlayer(player);
+            AddPlayer(player, Templates.Length);
+        }
+
+        /// <summary>玩家实体卸载前仅撤销外部代理，保留本世界的 ECS 居民与模拟状态。</summary>
+        public void ReleasePlayer(Player player)
+        {
             for (int i = proxies.Count - 1; i >= 0; i--)
             {
-                if (proxies[i].Item != player) continue;
-                Simulation.Despawn(proxies[i].Entity); proxyLookup.Remove(proxies[i].Key); proxies.RemoveAt(i);
+                if (!ReferenceEquals(proxies[i].Item, player)) continue;
+                if (Simulation?.IsCreated == true)
+                    Simulation.Despawn(proxies[i].Entity);
+                proxyLookup.Remove(proxies[i].Key);
+                proxies.RemoveAt(i);
             }
-            AddPlayer(player, Templates.Length);
         }
 
         /// <summary>只在合法已加载位置创建 Entity；低血量演示同样使用真实部位生命比例。</summary>
@@ -172,7 +187,7 @@ namespace FlatWorld.AIECS.Gameplay
         }
 
         /// <summary>玩家维度或导航缓存更换时必须结束整个旧模拟。</summary>
-        public bool IsCurrentWorld(Player player) => player != null && Navigation != null && WorldNavigationManager.ExistingInstance != null &&
+        public bool IsCurrentWorld(Player player) => Simulation?.IsCreated == true && player != null && Navigation != null && WorldNavigationManager.ExistingInstance != null &&
             WorldNavigationManager.ExistingInstance.OwnsSharedNavigation(Navigation) &&
             ChunkMgr.ExistingInstance != null && ChunkMgr.ExistingInstance.ResolveWorldAddress(player.transform.position).DimensionId == dimensionName;
 
@@ -199,6 +214,7 @@ namespace FlatWorld.AIECS.Gameplay
         public void Step(float deltaTime, double time, AiecsSimulationRange range = default)
         {
             Simulation.Complete();
+            RefreshWaterCurrentPushSpeeds();
             for (int i = proxies.Count - 1; i >= 0; i--)
             {
                 var proxy = proxies[i];
@@ -215,7 +231,19 @@ namespace FlatWorld.AIECS.Gameplay
             var centers = Simulation.GroupPositions;
             for (int i = 0; i < Templates.Length; i++) if (centers[i].z > 0f) Navigation.UpdateGoal(goals[i], centers[i].xy);
             losView = los.Read(Navigation.Read()); Simulation.Difficulty = GameplayCombatBridge.Difficulty();
+            Player currentPlayer = ItemMgr.Instance?.User_Player;
+            DayTimeSystem clock = DayTimeSystem.Instance;
+            if (currentPlayer != null && clock != null &&
+                clock.TryGetResolvedTimeData(currentPlayer.gameObject.scene.name, out _, out TimeData day) &&
+                day != null && day.DayLength > 0f)
+            {
+                Simulation.DayRatio = Mathf.Repeat(day.CurrentTime, day.DayLength) / day.DayLength;
+                Simulation.GameDays = day.TotalDays + (double)day.CurrentTime / day.DayLength;
+            }
+            RefreshDarknessSamples(time);
             Simulation.Step(Navigation, losView, deltaTime, time, range);
+            ApplyFeedRequests();
+            ApplyProductionRequests();
             Publish();
             PublishDrops(64);
             expiredCorpses.Clear();
@@ -224,6 +252,163 @@ namespace FlatWorld.AIECS.Gameplay
                 expiredCorpses.Add(corpses.Dequeue().Entity);
             }
             Simulation.DespawnBatch(expiredCorpses.AsArray());
+        }
+
+        /// <summary>环境亮度由 Unity 世界提供，避光决策与受击则留在共享 ECS 能力里。</summary>
+        private void RefreshDarknessSamples(double time)
+        {
+            LightLayerMgr lights = LightLayerMgr.Instance;
+            WorldNavigationManager navigation = WorldNavigationManager.ExistingInstance;
+            if (lights == null) return;
+            Simulation.Complete();
+            EntityManager entities = Simulation.Entities;
+            using EntityQuery query = entities.CreateEntityQuery(
+                ComponentType.ReadOnly<AiecsFlowAgent>(), ComponentType.ReadWrite<AiecsDarkness>());
+            using NativeArray<Entity> actors = query.ToEntityArray(Allocator.Temp);
+            foreach (Entity entity in actors)
+            {
+                AiecsDarkness darkness = entities.GetComponentData<AiecsDarkness>(entity);
+                if (time < darkness.NextSampleTime) continue;
+                darkness.NextSampleTime = time + 0.2d;
+                float2 position = entities.GetComponentData<AiecsFlowAgent>(entity).Position;
+                Vector2 origin = new Vector2(position.x, position.y);
+                darkness.LightLevel = lights.TryGetLightLevel(origin, out float brightness) ? brightness : 0f;
+                darkness.HasDarkDestination = 0;
+                if (darkness.LightLevel > 0.0001f && navigation != null && navigation.IsNavigationReady)
+                {
+                    float phase = entity.Index * 2.399963f;
+                    for (int ring = 1; ring <= 3 && darkness.HasDarkDestination == 0; ring++)
+                        for (int sample = 0; sample < 16; sample++)
+                        {
+                            float angle = phase + sample * Mathf.PI * 0.125f;
+                            float distance = darkness.RetreatRadius * ring / 3f;
+                            Vector2 candidate = WorldTopologyRuntime.NormalizePosition(origin +
+                                new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * distance);
+                            if (!lights.IsCompletelyDark(candidate) ||
+                                !navigation.TryGetCell(candidate, out _, out bool walkable) || !walkable)
+                                continue;
+                            darkness.DarkDestination = new float2(candidate.x, candidate.y);
+                            darkness.HasDarkDestination = 1;
+                            break;
+                        }
+                }
+                entities.SetComponentData(entity, darkness);
+            }
+        }
+
+        /// <summary>产物请求完成实体身份复核后交给正式掉落服务。</summary>
+        private void ApplyProductionRequests()
+        {
+            EntityManager entities = Simulation.Entities;
+            while (Simulation.TryDequeueProductionRequest(out AiecsProductionRequest request))
+            {
+                if (!entities.Exists(request.Entity) ||
+                    entities.GetComponentData<AiecsIdentity>(request.Entity).Key != request.Identity ||
+                    entities.GetComponentData<AiecsVital>(request.Entity).Dead != 0 ||
+                    request.ItemId.IsEmpty)
+                    continue;
+                DroppedItemService.SpawnLoot(request.ItemId.ToString(),
+                    new Vector2(request.Position.x, request.Position.y));
+            }
+        }
+
+        /// <summary>统一校验草格并原子扣除资源，同一格被多只生物争抢时只给成功者回写营养。</summary>
+        private void ApplyFeedRequests()
+        {
+            EntityManager entities = Simulation.Entities;
+            ChunkMgr chunks = ChunkMgr.Instance;
+            int searches = 0;
+            while (Simulation.TryDequeueFeedRequest(out AiecsFeedRequest request))
+            {
+                if (chunks == null || !entities.Exists(request.Entity) ||
+                    entities.GetComponentData<AiecsIdentity>(request.Entity).Key != request.Identity ||
+                    !entities.HasComponent<AiecsNutrition>(request.Entity) ||
+                    entities.GetComponentData<AiecsVital>(request.Entity).Dead != 0)
+                    continue;
+                AiecsNutrition nutrition = entities.GetComponentData<AiecsNutrition>(request.Entity);
+                float2 position = entities.GetComponentData<AiecsFlowAgent>(request.Entity).Position;
+                if (request.Operation == AiecsFeedOperation.Search)
+                {
+                    if (searches++ >= 8) continue;
+                    if (request.Resource == AiecsFoodResource.Nectar)
+                    {
+                        if (AiecsNectarForageProvider.TryFind(new Vector2(position.x, position.y),
+                                out Vector2 nectar, out int guid, out AiecsFoodTarget kind))
+                        {
+                            nutrition.FoodGuid = guid;
+                            nutrition.FoodPosition = new float2(nectar.x, nectar.y);
+                            nutrition.TargetKind = kind;
+                            nutrition.HasFoodTarget = 1;
+                            entities.SetComponentData(request.Entity, nutrition);
+                        }
+                        continue;
+                    }
+                    if (chunks.TryFindRuntimeGrassNear(new Vector2(position.x, position.y), 6f,
+                            out RuntimeTerrainTileSample grass))
+                    {
+                        nutrition.FoodCell = new int2(grass.WorldCell.x, grass.WorldCell.y);
+                        nutrition.FoodPosition = new float2(grass.WorldCell.x + 0.5f, grass.WorldCell.y + 0.5f);
+                        nutrition.HasFoodTarget = 1;
+                        entities.SetComponentData(request.Entity, nutrition);
+                    }
+                    continue;
+                }
+                if (request.Resource == AiecsFoodResource.Nectar)
+                {
+                    Vector2 nectar = new Vector2(nutrition.FoodPosition.x, nutrition.FoodPosition.y);
+                    if (WorldTopologyRuntime.SqrDistance(new Vector2(position.x, position.y), nectar) > 0.36f ||
+                        !AiecsNectarForageProvider.IsStillAvailable(nectar, request.FoodGuid,
+                            request.TargetKind))
+                        continue;
+                    nutrition.Current = Mathf.Min(nutrition.Maximum, nutrition.Current + nutrition.FeedGain);
+                    entities.SetComponentData(request.Entity, nutrition);
+                    if (entities.HasComponent<AiecsHiveMember>(request.Entity) && nutrition.Current > 1000f)
+                    {
+                        AiecsHiveMember hive = entities.GetComponentData<AiecsHiveMember>(request.Entity);
+                        if (hive.HomeGuid != 0)
+                        {
+                            hive.CarryingHoney = 1;
+                            entities.SetComponentData(request.Entity, hive);
+                        }
+                    }
+                    continue;
+                }
+                Vector2 foodCenter = new Vector2(request.FoodCell.x + 0.5f, request.FoodCell.y + 0.5f);
+                if (WorldTopologyRuntime.SqrDistance(new Vector2(position.x, position.y), foodCenter) > 0.36f ||
+                    !chunks.TryConsumeRuntimeGrass(new Vector2Int(request.FoodCell.x, request.FoodCell.y)))
+                    continue;
+                nutrition.Current = Mathf.Min(nutrition.Maximum, nutrition.Current + nutrition.FeedGain);
+                entities.SetComponentData(request.Entity, nutrition);
+            }
+        }
+
+        /// <summary>仅在水流 JSON 重新发布时同步模板和现有 ECS 居民，不增加常规 Tick 的逐实体托管访问。</summary>
+        private void RefreshWaterCurrentPushSpeeds()
+        {
+            uint revision = WaterCurrentPushConfigService.Revision;
+            if (waterCurrentRevision == revision) return;
+
+            for (int i = 0; i < Templates.Length; i++)
+            {
+                AiecsActorTemplate template = Templates[i];
+                template.WaterCurrentPushSpeed = WaterCurrentPushConfigService.ResolvePushSpeed(actorIds[i]);
+                template.Flight.BaseWaterPushSpeed = template.WaterCurrentPushSpeed;
+                Templates[i] = template;
+            }
+
+            EntityManager entities = Simulation.Entities;
+            using EntityQuery query = entities.CreateEntityQuery(
+                ComponentType.ReadOnly<AiecsIdentity>(), ComponentType.ReadWrite<AiecsFlowAgent>());
+            using NativeArray<Entity> residents = query.ToEntityArray(Allocator.Temp);
+            foreach (Entity entity in residents)
+            {
+                AiecsIdentity identity = entities.GetComponentData<AiecsIdentity>(entity);
+                if (identity.External != 0) continue;
+                AiecsFlowAgent agent = entities.GetComponentData<AiecsFlowAgent>(entity);
+                agent.WaterCurrentPushSpeed = Templates[identity.Definition].WaterCurrentPushSpeed;
+                entities.SetComponentData(entity, agent);
+            }
+            waterCurrentRevision = revision;
         }
         #endregion
 
@@ -241,7 +426,7 @@ namespace FlatWorld.AIECS.Gameplay
             identity = IdentityOf(item); return true;
         }
 
-        /// <summary>实际窗口才查询稀疏桶；OBB 精筛与旧目标共同预约武器的 MaxAttackTargets。</summary>
+        /// <summary>稀疏桶只筛数据候选；Collider2D 决定几何命中后再预约攻击配额。</summary>
         public void QueryWeaponPulse(Mod_Damage weapon, AttackShape2D shape, CombatDamageContext context)
         {
             if (Simulation == null || !GameDifficultyService.IsPlayer(weapon.item) || context.Attack.Source.World != worldStamp ||
@@ -257,29 +442,40 @@ namespace FlatWorld.AIECS.Gameplay
             view = Simulation.Spatial;
             WeaponPulses++; weapons[context.Attack.Source] = weapon;
             weaponCandidates.Clear();
-            view.BucketRange(shape.BoundsCenter, shape.BoundsExtents + view.MaximumBodyExtent, out int2 first, out int2 size);
-            for (int y = 0; y < size.y; y++)
-            for (int x = 0; x < size.x; x++)
+            weaponVisited.Clear();
+            using (CombatColliderQuery2D query = CombatColliderQuery2D.Rent())
             {
-                int2 bucket = view.NormalizeBucket(first + new int2(x, y));
-                for (int faction = 0; faction < factionNames.Count; faction++)
+                view.BucketRange(shape.BoundsCenter, shape.BoundsExtents + view.MaximumBodyExtent, out int2 first, out int2 size);
+                for (int y = 0; y < size.y; y++)
+                for (int x = 0; x < size.x; x++)
                 {
-                    if (!view.IsHostile(sourceFaction, faction) || !view.Buckets.TryGetFirstValue(new int3(bucket, faction), out int index, out var iterator)) continue;
-                    do
+                    int2 bucket = view.NormalizeBucket(first + new int2(x, y));
+                    for (int faction = 0; faction < factionNames.Count; faction++)
                     {
-                        WeaponCandidates++;
-                        var target = view.Samples[index];
-                        if (target.Identity.External != 0 || target.Dead != 0 || target.Identity.Key.World != worldStamp ||
-                            !shape.TryIntersect(target.ShapeNear(shape.BoundsCenter, view.Domain, true), out float fraction) ||
-                            !losView.Visible(context.Origin, target.Position)) continue;
-                        if (!Simulation.Entities.Exists(target.Entity) || Simulation.Entities.GetComponentData<AiecsVital>(target.Entity).Dead != 0) continue;
-                        var hit = context;
-                        hit.HitPoint = math.lengthsq(shape.SweepDelta) > 0.000001f
-                            ? shape.Center - shape.SweepDelta * (1f - fraction) : target.Position;
-                        weaponCandidates.Add(new WeaponCandidate {
-                            Hit = new AiecsHitEvent { Target = target.Entity, TargetKey = target.Identity.Key, Context = hit },
-                            Fraction = fraction, Distance = math.distancesq(context.Origin, hit.HitPoint) });
-                    } while (view.Buckets.TryGetNextValue(out index, ref iterator));
+                        if (!view.IsHostile(sourceFaction, faction) ||
+                            !view.Buckets.TryGetFirstValue(new int3(bucket, faction), out int index, out var iterator)) continue;
+                        do
+                        {
+                            WeaponCandidates++;
+                            var target = view.Samples[index];
+                            if (target.Identity.External != 0 || target.Dead != 0 || target.Identity.Key.World != worldStamp ||
+                                !weaponVisited.Add(index) || !losView.Visible(context.Origin, target.Position)) continue;
+                            query.Add(index, target.ShapeNear(shape.BoundsCenter, view.Domain, true));
+                        } while (view.Buckets.TryGetNextValue(out index, ref iterator));
+                    }
+                }
+                query.Query(shape, colliderHits);
+                for (int i = 0; i < colliderHits.Count; i++)
+                {
+                    CombatColliderHit2D contact = colliderHits[i];
+                    AiecsTargetSample target = view.Samples[contact.CandidateId];
+                    if (!Simulation.Entities.Exists(target.Entity) ||
+                        Simulation.Entities.GetComponentData<AiecsVital>(target.Entity).Dead != 0) continue;
+                    var hit = context;
+                    hit.HitPoint = contact.Point;
+                    weaponCandidates.Add(new WeaponCandidate {
+                        Hit = new AiecsHitEvent { Target = target.Entity, TargetKey = target.Identity.Key, Context = hit },
+                        Fraction = contact.Fraction, Distance = math.distancesq(context.Origin, hit.HitPoint) });
                 }
             }
             weaponCandidates.Sort(CompareWeaponCandidates);
@@ -332,7 +528,9 @@ namespace FlatWorld.AIECS.Gameplay
             foreach (var hit in Simulation.ExternalHits)
             {
                 if (!proxyLookup.TryGetValue(hit.TargetKey, out var proxy) || proxy.Item == null || IdentityOf(proxy.Item) != hit.TargetKey) continue;
-                float damage = proxy.Receiver.Hurt(hit.Context);
+                // 使用独立值快照跨入旧后端，不把集合迭代临时值的字段直接作为只读引用传递。
+                CombatDamageContext context = hit.Context;
+                float damage = proxy.Receiver.Hurt(in context);
                 if (damage >= 0f) { PlayerHits++; PlayerDamage += damage; }
             }
             foreach (var result in Simulation.DamageResults)
@@ -404,8 +602,12 @@ namespace FlatWorld.AIECS.Gameplay
         /// <summary>运行时新阵营追加稳定索引；这是稀少配置变化，不在每只 AI 中处理字符串。</summary>
         private int Faction(string value)
         {
-            value = (value ?? string.Empty).Trim().ToLowerInvariant();
+            value = FactionRelationService.NormalizeFactionId(value, allowEmpty: true).ToLowerInvariant();
             if (factionIndices.TryGetValue(value, out int index)) return index;
+            // 字符上限与 UTF-8 字节容量是两个约束，必须在修改目录前全部验证。
+            int byteCount = System.Text.Encoding.UTF8.GetByteCount(value);
+            if (byteCount > FixedString128Bytes.UTF8MaxLengthInBytes)
+                throw new ArgumentException($"ECS 阵营 ID 的 UTF-8 长度 {byteCount} 超过 {FixedString128Bytes.UTF8MaxLengthInBytes} 字节。", nameof(value));
             index = factionNames.Count; factionNames.Add(value); factionIndices.Add(value, index);
             if (Simulation != null) RefreshFactions(); return index;
         }

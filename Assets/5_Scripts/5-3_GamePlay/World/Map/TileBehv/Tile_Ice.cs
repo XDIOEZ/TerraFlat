@@ -9,7 +9,7 @@ public sealed class Tile_Ice : TileBlockBehaviour
     [SerializeField, Min(0.01f)] private float accelerationMultiplier = 0.35f;
     [SerializeField, Min(0.01f)] private float decelerationMultiplier = 0.15f;
 
-    public override void OnEnter(Item item, TileData tileData, Map map, TileEffectReceiver receiver)
+    public override void OnEnter(Item item, TileData tileData, Map map, Mod_TileEffectReceiver receiver)
     {
         receiver?.EnvironmentInteractions.SetAvailableEffects(
             new MovementSurfaceResponseEnvironmentEffectDefinition(
@@ -17,7 +17,7 @@ public sealed class Tile_Ice : TileBlockBehaviour
                 decelerationMultiplier));
     }
 
-    public override void OnExit(Item item, TileData tileData, Map map, TileEffectReceiver receiver)
+    public override void OnExit(Item item, TileData tileData, Map map, Mod_TileEffectReceiver receiver)
     {
         receiver?.EnvironmentInteractions.ClearAvailableEffects();
     }

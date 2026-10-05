@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using FlatWorld.NaturalEntities;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -64,6 +65,9 @@ public sealed class RuntimeTreeHabitatIndex : IDisposable
                 continue;
             activePositions.Add(tree.transform.position);
         }
+        // 资源实体只属于当前活动世界，不能把它们算进其他场景的鸟类容量。
+        if (ItemMgr.Instance?.PlayerInSceneName == sceneName)
+            NaturalEntityEcsService.AppendTreeHabitatPositions(activePositions);
         return activePositions;
     }
 

@@ -116,7 +116,7 @@ public static class BuffEffectDispatcher
     private static void ApplyMoveSpeedMultiplier(BuffEffectDefinition effect, BuffInstance runtime)
     {
         Item receiver = GetReceiver(runtime);
-        Mover mover = receiver?.itemMods.GetMod_ByID(ModText.Mover) as Mover;
+        Mod_Mover mover = receiver?.itemMods.GetMod_ByID(ModText.Mod_Mover) as Mod_Mover;
         if (mover?.Speed != null)
             mover.Speed.MultiplicativeModifier *= effect.Value;
     }
@@ -178,14 +178,14 @@ public static class BuffEffectDispatcher
     private static void ApplyDamageTakenMultiplier(BuffEffectDefinition effect, BuffInstance runtime)
     {
         Item receiver = GetReceiver(runtime);
-        DamageReceiver damageReceiver = receiver?.itemMods.GetMod_ByID(ModText.Hp) as DamageReceiver;
+        Mod_DamageReceiver damageReceiver = receiver?.itemMods.GetMod_ByID(ModText.Hp) as Mod_DamageReceiver;
         damageReceiver?.MultiplyDamageTakenMultiplier(effect.Value);
     }
 
     /// <summary>按生命上限比例调用统一治疗入口，沿用营养成本与禁止复活规则。</summary>
     private static void ApplyMaxHealthPercentHeal(BuffEffectDefinition effect, BuffInstance runtime)
     {
-        DamageReceiver health = GetReceiver(runtime)?.itemMods.GetMod_ByID<DamageReceiver>(ModText.Hp);
+        Mod_DamageReceiver health = GetReceiver(runtime)?.itemMods.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
         if (health != null && effect.Value > 0f)
             health.Heal(health.MaxHp * effect.Value);
     }
@@ -193,7 +193,7 @@ public static class BuffEffectDispatcher
     private static void ApplyHeal(BuffEffectDefinition effect, BuffInstance runtime)
     {
         Item receiver = GetReceiver(runtime);
-        DamageReceiver damageReceiver = receiver?.itemMods.GetMod_ByID(ModText.Hp) as DamageReceiver;
+        Mod_DamageReceiver damageReceiver = receiver?.itemMods.GetMod_ByID(ModText.Hp) as Mod_DamageReceiver;
         if (effect.Value > 0f)
             damageReceiver?.Heal(effect.Value);
     }
@@ -202,7 +202,13 @@ public static class BuffEffectDispatcher
     {
         Item receiver = GetReceiver(runtime);
         Mod_Stamina stamina = receiver?.itemMods.GetMod_ByID(ModText.Stamina) as Mod_Stamina;
-        stamina?.AddStamina(effect.Value);
+        if (stamina == null)
+            return;
+
+        if (effect.Value < 0f)
+            stamina.ConsumeStamina(StaminaConsumptionSources.BuffEffect, -effect.Value);
+        else
+            stamina.AddStamina(effect.Value);
     }
 
     private static void ApplyNutritionChange(BuffEffectDefinition effect, BuffInstance runtime)
@@ -253,7 +259,7 @@ public static class BuffEffectDispatcher
     private static void ApplyTrueDamage(BuffEffectDefinition effect, BuffInstance runtime)
     {
         Item receiver = GetReceiver(runtime);
-        DamageReceiver damageReceiver = receiver?.itemMods.GetMod_ByID(ModText.Hp) as DamageReceiver;
+        Mod_DamageReceiver damageReceiver = receiver?.itemMods.GetMod_ByID(ModText.Hp) as Mod_DamageReceiver;
         if (effect.Value > 0f)
             damageReceiver?.ForceHurt(effect.Value * (effect.ScaleWithStacks ? runtime.StackCount : 1));
     }
@@ -276,7 +282,7 @@ public static class BuffEffectDispatcher
                 return;
         }
 
-        DamageReceiver damageReceiver = receiver.itemMods.GetMod_ByID(ModText.Hp) as DamageReceiver;
+        Mod_DamageReceiver damageReceiver = receiver.itemMods.GetMod_ByID(ModText.Hp) as Mod_DamageReceiver;
         if (damageReceiver == null || damageReceiver.MaxHp <= 0f || effect.Value <= 0f)
             return;
 

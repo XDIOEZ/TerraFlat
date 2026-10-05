@@ -5,6 +5,8 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using FlatWorld.WorldModel;
+using MCPForUnity.Editor.Helpers;
+using MCPForUnity.Editor.Tools;
 using Newtonsoft.Json.Linq;
 using UnityEditor;
 using UnityEngine;
@@ -18,10 +20,11 @@ namespace FlatWorld.GameplayMCP
     /// </summary>
     internal static class GameplayMcpRuntime
     {
-        public const string ProtocolVersion = "0.8.2";
+        public const string ProtocolVersion = "0.10.4";
         public const string ExtensionPath = "Assets/Editor/FlatWorld/GameplayMCP/";
         private const float MinimumSessionTimeoutSeconds = 2f;
         private const float MaximumSessionTimeoutSeconds = 120f;
+        private const float SessionPlayerHealth = 20000f; // GamePlayMCP 启动世界时使用的玩家生命值。
         private const float MoveToProgressDistanceEpsilon = 0.05f; // 低于此距离的微动不重置卡滞计时。
         private const float MoveToStallTimeoutSeconds = 8f; // 导航模块先执行有限重规划，MCP 保留更长的无位移保护时限。
 
@@ -36,8 +39,8 @@ namespace FlatWorld.GameplayMCP
         /// <summary>尝试解析当前真实本地玩家及核心控制模块。</summary>
         public static bool TryGetPlayerContext(
             out Player player,
-            out GameController controller,
-            out Mover mover,
+            out Mod_GameController controller,
+            out Mod_Mover mover,
             out string error)
         {
             player = null;
@@ -65,11 +68,11 @@ namespace FlatWorld.GameplayMCP
                 return false;
             }
 
-            controller = player.itemMods.GetMod_ByID<GameController>(ModText.Controller);
-            mover = player.itemMods.GetMod_ByID<Mover>(ModText.Mover);
+            controller = player.itemMods.GetMod_ByID<Mod_GameController>(ModText.Controller);
+            mover = player.itemMods.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover);
             if (controller == null || mover == null || mover.rb == null)
             {
-                error = "player_control_missing: 玩家缺少 GameController 或可用 Mover。";
+                error = "player_control_missing: 玩家缺少 Mod_GameController 或可用 Mod_Mover。";
                 return false;
             }
 
@@ -79,8 +82,8 @@ namespace FlatWorld.GameplayMCP
         /// <summary>确保 GamePlayMCP 持有玩家的唯一外部控制租约。</summary>
         public static bool TryEnsureControl(
             out Player player,
-            out GameController controller,
-            out Mover mover,
+            out Mod_GameController controller,
+            out Mod_Mover mover,
             out string error)
         {
             if (!TryGetPlayerContext(out player, out controller, out mover, out error))
@@ -102,7 +105,7 @@ namespace FlatWorld.GameplayMCP
         public static bool TryReleaseControl(out string error)
         {
             error = string.Empty;
-            if (!TryGetPlayerContext(out _, out GameController controller, out _, out error))
+            if (!TryGetPlayerContext(out _, out Mod_GameController controller, out _, out error))
                 return false;
 
             if (!controller.IsExternalGameplayControlOwner(ControlOwner))
@@ -115,7 +118,7 @@ namespace FlatWorld.GameplayMCP
         }
 
         /// <summary>判断 GamePlayMCP 是否拥有当前玩家控制租约。</summary>
-        public static bool OwnsControl(GameController controller)
+        public static bool OwnsControl(Mod_GameController controller)
         {
             return controller != null && controller.IsExternalGameplayControlOwner(ControlOwner);
         }
@@ -176,6 +179,27 @@ namespace FlatWorld.GameplayMCP
                 };
             }
 
+            timeoutSeconds = Mathf.Clamp(
+                timeoutSeconds,
+                MinimumSessionTimeoutSeconds,
+                MaximumSessionTimeoutSeconds);
+            double deadline = Time.realtimeSinceStartupAsDouble + timeoutSeconds;
+            // 续档必须和正式入口一样等完整资源与 MOD 目录就绪后再读取存档。
+            GameRes resources = GameRes.Instance;
+            if (resources == null)
+                return BuildActionError("resources_unavailable", "游戏资源管理器不可用。", false);
+            await WaitUntilAsync(
+                () => resources == null || resources.isLoadFinish ||
+                      resources.LoadState == ResourceLoadState.Failed ||
+                      resources.LoadState == ResourceLoadState.Disposed,
+                timeoutSeconds);
+            if (resources == null || resources.LoadState == ResourceLoadState.Disposed)
+                return BuildActionError("resources_unavailable", "资源会话已结束，请重新启动播放。", false);
+            if (resources.LoadState == ResourceLoadState.Failed)
+                return BuildActionError("resource_load_failed", resources.LastLoadError, false);
+            if (!resources.isLoadFinish)
+                return BuildActionError("resources_not_ready", "游戏资源未在限定时间内完成加载。", false);
+
             string isolatedDirectory = Path.Combine(
                 Directory.GetCurrentDirectory(),
                 "Library",
@@ -223,16 +247,15 @@ namespace FlatWorld.GameplayMCP
 
             gameManager.ContinueGame(resolvedPlayerName);
             // 世界生成在冷启动/大存档下可能明显超过 20 秒；仍限制在桥接命令预算内，避免无限等待。
-            timeoutSeconds = Mathf.Clamp(
-                timeoutSeconds,
-                MinimumSessionTimeoutSeconds,
-                MaximumSessionTimeoutSeconds);
             bool ready = await WaitUntilAsync(
                 () => gameManager != null &&
                       gameManager.IsInGameWorld &&
                       gameManager.IsGameplayReady &&
                       ItemMgr.Instance?.User_Player != null,
-                timeoutSeconds);
+                Mathf.Max(0f, (float)(deadline - Time.realtimeSinceStartupAsDouble)));
+
+            if (ready && !TryInitializeSessionPlayerHealth())
+                return BuildActionError("player_health_missing", "玩家生命模块不可用，无法设置 GamePlayMCP 启动血量。", false);
 
             return new JObject
             {
@@ -322,7 +345,7 @@ namespace FlatWorld.GameplayMCP
                 seed,
                 planetData,
                 timeData,
-                GameDifficultyId.Simple,
+                GameDifficultyId.Level0,
                 null,
                 GameRes.ExistingInstance?.TextLibraries);
             if (!request.TryValidate(out string validationError))
@@ -348,6 +371,9 @@ namespace FlatWorld.GameplayMCP
                       ItemMgr.Instance?.User_Player != null,
                 Mathf.Max(0f, (float)(deadline - Time.realtimeSinceStartupAsDouble)));
 
+            if (ready && !TryInitializeSessionPlayerHealth())
+                return BuildActionError("player_health_missing", "玩家生命模块不可用，无法设置 GamePlayMCP 启动血量。", false);
+
             return new JObject
             {
                 ["ok"] = ready,
@@ -362,6 +388,19 @@ namespace FlatWorld.GameplayMCP
             };
         }
 
+        /// <summary>只在 GamePlayMCP 成功启动世界后初始化一次生命，后续伤害照常结算。</summary>
+        private static bool TryInitializeSessionPlayerHealth()
+        {
+            Player player = ItemMgr.Instance?.User_Player;
+            Mod_DamageReceiver health = player?.itemMods?.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
+            if (health == null)
+                return false;
+
+            health.MaxHp = SessionPlayerHealth;
+            health.Hp = SessionPlayerHealth;
+            return true;
+        }
+
         /// <summary>调用正式退出协程保存当前世界并返回 GameStartScene。</summary>
         public static async Task<JObject> SaveAndExitAsync(float timeoutSeconds)
         {
@@ -374,7 +413,7 @@ namespace FlatWorld.GameplayMCP
                 return BuildActionError("world_not_ready", "当前没有可保存退出的游戏世界。", false);
 
             string saveName = SaveDataMgr.Instance?.SaveData?.saveName ?? string.Empty;
-            if (TryGetPlayerContext(out _, out GameController controller, out Mover mover, out _))
+            if (TryGetPlayerContext(out _, out Mod_GameController controller, out Mod_Mover mover, out _))
             {
                 if (controller.IsExternalGameplayControlOwner(ControlOwner))
                 {
@@ -452,8 +491,23 @@ namespace FlatWorld.GameplayMCP
 
         #region 世界观察
 
+        /// <summary>按调用方需要生成观察，省略的分区不执行查询。</summary>
+        public static JObject BuildObservation(JObject parameters)
+        {
+            bool compact = string.Equals(GetString(parameters, "profile", GameplayMcpOutput.IsCompact(parameters) ? "compact" : "full"), "compact", StringComparison.OrdinalIgnoreCase);
+            return BuildObservation(
+                GetFloat(parameters, "radius", 10f),
+                GetInt(parameters, "maxEntities", compact ? 6 : 24),
+                GetBool(parameters, "includeInventory", !compact),
+                GetBool(parameters, "includeTerrain", !compact),
+                GetBool(parameters, "includeDrops", !compact),
+                GetBool(parameters, "includeNearby", !compact),
+                compact);
+        }
+
         /// <summary>构造供 Agent 高频消费的紧凑结构化观察结果。</summary>
-        public static JObject BuildObservation(float radius, int maxEntities, bool includeInventory)
+        public static JObject BuildObservation(float radius, int maxEntities, bool includeInventory,
+            bool includeTerrain = true, bool includeDrops = true, bool includeNearby = true, bool compact = false)
         {
             radius = Mathf.Clamp(radius, 1f, 64f);
             maxEntities = Mathf.Clamp(maxEntities, 1, 128);
@@ -467,7 +521,7 @@ namespace FlatWorld.GameplayMCP
                 ["scene"] = SceneManager.GetActiveScene().name
             };
 
-            if (!TryGetPlayerContext(out Player player, out GameController controller, out Mover mover, out string error))
+            if (!TryGetPlayerContext(out Player player, out Mod_GameController controller, out Mod_Mover mover, out string error))
             {
                 root["ready"] = false;
                 root["reason"] = error;
@@ -475,25 +529,57 @@ namespace FlatWorld.GameplayMCP
             }
 
             root["ready"] = true;
-            root["player"] = BuildPlayerObservation(player, controller, mover, includeInventory);
-            root["terrain"] = BuildTerrainGridObservation(player.transform.position);
-            root["drops"] = BuildNearbyDroppedItemObservation(player, radius, Mathf.Min(maxEntities, 16));
-            root["nearby"] = BuildNearbyObservation(player, radius, maxEntities);
+            root["player"] = compact
+                ? BuildCompactPlayerObservation(player, controller, mover, includeInventory)
+                : BuildPlayerObservation(player, controller, mover, includeInventory);
+            if (!compact)
+                root["environment"] = BuildEnvironmentObservation(player);
+            if (includeTerrain)
+                root["terrain"] = BuildTerrainGridObservation(player.transform.position);
+            if (includeDrops)
+                root["drops"] = BuildNearbyDroppedItemObservation(player, radius, Mathf.Min(maxEntities, 16));
+            if (includeNearby)
+                root["nearby"] = BuildNearbyObservation(player, radius, maxEntities);
             return root;
+        }
+
+        /// <summary>高频移动只读取位置、生存与输入状态，需要详细信息时再取完整观察。</summary>
+        private static JObject BuildCompactPlayerObservation(Player player, Mod_GameController controller,
+            Mod_Mover mover, bool includeInventory)
+        {
+            Mod_DamageReceiver health = player.itemMods.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
+            Mod_Stamina stamina = player.itemMods.GetMod_ByID<Mod_Stamina>(ModText.Stamina);
+            var result = new JObject
+            {
+                ["guid"] = player.itemData?.Guid ?? 0,
+                ["position"] = VectorToJson(player.transform.position),
+                ["velocity"] = VectorToJson(mover.rb.velocity),
+                ["moving"] = mover.IsMoving,
+                ["running"] = mover.IsRunning,
+                ["hp"] = health == null ? JValue.CreateNull() : new JArray(Round(health.Hp), Round(health.MaxHp)),
+                ["stamina"] = stamina == null ? JValue.CreateNull() : new JArray(Round(stamina.CurrentValue), Round(stamina.MaxValue)),
+                ["inputLocked"] = controller.IsGameplayInputLocked,
+                ["inputLock"] = controller.IsGameplayInputLocked ? controller.DescribeGameplayInputLockState() : string.Empty,
+                ["agentControl"] = new JObject { ["owned"] = OwnsControl(controller) }
+            };
+            if (includeInventory)
+                result["inventory"] = BuildInventorySummary(player, ResolveHotbar(player));
+            return result;
         }
 
         /// <summary>构造玩家核心状态、快捷栏和可选库存摘要。</summary>
         private static JObject BuildPlayerObservation(
             Player player,
-            GameController controller,
-            Mover mover,
+            Mod_GameController controller,
+            Mod_Mover mover,
             bool includeInventory)
         {
-            DamageReceiver health = player.itemMods.GetMod_ByID<DamageReceiver>(ModText.Hp);
+            Mod_DamageReceiver health = player.itemMods.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
             Mod_Stamina stamina = player.itemMods.GetMod_ByID<Mod_Stamina>(ModText.Stamina);
             Mod_Oxygen oxygen = player.itemMods.GetMod_ByID<Mod_Oxygen>(ModText.Oxygen);
             Mod_Food food = player.itemMods.GetMod_ByID<Mod_Food>(ModText.Food);
-            Inventory_HotBar hotbar = ResolveHotbar(player);
+            Mod_Temperature temperature = player.itemMods.GetMod_ByID<Mod_Temperature>(ModText.Temperature);
+            Mod_HotBar hotbar = ResolveHotbar(player);
             Mod_Hand handModule = player.GetComponentInChildren<Mod_Hand>(true);
             Inventory_Hand handInventory = handModule?.HandInventory;
             ItemSlot handSlot = handInventory?.Data?.itemSlots != null &&
@@ -510,8 +596,8 @@ namespace FlatWorld.GameplayMCP
                                               module.item.itemData != null &&
                                               module.item.itemData.Guid == handItemData.Guid);
             Nutrition nutrition = food?.Data?.nutrition;
-            TileEffectReceiver tileReceiver = player.itemMods.GetMod_ByID<TileEffectReceiver>(ModText.TileEffectReceiver) ??
-                                               player.GetComponentInChildren<TileEffectReceiver>(true);
+            Mod_TileEffectReceiver tileReceiver = player.itemMods.GetMod_ByID<Mod_TileEffectReceiver>(ModText.Mod_TileEffectReceiver) ??
+                                               player.GetComponentInChildren<Mod_TileEffectReceiver>(true);
             Mod_InteractSender interactSender = player.GetComponentInChildren<Mod_InteractSender>(true);
 
             var result = new JObject
@@ -537,6 +623,7 @@ namespace FlatWorld.GameplayMCP
                 },
                 ["hand"] = new JObject
                 {
+                    ["role"] = "cursor_transfer_inventory",
                     ["index"] = handInventory?.Data?.Index ?? -1,
                     ["held"] = handItemData?.IDName ?? string.Empty,
                     ["guid"] = handItemData == null ? JValue.CreateNull() : new JValue(handItemData.Guid),
@@ -544,6 +631,13 @@ namespace FlatWorld.GameplayMCP
                     ["runtimeWeapon"] = handWeapon != null,
                     ["canAttack"] = handWeapon?.CanAttack ?? false,
                     ["attackState"] = handWeapon?.CurrentState.ToString() ?? string.Empty
+                },
+                ["temperature"] = temperature?.Data == null ? JValue.CreateNull() : new JObject
+                {
+                    ["currentCelsius"] = Round(temperature.Data.CurrentTemperature),
+                    ["ambientCelsius"] = Round(temperature.Data.AmbientTemperature),
+                    ["insulationCelsius"] = Round(temperature.Data.Insulation),
+                    ["comfortable"] = temperature.IsComfortable()
                 },
                 ["nutrition"] = nutrition == null ? JValue.CreateNull() : new JObject
                 {
@@ -586,6 +680,7 @@ namespace FlatWorld.GameplayMCP
 
                 result["hotbar"] = new JObject
                 {
+                    ["role"] = "equipped_selection",
                     ["selected"] = hotbar.CurrentIndex,
                     ["held"] = hotbar.CurentSelectItem?.itemData?.IDName ?? string.Empty,
                     ["slots"] = slots
@@ -596,6 +691,29 @@ namespace FlatWorld.GameplayMCP
                 result["inventory"] = BuildInventorySummary(player, hotbar);
 
             return result;
+        }
+
+        /// <summary>暴露玩家当前可感知的天气与环境温度，避免 Agent 只能从画面猜测生存环境。</summary>
+        private static JObject BuildEnvironmentObservation(Player player)
+        {
+            WeatherMgr weather = WeatherMgr.Instance;
+            bool hasAmbient = TemperatureMgr.Instance.TryGetAmbientTemperature(
+                player.transform.position, out float ambientTemperature);
+            return new JObject
+            {
+                ["ambientTemperatureCelsius"] = hasAmbient
+                    ? new JValue(Round(ambientTemperature))
+                    : JValue.CreateNull(),
+                ["weather"] = new JObject
+                {
+                    ["type"] = weather.CurrentWeather.ToString(),
+                    ["phase"] = weather.CurrentWeatherPhase.ToString(),
+                    ["intensity"] = Round(weather.CurrentWeatherIntensity),
+                    ["raining"] = weather.IsRaining(),
+                    ["snowing"] = weather.IsSnowingAt(player.transform.position),
+                    ["remainingSeconds"] = Round(weather.CurrentWeatherRemainingTime)
+                }
+            };
         }
 
         /// <summary>通过 ItemMgr 既有空间索引构造玩家半径内的实体摘要。</summary>
@@ -617,7 +735,7 @@ namespace FlatWorld.GameplayMCP
                 dedupe);
 
             var ordered = candidates
-                .Where(item => item != null && item.itemData != null)
+                .Where(item => item != null && item.itemData != null && !item.InHand)
                 .Select(item => new
                 {
                     Item = item,
@@ -637,7 +755,7 @@ namespace FlatWorld.GameplayMCP
         /// <summary>构造一个附近实体的紧凑摘要。</summary>
         private static JObject BuildEntityObservation(Player player, Item item, float distance)
         {
-            DamageReceiver health = item.itemMods?.GetMod_ByID<DamageReceiver>(ModText.Hp);
+            Mod_DamageReceiver health = item.itemMods?.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
             bool interactable = CanPlayerInteract(item, player);
             ItemData data = item.itemData;
             Mod_MechanicalNode mechanical = item.itemMods?.GetMod_ByID<Mod_MechanicalNode>(Mod_MechanicalNode.ModuleId) ??
@@ -665,9 +783,9 @@ namespace FlatWorld.GameplayMCP
 
             if (mechanical != null)
             {
-                MechanicalNode node = mechanical.Node;
+                MachineEntity node = mechanical.Node;
                 MechanicalNetwork network = node?.Network;
-                MechanicalNodeState state = node?.State ?? mechanical.LocalState;
+                MachineState state = node?.State ?? mechanical.LocalState;
                 result["mechanical"] = new JObject
                 {
                     ["attached"] = node != null,
@@ -712,7 +830,7 @@ namespace FlatWorld.GameplayMCP
         }
 
         /// <summary>聚合玩家普通库存与快捷栏，减少 Agent 为查询资源重复翻槽位。</summary>
-        private static JArray BuildInventorySummary(Player player, Inventory_HotBar hotbar)
+        private static JArray BuildInventorySummary(Player player, Mod_HotBar hotbar)
         {
             var totals = new Dictionary<string, float>(StringComparer.Ordinal);
 
@@ -839,11 +957,11 @@ namespace FlatWorld.GameplayMCP
             return true;
         }
 
-        /// <summary>读取附近 ECS 掉落物当前位置，与旧 ItemMgr nearby 分开返回。</summary>
+        /// <summary>读取附近轻量掉落物当前位置，与完整 ItemMgr nearby 分开返回。</summary>
         private static JArray BuildNearbyDroppedItemObservation(Player player, float radius, int maxDrops)
         {
             var candidates = new List<DroppedItemObservation>(Mathf.Max(4, maxDrops));
-            DroppedItemService.QueryNearbyEntityDrops(player.transform.position, radius, candidates);
+            DroppedItemService.QueryNearbyLightweightDrops(player.transform.position, radius, candidates);
             var ordered = candidates
                 .Select(drop => new
                 {
@@ -1025,7 +1143,7 @@ namespace FlatWorld.GameplayMCP
             if (string.IsNullOrEmpty(action))
                 return BuildActionError("missing_action", "缺少 action。", false);
 
-            if (!TryEnsureControl(out Player player, out GameController controller, out Mover mover, out string error))
+            if (!TryEnsureControl(out Player player, out Mod_GameController controller, out Mod_Mover mover, out string error))
                 return BuildActionError("control_unavailable", error, false);
 
             return await GameplayMcpActionRegistry.ExecuteAsync(
@@ -1038,8 +1156,8 @@ namespace FlatWorld.GameplayMCP
         internal static async Task<JObject> MoveForAsync(
             JObject parameters,
             Player player,
-            GameController controller,
-            Mover mover)
+            Mod_GameController controller,
+            Mod_Mover mover)
         {
             Vector2 direction = new Vector2(GetFloat(parameters, "x", 0f), GetFloat(parameters, "y", 0f));
             float seconds = Mathf.Clamp(GetFloat(parameters, "seconds", 0.5f), 0.02f, 20f);
@@ -1075,8 +1193,8 @@ namespace FlatWorld.GameplayMCP
         internal static async Task<JObject> MoveToAsync(
             JObject parameters,
             Player player,
-            GameController controller,
-            Mover mover)
+            Mod_GameController controller,
+            Mod_Mover mover)
         {
             Vector2 target = WorldTopologyRuntime.NormalizePosition(new Vector2(
                 GetFloat(parameters, "x", player.transform.position.x),
@@ -1217,13 +1335,13 @@ namespace FlatWorld.GameplayMCP
         }
 
         /// <summary>设置 Agent 世界瞄准点，可直接使用坐标或附近实体 Guid。</summary>
-        internal static JObject LookAt(JObject parameters, Player player, GameController controller)
+        internal static JObject LookAt(JObject parameters, Player player, Mod_GameController controller)
         {
             if (!TryResolveTargetPosition(parameters, player, out Vector2 target, out string error))
                 return BuildActionError("target_not_found", error, false);
 
             if (!controller.TrySetExternalAimWorldPosition(ControlOwner, target))
-                return BuildActionError("aim_rejected", "GameController 拒绝了外部瞄准点。", false);
+                return BuildActionError("aim_rejected", "Mod_GameController 拒绝了外部瞄准点。", false);
 
             return BuildActionSuccess("look_at", player, new JObject { ["target"] = VectorToJson(target) });
         }
@@ -1322,7 +1440,7 @@ namespace FlatWorld.GameplayMCP
         }
 
         /// <summary>向现有攻击事件链提交一次有时长的攻击按压。</summary>
-        internal static async Task<JObject> AttackAsync(JObject parameters, Player player, GameController controller)
+        internal static async Task<JObject> AttackAsync(JObject parameters, Player player, Mod_GameController controller)
         {
             int targetGuid = GetInt(parameters, "targetGuid", 0);
             if (targetGuid != 0)
@@ -1358,7 +1476,7 @@ namespace FlatWorld.GameplayMCP
         /// <summary>调用当前真实手持物的 Act 入口。</summary>
         internal static JObject UseHeldItem(Player player)
         {
-            Inventory_HotBar hotbar = ResolveHotbar(player);
+            Mod_HotBar hotbar = ResolveHotbar(player);
             Item heldItem = hotbar?.CurentSelectItem;
             if (heldItem == null)
                 return BuildActionError("no_held_item", "当前快捷栏没有可使用的手持物。", false);
@@ -1373,9 +1491,9 @@ namespace FlatWorld.GameplayMCP
         /// <summary>通过快捷栏公开控制入口选择槽位。</summary>
         internal static JObject SelectHotbar(JObject parameters, Player player)
         {
-            Inventory_HotBar hotbar = ResolveHotbar(player);
+            Mod_HotBar hotbar = ResolveHotbar(player);
             if (hotbar == null)
-                return BuildActionError("hotbar_missing", "玩家没有 Inventory_HotBar。", false);
+                return BuildActionError("hotbar_missing", "玩家没有 Mod_HotBar。", false);
 
             int index = GetInt(parameters, "index", -1);
             bool selected = hotbar.TrySelectSlot(index);
@@ -1398,7 +1516,7 @@ namespace FlatWorld.GameplayMCP
         }
 
         /// <summary>停止外部持续输入并退出奔跑模式。</summary>
-        internal static JObject Stop(Player player, GameController controller, Mover mover)
+        internal static JObject Stop(Player player, Mod_GameController controller, Mod_Mover mover)
         {
             controller.TrySetExternalMoveInput(ControlOwner, Vector2.zero);
             controller.TrySetExternalAttackHeld(ControlOwner, false);
@@ -1548,10 +1666,10 @@ namespace FlatWorld.GameplayMCP
         }
 
         /// <summary>解析玩家快捷栏模块。</summary>
-        private static Inventory_HotBar ResolveHotbar(Player player)
+        private static Mod_HotBar ResolveHotbar(Player player)
         {
-            return player?.itemMods?.GetMod_ByID<Inventory_HotBar>(ModText.Hotbar) ??
-                   player?.GetComponentInChildren<Inventory_HotBar>(true);
+            return player?.itemMods?.GetMod_ByID<Mod_HotBar>(ModText.Hotbar) ??
+                   player?.GetComponentInChildren<Mod_HotBar>(true);
         }
 
         /// <summary>构造成功动作响应并附带最终玩家位置，减少额外 observe 调用。</summary>
@@ -1659,6 +1777,279 @@ namespace FlatWorld.GameplayMCP
         #endregion
     }
 
+    #region 统一工具输入输出
+
+    /// <summary>所有玩法接口共享精简输出与按字段取数参数。</summary>
+    public abstract class GameplayMcpOutputParameters
+    {
+        [ToolParameter("Attach compact live player observation to a successful result, avoiding a separate gameplay_observe call.", Required = false)]
+        public bool observe { get; set; }
+
+        [ToolParameter("Output mode: full (legacy default) or compact. Compact diagnostics preview at most 4 object samples per array and save the complete report. Errors remain complete.", Required = false, DefaultValue = "full")]
+        public string output { get; set; }
+
+        [ToolParameter("Optional comma-separated top-level data fields to return. Status, errors and pagination metadata are always retained; omitted fields mean not returned, not empty.", Required = false)]
+        public string fields { get; set; }
+    }
+
+    /// <summary>保持旧协议兼容，统一压缩成功响应并保留诊断证据。</summary>
+    internal static class GameplayMcpOutput
+    {
+        #region 调用反馈
+
+        private static int callSequence;
+        private static readonly object CallTimingGate = new object();
+        private static int activeCalls;
+        private static long lastResultReadyAt;
+        private static int lastResultCallId;
+        private static readonly string[] LoggedArguments =
+        {
+            "action", "command", "source", "x", "y", "seconds", "targetGuid", "targetId", "index",
+            "itemId", "query", "output", "observe", "treeAfter"
+        };
+
+        /// <summary>同步工具反馈调用和结果，Agent 间隔在下次请求进入时统计。</summary>
+        public static object Invoke(string tool, JObject args, Func<JObject, object> execute, bool diagnostic = false)
+        {
+            int id = BeginCall(tool, args);
+            try
+            {
+                object response = execute(args);
+                object output = Finish(response, args, diagnostic);
+                EndCall(id, tool, DescribeOutcome(response));
+                return output;
+            }
+            catch (Exception exception)
+            {
+                EndCall(id, tool, "异常 " + exception.GetType().Name + ": " + ShortText(exception.Message, 120));
+                throw;
+            }
+        }
+
+        /// <summary>异步动作只反馈开始与结果，游戏等待不计入 Agent 反应间隔。</summary>
+        public static async Task<object> InvokeAsync(string tool, JObject args, Func<JObject, Task<object>> execute,
+            bool diagnostic = false)
+        {
+            int id = BeginCall(tool, args);
+            try
+            {
+                object response = await execute(args);
+                object output = Finish(response, args, diagnostic);
+                EndCall(id, tool, DescribeOutcome(response));
+                return output;
+            }
+            catch (Exception exception)
+            {
+                EndCall(id, tool, "异常 " + exception.GetType().Name + ": " + ShortText(exception.Message, 120));
+                throw;
+            }
+        }
+
+        /// <summary>只记录短参数摘要，批次列出动作名，不序列化整包输入输出。</summary>
+        private static int BeginCall(string tool, JObject args)
+        {
+            int id = System.Threading.Interlocked.Increment(ref callSequence);
+            string reaction;
+            lock (CallTimingGate)
+            {
+                // Unity 只能观测工具间隔，不能把通信、排队或人工停顿拆成模型推理时间。
+                long now = System.Diagnostics.Stopwatch.GetTimestamp();
+                if (activeCalls > 0)
+                    reaction = "Agent反应间隔=不统计（并发调用）";
+                else if (lastResultReadyAt == 0)
+                    reaction = "Agent反应间隔=不统计（首次调用）";
+                else
+                {
+                    double milliseconds = (now - lastResultReadyAt) * 1000d / System.Diagnostics.Stopwatch.Frequency;
+                    reaction = $"Agent反应间隔≈{milliseconds.ToString("F1", CultureInfo.InvariantCulture)}ms " +
+                               $"参照=#{lastResultCallId}（上次结果就绪→本次请求进入，含通信/排队/停顿）";
+                }
+                activeCalls++;
+            }
+            var summary = new System.Text.StringBuilder(192);
+            foreach (string key in LoggedArguments)
+            {
+                if (args?[key] is not JValue value || value.Type == JTokenType.Null)
+                    continue;
+                if (summary.Length > 240)
+                    break;
+                summary.Append(' ').Append(key).Append('=').Append(ShortText(value.ToString(CultureInfo.InvariantCulture), 48));
+            }
+            if (args?["steps"] is JArray steps)
+            {
+                summary.Append(" steps=").Append(steps.Count).Append('[');
+                for (int i = 0; i < Math.Min(steps.Count, 8); i++)
+                {
+                    if (i > 0) summary.Append(',');
+                    summary.Append(ShortText(steps[i] is JObject step ? step["action"]?.ToString() : "invalid", 24));
+                }
+                summary.Append(']');
+            }
+            WriteCallLog($"[AI→MCP #{id}] 开始 {tool}{summary} {reaction}");
+            return id;
+        }
+
+        /// <summary>协议成功与业务拒绝分别反馈，失败摘要保留原始错误令牌。</summary>
+        private static string DescribeOutcome(object response)
+        {
+            if (response is ErrorResponse error)
+                return "失败 " + ShortText(error.Error, 120);
+            if (response is not SuccessResponse success)
+                return "完成";
+            object data = success.Data;
+            if (ReadLogValue(data, "ok") is bool ok && !ok)
+                return "失败 " + ShortText(ReadLogValue(data, "code")?.ToString(), 80) + BatchSummary(data);
+            if (ReadLogValue(data, "ready") is bool ready && !ready)
+                return "未就绪 " + ShortText(ReadLogValue(data, "reason")?.ToString(), 120);
+            if (ReadLogValue(data, "aborted") is bool aborted && aborted)
+                return "采样中断";
+            object outcome = ReadLogValue(data, "data");
+            foreach (string key in new[] { "notReached", "timedOut" })
+                if (ReadLogValue(outcome, key) is bool failed && failed)
+                    return "未完成 " + key + " " + ShortText(ReadLogValue(outcome, "stopReason")?.ToString(), 80);
+            foreach (string key in new[] { "interacted", "selected", "moved" })
+                if (ReadLogValue(outcome, key) is bool accepted && !accepted)
+                    return "操作被拒绝 " + key + "=false";
+            return "成功" + BatchSummary(data);
+        }
+
+        /// <summary>读取少量结果标志，不为日志生成诊断报告的完整 JSON。</summary>
+        private static object ReadLogValue(object data, string key)
+        {
+            if (data is JObject json)
+                return json[key] is JValue value ? value.Value : json[key];
+            return data?.GetType().GetProperty(key)?.GetValue(data);
+        }
+
+        private static string BatchSummary(object data)
+        {
+            object executed = ReadLogValue(data, "executed");
+            return executed == null ? string.Empty : $" 已执行={executed} 剩余={ReadLogValue(data, "remaining")}";
+        }
+
+        private static string ShortText(string text, int limit)
+        {
+            if (string.IsNullOrEmpty(text)) return string.Empty;
+            text = text.Replace('\r', ' ').Replace('\n', ' ');
+            return text.Length <= limit ? text : text.Substring(0, limit) + "…";
+        }
+
+        private static void EndCall(int id, string tool, string outcome)
+        {
+            WriteCallLog($"[AI→MCP #{id}] {outcome} {tool} 结果就绪");
+            lock (CallTimingGate)
+            {
+                activeCalls--;
+                if (activeCalls == 0)
+                {
+                    lastResultReadyAt = System.Diagnostics.Stopwatch.GetTimestamp();
+                    lastResultCallId = id;
+                }
+            }
+        }
+
+        /// <summary>调用反馈不附加堆栈，也不作为游戏警告或错误污染诊断计数。</summary>
+        private static void WriteCallLog(string message) =>
+            Debug.LogFormat(LogType.Log, LogOption.NoStacktrace, null, "{0}", message);
+
+        #endregion
+
+        public static bool IsCompact(JObject args) =>
+            string.Equals(args?["output"]?.ToString(), "compact", StringComparison.OrdinalIgnoreCase);
+
+        /// <summary>只筛选成功数据，业务错误及控制、分页状态始终完整返回。</summary>
+        public static object Finish(object response, JObject args, bool diagnostic = false)
+        {
+            bool compact = IsCompact(args);
+            string fields = args?["fields"]?.ToString();
+            bool observe = args?.Value<bool?>("observe") == true;
+            if (response is not SuccessResponse success || (!compact && !observe && string.IsNullOrWhiteSpace(fields)))
+                return response;
+            JObject data = success.Data is JObject json ? (JObject)json.DeepClone() :
+                success.Data == null ? new JObject() : JObject.FromObject(success.Data);
+            if (data.Value<bool?>("ok") == false || data.Value<bool?>("ready") == false)
+                return response;
+            if (observe && data["observation"] == null)
+                data["observation"] = GameplayMcpRuntime.BuildObservation(new JObject { ["profile"] = "compact" });
+
+            string reportPath = null;
+            var omitted = new JObject();
+            if (compact && diagnostic)
+            {
+                JObject preview = (JObject)data.DeepClone();
+                TrimSamples(preview, string.Empty, omitted);
+                if (omitted.Count > 0)
+                {
+                    try
+                    {
+                        string directory = Path.GetFullPath("Library/FlatWorldGameplayMCP/Reports");
+                        Directory.CreateDirectory(directory);
+                        reportPath = Path.Combine(directory, Guid.NewGuid().ToString("N") + ".json");
+                        File.WriteAllText(reportPath, data.ToString(Newtonsoft.Json.Formatting.None));
+                        data = preview;
+                    }
+                    catch (IOException)
+                    {
+                        omitted.RemoveAll();
+                    }
+                    catch (UnauthorizedAccessException)
+                    {
+                        omitted.RemoveAll();
+                    }
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(fields))
+            {
+                var wanted = new HashSet<string>(fields.Split(',').Select(name => name.Trim()), StringComparer.Ordinal);
+                foreach (string key in new[] { "ok", "ready", "reason", "playing", "frame", "scene", "protocol", "code",
+                    "aborted", "valid", "errors", "warnings", "issues", "source", "offset", "limit", "truncated",
+                    "next_offset", "returned_count", "total_count", "executed", "remaining", "results", "observation",
+                    "active", "owned", "owner", "timeScale", "isolated", "profilerEnabled", "deepProfiling",
+                    "elapsed", "frameSamples", "invalidReason", "completed" })
+                    wanted.Add(key);
+                var missing = new JArray(fields.Split(',').Select(name => name.Trim()).Distinct().Where(name => !data.ContainsKey(name)));
+                foreach (JProperty property in data.Properties().ToArray())
+                    if (!wanted.Contains(property.Name))
+                        property.Remove();
+                data["selectedFields"] = fields;
+                if (missing.Count > 0)
+                    data["missingFields"] = missing;
+            }
+            if (reportPath != null)
+            {
+                data["reportPath"] = reportPath;
+                data["omittedSamples"] = omitted;
+            }
+            return compact ? new JObject { ["success"] = true, ["data"] = data } :
+                new SuccessResponse(success.Message, data);
+        }
+
+        /// <summary>只限制对象样本数组，坐标、血量、方向和标量列表保持完整。</summary>
+        private static void TrimSamples(JToken token, string path, JObject omitted)
+        {
+            if (token is JObject obj)
+            {
+                foreach (JProperty property in obj.Properties())
+                    TrimSamples(property.Value, string.IsNullOrEmpty(path) ? property.Name : path + "." + property.Name, omitted);
+            }
+            else if (token is JArray array)
+            {
+                if (array.Count > 4 && array.All(value => value is JObject) &&
+                    !path.EndsWith("issues", StringComparison.Ordinal) && !path.EndsWith("errors", StringComparison.Ordinal))
+                {
+                    omitted[path] = array.Count - 4;
+                    while (array.Count > 4)
+                        array.RemoveAt(array.Count - 1);
+                }
+                for (int i = 0; i < array.Count; i++)
+                    TrimSamples(array[i], path + "[" + i + "]", omitted);
+            }
+        }
+    }
+
+    #endregion
+
     /// <summary>标记一个可被 GamePlayMCP 自动发现的玩法动作。</summary>
     [AttributeUsage(AttributeTargets.Class, AllowMultiple = false)]
     internal sealed class GameplayMcpActionAttribute : Attribute
@@ -1676,16 +2067,16 @@ namespace FlatWorld.GameplayMCP
     /// <summary>GamePlayMCP 动作上下文，统一提供当前真实玩家与控制模块。</summary>
     internal readonly struct GameplayMcpActionContext
     {
-        public GameplayMcpActionContext(Player player, GameController controller, Mover mover)
+        public GameplayMcpActionContext(Player player, Mod_GameController controller, Mod_Mover mover)
         {
             Player = player;
             Controller = controller;
-            Mover = mover;
+            Mod_Mover = mover;
         }
 
         public Player Player { get; }
-        public GameController Controller { get; }
-        public Mover Mover { get; }
+        public Mod_GameController Controller { get; }
+        public Mod_Mover Mod_Mover { get; }
     }
 
     /// <summary>一个可扩展的 GamePlayMCP 玩法动作。</summary>
@@ -1778,15 +2169,15 @@ namespace FlatWorld.GameplayMCP
     internal sealed class GameplayMcpMoveAction : IGameplayMcpAction
     {
         public Task<JObject> ExecuteAsync(GameplayMcpActionContext context, JObject parameters) =>
-            GameplayMcpRuntime.MoveForAsync(parameters, context.Player, context.Controller, context.Mover);
+            GameplayMcpRuntime.MoveForAsync(parameters, context.Player, context.Controller, context.Mod_Mover);
     }
 
     /// <summary>持续向世界坐标移动直到到达或超时。</summary>
-    [GameplayMcpAction("move_to", "Submit a move intent to the player's Mod_GameMCP_LLM runtime interface. Uses WorldNavigationManager paths, follows waypoints through the normal Mover input chain, replans around invalid routes, and reports resolved destination and navigation diagnostics.")]
+    [GameplayMcpAction("move_to", "Submit a move intent to the player's Mod_GameMCP_LLM runtime interface. Uses WorldNavigationManager paths, follows waypoints through the normal Mod_Mover input chain, replans around invalid routes, and reports resolved destination and navigation diagnostics.")]
     internal sealed class GameplayMcpMoveToAction : IGameplayMcpAction
     {
         public Task<JObject> ExecuteAsync(GameplayMcpActionContext context, JObject parameters) =>
-            GameplayMcpRuntime.MoveToAsync(parameters, context.Player, context.Controller, context.Mover);
+            GameplayMcpRuntime.MoveToAsync(parameters, context.Player, context.Controller, context.Mod_Mover);
     }
 
     /// <summary>设置世界瞄准点。</summary>
@@ -1844,7 +2235,7 @@ namespace FlatWorld.GameplayMCP
     internal sealed class GameplayMcpStopAction : IGameplayMcpAction
     {
         public Task<JObject> ExecuteAsync(GameplayMcpActionContext context, JObject parameters) =>
-            Task.FromResult(GameplayMcpRuntime.Stop(context.Player, context.Controller, context.Mover));
+            Task.FromResult(GameplayMcpRuntime.Stop(context.Player, context.Controller, context.Mod_Mover));
     }
 
     /// <summary>让真实世界继续运行一小段时间。</summary>

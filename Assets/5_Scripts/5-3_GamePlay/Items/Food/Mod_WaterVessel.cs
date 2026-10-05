@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using FlatWorld.Networking;
 using MemoryPack;
 using Newtonsoft.Json.Linq;
@@ -11,22 +12,22 @@ using UnityEngine;
 public partial class LiquidContainerState
 {
     public string LiquidId; // 当前液体稳定 ID；空容器必须为空。
-    public float Amount; // 当前液体份数；允许小数以支持按倾角连续倾倒。
+    public float Amount; // 当前液体份数；运行时只保存整数份，连续倾倒仅由表现层插值。
     public float ProcessingSeconds; // 当前液体加热处理的累计秒数。
     public float Temperature; // 当前液体温度；追加字段，兼容旧容器存档并由加工模块按秒冷却。
 }
 
 /// <summary>
 /// 可装任意已注册液体的复用容器模块。历史类名仍由现有模块 Prefab 使用，但运行时语义已经是通用液体容器；
-/// 液体属性全部来自 LiquidDefinition，新增 MOD 液体无需新增容器 Item 或修改本模块。
+/// 液体属性全部来自 LiquidDefinition，新增 MOD 液体无需新增容器 Item；声明 liquidSurface 的容器 Sprite 由本模块按主色重绘。
 /// </summary>
-public sealed class Mod_WaterVessel : Module, IInteractable
+public sealed class Mod_WaterVessel : Module, IInteractable, ILiquidVessel
 {
     #region 数据与生命周期
 
     public const string ModuleId = "Mod_WaterVessel";
     public const int DefaultCapacity = 8;
-    public const float AmountStep = 0.1f; // 液体份数的最小存储单位，只保留小数点后一位。
+    public const float AmountStep = 1f; // 所有容器液量只按整份流转。
     public const float AmountEpsilon = 0.0001f;
     public Ex_ModData_MemoryPackable ModData = new(); // 容器独立持久化载体。
     public LiquidContainerState Data = new(); // 液体 ID、数量、温度与加工进度。
@@ -38,8 +39,16 @@ public sealed class Mod_WaterVessel : Module, IInteractable
     public override ModuleTickMode TickMode => ModuleTickMode.Disabled;
     public int Capacity => capacity;
     public LiquidDefinition CurrentLiquid => ResolveLiquidDefinition(Data?.LiquidId, false);
+    LiquidContainerState ILiquidVessel.Data => Data;
+    public ItemData ItemData => item.itemData;
+    public Item Item => item;
+    public MachineEntity Machine => null;
+    public IVesselContents ContentsSource => item.itemMods?.GetMod_ByID<Mod_VesselContents>(Mod_VesselContents.ModuleId);
+    public void CommitVessel() => Commit();
     private WorldTileTargetOutline targetOutline; // 当前准心命中的单格液体来源轮廓。
     private bool actionBound;
+    private const float WorldHeatTickInterval = 1f;
+    private float worldHeatClock;
 
     public override ModuleData _Data
     {
@@ -58,6 +67,7 @@ public sealed class Mod_WaterVessel : Module, IInteractable
         if (normalized)
             ModData.WriteData(Data);
         RefreshVisual();
+        worldHeatClock = 0f;
         actionBound = item?.itemMods?.GetMod_ByID<Mod_Mortar>(Mod_Mortar.ModuleId)?.IsCrucible != true;
         if (actionBound)
             item.OnAct += Act;
@@ -76,6 +86,7 @@ public sealed class Mod_WaterVessel : Module, IInteractable
     {
         if (actionBound && item != null) item.OnAct -= Act;
         actionBound = false;
+        worldHeatClock = 0f;
         ReleaseTargetOutline();
         Changed = null;
     }
@@ -83,6 +94,7 @@ public sealed class Mod_WaterVessel : Module, IInteractable
     /// <summary>准心目标属于连续变化的表现状态，直接按帧刷新而不启用 Module Tick。</summary>
     private void LateUpdate()
     {
+        TickWorldHeat();
         if (item?.Owner is not Player ownerPlayer || !ownerPlayer.IsLocalProfile)
         {
             targetOutline?.Hide();
@@ -97,6 +109,33 @@ public sealed class Mod_WaterVessel : Module, IInteractable
 
         targetOutline ??= WorldTileTargetOutline.Create("Liquid Tile Target Outline");
         targetOutline.Show(target.WorldCell);
+    }
+
+    /// <summary>落地完整容器每秒读取所在格温度，让液体按统一速率升温、降温并触发无产物热转换。</summary>
+    private void TickWorldHeat()
+    {
+        if (!GameNetwork.HasStateAuthority || item == null || item.DestructionHandled ||
+            item.InHand || item.Owner != null || IsEmptyAmount(Data?.Amount ?? 0f))
+        {
+            worldHeatClock = 0f;
+            return;
+        }
+
+        worldHeatClock += Time.deltaTime;
+        if (worldHeatClock < WorldHeatTickInterval)
+            return;
+
+        float seconds = worldHeatClock;
+        worldHeatClock = 0f;
+        TemperatureMgr temperatureManager = TemperatureMgr.Instance;
+        if (temperatureManager == null ||
+            !temperatureManager.TryGetAmbientTemperature(item.transform.position, out float ambientTemperature))
+        {
+            return;
+        }
+
+        if (InventoryVesselHeating.ProcessWorldHeat(Data, ambientTemperature, seconds))
+            Commit();
     }
 
     private void OnDisable() => ReleaseTargetOutline();
@@ -147,7 +186,7 @@ public sealed class Mod_WaterVessel : Module, IInteractable
             }
             else
             {
-                float moved = AddLiquidAmount(target.Liquid.Id, Capacity - Data.Amount);
+                float moved = LiquidVesselOperations.FillFromWorld(this, actor, target);
                 if (moved > AmountEpsilon)
                     ItemActionFeedback.Show(actor, $"已装入{target.Liquid.DisplayName}。");
             }
@@ -167,7 +206,7 @@ public sealed class Mod_WaterVessel : Module, IInteractable
     public bool CanOperate(Item actor)
     {
         if (!GameNetwork.HasStateAuthority || actor == null || actor.DestructionHandled || item == null || item.DestructionHandled ||
-            !(actor.itemMods.GetMod_ByID<DamageReceiver>(ModText.Hp)?.Hp > 0f))
+            !(actor.itemMods.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp)?.Hp > 0f))
             return false;
         return item.InHand ? item.Owner == actor :
             item.Owner == null && WorldTopologyRuntime.ShortestDelta(actor.transform.position, item.transform.position).sqrMagnitude <= reach * reach;
@@ -186,23 +225,7 @@ public sealed class Mod_WaterVessel : Module, IInteractable
 
     /// <summary>液体定义声明可饮用即可消耗；恢复量与饮用后的状态后果都由同一液体定义决定。</summary>
     public bool Drink(Item actor)
-    {
-        LiquidDefinition liquid = CurrentLiquid;
-        if (!CanOperate(actor) || liquid == null || !liquid.Drinkable || IsEmptyAmount(Data.Amount))
-            return false;
-
-        float consumedAmount = Math.Min(1f, Data.Amount);
-        Mod_Food food = actor.itemMods.GetMod_ByID<Mod_Food>(ModText.Food);
-        if (food == null)
-            return false;
-
-        food.DrinkWater(liquid.HydrationPerServing * consumedAmount, item);
-        LiquidDrinkEffectProcessor.Apply(actor, liquid);
-
-        RemoveLiquidInternal(consumedAmount);
-        Commit();
-        return true;
-    }
+        => LiquidVesselOperations.Drink(this, actor);
 
     /// <summary>玩家明确倒空当前容器。</summary>
     public void Empty(Item actor)
@@ -213,83 +236,18 @@ public sealed class Mod_WaterVessel : Module, IInteractable
 
     /// <summary>主动倾倒才向操作者脚下提交液体；配方、饮用、转移等普通扣液入口不会重复浇地。</summary>
     public float PourToGround(Item actor, float amount)
-    {
-        if (!CanOperate(actor)) return 0f;
-        LiquidDefinition liquid = CurrentLiquid;
-        Vector2 position = actor.transform.position;
-        float removed = RemoveLiquidAmount(amount);
-        if (removed > AmountEpsilon && liquid != null &&
-            string.Equals(liquid.Category, "water", StringComparison.OrdinalIgnoreCase))
-            FarmlandSystem.TryAddGroundWater(position, removed);
-        return removed;
-    }
+        => LiquidVesselOperations.PourToGround(this, actor, amount);
 
     /// <summary>向另一只通用液体容器部分转移；不同液体禁止自动混合。</summary>
     public bool TransferTo(Mod_WaterVessel target, Item actor)
-    {
-        if (target == this || target == null || !CanOperate(actor) || !target.CanOperate(actor) || IsEmptyAmount(Data.Amount) ||
-            (!IsEmptyAmount(target.Data.Amount) && !SameLiquid(target.Data.LiquidId, Data.LiquidId)))
-            return false;
-
-        float moved = Math.Min(Data.Amount, target.Capacity - target.Data.Amount);
-        if (moved <= AmountEpsilon) return false;
-        float sourceTemperature = Data.Temperature;
-        target.AddLiquidInternal(Data.LiquidId, moved);
-        target.Data.Temperature = Mathf.Max(target.Data.Temperature, sourceTemperature);
-        RemoveLiquidInternal(moved);
-        Commit();
-        target.Commit();
-        return true;
-    }
+        => LiquidVesselOperations.Transfer(this, target, actor);
 
     /// <summary>
     /// 把库存容器中的液体或目录声明的原料装入当前容器。来源容器保持原槽位，原料按整份扣除；
     /// 当前手持来源优先走实例 API，原料数量不超过本次拖拽量，避免半组拖拽误消费整组。
     /// </summary>
     public bool TransferFromInventoryItem(ItemData sourceItemData, Item actor, float maximumItemAmount = float.PositiveInfinity)
-    {
-        if (!CanOperate(actor) || sourceItemData == null || item?.itemData == null ||
-            IsSameItemData(sourceItemData, item.itemData))
-        {
-            return false;
-        }
-
-        Mod_WaterVessel runtimeSource = ResolveHeldRuntimeSource(actor, sourceItemData);
-        if (runtimeSource != null)
-            return runtimeSource.TransferTo(this, actor);
-
-        if (!TryRead(sourceItemData, out Ex_ModData_MemoryPackable sourceStorage, out LiquidContainerState sourceState))
-            return FillFromInventoryIngredient(sourceItemData, actor, maximumItemAmount);
-
-        if (IsEmptyAmount(sourceState.Amount) || string.IsNullOrWhiteSpace(sourceState.LiquidId) ||
-            (!IsEmptyAmount(Data.Amount) && !SameLiquid(Data.LiquidId, sourceState.LiquidId)))
-        {
-            return false;
-        }
-
-        float moved = QuantizeMovementAmount(Math.Min(sourceState.Amount, Capacity - Data.Amount));
-        if (moved <= AmountEpsilon)
-            return false;
-
-        string liquidId = sourceState.LiquidId;
-        float sourceTemperature = sourceState.Temperature;
-        sourceState.Amount -= moved;
-        NormalizeStoredAmount(sourceState);
-        sourceState.ProcessingSeconds = 0f;
-        if (IsEmptyAmount(sourceState.Amount))
-        {
-            sourceState.Amount = 0f;
-            sourceState.LiquidId = null;
-        }
-        sourceStorage.WriteData(sourceState);
-
-        AddLiquidInternal(liquidId, moved);
-        Data.Temperature = Mathf.Max(Data.Temperature, sourceTemperature);
-        Commit();
-        RefreshInventoryItemPresentation(actor, sourceItemData);
-        ItemNetworkStateSerialization.NotifyRuntimeStateChanged(actor);
-        return true;
-    }
+        => LiquidVesselOperations.TransferFromInventory(this, sourceItemData, actor, maximumItemAmount);
 
     /// <summary>按液体目录的原料映射装液；先校验整份容量，再从真实来源槽扣料，绝不直接改堆叠数量。</summary>
     private bool FillFromInventoryIngredient(ItemData source, Item actor, float maximumItemAmount)
@@ -363,38 +321,13 @@ public sealed class Mod_WaterVessel : Module, IInteractable
         return removed;
     }
 
-    /// <summary>向容器加入可为小数的液体份数；用于世界装液和连续液体玩法。</summary>
+    /// <summary>向容器加入液体份数；输入会向下量化为整份。</summary>
     public float AddLiquidAmount(string liquidId, float amount)
-    {
-        if (!GameNetwork.HasStateAuthority || !IsFinitePositive(amount))
-            return 0f;
-        ResolveLiquidDefinition(liquidId, true);
-        if (!IsEmptyAmount(Data.Amount) && !SameLiquid(Data.LiquidId, liquidId))
-            return 0f;
+        => LiquidVesselOperations.Add(this, liquidId, amount);
 
-        float moved = QuantizeMovementAmount(Math.Min(amount, Capacity - Data.Amount));
-        if (moved <= AmountEpsilon)
-            return 0f;
-        float previousAmount = Data.Amount;
-        AddLiquidInternal(liquidId, moved);
-        Commit();
-        return Mathf.Max(0f, Data.Amount - previousAmount);
-    }
-
-    /// <summary>从容器移除可为小数的液体份数；返回实际移除量。</summary>
+    /// <summary>从容器移除液体份数；输入会向下量化为整份。</summary>
     public float RemoveLiquidAmount(float amount)
-    {
-        if (!GameNetwork.HasStateAuthority || !IsFinitePositive(amount) || IsEmptyAmount(Data.Amount))
-            return 0f;
-
-        float removed = QuantizeMovementAmount(Math.Min(amount, Data.Amount));
-        if (removed <= AmountEpsilon)
-            return 0f;
-        float previousAmount = Data.Amount;
-        RemoveLiquidInternal(removed);
-        Commit();
-        return Mathf.Max(0f, previousAmount - Data.Amount);
-    }
+        => LiquidVesselOperations.Remove(this, amount);
 
     /// <summary>玩法和 MOD 清空容器，不生成额外物品。</summary>
     public bool ClearContents()
@@ -402,6 +335,26 @@ public sealed class Mod_WaterVessel : Module, IInteractable
         if (!GameNetwork.HasStateAuthority || IsEmptyAmount(Data.Amount))
             return false;
         ClearContentsInternal();
+        Commit();
+        return true;
+    }
+
+    /// <summary>投料前检查液体身份与装量；此入口不修改容器，供库存事务预检。</summary>
+    public bool CanApplyIngredientReaction(LiquidIngredientReaction reaction)
+    {
+        return GameNetwork.HasStateAuthority && reaction != null &&
+               !IsEmptyAmount(Data.Amount) && CurrentLiquid != null &&
+               !string.Equals(Data.LiquidId, reaction.ResultLiquidId, StringComparison.Ordinal) &&
+               (!reaction.RequireFullContainer || Data.Amount >= Capacity - AmountEpsilon) &&
+               ResolveLiquidDefinition(reaction.ResultLiquidId, false) != null;
+    }
+
+    /// <summary>原料库存事务成功后替换液体身份，保留原有液量并刷新存档、图标和面板。</summary>
+    public bool TryApplyIngredientReaction(LiquidIngredientReaction reaction)
+    {
+        if (!CanApplyIngredientReaction(reaction)) return false;
+        Data.LiquidId = reaction.ResultLiquidId;
+        Data.ProcessingSeconds = 0f;
         Commit();
         return true;
     }
@@ -476,10 +429,7 @@ public sealed class Mod_WaterVessel : Module, IInteractable
         return true;
     }
 
-    /// <summary>
-    /// 根据容器快照与液体定义解析库存/快捷栏图标。液体可声明专用 visualState；
-    /// 容器没有该状态图时统一回退到 filled，因此新增 MOD 液体不需要修改 UI 代码。
-    /// </summary>
+    /// <summary>按 ItemData 状态在容器模块内重绘液面 Sprite；其他展示端只读取解析后的通用 Sprite。</summary>
     public static bool TryResolvePresentationSprite(ItemData itemData, out Sprite sprite)
     {
         sprite = null;
@@ -490,22 +440,209 @@ public sealed class Mod_WaterVessel : Module, IInteractable
             return false;
         }
 
-        string stateName = IsEmptyAmount(state.Amount)
-            ? "empty"
-            : ResolveLiquidDefinition(state.LiquidId, false)?.VisualState;
-
-        if (!string.IsNullOrWhiteSpace(stateName) &&
-            definition.TryGetVisualStateSprite(stateName, out sprite))
+        if (IsEmptyAmount(state.Amount))
         {
+            if (definition.TryGetVisualStateSprite("empty", out sprite))
+                return true;
+
+            sprite = definition.Sprite;
+            return sprite != null;
+        }
+
+        LiquidDefinition liquid = ResolveLiquidDefinition(state.LiquidId, false);
+        if (liquid == null)
+            return false;
+
+        if (definition.Visual?.LiquidSurface != null)
+        {
+            sprite = GenerateLiquidSurfaceSprite(
+                itemData,
+                definition.Sprite,
+                definition.Visual.LiquidSurface,
+                liquid.PrimaryColor,
+                Mathf.Clamp01(state.Amount / ResolveContainerCapacity(itemData)));
             return true;
         }
 
-        if (!IsEmptyAmount(state.Amount) && definition.TryGetVisualStateSprite("filled", out sprite))
+        if (definition.TryGetVisualStateSprite(liquid.VisualState, out sprite))
+            return true;
+
+        if (definition.TryGetVisualStateSprite("filled", out sprite))
             return true;
 
         sprite = definition.Sprite;
         return sprite != null;
     }
+
+    #region 容器液面 Sprite 重绘
+
+    private const float LiquidSurfaceShadowBlend = 0.22f; // 水面下层混入阴影色的比例。
+    private const float LiquidSurfaceHighlightBlend = 0.24f; // 水面顶边混入高光色的比例。
+
+    private readonly struct VesselSpriteCacheKey : IEquatable<VesselSpriteCacheKey>
+    {
+        public readonly int SourceSpriteId; // 原始物品 Sprite 实例。
+        public readonly int X; // 内腔像素区左下角 X。
+        public readonly int Y; // 内腔像素区左下角 Y。
+        public readonly int Width; // 内腔像素区像素宽度。
+        public readonly int Height; // 内腔像素区像素高度。
+        public readonly int FillRows; // 按容器余量量化后的液面高度。
+        public readonly int MaxSourceChannel; // 当前贴图内腔源像素的亮度上限。
+        public readonly Color32 LiquidColor; // 液体定义提供的主色。
+
+        public VesselSpriteCacheKey(Sprite source, RectInt bounds, int fillRows, int maxSourceChannel, Color32 liquidColor)
+        {
+            SourceSpriteId = source.GetInstanceID();
+            X = bounds.x;
+            Y = bounds.y;
+            Width = bounds.width;
+            Height = bounds.height;
+            FillRows = fillRows;
+            MaxSourceChannel = maxSourceChannel;
+            LiquidColor = liquidColor;
+        }
+
+        public bool Equals(VesselSpriteCacheKey other) =>
+            SourceSpriteId == other.SourceSpriteId && X == other.X && Y == other.Y &&
+            Width == other.Width && Height == other.Height && FillRows == other.FillRows &&
+            MaxSourceChannel == other.MaxSourceChannel &&
+            LiquidColor.Equals(other.LiquidColor);
+
+        public override bool Equals(object obj) => obj is VesselSpriteCacheKey other && Equals(other);
+
+        public override int GetHashCode() => HashCode.Combine(
+            SourceSpriteId, X, Y, Width, Height, FillRows, MaxSourceChannel, LiquidColor);
+    }
+
+    private static readonly Dictionary<VesselSpriteCacheKey, Sprite> GeneratedVesselSprites = new(); // 按源 Sprite、颜色和像素液面复用运行时贴图。
+
+    /// <summary>每次进入运行时清理上个会话创建的纹理对象，避免反复进出 Play Mode 累积。</summary>
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ClearGeneratedVesselSprites()
+    {
+        foreach (Sprite generatedSprite in GeneratedVesselSprites.Values)
+        {
+            if (generatedSprite == null)
+                continue;
+
+            Texture2D generatedTexture = generatedSprite.texture;
+            if (Application.isPlaying)
+            {
+                UnityEngine.Object.Destroy(generatedSprite);
+                if (generatedTexture != null)
+                    UnityEngine.Object.Destroy(generatedTexture);
+            }
+            else
+            {
+                UnityEngine.Object.DestroyImmediate(generatedSprite);
+                if (generatedTexture != null)
+                    UnityEngine.Object.DestroyImmediate(generatedTexture);
+            }
+        }
+
+        GeneratedVesselSprites.Clear();
+    }
+
+    /// <summary>按开口配置、主色和可见液面行数复用程序生成的容器 Sprite。</summary>
+    private static Sprite GenerateLiquidSurfaceSprite(
+        ItemData itemData,
+        Sprite sourceSprite,
+        LiquidSurfaceDefinition surface,
+        Color primaryColor,
+        float fillRatio)
+    {
+        if (sourceSprite == null || sourceSprite.texture == null)
+            throw new InvalidOperationException($"液体容器 {itemData.IDName} 缺少可重绘的基础 Sprite。");
+
+        Texture2D sourceTexture = sourceSprite.texture;
+        if (!sourceTexture.isReadable)
+            throw new InvalidOperationException(
+                $"液体容器 {itemData.IDName} 的贴图 {sourceTexture.name} 必须启用 Read/Write，才能程序化重绘液面。");
+
+        int width = Mathf.RoundToInt(sourceSprite.rect.width);
+        int height = Mathf.RoundToInt(sourceSprite.rect.height);
+        int sourceX = Mathf.RoundToInt(sourceSprite.rect.x);
+        int sourceY = Mathf.RoundToInt(sourceSprite.rect.y);
+        Rect bounds01 = surface.Bounds;
+        int xMin = Mathf.Clamp(Mathf.FloorToInt(bounds01.xMin * width), 0, width);
+        int yMin = Mathf.Clamp(Mathf.FloorToInt(bounds01.yMin * height), 0, height);
+        int xMax = Mathf.Clamp(Mathf.CeilToInt(bounds01.xMax * width), 0, width);
+        int yMax = Mathf.Clamp(Mathf.CeilToInt(bounds01.yMax * height), 0, height);
+        RectInt bounds = new RectInt(xMin, yMin, xMax - xMin, yMax - yMin);
+        if (width <= 0 || height <= 0 || bounds.width <= 0 || bounds.height <= 0 ||
+            sourceX < 0 || sourceY < 0 || sourceX + width > sourceTexture.width || sourceY + height > sourceTexture.height)
+            throw new InvalidOperationException($"液体容器 {itemData.IDName} 的液面开口配置超出了基础 Sprite。");
+
+        Color32 liquidColor = primaryColor;
+        int fillRows = Mathf.Clamp(Mathf.CeilToInt(Mathf.Clamp01(fillRatio) * bounds.height), 1, bounds.height);
+        var key = new VesselSpriteCacheKey(sourceSprite, bounds, fillRows, surface.MaxSourceChannel, liquidColor);
+        if (GeneratedVesselSprites.TryGetValue(key, out Sprite cachedSprite) && cachedSprite != null)
+            return cachedSprite;
+
+        Color32[] texturePixels = sourceTexture.GetPixels32();
+        Color32[] spritePixels = new Color32[width * height];
+        for (int y = 0; y < height; y++)
+            Array.Copy(texturePixels, (sourceY + y) * sourceTexture.width + sourceX, spritePixels, y * width, width);
+
+        Color32 shadowColor = (Color32)Color.Lerp((Color)liquidColor, new Color(0.03f, 0.06f, 0.08f, 1f), LiquidSurfaceShadowBlend);
+        Color32 highlightColor = (Color32)Color.Lerp((Color)liquidColor, Color.white, LiquidSurfaceHighlightBlend);
+        int liquidTop = bounds.yMin + fillRows - 1;
+        float centerX = bounds.xMin + bounds.width * 0.5f;
+        float centerY = bounds.yMin + bounds.height * 0.5f;
+        float radiusX = bounds.width * 0.5f;
+        float radiusY = bounds.height * 0.5f;
+
+        for (int y = bounds.yMin; y <= liquidTop; y++)
+        {
+            for (int x = bounds.xMin; x < bounds.xMax; x++)
+            {
+                float normalizedX = (x + 0.5f - centerX) / radiusX;
+                float normalizedY = (y + 0.5f - centerY) / radiusY;
+                if (normalizedX * normalizedX + normalizedY * normalizedY > 1f)
+                    continue;
+
+                int pixelIndex = y * width + x;
+                Color32 sourcePixel = spritePixels[pixelIndex];
+                if (sourcePixel.a == 0 ||
+                    Mathf.Max(Mathf.Max(sourcePixel.r, sourcePixel.g), sourcePixel.b) > surface.MaxSourceChannel)
+                    continue;
+
+                spritePixels[pixelIndex] = y == liquidTop ? highlightColor : shadowColor;
+            }
+        }
+
+        var generatedTexture = new Texture2D(width, height, TextureFormat.RGBA32, false)
+        {
+            name = $"{sourceSprite.name}_Liquid_{ColorUtility.ToHtmlStringRGBA(liquidColor)}_{fillRows}",
+            filterMode = sourceTexture.filterMode,
+            wrapMode = TextureWrapMode.Clamp
+        };
+        generatedTexture.SetPixels32(spritePixels);
+        generatedTexture.Apply(false, false);
+
+        Vector2 pivot = new Vector2(sourceSprite.pivot.x / width, sourceSprite.pivot.y / height);
+        // 落地建筑的光照遮挡读取当前液面 Sprite 的物理轮廓。
+        Sprite generatedSprite = Sprite.Create(
+            generatedTexture,
+            new Rect(0f, 0f, width, height),
+            pivot,
+            sourceSprite.pixelsPerUnit,
+            0,
+            SpriteMeshType.Tight,
+            sourceSprite.border,
+            true);
+        generatedTexture.Apply(false, true);
+        generatedSprite.name = generatedTexture.name;
+        GeneratedVesselSprites.Add(key, generatedSprite);
+        return generatedSprite;
+    }
+
+    /// <summary>装水容器加入通用 ItemData 图标解析注册表，不让任意 UI 知道容器模块类型。</summary>
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+    private static void RegisterPresentationResolver() =>
+        ItemDataPresentationResolverRegistry.Register(ModuleId, TryResolvePresentationSprite);
+
+    #endregion
 
     /// <summary>库存中的模块没有运行时组件，容量从正式物品定义的模块参数读取。</summary>
     private static int ResolveConfiguredCapacity(ItemData itemData, string stableModuleName)
@@ -554,7 +691,7 @@ public sealed class Mod_WaterVessel : Module, IInteractable
     /// <summary>当前快捷栏手持物若正是拖拽来源，则返回它的运行时容器模块。</summary>
     private static Mod_WaterVessel ResolveHeldRuntimeSource(Item actor, ItemData sourceItemData)
     {
-        Inventory_HotBar hotbar = actor?.itemMods?.GetMod_ByID<Inventory_HotBar>(ModText.Hotbar);
+        Mod_HotBar hotbar = actor?.itemMods?.GetMod_ByID<Mod_HotBar>(ModText.Hotbar);
         Item heldItem = hotbar?.CurentSelectItem;
         if (heldItem?.itemData == null || !IsSameItemData(heldItem.itemData, sourceItemData))
             return null;
@@ -582,7 +719,7 @@ public sealed class Mod_WaterVessel : Module, IInteractable
     private static bool IsFinitePositive(float value) =>
         !float.IsNaN(value) && !float.IsInfinity(value) && value > AmountEpsilon;
 
-    /// <summary>把液体状态归一到 0.1 份网格；读取旧的高精度浮点余量时也会立即压到一位小数。</summary>
+    /// <summary>统一把容器液量收敛为整数份，避免任何入口留下小数余量。</summary>
     public static bool NormalizeStoredAmount(LiquidContainerState state)
     {
         if (state == null || float.IsNaN(state.Amount) || float.IsInfinity(state.Amount))
@@ -591,7 +728,7 @@ public sealed class Mod_WaterVessel : Module, IInteractable
         float previousAmount = state.Amount;
         string previousLiquidId = state.LiquidId;
         float previousTemperature = state.Temperature;
-        state.Amount = Mathf.Round(state.Amount / AmountStep) * AmountStep;
+        state.Amount = Mathf.Max(0f, Mathf.Floor(state.Amount + AmountEpsilon));
         if (state.Temperature < 0f)
             state.Temperature = 0f;
         if (IsEmptyAmount(state.Amount))
@@ -605,12 +742,13 @@ public sealed class Mod_WaterVessel : Module, IInteractable
             previousTemperature != state.Temperature;
     }
 
-    /// <summary>液体转移量向下落到 0.1 份，保证一次操作不会凭空多移动液体。</summary>
+    /// <summary>所有液量移动都只允许整份，任何不足一份的输入都不结算。</summary>
     private static float QuantizeMovementAmount(float amount)
     {
         if (!IsFinitePositive(amount))
             return 0f;
-        return Mathf.Floor((amount + AmountEpsilon) / AmountStep) * AmountStep;
+        float quantized = Mathf.Floor((amount + AmountEpsilon) / AmountStep) * AmountStep;
+        return quantized > AmountEpsilon ? quantized : 0f;
     }
 
     private void AddLiquidInternal(string liquidId, float amount)
@@ -656,7 +794,7 @@ public sealed class Mod_WaterVessel : Module, IInteractable
         Save();
         RefreshVisual();
         RefreshContainingInventoryPresentation();
-        // 快捷栏当前手持实例会把 OnUIRefresh 绑定到 Inventory_HotBar.RefreshUI；
+        // 快捷栏当前手持实例会把 OnUIRefresh 绑定到 Mod_HotBar.RefreshUI；
         // 模块内部状态变化不会替换 ItemData 引用，因此必须显式发布这一运行时表现事件。
         item.OnUIRefresh?.Invoke();
         ItemNetworkStateSerialization.NotifyRuntimeStateChanged(item);
@@ -696,7 +834,7 @@ public sealed class Mod_WaterVessel : Module, IInteractable
         if (building != null && building.IsPlacementModeActive)
             return false;
 
-        GameController controller = actor.itemMods.GetMod_ByID<GameController>(ModText.Controller);
+        Mod_GameController controller = actor.itemMods.GetMod_ByID<Mod_GameController>(ModText.Controller);
         if (controller == null || controller.IsGameplayInputLocked ||
             (!controller.IsUsingMobile && controller.IsPointerOverUI()))
         {

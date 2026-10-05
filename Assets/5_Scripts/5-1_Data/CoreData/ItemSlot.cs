@@ -17,7 +17,7 @@ public partial class ItemSlot
     public List<string> CanAcceptTags = new List<string>();
 
     // 历史字段名保留用于现有 Prefab/存档；现在表示普通库存单格的堆叠数量上限。
-    public float SlotMaxVolume = 100;
+    public float SlotMaxVolume = Inventory_Data.DefaultSlotVolume;
 
     public int Index = -1;
 

@@ -20,6 +20,8 @@ internal sealed class ItemTickScheduler
     private readonly List<Item>[] slowBuckets = CreateBuckets();
     private readonly List<Item>[] dormantPhysicsBuckets = CreateBuckets();
     private readonly HashSet<Item> dirtyItems = new();
+    // 注销时只访问实体所在的 Tick 桶，避免逐个扫描全部桶。
+    private readonly Dictionary<Item, (ItemTickTier Tier, int Bucket)> locations = new();
     private readonly List<Item> snapshot = new(256);
 
     private float fastTimer;
@@ -35,6 +37,8 @@ internal sealed class ItemTickScheduler
     public int FastCount => CountItems(fastBuckets);
     public int NormalCount => CountItems(normalBuckets);
     public int SlowCount => CountItems(slowBuckets);
+
+    #region Tick 桶登记
 
     public void NotifyChanged(Item item)
     {
@@ -52,29 +56,32 @@ internal sealed class ItemTickScheduler
             return;
         }
 
-        switch (item.GetTickTier())
+        ItemTickTier tier = item.GetTickTier();
+        int bucket = -1;
+        switch (tier)
         {
             case ItemTickTier.EveryFrame:
                 everyFrameItems.Add(item);
                 item.ResetScheduledTickClock(-1f);
                 break;
             case ItemTickTier.Fast:
-                AddToBucket(fastBuckets, item);
+                bucket = AddToBucket(fastBuckets, item);
                 item.ResetScheduledTickClock(Time.time);
                 break;
             case ItemTickTier.Normal:
-                AddToBucket(normalBuckets, item);
+                bucket = AddToBucket(normalBuckets, item);
                 item.ResetScheduledTickClock(Time.time);
                 break;
             case ItemTickTier.Slow:
-                AddToBucket(slowBuckets, item);
+                bucket = AddToBucket(slowBuckets, item);
                 item.ResetScheduledTickClock(Time.time);
                 break;
             case ItemTickTier.Dormant:
-                if (item.GetComponent<Rigidbody2D>() != null)
-                    AddToBucket(dormantPhysicsBuckets, item);
+                if (item.TryGetComponent<Rigidbody2D>(out _))
+                    bucket = AddToBucket(dormantPhysicsBuckets, item);
                 break;
         }
+        locations[item] = (tier, bucket);
     }
 
     public void Remove(Item item)
@@ -84,18 +91,36 @@ internal sealed class ItemTickScheduler
             return;
         }
 
-        everyFrameItems.Remove(item);
-        RemoveFromBuckets(fastBuckets, item);
-        RemoveFromBuckets(normalBuckets, item);
-        RemoveFromBuckets(slowBuckets, item);
-        RemoveFromBuckets(dormantPhysicsBuckets, item);
+        if (locations.Remove(item, out (ItemTickTier Tier, int Bucket) location))
+        {
+            switch (location.Tier)
+            {
+                case ItemTickTier.EveryFrame:
+                    everyFrameItems.Remove(item);
+                    break;
+                case ItemTickTier.Fast:
+                    fastBuckets[location.Bucket].Remove(item);
+                    break;
+                case ItemTickTier.Normal:
+                    normalBuckets[location.Bucket].Remove(item);
+                    break;
+                case ItemTickTier.Slow:
+                    slowBuckets[location.Bucket].Remove(item);
+                    break;
+                case ItemTickTier.Dormant when location.Bucket >= 0:
+                    dormantPhysicsBuckets[location.Bucket].Remove(item);
+                    break;
+            }
+        }
         dirtyItems.Remove(item);
     }
+
+    #endregion
 
     public void Update(IReadOnlyList<Item> runtimeItems, float deltaTime, Action<Item> beforeEveryFrameTick,
         IReadOnlyList<Transform> players, WorldTopologyDomain topology)
     {
-        FlushDirty(runtimeItems);
+        FlushDirty();
 
         snapshot.Clear();
         snapshot.AddRange(everyFrameItems);
@@ -170,6 +195,7 @@ internal sealed class ItemTickScheduler
         ClearBuckets(slowBuckets);
         ClearBuckets(dormantPhysicsBuckets);
         dirtyItems.Clear();
+        locations.Clear();
 
         for (int i = 0; i < runtimeItems.Count; i++)
         {
@@ -181,7 +207,7 @@ internal sealed class ItemTickScheduler
         }
     }
 
-    private void FlushDirty(IReadOnlyList<Item> runtimeItems)
+    private void FlushDirty()
     {
         if (dirtyItems.Count == 0)
         {
@@ -198,24 +224,12 @@ internal sealed class ItemTickScheduler
         for (int i = 0; i < snapshot.Count; i++)
         {
             Item item = snapshot[i];
-            if (item != null && Contains(runtimeItems, item))
+            // 登记表同时保存休眠实体，批量切档时无需逐个重扫完整物品列表。
+            if (item != null && locations.ContainsKey(item))
             {
                 Register(item);
             }
         }
-    }
-
-    private static bool Contains(IReadOnlyList<Item> items, Item target)
-    {
-        for (int i = 0; i < items.Count; i++)
-        {
-            if (items[i] == target)
-            {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     private static List<Item>[] CreateBuckets()
@@ -229,18 +243,11 @@ internal sealed class ItemTickScheduler
         return buckets;
     }
 
-    private static void AddToBucket(List<Item>[] buckets, Item item)
+    private static int AddToBucket(List<Item>[] buckets, Item item)
     {
         int bucketIndex = (item.GetInstanceID() & int.MaxValue) % buckets.Length;
         buckets[bucketIndex].Add(item);
-    }
-
-    private static void RemoveFromBuckets(List<Item>[] buckets, Item item)
-    {
-        for (int i = 0; i < buckets.Length; i++)
-        {
-            buckets[i].Remove(item);
-        }
+        return bucketIndex;
     }
 
     private static int CountItems(List<Item>[] buckets)

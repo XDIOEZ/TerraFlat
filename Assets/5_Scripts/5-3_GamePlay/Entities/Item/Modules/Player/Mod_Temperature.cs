@@ -6,7 +6,7 @@ using FlatWorld.Networking;
 
 public partial class Mod_Temperature : Module, IEnvironmentAdjustable
 {
-    public const float NormalBodyTemperature = 36.5f; // 玩家正常体温，也是重生后的恢复目标
+    public const float NormalSurfaceTemperature = 36.5f; // 玩家默认体表温度，也是重生后的恢复目标
 
     public override ModuleTickMode TickMode => ModuleTickMode.FixedInterval;
     public override float FixedTickInterval => 0.25f;
@@ -17,24 +17,24 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable
     [MemoryPackable]
     public partial class TemperatureData
     {
-        [LabelText("当前体温"), SuffixLabel("℃", true), PropertyTooltip("角色当前体温。")]
-        public float CurrentTemperature = NormalBodyTemperature; // 当前体温(℃)
+        [LabelText("当前体表温度"), SuffixLabel("℃", true), PropertyTooltip("角色当前最外层温度。")]
+        public float CurrentTemperature = NormalSurfaceTemperature; // 当前体表温度(℃)
         [HideInInspector]
         public float AmbientTemperature = 20f; // 当前环境温度(℃)
-        [LabelText("变化速度"), SuffixLabel("℃/s", true), PropertyTooltip("体温向环境温度逼近的速度。")]
-        public float ChangeSpeed = 0.5f; // 体温趋近环境的速度(℃/s)
-        [LabelText("保温系数"), SuffixLabel("℃", true), PropertyTooltip("正数偏保暖，负数偏散热。")]
-        public float Insulation = 0f; // 保温系数(℃，正数偏保暖，负数偏散热)
+        [HideInInspector]
+        public float Insulation = 0f; // 保留 MemoryPack 字段槽位，不再参与温度计算。
 
-        [LabelText("冷伤起点"), SuffixLabel("℃", true), PropertyTooltip("体温低于该值后开始受到冷伤害。")]
-        public float ColdDamageStart = 5f; // 低于该体温开始受冷伤(℃)
-        [LabelText("热伤起点"), SuffixLabel("℃", true), PropertyTooltip("体温高于该值后开始受到热伤害。")]
-        public float HotDamageStart = 40f; // 高于该体温开始受热伤(℃)
-        // 保持这个 float 在 MemoryPack 数据中的原槽位；实际伤害配置不由旧存档的每秒伤害覆盖。
-        [LabelText("每次冷伤"), Min(0f)]
-        public float ColdDamagePerTick = 2f;
-        [LabelText("热伤每秒"), PropertyTooltip("高温状态下每秒造成的伤害值。")]
-        public float HotDamagePerSecond = 1f; // 高温每秒伤害
+        [LabelText("安全体表温度下限"), SuffixLabel("℃", true), PropertyTooltip("体表温度低于该值时消耗缓冲，耗尽后获得低温冻伤。")]
+        public float SafeTemperatureMin = 5f; // 危险低温的体表温度下限(℃)
+        [LabelText("安全体表温度上限"), SuffixLabel("℃", true), PropertyTooltip("体表温度高于该值时消耗缓冲，耗尽后获得热射病。")]
+        public float SafeTemperatureMax = 50f; // 危险高温的体表温度上限(℃)
+
+        [LabelText("危险温度缓冲时长"), MinValue(0f), SuffixLabel("秒", true)]
+        public float DangerTemperatureBufferSeconds = 60f; // 冷热共用的最大缓冲时间。
+        [LabelText("安全温度缓冲恢复速度"), MinValue(0f), SuffixLabel("秒/秒", true)]
+        public float TemperatureBufferRecoveryPerSecond = 1f; // 安全时每秒补回的缓冲时间。
+        [LabelText("危险温度剩余缓冲"), ReadOnly, SuffixLabel("秒", true)]
+        public float RemainingTemperatureBufferSeconds = 60f; // 剩余缓冲随角色保存，不能靠重载补满。
 
         [MemoryPackIgnore]
         public float RuntimeAmbientOffset = 0f; // 天气暴露、火源等运行时环境修正
@@ -72,9 +72,6 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable
 
     public UltEvent<float> OnTemperatureChanged = new UltEvent<float>(); // 体温变化事件
 
-    private DamageReceiver _damageReceiver; // 血量模块引用
-    private float _coldDamageTickTimer; // 低温伤害计时器
-    private float _hotDamageTickTimer; // 高温伤害计时器
     private bool _isInWater; // 当前是否处于真实水体中
     private int _lastWaterExitFrame = -1; // 最近一次退出真实水体的帧
     private bool _lastWaterExitWasActive; // 最近一次退出前是否确实处于水中
@@ -101,17 +98,20 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable
     public override void Load()
     {
         ResetTemporaryWarming();
-        float configuredColdDamageStart = Data.ColdDamageStart;
-        float configuredColdDamagePerTick = Data.ColdDamagePerTick;
+        float configuredSafeTemperatureMin = Data.SafeTemperatureMin;
+        float configuredSafeTemperatureMax = Data.SafeTemperatureMax;
+        float configuredBufferSeconds = Data.DangerTemperatureBufferSeconds;
+        float configuredBufferRecovery = Data.TemperatureBufferRecoveryPerSecond;
+        Data.RemainingTemperatureBufferSeconds = configuredBufferSeconds;
         modData.ReadData(ref Data);
-        Data.ColdDamagePerTick = configuredColdDamagePerTick;
-        Data.ColdDamageStart = configuredColdDamageStart; // 冷伤阈值属于当前玩法配置，不由旧存档覆盖。
+        Data.SafeTemperatureMin = configuredSafeTemperatureMin;
+        Data.SafeTemperatureMax = configuredSafeTemperatureMax; // 安全范围属于当前玩法配置，不由角色存档覆盖。
+        Data.DangerTemperatureBufferSeconds = configuredBufferSeconds;
+        Data.TemperatureBufferRecoveryPerSecond = configuredBufferRecovery;
         TemperatureMgr.Instance.NormalizeData(Data);
-        _coldDamageTickTimer = 0f;
-        _hotDamageTickTimer = 0f;
         ResetWaterExposureState();
 
-        _damageReceiver = item.itemMods.GetMod_ByID<DamageReceiver>(ModText.Hp);
+        InitializeTemperatureSafety();
         item.OnInit_Env += AdjustByEnvironment;
     }
 
@@ -133,12 +133,10 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable
         ProcessWaterEntryCooling(deltaTime);
         TemperatureMgr.Instance.ProcessTemperature(
             Data,
-            _damageReceiver,
             deltaTime,
             SetNaturalTemperature,
-            ref _coldDamageTickTimer,
-            ref _hotDamageTickTimer,
             NaturalTemperature);
+        UpdateTemperatureSafety(deltaTime);
     }
 
     public override void Unload()
@@ -148,8 +146,7 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable
             item.OnInit_Env -= AdjustByEnvironment;
         }
         ResetWaterExposureState();
-        _coldDamageTickTimer = 0f;
-        _hotDamageTickTimer = 0f;
+        ResetTemperatureSafety();
         ResetTemporaryWarming();
         base.Unload();
     }
@@ -194,10 +191,11 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable
     /// <summary>重生时恢复正常基础体温，并清除上一条生命遗留的水体降温与冷热伤计时。</summary>
     public void RestoreOnRespawn()
     {
-        _coldDamageTickTimer = 0f;
-        _hotDamageTickTimer = 0f;
         ResetWaterExposureState();
-        SetNaturalTemperature(NormalBodyTemperature);
+        ClearTemperatureConditionBuffs();
+        Data.RemainingTemperatureBufferSeconds = Data.DangerTemperatureBufferSeconds;
+        ClearTemperatureSafetyRetreat();
+        SetNaturalTemperature(NormalSurfaceTemperature);
     }
 
     /// <summary>以连续水域入水体温为基准，只在有效浸没档位变化时更新平滑目标。</summary>
@@ -271,7 +269,7 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable
 
     public bool IsComfortable()
     {
-        return Data.CurrentTemperature >= Data.ColdDamageStart && Data.CurrentTemperature <= Data.HotDamageStart;
+        return IsTemperatureSafe(Data.CurrentTemperature);
     }
 
 #endregion
@@ -329,10 +327,12 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable
         if (waterCoolingSpeedMultiplier <= 0f)
             return;
 
-        float nextTemperature = Mathf.MoveTowards(
+        float nextTemperature = ThermalRuntime.AdvanceTowards(
             NaturalTemperature,
             _waterEntryCoolingTargetTemperature,
-            _waterEntryCoolingSpeed * waterCoolingSpeedMultiplier * Mathf.Max(0f, deltaTime));
+            _waterEntryCoolingSpeed,
+            deltaTime,
+            waterCoolingSpeedMultiplier);
         SetNaturalTemperature(nextTemperature);
 
         if (NaturalTemperature <= _waterEntryCoolingTargetTemperature)

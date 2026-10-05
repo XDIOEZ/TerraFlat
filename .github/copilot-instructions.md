@@ -144,3 +144,675 @@
   - Tag: Untagged
   - Layer: UI
 <!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: 地球
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
+- Active game object:
+  - Name: GroundMesh_TexturedGrass
+  - Tag: Untagged
+  - Layer: Default
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: 地球
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
+- Active game object:
+  - Name: GroundMesh_TexturedGrass
+  - Tag: Untagged
+  - Layer: Default
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: 地球
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
+- Active game object:
+  - Name: GroundMesh_TexturedGrass
+  - Tag: Untagged
+  - Layer: Default
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: 地球
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
+- Active game object:
+  - Name: GroundMesh_TexturedGrass
+  - Tag: Untagged
+  - Layer: Default
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: 地球
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
+- Active game object:
+  - Name: GroundMesh_TexturedGrass
+  - Tag: Untagged
+  - Layer: Default
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: 地球
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
+- Active game object:
+  - Name: GroundMesh_TexturedGrass
+  - Tag: Untagged
+  - Layer: Default
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: 地球
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
+- Active game object:
+  - Name: NaturalItems
+  - Tag: Untagged
+  - Layer: Default
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: 地球
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
+- Active game object:
+  - Name: LightOccluders
+  - Tag: Untagged
+  - Layer: Default
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: 地球
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
+- Active game object:
+  - Name: Blocking
+  - Tag: Untagged
+  - Layer: Default
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: 地球
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
+- Active game object:
+  - Name: LightOccluders
+  - Tag: Untagged
+  - Layer: Default
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: 地球
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
+- Active game object:
+  - Name: NaturalItems
+  - Tag: Untagged
+  - Layer: Default
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: 地球
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
+- Active game object:
+  - Name: Module_ChunkLoder
+  - Tag: Untagged
+  - Layer: Default
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: 地球
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
+- Active game object:
+  - Name: Module_Food
+  - Tag: Untagged
+  - Layer: 9
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: 地球
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
+- Active game object:
+  - Name: Module_ConsumableBuff
+  - Tag: Untagged
+  - Layer: Default
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: 地球
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
+- Active game object:
+  - Name: Module_Food
+  - Tag: Untagged
+  - Layer: 9
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: 地球
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
+- Active game object:
+  - Name: Module_ChunkLoder
+  - Tag: Untagged
+  - Layer: Default
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: 地球
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
+- Active game object:
+  - Name: Module_DiscardItem
+  - Tag: Untagged
+  - Layer: Default
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: 地球
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
+- Active game object:
+  - Name: Module_Equipment
+  - Tag: Untagged
+  - Layer: Default
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: 地球
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
+- Active game object:
+  - Name: Module_FocusPoint
+  - Tag: Untagged
+  - Layer: 9
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: 地球
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
+- Active game object:
+  - Name: Module_Cam
+  - Tag: Untagged
+  - Layer: 9
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: 地球
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
+- Active game object:
+  - Name: Module_Bag
+  - Tag: Untagged
+  - Layer: 9
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: 地球
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
+- Active game object:
+  - Name: Module_Animator
+  - Tag: Untagged
+  - Layer: 9
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: 地球
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
+- Active game object:
+  - Name: Module_Hand
+  - Tag: Untagged
+  - Layer: 9
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: 地球
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
+- Active game object:
+  - Name: NaturalItems
+  - Tag: Untagged
+  - Layer: Default
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: 地球
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
+- Active game object:
+  - Name: NaturalItems
+  - Tag: Untagged
+  - Layer: Default
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: 地球
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
+- Active game object:
+  - Name: NaturalItems
+  - Tag: Untagged
+  - Layer: Default
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: 地球
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
+- Active game object:
+  - Name: GroundMesh_TexturedGrass
+  - Tag: Untagged
+  - Layer: Default
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: 地球
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
+- Active game object:
+  - Name: GroundMesh_TexturedGrass
+  - Tag: Untagged
+  - Layer: Default
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: 地球
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
+- Active game object:
+  - Name: GroundMesh_TexturedGrass
+  - Tag: Untagged
+  - Layer: Default
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: 地球
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
+- Active game object:
+  - Name: GroundMesh_TexturedGrass
+  - Tag: Untagged
+  - Layer: Default
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: 地球
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
+- Active game object:
+  - Name: GroundMesh_TexturedGrass
+  - Tag: Untagged
+  - Layer: Default
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: 地球
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
+- Active game object:
+  - Name: GroundMesh_TexturedGrass
+  - Tag: Untagged
+  - Layer: Default
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: 地球
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
+- Active game object:
+  - Name: LightOccluders
+  - Tag: Untagged
+  - Layer: Default
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: 地球
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
+- Active game object:
+  - Name: LightOccluders
+  - Tag: Untagged
+  - Layer: Default
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: 地球
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
+- Active game object:
+  - Name: LightOccluders
+  - Tag: Untagged
+  - Layer: Default
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: 地球
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
+- Active game object:
+  - Name: LightOccluders
+  - Tag: Untagged
+  - Layer: Default
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: 地球
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
+- Active game object:
+  - Name: NaturalItems
+  - Tag: Untagged
+  - Layer: Default
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: 地球
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
+- Active game object:
+  - Name: ECS掉落物_共享批次
+  - Tag: Untagged
+  - Layer: Default
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: 地球
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
+- Active game object:
+  - Name: Player
+  - Tag: Untagged
+  - Layer: Player
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: 地球
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
+- Active game object:
+  - Name: GroundMesh_TexturedGrass
+  - Tag: Untagged
+  - Layer: Default
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: 地球
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
+- Active game object:
+  - Name: Player
+  - Tag: Untagged
+  - Layer: Player
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: 地球
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
+- Active game object:
+  - Name: Mod_Damage
+  - Tag: Untagged
+  - Layer: DamageSender
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: 地球
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
+- Active game object:
+  - Name: Part_0
+  - Tag: Untagged
+  - Layer: Default
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: 地球
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
+- Active game object:
+  - Name: SafeAreaRoot
+  - Tag: Untagged
+  - Layer: UI
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: 地球
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
+- Active game object:
+  - Name: GroundMesh_TexturedGrass
+  - Tag: Untagged
+  - Layer: Default
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: 地球
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
+- Active game object:
+  - Name: UI_Food
+  - Tag: Untagged
+  - Layer: UI
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: 地球
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
+- Active game object:
+  - Name: Panel
+  - Tag: Untagged
+  - Layer: UI
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: DontDestroyOnLoad
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
+- Active game object:
+  - Name: GM Canvas
+  - Tag: Untagged
+  - Layer: Default
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->

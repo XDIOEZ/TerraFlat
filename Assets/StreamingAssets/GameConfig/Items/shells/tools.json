@@ -21,10 +21,8 @@
         "damage": {
           "parameters": {
             "DamageValues": {
-              "Cutting": 9.0,
-              "Piercing": 0.0,
-              "Chopping": 0.0,
-              "Blunt": 0.0
+              "Physical": 8,
+              "ImpactKind": 1
             }
           }
         },
@@ -60,7 +58,10 @@
       "volume": 0.8,
       "stackable": true,
       "canBePickedUp": true,
-      "tags": [],
+      "tags": [
+        "Wood",
+        "Combustion.Fuel"
+      ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Tools/Item_Tool_408.png",
         "rendererLocalPosition": {
@@ -114,10 +115,8 @@
           },
           "parameters": {
             "DamageValues": {
-              "Cutting": 0.0,
-              "Piercing": 0.0,
-              "Chopping": 0.0,
-              "Blunt": 2.0
+              "Physical": 3,
+              "ImpactKind": 4
             },
             "DamageInterval": 0.2,
             "EnableOnTriggerEnterDamage": true,
@@ -160,7 +159,7 @@
           }
         },
         "animation": {
-          "prefab": "Mod_Weapon_AnimationAction",
+          "prefab": "Module_Weapon_AnimationAction",
           "id": "Module_Weapon_AnimationAction",
           "enabled": true,
           "data": {
@@ -196,6 +195,18 @@
                 "z": 1.0
               }
             }
+          }
+        },
+        "燃料模块": {
+          "prefab": "Module_Fuel",
+          "id": "燃料模块",
+          "enabled": true,
+          "data": { "BitData": [], "Type": 0 },
+          "parameters": {
+            "Data": { "Fuel": { "x": 50.0, "y": 50.0 }, "MaxTemperature": 500.0 },
+            "lightBaseIntensity": 1.0,
+            "burnSpeedMultiplier": 1.0,
+            "igniteWhileHeld": false
           }
         }
       },
@@ -235,11 +246,27 @@
       "volume": 0.8,
       "stackable": true,
       "canBePickedUp": true,
-      "tags": [],
+      "tags": [
+        "Wood",
+        "Combustion.Fuel"
+      ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Mechanical/Items/DrilledStick_Idle.png"
       },
-      "modules": {}
+      "modules": {
+        "燃料模块": {
+          "prefab": "Module_Fuel",
+          "id": "燃料模块",
+          "enabled": true,
+          "data": { "BitData": [], "Type": 0 },
+          "parameters": {
+            "Data": { "Fuel": { "x": 50.0, "y": 50.0 }, "MaxTemperature": 500.0 },
+            "lightBaseIntensity": 1.0,
+            "burnSpeedMultiplier": 1.0,
+            "igniteWhileHeld": false
+          }
+        }
+      }
     },
     {
       "id": "Log",
@@ -254,7 +281,42 @@
       "volume": 12.0,
       "stackable": true,
       "canBePickedUp": true,
-      "tags": [],
+      "tags": [
+        "Wood",
+        "Combustion.Fuel"
+      ],
+      "processing": {
+        "cut": {
+          "inputAmount": 1,
+          "work": 6,
+          "minLevel": 3,
+          "maxLevel": 5,
+          "outputs": [
+            { "itemId": "Plank", "amount": 4 }
+          ]
+        }
+      },
+      "reactions": [
+        {
+          "id": "core:原木=木炭",
+          "minTemperature": 500.0,
+          "maxTemperature": 2000.0,
+          "work": 100,
+          "inputs": [
+            {
+              "match": "exact_item",
+              "amount": 3,
+              "itemId": "Log"
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "Charcoal",
+              "amount": 1
+            }
+          ]
+        }
+      ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Plants/Tree/item296.png",
         "rendererLocalPosition": {
@@ -308,10 +370,8 @@
           },
           "parameters": {
             "DamageValues": {
-              "Cutting": 0.0,
-              "Piercing": 0.0,
-              "Chopping": 2.0,
-              "Blunt": 6.0
+              "Physical": 6,
+              "ImpactKind": 4
             },
             "DamageInterval": 0.2,
             "EnableOnTriggerEnterDamage": true,
@@ -355,7 +415,7 @@
           }
         },
         "animation": {
-          "prefab": "Mod_Weapon_AnimationAction",
+          "prefab": "Module_Weapon_AnimationAction",
           "id": "Module_Weapon_AnimationAction",
           "enabled": true,
           "data": {
@@ -470,7 +530,8 @@
       "stackable": true,
       "canBePickedUp": true,
       "tags": [
-        "火种"
+        "Combustion.Tinder",
+        "Combustion.Fuel"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Plants/火种.png[火种]",
@@ -526,10 +587,8 @@
           },
           "parameters": {
             "DamageValues": {
-              "Cutting": 0.0,
-              "Piercing": 0.0,
-              "Chopping": 0.0,
-              "Blunt": 5.0
+              "Physical": 4,
+              "ImpactKind": 4
             },
             "DamageInterval": 0.2,
             "EnableOnTriggerEnterDamage": true,
@@ -578,7 +637,7 @@
           }
         },
         "animation": {
-          "prefab": "Mod_Weapon_AnimationAction",
+          "prefab": "Module_Weapon_AnimationAction",
           "id": "Module_Weapon_AnimationAction",
           "enabled": true,
           "data": {
@@ -688,6 +747,18 @@
       "shellPrefab": "Axe",
       "visual": {
         "rendererPath": "Render/Render_1"
+      },
+      "modules": {
+        "resourceTool": {
+          "prefab": "Module_ResourceTool",
+          "id": "Mod_ResourceTool",
+          "enabled": true,
+          "parameters": {
+            "toolKind": 3,
+            "harvestTier": 1,
+            "harvestEfficiency": 2.0
+          }
+        }
       }
     },
     {
@@ -759,14 +830,13 @@
           },
           "parameters": {
             "DamageValues": {
-              "Cutting": 1.0,
-              "Piercing": 0.0,
-              "Chopping": 10.0,
-              "Blunt": 1.0
+              "Physical": 12,
+              "ImpactKind": 3
             },
             "DamageInterval": 0.2,
             "EnableOnTriggerEnterDamage": true,
             "OnlyDealDamageWhenInHand": false,
+            "weaponHitboxRegion": 1,
             "MaxAttackTargets": 3,
             "EnableHitSlowdown": true,
             "HitSlowMultiplier": 0.5,
@@ -809,7 +879,7 @@
           }
         },
         "animation": {
-          "prefab": "Mod_Weapon_AnimationAction",
+          "prefab": "Module_Weapon_AnimationAction",
           "id": "Module_Weapon_AnimationAction",
           "enabled": true,
           "data": {
@@ -941,14 +1011,13 @@
           },
           "parameters": {
             "DamageValues": {
-              "Cutting": 2.0,
-              "Piercing": 0.0,
-              "Chopping": 11.0,
-              "Blunt": 1.0
+              "Physical": 14,
+              "ImpactKind": 3
             },
             "DamageInterval": 0.2,
             "EnableOnTriggerEnterDamage": true,
             "OnlyDealDamageWhenInHand": false,
+            "weaponHitboxRegion": 1,
             "MaxAttackTargets": 3,
             "EnableHitSlowdown": true,
             "HitSlowMultiplier": 0.5,
@@ -991,7 +1060,7 @@
           }
         },
         "animation": {
-          "prefab": "Mod_Weapon_AnimationAction",
+          "prefab": "Module_Weapon_AnimationAction",
           "id": "Module_Weapon_AnimationAction",
           "enabled": true,
           "data": {
@@ -1123,14 +1192,13 @@
           },
           "parameters": {
             "DamageValues": {
-              "Cutting": 2.0,
-              "Piercing": 0.0,
-              "Chopping": 15.0,
-              "Blunt": 1.0
+              "Physical": 18,
+              "ImpactKind": 3
             },
             "DamageInterval": 0.2,
             "EnableOnTriggerEnterDamage": true,
             "OnlyDealDamageWhenInHand": false,
+            "weaponHitboxRegion": 1,
             "MaxAttackTargets": 3,
             "EnableHitSlowdown": true,
             "HitSlowMultiplier": 0.5,
@@ -1173,7 +1241,7 @@
           }
         },
         "animation": {
-          "prefab": "Mod_Weapon_AnimationAction",
+          "prefab": "Module_Weapon_AnimationAction",
           "id": "Module_Weapon_AnimationAction",
           "enabled": true,
           "data": {
@@ -1305,14 +1373,13 @@
           },
           "parameters": {
             "DamageValues": {
-              "Cutting": 3.0,
-              "Piercing": 0.0,
-              "Chopping": 18.0,
-              "Blunt": 1.0
+              "Physical": 22,
+              "ImpactKind": 3
             },
             "DamageInterval": 0.2,
             "EnableOnTriggerEnterDamage": true,
             "OnlyDealDamageWhenInHand": false,
+            "weaponHitboxRegion": 1,
             "MaxAttackTargets": 3,
             "EnableHitSlowdown": true,
             "HitSlowMultiplier": 0.5,
@@ -1355,7 +1422,7 @@
           }
         },
         "animation": {
-          "prefab": "Mod_Weapon_AnimationAction",
+          "prefab": "Module_Weapon_AnimationAction",
           "id": "Module_Weapon_AnimationAction",
           "enabled": true,
           "data": {
@@ -1488,14 +1555,13 @@
           },
           "parameters": {
             "DamageValues": {
-              "Cutting": 3.0,
-              "Piercing": 0.0,
-              "Chopping": 20.0,
-              "Blunt": 1.0
+              "Physical": 20,
+              "ImpactKind": 3
             },
             "DamageInterval": 0.2,
             "EnableOnTriggerEnterDamage": true,
             "OnlyDealDamageWhenInHand": false,
+            "weaponHitboxRegion": 1,
             "MaxAttackTargets": 3,
             "EnableHitSlowdown": true,
             "HitSlowMultiplier": 0.5,
@@ -1538,7 +1604,7 @@
           }
         },
         "animation": {
-          "prefab": "Mod_Weapon_AnimationAction",
+          "prefab": "Module_Weapon_AnimationAction",
           "id": "Module_Weapon_AnimationAction",
           "enabled": true,
           "data": {
@@ -1670,14 +1736,13 @@
           },
           "parameters": {
             "DamageValues": {
-              "Cutting": 4.0,
-              "Piercing": 0.0,
-              "Chopping": 23.0,
-              "Blunt": 1.0
+              "Physical": 28,
+              "ImpactKind": 3
             },
             "DamageInterval": 0.2,
             "EnableOnTriggerEnterDamage": true,
             "OnlyDealDamageWhenInHand": false,
+            "weaponHitboxRegion": 1,
             "MaxAttackTargets": 3,
             "EnableHitSlowdown": true,
             "HitSlowMultiplier": 0.5,
@@ -1720,7 +1785,7 @@
           }
         },
         "animation": {
-          "prefab": "Mod_Weapon_AnimationAction",
+          "prefab": "Module_Weapon_AnimationAction",
           "id": "Module_Weapon_AnimationAction",
           "enabled": true,
           "data": {
@@ -1792,6 +1857,18 @@
       "shellPrefab": "Pickaxe",
       "visual": {
         "rendererPath": "Render/Render_1"
+      },
+      "modules": {
+        "resourceTool": {
+          "prefab": "Module_ResourceTool",
+          "id": "Mod_ResourceTool",
+          "enabled": true,
+          "parameters": {
+            "toolKind": 1,
+            "harvestTier": 1,
+            "harvestEfficiency": 2.0
+          }
+        }
       }
     },
     {
@@ -1799,7 +1876,7 @@
       "parent": "Pickaxe_Base",
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Weapons/Pickaxes/Pickaxe.prefab",
       "gameName": "石镐",
-      "description": "开采等级 1；使用镐头开采对应等级以下的矿物。",
+      "description": "基础采矿工具。采矿不设等级门槛，实际效率取决于伤害、采集加成和矿物防御。右键可逐层开采石地，天然五层采尽后露出基岩。",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
@@ -1863,14 +1940,13 @@
           },
           "parameters": {
             "DamageValues": {
-              "Cutting": 0.0,
-              "Piercing": 10.0,
-              "Chopping": 0.0,
-              "Blunt": 4.0
+              "Physical": 12,
+              "ImpactKind": 2
             },
             "DamageInterval": 0.2,
             "EnableOnTriggerEnterDamage": true,
             "OnlyDealDamageWhenInHand": false,
+            "weaponHitboxRegion": 1,
             "tileDamageToolKind": 1,
             "weaponAudioClass": 0,
             "attackAudioCueId": "",
@@ -1905,14 +1981,11 @@
                 "x": 1.0,
                 "y": 1.0
               }
-            },
-            "harvestKind": 1,
-            "harvestTier": 1,
-            "harvestEfficiency": 1
+            }
           }
         },
         "animation": {
-          "prefab": "Mod_Weapon_AnimationAction",
+          "prefab": "Module_Weapon_AnimationAction",
           "id": "Module_Weapon_AnimationAction",
           "enabled": true,
           "data": {
@@ -1980,7 +2053,7 @@
       "parent": "Pickaxe_Base",
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Weapons/Pickaxes/Pickaxe_Copper.prefab",
       "gameName": "铜镐",
-      "description": "开采等级 2；使用镐头开采对应等级以下的矿物。",
+      "description": "铜制采矿工具，比石镐有更高的采集效率；采矿不设等级门槛。右键可逐层开采石地，天然五层采尽后露出基岩。",
       "durability": 200.0,
       "maxDurability": 200.0,
       "amount": 1.0,
@@ -2036,8 +2109,14 @@
         }
       },
       "modules": {
+        "resourceTool": {
+          "parameters": {
+            "harvestTier": 2,
+            "harvestEfficiency": 2.0
+          }
+        },
         "animation": {
-          "prefab": "Mod_Weapon_AnimationAction",
+          "prefab": "Module_Weapon_AnimationAction",
           "id": "Module_Weapon_AnimationAction",
           "enabled": true,
           "data": {
@@ -2085,14 +2164,13 @@
           },
           "parameters": {
             "DamageValues": {
-              "Cutting": 0.0,
-              "Piercing": 15.0,
-              "Chopping": 0.0,
-              "Blunt": 6.0
+              "Physical": 18,
+              "ImpactKind": 2
             },
             "DamageInterval": 0.2,
             "EnableOnTriggerEnterDamage": true,
             "OnlyDealDamageWhenInHand": false,
+            "weaponHitboxRegion": 1,
             "tileDamageToolKind": 1,
             "weaponAudioClass": 0,
             "attackAudioCueId": "",
@@ -2127,10 +2205,7 @@
                 "x": 1.0,
                 "y": 1.0
               }
-            },
-            "harvestKind": 1,
-            "harvestTier": 2,
-            "harvestEfficiency": 1.15
+            }
           }
         }
       },
@@ -2163,7 +2238,7 @@
       "parent": "Pickaxe_Base",
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Weapons/Pickaxes/Pickaxe_Bronze.prefab",
       "gameName": "青铜镐",
-      "description": "开采等级 4；使用镐头开采对应等级以下的矿物。可开采硝石。",
+      "description": "青铜制采矿工具，采集效率较高；采矿不设等级门槛。右键可逐层开采石地，天然五层采尽后露出基岩。",
       "durability": 200.0,
       "maxDurability": 200.0,
       "amount": 1.0,
@@ -2217,6 +2292,12 @@
         }
       },
       "modules": {
+        "resourceTool": {
+          "parameters": {
+            "harvestTier": 4,
+            "harvestEfficiency": 2.0
+          }
+        },
         "damage": {
           "prefab": "Mod_Damage",
           "id": "Mod_Damage",
@@ -2227,14 +2308,13 @@
           },
           "parameters": {
             "DamageValues": {
-              "Cutting": 0.0,
-              "Piercing": 18.0,
-              "Chopping": 0.0,
-              "Blunt": 7.0
+              "Physical": 22,
+              "ImpactKind": 2
             },
             "DamageInterval": 0.2,
             "EnableOnTriggerEnterDamage": true,
             "OnlyDealDamageWhenInHand": false,
+            "weaponHitboxRegion": 1,
             "tileDamageToolKind": 1,
             "weaponAudioClass": 0,
             "attackAudioCueId": "",
@@ -2269,14 +2349,11 @@
                 "x": 1.0,
                 "y": 1.0
               }
-            },
-            "harvestKind": 1,
-            "harvestTier": 4,
-            "harvestEfficiency": 2.1
+            }
           }
         },
         "animation": {
-          "prefab": "Mod_Weapon_AnimationAction",
+          "prefab": "Module_Weapon_AnimationAction",
           "id": "Module_Weapon_AnimationAction",
           "enabled": true,
           "data": {
@@ -2344,7 +2421,7 @@
       "parent": "Pickaxe_Base",
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Weapons/Pickaxes/Pickaxe_RawIron.prefab",
       "gameName": "粗铁铁镐",
-      "description": "开采等级 3；由未经锻打除杂的粗铁制成，性能略高于铜镐、低于青铜镐，适合作为过渡工具。",
+      "description": "由未经锻打除杂的粗铁制成，性能略高于铜镐、低于青铜镐，适合作为过渡工具；采矿不设等级门槛。右键可逐层开采石地，天然五层采尽后露出基岩。",
       "durability": 200.0,
       "maxDurability": 200.0,
       "amount": 1.0,
@@ -2400,6 +2477,12 @@
         }
       },
       "modules": {
+        "resourceTool": {
+          "parameters": {
+            "harvestTier": 3,
+            "harvestEfficiency": 2.0
+          }
+        },
         "damage": {
           "prefab": "Mod_Damage",
           "id": "Mod_Damage",
@@ -2410,14 +2493,13 @@
           },
           "parameters": {
             "DamageValues": {
-              "Cutting": 0.0,
-              "Piercing": 16.0,
-              "Chopping": 0.0,
-              "Blunt": 6.5
+              "Physical": 20,
+              "ImpactKind": 2
             },
             "DamageInterval": 0.2,
             "EnableOnTriggerEnterDamage": true,
             "OnlyDealDamageWhenInHand": false,
+            "weaponHitboxRegion": 1,
             "tileDamageToolKind": 1,
             "weaponAudioClass": 0,
             "attackAudioCueId": "",
@@ -2452,14 +2534,11 @@
                 "x": 1.0,
                 "y": 1.0
               }
-            },
-            "harvestKind": 1,
-            "harvestTier": 3,
-            "harvestEfficiency": 1.35
+            }
           }
         },
         "animation": {
-          "prefab": "Mod_Weapon_AnimationAction",
+          "prefab": "Module_Weapon_AnimationAction",
           "id": "Module_Weapon_AnimationAction",
           "enabled": true,
           "data": {
@@ -2527,7 +2606,7 @@
       "parent": "Pickaxe_Base",
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Weapons/Pickaxes/Pickaxe_Iron.prefab",
       "gameName": "熟铁铁镐",
-      "description": "开采等级 4；由粗铁锻打除杂得到的熟铁制成，性能高于粗铁铁镐，可用于更稳定的中后期采矿。可开采硝石。",
+      "description": "由粗铁锻打除杂得到的熟铁制成，性能高于粗铁铁镐，可用于更稳定的中后期采矿；采矿不设等级门槛。右键可逐层开采石地，天然五层采尽后露出基岩。",
       "durability": 200.0,
       "maxDurability": 200.0,
       "amount": 1.0,
@@ -2583,6 +2662,12 @@
         }
       },
       "modules": {
+        "resourceTool": {
+          "parameters": {
+            "harvestTier": 4,
+            "harvestEfficiency": 2.0
+          }
+        },
         "damage": {
           "prefab": "Mod_Damage",
           "id": "Mod_Damage",
@@ -2593,14 +2678,13 @@
           },
           "parameters": {
             "DamageValues": {
-              "Cutting": 0.0,
-              "Piercing": 25.0,
-              "Chopping": 0.0,
-              "Blunt": 9.0
+              "Physical": 28,
+              "ImpactKind": 2
             },
             "DamageInterval": 0.2,
             "EnableOnTriggerEnterDamage": true,
             "OnlyDealDamageWhenInHand": false,
+            "weaponHitboxRegion": 1,
             "tileDamageToolKind": 1,
             "weaponAudioClass": 0,
             "attackAudioCueId": "",
@@ -2635,14 +2719,11 @@
                 "x": 1.0,
                 "y": 1.0
               }
-            },
-            "harvestKind": 1,
-            "harvestTier": 4,
-            "harvestEfficiency": 1.8
+            }
           }
         },
         "animation": {
-          "prefab": "Mod_Weapon_AnimationAction",
+          "prefab": "Module_Weapon_AnimationAction",
           "id": "Module_Weapon_AnimationAction",
           "enabled": true,
           "data": {
@@ -2740,13 +2821,21 @@
           "id": "Mod_Damage",
           "parameters": {
             "DamageValues": {
-              "Cutting": 0.0,
-              "Piercing": 0.0,
-              "Chopping": 0.0,
-              "Blunt": 6.0
+              "Physical": 6,
+              "ImpactKind": 4
             },
             "tileDamageToolKind": 3,
-            "buildingDamageMultiplier": 10.0
+            "buildingDamageMultiplier": 1.0
+          }
+        },
+        "resourceTool": {
+          "prefab": "Module_ResourceTool",
+          "id": "Mod_ResourceTool",
+          "enabled": true,
+          "parameters": {
+            "toolKind": 4,
+            "harvestTier": 1,
+            "harvestEfficiency": 2.0
           }
         }
       }
@@ -2771,19 +2860,27 @@
         "damage": {
           "parameters": {
             "DamageValues": {
-              "Cutting": 0.0,
-              "Piercing": 0.0,
-              "Chopping": 0.0,
-              "Blunt": 12.0
+              "Physical": 10,
+              "ImpactKind": 4
             }
           }
         },
         "animation": {
-          "prefab": "Mod_Weapon_AnimationAction",
+          "prefab": "Module_Weapon_AnimationAction",
           "id": "Module_Weapon_AnimationAction",
           "enabled": true,
           "parameters": {
             "staminaCostPerAttack": 2.7
+          }
+        },
+        "resourceTool": {
+          "prefab": "Module_ResourceTool",
+          "id": "Mod_ResourceTool",
+          "enabled": true,
+          "parameters": {
+            "toolKind": 4,
+            "harvestTier": 1,
+            "harvestEfficiency": 2.0
           }
         }
       }

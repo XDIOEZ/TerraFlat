@@ -4,8 +4,8 @@ using FlatWorld.Settings;
 using UnityEngine;
 
 /// <summary>
-/// 地面高度分层阴影的本机视觉偏好。宽度按单个地格的比例保存，默认 0.20 格，
-/// 玩家可在 0.04～0.45 格之间调整；开关仅影响地面高度着色，不改变墙脚接触阴影和水面。
+/// 地面高度分层阴影的本机视觉偏好。宽度按单个地格的比例保存，
+/// 默认值与范围来自世界渲染 JSON；开关仅影响地面高度着色，不改变墙脚接触阴影和水面。
 /// </summary>
 public static class GroundElevationShadowSettings
 {
@@ -13,10 +13,10 @@ public static class GroundElevationShadowSettings
 
     public const string EnabledSettingKey = "ground-elevation-shadows"; // 地面高度阴影开关。
     public const string WidthSettingKey = "ground-elevation-shadow-width"; // 地格内阴影宽度。
-    public const bool DefaultEnabled = true;
-    public const float DefaultWidth = 0.20f;
-    public const float MinWidth = 0.04f;
-    public const float MaxWidth = 0.45f;
+    public static bool DefaultEnabled => WorldRenderingConfigCatalog.Default.shadows.groundElevation.enabled;
+    public static float DefaultWidth => WorldRenderingConfigCatalog.Default.shadows.groundElevation.width;
+    public static float MinWidth => WorldRenderingConfigCatalog.Default.shadows.groundElevation.minimumWidth;
+    public static float MaxWidth => WorldRenderingConfigCatalog.Default.shadows.groundElevation.maximumWidth;
     private const string EnabledPreferenceKey = "FlatWorld.Visual.GroundElevationShadows";
     private const string WidthPreferenceKey = "FlatWorld.Visual.GroundElevationShadowWidth";
     private static readonly ISettingsProvider provider = new GroundElevationSettingsProvider();

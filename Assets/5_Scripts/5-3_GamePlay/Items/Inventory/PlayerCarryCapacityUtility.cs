@@ -84,7 +84,7 @@ public static class PlayerCarryCapacityUtility
         float totalWeight = bagData.CurrentCarryWeight;
         float totalVolume = bagData.CurrentCarryVolume;
 
-        Inventory_HotBar hotbarModule = player.itemMods.GetMod_ByID<Inventory_HotBar>(ModText.Hotbar);
+        Mod_HotBar hotbarModule = player.itemMods.GetMod_ByID<Mod_HotBar>(ModText.Hotbar);
         Inventory_Data hotbarData = hotbarModule?.RuntimeInventory?.Data;
         if (hotbarData != null && !ReferenceEquals(hotbarData, bagData))
         {
@@ -102,7 +102,7 @@ public static class PlayerCarryCapacityUtility
         if (player == null || player.itemMods == null)
             return;
 
-        BuffManager buffManager = player.itemMods.GetMod_ByID<BuffManager>(ModText.BuffManager);
+        Mod_BuffManager buffManager = player.itemMods.GetMod_ByID<Mod_BuffManager>(ModText.Mod_BuffManager);
         if (buffManager == null)
             return;
 
@@ -122,7 +122,7 @@ public static class PlayerCarryCapacityUtility
         if (player == null || player.itemMods == null)
             return;
 
-        BuffManager buffManager = player.itemMods.GetMod_ByID<BuffManager>(ModText.BuffManager);
+        Mod_BuffManager buffManager = player.itemMods.GetMod_ByID<Mod_BuffManager>(ModText.Mod_BuffManager);
         buffManager?.RemoveSourceBuff(OverweightBuffSource);
     }
 }

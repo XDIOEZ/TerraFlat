@@ -116,6 +116,30 @@ public static partial class RuntimeUIPrefabBuilder
         elevationWidthValue.alignment = TextAlignmentOptions.MidlineRight;
         elevationWidthValue.gameObject.AddComponent<LayoutElement>().preferredWidth = 65f;
 
+        GameObject outlineRow = CreateRow("交互描边行", content, 72f);
+        TextMeshProUGUI outlineLabel = CreateText("交互描边标签", outlineRow.transform, "交互描边", 22f, Cream);
+        outlineLabel.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+        Toggle interactionOutline = CreateToggle("交互描边开关", outlineRow.transform);
+        LayoutElement outlineLayout = interactionOutline.GetComponent<LayoutElement>();
+        outlineLayout.minHeight = 60f;
+        outlineLayout.preferredHeight = 64f;
+        outlineLayout.minWidth = 88f;
+        interactionOutline.isOn = InteractionOutlineSettings.DefaultEnabled;
+
+        GameObject outlineThicknessRow = CreateRow("描边粗细行", content, 72f);
+        TextMeshProUGUI outlineThicknessLabel = CreateText("描边粗细标签", outlineThicknessRow.transform,
+            "描边粗细", 22f, Cream);
+        outlineThicknessLabel.gameObject.AddComponent<LayoutElement>().preferredWidth = 200f;
+        Slider outlineThickness = CreateSlider("描边粗细滑块", outlineThicknessRow.transform);
+        outlineThickness.minValue = InteractionOutlineSettings.MinThickness;
+        outlineThickness.maxValue = InteractionOutlineSettings.MaxThickness;
+        outlineThickness.wholeNumbers = true;
+        outlineThickness.value = InteractionOutlineSettings.DefaultThickness;
+        TextMeshProUGUI outlineThicknessValue = CreateText("描边粗细数值", outlineThicknessRow.transform,
+            $"{Mathf.RoundToInt(InteractionOutlineSettings.DefaultThickness)} px", 18f, Amber);
+        outlineThicknessValue.alignment = TextAlignmentOptions.MidlineRight;
+        outlineThicknessValue.gameObject.AddComponent<LayoutElement>().preferredWidth = 65f;
+
         TextMeshProUGUI label = CreateText("水体风格标签", content, "水体风格", 22f, Cream);
         label.gameObject.AddComponent<LayoutElement>().preferredHeight = 36f;
         GameObject row = CreateRow("水体风格行", content, 72f);
@@ -142,6 +166,9 @@ public static partial class RuntimeUIPrefabBuilder
         serialized.FindProperty("groundElevationToggle").objectReferenceValue = elevationShadows;
         serialized.FindProperty("groundElevationWidthSlider").objectReferenceValue = elevationWidth;
         serialized.FindProperty("groundElevationWidthValueText").objectReferenceValue = elevationWidthValue;
+        serialized.FindProperty("interactionOutlineToggle").objectReferenceValue = interactionOutline;
+        serialized.FindProperty("interactionOutlineThicknessSlider").objectReferenceValue = outlineThickness;
+        serialized.FindProperty("interactionOutlineThicknessValueText").objectReferenceValue = outlineThicknessValue;
         serialized.ApplyModifiedPropertiesWithoutUndo();
         return root;
     }

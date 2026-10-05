@@ -271,10 +271,10 @@ public class Mod_Tent : Module, IInteractable
         }
 
         var food = playerItem.itemMods.GetMod_ByID<Mod_Food>(ModText.Food);
-        var hp = playerItem.itemMods.GetMod_ByID<DamageReceiver>(ModText.Hp);
+        var hp = playerItem.itemMods.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
         if (food == null || hp == null)
         {
-            Debug.LogError("[Tent] 玩家缺少 Mod_Food 或 DamageReceiver，无法执行睡眠结算");
+            Debug.LogError("[Tent] 玩家缺少 Mod_Food 或 Mod_DamageReceiver，无法执行睡眠结算");
             sleepingRoutine = null;
             yield break;
         }
@@ -365,12 +365,12 @@ public class Mod_Tent : Module, IInteractable
 
     #region 血量恢复
 
-    private void HealBySleep(DamageReceiver hp, Item playerItem, float healPerTick)
+    private void HealBySleep(Mod_DamageReceiver hp, Item playerItem, float healPerTick)
     {
         hp.Heal(healPerTick, playerItem);
     }
 
-    private SleepPlan BuildSleepPlan(Mod_Food food, DamageReceiver hp, int totalTicks)
+    private SleepPlan BuildSleepPlan(Mod_Food food, Mod_DamageReceiver hp, int totalTicks)
     {
         var nutrition = food.Data.nutrition;
         float vitaminRatio = nutrition.Max_Vitamins <= 0f
@@ -458,17 +458,17 @@ public class Mod_Tent : Module, IInteractable
         if (movementInputLocked)
             return true;
 
-    var controller = playerItem.itemMods.GetMod_ByID<GameController>(ModText.Controller);
+    var controller = playerItem.itemMods.GetMod_ByID<Mod_GameController>(ModText.Controller);
     if (controller == null)
     {
-        Debug.LogError("[Tent] 玩家缺少 GameController，无法禁用移动输入");
+        Debug.LogError("[Tent] 玩家缺少 Mod_GameController，无法禁用移动输入");
         return false;
     }
 
     var inputActions = controller._inputActions;
     if (inputActions == null)
     {
-        Debug.LogError("[Tent] GameController._inputActions 为空，无法禁用移动输入");
+        Debug.LogError("[Tent] Mod_GameController._inputActions 为空，无法禁用移动输入");
         return false;
     }
 
@@ -479,7 +479,7 @@ public class Mod_Tent : Module, IInteractable
     cachedShiftAction?.Disable();
     movementInputLocked = true;
 
-    var mover = playerItem.itemMods.GetMod_ByID<Mover>(ModText.Mover);
+    var mover = playerItem.itemMods.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover);
     mover?.SetRunState(false);
 
         return true;

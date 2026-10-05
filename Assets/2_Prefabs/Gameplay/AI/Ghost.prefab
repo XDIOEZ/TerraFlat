@@ -18,7 +18,7 @@ GameObject:
   - component: {fileID: 3136644202198907639}
   m_Layer: 0
   m_Name: Ghost
-  m_TagString: Ghost
+  m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -362,7 +362,7 @@ GameObject:
   - component: {fileID: 3001}
   - component: {fileID: 3002}
   m_Layer: 0
-  m_Name: Module_AI_Ghost
+  m_Name: Mod_AI_Ghost
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -398,7 +398,7 @@ MonoBehaviour:
   item: {fileID: 0}
   ModData:
     Name:
-    ID: AI_Ghost
+    ID: Mod_AI_Ghost
     isRunning: 1
     Type: 0
     BitData:

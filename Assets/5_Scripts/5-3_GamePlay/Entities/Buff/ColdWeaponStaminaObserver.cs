@@ -42,7 +42,10 @@ public partial class ColdWeaponStaminaObserver : ModuleObserverBase
     {
         if (isAttacking && stamina != null && coldWeapon != null)
         {
-            stamina.AddStamina(-state.StaminaConsumeSpeed * state.StaminaConsumeSpeedRate * timeDelta);
+            stamina.ConsumeStaminaPerSecond(
+                StaminaConsumptionSources.LegacyColdWeaponAttack,
+                state.StaminaConsumeSpeed * state.StaminaConsumeSpeedRate,
+                timeDelta);
 
             bool staminaOK = stamina.CurrentValue > state.StaminaLeast;
 

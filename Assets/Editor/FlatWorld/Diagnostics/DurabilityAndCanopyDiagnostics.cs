@@ -51,13 +51,13 @@ public static class DurabilityAndCanopyDiagnostics
             SceneManager.MoveGameObjectToScene(root, preview);
             GameItem owner = root.AddComponent<GameItem>();
             owner.BindData(new Data_GeneralItem());
-            DamageReceiver receiver = root.AddComponent<DamageReceiver>();
+            Mod_DamageReceiver receiver = root.AddComponent<Mod_DamageReceiver>();
             receiver.item = owner;
             receiver.modData = new Ex_ModData();
-            receiver.Data = new DamageReceiver.DamageReceiver_SaveData
+            receiver.Data = new Mod_DamageReceiver.DamageReceiver_SaveData
             {
                 Hp = 100f, MaxHp = 100f, UseBodyPartHealth = true, BodyPartDataVersion = 2,
-                BodyParts = DamageReceiver.CreateDefaultBodyParts(100f, 100f),
+                BodyParts = Mod_DamageReceiver.CreateDefaultBodyParts(100f, 100f),
                 DefenseValues = new CombatDefense(), DamageInterval = 0f
             };
             object helmet = new object();
@@ -83,7 +83,7 @@ public static class DurabilityAndCanopyDiagnostics
             receiver.SetOverallMaxHp(200f);
             Near(receiver.Hp, hp, "提高生命上限不自动回血");
             Near(head.MaxHp, 40f, "提高生命上限不改部位上限");
-            var restored = JsonConvert.DeserializeObject<DamageReceiver.DamageReceiver_SaveData>(
+            var restored = JsonConvert.DeserializeObject<Mod_DamageReceiver.DamageReceiver_SaveData>(
                 JsonConvert.SerializeObject(receiver.Data));
             Near(restored.Hp, hp, "整体生命序列化独立保存");
             Near(restored.BodyParts.Single(part => part.Part == BodyPartType.Head).MaxHp, 40f,

@@ -4,6 +4,7 @@
     {
       "id": "TileBase_StoneWall",
       "runtimeTileId": 7,
+      "loadCapacity": 10,
       "displayName": "矿洞岩壁",
       "tileAsset": "TileBase_StoneWall",
       "data": {
@@ -12,14 +13,22 @@
       },
       "behaviours": [],
       "damageProfile": {
-        "damageable": true, "maxHealth": 60,
-        "defenseValues": { "cutting": 2, "piercing": 2, "chopping": 2, "blunt": 2 },
-        "requiredTool": 1, "impactMaterial": 4, "dropItemId": "Ore_Stone", "dropAmount": 1
+        "damageable": true,
+        "maxHealth": 60,
+        "defenseValues": {
+          "physical": 4
+        },
+        "requiredTool": 1,
+        "impactMaterial": 4,
+        "dropItemId": "Ore_Stone",
+        "dropAmount": 1,
+        "minimumWeaponDamage": 0
       }
     },
     {
       "id": "TileBase_BuiltStoneWall",
       "runtimeTileId": 8,
+      "loadCapacity": 10,
       "displayName": "石墙",
       "tileAsset": "TileBase_BuiltStoneWall",
       "data": {
@@ -28,14 +37,17 @@
       },
       "behaviours": [],
       "damageProfile": {
-        "damageable": true, "maxHealth": 200,
-        "defenseValues": { "cutting": 5, "piercing": 5, "chopping": 5, "blunt": 5 },
-        "requiredTool": 0, "minimumWeaponDamage": 1, "impactMaterial": 4, "dropItemId": "Wall_Stone_Summoner", "dropAmount": 1
+        "damageable": true, "maxHealth": 60,
+        "defenseValues": {
+          "physical": 8
+        },
+        "requiredTool": 3, "minimumWeaponDamage": 0, "impactMaterial": 4, "dropItemId": "Wall_Stone_Summoner", "dropAmount": 1
       }
     },
     {
       "id": "TileBase_BuiltWoodWall",
       "runtimeTileId": 12,
+      "loadCapacity": 5,
       "displayName": "木墙",
       "tileAsset": "TileBase_BuiltWoodWall",
       "data": {
@@ -44,14 +56,17 @@
       },
       "behaviours": [],
       "damageProfile": {
-        "damageable": true, "maxHealth": 100,
-        "defenseValues": { "cutting": 5, "piercing": 5, "chopping": 0, "blunt": 0 },
-        "requiredTool": 0, "minimumWeaponDamage": 1, "impactMaterial": 3, "dropItemId": "Wall_Wood_Summoner", "dropAmount": 1
+        "damageable": true, "maxHealth": 50,
+        "defenseValues": {
+          "physical": 3
+        },
+        "requiredTool": 3, "minimumWeaponDamage": 0, "impactMaterial": 3, "dropItemId": "Wall_Wood_Summoner", "dropAmount": 1
       }
     },
     {
       "id": "Tile_WaterPlatform",
       "runtimeTileId": 13,
+      "loadCapacity": 5,
       "displayName": "水上平台",
       "tileAsset": "Tile_WaterPlatform",
       "data": {
@@ -61,7 +76,9 @@
       "behaviours": [],
       "damageProfile": {
         "damageable": false, "maxHealth": 100,
-        "defenseValues": { "cutting": 0, "piercing": 0, "chopping": 0, "blunt": 0 },
+        "defenseValues": {
+          "physical": 0
+        },
         "requiredTool": 0, "minimumWeaponDamage": 0, "impactMaterial": 1, "dropItemId": null, "dropAmount": 0
       },
       "groundPlacement": { "liquidRequirement": "Present", "refundItemId": "WaterPlatform_Summoner" }
@@ -69,6 +86,7 @@
     {
       "id": "Tile_Platform_Stone",
       "runtimeTileId": 15,
+      "loadCapacity": 10,
       "displayName": "石平台",
       "tileAsset": "Tile_Platform_Stone",
       "data": {
@@ -78,7 +96,9 @@
       "behaviours": [],
       "damageProfile": {
         "damageable": false, "maxHealth": 100,
-        "defenseValues": { "cutting": 0, "piercing": 0, "chopping": 0, "blunt": 0 },
+        "defenseValues": {
+          "physical": 0
+        },
         "requiredTool": 0, "minimumWeaponDamage": 0, "impactMaterial": 1, "dropItemId": null, "dropAmount": 0
       },
       "groundPlacement": { "liquidRequirement": "Present", "refundItemId": "Platform_Stone_Summoner" }
@@ -86,6 +106,7 @@
     {
       "id": "Tile_Platform_Copper",
       "runtimeTileId": 16,
+      "loadCapacity": 10,
       "displayName": "铜平台",
       "tileAsset": "Tile_Platform_Copper",
       "data": {
@@ -95,7 +116,9 @@
       "behaviours": [],
       "damageProfile": {
         "damageable": false, "maxHealth": 100,
-        "defenseValues": { "cutting": 0, "piercing": 0, "chopping": 0, "blunt": 0 },
+        "defenseValues": {
+          "physical": 0
+        },
         "requiredTool": 0, "minimumWeaponDamage": 0, "impactMaterial": 1, "dropItemId": null, "dropAmount": 0
       },
       "groundPlacement": { "liquidRequirement": "Present", "refundItemId": "Platform_Copper_Summoner" }
@@ -103,6 +126,7 @@
     {
       "id": "Tile_Platform_Iron",
       "runtimeTileId": 17,
+      "loadCapacity": 10,
       "displayName": "铁平台",
       "tileAsset": "Tile_Platform_Iron",
       "data": {
@@ -112,7 +136,9 @@
       "behaviours": [],
       "damageProfile": {
         "damageable": false, "maxHealth": 100,
-        "defenseValues": { "cutting": 0, "piercing": 0, "chopping": 0, "blunt": 0 },
+        "defenseValues": {
+          "physical": 0
+        },
         "requiredTool": 0, "minimumWeaponDamage": 0, "impactMaterial": 1, "dropItemId": null, "dropAmount": 0
       },
       "groundPlacement": { "liquidRequirement": "Present", "refundItemId": "Platform_Iron_Summoner" }
@@ -120,6 +146,7 @@
     {
       "id": "Tile_Platform_Bronze",
       "runtimeTileId": 18,
+      "loadCapacity": 10,
       "displayName": "青铜平台",
       "tileAsset": "Tile_Platform_Bronze",
       "data": {
@@ -129,7 +156,9 @@
       "behaviours": [],
       "damageProfile": {
         "damageable": false, "maxHealth": 100,
-        "defenseValues": { "cutting": 0, "piercing": 0, "chopping": 0, "blunt": 0 },
+        "defenseValues": {
+          "physical": 0
+        },
         "requiredTool": 0, "minimumWeaponDamage": 0, "impactMaterial": 1, "dropItemId": null, "dropAmount": 0
       },
       "groundPlacement": { "liquidRequirement": "Present", "refundItemId": "Platform_Bronze_Summoner" }
@@ -137,6 +166,7 @@
     {
       "id": "Tile_Wall_Copper",
       "runtimeTileId": 19,
+      "loadCapacity": 10,
       "displayName": "铜墙",
       "tileAsset": "Tile_Wall_Copper",
       "data": {
@@ -145,14 +175,17 @@
       },
       "behaviours": [],
       "damageProfile": {
-        "damageable": true, "maxHealth": 280,
-        "defenseValues": { "cutting": 5, "piercing": 5, "chopping": 5, "blunt": 5 },
-        "requiredTool": 0, "minimumWeaponDamage": 1, "impactMaterial": 4, "dropItemId": "Wall_Copper_Summoner", "dropAmount": 1
+        "damageable": true, "maxHealth": 50,
+        "defenseValues": {
+          "physical": 5
+        },
+        "requiredTool": 0, "minimumWeaponDamage": 0, "impactMaterial": 4, "dropItemId": "Wall_Copper_Summoner", "dropAmount": 1
       }
     },
     {
       "id": "Tile_Wall_Iron",
       "runtimeTileId": 20,
+      "loadCapacity": 10,
       "displayName": "铁墙",
       "tileAsset": "Tile_Wall_Iron",
       "data": {
@@ -161,14 +194,17 @@
       },
       "behaviours": [],
       "damageProfile": {
-        "damageable": true, "maxHealth": 360,
-        "defenseValues": { "cutting": 5, "piercing": 5, "chopping": 5, "blunt": 5 },
-        "requiredTool": 0, "minimumWeaponDamage": 1, "impactMaterial": 4, "dropItemId": "Wall_Iron_Summoner", "dropAmount": 1
+        "damageable": true, "maxHealth": 50,
+        "defenseValues": {
+          "physical": 5
+        },
+        "requiredTool": 0, "minimumWeaponDamage": 0, "impactMaterial": 4, "dropItemId": "Wall_Iron_Summoner", "dropAmount": 1
       }
     },
     {
       "id": "Tile_Wall_Bronze",
       "runtimeTileId": 21,
+      "loadCapacity": 10,
       "displayName": "青铜墙",
       "tileAsset": "Tile_Wall_Bronze",
       "data": {
@@ -177,14 +213,17 @@
       },
       "behaviours": [],
       "damageProfile": {
-        "damageable": true, "maxHealth": 320,
-        "defenseValues": { "cutting": 5, "piercing": 5, "chopping": 5, "blunt": 5 },
-        "requiredTool": 0, "minimumWeaponDamage": 1, "impactMaterial": 4, "dropItemId": "Wall_Bronze_Summoner", "dropAmount": 1
+        "damageable": true, "maxHealth": 50,
+        "defenseValues": {
+          "physical": 5
+        },
+        "requiredTool": 0, "minimumWeaponDamage": 0, "impactMaterial": 4, "dropItemId": "Wall_Bronze_Summoner", "dropAmount": 1
       }
     },
     {
       "id": "Tile_DirtWall",
       "runtimeTileId": 22,
+      "loadCapacity": 8,
       "displayName": "泥土墙",
       "tileAsset": "TileBase_Dirt",
       "data": {
@@ -193,14 +232,22 @@
       },
       "behaviours": [],
       "damageProfile": {
-        "damageable": true, "maxHealth": 40,
-        "defenseValues": { "cutting": 0, "piercing": 0, "chopping": 0, "blunt": 1 },
-        "requiredTool": 1, "impactMaterial": 1, "dropItemId": "Earth", "dropAmount": 1
+        "damageable": true,
+        "maxHealth": 50,
+        "defenseValues": {
+          "physical": 1
+        },
+        "requiredTool": 1,
+        "impactMaterial": 1,
+        "dropItemId": "Earth",
+        "dropAmount": 1,
+        "minimumWeaponDamage": 0
       }
     },
     {
       "id": "Tile_Floor_Wood",
       "runtimeTileId": 23,
+      "loadCapacity": 5,
       "displayName": "木地板",
       "tileAsset": "Tile_WaterPlatform",
       "data": {
@@ -210,7 +257,9 @@
       "behaviours": [],
       "damageProfile": {
         "damageable": false, "maxHealth": 100,
-        "defenseValues": { "cutting": 0, "piercing": 0, "chopping": 0, "blunt": 0 },
+        "defenseValues": {
+          "physical": 0
+        },
         "requiredTool": 0, "minimumWeaponDamage": 0, "impactMaterial": 1, "dropItemId": null, "dropAmount": 0
       },
       "groundPlacement": { "requiredSourceFlags": 1, "liquidRequirement": "Absent", "refundItemId": "Floor_Wood_Summoner" }
@@ -218,6 +267,7 @@
     {
       "id": "Tile_Floor_Stone",
       "runtimeTileId": 24,
+      "loadCapacity": 10,
       "displayName": "石地板",
       "tileAsset": "Tile_Platform_Stone",
       "data": {
@@ -227,7 +277,9 @@
       "behaviours": [],
       "damageProfile": {
         "damageable": false, "maxHealth": 100,
-        "defenseValues": { "cutting": 0, "piercing": 0, "chopping": 0, "blunt": 0 },
+        "defenseValues": {
+          "physical": 0
+        },
         "requiredTool": 0, "minimumWeaponDamage": 0, "impactMaterial": 1, "dropItemId": null, "dropAmount": 0
       },
       "groundPlacement": { "requiredSourceFlags": 1, "liquidRequirement": "Absent", "refundItemId": "Floor_Stone_Summoner" }
@@ -235,6 +287,7 @@
     {
       "id": "Tile_Floor_Copper",
       "runtimeTileId": 25,
+      "loadCapacity": 10,
       "displayName": "铜地板",
       "tileAsset": "Tile_Platform_Copper",
       "data": {
@@ -244,7 +297,9 @@
       "behaviours": [],
       "damageProfile": {
         "damageable": false, "maxHealth": 100,
-        "defenseValues": { "cutting": 0, "piercing": 0, "chopping": 0, "blunt": 0 },
+        "defenseValues": {
+          "physical": 0
+        },
         "requiredTool": 0, "minimumWeaponDamage": 0, "impactMaterial": 1, "dropItemId": null, "dropAmount": 0
       },
       "groundPlacement": { "requiredSourceFlags": 1, "liquidRequirement": "Absent", "refundItemId": "Floor_Copper_Summoner" }
@@ -252,6 +307,7 @@
     {
       "id": "Tile_Floor_Iron",
       "runtimeTileId": 26,
+      "loadCapacity": 10,
       "displayName": "铁地板",
       "tileAsset": "Tile_Platform_Iron",
       "data": {
@@ -261,7 +317,9 @@
       "behaviours": [],
       "damageProfile": {
         "damageable": false, "maxHealth": 100,
-        "defenseValues": { "cutting": 0, "piercing": 0, "chopping": 0, "blunt": 0 },
+        "defenseValues": {
+          "physical": 0
+        },
         "requiredTool": 0, "minimumWeaponDamage": 0, "impactMaterial": 1, "dropItemId": null, "dropAmount": 0
       },
       "groundPlacement": { "requiredSourceFlags": 1, "liquidRequirement": "Absent", "refundItemId": "Floor_Iron_Summoner" }
@@ -269,6 +327,7 @@
     {
       "id": "Tile_Floor_Bronze",
       "runtimeTileId": 27,
+      "loadCapacity": 10,
       "displayName": "青铜地板",
       "tileAsset": "Tile_Platform_Bronze",
       "data": {
@@ -278,7 +337,9 @@
       "behaviours": [],
       "damageProfile": {
         "damageable": false, "maxHealth": 100,
-        "defenseValues": { "cutting": 0, "piercing": 0, "chopping": 0, "blunt": 0 },
+        "defenseValues": {
+          "physical": 0
+        },
         "requiredTool": 0, "minimumWeaponDamage": 0, "impactMaterial": 1, "dropItemId": null, "dropAmount": 0
       },
       "groundPlacement": { "requiredSourceFlags": 1, "liquidRequirement": "Absent", "refundItemId": "Floor_Bronze_Summoner" }

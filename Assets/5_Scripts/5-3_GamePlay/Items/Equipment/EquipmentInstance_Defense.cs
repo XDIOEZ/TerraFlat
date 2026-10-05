@@ -18,7 +18,7 @@ public partial class EquipmentInstance_Defense : EquipmentInstance
     // 追加字段保持旧数据布局；空数组保留旧装备的全身覆盖语义。
     public BodyPartType[] CoveredParts = new BodyPartType[0];
 
-    [MemoryPackIgnore] private DamageReceiver appliedReceiver;
+    [MemoryPackIgnore] private Mod_DamageReceiver appliedReceiver;
     [MemoryPackIgnore] private CombatDefense appliedDefense;
     [MemoryPackIgnore] private bool appliedToBodyParts;
 
@@ -27,9 +27,9 @@ public partial class EquipmentInstance_Defense : EquipmentInstance
         if (_isApplied)
             return;
 
-        var damageReceiver = item.itemMods.GetMod_ByID<DamageReceiver>(ModText.Hp);
+        var damageReceiver = item?.itemMods?.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
         if (damageReceiver == null)
-            throw new MissingComponentException($"[{nameof(EquipmentInstance_Defense)}] Cannot find {nameof(DamageReceiver)} on item {item?.name}");
+            return;
 
         CombatDefense bonus = ResolveDefenseBonus();
         appliedDefense = new CombatDefense(bonus.Cutting, bonus.Piercing, bonus.Chopping, bonus.Blunt);

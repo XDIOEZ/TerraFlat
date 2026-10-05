@@ -24,7 +24,7 @@ public enum WolfState
 /// 狼 AI：支持群体协作（呼叫同伴、集火）、攻击伤害窗口、逃跑/避让等行为。
 /// 状态优先级：逃跑 > 攻击 > 追击 > 避让 > 警觉 > 移动 > 待机
 /// </summary>
-public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver
+public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver, IAIAdvanceCommandCancellationReceiver
 {
 #region SaveData
 	[Serializable]
@@ -162,10 +162,13 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver
 	public float fleeSafeHpRate = 0.45f;
 
 	[TabGroup("配置", "行为"), BoxGroup("配置/行为/逃跑"), LabelText("远离玩家距离"), SuffixLabel("米", true), MinValue(1f)]
-	public float avoidRunDistance = 9f;
+	public float avoidRunDistance = 30f;
+
+	[TabGroup("配置", "行为"), BoxGroup("配置/行为/逃跑"), LabelText("避让安全距离"), SuffixLabel("米", true), MinValue(1f)]
+	public float avoidSafeDistance = 30f; // 玩家远离到此距离后结束本轮避让。
 
 	[TabGroup("配置", "行为"), BoxGroup("配置/行为/逃跑"), LabelText("逃跑距离"), SuffixLabel("米", true), MinValue(1f)]
-	public float fleeRunDistance = 12f;
+	public float fleeRunDistance = 30f;
 
 	[TabGroup("配置", "行为"), BoxGroup("配置/行为/巡逻"), LabelText("启用闲逛")]
 	public bool enableWander = true;
@@ -284,8 +287,10 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver
 	{
 		if (_detector != null)
 		{
-			// 感知半径至少覆盖追击触发距离；丢失距离由当前目标记忆维持。
-			_detector.DetectionRadius = Mathf.Max(_detector.DetectionRadius, chaseTriggerDistance);
+			// 感知半径覆盖追击触发和独狼避让距离；较远的当前威胁由目标记忆维持。
+			_detector.DetectionRadius = Mathf.Max(
+				_detector.DetectionRadius,
+				Mathf.Max(chaseTriggerDistance, avoidSafeDistance));
 		}
 		_attack.Bind(item);
 	}
@@ -408,6 +413,14 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver
 		}
 	}
 
+	/// <summary>取消外部推进并停下旧寻路，后续由正常状态机重新选择行为。</summary>
+	public void CancelAdvance()
+	{
+		CompleteAdvance();
+		ClearChaseFormation();
+		item?.GetComponentInChildren<Mod_Mover_AI>(true)?.StopMovement();
+	}
+
 	[Button("狼群集火玩家")]
 	public void TriggerPackAttack(Item threatSource)
 	{
@@ -505,8 +518,14 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver
 		stateMachine.Register(CreateStoppedStateNode(WolfState.Alert, _ => TickAlert()));
 		stateMachine.Register(CreateMovingStateNode(WolfState.Chase, _ => TickChase()));
 		stateMachine.Register(CreateStoppedActionStateNode(WolfState.Attack, _ => TickAttack()));
-		stateMachine.Register(CreateMovingStateNode(WolfState.Avoid, _ => TickAvoid()));
-		stateMachine.Register(CreateMovingStateNode(WolfState.Flee, _ => TickFlee()));
+		stateMachine.Register(CreateFleeStateNode(
+			WolfState.Avoid,
+			ResolveFleeSourcePosition,
+			() => avoidRunDistance));
+		stateMachine.Register(CreateFleeStateNode(
+			WolfState.Flee,
+			ResolveFleeSourcePosition,
+			() => fleeRunDistance));
 		stateMachine.Register(CreateAdvanceStateNode(
 			WolfState.Advance,
 			ResolveAdvanceTarget,
@@ -581,16 +600,9 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver
 		TryCallNearbyWolves();
 	}
 
-	private void TickAvoid()
+	private Vector3? ResolveFleeSourcePosition()
 	{
-		if (_currentThreat == null) { StopMove(); return; }
-		MoveAwayFrom(_currentThreat.transform.position, avoidRunDistance);
-	}
-
-	private void TickFlee()
-	{
-		if (_currentThreat == null) { StopMove(); return; }
-		MoveAwayFrom(_currentThreat.transform.position, fleeRunDistance);
+		return _currentThreat != null ? _currentThreat.transform.position : (Vector3?)null;
 	}
 
 	private AIAdvanceTarget ResolveAdvanceTarget()
@@ -677,7 +689,12 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver
 		if (_currentThreat == null) return false;
 		if (IsAggressiveAdvanceActive()) return false;
 		if (_packCount > 1) return false;
-		return IsWithinEffectivePerceptionRange(_currentThreat, chaseTriggerDistance);
+
+		return IsWithinFleeDistance(
+			_currentThreat,
+			_currentState == WolfState.Avoid,
+			chaseTriggerDistance,
+			avoidSafeDistance);
 	}
 
 	/// <summary>警觉条件：威胁在警觉距离内，或警觉计时器未过期</summary>
@@ -796,7 +813,10 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver
 		}
 
 		if (_currentThreat == null) return;
-		if (!IsWithinEffectivePerceptionRange(_currentThreat, chaseLossDistance))
+		float threatRetentionDistance = _currentState == WolfState.Avoid
+			? Mathf.Max(chaseLossDistance, avoidSafeDistance)
+			: chaseLossDistance;
+		if (!IsWithinEffectivePerceptionRange(_currentThreat, threatRetentionDistance))
 			_currentThreat = null;
 	}
 
@@ -833,7 +853,7 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver
 		if (TryGetWolfAlly(target, out _))
 			return false;
 
-		DamageReceiver receiver = target.itemMods?.GetMod_ByID<DamageReceiver>(ModText.Hp);
+		Mod_DamageReceiver receiver = target.itemMods?.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
 		if (receiver == null || receiver.Hp <= 0f)
 			return false;
 
@@ -1047,10 +1067,10 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver
 		return (stableMemberIndex & 1) != 0;
 	}
 
-	/// <summary>兼容 Item 标签缺失但 Unity Tag 标记为 Player 的本地玩家。</summary>
+	/// <summary>玩家身份只读取项目 ItemData Tag，不再依赖 Unity Tag。</summary>
 	private bool IsPlayerChaseTarget(Item target)
 	{
-		return IsPlayerThreat(target) || (target != null && target.CompareTag("Player"));
+		return IsPlayerThreat(target);
 	}
 
 	/// <summary>阵型追击期间，只有足够靠近自身槽位才允许进入攻击状态。</summary>
@@ -1215,6 +1235,7 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver
 		DrawRangeWithLabel(center, attackTriggerDistance, new Color(1f, 0.2f, 0.2f, 1f), "攻击距离 attackTriggerDistance", 8f);
 		DrawRangeWithLabel(center, wanderRadius, new Color(0.3f, 1f, 0.5f, 1f), "闲逛半径 wanderRadius", 52f);
 		DrawRangeWithLabel(center, avoidRunDistance, new Color(0.2f, 0.6f, 1f, 1f), "避让距离 avoidRunDistance", 96f);
+		DrawRangeWithLabel(center, avoidSafeDistance, new Color(0.2f, 0.8f, 1f, 1f), "避让安全距离 avoidSafeDistance", 120f);
 		DrawRangeWithLabel(center, alertDetectDistance, new Color(1f, 0.6f, 0.1f, 1f), "警觉距离 alertDetectDistance", 142f);
 		DrawRangeWithLabel(center, chaseTriggerDistance, new Color(1f, 0.9f, 0.2f, 1f), "追击触发 chaseTriggerDistance", 196f);
 		DrawRangeWithLabel(center, fleeRunDistance, new Color(0.5f, 0.8f, 1f, 1f), "逃跑距离 fleeRunDistance", 236f);

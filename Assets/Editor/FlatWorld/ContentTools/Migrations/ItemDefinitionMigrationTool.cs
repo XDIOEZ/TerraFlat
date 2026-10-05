@@ -51,11 +51,12 @@ public static class ItemDefinitionMigrationTool
     /// <summary>已经以 JSON 为权威、无需再从具体 Prefab 导出的定义。</summary>
     private static readonly HashSet<string> PreservedIds = new(StringComparer.OrdinalIgnoreCase)
     {
+        "Ore_Diamond", "Mine_Diamond",
         "Knife_Base", "Dagger_Stone", "Dagger_Copper", "Dagger_Bone", "Knife_Flint", "Torch_Base",
         "WorldResource_Base", "MineResource_Base", "AppleTree", "Tree_Coconut", "Mine_Coal", "Mine_Copper",
         "Mine_Iron", "Mine_Stone", "Mine_Tin", "Iceberg", "Bush",
         "Tree_Pine", "Resin", "Charcoal", "Glue", "DrilledLog", "DrilledPlank", "DrilledStick", "HandDrill", "WoodHammer",
-        "Beehive", "Flower", "Scissors", "DrilledStoneSlab", "DrilledStone"
+        "Beehive", "Flower", "Scissors", "DrilledStoneSlab", "DrilledStone", "BirdEgg"
     };
 
     /// <summary>预览统计时不计入运行时物品数量的抽象定义。</summary>
@@ -520,7 +521,8 @@ public static class ItemDefinitionMigrationTool
             JObject copy = (JObject)source.DeepClone();
             if (PreservedSourcePaths.TryGetValue(id, out string sourcePath))
                 copy["sourcePrefab"] = sourcePath;
-            else if (!buildingShellDefinition)
+            // 显式空来源用于阻止继承父物品的具体 Prefab 身份，手工定义必须保留这项覆盖。
+            else if (!buildingShellDefinition && copy.Value<string>("sourcePrefab") != string.Empty)
                 copy.Remove("sourcePrefab");
             output.Add(copy);
         }
@@ -1019,7 +1021,8 @@ public static class ItemDefinitionMigrationTool
             assetPath.StartsWith("Assets/2_Prefabs/Gameplay/Modules/", StringComparison.OrdinalIgnoreCase))
             return Path.GetFileNameWithoutExtension(assetPath);
 
-        return module.GetType().Name;
+        // 外壳内嵌模块没有独立 Prefab 地址时使用稳定模块 ID，不能把组件类名伪装成 PrefabId。
+        return string.IsNullOrWhiteSpace(fallbackId) ? module.GetType().Name : fallbackId.Trim();
     }
 
     private static string ResolveStableModuleName(

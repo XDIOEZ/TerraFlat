@@ -1,0 +1,73 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &7821743140287195511
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 7821743140287195512}
+  - component: {fileID: 7821743140287195513}
+  m_Layer: 0
+  m_Name: Module_BeeBehavior
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &7821743140287195512
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7821743140287195511}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &7821743140287195513
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7821743140287195511}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0f94d95757e349caa4d3865fd2a6e43c, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  item: {fileID: 0}
+  ModData:
+    Name: bee_behavior
+    ID: Mod_BeeBehavior
+    isRunning: 1
+    Type: 0
+    BitData:
+  SatietyMaximum: 1440
+  SatietyDrainPerSecond: 1
+  ForageBelow: 800
+  ReturnAbove: 1000
+  HoneyContributionCost: 500
+  HoneyMealGain: 500
+  CropGainPerSecond: 100
+  FlowerGainPerSecond: 0.5
+  PatrolFlightSpeedMultiplier: 0.5
+  ForageScanInterval: 1
+  ForageLandingDistance: 0.3
+  HomeArrivalDistance: 0.45
+  AngryLockRadius: 3
+  LostTargetAngerSeconds: 10
+  AlertSeconds: 10
+  AngerMaximum: 10
+  AngerDecayPerSecond: 0.1
+  TargetScanInterval: 0.2
+  StingDistance: 0.45
+  StingInterval: 1

@@ -477,35 +477,30 @@ public static partial class TileBuildingSystem
         return found && TryDamage(best, sender, out result);
     }
 
-    /// <summary>按工具门槛、难度倍率、防御、最低有效伤害和建筑克制倍率计算最终数值。</summary>
+    /// <summary>按难度倍率、物理防御和工具弱点计算最终数值。</summary>
     public static float CalculateDamage(
         TileBuildingDamageProfile profile,
         IDamageSender sender,
         out bool weaknessMatched)
     {
-        // 旧 weaknessMatched 输出仅为 API 兼容；等级弱点系统已经移除。
-        weaknessMatched = true;
+        weaknessMatched = false;
         if (profile?.Damageable != true || sender?.DamageValues == null)
             return 0f;
-
-        if (profile.RequiredTool != TileDamageToolKind.None &&
-            (sender is not Mod_Damage damageModule ||
-             damageModule.TileDamageToolKind != profile.RequiredTool))
-        {
-            return 0f;
-        }
 
         float multiplier = GameDifficultyService.ResolveDirectDamageMultiplier(sender.attacker, null);
         CombatDamage scaledDamage = sender.DamageValues.Scaled(multiplier);
         float calculatedDamage = scaledDamage.CalculateAgainst(profile.ResolveDefense());
 
-        // MinimumWeaponDamage 属于建筑自身允许的最低有效伤害，先完成该规则，再应用武器对建筑的克制倍率。
-        if (scaledDamage.TotalCombatPower > 0f && profile.MinimumWeaponDamage > 0f)
-            calculatedDamage = Mathf.Max(calculatedDamage, profile.MinimumWeaponDamage);
-
-        // 锤类等建筑克制只放大已经由建筑规则确认有效的最终伤害；0 仍保持 0。
-        if (calculatedDamage > 0f && sender is IBuildingDamageSource buildingDamageSource)
-            calculatedDamage *= Mathf.Max(0f, buildingDamageSource.BuildingDamageMultiplier);
+        var context = GameplayCombatBridge.Context(sender, default);
+        ResourceToolKind preferred = profile.RequiredTool switch
+        {
+            TileDamageToolKind.Pickaxe => ResourceToolKind.Pickaxe,
+            TileDamageToolKind.Axe => ResourceToolKind.Axe,
+            TileDamageToolKind.Hammer => ResourceToolKind.Hammer,
+            _ => ResourceToolKind.None
+        };
+        weaknessMatched = preferred != ResourceToolKind.None && preferred == (ResourceToolKind)context.ResourceToolKind;
+        calculatedDamage *= weaknessMatched ? 2f : 1f;
         return calculatedDamage;
     }
 

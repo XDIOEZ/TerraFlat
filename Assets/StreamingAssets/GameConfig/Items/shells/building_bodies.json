@@ -62,13 +62,10 @@
       },
       "health": {
         "hasHp": true,
-        "hp": 180.0,
-        "maxHp": 180.0,
+        "hp": 60,
+        "maxHp": 60,
         "defense": {
-          "cutting": 8.0,
-          "piercing": 8.0,
-          "chopping": 8.0,
-          "blunt": 8.0
+          "physical": 8.0
         },
         "moduleLocalPosition": {
           "x": 0.0,
@@ -88,7 +85,9 @@
             "y": 1.0
           },
           "edgeRadius": 0.0
-        }
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
       },
       "modules": {
         "建筑模块": {
@@ -128,6 +127,9 @@
           "data": {
             "BitData": [],
             "Type": 0
+          },
+          "parameters": {
+            "acceptsMechanicalBellows": true
           }
         },
         "vesselHeating": {
@@ -209,13 +211,10 @@
       },
       "health": {
         "hasHp": true,
-        "hp": 180.0,
-        "maxHp": 180.0,
+        "hp": 60,
+        "maxHp": 60,
         "defense": {
-          "cutting": 8.0,
-          "piercing": 8.0,
-          "chopping": 8.0,
-          "blunt": 8.0
+          "physical": 8.0
         },
         "moduleLocalPosition": {
           "x": 0.0,
@@ -235,7 +234,9 @@
             "y": 1.0
           },
           "edgeRadius": 0.0
-        }
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
       },
       "modules": {
         "建筑模块": {
@@ -254,6 +255,21 @@
           "data": {
             "BitData": [],
             "Type": 0
+          },
+          "parameters": {
+            "absorbDroppedFuel": true,
+            "publishCellTemperature": true,
+            "neighborTemperatureOffset": 15.0,
+            "fuelByproductRules": [
+              {
+                "id": "wood-ash",
+                "inputTags": [
+                  "Wood"
+                ],
+                "itemsPerOutput": 3,
+                "outputItemId": "WoodAsh"
+              }
+            ]
           }
         },
         "燃料模块": {
@@ -379,13 +395,10 @@
       },
       "health": {
         "hasHp": true,
-        "hp": 180.0,
-        "maxHp": 180.0,
+        "hp": 50,
+        "maxHp": 50,
         "defense": {
-          "cutting": 8.0,
-          "piercing": 8.0,
-          "chopping": 8.0,
-          "blunt": 8.0
+          "physical": 3
         },
         "moduleLocalPosition": {
           "x": 0.0,
@@ -405,7 +418,9 @@
             "y": 1.0
           },
           "edgeRadius": 0.0
-        }
+        },
+        "weakTool": 3,
+        "combatBalanceVersion": 1
       },
       "modules": {
         "建筑模块": {
@@ -505,13 +520,10 @@
       },
       "health": {
         "hasHp": true,
-        "hp": 180.0,
-        "maxHp": 180.0,
+        "hp": 60,
+        "maxHp": 60,
         "defense": {
-          "cutting": 8.0,
-          "piercing": 8.0,
-          "chopping": 8.0,
-          "blunt": 8.0
+          "physical": 8.0
         },
         "moduleLocalPosition": {
           "x": 0.0,
@@ -531,7 +543,9 @@
             "y": 1.0
           },
           "edgeRadius": 0.0
-        }
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
       },
       "modules": {
         "建筑模块": {
@@ -624,13 +638,10 @@
       },
       "health": {
         "hasHp": true,
-        "hp": 180.0,
-        "maxHp": 180.0,
+        "hp": 50,
+        "maxHp": 50,
         "defense": {
-          "cutting": 8.0,
-          "piercing": 8.0,
-          "chopping": 8.0,
-          "blunt": 8.0
+          "physical": 3
         },
         "moduleLocalPosition": {
           "x": 0.0,
@@ -650,7 +661,9 @@
             "y": 1.0
           },
           "edgeRadius": 0.0
-        }
+        },
+        "weakTool": 3,
+        "combatBalanceVersion": 1
       },
       "modules": {
         "建筑模块": {
@@ -698,9 +711,9 @@
       }
     },
     {
-      "id": "Meatrack",
+      "id": "Mod_Meatrack",
       "parent": "BuildingBody_Base",
-      "sourcePrefab": "Assets/2_Prefabs/World/Buildings/Meatrack.prefab",
+      "sourcePrefab": "Assets/2_Prefabs/World/Buildings/Mod_Meatrack.prefab",
       "gameName": "晾肉架-建筑",
       "description": "用于晾晒和加工肉类的架子。",
       "durability": 1.0,
@@ -743,13 +756,10 @@
       },
       "health": {
         "hasHp": true,
-        "hp": 180.0,
-        "maxHp": 180.0,
+        "hp": 60,
+        "maxHp": 60,
         "defense": {
-          "cutting": 8.0,
-          "piercing": 8.0,
-          "chopping": 8.0,
-          "blunt": 8.0
+          "physical": 8.0
         },
         "moduleLocalPosition": {
           "x": 0.0,
@@ -769,7 +779,9 @@
             "y": 1.0
           },
           "edgeRadius": 0.0
-        }
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
       },
       "modules": {
         "建筑模块": {
@@ -777,7 +789,7 @@
           "id": "建筑模块",
           "enabled": false,
           "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Meatrack\",\"SummonerPrefabId\":\"Meatrack_Summoner\"}",
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Mod_Meatrack\",\"SummonerPrefabId\":\"Meatrack_Summoner\"}",
             "Type": 0
           }
         },
@@ -834,7 +846,8 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Building/Wall_Stone_Medium.png[Wall_Stone_Medium]",
+        "spriteAddress": "Assets/6_Art/Generated/Building/MineEntrance/MineEntrance_Artificial_Idle.png",
+        "materialAddress": "Assets/9_Shaders/Material/Ground-Facility-Lit.mat",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -851,9 +864,9 @@
           "z": 1.0
         },
         "color": {
-          "r": 0.28,
-          "g": 0.22,
-          "b": 0.18,
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
           "a": 1.0
         },
         "flipX": false,
@@ -861,6 +874,7 @@
         "sortingLayerName": "Default",
         "sortingOrder": 0,
         "collider": {
+          "isTrigger": true,
           "size": {
             "x": 2.0,
             "y": 2.0
@@ -869,13 +883,10 @@
       },
       "health": {
         "hasHp": true,
-        "hp": 180.0,
-        "maxHp": 180.0,
+        "hp": 60,
+        "maxHp": 60,
         "defense": {
-          "cutting": 8.0,
-          "piercing": 8.0,
-          "chopping": 8.0,
-          "blunt": 8.0
+          "physical": 8.0
         },
         "moduleLocalPosition": {
           "x": 0.0,
@@ -895,13 +906,20 @@
             "y": 1.0
           },
           "edgeRadius": 0.0
-        }
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
       },
       "modules": {
         "建筑模块": {
           "prefab": "Module_Building",
           "id": "建筑模块",
           "enabled": false,
+          "parameters": {
+            "PlacementLayer": "Ground",
+            "LightOcclusionMode": "None",
+            "CastSunShadow": false
+          },
           "data": {
             "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"MineEntrance\",\"SummonerPrefabId\":\"MineEntrance_Summoner\"}",
             "Type": 0
@@ -998,13 +1016,10 @@
       },
       "health": {
         "hasHp": true,
-        "hp": 180.0,
-        "maxHp": 180.0,
+        "hp": 60,
+        "maxHp": 60,
         "defense": {
-          "cutting": 8.0,
-          "piercing": 8.0,
-          "chopping": 8.0,
-          "blunt": 8.0
+          "physical": 8.0
         },
         "moduleLocalPosition": {
           "x": 0.0,
@@ -1024,7 +1039,9 @@
             "y": 1.0
           },
           "edgeRadius": 0.0
-        }
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
       },
       "modules": {
         "建筑模块": {
@@ -1036,9 +1053,9 @@
             "Type": 0
           }
         },
-        "Module_Equipment": {
+        "Mod_EquipmentRuntime": {
           "prefab": "BuildingFeature_Scarecrow_Mod_Equipment",
-          "id": "Module_Equipment",
+          "id": "Mod_EquipmentRuntime",
           "enabled": true,
           "data": {
             "BitData": [],
@@ -1117,13 +1134,10 @@
       },
       "health": {
         "hasHp": true,
-        "hp": 180.0,
-        "maxHp": 180.0,
+        "hp": 60,
+        "maxHp": 60,
         "defense": {
-          "cutting": 8.0,
-          "piercing": 8.0,
-          "chopping": 8.0,
-          "blunt": 8.0
+          "physical": 8.0
         },
         "moduleLocalPosition": {
           "x": 0.0,
@@ -1143,7 +1157,9 @@
             "y": 1.0
           },
           "edgeRadius": 0.0
-        }
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
       },
       "modules": {
         "建筑模块": {
@@ -1162,6 +1178,9 @@
           "data": {
             "BitData": [],
             "Type": 0
+          },
+          "parameters": {
+            "acceptsMechanicalBellows": true
           }
         },
         "燃料模块": {
@@ -1270,13 +1289,10 @@
       },
       "health": {
         "hasHp": true,
-        "hp": 180.0,
-        "maxHp": 180.0,
+        "hp": 60,
+        "maxHp": 60,
         "defense": {
-          "cutting": 8.0,
-          "piercing": 8.0,
-          "chopping": 8.0,
-          "blunt": 8.0
+          "physical": 8.0
         },
         "moduleLocalPosition": {
           "x": 0.0,
@@ -1296,7 +1312,9 @@
             "y": 1.0
           },
           "edgeRadius": 0.0
-        }
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
       },
       "modules": {
         "建筑模块": {
@@ -1395,13 +1413,10 @@
       },
       "health": {
         "hasHp": true,
-        "hp": 180.0,
-        "maxHp": 180.0,
+        "hp": 60,
+        "maxHp": 60,
         "defense": {
-          "cutting": 8.0,
-          "piercing": 8.0,
-          "chopping": 8.0,
-          "blunt": 8.0
+          "physical": 8.0
         },
         "moduleLocalPosition": {
           "x": 0.0,
@@ -1421,7 +1436,9 @@
             "y": 1.0
           },
           "edgeRadius": 0.0
-        }
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
       },
       "modules": {
         "建筑模块": {
@@ -1514,13 +1531,10 @@
       },
       "health": {
         "hasHp": true,
-        "hp": 180.0,
-        "maxHp": 180.0,
+        "hp": 60,
+        "maxHp": 60,
         "defense": {
-          "cutting": 8.0,
-          "piercing": 8.0,
-          "chopping": 8.0,
-          "blunt": 8.0
+          "physical": 8.0
         },
         "moduleLocalPosition": {
           "x": 0.0,
@@ -1540,16 +1554,21 @@
             "y": 1.0
           },
           "edgeRadius": 0.0
-        }
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
       },
       "modules": {
         "建筑模块": {
           "prefab": "Module_Building",
           "id": "建筑模块",
-          "enabled": false,
+          "enabled": true,
           "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"SparkMaker\",\"SummonerPrefabId\":\"SparkMaker_Summoner\"}",
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"SparkMaker\",\"SummonerPrefabId\":\"SparkMaker_Summoner\",\"SharedModuleIds\":[\"钻木取火模块\"]}",
             "Type": 0
+          },
+          "parameters": {
+            "RequiresPlacementRequest": true
           }
         },
         "钻木取火模块": {
@@ -1646,10 +1665,7 @@
         "hp": 20,
         "maxHp": 20,
         "defense": {
-          "cutting": 0,
-          "piercing": 0,
-          "chopping": 0,
-          "blunt": 0
+          "physical": 0
         },
         "moduleLocalPosition": {
           "x": 0,
@@ -1669,7 +1685,9 @@
             "y": 0.4928639
           },
           "edgeRadius": 0
-        }
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
       },
       "modules": {
         "建筑模块": {
@@ -1679,6 +1697,9 @@
           "data": {
             "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Torch_Building\",\"SummonerPrefabId\":\"Torch_Summoner\",\"SharedModuleIds\":[\"燃料模块\",\"Mod_Combustion\"]}",
             "Type": 0
+          },
+          "parameters": {
+            "LightOcclusionMode": "DisabledWhileEmitting"
           }
         },
         "燃料模块": {
@@ -1796,7 +1817,7 @@
               "FireSeed"
             ],
             "ignitionTags": [
-              "火种"
+              "Combustion.Tinder"
             ],
             "ignitionFuelValueOverride": 8.0
           }
@@ -1879,13 +1900,10 @@
       },
       "health": {
         "hasHp": true,
-        "hp": 180.0,
-        "maxHp": 180.0,
+        "hp": 60,
+        "maxHp": 60,
         "defense": {
-          "cutting": 8.0,
-          "piercing": 8.0,
-          "chopping": 8.0,
-          "blunt": 8.0
+          "physical": 8.0
         },
         "moduleLocalPosition": {
           "x": 0.0,
@@ -1905,7 +1923,9 @@
             "y": 1.0
           },
           "edgeRadius": 0.0
-        }
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
       },
       "modules": {
         "建筑模块": {

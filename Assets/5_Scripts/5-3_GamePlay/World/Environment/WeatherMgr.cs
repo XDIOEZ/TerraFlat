@@ -45,6 +45,9 @@ public partial class WeatherMgr : SingletonAutoMono<WeatherMgr>
 
 #region 属性
 
+    // 渲染查询只能读取现有管理器，不能在菜单或退出世界时自动创建天气系统。
+    public static WeatherMgr ExistingInstance => instance;
+
     [ShowInInspector, ReadOnly, LabelText("当前天气")]
     public WeatherType CurrentWeather => GetCurrentWeather(); // 当前天气类型
 
@@ -74,6 +77,12 @@ public partial class WeatherMgr : SingletonAutoMono<WeatherMgr>
     public void SetRainWeatherDebug()
     {
         SetRain();
+    }
+
+    [Button("切换为大雾")]
+    public void SetFogWeatherDebug()
+    {
+        SetFog();
     }
 
     public void NormalizeData(PlanetData planetData)
@@ -129,6 +138,11 @@ public partial class WeatherMgr : SingletonAutoMono<WeatherMgr>
     public void SetRain(float intensity = 1f)
     {
         SetWeather(WeatherType.Rain, intensity);
+    }
+
+    public void SetFog(float intensity = 1f)
+    {
+        SetWeather(WeatherType.Fog, intensity);
     }
 
     public void ClearWeather()
@@ -429,6 +443,11 @@ public partial class WeatherMgr : SingletonAutoMono<WeatherMgr>
         {
             SetRain();
         }
+
+        if (GUILayout.Button("大雾"))
+        {
+            SetFog();
+        }
         GUILayout.EndHorizontal();
 
         if (planetData != null)
@@ -440,7 +459,7 @@ public partial class WeatherMgr : SingletonAutoMono<WeatherMgr>
                 SetWindStrength(nextWindStrength);
 
             GUILayout.Space(8f);
-            GUILayout.Label("雨强度", _labelStyle);
+            GUILayout.Label("天气强度", _labelStyle);
             float nextIntensity = GUILayout.HorizontalSlider(planetData.WeatherIntensity, 0f, 1f);
             if (!Mathf.Approximately(nextIntensity, planetData.WeatherIntensity))
             {

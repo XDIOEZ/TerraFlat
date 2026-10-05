@@ -73,12 +73,6 @@ MonoBehaviour:
       - CanAcceptTags: []
         SlotMaxVolume: 0
         Index: 0
-      - CanAcceptTags: []
-        SlotMaxVolume: 0
-        Index: 0
-      - CanAcceptTags: []
-        SlotMaxVolume: 0
-        Index: 0
       Index: 0
       IsInjected: 0
       PanelPosition: {x: 0, y: 0, z: 0}
@@ -101,9 +95,6 @@ MonoBehaviour:
     Data:
       Name: 
       itemSlots:
-      - CanAcceptTags: []
-        SlotMaxVolume: 0
-        Index: 0
       - CanAcceptTags: []
         SlotMaxVolume: 0
         Index: 0
@@ -132,9 +123,6 @@ MonoBehaviour:
       - CanAcceptTags: []
         SlotMaxVolume: 0
         Index: 0
-      - CanAcceptTags: []
-        SlotMaxVolume: 0
-        Index: 0
       Index: 0
       IsInjected: 0
       PanelPosition: {x: 0, y: 0, z: 0}
@@ -154,7 +142,7 @@ MonoBehaviour:
   ignitionItemIds:
   - FireSeed
   ignitionTags:
-  - "\u706B\u79CD"
+  - Combustion.Tinder
   ignitionFuelValueOverride: 8
   ignitionMaxTemperatureOverride: 180
   basePanel: {fileID: 0}

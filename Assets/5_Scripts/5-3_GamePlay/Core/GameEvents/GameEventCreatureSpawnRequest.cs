@@ -3,6 +3,10 @@ using UnityEngine;
 
 namespace FlatWorld.Gameplay.Events
 {
+    /// <summary>
+    /// 游戏事件交给生态调度器的出生请求。Count 表示事件仍需出生的数量；
+    /// 执行器每次至多创建一只，位置搜索最多检查八个候选，未成功的数量由事件状态保留。
+    /// </summary>
     public sealed class GameEventCreatureSpawnRequest
     {
         public string WorldKey;
@@ -11,7 +15,6 @@ namespace FlatWorld.Gameplay.Events
         public float MinDistance = 10f;
         public float MaxDistance = 30f;
         public float PlayerVisibilityExclusionDistance = 8f;
-        public bool RequireOutsidePlayerView;
         public bool UseSpawnAnchor;
         public Vector3 SpawnAnchor;
         public int SearchAttemptsPerCreature = 16;

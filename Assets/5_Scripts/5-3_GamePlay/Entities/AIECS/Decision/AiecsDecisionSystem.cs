@@ -1,3 +1,4 @@
+using FlatWorld.Navigation;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
@@ -11,15 +12,26 @@ namespace FlatWorld.AIECS
     {
         [ReadOnly] public NativeArray<AiecsDefinition> Definitions;
         [ReadOnly] public AiecsSpatialView Spatial;
+        [ReadOnly] public FlowNavigationSnapshot Navigation;
         [ReadOnly] public NativeArray<AiecsEngagementSlot> EngagementSlots;
         public double Time; // 当前权威时间。
 
         /// <summary>错峰计算事实，并原子提交这一单位的行为意图。</summary>
         private void Execute([EntityIndexInQuery] int index, Entity entity, in AiecsIdentity identity, in AiecsVital vital,
             in AiecsFlowAgent actor, in AiecsAttackState attack, ref AiecsBrain brain,
+            ref AiecsAdvanceDirective advance,
             ref AiecsBehaviorIntent intent, ref AiecsBehaviorProposal proposal)
         {
             if (identity.External != 0 || vital.Dead != 0) { intent = default; proposal = default; return; }
+            if (advance.Active != 0 && advance.Goal.Epoch == Navigation.Epoch &&
+                (uint)advance.Goal.Slot < (uint)Navigation.Goals.Length)
+            {
+                FlowGoalData goal = Navigation.Goals[advance.Goal.Slot];
+                if (goal.Generation == advance.Goal.Generation && goal.Chunk >= 0 &&
+                    math.lengthsq(Navigation.Domain.ShortestDelta(actor.Position, goal.Position)) <=
+                    advance.ArrivalDistance * advance.ArrivalDistance)
+                    advance.Active = 0;
+            }
             bool targetValid = Spatial.TryTarget(brain.Target, brain.TargetKey, out var target);
             bool locked = attack.Phase == AiecsAttackPhase.Windup || attack.Phase == AiecsAttackPhase.Active || attack.Phase == AiecsAttackPhase.Recovery;
             AiecsDefinition definition = Definitions[identity.Definition];
@@ -28,7 +40,8 @@ namespace FlatWorld.AIECS
             bool inAttackRange = hasSlot && Time >= attack.NextAttack &&
                 math.lengthsq(Spatial.Domain.ShortestDelta(actor.Position, target.Position)) <=
                 definition.AttackStartRange * definition.AttackStartRange;
-            if (Time < brain.NextDecision && proposal.Priority <= 0 && targetValid == (intent.Target != Entity.Null) &&
+            if (advance.Active == 0 && intent.Behavior != (int)AiecsBehavior.Advance &&
+                Time < brain.NextDecision && proposal.Priority <= 0 && targetValid == (intent.Target != Entity.Null) &&
                 (intent.Behavior == (int)AiecsBehavior.Attack) == (locked || inAttackRange)) return;
             brain.NextDecision = Time + definition.DecisionPeriod;
             AiecsDecisionFacts facts = AiecsDecisionFacts.None;
@@ -52,6 +65,13 @@ namespace FlatWorld.AIECS
             }
             bool useProposal = proposal.Priority > 0 && proposal.Priority > priority;
             if (useProposal) behavior = proposal.Behavior;
+            // 推进命令优先于平时游荡；沿途战斗结束后继续前进。
+            if (advance.Active != 0 && !locked &&
+                (advance.AttackActorsOnRoute == 0 || !targetValid))
+            {
+                behavior = (int)AiecsBehavior.Advance;
+                useProposal = false;
+            }
             if (brain.Behavior != behavior)
             {
                 brain.Behavior = behavior; brain.EnteredAt = Time;

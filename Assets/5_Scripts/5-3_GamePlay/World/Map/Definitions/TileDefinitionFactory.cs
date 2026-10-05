@@ -35,6 +35,7 @@ public static class TileDefinitionFactory
         ValidateId(dto.Id, "地块 id");
         ValidateId(dto.TileAsset, $"{dto.Id}.tileAsset");
         if (dto.RuntimeTileId < 0) throw new InvalidDataException($"地块 {dto.Id} 的 runtimeTileId 不能为负数。");
+        if (dto.LoadCapacity < 0) throw new InvalidDataException($"地块 {dto.Id} 的 loadCapacity 不能为负数。");
         if (dto.Behaviours == null || dto.Behaviours.Count > 64)
             throw new InvalidDataException($"地块 {dto.Id} 的 behaviours 必须是最多 64 项的数组。");
         if (dto.DamageProfile == null) throw new InvalidDataException($"地块 {dto.Id} 的 damageProfile 不能为空。");
@@ -130,10 +131,15 @@ public static class TileDefinitionFactory
             rule.Amount < 1 || rule.Amount > 1024 || rule.Reach <= 0f ||
             rule.Reach > 16f || rule.BaseUsesPerTile < 2 || rule.BaseUsesPerTile > 100 ||
             rule.MinimumUsesPerTile < 2 || rule.MinimumUsesPerTile > rule.BaseUsesPerTile ||
-            rule.UseInterval < 0f || rule.UseInterval > 10f || rule.ReplacementTileId == id)
+            rule.UseInterval < 0f || rule.UseInterval > 10f ||
+            rule.NaturalLayerCount < 1 || rule.NaturalLayerCount > 100 ||
+            (rule.NaturalLayerCount == 1 && rule.ReplacementTileId == id) ||
+            (rule.NaturalLayerCount > 1 && (rule.ReplacementTileId != id || rule.ExhaustedTileId == id)))
             throw new InvalidDataException($"地块 {id} 的采挖工具、数量、距离或替换地表无效。");
         ValidateId(rule.ItemId, id + ".groundHarvest.itemId");
         ValidateId(rule.ReplacementTileId, id + ".groundHarvest.replacementTileId");
+        if (rule.NaturalLayerCount > 1 || !string.IsNullOrWhiteSpace(rule.ExhaustedTileId))
+            ValidateId(rule.ExhaustedTileId, id + ".groundHarvest.exhaustedTileId");
     }
     #endregion
 }

@@ -23,13 +23,19 @@ GamePlayMCP 默认不做操作系统级鼠标键盘自动化，也不让视觉�
 ## 入口
 
 - Editor MCP 工具：`Assets/Editor/FlatWorld/GameplayMCP/`
-- 外部控制租约：`Assets/5_Scripts/5-3_GamePlay/Player/Controller/GameController.ExternalControl.cs`
-- 输入仲裁：`Assets/5_Scripts/5-3_GamePlay/Player/Controller/GameController.cs`
+- 外部控制租约：`Assets/5_Scripts/5-3_GamePlay/Player/Controller/Mod_GameController.ExternalControl.cs`
+- 输入仲裁：`Assets/5_Scripts/5-3_GamePlay/Player/Controller/Mod_GameController.cs`
 - 交互入口：`Assets/5_Scripts/5-3_GamePlay/Player/Controller/Mod_InteractSender.cs`
-- 快捷栏入口：`Assets/5_Scripts/5-3_GamePlay/Items/Inventory/Inventory_HotBar.cs`
+- 快捷栏入口：`Assets/5_Scripts/5-3_GamePlay/Items/Inventory/Mod_HotBar.cs`
 - UI 观察与点击：`Assets/Editor/FlatWorld/GameplayMCP/GameplayUi{Tool,Runtime}.cs`
 
 GamePlayMCP 复用项目已有 MCPForUnity 自定义工具发现机制，不另起一套任意代码执行服务器。
+
+## 方法与经验分层
+
+- 本 `SKILL.md` 只保存稳定的操作方法、工具契约、测试流程与协议扩展规则。
+- MCP 连接、超时、Profiler 解读、截图验收、多人并行开发等实战经验放在 `Exp/`。
+- 遇到性能诊断、连接异常、超时或测试结果难以解释时，再读取 `Exp/MCP游戏测试经验.md`；不要把一次性测试流水账回填到 Skill。
 
 ## 每次自主游玩任务的强制启动顺序
 
@@ -47,18 +53,37 @@ GamePlayMCP 复用项目已有 MCPForUnity 自定义工具发现机制，不另�
 7. 调用 `gameplay_control(action="acquire")` 获取唯一主角控制租约。
 8. 调用 `gameplay_observe` 获取第一份结构化状态，然后开始游玩循环。
 
-需要操作主菜单、教程、背包、制作、设置等 UI 时，不要求先进入世界或获取玩家控制租约。直接调用 `gameplay_ui(action="tree")` 获取当前激活 Canvas 的语义 UI 树；点击时从 `clickable=true` 且 `interactable=true` 的节点选择 `id`，调用 `gameplay_ui(action="click", targetId=<id>)`。需要浏览 ScrollRect 中的屏外内容时，对树中的 `type=scroll` 节点调用 `gameplay_ui(action="scroll", targetId=<id>, deltaY=<滚轮量>)`；需要移动可拖拽窗口或滑块时，对对应可拖拽节点调用 `gameplay_ui(action="drag", targetId=<id>, deltaX=<像素>, dragDeltaY=<像素>)`。滚动与拖拽都必须走真实 EventSystem 事件链，不直接改 ScrollRect/RectTransform 数据。UI 操作后界面可能同步变化，继续操作前必须重新读取 UI 树，不复用旧树猜测下一个节点。
+需要操作主菜单、教程、背包、制作、设置等 UI 时，不要求先进入世界或获取玩家控制租约。直接调用 `gameplay_ui(action="tree")` 获取当前激活 Canvas 的语义 UI 树；点击时从 `clickable=true` 且 `interactable=true` 的节点选择 `id`，调用 `gameplay_ui(action="click", targetId=<id>)`。文本框先真实点击获得焦点，再调用 `gameplay_ui(action="text", targetId=<id>, text=<文本>)`，字符交给 TMP/UGUI InputField 自身处理，不直接赋值。需要浏览 ScrollRect 中的屏外内容时，对树中的 `type=scroll` 节点调用 `gameplay_ui(action="scroll", targetId=<id>, deltaY=<滚轮量>)`；需要移动可拖拽窗口或滑块时，对对应可拖拽节点调用 `gameplay_ui(action="drag", targetId=<id>, deltaX=<像素>, dragDeltaY=<像素>)`。滚动与拖拽都必须走真实 EventSystem 事件链，不直接改 ScrollRect/RectTransform 数据。UI 操作后界面可能同步变化，继续操作前必须重新读取 UI 树，不复用旧树猜测下一个节点。
 
-创建新世界使用 `gameplay_session(action="create_world", isolated=true)`，默认把首个存档及后续保存都写入 Library 隔离目录；只有用户明确要求正式存档时才传 `isolated=false`。它通过 `GameRes.Instance` 启动可能尚未创建的资源会话，等完整 Ready 后调用生产 `GameManager.CreateNewWorld(NewWorldCreationRequest)`；不得只轮询 `ExistingInstance` 导致永久等待。资源等待与世界等待共用单次调用时限，默认 60 秒、最长 120 秒，已经开始进入世界时只能查询状态，不能重复创建或改换存档目录。若返回 `world_entry_timeout`，先查 `gameplay_session(action="status")`；实测场景切换后仍可能继续初始化并最终就绪，轮询确认前不要重试创建。需要保存并返回主菜单时使用 `gameplay_session(action="save_exit")`；它直接调用生产退出协程并保存当前世界。
+创建新世界使用 `gameplay_session(action="create_world", isolated=true)`，默认把首个存档及后续保存都写入 Library 隔离目录；只有用户明确要求正式存档时才传 `isolated=false`。资源等待与世界等待共用单次调用时限，默认 60 秒、最长 120 秒；已经开始进入世界时只能查询状态，不能重复创建或改换存档目录。若返回 `world_entry_timeout`，先查 `gameplay_session(action="status")`，确认当前会话状态后再决定是否重试。需要保存并返回主菜单时使用 `gameplay_session(action="save_exit")`；它直接调用生产退出协程并保存当前世界。
+
+按用户指定的调试启动规则，`continue_save` / `create_world` 成功进入世界后，通过生命模块公开属性把本地玩家当前生命与上限初始化为 20000；只设置一次，不提供无敌或持续回血。已有世界的状态查询、控制租约和 `alreadyInWorld` 返回不改血量；普通菜单启动不经过此规则。
+
+启动期资源加载失败且尚无玩家时，使用 `gameplay_session(action="reload_resources")` 调用正式 `GameRes.RequestResourceReload()`；它等价于 Alt+R 的安全重载入口，不需要玩家控制租约，也不会保存或退出世界。
 
 脚本重编译、Domain Reload、退出世界或重新进入 Play Mode 后，旧控制租约不可假定仍有效。必须重新执行 `status -> acquire -> observe`。
 
 ## 自主游玩循环
 
+### Agent 快速输入输出
+
+- 所有 `gameplay_*` 调用在 Unity Console 输出 `[AI→MCP #编号]` 开始与结果日志，包含接口名、短参数摘要和执行结果；批次显示动作名与已执行/剩余步数。下一次串行调用到达时记录 `Agent反应间隔≈`：上次结果就绪到本次工具入口的间隔，不包含上次游戏动作/采样等待，但包含通信、排队、其它工具调用及人工停顿，不能当成纯模型推理时间；首次及并发调用不统计，重载后重置基线。结果日志不再记录游戏执行耗时。反馈使用无堆栈普通日志，不新增诊断 Warning/Error 计数，也不打印完整输入输出。
+- 所有 `gameplay_*` 接口共享 `output="compact"`、`fields="字段1,字段2"`、`observe=true`；常规 Agent 调用优先精简输出。`fields` 选择返回数据的顶层字段，状态、错误、分页和批次结果始终保留；省略字段不代表空值。旧调用默认 `output="full"`。它主要压缩输出，不承诺跳过任意字段对应的业务查询。
+- `gameplay_control(acquire, observe=true)` 可把取控制权与首次精简观察合并；会话 `status` 的 compact 模式跳过附近世界查询。能力接口 compact 只列命令名，查具体命令语义时读 full；默认不缓存会话与世界状态。
+- 完整 `gameplay_observe` 的 `player.hand` 是鼠标搬运槽，不是快捷栏当前装备；`player.hotbar.held` / `equippedWeapon` 才是当前快捷栏手持。完整观察同时提供 `player.temperature` 与顶层 `environment`，用于直接判断体温、环境温度、天气和降雨强度，不再从 UI 文本或画面反推。
+- `gameplay_ui(click/text/scroll/drag, treeAfter=true, output="compact")` 操作后等待一次 Editor 更新并附带新树，下一步从 `data.tree.data.semantic_tree` 选节点；compact UI 省略 path/rect/depth，但保留 ID、父节点、文本和可操作状态。分页只构造当前页完整节点，仍遍历统计总数。树读取失败时查看 `data.tree.success/error`，不要沿用旧节点。
+- `press_key` 使用外部虚拟键盘时，文本输入框聚焦只阻止玩法 Action，工具层不能把 `EventSystemGuard.IsTextInputFocused` 导致的玩法拒绝误判成控制租约失效；TMP/UGUI 的字符输入统一走 `gameplay_ui(action=text)`，不要假设 Input System 的虚拟按键状态会自动生成旧 UI 使用的字符事件。
+- `gameplay_query(source="runtime", output="compact")` 跳过名称、生命与机械详情；确实需要详情时传 `includeDetails=true`。其它查询源保留自身匹配内容与分页规则。
+- 诊断接口 compact 最多保留每个对象样本数组的前 4 项；截断时通过 `omittedSamples` 标明各字段省略数量，完整证据保存在 `reportPath` 指向的 Library JSON。计数、错误、标量数组完整保留；保存失败会保留原始完整数据。需要全部证据时读取报告，不要重跑采样来替代原样本。
+- 高频位置/血量检查优先 `gameplay_observe(profile="compact")`；需要时显式开启 `includeNearby/includeTerrain/includeDrops/includeInventory`。省略分区表示未查询，不表示没有内容。首次进入世界、环境变化、异常诊断仍读取 `profile="full"`；旧调用默认保持完整观察。
+- 动作后需要状态时用 `gameplay_act(..., observe=true)`，同一次返回附带真实精简观察；`observation={"profile":"full"}` 或其它 observe 参数可按需补充信息。
+- 已经确定、无需中途观察决策的短动作可用 `gameplay_act(steps=[{"action":"select_hotbar","index":0},{"action":"use"}], observe=true)`；最多 8 步，持续动作必须显式传 `seconds`，总等待预算最多 8 秒，失败或业务拒绝立即停止。每步仍通过正式动作注册表与控制租约执行；结果有 `executed/remaining/results`，已执行动作不会回滚，不能整批盲目重试。
+- 批次只用于工具说明列出的短动作；UI 操作仍先读最新 UI 树，不用批次猜旧节点。跨危险地形、战斗目标变化及异步生产结果需要重新观察后再决定下一步。合并观察只等一次 Editor 更新，不保证异步制作/世界加载已经完成。
+
 循环应保持短、可观察、可复现：
 
-1. `gameplay_observe`：读取玩家位置、速度、生命、体力、营养、输入锁、快捷栏、背包摘要、附近实体、附近 ECS 掉落物，以及以玩家脚下为中心的固定 3×3 权威地块；水格同时附带可用的河流/海洋表层流向与流量，避免 Agent 在河流中把环境漂移误判成移动或战斗异常。
-   - 玩家液体观察读取 TileEffectReceiver 的 LiquidDepth、LiquidId、LiquidFloating；附近水格读取独立液体层并考虑支撑面。currentTileData 只代表 Ground，不能再据此推断液体或盐度。
+1. `gameplay_observe`：读取玩家位置、速度、生命、体力、营养、输入锁、快捷栏、背包摘要、附近实体、附近 ECS 掉落物，以及以玩家脚下为中心的固定 3×3 权威地块；水格同时附带可用的河流/海洋表层流向与流量，用于区分主动移动与环境漂移。
+   - 玩家液体观察读取 Mod_TileEffectReceiver 的 LiquidDepth、LiquidId、LiquidFloating；附近水格读取独立液体层并考虑支撑面。currentTileData 只代表 Ground，不能再据此推断液体或盐度。
    - 需要从大量世界数据中快速寻找目标时，使用只读 `gameplay_query`。`source=runtime` 查询已实例化 Item，`query` 可填写稳定 ID 或任意已配置 Locale 下的完整物品名（例如 `Ore_Stone` / `石头` / `Stone`）；传入 `radius` 时只查询玩家周围该半径内的 Item，并复用 `ItemMgr` 空间索引，`radius` 最大 64 世界单位。运行时结果按玩家距离排序并强制分页，默认只返回最近 3 条、单页最多 32 条，通过 `total_count/truncated/next_offset` 继续读取；不填写 ID/名称时可直接取得附近不同物品，每条结果都包含稳定 `id` 与明确的 `position.x/position.y`，可直接交给 `gameplay_act(move_to)`。`source=ecology` 查询已加载 ChunkRuntime 的确定性自然物放置结果；`source=terrain` 按环境层阈值查询已加载地形格；`source=tile` 按数字 Tile ID、`Tile_Block` 稳定 ID、`tileItemName` 或显示名精确查询最近已加载地块坐标，默认只返回最近 1 格；`source=drops` 直接查询离线 ECS 掉落物空间桶，返回飞行中和落地后的实时世界坐标、数量与可拾取状态。所有查询都只读，不能生成、传送或直接拾取实体。
    - `source=runtime` 命中机械节点时额外返回只读 `mechanical` 快照（RPM、网络状态、扭矩供给/扭矩负载、手摇缓冲，以及加工器输入/输出/进度）；只用于观察真实运行状态，不允许由查询工具修改机械网络。
 2. 选择一个小目标，例如：
@@ -79,7 +104,7 @@ GamePlayMCP 复用项目已有 MCPForUnity 自定义工具发现机制，不另�
 当前协议通过 `gameplay_act` 至少支持：
 
 - `move`：按二维方向持续移动一段时间。
-- `move_to`：把目标提交给玩家运行时模块 `Mod_GameMCP_LLM`，使用 `WorldNavigationManager` 路径并经 `GameController` 外部控制租约和 `Mover` 跟随路点；返回路径请求、重规划、路点、路径代价和停止原因。
+- `move_to`：把目标提交给玩家运行时模块 `Mod_GameMCP_LLM`，使用 `WorldNavigationManager` 路径并经 `Mod_GameController` 外部控制租约和 `Mod_Mover` 跟随路点；返回路径请求、重规划、路点、路径代价和停止原因。
 - `look_at`：按坐标或 `targetGuid` 设置世界瞄准点。
 - `interact`：按真实交互规则交互，可指定 `targetGuid`。
 - `press_key`：通过独立虚拟 Keyboard 完成一次有界按下/松开。优先传 `inputAction`（如 `B/E/H/P/ESC/OpenChat`）以跟随玩家当前改键；`key` 用于明确模拟某个物理键。
@@ -99,7 +124,7 @@ UI 使用独立的 `gameplay_ui`：
 
 GM 使用独立的 `gameplay_gm` 白名单：
 
-- 给当前受控玩家施加已注册 Buff 时使用 `command=apply_self_buff:<buffId>`，例如 `apply_self_buff:core:night_vision`；内部先校验当前 GameRes 的 BuffDefinition，再走正式 `BuffManager.AddBuff`，不直接改运行时字典。
+- 给当前受控玩家施加已注册 Buff 时使用 `command=apply_self_buff:<buffId>`，例如 `apply_self_buff:core:night_vision`；内部先校验当前 GameRes 的 BuffDefinition，再走正式 `Mod_BuffManager.AddBuff`，不直接改运行时字典。
 - GM 命令仍要求当前世界就绪且已取得 GamePlayMCP 控制租约；具体命令始终以 `gameplay_capabilities.gmCommands` 为准。
 
 已有 `interact`、`select_hotbar`、`use` 等专用玩法语义时仍优先使用这些动作；`press_key` 主要服务桌面面板快捷键、返回/聊天等 InputAction，以及确实只通过键盘暴露的行为，不应退化成用按键猜测替代结构化玩法 API。
@@ -164,14 +189,15 @@ GM 使用独立的 `gameplay_gm` 白名单：
 - 修复视觉 Bug 后做最终定向验收。
 
 禁止把“截图 -> 视觉模型判断 -> 模拟点击”作为普通游玩主循环。
-普通 UI 操作应使用“`gameplay_ui(tree)` -> 读取文本/路径/控件状态 -> `gameplay_ui(click/scroll/drag)`”这一结构化链路；截图只用于确认布局、遮挡、样式等纯视觉问题。
+普通 UI 操作应使用“`gameplay_ui(tree)` -> 读取文本/路径/控件状态 -> `gameplay_ui(click/text/scroll/drag)`”这一结构化链路；截图只用于确认布局、遮挡、样式等纯视觉问题。
 
 ## 与其它测试体系的关系
 
 - TerraFlat 功能验收统一使用真实 Play Mode / GamePlayMCP 运行链；项目不再维护 `Assets/GameTest`、Unity Test Runner、冒烟测试或一次性 `*_test` Gameplay 动作。需要补能力时只能增加可复用的真实玩法动作、GM 能力或只读观察，不新增为了“让测试通过”的测试后门。
 
 - `gameplay_aiecs_debug(status/sample)` 只读当前 GM 开发模拟；sample 在 1～20 秒内记录真实帧时、Burst、隔离会话、错误、Tick、实际实体与占格状态。单位生成/清理与数量调整仍通过 GM 的正式 UI 按钮，不通过诊断工具修改游戏数据。
-- 用户要求截图循环时，每轮应在真实操作后抓取 Game View，并实际打开返回的 PNG；把截图检查与结构化状态/整轮 Console 对照。截图只报告已保存路径不等于看过画面，也不能仅以一个无错误的短采样窗口代替整个运行周期检查。
+- `gameplay_chunk_render_debug` 的 `status` 支持冻结现场，附带分阶段耗时、最老请求、有效/取消/过期提交通知及驱动心跳；`sample(seconds=1~20)` 只观察真实运行，不移动、不解除暂停、不改预算。暂停/换世界/编译时中断并标记无效，结束仅输出一条日志与 `Library/FlatWorldGameplayMCP/ChunkDiagnostics/` JSON。Editor 菜单为 `FlatWorld/调试/区块加载`。
+- 用户要求截图循环时，每轮应在真实操作后抓取 Game View，并实际打开返回的 PNG；把截图检查与结构化状态、整轮 Console 对照，不能用一个短采样窗口代替完整运行周期检查。
 
 - GamePlayMCP：负责开放式、自主、探索式游玩和发现未知问题。
 

@@ -36,8 +36,7 @@
           },
           "parameters": {
             "usesPerTile": 6,
-            "maxTillingDistance": 2,
-            "useInterval": 0.2
+            "maxTillingDistance": 2
           }
         },
         "damage": {
@@ -50,14 +49,13 @@
           },
           "parameters": {
             "DamageValues": {
-              "Cutting": 0.0,
-              "Piercing": 0.0,
-              "Chopping": 0.0,
-              "Blunt": 5.0
+              "Physical": 5.0,
+              "ImpactKind": 4
             },
             "DamageInterval": 0.2,
             "EnableOnTriggerEnterDamage": true,
             "OnlyDealDamageWhenInHand": false,
+            "weaponHitboxRegion": 1,
             "MaxAttackTargets": 3,
             "EnableHitSlowdown": true,
             "HitSlowMultiplier": 0.5,
@@ -71,7 +69,7 @@
           }
         },
         "animation": {
-          "prefab": "Mod_Weapon_AnimationAction",
+          "prefab": "Module_Weapon_AnimationAction",
           "id": "Module_Weapon_AnimationAction",
           "enabled": true,
           "data": {
@@ -98,7 +96,7 @@
       "id": "Hoe_Wood",
       "parent": "Hoe_Base",
       "gameName": "木锄头",
-      "description": "对准附近草地，右键或点击使用；从完整土地开始需要6次锄成耕地。",
+      "description": "对准附近草地，按住右键或使用键连续挥动；从完整土地开始需要6次锄成耕地。",
       "weight": 1.74,
       "volume": 3.5,
       "stackable": false,
@@ -118,7 +116,7 @@
       "parent": "Hoe_Base",
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Tools/Hoes/Hoe_Stone.prefab",
       "gameName": "石锄头",
-      "description": "对准附近草地，右键或点击使用；从完整土地开始需要4次锄成耕地。",
+      "description": "对准附近草地，按住右键或使用键连续挥动；从完整土地开始需要4次锄成耕地。",
       "weight": 2.125,
       "volume": 3.5,
       "stackable": false,
@@ -137,7 +135,7 @@
       "id": "Hoe_Copper",
       "parent": "Hoe_Base",
       "gameName": "铜锄头",
-      "description": "对准附近草地，右键或点击使用；从完整土地开始需要3次锄成耕地。",
+      "description": "对准附近草地，按住右键或使用键连续挥动；从完整土地开始需要3次锄成耕地。",
       "weight": 2.4,
       "volume": 3.5,
       "stackable": false,
@@ -156,7 +154,7 @@
       "id": "Hoe_Iron",
       "parent": "Hoe_Base",
       "gameName": "铁锄头",
-      "description": "对准附近草地，右键或点击使用；从完整土地开始需要2次锄成耕地。",
+      "description": "对准附近草地，按住右键或使用键连续挥动；从完整土地开始需要2次锄成耕地。",
       "weight": 2.675,
       "volume": 3.5,
       "stackable": false,

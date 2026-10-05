@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <AssemblyName>Example.HarmonyMachines</AssemblyName>
+    <RootNamespace>Example.HarmonyMachines</RootNamespace>
+    <GameManagedDirectory Condition="'$(GameManagedDirectory)' == ''">$(MSBuildThisFileDirectory)..\..\..\Library\ScriptAssemblies</GameManagedDirectory>
+    <HarmonyDllPath Condition="'$(HarmonyDllPath)' == ''">$(MSBuildThisFileDirectory)..\..\..\Assets\Plugins\Harmony\0Harmony.dll</HarmonyDllPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="GamePlay"><HintPath>$(GameManagedDirectory)\GamePlay.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="0Harmony"><HintPath>$(HarmonyDllPath)</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
+  <Target Name="ValidateReferences" BeforeTargets="ResolveReferences">
+    <Error Condition="!Exists('$(GameManagedDirectory)\GamePlay.dll')" Text="请设置 GameManagedDirectory 为当前游戏 Managed 或 Unity Library/ScriptAssemblies 目录。" />
+    <Error Condition="!Exists('$(HarmonyDllPath)')" Text="找不到游戏自带的 Harmony，请把 HarmonyDllPath 指向当前游戏的 0Harmony.dll。" />
+  </Target>
+  <Target Name="CreateModPackage" AfterTargets="Build">
+    <MakeDir Directories="$(MSBuildProjectDirectory)\package\lib" />
+    <Delete Files="$(MSBuildProjectDirectory)\package\lib\0Harmony.dll" />
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(MSBuildProjectDirectory)\package\lib" />
+    <Copy SourceFiles="$(MSBuildProjectDirectory)\manifest.json" DestinationFolder="$(MSBuildProjectDirectory)\package" />
+  </Target>
+</Project>

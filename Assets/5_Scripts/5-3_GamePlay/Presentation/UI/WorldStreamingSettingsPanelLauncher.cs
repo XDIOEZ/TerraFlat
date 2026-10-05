@@ -12,6 +12,7 @@ public sealed class WorldStreamingSettingsPanelLauncher : MonoBehaviour, ISettin
 {
     private SettingsActionListPagination pagination;
     private TMP_Dropdown modeDropdown;
+    private Toggle ownerCullingToggle;
     private Slider nearSlider;
     private Slider middleSlider;
     private Slider farSlider;
@@ -23,6 +24,7 @@ public sealed class WorldStreamingSettingsPanelLauncher : MonoBehaviour, ISettin
     private Button cancelButton;
     private Button applyButton;
     private ISettingsDropdown modeSetting;
+    private ISettingsToggle ownerCullingSetting;
     private SimulationRangePreferences.ISimulationRangeSettingsProvider rangeProvider;
     private ISettingsSlider nearSetting, middleSetting, farSetting;
     private bool initialized;
@@ -52,11 +54,14 @@ public sealed class WorldStreamingSettingsPanelLauncher : MonoBehaviour, ISettin
 
         modeSetting = WorldStreamingPreferences.SettingsProvider.GetDropdown(
             WorldStreamingPreferences.ModeSettingKey);
+        ownerCullingSetting = WorldStreamingPreferences.SettingsProvider.GetToggle(
+            WorldStreamingPreferences.OwnerCullingSettingKey);
         rangeProvider = SimulationRangePreferences.SettingsProvider;
         nearSetting = rangeProvider.GetSlider(SimulationRangePreferences.NearSettingKey);
         middleSetting = rangeProvider.GetSlider(SimulationRangePreferences.MiddleSettingKey);
         farSetting = rangeProvider.GetSlider(SimulationRangePreferences.FarSettingKey);
         modeDropdown = FindComponent<TMP_Dropdown>(transform, "性能模式下拉列表");
+        ownerCullingToggle = FindComponent<Toggle>(transform, "区块剔除开关");
         nearSlider = FindComponent<Slider>(transform, "一级模拟范围滑块");
         middleSlider = FindComponent<Slider>(transform, "二级模拟范围滑块");
         farSlider = FindComponent<Slider>(transform, "三级模拟范围滑块");
@@ -84,8 +89,9 @@ public sealed class WorldStreamingSettingsPanelLauncher : MonoBehaviour, ISettin
         farSlider?.onValueChanged.AddListener(OnRangeDraftChanged);
         initialized = true;
 
-        if (modeDropdown == null || statusText == null || cancelButton == null ||
-            applyButton == null || modeSetting == null || nearSlider == null ||
+        if (modeDropdown == null || ownerCullingToggle == null || ownerCullingSetting == null ||
+            statusText == null || cancelButton == null || applyButton == null ||
+            modeSetting == null || nearSlider == null ||
             middleSlider == null || farSlider == null || nearLabel == null ||
             middleLabel == null || farLabel == null || rangeText == null ||
             nearSetting == null || middleSetting == null || farSetting == null)
@@ -99,7 +105,8 @@ public sealed class WorldStreamingSettingsPanelLauncher : MonoBehaviour, ISettin
     /// <summary>提交当前下拉草稿并刷新实际调度状态。</summary>
     private void Apply()
     {
-        if (modeDropdown == null || modeSetting == null || rangeProvider == null ||
+        if (modeDropdown == null || modeSetting == null || ownerCullingToggle == null ||
+            ownerCullingSetting == null || rangeProvider == null ||
             nearSlider == null || middleSlider == null || farSlider == null)
             return;
         if (!rangeProvider.TrySetRadii(RadiusValue(nearSlider), RadiusValue(middleSlider),
@@ -115,6 +122,8 @@ public sealed class WorldStreamingSettingsPanelLauncher : MonoBehaviour, ISettin
                 statusText.text = FlatWorldLocalizationService.GetUiText(error);
             return;
         }
+
+        ownerCullingSetting.SetValue(ownerCullingToggle.isOn);
 
         RefreshStatus();
     }
@@ -154,13 +163,18 @@ public sealed class WorldStreamingSettingsPanelLauncher : MonoBehaviour, ISettin
         };
         statusText.text = modeStatus + "\n" + FlatWorldLocalizationService.GetUiFormat(
             "模拟：一级 {0} 格 / 二级 {1} 格 / 三级 {2} 格；三级外暂停。",
-            nearSetting.Value, middleSetting.Value, farSetting.Value);
+            nearSetting.Value, middleSetting.Value, farSetting.Value) + "\n" +
+            FlatWorldLocalizationService.GetUiText(
+                WorldStreamingPreferences.OwnerCullingEnabled
+                    ? "区块剔除：开（跳过画面外区块）"
+                    : "区块剔除：关（绘制全部已加载区块）");
     }
 
     /// <summary>流送页显示时丢弃旧草稿并读取已生效模式。</summary>
     public void OnSettingsPageShown()
     {
         modeDropdown?.SetValueWithoutNotify(modeSetting != null ? modeSetting.SelectedIndex : 0);
+        ownerCullingToggle?.SetIsOnWithoutNotify(ownerCullingSetting?.Value ?? false);
         SetRangeDraft(nearSlider, nearSetting);
         SetRangeDraft(middleSlider, middleSetting);
         SetRangeDraft(farSlider, farSetting);

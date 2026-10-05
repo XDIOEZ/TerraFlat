@@ -272,6 +272,20 @@
       "tags": [
         "47"
       ],
+      "matter": {
+        "initialMoisture": 0.8,
+        "evaporationRatePerSecond": 0.00085,
+        "evaporationStartTemperature": 0,
+        "temperatureDryingMultiplierPer10C": 0.25,
+        "waterAbsorptionRatePerSecond": 0.02,
+        "transitions": [
+          {
+            "id": "heat:leaf-ember",
+            "minTemperature": 100,
+            "outputItemId": "FireSeed"
+          }
+        ]
+      },
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Plants/Tree/plants.png[plants_57]",
         "rendererLocalPosition": {
@@ -316,7 +330,7 @@
       },
       "modules": {
         "heldFood": {
-          "prefab": "Module_HeldFood",
+          "prefab": "Mod_HeldFood",
           "id": "手上食物模块",
           "enabled": true,
           "data": {
@@ -455,7 +469,7 @@
       "volume": 2.0,
       "stackable": true,
       "canBePickedUp": true,
-      "tags": [],
+      "tags": ["Combustion.Fuel"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/icons_sheet.png[icons_sheet_69]",
         "rendererLocalPosition": {
@@ -575,7 +589,10 @@
       "volume": 4.0,
       "stackable": true,
       "canBePickedUp": true,
-      "tags": [],
+      "tags": [
+        "Wood",
+        "Combustion.Fuel"
+      ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Plants/Tree/item299.png",
         "rendererLocalPosition": {
@@ -618,7 +635,20 @@
           }
         }
       },
-      "modules": {},
+      "modules": {
+        "燃料模块": {
+          "prefab": "Module_Fuel",
+          "id": "燃料模块",
+          "enabled": true,
+          "data": { "BitData": [], "Type": 0 },
+          "parameters": {
+            "Data": { "Fuel": { "x": 50.0, "y": 50.0 }, "MaxTemperature": 500.0 },
+            "lightBaseIntensity": 1.0,
+            "burnSpeedMultiplier": 1.0,
+            "igniteWhileHeld": false
+          }
+        }
+      },
       "itemData": {
         "code": "",
         "transform": {
@@ -656,7 +686,21 @@
       "volume": 3.0,
       "stackable": true,
       "canBePickedUp": true,
-      "tags": [],
+      "tags": ["Combustion.Fuel"],
+      "matter": {
+        "initialMoisture": 0.8,
+        "evaporationRatePerSecond": 0.00085,
+        "evaporationStartTemperature": 0,
+        "temperatureDryingMultiplierPer10C": 0.25,
+        "waterAbsorptionRatePerSecond": 0.02,
+        "transitions": [
+          {
+            "id": "dry:hide",
+            "maxMoisture": 0.2,
+            "outputItemId": "Leather"
+          }
+        ]
+      },
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/RawHide.png",
         "rendererLocalPosition": {
@@ -859,7 +903,9 @@
       "volume": 0.15,
       "stackable": true,
       "canBePickedUp": true,
-      "tags": [],
+      "tags": [
+        "Combustion.Fuel"
+      ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Plants/Tree/item302.png",
         "rendererLocalPosition": {
@@ -902,7 +948,20 @@
           }
         }
       },
-      "modules": {},
+      "modules": {
+        "燃料模块": {
+          "prefab": "Module_Fuel",
+          "id": "燃料模块",
+          "enabled": true,
+          "data": { "BitData": [], "Type": 0 },
+          "parameters": {
+            "Data": { "Fuel": { "x": 10.0, "y": 10.0 }, "MaxTemperature": 400.0 },
+            "lightBaseIntensity": 1.0,
+            "burnSpeedMultiplier": 1.0,
+            "igniteWhileHeld": false
+          }
+        }
+      },
       "itemData": {
         "code": "",
         "transform": {
@@ -1108,6 +1167,48 @@
         "Ingot",
         "DrillDurability:100"
       ],
+      "reactions": [
+        {
+          "id": "core:铜+锡=青铜",
+          "minTemperature": 1000.0,
+          "maxTemperature": 2000.0,
+          "work": 100,
+          "inputs": [
+            {
+              "match": "exact_item",
+              "amount": 9,
+              "itemId": "Ingot_Copper"
+            },
+            {
+              "match": "exact_item",
+              "amount": 1,
+              "itemId": "Ingot_Tin"
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "Ingot_Bronze",
+              "amount": 10
+            }
+          ]
+        },
+        {
+          "id": "matter:melt:Ingot_Copper",
+          "minTemperature": 1085,
+          "work": 20,
+          "inputs": [
+            {
+              "match": "exact_item",
+              "itemId": "Ingot_Copper",
+              "amount": 1
+            }
+          ],
+          "liquidOutput": {
+            "liquidId": "core:molten_copper",
+            "amount": 1.0
+          }
+        }
+      ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Tools/Item_Tool_402.png",
         "rendererLocalPosition": {
@@ -1193,6 +1294,48 @@
         "Iron",
         "RawIron",
         "DrillDurability:160"
+      ],
+      "reactions": [
+        {
+          "id": "core:粗铁锭=铁锭",
+          "minTemperature": 1489.0,
+          "maxTemperature": 2000.0,
+          "work": 100,
+          "inputs": [
+            {
+              "match": "exact_item",
+              "amount": 1,
+              "itemId": "Ingot_RawIron"
+            },
+            {
+              "match": "exact_item",
+              "amount": 1,
+              "itemId": "Ingot_RawIron"
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "Ingot_WroughtIron",
+              "amount": 2
+            }
+          ]
+        },
+        {
+          "id": "matter:melt:Ingot_RawIron",
+          "minTemperature": 1538,
+          "work": 20,
+          "inputs": [
+            {
+              "match": "exact_item",
+              "itemId": "Ingot_RawIron",
+              "amount": 1
+            }
+          ],
+          "liquidOutput": {
+            "liquidId": "core:molten_iron",
+            "amount": 1.0
+          }
+        }
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Materials/Ores/ores.png[ores_10]",
@@ -1363,6 +1506,24 @@
         "Ingot",
         "DrillDurability:80"
       ],
+      "reactions": [
+        {
+          "id": "matter:melt:Ingot_Tin",
+          "minTemperature": 232,
+          "work": 20,
+          "inputs": [
+            {
+              "match": "exact_item",
+              "itemId": "Ingot_Tin",
+              "amount": 1
+            }
+          ],
+          "liquidOutput": {
+            "liquidId": "core:molten_tin",
+            "amount": 1.0
+          }
+        }
+      ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Tools/Item_Tool_394.png",
         "rendererLocalPosition": {
@@ -1529,7 +1690,14 @@
       "volume": 1.1,
       "stackable": true,
       "canBePickedUp": true,
-      "tags": [],
+      "tags": ["readable.writing.ink", "Combustion.Fuel"],
+      "processing": {
+        "grind": {
+          "inputAmount": 1,
+          "work": 4,
+          "outputs": [{ "itemId": "OrePowder_Coal", "amount": 2 }]
+        }
+      },
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Tools/Item_Tool_229.png",
         "rendererLocalPosition": {
@@ -1637,8 +1805,61 @@
       }
     },
     {
-      "id": "Ore_Copper",
+      "id": "SlingAmmo_Base",
       "parent": "BasicItem_Base",
+      "abstract": true,
+      "tags": ["SlingAmmo"],
+      "modules": {
+        "damage": {
+          "prefab": "Mod_Damage",
+          "id": "Mod_Damage",
+          "enabled": true,
+          "parameters": {
+            "DamageValues": {
+              "Physical": 12.0,
+              "ImpactKind": 4
+            },
+            "DamageInterval": -1.0,
+            "EnableOnTriggerEnterDamage": true,
+            "OnlyDealDamageWhenInHand": false,
+            "MaxAttackTargets": 1,
+            "EnableHitSlowdown": true,
+            "$collider2D": {
+              "type": "BoxCollider2D",
+              "enabled": false,
+              "isTrigger": true,
+              "offset": {"x": 0.0, "y": 0.0},
+              "size": {"x": 0.35, "y": 0.35}
+            }
+          }
+        },
+        "projectile": {
+          "prefab": "Mod_Projectile",
+          "id": "Mod_Projectile",
+          "enabled": true,
+          "data": {"BitData": [], "Type": 0},
+          "parameters": {
+            "UseVisibleArc": true,
+            "GroundImpactFraction": 0.15,
+            "SpinDegreesPerSecond": 480.0,
+            "MinSpeed": 3.0,
+            "MaxSpeed": 8.0,
+            "FlightLinearDrag": 0.0,
+            "VirtualGravity": 8.0,
+            "MinDamageMultiplier": 0.35,
+            "MaxDamageMultiplier": 1.0,
+            "MaxFlightSeconds": 1.5,
+            "RecoveryChance": 1.0,
+            "EmbedOnDamageReceiverWhenRecovered": false,
+            "BrokenSalvageChance": 0.0,
+            "SpriteForwardAngleDegrees": 0.0
+          }
+        }
+      }
+    },
+    {
+      "id": "Ore_Copper",
+      "parent": "SlingAmmo_Base",
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Minerals/Ore/Ore_Copper.prefab",
       "gameName": "孔雀石",
       "description": "含铜的矿石，可在熔炉中冶炼为铜锭。",
@@ -1649,7 +1870,75 @@
       "volume": 0.75,
       "stackable": true,
       "canBePickedUp": true,
-      "tags": [],
+      "processing": {
+        "grind": {
+          "inputAmount": 1,
+          "work": 4,
+          "outputs": [{ "itemId": "OrePowder_Copper", "amount": 2 }]
+        }
+      },
+      "reactions": [
+        {
+          "id": "core:铜矿=铜",
+          "minTemperature": 1000.0,
+          "maxTemperature": 2000.0,
+          "work": 100,
+          "inputs": [
+            {
+              "match": "exact_item",
+              "amount": 2,
+              "itemId": "Ore_Copper"
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "Ingot_Copper",
+              "amount": 1
+            }
+          ]
+        },
+        {
+          "id": "core:铜+锡=青铜 1",
+          "minTemperature": 1000.0,
+          "maxTemperature": 2000.0,
+          "work": 100,
+          "inputs": [
+            {
+              "match": "exact_item",
+              "amount": 9,
+              "itemId": "Ore_Copper"
+            },
+            {
+              "match": "exact_item",
+              "amount": 1,
+              "itemId": "Ore_Tin"
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "Ingot_Bronze",
+              "amount": 5
+            }
+          ]
+        },
+        {
+          "id": "core:铜矿石=熔融铜",
+          "minTemperature": 1085.0,
+          "maxTemperature": 1600.0,
+          "work": 20.0,
+          "inputs": [
+            {
+              "match": "exact_item",
+              "amount": 2,
+              "itemId": "Ore_Copper"
+            }
+          ],
+          "liquidOutput": {
+            "liquidId": "core:molten_copper",
+            "amount": 1.0
+          }
+        }
+      ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Tools/Item_Tool_399.png",
         "rendererLocalPosition": {
@@ -1800,7 +2089,7 @@
     },
     {
       "id": "Ore_Iron",
-      "parent": "BasicItem_Base",
+      "parent": "SlingAmmo_Base",
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Minerals/Ore/Ore_Iron.prefab",
       "gameName": "铁矿石",
       "description": "含铁的矿石，可在熔炉中冶炼为粗铁锭。",
@@ -1813,7 +2102,111 @@
       "canBePickedUp": true,
       "tags": [
         "Ore",
-        "Iron"
+        "Iron",
+        "SlingAmmo"
+      ],
+      "processing": {
+        "grind": {
+          "inputAmount": 1,
+          "work": 4,
+          "outputs": [{ "itemId": "OrePowder_Iron", "amount": 2 }]
+        }
+      },
+      "reactions": [
+        {
+          "id": "core:铁矿=粗铁锭",
+          "minTemperature": 1000.0,
+          "maxTemperature": 2000.0,
+          "work": 100,
+          "inputs": [
+            {
+              "match": "exact_item",
+              "amount": 1,
+              "itemId": "Ore_Iron"
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "Ingot_RawIron",
+              "amount": 1
+            }
+          ]
+        },
+        {
+          "id": "core:铁矿=铁锭",
+          "minTemperature": 1489.0,
+          "maxTemperature": 2000.0,
+          "work": 100,
+          "inputs": [
+            {
+              "match": "exact_item",
+              "amount": 1,
+              "itemId": "Ore_Iron"
+            },
+            {
+              "match": "exact_item",
+              "amount": 1,
+              "itemId": "Ore_Iron"
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "Ingot_WroughtIron",
+              "amount": 1
+            }
+          ]
+        },
+        {
+          "id": "core:铁矿+碳=钢",
+          "minTemperature": 1489.0,
+          "maxTemperature": 9999.0,
+          "work": 100,
+          "inputs": [
+            {
+              "match": "exact_item",
+              "amount": 1,
+              "itemId": "Ore_Iron"
+            },
+            {
+              "match": "exact_item",
+              "amount": 1,
+              "itemId": "Ore_Coal"
+            },
+            {
+              "match": "exact_item",
+              "amount": 1,
+              "itemId": "Ore_Iron"
+            },
+            {
+              "match": "exact_item",
+              "amount": 1,
+              "itemId": "Ore_Coal"
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "Ingot_Steel",
+              "amount": 1
+            }
+          ]
+        },
+        {
+          "id": "core:铁矿石=熔融铁",
+          "minTemperature": 1538.0,
+          "maxTemperature": 2000.0,
+          "work": 20.0,
+          "inputs": [
+            {
+              "match": "exact_item",
+              "amount": 1,
+              "itemId": "Ore_Iron"
+            }
+          ],
+          "liquidOutput": {
+            "liquidId": "core:molten_iron",
+            "amount": 1.0
+          }
+        }
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Tools/Item_Tool_391.png",
@@ -1884,7 +2277,7 @@
     },
     {
       "id": "Ore_Tin",
-      "parent": "BasicItem_Base",
+      "parent": "SlingAmmo_Base",
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Minerals/Ore/Ore_Tin.prefab",
       "gameName": "锡矿石",
       "description": "含锡的矿石，可在熔炉中冶炼为锡锭。",
@@ -1895,7 +2288,51 @@
       "volume": 0.7,
       "stackable": true,
       "canBePickedUp": true,
-      "tags": [],
+      "processing": {
+        "grind": {
+          "inputAmount": 1,
+          "work": 4,
+          "outputs": [{ "itemId": "OrePowder_Tin", "amount": 2 }]
+        }
+      },
+      "reactions": [
+        {
+          "id": "core:锡矿=锡",
+          "minTemperature": 1000.0,
+          "maxTemperature": 2000.0,
+          "work": 100,
+          "inputs": [
+            {
+              "match": "exact_item",
+              "amount": 2,
+              "itemId": "Ore_Tin"
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "Ingot_Tin",
+              "amount": 1
+            }
+          ]
+        },
+        {
+          "id": "core:锡矿石=熔融锡",
+          "minTemperature": 232.0,
+          "maxTemperature": 1200.0,
+          "work": 20.0,
+          "inputs": [
+            {
+              "match": "exact_item",
+              "amount": 2,
+              "itemId": "Ore_Tin"
+            }
+          ],
+          "liquidOutput": {
+            "liquidId": "core:molten_tin",
+            "amount": 1.0
+          }
+        }
+      ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Tools/Item_Tool_393.png",
         "rendererLocalPosition": {
@@ -2024,7 +2461,7 @@
       },
       "modules": {
         "heldFood": {
-          "prefab": "Module_HeldFood",
+          "prefab": "Mod_HeldFood",
           "id": "手上食物模块",
           "enabled": true,
           "data": {
@@ -2263,6 +2700,13 @@
       "stackable": true,
       "canBePickedUp": true,
       "tags": [],
+      "processing": {
+        "grind": {
+          "inputAmount": 1,
+          "work": 3,
+          "outputs": [{ "itemId": "Rice", "amount": 1 }]
+        }
+      },
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Farming/Rice/RiceGrain_Icon.png",
         "rendererLocalScale": {
@@ -2309,6 +2753,27 @@
       "weight": 0.1,
       "volume": 0.15,
       "stackable": true,
+      "reactions": [
+        {
+          "id": "core:大米=米饭",
+          "minTemperature": 100.0,
+          "maxTemperature": 2000.0,
+          "work": 100,
+          "inputs": [
+            {
+              "match": "exact_item",
+              "amount": 1,
+              "itemId": "Rice"
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "CookedRice",
+              "amount": 1
+            }
+          ]
+        }
+      ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Farming/Rice/Rice_Icon.png",
         "rendererLocalScale": {
@@ -2455,6 +2920,13 @@
         "Fruit",
         "Berry"
       ],
+      "processing": {
+        "grind": {
+          "inputAmount": 2,
+          "work": 4,
+          "outputs": [{ "itemId": "Jam", "amount": 1 }]
+        }
+      },
       "visual": {
         "spriteAddress": "Assets/6_Art/Food/Item_Food_Fruit.png[Item_Food_Fruit_54]",
         "rendererLocalPosition": {
@@ -2499,7 +2971,7 @@
       },
       "modules": {
         "heldFood": {
-          "prefab": "Module_HeldFood",
+          "prefab": "Mod_HeldFood",
           "id": "手上食物模块",
           "enabled": true,
           "data": {
@@ -2658,7 +3130,7 @@
       },
       "modules": {
         "heldFood": {
-          "prefab": "Module_HeldFood",
+          "prefab": "Mod_HeldFood",
           "id": "手上食物模块",
           "enabled": true,
           "data": {
@@ -2745,6 +3217,7 @@
     },
     {
       "id": "Coconut_Green",
+      "worldDropBehavior": "interactive",
       "parent": "BasicItem_Base",
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Food/Coconut_Green.prefab",
       "gameName": "青椰子",
@@ -2761,10 +3234,7 @@
         "hp": 20.0,
         "maxHp": 20.0,
         "defense": {
-          "cutting": 0.0,
-          "piercing": 0.0,
-          "chopping": 0.0,
-          "blunt": 0.0
+          "physical": 0.0
         },
         "collider": {
           "type": "BoxCollider2D",
@@ -2778,7 +3248,9 @@
             "x": 1.0,
             "y": 1.0
           }
-        }
+        },
+        "weakTool": 3,
+        "combatBalanceVersion": 1
       },
       "lootTableId": "Coconut_Green_Default",
       "tags": [],
@@ -2851,6 +3323,7 @@
     },
     {
       "id": "Coconut_Half",
+      "worldDropBehavior": "interactive",
       "parent": "BasicItem_Base",
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Food/Coconut_Half.prefab",
       "gameName": "半个椰子",
@@ -2867,10 +3340,7 @@
         "hp": 20.0,
         "maxHp": 20.0,
         "defense": {
-          "cutting": 0.0,
-          "piercing": 0.0,
-          "chopping": 0.0,
-          "blunt": 0.0
+          "physical": 0.0
         },
         "collider": {
           "type": "BoxCollider2D",
@@ -2884,7 +3354,9 @@
             "x": 1.0,
             "y": 1.0
           }
-        }
+        },
+        "weakTool": 3,
+        "combatBalanceVersion": 1
       },
       "lootTableId": "Coconut_Half_Default",
       "tags": [
@@ -2934,7 +3406,7 @@
       },
       "modules": {
         "heldFood": {
-          "prefab": "Module_HeldFood",
+          "prefab": "Mod_HeldFood",
           "id": "手上食物模块",
           "enabled": true,
           "data": {
@@ -3062,6 +3534,7 @@
     },
     {
       "id": "Coconut_Nude",
+      "worldDropBehavior": "interactive",
       "parent": "BasicItem_Base",
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Food/Coconut_Nude.prefab",
       "gameName": "去皮椰子",
@@ -3078,10 +3551,7 @@
         "hp": 20.0,
         "maxHp": 20.0,
         "defense": {
-          "cutting": 0.0,
-          "piercing": 0.0,
-          "chopping": 0.0,
-          "blunt": 0.0
+          "physical": 0.0
         },
         "collider": {
           "type": "BoxCollider2D",
@@ -3095,7 +3565,9 @@
             "x": 1.0,
             "y": 1.0
           }
-        }
+        },
+        "weakTool": 3,
+        "combatBalanceVersion": 1
       },
       "lootTableId": "Coconut_Nude_Default",
       "tags": [],
@@ -3168,6 +3640,7 @@
     },
     {
       "id": "Coconut_Shell",
+      "worldDropBehavior": "interactive",
       "parent": "BasicItem_Base",
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Food/Coconut_Shell.prefab",
       "gameName": "椰壳",
@@ -3182,13 +3655,7 @@
       "tags": [],
       "visual": {
         "spriteAddress": "Assets/6_Art/Food/椰子壳-空.png",
-        "spriteStates": {
-          "empty": "Assets/6_Art/Food/椰子壳-空.png",
-          "filled": "Assets/6_Art/Food/椰子壳-有水.png",
-          "dirty": "Assets/6_Art/Food/椰子壳-脏水.png",
-          "drinkable": "Assets/6_Art/Food/椰子壳-有水.png",
-          "sea": "Assets/6_Art/Food/椰子壳-有水.png"
-        },
+        "liquidSurface": { "bounds": { "x": 0.0625, "y": 0.36, "width": 0.875, "height": 0.56 }, "maxSourceChannel": 100 },
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -3325,7 +3792,7 @@
       },
       "modules": {
         "heldFood": {
-          "prefab": "Module_HeldFood",
+          "prefab": "Mod_HeldFood",
           "id": "手上食物模块",
           "enabled": true,
           "data": {
@@ -3467,6 +3934,27 @@
       "tags": [
         "47"
       ],
+      "reactions": [
+        {
+          "id": "core:鸡蛋=煎鸡蛋",
+          "minTemperature": 150.0,
+          "maxTemperature": 2000.0,
+          "work": 100,
+          "inputs": [
+            {
+              "match": "exact_item",
+              "amount": 1,
+              "itemId": "Egg"
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "Egg_Cooked",
+              "amount": 1
+            }
+          ]
+        }
+      ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Tools/Item_Tool_115.png",
         "rendererLocalPosition": {
@@ -3511,7 +3999,7 @@
       },
       "modules": {
         "heldFood": {
-          "prefab": "Module_HeldFood",
+          "prefab": "Mod_HeldFood",
           "id": "手上食物模块",
           "enabled": true,
           "data": {
@@ -3744,7 +4232,7 @@
       },
       "modules": {
         "heldFood": {
-          "prefab": "Module_HeldFood",
+          "prefab": "Mod_HeldFood",
           "id": "手上食物模块",
           "enabled": true,
           "data": {
@@ -3884,7 +4372,8 @@
       "stackable": true,
       "canBePickedUp": true,
       "tags": [
-        "47"
+        "47",
+        "Combustion.Fuel"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/icons_sheet.png[icons_sheet_10]",
@@ -3951,7 +4440,7 @@
           }
         },
         "heldFood": {
-          "prefab": "Module_HeldFood",
+          "prefab": "Mod_HeldFood",
           "id": "手上食物模块",
           "enabled": true,
           "data": {
@@ -4091,7 +4580,43 @@
       "stackable": true,
       "canBePickedUp": true,
       "tags": [
-        "47"
+        "47",
+        "Meat"
+      ],
+      "matter": {
+        "initialMoisture": 0.8,
+        "evaporationRatePerSecond": 0.00085,
+        "evaporationStartTemperature": 0,
+        "temperatureDryingMultiplierPer10C": 0.25,
+        "waterAbsorptionRatePerSecond": 0.02,
+        "transitions": [
+          {
+            "id": "dry:meat",
+            "maxMoisture": 0.2,
+            "outputItemId": "Meat_Dehydrate"
+          }
+        ]
+      },
+      "reactions": [
+        {
+          "id": "core:生肉=熟肉",
+          "minTemperature": 200.0,
+          "maxTemperature": 400.0,
+          "work": 100,
+          "inputs": [
+            {
+              "match": "exact_item",
+              "amount": 1,
+              "itemId": "Meat"
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "Meat_Cooked",
+              "amount": 1
+            }
+          ]
+        }
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/icons_sheet.png[icons_sheet_107]",
@@ -4137,7 +4662,7 @@
       },
       "modules": {
         "heldFood": {
-          "prefab": "Module_HeldFood",
+          "prefab": "Mod_HeldFood",
           "id": "手上食物模块",
           "enabled": true,
           "data": {
@@ -4323,7 +4848,7 @@
       },
       "modules": {
         "heldFood": {
-          "prefab": "Module_HeldFood",
+          "prefab": "Mod_HeldFood",
           "id": "手上食物模块",
           "enabled": true,
           "data": {
@@ -4509,7 +5034,7 @@
       },
       "modules": {
         "heldFood": {
-          "prefab": "Module_HeldFood",
+          "prefab": "Mod_HeldFood",
           "id": "手上食物模块",
           "enabled": true,
           "data": {
@@ -4695,7 +5220,7 @@
       },
       "modules": {
         "heldFood": {
-          "prefab": "Module_HeldFood",
+          "prefab": "Mod_HeldFood",
           "id": "手上食物模块",
           "enabled": true,
           "data": {
@@ -4881,7 +5406,7 @@
       },
       "modules": {
         "heldFood": {
-          "prefab": "Module_HeldFood",
+          "prefab": "Mod_HeldFood",
           "id": "手上食物模块",
           "enabled": true,
           "data": {
@@ -5148,7 +5673,7 @@
       },
       "modules": {
         "heldFood": {
-          "prefab": "Module_HeldFood",
+          "prefab": "Mod_HeldFood",
           "id": "手上食物模块",
           "enabled": true,
           "data": {
@@ -5334,7 +5859,7 @@
       },
       "modules": {
         "heldFood": {
-          "prefab": "Module_HeldFood",
+          "prefab": "Mod_HeldFood",
           "id": "手上食物模块",
           "enabled": true,
           "data": {
@@ -5483,7 +6008,7 @@
       },
       "modules": {
         "heldFood": {
-          "prefab": "Module_HeldFood",
+          "prefab": "Mod_HeldFood",
           "id": "手上食物模块",
           "enabled": true,
           "data": {
@@ -5625,39 +6150,44 @@
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Minerals/Ore/Ore_Stone.prefab",
       "shellPrefab": "Prop",
       "gameName": "石头",
-      "description": "可用于制作和建造。按住攻击键蓄力，松开后沿抛物线投掷；蓄力越久投得越远，可击中飞鸟，并在落点附近伤害地面目标。",
+      "description": "可用于制作和建造。按 F 丢出时会在飞行阶段造成钝击伤害，落地后恢复为普通可拾取石头。",
+      "worldDropBehavior": "interactive",
       "weight": 1.5,
       "volume": 0.7,
       "stackable": true,
       "tags": ["Stone", "Mineral", "Throwable"],
+      "processing": {
+        "grind": {
+          "inputAmount": 1,
+          "work": 4,
+          "outputs": [{ "itemId": "OrePowder_Stone", "amount": 2 }]
+        }
+      },
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Tools/Item_Tool_404.png"
       },
       "modules": {
-        "bow": {
-          "prefab": "Mod_Bow", "id": "Mod_Bow", "enabled": true,
-          "data": {"BitData": [], "Type": 0},
-          "parameters": {"UseHeldItemAsAmmo": true, "ShowNockedAmmo": false, "FullChargeSeconds": 1.2,
-            "MaxAimDistance": 16.0, "SpawnForwardOffset": 0.45, "StaminaConsumePerSecond": 1.0}
-        },
         "damage": {
           "prefab": "Mod_Damage", "id": "Mod_Damage", "enabled": true,
           "parameters": {
-            "DamageValues": {"Cutting": 0.0, "Piercing": 0.0, "Chopping": 0.0, "Blunt": 12.0},
+            "DamageValues": {
+              "Physical": 12.0,
+              "ImpactKind": 4
+            },
             "DamageInterval": -1.0, "EnableOnTriggerEnterDamage": true, "OnlyDealDamageWhenInHand": false,
             "MaxAttackTargets": 1, "EnableHitSlowdown": true,
             "$collider2D": {"type": "BoxCollider2D", "enabled": false, "isTrigger": true,
-              "offset": {"x": 0.0, "y": 0.0}, "size": {"x": 0.35, "y": 0.35}}
+              "offset": {"x": 0.0, "y": 0.0}, "size": {"x": 0.4375, "y": 0.4375}}
           }
         },
-        "projectile": {
-          "prefab": "Mod_Projectile", "id": "Mod_Projectile", "enabled": true,
+        "discardFlightDamage": {
+          "prefab": "Mod_DiscardFlightDamage", "id": "Mod_DiscardFlightDamage", "enabled": true,
           "data": {"BitData": [], "Type": 0},
-          "parameters": {"UseVisibleArc": true, "GroundImpactFraction": 0.15, "SpinDegreesPerSecond": 480.0,
-            "MinSpeed": 3.0, "MaxSpeed": 8.0, "FlightLinearDrag": 0.08, "VirtualGravity": 8.0,
-            "MinDamageMultiplier": 0.35, "MaxDamageMultiplier": 1.0, "MaxFlightSeconds": 1.5,
-            "RecoveryChance": 1.0, "EmbedOnDamageReceiverWhenRecovered": false, "BrokenSalvageChance": 0.0,
-            "SpriteForwardAngleDegrees": 0.0}
+          "parameters": {
+            "HardImpactTransformItemId": "ChippedTool",
+            "HardImpactTransformChance": 0.1,
+            "HardImpactMinimumDefense": 2.0
+          }
         }
       }
     },
@@ -5714,7 +6244,7 @@
       "volume": 0.45,
       "stackable": true,
       "canBePickedUp": true,
-      "tags": [],
+      "tags": ["readable.writing.ink", "Combustion.Fuel"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Charcoal/Charcoal_Icon.png",
         "collider": {
@@ -5763,6 +6293,7 @@
       "description": "从湿地挖出的可燃有机土，可作为低温燃料。",
       "weight": 0.6,
       "volume": 0.8,
+      "tags": ["Combustion.Fuel"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Environment/Peat/Peat_Icon.png",
         "color": { "r": 1, "g": 1, "b": 1, "a": 1 }
@@ -5821,11 +6352,27 @@
       "volume": 12.0,
       "stackable": true,
       "canBePickedUp": true,
-      "tags": [],
+      "tags": [
+        "Wood",
+        "Combustion.Fuel"
+      ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Mechanical/Items/DrilledLog_Idle.png"
       },
-      "modules": {}
+      "modules": {
+        "燃料模块": {
+          "prefab": "Module_Fuel",
+          "id": "燃料模块",
+          "enabled": true,
+          "data": { "BitData": [], "Type": 0 },
+          "parameters": {
+            "Data": { "Fuel": { "x": 50.0, "y": 50.0 }, "MaxTemperature": 500.0 },
+            "lightBaseIntensity": 1.0,
+            "burnSpeedMultiplier": 1.0,
+            "igniteWhileHeld": false
+          }
+        }
+      }
     },
     {
       "id": "DrilledPlank",
@@ -5839,11 +6386,27 @@
       "volume": 4.0,
       "stackable": true,
       "canBePickedUp": true,
-      "tags": [],
+      "tags": [
+        "Wood",
+        "Combustion.Fuel"
+      ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Mechanical/Items/DrilledPlank_Idle.png"
       },
-      "modules": {}
+      "modules": {
+        "燃料模块": {
+          "prefab": "Module_Fuel",
+          "id": "燃料模块",
+          "enabled": true,
+          "data": { "BitData": [], "Type": 0 },
+          "parameters": {
+            "Data": { "Fuel": { "x": 50.0, "y": 50.0 }, "MaxTemperature": 500.0 },
+            "lightBaseIntensity": 1.0,
+            "burnSpeedMultiplier": 1.0,
+            "igniteWhileHeld": false
+          }
+        }
+      }
     },
     {
       "id": "DrilledStoneSlab",
@@ -5862,7 +6425,7 @@
         "Mineral"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Mechanical/Items/DrilledStoneSlab_Idle.png"
       },
       "modules": {}
     },
@@ -5883,7 +6446,7 @@
         "Mineral"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Mechanical/Items/DrilledStone_Idle.png"
       },
       "modules": {}
     }
@@ -5891,14 +6454,20 @@
       "id": "Cotton",
       "parent": "BasicItem_Base",
       "gameName": "棉花",
-      "description": "柔软的天然纤维，可用于制作布料。",
+      "description": "柔软的天然纤维，可通过纺织加工制成布。",
       "weight": 0.1,
       "volume": 0.2,
       "stackable": true,
       "tags": ["Material", "Fiber"],
-      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Materials/Material.prefab",
+      "processing": {
+        "weave": {
+          "inputAmount": 2,
+          "work": 2,
+          "outputs": [{ "itemId": "Cloth", "amount": 1 }]
+        }
+      },
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Cotton/Cotton_Icon.png"
       }
     },
     {
@@ -5912,7 +6481,22 @@
       "canBePickedUp": true,
       "tags": ["Material"],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/WoodAsh/WoodAsh_Icon.png"
+      },
+      "modules": {}
+    },
+    {
+      "id": "Paper",
+      "parent": "BasicItem_Base",
+      "gameName": "纸张",
+      "description": "可用于扩充可阅读笔记的页数。",
+      "weight": 0.02,
+      "volume": 0.02,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": ["readable.paper"],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Paper/Paper_Icon.png"
       },
       "modules": {}
     },
@@ -5927,9 +6511,229 @@
       "canBePickedUp": true,
       "tags": ["Material"],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Nails/Nail_Icon.png"
       },
       "modules": {}
+    },
+    {
+      "id": "IronPlate",
+      "parent": "BasicItem_Base",
+      "gameName": "铁板",
+      "description": "由熟铁锭锻打制成的铁板，可用于后续金属制作。",
+      "weight": 2.5,
+      "volume": 0.2,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": ["Metal", "Iron", "WroughtIron", "IronPlate"],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/IronPlate/IronPlate_Icon.png"
+      },
+      "modules": {}
+    },
+    {
+      "id": "RawIronPlate",
+      "parent": "BasicItem_Base",
+      "gameName": "生铁板",
+      "description": "由生铁锭手工锻打制成的板材。",
+      "weight": 2.4,
+      "volume": 0.2,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": ["Metal", "Iron", "RawIron", "RawIronPlate"],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/MetalPlates/RawIronPlate_Icon.png"
+      },
+      "modules": {}
+    },
+    {
+      "id": "CopperPlate",
+      "parent": "BasicItem_Base",
+      "gameName": "铜板",
+      "description": "由铜锭锻打制成的板材。",
+      "weight": 2.0,
+      "volume": 0.2,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": ["Metal", "Copper", "CopperPlate"],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/MetalPlates/CopperPlate_Icon.png"
+      },
+      "modules": {}
+    },
+    {
+      "id": "BronzePlate",
+      "parent": "BasicItem_Base",
+      "gameName": "青铜板",
+      "description": "由青铜锭锻打制成的板材。",
+      "weight": 2.2,
+      "volume": 0.2,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": ["Metal", "Bronze", "BronzePlate"],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/MetalPlates/BronzePlate_Icon.png"
+      },
+      "modules": {}
+    },
+    {
+      "id": "TinPlate",
+      "parent": "BasicItem_Base",
+      "gameName": "锡板",
+      "description": "由锡锭锻打制成的板材。",
+      "weight": 1.7,
+      "volume": 0.2,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": ["Metal", "Tin", "TinPlate"],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/MetalPlates/TinPlate_Icon.png"
+      },
+      "modules": {}
+    },
+    {
+      "id": "SteelPlate",
+      "parent": "BasicItem_Base",
+      "gameName": "钢板",
+      "description": "由钢锭锻打制成的板材。",
+      "weight": 2.6,
+      "volume": 0.2,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": ["Metal", "Steel", "SteelPlate"],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/MetalPlates/SteelPlate_Icon.png"
+      },
+      "modules": {}
+    },
+    {
+      "id": "OrePowder_Coal",
+      "parent": "BasicItem_Base",
+      "gameName": "煤粉",
+      "description": "用石臼捣碎煤矿石得到的细煤粉，可用于后续材料加工。",
+      "weight": 0.5,
+      "volume": 0.55,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": ["Material", "Powder"],
+      "visual": { "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Powders/OrePowder_Coal.png" },
+      "modules": {}
+    },
+    {
+      "id": "OrePowder_Copper",
+      "parent": "BasicItem_Base",
+      "gameName": "孔雀石粉",
+      "description": "用石臼捣碎孔雀石得到的矿粉，可用于后续材料加工。",
+      "weight": 1.1,
+      "volume": 0.375,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": ["Material", "Powder"],
+      "visual": { "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Powders/OrePowder_Copper.png" },
+      "modules": {}
+    },
+    {
+      "id": "OrePowder_Iron",
+      "parent": "BasicItem_Base",
+      "gameName": "铁矿粉",
+      "description": "用石臼捣碎铁矿石得到的铁矿粉，可用于后续材料加工。",
+      "weight": 1.25,
+      "volume": 0.375,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": ["Material", "Powder"],
+      "visual": { "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Powders/OrePowder_Iron.png" },
+      "modules": {}
+    },
+    {
+      "id": "OrePowder_Tin",
+      "parent": "BasicItem_Base",
+      "gameName": "锡矿粉",
+      "description": "用石臼捣碎锡矿石得到的锡矿粉，可用于后续材料加工。",
+      "weight": 0.9,
+      "volume": 0.35,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": ["Material", "Powder"],
+      "visual": { "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Powders/OrePowder_Tin.png" },
+      "modules": {}
+    },
+    {
+      "id": "OrePowder_Stone",
+      "parent": "BasicItem_Base",
+      "gameName": "石粉",
+      "description": "用石臼捣碎石头得到的石粉，可用于后续材料加工。",
+      "weight": 0.75,
+      "volume": 0.35,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": ["Material", "Powder"],
+      "visual": { "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Powders/OrePowder_Stone.png" },
+      "modules": {}
+    },
+    {
+      "id": "OrePowder_Niter",
+      "parent": "BasicItem_Base",
+      "gameName": "硝石粉",
+      "description": "用石臼捣碎硝石得到的细粉，可用于制作肥料。",
+      "weight": 0.5,
+      "volume": 0.275,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": ["Material", "Powder"],
+      "visual": { "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Powders/OrePowder_Niter.png" },
+      "modules": {}
+    },
+    {
+      "id": "Beeswax",
+      "parent": "Apple",
+      "gameName": "蜂蜡",
+      "description": "由蜂巢产出的金黄色天然蜂蜡，可以直接食用；富含碳水化合物和维生素，但会降低 5 点水分。",
+      "weight": 0.1,
+      "volume": 0.12,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": ["Food", "Material", "AnimalProduct"],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Beeswax/Beeswax_Icon.png"
+      },
+      "modules": {
+        "food": {
+          "data": {
+            "FoodData": {
+              "nutrition": {
+                "Carbohydrates": 55.0,
+                "Max_Carbohydrates": 55.0,
+                "Fat": 2.0,
+                "Max_Fat": 2.0,
+                "Protein": 1.0,
+                "Max_Protein": 1.0,
+                "Water": -5.0,
+                "Max_Water": 5.0,
+                "Vitamins": 25.0,
+                "Max_Vitamins": 25.0
+              },
+              "Max_EatingProgress": 1.0
+            },
+            "MechanicStates": [
+              {
+                "StateKey": "food.spoilage",
+                "Data": {
+                  "EnableSpoilage": false,
+                  "SpoilageElapsedSeconds": 0.0,
+                  "SpoilageIntervalSeconds": 0.0,
+                  "SpoilageTargetItemID": ""
+                }
+              },
+              {
+                "StateKey": "food.consumption",
+                "Data": {
+                  "EatingProgress": 0.0
+                }
+              }
+            ]
+          }
+        }
+      }
     }
   ]
 }

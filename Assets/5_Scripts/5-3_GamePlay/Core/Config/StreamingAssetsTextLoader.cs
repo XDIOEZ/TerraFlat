@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.IO;
+using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Networking;
 
@@ -10,6 +11,7 @@ using UnityEngine.Networking;
 /// </summary>
 public static class StreamingAssetsTextLoader
 {
+    #region 跨平台文本读取
     public static string CombinePath(string root, string relativePath)
     {
         if (string.IsNullOrWhiteSpace(root))
@@ -46,15 +48,7 @@ public static class StreamingAssetsTextLoader
 
         if (!RequiresWebRequest(path))
         {
-            try
-            {
-                onCompleted?.Invoke(ReadAllText(path));
-            }
-            catch (Exception exception)
-            {
-                onFailed?.Invoke(exception);
-            }
-
+            yield return RunPureDataAsync(() => File.ReadAllText(path), onCompleted, onFailed);
             yield break;
         }
 
@@ -98,4 +92,33 @@ public static class StreamingAssetsTextLoader
 
         return string.Join("/", segments);
     }
+
+    #endregion
+
+    #region 后台纯数据处理
+
+    /// <summary>后台只处理私有字符串和 DTO，完成回调仍由资源协程在主线程执行。</summary>
+    public static IEnumerator RunPureDataAsync<T>(Func<T> work, Action<T> completed, Action<Exception> failed)
+    {
+        T result = default;
+        Exception error = null;
+#if UNITY_WEBGL && !UNITY_EDITOR
+        // WebGL 无托管工作线程，仍保持相同的回调与错误契约。
+        try { result = work(); }
+        catch (Exception exception) { error = exception; }
+        yield return null;
+#else
+        Task task = Task.Run(() =>
+        {
+            // 捕获异常而不在工作线程发布目录，协程取消后也不会留下未观察的任务异常。
+            try { result = work(); }
+            catch (Exception exception) { error = exception; }
+        });
+        while (!task.IsCompleted) yield return null;
+#endif
+        if (error != null) failed?.Invoke(error);
+        else completed?.Invoke(result);
+    }
+
+    #endregion
 }

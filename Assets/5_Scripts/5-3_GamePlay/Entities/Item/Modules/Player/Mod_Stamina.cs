@@ -1,4 +1,5 @@
 using MemoryPack;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UltEvents;
@@ -8,7 +9,10 @@ using UnityEngine.UI;
 public partial class Mod_Stamina : Module, IItemModuleDependencyBinder
 {
     private readonly List<IStaminaCapacityModifier> capacityModifiers = new(); // 独立容量来源。
-    private PlayerAdminController adminController; // 管理员拥有无限体力，统一在体力权威模块拦截消耗。
+    private Mod_PlayerAdminController adminController; // 管理员拥有无限体力，统一在体力权威模块拦截消耗。
+
+    /// <summary>任意体力消费完成后发布；仅用于运行时观察和调试，不进入存档。</summary>
+    public event Action<StaminaConsumptionRecord> StaminaConsumed;
 
     /// <summary>缓存影响体力容量的模块，体力模块不依赖缺盐等具体玩法。</summary>
     public void BindModuleDependencies(ItemMods modules)
@@ -18,7 +22,7 @@ public partial class Mod_Stamina : Module, IItemModuleDependencyBinder
         foreach (Module module in modules.Mods.Values)
         {
             if (module is IStaminaCapacityModifier modifier) capacityModifiers.Add(modifier);
-            if (module is PlayerAdminController controller) adminController = controller;
+            if (module is Mod_PlayerAdminController controller) adminController = controller;
         }
     }
     /// <summary>容量变化后限制当前值，并通知现有 HUD。</summary>
@@ -50,6 +54,7 @@ public partial class Mod_Stamina : Module, IItemModuleDependencyBinder
     public GameObject Prefab_UI;//TODO 这个是UI的预制体
 
     public Slider slider;
+    private BasePanel staminaPanel; // 模块持有自己创建的体力面板，卸载时对称释放。
     private RectTransform staminaBackground; // 原体力条灰黑底纹，只调整可用宽度。
     private RectTransform staminaFillArea; // 保持原填充样式，仅让填充范围与可用上限一致。
     public override void Awake()
@@ -66,7 +71,7 @@ public partial class Mod_Stamina : Module, IItemModuleDependencyBinder
         // 实例化体力 UI 预制体并获取 Slider 组件
         if (Prefab_UI != null)
         {
-            BasePanel staminaPanel = UIManager.Instance.CreatePanelFromGameObject(Prefab_UI);
+            staminaPanel = UIManager.Instance.CreatePanelFromGameObject(Prefab_UI);
             if (staminaPanel != null)
             {
                 // 耐力条是常驻信息 HUD：不阻断玩法输入，并固定在其它面板下方。
@@ -93,25 +98,76 @@ public partial class Mod_Stamina : Module, IItemModuleDependencyBinder
         modData.WriteData(Data);
     }
 
-    /// <summary>增加或消耗基础体力值，并统一应用当前难度倍率。</summary>
+    #region 体力面板生命周期
+    public override void Unload()
+    {
+        if (staminaPanel != null)
+        {
+            UIManager manager = UIManager.ExistingInstance;
+            if (manager != null)
+                manager.DestroyPanel(staminaPanel);
+            else
+                Destroy(staminaPanel.gameObject);
+        }
+
+        staminaPanel = null;
+        slider = null;
+        staminaBackground = null;
+        staminaFillArea = null;
+        capacityModifiers.Clear();
+        adminController = null;
+    }
+    #endregion
+
+    /// <summary>增加基础体力；负值仅作为未分类兼容入口，正式玩法消费应使用带来源的 Consume API。</summary>
     public void AddStamina(float value)
     {
-        if (value < 0f && HasAdministratorUnlimitedStamina())
+        if (value < 0f)
         {
-            EnsureAdministratorStaminaFull();
+            ConsumeStamina(StaminaConsumptionSources.Unspecified, -value);
             return;
         }
 
         CurrentValue += ResolveStaminaDelta(value); // 会自动触发事件和更新Slider
     }
 
-    /// <summary>尝试一次性消耗基础体力；不足时不扣除，供攻击等离散动作使用。</summary>
-    public bool TryConsumeStamina(float amount)
+    /// <summary>持续消耗基础体力；同帧多个来源按调用顺序独立结算并自然累加。</summary>
+    public float ConsumeStaminaPerSecond(string sourceId, float amountPerSecond, float deltaTime)
+    {
+        if (amountPerSecond <= 0f || deltaTime <= 0f)
+            return 0f;
+
+        return ConsumeStamina(sourceId, amountPerSecond * deltaTime);
+    }
+
+    /// <summary>消耗指定来源的基础体力并返回实际扣除量；不足时扣到零。</summary>
+    public float ConsumeStamina(string sourceId, float amount)
     {
         if (amount <= 0f)
+            return 0f;
+
+        if (HasAdministratorUnlimitedStamina())
         {
-            return true;
+            EnsureAdministratorStaminaFull();
+            return 0f;
         }
+
+        float effectiveCost = Mathf.Max(0f, -ResolveStaminaDelta(-amount));
+        if (effectiveCost <= 0f)
+            return 0f;
+
+        float before = CurrentValue;
+        CurrentValue = before - effectiveCost;
+        float consumed = Mathf.Max(0f, before - CurrentValue);
+        PublishConsumption(sourceId, amount, consumed);
+        return consumed;
+    }
+
+    /// <summary>尝试一次性消耗指定来源的基础体力；不足时完全不扣除。</summary>
+    public bool TryConsumeStamina(string sourceId, float amount)
+    {
+        if (amount <= 0f)
+            return true;
 
         if (HasAdministratorUnlimitedStamina())
         {
@@ -119,15 +175,37 @@ public partial class Mod_Stamina : Module, IItemModuleDependencyBinder
             return true;
         }
 
-        float delta = ResolveStaminaDelta(-amount);
-        float effectiveCost = -delta;
+        float effectiveCost = Mathf.Max(0f, -ResolveStaminaDelta(-amount));
         if (CurrentValue + 0.0001f < effectiveCost)
-        {
             return false;
-        }
 
-        CurrentValue += delta;
+        float before = CurrentValue;
+        CurrentValue = before - effectiveCost;
+        float consumed = Mathf.Max(0f, before - CurrentValue);
+        PublishConsumption(sourceId, amount, consumed);
         return true;
+    }
+
+    /// <summary>未提供来源的旧调用统一标记为未分类；内置玩法不得使用此入口。</summary>
+    public bool TryConsumeStamina(float amount)
+    {
+        return TryConsumeStamina(StaminaConsumptionSources.Unspecified, amount);
+    }
+
+    /// <summary>发布来源清晰的实际消费记录；零消耗不产生事件。</summary>
+    private void PublishConsumption(string sourceId, float requestedBaseAmount, float consumedAmount)
+    {
+        if (consumedAmount <= 0f)
+            return;
+
+        string stableSourceId = string.IsNullOrWhiteSpace(sourceId)
+            ? StaminaConsumptionSources.Unspecified
+            : sourceId;
+        StaminaConsumed?.Invoke(new StaminaConsumptionRecord(
+            stableSourceId,
+            Mathf.Max(0f, requestedBaseAmount),
+            consumedAmount,
+            CurrentValue));
     }
 
     /// <summary>把基础体力变化换算为难度规则下的实际变化。</summary>
@@ -223,5 +301,40 @@ public partial class Mod_Stamina : Module, IItemModuleDependencyBinder
             return Data.MaxStamina * multiplier;
         }
         // 移除了 setter，使其成为只读属性
+    }
+}
+
+/// <summary>
+/// 内置体力消费来源的稳定 ID。玩法模块只声明来源，倍率和最终数值仍由 Mod_Stamina 统一结算。
+/// MOD 可使用自己的命名空间 ID 接入同一消费 API，无需修改此列表。
+/// </summary>
+public static class StaminaConsumptionSources
+{
+    public const string Unspecified = "flatworld.stamina.unspecified";
+    public const string MovementWalk = "flatworld.movement.walk";
+    public const string MovementRun = "flatworld.movement.run";
+    public const string CarrierBoost = "flatworld.carrier.boost";
+    public const string BowCharge = "flatworld.combat.bow_charge";
+    public const string WeaponAttack = "flatworld.combat.weapon_attack";
+    public const string LegacyColdWeaponAttack = "flatworld.combat.legacy_cold_weapon_attack";
+    public const string Swimming = "flatworld.environment.swimming";
+    public const string HeatStress = "flatworld.environment.heat_stress";
+    public const string BuffEffect = "flatworld.buff.stamina_effect";
+}
+
+/// <summary>一次已完成的体力消费事务；仅描述运行时事实，不持久化消费过程。</summary>
+public readonly struct StaminaConsumptionRecord
+{
+    public string SourceId { get; }
+    public float RequestedBaseAmount { get; }
+    public float ConsumedAmount { get; }
+    public float RemainingStamina { get; }
+
+    public StaminaConsumptionRecord(string sourceId, float requestedBaseAmount, float consumedAmount, float remainingStamina)
+    {
+        SourceId = sourceId;
+        RequestedBaseAmount = requestedBaseAmount;
+        ConsumedAmount = consumedAmount;
+        RemainingStamina = remainingStamina;
     }
 }

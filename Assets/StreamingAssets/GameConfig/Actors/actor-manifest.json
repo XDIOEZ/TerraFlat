@@ -25,6 +25,11 @@
       "id": "livestock-actors",
       "path": "definitions/livestock-actors.json",
       "enabled": true
+    },
+    {
+      "id": "fish-actors",
+      "path": "definitions/fish-actors.json",
+      "enabled": true
     }
   ]
 }

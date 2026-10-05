@@ -260,13 +260,13 @@ public sealed class MoveSpeedEnvironmentEffectDefinition : IEnvironmentEffectDef
 /// <summary>角色独享的环境移速实例；应用时乘入，离开时仅撤销自己贡献的倍率。</summary>
 public sealed class MoveSpeedEnvironmentEffectInstance : IEnvironmentEffectInstance
 {
-    private readonly Mover mover;
+    private readonly Mod_Mover mover;
     private float multiplier;
 
     public MoveSpeedEnvironmentEffectInstance(Item actor,
         MoveSpeedEnvironmentEffectDefinition definition)
     {
-        mover = actor?.itemMods?.GetMod_ByID<Mover>(ModText.Mover);
+        mover = actor?.itemMods?.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover);
         multiplier = definition?.Multiplier ?? 1f;
     }
 
@@ -342,7 +342,7 @@ public sealed class MovementSurfaceResponseEnvironmentEffectInstance : IEnvironm
 {
     private readonly Item actor;
     private readonly MovementSurfaceResponseEnvironmentEffectDefinition definition;
-    private Mover mover;
+    private Mod_Mover mover;
     private float previousAccelerationMultiplier;
     private float previousDecelerationMultiplier;
 
@@ -362,7 +362,7 @@ public sealed class MovementSurfaceResponseEnvironmentEffectInstance : IEnvironm
         if (IsApplied || actor == null || definition == null)
             return false;
 
-        mover = actor.itemMods?.GetMod_ByID<Mover>(ModText.Mover);
+        mover = actor.itemMods?.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover);
         if (mover == null)
             return false;
 
@@ -598,9 +598,9 @@ public partial class Mod_InteractSender
         if (environmentInteractionRunner != null || item == null)
             return;
 
-        TileEffectReceiver receiver =
-            item.itemMods?.GetMod_ByID<TileEffectReceiver>(ModText.TileEffectReceiver) ??
-            item.GetComponentInChildren<TileEffectReceiver>(true);
+        Mod_TileEffectReceiver receiver =
+            item.itemMods?.GetMod_ByID<Mod_TileEffectReceiver>(ModText.Mod_TileEffectReceiver) ??
+            item.GetComponentInChildren<Mod_TileEffectReceiver>(true);
         environmentInteractionRunner = receiver?.EnvironmentInteractions;
     }
 

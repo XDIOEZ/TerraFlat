@@ -27,13 +27,13 @@ namespace TheKiwiCoder
 
         //添加自定义组件
         public Mod_ItemDetector itemDetector;
-        public Mover_AI mover;
+        public Mod_Mover_AI mover;
         public Item item;
-        public DamageReceiver damageReciver;
+        public Mod_DamageReceiver damageReciver;
         public Mod_Damage Damage;
         public Mod_Food Food;
-        public TileEffectReceiver tileEffectReceiver;
-        public BuffManager buffManager;
+        public Mod_TileEffectReceiver tileEffectReceiver;
+        public Mod_BuffManager buffManager;
         public UltEvent OnTreeStart = new UltEvent();
         public UltEvent OnTreeStop = new UltEvent();
 
@@ -59,11 +59,11 @@ namespace TheKiwiCoder
             context.Damage = context.item.GetComponentInChildren<Mod_Damage>();
             // Add whatever else you need here...
 
-            context.mover = context.item.itemMods.GetMod_ByID(ModText.Mover) as Mover_AI;
+            context.mover = context.item.itemMods.GetMod_ByID(ModText.Mod_Mover) as Mod_Mover_AI;
             context.Food = context.item.itemMods.GetMod_ByID(ModText.Food) as Mod_Food;
-            context.damageReciver = context.item.itemMods.GetMod_ByID(ModText.Hp) as DamageReceiver;
-            context.tileEffectReceiver = context.item.itemMods.GetMod_ByID(ModText.TileEffectReceiver) as TileEffectReceiver;
-            context.buffManager = context.item.itemMods.GetMod_ByID(ModText.BuffManager) as BuffManager;
+            context.damageReciver = context.item.itemMods.GetMod_ByID(ModText.Hp) as Mod_DamageReceiver;
+            context.tileEffectReceiver = context.item.itemMods.GetMod_ByID(ModText.Mod_TileEffectReceiver) as Mod_TileEffectReceiver;
+            context.buffManager = context.item.itemMods.GetMod_ByID(ModText.Mod_BuffManager) as Mod_BuffManager;
             return context;
         }
         public static Context CreateFromItem(Item item)
@@ -85,11 +85,11 @@ namespace TheKiwiCoder
             context.Damage = context.item.GetComponentInChildren<Mod_Damage>();
             // Add whatever else you need here...
 
-            context.mover = context.item.itemMods.GetMod_ByID(ModText.Mover) as Mover_AI;
+            context.mover = context.item.itemMods.GetMod_ByID(ModText.Mod_Mover) as Mod_Mover_AI;
             context.Food = context.item.itemMods.GetMod_ByID(ModText.Food) as Mod_Food;
-            context.damageReciver = context.item.itemMods.GetMod_ByID(ModText.Hp) as DamageReceiver;
-            context.tileEffectReceiver = context.item.itemMods.GetMod_ByID<TileEffectReceiver>(ModText.TileEffectReceiver);
-            context.buffManager = context.item.itemMods.GetMod_ByID(ModText.BuffManager) as BuffManager;
+            context.damageReciver = context.item.itemMods.GetMod_ByID(ModText.Hp) as Mod_DamageReceiver;
+            context.tileEffectReceiver = context.item.itemMods.GetMod_ByID<Mod_TileEffectReceiver>(ModText.Mod_TileEffectReceiver);
+            context.buffManager = context.item.itemMods.GetMod_ByID(ModText.Mod_BuffManager) as Mod_BuffManager;
             return context;
         }
     }

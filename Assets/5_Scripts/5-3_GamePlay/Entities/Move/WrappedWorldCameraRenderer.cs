@@ -212,12 +212,13 @@ public sealed class WrappedWorldCameraRenderer : MonoBehaviour
         nextLightSourceRefreshTime = now + LightSourceRefreshInterval;
         pointLightSources.Clear();
         RemoveDestroyedLightRecords();
-        Light2D[] lights = FindObjectsOfType<Light2D>(false);
+        // 光源列表不依赖实例 ID 顺序，刷新时省掉全场景排序。
+        Light2D[] lights = FindObjectsByType<Light2D>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
         for (int i = 0; i < lights.Length; i++)
         {
             Light2D light = lights[i];
             if (light != null && light.lightType == Light2D.LightType.Point &&
-                light.GetComponent<WorldTopologyLightProxy>() == null)
+                !light.TryGetComponent<WorldTopologyLightProxy>(out _))
             {
                 pointLightSources.Add(light);
             }

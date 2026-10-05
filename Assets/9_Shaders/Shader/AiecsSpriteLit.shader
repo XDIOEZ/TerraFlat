@@ -2,7 +2,7 @@ Shader "Game/2D/AIECS Sprite Lit"
 {
     Properties
     {
-        _MainTex("帧图集", 2D) = "white" {}
+        [PerRendererData] _MainTex("帧图集", 2D) = "white" {}
         _WaterTint("水下颜色", Color) = (0.18,0.42,0.78,1)
         _WaterAlpha("水下透明度", Range(0,1)) = 0.1
         _WaterLineColor("水线颜色", Color) = (0.65,0.9,1,1)
@@ -13,6 +13,8 @@ Shader "Game/2D/AIECS Sprite Lit"
         _WaterWaveFrequency("波频率", Float) = 8
         _WaterWaveSpeed("波速度", Float) = 2.4
         _WaterLineOffset("批次水线世界偏移", Float) = 0
+        [PerRendererData] _UsePerRendererDroppedWater("轻量掉落物独立水线", Float) = 0
+        [PerRendererData] _DroppedWaterParams("轻量掉落物水线参数", Vector) = (0,0,1,0)
     }
     SubShader
     {
@@ -32,7 +34,15 @@ Shader "Game/2D/AIECS Sprite Lit"
             float _WaterAlpha, _WaterLineStrength, _WaterFeather, _WaterLineWidth;
             float _WaterWaveAmplitude, _WaterWaveFrequency, _WaterWaveSpeed;
             float _WaterLineOffset;
+            float _UsePerRendererDroppedWater;
+            float4 _DroppedWaterParams;
         CBUFFER_END
+
+        #if defined(UNITY_DOTS_INSTANCING_ENABLED)
+        UNITY_DOTS_INSTANCING_START(UserPropertyMetadata)
+            UNITY_DOTS_INSTANCED_PROP(uint, _AiecsInstanceData)
+        UNITY_DOTS_INSTANCING_END(UserPropertyMetadata)
+        #endif
 
         struct Attributes
         {
@@ -53,17 +63,34 @@ Shader "Game/2D/AIECS Sprite Lit"
             UNITY_VERTEX_OUTPUT_STEREO
         };
 
-        // 顶点已按透明顺序装入网格；世界坐标水线不依赖图集 UV 或网格根节点。
+        // BRG 从共享实例缓冲读取姿态、图集帧、水线和颜色，原型网格仍可使用旧顶点格式。
         Varyings Vertex(Attributes input)
         {
             Varyings output = (Varyings)0;
             UNITY_SETUP_INSTANCE_ID(input);
             UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
+            #if defined(UNITY_DOTS_INSTANCING_ENABLED)
+            uint address = UNITY_DOTS_INSTANCED_METADATA_NAME(uint, _AiecsInstanceData)
+                + GetDOTSInstanceIndex() * 96u;
+            float4 transform0 = asfloat(unity_DOTSInstanceData.Load4(address));
+            float4 transform1 = asfloat(unity_DOTSInstanceData.Load4(address + 16u));
+            float4 atlas = asfloat(unity_DOTSInstanceData.Load4(address + 32u));
+            float4 tint = asfloat(unity_DOTSInstanceData.Load4(address + 48u));
+            float4 water = asfloat(unity_DOTSInstanceData.Load4(address + 64u));
+            float2 positionWS = float2(dot(transform0.xy, input.positionOS.xy) + transform0.z,
+                dot(transform1.xy, input.positionOS.xy) + transform1.z);
+            output.positionCS = TransformWorldToHClip(float3(positionWS, 0));
+            output.world = positionWS;
+            output.uv = atlas.xy + input.uv * atlas.zw;
+            output.water = water;
+            output.color = input.color * tint;
+            #else
             output.positionCS = TransformObjectToHClip(input.positionOS);
             output.world = TransformObjectToWorld(input.positionOS).xy;
             output.uv = input.uv;
             output.water = input.water;
             output.color = input.color;
+            #endif
             output.lightingUV = ComputeScreenPos(output.positionCS / output.positionCS.w).xy;
             return output;
         }
@@ -72,10 +99,17 @@ Shader "Game/2D/AIECS Sprite Lit"
         half4 SampleBody(Varyings input)
         {
             half4 main = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv) * input.color;
+            float4 resolvedWater = input.water;
+            float waterOffset = _WaterLineOffset;
+            if (_UsePerRendererDroppedWater > 0.5)
+            {
+                resolvedWater = _DroppedWaterParams;
+                waterOffset = 0;
+            }
             return FlatWorldApplyActorWater(main, 0, 0, input.world,
-                float4(input.water.x, 1, input.water.y + _WaterLineOffset, input.water.z),
+                float4(resolvedWater.x, 1, resolvedWater.y + waterOffset, resolvedWater.z),
                 float4(0, _WaterFeather, _WaterLineWidth, _WaterWaveAmplitude),
-                float4(_WaterWaveFrequency, _WaterWaveSpeed, input.water.w, _WaterLineStrength),
+                float4(_WaterWaveFrequency, _WaterWaveSpeed, resolvedWater.w, _WaterLineStrength),
                 _WaterTint, _WaterLineColor, _WaterAlpha, _Time.y);
         }
         ENDHLSL
@@ -86,7 +120,8 @@ Shader "Game/2D/AIECS Sprite Lit"
             HLSLPROGRAM
             #pragma vertex Vertex
             #pragma fragment Fragment
-            #pragma multi_compile_instancing
+            #pragma target 4.5
+            #pragma multi_compile _ DOTS_INSTANCING_ON
             #pragma multi_compile USE_SHAPE_LIGHT_TYPE_0 __
             #pragma multi_compile USE_SHAPE_LIGHT_TYPE_1 __
             #pragma multi_compile USE_SHAPE_LIGHT_TYPE_2 __
@@ -124,7 +159,8 @@ Shader "Game/2D/AIECS Sprite Lit"
             HLSLPROGRAM
             #pragma vertex Vertex
             #pragma fragment Normals
-            #pragma multi_compile_instancing
+            #pragma target 4.5
+            #pragma multi_compile _ DOTS_INSTANCING_ON
             #include "Packages/com.unity.render-pipelines.universal/Shaders/2D/Include/NormalsRenderingShared.hlsl"
 
             // 当前导出的普通帧采用平面法线；自定义法线贴图必须由导出器明确登记。

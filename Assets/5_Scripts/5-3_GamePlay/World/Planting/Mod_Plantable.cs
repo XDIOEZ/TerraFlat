@@ -1,4 +1,5 @@
 using System;
+using FlatWorld.NaturalEntities;
 using FlatWorld.Networking;
 using System.Collections.Generic;
 using UnityEngine;
@@ -50,7 +51,7 @@ public sealed class Mod_Plantable : Module
     private bool actBound;
     private bool previewCreationFailed;
     private PlantingSummoner plantingSummoner;
-    private GameController ownerController;
+    private Mod_GameController ownerController;
 
     /// <summary>当前指向有效耕地时，本模块保留这次使用动作，供食物等并存模块做优先级仲裁。</summary>
     public bool IsPlantingActionAvailable
@@ -59,7 +60,7 @@ public sealed class Mod_Plantable : Module
         {
             if (!GameNetwork.HasStateAuthority || item == null || !item.InHand || item.Owner == null)
                 return false;
-            if (!TryResolveOwnerController(out GameController controller))
+            if (!TryResolveOwnerController(out Mod_GameController controller))
                 return false;
             return TryResolvePlantingTarget(controller.GetMouseWorldPosition(), out _, out _);
         }
@@ -116,7 +117,7 @@ public sealed class Mod_Plantable : Module
             return;
         }
 
-        if (!TryResolveOwnerController(out GameController controller))
+        if (!TryResolveOwnerController(out Mod_GameController controller))
         {
             DisposePlantingSummoner();
             return;
@@ -140,7 +141,7 @@ public sealed class Mod_Plantable : Module
         if (!GameNetwork.HasStateAuthority || item == null || !item.InHand || item.Owner == null)
             return;
 
-        if (!TryResolveOwnerController(out GameController controller))
+        if (!TryResolveOwnerController(out Mod_GameController controller))
             return;
 
         Vector3 pointerWorldPosition = controller.GetMouseWorldPosition();
@@ -153,6 +154,11 @@ public sealed class Mod_Plantable : Module
         }
 
         Item actor = item.Owner;
+        if (GameRes.ExistingInstance.TryGetItemDefinition(cropItemId, out var definition) && definition.UsesResourceEntities)
+        {
+            TryPlantEntity(target, actor, definition);
+            return;
+        }
         Item crop = TryCreateCultivatedCrop(target);
         if (crop == null)
             return;
@@ -167,7 +173,7 @@ public sealed class Mod_Plantable : Module
         target.agriculture.RegisterCrop(target.tilePosition, crop);
         target.agriculture.CaptureState();
 
-        Inventory_HotBar hotbar = actor.itemMods.GetMod_ByID<Inventory_HotBar>(ModText.Hotbar);
+        Mod_HotBar hotbar = actor.itemMods.GetMod_ByID<Mod_HotBar>(ModText.Hotbar);
         hotbar?.RuntimeInventory?.SyncHeldItemImmediately();
         hotbar?.NotifyOwnerNetworkStateChanged();
     }
@@ -284,7 +290,7 @@ public sealed class Mod_Plantable : Module
             return false;
         }
 
-        if (!TryResolveOwnerController(out GameController controller) || controller == null || item.Owner == null)
+        if (!TryResolveOwnerController(out Mod_GameController controller) || controller == null || item.Owner == null)
         {
             reason = "种植者控制器尚未就绪";
             return false;
@@ -328,6 +334,33 @@ public sealed class Mod_Plantable : Module
     #endregion
 
     #region 作物生成与种子消耗
+
+    /// <summary>先创建同一套 Entity 植株，再扣种子；无外壳，也不把实体回滚误记成收获。</summary>
+    private void TryPlantEntity(PlantingTarget target, Item actor, RuntimeItemDefinition definition)
+    {
+        NaturalEntityHandle handle = default;
+        bool consumed = false;
+        try
+        {
+            handle = target.agriculture.CreateEntityCrop(target.tilePosition, definition);
+            if (!ConsumeOneSeed())
+            {
+                target.agriculture.RollbackEntityCrop(handle);
+                return;
+            }
+            consumed = true;
+            target.agriculture.CaptureEntityCrop(handle);
+            Mod_HotBar hotbar = actor.itemMods.GetMod_ByID<Mod_HotBar>(ModText.Hotbar);
+            hotbar?.RuntimeInventory?.SyncHeldItemImmediately();
+            hotbar?.NotifyOwnerNetworkStateChanged();
+        }
+        catch (Exception exception)
+        {
+            if (!consumed && handle.IsValid) target.agriculture.RollbackEntityCrop(handle);
+            Debug.LogError($"[种植] Entity 作物 {definition.Id} 处理失败；" +
+                (consumed ? "种子已扣除，保留已生成植株。" : "未消耗种子，已回滚植株。") + exception);
+        }
+    }
 
     private Item TryCreateCultivatedCrop(PlantingTarget target)
     {
@@ -397,7 +430,7 @@ public sealed class Mod_Plantable : Module
 
     #region 玩家控制器
 
-    private bool TryResolveOwnerController(out GameController controller)
+    private bool TryResolveOwnerController(out Mod_GameController controller)
     {
         if (ownerController != null)
         {
@@ -406,8 +439,8 @@ public sealed class Mod_Plantable : Module
         }
 
         Item owner = item?.Owner;
-        ownerController = owner?.itemMods?.GetMod_ByID<GameController>(ModText.Controller);
-        ownerController ??= owner?.GetComponent<GameController>();
+        ownerController = owner?.itemMods?.GetMod_ByID<Mod_GameController>(ModText.Controller);
+        ownerController ??= owner?.GetComponent<Mod_GameController>();
         controller = ownerController;
         return controller != null;
     }

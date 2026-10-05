@@ -17,7 +17,7 @@ using RuntimeWorldAddress = FlatWorld.WorldModel.WorldAddress;
 /// </summary>
 public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
 {
-    private const int CompactSaveVersion = 20; // Ground/Liquid 独立存档，不恢复旧水地块或农业水深。
+    private const int CompactSaveVersion = 21; // 生态进度使用当前布局；旧版本在解析核心数据前拒绝。
     private const int ModdedSaveVersion = 10;
     private const float AutoSaveFrameBudgetSeconds = 0.0025f;
     private const string TemporarySaveSuffix = ".tmp";
@@ -52,8 +52,11 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
     [Tooltip("当前使用的存档数据")]
     public GameSaveData SaveData;
 
-    [Tooltip("当前控制的玩家名称")]
+    [Tooltip("当前控制的角色 ID；字段名保留以兼容现有调用")]
     public string CurrentContrrolPlayerName;
+
+    /// <summary>为新角色创建与显示名无关的持久身份键。</summary>
+    public static string CreatePlayerProfileId() => "player:" + Guid.NewGuid().ToString("N");
     
     /// <summary>
     /// 获取当前活跃星球数据（快捷属性）
@@ -152,14 +155,29 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
             throw new InvalidOperationException("SaveData为null，无法创建联机世界快照");
 
         PrepareLoadedChunksForSave();
-        byte[] rawData = BuildCompactSavePayload(SaveData);
-        using MemoryStream output = new MemoryStream();
-        using (GZipStream gzip = new GZipStream(output, System.IO.Compression.CompressionLevel.Fastest, true))
+        var privateBackups = new List<(Data_Player Player, string SpecialData)>();
+        try
         {
-            gzip.Write(rawData, 0, rawData.Length);
+            if (SaveData.PlayerData_Dict != null)
+                foreach (Data_Player player in SaveData.PlayerData_Dict.Values)
+                {
+                    if (player == null) continue;
+                    string publicData = MachineInventoryCommands.PublicSpecialData(player.ItemSpecialData);
+                    if (string.Equals(publicData, player.ItemSpecialData, StringComparison.Ordinal)) continue;
+                    privateBackups.Add((player, player.ItemSpecialData));
+                    player.ItemSpecialData = publicData;
+                }
+            byte[] rawData = BuildCompactSavePayload(SaveData);
+            using MemoryStream output = new MemoryStream();
+            using (GZipStream gzip = new GZipStream(output, System.IO.Compression.CompressionLevel.Fastest, true))
+                gzip.Write(rawData, 0, rawData.Length);
+            return output.ToArray();
         }
-
-        return output.ToArray();
+        finally
+        {
+            foreach (var backup in privateBackups)
+                backup.Player.ItemSpecialData = backup.SpecialData;
+        }
     }
 
     /// <summary>
@@ -233,19 +251,27 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
             yield break;
         }
 
-        Exception captureFailure = null;
-        IEnumerator captureRoutine = PrepareLoadedChunksForAutoSaveCoroutine(
-            exception => captureFailure = exception);
-        while (captureRoutine.MoveNext())
-            yield return captureRoutine.Current;
-
-        if (captureFailure != null)
+        ecologySnapshotReaders++;
+        try
         {
-            onWriteQueued?.Invoke(Task.FromException<bool>(captureFailure));
-            yield break;
-        }
+            Exception captureFailure = null;
+            IEnumerator captureRoutine = PrepareLoadedChunksForAutoSaveCoroutine(
+                exception => captureFailure = exception);
+            while (captureRoutine.MoveNext())
+                yield return captureRoutine.Current;
 
-        onWriteQueued?.Invoke(QueueCurrentSaveWriteInBackground());
+            if (captureFailure != null)
+            {
+                onWriteQueued?.Invoke(Task.FromException<bool>(captureFailure));
+                yield break;
+            }
+
+            onWriteQueued?.Invoke(QueueCurrentSaveWriteInBackground());
+        }
+        finally
+        {
+            ecologySnapshotReaders--;
+        }
     }
 
     /// <summary>在主线程构建完整字节快照，并返回不访问 Unity API 的后台文件写入任务。</summary>
@@ -389,6 +415,91 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         createdSaveName = GetAvailableSaveName(requestedName);
         return SaveToDisk(saveData, UserSavePath, createdSaveName);
     }
+
+    #region 存档与角色改名
+
+    /// <summary>只修改角色显示名，字典键、运行时玩家索引和控制角色 ID 保持稳定。</summary>
+    public bool TryRenamePlayerDisplayName(string profileId, string requestedName)
+    {
+        string displayName = requestedName?.Trim();
+        if (string.IsNullOrWhiteSpace(profileId) || string.IsNullOrWhiteSpace(displayName) ||
+            SaveData?.PlayerData_Dict == null ||
+            !SaveData.PlayerData_Dict.TryGetValue(profileId, out Data_Player playerData) ||
+            playerData == null)
+            return false;
+
+        if (displayName.Length > 48)
+            return false;
+        if (string.Equals(playerData.Name_User, displayName, StringComparison.Ordinal))
+            return true;
+        foreach (KeyValuePair<string, Data_Player> profile in SaveData.PlayerData_Dict)
+        {
+            if (!string.Equals(profile.Key, profileId, StringComparison.Ordinal) &&
+                string.Equals(profile.Value?.Name_User, displayName, StringComparison.OrdinalIgnoreCase))
+                return false;
+        }
+
+        string previousName = playerData.Name_User;
+        playerData.Name_User = displayName;
+        if (SaveToDisk(SaveData, UserSavePath, SaveData.saveName))
+            return true;
+
+        playerData.Name_User = previousName;
+        return false;
+    }
+
+    /// <summary>先写入新文件及内部名称，再移除旧文件；失败时保留旧档。</summary>
+    public bool TryRenameSave(string oldName, string requestedName, out string renamedSaveName)
+    {
+        renamedSaveName = oldName;
+        string newName = requestedName?.Trim();
+        if (SaveData == null || string.IsNullOrWhiteSpace(oldName) ||
+            !string.Equals(SaveData.saveName, oldName, StringComparison.Ordinal) ||
+            string.IsNullOrWhiteSpace(newName) || newName.Length > 48 ||
+            !string.Equals(newName, NormalizeSaveName(newName), StringComparison.Ordinal))
+            return false;
+
+        if (string.Equals(oldName, newName, StringComparison.Ordinal))
+            return true;
+
+        string oldPath = GetSaveFilePath(UserSavePath, oldName);
+        string newPath = GetSaveFilePath(UserSavePath, newName);
+        if (!File.Exists(oldPath) || File.Exists(newPath) ||
+            File.Exists(GetBackupSavePath(newPath)) || File.Exists(GetTemporarySavePath(newPath)))
+            return false;
+
+        DateTime lastExitTimeUtc = GetLastExitTimeUtc(oldPath);
+        if (!SaveToDisk(SaveData, UserSavePath, newName))
+        {
+            SaveData.saveName = oldName;
+            return false;
+        }
+
+        try
+        {
+            if (lastExitTimeUtc != DateTime.MinValue)
+                RecordLastExitTimeUtc(newPath, lastExitTimeUtc);
+            // 先让旧路径的后台快照过期，再与原子写盘共用文件锁移除旧档。
+            ReserveSaveRevision(oldPath);
+            lock (SaveFileLock)
+            {
+                DeleteSaveFile(oldPath);
+                if (File.Exists(oldPath))
+                    throw new IOException("旧存档未能删除");
+            }
+            renamedSaveName = newName;
+            return true;
+        }
+        catch (Exception exception)
+        {
+            Debug.LogException(exception);
+            DeleteSaveFile(newPath);
+            SaveData.saveName = oldName;
+            return false;
+        }
+    }
+
+    #endregion
 
     private string GetAvailableSaveName(string requestedName)
     {
@@ -1253,6 +1364,8 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         RestoreSupportTerrain(chunk, delta);
         RestoreContaminationTerrain(chunk, delta);
         RestoreLiquidTerrain(chunk, delta);
+        RestoreGroundLayerTerrain(chunk, delta);
+        RestoreSnowTerrain(chunk, delta);
         baseline.PersistenceRestored = true;
     }
 
@@ -1522,6 +1635,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         runtimeBuildingDirtyChunks.Clear();
         runtimeBuildingDirtyAddresses.Clear();
         restoredRuntimeAiChunks.Clear();
+        ClearParkedRuntimeAi();
         restoredRuntimeAiWorld = null;
         restoredRuntimeAiEpoch = long.MinValue;
         restoredRuntimeBuildingChunks.Clear();
@@ -1753,7 +1867,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
     private static bool IsRuntimeBuildingItem(Item item, out Mod_Building building)
     {
         building = null;
-        if (MechanicalWorld.OwnsWorldItem(item?.itemData)) return false;
+        if (MachineWorld.OwnsWorldItem(item?.itemData)) return false;
         if (item == null || item is Player || item is Map || item.itemData == null)
             return false;
 
@@ -1792,7 +1906,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
     /// <summary>判断建筑 SaveData 是否可以在世界加载时重新实例化。</summary>
     private static bool IsRestorableRuntimeBuildingData(ItemData data)
     {
-        if (MechanicalWorld.OwnsWorldItem(data)) return false;
+        if (MachineWorld.OwnsWorldItem(data)) return true;
         try
         {
             if (data == null || !Mod_Building.TryReadBuildingData(
@@ -1907,6 +2021,13 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
             {
                 ItemData runtimeData = CloneAndRebaseItemData(savedData);
                 ItemTransform transformData = runtimeData.transform ?? new ItemTransform();
+                if (MachineWorld.OwnsWorldItem(runtimeData))
+                {
+                    MachineWorld.RestoreMachine(runtimeData);
+                    // 机器快照接管成功后删除旧区块 Item 来源，避免拆除后旧差量再次恢复同一台设施。
+                    delta?.ChangedItems?.RemoveAll(item => item?.Guid == runtimeData.Guid);
+                    continue;
+                }
                 Item restored = ItemMgr.Instance.InstantiateItem(
                     runtimeData,
                     transformData.position,
@@ -2130,6 +2251,14 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
                 continue;
             }
 
+            // 运行中进入新区块时先登记休眠快照，由生态调度器在镜头外分帧恢复。
+            if (GameManager.Instance != null && GameManager.Instance.IsGameplayReady &&
+                MonsterManager.IsRegisteredSpeciesId(savedData.IDName))
+            {
+                AddParkedRuntimeAi(address, CloneItemData(savedData));
+                continue;
+            }
+
             try
             {
                 ItemData runtimeData = CloneAndRebaseItemData(savedData);
@@ -2169,6 +2298,10 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
 
         record.ChangedItems ??= new List<ItemData>();
         record.ChangedItems.RemoveAll(RuntimeAiEntityUtility.IsAiData);
+        // 休眠实体已经卸载 GameObject，保存活动实体时仍须保留同一区块中的休眠快照。
+        if (parkedRuntimeAiByAddress.TryGetValue(address, out List<ItemData> parkedItems))
+            for (int i = 0; i < parkedItems.Count; i++)
+                record.ChangedItems.Add(parkedItems[i]);
         for (int i = 0; i < savedItems.Count; i++)
             record.ChangedItems.Add(savedItems[i]);
         record.ChangedItems.Sort((left, right) => (left?.Guid ?? 0).CompareTo(right?.Guid ?? 0));
@@ -2198,6 +2331,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
             return;
 
         restoredRuntimeAiChunks.Clear();
+        ClearParkedRuntimeAi();
         restoredRuntimeAiWorld = world;
         restoredRuntimeAiEpoch = epoch;
     }
@@ -2428,7 +2562,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
             Version = CompactSaveVersion,
             CoreSaveData = SerializeCoreDataWithoutChunks(saveData),
             DroppedItems = DroppedItemService.CaptureArchive(saveData),
-            MechanicalNetworks = MechanicalWorld.CaptureArchive(saveData)
+            MechanicalNetworks = MachineWorld.CaptureArchive(saveData)
         };
 
         foreach (KeyValuePair<string, ChunkSaveRecord> pair in chunkDeltas)
@@ -2524,7 +2658,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
             throw new InvalidDataException("差异存档的核心数据为空");
 
         DroppedItemService.RestoreArchive(saveData, envelope.DroppedItems);
-        MechanicalWorld.RestoreArchive(saveData, envelope.MechanicalNetworks);
+        MachineWorld.RestoreArchive(saveData, envelope.MechanicalNetworks);
 
         if (envelope.ChunkRecords == null)
             return saveData;
@@ -2742,6 +2876,8 @@ public partial class ChunkSaveRecord
     public List<AgricultureCellSaveData> AgricultureCells = new(); // 独立农业状态
     public List<ContaminationCellSaveData> ContaminationCells = new(); // 独立污染状态
     public List<LiquidCellSaveData> LiquidCells = new(); // 只保存玩家改变的液体格，与 Ground 差量独立。
+    public List<GroundLayerCellSaveData> GroundLayerCells = new(); // 追加伪 Z 轴差量，旧记录缺失时按未采挖处理。
+    public List<SnowCellSaveData> SnowCells = new(); // 独立保存玩家铲除或堆放的雪，不替换底层地形。
 
     [MemoryPackIgnore]
     public bool HasChanges =>
@@ -2753,7 +2889,9 @@ public partial class ChunkSaveRecord
          (AgricultureCells?.Count ?? 0) > 0 ||
          (SupportCells?.Count ?? 0) > 0 ||
          (ContaminationCells?.Count ?? 0) > 0 ||
-         (LiquidCells?.Count ?? 0) > 0);
+         (LiquidCells?.Count ?? 0) > 0 ||
+         (GroundLayerCells?.Count ?? 0) > 0 ||
+         (SnowCells?.Count ?? 0) > 0);
 }
 
 [MemoryPackable]

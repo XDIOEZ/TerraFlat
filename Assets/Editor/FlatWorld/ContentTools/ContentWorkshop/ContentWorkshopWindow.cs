@@ -65,7 +65,7 @@ namespace FlatWorld.Editor.ContentWorkshop
                 "equipment",
                 "Equipment_Base",
                 "Chestplate_Wood",
-                "Module_Equipment_Store"),
+                "Mod_EquipmentStore"),
             new(
                 WorkshopItemTemplateKind.Seed,
                 "种子",
@@ -1124,13 +1124,8 @@ namespace FlatWorld.Editor.ContentWorkshop
             itemDraft.AddEquipmentAbility = EditorGUILayout.ToggleLeft("可以装备", itemDraft.AddEquipmentAbility);
             if (itemDraft.AddCombatAbility)
             {
-                itemDraft.CuttingDamage = Mathf.Max(0f, EditorGUILayout.FloatField("切割伤害", itemDraft.CuttingDamage));
-                itemDraft.PiercingDamage = Mathf.Max(0f, EditorGUILayout.FloatField("穿刺伤害", itemDraft.PiercingDamage));
-                itemDraft.ChoppingDamage = Mathf.Max(0f, EditorGUILayout.FloatField("劈砍伤害", itemDraft.ChoppingDamage));
-                itemDraft.BluntDamage = Mathf.Max(0f, EditorGUILayout.FloatField("钝击伤害", itemDraft.BluntDamage));
-                float totalCombatPower = itemDraft.CuttingDamage + itemDraft.PiercingDamage +
-                                         itemDraft.ChoppingDamage + itemDraft.BluntDamage;
-                EditorGUILayout.LabelField("总战斗力", totalCombatPower.ToString("0.##"));
+                itemDraft.PhysicalDamage = Mathf.Max(0f, EditorGUILayout.FloatField("物理攻击力", itemDraft.PhysicalDamage));
+                itemDraft.ImpactKind = (CombatDamageKind)EditorGUILayout.EnumPopup("命中表现", itemDraft.ImpactKind);
             }
 
             GUILayout.Space(8f);

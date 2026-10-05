@@ -305,9 +305,9 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
         if (string.IsNullOrWhiteSpace(playerProfileName))
             throw new InvalidOperationException("维度切换缺少稳定玩家档案名。");
 
-        Vector3 sourcePosition = sourcePlayer.transform.position;
-        GameController sourceController = sourcePlayer.GetComponentInChildren<GameController>(true);
-        Mover sourceMover = sourcePlayer.itemMods?.GetMod_ByID<Mover>(ModText.Mover);
+        Vector3 sourcePosition = WorldTopologyRuntime.NormalizePosition(sourcePlayer.transform.position);
+        Mod_GameController sourceController = sourcePlayer.GetComponentInChildren<Mod_GameController>(true);
+        Mod_Mover sourceMover = sourcePlayer.itemMods?.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover);
         TransitionState state = new TransitionState
         {
             PreserveRunState = sourceMover != null && sourceMover.IsRunning
@@ -417,7 +417,7 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
         if (string.IsNullOrWhiteSpace(playerName))
             throw new InvalidOperationException("跨维度切换缺少稳定玩家档案名。");
         DimensionTravelProgressStore.SetLastPosition(playerData, sourceAddress, sourcePlayer.transform.position);
-        sourcePlayer.GetComponentInChildren<TileEffectReceiver>(true)?.PrepareForWorldTransition();
+        sourcePlayer.GetComponentInChildren<Mod_TileEffectReceiver>(true)?.PrepareForWorldTransition();
         ItemMgr.Instance.SavePlayer();
 
         GameManager.Instance.SetDimensionTransitionLoading("正在保存当前维度…", 0.22f);
@@ -459,9 +459,9 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
         state.EnterNotified = true;
 
         Player targetPlayer = ItemMgr.Instance.LoadPlayer(playerName);
-        targetPlayer.transform.position = targetPosition;
+        targetPlayer.transform.position = WorldLocalPresentation.ProjectPosition(targetPosition);
         targetPlayer.Data.transform.position = targetPosition;
-        targetPlayer.GetComponentInChildren<GameController>(true)?.SetGameplayInputLocked(true);
+        targetPlayer.GetComponentInChildren<Mod_GameController>(true)?.SetGameplayInputLocked(true);
         GameManager.Instance.NotifyDimensionPlayerEntered(targetPlayer);
 
         GameManager.Instance.SetDimensionTransitionLoading("正在生成目标区块…", 0.78f);
@@ -474,14 +474,14 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
         }
 
         yield return null;
-        targetPlayer.GetComponentInChildren<TileEffectReceiver>(true)?.RefreshCurrentTileEffects();
+        targetPlayer.GetComponentInChildren<Mod_TileEffectReceiver>(true)?.RefreshCurrentTileEffects();
 
         GameManager.Instance.SetDimensionTransitionLoading("正在完成目标维度加载…", 0.96f);
         Physics2D.SyncTransforms();
         yield return new WaitForFixedUpdate();
         GameManager.Instance.CompleteDimensionTransitionLoading();
 
-        targetPlayer.GetComponentInChildren<GameController>(true)?.SetGameplayInputLocked(false);
+        targetPlayer.GetComponentInChildren<Mod_GameController>(true)?.SetGameplayInputLocked(false);
         RestorePlayerRunState(targetPlayer, state.PreserveRunState);
         ItemMgr.Instance.SavePlayer();
         SaveDataMgr.Instance.Save_And_WriteToDisk();
@@ -517,7 +517,7 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
         Player currentPlayer = ItemMgr.Instance?.User_Player;
         if (!exitNotified)
         {
-            currentPlayer?.GetComponentInChildren<GameController>(true)?.SetGameplayInputLocked(false);
+            currentPlayer?.GetComponentInChildren<Mod_GameController>(true)?.SetGameplayInputLocked(false);
             RestorePlayerRunState(currentPlayer, preserveRunState);
             yield break;
         }
@@ -549,14 +549,14 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
         GameManager.Instance.NotifyDimensionWorldEntered();
 
         Player recoveredPlayer = ItemMgr.Instance.LoadPlayer(playerProfileName);
-        recoveredPlayer.transform.position = sourcePosition;
+        recoveredPlayer.transform.position = WorldLocalPresentation.ProjectPosition(sourcePosition);
         recoveredPlayer.Data.transform.position = sourcePosition;
-        recoveredPlayer.GetComponentInChildren<GameController>(true)?.SetGameplayInputLocked(true);
+        recoveredPlayer.GetComponentInChildren<Mod_GameController>(true)?.SetGameplayInputLocked(true);
         GameManager.Instance.NotifyDimensionPlayerEntered(recoveredPlayer);
         yield return WaitForRuntimeChunkPresentation(sourceAddress, sourcePosition, recoveredPlayer);
 
-        recoveredPlayer.GetComponentInChildren<TileEffectReceiver>(true)?.RefreshCurrentTileEffects();
-        recoveredPlayer.GetComponentInChildren<GameController>(true)?.SetGameplayInputLocked(false);
+        recoveredPlayer.GetComponentInChildren<Mod_TileEffectReceiver>(true)?.RefreshCurrentTileEffects();
+        recoveredPlayer.GetComponentInChildren<Mod_GameController>(true)?.SetGameplayInputLocked(false);
         RestorePlayerRunState(recoveredPlayer, preserveRunState);
         ItemMgr.Instance.SavePlayer();
         SaveDataMgr.Instance.Save_And_WriteToDisk();
@@ -565,7 +565,7 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
     /// <summary>维度切换完成后恢复玩家的奔跑开关；恢复必须在输入解锁后执行。</summary>
     private static void RestorePlayerRunState(Player player, bool shouldRun)
     {
-        Mover mover = player?.itemMods?.GetMod_ByID<Mover>(ModText.Mover);
+        Mod_Mover mover = player?.itemMods?.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover);
         mover?.SetRunState(shouldRun);
     }
 
@@ -698,7 +698,7 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
         if (chunkLoader != null)
         {
             // 复用玩家自己的动态视距、预取距离和性能配置，避免切维度时只保留中心区块。
-            chunkLoader.RefreshChunksForCameraView();
+            chunkLoader.RefreshConfiguredChunkWindow();
         }
         else
         {

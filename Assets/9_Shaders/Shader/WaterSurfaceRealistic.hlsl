@@ -18,33 +18,36 @@ void AccumulateWaterWave(
     slope += direction * waveCos * steepness * visibility;
 }
 
-/// <summary>用连续噪声的解析梯度补充细碎波面，避免独立随机亮点脱离水面运动。</summary>
-float2 WaterNoiseSlope(float2 position)
+/// <summary>用错相正弦波生成连续波光，同时返回解析斜率供法线复用。</summary>
+float2 SampleWaterShimmerWave(
+    float2 position,
+    float2 direction,
+    float frequency,
+    float time,
+    float speed,
+    float phaseOffset)
 {
-    float2 cell = floor(position);
-    float2 local = frac(position);
-    float2 blend = local * local * (3.0 - 2.0 * local);
-    float2 derivative = 6.0 * local * (1.0 - local);
-    float a = WaterHash(cell);
-    float b = WaterHash(cell + float2(1.0, 0.0));
-    float c = WaterHash(cell + float2(0.0, 1.0));
-    float d = WaterHash(cell + float2(1.0, 1.0));
-    return derivative * float2(
-        lerp(b - a, d - c, blend.y),
-        lerp(c - a, d - b, blend.x));
+    float phase = dot(position, direction) * frequency + time * speed + phaseOffset;
+    float footprint = fwidth(phase);
+    float visibility = 1.0 - smoothstep(0.9, 2.8, footprint);
+    float waveSin;
+    float waveCos;
+    sincos(phase, waveSin, waveCos);
+    return float2((waveSin * 0.5 + 0.5) * visibility, waveCos * visibility);
 }
 
 /// <summary>六组色散波与细波法线共同驱动反射，潮流平移和风浪传播分别跟随游戏时间。</summary>
 WaterSurfaceData CalculateWaterSurface(
     float2 positionWS,
     float2 screenUV,
-    half liquidDepth)
+    half liquidDepth,
+    float2 direction)
 {
     WaterSurfaceData surface = (WaterSurfaceData)0;
-    float2 direction = ResolveWaterFlowAxis();
     float2 lateral = float2(-direction.y, direction.x);
-    float time = _OceanWaveTime * _WaveSpeed;
-    float tide = ResolveTideFlowPhase(_WaveSpeed);
+    float waveSpeed = max(_WaveSpeed, 0.0);
+    float time = _OceanWaveTime * waveSpeed;
+    float tide = ResolveTideFlowPhase(waveSpeed);
     float2 waterPosition = positionWS - direction * tide * 0.045;
     float2 drift = direction * time * 0.08;
     float macroA = WaterNoise(waterPosition * 0.075 - drift * 0.1);
@@ -70,11 +73,26 @@ WaterSurfaceData CalculateWaterSurface(
     AccumulateWaterWave(warpedPosition, direction * 0.8 - lateral * 0.6,
         detailScale * 2.61, 0.09, time, 5.2, height, slope);
 
-    float2 detailPosition = waterPosition * max(_RippleScale, 0.25) - drift;
-    float detailVisibility = 1.0 - smoothstep(0.3, 1.2, length(fwidth(detailPosition)));
-    float2 fineSlope = WaterNoiseSlope(detailPosition + float2(8.3, 21.7));
-    fineSlope += WaterNoiseSlope(detailPosition * 1.91 + drift * 0.6) * 0.45;
-    slope += fineSlope * 0.2 * detailVisibility;
+    // 参考 2D 水面波光的做法：多组不同方向、速度的正弦波错相叠加，形成连续碎光而非随机噪点。
+    float rippleScale = max(_RippleScale, 0.25);
+    float2 shimmerPosition = waterPosition * rippleScale - drift * 0.45;
+    float2 shimmerDirectionA = direction * 0.86 + lateral * 0.51;
+    shimmerDirectionA *= rsqrt(max(dot(shimmerDirectionA, shimmerDirectionA), 0.001));
+    float2 shimmerDirectionB = direction * 0.34 - lateral * 0.94;
+    shimmerDirectionB *= rsqrt(max(dot(shimmerDirectionB, shimmerDirectionB), 0.001));
+    float2 shimmerDirectionC = direction * 0.62 + lateral * 0.78;
+    shimmerDirectionC *= rsqrt(max(dot(shimmerDirectionC, shimmerDirectionC), 0.001));
+    float2 shimmerA = SampleWaterShimmerWave(
+        shimmerPosition, shimmerDirectionA, 0.92, time, -1.18, 0.4);
+    float2 shimmerB = SampleWaterShimmerWave(
+        shimmerPosition, shimmerDirectionB, 1.37, time, 0.96, 2.1);
+    float2 shimmerC = SampleWaterShimmerWave(
+        shimmerPosition, shimmerDirectionC, 2.05, time, -0.72, 4.7);
+    float2 fineSlope =
+        shimmerDirectionA * shimmerA.y * 0.52 +
+        shimmerDirectionB * shimmerB.y * 0.31 +
+        shimmerDirectionC * shimmerC.y * 0.17;
+    slope += fineSlope * 0.12 * rippleScale;
     height *= _OceanWaveFactors.y;
     slope *= _OceanWaveFactors.y;
     float3 normalWS = normalize(float3(-slope * _NormalStrength, 1.0));
@@ -115,25 +133,43 @@ WaterSurfaceData CalculateWaterSurface(
     surface.specular = sunRadiance / (1.0 + sunRadiance)
         * saturate(_SpecularStrength) * _SpecularColor.a;
 
-    // 波峰只保留少量透光和波背阴影，不再画独立的白色正弦轮廓线。
+    // 大浪负责体积起伏，错相细浪只负责连续波光；二者共用同一水面运动时钟。
     float crest = smoothstep(0.08, 0.8 - saturate(_RippleWidth) * 0.6, height);
     float backLight = saturate(dot(-normalWS.xy, sunDirection.xy) + 0.18);
-    surface.ripple = crest * backLight * saturate(_RippleStrength) * _RippleColor.a;
+    float glintA = smoothstep(0.76, 0.96, shimmerA.x)
+        * smoothstep(0.24, 0.82, shimmerB.x);
+    float glintB = smoothstep(0.8, 0.975, shimmerB.x)
+        * smoothstep(0.28, 0.86, shimmerC.x);
+    float glintBreakup = saturate(
+        0.72 + (macroA - 0.5) * 0.46 + (macroB - 0.5) * 0.34);
+    float waveGlint = saturate(max(glintA, glintB * 0.72) * glintBreakup);
+    surface.ripple = saturate(crest * backLight * 0.42 + waveGlint)
+        * saturate(_RippleStrength) * _RippleColor.a;
     surface.rippleShadow = (1.0 - ndl) * saturate(_RippleShadowStrength) * 0.35;
 
-    float detailA = WaterNoise(detailPosition * 0.73 + normalWS.xy * 0.8);
-    float detailB = WaterNoise(detailPosition * 1.17 - drift * 0.3 + float2(23.1, 7.6));
+    float detailA = shimmerA.x;
+    float detailB = shimmerB.x;
+    float detailC = shimmerC.x;
     float causticFocus = pow(saturate(1.0 - abs(detailA - detailB) * 3.0), 12.0);
     surface.caustic = causticFocus * pow(surface.depthBlend, 4.0)
         * saturate(_CausticStrength) * _CausticColor.a;
 
     // 白沫只在足够陡的波峰上零星出现，避免每道细浪都变成白线。
     float steepCrest = crest * smoothstep(0.12, 0.46, dot(slope, slope));
-    float foamBreakup = smoothstep(0.5, 0.78, detailA * 0.6 + detailB * 0.4);
+    float foamBreakup = smoothstep(
+        0.56,
+        0.82,
+        detailA * 0.46 + detailB * 0.34 + detailC * 0.2);
     surface.whitecap = steepCrest * foamBreakup
         * saturate(_WhitecapStrength) * _FoamColor.a * _OceanWaveFactors.z;
     surface.moonReflection = ComputeMoonReflection(
-        screenUV, height, macroA, macroB, detailA * 2.0 - 1.0, detailB * 2.0 - 1.0, time);
+        screenUV,
+        height,
+        macroA,
+        macroB,
+        detailA * 2.0 - 1.0,
+        detailB * 2.0 - 1.0,
+        time);
     return surface;
 }
 
@@ -149,16 +185,16 @@ half3 ApplyWaterSurface(half3 sourceColor, WaterSurfaceData surface)
     sourceColor = lerp(sourceColor, _DeepColor.rgb, surface.rippleShadow);
     sourceColor += _CausticColor.rgb * surface.caustic;
     sourceColor = lerp(sourceColor, _ReflectionColor.rgb, surface.reflection);
-    sourceColor = lerp(sourceColor, _RippleColor.rgb, surface.ripple);
+    // 波光采用提亮混合，不把原水色直接染成一条条固定颜色的线。
+    sourceColor += _RippleColor.rgb * surface.ripple * saturate(1.0h - sourceColor);
     sourceColor += _SpecularColor.rgb * surface.specular;
     sourceColor = lerp(sourceColor, _FoamColor.rgb, surface.whitecap);
     return saturate(sourceColor);
 }
 
 /// <summary>岸边只留断续的薄泡沫，沿游戏时间起落，避免描出连续的方格亮边。</summary>
-half3 ApplyShore(half3 sourceColor, half recess, float2 positionWS)
+half3 ApplyShore(half3 sourceColor, half recess, float2 positionWS, float2 direction)
 {
-    float2 direction = ResolveWaterFlowAxis();
     float tide = ResolveTideFlowPhase(_FoamSpeed);
     float time = _GlobalGameDay * 180.0 * _FoamSpeed;
     float2 foamPosition = positionWS - direction * tide * 0.04;

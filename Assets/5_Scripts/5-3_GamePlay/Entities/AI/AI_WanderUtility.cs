@@ -1,10 +1,12 @@
 using FlatWorld.WorldModel;
 using UnityEngine;
 
+/// <summary>动物闲逛与逃离目标规划；地面逃离先按导航格确认局部路段可达，再比较水体代价。</summary>
 public static class AI_WanderUtility
 {
     private const int MinimumWaterExitSearchRadius = 2;
     private const int MaximumWaterExitSearchRadius = 16;
+    private static readonly float[] EscapeCandidateAngles = { 0f, 45f, -45f, 90f, -90f, 135f, -135f, 180f };
 
 #region API
     /// <summary>
@@ -29,12 +31,11 @@ public static class AI_WanderUtility
             return waterExitOffset;
 
         // 先检查正后方，再检查两侧和反方向；候选顺序保持确定，避免动物在河边左右抖动。
-        float[] candidateAngles = { 0f, 45f, -45f, 90f, -90f, 135f, -135f, 180f };
         Vector2 bestOffset = preferred * safeDistance;
         float bestScore = float.MaxValue;
-        for (int i = 0; i < candidateAngles.Length; i++)
+        for (int i = 0; i < EscapeCandidateAngles.Length; i++)
         {
-            Vector2 direction = Rotate(preferred, candidateAngles[i]);
+            Vector2 direction = Rotate(preferred, EscapeCandidateAngles[i]);
             Vector2 candidateOffset = direction * safeDistance;
             float score = EvaluateEscapeCandidate(origin, direction, safeDistance, preferred);
             if (score < bestScore)
@@ -45,6 +46,65 @@ public static class AI_WanderUtility
         }
 
         return bestOffset;
+    }
+
+    /// <summary>为地面动物选择同一导航连通区域内的短程逃离目标。</summary>
+    public static bool TryPickNavigableEscapeOffset(
+        Vector2 origin,
+        Vector2 preferredDirection,
+        float maximumDistance,
+        out Vector2 offset)
+    {
+        offset = default;
+        WorldNavigationManager navigation = WorldNavigationManager.ExistingInstance;
+        ChunkMgr chunkManager = ChunkMgr.Instance;
+        if (navigation == null || !navigation.IsNavigationReady || chunkManager == null)
+            return false;
+
+        Vector2 preferred = preferredDirection.sqrMagnitude > 0.0001f
+            ? preferredDirection.normalized
+            : Vector2.right;
+        WorldNavigationGrid grid = navigation.Grid;
+        Vector2Int startCell = WorldNavigationGrid.WorldToCell(origin);
+        float distance = Mathf.Max(0.5f, maximumDistance);
+
+        // 落水时先走到可达的陆地，避免局部逃离目标继续把动物留在水中。
+        if (TryPickWaterExitOffset(chunkManager, origin, distance, out Vector2 waterExitOffset) &&
+            IsDirectlyNavigable(grid, startCell, origin + waterExitOffset))
+        {
+            offset = waterExitOffset;
+            return true;
+        }
+
+        for (int segment = 0; segment < 5; segment++, distance *= 0.5f)
+        {
+            float bestScore = float.MaxValue;
+            Vector2 bestOffset = default;
+            bool found = false;
+            for (int i = 0; i < EscapeCandidateAngles.Length; i++)
+            {
+                Vector2 direction = Rotate(preferred, EscapeCandidateAngles[i]);
+                Vector2 candidateOffset = direction * distance;
+                if (!IsDirectlyNavigable(grid, startCell, origin + candidateOffset))
+                    continue;
+
+                float score = EvaluateEscapeCandidate(origin, direction, distance, preferred);
+                if (score >= bestScore)
+                    continue;
+
+                bestScore = score;
+                bestOffset = candidateOffset;
+                found = true;
+            }
+
+            if (!found)
+                continue;
+
+            offset = bestOffset;
+            return true;
+        }
+
+        return false;
     }
 
     public static Vector2 PickSaferOffset(
@@ -95,6 +155,17 @@ public static class AI_WanderUtility
 #endregion
 
 #region Helpers
+    /// <summary>沿实际导航格逐格确认局部目标可以直达。</summary>
+    private static bool IsDirectlyNavigable(
+        WorldNavigationGrid grid,
+        Vector2Int startCell,
+        Vector2 destination)
+    {
+        Vector2Int destinationCell = WorldNavigationGrid.WorldToCell(destination);
+        return destinationCell != startCell &&
+               grid.TryCalculateLineTraversalCost(startCell, destinationCell, out _);
+    }
+
     /// <summary>当前位于真实水面时，优先返回最近可走陆地中心方向。</summary>
     private static bool TryPickWaterExitOffset(
         ChunkMgr chunkManager,

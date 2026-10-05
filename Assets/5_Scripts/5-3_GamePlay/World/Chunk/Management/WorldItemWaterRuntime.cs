@@ -216,7 +216,7 @@ public sealed class WorldItemWaterRuntime : MonoBehaviour, IItemPoolLifecycle
             return;
         }
 
-        float speed = ResolveDriftSpeed(current.Kind, current.Flow);
+        float speed = ResolveDriftSpeed(current.Kind, current.Flow, waterItem.itemData.Stack);
         if (speed <= 0f || current.Direction.sqrMagnitude <= 0.000001f)
             return;
 
@@ -325,7 +325,6 @@ internal static class WorldItemWaterEntrySplashEffect
     private const string SplashMaterialResourcePath = "Weather/Materials/RainGroundSplash";
     private const string EmitterName = "WorldItemWaterEntrySplashes";
     private const int MaxParticles = 96;
-    private const int SortingOrder = 40;
 
     private static readonly Color SplashColor = new(0.72f, 0.94f, 1f, 0.72f);
     private static ParticleSystem splashParticles;
@@ -443,8 +442,7 @@ internal static class WorldItemWaterEntrySplashEffect
         {
             splashRenderer.renderMode = ParticleSystemRenderMode.Billboard;
             splashRenderer.sharedMaterial = splashMaterial;
-            splashRenderer.sortingLayerName = "Default";
-            splashRenderer.sortingOrder = SortingOrder;
+            WorldSortingManager.GetInstance().ApplyRenderer(splashRenderer, WorldSortingManager.GroundSplashCategory);
             splashRenderer.enableGPUInstancing = true;
         }
 

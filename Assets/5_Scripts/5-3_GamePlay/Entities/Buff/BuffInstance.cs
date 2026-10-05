@@ -94,27 +94,60 @@ public partial class BuffInstance
     }
 
     /// <summary>
-    /// 推进 Buff。返回 true 表示已到期，应由 BuffManager 统一移除。
+    /// 推进 Buff。返回 true 表示已到期，应由 Mod_BuffManager 统一移除。
     /// </summary>
     public bool Tick(float deltaTime)
     {
-        if (Definition == null || float.IsNaN(deltaTime) || deltaTime <= 0f)
+        return Tick(deltaTime, keepDurationRefreshed: false);
+    }
+
+    /// <summary>持续暴露只保持有效 Buff 的持续时间，周期效果仍正常推进，不重放 Start/Stop。</summary>
+    public bool Tick(float deltaTime, bool keepDurationRefreshed)
+    {
+        if (Definition == null || float.IsNaN(deltaTime) || float.IsInfinity(deltaTime) || deltaTime <= 0f)
             return IsExpired;
 
         EnsureStarted();
-        if (IsExpired)
-            return true;
+        if (keepDurationRefreshed && !IsExpired)
+        {
+            RefreshDuration();
+            TickElapsedSeconds += deltaTime;
+            ExecuteTicks();
+            return false;
+        }
 
-        float activeDelta = Definition.IsPermanent
-            ? deltaTime
-            : Mathf.Min(deltaTime, RemainingDurationSeconds);
+        float remainingDelta = deltaTime;
+        while (remainingDelta > 0f)
+        {
+            if (IsExpired && !TryDecayExpiredStack())
+                return true;
 
-        if (!Definition.IsPermanent)
-            RemainingDurationSeconds -= activeDelta;
+            float activeDelta = Definition.IsPermanent
+                ? remainingDelta
+                : Mathf.Min(remainingDelta, RemainingDurationSeconds);
+            if (!Definition.IsPermanent)
+                RemainingDurationSeconds -= activeDelta;
 
-        TickElapsedSeconds += activeDelta;
-        ExecuteTicks();
+            TickElapsedSeconds += activeDelta;
+            ExecuteTicks();
+            remainingDelta -= activeDelta;
+
+            if (IsExpired && !TryDecayExpiredStack())
+                return true;
+        }
+
         return IsExpired;
+    }
+
+    /// <summary>限时叠层到期时脱落一层；只有最后一层才进入 Stop 与移除流程。</summary>
+    private bool TryDecayExpiredStack()
+    {
+        if (Definition?.DecayStacksOnExpiry != true || StackCount <= 1)
+            return false;
+
+        SetStackCount(StackCount - 1);
+        RemainingDurationSeconds = Definition.DurationSeconds.Value;
+        return true;
     }
 
     public void Start()

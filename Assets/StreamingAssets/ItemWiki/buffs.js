@@ -12,10 +12,14 @@
         ["结算间隔（秒）", "tickIntervalSeconds", 0],
         ["叠加方式", "stackMode", "ignore"],
         ["最大层数", "maxStacks", 1],
+        ["到期逐层脱落", "decayStacksOnExpiry", false],
         ["第一层特效倍率", "visualBaseScale", 1],
         ["每层特效倍率增量", "visualScalePerStack", 0],
         ["入水叠层周期（秒）", "waterStackIntervalSeconds", 0],
         ["每 1/10 水深的层数上限增量", "waterStacksPerDepthLevel", 0],
+        ["普通雨叠层周期（秒）", "rainStackIntervalSeconds", 0],
+        ["淋雨层数上限", "rainMaxStacks", 0],
+        ["普通雨基准强度", "rainReferenceIntensity", 0],
         ["饮水延长时间（秒）", "drinkDurationExtensionSeconds", 0],
         ["分类", "category", "general"]
     ];
@@ -63,6 +67,8 @@
             refresh_duration: "重复施加刷新时间", add_stacks: "重复施加增加层数并刷新时间" }[source.stackMode || "ignore"];
         const lines = [`${mode}；最多 ${maximum} 层。`, source.durationSeconds == null
             ? "持续时间：永久，直到玩法规则移除。" : `持续时间：${source.durationSeconds} 秒；叠层不会重置周期结算时钟。`];
+        if (source.decayStacksOnExpiry)
+            lines.push(`每次持续时间结束脱落 1 层并重新计时，最后一层结束后移除 BUFF。`);
         const tick = source.tickIntervalSeconds || 0;
         for (const effect of source.effects || []) {
             const phase = { start: "获得时", tick: "每次周期结算", stop: "移除时" }[effect.phase] || effect.phase;
@@ -79,6 +85,10 @@
         if (source.waterStackIntervalSeconds > 0) {
             lines.push(`在真实水体中每 ${source.waterStackIntervalSeconds} 秒增加 1 层；跨水格保留计时，转入浅水不删除已经获得的层数。`);
             lines.push(Array.from({ length: 10 }, (_, i) => `${i + 1}/10 水深：最多 ${Math.min(maximum, (i + 1) * source.waterStacksPerDepthLevel)} 层`).join("；") + "。");
+        }
+        if (source.rainStackIntervalSeconds > 0) {
+            lines.push(`基准雨量 ${source.rainReferenceIntensity} 下，每淋雨 ${source.rainStackIntervalSeconds} 秒增加 1 层，淋雨最多 ${source.rainMaxStacks} 层；雨量越大越快，切换雨量保留未满一层的进度。`);
+            lines.push("刚开始淋雨不会立即加层；持续淋雨保持已有潮湿，不削减浸水获得的更高层数。停雨后按原周期逐层消退，未满一层的淋雨进度清零。");
         }
         if (source.id === "潮湿" || source.id === "燃烧") {
             lines.push("同层水胜：3 层潮湿熄灭 3 层燃烧；4 层燃烧可蒸发原有 3 层潮湿，但不能施加到已有 4 层潮湿的实体上。燃烧中持续浸水会重新累计潮湿，达到火焰层数时灭火。");

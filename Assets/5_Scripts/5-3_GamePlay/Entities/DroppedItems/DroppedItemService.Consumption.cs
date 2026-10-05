@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using FlatWorld.Networking;
 using UnityEngine;
 
-/// <summary>供只读诊断与自主游玩观察使用的 ECS 掉落物快照，不暴露可修改的 ECS/ItemData 引用。</summary>
+/// <summary>供只读诊断与自主游玩观察使用的轻量掉落物快照，不暴露可修改的运行态/ItemData 引用。</summary>
 public readonly struct DroppedItemObservation
 {
     public DroppedItemObservation(
@@ -40,10 +40,10 @@ public static partial class DroppedItemService
     private static readonly HashSet<Item> forageLegacyDedupe = new();
 
     /// <summary>
-    /// 读取玩家附近的离线 ECS 掉落物；包含飞行中与已落地实体的当前世界坐标。
-    /// 只复制观察字段，不返回 ECS Entity、ItemData 或其它可修改权威状态。
+    /// 读取玩家附近的离线轻量掉落物；包含飞行中与已落地实体的当前世界坐标。
+    /// 只复制观察字段，不返回内部运行态、ItemData 或其它可修改权威状态。
     /// </summary>
-    public static int QueryNearbyEntityDrops(
+    public static int QueryNearbyLightweightDrops(
         Vector2 origin,
         float radius,
         List<DroppedItemObservation> results)
@@ -52,7 +52,7 @@ public static partial class DroppedItemService
             throw new System.ArgumentNullException(nameof(results));
 
         results.Clear();
-        if (!UsesEntities || runtime == null || radius <= 0f ||
+        if (!UsesLightweightDrops || runtime == null || radius <= 0f ||
             float.IsNaN(radius) || float.IsInfinity(radius))
         {
             return 0;
@@ -62,25 +62,33 @@ public static partial class DroppedItemService
         return results.Count;
     }
 
-    /// <summary>按统一内容标签查询附近已落地实物；离线走 ECS 空间桶，联机走现有权威 Item 索引。</summary>
-    public static bool TryFindNearestTagged(Vector2 origin, float radius, string tag, out DroppedItemHandle handle)
+    /// <summary>按统一内容标签查询附近已落地实物；单机走轻量空间桶，联机走现有权威 Item 索引。</summary>
+    public static bool TryFindNearestTagged(Vector2 origin, float radius, string tag, out DroppedItemHandle handle,
+        System.Predicate<Vector2> positionFilter = null)
     {
         handle = default;
         if (radius <= 0f || float.IsNaN(radius) || float.IsInfinity(radius) || string.IsNullOrWhiteSpace(tag)) return false;
-        if (UsesEntities)
-        {
-            if (runtime == null || !runtime.TryFindNearestTagged(origin, radius, tag, out int id)) return false;
-            handle = new DroppedItemHandle(id, Epoch);
-            return true;
-        }
-        if (!GameNetwork.HasStateAuthority || ItemMgr.Instance == null) return false;
-        ItemMgr.Instance.QueryItemsInCircleNonAlloc(origin, radius, ~0, null, forageLegacyCandidates, forageLegacyDedupe);
         float nearest = radius * radius;
+        if (UsesLightweightDrops && runtime != null &&
+            runtime.TryFindNearestTagged(origin, radius, tag, out int lightweightId, positionFilter) &&
+            runtime.TryGetPickablePosition(lightweightId, out Vector2 lightweightPosition))
+        {
+            nearest = WorldTopologyRuntime.ShortestDelta(origin, lightweightPosition).sqrMagnitude;
+            handle = new DroppedItemHandle(lightweightId, Epoch);
+        }
+
+        // interactive 掉落物始终是完整 Item；单机也必须和 passive 轻量掉落物一起参与查询。
+        if (!GameNetwork.HasStateAuthority || ItemMgr.Instance == null) return handle.IsValid;
+        ItemMgr.Instance.QueryItemsInCircleNonAlloc(origin, radius, ~0, null, forageLegacyCandidates, forageLegacyDedupe);
         foreach (Item candidate in forageLegacyCandidates)
         {
             if (!IsLoosePickable(candidate) || candidate.itemData.Tags?.Contains(tag) != true) continue;
+            if (positionFilter != null && !positionFilter(candidate.transform.position)) continue;
             float distance = WorldTopologyRuntime.ShortestDelta(origin, candidate.transform.position).sqrMagnitude;
-            if (distance > nearest) continue;
+            if (distance > nearest ||
+                (Mathf.Approximately(distance, nearest) && handle.IsValid &&
+                 candidate.itemData.Guid > handle.Id))
+                continue;
             nearest = distance;
             handle = new DroppedItemHandle(candidate.itemData.Guid, 0, candidate);
         }

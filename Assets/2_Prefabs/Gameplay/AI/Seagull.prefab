@@ -229,7 +229,7 @@ GameObject:
   - component: {fileID: 7800530152048873989}
   - component: {fileID: 3819658476139289193}
   m_Layer: 0
-  m_Name: AI_Bird
+  m_Name: Mod_AI_Bird
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -265,11 +265,13 @@ MonoBehaviour:
   item: {fileID: 0}
   Data:
     Name: ai
-    ID: AI_Bird
+    ID: Mod_AI_Bird
     isRunning: 1
     Type: 0
     BitData: 
   groundSpeed: 0.5
+  takeoffRunSpeed: 2.6
+  takeoffRunDistance: 1.2
   flightSpeed: 6.3
   flightHeight: 2
   groundDuration: 8
@@ -278,7 +280,8 @@ MonoBehaviour:
   flightStaminaDrainRate: 1
   flightStaminaRecoveryRate: 10
   fleeTriggerDistance: 12
-  fleeSafeDistance: 20
+  fleeSafeDistance: 30
+  fleeRunDistance: 30
   transitionDuration: 0.75
   groundWanderRadius: 2
   flightWanderRadius: 18

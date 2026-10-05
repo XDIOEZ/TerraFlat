@@ -54,4 +54,40 @@ float3 TransformChunkBRGVertex(float3 positionOS, ChunkBRGInstanceData data)
     return float3(positionWS, data.transform1.w + positionOS.z);
 }
 
+// 机械动画只变更实例顶点或采样坐标；相位与转速由权威节点低频上传。
+float ChunkMechanicalPhase(ChunkBRGInstanceData data)
+{
+    return data.data0.z + _Time.y * data.data0.y;
+}
+
+float3 AnimateChunkMechanicalVertex(float3 positionOS, ChunkBRGInstanceData data)
+{
+    // 模式 4 仅压缩独立皮革层，木框与喷嘴保留原始顶点。
+    if (data.data0.x > 3.5 && data.data0.x < 4.5)
+    {
+        float compression = (1.0 - cos(ChunkMechanicalPhase(data))) * 0.5 * saturate(data.data0.w);
+        positionOS.y *= 1.0 - compression;
+        return positionOS;
+    }
+    if (data.data0.x < 0.5 || data.data0.x > 1.5) return positionOS;
+    float angle = ChunkMechanicalPhase(data);
+    float sine, cosine;
+    sincos(angle, sine, cosine);
+    float2 vertexXY = positionOS.xy;
+    positionOS.xy = float2(vertexXY.x * cosine - vertexXY.y * sine,
+                           vertexXY.x * sine + vertexXY.y * cosine);
+    return positionOS;
+}
+
+float2 AnimateChunkMechanicalUV(float2 uv, float4 animation, float4 region)
+{
+    if (animation.x < 1.5 || animation.x > 2.5) return uv;
+    float span = max(0.000001, region.y - region.x);
+    float localU = (uv.x - region.x) / span;
+    float width = max(0.000001, span - region.z * 2.0);
+    float phase = animation.z + _Time.y * animation.y;
+    uv.x = region.x + region.z + frac(localU + phase / 6.28318530718) * width;
+    return uv;
+}
+
 #endif

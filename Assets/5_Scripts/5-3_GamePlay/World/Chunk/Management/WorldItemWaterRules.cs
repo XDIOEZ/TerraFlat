@@ -1,7 +1,7 @@
 using UnityEngine;
 
 /// <summary>
-/// 世界散落物共用的水体规则：ECS 与联机 Item 兼容路径读取同一组数值。
+/// 世界散落物共用的水体规则：轻量掉落与联机 Item 路径读取同一组数值。
 /// 重量/体积为内容中的玩法比值，淡水下沉阈值为 0.64；液体定义只放大浮力阈值，
 /// 不改写物品重量、体积或淡水原有的水线与沉没时长。
 /// </summary>
@@ -21,6 +21,8 @@ public static class WorldItemWaterRules
     public const float FloatingEntryDepth = 0.48f;
     public const float FloatingRiseDuration = 0.8f;
     public const float RiverDriftSpeed = 0.45f;
+    public const float RiverLightItemWeightLimitKg = 1f;
+    public const float RiverLightItemMaxSpeedMultiplier = 3f;
     public const float OceanDriftSpeed = 0.15f;
     public const float SettledTickInterval = 0.5f;
     public const float FloatingEntrySplashMinIntensity = 0.18f;
@@ -30,7 +32,7 @@ public static class WorldItemWaterRules
 
     #region 无实例浮沉计算
 
-    /// <summary>旧 Item 与 ECS 必须通过同一流量规则换算漂移速度；湖泊静止。</summary>
+    /// <summary>不含物品重量的基础流速供水面表现复用；湖泊静止。</summary>
     public static float ResolveDriftSpeed(RuntimeWaterCurrentKind kind, float flow) => kind switch
     {
         RuntimeWaterCurrentKind.River => RiverDriftSpeed * WaterEnvironmentRules.ResolveRiverStrength(flow),
@@ -38,6 +40,21 @@ public static class WorldItemWaterRules
         RuntimeWaterCurrentKind.ExperimentalLiquid => Mathf.Min(flow, 1f),
         _ => 0f
     };
+
+    /// <summary>河流只给总重不足一千克的掉落物加速，最多三倍；重物及其他水流保持原速。</summary>
+    public static float ResolveDriftSpeed(RuntimeWaterCurrentKind kind, float flow, ItemStack stack)
+    {
+        float baseSpeed = ResolveDriftSpeed(kind, flow);
+        if (kind != RuntimeWaterCurrentKind.River || stack == null)
+            return baseSpeed;
+
+        float weight = stack.CurrentWeight;
+        if (float.IsNaN(weight) || float.IsInfinity(weight) || weight < 0f)
+            return baseSpeed;
+
+        float lightness = 1f - Mathf.Clamp01(weight / RiverLightItemWeightLimitKg);
+        return baseSpeed * Mathf.Lerp(1f, RiverLightItemMaxSpeedMultiplier, lightness);
+    }
 
     /// <summary>整组数量不影响单件重量/体积比，零体积沿用既有最小分母。</summary>
     public static float ResolveWeightVolumeRatio(ItemStack stack) => stack == null ? 0f :

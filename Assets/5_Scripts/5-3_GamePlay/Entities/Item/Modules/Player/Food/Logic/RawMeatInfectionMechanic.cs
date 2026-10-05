@@ -34,8 +34,8 @@ public sealed class RawMeatInfectionMechanic : IFoodMechanic, IFoodConsumptionOb
             return;
         }
 
-        BuffManager buffManager = result.Consumer.itemMods?.GetMod_ByID<BuffManager>(
-            ModText.BuffManager);
+        Mod_BuffManager buffManager = result.Consumer.itemMods?.GetMod_ByID<Mod_BuffManager>(
+            ModText.Mod_BuffManager);
         if (buffManager == null || !buffManager.AddBuff(InfectionBuffIds.Infection))
             return;
 

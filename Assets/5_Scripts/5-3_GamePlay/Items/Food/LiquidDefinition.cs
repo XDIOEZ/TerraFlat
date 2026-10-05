@@ -59,6 +59,23 @@ public sealed class LiquidSolidification
     public int OutputAmount { get; }
 }
 
+/// <summary>固体投入液体后的配方；原料留在容器库存中，满足份数与数量后才由库存事务扣除。</summary>
+public sealed class LiquidIngredientReaction
+{
+    public LiquidIngredientReaction(string itemId, int amount, string resultLiquidId, bool requireFullContainer)
+    {
+        ItemId = itemId;
+        Amount = amount;
+        ResultLiquidId = resultLiquidId;
+        RequireFullContainer = requireFullContainer;
+    }
+
+    public string ItemId { get; }
+    public int Amount { get; }
+    public string ResultLiquidId { get; }
+    public bool RequireFullContainer { get; }
+}
+
 /// <summary>
 /// 可注册的通用液体定义。容器只保存 LiquidId 与数量，不再把水质写死在容器类型里；
 /// 本体和 MOD 都通过同一目录声明液体的显示、饮用与加热语义。
@@ -71,6 +88,8 @@ public sealed class LiquidDefinition
         string description,
         string category,
         string visualState,
+        Color primaryColor,
+        float viscosity,
         bool drinkable,
         float hydrationPerServing,
         IReadOnlyList<LiquidDrinkEffect> drinkEffects,
@@ -78,18 +97,22 @@ public sealed class LiquidDefinition
         float buoyancyThresholdMultiplier = 1f,
         string sourceItemId = null,
         WorldLiquidSettings worldWater = null,
-        LiquidSolidification solidification = null)
+        LiquidSolidification solidification = null,
+        IReadOnlyList<LiquidIngredientReaction> ingredientReactions = null)
     {
         Id = id;
         DisplayName = displayName;
         Description = description;
         Category = category;
         VisualState = visualState;
+        PrimaryColor = primaryColor;
+        Viscosity = viscosity;
         Drinkable = drinkable;
         HydrationPerServing = hydrationPerServing;
         DrinkEffects = drinkEffects ?? Array.Empty<LiquidDrinkEffect>();
         HeatProcess = heatProcess;
         Solidification = solidification;
+        IngredientReactions = ingredientReactions ?? Array.Empty<LiquidIngredientReaction>();
         BuoyancyThresholdMultiplier = buoyancyThresholdMultiplier;
         SourceItemId = sourceItemId;
         WorldWater = worldWater;
@@ -101,12 +124,21 @@ public sealed class LiquidDefinition
     public string Description { get; }
     public string Category { get; }
     public string VisualState { get; }
+    /// <summary>液体容器 Sprite 的程序化液面使用此主色；容器不再为每种液体绑定贴图。</summary>
+    public Color PrimaryColor { get; }
+    /// <summary>相对水的玩法粘度；1 为普通水，数值越大越难倾倒。</summary>
+    public float Viscosity { get; }
+    /// <summary>倾倒速度倍率使用平方根压缩差距，避免高粘度液体慢到不可操作。</summary>
+    public float PourRateMultiplier => Mathf.Clamp(1f / Mathf.Sqrt(Mathf.Max(0.0001f, Viscosity)), 0.15f, 2f);
+    /// <summary>把开放式粘度值映射为 0～1 的液面/液柱表现强度。</summary>
+    public float VisualViscosity01 => Viscosity <= 1f ? 0f : Mathf.Clamp01(1f - 1f / Viscosity);
     public bool Drinkable { get; }
     public float HydrationPerServing { get; }
     public IReadOnlyList<LiquidDrinkEffect> DrinkEffects { get; }
     public LiquidHeatProcess HeatProcess { get; }
     /// <summary>液体冷却到熔点以下时的固体产物规则。</summary>
     public LiquidSolidification Solidification { get; }
+    public IReadOnlyList<LiquidIngredientReaction> IngredientReactions { get; } // 固体投料转换规则。
     /// <summary>世界掉落物浮沉阈值倍率；1 保持基础阈值不变。</summary>
     public float BuoyancyThresholdMultiplier { get; }
     public string SourceItemId { get; } // 可装入容器的库存原料 ID；一个完整物品对应一份液体，未配置则仅支持液体来源。
@@ -146,6 +178,12 @@ public sealed class LiquidDefinitionDto
     [JsonProperty("visualState")]
     public string VisualState = "filled";
 
+    [JsonProperty("primaryColor", Required = Required.Always)]
+    public Color? PrimaryColor;
+
+    [JsonProperty("viscosity")]
+    public float Viscosity = 1f;
+
     [JsonProperty("worldWater")]
     public WorldLiquidSettings WorldWater;
 
@@ -166,6 +204,9 @@ public sealed class LiquidDefinitionDto
 
     [JsonProperty("solidification")]
     public LiquidSolidificationDto Solidification;
+
+    [JsonProperty("ingredientReactions")]
+    public List<LiquidIngredientReactionDto> IngredientReactions = new();
 
     [JsonProperty("buoyancyThresholdMultiplier")]
     public float BuoyancyThresholdMultiplier = 1f;
@@ -231,6 +272,16 @@ public sealed class LiquidSolidificationDto
     public int OutputAmount = 1;
 }
 
+/// <summary>液体投料配方 DTO；原料与目标液体在完整目录载入后验证。</summary>
+[Serializable]
+public sealed class LiquidIngredientReactionDto
+{
+    [JsonProperty("itemId", Required = Required.Always)] public string ItemId;
+    [JsonProperty("amount", Required = Required.Always)] public int Amount;
+    [JsonProperty("resultLiquidId", Required = Required.Always)] public string ResultLiquidId;
+    [JsonProperty("requireFullContainer")] public bool RequireFullContainer;
+}
+
 /// <summary>本体液体目录。</summary>
 [Serializable]
 public sealed class LiquidCatalogDto
@@ -245,7 +296,7 @@ public sealed class LiquidCatalogDto
 /// <summary>液体定义的严格解析、校验和运行时构建入口。</summary>
 public static class LiquidDefinitionFactory
 {
-    public const int SupportedSchemaVersion = 1;
+    public const int SupportedSchemaVersion = 2;
 
     private static readonly JsonSerializerSettings StrictJsonSettings = new()
     {
@@ -283,6 +334,11 @@ public static class LiquidDefinitionFactory
         string displayName = NormalizeRequired(dto.DisplayName, $"液体 {id} displayName");
         string category = string.IsNullOrWhiteSpace(dto.Category) ? "generic" : dto.Category.Trim().ToLowerInvariant();
         string visualState = string.IsNullOrWhiteSpace(dto.VisualState) ? "filled" : dto.VisualState.Trim();
+        Color primaryColor = dto.PrimaryColor ?? throw new InvalidDataException($"液体 {id} 缺少 primaryColor");
+        ValidateColor(primaryColor, id);
+        ValidateFinite(dto.Viscosity, id, nameof(dto.Viscosity));
+        if (dto.Viscosity <= 0f)
+            throw new InvalidDataException($"液体 {id} viscosity 必须大于 0；1 表示普通水。");
         ValidateFinite(dto.HydrationPerServing, id, nameof(dto.HydrationPerServing));
         if (dto.HydrationPerServing < 0f)
             throw new InvalidDataException($"液体 {id} hydrationPerServing 不能小于 0");
@@ -301,6 +357,21 @@ public static class LiquidDefinitionFactory
         LiquidSolidification solidification = dto.Solidification == null
             ? null
             : BuildSolidification(id, dto.Solidification);
+        var ingredientReactions = new List<LiquidIngredientReaction>();
+        var reactionItems = new HashSet<string>(StringComparer.Ordinal);
+        foreach (LiquidIngredientReactionDto reaction in dto.IngredientReactions ?? new List<LiquidIngredientReactionDto>())
+        {
+            if (reaction == null || reaction.Amount <= 0)
+                throw new InvalidDataException($"液体 {id} 的 ingredientReactions 数量必须大于 0");
+            string itemId = NormalizeRequired(reaction.ItemId, $"液体 {id} ingredientReactions.itemId");
+            if (!reactionItems.Add(itemId))
+                throw new InvalidDataException($"液体 {id} 重复声明了投料物品：{itemId}");
+            ingredientReactions.Add(new LiquidIngredientReaction(
+                itemId,
+                reaction.Amount,
+                NormalizeContentId(reaction.ResultLiquidId, $"液体 {id} ingredientReactions.resultLiquidId"),
+                reaction.RequireFullContainer));
+        }
 
         return new LiquidDefinition(
             id,
@@ -308,6 +379,8 @@ public static class LiquidDefinitionFactory
             dto.Description?.Trim() ?? string.Empty,
             category,
             visualState,
+            primaryColor,
+            dto.Viscosity,
             dto.Drinkable,
             dto.HydrationPerServing,
             drinkEffects,
@@ -315,7 +388,8 @@ public static class LiquidDefinitionFactory
             dto.BuoyancyThresholdMultiplier,
             string.IsNullOrWhiteSpace(dto.SourceItemId) ? null : dto.SourceItemId.Trim(),
             dto.WorldWater,
-            solidification);
+            solidification,
+            ingredientReactions);
     }
 
     /// <summary>构建整个本体分包并拒绝重复 ID。</summary>
@@ -365,6 +439,12 @@ public static class LiquidDefinitionFactory
             if (solidification != null && !itemExists(solidification.OutputItemId))
                 throw new InvalidDataException($"液体 {definition.Id} 的凝固产物物品不存在：{solidification.OutputItemId}");
 
+            foreach (LiquidIngredientReaction reaction in definition.IngredientReactions)
+            {
+                if (!itemExists(reaction.ItemId) || !liquidExists(reaction.ResultLiquidId))
+                    throw new InvalidDataException($"液体 {definition.Id} 的投料配方引用不存在：{reaction.ItemId} / {reaction.ResultLiquidId}");
+            }
+
             LiquidHeatProcess heat = definition.HeatProcess;
             if (heat == null)
                 continue;
@@ -408,8 +488,8 @@ public static class LiquidDefinitionFactory
             throw new InvalidDataException($"液体 {liquidId} 的 heatProcess.mode 无效：{dto.Mode}");
         ValidateFinite(dto.MinimumTemperature, liquidId, nameof(dto.MinimumTemperature));
         ValidateFinite(dto.Seconds, liquidId, nameof(dto.Seconds));
-        if (dto.Seconds <= 0f)
-            throw new InvalidDataException($"液体 {liquidId} 的 heatProcess.seconds 必须大于 0");
+        if (dto.Seconds < 0f)
+            throw new InvalidDataException($"液体 {liquidId} 的 heatProcess.seconds 不能小于 0");
 
         string resultLiquidId = NormalizeOptionalContentId(dto.ResultLiquidId, $"液体 {liquidId} resultLiquidId");
         string outputItemId = dto.OutputItemId?.Trim();
@@ -472,6 +552,18 @@ public static class LiquidDefinitionFactory
             throw new InvalidDataException($"液体 {id} 的 {field} 必须是有限数值");
     }
 
+    /// <summary>主色各通道使用 0～1 的线性范围，阻止无效色值进入 UI 网格。</summary>
+    private static void ValidateColor(Color color, string id)
+    {
+        ValidateFinite(color.r, id, "primaryColor.r");
+        ValidateFinite(color.g, id, "primaryColor.g");
+        ValidateFinite(color.b, id, "primaryColor.b");
+        ValidateFinite(color.a, id, "primaryColor.a");
+        if (color.r < 0f || color.r > 1f || color.g < 0f || color.g > 1f ||
+            color.b < 0f || color.b > 1f || color.a <= 0f || color.a > 1f)
+            throw new InvalidDataException($"液体 {id} 的 primaryColor 通道必须在 0～1 范围内且 alpha 大于 0");
+    }
+
     private static bool ContainsWhitespaceOrControl(string value)
     {
         foreach (char character in value)
@@ -488,6 +580,7 @@ public static class LiquidIds
 {
     public const string DirtyWater = "core:dirty_water";
     public const string DrinkableWater = "core:drinkable_water";
+    public const string SaltWater = "core:salt_water";
     public const string SeaWater = "core:sea_water";
 }
 
@@ -514,7 +607,7 @@ public static class LiquidDrinkEffectProcessor
         if (actor == null || liquid == null || liquid.DrinkEffects == null || liquid.DrinkEffects.Count == 0)
             return default;
 
-        BuffManager buffManager = actor.itemMods?.GetMod_ByID<BuffManager>(ModText.BuffManager);
+        Mod_BuffManager buffManager = actor.itemMods?.GetMod_ByID<Mod_BuffManager>(ModText.Mod_BuffManager);
         bool anyEffectTriggered = false;
         bool feedbackShown = false;
 

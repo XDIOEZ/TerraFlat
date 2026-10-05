@@ -4,7 +4,13 @@ using Sirenix.OdinInspector;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
-public class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyBinder
+/// <summary>工具模块只依赖这一层动作表现接口，不直接依赖伤害模块内部实现。</summary>
+public interface IWeaponActionAnimation
+{
+    bool TryRequestAction(bool queueIfBusy = false);
+}
+
+public class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyBinder, IWeaponActionAnimation
 {
     #region Config
     [Tooltip("武器动画树 Animator")]
@@ -49,7 +55,7 @@ public class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyBinder
     [Tooltip("当前动画状态哈希")]
     [ShowInInspector, ReadOnly]
     private int currentStateHash;
-    private GameController cachedController;
+    private Mod_GameController cachedController;
     // 缓存命中模块，确保待机状态不保留伤害碰撞体。
     private Mod_Damage cachedDamageModule;
     // 持有者体力模块；没有体力模块的非玩家持有者不受该限制。
@@ -96,7 +102,7 @@ public class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyBinder
         if (item.Owner != null)
         {
             ownerStamina = item.Owner.itemMods?.GetMod_ByID<Mod_Stamina>(ModText.Stamina);
-            cachedController = item.Owner.GetComponentInChildren<GameController>();
+            cachedController = item.Owner.GetComponentInChildren<Mod_GameController>();
             if (cachedController != null)
             {
                 // 只监听中央攻击语义；手机交互与使用不会再误触发武器。
@@ -193,29 +199,33 @@ public class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyBinder
     [Button]
     public void RequestAttack()
     {
+        TryRequestAttack();
+    }
+
+    /// <summary>请求一段实际挥动；只有动画在本次调用中真正开始时返回 true。</summary>
+    public bool TryRequestAttack(bool queueIfBusy = true)
+    {
         if (animator == null)
         {
             Debug.LogError($"{name} 缺少 Animator 组件。", this);
-            return;
+            return false;
         }
 
         if (attackAnimationNames == null || attackAnimationNames.Count == 0)
         {
             Debug.LogError($"{name} 攻击动画列表为空。", this);
-            return;
+            return false;
         }
 
         if (!isAttacking)
         {
-            StartAttack(0);
-            return;
+            return StartAttack(0);
         }
 
         if (Time.time > comboDeadline)
         {
             ResetToIdle();
-            StartAttack(0);
-            return;
+            return StartAttack(0);
         }
 
         int nextIndex = currentIndex + 1;
@@ -223,13 +233,19 @@ public class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyBinder
         {
             if (Time.time < nextReadyTime)
             {
-                queuedNext = true;
-                return;
+                if (queueIfBusy)
+                    queuedNext = true;
+                return false;
             }
 
-            StartAttack(nextIndex);
+            return StartAttack(nextIndex);
         }
+
+        return false;
     }
+
+    /// <summary>对工具模块暴露稳定动作接口，内部仍复用现有攻击动画与体力节拍。</summary>
+    public bool TryRequestAction(bool queueIfBusy = false) => TryRequestAttack(queueIfBusy);
 
     public float AttackSpeedMultiplier => attackSpeedMultiplier * BodyTraumaBuffEffects.GetAttackMultiplier(item?.Owner); /// 当前攻击速度倍率（只读）
     public float StaminaCostPerAttack => staminaCostPerAttack; /// 每段攻击的基础体力消耗（只读）
@@ -308,7 +324,8 @@ public class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyBinder
     /// <summary>每一段实际挥动只结算一次体力；不足时拒绝启动该段攻击。</summary>
     private bool TryConsumeAttackStamina()
     {
-        return ownerStamina == null || ownerStamina.TryConsumeStamina(staminaCostPerAttack);
+        return ownerStamina == null ||
+               ownerStamina.TryConsumeStamina(StaminaConsumptionSources.WeaponAttack, staminaCostPerAttack);
     }
 
     [InfoBox("检查并尝试衔接下一段连击")]

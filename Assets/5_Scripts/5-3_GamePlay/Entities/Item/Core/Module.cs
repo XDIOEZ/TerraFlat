@@ -1,5 +1,6 @@
 using Sirenix.OdinInspector;
 using System;
+using System.Collections.Generic;
 using UltEvents;
 using UnityEngine;
 
@@ -53,9 +54,63 @@ public interface ICombustionStateReceiver
 
 public enum ModuleTickMode
 {
+    Unspecified,
     EveryFrame,
     FixedInterval,
     Disabled
+}
+
+/// <summary>本体旧模块的显式 Tick 策略表；新模块优先直接覆写 Module.TickMode。</summary>
+internal static class ModuleTickPolicyCatalog
+{
+    private static readonly Dictionary<Type, ModuleTickMode> Policies = new()
+    {
+        [typeof(Mod_InteractSender)] = ModuleTickMode.EveryFrame,
+        [typeof(Mod_GameController)] = ModuleTickMode.EveryFrame,
+        [typeof(Mod_SkillManager_Item)] = ModuleTickMode.EveryFrame,
+        [typeof(Mod_SkillManager)] = ModuleTickMode.EveryFrame,
+        [typeof(Inventory_Furnace)] = ModuleTickMode.EveryFrame,
+        [typeof(Mod_HotBar)] = ModuleTickMode.EveryFrame,
+        [typeof(Mod_Mover_AI)] = ModuleTickMode.EveryFrame,
+        [typeof(Mod_Mover)] = ModuleTickMode.EveryFrame,
+        [typeof(Mod_TurnBack)] = ModuleTickMode.EveryFrame,
+        [typeof(Mod_NewItemTransformController)] = ModuleTickMode.EveryFrame,
+        [typeof(Mod_FocusPoint_AI)] = ModuleTickMode.EveryFrame,
+        [typeof(Mod_FocusPoint)] = ModuleTickMode.EveryFrame,
+        [typeof(Mod_Carrier)] = ModuleTickMode.EveryFrame,
+        [typeof(Mod_AoutTurnBody)] = ModuleTickMode.EveryFrame,
+        [typeof(Mod_Equipment)] = ModuleTickMode.EveryFrame,
+#pragma warning disable CS0618
+        [typeof(Mod_EquipmentRuntime)] = ModuleTickMode.EveryFrame,
+#pragma warning restore CS0618
+        [typeof(Mod_Damage)] = ModuleTickMode.EveryFrame,
+        [typeof(Mod_TileEffectReceiver)] = ModuleTickMode.EveryFrame,
+        [typeof(Mod_ColdWeapon)] = ModuleTickMode.EveryFrame,
+        [typeof(Mod_ItemChunkAssigner)] = ModuleTickMode.EveryFrame,
+        [typeof(Mod_Bow)] = ModuleTickMode.EveryFrame,
+        [typeof(Mod_ChunkLoader)] = ModuleTickMode.EveryFrame,
+        [typeof(Mod_Fly)] = ModuleTickMode.EveryFrame,
+        [typeof(Mod_DamageReceiver)] = ModuleTickMode.EveryFrame,
+        [typeof(Mod_DiscardItem)] = ModuleTickMode.EveryFrame,
+        [typeof(Mod_GameMCP_LLM)] = ModuleTickMode.EveryFrame,
+        [typeof(Mod_BaseDroper)] = ModuleTickMode.EveryFrame,
+        [typeof(Mod_Droping)] = ModuleTickMode.EveryFrame,
+        [typeof(Mod_Building)] = ModuleTickMode.EveryFrame,
+    };
+
+    public static bool TryGet(Type moduleType, out ModuleTickMode mode)
+    {
+        mode = ModuleTickMode.Unspecified;
+        for (Type current = moduleType;
+             current != null && typeof(Module).IsAssignableFrom(current);
+             current = current.BaseType)
+        {
+            if (Policies.TryGetValue(current, out mode))
+                return true;
+        }
+
+        return false;
+    }
 }
 
 public enum ItemTickTier
@@ -74,6 +129,14 @@ public abstract class Module : MonoBehaviour, IRuntimeDataLifecycle
 {
     public abstract ModuleData _Data { get; set; }
 
+    [NonSerialized] private string runtimePrefabId;
+    [NonSerialized] private bool runtimeLoaded;
+
+    public string StableName => _Data?.StableName;
+    public string ResolvedModuleId => _Data?.ModuleId;
+    public string PrefabId => runtimePrefabId;
+    public bool Enabled => _Data?.Enabled == true;
+
     /// <summary>
     /// 模块写入模板和存档时使用的稳定 ID。Prefab 上的旧序列化值可以由具体模块覆盖。
     /// </summary>
@@ -81,12 +144,16 @@ public abstract class Module : MonoBehaviour, IRuntimeDataLifecycle
     {
         get
         {
-            string serializedId = _Data?.ID?.Trim();
-            return string.IsNullOrEmpty(serializedId) ? gameObject.name : serializedId;
+            string serializedId = _Data?.ModuleId?.Trim();
+            if (!string.IsNullOrEmpty(serializedId))
+                return serializedId;
+
+            // Item 根节点或同一节点承载多个模块时，GameObject 名不能充当能力 ID。
+            return UsesSharedModuleHost() ? GetType().Name : gameObject.name;
         }
     }
 
-    /// <summary>兼容规范 ID、旧序列化 ID、Prefab 子物体名和组件类型名。</summary>
+    /// <summary>只按 ModuleId / PrefabId 解析模块实现，不再把随机实例名或组件类型当能力 ID。</summary>
     public virtual bool MatchesPersistedId(string persistedId)
     {
         if (string.IsNullOrWhiteSpace(persistedId))
@@ -94,9 +161,9 @@ public abstract class Module : MonoBehaviour, IRuntimeDataLifecycle
 
         string candidate = persistedId.Trim();
         return string.Equals(candidate, CanonicalModuleId, StringComparison.OrdinalIgnoreCase) ||
-               string.Equals(candidate, _Data?.ID?.Trim(), StringComparison.OrdinalIgnoreCase) ||
-               string.Equals(candidate, gameObject.name, StringComparison.OrdinalIgnoreCase) ||
-               string.Equals(candidate, GetType().Name, StringComparison.OrdinalIgnoreCase);
+               string.Equals(candidate, _Data?.ModuleId?.Trim(), StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(candidate, runtimePrefabId, StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(candidate, gameObject.name, StringComparison.OrdinalIgnoreCase);
     }
     [ReadOnly]
     public Item item;
@@ -107,8 +174,8 @@ public abstract class Module : MonoBehaviour, IRuntimeDataLifecycle
 
     #region 更新调度
 
-    /// <summary>旧模块默认保持逐帧更新，只有显式声明的模块才会被降频或休眠。</summary>
-    public virtual ModuleTickMode TickMode => ModuleTickMode.EveryFrame;
+    /// <summary>会覆写 ModUpdate 的模块必须显式声明 Tick 策略；无 Tick 模块可保持 Unspecified。</summary>
+    public virtual ModuleTickMode TickMode => ModuleTickMode.Unspecified;
 
     /// <summary>FixedInterval 模式下的更新间隔。</summary>
     public virtual float FixedTickInterval => 0.1f;
@@ -122,12 +189,11 @@ public abstract class Module : MonoBehaviour, IRuntimeDataLifecycle
 
     public virtual void Awake()
     {
-        if (_Data != null)
-            EnsureRuntimeIdentity();
+        // 具体模块经常在 Awake 中补 ModuleId；统一身份延后到注册阶段建立。
     }
 
     /// <summary>建立模块参与运行时索引所需的非空稳定身份。</summary>
-    internal void EnsureRuntimeIdentity()
+    internal void EnsureRuntimeIdentity(string stableName = null, string prefabId = null)
     {
         if (_Data == null)
             throw new InvalidOperationException($"模块 {gameObject.name} 缺少 ModuleData。");
@@ -136,10 +202,128 @@ public abstract class Module : MonoBehaviour, IRuntimeDataLifecycle
         if (string.IsNullOrWhiteSpace(moduleId))
             throw new InvalidOperationException($"模块 {gameObject.name} 缺少稳定 ID。");
 
-        _Data.ID = moduleId.Trim();
-        _Data.Name = string.IsNullOrWhiteSpace(_Data.Name)
-            ? GenerateUniqueModName(_Data.ID)
-            : _Data.Name.Trim();
+        string resolvedStableName = string.IsNullOrWhiteSpace(stableName)
+            ? _Data.StableName?.Trim()
+            : stableName.Trim();
+        if (string.IsNullOrWhiteSpace(resolvedStableName))
+            resolvedStableName = ResolveImplicitStableName(moduleId);
+
+        _Data.ModuleId = moduleId.Trim();
+        _Data.StableName = resolvedStableName;
+        runtimePrefabId = string.IsNullOrWhiteSpace(prefabId)
+            ? (string.IsNullOrWhiteSpace(runtimePrefabId) ? ResolveImplicitPrefabId(moduleId) : runtimePrefabId)
+            : prefabId.Trim();
+        if (string.IsNullOrWhiteSpace(runtimePrefabId))
+            runtimePrefabId = _Data.ModuleId;
+    }
+
+    private bool UsesSharedModuleHost()
+    {
+        if (GetComponent<Item>() != null)
+            return true;
+
+        Module[] siblings = GetComponents<Module>();
+        return siblings != null && siblings.Length > 1;
+    }
+
+    private string ResolveImplicitStableName(string moduleId)
+    {
+        string normalizedId = moduleId.Trim();
+        Item owner = GetComponentInParent<Item>();
+        if (owner == null)
+            return UsesSharedModuleHost() ? normalizedId : (gameObject.name?.Trim() ?? normalizedId);
+
+        Module[] modules = owner.GetComponentsInChildren<Module>(true);
+        int matchingIdCount = 0;
+        for (int i = 0; i < modules.Length; i++)
+        {
+            Module candidate = modules[i];
+            if (candidate != null &&
+                string.Equals(candidate.CanonicalModuleId?.Trim(), normalizedId, StringComparison.OrdinalIgnoreCase))
+            {
+                matchingIdCount++;
+            }
+        }
+
+        if (matchingIdCount <= 1)
+            return UsesSharedModuleHost() ? normalizedId : (gameObject.name?.Trim() ?? normalizedId);
+
+        string path = BuildRelativeTransformPath(owner.transform, transform);
+        int ordinal = 0;
+        int sameTransformCount = 0;
+        Module[] localModules = GetComponents<Module>();
+        for (int i = 0; i < localModules.Length; i++)
+        {
+            Module candidate = localModules[i];
+            if (candidate == null ||
+                !string.Equals(candidate.CanonicalModuleId?.Trim(), normalizedId, StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            if (candidate == this)
+                ordinal = sameTransformCount;
+            sameTransformCount++;
+        }
+
+        return sameTransformCount > 1
+            ? $"{normalizedId}@{path}#{ordinal}"
+            : $"{normalizedId}@{path}";
+    }
+
+    private string ResolveImplicitPrefabId(string moduleId)
+    {
+        string gameObjectName = gameObject.name?.Trim();
+        return UsesSharedModuleHost() || string.IsNullOrWhiteSpace(gameObjectName)
+            ? moduleId.Trim()
+            : gameObjectName;
+    }
+
+    private static string BuildRelativeTransformPath(Transform root, Transform target)
+    {
+        if (root == null || target == null || root == target)
+            return "$root";
+
+        var segments = new List<string>();
+        Transform current = target;
+        while (current != null && current != root)
+        {
+            string segment = current.name;
+            Transform parent = current.parent;
+            if (parent != null)
+            {
+                int sameNameCount = 0;
+                for (int i = 0; i < parent.childCount; i++)
+                {
+                    if (string.Equals(parent.GetChild(i).name, current.name, StringComparison.Ordinal))
+                        sameNameCount++;
+                }
+
+                if (sameNameCount > 1)
+                    segment += $"[{current.GetSiblingIndex()}]";
+            }
+
+            segments.Add(segment);
+            current = parent;
+        }
+
+        segments.Reverse();
+        return segments.Count == 0 ? "$root" : string.Join("/", segments);
+    }
+
+    /// <summary>定义装配阶段一次性写入 StableName / ModuleId / PrefabId 三段身份。</summary>
+    internal void BindRuntimeIdentity(string stableName, string moduleId, string prefabId)
+    {
+        if (_Data == null)
+            throw new InvalidOperationException($"模块 {gameObject.name} 缺少 ModuleData。");
+        if (string.IsNullOrWhiteSpace(stableName))
+            throw new ArgumentException("StableName 不能为空。", nameof(stableName));
+        if (string.IsNullOrWhiteSpace(moduleId))
+            throw new ArgumentException("ModuleId 不能为空。", nameof(moduleId));
+        if (string.IsNullOrWhiteSpace(prefabId))
+            throw new ArgumentException("PrefabId 不能为空。", nameof(prefabId));
+
+        _Data.StableName = stableName.Trim();
+        _Data.ModuleId = moduleId.Trim();
+        runtimePrefabId = prefabId.Trim();
     }
 
     public void ModuleInit(Item item_, ModuleData data, ItemData itemData_ = null)
@@ -163,7 +347,7 @@ public abstract class Module : MonoBehaviour, IRuntimeDataLifecycle
 
         GameRes.Instance?.ApplyItemModuleConfiguration(
             Item_Data?.IDName,
-            _Data?.Name,
+            _Data?.StableName,
             this,
             _Data);
     }
@@ -180,10 +364,53 @@ public abstract class Module : MonoBehaviour, IRuntimeDataLifecycle
     {
     }
 
+    /// <summary>统一模块启停入口；禁用模块不建立运行态，也不参与 Tick。</summary>
+    public void SetEnabled(bool enabled)
+    {
+        if (_Data == null)
+            throw new InvalidOperationException($"模块 {gameObject.name} 缺少 ModuleData。");
+        if (_Data.Enabled == enabled)
+            return;
+
+        if (!enabled)
+            UnloadRuntime();
+
+        _Data.Enabled = enabled;
+
+        if (enabled && item?.IsInitialized == true)
+            LoadRuntime();
+
+        InvalidateTickSchedule();
+    }
+
+    internal void LoadRuntime()
+    {
+        if (runtimeLoaded || !Enabled)
+            return;
+        Load();
+        runtimeLoaded = true;
+    }
+
+    internal void SaveRuntime()
+    {
+        // 兼容少量仍直接调用 Load() 的玩法模块；启用态继续沿用旧行为执行 Save。
+        if (runtimeLoaded || Enabled)
+            Save();
+    }
+
+    internal void UnloadRuntime()
+    {
+        // 兼容少量仍直接调用 Load() 的玩法模块；启用态仍必须得到一次 Unload。
+        if (!runtimeLoaded && !Enabled)
+            return;
+        Unload();
+        runtimeLoaded = false;
+    }
+
     /// <summary>原位更新配置的稳定扩展入口；配置与运行态混存的模块可覆写并保留自身进度。</summary>
     public virtual void ApplyResourceConfiguration(string itemId, string moduleName, string json)
     {
-        ModuleJsonConfigurator.Apply(this, itemId, moduleName, _Data?.ID, json);
+        ModuleJsonConfigurator.Apply(this, itemId, moduleName, _Data?.ModuleId, json);
         OnResourcesReloaded();
     }
 
@@ -201,19 +428,19 @@ public abstract class Module : MonoBehaviour, IRuntimeDataLifecycle
         if (data == null)
             return;
 
-        Unload();
+        UnloadRuntime();
         _Data = data;
         EnsureRuntimeIdentity();
-        if (item != null && item.itemData != null && !string.IsNullOrEmpty(data.Name))
-            item.itemData.ModuleDataDic[data.Name] = data;
+        if (item != null && item.itemData != null && !string.IsNullOrEmpty(data.StableName))
+            item.itemData.ModuleDataDic[data.StableName] = data;
 
         GameRes.Instance?.ApplyItemModuleConfiguration(
             item?.itemData?.IDName,
-            data.Name,
+            data.StableName,
             this,
             data);
 
-        Load();
+        LoadRuntime();
     }
 
     public virtual void ModUpdate(float deltaTime)
@@ -226,25 +453,20 @@ public abstract class Module : MonoBehaviour, IRuntimeDataLifecycle
         OnAct.Invoke(this);
     }
 
-
-
-    /// <summary>
-    /// 生成模块唯一名称
-    /// </summary>
-    public static string GenerateUniqueModName(string id)
-    {
-        return id + "_" + UnityEngine.Random.Range(1000, 9999);
-    }
-
     #region 添加模块
     public static Module ADDModTOItem(Item item, string modName)
     {
-        if (HasMod(item, modName))
+        return ADDModTOItem(item, modName, modName);
+    }
+
+    public static Module ADDModTOItem(Item item, string prefabId, string stableName)
+    {
+        if (HasMod(item, stableName))
         {
             return null;
         }
         // 实例化模块预制体
-        GameObject @object = GameRes.Instance.InstantiatePrefab(modName);
+        GameObject @object = GameRes.Instance.InstantiatePrefab(prefabId);
 
 
         // 设置为 item 的子物体（使用 worldPositionStays = false 以便我们手动设置位置）
@@ -258,54 +480,70 @@ public abstract class Module : MonoBehaviour, IRuntimeDataLifecycle
 
         // 获取模块并初始化
         Module module = @object.GetComponentInChildren<Module>();
-        module._Data.ID = modName;
-        module._Data.Name = GenerateUniqueModName(module._Data.ID);
+        module.BindRuntimeIdentity(stableName, module.CanonicalModuleId, prefabId);
 
         item.itemMods.AddMod(module);
+        if (item.itemData?.ModuleDataDic != null)
+            item.itemData.ModuleDataDic[module.StableName] = module._Data;
         module.ModuleInit(item, null);
         return module;
     }
 
     public static Module ADDModTOItem(Item item, ModuleData mod)
     {
+        if (mod == null || string.IsNullOrWhiteSpace(mod.ModuleId))
+            throw new ArgumentException("动态模块缺少 ModuleId。", nameof(mod));
 
-        GameObject @object = GameRes.Instance.InstantiatePrefab(mod.ID);
+        string prefabId = mod.ModuleId;
+        GameObject @object = GameRes.Instance.InstantiatePrefab(prefabId);
 
         @object.transform.SetParent(item.transform);
 
         Module module = @object.GetComponentInChildren<Module>();
+        module._Data = mod;
+        string stableName = string.IsNullOrWhiteSpace(mod.StableName) ? prefabId : mod.StableName;
+        module.BindRuntimeIdentity(stableName, mod.ModuleId, prefabId);
 
         item.itemMods.AddMod(module); // 添加到字典
+        if (item.itemData?.ModuleDataDic != null)
+            item.itemData.ModuleDataDic[module.StableName] = module._Data;
 
-        module.ModuleInit(item, null);
-        module.Load();
+        module.ModuleInit(item, mod);
+        module.LoadRuntime();
 
         return module;
     }
     public static Module ADDModTOItem(Item item, ModuleData mod, ItemData itemData)
     {
-        //TODO 实例化模块 但是如果存在多个名字相同的模块会导致覆盖的问题
-        GameObject @object = GameRes.Instance.InstantiatePrefab(mod.ID);
+        if (mod == null || string.IsNullOrWhiteSpace(mod.ModuleId))
+            throw new ArgumentException("动态模块缺少 ModuleId。", nameof(mod));
+
+        string prefabId = mod.ModuleId;
+        GameObject @object = GameRes.Instance.InstantiatePrefab(prefabId);
 
         @object.transform.SetParent(item.transform);
 
         Module module = @object.GetComponentInChildren<Module>();
 
         module._Data = mod;
+        string stableName = string.IsNullOrWhiteSpace(mod.StableName) ? prefabId : mod.StableName;
+        module.BindRuntimeIdentity(stableName, mod.ModuleId, prefabId);
 
         item.itemMods.AddMod(module); // 添加到字典
+        if (item.itemData?.ModuleDataDic != null)
+            item.itemData.ModuleDataDic[module.StableName] = module._Data;
 
         module.ModuleInit(item, mod, itemData);
 
-        module.Load();
+        module.LoadRuntime();
         return module;
     }
     #endregion
     #region 移除模块
     public static Module REMOVEModFROMItem(Item item, ModuleData mod)
     {
-        if (!item.Mods.TryGetValue(mod.Name, out Module module))
-            throw new InvalidOperationException($"物品 {item.name} 不包含模块实例 {mod.Name}。");
+        if (!item.Mods.TryGetValue(mod.StableName, out Module module))
+            throw new InvalidOperationException($"物品 {item.name} 不包含模块实例 {mod.StableName}。");
 
         return RemoveRuntimeModule(item, module);
     }
@@ -324,11 +562,11 @@ public abstract class Module : MonoBehaviour, IRuntimeDataLifecycle
     /// <summary>按卸载、移除数据、销毁对象的顺序结束模块生命周期。</summary>
     private static Module RemoveRuntimeModule(Item item, Module module)
     {
-        module.Unload();
+        module.UnloadRuntime();
         item.itemMods.RemoveMod(module);
 
-        if (!string.IsNullOrEmpty(module._Data?.Name))
-            item.itemData.ModuleDataDic.Remove(module._Data.Name);
+        if (!string.IsNullOrEmpty(module._Data?.StableName))
+            item.itemData.ModuleDataDic.Remove(module._Data.StableName);
 
         Destroy(module.gameObject);
         item.MarkModuleScheduleDirty();

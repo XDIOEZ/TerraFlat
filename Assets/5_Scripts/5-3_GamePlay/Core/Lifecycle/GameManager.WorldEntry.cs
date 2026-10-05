@@ -275,11 +275,11 @@ public partial class GameManager
 
         Debug.Log($"[GameManager] 玩家脚下区块就绪耗时 {Time.realtimeSinceStartup - centerStartedAt:0.00} 秒。");
 
-        // 首屏可玩区已经准备好，再展开真实相机窗口。这样重生成任务不会在进入世界最关键的
+        // 首屏可玩区已经准备好，再展开玩家配置的区块窗口。这样重生成任务不会在进入世界最关键的
         // 几秒内让外围区块与玩家脚下区块竞争后台 CPU，同时不降低正常流送阶段的总吞吐。
         if (chunkLoader != null)
         {
-            chunkLoader.RefreshChunksForCameraView();
+            chunkLoader.RefreshConfiguredChunkWindow();
         }
         else
         {

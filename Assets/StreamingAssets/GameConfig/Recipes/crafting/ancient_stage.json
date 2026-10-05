@@ -6,17 +6,12 @@
       "displayName": "草药包",
       "recipeType": "crafting",
       "inputRule": "unordered",
-      "gridWidth": 1,
-      "gridHeight": 1,
-      "allowMirror": false,
       "temperature": 0,
       "maxTemperature": 2000,
       "inputs": [
         {
-          "slot": 0,
           "match": "exact_item",
           "itemId": "Herb",
-          "tag": "",
           "amount": 2
         }
       ],
@@ -29,35 +24,58 @@
       "actions": []
     },
     {
-      "id": "core:石铲",
-      "displayName": "石铲",
+      "id": "core:木铲",
+      "displayName": "木铲",
       "recipeType": "crafting",
       "inputRule": "unordered",
-      "gridWidth": 3,
-      "gridHeight": 1,
-      "allowMirror": false,
       "temperature": 0,
       "maxTemperature": 2000,
       "inputs": [
         {
-          "slot": 0,
           "match": "exact_item",
-          "itemId": "Ore_Stone",
-          "tag": "",
+          "itemId": "Plank",
           "amount": 2
         },
         {
-          "slot": 1,
           "match": "exact_item",
           "itemId": "Stick_Wood",
-          "tag": "",
           "amount": 2
         },
         {
-          "slot": 2,
           "match": "exact_item",
           "itemId": "Rope",
-          "tag": "",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Shovel_Wood",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:石铲",
+      "displayName": "石铲",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Ore_Stone",
+          "amount": 2
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Stick_Wood",
+          "amount": 2
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Rope",
           "amount": 1
         }
       ],
@@ -70,21 +88,144 @@
       "actions": []
     },
     {
-      "id": "core:干草制绳",
-      "displayName": "干草制绳",
+      "id": "core:铜铲",
+      "displayName": "铜铲",
       "recipeType": "crafting",
       "inputRule": "unordered",
-      "gridWidth": 1,
-      "gridHeight": 1,
-      "allowMirror": false,
       "temperature": 0,
       "maxTemperature": 2000,
       "inputs": [
         {
-          "slot": 0,
+          "match": "exact_item",
+          "itemId": "Ingot_Copper",
+          "amount": 2
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Stick_Wood",
+          "amount": 2
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Rope",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Shovel_Copper",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:粗铁铲",
+      "displayName": "粗铁铲",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Ingot_RawIron",
+          "amount": 2
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Stick_Wood",
+          "amount": 2
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Rope",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Shovel_RawIron",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:青铜铲",
+      "displayName": "青铜铲",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Ingot_Bronze",
+          "amount": 2
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Stick_Wood",
+          "amount": 2
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Rope",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Shovel_Bronze",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:铁铲",
+      "displayName": "铁铲",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Ingot_WroughtIron",
+          "amount": 2
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Stick_Wood",
+          "amount": 2
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Rope",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Shovel_Iron",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:干草制绳",
+      "displayName": "干草制绳",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
           "match": "exact_item",
           "itemId": "Straw",
-          "tag": "",
           "amount": 3
         }
       ],
@@ -101,17 +242,12 @@
       "displayName": "柳枝制绳",
       "recipeType": "crafting",
       "inputRule": "unordered",
-      "gridWidth": 1,
-      "gridHeight": 1,
-      "allowMirror": false,
       "temperature": 0,
       "maxTemperature": 2000,
       "inputs": [
         {
-          "slot": 0,
           "match": "exact_item",
           "itemId": "WillowBranch",
-          "tag": "",
           "amount": 3
         }
       ],
@@ -128,17 +264,12 @@
       "displayName": "柳树皮制绳",
       "recipeType": "crafting",
       "inputRule": "unordered",
-      "gridWidth": 1,
-      "gridHeight": 1,
-      "allowMirror": false,
       "temperature": 0,
       "maxTemperature": 2000,
       "inputs": [
         {
-          "slot": 0,
           "match": "exact_item",
           "itemId": "WillowBark",
-          "tag": "",
           "amount": 3
         }
       ],
@@ -155,24 +286,17 @@
       "displayName": "硝石肥料",
       "recipeType": "crafting",
       "inputRule": "unordered",
-      "gridWidth": 2,
-      "gridHeight": 1,
-      "allowMirror": false,
       "temperature": 0,
       "maxTemperature": 2000,
       "inputs": [
         {
-          "slot": 0,
           "match": "exact_item",
           "itemId": "Ore_Niter",
-          "tag": "",
           "amount": 1
         },
         {
-          "slot": 1,
           "match": "exact_item",
           "itemId": "Humus",
-          "tag": "",
           "amount": 2
         }
       ],
@@ -189,17 +313,12 @@
       "displayName": "石平台",
       "recipeType": "crafting",
       "inputRule": "unordered",
-      "gridWidth": 1,
-      "gridHeight": 1,
-      "allowMirror": false,
       "temperature": 0,
       "maxTemperature": 2000,
       "inputs": [
         {
-          "slot": 0,
           "match": "exact_item",
           "itemId": "Ore_Stone",
-          "tag": "",
           "amount": 4
         }
       ],
@@ -216,17 +335,12 @@
       "displayName": "铜平台",
       "recipeType": "crafting",
       "inputRule": "unordered",
-      "gridWidth": 1,
-      "gridHeight": 1,
-      "allowMirror": false,
       "temperature": 0,
       "maxTemperature": 2000,
       "inputs": [
         {
-          "slot": 0,
           "match": "exact_item",
           "itemId": "Ingot_Copper",
-          "tag": "",
           "amount": 2
         }
       ],
@@ -243,17 +357,12 @@
       "displayName": "铜墙",
       "recipeType": "crafting",
       "inputRule": "unordered",
-      "gridWidth": 1,
-      "gridHeight": 1,
-      "allowMirror": false,
       "temperature": 0,
       "maxTemperature": 2000,
       "inputs": [
         {
-          "slot": 0,
           "match": "exact_item",
           "itemId": "Ingot_Copper",
-          "tag": "",
           "amount": 2
         }
       ],
@@ -270,17 +379,12 @@
       "displayName": "铁平台",
       "recipeType": "crafting",
       "inputRule": "unordered",
-      "gridWidth": 1,
-      "gridHeight": 1,
-      "allowMirror": false,
       "temperature": 0,
       "maxTemperature": 2000,
       "inputs": [
         {
-          "slot": 0,
           "match": "exact_item",
           "itemId": "Ingot_RawIron",
-          "tag": "",
           "amount": 2
         }
       ],
@@ -297,17 +401,12 @@
       "displayName": "铁墙",
       "recipeType": "crafting",
       "inputRule": "unordered",
-      "gridWidth": 1,
-      "gridHeight": 1,
-      "allowMirror": false,
       "temperature": 0,
       "maxTemperature": 2000,
       "inputs": [
         {
-          "slot": 0,
           "match": "exact_item",
           "itemId": "Ingot_RawIron",
-          "tag": "",
           "amount": 2
         }
       ],
@@ -324,17 +423,12 @@
       "displayName": "青铜平台",
       "recipeType": "crafting",
       "inputRule": "unordered",
-      "gridWidth": 1,
-      "gridHeight": 1,
-      "allowMirror": false,
       "temperature": 0,
       "maxTemperature": 2000,
       "inputs": [
         {
-          "slot": 0,
           "match": "exact_item",
           "itemId": "Ingot_Bronze",
-          "tag": "",
           "amount": 2
         }
       ],
@@ -351,17 +445,12 @@
       "displayName": "青铜墙",
       "recipeType": "crafting",
       "inputRule": "unordered",
-      "gridWidth": 1,
-      "gridHeight": 1,
-      "allowMirror": false,
       "temperature": 0,
       "maxTemperature": 2000,
       "inputs": [
         {
-          "slot": 0,
           "match": "exact_item",
           "itemId": "Ingot_Bronze",
-          "tag": "",
           "amount": 2
         }
       ],
@@ -378,17 +467,12 @@
       "displayName": "陶罐坯",
       "recipeType": "crafting",
       "inputRule": "unordered",
-      "gridWidth": 1,
-      "gridHeight": 1,
-      "allowMirror": false,
       "temperature": 0,
       "maxTemperature": 2000,
       "inputs": [
         {
-          "slot": 0,
           "match": "exact_item",
           "itemId": "Clay",
-          "tag": "",
           "amount": 4
         }
       ],
@@ -432,24 +516,17 @@
       "displayName": "腌肉",
       "recipeType": "crafting",
       "inputRule": "unordered",
-      "gridWidth": 2,
-      "gridHeight": 1,
-      "allowMirror": false,
       "temperature": 0,
       "maxTemperature": 2000,
       "inputs": [
         {
-          "slot": 0,
           "match": "exact_item",
           "itemId": "Meat",
-          "tag": "",
           "amount": 2
         },
         {
-          "slot": 1,
           "match": "exact_item",
           "itemId": "Salt",
-          "tag": "",
           "amount": 1
         }
       ],
@@ -457,40 +534,6 @@
         {
           "itemId": "Meat_Cured",
           "amount": 2
-        }
-      ],
-      "actions": []
-    },
-    {
-      "id": "core:bottled_jam",
-      "displayName": "瓶装果酱",
-      "recipeType": "crafting",
-      "inputRule": "unordered",
-      "gridWidth": 2,
-      "gridHeight": 1,
-      "allowMirror": false,
-      "temperature": 0,
-      "maxTemperature": 2000,
-      "inputs": [
-        {
-          "slot": 0,
-          "match": "exact_item",
-          "itemId": "Jam",
-          "tag": "",
-          "amount": 1
-        },
-        {
-          "slot": 1,
-          "match": "exact_item",
-          "itemId": "ClayJar",
-          "tag": "",
-          "amount": 1
-        }
-      ],
-      "outputs": [
-        {
-          "itemId": "BottledJam",
-          "amount": 1
         }
       ],
       "actions": []

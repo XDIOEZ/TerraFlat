@@ -20,6 +20,7 @@ public static class FactionRelationService
     public static uint Revision { get; private set; } // Native 关系快照只在实际关系或身份变化时刷新。
     #region 内置阵营
 
+    public const int MaxFactionIdLength = 96;
     public const string WolfFactionId = "wolves";
     public const string PlayerFactionId = "players";
     public const string NeutralFactionId = "neutral";
@@ -115,6 +116,37 @@ public static class FactionRelationService
         }
 
         return FactionRelation.Hostile;
+    }
+
+    /// <summary>原生战斗输入先校验长度再解码；非法数据明确拒绝，不当作空阵营放行攻击。</summary>
+    public static bool TryGetCombatRelation(
+        in Unity.Collections.FixedString128Bytes sourceFactionId,
+        string targetFactionId,
+        out FactionRelation relation,
+        out string error)
+    {
+        relation = FactionRelation.Neutral;
+        Unity.Collections.FixedString128Bytes source = sourceFactionId;
+        if (source.Length > source.Capacity)
+        {
+            error = $"来源阵营 UTF-8 长度 {source.Length} 超过缓冲容量 {source.Capacity}。";
+            return false;
+        }
+
+        if (!TryNormalizeFactionId(source.ToString(), true, out string left, out error))
+        {
+            error = "来源阵营无效：" + error;
+            return false;
+        }
+        if (!TryNormalizeFactionId(targetFactionId, true, out string right, out error))
+        {
+            error = "目标阵营无效：" + error;
+            return false;
+        }
+
+        // 校验后仍经过原公开入口，保留 Harmony 对阵营规则的修改。
+        relation = GetRelation(left, right);
+        return true;
     }
 
     /// <summary>将关系枚举转换为 MOD API 使用的稳定英文值。</summary>
@@ -248,28 +280,44 @@ public static class FactionRelationService
         return false;
     }
 
-    /// <summary>标准化并校验阵营 ID。</summary>
-    private static string NormalizeFactionId(string factionId, bool allowEmpty)
+    /// <summary>配置和 MOD 注册使用严格校验，必须在写入阵营目录之前调用。</summary>
+    public static string NormalizeFactionId(string factionId, bool allowEmpty)
     {
-        string normalized = factionId?.Trim() ?? string.Empty;
+        if (!TryNormalizeFactionId(factionId, allowEmpty, out string normalized, out string error))
+            throw new ArgumentException(error, nameof(factionId));
+        return normalized;
+    }
+
+    /// <summary>运行时输入复用严格校验条件，但由调用者决定拒绝单次命中而非抛出整轮异常。</summary>
+    private static bool TryNormalizeFactionId(string factionId, bool allowEmpty, out string normalized, out string error)
+    {
+        normalized = factionId?.Trim() ?? string.Empty;
+        error = null;
         if (normalized.Length == 0)
         {
             if (allowEmpty)
-                return string.Empty;
+                return true;
 
-            throw new ArgumentException("阵营 ID 不能为空。", nameof(factionId));
+            error = "阵营 ID 不能为空。";
+            return false;
         }
 
-        if (normalized.Length > 96)
-            throw new ArgumentException("阵营 ID 不能超过 96 个字符。", nameof(factionId));
+        if (normalized.Length > MaxFactionIdLength)
+        {
+            error = $"阵营 ID 不能超过 {MaxFactionIdLength} 个字符，实际为 {normalized.Length}。";
+            return false;
+        }
 
         for (int i = 0; i < normalized.Length; i++)
         {
             if (char.IsControl(normalized[i]))
-                throw new ArgumentException("阵营 ID 不能包含控制字符。", nameof(factionId));
+            {
+                error = $"阵营 ID 不能包含控制字符，位置为 {i}。";
+                return false;
+            }
         }
 
-        return normalized;
+        return true;
     }
 
     /// <summary>构造不区分左右顺序的关系键。</summary>

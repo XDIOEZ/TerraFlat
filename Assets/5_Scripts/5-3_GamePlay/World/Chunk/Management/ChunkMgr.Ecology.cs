@@ -113,8 +113,9 @@ public partial class ChunkMgr
             return profile;
 
         PlanetData sourcePlanet = GetPortalSourcePlanetData(dimensionManager, sourceDimensionId);
-        ChunkGenerationProfileSnapshot sourceProfile = ApplyWorldCoordinateScale(
+        ChunkGenerationProfileSnapshot sourceProfile = ApplyWorldChunkSize(
             sourceAsset.CreateSnapshot(), sourcePlanet);
+        sourceProfile = ApplyWorldCoordinateScale(sourceProfile, sourcePlanet);
         sourceProfile = ApplyPersistedEcologyConfiguration(sourceProfile, sourcePlanet);
         sourceProfile = sourceProfile.WithNumericParameter("cave.portal.baseSeed", baseSeed);
         if (sourceProfile.Settings.Mode != ChunkGenerationMode.Surface)
@@ -201,8 +202,9 @@ public partial class ChunkMgr
         if (profileAsset == null)
             return;
 
-        ChunkGenerationProfileSnapshot profile = ApplyWorldCoordinateScale(
+        ChunkGenerationProfileSnapshot profile = ApplyWorldChunkSize(
             profileAsset.CreateSnapshot());
+        profile = ApplyWorldCoordinateScale(profile);
         profile = WorldGenerationRuntimeHooks.ApplyBeforeWorldModelGeneration(profile);
         profile = ApplyPersistedEcologyConfiguration(profile);
         int baseSeed = SaveDataMgr.Instance?.SaveData?.Seed ?? 1;

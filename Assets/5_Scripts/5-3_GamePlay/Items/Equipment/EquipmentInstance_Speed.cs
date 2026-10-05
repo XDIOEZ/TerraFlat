@@ -12,12 +12,20 @@ public partial class EquipmentInstance_Speed : EquipmentInstance
     [MemoryPackIgnore]
     private bool _isApplied = false;
 
+    [MemoryPackIgnore]
+    private Mod_Mover appliedMover;
+
     public override void Equip(Item item)
     {
         if (_isApplied)
             return;
 
-        item.itemMods.GetMod_ByID<Mover>(ModText.Mover).Data.Speed.AdditiveModifier += SpeedIncrease;
+        Mod_Mover mover = item?.itemMods?.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover);
+        if (mover?.Data?.Speed == null)
+            return;
+
+        mover.Data.Speed.AdditiveModifier += SpeedIncrease;
+        appliedMover = mover;
         _isApplied = true;
     }
 
@@ -26,7 +34,10 @@ public partial class EquipmentInstance_Speed : EquipmentInstance
         if (!_isApplied)
             return;
 
-        item.itemMods.GetMod_ByID<Mover>(ModText.Mover).Data.Speed.AdditiveModifier -= SpeedIncrease;
+        if (appliedMover?.Data?.Speed != null)
+            appliedMover.Data.Speed.AdditiveModifier -= SpeedIncrease;
+
+        appliedMover = null;
         _isApplied = false;
     }
 

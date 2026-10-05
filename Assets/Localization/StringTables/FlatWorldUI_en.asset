@@ -2242,6 +2242,10 @@ MonoBehaviour:
     m_Localized: "Year {0} \xB7 {1} \xB7 Day {2}"
     m_Metadata:
       m_Items: []
+  - m_Id: 3733935167
+    m_Localized: "Year {0} \xB7 {1} \xB7 Day {2} \xB7 {3:00}h"
+    m_Metadata:
+      m_Items: []
   - m_Id: 11095680595517441
     m_Localized: '{0} days per year. Changes preserve current seasonal progress.'
     m_Metadata:
@@ -2560,7 +2564,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 16649623023116289
-    m_Localized: " · Efficiency {0:0.#}% (required {1:0} RPM)"
+    m_Localized: " \xB7 Efficiency {0:0.#}% (required {1:0} RPM)"
     m_Metadata:
       m_Items: []
   - m_Id: 16649623023116290
@@ -2568,7 +2572,346 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 16649623023116291
-    m_Localized: " · Speed x{0:0.##} · Torque x{1:0.##}"
+    m_Localized: " \xB7 Speed x{0:0.##} \xB7 Torque x{1:0.##}"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17027010122473472
+    m_Localized: Rows per mouse-wheel step
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17027010181193728
+    m_Localized: '{0} rows'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740032
+    m_Localized: Writing Material
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740033
+    m_Localized: Paper
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740034
+    m_Localized: Add Page
+    m_Metadata:
+      m_Items: []
+  - m_Id: -9223372035866248469
+    m_Localized: Updating resources {0:0}%
+    m_Metadata:
+      m_Items: []
+  - m_Id: -9223372035964569759
+    m_Localized: Resources updated
+    m_Metadata:
+      m_Items: []
+  - m_Id: -9223372034884455312
+    m_Localized: Update failed; old assets kept
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12589890265088
+    m_Localized: Sort
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740035
+    m_Localized: Push Mill
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740036
+    m_Localized: Language changes apply immediately. Click Save to keep them.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740037
+    m_Localized: These settings do not depend on the current world. Click Save to
+      keep changes.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740038
+    m_Localized: Unsaved changes are discarded when you close the settings.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740039
+    m_Localized: Settings changes saved.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740040
+    m_Localized: 'Current: {0}. Select an action and enter a control; conflicts are
+      blocked. Click Save to keep the change.'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740041
+    m_Localized: Graphics settings changed. Click Save to keep them.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740042
+    m_Localized: Effects quality changed. Click Save to keep it.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740043
+    m_Localized: Grind by Hand
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740044
+    m_Localized: Search name or tag
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740045
+    m_Localized: Precise Interaction
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740046
+    m_Localized: Precise Interaction (Point at Target)
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740047
+    m_Localized: MOD Management
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740048
+    m_Localized: Drag entries to reorder; hover over a page button to change pages.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740049
+    m_Localized: 'Content type: C# MOD'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740050
+    m_Localized: Restart the game to apply C# MOD enablement, load order, or code
+      changes.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740051
+    m_Localized: Interaction Outline
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740052
+    m_Localized: Outline Thickness
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740053
+    m_Localized: Default Chunk Width
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740054
+    m_Localized: Default Chunk Height
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740055
+    m_Localized: Default chunk size for new worlds; existing saves are unaffected.
+      Width and height can each be set from 1 to 256 tiles.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740056
+    m_Localized: World Settings
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740057
+    m_Localized: Back to Names
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740058
+    m_Localized: Optional; a name is generated automatically
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740059
+    m_Localized: Leave names blank to generate them automatically.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1944233605849088
+    m_Localized: Choose challenge level 0 - 20
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1944233681346560
+    m_Localized: Rule Changes
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1944233681346561
+    m_Localized: Compared with Difficulty 0
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1944233681346562
+    m_Localized: Death Penalty
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1944233681346563
+    m_Localized: Drop All Items
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1944233681346564
+    m_Localized: Keep Items
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1944233681346565
+    m_Localized: Time Speed
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1944233681346566
+    m_Localized: Loot Amount
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1944233681346567
+    m_Localized: Growth Speed
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1944233681346568
+    m_Localized: Choose difficulty level 0 - 20, then click Apply.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1944233681346569
+    m_Localized: 'Current save difficulty: Difficulty 0'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1944233681346570
+    m_Localized: Difficulty 0
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1944233681346571
+    m_Localized: Base rules for learning the world and its systems.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1944233681346572
+    m_Localized: Difficulty 1
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1944233681346573
+    m_Localized: A light challenge with slightly stronger enemies and survival pressure.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1944233681346574
+    m_Localized: Difficulty 2
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1944233681346575
+    m_Localized: Difficulty 3
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1944233681346576
+    m_Localized: Difficulty 4
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1944233681346577
+    m_Localized: Difficulty 5
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1944233681346578
+    m_Localized: A standard challenge with higher combat, survival, and resource
+      pressure.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1944233681346579
+    m_Localized: Difficulty 6
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1944233681346580
+    m_Localized: Difficulty 7
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1944233681346581
+    m_Localized: Difficulty 8
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1944233681346582
+    m_Localized: Difficulty 9
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1944233681346583
+    m_Localized: Difficulty 10
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1944233681346584
+    m_Localized: A high-intensity challenge with harsher death penalties and world
+      threats.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1944233681346585
+    m_Localized: Difficulty 11
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1944233681346586
+    m_Localized: Difficulty 12
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1944233681346587
+    m_Localized: Difficulty 13
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1944233681346588
+    m_Localized: Difficulty 14
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1944233681346589
+    m_Localized: Difficulty 15
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1944233681346590
+    m_Localized: A harsh challenge demanding stronger planning for resources, production,
+      and combat.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1944233681346591
+    m_Localized: Difficulty 16
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1944233681346592
+    m_Localized: Difficulty 17
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1944233681346593
+    m_Localized: Difficulty 18
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1944233681346594
+    m_Localized: Difficulty 19
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1944233681346595
+    m_Localized: Difficulty 20
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1944233681346596
+    m_Localized: An extreme challenge for players familiar with every major system.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 5243742982368013
+    m_Localized: Miss
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740060
+    m_Localized: "Change Orientation"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740061
+    m_Localized: "Automatic Connection"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740062
+    m_Localized: "Manual Connection"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740063
+    m_Localized: "Straight"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740064
+    m_Localized: "Corner"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740065
+    m_Localized: "East"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740066
+    m_Localized: "North"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740067
+    m_Localized: "West"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740068
+    m_Localized: "South"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740069
+    m_Localized: " \u00b7 {0}: {1} ({2} \u2192 {3})"
     m_Metadata:
       m_Items: []
   references:

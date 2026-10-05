@@ -12,9 +12,28 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e8e5ad8285f24fa43b658f35c3137b11, type: 3}
   m_Name: "\u751F\u7269\u52A8\u753B\u76EE\u5F55"
   m_EditorClassIdentifier: 
-  SourceFingerprint: bfbc8d9db71becbdb9671301733f4ed4
+  SourceFingerprint: c6af4382aa2813df6cbf5460dfe5523a
   Material: {fileID: 2100000, guid: 922522c46cd4b2c4b8d0c318e520b4a8, type: 2}
   Sprites:
+  - Source: Assets/6_Art/Generated/AI/Bee/Bee_Flying_Left.png[Bee_Flying_Left]
+    LocalRect:
+      serializedVersion: 2
+      x: -0.25
+      y: -0
+      width: 0.5
+      height: 0.5
+    VisibleRect:
+      serializedVersion: 2
+      x: -0.175
+      y: 0.0625
+      width: 0.35
+      height: 0.325
+    AtlasRect:
+      serializedVersion: 2
+      x: 0.38671875
+      y: 0.4921875
+      width: 0.078125
+      height: 0.15625
   - Source: Assets/8_Animations/Character/Birds/Bird/Ground_0.png[Ground_0]
     LocalRect:
       serializedVersion: 2
@@ -30,8 +49,8 @@ MonoBehaviour:
       height: 0.575
     AtlasRect:
       serializedVersion: 2
-      x: 0.38671875
-      y: 0.328125
+      x: 0.46875
+      y: 0.8203125
       width: 0.078125
       height: 0.15625
   - Source: Assets/8_Animations/Character/Birds/Bird/Ground_1.png[Ground_1]
@@ -49,30 +68,11 @@ MonoBehaviour:
       height: 0.55
     AtlasRect:
       serializedVersion: 2
-      x: 0.46875
-      y: 0.65625
+      x: 0.55078125
+      y: 0
       width: 0.078125
       height: 0.15625
   - Source: Assets/8_Animations/Character/Birds/Bird/Walk_0.png[Walk_0]
-    LocalRect:
-      serializedVersion: 2
-      x: -0.5
-      y: -0
-      width: 1
-      height: 1
-    VisibleRect:
-      serializedVersion: 2
-      x: -0.35
-      y: 0.075
-      width: 0.725
-      height: 0.575
-    AtlasRect:
-      serializedVersion: 2
-      x: 0.46875
-      y: 0.8203125
-      width: 0.078125
-      height: 0.15625
-  - Source: Assets/8_Animations/Character/Birds/Bird/Walk_1.png[Walk_1]
     LocalRect:
       serializedVersion: 2
       x: -0.5
@@ -91,6 +91,25 @@ MonoBehaviour:
       y: 0.7734375
       width: 0.078125
       height: 0.15625
+  - Source: Assets/8_Animations/Character/Birds/Bird/Walk_1.png[Walk_1]
+    LocalRect:
+      serializedVersion: 2
+      x: -0.5
+      y: -0
+      width: 1
+      height: 1
+    VisibleRect:
+      serializedVersion: 2
+      x: -0.35
+      y: 0.075
+      width: 0.725
+      height: 0.575
+    AtlasRect:
+      serializedVersion: 2
+      x: 0.12890625
+      y: 0.7734375
+      width: 0.078125
+      height: 0.15625
   - Source: Assets/8_Animations/Character/Birds/Bird/TakingOff_0.png[TakingOff_0]
     LocalRect:
       serializedVersion: 2
@@ -106,8 +125,8 @@ MonoBehaviour:
       height: 0.6
     AtlasRect:
       serializedVersion: 2
-      x: 0.12890625
-      y: 0.7734375
+      x: 0.2578125
+      y: 0.515625
       width: 0.078125
       height: 0.15625
   - Source: Assets/8_Animations/Character/Birds/Bird/TakingOff_1.png[TakingOff_1]
@@ -126,7 +145,7 @@ MonoBehaviour:
     AtlasRect:
       serializedVersion: 2
       x: 0.2578125
-      y: 0.515625
+      y: 0.6796875
       width: 0.078125
       height: 0.15625
   - Source: Assets/8_Animations/Character/Birds/Bird/Flying_0.png[Flying_0]
@@ -145,7 +164,7 @@ MonoBehaviour:
     AtlasRect:
       serializedVersion: 2
       x: 0.2578125
-      y: 0.6796875
+      y: 0.84375
       width: 0.078125
       height: 0.15625
   - Source: Assets/8_Animations/Character/Birds/Bird/Flying_1.png[Flying_1]
@@ -163,8 +182,8 @@ MonoBehaviour:
       height: 0.625
     AtlasRect:
       serializedVersion: 2
-      x: 0.2578125
-      y: 0.84375
+      x: 0.38671875
+      y: 0
       width: 0.078125
       height: 0.15625
   - Source: Assets/8_Animations/Character/Birds/Bird/Landing_0.png[Landing_0]
@@ -183,7 +202,7 @@ MonoBehaviour:
     AtlasRect:
       serializedVersion: 2
       x: 0.38671875
-      y: 0
+      y: 0.1640625
       width: 0.078125
       height: 0.15625
   - Source: Assets/8_Animations/Character/Birds/Bird/Landing_1.png[Landing_1]
@@ -202,7 +221,7 @@ MonoBehaviour:
     AtlasRect:
       serializedVersion: 2
       x: 0.38671875
-      y: 0.1640625
+      y: 0.328125
       width: 0.078125
       height: 0.15625
   - Source: Assets/6_Art/Characters/Hana Caraka - Livestock & Fish [Sample]/Chicken/Chicken.png[Chicken_4]
@@ -448,8 +467,8 @@ MonoBehaviour:
       height: 1.75
     AtlasRect:
       serializedVersion: 2
-      x: 0
-      y: 0.515625
+      x: 0.12890625
+      y: 0
       width: 0.125
       height: 0.25
   - Source: Assets/6_Art/Generated/Actors/Ghost/Ghost_Idle_Sheet.png[Ghost_Idle_1]
@@ -468,7 +487,7 @@ MonoBehaviour:
     AtlasRect:
       serializedVersion: 2
       x: 0.12890625
-      y: 0.2578125
+      y: 0.515625
       width: 0.125
       height: 0.25
   - Source: Assets/6_Art/Generated/Actors/Ghost/Ghost_Idle_Sheet.png[Ghost_Idle_2]
@@ -486,8 +505,8 @@ MonoBehaviour:
       height: 1.75
     AtlasRect:
       serializedVersion: 2
-      x: 0
-      y: 0
+      x: 0.12890625
+      y: 0.2578125
       width: 0.125
       height: 0.25
   - Source: Assets/6_Art/Generated/Actors/Ghost/Ghost_Idle_Sheet.png[Ghost_Idle_3]
@@ -505,7 +524,7 @@ MonoBehaviour:
       height: 1.75
     AtlasRect:
       serializedVersion: 2
-      x: 0.12890625
+      x: 0
       y: 0
       width: 0.125
       height: 0.25
@@ -525,7 +544,7 @@ MonoBehaviour:
     AtlasRect:
       serializedVersion: 2
       x: 0
-      y: 0.2578125
+      y: 0.515625
       width: 0.125
       height: 0.25
   - Source: Assets/6_Art/Generated/Actors/Ghost/Ghost_Idle_Sheet.png[Ghost_Idle_5]
@@ -543,8 +562,8 @@ MonoBehaviour:
       height: 1.75
     AtlasRect:
       serializedVersion: 2
-      x: 0.12890625
-      y: 0.515625
+      x: 0
+      y: 0.2578125
       width: 0.125
       height: 0.25
   - Source: Assets/6_Art/Generated/Actors/Ghost/Ghost_Idle_Sheet.png[Ghost_Idle_6]
@@ -600,8 +619,8 @@ MonoBehaviour:
       height: 0.5
     AtlasRect:
       serializedVersion: 2
-      x: 0.94921875
-      y: 0.1640625
+      x: 0.9453125
+      y: 0
       width: 0.03125
       height: 0.0625
   - Source: Assets/6_Art/Characters/MinifolksForestAnimals/Without outline/MiniBunny.png[MiniBunny_Move_2]
@@ -619,8 +638,8 @@ MonoBehaviour:
       height: 0.5625
     AtlasRect:
       serializedVersion: 2
-      x: 0.94921875
-      y: 0.234375
+      x: 0.9453125
+      y: 0.0703125
       width: 0.03125
       height: 0.0625
   - Source: Assets/6_Art/Characters/MinifolksForestAnimals/Without outline/MiniBunny.png[MiniBunny_Move_3]
@@ -638,8 +657,8 @@ MonoBehaviour:
       height: 0.375
     AtlasRect:
       serializedVersion: 2
-      x: 0.68359375
-      y: 0.3046875
+      x: 0.94921875
+      y: 0.1640625
       width: 0.03125
       height: 0.0625
   - Source: Assets/6_Art/Characters/MinifolksForestAnimals/Without outline/MiniBunny.png[MiniBunny_Move_4]
@@ -657,8 +676,8 @@ MonoBehaviour:
       height: 0.4375
     AtlasRect:
       serializedVersion: 2
-      x: 0.9296875
-      y: 0.375
+      x: 0.71875
+      y: 0.7265625
       width: 0.03125
       height: 0.0625
   - Source: Assets/6_Art/Characters/MinifolksForestAnimals/Without outline/MiniBunny.png[MiniBunny_Idle_1]
@@ -676,8 +695,8 @@ MonoBehaviour:
       height: 0.4375
     AtlasRect:
       serializedVersion: 2
-      x: 0.89453125
-      y: 0.375
+      x: 0.71875
+      y: 0.65625
       width: 0.03125
       height: 0.0625
   - Source: Assets/6_Art/Characters/MinifolksForestAnimals/Without outline/MiniBunny.png[MiniBunny_Idle_2]
@@ -695,8 +714,8 @@ MonoBehaviour:
       height: 0.4375
     AtlasRect:
       serializedVersion: 2
-      x: 0.859375
-      y: 0.375
+      x: 0.71875
+      y: 0.5859375
       width: 0.03125
       height: 0.0625
   - Source: Assets/6_Art/Characters/MinifolksForestAnimals/Without outline/MiniBunny.png[MiniBunny_Idle_3]
@@ -714,8 +733,8 @@ MonoBehaviour:
       height: 0.375
     AtlasRect:
       serializedVersion: 2
-      x: 0.82421875
-      y: 0.375
+      x: 0.71875
+      y: 0.515625
       width: 0.03125
       height: 0.0625
   - Source: Assets/6_Art/Characters/MinifolksForestAnimals/Without outline/MiniBunny.png[MiniBunny_Idle_4]
@@ -734,7 +753,7 @@ MonoBehaviour:
     AtlasRect:
       serializedVersion: 2
       x: 0.71875
-      y: 0.3046875
+      y: 0.375
       width: 0.03125
       height: 0.0625
   - Source: Assets/8_Animations/Character/Birds/Seagull/Ground_0.png[Ground_0]
@@ -753,7 +772,7 @@ MonoBehaviour:
     AtlasRect:
       serializedVersion: 2
       x: 0.38671875
-      y: 0.4921875
+      y: 0.65625
       width: 0.078125
       height: 0.15625
   - Source: Assets/8_Animations/Character/Birds/Seagull/Ground_1.png[Ground_1]
@@ -772,7 +791,7 @@ MonoBehaviour:
     AtlasRect:
       serializedVersion: 2
       x: 0.38671875
-      y: 0.65625
+      y: 0.8203125
       width: 0.078125
       height: 0.15625
   - Source: Assets/8_Animations/Character/Birds/Seagull/Walk_0.png[Walk_0]
@@ -790,8 +809,8 @@ MonoBehaviour:
       height: 0.6
     AtlasRect:
       serializedVersion: 2
-      x: 0.38671875
-      y: 0.8203125
+      x: 0.46875
+      y: 0
       width: 0.078125
       height: 0.15625
   - Source: Assets/8_Animations/Character/Birds/Seagull/Walk_1.png[Walk_1]
@@ -810,7 +829,7 @@ MonoBehaviour:
     AtlasRect:
       serializedVersion: 2
       x: 0.46875
-      y: 0
+      y: 0.1640625
       width: 0.078125
       height: 0.15625
   - Source: Assets/8_Animations/Character/Birds/Seagull/TakingOff_0.png[TakingOff_0]
@@ -829,7 +848,7 @@ MonoBehaviour:
     AtlasRect:
       serializedVersion: 2
       x: 0.46875
-      y: 0.1640625
+      y: 0.328125
       width: 0.078125
       height: 0.15625
   - Source: Assets/8_Animations/Character/Birds/Seagull/TakingOff_1.png[TakingOff_1]
@@ -848,7 +867,7 @@ MonoBehaviour:
     AtlasRect:
       serializedVersion: 2
       x: 0.46875
-      y: 0.328125
+      y: 0.4921875
       width: 0.078125
       height: 0.15625
   - Source: Assets/8_Animations/Character/Birds/Seagull/Flying_0.png[Flying_0]
@@ -867,7 +886,7 @@ MonoBehaviour:
     AtlasRect:
       serializedVersion: 2
       x: 0.46875
-      y: 0.4921875
+      y: 0.65625
       width: 0.078125
       height: 0.15625
   - Source: Assets/8_Animations/Character/Birds/Seagull/Flying_1.png[Flying_1]
@@ -885,7 +904,7 @@ MonoBehaviour:
       height: 0.7
     AtlasRect:
       serializedVersion: 2
-      x: 0.55078125
+      x: 0.6328125
       y: 0
       width: 0.078125
       height: 0.15625
@@ -904,7 +923,7 @@ MonoBehaviour:
       height: 0.825
     AtlasRect:
       serializedVersion: 2
-      x: 0.6328125
+      x: 0.71484375
       y: 0
       width: 0.078125
       height: 0.15625
@@ -923,7 +942,7 @@ MonoBehaviour:
       height: 0.5
     AtlasRect:
       serializedVersion: 2
-      x: 0.71484375
+      x: 0.796875
       y: 0
       width: 0.078125
       height: 0.15625
@@ -942,7 +961,7 @@ MonoBehaviour:
       height: 0.6875
     AtlasRect:
       serializedVersion: 2
-      x: 0.6171875
+      x: 0.8828125
       y: 0.234375
       width: 0.0625
       height: 0.0625
@@ -961,8 +980,8 @@ MonoBehaviour:
       height: 0.625
     AtlasRect:
       serializedVersion: 2
-      x: 0.68359375
-      y: 0.234375
+      x: 0.6171875
+      y: 0.3046875
       width: 0.0625
       height: 0.0625
   - Source: Assets/6_Art/Characters/MinifolksForestAnimals/Without outline/MiniWolf.png[MiniWolf_Walk_3]
@@ -980,8 +999,8 @@ MonoBehaviour:
       height: 0.5
     AtlasRect:
       serializedVersion: 2
-      x: 0.75
-      y: 0.234375
+      x: 0.6171875
+      y: 0.375
       width: 0.0625
       height: 0.0625
   - Source: Assets/6_Art/Characters/MinifolksForestAnimals/Without outline/MiniWolf.png[MiniWolf_Walk_4]
@@ -999,8 +1018,8 @@ MonoBehaviour:
       height: 0.625
     AtlasRect:
       serializedVersion: 2
-      x: 0.81640625
-      y: 0.234375
+      x: 0.6171875
+      y: 0.4453125
       width: 0.0625
       height: 0.0625
   - Source: Assets/6_Art/Characters/MinifolksForestAnimals/Without outline/MiniWolf.png[MiniWolf_Walk_5]
@@ -1018,8 +1037,8 @@ MonoBehaviour:
       height: 0.5
     AtlasRect:
       serializedVersion: 2
-      x: 0.8828125
-      y: 0.234375
+      x: 0.6171875
+      y: 0.515625
       width: 0.0625
       height: 0.0625
   - Source: Assets/6_Art/Characters/MinifolksForestAnimals/Without outline/MiniWolf.png[MiniWolf_Walk_6]
@@ -1038,7 +1057,7 @@ MonoBehaviour:
     AtlasRect:
       serializedVersion: 2
       x: 0.6171875
-      y: 0.3046875
+      y: 0.5859375
       width: 0.0625
       height: 0.0625
   - Source: Assets/6_Art/Characters/MinifolksForestAnimals/Without outline/MiniWolf.png[MiniWolf_Idle_1]
@@ -1057,7 +1076,7 @@ MonoBehaviour:
     AtlasRect:
       serializedVersion: 2
       x: 0.6171875
-      y: 0.375
+      y: 0.65625
       width: 0.0625
       height: 0.0625
   - Source: Assets/6_Art/Characters/MinifolksForestAnimals/Without outline/MiniWolf.png[MiniWolf_Idle_2]
@@ -1076,7 +1095,7 @@ MonoBehaviour:
     AtlasRect:
       serializedVersion: 2
       x: 0.6171875
-      y: 0.4453125
+      y: 0.7265625
       width: 0.0625
       height: 0.0625
   - Source: Assets/6_Art/Characters/MinifolksForestAnimals/Without outline/MiniWolf.png[MiniWolf_Idle_3]
@@ -1095,7 +1114,7 @@ MonoBehaviour:
     AtlasRect:
       serializedVersion: 2
       x: 0.6171875
-      y: 0.515625
+      y: 0.796875
       width: 0.0625
       height: 0.0625
   - Source: Assets/6_Art/Characters/MinifolksForestAnimals/Without outline/MiniWolf.png[MiniWolf_Idle_4]
@@ -1114,7 +1133,7 @@ MonoBehaviour:
     AtlasRect:
       serializedVersion: 2
       x: 0.6171875
-      y: 0.5859375
+      y: 0.8671875
       width: 0.0625
       height: 0.0625
   - Source: Assets/6_Art/Characters/MinifolksForestAnimals/Without outline/MiniWolf.png[MiniWolf_Attack_1_1]
@@ -1133,7 +1152,7 @@ MonoBehaviour:
     AtlasRect:
       serializedVersion: 2
       x: 0.6171875
-      y: 0.65625
+      y: 0.9375
       width: 0.0625
       height: 0.0625
   - Source: Assets/6_Art/Characters/MinifolksForestAnimals/Without outline/MiniWolf.png[MiniWolf_Attack_1_2]
@@ -1151,8 +1170,8 @@ MonoBehaviour:
       height: 0.6875
     AtlasRect:
       serializedVersion: 2
-      x: 0.6171875
-      y: 0.7265625
+      x: 0.68359375
+      y: 0.3046875
       width: 0.0625
       height: 0.0625
   - Source: Assets/6_Art/Characters/MinifolksForestAnimals/Without outline/MiniWolf.png[MiniWolf_Attack_1_3]
@@ -1170,8 +1189,8 @@ MonoBehaviour:
       height: 0.625
     AtlasRect:
       serializedVersion: 2
-      x: 0.6171875
-      y: 0.796875
+      x: 0.75
+      y: 0.3046875
       width: 0.0625
       height: 0.0625
   - Source: Assets/6_Art/Characters/MinifolksForestAnimals/Without outline/MiniWolf.png[MiniWolf_Attack_1_4]
@@ -1189,8 +1208,8 @@ MonoBehaviour:
       height: 0.625
     AtlasRect:
       serializedVersion: 2
-      x: 0.6171875
-      y: 0.8671875
+      x: 0.81640625
+      y: 0.3046875
       width: 0.0625
       height: 0.0625
   - Source: Assets/6_Art/Characters/MinifolksForestAnimals/Without outline/MiniWolf.png[MiniWolf_Attack_1_5]
@@ -1208,8 +1227,8 @@ MonoBehaviour:
       height: 0.625
     AtlasRect:
       serializedVersion: 2
-      x: 0.6171875
-      y: 0.9375
+      x: 0.8828125
+      y: 0.3046875
       width: 0.0625
       height: 0.0625
   - Source: Assets/6_Art/Characters/MinifolksForestAnimals/Without outline/MiniWolf.png[MiniWolf_Death_1]
@@ -1266,7 +1285,7 @@ MonoBehaviour:
     AtlasRect:
       serializedVersion: 2
       x: 0.55078125
-      y: 0.4296875
+      y: 0.6953125
       width: 0.0625
       height: 0.0625
   - Source: Assets/6_Art/Characters/MinifolksForestAnimals/Without outline/MiniWolf.png[MiniWolf_Death_4]
@@ -1285,7 +1304,7 @@ MonoBehaviour:
     AtlasRect:
       serializedVersion: 2
       x: 0.55078125
-      y: 0.5
+      y: 0.765625
       width: 0.0625
       height: 0.0625
   - Source: Assets/6_Art/Characters/Creature/MinifolksForestAnimals/Outline/MiniBoar.png[MiniBoar_Idle_4]
@@ -1304,7 +1323,7 @@ MonoBehaviour:
     AtlasRect:
       serializedVersion: 2
       x: 0.55078125
-      y: 0.5703125
+      y: 0.8359375
       width: 0.0625
       height: 0.0625
   - Source: Assets/6_Art/Characters/Creature/MinifolksForestAnimals/Outline/MiniBoar.png[MiniBoar_Idle_2]
@@ -1323,7 +1342,7 @@ MonoBehaviour:
     AtlasRect:
       serializedVersion: 2
       x: 0.55078125
-      y: 0.640625
+      y: 0.90625
       width: 0.0625
       height: 0.0625
   - Source: Assets/6_Art/Characters/Creature/MinifolksForestAnimals/Outline/MiniBoar.png[MiniBoar_Idle_3]
@@ -1341,8 +1360,8 @@ MonoBehaviour:
       height: 0.5625
     AtlasRect:
       serializedVersion: 2
-      x: 0.55078125
-      y: 0.7109375
+      x: 0.6171875
+      y: 0.1640625
       width: 0.0625
       height: 0.0625
   - Source: Assets/6_Art/Characters/Creature/MinifolksForestAnimals/Outline/MiniBoar.png[MiniBoar_Attack_5]
@@ -1360,8 +1379,8 @@ MonoBehaviour:
       height: 0.6875
     AtlasRect:
       serializedVersion: 2
-      x: 0.55078125
-      y: 0.78125
+      x: 0.68359375
+      y: 0.1640625
       width: 0.0625
       height: 0.0625
   - Source: Assets/6_Art/Characters/Creature/MinifolksForestAnimals/Outline/MiniBoar.png[MiniBoar_Attack_2]
@@ -1379,8 +1398,8 @@ MonoBehaviour:
       height: 0.6875
     AtlasRect:
       serializedVersion: 2
-      x: 0.55078125
-      y: 0.8515625
+      x: 0.75
+      y: 0.1640625
       width: 0.0625
       height: 0.0625
   - Source: Assets/6_Art/Characters/Creature/MinifolksForestAnimals/Outline/MiniBoar.png[MiniBoar_Attack_3]
@@ -1398,8 +1417,8 @@ MonoBehaviour:
       height: 0.75
     AtlasRect:
       serializedVersion: 2
-      x: 0.55078125
-      y: 0.921875
+      x: 0.81640625
+      y: 0.1640625
       width: 0.0625
       height: 0.0625
   - Source: Assets/6_Art/Characters/Creature/MinifolksForestAnimals/Outline/MiniBoar.png[MiniBoar_Attack_4]
@@ -1417,7 +1436,7 @@ MonoBehaviour:
       height: 0.75
     AtlasRect:
       serializedVersion: 2
-      x: 0.6171875
+      x: 0.8828125
       y: 0.1640625
       width: 0.0625
       height: 0.0625
@@ -1436,8 +1455,8 @@ MonoBehaviour:
       height: 0.6875
     AtlasRect:
       serializedVersion: 2
-      x: 0.68359375
-      y: 0.1640625
+      x: 0.6171875
+      y: 0.234375
       width: 0.0625
       height: 0.0625
   - Source: Assets/6_Art/Characters/Creature/MinifolksForestAnimals/Outline/MiniBoar.png[MiniBoar_Move_2]
@@ -1455,8 +1474,8 @@ MonoBehaviour:
       height: 0.6875
     AtlasRect:
       serializedVersion: 2
-      x: 0.75
-      y: 0.1640625
+      x: 0.68359375
+      y: 0.234375
       width: 0.0625
       height: 0.0625
   - Source: Assets/6_Art/Characters/Creature/MinifolksForestAnimals/Outline/MiniBoar.png[MiniBoar_Move_3]
@@ -1475,7 +1494,7 @@ MonoBehaviour:
     AtlasRect:
       serializedVersion: 2
       x: 0.81640625
-      y: 0.1640625
+      y: 0.234375
       width: 0.0625
       height: 0.0625
   - Source: Assets/6_Art/Characters/Creature/MinifolksForestAnimals/Outline/MiniBoar.png[MiniBoar_Move_4]
@@ -1493,8 +1512,8 @@ MonoBehaviour:
       height: 0.5625
     AtlasRect:
       serializedVersion: 2
-      x: 0.8828125
-      y: 0.1640625
+      x: 0.75
+      y: 0.234375
       width: 0.0625
       height: 0.0625
   - Source: Assets/6_Art/Characters/Retro RPG Series - Animal Wildlife/Wolf.png[Wolf_32]
@@ -1512,8 +1531,8 @@ MonoBehaviour:
       height: 0.6875
     AtlasRect:
       serializedVersion: 2
-      x: 0.68359375
-      y: 0.65625
+      x: 0.94921875
+      y: 0.234375
       width: 0.03125
       height: 0.0625
   - Source: Assets/6_Art/Characters/Retro RPG Series - Animal Wildlife/Wolf.png[Wolf_33]
@@ -1531,7 +1550,7 @@ MonoBehaviour:
       height: 0.6875
     AtlasRect:
       serializedVersion: 2
-      x: 0.75390625
+      x: 0.94921875
       y: 0.3046875
       width: 0.03125
       height: 0.0625
@@ -1550,8 +1569,8 @@ MonoBehaviour:
       height: 0.625
     AtlasRect:
       serializedVersion: 2
-      x: 0.7890625
-      y: 0.3046875
+      x: 0.68359375
+      y: 0.375
       width: 0.03125
       height: 0.0625
   - Source: Assets/6_Art/Characters/Retro RPG Series - Animal Wildlife/Wolf.png[Wolf_35]
@@ -1569,8 +1588,8 @@ MonoBehaviour:
       height: 0.625
     AtlasRect:
       serializedVersion: 2
-      x: 0.82421875
-      y: 0.3046875
+      x: 0.68359375
+      y: 0.4453125
       width: 0.03125
       height: 0.0625
   - Source: Assets/6_Art/Characters/Retro RPG Series - Animal Wildlife/Wolf.png[Wolf_0]
@@ -1588,8 +1607,8 @@ MonoBehaviour:
       height: 0.625
     AtlasRect:
       serializedVersion: 2
-      x: 0.859375
-      y: 0.3046875
+      x: 0.68359375
+      y: 0.515625
       width: 0.03125
       height: 0.0625
   - Source: Assets/6_Art/Characters/Retro RPG Series - Animal Wildlife/Wolf.png[Wolf_1]
@@ -1607,8 +1626,8 @@ MonoBehaviour:
       height: 0.5625
     AtlasRect:
       serializedVersion: 2
-      x: 0.89453125
-      y: 0.3046875
+      x: 0.68359375
+      y: 0.5859375
       width: 0.03125
       height: 0.0625
   - Source: Assets/6_Art/Characters/Retro RPG Series - Animal Wildlife/Wolf.png[Wolf_2]
@@ -1626,8 +1645,8 @@ MonoBehaviour:
       height: 0.5625
     AtlasRect:
       serializedVersion: 2
-      x: 0.9296875
-      y: 0.3046875
+      x: 0.68359375
+      y: 0.65625
       width: 0.03125
       height: 0.0625
   - Source: Assets/6_Art/Characters/Retro RPG Series - Animal Wildlife/Wolf.png[Wolf_3]
@@ -1645,8 +1664,8 @@ MonoBehaviour:
       height: 0.625
     AtlasRect:
       serializedVersion: 2
-      x: 0.96484375
-      y: 0.3046875
+      x: 0.68359375
+      y: 0.7265625
       width: 0.03125
       height: 0.0625
   - Source: Assets/6_Art/Characters/Retro RPG Series - Animal Wildlife/Wolf.png[Wolf_16]
@@ -1665,7 +1684,7 @@ MonoBehaviour:
     AtlasRect:
       serializedVersion: 2
       x: 0.68359375
-      y: 0.375
+      y: 0.796875
       width: 0.03125
       height: 0.0625
   - Source: Assets/6_Art/Characters/Retro RPG Series - Animal Wildlife/Wolf.png[Wolf_17]
@@ -1684,7 +1703,7 @@ MonoBehaviour:
     AtlasRect:
       serializedVersion: 2
       x: 0.68359375
-      y: 0.4453125
+      y: 0.8671875
       width: 0.03125
       height: 0.0625
   - Source: Assets/6_Art/Characters/Retro RPG Series - Animal Wildlife/Wolf.png[Wolf_18]
@@ -1703,7 +1722,7 @@ MonoBehaviour:
     AtlasRect:
       serializedVersion: 2
       x: 0.68359375
-      y: 0.515625
+      y: 0.9375
       width: 0.03125
       height: 0.0625
   - Source: Assets/6_Art/Characters/Retro RPG Series - Animal Wildlife/Wolf.png[Wolf_19]
@@ -1721,8 +1740,8 @@ MonoBehaviour:
       height: 0.625
     AtlasRect:
       serializedVersion: 2
-      x: 0.68359375
-      y: 0.5859375
+      x: 0.71875
+      y: 0.796875
       width: 0.03125
       height: 0.0625
   - Source: Assets/6_Art/Characters/Retro RPG Series - Animal Wildlife/Wolf_Attack.png[Wolf_Attack_0]
@@ -1740,7 +1759,7 @@ MonoBehaviour:
       height: 0.75
     AtlasRect:
       serializedVersion: 2
-      x: 0.96484375
+      x: 0.75390625
       y: 0.375
       width: 0.03125
       height: 0.0625
@@ -1759,8 +1778,8 @@ MonoBehaviour:
       height: 0.8125
     AtlasRect:
       serializedVersion: 2
-      x: 0.68359375
-      y: 0.7265625
+      x: 0.7890625
+      y: 0.375
       width: 0.03125
       height: 0.0625
   - Source: Assets/6_Art/Characters/Retro RPG Series - Animal Wildlife/Wolf_Attack.png[Wolf_Attack_4]
@@ -1778,8 +1797,8 @@ MonoBehaviour:
       height: 0.625
     AtlasRect:
       serializedVersion: 2
-      x: 0.68359375
-      y: 0.796875
+      x: 0.82421875
+      y: 0.375
       width: 0.03125
       height: 0.0625
   - Source: Assets/6_Art/Characters/Retro RPG Series - Animal Wildlife/Wolf_Attack.png[Wolf_Attack_2]
@@ -1797,8 +1816,8 @@ MonoBehaviour:
       height: 0.625
     AtlasRect:
       serializedVersion: 2
-      x: 0.68359375
-      y: 0.8671875
+      x: 0.859375
+      y: 0.375
       width: 0.03125
       height: 0.0625
   - Source: Assets/6_Art/Characters/Retro RPG Series - Animal Wildlife/Wolf.png[Wolf_48]
@@ -1816,8 +1835,8 @@ MonoBehaviour:
       height: 0.875
     AtlasRect:
       serializedVersion: 2
-      x: 0.68359375
-      y: 0.9375
+      x: 0.89453125
+      y: 0.375
       width: 0.03125
       height: 0.0625
   - Source: Assets/6_Art/Characters/Retro RPG Series - Animal Wildlife/Wolf.png[Wolf_49]
@@ -1835,7 +1854,7 @@ MonoBehaviour:
       height: 0.8125
     AtlasRect:
       serializedVersion: 2
-      x: 0.71875
+      x: 0.9296875
       y: 0.375
       width: 0.03125
       height: 0.0625
@@ -1854,7 +1873,7 @@ MonoBehaviour:
       height: 0.875
     AtlasRect:
       serializedVersion: 2
-      x: 0.75390625
+      x: 0.96484375
       y: 0.375
       width: 0.03125
       height: 0.0625
@@ -1873,8 +1892,8 @@ MonoBehaviour:
       height: 0.5625
     AtlasRect:
       serializedVersion: 2
-      x: 0.7890625
-      y: 0.375
+      x: 0.71875
+      y: 0.4453125
       width: 0.03125
       height: 0.0625
   - Source: Assets/6_Art/Generated/Actors/Zombie/Character_Zombie_Walk_LR_Sheet.png[Character_Zombie_Walk_Right_0]
@@ -1892,7 +1911,7 @@ MonoBehaviour:
       height: 0.90625
     AtlasRect:
       serializedVersion: 2
-      x: 0.796875
+      x: 0.87890625
       y: 0
       width: 0.0625
       height: 0.125
@@ -1911,8 +1930,8 @@ MonoBehaviour:
       height: 0.90625
     AtlasRect:
       serializedVersion: 2
-      x: 0.9296875
-      y: 0
+      x: 0.55078125
+      y: 0.1640625
       width: 0.0625
       height: 0.125
   - Source: Assets/6_Art/Generated/Actors/Zombie/Character_Zombie_Walk_LR_Sheet.png[Character_Zombie_Walk_Right_2]
@@ -1931,7 +1950,7 @@ MonoBehaviour:
     AtlasRect:
       serializedVersion: 2
       x: 0.55078125
-      y: 0.1640625
+      y: 0.4296875
       width: 0.0625
       height: 0.125
   - Source: Assets/6_Art/Generated/Actors/Zombie/Character_Zombie_Walk_LR_Sheet.png[Character_Zombie_Walk_Right_3]
@@ -1950,7 +1969,7 @@ MonoBehaviour:
     AtlasRect:
       serializedVersion: 2
       x: 0.55078125
-      y: 0.296875
+      y: 0.5625
       width: 0.0625
       height: 0.125
   - Source: Assets/6_Art/Generated/Actors/Zombie/Character_Zombie_Idle_LR_Sheet.png[Character_Zombie_Idle_Right]
@@ -1968,18 +1987,18 @@ MonoBehaviour:
       height: 0.90625
     AtlasRect:
       serializedVersion: 2
-      x: 0.86328125
-      y: 0
+      x: 0.55078125
+      y: 0.296875
       width: 0.0625
       height: 0.125
   Actors:
-  - Id: Bird
+  - Id: Bee
     SortingLayerId: 0
     SortingOrder: 0
     Color: {r: 1, g: 1, b: 1, a: 1}
     FlipX: 0
     FlipY: 0
-    BodyYRange: {x: 0, y: 1}
+    BodyYRange: {x: 0, y: 0.5}
     Clips:
     - State: Base Layer.Ground
       Duration: 0.375
@@ -1991,7 +2010,7 @@ MonoBehaviour:
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 0.125
-        Sprite: 1
+        Sprite: 0
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
@@ -2006,37 +2025,37 @@ MonoBehaviour:
       Loop: 1
       Frames:
       - Start: 0
-        Sprite: 2
+        Sprite: 0
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 0.125
-        Sprite: 3
+        Sprite: 0
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 0.25
-        Sprite: 2
+        Sprite: 0
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       Markers: []
     - State: Base Layer.TakingOff
-      Duration: 0.25
-      Loop: 0
+      Duration: 0.375
+      Loop: 1
       Frames:
       - Start: 0
-        Sprite: 4
+        Sprite: 0
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 0.125
-        Sprite: 5
+        Sprite: 0
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 0.25
-        Sprite: 5
+        Sprite: 0
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
@@ -2046,12 +2065,100 @@ MonoBehaviour:
       Loop: 1
       Frames:
       - Start: 0
-        Sprite: 6
+        Sprite: 0
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 0.125
-        Sprite: 7
+        Sprite: 0
+        Position: {x: 0, y: 0, z: 0}
+        Scale: {x: 1, y: 1, z: 1}
+        Rotation: 0
+      - Start: 0.25
+        Sprite: 0
+        Position: {x: 0, y: 0, z: 0}
+        Scale: {x: 1, y: 1, z: 1}
+        Rotation: 0
+      Markers: []
+    - State: Base Layer.Landing
+      Duration: 0.375
+      Loop: 1
+      Frames:
+      - Start: 0
+        Sprite: 0
+        Position: {x: 0, y: 0, z: 0}
+        Scale: {x: 1, y: 1, z: 1}
+        Rotation: 0
+      - Start: 0.125
+        Sprite: 0
+        Position: {x: 0, y: 0, z: 0}
+        Scale: {x: 1, y: 1, z: 1}
+        Rotation: 0
+      - Start: 0.25
+        Sprite: 0
+        Position: {x: 0, y: 0, z: 0}
+        Scale: {x: 1, y: 1, z: 1}
+        Rotation: 0
+      Markers: []
+  - Id: Bird
+    SortingLayerId: 0
+    SortingOrder: 0
+    Color: {r: 1, g: 1, b: 1, a: 1}
+    FlipX: 0
+    FlipY: 0
+    BodyYRange: {x: 0, y: 1}
+    Clips:
+    - State: Base Layer.Ground
+      Duration: 0.375
+      Loop: 1
+      Frames:
+      - Start: 0
+        Sprite: 1
+        Position: {x: 0, y: 0, z: 0}
+        Scale: {x: 1, y: 1, z: 1}
+        Rotation: 0
+      - Start: 0.125
+        Sprite: 2
+        Position: {x: 0, y: 0, z: 0}
+        Scale: {x: 1, y: 1, z: 1}
+        Rotation: 0
+      - Start: 0.25
+        Sprite: 1
+        Position: {x: 0, y: 0, z: 0}
+        Scale: {x: 1, y: 1, z: 1}
+        Rotation: 0
+      Markers: []
+    - State: Base Layer.Walk
+      Duration: 0.375
+      Loop: 1
+      Frames:
+      - Start: 0
+        Sprite: 3
+        Position: {x: 0, y: 0, z: 0}
+        Scale: {x: 1, y: 1, z: 1}
+        Rotation: 0
+      - Start: 0.125
+        Sprite: 4
+        Position: {x: 0, y: 0, z: 0}
+        Scale: {x: 1, y: 1, z: 1}
+        Rotation: 0
+      - Start: 0.25
+        Sprite: 3
+        Position: {x: 0, y: 0, z: 0}
+        Scale: {x: 1, y: 1, z: 1}
+        Rotation: 0
+      Markers: []
+    - State: Base Layer.TakingOff
+      Duration: 0.25
+      Loop: 0
+      Frames:
+      - Start: 0
+        Sprite: 5
+        Position: {x: 0, y: 0, z: 0}
+        Scale: {x: 1, y: 1, z: 1}
+        Rotation: 0
+      - Start: 0.125
+        Sprite: 6
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
@@ -2061,22 +2168,42 @@ MonoBehaviour:
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       Markers: []
+    - State: Base Layer.Flying
+      Duration: 0.375
+      Loop: 1
+      Frames:
+      - Start: 0
+        Sprite: 7
+        Position: {x: 0, y: 0, z: 0}
+        Scale: {x: 1, y: 1, z: 1}
+        Rotation: 0
+      - Start: 0.125
+        Sprite: 8
+        Position: {x: 0, y: 0, z: 0}
+        Scale: {x: 1, y: 1, z: 1}
+        Rotation: 0
+      - Start: 0.25
+        Sprite: 7
+        Position: {x: 0, y: 0, z: 0}
+        Scale: {x: 1, y: 1, z: 1}
+        Rotation: 0
+      Markers: []
     - State: Base Layer.Landing
       Duration: 0.25
       Loop: 0
       Frames:
       - Start: 0
-        Sprite: 8
+        Sprite: 9
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 0.125
-        Sprite: 9
+        Sprite: 10
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 0.25
-        Sprite: 9
+        Sprite: 10
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
@@ -2094,32 +2221,32 @@ MonoBehaviour:
       Loop: 1
       Frames:
       - Start: 0
-        Sprite: 10
-        Position: {x: 0, y: 0, z: 0}
-        Scale: {x: 1, y: 1, z: 1}
-        Rotation: 0
-      - Start: 0.083333336
         Sprite: 11
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
-      - Start: 0.25
+      - Start: 0.083333336
         Sprite: 12
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
-      - Start: 0.41666666
+      - Start: 0.25
         Sprite: 13
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
-      - Start: 0.5833333
+      - Start: 0.41666666
         Sprite: 14
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
-      - Start: 0.6666667
+      - Start: 0.5833333
         Sprite: 15
+        Position: {x: 0, y: 0, z: 0}
+        Scale: {x: 1, y: 1, z: 1}
+        Rotation: 0
+      - Start: 0.6666667
+        Sprite: 16
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
@@ -2129,17 +2256,17 @@ MonoBehaviour:
       Loop: 1
       Frames:
       - Start: 0
-        Sprite: 16
-        Position: {x: 0, y: 0, z: 0}
-        Scale: {x: 1, y: 1, z: 1}
-        Rotation: 0
-      - Start: 1
         Sprite: 17
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
+      - Start: 1
+        Sprite: 18
+        Position: {x: 0, y: 0, z: 0}
+        Scale: {x: 1, y: 1, z: 1}
+        Rotation: 0
       - Start: 2
-        Sprite: 16
+        Sprite: 17
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
@@ -2149,17 +2276,17 @@ MonoBehaviour:
       Loop: 1
       Frames:
       - Start: 0
-        Sprite: 18
+        Sprite: 19
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 9.016666
-        Sprite: 19
+        Sprite: 20
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 10.05
-        Sprite: 19
+        Sprite: 20
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
@@ -2169,17 +2296,17 @@ MonoBehaviour:
       Loop: 1
       Frames:
       - Start: 0
-        Sprite: 20
-        Position: {x: 0, y: 0, z: 0}
-        Scale: {x: 1, y: 1, z: 1}
-        Rotation: 0
-      - Start: 0.5
         Sprite: 21
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
+      - Start: 0.5
+        Sprite: 22
+        Position: {x: 0, y: 0, z: 0}
+        Scale: {x: 1, y: 1, z: 1}
+        Rotation: 0
       - Start: 1
-        Sprite: 20
+        Sprite: 21
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
@@ -2197,42 +2324,42 @@ MonoBehaviour:
       Loop: 1
       Frames:
       - Start: 0
-        Sprite: 22
-        Position: {x: 0, y: 0.15, z: 0}
-        Scale: {x: 1, y: 1, z: 1}
-        Rotation: 0
-      - Start: 0.125
         Sprite: 23
         Position: {x: 0, y: 0.15, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
-      - Start: 0.25
+      - Start: 0.125
         Sprite: 24
         Position: {x: 0, y: 0.15, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
-      - Start: 0.375
+      - Start: 0.25
         Sprite: 25
         Position: {x: 0, y: 0.15, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
-      - Start: 0.5
+      - Start: 0.375
         Sprite: 26
         Position: {x: 0, y: 0.15, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
-      - Start: 0.625
+      - Start: 0.5
         Sprite: 27
         Position: {x: 0, y: 0.15, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
-      - Start: 0.75
+      - Start: 0.625
         Sprite: 28
         Position: {x: 0, y: 0.15, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
-      - Start: 0.875
+      - Start: 0.75
         Sprite: 29
+        Position: {x: 0, y: 0.15, z: 0}
+        Scale: {x: 1, y: 1, z: 1}
+        Rotation: 0
+      - Start: 0.875
+        Sprite: 30
         Position: {x: 0, y: 0.15, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
@@ -2250,27 +2377,27 @@ MonoBehaviour:
       Loop: 1
       Frames:
       - Start: 0
-        Sprite: 30
-        Position: {x: 0, y: 0, z: 0}
-        Scale: {x: 1, y: 1, z: 1}
-        Rotation: 0
-      - Start: 0.12
         Sprite: 31
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
-      - Start: 0.24
+      - Start: 0.12
         Sprite: 32
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
-      - Start: 0.36
+      - Start: 0.24
         Sprite: 33
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
+      - Start: 0.36
+        Sprite: 34
+        Position: {x: 0, y: 0, z: 0}
+        Scale: {x: 1, y: 1, z: 1}
+        Rotation: 0
       - Start: 0.48
-        Sprite: 30
+        Sprite: 31
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
@@ -2280,27 +2407,27 @@ MonoBehaviour:
       Loop: 1
       Frames:
       - Start: 0
-        Sprite: 34
-        Position: {x: 0, y: 0, z: 0}
-        Scale: {x: 1, y: 1, z: 1}
-        Rotation: 0
-      - Start: 0.2
         Sprite: 35
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
-      - Start: 0.4
+      - Start: 0.2
         Sprite: 36
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
-      - Start: 0.6
+      - Start: 0.4
         Sprite: 37
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
+      - Start: 0.6
+        Sprite: 38
+        Position: {x: 0, y: 0, z: 0}
+        Scale: {x: 1, y: 1, z: 1}
+        Rotation: 0
       - Start: 0.8
-        Sprite: 34
+        Sprite: 35
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
@@ -2310,27 +2437,27 @@ MonoBehaviour:
       Loop: 1
       Frames:
       - Start: 0
-        Sprite: 34
-        Position: {x: 0, y: 0, z: 0}
-        Scale: {x: 1, y: 1, z: 1}
-        Rotation: 0
-      - Start: 0.2
         Sprite: 35
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
-      - Start: 0.4
+      - Start: 0.2
         Sprite: 36
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
-      - Start: 0.6
+      - Start: 0.4
         Sprite: 37
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
+      - Start: 0.6
+        Sprite: 38
+        Position: {x: 0, y: 0, z: 0}
+        Scale: {x: 1, y: 1, z: 1}
+        Rotation: 0
       - Start: 0.8
-        Sprite: 34
+        Sprite: 35
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
@@ -2340,27 +2467,27 @@ MonoBehaviour:
       Loop: 1
       Frames:
       - Start: 0
-        Sprite: 34
-        Position: {x: 0, y: 0, z: 0}
-        Scale: {x: 1, y: 1, z: 1}
-        Rotation: 0
-      - Start: 0.2
         Sprite: 35
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
-      - Start: 0.4
+      - Start: 0.2
         Sprite: 36
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
-      - Start: 0.6
+      - Start: 0.4
         Sprite: 37
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
+      - Start: 0.6
+        Sprite: 38
+        Position: {x: 0, y: 0, z: 0}
+        Scale: {x: 1, y: 1, z: 1}
+        Rotation: 0
       - Start: 0.8
-        Sprite: 34
+        Sprite: 35
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
@@ -2378,17 +2505,17 @@ MonoBehaviour:
       Loop: 1
       Frames:
       - Start: 0
-        Sprite: 38
-        Position: {x: 0, y: 0, z: 0}
-        Scale: {x: 1, y: 1, z: 1}
-        Rotation: 0
-      - Start: 0.125
         Sprite: 39
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
+      - Start: 0.125
+        Sprite: 40
+        Position: {x: 0, y: 0, z: 0}
+        Scale: {x: 1, y: 1, z: 1}
+        Rotation: 0
       - Start: 0.25
-        Sprite: 38
+        Sprite: 39
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
@@ -2398,17 +2525,17 @@ MonoBehaviour:
       Loop: 1
       Frames:
       - Start: 0
-        Sprite: 40
-        Position: {x: 0, y: 0, z: 0}
-        Scale: {x: 1, y: 1, z: 1}
-        Rotation: 0
-      - Start: 0.125
         Sprite: 41
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
+      - Start: 0.125
+        Sprite: 42
+        Position: {x: 0, y: 0, z: 0}
+        Scale: {x: 1, y: 1, z: 1}
+        Rotation: 0
       - Start: 0.25
-        Sprite: 40
+        Sprite: 41
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
@@ -2418,17 +2545,17 @@ MonoBehaviour:
       Loop: 0
       Frames:
       - Start: 0
-        Sprite: 42
+        Sprite: 43
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 0.125
-        Sprite: 43
+        Sprite: 44
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 0.25
-        Sprite: 43
+        Sprite: 44
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
@@ -2438,17 +2565,17 @@ MonoBehaviour:
       Loop: 1
       Frames:
       - Start: 0
-        Sprite: 44
-        Position: {x: 0, y: 0, z: 0}
-        Scale: {x: 1, y: 1, z: 1}
-        Rotation: 0
-      - Start: 0.125
         Sprite: 45
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
+      - Start: 0.125
+        Sprite: 46
+        Position: {x: 0, y: 0, z: 0}
+        Scale: {x: 1, y: 1, z: 1}
+        Rotation: 0
       - Start: 0.25
-        Sprite: 44
+        Sprite: 45
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
@@ -2458,17 +2585,120 @@ MonoBehaviour:
       Loop: 0
       Frames:
       - Start: 0
-        Sprite: 46
+        Sprite: 47
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 0.125
-        Sprite: 47
+        Sprite: 48
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 0.25
-        Sprite: 47
+        Sprite: 48
+        Position: {x: 0, y: 0, z: 0}
+        Scale: {x: 1, y: 1, z: 1}
+        Rotation: 0
+      Markers: []
+  - Id: Sheep
+    SortingLayerId: 0
+    SortingOrder: 0
+    Color: {r: 1, g: 1, b: 1, a: 1}
+    FlipX: 0
+    FlipY: 0
+    BodyYRange: {x: -0.2, y: 0.8}
+    Clips:
+    - State: Base Layer.Move
+      Duration: 0.75
+      Loop: 1
+      Frames:
+      - Start: 0
+        Sprite: 11
+        Position: {x: 0, y: 0, z: 0}
+        Scale: {x: 1, y: 1, z: 1}
+        Rotation: 0
+      - Start: 0.083333336
+        Sprite: 12
+        Position: {x: 0, y: 0, z: 0}
+        Scale: {x: 1, y: 1, z: 1}
+        Rotation: 0
+      - Start: 0.25
+        Sprite: 13
+        Position: {x: 0, y: 0, z: 0}
+        Scale: {x: 1, y: 1, z: 1}
+        Rotation: 0
+      - Start: 0.41666666
+        Sprite: 14
+        Position: {x: 0, y: 0, z: 0}
+        Scale: {x: 1, y: 1, z: 1}
+        Rotation: 0
+      - Start: 0.5833333
+        Sprite: 15
+        Position: {x: 0, y: 0, z: 0}
+        Scale: {x: 1, y: 1, z: 1}
+        Rotation: 0
+      - Start: 0.6666667
+        Sprite: 16
+        Position: {x: 0, y: 0, z: 0}
+        Scale: {x: 1, y: 1, z: 1}
+        Rotation: 0
+      Markers: []
+    - State: Base Layer.Sit
+      Duration: 2.0166667
+      Loop: 1
+      Frames:
+      - Start: 0
+        Sprite: 17
+        Position: {x: 0, y: 0, z: 0}
+        Scale: {x: 1, y: 1, z: 1}
+        Rotation: 0
+      - Start: 1
+        Sprite: 18
+        Position: {x: 0, y: 0, z: 0}
+        Scale: {x: 1, y: 1, z: 1}
+        Rotation: 0
+      - Start: 2
+        Sprite: 17
+        Position: {x: 0, y: 0, z: 0}
+        Scale: {x: 1, y: 1, z: 1}
+        Rotation: 0
+      Markers: []
+    - State: Base Layer.Sleep
+      Duration: 10.066667
+      Loop: 1
+      Frames:
+      - Start: 0
+        Sprite: 19
+        Position: {x: 0, y: 0, z: 0}
+        Scale: {x: 1, y: 1, z: 1}
+        Rotation: 0
+      - Start: 9.016666
+        Sprite: 20
+        Position: {x: 0, y: 0, z: 0}
+        Scale: {x: 1, y: 1, z: 1}
+        Rotation: 0
+      - Start: 10.05
+        Sprite: 20
+        Position: {x: 0, y: 0, z: 0}
+        Scale: {x: 1, y: 1, z: 1}
+        Rotation: 0
+      Markers: []
+    - State: Base Layer.Stand
+      Duration: 1.0166667
+      Loop: 1
+      Frames:
+      - Start: 0
+        Sprite: 21
+        Position: {x: 0, y: 0, z: 0}
+        Scale: {x: 1, y: 1, z: 1}
+        Rotation: 0
+      - Start: 0.5
+        Sprite: 22
+        Position: {x: 0, y: 0, z: 0}
+        Scale: {x: 1, y: 1, z: 1}
+        Rotation: 0
+      - Start: 1
+        Sprite: 21
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
@@ -2486,37 +2716,37 @@ MonoBehaviour:
       Loop: 1
       Frames:
       - Start: 0
-        Sprite: 48
-        Position: {x: 0, y: 0, z: 0}
-        Scale: {x: 1, y: 1, z: 1}
-        Rotation: 0
-      - Start: 0.08
         Sprite: 49
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
-      - Start: 0.16
+      - Start: 0.08
         Sprite: 50
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
-      - Start: 0.24
+      - Start: 0.16
         Sprite: 51
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
-      - Start: 0.32
+      - Start: 0.24
         Sprite: 52
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
-      - Start: 0.4
+      - Start: 0.32
         Sprite: 53
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
+      - Start: 0.4
+        Sprite: 54
+        Position: {x: 0, y: 0, z: 0}
+        Scale: {x: 1, y: 1, z: 1}
+        Rotation: 0
       - Start: 0.48
-        Sprite: 48
+        Sprite: 49
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
@@ -2526,27 +2756,27 @@ MonoBehaviour:
       Loop: 1
       Frames:
       - Start: 0
-        Sprite: 54
-        Position: {x: 0, y: 0, z: 0}
-        Scale: {x: 1, y: 1, z: 1}
-        Rotation: 0
-      - Start: 0.2
         Sprite: 55
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
-      - Start: 0.4
+      - Start: 0.2
         Sprite: 56
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
-      - Start: 0.6
+      - Start: 0.4
         Sprite: 57
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
+      - Start: 0.6
+        Sprite: 58
+        Position: {x: 0, y: 0, z: 0}
+        Scale: {x: 1, y: 1, z: 1}
+        Rotation: 0
       - Start: 0.8
-        Sprite: 54
+        Sprite: 55
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
@@ -2556,37 +2786,37 @@ MonoBehaviour:
       Loop: 1
       Frames:
       - Start: 0
-        Sprite: 48
-        Position: {x: 0, y: 0, z: 0}
-        Scale: {x: 1, y: 1, z: 1}
-        Rotation: 0
-      - Start: 0.12
         Sprite: 49
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
-      - Start: 0.24
+      - Start: 0.12
         Sprite: 50
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
-      - Start: 0.36
+      - Start: 0.24
         Sprite: 51
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
-      - Start: 0.48
+      - Start: 0.36
         Sprite: 52
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
-      - Start: 0.6
+      - Start: 0.48
         Sprite: 53
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
+      - Start: 0.6
+        Sprite: 54
+        Position: {x: 0, y: 0, z: 0}
+        Scale: {x: 1, y: 1, z: 1}
+        Rotation: 0
       - Start: 0.72
-        Sprite: 48
+        Sprite: 49
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
@@ -2596,37 +2826,37 @@ MonoBehaviour:
       Loop: 0
       Frames:
       - Start: 0
-        Sprite: 58
-        Position: {x: 0, y: 0, z: 0}
-        Scale: {x: 1, y: 1, z: 1}
-        Rotation: 0
-      - Start: 0.18
         Sprite: 59
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
-      - Start: 0.35
+      - Start: 0.18
         Sprite: 60
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
-      - Start: 0.48
+      - Start: 0.35
         Sprite: 61
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
-      - Start: 0.6
+      - Start: 0.48
         Sprite: 62
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
+      - Start: 0.6
+        Sprite: 63
+        Position: {x: 0, y: 0, z: 0}
+        Scale: {x: 1, y: 1, z: 1}
+        Rotation: 0
       - Start: 0.84
-        Sprite: 54
+        Sprite: 55
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 0.85
-        Sprite: 54
+        Sprite: 55
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
@@ -2672,32 +2902,32 @@ MonoBehaviour:
       Loop: 0
       Frames:
       - Start: 0
-        Sprite: 63
-        Position: {x: 0, y: 0, z: 0}
-        Scale: {x: 1, y: 1, z: 1}
-        Rotation: 0
-      - Start: 0.16
         Sprite: 64
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
-      - Start: 0.32
+      - Start: 0.16
         Sprite: 65
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
-      - Start: 0.48
+      - Start: 0.32
         Sprite: 66
+        Position: {x: 0, y: 0, z: 0}
+        Scale: {x: 1, y: 1, z: 1}
+        Rotation: 0
+      - Start: 0.48
+        Sprite: 67
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 0.63
-        Sprite: 66
+        Sprite: 67
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 0.64
-        Sprite: 66
+        Sprite: 67
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
@@ -2715,22 +2945,22 @@ MonoBehaviour:
       Loop: 1
       Frames:
       - Start: 0
-        Sprite: 67
-        Position: {x: 0, y: 0, z: 0}
-        Scale: {x: 1, y: 1, z: 1}
-        Rotation: 0
-      - Start: 0.25
         Sprite: 68
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
-      - Start: 0.5
+      - Start: 0.25
         Sprite: 69
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
+      - Start: 0.5
+        Sprite: 70
+        Position: {x: 0, y: 0, z: 0}
+        Scale: {x: 1, y: 1, z: 1}
+        Rotation: 0
       - Start: 0.75
-        Sprite: 67
+        Sprite: 68
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
@@ -2740,797 +2970,797 @@ MonoBehaviour:
       Loop: 0
       Frames:
       - Start: 0
-        Sprite: 70
+        Sprite: 71
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 0.016666668
-        Sprite: 70
+        Sprite: 71
         Position: {x: 0.041495208, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 0.033333335
-        Sprite: 70
+        Sprite: 71
         Position: {x: 0.1282579, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 0.05
-        Sprite: 70
+        Sprite: 71
         Position: {x: 0.20370369, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 0.06
-        Sprite: 71
+        Sprite: 72
         Position: {x: 0.22, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 0.06666667
-        Sprite: 71
+        Sprite: 72
         Position: {x: 0.21803841, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 0.083333336
-        Sprite: 71
+        Sprite: 72
         Position: {x: 0.19828103, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 0.1
-        Sprite: 71
+        Sprite: 72
         Position: {x: 0.16296296, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 0.11666667
-        Sprite: 71
+        Sprite: 72
         Position: {x: 0.11915725, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 0.13333334
-        Sprite: 71
+        Sprite: 72
         Position: {x: 0.07393691, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 0.15
-        Sprite: 71
+        Sprite: 72
         Position: {x: 0.03437504, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 0.16666667
-        Sprite: 71
+        Sprite: 72
         Position: {x: 0.007544622, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 0.18
-        Sprite: 72
+        Sprite: 73
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 0.18333334
-        Sprite: 72
+        Sprite: 73
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 0.2
-        Sprite: 72
+        Sprite: 73
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 0.21666667
-        Sprite: 72
+        Sprite: 73
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 0.23333333
-        Sprite: 72
+        Sprite: 73
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 0.25
-        Sprite: 72
+        Sprite: 73
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 0.26666668
-        Sprite: 72
+        Sprite: 73
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 0.28333333
-        Sprite: 72
+        Sprite: 73
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 0.3
-        Sprite: 72
+        Sprite: 73
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 0.31666666
-        Sprite: 72
+        Sprite: 73
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 0.33333334
-        Sprite: 72
+        Sprite: 73
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 0.35
-        Sprite: 72
+        Sprite: 73
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 0.36666667
-        Sprite: 72
+        Sprite: 73
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 0.38333333
-        Sprite: 72
+        Sprite: 73
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 0.4
-        Sprite: 72
+        Sprite: 73
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 0.41666666
-        Sprite: 72
+        Sprite: 73
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 0.43333334
-        Sprite: 72
+        Sprite: 73
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 0.45
-        Sprite: 72
+        Sprite: 73
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 0.46666667
-        Sprite: 72
+        Sprite: 73
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 0.48333332
-        Sprite: 72
+        Sprite: 73
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 0.5
-        Sprite: 72
+        Sprite: 73
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 0.51666665
-        Sprite: 72
+        Sprite: 73
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 0.53333336
-        Sprite: 72
+        Sprite: 73
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 0.55
-        Sprite: 72
+        Sprite: 73
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 0.56666666
-        Sprite: 72
+        Sprite: 73
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 0.5833333
-        Sprite: 72
+        Sprite: 73
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 0.6
-        Sprite: 72
+        Sprite: 73
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 0.6166667
-        Sprite: 72
+        Sprite: 73
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 0.6333333
-        Sprite: 72
+        Sprite: 73
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 0.65
-        Sprite: 72
+        Sprite: 73
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 0.6666667
-        Sprite: 72
+        Sprite: 73
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 0.68333334
-        Sprite: 72
+        Sprite: 73
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 0.7
-        Sprite: 72
+        Sprite: 73
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 0.71666664
-        Sprite: 72
+        Sprite: 73
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 0.73333335
-        Sprite: 72
+        Sprite: 73
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 0.75
-        Sprite: 73
+        Sprite: 74
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 0.76666665
-        Sprite: 73
+        Sprite: 74
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 0.78333336
-        Sprite: 73
+        Sprite: 74
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 0.8
-        Sprite: 73
+        Sprite: 74
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 0.81666666
-        Sprite: 73
+        Sprite: 74
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 0.8333333
-        Sprite: 73
+        Sprite: 74
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 0.85
-        Sprite: 73
+        Sprite: 74
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 0.8666667
-        Sprite: 73
+        Sprite: 74
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 0.8833333
-        Sprite: 73
+        Sprite: 74
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 0.9
-        Sprite: 73
+        Sprite: 74
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 0.9166667
-        Sprite: 73
+        Sprite: 74
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 0.93333334
-        Sprite: 73
+        Sprite: 74
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 0.95
-        Sprite: 73
+        Sprite: 74
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 0.96666664
-        Sprite: 73
+        Sprite: 74
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 0.98333335
-        Sprite: 73
+        Sprite: 74
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 1
-        Sprite: 73
+        Sprite: 74
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 1.0166667
-        Sprite: 73
+        Sprite: 74
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 1.0333333
-        Sprite: 73
+        Sprite: 74
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 1.05
-        Sprite: 73
+        Sprite: 74
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 1.0666667
-        Sprite: 73
+        Sprite: 74
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 1.0833334
-        Sprite: 73
+        Sprite: 74
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 1.1
-        Sprite: 73
+        Sprite: 74
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 1.1166667
-        Sprite: 73
+        Sprite: 74
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 1.1333333
-        Sprite: 73
+        Sprite: 74
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 1.15
-        Sprite: 73
+        Sprite: 74
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 1.1666666
-        Sprite: 73
+        Sprite: 74
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 1.1833333
-        Sprite: 73
+        Sprite: 74
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 1.2
-        Sprite: 73
+        Sprite: 74
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 1.2166667
-        Sprite: 73
+        Sprite: 74
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 1.2333333
-        Sprite: 73
+        Sprite: 74
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 1.25
-        Sprite: 73
+        Sprite: 74
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 1.2666667
-        Sprite: 73
+        Sprite: 74
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 1.2833333
-        Sprite: 73
+        Sprite: 74
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 1.3
-        Sprite: 73
+        Sprite: 74
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 1.3166667
-        Sprite: 73
+        Sprite: 74
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 1.3333334
-        Sprite: 73
+        Sprite: 74
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 1.35
-        Sprite: 73
+        Sprite: 74
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 1.3666667
-        Sprite: 73
+        Sprite: 74
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 1.3833333
-        Sprite: 73
+        Sprite: 74
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 1.4
-        Sprite: 73
+        Sprite: 74
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 1.4166666
-        Sprite: 73
+        Sprite: 74
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 1.4333333
-        Sprite: 73
+        Sprite: 74
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 1.45
-        Sprite: 70
+        Sprite: 71
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 1.4666667
-        Sprite: 70
+        Sprite: 71
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 1.4833333
-        Sprite: 70
+        Sprite: 71
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 1.5
-        Sprite: 70
+        Sprite: 71
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 1.5166667
-        Sprite: 70
+        Sprite: 71
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 1.5333333
-        Sprite: 70
+        Sprite: 71
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 1.55
-        Sprite: 70
+        Sprite: 71
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 1.5666667
-        Sprite: 70
+        Sprite: 71
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 1.5833334
-        Sprite: 70
+        Sprite: 71
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 1.6
-        Sprite: 70
+        Sprite: 71
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 1.6166667
-        Sprite: 70
+        Sprite: 71
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 1.6333333
-        Sprite: 70
+        Sprite: 71
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 1.65
-        Sprite: 70
+        Sprite: 71
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 1.6666666
-        Sprite: 70
+        Sprite: 71
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 1.6833333
-        Sprite: 70
+        Sprite: 71
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 1.7
-        Sprite: 70
+        Sprite: 71
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 1.7166667
-        Sprite: 70
+        Sprite: 71
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 1.7333333
-        Sprite: 70
+        Sprite: 71
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 1.75
-        Sprite: 70
+        Sprite: 71
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 1.7666667
-        Sprite: 70
+        Sprite: 71
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 1.7833333
-        Sprite: 70
+        Sprite: 71
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 1.8
-        Sprite: 70
+        Sprite: 71
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 1.8166667
-        Sprite: 70
+        Sprite: 71
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 1.8333334
-        Sprite: 70
+        Sprite: 71
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 1.85
-        Sprite: 70
+        Sprite: 71
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 1.8666667
-        Sprite: 70
+        Sprite: 71
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 1.8833333
-        Sprite: 70
+        Sprite: 71
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 1.9
-        Sprite: 70
+        Sprite: 71
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 1.9166666
-        Sprite: 70
+        Sprite: 71
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 1.9333333
-        Sprite: 70
+        Sprite: 71
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 1.95
-        Sprite: 70
+        Sprite: 71
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 1.9666667
-        Sprite: 70
+        Sprite: 71
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 1.9833333
-        Sprite: 70
+        Sprite: 71
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 2
-        Sprite: 70
+        Sprite: 71
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 2.0166667
-        Sprite: 70
+        Sprite: 71
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 2.0333333
-        Sprite: 70
+        Sprite: 71
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 2.05
-        Sprite: 70
+        Sprite: 71
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 2.0666666
-        Sprite: 70
+        Sprite: 71
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 2.0833333
-        Sprite: 70
+        Sprite: 71
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 2.1
-        Sprite: 70
+        Sprite: 71
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 2.1166666
-        Sprite: 70
+        Sprite: 71
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 2.1333334
-        Sprite: 70
+        Sprite: 71
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 2.15
-        Sprite: 70
+        Sprite: 71
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 2.1666667
-        Sprite: 70
+        Sprite: 71
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 2.18
-        Sprite: 70
+        Sprite: 71
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 2.1833334
-        Sprite: 70
+        Sprite: 71
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 2.2
-        Sprite: 70
+        Sprite: 71
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 2.2166667
-        Sprite: 70
+        Sprite: 71
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 2.2333333
-        Sprite: 70
+        Sprite: 71
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 2.25
-        Sprite: 70
+        Sprite: 71
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 2.2666667
-        Sprite: 70
+        Sprite: 71
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 2.2833333
-        Sprite: 70
+        Sprite: 71
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 2.3
-        Sprite: 70
+        Sprite: 71
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 2.3166666
-        Sprite: 70
+        Sprite: 71
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 2.3333333
-        Sprite: 70
+        Sprite: 71
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 2.35
-        Sprite: 70
+        Sprite: 71
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 2.3666666
-        Sprite: 70
+        Sprite: 71
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 2.3833334
-        Sprite: 70
+        Sprite: 71
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 2.4
-        Sprite: 70
+        Sprite: 71
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 2.4166667
-        Sprite: 70
+        Sprite: 71
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 2.4333334
-        Sprite: 70
+        Sprite: 71
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 2.45
-        Sprite: 70
+        Sprite: 71
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 2.4666667
-        Sprite: 70
+        Sprite: 71
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 2.4833333
-        Sprite: 70
+        Sprite: 71
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 2.5
-        Sprite: 70
+        Sprite: 71
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 2.5166667
-        Sprite: 70
+        Sprite: 71
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 2.5333333
-        Sprite: 70
+        Sprite: 71
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 2.55
-        Sprite: 70
+        Sprite: 71
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 2.5666666
-        Sprite: 70
+        Sprite: 71
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 2.57
-        Sprite: 70
+        Sprite: 71
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
@@ -3576,27 +3806,27 @@ MonoBehaviour:
       Loop: 1
       Frames:
       - Start: 0
-        Sprite: 74
-        Position: {x: 0, y: 0, z: 0}
-        Scale: {x: 1, y: 1, z: 1}
-        Rotation: 0
-      - Start: 0.2
         Sprite: 75
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
-      - Start: 0.41666666
+      - Start: 0.2
         Sprite: 76
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
-      - Start: 0.6166667
+      - Start: 0.41666666
         Sprite: 77
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
+      - Start: 0.6166667
+        Sprite: 78
+        Position: {x: 0, y: 0, z: 0}
+        Scale: {x: 1, y: 1, z: 1}
+        Rotation: 0
       - Start: 0.8333333
-        Sprite: 74
+        Sprite: 75
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
@@ -3614,27 +3844,27 @@ MonoBehaviour:
       Loop: 1
       Frames:
       - Start: 0
-        Sprite: 78
-        Position: {x: 0, y: 0, z: 0}
-        Scale: {x: 1, y: 1, z: 1}
-        Rotation: 0
-      - Start: 0.17
         Sprite: 79
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
-      - Start: 0.33
+      - Start: 0.17
         Sprite: 80
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
-      - Start: 0.5
+      - Start: 0.33
         Sprite: 81
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
+      - Start: 0.5
+        Sprite: 82
+        Position: {x: 0, y: 0, z: 0}
+        Scale: {x: 1, y: 1, z: 1}
+        Rotation: 0
       - Start: 0.66
-        Sprite: 78
+        Sprite: 79
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
@@ -3644,27 +3874,27 @@ MonoBehaviour:
       Loop: 1
       Frames:
       - Start: 0
-        Sprite: 82
-        Position: {x: 0, y: 0, z: 0}
-        Scale: {x: 1, y: 1, z: 1}
-        Rotation: 0
-      - Start: 0.31666666
         Sprite: 83
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
-      - Start: 0.6666667
+      - Start: 0.31666666
         Sprite: 84
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
-      - Start: 1
+      - Start: 0.6666667
         Sprite: 85
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
+      - Start: 1
+        Sprite: 86
+        Position: {x: 0, y: 0, z: 0}
+        Scale: {x: 1, y: 1, z: 1}
+        Rotation: 0
       - Start: 1.3333334
-        Sprite: 82
+        Sprite: 83
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
@@ -3674,27 +3904,27 @@ MonoBehaviour:
       Loop: 1
       Frames:
       - Start: 0
-        Sprite: 86
-        Position: {x: 0, y: 0, z: 0}
-        Scale: {x: 1, y: 1, z: 1}
-        Rotation: 0
-      - Start: 0.21666667
         Sprite: 87
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
-      - Start: 0.45
+      - Start: 0.21666667
         Sprite: 88
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
-      - Start: 0.6666667
+      - Start: 0.45
         Sprite: 89
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
+      - Start: 0.6666667
+        Sprite: 90
+        Position: {x: 0, y: 0, z: 0}
+        Scale: {x: 1, y: 1, z: 1}
+        Rotation: 0
       - Start: 0.8333333
-        Sprite: 86
+        Sprite: 87
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
@@ -3704,32 +3934,32 @@ MonoBehaviour:
       Loop: 0
       Frames:
       - Start: 0
-        Sprite: 90
-        Position: {x: 0, y: 0, z: 0}
-        Scale: {x: 1, y: 1, z: 1}
-        Rotation: 0
-      - Start: 0.16666667
         Sprite: 91
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
-      - Start: 0.33333334
+      - Start: 0.16666667
         Sprite: 92
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
-      - Start: 0.5
+      - Start: 0.33333334
         Sprite: 93
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
+      - Start: 0.5
+        Sprite: 94
+        Position: {x: 0, y: 0, z: 0}
+        Scale: {x: 1, y: 1, z: 1}
+        Rotation: 0
       - Start: 0.6666667
-        Sprite: 90
+        Sprite: 91
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
       - Start: 0.8333333
-        Sprite: 90
+        Sprite: 91
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
@@ -3775,27 +4005,27 @@ MonoBehaviour:
       Loop: 1
       Frames:
       - Start: 0
-        Sprite: 94
-        Position: {x: 0, y: 0, z: 0}
-        Scale: {x: 1, y: 1, z: 1}
-        Rotation: 0
-      - Start: 0.2
         Sprite: 95
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
-      - Start: 0.41
+      - Start: 0.2
         Sprite: 96
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
-      - Start: 0.6
+      - Start: 0.41
         Sprite: 97
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
+      - Start: 0.6
+        Sprite: 98
+        Position: {x: 0, y: 0, z: 0}
+        Scale: {x: 1, y: 1, z: 1}
+        Rotation: 0
       - Start: 0.75
-        Sprite: 94
+        Sprite: 95
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
@@ -3813,27 +4043,27 @@ MonoBehaviour:
       Loop: 1
       Frames:
       - Start: 0
-        Sprite: 98
-        Position: {x: 0, y: 0, z: 0}
-        Scale: {x: 1, y: 1, z: 1}
-        Rotation: 0
-      - Start: 0.15
         Sprite: 99
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
-      - Start: 0.3
+      - Start: 0.15
         Sprite: 100
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
-      - Start: 0.45
+      - Start: 0.3
         Sprite: 101
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
+      - Start: 0.45
+        Sprite: 102
+        Position: {x: 0, y: 0, z: 0}
+        Scale: {x: 1, y: 1, z: 1}
+        Rotation: 0
       - Start: 0.6
-        Sprite: 98
+        Sprite: 99
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
@@ -3843,7 +4073,7 @@ MonoBehaviour:
       Loop: 1
       Frames:
       - Start: 0
-        Sprite: 102
+        Sprite: 103
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
@@ -3853,27 +4083,27 @@ MonoBehaviour:
       Loop: 1
       Frames:
       - Start: 0
-        Sprite: 98
-        Position: {x: 0, y: 0, z: 0}
-        Scale: {x: 1, y: 1, z: 1}
-        Rotation: 0
-      - Start: 0.15
         Sprite: 99
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
-      - Start: 0.3
+      - Start: 0.15
         Sprite: 100
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
-      - Start: 0.45
+      - Start: 0.3
         Sprite: 101
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
+      - Start: 0.45
+        Sprite: 102
+        Position: {x: 0, y: 0, z: 0}
+        Scale: {x: 1, y: 1, z: 1}
+        Rotation: 0
       - Start: 0.6
-        Sprite: 98
+        Sprite: 99
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
@@ -3883,7 +4113,7 @@ MonoBehaviour:
       Loop: 1
       Frames:
       - Start: 0
-        Sprite: 102
+        Sprite: 103
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0
@@ -3893,7 +4123,7 @@ MonoBehaviour:
       Loop: 1
       Frames:
       - Start: 0
-        Sprite: 102
+        Sprite: 103
         Position: {x: 0, y: 0, z: 0}
         Scale: {x: 1, y: 1, z: 1}
         Rotation: 0

@@ -32,13 +32,13 @@ public sealed class Mod_ChargeAttack : Module, IAnimalCombatSkill, ITrunDirectio
 
     #region 运行时字段
     private AnimalSkillDefinition _definition;
-    private Mover_AI _mover;
+    private Mod_Mover_AI _mover;
     private Mod_Damage _normalDamage;
     private Mod_AnimatorController _animator;
     private Mod_TurnBack _turnBody;
     private Collider2D _hitbox;
     private Item _target;
-    private readonly HashSet<DamageReceiver> _hitReceivers = new HashSet<DamageReceiver>();
+    private readonly HashSet<Mod_DamageReceiver> _hitReceivers = new HashSet<Mod_DamageReceiver>();
     private readonly List<Collider2D> _overlapColliders = new List<Collider2D>();
     private readonly ChargeDamageSender _damageSender = new ChargeDamageSender();
 
@@ -300,7 +300,7 @@ public sealed class Mod_ChargeAttack : Module, IAnimalCombatSkill, ITrunDirectio
 
         for (int i = 0; i < _overlapColliders.Count; i++)
         {
-            DamageReceiver receiver = GameplayPhysics2D.ResolveComponent<DamageReceiver>(
+            Mod_DamageReceiver receiver = GameplayPhysics2D.ResolveComponent<Mod_DamageReceiver>(
                 _overlapColliders[i]);
             ApplyDamage(receiver);
         }
@@ -314,10 +314,10 @@ public sealed class Mod_ChargeAttack : Module, IAnimalCombatSkill, ITrunDirectio
             return;
         }
 
-        ApplyDamage(GameplayPhysics2D.ResolveComponent<DamageReceiver>(other));
+        ApplyDamage(GameplayPhysics2D.ResolveComponent<Mod_DamageReceiver>(other));
     }
 
-    private void ApplyDamage(DamageReceiver receiver)
+    private void ApplyDamage(Mod_DamageReceiver receiver)
     {
         if (receiver == null || receiver.item == null || receiver.item == item ||
             !_hitReceivers.Add(receiver))
@@ -343,8 +343,8 @@ public sealed class Mod_ChargeAttack : Module, IAnimalCombatSkill, ITrunDirectio
 
         if (_mover == null)
         {
-            _mover = item.itemMods.GetMod_ByID<Mover_AI>(ModText.Mover) ??
-                     item.itemMods.GetMod_ByID<Mover_AI>(ModText.Mover_AI);
+            _mover = item.itemMods.GetMod_ByID<Mod_Mover_AI>(ModText.Mod_Mover) ??
+                     item.itemMods.GetMod_ByID<Mod_Mover_AI>(ModText.Mod_Mover_AI);
         }
 
         if (_normalDamage == null)

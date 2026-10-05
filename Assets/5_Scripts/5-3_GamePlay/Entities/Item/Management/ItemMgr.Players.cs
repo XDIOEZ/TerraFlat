@@ -1,6 +1,7 @@
 using Force.DeepCloner;
 using Sirenix.OdinInspector;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -42,13 +43,19 @@ public partial class ItemMgr
     }
 
     [Button("加载玩家")]
-    [Tooltip("根据传入的玩家名称,加载玩家数据\n" +
-        "优先加载当前存档中的同名玩家数据\n" +
-        "如果加载不到就自动创建新的玩家数据")]
+    [Tooltip("按稳定角色 ID 加载玩家数据；不存在时创建新角色。")]
     public Player LoadPlayer(string playerName)
+    {
+        return LoadPlayer(playerName, null);
+    }
+
+    /// <summary>首次创建角色时单独指定显示名，身份键始终使用 playerName 参数。</summary>
+    public Player LoadPlayer(string playerName, string newPlayerDisplayName)
     {
         // 加载或者创建玩家数据
         Data_Player playerData = LoadOrCreatePlayerData(playerName, out bool wasCreated);
+        if (wasCreated && !string.IsNullOrWhiteSpace(newPlayerDisplayName))
+            playerData.Name_User = newPlayerDisplayName.Trim();
         //传入数据创建玩家
         Player player = CreatePlayer(playerData);
         if (wasCreated)
@@ -70,6 +77,9 @@ public partial class ItemMgr
         if (player == null)
             return;
 
+        // 玩家卸载前先解除生态后端代理，避免同帧 LateUpdate 访问已销毁的 Player。
+        AiRuntimeBackendService.Ecology?.ReleasePlayer(player);
+
         string profileName = player.ProfileName;
         if (!string.IsNullOrWhiteSpace(profileName) &&
             Player_DIC.TryGetValue(profileName, out Player registeredPlayer) &&
@@ -84,6 +94,53 @@ public partial class ItemMgr
         DespawnItem(player, saveData: false);
     }
 
+    /// <summary>
+    /// F5 成功发布新资源后，用最新 Player Prefab 重建本地主角。
+    /// 玩家 Data 原引用继续使用；旧玩家先完整保存和卸载，运行时 UI 清空一帧后再由新模块重新实例化。
+    /// </summary>
+    public IEnumerator ReloadLocalPlayerAfterResourceReload()
+    {
+        Player previousPlayer = User_Player;
+        if (previousPlayer == null || !previousPlayer.IsLocalProfile)
+            yield break;
+
+        string profileName = RequireProfileName(previousPlayer);
+        Data_Player playerData = previousPlayer.Data;
+        if (playerData == null)
+            throw new InvalidOperationException("[ItemMgr] F5 重载玩家失败：当前本地玩家缺少 Data_Player。");
+
+        string prefabId = string.IsNullOrWhiteSpace(playerData.IDName) ? "Player" : playerData.IDName;
+        GameObject latestPlayerPrefab = GameRes.Instance.GetPrefab(prefabId);
+        if (latestPlayerPrefab == null || latestPlayerPrefab.GetComponent<Player>() == null)
+            throw new MissingReferenceException($"[ItemMgr] F5 重载玩家失败：最新资源目录中的 {prefabId} Prefab 缺少 Player。");
+
+        previousPlayer.Save();
+        playerData.CurrentSceneName = SceneManager.GetActiveScene().name;
+        SaveDataMgr.Instance.SaveData.PlayerData_Dict[profileName] = playerData;
+
+        ReleasePlayerForWorldTransition(previousPlayer);
+        UIManager.ExistingInstance?.DestroyRuntimeUiInstancesForResourceReload();
+
+        // Destroy 在帧末生效；等旧 Player / UI 真正销毁后再创建新实例，避免同帧残留输入和 Canvas。
+        yield return null;
+
+        Player reloadedPlayer = CreatePlayer(playerData);
+        reloadedPlayer.SetProfileContext(
+            localProfile: true,
+            profileDataWasCreated: false,
+            runtimeProfileName: profileName);
+        Player_DIC[profileName] = reloadedPlayer;
+        reloadedPlayer.Load();
+
+        reloadedPlayer.Data.CurrentSceneName = SceneManager.GetActiveScene().name;
+        SaveDataMgr.Instance.SaveData.PlayerData_Dict[profileName] = reloadedPlayer.Data;
+
+        GameManager.NotifyLocalPlayerRuntimeReloaded(reloadedPlayer);
+        reloadedPlayer.itemMods
+            .GetMod_ByID<Mod_ChunkLoader>(ModText.ChunkLoader)?
+            .RefreshChunksAroundPlayer();
+    }
+
     [Tooltip("实例化玩家 但是不初始化")]
     public Player CreatePlayer(string playerName)
     {
@@ -92,6 +149,9 @@ public partial class ItemMgr
 
     public Player CreatePlayer(string playerName, PlayerCreationTemplateConfig creationTemplate)
     {
+        if (creationTemplate == null)
+            throw new ArgumentNullException(nameof(creationTemplate));
+
         // 加载或者创建玩家数据
         Data_Player playerData = LoadOrCreatePlayerData(playerName, out bool wasCreated);
         //传入数据创建玩家
@@ -133,9 +193,10 @@ public partial class ItemMgr
                 playerData.Guid = networkGuid;
         }
 
-        playerData.Name_User = playerName;
+        if (!hasSavedData)
+            playerData.Name_User = playerName;
         playerData.CurrentSceneName = SceneManager.GetActiveScene().name;
-        playerData.transform.position = spawnPosition;
+        playerData.transform.position = WorldLocalPresentation.ToLogical(spawnPosition);
         playerData.transform.rotation = Quaternion.identity;
         if (playerData.transform.scale == Vector3.zero)
             playerData.transform.scale = Vector3.one;
@@ -203,6 +264,8 @@ public partial class ItemMgr
 
     private void InitializeNetworkLocalPlayer(Player player, Vector3 spawnPosition)
     {
+        Vector3 logicalSpawnPosition = WorldLocalPresentation.ToLogical(spawnPosition);
+        Vector3 presentationSpawnPosition = WorldLocalPresentation.ProjectPosition(logicalSpawnPosition);
         Rigidbody2D body = player.GetComponent<Rigidbody2D>();
         if (body != null)
         {
@@ -214,28 +277,33 @@ public partial class ItemMgr
         if (_networkInitializedPlayers.Add(player))
             player.Load();
 
-        player.transform.position = spawnPosition;
-        player.Data.transform.position = spawnPosition;
+        player.transform.position = presentationSpawnPosition;
+        if (body != null)
+            body.position = presentationSpawnPosition;
+        player.Data.transform.position = logicalSpawnPosition;
 
-        GameController controller = player.GetComponentInChildren<GameController>(true);
+        Mod_GameController controller = player.GetComponentInChildren<Mod_GameController>(true);
         controller?.SetGameplayInputLocked(false);
     }
 
     private static void ConfigureRemoteNetworkReplica(Player player, Vector3 spawnPosition)
     {
+        Vector3 logicalSpawnPosition = WorldLocalPresentation.ToLogical(spawnPosition);
+        Vector3 presentationSpawnPosition = WorldLocalPresentation.ProjectPosition(logicalSpawnPosition);
         player.SetProfileContext(
             localProfile: false,
             profileDataWasCreated: player.WasProfileDataCreated,
             runtimeProfileName: player.ProfileName);
-        player.transform.position = spawnPosition;
-        player.Data.transform.position = spawnPosition;
+        player.transform.position = presentationSpawnPosition;
+        player.Data.transform.position = logicalSpawnPosition;
 
-        GameController controller = player.GetComponentInChildren<GameController>(true);
+        Mod_GameController controller = player.GetComponentInChildren<Mod_GameController>(true);
         controller?.SetGameplayInputLocked(true);
 
         Rigidbody2D body = player.GetComponent<Rigidbody2D>();
         if (body != null)
         {
+            body.position = presentationSpawnPosition;
             body.velocity = Vector2.zero;
             body.bodyType = RigidbodyType2D.Kinematic;
             // 网络层已经按每帧生成平滑视觉坐标，关闭物理插值避免再次插值造成节拍抖动。
@@ -259,14 +327,9 @@ public partial class ItemMgr
             // 玩家根数据仍保留自身进度，但背包/快捷栏中的物品必须使用当前 ItemDefinition 配置。
             ItemDefinitionRuntime.RebaseNestedPersistedItems(GameRes.Instance, playerData);
 
-            // 档案字典键是玩家身份真源；修复旧存档中空名、默认名或临时身份写回造成的错位。
-            if (!string.Equals(playerData.Name_User, playerName, StringComparison.Ordinal))
-            {
-                Debug.LogWarning(
-                    $"[ItemMgr] 玩家档案名与数据名不一致，已按档案键修复：" +
-                    $"data={playerData.Name_User ?? "<null>"}, profile={playerName}");
+            // 旧档字典键继续作为稳定 ID；显示名为空时才回退，改名不能改变身份。
+            if (string.IsNullOrWhiteSpace(playerData.Name_User))
                 playerData.Name_User = playerName;
-            }
         }
         else //如果不存在，则创建默认玩家数据
         {
@@ -312,7 +375,7 @@ public partial class ItemMgr
     /// <summary>获取 Player 在存档和运行时字典中的稳定身份键。</summary>
     private static string RequireProfileName(Player player)
     {
-        string profileName = player?.ProfileName;
+        string profileName = player?.ProfileId;
         if (string.IsNullOrWhiteSpace(profileName))
             throw new InvalidOperationException("玩家缺少稳定档案名，禁止保存到错误角色槽位");
 

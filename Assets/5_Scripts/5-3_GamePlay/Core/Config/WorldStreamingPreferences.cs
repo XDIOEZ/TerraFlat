@@ -19,14 +19,18 @@ public enum WorldStreamingPerformanceMode
 public static class WorldStreamingPreferences
 {
     private const string ModeKey = "FlatWorld.WorldStreaming.PerformanceMode.v1";
+    private const string OwnerCullingKey = "FlatWorld.WorldStreaming.OwnerCulling.v1";
 
     public const string SettingsProviderId = "world-streaming";
     public const string ModeSettingKey = "worldStreaming.performanceMode";
+    public const string OwnerCullingSettingKey = "worldStreaming.ownerCulling";
 
     public static event Action Changed;
 
     private static readonly ISettingsProvider settingsProvider =
         CreateSettingsProvider();
+    private static bool ownerCullingInitialized;
+    private static bool ownerCullingEnabled;
 
     /// <summary>供设置 UI 使用的区块流送模式下拉列表契约。</summary>
     public static ISettingsProvider SettingsProvider => RegisterSettingsProvider();
@@ -41,6 +45,30 @@ public static class WorldStreamingPreferences
                 ? (WorldStreamingPerformanceMode)value
                 : WorldStreamingPerformanceMode.Automatic;
         }
+    }
+
+    /// <summary>区块视锥剔除默认关闭，便于在高视距下对比全量绘制耗时。</summary>
+    public static bool OwnerCullingEnabled
+    {
+        get
+        {
+            if (!ownerCullingInitialized)
+            {
+                ownerCullingEnabled = PlayerPrefs.GetInt(OwnerCullingKey, 0) != 0;
+                ownerCullingInitialized = true;
+            }
+            return ownerCullingEnabled;
+        }
+    }
+
+    /// <summary>保存区块剔除开关，当前 BRG 的下一次剔除回调直接读取新值。</summary>
+    public static void SetOwnerCullingEnabled(bool enabled)
+    {
+        if (OwnerCullingEnabled == enabled)
+            return;
+        ownerCullingEnabled = enabled;
+        PlayerPrefs.SetInt(OwnerCullingKey, enabled ? 1 : 0);
+        PlayerPrefs.Save();
     }
 
     /// <summary>保存模式并让正在运行的 ChunkMgr 立即更新调度器。</summary>
@@ -82,6 +110,7 @@ public static class WorldStreamingPreferences
     {
         SettingsProviderRegistry.Unregister(settingsProvider);
         Changed = null;
+        ownerCullingInitialized = false;
     }
 
     private static ISettingsProvider RegisterSettingsProvider()
@@ -106,6 +135,7 @@ public static class WorldStreamingPreferences
             };
 
         private readonly IReadOnlyList<ISettingsDropdown> dropdowns;
+        private readonly IReadOnlyList<ISettingsToggle> toggles;
 
         public WorldStreamingSettingsProvider()
         {
@@ -122,20 +152,35 @@ public static class WorldStreamingPreferences
                     () => (int)Mode,
                     TrySetMode)
             };
+            toggles = new ISettingsToggle[]
+            {
+                new SettingsToggle(
+                    new SettingDescriptor(
+                        OwnerCullingSettingKey,
+                        "区块剔除",
+                        SettingControlType.Toggle,
+                        "world",
+                        order: 1),
+                    () => OwnerCullingEnabled,
+                    SetOwnerCullingEnabled)
+            };
         }
 
         public string ProviderId => SettingsProviderId;
         public string DisplayName => "区块流送";
         public int Order => 60;
-        public IReadOnlyList<ISettingsToggle> ToggleSettings =>
-            Array.Empty<ISettingsToggle>();
+        public IReadOnlyList<ISettingsToggle> ToggleSettings => toggles;
         public IReadOnlyList<ISettingsSlider> SliderSettings =>
             Array.Empty<ISettingsSlider>();
         public IReadOnlyList<ISettingsDropdown> DropdownSettings => dropdowns;
         public IReadOnlyList<ISettingsSwitch> SwitchSettings =>
             Array.Empty<ISettingsSwitch>();
 
-        public void ResetToDefaults() => SetMode(WorldStreamingPerformanceMode.Automatic);
+        public void ResetToDefaults()
+        {
+            SetMode(WorldStreamingPerformanceMode.Automatic);
+            SetOwnerCullingEnabled(false);
+        }
 
         private static string TrySetMode(int index)
         {

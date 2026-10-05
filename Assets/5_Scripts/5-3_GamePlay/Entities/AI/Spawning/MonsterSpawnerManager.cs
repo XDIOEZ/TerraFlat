@@ -3,44 +3,21 @@ using System.Collections.Generic;
 using FlatWorld.Networking;
 using Sirenix.OdinInspector;
 using UnityEngine;
+using RuntimeWorldAddress = FlatWorld.WorldModel.WorldAddress;
 
 /// <summary>
-/// 生物生成与生态预算管理器。
-/// 负责跨时刻调度、种群上限、环境校验、死亡补位和远距离回收。
+/// 生物生态调度器。调度间隔、每轮检查量和两种后端的装载预算由全局 JSON 决定；
+/// 每次调度至多创建一只生物。时间计划只产生待出生需求，
+/// 已出生个体由存档和休眠仓库保留身份，远距卸载表现，靠近时恢复同一 GUID 与模块状态。
 /// </summary>
 [RequireComponent(typeof(MonsterManager))]
 public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerManager>
 {
     #region 配置
 
-    [Header("生成配置")]
-    [SerializeField, Required]
     private List<SpawnerConfig> _spawnerConfigs = new();
-
-    [Header("全局生态限制")]
-    [SerializeField]
-    [Tooltip("启用后，仅显式标记为 Entities 的物种交给 AIECS；GameObject 物种继续正常运行。")]
-    private bool _useAiecsBackend = true;
-
-    [SerializeField, Min(1)]
-    private int _globalAliveLimit = 40;
-
-    [SerializeField, Min(0.1f)]
-    private float _spawnRetryInterval = 0.5f;
-
-    [SerializeField, Min(1)]
-    [Tooltip("多个配置同时到期时轮转分帧，保留待生成数量，不改变配置频率。")]
-    private int _maxSpawnsPerFrame = 2;
-
-    [SerializeField, Min(0.1f)]
-    [Tooltip("仅在完整候选搜索/实体创建之间让出本帧；不能中断一次 Unity 实体初始化。")]
-    private float _spawnWorkBudgetMilliseconds = 2f;
-
-    [SerializeField, Min(0.5f)]
-    private float _populationMaintenanceInterval = 2f;
-
-    [SerializeField, Min(0.5f)]
-    private float _recycleCheckInterval = 2f;
+    // 世界内只读取启动时校验过的全局设置，不在游玩帧解析 JSON。
+    private SpawnerRuntimeSettings _settings;
 
     #endregion
 
@@ -58,16 +35,14 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
     private readonly HashSet<Item> _chunkDormantItems = new();
     private readonly Dictionary<string, float> _nextSpawnRetryTime = new(StringComparer.Ordinal);
     private readonly Dictionary<string, float> _nextRecoveryCheckTime = new(StringComparer.Ordinal);
+    private readonly Dictionary<SpawnerConfig, int> _remainingSearchAttempts = new();
+    private readonly Dictionary<int, float> _nextResidentWakeAttempt = new();
     private readonly List<SpawnerConfig> _jsonRuntimeConfigs = new();
     private readonly List<Vector3> _playerPositions = new(4);
     private readonly List<Item> _itemSnapshot = new(64);
     private readonly List<MonsterManager.Registration> _monsterSnapshot = new(64);
-    private readonly Dictionary<string, int> _overflowSpeciesCounts = new(StringComparer.Ordinal);
-    private readonly Dictionary<SpawnerConfig, int> _overflowGroupCounts = new();
-    private readonly Dictionary<(SpawnerConfig Config, int Player), int> _overflowNearbyCounts = new();
-    private List<SpawnerConfig> _serializedSpawnerConfigs;
-    private float _nextPopulationMaintenanceTime;
-    private float _nextRecycleCheckTime;
+    private float _nextEcologyTickTime;
+    private float _nextCreatureBirthTime;
     private readonly RuntimeTreeHabitatIndex _treeHabitatIndex = new();
     private readonly Dictionary<SpawnerConfig, HabitatCandidates> _treeCapacityCache = new();
     private readonly Dictionary<SpawnerConfig, string> _configKeys = new();
@@ -78,8 +53,9 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
     private bool _hasLimitedEntities;
     private readonly List<Item> _presentationItems = new(32);
     private int _monsterSnapshotVersion = -1;
-    private bool _initialDormancyPending;
     private int _spawnConfigCursor;
+    private int _activeResidentCursor;
+    private int _parkedAddressCursor;
 
     #endregion
 
@@ -91,9 +67,7 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
         if (Instance != this)
             return;
 
-        _serializedSpawnerConfigs = _spawnerConfigs;
         _monsterManager = GetComponent<MonsterManager>();
-        AiRuntimeBackendService.UseEntities = _useAiecsBackend;
     }
 
     private void Start()
@@ -189,13 +163,12 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
                         this);
                 }
             }
-            RemoveLegacyEntityRoutedActorInstances();
         }
-        _nextPopulationMaintenanceTime = Time.unscaledTime;
-        _nextRecycleCheckTime = Time.unscaledTime + _recycleCheckInterval;
+        _nextEcologyTickTime = Time.unscaledTime;
+        _nextCreatureBirthTime = Time.unscaledTime;
+        _nextEventSearchTime = Time.unscaledTime;
         _chunkManager.RuntimeEntityPresentationChanged += OnChunkPresentationChanged;
         _itemManager.RuntimeAiAddressChanged += OnRuntimeAiAddressChanged;
-        _initialDormancyPending = true;
         enabled = true;
     }
 
@@ -212,6 +185,8 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
         ReleaseJsonRuntimeConfigs();
         _nextSpawnRetryTime.Clear();
         _nextRecoveryCheckTime.Clear();
+        _remainingSearchAttempts.Clear();
+        _nextResidentWakeAttempt.Clear();
         enabled = false;
         _itemManager = null;
         _chunkManager = null;
@@ -256,19 +231,20 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
         _monsterManager?.ResetWorld();
         ReleaseJsonRuntimeConfigs();
 
-        if (SpawnerConfigCatalogService.IsLoaded)
+        if (!SpawnerConfigCatalogService.IsLoaded)
         {
-            _jsonRuntimeConfigs.AddRange(SpawnerConfigCatalogService.CreateRuntimeConfigs());
-            _spawnerConfigs = _jsonRuntimeConfigs;
-        }
-        else
-        {
-            _spawnerConfigs = _serializedSpawnerConfigs ?? new List<SpawnerConfig>();
+            Debug.LogError("[MonsterSpawnerManager] 生物生成 JSON 目录尚未加载。", this);
+            return false;
         }
 
-        if (_spawnerConfigs == null || _spawnerConfigs.Count == 0)
+        _jsonRuntimeConfigs.AddRange(SpawnerConfigCatalogService.CreateRuntimeConfigs());
+        _spawnerConfigs = _jsonRuntimeConfigs;
+        _settings = SpawnerConfigCatalogService.Catalog.Settings;
+        AiRuntimeBackendService.UseEntities = _settings.UseAiecsBackend;
+
+        if (_spawnerConfigs.Count == 0)
         {
-            Debug.LogError("[MonsterSpawnerManager] JSON 与兼容回退均未提供有效 SpawnerConfig。", this);
+            Debug.LogError("[MonsterSpawnerManager] 生物生成 JSON 目录没有有效配置。", this);
             return false;
         }
 
@@ -296,14 +272,17 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
         if (_gameManager == null || !_gameManager.IsGameplayReady)
             return;
 
-        if (_initialDormancyPending)
-        {
-            _initialDormancyPending = false;
-            RefreshChunkDormancy();
-        }
-
-        if (!GameNetwork.HasStateAuthority)
+        float now = Time.unscaledTime;
+        if (now < _nextEcologyTickTime)
             return;
+        _nextEcologyTickTime = now + Mathf.Max(0.1f, _settings.EcologyTickInterval);
+
+        bool presentationChanged = ProcessPresentationChanges(Mathf.Max(1, _settings.ResidentChecksPerTick));
+        if (!GameNetwork.HasStateAuthority)
+        {
+            RefreshClientChunkDormancy();
+            return;
+        }
 
         if (!TryGetCurrentTimeData(out string sceneName, out TimeData timeData))
             return;
@@ -331,9 +310,9 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
             QueuePopulationRecovery(config, state);
         }
 
-        ProcessDueSpawnWork(sceneName, currentDay);
-        MaintainTrackedPopulation();
-        RecycleDistantPopulation();
+        if (!presentationChanged && SaveDataMgr.Instance?.IsEcologySnapshotInProgress != true &&
+            !MaintainResidentStreaming())
+            ProcessDueSpawnWork(sceneName, currentDay);
     }
 
     #endregion
@@ -347,6 +326,9 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
 
         saveData.MonsterSpawnerData ??= new MonsterSpawnerSaveData();
         saveData.MonsterSpawnerData.ConfigStates = _runtimeStates ?? new Dictionary<string, SpawnerProgressSaveData>();
+        // ECS 停用时保留原有冷快照，不让未启动的后端覆盖历史居民。
+        if (AiRuntimeBackendService.UseEntities && AiRuntimeBackendService.HasEntitiesRoutes)
+            AiRuntimeBackendService.Ecology?.CaptureResidents(saveData.MonsterSpawnerData);
     }
 
     private void BindSaveData(GameSaveData saveData)
@@ -392,8 +374,6 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
         if (state.LastProcessedTotalTime < 0f)
         {
             state.LastProcessedTotalTime = currentTotalTime;
-            state.LastCheckedDay = currentDay;
-            state.TriggeredWindowIndices.Clear();
             return;
         }
 
@@ -402,7 +382,6 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
 
         float previousTotalTime = state.LastProcessedTotalTime;
         state.LastProcessedTotalTime = currentTotalTime;
-        state.LastCheckedDay = currentDay;
         if (currentTotalTime <= previousTotalTime)
             return;
 
@@ -417,8 +396,9 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
         float dayLength = Mathf.Max(1f, timeData.DayLength);
         float interval = dayLength / spawnsPerDay;
         float firstTriggerTime = Mathf.Repeat(config.SpawnTriggerTime, dayLength);
-        int startDay = Mathf.Max(0, Mathf.FloorToInt(previousTotalTime / dayLength));
-        int endDay = Mathf.Max(startDay, Mathf.FloorToInt(currentTotalTime / dayLength));
+        // 跨天快进只处理当前日窗口，不能把离线期间的出生事件一次性补进当前视野。
+        int endDay = Mathf.Max(0, Mathf.FloorToInt(currentTotalTime / dayLength));
+        int startDay = endDay;
 
         for (int day = startDay; day <= endDay; day++)
         {
@@ -639,22 +619,18 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
 
     #region 生成执行
 
-    /// <summary>公平轮转到期配置；昂贵创建只在操作边界让帧，未执行的队列和重试时间保持不变。</summary>
+    /// <summary>每轮只处理一个配置的一次候选搜索或创建；配置轮转防止长期饥饿。</summary>
     private void ProcessDueSpawnWork(string sceneName, int currentDay)
     {
         int count = _spawnerConfigs.Count;
         if (count == 0) return;
         int cursor = _spawnConfigCursor % count;
-        int spawned = 0;
-        double deadline = Time.realtimeSinceStartupAsDouble + Mathf.Max(0.1f, _spawnWorkBudgetMilliseconds) * 0.001;
         for (int visited = 0; visited < count; visited++)
         {
             SpawnerConfig config = _spawnerConfigs[cursor];
             cursor = (cursor + 1) % count;
             if (config == null) continue;
             if (ProcessPendingSpawns(config, GetOrCreateState(config), sceneName, currentDay))
-                spawned++;
-            if (spawned >= Mathf.Max(1, _maxSpawnsPerFrame) || Time.realtimeSinceStartupAsDouble >= deadline)
                 break;
         }
         _spawnConfigCursor = cursor;
@@ -673,20 +649,37 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
         float now = Time.unscaledTime;
         if (_nextSpawnRetryTime.TryGetValue(key, out float nextRetry) && now < nextRetry)
             return false;
+        if (now < _nextCreatureBirthTime)
+            return false;
 
         if (!HasAvailableBackendEntry(config))
-        {
-            state.PendingSpawnCount = 0;
-            state.PendingReplacementCount = 0;
             return false;
-        }
 
         if (config.RequireGlobalDarkness && !IsGlobalDark(sceneName))
             return false;
 
-        _nextSpawnRetryTime[key] = now + Mathf.Max(0.05f, _spawnRetryInterval);
-        if (!TrySpawnOne(config, state))
+        if (_monsterManager.Count >= Mathf.Max(1, _settings.MaxLoadedGameObjectActors) &&
+            !UsesEntityPopulation(config))
             return false;
+
+        if (!TrySpawnOne(config, state))
+        {
+            int remaining = _remainingSearchAttempts.TryGetValue(config, out int value)
+                ? value - 1 : Mathf.Max(1, config.SpawnSearchRetryCount) - 1;
+            if (remaining <= 0)
+            {
+                _remainingSearchAttempts.Remove(config);
+                _nextSpawnRetryTime[key] = now + Mathf.Max(0.05f, _settings.SpawnRetryInterval);
+            }
+            else
+            {
+                _remainingSearchAttempts[config] = remaining;
+            }
+            return true;
+        }
+
+        _remainingSearchAttempts.Remove(config);
+        _nextSpawnRetryTime[key] = now + Mathf.Max(_settings.EcologyTickInterval, config.AsyncSpawnInterval);
 
         if (state.PendingSpawnCount > 0)
         {
@@ -705,7 +698,7 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
     private bool TrySpawnOne(SpawnerConfig config, SpawnerProgressSaveData state)
     {
         int globalLimit = GameDifficultyService.ScaleCount(
-            _globalAliveLimit,
+            _settings.GlobalAliveLimit,
             GameDifficultyService.Current.World.SpawnPopulationMultiplier,
             1);
         if (!config.UnboundedDailyGrowth &&
@@ -723,6 +716,11 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
         if (!TryGetValidSpawnPosition(config, out Vector3 spawnPosition))
             return false;
 
+        if (!IsWithinLocalSpeciesLimit(config, entry, spawnPosition))
+            return false;
+
+        // 即使资源初始化失败，昂贵的创建尝试也不能在同一短时间窗内反复执行。
+        _nextCreatureBirthTime = Time.unscaledTime + Mathf.Max(0.1f, _settings.EcologyTickInterval);
         if (!TrySpawnMonster(entry, spawnPosition))
             return false;
 
@@ -790,6 +788,13 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
             return false;
         }
 
+        if (!AiRuntimeBackendService.UsesEntities(entry) &&
+            _monsterManager.Count >= Mathf.Max(1, _settings.MaxLoadedGameObjectActors))
+            return false;
+        if (AiRuntimeBackendService.UsesEntities(entry) &&
+            AiRuntimeBackendService.Ecology.ResidentCount >= Mathf.Max(1, _settings.MaxLoadedEntityActors))
+            return false;
+
          int speciesLimit = GameDifficultyService.ScaleCount(
              entry.SpeciesAliveLimit,
              GameDifficultyService.Current.World.SpawnPopulationMultiplier);
@@ -805,39 +810,34 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
             return false;
 
         PrepareNearbyGroupCounts(config);
-        int retries = Mathf.Max(1, config.SpawnSearchRetryCount);
-        for (int i = 0; i < retries; i++)
-        {
-            Vector3 anchor = _playerPositions[UnityEngine.Random.Range(0, _playerPositions.Count)];
-            float randomAngle = UnityEngine.Random.Range(0f, 360f) * Mathf.Deg2Rad;
-            float randomDistance = UnityEngine.Random.Range(
-                Mathf.Max(0f, config.MinSpawnDistance),
-                Mathf.Max(config.MinSpawnDistance, config.MaxSpawnDistance));
+        Vector3 anchor = _playerPositions[UnityEngine.Random.Range(0, _playerPositions.Count)];
+        float randomAngle = UnityEngine.Random.Range(0f, Mathf.PI * 2f);
+        float randomDistance = UnityEngine.Random.Range(
+            Mathf.Max(0f, config.MinSpawnDistance),
+            Mathf.Max(config.MinSpawnDistance, config.MaxSpawnDistance));
+        Vector3 candidate = anchor + new Vector3(
+            Mathf.Cos(randomAngle) * randomDistance,
+            Mathf.Sin(randomAngle) * randomDistance,
+            0f);
+        if (config.TreeHabitat.Enabled && !TryGetTreeHabitatPosition(config, out candidate))
+            return false;
+        candidate = WorldTopologyRuntime.NormalizePosition(candidate);
+        candidate.x = Mathf.Floor(candidate.x) + 0.5f;
+        candidate.y = Mathf.Floor(candidate.y) + 0.5f;
 
-            Vector3 candidate = anchor + new Vector3(
-                Mathf.Cos(randomAngle) * randomDistance,
-                Mathf.Sin(randomAngle) * randomDistance,
-                0f);
-            if (config.TreeHabitat.Enabled && !TryGetTreeHabitatPosition(config, out candidate))
-                continue;
-            candidate.x = Mathf.Floor(candidate.x) + 0.5f;
-            candidate.y = Mathf.Floor(candidate.y) + 0.5f;
+        if (IsNearAnyPlayer(candidate, Mathf.Max(config.MinSpawnDistance, config.PlayerVisibilityExclusionDistance)) ||
+            IsVisibleByAnyActiveCamera(candidate, 0.15f) ||
+            !IsWithinPlayerPopulationLimit(config, candidate) ||
+            !_chunkManager.IsRuntimeEntityPresentationReady(candidate) ||
+            !IsRuntimeTerrainReady(candidate) ||
+            !(config.WaterOnly ? AquaticHabitat.CanSwimAt(candidate) : IsWalkableSpawnPosition(candidate)) ||
+            !IsBiomeAllowed(config, candidate) ||
+            !IsGroundTileAllowed(config, candidate) ||
+            !IsLightAllowed(config, candidate))
+            return false;
 
-            if (IsNearAnyPlayer(candidate, Mathf.Max(config.MinSpawnDistance, config.PlayerVisibilityExclusionDistance)) ||
-                !IsWithinPlayerPopulationLimit(config, candidate) ||
-                !IsRuntimeTerrainReady(candidate) ||
-                !IsWalkableSpawnPosition(candidate) ||
-                !IsBiomeAllowed(config, candidate) ||
-                !IsLightAllowed(config, candidate))
-            {
-                continue;
-            }
-
-            spawnPosition = candidate;
-            return true;
-        }
-
-        return false;
+        spawnPosition = candidate;
+        return true;
     }
 
     private bool IsWalkableSpawnPosition(Vector3 worldPos)
@@ -868,6 +868,16 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
         }
 
         return false;
+    }
+
+    /// <summary>按权威地表 Tile 限制生态出生地，避免只看群系时刷在石块斑块上。</summary>
+    private bool IsGroundTileAllowed(SpawnerConfig config, Vector3 worldPos)
+    {
+        if (config.AllowedGroundTileIds == null || config.AllowedGroundTileIds.Count == 0)
+            return true;
+
+        return _chunkManager.TryGetRuntimeTerrainTile(worldPos, out RuntimeTerrainTileSample sample) &&
+               config.AllowedGroundTileIds.Contains(sample.Cell.GroundTileId);
     }
 
     /// <summary>兼容旧 BiomeData 的显示名与资源名。</summary>
@@ -1067,6 +1077,21 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
         return true;
     }
 
+    /// <summary>物种上限同时考虑候选区域的休眠居民，不阻止其它区域建立独立种群。</summary>
+    private bool IsWithinLocalSpeciesLimit(
+        SpawnerConfig config, SpawnerConfig.SpawnEntry entry, Vector3 candidate)
+    {
+        if (config.IgnorePopulationLimits || config.UnboundedDailyGrowth || entry.SpeciesAliveLimit <= 0)
+            return true;
+        int limit = GameDifficultyService.ScaleCount(
+            entry.SpeciesAliveLimit, GameDifficultyService.Current.World.SpawnPopulationMultiplier);
+        int loaded = CountSpeciesAlive(entry.PrefabName);
+        int nearbyParked = SaveDataMgr.Instance?.CountParkedRuntimeAiSpeciesWithinRadius(
+            entry.PrefabName, candidate,
+            Mathf.Max(1f, config.PlayerPopulationRadius) * Mathf.Max(1f, config.PlayerPopulationRadius)) ?? 0;
+        return loaded + nearbyParked < limit;
+    }
+
     private int GetEffectiveGroupLimit(SpawnerConfig config)
     {
         if (config.UnboundedDailyGrowth || config.IgnorePopulationLimits)
@@ -1107,7 +1132,7 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
 
     private int CountGroupAlive(SpawnerConfig config)
     {
-        int count = _monsterManager?.GetGroupCount(config) ?? 0;
+        int count = _monsterManager?.GetResidentGroupCount(config) ?? 0;
         if (UsesEntityPopulation(config))
             count += AiRuntimeBackendService.Ecology?.GetGroupCount(config) ?? 0;
         return count;
@@ -1115,7 +1140,7 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
 
     private int CountSpeciesAlive(string speciesId)
     {
-        int count = _monsterManager?.GetSpeciesCount(speciesId) ?? 0;
+        int count = _monsterManager?.GetResidentSpeciesCount(speciesId) ?? 0;
         if (AiRuntimeBackendService.UseEntities && AiRuntimeBackendService.UsesEntities(speciesId))
             count += AiRuntimeBackendService.Ecology?.GetSpeciesCount(speciesId) ?? 0;
         return count;
@@ -1124,7 +1149,7 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
     /// <summary>只统计仍受全局数量预算约束的生态实体。</summary>
     private int CountPopulationLimitedAlive()
     {
-        int count = _monsterManager?.PopulationLimitedCount ?? 0;
+        int count = _monsterManager?.ResidentPopulationLimitedCount ?? 0;
         if (AiRuntimeBackendService.UseEntities && _hasLimitedEntities)
             count += AiRuntimeBackendService.Ecology?.PopulationLimitedCount ?? 0;
         return count;
@@ -1148,15 +1173,15 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
         _monsterSnapshot.Clear();
         _monsterSnapshotVersion = -1;
         _spawnConfigCursor = 0;
+        _activeResidentCursor = 0;
+        _parkedAddressCursor = 0;
         _playerPositions.Clear();
         _nearbyGroupCounts.Clear();
         _availableEntries.Clear();
-        _overflowNearbyCounts.Clear();
         _presentationItems.Clear();
-        _eventActorBehaviours.Clear();
         Array.Clear(_eventCameras, 0, _eventCameras.Length);
-        _overflowSpeciesCounts.Clear();
-        _overflowGroupCounts.Clear();
+        _remainingSearchAttempts.Clear();
+        _nextResidentWakeAttempt.Clear();
         _monsterManager?.ResetWorld();
     }
 
@@ -1192,40 +1217,38 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
         _chunkDormantItems.Remove(item);
     }
 
-    /// <summary>让自然生物随新版区块画面休眠，并在画面重新绑定后恢复。</summary>
-    private void RefreshChunkDormancy()
-    {
-        if (_monsterManager == null || _monsterManager.Count == 0 || _chunkManager == null)
-            return;
-
-        RefreshMonsterSnapshot();
-        for (int i = 0; i < _monsterSnapshot.Count; i++)
-            RefreshTrackedItemChunkDormancy(_monsterSnapshot[i].Item);
-    }
-
     /// <summary>只唤醒由本管理器主动休眠的实体，避免干扰死亡与对象池状态。</summary>
-    private void RefreshTrackedItemChunkDormancy(Item item)
+    private bool RefreshTrackedItemChunkDormancy(Item item)
     {
         if (item == null || item.DestructionHandled || _chunkManager == null)
-            return;
+            return false;
 
         bool presentationReady = _chunkManager.IsRuntimeEntityPresentationReady(
             item.transform.position);
         if (!presentationReady)
         {
-            if (item.gameObject.activeSelf)
+            if (item.gameObject.activeSelf &&
+                !IsVisibleByAnyActiveCamera(item.transform.position, 0.15f))
             {
                 _chunkDormantItems.Add(item);
                 item.gameObject.SetActive(false);
+                return true;
             }
 
-            return;
+            return false;
         }
 
-        if (_chunkDormantItems.Remove(item) && !item.gameObject.activeSelf)
+        if (item.gameObject.activeSelf)
+            _chunkDormantItems.Remove(item);
+        if (_chunkDormantItems.Contains(item) &&
+            !IsVisibleByAnyActiveCamera(item.transform.position, 0.15f) &&
+            !item.gameObject.activeSelf)
         {
+            _chunkDormantItems.Remove(item);
             item.gameObject.SetActive(true);
+            return true;
         }
+        return false;
     }
 
     private void OnMonsterDeathStarted(Item item, SpawnerConfig config)
@@ -1233,180 +1256,119 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
         QueueDeathReplacement(config);
     }
 
-    private void MaintainTrackedPopulation()
+    /// <summary>分批休眠远处活体并恢复邻近居民；一次调度最多执行一个实体生命周期操作。</summary>
+    private bool MaintainResidentStreaming()
     {
-        if (Time.unscaledTime < _nextPopulationMaintenanceTime)
-            return;
-
-        _nextPopulationMaintenanceTime = Time.unscaledTime + Mathf.Max(0.5f, _populationMaintenanceInterval);
-        _monsterManager.PruneInvalidRegistrations();
-        RefreshMonsterSnapshot();
-        CollectPopulationOverflow(_itemSnapshot);
-        for (int i = 0; i < _itemSnapshot.Count; i++)
-        {
-            Item item = _itemSnapshot[i];
-            if (item != null && _itemManager != null)
-                _itemManager.DespawnItem(item, saveData: false);
-        }
-    }
-
-    private void CollectPopulationOverflow(List<Item> overflow)
-    {
-        overflow.Clear();
-        _overflowSpeciesCounts.Clear();
-        _overflowGroupCounts.Clear();
-        _overflowNearbyCounts.Clear();
-        float multiplier = GameDifficultyService.Current.World.SpawnPopulationMultiplier;
-        int globalLimit = GameDifficultyService.ScaleCount(_globalAliveLimit, multiplier, 1);
-        int totalCount = AiRuntimeBackendService.UseEntities && _hasLimitedEntities
-            ? AiRuntimeBackendService.Ecology?.PopulationLimitedCount ?? 0 : 0;
-
-        // 先汇总每个配置在每位玩家周边的数量；随后每次选中回收时增量扣减。
-        for (int i = 0; i < _monsterSnapshot.Count; i++)
-        {
-            MonsterManager.Registration registration = _monsterSnapshot[i];
-            SpawnerConfig config = registration.Config;
-            if (config != null && !config.UnboundedDailyGrowth && !config.IgnorePopulationLimits &&
-                MonsterManager.IsActiveForPopulationLimits(registration.Item))
-                AdjustOverflowNearbyCounts(config, registration.Item.transform.position, 1);
-        }
-
-        for (int registrationIndex = 0; registrationIndex < _monsterSnapshot.Count; registrationIndex++)
-        {
-            MonsterManager.Registration registration = _monsterSnapshot[registrationIndex];
-            Item item = registration.Item;
-            SpawnerConfig config = registration.Config;
-            if (!MonsterManager.IsActiveForPopulationLimits(item) ||
-                item.itemData == null ||
-                config == null || config.UnboundedDailyGrowth || config.IgnorePopulationLimits)
-            {
-                continue;
-            }
-
-            string speciesId = registration.SpeciesId;
-            _overflowSpeciesCounts.TryGetValue(speciesId, out int speciesCount);
-            if (!_overflowGroupCounts.TryGetValue(config, out int groupCount) && UsesEntityPopulation(config))
-                groupCount = AiRuntimeBackendService.Ecology?.GetGroupCount(config) ?? 0;
-
-            int speciesLimit = 0;
-            if (config.SpawnEntries != null)
-            {
-                for (int i = 0; i < config.SpawnEntries.Count; i++)
-                {
-                    SpawnerConfig.SpawnEntry entry = config.SpawnEntries[i];
-                    if (entry != null && entry.PrefabName == speciesId)
-                    {
-                        speciesLimit = GameDifficultyService.ScaleCount(entry.SpeciesAliveLimit, multiplier);
-                        break;
-                    }
-                }
-            }
-
-            bool exceedsLimit = totalCount >= globalLimit ||
-                groupCount >= GetEffectiveGroupLimit(config) ||
-                (speciesLimit > 0 && speciesCount >= speciesLimit) ||
-                ExceedsNearbyPlayerLimit(item, config);
-            if (exceedsLimit && !_monsterManager.IsEcologyRecycleProtected(item))
-            {
-                overflow.Add(item);
-                AdjustOverflowNearbyCounts(config, item.transform.position, -1);
-                continue;
-            }
-            // 已选中回收的对象不再占用后续候选的额度，避免连锁过度裁剪。
-            totalCount++;
-            _overflowSpeciesCounts[speciesId] = speciesCount + 1;
-            _overflowGroupCounts[config] = groupCount + 1;
-        }
-    }
-
-    private bool ExceedsNearbyPlayerLimit(Item item, SpawnerConfig config)
-    {
-        int limit = GameDifficultyService.ScaleCount(config.PerPlayerAliveLimit,
-            GameDifficultyService.Current.World.SpawnPopulationMultiplier);
-        if (limit <= 0 || _playerPositions.Count == 0)
+        SaveDataMgr saveManager = SaveDataMgr.Instance;
+        if (saveManager == null || saveManager.SaveData == null || _monsterManager == null)
             return false;
 
-        float radius = Mathf.Max(1f, config.PlayerPopulationRadius);
-        float radiusSqr = radius * radius;
-        for (int playerIndex = 0; playerIndex < _playerPositions.Count; playerIndex++)
+        RefreshMonsterSnapshot();
+        int checks = Mathf.Min(Mathf.Max(1, _settings.ResidentChecksPerTick), _monsterSnapshot.Count);
+        float now = Time.unscaledTime;
+        for (int i = 0; i < checks; i++)
         {
-            Vector3 playerPosition = _playerPositions[playerIndex];
-            if (WorldTopologyRuntime.SqrDistance(item.transform.position, playerPosition) > radiusSqr)
+            if (_activeResidentCursor >= _monsterSnapshot.Count)
+                _activeResidentCursor = 0;
+            MonsterManager.Registration registration = _monsterSnapshot[_activeResidentCursor++];
+            Item item = registration.Item;
+            SpawnerConfig config = registration.Config;
+            if (item == null || item.DestructionHandled || config == null)
                 continue;
 
-            _overflowNearbyCounts.TryGetValue((config, playerIndex), out int nearbyCount);
-            if (nearbyCount > limit)
+            // 区块事件处理常规显隐，这里补偿相机移动后仍待处理的可见实体。
+            if (RefreshTrackedItemChunkDormancy(item))
+                return true;
+            if (config.RecycleDistance <= 0f || _monsterManager.IsEcologyRecycleProtected(item) ||
+                IsNearAnyPlayer(item.transform.position, config.RecycleDistance) ||
+                IsVisibleByAnyActiveCamera(item.transform.position, 0.15f))
+            {
+                _farAwaySince.Remove(item);
+                continue;
+            }
+
+            if (!_farAwaySince.TryGetValue(item, out float farSince))
+            {
+                _farAwaySince[item] = now;
+                continue;
+            }
+            if (now - farSince < Mathf.Max(0f, config.RecycleGraceSeconds))
+                continue;
+
+            try
+            {
+                if (saveManager.TryParkRuntimeAi(item))
+                    return true;
+            }
+            catch (Exception exception)
+            {
+                _farAwaySince[item] = now;
+                Debug.LogError($"[MonsterSpawnerManager] 休眠生物失败：{item.name}", item);
+                Debug.LogException(exception);
+            }
+        }
+
+        int parkedChecks = Mathf.Max(1, _settings.ResidentChecksPerTick);
+        int priorityChecks = Mathf.Min(parkedChecks, _wakePriorityAddresses.Count);
+        for (int i = 0; i < priorityChecks; i++)
+        {
+            RuntimeWorldAddress address = _wakePriorityAddresses.Dequeue();
+            _queuedWakePriorityAddresses.Remove(address);
+            if (!saveManager.TryGetNextParkedRuntimeAi(address, out ItemData prioritized))
+                continue;
+            if (!TryWakeResidentSnapshot(saveManager, prioritized, now))
+                continue;
+            if (!_nextResidentWakeAttempt.ContainsKey(prioritized.Guid))
+                QueueWakePriorityAddress(address);
+            return true;
+        }
+
+        for (int i = priorityChecks; i < parkedChecks; i++)
+        {
+            if (!saveManager.TryGetNextParkedRuntimeAi(ref _parkedAddressCursor, out ItemData snapshot))
+                break;
+            if (TryWakeResidentSnapshot(saveManager, snapshot, now))
                 return true;
         }
 
         return false;
     }
 
-    /// <summary>一次汇总、逐项扣减；复杂度与怪物数×玩家数成正比，不再逐怪物重扫整表。</summary>
-    private void AdjustOverflowNearbyCounts(SpawnerConfig config, Vector3 position, int delta)
+    /// <summary>只有玩家附近、区块就绪且所有活动镜头之外，才恢复同一居民的完整状态。</summary>
+    private bool TryWakeResidentSnapshot(SaveDataMgr saveManager, ItemData snapshot, float now)
     {
-        if (config.PerPlayerAliveLimit <= 0) return;
-        float radius = Mathf.Max(1f, config.PlayerPopulationRadius);
-        float radiusSqr = radius * radius;
-        for (int player = 0; player < _playerPositions.Count; player++)
-        {
-            if (WorldTopologyRuntime.SqrDistance(position, _playerPositions[player]) > radiusSqr)
-                continue;
-            var key = (config, player);
-            if (!_overflowNearbyCounts.TryGetValue(key, out int count) && UsesEntityPopulation(config))
-                count = AiRuntimeBackendService.Ecology?.CountGroupWithinRadius(config, _playerPositions[player], radiusSqr) ?? 0;
-            _overflowNearbyCounts[key] = count + delta;
-        }
+        if (snapshot?.transform == null ||
+            !_monsterManager.TryGetConfigForSpecies(snapshot.IDName, out SpawnerConfig config) ||
+            config.RecycleDistance <= 0f)
+            return false;
+
+        Vector3 position = snapshot.transform.position;
+        float wakeDistance = Mathf.Max(config.MaxSpawnDistance, config.RecycleDistance * 0.8f);
+        if (!IsNearAnyPlayer(position, wakeDistance) ||
+            _monsterManager.Count >= Mathf.Max(1, _settings.MaxLoadedGameObjectActors) ||
+            !_chunkManager.IsRuntimeEntityPresentationReady(position) ||
+            IsVisibleByAnyActiveCamera(position, 0.15f) ||
+            (_nextResidentWakeAttempt.TryGetValue(snapshot.Guid, out float nextAttempt) && now < nextAttempt))
+            return false;
+
+        if (saveManager.TryWakeParkedRuntimeAi(snapshot))
+            _nextResidentWakeAttempt.Remove(snapshot.Guid);
+        else
+            _nextResidentWakeAttempt[snapshot.Guid] = now + 5f;
+        return true;
     }
 
-    private void RecycleDistantPopulation()
+    /// <summary>非权威客户端只维护本地表现显隐，不操作生态出生和持久化。</summary>
+    private void RefreshClientChunkDormancy()
     {
-        if (Time.unscaledTime < _nextRecycleCheckTime || _playerPositions.Count == 0)
-            return;
-
-        _nextRecycleCheckTime = Time.unscaledTime + Mathf.Max(0.5f, _recycleCheckInterval);
-        if (AiRuntimeBackendService.UseEntities && AiRuntimeBackendService.HasEntitiesRoutes)
-            AiRuntimeBackendService.Ecology?.RecycleDistantPopulation(_playerPositions, Time.unscaledTime);
-
-        _itemSnapshot.Clear();
         RefreshMonsterSnapshot();
-        float now = Time.unscaledTime;
-
-        for (int registrationIndex = 0; registrationIndex < _monsterSnapshot.Count; registrationIndex++)
+        int checks = Mathf.Min(Mathf.Max(1, _settings.ResidentChecksPerTick), _monsterSnapshot.Count);
+        for (int i = 0; i < checks; i++)
         {
-            MonsterManager.Registration registration = _monsterSnapshot[registrationIndex];
-            Item item = registration.Item;
-            SpawnerConfig config = registration.Config;
-            if (item == null || config == null || config.RecycleDistance <= 0f)
-                continue;
-            if (_monsterManager.IsEcologyRecycleProtected(item))
-            {
-                _farAwaySince.Remove(item);
-                continue;
-            }
-
-            if (!IsNearAnyPlayer(item.transform.position, config.RecycleDistance))
-            {
-                if (!_farAwaySince.TryGetValue(item, out float farSince))
-                {
-                    _farAwaySince[item] = now;
-                }
-                else if (now - farSince >= Mathf.Max(0f, config.RecycleGraceSeconds))
-                {
-                    _itemSnapshot.Add(item);
-                }
-            }
-            else
-            {
-                _farAwaySince.Remove(item);
-            }
-        }
-
-        for (int i = 0; i < _itemSnapshot.Count; i++)
-        {
-            Item item = _itemSnapshot[i];
-            if (item != null && _itemManager != null)
-                _itemManager.DespawnItem(item, saveData: false);
+            if (_activeResidentCursor >= _monsterSnapshot.Count)
+                _activeResidentCursor = 0;
+            if (RefreshTrackedItemChunkDormancy(_monsterSnapshot[_activeResidentCursor++].Item))
+                return;
         }
     }
 
@@ -1440,33 +1402,6 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
         return false;
     }
 
-    /// <summary>只清理已经明确改由 AIECS 接管的旧 GameObject 残留，其他动物继续保留。</summary>
-    private void RemoveLegacyEntityRoutedActorInstances()
-    {
-        if (_itemManager == null || GameRes.Instance == null)
-            return;
-
-        _itemSnapshot.Clear();
-        foreach (Item item in _itemManager.WorldRunTimeItems.Values)
-        {
-            if (item == null || item is Player || item.itemData == null)
-                continue;
-            if (!GameRes.Instance.TryGetItemDefinition(item.itemData.IDName, out RuntimeItemDefinition definition) ||
-                !definition.IsActor ||
-                !AiRuntimeBackendService.UsesEntities(item.itemData.IDName))
-                continue;
-            _itemSnapshot.Add(item);
-        }
-
-        for (int i = 0; i < _itemSnapshot.Count; i++)
-        {
-            Item item = _itemSnapshot[i];
-            if (item != null && !item.DestructionHandled)
-                _itemManager.DespawnItem(item, saveData: false);
-        }
-        _itemSnapshot.Clear();
-    }
-
     #endregion
 
     #region 状态与调试
@@ -1481,7 +1416,6 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
             _runtimeStates[key] = state;
         }
 
-        state.TriggeredWindowIndices ??= new List<int>();
         state.PendingSpawnCount = Mathf.Max(0, state.PendingSpawnCount);
         state.PendingReplacementCount = Mathf.Max(0, state.PendingReplacementCount);
         return state;

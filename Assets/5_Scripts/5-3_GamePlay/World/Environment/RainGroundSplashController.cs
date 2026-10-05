@@ -14,8 +14,6 @@ public sealed class RainGroundSplashController : MonoBehaviour
 
     [Header("材质与排序")]
     [SerializeField] private Material _splashMaterial; // 环形水花材质
-    [SerializeField] private string _sortingLayerName = "Default"; // 位于地面之上、角色之下
-    [SerializeField] private int _sortingOrder = 40; // 同层排序
     [SerializeField] private float _splashZ; // 世界空间深度
 
     [Header("密度")]
@@ -207,8 +205,7 @@ public sealed class RainGroundSplashController : MonoBehaviour
         {
             _splashRenderer.renderMode = ParticleSystemRenderMode.Billboard;
             _splashRenderer.sharedMaterial = _splashMaterial;
-            _splashRenderer.sortingLayerName = _sortingLayerName;
-            _splashRenderer.sortingOrder = _sortingOrder;
+            WorldSortingManager.GetInstance().ApplyRenderer(_splashRenderer, WorldSortingManager.GroundSplashCategory);
             _splashRenderer.enableGPUInstancing = true;
         }
 

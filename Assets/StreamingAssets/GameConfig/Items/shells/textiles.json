@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 1,
+  "items": [
+    {
+      "id": "Cloth",
+      "parent": "BasicItem_Base",
+      "gameName": "布",
+      "description": "由棉花纺织而成的布匹，可作为后续制作材料。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 0.2,
+      "volume": 0.2,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": ["Material"],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Cloth/Cloth_Icon.png"
+      },
+      "modules": {}
+    },
+    {
+      "id": "SilkFiber",
+      "parent": "BasicItem_Base",
+      "gameName": "蚕丝",
+      "description": "细长柔韧的天然纤维，可通过纺织加工制成丝绸。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 0.05,
+      "volume": 0.1,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": ["Material", "Fiber"],
+      "processing": {
+        "weave": {
+          "inputAmount": 2,
+          "work": 2,
+          "outputs": [{ "itemId": "Silk", "amount": 1 }]
+        }
+      },
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/SilkFiber/SilkFiber_Icon.png"
+      },
+      "modules": {}
+    },
+    {
+      "id": "Silk",
+      "parent": "BasicItem_Base",
+      "gameName": "丝绸",
+      "description": "由蚕丝纺织而成的轻柔织物，可作为后续制作材料。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 0.1,
+      "volume": 0.1,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": ["Material"],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Silk/Silk_Icon.png"
+      },
+      "modules": {}
+    }
+  ]
+}

@@ -8,8 +8,8 @@ public partial class Inventory_Data
 {
     #region 动态槽位容量
 
-    /// <summary>普通库存单格默认最多 100 件；字段名沿用旧 SlotMaxVolume 以避免破坏现有 Prefab。</summary>
-    public const float DefaultSlotVolume = 100f;
+    /// <summary>普通库存使用整型最大值作为无限堆叠上限，重量和体积限制独立生效。</summary>
+    public const float DefaultSlotVolume = int.MaxValue;
 
     /// <summary>一立方米对应的升数；物品库存内部体积单位为 L。</summary>
     public const float LitersPerCubicMeter = 1000f;
@@ -23,8 +23,8 @@ public partial class Inventory_Data
     /// <summary>玩家背包重量可超过常规上限的比例；体积上限不允许超出，储物容器不使用该宽限。</summary>
     public const float PlayerBagCarryOverageMultiplier = 1.5f;
 
-    /// <summary>玩家主背包的基础槽位数；自动收缩时不会低于该数量。</summary>
-    public const int DefaultPlayerBagSlotCount = 27;
+    /// <summary>生存玩家主背包固定槽位数，也是创造背包的基础槽位数。</summary>
+    public const int DefaultPlayerBagSlotCount = 20;
 
     /// <summary>空余槽位小于等于该数量时触发扩容。</summary>
     public const int PlayerBagExpandFreeSlotThreshold = 2;
@@ -62,7 +62,7 @@ public partial class Inventory_Data
     [MemoryPackIgnore, FastClonerIgnore, JsonIgnore]
     private float CarryCapacityOverageMultiplier { get; set; } = 1f;
 
-    /// <summary>只有玩家主背包启用“27 格基线 + 3 个预留空格”的动态收缩策略。</summary>
+    /// <summary>只有创造主背包启用“20 格基线 + 3 个预留空格”的动态收缩策略。</summary>
     [MemoryPackIgnore, FastClonerIgnore, JsonIgnore]
     private bool UsesPlayerBagDynamicSlotPolicy { get; set; }
 
@@ -74,22 +74,24 @@ public partial class Inventory_Data
     [MemoryPackIgnore, FastClonerIgnore, JsonIgnore]
     public float CurrentCarryVolume => CalculateCarryVolume();
 
-    /// <summary>配置普通玩家主背包：格子自动扩容、可堆叠物单格无限；重量允许有限超载，体积严格受限。</summary>
+    /// <summary>生存主背包固定 20 格；创造状态恢复后才允许扩容，堆叠和携带规则独立处理。</summary>
     public void ConfigurePlayerBagCapacity(float maxWeight, float maxVolume)
     {
         UsesPlayerBagDynamicSlotPolicy = true;
         CarryCapacityOverageMultiplier = PlayerBagCarryOverageMultiplier;
-        SetUnlimitedSlots(true);
+        SetUnlimitedSlots(HasUnlimitedCarryCapacity);
+        if (!HasUnlimitedSlots)
+            SetFixedSlotCount(DefaultPlayerBagSlotCount);
         SetUnlimitedStackSize(true);
         SetCarryCapacity(maxWeight, maxVolume);
     }
 
-    /// <summary>配置储物容器：重量上限使用 kg、体积上限使用 L；槽位按需增长，单格遵守普通堆叠规则。</summary>
+    /// <summary>配置固定格数储物容器，重量上限使用 kg、体积上限使用 L。</summary>
     public void ConfigureStorageContainerCapacity(float maxWeight, float maxVolume)
     {
         UsesPlayerBagDynamicSlotPolicy = false;
         CarryCapacityOverageMultiplier = 1f;
-        SetUnlimitedSlots(true);
+        SetUnlimitedSlots(false);
         SetUnlimitedStackSize(false);
         SetCarryCapacity(maxWeight, maxVolume);
     }
@@ -132,7 +134,7 @@ public partial class Inventory_Data
                 continue;
 
             if (enabled)
-                slot.SlotMaxVolume = float.MaxValue;
+                slot.SlotMaxVolume = DefaultSlotVolume;
             else if (slot.SlotMaxVolume == float.MaxValue)
                 slot.SlotMaxVolume = DefaultSlotVolume;
         }
@@ -143,6 +145,18 @@ public partial class Inventory_Data
     {
         HasUnlimitedSlots = enabled;
         EnsureSpareSlot();
+    }
+
+    /// <summary>按当前配置初始化固定格数，不在物品增减时改变格子数量。</summary>
+    public void SetFixedSlotCount(int count)
+    {
+        SetUnlimitedSlots(false);
+        itemSlots ??= new System.Collections.Generic.List<ItemSlot>();
+        count = Mathf.Max(1, count);
+        if (itemSlots.Count > count)
+            itemSlots.RemoveRange(count, itemSlots.Count - count);
+        AddDynamicSlots(Mathf.Max(0, count - itemSlots.Count));
+        ReindexDynamicSlots();
     }
 
     /// <summary>
@@ -174,8 +188,7 @@ public partial class Inventory_Data
     }
 
     /// <summary>
-    /// 玩家主背包自检：先按空余槽位阈值扩容，再在总槽位超过 27 时删除多余空槽。
-    /// 收缩目标同时保留 3 个空槽，因此不会在 27/28 格之间反复扩缩。
+    /// 创造主背包自检：按空余槽位阈值扩容，多余空槽收缩到 20 格基线并保留 3 个空槽。
     /// </summary>
     public void MaintainDynamicSlotCount()
     {
@@ -224,7 +237,7 @@ public partial class Inventory_Data
         {
             itemSlots.Add(new ItemSlot(itemSlots.Count)
             {
-                SlotMaxVolume = HasUnlimitedStackSize ? float.MaxValue : DefaultSlotVolume
+                SlotMaxVolume = DefaultSlotVolume
             });
         }
     }

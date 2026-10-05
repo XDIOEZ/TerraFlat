@@ -4,7 +4,7 @@ namespace FlatWorld.WorldModel
 {
     /// <summary>
     /// 旧版 ChunkGenerator_Land 的单点气候结果。
-    /// 高度、基础温度和基础降水来自旧版三通道噪声；温度已叠加海拔降温，最终降水已叠加迎风增雨与背风雨影。
+    /// 高度、基础温度和基础降水来自三通道噪声；温度修正统一交给 FinishSurfaceClimate，降水已叠加迎风增雨与背风雨影。
     /// 风向始终是单位向量，可直接写入区块环境层。
     /// </summary>
     internal readonly struct LegacyClimateSample
@@ -54,9 +54,18 @@ namespace FlatWorld.WorldModel
 
         /// <summary>采样旧版基础降水，再按区域风向和逆风地形计算最终降水。</summary>
         internal static double SamplePrecipitation(ChunkGenerationRequest request,
-            ChunkGenerationSettingsSnapshot settings, int worldX, int worldY)
+            ChunkGenerationSettingsSnapshot settings, int worldX, int worldY,
+            double? sampledHeight = null)
         {
-            return SampleClimate(request, settings, worldX, worldY).Precipitation;
+            NormalizeWorldCell(request, ref worldX, ref worldY);
+            float height = sampledHeight.HasValue
+                ? (float)sampledHeight.Value
+                : SampleHeightAt(request, settings, worldX, worldY);
+            float basePrecipitation = SampleChannel(request, settings,
+                settings.PrecipitationNoise, PrecipitationChannelId, worldX, worldY);
+            SampleWind(request, settings, worldX, worldY, out float windX, out float windY);
+            return SampleOrographicPrecipitation(request, settings, worldX, worldY,
+                height, basePrecipitation, windX, windY);
         }
 
         /// <summary>一次返回地表格需要的高度、基础/地形降水和风向。</summary>
@@ -68,8 +77,7 @@ namespace FlatWorld.WorldModel
             float baseTemperature = SampleChannel(request, settings,
                 settings.TemperatureNoise,
                 TemperatureChannelId, worldX, worldY);
-            float temperature = (float)settings.ApplyAltitudeTemperatureCooling(
-                height, baseTemperature);
+            float temperature = baseTemperature;
             double temperatureCelsius = Lerp(
                 settings.TemperatureCelsiusMin,
                 settings.TemperatureCelsiusMax,
@@ -78,7 +86,23 @@ namespace FlatWorld.WorldModel
                 settings.PrecipitationNoise,
                 PrecipitationChannelId, worldX, worldY);
             SampleWind(request, settings, worldX, worldY, out float windX, out float windY);
+            float precipitation = SampleOrographicPrecipitation(request, settings,
+                worldX, worldY, height, basePrecipitation, windX, windY);
+            return new LegacyClimateSample(height, temperature, temperatureCelsius,
+                basePrecipitation, precipitation, windX, windY);
+        }
 
+        /// <summary>地形降水的共同计算步骤，径流采样无需附带计算温度。</summary>
+        private static float SampleOrographicPrecipitation(
+            ChunkGenerationRequest request,
+            ChunkGenerationSettingsSnapshot settings,
+            int worldX,
+            int worldY,
+            float height,
+            float basePrecipitation,
+            float windX,
+            float windY)
+        {
             int sampleCount = settings.OrographicSampleCount;
             float sampleDistance = (float)settings.OrographicSampleDistance;
             float meanUpwindHeight = 0f;
@@ -102,8 +126,7 @@ namespace FlatWorld.WorldModel
                 maxUpwindHeight,
                 (float)settings.WindwardRainGain,
                 (float)settings.LeewardRainLoss);
-            return new LegacyClimateSample(height, temperature, temperatureCelsius,
-                basePrecipitation, precipitation, windX, windY);
+            return precipitation;
         }
 
         #endregion

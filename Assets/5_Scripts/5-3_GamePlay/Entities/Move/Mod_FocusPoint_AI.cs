@@ -4,12 +4,12 @@ using UnityEngine;
 
 public class Mod_FocusPoint_AI : Mod_FocusPoint
 {
-    public Mover mover;
+    public Mod_Mover mover;
     public override void Load()
     {
         ModData.ReadData(ref Data);
 
-        mover = item.itemMods.GetMod_ByID(ModText.Mover) as Mover;
+        mover = item.itemMods.GetMod_ByID(ModText.Mod_Mover) as Mod_Mover;
     }
 
     public override void ModUpdate(float deltaTime)

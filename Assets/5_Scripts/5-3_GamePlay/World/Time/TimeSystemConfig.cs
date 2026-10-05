@@ -44,7 +44,7 @@ public sealed class TimeSystemProfileConfig
     public string Mode = TimeSystemModes.Unlimited;
     public float TimeScale = 1f;
     public float DayLength = 1440f;
-    public float InitialTime = 360f;
+    public float InitialTime = 480f;
     public int InitialTotalDays;
     public float TimeLimitDays;
     public string ReferenceScene = string.Empty;

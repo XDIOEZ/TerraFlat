@@ -53,3 +53,4 @@ MonoBehaviour:
     BitData: 
   PanelPrefab: {fileID: 8590396981883253119, guid: 5faa18d504c67424c9ca3ee2f9ff11e6, type: 3}
   StationId: mortar
+  SlotCount: 6

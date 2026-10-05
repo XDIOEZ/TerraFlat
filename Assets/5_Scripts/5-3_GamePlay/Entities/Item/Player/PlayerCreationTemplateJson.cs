@@ -9,7 +9,7 @@ using UnityEngine;
 
 #region 玩家创建配置模型
 
-/// <summary>玩家创建 JSON 配置目录；只在无玩家存档的创建阶段应用。</summary>
+/// <summary>玩家创建 JSON 配置目录；创建期属性只用于新玩家，热量传导速率始终取当前配置。</summary>
 [Serializable]
 public sealed class PlayerCreationTemplateCatalogConfig
 {
@@ -61,7 +61,7 @@ public sealed class PlayerCreationTemplateConfig
     [Serializable]
     public sealed class MovementSettings
     {
-        [JsonProperty("speed")] public float Speed = 5f;
+        [JsonProperty("speed")] public float Speed = 3.5f;
         [JsonProperty("slowDownSpeed")] public float SlowDownSpeed = 5f;
         [JsonProperty("endSpeed")] public float EndSpeed = 0.1f;
         [JsonProperty("moveStaminaConsume")] public float MoveStaminaConsume;
@@ -130,7 +130,7 @@ public sealed class PlayerCreationTemplateConfig
             throw new InvalidOperationException($"玩家创建 JSON 配置不完整：{Id}");
 
         ApplyCore(player.Data);
-        ApplyMovement(player.GetComponentInChildren<Mover>(true));
+        ApplyMovement(player.GetComponentInChildren<Mod_Mover>(true));
         ApplyFood(player.GetComponentInChildren<Mod_Food>(true));
         ApplyStamina(player.GetComponentInChildren<Mod_Stamina>(true));
 
@@ -151,12 +151,12 @@ public sealed class PlayerCreationTemplateConfig
         data.MaxCarryVolume = Mathf.Max(0f, Core.MaxCarryVolume);
     }
 
-    private void ApplyMovement(Mover mover)
+    private void ApplyMovement(Mod_Mover mover)
     {
         if (mover == null)
             return;
 
-        mover.Data = new Mover.Mover_SaveData
+        mover.Data = new Mod_Mover.Mover_SaveData
         {
             Speed = new GameValue_float(Mathf.Max(0f, Movement.Speed)),
             slowDownSpeed = Mathf.Max(0f, Movement.SlowDownSpeed),

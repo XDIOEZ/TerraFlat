@@ -26,7 +26,24 @@ internal static class ChunkBatchRendererGroupService
         Back,
         Ground,
         Water,
-        Blocking
+        SupportShadow,
+        Support,
+        Environment,
+        Snow,
+        Blocking,
+        SnowWall,
+        Grass,
+        GroundCover,
+        MechanicalLowerBase,
+        MechanicalLowerMotionA,
+        MechanicalLowerMotionB,
+        MechanicalLowerFront,
+        MechanicalUpperBase,
+        MechanicalUpperMotionA,
+        MechanicalUpperMotionB,
+        MechanicalUpperFront,
+        NaturalStatic,
+        NaturalShadow
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -37,8 +54,8 @@ internal static class ChunkBatchRendererGroupService
         public Vector4 Data0;
         public Vector4 Data1;
         public Vector4 Tint;
-        public Vector4 FlowX; // 四个共享格角的下游速度 X
-        public Vector4 FlowY; // 四个共享格角的下游速度 Y
+        public Vector4 FlowX; // 河流为四格角速度，海洋为当前格风场单位方向 X。
+        public Vector4 FlowY; // 河流为四格角速度，海洋为当前格风场单位方向 Y。
 
         public static InstanceData Create(Matrix4x4 localToWorld, Vector4 data0, Vector4 data1, Color tint)
         {
@@ -56,17 +73,34 @@ internal static class ChunkBatchRendererGroupService
     internal readonly struct Visual
     {
         public Visual(VisualLayer layer, Sprite sprite, Material sourceMaterial, InstanceData data)
+            : this(layer, sprite, sourceMaterial, data, false, default)
+        {
+        }
+
+        /// <summary>需要透明深度排序的实例额外携带稳定世界锚点；机械建筑用它按 Y 轴排序整组子图层。</summary>
+        public Visual(VisualLayer layer, Sprite sprite, Material sourceMaterial, InstanceData data,
+            Vector3 sortingPosition)
+            : this(layer, sprite, sourceMaterial, data, true, sortingPosition)
+        {
+        }
+
+        private Visual(VisualLayer layer, Sprite sprite, Material sourceMaterial, InstanceData data,
+            bool depthSorted, Vector3 sortingPosition)
         {
             Layer = layer;
             Sprite = sprite;
             SourceMaterial = sourceMaterial;
             Data = data;
+            DepthSorted = depthSorted;
+            SortingPosition = sortingPosition;
         }
 
         public VisualLayer Layer { get; }
         public Sprite Sprite { get; }
         public Material SourceMaterial { get; }
         public InstanceData Data { get; }
+        public bool DepthSorted { get; }
+        public Vector3 SortingPosition { get; }
     }
 
     private static Backend backend;
@@ -74,12 +108,12 @@ internal static class ChunkBatchRendererGroupService
     static ChunkBatchRendererGroupService()
     {
         // 资源会话结束必须先注销 BRG；共享缓存本身不依赖地形后端。
-        SharedSpriteMeshCache.Clearing += ResetStatics;
+        SharedSpriteMeshCache.Clearing += OnSharedMeshesClearing;
     }
 
     internal static void RegisterOwner(ChunkTilemapRenderer owner, Bounds worldBounds)
     {
-        if (owner == null)
+        if (owner == null || SharedSpriteMeshCache.IsSessionEnding)
             return;
         EnsureBackend().RegisterOwner(owner, worldBounds);
     }
@@ -89,6 +123,10 @@ internal static class ChunkBatchRendererGroupService
         backend?.UnregisterOwner(owner);
     }
 
+    /// <summary>草花与区块共用本机镜像，避免由后续补绘相机覆盖已绘制的角色。</summary>
+    internal static void RefreshOwnerProjection(ChunkTilemapRenderer owner)
+        => backend?.RefreshOwnerProjection(owner);
+
     /// <summary>
     /// 世界窗口彻底关闭后再释放空闲后端。
     /// 普通区块流送期间即使短暂没有 Owner，也保留 BRG，避免反复销毁/重建共享批次。
@@ -97,8 +135,7 @@ internal static class ChunkBatchRendererGroupService
     {
         if (backend == null || backend.OwnerCount != 0)
             return;
-        backend.Dispose();
-        backend = null;
+        ReleaseBackend(false);
     }
 
     internal static void SetVisual(ChunkTilemapRenderer owner, int slotKey, Visual visual)
@@ -113,16 +150,21 @@ internal static class ChunkBatchRendererGroupService
         backend?.ClearVisual(owner, slotKey);
     }
 
+    /// <summary>整块首次提交时合并同批次的 GPU 写入。</summary>
+    internal static void BeginBulkSubmit() => backend?.BeginBulkSubmit();
+
+    internal static void EndBulkSubmit() => backend?.EndBulkSubmit();
+
     /// <summary>检查某个区块地形表现是否仍登记在当前 BRG 后端。</summary>
     internal static bool IsOwnerRegistered(ChunkTilemapRenderer owner)
     {
         return owner != null && backend?.IsOwnerRegistered(owner) == true;
     }
 
-    /// <summary>读取当前 Owner 实际登记到 BRG 的实例数，用于判断“数据存在但表现提交缺失”。</summary>
-    internal static int GetOwnerVisualCount(ChunkTilemapRenderer owner)
+    /// <summary>只统计基础地形图层，避免同 Owner 的草花扩展实例污染地形对账。</summary>
+    internal static int GetOwnerTerrainVisualCount(ChunkTilemapRenderer owner)
     {
-        return owner != null && backend != null ? backend.GetOwnerVisualCount(owner) : 0;
+        return owner != null && backend != null ? backend.GetOwnerTerrainVisualCount(owner) : 0;
     }
 
     /// <summary>构造当前 BRG 后端快照，供运行时日志和 Inspector ContextMenu 定向排查。</summary>
@@ -134,13 +176,39 @@ internal static class ChunkBatchRendererGroupService
     }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetStatics()
+    private static void ResetStatics() => ReleaseBackend(false);
+
+#if UNITY_EDITOR
+    /// <summary>Ctrl+R/脚本热重载后下一帧从权威 Chunk 数据恢复全部可见 BRG Owner。</summary>
+    [UnityEditor.InitializeOnLoadMethod]
+    private static void ScheduleEditorAssemblyReloadRecovery()
     {
-        if (RenderDebugEnabled && backend != null)
-            Debug.LogWarning("[ChunkRenderDebug] BRG backend 正在 Reset；现有 ChunkView 的基础地块表现需要重新登记。 " +
-                             backend.BuildDebugSummary());
-        backend?.Dispose();
+        UnityEditor.EditorApplication.delayCall -= RepairEditorAssemblyReloadedViews;
+        UnityEditor.EditorApplication.delayCall += RepairEditorAssemblyReloadedViews;
+    }
+
+    private static void RepairEditorAssemblyReloadedViews()
+    {
+        if (!Application.isPlaying)
+            return;
+
+        ChunkView[] views = UnityEngine.Object.FindObjectsByType<ChunkView>(FindObjectsSortMode.None);
+        for (int i = 0; i < views.Length; i++)
+            views[i]?.RepairPresentationBackendIfNeeded();
+    }
+#endif
+
+    private static void OnSharedMeshesClearing() => ReleaseBackend(!SharedSpriteMeshCache.IsSessionEnding);
+
+    /// <summary>正常退出静默释放；只有运行中丢弃仍有 Owner 的后端才报告异常重建。</summary>
+    private static void ReleaseBackend(bool reportActiveReset)
+    {
+        Backend previous = backend;
         backend = null;
+        if (reportActiveReset && Application.isPlaying && RenderDebugEnabled && previous != null && previous.OwnerCount > 0)
+            Debug.LogWarning("[ChunkRenderDebug] BRG backend 正在 Reset；现有 ChunkView 的 BRG 表现需要重新登记。 " +
+                             previous.BuildDebugSummary());
+        previous?.Dispose();
     }
 
     private static Backend EnsureBackend() => backend ??= new Backend();
@@ -155,35 +223,46 @@ internal static class ChunkBatchRendererGroupService
         private const int InstanceStride = 112;
         private const int ZeroPrefixBytes = InstanceStride;
         private const uint InstanceMetadataAddress = ZeroPrefixBytes;
-        private const int TerrainQueueBase = 2988;
+        private const string MechanicalKeyword = "_CHUNK_MECHANICAL";
         private static readonly int InstanceDataId = Shader.PropertyToID("_ChunkInstanceData");
         private static readonly int ElevationStrengthId = Shader.PropertyToID("_ElevationStrength");
         private static readonly int ElevationEdgeWidthId = Shader.PropertyToID("_ElevationEdgeWidth");
+        private static readonly int GrassSwayEnabledId = Shader.PropertyToID("_GrassSwayEnabled");
+        private const string GrassSwayKeyword = "_CHUNK_GRASS_SWAY";
 
         private readonly object syncRoot = new();
         private readonly BatchRendererGroup rendererGroup;
         private readonly Dictionary<ChunkTilemapRenderer, Dictionary<int, InstanceHandle>> ownerHandles = new();
-        private readonly Dictionary<ChunkTilemapRenderer, Bounds> ownerBounds = new();
-        private readonly Dictionary<ChunkTilemapRenderer, bool> ownerVisibility = new();
-        private readonly List<int> batchVisibleCounts = new();
+        /// <summary>注册时建立区块可见状态，剔除回调不再逐实例查字典。</summary>
+        private readonly Dictionary<int, OwnerCullingState> ownerCullingById = new();
+        private readonly List<OwnerCullingState> activeOwnerCullingStates = new();
+        /// <summary>每个批次复用本次剔除的可见实例索引。</summary>
+        private readonly List<List<int>> batchVisibleInstances = new();
+        /// <summary>实例或批次变化后，下次局部剔除重新收集可见索引。</summary>
+        private bool visibleInstanceListsDirty = true;
         private readonly Dictionary<VisualKey, TileBatch> batches = new();
         private readonly List<TileBatch> orderedBatches = new();
-        private readonly Dictionary<int, MeshRegistration> meshes = new();
+        private readonly HashSet<TileBatch> ownerRemovalBatches = new();
+        private readonly HashSet<TileBatch> bulkSubmitBatches = new();
+        private int bulkSubmitDepth;
+        private readonly Dictionary<(int SpriteId, bool SunShadow), MeshRegistration> meshes = new();
         private readonly Dictionary<MaterialKey, MaterialRegistration> materials = new();
         private readonly HashSet<int> warnedMissingOwnerIds = new();
         private readonly Material spriteTemplate;
         private readonly Material contactTemplate;
+        private readonly Material supportShadowTemplate;
         private readonly Material waterTemplate;
         private long cullingCallbackCount;
-        private long lastZeroVisibleWarningCull;
         private int lastCullingCommandCount;
         private int lastCullingVisibleCount;
         private bool disposed;
 
         public Backend()
         {
+            ValidateBatchSortingProfiles();
             spriteTemplate = LoadTemplate("Config/WorldModel/BRG/ChunkBRG-Sprite-Lit");
             contactTemplate = LoadTemplate("Config/WorldModel/BRG/ChunkBRG-Contact-Lit");
+            supportShadowTemplate = LoadTemplate("Config/WorldModel/BRG/ChunkBRG-Support-Shadow");
             waterTemplate = LoadTemplate("Config/WorldModel/BRG/ChunkBRG-Water-Lit");
             rendererGroup = new BatchRendererGroup(OnPerformCulling, IntPtr.Zero);
             GroundElevationShadowSettings.Changed += ApplyGroundElevationPreference;
@@ -206,10 +285,66 @@ internal static class ChunkBatchRendererGroupService
             {
                 if (!ownerHandles.ContainsKey(owner))
                     ownerHandles.Add(owner, new Dictionary<int, InstanceHandle>());
-                ownerBounds[owner] = worldBounds;
-                warnedMissingOwnerIds.Remove(owner.GetInstanceID());
+                int ownerId = owner.GetInstanceID();
+                RegisterOwnerCullingState(ownerId, worldBounds, owner.DepthPresentationOffset);
+                RefreshOwnerProjection(owner);
+                ownerCullingById[ownerId].Bounds = worldBounds;
+                warnedMissingOwnerIds.Remove(ownerId);
             }
         }
+
+        /// <summary>复用区块状态，使已有实例自动读取最新边界。</summary>
+        private void RegisterOwnerCullingState(int ownerId, Bounds worldBounds, Vector3 projectionOffset)
+        {
+            if (ownerCullingById.TryGetValue(ownerId, out OwnerCullingState state))
+            {
+                state.Bounds = worldBounds;
+                return;
+            }
+
+            state = new OwnerCullingState(worldBounds, activeOwnerCullingStates.Count)
+            {
+                ProjectionOffset = projectionOffset
+            };
+            ownerCullingById.Add(ownerId, state);
+            activeOwnerCullingStates.Add(state);
+            visibleInstanceListsDirty = true;
+        }
+
+        /// <summary>只在区块切换镜像时平移已有草花实例，并合并同批次的 GPU 上传。</summary>
+        public void RefreshOwnerProjection(ChunkTilemapRenderer owner)
+        {
+            lock (syncRoot)
+            {
+                if (owner == null || !ownerHandles.TryGetValue(owner, out var handles) ||
+                    !ownerCullingById.TryGetValue(owner.GetInstanceID(), out var state))
+                    return;
+
+                Vector3 offset = owner.DepthPresentationOffset;
+                Vector3 delta = offset - state.ProjectionOffset;
+                if (delta == Vector3.zero) return;
+                state.ProjectionOffset = offset;
+                Bounds bounds = state.Bounds;
+                bounds.center += delta;
+                state.Bounds = bounds;
+                visibleInstanceListsDirty = true;
+
+                BeginBulkSubmit();
+                try
+                {
+                    foreach (InstanceHandle handle in handles.Values)
+                    {
+                        if (!UsesOwnerProjection(handle.Batch.Key.Layer)) continue;
+                        handle.Batch.Translate(handle.Index, delta);
+                        bulkSubmitBatches.Add(handle.Batch);
+                    }
+                }
+                finally { EndBulkSubmit(); }
+            }
+        }
+
+        private static bool UsesOwnerProjection(VisualLayer layer)
+            => layer == VisualLayer.Grass || layer == VisualLayer.GroundCover;
 
         public bool IsOwnerRegistered(ChunkTilemapRenderer owner)
         {
@@ -217,12 +352,22 @@ internal static class ChunkBatchRendererGroupService
                 return owner != null && ownerHandles.ContainsKey(owner);
         }
 
-        public int GetOwnerVisualCount(ChunkTilemapRenderer owner)
+        public int GetOwnerTerrainVisualCount(ChunkTilemapRenderer owner)
         {
             lock (syncRoot)
-                return owner != null && ownerHandles.TryGetValue(owner, out Dictionary<int, InstanceHandle> handles)
-                    ? handles.Count
-                    : 0;
+            {
+                if (owner == null || !ownerHandles.TryGetValue(owner, out Dictionary<int, InstanceHandle> handles))
+                    return 0;
+
+                int count = 0;
+                foreach (InstanceHandle handle in handles.Values)
+                {
+                    VisualLayer layer = handle.Batch.Key.Layer;
+                    if (layer is VisualLayer.Back or VisualLayer.Ground or VisualLayer.Water or VisualLayer.Blocking)
+                        count++;
+                }
+                return count;
+            }
         }
 
         public string BuildDebugSummary(ChunkTilemapRenderer owner = null)
@@ -246,7 +391,8 @@ internal static class ChunkBatchRendererGroupService
                 string ownerPart = owner != null
                     ? $" owner={owner.name} ownerRegistered={ownerInstances >= 0} ownerInstances={Mathf.Max(0, ownerInstances)}"
                     : string.Empty;
-                return $"[ChunkRenderDebug] owners={ownerHandles.Count} batches={batches.Count} activeBatches={activeBatches} " +
+                return $"[ChunkRenderDebug] ownerCulling={WorldStreamingPreferences.OwnerCullingEnabled} " +
+                       $"owners={ownerHandles.Count} batches={batches.Count} activeBatches={activeBatches} " +
                        $"instances={totalInstances} meshes={meshes.Count} materials={materials.Count} " +
                        $"culls={cullingCallbackCount} lastCullCommands={lastCullingCommandCount} " +
                        $"lastCullVisible={lastCullingVisibleCount}{ownerPart}";
@@ -262,16 +408,50 @@ internal static class ChunkBatchRendererGroupService
                 if (!ownerHandles.TryGetValue(owner, out Dictionary<int, InstanceHandle> handles))
                     return;
 
-                while (handles.Count > 0)
+                ownerRemovalBatches.Clear();
+                foreach (InstanceHandle handle in handles.Values)
                 {
-                    using Dictionary<int, InstanceHandle>.Enumerator enumerator = handles.GetEnumerator();
-                    enumerator.MoveNext();
-                    RemoveHandle(owner, enumerator.Current.Key, enumerator.Current.Value, handles);
+                    if (ownerRemovalBatches.Add(handle.Batch))
+                        handle.Batch.BeginBulkRemoval();
+                }
+
+                try
+                {
+                    while (handles.Count > 0)
+                    {
+                        using Dictionary<int, InstanceHandle>.Enumerator enumerator = handles.GetEnumerator();
+                        enumerator.MoveNext();
+                        RemoveHandle(owner, enumerator.Current.Key, enumerator.Current.Value, handles);
+                    }
+                }
+                finally
+                {
+                    foreach (TileBatch batch in ownerRemovalBatches)
+                        batch.EndBulkRemoval();
+                    ownerRemovalBatches.Clear();
                 }
 
                 ownerHandles.Remove(owner);
-                ownerBounds.Remove(owner);
+                UnregisterOwnerCullingState(owner.GetInstanceID());
             }
+        }
+
+        /// <summary>交换删除区块状态，避免大量区块卸载时线性搬移列表。</summary>
+        private void UnregisterOwnerCullingState(int ownerId)
+        {
+            if (!ownerCullingById.TryGetValue(ownerId, out OwnerCullingState state))
+                return;
+
+            int lastIndex = activeOwnerCullingStates.Count - 1;
+            if (state.Index != lastIndex)
+            {
+                OwnerCullingState moved = activeOwnerCullingStates[lastIndex];
+                activeOwnerCullingStates[state.Index] = moved;
+                moved.Index = state.Index;
+            }
+            activeOwnerCullingStates.RemoveAt(lastIndex);
+            ownerCullingById.Remove(ownerId);
+            visibleInstanceListsDirty = true;
         }
 
         public void SetVisual(ChunkTilemapRenderer owner, int slotKey, Visual visual)
@@ -295,12 +475,23 @@ internal static class ChunkBatchRendererGroupService
                     return;
                 }
 
+                OwnerCullingState cullingState = ownerCullingById[owner.GetInstanceID()];
+                InstanceData data = visual.Data;
+                Vector3 sortingPosition = visual.SortingPosition;
+                if (UsesOwnerProjection(visual.Layer))
+                {
+                    data.Transform0.z += cullingState.ProjectionOffset.x;
+                    data.Transform1.z += cullingState.ProjectionOffset.y;
+                    data.Transform1.w += cullingState.ProjectionOffset.z;
+                    sortingPosition += cullingState.ProjectionOffset;
+                }
                 VisualKey key = new(visual.Layer, visual.Sprite, visual.SourceMaterial);
                 if (handles.TryGetValue(slotKey, out InstanceHandle current))
                 {
                     if (current.Batch.Key.Equals(key))
                     {
-                        current.Batch.Update(current.Index, visual.Data);
+                        current.Batch.Update(current.Index, data, sortingPosition);
+                        if (bulkSubmitDepth > 0) bulkSubmitBatches.Add(current.Batch);
                         return;
                     }
 
@@ -308,8 +499,27 @@ internal static class ChunkBatchRendererGroupService
                 }
 
                 TileBatch batch = GetOrCreateBatch(key, visual);
-                int index = batch.Add(owner, slotKey, visual.Data);
+                int index = batch.Add(owner, slotKey, cullingState, data, sortingPosition);
+                if (bulkSubmitDepth > 0) bulkSubmitBatches.Add(batch);
                 handles[slotKey] = new InstanceHandle(batch, index);
+                visibleInstanceListsDirty = true;
+            }
+        }
+
+        public void BeginBulkSubmit()
+        {
+            lock (syncRoot) bulkSubmitDepth++;
+        }
+
+        public void EndBulkSubmit()
+        {
+            lock (syncRoot)
+            {
+                if (bulkSubmitDepth == 0) return;
+                if (--bulkSubmitDepth != 0) return;
+                foreach (TileBatch batch in bulkSubmitBatches)
+                    batch.FlushBulkSubmit();
+                bulkSubmitBatches.Clear();
             }
         }
 
@@ -333,6 +543,7 @@ internal static class ChunkBatchRendererGroupService
             Dictionary<int, InstanceHandle> handles)
         {
             handles.Remove(slotKey);
+            visibleInstanceListsDirty = true;
             if (handle.Batch.Remove(handle.Index, out InstanceOwner movedOwner))
             {
                 if (ownerHandles.TryGetValue(movedOwner.Owner, out Dictionary<int, InstanceHandle> movedHandles))
@@ -345,25 +556,33 @@ internal static class ChunkBatchRendererGroupService
             if (batches.TryGetValue(key, out TileBatch existing))
                 return existing;
 
-            MeshRegistration mesh = GetOrCreateMesh(visual.Sprite);
+            MeshRegistration mesh = GetOrCreateMesh(visual.Sprite, visual.Layer == VisualLayer.NaturalShadow);
             MaterialRegistration material = GetOrCreateMaterial(visual.Layer, visual.Sprite.texture,
                 visual.SourceMaterial);
             var batch = new TileBatch(this, key, mesh.Id, material.Id, ResolvePriority(visual.Layer),
-                InitialCapacity);
+                visual.DepthSorted, InitialCapacity);
             batches.Add(key, batch);
             orderedBatches.Add(batch);
-            orderedBatches.Sort((left, right) => left.Priority.CompareTo(right.Priority));
+            orderedBatches.Sort(CompareBatchOrder);
             return batch;
         }
 
-        private MeshRegistration GetOrCreateMesh(Sprite sprite)
+        /// <summary>同一透明队列内按逻辑优先级与图层稳定排序。</summary>
+        private static int CompareBatchOrder(TileBatch left, TileBatch right)
         {
-            int key = sprite.GetInstanceID();
+            int priority = left.Priority.CompareTo(right.Priority);
+            return priority != 0 ? priority : left.Key.Layer.CompareTo(right.Key.Layer);
+        }
+
+        private MeshRegistration GetOrCreateMesh(Sprite sprite, bool sunShadow)
+        {
+            var key = (sprite.GetInstanceID(), sunShadow);
             if (meshes.TryGetValue(key, out MeshRegistration registration))
                 return registration;
 
             // Mesh 属于资源会话；注册 ID 只保存在当前 Backend，重建 BRG 后重新注册。
-            Mesh mesh = SharedSpriteMeshCache.GetOrCreate(sprite);
+            Mesh mesh = sunShadow ? SharedSpriteMeshCache.GetSunShadowGeometry(sprite).Mesh
+                : SharedSpriteMeshCache.GetOrCreate(sprite);
             BatchMeshID id = rendererGroup.RegisterMesh(mesh);
             registration = new MeshRegistration(id);
             meshes.Add(key, registration);
@@ -375,13 +594,16 @@ internal static class ChunkBatchRendererGroupService
         {
             Material template = layer switch
             {
-                VisualLayer.Ground => contactTemplate,
+                VisualLayer.Ground or VisualLayer.Support => contactTemplate,
+                VisualLayer.SupportShadow => supportShadowTemplate,
                 VisualLayer.Water => waterTemplate,
                 _ => spriteTemplate
             };
-            int priority = ResolvePriority(layer);
+            int queuePriority = ResolveRenderQueuePriority(layer);
+            int renderQueue = WorldRenderingConfigCatalog.Default.sorting.batchRenderQueueBase + queuePriority;
             var key = new MaterialKey(template.GetInstanceID(), sourceMaterial.GetInstanceID(),
-                texture != null ? texture.GetInstanceID() : 0, priority);
+                texture != null ? texture.GetInstanceID() : 0, queuePriority,
+                layer == VisualLayer.NaturalStatic || layer == VisualLayer.NaturalShadow ? 2 : IsMechanicalLayer(layer) ? 1 : 0);
             if (materials.TryGetValue(key, out MaterialRegistration registration))
                 return registration;
 
@@ -390,15 +612,23 @@ internal static class ChunkBatchRendererGroupService
                 name = $"ChunkBRG_{layer}_{sourceMaterial.name}_{texture?.name}",
                 hideFlags = HideFlags.HideAndDontSave,
                 enableInstancing = true,
-                // BRG 没有 SpriteRenderer/TilemapRenderer 的 Sorting Layer 字段，实际会与普通世界渲染共用默认排序域。
-                // 地形批次固定占用 2987~2992；草等 BRG 上层表现需使用 Default Sorting Layer，
-                // 并把 Render Queue 放在 2992 之后、普通世界 Sprite 3000 之前。
-                renderQueue = TerrainQueueBase + priority
+                // BRG 没有 SpriteRenderer/TilemapRenderer 的 Sorting Layer 字段；统一按世界渲染 JSON 配置透明队列。
+                renderQueue = renderQueue
             };
             runtimeMaterial.CopyPropertiesFromMaterial(sourceMaterial);
             runtimeMaterial.shaderKeywords = sourceMaterial.shaderKeywords;
             runtimeMaterial.SetTexture("_MainTex", texture);
-            runtimeMaterial.renderQueue = TerrainQueueBase + priority;
+            runtimeMaterial.renderQueue = renderQueue;
+            if (sourceMaterial.HasProperty(GrassSwayEnabledId) &&
+                sourceMaterial.GetFloat(GrassSwayEnabledId) > 0.5f)
+                runtimeMaterial.EnableKeyword(GrassSwayKeyword);
+            else
+                runtimeMaterial.DisableKeyword(GrassSwayKeyword);
+            if (IsMechanicalLayer(layer)) runtimeMaterial.EnableKeyword(MechanicalKeyword);
+            else runtimeMaterial.DisableKeyword(MechanicalKeyword);
+            if (layer == VisualLayer.NaturalStatic || layer == VisualLayer.NaturalShadow)
+                runtimeMaterial.EnableKeyword("_CHUNK_RESOURCE");
+            else runtimeMaterial.DisableKeyword("_CHUNK_RESOURCE");
             if (layer == VisualLayer.Ground)
                 ApplyGroundElevationPreference(runtimeMaterial);
             BatchMaterialID id = rendererGroup.RegisterMaterial(runtimeMaterial);
@@ -454,41 +684,37 @@ internal static class ChunkBatchRendererGroupService
                 cullingCallbackCount++;
                 int commandCount = 0;
                 int visibleCount = 0;
-                int submittedCount = 0;
-                ownerVisibility.Clear();
-                batchVisibleCounts.Clear();
+                int sortedVisibleCount = 0;
+                bool ownerVisibilityChanged = false;
+                bool allOwnersVisible = !WorldStreamingPreferences.OwnerCullingEnabled ||
+                    RefreshOwnerVisibility(context.cullingPlanes, out ownerVisibilityChanged);
+                if (!allOwnersVisible && (visibleInstanceListsDirty || ownerVisibilityChanged))
+                    RebuildVisibleInstanceLists();
                 for (int i = 0; i < orderedBatches.Count; i++)
                 {
                     TileBatch batch = orderedBatches[i];
-                    submittedCount += batch.Count;
-                    int batchVisible = 0;
-                    for (int instance = 0; instance < batch.Count; instance++)
-                    {
-                        if (IsOwnerVisible(batch.GetOwner(instance), context.cullingPlanes))
-                            batchVisible++;
-                    }
-                    batchVisibleCounts.Add(batchVisible);
+                    int batchCount = batch.Count;
+                    int batchVisible = allOwnersVisible ? batchCount : batchVisibleInstances[i].Count;
                     if (batchVisible <= 0)
                         continue;
-                    commandCount++;
+                    commandCount += batch.DepthSorted ? batchVisible : 1;
+                    if (batch.DepthSorted) sortedVisibleCount += batchVisible;
                     visibleCount += batchVisible;
                 }
                 lastCullingCommandCount = commandCount;
                 lastCullingVisibleCount = visibleCount;
 
-                if (RenderDebugEnabled && ownerHandles.Count > 0 && submittedCount == 0 &&
-                    cullingCallbackCount - lastZeroVisibleWarningCull >= 180)
-                {
-                    lastZeroVisibleWarningCull = cullingCallbackCount;
-                    Debug.LogWarning($"[ChunkRenderDebug] BRG 有 {ownerHandles.Count} 个 Owner，但没有提交可绘制实例。 " +
-                                     BuildDebugSummary());
-                }
+                // 基础地形已经由 ChunkGroundMeshRenderer 绘制，BRG Owner 只给草、自然物、机械等扩展层复用。
+                // 因此“有 Owner 但当前没有 BRG 实例”是合法空状态，不能再按异常周期刷 Warning。
 
                 BatchCullingOutputDrawCommands* commands =
                     (BatchCullingOutputDrawCommands*)output.drawCommands.GetUnsafePtr();
                 commands->drawCommandPickingInstanceIDs = null;
-                commands->instanceSortingPositions = null;
-                commands->instanceSortingPositionFloatCount = 0;
+                commands->instanceSortingPositions = sortedVisibleCount > 0
+                    ? (float*)UnsafeUtility.Malloc(sizeof(float) * sortedVisibleCount * 3,
+                        UnsafeUtility.AlignOf<float>(), Allocator.TempJob)
+                    : null;
+                commands->instanceSortingPositionFloatCount = sortedVisibleCount * 3;
                 commands->drawCommandCount = commandCount;
                 commands->drawRangeCount = commandCount;
                 commands->visibleInstanceCount = visibleCount;
@@ -511,12 +737,53 @@ internal static class ChunkBatchRendererGroupService
 
                 int commandIndex = 0;
                 int visibleOffset = 0;
+                int sortingFloatOffset = 0;
                 for (int i = 0; i < orderedBatches.Count; i++)
                 {
                     TileBatch batch = orderedBatches[i];
-                    int batchVisible = batchVisibleCounts[i];
+                    List<int> visibleInstances = allOwnersVisible ? null : batchVisibleInstances[i];
+                    int batchVisible = allOwnersVisible ? batch.Count : visibleInstances.Count;
                     if (batchVisible <= 0)
                         continue;
+
+                    if (batch.DepthSorted)
+                    {
+                        for (int visibleIndex = 0; visibleIndex < batchVisible; visibleIndex++)
+                        {
+                            int instance = allOwnersVisible ? visibleIndex : visibleInstances[visibleIndex];
+
+                            BatchDrawCommand* sortedDraw = commands->drawCommands + commandIndex;
+                            sortedDraw->visibleOffset = (uint)visibleOffset;
+                            sortedDraw->visibleCount = 1;
+                            sortedDraw->batchID = batch.BatchId;
+                            sortedDraw->materialID = batch.MaterialId;
+                            sortedDraw->meshID = batch.MeshId;
+                            sortedDraw->submeshIndex = 0;
+                            sortedDraw->splitVisibilityMask = 0xff;
+                            sortedDraw->flags = BatchDrawCommandFlags.HasSortingPosition;
+                            sortedDraw->sortingPosition = sortingFloatOffset;
+
+                            Vector3 position = batch.GetSortingPosition(instance);
+                            commands->instanceSortingPositions[sortingFloatOffset] = position.x;
+                            commands->instanceSortingPositions[sortingFloatOffset + 1] = position.y;
+                            commands->instanceSortingPositions[sortingFloatOffset + 2] = position.z;
+                            commands->visibleInstances[visibleOffset] = instance;
+
+                            BatchDrawRange* sortedRange = commands->drawRanges + commandIndex;
+                            sortedRange->drawCommandsBegin = (uint)commandIndex;
+                            sortedRange->drawCommandsCount = 1;
+                            sortedRange->filterSettings = new BatchFilterSettings
+                            {
+                                renderingLayerMask = uint.MaxValue,
+                                allDepthSorted = true
+                            };
+
+                            sortingFloatOffset += 3;
+                            visibleOffset++;
+                            commandIndex++;
+                        }
+                        continue;
+                    }
 
                     BatchDrawCommand* draw = commands->drawCommands + commandIndex;
                     draw->visibleOffset = (uint)visibleOffset;
@@ -527,22 +794,20 @@ internal static class ChunkBatchRendererGroupService
                     draw->submeshIndex = 0;
                     draw->splitVisibilityMask = 0xff;
                     draw->flags = 0;
-                    draw->sortingPosition = batch.Priority;
+                    draw->sortingPosition = 0;
 
                     BatchDrawRange* range = commands->drawRanges + commandIndex;
                     range->drawCommandsBegin = (uint)commandIndex;
                     range->drawCommandsCount = 1;
                     range->filterSettings = new BatchFilterSettings
                     {
-                        renderingLayerMask = uint.MaxValue
+                        renderingLayerMask = uint.MaxValue,
+                        allDepthSorted = false
                     };
 
-                    int visibleIndex = 0;
-                    for (int instance = 0; instance < batch.Count; instance++)
-                    {
-                        if (ownerVisibility[batch.GetOwner(instance)])
-                            commands->visibleInstances[visibleOffset + visibleIndex++] = instance;
-                    }
+                    for (int visibleIndex = 0; visibleIndex < batchVisible; visibleIndex++)
+                        commands->visibleInstances[visibleOffset + visibleIndex] =
+                            allOwnersVisible ? visibleIndex : visibleInstances[visibleIndex];
 
                     visibleOffset += batchVisible;
                     commandIndex++;
@@ -552,16 +817,44 @@ internal static class ChunkBatchRendererGroupService
             return default;
         }
 
-        /// <summary>按区块边界与当前相机裁剪面判断，预加载区块靠近镜头时无需重新绑定 BRG。</summary>
-        private bool IsOwnerVisible(ChunkTilemapRenderer owner, NativeArray<Plane> planes)
+        /// <summary>只在区块可见状态变化时通知重建实例索引，镜头在区块内移动可复用旧结果。</summary>
+        private bool RefreshOwnerVisibility(NativeArray<Plane> planes, out bool visibilityChanged)
         {
-            if (ownerVisibility.TryGetValue(owner, out bool visible))
-                return visible;
+            bool allVisible = true;
+            visibilityChanged = false;
+            for (int i = 0; i < activeOwnerCullingStates.Count; i++)
+            {
+                OwnerCullingState state = activeOwnerCullingStates[i];
+                bool visible = IsOwnerVisible(state.Bounds, planes);
+                if (state.Visible != visible)
+                {
+                    state.Visible = visible;
+                    visibilityChanged = true;
+                }
+                if (!visible)
+                    allVisible = false;
+            }
+            return allVisible;
+        }
 
-            Bounds bounds = ownerBounds[owner];
+        /// <summary>批次顺序或区块可见集合改变后，才扫描实例生成可见索引。</summary>
+        private void RebuildVisibleInstanceLists()
+        {
+            for (int i = 0; i < orderedBatches.Count; i++)
+            {
+                TileBatch batch = orderedBatches[i];
+                if (i == batchVisibleInstances.Count)
+                    batchVisibleInstances.Add(new List<int>(Mathf.Min(batch.Count, 64)));
+                batch.CollectVisibleInstances(batchVisibleInstances[i]);
+            }
+            visibleInstanceListsDirty = false;
+        }
+
+        /// <summary>按区块边界与相机裁剪面判断，预加载区块靠近镜头时直接显示。</summary>
+        private static bool IsOwnerVisible(Bounds bounds, NativeArray<Plane> planes)
+        {
             Vector3 center = bounds.center;
             Vector3 extents = bounds.extents;
-            visible = true;
             for (int i = 0; i < planes.Length; i++)
             {
                 Plane plane = planes[i];
@@ -571,12 +864,9 @@ internal static class ChunkBatchRendererGroupService
                                Mathf.Abs(normal.z) * extents.z;
                 if (Vector3.Dot(normal, center) + plane.distance + radius >= 0f)
                     continue;
-                visible = false;
-                break;
+                return false;
             }
-
-            ownerVisibility.Add(owner, visible);
-            return visible;
+            return true;
         }
 
         public void Dispose()
@@ -588,28 +878,45 @@ internal static class ChunkBatchRendererGroupService
                 disposed = true;
                 GroundElevationShadowSettings.Changed -= ApplyGroundElevationPreference;
 
-                for (int i = 0; i < orderedBatches.Count; i++)
-                    orderedBatches[i].Dispose();
-                orderedBatches.Clear();
-                batches.Clear();
-                ownerHandles.Clear();
-                ownerBounds.Clear();
-                ownerVisibility.Clear();
-                batchVisibleCounts.Clear();
-
-                foreach (MaterialRegistration registration in materials.Values)
+                try
                 {
-                    rendererGroup.UnregisterMaterial(registration.Id);
-                    DestroyRuntimeObject(registration.Material);
+                    for (int i = 0; i < orderedBatches.Count; i++)
+                    {
+                        try { orderedBatches[i].Dispose(); }
+                        catch (Exception exception) { Debug.LogException(exception); }
+                    }
+                    foreach (MaterialRegistration registration in materials.Values)
+                    {
+                        try { rendererGroup.UnregisterMaterial(registration.Id); }
+                        catch (Exception exception) { Debug.LogException(exception); }
+                        try { DestroyRuntimeObject(registration.Material); }
+                        catch (Exception exception) { Debug.LogException(exception); }
+                    }
+                    foreach (MeshRegistration registration in meshes.Values)
+                    {
+                        try { rendererGroup.UnregisterMesh(registration.Id); }
+                        catch (Exception exception) { Debug.LogException(exception); }
+                    }
                 }
-                materials.Clear();
-
-                foreach (MeshRegistration registration in meshes.Values)
+                finally
                 {
-                    rendererGroup.UnregisterMesh(registration.Id);
+                    // 原生组必须独立释放，不能被某一批次的清理异常留在旧脚本域。
+                    try { rendererGroup.Dispose(); }
+                    finally
+                    {
+                        orderedBatches.Clear();
+                        batches.Clear();
+                        ownerHandles.Clear();
+                        ownerCullingById.Clear();
+                        activeOwnerCullingStates.Clear();
+                        batchVisibleInstances.Clear();
+                        ownerRemovalBatches.Clear();
+                        bulkSubmitBatches.Clear();
+                        bulkSubmitDepth = 0;
+                        materials.Clear();
+                        meshes.Clear();
+                    }
                 }
-                meshes.Clear();
-                rendererGroup.Dispose();
             }
         }
 
@@ -621,14 +928,50 @@ internal static class ChunkBatchRendererGroupService
             return template;
         }
 
-        private static int ResolvePriority(VisualLayer layer) => layer switch
+        /// <summary>所有 BRG 图层顺序只从世界渲染 JSON 读取，避免表现层再维护第二份硬编码层级。</summary>
+        private static WorldRenderingConfig.BatchSortingProfile ResolveBatchSortingProfile(VisualLayer layer)
         {
-            VisualLayer.Back => -1,
-            VisualLayer.Ground => 0,
-            VisualLayer.Water => 1,
-            VisualLayer.Blocking => 4,
-            _ => 0
-        };
+            WorldRenderingConfig.BatchSortingProfile[] profiles =
+                WorldRenderingConfigCatalog.Default.sorting.batchProfiles;
+            string layerName = layer.ToString();
+            for (int i = 0; i < profiles.Length; i++)
+            {
+                WorldRenderingConfig.BatchSortingProfile profile = profiles[i];
+                if (profile != null && string.Equals(profile.visualLayer, layerName, StringComparison.Ordinal))
+                    return profile;
+            }
+            throw new InvalidOperationException($"世界渲染配置缺少 BRG 图层 {layerName} 的排序配置。");
+        }
+
+        private static int ResolvePriority(VisualLayer layer) => ResolveBatchSortingProfile(layer).batchOrder;
+
+        private static int ResolveRenderQueuePriority(VisualLayer layer) =>
+            ResolveBatchSortingProfile(layer).renderQueueOffset;
+
+        /// <summary>启动 BRG 后端时要求 JSON 精确覆盖全部 VisualLayer，未知或漏配直接报错。</summary>
+        private static void ValidateBatchSortingProfiles()
+        {
+            var configured = new HashSet<VisualLayer>();
+            WorldRenderingConfig.BatchSortingProfile[] profiles =
+                WorldRenderingConfigCatalog.Default.sorting.batchProfiles;
+            for (int i = 0; i < profiles.Length; i++)
+            {
+                WorldRenderingConfig.BatchSortingProfile profile = profiles[i];
+                if (profile == null ||
+                    !Enum.TryParse(profile.visualLayer, false, out VisualLayer layer) ||
+                    !Enum.IsDefined(typeof(VisualLayer), layer))
+                    throw new InvalidOperationException($"世界渲染配置包含未知 BRG 图层：{profile?.visualLayer ?? "<null>"}。");
+                configured.Add(layer);
+            }
+
+            foreach (VisualLayer layer in Enum.GetValues(typeof(VisualLayer)))
+                if (!configured.Contains(layer))
+                    throw new InvalidOperationException($"世界渲染配置缺少 BRG 图层 {layer} 的排序配置。");
+        }
+
+        /// <summary>机械实例使用同一 BRG 后端，但启用专属 GPU 动画变体。</summary>
+        private static bool IsMechanicalLayer(VisualLayer layer)
+            => layer >= VisualLayer.MechanicalLowerBase && layer <= VisualLayer.MechanicalUpperFront;
 
         private static void DestroyRuntimeObject(UnityEngine.Object target)
         {
@@ -645,18 +988,23 @@ internal static class ChunkBatchRendererGroupService
             private readonly Backend backend;
             private readonly List<InstanceData> gpuData = new();
             private readonly List<InstanceOwner> owners = new();
+            private readonly List<Vector3> sortingPositions = new();
             private readonly InstanceData[] scratch = new InstanceData[1];
             private GraphicsBuffer buffer;
             private int capacity;
+            private bool bulkRemoving;
+            private readonly List<int> bulkDirtyIndices = new();
+            private readonly List<int> bulkSubmitIndices = new();
 
             public TileBatch(Backend backend, VisualKey key, BatchMeshID meshId,
-                BatchMaterialID materialId, int priority, int capacity)
+                BatchMaterialID materialId, int priority, bool depthSorted, int capacity)
             {
                 this.backend = backend;
                 Key = key;
                 MeshId = meshId;
                 MaterialId = materialId;
                 Priority = priority;
+                DepthSorted = depthSorted;
                 Resize(capacity);
             }
 
@@ -664,27 +1012,111 @@ internal static class ChunkBatchRendererGroupService
             public BatchMeshID MeshId { get; }
             public BatchMaterialID MaterialId { get; }
             public int Priority { get; }
+            public bool DepthSorted { get; }
             public BatchID BatchId { get; private set; }
             public int Count => gpuData.Count;
-            public ChunkTilemapRenderer GetOwner(int index) => owners[index].Owner;
+            public Vector3 GetSortingPosition(int index) => sortingPositions[index];
 
-            public int Add(ChunkTilemapRenderer owner, int slotKey, InstanceData data)
+            /// <summary>只在可见区块集合变化时扫描本批次，平常复用上次的索引。</summary>
+            public void CollectVisibleInstances(List<int> visibleInstances)
+            {
+                visibleInstances.Clear();
+                int count = owners.Count;
+                for (int index = 0; index < count; index++)
+                {
+                    if (owners[index].CullingState.Visible)
+                        visibleInstances.Add(index);
+                }
+            }
+
+            public int Add(ChunkTilemapRenderer owner, int slotKey, OwnerCullingState cullingState,
+                InstanceData data, Vector3 sortingPosition)
             {
                 if (gpuData.Count >= capacity)
                     Resize(capacity * 2);
                 int index = gpuData.Count;
                 gpuData.Add(data);
-                owners.Add(new InstanceOwner(owner, slotKey));
-                Upload(index, data);
+                owners.Add(new InstanceOwner(owner, slotKey, cullingState));
+                sortingPositions.Add(sortingPosition);
+                if (backend.bulkSubmitDepth > 0) bulkSubmitIndices.Add(index);
+                else Upload(index, data);
                 return index;
             }
 
-            public void Update(int index, InstanceData data)
+            public void Update(int index, InstanceData data, Vector3 sortingPosition)
             {
                 if ((uint)index >= (uint)gpuData.Count)
                     return;
                 gpuData[index] = data;
-                Upload(index, data);
+                sortingPositions[index] = sortingPosition;
+                if (backend.bulkSubmitDepth > 0) bulkSubmitIndices.Add(index);
+                else Upload(index, data);
+            }
+
+            public void Translate(int index, Vector3 delta)
+            {
+                InstanceData data = gpuData[index];
+                data.Transform0.z += delta.x;
+                data.Transform1.z += delta.y;
+                data.Transform1.w += delta.z;
+                Update(index, data, sortingPositions[index] + delta);
+            }
+
+            public void FlushBulkSubmit()
+            {
+                bulkSubmitIndices.Sort();
+                int start = -1;
+                int end = -1;
+                for (int i = 0; i < bulkSubmitIndices.Count; i++)
+                {
+                    int index = bulkSubmitIndices[i];
+                    if (index >= gpuData.Count) continue;
+                    if (start >= 0 && index <= end + 1)
+                    {
+                        end = Mathf.Max(end, index);
+                        continue;
+                    }
+                    UploadRange(start, end);
+                    start = end = index;
+                }
+                UploadRange(start, end);
+                bulkSubmitIndices.Clear();
+            }
+
+            /// <summary>同一区块的实例先在 CPU 上交换删除，结束时合并写回 GPU。</summary>
+            public void BeginBulkRemoval()
+            {
+                bulkRemoving = true;
+                bulkDirtyIndices.Clear();
+            }
+
+            public void EndBulkRemoval()
+            {
+                bulkRemoving = false;
+                bulkDirtyIndices.Sort();
+                int rangeStart = -1;
+                int rangeEnd = -1;
+                for (int i = 0; i < bulkDirtyIndices.Count; i++)
+                {
+                    int index = bulkDirtyIndices[i];
+                    if (index >= gpuData.Count)
+                        break;
+                    if (rangeStart >= 0 && index <= rangeEnd + 1)
+                    {
+                        rangeEnd = Mathf.Max(rangeEnd, index);
+                        continue;
+                    }
+                    UploadRange(rangeStart, rangeEnd);
+                    rangeStart = rangeEnd = index;
+                }
+                UploadRange(rangeStart, rangeEnd);
+                bulkDirtyIndices.Clear();
+            }
+
+            private void UploadRange(int start, int end)
+            {
+                if (start >= 0)
+                    buffer.SetData(gpuData, start, start + 1, end - start + 1);
             }
 
             public bool Remove(int index, out InstanceOwner movedOwner)
@@ -699,11 +1131,16 @@ internal static class ChunkBatchRendererGroupService
                 {
                     gpuData[index] = gpuData[last];
                     owners[index] = owners[last];
+                    sortingPositions[index] = sortingPositions[last];
                     movedOwner = owners[index];
-                    Upload(index, gpuData[index]);
+                    if (bulkRemoving)
+                        bulkDirtyIndices.Add(index);
+                    else
+                        Upload(index, gpuData[index]);
                 }
                 gpuData.RemoveAt(last);
                 owners.RemoveAt(last);
+                sortingPositions.RemoveAt(last);
                 return moved;
             }
 
@@ -728,8 +1165,7 @@ internal static class ChunkBatchRendererGroupService
                 BatchId = backend.CreateBatch(buffer);
                 if (gpuData.Count > 0)
                 {
-                    InstanceData[] all = gpuData.ToArray();
-                    buffer.SetData(all, 0, 1, all.Length);
+                    buffer.SetData(gpuData, 0, 1, gpuData.Count);
                 }
             }
 
@@ -743,11 +1179,14 @@ internal static class ChunkBatchRendererGroupService
             {
                 if (buffer == null)
                     return;
-                backend.rendererGroup.RemoveBatch(BatchId);
-                buffer.Dispose();
+                GraphicsBuffer previous = buffer;
                 buffer = null;
                 gpuData.Clear();
                 owners.Clear();
+                sortingPositions.Clear();
+                bulkDirtyIndices.Clear();
+                try { backend.rendererGroup.RemoveBatch(BatchId); }
+                finally { previous.Dispose(); }
             }
         }
 
@@ -765,14 +1204,32 @@ internal static class ChunkBatchRendererGroupService
 
         private readonly struct InstanceOwner
         {
-            public InstanceOwner(ChunkTilemapRenderer owner, int slotKey)
+            public InstanceOwner(ChunkTilemapRenderer owner, int slotKey, OwnerCullingState cullingState)
             {
                 Owner = owner;
                 SlotKey = slotKey;
+                CullingState = cullingState;
             }
 
             public ChunkTilemapRenderer Owner { get; }
             public int SlotKey { get; }
+            /// <summary>区块共享的本次相机可见状态。</summary>
+            public OwnerCullingState CullingState { get; }
+        }
+
+        /// <summary>一个区块只保存一份边界和本次相机可见结果。</summary>
+        private sealed class OwnerCullingState
+        {
+            public OwnerCullingState(Bounds bounds, int index)
+            {
+                Bounds = bounds;
+                Index = index;
+            }
+
+            public Bounds Bounds { get; set; }
+            public Vector3 ProjectionOffset { get; set; }
+            public int Index { get; set; }
+            public bool Visible { get; set; }
         }
 
         private readonly struct VisualKey : IEquatable<VisualKey>
@@ -796,23 +1253,25 @@ internal static class ChunkBatchRendererGroupService
 
         private readonly struct MaterialKey : IEquatable<MaterialKey>
         {
-            public MaterialKey(int templateId, int sourceId, int textureId, int priority)
+            public MaterialKey(int templateId, int sourceId, int textureId, int priority, int variant)
             {
                 TemplateId = templateId;
                 SourceId = sourceId;
                 TextureId = textureId;
                 Priority = priority;
+                Variant = variant;
             }
 
             private int TemplateId { get; }
             private int SourceId { get; }
             private int TextureId { get; }
             private int Priority { get; }
+            private int Variant { get; }
 
             public bool Equals(MaterialKey other) => TemplateId == other.TemplateId && SourceId == other.SourceId &&
-                                                     TextureId == other.TextureId && Priority == other.Priority;
+                                                     TextureId == other.TextureId && Priority == other.Priority && Variant == other.Variant;
             public override bool Equals(object obj) => obj is MaterialKey other && Equals(other);
-            public override int GetHashCode() => HashCode.Combine(TemplateId, SourceId, TextureId, Priority);
+            public override int GetHashCode() => HashCode.Combine(TemplateId, SourceId, TextureId, Priority, Variant);
         }
 
         private readonly struct MeshRegistration

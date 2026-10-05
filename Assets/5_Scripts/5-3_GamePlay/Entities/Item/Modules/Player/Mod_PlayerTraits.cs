@@ -18,8 +18,8 @@ public class Mod_PlayerTraits : Module
     }
 
     private Player player;
-    private PlayerAdminController adminController;
-    private GameController gameController;
+    private Mod_PlayerAdminController adminController;
+    private Mod_GameController gameController;
 
     public override void Awake()
     {
@@ -35,7 +35,7 @@ public class Mod_PlayerTraits : Module
             player = GetComponentInParent<Player>();
         }
 
-        gameController = GetComponentInParent<GameController>();
+        gameController = GetComponentInParent<Mod_GameController>();
     }
 
     public override void Save()
@@ -55,7 +55,7 @@ public class Mod_PlayerTraits : Module
     }
 
     /// <summary>
-    /// 玩家死亡处理（统一走 DamageReceiver 濒死流程）
+    /// 玩家死亡处理（统一走 Mod_DamageReceiver 濒死流程）
     /// </summary>
     public void Death()
     {
@@ -66,10 +66,10 @@ public class Mod_PlayerTraits : Module
             return;
         }
 
-        var damageReceiver = item.itemMods.GetMod_ByID<DamageReceiver>(ModText.Hp);
+        var damageReceiver = item.itemMods.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
         if (damageReceiver == null)
         {
-            throw new MissingComponentException($"[Mod_PlayerTraits] 玩家缺少 {nameof(DamageReceiver)}，无法触发濒死状态");
+            throw new MissingComponentException($"[Mod_PlayerTraits] 玩家缺少 {nameof(Mod_DamageReceiver)}，无法触发濒死状态");
         }
 
         damageReceiver.ForceHurt(damageReceiver.Hp + damageReceiver.MaxHp + 99999f);
@@ -99,7 +99,7 @@ public class Mod_PlayerTraits : Module
             return message;
         }
 
-        // ItemDefinitions 是可创建物品唯一真源，不再回到 Prefab 别名筛选。
+        // 本体和正式注册的 MOD 物品走 ItemDefinitions；已物化但仍由 MOD 模板承载的道具由下方目录合并补齐。
         if (GameRes.Instance == null)
         {
             const string message = "创造背包失败：物品目录尚未初始化。";
@@ -110,7 +110,7 @@ public class Mod_PlayerTraits : Module
         // 同类物品只选一个已有槽位补充，避免拆分堆叠后一次点击重复加量。
         // PlacedBuilding 是建筑落地后的运行态载体，不是玩家应持有的物品；
         // 旧创造背包里若已经存在则直接清掉，避免继续占用背包槽位。
-        var existingSlotIndices = new Dictionary<string, int>();
+        var existingSlotIndices = new Dictionary<string, int>(System.StringComparer.OrdinalIgnoreCase);
         var bagData = bagMod.inventory.Data;
         int removedPlacedBuildingCount = 0;
         int removedWorldOnlyCount = 0;
@@ -137,7 +137,7 @@ public class Mod_PlayerTraits : Module
                 existingSlotIndices.Add(existingItem.IDName, i);
         }
 
-        IReadOnlyList<string> itemIds = GameRes.Instance.GetAllItemIds();
+        IReadOnlyList<string> itemIds = GetCreativeInventoryItemIds(out int detectedModItemCount);
         var creativeItems = new List<ItemData>(itemIds.Count);
         var uncreatableItemIds = new List<string>();
         int actorCount = 0;
@@ -147,28 +147,27 @@ public class Mod_PlayerTraits : Module
 
         foreach (string itemId in itemIds)
         {
-            // Actor 与普通 Item 共用定义目录，但不能进入背包。
-            if (!GameRes.Instance.TryGetItemDefinition(itemId, out RuntimeItemDefinition definition))
-            {
-                uncreatableItemIds.Add(itemId);
-                continue;
-            }
-
-            if (definition.IsActor)
-            {
-                actorCount++;
-                continue;
-            }
-
             ItemData data;
+            bool isActor;
             try
             {
-                data = GameRes.Instance.CreateItemData(itemId);
+                if (!TryCreateCreativeItemData(itemId, out data, out isActor))
+                {
+                    uncreatableItemIds.Add(itemId);
+                    continue;
+                }
             }
             catch (System.Exception exception)
             {
                 uncreatableItemIds.Add(itemId);
                 Debug.LogError($"[Mod_PlayerTraits.InitializeCreativeInventoryForAdmin] 物品 {itemId} 无法创建：{exception.Message}");
+                continue;
+            }
+
+            // Actor 与普通 Item 共用定义目录，但不能进入背包。
+            if (isActor)
+            {
+                actorCount++;
                 continue;
             }
 
@@ -213,6 +212,7 @@ public class Mod_PlayerTraits : Module
         }
 
         // 只为缺少的物品扩容，重复补充已有物品时不新增整套槽位。
+        CreativeInventoryState.Enable(target, bagMod.inventory);
         int firstCreativeSlotIndex = bagData.itemSlots.Count;
         if (creativeItems.Count > 0)
             bagMod.inventory.AddSlotsAtRuntime(creativeItems.Count);
@@ -223,29 +223,103 @@ public class Mod_PlayerTraits : Module
             data.Stack.CanBePickedUp = false;
             bagData.SetOne_ItemData(firstCreativeSlotIndex + i, data);
         }
-        CreativeInventoryState.Enable(target, bagMod.inventory);
         bagData.MaintainDynamicSlotCount();
         bagMod.inventory.RefreshUI();
 
         string summary = $"创造背包完成：新增 {creativeItems.Count} 种，补充 {replenishedCount} 种，每种增加 {amountPerItem} 个，" +
                          $"不可创建 {uncreatableItemIds.Count} 种，排除 Actor {actorCount} 种、落地建筑状态 {placedBuildingCount} 种、世界专用实体 {worldOnlyCount} 种，" +
-                         $"清理旧建筑状态 {removedPlacedBuildingCount} 格、旧世界实体 {removedWorldOnlyCount} 格，共扫描 {itemIds.Count} 条定义；已解除重量与体积上限，背包格子保持默认自动扩容。";
+                         $"清理旧建筑状态 {removedPlacedBuildingCount} 格、旧世界实体 {removedWorldOnlyCount} 格，共扫描 {itemIds.Count} 种物品（额外检测 MOD 道具 {detectedModItemCount} 种）；" +
+                         "已解除重量、体积与放置距离上限，并开启创造背包动态扩容。";
         if (uncreatableItemIds.Count > 0)
             Debug.LogError($"[Mod_PlayerTraits.InitializeCreativeInventoryForAdmin] 不可创建物品：{string.Join(", ", uncreatableItemIds)}");
         Debug.Log($"[Mod_PlayerTraits.InitializeCreativeInventoryForAdmin] {summary}");
         return summary;
     }
 
+    /// <summary>合并正式物品目录与已物化的 MOD 物品模板，避免 F2 漏掉仍走 MOD 运行时模板注册链的道具。</summary>
+    private static IReadOnlyList<string> GetCreativeInventoryItemIds(out int detectedModItemCount)
+    {
+        detectedModItemCount = 0;
+        GameRes gameRes = GameRes.Instance;
+        var ids = new HashSet<string>(gameRes.GetAllItemIds(), System.StringComparer.OrdinalIgnoreCase);
+        ModRuntimeManager modRuntime = ModRuntimeManager.Instance;
+        if (modRuntime != null)
+        {
+            foreach (ModDefinitionInfo info in modRuntime.DefinitionInfos)
+            {
+                if (info == null || !info.Materialized || string.IsNullOrWhiteSpace(info.Id) || ids.Contains(info.Id))
+                    continue;
+                if (!gameRes.AllPrefabs.TryGetValue(info.Id, out GameObject prefab) ||
+                    prefab == null ||
+                    !modRuntime.IsRuntimeTemplate(prefab) ||
+                    prefab.GetComponent<Item>()?.itemData == null)
+                {
+                    continue;
+                }
+
+                ids.Add(info.Id);
+                detectedModItemCount++;
+            }
+        }
+
+        var result = new List<string>(ids);
+        result.Sort(System.StringComparer.OrdinalIgnoreCase);
+        return result;
+    }
+
+    /// <summary>优先从统一 ItemDefinition 创建；MOD 模板注册链则从当前运行时模板克隆静态数据。</summary>
+    private static bool TryCreateCreativeItemData(string itemId, out ItemData data, out bool isActor)
+    {
+        data = null;
+        isActor = false;
+        GameRes gameRes = GameRes.Instance;
+        if (gameRes == null || string.IsNullOrWhiteSpace(itemId))
+            return false;
+
+        if (gameRes.TryGetItemDefinition(itemId, out RuntimeItemDefinition definition))
+        {
+            isActor = definition.IsActor;
+            if (!isActor)
+                data = gameRes.CreateItemData(itemId);
+            return true;
+        }
+
+        ModRuntimeManager modRuntime = ModRuntimeManager.Instance;
+        if (modRuntime == null ||
+            !gameRes.AllPrefabs.TryGetValue(itemId, out GameObject prefab) ||
+            prefab == null ||
+            !modRuntime.IsRuntimeTemplate(prefab))
+        {
+            return false;
+        }
+
+        Item templateItem = prefab.GetComponent<Item>();
+        if (templateItem?.itemData == null)
+            return false;
+
+        data = templateItem.itemData.DeepClone();
+        data.IDName = itemId;
+        data.Guid = System.Guid.NewGuid().GetHashCode();
+        return true;
+    }
+
     /// <summary>按当前静态定义判断物品是否只能存在于世界中，避免读取创造背包被改写后的运行态标志。</summary>
     private static bool IsWorldOnlyDefinition(string itemId)
     {
-        if (string.IsNullOrWhiteSpace(itemId) ||
-            GameRes.Instance == null ||
-            !GameRes.Instance.TryGetItemDefinition(itemId, out RuntimeItemDefinition definition))
+        if (string.IsNullOrWhiteSpace(itemId))
             return false;
 
-        ItemData configuredData = definition.CreateItemData();
-        return configuredData?.Stack != null && !configuredData.Stack.CanBePickedUp;
+        try
+        {
+            return TryCreateCreativeItemData(itemId, out ItemData configuredData, out bool isActor) &&
+                   !isActor &&
+                   configuredData?.Stack != null &&
+                   !configuredData.Stack.CanBePickedUp;
+        }
+        catch (System.Exception)
+        {
+            return false;
+        }
     }
 
     /// <summary>落地建筑本体属于世界运行态，不应作为可持有物品进入创造背包。</summary>
@@ -313,7 +387,7 @@ public class Mod_PlayerTraits : Module
     public void TeleportToMousePosition()
     {
         if (gameController == null)
-            gameController = GetComponentInParent<GameController>();
+            gameController = GetComponentInParent<Mod_GameController>();
 
         if (gameController != null)
             TryTeleportToScreenPosition(gameController.GetPointerScreenPosition());
@@ -326,26 +400,28 @@ public class Mod_PlayerTraits : Module
             return false;
 
         if (gameController == null)
-            gameController = target.GetComponent<GameController>();
+            gameController = target.GetComponent<Mod_GameController>();
 
         if (gameController == null)
         {
-            Debug.LogWarning("[Mod_PlayerTraits] 未找到 GameController，无法读取指针世界坐标");
+            Debug.LogWarning("[Mod_PlayerTraits] 未找到 Mod_GameController，无法读取指针世界坐标");
             return false;
         }
 
         Vector3 destination = gameController.GetMouseWorldPosition(screenPosition);
         destination.z = target.transform.position.z;
+        Vector3 logicalDestination = WorldTopologyRuntime.NormalizePosition(destination);
+        Vector3 presentationDestination = WorldLocalPresentation.ProjectPosition(logicalDestination);
         Rigidbody2D body = target.GetComponent<Rigidbody2D>();
         body.velocity = Vector2.zero;
         body.angularVelocity = 0f;
-        body.position = destination;
-        target.transform.position = destination;
-        target.Data.transform.position = destination;
+        body.position = presentationDestination;
+        target.transform.position = presentationDestination;
+        target.Data.transform.position = logicalDestination;
         ChunkMgr.ExistingInstance?.ResetChunkLoadQueue();
         target.itemMods.GetMod_ByID<Mod_ChunkLoader>(ModText.ChunkLoader)?.RefreshChunksAroundPlayer();
 
-        Debug.Log($"[GM] 玩家已传送到位置: {destination}");
+        Debug.Log($"[GM] 玩家已传送到逻辑位置: {logicalDestination}");
         return true;
     }
 
@@ -382,7 +458,7 @@ public class Mod_PlayerTraits : Module
             TryGetPlayer(out _);
 
         if (adminController == null)
-            adminController = player?.GetComponentInChildren<PlayerAdminController>(true);
+            adminController = player?.GetComponentInChildren<Mod_PlayerAdminController>(true);
 
         if (adminController != null)
             return adminController.IsAdminInvincibilityEnabled;

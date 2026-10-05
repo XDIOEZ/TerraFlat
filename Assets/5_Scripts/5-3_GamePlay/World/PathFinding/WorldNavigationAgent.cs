@@ -8,7 +8,8 @@ public enum WorldNavigationDestinationResult
     Pending,
     Accepted,
     Reached,
-    RejectedByPathCost
+    RejectedByPathCost,
+    Failed
 }
 
 /// <summary>
@@ -18,9 +19,26 @@ public enum WorldNavigationDestinationResult
 [DisallowMultipleComponent]
 public sealed class WorldNavigationAgent : MonoBehaviour
 {
+    public const int PathFailureErrorThreshold = 4; // 同一目标连续失败达到此次数后公布错误结果。
     private const float MinimumWaypointDistance = 0.3f;
     private const float MinimumDestinationChangeDistance = 0.5f;
     private static readonly System.Collections.Generic.List<WorldNavigationAgent> ActiveAgentRegistry = new();
+
+    #region GameObject AI 局部避让
+
+    private const float LocalAvoidanceRadius = 1.35f;
+    private const float LocalAvoidanceBodyRadius = 0.35f;
+    private const float LocalAvoidancePredictionTime = 0.7f;
+    private const float LocalAvoidanceBucketSize = 2f;
+    private const int MaxLocalAvoidanceNeighbors = 12;
+    private static readonly System.Collections.Generic.Dictionary<Vector2Int, System.Collections.Generic.List<WorldNavigationAgent>>
+        LocalAvoidanceBuckets = new();
+
+    private Vector2 preferredVelocity;
+    private Vector2Int localAvoidanceBucket;
+    private bool hasLocalAvoidanceBucket;
+
+    #endregion
 
     [SerializeField, Min(0.01f)] private float stopDistance = 0.5f;
     [SerializeField, Min(0.01f)] private float waypointDistance = MinimumWaypointDistance;
@@ -31,7 +49,8 @@ public sealed class WorldNavigationAgent : MonoBehaviour
     [SerializeField, Min(0.001f)] private float progressDistanceThreshold = 0.02f;
 
     private Rigidbody2D body;
-    private Mover surfaceMover;
+    private Mod_Mover surfaceMover;
+    private Item waterActor; // 无 Mod_Mover 生物的水流配置身份。
     private WorldNavigationManager navigationManager;
     private Vector2[] waypoints = Array.Empty<Vector2>();
     private Vector2 destination;
@@ -102,7 +121,9 @@ public sealed class WorldNavigationAgent : MonoBehaviour
     private void OnDisable()
     {
         ActiveAgentRegistry.Remove(this);
+        RemoveFromLocalAvoidanceBucket();
         CancelPendingRequest();
+        preferredVelocity = Vector2.zero;
         ApplyVelocity(Vector2.zero, 0f);
     }
 
@@ -110,6 +131,7 @@ public sealed class WorldNavigationAgent : MonoBehaviour
     private static void ResetActiveAgentRegistry()
     {
         ActiveAgentRegistry.Clear();
+        LocalAvoidanceBuckets.Clear();
     }
 
     public void Bind(Rigidbody2D rigidbody2D)
@@ -119,8 +141,21 @@ public sealed class WorldNavigationAgent : MonoBehaviour
 
     public void Bind(Rigidbody2D rigidbody2D, WorldNavigationManager manager)
     {
+        Bind(rigidbody2D, manager, null);
+    }
+
+    /// <summary>AI 模块位于子物体，显式绑定其 Mod_Mover 才能让导航速度与水流共用刚体出口。</summary>
+    public void Bind(Rigidbody2D rigidbody2D, WorldNavigationManager manager, Mod_Mover mover)
+    {
+        Bind(rigidbody2D, manager, mover, null);
+    }
+
+    /// <summary>无 Mod_Mover 的生物仍以 Actor 身份读取统一水流配置；有 Mod_Mover 时由其结算主动和被动速度。</summary>
+    public void Bind(Rigidbody2D rigidbody2D, WorldNavigationManager manager, Mod_Mover mover, Item actor)
+    {
         body = rigidbody2D != null ? rigidbody2D : GetComponent<Rigidbody2D>();
-        surfaceMover = body != null ? body.GetComponentInParent<Mover>() : null;
+        surfaceMover = mover;
+        waterActor = actor;
         if (manager != null)
             navigationManager = manager;
         lastProgressPosition = CurrentPosition;
@@ -183,6 +218,7 @@ public sealed class WorldNavigationAgent : MonoBehaviour
             destinationPathCostLimitExclusive = maximumPathCostExclusive;
             CancelPendingRequest();
             InvalidateCurrentPath();
+            consecutiveFailures = 0;
             DestinationResult = WorldNavigationDestinationResult.Pending;
             nextRequestTime = 0f;
         }
@@ -220,7 +256,8 @@ public sealed class WorldNavigationAgent : MonoBehaviour
         {
             CancelPendingRequest();
             InvalidateCurrentPath();
-            DestinationResult = WorldNavigationDestinationResult.Pending;
+            if (DestinationResult != WorldNavigationDestinationResult.Failed)
+                DestinationResult = WorldNavigationDestinationResult.Pending;
             nextRequestTime = 0f;
         }
     }
@@ -229,6 +266,7 @@ public sealed class WorldNavigationAgent : MonoBehaviour
     {
         CanMove = false;
         ReachedDestination = true;
+        preferredVelocity = Vector2.zero;
         CancelPendingRequest();
         if (hasDestination &&
             (!hasPath || WorldTopologyRuntime.SqrDistance(destination, activePathDestination) > 0.0001f))
@@ -258,20 +296,24 @@ public sealed class WorldNavigationAgent : MonoBehaviour
 
         CancelPendingRequest();
         InvalidateCurrentPath();
-        DestinationResult = WorldNavigationDestinationResult.Pending;
+        if (DestinationResult != WorldNavigationDestinationResult.Failed)
+            DestinationResult = WorldNavigationDestinationResult.Pending;
         destinationDirty = true;
         nextRequestTime = 0f;
     }
 
     public void Tick(float deltaTime)
     {
+        Vector2 current = CurrentPosition;
+        UpdateLocalAvoidanceBucket(current);
+        preferredVelocity = Vector2.zero;
+
         if (!CanMove || !hasDestination)
         {
             ApplyVelocity(Vector2.zero, deltaTime);
             return;
         }
 
-        Vector2 current = CurrentPosition;
         if (HasReachedCurrentDestination(current) || HasReachedResolvedDestination(current))
         {
             CompleteDestination();
@@ -298,6 +340,7 @@ public sealed class WorldNavigationAgent : MonoBehaviour
             lastFailureRevision != navigation.GridRevision)
         {
             consecutiveFailures = 0;
+            DestinationResult = WorldNavigationDestinationResult.Pending;
             lastFailureRevision = navigation.GridRevision;
             nextRequestTime = Time.unscaledTime;
         }
@@ -362,7 +405,12 @@ public sealed class WorldNavigationAgent : MonoBehaviour
         if (deltaTime > 0f)
             speed = Mathf.Min(speed, distance / deltaTime);
 
-        ApplyVelocity(delta / distance * speed, deltaTime);
+        preferredVelocity = delta / distance * speed;
+        Vector2 steeredVelocity = ResolveLocalAvoidanceVelocity(
+            navigation,
+            current,
+            preferredVelocity);
+        ApplyVelocity(steeredVelocity, deltaTime);
         RecoverIfStalled(current);
     }
 
@@ -374,7 +422,8 @@ public sealed class WorldNavigationAgent : MonoBehaviour
         navigationManager = navigation;
         submittedDestination = destination;
         submittedPathCostLimitExclusive = destinationPathCostLimitExclusive;
-        DestinationResult = WorldNavigationDestinationResult.Pending;
+        if (DestinationResult != WorldNavigationDestinationResult.Failed)
+            DestinationResult = WorldNavigationDestinationResult.Pending;
         destinationDirty = false;
         nextRequestTime = Time.unscaledTime + Mathf.Max(0.05f, repathInterval);
         requestId = navigation.RequestPath(current, submittedDestination, OnPathCompleted,
@@ -397,6 +446,8 @@ public sealed class WorldNavigationAgent : MonoBehaviour
                 ApplyVelocity(Vector2.zero, Time.deltaTime);
             destinationDirty = true;
             consecutiveFailures = Mathf.Min(consecutiveFailures + 1, 8);
+            if (consecutiveFailures >= PathFailureErrorThreshold)
+                DestinationResult = WorldNavigationDestinationResult.Failed;
             lastFailureRevision = result.GridRevision;
             float retryDelay = Mathf.Min(
                 Mathf.Max(repathInterval, 0.05f) * Mathf.Pow(2f, Mathf.Min(consecutiveFailures, 4)),
@@ -584,6 +635,7 @@ public sealed class WorldNavigationAgent : MonoBehaviour
     {
         CancelPendingRequest();
         ReachedDestination = true;
+        preferredVelocity = Vector2.zero;
         DestinationResult = WorldNavigationDestinationResult.Reached;
         hasPath = false;
         pathReachesDestination = false;
@@ -592,6 +644,216 @@ public sealed class WorldNavigationAgent : MonoBehaviour
         waypoints = Array.Empty<Vector2>();
         ApplyVelocity(Vector2.zero, Time.deltaTime);
     }
+
+    #region GameObject AI 局部避让
+
+    /// <summary>只有正在用公共 AI Mod_Mover 行走的单位参与局部避让，飞行等独立移动不会污染人群判断。</summary>
+    private bool IsLocalAvoidanceParticipant =>
+        surfaceMover is Mod_Mover_AI &&
+        body != null &&
+        isActiveAndEnabled &&
+        CanMove &&
+        hasDestination &&
+        !ReachedDestination;
+
+    /// <summary>用小型空间桶限制邻居查询，不让 GameObject AI 的避让退化成全体两两扫描。</summary>
+    private void UpdateLocalAvoidanceBucket(Vector2 position)
+    {
+        if (surfaceMover is not Mod_Mover_AI || !isActiveAndEnabled)
+        {
+            RemoveFromLocalAvoidanceBucket();
+            return;
+        }
+
+        Vector2Int nextBucket = GetLocalAvoidanceBucket(position);
+        if (hasLocalAvoidanceBucket && nextBucket == localAvoidanceBucket)
+            return;
+
+        RemoveFromLocalAvoidanceBucket();
+        if (!LocalAvoidanceBuckets.TryGetValue(nextBucket, out System.Collections.Generic.List<WorldNavigationAgent> agents))
+        {
+            agents = new System.Collections.Generic.List<WorldNavigationAgent>(4);
+            LocalAvoidanceBuckets.Add(nextBucket, agents);
+        }
+
+        agents.Add(this);
+        localAvoidanceBucket = nextBucket;
+        hasLocalAvoidanceBucket = true;
+    }
+
+    private void RemoveFromLocalAvoidanceBucket()
+    {
+        if (!hasLocalAvoidanceBucket)
+            return;
+
+        if (LocalAvoidanceBuckets.TryGetValue(localAvoidanceBucket,
+                out System.Collections.Generic.List<WorldNavigationAgent> agents))
+        {
+            agents.Remove(this);
+            if (agents.Count == 0)
+                LocalAvoidanceBuckets.Remove(localAvoidanceBucket);
+        }
+
+        hasLocalAvoidanceBucket = false;
+    }
+
+    private static Vector2Int GetLocalAvoidanceBucket(Vector2 position)
+    {
+        Vector2 normalized = WorldTopologyRuntime.NormalizePosition(position);
+        return new Vector2Int(
+            Mathf.FloorToInt(normalized.x / LocalAvoidanceBucketSize),
+            Mathf.FloorToInt(normalized.y / LocalAvoidanceBucketSize));
+    }
+
+    /// <summary>预测短时间内的相撞趋势，优先向自身右侧错身，并在贴身时附加分离力。</summary>
+    private Vector2 ResolveLocalAvoidanceVelocity(
+        WorldNavigationManager navigation,
+        Vector2 current,
+        Vector2 desiredVelocity)
+    {
+        float desiredSpeed = desiredVelocity.magnitude;
+        if (!IsLocalAvoidanceParticipant || desiredSpeed <= 0.0001f)
+            return desiredVelocity;
+
+        Vector2 forward = desiredVelocity / desiredSpeed;
+        Vector2 right = new(forward.y, -forward.x);
+        Vector2 separation = Vector2.zero;
+        Vector2 passing = Vector2.zero;
+        bool hasImminentCollision = false;
+        int acceptedNeighbors = 0;
+        int bucketRange = Mathf.Max(1, Mathf.CeilToInt(LocalAvoidanceRadius / LocalAvoidanceBucketSize));
+
+        for (int y = -bucketRange; y <= bucketRange && acceptedNeighbors < MaxLocalAvoidanceNeighbors; y++)
+        {
+            for (int x = -bucketRange; x <= bucketRange && acceptedNeighbors < MaxLocalAvoidanceNeighbors; x++)
+            {
+                Vector2 bucketSample = current + new Vector2(
+                    x * LocalAvoidanceBucketSize,
+                    y * LocalAvoidanceBucketSize);
+                Vector2Int bucketKey = GetLocalAvoidanceBucket(bucketSample);
+                if (!LocalAvoidanceBuckets.TryGetValue(bucketKey,
+                        out System.Collections.Generic.List<WorldNavigationAgent> neighbors))
+                    continue;
+
+                for (int i = 0; i < neighbors.Count && acceptedNeighbors < MaxLocalAvoidanceNeighbors; i++)
+                {
+                    WorldNavigationAgent other = neighbors[i];
+                    if (other == null || other == this || !other.IsLocalAvoidanceParticipant || other.body == body)
+                        continue;
+
+                    Vector2 toOther = WorldTopologyRuntime.ShortestDelta(current, other.CurrentPosition);
+                    float distanceSqr = toOther.sqrMagnitude;
+                    if (distanceSqr > LocalAvoidanceRadius * LocalAvoidanceRadius)
+                        continue;
+
+                    acceptedNeighbors++;
+                    float distance = Mathf.Sqrt(Mathf.Max(0.000001f, distanceSqr));
+                    Vector2 towardOther = distance > 0.001f
+                        ? toOther / distance
+                        : ResolveCoincidentSeparationDirection(other);
+                    float combinedClearance = LocalAvoidanceBodyRadius * 2f;
+
+                    if (distance < combinedClearance * 1.5f)
+                    {
+                        float separationWeight = 1f - Mathf.Clamp01(
+                            (distance - combinedClearance) /
+                            Mathf.Max(0.001f, combinedClearance * 0.5f));
+                        separation -= towardOther * Mathf.Lerp(0.35f, 1.15f, separationWeight);
+                    }
+
+                    Vector2 relativeVelocity = other.preferredVelocity - desiredVelocity;
+                    float relativeSpeedSqr = relativeVelocity.sqrMagnitude;
+                    if (relativeSpeedSqr <= 0.0001f)
+                        continue;
+
+                    float timeToClosest = -Vector2.Dot(toOther, relativeVelocity) / relativeSpeedSqr;
+                    if (timeToClosest < 0f || timeToClosest > LocalAvoidancePredictionTime)
+                        continue;
+
+                    Vector2 closestOffset = toOther + relativeVelocity * timeToClosest;
+                    float collisionClearance = combinedClearance * 1.2f;
+                    if (closestOffset.sqrMagnitude >= collisionClearance * collisionClearance)
+                        continue;
+
+                    hasImminentCollision = true;
+                    float timeWeight = 1f - Mathf.Clamp01(timeToClosest / LocalAvoidancePredictionTime);
+                    float clearanceWeight = 1f - Mathf.Clamp01(
+                        closestOffset.magnitude / Mathf.Max(0.001f, collisionClearance));
+                    passing += right * Mathf.Max(0.35f, Mathf.Max(timeWeight, clearanceWeight));
+                }
+            }
+        }
+
+        if (acceptedNeighbors == 0)
+            return desiredVelocity;
+
+        separation = Vector2.ClampMagnitude(separation, 1f);
+        passing = Vector2.ClampMagnitude(passing, 1f);
+        Vector2 primary = desiredVelocity +
+                          separation * (desiredSpeed * 0.9f) +
+                          passing * (desiredSpeed * 0.95f);
+        primary = primary.sqrMagnitude > 0.0001f
+            ? primary.normalized * desiredSpeed
+            : desiredVelocity;
+        if (IsLocalAvoidanceVelocityNavigable(navigation, current, primary))
+            return primary;
+
+        if (passing.sqrMagnitude > 0.0001f)
+        {
+            Vector2 alternate = desiredVelocity +
+                                separation * (desiredSpeed * 0.9f) -
+                                passing * (desiredSpeed * 0.95f);
+            alternate = alternate.sqrMagnitude > 0.0001f
+                ? alternate.normalized * desiredSpeed
+                : desiredVelocity;
+            if (IsLocalAvoidanceVelocityNavigable(navigation, current, alternate))
+                return alternate;
+        }
+
+        return hasImminentCollision ? desiredVelocity * 0.45f : desiredVelocity;
+    }
+
+    /// <summary>避让只能在当前通行代价以内侧移，避免为了绕一只动物主动切进河流或阻挡格。</summary>
+    private bool IsLocalAvoidanceVelocityNavigable(
+        WorldNavigationManager navigation,
+        Vector2 current,
+        Vector2 velocity)
+    {
+        if (navigation == null || velocity.sqrMagnitude <= 0.0001f)
+            return false;
+
+        float probeDistance = Mathf.Clamp(
+            Mathf.Max(LocalAvoidanceBodyRadius * 2f, velocity.magnitude * 0.2f),
+            0.7f,
+            1.1f);
+        Vector2 probe = WorldTopologyRuntime.NormalizePosition(
+            current + velocity.normalized * probeDistance);
+        if (!navigation.TryGetCell(current, out uint currentPenalty, out bool currentWalkable) ||
+            !currentWalkable ||
+            !navigation.TryGetCell(probe, out uint probePenalty, out bool probeWalkable) ||
+            !probeWalkable ||
+            probePenalty > currentPenalty)
+        {
+            return false;
+        }
+
+        return navigation.HasGridLineOfSight(current, probe);
+    }
+
+    /// <summary>完全重叠时按成对实例生成相反方向，避免两边都拿到同一个零向量。</summary>
+    private Vector2 ResolveCoincidentSeparationDirection(WorldNavigationAgent other)
+    {
+        int selfId = GetInstanceID();
+        int otherId = other.GetInstanceID();
+        int low = Mathf.Min(selfId, otherId);
+        int high = Mathf.Max(selfId, otherId);
+        uint hash = unchecked((uint)(low * 73856093) ^ (uint)(high * 19349663));
+        float angle = (hash % 360u) * Mathf.Deg2Rad;
+        Vector2 axis = new(Mathf.Cos(angle), Mathf.Sin(angle));
+        return selfId <= otherId ? axis : -axis;
+    }
+
+    #endregion
 
     private bool HasReachedCurrentDestination(Vector2 current)
         => WorldTopologyRuntime.SqrDistance(current, destination) <= stopDistance * stopDistance;
@@ -634,16 +896,22 @@ public sealed class WorldNavigationAgent : MonoBehaviour
         fallbackVelocity = velocity;
         if (body != null)
         {
+            if (surfaceMover != null)
+            {
+                surfaceMover.ApplyNavigationVelocity(velocity, deltaTime);
+                return;
+            }
+
             if (deltaTime <= 0f)
             {
                 body.velocity = Vector2.zero;
                 return;
             }
 
-            surfaceMover ??= body.GetComponentInParent<Mover>();
-            body.velocity = surfaceMover == null
-                ? velocity
-                : surfaceMover.SmoothSurfaceVelocity(body.velocity, velocity, deltaTime);
+            body.velocity = waterActor != null
+                ? velocity + WorldMotionSystem.SampleWaterVelocity(body.position,
+                    WaterCurrentPushConfigService.ResolvePushSpeed(waterActor))
+                : velocity;
             return;
         }
 
@@ -654,7 +922,13 @@ public sealed class WorldNavigationAgent : MonoBehaviour
     internal bool CopyRemainingDebugPath(System.Collections.Generic.List<Vector3> output)
     {
         output.Clear();
-        if (!isActiveAndEnabled || !hasPath || waypointIndex >= waypoints.Length)
+        // 路线提示只画正在执行的地面导航，停止后的缓存路径不能继续“拴”在飞行中的实体上。
+        if (!isActiveAndEnabled ||
+            !CanMove ||
+            !hasDestination ||
+            ReachedDestination ||
+            !hasPath ||
+            waypointIndex >= waypoints.Length)
             return false;
 
         float z = transform.position.z - 0.05f;

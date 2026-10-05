@@ -5,7 +5,7 @@ public partial class Mod_Defense : Module
     public Ex_ModData_MemoryPackable SaveData;
     public override ModuleData _Data { get { return SaveData; }  set { SaveData = (Ex_ModData_MemoryPackable)value; } }
 
-    [Header("四类防御加成")]
+    [Header("物理防御加成")]
     public CombatDefense DefenseValues = new CombatDefense();
     private bool _isDefenseApplied;
 
@@ -20,14 +20,14 @@ public partial class Mod_Defense : Module
     }
 
 
-    /// <summary>校正四类防御并挂接到生命模块。</summary>
+    /// <summary>校正物理防御并挂接到生命模块。</summary>
     public override void Load()
     {
         DefenseValues ??= new CombatDefense();
         DefenseValues.ClampNonNegative();
         if (item.itemMods.ContainsKey_ID(ModText.Hp))
         {
-            var Hp = item.itemMods.GetMod_ByID(ModText.Hp) as DamageReceiver;
+            var Hp = item.itemMods.GetMod_ByID(ModText.Hp) as Mod_DamageReceiver;
             Hp.AddDefense(DefenseValues);
             _isDefenseApplied = true;
         }
@@ -38,7 +38,7 @@ public partial class Mod_Defense : Module
     {
     }
 
-    /// <summary>卸载本模块对生命模块施加的四类防御。</summary>
+    /// <summary>卸载本模块对生命模块施加的物理防御。</summary>
     public override void Unload()
     {
         if (!_isDefenseApplied)
@@ -46,7 +46,7 @@ public partial class Mod_Defense : Module
 
         if (item.Mods.ContainsKey(ModText.Hp))
         {
-            var Hp = item.itemMods.GetMod_ByID(ModText.Hp) as DamageReceiver;
+            var Hp = item.itemMods.GetMod_ByID(ModText.Hp) as Mod_DamageReceiver;
             Hp.RemoveDefense(DefenseValues);
         }
 

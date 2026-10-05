@@ -1,0 +1,200 @@
+<?xml version="1.0"?>
+<!DOCTYPE lmms-project>
+<lmms-project version="1.0" creator="LMMS" creatorversion="1.2.2" type="song">
+  <head timesig_numerator="4" timesig_denominator="4" bpm="120" mastervol="65" masterpitch="0" />
+  <song>
+    <trackcontainer type="song" visible="1" width="1100" height="440" x="5" y="5" maximized="0" minimized="0">
+      <track muted="0" type="0" name="A - Warm Wood" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="65" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="67" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="19" wavetype1="0" coarse1="19" finel1="-18" finer1="-18" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="8" wavetype2="0" coarse2="24" finel2="31" finer2="31" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="4100" fwet="1">
+            <elvol pdel="0" att="0.017321" hold="0" dec="0.084853" sustain="0" rel="0.042426" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" att="0.000000" hold="0" dec="0.100000" sustain="0" rel="0.044721" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" att="0.000000" hold="0" dec="0.100000" sustain="0" rel="0.044721" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="0" name="A_wood / click_01">
+          <note pos="12" key="64" len="9" vol="85" pan="0" />
+        </pattern>
+        <pattern type="1" steps="16" len="192" pos="192" name="A_wood / click_02">
+          <note pos="12" key="65" len="9" vol="81" pan="0" />
+        </pattern>
+        <pattern type="1" steps="16" len="192" pos="384" name="A_wood / click_03">
+          <note pos="12" key="63" len="9" vol="88" pan="0" />
+        </pattern>
+        <pattern type="1" steps="16" len="192" pos="576" name="A_wood / hover">
+          <note pos="12" key="69" len="4" vol="43" pan="0" />
+        </pattern>
+        <pattern type="1" steps="16" len="192" pos="768" name="A_wood / confirm">
+          <note pos="12" key="64" len="8" vol="79" pan="0" />
+          <note pos="20" key="71" len="9" vol="85" pan="0" />
+          <note pos="27" key="76" len="8" vol="62" pan="0" />
+        </pattern>
+        <pattern type="1" steps="16" len="192" pos="960" name="A_wood / cancel">
+          <note pos="12" key="66" len="7" vol="68" pan="0" />
+          <note pos="20" key="59" len="9" vol="64" pan="0" />
+        </pattern>
+        <pattern type="1" steps="16" len="192" pos="1152" name="A_wood / open">
+          <note pos="12" key="59" len="8" vol="65" pan="0" />
+          <note pos="19" key="66" len="8" vol="71" pan="0" />
+        </pattern>
+        <pattern type="1" steps="16" len="192" pos="1344" name="A_wood / close">
+          <note pos="12" key="64" len="7" vol="63" pan="0" />
+          <note pos="19" key="57" len="9" vol="57" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="B - Soft Button" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="65" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="78" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="13" wavetype1="0" coarse1="12" finel1="0" finer1="0" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="5" wavetype2="1" coarse2="19" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="2300" fwet="1">
+            <elvol pdel="0" att="0.022361" hold="0" dec="0.104881" sustain="0" rel="0.050990" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" att="0.000000" hold="0" dec="0.100000" sustain="0" rel="0.044721" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" att="0.000000" hold="0" dec="0.100000" sustain="0" rel="0.044721" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="1536" name="B_soft / click_01">
+          <note pos="12" key="52" len="9" vol="85" pan="0" />
+        </pattern>
+        <pattern type="1" steps="16" len="192" pos="1728" name="B_soft / click_02">
+          <note pos="12" key="53" len="9" vol="81" pan="0" />
+        </pattern>
+        <pattern type="1" steps="16" len="192" pos="1920" name="B_soft / click_03">
+          <note pos="12" key="51" len="9" vol="88" pan="0" />
+        </pattern>
+        <pattern type="1" steps="16" len="192" pos="2112" name="B_soft / hover">
+          <note pos="12" key="57" len="4" vol="43" pan="0" />
+        </pattern>
+        <pattern type="1" steps="16" len="192" pos="2304" name="B_soft / confirm">
+          <note pos="12" key="52" len="8" vol="79" pan="0" />
+          <note pos="20" key="59" len="9" vol="85" pan="0" />
+          <note pos="27" key="64" len="8" vol="62" pan="0" />
+        </pattern>
+        <pattern type="1" steps="16" len="192" pos="2496" name="B_soft / cancel">
+          <note pos="12" key="54" len="7" vol="68" pan="0" />
+          <note pos="20" key="47" len="9" vol="64" pan="0" />
+        </pattern>
+        <pattern type="1" steps="16" len="192" pos="2688" name="B_soft / open">
+          <note pos="12" key="47" len="8" vol="65" pan="0" />
+          <note pos="19" key="54" len="8" vol="71" pan="0" />
+        </pattern>
+        <pattern type="1" steps="16" len="192" pos="2880" name="B_soft / close">
+          <note pos="12" key="52" len="7" vol="63" pan="0" />
+          <note pos="19" key="45" len="9" vol="57" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="C - Gentle Pixel" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="60" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="66" wavetype0="1" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="17" wavetype1="0" coarse1="0" finel1="0" finer1="0" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="6" wavetype2="0" coarse2="12" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="3300" fwet="1">
+            <elvol pdel="0" att="0.020000" hold="0" dec="0.097980" sustain="0" rel="0.048990" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" att="0.000000" hold="0" dec="0.100000" sustain="0" rel="0.044721" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" att="0.000000" hold="0" dec="0.100000" sustain="0" rel="0.044721" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="3072" name="C_pixel / click_01">
+          <note pos="12" key="60" len="9" vol="85" pan="0" />
+        </pattern>
+        <pattern type="1" steps="16" len="192" pos="3264" name="C_pixel / click_02">
+          <note pos="12" key="61" len="9" vol="81" pan="0" />
+        </pattern>
+        <pattern type="1" steps="16" len="192" pos="3456" name="C_pixel / click_03">
+          <note pos="12" key="59" len="9" vol="88" pan="0" />
+        </pattern>
+        <pattern type="1" steps="16" len="192" pos="3648" name="C_pixel / hover">
+          <note pos="12" key="65" len="4" vol="43" pan="0" />
+        </pattern>
+        <pattern type="1" steps="16" len="192" pos="3840" name="C_pixel / confirm">
+          <note pos="12" key="60" len="8" vol="79" pan="0" />
+          <note pos="20" key="67" len="9" vol="85" pan="0" />
+          <note pos="27" key="72" len="8" vol="62" pan="0" />
+        </pattern>
+        <pattern type="1" steps="16" len="192" pos="4032" name="C_pixel / cancel">
+          <note pos="12" key="62" len="7" vol="68" pan="0" />
+          <note pos="20" key="55" len="9" vol="64" pan="0" />
+        </pattern>
+        <pattern type="1" steps="16" len="192" pos="4224" name="C_pixel / open">
+          <note pos="12" key="55" len="8" vol="65" pan="0" />
+          <note pos="19" key="62" len="8" vol="71" pan="0" />
+        </pattern>
+        <pattern type="1" steps="16" len="192" pos="4416" name="C_pixel / close">
+          <note pos="12" key="60" len="7" vol="63" pan="0" />
+          <note pos="19" key="53" len="9" vol="57" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="A - Wood Texture" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="12" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="0" finel1="0" finer1="0" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="2600" fwet="1">
+            <elvol pdel="0" att="0.012649" hold="0" dec="0.046904" sustain="0" rel="0.028284" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" att="0.000000" hold="0" dec="0.100000" sustain="0" rel="0.044721" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" att="0.000000" hold="0" dec="0.100000" sustain="0" rel="0.044721" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="0" name="A_wood / click_01">
+          <note pos="12" key="64" len="3" vol="85" pan="0" />
+        </pattern>
+        <pattern type="1" steps="16" len="192" pos="192" name="A_wood / click_02">
+          <note pos="12" key="65" len="3" vol="81" pan="0" />
+        </pattern>
+        <pattern type="1" steps="16" len="192" pos="384" name="A_wood / click_03">
+          <note pos="12" key="63" len="3" vol="88" pan="0" />
+        </pattern>
+        <pattern type="1" steps="16" len="192" pos="576" name="A_wood / hover">
+          <note pos="12" key="69" len="3" vol="43" pan="0" />
+        </pattern>
+        <pattern type="1" steps="16" len="192" pos="768" name="A_wood / confirm">
+          <note pos="12" key="64" len="3" vol="79" pan="0" />
+          <note pos="20" key="71" len="3" vol="85" pan="0" />
+          <note pos="27" key="76" len="3" vol="62" pan="0" />
+        </pattern>
+        <pattern type="1" steps="16" len="192" pos="960" name="A_wood / cancel">
+          <note pos="12" key="66" len="3" vol="68" pan="0" />
+          <note pos="20" key="59" len="3" vol="64" pan="0" />
+        </pattern>
+        <pattern type="1" steps="16" len="192" pos="1152" name="A_wood / open">
+          <note pos="12" key="59" len="3" vol="65" pan="0" />
+          <note pos="19" key="66" len="3" vol="71" pan="0" />
+        </pattern>
+        <pattern type="1" steps="16" len="192" pos="1344" name="A_wood / close">
+          <note pos="12" key="64" len="3" vol="63" pan="0" />
+          <note pos="19" key="57" len="3" vol="57" pan="0" />
+        </pattern>
+      </track>
+    </trackcontainer>
+    <mixer visible="1" width="561" height="332" x="5" y="310" maximized="0" minimized="0">
+      <mixerchannel num="0" muted="0" volume="1" name="Master" soloed="0">
+        <fxchain numofeffects="0" enabled="0" />
+      </mixerchannel>
+    </mixer>
+    <ControllerRackView visible="1" width="258" height="142" x="836" y="407" maximized="0" minimized="0" />
+    <pianoroll visible="0" width="640" height="480" x="1" y="1" maximized="0" minimized="0" />
+    <automationeditor visible="0" width="640" height="400" x="56" y="255" maximized="0" minimized="0" />
+    <projectnotes visible="0" width="640" height="400" x="1" y="1" maximized="0" minimized="0">FlatWorld UI candidates: A wood / B soft / C pixel. One cue per bar at 120 BPM. Each group: click 1, click 2, click 3, hover, confirm, cancel, open, close. Original TripleOscillator patches; preview only.</projectnotes>
+    <timeline lp0pos="0" lp1pos="192" lpstate="0" />
+    <controllers />
+  </song>
+</lmms-project>

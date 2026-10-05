@@ -3,24 +3,25 @@ using System.Collections.Generic;
 using FlatWorld.DroppedItems;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using Unity.Profiling;
 
-/// <summary>主线程只桥接资源、地形、库存和存档；位置、数量及运动状态保存在独立 ECS World。</summary>
+/// <summary>主线程统一驱动轻量掉落物；没有 Entity、逐物品 Update、Rigidbody2D 或完整 Item 模块。</summary>
 internal sealed partial class DroppedItemRuntime : IDisposable
 {
     private const float SpatialCellSize = 2f;
-    private readonly DroppedItemSimulation simulation = new();
+    private readonly LightweightDroppedItemSimulation simulation = new();
     private readonly Dictionary<int, ItemData> payloads = new();
     private readonly Dictionary<int, DroppedItemVisual> visuals = new();
     private readonly Dictionary<(string, Sprite), DroppedItemVisual> visualCache = new();
     private readonly Dictionary<Vector2Int, HashSet<int>> spatial = new();
     private readonly Dictionary<int, Vector2Int> spatialOwners = new();
-    private readonly List<DroppedChange> changes = new();
+    private readonly List<LightweightDroppedChange> changes = new();
     private readonly List<DroppedItemSaveRecord> unresolved = new();
     private readonly DroppedItemPresentation presentation;
     private WorldTopologyDomain domain;
     public int Count => simulation.Count;
     public bool IsCreated => simulation.IsCreated;
-    public int VisibleBatchCount => presentation.VisibleBatchCount;
+    public int VisibleViewCount => presentation.VisibleViewCount;
     public bool Contains(int id) => simulation.Contains(id);
 
     public DroppedItemRuntime(Scene scene, List<DroppedItemSaveRecord> records)
@@ -28,9 +29,10 @@ internal sealed partial class DroppedItemRuntime : IDisposable
         try
         {
             domain = WorldTopologyRuntime.GetActiveDomain();
-            presentation = new DroppedItemPresentation(scene, simulation, visuals);
+            presentation = new DroppedItemPresentation(scene, simulation, visuals, payloads);
             if (records != null)
                 foreach (DroppedItemSaveRecord record in records) Restore(record);
+            MachineWorld.CellChanged += RefreshTransportCell;
         }
         catch
         {
@@ -50,7 +52,8 @@ internal sealed partial class DroppedItemRuntime : IDisposable
         return visual;
     }
 
-    public void Add(ItemData data, DroppedBody body, DroppedFlight? flight = null, DroppedWaterTransition? water = null)
+    public void Add(ItemData data, LightweightDroppedBody body, LightweightDroppedFlight? flight = null,
+        LightweightDroppedWaterTransition? water = null)
     {
         // 先验证共享视觉，失败时还没有创建实体，调用者可以安全保留库存。
         DroppedItemVisual visual = ResolveVisual(data);
@@ -58,6 +61,7 @@ internal sealed partial class DroppedItemRuntime : IDisposable
         try
         {
             payloads.Add(body.Id, data); visuals.Add(body.Id, visual);
+            lastMatterTimes.Add(body.Id, matterTime);
             UpdatePlacement(body.Id);
             if (body.WaterKind != 0) wetItems.Add(body.Id);
             if (!flight.HasValue) QueueEnvironment(body.Id);
@@ -76,7 +80,9 @@ internal sealed partial class DroppedItemRuntime : IDisposable
             spatialOwners.Remove(id);
         }
         DetachTerrain(id);
+        transportItems.Remove(id);
         wetItems.Remove(id); pendingEnvironmentSet.Remove(id);
+        lastMatterTimes.Remove(id);
         visuals.Remove(id); payloads.Remove(id); simulation.Remove(id);
     }
 
@@ -85,7 +91,7 @@ internal sealed partial class DroppedItemRuntime : IDisposable
 
     private void UpdatePlacement(int id)
     {
-        DroppedBody body = simulation.Get(id);
+        LightweightDroppedBody body = simulation.Get(id);
         Vector2Int cell = SpatialCell(body.Position);
         if (!spatialOwners.TryGetValue(id, out Vector2Int previous) || previous != cell)
         {
@@ -98,29 +104,43 @@ internal sealed partial class DroppedItemRuntime : IDisposable
             bucket.Add(id); spatialOwners[id] = cell;
         }
         presentation.Changed(id);
+        if (MachineWorld.GetTransportAt(body.Position) != null) transportItems.Add(id);
+        else transportItems.Remove(id);
     }
 
     #endregion
 
     #region 驱动与保存
 
-    public void Tick(float deltaTime, IEnumerable<ItemPicker> pickers)
+    // 集中驱动也分阶段记账，区分运动、入水、输送、物质与拾取的实际开销。
+    private static readonly ProfilerMarker MotionTickMarker = new("DroppedItems.Tick.Motion");
+    private static readonly ProfilerMarker WaterTickMarker = new("DroppedItems.Tick.Water");
+    private static readonly ProfilerMarker TransportTickMarker = new("DroppedItems.Tick.Transport");
+    private static readonly ProfilerMarker MatterTickMarker = new("DroppedItems.Tick.Matter");
+    private static readonly ProfilerMarker PickupTickMarker = new("DroppedItems.Tick.Pickup");
+
+    public void Tick(float deltaTime, IEnumerable<Mod_ItemPicker> pickers)
     {
         if (deltaTime <= 0f) return;
         domain = WorldTopologyRuntime.GetActiveDomain();
-        simulation.Step(deltaTime, domain, changes);
-        foreach (DroppedChange change in changes)
+        using (MotionTickMarker.Auto())
         {
-            if (!simulation.Contains(change.Id)) continue;
-            if (change.Kind == 3) { Remove(change.Id); continue; }
-            if (change.Kind == 1) CheckEnvironment(change.Id);
-            if (simulation.Contains(change.Id)) UpdatePlacement(change.Id);
+            simulation.Step(deltaTime, domain, changes);
+            foreach (LightweightDroppedChange change in changes)
+            {
+                if (!simulation.Contains(change.Id)) continue;
+                if (change.Kind == 3) { Remove(change.Id); continue; }
+                if (change.Kind == 1) CheckEnvironment(change.Id);
+                if (simulation.Contains(change.Id)) UpdatePlacement(change.Id);
+            }
         }
-        TickWater(deltaTime);
-        TickPickup(deltaTime, pickers);
+        using (WaterTickMarker.Auto()) TickWater(deltaTime);
+        using (TransportTickMarker.Auto()) TickTransport(deltaTime);
+        using (MatterTickMarker.Auto()) TickMatter(deltaTime);
+        using (PickupTickMarker.Auto()) TickPickup(deltaTime, pickers);
     }
 
-    public void Present(Camera camera) => presentation.Present(camera, domain);
+    public void Present(Camera camera) => presentation.Present(camera, domain, spatial, SpatialCellSize);
 
     public List<DroppedItemSaveRecord> Capture()
     {
@@ -141,7 +161,7 @@ internal sealed partial class DroppedItemRuntime : IDisposable
                 FastCloner.FastCloner.DeepClone(record.Data));
             DroppedItemService.RemoveLegacyDropData(data);
             data.inHand = false; data.Stack.CanBePickedUp = true;
-            DroppedBody body = new()
+            LightweightDroppedBody body = new()
             {
                 Id = data.Guid, Amount = data.Stack.Amount, Position = domain.Normalize(record.Position),
                 Scale = record.Scale, Rotation = record.Rotation, VisualHeight = record.VisualHeight,
@@ -149,13 +169,13 @@ internal sealed partial class DroppedItemRuntime : IDisposable
                 SubmergedProgress = record.WaterKind == 2 && record.HasWaterTransition
                     ? Mathf.Clamp01((record.WaterElapsed - record.WaterDuration) / WorldItemWaterRules.SubmergedRecedeDuration) : 0f
             };
-            DroppedFlight? flight = record.HasFlight ? new DroppedFlight
+            LightweightDroppedFlight? flight = record.HasFlight ? new LightweightDroppedFlight
             {
                 Start = record.FlightStart, End = record.FlightEnd, Control = record.FlightControl,
                 Duration = record.FlightDuration, Elapsed = record.FlightElapsed,
                 ArcHeight = record.ArcHeight, RotationSpeed = record.RotationSpeed
             } : null;
-            DroppedWaterTransition? water = record.HasWaterTransition ? new DroppedWaterTransition
+            LightweightDroppedWaterTransition? water = record.HasWaterTransition ? new LightweightDroppedWaterTransition
             {
                 StartDepth = record.WaterStart, TargetDepth = record.WaterTarget,
                 Duration = record.WaterDuration, Elapsed = record.WaterElapsed,
@@ -173,11 +193,51 @@ internal sealed partial class DroppedItemRuntime : IDisposable
 
     public void Dispose()
     {
+        MachineWorld.CellChanged -= RefreshTransportCell;
+        transportItems.Clear(); transportScratch.Clear();
         ClearTerrainSubscriptions();
         presentation.Dispose(); simulation.Dispose();
         payloads.Clear(); visuals.Clear(); visualCache.Clear(); spatial.Clear(); spatialOwners.Clear();
         pickupAttempts.Clear();
+        matterScratch.Clear(); lastMatterTimes.Clear();
     }
 
+    #endregion
+
+    #region 输送带掉落物
+    private readonly HashSet<int> transportItems = new();
+    private readonly List<int> transportScratch = new();
+
+    /// <summary>放置、拆除或转速改变时只检查这个格附近的空间桶，静止地面物不逐帧查带。</summary>
+    private void RefreshTransportCell(Vector2Int cell)
+    {
+        Vector2 center = (Vector2)cell + Vector2.one * .5f;
+        if (!spatial.TryGetValue(SpatialCell(center), out HashSet<int> bucket)) return;
+        foreach (int id in bucket)
+        {
+            LightweightDroppedBody body = simulation.Get(id);
+            Vector2Int bodyCell = new(Mathf.FloorToInt(body.Position.x), Mathf.FloorToInt(body.Position.y));
+            if (bodyCell != cell) continue;
+            if (MachineWorld.GetTransportAt(body.Position) != null) transportItems.Add(id);
+            else transportItems.Remove(id);
+        }
+    }
+
+    private void TickTransport(float seconds)
+    {
+        transportScratch.Clear(); transportScratch.AddRange(transportItems);
+        foreach (int id in transportScratch)
+        {
+            if (!simulation.Contains(id)) { transportItems.Remove(id); continue; }
+            LightweightDroppedBody body = simulation.Get(id);
+            if (body.Pickable == 0 || body.WaterKind != 0 || simulation.TryGetFlight(id, out _)) continue;
+            Vector2 position = MachineWorld.TransportGroundItem(body.Position, seconds);
+            if (WorldTopologyRuntime.ShortestDelta(body.Position, position).sqrMagnitude < .00000001f) continue;
+            body.Position = position;
+            simulation.Set(body);
+            UpdatePlacement(id);
+            CheckEnvironment(id);
+        }
+    }
     #endregion
 }

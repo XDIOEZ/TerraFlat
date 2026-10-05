@@ -37,6 +37,8 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 		public float Fatigue01 = 0f;
 		public bool GrassSustenanceInitialized;
 		public float GrassSustenanceRemaining;
+		public bool SleepSuppressedByDamage;
+		public double SleepAllowedFromGameDay = -1d;
 	}
 	#endregion
 
@@ -150,13 +152,13 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 	[FoldoutGroup("逃跑参数"), PropertyOrder(55), LabelText("逃跑触发距离"), SuffixLabel("米", true), MinValue(0.1f)]
 	public float fleeTriggerDistance = 6f;
 	[FoldoutGroup("逃跑参数"), PropertyOrder(56), LabelText("逃跑安全距离"), SuffixLabel("米", true), MinValue(0.1f)]
-	public float fleeSafeDistance = 10f;
+	public float fleeSafeDistance = 36f;
 	[FoldoutGroup("逃跑参数"), PropertyOrder(57), LabelText("逃跑偏移距离"), SuffixLabel("米", true), MinValue(1f)]
-	public float fleeRunDistance = 8f;
+	public float fleeRunDistance = 36f;
 	[FoldoutGroup("逃跑参数"), PropertyOrder(58), LabelText("受击威胁记忆"), SuffixLabel("秒", true), MinValue(0.1f)]
 	public float damageFleeDuration = 5f;
 	[FoldoutGroup("逃跑参数"), PropertyOrder(58), LabelText("威胁TypeTag列表")]
-	public List<string> threatTags = new List<string> { "Predator", "Wolf" };
+	public List<string> threatTags = new List<string> { Tag.Carnivore };
 	[FoldoutGroup("逃跑参数"), PropertyOrder(59), LabelText("检测所有玩家")]
 	public bool fleeFromPlayer = true;
 
@@ -212,8 +214,12 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 	#region Lifecycle
 	public override void Load()
 	{
+		Data ??= new AI_ChickenSaveData();
+		Data.SleepSuppressedByDamage = false;
+		Data.SleepAllowedFromGameDay = -1d;
 		ModData.ReadData(ref Data);
-		_currentState = Data.State;
+		_currentState = Data.State == ChickenState.Sleep && IsSleepSuppressedByDamage()
+			? ChickenState.Idle : Data.State;
 		_idleRemainTimer = GetIdleDuration();
 		InitializeAI();
 		BindEggWorldTime();
@@ -246,20 +252,18 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 
 	protected override void OnDamageThreatUpdated(DamageReceiverDamageInfo damageInfo)
 	{
-		if (!TryGetRecentDamageThreat(out Item threat, out Vector3 sourcePosition))
+		if (!TryGetRecentDamageThreat(out Item threat, out _))
 			return;
 
 		_currentThreat = threat;
 
-		if (_isReady &&
-			_stateMachine != null &&
-			_stateMachine.IsInitialized &&
-			_currentState != ChickenState.Flee)
-		{
-			SwitchState(ChickenState.Flee);
-		}
+		if (!_isReady || _stateMachine == null || !_stateMachine.IsInitialized)
+			return;
 
-		MoveAwayFrom(sourcePosition, fleeRunDistance);
+		if (_currentState == ChickenState.Flee)
+			RetargetCurrentFleeNode();
+		else
+			SwitchState(ChickenState.Flee);
 	}
 
 	/// <summary>小鸡受到有效伤害后获得短时速度1，不要求伤害必须来自可识别攻击者。</summary>
@@ -268,7 +272,8 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 		if (item == null || damageInfo == null || damageInfo.DamageValue <= 0f)
 			return;
 
-		BuffManager buffManager = item.itemMods?.GetMod_ByID<BuffManager>(ModText.BuffManager);
+		SuppressSleepUntilNextNight();
+		Mod_BuffManager buffManager = item.itemMods?.GetMod_ByID<Mod_BuffManager>(ModText.Mod_BuffManager);
 		buffManager?.AddBuff(SpeedOneBuffId);
 	}
 
@@ -383,7 +388,10 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 		stateMachine.Register(CreateStoppedStateNode(ChickenState.Sleep, TickSleep));
 		stateMachine.Register(CreateStoppedStateNode(ChickenState.Mate, _ => TickMate()));
 		stateMachine.Register(CreateStoppedStateNode(ChickenState.LayEgg, _ => TickLayEgg()));
-		stateMachine.Register(CreateMovingStateNode(ChickenState.Flee, _ => TickFlee()));
+		stateMachine.Register(CreateFleeStateNode(
+			ChickenState.Flee,
+			ResolveFleeSourcePosition,
+			() => fleeRunDistance));
 	}
 	#endregion
 
@@ -459,17 +467,15 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 		_layEggTriggered = true;
 	}
 
-	private void TickFlee()
+	private Vector3? ResolveFleeSourcePosition()
 	{
 		if (TryGetRecentDamageThreat(out Item damageThreat, out Vector3 damageSource))
 		{
 			_currentThreat = damageThreat;
-			MoveAwayFrom(damageSource, fleeRunDistance);
-			return;
+			return damageSource;
 		}
 
-		if (_currentThreat == null) { StopMove(); return; }
-		MoveAwayFrom(_currentThreat.transform.position, fleeRunDistance);
+		return _currentThreat != null ? _currentThreat.transform.position : (Vector3?)null;
 	}
 	#endregion
 
@@ -489,11 +495,11 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 		{
 			if (threat == null) return false;
 			_currentThreat = threat;
-			return IsWithinEffectivePerceptionRange(threat, fleeSafeDistance);
+			return IsWithinFleeDistance(threat, true, fleeTriggerDistance, fleeSafeDistance);
 		}
 
 		if (threat == null) return false;
-		if (!IsWithinEffectivePerceptionRange(threat, fleeTriggerDistance)) return false;
+		if (!IsWithinFleeDistance(threat, false, fleeTriggerDistance, fleeSafeDistance)) return false;
 
 		_currentThreat = threat;
 		return true;
@@ -528,6 +534,7 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 
 	private bool ShouldSleep()
 	{
+		if (IsSleepSuppressedByDamage()) return false;
 		float hpRate = GetHpRate();
 
 		if (_currentState == ChickenState.Sleep)
@@ -575,33 +582,57 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 	}
 	#endregion
 
+	#region 受伤后保持清醒
+	/// <summary>受伤后禁睡到下一次夜晚开始，白天低血量也不能提前补觉。</summary>
+	private void SuppressSleepUntilNextNight()
+	{
+		Data.SleepSuppressedByDamage = true;
+		Data.SleepAllowedFromGameDay = TryGetCurrentGameDay(out double gameDay)
+			? GetNextNightGameDay(gameDay) : -1d;
+	}
+
+	/// <summary>使用存档中的绝对游戏日比较，跨午夜、跳时和远距休眠都不会提前解除警戒。</summary>
+	private bool IsSleepSuppressedByDamage()
+	{
+		if (!Data.SleepSuppressedByDamage) return false;
+		if (!TryGetCurrentGameDay(out double gameDay)) return true;
+		if (Data.SleepAllowedFromGameDay < 0d)
+			Data.SleepAllowedFromGameDay = GetNextNightGameDay(gameDay);
+		if (gameDay < Data.SleepAllowedFromGameDay) return true;
+
+		Data.SleepSuppressedByDamage = false;
+		Data.SleepAllowedFromGameDay = -1d;
+		return false;
+	}
+
+	private double GetNextNightGameDay(double gameDay)
+	{
+		double nextNight = Math.Floor(gameDay) + Mathf.Clamp01(dayEndRatio);
+		return nextNight > gameDay ? nextNight : nextNight + 1d;
+	}
+
+	private bool TryGetCurrentGameDay(out double gameDay)
+	{
+		gameDay = 0d;
+		DayTimeSystem timeSystem = DayTimeSystem.GetInstance();
+		if (timeSystem == null ||
+			!timeSystem.WorldTimeDict.TryGetValue(gameObject.scene.name, out TimeData timeData) || timeData == null)
+			return false;
+
+		float dayLength = Mathf.Max(1f, timeData.DayLength);
+		gameDay = Math.Max(0, timeData.TotalDays) +
+			(double)Mathf.Repeat(timeData.CurrentTime, dayLength) / dayLength;
+		return true;
+	}
+	#endregion
+
 	#region Helpers - Chicken 特有
 	private Item FindClosestThreat()
 	{
-		Item closestThreat = _detector.FindClosestItemByTags(threatTags, transform.position);
-		float closestDistanceSqr = closestThreat != null
-			? WorldTopologyRuntime.SqrDistance(transform.position, closestThreat.transform.position)
-			: float.MaxValue;
-
-		if (!fleeFromPlayer)
-			return closestThreat;
-
-		List<Item> detectedItems = _detector.CurrentItemsInArea;
-		for (int i = 0; i < detectedItems.Count; i++)
-		{
-			Item detectedItem = detectedItems[i];
-			if (!(detectedItem is Player))
-				continue;
-
-			float distanceSqr = WorldTopologyRuntime.SqrDistance(transform.position, detectedItem.transform.position);
-			if (distanceSqr >= closestDistanceSqr)
-				continue;
-
-			closestThreat = detectedItem;
-			closestDistanceSqr = distanceSqr;
-		}
-
-		return closestThreat;
+		return _detector.FindClosestItemByTags(
+			threatTags,
+			transform.position,
+			includePlayerEntities: fleeFromPlayer);
 	}
 
 	private Item FindClosestEdibleItem()

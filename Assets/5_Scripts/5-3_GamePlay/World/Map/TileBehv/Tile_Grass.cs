@@ -15,16 +15,16 @@ public class Tile_Grass : TileBlockBehaviour
     [Header("进入草地时附加的 Buff（预留，暂未使用）")]
     public List<string> BuffInfo = new List<string>();
 
-    public override void OnEnter(Item item, TileData tileData, Map map, TileEffectReceiver receiver)
+    public override void OnEnter(Item item, TileData tileData, Map map, Mod_TileEffectReceiver receiver)
     {
         // 之后如果有“踩到草地”的特殊效果（如加速、隐藏等），可以在这里实现
     }
 
-    public override void OnExit(Item item, TileData tileData, Map map, TileEffectReceiver receiver)
+    public override void OnExit(Item item, TileData tileData, Map map, Mod_TileEffectReceiver receiver)
     {
     }
 
-    public override void OnUpdate(Item item, TileData tileData, Map map, TileEffectReceiver receiver, float deltaTime)
+    public override void OnUpdate(Item item, TileData tileData, Map map, Mod_TileEffectReceiver receiver, float deltaTime)
     {
     }
 }

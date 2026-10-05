@@ -61,6 +61,8 @@ public class AI_AttackController
 
 	/// <summary>冷却是否已结束</summary>
 	public bool IsCooldownDone => _cooldownTimer <= 0f;
+	/// <summary>用于行为图在状态间与存档之间保持攻击冷却。</summary>
+	public float CooldownRemaining => _cooldownTimer;
 
 	/// <summary>是否已触发当前伤害窗口（防止同一窗口内重复触发）</summary>
 	public bool IsWindowTriggered => _windowTriggered;
@@ -125,6 +127,12 @@ public class AI_AttackController
 		_damageWindowActive = false;
 		SetDamageEnabled(false);
 		SetAnimatorAttacking(false);
+	}
+
+	/// <summary>仅恢复冷却剩余时间，不恢复一次攻击的临时伤害窗口。</summary>
+	public void RestoreCooldown(float remaining)
+	{
+		_cooldownTimer = Mathf.Clamp(remaining, 0f, Mathf.Max(0f, Cooldown));
 	}
 
 	/// <summary>
@@ -235,6 +243,8 @@ public class AI_AttackController
 	{
 		_windupTimer = 0f;
 		_windowRemainTimer = 0f;
+		_recoveryTimer = 0f;
+		_windowTriggered = false;
 		_damageWindowActive = false;
 		SetDamageEnabled(false);
 		SetAnimatorAttacking(false);

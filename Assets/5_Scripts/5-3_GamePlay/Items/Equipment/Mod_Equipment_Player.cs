@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 
 /// <summary>
-/// 玩家专属装备模块：挂在玩家子对象下，通过 GameController 的 InputAction 打开装备面板。
+/// 玩家专属装备模块：挂在玩家子对象下，通过 Mod_GameController 的 InputAction 打开装备面板。
 /// </summary>
 public class Mod_Equipment_Player : Mod_Equipment
 {
@@ -15,7 +15,7 @@ public class Mod_Equipment_Player : Mod_Equipment
 
     private InputAction openPanelAction;
     private Action<InputAction.CallbackContext> openPanelCallback;
-    private GameController inputController;
+    private Mod_GameController inputController;
 
     #endregion
 
@@ -23,10 +23,10 @@ public class Mod_Equipment_Player : Mod_Equipment
 
     protected override void BindOpenPanelTrigger()
     {
-        inputController = item.itemMods.GetMod_ByID<GameController>(ModText.Controller);
+        inputController = item.itemMods.GetMod_ByID<Mod_GameController>(ModText.Controller);
         if (inputController == null || inputController._inputActions == null)
         {
-            Debug.LogError($"[Mod_Equipment_Player] GameController 或输入资产为空，无法绑定动作。物体: {name}");
+            Debug.LogError($"[Mod_Equipment_Player] Mod_GameController 或输入资产为空，无法绑定动作。物体: {name}");
             return;
         }
 

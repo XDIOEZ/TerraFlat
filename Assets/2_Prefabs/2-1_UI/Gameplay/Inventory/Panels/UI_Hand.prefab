@@ -424,6 +424,7 @@ GameObject:
   - component: {fileID: 2699488455053025932}
   - component: {fileID: 4514313257798024590}
   - component: {fileID: 2636489613849441037}
+  - component: {fileID: 7000000000000000000}
   m_Layer: 5
   m_Name: UI_Hand
   m_TagString: Untagged
@@ -928,3 +929,17 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!114 &7000000000000000000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6460790424826419754}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a770e3391c6fbbc4c931ac2c40acd1f7, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  animationId: panel.scale
+  motionRoot: {fileID: 5690605725274206243}

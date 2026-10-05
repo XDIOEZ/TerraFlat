@@ -46,15 +46,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 818a288dde5ed484ebb221ca065c59f9, type: 3}
   m_Name:
   m_EditorClassIdentifier:
-  _spawnerConfigs:
-  - {fileID: 11400000, guid: 3728acca7d2bf834aa32d083b7c9a9c1, type: 2}
-  - {fileID: 11400001, guid: d761520c2ce00864abbe419e138f92c7, type: 2}
-  - {fileID: 11400000, guid: b14e9d6f8c0a2b3d5e7f9a1c4d6b8e0f, type: 2}
-  _useAiecsBackend: 1
-  _globalAliveLimit: 40
-  _spawnRetryInterval: 0.5
-  _populationMaintenanceInterval: 2
-  _recycleCheckInterval: 2
 --- !u!114 &621153831357500893
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -248,7 +239,7 @@ MonoBehaviour:
   priority: 0
   blendDistance: 0
   weight: 1
-  sharedProfile: {fileID: 11400000, guid: ec205a5e3ef5d6b49ba00791799edcc5, type: 2}
+  sharedProfile: {fileID: 0}
 --- !u!114 &5837248620173946120
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -348,6 +339,8 @@ GameObject:
   - component: {fileID: 2693940703275175513}
   - component: {fileID: 4939125256281199578}
   - component: {fileID: 6188641116391193677}
+  - component: {fileID: 8897026105265421041}
+  - component: {fileID: 838629431320725304}
   m_Layer: 0
   m_Name: WorldManager
   m_TagString: Untagged
@@ -355,6 +348,33 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
+--- !u!114 &838629431320725304
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4565539948505994440}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ef4964bd394a48d291f28b5c5736c922, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  damageTextPrefab: {fileID: 1729398625125957200, guid: 3b8b0ac52f922cc499112bd9e5b27298, type: 3}
+  textScale: 0.65
+  textWidthMultiplier: 4
+--- !u!114 &8897026105265421041
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4565539948505994440}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 44ea79331a8b4ad49fd9ec5f19f1e8dc, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
 --- !u!4 &891121404665747283
 Transform:
   m_ObjectHideFlags: 0
@@ -538,12 +558,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f352f64487f7ede4b8069e0d3a2c9513, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  minimumLength: 0.35
-  maximumLength: 2.8
-  maximumDistance: 8
-  opacity: 0.34
-  shadowColor: {r: 0.12, g: 0.14, b: 0.2, a: 1}
-  maximumVisibleDistance: 80
 --- !u!1 &5482967027949208378
 GameObject:
   m_ObjectHideFlags: 0
@@ -604,15 +618,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4b1e6c3d7a904ef0a9a2b86f1d4c5e70, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  actorShadowPrefab: {fileID: 4309152267431885310, guid: 6d2a7f4c9e3148b3a5c0d7e1f2a6b8c9, type: 3}
-  maxShadowAlpha: 0.55
-  minSunlightToShow: 0.02
-  sunlightResponsePower: 1
-  shadowWidthRatio: 0.9
-  shadowHeightToWidthRatio: 0.9
-  minShadowWidth: 0.18
-  maxShadowWidth: 2.5
-  shadowGroundOffset: 0.01
 --- !u!1 &8923630362666243623
 GameObject:
   m_ObjectHideFlags: 0
@@ -725,9 +730,12 @@ MonoBehaviour:
   maxPooledChunkCount: 32
   chunkLoadSpeedMultiplier: 1
   unlimitedChunkLoadSpeed: 0
-  maxChunkPresentationsPerFrame: 1
-  maxChunkPresentationContinuationStepsPerFrame: 6
+  maxChunkPresentationsPerFrame: 64
+  maxChunkPresentationStartMillisecondsPerFrame: 4
+  maxChunkPresentationContinuationStepsPerFrame: 64
+  maxChunkPresentationContinuationMillisecondsPerFrame: 3
   defaultGenerationProfile: {fileID: 0}
   backgroundGenerationConcurrency: 2
-  maxChunkCommitsPerFrame: 1
+  maxChunkCommitsPerFrame: 64
+  maxChunkCommitMillisecondsPerFrame: 3
   authoritativeSimulation: 1

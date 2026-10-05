@@ -3,10 +3,10 @@ using FlatWorld.Networking;
 using UnityEngine;
 
 /// <summary>
-/// 锄头单次使用入口；地块进度由农业系统持有，不会随换工具重置。
-/// 木、石、铜、铁分别配置 6、4、3、2 次完成，右键和手机使用共用 Item.OnAct。
+/// 锄头持续使用入口；每次真实挥动只结算一次地块进度，地块进度不会随换工具重置。
+/// 木、石、铜、铁分别配置 6、4、3、2 次完成，右键/手机长按共用 Mod_GameController 的使用状态。
 /// </summary>
-public partial class Mod_Hoe : Module
+public partial class Mod_Hoe : Module, IItemModuleDependencyBinder
 {
     #region 数据与配置
 
@@ -23,12 +23,11 @@ public partial class Mod_Hoe : Module
     public override ModuleTickMode TickMode => ModuleTickMode.Disabled;
     [Min(2)] public int usesPerTile = 6; // 从完整土地开始需要的使用次数
     [Min(0.1f)] public float maxTillingDistance = 2f; // 可操作距离
-    [Min(0f)] public float useInterval = 0.2f; // 最小使用间隔
     private bool actBound;
-    private float nextUseTime;
     private WorldTileTargetOutline targetOutline;
-    private GameController ownerController;
-    private Mod_Weapon_AnimationAction attackAction;
+    private Mod_GameController ownerController;
+    private IWeaponActionAnimation actionAnimation;
+    private bool continuousUseArmed;
 
     #endregion
 
@@ -36,16 +35,16 @@ public partial class Mod_Hoe : Module
 
     public override void Awake() => ModData.ID = ModText.Tool;
 
+    /// <summary>锄地只依赖通用挥动能力，不绑定具体伤害模块或动画实现。</summary>
+    public void BindModuleDependencies(ItemMods modules)
+    {
+        actionAnimation = modules.RequireSingleCapability<IWeaponActionAnimation>();
+    }
+
     public override void Load()
     {
         ModData.ReadData(ref Data);
-        nextUseTime = 0f;
-        attackAction = item?.itemMods?.GetMod_ByID<Mod_Weapon_AnimationAction>("Module_Weapon_AnimationAction");
-        if (!actBound)
-        {
-            item.OnAct += Act;
-            actBound = true;
-        }
+        BindAct();
     }
 
     public override void Save() => ModData.WriteData(Data);
@@ -55,31 +54,58 @@ public partial class Mod_Hoe : Module
         if (actBound && item != null)
             item.OnAct -= Act;
         actBound = false;
+        continuousUseArmed = false;
         ReleaseOutline();
         ownerController = null;
-        attackAction = null;
+        actionAnimation = null;
     }
 
+    private void OnEnable() => BindAct();
     private void OnDestroy() => Unload();
+
+    /// <summary>热重载后重新建立右键事件，不把输入恢复职责塞进伤害模块。</summary>
+    private void BindAct()
+    {
+        if (actBound || item == null)
+            return;
+        item.OnAct += Act;
+        actBound = true;
+    }
 
     /// <summary>手持时复用装水的单格白框；预览和右键都读取同一锄地资格。</summary>
     private void LateUpdate()
     {
         if (item == null || !item.InHand || item.Owner is not Player player || !player.IsLocalProfile)
         {
+            continuousUseArmed = false;
             targetOutline?.Hide();
             ownerController = null;
             return;
         }
-        ownerController ??= player.itemMods.GetMod_ByID<GameController>(ModText.Controller);
-        if (ownerController == null || !FarmlandSystem.TryGetTillingTarget(ownerController.GetMouseWorldPosition(),
-                player.transform.position, maxTillingDistance, out var sample))
+        ownerController ??= player.itemMods.GetMod_ByID<Mod_GameController>(ModText.Controller);
+        if (ownerController == null)
         {
             targetOutline?.Hide();
             return;
         }
-        targetOutline ??= WorldTileTargetOutline.Create("Hoe Tile Target Outline");
-        targetOutline.Show(sample.WorldCell);
+
+        if (FarmlandSystem.TryGetTillingTarget(ownerController.GetMouseWorldPosition(),
+                player.transform.position, maxTillingDistance, out var sample))
+        {
+            targetOutline ??= WorldTileTargetOutline.Create("Hoe Tile Target Outline");
+            targetOutline.Show(sample.WorldCell);
+        }
+        else
+        {
+            targetOutline?.Hide();
+        }
+
+        if (!ownerController.IsRightClickHeld)
+            continuousUseArmed = false;
+
+        // 只有本次按下已经通过 Item.Act 武装后才续挥，避免切换手持物时继承旧按住状态。
+        if (continuousUseArmed)
+            TryPerformTillingSwing(ownerController);
     }
 
     private void OnDisable() => ReleaseOutline();
@@ -90,30 +116,40 @@ public partial class Mod_Hoe : Module
         targetOutline = null;
     }
 
-    /// <summary>真实手持且目标有效时，只累计一次工作量。</summary>
+    /// <summary>单次按下立即尝试第一挥；持续按住由 LateUpdate 按动画节拍续挥。</summary>
     public override void Act()
     {
-        if (!GameNetwork.HasStateAuthority || item == null || !item.InHand ||
-            item.Owner == null || Time.time < nextUseTime)
-            return;
-        GameController controller = item.Owner.itemMods.GetMod_ByID<GameController>(ModText.Controller);
-        if (controller == null)
+        if (item?.Owner == null)
             return;
 
-        if (!FarmlandSystem.TryGetTillingTarget(controller.GetMouseWorldPosition(), item.Owner.transform.position,
+        ownerController ??= item.Owner.itemMods.GetMod_ByID<Mod_GameController>(ModText.Controller);
+        continuousUseArmed = ownerController?.IsRightClickHeld == true;
+        TryPerformTillingSwing(ownerController);
+    }
+
+    /// <summary>动画确认这一挥真实开始后，才对当前目标地块结算一次工作量。</summary>
+    private void TryPerformTillingSwing(Mod_GameController controller)
+    {
+        if (!GameNetwork.HasStateAuthority || controller == null || item == null || !item.InHand ||
+            item.Owner == null || usesPerTile <= 0)
+            return;
+
+        Vector3 pointer = controller.GetMouseWorldPosition();
+        if (!FarmlandSystem.TryGetTillingTarget(pointer, item.Owner.transform.position,
                 maxTillingDistance, out var target))
             return;
 
-        if (FarmlandSystem.TryTill(controller.GetMouseWorldPosition(), item.Owner.transform.position,
+        actionAnimation ??= item.itemMods.RequireSingleCapability<IWeaponActionAnimation>();
+        if (!actionAnimation.TryRequestAction(queueIfBusy: false))
+            return;
+
+        if (!FarmlandSystem.TryTill(pointer, item.Owner.transform.position,
                 maxTillingDistance, 1f / usesPerTile, out bool completed))
-        {
-            nextUseTime = Time.time + useInterval;
-            attackAction ??= item.itemMods?.GetMod_ByID<Mod_Weapon_AnimationAction>("Module_Weapon_AnimationAction");
-            attackAction?.RequestAttack();
-            HoeTillingFeedback.Play(item, target.WorldCell);
-            if (completed)
-                Data.tilledCount++;
-        }
+            return;
+
+        HoeTillingFeedback.Play(item, target.WorldCell);
+        if (completed)
+            Data.tilledCount++;
     }
 
     #endregion

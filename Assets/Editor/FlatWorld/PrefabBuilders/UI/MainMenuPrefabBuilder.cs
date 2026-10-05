@@ -19,7 +19,7 @@ public static class MainMenuPrefabBuilder
     private static readonly Color ButtonBorder = new Color32(55, 55, 55, 255);
     private static readonly Color Label = new Color32(236, 238, 239, 255);
     private static readonly Color Muted = new Color32(207, 207, 207, 255);
-    private static readonly Color Accent = new Color32(215, 197, 106, 255);
+    private static Color Accent => FlatWorldUITheme.Accent;
     private static readonly Color TitleShadow = new Color32(12, 17, 20, 200);
     private static readonly Color Atmosphere = new Color(0.025f, 0.04f, 0.035f, 0.08f);
 
@@ -204,6 +204,7 @@ public static class MainMenuPrefabBuilder
         panel.canvasGroup = group;
         panel.rectTransform = rect;
         panel.PanelName = GameManager.MainMenuPanelKey;
+        RuntimeUIPrefabBuilder.ConfigureScaleAnimation(panel);
     }
 
     private static void BuildBackground(Transform root, Sprite sprite)
@@ -257,7 +258,7 @@ public static class MainMenuPrefabBuilder
         cardRect.anchorMax = Vector2.zero;
         cardRect.pivot = Vector2.zero;
         cardRect.anchoredPosition = new Vector2(76f, 76f);
-        cardRect.sizeDelta = new Vector2(560f, 410f);
+        cardRect.sizeDelta = new Vector2(560f, 524f);
         card.raycastTarget = true;
 
         Outline cardOutline = card.gameObject.AddComponent<Outline>();
@@ -276,6 +277,7 @@ public static class MainMenuPrefabBuilder
         CreateMenuButton(card.transform, font, GameManager.MainMenuContinueButtonKey, "01", "继续旅程", "载入已有世界", 40f, false);
         CreateMenuButton(card.transform, font, GameManager.MainMenuNewGameButtonKey, "02", "新建世界", "自定义你的开局", 154f, false);
         CreateMenuButton(card.transform, font, GameManager.MainMenuMultiplayerButtonKey, "03", "联机模式", "与好友共同生存", 268f, true);
+        CreateMenuButton(card.transform, font, GameManager.MainMenuModsButtonKey, "04", "MOD 管理", "查看与配置扩展内容", 382f, false);
     }
 
     /// <summary>创建主菜单右上角的设置入口；当前只负责展示，不绑定设置逻辑。</summary>

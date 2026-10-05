@@ -56,8 +56,8 @@ namespace FlatWorld.Dialogue
             if (temperature == null)
                 return;
             tracker.Tick(temperature.Data.CurrentTemperature,
-                temperature.Data.ColdDamageStart + settings.ColdThresholdOffset,
-                temperature.Data.HotDamageStart + settings.HotThresholdOffset,
+                temperature.SafeTemperatureMin + settings.ColdThresholdOffset,
+                temperature.SafeTemperatureMax + settings.HotThresholdOffset,
                 context.RequestedAt, settings);
             context.SetFact(CharacterSpeechFacts.TemperatureTransition, tracker.Transition);
         }

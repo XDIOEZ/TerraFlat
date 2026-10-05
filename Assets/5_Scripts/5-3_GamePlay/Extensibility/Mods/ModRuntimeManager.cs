@@ -174,25 +174,23 @@ public sealed partial class ModRuntimeManager : MonoBehaviour
     private IEnumerator LoadEnabledModsCore(GameRes gameRes, Action<string, float> reportProgress)
     {
         reportProgress?.Invoke("扫描 MOD 清单", 0f);
-        List<ModPackage> packages = ScanPackages();
         activeProfile = ModProfileStore.LoadActiveProfile();
         safeModeActive = !preparingResourceReload && ModProfileStore.ConsumeSafeModeRequest();
+        // 安全模式必须先于包扫描生效，否则损坏的清单会挡住恢复入口。
+        List<ModPackage> packages = safeModeActive ? new List<ModPackage>() : ScanPackages(activeProfile);
         if (safeModeActive)
         {
-            packages.Clear();
             Debug.LogWarning("[ModRuntime] 检测到上次加载失败，本次已使用安全模式跳过所有外部 MOD");
         }
-        else
-        {
-            packages = packages.Where(package => activeProfile.IsEnabled(package.Manifest.Id)).ToList();
-        }
 
+        PrepareManagedPackages(packages);
         List<ModPackage> sortedPackages = ResolveLoadOrder(packages, activeProfile);
 
         for (int i = 0; i < sortedPackages.Count; i++)
         {
             ModPackage package = sortedPackages[i];
             reportProgress?.Invoke($"读取 MOD 内容：{package.Manifest.Name ?? package.Manifest.Id}", CalculateProgress(i, sortedPackages.Count, 0.05f, 0.45f));
+            InitializeManaged(package);
             LoadPackageSources(gameRes, package);
             loadedPackages.Add(package);
             packagesById.Add(package.Manifest.Id, package);
@@ -230,6 +228,7 @@ public sealed partial class ModRuntimeManager : MonoBehaviour
     /// <summary>仅正式发布后通知脚本，候选目录不能触发当前世界的生命周期副作用。</summary>
     internal void PublishContentReady()
     {
+        PublishManagedContentReady();
         BindGameEvents();
         DispatchEvent("content.ready", new
         {
@@ -239,7 +238,7 @@ public sealed partial class ModRuntimeManager : MonoBehaviour
         });
     }
 
-    private List<ModPackage> ScanPackages()
+    private List<ModPackage> ScanPackages(ModProfile profile)
     {
         List<ModPackage> packages = new();
         string[] directories = Directory.GetDirectories(ModsRootPath, "*", SearchOption.TopDirectoryOnly);
@@ -258,6 +257,9 @@ public sealed partial class ModRuntimeManager : MonoBehaviour
             string manifestJson = ReadLimitedText(manifestPath, MaximumJsonCharacters);
             ModManifest manifest = JsonConvert.DeserializeObject<ModManifest>(manifestJson)
                 ?? throw new InvalidDataException($"MOD 清单为空：{manifestPath}");
+
+            if (!string.IsNullOrWhiteSpace(manifest.Id) && !profile.IsEnabled(manifest.Id))
+                continue;
 
             ValidateManifest(manifest, directory);
             string contentHash = ComputePackageHash(directory, manifestJson);
@@ -618,8 +620,7 @@ public sealed partial class ModRuntimeManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 解析 MOD Actor 继承并原子注册。Actor 复用 ItemDefinition 的实例化/存档管线，
-    /// 但必须继承或提供带 IAIActor 的合法外壳；行为参数与外观均由 JSON 覆盖。
+    /// 解析 MOD Actor 继承并原子注册；默认复用 GameObject 模块，ECS 能力仅供显式 ECS 物种编译。
     /// </summary>
     private void ProcessActorDefinitions(GameRes gameRes)
     {
@@ -1681,14 +1682,38 @@ public sealed partial class ModRuntimeManager : MonoBehaviour
                 string manifestPath = Path.Combine(directory, ManifestFileName);
                 if (!File.Exists(manifestPath))
                     throw new FileNotFoundException("缺少 manifest.json");
-
-                ModManifest manifest = JsonConvert.DeserializeObject<ModManifest>(ReadLimitedText(manifestPath, MaximumJsonCharacters))
+                ValidateNoReparsePoints(ModsRootPath, manifestPath);
+                string manifestJson = ReadLimitedText(manifestPath, MaximumJsonCharacters);
+                ModManifest manifest = JsonConvert.DeserializeObject<ModManifest>(manifestJson)
                     ?? throw new InvalidDataException("manifest.json 为空");
+                ValidateManifest(manifest, directory);
+                string actualHash = ComputePackageHash(directory, manifestJson);
+                if (!string.IsNullOrWhiteSpace(manifest.ContentHash) &&
+                    !string.Equals(manifest.ContentHash.Trim(), actualHash, StringComparison.OrdinalIgnoreCase))
+                    throw new InvalidDataException("内容哈希不匹配，文件可能不完整或已被修改");
+
                 info.Id = manifest.Id;
                 info.Name = manifest.Name;
                 info.Version = manifest.Version;
-                info.Enabled = !File.Exists(Path.Combine(directory, ".disabled")) && profile.IsEnabled(manifest.Id);
+                info.Author = manifest.Author;
+                info.Description = manifest.Description;
+                if (!string.IsNullOrWhiteSpace(manifest.PreviewImage))
+                {
+                    // 展示图是可选资源：路径必须安全，但文件缺失不应让整个 MOD 失效。
+                    string previewPath = ModPathUtility.ResolvePackagePath(directory, manifest.PreviewImage, false);
+                    if (File.Exists(previewPath))
+                    {
+                        ValidateNoReparsePoints(directory, previewPath);
+                        info.PreviewImagePath = previewPath;
+                    }
+                }
+                info.Dependencies = (manifest.Dependencies ?? new List<ModDependency>())
+                    .Where(value => value != null && !string.IsNullOrWhiteSpace(value.Id))
+                    .Select(value => value.Id).ToList();
+                info.DisabledByFile = File.Exists(Path.Combine(directory, ".disabled"));
+                info.Enabled = !info.DisabledByFile && profile.IsEnabled(manifest.Id);
                 info.Loaded = packagesById.ContainsKey(manifest.Id ?? string.Empty);
+                info.HasManagedCode = manifest.Managed != null;
                 info.Valid = true;
             }
             catch (Exception ex)
@@ -1699,7 +1724,34 @@ public sealed partial class ModRuntimeManager : MonoBehaviour
             result.Add(info);
         }
 
+        foreach (IGrouping<string, InstalledModInfo> duplicates in result
+                     .Where(value => value.Valid)
+                     .GroupBy(value => value.Id, IdComparer)
+                     .Where(group => group.Count() > 1))
+        {
+            foreach (InstalledModInfo info in duplicates)
+            {
+                info.Valid = false;
+                info.Error = "重复 MOD ID：" + duplicates.Key;
+            }
+        }
+
         return result;
+    }
+
+    /// <summary>只允许切换 Mods 根目录下的直接子目录，避免坏包路径把标记写到目录外。</summary>
+    public void SetPackageFolderDisabled(string folderPath, bool disabled)
+    {
+        string root = Path.GetFullPath(ModsRootPath);
+        string folder = Path.GetFullPath(folderPath);
+        if (!string.Equals(Path.GetDirectoryName(folder), root, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidDataException("MOD 目录不在安装目录的第一层：" + folderPath);
+        ValidateNoReparsePoints(root, folder);
+        string marker = Path.Combine(folder, ".disabled");
+        if (File.Exists(marker) && (File.GetAttributes(marker) & FileAttributes.ReparsePoint) != 0)
+            throw new InvalidDataException("MOD 禁用标记不能是符号链接：" + marker);
+        if (disabled) File.WriteAllText(marker, "disabled by FlatWorld MOD manager");
+        else if (File.Exists(marker)) File.Delete(marker);
     }
 
     public static string CalculatePackageHash(string packageRoot)
@@ -1867,6 +1919,9 @@ public sealed partial class ModRuntimeManager : MonoBehaviour
             ModPathUtility.ResolvePackagePath(packageRoot, manifest.SettingsFile, true);
         if (!string.IsNullOrWhiteSpace(manifest.EntryLua))
             ModPathUtility.ResolvePackagePath(packageRoot, manifest.EntryLua, true);
+        if (!string.IsNullOrWhiteSpace(manifest.PreviewImage))
+            ModPathUtility.ResolvePackagePath(packageRoot, manifest.PreviewImage, false);
+        ModManagedAssemblyStore.ValidateDefinition(packageRoot, manifest.Managed);
     }
 
     private static void ValidateContentId(string modId, string contentId)
@@ -1976,9 +2031,12 @@ public sealed partial class ModRuntimeManager : MonoBehaviour
 
     private static string ComputePackageHash(string packageRoot, string manifestJson)
     {
-        List<string> files = EnumerateSafePackageFiles(packageRoot);
-
         JObject canonicalManifest = JObject.Parse(manifestJson);
+        ModManagedDefinition managed = canonicalManifest["managed"]?.ToObject<ModManagedDefinition>();
+        ModManagedAssemblyStore.ValidateDefinition(packageRoot, managed);
+        var allowedAssemblies = new HashSet<string>(ModManagedAssemblyStore.Paths(managed)
+            .Select(path => ModPathUtility.ResolvePackagePath(packageRoot, path, true)), StringComparer.OrdinalIgnoreCase);
+        List<string> files = EnumerateSafePackageFiles(packageRoot, allowedAssemblies);
         canonicalManifest["contentHash"] = string.Empty;
 
         using IncrementalHash hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
@@ -2003,7 +2061,7 @@ public sealed partial class ModRuntimeManager : MonoBehaviour
         return ToLowerHex(hash.GetHashAndReset());
     }
 
-    private static List<string> EnumerateSafePackageFiles(string packageRoot)
+    private static List<string> EnumerateSafePackageFiles(string packageRoot, HashSet<string> allowedAssemblies = null)
     {
         List<string> files = new();
         Stack<string> pendingDirectories = new();
@@ -2029,8 +2087,9 @@ public sealed partial class ModRuntimeManager : MonoBehaviour
                     throw new InvalidDataException($"MOD 不允许使用符号链接：{file}");
 
                 string extension = Path.GetExtension(file).ToLowerInvariant();
-                if (extension is ".dll" or ".exe" or ".com" or ".scr" or ".msi" or
+                if ((extension is ".dll" or ".exe" or ".com" or ".scr" or ".msi" or
                     ".bat" or ".cmd" or ".ps1" or ".vbs" or ".js" or ".cs")
+                    && !(extension == ".dll" && allowedAssemblies?.Contains(Path.GetFullPath(file)) == true))
                 {
                     throw new InvalidDataException($"MOD 包包含禁止的可执行文件：{file}");
                 }
@@ -2111,6 +2170,8 @@ public sealed partial class ModRuntimeManager : MonoBehaviour
     private void UnloadAll(bool keepFailureState = false)
     {
         UnbindGameEvents();
+
+        UnloadManaged();
 
         GameRes gameRes = GameRes.ExistingInstance;
         UnloadTileDefinitions(gameRes);
@@ -2358,9 +2419,16 @@ public sealed class InstalledModInfo
     public string Version;
     public string FolderName;
     public string FolderPath;
+    public string Author;
+    public string Description;
+    /// <summary>经过包内安全路径校验、且当前实际存在的展示图完整路径。</summary>
+    public string PreviewImagePath;
+    public List<string> Dependencies = new();
     public bool Enabled;
     public bool Loaded;
     public bool Valid;
+    public bool DisabledByFile;
+    public bool HasManagedCode;
     public string Error;
 }
 

@@ -61,8 +61,10 @@ public sealed class MonsterManager : SingletonMono<MonsterManager>
     private readonly Dictionary<Item, Registration> _registrations = new();
     private readonly Dictionary<SpawnerConfig, int> _activeGroupCounts = new();
     private readonly Dictionary<string, int> _activeSpeciesCounts = new(StringComparer.Ordinal);
-    private readonly Dictionary<DamageReceiver, Item> _itemByDeathReceiver = new();
-    private readonly Dictionary<Item, DamageReceiver> _deathReceiverByItem = new();
+    private readonly Dictionary<SpawnerConfig, int> _residentGroupCounts = new();
+    private readonly Dictionary<string, int> _residentSpeciesCounts = new(StringComparer.Ordinal);
+    private readonly Dictionary<Mod_DamageReceiver, Item> _itemByDeathReceiver = new();
+    private readonly Dictionary<Item, Mod_DamageReceiver> _deathReceiverByItem = new();
     private readonly Dictionary<Item, int> _ecologyRecycleProtectionCounts = new();
     private readonly List<Item> _cleanupItems = new(64);
     private readonly HashSet<Item> _populationActiveItems = new();
@@ -193,6 +195,14 @@ public sealed class MonsterManager : SingletonMono<MonsterManager>
         return !string.IsNullOrWhiteSpace(itemId) && _configBySpecies.ContainsKey(itemId);
     }
 
+    /// <summary>休眠实体按物种恢复时读取当前生态配置，不依赖已卸载的 Item。</summary>
+    public bool TryGetConfigForSpecies(string speciesId, out SpawnerConfig config)
+    {
+        config = null;
+        return !string.IsNullOrWhiteSpace(speciesId) &&
+               _configBySpecies.TryGetValue(speciesId, out config);
+    }
+
     #endregion
 
     #region 注册接口
@@ -215,11 +225,12 @@ public sealed class MonsterManager : SingletonMono<MonsterManager>
             observer = item.gameObject.AddComponent<MonsterPopulationObserver>();
         var registration = new Registration(item, config, speciesId, observer);
         _registrations.Add(item, registration);
+        AdjustResidentCounts(registration, 1);
         RegistrationVersion++;
         observer.Bind(this, item);
         NotifyPopulationActivityChanged(item);
 
-        DamageReceiver receiver = item.GetComponentInChildren<DamageReceiver>(true);
+        Mod_DamageReceiver receiver = item.GetComponentInChildren<Mod_DamageReceiver>(true);
         if (receiver != null && !_itemByDeathReceiver.ContainsKey(receiver))
         {
             _itemByDeathReceiver.Add(receiver, item);
@@ -238,13 +249,14 @@ public sealed class MonsterManager : SingletonMono<MonsterManager>
 
         if (_populationActiveItems.Remove(item))
             AdjustActiveCounts(registration, -1);
+        AdjustResidentCounts(registration, -1);
         _registrations.Remove(item);
         RegistrationVersion++;
         if (registration.Observer != null)
             registration.Observer.Unbind(this);
 
         _ecologyRecycleProtectionCounts.Remove(item);
-        if (!_deathReceiverByItem.TryGetValue(item, out DamageReceiver receiver))
+        if (!_deathReceiverByItem.TryGetValue(item, out Mod_DamageReceiver receiver))
         {
             MonsterUnregistered?.Invoke(item, registration.Config);
             return;
@@ -280,7 +292,7 @@ public sealed class MonsterManager : SingletonMono<MonsterManager>
             if (registration.Observer != null)
                 registration.Observer.Unbind(this);
         }
-        foreach (DamageReceiver receiver in _itemByDeathReceiver.Keys)
+        foreach (Mod_DamageReceiver receiver in _itemByDeathReceiver.Keys)
         {
             if (receiver != null)
                 receiver.DeathStarted -= OnMonsterDeathStarted;
@@ -290,6 +302,8 @@ public sealed class MonsterManager : SingletonMono<MonsterManager>
         _populationActiveItems.Clear();
         _activeGroupCounts.Clear();
         _activeSpeciesCounts.Clear();
+        _residentGroupCounts.Clear();
+        _residentSpeciesCounts.Clear();
         _itemByDeathReceiver.Clear();
         _deathReceiverByItem.Clear();
         _ecologyRecycleProtectionCounts.Clear();
@@ -297,7 +311,7 @@ public sealed class MonsterManager : SingletonMono<MonsterManager>
         RegistrationVersion++;
     }
 
-    private void OnMonsterDeathStarted(DamageReceiver receiver)
+    private void OnMonsterDeathStarted(Mod_DamageReceiver receiver)
     {
         if (receiver == null ||
             !_itemByDeathReceiver.TryGetValue(receiver, out Item item) ||
@@ -365,6 +379,32 @@ public sealed class MonsterManager : SingletonMono<MonsterManager>
             return 0;
 
         return _activeSpeciesCounts.TryGetValue(speciesId, out int count) ? count : 0;
+    }
+
+    /// <summary>已出生且尚未卸载的组居民数，区块显隐不改变此值。</summary>
+    public int GetResidentGroupCount(SpawnerConfig config)
+    {
+        return config != null && _residentGroupCounts.TryGetValue(config, out int count) ? count : 0;
+    }
+
+    /// <summary>已出生且尚未卸载的物种居民数。</summary>
+    public int GetResidentSpeciesCount(string speciesId)
+    {
+        return !string.IsNullOrWhiteSpace(speciesId) &&
+               _residentSpeciesCounts.TryGetValue(speciesId, out int count) ? count : 0;
+    }
+
+    /// <summary>仍受全局生态上限约束的装载居民数。</summary>
+    public int ResidentPopulationLimitedCount
+    {
+        get
+        {
+            int count = 0;
+            foreach (KeyValuePair<SpawnerConfig, int> pair in _residentGroupCounts)
+                if (pair.Key != null && !pair.Key.UnboundedDailyGrowth && !pair.Key.IgnorePopulationLimits)
+                    count += pair.Value;
+            return count;
+        }
     }
 
     /// <summary>复制稳定快照，调用方可在回收实体时安全遍历。</summary>
@@ -449,6 +489,13 @@ public sealed class MonsterManager : SingletonMono<MonsterManager>
     {
         AdjustCount(_activeGroupCounts, registration.Config, delta);
         AdjustCount(_activeSpeciesCounts, registration.SpeciesId, delta);
+    }
+
+    /// <summary>居民出生与卸载才改变生态计数，表现显隐只改变活动计数。</summary>
+    private void AdjustResidentCounts(Registration registration, int delta)
+    {
+        AdjustCount(_residentGroupCounts, registration.Config, delta);
+        AdjustCount(_residentSpeciesCounts, registration.SpeciesId, delta);
     }
 
     private static void AdjustCount<TKey>(Dictionary<TKey, int> counts, TKey key, int delta)

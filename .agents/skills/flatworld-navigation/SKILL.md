@@ -1,6 +1,6 @@
 ---
 name: flatworld-navigation
-description: "Use when: 定位或修改 FlatWorld 的稀疏网格寻路、16×16 Chunk 分层流场、动态导航脏区、TileData 权重、建筑占地、AI 移动或联机本地导航窗口。关键词：WorldNavigationManager、WorldNavigationGrid、FlowNavigationCache、WorldNavigationAgent、BuildingOccupancyRegistry、Mover_AI。"
+description: "Use when: 定位或修改 FlatWorld 的稀疏网格寻路、16×16 Chunk 分层流场、动态导航脏区、TileData 权重、建筑占地、AI 移动或联机本地导航窗口。关键词：WorldNavigationManager、WorldNavigationGrid、FlowNavigationCache、WorldNavigationAgent、BuildingOccupancyRegistry、Mod_Mover_AI。"
 ---
 
 # FlatWorld 导航
@@ -8,15 +8,18 @@ description: "Use when: 定位或修改 FlatWorld 的稀疏网格寻路、16×16
 ## 入口
 
 - 网格/请求：`Assets/5_Scripts/5-3_GamePlay/World/PathFinding/WorldNavigationManager.cs`
-- 玩家外部智能体移动：`Assets/5_Scripts/5-3_GamePlay/Entities/Item/Modules/Player/Mod_GameMCP_LLM.cs`，用导航请求产生路点并通过 `GameController` 租约和 `Mover` 执行。
+- 玩家外部智能体移动：`Assets/5_Scripts/5-3_GamePlay/Entities/Item/Modules/Player/Mod_GameMCP_LLM.cs`，用导航请求产生路点并通过 `Mod_GameController` 租约和 `Mod_Mover` 执行。
 - ECS 网格适配：同目录 `WorldNavigationManager.SharedFlow.cs`；纯数据共享缓存、导向图与 Job 在 `Assets/5_Scripts/Shared/Navigation/`。
 - ECS 查表/移动：`Entities/AIECS/Navigation/AiecsFlowAgent.cs`；真实游戏网格的显式开发入口在 `Entities/AIECS/Gameplay/AiecsNavigationCrowd.cs`。
 - 动态占地：`World/Building/BuildingOccupancyRegistry.cs`
 - Tile 桥：`World/Map/Base/Map.cs`
-- AI 移动：`Entities/Move/Mover_AI.cs`
+- AI 移动：`Entities/Move/Mod_Mover_AI.cs`
+- `Mod_Mover_AI` 实现 `ITemperatureSafetyMovement`：温度安全目标存在时拒绝普通 AI 的目标覆盖和存活状态下的普通停止请求；目标到达或寻路失败后由体温模块选择下一条安全记录，清除温度目标后才恢复原 AI 调度。死亡/卸载必须仍能强制停止导航。
 - 调用方：`World/Chunk/Mod_ChunkLoader.cs`、`Networking/Gameplay/NetworkChunkStreamingCoordinator.cs`
 
 ## 不变量
+
+- 导航阻挡来源 ID 使用 `long`：Unity InstanceID 保持原有有符号 32 位值，数据实体使用高 32 位的来源域。不得用“很小的负 int”猜一个不冲突的区间；升降级交接须先撤销旧来源再登记新来源。
 
 - 权威链：Tile 栈顶可走性/权重 + 动态建筑占地 → 脏格/脏区 → 稀疏 `WorldNavigationGrid`。
 - 新运行时世界注册导航读取有效 Ground 与独立 LiquidDepth。地块基础 NavigationCost 不随抽水改变，`WorldLiquidSystem.GetNavigationCost` 按当前液体定义合成有限高成本，抽干自动回到原地面成本；水仍可走，由带权寻路决定绕行。平台同时遮断液体接触与液体导航成本。
@@ -24,12 +27,13 @@ description: "Use when: 定位或修改 FlatWorld 的稀疏网格寻路、16×16
 - `WorldNavigationAgent` 接收路径后的路点跳过也必须沿用同一代价限制；只用几何 LOS 会把已经绕开的高代价地形重新拉直穿过。
 - `WorldNavigationGrid.SetCell` 的可走格代价发生变化时必须使旧路径失效，否则运行中的 AI 会继续执行按旧权重生成的路线。
 - 限制移动总代价时读取 `WorldNavigationPathResult.TotalCost`；异步新路径超限不能覆盖当前已接受路径，导航代理应让旧路径走完并停止自动续算，只有目标再次明显移动才重新评估。
-- `WorldNavigationAgent.DestinationResult` 是当前目的地请求的权威结果；上层必须消费 `RejectedByPathCost`，不能通过速度为零或是否持有路径反推拒绝原因。
+- `WorldNavigationAgent.DestinationResult` 是当前目的地请求的权威结果；上层必须消费 `RejectedByPathCost`，不能通过速度为零或是否持有路径反推拒绝原因。同一目标连续四次无路径时公布 `Failed`，后续自动重试期间保持该结果；目标改变、导航网格修订或成功得到路径时才解除失败状态，供 AI 节点一次性报错。
 - 追击总代价上限必须随 `RequestPath` 传入共享搜索；Dijkstra 前沿代价达到某个请求上限时，只结束该请求并返回明确的代价拒绝，不能等完整搜索结束才判断，也不能取消同目标其它成员的请求。拒绝、成功、取消和失败都须清理起点等待链与上限索引；缓存路径只能使用已结算起点的代价，不能把尚未收敛的暂定代价当成超限依据。
 - 运行时只用项目内置导航，不恢复 Aron Granberg A*，也不把 Physics2D 扫描当权威。
-- 玩家目标移动模块 `Mod_GameMCP_LLM` 复用 `WorldNavigationManager` 的路径与修订号，并通过外部控制租约注入 `GameController` 输入；它不拥有第二套网格、刚体驱动或寻路服务，编辑器 GameMCP 只是该运行时接口的一个调用方。
+- 玩家目标移动模块 `Mod_GameMCP_LLM` 复用 `WorldNavigationManager` 的路径与修订号，并通过外部控制租约注入 `Mod_GameController` 输入；它不拥有第二套网格、刚体驱动或寻路服务，编辑器 GameMCP 只是该运行时接口的一个调用方。
 - 动态可交互建筑的导航占地与放置占用共用 `BuildingOccupancyRegistry` 的离散世界格记录；实体 Collider 的尺寸/接触状态不能改变导航占格，避免相邻建筑因物理接触污染逻辑层。
 - 世界物品的离散占格写在定义的 `worldGridOccupancy.cells` 中，纯 DTO `WorldGridOccupancyData` 与校验后的 `GridCellOffset` 位于 `noEngineReferences` 的 WorldModel 程序集，可供非 Unity 模拟直接读取。普通 C# 生命周期桥接器只在实时适配边界读取 Transform 格锚点并消费 Item 注册、注销、移动事件；导航占格不得由 Collider bounds 推算，避免 Mono 组件和物理形状成为数据层依赖。
+- 实心静态资源必须同时声明导航占格；物理碰撞箱不会自动进入导航图。矿点通过 `MineResource_Base.worldGridOccupancy` 继承一格占地，资源 ECS 与完整 Item 都消费同一定义；可拾取的小石头不继承矿点占地。遇到 AI 顶住资源反复重寻路时先检查合并后的占格配置，不要用缩小碰撞箱、扩大感知或额外 Physics2D 扫描掩盖漏登记。
 - 移除覆盖层后恢复基础层权重；建筑不改 TileData。
 - 失败/未表现完成的 Chunk 不注册导航；View 入池或销毁前先 Unbind。
 - 本地导航窗口只跟随 owned 玩家；远程副本不移动它。
@@ -41,7 +45,9 @@ description: "Use when: 定位或修改 FlatWorld 的稀疏网格寻路、16×16
 ## ECS 分层流场的边界
 
 - `GamePlay` 与 `FlatWorld.AIECS` 共同引用无业务依赖的 `FlatWorld.Navigation`；跨两者的桥接放在独立 `FlatWorld.AIECS.Gameplay`，不能让核心导航引用 AI、Item 或 GamePlay，也不能让 AIECS 与 GamePlay 循环引用。
-- 共享缓存只读取 `WorldNavigationGrid` 最终有效值，沿用 10/14 八邻接、目标格地形代价和禁止对角切角；不能另建一套地形/建筑/Physics2D 权威。旧 `RequestPath`、总代价拒绝和取消路径仍由旧后端负责，尚未迁移为 ECS 追击规则。
+- `FlowNavigationCache` 交给 `IFlowGridSource.TryGetCell` 的格坐标已按冻结的 `WorldTopologyDomain` 规范化；GamePlay 适配器应直读网格中的规范坐标，普通公开网格查询仍负责自行规范化。不要在 16×16 逐格快照内反复经 `WorldTopologyRuntime` 查询活动存档。
+- 共享 Flow 的水深、水流等表层变化只更新受影响块的 Native 数据；通行代价或出口变化才重建局部图与共享目标路线。Native 容器的快照视图借给 Job 使用，原位写入、扩容和重排前必须完成已登记的读取依赖；改变 `NativeList` 长度后重新取得 `AsArray` 视图。
+- `WorldNavigationGrid` 的权威格按 16×16 Chunk 连续数组保存；运行时归属只记 Chunk，不维护每格 Owner 字典。共享缓存只读取最终有效值，沿用 10/14 八邻接、目标格代价和禁止对角切角。长距离 `RequestPath` 借共享 Portal/Flow 还原路点，短距离及不可用时沿用局部目标场；总代价拒绝和取消仍保持原 API 契约。
 - `ConsumeChanges` 只供旧管理器消费；共享缓存订阅独立的 `CellChanged/Cleared`。逐格通知必须在旧队列的数量上限判断之前发出，否则大量变更会漏掉 ECS 脏块；世界切换先等待快照读取 Job，再取消订阅和释放缓存。
 - 导航 Chunk 固定 16×16，出口由双方都可走的连续边缘缺口生成，一侧可有多个出口；块内断开的区域不能因为“属于同一 Chunk”就连通。每个缺口使用确定的代表格，缓存到代表格的带权局部图，因此保留可达性与代价规则，但不保证等于完整逐格搜索的全局最短路线。
 - 目标按玩家/编队创建少量共享句柄，禁止逐 AI 注册目标或创建 `WorldNavigationAgent`。目标在同一格内移动只更新坐标；在同 Chunk 的同一连通分量跨格只更新该目标的 256 格导向图。跨 Chunk、传送到不同连通分量或出口图变化才重算区块级路线；不能省掉连通分量变化的失效判断。

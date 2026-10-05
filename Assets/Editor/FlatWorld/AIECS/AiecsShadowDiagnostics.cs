@@ -96,7 +96,9 @@ namespace FlatWorld.AIECS.Editor
             Require(AiecsShadowRenderer.ResolveOpacity(0.4f, 1f, 0, 0.5f) == 0f, "水态过渡仍有阴影。");
 
             int initialRoots = CountRoots();
-            var renderer = new AiecsShadowRenderer(SceneManager.GetActiveScene());
+            WorldSortingManager.GetResourceSortingKey(WorldSortingManager.GroundShadowCategory,
+                out int shadowLayerId, out int shadowOrder);
+            var renderer = new AiecsShadowRenderer(SceneManager.GetActiveScene(), shadowLayerId, shadowOrder);
             var counts = new[] { 0, 1, 4096, 4097, 20000, 1, 0 };
             try
             {

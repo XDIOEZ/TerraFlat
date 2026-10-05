@@ -556,8 +556,10 @@ namespace FlatWorld.Networking.Gameplay
                 throw new InvalidOperationException($"快照中缺少星球数据：{snapshot.PlanetName}");
             }
 
-            int chunkSizeX = IsValidChunkSize(snapshot.ChunkSizeX) ? snapshot.ChunkSizeX : 16;
-            int chunkSizeY = IsValidChunkSize(snapshot.ChunkSizeY) ? snapshot.ChunkSizeY : 16;
+            int chunkSizeX = PlanetData.IsValidChunkDimension(snapshot.ChunkSizeX)
+                ? snapshot.ChunkSizeX : PlanetData.DefaultChunkDimension;
+            int chunkSizeY = PlanetData.IsValidChunkDimension(snapshot.ChunkSizeY)
+                ? snapshot.ChunkSizeY : PlanetData.DefaultChunkDimension;
             SaveDataMgr.Instance.SaveData.Seed = snapshot.Seed == 0 ? 1 : snapshot.Seed;
             SaveDataMgr.Instance.SaveData.SaveSeed = SaveDataMgr.Instance.SaveData.Seed.ToString();
             planet.Radius = Mathf.Max(1, snapshot.PlanetRadius);
@@ -617,8 +619,6 @@ namespace FlatWorld.Networking.Gameplay
                 $"Hash={localSettingsHash:X8}, 已有地图数={planet.MapData_Dict.Count}", this);
         }
 
-        private static bool IsValidChunkSize(int value) => value > 0 && value <= 256;
-
         private static void NormalizeGenerationSettings(PlanetData planet)
         {
             if (planet == null)
@@ -626,9 +626,7 @@ namespace FlatWorld.Networking.Gameplay
 
             planet.Radius = Mathf.Max(1, planet.Radius);
             planet.NoiseScale = PlanetData.NormalizeNoiseScale(planet.NoiseScale);
-            int chunkSizeX = IsValidChunkSize(planet.ChunkSize.x) ? planet.ChunkSize.x : 16;
-            int chunkSizeY = IsValidChunkSize(planet.ChunkSize.y) ? planet.ChunkSize.y : 16;
-            planet.ChunkSize = new Vector2Int(chunkSizeX, chunkSizeY);
+            planet.ChunkSize = PlanetData.NormalizeChunkSize(planet.ChunkSize);
             if (planet.TopologyMode != WorldTopologyMode.Infinite &&
                 planet.TopologyMode != WorldTopologyMode.Wrapped)
             {

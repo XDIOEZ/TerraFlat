@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using FlatWorld.Localization;
+using FlatWorld.NaturalEntities;
 using FlatWorld.WorldModel;
 using MCPForUnity.Editor.Helpers;
 using MCPForUnity.Editor.Tools;
@@ -23,20 +24,36 @@ namespace FlatWorld.GameplayMCP
         Group = "core")]
     public static class GameplayQueryTool
     {
+        #region 统一输入输出
+
+        /// <summary>按需返回数据，错误与分页状态保持完整。</summary>
+        public static object HandleCommand(JObject parameters)
+        {
+            return GameplayMcpOutput.Invoke("gameplay_query", parameters, ExecuteCommand, false);
+        }
+
+        #endregion
+
         private const int DefaultRuntimePageSize = 3;
         private const int MaximumRuntimePageSize = 32;
         private const float MaximumRuntimeRadius = 64f;
 
-        public sealed class Parameters
+        public sealed class Parameters : GameplayMcpOutputParameters
         {
+            [ToolParameter("Runtime matches: include localized names, health and mechanical details. Defaults to false with output=compact, true with output=full.", Required = false)]
+            public bool? includeDetails { get; set; }
+
             [ToolParameter("Query source: runtime for instantiated Items, ecology for deterministic natural placements, terrain for environment layers, tile for surface tile identity, drops for ECS dropped items.", Required = false, DefaultValue = "runtime")]
             public string source { get; set; }
 
-            [ToolParameter("Search text. runtime/drops accept an exact stable ItemDefinition id or exact localized item name. tile accepts an exact numeric tile id, Tile_Block id, tileItemName, or displayName.", Required = false)]
+            [ToolParameter("Search text. runtime/ecology/drops accept an exact stable ItemDefinition id or exact localized item name. tile accepts an exact numeric tile id, Tile_Block id, tileItemName, or displayName.", Required = false)]
             public string query { get; set; }
 
             [ToolParameter("Backward-compatible exact stable ItemDefinition id filter. When set, it takes precedence over query. Empty means any id.", Required = false)]
             public string itemId { get; set; }
+
+            [ToolParameter("Ecology only: include placements already harvested or destroyed. Defaults to true; removed is reported for each match.", Required = false, DefaultValue = "true")]
+            public bool includeRemoved { get; set; } = true;
 
             [ToolParameter("Required item tag. Empty means any tag.", Required = false)]
             public string tag { get; set; }
@@ -56,6 +73,9 @@ namespace FlatWorld.GameplayMCP
             [ToolParameter("Terrain environment layer id when source=terrain, for example riverFloodplain or height.", Required = false, DefaultValue = "riverFloodplain")]
             public string layerId { get; set; }
 
+            [ToolParameter("Optional exact biome id filter for source=terrain. Omit to include all biomes; filtering happens before nearest-result limits.", Required = false)]
+            public int? biomeId { get; set; }
+
             [ToolParameter("Minimum terrain environment value when source=terrain.", Required = false, DefaultValue = "0")]
             public float minValue { get; set; }
 
@@ -67,7 +87,7 @@ namespace FlatWorld.GameplayMCP
         }
 
         /// <summary>按稳定条件查询当前已加载实体，并按玩家距离排序。</summary>
-        public static object HandleCommand(JObject parameters)
+        private static object ExecuteCommand(JObject parameters)
         {
             if (!GameplayMcpRuntime.TryGetPlayerContext(
                     out Player player,
@@ -98,7 +118,10 @@ namespace FlatWorld.GameplayMCP
             bool? pickup = TryReadNullableBool(parameters?["pickup"]);
 
             if (string.Equals(source, "ecology", StringComparison.OrdinalIgnoreCase))
-                return QueryEcology(player, itemId, limit);
+            {
+                bool includeRemoved = !bool.TryParse(parameters?["includeRemoved"]?.ToString(), out bool parsedIncludeRemoved) || parsedIncludeRemoved;
+                return QueryEcology(player, itemId, query, includeRemoved, limit);
+            }
 
             if (string.Equals(source, "tile", StringComparison.OrdinalIgnoreCase))
             {
@@ -136,7 +159,14 @@ namespace FlatWorld.GameplayMCP
                     : null;
                 bool walkableOnly = !bool.TryParse(parameters?["walkableOnly"]?.ToString(), out bool parsedWalkable) ||
                                     parsedWalkable;
-                return QueryTerrain(player, layerId, minValue, maxValue, walkableOnly, limit);
+                int? biomeId = null;
+                if (parameters?["biomeId"] != null && parameters["biomeId"].Type != JTokenType.Null)
+                {
+                    if (!int.TryParse(parameters["biomeId"].ToString(), out int parsedBiomeId) || parsedBiomeId < 0)
+                        return new ErrorResponse("invalid_biome_id: biomeId 必须为非负整数。");
+                    biomeId = parsedBiomeId;
+                }
+                return QueryTerrain(player, layerId, minValue, maxValue, walkableOnly, limit, biomeId);
             }
 
             if (!string.Equals(source, "runtime", StringComparison.OrdinalIgnoreCase))
@@ -171,18 +201,19 @@ namespace FlatWorld.GameplayMCP
                 .ToArray();
 
             var result = new JArray();
+            bool includeDetails = bool.TryParse(parameters?["includeDetails"]?.ToString(), out bool details)
+                ? details : !GameplayMcpOutput.IsCompact(parameters);
             for (int i = 0; i < matches.Length; i++)
             {
                 Item item = matches[i].Item;
                 ItemData data = item.itemData;
-                DamageReceiver health = item.itemMods?.GetMod_ByID<DamageReceiver>(ModText.Hp);
+                Mod_DamageReceiver health = includeDetails ? item.itemMods?.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp) : null;
                 bool interactable = GameplayMcpRuntime.CanPlayerInteract(item, player);
 
                 var entry = new JObject
                 {
                     ["guid"] = data.Guid,
                     ["id"] = data.IDName ?? string.Empty,
-                    ["name"] = ResolveCurrentDisplayName(data),
                     ["position"] = new JObject
                     {
                         ["x"] = Round(item.transform.position.x),
@@ -197,9 +228,15 @@ namespace FlatWorld.GameplayMCP
                         : new JArray(Round(health.Hp), Round(health.MaxHp))
                 };
 
-                JToken mechanical = BuildMechanicalSnapshot(item);
-                if (mechanical != null)
-                    entry["mechanical"] = mechanical;
+                if (includeDetails)
+                {
+                    entry["name"] = ResolveCurrentDisplayName(data);
+                    JToken mechanical = BuildMechanicalSnapshot(item);
+                    if (mechanical != null)
+                        entry["mechanical"] = mechanical;
+                }
+                else
+                    entry.Remove("hp");
 
                 result.Add(entry);
             }
@@ -236,10 +273,10 @@ namespace FlatWorld.GameplayMCP
             if (view == null)
                 return null;
 
-            MechanicalNode node = view.Node;
+            MachineEntity node = view.Node;
             MechanicalNetwork network = node?.Network;
-            MechanicalNodeState state = node?.State ?? view.LocalState;
-            MechanicalProcessor processor = node?.Processor;
+            MachineState state = node?.State ?? view.LocalState;
+            RecipeProcessor processor = node?.Processor;
             ItemData input = processor?.Input?.Data?.GetItemSlot(0)?.itemData;
             ItemData output = processor?.Output?.Data?.GetItemSlot(0)?.itemData;
 
@@ -298,12 +335,15 @@ namespace FlatWorld.GameplayMCP
         /// 查询已加载 ChunkRuntime 的确定性自然物放置结果。
         /// 这里只暴露生成事实，真正交互仍必须等待正常 ChunkView 绑定并通过真实玩法 API 完成。
         /// </summary>
-        private static object QueryEcology(Player player, string itemId, int limit)
+        private static object QueryEcology(Player player, string itemId, string query, bool includeRemoved, int limit)
         {
             ChunkMgr chunkMgr = ChunkMgr.Instance;
             if (chunkMgr == null)
                 return new ErrorResponse("chunk_runtime_not_ready: ChunkMgr 尚未就绪。");
 
+            // 生态目标沿用目录的稳定 ID 和本地化名称匹配，不按显示名猜测物品身份。
+            HashSet<string> resolvedItemIds = ResolveCatalogItemIds(itemId, query);
+            bool hasIdentityFilter = !string.IsNullOrWhiteSpace(itemId) || !string.IsNullOrWhiteSpace(query);
             var matches = chunkMgr.Chunks.Values
                 .Where(chunk => chunk != null &&
                                 chunk.DataStatus == ChunkDataStatus.Ready &&
@@ -316,17 +356,16 @@ namespace FlatWorld.GameplayMCP
                         chunk.Address.ChunkOrigin.X + placement.LocalX + 0.5f + placement.OffsetX,
                         chunk.Address.ChunkOrigin.Y + placement.LocalY + 0.5f + placement.OffsetY)
                 }))
-                .Where(entry => string.IsNullOrEmpty(itemId) ||
-                                string.Equals(
-                                    entry.Placement.ItemId,
-                                    itemId,
-                                    StringComparison.OrdinalIgnoreCase))
+                .Where(entry => !hasIdentityFilter || resolvedItemIds.Contains(entry.Placement.ItemId ?? string.Empty))
                 .Select(entry => new
                 {
                     entry.Placement,
                     entry.Position,
+                    // 删除状态取世界权威记录，生成点还存在不代表现在仍能采集。
+                    Removed = chunkMgr.IsNaturalItemRemoved(entry.Chunk.Address, entry.Placement.Guid),
                     Distance = WorldTopologyRuntime.Distance(player.transform.position, entry.Position)
                 })
+                .Where(entry => includeRemoved || !entry.Removed)
                 .OrderBy(entry => entry.Distance)
                 .ThenBy(entry => entry.Placement.Guid)
                 .Take(limit)
@@ -335,11 +374,17 @@ namespace FlatWorld.GameplayMCP
             var result = new JArray();
             for (int i = 0; i < matches.Length; i++)
             {
+                // 自然物生命直接取 ECS，未激活或没有生命组件时明确返回 null。
+                Vector2 health = default;
+                bool hasHealth = !matches[i].Removed && NaturalEntityEcsService.TryGetHealthAtPosition(
+                    matches[i].Placement.Guid, matches[i].Position, out health);
                 result.Add(new JObject
                 {
                     ["guid"] = matches[i].Placement.Guid,
                     ["id"] = matches[i].Placement.ItemId,
                     ["rule"] = matches[i].Placement.RuleId,
+                    ["removed"] = matches[i].Removed,
+                    ["hp"] = hasHealth ? new JArray(Round(health.x), Round(health.y)) : null,
                     ["position"] = new JArray(
                         Round(matches[i].Position.x),
                         Round(matches[i].Position.y)),
@@ -351,6 +396,8 @@ namespace FlatWorld.GameplayMCP
             {
                 source = "ecology",
                 item_id = itemId,
+                query,
+                include_removed = includeRemoved,
                 count = matches.Length,
                 matches = result
             });
@@ -363,7 +410,8 @@ namespace FlatWorld.GameplayMCP
             float minValue,
             float? maxValue,
             bool walkableOnly,
-            int limit)
+            int limit,
+            int? biomeId)
         {
             if (string.IsNullOrWhiteSpace(layerId))
                 return new ErrorResponse("terrain_layer_required: source=terrain 时 layerId 不能为空。");
@@ -375,6 +423,8 @@ namespace FlatWorld.GameplayMCP
             var matches = chunkMgr.Chunks.Values
                 .Where(chunk => chunk?.Terrain != null && chunk.DataStatus == ChunkDataStatus.Ready)
                 .SelectMany(chunk => EnumerateTerrainMatches(chunk, layerId, minValue, maxValue, walkableOnly))
+                // 先过滤群系再取最近结果，避免附近草地挤掉已加载的矿区或森林。
+                .Where(entry => !biomeId.HasValue || entry.BiomeId == biomeId.Value)
                 .Select(entry => new
                 {
                     entry.Position,
@@ -405,6 +455,7 @@ namespace FlatWorld.GameplayMCP
             {
                 source = "terrain",
                 layer_id = layerId,
+                biome_id = biomeId,
                 min_value = minValue,
                 max_value = maxValue,
                 walkable_only = walkableOnly,
@@ -534,7 +585,7 @@ namespace FlatWorld.GameplayMCP
             }
         }
 
-        /// <summary>查询玩家附近 ECS 掉落物，并保留飞行中掉落的实时世界位置。</summary>
+        /// <summary>查询玩家附近轻量 GameObject 掉落物，并保留飞行中掉落的实时世界位置。</summary>
         private static object QueryDrops(
             Player player,
             string itemId,
@@ -547,7 +598,7 @@ namespace FlatWorld.GameplayMCP
         {
             limit = Mathf.Clamp(limit, 1, MaximumRuntimePageSize);
             var candidates = new List<DroppedItemObservation>(64);
-            DroppedItemService.QueryNearbyEntityDrops(player.transform.position, radius, candidates);
+            DroppedItemService.QueryNearbyLightweightDrops(player.transform.position, radius, candidates);
             HashSet<string> resolvedItemIds = ResolveCatalogItemIds(itemId, query);
             bool hasIdentityFilter = !string.IsNullOrWhiteSpace(itemId) || !string.IsNullOrWhiteSpace(query);
 
@@ -731,7 +782,7 @@ namespace FlatWorld.GameplayMCP
         private static bool IsQueryableRuntimeItem(Item item, Player player)
         {
             if (item == null || item == player || item.itemData == null || item.DestructionHandled ||
-                !item.gameObject.activeInHierarchy)
+                item.InHand || !item.gameObject.activeInHierarchy)
             {
                 return false;
             }

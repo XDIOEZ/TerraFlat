@@ -206,6 +206,20 @@ namespace FlatWorld.Networking.Gameplay
         public string ItemId;
         public byte[] SourcePayload;
         public Vector3 Position;
+        public int RotationQuarterTurns; // 机械召唤器的放置朝向。
+        public bool HorizontalMirrorX; // 普通横向建筑仅左右镜像的临时放置朝向。
+    }
+
+    /// <summary>机械节点以纯数据快照或转速增量同步，不进入世界 Item 出生协议。</summary>
+    public struct NetworkMechanicalNodeMessage : NetworkMessage
+    {
+        public int NodeGuid;
+        public byte[] Payload;
+        public bool Reset;
+        public bool Removed;
+        public bool SpeedOnly;
+        public float Rpm;
+        public int EntryDirection;
     }
 
     /// <summary>只有 Accepted=true 时客户端才能扣除一个建造材料。</summary>

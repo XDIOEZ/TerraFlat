@@ -140,8 +140,21 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
         "terrain.seaLevel",
         "terrain.beachLevel",
         "terrain.mountainLevel",
-        "terrain.snowTemperature",
-        "terrain.snowMinimumPrecipitation",
+        "biome.snow.maximumCelsius",
+        "biome.snow.minimumPrecipitation",
+        "biome.snow.wetGroundMinimumMoisture",
+        "biome.cold.maximumCelsius",
+        "biome.cold.wetGroundMinimumMoisture",
+        "biome.desert.minimumCelsius",
+        "biome.snow.regions.enabled",
+        "biome.snow.regions.size",
+        "biome.snow.regions.chance",
+        "biome.snow.regions.largeRatio",
+        "biome.snow.large.minRadius",
+        "biome.snow.large.maxRadius",
+        "biome.snow.peak.minRadius",
+        "biome.snow.peak.maxRadius",
+        "biome.snow.peak.minimumHeight",
         "terrain.height.coordScale",
         "terrain.height.frequency",
         "terrain.height.octaves",
@@ -155,6 +168,21 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
         "climate.temperature.coordScale",
         "climate.temperature.altitudeCoolingStart",
         "climate.temperature.altitudeCoolingStrength",
+        "climate.equator.minimumCelsius",
+        "climate.equator.maximumCelsius",
+        "climate.equator.peakCelsius",
+        "climate.equator.spacingTiles",
+        "climate.polarBand.halfWidth",
+        "climate.polarBand.transitionTiles",
+        "climate.polarBand.transitionCelsius",
+        "climate.temperature.blendRadius",
+        "climate.polarBand.boundary.offsetTiles",
+        "climate.polarBand.boundary.spacingTiles",
+        "climate.polarBand.boundary.detailStrength",
+        "climate.temperature.regionalVariationCelsius",
+        "climate.temperature.rainCoolingCelsius",
+        "climate.temperature.windwardCoolingCelsius",
+        "climate.temperature.leewardWarmingCelsius",
         "river.enabled",
         "structure.enabled"
     };
@@ -171,17 +199,26 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
         {
             ["world.coordinateScale"] = "越大地貌越密集、越碎；越小地貌越舒展",
             ["terrain.groundTileId"] = "普通陆地默认使用的 Tile 数字编号",
-            ["terrain.riverbedTileId"] = "河流和淡水使用的 Tile 数字编号",
+            ["terrain.riverbedTileId"] = "湖泊等普通淡水底材使用的 Tile 数字编号",
             ["terrain.waterThreshold"] = "旧配置兼容项，当前纯地表生成器不读取",
             ["terrain.seabedTileId"] = "海洋使用的咸水 Tile 数字编号",
             ["terrain.sandTileId"] = "沙滩、沙漠和冲积带使用的 Tile 数字编号",
             ["terrain.stoneTileId"] = "山地石地使用的 Tile 数字编号",
-            ["terrain.snowTileId"] = "雪地使用的 Tile 数字编号",
             ["terrain.seaLevel"] = "越高水域越多，越低陆地越多",
             ["terrain.beachLevel"] = "越高海岸边的沙滩带越宽",
             ["terrain.mountainLevel"] = "越低石质山地越多，越高山地越少",
-            ["terrain.snowTemperature"] = "实际温度低于该值时具备积雪条件；越高雪地越多",
-            ["terrain.snowMinimumPrecipitation"] = "降水高于该值才生成雪地；越高雪地越集中在湿润区",
+            ["biome.snow.maximumCelsius"] = "雪地允许的最高摄氏气温，默认只在零下生成",
+            ["biome.snow.minimumPrecipitation"] = "雪地最低降水；极圈是否跳过此条件由雪地规则控制",
+            ["biome.desert.minimumCelsius"] = "沙漠最低摄氏气温，低温干燥区域不会判成沙漠",
+            ["biome.snow.regions.enabled"] = "启用稀有大片雪原与少量山顶积雪；旧冻结规则缺少此参数时沿用旧分布",
+            ["biome.snow.regions.size"] = "每个候选区域的边长；越大候选越稀疏，半径最多为区域短边的 42%",
+            ["biome.snow.regions.chance"] = "每个候选区域出现雪原的概率；仍须满足实际温度与最终降水条件",
+            ["biome.snow.regions.largeRatio"] = "出现雪原后选择大片的比例；剩余比例只尝试高山上的小片积雪",
+            ["biome.snow.large.minRadius"] = "大片雪原的最小半径，单位为世界格",
+            ["biome.snow.large.maxRadius"] = "大片雪原的最大半径；二次权重让尺寸集中在上下限中间",
+            ["biome.snow.peak.minRadius"] = "山顶积雪的最小半径，单位为世界格",
+            ["biome.snow.peak.maxRadius"] = "山顶积雪的最大半径；同样使用二次权重抽大小",
+            ["biome.snow.peak.minimumHeight"] = "小片积雪的最低海拔，至少达到山地阈值",
             ["terrain.noiseScale"] = "简化地形模式的起伏密度；越大变化越快",
             ["terrain.octaves"] = "简化地形模式的细节层数；越高越细、计算越慢",
             ["climate.noiseScale"] = "简化气候模式的区域密度；越大冷热干湿变化越快",
@@ -205,14 +242,29 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
             ["climate.temperature.coordScale"] = "温度图坐标倍率；越大冷热区域越密集",
             ["climate.temperature.altitudeCoolingStart"] = "超过该高度后开始按海拔降温",
             ["climate.temperature.altitudeCoolingStrength"] = "海拔对温度的影响强度；越高山区越冷",
+            ["climate.equator.minimumCelsius"] = "赤道二次概率底温下限，默认 40℃；实际温度继续叠加环境修正",
+            ["climate.equator.maximumCelsius"] = "赤道二次概率底温上限，默认 60℃",
+            ["climate.equator.peakCelsius"] = "赤道底温概率最高值，默认 45℃",
+            ["climate.equator.spacingTiles"] = "赤道随机底温控制点间距，默认 256 格；相邻区域平滑连接",
+            ["climate.polarBand.halfWidth"] = "整条寒带占地图的比例；0.1 表示 10%",
+            ["climate.polarBand.transitionTiles"] = "极圈边缘回到温带底温的距离，单位为格",
+            ["climate.polarBand.transitionCelsius"] = "离开极圈短过渡后的温带底温，随后继续向赤道渐暖",
+            ["climate.temperature.blendRadius"] = "邻格气温平滑半径；0 关闭，默认 2 格",
+            ["climate.polarBand.boundary.offsetTiles"] = "极圈边界随机上下偏移的最大格数；0 关闭起伏",
+            ["climate.polarBand.boundary.spacingTiles"] = "边界随机控制点的大致间距；越大起伏越宽缓",
+            ["climate.polarBand.boundary.detailStrength"] = "小范围随机起伏的占比，温度和积雪范围共用偏移",
+            ["climate.temperature.regionalVariationCelsius"] = "局部温度噪声的最大正负温差，单位为摄氏度",
+            ["climate.temperature.rainCoolingCelsius"] = "静态气候降水量为 1 时的降温幅度",
+            ["climate.temperature.windwardCoolingCelsius"] = "迎风地形增雨造成的额外降温幅度",
+            ["climate.temperature.leewardWarmingCelsius"] = "背风雨影造成的额外升温幅度",
             ["climate.temperature.frequency"] = "温度图基础频率；越大冷热变化越快",
             ["climate.temperature.octaves"] = "温度图细节层数；越高局部温差越细碎",
             ["climate.temperature.lacunarity"] = "温度每层细节缩小的速度",
             ["climate.temperature.persistence"] = "温度小细节保留强度；越大温度分布越碎",
             ["climate.temperature.offsetX"] = "沿 X 方向平移整张温度噪声图",
             ["climate.temperature.offsetY"] = "沿 Y 方向平移整张温度噪声图",
-            ["climate.temperature.celsiusMin"] = "归一化最低温对应的摄氏温度，仅影响环境温度数值",
-            ["climate.temperature.celsiusMax"] = "归一化最高温对应的摄氏温度，仅影响环境温度数值",
+            ["climate.temperature.celsiusMin"] = "原始温度噪声下界，也用于归一化温度与海拔降温换算",
+            ["climate.temperature.celsiusMax"] = "原始温度噪声上界，实际合成气候允许超出此范围",
             ["climate.wind.regionSize"] = "一块稳定风向区域的大小；越大风向变化越缓",
             ["climate.wind.seedSalt"] = "改变风场排列，不改变世界种子和高度图",
             ["climate.orographic.sampleDistance"] = "向上风方向检查山体的距离；越大雨影影响更远",
@@ -240,6 +292,9 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
             ["river.floodplainMaxRadius"] = "冲积平原向河道两侧扩展的最大格数",
             ["river.floodplainMaxSlope"] = "允许生成宽冲积平原的最大坡度；越高陡坡也会铺开",
             ["river.alluvialTileThreshold"] = "冲积强度超过该值才换成沙土 Tile",
+            ["river.bedCenterTileId"] = "河流中央河床使用的 Tile 数字编号",
+            ["river.bedEdgeTileId"] = "河流两侧河床使用的 Tile 数字编号",
+            ["river.bedCenterStrengthThreshold"] = "横截面强度达到该值才铺中央河床；越高两侧河床越宽",
             ["river.depthMin"] = "小河的最浅深度表现值",
             ["river.depthMax"] = "大河的最深深度表现值",
             ["river.minLakeCells"] = "旧版水文中盆地至少多大才显示为湖泊",
@@ -256,8 +311,8 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
             ["terrain.biomeCount"] = "旧配置兼容项，当前群系编号固定为 0～7",
             ["biome.desert.minimumHeight"] = "低于该高度不判定沙漠，避免沙漠贴进海里",
             ["biome.desert.maximumPrecipitation"] = "降水高于该值不判定沙漠；越低沙漠越少",
-            ["biome.grassland.minimumTemperature"] = "温度低于该值不判定温带草原",
-            ["biome.grassland.maximumTemperature"] = "温度高于该值不判定温带草原",
+            ["biome.grassland.minimumCelsius"] = "温带草原允许的最低摄氏气温",
+            ["biome.grassland.maximumCelsius"] = "温带草原允许的最高摄氏气温",
             ["biome.grassland.minimumPrecipitation"] = "降水低于该值不判定温带草原",
             ["biome.grassland.maximumPrecipitation"] = "降水高于该值不判定温带草原，通常转森林",
             ["river.lakeChance"] = "内陆汇流终点形成淡水湖的确定性概率",
@@ -276,6 +331,8 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
     #region 序列化状态
 
     [SerializeField] private ChunkGenerationProfileSO profileAsset;
+    private NaturalGenerationRuleCatalog previewNaturalRules;
+    private RiverGenerationConfigCatalog previewRiverConfigs;
     [SerializeField] private int worldSeed = -329089282;
     [SerializeField] private int centerX;
     [SerializeField] private int centerY;
@@ -345,6 +402,13 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
         if (profileAsset != null && numericParameters.Count == 0)
             ResetParametersFromProfile();
         EditorApplication.update += PollGeneration;
+    }
+
+    /// <summary>重新聚焦时读取可能被外部修改的世界生成 JSON。</summary>
+    private void OnFocus()
+    {
+        previewNaturalRules = null;
+        previewRiverConfigs = null;
     }
 
     private void OnDisable()
@@ -640,8 +704,21 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
             DrawSlider("terrain.seaLevel", "海平面", 0f, 1f);
             DrawSlider("terrain.beachLevel", "沙滩上限", 0f, 1f);
             DrawSlider("terrain.mountainLevel", "山地阈值", 0f, 1f);
-            DrawSlider("terrain.snowTemperature", "雪地温度阈值", 0f, 1f);
-            DrawSlider("terrain.snowMinimumPrecipitation", "雪地最低降水", 0f, 1f);
+            DrawDoubleField("biome.snow.maximumCelsius", "雪地最高温度（°C）");
+            DrawSlider("biome.snow.minimumPrecipitation", "雪地最低降水", 0f, 1f);
+            DrawSlider("biome.snow.wetGroundMinimumMoisture", "雪下泥土最低湿度", 0f, 1f);
+            DrawDoubleField("biome.cold.maximumCelsius", "寒冷裸地最高温度（°C）");
+            DrawSlider("biome.cold.wetGroundMinimumMoisture", "寒冷裸地泥土最低湿度", 0f, 1f);
+            DrawDoubleField("biome.desert.minimumCelsius", "沙漠最低温度（°C）");
+            DrawToggle("biome.snow.regions.enabled", "稀有雪原区域");
+            DrawDoubleField("biome.snow.regions.size", "雪原候选区域边长（格）");
+            DrawSlider("biome.snow.regions.chance", "雪原出现概率（每候选区域）", 0f, 1f);
+            DrawSlider("biome.snow.regions.largeRatio", "雪原中大片的比例", 0f, 1f);
+            DrawDoubleField("biome.snow.large.minRadius", "大片雪原最小半径（格）");
+            DrawDoubleField("biome.snow.large.maxRadius", "大片雪原最大半径（格）");
+            DrawDoubleField("biome.snow.peak.minRadius", "山顶积雪最小半径（格）");
+            DrawDoubleField("biome.snow.peak.maxRadius", "山顶积雪最大半径（格）");
+            DrawSlider("biome.snow.peak.minimumHeight", "山顶积雪最低海拔", 0f, 1f);
 
             EditorGUILayout.Space(3f);
             EditorGUILayout.LabelField("高度噪声", EditorStyles.miniBoldLabel);
@@ -657,10 +734,25 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
 
             EditorGUILayout.Space(3f);
             EditorGUILayout.LabelField("气候与附加层", EditorStyles.miniBoldLabel);
+            DrawDoubleField("climate.equator.minimumCelsius", "赤道底温下限（°C）");
+            DrawDoubleField("climate.equator.maximumCelsius", "赤道底温上限（°C）");
+            DrawDoubleField("climate.equator.peakCelsius", "赤道底温概率峰（°C）");
+            DrawDoubleField("climate.equator.spacingTiles", "赤道底温控制点间距（格）");
+            DrawSlider("climate.polarBand.halfWidth", "寒带占地图比例（0.1 = 10%）", 0.001f, 1f);
+            DrawDoubleField("climate.polarBand.transitionTiles", "寒带外温度过渡距离（格）");
+            DrawDoubleField("climate.polarBand.transitionCelsius", "寒带外温带底温（°C）");
+            DrawIntegerSlider("climate.temperature.blendRadius", "邻格温度平滑半径（格）", 0, 32);
+            DrawDoubleField("climate.polarBand.boundary.offsetTiles", "极圈边界最大随机偏移（格）");
+            DrawDoubleField("climate.polarBand.boundary.spacingTiles", "极圈边界随机点间距（格）");
+            DrawSlider("climate.polarBand.boundary.detailStrength", "极圈边界细节起伏占比", 0f, 1f);
+            DrawDoubleField("climate.temperature.regionalVariationCelsius", "局部温差幅度（°C）");
             DrawDoubleField("climate.precipitation.coordScale", "降水坐标倍率");
             DrawDoubleField("climate.temperature.coordScale", "温度坐标倍率");
             DrawSlider("climate.temperature.altitudeCoolingStart", "海拔降温起点", 0f, 1f);
             DrawDoubleField("climate.temperature.altitudeCoolingStrength", "海拔降温强度");
+            DrawDoubleField("climate.temperature.rainCoolingCelsius", "降雨降温幅度（°C）");
+            DrawDoubleField("climate.temperature.windwardCoolingCelsius", "迎风降温幅度（°C）");
+            DrawDoubleField("climate.temperature.leewardWarmingCelsius", "背风升温幅度（°C）");
             DrawToggle("river.enabled", "生成河流");
             DrawToggle("structure.enabled", "生成结构");
         }
@@ -671,7 +763,7 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
 
         using (new EditorGUILayout.HorizontalScope())
         {
-            if (GUILayout.Button("从 Profile 重新读取"))
+            if (GUILayout.Button("从 Profile 和 JSON 重新读取"))
                 ResetParametersFromProfile();
 
             using (new EditorGUI.DisabledScope(profileAsset == null || generationTask != null))
@@ -681,8 +773,9 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
             }
         }
         EditorGUILayout.HelpBox(
-            "“应用”会直接保存所选 Profile SO，并支持撤销。世界坐标缩放属于当前 PlanetData，" +
-            "进入世界时会覆盖 Profile，因此不会写入。",
+            "“应用”只保存 Profile SO 中的参数，并支持撤销。河流参数保存在" +
+            " GameConfig/WorldGeneration/Hydrology/river-generation.json；在此调整河流只影响本次预览。" +
+            "世界坐标缩放由 PlanetData 管理，不会写入。",
             MessageType.Info);
     }
 
@@ -698,7 +791,7 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
 
         try
         {
-            ChunkGenerationProfileSnapshot snapshot = profileAsset.CreateSnapshot();
+            ChunkGenerationProfileSnapshot snapshot = ReadProfileSnapshot(profileAsset);
             bool cave = snapshot.Settings.Mode == ChunkGenerationMode.Cave;
             EditorGUILayout.LabelField(cave ? "矿脉规则数量" : "生态规则数量",
                 cave ? snapshot.CaveResourceRules.Count.ToString() :
@@ -752,7 +845,7 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
 
             EditorGUILayout.HelpBox(
                 "预览会复用正式 ChunkEcologyGenerator；这里只显示点位和统计，不实例化 Prefab，" +
-                "不会写入世界存档。规则概率和环境范围请在 Profile SO 中配置。",
+                "不会写入世界存档。规则概率和环境范围请在自然物 JSON 中配置。",
                 MessageType.Info);
         }
         catch (Exception exception)
@@ -925,16 +1018,26 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
 
     #region 参数操作
 
+    /// <summary>预览显式读取自然物与河流 JSON；窗口重新聚焦或重新读取时刷新目录。</summary>
+    private ChunkGenerationProfileSnapshot ReadProfileSnapshot(ChunkGenerationProfileSO profile)
+    {
+        previewNaturalRules ??= NaturalGenerationRuleCatalogLoader.LoadBuiltIn();
+        previewRiverConfigs ??= RiverGenerationConfigLoader.LoadBuiltIn();
+        return profile.CreateSnapshot(previewNaturalRules, previewRiverConfigs);
+    }
+
     /// <summary>把 Profile 参数复制为窗口私有值，并补上运行时星球才提供的世界坐标缩放。</summary>
     private void ResetParametersFromProfile()
     {
+        previewNaturalRules = null;
+        previewRiverConfigs = null;
         numericParameters.Clear();
         if (profileAsset == null)
             return;
 
         try
         {
-            ChunkGenerationProfileSnapshot snapshot = profileAsset.CreateSnapshot();
+            ChunkGenerationProfileSnapshot snapshot = ReadProfileSnapshot(profileAsset);
             foreach (KeyValuePair<string, double> pair in snapshot.NumericParameters
                          .OrderBy(pair => pair.Key, StringComparer.Ordinal))
             {
@@ -1019,7 +1122,7 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
             string confirmation =
                 $"确定把当前窗口参数应用到“{profileAsset.name}”吗？\n\n" +
                 $"资源：{assetPath}\n匹配参数：{matchedCount} 项\n将修改：{changedCount} 项\n\n" +
-                "世界坐标缩放不会写入，它由当前世界的 PlanetData 管理。";
+                "河流参数需在 river-generation.json 中修改；世界坐标缩放由 PlanetData 管理。";
             if (!EditorUtility.DisplayDialog("应用地形参数到 Profile SO", confirmation,
                     "应用并保存", "取消"))
             {
@@ -1028,7 +1131,7 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
 
             if (changedCount == 0)
             {
-                statusMessage = $"{profileAsset.name} 已经与当前可保存参数一致，无需修改。";
+                statusMessage = $"{profileAsset.name} 的 SO 参数没有变化；河流参数请在 river-generation.json 中修改。";
                 statusType = MessageType.Info;
                 return;
             }
@@ -1165,10 +1268,34 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
     /// <summary>读取参数说明；MOD 自定义键没有内置说明时返回空文本。</summary>
     private static string GetParameterDescription(string id)
     {
-        return !string.IsNullOrWhiteSpace(id) &&
-               ParameterDescriptions.TryGetValue(id, out string description)
-            ? description
-            : string.Empty;
+        if (string.IsNullOrWhiteSpace(id)) return string.Empty;
+        if (ParameterDescriptions.TryGetValue(id, out string description)) return description;
+        // 通用群系条件共用中文说明，新增规则参数无需逐个硬编码文案。
+        if (id.StartsWith("biome.", StringComparison.Ordinal))
+        {
+            string suffix = id.Substring(id.LastIndexOf('.') + 1);
+            return suffix switch
+            {
+                "enabled" => "是否启用这条群系规则",
+                "priority" => "越大越先匹配，同优先级按稳定群系编号排序",
+                "minimumHeight" => "群系允许的最低地形高度",
+                "maximumHeight" => "群系允许的最高地形高度",
+                "minimumCelsius" => "群系允许的最低摄氏气温",
+                "maximumCelsius" => "群系允许的最高摄氏气温",
+                "includeMaximumCelsius" => "最高气温是否允许等号；0 表示严格低于",
+                "minimumPrecipitation" => "群系允许的最低降水",
+                "maximumPrecipitation" => "群系允许的最高降水",
+                "minimumMoisture" => "群系允许的最低湿度",
+                "maximumMoisture" => "群系允许的最高湿度",
+                "groundTileId" => "干燥陆地底材编号；0 表示沿用物理地形底材",
+                "wetGroundTileId" => "湿润陆地底材编号；0 表示沿用干燥底材",
+                "wetGroundMinimumMoisture" => "湿度达到此值时采用湿润底材，含等号",
+                "ignoreRegions" => "极圈内是否跳过零散雪原资格",
+                "ignorePrecipitation" => "极圈内是否跳过降水范围条件",
+                _ => string.Empty
+            };
+        }
+        return string.Empty;
     }
 
     /// <summary>判断右侧生成输入是否已经不同于左侧画面对应的输入。</summary>
@@ -1191,7 +1318,7 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
             AddFingerprint(ref hash, profileAsset.ChunkHeight);
             try
             {
-                ChunkGenerationProfileSnapshot snapshot = profileAsset.CreateSnapshot();
+                ChunkGenerationProfileSnapshot snapshot = ReadProfileSnapshot(profileAsset);
                 AddFingerprint(ref hash, unchecked((long)snapshot.GenerationFingerprint));
                 AddFingerprint(ref hash, unchecked((long)snapshot.EcologyFingerprint));
             }
@@ -1345,7 +1472,7 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
         int height = Mathf.Clamp(previewHeight, MinimumPreviewSize, MaximumPreviewSize);
         int originX = checked(centerX - width / 2);
         int originY = checked(centerY - height / 2);
-        ChunkGenerationProfileSnapshot source = profileAsset.CreateSnapshot();
+        ChunkGenerationProfileSnapshot source = ReadProfileSnapshot(profileAsset);
 
         Dictionary<string, double> numbers = source.NumericParameters.ToDictionary(
             pair => pair.Key,
@@ -1454,7 +1581,7 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
     /// 只复制当前预览修改过的 cave.portal 参数，地表高度/水文仍保留地表 Profile 自身的配置，
     /// 这样预览中的蓝色出口数量和坐标会与实际地表入口一致。
     /// </summary>
-    private static CavePortalPairingSnapshot CreatePreviewCavePortalPairing(
+    private CavePortalPairingSnapshot CreatePreviewCavePortalPairing(
         ChunkGenerationProfileSnapshot caveProfile, int seed,
         ChunkGenerationTopologySnapshot topology, bool fastPreview)
     {
@@ -1466,7 +1593,7 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
         if (surfaceAsset == null)
             return null;
 
-        ChunkGenerationProfileSnapshot source = surfaceAsset.CreateSnapshot();
+        ChunkGenerationProfileSnapshot source = ReadProfileSnapshot(surfaceAsset);
         var numbers = source.NumericParameters.ToDictionary(pair => pair.Key, pair => pair.Value,
             StringComparer.Ordinal);
         foreach (KeyValuePair<string, double> parameter in caveProfile.NumericParameters)

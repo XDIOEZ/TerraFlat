@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "buffs": [
+    {
+      "id": "低温冻伤",
+      "displayName": "低温冻伤",
+      "category": "general",
+      "description": "体温低于安全下限并耗尽危险温度缓冲后持续生效，每10秒损失10点生命；缓冲默认60秒，安全时每秒恢复1秒，不会直接重置。",
+      "durationSeconds": null,
+      "tickIntervalSeconds": 10.0,
+      "stackMode": "ignore",
+      "effects": [
+        {
+          "phase": "tick",
+          "typeId": "core:true_damage",
+          "value": 10.0
+        }
+      ]
+    },
+    {
+      "id": "热射病",
+      "displayName": "热射病",
+      "category": "general",
+      "description": "体温高于安全上限并耗尽危险温度缓冲后发作4分钟，每10秒损失10点生命；缓冲默认60秒，安全时每秒恢复1秒，不会直接重置。持续高温不会续期，到期后若仍处于高温则再次发作。",
+      "durationSeconds": 240.0,
+      "tickIntervalSeconds": 10.0,
+      "stackMode": "ignore",
+      "effects": [
+        {
+          "phase": "tick",
+          "typeId": "core:true_damage",
+          "value": 10.0
+        }
+      ]
+    }
+  ]
+}

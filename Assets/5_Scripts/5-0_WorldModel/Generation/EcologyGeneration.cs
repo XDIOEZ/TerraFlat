@@ -15,6 +15,13 @@ namespace FlatWorld.WorldModel
         Patch = 1
     }
 
+    /// <summary>自然物单次生成数量的分布方式。</summary>
+    public enum EcologyItemCountDistribution : byte
+    {
+        Fixed = 0,
+        QuadraticPeak = 1
+    }
+
     /// <summary>
     /// 一条自然生态物品规则的无 Unity 配置副本。
     /// 概率按“每个候选地块一次判定”计算，所有字段都能直接转换为 JSON。
@@ -39,6 +46,7 @@ namespace FlatWorld.WorldModel
             IEnumerable<string> providedTags = null,
             bool companionOnly = false,
             string companionHostTag = null,
+            string requiredChunkTag = null,
             double companionSpawnChance = 0d,
             double companionOffsetX = 0d,
             double companionOffsetY = 0d,
@@ -48,7 +56,17 @@ namespace FlatWorld.WorldModel
             EcologyDistributionMode distributionMode = EcologyDistributionMode.Uniform,
             int patchSpacing = 24,
             double patchRadius = 2.5d,
-            double patchChance = 1d)
+            double patchChance = 1d,
+            int requiredTagChunkRadius = 0,
+            double maxRiverFloodplainStrength = 1d,
+            string requiredEnvironmentLayer = null,
+            double minimumEnvironmentValue = 0d,
+            EcologyItemCountDistribution itemCountDistribution = EcologyItemCountDistribution.Fixed,
+            int itemCountMin = 1,
+            int itemCountPeak = 1,
+            double itemCountQuadraticRadius = 1d,
+            double maximumEnvironmentValue = double.MaxValue,
+            bool requireNaturalPlantableGround = false)
         {
             if (string.IsNullOrWhiteSpace(ruleId))
                 throw new ArgumentException("Ecology rule id is required.", nameof(ruleId));
@@ -56,10 +74,38 @@ namespace FlatWorld.WorldModel
                 throw new ArgumentException("Ecology item id is required.", nameof(itemId));
             if (!Enum.IsDefined(typeof(EcologyDistributionMode), distributionMode))
                 throw new ArgumentOutOfRangeException(nameof(distributionMode));
+            if (!Enum.IsDefined(typeof(EcologyItemCountDistribution), itemCountDistribution))
+                throw new ArgumentOutOfRangeException(nameof(itemCountDistribution));
+            if (!companionOnly && !string.IsNullOrWhiteSpace(requiredChunkTag))
+                throw new ArgumentException("Chunk tag requirements only apply to companions.",
+                    nameof(requiredChunkTag));
+            if (requiredTagChunkRadius < 0 || requiredTagChunkRadius > 1 ||
+                (requiredTagChunkRadius > 0 && string.IsNullOrWhiteSpace(requiredChunkTag)))
+                throw new ArgumentOutOfRangeException(nameof(requiredTagChunkRadius));
 
             RuleId = ruleId.Trim();
             ItemId = itemId.Trim();
             ItemCount = Math.Max(1, itemCount);
+            ItemCountDistribution = itemCountDistribution;
+            if (itemCountDistribution == EcologyItemCountDistribution.Fixed)
+            {
+                ItemCountMin = ItemCount;
+                ItemCountPeak = ItemCount;
+                ItemCountQuadraticRadius = 1d;
+            }
+            else
+            {
+                if (itemCountMin < 1 || itemCountMin > ItemCount)
+                    throw new ArgumentOutOfRangeException(nameof(itemCountMin));
+                if (itemCountPeak < itemCountMin || itemCountPeak > ItemCount)
+                    throw new ArgumentOutOfRangeException(nameof(itemCountPeak));
+                if (double.IsNaN(itemCountQuadraticRadius) ||
+                    double.IsInfinity(itemCountQuadraticRadius) || itemCountQuadraticRadius <= 0d)
+                    throw new ArgumentOutOfRangeException(nameof(itemCountQuadraticRadius));
+                ItemCountMin = itemCountMin;
+                ItemCountPeak = itemCountPeak;
+                ItemCountQuadraticRadius = itemCountQuadraticRadius;
+            }
             SpawnChance = Clamp01(spawnChance);
             SpawnChanceMultiplier = Math.Max(0d, Finite(spawnChanceMultiplier, 1d));
             BiomeMask = biomeMask;
@@ -72,12 +118,25 @@ namespace FlatWorld.WorldModel
             ProvidedTags = new ReadOnlyCollection<string>(NormalizeTags(providedTags));
             CompanionOnly = companionOnly;
             CompanionHostTag = companionHostTag?.Trim() ?? string.Empty;
+            RequiredChunkTag = requiredChunkTag?.Trim() ?? string.Empty;
+            RequiredTagChunkRadius = requiredTagChunkRadius;
+            RequiredEnvironmentLayer = requiredEnvironmentLayer?.Trim() ?? string.Empty;
+            if (double.IsNaN(minimumEnvironmentValue) || double.IsInfinity(minimumEnvironmentValue))
+                throw new ArgumentOutOfRangeException(nameof(minimumEnvironmentValue));
+            if (double.IsNaN(maximumEnvironmentValue) || double.IsInfinity(maximumEnvironmentValue) ||
+                maximumEnvironmentValue < minimumEnvironmentValue)
+                throw new ArgumentOutOfRangeException(nameof(maximumEnvironmentValue));
+            MinimumEnvironmentValue = minimumEnvironmentValue;
+            MaximumEnvironmentValue = maximumEnvironmentValue;
+            RequireNaturalPlantableGround = requireNaturalPlantableGround;
             CompanionSpawnChance = Clamp01(companionSpawnChance);
             CompanionOffsetX = Finite(companionOffsetX, 0d);
             CompanionOffsetY = Finite(companionOffsetY, 0d);
             CompanionMinRadius = Math.Max(0d, Finite(companionMinRadius, 0d));
             CompanionMaxRadius = Math.Max(CompanionMinRadius, Finite(companionMaxRadius, 0d));
             MinRiverFloodplainStrength = Clamp01(minRiverFloodplainStrength);
+            MaxRiverFloodplainStrength = Math.Max(MinRiverFloodplainStrength,
+                Clamp01(maxRiverFloodplainStrength));
             DistributionMode = distributionMode;
             PatchSpacing = Math.Max(2, patchSpacing);
             PatchRadius = Math.Max(0.5d, Math.Min(PatchSpacing * 0.5d,
@@ -88,6 +147,10 @@ namespace FlatWorld.WorldModel
         public string RuleId { get; }
         public string ItemId { get; }
         public int ItemCount { get; }
+        public EcologyItemCountDistribution ItemCountDistribution { get; }
+        public int ItemCountMin { get; }
+        public int ItemCountPeak { get; }
+        public double ItemCountQuadraticRadius { get; }
         public double SpawnChance { get; }
         public double SpawnChanceMultiplier { get; }
         /// <summary>0 表示不限制群系；其他值按 SurfaceBiomeKind 的位编号匹配。</summary>
@@ -101,6 +164,10 @@ namespace FlatWorld.WorldModel
         public IReadOnlyList<string> ProvidedTags { get; }
         public bool CompanionOnly { get; }
         public string CompanionHostTag { get; }
+        /// <summary>伴生物所需的自然物标签，由配置半径内实际生成的宿主规则提供。</summary>
+        public string RequiredChunkTag { get; }
+        /// <summary>标签搜索半径：0 为当前区块，1 为包含当前区块的九宫格。</summary>
+        public int RequiredTagChunkRadius { get; }
         public double CompanionSpawnChance { get; }
         public double CompanionOffsetX { get; }
         public double CompanionOffsetY { get; }
@@ -108,6 +175,14 @@ namespace FlatWorld.WorldModel
         public double CompanionMaxRadius { get; }
         /// <summary>最低河流冲积影响强度；大于 0 时只在河岸附近生成。</summary>
         public double MinRiverFloodplainStrength { get; }
+        /// <summary>最高河流冲积影响强度；0 排除河岸湿地，默认 1 不限制。</summary>
+        public double MaxRiverFloodplainStrength { get; }
+        /// <summary>可选生成环境约束；缺失对应层时不生成，避免稀有伴生资源散落全地图。</summary>
+        public string RequiredEnvironmentLayer { get; }
+        public double MinimumEnvironmentValue { get; }
+        public double MaximumEnvironmentValue { get; }
+        /// <summary>要求脚下地块在地块目录中声明为自然可种植基质。</summary>
+        public bool RequireNaturalPlantableGround { get; }
         /// <summary>自然物逐格均匀生成，或先形成稀疏小聚落。</summary>
         public EcologyDistributionMode DistributionMode { get; }
         /// <summary>聚落候选网格的边长；相邻网格各自最多形成一个聚落。</summary>
@@ -134,8 +209,14 @@ namespace FlatWorld.WorldModel
             return temperature >= MinTemperature && temperature <= MaxTemperature &&
                    precipitation >= MinPrecipitation && precipitation <= MaxPrecipitation &&
                    height >= MinHeight && height <= MaxHeight &&
-                   riverFloodplainStrength >= MinRiverFloodplainStrength;
+                   riverFloodplainStrength >= MinRiverFloodplainStrength &&
+                   riverFloodplainStrength <= MaxRiverFloodplainStrength;
         }
+
+        /// <summary>按冻结的地块能力判断当前自然物是否允许落在该地表。</summary>
+        public bool MatchesGround(int groundTileId, ChunkGenerationSettingsSnapshot settings) =>
+            !RequireNaturalPlantableGround ||
+            settings != null && settings.IsNaturalPlantableGround(groundTileId);
 
         private static List<string> NormalizeTags(IEnumerable<string> tags)
         {
@@ -216,6 +297,34 @@ namespace FlatWorld.WorldModel
         #endregion
     }
 
+    /// <summary>可按固定种子重建的自然物数据身份；运行态状态沿用生态差量存档。</summary>
+    public readonly struct NaturalEntityData
+    {
+        #region 稳定生成数据
+        public NaturalEntityData(NaturalItemPlacement placement)
+        {
+            Guid = placement.Guid;
+            ItemId = placement.ItemId;
+            LocalX = placement.LocalX;
+            LocalY = placement.LocalY;
+            OffsetX = placement.OffsetX;
+            OffsetY = placement.OffsetY;
+            RuleId = placement.RuleId;
+        }
+
+        public int Guid { get; }
+        public string ItemId { get; }
+        public int LocalX { get; }
+        public int LocalY { get; }
+        public float OffsetX { get; }
+        public float OffsetY { get; }
+        public string RuleId { get; }
+
+        public NaturalItemPlacement ToPlacement() => new NaturalItemPlacement(
+            Guid, ItemId, LocalX, LocalY, OffsetX, OffsetY, RuleId);
+        #endregion
+    }
+
     /// <summary>一个区块的自然物品生成结果，只保存纯数据，不持有 Item 或 GameObject。</summary>
     public sealed class ChunkEcologyData
     {
@@ -237,6 +346,13 @@ namespace FlatWorld.WorldModel
         #endregion
     }
 
+    /// <summary>按同一世界种子与生成快照查询相邻区块的天然宿主标签。</summary>
+    public interface IChunkEcologyNeighborhoodTagResolver
+    {
+        bool HasHostTagInChunk(ChunkGenerationRequest request, string tag,
+            CancellationToken cancellationToken);
+    }
+
     /// <summary>
     /// 在已完成的纯地形上执行可配置生态阶段。
     /// 宿主和伴生物都由规则声明，不读取 Prefab 标签，因此后台生成可以完全无头运行。
@@ -248,18 +364,44 @@ namespace FlatWorld.WorldModel
         private const uint PlacementSalt = 0x6e636f6cU;
         private const uint CompanionSalt = 0x636f6d70U;
         private const uint OffsetSalt = 0x6f666673U;
+        private const uint CountSalt = 0x636f756eU;
         private const uint PatchSalt = 0x70617463U;
+        private const double QuadraticCountTailWeight = 0.02d;
+        private const string TreeTag = "Tree";
 
         #endregion
 
         #region 生成入口
+
+        /// <summary>等待宿主生成完毕后，再确认邻域标签的伴生物候选。</summary>
+        private readonly struct PendingCompanion
+        {
+            public PendingCompanion(EcologySpawnRuleSnapshot rule, int localX, int localY,
+                int worldX, int worldY, int hostGuid)
+            {
+                Rule = rule;
+                LocalX = localX;
+                LocalY = localY;
+                WorldX = worldX;
+                WorldY = worldY;
+                HostGuid = hostGuid;
+            }
+
+            public EcologySpawnRuleSnapshot Rule { get; }
+            public int LocalX { get; }
+            public int LocalY { get; }
+            public int WorldX { get; }
+            public int WorldY { get; }
+            public int HostGuid { get; }
+        }
 
         public static ChunkEcologyData Generate(
             ChunkGenerationRequest request,
             ChunkTerrainBuffer terrain,
             double globalMultiplier,
             IReadOnlyList<EcologySpawnRuleSnapshot> rules,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken,
+            IChunkEcologyNeighborhoodTagResolver neighborhoodTagResolver = null)
         {
             if (terrain == null)
                 throw new ArgumentNullException(nameof(terrain));
@@ -270,6 +412,8 @@ namespace FlatWorld.WorldModel
 
             var placements = new List<NaturalItemPlacement>();
             var claimedGuids = new HashSet<int>();
+            var chunkTags = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var pendingCompanions = new List<PendingCompanion>();
             // 每个格子只需要当前格的宿主关系；复用字典避免为每个可走格分配一次 Dictionary。
             var hosts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
             var hostRules = new List<EcologySpawnRuleSnapshot>();
@@ -296,6 +440,7 @@ namespace FlatWorld.WorldModel
 
                     TerrainCell cell = terrain.GetCell(x, y);
                     hosts.Clear();
+                    bool treeCellClaimed = false;
                     if (!IsValidNaturalCell(cell, terrain, x, y))
                         continue;
 
@@ -310,7 +455,9 @@ namespace FlatWorld.WorldModel
                     for (int ruleIndex = 0; ruleIndex < hostRules.Count; ruleIndex++)
                     {
                         EcologySpawnRuleSnapshot rule = hostRules[ruleIndex];
-                        if (!rule.Matches(cell.BiomeId, temperature, precipitation, height,
+                        if (!rule.MatchesGround(cell.GroundTileId, request.Profile.Settings) ||
+                            !MatchesEnvironmentLayer(rule, terrain, x, y) ||
+                            !rule.Matches(cell.BiomeId, temperature, precipitation, height,
                                 riverFloodplain))
                         {
                             continue;
@@ -325,7 +472,13 @@ namespace FlatWorld.WorldModel
                             continue;
                         }
 
-                        for (int itemIndex = 0; itemIndex < rule.ItemCount; itemIndex++)
+                        bool isTreeRule = RuleProvidesTag(rule, TreeTag);
+                        // 同一世界格只允许一棵树占位，避免不同树种独立判定后叠在一起生成。
+                        if (isTreeRule && treeCellClaimed)
+                            continue;
+
+                        int itemCount = ResolveItemCount(request, rule, worldX, worldY, 0);
+                        for (int itemIndex = 0; itemIndex < itemCount; itemIndex++)
                         {
                             int guid = CreateGuid(request, worldX, worldY,
                                 rule, itemIndex, 0, claimedGuids);
@@ -334,11 +487,18 @@ namespace FlatWorld.WorldModel
                             for (int tagIndex = 0; tagIndex < rule.ProvidedTags.Count; tagIndex++)
                             {
                                 string tag = rule.ProvidedTags[tagIndex];
+                                chunkTags.Add(tag);
                                 if (!hosts.TryGetValue(tag, out int currentHostGuid) ||
                                     guid < currentHostGuid)
                                 {
                                     hosts[tag] = guid;
                                 }
+                            }
+
+                            if (isTreeRule)
+                            {
+                                treeCellClaimed = true;
+                                break;
                             }
                         }
                     }
@@ -347,6 +507,8 @@ namespace FlatWorld.WorldModel
                     {
                         EcologySpawnRuleSnapshot rule = companionRules[ruleIndex];
                         if (string.IsNullOrWhiteSpace(rule.CompanionHostTag) ||
+                            !rule.MatchesGround(cell.GroundTileId, request.Profile.Settings) ||
+                            !MatchesEnvironmentLayer(rule, terrain, x, y) ||
                             !rule.Matches(cell.BiomeId, temperature, precipitation, height,
                                 riverFloodplain) ||
                             !hosts.TryGetValue(rule.CompanionHostTag, out int hostGuid))
@@ -365,25 +527,216 @@ namespace FlatWorld.WorldModel
                             continue;
                         }
 
-                        for (int itemIndex = 0; itemIndex < rule.ItemCount; itemIndex++)
+                        if (!string.IsNullOrEmpty(rule.RequiredChunkTag))
                         {
-                            int guid = CreateGuid(request, worldX, worldY,
-                                rule, itemIndex, hostGuid, claimedGuids);
-                            ResolveCompanionOffset(request, worldX, worldY, rule,
-                                itemIndex, out float offsetX, out float offsetY);
-                            placements.Add(new NaturalItemPlacement(guid, rule.ItemId, x, y,
-                                offsetX, offsetY, rule.RuleId, hostGuid));
+                            pendingCompanions.Add(new PendingCompanion(rule, x, y,
+                                worldX, worldY, hostGuid));
+                            continue;
                         }
+
+                        AddCompanionPlacements(request, rule, x, y, worldX, worldY,
+                            hostGuid, claimedGuids, placements);
                     }
                 }
+            }
+
+            var neighborhoodTags = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
+            for (int i = 0; i < pendingCompanions.Count; i++)
+            {
+                if ((i & 63) == 0)
+                    cancellationToken.ThrowIfCancellationRequested();
+                PendingCompanion pending = pendingCompanions[i];
+                if (!HasRequiredTag(request, rules, chunkTags, neighborhoodTags,
+                        pending.Rule, neighborhoodTagResolver, cancellationToken))
+                    continue;
+
+                AddCompanionPlacements(request, pending.Rule, pending.LocalX,
+                    pending.LocalY, pending.WorldX, pending.WorldY, pending.HostGuid,
+                    claimedGuids, placements);
             }
 
             return placements.Count == 0 ? ChunkEcologyData.Empty : new ChunkEcologyData(placements);
         }
 
+        /// <summary>当前区块优先；仅本区块无标签且规则允许时查询周围八个区块。</summary>
+        private static bool HasRequiredTag(ChunkGenerationRequest request,
+            IReadOnlyList<EcologySpawnRuleSnapshot> rules, ISet<string> chunkTags,
+            IDictionary<string, bool> neighborhoodTags, EcologySpawnRuleSnapshot rule,
+            IChunkEcologyNeighborhoodTagResolver resolver, CancellationToken cancellationToken)
+        {
+            string tag = rule.RequiredChunkTag;
+            if (chunkTags.Contains(tag)) return true;
+            if (rule.RequiredTagChunkRadius == 0) return false;
+            if (neighborhoodTags.TryGetValue(tag, out bool found)) return found;
+            if (resolver == null)
+                throw new InvalidOperationException("邻区自然物标签查询器未提供。");
+
+            found = HasHostRuleProvidingTag(rules, tag) &&
+                HasTagInNeighborChunks(request, tag, resolver, cancellationToken);
+            neighborhoodTags[tag] = found;
+            return found;
+        }
+
+        /// <summary>只认天然宿主规则提供的标签，不用尚未生成的伴生物充当花朵。</summary>
+        private static bool HasHostRuleProvidingTag(
+            IReadOnlyList<EcologySpawnRuleSnapshot> rules, string tag)
+        {
+            for (int i = 0; i < rules.Count; i++)
+            {
+                EcologySpawnRuleSnapshot rule = rules[i];
+                if (rule != null && !rule.CompanionOnly && RuleProvidesTag(rule, tag))
+                    return true;
+            }
+            return false;
+        }
+
+        /// <summary>按固定坐标顺序查询八邻区，Wrapped 世界跳过绕回后的重复区块。</summary>
+        private static bool HasTagInNeighborChunks(ChunkGenerationRequest request, string tag,
+            IChunkEcologyNeighborhoodTagResolver resolver, CancellationToken cancellationToken)
+        {
+            Int2 origin = request.Address.ChunkOrigin;
+            int width = request.Profile.Width;
+            int height = request.Profile.Height;
+            var seen = new HashSet<Int2>
+            {
+                new Int2(request.Topology.NormalizeX(origin.X),
+                    request.Topology.NormalizeY(origin.Y))
+            };
+            for (int offsetY = -1; offsetY <= 1; offsetY++)
+            for (int offsetX = -1; offsetX <= 1; offsetX++)
+            {
+                if (offsetX == 0 && offsetY == 0) continue;
+                cancellationToken.ThrowIfCancellationRequested();
+                long rawX = (long)origin.X + (long)offsetX * width;
+                long rawY = (long)origin.Y + (long)offsetY * height;
+                if (rawX < int.MinValue || rawX > int.MaxValue ||
+                    rawY < int.MinValue || rawY > int.MaxValue)
+                    continue;
+                Int2 neighborOrigin = new(
+                    request.Topology.NormalizeX((int)rawX),
+                    request.Topology.NormalizeY((int)rawY));
+                if (!seen.Add(neighborOrigin)) continue;
+                var neighborRequest = new ChunkGenerationRequest(
+                    request.WorldEpoch,
+                    new WorldAddress(request.Address.DimensionId, neighborOrigin),
+                    request.WorldSeed, request.RequestVersion, request.Profile, request.Topology);
+                if (resolver.HasHostTagInChunk(neighborRequest, tag, cancellationToken))
+                    return true;
+            }
+            return false;
+        }
+
+        /// <summary>对邻区复用正式宿主判定，找到第一朵天然花后立即停止扫描。</summary>
+        public static bool HasHostTagInChunk(ChunkGenerationRequest request,
+            ChunkTerrainBuffer terrain, double globalMultiplier,
+            IReadOnlyList<EcologySpawnRuleSnapshot> rules, string tag,
+            CancellationToken cancellationToken)
+        {
+            if (terrain == null) throw new ArgumentNullException(nameof(terrain));
+            if (globalMultiplier <= 0d || rules == null)
+                return false;
+
+            var taggedRules = new List<EcologySpawnRuleSnapshot>();
+            for (int i = 0; i < rules.Count; i++)
+            {
+                EcologySpawnRuleSnapshot rule = rules[i];
+                if (rule != null && !rule.CompanionOnly && RuleProvidesTag(rule, tag))
+                    taggedRules.Add(rule);
+            }
+            if (taggedRules.Count == 0) return false;
+
+            int startX = request.Address.ChunkOrigin.X;
+            int startY = request.Address.ChunkOrigin.Y;
+            for (int y = 0; y < terrain.Height; y++)
+            for (int x = 0; x < terrain.Width; x++)
+            {
+                if (((y * terrain.Width + x) & 63) == 0)
+                    cancellationToken.ThrowIfCancellationRequested();
+                TerrainCell cell = terrain.GetCell(x, y);
+                if (!IsValidNaturalCell(cell, terrain, x, y)) continue;
+                double temperature = ReadEnvironment(terrain, "temperature", x, y);
+                double precipitation = ReadEnvironment(terrain, "precipitation", x, y);
+                double height = ReadEnvironment(terrain, "height", x, y);
+                double riverFloodplain = ReadEnvironment(terrain, "riverFloodplain", x, y);
+                int worldX = request.Topology.NormalizeX(startX + x);
+                int worldY = request.Topology.NormalizeY(startY + y);
+                for (int ruleIndex = 0; ruleIndex < taggedRules.Count; ruleIndex++)
+                {
+                    EcologySpawnRuleSnapshot rule = taggedRules[ruleIndex];
+                    if (!rule.MatchesGround(cell.GroundTileId, request.Profile.Settings) ||
+                        !MatchesEnvironmentLayer(rule, terrain, x, y) ||
+                        !rule.Matches(cell.BiomeId, temperature, precipitation, height,
+                            riverFloodplain) ||
+                        !MatchesDistribution(request, worldX, worldY, rule))
+                        continue;
+                    double chance = Clamp01(globalMultiplier * rule.SpawnChance *
+                        rule.SpawnChanceMultiplier);
+                    if (PassesChance(request, worldX, worldY, rule, chance, PlacementSalt))
+                        return true;
+                }
+            }
+            return false;
+        }
+
+        /// <summary>判断一条宿主规则是否提供指定标签。</summary>
+        private static bool RuleProvidesTag(EcologySpawnRuleSnapshot rule, string tag)
+        {
+            for (int i = 0; i < rule.ProvidedTags.Count; i++)
+                if (string.Equals(rule.ProvidedTags[i], tag, StringComparison.OrdinalIgnoreCase))
+                    return true;
+            return false;
+        }
+
         #endregion
 
         #region 生成辅助
+
+        /// <summary>按已确认的宿主生成伴生物，并保留宿主 GUID 供加载时核验。</summary>
+        private static void AddCompanionPlacements(ChunkGenerationRequest request,
+            EcologySpawnRuleSnapshot rule, int localX, int localY, int worldX, int worldY,
+            int hostGuid, HashSet<int> claimedGuids, List<NaturalItemPlacement> placements)
+        {
+            int itemCount = ResolveItemCount(request, rule, worldX, worldY, hostGuid);
+            for (int itemIndex = 0; itemIndex < itemCount; itemIndex++)
+            {
+                int guid = CreateGuid(request, worldX, worldY,
+                    rule, itemIndex, hostGuid, claimedGuids);
+                ResolveCompanionOffset(request, worldX, worldY, rule,
+                    itemIndex, out float offsetX, out float offsetY);
+                placements.Add(new NaturalItemPlacement(guid, rule.ItemId, localX, localY,
+                    offsetX, offsetY, rule.RuleId, hostGuid));
+            }
+        }
+
+        /// <summary>按规则确定本次生成数量；二次分布以峰值数量为最高概率并保留极低概率长尾。</summary>
+        private static int ResolveItemCount(ChunkGenerationRequest request,
+            EcologySpawnRuleSnapshot rule, int worldX, int worldY, int hostGuid)
+        {
+            if (rule.ItemCountDistribution == EcologyItemCountDistribution.Fixed)
+                return rule.ItemCount;
+
+            double totalWeight = 0d;
+            for (int count = rule.ItemCountMin; count <= rule.ItemCount; count++)
+                totalWeight += ResolveQuadraticCountWeight(rule, count);
+
+            ulong seed = CreateSeed(request, rule.RuleId, CountSalt) ^ (uint)hostGuid;
+            double target = Hash01(seed, worldX, worldY) * totalWeight;
+            double accumulated = 0d;
+            for (int count = rule.ItemCountMin; count <= rule.ItemCount; count++)
+            {
+                accumulated += ResolveQuadraticCountWeight(rule, count);
+                if (target <= accumulated)
+                    return count;
+            }
+
+            return rule.ItemCount;
+        }
+
+        private static double ResolveQuadraticCountWeight(EcologySpawnRuleSnapshot rule, int count)
+        {
+            double normalized = (count - rule.ItemCountPeak) / rule.ItemCountQuadraticRadius;
+            return Math.Max(QuadraticCountTailWeight, 1d - normalized * normalized);
+        }
 
         private static bool IsValidNaturalCell(TerrainCell cell, ChunkTerrainBuffer terrain,
             int x, int y)
@@ -398,6 +751,12 @@ namespace FlatWorld.WorldModel
 
             return ReadEnvironment(terrain, "structure", x, y) < 0.5d;
         }
+
+        private static bool MatchesEnvironmentLayer(EcologySpawnRuleSnapshot rule,
+            ChunkTerrainBuffer terrain, int x, int y) =>
+            string.IsNullOrEmpty(rule.RequiredEnvironmentLayer) ||
+            terrain.TryGetEnvironmentValue(rule.RequiredEnvironmentLayer, x, y, out float value) &&
+            value >= rule.MinimumEnvironmentValue && value <= rule.MaximumEnvironmentValue;
 
         private static double ReadEnvironment(ChunkTerrainBuffer terrain, string layerId,
             int x, int y)

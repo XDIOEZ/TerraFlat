@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "packages": [
+    {
+      "id": "surface.forest",
+      "path": "surface-forest.json",
+      "enabled": true
+    },
+    {
+      "id": "surface.grassland",
+      "path": "surface-grassland.json",
+      "enabled": true
+    },
+    {
+      "id": "surface.common",
+      "path": "surface-common.json",
+      "enabled": true
+    },
+    {
+      "id": "surface.river",
+      "path": "surface-river.json",
+      "enabled": true
+    },
+    {
+      "id": "surface.stone",
+      "path": "surface-stone.json",
+      "enabled": true
+    },
+    {
+      "id": "surface.sulfur",
+      "path": "surface-sulfur.json",
+      "enabled": true
+    },
+    {
+      "id": "surface.beach",
+      "path": "surface-beach.json",
+      "enabled": true
+    },
+    {
+      "id": "surface.desert",
+      "path": "surface-desert.json",
+      "enabled": true
+    },
+    {
+      "id": "surface.snow",
+      "path": "surface-snow.json",
+      "enabled": true
+    },
+    {
+      "id": "surface.ancient",
+      "path": "surface-ancient.json",
+      "enabled": true
+    },
+    {
+      "id": "cave.flora",
+      "path": "cave-flora.json",
+      "enabled": true
+    },
+    {
+      "id": "cave.resources",
+      "path": "cave-resources.json",
+      "enabled": true
+    }
+  ]
+}

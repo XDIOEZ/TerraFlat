@@ -5,7 +5,7 @@ using Unity.Mathematics;
 
 namespace FlatWorld.DroppedItems
 {
-    /// <summary>真正的 Entities 存储与生命周期；不引用 Item、GameObject、资源目录或背包。</summary>
+    /// <summary>学习参考：旧 Entities 存储与生命周期。当前程序集仅 Editor 编译，不参与正式掉落物运行。</summary>
     public sealed class DroppedItemSimulation : IDisposable
     {
         private readonly World world;

@@ -54,7 +54,7 @@ namespace FlatWorld.AIECS
 
     #region 感知、决策与行为意图
     /// <summary>内置通用行为；扩展系统可使用大于等于 1024 的行为 ID，不添加物种专属系统。</summary>
-    public enum AiecsBehavior : int { Idle, Wander, Chase, Flee, Attack, Custom = 1024 }
+    public enum AiecsBehavior : int { Idle, Wander, Chase, Flee, Attack, Advance, Custom = 1024 }
 
     /// <summary>可组合条件位；核心 Brain 只匹配规则并提交意图，不负责路径或伤害。</summary>
     [System.Flags]
@@ -110,6 +110,14 @@ namespace FlatWorld.AIECS
         public double RefreshAt; // 下一次允许选择目标的时刻。
         public int Behavior; // 产生该目标的行为。
         public byte Valid; // 当前目标有效。
+    }
+
+    /// <summary>外部事件下发的共享导航目标；同一目标的生物共用一个 Flow 句柄。</summary>
+    public struct AiecsAdvanceDirective : IComponentData
+    {
+        public FlowGoalHandle Goal;
+        public float ArrivalDistance;
+        public byte Active, AttackActorsOnRoute;
     }
     #endregion
 
@@ -185,6 +193,7 @@ namespace FlatWorld.AIECS
     public struct AiecsDefinition
     {
         public FixedString128Bytes Id, Faction, LootTable; // 当前内容的稳定 ID。
+        public AiecsCapability Capabilities; // 冷路径编译的能力组合，不在热路径解析 JSON。
         public float SenseRange, ChaseRange, PerceptionPeriod, DecisionPeriod; // 感知与决策节奏。
         public float ChaseRetryDelay; // 不可达目标的重试间隔。
         public float FleeHealthRatio, FleeSeconds, MemorySeconds; // 生存规则与记忆。
@@ -223,9 +232,10 @@ namespace FlatWorld.AIECS
         public float2 Position, Facing; // 当前位置与逻辑朝向。
         public float Hp, MaxHp, ActionElapsed; // 生命与动作时钟。
         public float LiquidDepth, WaterBlend; // 有效水深与入水表现混合。
+        public float FlightHeight, FlightCruiseHeight; // 表现高度与巡航高度，不改变地面碰撞与掉落位置。
         public int Definition, Group, Behavior; // 目录索引、分组颜色与行为。
         public AiecsAttackPhase AttackPhase; // 映射表现动作。
-        public byte Dead, External, HasTarget; // 可见对象分类与实际锁定状态。
+        public byte Dead, External, HasTarget, FlightAirborne, Moving; // 可见对象分类、锁定、飞行与实际移动状态。
     }
     #endregion
 }

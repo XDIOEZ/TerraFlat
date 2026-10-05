@@ -74,8 +74,9 @@ public class Inventory_UI : MonoBehaviour
 
             inventory.Data.itemSlots[i].Index = i;
 
-            if(inventory.Data.itemSlots[i].SlotMaxVolume == 0|| inventory.Data.itemSlots[i].SlotMaxVolume == 128)
-            inventory.Data.itemSlots[i].SlotMaxVolume = 100;
+            // 普通槽统一使用大堆叠容量，显式单件装配槽保留原限制。
+            if (inventory.Data.itemSlots[i].SlotMaxVolume != 1f)
+                inventory.Data.itemSlots[i].SlotMaxVolume = Inventory_Data.DefaultSlotVolume;
 
             itemSlot_UI.ItemSlot = inventory.Data.itemSlots[i];
 

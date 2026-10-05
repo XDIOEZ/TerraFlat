@@ -58,12 +58,12 @@ public partial class Mod_MoveSpeed : Module, IItemValueModifier
         // 逻辑已迁移到Unequip方法，卸下时触发
     }
 
-    // 提取重复逻辑：获取 Mover 模块
-    private Mover GetMover()
+    // 提取重复逻辑：获取 Mod_Mover 模块
+    private Mod_Mover GetMover()
     {
-        if (item?.itemMods != null && item.itemMods.ContainsKey_ID(ModText.Mover))
+        if (item?.itemMods != null && item.itemMods.ContainsKey_ID(ModText.Mod_Mover))
         {
-            return item.itemMods.GetMod_ByID(ModText.Mover) as Mover;
+            return item.itemMods.GetMod_ByID(ModText.Mod_Mover) as Mod_Mover;
         }
         return null;
     }

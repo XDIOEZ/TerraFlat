@@ -1933,8 +1933,10 @@ GameObject:
   - component: {fileID: 336566662049313673}
   - component: {fileID: 2778211446581845300}
   - component: {fileID: 671399011624820480}
+  - component: {fileID: 9090000000000016100}
   - component: {fileID: 5703448706332420614}
   - component: {fileID: 7118296150934312271}
+  - component: {fileID: 7000000000000000000}
   m_Layer: 0
   m_Name: UI_StoneMortar
   m_TagString: Untagged
@@ -1954,6 +1956,7 @@ RectTransform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
+  - {fileID: 9090000000000016002}
   - {fileID: 8691794572969504528}
   - {fileID: 5591132843282068270}
   - {fileID: 6645204265536338954}
@@ -2033,12 +2036,99 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   canvasGroup: {fileID: 2778211446581845300}
-  CanDrag: 0
-  Dragger: {fileID: 0}
+  CanDrag: 1
+  Dragger: {fileID: 9090000000000016100}
   rectTransform: {fileID: 7378317741759783839}
   PanelName: "\u77F3\u81FC"
   isOpen: 0
   blocksGameplayInput: 1
+--- !u!114 &9090000000000016100
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8590396981883253119}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e35963cbd2d44304c83e206e1ebb4fc3, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  rectTransform: {fileID: 7378317741759783839}
+  canvas: {fileID: 0}
+  draggableImage: {fileID: 336566662049313673}
+  originalPosition: {x: 0, y: 0}
+  offset: {x: 0, y: 0}
+  DefaultOrder: 0
+  IsDragging: 0
+--- !u!1 &9090000000000016000
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 9090000000000016002}
+  - component: {fileID: 9090000000000016003}
+  - component: {fileID: 9090000000000016001}
+  m_Layer: 0
+  m_Name: FWUI_DragSurface
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &9090000000000016002
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9090000000000016000}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 7378317741759783839}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 1, y: 1}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!222 &9090000000000016003
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9090000000000016000}
+  m_CullTransparentMesh: 1
+--- !u!114 &9090000000000016001
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9090000000000016000}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d464b2cb3ef34d4e9825b8aa6b4f7d31, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  m_Material: {fileID: 0}
+  m_Color: {r: 0, g: 0, b: 0, a: 0}
+  m_RaycastTarget: 1
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  windowRect: {fileID: 7378317741759783839}
+  headerHeight: 78
+  borderWidth: 12
 --- !u!114 &5703448706332420614
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2296,3 +2386,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!114 &7000000000000000000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8590396981883253119}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a770e3391c6fbbc4c931ac2c40acd1f7, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  animationId: panel.scale
+  motionRoot: {fileID: 7378317741759783839}

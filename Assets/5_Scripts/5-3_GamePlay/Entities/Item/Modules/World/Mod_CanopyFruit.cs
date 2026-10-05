@@ -26,7 +26,7 @@ public sealed partial class Mod_CanopyFruit : Module, INaturalResourceInitialize
     public Vector2 CrownSpreadUV = new(0.048f, 0.02f);
     [Min(0f)] public float DropScatterRadius = 0.85f;
     private CanopyFruitState state; // 唯一运行态权威。
-    private DamageReceiver receiver; // 树本身的死亡权威。
+    private Mod_DamageReceiver receiver; // 树本身的死亡权威。
     private Mod_Grow growth; // 可选树龄门禁。
     private Sprite fruitSprite, splitSprite; // 已加载定义的共享贴图。
     private bool wasTicked, liveStep; // 首次加载和历史补算不追溯伤害。
@@ -45,7 +45,7 @@ public sealed partial class Mod_CanopyFruit : Module, INaturalResourceInitialize
         growth = null;
         foreach (Module module in modules.Mods.Values)
         {
-            if (module is DamageReceiver health)
+            if (module is Mod_DamageReceiver health)
             {
                 if (receiver != null) throw new InvalidOperationException("树果模块不允许多个生命权威。");
                 receiver = health;
@@ -169,7 +169,7 @@ public sealed partial class Mod_CanopyFruit : Module, INaturalResourceInitialize
     }
 
     /// <summary>死亡前结清历史；未成熟果清除，已脱冠果安全落地，事件重入不会重复产出。</summary>
-    private void HandleDeath(DamageReceiver source)
+    private void HandleDeath(Mod_DamageReceiver source)
     {
         if (state.Stopped || !GameNetwork.HasStateAuthority) return;
         liveStep = false;

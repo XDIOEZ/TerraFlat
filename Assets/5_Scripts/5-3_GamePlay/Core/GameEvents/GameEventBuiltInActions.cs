@@ -243,9 +243,6 @@ namespace FlatWorld.Gameplay.Events
         [JsonProperty("playerVisibilityExclusionDistance")]
         public float PlayerVisibilityExclusionDistance = 12f;
 
-        [JsonProperty("requireOutsidePlayerView")]
-        public bool RequireOutsidePlayerView = true;
-
         [JsonProperty("searchAttemptsPerCreature")]
         public int SearchAttemptsPerCreature = 24;
 
@@ -342,7 +339,7 @@ namespace FlatWorld.Gameplay.Events
             int attemptCount = Mathf.Min(
                 value.Count - runtime.SpawnedCount,
                 Mathf.Max(1, value.MaxSpawnAttemptsPerTick));
-            List<Item> spawnedItems = new(attemptCount);
+            List<int> spawnedActorGuids = new(attemptCount);
             int spawned = spawner.SpawnEventCreatures(new GameEventCreatureSpawnRequest
             {
                 WorldKey = context.ActiveWorldKey,
@@ -351,26 +348,25 @@ namespace FlatWorld.Gameplay.Events
                 MinDistance = value.MinDistance,
                 MaxDistance = value.MaxDistance,
                 PlayerVisibilityExclusionDistance = value.PlayerVisibilityExclusionDistance,
-                RequireOutsidePlayerView = value.RequireOutsidePlayerView,
                 UseSpawnAnchor = true,
                 SpawnAnchor = targetPosition,
                 SearchAttemptsPerCreature = Mathf.Max(1, value.SearchAttemptsPerCreature),
                 AllowedBiomes = value.AllowedBiomes ?? new List<string>()
-            }, spawnedItems);
+            }, spawnedActorGuids);
 
             AIAdvanceCommand command = new(
                 targetItemGuid,
                 targetPosition,
                 value.ArrivalDistance,
                 value.AttackActorsOnRoute);
-            for (int i = 0; i < spawnedItems.Count; i++)
+            for (int i = 0; i < spawnedActorGuids.Count; i++)
             {
-                if (!TryIssueAdvanceCommand(spawnedItems[i], command))
+                int actorGuid = spawnedActorGuids[i];
+                if (!AiRuntimeBackendService.TrySetAdvanceCommand(actorGuid, command))
                 {
-                    Debug.LogWarning(
-                        $"[GameEvent] Spawned '{value.PrefabId}' does not implement " +
-                        $"{nameof(IAIAdvanceCommandReceiver)}; it will keep its default AI.",
-                        spawnedItems[i]);
+                    AiRuntimeBackendService.TryDespawnActor(actorGuid);
+                    spawned--;
+                    Debug.LogWarning($"[GameEvent] 生物 '{value.PrefabId}' 接收推进命令失败，已回收。GUID={actorGuid}");
                 }
             }
 
@@ -388,24 +384,6 @@ namespace FlatWorld.Gameplay.Events
             bool cancelled)
         {
             // Advance commands belong to the spawned actors and survive the short-lived event action.
-        }
-
-        private static bool TryIssueAdvanceCommand(Item spawnedItem, AIAdvanceCommand command)
-        {
-            if (spawnedItem == null)
-                return false;
-
-            MonoBehaviour[] behaviours = spawnedItem.GetComponentsInChildren<MonoBehaviour>(true);
-            for (int i = 0; i < behaviours.Length; i++)
-            {
-                if (behaviours[i] is not IAIAdvanceCommandReceiver receiver)
-                    continue;
-
-                receiver.BeginAdvance(command);
-                return true;
-            }
-
-            return false;
         }
 
         private static bool TryReadTarget(

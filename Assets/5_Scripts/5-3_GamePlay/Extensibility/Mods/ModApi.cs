@@ -1,5 +1,4 @@
 using System;
-using System.Linq;
 using UnityEngine;
 
 #region MOD 公共 API
@@ -159,8 +158,46 @@ public sealed class ModApi
         if (ItemMgr.Instance == null)
             throw new InvalidOperationException("ItemMgr 尚未就绪");
 
+        // MOD 按物种路由生成生物，GUID 接口同时支持 GameObject 与 ECS。
+        if (GameRes.Instance.TryGetItemDefinition(itemId, out RuntimeItemDefinition definition) &&
+            definition.IsActor)
+        {
+            if (!AiRuntimeBackendService.TrySpawnDirect(itemId, new Vector3(x, y, 0f), 0, out int actorGuid))
+                throw new InvalidOperationException($"生物生成失败：{itemId}");
+            return actorGuid;
+        }
         Item item = ItemMgr.Instance.InstantiateItem(itemId, new Vector3(x, y, 0f));
         return item?.itemData?.Guid ?? 0;
+    }
+
+    /// <summary>MOD 用稳定 GUID 查询实际生物后端。</summary>
+    public bool IsActorAlive(int actorGuid)
+    {
+        return AiRuntimeBackendService.TryGetActor(actorGuid, out _, out bool alive) && alive;
+    }
+
+    public bool AdvanceActorToItem(int actorGuid, int targetItemGuid,
+        float arrivalDistance = 1.25f, bool attackActorsOnRoute = false)
+    {
+        manager.EnsureWorldMutationAllowed("AdvanceActorToItem");
+        Item target = ItemMgr.Instance?.GetItemByGuid(targetItemGuid);
+        if (target == null || target.DestructionHandled)
+            return false;
+        return AiRuntimeBackendService.TrySetAdvanceCommand(actorGuid,
+            new AIAdvanceCommand(targetItemGuid, target.transform.position,
+                arrivalDistance, attackActorsOnRoute));
+    }
+
+    public bool StopActorAdvance(int actorGuid)
+    {
+        manager.EnsureWorldMutationAllowed("StopActorAdvance");
+        return AiRuntimeBackendService.TryClearAdvanceCommand(actorGuid);
+    }
+
+    public bool DespawnActor(int actorGuid)
+    {
+        manager.EnsureWorldMutationAllowed("DespawnActor");
+        return AiRuntimeBackendService.TryDespawnActor(actorGuid);
     }
 
     public string GetGlobalState()
@@ -210,10 +247,9 @@ public sealed class ModItemApi
     public float MaxDurability => item?.itemData?.MaxDurability ?? 0f;
     public float X => item != null ? item.transform.position.x : 0f;
     public float Y => item != null ? item.transform.position.y : 0f;
-    public bool IsActor => item != null && item.GetComponentsInChildren<MonoBehaviour>(true)
-        .Any(component => component is IAIActor);
-    public float Health => item?.GetComponentInChildren<DamageReceiver>(true)?.Hp ?? 0f;
-    public float MaxHealth => item?.GetComponentInChildren<DamageReceiver>(true)?.MaxHp ?? 0f;
+    public bool IsActor => AiRuntimeBackendService.TryGetGameObjectActor(item, out _);
+    public float Health => item?.GetComponentInChildren<Mod_DamageReceiver>(true)?.Hp ?? 0f;
+    public float MaxHealth => item?.GetComponentInChildren<Mod_DamageReceiver>(true)?.MaxHp ?? 0f;
     public string FactionId => FactionRelationService.GetFactionId(item);
     public bool IsLiquidContainer => GetLiquidContainer() != null;
     public string LiquidId => GetLiquidContainer()?.Data?.LiquidId ?? string.Empty;
@@ -264,13 +300,12 @@ public sealed class ModItemApi
         return GetLiquidContainer()?.ClearContents() == true;
     }
 
-    /// <summary>让带 Mover_AI 的 Actor 前往世界坐标；基础状态机仍可在后续 Tick 覆盖目标。</summary>
+    /// <summary>直接控制 GameObject Actor 的移动模块，状态机仍可在下一 Tick 选择新目标。</summary>
     public bool MoveTo(float x, float y, bool forceRepath = false)
     {
         ModRuntimeManager.Instance?.EnsureWorldMutationAllowed("ActorMoveTo");
-        Mover_AI mover = item?.GetComponentInChildren<Mover_AI>(true);
-        if (mover == null)
-            return false;
+        Mod_Mover_AI mover = item?.GetComponentInChildren<Mod_Mover_AI>(true);
+        if (mover == null) return false;
         mover.SetDestination(new Vector2(x, y), forceRepath);
         return true;
     }
@@ -278,9 +313,8 @@ public sealed class ModItemApi
     public bool StopMoving()
     {
         ModRuntimeManager.Instance?.EnsureWorldMutationAllowed("ActorStopMoving");
-        Mover_AI mover = item?.GetComponentInChildren<Mover_AI>(true);
-        if (mover == null)
-            return false;
+        Mod_Mover_AI mover = item?.GetComponentInChildren<Mod_Mover_AI>(true);
+        if (mover == null) return false;
         mover.StopMovement();
         return true;
     }

@@ -127,7 +127,7 @@ public static class EnvironmentWaterDiagnostics
 
     private static void ValidateProductionContracts()
     {
-        string receiver = ReadAsset("Assets/5_Scripts/5-3_GamePlay/World/Chunk/TileEffectReceiver.cs");
+        string receiver = ReadAsset("Assets/5_Scripts/5-3_GamePlay/World/Chunk/Mod_TileEffectReceiver.cs");
         Check(receiver.Contains("ConsumeSwimStamina(safeDeltaTime, naturalImmersion)") &&
             receiver.Contains("waterStamina.AddStamina(-consumePerSecond * deltaTime)"), "体力使用自然深度且保留难度入口");
         string renderer = ReadAsset("Assets/5_Scripts/5-3_GamePlay/World/WorldModel/Presentation/ChunkTilemapRenderer.cs");

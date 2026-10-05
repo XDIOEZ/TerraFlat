@@ -6,7 +6,7 @@
 → `MobileInputRuntime`
 → `FlatWorldMobileDevice`
 → `PlayerInputActions` 的 `Mobile` 绑定组
-→ `GameController`
+→ `Mod_GameController`
 → 移动、指向、攻击、交互、使用及各玩法模块。
 
 排查时从链首确认触摸所有权和写入值，再逐层向下；不要在 HUD 或玩法模块直接模拟键盘、鼠标或手柄。
@@ -18,8 +18,8 @@
 | 虚拟设备 | `Assets/5_Scripts/5-3_GamePlay/Player/Controller/FlatWorldMobileDevice.cs` | 注册独立设备，保存三组方向和按钮位，集中写入与 `ResetAll()` |
 | Action 真相 | `Assets/PlayerInput/PlayerInputActions.inputactions` | 定义 `Mobile` 控制方案与动作绑定 |
 | 生成包装 | `Assets/PlayerInput/PlayerInputActions.cs` | Input System 自动生成；只检查，不手改 |
-| 输入语义 | `Assets/5_Scripts/5-3_GamePlay/Player/Controller/GameController.cs` | 设备切换、径向虚拟指针、攻击事件、输入锁和生命周期清理 |
-| 准星系统 | `Assets/5_Scripts/5-3_GamePlay/Player/Controller/PlayerAimCursorSystem.cs` | 统一摇杆死区、世界距离、屏幕径向位置和目标距离裁剪；`GameController` 持有并调用 |
+| 输入语义 | `Assets/5_Scripts/5-3_GamePlay/Player/Controller/Mod_GameController.cs` | 设备切换、径向虚拟指针、攻击事件、输入锁和生命周期清理 |
+| 准星系统 | `Assets/5_Scripts/5-3_GamePlay/Player/Controller/PlayerAimCursorSystem.cs` | 统一摇杆死区、世界距离、屏幕径向位置和目标距离裁剪；`Mod_GameController` 持有并调用 |
 | 摇杆 | `Assets/5_Scripts/5-3_GamePlay/Presentation/UI/MobileVirtualJoystick.cs` | 每实例持有 `pointerId`；移动、浮动指向与攻击摇杆写入 |
 | 按钮 | `Assets/5_Scripts/5-3_GamePlay/Presentation/UI/MobileInputButton.cs` | 按住/抬起转换为虚拟设备按钮并可靠释放 |
 | HUD 控制器 | `Assets/5_Scripts/5-3_GamePlay/Presentation/UI/PlayerMobileControlsHUD.cs` | 本地玩家可见性、Prefab 绑定、抽屉、快捷栏、面板联动和总清理 |
@@ -48,7 +48,7 @@
 | 多指被合并、第二根手指无效 | `Assets/5_Scripts/5-5_UI/Input/EventSystemGuard.cs` 的逐触点绑定和 `AllPointersAsIs` |
 | 刘海遮挡、横屏翻转或尺寸变化 | `Assets/5_Scripts/5-5_UI/Common/Controls/SafeAreaRectController.cs`、`Assets/5_Scripts/5-5_UI/Core/UIManager.cs`、`Assets/Resources/UI/UIRoot.prefab` |
 | 底部上滑触发回到桌面/多任务手势 | `Assets/5_Scripts/5-5_UI/Common/Controls/AndroidSystemGestureInsets.cs` 读取强制手势边距，`PlayerMobileControlsHUD` 只避让快捷栏 |
-| 面板打开后仍能移动/攻击 | `UIManager.InteractionSurfaceChanged`、`PlayerMobileControlsHUD.RefreshInteractionSurface()`、`GameController.CancelActiveAttackAndMobileInput()` |
+| 面板打开后仍能移动/攻击 | `UIManager.InteractionSurfaceChanged`、`PlayerMobileControlsHUD.RefreshInteractionSurface()`、`Mod_GameController.CancelActiveAttackAndMobileInput()` |
 | 按钮会改变普通朝向 | `UI_MobileControls.prefab` 的层级/射线顺序和指向捕获层范围 |
 | 快捷栏与摇杆重叠 | `PlayerMobileControlsHUD.TryConfigureHotbarWidth()`；上限为安全区宽度 44% 与 760 参考像素的较小值 |
 | Android 返回行为错误 | `Assets/5_Scripts/5-3_GamePlay/Presentation/UI/Module_Setting.cs` 与 `PlayerMobileControlsHUD.TryCloseActiveDrawer()` |
@@ -60,7 +60,7 @@
 - 武器只监听 `AttackStarted`/`AttackEnded`：`Assets/5_Scripts/5-3_GamePlay/Entities/Combat/Mod_Weapon_AnimationAction.cs`、`Assets/5_Scripts/5-3_GamePlay/Entities/Combat/Mod_ColdWeapon.cs`。
 - 建造和世界指向：`Assets/5_Scripts/5-3_GamePlay/World/Building/Mod_Building.cs`。
 - 锄地、农田补给和种植：`Assets/5_Scripts/5-3_GamePlay/Items/Food/Mod_Hoe.cs`、`Assets/5_Scripts/5-3_GamePlay/Items/Food/Mod_FarmlandSupply.cs`、`Assets/5_Scripts/5-3_GamePlay/World/Planting/Mod_Plantable.cs`。
-- 丢弃与槽位长按：`Assets/5_Scripts/5-3_GamePlay/Entities/Item/Modules/Inventory/Module_DiscardItem.cs`、`Assets/5_Scripts/5-3_GamePlay/Items/Inventory/ItemSlot_UI.cs`。
+- 丢弃与槽位长按：`Assets/5_Scripts/5-3_GamePlay/Entities/Item/Modules/Inventory/Mod_DiscardItem.cs`、`Assets/5_Scripts/5-3_GamePlay/Items/Inventory/ItemSlot_UI.cs`。
 - Android 帧率与质量启动配置：`Assets/5_Scripts/5-3_GamePlay/Core/MobilePlatformBootstrap.cs`；平台序列化配置位于 `ProjectSettings/ProjectSettings.asset` 和 `ProjectSettings/QualitySettings.asset`。
 
 ## 定位命令

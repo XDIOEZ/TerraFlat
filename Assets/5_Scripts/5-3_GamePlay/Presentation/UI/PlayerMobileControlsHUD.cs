@@ -1,6 +1,8 @@
 using System.Collections;
+using System.Collections.Generic;
 using FlatWorld.Mobile;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.Controls;
 using UnityEngine.UI;
@@ -34,6 +36,8 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
     // 设置值 100 对应原有缩放速度，0 表示关闭。
     private const float TwoFingerZoomSensitivityPerUnit = 0.00015f;
     private const float TwoFingerZoomNoiseThreshold = 1f;
+    private const float PreviewRotationTapTolerance = 16f;
+    private const float PreviewRotationTapMaxSeconds = 0.45f;
 
     // 奔跑是状态按钮，运行时两态必须继续使用统一灰阶主题；仅开启态用暖黄细节表达状态。
     private static readonly Color RunOffColor = FlatWorldUITheme.SurfaceRaised;
@@ -46,7 +50,7 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
     private static PlayerMobileControlsHUD activeLocalHud;
 
     private Player player;
-    private GameController controller;
+    private Mod_GameController controller;
     private GameObject viewObject;
     private GameObject gameplayLayer;
     private CanvasGroup gameplayOpacityGroup;
@@ -60,13 +64,12 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
     private Transform heldItemDropSurfaceHomeParent;
     private int heldItemDropSurfaceHomeSiblingIndex = -1;
     private MobileInputButton[] inputButtons;
-    private Canvas hotbarCanvas;
     private BasePanel hotbarOpacityPanel;
     private RectTransform hotbarCraftingButton;
     private Transform hotbarCraftingHome;
     private RectTransform hotbarBackpackButton;
     private Transform hotbarBackpackHome;
-    private Mover mover;
+    private Mod_Mover mover;
     private Image runButtonImage;
     private Outline runButtonOutline;
     private Image runStateIndicator;
@@ -79,9 +82,6 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
     private int lastScreenHeight;
     private bool missingPrefabLogged;
     private bool runStateBound;
-    private bool hotbarCanvasSortingCached;
-    private bool hotbarCanvasOriginalOverrideSorting;
-    private int hotbarCanvasOriginalSortingOrder;
     private bool changingViewState;
     private bool hotbarOriginalLayoutCached;
     private RectTransform hotbarOriginalRect;
@@ -97,6 +97,20 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
     private int zoomPointerIdA = int.MinValue;
     private int zoomPointerIdB = int.MinValue;
     private float previousTwoFingerDistance;
+    private readonly Dictionary<int, PreviewRotationTouch> previewRotationTouches = new();
+    private readonly List<RaycastResult> previewTouchRaycastResults = new(8);
+
+    /// <summary>每根手指独立记录预览点按起点，拖动与长按不会触发旋转。</summary>
+    private readonly struct PreviewRotationTouch
+    {
+        public readonly Vector2 Position;
+        public readonly float StartedAt;
+        public PreviewRotationTouch(Vector2 position, float startedAt)
+        {
+            Position = position;
+            StartedAt = startedAt;
+        }
+    }
 
     public bool IsDrawerOpen => drawer != null && drawer.activeSelf;
     /// <summary>本地手机菜单抽屉是否打开，用于允许背包和制作面板并行切换。</summary>
@@ -111,8 +125,8 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
     private void Awake()
     {
         player = GetComponent<Player>();
-        controller = GetComponentInChildren<GameController>(true);
-        mover = GetComponentInChildren<Mover>(true);
+        controller = GetComponentInChildren<Mod_GameController>(true);
+        mover = GetComponentInChildren<Mod_Mover>(true);
     }
 
     /// <summary>绑定本地玩家、设置与系统手势边距变化，并刷新手机 HUD 可见性。</summary>
@@ -204,11 +218,11 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
             return false;
 
         return controller != null &&
-               controller.PreferredInputDevice == GameController.InputDeviceType.Mobile;
+               controller.PreferredInputDevice == Mod_GameController.InputDeviceType.Mobile;
     }
 
     /// <summary>设置切换控制方式后立即刷新触屏 HUD，并可靠释放旧触控状态。</summary>
-    private void HandleInputDeviceChanged(GameController.InputDeviceType deviceType)
+    private void HandleInputDeviceChanged(Mod_GameController.InputDeviceType deviceType)
     {
         RefreshAvailability();
     }
@@ -353,6 +367,7 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
 
     private void Update()
     {
+        UpdatePreviewRotationTouches();
         if (!IsGameplayTouchAvailable())
         {
             ResetTwoFingerZoom();
@@ -395,19 +410,109 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
 
     #endregion
 
+    #region 放置预览点按
+
+    /// <summary>逐触点识别短按放置虚影；世界坐标和建筑朝向交给统一控制器与模块处理。</summary>
+    private void UpdatePreviewRotationTouches()
+    {
+        if (!IsGameplayControlsAvailable())
+        {
+            previewRotationTouches.Clear();
+            return;
+        }
+
+        Touchscreen touchscreen = Touchscreen.current;
+        if (touchscreen == null)
+            return;
+
+        for (int i = 0; i < touchscreen.touches.Count; i++)
+        {
+            TouchControl touch = touchscreen.touches[i];
+            if (touch == null)
+                continue;
+
+            int touchId = touch.touchId.ReadValue();
+            if (touchId < 0)
+                continue;
+
+            Vector2 position = touch.position.ReadValue();
+            if (touch.press.wasPressedThisFrame && IsPreviewRotationSurface(position) &&
+                controller.CanRotateBuildingPreviewAt(position))
+            {
+                previewRotationTouches[touchId] = new PreviewRotationTouch(position, Time.unscaledTime);
+            }
+
+            if (previewRotationTouches.TryGetValue(touchId, out PreviewRotationTouch activeTouch) &&
+                (position - activeTouch.Position).sqrMagnitude > GetPreviewTapToleranceSqr())
+            {
+                previewRotationTouches.Remove(touchId);
+            }
+
+            if (touch.press.wasReleasedThisFrame)
+            {
+                if (previewRotationTouches.TryGetValue(touchId, out PreviewRotationTouch start) &&
+                    Time.unscaledTime - start.StartedAt <= PreviewRotationTapMaxSeconds &&
+                    (position - start.Position).sqrMagnitude <= GetPreviewTapToleranceSqr() &&
+                    IsPreviewRotationSurface(position))
+                {
+                    controller.TryRotateBuildingPreviewAt(position);
+                }
+                previewRotationTouches.Remove(touchId);
+            }
+            else if (!touch.press.isPressed)
+            {
+                previewRotationTouches.Remove(touchId);
+            }
+        }
+    }
+
+    /// <summary>正式按钮与攻击区保留触点所有权；空白世界、移动和普通指向区允许点按预览。</summary>
+    private bool IsPreviewRotationSurface(Vector2 screenPosition)
+    {
+        EventSystem eventSystem = EventSystem.current;
+        if (eventSystem == null)
+            return true;
+
+        var eventData = new PointerEventData(eventSystem) { position = screenPosition };
+        previewTouchRaycastResults.Clear();
+        eventSystem.RaycastAll(eventData, previewTouchRaycastResults);
+        if (previewTouchRaycastResults.Count == 0)
+            return true;
+
+        MobileVirtualJoystick joystick = previewTouchRaycastResults[0].gameObject
+            .GetComponentInParent<MobileVirtualJoystick>();
+        return joystick != null && joystick.Role != MobileVirtualJoystick.JoystickRole.Attack;
+    }
+
+    /// <summary>移动容差按当前 Canvas 缩放换算，匹配手机其他轻点手势。</summary>
+    private float GetPreviewTapToleranceSqr()
+    {
+        Canvas canvas = viewObject.GetComponentInParent<Canvas>();
+        float scaleFactor = canvas != null ? canvas.scaleFactor : 1f;
+        float tolerance = PreviewRotationTapTolerance * scaleFactor;
+        return tolerance * tolerance;
+    }
+
+    #endregion
+
     #region 中间区双指缩放
 
-    /// <summary>仅在手机玩法层可交互时处理双指镜头缩放。</summary>
-    private bool IsGameplayTouchAvailable()
+    /// <summary>只在真实手机玩法层可操作时接受触摸；缩放灵敏度不影响预览点按。</summary>
+    private bool IsGameplayControlsAvailable()
     {
-        return UIUserSettings.PinchZoomSensitivity > 0f &&
-               ShouldShow() &&
+        return ShouldShow() &&
                viewObject != null &&
                viewObject.activeInHierarchy &&
                gameplayLayer != null &&
                gameplayLayer.activeSelf &&
                controller != null &&
                !controller.IsGameplayInputLocked;
+    }
+
+    /// <summary>仅在手机玩法层可交互时处理双指镜头缩放。</summary>
+    private bool IsGameplayTouchAvailable()
+    {
+        return UIUserSettings.PinchZoomSensitivity > 0f && IsGameplayControlsAvailable();
     }
 
     /// <summary>追踪中间区内的两个触点，并把双指间距变化转换为镜头缩放。</summary>
@@ -790,7 +895,7 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         inputButton.Configure(virtualButton);
     }
 
-    /// <summary>缓存奔跑开关的两态视觉节点，状态由真实 Mover 统一驱动。</summary>
+    /// <summary>缓存奔跑开关的两态视觉节点，状态由真实 Mod_Mover 统一驱动。</summary>
     private void CacheRunButtonVisual()
     {
         Transform runButton = FindRequired("奔跑");
@@ -803,7 +908,7 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
     private void BindRunStateVisual()
     {
         if (mover == null)
-            mover = GetComponentInChildren<Mover>(true);
+            mover = GetComponentInChildren<Mod_Mover>(true);
         if (mover == null || viewObject == null)
             return;
 
@@ -913,7 +1018,7 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
     private bool TryConfigureHotbarWidth()
     {
         RectTransform hotbarAnchor = FindRequired(HotbarAnchorName) as RectTransform;
-        Inventory_HotBar hotbar = GetComponentInChildren<Inventory_HotBar>(true);
+        Mod_HotBar hotbar = GetComponentInChildren<Mod_HotBar>(true);
         RectTransform hotbarRect = hotbar?.RuntimeInventory?.basePanel?.transform as RectTransform;
         if (hotbarAnchor == null || hotbarRect == null)
             return false;
@@ -933,7 +1038,6 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
             hotbarRect.SetParent(hotbarAnchor, false);
         hotbarRect.SetAsLastSibling();
         AttachHotbarSideButtons(hotbarRect);
-        CacheHotbarCanvas(hotbarRect);
         RectTransform safeRoot = UIManager.Instance.SafeAreaRoot;
         float safeWidth = safeRoot != null
             ? safeRoot.rect.width
@@ -962,7 +1066,6 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
             hotbarRect.anchoredPosition += (Vector2)hotbarRect.parent.InverseTransformVector(
                 safeRoot.TransformVector(Vector3.up * correction));
         }
-        ApplyHotbarInteractionPriority(UIManager.Instance.HasOpenGameplayInputBlockingPanel());
         ApplyTouchControlsOpacity();
         return true;
     }
@@ -1114,40 +1217,6 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
             hotbarOriginalRect.anchoredPosition += (Vector2)hotbarOriginalRect.parent.InverseTransformVector(
                 safeRoot.TransformVector(Vector3.up * correction));
         }
-        ApplyHotbarInteractionPriority(false);
-    }
-
-    /// <summary>缓存快捷栏独立 Canvas 的原始排序，关闭容器后恢复桌面 HUD 层级。</summary>
-    private void CacheHotbarCanvas(RectTransform hotbarRect)
-    {
-        Canvas nextCanvas = hotbarRect != null ? hotbarRect.GetComponent<Canvas>() : null;
-        if (hotbarCanvas == nextCanvas && hotbarCanvasSortingCached)
-            return;
-
-        hotbarCanvas = nextCanvas;
-        hotbarCanvasSortingCached = hotbarCanvas != null;
-        if (!hotbarCanvasSortingCached)
-            return;
-
-        hotbarCanvasOriginalOverrideSorting = hotbarCanvas.overrideSorting;
-        hotbarCanvasOriginalSortingOrder = hotbarCanvas.sortingOrder;
-    }
-
-    /// <summary>模态容器打开时让快捷栏 Canvas 参与最上层射线命中，关闭后还原原始排序。</summary>
-    private void ApplyHotbarInteractionPriority(bool modalOpen)
-    {
-        if (!hotbarCanvasSortingCached || hotbarCanvas == null)
-            return;
-
-        if (modalOpen)
-        {
-            hotbarCanvas.overrideSorting = true;
-            hotbarCanvas.sortingOrder = UIManager.HotbarModalSortingOrder;
-            return;
-        }
-
-        hotbarCanvas.overrideSorting = hotbarCanvasOriginalOverrideSorting;
-        hotbarCanvas.sortingOrder = hotbarCanvasOriginalSortingOrder;
     }
 
     #endregion
@@ -1279,8 +1348,6 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
                 viewObject.transform.SetAsFirstSibling();
         }
 
-        ApplyHotbarInteractionPriority(modalOpen);
-
         if (hotbarConfigured)
             TryConfigureHotbarWidth();
         else if (hotbarSetupCoroutine == null && isActiveAndEnabled)
@@ -1337,6 +1404,7 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
     public void ResetAllTouchState()
     {
         ResetTwoFingerZoom();
+        previewRotationTouches.Clear();
         if (heldItemDropSurfaces != null)
         {
             for (int i = 0; i < heldItemDropSurfaces.Length; i++)

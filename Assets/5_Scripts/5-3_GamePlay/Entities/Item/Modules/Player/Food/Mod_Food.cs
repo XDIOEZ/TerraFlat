@@ -109,7 +109,7 @@ public partial class Mod_Food : Module, IItemPoolLifecycle
     private Mod_Stamina _stamina;
 
     [MemoryPackIgnore]
-    private DamageReceiver _damageReceiver;
+    private Mod_DamageReceiver _damageReceiver;
 
     [MemoryPackIgnore]
     private Mod_PlayerDeathState _deathState;
@@ -338,7 +338,7 @@ public partial class Mod_Food : Module, IItemPoolLifecycle
         }
 
         _stamina = item.itemMods.GetMod_ByID<Mod_Stamina>(ModText.Stamina);
-        _damageReceiver = item.itemMods.GetMod_ByID<DamageReceiver>(ModText.Hp);
+        _damageReceiver = item.itemMods.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
         _deathState = item.itemMods.GetMod_ByID<Mod_PlayerDeathState>(Mod_PlayerDeathState.ModuleId);
     }
 

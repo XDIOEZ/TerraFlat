@@ -6,7 +6,7 @@
 
 ## 当前机制
 
-- 当前正式入口是 `Mod_Equipment`，它已经取代旧的 `Mod_Inventory + Module_Equipment` 双模块拆分方案。
+- 当前正式入口是 `Mod_Equipment`，它已经取代旧的 `Mod_Inventory + Mod_EquipmentRuntime` 双模块拆分方案。
 - `Mod_Equipment` 同时实现库存、交互和实例 UI 契约，持有 `Inventory_Equipment`。
 - 每个装备槽可以保存对应的 `EquipmentInstance` 列表，装备实例负责具体效果生命周期。
 - 装备变化通过 EquipmentInventory 的数据变化事件驱动重新应用效果。
@@ -29,7 +29,7 @@
 - `EquipmentInstance.cs`
 - `EquipmentInstance_*.cs`
 - `Equipment_SO.cs`
-- `Module_Equipment_Store.cs`
+- `Mod_EquipmentStore.cs`
 - 正式 UI：`Assets/2_Prefabs/2-1_UI/Gameplay/` 下的 `UI_Equipment.prefab`
 
 ## 生命周期
@@ -38,7 +38,7 @@
 
 ## 设计边界
 
-- `Module_Equipment.cs` 属于废弃旧实现，不应重新成为正式入口。
+- `Mod_EquipmentRuntime.cs` 属于废弃旧实现，不应重新成为正式入口。
 - 装备加成应通过独立 EquipmentInstance 或稳定契约接入目标系统，不在装备 UI 中直接改玩家业务字段。
 - 外部系统如体温只接受装备提供的保护值/修饰，不允许装备直接接管体温演算。
 

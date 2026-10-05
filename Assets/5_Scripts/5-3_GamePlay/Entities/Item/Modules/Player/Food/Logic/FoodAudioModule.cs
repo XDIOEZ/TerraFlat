@@ -6,6 +6,8 @@ using FlatWorld.Audio;
 /// </summary>
 public sealed class FoodAudioModule : IFoodMechanic, IFoodUseRule
 {
+    #region 进食音效
+
     private readonly Mod_Food.ConsumeAudioSettings settings;
 
     public FoodAudioModule(IFoodRuntimeContext context)
@@ -22,16 +24,19 @@ public sealed class FoodAudioModule : IFoodMechanic, IFoodUseRule
         if (context.Food?.Item == null)
             return;
 
-        PlayEatSound();
+        PlayEatSound(context.Consumer?.Item ?? context.Food.Item);
     }
 
-    private void PlayEatSound()
+    private void PlayEatSound(Item consumer)
     {
-        if (!settings.Enabled || AudioService.Instance == null)
+        if (!settings.Enabled || consumer == null)
             return;
 
+        // 进食声音跟随食用者，远处角色吃东西也遵守左右声道和传播范围。
         AudioService.Instance.Play(
             settings.ResolveCueId(),
-            AudioPlayOptions.Global(settings.VolumeScale, settings.SamplePitch()));
+            AudioPlayOptions.Attached(consumer.transform, settings.VolumeScale, settings.SamplePitch()));
     }
+
+    #endregion
 }

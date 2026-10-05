@@ -17,6 +17,7 @@ public sealed class InventoryDragTransaction
     private readonly Func<bool> _prepareFallbackHandler;
     private readonly Func<Inventory, int, bool> _fallbackDropHandler;
     private readonly Func<ItemData> _sourceItemProvider;
+    private Action _onCompleted;
     private bool _fallbackPrepared;
     private bool _completed;
 
@@ -34,13 +35,15 @@ public sealed class InventoryDragTransaction
         Func<Inventory, int, bool> fallbackDropHandler,
         bool hideSourceVisual,
         bool fallbackPrepared = false,
-        Func<ItemData> sourceItemProvider = null)
+        Func<ItemData> sourceItemProvider = null,
+        Action onCompleted = null)
     {
         DraggedAmount = draggedAmount;
         _dropHandler = dropHandler;
         _prepareFallbackHandler = prepareFallbackHandler;
         _fallbackDropHandler = fallbackDropHandler;
         _sourceItemProvider = sourceItemProvider;
+        _onCompleted = onCompleted;
         HideSourceVisual = hideSourceVisual;
         _fallbackPrepared = fallbackPrepared;
     }
@@ -55,6 +58,7 @@ public sealed class InventoryDragTransaction
             return false;
 
         _completed = true;
+        ReleaseSourceDrag();
         return true;
     }
 
@@ -71,6 +75,7 @@ public sealed class InventoryDragTransaction
             return false;
 
         _completed = true;
+        ReleaseSourceDrag();
         return true;
     }
 
@@ -91,6 +96,7 @@ public sealed class InventoryDragTransaction
 
         _fallbackPrepared = true;
         HideSourceVisual = false;
+        ReleaseSourceDrag();
         return true;
     }
 
@@ -98,24 +104,32 @@ public sealed class InventoryDragTransaction
     public void Resolve()
     {
         _completed = true;
+        ReleaseSourceDrag();
     }
 
     /// <summary>结束拖拽；仅在未命中槽位时按要求准备手部携带回退。</summary>
     public void Complete(bool prepareFallback)
     {
-        if (_completed)
-            return;
-
-        if (prepareFallback)
+        if (!_completed && prepareFallback)
             PrepareFallback();
 
         _completed = true;
+        ReleaseSourceDrag();
+    }
+
+    /// <summary>来源槽占用只释放一次，支持目标提交、转入手部及取消三种结束方式。</summary>
+    private void ReleaseSourceDrag()
+    {
+        Action onCompleted = _onCompleted;
+        _onCompleted = null;
+        onCompleted?.Invoke();
     }
 }
 
 [System.Serializable]
 public class Inventory
 {
+    [NonSerialized] public MachineEntity MachineOwner; // 数据机器的归属信息不参与库存序列化。
     #region 字段和属性
 
     [FoldoutGroup("基础引用"), ReadOnly, LabelText("所属物品")]
@@ -149,9 +163,16 @@ public class Inventory
 
     public static Inventory LastOpenedContainer;
 
+    // 快捷转移只用所属面板判断容器是否开放，不参与库存槽位 UI 的创建。
+    private BasePanel _quickTransferOwnerPanel;
+
+    // 拖拽期间保留来源槽；加工器可据此暂缓消费正在被玩家移动的物品。
+    [NonSerialized] private Dictionary<ItemSlot, int> _activeDragSourceCounts;
+
     // 运行时赋值，不序列化
     GameObject ItemSlot_Prefab;
     Transform ItemSlot_Parent;
+    [NonSerialized] private InventoryVirtualizedSlotGrid _virtualizedSlotGrid; // UI_Bag 只实例化可视区域附近的槽位。
 
     // 玩家行囊或受限容器的容量显示节点；正式节点由 UI_Bag Prefab 提供。
     private TextMeshProUGUI _carryWeightValueText;
@@ -160,7 +181,7 @@ public class Inventory
     private Inventory_Data _overweightObservedData; // 当前绑定超重监听的数据源，用于安全解绑旧引用。
 
     // 输入绑定缓存，便于之后解除绑定
-    private GameController _boundController;
+    private Mod_GameController _boundController;
     private InputAction _boundToggleAction;
     private Action<InputAction.CallbackContext> _toggleCallback;
     private bool _isProcessingGamepadSubmit;
@@ -249,26 +270,24 @@ public class Inventory
     #region 输入绑定
 
 
-    public void BindController(GameController gameController)
+    public void BindController(Mod_GameController gameController)
     {
         // 先解除之前的绑定，避免重复订阅
         UnbindController();
 
+        // 常驻容器没有开关按键，不需要输入资产，也不应产生绑定警告。
+        if (string.IsNullOrEmpty(ToggleActionName))
+            return;
+
         // 基本防守：控制器或输入资产为空则不绑定
         if (gameController == null || gameController._inputActions == null)
         {
-            Debug.LogWarning("[Inventory.BindController] GameController 或 _inputActions 为空，取消绑定");
+            Debug.LogWarning("[Inventory.BindController] Mod_GameController 或 _inputActions 为空，取消绑定");
             return;
         }
 
 
-        // 未配置 ToggleActionName 时不绑定
-        if (string.IsNullOrEmpty(ToggleActionName))
-        {
-            // 快捷栏、装备栏等常驻库存不需要独立开关按键。
-            return;
-        }
-        // 未配置 ToggleActionName 时不绑定
+        // 有开关按键的容器需要对应面板。
         if (InventoryPanel_Prefab == null)
         {
             InventoryPanel_Prefab = GameRes.Instance.GetPrefab(Data.UIPrefabName);
@@ -296,7 +315,7 @@ public class Inventory
             if (gameController.IsGameplayInputLocked &&
                 (basePanel == null || !basePanel.IsOpen()) &&
                 !CanToggleFromMobileMenu() &&
-                !CanOpenPlayerBagAlongsideHandCraft(gameController))
+                !CanOpenPlayerBagAlongsideOtherPanels(gameController))
             {
                 return;
             }
@@ -311,7 +330,7 @@ public class Inventory
         _boundToggleAction = action;
         BindCarryCapacityLinkedInventory();
 
-        if (basePanel != null && basePanel.IsOpen() && UsesModalGameplayInputLock())
+        if (basePanel != null && basePanel.IsOpen() && UsesGameplayInputLock())
             AcquirePanelInputLock();
     }
 
@@ -323,22 +342,21 @@ public class Inventory
                PlayerMobileControlsHUD.IsActiveDrawerOpen;
     }
 
-    /// <summary>玩家行囊允许在手工制作面板持有玩法输入锁时继续打开；其它库存不放宽。</summary>
-    private bool CanOpenPlayerBagAlongsideHandCraft(GameController gameController)
+    /// <summary>玩家主背包与其它 UI 面板并行；只保留直接锁和世界加载锁这类硬阻断。</summary>
+    private bool CanOpenPlayerBagAlongsideOtherPanels(Mod_GameController gameController)
     {
         if (!IsPlayerBagInventory() || gameController == null)
             return false;
 
-        return !gameController.HasBlockingGameplayInputLock(owner => owner is Mod_HandCraftTable);
+        return !gameController.HasBlockingGameplayInputLock(_ => true);
     }
 
     /// <summary>
-    /// 解除通过 BindController 建立的输入绑定
+    /// 解除通过 BindController 建立的输入绑定。
+    /// 库存数据/UI 事件拥有独立生命周期，不能在这里解绑，否则重新绑定控制器会让槽位停止自动刷新。
     /// </summary>
     public void UnbindController()
     {
-        Data.Event_RefreshUI -= RefreshUI;
-        UnbindSlotDataEvents();
         UnbindCarryCapacityLinkedInventory();
         _boundController?.ReleaseGameplayInputLock(this);
 
@@ -350,6 +368,15 @@ public class Inventory
         _boundController = null;
         _boundToggleAction = null;
         _toggleCallback = null;
+    }
+
+    /// <summary>库存真正退出运行时生命周期时，解除数据层到 UI 的刷新监听。</summary>
+    public void UnbindRuntimeDataEvents()
+    {
+        if (Data != null)
+            Data.Event_RefreshUI -= RefreshUI;
+
+        UnbindSlotDataEvents();
     }
 
     /// <summary>解除当前库存所有槽位的 UI 监听，避免场景/玩家销毁后继续回调旧界面。</summary>
@@ -451,18 +478,20 @@ public class Inventory
 
         basePanel = UIManager.Instance.CreatePanelFromGameObject(panelPrefab).GetComponentInChildren<BasePanel>();
         ResolvePanelInputController();
-        bool usesModalGameplayInputLock = UsesModalGameplayInputLock();
-        basePanel.SetGameplayInputBlocking(usesModalGameplayInputLock);
-        // 快捷栏与手部库存属于常驻/内部 HUD，不进入模态焦点链，也不锁定玩家输入。
-        if (usesModalGameplayInputLock)
-        {
+        bool usesTogglePanelLifecycle = UsesTogglePanelLifecycle();
+        bool usesGameplayInputLock = UsesGameplayInputLock();
+        basePanel.SetGameplayInputBlocking(usesGameplayInputLock);
+        // 玩家主背包仍参与关闭/手柄焦点链，但不再通过玩法输入锁影响其它 UI。
+        if (usesTogglePanelLifecycle)
             basePanel.PrepareForGamepadNavigation(closeOnCancel: true);
+        if (usesGameplayInputLock)
+        {
             basePanel.Opened += AcquirePanelInputLock;
             basePanel.Closed += ReleasePanelInputLock;
         }
-        // 普通背包 Prefab 可能以可见状态保存；先统一为关闭态，确保随后 Open 能触发输入锁事件。
+        // 可开关库存 Prefab 可能以可见状态保存；先统一为关闭态，确保随后 Open 走正常面板生命周期。
         // 快捷栏与手部库存保留 Prefab 的显示状态，不参与这次归一化。
-        if (usesModalGameplayInputLock)
+        if (usesTogglePanelLifecycle)
         {
             basePanel.Close();
         }
@@ -507,7 +536,7 @@ public class Inventory
 
     private void AcquirePanelInputLock()
     {
-        if (UsesModalGameplayInputLock())
+        if (UsesGameplayInputLock())
             _boundController?.AcquireGameplayInputLock(this);
     }
 
@@ -521,8 +550,8 @@ public class Inventory
         if (_boundController != null || item == null)
             return;
 
-        _boundController = item.itemMods?.GetMod_ByID<GameController>(ModText.Controller);
-        _boundController ??= item.GetComponent<GameController>();
+        _boundController = item.itemMods?.GetMod_ByID<Mod_GameController>(ModText.Controller);
+        _boundController ??= item.GetComponent<Mod_GameController>();
     }
 
     // 辅助方法：检查 Vector2 是否有效
@@ -546,9 +575,12 @@ public class Inventory
         Player player = item as Player;
         bool isPlayerBag = player != null && string.Equals(Data.Name, ModText.Bag, StringComparison.Ordinal);
         if (isPlayerBag)
+        {
+            CreativeInventoryState.Restore(this);
             Data.ConfigurePlayerBagCapacity(
                 player.Data?.MaxCarryWeight ?? Inventory_Data.DefaultPlayerBagMaxWeight,
                 player.Data?.MaxCarryVolume ?? Inventory_Data.DefaultPlayerBagMaxVolume);
+        }
         else if (StorageMaxWeightKg > 0f &&
                  StorageMaxVolumeCubicMeters > 0f &&
                  !float.IsNaN(StorageMaxWeightKg) &&
@@ -562,6 +594,7 @@ public class Inventory
         }
         else
         {
+            Data.SetUnlimitedSlots(false);
             // 玩家手部槽与快捷栏只是主背包物品的临时/快捷承载入口，
             // 单格堆叠规则应与主背包一致；重量与体积仍由玩家统一携带容量统计负责。
             Data.SetUnlimitedStackSize(IsHandInventory() || IsHotBarInventory());
@@ -580,9 +613,7 @@ public class Inventory
             // Inventory 可能复用存档中的 ItemSlot，先清理上一轮玩家/UI 的旧监听。
             slot.onSlotDataChanged.Clear();
             slot.Index = i;
-            slot.SlotMaxVolume = Data.HasUnlimitedStackSize
-                ? float.MaxValue
-                : Inventory_Data.DefaultSlotVolume;
+            slot.SlotMaxVolume = Inventory_Data.DefaultSlotVolume;
         }
 
         // 初始化事件系统
@@ -604,16 +635,31 @@ public class Inventory
             Debug.LogError("Prefab_BasePanel 未设置,请在Inspector中的Mod_Inventory中设置对应Inventory的面板预制体");
             return;
         }
-        ItemSlot_Parent = basePanel.transform.GetComponentInChildren<UI_Content>().transform;
-
-        if (ItemSlot_Parent == null)
-        {
-            Debug.LogError("ItemSlot_Parent 未设置");
-            return;
-        }
+        UI_Content content = basePanel.GetComponentInChildren<UI_Content>(true);
+        if (content == null)
+            throw new InvalidOperationException($"库存面板 {basePanel.name} 缺少 UI_Content 槽位容器。");
+        ItemSlot_Parent = content.transform;
 
         // 加载Slot UI预制体
         ItemSlot_Prefab = GameRes.Instance.GetPrefab("UI_Slot");
+
+        // 只有创造背包复用虚拟化网格，生存背包使用固定槽位对象。
+        InventorySlotVisualProfile visualProfile = basePanel.GetComponentInChildren<InventorySlotVisualProfile>(true);
+        _virtualizedSlotGrid = basePanel.GetComponent<InventoryVirtualizedSlotGrid>();
+        if (_virtualizedSlotGrid != null && Data.HasUnlimitedSlots)
+        {
+            _virtualizedSlotGrid.enabled = true;
+            _virtualizedSlotGrid.Bind(this, ItemSlot_Parent, ItemSlot_Prefab, visualProfile);
+            CompleteUIInitialization(syncData: false);
+            return;
+        }
+
+        if (_virtualizedSlotGrid != null)
+        {
+            _virtualizedSlotGrid.Unbind();
+            _virtualizedSlotGrid.enabled = false;
+            _virtualizedSlotGrid = null;
+        }
 
         // 只管理实际槽位，名称提示等附属 UI 不参与数量同步。
         int targetCount = Data.itemSlots.Count;
@@ -642,26 +688,30 @@ public class Inventory
         }
 
         // 面板可声明自己的槽位视觉主题；仅覆盖表现，不改变通用 UI_Slot 或库存交互逻辑。
-        InventorySlotVisualProfile visualProfile = basePanel.GetComponentInChildren<InventorySlotVisualProfile>(true);
         if (visualProfile != null)
         {
             foreach (ItemSlot_UI slot in itemSlot_UI)
                 visualProfile.Apply(slot);
         }
 
-        // 同步 UI 数据
+        CompleteUIInitialization(syncData: true);
+    }
+
+    /// <summary>统一完成库存面板的容量、搜索、排序和手柄导航绑定。</summary>
+    private void CompleteUIInitialization(bool syncData)
+    {
         BindCarryCapacityUI();
-        SyncData();
+        if (syncData)
+            SyncData();
 
-        //初始化时自动同步UI显示
         RefreshUI();
-
         InventorySortButton.EnsureFor(this);
+        basePanel.GetComponent<InventoryBagSearch>()?.Bind(this);
 
         // 槽位是运行时动态创建的，必须在创建完成后重新收集组件并补齐导航图。
         Canvas.ForceUpdateCanvases();
         basePanel.RefreshUIComponents();
-        if (UsesModalGameplayInputLock())
+        if (UsesTogglePanelLifecycle())
         {
             basePanel.PrepareForGamepadNavigation(
                 preferredControlName: "UI_Slot",
@@ -830,6 +880,39 @@ public class Inventory
         slotUI.RefreshUI();
     }
 
+    /// <summary>虚拟化 UI 预分配索引映射，但不创建与数据槽位等量的 GameObject。</summary>
+    public void PrepareVirtualizedSlotUIMap(int slotCount)
+    {
+        itemSlot_UI.Clear();
+        for (int i = 0; i < Mathf.Max(0, slotCount); i++)
+            itemSlot_UI.Add(null);
+
+        if (Data?.itemSlots == null)
+            return;
+
+        // 数据槽刷新监听与 UI 实例数量解耦，未渲染槽位也保持原有刷新语义。
+        for (int i = 0; i < Data.itemSlots.Count; i++)
+        {
+            ItemSlot slot = Data.itemSlots[i];
+            if (slot == null)
+                continue;
+
+            slot.Index = i;
+            slot.onSlotDataChanged.Clear();
+            slot.onSlotDataChanged += OnItemSlotChanged;
+        }
+    }
+
+    /// <summary>复用槽位离开原数据索引时解除映射，避免旧索引刷新到错误的 UI。</summary>
+    public void UnbindVirtualSlotUI(ItemSlot_UI slotUI, int bindIndex)
+    {
+        if (slotUI == null || bindIndex < 0 || bindIndex >= itemSlot_UI.Count)
+            return;
+
+        if (ReferenceEquals(itemSlot_UI[bindIndex], slotUI))
+            itemSlot_UI[bindIndex] = null;
+    }
+
     private void RegisterSlotUI(ItemSlot_UI slotUI, int bindIndex)
     {
         if (bindIndex < itemSlot_UI.Count)
@@ -848,7 +931,7 @@ public class Inventory
     }
 
     // 当物品槽数据发生变化时的回调
-    private void OnItemSlotChanged(ItemSlot slot)
+    protected virtual void OnItemSlotChanged(ItemSlot slot)
     {
         // 防守性编程：检查slot和Data是否为空
         if (slot == null || Data == null || Data.itemSlots == null)
@@ -857,7 +940,16 @@ public class Inventory
             return;
         }
 
-        // 找到对应的UI并刷新
+        // 动态大背包优先直接使用稳定索引，避免每次槽位变化都线性扫描整个库存。
+        int directIndex = slot.Index;
+        if (directIndex >= 0 && directIndex < Data.itemSlots.Count &&
+            ReferenceEquals(Data.itemSlots[directIndex], slot))
+        {
+            RefreshUI(directIndex);
+            return;
+        }
+
+        // 兼容外部槽位索引尚未同步的情况。
         for (int i = 0; i < Data.itemSlots.Count; i++)
         {
             if (Data.itemSlots[i] != null && Data.itemSlots[i] == slot)
@@ -907,6 +999,13 @@ public class Inventory
 
     public void RefreshUI(int index)
     {
+        if (_virtualizedSlotGrid != null)
+        {
+            _virtualizedSlotGrid.RefreshSlot(index);
+            RefreshCarryCapacityUI();
+            return;
+        }
+
         if (itemSlot_UI == null || index < 0 || index >= itemSlot_UI.Count)
             return;
 
@@ -933,6 +1032,13 @@ public class Inventory
             return;
         }
 
+        if (_virtualizedSlotGrid != null)
+        {
+            _virtualizedSlotGrid.RefreshVisibleSlots();
+            RefreshCarryCapacityUI();
+            return;
+        }
+
         for (int i = 0; i < itemSlot_UI.Count; i++)
         {
             ItemSlot_UI slotUI = itemSlot_UI[i];
@@ -950,7 +1056,7 @@ public class Inventory
     {
         UnbindPlayerCarryWeightEvents();
         if (item is not Player player || Data == null ||
-            (!IsPlayerBagInventory() && this is not Inventory_HotBar.HotBarRuntimeInventory))
+            (!IsPlayerBagInventory() && this is not Mod_HotBar.HotBarRuntimeInventory))
             return;
 
         _overweightObservedData = Data;
@@ -1049,18 +1155,18 @@ public class Inventory
             PlayerCarryCapacityUtility.TryGetSnapshot(player, out PlayerCarryCapacitySnapshot snapshot))
         {
             currentWeight = snapshot.CurrentWeight;
-            currentVolume = snapshot.CurrentVolume / Inventory_Data.LitersPerCubicMeter;
+            currentVolume = snapshot.CurrentVolume;
             maxWeight = snapshot.IsUnlimited ? "INF" : snapshot.MaxWeight.ToString("0.##");
             maxVolume = snapshot.IsUnlimited
                 ? "INF"
-                : (snapshot.MaxVolume / Inventory_Data.LitersPerCubicMeter).ToString("0.######");
+                : snapshot.MaxVolume.ToString("0.##");
         }
         else if (Data?.HasCarryCapacity == true)
         {
             currentWeight = Data.CurrentCarryWeight;
-            currentVolume = Data.CurrentCarryVolume / Inventory_Data.LitersPerCubicMeter;
+            currentVolume = Data.CurrentCarryVolume;
             maxWeight = Data.MaxCarryWeight.ToString("0.##");
-            maxVolume = (Data.MaxCarryVolume / Inventory_Data.LitersPerCubicMeter).ToString("0.######");
+            maxVolume = Data.MaxCarryVolume.ToString("0.##");
         }
         else
         {
@@ -1070,7 +1176,7 @@ public class Inventory
         if (_carryWeightValueText != null)
             _carryWeightValueText.text = $"{currentWeight:0.##} / {maxWeight} kg";
         if (_carryVolumeValueText != null)
-            _carryVolumeValueText.text = $"{currentVolume:0.######} / {maxVolume} m³";
+            _carryVolumeValueText.text = $"{currentVolume:0.##} / {maxVolume} L";
     }
 
     #endregion
@@ -1236,7 +1342,7 @@ public class Inventory
         RefreshUI(index);
         handInventory.RefreshUI(handSlot.Index);
 
-        if (this is Inventory_HotBar.HotBarRuntimeInventory hotBarInventory)
+        if (this is Mod_HotBar.HotBarRuntimeInventory hotBarInventory)
             hotBarInventory.SyncHeldItemImmediately();
 
         _touchTapFlow = HasHeldItem(handInventory)
@@ -1258,7 +1364,7 @@ public class Inventory
             return OnMouseDragBegin(index);
 
         DefaultTarget_Inventory = handInventory;
-        int sourceAmount = Mathf.FloorToInt(localSlot.itemData.Stack.Amount);
+        int sourceAmount = Inventory_Data.GetWholeStackAmount(localSlot.itemData.Stack.Amount);
         int halfAmount = Mathf.Max(1, Mathf.CeilToInt(sourceAmount * 0.5f));
         if (!Data.TransferItemQuantityTo(localSlot, handInventory.Data, handSlot, halfAmount))
             return null;
@@ -1334,6 +1440,8 @@ public class Inventory
         ItemSlot fallbackSlot = null;
         ItemData fallbackItem = null;
 
+        BeginSlotDrag(sourceSlot);
+
         return new InventoryDragTransaction(
             draggedItem.Stack.Amount,
             (targetInventory, targetIndex) =>
@@ -1348,7 +1456,36 @@ public class Inventory
                 fallbackInventory != null &&
                 fallbackInventory.TryDropSlotTo(fallbackSlot, fallbackItem, targetInventory, targetIndex),
             true,
-            sourceItemProvider: () => IsCurrentDragSource(sourceSlot, draggedItem) ? draggedItem : null);
+            sourceItemProvider: () => ResolveCurrentDragSource(sourceSlot, draggedItem),
+            onCompleted: () => EndSlotDrag(sourceSlot));
+    }
+
+    /// <summary>判断指定来源槽是否正被拖拽，供持续加工在用户操作期间暂缓消费。</summary>
+    public bool IsSlotBeingDragged(int index)
+    {
+        return Data?.itemSlots != null && index >= 0 && index < Data.itemSlots.Count &&
+               _activeDragSourceCounts != null &&
+               _activeDragSourceCounts.ContainsKey(Data.itemSlots[index]);
+    }
+
+    /// <summary>虚拟化网格在任意槽位拖拽期间暂停重绑，避免来源索引被滚动复用。</summary>
+    public bool HasActiveSlotDrag => _activeDragSourceCounts != null && _activeDragSourceCounts.Count > 0;
+
+    /// <summary>登记一次来源槽拖拽，支持多指同时起手。</summary>
+    private void BeginSlotDrag(ItemSlot slot)
+    {
+        _activeDragSourceCounts ??= new Dictionary<ItemSlot, int>();
+        _activeDragSourceCounts.TryGetValue(slot, out int count);
+        _activeDragSourceCounts[slot] = count + 1;
+    }
+
+    /// <summary>结束一次来源槽拖拽，避免面板关闭后留下加工暂停状态。</summary>
+    private void EndSlotDrag(ItemSlot slot)
+    {
+        if (_activeDragSourceCounts == null || !_activeDragSourceCounts.TryGetValue(slot, out int count))
+            return;
+        if (count <= 1) _activeDragSourceCounts.Remove(slot);
+        else _activeDragSourceCounts[slot] = count - 1;
     }
 
     /// <summary>让目标槽提交来源拖拽事务。</summary>
@@ -1364,7 +1501,8 @@ public class Inventory
         Inventory targetInventory,
         int targetIndex)
     {
-        if (!IsCurrentDragSource(sourceSlot, draggedItem) ||
+        ItemData sourceItem = ResolveCurrentDragSource(sourceSlot, draggedItem);
+        if (sourceItem == null ||
             !IsValidQuickTransferTarget(targetInventory) ||
             targetIndex < 0 || targetIndex >= targetInventory.Data.itemSlots.Count)
             return false;
@@ -1387,13 +1525,15 @@ public class Inventory
             return false;
 
         ItemData targetItem = targetSlot.itemData;
-        bool swapsDifferentItems = targetItem != null && !targetItem.CanStackWith(draggedItem);
+        bool swapsDifferentItems = targetItem != null && !targetItem.CanStackWith(sourceItem);
         if (swapsDifferentItems &&
             (!CanAcceptQuickTransfer(targetSlot, sourceSlot) ||
-             !targetInventory.CanHoldWholeStack(targetSlot, draggedItem) ||
+             !targetInventory.CanHoldWholeStack(targetSlot, sourceItem) ||
              !CanHoldWholeStack(sourceSlot, targetItem)))
             return false;
 
+        if (MachineInventoryCommands.TryRoute(this, Data.itemSlots.IndexOf(sourceSlot), targetInventory,
+                targetIndex, "move", 0, out bool routed)) return routed;
         if (!Data.DropItemSlotTo(sourceSlot, targetInventory.Data, targetSlot))
             return false;
 
@@ -1435,7 +1575,7 @@ public class Inventory
         handInventory = GetPlayerHandInventory();
         handSlot = null;
         handItem = null;
-        if (!IsCurrentDragSource(sourceSlot, draggedItem) ||
+        if (ResolveCurrentDragSource(sourceSlot, draggedItem) == null ||
             !IsValidQuickTransferTarget(handInventory) ||
             ReferenceEquals(this, handInventory))
             return false;
@@ -1451,14 +1591,23 @@ public class Inventory
         return handItem?.Stack != null;
     }
 
-    /// <summary>确认拖拽期间来源槽仍持有创建事务时的同一物品实例。</summary>
-    private bool IsCurrentDragSource(ItemSlot sourceSlot, ItemData draggedItem)
+    /// <summary>识别同一来源物品；制作事务可替换对象引用，但会保留实例标识与定义 ID。</summary>
+    private ItemData ResolveCurrentDragSource(ItemSlot sourceSlot, ItemData draggedItem)
     {
-        return Data?.itemSlots != null &&
-               sourceSlot != null &&
-               draggedItem?.Stack != null &&
-               Data.itemSlots.Contains(sourceSlot) &&
-               ReferenceEquals(sourceSlot.itemData, draggedItem);
+        if (Data?.itemSlots == null || sourceSlot == null || draggedItem?.Stack == null ||
+            !Data.itemSlots.Contains(sourceSlot))
+            return null;
+
+        ItemData current = sourceSlot.itemData;
+        if (current?.Stack == null)
+            return null;
+        if (ReferenceEquals(current, draggedItem))
+            return current;
+
+        return draggedItem.Guid != 0 && current.Guid == draggedItem.Guid &&
+               string.Equals(draggedItem.IDName, current.IDName, StringComparison.Ordinal)
+            ? current
+            : null;
     }
 
     /// <summary>判断一个槽位能否完整容纳指定物品堆，供异类交换使用。</summary>
@@ -1468,14 +1617,13 @@ public class Inventory
             return false;
         if (!itemData.Stack.Stackable)
             return itemData.Stack.Amount <= 1.0001f;
-        return Data != null &&
-               (Data.HasUnlimitedStackSize || itemData.Stack.Amount <= slot.SlotMaxVolume + 0.0001f);
+        return Data != null && itemData.Stack.Amount <= slot.SlotMaxVolume + 0.0001f;
     }
 
     /// <summary>拖拽改变快捷栏槽位后立即刷新玩家手持实例。</summary>
     private static void SyncHotBarAfterDrag(Inventory inventory)
     {
-        if (inventory is Inventory_HotBar.HotBarRuntimeInventory hotBarInventory)
+        if (inventory is Mod_HotBar.HotBarRuntimeInventory hotBarInventory)
             hotBarInventory.SyncHeldItemImmediately();
     }
 
@@ -1530,7 +1678,7 @@ public class Inventory
             return;
 
         // 玩家背包转入快捷栏后，立即刷新当前手持实例，避免等待下一次模块 Tick 才显示。
-        if (DefaultTarget_Inventory is Inventory_HotBar.HotBarRuntimeInventory hotBarInventory)
+        if (DefaultTarget_Inventory is Mod_HotBar.HotBarRuntimeInventory hotBarInventory)
             hotBarInventory.SyncHeldItemImmediately();
 
         RefreshUI(index);
@@ -1645,7 +1793,7 @@ public class Inventory
     /// </summary>
     private int GetLeftClickTargetSlotIndex(int sourceIndex)
     {
-        if (DefaultTarget_Inventory is Inventory_HotBar.HotBarRuntimeInventory hotBarInventory &&
+        if (DefaultTarget_Inventory is Mod_HotBar.HotBarRuntimeInventory hotBarInventory &&
             hotBarInventory.Data?.itemSlots != null &&
             hotBarInventory.Data.itemSlots.Count > 0)
         {
@@ -1704,6 +1852,7 @@ public class Inventory
         if (sourceSlot == null || sourceSlot.itemData == null)
             return false;
 
+        if (MachineInventoryCommands.TryRoute(this, sourceIndex, targetInventory, -1, "quick", 0, out bool routed)) return routed;
         bool moved = false;
         moved |= TryTransferToMatchedSlots(sourceSlot, targetInventory);
         moved |= TryTransferToEmptySlots(sourceSlot, targetInventory);
@@ -1782,11 +1931,24 @@ public class Inventory
         if (!targetInventory.CanAcceptQuickTransfer(sourceSlot, targetSlot))
             return false;
 
+        if (MachineInventoryCommands.TryRoute(this, Data.itemSlots.IndexOf(sourceSlot), targetInventory,
+                targetInventory.Data.itemSlots.IndexOf(targetSlot), "quantity", transferCount, out bool routed)) return routed;
         return Data.TransferItemQuantityTo(
             sourceSlot,
             targetInventory.Data,
             targetSlot,
             transferCount);
+    }
+
+    /// <summary>服务端的已校验请求复用完整拖拽与数量转移规则。</summary>
+    public bool ExecuteMachineTransfer(int sourceIndex, Inventory target, int targetIndex, string operation, int amount)
+    {
+        if (Data?.itemSlots == null || (uint)sourceIndex >= (uint)Data.itemSlots.Count || target?.Data?.itemSlots == null) return false;
+        if (operation == "quick") return TryQuickMoveSlotToInventory(sourceIndex, target);
+        if ((uint)targetIndex >= (uint)target.Data.itemSlots.Count) return false;
+        if (operation == "move") return TryMoveSlotTo(sourceIndex, target, targetIndex);
+        return operation == "quantity" && amount > 0 &&
+            TryTransferQuickQuantity(Data.itemSlots[sourceIndex], target, target.Data.itemSlots[targetIndex], amount);
     }
 
     /// <summary>
@@ -1843,7 +2005,7 @@ public class Inventory
         if (ownerItem == null || ownerItem.itemMods == null)
             return null;
 
-        Inventory_HotBar hotbarModule = ownerItem.itemMods.GetMod_ByID<Inventory_HotBar>(ModText.Hotbar);
+        Mod_HotBar hotbarModule = ownerItem.itemMods.GetMod_ByID<Mod_HotBar>(ModText.Hotbar);
         if (hotbarModule != null)
             return hotbarModule.GetDefaultTargetInventory();
 
@@ -1859,7 +2021,8 @@ public class Inventory
         if (LastOpenedContainer == null || LastOpenedContainer == this)
             return null;
 
-        if (LastOpenedContainer.basePanel == null || !LastOpenedContainer.basePanel.IsOpen())
+        if (LastOpenedContainer._quickTransferOwnerPanel == null ||
+            !LastOpenedContainer._quickTransferOwnerPanel.IsOpen())
         {
             LastOpenedContainer = null;
             return null;
@@ -1874,13 +2037,12 @@ public class Inventory
     /// </summary>
     public void SyncQuickTransferTarget(BasePanel ownerPanel = null)
     {
-        if (ownerPanel != null)
-            basePanel = ownerPanel;
+        _quickTransferOwnerPanel = ownerPanel != null ? ownerPanel : basePanel;
 
         if (IsHotBarInventory() || IsHandInventory())
             return;
 
-        if (basePanel != null && basePanel.IsOpen())
+        if (_quickTransferOwnerPanel != null && _quickTransferOwnerPanel.IsOpen())
         {
             LastOpenedContainer = this;
             return;
@@ -1900,10 +2062,16 @@ public class Inventory
         return this is Inventory_Hand || Data?.Name == ModText.Hand;
     }
 
-    /// <summary>只有玩家主动打开的库存面板才参与模态输入锁与手柄焦点链。</summary>
-    private bool UsesModalGameplayInputLock()
+    /// <summary>玩家主动开关的库存面板参与关闭与手柄焦点链；快捷栏和手部库存不参与。</summary>
+    private bool UsesTogglePanelLifecycle()
     {
         return !IsHotBarInventory() && !IsHandInventory();
+    }
+
+    /// <summary>玩家主背包是可并行 UI，不获取玩法输入锁；其它独立库存面板维持原有锁定行为。</summary>
+    private bool UsesGameplayInputLock()
+    {
+        return UsesTogglePanelLifecycle() && !IsPlayerBagInventory();
     }
 
     #endregion
@@ -1927,7 +2095,7 @@ public class Inventory
     /// </summary>
     public void AppendExternalSlots(IList<ItemSlot> externalSlots)
     {
-        if (Data?.itemSlots == null || externalSlots == null || externalSlots.Count == 0)
+        if (Data?.itemSlots == null || !Data.HasUnlimitedSlots || externalSlots == null || externalSlots.Count == 0)
             return;
 
         for (int i = 0; i < externalSlots.Count; i++)
@@ -1995,6 +2163,10 @@ public class Inventory
             return;
         }
 
+        // 显式扩容同样遵守容量策略，固定库存不能通过此入口增加格子。
+        if (!Data.HasUnlimitedSlots)
+            return;
+
         // 显式批量扩容只负责追加槽位，不能调用 InitData：
         // 玩家主背包的动态容量自检会立刻把这些尚未填充的空槽收缩掉，
         // 同时 InitData 还会重建库存事件。调用方会在同一事务内继续填充这些槽位。
@@ -2002,9 +2174,7 @@ public class Inventory
         {
             Data.itemSlots.Add(new ItemSlot(Data.itemSlots.Count)
             {
-                SlotMaxVolume = Data.HasUnlimitedStackSize
-                    ? float.MaxValue
-                    : Inventory_Data.DefaultSlotVolume
+                SlotMaxVolume = Inventory_Data.DefaultSlotVolume
             });
         }
 
@@ -2231,28 +2401,46 @@ public class Inventory
     #endregion
 }
 
-/// <summary>统一管理背包与制作面板首次打开时的左右布局，避免两个大面板默认重叠。</summary>
+/// <summary>统一管理背包与制作面板首次打开时的默认布局。</summary>
 public static class InventoryPanelLayout
 {
     public const float PanelMargin = 18f;
-    private const float DefaultBagWidth = 706f;
-    private const float DefaultCraftingWidth = 1344f;
+    private const float DefaultBagWidth = 920f;
     private const float FullScreenCraftingThreshold = 0.65f;
 
-    /// <summary>把背包放到画布左侧，并保留统一的小边距。</summary>
+    /// <summary>把背包左边、上边直接贴齐画布，固定占据左上角。</summary>
     public static void ApplyDefaultBagPosition(RectTransform panel)
     {
-        SetSidePosition(panel, left: true);
+        if (panel == null)
+            return;
+
+        RectTransform parent = panel.parent as RectTransform;
+        if (parent == null)
+            return;
+
+        Canvas.ForceUpdateCanvases();
+
+        Rect parentRect = parent.rect;
+        Vector2 panelSize = panel.rect.size;
+        Vector2 anchorReferenceNormalized = new Vector2(
+            Mathf.Lerp(panel.anchorMin.x, panel.anchorMax.x, panel.pivot.x),
+            Mathf.Lerp(panel.anchorMin.y, panel.anchorMax.y, panel.pivot.y));
+        Vector2 anchorReference = parentRect.min + Vector2.Scale(parentRect.size, anchorReferenceNormalized);
+        Vector2 targetPivot = new Vector2(
+            parentRect.xMin + panelSize.x * panel.pivot.x,
+            parentRect.yMax - panelSize.y * (1f - panel.pivot.y));
+
+        panel.anchoredPosition = targetPivot - anchorReference;
     }
 
     /// <summary>把制作面板放到画布右侧，与背包保持统一间距。</summary>
     public static void ApplyDefaultCraftingPosition(RectTransform panel)
     {
-        SetSidePosition(panel, left: false);
+        SetCraftingPosition(panel);
     }
 
-    /// <summary>按背包与制作面板的组合宽度计算相邻位置，窄屏时回退到各自屏幕侧边。</summary>
-    private static void SetSidePosition(RectTransform panel, bool left)
+    /// <summary>按背包与制作面板的组合宽度计算制作面板位置，窄屏时回退到屏幕右侧。</summary>
+    private static void SetCraftingPosition(RectTransform panel)
     {
         if (panel == null)
             return;
@@ -2264,28 +2452,26 @@ public static class InventoryPanelLayout
         Canvas.ForceUpdateCanvases();
         float canvasWidth = parent.rect.width > 0f ? parent.rect.width : Screen.width;
         float panelWidth = panel.rect.width > 0f ? panel.rect.width : panel.sizeDelta.x;
-        if (!left && panelWidth >= canvasWidth * FullScreenCraftingThreshold)
+        if (panelWidth >= canvasWidth * FullScreenCraftingThreshold)
         {
             panel.anchoredPosition = new Vector2(0f, panel.anchoredPosition.y);
             return;
         }
 
-        float bagWidth = left ? panelWidth : DefaultBagWidth;
-        float craftingWidth = left ? DefaultCraftingWidth : panelWidth;
+        float bagWidth = DefaultBagWidth;
+        float craftingWidth = panelWidth;
         float pairWidth = bagWidth + PanelMargin + craftingWidth;
         float availableWidth = Mathf.Max(0f, canvasWidth - PanelMargin * 2f);
         float x;
         if (pairWidth <= availableWidth)
         {
             float pairLeft = -pairWidth * 0.5f;
-            x = left
-                ? pairLeft + bagWidth * 0.5f
-                : pairLeft + bagWidth + PanelMargin + craftingWidth * 0.5f;
+            x = pairLeft + bagWidth + PanelMargin + craftingWidth * 0.5f;
         }
         else
         {
             float halfWidth = Mathf.Max(0f, canvasWidth * 0.5f - PanelMargin - panelWidth * 0.5f);
-            x = left ? -halfWidth : halfWidth;
+            x = halfWidth;
         }
 
         panel.anchoredPosition = new Vector2(x, panel.anchoredPosition.y);

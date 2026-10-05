@@ -1,7 +1,7 @@
 using MemoryPack;
 
 /// <summary>
-/// 通用数据层的四类伤害容器，所有伤害直接按切割、穿刺、劈砍、钝击保存和结算。
+/// 通用数据层的物理伤害兼容容器，旧四槽只用于读取历史存档。
 /// </summary>
 [System.Serializable]
 [MemoryPackable]
@@ -30,13 +30,20 @@ public partial class Damage
         Blunt = blunt;
     }
 
-    /// <summary>四类攻击分别减去对应防御，再合计最终伤害。</summary>
+    #region 物理伤害兼容
+
+    /// <summary>旧存档的攻击分量合成物理伤害，再抵扣一次物理防御。</summary>
     public float Return_EndDamage(Defense defense = null)
     {
         defense ??= new Defense();
-        return System.Math.Max(0f, Cutting - defense.Cutting) +
-               System.Math.Max(0f, Piercing - defense.Piercing) +
-               System.Math.Max(0f, Chopping - defense.Chopping) +
-               System.Math.Max(0f, Blunt - defense.Blunt);
+        return System.Math.Max(0f, Physical - defense.Physical);
     }
+
+    [MemoryPackIgnore]
+    public float Physical
+    {
+        get => System.Math.Max(0f, Cutting) + System.Math.Max(0f, Piercing) + System.Math.Max(0f, Chopping) + System.Math.Max(0f, Blunt);
+        set { Cutting = Piercing = Chopping = 0f; Blunt = System.Math.Max(0f, value); }
+    }
+    #endregion
 }

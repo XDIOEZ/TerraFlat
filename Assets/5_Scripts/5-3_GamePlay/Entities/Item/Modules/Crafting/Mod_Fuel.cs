@@ -1,4 +1,5 @@
 using MemoryPack;
+using Newtonsoft.Json.Linq;
 using UnityEngine;
 using UnityEngine.Rendering.Universal;
 
@@ -78,7 +79,9 @@ public class Mod_Fuel : Module
     /// </summary>
     public void AddFuel(float amount)
     {
-        Data.Fuel.x = Mathf.Min(Data.Fuel.x + amount, Data.Fuel.y);
+        if (amount <= 0f) return;
+        // 完整保留最后一份燃料的热值，超过显示容量的部分作为隐藏储备继续燃烧。
+        Data.Fuel.x += amount;
     }
 
     /// <summary>
@@ -209,6 +212,86 @@ public class Mod_Fuel : Module
     {
         return burnSpeedMultiplier;
     }
+
+    #region 冷数据解析
+    /// <summary>库存里的 ItemData 没有实例化 Module 时，从保存态或当前物品定义解析燃料数据。</summary>
+    public static bool TryResolveItemData(ItemData source, out FuelData fuelData)
+    {
+        fuelData = null;
+        if (source?.ModuleDataDic == null)
+            return false;
+
+        string stableModuleName = null;
+        Ex_ModData_MemoryPackable storage = null;
+        if (source.ModuleDataDic.TryGetValue(ModText.Fuel, out ModuleData direct) &&
+            direct is Ex_ModData_MemoryPackable directStorage &&
+            string.Equals(directStorage.ID, ModText.Fuel, System.StringComparison.Ordinal))
+        {
+            stableModuleName = ModText.Fuel;
+            storage = directStorage;
+        }
+        else
+        {
+            foreach (var pair in source.ModuleDataDic)
+            {
+                if (pair.Value is not Ex_ModData_MemoryPackable candidate ||
+                    !string.Equals(candidate.ID, ModText.Fuel, System.StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                stableModuleName = pair.Key;
+                storage = candidate;
+                break;
+            }
+        }
+
+        if (storage == null)
+            return false;
+
+        if (storage.BitData != null && storage.BitData.Length > 0)
+        {
+            fuelData = new FuelData();
+            storage.ReadData(ref fuelData);
+            return fuelData != null;
+        }
+
+        GameRes gameRes = GameRes.ExistingInstance;
+        if (gameRes == null ||
+            !gameRes.TryGetItemDefinition(source.IDName, out RuntimeItemDefinition definition))
+        {
+            return false;
+        }
+
+        string[] parameterKeys =
+        {
+            stableModuleName,
+            storage.Name,
+            ModText.Fuel
+        };
+        for (int i = 0; i < parameterKeys.Length; i++)
+        {
+            string key = parameterKeys[i];
+            if (string.IsNullOrWhiteSpace(key) ||
+                !definition.TryGetModuleParameters(key, out string json) ||
+                string.IsNullOrWhiteSpace(json))
+            {
+                continue;
+            }
+
+            JObject parameters = JObject.Parse(json);
+            JToken dataToken = parameters["Data"];
+            if (dataToken == null)
+                continue;
+
+            fuelData = dataToken.ToObject<FuelData>();
+            if (fuelData != null)
+                return true;
+        }
+
+        return false;
+    }
+    #endregion
 }
 
 [MemoryPackable]
@@ -216,7 +299,7 @@ public class Mod_Fuel : Module
 public partial class FuelData
 {
     /// <summary>
-    /// x = 当前燃料值, y = 最大燃料值
+    /// x = 实际燃料值（允许高于显示容量）, y = 显示容量/自动补充阈值
     /// </summary>
     public Vector2 Fuel = new Vector2(100f, 100f);
     [Tooltip("燃烧时提供的最大温度")]

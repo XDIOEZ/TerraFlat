@@ -2,6 +2,7 @@
     "name": "FlatWorld.DroppedItems.Core",
     "rootNamespace": "FlatWorld.DroppedItems",
     "references": ["Unity.Entities", "Unity.Collections", "Unity.Mathematics", "Unity.Burst", "FlatWorld.WorldTopology"],
+    "includePlatforms": ["Editor"],
     "autoReferenced": true,
     "noEngineReferences": false
 }

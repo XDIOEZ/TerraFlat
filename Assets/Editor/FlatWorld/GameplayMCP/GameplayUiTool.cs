@@ -1,3 +1,4 @@
+using System.Threading.Tasks;
 using MCPForUnity.Editor.Helpers;
 using MCPForUnity.Editor.Tools;
 using Newtonsoft.Json.Linq;
@@ -5,21 +6,37 @@ using Newtonsoft.Json.Linq;
 namespace FlatWorld.GameplayMCP
 {
     /// <summary>
-    /// 向自主游玩 Agent 暴露当前可见 UI 的语义树，并允许按树中运行时 ID 执行真实 UI 点击、滚动或拖拽。
+    /// 向自主游玩 Agent 暴露当前可见 UI 的语义树，并允许按树中运行时 ID 执行真实 UI 点击、文本、滚动或拖拽。
     /// </summary>
     [McpForUnityTool(
         "gameplay_ui",
-        Description = "Inspect and operate live FlatWorld UI without screenshots. action=tree returns a paged semantic UI tree for active canvases; action=click performs a real EventSystem left click; action=scroll sends a real EventSystem scroll event to a ScrollRect; action=drag sends the standard EventSystem pointer/drag chain to a draggable UI node.",
+        Description = "Inspect and operate live FlatWorld UI without screenshots. action=tree returns a paged semantic UI tree; action=click uses EventSystem left click; action=text sends character events to the focused InputField; action=scroll/drag use standard UI event chains.",
         Group = "core")]
     public static class GameplayUiTool
     {
-        public sealed class Parameters
+        #region 统一输入输出
+
+        /// <summary>按需返回数据，错误与分页状态保持完整。</summary>
+        public static async Task<object> HandleCommand(JObject parameters)
         {
-            [ToolParameter("UI action: tree, click, scroll, or drag.", Required = false, DefaultValue = "tree")]
+            return await GameplayMcpOutput.InvokeAsync("gameplay_ui", parameters, ExecuteCommand, false);
+        }
+
+        #endregion
+
+        public sealed class Parameters : GameplayMcpOutputParameters
+        {
+            [ToolParameter("After a successful click, text, scroll or drag, wait one Editor update and return the refreshed UI tree in the same call. Uses the same paging options.", Required = false)]
+            public bool treeAfter { get; set; }
+
+            [ToolParameter("UI action: tree, click, text, scroll, or drag.", Required = false, DefaultValue = "tree")]
             public string action { get; set; }
 
-            [ToolParameter("Runtime UI node id returned by action=tree. Required for action=click, action=scroll, or action=drag.", Required = false)]
+            [ToolParameter("Runtime UI node id returned by action=tree. Required for action=click, action=text, action=scroll, or action=drag.", Required = false)]
             public int targetId { get; set; }
+
+            [ToolParameter("Text to type into a focused TMP_InputField/InputField for action=text. Focus the field through action=click first.", Required = false)]
+            public string text { get; set; }
 
             [ToolParameter("Vertical EventSystem scroll delta for action=scroll. Negative scrolls down, positive scrolls up.", Required = false, DefaultValue = "-6")]
             public float deltaY { get; set; }
@@ -44,18 +61,27 @@ namespace FlatWorld.GameplayMCP
         }
 
         /// <summary>读取当前语义 UI 树，或按树节点 ID 执行一次真实左键点击。</summary>
-        public static object HandleCommand(JObject parameters)
+        private static async Task<object> ExecuteCommand(JObject parameters)
         {
             JObject args = parameters ?? new JObject();
             string action = args["action"]?.ToString()?.Trim().ToLowerInvariant() ?? "tree";
-            return action switch
+            object response = action switch
             {
                 "tree" => GameplayUiRuntime.BuildTree(args),
                 "click" => GameplayUiRuntime.Click(args),
+                "text" => GameplayUiRuntime.TextInput(args),
                 "scroll" => GameplayUiRuntime.Scroll(args),
                 "drag" => GameplayUiRuntime.Drag(args),
-                _ => new ErrorResponse("unknown_ui_action: action 只支持 tree、click、scroll 或 drag。")
+                _ => new ErrorResponse("unknown_ui_action: action 只支持 tree、click、text、scroll 或 drag。")
             };
+            if (action != "tree" && args.Value<bool?>("treeAfter") == true && response is SuccessResponse success)
+            {
+                await GameplayMcpRuntime.WaitEditorSecondsAsync(0.001f);
+                JObject data = JObject.FromObject(success.Data);
+                data["tree"] = JObject.FromObject(GameplayUiRuntime.BuildTree(args));
+                return new SuccessResponse(success.Message, data);
+            }
+            return response;
         }
     }
 }

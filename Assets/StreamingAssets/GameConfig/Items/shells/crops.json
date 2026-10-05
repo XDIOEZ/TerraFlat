@@ -3,6 +3,7 @@
   "items": [
     {
       "id": "Crop_Base",
+      "entityRuntime": "resource",
       "abstract": true,
       "parent": "BasicItem_Base",
       "weight": 0.7,
@@ -240,14 +241,12 @@
               "MaxHp": 30.0,
               "UseBodyPartHealth": false,
               "DefenseValues": {
-                "Cutting": 0.0,
-                "Piercing": 0.0,
-                "Chopping": 0.0,
-                "Blunt": 0.0
+                "Physical": 0.0
               },
               "AttackersUIDs": [],
               "DamageInterval": 0.12,
-              "DestroyDelay": 0.0
+              "DestroyDelay": 0.0,
+              "CombatBalanceVersion": 1
             },
             "impactAudioMaterial": 2,
             "healthBarTopPadding": 0.08,
@@ -492,6 +491,7 @@
     {
       "id": "BerryCrop",
       "parent": "WildCrop_Base",
+      "tags": ["BeeForage.Crop"],
       "gameName": "浆果丛-农作物",
       "description": "可自然生长或种在耕地中的浆果丛；成熟后可反复采摘，果实会周期再生。",
       "weight": 1.5,
@@ -500,6 +500,13 @@
       "lootTableId": "BerryCrop_Default",
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Plants/TX Plant.png[GrassLand_6]",
+        "shadows": {
+          "contactWidth": 0.85,
+          "footLocalPosition": {
+            "x": 0.0,
+            "y": 0.0
+          }
+        },
         "collider": {
           "size": {
             "x": 0.8,
@@ -526,14 +533,12 @@
               "MaxHp": 60.0,
               "UseBodyPartHealth": false,
               "DefenseValues": {
-                "Cutting": 0.0,
-                "Piercing": 0.0,
-                "Chopping": 0.0,
-                "Blunt": 0.0
+                "Physical": 0.0
               },
               "AttackersUIDs": [],
               "DamageInterval": 0.12,
-              "DestroyDelay": 0.0
+              "DestroyDelay": 0.0,
+              "CombatBalanceVersion": 1
             },
             "impactAudioMaterial": 2,
             "healthBarTopPadding": 0.08,
@@ -606,7 +611,7 @@
           },
           "parameters": {
             "CollectItemId": "Berry",
-            "MaxStock": 12,
+            "MaxStock": 16,
             "NaturalInitialStockMin": 1,
             "NaturalInitialStockMax": 2,
             "SpawnRadius": 1.2,
@@ -647,9 +652,10 @@
             "ProductionList": [
               {
                 "itemName": "Berry",
-                "itemCountMin": 6,
-                "itemCountMax": 6,
-                "MaxProductionTime": 405.0,
+                "itemCountMin": 3,
+                "itemCountMax": 9,
+                "MaxProductionTime": 4320.0,
+                "ProductionIntervalDays": 3.0,
                 "ProductionTime": 0.0,
                 "MaxProductionCount": -1,
                 "CurrentProductionCount": 0,
@@ -659,13 +665,20 @@
                 "SpawnProbability": 1.0,
                 "Random_ProductionTime": {
                   "x": 0.0,
-                  "y": 405.0
+                  "y": 0.0
                 },
-                "IsInitialized": false
+                "IsInitialized": false,
+                "YieldGeneVariants": [
+                  { "minAmount": 0, "maxAmount": 6, "weight": 0.05 },
+                  { "minAmount": 0, "maxAmount": 9, "weight": 0.15 },
+                  { "minAmount": 3, "maxAmount": 9, "weight": 0.60 },
+                  { "minAmount": 3, "maxAmount": 12, "weight": 0.15 },
+                  { "minAmount": 3, "maxAmount": 16, "weight": 0.05 }
+                ]
               }
             ],
             "ProductionSpeed": 1.0,
-            "UseCropGrowthMultiplier": true
+            "UseCropGrowthMultiplier": false
           }
         }
       }
@@ -682,7 +695,7 @@
       "volume": 3.0,
       "stackable": true,
       "canBePickedUp": false,
-      "tags": [],
+      "tags": ["BeeForage.Crop"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Farming/Rice/RiceCrop_Seedling.png",
         "spriteStates": {
@@ -766,14 +779,32 @@
     }
     ,{
       "id": "CottonCrop",
-      "parent": "Crop_Base",
+      "parent": "WildCrop_Base",
+      "tags": ["BeeForage.Crop"],
       "gameName": "棉花",
       "description": "成熟后可以采集棉花纤维。",
       "weight": 0.7,
       "volume": 2.5,
       "stackable": true,
       "canBePickedUp": false,
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Farming/CottonCrop/CottonCrop_Seedling.png",
+        "spriteStates": {
+          "seedling": "Assets/6_Art/Generated/Farming/CottonCrop/CottonCrop_Seedling.png",
+          "growing": "Assets/6_Art/Generated/Farming/CottonCrop/CottonCrop_Growing.png",
+          "mature": "Assets/6_Art/Generated/Farming/CottonCrop/CottonCrop_Mature.png"
+        },
+        "color": { "r": 1.0, "g": 1.0, "b": 1.0, "a": 1.0 }
+      },
       "modules": {
+        "cropVisual": {
+          "parameters": {
+            "buriedClip": 0.0,
+            "seedlingScale": 1.0,
+            "matureScale": 1.0,
+            "growingVisualThreshold": 0.35
+          }
+        },
         "cropYield": {
           "parameters": {
             "outputs": [

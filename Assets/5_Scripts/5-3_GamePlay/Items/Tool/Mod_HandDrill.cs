@@ -14,7 +14,7 @@ public partial class HandDrillRuntimeState
 {
     public const int CurrentVersion = 1;
     public int Version = CurrentVersion;
-    public MechanicalProcessingState Processing = new();
+    public RecipeProcessingState Processing = new();
     public string BitMaterialId = string.Empty;
     public float Durability;
     public float MaxDurability;
@@ -32,7 +32,7 @@ public sealed class Mod_HandDrill : Module, IInteractable
     public override ModuleData _Data { get => Data; set => Data = (Ex_ModData_MemoryPackable)value; }
     public override string CanonicalModuleId => ModuleId;
     public override ModuleTickMode TickMode => ModuleTickMode.Disabled;
-    public MechanicalProcessor Processor { get; private set; }
+    public RecipeProcessor Processor { get; private set; }
     private HandDrillRuntimeState runtimeState;
     private MechanicalPanelSession panel;
     #endregion
@@ -42,7 +42,7 @@ public sealed class Mod_HandDrill : Module, IInteractable
     {
         runtimeState = ReadRuntimeState(Data, item?.itemData);
         ApplyRuntimeDurability(item?.itemData, runtimeState);
-        Processor = new MechanicalProcessor("hand_drill", runtimeState.Processing);
+        Processor = new RecipeProcessor("hand_drill", runtimeState.Processing);
         item.OnAct += OnItemAct;
     }
     public override void Save()
@@ -210,7 +210,7 @@ public sealed class Mod_HandDrill : Module, IInteractable
         ApplyRuntimeDurability(itemData, state);
     }
 
-    /// <summary>读取当前运行态，并兼容旧版只序列化 MechanicalProcessingState 的载荷。</summary>
+    /// <summary>读取当前运行态，并兼容旧版只序列化 RecipeProcessingState 的载荷。</summary>
     private static HandDrillRuntimeState ReadRuntimeState(
         Ex_ModData_MemoryPackable moduleData,
         ItemData itemData)
@@ -225,14 +225,14 @@ public sealed class Mod_HandDrill : Module, IInteractable
             }
             catch
             {
-                // 旧版手钻载荷不是该结构，继续按旧 MechanicalProcessingState 尝试迁移。
+                // 旧版手钻载荷不是该结构，继续按旧 RecipeProcessingState 尝试迁移。
             }
 
             try
             {
-                MechanicalProcessingState legacy = moduleData.GetData<MechanicalProcessingState>();
+                RecipeProcessingState legacy = moduleData.GetData<RecipeProcessingState>();
                 HandDrillRuntimeState migrated = CreateDefaultRuntimeState(itemData);
-                migrated.Processing = legacy ?? new MechanicalProcessingState();
+                migrated.Processing = legacy ?? new RecipeProcessingState();
                 return migrated;
             }
             catch (Exception exception)
@@ -257,7 +257,7 @@ public sealed class Mod_HandDrill : Module, IInteractable
 
     private static HandDrillRuntimeState SanitizeRuntimeState(HandDrillRuntimeState state, ItemData itemData)
     {
-        state.Processing ??= new MechanicalProcessingState();
+        state.Processing ??= new RecipeProcessingState();
         if (state.MaxDurability <= 0f)
         {
             float maxDurability = Mathf.Max(1f, itemData?.MaxDurability ?? 1f);

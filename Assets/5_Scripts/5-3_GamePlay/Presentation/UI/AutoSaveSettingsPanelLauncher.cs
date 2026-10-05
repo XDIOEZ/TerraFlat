@@ -233,9 +233,7 @@ public sealed class AutoSaveSettingsPanelLauncher : MonoBehaviour, ISettingsPage
             return;
 
         statusText.text = message;
-        statusText.color = isError
-            ? new Color(0.95f, 0.38f, 0.31f)
-            : new Color(0.21f, 0.78f, 0.74f);
+        statusText.color = isError ? FlatWorldUITheme.Danger : FlatWorldUITheme.Teal;
     }
 
     /// <summary>放弃当前视图草稿并返回世界设置入口页。</summary>

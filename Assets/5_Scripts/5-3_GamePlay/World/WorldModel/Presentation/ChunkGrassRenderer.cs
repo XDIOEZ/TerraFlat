@@ -1,17 +1,23 @@
+using System;
+using System.Collections;
 using System.Collections.Generic;
 using FlatWorld.WorldModel;
-using UnityEngine;
-using UnityEngine.Tilemaps;
 using Unity.Profiling;
+using UnityEngine;
 
-/// <summary>Pure presentation adapter for the model-owned grass layer.</summary>
-public sealed class ChunkGrassRenderer : MonoBehaviour, IChunkViewRenderer
+/// <summary>
+/// 按权威草格提交全局 BatchRendererGroup 实例；每格只保存确定性变体、局部矩阵与色调。
+/// 32×32 区块按 128 格分步绑定，运行时 Sprite 变体按贴图配置跨区块共享，避免重复对象和逐 Chunk Tilemap。
+/// </summary>
+public sealed class ChunkGrassRenderer : MonoBehaviour, IIncrementalChunkViewRenderer
 {
-    private static readonly ProfilerMarker RenderAllMarker =
+    #region 配置与缓存
+
+    private static readonly ProfilerMarker RenderRangeMarker =
         new("FlatWorld.ChunkStreaming.RenderGrass");
     private const int CommonVariantCount = 24;
+    private const int CellsPerStep = 128;
 
-    [SerializeField] private Tilemap tilemap;
     [SerializeField] private Texture2D sourceTexture;
     [SerializeField, Min(1)] private int variantCount = 32;
     [SerializeField, Min(1)] private int textureColumns = 6;
@@ -20,148 +26,178 @@ public sealed class ChunkGrassRenderer : MonoBehaviour, IChunkViewRenderer
     [SerializeField, Range(0f, 0.45f)] private float positionJitter = 0.22f;
     [SerializeField] private Vector2 scaleRange = new(0.85f, 1.15f);
     [SerializeField, Range(0f, 1f)] private float accentVariantChance = 0.2f;
-
-    [Header("草地渲染")]
     [SerializeField] private Material grassMaterial;
-    [SerializeField] private string sortingLayerName = "Default";
-    [SerializeField] private int sortingOrder;
 
-    private readonly List<Sprite> runtimeSprites = new();
-    private readonly List<Tile> runtimeTiles = new();
-    private ChunkRuntime boundChunk;
-    private Texture2D boundTexture;
+    private readonly List<int> visibleCellIndices = new(); // 当前提交的草格索引，供增量清理和后端恢复。
+    private readonly HashSet<int> visibleCells = new(); // 快速判断区块草格是否已有实例。
+    private ChunkRuntime boundChunk; // 当前绑定的权威区块。
+    private ChunkTilemapRenderer ownerRenderer; // 共享区块边界裁剪与 BRG 生命周期。
+    private Sprite[] sharedSprites; // 同配置区块共用同一组 Sprite 身份。
 
-    public bool IsConfigured => tilemap != null && sourceTexture != null;
+    public bool IsConfigured => sourceTexture != null && grassMaterial != null;
+    public Material GrassMaterial => grassMaterial;
 
-    private void Awake()
-    {
-        ApplyGrassMaterial();
-    }
+    #endregion
 
+    #region 绑定与解绑
+
+    /// <summary>同步入口复用相同范围提交逻辑，供非分帧绑定调用。</summary>
     public void Bind(ChunkRuntime chunk)
     {
-        if (chunk == null)
-            throw new System.ArgumentNullException(nameof(chunk));
-        if (chunk.Terrain == null)
-            throw new System.InvalidOperationException("Cannot bind grass rendering before data is ready.");
-        if (ReferenceEquals(boundChunk, chunk))
+        if (!PrepareBinding(chunk))
             return;
-
-        Unbind();
-        boundChunk = chunk;
-        boundChunk.Terrain.Changed += HandleTerrainChanged;
-        ApplyGrassMaterial();
-        EnsureRuntimeTiles();
-        RenderAll(boundChunk.Terrain);
+        try
+        {
+            RenderRange(chunk.Terrain, 0, chunk.Terrain.CellCount);
+        }
+        catch
+        {
+            Unbind();
+            throw;
+        }
     }
 
+    /// <summary>每次最多提交 128 格，避免视距加载时单区块草层独占主线程。</summary>
+    public IEnumerator BindIncremental(ChunkRuntime chunk)
+    {
+        if (!PrepareBinding(chunk))
+            yield break;
+
+        bool completed = false;
+        try
+        {
+            int cellCount = chunk.Terrain.CellCount;
+            for (int start = 0; start < cellCount; start += CellsPerStep)
+            {
+                RenderRange(chunk.Terrain, start, Mathf.Min(CellsPerStep, cellCount - start));
+                if (start + CellsPerStep < cellCount)
+                    yield return null;
+            }
+            completed = true;
+        }
+        finally
+        {
+            if (!completed)
+                Unbind();
+        }
+    }
+
+    /// <summary>确认基础 Owner 已就绪后订阅地形脏格并取得共享草纹理变体。</summary>
+    private bool PrepareBinding(ChunkRuntime chunk)
+    {
+        if (chunk == null)
+            throw new ArgumentNullException(nameof(chunk));
+        if (chunk.Terrain == null)
+            throw new InvalidOperationException("草地表现绑定前必须完成区块数据。");
+        if (ReferenceEquals(boundChunk, chunk))
+            return false;
+
+        Unbind();
+        if (!IsConfigured)
+            throw new InvalidOperationException("ChunkGrassRenderer 缺少草地贴图或 BRG 材质。");
+        ownerRenderer = GetComponent<ChunkTilemapRenderer>();
+        if (ownerRenderer == null || !ownerRenderer.IsBatchPresentationComplete)
+            throw new InvalidOperationException("草地表现必须在基础地形 BRG Owner 注册后绑定。");
+
+        sharedSprites = GrassSpriteVariantCache.Get(
+            sourceTexture, variantCount, textureColumns, spriteSizePixels, pixelsPerUnit);
+        if (sharedSprites.Length == 0)
+            throw new InvalidOperationException("草地贴图未包含可用的变体 Sprite。");
+
+        boundChunk = chunk;
+        boundChunk.Terrain.Changed += HandleTerrainChanged;
+        ownerRenderer.BatchPresentationRebuilt += HandleOwnerPresentationRebuilt;
+        return true;
+    }
+
+    /// <summary>回池时移除本图层实例，不销毁跨区块共享的 Sprite 变体。</summary>
     public void Unbind()
     {
         if (boundChunk?.Terrain != null)
             boundChunk.Terrain.Changed -= HandleTerrainChanged;
-        if (tilemap != null)
-            tilemap.ClearAllTiles();
+        if (ownerRenderer != null && boundChunk?.Terrain != null)
+            ownerRenderer.BatchPresentationRebuilt -= HandleOwnerPresentationRebuilt;
+        if (ownerRenderer != null)
+        {
+            for (int i = 0; i < visibleCellIndices.Count; i++)
+            {
+                int index = visibleCellIndices[i];
+                ownerRenderer.ClearLayerVisual(
+                    ChunkBatchRendererGroupService.VisualLayer.Grass,
+                    index % boundChunk.Terrain.Width,
+                    index / boundChunk.Terrain.Width);
+            }
+        }
+
+        visibleCellIndices.Clear();
+        visibleCells.Clear();
+        sharedSprites = null;
+        ownerRenderer = null;
         boundChunk = null;
     }
 
-    private void HandleTerrainChanged(ChunkTerrainChanged changed)
-    {
-        if (changed.Kind != TerrainChangeKind.Grass || boundChunk?.Terrain == null)
-            return;
-        RenderCell(boundChunk.Terrain, changed.LocalCell.X, changed.LocalCell.Y);
-    }
-
-    #region 草地材质
-
-    /// <summary>
-    /// 为区块草地 TilemapRenderer 设置共享摆动材质与 BRG 兼容排序。
-    /// BRG 没有 SpriteRenderer 的 Sorting Layer 字段，因此草必须与 BRG 共用 Default 层，
-    /// 再由材质 Render Queue 保证位于地形批次之后、普通世界 Sprite 之前。
-    /// </summary>
-    private void ApplyGrassMaterial()
-    {
-        if (tilemap == null || grassMaterial == null)
-            return;
-
-        TilemapRenderer renderer = tilemap.GetComponent<TilemapRenderer>();
-        if (renderer == null)
-            return;
-
-        if (renderer.sharedMaterial != grassMaterial)
-            renderer.sharedMaterial = grassMaterial;
-        renderer.sortingLayerName = sortingLayerName;
-        renderer.sortingOrder = sortingOrder;
-    }
+    /// <summary>区块销毁时解除 Terrain 与 Owner 事件订阅。</summary>
+    private void OnDestroy() => Unbind();
 
     #endregion
 
-    private void RenderAll(ChunkTerrainData terrain)
+    #region 增量提交
+
+    /// <summary>仅草层数据变化时更新对应 BRG 单格。</summary>
+    private void HandleTerrainChanged(ChunkTerrainChanged changed)
     {
-        if (tilemap == null || runtimeTiles.Count == 0 || terrain == null)
+        if (changed.Kind == TerrainChangeKind.Grass && boundChunk?.Terrain != null)
+            RenderCell(boundChunk.Terrain, changed.LocalCell.X, changed.LocalCell.Y);
+    }
+
+    /// <summary>基础 BRG Owner 修复后重提交本区块草实例。</summary>
+    private void HandleOwnerPresentationRebuilt()
+    {
+        if (boundChunk?.Terrain == null)
             return;
-
-        using (RenderAllMarker.Auto())
+        sharedSprites = GrassSpriteVariantCache.Get(
+            sourceTexture, variantCount, textureColumns, spriteSizePixels, pixelsPerUnit);
+        for (int i = 0; i < visibleCellIndices.Count; i++)
         {
-            tilemap.ClearAllTiles();
-            var tiles = new TileBase[terrain.CellCount];
-            for (int y = 0; y < terrain.Height; y++)
-            for (int x = 0; x < terrain.Width; x++)
-            {
-                if (terrain.GetGrass(x, y) == ChunkTerrainData.GrassPresent)
-                {
-                    uint state = MixSeed(
-                        boundChunk.Address.ChunkOrigin.X + x,
-                        boundChunk.Address.ChunkOrigin.Y + y);
-                    tiles[y * terrain.Width + x] = runtimeTiles[SelectVariant(ref state)];
-                }
-            }
+            int index = visibleCellIndices[i];
+            int x = index % boundChunk.Terrain.Width;
+            int y = index / boundChunk.Terrain.Width;
+            if (boundChunk.Terrain.GetGrass(x, y) == ChunkTerrainData.GrassPresent)
+                RenderPresentCell(x, y);
+        }
+    }
 
-            tilemap.SetTilesBlock(
-                new BoundsInt(0, 0, 0, terrain.Width, terrain.Height, 1), tiles);
-            for (int y = 0; y < terrain.Height; y++)
-            for (int x = 0; x < terrain.Width; x++)
+    /// <summary>逐段读取权威草层，空格无需进入 BRG 后端。</summary>
+    private void RenderRange(ChunkTerrainData terrain, int startIndex, int count)
+    {
+        using (RenderRangeMarker.Auto())
+        {
+            for (int index = startIndex; index < startIndex + count; index++)
             {
+                int x = index % terrain.Width;
+                int y = index / terrain.Width;
                 if (terrain.GetGrass(x, y) == ChunkTerrainData.GrassPresent)
-                    ApplyPresentCellVisual(x, y);
+                    RenderPresentCell(x, y);
             }
         }
     }
 
+    /// <summary>更新单格草的确定性变体、摆动矩阵和轻微色调。</summary>
     private void RenderCell(ChunkTerrainData terrain, int x, int y)
     {
-        if (tilemap == null || runtimeTiles.Count == 0)
-            return;
         if (terrain.GetGrass(x, y) == ChunkTerrainData.GrassPresent)
             RenderPresentCell(x, y);
         else
-            tilemap.SetTile(new Vector3Int(x, y, 0), null);
+            ClearCell(x, y);
     }
 
+    /// <summary>按规范世界格坐标生成稳定外观，并提交到 Grass BRG 图层。</summary>
     private void RenderPresentCell(int x, int y)
     {
         int worldX = boundChunk.Address.ChunkOrigin.X + x;
         int worldY = boundChunk.Address.ChunkOrigin.Y + y;
         uint state = MixSeed(worldX, worldY);
-        int variantIndex = SelectVariant(ref state);
-        Vector3Int cell = new(x, y, 0);
-        tilemap.SetTile(cell, runtimeTiles[variantIndex]);
-
-        ApplyPresentCellVisual(cell, ref state);
-    }
-
-    /// <summary>重放确定性随机序列，并只应用矩阵与色调。</summary>
-    private void ApplyPresentCellVisual(int x, int y)
-    {
-        int worldX = boundChunk.Address.ChunkOrigin.X + x;
-        int worldY = boundChunk.Address.ChunkOrigin.Y + y;
-        uint state = MixSeed(worldX, worldY);
-        SelectVariant(ref state);
-        ApplyPresentCellVisual(new Vector3Int(x, y, 0), ref state);
-    }
-
-    /// <summary>设置单格草地的偏移、缩放、翻转和色调。</summary>
-    private void ApplyPresentCellVisual(Vector3Int cell, ref uint state)
-    {
+        Sprite sprite = sharedSprites[SelectVariant(ref state)];
 
         float offsetX = Mathf.Lerp(-positionJitter, positionJitter, Next01(ref state));
         float offsetY = Mathf.Lerp(-positionJitter, positionJitter, Next01(ref state));
@@ -170,86 +206,39 @@ public sealed class ChunkGrassRenderer : MonoBehaviour, IChunkViewRenderer
             Mathf.Max(scaleRange.x, scaleRange.y),
             Next01(ref state));
         float flipX = Next01(ref state) < 0.5f ? -1f : 1f;
-        tilemap.SetTransformMatrix(cell, Matrix4x4.TRS(
-            new Vector3(offsetX, offsetY, 0f),
-            Quaternion.identity,
-            new Vector3(scale * flipX, scale, 1f)));
-
         float tint = Mathf.Lerp(0.9f, 1f, Next01(ref state));
-        tilemap.SetColor(cell, new Color(tint, tint, tint, 1f));
+        Matrix4x4 localToWorld = Matrix4x4.Translate(new Vector3(worldX + 0.5f, worldY + 0.5f, 0f)) *
+                                 Matrix4x4.TRS(new Vector3(offsetX, offsetY, 0f), Quaternion.identity,
+                                     new Vector3(scale * flipX, scale, 1f));
+
+        ownerRenderer.SetLayerVisual(ChunkBatchRendererGroupService.VisualLayer.Grass, x, y,
+            sprite, grassMaterial, localToWorld, new Color(tint, tint, tint, 1f));
+        if (visibleCells.Add(y * boundChunk.Terrain.Width + x))
+            visibleCellIndices.Add(y * boundChunk.Terrain.Width + x);
     }
 
+    /// <summary>草格消失时只清理已登记的单格实例。</summary>
+    private void ClearCell(int x, int y)
+    {
+        int index = y * boundChunk.Terrain.Width + x;
+        if (!visibleCells.Remove(index))
+            return;
+        visibleCellIndices.Remove(index);
+        ownerRenderer.ClearLayerVisual(ChunkBatchRendererGroupService.VisualLayer.Grass, x, y);
+    }
+
+    #endregion
+
+    #region 确定性外观
+
+    /// <summary>按权重选择基础草变体或少量强调变体。</summary>
     private int SelectVariant(ref uint state)
     {
-        int count = runtimeTiles.Count;
+        int count = sharedSprites.Length;
         int commonCount = Mathf.Min(CommonVariantCount, count);
         if (count > commonCount && Next01(ref state) < accentVariantChance)
             return commonCount + (int)(Next(ref state) % (uint)(count - commonCount));
         return (int)(Next(ref state) % (uint)commonCount);
-    }
-
-    private void EnsureRuntimeTiles()
-    {
-        if (boundTexture == sourceTexture && runtimeTiles.Count > 0)
-            return;
-
-        DestroyRuntimeAssets();
-        boundTexture = sourceTexture;
-        if (sourceTexture == null)
-            return;
-
-        int rows = sourceTexture.height / spriteSizePixels;
-        int columns = Mathf.Min(textureColumns, sourceTexture.width / spriteSizePixels);
-        int availableCount = Mathf.Min(variantCount, rows * columns);
-        for (int index = 0; index < availableCount; index++)
-        {
-            int column = index % columns;
-            int rowFromTop = index / columns;
-            int y = sourceTexture.height - (rowFromTop + 1) * spriteSizePixels;
-            if (y < 0)
-                break;
-
-            Sprite sprite = Sprite.Create(
-                sourceTexture,
-                new Rect(column * spriteSizePixels, y, spriteSizePixels, spriteSizePixels),
-                new Vector2(0.5f, 0.5f),
-                pixelsPerUnit,
-                0,
-                SpriteMeshType.Tight);
-            sprite.name = $"ChunkGrassDetail_{index}";
-
-            Tile tile = ScriptableObject.CreateInstance<Tile>();
-            tile.name = $"ChunkGrassDetailTile_{index}";
-            tile.sprite = sprite;
-            tile.color = Color.white;
-            tile.colliderType = Tile.ColliderType.None;
-            tile.flags = TileFlags.None;
-            runtimeSprites.Add(sprite);
-            runtimeTiles.Add(tile);
-        }
-    }
-
-    private void OnDestroy() => DestroyRuntimeAssets();
-
-    private void DestroyRuntimeAssets()
-    {
-        for (int i = 0; i < runtimeTiles.Count; i++)
-            DestroyRuntimeAsset(runtimeTiles[i]);
-        for (int i = 0; i < runtimeSprites.Count; i++)
-            DestroyRuntimeAsset(runtimeSprites[i]);
-        runtimeTiles.Clear();
-        runtimeSprites.Clear();
-        boundTexture = null;
-    }
-
-    private static void DestroyRuntimeAsset(Object target)
-    {
-        if (target == null)
-            return;
-        if (Application.isPlaying)
-            Destroy(target);
-        else
-            DestroyImmediate(target);
     }
 
     private static float Next01(ref uint state) =>
@@ -273,4 +262,123 @@ public sealed class ChunkGrassRenderer : MonoBehaviour, IChunkViewRenderer
             return state == 0u ? 0x9E3779B9u : state;
         }
     }
+
+    #endregion
+
+    #region 跨区块 Sprite 共享
+
+    /// <summary>同一草地纹理配置只创建一组变体 Sprite，保持 BRG 网格和批次跨区块复用。</summary>
+    private static class GrassSpriteVariantCache
+    {
+        private static readonly Dictionary<SpriteSetKey, Sprite[]> spriteSets = new();
+
+        static GrassSpriteVariantCache()
+        {
+            SharedSpriteMeshCache.Clearing += Clear;
+        }
+
+        /// <summary>命中配置缓存；首次使用时按纹理网格切片创建共享 Sprite。</summary>
+        public static Sprite[] Get(Texture2D texture, int count, int maxColumns, int sizePixels, float ppu)
+        {
+            var key = new SpriteSetKey(texture, count, maxColumns, sizePixels, ppu);
+            if (spriteSets.TryGetValue(key, out Sprite[] existing))
+                return existing;
+
+            int rows = texture.height / sizePixels;
+            int columns = Mathf.Min(maxColumns, texture.width / sizePixels);
+            int availableCount = Mathf.Min(count, rows * columns);
+            if (availableCount == 0)
+                throw new InvalidOperationException("草地源贴图尺寸不足以切出任何变体。");
+
+            var sprites = new Sprite[availableCount];
+            try
+            {
+                for (int index = 0; index < availableCount; index++)
+                {
+                    int column = index % columns;
+                    int rowFromTop = index / columns;
+                    int y = texture.height - (rowFromTop + 1) * sizePixels;
+                    Sprite sprite = Sprite.Create(
+                        texture,
+                        new Rect(column * sizePixels, y, sizePixels, sizePixels),
+                        new Vector2(0.5f, 0.5f),
+                        ppu,
+                        0,
+                        SpriteMeshType.Tight);
+                    sprite.name = "ChunkGrassDetail_" + index;
+                    sprite.hideFlags = HideFlags.HideAndDontSave;
+                    sprites[index] = sprite;
+                }
+            }
+            catch
+            {
+                DestroySprites(sprites);
+                throw;
+            }
+
+            spriteSets.Add(key, sprites);
+            return sprites;
+        }
+
+        /// <summary>共享网格缓存通知后，BRG 已释放引用，可销毁本缓存自有的运行时 Sprite。</summary>
+        private static void Clear()
+        {
+            foreach (Sprite[] sprites in spriteSets.Values)
+                DestroySprites(sprites);
+            spriteSets.Clear();
+        }
+
+        private static void DestroySprites(Sprite[] sprites)
+        {
+            for (int i = 0; i < sprites.Length; i++)
+            {
+                Sprite sprite = sprites[i];
+                if (sprite == null)
+                    continue;
+                if (Application.isPlaying)
+                    UnityEngine.Object.Destroy(sprite);
+                else
+                    UnityEngine.Object.DestroyImmediate(sprite);
+            }
+        }
+    }
+
+    /// <summary>区分纹理身份和切片配置，允许 MOD 注册不同草纹理与尺寸。</summary>
+    private readonly struct SpriteSetKey : IEquatable<SpriteSetKey>
+    {
+        private readonly Texture2D texture;
+        private readonly int count;
+        private readonly int columns;
+        private readonly int sizePixels;
+        private readonly float pixelsPerUnit;
+
+        public SpriteSetKey(Texture2D texture, int count, int columns, int sizePixels, float pixelsPerUnit)
+        {
+            this.texture = texture;
+            this.count = count;
+            this.columns = columns;
+            this.sizePixels = sizePixels;
+            this.pixelsPerUnit = pixelsPerUnit;
+        }
+
+        public bool Equals(SpriteSetKey other) =>
+            ReferenceEquals(texture, other.texture) && count == other.count && columns == other.columns &&
+            sizePixels == other.sizePixels && pixelsPerUnit.Equals(other.pixelsPerUnit);
+
+        public override bool Equals(object obj) => obj is SpriteSetKey other && Equals(other);
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                int hash = texture != null ? texture.GetInstanceID() : 0;
+                hash = (hash * 397) ^ count;
+                hash = (hash * 397) ^ columns;
+                hash = (hash * 397) ^ sizePixels;
+                return (hash * 397) ^ pixelsPerUnit.GetHashCode();
+            }
+        }
+    }
+
+    #endregion
 }

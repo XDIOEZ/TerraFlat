@@ -6,7 +6,7 @@ using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 /// <summary>
-/// 玩家死亡状态模块：监听 DamageReceiver 的死亡事件，处理濒死UI、重生与回主菜单。
+/// 玩家死亡状态模块：监听 Mod_DamageReceiver 的死亡事件，处理濒死UI、重生与回主菜单。
 /// 进入世界时从已加载的权威血量恢复濒死控制与界面，不重放死亡结算或掉落。
 /// </summary>
 public partial class Mod_PlayerDeathState : Module
@@ -55,15 +55,15 @@ public partial class Mod_PlayerDeathState : Module
     public SaveData Data = new SaveData(); // 运行时数据
 
     private Player _player; // 玩家引用
-    private DamageReceiver _damageReceiver; // 血量模块
-    private BuffManager _buffManager; // Buff 状态模块
+    private Mod_DamageReceiver _damageReceiver; // 血量模块
+    private Mod_BuffManager _buffManager; // Buff 状态模块
     private Mod_Food _food; // 食物模块
     private Mod_Temperature _temperature; // 体温模块
-    private GameController _gameController; // 输入控制器
-    private Mover _mover; // 移动模块
+    private Mod_GameController _gameController; // 输入控制器
+    private Mod_Mover _mover; // 移动模块
     private Mod_ChunkLoader _chunkLoader; // 区块加载模块
     private Rigidbody2D _rb; // 刚体缓存
-    private PlayerAdminController _adminController; // 管理员无敌状态
+    private Mod_PlayerAdminController _adminController; // 管理员无敌状态
 
     private bool _isInDyingState; // 是否已进入濒死
     private bool _forceSuicideRequested; // 设置页强制自杀请求，绕过管理员无敌
@@ -101,25 +101,25 @@ public partial class Mod_PlayerDeathState : Module
             throw new MissingComponentException("[Mod_PlayerDeathState] 当前 item 不是 Player，无法启用玩家死亡状态模块");
         }
 
-        _damageReceiver = item.itemMods.GetMod_ByID<DamageReceiver>(ModText.Hp);
+        _damageReceiver = item.itemMods.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
         if (_damageReceiver == null)
         {
-            throw new MissingComponentException("[Mod_PlayerDeathState] 玩家缺少 DamageReceiver，无法监听死亡事件");
+            throw new MissingComponentException("[Mod_PlayerDeathState] 玩家缺少 Mod_DamageReceiver，无法监听死亡事件");
         }
 
-        _gameController = item.itemMods.GetMod_ByID<GameController>(ModText.Controller);
+        _gameController = item.itemMods.GetMod_ByID<Mod_GameController>(ModText.Controller);
         if (_gameController == null)
         {
-            throw new MissingComponentException("[Mod_PlayerDeathState] 玩家缺少 GameController，无法锁定输入");
+            throw new MissingComponentException("[Mod_PlayerDeathState] 玩家缺少 Mod_GameController，无法锁定输入");
         }
 
         _food = item.itemMods.GetMod_ByID<Mod_Food>(ModText.Food);
-        _buffManager = item.itemMods.GetMod_ByID<BuffManager>(ModText.BuffManager);
+        _buffManager = item.itemMods.GetMod_ByID<Mod_BuffManager>(ModText.Mod_BuffManager);
         _temperature = item.itemMods.GetMod_ByID<Mod_Temperature>(ModText.Temperature);
-        _mover = item.itemMods.GetMod_ByID<Mover>(ModText.Mover);
+        _mover = item.itemMods.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover);
         _chunkLoader = item.itemMods.GetMod_ByID<Mod_ChunkLoader>(ModText.ChunkLoader);
         _rb = item.GetComponent<Rigidbody2D>();
-        _adminController = _player.GetComponentInChildren<PlayerAdminController>(true);
+        _adminController = _player.GetComponentInChildren<Mod_PlayerAdminController>(true);
 
         // 标准世界进入期间的新玩家由 GameManager 确认最终陆地后写入；其它路径仍需补齐。
         EnsureMainWorldSpawnPoint();
@@ -130,6 +130,8 @@ public partial class Mod_PlayerDeathState : Module
         // 模块 Load 顺序不保证生命数据先就绪，等全部玩家模块加载完成后再恢复状态。
         GameManager.Event_PlayerEnterWorld -= RestoreDyingStateOnWorldEnter;
         GameManager.Event_PlayerEnterWorld += RestoreDyingStateOnWorldEnter;
+        GameManager.Event_LocalPlayerRuntimeReloaded -= RestoreDyingStateOnWorldEnter;
+        GameManager.Event_LocalPlayerRuntimeReloaded += RestoreDyingStateOnWorldEnter;
     }
 
     public override void Save()
@@ -141,6 +143,7 @@ public partial class Mod_PlayerDeathState : Module
     public override void Unload()
     {
         GameManager.Event_PlayerEnterWorld -= RestoreDyingStateOnWorldEnter;
+        GameManager.Event_LocalPlayerRuntimeReloaded -= RestoreDyingStateOnWorldEnter;
         if (_damageReceiver != null)
         {
             _damageReceiver.OnDead -= OnPlayerDead;
@@ -393,8 +396,13 @@ public partial class Mod_PlayerDeathState : Module
             gameManager.BeginRespawnLoadingPresentation();
 
         _dyingPanel?.Close();
-        item.transform.position = new Vector3(respawnPosition.x, respawnPosition.y, 0f);
-        _player.Data.transform.position = item.transform.position;
+        Vector3 logicalRespawnPosition = WorldTopologyRuntime.NormalizePosition(
+            new Vector3(respawnPosition.x, respawnPosition.y, 0f));
+        Vector3 presentationRespawnPosition = WorldLocalPresentation.ProjectPosition(logicalRespawnPosition);
+        item.transform.position = presentationRespawnPosition;
+        if (_rb != null)
+            _rb.position = presentationRespawnPosition;
+        _player.Data.transform.position = logicalRespawnPosition;
         RestartChunkStreamingForRespawn();
 
         yield return null;
@@ -540,6 +548,7 @@ public partial class Mod_PlayerDeathState : Module
             return;
 
         GameManager.Event_PlayerEnterWorld -= RestoreDyingStateOnWorldEnter;
+        GameManager.Event_LocalPlayerRuntimeReloaded -= RestoreDyingStateOnWorldEnter;
         if (_damageReceiver.Hp > 0f || _isInDyingState)
             return;
 
@@ -610,7 +619,7 @@ public partial class Mod_PlayerDeathState : Module
     private bool HasAdminInvincibility()
     {
         if (_adminController == null && _player != null)
-            _adminController = _player.GetComponentInChildren<PlayerAdminController>(true);
+            _adminController = _player.GetComponentInChildren<Mod_PlayerAdminController>(true);
 
         return _adminController != null && _adminController.IsAdminInvincibilityEnabled;
     }

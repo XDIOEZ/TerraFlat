@@ -1,7 +1,7 @@
 using UnityEngine;
 
 /// <summary>
-/// 本地玩家的 GameObject 物理适配：消费 Bounds 归一化结果，并刷新 Chunk Loader 与既有 Wrap 通知。
+/// 本地玩家的局部平面适配：Rigidbody/Transform 保持连续，只把逻辑坐标规范化到环世界域。
 /// 保留 Prefab 脚本身份；不是数学核心，不能复制到 Jobs。
 /// </summary>
 [DisallowMultipleComponent]
@@ -11,6 +11,8 @@ public sealed class PlayerWorldWrapController : MonoBehaviour
     private Player player;
     private Rigidbody2D body;
     private Mod_ChunkLoader chunkLoader;
+    private bool hasPresentationImage;
+    private Vector2Int presentationImage;
 
     private void Awake()
     {
@@ -24,38 +26,60 @@ public sealed class PlayerWorldWrapController : MonoBehaviour
         TryWrapNow();
     }
 
-    /// <summary>Checks and applies one wrap operation. Public for focused runtime tests.</summary>
+    private void OnDisable()
+    {
+        WorldLocalPresentation.ClearAnchor(transform);
+        hasPresentationImage = false;
+    }
+
+    /// <summary>检测局部平面跨周并刷新逻辑世界；不会搬动 Rigidbody。保留公开入口供聚焦测试。</summary>
     public bool TryWrapNow()
     {
         if (player == null || body == null || !player.IsLocalProfile ||
             !WorldTopologyRuntime.TryGetActiveBounds(out WorldTopologyBounds bounds))
         {
+            hasPresentationImage = false;
             return false;
         }
 
         Vector2 current = body.position;
-        if (!IsFinite(current) || bounds.Contains(current))
+        if (!IsFinite(current))
+            return false;
+
+        bool firstAnchorBinding = !WorldLocalPresentation.HasAnchor;
+        WorldLocalPresentation.SetAnchor(transform);
+        Vector2 logical = bounds.NormalizePosition(current);
+
+        if (player.Data?.transform != null)
+            player.Data.transform.position = new Vector3(logical.x, logical.y, transform.position.z);
+
+        Vector2Int currentImage = ResolvePresentationImage(bounds, current);
+        if (!hasPresentationImage)
         {
+            presentationImage = currentImage;
+            hasPresentationImage = true;
+            if (firstAnchorBinding)
+                WorldTopologyRuntime.NotifyLocalPlayerWrapped();
             return false;
         }
 
-        Vector2 velocity = body.velocity;
-        Vector2 normalized = bounds.NormalizePosition(current);
-        float z = transform.position.z;
+        if (currentImage == presentationImage)
+            return false;
 
-        body.position = normalized;
-        body.velocity = velocity;
-        transform.position = new Vector3(normalized.x, normalized.y, z);
-
-        if (player.Data?.transform != null)
-        {
-            player.Data.transform.position = transform.position;
-        }
+        presentationImage = currentImage;
 
         if (chunkLoader != null)
             chunkLoader.RefreshAfterWorldWrap();
-        WorldTopologyRuntime.NotifyLocalPlayerWrapped(current, normalized);
+        // 这里只通知逻辑跨周；Transform 没有瞬移，因此不能触发 Cinemachine 的 OnTargetObjectWarped。
+        WorldTopologyRuntime.NotifyLocalPlayerWrapped();
         return true;
+    }
+
+    private static Vector2Int ResolvePresentationImage(WorldTopologyBounds bounds, Vector2 position)
+    {
+        return new Vector2Int(
+            Mathf.FloorToInt((position.x - bounds.Min.x) / bounds.Span.x),
+            Mathf.FloorToInt((position.y - bounds.Min.y) / bounds.Span.y));
     }
 
     private static bool IsFinite(Vector2 value)

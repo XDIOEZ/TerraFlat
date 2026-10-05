@@ -52,9 +52,10 @@ MonoBehaviour:
     Type: 0
     BitData: '{"Version":1}'
   MaxSpeed: 5
+  BoostSpeedMultiplier: 1.5
   Acceleration: 3
   Braking: 6
-  Mass: 60
+  FacingTurnSpeed: 30
   Radius: 0.35
   SeatOffset: {x: 0, y: 0.25}
   AllowsWater: 1

@@ -24,14 +24,16 @@ description: "Use when: 定位或修改 FlatWorld 的伤害、生命值、身体
 - 技能由 `GameRes.SkillDict` 注册；移动资源同时检查 Addressables `Skill` 标签。
 - Buff 生命周期属于 `flatworld-buff`；伤害 API 语义变化才联动 Buff/Environment，局部数值与表现无需扩散。
 - 正式 AI 的生命、防御、攻击伤害、伤害碰撞窗静态值来自 Actor JSON modules；当前生命和攻击者等运行态仍由存档/模块维护。
-- 历史武器/Actor 大量通过 Prefab 或 JSON 继承覆盖旧单值 `Damage`；迁移到四类伤害时只能在最终运行实例 `Load` 后读取合并结果，禁止在 `OnValidate` 提前固化父模板数值。
-- 树木、矿物等世界资源的 `DamageReceiver.Data` 会进入世界存档；调整 Prefab 防御时若旧存档也必须生效，要同步提升数据版本并在 `Load` 按稳定物品 ID 迁移，不能只改 Prefab。
+- 攻击与防御的新配置只写 `Physical`；`ImpactKind` 仅决定命中特效和刃伤出血资格。CombatDamage/CombatDefense 的旧四字段保留 MemoryPack 布局与历史 JSON 读取，攻击合计、防御取最大值；不得再逐槽抵扣，也不能把等值旧护甲加成四倍。
+- 生命配置使用 `CombatBalanceVersion`；提高版本时，GO 与自然 ECS 在读档后按旧生命比例迁移 `Hp/MaxHp` 和基础物理防御，不复活、不回满；同版本实例改造不能重复覆盖。
+- 工具弱点在防御后固定乘 2，非匹配乘 1，工具等级/效率不再影响倍率；未破防仍是 0。资源通过唯一 `Mod_ResourceHarvest` 或生命模块静态 `weakTool` 声明，禁止两处重复配置；树弱斧、矿弱镐、普通石块弱锤。所有工具仍可尝试攻击，科技门槛只由物理攻击和防御产生。
 - `DamageReceiver` 与实际受击 `Collider2D` 不保证位于同一节点；Collider 还可能位于同一 Item 的兄弟模块。组件解析在当前节点/父级/子级都失败时必须回到最近的 Item 根搜索完整子树；命中特效应优先使用碰撞回调传入的 Collider 定位，并在缺失时回退子级、父级或接收器中心，禁止直接假定 `receiver.GetComponent<Collider2D>()` 非空。
 - ItemDefinition 的模块 JSON 不应写入 `AttackEffects: []` 等 Unity 资源引用集合；运行时 `PopulateObject` 会用空数组覆盖 Prefab 引用，导致命中特效被清空。迁移器应跳过 `UnityEngine.Object` 集合。
 - 类型命中特效由 `Mod_Damage.impactEffectSet` 显式引用 `CombatImpactEffectSet`，`AttackEffects` 只放数字等每次都播放的通用反馈；不能用通用列表是否为空阻断命中形状。动画与数字统一读取攻击数值 `CombatDamage.DominantKind`，不要按武器名称分类或分别实现占比比较；映射资源留在 GamePlay 程序集，避免 Effect 反向引用战斗程序集。
 - 玩家自身的受击伤害数字与部位提示应在接收侧订阅 `DamageReceiver.OnDamageReceived` 统一保证，不能依赖攻击者 `Mod_Damage.AttackEffects`（AI 攻击资源可以为空）；部位提示必须读取同一笔 `DamageReceiverDamageInfo.BodyPartHits`，禁止再次随机部位。
 - 命中特效必须区分 `0` 与 `-1`：`0` 表示有效命中但被护甲完全抵消，应播放数字 0；`-1` 表示死亡、受伤冷却等无效结算，不应播放命中特效；可破坏 Tile 也应把零伤害命中返回给 `Mod_Damage`。
 - 概率命中状态不要硬编码进 `Mod_Damage`；伤害模块只发布实体命中目标与结算结果，`DamageOnHitBuffApplier` 等独立组件再通过目标 `BuffManager` 添加状态。`0` 仍属于有效实体命中并可触发状态，负数无效结算不触发；Tile 伤害不发布实体命中事件。
+- 资源工具身份不属于 `Mod_Damage`：镐等通用采集能力由 `Mod_ResourceTool` 提供，铲地能力由 `Mod_Shovel` 提供；这些模块通过 `ICombatDamageContextModifier` 把工具类别、等级和效率附加到伤害上下文。右键工具需要挥动表现时只消费 `IWeaponActionAnimation`，禁止把锄地、铲地、剪草等玩法重新塞进伤害模块。
 - 命中附加状态的层数由 `DamageOnHitBuffApplier.applicationStacks` 配置，并通过 `CombatOnHitBuff.Stacks` 同时传到两个后端；一次命中应原子施加完整层数，不能循环添加单层，否则潮湿免疫等强度比较会错误拒绝多层攻击。
 - 玩家进入 `Mod_PlayerDeathState` 濒死状态后，`Mod_Food` 等被动生命模块不得继续改写 `DamageReceiver.Hp`，否则会把死亡状态抬成极低正数。
 - 濒死控制与界面属于血量的派生运行态，须在本地玩家 `Event_PlayerEnterWorld`（全部模块加载后）按权威血量恢复；不能依赖模块 Load 顺序，也不能重放 `OnDead`，否则读档会重复死亡掉落。
@@ -39,32 +41,46 @@ description: "Use when: 定位或修改 FlatWorld 的伤害、生命值、身体
 - 武器的 `Mod_Damage` 必须是武器实例内的直接子物体，禁止再嵌套 `Mod_Damage.prefab` 实例；Prefab 组合可显式序列化跨模块引用，JSON 组合则必须在所有模块注册后通过 `IItemModuleDependencyBinder` 按唯一稳定 ID 绑定，禁止层级搜索或静默补建。攻击动画曲线只负责开关已存在的碰撞体。
 - 玩家手持的动画近战/工具统一由 `Mod_Weapon_AnimationAction` 在每一段实际 `StartAttack` 时通过持有者 `Mod_Stamina.TryConsumeStamina` 结算 `staminaCostPerAttack`；按住连击必须每段单独扣除，体力不足则不启动该段。基础消耗由 Item JSON 的模块参数配置并继续受全局体力消耗难度倍率影响，禁止按物品 ID 在战斗代码里硬编码；仍保留 `sourcePrefab` 的现行内容同步对应序列化值，避免后续迁移覆盖经济配置。
 - 旧式 `Mod_ColdWeapon` 仍通过 `ColdWeaponStaminaObserver.state.StaminaConsumeSpeed` 按秒扣除体力，基础值序列化在 `Assets/2_Prefabs/Gameplay/Modules/Combat/Mod_ColdWeapon.prefab`；批量调整“所有武器体力消耗”时必须同时覆盖动画武器、弓与该旧链路。`StaminaConsumeSpeedRate` 是独立倍率，不要在降低基础消耗时同时缩放两者而造成重复倍率。
-- 动画武器的伤害盒必须跟随 `Render` 下实际武器 `SpriteRenderer` 的局部位置、旋转、缩放与 Sprite 边界；同时处理 `flipX/flipY` 对 Pivot 偏移的反转。禁止把 `Mod_Damage` 固定在 `Render` 原点并沿用模板的默认 1×1 BoxCollider，否则武器旋转后会出现大面积错位。
+- 动画武器的伤害盒必须跟随 `Render` 下实际武器 `SpriteRenderer` 的局部位置、旋转、缩放，并优先用 Sprite 物理轮廓/紧致网格计算最小包围矩形；只有拿不到轮廓时才回退 Sprite bounds，同时处理 `flipX/flipY`。默认使用 `TightSprite`；斧、镐、矛、锄、铲这类统一朝右上姿势的工具可配置 `UpperRightQuadrant`，按标准姿势可见范围的右上四分之一生成伤害盒并继续随整段挥动动画移动。禁止为每把工具手写碰撞体偏移。
 - `Mod_Damage` 开启伤害窗口时必须主动扫描当前重叠目标，不能只依赖 `OnTriggerEnter2D`；玩家、AI 与技能统一走公共伤害窗口，避免碰撞体后开时漏掉已经重叠的接收器。
+- 动画武器按 `Mod_Weapon_AnimationAction` 模块资格在 Animator 更新后的 `LateUpdate` 登记窗口并逐帧查询 GO/ECS；`DamageInterval` 不能限制挥动采样，否则短窗口只查起始姿态。窗口命中集合跨帧保留、关闭时清空，目标受击冷却仍由接收侧裁定；非动画持续伤害保留周期 Pulse。
 - 标准物品武器的 `Mod_Damage.MaxAttackTargets` 默认统一为 `3`；特殊单体攻击可显式调低。Prefab 与 Item JSON 都可能覆盖 C# 默认值，调整默认目标数时必须同步检查这两类序列化配置。
 - `DamageSender` 与 `DamageReciver` 是战斗专用 Trigger 对，Physics2D 矩阵中两层都只能与彼此接触；交互、拾取、玩家身体和普通阻挡不得与任一伤害层建立接触对。`DamageReceiver` 必须自带同节点专用 Trigger Collider，禁止借用 Item 根的普通阻挡 Collider；冲撞技能等物理伤害发送器也必须归入 `DamageSender`。Tile/建筑伤害继续使用不依赖接触矩阵的显式空间查询。
 - 带 `Owner` 的武器、投射物仍保持伤害物品自身作为 `IDamageSender.attacker`，兼容资源节点、难度与既有结算语义；防自伤只在 Trigger、主动重叠扫描和最终结算入口额外排除 `item.Owner`，禁止为了防自伤全局改写攻击者身份。
 - 受击后附加状态统一消费 `DamageReceiverDamageInfo`，具体规则通过 `DamageReceivedStatusEffectRegistry` 注册，禁止把出血/中毒等业务硬编码进 `Mod_Damage`。需要按真实伤害类型判定时读取 `ResolvedDamageValues`（已应用难度、防御和受击倍率），并按 `DamageValue` 裁掉过量伤害；玩家/动物出血只认切割、穿刺、劈砍分量，纯钝击和被防御完全抵消的分量不能触发。
-- 玩家弓类远程武器使用 `Mod_Bow` 监听 `GameController.AttackStarted/AttackEnded` 完成按住蓄力与松开发射；持续拉弓时通过持有者的 `Mod_Stamina` 按秒消耗体力，松开、取消或卸载后必须立即停止消耗，消耗统一走 `Mod_Stamina.AddStamina` 以保留难度倍率。弹药只通过通用 `Arrow` 标签和同库存事务选择，不按木/石/铜/铁写特殊分支。箭矢自身组合 `Mod_Projectile + Mod_Damage`：前者只负责飞行、蓄力倍率与落地回收，后者继续作为唯一伤害发送器；两者用 `IItemModuleDependencyBinder` 显式绑定，使新增 MOD 箭种只需遵守相同模块契约即可接入。不同弓身的伤害差异统一通过 `Mod_Bow.ProjectileDamageMultiplier` 传给 `Mod_Projectile.Launch`，禁止为某把弓复制箭矢定义或直接改箭矢基础伤害。
+- 玩家弓类远程武器使用 `Mod_Bow` 监听 `GameController.AttackStarted/AttackEnded` 完成按住蓄力与松开发射；持续拉弓时通过持有者的 `Mod_Stamina.ConsumeStaminaPerSecond` 以稳定来源 `flatworld.combat.bow_charge` 按秒消耗体力，松开、取消或卸载后必须立即停止消耗，难度倍率仍由体力权威模块统一应用。弹药只通过通用 `Arrow` 标签和同库存事务选择，不按木/石/铜/铁写特殊分支。箭矢自身组合 `Mod_Projectile + Mod_Damage`：前者只负责飞行、蓄力倍率与落地回收，后者继续作为唯一伤害发送器；两者用 `IItemModuleDependencyBinder` 显式绑定，使新增 MOD 箭种只需遵守相同模块契约即可接入。不同弓身的伤害差异统一通过 `Mod_Bow.ProjectileDamageMultiplier` 传给 `Mod_Projectile.Launch`，禁止为某把弓复制箭矢定义或直接改箭矢基础伤害。
+- 远程武器贴图主轴或握持锚点不在 Sprite 中心时，用 `Mod_Bow` 的手持视觉局部姿态只校正手持实例，并用局部管口坐标统一驱动真实投射物与轨迹预览生成点；禁止为了修手持锚点直接改世界 Sprite Pivot，避免落地坐标、拾取范围和对象池复用一起偏移。
+- 蓄力武器的额外发射效果由同一物品上的 `IProjectileChargeModifier` 模块组合提供；`Mod_Bow` 只在有效弹药开始蓄力后通知模块，并在松开或取消时收束其运行态，`Mod_Projectile` 分别接收速度和伤害倍率。麦克风采集只能由本地玩家的修饰模块在蓄力期间持有，结束、失焦、卸载时立即停止；音量状态不存档，也不复制一套箭矢定义。
 - 高速箭矢不能只依赖 Trigger 回调和 Rigidbody2D Continuous；`Mod_Projectile` 应使用 `Mod_Damage` 的实际伤害盒对上一帧到当前帧做 NonAlloc 形状扫掠，再把命中交回 `Mod_Damage` 的统一结算入口，避免高速穿过窄目标时漏伤害。
+- 自然资源树木的纯数据受击 `HitBounds` 必须至少覆盖其阻挡 `BodyBounds`；树干物理范围变大时不能留下“能撞到但打不到”的边缘区域，否则投射物会先被静态阻挡反弹而没有进入伤害结算。
+- ECS 树木的区块障碍 Collider 通过 `GameplayCombatBridge` 的内部物理目标契约绑定原生 Record，投射物直接转交 Unity 命中的 Collider 与世界接触点；近战仍通过独立受击投影查询。两路共用窗口预约与 `ApplyWeaponHit`，不创建 GO 生命模块、不再次按点猜目标。Collider 回池/卸载必须解除绑定，环形镜像继承源目标，身份变化也须递增投影版本；已有物理反弹的零伤害回执只补表现，禁止再次反射速度。
 - 箭矢损坏回收材料由 `Mod_Projectile` 读取当前物品对应的普通合成配方并从 `ExactItem` 输入中按用量权重选一份，禁止在战斗代码里硬编码木棍、石料或金属；Tag 输入无法还原本次实际消耗的具体物品，因此没有可确定的精确材料时应跳过回收，不允许猜测生成物。
+- “命中硬目标后变成其他物品”属于具体丢弃物能力，当前由 `Mod_DiscardFlightDamage` 的显式参数开启；禁止再用 `Stone` 等材质 Tag 在通用 `Mod_Projectile` 内隐式触发，否则石箭等同材质投射物会串行为。
 - 可回收箭矢命中 `DamageReceiver` 后的“插在目标身上”状态由 `Mod_Projectile` 保存相对目标 Item 根节点的局部姿态并逐帧同步；箭矢仍保持独立 Runtime Item，不改挂到 Actor 层级。跟随移动时必须调用 `ItemMgr.NotifyRuntimeItemMoved` 刷新空间索引，目标失效后解除附着并保留箭矢最后世界位置，确保拾取、对象池和世界索引不被父子层级关系破坏。
 - 出血资格使用稳定 `Blood` 标签表达“该实体有血”，不要用 `Player`/`Animal` 类型或物种标签代替。玩家和有血动物可以同时保留自己的分类标签；幽灵、机械体等无血实体只要不声明 `Blood` 就不会触发刃伤出血规则，MOD 生物也通过同一标签接入。
-- 拆墙工具类别与建筑克制倍率是两个独立配置：`TileDamageToolKind.Hammer` 只表达工具类别/门槛，`IBuildingDamageSource.BuildingDamageMultiplier` 表达目标完成防御后的伤害倍率；木锤等锤类需在 Item JSON 显式配置建筑倍率。动态建筑在防御后应用倍率，格子建筑必须先完成自身 `MinimumWeaponDamage` 最低有效伤害规则，再对这个最终有效伤害应用倍率，因此石墙保底 1 点在木锤的 10 倍建筑克制下最终为 10 点。未被建筑规则判定为有效的 0 伤害仍不得被倍率放大。
+- Tile 的 `RequiredTool` 现为工具弱点，和 `health.weakTool` 共用防御后两倍规则；没有工具硬拒绝、最低伤害保底或旧建筑十倍倍率。`MinimumWeaponDamage`/`BuildingDamageMultiplier` 仅保留序列化与 API 兼容，禁止恢复绕过防御的拆墙规则。
 
 ## ECS 与旧战斗的共同契约
 
-- `Shared/Combat/CombatContext.cs` 位于无 GamePlay 依赖的公共程序集，固定值身份与四类伤害可进入 Burst。两个后端共用难度/防御、实际损失裁剪与刃伤出血阈值；managed CombatDamage 只在旧入口与反馈边界转换。
+- 接触伤害由独立 `Mod_ContactDamage` 的 `Settings` 组合，资源后端由 `NaturalEntityEcsProfileCompiler` 编译并仅遍历已登记的伤害源；两个后端共用 `ContactDamageRuntime`，只查询真实身体、按完整目标身份限频，再调用 `Hurt(CombatDamageContext)`。不得用武器/拾取 Trigger 代替身体、伤及空中目标、在客户端重复扣血或补算离线接触；采集、死亡、卸载与配置停用立即移除来源，冷却不进入存档。
+
+- `Shared/Combat/CombatContext.cs` 的 `CombatRules.ResolvePhysical` 是共同物理公式；旧 float4 只带表现比例，`Resolve` 先合计攻击并扣一次物理防御。两个后端共用难度、实际损失裁剪与刃伤出血阈值。
 - `Hurt(IDamageSender)` 保留原来发送端 Item 与旧规则，然后适配同一生命提交核心；`Hurt(in CombatDamageContext)` 使用明确 Source/Credit 和模拟 Tick/Time。ECS 来源不提供旧 Item 引用，消费方应读取 `DamageReceiverDamageInfo.Context`，不可把其旧 Attacker 字段为空解释成环境攻击或丢弃击杀归因。
+- 阵营配置注册仍严格校验 96 字符限制，进入 Native 目录前另查 UTF-8 字节容量；接收 Native 命中必须先验证长度再解码。非法阵营返回无效命中 `-1` 并限次记录来源身份、Tick 和有限原始字节，不截断、不改为空阵营、不消耗受伤冷却，也不能让单次坏数据中断整轮 AI 更新。
 - 武器自身 Source 与 Owner 的 Credit 分开；generation/world/dimension 必须随事件传递。模拟时间使用 double，不能把同一渲染帧的多个 ECS Tick 都改成 Time.time，否则受伤间隔与 Buff 结算会漂移。旧对象的专属 incoming rule 未提供纯上下文实现时必须显式拒绝，不能绕过资源/建筑门槛。
-- `Mod_Damage` 仅在实际窗口或周期 Pulse 导出 Box OBB，通过少量 GameplayCombatBridge 查询原生空间桶；GO 与 ECS 共用 MaxAttackTargets 和窗口预约集合。Sequence/Window/Pulse 在生产处保持唯一，原生普通攻击每次 Active 只生产一次；新增技能也必须在真实 Pulse 生成事件，不能靠每帧扫描后交给生命层去重。
+- `Mod_Damage` 仅在实际窗口或周期 Pulse 导出 `AttackShape2D` 范围描述；各数据后端用空间桶收集候选，临时投影受击 `Collider2D`，统一由 Physics2D Overlap/BoxCast 判几何命中。`AttackShape2D` 不实现命中相交算法；身份、阵营、LOS、配额和伤害仍归数据逻辑。GO 与 ECS 共用 MaxAttackTargets 和窗口预约集合，Sequence/Window/Pulse 在生产处保持唯一。
 - AIECS 的近战接敌资格由目标级 `Engagement Slot` 批量裁决，而不是导航格占位；新的起手动作需要当前槽位资格，已进入既有动作阶段的实体继续使用原有锁定时序。槽位只控制同时接近目标的数量，最终有效性仍由现有距离、方向、LOS 与阵营规则确认。
 - 命中附加状态由 `ICombatDamageContextModifier` 组合导出，装配时从 ItemMods 已注册表缓存；上下文的 FixedList 容量在装配时校验，不能热路径静默截断。旧命中回调与纯数据结算各自应用一次；0 伤害有效命中仍可触发附加 Buff，负数拒绝结果不可触发，出血必须有实际刃伤。
+- 同一 Item 可以合法存在多个 `Mod_Damage` 伤害盒；`Mod_Damage` 自身是上下文聚合器，缓存 `ICombatDamageContextModifier` 时必须排除所有其它 `Mod_Damage`，否则多个聚合器会互相调用并造成栈溢出。
 - 原生同目标命中按时间/攻击键分组串行提交、不同目标并行；死亡与掉落先锁存一次性状态再发布。死亡事件携带 Entity，尸体按时间排队批量回收，掉落按预算消费，不得每次死亡扫描全体实体或一次创建全部掉落。旧投射物扫掠/附着、完整技能、生态掉落修饰尚未迁移，不能因近战 Bridge 已接通而宣称全战斗兼容。
 
 ## 验证
 
-- `Mod_Projectile.UseVisibleArc` 的可见轨迹由逐帧模块更新持有：显式提交 Rigidbody2D 和 Transform 姿态，并关闭物理插值，不能只写刚体位置再等待物理帧显示。阻力采用指数衰减的解析位移积分，避免射程依赖渲染帧率；普通物理投射物仍保留自身插值。
+- 投射物的地面位移由 Dynamic Rigidbody2D 负责；`UseVisibleArc` 仅按虚拟高度偏移视觉和攻击传感器。实体碰撞盒与伤害 Trigger 分开；撞到带 `DamageReceiver` 的实体时必须先完成统一伤害结算：实际伤害大于 0 走正常命中/回收/附着流程，只有有效 0 伤害（被防御完全抵消）才允许反弹，不能让 Physics2D 抢先把可造成伤害的箭弹走。目标身份、阵营、距离、次数与伤害始终由数据和 `CombatRules` 裁定。
+- 投射物进入反弹状态后，视觉转速应跟随刚体线速度同步衰减，并持续到刚体实际停止或飞行结束；不能用固定短时长让旋转提前停掉。
+- 需要精确抛物线预判的 `UseVisibleArc` 投掷物必须让地面位移保持匀速，并由 `Mod_Projectile` 的同一速度/时长/虚拟重力公式同时驱动真实飞行与预览；预览只在蓄力期间显示并随蓄力延长，落点圆环表示无碰撞情况下的预计终点，禁止另写一套近似曲线。
+- 可见抛物线处于 `AirborneOnly` 时禁用地面实体碰撞盒，不能让地面投影推动尚无受击资格的动物；落地段在物理步之前按最近实体接触补做统一伤害判定。伤害盒容错与实体碰撞尺寸分开配置，逻辑闪避不重掷概率，并在本次飞行中排除该目标的实体碰撞；回收、卸载与再次发射统一撤销临时排除。
+- 消耗外部弹药的抛掷武器仍组合 `Mod_Bow`；可用 `AmmoItemId` 精确筛选同库存弹药，留空则沿用 `AmmoTag`。开启轨迹预览时读取实际弹药定义与模块 Prefab 默认值，并缓存 `Mod_Projectile.TrajectorySettings`；弹药或资源定义变化后更新缓存，禁止为了预判生成临时 Item 或复制弹药的投射参数。
 
 - 覆盖攻击→受伤→死亡→掉落，确认事件只触发一次、随机输入固定、池化特效每次重置。
 

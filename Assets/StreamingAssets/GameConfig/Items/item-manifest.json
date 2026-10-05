@@ -2,6 +2,11 @@
   "schemaVersion": 1,
   "packages": [
     {
+      "id": "snowball",
+      "path": "shells/snowball.json",
+      "enabled": true
+    },
+    {
       "id": "vehicles",
       "path": "shells/vehicles.json",
       "enabled": true
@@ -32,6 +37,41 @@
       "enabled": true
     },
     {
+      "id": "bird_egg",
+      "path": "shells/bird_egg.json",
+      "enabled": true
+    },
+    {
+      "id": "textiles",
+      "path": "shells/textiles.json",
+      "enabled": true
+    },
+    {
+      "id": "gold",
+      "path": "shells/gold.json",
+      "enabled": true
+    },
+    {
+      "id": "diamond",
+      "path": "shells/diamond.json",
+      "enabled": true
+    },
+    {
+      "id": "obsidian",
+      "path": "shells/obsidian.json",
+      "enabled": true
+    },
+    {
+      "id": "iron_bucket",
+      "path": "shells/iron_bucket.json",
+      "enabled": true
+    },
+    {
+      "id": "sulfur",
+      "path": "shells/sulfur.json",
+      "enabled": true
+    },
+    {
       "id": "resource_nodes",
       "path": "shells/resource_nodes.json",
       "enabled": true
@@ -52,6 +92,11 @@
       "enabled": true
     },
     {
+      "id": "electrical",
+      "path": "shells/electrical.json",
+      "enabled": true
+    },
+    {
       "id": "hand_drill",
       "path": "shells/hand_drill.json",
       "enabled": true
@@ -69,6 +114,11 @@
     {
       "id": "chili",
       "path": "shells/chili.json",
+      "enabled": true
+    },
+    {
+      "id": "cactus",
+      "path": "shells/cactus.json",
       "enabled": true
     },
     {
@@ -119,6 +169,16 @@
     {
       "id": "wooden_barrel",
       "path": "shells/wooden_barrel.json",
+      "enabled": true
+    },
+    {
+      "id": "fishing",
+      "path": "shells/fishing.json",
+      "enabled": true
+    },
+    {
+      "id": "conveyor",
+      "path": "shells/conveyor.json",
       "enabled": true
     }
   ]

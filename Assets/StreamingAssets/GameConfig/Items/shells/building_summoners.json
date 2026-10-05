@@ -14,6 +14,7 @@
     },
     {
       "id": "BlastFurnace_Summoner",
+      "worldDropBehavior": "interactive",
       "parent": "BuildingSummoner_Base",
       "sourcePrefab": "Assets/2_Prefabs/World/Buildings/Summoners/BlastFurnace_Summoner.prefab",
       "gameName": "高炉",
@@ -73,13 +74,10 @@
       },
       "health": {
         "hasHp": true,
-        "hp": 180.0,
-        "maxHp": 180.0,
+        "hp": 60,
+        "maxHp": 60,
         "defense": {
-          "cutting": 8.0,
-          "piercing": 8.0,
-          "chopping": 8.0,
-          "blunt": 8.0
+          "physical": 8.0
         },
         "moduleLocalPosition": {
           "x": 0.0,
@@ -99,7 +97,9 @@
             "y": 1.0
           },
           "edgeRadius": 0.0
-        }
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
       },
       "modules": {
         "建筑模块": {
@@ -139,6 +139,7 @@
     },
     {
       "id": "Bonfire_Summoner",
+      "worldDropBehavior": "interactive",
       "parent": "BuildingSummoner_Base",
       "sourcePrefab": "Assets/2_Prefabs/World/Buildings/Summoners/Bonfire_Summoner.prefab",
       "gameName": "篝火",
@@ -198,13 +199,10 @@
       },
       "health": {
         "hasHp": true,
-        "hp": 180.0,
-        "maxHp": 180.0,
+        "hp": 60,
+        "maxHp": 60,
         "defense": {
-          "cutting": 8.0,
-          "piercing": 8.0,
-          "chopping": 8.0,
-          "blunt": 8.0
+          "physical": 8.0
         },
         "moduleLocalPosition": {
           "x": 0.0,
@@ -224,7 +222,9 @@
             "y": 1.0
           },
           "edgeRadius": 0.0
-        }
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
       },
       "modules": {
         "建筑模块": {
@@ -264,6 +264,7 @@
     },
     {
       "id": "Chest_Wood_Summoner",
+      "worldDropBehavior": "interactive",
       "parent": "BuildingSummoner_Base",
       "sourcePrefab": "Assets/2_Prefabs/World/Buildings/Summoners/Chest_Wood_Summoner.prefab",
       "gameName": "木箱",
@@ -276,7 +277,9 @@
       "stackable": true,
       "canBePickedUp": true,
       "tags": [
-        "35"
+        "35",
+        "Wood",
+        "Combustion.Fuel"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Building/Tileset.png[Tileset_77]",
@@ -323,13 +326,10 @@
       },
       "health": {
         "hasHp": true,
-        "hp": 180.0,
-        "maxHp": 180.0,
+        "hp": 50,
+        "maxHp": 50,
         "defense": {
-          "cutting": 8.0,
-          "piercing": 8.0,
-          "chopping": 8.0,
-          "blunt": 8.0
+          "physical": 3
         },
         "moduleLocalPosition": {
           "x": 0.0,
@@ -349,7 +349,9 @@
             "y": 1.0
           },
           "edgeRadius": 0.0
-        }
+        },
+        "weakTool": 3,
+        "combatBalanceVersion": 1
       },
       "modules": {
         "建筑模块": {
@@ -359,6 +361,18 @@
           "data": {
             "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Chest_Wood\",\"SummonerPrefabId\":\"Chest_Wood_Summoner\"}",
             "Type": 0
+          }
+        },
+        "燃料模块": {
+          "prefab": "Module_Fuel",
+          "id": "燃料模块",
+          "enabled": true,
+          "data": { "BitData": [], "Type": 0 },
+          "parameters": {
+            "Data": { "Fuel": { "x": 50.0, "y": 50.0 }, "MaxTemperature": 500.0 },
+            "lightBaseIntensity": 1.0,
+            "burnSpeedMultiplier": 1.0,
+            "igniteWhileHeld": false
           }
         }
       },
@@ -389,6 +403,7 @@
     },
     {
       "id": "Door_Stone_Summoner",
+      "worldDropBehavior": "interactive",
       "parent": "BuildingSummoner_Base",
       "sourcePrefab": "Assets/2_Prefabs/World/Buildings/Summoners/Door_Stone_Summoner.prefab",
       "gameName": "石门",
@@ -448,13 +463,10 @@
       },
       "health": {
         "hasHp": true,
-        "hp": 180.0,
-        "maxHp": 180.0,
+        "hp": 60,
+        "maxHp": 60,
         "defense": {
-          "cutting": 8.0,
-          "piercing": 8.0,
-          "chopping": 8.0,
-          "blunt": 8.0
+          "physical": 8.0
         },
         "moduleLocalPosition": {
           "x": 0.0,
@@ -474,7 +486,9 @@
             "y": 1.0
           },
           "edgeRadius": 0.0
-        }
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
       },
       "modules": {
         "建筑模块": {
@@ -514,6 +528,7 @@
     },
     {
       "id": "Door_Wood_Summoner",
+      "worldDropBehavior": "interactive",
       "parent": "BuildingSummoner_Base",
       "sourcePrefab": "Assets/2_Prefabs/World/Buildings/Summoners/Door_Wood_Summoner.prefab",
       "gameName": "木门",
@@ -526,7 +541,9 @@
       "stackable": true,
       "canBePickedUp": true,
       "tags": [
-        "35"
+        "35",
+        "Wood",
+        "Combustion.Fuel"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Building/Door_Wood_Close.png[Door_Wood_Close]",
@@ -573,13 +590,10 @@
       },
       "health": {
         "hasHp": true,
-        "hp": 180.0,
-        "maxHp": 180.0,
+        "hp": 50,
+        "maxHp": 50,
         "defense": {
-          "cutting": 8.0,
-          "piercing": 8.0,
-          "chopping": 8.0,
-          "blunt": 8.0
+          "physical": 3
         },
         "moduleLocalPosition": {
           "x": 0.0,
@@ -599,7 +613,9 @@
             "y": 1.0
           },
           "edgeRadius": 0.0
-        }
+        },
+        "weakTool": 3,
+        "combatBalanceVersion": 1
       },
       "modules": {
         "建筑模块": {
@@ -609,6 +625,18 @@
           "data": {
             "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Door_Wood\",\"SummonerPrefabId\":\"Door_Wood_Summoner\"}",
             "Type": 0
+          }
+        },
+        "燃料模块": {
+          "prefab": "Module_Fuel",
+          "id": "燃料模块",
+          "enabled": true,
+          "data": { "BitData": [], "Type": 0 },
+          "parameters": {
+            "Data": { "Fuel": { "x": 50.0, "y": 50.0 }, "MaxTemperature": 500.0 },
+            "lightBaseIntensity": 1.0,
+            "burnSpeedMultiplier": 1.0,
+            "igniteWhileHeld": false
           }
         }
       },
@@ -639,6 +667,7 @@
     },
     {
       "id": "Meatrack_Summoner",
+      "worldDropBehavior": "interactive",
       "parent": "BuildingSummoner_Base",
       "sourcePrefab": "Assets/2_Prefabs/World/Buildings/Summoners/Meatrack_Summoner.prefab",
       "gameName": "晾肉架",
@@ -698,13 +727,10 @@
       },
       "health": {
         "hasHp": true,
-        "hp": 180.0,
-        "maxHp": 180.0,
+        "hp": 60,
+        "maxHp": 60,
         "defense": {
-          "cutting": 8.0,
-          "piercing": 8.0,
-          "chopping": 8.0,
-          "blunt": 8.0
+          "physical": 8.0
         },
         "moduleLocalPosition": {
           "x": 0.0,
@@ -724,7 +750,9 @@
             "y": 1.0
           },
           "edgeRadius": 0.0
-        }
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
       },
       "modules": {
         "建筑模块": {
@@ -732,7 +760,7 @@
           "id": "建筑模块",
           "enabled": false,
           "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Meatrack\",\"SummonerPrefabId\":\"Meatrack_Summoner\"}",
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Mod_Meatrack\",\"SummonerPrefabId\":\"Meatrack_Summoner\"}",
             "Type": 0
           }
         }
@@ -764,6 +792,7 @@
     },
     {
       "id": "MineEntrance_Summoner",
+      "worldDropBehavior": "interactive",
       "parent": "BuildingSummoner_Base",
       "sourcePrefab": "Assets/2_Prefabs/World/Buildings/Summoners/MineEntrance_Summoner.prefab",
       "gameName": "矿坑入口",
@@ -779,7 +808,8 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Building/Wall_Stone_Medium.png[Wall_Stone_Medium]",
+        "spriteAddress": "Assets/6_Art/Generated/Building/MineEntrance/MineEntrance_Artificial_Idle.png",
+        "materialAddress": "Assets/9_Shaders/Material/Ground-Facility-Lit.mat",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -796,9 +826,9 @@
           "z": 1.0
         },
         "color": {
-          "r": 0.28,
-          "g": 0.22,
-          "b": 0.18,
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
           "a": 1.0
         },
         "flipX": false,
@@ -808,7 +838,7 @@
         "collider": {
           "type": "BoxCollider2D",
           "enabled": true,
-          "isTrigger": false,
+          "isTrigger": true,
           "offset": {
             "x": 0.0,
             "y": 0.0
@@ -823,13 +853,10 @@
       },
       "health": {
         "hasHp": true,
-        "hp": 180.0,
-        "maxHp": 180.0,
+        "hp": 60,
+        "maxHp": 60,
         "defense": {
-          "cutting": 8.0,
-          "piercing": 8.0,
-          "chopping": 8.0,
-          "blunt": 8.0
+          "physical": 8.0
         },
         "moduleLocalPosition": {
           "x": 0.0,
@@ -849,13 +876,20 @@
             "y": 1.0
           },
           "edgeRadius": 0.0
-        }
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
       },
       "modules": {
         "建筑模块": {
           "prefab": "Module_Building",
           "id": "建筑模块",
           "enabled": false,
+          "parameters": {
+            "PlacementLayer": "Ground",
+            "LightOcclusionMode": "None",
+            "CastSunShadow": false
+          },
           "data": {
             "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"MineEntrance\",\"SummonerPrefabId\":\"MineEntrance_Summoner\"}",
             "Type": 0
@@ -889,6 +923,7 @@
     },
     {
       "id": "Scarecrow_Summoner",
+      "worldDropBehavior": "interactive",
       "parent": "BuildingSummoner_Base",
       "sourcePrefab": "Assets/2_Prefabs/World/Buildings/Summoners/Scarecrow_Summoner.prefab",
       "gameName": "稻草人",
@@ -948,13 +983,10 @@
       },
       "health": {
         "hasHp": true,
-        "hp": 180.0,
-        "maxHp": 180.0,
+        "hp": 60,
+        "maxHp": 60,
         "defense": {
-          "cutting": 8.0,
-          "piercing": 8.0,
-          "chopping": 8.0,
-          "blunt": 8.0
+          "physical": 8.0
         },
         "moduleLocalPosition": {
           "x": 0.0,
@@ -974,7 +1006,9 @@
             "y": 1.0
           },
           "edgeRadius": 0.0
-        }
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
       },
       "modules": {
         "建筑模块": {
@@ -1014,6 +1048,7 @@
     },
     {
       "id": "Smelter_Summoner",
+      "worldDropBehavior": "interactive",
       "parent": "BuildingSummoner_Base",
       "sourcePrefab": "Assets/2_Prefabs/World/Buildings/Summoners/Smelter_Summoner.prefab",
       "gameName": "熔炉",
@@ -1073,13 +1108,10 @@
       },
       "health": {
         "hasHp": true,
-        "hp": 180.0,
-        "maxHp": 180.0,
+        "hp": 60,
+        "maxHp": 60,
         "defense": {
-          "cutting": 8.0,
-          "piercing": 8.0,
-          "chopping": 8.0,
-          "blunt": 8.0
+          "physical": 8.0
         },
         "moduleLocalPosition": {
           "x": 0.0,
@@ -1099,7 +1131,9 @@
             "y": 1.0
           },
           "edgeRadius": 0.0
-        }
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
       },
       "modules": {
         "建筑模块": {
@@ -1139,6 +1173,7 @@
     },
     {
       "id": "Tent_Summoner",
+      "worldDropBehavior": "interactive",
       "parent": "BuildingSummoner_Base",
       "sourcePrefab": "Assets/2_Prefabs/World/Buildings/Summoners/Tent_Summoner.prefab",
       "gameName": "帐篷",
@@ -1151,7 +1186,8 @@
       "stackable": false,
       "canBePickedUp": true,
       "tags": [
-        "35"
+        "35",
+        "Combustion.Fuel"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Tent.png[Tent]",
@@ -1198,13 +1234,10 @@
       },
       "health": {
         "hasHp": true,
-        "hp": 180.0,
-        "maxHp": 180.0,
+        "hp": 60,
+        "maxHp": 60,
         "defense": {
-          "cutting": 8.0,
-          "piercing": 8.0,
-          "chopping": 8.0,
-          "blunt": 8.0
+          "physical": 8.0
         },
         "moduleLocalPosition": {
           "x": 0.0,
@@ -1224,7 +1257,9 @@
             "y": 1.0
           },
           "edgeRadius": 0.0
-        }
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
       },
       "modules": {
         "建筑模块": {
@@ -1234,6 +1269,18 @@
           "data": {
             "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Tent\",\"SummonerPrefabId\":\"Tent_Summoner\"}",
             "Type": 0
+          }
+        },
+        "燃料模块": {
+          "prefab": "Module_Fuel",
+          "id": "燃料模块",
+          "enabled": true,
+          "data": { "BitData": [], "Type": 0 },
+          "parameters": {
+            "Data": { "Fuel": { "x": 50.0, "y": 50.0 }, "MaxTemperature": 500.0 },
+            "lightBaseIntensity": 1.0,
+            "burnSpeedMultiplier": 1.0,
+            "igniteWhileHeld": false
           }
         }
       },
@@ -1264,6 +1311,7 @@
     },
     {
       "id": "Wall_Stone_Summoner",
+      "worldDropBehavior": "interactive",
       "parent": "BuildingSummoner_Base",
       "sourcePrefab": "Assets/2_Prefabs/World/Buildings/Summoners/Wall_Stone_Summoner.prefab",
       "gameName": "石墙",
@@ -1323,13 +1371,10 @@
       },
       "health": {
         "hasHp": true,
-        "hp": 180.0,
-        "maxHp": 180.0,
+        "hp": 60,
+        "maxHp": 60,
         "defense": {
-          "cutting": 8.0,
-          "piercing": 8.0,
-          "chopping": 8.0,
-          "blunt": 8.0
+          "physical": 8.0
         },
         "moduleLocalPosition": {
           "x": 0.0,
@@ -1349,7 +1394,9 @@
             "y": 1.0
           },
           "edgeRadius": 0.0
-        }
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
       },
       "modules": {
         "建筑模块": {
@@ -1389,6 +1436,7 @@
     },
     {
       "id": "Wall_Wood_Summoner",
+      "worldDropBehavior": "interactive",
       "parent": "BuildingSummoner_Base",
       "sourcePrefab": "Assets/2_Prefabs/World/Buildings/Summoners/Wall_Wood_Summoner.prefab",
       "gameName": "木墙",
@@ -1401,7 +1449,9 @@
       "stackable": true,
       "canBePickedUp": true,
       "tags": [
-        "35"
+        "35",
+        "Wood",
+        "Combustion.Fuel"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Building/Wall_Wood_Medium.png[Wall_Wood_Medium]",
@@ -1448,13 +1498,10 @@
       },
       "health": {
         "hasHp": true,
-        "hp": 100.0,
-        "maxHp": 100.0,
+        "hp": 50,
+        "maxHp": 50,
         "defense": {
-          "cutting": 5.0,
-          "piercing": 5.0,
-          "chopping": 0.0,
-          "blunt": 0.0
+          "physical": 3
         },
         "moduleLocalPosition": {
           "x": 0.0,
@@ -1474,7 +1521,9 @@
             "y": 1.0
           },
           "edgeRadius": 0.0
-        }
+        },
+        "weakTool": 3,
+        "combatBalanceVersion": 1
       },
       "modules": {
         "建筑模块": {
@@ -1484,6 +1533,18 @@
           "data": {
             "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Wall_Wood\",\"SummonerPrefabId\":\"Wall_Wood_Summoner\",\"TileBlockId\":\"TileBase_BuiltWoodWall\"}",
             "Type": 0
+          }
+        },
+        "燃料模块": {
+          "prefab": "Module_Fuel",
+          "id": "燃料模块",
+          "enabled": true,
+          "data": { "BitData": [], "Type": 0 },
+          "parameters": {
+            "Data": { "Fuel": { "x": 50.0, "y": 50.0 }, "MaxTemperature": 500.0 },
+            "lightBaseIntensity": 1.0,
+            "burnSpeedMultiplier": 1.0,
+            "igniteWhileHeld": false
           }
         }
       },
@@ -1514,6 +1575,7 @@
     },
     {
       "id": "WorkBench_Summoner",
+      "worldDropBehavior": "interactive",
       "parent": "BuildingSummoner_Base",
       "sourcePrefab": "Assets/2_Prefabs/World/Buildings/Summoners/WorkBench_Summoner.prefab",
       "gameName": "工作台",
@@ -1573,13 +1635,10 @@
       },
       "health": {
         "hasHp": true,
-        "hp": 180.0,
-        "maxHp": 180.0,
+        "hp": 60,
+        "maxHp": 60,
         "defense": {
-          "cutting": 8.0,
-          "piercing": 8.0,
-          "chopping": 8.0,
-          "blunt": 8.0
+          "physical": 8.0
         },
         "moduleLocalPosition": {
           "x": 0.0,
@@ -1599,7 +1658,9 @@
             "y": 1.0
           },
           "edgeRadius": 0.0
-        }
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
       },
       "modules": {
         "建筑模块": {
@@ -1639,6 +1700,7 @@
     },
     {
       "id": "SparkMaker_Summoner",
+      "worldDropBehavior": "interactive",
       "parent": "BuildingSummoner_Base",
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Tools/Summoners/SparkMaker_Summoner.prefab",
       "gameName": "钻木取火工具",
@@ -1651,7 +1713,9 @@
       "stackable": false,
       "canBePickedUp": true,
       "tags": [
-        "35"
+        "35",
+        "Wood",
+        "Combustion.Fuel"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/ADDSparkMaker.png[ADDSparkMaker_11]",
@@ -1698,13 +1762,10 @@
       },
       "health": {
         "hasHp": true,
-        "hp": 180.0,
-        "maxHp": 180.0,
+        "hp": 60,
+        "maxHp": 60,
         "defense": {
-          "cutting": 8.0,
-          "piercing": 8.0,
-          "chopping": 8.0,
-          "blunt": 8.0
+          "physical": 8.0
         },
         "moduleLocalPosition": {
           "x": 0.0,
@@ -1724,16 +1785,42 @@
             "y": 1.0
           },
           "edgeRadius": 0.0
-        }
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
       },
       "modules": {
         "建筑模块": {
           "prefab": "Module_Building",
           "id": "建筑模块",
-          "enabled": false,
+          "enabled": true,
           "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"SparkMaker\",\"SummonerPrefabId\":\"SparkMaker_Summoner\"}",
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"SparkMaker\",\"SummonerPrefabId\":\"SparkMaker_Summoner\",\"SharedModuleIds\":[\"钻木取火模块\"]}",
             "Type": 0
+          },
+          "parameters": {
+            "RequiresPlacementRequest": true
+          }
+        },
+        "钻木取火模块": {
+          "prefab": "BuildingFeature_SparkMaker_Mod_FireDrill",
+          "id": "钻木取火模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          }
+        },
+        "燃料模块": {
+          "prefab": "Module_Fuel",
+          "id": "燃料模块",
+          "enabled": true,
+          "data": { "BitData": [], "Type": 0 },
+          "parameters": {
+            "Data": { "Fuel": { "x": 50.0, "y": 50.0 }, "MaxTemperature": 500.0 },
+            "lightBaseIntensity": 1.0,
+            "burnSpeedMultiplier": 1.0,
+            "igniteWhileHeld": false
           }
         }
       },
@@ -1764,6 +1851,7 @@
     },
     {
       "id": "Torch_Summoner",
+      "worldDropBehavior": "interactive",
       "parent": "Torch_Base",
       "waterEntryTransformItemId": "Stick_Wood",
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Tools/Summoners/Torch_Summoner.prefab",
@@ -1827,10 +1915,7 @@
         "hp": 20,
         "maxHp": 20,
         "defense": {
-          "cutting": 0,
-          "piercing": 1,
-          "chopping": 0,
-          "blunt": 0
+          "physical": 1
         },
         "moduleLocalPosition": {
           "x": 0,
@@ -1850,7 +1935,9 @@
             "y": 1
           },
           "edgeRadius": 0
-        }
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
       },
       "modules": {
         "建筑模块": {
@@ -1893,6 +1980,7 @@
     },
     {
       "id": "CompostBin_Summoner",
+      "worldDropBehavior": "interactive",
       "parent": "BuildingSummoner_Base",
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Food/Summoners/CompostBin_Summoner.prefab",
       "gameName": "堆肥箱",
@@ -1952,13 +2040,10 @@
       },
       "health": {
         "hasHp": true,
-        "hp": 180.0,
-        "maxHp": 180.0,
+        "hp": 60,
+        "maxHp": 60,
         "defense": {
-          "cutting": 8.0,
-          "piercing": 8.0,
-          "chopping": 8.0,
-          "blunt": 8.0
+          "physical": 8.0
         },
         "moduleLocalPosition": {
           "x": 0.0,
@@ -1978,7 +2063,9 @@
             "y": 1.0
           },
           "edgeRadius": 0.0
-        }
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
       },
       "modules": {
         "建筑模块": {
@@ -2018,6 +2105,7 @@
     },
     {
       "id": "WaterPlatform_Summoner",
+      "worldDropBehavior": "interactive",
       "parent": "BuildingSummoner_Base",
       "gameName": "水上平台",
       "description": "只能铺设在水中的木板平台。铺好后成为普通地面，可正常行走并继续放置建筑。",
@@ -2037,7 +2125,9 @@
       "health": {
         "hasHp": true,
         "hp": 1.0,
-        "maxHp": 1.0
+        "maxHp": 1.0,
+        "weakTool": 4,
+        "combatBalanceVersion": 1
       },
       "modules": {
         "建筑模块": {

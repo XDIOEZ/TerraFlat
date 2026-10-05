@@ -1,0 +1,15 @@
+{
+  "recipes": [
+    {
+      "id": "example.enderchest:chest_recipe",
+      "displayName": "末影箱",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "inputs": [
+        { "match": "exact_item", "itemId": "Plank", "amount": 8 },
+        { "match": "exact_item", "itemId": "StoneSlab", "amount": 1 }
+      ],
+      "outputs": [{ "itemId": "example.enderchest:chest_Summoner", "amount": 1 }]
+    }
+  ]
+}

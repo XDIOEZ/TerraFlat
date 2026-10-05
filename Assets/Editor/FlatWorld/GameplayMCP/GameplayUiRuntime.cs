@@ -53,23 +53,34 @@ namespace FlatWorld.GameplayMCP
                 .ThenBy(canvas => BuildPath(canvas.transform), StringComparer.Ordinal)
                 .ToArray();
 
-            var nodes = new List<JObject>(Math.Min(MaximumNodeLimit * 2, 256));
+            var nodes = new List<JObject>(limit);
+            int totalCount = 0;
             for (int i = 0; i < rootCanvases.Length; i++)
             {
                 Canvas canvas = rootCanvases[i];
                 int rootId = canvas.gameObject.GetInstanceID();
-                nodes.Add(BuildNode(canvas.gameObject, null, 0, "canvas"));
+                if (totalCount >= offset && nodes.Count < limit)
+                    nodes.Add(BuildNode(canvas.gameObject, null, 0, "canvas"));
+                totalCount++;
                 TraverseSemanticChildren(
                     canvas.transform,
                     rootId,
                     1,
                     includeText,
                     interactiveOnly,
-                    nodes);
+                    nodes, offset, limit, ref totalCount);
             }
 
-            int totalCount = nodes.Count;
-            JObject[] page = nodes.Skip(offset).Take(limit).ToArray();
+            JObject[] page = nodes.ToArray();
+            if (GameplayMcpOutput.IsCompact(parameters))
+            {
+                foreach (JObject node in page)
+                {
+                    node.Remove("path");
+                    node.Remove("rect");
+                    node.Remove("depth");
+                }
+            }
             bool truncated = offset + page.Length < totalCount;
             Scene activeScene = SceneManager.GetActiveScene();
 
@@ -85,7 +96,7 @@ namespace FlatWorld.GameplayMCP
                 truncated,
                 next_offset = truncated ? offset + page.Length : (int?)null,
                 semantic_tree = new JArray(page),
-                hint = "Use targetId from a clickable node with action=click/drag, or from a scroll node with action=scroll; then query the tree again because UI may have changed."
+                hint = "Use click for interactable controls, click then text for type=input, drag for draggable controls, or scroll for type=scroll; then query the tree again because UI may have changed."
             });
         }
 
@@ -96,7 +107,7 @@ namespace FlatWorld.GameplayMCP
             int semanticDepth,
             bool includeText,
             bool interactiveOnly,
-            ICollection<JObject> result)
+            ICollection<JObject> result, int offset, int limit, ref int totalCount)
         {
             for (int i = 0; i < parent.childCount; i++)
             {
@@ -108,8 +119,10 @@ namespace FlatWorld.GameplayMCP
                 int nextDepth = semanticDepth;
                 if (TryResolveSemanticKind(child.gameObject, includeText, interactiveOnly, out string kind))
                 {
-                    JObject node = BuildNode(child.gameObject, semanticParentId, semanticDepth, kind);
-                    result.Add(node);
+                    // 只给当前页构造完整节点，分页外仍计数并保留语义父节点。
+                    if (totalCount >= offset && result.Count < limit)
+                        result.Add(BuildNode(child.gameObject, semanticParentId, semanticDepth, kind));
+                    totalCount++;
                     nextParentId = child.gameObject.GetInstanceID();
                     nextDepth = semanticDepth + 1;
                 }
@@ -120,7 +133,7 @@ namespace FlatWorld.GameplayMCP
                     nextDepth,
                     includeText,
                     interactiveOnly,
-                    result);
+                    result, offset, limit, ref totalCount);
             }
         }
 
@@ -227,7 +240,11 @@ namespace FlatWorld.GameplayMCP
             if (slot != null)
             {
                 node["slotIndex"] = slot.slotIndex;
-                string iconName = slot.image?.sprite?.name;
+                // 空槽隐藏图标后仍保留 Sprite 引用，只报告当前实际显示的图标。
+                string iconName = slot.image != null && slot.image.isActiveAndEnabled &&
+                                  slot.image.color.a > 0f
+                    ? slot.image.sprite?.name
+                    : null;
                 if (!string.IsNullOrEmpty(iconName))
                     node["icon"] = iconName;
             }
@@ -246,6 +263,74 @@ namespace FlatWorld.GameplayMCP
                 node["value"] = NormalizeText(tmpInput.text);
             else if (target.GetComponent<InputField>() is { } input)
                 node["value"] = NormalizeText(input.text);
+        }
+
+        #endregion
+
+        #region UI 文本输入
+
+        /// <summary>把字符事件交给已经通过真实点击获得焦点的输入框，不直接修改控件文本。</summary>
+        public static object TextInput(JObject parameters)
+        {
+            if (!Application.isPlaying)
+                return new ErrorResponse("not_playing: Unity 必须处于 Play Mode 才能输入运行时 UI 文本。");
+
+            int targetId = ReadInt(parameters, "targetId", 0);
+            if (targetId == 0)
+                return new ErrorResponse("missing_ui_target: action=text 需要 targetId。");
+
+            GameObject target = EditorUtility.InstanceIDToObject(targetId) as GameObject;
+            if (!IsQueryableRuntimeObject(target))
+                return new ErrorResponse($"ui_target_not_found: 找不到当前运行时 UI 节点 id={targetId}，请重新读取 UI 树。");
+            if (!target.activeInHierarchy || !IsVisibleThroughCanvasGroups(target.transform))
+                return new ErrorResponse($"ui_target_hidden: UI 节点 id={targetId} 当前不可见，请重新读取 UI 树。");
+            if (!IsInteractable(target))
+                return new ErrorResponse($"ui_target_disabled: UI 节点 id={targetId} 当前不可交互。");
+
+            EventSystem eventSystem = EventSystem.current;
+            if (eventSystem == null)
+                return new ErrorResponse("event_system_missing: 当前没有可用 EventSystem。");
+            if (eventSystem.currentSelectedGameObject != target)
+                return new ErrorResponse("ui_input_not_focused: 输入框必须先通过 gameplay_ui(action=click) 获得焦点。");
+
+            string inputText = parameters?["text"]?.ToString() ?? string.Empty;
+            if (inputText.Length > 128)
+                return new ErrorResponse("ui_text_too_long: 单次文本输入最多 128 个字符。");
+
+            TMP_InputField tmpInput = target.GetComponent<TMP_InputField>();
+            InputField legacyInput = target.GetComponent<InputField>();
+            if (tmpInput == null && legacyInput == null)
+                return new ErrorResponse($"ui_target_not_input: UI 节点 id={targetId} 不是文本输入框。");
+            if (tmpInput != null && !tmpInput.isFocused)
+                return new ErrorResponse("ui_input_not_focused: TMP 输入框当前没有编辑焦点。");
+            if (legacyInput != null && !legacyInput.isFocused)
+                return new ErrorResponse("ui_input_not_focused: InputField 当前没有编辑焦点。");
+
+            for (int i = 0; i < inputText.Length; i++)
+            {
+                var keyEvent = new Event
+                {
+                    type = EventType.KeyDown,
+                    keyCode = KeyCode.None,
+                    character = inputText[i],
+                    modifiers = EventModifiers.None
+                };
+                if (tmpInput != null)
+                    tmpInput.ProcessEvent(keyEvent);
+                else
+                    legacyInput.ProcessEvent(keyEvent);
+            }
+
+            return new SuccessResponse("FlatWorld UI text input completed.", new
+            {
+                action = "text",
+                target_id = targetId,
+                target_name = target.name,
+                target_path = BuildPath(target.transform),
+                character_count = inputText.Length,
+                value = tmpInput != null ? NormalizeText(tmpInput.text) : NormalizeText(legacyInput.text),
+                hint = "Query gameplay_ui(action=tree) again before choosing the next UI action."
+            });
         }
 
         #endregion

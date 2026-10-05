@@ -66,7 +66,7 @@ public class Tile_Farmland : TileBlockBehaviour
 
 #region 地块回调
 
-    public override void OnUpdate(Item item, TileData tileData, Map map, TileEffectReceiver receiver, float deltaTime)
+    public override void OnUpdate(Item item, TileData tileData, Map map, Mod_TileEffectReceiver receiver, float deltaTime)
     {
         // 正式农作物的天气、水肥、耕地与难度倍率只允许在 Mod_Grow 中结算一次。
         // 此行为保留为旧资源/API 兼容层，不再直接修改作物进度或地块资源。

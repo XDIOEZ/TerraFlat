@@ -5,30 +5,76 @@
     "ActivationChunks": 1,
     "DeactivationChunks": 2,
     "UnloadDelaySeconds": 5,
-    "ReferenceRpm": 60,
+    "ReferenceRpm": 20,
+    "WattsPerTorqueRpm": 1.5,
+    "ManualHoldThresholdSeconds": 0.25,
     "ManualPulseSeconds": 0.2,
     "ManualReserveSeconds": 0.2,
-    "BellowsHeatBonus": 250
+    "BellowsHeatBonus": 500
   },
   "Nodes": [
-    { "Id": "HandCrank", "Kind": "source", "Ports": "all", "Source": "manual", "Torque": 24, "TorqueCapacity": 64 },
-    { "Id": "WaterWheel", "Kind": "source", "Ports": "all", "Source": "water", "Torque": 48, "TorqueCapacity": 128 },
-    { "Id": "Windmill", "Kind": "source", "Ports": "all", "Source": "wind", "Torque": 64, "TorqueCapacity": 128 },
-    { "Id": "Shaft_Wood", "Kind": "shaft", "Ports": "axis", "TorqueCapacity": 32 },
-    { "Id": "Gear_Wood", "Kind": "gear", "Ports": "all", "AxlePorts": ["left"], "TorqueCapacity": 32 },
-    { "Id": "Gearbox_Wood", "Kind": "gearbox", "Ports": "axis", "TorqueCapacity": 32, "Ratios": [1.5], "ReverseSpeedRatio": 0.5, "ForwardTorqueRatio": 0.5, "ReverseTorqueRatio": 1.5 },
-    { "Id": "Clutch", "Kind": "clutch", "Ports": "axis", "TorqueCapacity": 256 },
-    { "Id": "Shaft_Copper", "Kind": "shaft", "Ports": "axis", "TorqueCapacity": 96 },
-    { "Id": "Gear_Copper", "Kind": "gear", "Ports": "all", "TorqueCapacity": 96 },
-    { "Id": "Gearbox_Copper", "Kind": "gearbox", "Ports": "axis", "TorqueCapacity": 32, "Ratios": [1.5], "ReverseSpeedRatio": 0.5, "ForwardTorqueRatio": 0.5, "ReverseTorqueRatio": 1.5 },
-    { "Id": "Shaft_Iron", "Kind": "shaft", "Ports": "axis", "TorqueCapacity": 256 },
-    { "Id": "Gear_Iron", "Kind": "gear", "Ports": "all", "TorqueCapacity": 256 },
-    { "Id": "Gearbox_Iron", "Kind": "gearbox", "Ports": "axis", "TorqueCapacity": 32, "Ratios": [1.5], "ReverseSpeedRatio": 0.5, "ForwardTorqueRatio": 0.5, "ReverseTorqueRatio": 1.5 },
-    { "Id": "CrossShaft", "Kind": "bridge", "Ports": "axis", "TorqueCapacity": 256 },
-    { "Id": "Millstone", "Kind": "consumer", "Ports": "all", "Station": "millstone", "RequiredRpm": 60, "TorqueLoad": 8, "TorqueCapacity": 256 },
-    { "Id": "MechanicalBellows", "Kind": "bellows", "Ports": "all", "RequiredRpm": 60, "TorqueLoad": 8, "TorqueCapacity": 256 },
-    { "Id": "Sawmill", "Kind": "consumer", "Ports": "all", "Station": "sawmill", "RequiredRpm": 120, "TorqueLoad": 12, "TorqueCapacity": 256 },
-    { "Id": "MechanicalHammer", "Kind": "consumer", "Ports": "all", "Station": "mechanical_hammer", "RequiredRpm": 180, "TorqueLoad": 16, "TorqueCapacity": 256 }
+    { "Id": "HandCrank", "Kind": "source", "Ports": "axis", "AxisPortVisual": { "Count": 2, "StartX": 0.25, "Y": 0 }, "Source": "manual", "Torque": 20, "Rpm": 20 },
+    { "Id": "WaterWheel", "Kind": "source", "Ports": "axis", "Source": "water", "SourceRadius": 0.92, "Torque": 120 },
+    { "Id": "Windmill", "Kind": "source", "Ports": "all", "Source": "wind", "Torque": 60, "Rpm": 20 },
+    { "Id": "Shaft_Wood", "Kind": "shaft", "Ports": "axis", "BlocksMovement": false, "PlayerMoveSpeedMultiplier": 0.7 },
+    { "Id": "Gear_Wood", "Kind": "gear", "Ports": "all", "AxlePorts": ["left"] },
+    { "Id": "Gearbox_Wood", "Kind": "gearbox", "Ports": "axis", "AxisPortVisual": { "Count": 2, "StartX": 0.25, "Y": 0 }, "Ratios": [2], "ReverseSpeedRatio": 0.5, "ForwardTorqueRatio": 0.5, "ReverseTorqueRatio": 2 },
+    { "Id": "Clutch", "Kind": "clutch", "Ports": "axis" },
+    { "Id": "CrossShaft", "Kind": "bridge", "Ports": "axis" },
+    { "Id": "Millstone", "Kind": "consumer", "Ports": "axis", "AxisPortVisual": { "Count": 2, "StartX": 0.25, "Y": 0 }, "Station": "millstone", "ProcessCapability": "grind", "RequiredRpm": 20, "TorqueLoad": 10, "ManualDriveTorque": 60, "ManualDriveRpm": 2, "ManualDriveSecondsPerPress": 3 },
+    { "Id": "MechanicalBellows", "Kind": "bellows", "Ports": "all", "AxlePorts": ["left"], "RequiredRpm": 20, "TorqueLoad": 10 },
+    { "Id": "Sawmill", "Kind": "consumer", "Ports": "all", "Station": "sawmill", "ProcessCapability": "cut", "ProcessCapabilityLevel": 3, "RequiredRpm": 40, "TorqueLoad": 20 },
+    { "Id": "MechanicalLoom", "Kind": "consumer", "Ports": "axis", "AxisPortVisual": { "Count": 2, "StartX": 0.25, "Y": 0 }, "Station": "mechanical_loom", "ProcessCapability": "weave", "RequiredRpm": 20, "TorqueLoad": 10 },
+    { "Id": "MechanicalHammer", "Kind": "consumer", "Ports": "axis", "AxisPortVisual": { "Count": 2, "StartX": 0.25, "Y": 0 }, "Station": "mechanical_hammer", "RequiredRpm": 60, "TorqueLoad": 20 },
+    {
+      "Id": "Generator_Basic",
+      "FormerIds": ["Motor_Basic"],
+      "Kind": "converter",
+      "Ports": "axis",
+      "AxisPortVisual": { "Count": 1, "StartX": 0.25, "Y": 0 },
+      "AxlePorts": ["right"],
+      "Source": "electric",
+      "Torque": 20,
+      "Rpm": 20,
+      "RequiredRpm": 20,
+      "TorqueLoad": 20,
+      "Electrical": {
+        "Role": "converter",
+        "Connection": "left",
+        "ConversionEfficiency": 1,
+        "NominalVoltage": 120,
+        "PowerWatts": 600
+      }
+    },
+    {
+      "Id": "Wire_Copper",
+      "Kind": "electrical_wire",
+      "Ports": "none",
+      "PlacementLayer": 3,
+      "BlocksMovement": false,
+      "CastVisualShadows": false,
+      "Electrical": {
+        "Role": "wire",
+        "NominalVoltage": 120,
+        "MaximumVoltage": 600,
+        "MaxCurrentAmps": 10,
+        "ResistanceOhms": 0.02
+      }
+    },
+    {
+      "Id": "Battery_Basic",
+      "Kind": "electrical_battery",
+      "Ports": "none",
+      "Electrical": {
+        "Role": "battery",
+        "NominalVoltage": 120,
+        "CapacityJoules": 60000,
+        "MaxChargeWatts": 600,
+        "MaxDischargeWatts": 600
+      }
+    },
+    { "Id": "Conveyor_Wood", "Kind": "consumer", "Ports": "all", "PortMode": "relay", "BlocksMovement": false, "CastVisualShadows": false, "RequiredRpm": 20, "TorqueLoad": 2, "Transport": { "Speed": 0.8, "HalfWidth": 0.5 } },
+    { "Id": "Conveyor_Cloth", "Kind": "consumer", "Ports": "all", "PortMode": "relay", "BlocksMovement": false, "CastVisualShadows": false, "RequiredRpm": 20, "TorqueLoad": 2, "Transport": { "Speed": 0.8, "HalfWidth": 0.5 } }
   ],
   "Processes": [
     { "Station": "hand_drill", "Input": "Log", "Outputs": [{ "ItemName": "DrilledLog", "amount": 1 }], "WorkSeconds": 4 },
@@ -36,8 +82,17 @@
     { "Station": "hand_drill", "Input": "Stick_Wood", "Outputs": [{ "ItemName": "DrilledStick", "amount": 1 }], "WorkSeconds": 4 },
     { "Station": "hand_drill", "Input": "StoneSlab", "Outputs": [{ "ItemName": "DrilledStoneSlab", "amount": 1 }], "WorkSeconds": 6 },
     { "Station": "hand_drill", "Input": "Ore_Stone", "Outputs": [{ "ItemName": "DrilledStone", "amount": 1 }], "WorkSeconds": 6 },
-    { "Station": "millstone", "Input": "RiceGrain", "Outputs": [{ "ItemName": "Rice", "amount": 1 }], "WorkSeconds": 3 },
-    { "Station": "sawmill", "Input": "Log", "Outputs": [{ "ItemName": "Plank", "amount": 4 }], "WorkSeconds": 6 },
-    { "Station": "mechanical_hammer", "Input": "Ingot_RawIron", "Outputs": [{ "ItemName": "Ingot_WroughtIron", "amount": 1 }], "WorkSeconds": 8 }
+    { "Station": "mechanical_hammer", "Input": "Ingot_RawIron", "Outputs": [{ "ItemName": "Ingot_WroughtIron", "amount": 1 }], "WorkSeconds": 8 },
+    { "Station": "mechanical_hammer", "Input": "Ingot_WroughtIron", "Outputs": [{ "ItemName": "IronPlate", "amount": 1 }], "WorkSeconds": 8 },
+    { "Station": "mechanical_hammer", "Input": "Ingot_Copper", "Outputs": [{ "ItemName": "CopperPlate", "amount": 1 }], "WorkSeconds": 8 },
+    { "Station": "mechanical_hammer", "Input": "Ingot_Bronze", "Outputs": [{ "ItemName": "BronzePlate", "amount": 1 }], "WorkSeconds": 8 },
+    { "Station": "mechanical_hammer", "Input": "Ingot_Tin", "Outputs": [{ "ItemName": "TinPlate", "amount": 1 }], "WorkSeconds": 8 },
+    { "Station": "mechanical_hammer", "Input": "Ingot_Steel", "Outputs": [{ "ItemName": "SteelPlate", "amount": 1 }], "WorkSeconds": 8 },
+    { "Station": "hand_forge", "Input": "Ingot_RawIron", "Outputs": [{ "ItemName": "RawIronPlate", "amount": 1 }], "WorkSeconds": 12 },
+    { "Station": "hand_forge", "Input": "Ingot_WroughtIron", "Outputs": [{ "ItemName": "IronPlate", "amount": 1 }], "WorkSeconds": 12 },
+    { "Station": "hand_forge", "Input": "Ingot_Copper", "Outputs": [{ "ItemName": "CopperPlate", "amount": 1 }], "WorkSeconds": 12 },
+    { "Station": "hand_forge", "Input": "Ingot_Bronze", "Outputs": [{ "ItemName": "BronzePlate", "amount": 1 }], "WorkSeconds": 12 },
+    { "Station": "hand_forge", "Input": "Ingot_Tin", "Outputs": [{ "ItemName": "TinPlate", "amount": 1 }], "WorkSeconds": 12 },
+    { "Station": "hand_forge", "Input": "Ingot_Steel", "Outputs": [{ "ItemName": "SteelPlate", "amount": 1 }], "WorkSeconds": 12 }
   ]
 }

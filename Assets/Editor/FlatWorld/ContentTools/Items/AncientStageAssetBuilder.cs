@@ -21,7 +21,6 @@ public static partial class AncientStageAssetBuilder
         SaveModule<Mod_FarmlandSupply>("World", "Module_FarmlandSupply");
         SaveModule<Mod_SweatBalance>("World", "Module_SweatBalance");
         BuildSurvivalModules();
-        BuildEcology();
         BuildStructures();
         BuildMiningCamp();
         BuildSnow();
@@ -82,57 +81,4 @@ public static partial class AncientStageAssetBuilder
         finally { PrefabUtility.UnloadPrefabContents(root); }
     }
 
-    #region 自然来源
-    /// <summary>把药草、狗尾草和柳树接到地表生态，把硝石接到洞穴矿脉。</summary>
-    private static void BuildEcology()
-    {
-        var surface = new SerializedObject(AssetDatabase.LoadAssetAtPath<ChunkGenerationProfileSO>(
-            "Assets/Resources/Config/WorldModel/ChunkGenerationProfile_Surface.asset"));
-        AddEcologyRule(surface, "surface.ancient.herb", "HerbCrop", 48, 0.00045f, 0f);
-        AddEcologyRule(surface, "surface.ancient.foxtail", "FoxtailCrop", 48, 0.001f, 0f);
-        AddEcologyRule(surface, "surface.ancient.willow", "Tree_Willow", 48, 0.002f, 0.1f);
-        surface.ApplyModifiedPropertiesWithoutUndo();
-        var cave = new SerializedObject(AssetDatabase.LoadAssetAtPath<ChunkGenerationProfileSO>(
-            "Assets/Resources/Config/WorldModel/ChunkGenerationProfile_Cave.asset"));
-        SerializedProperty rules = cave.FindProperty("caveResourceRules");
-        for (int i = 0; i < rules.arraySize; i++)
-            if (rules.GetArrayElementAtIndex(i).FindPropertyRelative("RuleId").stringValue == "cave.resource.niter")
-                return;
-        rules.InsertArrayElementAtIndex(0);
-        SerializedProperty entry = rules.GetArrayElementAtIndex(0);
-        entry.FindPropertyRelative("RuleId").stringValue = "cave.resource.niter";
-        entry.FindPropertyRelative("ItemId").stringValue = "Mine_Niter";
-        entry.FindPropertyRelative("VeinThreshold").floatValue = 0.88f;
-        entry.FindPropertyRelative("VeinScale").floatValue = 0.03f;
-        entry.FindPropertyRelative("NoiseOffset").intValue = 6607;
-        cave.ApplyModifiedPropertiesWithoutUndo();
-    }
-
-    /// <summary>登记一项独立生态规则；重建资源不会重复添加。</summary>
-    private static void AddEcologyRule(SerializedObject profile, string id, string item, int biomeMask, float chance, float river)
-    {
-        SerializedProperty rules = profile.FindProperty("ecologyRules");
-        for (int i = 0; i < rules.arraySize; i++)
-            if (rules.GetArrayElementAtIndex(i).FindPropertyRelative("RuleId").stringValue == id)
-                return;
-        int index = rules.arraySize++;
-        SerializedProperty entry = rules.GetArrayElementAtIndex(index);
-        entry.FindPropertyRelative("RuleId").stringValue = id;
-        entry.FindPropertyRelative("ItemId").stringValue = item;
-        entry.FindPropertyRelative("ItemCount").intValue = 1;
-        entry.FindPropertyRelative("SpawnChance").floatValue = chance;
-        entry.FindPropertyRelative("SpawnChanceMultiplier").floatValue = 1f;
-        entry.FindPropertyRelative("BiomeMask").intValue = biomeMask;
-        entry.FindPropertyRelative("DistributionMode").intValue = 0;
-        entry.FindPropertyRelative("MinTemperature").floatValue = 0f;
-        entry.FindPropertyRelative("MaxTemperature").floatValue = 1f;
-        entry.FindPropertyRelative("MinPrecipitation").floatValue = 0f;
-        entry.FindPropertyRelative("MaxPrecipitation").floatValue = 1f;
-        entry.FindPropertyRelative("MinHeight").floatValue = 0f;
-        entry.FindPropertyRelative("MaxHeight").floatValue = 1f;
-        entry.FindPropertyRelative("MinRiverFloodplainStrength").floatValue = river;
-        entry.FindPropertyRelative("CompanionOnly").boolValue = false;
-        entry.FindPropertyRelative("ProvidedTags").ClearArray();
-    }
-    #endregion
 }

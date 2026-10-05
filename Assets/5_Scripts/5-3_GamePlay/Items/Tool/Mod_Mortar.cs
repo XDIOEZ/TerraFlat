@@ -6,20 +6,24 @@ using UnityEngine;
 
 /// <summary>
 /// 可携带的配方加工容器：石臼通过捣击执行普通合成，坩埚通过加热执行容器配方。
-/// 两种模式共用动态库存、快捷转移、事务匹配和 ItemData 持久化；UI 只负责交互与反馈。
+/// 两种模式共用固定库存、快捷转移、事务匹配和 ItemData 持久化；UI 只负责交互与反馈。
 /// </summary>
 public sealed class Mod_Mortar : Module, IInteractable, IInventory
 {
     #region 配置与状态
     public const string ModuleId = "Mod_Mortar";
     public const string CrucibleStationId = "crucible";
+    public const int DefaultSlotCount = 6;
+    [Min(1), Tooltip("原料与产物共用的固定槽位数")]
+    public int SlotCount = DefaultSlotCount;
     public Ex_ModData_MemoryPackable Data = new Ex_ModData_MemoryPackable(); // 独立模块数据。
     public override ModuleData _Data { get => Data; set => Data = (Ex_ModData_MemoryPackable)value; }
     public override string CanonicalModuleId => ModuleId;
     public override ModuleTickMode TickMode => IsCrucible ? ModuleTickMode.FixedInterval : ModuleTickMode.Disabled;
     public override float FixedTickInterval => IsCrucible ? 1f : base.FixedTickInterval;
     public GameObject PanelPrefab; // 正式交互面板。
-    public string StationId = "mortar"; // 配方工作站标识。
+    public string StationId = "mortar"; // 坩埚等仍需要工作站身份；普通石臼不再按 Station 查配方。
+    public string ProcessCapability = "grind"; // 石臼只提供研磨能力，具体加工结果由投入物品自身声明。
     public bool EnableStrikeGesture = true; // 坩埚模式关闭捣击手势，只保留材料容器面板。
     public string ContainerLabel = "石臼"; // 面板标题和异常信息使用的容器名称。
     private readonly MortarInventory bowl = new MortarInventory();
@@ -46,10 +50,11 @@ public sealed class Mod_Mortar : Module, IInteractable, IInventory
             throw new InvalidOperationException($"{ContainerLabel}存档缺少容器内库存。");
         bowl.item = item;
         bowl.StationId = StationId;
+        bowl.ProcessCapability = ProcessCapability;
         bowl.MaterialOnly = IsCrucible;
         bowl.Data = state.Bowl;
+        bowl.Data.SetFixedSlotCount(SlotCount);
         bowl.NormalizeStoredStacks();
-        bowl.Data.SetUnlimitedSlots(true);
         bowl.InitData();
         capabilities = new CraftingCapabilities
         {
@@ -123,7 +128,6 @@ public sealed class Mod_Mortar : Module, IInteractable, IInventory
             panel = UIManager.Instance.CreatePanelFromGameObject(PanelPrefab);
             view = panel.GetComponentInChildren<MortarInteractionView>(true);
             if (view == null) throw new InvalidOperationException($"{ContainerLabel}面板缺少容器视图。");
-            bowl.basePanel = panel;
             bowl.itemSlot_UI.Clear();
             view.SyncSlots(bowl);
             panel.PrepareForGamepadNavigation("关闭");
@@ -177,39 +181,74 @@ public sealed class Mod_Mortar : Module, IInteractable, IInventory
         if (IsCrucible)
             return;
         batch = null;
-        foreach (RuntimeRecipe recipe in GameRes.Instance.GetRecipes(RecipeType.Crafting))
+        if (ItemProcessingResolver.TryResolveRecipe(
+                bowl, ProcessCapability, capabilities, out RuntimeItemProcessingDefinition processing))
         {
-            if (!string.Equals(recipe.RequiredStation, StationId, StringComparison.OrdinalIgnoreCase)) continue;
-            if (recipe.inputs.RowItems_List.Count != 1 || recipe.outputs.results.Count == 0 || recipe.action.Count != 0)
-                throw new InvalidOperationException($"石臼配方 {recipe.Id} 必须为无额外动作的单原料、多产物转换。");
-            RuntimeRecipeIngredient ingredient = recipe.inputs.RowItems_List[0];
-            if (ingredient.amount <= 0 || !CraftingRecipeMatcher.TryMatchRecipe(bowl, recipe, capabilities, out _)) continue;
-            batch = recipe;
-            ReserveOutputSlots(recipe);
-            break;
+            batch = processing.Recipe;
         }
+        AlignManualWorkProgress(state, batch);
     }
 
-    /// <summary>提交前为每个产物单位预留空格；实际事务优先合并同类，不同产物可同时原子写入。</summary>
-    private void ReserveOutputSlots(RuntimeRecipe recipe)
+    /// <summary>切换配方时清空旧进度，同一配方只保留尚未结算的有效操作次数。</summary>
+    public static void AlignManualWorkProgress(MortarState mortarState, RuntimeRecipe recipe)
     {
-        int required = 0;
-        foreach (RuntimeRecipeResult output in recipe.outputs.results)
-            required = checked(required + Mathf.CeilToInt(output.amount));
-        int empty = bowl.Data.itemSlots.FindAll(slot => slot.itemData == null).Count;
-        while (empty++ < required)
-            bowl.Data.itemSlots.Add(new ItemSlot(bowl.Data.itemSlots.Count) { SlotMaxVolume = Inventory_Data.DefaultSlotVolume });
+        if (mortarState == null)
+            return;
+
+        string recipeId = recipe?.Id;
+        if (!string.Equals(mortarState.ProcessingRecipeId, recipeId, StringComparison.OrdinalIgnoreCase))
+        {
+            mortarState.ProcessingRecipeId = recipeId;
+            mortarState.ProcessingStep = 0;
+            return;
+        }
+
+        int requiredSteps = Mathf.Max(1, recipe?.ManualWorkSteps ?? 1);
+        mortarState.ProcessingStep = Mathf.Clamp(mortarState.ProcessingStep, 0, requiredSteps - 1);
+    }
+
+    /// <summary>记录一次有效手动加工；返回 true 表示本次操作已经满足配方结算条件。</summary>
+    public static bool AdvanceManualWork(MortarState mortarState, RuntimeRecipe recipe)
+    {
+        if (mortarState == null || recipe == null)
+            return false;
+
+        AlignManualWorkProgress(mortarState, recipe);
+        int requiredSteps = Mathf.Max(1, recipe.ManualWorkSteps);
+        if (mortarState.ProcessingStep >= requiredSteps - 1)
+            return true;
+
+        mortarState.ProcessingStep++;
+        return false;
+    }
+
+    /// <summary>配方成功结算后从零开始累计下一份原料的手动加工进度。</summary>
+    public static void CompleteManualWork(MortarState mortarState, RuntimeRecipe recipe)
+    {
+        if (mortarState == null || recipe == null)
+            return;
+
+        mortarState.ProcessingRecipeId = recipe.Id;
+        mortarState.ProcessingStep = 0;
     }
 
     private void OnStrike()
     {
         if (!EnableStrikeGesture || panel == null || !panel.IsOpen() || batch == null) return;
+        bool readyToCraft = AdvanceManualWork(state, batch);
+        view?.PlayProcessingDust();
+        if (!readyToCraft)
+        {
+            OnBowlChanged(null);
+            return;
+        }
+
         processing = true;
         try
         {
             CraftingResult result = CraftingService.CraftRecipe(bowl, bowl, capabilities, batch, actor);
             if (result.Success)
-                view?.PlayProcessingDust();
+                CompleteManualWork(state, batch);
         }
         finally { processing = false; }
         OnBowlChanged(null);
@@ -267,7 +306,7 @@ public sealed class Mod_Mortar : Module, IInteractable, IInventory
             MaterialOnly = true,
             Data = state.Bowl
         };
-        materialInventory.Data.SetUnlimitedSlots(true);
+        materialInventory.Data.SetUnlimitedSlots(false);
         CraftingCapabilities heatCapabilities = new CraftingCapabilities
         {
             RecipeType = RecipeType.Smelting,
@@ -275,21 +314,30 @@ public sealed class Mod_Mortar : Module, IInteractable, IInventory
             AllowOutputIntoInput = true
         };
 
+        foreach (ItemSlot materialSlot in materialInventory.Data.itemSlots)
+        {
+            ItemData material = materialSlot?.itemData;
+            if (material != null && ItemMatterRuntime.Advance(material, temperature, 1f, seconds))
+                materialInventory.Data.NotifyItemStateChanged(material);
+        }
+
+        RuntimeItemReactionDefinition selectedReaction = null;
         RuntimeRecipe selectedRecipe = null;
         CraftingRecipeMatch selectedMatch = null;
-        foreach (RuntimeRecipe recipe in GameRes.ExistingInstance.GetRecipes(RecipeType.Smelting))
+        if (ItemReactionResolver.TryResolve(materialInventory, heatCapabilities,
+                out RuntimeItemReactionDefinition reaction, out CraftingRecipeMatch reactionMatch,
+                requireLiquidOutput: true))
         {
-            if (!string.Equals(recipe.RequiredStation, CrucibleStationId, StringComparison.OrdinalIgnoreCase) ||
-                recipe.LiquidOutput == null || temperature < recipe.Temperature || temperature > recipe.Temperature_Max)
-                continue;
-            if (hasLiquid && !string.Equals(recipe.LiquidOutput.LiquidId, liquidState.LiquidId, StringComparison.OrdinalIgnoreCase))
-                continue;
-            if (!CraftingRecipeMatcher.TryMatchRecipe(materialInventory, recipe, heatCapabilities, out CraftingRecipeMatch match))
-                continue;
-
-            selectedRecipe = recipe;
-            selectedMatch = match;
-            break;
+            float materialTemperature = ItemMatterRuntime.GetMinimumConsumedTemperature(
+                materialInventory, reactionMatch, temperature);
+            if (reaction.TemperatureMatches(materialTemperature) &&
+                (!hasLiquid || string.Equals(reaction.LiquidOutput.LiquidId, liquidState.LiquidId,
+                    StringComparison.OrdinalIgnoreCase)))
+            {
+                selectedReaction = reaction;
+                selectedRecipe = reaction.Recipe;
+                selectedMatch = reactionMatch;
+            }
         }
 
         if (selectedRecipe == null)
@@ -303,7 +351,7 @@ public sealed class Mod_Mortar : Module, IInteractable, IInventory
         }
 
         state.HeatingSeconds += Mathf.Max(0f, seconds);
-        if (state.HeatingSeconds < selectedRecipe.ProcessingSeconds)
+        if (state.HeatingSeconds < selectedReaction.WorkRequired)
         {
             storage.WriteData(state);
             return true;
@@ -358,10 +406,22 @@ public sealed class Mod_Mortar : Module, IInteractable, IInventory
             state ??= new MortarState();
             if (state.Bowl?.itemSlots == null)
                 throw new InvalidOperationException("坩埚存档缺少容器内库存。");
+            state.Bowl.SetFixedSlotCount(ResolveFixedSlotCount(itemData));
             return true;
         }
 
         return false;
+    }
+
+    /// <summary>未物化的坩埚也读取当前定义的固定格数，热加工不能临时扩容。</summary>
+    private static int ResolveFixedSlotCount(ItemData itemData)
+    {
+        if (GameRes.Instance.TryGetItemDefinition(itemData.IDName, out RuntimeItemDefinition definition))
+            foreach (KeyValuePair<string, ModuleData> pair in itemData.ModuleDataDic)
+                if (pair.Value?.ID == ModuleId &&
+                    definition.TryGetModuleParameters(pair.Key, out string json) && !string.IsNullOrWhiteSpace(json))
+                    return Mathf.Max(1, JObject.Parse(json).Value<int?>(nameof(SlotCount)) ?? DefaultSlotCount);
+        return DefaultSlotCount;
     }
 
     private bool TryUseLiquidVessel(Item playerItem)
@@ -423,14 +483,13 @@ public sealed class Mod_Mortar : Module, IInteractable, IInventory
             GameRes.ExistingInstance == null)
             return false;
 
-        state.Bowl.EnsureSpareSlot();
         var materialInventory = new MortarInventory
         {
             StationId = CrucibleStationId,
             MaterialOnly = true,
             Data = state.Bowl
         };
-        materialInventory.Data.SetUnlimitedSlots(true);
+        materialInventory.Data.SetUnlimitedSlots(false);
 
         ItemData output = GameRes.ExistingInstance.CreateItemData(solidification.OutputItemId);
         output.Stack.Amount = Mathf.Max(1, Mathf.RoundToInt(vessel.Data.Amount * solidification.OutputAmount));
@@ -452,7 +511,7 @@ public sealed class Mod_Mortar : Module, IInteractable, IInventory
         vessel.CommitExternalState();
         state.Bowl = materialInventory.Data;
         bowl.Data = state.Bowl;
-        bowl.Data.SetUnlimitedSlots(true);
+        bowl.Data.SetUnlimitedSlots(false);
         Save();
         view?.SyncSlots(bowl);
         return true;
@@ -461,9 +520,10 @@ public sealed class Mod_Mortar : Module, IInteractable, IInventory
     #endregion
 
     /// <summary>只接收该工作站的原料与产物，避免无关物品或石臼自身被放入容器。</summary>
-    private sealed class MortarInventory : Inventory
+    public sealed class MortarInventory : Inventory
     {
         public string StationId;
+        public string ProcessCapability = "grind";
         public bool MaterialOnly;
 
         /// <summary>加载时修正旧运行过程中被空白投放区拆散的同类堆叠，不改变不同物品的相对顺序。</summary>
@@ -534,6 +594,9 @@ public sealed class Mod_Mortar : Module, IInteractable, IInventory
             ItemData candidate = sourceSlot?.itemData;
             if (candidate == null || ReferenceEquals(candidate, item?.itemData)) return false;
             if (MaterialOnly && Mod_WaterVessel.TryRead(candidate, out _, out _)) return false;
+            if (!string.Equals(StationId, CrucibleStationId, StringComparison.OrdinalIgnoreCase))
+                return ItemProcessingResolver.TryResolve(candidate, ProcessCapability, out _);
+
             RecipeType recipeType = string.Equals(StationId, CrucibleStationId, StringComparison.OrdinalIgnoreCase)
                 ? RecipeType.Smelting
                 : RecipeType.Crafting;

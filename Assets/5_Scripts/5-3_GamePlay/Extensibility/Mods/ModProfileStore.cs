@@ -17,7 +17,7 @@ public sealed class ModProfile
     public string Id = "default";
 
     [JsonProperty("autoEnableNewMods")]
-    public bool AutoEnableNewMods = true;
+    public bool AutoEnableNewMods = false;
 
     [JsonProperty("enabledMods")]
     public List<string> EnabledMods = new();

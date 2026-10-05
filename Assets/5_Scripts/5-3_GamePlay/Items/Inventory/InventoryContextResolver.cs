@@ -16,7 +16,7 @@ public static class InventoryContextResolver
         var visited = new HashSet<Inventory>();
 
         // 快捷栏优先：手持物通常直接绑定这里的槽位数据，优先命中也能避免误扫主背包。
-        Inventory_HotBar hotbar = inventoryOwner.itemMods?.GetMod_ByID<Inventory_HotBar>(ModText.Hotbar);
+        Mod_HotBar hotbar = inventoryOwner.itemMods?.GetMod_ByID<Mod_HotBar>(ModText.Hotbar);
         if (TryCandidate(hotbar?.RuntimeInventory, containedItem, visited, out inventory))
             return true;
 
@@ -44,7 +44,7 @@ public static class InventoryContextResolver
                 return true;
         }
 
-        return false;
+        return MachineWorld.TryFindContainingInventory(inventoryOwner, containedItem, out inventory);
     }
 
     /// <summary>检查候选库存是否包含目标物品实例；优先引用相等，Guid 仅作运行时重绑后的稳定回退。</summary>

@@ -227,7 +227,7 @@ namespace FlatWorld.Editor.ContentWorkshop
             return draft;
         }
 
-        /// <summary>载入现有配方；普通合成会把旧网格按材料身份归并为滚动列表数据。</summary>
+        /// <summary>载入现有配方；普通合成直接读取无位置材料清单。</summary>
         public static WorkshopRecipeDraft FromRecord(WorkshopRecipeRecord record)
         {
             if (record?.Definition == null)
@@ -236,7 +236,8 @@ namespace FlatWorld.Editor.ContentWorkshop
             RecipeDto source = record.Definition;
             bool isHeating = string.Equals(source.RecipeType, "smelting", StringComparison.OrdinalIgnoreCase);
             if (isHeating &&
-                (source.GridWidth > HeatingCanvasWidth || source.GridHeight > HeatingCanvasHeight))
+                (source.GridWidth.GetValueOrDefault() > HeatingCanvasWidth ||
+                 source.GridHeight.GetValueOrDefault() > HeatingCanvasHeight))
             {
                 throw new InvalidOperationException(
                     $"配方 {source.Id} 使用 {source.GridWidth}×{source.GridHeight} 网格，" +
@@ -254,17 +255,16 @@ namespace FlatWorld.Editor.ContentWorkshop
                 IsHeating = isHeating,
                 Ordered = isHeating &&
                           string.Equals(source.InputRule, "ordered", StringComparison.OrdinalIgnoreCase),
-                AllowMirror = isHeating && source.AllowMirror,
+                AllowMirror = isHeating && source.AllowMirror == true,
                 AutoTrim = !isHeating,
                 Temperature = source.Temperature,
                 MaxTemperature = source.MaxTemperature,
-                OriginalGridWidth = Mathf.Clamp(source.GridWidth, 1, HeatingCanvasWidth),
-                OriginalGridHeight = Mathf.Clamp(source.GridHeight, 1, HeatingCanvasHeight)
+                OriginalGridWidth = Mathf.Clamp(source.GridWidth.GetValueOrDefault(HeatingCanvasWidth), 1, HeatingCanvasWidth),
+                OriginalGridHeight = Mathf.Clamp(source.GridHeight.GetValueOrDefault(HeatingCanvasHeight), 1, HeatingCanvasHeight)
             };
 
-            Dictionary<int, int> craftingSlotRemap = isHeating
-                ? null
-                : draft.LoadCraftingInputs(source.Inputs);
+            if (!isHeating)
+                draft.LoadCraftingInputs(source.Inputs);
             if (isHeating)
                 draft.LoadHeatingInputs(source);
 
@@ -284,7 +284,7 @@ namespace FlatWorld.Editor.ContentWorkshop
             foreach (RecipeActionDto action in source.Actions ?? new List<RecipeActionDto>())
             {
                 if (action != null)
-                    draft.Actions.Add(CloneAction(action, craftingSlotRemap));
+                    draft.Actions.Add(CloneAction(action));
             }
 
             draft.HeatingPreset = GuessHeatingPreset(record.PackageId, source.Temperature);
@@ -315,13 +315,6 @@ namespace FlatWorld.Editor.ContentWorkshop
             if (index < 0 || index >= CraftingIngredients.Count)
                 return;
             CraftingIngredients.RemoveAt(index);
-            foreach (RecipeActionDto action in Actions)
-            {
-                if (action.SlotIndex == index)
-                    action.SlotIndex = -1;
-                else if (action.SlotIndex > index)
-                    action.SlotIndex--;
-            }
         }
 
         /// <summary>清空当前配方类型使用的全部材料。</summary>
@@ -330,8 +323,6 @@ namespace FlatWorld.Editor.ContentWorkshop
             if (!IsHeating)
             {
                 CraftingIngredients.Clear();
-                foreach (RecipeActionDto action in Actions)
-                    action.SlotIndex = -1;
                 return;
             }
 
@@ -339,32 +330,14 @@ namespace FlatWorld.Editor.ContentWorkshop
                 ingredient.Clear();
         }
 
-        /// <summary>把旧普通合成网格按物品或标签身份合并为不限长度的材料清单。</summary>
-        private Dictionary<int, int> LoadCraftingInputs(IEnumerable<RecipeIngredientDto> inputs)
+        /// <summary>将普通合成材料读成不限长度的清单。</summary>
+        private void LoadCraftingInputs(IEnumerable<RecipeIngredientDto> inputs)
         {
-            var slotRemap = new Dictionary<int, int>();
             foreach (RecipeIngredientDto input in inputs ?? Enumerable.Empty<RecipeIngredientDto>())
             {
-                if (!TryCreateIngredient(input, out WorkshopIngredientDraft ingredient))
-                    continue;
-
-                int targetIndex = CraftingIngredients.FindIndex(existing =>
-                    HasSameIdentity(existing, ingredient));
-                if (targetIndex < 0)
-                {
+                if (TryCreateIngredient(input, out WorkshopIngredientDraft ingredient))
                     CraftingIngredients.Add(ingredient);
-                    targetIndex = CraftingIngredients.Count - 1;
-                }
-                else
-                {
-                    long totalAmount = (long)CraftingIngredients[targetIndex].Amount + ingredient.Amount;
-                    CraftingIngredients[targetIndex].Amount = (int)Math.Min(int.MaxValue, totalAmount);
-                }
-
-                slotRemap[input.Slot] = targetIndex;
             }
-
-            return slotRemap;
         }
 
         /// <summary>把热加工输入按原槽位载入 3×3 画布。</summary>
@@ -372,11 +345,13 @@ namespace FlatWorld.Editor.ContentWorkshop
         {
             foreach (RecipeIngredientDto input in source.Inputs ?? Enumerable.Empty<RecipeIngredientDto>())
             {
-                if (!TryCreateIngredient(input, out WorkshopIngredientDraft ingredient) || source.GridWidth <= 0)
+                int width = source.GridWidth.GetValueOrDefault();
+                int slot = input?.Slot ?? -1;
+                if (!TryCreateIngredient(input, out WorkshopIngredientDraft ingredient) || width <= 0 || slot < 0)
                     continue;
 
-                int row = input.Slot / source.GridWidth;
-                int column = input.Slot % source.GridWidth;
+                int row = slot / width;
+                int column = slot % width;
                 if (row < 0 || row >= HeatingCanvasHeight || column < 0 || column >= HeatingCanvasWidth)
                     continue;
 
@@ -405,36 +380,14 @@ namespace FlatWorld.Editor.ContentWorkshop
             return true;
         }
 
-        /// <summary>比较两个材料草稿是否表示同一个精确物品或标签。</summary>
-        private static bool HasSameIdentity(WorkshopIngredientDraft left, WorkshopIngredientDraft right)
+        /// <summary>复制按角色标签定位的配方动作。</summary>
+        private static RecipeActionDto CloneAction(RecipeActionDto source)
         {
-            if (left == null || right == null || left.IsTag != right.IsTag)
-                return false;
-            return string.Equals(
-                left.IsTag ? left.Tag : left.ItemId,
-                right.IsTag ? right.Tag : right.ItemId,
-                StringComparison.OrdinalIgnoreCase);
-        }
-
-        /// <summary>复制配方动作，并把旧网格槽位映射到普通合成材料清单。</summary>
-        private static RecipeActionDto CloneAction(
-            RecipeActionDto source,
-            IReadOnlyDictionary<int, int> craftingSlotRemap)
-        {
-            int slotIndex = source.SlotIndex;
-            if (craftingSlotRemap != null)
-            {
-                slotIndex = craftingSlotRemap.TryGetValue(slotIndex, out int remappedIndex)
-                    ? remappedIndex
-                    : -1;
-            }
-
             return new RecipeActionDto
             {
                 Type = source.Type,
                 TargetRole = source.TargetRole,
-                Value = source.Value,
-                SlotIndex = slotIndex
+                Value = source.Value
             };
         }
 
@@ -486,7 +439,7 @@ namespace FlatWorld.Editor.ContentWorkshop
                 DisplayName = DisplayName.Trim(),
                 RecipeType = IsHeating ? "smelting" : "crafting",
                 InputRule = IsHeating && Ordered ? "ordered" : "unordered",
-                AllowMirror = IsHeating && Ordered && AllowMirror,
+                AllowMirror = IsHeating ? Ordered && AllowMirror : (bool?)null,
                 Temperature = IsHeating ? Mathf.Max(0f, Temperature) : 0f,
                 MaxTemperature = IsHeating ? Mathf.Max(Temperature, MaxTemperature) : 2000f,
                 Outputs = Outputs.Select(output => new RecipeOutputDto
@@ -510,22 +463,22 @@ namespace FlatWorld.Editor.ContentWorkshop
                     .Where(ingredient => !ingredient.IsEmpty)
                     .Select(ingredient => ingredient.Clone())
                     .ToList();
-                dto.GridWidth = compact.Count;
-                dto.GridHeight = 1;
                 for (int index = 0; index < compact.Count; index++)
-                    dto.Inputs.Add(ToDto(compact[index], index));
+                    dto.Inputs.Add(ToDto(compact[index], null));
                 return;
             }
 
             if (!AutoTrim)
             {
-                dto.GridWidth = IsExisting
+                int width = IsExisting
                     ? Mathf.Clamp(OriginalGridWidth, 1, HeatingCanvasWidth)
                     : HeatingCanvasWidth;
-                dto.GridHeight = IsExisting
+                int height = IsExisting
                     ? Mathf.Clamp(OriginalGridHeight, 1, HeatingCanvasHeight)
                     : HeatingCanvasHeight;
-                CopyHeatingCanvasRegion(dto, 0, 0, dto.GridWidth, dto.GridHeight);
+                dto.GridWidth = width;
+                dto.GridHeight = height;
+                CopyHeatingCanvasRegion(dto, 0, 0, width, height);
                 return;
             }
 
@@ -535,8 +488,9 @@ namespace FlatWorld.Editor.ContentWorkshop
                     .Where(ingredient => !ingredient.IsEmpty)
                     .Select(ingredient => ingredient.Clone())
                     .ToList();
-                dto.GridWidth = Mathf.Min(HeatingCanvasWidth, compact.Count);
-                dto.GridHeight = Mathf.CeilToInt((float)compact.Count / dto.GridWidth);
+                int width = Mathf.Min(HeatingCanvasWidth, compact.Count);
+                dto.GridWidth = width;
+                dto.GridHeight = Mathf.CeilToInt((float)compact.Count / width);
                 for (int index = 0; index < compact.Count; index++)
                     dto.Inputs.Add(ToDto(compact[index], index));
                 return;
@@ -558,9 +512,11 @@ namespace FlatWorld.Editor.ContentWorkshop
                 maxColumn = Mathf.Max(maxColumn, column);
             }
 
-            dto.GridWidth = maxColumn - minColumn + 1;
-            dto.GridHeight = maxRow - minRow + 1;
-            CopyHeatingCanvasRegion(dto, minRow, minColumn, dto.GridWidth, dto.GridHeight);
+            int orderedWidth = maxColumn - minColumn + 1;
+            int orderedHeight = maxRow - minRow + 1;
+            dto.GridWidth = orderedWidth;
+            dto.GridHeight = orderedHeight;
+            CopyHeatingCanvasRegion(dto, minRow, minColumn, orderedWidth, orderedHeight);
         }
 
         /// <summary>把热加工画布中的指定矩形区域写入 DTO。</summary>
@@ -579,8 +535,8 @@ namespace FlatWorld.Editor.ContentWorkshop
             }
         }
 
-        /// <summary>把单个材料草稿转换为运行时输入槽数据。</summary>
-        private static RecipeIngredientDto ToDto(WorkshopIngredientDraft ingredient, int slot)
+        /// <summary>把材料草稿转换为 JSON 输入，普通合成不写 slot。</summary>
+        private static RecipeIngredientDto ToDto(WorkshopIngredientDraft ingredient, int? slot)
         {
             return new RecipeIngredientDto
             {
@@ -658,10 +614,8 @@ namespace FlatWorld.Editor.ContentWorkshop
         public bool AddFuelAbility;
         public bool AddCombatAbility;
         public bool AddEquipmentAbility;
-        public float CuttingDamage;
-        public float PiercingDamage;
-        public float ChoppingDamage;
-        public float BluntDamage = 5f;
+        public float PhysicalDamage = 5f;
+        public CombatDamageKind ImpactKind = CombatDamageKind.Blunt;
 
         #region 食物参数
 
@@ -746,10 +700,8 @@ namespace FlatWorld.Editor.ContentWorkshop
             AddFuelAbility = false;
             AddCombatAbility = template.Kind is WorkshopItemTemplateKind.Tool or WorkshopItemTemplateKind.Weapon;
             AddEquipmentAbility = template.Kind == WorkshopItemTemplateKind.Equipment;
-            CuttingDamage = 0f;
-            PiercingDamage = 0f;
-            ChoppingDamage = template.Kind == WorkshopItemTemplateKind.Weapon ? 10f : 5f;
-            BluntDamage = 0f;
+            PhysicalDamage = template.Kind == WorkshopItemTemplateKind.Weapon ? 10f : 5f;
+            ImpactKind = CombatDamageKind.Blunt;
 
             FoodCarbohydrates = 40f;
             FoodMaxCarbohydrates = 40f;

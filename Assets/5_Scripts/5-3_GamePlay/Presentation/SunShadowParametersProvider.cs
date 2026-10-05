@@ -13,9 +13,19 @@ public readonly struct SunShadowParameters
     public readonly float MaximumDistance;
     public readonly SunShadowPhase Phase;
     public Vector2 SunDirection => -ShadowDirection;
-    public bool IsVisible => Opacity > 0.001f;
-    public Vector4 ShaderVector => new Vector4(ShadowDirection.x * LengthMultiplier,
-        ShadowDirection.y * LengthMultiplier, MaximumDistance, Opacity);
+    public bool IsValid => IsFinite(ShadowDirection.x) && IsFinite(ShadowDirection.y) &&
+        IsFinite(LengthMultiplier) && LengthMultiplier >= 0f &&
+        IsFinite(Opacity) && Opacity >= 0f &&
+        IsFinite(MaximumDistance) && MaximumDistance >= 0f &&
+        IsFinite(ShadowDirection.x * LengthMultiplier) && IsFinite(ShadowDirection.y * LengthMultiplier);
+    public bool IsVisible => IsValid && Opacity > 0.001f;
+    // 全局参数也供资源 ECS 和批量阴影读取，非法快照不能进入任何 Shader。
+    public Vector4 ShaderVector => IsValid
+        ? new Vector4(ShadowDirection.x * LengthMultiplier,
+            ShadowDirection.y * LengthMultiplier, MaximumDistance, Opacity)
+        : Vector4.zero;
+
+    private static bool IsFinite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);
 
     /// <summary>创建本帧统一快照。</summary>
     public SunShadowParameters(Vector2 direction, float length, float opacity, float maximumDistance, SunShadowPhase phase)
@@ -27,42 +37,54 @@ public readonly struct SunShadowParameters
 }
 
 /// <summary>
-/// 直接采样 DayTimeSystem 的场景时间和有效光照：6 点日出、18 点日落，边界约 1 小时淡入淡出。
-/// 正午仍保留短投影；最大倍率和世界长度同时限制，不使用 Unity _Time 或另一个时钟。
+/// 直接采样 DayTimeSystem 的场景时间和太阳日照：影子是否出现只由日照亮度决定。
+/// 时间只负责太阳轨迹方向；正午仍保留短投影，不使用 Unity _Time 或另一个时钟。
 /// </summary>
 public static class SunShadowParametersProvider
 {
     #region 太阳采样与维度规则
 
     public const string ShaderVectorName = "_WorldSunShadow";
+    public static float MaximumOpacity => WorldRenderingConfigCatalog.Default.shadows.maximumOpacity;
     private static readonly int ParametersId = Shader.PropertyToID(ShaderVectorName);
     private static readonly int ColorId = Shader.PropertyToID("_WorldSunShadowColor");
-    private static readonly int BlurId = Shader.PropertyToID("_WorldSunShadowBlur"); // 共用柔化全局参数。
 
     /// <summary>统一的太阳采样入口，允许 Harmony/MOD 替换轨迹或特殊维度规则。</summary>
     public static SunShadowParameters Evaluate(string worldKey, float minimumLength, float maximumLength,
-        float maximumDistance, float opacity)
+        float maximumDistance)
     {
         DayTimeSystem time = DayTimeSystem.GetInstance();
         if (time == null || !AllowsSunShadows(worldKey) ||
             !time.TryGetResolvedTimeData(worldKey, out _, out TimeData data) || data == null)
             return default;
+        if (float.IsNaN(data.CurrentTime) || float.IsInfinity(data.CurrentTime) ||
+            float.IsNaN(data.DayLength) || float.IsInfinity(data.DayLength) || data.DayLength <= 0f)
+            return default;
 
         float day = Mathf.Repeat(data.CurrentTime / Mathf.Max(1f, data.DayLength), 1f);
-        float progress = (day - 0.25f) * 2f;
-        if (progress <= 0f || progress >= 1f) return default;
+        float alpha = ResolveOpacity(time.GetSunLighting(worldKey));
+        if (alpha <= 0.001f) return default;
 
-        float altitude = Mathf.Sin(progress * Mathf.PI);
+        // 时间只决定太阳在天空中的方向，不再决定影子的出现和消失。
+        float progress = Mathf.Clamp01((day - 0.25f) / 0.5f);
+
+        // 单精度 Sin(PI) 可能略小于零，非整数次幂前必须限制在太阳高度的合法区间。
+        float altitude = Mathf.Clamp01(Mathf.Sin(progress * Mathf.PI));
         Vector2 direction = new Vector2(-Mathf.Cos(progress * Mathf.PI), -0.55f).normalized;
         float length = Mathf.Lerp(Mathf.Max(minimumLength, maximumLength), minimumLength,
             Mathf.Pow(altitude, 0.75f));
-        float fade = Mathf.SmoothStep(0f, 1f, Mathf.Min(progress, 1f - progress) / 0.08f);
-        float alpha = Mathf.Clamp01(opacity) * fade * Mathf.Clamp01(time.GetLighting(worldKey));
         SunShadowPhase phase = progress < 0.08f ? SunShadowPhase.Sunrise :
             progress > 0.92f ? SunShadowPhase.Sunset :
             Mathf.Abs(progress - 0.5f) < 0.04f ? SunShadowPhase.Noon :
             progress < 0.5f ? SunShadowPhase.Morning : SunShadowPhase.Afternoon;
         return new SunShadowParameters(direction, length, alpha, Mathf.Max(0.1f, maximumDistance), phase);
+    }
+
+    /// <summary>太阳日照直接决定阴影透明度；只要仍有日照就保留对应强度的阴影。</summary>
+    public static float ResolveOpacity(float sunlight)
+    {
+        if (float.IsNaN(sunlight) || float.IsInfinity(sunlight)) return 0f;
+        return MaximumOpacity * Mathf.Clamp01(sunlight);
     }
 
     /// <summary>自动规则禁止地下及固定光照维度；作者可显式覆盖。</summary>
@@ -80,19 +102,25 @@ public static class SunShadowParametersProvider
 
     #region Shader 全局参数
 
-    /// <summary>普通 Sprite 和 ECS 网格共用太阳参数、颜色与本机柔化强度。</summary>
+    /// <summary>普通 Sprite 和 ECS 网格共用太阳参数、颜色与两种阴影的柔化强度。</summary>
     public static void Publish(SunShadowParameters parameters, Color color)
     {
         Shader.SetGlobalVector(ParametersId, parameters.ShaderVector);
         Shader.SetGlobalColor(ColorId, color);
-        Shader.SetGlobalFloat(BlurId, SunShadowSettings.EffectiveBlurStrength);
+        SunShadowSettings.PublishBlur();
     }
 
-    /// <summary>禁用、退出世界和域重载时立即清零。</summary>
+    /// <summary>太阳长投影关闭时，接触阴影仍使用同一颜色和柔化设置。</summary>
+    public static void PublishContactAppearance()
+    {
+        Shader.SetGlobalColor(ColorId, WorldRenderingConfigCatalog.Default.shadows.color);
+        SunShadowSettings.PublishBlur();
+    }
+
+    /// <summary>禁用或退出世界时只清除太阳投影，不影响脚底阴影柔化。</summary>
     public static void ClearGlobals()
     {
         Shader.SetGlobalVector(ParametersId, Vector4.zero);
-        Shader.SetGlobalFloat(BlurId, 0f);
     }
 
     #endregion

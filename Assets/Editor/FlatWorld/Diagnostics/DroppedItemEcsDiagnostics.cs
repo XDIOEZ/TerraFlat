@@ -15,7 +15,7 @@ public static class DroppedItemEcsDiagnostics
     private const string ReportPath = "Temp/DroppedItemEcsValidation.txt";
     private static readonly List<string> Results = new();
 
-    [MenuItem("FlatWorld/诊断/验证掉落物 ECS")]
+    [MenuItem("FlatWorld/诊断/学习参考/验证旧掉落物 ECS")]
     public static void Run()
     {
         if (EditorApplication.isPlayingOrWillChangePlaymode)
@@ -179,7 +179,7 @@ public static class DroppedItemEcsDiagnostics
         UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(root, scene);
         try
         {
-            ItemPicker picker = root.AddComponent<ItemPicker>();
+            Mod_ItemPicker picker = root.AddComponent<Mod_ItemPicker>();
             picker.ModSaveData = new Ex_ModData_MemoryPackable();
             InventoryFixture hotbar = new(ModText.Hotbar, 2f), bag = new(ModText.Bag);
             picker.AddTargetInventories.Add(hotbar); picker.AddTargetInventories.Add(bag);

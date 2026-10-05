@@ -2,7 +2,6 @@ using System;
 using System.IO;
 using UnityEditor;
 using UnityEngine;
-using UnityEngine.Tilemaps;
 using UnityEngine.UI;
 
 /// <summary>0920 资源的显式同步与静态引用检查；不进入播放、不打开存档、不自动运行。</summary>
@@ -17,31 +16,30 @@ public static class Todo0920AssetValidation
             throw new InvalidOperationException("请在非播放模式执行资源同步。");
         GameUIPrefabRebuilder.RebuildCraftingSelectionUI();
         ItemStepScrollRectMigration.Migrate();
-        ApplyGroundCoverSorting();
+        ApplyGroundCoverBatchMaterial();
         ValidateCraftingPrefabs();
         AssetDatabase.SaveAssets();
         Debug.Log("[Todo0920] PASS：制作模板、60%手工面板、逐项滚动和花层预制体静态检查通过。");
     }
 
-    /// <summary>只更新花层排序字段，不重建花朵贴图或覆盖当前草层和 BRG 的其它改动。</summary>
-    private static void ApplyGroundCoverSorting()
+    /// <summary>只同步花层 BRG 材质并移除旧 Flowers Tilemap，不触碰其它 Chunk 图层。</summary>
+    private static void ApplyGroundCoverBatchMaterial()
     {
         const string path = "Assets/2_Prefabs/World/WorldModel/ChunkView.prefab";
         GameObject root = PrefabUtility.LoadPrefabContents(path);
         try
         {
-            ChunkGroundCoverRenderer[] covers = root.GetComponentsInChildren<ChunkGroundCoverRenderer>(true);
-            Require(covers.Length > 0, "ChunkView 缺少正式花层。");
-            foreach (ChunkGroundCoverRenderer cover in covers)
-            {
-                var serialized = new SerializedObject(cover);
-                var tilemap = serialized.FindProperty("tilemap").objectReferenceValue as Tilemap;
-                Require(tilemap != null, "花层缺少正式 Tilemap 引用。");
-                TilemapRenderer renderer = tilemap.GetComponent<TilemapRenderer>();
-                Require(renderer != null, "花层缺少 TilemapRenderer。");
-                renderer.sortingLayerName = "Default";
-                renderer.sortingOrder = 0;
-            }
+            ChunkGrassRenderer grass = root.GetComponent<ChunkGrassRenderer>();
+            Require(grass != null && grass.GrassMaterial != null, "ChunkView 缺少正式草层材质。");
+            ChunkGroundCoverRenderer cover = root.GetComponent<ChunkGroundCoverRenderer>();
+            Require(cover != null, "ChunkView 缺少正式花层 BRG 表现器。");
+            var serialized = new SerializedObject(cover);
+            serialized.FindProperty("groundCoverMaterial").objectReferenceValue = grass.GrassMaterial;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+
+            Transform legacyFlowers = root.transform.Find("Flowers");
+            if (legacyFlowers != null)
+                UnityEngine.Object.DestroyImmediate(legacyFlowers.gameObject);
             PrefabUtility.SaveAsPrefabAsset(root, path);
         }
         finally { PrefabUtility.UnloadPrefabContents(root); }

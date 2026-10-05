@@ -17,6 +17,7 @@ public sealed class RuntimeRecipe
     public float Temperature;
     public float Temperature_Max = 2000f;
     public float ProcessingSeconds;
+    public int ManualWorkSteps = 1;
     public RuntimeLiquidOutput LiquidOutput;
 
     public string name => string.IsNullOrWhiteSpace(DisplayName) ? Id : DisplayName;
@@ -104,5 +105,83 @@ public sealed class RuntimeRecipeAction
     public string Type;
     public string TargetRole;
     public float Value;
-    public int SlotIndex = -1;
+}
+
+/// <summary>把物品自身的加工响应适配成现有制作事务；设备只提供 capability，不持有具体物品配方。</summary>
+public static class ItemProcessingResolver
+{
+    public static bool TryResolve(
+        ItemData itemData,
+        string capability,
+        out RuntimeItemProcessingDefinition processing)
+        => TryResolve(itemData, capability, null, out processing);
+
+    public static bool TryResolve(
+        ItemData itemData,
+        string capability,
+        int? sourceLevel,
+        out RuntimeItemProcessingDefinition processing)
+    {
+        processing = null;
+        GameRes resources = GameRes.ExistingInstance;
+        if (itemData == null || resources == null || string.IsNullOrWhiteSpace(itemData.IDName) ||
+            !resources.TryGetItemDefinition(itemData.IDName, out RuntimeItemDefinition definition))
+        {
+            return false;
+        }
+
+        if (!definition.TryGetProcessing(capability, out processing))
+            return false;
+        if (processing.AcceptsSourceLevel(sourceLevel))
+            return true;
+        processing = null;
+        return false;
+    }
+
+    public static bool TryGetSourceLevel(ItemData source, string capability, out int level)
+    {
+        level = 0;
+        GameRes resources = GameRes.ExistingInstance;
+        return source != null && resources != null && !string.IsNullOrWhiteSpace(source.IDName) &&
+               resources.TryGetItemDefinition(source.IDName, out RuntimeItemDefinition definition) &&
+               definition.TryGetProcessingCapabilityLevel(capability, out level);
+    }
+
+    public static bool TryResolve(
+        ItemData itemData,
+        ItemData source,
+        string capability,
+        out RuntimeItemProcessingDefinition processing)
+    {
+        processing = null;
+        return TryGetSourceLevel(source, capability, out int level) &&
+               TryResolve(itemData, capability, level, out processing);
+    }
+
+    /// <summary>从当前库存中寻找第一份真正可提交的物品加工响应，允许产物继续留在同一容器。</summary>
+    public static bool TryResolveRecipe(
+        Inventory input,
+        string capability,
+        CraftingCapabilities capabilities,
+        out RuntimeItemProcessingDefinition processing,
+        int? sourceLevel = null)
+    {
+        processing = null;
+        if (input?.Data?.itemSlots == null || capabilities == null || string.IsNullOrWhiteSpace(capability))
+            return false;
+
+        for (int index = 0; index < input.Data.itemSlots.Count; index++)
+        {
+            ItemData itemData = input.Data.itemSlots[index]?.itemData;
+            if (!TryResolve(itemData, capability, sourceLevel, out RuntimeItemProcessingDefinition candidate))
+                continue;
+            if (!CraftingRecipeMatcher.TryMatchRecipe(input, candidate.Recipe, capabilities, out _))
+                continue;
+
+            processing = candidate;
+            return true;
+        }
+
+        return false;
+    }
 }

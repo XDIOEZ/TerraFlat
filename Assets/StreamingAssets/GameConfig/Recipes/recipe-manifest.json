@@ -27,6 +27,16 @@
       "enabled": true
     },
     {
+      "id": "crafting/obsidian",
+      "path": "crafting/obsidian.json",
+      "enabled": true
+    },
+    {
+      "id": "crafting/iron_bucket",
+      "path": "crafting/iron_bucket.json",
+      "enabled": true
+    },
+    {
       "id": "crafting/buildings",
       "path": "crafting/buildings.json",
       "enabled": true
@@ -34,6 +44,11 @@
     {
       "id": "crafting/mechanical",
       "path": "crafting/mechanical.json",
+      "enabled": true
+    },
+    {
+      "id": "crafting/electrical",
+      "path": "crafting/electrical.json",
       "enabled": true
     },
     {
@@ -84,6 +99,11 @@
     {
       "id": "crafting/wooden_barrel",
       "path": "crafting/wooden_barrel.json",
+      "enabled": true
+    },
+    {
+      "id": "crafting/fishing",
+      "path": "crafting/fishing.json",
       "enabled": true
     }
   ]

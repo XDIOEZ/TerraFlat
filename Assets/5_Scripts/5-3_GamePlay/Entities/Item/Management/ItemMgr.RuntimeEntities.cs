@@ -56,7 +56,11 @@ internal static class RuntimeAiEntityUtility
             }
         }
 
-        return MonsterManager.IsRegisteredSpeciesId(data.IDName);
+        // 存档采集可能发生在生态目录注销之后；Actor 定义仍能识别休眠快照。
+        return MonsterManager.IsRegisteredSpeciesId(data.IDName) ||
+               (GameRes.Instance != null &&
+                GameRes.Instance.TryGetItemDefinition(data.IDName, out RuntimeItemDefinition definition) &&
+                definition.IsActor);
     }
 
     private static bool IsAiModuleId(string value)
@@ -67,6 +71,14 @@ internal static class RuntimeAiEntityUtility
                 value.StartsWith(AiModulePrefix, StringComparison.OrdinalIgnoreCase));
     }
 }
+
+#region 运行时 AI 持久化契约
+/// <summary>由宿主模块声明运行时 AI 是否拥有独立存档，供临时巢群等所有权模型使用。</summary>
+public interface IRuntimeAiPersistencePolicy
+{
+    bool PersistRuntimeAi { get; }
+}
+#endregion
 
 /// <summary>
 /// ItemMgr 的 AI 实体区块索引。索引键为纯 WorldModel.WorldAddress，
@@ -158,9 +170,21 @@ public partial class ItemMgr
 
         foreach (Item item in items)
         {
-            if (item != null && item.itemData != null)
+            if (item != null && item.itemData != null && ShouldPersistRuntimeAi(item))
                 output.Add(item);
         }
+    }
+
+    /// <summary>具有宿主所有权的实体由宿主恢复，不再另存一份自由 AI。</summary>
+    private static bool ShouldPersistRuntimeAi(Item item)
+    {
+        MonoBehaviour[] behaviours = item.GetComponentsInChildren<MonoBehaviour>(true);
+        for (int index = 0; index < behaviours.Length; index++)
+        {
+            if (behaviours[index] is IRuntimeAiPersistencePolicy policy && !policy.PersistRuntimeAi)
+                return false;
+        }
+        return true;
     }
 
     /// <summary>复制本次存档需要重写的地址，并包含所有仍有活体的地址。</summary>
