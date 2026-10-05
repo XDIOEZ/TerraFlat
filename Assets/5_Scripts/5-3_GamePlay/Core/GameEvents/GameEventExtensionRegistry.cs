@@ -10,6 +10,8 @@ namespace FlatWorld.Gameplay.Events
     /// </summary>
     public static class GameEventExtensionRegistry
     {
+        #region 扩展注册与查询
+
         private static readonly Dictionary<string, IGameEventTriggerHandler> TriggerHandlers =
             new(StringComparer.Ordinal);
         private static readonly Dictionary<string, IGameEventConditionEvaluator> ConditionEvaluators =
@@ -53,19 +55,28 @@ namespace FlatWorld.Gameplay.Events
         public static bool TryGetTrigger(string type, out IGameEventTriggerHandler handler)
         {
             EnsureBuiltInsRegistered();
-            return TriggerHandlers.TryGetValue(GameEventConfigLoader.NormalizeType(type), out handler);
+            return TryGet(TriggerHandlers, type, out handler);
         }
 
         public static bool TryGetCondition(string type, out IGameEventConditionEvaluator evaluator)
         {
             EnsureBuiltInsRegistered();
-            return ConditionEvaluators.TryGetValue(GameEventConfigLoader.NormalizeType(type), out evaluator);
+            return TryGet(ConditionEvaluators, type, out evaluator);
         }
 
         public static bool TryGetAction(string type, out IGameEventActionHandler handler)
         {
             EnsureBuiltInsRegistered();
-            return ActionHandlers.TryGetValue(GameEventConfigLoader.NormalizeType(type), out handler);
+            return TryGet(ActionHandlers, type, out handler);
+        }
+
+        private static bool TryGet<T>(Dictionary<string, T> registry, string type, out T extension)
+        {
+            // 已校验的类型直接查表，外部原始输入仍走统一规范化。
+            if (type != null && registry.TryGetValue(type, out extension))
+                return true;
+
+            return registry.TryGetValue(GameEventConfigLoader.NormalizeType(type), out extension);
         }
 
         private static bool Register<T>(
@@ -94,5 +105,7 @@ namespace FlatWorld.Gameplay.Events
             ActionHandlers.Clear();
             builtInsRegistered = false;
         }
+
+        #endregion
     }
 }

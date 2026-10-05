@@ -22,7 +22,10 @@
 
 - **Profiler 本身会扰动 Editor 帧时间。** 低干扰 `gameplay_*_debug(sample)` 更适合判断版本整体帧时间和 backlog；Profiler 更适合回答“时间花在哪”。两种数据不能直接混成同一基准。
 - 低干扰采样前要看采样结果里的 `profilerEnabled`，不能只凭“我没打开 Profiler 窗口”判断 Profiler 已关闭。实际遇到过 Profiler 仍在记录、关闭后同一场景帧推进明显增加的情况；PuerTS 性能抓取结束后也要确认它是否恢复了原记录状态。
-- PuerTS RawFrameData 报告必须先过“新鲜度门禁”：优先使用 `warnings=[]`、`recordStarted=true` 且抓取前后 Profiler 帧范围确实推进的报告。若出现 `Profiler recording completed, but no new frames were added after the previous Profiler buffer.`，该报告可能只是分析已存在/环形缓冲中的帧，不能拿来证明刚才那 8～15 秒发生了什么，也不要参与版本回归结论。
+- PuerTS RawFrameData 报告必须先过“新鲜度门禁”：`recordStarted=true` 且抓取前后 Profiler 帧范围确实推进；逐条核实警告，`current` 目标的连接提示可在已确认目标后保留。若出现 `Profiler recording completed, but no new frames were added after the previous Profiler buffer.`，该报告可能只是分析已存在/环形缓冲中的帧，不能用于本轮回归结论。
+- Unity 2022.3 的 Deep Profile 开关须配合脚本重载；仅写 `ProfilerDriver.deepProfiling=true` 不足以证明已加载程序集插桩，报告中应出现真实托管方法调用链。深度数据只与同为深度采样的数据比较，不能拿其 FPS 对比普通采样。
+- 深度采游戏时先关闭 `profileEditor`，PuerTS 抓取使用 `target=current`；`target=editor` 会临时开启整个 Editor 的录制。先用亚秒级窗口，报告导出可能长时间阻塞并消耗大量内存；卡住或连接超时须核对进程、日志和产物，不能直接断言 Unity 退出。域重载后从 `instances.json` 重读端口，旧 HTTP 端口仍监听不代表命令端点可用。
+- 用户要求启动游戏时须显示并核实实际 Game 画面；隐藏窗口下的 `ready=true` 只能证明世界状态，不能代替可见运行验收。
 - `gameplay_spawner_debug(sample)` 等工具返回的 `frames / elapsed` 可以帮助发现 Editor 更新明显变慢，但它不是正式 FPS 基准；其中 `measured.*` 主要描述该诊断工具负责的子系统工作，整帧根因仍要靠 Profiler 或更专门的诊断 Marker。
 - Editor Profiler 的绝对 FPS 不能直接当发行版 FPS。实战中 GameView、UI Toolkit、Profiler 解析、MCP Server 都会进入采样；版本对比时更应关注同条件下的 P50/P95 和项目 Marker 变化。
 - 热点排序优先看 **Self Time**。父级 Marker 的 Total Time 经常只是把真正热点包在里面，单看 Total 容易把入口函数当成根因。

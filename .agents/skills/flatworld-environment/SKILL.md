@@ -25,6 +25,7 @@ description: "Use when: 定位或修改 FlatWorld 的世界时间、昼夜、天
 - 当前跨场景时间与存档主入口是 `DayTimeSystem`；季节改动前确认场景是否使用 `DayNightTimeManager`。
 - GM 当天时刻滑条应解析活动场景实际引用的时钟，按当前 `DayLength` 映射 00:00～23:59；拖动期间只预览，松开后由状态权威端调用 `JumpToTime` 一次，避免每个刻度都触发时间事件和天气调度。GM 面板在主菜单也会创建，此时先确认已进入世界，再用 `DayTimeSystem.GetInstance()` 无报错地探测时钟；不要在非世界场景用会打印缺失错误的 `Instance`。
 - 天气权威状态保存在 `PlanetData`；阶段边界使用绝对世界时间，跳时交给 Scheduler 跨越全部边界。
+- 高频天气阶段校验使用 Scheduler 的显式枚举匹配，新增阶段须同步 `IsValidPhase`，避免 `Enum.IsDefined` 反射和装箱。
 - `PlanetData.WindStrength` 是独立于降雨强度的星球级权威状态；修改必须经 `WeatherMgr.SetWindStrength` 发布天气快照，Client 只应用复制值，离开世界或 `SuppressWeather` 维度时清零 Shader 全局表现但不改存档值。
 - 静态降水层影响地形/生态，不等于动态天气强度。
 - 普通 Client 不调度天气或体温伤害，只应用服务器状态。
@@ -60,6 +61,7 @@ description: "Use when: 定位或修改 FlatWorld 的世界时间、昼夜、天
 - 区块积雪表现直接从已绑定 `ChunkTerrainData` 读取 `temperature.celsius`，再叠加星球基温差采样 `SeasonalSnow`；禁止逐格走世界坐标温度查询。降雨且镜头当地低于冻结温度才启用无雪区块的周期刷新；停雪后仅有残雪的区块继续刷新融化，融净即停用。地形与液体变化事件可临时唤醒覆盖层；雪量与地形版本均不变时跳过整块扫描，区块刷新按 X/Y 坐标错峰。
 
 - 角色液体接触由 `Mod_TileEffectReceiver.Liquid` 独立维护，WorldLiquidBehaviour 读取当前 LiquidDepth；深水有体力时 `LiquidFloating` 仅暂停 Ground。Ground 与 Liquid 各自拥有环境效果运行器，雪地/泥地退出不能清掉潮湿、体温、游泳、氧气、液体减速或饮用动作。浮沉边界只触发一次 Ground Exit/Enter，禁止用全接收器 effectSuppressors 代替上浮状态。
+- Ground 接触身份校验只读取当前权威 Terrain 引用和 TopTileId；仅重新进入地块时创建角色独立 TileData，不能每帧为身份比较克隆模板。地格移动、地块替换和区块重载仍须触发重新绑定。
 
 ## 验证
 

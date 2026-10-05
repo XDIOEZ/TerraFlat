@@ -65,7 +65,7 @@ public static class WeatherEventScheduler
         config ??= new RainEventScheduleConfig();
         NormalizeWeatherValues(planetData);
 
-        if (!Enum.IsDefined(typeof(WeatherPhase), planetData.WeatherPhase))
+        if (!IsValidPhase(planetData.WeatherPhase))
             EnterClearPhase(planetData, currentTotalTime, dayLength, config);
         else if (planetData.WeatherPhase == WeatherPhase.Clear &&
                  planetData.NextWeatherEventTotalTime <= 0f)
@@ -82,6 +82,15 @@ public static class WeatherEventScheduler
 
         planetData.WeatherDataVersion = CurrentDataVersion;
         ApplyPhasePresentation(planetData, config);
+    }
+
+    private static bool IsValidPhase(WeatherPhase phase)
+    {
+        // 显式匹配合法阶段，避免高频 Enum.IsDefined 的反射与装箱。
+        return phase is WeatherPhase.Clear or WeatherPhase.Forecast or
+            WeatherPhase.RainStarting or WeatherPhase.RainSteady or
+            WeatherPhase.RainHeavy or WeatherPhase.RainEnding or
+            WeatherPhase.Recovery or WeatherPhase.Fog;
     }
 
     public static int Advance(

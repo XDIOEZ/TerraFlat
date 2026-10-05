@@ -24,6 +24,7 @@ description: "Use when: 定位或修改 FlatWorld 的全局游戏事件、事件
 - 单个坏文件或坏事件应被隔离，不能阻断其他有效配置。
 - 新行为实现并注册 Handler；不要把玩法分支堆进 `GameEventManager` 或改成专用 JSON 字段。
 - 逐帧触发器复用已校验的类型参数；修改现有定义参数必须重新校验或替换参数 JObject。候选运行态只在状态变化时写回 JSON，缓存须识别外部 JSON 替换并随进度对象释放，不能延迟到退出才写回。
+- 扩展查询先用已校验的类型键直接查表，未命中再统一 Trim/转小写；不能让每帧事件调度重复分配规范化字符串，外部原始输入仍须可用。
 - 行动的完成、取消和世界退出路径都要清理运行时状态；天气、怪物、存档或联机变化同时使用对应 Skill。
 - 生物事件行动的待生成数量只按实际成功数扣减；`MonsterSpawnerManager.SpawnEventCreatures` 每次最多创建一只，候选必须在所有活动镜头外且区块表现就绪，受共享出生间隔和候选检查预算约束。
 - `creature.advance` 取得 Actor GUID 后通过 `AiRuntimeBackendService` 向实际 GameObject/ECS 后端下发命令；命令失败要回收该 Actor，并且不能把它计入事件已生成数。

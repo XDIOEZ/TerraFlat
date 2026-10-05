@@ -623,12 +623,18 @@ public partial class Mod_TileEffectReceiver : Module
         if (!hasActiveTileEffects || activeGridPos != gridPos)
             return false;
 
+        if (activeRuntimeTerrain != null)
+        {
+            // 校验地块身份只读权威采样，避免每帧克隆地块行为数据。
+            ChunkMgr manager = ChunkMgr.ExistingInstance;
+            return manager != null &&
+                   manager.TryGetRuntimeTerrainTile(transform.position, out RuntimeTerrainTileSample sample) &&
+                   ReferenceEquals(sample.Terrain, activeRuntimeTerrain) &&
+                   sample.TopTileId == activeRuntimeTileId;
+        }
+
         if (!TryResolveTileEffect(gridPos, out TileEffectResolution currentResolution))
             return false;
-
-        if (activeRuntimeTerrain != null)
-            return ReferenceEquals(currentResolution.RuntimeTerrain, activeRuntimeTerrain) &&
-                   currentResolution.RuntimeTileId == activeRuntimeTileId;
 
         return activeTileMap != null && activeTileMap == currentResolution.Map &&
                ReferenceEquals(activeTileData, currentResolution.TileData);
