@@ -102,6 +102,8 @@ MonoBehaviour:
       Initialized: 0
       TemperatureCelsius: 20
       Moisture: 0
+      IsBurning: 0
+      CombustionElapsedSeconds: 0
     HeatConductionRate: 1
     position: {x: 50, y: 50}
     TileLoaded: 0
