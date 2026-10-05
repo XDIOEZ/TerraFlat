@@ -1,0 +1,39 @@
+{
+  "$schema": "../game-events.schema.json",
+  "schemaVersion": 1,
+  "events": [
+    {
+      "id": "surface_daily_cloudy",
+      "displayName": "阴天",
+      "description": "从第2天起每天有20%概率出现阴天，持续半个游戏日，云层遮蔽日光但不降雨。",
+      "enabled": true,
+      "priority": 20,
+      "conflictGroup": "forced_weather",
+      "oncePerWorld": false,
+      "cooldownDays": 0,
+      "durationDays": 0.5,
+      "trigger": {
+        "type": "day.schedule",
+        "parameters": {
+          "minimumDay": 2,
+          "repeatEveryDays": 1,
+          "timeOfDay": 0,
+          "chance": 0.2
+        }
+      },
+      "conditions": [
+        {
+          "type": "dimension.is",
+          "parameters": { "allowedDimensionIds": ["surface"] }
+        }
+      ],
+      "actions": [
+        {
+          "id": "force_cloudy",
+          "type": "weather.override",
+          "parameters": { "weather": "Cloudy", "intensity": 1.0 }
+        }
+      ]
+    }
+  ]
+}

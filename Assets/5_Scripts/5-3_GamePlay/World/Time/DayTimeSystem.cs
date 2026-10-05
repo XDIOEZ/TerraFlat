@@ -429,13 +429,15 @@ private void TimeRun(string sceneName, float deltaTime)
     /// </summary>
     public float GetLighting(string sceneName)
     {
-        return GetLightingInternal(sceneName, true);
+        float cloudMultiplier = WeatherMgr.ExistingInstance?.GetCloudLightingMultiplier(sceneName, false) ?? 1f;
+        return GetLightingInternal(sceneName, true) * cloudMultiplier;
     }
 
     /// <summary>获取仅由太阳日照产生的最终场景亮度，不包含月光。</summary>
     public float GetSunLighting(string sceneName)
     {
-        return GetLightingInternal(sceneName, false);
+        float cloudMultiplier = WeatherMgr.ExistingInstance?.GetCloudLightingMultiplier(sceneName, true) ?? 1f;
+        return GetLightingInternal(sceneName, false) * cloudMultiplier;
     }
 
     /// <summary>统一计算场景光照；太阳阴影通过 includeMoonlight=false 读取纯日照。</summary>

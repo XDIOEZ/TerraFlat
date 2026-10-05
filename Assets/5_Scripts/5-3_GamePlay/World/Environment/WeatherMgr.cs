@@ -17,6 +17,10 @@ public partial class WeatherMgr : SingletonAutoMono<WeatherMgr>
     private const float ResizeHandleSize = 18f; // 右下角缩放手柄尺寸
 
     public bool EnableDebugLog = false; // 是否输出天气处理调试日志
+    [SerializeField, Range(0f, 1f), Tooltip("满强度云层下的环境光倍率。")]
+    private float _cloudyAmbientLightMultiplier = 0.65f;
+    [SerializeField, Range(0f, 1f), Tooltip("满强度云层下的太阳投影倍率。")]
+    private float _cloudySunLightMultiplier = 0.15f;
     [SerializeField] private Key _toggleDebugPanelInputKey = Key.F12; // 天气调试面板快捷键
     [SerializeField] private bool _debugPanelVisible = false; // 天气调试面板显示状态
     [SerializeField] private Rect _debugWindowRect = new Rect(20f, 220f, 380f, 280f); // 调试面板位置和尺寸
@@ -77,6 +81,12 @@ public partial class WeatherMgr : SingletonAutoMono<WeatherMgr>
     public void SetRainWeatherDebug()
     {
         SetRain();
+    }
+
+    [Button("切换为阴天")]
+    public void SetCloudyWeatherDebug()
+    {
+        SetCloudy();
     }
 
     [Button("切换为大雾")]
@@ -143,6 +153,11 @@ public partial class WeatherMgr : SingletonAutoMono<WeatherMgr>
     public void SetFog(float intensity = 1f)
     {
         SetWeather(WeatherType.Fog, intensity);
+    }
+
+    public void SetCloudy(float intensity = 1f)
+    {
+        SetWeather(WeatherType.Cloudy, intensity);
     }
 
     public void ClearWeather()
@@ -315,6 +330,33 @@ public partial class WeatherMgr : SingletonAutoMono<WeatherMgr>
 
 #endregion
 
+#region 云层光照
+
+    public float GetCloudLightingMultiplier(string sceneName, bool directSunlight)
+    {
+        if (!_weatherRuntimeAllowed)
+            return 1f;
+
+        DimensionManager dimensions = DimensionManager.Instance;
+        if (dimensions != null &&
+            dimensions.TryGetDefinitionForWorldKey(sceneName, out DimensionDefinition definition) &&
+            (definition.SuppressWeather || definition.UseFixedLighting))
+        {
+            return 1f;
+        }
+
+        WeatherType weather = GetCurrentWeather();
+        if (weather is not (WeatherType.Cloudy or WeatherType.Rain or WeatherType.Storm))
+            return 1f;
+
+        // 阴天和雨云共用光照衰减，局部灯光不受影响。
+        float fullCloudMultiplier = directSunlight
+            ? _cloudySunLightMultiplier : _cloudyAmbientLightMultiplier;
+        return Mathf.Lerp(1f, Mathf.Clamp01(fullCloudMultiplier), GetCurrentWeatherIntensity());
+    }
+
+#endregion
+
 #region 生命周期
 
     private void Start()
@@ -442,6 +484,11 @@ public partial class WeatherMgr : SingletonAutoMono<WeatherMgr>
         if (GUILayout.Button("雨天"))
         {
             SetRain();
+        }
+
+        if (GUILayout.Button("阴天"))
+        {
+            SetCloudy();
         }
 
         if (GUILayout.Button("大雾"))

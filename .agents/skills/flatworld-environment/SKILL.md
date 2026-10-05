@@ -27,6 +27,7 @@ description: "Use when: 定位或修改 FlatWorld 的世界时间、昼夜、天
 - GM 当天时刻滑条应解析活动场景实际引用的时钟，按当前 `DayLength` 映射 00:00～23:59；拖动期间只预览，松开后由状态权威端调用 `JumpToTime` 一次，避免每个刻度都触发时间事件和天气调度。GM 面板在主菜单也会创建，此时先确认已进入世界，再用 `DayTimeSystem.GetInstance()` 无报错地探测时钟；不要在非世界场景用会打印缺失错误的 `Instance`。
 - 天气权威状态保存在 `PlanetData`；阶段边界使用绝对世界时间，跳时交给 Scheduler 跨越全部边界。
 - 高频天气阶段校验使用 Scheduler 的显式枚举匹配，新增阶段须同步 `IsValidPhase`，避免 `Enum.IsDefined` 反射和装箱。
+- 独立阴天使用 `WeatherType.Cloudy / WeatherPhase.Cloudy`，结束后放晴；`Forecast/Recovery` 仍属于降雨链。阴天恢复须保留强度和绝对结束时间，自然事件配置在 `core-cloudy.json`。云层只在 `DayTimeSystem.GetLighting/GetSunLighting` 外层衰减一次，不能在引用场景递归中重复乘算，也不能影响局部灯光或抑制天气/固定光照的维度。
 - `PlanetData.WindStrength` 是独立于降雨强度的星球级权威状态；修改必须经 `WeatherMgr.SetWindStrength` 发布天气快照，Client 只应用复制值，离开世界或 `SuppressWeather` 维度时清零 Shader 全局表现但不改存档值。
 - 静态降水层影响地形/生态，不等于动态天气强度。
 - 普通 Client 不调度天气或体温伤害，只应用服务器状态。

@@ -302,7 +302,7 @@ public partial class WeatherMgr
     {
         return weatherType switch
         {
-            WeatherType.Cloudy => WeatherPhase.Forecast,
+            WeatherType.Cloudy => WeatherPhase.Cloudy,
             WeatherType.Rain when intensity >= 0.85f => WeatherPhase.RainHeavy,
             WeatherType.Rain when intensity >= 0.5f => WeatherPhase.RainSteady,
             WeatherType.Rain => WeatherPhase.RainStarting,

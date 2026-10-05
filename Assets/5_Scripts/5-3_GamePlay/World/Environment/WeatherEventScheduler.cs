@@ -10,7 +10,8 @@ public enum WeatherPhase
     RainHeavy,
     RainEnding,
     Recovery,
-    Fog = 7 // 大雾独立于降雨阶段，结束后回到晴天。
+    Fog = 7, // 大雾独立于降雨阶段，结束后回到晴天。
+    Cloudy = 8 // 独立阴天结束后放晴，不进入降雨预告链。
 }
 
 [Serializable]
@@ -49,6 +50,7 @@ public static class WeatherEventScheduler
     public const int CurrentDataVersion = 2;
     public const int MaxTransitionsPerAdvance = 100000;
     public const float DefaultFogDurationDays = 0.25f; // 手动起雾的默认时长；事件可覆盖绝对结束时间。
+    public const float DefaultCloudyDurationDays = 0.5f; // 手动阴天默认持续半个游戏日。
 
 #region 初始化与推进
 
@@ -90,7 +92,7 @@ public static class WeatherEventScheduler
         return phase is WeatherPhase.Clear or WeatherPhase.Forecast or
             WeatherPhase.RainStarting or WeatherPhase.RainSteady or
             WeatherPhase.RainHeavy or WeatherPhase.RainEnding or
-            WeatherPhase.Recovery or WeatherPhase.Fog;
+            WeatherPhase.Recovery or WeatherPhase.Fog or WeatherPhase.Cloudy;
     }
 
     public static int Advance(
@@ -145,7 +147,7 @@ public static class WeatherEventScheduler
         planetData.WeatherDataVersion = CurrentDataVersion;
         planetData.WeatherPhase = phase;
         planetData.WeatherPhaseStartedTotalTime = currentTotalTime;
-        if (phase == WeatherPhase.Fog)
+        if (phase is WeatherPhase.Fog or WeatherPhase.Cloudy)
             planetData.WeatherIntensity = 1f;
 
         if (phase == WeatherPhase.Clear)
@@ -267,6 +269,7 @@ public static class WeatherEventScheduler
             WeatherPhase.RainEnding => Mathf.Max(0.1f, config.RainEndingDuration),
             WeatherPhase.Recovery => Mathf.Max(0.1f, config.RecoveryDuration),
             WeatherPhase.Fog => Mathf.Max(0.1f, dayLength * DefaultFogDurationDays),
+            WeatherPhase.Cloudy => Mathf.Max(0.1f, dayLength * DefaultCloudyDurationDays),
             _ => 0.1f
         };
     }
@@ -328,6 +331,11 @@ public static class WeatherEventScheduler
         config ??= new RainEventScheduleConfig();
         switch (planetData.WeatherPhase)
         {
+            case WeatherPhase.Cloudy:
+                // 独立阴天保留手动、事件或存档中的强度。
+                planetData.CurrentWeather = WeatherType.Cloudy;
+                planetData.WeatherIntensity = Mathf.Clamp01(planetData.WeatherIntensity);
+                break;
             case WeatherPhase.Fog:
                 // 保留手动、事件或存档中的雾强度，不能在每次推进时重新变成雨或晴天。
                 planetData.CurrentWeather = WeatherType.Fog;
