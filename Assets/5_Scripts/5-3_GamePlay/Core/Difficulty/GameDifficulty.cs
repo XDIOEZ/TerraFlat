@@ -619,7 +619,8 @@ public static class GameDifficultyService
             return false;
 
         Item owner = candidate.Owner != null ? candidate.Owner : candidate;
-        return owner is Player || owner.GetComponent<Player>() != null;
+        // 非玩家是正常查询结果，避免 Editor 为缺失组件创建诊断字符串。
+        return owner is Player || owner.TryGetComponent<Player>(out _);
     }
 
     public static float ResolveDirectDamageMultiplier(Item attacker, Item receiver)

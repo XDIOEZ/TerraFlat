@@ -23,6 +23,7 @@ description: "Use when: 定位或修改 FlatWorld 的世界时间、昼夜、天
 - `TemperatureData` 的 MemoryPack 字段顺序属于存档布局，改冷伤语义不能删掉中间 float 槽位。规则参数在加载旧存档后恢复当前内容配置，运行态体温仍由存档恢复。
 
 - 当前跨场景时间与存档主入口是 `DayTimeSystem`；季节改动前确认场景是否使用 `DayNightTimeManager`。
+- 高频时钟消费者复用 `DayTimeSystem.GetCurrentActiveSceneName()`，只按活动场景句柄缓存名称，并在世界进入/退出时失效；时刻、天气和维度规则继续实时读取，不能随名称一起缓存。
 - GM 当天时刻滑条应解析活动场景实际引用的时钟，按当前 `DayLength` 映射 00:00～23:59；拖动期间只预览，松开后由状态权威端调用 `JumpToTime` 一次，避免每个刻度都触发时间事件和天气调度。GM 面板在主菜单也会创建，此时先确认已进入世界，再用 `DayTimeSystem.GetInstance()` 无报错地探测时钟；不要在非世界场景用会打印缺失错误的 `Instance`。
 - 天气权威状态保存在 `PlanetData`；阶段边界使用绝对世界时间，跳时交给 Scheduler 跨越全部边界。
 - 高频天气阶段校验使用 Scheduler 的显式枚举匹配，新增阶段须同步 `IsValidPhase`，避免 `Enum.IsDefined` 反射和装箱。

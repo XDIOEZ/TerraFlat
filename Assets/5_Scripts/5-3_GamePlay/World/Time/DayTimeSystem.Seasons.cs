@@ -20,7 +20,7 @@ public partial class DayTimeSystem
 
     /// <summary>解析活动维度实际引用的世界时间，不创建新的世界或时钟。</summary>
     public bool TryGetActiveTimeData(out TimeData time) =>
-        TryGetResolvedTimeData(SceneManager.GetActiveScene().name, out _, out time);
+        TryGetResolvedTimeData(GetCurrentActiveSceneName(), out _, out time);
 
     /// <summary>读取当前季节快照，供 HUD、环境与植物共享。</summary>
     public bool TryGetCurrentSeason(out SeasonSnapshot snapshot)

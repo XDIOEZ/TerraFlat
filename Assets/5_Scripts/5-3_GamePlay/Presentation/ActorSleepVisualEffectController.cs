@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -24,6 +25,8 @@ public sealed class ActorSleepVisualEffectController : MonoBehaviour
 
     private VisualEffectManager _effectManager;
     private Transform _actorRoot;
+    private GameObject _rendererOwner;
+    private readonly List<ParticleSystemRenderer> _effectRenderers = new(2);
     /// <summary>AI 最近一次提交的睡眠表现请求，跨区块休眠保留。</summary>
     private bool _sleeping;
 
@@ -68,9 +71,11 @@ public sealed class ActorSleepVisualEffectController : MonoBehaviour
         GameObject effectObject = _effectManager.GetOwnerEffect(_actorRoot, effectName);
         if (effectObject != null)
         {
+            CacheEffectRenderers(effectObject);
             WorldSortingManager sorting = WorldSortingManager.GetInstance();
-            foreach (ParticleSystemRenderer renderer in effectObject.GetComponentsInChildren<ParticleSystemRenderer>(true))
-                sorting.ApplyRenderer(renderer, WorldSortingManager.WorldEffectCategory, 10);
+            for (int i = 0; i < _effectRenderers.Count; i++)
+                if (_effectRenderers[i] != null)
+                    sorting.ApplyRenderer(_effectRenderers[i], WorldSortingManager.WorldEffectCategory, 10);
             SynchronizeTransform(effectObject.transform);
         }
     }
@@ -84,6 +89,17 @@ public sealed class ActorSleepVisualEffectController : MonoBehaviour
     #endregion
 
     #region Helpers
+
+    private void CacheEffectRenderers(GameObject effectObject)
+    {
+        if (_rendererOwner == effectObject)
+            return;
+
+        // 特效实例更换时才重建成员列表，逐帧跟随不创建子组件数组。
+        _rendererOwner = effectObject;
+        _effectRenderers.Clear();
+        effectObject.GetComponentsInChildren(true, _effectRenderers);
+    }
 
     /// <summary>Owner 仅用于登记；粒子由特效管理器持有，避免随角色的激活过程修改层级。</summary>
     private void PlayEffect()
@@ -116,6 +132,8 @@ public sealed class ActorSleepVisualEffectController : MonoBehaviour
             _effectManager.StopOwnerEffect(_actorRoot, effectName);
 
         _effectManager = null;
+        _rendererOwner = null;
+        _effectRenderers.Clear();
     }
 
     #endregion

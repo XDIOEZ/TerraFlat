@@ -33,6 +33,7 @@ description: "Use when: 定位或修改 FlatWorld 的运行时特效、粒子、
 - 通用投射物飞行拖尾由 `ProjectileFlightTrailPresenter` 挂在 `Mod_Projectile` Prefab 上负责，只读取投射物飞行态和 Sprite 表现；不要把拖尾生命周期写进 `Mod_Bow`、伤害或碰撞结算。
 - 源实体会在触发特效的同帧被回收时，一次性粒子根节点必须先脱离源实体并放到同一场景独立播放；否则 `PrepareForDespawn/OnDisable` 会把粒子提前清空。
 - 需要在角色 `OnDisable` 中立即回收的池化特效不能挂到该角色层级下，否则归池 `SetParent` 会与父级激活/停用过程冲突；Owner 登记与 Transform 父级分开，睡眠 ZZZ 由单位缩放的独立特效根节点持有并在 `LateUpdate` 跟随。区块休眠不等于退出 AI 睡眠状态，停用时只释放可见实例，重新激活时恢复仍有效的表现请求。
+- 睡眠粒子的 Renderer 成员按实际特效实例缓存到复用列表，替换或回收时清理，逐帧仍更新排序和 Transform；验收须有真实睡眠粒子在播放，并检查停用后清空、重新启用后重建，不能用清醒时的零分配代替。
 - 粒子 `VelocityModule` 的线性 X/Y/Z 必须使用同一种 `minMaxState`；2D 特效即使 Z 速度恒为零，也应使用与 X/Y 相同的模式并把上下限都设为零，避免 `Particle Velocity curves must all be in the same mode`。
 - 运行时动态创建的 `ParticleSystem` 不能依赖 Renderer 默认材质；在 URP 2D 下必须显式绑定可用材质，否则默认/旧管线 Shader 可能直接显示为洋红色。
 - `ParticleSystem.EmitParams.rotation` 使用欧拉角度数；2D `Billboard` 粒子按世界移动方向旋转时，屏幕旋转正负方向与 `Vector2.SignedAngle(Vector2.up, direction)` 相反，应使用其反号，否则水平/垂直方向看似正常但 45° 斜向会转成垂直朝向。
@@ -40,6 +41,7 @@ description: "Use when: 定位或修改 FlatWorld 的运行时特效、粒子、
 - 逻辑未命中由 `CombatFeedbackEvents` 发布攻击位置快照，世界级 `CombatMissFeedbackPresenter` 消费后用本地化文本和白色覆盖复用伤害文字池；不得重掷命中概率、把 0 伤害/无效结算当成闪避，或在伤害模块中写入具体文案和动画。
 - 角色颜色等共享 Shader 参数通过现有 MPB 控制器提交，避免多个组件互相覆盖。
 - Unity 2D 使用 URP/Light2D；修改 Shader 前核对材质实际 Shader 与 Pass。
+- HLSL 噪声函数的坐标参数不能命名为 `point`（保留关键字）；Shader 可能到首次启用对应天气才编译，验收须触发实际效果并检查 `ShaderUtil.GetShaderMessages` 与画面。
 - 输送带圆弧 UV 必须使用 FullRect Sprite 网格；尺寸与格心偏移按 `sprite.rect/pivot/pixelsPerUnit` 计算，预览和行合批共用 `ConveyorPresentation`，不能用透明裁边后的网格范围代替完整画布。横向采样内缩要落在有效 texel 中心，避免带端采到透明留白。
 - 输送带主体与侧轴统一走 `MechanicalConnectorDepthMesh` 的 `MechanicalShaft` 层，始终位于玩家下方；动态带面上下界按完整画布向外对齐 texel 行，覆盖完整带条并保留静止边框。
 - 输送带仅直带显示侧铁环，安装与预览共用 `ConveyorPresentation.HasVisibleSidePort`，拐角隐藏图片但不改权威供能端口；直带用 `SidePortPosition/SidePortOffset` 定位，内侧伸入主体下方，只露出外侧铁环，不能按整张透明画布居中后再外推。

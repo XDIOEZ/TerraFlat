@@ -52,17 +52,17 @@ Shader "Hidden/FlatWorld/DenseFog"
                 return output;
             }
 
-            float Hash(float2 point)
+            float Hash(float2 noisePosition)
             {
-                float3 value = frac(float3(point.xyx) * 0.1031);
+                float3 value = frac(float3(noisePosition.xyx) * 0.1031);
                 value += dot(value, value.yzx + 33.33);
                 return frac((value.x + value.y) * value.z);
             }
 
-            float CloudNoise(float2 point)
+            float CloudNoise(float2 noisePosition)
             {
-                float2 cell = floor(point);
-                float2 local = frac(point);
+                float2 cell = floor(noisePosition);
+                float2 local = frac(noisePosition);
                 local = local * local * (3.0 - 2.0 * local);
                 return lerp(lerp(Hash(cell), Hash(cell + float2(1.0, 0.0)), local.x),
                     lerp(Hash(cell + float2(0.0, 1.0)), Hash(cell + 1.0), local.x), local.y);

@@ -109,7 +109,8 @@ public partial class DayTimeSystem : SingletonMono<DayTimeSystem>
             return;
 
         LoadFromSaveData(SaveDataMgr.Instance.SaveData.DayTimeData);
-        string sceneName = SceneManager.GetActiveScene().name;
+        cachedActiveSceneHandle = int.MinValue;
+        string sceneName = GetCurrentActiveSceneName();
         EnsureSceneTimeData(sceneName, GameManager.Instance.ReadyTimeData);
         ApplyPresentationSettings(sceneName);
     }
@@ -136,6 +137,8 @@ public partial class DayTimeSystem : SingletonMono<DayTimeSystem>
         caveExitLightPositions.Clear();
         cachedCaveExitLightWorldKey = string.Empty;
         nextCaveExitLightRefreshTime = 0f;
+        cachedActiveSceneHandle = int.MinValue;
+        cachedActiveSceneName = string.Empty;
     }
 
     private void Update()
@@ -193,13 +196,26 @@ private void TimeRun(string sceneName, float deltaTime)
         }
     }
 
-    /// <summary>
-    /// 获取当前激活的场景名（需要根据实际项目实现）
-    /// </summary>
-    private string GetCurrentActiveSceneName()
+    #region 活动场景名称缓存
+
+    private int cachedActiveSceneHandle = int.MinValue;
+    private string cachedActiveSceneName = string.Empty;
+
+    /// <summary>按活动场景句柄复用名称，世界进入与退出时同时失效。</summary>
+    public string GetCurrentActiveSceneName()
     {
-        return SceneManager.GetActiveScene().name;
+        Scene scene = SceneManager.GetActiveScene();
+        if (cachedActiveSceneHandle != scene.handle)
+        {
+            // Scene.name 的托管字符串只在切换场景时读取。
+            cachedActiveSceneHandle = scene.handle;
+            cachedActiveSceneName = scene.name;
+        }
+
+        return cachedActiveSceneName;
     }
+
+    #endregion
 
     /// <summary>
     /// 设置全局光源以及供水面使用的最终月光强度。

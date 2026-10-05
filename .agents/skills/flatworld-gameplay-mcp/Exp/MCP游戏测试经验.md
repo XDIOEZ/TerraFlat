@@ -32,6 +32,7 @@
 - `Idle`、`Semaphore.WaitForSignal` 多数是线程等待，不应该直接拿来当优化目标。
 - `Gfx.WaitForGfxCommandsFromMainThread` 很高时，常见含义是 Render Thread 等主线程继续提交；**没有 GPU Frame Time 不能据此断言 GPU 是瓶颈**。
 - GC 必须沿 **Top GC Allocation Paths** 看业务调用链，只看 `GC.Alloc` 总量很难判断来源。
+- 需要适中粒度时保持 Deep Profile 关闭，用已有模块/阶段 Marker 找热点，短时启用 `Profiler.enableAllocationCallstacks` 定位 GC；通过 `RawFrameDataView.GetSampleCallstack` 与 `ResolveMethodInfo` 还原分配调用链，无需展开整棵方法树。CPU 前后比较前关闭分配调用栈；曾启用 Deep 的程序集须先关闭开关并完成脚本重载。
 - Unity Mono 环境下 `GC.GetAllocatedBytesForCurrentThread` 曾出现不可用/恒零的情况。涉及“零分配”结论时应以 Profiler 子树里的 `GC.Alloc` 元数据或自检结果为准。
 - Debug `OnGUI` 很容易制造字符串、GUIContent 和 IMGUI 分配。动物参数、蜂巢参数、路径等 Overlay 开着时，GC/CPU 报告会明显被调试显示污染。
 - 旧 Profiler 报告只能保留历史方向。核心系统（尤其 AIECS、BRG、区块流送）一旦重构，必须重新抓同场景数据，不能把旧热点直接当成当前瓶颈。

@@ -174,12 +174,14 @@ public partial class WeatherMgr
 
     private bool IsRelevantTimeSource(string sceneName)
     {
-        string activeSceneName = SceneManager.GetActiveScene().name;
+        DayTimeSystem timeSystem = DayTimeSystem.Instance;
+        string activeSceneName = timeSystem != null
+            ? timeSystem.GetCurrentActiveSceneName() : SceneManager.GetActiveScene().name;
         if (string.Equals(sceneName, activeSceneName, StringComparison.Ordinal))
             return true;
 
-        return DayTimeSystem.Instance != null &&
-               DayTimeSystem.Instance.TryGetResolvedTimeData(activeSceneName, out string resolvedSceneName, out _) &&
+        return timeSystem != null &&
+               timeSystem.TryGetResolvedTimeData(activeSceneName, out string resolvedSceneName, out _) &&
                string.Equals(sceneName, resolvedSceneName, StringComparison.Ordinal);
     }
 
@@ -209,9 +211,9 @@ public partial class WeatherMgr
     private static bool TryGetCurrentTimeData(out TimeData timeData)
     {
         timeData = null;
-        string activeSceneName = SceneManager.GetActiveScene().name;
-        return DayTimeSystem.Instance != null &&
-               DayTimeSystem.Instance.TryGetResolvedTimeData(activeSceneName, out _, out timeData) &&
+        DayTimeSystem timeSystem = DayTimeSystem.Instance;
+        return timeSystem != null &&
+               timeSystem.TryGetResolvedTimeData(timeSystem.GetCurrentActiveSceneName(), out _, out timeData) &&
                timeData != null;
     }
 

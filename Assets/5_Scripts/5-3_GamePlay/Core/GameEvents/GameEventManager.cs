@@ -896,11 +896,13 @@ namespace FlatWorld.Gameplay.Events
             out string resolvedSceneName,
             out TimeData timeData)
         {
-            activeWorldKey = SceneManager.GetActiveScene().name;
+            DayTimeSystem timeSystem = DayTimeSystem.Instance;
+            activeWorldKey = timeSystem != null
+                ? timeSystem.GetCurrentActiveSceneName() : SceneManager.GetActiveScene().name;
             resolvedSceneName = activeWorldKey;
             timeData = null;
-            return DayTimeSystem.Instance != null &&
-                   DayTimeSystem.Instance.TryGetResolvedTimeData(
+            return timeSystem != null &&
+                   timeSystem.TryGetResolvedTimeData(
                        activeWorldKey,
                        out resolvedSceneName,
                        out timeData) &&
