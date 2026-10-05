@@ -6,13 +6,15 @@ using UnityEngine;
 /// </summary>
 public static class GameplayPhysics2D
 {
+    #region 物理命中组件解析
     public static T ResolveComponent<T>(Collider2D collider) where T : class
     {
         Collider2D source = ColliderSource2D.Resolve(collider);
         if (source == null)
             return null;
 
-        T component = source.GetComponent<T>();
+        // 可选能力未命中时避免创建 GetComponent 缺失诊断。
+        source.TryGetComponent(out T component);
         component ??= source.GetComponentInParent<T>();
         component ??= source.GetComponentInChildren<T>(true);
         if (component != null)
@@ -21,4 +23,5 @@ public static class GameplayPhysics2D
         Item owner = source.GetComponentInParent<Item>();
         return owner != null ? owner.GetComponentInChildren<T>(true) : null;
     }
+    #endregion
 }

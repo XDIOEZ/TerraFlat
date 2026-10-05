@@ -171,8 +171,8 @@ public partial class Mod_FocusPoint : Module
             }
             
             float targetAngle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
-            HandAimOrientation aimOrientation = targetTrans.GetComponent<HandAimOrientation>();
-            if (aimOrientation != null)
+            // 可选朝向组件缺失时不生成编辑器诊断分配。
+            if (targetTrans.TryGetComponent(out HandAimOrientation aimOrientation))
             {
                 targetAngle += aimOrientation.AngleOffsetDegrees;
             }

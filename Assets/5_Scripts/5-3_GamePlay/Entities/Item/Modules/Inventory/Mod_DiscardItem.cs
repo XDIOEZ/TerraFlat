@@ -50,6 +50,12 @@ public class Mod_DiscardItem : Mod_BaseDroper
     private Transform heldDropTransform;
     private Vector3 heldDropBaseScale = Vector3.one;
 
+    #region 悬停查询缓存
+    private readonly List<RaycastResult> hoveredRaycastResults = new List<RaycastResult>(8);
+    private EventSystem hoveredEventSystem;
+    private PointerEventData hoveredPointerEventData;
+    #endregion
+
     #region 生命周期
 
     private void OnValidate()
@@ -121,29 +127,27 @@ public class Mod_DiscardItem : Mod_BaseDroper
     private void UpdateHoveredSlot()
     {
         hoveredSlot = null;
-        if (Mouse.current == null || EventSystem.current == null)
+        EventSystem eventSystem = EventSystem.current;
+        if (Mouse.current == null || eventSystem == null)
             return;
 
-        Vector2 mousePosition = Mouse.current.position.ReadValue();
-
-        List<RaycastResult> results = new List<RaycastResult>();
-        PointerEventData pointerEventData = new PointerEventData(EventSystem.current)
+        // 同一事件系统复用查询对象，切换场景时重新绑定。
+        if (hoveredEventSystem != eventSystem || hoveredPointerEventData == null)
         {
-            position = mousePosition
-        };
+            hoveredEventSystem = eventSystem;
+            hoveredPointerEventData = new PointerEventData(eventSystem);
+        }
+        hoveredPointerEventData.Reset();
+        hoveredPointerEventData.position = Mouse.current.position.ReadValue();
+        hoveredRaycastResults.Clear();
+        eventSystem.RaycastAll(hoveredPointerEventData, hoveredRaycastResults);
 
-        EventSystem.current.RaycastAll(pointerEventData, results);
-
-        if (results.Count > 0)
+        foreach (RaycastResult result in hoveredRaycastResults)
         {
-            foreach (var r in results)
+            if (result.gameObject.TryGetComponent(out ItemSlot_UI slot))
             {
-                var slot = r.gameObject.GetComponent<ItemSlot_UI>();
-                if (slot != null)
-                {
-                    hoveredSlot = slot;
-                    break;
-                }
+                hoveredSlot = slot;
+                break;
             }
         }
     }

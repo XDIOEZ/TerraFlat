@@ -64,6 +64,7 @@ public partial class ItemMgr : SingletonMono<ItemMgr>
     #region 分级更新调度
 
     private readonly ItemTickScheduler _tickScheduler = new();
+    private Action<Item> _refreshRuntimeItemIndexesCallback;
     private readonly List<Transform> _simulationPlayers = new(4);
     private bool _itemTickSuspended;
 
@@ -249,8 +250,10 @@ public partial class ItemMgr : SingletonMono<ItemMgr>
         }
 
         RefreshSimulationPlayers();
+        // 索引刷新委托只创建一次，避免每帧方法组转换分配。
+        _refreshRuntimeItemIndexesCallback ??= RefreshRuntimeItemIndexes;
         using (SchedulerTickMarker.Auto())
-            _tickScheduler.Update(RuntimeItems, Time.deltaTime, RefreshRuntimeItemIndexes,
+            _tickScheduler.Update(RuntimeItems, Time.deltaTime, _refreshRuntimeItemIndexesCallback,
                 _simulationPlayers, WorldTopologyRuntime.GetActiveDomain());
         using (WaterTickMarker.Auto())
             WorldItemWaterSystem.ProcessPendingSpawnChecks();

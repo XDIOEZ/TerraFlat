@@ -152,6 +152,8 @@ public partial class Mod_GameController : Module
     private Mod_HotBar _playerHotBar;
     private Mod_InteractSender _interactionSender;
     private readonly List<RaycastResult> _uiRaycastResults = new List<RaycastResult>(8);
+    private EventSystem _uiRaycastEventSystem;
+    private PointerEventData _uiRaycastEventData;
     private readonly HashSet<object> _gameplayInputLockOwners = new HashSet<object>();
 
 #endregion
@@ -504,13 +506,17 @@ public partial class Mod_GameController : Module
         if (eventSystem == null)
             return false;
 
-        PointerEventData eventData = new PointerEventData(eventSystem)
+        // 保留实时射线查询，只复用事件数据以避免重复分配。
+        if (_uiRaycastEventSystem != eventSystem || _uiRaycastEventData == null)
         {
-            position = GetPointerScreenPosition()
-        };
+            _uiRaycastEventSystem = eventSystem;
+            _uiRaycastEventData = new PointerEventData(eventSystem);
+        }
+        _uiRaycastEventData.Reset();
+        _uiRaycastEventData.position = GetPointerScreenPosition();
 
         _uiRaycastResults.Clear();
-        eventSystem.RaycastAll(eventData, _uiRaycastResults);
+        eventSystem.RaycastAll(_uiRaycastEventData, _uiRaycastResults);
         return _uiRaycastResults.Count > 0;
     }
 

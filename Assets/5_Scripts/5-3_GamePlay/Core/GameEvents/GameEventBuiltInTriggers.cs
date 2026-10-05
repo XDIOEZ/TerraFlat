@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
@@ -26,10 +27,19 @@ namespace FlatWorld.Gameplay.Events
     {
         private const int MaximumOccurrencesPerAdvance = 4096;
 
+        #region 日历参数缓存
+        private readonly ConditionalWeakTable<JObject, DayScheduleGameEventTriggerParameters> parameterCache = new();
+        private static readonly DayScheduleGameEventTriggerParameters DefaultParameters = new();
+        private static readonly ConditionalWeakTable<JObject, DayScheduleGameEventTriggerParameters>.CreateValueCallback ParseParameters =
+            parameters => parameters.ToObject<DayScheduleGameEventTriggerParameters>() ?? new DayScheduleGameEventTriggerParameters();
+        #endregion
+
         public string Type => "day.schedule";
 
         public bool Validate(JObject parameters, out string error)
         {
+            if (parameters != null)
+                parameterCache.Remove(parameters);
             DayScheduleGameEventTriggerParameters value = Read(parameters);
             if (value.MinimumDay < 1)
             {
@@ -123,10 +133,13 @@ namespace FlatWorld.Gameplay.Events
             }
         }
 
-        private static DayScheduleGameEventTriggerParameters Read(JObject parameters)
+        private DayScheduleGameEventTriggerParameters Read(JObject parameters)
         {
-            return parameters?.ToObject<DayScheduleGameEventTriggerParameters>()
-                   ?? new DayScheduleGameEventTriggerParameters();
+            // 定义替换或重新校验后重新解析，逐帧只读已经校验的参数。
+            if (parameters == null)
+                return DefaultParameters;
+            return parameterCache.TryGetValue(parameters, out DayScheduleGameEventTriggerParameters cached)
+                ? cached : parameterCache.GetValue(parameters, ParseParameters);
         }
 
         internal static float DeterministicUnit(int worldSeed, string eventId, int dayNumber)
@@ -199,10 +212,26 @@ namespace FlatWorld.Gameplay.Events
     /// </summary>
     public sealed class GroundItemDwellGameEventTrigger : IGameEventTriggerHandler
     {
+        #region 地面候选状态缓存
+        private sealed class RuntimeCache
+        {
+            public string Json;
+            public GroundItemDwellTriggerRuntimeState State;
+            public readonly GroundItemDwellTriggerRuntimeState Snapshot = new();
+        }
+        private static readonly ConditionalWeakTable<GameEventProgressSaveData, RuntimeCache> RuntimeStates = new();
+        private readonly ConditionalWeakTable<JObject, GroundItemDwellGameEventTriggerParameters> parameterCache = new();
+        private static readonly GroundItemDwellGameEventTriggerParameters DefaultParameters = new();
+        private static readonly ConditionalWeakTable<JObject, GroundItemDwellGameEventTriggerParameters>.CreateValueCallback ParseParameters =
+            parameters => parameters.ToObject<GroundItemDwellGameEventTriggerParameters>() ?? new GroundItemDwellGameEventTriggerParameters();
+        #endregion
+
         public string Type => "world.item.dwell";
 
         public bool Validate(JObject parameters, out string error)
         {
+            if (parameters != null)
+                parameterCache.Remove(parameters);
             GroundItemDwellGameEventTriggerParameters value = Read(parameters);
             if (string.IsNullOrWhiteSpace(value.ItemId))
             {
@@ -241,7 +270,8 @@ namespace FlatWorld.Gameplay.Events
             }
 
             Item candidate = FindEligibleGroundItem(
-                value,
+                value.ItemId,
+                value.RequirePickupable,
                 runtime.HasCandidate ? runtime.CandidateItemGuid : 0);
             if (candidate == null)
             {
@@ -294,20 +324,21 @@ namespace FlatWorld.Gameplay.Events
         }
 
         private static Item FindEligibleGroundItem(
-            GroundItemDwellGameEventTriggerParameters parameters,
+            string itemId,
+            bool requirePickupable,
             int preferredGuid)
         {
             ItemMgr itemManager = ItemMgr.Instance;
-            if (itemManager == null)
+            if (itemManager == null || string.IsNullOrWhiteSpace(itemId) ||
+                !itemManager.RuntimeItemsGroup.TryGetValue(itemId.Trim(), out List<Item> candidates))
                 return null;
 
-            List<Item> candidates = itemManager.GetItemsByNameID(parameters.ItemId.Trim());
             Item selected = null;
             int selectedGuid = int.MaxValue;
             for (int i = 0; i < candidates.Count; i++)
             {
                 Item candidate = candidates[i];
-                if (!IsEligibleGroundItem(candidate, parameters.RequirePickupable))
+                if (!IsEligibleGroundItem(candidate, requirePickupable))
                     continue;
 
                 int guid = candidate.itemData.Guid;
@@ -345,35 +376,71 @@ namespace FlatWorld.Gameplay.Events
                    definition.CooldownDays * Mathf.Max(1f, context.DayLength);
         }
 
-        private static GroundItemDwellGameEventTriggerParameters Read(JObject parameters)
+        private GroundItemDwellGameEventTriggerParameters Read(JObject parameters)
         {
-            return parameters?.ToObject<GroundItemDwellGameEventTriggerParameters>()
-                   ?? new GroundItemDwellGameEventTriggerParameters();
+            if (parameters == null)
+                return DefaultParameters;
+            return parameterCache.TryGetValue(parameters, out GroundItemDwellGameEventTriggerParameters cached)
+                ? cached : parameterCache.GetValue(parameters, ParseParameters);
         }
 
         private static GroundItemDwellTriggerRuntimeState ReadRuntime(
             GameEventProgressSaveData progress)
         {
-            if (string.IsNullOrWhiteSpace(progress?.TriggerRuntimeDataJson))
-                return new GroundItemDwellTriggerRuntimeState();
+            if (!RuntimeStates.TryGetValue(progress, out RuntimeCache cache))
+            {
+                cache = new RuntimeCache();
+                RuntimeStates.Add(progress, cache);
+            }
+            if (cache.State != null && string.Equals(cache.Json, progress.TriggerRuntimeDataJson, StringComparison.Ordinal))
+                return cache.State;
 
             try
             {
-                return JsonConvert.DeserializeObject<GroundItemDwellTriggerRuntimeState>(
-                           progress.TriggerRuntimeDataJson)
-                       ?? new GroundItemDwellTriggerRuntimeState();
+                cache.State = string.IsNullOrWhiteSpace(progress.TriggerRuntimeDataJson)
+                    ? new GroundItemDwellTriggerRuntimeState()
+                    : JsonConvert.DeserializeObject<GroundItemDwellTriggerRuntimeState>(progress.TriggerRuntimeDataJson)
+                      ?? new GroundItemDwellTriggerRuntimeState();
             }
             catch
             {
-                return new GroundItemDwellTriggerRuntimeState();
+                cache.State = new GroundItemDwellTriggerRuntimeState();
             }
+            cache.Json = progress.TriggerRuntimeDataJson;
+            CopyRuntime(cache.State, cache.Snapshot);
+            return cache.State;
         }
 
         private static void WriteRuntime(
             GameEventProgressSaveData progress,
             GroundItemDwellTriggerRuntimeState runtime)
         {
+            RuntimeStates.TryGetValue(progress, out RuntimeCache cache);
+            GroundItemDwellTriggerRuntimeState snapshot = cache?.Snapshot;
+            // 候选状态未变化时直接复用存档 JSON，避免逐帧序列化。
+            if (snapshot != null && string.Equals(cache.Json, progress.TriggerRuntimeDataJson, StringComparison.Ordinal) &&
+                snapshot.HasCandidate == runtime.HasCandidate &&
+                snapshot.CandidateItemGuid == runtime.CandidateItemGuid &&
+                snapshot.CandidateFirstSeenTotalTime == runtime.CandidateFirstSeenTotalTime &&
+                snapshot.CandidateWorldKey == runtime.CandidateWorldKey &&
+                snapshot.ObservedTriggerCount == runtime.ObservedTriggerCount)
+                return;
+
             progress.TriggerRuntimeDataJson = JsonConvert.SerializeObject(runtime, Formatting.None);
+            if (cache != null)
+            {
+                cache.Json = progress.TriggerRuntimeDataJson;
+                CopyRuntime(runtime, cache.Snapshot);
+            }
+        }
+
+        private static void CopyRuntime(GroundItemDwellTriggerRuntimeState source, GroundItemDwellTriggerRuntimeState target)
+        {
+            target.HasCandidate = source.HasCandidate;
+            target.CandidateItemGuid = source.CandidateItemGuid;
+            target.CandidateFirstSeenTotalTime = source.CandidateFirstSeenTotalTime;
+            target.CandidateWorldKey = source.CandidateWorldKey;
+            target.ObservedTriggerCount = source.ObservedTriggerCount;
         }
 
         private static void ResetCandidate(GroundItemDwellTriggerRuntimeState runtime)

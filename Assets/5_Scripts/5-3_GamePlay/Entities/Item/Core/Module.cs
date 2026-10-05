@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using UltEvents;
 using UnityEngine;
+using Unity.Profiling;
 
 /// <summary>
 /// 环境调整接口：让各模块可选地实现环境初始化逻辑
@@ -442,6 +443,23 @@ public abstract class Module : MonoBehaviour, IRuntimeDataLifecycle
 
         LoadRuntime();
     }
+
+    #region 模块性能采样
+    private ProfilerMarker tickProfilerMarker;
+    private bool tickProfilerMarkerInitialized;
+
+    internal void TickWithProfiler(float deltaTime)
+    {
+        // 标记名仅首次创建，让性能分析器直接定位模块的耗时和分配。
+        if (!tickProfilerMarkerInitialized)
+        {
+            tickProfilerMarker = new ProfilerMarker("FlatWorld.Module." + GetType().Name);
+            tickProfilerMarkerInitialized = true;
+        }
+        using (tickProfilerMarker.Auto())
+            ModUpdate(deltaTime);
+    }
+    #endregion
 
     public virtual void ModUpdate(float deltaTime)
     {

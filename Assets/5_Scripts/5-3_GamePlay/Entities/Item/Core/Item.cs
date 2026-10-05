@@ -243,7 +243,7 @@ public abstract class Item : MonoBehaviour
         {
             Module mod = everyFrameModules[i];
             if (IsScheduledModuleValid(mod))
-                mod.ModUpdate(deltaTime);
+                mod.TickWithProfiler(deltaTime);
         }
 
         TickScheduledModules(deltaTime);
@@ -1061,7 +1061,7 @@ public abstract class Item : MonoBehaviour
             scheduled.Elapsed = 0f;
 
             if (IsScheduledModuleValid(scheduled.Module))
-                scheduled.Module.ModUpdate(elapsed);
+                scheduled.Module.TickWithProfiler(elapsed);
         }
     }
 

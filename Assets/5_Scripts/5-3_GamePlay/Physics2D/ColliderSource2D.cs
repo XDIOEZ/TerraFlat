@@ -16,11 +16,13 @@ public sealed class ColliderSource2D : MonoBehaviour
         ImageOffset = imageOffset;
     }
 
+    #region 碰撞源解析
     public static Collider2D Resolve(Collider2D collider)
     {
         if (collider == null)
             return null;
-        ColliderSource2D source = collider.GetComponent<ColliderSource2D>();
-        return source != null ? source.SourceCollider : collider;
+        // 普通碰撞体没有镜像标记时直接返回，避免缺失组件诊断分配。
+        return collider.TryGetComponent(out ColliderSource2D source) ? source.SourceCollider : collider;
     }
+    #endregion
 }
