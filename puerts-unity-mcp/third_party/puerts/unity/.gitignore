@@ -81,3 +81,6 @@ node_modules
 .vs
 /.vsconfig
 /obj/
+
+# C# IL2CPP 导出器所需的编辑器 IL 读取依赖。
+!upms/core/Editor/Mono.Reflection.dll
