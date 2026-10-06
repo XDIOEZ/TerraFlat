@@ -9,7 +9,7 @@ public static class TimeSystemConfigLoader
 {
     #region 常量
 
-    public const int SupportedSchemaVersion = 1;
+    public const int SupportedSchemaVersion = 2;
     public const string RelativeTimeSystemRoot = "GameConfig/Time";
     public const string ConfigFileName = "time-system.json";
     public const string RelativeConfigPath = RelativeTimeSystemRoot + "/" + ConfigFileName;
@@ -152,8 +152,10 @@ public static class TimeSystemConfigLoader
         profile.Mode = TimeSystemModes.Normalize(rawMode);
         if (!IsFinite(profile.TimeScale) || profile.TimeScale < 0f)
             throw new InvalidDataException($"时间系统 Profile {profile.Id} 的 timeScale 无效：{profile.TimeScale}");
-        if (!IsFinite(profile.DayLength) || profile.DayLength <= 0f)
-            throw new InvalidDataException($"时间系统 Profile {profile.Id} 的 dayLength 无效：{profile.DayLength}");
+        if (!IsFinite(profile.RotationPeriodSeconds) || profile.RotationPeriodSeconds <= 0f)
+            throw new InvalidDataException($"时间系统 Profile {profile.Id} 的 rotationPeriodSeconds 无效：{profile.RotationPeriodSeconds}");
+        if (!IsFinite(profile.OrbitalPeriodSeconds) || profile.OrbitalPeriodSeconds <= 0f)
+            throw new InvalidDataException($"时间系统 Profile {profile.Id} 的 orbitalPeriodSeconds 无效：{profile.OrbitalPeriodSeconds}");
         if (!IsFinite(profile.InitialTime))
             throw new InvalidDataException($"时间系统 Profile {profile.Id} 的 initialTime 无效：{profile.InitialTime}");
         if (profile.InitialTotalDays < 0)

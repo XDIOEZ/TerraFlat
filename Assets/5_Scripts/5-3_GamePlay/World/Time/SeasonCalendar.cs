@@ -18,7 +18,7 @@ public partial class SeasonCalendarHistoryEntry
     public SeasonCycleSettings Settings; // 当时生效的独立参数。
 }
 
-/// <summary>每个世界独立保存的季节参数；默认四季各 6 天，温度表示相对当地生成气候的摄氏度偏移。</summary>
+/// <summary>每个世界独立保存四季相对长度与温差；总季长按公转周期归一，默认物理周期下四季各 6 天。</summary>
 [Serializable, MemoryPackable]
 public partial class SeasonCycleSettings
 {
@@ -67,6 +67,25 @@ public partial class SeasonCycleSettings
                 float.IsNaN(temperature) || float.IsInfinity(temperature))
                 throw new InvalidDataException($"季节 {season} 的天数必须为有限正数，温差必须为有限数值。");
         }
+    }
+
+    /// <summary>按现有四季比例缩放到物理公转周期对应的一年长度。</summary>
+    public void NormalizeToYearDays(double yearDays)
+    {
+        Validate();
+        if (double.IsNaN(yearDays) || double.IsInfinity(yearDays) || yearDays <= 0d)
+            throw new InvalidDataException("公转周期换算出的一年长度必须为有限正数。");
+
+        double currentYearDays = YearDays;
+        if (Math.Abs(currentYearDays - yearDays) <= Math.Max(0.000001d, yearDays * 0.000001d))
+            return;
+
+        double scale = yearDays / currentYearDays;
+        SpringDays = (float)(SpringDays * scale);
+        SummerDays = (float)(SummerDays * scale);
+        AutumnDays = (float)(AutumnDays * scale);
+        WinterDays = (float)(WinterDays * scale);
+        Validate();
     }
 
     /// <summary>创建独立配置副本，避免准备界面、世界与存档共享可变对象。</summary>
@@ -160,6 +179,7 @@ public static class SeasonCalendar
         replacement.AutumnDays = autumn;
         replacement.WinterDays = winter;
         replacement.Validate();
+        replacement.NormalizeToYearDays(time.YearLengthDays);
         SeasonSnapshot current = Sample(time);
         double adjustedDays = (current.Year - 1d) * replacement.YearDays;
         for (int index = 0; index < (int)current.Season; index++)

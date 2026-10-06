@@ -603,9 +603,9 @@ private void TimeRun(string sceneName, float deltaTime)
     }
 
     /// <summary>
-    /// 修改一天时长
+    /// 修改星球自转周期；一天长度始终等于该周期
     /// </summary>
-    public void SetDayLength(string sceneName, float minutes)
+    public void SetDayLength(string sceneName, float seconds)
     {
         if (!WorldTimeDict.TryGetValue(sceneName, out TimeData timeData))
         {
@@ -613,7 +613,9 @@ private void TimeRun(string sceneName, float deltaTime)
             WorldTimeDict[sceneName] = timeData;
         }
 
-        timeData.DayLength = minutes;
+        timeData.RotationPeriodSeconds = Mathf.Max(1f, seconds);
+        timeData.CurrentTime = Mathf.Repeat(timeData.CurrentTime, timeData.DayLength);
+        timeData.Seasons.NormalizeToYearDays(timeData.YearLengthDays);
     }
 
     /// <summary>
@@ -712,12 +714,13 @@ private void TimeRun(string sceneName, float deltaTime)
     /// <summary>
     /// 初始化场景时间数据
     /// </summary>
-    public void InitializeSceneTimeData(string sceneName, float dayLength = 24f, float timeScale = 1f)
+    public void InitializeSceneTimeData(string sceneName, float rotationPeriodSeconds = TimeData.DefaultRotationPeriodSeconds, float timeScale = 1f)
     {
         if (!WorldTimeDict.ContainsKey(sceneName))
         {
             TimeData timeData = CreateConfiguredTimeData();
-            timeData.DayLength = Mathf.Max(1f, dayLength);
+            timeData.RotationPeriodSeconds = Mathf.Max(1f, rotationPeriodSeconds);
+            timeData.Seasons.NormalizeToYearDays(timeData.YearLengthDays);
             timeData.CurrentTime = Mathf.Repeat(timeData.CurrentTime, timeData.DayLength);
             timeData.TimeScaleModifier = Mathf.Max(0f, timeScale);
             WorldTimeDict[sceneName] = timeData;
@@ -856,7 +859,8 @@ public void LoadFromSaveData(DayTimeSaveData saveData)
 public partial class SerializableTimeData
 {
     public float CurrentTime;
-    public float DayLength;
+    public float RotationPeriodSeconds;
+    public float OrbitalPeriodSeconds;
     public SerializableKeyframe[] LightParamsKeys;
     public float TimeScaleModifier;
     public string ReferenceScene;
@@ -875,7 +879,8 @@ public partial class SerializableTimeData
 
     [MemoryPackConstructor]
     public SerializableTimeData(float currentTime,
-                                float dayLength,
+                                float rotationPeriodSeconds,
+                                float orbitalPeriodSeconds,
                                 SerializableKeyframe[] lightParamsKeys,
                                 float timeScaleModifier,
                                 string referenceScene,
@@ -893,7 +898,8 @@ public partial class SerializableTimeData
                                 List<SeasonCalendarHistoryEntry> seasonHistory)
     {
         CurrentTime = currentTime;
-        DayLength = dayLength;
+        RotationPeriodSeconds = rotationPeriodSeconds;
+        OrbitalPeriodSeconds = orbitalPeriodSeconds;
         LightParamsKeys = lightParamsKeys;
         TimeScaleModifier = timeScaleModifier;
         ReferenceScene = referenceScene ?? "";
@@ -915,7 +921,8 @@ public partial class SerializableTimeData
     public SerializableTimeData(TimeData timeData)
     {
         CurrentTime = timeData.CurrentTime;
-        DayLength = timeData.DayLength;
+        RotationPeriodSeconds = timeData.RotationPeriodSeconds;
+        OrbitalPeriodSeconds = timeData.OrbitalPeriodSeconds;
         TimeScaleModifier = timeData.TimeScaleModifier;
         ReferenceScene = timeData.ReferenceScene ?? "";
         TotalDays = Mathf.Max(0, timeData.TotalDays);
@@ -946,8 +953,10 @@ public partial class SerializableTimeData
     // 还原回运行时 TimeData
     public TimeData ToTimeData()
     {
-        if (Seasons == null || double.IsNaN(SeasonOffsetDays) || double.IsInfinity(SeasonOffsetDays))
-            throw new System.IO.InvalidDataException("当前版本存档的季节数据无效，停止加载。");
+        if (RotationPeriodSeconds <= 0f || float.IsNaN(RotationPeriodSeconds) || float.IsInfinity(RotationPeriodSeconds) ||
+            OrbitalPeriodSeconds <= 0f || float.IsNaN(OrbitalPeriodSeconds) || float.IsInfinity(OrbitalPeriodSeconds) ||
+            Seasons == null || double.IsNaN(SeasonOffsetDays) || double.IsInfinity(SeasonOffsetDays))
+            throw new System.IO.InvalidDataException("当前版本存档的时间或季节数据无效，停止加载。");
         Seasons.Validate();
         // 重建曲线
         var curve = new AnimationCurve();
@@ -962,7 +971,8 @@ public partial class SerializableTimeData
         TimeData timeData = new TimeData
         {
             CurrentTime = CurrentTime,
-            DayLength = DayLength,
+            RotationPeriodSeconds = RotationPeriodSeconds,
+            OrbitalPeriodSeconds = OrbitalPeriodSeconds,
             LightParams = curve,
             TimeScaleModifier = TimeScaleModifier,
             ReferenceScene = ReferenceScene,

@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "defaultProfileId": "standard",
   "profiles": [
     {
@@ -8,7 +8,8 @@
       "description": "标准昼夜循环，无时间上限。",
       "mode": "unlimited",
       "timeScale": 1.0,
-      "dayLength": 1440.0,
+      "rotationPeriodSeconds": 1440.0,
+      "orbitalPeriodSeconds": 34560.0,
       "initialTime": 480.0,
       "initialTotalDays": 0,
       "timeLimitDays": 0.0,
@@ -64,7 +65,8 @@
       "description": "时间以标准速度的四倍推进，无时间上限。",
       "mode": "unlimited",
       "timeScale": 4.0,
-      "dayLength": 1440.0,
+      "rotationPeriodSeconds": 1440.0,
+      "orbitalPeriodSeconds": 34560.0,
       "initialTime": 480.0,
       "initialTotalDays": 0,
       "timeLimitDays": 0.0,
@@ -120,7 +122,8 @@
       "description": "世界从创建时开始计时，七个游戏日后停止自然时间推进。",
       "mode": "timeLimited",
       "timeScale": 1.0,
-      "dayLength": 1440.0,
+      "rotationPeriodSeconds": 1440.0,
+      "orbitalPeriodSeconds": 34560.0,
       "initialTime": 480.0,
       "initialTotalDays": 0,
       "timeLimitDays": 7.0,

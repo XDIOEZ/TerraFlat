@@ -17,7 +17,7 @@ using RuntimeWorldAddress = FlatWorld.WorldModel.WorldAddress;
 /// </summary>
 public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
 {
-    private const int CompactSaveVersion = 21; // 生态进度使用当前布局；旧版本在解析核心数据前拒绝。
+    private const int CompactSaveVersion = 22; // 时间数据改用自转/公转周期；旧版本在解析核心数据前拒绝。
     private const int ModdedSaveVersion = 10;
     private const float AutoSaveFrameBudgetSeconds = 0.0025f;
     private const string TemporarySaveSuffix = ".tmp";

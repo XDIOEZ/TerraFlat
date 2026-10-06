@@ -5,11 +5,23 @@ using UnityEngine;
 [System.Serializable]
 public partial class TimeData
 {
+    public const float DefaultRotationPeriodSeconds = 1440f;
+    public const float DefaultOrbitalPeriodSeconds = DefaultRotationPeriodSeconds * 24f;
+
     [Tooltip("当前时间点（单位/秒）")]
     public float CurrentTime = 0f;
 
-    [Tooltip("一天时长（单位/秒）")]
-    public float DayLength = 1440f;
+    [Tooltip("星球自转一周所需的游戏秒数；它就是一天的长度")]
+    public float RotationPeriodSeconds = DefaultRotationPeriodSeconds;
+
+    [Tooltip("星球公转一周所需的游戏秒数；它就是一年的长度")]
+    public float OrbitalPeriodSeconds = DefaultOrbitalPeriodSeconds;
+
+    [MemoryPackIgnore]
+    public float DayLength => RotationPeriodSeconds;
+
+    [MemoryPackIgnore]
+    public double YearLengthDays => OrbitalPeriodSeconds / System.Math.Max(1d, RotationPeriodSeconds);
 
     [Tooltip("光照参数曲线（时间比例到光照强度）")]
     [MemoryPackIgnore]
@@ -78,7 +90,8 @@ public partial class TimeData
         return new TimeData
         {
             CurrentTime = CurrentTime,
-            DayLength = DayLength,
+            RotationPeriodSeconds = RotationPeriodSeconds,
+            OrbitalPeriodSeconds = OrbitalPeriodSeconds,
             LightParams = CopyAnimationCurve(LightParams),
             dayNightGradient = CopyGradient(dayNightGradient),
             TimeScaleModifier = TimeScaleModifier,
@@ -99,6 +112,15 @@ public partial class TimeData
 
     public void EnsureTimeSystemDefaults()
     {
+        if (float.IsNaN(RotationPeriodSeconds) || float.IsInfinity(RotationPeriodSeconds) || RotationPeriodSeconds <= 0f)
+            RotationPeriodSeconds = DefaultRotationPeriodSeconds;
+        if (float.IsNaN(OrbitalPeriodSeconds) || float.IsInfinity(OrbitalPeriodSeconds) || OrbitalPeriodSeconds <= 0f)
+            OrbitalPeriodSeconds = DefaultOrbitalPeriodSeconds;
+
+        CurrentTime = Mathf.Repeat(CurrentTime, RotationPeriodSeconds);
+        Seasons ??= new SeasonCycleSettings();
+        Seasons.NormalizeToYearDays(YearLengthDays);
+
         if (string.IsNullOrWhiteSpace(TimeSystemProfileId))
             TimeSystemProfileId = "standard";
 

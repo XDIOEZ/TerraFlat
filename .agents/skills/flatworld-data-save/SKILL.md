@@ -16,7 +16,7 @@ description: "Use when: 定位或修改 FlatWorld 的数据模型、MemoryPack �
 ## 核心不变量
 
 - 开发阶段只读取当前 Envelope 版本，不保留旧版本自动升级路径。Ground/Liquid 格式边界使用 FWD8；格式头必须在反序列化内部对象之前校验，旧格式明确拒绝但不删除或覆盖原文件。
-- `SerializableTimeData` 的时间 Profile、限时边界和月相字段属于当前格式；`TimeData.EnsureTimeSystemDefaults()` 只负责当前运行时对象的合法化，不承担旧存档恢复。
+- `SerializableTimeData` 的自转周期、公转周期、时间 Profile、限时边界和月相字段属于当前格式；一天由自转周期决定，一年由公转周期决定；`TimeData.EnsureTimeSystemDefaults()` 只负责当前运行时对象的合法化，不承担旧存档恢复。
 - 正式存档只写 `Application.persistentDataPath/Saves/LocalSaveData/`，并使用临时文件/原子替换；失败不得伪装为成功恢复。
 - `GameSaveData.PlayerData_Dict` 的键是不可变角色 ID，`Data_Player.Name_User` 仅是可修改的显示名；旧档保留原字典键作为兼容 ID，新角色分配独立 ID。改角色名只写 `Name_User`，改存档名要同步 `GameSaveData.saveName`、磁盘文件名和最后退出时间元数据，失败保留旧档。
 - `ItemSpecialDataJsonStore` 按命名空间更新并保留未知根属性；教程、任务、维度、出生点不得互相覆盖或改 `Data_Player` 布局。

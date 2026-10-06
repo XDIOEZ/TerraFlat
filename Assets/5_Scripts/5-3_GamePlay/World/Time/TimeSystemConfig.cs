@@ -43,7 +43,8 @@ public sealed class TimeSystemProfileConfig
     public string Description;
     public string Mode = TimeSystemModes.Unlimited;
     public float TimeScale = 1f;
-    public float DayLength = 1440f;
+    public float RotationPeriodSeconds = TimeData.DefaultRotationPeriodSeconds;
+    public float OrbitalPeriodSeconds = TimeData.DefaultOrbitalPeriodSeconds;
     public float InitialTime = 480f;
     public int InitialTotalDays;
     public float TimeLimitDays;
@@ -51,7 +52,7 @@ public sealed class TimeSystemProfileConfig
     public List<TimeSystemCurveKeyConfig> LightCurve = new();
     public TimeSystemGradientConfig DayNightGradient = new();
     public TimeSystemMoonConfig Moon = new();
-    public SeasonCycleSettings Seasons = new(); // 新世界四季参数
+    public SeasonCycleSettings Seasons = new(); // 新世界四季比例与温差；总长度由公转周期归一。
     public TimeSystemPresentationConfig Presentation = new();
 
     #endregion
@@ -60,12 +61,14 @@ public sealed class TimeSystemProfileConfig
 
     public TimeData CreateTimeData()
     {
-        float dayLength = Mathf.Max(1f, DayLength);
+        float rotationPeriod = Mathf.Max(1f, RotationPeriodSeconds);
+        float orbitalPeriod = Mathf.Max(1f, OrbitalPeriodSeconds);
         string normalizedMode = TimeSystemModes.Normalize(Mode);
         TimeData timeData = new TimeData
         {
-            CurrentTime = Mathf.Repeat(InitialTime, dayLength),
-            DayLength = dayLength,
+            CurrentTime = Mathf.Repeat(InitialTime, rotationPeriod),
+            RotationPeriodSeconds = rotationPeriod,
+            OrbitalPeriodSeconds = orbitalPeriod,
             LightParams = CreateLightCurve(),
             dayNightGradient = CreateGradient(),
             TimeScaleModifier = Mathf.Max(0f, TimeScale),
