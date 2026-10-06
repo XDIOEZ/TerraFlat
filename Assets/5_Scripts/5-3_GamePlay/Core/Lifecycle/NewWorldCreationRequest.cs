@@ -168,7 +168,7 @@ public sealed class NewWorldCreationRequest
 
         if (!global::PlanetData.IsValidNoiseScale(PlanetData.NoiseScale))
         {
-            error = "世界坐标缩放必须是合法有限值。";
+            error = "空间距离倍率必须是合法有限值。";
             return false;
         }
 
