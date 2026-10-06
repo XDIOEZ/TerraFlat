@@ -31,6 +31,7 @@ namespace FlatWorld.AIECS
     public struct EntityClimate : IComponentData
     {
         public float BaselineCelsius, AmbientCelsius;
+        public float SeasonPoleProximity;
         public float MinimumGrowthTemperature, MaximumGrowthTemperature;
         public float MinimumSurvivalTemperature, MaximumSurvivalTemperature;
         public float FatalExposureHours, RecoveryRate, ColdSeconds, HeatSeconds;
@@ -49,22 +50,32 @@ namespace FlatWorld.AIECS
 
     #region 冻结季节输入
 
-    /// <summary>一段季节配置历史的纯值副本；最后一段 EndDay 为正无穷。</summary>
+    /// <summary>一段秒制物理日历的纯值副本；最后一段结束时间为正无穷。</summary>
     public struct EntitySeasonPeriod
     {
-        public double EndDay, OffsetDays;
-        public float4 Days, Temperatures;
+        public double EndTimeSeconds, OffsetSeconds;
+        public double4 Fractions;
+        public float4 Temperatures;
+        public float TiltScale, OrbitalEccentricity;
+        public float RotationPeriodSeconds, OrbitalPeriodSeconds;
+
+        public double GetOrbitalProgress(double gameSeconds)
+        {
+            double elapsed = math.max(0d, gameSeconds + OffsetSeconds);
+            double years = math.floor(elapsed / OrbitalPeriodSeconds);
+            return (elapsed - years * OrbitalPeriodSeconds) / OrbitalPeriodSeconds;
+        }
 
         /// <summary>日历与批量耐候共用同一数值核，修改季长不会重写历史气候。</summary>
-        public float Sample(double absoluteDay, out int index, out double completedYears, out float progress)
+        public float Sample(double gameSeconds, out int index, out double completedYears, out float progress)
         {
-            double elapsed = math.max(0d, absoluteDay + OffsetDays);
-            double yearDays = (double)Days.x + Days.y + Days.z + Days.w;
-            completedYears = math.floor(elapsed / yearDays);
-            double remaining = elapsed - completedYears * yearDays;
+            double elapsed = math.max(0d, gameSeconds + OffsetSeconds);
+            completedYears = math.floor(elapsed / OrbitalPeriodSeconds);
+            double phase = (elapsed - completedYears * OrbitalPeriodSeconds) / OrbitalPeriodSeconds;
             index = 0;
-            while (index < 3 && remaining >= Days[index]) remaining -= Days[index++];
-            progress = (float)(remaining / Days[index]);
+            double start = 0d, end = Fractions.x;
+            while (index < 3 && phase >= end) { start = end; index++; end = index == 3 ? 1d : end + Fractions[index]; }
+            progress = (float)math.saturate((phase - start) / (end - start));
             float center = Temperatures[index];
             float previous = completedYears == 0d && index == 0 ? center : Temperatures[(index + 3) % 4];
             float next = Temperatures[(index + 1) % 4];
@@ -73,6 +84,52 @@ namespace FlatWorld.AIECS
             return progress < 0.5f
                 ? math.lerp((previous + center) * 0.5f, center, t)
                 : math.lerp(center, (center + next) * 0.5f, t);
+        }
+
+        /// <summary>给历史补算叠加倾角空间差和椭圆轨道远近日点温差。</summary>
+        public float SamplePhysicalOffset(double gameSeconds, float baselineCelsius, float poleProximity)
+        {
+            float configured = Sample(gameSeconds, out _, out _, out _);
+            float tilt = configured * TiltScale * math.saturate(poleProximity);
+            if (OrbitalEccentricity <= 0f)
+                return tilt;
+
+            const double twoPi = 6.28318530717958647692d;
+            const double springStart = 0.78539816339744830962d;
+            double eccentricity = math.clamp((double)OrbitalEccentricity, 0d, 0.999999d);
+            double phase = GetOrbitalProgress(gameSeconds);
+            double springMean = MeanFromTrue(springStart, eccentricity);
+            double mean = NormalizeRadians(springMean + phase * twoPi);
+            double eccentricAnomaly = eccentricity < 0.8d ? mean : math.PI;
+            for (int i = 0; i < 8; i++)
+            {
+                double value = eccentricAnomaly - eccentricity * math.sin(eccentricAnomaly) - mean;
+                double derivative = 1d - eccentricity * math.cos(eccentricAnomaly);
+                eccentricAnomaly -= value / math.max(0.000001d, derivative);
+            }
+            double radiusRatio = math.max(0.000001d, 1d - eccentricity * math.cos(eccentricAnomaly));
+            double kelvin = math.max(1d, baselineCelsius + 273.15d);
+            return tilt + (float)(kelvin * (1d / math.sqrt(radiusRatio) - 1d));
+        }
+
+        private static double MeanFromTrue(double trueAnomaly, double eccentricity)
+        {
+            const double twoPi = 6.28318530717958647692d;
+            double revolutions = math.floor(trueAnomaly / twoPi);
+            double principal = trueAnomaly - revolutions * twoPi;
+            double eccentricAnomaly = 2d * math.atan2(
+                math.sqrt(1d - eccentricity) * math.sin(principal * 0.5d),
+                math.sqrt(1d + eccentricity) * math.cos(principal * 0.5d));
+            if (eccentricAnomaly < 0d)
+                eccentricAnomaly += twoPi;
+            return eccentricAnomaly - eccentricity * math.sin(eccentricAnomaly) + revolutions * twoPi;
+        }
+
+        private static double NormalizeRadians(double value)
+        {
+            const double twoPi = 6.28318530717958647692d;
+            value %= twoPi;
+            return value < 0d ? value + twoPi : value;
         }
     }
 
@@ -169,9 +226,10 @@ namespace FlatWorld.AIECS
                 for (int segment = 0; segment < 2048 && GameTime - climate.LastSimulationTime > 0.00001d; segment++)
                 {
                     float seconds = (float)math.min(maxStep, GameTime - climate.LastSimulationTime);
-                    double midpoint = (climate.LastSimulationTime + seconds * 0.5d) / DayLength;
+                    double midpoint = climate.LastSimulationTime + seconds * 0.5d;
                     float temperature = historical ? climate.BaselineCelsius +
-                        (Seasonal ? SampleSeason(midpoint) : 0f) : climate.AmbientCelsius;
+                        (Seasonal ? SampleSeason(midpoint, climate.BaselineCelsius, climate.SeasonPoleProximity) : 0f) :
+                        climate.AmbientCelsius;
                     climate.ColdSeconds = temperature < climate.MinimumSurvivalTemperature
                         ? climate.ColdSeconds + seconds : math.max(0f, climate.ColdSeconds - seconds * climate.RecoveryRate);
                     climate.HeatSeconds = temperature > climate.MaximumSurvivalTemperature
@@ -195,10 +253,11 @@ namespace FlatWorld.AIECS
                 }
             }
 
-            private float SampleSeason(double day)
+            private float SampleSeason(double day, float baselineCelsius, float poleProximity)
             {
                 for (int i = 0; i < Seasons.Length; i++)
-                    if (day < Seasons[i].EndDay) return Seasons[i].Sample(day, out _, out _, out _);
+                    if (day < Seasons[i].EndTimeSeconds)
+                        return Seasons[i].SamplePhysicalOffset(day, baselineCelsius, poleProximity);
                 return 0f;
             }
 

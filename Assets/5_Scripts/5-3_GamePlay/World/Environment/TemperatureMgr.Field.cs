@@ -17,6 +17,8 @@ public partial class TemperatureMgr
     private RadiantLiquidTemperatureField radiantLiquidTemperatureField;
     private int fieldContextFrame = -1;
     private float ambientFieldOffset;
+    private float seasonTiltOffsetAtPole;
+    private float orbitalTemperatureFactor;
     private int fieldChunkWidth;
     private int fieldChunkHeight;
     private int fieldContextVersion;
@@ -88,7 +90,19 @@ public partial class TemperatureMgr
         float weatherOffset = dimension?.ActiveDefinition?.SuppressWeather == true
             ? 0f : WeatherMgr.CalculateWeatherTemperatureOffset(planet);
         ambientFieldOffset = planet != null
-            ? planet.GlobalTemperature - PlanetData.DefaultGlobalTemperature + weatherOffset + DayTimeSystem.GetSeasonTemperatureOffset() : 0f;
+            ? planet.GlobalTemperature - PlanetData.DefaultGlobalTemperature + weatherOffset : 0f;
+        seasonTiltOffsetAtPole = 0f;
+        orbitalTemperatureFactor = 0f;
+        if (planet != null && dimension?.ActiveDefinition?.SuppressWeather != true &&
+            DayTimeSystem.Instance != null &&
+            DayTimeSystem.Instance.TryGetActiveTimeData(out TimeData time))
+        {
+            SeasonSnapshot season = SeasonCalendar.Sample(time);
+            seasonTiltOffsetAtPole = OrbitalSeasonPhysics.ResolveTiltTemperatureOffset(
+                time, season.TemperatureOffset, 1f);
+            orbitalTemperatureFactor = OrbitalSeasonPhysics.ResolveEccentricTemperatureFactor(
+                time, time.GetTotalGameTimeSeconds());
+        }
     }
 
     #endregion
@@ -133,8 +147,17 @@ public partial class TemperatureMgr
             !terrain.TryGetEnvironmentValue("temperature.celsius", x, y, out float baseline))
             return false;
 
+        float seasonOffset = 0f;
+        if (includeTransient && fieldPlanet != null)
+        {
+            float poleProximity = OrbitalSeasonPhysics.ResolvePoleProximity(fieldBounds, position);
+            float physicalBaseline = baseline + fieldPlanet.GlobalTemperature - PlanetData.DefaultGlobalTemperature;
+            seasonOffset = seasonTiltOffsetAtPole * poleProximity +
+                           Mathf.Max(1f, physicalBaseline + 273.15f) * orbitalTemperatureFactor;
+        }
+
         temperature = includeTransient
-            ? baseline + ambientFieldOffset + localTemperatureField.Sample(cell) +
+            ? baseline + ambientFieldOffset + seasonOffset + localTemperatureField.Sample(cell) +
               (radiantLiquidTemperatureField?.Sample(cell) ?? 0f)
             : baseline + (includePlanetOffset ? fieldPlanet.GlobalTemperature - PlanetData.DefaultGlobalTemperature : 0f);
         if (includeTransient)

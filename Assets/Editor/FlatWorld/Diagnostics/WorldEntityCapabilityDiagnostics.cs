@@ -59,7 +59,11 @@ public static class WorldEntityCapabilityDiagnostics
         system.DifficultyGrowthMultiplier = 1f;
         system.WeatherMultiplier = 1f;
         var season = new EntitySeasonPeriod
-        { EndDay = double.PositiveInfinity, Days = new float4(6f), Temperatures = new float4(0, 12, 0, -30) };
+        {
+            EndTimeSeconds = double.PositiveInfinity, Fractions = new double4(0.25d),
+            RotationPeriodSeconds = 24f, OrbitalPeriodSeconds = 24f * 24f,
+            Temperatures = new float4(0, 12, 0, -30), TiltScale = 1f
+        };
         system.SetSeasons(new[] { season });
 
         Entity tree = manager.CreateEntity(typeof(AiecsVital));

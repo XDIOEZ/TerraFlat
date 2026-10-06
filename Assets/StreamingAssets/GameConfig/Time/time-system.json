@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "defaultProfileId": "standard",
   "profiles": [
     {
@@ -10,6 +10,8 @@
       "timeScale": 1.0,
       "rotationPeriodSeconds": 1440.0,
       "orbitalPeriodSeconds": 34560.0,
+      "axialTiltDegrees": 23.44,
+      "orbitalEccentricity": 0.0,
       "initialTime": 480.0,
       "initialTotalDays": 0,
       "timeLimitDays": 0.0,
@@ -37,10 +39,6 @@
         ]
       },
       "seasons": {
-        "springDays": 6.0,
-        "summerDays": 6.0,
-        "autumnDays": 6.0,
-        "winterDays": 6.0,
         "springTemperatureOffset": 0.0,
         "summerTemperatureOffset": 12.0,
         "autumnTemperatureOffset": 0.0,
@@ -67,6 +65,8 @@
       "timeScale": 4.0,
       "rotationPeriodSeconds": 1440.0,
       "orbitalPeriodSeconds": 34560.0,
+      "axialTiltDegrees": 23.44,
+      "orbitalEccentricity": 0.0,
       "initialTime": 480.0,
       "initialTotalDays": 0,
       "timeLimitDays": 0.0,
@@ -94,10 +94,6 @@
         ]
       },
       "seasons": {
-        "springDays": 6.0,
-        "summerDays": 6.0,
-        "autumnDays": 6.0,
-        "winterDays": 6.0,
         "springTemperatureOffset": 0.0,
         "summerTemperatureOffset": 12.0,
         "autumnTemperatureOffset": 0.0,
@@ -124,6 +120,8 @@
       "timeScale": 1.0,
       "rotationPeriodSeconds": 1440.0,
       "orbitalPeriodSeconds": 34560.0,
+      "axialTiltDegrees": 23.44,
+      "orbitalEccentricity": 0.0,
       "initialTime": 480.0,
       "initialTotalDays": 0,
       "timeLimitDays": 7.0,
@@ -151,10 +149,6 @@
         ]
       },
       "seasons": {
-        "springDays": 6.0,
-        "summerDays": 6.0,
-        "autumnDays": 6.0,
-        "winterDays": 6.0,
         "springTemperatureOffset": 0.0,
         "summerTemperatureOffset": 12.0,
         "autumnTemperatureOffset": 0.0,

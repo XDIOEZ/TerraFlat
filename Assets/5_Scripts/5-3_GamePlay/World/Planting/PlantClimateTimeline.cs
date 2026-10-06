@@ -17,15 +17,20 @@ public static class PlantClimateTimeline
             !manager.TryGetClimateBaseline(item.transform.position, out baseline))) return true;
         bool historical = now - cursor > 1d;
         bool seasonal = DimensionManager.ExistingInstance?.ActiveDefinition?.SuppressWeather != true;
+        float poleProximity = WorldTopologyRuntime.TryGetActiveBounds(out WorldTopologyBounds bounds)
+            ? OrbitalSeasonPhysics.ResolvePoleProximity(bounds, item.transform.position)
+            : 1f;
         float current = 0f;
         if (needsTemperature && !manager.TryGetAmbientTemperature(item.transform.position, out current)) return true;
         double maxStep = Math.Min(30d, clock.DayLength / 96d);
         for (int segment = 0; segment < 2048 && now - cursor > 0.00001d; segment++)
         {
             float seconds = (float)Math.Min(maxStep, now - cursor);
-            double midpoint = (cursor + seconds * 0.5d) / clock.DayLength;
-            float temperature = !needsTemperature ? 0f : historical ? baseline + (seasonal
-                ? SeasonCalendar.SampleHistorical(clock, midpoint).TemperatureOffset : 0f) : current;
+            double midpoint = cursor + seconds * 0.5d;
+            float seasonOffset = seasonal
+                ? SeasonCalendar.SampleHistoricalTemperatureOffset(clock, midpoint, baseline, poleProximity)
+                : 0f;
+            float temperature = !needsTemperature ? 0f : historical ? baseline + seasonOffset : current;
             float growth = 1f;
             stress = 0f;
             foreach (IPlantEnvironmentCondition condition in conditions)

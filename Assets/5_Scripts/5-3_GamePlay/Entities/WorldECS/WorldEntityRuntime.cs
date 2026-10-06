@@ -164,7 +164,7 @@ public static class WorldEntityRuntime
             return;
         capabilities.StepSeconds = capabilitySeconds;
         capabilitySeconds = 0f;
-        capabilities.GameTime = clock.TotalDays * (double)clock.DayLength + clock.CurrentTime;
+        capabilities.GameTime = clock.GetTotalGameTimeSeconds();
         capabilities.DayLength = clock.DayLength;
         capabilities.Seasonal = DimensionManager.ExistingInstance?.ActiveDefinition?.SuppressWeather != true;
         capabilities.DifficultyGrowthMultiplier = GameDifficultyService.Current.Production.CropGrowthMultiplier;
@@ -201,11 +201,14 @@ public static class WorldEntityRuntime
         for (int i = 0; i < count; i++)
         {
             SeasonCalendarHistoryEntry old = i < count - 1 ? clock.SeasonHistory[i] : null;
-            EntitySeasonPeriod next = SeasonCalendar.CreateEntityPeriod(old?.Settings ?? clock.Seasons,
-                old?.OffsetDays ?? clock.SeasonOffsetDays, old?.EndWorldDay ?? double.PositiveInfinity);
+            EntitySeasonPeriod next = old != null ? SeasonCalendar.CreateEntityPeriod(old) : SeasonCalendar.CreateEntityPeriod(clock);
             EntitySeasonPeriod previous = seasonPeriods[i];
-            if (previous.EndDay != next.EndDay || previous.OffsetDays != next.OffsetDays ||
-                !previous.Days.Equals(next.Days) || !previous.Temperatures.Equals(next.Temperatures)) changed = true;
+            if (previous.EndTimeSeconds != next.EndTimeSeconds || previous.OffsetSeconds != next.OffsetSeconds ||
+                !previous.Fractions.Equals(next.Fractions) || !previous.Temperatures.Equals(next.Temperatures) ||
+                previous.TiltScale != next.TiltScale ||
+                previous.OrbitalEccentricity != next.OrbitalEccentricity ||
+                previous.RotationPeriodSeconds != next.RotationPeriodSeconds ||
+                previous.OrbitalPeriodSeconds != next.OrbitalPeriodSeconds) changed = true;
             seasonPeriods[i] = next;
         }
         if (changed) { capabilities.SetSeasons(seasonPeriods); plants.SetSeasons(seasonPeriods); }

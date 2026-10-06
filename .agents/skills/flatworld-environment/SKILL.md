@@ -53,7 +53,7 @@ description: "Use when: 定位或修改 FlatWorld 的世界时间、昼夜、天
 - GameObject AI 的体温模块保留最近 4 个“体温与当地环境都安全”的移动位置；当地目标温度超界时优先返回记录中空间距离最近的位置并立即移除该记录，回到安全环境后若体温仍超界则原地恢复。位置记录和避险只在权威端推进。
 - 伤害语义联动 `flatworld-combat`，维度覆盖联动 `flatworld-dimension`，雨视觉联动 Effects Skill。
 
-- 季节日历只从 `SeasonCalendar` 取快照；调整四季长度保留年、季、进度和绝对时钟，并记录 `SeasonHistory`。植物与积雪的历史补算使用 `SampleHistorical`，不能拿新季长重算过去的温害。
+- 日长只读 `RotationPeriodSeconds`，年长只读 `OrbitalPeriodSeconds`；四季只是年内归一划分。运行时经 `SetRotationPeriod/SetOrbitalPeriod` 修改，年份、季节与轨道距离共用游戏秒轴和公转起点；禁止从季长之和另建年钟。植物、积雪与 ECS 补算使用 `SeasonCalendar` 的秒制历史快照，冻结旧周期、倾角和离心率，不能用当前日长重算过去。
 - `TemperatureMgr.TryGetClimateBaseline` 不含季节、动态天气和局部源；历史环境重建与积雪采样用它，角色体温仍用最终环境温度入口，避免重复叠加季节。
 - 环世界地理温度先按纬度求底温：`climate.polarBand.*` 冷带到 `climate.equator.minimumCelsius/maximumCelsius/peakCelsius` 赤道二次概率底温平滑过渡（默认 40~60℃，45℃概率最高），再加 `climate.temperature.regionalVariationCelsius` 局部噪声、`altitudeCooling*` 海拔降温、`rainCoolingCelsius` 降雨降温和 `windwardCoolingCelsius/leewardWarmingCelsius` 迎风/背风温差。赤道随机底温通过 `spacingTiles` 控制横向区域大小，不随当前天气重抽；风向通过既有地形降水差参与，单位风向不能冒充风速。海拔只在 `FinishSurfaceClimate` 叠加一次，Legacy/Burst 核只返回原始温度噪声；最终温度允许因环境修正超出纬度底温范围。
 - 静态气候降雨与风向修正随 Profile 固定，不能混入当前动态天气或季节；运行时查询继续叠加实时偏移。`TryGetGeographicTemperature` 只返回固定 `temperature.celsius`，连星球全局调温也不叠加。

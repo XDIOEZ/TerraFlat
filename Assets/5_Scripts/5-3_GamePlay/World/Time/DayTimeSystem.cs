@@ -605,17 +605,25 @@ private void TimeRun(string sceneName, float deltaTime)
     /// <summary>
     /// 修改星球自转周期；一天长度始终等于该周期
     /// </summary>
-    public void SetDayLength(string sceneName, float seconds)
+    public void SetRotationPeriod(string sceneName, float seconds)
     {
-        if (!WorldTimeDict.TryGetValue(sceneName, out TimeData timeData))
-        {
-            timeData = CreateConfiguredTimeData();
-            WorldTimeDict[sceneName] = timeData;
-        }
+        ResolvePhysicalClock(sceneName).SetRotationPeriod(seconds);
+        SeasonSettingsChanged?.Invoke();
+    }
 
-        timeData.RotationPeriodSeconds = Mathf.Max(1f, seconds);
-        timeData.CurrentTime = Mathf.Repeat(timeData.CurrentTime, timeData.DayLength);
-        timeData.Seasons.NormalizeToYearDays(timeData.YearLengthDays);
+    /// <summary>公转周期是唯一年长来源，维度引用始终修改实际世界时钟。</summary>
+    public void SetOrbitalPeriod(string sceneName, float seconds)
+    {
+        ResolvePhysicalClock(sceneName).SetOrbitalPeriod(seconds);
+        SeasonSettingsChanged?.Invoke();
+    }
+
+    private TimeData ResolvePhysicalClock(string sceneName)
+    {
+        if (!WorldTimeDict.ContainsKey(sceneName)) InitializeSceneTimeData(sceneName);
+        if (!TryGetResolvedTimeData(sceneName, out _, out TimeData time))
+            throw new InvalidOperationException("无法解析星球物理时间：" + sceneName);
+        return time;
     }
 
     /// <summary>
@@ -674,14 +682,9 @@ private void TimeRun(string sceneName, float deltaTime)
         if (gameSeconds <= 0f)
             return;
 
-        float dayLength = Mathf.Max(1f, timeData.DayLength);
         int oldDay = timeData.GetCurrentDay();
         float oldTotalTime = timeData.GetTotalGameTime();
-        float nextTime = timeData.CurrentTime + gameSeconds;
-        int daysPassed = Mathf.Max(0, Mathf.FloorToInt(nextTime / dayLength));
-
-        timeData.TotalDays += daysPassed;
-        timeData.CurrentTime = Mathf.Repeat(nextTime, dayLength);
+        timeData.SetTotalGameTimeSeconds(timeData.GetTotalGameTimeSeconds() + gameSeconds);
 
         float newTotalTime = timeData.GetTotalGameTime();
         TimeAdvanced?.Invoke(sceneName, oldTotalTime, newTotalTime);
@@ -714,15 +717,14 @@ private void TimeRun(string sceneName, float deltaTime)
     /// <summary>
     /// 初始化场景时间数据
     /// </summary>
-    public void InitializeSceneTimeData(string sceneName, float rotationPeriodSeconds = TimeData.DefaultRotationPeriodSeconds, float timeScale = 1f)
+    public void InitializeSceneTimeData(string sceneName, float? rotationPeriodSeconds = null, float? orbitalPeriodSeconds = null, float? timeScale = null)
     {
         if (!WorldTimeDict.ContainsKey(sceneName))
         {
             TimeData timeData = CreateConfiguredTimeData();
-            timeData.RotationPeriodSeconds = Mathf.Max(1f, rotationPeriodSeconds);
-            timeData.Seasons.NormalizeToYearDays(timeData.YearLengthDays);
-            timeData.CurrentTime = Mathf.Repeat(timeData.CurrentTime, timeData.DayLength);
-            timeData.TimeScaleModifier = Mathf.Max(0f, timeScale);
+            if (rotationPeriodSeconds.HasValue) timeData.SetRotationPeriod(rotationPeriodSeconds.Value);
+            if (orbitalPeriodSeconds.HasValue) timeData.SetOrbitalPeriod(orbitalPeriodSeconds.Value);
+            if (timeScale.HasValue) timeData.TimeScaleModifier = Mathf.Max(0f, timeScale.Value);
             WorldTimeDict[sceneName] = timeData;
         }
 
@@ -861,6 +863,8 @@ public partial class SerializableTimeData
     public float CurrentTime;
     public float RotationPeriodSeconds;
     public float OrbitalPeriodSeconds;
+    public float AxialTiltDegrees;
+    public float OrbitalEccentricity;
     public SerializableKeyframe[] LightParamsKeys;
     public float TimeScaleModifier;
     public string ReferenceScene;
@@ -874,13 +878,15 @@ public partial class SerializableTimeData
     public float FullMoonNightIntensity;
     public float InitialMoonPhase;
     public SeasonCycleSettings Seasons; // 当前世界的四季参数
-    public double SeasonOffsetDays; // 调整季长后的日历偏移
+    public double OrbitalOffsetSeconds; // 年份与公转共同使用的秒制起点
     public List<SeasonCalendarHistoryEntry> SeasonHistory; // 改季长前的历史，供离开区块后的补算读取。
 
     [MemoryPackConstructor]
     public SerializableTimeData(float currentTime,
                                 float rotationPeriodSeconds,
                                 float orbitalPeriodSeconds,
+                                float axialTiltDegrees,
+                                float orbitalEccentricity,
                                 SerializableKeyframe[] lightParamsKeys,
                                 float timeScaleModifier,
                                 string referenceScene,
@@ -894,12 +900,14 @@ public partial class SerializableTimeData
                                 float fullMoonNightIntensity,
                                 float initialMoonPhase,
                                 SeasonCycleSettings seasons,
-                                double seasonOffsetDays,
+                                double orbitalOffsetSeconds,
                                 List<SeasonCalendarHistoryEntry> seasonHistory)
     {
         CurrentTime = currentTime;
         RotationPeriodSeconds = rotationPeriodSeconds;
         OrbitalPeriodSeconds = orbitalPeriodSeconds;
+        AxialTiltDegrees = axialTiltDegrees;
+        OrbitalEccentricity = orbitalEccentricity;
         LightParamsKeys = lightParamsKeys;
         TimeScaleModifier = timeScaleModifier;
         ReferenceScene = referenceScene ?? "";
@@ -913,7 +921,7 @@ public partial class SerializableTimeData
         FullMoonNightIntensity = fullMoonNightIntensity;
         InitialMoonPhase = initialMoonPhase;
         Seasons = seasons;
-        SeasonOffsetDays = seasonOffsetDays;
+        OrbitalOffsetSeconds = orbitalOffsetSeconds;
         SeasonHistory = seasonHistory;
     }
 
@@ -923,6 +931,8 @@ public partial class SerializableTimeData
         CurrentTime = timeData.CurrentTime;
         RotationPeriodSeconds = timeData.RotationPeriodSeconds;
         OrbitalPeriodSeconds = timeData.OrbitalPeriodSeconds;
+        AxialTiltDegrees = timeData.AxialTiltDegrees;
+        OrbitalEccentricity = timeData.OrbitalEccentricity;
         TimeScaleModifier = timeData.TimeScaleModifier;
         ReferenceScene = timeData.ReferenceScene ?? "";
         TotalDays = Mathf.Max(0, timeData.TotalDays);
@@ -934,7 +944,7 @@ public partial class SerializableTimeData
         FullMoonNightIntensity = timeData.FullMoonNightIntensity;
         InitialMoonPhase = timeData.InitialMoonPhase;
         Seasons = timeData.Seasons.Copy();
-        SeasonOffsetDays = timeData.SeasonOffsetDays;
+        OrbitalOffsetSeconds = timeData.OrbitalOffsetSeconds;
         SeasonHistory = SeasonCalendar.CopyHistory(timeData.SeasonHistory);
 
         // AnimationCurve → 数组
@@ -953,9 +963,12 @@ public partial class SerializableTimeData
     // 还原回运行时 TimeData
     public TimeData ToTimeData()
     {
-        if (RotationPeriodSeconds <= 0f || float.IsNaN(RotationPeriodSeconds) || float.IsInfinity(RotationPeriodSeconds) ||
-            OrbitalPeriodSeconds <= 0f || float.IsNaN(OrbitalPeriodSeconds) || float.IsInfinity(OrbitalPeriodSeconds) ||
-            Seasons == null || double.IsNaN(SeasonOffsetDays) || double.IsInfinity(SeasonOffsetDays))
+        if (RotationPeriodSeconds < 1f || float.IsNaN(RotationPeriodSeconds) || float.IsInfinity(RotationPeriodSeconds) ||
+            OrbitalPeriodSeconds < 1f || float.IsNaN(OrbitalPeriodSeconds) || float.IsInfinity(OrbitalPeriodSeconds) ||
+            AxialTiltDegrees < 0f || AxialTiltDegrees > 90f || float.IsNaN(AxialTiltDegrees) || float.IsInfinity(AxialTiltDegrees) ||
+            OrbitalEccentricity < 0f || OrbitalEccentricity >= 1f || float.IsNaN(OrbitalEccentricity) || float.IsInfinity(OrbitalEccentricity) ||
+            Seasons == null || double.IsNaN(OrbitalOffsetSeconds) || double.IsInfinity(OrbitalOffsetSeconds) ||
+            float.IsNaN(CurrentTime) || float.IsInfinity(CurrentTime) || CurrentTime < 0f || CurrentTime >= RotationPeriodSeconds || TotalDays < 0)
             throw new System.IO.InvalidDataException("当前版本存档的时间或季节数据无效，停止加载。");
         Seasons.Validate();
         // 重建曲线
@@ -971,8 +984,8 @@ public partial class SerializableTimeData
         TimeData timeData = new TimeData
         {
             CurrentTime = CurrentTime,
-            RotationPeriodSeconds = RotationPeriodSeconds,
-            OrbitalPeriodSeconds = OrbitalPeriodSeconds,
+            AxialTiltDegrees = AxialTiltDegrees,
+            OrbitalEccentricity = OrbitalEccentricity,
             LightParams = curve,
             TimeScaleModifier = TimeScaleModifier,
             ReferenceScene = ReferenceScene,
@@ -986,10 +999,11 @@ public partial class SerializableTimeData
             FullMoonNightIntensity = FullMoonNightIntensity,
             InitialMoonPhase = InitialMoonPhase,
             Seasons = Seasons.Copy(),
-            SeasonOffsetDays = SeasonOffsetDays,
+            OrbitalOffsetSeconds = OrbitalOffsetSeconds,
             SeasonHistory = SeasonCalendar.CopyHistory(SeasonHistory)
         };
 
+        timeData.InitializePhysicalPeriods(RotationPeriodSeconds, OrbitalPeriodSeconds);
         timeData.EnsureTimeSystemDefaults();
         return timeData;
     }

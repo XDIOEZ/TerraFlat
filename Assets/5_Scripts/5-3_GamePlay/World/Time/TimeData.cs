@@ -5,23 +5,33 @@ using UnityEngine;
 [System.Serializable]
 public partial class TimeData
 {
+    #region 物理周期与日历
     public const float DefaultRotationPeriodSeconds = 1440f;
     public const float DefaultOrbitalPeriodSeconds = DefaultRotationPeriodSeconds * 24f;
+    public const float DefaultAxialTiltDegrees = 23.44f;
+    public const float DefaultOrbitalEccentricity = 0f;
 
     [Tooltip("当前时间点（单位/秒）")]
     public float CurrentTime = 0f;
 
-    [Tooltip("星球自转一周所需的游戏秒数；它就是一天的长度")]
-    public float RotationPeriodSeconds = DefaultRotationPeriodSeconds;
+    public float RotationPeriodSeconds { get; private set; } = DefaultRotationPeriodSeconds;
 
-    [Tooltip("星球公转一周所需的游戏秒数；它就是一年的长度")]
-    public float OrbitalPeriodSeconds = DefaultOrbitalPeriodSeconds;
+    public float OrbitalPeriodSeconds { get; private set; } = DefaultOrbitalPeriodSeconds;
+
+    [Tooltip("星球自转轴相对公转轨道法线的倾角；控制季节温差强弱与极区放大")]
+    public float AxialTiltDegrees = DefaultAxialTiltDegrees;
+
+    [Tooltip("椭圆轨道离心率；0 为圆轨道，越接近 1 远近日点差异越强")]
+    public float OrbitalEccentricity = DefaultOrbitalEccentricity;
 
     [MemoryPackIgnore]
     public float DayLength => RotationPeriodSeconds;
 
     [MemoryPackIgnore]
-    public double YearLengthDays => OrbitalPeriodSeconds / System.Math.Max(1d, RotationPeriodSeconds);
+    public double YearLengthDays => (double)OrbitalPeriodSeconds / RotationPeriodSeconds;
+
+    [MemoryPackIgnore]
+    public double OrbitalCycles => System.Math.Max(0d, (GetTotalGameTimeSeconds() + OrbitalOffsetSeconds) / OrbitalPeriodSeconds);
 
     [Tooltip("光照参数曲线（时间比例到光照强度）")]
     [MemoryPackIgnore]
@@ -72,12 +82,68 @@ public partial class TimeData
     [Tooltip("新世界第 0 天的月相位置")]
     public float InitialMoonPhase = 0.5f;
 
-    [Tooltip("随世界保存的四季长度与当地温度偏移")]
+    [Tooltip("随世界保存的四季温差；季长只由物理周期派生")]
     public SeasonCycleSettings Seasons = new();
 
-    [Tooltip("修改季长时保留当前季节进度的日历偏移，不改变绝对游戏时间")]
-    public double SeasonOffsetDays;
-    public System.Collections.Generic.List<SeasonCalendarHistoryEntry> SeasonHistory = new(); // 调整季长前的历史气候参数。
+    public double OrbitalOffsetSeconds; // 修改公转周期时保持当前年份与公转进度的同轴起点。
+    public System.Collections.Generic.List<SeasonCalendarHistoryEntry> SeasonHistory = new(); // 物理参数修改前的秒制历史。
+
+    /// <summary>创建与读档共用物理参数入口，不保存派生日长或年长。</summary>
+    internal void InitializePhysicalPeriods(float rotation, float orbital)
+    {
+        ValidatePeriod(rotation);
+        ValidatePeriod(orbital);
+        RotationPeriodSeconds = rotation;
+        OrbitalPeriodSeconds = orbital;
+        Seasons.ApplyOrbitalDurations(YearLengthDays, OrbitalEccentricity);
+    }
+
+    /// <summary>改变日长时保持绝对游戏秒数及公转进度，重新换算已完成的自转圈数。</summary>
+    public void SetRotationPeriod(float seconds)
+    {
+        ValidatePeriod(seconds);
+        if (seconds == RotationPeriodSeconds) return;
+        double now = GetTotalGameTimeSeconds();
+        SeasonCalendar.RecordHistory(this, now);
+        RotationPeriodSeconds = seconds;
+        SetTotalGameTimeSeconds(now);
+        Seasons.ApplyOrbitalDurations(YearLengthDays, OrbitalEccentricity);
+    }
+
+    /// <summary>改变年长时保持绝对秒数、当前年份和公转进度，一天长度不变。</summary>
+    public void SetOrbitalPeriod(float seconds)
+    {
+        ValidatePeriod(seconds);
+        if (seconds == OrbitalPeriodSeconds) return;
+        double now = GetTotalGameTimeSeconds();
+        double cycles = OrbitalCycles;
+        SeasonCalendar.RecordHistory(this, now);
+        OrbitalPeriodSeconds = seconds;
+        OrbitalOffsetSeconds = cycles * seconds - now;
+        Seasons.ApplyOrbitalDurations(YearLengthDays, OrbitalEccentricity);
+    }
+
+    private static void ValidatePeriod(float seconds)
+    {
+        if (float.IsNaN(seconds) || float.IsInfinity(seconds) || seconds < 1f)
+            throw new System.ArgumentOutOfRangeException(nameof(seconds), "物理周期必须为至少 1 的有限游戏秒数。");
+    }
+
+    /// <summary>用同一秒制时间轴推进和跳时，避免大跨度跳时丢掉日内余数。</summary>
+    public void SetTotalGameTimeSeconds(double seconds)
+    {
+        if (double.IsNaN(seconds) || double.IsInfinity(seconds) || seconds < 0d || seconds / DayLength >= int.MaxValue)
+            throw new System.ArgumentOutOfRangeException(nameof(seconds));
+        TotalDays = (int)System.Math.Floor(seconds / DayLength);
+        CurrentTime = (float)(seconds - (double)TotalDays * DayLength);
+        if (CurrentTime >= DayLength) { TotalDays++; CurrentTime = 0f; }
+    }
+
+    public double GetTotalGameTimeSeconds() => System.Math.Max(0, TotalDays) * (double)DayLength + CurrentTime;
+
+    #endregion
+
+    #region 运行时复制与合法化
     
     public TimeData() { }
 
@@ -92,6 +158,8 @@ public partial class TimeData
             CurrentTime = CurrentTime,
             RotationPeriodSeconds = RotationPeriodSeconds,
             OrbitalPeriodSeconds = OrbitalPeriodSeconds,
+            AxialTiltDegrees = AxialTiltDegrees,
+            OrbitalEccentricity = OrbitalEccentricity,
             LightParams = CopyAnimationCurve(LightParams),
             dayNightGradient = CopyGradient(dayNightGradient),
             TimeScaleModifier = TimeScaleModifier,
@@ -105,21 +173,25 @@ public partial class TimeData
             FullMoonNightIntensity = FullMoonNightIntensity,
             InitialMoonPhase = InitialMoonPhase,
             Seasons = Seasons.Copy(),
-            SeasonOffsetDays = SeasonOffsetDays,
+            OrbitalOffsetSeconds = OrbitalOffsetSeconds,
             SeasonHistory = SeasonCalendar.CopyHistory(SeasonHistory)
         };
     }
 
     public void EnsureTimeSystemDefaults()
     {
-        if (float.IsNaN(RotationPeriodSeconds) || float.IsInfinity(RotationPeriodSeconds) || RotationPeriodSeconds <= 0f)
+        if (float.IsNaN(RotationPeriodSeconds) || float.IsInfinity(RotationPeriodSeconds) || RotationPeriodSeconds < 1f)
             RotationPeriodSeconds = DefaultRotationPeriodSeconds;
-        if (float.IsNaN(OrbitalPeriodSeconds) || float.IsInfinity(OrbitalPeriodSeconds) || OrbitalPeriodSeconds <= 0f)
+        if (float.IsNaN(OrbitalPeriodSeconds) || float.IsInfinity(OrbitalPeriodSeconds) || OrbitalPeriodSeconds < 1f)
             OrbitalPeriodSeconds = DefaultOrbitalPeriodSeconds;
+        if (float.IsNaN(AxialTiltDegrees) || float.IsInfinity(AxialTiltDegrees) || AxialTiltDegrees < 0f || AxialTiltDegrees > 90f)
+            AxialTiltDegrees = DefaultAxialTiltDegrees;
+        if (float.IsNaN(OrbitalEccentricity) || float.IsInfinity(OrbitalEccentricity) || OrbitalEccentricity < 0f || OrbitalEccentricity >= 1f)
+            OrbitalEccentricity = DefaultOrbitalEccentricity;
 
         CurrentTime = Mathf.Repeat(CurrentTime, RotationPeriodSeconds);
         Seasons ??= new SeasonCycleSettings();
-        Seasons.NormalizeToYearDays(YearLengthDays);
+        Seasons.ApplyOrbitalDurations(YearLengthDays, OrbitalEccentricity);
 
         if (string.IsNullOrWhiteSpace(TimeSystemProfileId))
             TimeSystemProfileId = "standard";
@@ -208,10 +280,7 @@ public partial class TimeData
     /// </summary>
     public float GetTotalGameTime()
     {
-        float currentTimeInDay = CurrentTime % DayLength;
-        if (currentTimeInDay < 0f)
-            currentTimeInDay += DayLength;
-
-        return Mathf.Max(0, TotalDays) * DayLength + currentTimeInDay;
+        return (float)GetTotalGameTimeSeconds();
     }
+    #endregion
 }

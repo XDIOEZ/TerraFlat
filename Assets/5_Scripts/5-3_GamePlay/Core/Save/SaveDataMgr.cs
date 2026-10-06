@@ -17,8 +17,8 @@ using RuntimeWorldAddress = FlatWorld.WorldModel.WorldAddress;
 /// </summary>
 public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
 {
-    private const int CompactSaveVersion = 22; // 时间数据改用自转/公转周期；旧版本在解析核心数据前拒绝。
-    private const int ModdedSaveVersion = 10;
+    private const int CompactSaveVersion = 24; // 物理日历与历史统一为游戏秒，派生日长、年长不入档。
+    private const int ModdedSaveVersion = 11;
     private const float AutoSaveFrameBudgetSeconds = 0.0025f;
     private const string TemporarySaveSuffix = ".tmp";
     private const string BackupSaveSuffix = ".bak";

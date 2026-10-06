@@ -9,7 +9,7 @@ public static class TimeSystemConfigLoader
 {
     #region 常量
 
-    public const int SupportedSchemaVersion = 2;
+    public const int SupportedSchemaVersion = 3;
     public const string RelativeTimeSystemRoot = "GameConfig/Time";
     public const string ConfigFileName = "time-system.json";
     public const string RelativeConfigPath = RelativeTimeSystemRoot + "/" + ConfigFileName;
@@ -152,10 +152,14 @@ public static class TimeSystemConfigLoader
         profile.Mode = TimeSystemModes.Normalize(rawMode);
         if (!IsFinite(profile.TimeScale) || profile.TimeScale < 0f)
             throw new InvalidDataException($"时间系统 Profile {profile.Id} 的 timeScale 无效：{profile.TimeScale}");
-        if (!IsFinite(profile.RotationPeriodSeconds) || profile.RotationPeriodSeconds <= 0f)
+        if (!IsFinite(profile.RotationPeriodSeconds) || profile.RotationPeriodSeconds < 1f)
             throw new InvalidDataException($"时间系统 Profile {profile.Id} 的 rotationPeriodSeconds 无效：{profile.RotationPeriodSeconds}");
-        if (!IsFinite(profile.OrbitalPeriodSeconds) || profile.OrbitalPeriodSeconds <= 0f)
+        if (!IsFinite(profile.OrbitalPeriodSeconds) || profile.OrbitalPeriodSeconds < 1f)
             throw new InvalidDataException($"时间系统 Profile {profile.Id} 的 orbitalPeriodSeconds 无效：{profile.OrbitalPeriodSeconds}");
+        if (!IsFinite(profile.AxialTiltDegrees) || profile.AxialTiltDegrees < 0f || profile.AxialTiltDegrees > 90f)
+            throw new InvalidDataException($"时间系统 Profile {profile.Id} 的 axialTiltDegrees 无效：{profile.AxialTiltDegrees}");
+        if (!IsFinite(profile.OrbitalEccentricity) || profile.OrbitalEccentricity < 0f || profile.OrbitalEccentricity >= 1f)
+            throw new InvalidDataException($"时间系统 Profile {profile.Id} 的 orbitalEccentricity 无效：{profile.OrbitalEccentricity}");
         if (!IsFinite(profile.InitialTime))
             throw new InvalidDataException($"时间系统 Profile {profile.Id} 的 initialTime 无效：{profile.InitialTime}");
         if (profile.InitialTotalDays < 0)

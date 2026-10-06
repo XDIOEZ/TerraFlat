@@ -76,7 +76,8 @@ public partial class WeatherMgr
             if (end > cursor)
             {
                 double midpoint = (cursor + (double)end) * 0.5d;
-                float offset = SeasonCalendar.SampleHistorical(clock, midpoint / dayLength).TemperatureOffset + CalculateWeatherTemperatureOffset(planet);
+                float offset = SeasonCalendar.SampleHistoricalTemperatureOffset(clock, midpoint, planet.GlobalTemperature, 1f) +
+                    CalculateWeatherTemperatureOffset(planet);
                 float precipitation = planet.CurrentWeather is WeatherType.Rain or WeatherType.Storm ? planet.WeatherIntensity : 0f;
                 SnowCoverSimulation.Advance(planet.SeasonalSnow, GetSnowConfig(), offset, precipitation, end - cursor);
             }

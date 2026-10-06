@@ -179,8 +179,11 @@ namespace FlatWorld.AIECS
                 for (int step = 0; step < 2048 && GameTime - plant.LastWorldTime > 0.00001d; step++)
                 {
                     float seconds = (float)math.min(maxStep, GameTime - plant.LastWorldTime);
+                    double midpointDay = plant.LastWorldTime + seconds * 0.5d;
                     float temperature = historical ? climate.BaselineCelsius +
-                        (Seasonal ? SampleSeason((plant.LastWorldTime + seconds * 0.5d) / DayLength) : 0f) : climate.AmbientCelsius;
+                        (Seasonal ? SampleSeason(
+                            midpointDay, climate.BaselineCelsius, climate.SeasonPoleProximity) : 0f) :
+                        climate.AmbientCelsius;
                     float suitability = hasClimate ? EntityPlantRules.AdvanceClimate(ref climate, temperature, seconds, DayLength) : 1f;
                     plant.LastWorldTime += seconds;
                     if (hasClimate && climate.Dead != 0) { vital.Dead = 1; vital.Hp = 0f; break; }
@@ -229,10 +232,11 @@ namespace FlatWorld.AIECS
                     (int)(oldStress * 64f) != (int)(plant.ClimateStress * 64f) || vital.Dead != 0) appearance.Revision++;
             }
 
-            private float SampleSeason(double day)
+            private float SampleSeason(double day, float baselineCelsius, float poleProximity)
             {
                 for (int i = 0; i < Seasons.Length; i++)
-                    if (day < Seasons[i].EndDay) return Seasons[i].Sample(day, out _, out _, out _);
+                    if (day < Seasons[i].EndTimeSeconds)
+                        return Seasons[i].SamplePhysicalOffset(day, baselineCelsius, poleProximity);
                 return 0f;
             }
         }

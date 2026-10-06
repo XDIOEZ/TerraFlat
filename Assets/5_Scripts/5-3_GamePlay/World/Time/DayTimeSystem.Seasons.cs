@@ -1,6 +1,4 @@
 using System;
-using FlatWorld.Networking;
-using UnityEngine.SceneManagement;
 
 public partial class DayTimeSystem
 {
@@ -32,35 +30,25 @@ public partial class DayTimeSystem
         return true;
     }
 
-    /// <summary>只由权威端提交四季长度，并保留正在经历的季节进度。</summary>
+    /// <summary>季节长度由自转、公转和离心率决定，不再允许独立改写四季天数。</summary>
     public bool TryChangeSeasonLengths(float spring, float summer, float autumn, float winter, out string error)
     {
-        if (!GameNetwork.HasStateAuthority || !TryGetActiveTimeData(out TimeData time))
-        {
-            error = "请在自己管理的世界中调整季节。";
-            return false;
-        }
-        try
-        {
-            SeasonCalendar.ChangeLengths(time, spring, summer, autumn, winter);
-        }
-        catch (System.IO.InvalidDataException)
-        {
-            error = "每个季节的天数必须是大于 0 的有限数值。";
-            return false;
-        }
-        SeasonSettingsChanged?.Invoke();
-        error = string.Empty;
-        return true;
+        error = "季节长度由星球公转周期与轨道离心率自动计算，不能单独修改。";
+        return false;
     }
 
     /// <summary>季节温差与天气使用同一维度资格，地下等禁止天气的维度不受地表四季影响。</summary>
-    public static float GetSeasonTemperatureOffset()
+    public static float GetSeasonTemperatureOffset(
+        float poleProximity = 1f,
+        float baselineCelsius = PlanetData.DefaultGlobalTemperature)
     {
         if (DimensionManager.ExistingInstance?.ActiveDefinition?.SuppressWeather == true)
             return 0f;
-        return Instance != null && Instance.TryGetCurrentSeason(out SeasonSnapshot snapshot)
-            ? snapshot.TemperatureOffset : 0f;
+        if (Instance == null || !Instance.TryGetActiveTimeData(out TimeData time))
+            return 0f;
+        SeasonSnapshot snapshot = SeasonCalendar.Sample(time);
+        return OrbitalSeasonPhysics.ResolveTemperatureOffset(
+            time, snapshot, poleProximity, baselineCelsius, time.GetTotalGameTimeSeconds());
     }
     #endregion
 }

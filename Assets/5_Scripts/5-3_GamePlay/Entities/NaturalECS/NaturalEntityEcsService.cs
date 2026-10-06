@@ -636,6 +636,9 @@ namespace FlatWorld.NaturalEntities
             TemperatureMgr temperature = TemperatureMgr.Instance;
             Vector3 position = record.Snapshot.transform.position;
             climate.EnvironmentReady = 0;
+            climate.SeasonPoleProximity = WorldTopologyRuntime.TryGetActiveBounds(out WorldTopologyBounds bounds)
+                ? OrbitalSeasonPhysics.ResolvePoleProximity(bounds, position)
+                : 1f;
             if (temperature != null && temperature.TryGetAmbientTemperature(position, out float ambient) &&
                 temperature.TryGetClimateBaseline(position, out float baseline))
             {
