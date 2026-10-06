@@ -18,6 +18,16 @@ public partial class TileData_CellBuilding : TileData
         return (TileData_CellBuilding)MemberwiseClone();
     }
 
+    public override void CopyFrom(TileData source)
+    {
+        if (source is not TileData_CellBuilding building)
+            throw new System.InvalidCastException($"TileData_CellBuilding 无法从 {source?.GetType().Name ?? "null"} 复制");
+
+        CopyBaseFrom(building);
+        Version = building.Version;
+        CurrentHp = building.CurrentHp;
+    }
+
     public static TileData_CellBuilding FromTile(TileData source, float currentHp)
     {
         if (source == null)

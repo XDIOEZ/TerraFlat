@@ -65,6 +65,10 @@ description: "Use when: 定位或修改 FlatWorld 的世界时间、昼夜、天
 - 角色液体接触由 `Mod_TileEffectReceiver.Liquid` 独立维护，WorldLiquidBehaviour 读取当前 LiquidDepth；深水有体力时 `LiquidFloating` 仅暂停 Ground。Ground 与 Liquid 各自拥有环境效果运行器，雪地/泥地退出不能清掉潮湿、体温、游泳、氧气、液体减速或饮用动作。浮沉边界只触发一次 Ground Exit/Enter，禁止用全接收器 effectSuppressors 代替上浮状态。
 - Ground 接触身份校验只读取当前权威 Terrain 引用和 TopTileId；仅重新进入地块时创建角色独立 TileData，不能每帧为身份比较克隆模板。地格移动、地块替换和区块重载仍须触发重新绑定。
 
+## 空间尺度
+
+- 静态气候跟随 `PlanetData.SpatialDistanceScale`：基础温度/降水噪声通过反算坐标频率自动改变波长，`climate.wind.regionSize` 与 `climate.orographic.sampleDistance` 必须按同一倍率同步缩放；摄氏温差、降雨增益/损失等强度值不缩放。
+
 ## 验证
 
 - 单机散落物水态由 `DroppedItemRuntime.Water` 桥接权威地形、液体目录与 ECS 短期水线组件；原 `WorldItemWaterRuntime` 仅保留旧实体/联机兼容。淡水密度阈值保持 0.64，海水倍率读取液体定义，不能把漂浮深度和浮力阈值混成同一参数。

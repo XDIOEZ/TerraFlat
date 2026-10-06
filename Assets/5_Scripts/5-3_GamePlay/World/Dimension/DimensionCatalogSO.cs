@@ -122,12 +122,47 @@ public sealed class DimensionCatalogSO : ScriptableObject
     {
         string normalized = string.IsNullOrWhiteSpace(dimensionId)
             ? WorldAddress.SurfaceDimensionId
-            : dimensionId.Trim().ToLowerInvariant();
+            : dimensionId.Trim();
 
         for (int i = 0; i < Dimensions.Count; i++)
         {
             DimensionDefinition definition = Dimensions[i];
-            if (definition != null && string.Equals(definition.DimensionId, normalized, StringComparison.Ordinal))
+            if (definition != null && string.Equals(
+                    definition.DimensionId,
+                    normalized,
+                    StringComparison.OrdinalIgnoreCase))
+                return definition;
+        }
+
+        return null;
+    }
+
+    /// <summary>直接从 worldKey 的维度后缀匹配目录，热路径不构造 WorldAddress、不 Substring/ToLower。</summary>
+    public DimensionDefinition FindForWorldKey(string worldKey)
+    {
+        if (string.IsNullOrWhiteSpace(worldKey))
+            return Find(WorldAddress.SurfaceDimensionId);
+
+        int separatorIndex = worldKey.IndexOf(WorldAddress.Separator, StringComparison.Ordinal);
+        if (separatorIndex < 0)
+            return Find(WorldAddress.SurfaceDimensionId);
+
+        int start = separatorIndex + WorldAddress.Separator.Length;
+        int end = worldKey.Length;
+        while (start < end && char.IsWhiteSpace(worldKey[start])) start++;
+        while (end > start && char.IsWhiteSpace(worldKey[end - 1])) end--;
+        if (start >= end)
+            return Find(WorldAddress.SurfaceDimensionId);
+
+        int length = end - start;
+        for (int i = 0; i < Dimensions.Count; i++)
+        {
+            DimensionDefinition definition = Dimensions[i];
+            string id = definition?.DimensionId;
+            if (string.IsNullOrEmpty(id) || id.Length != length)
+                continue;
+
+            if (string.Compare(worldKey, start, id, 0, length, StringComparison.OrdinalIgnoreCase) == 0)
                 return definition;
         }
 

@@ -34,25 +34,30 @@ public partial class PlanetData
     public const int DefaultChunkDimension = 16;
     public const int MinChunkDimension = 1;
     public const int MaxChunkDimension = 256;
-    public const float DefaultNoiseScale = 0.01f;
-    public const float MinNoiseScale = 0f;
-    public const float MaxNoiseScale = 100f;
+    public const float DefaultSpatialDistanceScale = 1f;
+    public const float MinSpatialDistanceScale = 0.25f;
+    public const float MaxSpatialDistanceScale = 4f;
+    public const float DefaultNoiseScale = 0.01f; // 仅作为底层程序生成坐标频率基准。
     public const float DefaultWindStrength = 0.35f;
 
-    /// <summary>判断世界坐标缩放是否可用于程序生成。</summary>
-    public static bool IsValidNoiseScale(float value)
+    /// <summary>判断玩家设置的自然地理空间距离倍率是否有效。</summary>
+    public static bool IsValidSpatialDistanceScale(float value)
     {
         return !float.IsNaN(value) &&
                !float.IsInfinity(value) &&
-               value >= MinNoiseScale &&
-               value <= MaxNoiseScale;
+               value >= MinSpatialDistanceScale &&
+               value <= MaxSpatialDistanceScale;
     }
 
-    /// <summary>非法世界坐标缩放统一回退到项目默认值。</summary>
-    public static float NormalizeNoiseScale(float value)
+    /// <summary>非法空间距离倍率统一回退到 1x。</summary>
+    public static float NormalizeSpatialDistanceScale(float value)
     {
-        return IsValidNoiseScale(value) ? value : DefaultNoiseScale;
+        return IsValidSpatialDistanceScale(value) ? value : DefaultSpatialDistanceScale;
     }
+
+    /// <summary>空间距离倍率与底层噪声坐标频率互为倒数：2x 地理尺度使用 0.005 坐标倍率。</summary>
+    public static float ResolveCoordinateScale(float spatialDistanceScale) =>
+        DefaultNoiseScale / NormalizeSpatialDistanceScale(spatialDistanceScale);
 
     /// <summary>区块单边尺寸允许玩家按世界配置，联机协议与生成器共用同一范围。</summary>
     public static bool IsValidChunkDimension(int value)
@@ -76,8 +81,8 @@ public partial class PlanetData
     [LabelText("星球半径"), MinValue(1), PropertyTooltip("星球可探索范围的基础半径。")]
     public int Radius = DefaultRadius;
 
-    [LabelText("世界坐标缩放"), MinValue(MinNoiseScale), PropertyTooltip("所有地形噪声共享的世界级坐标倍率。越小地貌越舒展，越大地貌越密集；最终频率还会乘各通道的坐标倍率和基础频率。")]
-    public float NoiseScale = DefaultNoiseScale;
+    [LabelText("空间距离倍率"), MinValue(MinSpatialDistanceScale), MaxValue(MaxSpatialDistanceScale), PropertyTooltip("自然地理结构的统一空间尺度。1x 为基准；2x 会让地貌、气候区、河流、湖泊、雪区与洞穴等空间距离约扩大到两倍，并反向降低底层噪声坐标频率。")]
+    public float SpatialDistanceScale = DefaultSpatialDistanceScale;
 
     //星球地图大小
     public Vector2Int ChunkSize = new Vector2Int(DefaultChunkDimension, DefaultChunkDimension);

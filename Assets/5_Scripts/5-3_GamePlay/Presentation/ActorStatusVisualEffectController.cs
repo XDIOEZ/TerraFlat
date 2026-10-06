@@ -229,6 +229,8 @@ public sealed class ActorStatusVisualEffectController : MonoBehaviour
         new Dictionary<string, RuntimeStatusGlowVisual>(StringComparer.OrdinalIgnoreCase);
 
     private SpriteRenderer sourceRenderer;
+    private SortingGroup sourceSortingGroup;
+    private bool sourceSortingResolved;
     private Mod_BuffManager buffManager;
     private float nextReconciliationTime;
     private bool statusesDirty = true;
@@ -240,6 +242,7 @@ public sealed class ActorStatusVisualEffectController : MonoBehaviour
     private void Awake()
     {
         sourceRenderer = GetComponent<SpriteRenderer>();
+        ResolveSourceSortingGroup();
         BuildRuntimeVisuals();
     }
 
@@ -1056,7 +1059,7 @@ public sealed class ActorStatusVisualEffectController : MonoBehaviour
 
         if (sourceRenderer == null)
             return;
-        WorldSortingManager.ReadExternalRendererKey(sourceRenderer, out int sortingLayerId, out int sortingOrder);
+        ReadCachedSourceSortingKey(out int sortingLayerId, out int sortingOrder);
         for (int i = 0; i < visual.Renderers.Length; i++)
         {
             ParticleSystemRenderer renderer = visual.Renderers[i];
@@ -1066,6 +1069,38 @@ public sealed class ActorStatusVisualEffectController : MonoBehaviour
             renderer.sortingLayerID = sortingLayerId;
             renderer.sortingOrder = sortingOrder + visual.Effect.SortingOrderOffset;
         }
+    }
+
+    /// <summary>角色层级稳定后只解析一次最外层 SortingGroup，避免持续粒子每帧 GetComponent 遍历父链。</summary>
+    private void ResolveSourceSortingGroup()
+    {
+        sourceSortingGroup = null;
+        sourceSortingResolved = true;
+        if (sourceRenderer == null)
+            return;
+
+        for (Transform current = sourceRenderer.transform; current != null; current = current.parent)
+        {
+            SortingGroup group = current.GetComponent<SortingGroup>();
+            if (group != null && group.enabled)
+                sourceSortingGroup = group;
+        }
+    }
+
+    private void ReadCachedSourceSortingKey(out int sortingLayerId, out int sortingOrder)
+    {
+        if (!sourceSortingResolved)
+            ResolveSourceSortingGroup();
+
+        if (sourceSortingGroup != null && sourceSortingGroup.enabled)
+        {
+            sortingLayerId = sourceSortingGroup.sortingLayerID;
+            sortingOrder = sourceSortingGroup.sortingOrder;
+            return;
+        }
+
+        sortingLayerId = sourceRenderer.sortingLayerID;
+        sortingOrder = sourceRenderer.sortingOrder;
     }
 
     #endregion

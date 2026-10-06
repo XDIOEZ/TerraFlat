@@ -380,19 +380,15 @@ public sealed class ChunkGenerator_River : ChunkGeneratorBase
         return !float.IsNaN(value) && !float.IsInfinity(value) && value > 0f;
     }
 
-    #region 世界坐标缩放
+    #region 世界空间距离倍率
 
     /// <summary>
-    /// 世界坐标倍率越小，地貌越舒展，因此径流单元、追踪距离和河宽按反比放大。
-    /// 倍率限制在 0.25x 到 4x，避免极端输入造成水文区域计算失控。
+    /// 玩家空间距离倍率越大，地貌越舒展，因此径流单元、追踪距离和河宽同步放大。
     /// </summary>
     private HydrologySpatialSettings ResolveSpatialSettings(PlanetData planetData)
     {
-        float coordinateScale = ChunkGenerator_Land.ResolveNoiseScale(planetData);
-        float distanceScale = coordinateScale <= 0f
-            ? 4f
-            : Mathf.Clamp(PlanetData.DefaultNoiseScale / coordinateScale, 0.25f, 4f);
-        float lateralScale = Mathf.Sqrt(distanceScale);
+        float distanceScale = PlanetData.NormalizeSpatialDistanceScale(
+            planetData?.SpatialDistanceScale ?? PlanetData.DefaultSpatialDistanceScale);
         int effectiveRunoffCellSize = ScaleDistance(runoffCellSize, distanceScale, 16, 256);
         int effectiveSampleStride = ScaleDistance(
             runoffSampleStride,
@@ -406,7 +402,7 @@ public sealed class ChunkGenerator_River : ChunkGeneratorBase
             effectiveRunoffCellSize,
             effectiveSampleStride,
             ScaleDistance(maxTraceSteps, distanceScale, 32, 2048),
-            ScaleDistance(maxRiverWidth, lateralScale, 1, 15));
+            ScaleDistance(maxRiverWidth, distanceScale, 1, 64));
     }
 
     private static int ScaleDistance(int value, float scale, int minimum, int maximum)

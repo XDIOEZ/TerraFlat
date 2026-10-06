@@ -219,16 +219,16 @@ public static class NewGamePrefabBuilder
             defaultRadius,
             TMP_InputField.ContentType.IntegerNumber);
 
-        string defaultNoiseScale = PlanetData.DefaultNoiseScale.ToString("0.########", CultureInfo.InvariantCulture);
+        string defaultSpatialDistanceScale = PlanetData.DefaultSpatialDistanceScale.ToString("0.##", CultureInfo.InvariantCulture);
         CreateWorldSettingInputRow(
             content,
             font,
-            "坐标缩放设置项",
-            "坐标缩放",
-            "地貌疏密",
-            GameManager.NewGameNoiseInputKey,
-            defaultNoiseScale,
-            defaultNoiseScale,
+            "空间距离倍率设置项",
+            "空间距离倍率",
+            "自然地理尺寸",
+            GameManager.NewGameSpatialDistanceScaleInputKey,
+            defaultSpatialDistanceScale,
+            defaultSpatialDistanceScale,
             TMP_InputField.ContentType.DecimalNumber);
 
         string defaultChunkSize = NewWorldUserSettings.DefaultChunkDimension.ToString(CultureInfo.InvariantCulture);

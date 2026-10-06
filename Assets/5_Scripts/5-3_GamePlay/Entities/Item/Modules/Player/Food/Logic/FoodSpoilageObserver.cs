@@ -3,12 +3,12 @@ using UnityEngine;
 
 /// <summary>食物腐败观察者自己的配置与运行时状态，不进入 ModData_FoodData 的具体字段。</summary>
 [Serializable]
-public sealed class FoodSpoilageObserverData
+public struct FoodSpoilageObserverData
 {
-    public bool EnableSpoilage = true;
+    public bool EnableSpoilage;
     public float SpoilageElapsedSeconds;
-    public float SpoilageIntervalSeconds = 1800f;
-    public string SpoilageTargetItemID = "Meat_Rotten";
+    public float SpoilageIntervalSeconds;
+    public string SpoilageTargetItemID;
 
     /// <summary>从通用观察者负载读取腐败数据。</summary>
     public static FoodSpoilageObserverData Load(ModData_FoodData persistentData)
@@ -121,11 +121,11 @@ public sealed class FoodSpoilageModuleDataObserver : IModuleDataTickObserver
 
 /// <summary>可融化食物的库存计时状态；复用食物观察者存储，不额外挂载运行时模块。</summary>
 [Serializable]
-public sealed class FoodMeltingObserverData
+public struct FoodMeltingObserverData
 {
     public bool EnableMelting;
     public float MeltingElapsedSeconds;
-    public float MeltingIntervalSeconds = 300f;
+    public float MeltingIntervalSeconds;
 
     /// <summary>从通用观察者负载读取融化数据。</summary>
     public static FoodMeltingObserverData Load(ModData_FoodData persistentData)

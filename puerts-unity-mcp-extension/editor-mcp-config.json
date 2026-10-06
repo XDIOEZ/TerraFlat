@@ -5,7 +5,7 @@
     "_comment_directTargets": "No LAN discovery is performed. Set selectedTargetUrl, pass --target-url, or set PUERTS_UNITY_MCP_TARGET_URL when connecting to a remote Unity Editor or phone/player MCP.",
     "editorAutoStart": true,
     "editorBindAddress": "127.0.0.1",
-    "editorPort": 18990,
+    "editorPort": 18992,
     "runtimeAutoStart": true,
     "runtimeBindAddress": "0.0.0.0",
     "runtimePort": 18991,

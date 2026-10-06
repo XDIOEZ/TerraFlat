@@ -15,7 +15,7 @@ public partial class ItemMgr : SingletonMono<ItemMgr>
     private static readonly ProfilerMarker SchedulerTickMarker = new("ItemMgr.Update.TickScheduler");
     private static readonly ProfilerMarker WaterTickMarker = new("ItemMgr.Update.WorldItemWater");
     private static readonly ProfilerMarker DroppedTickMarker = new("ItemMgr.Update.DroppedItems");
-    private static readonly ProfilerMarker PerceptionScheduleMarker = new("ItemMgr.LateUpdate.PerceptionSchedule");
+    private static readonly ProfilerMarker PerceptionScheduleMarker = new("ItemMgr.Update.PerceptionSchedule");
     private static readonly ProfilerMarker DroppedPresentMarker = new("ItemMgr.LateUpdate.DroppedPresent");
     private static readonly ProfilerMarker NaturalPresentMarker = new("ItemMgr.LateUpdate.NaturalPresent");
 
@@ -259,6 +259,9 @@ public partial class ItemMgr : SingletonMono<ItemMgr>
             WorldItemWaterSystem.ProcessPendingSpawnChecks();
         using (DroppedTickMarker.Auto())
             DroppedItemService.Tick(Time.deltaTime);
+        // AI Tick 已提交本帧全部检测请求后立即调度，让 Job 在剩余帧时间里并行运行到下一帧结算。
+        using (PerceptionScheduleMarker.Auto())
+            SchedulePerceptionBatch();
     }
 
     private void LateUpdate()
@@ -266,8 +269,6 @@ public partial class ItemMgr : SingletonMono<ItemMgr>
         if (!IsWorldItemRuntimeActive())
             return;
 
-        using (PerceptionScheduleMarker.Auto())
-            SchedulePerceptionBatch();
         using (DroppedPresentMarker.Auto())
             DroppedItemService.Present();
         using (NaturalPresentMarker.Auto())

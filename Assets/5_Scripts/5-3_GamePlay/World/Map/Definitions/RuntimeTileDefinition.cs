@@ -49,7 +49,16 @@ public sealed class RuntimeTileDefinition
     public JObject CopySource() => (JObject)source.DeepClone();
 
     /// <summary>创建独立地块数据；行为实例不随格子或角色复制。</summary>
-    public TileData CreateTileData() => TileDataTemplate.Clone();
+    public TileData CreateTileData(TileData reusable = null)
+    {
+        if (reusable != null && reusable.GetType() == TileDataTemplate.GetType())
+        {
+            reusable.CopyFrom(TileDataTemplate);
+            return reusable;
+        }
+
+        return TileDataTemplate.Clone();
+    }
 
     // 保留旧消费代码常用名称，实际数据全部来自本运行时定义。
     public string name => Id;

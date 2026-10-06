@@ -76,7 +76,7 @@ namespace FlatWorld.Gameplay.Events
             GameEventProgressSaveData progress,
             List<GameEventOccurrence> results)
         {
-            if (context == null || definition == null || progress == null || results == null)
+            if (definition == null || progress == null || results == null)
                 return;
 
             DayScheduleGameEventTriggerParameters value = Read(parameters);
@@ -256,7 +256,7 @@ namespace FlatWorld.Gameplay.Events
             GameEventProgressSaveData progress,
             List<GameEventOccurrence> results)
         {
-            if (context == null || definition == null || progress == null || results == null)
+            if (definition == null || progress == null || results == null)
                 return;
 
             GroundItemDwellGameEventTriggerParameters value = Read(parameters);

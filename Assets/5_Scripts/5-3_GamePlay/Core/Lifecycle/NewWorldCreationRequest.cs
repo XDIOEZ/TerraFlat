@@ -166,7 +166,7 @@ public sealed class NewWorldCreationRequest
             return false;
         }
 
-        if (!global::PlanetData.IsValidNoiseScale(PlanetData.NoiseScale))
+        if (!global::PlanetData.IsValidSpatialDistanceScale(PlanetData.SpatialDistanceScale))
         {
             error = "空间距离倍率必须是合法有限值。";
             return false;

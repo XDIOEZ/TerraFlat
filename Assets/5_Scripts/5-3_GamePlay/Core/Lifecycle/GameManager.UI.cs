@@ -44,7 +44,7 @@ public partial class GameManager
     public const string NewGamePlayerInputKey = "新增玩家名称输入框";
     public const string NewGameSaveInputKey = "新增存档名称输入框";
     public const string NewGameRadiusInputKey = "星球半径输入框";
-    public const string NewGameNoiseInputKey = "噪声缩放输入框";
+    public const string NewGameSpatialDistanceScaleInputKey = "空间距离倍率输入框";
     public const string NewGameChunkWidthInputKey = "区块宽度输入框";
     public const string NewGameChunkHeightInputKey = "区块高度输入框";
     public const string NewGameSeedInputKey = "世界种子输入框";
@@ -1251,19 +1251,21 @@ public partial class GameManager
             ReadyPlanetData = new PlanetData();
 
         ReadyPlanetData.Radius = Mathf.Max(1, ReadyPlanetData.Radius);
-        ReadyPlanetData.NoiseScale = PlanetData.NormalizeNoiseScale(ReadyPlanetData.NoiseScale);
+        ReadyPlanetData.SpatialDistanceScale = PlanetData.NormalizeSpatialDistanceScale(
+            ReadyPlanetData.SpatialDistanceScale);
         ReadyPlanetData.ChunkSize = PlanetData.NormalizeChunkSize(ReadyPlanetData.ChunkSize);
 
         TMP_InputField radiusInput = panel.GetInputField(NewGameRadiusInputKey);
-        TMP_InputField noiseInput = panel.GetInputField(NewGameNoiseInputKey);
+        TMP_InputField spatialDistanceScaleInput = panel.GetInputField(NewGameSpatialDistanceScaleInputKey);
         TMP_InputField chunkWidthInput = panel.GetInputField(NewGameChunkWidthInputKey);
         TMP_InputField chunkHeightInput = panel.GetInputField(NewGameChunkHeightInputKey);
         Toggle topologyToggle = panel.GetToggle(NewGameTopologyToggleKey);
         radiusInput?.SetTextWithoutNotify(ReadyPlanetData.Radius.ToString(CultureInfo.InvariantCulture));
-        noiseInput?.SetTextWithoutNotify(ReadyPlanetData.NoiseScale.ToString("0.########", CultureInfo.InvariantCulture));
+        spatialDistanceScaleInput?.SetTextWithoutNotify(
+            ReadyPlanetData.SpatialDistanceScale.ToString("0.##", CultureInfo.InvariantCulture));
         ApplyNewWorldChunkDefaults(panel);
         radiusInput?.onValueChanged.AddListener(OnPlanetRadiusChanged);
-        noiseInput?.onValueChanged.AddListener(OnPlanetNoiseScaleChanged);
+        spatialDistanceScaleInput?.onValueChanged.AddListener(OnPlanetSpatialDistanceScaleChanged);
         chunkWidthInput?.onValueChanged.AddListener(OnPlanetChunkWidthChanged);
         chunkHeightInput?.onValueChanged.AddListener(OnPlanetChunkHeightChanged);
         topologyToggle?.SetIsOnWithoutNotify(pendingNewWorldTopology == WorldTopologyMode.Wrapped);
@@ -1318,7 +1320,7 @@ public partial class GameManager
 
         Selectable target = panel.GetInputField(worldSettings ? NewGameRadiusInputKey : NewGamePlayerInputKey);
         if (worldSettings && target != null && !target.IsInteractable())
-            target = panel.GetInputField(NewGameNoiseInputKey);
+            target = panel.GetInputField(NewGameSpatialDistanceScaleInputKey);
         if (target == null || !target.IsInteractable())
             return;
         EventSystem.current.SetSelectedGameObject(null);
@@ -1425,7 +1427,7 @@ public partial class GameManager
         }
 
         TMP_InputField radiusInput = panel.GetInputField(NewGameRadiusInputKey);
-        TMP_InputField noiseInput = panel.GetInputField(NewGameNoiseInputKey);
+        TMP_InputField spatialDistanceScaleInput = panel.GetInputField(NewGameSpatialDistanceScaleInputKey);
         TMP_InputField chunkWidthInput = panel.GetInputField(NewGameChunkWidthInputKey);
         TMP_InputField chunkHeightInput = panel.GetInputField(NewGameChunkHeightInputKey);
         Toggle topologyToggle = panel.GetToggle(NewGameTopologyToggleKey);
@@ -1440,10 +1442,10 @@ public partial class GameManager
             return false;
         }
 
-        if (!TryParseNoiseScale(noiseInput?.text, out float noiseScale))
+        if (!TryParseSpatialDistanceScale(spatialDistanceScaleInput?.text, out float spatialDistanceScale))
         {
             Debug.LogWarning(
-                $"[GameManager] 世界坐标缩放无效：{noiseInput?.text}。请输入 {PlanetData.MinNoiseScale} 到 {PlanetData.MaxNoiseScale} 之间的有限数值。");
+                $"[GameManager] 空间距离倍率无效：{spatialDistanceScaleInput?.text}。请输入 {PlanetData.MinSpatialDistanceScale} 到 {PlanetData.MaxSpatialDistanceScale} 之间的数值。");
             return false;
         }
 
@@ -1473,12 +1475,13 @@ public partial class GameManager
 
         ReadyPlanetData ??= new PlanetData();
         ReadyPlanetData.Radius = radius;
-        ReadyPlanetData.NoiseScale = noiseScale;
+        ReadyPlanetData.SpatialDistanceScale = spatialDistanceScale;
         ReadyPlanetData.ChunkSize = chunkSize;
         ReadyPlanetData.TopologyMode = topologyMode;
         pendingNewWorldTopology = topologyMode;
         radiusInput?.SetTextWithoutNotify(radius.ToString(CultureInfo.InvariantCulture));
-        noiseInput.SetTextWithoutNotify(noiseScale.ToString("0.########", CultureInfo.InvariantCulture));
+        spatialDistanceScaleInput?.SetTextWithoutNotify(
+            spatialDistanceScale.ToString("0.##", CultureInfo.InvariantCulture));
         chunkWidthInput?.SetTextWithoutNotify(chunkSize.x.ToString(CultureInfo.InvariantCulture));
         chunkHeightInput?.SetTextWithoutNotify(chunkSize.y.ToString(CultureInfo.InvariantCulture));
 
@@ -1764,15 +1767,15 @@ public partial class GameManager
         Debug.LogWarning($"输入的半径值无效：{value}");
     }
 
-    private void OnPlanetNoiseScaleChanged(string value)
+    private void OnPlanetSpatialDistanceScaleChanged(string value)
     {
-        if (TryParseNoiseScale(value, out float noiseScale))
+        if (TryParseSpatialDistanceScale(value, out float spatialDistanceScale))
         {
-            ReadyPlanetData.NoiseScale = noiseScale;
+            ReadyPlanetData.SpatialDistanceScale = spatialDistanceScale;
             return;
         }
 
-        Debug.LogWarning($"输入的噪声缩放值无效：{value}");
+        Debug.LogWarning($"输入的空间距离倍率无效：{value}");
     }
 
     private void OnPlanetChunkWidthChanged(string value)
@@ -1809,11 +1812,13 @@ public partial class GameManager
         return int.TryParse(value, NumberStyles.Integer, CultureInfo.CurrentCulture, out radius) && radius > 0;
     }
 
-    private static bool TryParseNoiseScale(string value, out float noiseScale)
+    private static bool TryParseSpatialDistanceScale(string value, out float spatialDistanceScale)
     {
-        bool parsed = float.TryParse(value, NumberStyles.Float, CultureInfo.CurrentCulture, out noiseScale) ||
-                      float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out noiseScale);
-        return parsed && PlanetData.IsValidNoiseScale(noiseScale);
+        bool parsed = float.TryParse(value, NumberStyles.Float, CultureInfo.CurrentCulture,
+                          out spatialDistanceScale) ||
+                      float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture,
+                          out spatialDistanceScale);
+        return parsed && PlanetData.IsValidSpatialDistanceScale(spatialDistanceScale);
     }
 
     private static bool TryParseChunkDimension(string value, out int dimension)

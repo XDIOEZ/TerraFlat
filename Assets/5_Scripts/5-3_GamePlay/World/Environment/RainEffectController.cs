@@ -31,6 +31,7 @@ public class RainEffectController : MonoBehaviour
     private float[] _baseRateOverDistanceMultipliers; // 初始按距离发射倍率
     private int[] _baseMaxParticles; // 初始最大粒子数
     private float[] _lastAppliedLifetimes; // 最近写入的生命周期，避免每帧重复设置
+    private Camera _cachedMainCamera; // 世界相机生命周期内复用，避免 LateUpdate 每帧 Camera.main 查询。
 
 #endregion
 
@@ -98,7 +99,9 @@ public class RainEffectController : MonoBehaviour
             return;
         }
 
-        SyncTransformToCamera(Camera.main);
+        if (_cachedMainCamera == null || !_cachedMainCamera.isActiveAndEnabled)
+            _cachedMainCamera = Camera.main;
+        SyncTransformToCamera(_cachedMainCamera);
     }
 
     private void SyncTransformToCamera(Camera targetCamera)

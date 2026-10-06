@@ -51,7 +51,7 @@ namespace FlatWorld.Networking.Gameplay
         public int Seed;
         public int GenerationProtocol;
         public int PlanetRadius;
-        public float NoiseScale;
+        public float SpatialDistanceScale;
         public bool AutoGenerateMap;
         public int ChunkSizeX;
         public int ChunkSizeY;
@@ -67,7 +67,7 @@ namespace FlatWorld.Networking.Gameplay
         public int Seed;
         public int GenerationProtocol;
         public int PlanetRadius;
-        public float NoiseScale;
+        public float SpatialDistanceScale;
         public bool AutoGenerateMap;
         public int ChunkSizeX;
         public int ChunkSizeY;
@@ -87,12 +87,12 @@ namespace FlatWorld.Networking.Gameplay
 
     public static class NetworkMapGenerationProtocol
     {
-        public const int CurrentVersion = 6;
+        public const int CurrentVersion = 7;
 
         public static uint CalculateSettingsHash(
             int seed,
             int planetRadius,
-            float noiseScale,
+            float spatialDistanceScale,
             bool autoGenerateMap,
             int chunkSizeX,
             int chunkSizeY,
@@ -105,7 +105,7 @@ namespace FlatWorld.Networking.Gameplay
                 hash = Add(hash, CurrentVersion);
                 hash = Add(hash, seed);
                 hash = Add(hash, planetRadius);
-                hash = Add(hash, (int)System.Math.Round(noiseScale * 1000000d));
+                hash = Add(hash, (int)System.Math.Round(spatialDistanceScale * 1000000d));
                 hash = Add(hash, autoGenerateMap ? 1 : 0);
                 hash = Add(hash, chunkSizeX);
                 hash = Add(hash, chunkSizeY);

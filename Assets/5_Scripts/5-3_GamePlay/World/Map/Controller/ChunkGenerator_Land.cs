@@ -556,12 +556,10 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
 
     public static float ResolveNoiseScale(PlanetData sourcePlanetData)
     {
-        float configuredScale = sourcePlanetData != null
-            ? sourcePlanetData.NoiseScale
-            : PlanetData.DefaultNoiseScale;
-        if (!IsFinite(configuredScale) || configuredScale <= 0f)
-            return PlanetData.DefaultNoiseScale;
-        return PlanetData.NormalizeNoiseScale(configuredScale);
+        float spatialDistanceScale = sourcePlanetData != null
+            ? sourcePlanetData.SpatialDistanceScale
+            : PlanetData.DefaultSpatialDistanceScale;
+        return PlanetData.ResolveCoordinateScale(spatialDistanceScale);
     }
 
     private void InitializeMapStorage(Map map)

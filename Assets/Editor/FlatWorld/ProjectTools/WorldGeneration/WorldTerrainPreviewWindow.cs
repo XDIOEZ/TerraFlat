@@ -15,7 +15,7 @@ using Object = UnityEngine.Object;
 /// <summary>
 /// 在不进入游戏场景的情况下，复用正式 ChunkGenerationProfileSO 与 DeterministicChunkGenerator
 /// 生成一块连续 WorldModel 预览。预览是一格一像素，支持地表或矿洞 Profile 的地形、群系、高度图和物品四种显示方式；右侧临时参数
-/// 默认只作用于本次预览，也可经确认后写回 Profile 资源；运行时世界坐标缩放仍由 PlanetData 管理。
+/// 默认只作用于本次预览，也可经确认后写回 Profile 资源；运行时空间距离倍率仍由 PlanetData 管理。
 /// 默认使用快速模式跳过高成本河流和结构阶段，切换精确模式可复现完整正式结果；生成放在后台线程，
 /// 最大预览边长限制为 1024，避免高分辨率水文和生态计算长时间占用编辑器内存。
 /// </summary>
@@ -128,7 +128,7 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
     private const int MinimumNaturalItemIconVisibleLimit = 32;
     private const int MaximumNaturalItemIconVisibleLimit = 512;
     private const int DefaultNaturalItemIconVisibleLimit = 192;
-    private const string RuntimeWorldCoordinateScaleId = "world.coordinateScale";
+    private const string RuntimeWorldSpatialDistanceScaleId = "world.spatialDistanceScale";
     private const string ProfileNumericParametersPropertyName = "numericParameters";
     private const string ProfileParameterIdPropertyName = "Id";
     private const string ProfileParameterValuePropertyName = "Value";
@@ -136,7 +136,7 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
 
     private static readonly HashSet<string> CommonParameterIds = new(StringComparer.Ordinal)
     {
-        "world.coordinateScale",
+        "world.spatialDistanceScale",
         "terrain.seaLevel",
         "terrain.beachLevel",
         "terrain.mountainLevel",
@@ -197,7 +197,7 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
     private static readonly IReadOnlyDictionary<string, string> ParameterDescriptions =
         new Dictionary<string, string>(StringComparer.Ordinal)
         {
-            ["world.coordinateScale"] = "越大地貌越密集、越碎；越小地貌越舒展",
+            ["world.spatialDistanceScale"] = "自然地理结构的空间距离倍率；越大地貌、气候区、河流、湖泊和洞穴越舒展",
             ["terrain.groundTileId"] = "普通陆地默认使用的 Tile 数字编号",
             ["terrain.riverbedTileId"] = "湖泊等普通淡水底材使用的 Tile 数字编号",
             ["terrain.waterThreshold"] = "旧配置兼容项，当前纯地表生成器不读取",
@@ -700,7 +700,7 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
         EditorGUIUtility.labelWidth = 365f;
         try
         {
-            DrawDoubleField("world.coordinateScale", "世界坐标缩放");
+            DrawDoubleField("world.spatialDistanceScale", "空间距离倍率");
             DrawSlider("terrain.seaLevel", "海平面", 0f, 1f);
             DrawSlider("terrain.beachLevel", "沙滩上限", 0f, 1f);
             DrawSlider("terrain.mountainLevel", "山地阈值", 0f, 1f);
@@ -775,7 +775,7 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
         EditorGUILayout.HelpBox(
             "“应用”只保存 Profile SO 中的参数，并支持撤销。河流参数保存在" +
             " GameConfig/WorldGeneration/Hydrology/river-generation.json；在此调整河流只影响本次预览。" +
-            "世界坐标缩放由 PlanetData 管理，不会写入。",
+            "空间距离倍率由 PlanetData 管理，不会写入。",
             MessageType.Info);
     }
 
@@ -1005,7 +1005,7 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
         if (previewResult.WaterRatio >= 0.995d)
         {
             EditorGUILayout.HelpBox(
-                "该范围几乎全是水。优先检查世界坐标缩放、海平面和高度噪声参数。",
+                "该范围几乎全是水。优先检查空间距离倍率、海平面和高度噪声参数。",
                 MessageType.Error);
         }
         else if (previewResult.WalkableRatio <= 0.01d)
@@ -1026,7 +1026,7 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
         return profile.CreateSnapshot(previewNaturalRules, previewRiverConfigs);
     }
 
-    /// <summary>把 Profile 参数复制为窗口私有值，并补上运行时星球才提供的世界坐标缩放。</summary>
+    /// <summary>把 Profile 参数复制为窗口私有值，并补上运行时星球才提供的空间距离倍率。</summary>
     private void ResetParametersFromProfile()
     {
         previewNaturalRules = null;
@@ -1044,12 +1044,12 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
                 numericParameters.Add(new NumericParameterValue { Id = pair.Key, Value = pair.Value });
             }
 
-            if (FindParameter(RuntimeWorldCoordinateScaleId) == null)
+            if (FindParameter(RuntimeWorldSpatialDistanceScaleId) == null)
             {
                 numericParameters.Add(new NumericParameterValue
                 {
-                    Id = RuntimeWorldCoordinateScaleId,
-                    Value = snapshot.Settings.WorldCoordinateScale
+                    Id = RuntimeWorldSpatialDistanceScaleId,
+                    Value = snapshot.Settings.WorldSpatialDistanceScale
                 });
             }
             statusMessage = $"已读取 Profile：{snapshot.ProfileId}，参数 {numericParameters.Count} 项。";
@@ -1081,7 +1081,7 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
             Dictionary<string, double> values = numericParameters
                 .Where(parameter => parameter != null &&
                                     !string.IsNullOrWhiteSpace(parameter.Id) &&
-                                    !string.Equals(parameter.Id, RuntimeWorldCoordinateScaleId,
+                                    !string.Equals(parameter.Id, RuntimeWorldSpatialDistanceScaleId,
                                         StringComparison.Ordinal) &&
                                     !double.IsNaN(parameter.Value) &&
                                     !double.IsInfinity(parameter.Value))
@@ -1122,7 +1122,7 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
             string confirmation =
                 $"确定把当前窗口参数应用到“{profileAsset.name}”吗？\n\n" +
                 $"资源：{assetPath}\n匹配参数：{matchedCount} 项\n将修改：{changedCount} 项\n\n" +
-                "河流参数需在 river-generation.json 中修改；世界坐标缩放由 PlanetData 管理。";
+                "河流参数需在 river-generation.json 中修改；空间距离倍率由 PlanetData 管理。";
             if (!EditorUtility.DisplayDialog("应用地形参数到 Profile SO", confirmation,
                     "应用并保存", "取消"))
             {
@@ -1157,7 +1157,7 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
             EditorUtility.SetDirty(profileAsset);
             AssetDatabase.SaveAssetIfDirty(profileAsset);
             statusMessage =
-                $"已应用并保存 {profileAsset.name}：更新 {changedCount} 项；世界坐标缩放未写入。";
+                $"已应用并保存 {profileAsset.name}：更新 {changedCount} 项；空间距离倍率未写入。";
             statusType = MessageType.Info;
             Debug.Log($"[地形预览器] 已应用 {changedCount} 项参数到 {assetPath}。", profileAsset);
         }

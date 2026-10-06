@@ -277,7 +277,7 @@ namespace FlatWorld.GameplayMCP
             string worldName,
             string topology,
             int radius,
-            float noiseScale,
+            float spatialDistanceScale,
             bool isolated,
             float timeoutSeconds)
         {
@@ -335,7 +335,7 @@ namespace FlatWorld.GameplayMCP
             {
                 Name = resolvedWorldName,
                 Radius = Mathf.Max(1, radius),
-                NoiseScale = PlanetData.NormalizeNoiseScale(noiseScale),
+                SpatialDistanceScale = PlanetData.NormalizeSpatialDistanceScale(spatialDistanceScale),
                 TopologyMode = topologyMode
             };
             TimeData timeData = gameManager.ReadyTimeData?.CreateRuntimeCopy() ?? new TimeData();

@@ -33,6 +33,24 @@ public abstract partial class TileData
     /// 为运行时创建一份浅量的深拷贝（手写，避免通用深拷贝插件开销）
     /// </summary>
     public abstract TileData Clone();
+
+    /// <summary>把共享模板内容重置到已有实例，用于运行时热路径复用而不重新分配对象。</summary>
+    public abstract void CopyFrom(TileData source);
+
+    protected void CopyBaseFrom(TileData source)
+    {
+        if (source == null)
+            throw new System.ArgumentNullException(nameof(source));
+
+        ID = source.ID;
+        Name = source.Name;
+        TileTag = source.TileTag;
+        position = source.position;
+        DemolitionTime = source.DemolitionTime;
+        workTime = source.workTime;
+        Penalty = source.Penalty;
+        IsWalkable = source.IsWalkable;
+    }
     /// <summary>
     /// 重写ToString方法，返回对象的详细信息
     /// </summary>

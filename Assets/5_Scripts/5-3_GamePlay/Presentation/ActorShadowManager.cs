@@ -21,6 +21,8 @@ public sealed class ActorShadowManager : SingletonMono<ActorShadowManager>
     private ContactShadowBatchRenderer mechanicalShadowBatch; // 机械数据节点共用的单独排序批次。
     private int lightingFrame = -1;
     private int lightingSceneHandle = int.MinValue;
+    private int lightingSceneNameHandle = int.MinValue;
+    private string lightingSceneName = string.Empty;
     private float cachedShadowOpacity; // 本帧光照与晨昏进度合成后的透明度。
 
     #endregion
@@ -307,7 +309,12 @@ public sealed class ActorShadowManager : SingletonMono<ActorShadowManager>
         lightingFrame = Time.frameCount;
         lightingSceneHandle = sceneHandle;
         cachedShadowOpacity = 0f;
-        string sceneName = resolvedScene.name;
+        if (lightingSceneNameHandle != sceneHandle)
+        {
+            lightingSceneNameHandle = sceneHandle;
+            lightingSceneName = resolvedScene.name;
+        }
+        string sceneName = lightingSceneName;
 
         DayTimeSystem dayTimeSystem = DayTimeSystem.GetInstance();
         if (dayTimeSystem == null ||

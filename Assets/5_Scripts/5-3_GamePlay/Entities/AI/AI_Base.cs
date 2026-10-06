@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using Sirenix.OdinInspector;
 using UnityEngine;
-using UltEvents;
 
 /// <summary>
 /// AI 闲逛配置，封装闲逛相关的所有参数。
@@ -181,10 +180,10 @@ public abstract class AI_Base<TState> : Module, IAIActor where TState : struct, 
 	protected readonly AI_AnimalSkillController _animalSkills = new AI_AnimalSkillController();
 #endregion
 
-#region Events
+	#region Events
 	/// <summary>状态切换事件，参数为 (旧状态, 新状态)</summary>
-	public UltEvent<TState, TState> OnStateChanged = new UltEvent<TState, TState>();
-#endregion
+	public event Action<TState, TState> OnStateChanged;
+	#endregion
 
 #region Abstract - 子类必须实现
 	/// <summary>评估下一状态（按优先级从高到低判断）</summary>

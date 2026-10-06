@@ -40,12 +40,13 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
     private const float PreviewRotationTapMaxSeconds = 0.45f;
 
     // 奔跑是状态按钮，运行时两态必须继续使用统一灰阶主题；仅开启态用暖黄细节表达状态。
-    private static readonly Color RunOffColor = FlatWorldUITheme.SurfaceRaised;
-    private static readonly Color RunOnColor = FlatWorldUITheme.Selection;
-    private static readonly Color RunOffBorderColor = FlatWorldUITheme.Border;
-    private static readonly Color RunOnBorderColor = FlatWorldUITheme.SelectionOutline;
-    private static readonly Color RunOffIndicatorColor = FlatWorldUITheme.Border;
-    private static readonly Color RunOnIndicatorColor = FlatWorldUITheme.Accent;
+    // 不在 MonoBehaviour 类型初始化阶段访问 Resources；颜色在真正刷新按钮时再从主题目录读取。
+    private static Color RunOffColor => FlatWorldUITheme.SurfaceRaised;
+    private static Color RunOnColor => FlatWorldUITheme.Selection;
+    private static Color RunOffBorderColor => FlatWorldUITheme.Border;
+    private static Color RunOnBorderColor => FlatWorldUITheme.SelectionOutline;
+    private static Color RunOffIndicatorColor => FlatWorldUITheme.Border;
+    private static Color RunOnIndicatorColor => FlatWorldUITheme.Accent;
 
     private static PlayerMobileControlsHUD activeLocalHud;
 

@@ -51,8 +51,8 @@ namespace FlatWorld.GameplayMCP
             [ToolParameter("New-world radius when using wrapped topology.", Required = false, DefaultValue = "1000")]
             public int radius { get; set; }
 
-            [ToolParameter("New-world global terrain noise scale.", Required = false, DefaultValue = "0.01")]
-            public float noiseScale { get; set; }
+            [ToolParameter("New-world natural geography spatial distance multiplier.", Required = false, DefaultValue = "1")]
+            public float spatialDistanceScale { get; set; }
         }
 
         /// <summary>执行会话查询或启动。</summary>
@@ -89,13 +89,13 @@ namespace FlatWorld.GameplayMCP
                     int radius = int.TryParse(parameters?["radius"]?.ToString(), out int parsedRadius)
                         ? parsedRadius
                         : PlanetData.DefaultRadius;
-                    float noiseScale = float.TryParse(
-                        parameters?["noiseScale"]?.ToString(),
+                    float spatialDistanceScale = float.TryParse(
+                        parameters?["spatialDistanceScale"]?.ToString(),
                         System.Globalization.NumberStyles.Float,
                         System.Globalization.CultureInfo.InvariantCulture,
-                        out float parsedNoiseScale)
-                        ? parsedNoiseScale
-                        : PlanetData.DefaultNoiseScale;
+                        out float parsedSpatialDistanceScale)
+                        ? parsedSpatialDistanceScale
+                        : PlanetData.DefaultSpatialDistanceScale;
                     float timeout = float.TryParse(parameters?["timeoutSeconds"]?.ToString(), out float parsedTimeout)
                         ? parsedTimeout
                         : 60f;
@@ -106,7 +106,7 @@ namespace FlatWorld.GameplayMCP
                         worldName,
                         topology,
                         radius,
-                        noiseScale,
+                        spatialDistanceScale,
                         isolated,
                         timeout);
                     return new SuccessResponse("FlatWorld new-world request completed.", result);

@@ -1,6 +1,6 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
-using DG.Tweening;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -13,6 +13,21 @@ public sealed class FoodUIModule : IFoodMechanic, IFoodStateObserver, IDisposabl
 {
     private const float StatusBarTransitionDuration = 0.24f;
 
+    private struct StatusBarTransition
+    {
+        public Slider Slider;
+        public float StartValue;
+        public float TargetValue;
+        public float Elapsed;
+    }
+
+    private struct DisplayedRange
+    {
+        public int Current;
+        public int Maximum;
+        public bool Initialized;
+    }
+
     private readonly IFoodRuntimeContext context;
     private readonly Mod_DamageReceiver damageReceiver;
     private readonly GameObject panelPrefab;
@@ -21,6 +36,32 @@ public sealed class FoodUIModule : IFoodMechanic, IFoodStateObserver, IDisposabl
     private readonly Func<BasePanel> readPanel;
     private readonly Action<BasePanel> writePanel;
     private readonly Dictionary<Slider, float> statusBarTargets = new Dictionary<Slider, float>();
+    private readonly List<StatusBarTransition> statusBarTransitions = new List<StatusBarTransition>(8);
+    private Coroutine statusBarTransitionCoroutine;
+    private BasePanel boundPanel;
+    private Slider carbohydratesSlider;
+    private Slider fatSlider;
+    private Slider proteinSlider;
+    private Slider waterSlider;
+    private Slider vitaminsSlider;
+    private Slider healthSlider;
+    private Slider temperatureSlider;
+    private TMPro.TextMeshProUGUI carbohydratesText;
+    private TMPro.TextMeshProUGUI fatText;
+    private TMPro.TextMeshProUGUI proteinText;
+    private TMPro.TextMeshProUGUI waterText;
+    private TMPro.TextMeshProUGUI vitaminsText;
+    private TMPro.TextMeshProUGUI healthText;
+    private TMPro.TextMeshProUGUI temperatureText;
+    private Mod_Temperature temperatureModule;
+    private DisplayedRange carbohydratesDisplay;
+    private DisplayedRange fatDisplay;
+    private DisplayedRange proteinDisplay;
+    private DisplayedRange waterDisplay;
+    private DisplayedRange vitaminsDisplay;
+    private DisplayedRange healthDisplay;
+    private int temperatureDisplayTenths = int.MinValue;
+    private bool temperatureDisplayInitialized;
 
     public FoodUIModule(
         IFoodRuntimeContext context,
@@ -69,14 +110,20 @@ public sealed class FoodUIModule : IFoodMechanic, IFoodStateObserver, IDisposabl
         BasePanel panel = ResolvePanel();
         if (panel == null)
             return;
+        BindPanelControls(panel);
 
         if (context.Data?.nutrition != null)
         {
-            UpdateNutrition(panel, "碳水", context.Data.nutrition.Carbohydrates, context.Data.nutrition.Max_Carbohydrates);
-            UpdateNutrition(panel, "脂肪", context.Data.nutrition.Fat, context.Data.nutrition.Max_Fat);
-            UpdateNutrition(panel, "蛋白质", context.Data.nutrition.Protein, context.Data.nutrition.Max_Protein);
-            UpdateNutrition(panel, "水", context.Data.nutrition.Water, context.Data.nutrition.Max_Water);
-            UpdateNutrition(panel, "维生素", context.Data.nutrition.Vitamins, context.Data.nutrition.Max_Vitamins);
+            UpdateNutrition(carbohydratesSlider, carbohydratesText, ref carbohydratesDisplay,
+                context.Data.nutrition.Carbohydrates, context.Data.nutrition.Max_Carbohydrates);
+            UpdateNutrition(fatSlider, fatText, ref fatDisplay,
+                context.Data.nutrition.Fat, context.Data.nutrition.Max_Fat);
+            UpdateNutrition(proteinSlider, proteinText, ref proteinDisplay,
+                context.Data.nutrition.Protein, context.Data.nutrition.Max_Protein);
+            UpdateNutrition(waterSlider, waterText, ref waterDisplay,
+                context.Data.nutrition.Water, context.Data.nutrition.Max_Water);
+            UpdateNutrition(vitaminsSlider, vitaminsText, ref vitaminsDisplay,
+                context.Data.nutrition.Vitamins, context.Data.nutrition.Max_Vitamins);
         }
 
         UpdateTemperatureUI(panel);
@@ -105,6 +152,7 @@ public sealed class FoodUIModule : IFoodMechanic, IFoodStateObserver, IDisposabl
     {
         GameObject panelInstance = readPanelInstance?.Invoke();
         StopStatusBarTransitions();
+        ClearPanelBindings();
         writePanel?.Invoke(null);
         writePanelInstance?.Invoke(null);
 
@@ -151,6 +199,7 @@ public sealed class FoodUIModule : IFoodMechanic, IFoodStateObserver, IDisposabl
         createdPanel.SetGameplayInputBlocking(false);
         writePanelInstance?.Invoke(createdPanel.gameObject);
         writePanel?.Invoke(createdPanel);
+        BindPanelControls(createdPanel);
 
         LayoutRebuilder.ForceRebuildLayoutImmediate(createdPanel.rectTransform);
         RestorePanelPosition();
@@ -183,6 +232,81 @@ public sealed class FoodUIModule : IFoodMechanic, IFoodStateObserver, IDisposabl
         panel.Open();
         SetStatusHudInputTransparent(panel);
         RefreshUI();
+    }
+
+    /// <summary>面板实例固定后一次性缓存高频状态控件，后续刷新不再遍历层级或按名称查找。</summary>
+    private void BindPanelControls(BasePanel panel)
+    {
+        if (panel == null || boundPanel == panel)
+            return;
+
+        ClearPanelBindings();
+        boundPanel = panel;
+        carbohydratesSlider = panel.GetSlider("碳水");
+        fatSlider = panel.GetSlider("脂肪");
+        proteinSlider = panel.GetSlider("蛋白质");
+        waterSlider = panel.GetSlider("水");
+        vitaminsSlider = panel.GetSlider("维生素");
+        healthSlider = FindSliderOnce(panel, "血量");
+        temperatureSlider = panel.GetSlider("体温");
+        panel.TryGetText("DataText_碳水", out carbohydratesText);
+        panel.TryGetText("DataText_脂肪", out fatText);
+        panel.TryGetText("DataText_蛋白质", out proteinText);
+        panel.TryGetText("DataText_水", out waterText);
+        panel.TryGetText("DataText_维生素", out vitaminsText);
+        panel.TryGetText("DataText_血量", out healthText);
+        panel.TryGetText("DataText_体温", out temperatureText);
+        temperatureModule = context.Item?.itemMods?.GetMod_ByID<Mod_Temperature>(ModText.Temperature);
+        statusBarTransitionCoroutine = panel.StartCoroutine(AdvanceStatusBarTransitionsCoroutine(panel));
+    }
+
+    /// <summary>兼容旧版 Prefab 缺少可选血量条时不输出警告，只在绑定面板时扫描一次。</summary>
+    private static Slider FindSliderOnce(BasePanel panel, string name)
+    {
+        if (panel == null)
+            return null;
+
+        Slider[] sliders = panel.GetComponentsInChildren<Slider>(true);
+        for (int i = 0; i < sliders.Length; i++)
+        {
+            Slider slider = sliders[i];
+            if (slider != null && string.Equals(slider.name, name, StringComparison.Ordinal))
+                return slider;
+        }
+
+        return null;
+    }
+
+    private void ClearPanelBindings()
+    {
+        if (statusBarTransitionCoroutine != null && boundPanel != null)
+            boundPanel.StopCoroutine(statusBarTransitionCoroutine);
+        statusBarTransitionCoroutine = null;
+        StopStatusBarTransitions();
+        boundPanel = null;
+        carbohydratesSlider = null;
+        fatSlider = null;
+        proteinSlider = null;
+        waterSlider = null;
+        vitaminsSlider = null;
+        healthSlider = null;
+        temperatureSlider = null;
+        carbohydratesText = null;
+        fatText = null;
+        proteinText = null;
+        waterText = null;
+        vitaminsText = null;
+        healthText = null;
+        temperatureText = null;
+        temperatureModule = null;
+        carbohydratesDisplay = default;
+        fatDisplay = default;
+        proteinDisplay = default;
+        waterDisplay = default;
+        vitaminsDisplay = default;
+        healthDisplay = default;
+        temperatureDisplayTenths = int.MinValue;
+        temperatureDisplayInitialized = false;
     }
 
     private void RestorePanelPosition()
@@ -220,22 +344,45 @@ public sealed class FoodUIModule : IFoodMechanic, IFoodStateObserver, IDisposabl
             graphic.raycastTarget = false;
     }
 
-    private void UpdateNutrition(BasePanel panel, string name, float currentValue, float maxValue)
+    private void UpdateNutrition(
+        Slider slider,
+        TMPro.TextMeshProUGUI text,
+        ref DisplayedRange displayed,
+        float currentValue,
+        float maxValue)
     {
-        Slider slider = panel.GetSlider(name);
         if (slider != null)
             SetStatusBarValue(slider, 0f, maxValue, currentValue);
 
-        TMPro.TextMeshProUGUI text = panel.GetText($"DataText_{name}");
-        if (text != null)
-            text.text = $"{Mathf.RoundToInt(currentValue)}/{Mathf.RoundToInt(maxValue)}";
+        UpdateRangeText(text, ref displayed, currentValue, maxValue);
+    }
+
+    /// <summary>TMP 的数值 SetText 最终仍可能生成 backing string；显示整数未变化时跳过文本重建。</summary>
+    private static void UpdateRangeText(
+        TMPro.TextMeshProUGUI text,
+        ref DisplayedRange displayed,
+        float currentValue,
+        float maxValue)
+    {
+        if (text == null)
+            return;
+
+        int current = Mathf.RoundToInt(currentValue);
+        int maximum = Mathf.RoundToInt(maxValue);
+        if (displayed.Initialized && displayed.Current == current && displayed.Maximum == maximum)
+            return;
+
+        displayed.Current = current;
+        displayed.Maximum = maximum;
+        displayed.Initialized = true;
+        text.SetText("{0:0}/{1:0}", current, maximum);
     }
 
     /// <summary>把本地玩家的权威生命值同步到常驻参数面板。</summary>
     private void UpdateHealthUI(BasePanel panel)
     {
-        Slider slider = FindSlider(panel, "血量");
-        panel.TryGetText("DataText_血量", out TMPro.TextMeshProUGUI text);
+        Slider slider = healthSlider;
+        TMPro.TextMeshProUGUI text = healthText;
         bool showHealth = context.IsPlayer && damageReceiver != null;
 
         if (slider != null)
@@ -249,24 +396,7 @@ public sealed class FoodUIModule : IFoodMechanic, IFoodStateObserver, IDisposabl
         if (slider != null)
             SetStatusBarValue(slider, 0f, Mathf.Max(1f, maxHp), hp);
 
-        if (text != null)
-            text.text = $"{Mathf.RoundToInt(hp)}/{Mathf.RoundToInt(maxHp)}";
-    }
-
-    /// <summary>安静查找血量行，兼容旧版 Prefab 尚未重建时不刷屏输出警告。</summary>
-    private static Slider FindSlider(BasePanel panel, string name)
-    {
-        if (panel == null)
-            return null;
-
-        Slider[] sliders = panel.GetComponentsInChildren<Slider>(true);
-        for (int i = 0; i < sliders.Length; i++)
-        {
-            if (sliders[i] != null && string.Equals(sliders[i].name, name, StringComparison.Ordinal))
-                return sliders[i];
-        }
-
-        return null;
+        UpdateRangeText(text, ref healthDisplay, hp, maxHp);
     }
 
     /// <summary>监听 Mod_DamageReceiver 的统一状态事件，确保受伤、回血和网络同步都能刷新面板。</summary>
@@ -294,14 +424,20 @@ public sealed class FoodUIModule : IFoodMechanic, IFoodStateObserver, IDisposabl
     /// <summary>存在体温模块时刷新体温显示，否则显示空值。</summary>
     private void UpdateTemperatureUI(BasePanel panel)
     {
-        Mod_Temperature temperature =
-            context.Item?.itemMods?.GetMod_ByID<Mod_Temperature>(ModText.Temperature);
-        Slider slider = panel.GetSlider("体温");
-        TMPro.TextMeshProUGUI dataText = panel.GetText("DataText_体温");
+        if (temperatureModule == null)
+            temperatureModule = context.Item?.itemMods?.GetMod_ByID<Mod_Temperature>(ModText.Temperature);
+        Mod_Temperature temperature = temperatureModule;
+        Slider slider = temperatureSlider;
+        TMPro.TextMeshProUGUI dataText = temperatureText;
         if (temperature?.Data == null)
         {
             if (dataText != null)
-                dataText.text = "--";
+            {
+                if (!temperatureDisplayInitialized || temperatureDisplayTenths != int.MinValue)
+                    dataText.text = "--";
+                temperatureDisplayTenths = int.MinValue;
+                temperatureDisplayInitialized = true;
+            }
             return;
         }
 
@@ -316,7 +452,15 @@ public sealed class FoodUIModule : IFoodMechanic, IFoodStateObserver, IDisposabl
                 temperature.Data.CurrentTemperature);
 
         if (dataText != null)
-            dataText.text = $"{temperature.Data.CurrentTemperature:0.0}°C";
+        {
+            int tenths = Mathf.RoundToInt(temperature.Data.CurrentTemperature * 10f);
+            if (!temperatureDisplayInitialized || temperatureDisplayTenths != tenths)
+            {
+                temperatureDisplayTenths = tenths;
+                temperatureDisplayInitialized = true;
+                dataText.SetText("{0:1}°C", tenths * 0.1f);
+            }
+        }
     }
 
     #region 状态条过渡
@@ -340,32 +484,93 @@ public sealed class FoodUIModule : IFoodMechanic, IFoodStateObserver, IDisposabl
             return;
 
         statusBarTargets[slider] = clampedTarget;
-        DOTween.Kill(slider, false);
         if (Mathf.Approximately(slider.value, clampedTarget))
         {
             slider.SetValueWithoutNotify(clampedTarget);
+            RemoveStatusBarTransition(slider);
             return;
         }
 
-        DOTween.To(
-                () => slider.value,
-                value => slider.SetValueWithoutNotify(value),
-                clampedTarget,
-                StatusBarTransitionDuration)
-            .SetId(slider)
-            .SetEase(Ease.OutCubic)
-            .SetUpdate(true);
+        for (int i = 0; i < statusBarTransitions.Count; i++)
+        {
+            if (statusBarTransitions[i].Slider != slider)
+                continue;
+
+            StatusBarTransition transition = statusBarTransitions[i];
+            transition.StartValue = slider.value;
+            transition.TargetValue = clampedTarget;
+            transition.Elapsed = 0f;
+            statusBarTransitions[i] = transition;
+            return;
+        }
+
+        statusBarTransitions.Add(new StatusBarTransition
+        {
+            Slider = slider,
+            StartValue = slider.value,
+            TargetValue = clampedTarget,
+            Elapsed = 0f
+        });
+    }
+
+    private void AdvanceStatusBarTransitions(float unscaledDeltaTime)
+    {
+        float deltaTime = Mathf.Max(0f, unscaledDeltaTime);
+        for (int i = statusBarTransitions.Count - 1; i >= 0; i--)
+        {
+            StatusBarTransition transition = statusBarTransitions[i];
+            if (transition.Slider == null)
+            {
+                statusBarTransitions.RemoveAt(i);
+                continue;
+            }
+
+            transition.Elapsed += deltaTime;
+            float t = StatusBarTransitionDuration <= 0f
+                ? 1f
+                : Mathf.Clamp01(transition.Elapsed / StatusBarTransitionDuration);
+            float inverse = 1f - t;
+            float eased = 1f - inverse * inverse * inverse;
+            transition.Slider.SetValueWithoutNotify(Mathf.LerpUnclamped(
+                transition.StartValue,
+                transition.TargetValue,
+                eased));
+
+            if (t >= 1f)
+            {
+                transition.Slider.SetValueWithoutNotify(transition.TargetValue);
+                statusBarTransitions.RemoveAt(i);
+            }
+            else
+            {
+                statusBarTransitions[i] = transition;
+            }
+        }
+    }
+
+    /// <summary>常驻 HUD 用一条复用协程逐帧推进状态条，避免为每次刷新创建 Tween 和闭包。</summary>
+    private IEnumerator AdvanceStatusBarTransitionsCoroutine(BasePanel owner)
+    {
+        while (owner != null && boundPanel == owner)
+        {
+            AdvanceStatusBarTransitions(Time.unscaledDeltaTime);
+            yield return null;
+        }
+    }
+
+    private void RemoveStatusBarTransition(Slider slider)
+    {
+        for (int i = statusBarTransitions.Count - 1; i >= 0; i--)
+        {
+            if (statusBarTransitions[i].Slider == slider)
+                statusBarTransitions.RemoveAt(i);
+        }
     }
 
     /// <summary>释放面板前终止所有状态条动画，避免销毁后仍访问 Slider。</summary>
     private void StopStatusBarTransitions()
     {
-        foreach (Slider slider in statusBarTargets.Keys)
-        {
-            if (slider != null)
-                DOTween.Kill(slider, false);
-        }
-
+        statusBarTransitions.Clear();
         statusBarTargets.Clear();
     }
 

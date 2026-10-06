@@ -41,6 +41,8 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
     private GameManager gameManager;
     private Material material;
     private bool hidden = true;
+    private int activeSceneNameHandle = int.MinValue;
+    private string activeSceneName = string.Empty;
     public SunShadowParameters CurrentParameters { get; private set; }
     public int RegisteredCount => bindings.Count;
     public int VisibleCount { get; private set; }
@@ -206,8 +208,14 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
     /// <summary>所有 Update 完成后采样时间，早于默认顺序的 ECS LateUpdate 发布。</summary>
     private void UpdateSunParameters()
     {
+        Scene activeScene = SceneManager.GetActiveScene();
+        if (activeSceneNameHandle != activeScene.handle)
+        {
+            activeSceneNameHandle = activeScene.handle;
+            activeSceneName = activeScene.name;
+        }
         CurrentParameters = gameManager != null && gameManager.IsInGameWorld
-            ? SunShadowParametersProvider.Evaluate(SceneManager.GetActiveScene().name,
+            ? SunShadowParametersProvider.Evaluate(activeSceneName,
                 Defaults.minimumLength, Defaults.maximumLength, Defaults.maximumDistance)
             : default;
         SunShadowParametersProvider.Publish(CurrentParameters, Defaults.color);

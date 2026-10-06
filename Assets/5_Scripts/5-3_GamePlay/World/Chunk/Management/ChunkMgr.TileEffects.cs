@@ -1,3 +1,6 @@
+using System;
+using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using FlatWorld.WorldModel;
 using Unity.Mathematics;
 using UnityEngine;
@@ -63,6 +66,32 @@ public readonly struct RuntimeWaterCurrentSample
 public static class ChunkRuntimeTileEffectResolver
 {
     private const string TileBlockParameterPrefix = "tile.block.";
+    private static readonly ConditionalWeakTable<ChunkGenerationProfileSnapshot, TileBlockLookup>
+        TileBlockLookups = new();
+
+    /// <summary>Profile 创建后不可变，预解析数字 TileId 映射，避免进格热路径拼接字符串。</summary>
+    private sealed class TileBlockLookup
+    {
+        public readonly Dictionary<int, string> ByTileId = new();
+
+        public TileBlockLookup(ChunkGenerationProfileSnapshot profile)
+        {
+            if (profile?.TextParameters == null)
+                return;
+
+            foreach (KeyValuePair<string, string> pair in profile.TextParameters)
+            {
+                string key = pair.Key;
+                if (string.IsNullOrEmpty(key) ||
+                    !key.StartsWith(TileBlockParameterPrefix, StringComparison.Ordinal) ||
+                    !int.TryParse(key.Substring(TileBlockParameterPrefix.Length), out int tileId) ||
+                    tileId == 0 || string.IsNullOrWhiteSpace(pair.Value))
+                    continue;
+
+                ByTileId[tileId] = pair.Value;
+            }
+        }
+    }
 
     #region 公共接口
 
@@ -80,6 +109,17 @@ public static class ChunkRuntimeTileEffectResolver
         ChunkTerrainData terrain, Vector2Int localCell, Vector2Int worldCell,
         out TileData tileData, out RuntimeTileDefinition tileBlock)
     {
+        return TryCreateTileEffectData(profile, runtimeTileCatalog, terrain, localCell, worldCell,
+            null, out tileData, out tileBlock);
+    }
+
+    /// <summary>允许调用方复用同类型 TileData，跨格移动时只重置模板内容，不重复分配。</summary>
+    public static bool TryCreateTileEffectData(ChunkGenerationProfileSnapshot profile,
+        ChunkGenerationProfileSnapshot runtimeTileCatalog,
+        ChunkTerrainData terrain, Vector2Int localCell, Vector2Int worldCell,
+        TileData reusableTileData,
+        out TileData tileData, out RuntimeTileDefinition tileBlock)
+    {
         tileData = null;
         tileBlock = null;
         if (profile == null || terrain == null || terrain.IsDisposed || GameRes.ExistingInstance == null)
@@ -92,9 +132,8 @@ public static class ChunkRuntimeTileEffectResolver
         int supportId = TerrainSupportLayer.GetTileId(terrain, localCell.x, localCell.y);
         if (supportId != 0 && effective.BlockingTileId == 0 && effective.BackTileId == 0)
             tileId = supportId;
-        string parameterId = TileBlockParameterPrefix + tileId;
         if (tileId == 0 ||
-            !TryResolveTileBlockId(profile, runtimeTileCatalog, parameterId, out string tileBlockId))
+            !TryResolveTileBlockId(profile, runtimeTileCatalog, tileId, out string tileBlockId))
             return false;
 
         tileBlock = GameRes.ExistingInstance.GetTileBlock(tileBlockId);
@@ -104,7 +143,7 @@ public static class ChunkRuntimeTileEffectResolver
             return false;
         }
 
-        tileData = tileBlock.CreateTileData();
+        tileData = tileBlock.CreateTileData(reusableTileData);
         tileData.position = new Vector3Int(worldCell.x, worldCell.y, 0);
         tileData.IsWalkable = terrain.IsWalkable(localCell.x, localCell.y);
         return true;
@@ -114,29 +153,40 @@ public static class ChunkRuntimeTileEffectResolver
     private static bool TryResolveTileBlockId(
         ChunkGenerationProfileSnapshot profile,
         ChunkGenerationProfileSnapshot runtimeTileCatalog,
-        string parameterId,
+        int tileId,
         out string tileBlockId)
     {
         tileBlockId = null;
-        if (profile?.TextParameters != null &&
-            profile.TextParameters.TryGetValue(parameterId, out tileBlockId) &&
-            !string.IsNullOrWhiteSpace(tileBlockId))
+        if (TryResolveFromProfile(profile, tileId, out tileBlockId))
         {
             return true;
         }
 
-        if (runtimeTileCatalog?.TextParameters != null &&
-            runtimeTileCatalog.TextParameters.TryGetValue(parameterId, out tileBlockId) &&
-            !string.IsNullOrWhiteSpace(tileBlockId)) return true;
+        if (TryResolveFromProfile(runtimeTileCatalog, tileId, out tileBlockId))
+            return true;
 
         // MOD 只需在 JSON 声明稳定数字 ID，不要求修改本体或冻结的生成 Profile。
-        if (int.TryParse(parameterId.Substring(TileBlockParameterPrefix.Length), out int tileId) &&
-            GameRes.ExistingInstance != null && GameRes.ExistingInstance.TryGetTileDefinition(tileId, out var definition))
+        if (GameRes.ExistingInstance != null &&
+            GameRes.ExistingInstance.TryGetTileDefinition(tileId, out var definition))
         {
             tileBlockId = definition.Id;
             return true;
         }
         return false;
+    }
+
+    private static bool TryResolveFromProfile(
+        ChunkGenerationProfileSnapshot profile,
+        int tileId,
+        out string tileBlockId)
+    {
+        tileBlockId = null;
+        if (profile == null)
+            return false;
+
+        TileBlockLookup lookup = TileBlockLookups.GetValue(profile, value => new TileBlockLookup(value));
+        return lookup.ByTileId.TryGetValue(tileId, out tileBlockId) &&
+               !string.IsNullOrWhiteSpace(tileBlockId);
     }
 
     #endregion
@@ -264,6 +314,13 @@ public partial class ChunkMgr
     public bool TryGetRuntimeTileEffect(Vector2 worldPosition, out RuntimeTerrainTileSample sample,
         out TileData tileData, out RuntimeTileDefinition tileBlock)
     {
+        return TryGetRuntimeTileEffect(worldPosition, null, out sample, out tileData, out tileBlock);
+    }
+
+    /// <summary>地块接触接收器可复用上一个同类型 TileData，避免连续移动产生 GC。</summary>
+    public bool TryGetRuntimeTileEffect(Vector2 worldPosition, TileData reusableTileData,
+        out RuntimeTerrainTileSample sample, out TileData tileData, out RuntimeTileDefinition tileBlock)
+    {
         tileData = null;
         tileBlock = null;
         return TryGetRuntimeTerrainTile(worldPosition, out sample) &&
@@ -273,6 +330,7 @@ public partial class ChunkMgr
                    sample.Terrain,
                    sample.LocalCell,
                    sample.WorldCell,
+                   reusableTileData,
                    out tileData,
                    out tileBlock);
     }

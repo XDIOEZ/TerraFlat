@@ -95,4 +95,26 @@ public partial class TileData_Farmland : TileData
         }
         return copy;
     }
+
+    public override void CopyFrom(TileData source)
+    {
+        if (source is not TileData_Farmland farmland)
+            throw new System.InvalidCastException($"TileData_Farmland 无法从 {source?.GetType().Name ?? "null"} 复制");
+
+        CopyBaseFrom(farmland);
+        waterValue = farmland.waterValue;
+        maxWater = farmland.maxWater;
+        if (farmland.fertilityValue == null)
+        {
+            fertilityValue = null;
+            return;
+        }
+
+        fertilityValue ??= new GameValue_float();
+        fertilityValue.BaseValue = farmland.fertilityValue.BaseValue;
+        fertilityValue.BaseAdditive = farmland.fertilityValue.BaseAdditive;
+        fertilityValue.AdditiveModifier = farmland.fertilityValue.AdditiveModifier;
+        fertilityValue.MultiplicativeModifier = farmland.fertilityValue.MultiplicativeModifier;
+        fertilityValue.FinalAdditive = farmland.fertilityValue.FinalAdditive;
+    }
 }

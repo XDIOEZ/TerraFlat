@@ -21,7 +21,7 @@ description: "Use when: 定位或修改 FlatWorld 的维度、星球表面/地�
 - 环绕世界由额外相机绘制平移副本，但 `Light2D` 等局部空间组件不会随画面自动平移；这类表现必须为当前可见世界镜像同步轻量代理，并将纯表现代理排除出光照、AI、存档等玩法查询。
 - 洞穴只走 WorldModel 的 Profile、`DeterministicChunkGenerator`、`CaveLayoutKernel` 与 `CaveGenerationFeatureGenerator`；旧 Map 不再维护独立洞穴生成器或采样器。
 - 洞穴规则需要参考地表时，只能使用 `CavePortalPairingSnapshot` 冻结的地表 Profile、派生种子与拓扑做纯采样；禁止查询已生成或已加载的地表 Chunk、Tilemap，配对指纹必须参与洞穴生成指纹。地下湖只按同一快照复算的地表高度带和最低降水阈值决定是否形成，不保留独立随机成湖概率，也不能读取地表环境层。
-- 洞穴布局若要跟随地表尺度，必须从配对地表复制 `world.coordinateScale` 并统一换算距离参数；群系交界默认只复算基础气候群系，不引入依赖区域构建结果的水文覆盖。
+- 洞穴布局跟随地表 `world.spatialDistanceScale`；配对地表必须复制同一空间距离倍率，洞室、隧道、地下河和入口安全区等空间距离统一缩放，底层噪声坐标频率再由该倍率反算。群系交界默认只复算基础气候群系，不引入依赖区域构建结果的水文覆盖。
 - 地表入口必须是已安装 MineEntrance；CaveExit 在基线完成后创建以进入差量。
 - CaveExit 运行时定义位于 `StreamingAssets/GameConfig/Items/shells/dimension_portals.json`，复用 `BuildingBodyShell` 与维度入口模块；独立 CaveExit Prefab 只作编辑器迁移源，不得加入 Addressables。需要阻挡寻路的入口由模块参数显式注册 `WorldNavigationObstacle`，占地来自通用 Shell 的非 Trigger 碰撞体。
 - 矿洞默认抑制天气/怪物生成，`FixedLighting` 是上限。

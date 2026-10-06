@@ -87,8 +87,13 @@ public sealed class ActorRenderColorEffect : ActorRenderEffectModule
     /// <summary>设置持续状态染色；强度为 0 时恢复角色原色。</summary>
     public void SetStatusTint(Color tint, float strength)
     {
+        float clampedStrength = Mathf.Clamp01(strength);
+        if (targetStatusTint == tint && Mathf.Approximately(targetStatusStrength, clampedStrength))
+            return;
+
         targetStatusTint = tint;
-        targetStatusStrength = Mathf.Clamp01(strength);
+        targetStatusStrength = clampedStrength;
+        MarkRenderStateDirty();
     }
 
     /// <summary>清除持续状态染色。</summary>
@@ -104,6 +109,7 @@ public sealed class ActorRenderColorEffect : ActorRenderEffectModule
         flashDuration = Mathf.Max(0.01f, duration > 0f ? duration : defaultFlashDuration);
         flashCount = Mathf.Max(1, count > 0 ? count : defaultFlashCount);
         flashElapsed = 0f;
+        MarkRenderStateDirty();
     }
 
     /// <summary>使用组件默认参数播放受击闪红。</summary>
@@ -115,6 +121,8 @@ public sealed class ActorRenderColorEffect : ActorRenderEffectModule
     #endregion
 
     #region Effect Module
+
+    public override bool RequiresContinuousRendering => false;
 
     protected override bool AppliesTo(Renderer renderer)
     {
@@ -129,6 +137,9 @@ public sealed class ActorRenderColorEffect : ActorRenderEffectModule
 
     protected override void PrepareFrame(float deltaTime)
     {
+        Color previousTint = currentStatusTint;
+        float previousStrength = currentStatusStrength;
+        float previousFlash = currentFlashAmount;
         float tintBlend = GetTransitionBlend(deltaTime, statusTransitionSeconds);
         currentStatusTint = Color.Lerp(currentStatusTint, targetStatusTint, tintBlend);
         currentStatusStrength = Mathf.Lerp(currentStatusStrength, targetStatusStrength, tintBlend);
@@ -137,6 +148,12 @@ public sealed class ActorRenderColorEffect : ActorRenderEffectModule
             flashElapsed += Mathf.Max(0f, deltaTime);
 
         currentFlashAmount = EvaluateFlashAmount();
+        if (previousTint != currentStatusTint ||
+            !Mathf.Approximately(previousStrength, currentStatusStrength) ||
+            !Mathf.Approximately(previousFlash, currentFlashAmount))
+        {
+            MarkRenderStateDirty();
+        }
     }
 
     protected override void ApplyEffect(Renderer renderer, MaterialPropertyBlock block, float deltaTime)

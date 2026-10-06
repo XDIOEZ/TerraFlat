@@ -19,6 +19,8 @@ namespace FlatWorld.Guide
         private Data_Player loadedPlayerData;
         private NewPlayerGuideProgressStore progress;
         private bool isActiveForPlayer;
+        private const string TrueFact = "True";
+        private const string FalseFact = "False";
 
         public int ContextOrder => 200;
         public bool IsTutorialActive => isActiveForPlayer;
@@ -73,10 +75,32 @@ namespace FlatWorld.Guide
 
         public void Contribute(CharacterSpeechContext context)
         {
-            RefreshEligibility();
-            context.SetFact(CharacterSpeechFacts.TutorialEnabled, isActiveForPlayer.ToString());
-            context.SetFact(CharacterSpeechFacts.TutorialStage, CurrentStage.ToString());
-            context.SetFact(CharacterSpeechFacts.TutorialCompleted, IsTutorialCompleted.ToString());
+            // 资格变化由 ProfileContextChanged 与真实玩法事件刷新；语音轮询只读取缓存，禁止反复解析 ItemSpecialData JSON。
+            NewPlayerGuideStage stage = CurrentStage;
+            context.SetFact(
+                CharacterSpeechFacts.TutorialEnabled,
+                isActiveForPlayer ? TrueFact : FalseFact);
+            context.SetFact(CharacterSpeechFacts.TutorialStage, GetStageFact(stage));
+            context.SetFact(
+                CharacterSpeechFacts.TutorialCompleted,
+                stage == NewPlayerGuideStage.Completed ? TrueFact : FalseFact);
+        }
+
+        private static string GetStageFact(NewPlayerGuideStage stage)
+        {
+            return stage switch
+            {
+                NewPlayerGuideStage.OpenInventory => nameof(NewPlayerGuideStage.OpenInventory),
+                NewPlayerGuideStage.GatherSurvivalMaterials => nameof(NewPlayerGuideStage.GatherSurvivalMaterials),
+                NewPlayerGuideStage.CraftSparkMaker => nameof(NewPlayerGuideStage.CraftSparkMaker),
+                NewPlayerGuideStage.PlaceSparkMaker => nameof(NewPlayerGuideStage.PlaceSparkMaker),
+                NewPlayerGuideStage.CreateFireSeed => nameof(NewPlayerGuideStage.CreateFireSeed),
+                NewPlayerGuideStage.CraftBonfire => nameof(NewPlayerGuideStage.CraftBonfire),
+                NewPlayerGuideStage.PlaceBonfire => nameof(NewPlayerGuideStage.PlaceBonfire),
+                NewPlayerGuideStage.IgniteBonfire => nameof(NewPlayerGuideStage.IgniteBonfire),
+                NewPlayerGuideStage.Completed => nameof(NewPlayerGuideStage.Completed),
+                _ => nameof(NewPlayerGuideStage.OpenInventory)
+            };
         }
 
         #endregion

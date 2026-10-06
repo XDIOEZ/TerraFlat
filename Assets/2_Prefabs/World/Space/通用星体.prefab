@@ -100,7 +100,7 @@ MonoBehaviour:
   planetData:
     Name: 
     Radius: 1000
-    NoiseScale: 0.01
+    SpatialDistanceScale: 1
     ChunkSize: {x: 100, y: 100}
     AutoGenerateMap: 1
     name: 

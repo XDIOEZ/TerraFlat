@@ -145,28 +145,47 @@ public sealed class WaterImmersionRenderEffect : ActorRenderEffectModule
     /// <summary>设置水体目标状态；进入水格时传入 LiquidDepth，离开水格时传入 false。</summary>
     public void SetWaterState(float depth, bool inWater)
     {
+        float nextDepth = Mathf.Clamp01(depth);
+        float nextBlend = inWater ? 1f : 0f;
+        if (!useDirectImmersion && Mathf.Approximately(targetDepth, nextDepth) &&
+            Mathf.Approximately(targetBlend, nextBlend))
+            return;
+
         useDirectImmersion = false;
-        targetDepth = Mathf.Clamp01(depth);
-        targetBlend = inWater ? 1f : 0f;
+        targetDepth = nextDepth;
+        targetBlend = nextBlend;
+        MarkRenderStateDirty();
     }
 
     /// <summary>角色水体直接使用玩法有效淹没高度作为遮罩高度，不再经过额外深度曲线。</summary>
     public void SetActorImmersionState(float immersionLevel, bool inWater)
     {
+        float nextImmersion = Mathf.Clamp01(immersionLevel);
+        float nextBlend = inWater ? 1f : 0f;
+        if (useDirectImmersion && Mathf.Approximately(targetDirectImmersion, nextImmersion) &&
+            Mathf.Approximately(targetBlend, nextBlend))
+            return;
+
         useDirectImmersion = true;
-        targetDirectImmersion = Mathf.Clamp01(immersionLevel);
-        targetBlend = inWater ? 1f : 0f;
+        targetDirectImmersion = nextImmersion;
+        targetBlend = nextBlend;
+        MarkRenderStateDirty();
     }
 
     /// <summary>指定计算世界水平水线的主体 Sprite；供手持物、掉落物等外部表现复用。</summary>
     public void SetReferenceRenderer(SpriteRenderer renderer)
     {
+        if (referenceSpriteRenderer == renderer)
+            return;
         referenceSpriteRenderer = renderer;
+        MarkRenderStateDirty();
     }
 
     #endregion
 
     #region Effect Module
+
+    public override bool RequiresContinuousRendering => false;
 
     /// <summary>水体浸没仅作用于 SpriteRenderer。</summary>
     protected override bool AppliesTo(Renderer renderer)
@@ -177,6 +196,14 @@ public sealed class WaterImmersionRenderEffect : ActorRenderEffectModule
     /// <summary>平滑水深状态并计算当前帧统一水线参数。</summary>
     protected override void PrepareFrame(float deltaTime)
     {
+        float previousDepth = currentDepth;
+        float previousBlend = currentBlend;
+        float previousSurface = currentSurfaceV;
+        float previousTint = currentTintStrength;
+        float previousLine = currentLineStrength;
+        float previousWaterY = currentWaterY;
+        float previousReferenceHeight = currentReferenceHeight;
+        bool previousWorldWaterReference = hasWorldWaterReference;
         float smoothTime = Mathf.Max(0.0001f, transitionSeconds);
         currentDepth = Mathf.SmoothDamp(
             currentDepth,
@@ -215,6 +242,19 @@ public sealed class WaterImmersionRenderEffect : ActorRenderEffectModule
         currentTintStrength = Mathf.Clamp01(depthToTintStrength.Evaluate(visualDepth));
         currentLineStrength = Mathf.Clamp01(depthToLineStrength.Evaluate(visualDepth));
         UpdateWorldWaterSurface();
+
+        bool waterVisible = currentBlend > 0.0001f || targetBlend > 0.0001f;
+        if (!Mathf.Approximately(previousDepth, currentDepth) ||
+            !Mathf.Approximately(previousBlend, currentBlend) ||
+            !Mathf.Approximately(previousSurface, currentSurfaceV) ||
+            !Mathf.Approximately(previousTint, currentTintStrength) ||
+            !Mathf.Approximately(previousLine, currentLineStrength) ||
+            waterVisible && (!Mathf.Approximately(previousWaterY, currentWaterY) ||
+                             !Mathf.Approximately(previousReferenceHeight, currentReferenceHeight) ||
+                             previousWorldWaterReference != hasWorldWaterReference))
+        {
+            MarkRenderStateDirty();
+        }
     }
 
     /// <summary>把当前帧水体参数写入共享材质属性块。</summary>

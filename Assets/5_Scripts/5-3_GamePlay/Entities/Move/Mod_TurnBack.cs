@@ -1,6 +1,5 @@
 using Sirenix.OdinInspector;
 using System.Collections.Generic;
-using UltEvents;
 using UnityEngine;
 
 public class Mod_TurnBack : Module
@@ -31,7 +30,8 @@ public class Mod_TurnBack : Module
     /// <summary>角色当前实际使用的左右转身角，供瞄准对象合成最终旋转。</summary>
     public float CurrentTurnAngleY { get; private set; }
 
-    public UltEvent<Vector2> OnTrun = new UltEvent<Vector2>();
+    /// <summary>仅在真实左右翻面时广播；无 Inspector 持久监听，使用 C# 事件避免 Vector2 装箱。</summary>
+    public event System.Action<Vector2> OnTrun;
 
     private float turnTimeElapsed;
     private float startY;
@@ -74,6 +74,7 @@ public class Mod_TurnBack : Module
         targetY = currentDirection == Vector2.right ? 0f : 180f;
         CurrentTurnAngleY = targetY;
         UpdateAllTransformDirections();
+        ApplyFinalPositions();
 
         if (faceMouse == null)
             Debug.LogError("[TurnBody] 初始化失败：FaceMouse 模块未找到！" + item.name);
@@ -109,8 +110,6 @@ public class Mod_TurnBack : Module
     public void TurnBodyToDirection(Vector2 targetDirection)
     {
         if (IsDirectionLocked) return;
-        OnTrun.Invoke(targetDirection);
-
         if (Mathf.Abs(targetDirection.x) < 0.01f) return;
 
         float targetSign = Mathf.Sign(targetDirection.x);
@@ -119,6 +118,8 @@ public class Mod_TurnBack : Module
         if (facingSign == targetSign) return;
 
         currentDirection = (targetDirection.x > 0) ? Vector2.right : Vector2.left;
+        // OnTrun 只描述真实左右翻面，避免同朝向每帧重复触发 UltEvent 装箱和订阅者写入。
+        OnTrun?.Invoke(targetDirection);
 
         isTurning = true;
         turnTimeElapsed = 0f;
@@ -241,19 +242,7 @@ public class Mod_TurnBack : Module
 
     void UpdateTransform_Positions()
     {
-        if (!isPositionTransforming)
-        {
-            // 位置转换完成后，直接设置最终位置
-            foreach (var transform in controlledTransforms_Position)
-            {
-                if (transform == null) continue;
-
-                Vector3 localPos = transform.localPosition;
-                localPos.x = Mathf.Abs(localPos.x) * currentDirection.x;
-                transform.localPosition = localPos;
-            }
-            return;
-        }
+        if (!isPositionTransforming) return;
 
         // 位置转换中，使用插值更新位置
         float t = Mathf.Clamp01(turnTimeElapsed / Duration);
@@ -276,6 +265,19 @@ public class Mod_TurnBack : Module
         if (t >= 1f)
         {
             isPositionTransforming = false;
+        }
+    }
+
+    /// <summary>加载或重置时一次性把附属位置同步到当前左右朝向。</summary>
+    private void ApplyFinalPositions()
+    {
+        foreach (var targetTransform in controlledTransforms_Position)
+        {
+            if (targetTransform == null) continue;
+
+            Vector3 localPos = targetTransform.localPosition;
+            localPos.x = Mathf.Abs(localPos.x) * currentDirection.x;
+            targetTransform.localPosition = localPos;
         }
     }
 
@@ -323,6 +325,7 @@ public class Mod_TurnBack : Module
         targetY = currentDirection == Vector2.right ? 0f : 180f;
         CurrentTurnAngleY = targetY;
         UpdateAllTransformDirections();
+        ApplyFinalPositions();
     }
 
     /// <summary>设置技能使用的朝向锁，释放后恢复正常自动转身。</summary>

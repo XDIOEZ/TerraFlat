@@ -55,6 +55,7 @@ public partial class Mod_TileEffectReceiver : Module
 
     private RuntimeTileDefinition activeTileBlock;
     private TileData activeTileData;
+    private TileData reusableRuntimeTileData;
     private Map activeTileMap;
     private ChunkTerrainData activeRuntimeTerrain;
     private int activeRuntimeTileId;
@@ -594,10 +595,11 @@ public partial class Mod_TileEffectReceiver : Module
         out TileEffectResolution resolution)
     {
         ChunkMgr manager = ChunkMgr.ExistingInstance;
-        if (manager != null && manager.TryGetRuntimeTileEffect(samplePosition,
+        if (manager != null && manager.TryGetRuntimeTileEffect(samplePosition, reusableRuntimeTileData,
                 out RuntimeTerrainTileSample sample, out TileData runtimeData,
                 out RuntimeTileDefinition runtimeBlock))
         {
+            reusableRuntimeTileData = runtimeData;
             resolution = new TileEffectResolution(runtimeBlock, runtimeData, null,
                 sample.Terrain, sample.TopTileId);
             return true;

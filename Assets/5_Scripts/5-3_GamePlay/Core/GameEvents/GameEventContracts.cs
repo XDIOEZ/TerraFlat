@@ -25,7 +25,8 @@ namespace FlatWorld.Gameplay.Events
         }
     }
 
-    public sealed class GameEventTriggerContext
+    /// <summary>每帧时间推进都会创建，保持值类型避免事件系统主循环产生托管垃圾。</summary>
+    public readonly struct GameEventTriggerContext
     {
         public string TimeSourceSceneName { get; }
         public string ActiveWorldKey { get; }

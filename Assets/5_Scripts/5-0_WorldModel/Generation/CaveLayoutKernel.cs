@@ -305,7 +305,7 @@ namespace FlatWorld.WorldModel
                     localX * localX / (radiusX * radiusX) +
                     localY * localY / (radiusY * radiusY));
                 double shorelineNoise = SampleNoise01(request.Topology, point,
-                    request.WorldSeed, 0.19d / settings.WorldCoordinateDistanceScale, 0x51f15e);
+                    request.WorldSeed, 0.19d / settings.WorldSpatialDistanceScale, 0x51f15e);
                 double shoreline = 1d + (shorelineNoise - 0.5d) * 0.22d;
                 if (normalizedDistance >= shoreline)
                     continue;
@@ -427,7 +427,7 @@ namespace FlatWorld.WorldModel
 
             Point perpendicular = new(-direction.Y / length, direction.X / length);
             double bendOffset = Math.Min(settings.CaveRegionSize * 0.28d,
-                5.5d * settings.WorldCoordinateDistanceScale);
+                5.5d * settings.WorldSpatialDistanceScale);
             Point bendA = start + direction * 0.34d + perpendicular *
                 Lerp(-bendOffset, bendOffset, NextUnitDouble(ref tunnelState));
             Point bendB = start + direction * 0.67d + perpendicular *
@@ -436,7 +436,7 @@ namespace FlatWorld.WorldModel
                 Math.Min(DistanceToSegment(localPoint, bendA, bendB),
                     DistanceToSegment(localPoint, bendB, end)));
             double shorelineNoise = SampleNoise01(request.Topology, point, request.WorldSeed,
-                0.17d / settings.WorldCoordinateDistanceScale, 0x6a09e667);
+                0.17d / settings.WorldSpatialDistanceScale, 0x6a09e667);
             double halfWidth = settings.CaveRiverHalfWidth * Lerp(0.82d, 1.18d, shorelineNoise);
             if (distance >= halfWidth)
                 return;
@@ -798,7 +798,7 @@ namespace FlatWorld.WorldModel
                 localX * localX / (room.RadiusX * room.RadiusX) +
                 localY * localY / (room.RadiusY * room.RadiusY));
             double edgeNoise = SampleNoise01(topology, point, worldSeed,
-                0.16d / settings.WorldCoordinateDistanceScale, 503);
+                0.16d / settings.WorldSpatialDistanceScale, 503);
             return normalizedDistance <= 1d + (edgeNoise - 0.5d) * 0.24d;
         }
 
@@ -815,7 +815,7 @@ namespace FlatWorld.WorldModel
 
             Point perpendicular = new(-direction.Y / length, direction.X / length);
             double bendOffset = Math.Min(settings.CaveRegionSize * 0.28d,
-                5.5d * settings.WorldCoordinateDistanceScale);
+                5.5d * settings.WorldSpatialDistanceScale);
             Point bendA = start + direction * 0.34d + perpendicular *
                 Lerp(-bendOffset, bendOffset, NextUnitDouble(ref state));
             Point bendB = start + direction * 0.67d + perpendicular *
@@ -823,9 +823,9 @@ namespace FlatWorld.WorldModel
             double radius = Lerp(settings.CaveTunnelMinRadius, settings.CaveTunnelMaxRadius,
                 NextUnitDouble(ref state));
             double edgeNoise = SampleNoise01(topology, point, unchecked((int)state),
-                0.21d / settings.WorldCoordinateDistanceScale, 883);
+                0.21d / settings.WorldSpatialDistanceScale, 883);
             double effectiveRadius = radius + (edgeNoise - 0.5d) * 0.55d *
-                settings.WorldCoordinateDistanceScale;
+                settings.WorldSpatialDistanceScale;
             double distance = Math.Min(DistanceToSegment(point, start, bendA),
                 Math.Min(DistanceToSegment(point, bendA, bendB),
                     DistanceToSegment(point, bendB, end)));

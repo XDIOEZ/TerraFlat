@@ -1261,7 +1261,7 @@ public partial class GameManager : SingletonAutoMono<GameManager>
     }
 
     /// <summary>
-    /// 从当前维度取得正式纯生成快照、坐标缩放与有限世界拓扑。
+    /// 从当前维度取得正式纯生成快照、空间距离倍率与有限世界拓扑。
     /// </summary>
     private static bool TryGetSpawnGenerationInput(
         out FlatWorld.WorldModel.ChunkGenerationProfileSnapshot profile,
@@ -1308,12 +1308,10 @@ public partial class GameManager : SingletonAutoMono<GameManager>
             return false;
         }
 
-        float noiseScale = planetData.NoiseScale;
-        if (float.IsNaN(noiseScale) || float.IsInfinity(noiseScale) || noiseScale <= 0f)
-            noiseScale = PlanetData.DefaultNoiseScale;
-        noiseScale = PlanetData.NormalizeNoiseScale(noiseScale);
+        float spatialDistanceScale = PlanetData.NormalizeSpatialDistanceScale(
+            planetData.SpatialDistanceScale);
         profile = profileAsset.CreateSnapshot().WithNumericParameter(
-            "world.coordinateScale", noiseScale);
+            "world.spatialDistanceScale", spatialDistanceScale);
         // 出生搜索与 ChunkMgr 后台生成必须经过同一运行时覆盖，避免选中的陆地生成后变成水。
         profile = WorldGenerationRuntimeHooks.ApplyBeforeWorldModelGeneration(profile);
         dimensionId = dimensionManager.ActiveDefinition?.DimensionId;

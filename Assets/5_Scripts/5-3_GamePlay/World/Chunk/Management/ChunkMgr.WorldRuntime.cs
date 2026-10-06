@@ -380,14 +380,14 @@ public partial class ChunkMgr
             });
     }
 
-    /// <summary>把新建世界界面的坐标缩放写入纯生成快照，后台线程不再读取 Unity 单例。</summary>
-    private static ChunkGenerationProfileSnapshot ApplyWorldCoordinateScale(
+    /// <summary>把存档中的空间距离倍率写入纯生成快照，后台线程不再读取 Unity 单例。</summary>
+    private static ChunkGenerationProfileSnapshot ApplyWorldSpatialDistanceScale(
         ChunkGenerationProfileSnapshot profile)
     {
         if (profile == null)
             throw new ArgumentNullException(nameof(profile));
         PlanetData planet = SaveDataMgr.Instance?.GetCurrentPlanetData();
-        return ApplyWorldCoordinateScale(profile, planet);
+        return ApplyWorldSpatialDistanceScale(profile, planet);
     }
 
     /// <summary>把存档中的区块尺寸覆盖到生成 Profile，避免资源 Profile 与世界网格出现双真源。</summary>
@@ -404,14 +404,15 @@ public partial class ChunkMgr
         return profile.WithChunkSize(chunkSize.x, chunkSize.y);
     }
 
-    /// <summary>按指定维度 PlanetData 写入坐标缩放；矿洞复核地表时不能误用当前矿洞数值。</summary>
-    private static ChunkGenerationProfileSnapshot ApplyWorldCoordinateScale(
+    /// <summary>按指定维度 PlanetData 写入空间距离倍率；矿洞复核地表时不能误用当前矿洞数值。</summary>
+    private static ChunkGenerationProfileSnapshot ApplyWorldSpatialDistanceScale(
         ChunkGenerationProfileSnapshot profile, PlanetData planet)
     {
         if (profile == null)
             throw new ArgumentNullException(nameof(profile));
-        float coordinateScale = ChunkGenerator_Land.ResolveNoiseScale(planet);
-        return profile.WithNumericParameter("world.coordinateScale", coordinateScale);
+        float spatialDistanceScale = PlanetData.NormalizeSpatialDistanceScale(
+            planet?.SpatialDistanceScale ?? PlanetData.DefaultSpatialDistanceScale);
+        return profile.WithNumericParameter("world.spatialDistanceScale", spatialDistanceScale);
     }
 
     /// <summary>获取当前活动维度编号；没有维度管理器时退回使用场景名。</summary>

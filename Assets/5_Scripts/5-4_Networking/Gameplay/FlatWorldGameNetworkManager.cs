@@ -295,7 +295,7 @@ namespace FlatWorld.Networking.Gameplay
             uint generationSettingsHash = NetworkMapGenerationProtocol.CalculateSettingsHash(
                 SaveDataMgr.Instance.SaveData.Seed,
                 synchronizedPlanet.Radius,
-                synchronizedPlanet.NoiseScale,
+                synchronizedPlanet.SpatialDistanceScale,
                 synchronizedPlanet.AutoGenerateMap,
                 synchronizedPlanet.ChunkSize.x,
                 synchronizedPlanet.ChunkSize.y,
@@ -315,7 +315,7 @@ namespace FlatWorld.Networking.Gameplay
                 Seed = SaveDataMgr.Instance.SaveData.Seed,
                 GenerationProtocol = NetworkMapGenerationProtocol.CurrentVersion,
                 PlanetRadius = synchronizedPlanet.Radius,
-                NoiseScale = synchronizedPlanet.NoiseScale,
+                SpatialDistanceScale = synchronizedPlanet.SpatialDistanceScale,
                 AutoGenerateMap = synchronizedPlanet.AutoGenerateMap,
                 ChunkSizeX = synchronizedPlanet.ChunkSize.x,
                 ChunkSizeY = synchronizedPlanet.ChunkSize.y,
@@ -382,7 +382,7 @@ namespace FlatWorld.Networking.Gameplay
                     Seed = begin.Seed,
                     GenerationProtocol = begin.GenerationProtocol,
                     PlanetRadius = begin.PlanetRadius,
-                    NoiseScale = begin.NoiseScale,
+                    SpatialDistanceScale = begin.SpatialDistanceScale,
                     AutoGenerateMap = begin.AutoGenerateMap,
                     ChunkSizeX = begin.ChunkSizeX,
                     ChunkSizeY = begin.ChunkSizeY,
@@ -563,7 +563,8 @@ namespace FlatWorld.Networking.Gameplay
             SaveDataMgr.Instance.SaveData.Seed = snapshot.Seed == 0 ? 1 : snapshot.Seed;
             SaveDataMgr.Instance.SaveData.SaveSeed = SaveDataMgr.Instance.SaveData.Seed.ToString();
             planet.Radius = Mathf.Max(1, snapshot.PlanetRadius);
-            planet.NoiseScale = PlanetData.NormalizeNoiseScale(snapshot.NoiseScale);
+            planet.SpatialDistanceScale = PlanetData.NormalizeSpatialDistanceScale(
+                snapshot.SpatialDistanceScale);
             planet.AutoGenerateMap = snapshot.AutoGenerateMap;
             planet.ChunkSize = new Vector2Int(chunkSizeX, chunkSizeY);
             if (!System.Enum.IsDefined(typeof(WorldTopologyMode), snapshot.TopologyMode))
@@ -578,7 +579,7 @@ namespace FlatWorld.Networking.Gameplay
             uint localSettingsHash = NetworkMapGenerationProtocol.CalculateSettingsHash(
                 SaveDataMgr.Instance.SaveData.Seed,
                 planet.Radius,
-                planet.NoiseScale,
+                planet.SpatialDistanceScale,
                 planet.AutoGenerateMap,
                 planet.ChunkSize.x,
                 planet.ChunkSize.y,
@@ -614,8 +615,8 @@ namespace FlatWorld.Networking.Gameplay
             planet.MapData_Dict = canonicalMaps;
 
             Debug.Log(
-                $"[联机地图] 噪声配置已同步：Seed={SaveDataMgr.Instance.SaveData.Seed}, " +
-                $"Scale={planet.NoiseScale}, Chunk={planet.ChunkSize.x}x{planet.ChunkSize.y}, " +
+                $"[联机地图] 空间距离倍率已同步：Seed={SaveDataMgr.Instance.SaveData.Seed}, " +
+                $"SpatialScale={planet.SpatialDistanceScale}, Chunk={planet.ChunkSize.x}x{planet.ChunkSize.y}, " +
                 $"Hash={localSettingsHash:X8}, 已有地图数={planet.MapData_Dict.Count}", this);
         }
 
@@ -625,7 +626,8 @@ namespace FlatWorld.Networking.Gameplay
                 throw new ArgumentNullException(nameof(planet));
 
             planet.Radius = Mathf.Max(1, planet.Radius);
-            planet.NoiseScale = PlanetData.NormalizeNoiseScale(planet.NoiseScale);
+            planet.SpatialDistanceScale = PlanetData.NormalizeSpatialDistanceScale(
+                planet.SpatialDistanceScale);
             planet.ChunkSize = PlanetData.NormalizeChunkSize(planet.ChunkSize);
             if (planet.TopologyMode != WorldTopologyMode.Infinite &&
                 planet.TopologyMode != WorldTopologyMode.Wrapped)

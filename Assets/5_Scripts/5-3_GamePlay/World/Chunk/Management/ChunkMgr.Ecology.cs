@@ -115,7 +115,7 @@ public partial class ChunkMgr
         PlanetData sourcePlanet = GetPortalSourcePlanetData(dimensionManager, sourceDimensionId);
         ChunkGenerationProfileSnapshot sourceProfile = ApplyWorldChunkSize(
             sourceAsset.CreateSnapshot(), sourcePlanet);
-        sourceProfile = ApplyWorldCoordinateScale(sourceProfile, sourcePlanet);
+        sourceProfile = ApplyWorldSpatialDistanceScale(sourceProfile, sourcePlanet);
         sourceProfile = ApplyPersistedEcologyConfiguration(sourceProfile, sourcePlanet);
         sourceProfile = sourceProfile.WithNumericParameter("cave.portal.baseSeed", baseSeed);
         if (sourceProfile.Settings.Mode != ChunkGenerationMode.Surface)
@@ -124,7 +124,7 @@ public partial class ChunkMgr
         ChunkGenerationSettingsSnapshot sourceSettings = sourceProfile.Settings;
         // 即使旧矿洞存档还保留较早的入口参数，也要以它对应地表的冻结参数为准。
         profile = profile
-            .WithNumericParameter("world.coordinateScale", sourceSettings.WorldCoordinateScale)
+            .WithNumericParameter("world.spatialDistanceScale", sourceSettings.WorldSpatialDistanceScale)
             .WithNumericParameter("cave.portal.enabled", sourceSettings.CavePortalEnabled ? 1d : 0d)
             .WithNumericParameter("cave.portal.chunkChance", sourceSettings.CavePortalChunkChance)
             .WithNumericParameter("cave.portal.safeRadius", sourceSettings.CavePortalSafeRadius)
@@ -204,7 +204,7 @@ public partial class ChunkMgr
 
         ChunkGenerationProfileSnapshot profile = ApplyWorldChunkSize(
             profileAsset.CreateSnapshot());
-        profile = ApplyWorldCoordinateScale(profile);
+        profile = ApplyWorldSpatialDistanceScale(profile);
         profile = WorldGenerationRuntimeHooks.ApplyBeforeWorldModelGeneration(profile);
         profile = ApplyPersistedEcologyConfiguration(profile);
         int baseSeed = SaveDataMgr.Instance?.SaveData?.Seed ?? 1;

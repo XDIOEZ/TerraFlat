@@ -85,6 +85,10 @@ description: "Use when: 定位或修改 FlatWorld 的地图内容、Tilemap、�
 - 功能验收以实际游戏操作和可观察结果为准；不以冒烟、自动化测试或静态检查代替实际验收。
 - 世界生成与持久化改动实际覆盖新建世界、抽干露底、区块往返和保存重进；保留用户当前试玩时，不自动停止游戏或排队运行测试。
 
+## 空间尺度
+
+- `PlanetData.SpatialDistanceScale` 是玩家可见的世界空间尺度唯一真源，默认 1x、范围 0.25～4x；运行时注入 `world.spatialDistanceScale`，底层噪声坐标频率按 `0.01 / SpatialDistanceScale` 反算。风区、地形降雨采样、河网距离与宽度、湖泊、雪区、自然结构、泥炭斑块和洞穴距离按同一倍率缩放，面积类格数按倍率平方；海平面、气候阈值、概率、水深、流量阈值及 Tile/Chunk/实体物理尺寸不缩放。
+
 ## Skill 维护原则
 
 - 实验动态流向通过 `ChunkMgr.TryGetExperimentalLiquidFlow` 查询，休眠/停用后归零；不能覆写天然 `riverFlow*` 或持久化流向。`TryGetRuntimeWaterCurrent` 优先消费实际动态流量，关闭实验后仍沿用既有天然水文行为。

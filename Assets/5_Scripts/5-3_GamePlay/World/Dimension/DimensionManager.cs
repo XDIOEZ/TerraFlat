@@ -58,7 +58,7 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
     public bool TryGetDefinitionForWorldKey(string worldKey, out DimensionDefinition definition)
     {
         LoadCatalog();
-        definition = catalog.Find(WorldAddress.FromWorldKey(worldKey).DimensionId);
+        definition = catalog?.FindForWorldKey(worldKey);
         return definition != null;
     }
 

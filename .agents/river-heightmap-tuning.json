@@ -30,9 +30,9 @@
     "note": "半径 64 的快速环绕世界会把基础高度周期压成约一个大起伏，只能做连通性检查，不能再作为河流写实度结论。"
   },
   "heightDrivenComparisonParameters": {
-    "world.coordinateScale.reference": 0.01,
-    "world.coordinateDistanceScale.minimum": 0.25,
-    "world.coordinateDistanceScale.maximum": 4.0,
+    "world.spatialDistanceScale.reference": 1.0,
+    "world.spatialDistanceScale.minimum": 0.25,
+    "world.spatialDistanceScale.maximum": 4.0,
     "river.startFlow": 0.14,
     "river.tributaryStartFlow": 0.1,
     "river.meanderTieTolerance": 0.0,
@@ -57,7 +57,7 @@
     "fallback": "if the preferred continuous vector has no valid receiver, keep the same two-receiver model and fall back to pure strict-downhill slope weights",
     "network": "each cell retains at most two adjacent D-infinity receivers instead of one D8 receiver or an all-neighbor fan; visible cells are converted to a dominant-downstream centerline graph, long grid-aligned runs receive terrain-aware curvature relaxation, then Chaikin smoothing and sub-cell rasterization rebuild the final channel",
     "floodplain": "accumulated flow plus local height slope; no independent river noise",
-    "worldScale": "terrain and climate frequency multiply by world.coordinateScale / 0.01; river distance parameters multiply by the inverse ratio clamped to 0.25-4; lateral width and floodplain parameters use the square root of that distance ratio",
+    "worldScale": "player-facing world.spatialDistanceScale is 0.25-4; terrain and climate coordinate frequency use 0.01 / spatialDistanceScale; river length, width and floodplain distances multiply linearly by spatialDistanceScale",
     "visualStatus": "4 个固定种子、256x256、关闭大型湖的纯生成诊断：startFlow=0.14、tributary=0.10、fullWidth=0.45、minimumVisibleCourseLength=96 时河格约 375~910，最长一格宽 45° 直段为 1~6 格；旧版跨屏斜线不再能由单格中心线持续形成。"
   },
   "tracks": {
@@ -177,22 +177,22 @@
         }
       ]
     },
-    "worldCoordinateScale": {
-      "metric": "玩家改变世界坐标缩放后，地貌频率、径流源间距、最长河程、最短可见河程、前视距离与河道横向尺度同步变化",
-      "parameter": "world.coordinateScale",
-      "reference": 0.01,
-      "mapping": "距离倍率 = clamp(0.01 / world.coordinateScale, 0.25, 4.0)；0 使用 4.0 安全上限",
+    "worldSpatialDistanceScale": {
+      "metric": "玩家改变空间距离倍率后，地貌波长、风区、地形降雨采样、径流源间距、最长河程、最短可见河程、前视距离与河道横向尺度同步变化",
+      "parameter": "world.spatialDistanceScale",
+      "reference": 1.0,
+      "mapping": "底层坐标频率 = 0.01 / world.spatialDistanceScale；距离参数直接乘 0.25-4 的空间距离倍率",
       "examples": [
         {
-          "worldCoordinateScale": 0.005,
-          "distanceScale": 2.0,
+          "spatialDistanceScale": 2.0,
+          "coordinateScale": 0.005,
           "river.runoffCellSize": 128,
           "river.maxTraceSteps": 768,
           "river.minimumVisibleCourseLength": 192
         },
         {
-          "worldCoordinateScale": 0.02,
-          "distanceScale": 0.5,
+          "spatialDistanceScale": 0.5,
+          "coordinateScale": 0.02,
           "river.runoffCellSize": 32,
           "river.maxTraceSteps": 192,
           "river.minimumVisibleCourseLength": 48

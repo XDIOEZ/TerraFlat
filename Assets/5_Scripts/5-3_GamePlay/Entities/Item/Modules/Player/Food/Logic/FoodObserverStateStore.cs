@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using UnityEngine;
 
 /// <summary>规则状态的通用读写工具；每条规则用自己的 StateKey 隔离数据。</summary>
 public static class FoodObserverStateStore
@@ -11,8 +12,19 @@ public static class FoodObserverStateStore
 
     public static FoodMechanicStateData Find(ModData_FoodData data, string key)
     {
-        return data?.MechanicStates?.Find(item => item != null &&
-            string.Equals(item.StateKey, key, StringComparison.Ordinal));
+        List<FoodMechanicStateData> states = data?.MechanicStates;
+        if (states == null || key == null)
+            return null;
+
+        // 高频库存 Tick 禁止 List.Find 闭包；直接遍历不会为每次查找分配委托/闭包对象。
+        for (int i = 0; i < states.Count; i++)
+        {
+            FoodMechanicStateData item = states[i];
+            if (item != null && string.Equals(item.StateKey, key, StringComparison.Ordinal))
+                return item;
+        }
+
+        return null;
     }
 
     public static FoodMechanicStateData GetOrCreate(ModData_FoodData data, string key)
@@ -46,8 +58,20 @@ public static class FoodObserverStateStore
 
     public static float ReadFloat(FoodMechanicStateData state, string key, float fallback)
     {
-        return float.TryParse(ReadString(state, key), NumberStyles.Float,
-            CultureInfo.InvariantCulture, out float value) ? value : fallback;
+        if (state == null || string.IsNullOrWhiteSpace(key))
+            return fallback;
+        if (state.TryGetRuntimeFloat(key, out float cached))
+            return cached;
+
+        string raw = state.Data != null && state.Data.TryGetValue(key, out string stored)
+            ? stored
+            : null;
+        if (!float.TryParse(raw, NumberStyles.Float, CultureInfo.InvariantCulture, out float value))
+            return fallback;
+
+        if (Application.isPlaying)
+            state.SetRuntimeFloat(key, value);
+        return value;
     }
 
     public static bool ReadBool(FoodMechanicStateData state, string key, bool fallback)
@@ -60,12 +84,22 @@ public static class FoodObserverStateStore
         if (state == null || string.IsNullOrWhiteSpace(key))
             return;
 
+        state.RemoveRuntimeFloat(key);
         state.Data ??= new Dictionary<string, string>();
         state.Data[key] = value ?? string.Empty;
     }
 
     public static void WriteFloat(FoodMechanicStateData state, string key, float value)
     {
+        if (state == null || string.IsNullOrWhiteSpace(key))
+            return;
+
+        if (Application.isPlaying)
+        {
+            state.SetRuntimeFloat(key, value);
+            return;
+        }
+
         WriteString(state, key, value.ToString(CultureInfo.InvariantCulture));
     }
 

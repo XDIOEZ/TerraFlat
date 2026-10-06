@@ -242,8 +242,9 @@ namespace FlatWorld.WorldModel
     public sealed class ChunkGenerationSettingsSnapshot
     {
         private const double DefaultWorldCoordinateScale = 0.01d;
-        private const double MinimumWorldDistanceScale = 0.25d;
-        private const double MaximumWorldDistanceScale = 4d;
+        private const double DefaultWorldSpatialDistanceScale = 1d;
+        private const double MinimumWorldSpatialDistanceScale = 0.25d;
+        private const double MaximumWorldSpatialDistanceScale = 4d;
         private readonly HashSet<int> naturalPlantableGroundTileIds;
 
         /// <summary>把配置表里的原始参数整理成生成器可以直接使用的安全数值。</summary>
@@ -253,6 +254,13 @@ namespace FlatWorld.WorldModel
             // 所有默认值和数字范围都在这里一次处理好，后面生成每个格子时就不用反复检查。
             Mode = GetText(texts, "terrain.mode", "surface").Equals("cave",
                 StringComparison.OrdinalIgnoreCase) ? ChunkGenerationMode.Cave : ChunkGenerationMode.Surface;
+            WorldSpatialDistanceScale = Clamp(FinitePositive(
+                    GetDouble(numbers, "world.spatialDistanceScale", DefaultWorldSpatialDistanceScale),
+                    DefaultWorldSpatialDistanceScale),
+                MinimumWorldSpatialDistanceScale,
+                MaximumWorldSpatialDistanceScale);
+            WorldCoordinateScale = DefaultWorldCoordinateScale / WorldSpatialDistanceScale;
+            double worldFrequencyScale = 1d / WorldSpatialDistanceScale;
             GroundTileId = GetInt(numbers, "terrain.groundTileId", 1);
             SandTileId = GetInt(numbers, "terrain.sandTileId", GroundTileId);
             SeabedTileId = GetInt(numbers, "terrain.seabedTileId", SandTileId);
@@ -264,10 +272,14 @@ namespace FlatWorld.WorldModel
             naturalPlantableGroundTileIds = ParsePositiveIntSet(
                 GetText(texts, "ecology.naturalPlantableGroundTileIds", string.Empty));
             PeatSpawnChance = Clamp01(GetDouble(numbers, "biome.peat.spawnChance", 0.1d));
-            PeatStoneBoundaryRadius = Math.Min(8, Math.Max(1,
-                GetInt(numbers, "biome.peat.stoneBoundaryRadius", 2)));
+            PeatStoneBoundaryRadius = ScaleDistance(
+                GetInt(numbers, "biome.peat.stoneBoundaryRadius", 2),
+                WorldSpatialDistanceScale, 1, 32);
             PeatPatchThreshold = Clamp01(GetDouble(numbers, "biome.peat.patchThreshold", 0.64d));
-            PeatPatchScale = Clamp(GetDouble(numbers, "biome.peat.patchScale", 0.09d), 0.001d, 1d);
+            PeatPatchScale = Clamp(
+                GetDouble(numbers, "biome.peat.patchScale", 0.09d) / WorldSpatialDistanceScale,
+                0.001d,
+                1d);
             CaveFloorTileId = GetInt(numbers, "cave.floorTileId", StoneTileId);
             CaveWallTileId = GetInt(numbers, "cave.wallTileId", StoneTileId);
             SeaLevel = Clamp01(GetDouble(numbers, "terrain.seaLevel", 0.30d));
@@ -281,15 +293,22 @@ namespace FlatWorld.WorldModel
             MountainDirtMinimumMoisture = Clamp01(
                 GetDouble(numbers, "biome.mountain.dirtMinimumMoisture", 0.5d));
             SnowRegionsEnabled = GetBool(numbers, "biome.snow.regions.enabled", false);
-            SnowRegionSize = Clamp(GetInt(numbers, "biome.snow.regions.size", 768), 32, 8192);
+            SnowRegionSize = ScaleDistance(GetInt(numbers, "biome.snow.regions.size", 768),
+                WorldSpatialDistanceScale, 32, 32768);
             SnowRegionChance = Clamp01(GetDouble(numbers, "biome.snow.regions.chance", 0.1d));
             SnowLargeRegionRatio = Clamp01(GetDouble(numbers, "biome.snow.regions.largeRatio", 0.9d));
-            SnowLargeMinRadius = FinitePositive(GetDouble(numbers, "biome.snow.large.minRadius", 192d), 192d);
+            SnowLargeMinRadius = ScaleDistance(FinitePositive(
+                    GetDouble(numbers, "biome.snow.large.minRadius", 192d), 192d),
+                WorldSpatialDistanceScale, 1d, 4096d);
             SnowLargeMaxRadius = Math.Max(SnowLargeMinRadius,
-                FinitePositive(GetDouble(numbers, "biome.snow.large.maxRadius", 320d), 320d));
-            SnowPeakMinRadius = FinitePositive(GetDouble(numbers, "biome.snow.peak.minRadius", 12d), 12d);
+                ScaleDistance(FinitePositive(GetDouble(numbers, "biome.snow.large.maxRadius", 320d), 320d),
+                    WorldSpatialDistanceScale, 1d, 4096d));
+            SnowPeakMinRadius = ScaleDistance(FinitePositive(
+                    GetDouble(numbers, "biome.snow.peak.minRadius", 12d), 12d),
+                WorldSpatialDistanceScale, 1d, 1024d);
             SnowPeakMaxRadius = Math.Max(SnowPeakMinRadius,
-                FinitePositive(GetDouble(numbers, "biome.snow.peak.maxRadius", 28d), 28d));
+                ScaleDistance(FinitePositive(GetDouble(numbers, "biome.snow.peak.maxRadius", 28d), 28d),
+                    WorldSpatialDistanceScale, 1d, 1024d));
             SnowPeakMinimumHeight = Math.Max(MountainLevel,
                 Clamp01(GetDouble(numbers, "biome.snow.peak.minimumHeight", 0.78d)));
             SnowGrassDensityMultiplier = Clamp01(
@@ -306,16 +325,6 @@ namespace FlatWorld.WorldModel
             GrasslandMaximumPrecipitation = Math.Max(
                 GrasslandMinimumPrecipitation,
                 Clamp01(GetDouble(numbers, "biome.grassland.maximumPrecipitation", 0.75d)));
-            WorldCoordinateScale = NonNegativeFinite(
-                GetDouble(numbers, "world.coordinateScale", DefaultWorldCoordinateScale),
-                DefaultWorldCoordinateScale);
-            double worldFrequencyScale = WorldCoordinateScale / DefaultWorldCoordinateScale;
-            WorldCoordinateDistanceScale = WorldCoordinateScale <= 0d
-                ? MaximumWorldDistanceScale
-                : Clamp(
-                    DefaultWorldCoordinateScale / WorldCoordinateScale,
-                    MinimumWorldDistanceScale,
-                    MaximumWorldDistanceScale);
             TerrainScale = Positive(
                                GetDouble(numbers, "terrain.noiseScale", 0.0085d),
                                0.0085d) * worldFrequencyScale;
@@ -346,8 +355,9 @@ namespace FlatWorld.WorldModel
             EquatorPeakCelsius = Clamp(Finite(
                 GetDouble(numbers, "climate.equator.peakCelsius", 45d), 45d),
                 EquatorMinimumCelsius, EquatorMaximumCelsius);
-            EquatorSpacingTiles = Math.Max(8d, FinitePositive(
-                GetDouble(numbers, "climate.equator.spacingTiles", 256d), 256d));
+            EquatorSpacingTiles = ScaleDistance(FinitePositive(
+                    GetDouble(numbers, "climate.equator.spacingTiles", 256d), 256d),
+                WorldSpatialDistanceScale, 8d, 4096d);
             RegionalTemperatureVariationCelsius = NonNegativeFinite(
                 GetDouble(numbers, "climate.temperature.regionalVariationCelsius", 2d), 2d);
             RainTemperatureCoolingCelsius = NonNegativeFinite(
@@ -369,17 +379,22 @@ namespace FlatWorld.WorldModel
             // 极圈总宽度默认占地图的 10%，区外冷暖过渡单独限制距离。
             PolarBandHalfWidth = Clamp(Finite(
                 GetDouble(numbers, "climate.polarBand.halfWidth", 0.1d), 0.1d), 0.001d, 1d);
-            PolarBandTransitionTiles = Math.Max(1d, FinitePositive(
-                GetDouble(numbers, "climate.polarBand.transitionTiles", 32d), 32d));
+            PolarBandTransitionTiles = ScaleDistance(FinitePositive(
+                    GetDouble(numbers, "climate.polarBand.transitionTiles", 32d), 32d),
+                WorldSpatialDistanceScale, 1d, 1024d);
             PolarBandTransitionCelsius = Clamp(Finite(
                 GetDouble(numbers, "climate.polarBand.transitionCelsius", 15d), 15d),
                 Math.Min(PolarBandEdgeCelsius, EquatorMinimumCelsius),
                 Math.Max(PolarBandEdgeCelsius, EquatorMaximumCelsius));
-            BiomeTemperatureBlendRadius = Clamp(GetInt(numbers, "climate.temperature.blendRadius", 2), 0, 32);
-            PolarBoundaryOffsetTiles = NonNegativeFinite(
-                GetDouble(numbers, "climate.polarBand.boundary.offsetTiles", 32d), 32d);
-            PolarBoundarySpacingTiles = Math.Max(8d, FinitePositive(
-                GetDouble(numbers, "climate.polarBand.boundary.spacingTiles", 128d), 128d));
+            BiomeTemperatureBlendRadius = ScaleDistance(
+                GetInt(numbers, "climate.temperature.blendRadius", 2),
+                WorldSpatialDistanceScale, 0, 128);
+            PolarBoundaryOffsetTiles = ScaleDistance(NonNegativeFinite(
+                    GetDouble(numbers, "climate.polarBand.boundary.offsetTiles", 32d), 32d),
+                WorldSpatialDistanceScale, 0d, 2048d);
+            PolarBoundarySpacingTiles = ScaleDistance(FinitePositive(
+                    GetDouble(numbers, "climate.polarBand.boundary.spacingTiles", 128d), 128d),
+                WorldSpatialDistanceScale, 8d, 4096d);
             PolarBoundaryDetailStrength = Clamp01(Finite(
                 GetDouble(numbers, "climate.polarBand.boundary.detailStrength", 0.25d), 0.25d));
             TemperatureAltitudeCoolingStart = Clamp01(GetDouble(
@@ -392,11 +407,13 @@ namespace FlatWorld.WorldModel
                 numbers, "terrain.height.secondaryBoostEnabled", true);
             HeightSecondaryBoostStrength = NonNegativeFinite(
                 GetDouble(numbers, "terrain.height.secondaryBoostStrength", 1d), 1d);
-            WindRegionSize = Math.Max(8d, FinitePositive(
-                GetDouble(numbers, "climate.wind.regionSize", 256d), 256d));
+            WindRegionSize = ScaleDistance(FinitePositive(
+                    GetDouble(numbers, "climate.wind.regionSize", 256d), 256d),
+                WorldSpatialDistanceScale, 8d, 8192d);
             WindSeedSalt = GetInt(numbers, "climate.wind.seedSalt", 1779033703);
-            OrographicSampleDistance = Math.Max(8d, FinitePositive(
-                GetDouble(numbers, "climate.orographic.sampleDistance", 64d), 64d));
+            OrographicSampleDistance = ScaleDistance(FinitePositive(
+                    GetDouble(numbers, "climate.orographic.sampleDistance", 64d), 64d),
+                WorldSpatialDistanceScale, 8d, 2048d);
             OrographicSampleCount = Clamp(
                 GetInt(numbers, "climate.orographic.sampleCount", 4), 1, 8);
             WindwardRainGain = NonNegativeFinite(
@@ -408,16 +425,17 @@ namespace FlatWorld.WorldModel
                 GetDouble(numbers, "river.polarSourceChanceMultiplier", 0.05d), 0.05d));
             RiverAlgorithm = ParseRiverAlgorithm(
                 GetText(texts, "river.algorithm", "heightDriven"));
-            RiverHydrologyRegionSize = Clamp(
-                GetInt(numbers, "river.hydrologyRegionSize", 256), 64, 1024);
+            RiverHydrologyRegionSize = ScaleDistance(
+                GetInt(numbers, "river.hydrologyRegionSize", 256),
+                WorldSpatialDistanceScale, 64, 1024);
             RiverRunoffCellSize = ScaleDistance(
                 GetInt(numbers, "river.runoffCellSize", 64),
-                WorldCoordinateDistanceScale,
+                WorldSpatialDistanceScale,
                 16,
                 256);
             int runoffSampleStride = ScaleDistance(
                 GetInt(numbers, "river.runoffSampleStride", 8),
-                WorldCoordinateDistanceScale,
+                WorldSpatialDistanceScale,
                 1,
                 RiverRunoffCellSize);
             while (RiverRunoffCellSize % runoffSampleStride != 0)
@@ -425,12 +443,12 @@ namespace FlatWorld.WorldModel
             RiverRunoffSampleStride = runoffSampleStride;
             RiverMaxTraceSteps = ScaleDistance(
                 GetInt(numbers, "river.maxTraceSteps", 384),
-                WorldCoordinateDistanceScale,
+                WorldSpatialDistanceScale,
                 32,
                 2048);
             RiverMinimumVisibleCourseLength = ScaleDistance(
                 GetInt(numbers, "river.minimumVisibleCourseLength", 96),
-                WorldCoordinateDistanceScale,
+                WorldSpatialDistanceScale,
                 0,
                 RiverMaxTraceSteps);
             RiverInfiltrationFloor = Clamp01(
@@ -442,23 +460,22 @@ namespace FlatWorld.WorldModel
             RiverFullWidthFlow = Math.Max(
                 RiverStartFlow,
                 Positive(GetDouble(numbers, "river.fullWidthFlow", 0.45d), 0.45d));
-            double lateralDistanceScale = Math.Sqrt(WorldCoordinateDistanceScale);
             RiverMaxWidth = ScaleDistance(
-                GetInt(numbers, "river.maxWidth", 7), lateralDistanceScale, 1, 15);
+                GetInt(numbers, "river.maxWidth", 7), WorldSpatialDistanceScale, 1, 64);
             RiverMeanderTieTolerance = Clamp(
                 GetDouble(numbers, "river.meanderTieTolerance", 0d), 0d, 0.02d);
             RiverMeanderStrength = Clamp(
                 GetDouble(numbers, "river.meanderStrength", 0.85d), 0d, 1.5d);
             RiverMeanderScale = Math.Max(8d, FinitePositive(
                 GetDouble(numbers, "river.meanderScale", 48d), 48d) *
-                WorldCoordinateDistanceScale);
+                WorldSpatialDistanceScale);
             RiverValleyDetailWeight = Clamp(
                 GetDouble(numbers, "river.valleyDetailWeight", 4d), 0d, 4d);
             RiverLookAheadWeight = Clamp(
                 GetDouble(numbers, "river.lookAheadWeight", 0.55d), 0d, 0.8d);
             RiverLookAheadDistance = ScaleDistance(
                 GetInt(numbers, "river.lookAheadDistance", 6),
-                WorldCoordinateDistanceScale,
+                WorldSpatialDistanceScale,
                 1,
                 24);
             RiverFloodplainStartFlow = Math.Max(
@@ -466,9 +483,9 @@ namespace FlatWorld.WorldModel
                 Positive(GetDouble(numbers, "river.floodplainStartFlow", 0.14d), 0.14d));
             RiverFloodplainMaxRadius = ScaleDistance(
                 GetInt(numbers, "river.floodplainMaxRadius", 8),
-                lateralDistanceScale,
+                WorldSpatialDistanceScale,
                 0,
-                24);
+                96);
             RiverFloodplainMaxSlope = Positive(
                 GetDouble(numbers, "river.floodplainMaxSlope", 0.08d), 0.08d);
             RiverAlluvialTileThreshold = Clamp01(
@@ -500,10 +517,11 @@ namespace FlatWorld.WorldModel
             RiverDepthMax = Math.Max(
                 RiverDepthMin,
                 Clamp01(GetDouble(numbers, "river.depthMax", 0.9d)));
-            RiverMinLakeCells = Clamp(
-                GetInt(numbers, "river.minLakeCells", 18), 1, 4096);
-            RiverMaxLakeCells = Clamp(
-                GetInt(numbers, "river.maxLakeCells", 220), RiverMinLakeCells, 4096);
+            RiverMinLakeCells = ScaleArea(
+                GetInt(numbers, "river.minLakeCells", 18), WorldSpatialDistanceScale, 1, 4096);
+            RiverMaxLakeCells = ScaleArea(
+                GetInt(numbers, "river.maxLakeCells", 220), WorldSpatialDistanceScale,
+                RiverMinLakeCells, 4096);
             RiverMaxLakeLevelRise = Clamp(
                 GetDouble(numbers, "river.maxLakeLevelRise", 0.045d), 0.001d, 0.25d);
             RiverLakeMinFlow = Positive(
@@ -513,23 +531,31 @@ namespace FlatWorld.WorldModel
             RiverMaxCachedRegions = Clamp(
                 GetInt(numbers, "river.maxCachedRegions", 9), 1, 32);
             LargeLakeEnabled = GetBool(numbers, "lake.large.enabled", true);
-            LargeLakeRegionSize = Clamp(GetInt(numbers, "lake.large.regionSize", 384), 128, 4096);
+            LargeLakeRegionSize = ScaleDistance(GetInt(numbers, "lake.large.regionSize", 384),
+                WorldSpatialDistanceScale, 32, 16384);
             LargeLakeChance = Clamp01(GetDouble(numbers, "lake.large.chance", 0.65d));
-            LargeLakeMinRadius = Clamp(GetDouble(numbers, "lake.large.minRadius", 48d), 16d, 256d);
-            LargeLakeMaxRadius = Clamp(GetDouble(numbers, "lake.large.maxRadius", 104d), LargeLakeMinRadius, 512d);
+            LargeLakeMinRadius = ScaleDistance(GetDouble(numbers, "lake.large.minRadius", 48d),
+                WorldSpatialDistanceScale, 4d, 1024d);
+            LargeLakeMaxRadius = ScaleDistance(GetDouble(numbers, "lake.large.maxRadius", 104d),
+                WorldSpatialDistanceScale, LargeLakeMinRadius, 2048d);
             LargeLakeIslandChance = Clamp01(GetDouble(numbers, "lake.large.islandChance", 0.7d));
             // 旧冻结配置没有显式启用时保持原样；新世界 Profile 决定是否生成火山小湖。
             LavaLakeEnabled = GetBool(numbers, "lake.lava.enabled", false);
-            LavaLakeRegionSize = Clamp(GetInt(numbers, "lake.lava.regionSize", 192), 64, 1024);
+            LavaLakeRegionSize = ScaleDistance(GetInt(numbers, "lake.lava.regionSize", 192),
+                WorldSpatialDistanceScale, 16, 4096);
             LavaLakeChance = Clamp01(GetDouble(numbers, "lake.lava.chance", 0.35d));
-            LavaLakeMinRadius = Clamp(GetDouble(numbers, "lake.lava.minRadius", 3d), 1d, 12d);
-            LavaLakeMaxRadius = Clamp(GetDouble(numbers, "lake.lava.maxRadius", 6d), LavaLakeMinRadius, 16d);
-            LavaLakeRareMaxRadius = Clamp(
-                GetDouble(numbers, "lake.lava.rareMaxRadius", LavaLakeMaxRadius),
+            LavaLakeMinRadius = ScaleDistance(GetDouble(numbers, "lake.lava.minRadius", 3d),
+                WorldSpatialDistanceScale, 0.5d, 48d);
+            LavaLakeMaxRadius = ScaleDistance(GetDouble(numbers, "lake.lava.maxRadius", 6d),
+                WorldSpatialDistanceScale, LavaLakeMinRadius, 64d);
+            LavaLakeRareMaxRadius = ScaleDistance(
+                GetDouble(numbers, "lake.lava.rareMaxRadius", 56d),
+                WorldSpatialDistanceScale,
                 LavaLakeMaxRadius,
-                96d);
+                384d);
             LavaLakeMinimumHeight = Clamp01(GetDouble(numbers, "lake.lava.minimumHeight", 0.74d));
-            LavaLakeShoreWidth = Clamp(GetDouble(numbers, "lake.lava.shoreWidth", 2.5d), 0.5d, 6d);
+            LavaLakeShoreWidth = ScaleDistance(GetDouble(numbers, "lake.lava.shoreWidth", 2.5d),
+                WorldSpatialDistanceScale, 0.25d, 24d);
             GrassDensity = Clamp01(GetDouble(numbers, "grass.density", 0.24d));
             GrassMinimumTemperature = Clamp01(
                 GetDouble(numbers, "grass.minimumTemperature", 0.15d));
@@ -541,43 +567,47 @@ namespace FlatWorld.WorldModel
             GrassMaximumHeight = Clamp01(
                 GetDouble(numbers, "grass.maximumHeight", MountainLevel));
             StructureEnabled = GetBool(numbers, "structure.enabled", true);
-            StructureRegionSize = Math.Max(8, GetInt(numbers, "structure.regionSize", 96));
+            StructureRegionSize = ScaleDistance(GetInt(numbers, "structure.regionSize", 96),
+                WorldSpatialDistanceScale, 8, 4096);
             StructureChance = Clamp01(GetDouble(numbers, "structure.spawnChance", 0.18d));
-            StructureRadius = Clamp(GetInt(numbers, "structure.radius", 2), 1, 12);
+            StructureRadius = ScaleDistance(GetInt(numbers, "structure.radius", 2),
+                WorldSpatialDistanceScale, 1, 48);
             StructureGroundTileId = GetInt(numbers, "structure.groundTileId", SandTileId);
             ResourceSpawnTypeId = GetText(texts, "resource.spawnTypeId",
                 GetText(texts, "entity.spawnTypeId", string.Empty));
             ResourceDensity = Clamp01(GetDouble(numbers, "resource.density",
                 GetDouble(numbers, "entity.spawnCount", 0d) / 256d));
-            ResourceMinSpacing = Clamp(GetInt(numbers, "resource.minSpacing", 5), 1, 64);
+            ResourceMinSpacing = ScaleDistance(GetInt(numbers, "resource.minSpacing", 5),
+                WorldSpatialDistanceScale, 1, 256);
             CaveOpenThreshold = Clamp01(GetDouble(numbers, "cave.openThreshold", 0.52d));
             CaveRegionSize = ScaleDistance(
-                GetInt(numbers, "cave.regionSize", 32), WorldCoordinateDistanceScale, 8, 512);
+                GetInt(numbers, "cave.regionSize", 32), WorldSpatialDistanceScale, 8, 512);
             CaveRoomMinRadius = ScaleDistance(
                 Positive(GetDouble(numbers, "cave.room.minRadius", 3.8d), 3.8d),
-                WorldCoordinateDistanceScale, 0.75d, 128d);
+                WorldSpatialDistanceScale, 0.75d, 128d);
             CaveRoomMaxRadius = Math.Max(
                 CaveRoomMinRadius,
                 ScaleDistance(Positive(
                         GetDouble(numbers, "cave.room.maxRadius", 6.8d), 6.8d),
-                    WorldCoordinateDistanceScale, 0.75d, 128d));
+                    WorldSpatialDistanceScale, 0.75d, 128d));
             CaveTunnelMinRadius = ScaleDistance(Positive(
                     GetDouble(numbers, "cave.tunnel.minRadius", 1.35d), 1.35d),
-                WorldCoordinateDistanceScale, 0.5d, 32d);
+                WorldSpatialDistanceScale, 0.5d, 32d);
             CaveTunnelMaxRadius = Math.Max(
                 CaveTunnelMinRadius,
                 ScaleDistance(Positive(
                         GetDouble(numbers, "cave.tunnel.maxRadius", 2.15d), 2.15d),
-                    WorldCoordinateDistanceScale, 0.5d, 32d));
+                    WorldSpatialDistanceScale, 0.5d, 32d));
             CaveNetworkExtraConnectionChance = Clamp01(GetDouble(
                 numbers, "cave.network.extraConnectionChance", 0.28d));
             CaveBiomeBoundaryHalfWidth = ScaleDistance(NonNegativeFinite(GetDouble(
                     numbers, "cave.biomeBoundary.halfWidth", 1.5d), 1.5d),
-                WorldCoordinateDistanceScale, 0d, 16d);
+                WorldSpatialDistanceScale, 0d, 16d);
             CaveSpawnX = Finite(GetDouble(numbers, "cave.spawn.x", 0.5d), 0.5d);
             CaveSpawnY = Finite(GetDouble(numbers, "cave.spawn.y", 0.5d), 0.5d);
-            CaveSpawnSafeRadius = NonNegativeFinite(
-                GetDouble(numbers, "cave.spawn.safeRadius", 4d), 4d);
+            CaveSpawnSafeRadius = ScaleDistance(NonNegativeFinite(
+                    GetDouble(numbers, "cave.spawn.safeRadius", 4d), 4d),
+                WorldSpatialDistanceScale, 0d, 64d);
             CaveSurfaceOceanWallChance = Clamp01(GetDouble(
                 numbers, "cave.surfaceInfluence.oceanWallChance", 0.85d));
             CaveGroundwaterEnabled = GetBool(numbers, "cave.groundwater.enabled", false);
@@ -599,7 +629,7 @@ namespace FlatWorld.WorldModel
                 GetDouble(numbers, "cave.river.connectionChance", 0.3d));
             CaveRiverHalfWidth = ScaleDistance(Positive(
                     GetDouble(numbers, "cave.river.halfWidth", 0.72d), 0.72d),
-                WorldCoordinateDistanceScale, 0.35d, 4d);
+                WorldSpatialDistanceScale, 0.35d, 16d);
             CaveRiverMinDepth = Clamp01(
                 GetDouble(numbers, "cave.river.minDepth", 0.25d));
             CaveRiverMaxDepth = Math.Max(CaveRiverMinDepth, Clamp01(
@@ -626,8 +656,9 @@ namespace FlatWorld.WorldModel
             CavePortalEnabled = GetBool(numbers, "cave.portal.enabled", true);
             CavePortalChunkChance = Clamp01(
                 GetDouble(numbers, "cave.portal.chunkChance", 0d));
-            CavePortalSafeRadius = Math.Max(1d, Positive(
-                GetDouble(numbers, "cave.portal.safeRadius", 3d), 3d));
+            CavePortalSafeRadius = ScaleDistance(Positive(
+                    GetDouble(numbers, "cave.portal.safeRadius", 3d), 3d),
+                WorldSpatialDistanceScale, 1d, 64d);
             // 为 0 时沿用当前 Profile 的区块尺寸；编辑器连续预览会显式保留正式区块尺寸。
             CavePortalChunkWidth = Math.Max(0,
                 GetInt(numbers, "cave.portal.chunkWidth", 0));
@@ -637,8 +668,9 @@ namespace FlatWorld.WorldModel
             CavePortalSeedSalt = GetInt(numbers, "cave.portal.seedSalt", 7919);
             CavePortalShrubEnabled = GetBool(numbers, "cave.portal.shrub.enabled", true);
             CavePortalShrubItemId = GetText(texts, "cave.portal.shrub.itemId", string.Empty);
-            CavePortalShrubRadius = Clamp(
-                GetInt(numbers, "cave.portal.shrub.radius", 7), 1, 32);
+            CavePortalShrubRadius = ScaleDistance(
+                GetInt(numbers, "cave.portal.shrub.radius", 7),
+                WorldSpatialDistanceScale, 1, 128);
             CavePortalShrubChanceMultiplier = Math.Max(0d, Finite(
                 GetDouble(numbers, "cave.portal.shrub.chanceMultiplier", 64d), 64d));
             CaveResourceDensity = Clamp01(
@@ -782,10 +814,10 @@ namespace FlatWorld.WorldModel
         /// <summary>温带草原默认降水区间，最终规则由 biome.grassland 配置冻结。</summary>
         public double GrasslandMinimumPrecipitation { get; }
         public double GrasslandMaximumPrecipitation { get; }
-        /// <summary>玩家为当前世界选择的坐标倍率；默认 0.01。</summary>
+        /// <summary>玩家为当前世界选择的自然地理空间距离倍率；默认 1x。</summary>
+        public double WorldSpatialDistanceScale { get; }
+        /// <summary>由空间距离倍率反算出的底层程序生成坐标频率；默认 0.01。</summary>
         public double WorldCoordinateScale { get; }
-        /// <summary>坐标倍率换算成格子距离后的反比倍率，限制在 0.25 到 4。</summary>
-        public double WorldCoordinateDistanceScale { get; }
         /// <summary>控制山地变化有多快；数值越小，大片地形通常越平缓。</summary>
         public double TerrainScale { get; }
         /// <summary>控制温度和降水区域变化有多快。</summary>
@@ -1152,20 +1184,28 @@ namespace FlatWorld.WorldModel
         /// <summary>返回正数参数；输入不合法时使用默认值。</summary>
         private static double Positive(double value, double fallback) => value > 0d ? value : fallback;
 
-        /// <summary>距离类参数按世界坐标倍率反向换算，并保留安全上下限。</summary>
+        /// <summary>距离类参数按世界空间距离倍率换算，并保留安全上下限。</summary>
         private static int ScaleDistance(int value, double scale, int min, int max)
         {
             int scaled = (int)Math.Round(value * scale, MidpointRounding.AwayFromZero);
             return Clamp(scaled, min, max);
         }
 
-        /// <summary>浮点距离参数按世界坐标倍率反向换算，并保留安全上下限。</summary>
+        /// <summary>浮点距离参数按世界空间距离倍率换算，并保留安全上下限。</summary>
         private static double ScaleDistance(double value, double scale, double min, double max)
         {
             return Clamp(value * scale, min, max);
         }
 
-        /// <summary>过滤负数和无穷数，保证坐标缩放参数可以安全参与计算。</summary>
+        /// <summary>面积类格子数量按距离倍率平方换算，保持湖泊等二维结构比例。</summary>
+        private static int ScaleArea(int value, double distanceScale, int min, int max)
+        {
+            double areaScale = distanceScale * distanceScale;
+            int scaled = (int)Math.Round(value * areaScale, MidpointRounding.AwayFromZero);
+            return Clamp(scaled, min, max);
+        }
+
+        /// <summary>过滤负数和无穷数，保证空间参数可以安全参与计算。</summary>
         private static double NonNegativeFinite(double value, double fallback)
         {
             return double.IsNaN(value) || double.IsInfinity(value) || value < 0d

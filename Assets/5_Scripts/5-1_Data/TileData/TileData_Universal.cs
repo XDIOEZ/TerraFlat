@@ -15,4 +15,11 @@ public partial class TileData_Universal : TileData
         // 当前没有需要手动深拷贝的引用类型字段，直接 MemberwiseClone 即可。
         return (TileData_Universal)MemberwiseClone();
     }
+
+    public override void CopyFrom(TileData source)
+    {
+        if (source is not TileData_Universal universal)
+            throw new System.InvalidCastException($"TileData_Universal 无法从 {source?.GetType().Name ?? "null"} 复制");
+        CopyBaseFrom(universal);
+    }
 }
