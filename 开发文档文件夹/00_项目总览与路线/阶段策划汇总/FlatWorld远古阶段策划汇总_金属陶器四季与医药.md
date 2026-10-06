@@ -164,7 +164,7 @@
 - 内容与配方：[新增物品](<C:/Users/CatStudio/Desktop/TerraFlat-master/Assets/StreamingAssets/GameConfig/Items/shells/ancient_stage.json>)、[新增制作及加工](<C:/Users/CatStudio/Desktop/TerraFlat-master/Assets/StreamingAssets/GameConfig/Recipes/crafting/ancient_stage.json>)、[工具](<C:/Users/CatStudio/Desktop/TerraFlat-master/Assets/StreamingAssets/GameConfig/Items/shells/tools.json>)、[合金](<C:/Users/CatStudio/Desktop/TerraFlat-master/Assets/StreamingAssets/GameConfig/Recipes/smelting/alloys.json>)。
 - 时间与环境：[日历及历史](<C:/Users/CatStudio/Desktop/TerraFlat-master/Assets/5_Scripts/5-3_GamePlay/World/Time/SeasonCalendar.cs>)、[植物气候补算](<C:/Users/CatStudio/Desktop/TerraFlat-master/Assets/5_Scripts/5-3_GamePlay/World/Planting/PlantClimateTimeline.cs>)、[积雪推进](<C:/Users/CatStudio/Desktop/TerraFlat-master/Assets/5_Scripts/5-3_GamePlay/World/Environment/WeatherMgr.Snow.cs>)。
 - 操作与保存：[水容器](<C:/Users/CatStudio/Desktop/TerraFlat-master/Assets/5_Scripts/5-3_GamePlay/Items/Food/Mod_WaterVessel.cs>)、[水处理](<C:/Users/CatStudio/Desktop/TerraFlat-master/Assets/5_Scripts/5-3_GamePlay/Items/Food/Mod_VesselHeating.cs>)、[平台放置与拆除](<C:/Users/CatStudio/Desktop/TerraFlat-master/Assets/5_Scripts/5-3_GamePlay/World/Building/TileBuildingSystem.GroundPlacement.cs>)。
-- 正式资源装配：[资源装配入口](<C:/Users/CatStudio/Desktop/TerraFlat-master/Assets/Editor/FlatWorld/ContentTools/Items/AncientStageAssetBuilder.cs>)；矿工营地规格见[稳定基地与遗迹探索](<C:/Users/CatStudio/Desktop/TerraFlat-master/开发文档文件夹/AI策划/阶段策划汇总/FlatWorld下一阶段开发指导_稳定基地与遗迹探索.md>)。
+- 正式资源装配：[资源装配入口](<C:/Users/CatStudio/Desktop/TerraFlat-master/Assets/Editor/FlatWorld/ContentTools/Items/AncientStageAssetBuilder.cs>)；矿工营地规格见[稳定基地与遗迹探索](FlatWorld下一阶段开发指导_稳定基地与遗迹探索.md)。
 
 存档外层版本已提升，旧档明确报版本不兼容并停止读取，不迁移、不覆盖旧文件。请新建世界做本轮人工验收，再验证同版本保存恢复。
 

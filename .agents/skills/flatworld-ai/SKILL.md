@@ -14,7 +14,7 @@ description: "Use when: 定位或修改 FlatWorld 的动物、怪物、蜂群、
 - 世界桥：`Entities/AIECS/Gameplay/AiecsEcologyRuntimeHost*.cs`、`AiecsGameplayBridge.cs`。负责正式世界生命周期、蜂巢、存档、旧 Unity 接口输入。
 - 生成：`Entities/AI/Runtime/AiRuntimeBackendService.cs`、`Entities/AI/Spawning/MonsterSpawnerManager.cs`、`Resources/GameConfig/Spawners/Rules/*.json`。
 - 表现：`Entities/AIECS/Presentation/AiecsWorldRenderer.cs`、`AiecsBatchRendererGroup.cs`、`Assets/9_Shaders/Shader/AiecsSpriteLit.shader`。动画目录在 `Assets/6_Art/Generated/Actors/AIECS/`。
-- 设计文档：`开发文档文件夹/待实现功能文件夹/AI_ECS逻辑与GameObject镜像代理架构待办.md`。
+- 设计文档：`开发文档文件夹/02_实体AI与ECS/AI_ECS逻辑与GameObject镜像代理架构待办.md`。
 
 ## 运行边界
 
