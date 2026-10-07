@@ -53,6 +53,6 @@ MonoBehaviour:
   ModData:
     Name: 
     ID: 
-    isRunning: 0
+    Enabled: 1
     Type: 0
     BitData: 

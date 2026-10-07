@@ -52,7 +52,7 @@ MonoBehaviour:
   ModData:
     Name: 
     ID: "FaceMouse\u6A21\u5757"
-    isRunning: 0
+    Enabled: 1
     Type: 0
     BitData: 
   Mod_GameController: {fileID: 0}

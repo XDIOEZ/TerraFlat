@@ -1075,6 +1075,19 @@ public static class FlatWorldContentValidator
                     continue;
                 }
 
+                // 关闭 AI 基础模块会跳过运行态加载，导致行为有目标却无法执行。
+                if (!(pair.Value.Enabled ?? prototype.Enabled) &&
+                    prototype is Mod_Mover_AI or Mod_ItemDetector or Mod_FocusPoint_AI)
+                {
+                    AddWarning(
+                        report,
+                        "FWC-ACTORJSON-004",
+                        ActorManifestAssetPath,
+                        $"{actorField}.modules[{pair.Key}].enabled",
+                        "AI 基础模块已禁用，GameObject 后端不会加载它的运行态或调度更新；请确认 AI 没有依赖此模块。",
+                        prototype);
+                }
+
                 ValidateModuleJsonParameters(
                     context,
                     report,

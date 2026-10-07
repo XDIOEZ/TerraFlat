@@ -74,7 +74,7 @@ MonoBehaviour:
   ModDataMemoryPack:
     Name: 
     ID: 
-    isRunning: 0
+    Enabled: 1
     Type: 0
     BitData: 
   animationController: {fileID: 0}

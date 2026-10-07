@@ -272,7 +272,7 @@
         "detector": {
           "prefab": "Module_Detector",
           "id": "物品检测模块",
-          "enabled": false,
+          "enabled": true,
           "data": {
             "BitData": [],
             "Type": 0
@@ -378,7 +378,7 @@
         "FaceMouse模块": {
           "prefab": "Module_FocusPoint_AI",
           "id": "FaceMouse模块",
-          "enabled": false,
+          "enabled": true,
           "data": {
             "BitData": [],
             "Type": 0
@@ -517,7 +517,7 @@
         "mover": {
           "prefab": "Module_Mover_AI",
           "id": "移动模块",
-          "enabled": false,
+          "enabled": true,
           "data": {
             "BitData": [],
             "Type": 0
@@ -874,7 +874,7 @@
         "detector": {
           "prefab": "Module_Detector",
           "id": "物品检测模块",
-          "enabled": false,
+          "enabled": true,
           "data": {
             "BitData": [],
             "Type": 0
@@ -904,7 +904,7 @@
         "FaceMouse模块": {
           "prefab": "Module_FocusPoint_AI",
           "id": "FaceMouse模块",
-          "enabled": false,
+          "enabled": true,
           "data": {
             "BitData": [],
             "Type": 0
@@ -952,7 +952,7 @@
         "mover": {
           "prefab": "Module_Mover_AI",
           "id": "移动模块",
-          "enabled": false,
+          "enabled": true,
           "data": {
             "BitData": [],
             "Type": 0
@@ -1617,7 +1617,7 @@
         "detector": {
           "prefab": "Module_Detector",
           "id": "物品检测模块",
-          "enabled": false,
+          "enabled": true,
           "data": {
             "BitData": [],
             "Type": 0
@@ -1647,7 +1647,7 @@
         "FaceMouse模块": {
           "prefab": "Module_FocusPoint_AI",
           "id": "FaceMouse模块",
-          "enabled": false,
+          "enabled": true,
           "data": {
             "BitData": [],
             "Type": 0
@@ -1695,7 +1695,7 @@
         "mover": {
           "prefab": "Module_Mover_AI",
           "id": "移动模块",
-          "enabled": false,
+          "enabled": true,
           "data": {
             "BitData": [],
             "Type": 0
