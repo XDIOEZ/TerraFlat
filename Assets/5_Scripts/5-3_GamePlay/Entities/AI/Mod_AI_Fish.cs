@@ -34,7 +34,8 @@ public sealed partial class Mod_AI_Fish : Module, IAIActor, IItemModuleDependenc
     [Min(0.01f)] public float swimSpeed = 1.1f;
     [Min(0.1f)] public float wanderRadius = 3f;
     [Min(0.1f)] public float forageRadius = 8f;
-    [Min(0.05f)] public float eatRange = 0.45f;
+    // 留出水流漂移余量，避免食物稍微移动就打断进食。
+    [Min(0.05f)] public float eatRange = 0.9f;
     [Min(0.1f)] public float eatSeconds = 0.8f;
     [Min(0.1f)] public float scanInterval = 0.5f;
     [Min(0.1f)] public float fleeTriggerDistance = 6f;

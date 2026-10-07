@@ -328,7 +328,7 @@
             "swimSpeed": 1.1,
             "wanderRadius": 3.0,
             "forageRadius": 8.0,
-            "eatRange": 0.45,
+            "eatRange": 0.9,
             "eatSeconds": 0.8,
             "scanInterval": 0.5,
             "fleeTriggerDistance": 6.0,

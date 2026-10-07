@@ -48,7 +48,7 @@ MonoBehaviour:
   swimSpeed: 1.1
   wanderRadius: 3
   forageRadius: 8
-  eatRange: 0.45
+  eatRange: 0.9
   eatSeconds: 0.8
   scanInterval: 0.5
   eatAvailableFoodThreshold: 1
