@@ -12,7 +12,8 @@ description: "Use when: 定位或修改 FlatWorld 的玩家实体、输入系统
 - 交互：同目录 `{Mod_InteractSender,Mod_InteractReciver}.cs`
 - 管理员：`Mod_PlayerAdminController.cs`；移动/相机/焦点：`Entities/Move/`
 - `Mod_PlayerAdminController` 的 Ctrl+F1 用于启用管理员身份；裸 F1 由 `UIManager` 专用于宣传片录制 UI 隐藏。F2 是本地开发用创造背包一键入口：不依赖管理员身份，按下后复用 `Mod_PlayerTraits.InitializeCreativeInventoryForAdmin` 初始化/补充物品，并确保玩家主背包面板打开；已打开的玩家主背包输入锁不能拦截 F2，其它模态输入锁与世界加载仍须拦截，管理员专属的其它快捷键仍保持原有权限门槛。
-- GM 传送由唯一的 `Development/Debug/GMReflectionConsole.Teleport.cs` 消费 T 键和点选入口；不能放回 `Mod_PlayerAdminController.Update`，因为玩家外壳与 Module_Player 均可能挂载管理员模块，且 GM 传送不依赖角色显示名。落点统一交给 `Mod_PlayerTraits.TryTeleportToScreenPosition` 同步刚体、玩家位置和区块加载。聊天框默认由 Enter 打开；由于 Enter 同时用于提交，打开当帧必须抑制一次提交，避免输入框闪开闪关。
+- 玩家层级只保留 `Module_Player` 内的一份 `Mod_PlayerAdminController`，禁止在 Player 根节点重复挂载，否则会冲突 StableName 或重复响应管理员快捷键。
+- GM 传送由唯一的 `Development/Debug/GMReflectionConsole.Teleport.cs` 消费 T 键和点选入口；不能放回 `Mod_PlayerAdminController.Update`，GM 传送不依赖角色显示名。落点统一交给 `Mod_PlayerTraits.TryTeleportToScreenPosition` 同步刚体、玩家位置和区块加载。聊天框默认由 Enter 打开；由于 Enter 同时用于提交，打开当帧必须抑制一次提交，避免输入框闪开闪关。
 - 游戏镜头由 `Mod_Cam` 实例化 `Assets/2_Prefabs/Gameplay/Modules/Camera/Main Camera.prefab`；2D 跟随使用 Cinemachine 2.x `Framing Transposer`，跟随手感优先在该 Prefab 的 Lookahead 与 XY Damping 调整。
 - `Mod_Cam` 与 `Mod_ChunkLoader` 是玩家下的兄弟模块；镜头缩放需要刷新区块窗口时必须经玩家根节点/ItemMods 解析区块加载器，不能只用 `GetComponentInParent<Mod_ChunkLoader>()`，否则大视野变化只能等加载模块下一次 Tick 才被动追上。
 

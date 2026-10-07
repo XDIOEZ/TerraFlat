@@ -2,8 +2,8 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 
 /// <summary>
-/// 管理员相关输入与时间控制逻辑的独立 Mono 脚本。
-/// 挂在与 Player 相同的 GameObject 上，通过引用 Player 来操作玩家数据。
+/// 管理员相关输入与时间控制模块。
+/// 只挂在玩家的 Module_Player 子节点上，通过引用 Player 来操作玩家数据。
 /// </summary>
 public class Mod_PlayerAdminController : Module, IIncomingDamageRule, IIncomingDamageContextRule
 {

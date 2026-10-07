@@ -552,7 +552,6 @@ GameObject:
   - component: {fileID: 27656915510777888}
   - component: {fileID: 7199555808017476116}
   - component: {fileID: 6883143605326503467}
-  - component: {fileID: 4377666045775335801}
   - component: {fileID: 9206547286300101542}
   - component: {fileID: 7130251929038421976}
   - component: {fileID: 8512309475123094751}
@@ -811,39 +810,6 @@ MonoBehaviour:
     Name_User: "\u7BA1\u7406\u5458"
     PlayerPov: 10
     PerceptionRadiusMultiplier: 1
---- !u!114 &4377666045775335801
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4678875130974218576}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c7edb27ca9ef94748848deea627fc92b, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  item: {fileID: 0}
-  player: {fileID: 6883143605326503467}
-  playerTraits: {fileID: 0}
-  hotbar: {fileID: 0}
-  damageReceiver: {fileID: 0}
-  sanMod: {fileID: 0}
-  foodMod: {fileID: 0}
-  staminaMod: {fileID: 0}
-  adminCamera: {fileID: 0}
-  chunkLoader: {fileID: 0}
-  timeScale: 1
-  timeScaleStep: 0.5
-  minTimeScale: 0.1
-  maxTimeScale: 10
-  timeScaleHintDuration: 1
-  ModSaveData:
-    Name: 
-    ID: 
-    isRunning: 1
-    Type: 0
-    BitData: 
 --- !u!114 &9206547286300101542
 MonoBehaviour:
   m_ObjectHideFlags: 0
