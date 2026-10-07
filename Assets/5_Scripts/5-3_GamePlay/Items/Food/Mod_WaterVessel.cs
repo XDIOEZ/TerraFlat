@@ -57,7 +57,7 @@ public sealed class Mod_WaterVessel : Module, IInteractable, ILiquidVessel
     }
 
     /// <summary>恢复容器状态并绑定统一使用入口。</summary>
-    public override void Load()
+    protected override void OnLoad()
     {
         ModData.ReadData(ref Data);
         Data ??= new LiquidContainerState();
@@ -74,7 +74,7 @@ public sealed class Mod_WaterVessel : Module, IInteractable, ILiquidVessel
     }
 
     /// <summary>写入液体身份、数量与加工进度。</summary>
-    public override void Save()
+    protected override void OnSave()
     {
         NormalizeStoredAmount(Data);
         Validate(Data, capacity);
@@ -82,7 +82,7 @@ public sealed class Mod_WaterVessel : Module, IInteractable, ILiquidVessel
     }
 
     /// <summary>解除池化前的动作和视图订阅。</summary>
-    public override void Unload()
+    protected override void OnUnload()
     {
         if (actionBound && item != null) item.OnAct -= Act;
         actionBound = false;

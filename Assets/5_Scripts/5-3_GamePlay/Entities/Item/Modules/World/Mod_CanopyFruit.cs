@@ -60,7 +60,7 @@ public sealed partial class Mod_CanopyFruit : Module, INaturalResourceInitialize
     }
 
     /// <summary>只恢复状态和订阅，不在模块 Load 栈内生成掉落。</summary>
-    public override void Load()
+    protected override void OnLoad()
     {
         Settings.Validate();
         if (BluntDamage < 0 || float.IsNaN(BluntDamage) || float.IsInfinity(BluntDamage) ||
@@ -76,10 +76,10 @@ public sealed partial class Mod_CanopyFruit : Module, INaturalResourceInitialize
     }
 
     /// <summary>保存不可变字符串快照；不推进、不解绑、不产生副作用。</summary>
-    public override void Save() => ModData.WriteData(state);
+    protected override void OnSave() => ModData.WriteData(state);
 
     /// <summary>卸载只销毁视觉，未落地轨迹随树的模块快照保留，加载后补算。</summary>
-    public override void Unload()
+    protected override void OnUnload()
     {
         if (receiver != null) receiver.DeathStarted -= HandleDeath;
         foreach (SpriteRenderer visual in visuals.Values)

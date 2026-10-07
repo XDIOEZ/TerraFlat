@@ -91,7 +91,7 @@ public partial class Mod_PlayerDeathState : Module
         _Data.ID = ModuleId;
     }
 
-    public override void Load()
+    protected override void OnLoad()
     {
         ModData.ReadData(ref Data);
 
@@ -134,13 +134,13 @@ public partial class Mod_PlayerDeathState : Module
         GameManager.Event_LocalPlayerRuntimeReloaded += RestoreDyingStateOnWorldEnter;
     }
 
-    public override void Save()
+    protected override void OnSave()
     {
         ModData.WriteData(Data);
         item.itemData.ModuleDataDic[_Data.Name] = ModData;
     }
 
-    public override void Unload()
+    protected override void OnUnload()
     {
         GameManager.Event_PlayerEnterWorld -= RestoreDyingStateOnWorldEnter;
         GameManager.Event_LocalPlayerRuntimeReloaded -= RestoreDyingStateOnWorldEnter;

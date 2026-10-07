@@ -16,13 +16,13 @@ public class Mod_DebugInfo : Module, IInstanceUI
     [Header("调试信息")]
     public List<string> DebugInfo = new List<string>();
 
-    public override void Load()
+    protected override void OnLoad()
     {
         // 如需加载调试信息，可在这里处理。
        
     }
 
-    public override void Save()
+    protected override void OnSave()
     {
         // 如需保存调试信息，可在这里处理。
     }

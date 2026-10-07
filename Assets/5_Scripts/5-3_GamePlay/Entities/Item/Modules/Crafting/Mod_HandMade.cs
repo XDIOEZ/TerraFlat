@@ -62,8 +62,7 @@ public class Mod_HandMade : Module,IInventory
         }
     }
 
-    [Button]
-    public override void Load()
+    protected override void OnLoad()
     {
         //初始化库存
         InitializeInventories();
@@ -73,7 +72,7 @@ public class Mod_HandMade : Module,IInventory
         RestorePanelPosition();
     }
 
-    public override void Save()
+    protected override void OnSave()
     {
         SavePanelPosition();
         item.itemData.ModuleDataDic[_Data.Name] = _Data;
@@ -84,7 +83,7 @@ public class Mod_HandMade : Module,IInventory
         Unload();
     }
 
-    public override void Unload()
+    protected override void OnUnload()
     {
         CleanupEventListeners();
     }

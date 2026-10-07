@@ -93,7 +93,7 @@ public sealed class Mod_Collectable : Module, IInteractable, IItemPoolLifecycle,
         EnsureIndicatorRenderers();
     }
 
-    public override void Load()
+    protected override void OnLoad()
     {
         EnsureConfiguration();
         EnsureDataContainer();
@@ -110,13 +110,13 @@ public sealed class Mod_Collectable : Module, IInteractable, IItemPoolLifecycle,
         RefreshIndicatorPresentation();
     }
 
-    public override void Save()
+    protected override void OnSave()
     {
         EnsureDataContainer();
         Data.CurrentStock = Mathf.Clamp(Data.CurrentStock, 0, Mathf.Max(1, MaxStock));
     }
 
-    public override void Unload()
+    protected override void OnUnload()
     {
         if (cropModule != null)
             cropModule.Matured -= HandleCropMatured;

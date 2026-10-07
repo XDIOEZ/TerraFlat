@@ -62,7 +62,7 @@ public sealed class Mod_FuelInteraction : Module, IInteractable, IItemModuleDepe
 
     #region 生命周期与交互
 
-    public override void Load()
+    protected override void OnLoad()
     {
         ValidateDependencies();
         item.OnAct -= Act;
@@ -71,11 +71,11 @@ public sealed class Mod_FuelInteraction : Module, IInteractable, IItemModuleDepe
         combustion.Changed += HandleStateChanged;
     }
 
-    public override void Save()
+    protected override void OnSave()
     {
     }
 
-    public override void Unload()
+    protected override void OnUnload()
     {
         if (item != null)
             item.OnAct -= Act;

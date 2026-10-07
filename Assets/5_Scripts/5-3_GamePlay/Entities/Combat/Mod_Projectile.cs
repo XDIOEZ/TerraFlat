@@ -125,7 +125,7 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
     }
 
     /// <summary>初始化待发射状态，并关闭伤害窗口。</summary>
-    public override void Load()
+    protected override void OnLoad()
     {
         if (_damage == null)
             throw new MissingComponentException($"{name} 缺少 Mod_Damage 依赖。");
@@ -155,7 +155,7 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
     }
 
     /// <summary>投射物没有额外持久化运行态。</summary>
-    public override void Save()
+    protected override void OnSave()
     {
     }
 
@@ -199,7 +199,7 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
     }
 
     /// <summary>解除伤害事件，防止对象池复用后重复订阅。</summary>
-    public override void Unload()
+    protected override void OnUnload()
     {
         _damage?.SetDeliveryCapabilities(FlatWorld.Combat.CombatDeliveryCapabilities.None);
         if (_damage != null)

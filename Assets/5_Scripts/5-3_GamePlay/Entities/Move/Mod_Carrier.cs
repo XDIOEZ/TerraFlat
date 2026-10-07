@@ -67,7 +67,7 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, IInteractable, I
     }
 
     /// <summary>只恢复空座位，不迁移任何启动资产或旧存档。</summary>
-    public override void Load()
+    protected override void OnLoad()
     {
         if (!(MaxSpeed > 0 && BoostSpeedMultiplier >= 1f && Acceleration > 0 && Braking > 0 && FacingTurnSpeed > 0 && Radius > 0) ||
             !(LandSpeedMultiplier > 0f && LandSpeedMultiplier <= 1f) ||
@@ -100,10 +100,10 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, IInteractable, I
     }
 
     /// <summary>保存版本标记，不保存乘员引用、油门或瞬时速度。</summary>
-    public override void Save() => Data.WriteData(new CarrierSaveState());
+    protected override void OnSave() => Data.WriteData(new CarrierSaveState());
 
     /// <summary>源回收前释放乘员的刚体与环境租约。</summary>
-    public override void Unload()
+    protected override void OnUnload()
     {
         SuspendRuntimeSources();
         loaded = false;

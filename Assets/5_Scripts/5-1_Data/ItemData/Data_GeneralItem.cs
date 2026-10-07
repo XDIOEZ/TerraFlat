@@ -6,5 +6,5 @@ using NaughtyAttributes;
 [System.Serializable]
 public partial class Data_GeneralItem : ItemData
 {
-    public string code;
+    [MemoryPackIgnore] public string code;
 }

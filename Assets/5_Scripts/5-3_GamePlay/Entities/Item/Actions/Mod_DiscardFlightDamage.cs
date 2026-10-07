@@ -57,7 +57,7 @@ public sealed class Mod_DiscardFlightDamage : Module, IItemModuleDependencyBinde
 
     #region Module 生命周期
 
-    public override void Load()
+    protected override void OnLoad()
     {
         if (damageModule == null)
             throw new MissingComponentException($"{name} 缺少 Mod_Damage 依赖。");
@@ -70,11 +70,11 @@ public sealed class Mod_DiscardFlightDamage : Module, IItemModuleDependencyBinde
         damageModule.SetIdleTickSuppressed(true);
     }
 
-    public override void Save()
+    protected override void OnSave()
     {
     }
 
-    public override void Unload()
+    protected override void OnUnload()
     {
         if (damageModule != null)
         {

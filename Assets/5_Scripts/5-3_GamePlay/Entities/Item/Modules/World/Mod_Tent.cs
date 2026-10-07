@@ -91,19 +91,19 @@ public class Mod_Tent : Module, IInteractable
     }
 
     /// <summary>帐篷没有持续运行态，加载时只校正模块数据。</summary>
-    public override void Load()
+    protected override void OnLoad()
     {
         EnsureModuleData();
     }
 
     /// <summary>帐篷当前没有额外持久化状态。</summary>
-    public override void Save()
+    protected override void OnSave()
     {
         EnsureModuleData();
     }
 
     /// <summary>回收模块时释放输入锁、时间倍率与临时睡眠面板。</summary>
-    public override void Unload()
+    protected override void OnUnload()
     {
         if (sleepingRoutine != null)
             StopCoroutine(sleepingRoutine);

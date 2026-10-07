@@ -7,7 +7,7 @@ using UnityEngine;
 [MemoryPackable]
 public partial class Mod_EquipmentSaveData
 {
-    public Inventory_Data EquipmentInventoryData;
+    public InventoryInstanceSnapshot EquipmentInventoryData;
     public List<List<EquipmentInstance>> EquipmentInstances;
 }
 
@@ -61,9 +61,10 @@ public class Mod_Equipment : Module, IInventory, IInteractable, IInstanceUI
         base.Awake();
     }
 
-    public override void Load()
+    protected override void OnLoad()
     {
         EquipmentInventory ??= new Inventory_Equipment();
+        EquipmentInventory.EnsureSlotSchema();
         LoadSaveDataFromModule();
 
         // 设置所有者
@@ -104,7 +105,7 @@ public class Mod_Equipment : Module, IInventory, IInteractable, IInstanceUI
         Unload();
     }
 
-    public override void Unload()
+    protected override void OnUnload()
     {
         if (EquipmentInventory?.Data != null)
             EquipmentInventory.Data.Event_OnDataChanged_TwoSlots -= UpdateEquipment;
@@ -112,7 +113,7 @@ public class Mod_Equipment : Module, IInventory, IInteractable, IInstanceUI
         UnbindOpenPanelTrigger();
     }
 
-    public override void Save()
+    protected override void OnSave()
     {
         // 保存面板状态与位置
         var panel = EquipmentInventory.basePanel;
@@ -136,7 +137,7 @@ public class Mod_Equipment : Module, IInventory, IInteractable, IInstanceUI
 
         var saveData = new Mod_EquipmentSaveData
         {
-            EquipmentInventoryData = EquipmentInventory.Data,
+            EquipmentInventoryData = InventoryInstanceSnapshot.Capture(EquipmentInventory.Data),
             EquipmentInstances = equipment_Instances
         };
         ModSaveData.WriteData(saveData);
@@ -397,28 +398,16 @@ public class Mod_Equipment : Module, IInventory, IInteractable, IInstanceUI
 
     void LoadSaveDataFromModule()
     {
-        try
-        {
-            Mod_EquipmentSaveData saveData = null;
-            ModSaveData.ReadData(ref saveData);
+        Mod_EquipmentSaveData saveData = null;
+        ModSaveData.ReadData(ref saveData);
+        if (saveData == null) return;
 
-            if (saveData != null)
-            {
-                if (saveData.EquipmentInventoryData != null)
-                    EquipmentInventory.Data = saveData.EquipmentInventoryData;
-
-                if (saveData.EquipmentInstances != null)
-                    equipment_Instances = saveData.EquipmentInstances;
-
-                return;
-            }
-        }
-        catch
-        {
-            // 兼容旧版：旧版仅保存装备实例列表
-        }
-
-        ModSaveData.ReadData(ref equipment_Instances);
+        // 装备恢复复用当前布局和同一物品引用，只有冷快照补接当前定义。
+        saveData.EquipmentInventoryData?.RestoreTo(EquipmentInventory.Data,
+            data => data.SharedConfiguration == null
+                ? ItemDefinitionRuntime.RebasePersistedData(GameRes.ExistingInstance, data) : data);
+        if (saveData.EquipmentInstances != null)
+            equipment_Instances = saveData.EquipmentInstances;
     }
 
     void EnsureEquipmentListSize()

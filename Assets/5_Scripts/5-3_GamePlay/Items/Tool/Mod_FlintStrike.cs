@@ -59,7 +59,7 @@ public class Mod_FlintStrike : Module, IInteractable
         }
     }
 
-    public override void Load()
+    protected override void OnLoad()
     {
         ModSaveData.ReadData(ref RawData);
         EnsureRuntimeDefaults();
@@ -69,12 +69,12 @@ public class Mod_FlintStrike : Module, IInteractable
         BindInteractEvents();
     }
 
-    public override void Save()
+    protected override void OnSave()
     {
         ModSaveData.WriteData(RawData);
     }
 
-    public override void Unload()
+    protected override void OnUnload()
     {
         UnbindItemActEvent();
         UnbindInteractEvents();

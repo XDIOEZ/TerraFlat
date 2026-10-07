@@ -52,11 +52,11 @@ public class Mod_InteractReciver : Module, IInteractable
 
     }
 
-    public override void Load()
+    protected override void OnLoad()
     {
     }
 
-    public override void Save()
+    protected override void OnSave()
     {
     }
 

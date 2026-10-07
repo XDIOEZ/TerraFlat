@@ -36,7 +36,7 @@ public partial class Mod_UI_CanvasManager : Module, IInstanceUI
     #endregion
 
     #region Unity生命周期
-    public override void Load()
+    protected override void OnLoad()
     {
         exData.ReadData(ref canvasPanelState);
 
@@ -106,8 +106,7 @@ public partial class Mod_UI_CanvasManager : Module, IInstanceUI
         SyncAllButtonVisuals();
     }
 
-    [Button("保存")]
-    public override void Save()
+    protected override void OnSave()
     {
         // 清理之前状态，防止重复/冲突
         canvasPanelState.canvasPanelboolStates.Clear();

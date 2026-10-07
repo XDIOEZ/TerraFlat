@@ -123,7 +123,7 @@ public partial class Mod_ColdWeapon : Module
             _Data.ID = ModText.ColdWeapon;
     }
 
-    public override void Load()
+    protected override void OnLoad()
     {
         Data.ReadData(ref weaponData);
 
@@ -161,13 +161,13 @@ public partial class Mod_ColdWeapon : Module
         ApplyObserverState();
     }
 
-    public override void Save()
+    protected override void OnSave()
     {
         weaponData.ObserverState = BuildObserverState();
         Data.WriteData(weaponData);
     }
 
-    public override void Unload()
+    protected override void OnUnload()
     {
         if (cachedController != null)
         {

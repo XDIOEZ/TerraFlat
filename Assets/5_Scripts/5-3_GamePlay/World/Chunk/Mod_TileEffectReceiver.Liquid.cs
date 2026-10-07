@@ -139,11 +139,11 @@ public partial class Mod_TileEffectReceiver
         finally { groundCallback = false; }
     }
 
-    public override void Unload()
+    protected override void OnUnload()
     {
         PrepareForWorldTransition();
         effectSuppressors.Clear();
-        base.Unload();
+        base.OnUnload();
     }
     #endregion
 }

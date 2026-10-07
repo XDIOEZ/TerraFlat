@@ -70,22 +70,22 @@ public partial class Mod_Oxygen : Module
             _Data.ID = ModuleId;
     }
 
-    public override void Load()
+    protected override void OnLoad()
     {
         modData.ReadData(ref Data);
         NormalizeData();
         ResetWaterExposureState();
     }
 
-    public override void Save()
+    protected override void OnSave()
     {
         modData.WriteData(Data);
     }
 
-    public override void Unload()
+    protected override void OnUnload()
     {
         ResetWaterExposureState();
-        base.Unload();
+        base.OnUnload();
     }
 
     #endregion

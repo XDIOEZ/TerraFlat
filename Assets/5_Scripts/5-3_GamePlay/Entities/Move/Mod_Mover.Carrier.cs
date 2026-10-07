@@ -177,6 +177,6 @@ public partial class Mod_Mover
         ApplyCarrierPosition(CarrierSource.SeatPosition);
     }
     private void OnDisable() => ReleaseCarrierLease();
-    public override void Unload() => ReleaseCarrierLease();
+    protected override void OnUnload() => ReleaseCarrierLease();
     #endregion
 }

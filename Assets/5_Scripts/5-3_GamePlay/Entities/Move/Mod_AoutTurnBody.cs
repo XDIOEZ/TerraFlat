@@ -6,9 +6,9 @@ using UnityEngine;
 public class Mod_AoutTurnBody : Mod_TurnBack
 {
     public Mod_Mover mover;
-    public override void Load()
+    protected override void OnLoad()
     {
-        base.Load();
+        base.OnLoad();
         mover = item.Mods[ModText.Mod_Mover] as Mod_Mover;
     }
     public override void ModUpdate(float delta)

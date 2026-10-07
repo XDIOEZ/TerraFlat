@@ -233,7 +233,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
             _Data.ID = ModText.Building;
     }
 
-    public override void Load()
+    protected override void OnLoad()
     {
         UnbindPlacementRotationInput();
         _placementRequested = false;
@@ -254,7 +254,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
         SyncRuntimeState();
     }
 
-    public override void Save()
+    protected override void OnSave()
     {
         if (BuildingData == null || item?.itemData?.ModuleDataDic == null)
             return;

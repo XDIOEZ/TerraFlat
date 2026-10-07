@@ -26,13 +26,13 @@ public abstract class Mod_GroundHarvestToolBase : Mod_ResourceToolBase, IItemMod
             ? modules.RequireSingleCapability<IWeaponActionAnimation>() : null;
     }
 
-    public override void Load()
+    protected override void OnLoad()
     {
-        base.Load();
+        base.OnLoad();
         BindAct();
     }
 
-    public override void Unload()
+    protected override void OnUnload()
     {
         if (actBound && item != null)
             item.OnAct -= Act;

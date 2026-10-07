@@ -62,9 +62,9 @@ public class Mod_DiscardItem : Mod_BaseDroper
     {
         _Data.ID = ModText.ItemDorper;
     }
-    public override void Load()
+    protected override void OnLoad()
     {
-        base.Load();
+        base.OnLoad();
 
         faceMouse = item.itemMods.GetMod_ByID(ModText.FocusPoint).GetComponent<Mod_FocusPoint>();
 

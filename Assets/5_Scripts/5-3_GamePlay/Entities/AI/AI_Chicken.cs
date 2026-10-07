@@ -214,7 +214,7 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 	#endregion
 
 	#region Lifecycle
-	public override void Load()
+	protected override void OnLoad()
 	{
 		_worldSceneHandle = int.MinValue;
 		Data ??= new AI_ChickenSaveData();
@@ -228,15 +228,15 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 		BindEggWorldTime();
 	}
 
-	public override void Unload()
+	protected override void OnUnload()
 	{
 		UnbindEggWorldTime();
 		_worldSceneHandle = int.MinValue;
 		_worldSceneName = null;
-		base.Unload();
+		base.OnUnload();
 	}
 
-	public override void Save()
+	protected override void OnSave()
 	{
 		Data.State = _currentState;
 		ModData.WriteData(Data);

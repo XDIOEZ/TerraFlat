@@ -59,7 +59,7 @@ public class Mod_Inventory : Module, IInventory, IInstanceUI, IInteractable
         }
     }
 
-    public override void Load()
+    protected override void OnLoad()
     {
         Data ??= new Inventory_ModuleData();
         Data.Data ??= new Dictionary<string, Inventory_Data>();
@@ -96,7 +96,10 @@ public class Mod_Inventory : Module, IInventory, IInstanceUI, IInteractable
             if (Data.Data.TryGetValue(inventoryId, out Inventory_Data savedInventoryData) &&
                 savedInventoryData != null)
             {
-                currentInventory.Data = savedInventoryData;
+                InventoryInstanceSnapshot.Capture(savedInventoryData).RestoreTo(currentInventory.Data,
+                    data => data.SharedConfiguration == null
+                        ? ItemDefinitionRuntime.RebasePersistedData(GameRes.ExistingInstance, data) : data);
+                Data.Data[inventoryId] = currentInventory.Data;
             }
             else
             {
@@ -159,7 +162,7 @@ public class Mod_Inventory : Module, IInventory, IInstanceUI, IInteractable
     }
 
     /// <summary>卸载容器时解除旧交互桥接并清理临时转移目标。</summary>
-    public override void Unload()
+    protected override void OnUnload()
     {
         UnbindInteractionReceiver();
 
@@ -376,8 +379,7 @@ public class Mod_Inventory : Module, IInventory, IInstanceUI, IInteractable
 
     #region 保存方法
 
-    [Button]
-    public override void Save()
+    protected override void OnSave()
     {
         Data ??= new Inventory_ModuleData();
         Data.Data ??= new Dictionary<string, Inventory_Data>();
@@ -566,7 +568,10 @@ public static class InventoryModuleDataPersistence
         if (!source.Data.TryGetValue(key, out Inventory_Data savedData) || savedData == null)
             return false;
 
-        target.Data = savedData;
+        InventoryInstanceSnapshot.Capture(savedData).RestoreTo(target.Data,
+            data => data.SharedConfiguration == null
+                ? ItemDefinitionRuntime.RebasePersistedData(GameRes.ExistingInstance, data) : data);
+        source.Data[key] = target.Data;
         return true;
     }
 

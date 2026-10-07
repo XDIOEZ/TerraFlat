@@ -57,7 +57,7 @@ public partial class Mod_BuffManager : Module
             Debug.LogWarning("[BuffManager] 找不到父级 Item。", this);
     }
 
-    public override void Load()
+    protected override void OnLoad()
     {
         ResetWaterStackClock();
         ClearAllBuffs();
@@ -97,7 +97,7 @@ public partial class Mod_BuffManager : Module
         BindFoodEvents();
     }
 
-    public override void Save()
+    protected override void OnSave()
     {
         if (ModData == null)
         {
@@ -119,7 +119,7 @@ public partial class Mod_BuffManager : Module
         Unload();
     }
 
-    public override void Unload()
+    protected override void OnUnload()
     {
         ResetWaterStackClock();
         ClearAllBuffs();

@@ -241,7 +241,20 @@ public partial class GameRes : SingletonAutoMono<GameRes>
             if (TryGetItemDefinition(prefab, out RuntimeItemDefinition definition) &&
                 obj.TryGetComponent(out Item item))
             {
-                ItemDefinitionRuntime.ConfigureInstance(this, definition, item, definition.CreateItemData());
+                try
+                {
+                    ItemDefinitionRuntime.ConfigureInstance(this, definition, item, definition.CreateItemData());
+                }
+                catch
+                {
+                    // 工厂尚未返回时也要撤销半实例，调用方此时拿不到外壳来执行清理。
+                    try { ItemMgr.GetInstance()?.NotifyRuntimeItemDestroyed(item); }
+                    catch (System.Exception exception) { Debug.LogException(exception, item); }
+                    try { item.PrepareForDespawn(saveData: false); }
+                    catch (System.Exception exception) { Debug.LogException(exception, item); }
+                    Destroy(obj);
+                    throw;
+                }
             }
 
             return obj;

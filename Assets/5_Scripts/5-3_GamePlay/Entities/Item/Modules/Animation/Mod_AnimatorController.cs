@@ -19,7 +19,7 @@ public class Mod_AnimatorController : Module, ITrunDirection
         _Data.ID = ModText.AnimatorReceiver;
     }
 
-    public override void Load()
+    protected override void OnLoad()
     {
         if (animator == null)
         {
@@ -30,7 +30,7 @@ public class Mod_AnimatorController : Module, ITrunDirection
       //  throw new System.NotImplementedException();
     }
 
-    public override void Save()
+    protected override void OnSave()
     {
        // throw new System.NotImplementedException();
     }

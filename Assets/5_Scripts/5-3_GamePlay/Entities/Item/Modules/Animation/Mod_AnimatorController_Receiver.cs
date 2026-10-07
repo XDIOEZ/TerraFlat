@@ -104,9 +104,9 @@ public class Mod_AnimatorController_Receiver : Mod_AnimatorController
 
 
 
-    public override void Load()
+    protected override void OnLoad()
     {
-        base.Load();
+        base.OnLoad();
 
         if (targetSpriteRenderer == null)
         {
@@ -131,7 +131,7 @@ public class Mod_AnimatorController_Receiver : Mod_AnimatorController
         lastIsAttacking = IsAttacking;
     }
 
-    public override void Save()
+    protected override void OnSave()
     {
     }
     

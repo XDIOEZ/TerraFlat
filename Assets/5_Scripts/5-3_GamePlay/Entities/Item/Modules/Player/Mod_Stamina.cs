@@ -64,7 +64,7 @@ public partial class Mod_Stamina : Module, IItemModuleDependencyBinder
             _Data.ID = ModText.Stamina;
         }
     }
-    public override void Load()
+    protected override void OnLoad()
     {
         modData.ReadData(ref Data);
 
@@ -93,13 +93,13 @@ public partial class Mod_Stamina : Module, IItemModuleDependencyBinder
         UpdateSlider();
     }
 
-    public override void Save()
+    protected override void OnSave()
     {
         modData.WriteData(Data);
     }
 
     #region 体力面板生命周期
-    public override void Unload()
+    protected override void OnUnload()
     {
         if (staminaPanel != null)
         {

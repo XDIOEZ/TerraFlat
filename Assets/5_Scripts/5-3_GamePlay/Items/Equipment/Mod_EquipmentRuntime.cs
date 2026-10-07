@@ -40,7 +40,7 @@ public class Mod_EquipmentRuntime : Module
         }
     }
 
-    public override void Load()
+    protected override void OnLoad()
     {
 
         Equipment_inventory.InitData();
@@ -207,7 +207,7 @@ public class Mod_EquipmentRuntime : Module
             }
         }
     }
-    public override void Save()
+    protected override void OnSave()
     {
         // 先把每个槽位当前的装备实例列表写回到各自的装备模块数据
         SaveAllEquipmentModuleData();
@@ -217,7 +217,7 @@ public class Mod_EquipmentRuntime : Module
 
     }
 
-    public override void Unload()
+    protected override void OnUnload()
     {
         if (Equipment_inventory?.Data != null)
             Equipment_inventory.Data.Event_OnDataChanged_TwoSlots -= UpdateEquipment;

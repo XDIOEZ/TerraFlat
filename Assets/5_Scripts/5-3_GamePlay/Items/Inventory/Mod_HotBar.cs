@@ -207,14 +207,13 @@ public class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
         RuntimeInventory?.OnValidate();
     }
 
-    public override void Load()
+    protected override void OnLoad()
     {
         runtimeUnloading = false;
         heldItemSyncPending = true;
         EnsureRuntimeInventoryBinding();
 
-        // 旧版本只保存 RawData；新版本将真实快捷栏库存与选中格写入 ModuleData。
-        // 无法读取新格式时保留 Prefab/旧存档中的原始数据。
+        // 实例快照恢复到当前快捷栏布局，不替换已绑定的库存与物品引用。
         bool restoredSavedState = TryRestoreSavedState();
 
         if (RuntimeInventory == null)
@@ -235,7 +234,7 @@ public class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
         BindInventoryController();
     }
 
-    public override void Save()
+    protected override void OnSave()
     {
         EnsureRuntimeInventoryBinding();
         // 手持模块先提交实时进度，玩家快照不能早于食用、容器和武器状态的保存。
@@ -244,7 +243,7 @@ public class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
         ModSaveData.WriteData(new InventoryHotBarSaveState
         {
             Version = InventoryHotBarSaveState.CurrentVersion,
-            Inventory = RuntimeInventory?.Data
+            Inventory = InventoryInstanceSnapshot.Capture(RuntimeInventory?.Data)
         });
 
         if (item?.itemData != null && !string.IsNullOrEmpty(_Data.Name))
@@ -252,7 +251,7 @@ public class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
     }
 
     /// <summary>卸载和对象回池共用完整清理，不能等到 OnDestroy 才解除手持物与输入。</summary>
-    public override void Unload()
+    protected override void OnUnload()
     {
         if (runtimeUnloading) return;
         runtimeUnloading = true;
@@ -285,15 +284,29 @@ public class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
         if (data is not Ex_ModData_MemoryPackable networkData)
             return;
 
-        ModSaveData = networkData;
+        Item owner = item;
+        ItemData ownerData = owner?.itemData;
+        if (owner == null || ownerData == null) return;
+        uint ownerGeneration = owner.RuntimeGeneration;
+        uint moduleGeneration = RuntimeGeneration;
+        BindSnapshotData(owner, networkData, ownerData);
+        Item heldBefore = CurentSelectItem;
+        ItemNetworkStateSerialization.RuntimeStateBaseline heldBaseline = heldBefore == null ? null :
+            ItemNetworkStateSerialization.CaptureRuntimeStateBaseline(heldBefore);
         EnsureRuntimeInventoryBinding();
         if (!TryRestoreSavedState())
             return;
+        if (!IsCurrentNetworkBinding(owner, ownerData, networkData, ownerGeneration, moduleGeneration)) return;
 
         EnsureHotBarSlots();
-        RuntimeInventory.item = item;
+        RuntimeInventory.item = owner;
         RuntimeInventory.InitData();
+        if (!IsCurrentNetworkBinding(owner, ownerData, networkData, ownerGeneration, moduleGeneration)) return;
         SyncCurrentHeldItemWithSlot();
+        if (!IsCurrentNetworkBinding(owner, ownerData, networkData, ownerGeneration, moduleGeneration)) return;
+        if (heldBaseline != null && ReferenceEquals(heldBefore, CurentSelectItem) &&
+            !ItemNetworkStateSerialization.ApplyMergedRuntimeStates(heldBefore, heldBaseline, true)) return;
+        if (!IsCurrentNetworkBinding(owner, ownerData, networkData, ownerGeneration, moduleGeneration)) return;
         RefreshUI();
     }
 
@@ -305,37 +318,76 @@ public class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
         if (owner == null || data is not Ex_ModData_MemoryPackable networkData)
             return;
 
+        ItemData ownerData = owner.itemData;
+        if (ownerData == null) return;
+        uint ownerGeneration = owner.RuntimeGeneration;
+        uint moduleGeneration = RuntimeGeneration;
         runtimeUnloading = false;
-        ModuleInit(owner, networkData, owner.itemData);
-        ModSaveData = networkData;
+        BindSnapshotData(owner, networkData, ownerData);
+        Item heldBefore = CurentSelectItem;
+        ItemNetworkStateSerialization.RuntimeStateBaseline heldBaseline = heldBefore == null ? null :
+            ItemNetworkStateSerialization.CaptureRuntimeStateBaseline(heldBefore);
         EnsureRuntimeInventoryBinding();
         if (!TryRestoreSavedState())
             return;
+        if (!IsCurrentNetworkBinding(owner, ownerData, networkData, ownerGeneration, moduleGeneration)) return;
 
         EnsureHotBarSlots();
         RuntimeInventory.item = owner;
-        UnloadCurrentItem();
+        if (spawnLocation == null) spawnLocation = owner.transform;
         GetRequiredComponents();
-        LoadItemFromSlot(CurrentIndex);
+        SyncCurrentHeldItemWithSlot(notifyOwner: false);
+        if (!IsCurrentNetworkBinding(owner, ownerData, networkData, ownerGeneration, moduleGeneration)) return;
+        if (heldBaseline != null && ReferenceEquals(heldBefore, CurentSelectItem) &&
+            !ItemNetworkStateSerialization.ApplyMergedRuntimeStates(heldBefore, heldBaseline, false,
+                (module, state) =>
+                {
+                    if (module is IRemoteNetworkModule remoteModule)
+                        remoteModule.ApplyRemoteNetworkData(heldBefore, state);
+                })) return;
+        if (!IsCurrentNetworkBinding(owner, ownerData, networkData, ownerGeneration, moduleGeneration)) return;
 
         // 远端手持物只负责显示，不能再次参与碰撞、攻击或 ItemMgr Tick。
         if (CurentSelectItem != null)
         {
-            ItemMgr.Instance?.MarkAsRemoteVisualOnly(CurentSelectItem);
-            CurentSelectItem.enabled = false;
-            Module[] gameplayModules = CurentSelectItem.GetComponentsInChildren<Module>(true);
+            Item held = CurentSelectItem;
+            ItemData heldData = held.itemData;
+            uint heldGeneration = held.RuntimeGeneration;
+            bool StillHeldCurrent() => IsCurrentNetworkBinding(owner, ownerData, networkData, ownerGeneration, moduleGeneration) &&
+                held != null && !held.DestructionHandled && !held.IsInPool && held.RuntimeGeneration == heldGeneration &&
+                ReferenceEquals(heldData, held.itemData) && ReferenceEquals(held, CurentSelectItem);
+            ItemMgr.Instance?.MarkAsRemoteVisualOnly(held);
+            if (!StillHeldCurrent()) return;
+            held.enabled = false;
+            if (!StillHeldCurrent()) return;
+            Module[] gameplayModules = held.GetComponentsInChildren<Module>(true);
             for (int i = 0; i < gameplayModules.Length; i++)
-                gameplayModules[i].enabled = false;
+            {
+                if (!StillHeldCurrent()) return;
+                if (gameplayModules[i] != null) gameplayModules[i].enabled = false;
+            }
 
-            Collider2D[] colliders = CurentSelectItem.GetComponentsInChildren<Collider2D>(true);
+            if (!StillHeldCurrent()) return;
+            Collider2D[] colliders = held.GetComponentsInChildren<Collider2D>(true);
             for (int i = 0; i < colliders.Length; i++)
-                colliders[i].enabled = false;
+            {
+                if (!StillHeldCurrent()) return;
+                if (colliders[i] != null) colliders[i].enabled = false;
+            }
 
-            Rigidbody2D body = CurentSelectItem.GetComponent<Rigidbody2D>();
+            if (!StillHeldCurrent()) return;
+            Rigidbody2D body = held.GetComponent<Rigidbody2D>();
             if (body != null)
                 body.simulated = false;
         }
     }
+
+    private bool IsCurrentNetworkBinding(Item owner, ItemData ownerData, ModuleData data,
+        uint ownerGeneration, uint moduleGeneration) => this != null && owner != null &&
+        !owner.DestructionHandled && !owner.IsInPool && owner.RuntimeGeneration == ownerGeneration &&
+        RuntimeGeneration == moduleGeneration && ReferenceEquals(item, owner) && ReferenceEquals(owner.itemData, ownerData) &&
+        ReferenceEquals(_Data, data) && !string.IsNullOrEmpty(StableName) &&
+        owner.Mods.TryGetValue(StableName, out Module registered) && ReferenceEquals(registered, this);
 
     private void OnDestroy()
     {
@@ -366,30 +418,16 @@ public class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
         if (ModSaveData?.BitData == null || ModSaveData.BitData.Length == 0)
             return false;
 
-        try
-        {
-            InventoryHotBarSaveState state =
-                MemoryPackSerializer.Deserialize<InventoryHotBarSaveState>(ModSaveData.BitData);
-            if (state == null || state.Version != InventoryHotBarSaveState.CurrentVersion || state.Inventory == null)
-                return false;
+        InventoryHotBarSaveState state =
+            MemoryPackSerializer.Deserialize<InventoryHotBarSaveState>(ModSaveData.BitData);
+        if (state == null || state.Version != InventoryHotBarSaveState.CurrentVersion || state.Inventory == null)
+            throw new InvalidOperationException("快捷栏实例快照格式无效。");
 
-            RuntimeInventory.Data = state.Inventory;
-            return true;
-        }
-        catch
-        {
-            // 兼容旧版 List<string> RawData。旧数据没有库存内容，因此保留现有 RuntimeInventory.Data。
-            try
-            {
-                ModSaveData.ReadData(ref RawData);
-            }
-            catch
-            {
-                // 非本版本数据也不应阻断玩家加载。
-            }
-
-            return false;
-        }
+        EnsureHotBarSlots();
+        state.Inventory.RestoreTo(RuntimeInventory.Data,
+            data => data.SharedConfiguration == null
+                ? ItemDefinitionRuntime.RebasePersistedData(GameRes.ExistingInstance, data) : data);
+        return true;
     }
 
     private void OnInventoryValidate()
@@ -1075,7 +1113,7 @@ public class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
         NotifyOwnerNetworkStateChanged();
     }
 
-    private void SyncCurrentHeldItemWithSlot()
+    private void SyncCurrentHeldItemWithSlot(bool notifyOwner = true)
     {
         if (runtimeUnloading) return;
         if (heldItemTransitionInProgress)
@@ -1087,7 +1125,7 @@ public class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
         heldItemTransitionInProgress = true;
         try
         {
-            SyncCurrentHeldItemCore();
+            SyncCurrentHeldItemCore(notifyOwner);
         }
         finally
         {
@@ -1095,11 +1133,19 @@ public class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
         }
     }
 
-    private void SyncCurrentHeldItemCore()
+    private void SyncCurrentHeldItemCore(bool notifyOwner)
     {
+        Item owner = item;
+        ItemData ownerData = owner?.itemData;
+        ModuleData moduleData = _Data;
+        uint ownerGeneration = owner != null ? owner.RuntimeGeneration : 0;
+        uint moduleGeneration = RuntimeGeneration;
+        bool StillCurrent() => IsCurrentNetworkBinding(owner, ownerData, moduleData, ownerGeneration, moduleGeneration);
+        if (!StillCurrent()) return;
         if (Data == null || Data.itemSlots == null || Data.itemSlots.Count == 0)
         {
             UnloadCurrentItem();
+            if (!StillCurrent()) return;
             CurrentSelectItemSlot = null;
             return;
         }
@@ -1108,7 +1154,8 @@ public class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
         if (fixedIndex != CurrentIndex)
         {
             CurrentIndex = fixedIndex;
-            NotifyOwnerNetworkStateChanged();
+            if (notifyOwner) NotifyOwnerNetworkStateChanged();
+            if (!StillCurrent()) return;
         }
 
         ItemSlot currentSlot = Data.itemSlots[CurrentIndex];
@@ -1121,7 +1168,8 @@ public class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
             if (CurentSelectItem != null)
             {
                 UnloadCurrentItem();
-                NotifyOwnerNetworkStateChanged();
+                if (!StillCurrent()) return;
+                if (notifyOwner) NotifyOwnerNetworkStateChanged();
             }
 
             return;
@@ -1130,15 +1178,18 @@ public class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
         if (CurentSelectItem == null)
         {
             LoadItemFromSlot(CurrentIndex);
-            NotifyOwnerNetworkStateChanged();
+            if (!StillCurrent()) return;
+            if (notifyOwner) NotifyOwnerNetworkStateChanged();
             return;
         }
 
         if (!ReferenceEquals(CurentSelectItem.itemData, slotData))
         {
             UnloadCurrentItem();
+            if (!StillCurrent()) return;
             LoadItemFromSlot(CurrentIndex);
-            NotifyOwnerNetworkStateChanged();
+            if (!StillCurrent()) return;
+            if (notifyOwner) NotifyOwnerNetworkStateChanged();
         }
     }
 
@@ -1156,8 +1207,8 @@ public class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
 [MemoryPackable]
 public partial class InventoryHotBarSaveState
 {
-    public const int CurrentVersion = 1;
+    public const int CurrentVersion = 2;
 
     public int Version;
-    public Inventory_Data Inventory;
+    public InventoryInstanceSnapshot Inventory;
 }

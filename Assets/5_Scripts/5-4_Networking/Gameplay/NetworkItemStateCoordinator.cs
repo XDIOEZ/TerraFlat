@@ -1807,7 +1807,9 @@ namespace FlatWorld.Networking.Gameplay
         private static Item[] SnapshotRuntimeItems()
         {
             Item[] items = new Item[ItemMgr.Instance.WorldRunTimeItems.Count];
-            ItemMgr.Instance.WorldRunTimeItems.Values.CopyTo(items, 0);
+            int index = 0;
+            foreach (Item item in ItemMgr.Instance.WorldRunTimeItems.Values)
+                items[index++] = item;
             return items;
         }
 

@@ -8,9 +8,9 @@ public class Mod_Damage_AI : Mod_Damage,ITrunDirection
     public Mod_TurnBack TrunBody;
     public Mod_AnimatorController_Receiver animator;
 
-    public override void Load()
+    protected override void OnLoad()
     {
-        base.Load();
+        base.OnLoad();
         
         // 添加空检查以防止程序崩溃
         if (item != null && item.itemMods != null)
@@ -46,14 +46,14 @@ public class Mod_Damage_AI : Mod_Damage,ITrunDirection
         }
     }
 
-    public override void Save()
+    protected override void OnSave()
     {
-        base.Save();
+        base.OnSave();
     }
 
-    public override void Unload()
+    protected override void OnUnload()
     {
-        base.Unload();
+        base.OnUnload();
         DOTween.Clear(transform);
     }
 

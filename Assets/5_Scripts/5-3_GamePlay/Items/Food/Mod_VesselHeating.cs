@@ -12,8 +12,8 @@ public sealed class Mod_VesselHeating : Module, IInventoryHeatTreatment
     public override ModuleTickMode TickMode => ModuleTickMode.Disabled;
     public override ModuleData _Data { get => ModData; set => ModData = (Ex_ModData)value; }
 
-    public override void Load() { }
-    public override void Save() { }
+    protected override void OnLoad() { }
+    protected override void OnSave() { }
 
     /// <summary>在原库存槽中处理液体；需要物品产出时先成功提交产物事务，再消耗液体。</summary>
     public bool ProcessHeat(Inventory input, Inventory output, float temperature, float seconds)

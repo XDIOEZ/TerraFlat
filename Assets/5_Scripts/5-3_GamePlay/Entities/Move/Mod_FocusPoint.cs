@@ -34,7 +34,7 @@ public partial class Mod_FocusPoint : Module
     #endregion
 
     #region Module Methods
-    public override void Load()
+    protected override void OnLoad()
     {
         ModData.ReadData(ref Data);
 
@@ -75,7 +75,7 @@ public partial class Mod_FocusPoint : Module
         PlayerTakeItem_FaceMouse(deltaTime);
     }
 
-    public override void Save()
+    protected override void OnSave()
     {
         ModData.WriteData(Data);
     }

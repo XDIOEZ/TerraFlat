@@ -35,17 +35,36 @@ public sealed class Mod_HandDrill : Module, IInteractable
     public RecipeProcessor Processor { get; private set; }
     private HandDrillRuntimeState runtimeState;
     private MechanicalPanelSession panel;
+    private static IDisposable snapshotRestorationRegistration;
+
+    static Mod_HandDrill() => RegisterSnapshotRestorer();
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+    private static void RegisterSnapshotRestorer()
+    {
+        snapshotRestorationRegistration ??= ItemInstanceStateRestorationRegistry.Register(new SnapshotRestorer());
+    }
+
+    private sealed class SnapshotRestorer : IItemInstanceStateRestorer
+    {
+        public string ModuleId => Mod_HandDrill.ModuleId;
+        public void Restore(ItemData data, ModuleData module)
+        {
+            if (module is Ex_ModData_MemoryPackable binary)
+                ApplyRuntimeDurability(data, ReadRuntimeState(binary, data));
+        }
+    }
     #endregion
 
     #region 生命周期与交互
-    public override void Load()
+    protected override void OnLoad()
     {
         runtimeState = ReadRuntimeState(Data, item?.itemData);
         ApplyRuntimeDurability(item?.itemData, runtimeState);
         Processor = new RecipeProcessor("hand_drill", runtimeState.Processing);
         item.OnAct += OnItemAct;
     }
-    public override void Save()
+    protected override void OnSave()
     {
         if (Processor == null || runtimeState == null)
             return;
@@ -58,7 +77,7 @@ public sealed class Mod_HandDrill : Module, IInteractable
         }
         Data.WriteData(runtimeState);
     }
-    public override void Unload()
+    protected override void OnUnload()
     {
         if (item != null) item.OnAct -= OnItemAct;
         panel?.Dispose(); panel = null;

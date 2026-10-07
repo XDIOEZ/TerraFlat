@@ -29,20 +29,20 @@ public sealed class Mod_BodyPartTreatment : Module
     private Item boundItem;
     private bool usingItem;
 
-    public override void Load()
+    protected override void OnLoad()
     {
         if (treatableParts == null || treatableParts.Length == 0 ||
             float.IsNaN(durabilityRestored) || float.IsInfinity(durabilityRestored) || durabilityRestored <= 0f ||
             float.IsNaN(channelDurationSeconds) || float.IsInfinity(channelDurationSeconds) || channelDurationSeconds < 0f)
             throw new InvalidOperationException("医疗用品必须配置可治疗部位和有限正恢复量。");
-        Unload();
+        OnUnload();
         boundItem = item;
         if (boundItem != null) boundItem.OnAct += Act;
     }
 
-    public override void Save() { }
+    protected override void OnSave() { }
 
-    public override void Unload()
+    protected override void OnUnload()
     {
         if (boundItem != null) boundItem.OnAct -= Act;
         boundItem = null;

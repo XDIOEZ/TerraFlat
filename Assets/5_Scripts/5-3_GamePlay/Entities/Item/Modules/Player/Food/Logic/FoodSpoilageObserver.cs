@@ -45,16 +45,16 @@ public struct FoodSpoilageObserverData
 /// 监听库存中的食物数据 Tick，负责腐败计时和到期后的原槽位状态替换。
 /// 观察者只处理规则判断，实际库存写入交给 IFoodItemOperationGateway 的默认实现。
 /// </summary>
-public sealed class FoodSpoilageModuleDataObserver : IModuleDataTickObserver
+public sealed class FoodSpoilageModuleDataObserver : IModuleDataRule
 {
     /// <summary>只接收食物模块数据，避免观察者处理其他库存模块。</summary>
-    public bool CanObserve(ModuleData moduleData)
+    public bool CanStep(ModuleDataTickContext context)
     {
-        return moduleData is ModData_FoodData;
+        return context.ModuleData is ModData_FoodData;
     }
 
     /// <summary>每次库存 Tick 推进计时，到期后请求网关替换当前槽位物品。</summary>
-    public void OnModuleDataTick(ModuleDataTickContext context)
+    public void Step(ModuleDataTickContext context)
     {
         // 没有开启腐败，或上下文不是有效的食物库存槽位时，不做任何处理。
         if (!(context.ModuleData is ModData_FoodData foodData))
@@ -157,17 +157,17 @@ public struct FoodMeltingObserverData
 /// 监听库存中的可融化食物，每经过一个配置周期就从当前堆叠中融化掉 1 个。
 /// 与腐败共用库存 ModuleData Tick 和持久化框架，但不把冰块转换成虚构的“水物品”。
 /// </summary>
-public sealed class FoodMeltingModuleDataObserver : IModuleDataTickObserver
+public sealed class FoodMeltingModuleDataObserver : IModuleDataRule
 {
     /// <summary>只观察显式声明了融化状态的食物数据。</summary>
-    public bool CanObserve(ModuleData moduleData)
+    public bool CanStep(ModuleDataTickContext context)
     {
-        return moduleData is ModData_FoodData foodData &&
+        return context.ModuleData is ModData_FoodData foodData &&
                FoodObserverStateStore.Find(foodData, FoodObserverStateStore.MeltingStateKey) != null;
     }
 
     /// <summary>推进融化计时；允许一次较大的 Tick 跨过多个周期并一次性扣除对应数量。</summary>
-    public void OnModuleDataTick(ModuleDataTickContext context)
+    public void Step(ModuleDataTickContext context)
     {
         if (!(context.ModuleData is ModData_FoodData foodData))
             return;

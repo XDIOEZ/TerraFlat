@@ -136,7 +136,7 @@ public class Mod_ChunkLoader : Module
         NormalizeDistanceConfig();
     }
 
-    public override void Load()
+    protected override void OnLoad()
     {
         ModData.ReadData(ref distanceConfig);
         NormalizeDistanceConfig();
@@ -145,7 +145,7 @@ public class Mod_ChunkLoader : Module
         BindMovementEvent();
     }
 
-    public override void Save() => ModData.WriteData(distanceConfig);
+    protected override void OnSave() => ModData.WriteData(distanceConfig);
 
     public override void ModUpdate(float deltaTime)
     {

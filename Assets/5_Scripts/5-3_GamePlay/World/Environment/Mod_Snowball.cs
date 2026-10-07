@@ -22,15 +22,15 @@ public sealed class Mod_Snowball : Module
 
     #region 生命周期
     public override void Awake() { ModData.ID = ModuleId; base.Awake(); }
-    public override void Load()
+    protected override void OnLoad()
     {
         if (reach <= 0f || float.IsNaN(reach) || float.IsInfinity(reach))
             throw new InvalidOperationException("雪球铺设距离必须是有限正数。");
         nextUseTime = 0f;
         BindAct();
     }
-    public override void Save() { }
-    public override void Unload()
+    protected override void OnSave() { }
+    protected override void OnUnload()
     {
         if (actBound && item != null) item.OnAct -= Act;
         actBound = false;

@@ -135,7 +135,7 @@ public partial class Mod_Building
         if (LightOcclusionMode != BuildingLightOcclusionMode.Automatic || path == null)
             return float.PositiveInfinity;
 
-        List<Module> lightModules = item.itemMods.GetModList_ByID(ModText.LightSource);
+        IReadOnlyList<Module> lightModules = item.itemMods.GetModList_ByID(ModText.LightSource);
         if (lightModules == null)
             return float.PositiveInfinity;
 
@@ -160,7 +160,7 @@ public partial class Mod_Building
     /// <summary>火把等小型发光建筑亮起时可完全退出局部阴影，熄灭后由同一遮挡器自动恢复。</summary>
     private bool HasActiveOwnOcclusionLight()
     {
-        List<Module> lightModules = item.itemMods.GetModList_ByID(ModText.LightSource);
+        IReadOnlyList<Module> lightModules = item.itemMods.GetModList_ByID(ModText.LightSource);
         if (lightModules == null)
             return false;
 

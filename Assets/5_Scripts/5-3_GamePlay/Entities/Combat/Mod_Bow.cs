@@ -148,7 +148,7 @@ public sealed class Mod_Bow : Module, IItemModuleDependencyBinder
     }
 
     /// <summary>手持弓加载时绑定射手控制器；地面弓不监听攻击输入。</summary>
-    public override void Load()
+    protected override void OnLoad()
     {
         RestoreHeldVisualTransform();
         CancelCharge();
@@ -157,7 +157,7 @@ public sealed class Mod_Bow : Module, IItemModuleDependencyBinder
     }
 
     /// <summary>弓没有独立持久化运行态。</summary>
-    public override void Save()
+    protected override void OnSave()
     {
     }
 
@@ -194,7 +194,7 @@ public sealed class Mod_Bow : Module, IItemModuleDependencyBinder
     }
 
     /// <summary>解除统一攻击事件并清理临时搭箭表现。</summary>
-    public override void Unload()
+    protected override void OnUnload()
     {
         UnbindController();
         CancelCharge();

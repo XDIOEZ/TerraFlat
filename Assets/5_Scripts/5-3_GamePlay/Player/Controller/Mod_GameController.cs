@@ -1299,12 +1299,12 @@ public partial class Mod_GameController : Module
 
 #region 数据存取
 
-    public override void Load()
+    protected override void OnLoad()
     {
         // 输入绑定由 InputBindingService 构造时独立加载，不进入物品模块存档。
     }
 
-    public override void Save()
+    protected override void OnSave()
     {
         // 输入绑定在重绑完成时独立保存，不进入物品模块存档。
     }

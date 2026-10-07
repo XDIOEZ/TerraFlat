@@ -13,20 +13,43 @@ public partial class Data_TileMap : ItemData
     [NonSerialized]
     private int _nonEmptyCellCount = -1;
 
-    [MemoryPackInclude]
+    [MemoryPackIgnore]
     [SerializeField, HideInInspector]
     private TileStackCell[,] _tileCells = new TileStackCell[20, 20];
 
     [Tooltip("地图的位置")]
-    public Vector2Int position = Vector2Int.zero;
+    [MemoryPackIgnore] public Vector2Int position = Vector2Int.zero;
 
-    public bool TileLoaded;
+    [MemoryPackIgnore] public bool TileLoaded;
 
     [Tooltip("环境多层网格（温度、摄氏温度、降水、高度、风向与光照）")]
-    public EnvironmentLayers EnvironmentLayers = new EnvironmentLayers();
+    [MemoryPackIgnore] public EnvironmentLayers EnvironmentLayers = new EnvironmentLayers();
 
     [Tooltip("装饰草层数据，每格使用一个字节保存状态")]
-    public GrassLayerData GrassLayer = new GrassLayerData();
+    [MemoryPackIgnore] public GrassLayerData GrassLayer = new GrassLayerData();
+
+    #region 地图实例快照
+
+    internal byte[] CaptureMapInstanceState() => MemoryPackSerializer.Serialize(new TileMapInstanceSnapshot
+    {
+        Tiles = _tileCells, Position = position, TileLoaded = TileLoaded,
+        Environment = EnvironmentLayers, Grass = GrassLayer
+    });
+
+    internal void RestoreMapInstanceState(byte[] payload)
+    {
+        if (payload == null) return;
+        TileMapInstanceSnapshot state = MemoryPackSerializer.Deserialize<TileMapInstanceSnapshot>(payload);
+        if (state == null) throw new InvalidOperationException("地图实例快照为空。");
+        _tileCells = state.Tiles;
+        position = state.Position;
+        TileLoaded = state.TileLoaded;
+        EnvironmentLayers = state.Environment ?? new EnvironmentLayers();
+        GrassLayer = state.Grass ?? new GrassLayerData();
+        _nonEmptyCellCount = -1;
+    }
+
+    #endregion
 
     [MemoryPackIgnore]
     public int Width => _tileCells != null && _tileCells.Length > 0 ? _tileCells.GetLength(0) : 0;
@@ -426,4 +449,14 @@ public partial class Data_TileMap : ItemData
     {
         _nonEmptyCellCount = -1;
     }
+}
+
+[MemoryPackable]
+internal sealed partial class TileMapInstanceSnapshot
+{
+    public TileStackCell[,] Tiles;
+    public Vector2Int Position;
+    public bool TileLoaded;
+    public EnvironmentLayers Environment;
+    public GrassLayerData Grass;
 }

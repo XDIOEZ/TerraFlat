@@ -58,18 +58,18 @@ public sealed class Mod_DamageOnHitBuffApplier : Module, IItemModuleDependencyBi
     public void SetCombustionActive(bool active) => combustionActive = active;
 
     /// <summary>模块加载时订阅伤害结算。</summary>
-    public override void Load()
+    protected override void OnLoad()
     {
         damageModule.OnReceiverDamageResolved -= HandleReceiverDamageResolved;
         damageModule.OnReceiverDamageResolved += HandleReceiverDamageResolved;
     }
 
-    public override void Save()
+    protected override void OnSave()
     {
     }
 
     /// <summary>模块卸载时解除订阅，兼容对象池复用。</summary>
-    public override void Unload()
+    protected override void OnUnload()
     {
         if (damageModule != null)
             damageModule.OnReceiverDamageResolved -= HandleReceiverDamageResolved;

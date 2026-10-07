@@ -15,7 +15,7 @@ description: "Use when: 定位或修改 FlatWorld 的数据模型、MemoryPack �
 
 ## 核心不变量
 
-- 开发阶段只读取当前 Envelope 版本，不保留旧版本自动升级路径。Ground/Liquid 格式边界使用 FWD8；格式头必须在反序列化内部对象之前校验，旧格式明确拒绝但不删除或覆盖原文件。
+- 开发阶段只读取当前 Envelope 版本，不保留旧版本自动升级路径。实例快照格式为 FWD9/25，外层为 FWD5/12；格式头必须在反序列化内部对象之前校验，旧格式明确拒绝但不删除或覆盖原文件。
 - `SerializableTimeData` 保存自转/公转周期、倾角、离心率、公转秒制起点、Profile、限时边界与月相；日长、年长和季长是只读派生值，不重复入档。季节历史按绝对游戏秒冻结当时的物理参数；恢复经统一物理入口重建派生状态，`EnsureTimeSystemDefaults()` 不承担旧存档兼容。
 - 正式存档只写 `Application.persistentDataPath/Saves/LocalSaveData/`，并使用临时文件/原子替换；失败不得伪装为成功恢复。
 - `GameSaveData.PlayerData_Dict` 的键是不可变角色 ID，`Data_Player.Name_User` 仅是可修改的显示名；旧档保留原字典键作为兼容 ID，新角色分配独立 ID。改角色名只写 `Name_User`，改存档名要同步 `GameSaveData.saveName`、磁盘文件名和最后退出时间元数据，失败保留旧档。
@@ -48,7 +48,10 @@ description: "Use when: 定位或修改 FlatWorld 的数据模型、MemoryPack �
 - 时间保存同时复制季节配置和历史区间；积雪、植物冷热暴露、自然补位年份、陶罐水质／加工进度、盐分负担各有独立状态，不能在渲染绑定或 UI 打开时重置。
 - MemoryPack 追加可选数值字段时，不能依赖字段初始化值表达缺省；若 0 也是有效配置，使用可空数值并在转为运行时快照时解析缺省，避免未记录字段被当成显式 0。
 - 通用液体容器的 `LiquidContainerState.Amount` 以 `0.1` 份为最小持久化单位；运行时读入高精度浮点余量时先归一到一位小数，后续装液、倾倒、转移与加工不得重新写入更高精度的数量。
-- JSON ItemDefinition 是物品静态配置真源：恢复世界实体、建筑、AI 和库存物品时先用当前定义重建重量、体积、标签、耐久上限和模块组合，再叠加 GUID、数量、位置、耐久比例及模块运行态；删除的旧模块不得被存档重新实例化。
+- ItemData 及派生类的 MemoryPack 持久化只通过 InstanceSnapshot；Unity/JSON 字段是配置适配外壳，不直接入档。冷数据不读取 GameRes，入世/入包先按当前定义原位恢复重量、标签、耐久与模块组合，再合并实例状态；保留真实槽位的 ItemData 引用，已删除模块不能复活，未知扩展负载继续保留。
+- ItemInstanceDataFactory.Compile 冷路径冻结共享只读配置和默认状态，生成只分配独立可变数据；ModuleData 默认值采用 object 泛型深拷贝并检查具体类型。库存快照只保存内容及用户状态，恢复须保留当前布局的 UI/输入/槽位标签，并将新冷槽位数据 rebase 到当前定义。模块自有 BitData 仍由各模块负责区分配置与进度，不能把不透明负载当作配置已全部抽离。
+- 冷数据可从当前 JSON 或 Prefab-only 模板恢复；活跃库存只补新冷物品配置，不能重建已挂接定义的 ModuleData 引用。模块自有库存也使用 InventoryInstanceSnapshot，禁止把 MemoryPack 往返当作热实例克隆器；同 GUID 跨槽移动继续复用原 ItemData。
+- 派生实例属性通过 IItemInstanceStateRestorer 注册纯数据恢复规则，统一在模块状态恢复后执行；不能在快照层硬编码具体玩法。编解码器收发缓冲与快照隔离，释放注册租期前先完成状态调用及实例清理。
 - `ItemData.CraftedDurabilityMultiplier` 是制作材料赋予的实例品质，作为追加字段持久化；恢复时先用当前 ItemDefinition 的基础耐久重建，再应用倍率并保留原耐久百分比，禁止把历史 `MaxDurability` 直接当成当前基础值。
 - `GameSaveData.WorldGenerationConfigMode` 是每个存档自己的生成规则策略：`Frozen` 保持 `PlanetData.Ecology` 冻结 Profile；`FollowCurrent` 跳过冻结 Profile 并允许存档跟随当前游戏版本。玩家从冻结切到跟随当前时清除所有维度的冻结 Profile，但必须保留 `EcologyWorldSaveData.Chunks` 内的删除 GUID、状态覆盖和恢复年份；重新冻结由下一次正式世界生成捕获当前 Profile。
 

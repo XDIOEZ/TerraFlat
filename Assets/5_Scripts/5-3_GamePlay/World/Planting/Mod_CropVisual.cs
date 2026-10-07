@@ -84,7 +84,7 @@ public sealed class Mod_CropVisual : Module
         CropVisualData.ID = ModText.CropVisual;
     }
 
-    public override void Load()
+    protected override void OnLoad()
     {
         item ??= GetComponentInParent<Item>();
         if (item == null)
@@ -111,12 +111,12 @@ public sealed class Mod_CropVisual : Module
         ApplyGrowthVisual(cropModule.NormalizedGrowth);
     }
 
-    public override void Save()
+    protected override void OnSave()
     {
         // 表现参数来自 ItemDefinition，运行时只写入材质属性块，不产生独立状态。
     }
 
-    public override void Unload()
+    protected override void OnUnload()
     {
         UnbindCrop();
         ClearVisualState();

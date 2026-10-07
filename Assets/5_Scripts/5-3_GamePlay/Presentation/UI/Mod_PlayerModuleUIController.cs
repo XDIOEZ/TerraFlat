@@ -36,13 +36,13 @@ public class Mod_PlayerModuleUIController : Module
 
 #region 生命周期
 
-    public override void Load()
+    protected override void OnLoad()
     {
         // 暂时移除右上角角色模块统一管理入口，保留控制器以便后续恢复时不改变数据结构。
         ClearButtons();
     }
 
-    public override void Save()
+    protected override void OnSave()
     {
     }
 

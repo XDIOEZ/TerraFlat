@@ -27,7 +27,7 @@ public class Mod_PlayerTraits : Module
         _Data.ID = ModuleId;
     }
 
-    public override void Load()
+    protected override void OnLoad()
     {
         player = item as Player;
         if (player == null)
@@ -38,7 +38,7 @@ public class Mod_PlayerTraits : Module
         gameController = GetComponentInParent<Mod_GameController>();
     }
 
-    public override void Save()
+    protected override void OnSave()
     {
     }
 
@@ -50,8 +50,8 @@ public class Mod_PlayerTraits : Module
             return;
         }
 
-        target.BindData(target.itemData.DeepClone());
-        Debug.Log("克隆成功");
+        ItemData clone = ItemInstanceDataFactory.Create(target.itemData);
+        Debug.Log($"克隆成功：{clone.IDName}，已创建独立状态副本。");
     }
 
     /// <summary>

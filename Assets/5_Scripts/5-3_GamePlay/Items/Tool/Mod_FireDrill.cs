@@ -49,7 +49,7 @@ public class Mod_FireDrill : Module, IInteractable
         ModSaveData.ID = "钻木取火模块";
     }
 
-    public override void Load()
+    protected override void OnLoad()
     {
         EnsureRuntimeDefaults();
         if (ModSaveData.BitData?.Length > 0)
@@ -69,7 +69,7 @@ public class Mod_FireDrill : Module, IInteractable
         BindInteractEvents();
     }
 
-    public override void Save()
+    protected override void OnSave()
     {
         ModSaveData.WriteData(new FireDrillRuntimeState
         {
@@ -77,7 +77,7 @@ public class Mod_FireDrill : Module, IInteractable
         });
     }
 
-    public override void Unload()
+    protected override void OnUnload()
     {
         UnbindItemActEvent();
         UnbindInteractEvents();

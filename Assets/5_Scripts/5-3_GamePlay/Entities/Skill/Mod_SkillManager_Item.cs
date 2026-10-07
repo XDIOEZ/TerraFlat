@@ -15,13 +15,13 @@ public class Mod_SkillManager_Item : Mod_SkillManager
     {
         base.ModUpdate(deltaTime);
     }
-    public override void Load()
+    protected override void OnLoad()
     {
-        base.Load();
+        base.OnLoad();
     }
-    public override void Save()
+    protected override void OnSave()
     {
-        base.Save();
+        base.OnSave();
     }
 
     public override void Act()

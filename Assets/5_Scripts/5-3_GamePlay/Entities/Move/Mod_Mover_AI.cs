@@ -64,9 +64,9 @@ public class Mod_Mover_AI : Mod_Mover, ISimulationRangeAware, ITemperatureSafety
         hasTemperatureSafetyDestination &&
         (HasReachedTarget || DestinationResult == WorldNavigationDestinationResult.Failed);
 
-    public override void Load()
+    protected override void OnLoad()
     {
-        base.Load();
+        base.OnLoad();
 
         GameObject agentObject = item != null ? item.gameObject : gameObject;
         NavigationAgent = agentObject.GetComponent<WorldNavigationAgent>();
@@ -228,11 +228,11 @@ public class Mod_Mover_AI : Mod_Mover, ISimulationRangeAware, ITemperatureSafety
         SetDestination(targetPosition);
     }
 
-    public override void Unload()
+    protected override void OnUnload()
     {
         hasTemperatureSafetyDestination = false;
         StopMovementInternal();
-        base.Unload();
+        base.OnUnload();
     }
 
     private bool CanTemperatureSafetyOverrideStop()

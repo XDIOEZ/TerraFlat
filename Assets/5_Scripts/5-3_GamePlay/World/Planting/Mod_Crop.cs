@@ -146,7 +146,7 @@ public sealed class Mod_Crop : Module, IInteractable, IPlantableCrop, IWorldTime
         base.Awake();
     }
 
-    public override void Load()
+    protected override void OnLoad()
     {
         item ??= GetComponentInParent<Item>();
         if (item == null)
@@ -181,14 +181,14 @@ public sealed class Mod_Crop : Module, IInteractable, IPlantableCrop, IWorldTime
         GrowthChanged?.Invoke(this, NormalizedGrowth);
     }
 
-    public override void Save()
+    protected override void OnSave()
     {
         Data ??= new CropRuntimeData();
         NormalizeRuntimeState();
         ModData.WriteData(Data);
     }
 
-    public override void Unload()
+    protected override void OnUnload()
     {
         environmentConditions.Clear();
         ClimateStress = 0f;

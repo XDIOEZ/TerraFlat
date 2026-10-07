@@ -57,7 +57,7 @@ public class Mod_Door : Module, IInteractable, IBuildingPlacementCommitted
         _Data.ID = DoorModId;
     }
 
-    public override void Load()
+    protected override void OnLoad()
     {
         EnsureData();
         CacheReferences();
@@ -69,11 +69,11 @@ public class Mod_Door : Module, IInteractable, IBuildingPlacementCommitted
     }
 
     /// <summary>门打开后实体碰撞会关闭，交互范围仍由独立空间注册保留。</summary>
-    public override void Unload()
+    protected override void OnUnload()
     {
         loaded = false;
         SpatialInteractionRegistry.Unregister(this);
-        base.Unload();
+        base.OnUnload();
     }
 
     private void OnDisable() => SpatialInteractionRegistry.Unregister(this);
@@ -87,7 +87,7 @@ public class Mod_Door : Module, IInteractable, IBuildingPlacementCommitted
         SpatialInteractionRegistry.Register(this, 0.75f);
     }
 
-    public override void Save()
+    protected override void OnSave()
     {
         EnsureData();
         DoorData.WriteData(Data);

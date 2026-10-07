@@ -8,7 +8,7 @@ using UnityEngine;
 [MemoryPackable]
 public partial class VesselContentsState
 {
-    public Inventory_Data Items; // 木桶内部的六格物品库存。
+    public InventoryInstanceSnapshot Items; // 木桶内部的六格物品实例状态。
 }
 
 /// <summary>
@@ -41,16 +41,24 @@ public sealed class Mod_VesselContents : Module, IInventory, IVesselContents
     public Inventory Contents => contents;
 
     /// <summary>恢复六格库存并订阅固体、液体变化；数据不依赖面板生命周期。</summary>
-    public override void Load()
+    protected override void OnLoad()
     {
-        state = ModData.BitData == null || ModData.BitData.Length == 0
-            ? new VesselContentsState { Items = CreateInventoryData() }
-            : ModData.GetData<VesselContentsState>();
-        if (state?.Items?.itemSlots == null || state.Items.itemSlots.Count != SlotCount)
+        bool hasSavedState = ModData.BitData != null && ModData.BitData.Length > 0;
+        state = hasSavedState ? ModData.GetData<VesselContentsState>() : new VesselContentsState
+        {
+            Items = InventoryInstanceSnapshot.Capture(CreateInventoryData())
+        };
+        if (state?.Items == null || state.Items.SlotCount != SlotCount)
+            throw new InvalidOperationException("木桶固体库存实例快照必须恰好有六个槽位。");
+        contents.Data ??= CreateInventoryData();
+        // 库存状态原位合并，已挂定义的实例继续复用自己的配置与模块引用。
+        state.Items.RestoreTo(contents.Data,
+            data => data.SharedConfiguration == null
+                ? ItemDefinitionRuntime.RebasePersistedData(GameRes.ExistingInstance, data) : data);
+        if (contents.Data.itemSlots == null || contents.Data.itemSlots.Count != SlotCount)
             throw new InvalidOperationException("木桶固体库存必须保存六个槽位。");
 
         contents.item = item;
-        contents.Data = state.Items;
         contents.Data.SetUnlimitedSlots(false);
         contents.InitData();
         contents.Data.Event_OnDataChanged += OnContentsChanged;
@@ -61,14 +69,14 @@ public sealed class Mod_VesselContents : Module, IInventory, IVesselContents
     }
 
     /// <summary>把真实库存槽位写入独立模块存档。</summary>
-    public override void Save()
+    protected override void OnSave()
     {
-        state.Items = contents.Data;
+        state.Items = InventoryInstanceSnapshot.Capture(contents.Data);
         ModData.WriteData(state);
     }
 
     /// <summary>释放库存事件与所属物品，避免回池后面板触及旧容器。</summary>
-    public override void Unload()
+    protected override void OnUnload()
     {
         if (pendingReaction != null) StopCoroutine(pendingReaction);
         pendingReaction = null;

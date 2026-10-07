@@ -49,7 +49,7 @@ public sealed class Mod_ContactDamage : Module
         set => ModData = value as Ex_ModData_MemoryPackable ?? throw new ArgumentException("接触伤害模块数据类型错误。");
     }
 
-    public override void Load()
+    protected override void OnLoad()
     {
         OnResourcesReloaded();
         runtime = new ContactDamageRuntime(IsWorldSourceActive);
@@ -61,8 +61,8 @@ public sealed class Mod_ContactDamage : Module
         if (!Settings.TryValidate(out string reason)) throw new InvalidOperationException(reason);
     }
 
-    public override void Save() { } // 接触与冷却只属于当前实例，不保存离线伤害。
-    public override void Unload() => runtime = null;
+    protected override void OnSave() { } // 接触与冷却只属于当前实例，不保存离线伤害。
+    protected override void OnUnload() => runtime = null;
 
     public override void ModUpdate(float deltaTime)
     {

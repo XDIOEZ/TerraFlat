@@ -42,7 +42,7 @@ public sealed partial class Mod_DimensionPortal : Module, IInteractable, IItemPo
     }
 
     /// <summary>加载时缓存入口所属 Item 与建筑模块。</summary>
-    public override void Load()
+    protected override void OnLoad()
     {
         EnsureModuleData();
         CachePortalContext();
@@ -53,13 +53,13 @@ public sealed partial class Mod_DimensionPortal : Module, IInteractable, IItemPo
     }
 
     /// <summary>维度入口当前没有额外持久化状态。</summary>
-    public override void Save()
+    protected override void OnSave()
     {
         EnsureModuleData();
     }
 
     /// <summary>卸载时清除一次交互与对象池缓存。</summary>
-    public override void Unload()
+    protected override void OnUnload()
     {
         ResetRuntimeState();
     }

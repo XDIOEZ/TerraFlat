@@ -32,7 +32,7 @@ public class Mod_Fuel : Module
         _Data.ID = ModText.Fuel;
     }
 
-    public override void Load()
+    protected override void OnLoad()
     {
         ExData.ReadData(ref Data);
         fuelLight ??= item.GetComponentInChildren<Light2D>(true);
@@ -49,7 +49,7 @@ public class Mod_Fuel : Module
         }
     }
 
-    public override void Save()
+    protected override void OnSave()
     {
         ExData.WriteData(Data);
     }

@@ -3,9 +3,9 @@ public class Mod_SkillManager_AI : Mod_SkillManager
 {
     public Mod_AnimatorController_Receiver animatorReceiver;
 
-    public override void Load()
+    protected override void OnLoad()
     {
-        base.Load();
+        base.OnLoad();
         animatorReceiver = item.itemMods.GetMod_ByID<Mod_AnimatorController_Receiver> (ModText.AnimatorReceiver);
         if (animatorReceiver != null)
         {
@@ -14,12 +14,12 @@ public class Mod_SkillManager_AI : Mod_SkillManager
         }
     }
     
-    public override void Save()
+    protected override void OnSave()
     {
-        base.Save();
+        base.OnSave();
     }
 
-    public override void Unload()
+    protected override void OnUnload()
     {
         if (animatorReceiver != null)
         {
@@ -28,7 +28,7 @@ public class Mod_SkillManager_AI : Mod_SkillManager
             animatorReceiver = null;
         }
 
-        base.Unload();
+        base.OnUnload();
     }
 
     public void UseSkill(int skillIndex)

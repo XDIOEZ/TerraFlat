@@ -1,7 +1,6 @@
 // AI-Context: Item/Module 网络快照与游戏层网络桥；游戏模块不能依赖 Mirror，建造/拾取请求通过这里交给网络协调器。
 using System;
 using System.Collections.Generic;
-using System.Reflection;
 using MemoryPack;
 using UnityEngine;
 
@@ -10,8 +9,9 @@ using UnityEngine;
 /// </summary>
 public static class ItemNetworkStateSerialization
 {
+    #region Item 网络状态桥与快照
     private const int MaxSnapshotBytes = 512 * 1024;
-    private static readonly Dictionary<Type, FieldInfo[]> SyncFieldsByType = new();
+    private static readonly byte[] SnapshotMagic = { (byte)'F', (byte)'W', (byte)'I', (byte)'1' };
 
     public static event Action<Item> RuntimeStateChanged;
     public static Func<bool> ShouldDeferLocalDestruction;
@@ -48,54 +48,58 @@ public static class ItemNetworkStateSerialization
             return Array.Empty<byte>();
 
         item.ModuleSave();
-        ItemData data = item.itemData;
-        string privateState = data.ItemSpecialData;
-        // 玩家公共快照不携带已注册的私有库存，完整值只保留在权威存档里。
-        if (item is Player) data.ItemSpecialData = MachineInventoryCommands.PublicSpecialData(privateState);
-        ItemTransform transformState = ignoreTransform ? data.transform : null;
-        Vector3 position = transformState?.position ?? default;
-        Quaternion rotation = transformState?.rotation ?? default;
-        Vector3 scale = transformState?.scale ?? default;
-        try
-        {
-            if (transformState != null)
-            {
-                // 玩家移动由独立运动通道同步，序列化时暂时去掉位姿。
-                transformState.position = Vector3.zero;
-                transformState.rotation = Quaternion.identity;
-                transformState.scale = Vector3.one;
-            }
-            return MemoryPackSerializer.Serialize<ItemData>(data);
-        }
-        finally
-        {
-            data.ItemSpecialData = privateState;
-            if (transformState != null)
-            {
-                transformState.position = position;
-                transformState.rotation = rotation;
-                transformState.scale = scale;
-            }
-        }
+        // 捕获阶段直接生成脱离对象的公开状态，不暂改活跃数据或位姿。
+        return SerializeSnapshot(ItemInstanceSnapshot.Capture(item.itemData, !ignoreTransform,
+            item is Player, MachineInventoryCommands.PublicSpecialData));
     }
 
     public static bool IsValidPayload(byte[] payload)
-        => payload != null && payload.Length > 0 && payload.Length <= MaxSnapshotBytes;
+    {
+        if (payload == null || payload.Length <= SnapshotMagic.Length || payload.Length > MaxSnapshotBytes) return false;
+        for (int i = 0; i < SnapshotMagic.Length; i++)
+            if (payload[i] != SnapshotMagic[i]) return false;
+        return true;
+    }
 
     public static bool TryReadIdentity(byte[] payload, out int guid, out string itemId)
     {
         guid = 0;
         itemId = null;
-        if (!TryDeserialize(payload, out ItemData state))
+        if (!TryDeserialize(payload, out ItemInstanceSnapshot state, validateRuntimeState: false))
             return false;
 
         guid = state.Guid;
-        itemId = state.IDName;
+        itemId = state.DefinitionId;
         return true;
     }
 
     public static bool TryDeserializeItemData(byte[] payload, out ItemData itemData)
-        => TryDeserialize(payload, out itemData);
+    {
+        itemData = null;
+        if (!TryDeserialize(payload, out ItemInstanceSnapshot snapshot, validateRuntimeState: false)) return false;
+        try
+        {
+            ItemData coldData = snapshot.CreateColdData();
+            GameRes resources = GameRes.ExistingInstance;
+            if (resources == null) return false;
+            if (coldData is Data_Player)
+                ItemInstanceDataFactory.ApplyCurrentDefinition(coldData,
+                    resources.GetPrefab("Player").GetComponent<Player>().Get_NewItemData());
+            else
+            {
+                ItemDefinitionRuntime.RebasePersistedData(resources, coldData);
+            }
+            if (coldData.SharedConfiguration == null) return false;
+            ItemDefinitionRuntime.RebaseNestedPersistedItems(resources, coldData, onlyColdData: true);
+            itemData = coldData;
+            return true;
+        }
+        catch (Exception exception)
+        {
+            Debug.LogWarning($"[联机物品] 快照恢复失败：{exception.Message}");
+            return false;
+        }
+    }
 
     public static bool TrySerializeItemData(ItemData itemData, out byte[] payload)
     {
@@ -105,7 +109,7 @@ public static class ItemNetworkStateSerialization
 
         try
         {
-            payload = MemoryPackSerializer.Serialize<ItemData>(itemData);
+            payload = SerializeSnapshot(ItemInstanceSnapshot.Capture(itemData));
             return IsValidPayload(payload);
         }
         catch (Exception exception)
@@ -119,33 +123,11 @@ public static class ItemNetworkStateSerialization
     public static bool Apply(Item target, byte[] payload, bool reloadRuntimeModules, bool requireMatchingGuid)
     {
         if (!TryMergeSnapshot(target, payload, requireMatchingGuid, out ItemData current,
-                out Dictionary<string, ModuleData> previousModuleStates))
+                out RuntimeStateBaseline baseline))
             return false;
-
-        if (!reloadRuntimeModules || target.Mods == null || target.Mods.Count == 0)
-            return true;
-
-        List<Module> runtimeModules = new List<Module>(target.Mods.Values);
-        for (int i = 0; i < runtimeModules.Count; i++)
-        {
-            Module module = runtimeModules[i];
-            if (module == null || module._Data == null)
-                continue;
-
-            ModuleData state = FindModuleState(current.ModuleDataDic, module.StableName);
-            if (state == null)
-                continue;
-
-            ModuleData previousState = FindModuleState(previousModuleStates, module.StableName);
-            if (ModuleStatesEqual(previousState, state))
-                continue;
-
-            module.ModuleInit(target, state, current);
-            module.ApplyNetworkData(state);
-        }
-
+        if (!ApplyMergedRuntimeStates(target, baseline, reloadRuntimeModules)) return false;
         target.OnUIRefresh?.Invoke();
-        return true;
+        return IsCurrentItem(target, current, baseline.ItemGeneration);
     }
 
     /// <summary>
@@ -157,28 +139,55 @@ public static class ItemNetworkStateSerialization
         byte[] payload,
         Action<Module, ModuleData> runtimeApplier)
     {
-        if (!TryMergeSnapshot(target, payload, false, out ItemData current, out _))
+        if (!TryMergeSnapshot(target, payload, false, out _, out RuntimeStateBaseline baseline))
             return false;
+        return ApplyMergedRuntimeStates(target, baseline, reloadRuntimeModules: false, runtimeApplier: runtimeApplier);
+    }
 
-        if (target.Mods == null || target.Mods.Count == 0)
-            return true;
+    /// <summary>在热恢复前捕获身份与模块状态，后续回调不能接管回收后产生的新代实例。</summary>
+    public sealed class RuntimeStateBaseline
+    {
+        internal readonly Item Item;
+        internal readonly ItemData Data;
+        internal readonly uint ItemGeneration;
+        internal readonly List<(Module Module, uint Generation, ModuleInstanceSnapshot State)> Modules = new();
 
-        List<Module> runtimeModules = new List<Module>(target.Mods.Values);
-        for (int i = 0; i < runtimeModules.Count; i++)
+        internal RuntimeStateBaseline(Item item)
         {
-            Module module = runtimeModules[i];
-            if (module == null || module._Data == null)
-                continue;
-
-            ModuleData state = FindModuleState(current.ModuleDataDic, module.StableName);
-            if (state == null)
-                continue;
-
-            module.ModuleInit(target, state, current);
-            runtimeApplier?.Invoke(module, state);
+            Item = item;
+            Data = item.itemData;
+            ItemGeneration = item.RuntimeGeneration;
+            foreach (Module module in item.Mods.Values)
+                if (module != null && module._Data != null)
+                    Modules.Add((module, module.RuntimeGeneration, ModuleInstanceSnapshot.Capture(module._Data)));
         }
+    }
 
-        return true;
+    public static RuntimeStateBaseline CaptureRuntimeStateBaseline(Item item)
+        => item != null && item.itemData != null ? new RuntimeStateBaseline(item) : null;
+
+    /// <summary>原位恢复库存或网络数据后，只刷新进入恢复前已存在且状态变化的模块。</summary>
+    public static bool ApplyMergedRuntimeStates(Item target, RuntimeStateBaseline baseline,
+        bool reloadRuntimeModules, Action<Module, ModuleData> runtimeApplier = null)
+    {
+        if (baseline == null || !ReferenceEquals(target, baseline.Item) ||
+            !IsCurrentItem(target, baseline.Data, baseline.ItemGeneration)) return false;
+        foreach (var entry in baseline.Modules)
+        {
+            if (!IsCurrentItem(target, baseline.Data, baseline.ItemGeneration)) return false;
+            Module module = entry.Module;
+            if (!IsCurrentModule(target, module, entry.Generation)) continue;
+            ModuleData state = FindModuleState(baseline.Data.ModuleDataDic, module.StableName);
+            if (state == null || entry.State.Matches(state)) continue;
+            if (runtimeApplier != null)
+            {
+                module.BindSnapshotData(target, state, baseline.Data);
+                runtimeApplier(module, state);
+            }
+            else if (reloadRuntimeModules) module.ApplyNetworkData(state);
+            else module.BindSnapshotData(target, state, baseline.Data);
+        }
+        return IsCurrentItem(target, baseline.Data, baseline.ItemGeneration);
     }
 
     public static uint CalculateHash(byte[] payload)
@@ -204,21 +213,23 @@ public static class ItemNetworkStateSerialization
             if (state == null)
                 return hash;
 
-            hash = AppendHash(hash, state.GetType().FullName);
-            hash = AppendHash(hash, state.ModuleId);
-            hash = AppendHash(hash, state.StableName);
-            hash = (hash ^ (state.Enabled ? (byte)1 : (byte)0)) * 16777619u;
-
-            if (state is Ex_ModData_MemoryPackable binaryState)
-                return AppendHash(hash, binaryState.BitData);
-            if (state is Ex_ModData jsonState)
-                return AppendHash(hash, jsonState.BitData);
-
-            return hash;
+            return AppendHash(hash, MemoryPackSerializer.Serialize(ModuleInstanceSnapshot.Capture(state)));
         }
     }
 
-    private static bool TryDeserialize(byte[] payload, out ItemData state)
+    private static byte[] SerializeSnapshot(ItemInstanceSnapshot snapshot)
+    {
+        snapshot.Validate();
+        byte[] body = MemoryPackSerializer.Serialize(snapshot);
+        if (body.Length + SnapshotMagic.Length > MaxSnapshotBytes)
+            throw new InvalidOperationException("物品实例快照超过网络大小上限。");
+        byte[] payload = new byte[SnapshotMagic.Length + body.Length];
+        Buffer.BlockCopy(SnapshotMagic, 0, payload, 0, SnapshotMagic.Length);
+        Buffer.BlockCopy(body, 0, payload, SnapshotMagic.Length, body.Length);
+        return payload;
+    }
+
+    private static bool TryDeserialize(byte[] payload, out ItemInstanceSnapshot state, bool validateRuntimeState = true)
     {
         state = null;
         if (!IsValidPayload(payload))
@@ -226,8 +237,13 @@ public static class ItemNetworkStateSerialization
 
         try
         {
-            state = MemoryPackSerializer.Deserialize<ItemData>(payload);
-            return state != null;
+            byte[] body = new byte[payload.Length - SnapshotMagic.Length];
+            Buffer.BlockCopy(payload, SnapshotMagic.Length, body, 0, body.Length);
+            state = MemoryPackSerializer.Deserialize<ItemInstanceSnapshot>(body);
+            if (state == null) return false;
+            state.Validate();
+            if (validateRuntimeState) state.CreateColdData();
+            return true;
         }
         catch (Exception exception)
         {
@@ -241,52 +257,39 @@ public static class ItemNetworkStateSerialization
         byte[] payload,
         bool requireMatchingGuid,
         out ItemData current,
-        out Dictionary<string, ModuleData> previousModuleStates)
+        out RuntimeStateBaseline baseline)
     {
         current = target?.itemData;
-        previousModuleStates = null;
-        if (current == null || !TryDeserialize(payload, out ItemData incoming))
+        baseline = null;
+        if (current == null || !TryDeserialize(payload, out ItemInstanceSnapshot incoming))
             return false;
 
-        if (incoming.GetType() != current.GetType() ||
-            !string.Equals(incoming.IDName, current.IDName, StringComparison.Ordinal) ||
+        if (incoming.Kind != ItemInstanceSnapshot.GetKind(current) ||
+            !string.Equals(incoming.DefinitionId, current.IDName, StringComparison.Ordinal) ||
             (requireMatchingGuid && incoming.Guid != current.Guid))
         {
             return false;
         }
 
-        previousModuleStates = current.ModuleDataDic;
-        ItemTransform preservedTransform = current.transform;
-        int preservedGuid = current.Guid;
-        string privateState = target is Player ? current.ItemSpecialData : null;
-        CopySerializableFields(incoming, current);
-        current.Guid = preservedGuid;
-        current.transform = preservedTransform;
-        if (target is Player)
-            current.ItemSpecialData = MachineInventoryCommands.MergePrivateSpecialData(
-                privateState, current.ItemSpecialData);
-
-        if (current.ModuleDataDic == null)
-            current.ModuleDataDic = new Dictionary<string, ModuleData>();
-
-        return true;
-    }
-
-    private static uint AppendHash(uint hash, string value)
-    {
-        unchecked
+        try
         {
-            if (string.IsNullOrEmpty(value))
-                return (hash ^ 0u) * 16777619u;
-
-            for (int i = 0; i < value.Length; i++)
-            {
-                char character = value[i];
-                hash = (hash ^ (byte)character) * 16777619u;
-                hash = (hash ^ (byte)(character >> 8)) * 16777619u;
-            }
-
-            return hash;
+            uint itemGeneration = target.RuntimeGeneration;
+            baseline = CaptureRuntimeStateBaseline(target);
+            string privateState = target is Player ? current.ItemSpecialData : null;
+            // 活跃实例已在生成时挂接本地定义，状态包不能重建其当前模块布局。
+            incoming.RestoreTo(current, preserveTransform: true, preserveGuid: true);
+            if (!IsCurrentItem(target, current, itemGeneration)) return false;
+            ItemDefinitionRuntime.RebaseNestedPersistedItems(GameRes.ExistingInstance, current, onlyColdData: true);
+            if (!IsCurrentItem(target, current, itemGeneration)) return false;
+            if (target is Player)
+                current.ItemSpecialData = MachineInventoryCommands.MergePrivateSpecialData(privateState, current.ItemSpecialData);
+            target.MarkModuleScheduleDirty();
+            return true;
+        }
+        catch (Exception exception)
+        {
+            Debug.LogWarning($"[联机物品] 合并实例状态失败：{exception.Message}");
+            return false;
         }
     }
 
@@ -304,25 +307,6 @@ public static class ItemNetworkStateSerialization
         }
     }
 
-    private static void CopySerializableFields(ItemData source, ItemData destination)
-    {
-        Type type = source.GetType();
-        if (!SyncFieldsByType.TryGetValue(type, out FieldInfo[] fields))
-        {
-            fields = type.GetFields(BindingFlags.Instance | BindingFlags.Public);
-            SyncFieldsByType[type] = fields;
-        }
-
-        for (int i = 0; i < fields.Length; i++)
-        {
-            FieldInfo field = fields[i];
-            if (field.IsInitOnly || field.Name == nameof(ItemData.Guid) || field.Name == nameof(ItemData.transform))
-                continue;
-
-            field.SetValue(destination, field.GetValue(source));
-        }
-    }
-
     private static ModuleData FindModuleState(
         Dictionary<string, ModuleData> states,
         string stableName)
@@ -333,37 +317,12 @@ public static class ItemNetworkStateSerialization
         return states.TryGetValue(stableName, out ModuleData exact) ? exact : null;
     }
 
-    private static bool ModuleStatesEqual(ModuleData left, ModuleData right)
-    {
-        if (ReferenceEquals(left, right))
-            return true;
-        if (left == null || right == null || left.GetType() != right.GetType() ||
-            left.ModuleId != right.ModuleId || left.StableName != right.StableName || left.Enabled != right.Enabled)
-        {
-            return false;
-        }
+    private static bool IsCurrentItem(Item target, ItemData data, uint generation) => target != null &&
+        !target.DestructionHandled && !target.IsInPool && target.RuntimeGeneration == generation && ReferenceEquals(target.itemData, data);
 
-        if (left is Ex_ModData leftJson && right is Ex_ModData rightJson)
-            return string.Equals(leftJson.BitData, rightJson.BitData, StringComparison.Ordinal);
+    private static bool IsCurrentModule(Item target, Module module, uint generation) => module != null &&
+        module.RuntimeGeneration == generation && !string.IsNullOrWhiteSpace(module.StableName) &&
+        target.Mods.TryGetValue(module.StableName, out Module registered) && ReferenceEquals(module, registered);
 
-        if (left is Ex_ModData_MemoryPackable leftBinary && right is Ex_ModData_MemoryPackable rightBinary)
-        {
-            byte[] a = leftBinary.BitData;
-            byte[] b = rightBinary.BitData;
-            if (ReferenceEquals(a, b))
-                return true;
-            if (a == null || b == null || a.Length != b.Length)
-                return false;
-
-            for (int i = 0; i < a.Length; i++)
-            {
-                if (a[i] != b[i])
-                    return false;
-            }
-
-            return true;
-        }
-
-        return false;
-    }
+    #endregion
 }

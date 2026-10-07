@@ -935,7 +935,7 @@ public static class ItemDefinitionCatalogLoader
 
             bool resourceExtension = string.Equals(dto.EntityRuntime?.Trim(), "resource", StringComparison.OrdinalIgnoreCase) &&
                 ResourceEntityCapabilityRegistry.IsRegistered(moduleId);
-            Module prototype = resourceExtension ? null : ResolveModulePrototype(gameRes, shell, moduleId);
+            Module prototype = resourceExtension ? null : ResolveModulePrototype(gameRes, shell, moduleId, moduleDto.Id);
             ModuleData moduleData;
             if (resourceExtension)
             {
@@ -973,8 +973,6 @@ public static class ItemDefinitionCatalogLoader
                 lootTableBound = true;
             }
 
-            if (!resourceExtension)
-                ModuleJsonConfigurator.Validate(prototype, id, moduleName, moduleData.ModuleId, parameters?.ToString(Formatting.None));
             moduleParameters.Add(moduleName, parameters?.ToString(Formatting.None));
             modulePrefabIds.Add(moduleName, moduleId);
         }
@@ -1037,7 +1035,8 @@ public static class ItemDefinitionCatalogLoader
             ResolveProcessingCapabilityLevels(dto.ProcessingCapabilities, id),
             dto.FormerIds,
             ItemMatterReactionCompiler.CompileMatter(dto.Matter, dto.Tags, id),
-            ItemMatterReactionCompiler.CompileReactions(dto.Reactions, id));
+            ItemMatterReactionCompiler.CompileReactions(dto.Reactions, id),
+            gameRes);
     }
 
     private static Dictionary<string, int> ResolveProcessingCapabilityLevels(
@@ -1376,26 +1375,42 @@ public static class ItemDefinitionCatalogLoader
         }
     }
 
-    private static Module ResolveModulePrototype(GameRes gameRes, GameObject shell, string moduleId)
-        => FindModulePrototype(shell, gameRes.GetPrefab(moduleId, false), moduleId);
+    private static Module ResolveModulePrototype(GameRes gameRes, GameObject shell, string prefabId, string moduleId = null)
+        => FindModulePrototype(shell, gameRes.GetPrefab(prefabId, false),
+            string.IsNullOrWhiteSpace(moduleId) ? prefabId : moduleId.Trim());
 
     /// <summary>构建、运行时校验和编辑器预检共用模块定位规则，支持外壳内嵌模块的持久化身份。</summary>
     public static Module FindModulePrototype(GameObject shell, GameObject modulePrefab, string moduleId)
     {
         if (modulePrefab != null)
         {
-            // 一个旧模块 Prefab 可能同时包含 Item 和多个 Module，必须按持久化 ID 选中目标类型，不能取第一个组件。
             Module[] candidates = modulePrefab.GetComponentsInChildren<Module>(true);
-            Module matched = candidates.FirstOrDefault(candidate =>
-                candidate != null && candidate.MatchesPersistedId(moduleId));
+            Module matched = FindUniquePrototype(candidates, moduleId, modulePrefab.name);
             if (matched != null)
                 return matched;
             if (candidates.Length == 1)
                 return candidates[0];
+            if (candidates.Length > 1)
+                throw new InvalidDataException($"模块 Prefab {modulePrefab.name} 包含多个 Module，找不到唯一能力 {moduleId}。");
         }
 
-        return shell == null ? null : shell.GetComponentsInChildren<Module>(true)
-            .FirstOrDefault(candidate => candidate != null && candidate.MatchesPersistedId(moduleId));
+        return shell == null ? null : FindUniquePrototype(shell.GetComponentsInChildren<Module>(true), moduleId, shell.name);
+    }
+
+    /// <summary>多模块宿主必须唯一命中，禁止目录顺序决定具体实现。</summary>
+    private static Module FindUniquePrototype(Module[] candidates, string moduleId, string hostName)
+    {
+        Module matched = null;
+        for (int index = 0; index < candidates.Length; index++)
+        {
+            Module candidate = candidates[index];
+            if (candidate == null || !candidate.MatchesPersistedId(moduleId))
+                continue;
+            if (matched != null)
+                throw new InvalidDataException($"外壳/模块 Prefab {hostName} 的能力 {moduleId} 存在多个实现，请使用确定的 Prefab 与稳定模块名。");
+            matched = candidate;
+        }
+        return matched;
     }
 
     private static Sprite ResolveSprite(

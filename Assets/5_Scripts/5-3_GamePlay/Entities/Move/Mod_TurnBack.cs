@@ -65,7 +65,7 @@ public class Mod_TurnBack : Module
         }
     }
 
-    public override void Load()
+    protected override void OnLoad()
     {
         faceMouse = item.itemMods.GetMod_ByID(ModText.FocusPoint) as Mod_FocusPoint;
 
@@ -87,7 +87,7 @@ public class Mod_TurnBack : Module
         UpdateTransform_Positions();
     }
 
-    public override void Save() { }
+    protected override void OnSave() { }
 
     #endregion
 

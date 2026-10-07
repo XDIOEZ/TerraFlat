@@ -51,12 +51,19 @@ internal sealed class ItemObjectPool
                     continue;
                 }
 
-                PooledItemMarker pooledMarker = pooledItem.PoolMarker;
-                pooledMarker.InPool = false;
-                pooledMarker.RestoreBaseline();
-
-                pooledItem.transform.SetParent(null, false);
-                return pooledItem.gameObject;
+                try
+                {
+                    PooledItemMarker pooledMarker = pooledItem.PoolMarker;
+                    pooledMarker.InPool = false;
+                    pooledMarker.RestoreBaseline();
+                    pooledItem.transform.SetParent(null, false);
+                    return pooledItem.gameObject;
+                }
+                catch
+                {
+                    UnityEngine.Object.Destroy(pooledItem.gameObject);
+                    throw;
+                }
             }
         }
 
@@ -111,7 +118,7 @@ internal sealed class ItemObjectPool
 
     private bool CanPool(Item item)
     {
-        if (item == null || item is Player || item is Map)
+        if (item == null || item.IsRuntimeTransitioning || item is Player || item is Map)
         {
             return false;
         }
@@ -120,10 +127,17 @@ internal sealed class ItemObjectPool
         for (int i = 0; i < poolComponents.Count; i++)
         {
             MonoBehaviour behaviour = poolComponents[i];
-            if (behaviour == null || behaviour == item || behaviour is IItemPoolLifecycle)
+            if (behaviour == null || behaviour == item)
             {
                 continue;
             }
+
+            if (behaviour is Module module && (module.IsRuntimeLoaded || module.IsRuntimeTransitioning))
+            {
+                poolComponents.Clear();
+                return false;
+            }
+            if (behaviour is IItemPoolLifecycle) continue;
 
             Type type = behaviour.GetType();
             if (!IsPoolSafe(type))
@@ -143,21 +157,30 @@ internal sealed class ItemObjectPool
         if (PoolSafeTypes.TryGetValue(type, out bool safe))
             return safe;
 
-        const BindingFlags lifecycleFlags = BindingFlags.Instance |
-                                            BindingFlags.Public |
-                                            BindingFlags.NonPublic |
-                                            BindingFlags.DeclaredOnly;
-        bool hasDestroy = type.GetMethod("OnDestroy", lifecycleFlags) != null;
-        bool hasDisable = type.GetMethod("OnDisable", lifecycleFlags) != null;
+        bool hasDestroy = FindLifecycleMethod(type, "OnDestroy") != null;
+        bool hasDisable = FindLifecycleMethod(type, "OnDisable") != null;
         safe = !hasDestroy || hasDisable;
         if (!safe && typeof(Module).IsAssignableFrom(type))
         {
-            MethodInfo unload = type.GetMethod(nameof(Module.Unload), BindingFlags.Instance | BindingFlags.Public);
+            MethodInfo unload = FindLifecycleMethod(type, "OnUnload");
             safe = unload != null && unload.DeclaringType != typeof(Module);
         }
 
         PoolSafeTypes.Add(type, safe);
         return safe;
+    }
+
+    // 私有 Unity 回调和受保护卸载钩子都沿继承链查找，派生模块不能绕开基础清理约束。
+    private static MethodInfo FindLifecycleMethod(Type type, string name)
+    {
+        const BindingFlags flags = BindingFlags.Instance | BindingFlags.Public |
+                                   BindingFlags.NonPublic | BindingFlags.DeclaredOnly;
+        for (Type current = type; current != null && current != typeof(MonoBehaviour); current = current.BaseType)
+        {
+            MethodInfo method = current.GetMethod(name, flags);
+            if (method != null) return method;
+        }
+        return null;
     }
 
     private Transform GetPoolRoot(Transform owner)

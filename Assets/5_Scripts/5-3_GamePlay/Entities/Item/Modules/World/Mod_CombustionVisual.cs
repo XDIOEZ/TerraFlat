@@ -28,7 +28,7 @@ public sealed class Mod_CombustionVisual : Module, ICombustionStateReceiver
 
     #region 生命周期
 
-    public override void Load()
+    protected override void OnLoad()
     {
         effect = GetComponent<CombustionVisualEffect>();
         if (effect == null)
@@ -37,11 +37,11 @@ public sealed class Mod_CombustionVisual : Module, ICombustionStateReceiver
         effect.SetCombustionActive(combustionActive);
     }
 
-    public override void Save()
+    protected override void OnSave()
     {
     }
 
-    public override void Unload()
+    protected override void OnUnload()
     {
         effect?.SetCombustionActive(false);
     }

@@ -27,6 +27,8 @@ public static class ItemDefinitionRuntime
             previous.TryGetModuleParameters(pair.Key, out string oldJson);
             string moduleId = module._Data?.ModuleId;
             if (json == oldJson || current.GetModulePrefabId(pair.Key, moduleId) != previous.GetModulePrefabId(pair.Key, moduleId)) continue;
+            if (!current.TryGetModuleAssembly(pair.Key, out RuntimeItemModuleAssemblyPlan assembly) ||
+                !assembly.MatchesImplementation(module)) continue;
             json = GetChangedModuleParameters(oldJson, json);
             if (json == null) continue;
             ModuleJsonConfigurator.Validate(module, current.Id, pair.Key, moduleId, json);
@@ -88,10 +90,13 @@ public static class ItemDefinitionRuntime
         if (gameRes.TryGetItemDefinition(definitionId, out RuntimeItemDefinition definition))
         {
             ItemData currentData = definition.CreateItemData();
-            RestoreItemInstanceState(currentData, persistedData);
-            RestoreModuleRuntimeState(currentData.ModuleDataDic, persistedData.ModuleDataDic);
-            Mod_HandDrill.RestoreRuntimeDurability(currentData);
-            rebasedData = currentData;
+            ItemInstanceDataFactory.ApplyCurrentDefinition(persistedData, currentData);
+            rebasedData = persistedData;
+        }
+        else if (gameRes.GetPrefab(definitionId, logError: false)?.GetComponent<Item>() is Item template)
+        {
+            // Prefab-only 数据同样从当前模板恢复配置，冷快照不能充当静态真源。
+            ItemInstanceDataFactory.ApplyCurrentDefinition(persistedData, template.Get_NewItemData());
         }
 
         RebaseNestedPersistedItems(gameRes, rebasedData);
@@ -99,13 +104,13 @@ public static class ItemDefinitionRuntime
     }
 
     /// <summary>只刷新物品内部库存中的 ItemData；用于 Player 等不由 ItemDefinition 创建的根数据。</summary>
-    public static void RebaseNestedPersistedItems(GameRes gameRes, ItemData itemData)
+    public static void RebaseNestedPersistedItems(GameRes gameRes, ItemData itemData, bool onlyColdData = false)
     {
         if (gameRes == null || itemData == null)
             return;
 
         if (itemData is Data_Player playerData)
-            RebaseInventoryDictionary(gameRes, playerData._inventoryData);
+            RebaseInventoryDictionary(gameRes, playerData._inventoryData, onlyColdData);
 
         if (itemData.ModuleDataDic == null)
             return;
@@ -113,96 +118,12 @@ public static class ItemDefinitionRuntime
         foreach (ModuleData moduleData in itemData.ModuleDataDic.Values)
         {
             if (moduleData is Inventory_ModuleData inventoryModuleData)
-                RebaseInventoryDictionary(gameRes, inventoryModuleData.Data);
-        }
-    }
-
-    /// <summary>保留实例态；定义字段保持 currentData 的当前版本配置。</summary>
-    private static void RestoreItemInstanceState(ItemData currentData, ItemData persistedData)
-    {
-        float durabilityRatio = persistedData.MaxDurability > 0f
-            ? Mathf.Clamp01(persistedData.Durability / persistedData.MaxDurability)
-            : 1f;
-
-        currentData.Guid = persistedData.Guid;
-        currentData.ItemSpecialData = persistedData.ItemSpecialData;
-        currentData.inHand = persistedData.inHand;
-        currentData.transform = persistedData.transform ?? currentData.transform;
-        currentData.FactionId = persistedData.FactionId;
-        if (persistedData.MatterState != null)
-        {
-            currentData.MatterState = new ItemMatterState
-            {
-                Initialized = persistedData.MatterState.Initialized,
-                TemperatureCelsius = persistedData.MatterState.TemperatureCelsius,
-                Moisture = persistedData.MatterState.Moisture
-            };
-        }
-        CraftedDurabilityQuality.RestorePersistedMultiplier(currentData, persistedData);
-
-        if (currentData.Stack != null && persistedData.Stack != null)
-            currentData.Stack.Amount = persistedData.Stack.Amount;
-
-        if (currentData.MaxDurability > 0f)
-            currentData.Durability = currentData.MaxDurability * durabilityRatio;
-    }
-
-    /// <summary>
-    /// 当前定义决定模块集合、稳定 ID、启用状态和类型；匹配模块只恢复其运行时负载。
-    /// 删除的旧模块不会被存档重新实例化，新模块直接使用当前定义默认状态。
-    /// </summary>
-    private static void RestoreModuleRuntimeState(
-        Dictionary<string, ModuleData> currentModules,
-        IReadOnlyDictionary<string, ModuleData> persistedModules)
-    {
-        if (currentModules == null || persistedModules == null)
-            return;
-
-        foreach (KeyValuePair<string, ModuleData> pair in currentModules)
-        {
-            ModuleData current = pair.Value;
-            if (current == null ||
-                !persistedModules.TryGetValue(pair.Key, out ModuleData persisted) ||
-                persisted == null ||
-                persisted.GetType() != current.GetType())
-            {
-                continue;
-            }
-
-            switch (current)
-            {
-                case Ex_ModData currentJson when persisted is Ex_ModData persistedJson:
-                    currentJson.BitData = persistedJson.BitData;
-                    break;
-
-                case Ex_ModData_MemoryPackable currentBinary when persisted is Ex_ModData_MemoryPackable persistedBinary:
-                    currentBinary.BitData = persistedBinary.BitData == null
-                        ? null
-                        : (byte[])persistedBinary.BitData.Clone();
-                    break;
-
-                case CollectableModuleData currentCollectable when persisted is CollectableModuleData persistedCollectable:
-                    currentCollectable.CurrentStock = persistedCollectable.CurrentStock;
-                    currentCollectable.IsInitialized = persistedCollectable.IsInitialized;
-                    break;
-
-                case Inventory_ModuleData currentInventory when persisted is Inventory_ModuleData persistedInventory:
-                    currentInventory.Data = persistedInventory.Data ?? currentInventory.Data;
-                    currentInventory.PanleRectPosition = persistedInventory.PanleRectPosition;
-                    currentInventory.BasePanelIsOpen = persistedInventory.BasePanelIsOpen;
-                    break;
-
-                case ModData_FoodData currentFood when persisted is ModData_FoodData persistedFood:
-                    currentFood.MechanicStates = persistedFood.MechanicStates ?? new List<FoodMechanicStateData>();
-                    if (currentFood.FoodData != null && persistedFood.FoodData != null)
-                        currentFood.FoodData.PanelPosition = persistedFood.FoodData.PanelPosition;
-                    break;
-            }
+                RebaseInventoryDictionary(gameRes, inventoryModuleData.Data, onlyColdData);
         }
     }
 
     /// <summary>递归把库存里的物品配置提升到当前定义，库存位置和数量等实例状态保持不变。</summary>
-    private static void RebaseInventoryDictionary(GameRes gameRes, IDictionary<string, Inventory_Data> inventories)
+    private static void RebaseInventoryDictionary(GameRes gameRes, IDictionary<string, Inventory_Data> inventories, bool onlyColdData)
     {
         if (inventories == null)
             return;
@@ -217,7 +138,10 @@ public static class ItemDefinitionRuntime
                 ItemSlot slot = inventoryData.itemSlots[i];
                 if (slot?.itemData == null)
                     continue;
-                slot.itemData = RebasePersistedData(gameRes, slot.itemData);
+                if (!onlyColdData || slot.itemData.SharedConfiguration == null)
+                    slot.itemData = RebasePersistedData(gameRes, slot.itemData);
+                else
+                    RebaseNestedPersistedItems(gameRes, slot.itemData, onlyColdData: true);
             }
         }
     }
@@ -413,105 +337,57 @@ public static class ItemDefinitionRuntime
 
         using var availableScope = ListPool<Module>.Get(out var available);
         item.GetComponentsInChildren(true, available);
-        // 候选身份只整理一次，避免每个定义模块都重复整理全部候选。
-        for (int i = 0; i < available.Count; i++)
-            available[i]?.EnsureRuntimeIdentity();
-
-        foreach (KeyValuePair<string, ModuleData> pair in itemData.ModuleDataDic)
+        using var boundScope = DictionaryPool<string, Module>.Get(out var boundByName);
+        using var consumedScope = HashSetPool<Module>.Get(out var consumed);
+        for (int index = 0; index < available.Count; index++)
         {
-            string stableName = pair.Key;
-            ModuleData moduleData = pair.Value;
-            if (moduleData == null || string.IsNullOrWhiteSpace(moduleData.ModuleId))
+            Module candidate = available[index];
+            if (candidate == null || string.IsNullOrWhiteSpace(candidate.StableName) ||
+                !definition.TryGetModuleAssembly(candidate.StableName, out _))
                 continue;
-
-            moduleData.StableName = stableName;
-            string prefabId = definition.GetModulePrefabId(stableName, moduleData.ModuleId);
-            int embeddedIndex = -1;
-
-            // 先按具体 PrefabId 匹配，避免同一 ModuleId 的多个实现变体互相串用。
-            for (int i = 0; i < available.Count; i++)
-            {
-                Module candidate = available[i];
-                if (candidate == null ||
-                    (!string.Equals(candidate.PrefabId, prefabId, StringComparison.OrdinalIgnoreCase) &&
-                     !string.Equals(candidate.gameObject.name, prefabId, StringComparison.OrdinalIgnoreCase)))
-                    continue;
-                candidate.BindRuntimeIdentity(stableName, moduleData.ModuleId, prefabId);
-                embeddedIndex = i;
-                break;
-            }
-
-            // 旧 Actor 外壳会把内嵌模块节点改名；PrefabId 因此可能失真，按唯一具体类型复用原模块。
-            Type expectedModuleType = embeddedIndex < 0
-                ? ResolveModuleType(gameRes, prefabId, moduleData.ModuleId)
-                : null;
-            if (embeddedIndex < 0 && expectedModuleType != null)
-            {
-                int typedIndex = -1;
-                for (int i = 0; i < available.Count; i++)
-                {
-                    Module candidate = available[i];
-                    if (candidate == null || candidate.GetType() != expectedModuleType)
-                        continue;
-
-                    if (typedIndex >= 0)
-                    {
-                        typedIndex = -1;
-                        break;
-                    }
-
-                    typedIndex = i;
-                }
-
-                if (typedIndex >= 0)
-                {
-                    Module candidate = available[typedIndex];
-                    candidate.BindRuntimeIdentity(stableName, moduleData.ModuleId, prefabId);
-                    embeddedIndex = typedIndex;
-                }
-            }
-
-            // 没有独立变体时才允许按 ModuleId 唯一回退。
-            if (embeddedIndex < 0 && string.Equals(prefabId, moduleData.ModuleId, StringComparison.OrdinalIgnoreCase))
-            {
-                for (int i = 0; i < available.Count; i++)
-                {
-                    Module candidate = available[i];
-                    if (candidate == null ||
-                        !string.Equals(candidate.ResolvedModuleId, moduleData.ModuleId, StringComparison.OrdinalIgnoreCase))
-                        continue;
-                    candidate.BindRuntimeIdentity(stableName, moduleData.ModuleId, prefabId);
-                    embeddedIndex = i;
-                    break;
-                }
-            }
-            if (embeddedIndex >= 0)
-            {
-                available.RemoveAt(embeddedIndex);
-                continue;
-            }
-
-            GameObject moduleObject = gameRes.InstantiatePrefab(prefabId, parent: item.transform);
-            Module module = moduleObject?.GetComponentInChildren<Module>(true);
-            if (module == null)
-                throw new MissingComponentException(
-                    $"物品 {itemData.IDName} 无法实例化模块：{moduleData.ModuleId}（PrefabId={prefabId}）");
-            moduleObject.name = prefabId;
-            moduleObject.transform.localPosition = Vector3.zero;
-            moduleObject.transform.localRotation = Quaternion.identity;
-            moduleObject.transform.localScale = Vector3.one;
-            module.BindRuntimeIdentity(stableName, moduleData.ModuleId, prefabId);
+            if (!boundByName.TryAdd(candidate.StableName, candidate))
+                throw new InvalidDataException($"物品 {itemData.IDName} 存在重复模块稳定名：{candidate.StableName}。");
         }
-    }
 
-    private static Type ResolveModuleType(GameRes gameRes, string prefabId, string moduleId)
-    {
-        if (gameRes == null || string.IsNullOrWhiteSpace(prefabId))
-            return null;
+        // 只复用已绑定的精确身份或当前外壳的编译位置，禁止相同类型模块之间猜测替代。
+        foreach (RuntimeItemModuleAssemblyPlan assembly in definition.ModuleAssemblies)
+        {
+            if (!itemData.ModuleDataDic.TryGetValue(assembly.StableName, out ModuleData moduleData) || moduleData == null)
+                throw new InvalidDataException($"物品 {itemData.IDName} 缺少当前定义模块状态：{assembly.StableName}。");
+            if (!string.Equals(moduleData.ModuleId, assembly.ModuleId, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidDataException($"物品 {itemData.IDName} 的模块 {assembly.StableName} 状态能力身份不匹配。");
+            if (assembly.IsDataOnly)
+                continue;
 
-        GameObject modulePrefab = gameRes.GetPrefab(prefabId, false);
-        Module prototype = ItemDefinitionCatalogLoader.FindModulePrototype(null, modulePrefab, moduleId);
-        return prototype?.GetType();
+            Module module;
+            if (boundByName.TryGetValue(assembly.StableName, out module))
+            {
+                if (!assembly.MatchesBoundModule(module) && !assembly.TryRestoreRuntimeIdentity(module, item.transform))
+                    throw new InvalidDataException($"物品 {itemData.IDName} 的模块 {assembly.StableName} 复用实例实现不符合当前定义。");
+            }
+            else
+            {
+                module = assembly.ResolveEmbeddedModule(item.transform);
+                if (module != null && !string.IsNullOrWhiteSpace(module.PrefabId) &&
+                    !string.Equals(module.PrefabId, assembly.PrefabId, StringComparison.OrdinalIgnoreCase))
+                    throw new InvalidDataException($"物品 {itemData.IDName} 的外壳模块 {assembly.StableName} 已绑定另一具体 Prefab。");
+                module ??= assembly.InstantiateModule(item.transform);
+            }
+            if (!consumed.Add(module))
+                throw new InvalidDataException($"物品 {itemData.IDName} 的模块 {assembly.StableName} 重复占用同一组件。");
+            if (module._Data == null || module._Data.GetType() != moduleData.GetType())
+                throw new InvalidDataException($"物品 {itemData.IDName} 的模块 {assembly.StableName} 状态类型与编译实现不匹配。");
+            module._Data = moduleData;
+            module.BindRuntimeIdentity(assembly.StableName, assembly.ModuleId, assembly.PrefabId);
+        }
+
+        // 定义之外的组件先退出运行态再移除，节点上的外壳表现仍由外壳持有。
+        foreach (Module module in available)
+        {
+            if (module == null || consumed.Contains(module))
+                continue;
+            ItemModuleAssemblyCompiler.RetireUnconfiguredModule(module);
+        }
     }
 
     #endregion

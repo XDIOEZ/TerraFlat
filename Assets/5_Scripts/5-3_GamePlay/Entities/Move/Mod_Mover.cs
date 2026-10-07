@@ -189,7 +189,7 @@ public partial class Mod_Mover : Module
         hungerAction?.ClampValues();
     }
 
-    public override void Load()
+    protected override void OnLoad()
     {
         ModDataMemoryPack.ReadData(ref Data);
         bool persistedRunState = Data.isRunning;
@@ -560,7 +560,7 @@ public partial class Mod_Mover : Module
     #endregion
 
     #region 数据存取
-    public override void Save()
+    protected override void OnSave()
     {
         SaveCarrierSafePosition();
         var saveData = new Mover_SaveData

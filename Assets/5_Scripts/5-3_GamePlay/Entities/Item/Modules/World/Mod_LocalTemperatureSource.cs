@@ -39,7 +39,7 @@ public sealed class Mod_LocalTemperatureSource : Module, ICombustionStateReceive
 
     #region 生命周期
 
-    public override void Load()
+    protected override void OnLoad()
     {
         source = GetComponent<LocalTemperatureSource>();
         if (source == null)
@@ -47,11 +47,11 @@ public sealed class Mod_LocalTemperatureSource : Module, ICombustionStateReceive
         ApplyOutput();
     }
 
-    public override void Save()
+    protected override void OnSave()
     {
     }
 
-    public override void Unload()
+    protected override void OnUnload()
     {
         source?.Configure(radius, 0f);
     }

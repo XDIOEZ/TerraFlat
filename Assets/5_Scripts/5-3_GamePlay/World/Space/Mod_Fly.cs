@@ -85,7 +85,7 @@ public class Mod_Fly : Module, IInteract, IInteractable
 		}
 	}
 
-	public override void Load()
+	protected override void OnLoad()
 	{
 		if (ModData != null)
 		{
@@ -107,7 +107,7 @@ public class Mod_Fly : Module, IInteract, IInteractable
 		}
 	}
 
-	public override void Save()
+	protected override void OnSave()
 	{
 		ModData?.WriteData(new FlySaveData
 		{

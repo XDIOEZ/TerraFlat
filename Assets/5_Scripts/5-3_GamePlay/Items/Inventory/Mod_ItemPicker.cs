@@ -29,7 +29,7 @@ public class Mod_ItemPicker : Module
         _Data.ID = ModText.Picker;
     }
 
-    public override void Load()
+    protected override void OnLoad()
     {
         ModSaveData.ReadData(ref Data);
         RebuildTargetInventories();
@@ -49,13 +49,13 @@ public class Mod_ItemPicker : Module
     private void Start()
     {
     }
-    public override void Save()
+    protected override void OnSave()
     {
         ModSaveData.WriteData(Data);
     }
 
     /// <summary>清理碰撞补偿状态，避免物品复用或模块重载后残留旧拾取请求。</summary>
-    public override void Unload()
+    protected override void OnUnload()
     {
         DroppedItemService.UnregisterPicker(this);
         deferredPickupItems.Clear();

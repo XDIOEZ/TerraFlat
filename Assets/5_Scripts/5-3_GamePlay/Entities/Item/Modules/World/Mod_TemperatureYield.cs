@@ -43,7 +43,7 @@ public sealed class Mod_TemperatureYield : Module, IResourceYieldModifier
     #region 生命周期
 
     /// <summary>建立实例时校验参数；温度与产量不写入存档。</summary>
-    public override void Load()
+    protected override void OnLoad()
     {
         ValidateConfiguration();
         if (!GameRes.Instance.TryGetItemDefinition(OutputItemId, out _))
@@ -51,7 +51,7 @@ public sealed class Mod_TemperatureYield : Module, IResourceYieldModifier
     }
 
     /// <summary>倍率来自当前温度场，保存时不固化或改写原始战利品表。</summary>
-    public override void Save()
+    protected override void OnSave()
     {
     }
 

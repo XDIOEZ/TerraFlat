@@ -10,12 +10,12 @@ public class Mod_ItemChunkAssigner : Module
 
     public override ModuleData _Data { get { return ModData; } set { ModData = (Ex_ModData_MemoryPackable)value; } }
 
-    public override void Load()
+    protected override void OnLoad()
     {
         ModData.ReadData(ref lastChunkPos);
     }
 
-    public override void Save()
+    protected override void OnSave()
     {
         ModData.WriteData(lastChunkPos);
     }

@@ -469,8 +469,11 @@ public sealed class RuntimeItemDefinition
 {
     public IReadOnlyList<string> FormerIds { get; }
     private readonly ItemData templateData;
+    private readonly Func<ItemData> createInstanceData;
     private readonly Dictionary<string, string> moduleParameters;
     private readonly Dictionary<string, string> modulePrefabIds;
+    private readonly Dictionary<string, RuntimeItemModuleAssemblyPlan> moduleAssembliesByName;
+    private readonly HashSet<string> moduleIds;
     private readonly Dictionary<string, Sprite> visualStateSprites;
     private readonly Dictionary<string, RuntimeItemProcessingDefinition> processingDefinitions;
     private readonly Dictionary<string, int> processingCapabilityLevels;
@@ -493,6 +496,9 @@ public sealed class RuntimeItemDefinition
 
     /// <summary>定义编译后的模块描述；纯数据系统可据此装配能力，不需要实例化 Module Prefab。</summary>
     public IReadOnlyList<RuntimeItemModuleDefinition> ModuleDefinitions { get; }
+
+    /// <summary>目录构建时完成的具体模块装配计划，随定义重载整体替换。</summary>
+    public IReadOnlyList<RuntimeItemModuleAssemblyPlan> ModuleAssemblies { get; }
 
     /// <summary>当前物品可响应的加工能力；配方关系属于物品，不属于石臼、石磨等具体设备。</summary>
     public IReadOnlyDictionary<string, RuntimeItemProcessingDefinition> ProcessingDefinitions => processingDefinitions;
@@ -571,7 +577,8 @@ public sealed class RuntimeItemDefinition
         Dictionary<string, int> processingCapabilities = null,
         string[] formerIds = null,
         RuntimeItemMatterDefinition matter = null,
-        IReadOnlyList<RuntimeItemReactionDefinition> reactions = null)
+        IReadOnlyList<RuntimeItemReactionDefinition> reactions = null,
+        GameRes moduleResources = null)
     {
         Id = id;
         var aliases = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -584,6 +591,7 @@ public sealed class RuntimeItemDefinition
         ShellPrefabId = shellPrefabId;
         ShellPrefab = shellPrefab;
         templateData = itemData;
+        createInstanceData = ItemInstanceDataFactory.Compile(itemData);
         Visual = visual;
         Health = health;
         LootTableId = lootTableId;
@@ -613,11 +621,16 @@ public sealed class RuntimeItemDefinition
         DescriptionKey = string.IsNullOrWhiteSpace(descriptionKey)
             ? FlatWorldLocalizationService.GetItemDescriptionKey(id)
             : descriptionKey.Trim();
-        moduleParameters = parameters ?? new Dictionary<string, string>(StringComparer.Ordinal);
-        modulePrefabIds = prefabIds ?? new Dictionary<string, string>(StringComparer.Ordinal);
-        visualStateSprites = stateSprites ?? new Dictionary<string, Sprite>(StringComparer.OrdinalIgnoreCase);
-        processingDefinitions = processing ?? new Dictionary<string, RuntimeItemProcessingDefinition>(StringComparer.OrdinalIgnoreCase);
-        processingCapabilityLevels = processingCapabilities ?? new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        moduleParameters = parameters == null ? new Dictionary<string, string>(StringComparer.Ordinal)
+            : new Dictionary<string, string>(parameters, StringComparer.Ordinal);
+        modulePrefabIds = prefabIds == null ? new Dictionary<string, string>(StringComparer.Ordinal)
+            : new Dictionary<string, string>(prefabIds, StringComparer.Ordinal);
+        visualStateSprites = stateSprites == null ? new Dictionary<string, Sprite>(StringComparer.OrdinalIgnoreCase)
+            : new Dictionary<string, Sprite>(stateSprites, StringComparer.OrdinalIgnoreCase);
+        processingDefinitions = processing == null ? new Dictionary<string, RuntimeItemProcessingDefinition>(StringComparer.OrdinalIgnoreCase)
+            : new Dictionary<string, RuntimeItemProcessingDefinition>(processing, StringComparer.OrdinalIgnoreCase);
+        processingCapabilityLevels = processingCapabilities == null ? new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
+            : new Dictionary<string, int>(processingCapabilities, StringComparer.OrdinalIgnoreCase);
         Matter = matter;
         Reactions = reactions ?? Array.Empty<RuntimeItemReactionDefinition>();
 
@@ -636,6 +649,14 @@ public sealed class RuntimeItemDefinition
                 moduleData?.Enabled != false));
         }
         ModuleDefinitions = modules.AsReadOnly();
+        moduleIds = new HashSet<string>(StringComparer.Ordinal);
+        foreach (RuntimeItemModuleDefinition module in ModuleDefinitions)
+            moduleIds.Add(module.ModuleId);
+        ModuleAssemblies = ItemModuleAssemblyCompiler.Compile(moduleResources, id, shellPrefab, ModuleDefinitions, UsesResourceEntities);
+        moduleAssembliesByName = new Dictionary<string, RuntimeItemModuleAssemblyPlan>(ModuleAssemblies.Count, StringComparer.Ordinal);
+        foreach (RuntimeItemModuleAssemblyPlan assembly in ModuleAssemblies)
+            moduleAssembliesByName.Add(assembly.StableName, assembly);
+        CompileModuleDataRules();
     }
 
     /// <summary>查询物品是否响应指定加工能力。</summary>
@@ -672,7 +693,7 @@ public sealed class RuntimeItemDefinition
 
     public ItemData CreateItemData()
     {
-        return FastCloner.FastCloner.DeepClone(templateData);
+        return createInstanceData();
     }
 
     #region 定义模块查询
@@ -680,34 +701,53 @@ public sealed class RuntimeItemDefinition
     /// <summary>只读模板判断模块身份，筛选目录时无需克隆整份 ItemData。</summary>
     public bool HasModule(string moduleId)
     {
-        if (string.IsNullOrWhiteSpace(moduleId) || templateData?.ModuleDataDic == null) return false;
-        foreach (ModuleData module in templateData.ModuleDataDic.Values)
-            if (module != null && string.Equals(module.ID, moduleId, StringComparison.Ordinal)) return true;
-        return false;
+        return !string.IsNullOrWhiteSpace(moduleId) && moduleIds.Contains(moduleId);
     }
 
     #endregion
 
     #region 模块配置计划
 
-    // 同一定义中的 JSON 与模块类型固定；配置计划随资源定义一起释放。
-    private readonly Dictionary<(string Name, Type ModuleType), ModuleJsonConfigurator.PreparedParameters>
-        preparedModuleParameters = new();
+    public bool TryGetModuleAssembly(string stableModuleName, out RuntimeItemModuleAssemblyPlan assembly)
+        => moduleAssembliesByName.TryGetValue(stableModuleName ?? string.Empty, out assembly);
 
-    /// <summary>一次资源定义内复用模块参数计划；资源重载会换用新的定义实例。</summary>
+    /// <summary>复用目录构建时已校验的参数计划，实例加载不再解析 JSON 或猜测类型。</summary>
     public void ApplyModuleConfiguration(Module module, string moduleName, string moduleId)
     {
-        if (module == null || !TryGetModuleParameters(moduleName, out string json) ||
-            string.IsNullOrWhiteSpace(json))
+        if (module == null || !TryGetModuleAssembly(moduleName, out RuntimeItemModuleAssemblyPlan assembly))
             return;
+        if (!string.Equals(assembly.ModuleId, moduleId, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException($"物品 {Id} 的模块 {moduleName} 能力身份与当前定义不一致。");
+        assembly.ApplyConfiguration(module);
+    }
 
-        var key = (moduleName ?? string.Empty, module.GetType());
-        if (!preparedModuleParameters.TryGetValue(key, out ModuleJsonConfigurator.PreparedParameters prepared))
-        {
-            prepared = ModuleJsonConfigurator.Prepare(module, Id, moduleName, moduleId, json);
-            preparedModuleParameters.Add(key, prepared);
-        }
-        prepared.Apply(module);
+    #endregion
+
+    #region 纯数据规则计划
+
+    private readonly Dictionary<string, RuntimeModuleDataRulePlan> moduleDataRulesByName = new(StringComparer.Ordinal);
+    private uint compiledRuleRevision;
+
+    private void CompileModuleDataRules()
+    {
+        uint revision = ModuleDataRuleRegistry.Revision;
+        var currentPlans = new Dictionary<string, RuntimeModuleDataRulePlan>(ModuleDefinitions.Count, StringComparer.Ordinal);
+        foreach (RuntimeItemModuleDefinition module in ModuleDefinitions)
+            currentPlans.Add(module.StableName, ModuleDataRuleRegistry.Compile(module));
+        moduleDataRulesByName.Clear();
+        foreach (KeyValuePair<string, RuntimeModuleDataRulePlan> pair in currentPlans)
+            moduleDataRulesByName.Add(pair.Key, pair.Value);
+        compiledRuleRevision = revision;
+    }
+
+    public bool TryGetModuleDataRules(string stableModuleName, string moduleId, out RuntimeModuleDataRulePlan rules)
+    {
+        if (compiledRuleRevision != ModuleDataRuleRegistry.Revision)
+            CompileModuleDataRules();
+        rules = null;
+        return TryGetModuleAssembly(stableModuleName, out RuntimeItemModuleAssemblyPlan assembly) &&
+               string.Equals(assembly.ModuleId, moduleId, StringComparison.OrdinalIgnoreCase) &&
+               moduleDataRulesByName.TryGetValue(stableModuleName, out rules);
     }
 
     #endregion

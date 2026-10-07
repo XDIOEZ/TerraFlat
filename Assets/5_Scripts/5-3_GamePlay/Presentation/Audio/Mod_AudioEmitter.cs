@@ -76,7 +76,7 @@ public sealed class Mod_AudioEmitter : Module, IItemPoolLifecycle
         base.Awake();
     }
 
-    public override void Load()
+    protected override void OnLoad()
     {
         RebuildBindings();
         BindItemEvents();
@@ -90,7 +90,7 @@ public sealed class Mod_AudioEmitter : Module, IItemPoolLifecycle
             PlayEvent(saveData.ActivePersistentEvents[i]);
     }
 
-    public override void Save()
+    protected override void OnSave()
     {
         ItemAudioEmitterSaveData saveData = new ItemAudioEmitterSaveData();
         foreach (KeyValuePair<string, ItemAudioBinding> pair in bindingByEvent)

@@ -49,10 +49,10 @@ public partial class ItemMgr : SingletonMono<ItemMgr>
     #region Runtime Data
 
     [ShowInInspector]
-    public Dictionary<int, Item> WorldRunTimeItems => _runtimeRegistry.ItemsByGuid;
+    public IReadOnlyDictionary<int, Item> WorldRunTimeItems => _runtimeRegistry.ItemsByGuid;
 
     [ShowInInspector]
-    public Dictionary<string, List<Item>> RuntimeItemsGroup => _runtimeRegistry.Groups;
+    public IReadOnlyDictionary<string, IReadOnlyList<Item>> RuntimeItemsGroup => _runtimeRegistry.Groups;
 
     private Map _cachedMap;
     private Transform _externalPlayerTransform;
@@ -253,7 +253,7 @@ public partial class ItemMgr : SingletonMono<ItemMgr>
         // 索引刷新委托只创建一次，避免每帧方法组转换分配。
         _refreshRuntimeItemIndexesCallback ??= RefreshRuntimeItemIndexes;
         using (SchedulerTickMarker.Auto())
-            _tickScheduler.Update(RuntimeItems, Time.deltaTime, _refreshRuntimeItemIndexesCallback,
+            _tickScheduler.Update(Time.deltaTime, _refreshRuntimeItemIndexesCallback,
                 _simulationPlayers, WorldTopologyRuntime.GetActiveDomain());
         using (WaterTickMarker.Auto())
             WorldItemWaterSystem.ProcessPendingSpawnChecks();

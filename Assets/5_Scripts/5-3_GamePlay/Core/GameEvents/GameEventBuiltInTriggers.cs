@@ -330,7 +330,7 @@ namespace FlatWorld.Gameplay.Events
         {
             ItemMgr itemManager = ItemMgr.Instance;
             if (itemManager == null || string.IsNullOrWhiteSpace(itemId) ||
-                !itemManager.RuntimeItemsGroup.TryGetValue(itemId.Trim(), out List<Item> candidates))
+                !itemManager.RuntimeItemsGroup.TryGetValue(itemId.Trim(), out IReadOnlyList<Item> candidates))
                 return null;
 
             Item selected = null;

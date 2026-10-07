@@ -37,11 +37,11 @@ public class VesselLogic : MachineLogic, ILiquidVessel, IVesselContents
         Mod_WaterVessel.Validate(Data, Capacity);
         if (entity.Definition.Content.Has<Mod_VesselContents>())
         {
+            Inventory_Data contentsData = MachineInventory.NewData("木桶内物品", 6);
             contentsState = MachineModuleState.Read<VesselContentsState>(entity.Snapshot, Mod_VesselContents.ModuleId)
-                ?? new VesselContentsState { Items = MachineInventory.NewData("木桶内物品", 6) };
-            if (contentsState.Items?.itemSlots?.Count != 6) throw new InvalidOperationException("木桶固体库存必须为六格。");
-            Contents = new Mod_VesselContents.VesselInventory { Data = contentsState.Items };
-            MachineInventory.Rebase(Contents.Data);
+                ?? new VesselContentsState { Items = InventoryInstanceSnapshot.Capture(contentsData) };
+            Contents = new Mod_VesselContents.VesselInventory { Data = contentsData };
+            RestoreContents(contentsState.Items);
             Contents.Data.SetUnlimitedSlots(false);
             Contents.InitData();
             Track(Contents);
@@ -116,7 +116,11 @@ public class VesselLogic : MachineLogic, ILiquidVessel, IVesselContents
     public override void Capture()
     {
         MachineModuleState.Write(Entity.Snapshot, Mod_WaterVessel.ModuleId, Data);
-        if (contentsState != null) MachineModuleState.Write(Entity.Snapshot, Mod_VesselContents.ModuleId, contentsState);
+        if (contentsState != null)
+        {
+            contentsState.Items = InventoryInstanceSnapshot.Capture(Contents.Data);
+            MachineModuleState.Write(Entity.Snapshot, Mod_VesselContents.ModuleId, contentsState);
+        }
     }
 
     public override bool ApplyRemoteSnapshot(ItemData snapshot)
@@ -126,10 +130,21 @@ public class VesselLogic : MachineLogic, ILiquidVessel, IVesselContents
         if (Contents != null)
         {
             var incoming = MachineModuleState.Read<VesselContentsState>(snapshot, Mod_VesselContents.ModuleId);
-            MachineInventory.ApplySnapshot(Contents, incoming.Items);
+            RestoreContents(incoming?.Items);
+            Contents.RefreshUI();
         }
         NotifyRemoteChanged();
         return true;
+    }
+
+    private void RestoreContents(InventoryInstanceSnapshot snapshot)
+    {
+        if (snapshot == null || snapshot.SlotCount != 6)
+            throw new InvalidOperationException("木桶固体库存必须为六格。");
+        // 机器保留自己的六格布局，网络与存档只合并物品实例状态。
+        snapshot.RestoreTo(Contents.Data,
+            data => data.SharedConfiguration == null
+                ? ItemDefinitionRuntime.RebasePersistedData(GameRes.ExistingInstance, data) : data);
     }
 
     protected override void OnInventoryChanged(ItemSlot slot)

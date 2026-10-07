@@ -39,7 +39,7 @@ public sealed class Mod_Mortar : Module, IInteractable, IInventory
     #endregion
 
     #region 生命周期与存档
-    public override void Load()
+    protected override void OnLoad()
     {
         ContainerLabel = string.IsNullOrWhiteSpace(ContainerLabel) ? (IsCrucible ? "坩埚" : "石臼") : ContainerLabel;
         // 新道具创建初始状态；已有存档严格反序列化，不吞掉损坏数据。
@@ -52,8 +52,8 @@ public sealed class Mod_Mortar : Module, IInteractable, IInventory
         bowl.StationId = StationId;
         bowl.ProcessCapability = ProcessCapability;
         bowl.MaterialOnly = IsCrucible;
-        bowl.Data = state.Bowl;
-        bowl.Data.SetFixedSlotCount(SlotCount);
+        bowl.Data = RestoreBowlInventory(state.Bowl, bowl.Data, SlotCount, ContainerLabel);
+        state.Bowl = bowl.Data;
         bowl.NormalizeStoredStacks();
         bowl.InitData();
         capabilities = new CraftingCapabilities
@@ -69,7 +69,7 @@ public sealed class Mod_Mortar : Module, IInteractable, IInventory
         loaded = true;
     }
 
-    public override void Save()
+    protected override void OnSave()
     {
         if (state != null)
         {
@@ -78,7 +78,7 @@ public sealed class Mod_Mortar : Module, IInteractable, IInventory
         }
     }
 
-    public override void Unload()
+    protected override void OnUnload()
     {
         if (!loaded) return;
         loaded = false;
@@ -406,21 +406,52 @@ public sealed class Mod_Mortar : Module, IInteractable, IInventory
             state ??= new MortarState();
             if (state.Bowl?.itemSlots == null)
                 throw new InvalidOperationException("坩埚存档缺少容器内库存。");
-            state.Bowl.SetFixedSlotCount(ResolveFixedSlotCount(itemData));
+            int slotCount = ResolveFixedSlotCount(itemData, out string containerLabel);
+            state.Bowl = RestoreBowlInventory(state.Bowl, null, slotCount, containerLabel);
             return true;
         }
 
         return false;
     }
 
-    /// <summary>未物化的坩埚也读取当前定义的固定格数，热加工不能临时扩容。</summary>
-    private static int ResolveFixedSlotCount(ItemData itemData)
+    /// <summary>库存外壳保持当前布局，快照恢复同 GUID 实例，冷物品才补接当前定义。</summary>
+    private static Inventory_Data RestoreBowlInventory(Inventory_Data saved, Inventory_Data current,
+        int slotCount, string containerLabel)
     {
-        if (GameRes.Instance.TryGetItemDefinition(itemData.IDName, out RuntimeItemDefinition definition))
+        current ??= new Inventory_Data(new List<ItemSlot>(), containerLabel);
+        current.Name = containerLabel;
+        // 先保留现有物品供同 GUID 复用，再按当前配置收回空的溢出槽位。
+        current.SetFixedSlotCount(Mathf.Max(slotCount, current.itemSlots?.Count ?? 0));
+        InventoryInstanceSnapshot.Capture(saved).RestoreTo(current, data =>
+            data.SharedConfiguration == null
+                ? ItemDefinitionRuntime.RebasePersistedData(GameRes.ExistingInstance, data)
+                : data);
+        int restoredSlotCount = Mathf.Max(1, slotCount);
+        for (int index = current.itemSlots.Count - 1; index >= restoredSlotCount; index--)
+            if (current.itemSlots[index]?.itemData != null)
+            {
+                restoredSlotCount = index + 1;
+                break;
+            }
+        current.SetFixedSlotCount(restoredSlotCount);
+        return current;
+    }
+
+    /// <summary>未物化的坩埚从当前定义建立本地库存布局，不使用存档中的配置。</summary>
+    private static int ResolveFixedSlotCount(ItemData itemData, out string containerLabel)
+    {
+        containerLabel = "坩埚";
+        GameRes resources = GameRes.ExistingInstance;
+        if (resources != null && resources.TryGetItemDefinition(itemData.IDName, out RuntimeItemDefinition definition))
             foreach (KeyValuePair<string, ModuleData> pair in itemData.ModuleDataDic)
                 if (pair.Value?.ID == ModuleId &&
                     definition.TryGetModuleParameters(pair.Key, out string json) && !string.IsNullOrWhiteSpace(json))
-                    return Mathf.Max(1, JObject.Parse(json).Value<int?>(nameof(SlotCount)) ?? DefaultSlotCount);
+                {
+                    JObject configuration = JObject.Parse(json);
+                    string label = configuration.Value<string>(nameof(ContainerLabel));
+                    if (!string.IsNullOrWhiteSpace(label)) containerLabel = label;
+                    return Mathf.Max(1, configuration.Value<int?>(nameof(SlotCount)) ?? DefaultSlotCount);
+                }
         return DefaultSlotCount;
     }
 

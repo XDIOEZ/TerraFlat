@@ -74,7 +74,7 @@ public sealed class Mod_ChargeAttack : Module, IAnimalCombatSkill, ITrunDirectio
             ModData.ID = PersistedModuleId;
     }
 
-    public override void Load()
+    protected override void OnLoad()
     {
         _phase = ChargeAttackPhase.Idle;
         _phaseRemain = 0f;
@@ -100,7 +100,7 @@ public sealed class Mod_ChargeAttack : Module, IAnimalCombatSkill, ITrunDirectio
         }
     }
 
-    public override void Save()
+    protected override void OnSave()
     {
     }
 

@@ -91,7 +91,7 @@ public class Mod_PlayerAdminController : Module, IIncomingDamageRule, IIncomingD
         initialUnityTimeScale = Time.timeScale;
     }
 
-    public override void Load()
+    protected override void OnLoad()
     {
         // 尝试自动获取 Player 引用
         if (player == null) player = GetComponentInParent<Player>();
@@ -184,7 +184,7 @@ public class Mod_PlayerAdminController : Module, IIncomingDamageRule, IIncomingD
         }
     }
 
-    public override void Save() { }
+    protected override void OnSave() { }
 
     #endregion
 

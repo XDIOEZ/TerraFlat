@@ -87,13 +87,13 @@ public class Mod_PlantGrow : Module
         OnAction.Invoke(_data.nodeIndex);
     }
 
-    public override void Load()
+    protected override void OnLoad()
     {
         _memoryPackable.ReadData(ref _data);
       //  throw new System.NotImplementedException();
     }
 
-    public override void Save()
+    protected override void OnSave()
     {
         _memoryPackable.WriteData(_data);
 //throw new System.NotImplementedException();

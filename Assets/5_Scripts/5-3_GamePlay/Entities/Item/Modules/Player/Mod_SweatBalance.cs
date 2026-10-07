@@ -48,7 +48,7 @@ public sealed class Mod_SweatBalance : Module, IItemModuleDependencyBinder, ISta
         stamina = modules.RequireSingleModById<Mod_Stamina>(ModText.Stamina);
     }
     /// <summary>恢复负担；新实例不携带上一角色的提示状态。</summary>
-    public override void Load()
+    protected override void OnLoad()
     {
         ModData.ReadData(ref Data);
         if (!IsFinite(Data.SaltBurden) || Data.SaltBurden < 0f || Data.SaltBurden > 1f ||
@@ -60,9 +60,9 @@ public sealed class Mod_SweatBalance : Module, IItemModuleDependencyBinder, ISta
         heatWarningShown = saltWarningShown = false;
     }
     /// <summary>盐负担和剩余恢复量随玩家保存。</summary>
-    public override void Save() => ModData.WriteData(Data);
+    protected override void OnSave() => ModData.WriteData(Data);
     /// <summary>只清理引用，不清空已经保存的生存状态。</summary>
-    public override void Unload() { food = null; temperature = null; stamina = null; }
+    protected override void OnUnload() { food = null; temperature = null; stamina = null; }
     #endregion
 
     /// <summary>以独立上限负担结算出汗和补盐，普通休息只恢复剩余容量内的体力。</summary>

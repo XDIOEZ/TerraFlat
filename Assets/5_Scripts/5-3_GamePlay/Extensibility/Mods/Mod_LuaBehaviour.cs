@@ -55,7 +55,7 @@ public sealed class Mod_LuaBehaviour : Module
     }
 #endif
 
-    public override void Load()
+    protected override void OnLoad()
     {
         if (ModRuntimeManager.Instance == null)
             return;
@@ -68,7 +68,7 @@ public sealed class Mod_LuaBehaviour : Module
             data.BitData);
     }
 
-    public override void Save()
+    protected override void OnSave()
     {
         if (ModRuntimeManager.Instance == null)
             return;

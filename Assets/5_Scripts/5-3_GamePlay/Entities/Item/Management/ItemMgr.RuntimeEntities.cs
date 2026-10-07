@@ -253,7 +253,7 @@ public partial class ItemMgr
     }
 
     /// <summary>从新版实体索引移除 Item，并把原地址标记为需要保存。</summary>
-    private void RemoveRuntimeAiEntity(Item item, bool markDirty = true)
+    private void RemoveRuntimeAiEntity(Item item, bool markDirty = true, int? registeredGuid = null)
     {
         if (ReferenceEquals(item, null))
             return;
@@ -264,7 +264,9 @@ public partial class ItemMgr
             return;
 
         RemoveRuntimeAiFromAddress(item, previous);
-        if (item != null && item.itemData != null)
+        if (registeredGuid.HasValue)
+            _runtimeAiAddressByGuid.Remove(registeredGuid.Value);
+        else if (item != null && item.itemData != null)
             _runtimeAiAddressByGuid.Remove(item.itemData.Guid);
         if (markDirty)
             _runtimeAiDirtyAddresses.Add(previous);
@@ -345,15 +347,17 @@ public partial class ItemMgr
     /// <summary>Item 被 Unity 场景卸载直接销毁时，从运行时注册表注销。</summary>
     internal void NotifyRuntimeItemDestroyed(Item item)
     {
-        if (item?.itemData == null ||
-            !WorldRunTimeItems.TryGetValue(item.itemData.Guid, out Item registered) ||
-            registered != item)
+        if (!_runtimeRegistry.Contains(item) || !_runtimeDespawning.Add(item))
         {
             return;
         }
 
-        RuntimeItemDespawning?.Invoke(item);
-        UnregisterRuntimeItem(item);
+        try
+        {
+            try { RuntimeItemDespawning?.Invoke(item); }
+            finally { UnregisterRuntimeItem(item); }
+        }
+        finally { _runtimeDespawning.Remove(item); }
     }
 
     #endregion

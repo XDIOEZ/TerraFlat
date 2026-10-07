@@ -48,12 +48,12 @@ public partial class Mod_MoveSpeed : Module, IItemValueModifier
     }
 
     // 保留基类方法但清空实现，因为逻辑已迁移到接口方法
-    public override void Load()
+    protected override void OnLoad()
     {
         // 逻辑已迁移到Equip方法，装备时触发
     }
 
-    public override void Save()
+    protected override void OnSave()
     {
         // 逻辑已迁移到Unequip方法，卸下时触发
     }

@@ -17,15 +17,15 @@ using RuntimeWorldAddress = FlatWorld.WorldModel.WorldAddress;
 /// </summary>
 public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
 {
-    private const int CompactSaveVersion = 24; // 物理日历与历史统一为游戏秒，派生日长、年长不入档。
-    private const int ModdedSaveVersion = 11;
+    private const int CompactSaveVersion = 25; // ItemData 只保存实例状态，定义配置在主线程恢复。
+    private const int ModdedSaveVersion = 12;
     private const float AutoSaveFrameBudgetSeconds = 0.0025f;
     private const string TemporarySaveSuffix = ".tmp";
     private const string BackupSaveSuffix = ".bak";
     private const string LastExitTimeSuffix = ".lastplayed";
-    // 季节与世界状态采用当前布局，先检查封装头，再解析嵌套 MemoryPack 数据。
-    private static readonly byte[] CompactSaveMagic = { (byte)'F', (byte)'W', (byte)'D', (byte)'8' };
-    private static readonly byte[] ModdedSaveMagic = { (byte)'F', (byte)'W', (byte)'D', (byte)'4' };
+    // 实例状态采用当前布局，先检查封装头，再解析嵌套 MemoryPack 数据。
+    private static readonly byte[] CompactSaveMagic = { (byte)'F', (byte)'W', (byte)'D', (byte)'9' };
+    private static readonly byte[] ModdedSaveMagic = { (byte)'F', (byte)'W', (byte)'D', (byte)'5' };
     private static readonly object SaveFileLock = new object();
     private static readonly object SaveRevisionLock = new object();
     private static readonly Dictionary<string, long> LatestSaveRevisions =
@@ -155,29 +155,13 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
             throw new InvalidOperationException("SaveData为null，无法创建联机世界快照");
 
         PrepareLoadedChunksForSave();
-        var privateBackups = new List<(Data_Player Player, string SpecialData)>();
-        try
-        {
-            if (SaveData.PlayerData_Dict != null)
-                foreach (Data_Player player in SaveData.PlayerData_Dict.Values)
-                {
-                    if (player == null) continue;
-                    string publicData = MachineInventoryCommands.PublicSpecialData(player.ItemSpecialData);
-                    if (string.Equals(publicData, player.ItemSpecialData, StringComparison.Ordinal)) continue;
-                    privateBackups.Add((player, player.ItemSpecialData));
-                    player.ItemSpecialData = publicData;
-                }
-            byte[] rawData = BuildCompactSavePayload(SaveData);
-            using MemoryStream output = new MemoryStream();
-            using (GZipStream gzip = new GZipStream(output, System.IO.Compression.CompressionLevel.Fastest, true))
-                gzip.Write(rawData, 0, rawData.Length);
-            return output.ToArray();
-        }
-        finally
-        {
-            foreach (var backup in privateBackups)
-                backup.Player.ItemSpecialData = backup.SpecialData;
-        }
+        using IDisposable publicPlayerCapture = ItemSnapshotSerialization.BeginPublicPlayerState(
+            MachineInventoryCommands.PublicSpecialData);
+        byte[] rawData = BuildCompactSavePayload(SaveData);
+        using MemoryStream output = new MemoryStream();
+        using (GZipStream gzip = new GZipStream(output, System.IO.Compression.CompressionLevel.Fastest, true))
+            gzip.Write(rawData, 0, rawData.Length);
+        return output.ToArray();
     }
 
     /// <summary>
@@ -2643,7 +2627,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         if (!HasSaveHeader(payload, CompactSaveMagic))
         {
             throw new SaveVersionIncompatibleException(
-                "存档封装与当前 Ground/Liquid 独立格式不兼容，请创建新世界。不会迁移、覆盖或删除该存档。");
+                "存档封装与当前 Item 实例状态格式不兼容，请创建新世界。不会迁移、覆盖或删除该存档。");
         }
 
         byte[] body = new byte[payload.Length - CompactSaveMagic.Length];

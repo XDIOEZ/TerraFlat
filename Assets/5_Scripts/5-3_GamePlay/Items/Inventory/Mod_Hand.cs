@@ -16,7 +16,7 @@ public class Mod_Hand : Module
     [SerializeReference]
     public List<string> RawData = new List<string>();
 
-    public override void Load()
+    protected override void OnLoad()
     {
         ModSaveData.ReadData(ref RawData);
 
@@ -27,13 +27,13 @@ public class Mod_Hand : Module
         HandInventory.SwitchUI();
     }
 
-    public override void Save()
+    protected override void OnSave()
     {
         ModSaveData.WriteData(RawData);
     }
 
     /// <summary>玩家卸载时清理全局手部入口，禁止后续 UI 回调命中上一轮玩家。</summary>
-    public override void Unload()
+    protected override void OnUnload()
     {
         if (ReferenceEquals(Inventory_Hand.PlayerHand, HandInventory))
             Inventory_Hand.PlayerHand = null;

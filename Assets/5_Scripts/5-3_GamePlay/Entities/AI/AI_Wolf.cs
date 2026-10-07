@@ -244,7 +244,7 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver, IA
 #endregion
 
 #region Lifecycle
-	public override void Load()
+	protected override void OnLoad()
 	{
 		ModData.ReadData(ref Data);
 		Data ??= new AI_WolfSaveData();
@@ -256,7 +256,7 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver, IA
 		InitializeAI();
 	}
 
-	public override void Save()
+	protected override void OnSave()
 	{
 		Data.State = _currentState;
 		ModData.WriteData(Data);

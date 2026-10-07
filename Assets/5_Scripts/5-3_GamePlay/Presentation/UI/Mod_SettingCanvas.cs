@@ -40,7 +40,7 @@ public class Mod_SettingCanvas : Module, IInstanceUI
         _Data.ID = ModText.Setting;
     }
 
-    public override void Load()
+    protected override void OnLoad()
     {
         gameController = item.itemMods.GetMod_ByID(ModText.Controller).GetComponent<Mod_GameController>();
         // 初始化输入系统
@@ -52,7 +52,7 @@ public class Mod_SettingCanvas : Module, IInstanceUI
         playerInputActions.Win10.ESC.performed += OnEscapePressed;
     }
 
-    public override void Save()
+    protected override void OnSave()
     {
     }
     public override void Act()

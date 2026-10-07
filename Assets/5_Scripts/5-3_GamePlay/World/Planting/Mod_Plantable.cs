@@ -76,7 +76,7 @@ public sealed class Mod_Plantable : Module
         ModData.ID = ModText.Plantable;
     }
 
-    public override void Load()
+    protected override void OnLoad()
     {
         ModData ??= new Ex_ModData_MemoryPackable();
         item ??= GetComponentInParent<Item>();
@@ -87,12 +87,12 @@ public sealed class Mod_Plantable : Module
         BindItemActEvent();
     }
 
-    public override void Save()
+    protected override void OnSave()
     {
         // 本模块没有额外运行时状态，配置字段随 ModuleData 直接持久化。
     }
 
-    public override void Unload()
+    protected override void OnUnload()
     {
         UnbindItemActEvent();
         DisposePlantingSummoner();

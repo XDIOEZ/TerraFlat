@@ -17,7 +17,7 @@ public sealed class Mod_ConsumableBuff : Module, IFoodMechanic, IFoodConsumption
     }
 
     /// <summary>装配时核对 Buff 引用，避免消耗药品后才发现配置缺失。</summary>
-    public override void Load()
+    protected override void OnLoad()
     {
         foreach (string id in buffIds)
             if (GameRes.Instance.GetBuffDefinition(id) == null)
@@ -25,7 +25,7 @@ public sealed class Mod_ConsumableBuff : Module, IFoodMechanic, IFoodConsumption
     }
 
     /// <summary>药效计时由使用者 Buff 系统持久化。</summary>
-    public override void Save() { }
+    protected override void OnSave() { }
 
     /// <summary>只有存活且支持 Buff 的对象能使用药品。</summary>
     public bool CanUse(FoodUseContext context, out string reason)

@@ -90,7 +90,7 @@ public sealed class Mod_HeldFood : Module, IFoodMechanic, IFoodStateObserver
     #region 生命周期
 
     /// <summary>绑定手持状态变化并恢复当前食用进度的遮罩。</summary>
-    public override void Load()
+    protected override void OnLoad()
     {
         if (item == null)
             return;
@@ -101,7 +101,7 @@ public sealed class Mod_HeldFood : Module, IFoodMechanic, IFoodStateObserver
     }
 
     /// <summary>解绑手持状态并释放所有运行时遮罩对象。</summary>
-    public override void Unload()
+    protected override void OnUnload()
     {
         if (item != null)
             item.OnInHandChanged -= HandleInHandChanged;
@@ -111,7 +111,7 @@ public sealed class Mod_HeldFood : Module, IFoodMechanic, IFoodStateObserver
     }
 
     /// <summary>手持食物表现不额外持久化数据，进食进度由 Mod_Food 统一保存。</summary>
-    public override void Save()
+    protected override void OnSave()
     {
     }
 

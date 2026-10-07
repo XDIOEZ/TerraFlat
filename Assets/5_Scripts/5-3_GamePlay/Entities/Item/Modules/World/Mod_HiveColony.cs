@@ -151,7 +151,7 @@ public sealed partial class Mod_HiveColony : Module
     #endregion
 
     #region 生命周期
-    public override void Load()
+    protected override void OnLoad()
     {
         if (string.IsNullOrWhiteSpace(ActorId) || MinimumResidents < 1 || MaximumResidents < MinimumResidents ||
             SpawnRadius <= 0f || ReconcileInterval <= 0f || TerritoryBaseRadiusCells < 0 || AlarmSeconds <= 0f ||
@@ -178,7 +178,7 @@ public sealed partial class Mod_HiveColony : Module
     }
 
     /// <summary>先同步成员的饱食度与愤怒值，再保存蜂巢唯一的权威快照。</summary>
-    public override void Save()
+    protected override void OnSave()
     {
         PruneDeadResidents();
         CaptureResidents();
@@ -186,7 +186,7 @@ public sealed partial class Mod_HiveColony : Module
     }
 
     /// <summary>卸载时先保存成员状态，再撤回独立 Actor。</summary>
-    public override void Unload()
+    protected override void OnUnload()
     {
         ItemMgr manager = itemManager;
         UnbindHiveDamageEvents();

@@ -60,23 +60,47 @@ public partial class EquipmentInstance_Bag : EquipmentInstance
         Debug.Log($"[EquipmentInstance_Bag][{stage}] Owner={owner} | BagData=> {bagDataSummary} | Runtime=> {runtimeSummary}");
     }
 
-    private static Inventory_Data CloneInventoryData(Inventory_Data source)
-    {
-        if (source == null)
-            return new Inventory_Data(new List<ItemSlot>(), "EquipmentBag");
+    #region 库存状态恢复
 
-        try
+    private static Inventory_Data CreateInventoryLayout(Inventory_Data source)
+    {
+        var slots = new List<ItemSlot>(source.itemSlots?.Count ?? 0);
+        for (int i = 0; i < (source.itemSlots?.Count ?? 0); i++)
         {
-            byte[] bytes = MemoryPackSerializer.Serialize(source);
-            Inventory_Data cloned = MemoryPackSerializer.Deserialize<Inventory_Data>(bytes);
-            return cloned ?? new Inventory_Data(new List<ItemSlot>(), source.Name);
+            ItemSlot slot = source.itemSlots[i];
+            slots.Add(new ItemSlot(i)
+            {
+                CanAcceptTags = slot?.CanAcceptTags == null ? new List<string>() : new List<string>(slot.CanAcceptTags),
+                SlotMaxVolume = slot?.SlotMaxVolume ?? Inventory_Data.DefaultSlotVolume,
+                itemData = slot?.itemData
+            });
         }
-        catch (Exception ex)
+        return new Inventory_Data(slots, source.Name)
         {
-            Debug.LogError($"[EquipmentInstance_Bag] Inventory_Data 克隆失败: {ex}");
-            return source;
-        }
+            ToggleActionName = source.ToggleActionName,
+            UIPrefabName = source.UIPrefabName
+        };
     }
+
+    /// <summary>只建立库存布局外壳，恢复后持久数据和装备槽位共用同一实例状态。</summary>
+    private void RestoreInventoryState()
+    {
+        BagData ??= new Inventory_Data(new List<ItemSlot>(), "EquipmentBag");
+        BagInventory ??= new Inventory();
+        Inventory_Data current = BagInventory.Data ?? CreateInventoryLayout(BagData);
+        if (!ReferenceEquals(current, BagData))
+            InventoryInstanceSnapshot.Capture(BagData).RestoreTo(current, RebaseColdItem);
+        else if (current.itemSlots != null)
+            foreach (ItemSlot slot in current.itemSlots)
+                if (slot?.itemData != null) slot.itemData = RebaseColdItem(slot.itemData);
+        BagInventory.Data = current;
+        BagData = current;
+    }
+
+    private static ItemData RebaseColdItem(ItemData data) => data.SharedConfiguration == null
+        ? ItemDefinitionRuntime.RebasePersistedData(GameRes.ExistingInstance, data) : data;
+
+    #endregion
 
     [Button]
     public override void Equip(Item item = null)
@@ -86,12 +110,7 @@ public partial class EquipmentInstance_Bag : EquipmentInstance
 
         LogDebug("Equip-Before", item);
 
-        BagInventory ??= new Inventory();
-        if (BagData == null)
-            BagData = new Inventory_Data(new List<ItemSlot>(), "EquipmentBag");
-
-        // 使用快照作为运行时副本，避免运行时引用状态影响序列化还原。
-        BagInventory.Data = CloneInventoryData(BagData);
+        RestoreInventoryState();
         BagInventory.item = item;
 
         var controller = item.itemMods.GetMod_ByID<Mod_GameController>(ModText.Controller);
@@ -115,9 +134,11 @@ public partial class EquipmentInstance_Bag : EquipmentInstance
 
         DetachFromPlayerInventory(ResolvePlayerBagInventory(item));
 
-        // BagData 直接持有扩展槽位对象；卸下后只需让运行时副本重新指向最新快照。
-        if (BagInventory != null)
-            BagInventory.Data = CloneInventoryData(BagData);
+        // 卸下只解除运行态，保留被主背包和手持模块引用的同一物品对象。
+        if (BagInventory?.Data != null)
+            BagData = BagInventory.Data;
+        if (BagInventory == null)
+            return;
 
         BagInventory.UnbindController();
         BagInventory.UnbindRuntimeDataEvents();
@@ -140,6 +161,7 @@ public partial class EquipmentInstance_Bag : EquipmentInstance
         if (ownerInventory?.Data?.HasUnlimitedSlots != true || BagData == null)
             return;
 
+        RestoreInventoryState();
         if (attachedOwnerInventory == ownerInventory)
             return;
 

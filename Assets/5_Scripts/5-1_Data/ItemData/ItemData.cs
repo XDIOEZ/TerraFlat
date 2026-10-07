@@ -26,10 +26,10 @@ using FastCloner.Code;
 public abstract partial class ItemData
 {
     [Tooltip("物品定义 ID：稳定标识，用于存档、配方和查找，不作为界面显示名")]
-    public string IDName;
+    [MemoryPackIgnore] public string IDName;
 
     [Tooltip("默认名称：来自定义的 gameName；界面按 ID 查询 RuntimeItemDefinition.DisplayName 获取当前语言名称")]
-    public string GameName;
+    [MemoryPackIgnore] public string GameName;
 
     [Tooltip("物品描述")]
     [TextArea]
@@ -39,19 +39,19 @@ public abstract partial class ItemData
     public string Description = "什么都没有描述";
 
     [Tooltip("物品耐久度")]
-    public float Durability = 1;
+    [MemoryPackIgnore] public float Durability = 1;
 
     [Tooltip("物品耐久度")]
-    public float MaxDurability = 1;
+    [MemoryPackIgnore] public float MaxDurability = 1;
 
     [Tooltip("新版Tag系统_适配新版合成表")]
-    public List<string> Tags = new();
+    [MemoryPackIgnore] public List<string> Tags = new();
 
     [Tooltip("物品堆叠信息")]
-    public ItemStack Stack;
+    [MemoryPackIgnore] public ItemStack Stack;
 
     [Tooltip("物品缩放")]
-    public ItemTransform transform = new();
+    [MemoryPackIgnore] public ItemTransform transform = new();
 
     #region 运行时物理反馈
 
@@ -62,25 +62,25 @@ public abstract partial class ItemData
     #endregion
 
     [Tooltip("物品特殊数据")]
-    public string ItemSpecialData;
+    [MemoryPackIgnore] public string ItemSpecialData;
 
     [Tooltip("此物品是否在手上?")]
-    public bool inHand = false;
+    [MemoryPackIgnore] public bool inHand = false;
 
     [Tooltip("全局唯一标识")]
-    public int Guid;
+    [MemoryPackIgnore] public int Guid;
     [ShowInInspector]
-    public Dictionary<string, ModuleData> ModuleDataDic = new();
+    [MemoryPackIgnore] public Dictionary<string, ModuleData> ModuleDataDic = new();
 
-    // 新增字段追加到末尾，保持旧 MemoryPack 存档的字段顺序。
+    // Unity 配置外壳不再进入存档，持久化统一使用实例快照。
     [Tooltip("实体所属的阵营/队伍 ID；为空时由运行时兼容规则推导")]
-    public string FactionId = string.Empty;
+    [MemoryPackIgnore] public string FactionId = string.Empty;
 
     [Tooltip("制作材料赋予的耐久倍率；1 表示使用物品定义中的基础耐久")]
-    public float CraftedDurabilityMultiplier = 1f;
+    [MemoryPackIgnore] public float CraftedDurabilityMultiplier = 1f;
 
     [Tooltip("物品实例当前的温度与含水率状态")]
-    public ItemMatterState MatterState = new();
+    [MemoryPackIgnore] public ItemMatterState MatterState = new();
 
     #region 热量传导
 
@@ -88,7 +88,31 @@ public abstract partial class ItemData
 
     [HideInInspector, JsonProperty("heatConductionRate")]
     [Tooltip("热量传导速率（℃/s）；由物品或玩家 JSON 配置，温差决定升温或降温方向")]
-    public float HeatConductionRate = DefaultHeatConductionRate; // 实体自身的基础热量传导速率
+    [MemoryPackIgnore] public float HeatConductionRate = DefaultHeatConductionRate; // 实体自身的基础热量传导速率
+
+    #endregion
+
+    #region 定义与实例持久化边界
+
+    [MemoryPackIgnore, JsonIgnore, FastClonerIgnore]
+    public ItemSharedConfiguration SharedConfiguration { get; internal set; }
+
+    [NonSerialized, MemoryPackIgnore, JsonIgnore]
+    internal ModuleInstanceSnapshot[] PreservedModuleStates;
+
+    [NonSerialized, MemoryPackIgnore, JsonIgnore]
+    internal string[] PreservedAddedTags;
+
+    [NonSerialized, MemoryPackIgnore, JsonIgnore]
+    internal string[] PreservedRemovedTags;
+
+    // 所有世界、库存与内嵌模块中的 ItemData 都由这个唯一属性写入实例状态。
+    [JsonIgnore, FastClonerIgnore]
+    public ItemInstanceSnapshot InstanceSnapshot
+    {
+        get => ItemSnapshotSerialization.Capture(this);
+        set => (value ?? throw new InvalidOperationException("物品实例快照为空。")).RestoreColdTo(this);
+    }
 
     #endregion
 
@@ -161,7 +185,7 @@ public abstract partial class ItemData
         return string.Equals(ownSpecialData, otherSpecialData, StringComparison.Ordinal);
     }
 
-    /// <summary>旧存档未包含品质字段时按 1 倍处理，避免把 0 误判为独立堆叠身份。</summary>
+    /// <summary>无效品质倍率按基础值处理，避免产生非法堆叠身份。</summary>
     private static float NormalizeCraftedDurabilityMultiplier(float multiplier)
     {
         return !float.IsNaN(multiplier) && !float.IsInfinity(multiplier) && multiplier > 0f

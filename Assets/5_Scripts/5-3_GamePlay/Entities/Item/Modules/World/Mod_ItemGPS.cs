@@ -13,12 +13,12 @@ public class Mod_ItemGPS : Module
 
     public TMP_Text GPS_Text;
 
-    public override void Load()
+    protected override void OnLoad()
     {
       //  throw new System.NotImplementedException();
     }
 
-    public override void Save()
+    protected override void OnSave()
     {
       //  throw new System.NotImplementedException();
     }

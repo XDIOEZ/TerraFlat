@@ -67,7 +67,7 @@ public sealed class Mod_MicrophoneCharge : Module, IProjectileChargeModifier, II
     }
 
     /// <summary>装载时校验音量区间并清除上一次使用的录音状态。</summary>
-    public override void Load()
+    protected override void OnLoad()
     {
         if (FullBonusRms <= NoiseFloorRms)
             throw new System.InvalidOperationException($"{name} 的满加成音量必须高于静音阈值。");
@@ -75,12 +75,12 @@ public sealed class Mod_MicrophoneCharge : Module, IProjectileChargeModifier, II
     }
 
     /// <summary>麦克风采集状态不进入物品存档。</summary>
-    public override void Save()
+    protected override void OnSave()
     {
     }
 
     /// <summary>物品卸载时结束录音。</summary>
-    public override void Unload()
+    protected override void OnUnload()
     {
         CancelCharge();
     }

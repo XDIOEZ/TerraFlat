@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using UltEvents;
 using UnityEngine;
 using Unity.Profiling;
+using UnityEngine.Pool;
 
 /// <summary>
 /// 环境调整接口：让各模块可选地实现环境初始化逻辑
@@ -131,7 +132,16 @@ public abstract class Module : MonoBehaviour, IRuntimeDataLifecycle
     public abstract ModuleData _Data { get; set; }
 
     [NonSerialized] private string runtimePrefabId;
-    [NonSerialized] private bool runtimeLoaded;
+    [NonSerialized] private GameObject runtimeOwnedRoot;
+    [NonSerialized] private RuntimeLifecycleState lifecycleState;
+    [NonSerialized] private bool unloadAfterLoading;
+    [NonSerialized] private bool saving;
+    private enum RuntimeLifecycleState { Unloaded, Loading, Loaded, Unloading }
+
+    public bool IsRuntimeLoaded => lifecycleState == RuntimeLifecycleState.Loaded;
+    internal bool IsRuntimeTransitioning => lifecycleState == RuntimeLifecycleState.Loading || lifecycleState == RuntimeLifecycleState.Unloading;
+    public uint RuntimeGeneration { get; private set; }
+    internal float RuntimeLoadedAt { get; private set; }
 
     public string StableName => _Data?.StableName;
     public string ResolvedModuleId => _Data?.ModuleId;
@@ -199,7 +209,7 @@ public abstract class Module : MonoBehaviour, IRuntimeDataLifecycle
         if (_Data == null)
             throw new InvalidOperationException($"模块 {gameObject.name} 缺少 ModuleData。");
 
-        string moduleId = CanonicalModuleId;
+        string moduleId = string.IsNullOrWhiteSpace(runtimePrefabId) ? CanonicalModuleId : _Data.ModuleId;
         if (string.IsNullOrWhiteSpace(moduleId))
             throw new InvalidOperationException($"模块 {gameObject.name} 缺少稳定 ID。");
 
@@ -240,6 +250,7 @@ public abstract class Module : MonoBehaviour, IRuntimeDataLifecycle
         {
             Module candidate = modules[i];
             if (candidate != null &&
+                candidate.GetComponentInParent<Item>(true) == owner &&
                 string.Equals(candidate.CanonicalModuleId?.Trim(), normalizedId, StringComparison.OrdinalIgnoreCase))
             {
                 matchingIdCount++;
@@ -329,6 +340,22 @@ public abstract class Module : MonoBehaviour, IRuntimeDataLifecycle
 
     public void ModuleInit(Item item_, ModuleData data, ItemData itemData_ = null)
     {
+        if (item_ == null) throw new ArgumentNullException(nameof(item_));
+        if (lifecycleState == RuntimeLifecycleState.Loading || lifecycleState == RuntimeLifecycleState.Unloading)
+            throw new InvalidOperationException($"模块 {StableName} 正在切换生命周期，不能重新绑定数据。");
+        if (IsRuntimeLoaded && ReferenceEquals(item, item_) &&
+            (data == null || ReferenceEquals(_Data, data)) && ReferenceEquals(Item_Data, itemData_ ?? item_.itemData))
+            return;
+        Item previousOwner = item;
+        ItemData previousOwnerData = item?.itemData;
+        uint previousOwnerGeneration = item != null ? item.RuntimeGeneration : 0;
+        bool wasLoaded = IsRuntimeLoaded;
+        UnloadRuntime();
+        if (wasLoaded && previousOwner != null &&
+            (previousOwner.DestructionHandled || previousOwner.IsInPool ||
+             previousOwner.RuntimeGeneration != previousOwnerGeneration ||
+             !ReferenceEquals(previousOwner.itemData, previousOwnerData)))
+            throw new InvalidOperationException($"模块 {StableName} 的原物品在卸载回调中已结束或换代。");
         this.item = item_;
         if (itemData_ == null)
         {
@@ -353,60 +380,128 @@ public abstract class Module : MonoBehaviour, IRuntimeDataLifecycle
             _Data);
     }
 
+    /// <summary>网络状态可原位换数据，但不能借此切换模块身份或偷偷改变生命周期。</summary>
+    internal void BindSnapshotData(Item owner, ModuleData data, ItemData ownerData)
+    {
+        if (owner == null || data == null || ownerData == null)
+            throw new ArgumentNullException(nameof(data));
+        if (!ReferenceEquals(item, owner) || !ReferenceEquals(ownerData, owner.itemData) || data.GetType() != _Data?.GetType() ||
+            !string.Equals(data.StableName, StableName, StringComparison.Ordinal) ||
+            !string.Equals(data.ModuleId, ResolvedModuleId, StringComparison.Ordinal))
+            throw new InvalidOperationException($"模块 {StableName} 快照绑定必须保持所属物品、类型及身份。");
+        if (IsRuntimeTransitioning)
+            throw new InvalidOperationException($"模块 {StableName} 正在切换生命周期，不能绑定快照。");
+        _Data = data;
+        Item_Data = ownerData;
+        owner.itemData.ModuleDataDic[data.StableName] = data;
+    }
+
+    #region 受控生命周期
 
     [Button("Load")]
-    public abstract void Load();
+    public void Load() => LoadRuntime();
     [Button("Save")]
-    public abstract void Save();
-
-    /// <summary>解除事件、输入与临时资源；无运行时绑定的模块无需重写。</summary>
+    public void Save() => SaveRuntime();
     [Button("Unload")]
-    public virtual void Unload()
-    {
-    }
+    public void Unload() => UnloadRuntime();
+
+    protected abstract void OnLoad();
+    protected abstract void OnSave();
+    protected virtual void OnUnload() { }
 
     /// <summary>统一模块启停入口；禁用模块不建立运行态，也不参与 Tick。</summary>
     public void SetEnabled(bool enabled)
     {
         if (_Data == null)
             throw new InvalidOperationException($"模块 {gameObject.name} 缺少 ModuleData。");
-        if (_Data.Enabled == enabled)
+        if (_Data.Enabled == enabled && (!enabled || IsRuntimeLoaded || item?.IsInitialized != true))
             return;
-
-        if (!enabled)
-            UnloadRuntime();
-
-        _Data.Enabled = enabled;
-
-        if (enabled && item?.IsInitialized == true)
-            LoadRuntime();
-
-        InvalidateTickSchedule();
+        bool previous = _Data.Enabled;
+        try
+        {
+            if (!enabled) UnloadRuntime();
+            _Data.Enabled = enabled;
+            if (enabled && item?.IsInitialized == true) LoadRuntime();
+        }
+        catch
+        {
+            _Data.Enabled = previous;
+            throw;
+        }
+        finally { InvalidateTickSchedule(); }
     }
 
     internal void LoadRuntime()
     {
-        if (runtimeLoaded || !Enabled)
+        if (lifecycleState != RuntimeLifecycleState.Unloaded || !Enabled ||
+            item?.DestructionHandled == true || item?.IsUnloadingModules == true)
             return;
-        Load();
-        runtimeLoaded = true;
+        if (item == null || Item_Data == null || _Data == null)
+            throw new InvalidOperationException($"模块 {StableName} 必须先通过 ModuleInit 绑定，再加载。");
+
+        lifecycleState = RuntimeLifecycleState.Loading;
+        unloadAfterLoading = false;
+        RuntimeLoadedAt = Time.time;
+        AdvanceRuntimeGeneration();
+        try
+        {
+            try { OnLoad(); }
+            catch (Exception loadError)
+            {
+                // 部分加载失败也执行清理，已订阅的事件和临时资源不能留在实例上。
+                lifecycleState = RuntimeLifecycleState.Unloading;
+                try { OnUnload(); }
+                catch (Exception cleanupError)
+                {
+                    throw new AggregateException($"模块 {StableName} 加载及回滚失败。", loadError, cleanupError);
+                }
+                finally
+                {
+                    lifecycleState = RuntimeLifecycleState.Unloaded;
+                    AdvanceRuntimeGeneration();
+                }
+                throw;
+            }
+            lifecycleState = RuntimeLifecycleState.Loaded;
+            if (unloadAfterLoading) UnloadRuntime();
+        }
+        finally { InvalidateTickSchedule(); }
     }
 
     internal void SaveRuntime()
     {
-        // 兼容少量仍直接调用 Load() 的玩法模块；启用态继续沿用旧行为执行 Save。
-        if (runtimeLoaded || Enabled)
-            Save();
+        if (!IsRuntimeLoaded || saving) return;
+        saving = true;
+        try { OnSave(); }
+        finally { saving = false; }
     }
 
     internal void UnloadRuntime()
     {
-        // 兼容少量仍直接调用 Load() 的玩法模块；启用态仍必须得到一次 Unload。
-        if (!runtimeLoaded && !Enabled)
+        if (lifecycleState == RuntimeLifecycleState.Loading)
+        {
+            unloadAfterLoading = true;
             return;
-        Unload();
-        runtimeLoaded = false;
+        }
+        if (lifecycleState != RuntimeLifecycleState.Loaded)
+            return;
+        lifecycleState = RuntimeLifecycleState.Unloading;
+        try { OnUnload(); }
+        finally
+        {
+            lifecycleState = RuntimeLifecycleState.Unloaded;
+            AdvanceRuntimeGeneration();
+            InvalidateTickSchedule();
+        }
     }
+
+    private void AdvanceRuntimeGeneration()
+    {
+        RuntimeGeneration++;
+        if (RuntimeGeneration == 0) RuntimeGeneration++;
+    }
+
+    #endregion
 
     /// <summary>原位更新配置的稳定扩展入口；配置与运行态混存的模块可覆写并保留自身进度。</summary>
     public virtual void ApplyResourceConfiguration(string itemId, string moduleName, string json)
@@ -429,7 +524,20 @@ public abstract class Module : MonoBehaviour, IRuntimeDataLifecycle
         if (data == null)
             return;
 
+        if (!string.Equals(data.StableName, StableName, StringComparison.Ordinal) ||
+            !string.Equals(data.ModuleId, ResolvedModuleId, StringComparison.Ordinal) || data.GetType() != _Data?.GetType())
+            throw new InvalidOperationException($"模块 {StableName} 不能通过网络快照更改注册身份。");
+
+        Item owner = item;
+        ItemData ownerData = owner?.itemData;
+        uint ownerGeneration = owner != null ? owner.RuntimeGeneration : 0;
+        bool wasRegistered = owner != null && owner.itemMods.HasMod(this);
         UnloadRuntime();
+        // 卸载回调可能移除模块或回收宿主，旧状态不能写进后续接管的实例。
+        if (owner != null && (owner.DestructionHandled || owner.IsInPool ||
+            owner.RuntimeGeneration != ownerGeneration || !ReferenceEquals(owner.itemData, ownerData) ||
+            !ReferenceEquals(item, owner) || (wasRegistered && !owner.itemMods.HasMod(this))))
+            throw new InvalidOperationException($"模块 {StableName} 的宿主或注册在网络卸载回调中已失效。");
         _Data = data;
         EnsureRuntimeIdentity();
         if (item != null && item.itemData != null && !string.IsNullOrEmpty(data.StableName))
@@ -442,6 +550,7 @@ public abstract class Module : MonoBehaviour, IRuntimeDataLifecycle
             data);
 
         LoadRuntime();
+        InvalidateTickSchedule();
     }
 
     #region 模块性能采样
@@ -471,125 +580,174 @@ public abstract class Module : MonoBehaviour, IRuntimeDataLifecycle
         OnAct.Invoke(this);
     }
 
-    #region 添加模块
-    public static Module ADDModTOItem(Item item, string modName)
-    {
-        return ADDModTOItem(item, modName, modName);
-    }
+    #region 动态模块装配
+
+    public static Module ADDModTOItem(Item item, string modName) => ADDModTOItem(item, modName, modName);
 
     public static Module ADDModTOItem(Item item, string prefabId, string stableName)
     {
-        if (HasMod(item, stableName))
+        if (item == null) throw new ArgumentNullException(nameof(item));
+        if (item.itemMods.ContainsKey_Name(stableName)) return null;
+        return AddRuntimeModule(item, prefabId, stableName, null, null);
+    }
+
+    public static Module ADDModTOItem(Item item, ModuleData data) => ADDModTOItem(item, data, null);
+
+    public static Module ADDModTOItem(Item item, ModuleData data, ItemData itemData)
+    {
+        if (data == null || string.IsNullOrWhiteSpace(data.ModuleId))
+            throw new ArgumentException("动态模块缺少 ModuleId。", nameof(data));
+        string stableName = string.IsNullOrWhiteSpace(data.StableName) ? data.ModuleId : data.StableName;
+        return AddRuntimeModule(item, data.ModuleId, stableName, data, itemData);
+    }
+
+    private static Module AddRuntimeModule(Item owner, string prefabId, string stableName, ModuleData data, ItemData separateData)
+    {
+        if (owner == null || owner.itemData == null) throw new ArgumentNullException(nameof(owner));
+        if (owner.DestructionHandled || owner.IsUnloadingModules)
+            throw new InvalidOperationException($"物品 {owner.name} 正在回收，不能添加模块。");
+        if (string.IsNullOrWhiteSpace(stableName) || string.IsNullOrWhiteSpace(prefabId))
+            throw new ArgumentException("动态模块的稳定名和 Prefab 地址不能为空。");
+        stableName = stableName.Trim();
+        prefabId = prefabId.Trim();
+        if (owner.itemMods.ContainsKey_Name(stableName))
+            throw new InvalidOperationException($"物品 {owner.name} 已存在模块实例：{stableName}。");
+
+        using var mutation = owner.itemMods.BeginMutation();
+        owner.itemMods.BindOwner(owner);
+        owner.itemData.ModuleDataDic ??= new Dictionary<string, ModuleData>(StringComparer.Ordinal);
+        owner.itemData.ModuleDataDic.TryGetValue(stableName, out ModuleData previousData);
+        uint generation = owner.RuntimeGeneration;
+        GameObject instance = null;
+        Module module = null;
+        try
         {
-            return null;
+            RuntimeItemDefinition definition = null;
+            GameRes.Instance?.TryGetItemDefinition(owner.itemData.IDName, out definition);
+            if (definition != null && definition.TryGetModuleAssembly(stableName, out var assembly))
+            {
+                if (assembly.IsDataOnly)
+                    throw new InvalidOperationException($"模块 {stableName} 是纯数据能力，不能添加 GameObject。");
+                if (data != null && !string.Equals(data.ModuleId, assembly.ModuleId, StringComparison.OrdinalIgnoreCase))
+                    throw new InvalidOperationException($"模块 {stableName} 与当前定义的能力身份不一致。");
+                module = assembly.InstantiateModule(owner.transform);
+                prefabId = assembly.PrefabId;
+                if (data != null) module._Data = data;
+                module.BindRuntimeIdentity(stableName, assembly.ModuleId, prefabId);
+                module._Data.Enabled = assembly.Definition.Enabled;
+            }
+            else
+            {
+                instance = GameRes.Instance?.InstantiatePrefab(prefabId, parent: owner.transform);
+                if (instance == null) throw new InvalidOperationException($"无法加载模块 Prefab：{prefabId}。");
+                if (instance.GetComponentInChildren<Item>(true) != null)
+                    throw new InvalidOperationException($"动态模块 Prefab {prefabId} 不能包含嵌套 Item。");
+                using var scope = ListPool<Module>.Get(out var components);
+                instance.GetComponentsInChildren(true, components);
+                if (components.Count != 1)
+                    throw new InvalidOperationException($"模块 Prefab {prefabId} 必须声明唯一目标组件，实际数量：{components.Count}。");
+                module = components[0];
+                module.SetRuntimeOwnedRoot(instance);
+                if (data != null) module._Data = data;
+                module.BindRuntimeIdentity(stableName, data?.ModuleId ?? module.CanonicalModuleId, prefabId);
+                instance.transform.localPosition = Vector3.zero;
+                instance.transform.localRotation = Quaternion.identity;
+                instance.transform.localScale = Vector3.one;
+            }
+            owner.itemMods.AddMod(module);
+            owner.itemData.ModuleDataDic[stableName] = module._Data;
+            module.ModuleInit(owner, module._Data, separateData);
+            if (module is IItemModuleDependencyBinder binder) binder.BindModuleDependencies(owner.itemMods);
+            if (owner.CanLoadRuntimeModules) module.LoadRuntime();
+            if (owner.RuntimeGeneration != generation || owner.DestructionHandled || !owner.itemMods.HasMod(module))
+                throw new InvalidOperationException($"物品 {owner.name} 在添加模块期间改变了生命周期。");
+            return module;
         }
-        // 实例化模块预制体
-        GameObject @object = GameRes.Instance.InstantiatePrefab(prefabId);
-
-
-        // 设置为 item 的子物体（使用 worldPositionStays = false 以便我们手动设置位置）
-        @object.transform.SetParent(item.transform, worldPositionStays: false);
-
-        // 设置位置、旋转、缩放与 item 一致
-        @object.transform.localPosition = Vector3.zero;
-        @object.transform.localRotation = Quaternion.identity;
-        @object.transform.localScale = Vector3.one;
-
-
-        // 获取模块并初始化
-        Module module = @object.GetComponentInChildren<Module>();
-        module.BindRuntimeIdentity(stableName, module.CanonicalModuleId, prefabId);
-
-        item.itemMods.AddMod(module);
-        if (item.itemData?.ModuleDataDic != null)
-            item.itemData.ModuleDataDic[module.StableName] = module._Data;
-        module.ModuleInit(item, null);
-        return module;
+        catch
+        {
+            if (module != null)
+            {
+                try { module.UnloadRuntime(); }
+                catch (Exception cleanupError) { Debug.LogException(cleanupError, module); }
+                if (owner.RuntimeGeneration == generation)
+                {
+                    owner.itemMods.RemoveMod(module);
+                    if (owner.itemData.ModuleDataDic.TryGetValue(stableName, out ModuleData current) && ReferenceEquals(current, module._Data))
+                    {
+                        if (previousData == null) owner.itemData.ModuleDataDic.Remove(stableName);
+                        else owner.itemData.ModuleDataDic[stableName] = previousData;
+                    }
+                }
+                module.DestroyRuntimeObject();
+            }
+            else if (instance != null) Destroy(instance);
+            throw;
+        }
     }
 
-    public static Module ADDModTOItem(Item item, ModuleData mod)
+    internal void SetRuntimeOwnedRoot(GameObject root) => runtimeOwnedRoot = root;
+
+    internal void DestroyRuntimeObject()
     {
-        if (mod == null || string.IsNullOrWhiteSpace(mod.ModuleId))
-            throw new ArgumentException("动态模块缺少 ModuleId。", nameof(mod));
-
-        string prefabId = mod.ModuleId;
-        GameObject @object = GameRes.Instance.InstantiatePrefab(prefabId);
-
-        @object.transform.SetParent(item.transform);
-
-        Module module = @object.GetComponentInChildren<Module>();
-        module._Data = mod;
-        string stableName = string.IsNullOrWhiteSpace(mod.StableName) ? prefabId : mod.StableName;
-        module.BindRuntimeIdentity(stableName, mod.ModuleId, prefabId);
-
-        item.itemMods.AddMod(module); // 添加到字典
-        if (item.itemData?.ModuleDataDic != null)
-            item.itemData.ModuleDataDic[module.StableName] = module._Data;
-
-        module.ModuleInit(item, mod);
-        module.LoadRuntime();
-
-        return module;
+        // 独立 Prefab 释放自己的根对象，内嵌模块只移除组件，不能误删 Item 或共享表现节点。
+        if (runtimeOwnedRoot != null && runtimeOwnedRoot != item?.gameObject)
+        {
+            using var scope = ListPool<Module>.Get(out var siblings);
+            runtimeOwnedRoot.GetComponentsInChildren(true, siblings);
+            bool shared = false;
+            foreach (Module sibling in siblings)
+                if (sibling != this && item?.itemMods.HasMod(sibling) == true) { shared = true; break; }
+            if (!shared)
+            {
+                runtimeOwnedRoot.SetActive(false);
+                Destroy(runtimeOwnedRoot);
+                return;
+            }
+        }
+        enabled = false;
+        Destroy(this);
     }
-    public static Module ADDModTOItem(Item item, ModuleData mod, ItemData itemData)
-    {
-        if (mod == null || string.IsNullOrWhiteSpace(mod.ModuleId))
-            throw new ArgumentException("动态模块缺少 ModuleId。", nameof(mod));
 
-        string prefabId = mod.ModuleId;
-        GameObject @object = GameRes.Instance.InstantiatePrefab(prefabId);
-
-        @object.transform.SetParent(item.transform);
-
-        Module module = @object.GetComponentInChildren<Module>();
-
-        module._Data = mod;
-        string stableName = string.IsNullOrWhiteSpace(mod.StableName) ? prefabId : mod.StableName;
-        module.BindRuntimeIdentity(stableName, mod.ModuleId, prefabId);
-
-        item.itemMods.AddMod(module); // 添加到字典
-        if (item.itemData?.ModuleDataDic != null)
-            item.itemData.ModuleDataDic[module.StableName] = module._Data;
-
-        module.ModuleInit(item, mod, itemData);
-
-        module.LoadRuntime();
-        return module;
-    }
     #endregion
-    #region 移除模块
-    public static Module REMOVEModFROMItem(Item item, ModuleData mod)
-    {
-        if (!item.Mods.TryGetValue(mod.StableName, out Module module))
-            throw new InvalidOperationException($"物品 {item.name} 不包含模块实例 {mod.StableName}。");
 
+    #region 动态模块移除
+
+    public static Module REMOVEModFROMItem(Item item, ModuleData data)
+    {
+        if (item == null || data == null) throw new ArgumentNullException(nameof(item));
+        if (!item.Mods.TryGetValue(data.StableName, out Module module))
+            throw new InvalidOperationException($"物品 {item.name} 不包含模块实例 {data.StableName}。");
         return RemoveRuntimeModule(item, module);
     }
 
     public static Module REMOVEModFROMItem(Item item, string name)
     {
-        Module module = item.Mods.TryGetValue(name, out Module namedModule)
-            ? namedModule
-            : item.itemMods.GetMod_ByID(name);
-        if (module == null)
-            throw new InvalidOperationException($"物品 {item.name} 不包含模块 {name}。");
-
+        if (item == null) throw new ArgumentNullException(nameof(item));
+        Module module = item.Mods.TryGetValue(name, out Module named) ? named : item.itemMods.GetMod_ByID(name);
+        if (module == null) throw new InvalidOperationException($"物品 {item.name} 不包含模块 {name}。");
         return RemoveRuntimeModule(item, module);
     }
 
-    /// <summary>按卸载、移除数据、销毁对象的顺序结束模块生命周期。</summary>
-    private static Module RemoveRuntimeModule(Item item, Module module)
+    private static Module RemoveRuntimeModule(Item owner, Module module)
     {
-        module.UnloadRuntime();
-        item.itemMods.RemoveMod(module);
-
-        if (!string.IsNullOrEmpty(module._Data?.StableName))
-            item.itemData.ModuleDataDic.Remove(module._Data.StableName);
-
-        Destroy(module.gameObject);
-        item.MarkModuleScheduleDirty();
+        if (!owner.itemMods.TryGetRegisteredIdentity(module, out string name, out _)) return module;
+        using var mutation = owner.itemMods.BeginMutation();
+        uint generation = owner.RuntimeGeneration;
+        owner.itemData.ModuleDataDic.TryGetValue(name, out ModuleData previousData);
+        try { module.UnloadRuntime(); }
+        finally
+        {
+            if (owner.RuntimeGeneration == generation)
+            {
+                owner.itemMods.RemoveMod(module);
+                if (owner.itemData.ModuleDataDic.TryGetValue(name, out ModuleData current) && ReferenceEquals(current, previousData))
+                    owner.itemData.ModuleDataDic.Remove(name);
+            }
+            module.DestroyRuntimeObject();
+        }
         return module;
     }
+
     #endregion
     #region 检测模块
 

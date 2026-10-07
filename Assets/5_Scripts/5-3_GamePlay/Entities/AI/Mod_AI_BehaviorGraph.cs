@@ -380,7 +380,7 @@ public sealed class Mod_AI_BehaviorGraph : Module, IModuleJsonParameterValidator
         base.Awake();
     }
 
-    public override void Load()
+    protected override void OnLoad()
     {
         ModData ??= new Ex_ModData();
         SaveData saved = ReadSaveData();
@@ -393,13 +393,13 @@ public sealed class Mod_AI_BehaviorGraph : Module, IModuleJsonParameterValidator
         _runtime?.Tick(deltaTime);
     }
 
-    public override void Save()
+    protected override void OnSave()
     {
         ModData ??= new Ex_ModData();
         ModData.WriteData(CaptureSaveData());
     }
 
-    public override void Unload()
+    protected override void OnUnload()
     {
         _runtime?.Reset();
         _context?.Dispose();

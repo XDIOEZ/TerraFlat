@@ -1,6 +1,7 @@
 using Sirenix.OdinInspector;
 using System;
 using System.Collections.Generic;
+using System.Runtime.ExceptionServices;
 using UnityEngine;
 
 public partial class ItemMgr
@@ -8,8 +9,11 @@ public partial class ItemMgr
     #region Runtime Registry
 
     private readonly ItemRuntimeRegistry _runtimeRegistry = new();
+    private readonly HashSet<Item> _runtimeDespawning = new(ItemReferenceComparer.Instance);
 
-    private List<Item> RuntimeItems => _runtimeRegistry.Items;
+    private IReadOnlyList<Item> RuntimeItems => _runtimeRegistry.Items;
+
+    internal bool IsRuntimeItemRegistered(Item item) => _runtimeRegistry.Contains(item);
 
     #endregion
 
@@ -68,6 +72,11 @@ public partial class ItemMgr
         {
             throw new ArgumentException("ItemData.IDName 不能为空", nameof(itemData));
         }
+        if (itemData.SharedConfiguration == null)
+            itemData = ItemDefinitionRuntime.RebasePersistedData(GameRes.Instance, itemData);
+        if (itemData.Guid != 0 && _runtimeItemReplacements.ContainsKey(itemData.Guid))
+            throw new InvalidOperationException($"Item GUID {itemData.Guid} 正在交接运行时实例，不能同时生成。");
+        _runtimeRegistry.ValidateIdentityAvailable(itemData);
         // 落地设施只能由机器世界持有，禁止调用旧 Item 入口形成第二个权威实例。
         if (!itemData.inHand && MachineWorld.OwnsWorldItem(itemData))
             throw new InvalidOperationException($"落地设施 {itemData.IDName} 请使用 MachineWorld.Place/SpawnGenerated/RestoreMachine。");
@@ -80,30 +89,97 @@ public partial class ItemMgr
 
         GameObject itemObj = AcquireItemObject(itemData.IDName);
         Item item = itemObj.GetComponent<Item>();
-        item.BindData(itemData);
-        item.PrepareForPoolReuse();
-        item.Owner = owner;
-        if (GameRes.Instance.TryGetItemDefinition(itemData.IDName, out RuntimeItemDefinition definition))
-            ItemDefinitionRuntime.ConfigureInstance(GameRes.Instance, definition, item, itemData);
-        // JSON 模块装配完成后才固定池内层级；首次外壳结构并不是可复用的最终结构。
-        item.PoolMarker.CaptureBaseline();
-        itemObj.name = itemData.IDName;
-        Vector3 logicalPosition = itemData.inHand
-            ? position
-            : WorldLocalPresentation.ToLogical(position);
-        itemObj.transform.position = itemData.inHand
-            ? position
-            : WorldLocalPresentation.ProjectPosition(logicalPosition);
-        itemObj.transform.rotation = rotation;
-        itemObj.transform.localScale = scale;
-        itemObj.SetActive(true);
+        ulong registrationToken = 0;
+        try
+        {
+            item.PrepareForPoolReuse();
+            item.BindData(itemData);
+            item.Owner = owner;
+            if (GameRes.Instance.TryGetItemDefinition(itemData.IDName, out RuntimeItemDefinition definition))
+                ItemDefinitionRuntime.ConfigureInstance(GameRes.Instance, definition, item, itemData);
+            // JSON 模块装配完成后才固定池内层级；首次外壳结构并不是可复用的最终结构。
+            item.PoolMarker.CaptureBaseline();
+            itemObj.name = itemData.IDName;
+            Vector3 logicalPosition = itemData.inHand
+                ? position
+                : WorldLocalPresentation.ToLogical(position);
+            itemObj.transform.position = itemData.inHand
+                ? position
+                : WorldLocalPresentation.ProjectPosition(logicalPosition);
+            itemObj.transform.rotation = rotation;
+            itemObj.transform.localScale = scale;
+            itemObj.SetActive(true);
 
-        RegisterRuntimeItem(item, itemData.IDName);
-        ItemWorldPlacement.Attach(item, itemObj, logicalPosition, parent);
-        RuntimeItemInstantiated?.Invoke(item);
-        WorldItemWaterSystem.ScheduleSpawnCheck(item);
+            RegisterRuntimeItem(item, itemData.IDName, out registrationToken);
+            ItemWorldPlacement.Attach(item, itemObj, logicalPosition, parent);
+            EnsureSpawnRegistrationCurrent(item, itemData, registrationToken);
+            RuntimeItemInstantiated?.Invoke(item);
+            EnsureSpawnRegistrationCurrent(item, itemData, registrationToken);
+            WorldItemWaterSystem.ScheduleSpawnCheck(item);
+            return item;
+        }
+        catch
+        {
+            CleanupFailedItemSpawn(item, itemObj, itemData, registrationToken);
+            throw;
+        }
+    }
 
-        return item;
+    private void EnsureSpawnRegistrationCurrent(Item item, ItemData data, ulong token)
+    {
+        if (item == null || item.DestructionHandled || item.IsInPool ||
+            !ReferenceEquals(item.itemData, data) || !_runtimeRegistry.IsRegistrationCurrent(item, token) ||
+            !_runtimeRegistry.TryGetRegisteredIdentity(item, out int guid, out string definitionId) ||
+            data.Guid != guid || !string.Equals(data.IDName, definitionId, StringComparison.Ordinal))
+            throw new InvalidOperationException($"Item {data.IDName}/{data.Guid} 在生成回调中已结束或切换运行实例。");
+    }
+
+    private void RestoreRegisteredItemIdentityForCleanup(Item item, ulong token)
+    {
+        if (item != null && item.itemData != null && _runtimeRegistry.IsRegistrationCurrent(item, token) &&
+            _runtimeRegistry.TryGetRegisteredIdentity(item, out int guid, out string definitionId))
+        {
+            item.itemData.Guid = guid;
+            item.itemData.IDName = definitionId;
+        }
+    }
+
+    private void CleanupFailedItemSpawn(Item item, GameObject itemObject, ItemData data, ulong token,
+        uint? runtimeGeneration = null)
+    {
+        if (item == null)
+        {
+            if (itemObject != null) Destroy(itemObject);
+            return;
+        }
+        // 回调可能已将旧实例回池并复用，失败清理不能销毁后来接管该外壳的新注册。
+        if (item.IsInPool || (token != 0 && _runtimeRegistry.Contains(item) &&
+            !_runtimeRegistry.IsRegistrationCurrent(item, token))) return;
+        if (token != 0 && !ReferenceEquals(item.itemData, data)) return;
+        if (runtimeGeneration.HasValue && item.RuntimeGeneration != runtimeGeneration.Value) return;
+        RestoreRegisteredItemIdentityForCleanup(item, token);
+        if (!_runtimeDespawning.Add(item)) return;
+        try
+        {
+            try
+            {
+                if (_runtimeRegistry.Contains(item))
+                    RuntimeItemDespawning?.Invoke(item);
+            }
+            catch (Exception exception) { Debug.LogException(exception, item); }
+            try { WorldItemWaterSystem.CancelSpawnCheck(item); }
+            catch (Exception exception) { Debug.LogException(exception, item); }
+            try { WorldItemWaterSystem.ClearRuntimeState(item); }
+            catch (Exception exception) { Debug.LogException(exception, item); }
+            try { item.GetComponentInParent<Chunk>()?.RemoveItem(item); }
+            catch (Exception exception) { Debug.LogException(exception, item); }
+            try { UnregisterRuntimeItem(item); }
+            catch (Exception exception) { Debug.LogException(exception, item); }
+            try { item.PrepareForDespawn(saveData: false); }
+            catch (Exception exception) { Debug.LogException(exception, item); }
+            if (itemObject != null) Destroy(itemObject);
+        }
+        finally { _runtimeDespawning.Remove(item); }
     }
 
     public void DespawnItem(Item item, bool saveData = true, bool detachFromChunk = true)
@@ -113,25 +189,51 @@ public partial class ItemMgr
             throw new ArgumentNullException(nameof(item));
         }
 
-        if (item.DestructionHandled)
+        if (item.DestructionHandled || !_runtimeDespawning.Add(item))
             return;
 
-        WorldItemWaterSystem.CancelSpawnCheck(item);
-        MachineWorld.BeforeDespawn(item);
-        RuntimeItemDespawning?.Invoke(item);
-        WorldItemWaterSystem.ClearRuntimeState(item);
+        Exception failure = null;
+        try
+        {
+            try { WorldItemWaterSystem.CancelSpawnCheck(item); }
+            catch (Exception exception) { CaptureDespawnFailure(ref failure, exception); }
+            try { MachineWorld.BeforeDespawn(item); }
+            catch (Exception exception) { CaptureDespawnFailure(ref failure, exception); }
+            try { RuntimeItemDespawning?.Invoke(item); }
+            catch (Exception exception) { CaptureDespawnFailure(ref failure, exception); }
+            try { WorldItemWaterSystem.ClearRuntimeState(item); }
+            catch (Exception exception) { CaptureDespawnFailure(ref failure, exception); }
+            try
+            {
+                if (detachFromChunk)
+                    item.GetComponentInParent<Chunk>()?.RemoveItem(item);
+            }
+            catch (Exception exception) { CaptureDespawnFailure(ref failure, exception); }
+            try { UnregisterRuntimeItem(item); }
+            catch (Exception exception) { CaptureDespawnFailure(ref failure, exception); }
+            try { item.PrepareForDespawn(saveData); }
+            catch (Exception exception) { CaptureDespawnFailure(ref failure, exception); }
 
-        if (detachFromChunk)
-            item.GetComponentInParent<Chunk>()?.RemoveItem(item);
-
-        UnregisterRuntimeItem(item);
-
-        item.PrepareForDespawn(saveData);
-        if (TryReturnItemToPool(item))
-            return;
-
-        Destroy(item.gameObject);
+            bool returnedToPool = false;
+            try
+            {
+                if (failure == null && item != null)
+                    returnedToPool = TryReturnItemToPool(item);
+            }
+            catch (Exception exception) { CaptureDespawnFailure(ref failure, exception); }
+            if (!returnedToPool && item != null)
+                Destroy(item.gameObject);
+        }
+        finally
+        {
+            _runtimeDespawning.Remove(item);
+        }
+        if (failure != null)
+            ExceptionDispatchInfo.Capture(failure).Throw();
     }
+
+    private static void CaptureDespawnFailure(ref Exception failure, Exception exception) =>
+        failure = failure == null ? exception : new AggregateException("Item 回收阶段出现多个异常。", failure, exception);
 
     public void DestroyItem(Item item)
     {
@@ -184,38 +286,70 @@ public partial class ItemMgr
         => InstantiateItem(itemData, itemData.transform.position, itemData.transform.rotation, itemData.transform.scale, parent);
 
     // 生成GUID的辅助方法
-    public int GenerateGuid() => Guid.NewGuid().GetHashCode();
-
-    private void RegisterRuntimeItem(Item item, string context)
+    public int GenerateGuid()
     {
+        int guid;
+        do { guid = Guid.NewGuid().GetHashCode(); }
+        while (guid == 0 || WorldRunTimeItems.ContainsKey(guid) || _runtimeItemReplacements.ContainsKey(guid));
+        return guid;
+    }
+
+    private ulong RegisterRuntimeItem(Item item, string context)
+        => RegisterRuntimeItem(item, context, out _);
+
+    private ulong RegisterRuntimeItem(Item item, string context, out ulong registrationToken,
+        RuntimeItemReplacement authorizedTransfer = null)
+    {
+        registrationToken = 0;
         if (item == null)
         {
-            Debug.LogError($"RegisterRuntimeItem: item为空, context={context}");
-            return;
+            throw new ArgumentNullException(nameof(item), $"运行时注册缺少 Item，context={context}。");
         }
 
         if (item.itemData == null)
         {
-            Debug.LogError($"物品缺少itemData: {item.name}, context={context}", item);
-            return;
+            throw new InvalidOperationException($"物品缺少 ItemData：{item.name}，context={context}。");
         }
 
-        _runtimeRegistry.Register(item, GenerateGuid);
-        RefreshItemSpatialIndex(item);
-        RefreshPerceptionTarget(item);
-        _tickScheduler.Register(item);
+        if (!_runtimeRegistry.Contains(item) && _runtimeItemReplacements.TryGetValue(item.itemData.Guid, out var reserved) &&
+            (!ReferenceEquals(reserved, authorizedTransfer) ||
+             (!ReferenceEquals(item, reserved.Original) && !ReferenceEquals(item, reserved.Candidate))))
+            throw new InvalidOperationException($"Item GUID {item.itemData.Guid} 已被运行时替换事务保留。");
 
-        if (TryRegisterRuntimeAiEntity(item))
-            ItemWorldPlacement.AttachRuntimeAi(item, item.gameObject);
-
-        // 实体注册完成后创建独立阴影；阴影不进入 Item 或 RuntimeEntities 层级。
-        ActorShadowManager.GetInstance()?.RegisterActor(item);
-
-        if (item is Map mapItem)
+        if (!_runtimeRegistry.Register(item, GenerateGuid))
         {
-            _cachedMap = mapItem;
+            _tickScheduler.NotifyChanged(item);
+            registrationToken = _runtimeRegistry.GetRegistrationToken(item);
+            return registrationToken;
         }
-        RuntimeItemRegistered?.Invoke(item);
+
+        registrationToken = _runtimeRegistry.GetRegistrationToken(item);
+        ItemData registeredData = item.itemData;
+        try
+        {
+            RefreshItemSpatialIndex(item);
+            RefreshPerceptionTarget(item);
+            _tickScheduler.Register(item);
+            if (TryRegisterRuntimeAiEntity(item))
+                ItemWorldPlacement.AttachRuntimeAi(item, item.gameObject);
+
+            // 实体注册完成后创建独立阴影；阴影不进入 Item 或 RuntimeEntities 层级。
+            ActorShadowManager.GetInstance()?.RegisterActor(item);
+            if (item is Map mapItem)
+                _cachedMap = mapItem;
+            RuntimeItemRegistered?.Invoke(item);
+            EnsureSpawnRegistrationCurrent(item, registeredData, registrationToken);
+            return registrationToken;
+        }
+        catch
+        {
+            if (_runtimeRegistry.IsRegistrationCurrent(item, registrationToken))
+            {
+                RestoreRegisteredItemIdentityForCleanup(item, registrationToken);
+                UnregisterRuntimeItem(item);
+            }
+            throw;
+        }
     }
 
     public void InjectRuntimeItem(Item item, string context = null)
@@ -244,26 +378,33 @@ public partial class ItemMgr
     /// </summary>
     public void MarkAsRemoteVisualOnly(Item item)
     {
-        RuntimeItemDespawning?.Invoke(item);
-        UnregisterRuntimeItem(item);
+        if (!_runtimeRegistry.Contains(item) || !_runtimeDespawning.Add(item)) return;
+        try
+        {
+            try { RuntimeItemDespawning?.Invoke(item); }
+            finally { UnregisterRuntimeItem(item); }
+        }
+        finally { _runtimeDespawning.Remove(item); }
     }
 
     private void UnregisterRuntimeItem(Item item)
     {
-        if (item == null || item.itemData == null) return;
+        if (!_runtimeRegistry.TryGetRegisteredGuid(item, out int registeredGuid) || !_runtimeRegistry.Remove(item))
+            return;
 
-        _runtimeRegistry.Remove(item);
-        RemoveRuntimeAiEntity(item);
-
-        if (item is Map)
-        {
-            _cachedMap = null;
-        }
-
-        RemoveItemFromSpatialIndex(item);
-        _perceptionTargets.Remove(item);
         _tickScheduler.Remove(item);
-        RuntimeItemUnregistered?.Invoke(item);
+        try
+        {
+            RemoveRuntimeAiEntity(item, registeredGuid: registeredGuid);
+        }
+        finally
+        {
+            if (item is Map)
+                _cachedMap = null;
+            RemoveItemFromSpatialIndex(item);
+            _perceptionTargets.Remove(item);
+            RuntimeItemUnregistered?.Invoke(item);
+        }
     }
 
     private GameObject SpawnItemObject(string itemId)
@@ -291,7 +432,7 @@ public partial class ItemMgr
 
     #region Runtime Registry API
 
-    // ✅ 添加到分组
+    // 分组是完整注册的派生索引，禁止只写入其中一个集合。
     public void AddToGroup(Item item)
     {
         if (item == null)
@@ -313,17 +454,17 @@ public partial class ItemMgr
             return;
         }
 
-        _runtimeRegistry.AddToGroup(item);
+        RegisterRuntimeItem(item, key);
     }
 
     // ✅ 获取同类物品列表
-    public List<Item> GetItemsByNameID(string nameId)
+    public IReadOnlyList<Item> GetItemsByNameID(string nameId)
     {
         if (RuntimeItemsGroup.TryGetValue(nameId, out var list))
         {
             return list;
         }
-        return new List<Item>();
+        return Array.Empty<Item>();
     }
 
     // 查找运行时物品

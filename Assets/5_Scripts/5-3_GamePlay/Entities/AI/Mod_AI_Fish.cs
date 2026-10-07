@@ -122,7 +122,7 @@ public sealed partial class Mod_AI_Fish : Module, IAIActor, IItemModuleDependenc
         threatDetector = modules.RequireSingleModById<Mod_ItemDetector>(ModText.Detector);
     }
 
-    public override void Load()
+    protected override void OnLoad()
     {
         if (fishRenderer == null) fishRenderer = item.Sprite;
         if (fishRenderer == null) throw new InvalidOperationException("小鱼外壳缺少独立的水下 SpriteRenderer。");
@@ -175,9 +175,9 @@ public sealed partial class Mod_AI_Fish : Module, IAIActor, IItemModuleDependenc
         UpdatePresentation(0f);
     }
 
-    public override void Save() => Data.WriteData(state);
+    protected override void OnSave() => Data.WriteData(state);
 
-    public override void Unload()
+    protected override void OnUnload()
     {
         loaded = false;
         if (health != null) health.OnDamageReceived -= HandleFishDamage;

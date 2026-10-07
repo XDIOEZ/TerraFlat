@@ -28,14 +28,14 @@ public sealed class Mod_ResourceHarvest : Module, IIncomingDamageRule, IIncoming
     }
 
     /// <summary>校验资源专精配置，避免把无类别配置误当成有效加成。</summary>
-    public override void Load()
+    protected override void OnLoad()
     {
         if (requiredTool == ResourceToolKind.None || minimumTier < 1)
             throw new InvalidOperationException("资源节点必须配置专精工具类别和正等级。");
     }
 
     /// <summary>工具要求属于静态定义，无需写入资源存档。</summary>
-    public override void Save() { }
+    protected override void OnSave() { }
     #endregion
 
     #region 工具弱点结算

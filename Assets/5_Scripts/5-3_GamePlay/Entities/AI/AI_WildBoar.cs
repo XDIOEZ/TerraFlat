@@ -250,7 +250,7 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 	#endregion
 
 	#region Lifecycle
-	public override void Load()
+	protected override void OnLoad()
 	{
 		ModData.ReadData(ref Data);
 		_currentState = Data.State;
@@ -258,7 +258,7 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 		InitializeAI();
 	}
 
-	public override void Save()
+	protected override void OnSave()
 	{
 		Data.State = _currentState;
 		if (_retaliationTarget != null)

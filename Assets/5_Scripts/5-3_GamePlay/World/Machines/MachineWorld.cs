@@ -107,6 +107,7 @@ public static partial class MachineWorld
         var definition = MachineCatalog.Get(snapshot.IDName);
         // 缺失 MOD 内容不丢弃存档，恢复目录后仍能重新载入。
         if (definition == null) return;
+        ItemDefinitionRuntime.RebasePersistedData(GameRes.ExistingInstance, snapshot);
         var state = ReadMachineState(snapshot);
         if (state.Hp < 0f) state.Hp = ResolveMaximumHp(snapshot);
         var node = new MachineEntity

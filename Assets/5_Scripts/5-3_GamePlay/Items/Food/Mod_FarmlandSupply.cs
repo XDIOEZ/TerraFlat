@@ -35,16 +35,16 @@ public class Mod_FarmlandSupply : Module
             _Data.ID = nameof(Mod_FarmlandSupply);
     }
 
-    public override void Load()
+    protected override void OnLoad()
     {
         BindActEvent();
     }
 
-    public override void Save()
+    protected override void OnSave()
     {
     }
 
-    public override void Unload()
+    protected override void OnUnload()
     {
         UnbindActEvent();
     }

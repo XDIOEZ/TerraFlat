@@ -72,7 +72,7 @@ description: "Use when: 定位或修改 FlatWorld 的背包、槽位、快捷栏
 - `CreativeInventoryState` 同时控制创造背包动态槽位与重量/体积豁免，必须先恢复状态再初始化格数，批量填充前先启用。只有创造背包保持 20 格基线、空槽 <= 2 时补足 3 格的扩容和收缩策略。F2 创造背包以 `GameRes.ItemDefinitions` 为主目录，并额外合并 `ModRuntimeManager.DefinitionInfos` 中已经物化成功、且实际指向 `Item` 运行时模板的 MOD 道具，不能把 MOD 内部普通 Prefab/模块壳当成物品。创造背包目录必须排除 `BuildingRole.PlacedBuilding` 的落地建筑本体，以及当前静态定义 `CanBePickedUp=false` 的树、矿点、作物、传送口等世界专用实体，只保留真正可持有的物品和建筑召唤器；重复召唤创造背包时也要清理历史遗留的世界实体槽位。创造背包会把已入包物品的运行态 `CanBePickedUp` 改成 false，因此清理旧槽位时必须回到当前静态定义或当前 MOD 运行时模板判断，禁止读取槽位里的该标志反推是否可持有。便携设施过滤时应优先用当前 `ItemData.IDName` 与 `BuildingPrefabId/SummonerPrefabId` 的载体身份对应关系判定，不能只信历史 `Role`，否则旧背包状态可能把落地本体误当成可持有召唤器。创造模式额外绕过重量/体积上限，但 `Stackable=false` 仍严格一件一格。库存事务通过 `NotifyItemDataChanged` 只负责及时补足预留空槽，周期容量自检再负责安全收缩多余空槽，避免在数据变更事件分发前移除刚变化的槽位引用；容量预检必须纯只读并计入可动态扩容的空间。动态增减槽位的 UI 只同步表现，不重新初始化库存业务事件；快捷栏部分拾取后的余量必须继续尝试主背包，最后统一发布拾取数量。
 - 快捷栏收到 Mobile `RightClick` 时必须允许当前手持物执行 `Act`，不能因触点位于手机“使用”按钮上而被 `IsPointerOverUI()` 拦截；键鼠右键仍保留 UI 遮挡检查。
 - 快捷栏生成的手持物只注册到玩家 `Mod_FocusPoint`；左右翻身角由该模块读取 `Mod_TurnBack.CurrentTurnAngleY` 后与 Z 轴瞄准一次性合成，不能再把手持物根节点注册进 `controlledTransforms_Direction`。
-- 快捷栏手持创建使用 `ItemMgr.InstantiateHeldItem`，直接传真实槽位 ItemData，并在注册前设置 Owner/inHand；禁止先按定义 ID 创建并注册随机 GUID，再 BindData 替换身份。库存事件只标脏，在快捷栏安全更新边界同步；同槽同数据不重建，但同 GUID 的新数据引用仍需重绑。InitData 前解除旧库存事件、完成后重绑，Unload 与 OnDestroy 共用完整清理。
+- 快捷栏手持创建使用 `ItemMgr.InstantiateHeldItem`，直接传真实槽位 ItemData，并在注册前设置 Owner/inHand；禁止先按定义 ID 创建并注册随机 GUID，再 BindData 替换身份。库存事件只标脏，在快捷栏安全更新边界同步；快照同 GUID 跨槽复用 ItemData，不重生未变化的手持模块，确实换数据引用才重新绑定。InitData 前解除旧库存事件、完成后重绑，OnUnload 与 OnDestroy 共用完整清理。
 - 快捷栏保存前先调用当前手持物 ModuleSave，再序列化库存，避免手持进度落后于玩家快照。手持 ECS 迁移属于统一实体架构待办，不能另建 World，也不能把仅有接口优化当作玩法模块全部迁移完成。
 - 需要“只从物品所在库存取料”的玩法统一使用 `InventoryContextResolver` 按 `ItemData` 引用/Guid 解析真实所属 `Inventory`；快捷栏手持物会命中 `Mod_HotBar.RuntimeInventory`，普通背包命中对应 `Mod_Inventory.InventoryInstances`。实际扣除使用 `Inventory_Data.TryConsumeFirstByTag/TryConsumeFromSlot` 事务入口，不能直接改 `Stack.Amount`，否则快捷栏 UI、数据事件和后续持久化会失步。
 - 丢弃统一经过 `Mod_DiscardItem.DropItemByCount`；扣减 `ItemSlot.Amount` 后除触发槽位事件外，还必须按快捷栏槽位索引显式刷新 UI，兼容手机入口没有 `ItemSlot_UI` 引用的情况。
@@ -101,7 +101,7 @@ description: "Use when: 定位或修改 FlatWorld 的背包、槽位、快捷栏
 - 废弃 `Mod_EquipmentRuntime.cs` 不再使用。
 - `Mod_Food` 的被动生命联动必须读取 `Mod_PlayerDeathState`；玩家濒死或 `Mod_DamageReceiver.Hp <= 0` 时停止回血与生存伤害，避免死亡状态被抬成极低正数。
 - `Mod_Food.HealthState` 的回血判定只看蛋白质；`HealInterval/HealAmount` 大于 0 时按间隔一次性回血，动物继续使用 `HealNeedRatio`，玩家创建模板通过 `proteinHealThreshold` 配置绝对蛋白质门槛。
-- `Mod_Food` 仅在基础营养持续消耗或 `IFoodTickObserver` 规则要求时进入 `FixedInterval`；无角色模块的静态世界食物应休眠，库存腐败仍由 `IModuleDataTickObserver` 独立推进，可选角色模块必须静默查询。难度倍率的 `IsPlayer` 每次解析当前 Owner，再用 `TryGetComponent` 查询可选 Player，避免 Editor 缺失组件诊断分配；不能缓存可能随归属变化的玩家判断。
+- `Mod_Food` 仅在基础营养持续消耗或 `IFoodTickObserver` 规则要求时进入 `FixedInterval`；无角色模块的静态世界食物应休眠，库存腐败/融化经 `ModuleDataRuleRegistry.Step` 的 `IModuleDataRule` 独立推进。规则按稳定 ModuleId/RuleId 注册，配置按定义共享，可变状态只写上下文；槽位替换后停止旧状态的后续规则。可选角色模块必须静默查询，难度倍率的 IsPlayer 每次解析当前 Owner，不能缓存随归属变化的判断。
 - `FoodRulePipeline` 的 Tick 和状态刷新通知直接遍历已排序规则，避免捕获上下文的闭包；保留 `IFoodTickRequirement` 门禁和逐规则异常隔离，不能为了减分配跳过营养、回血或 UI 通知。
 - `Mod_HeldFood` 的咬痕只读取 `EatingProgress` 与 `Max_EatingProgress`，按物品 GUID 确定性重建当前轮廓遮罩，不重复持久化随机点；实际口数取最大进度的向上整数，最后一口直接清空残余区域。
 

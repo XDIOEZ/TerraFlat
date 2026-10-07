@@ -330,7 +330,7 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
         NormalizeStatRanges();
     }
 
-    public override void Load()
+    protected override void OnLoad()
     {
         CombatPhysicsChannels.AssignDamageReceiver(this);
         ClearBodyPartPenalties();
@@ -580,7 +580,7 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
         Unload();
     }
 
-    public override void Unload()
+    protected override void OnUnload()
     {
         incomingDamageRules.Clear();
         ClearBodyPartPenalties();
@@ -606,8 +606,7 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
     }
 
 
-    [Button]
-    public override void Save()
+    protected override void OnSave()
     {
         modData.WriteData(Data);
         item.itemData.ModuleDataDic[_Data.Name] = modData;

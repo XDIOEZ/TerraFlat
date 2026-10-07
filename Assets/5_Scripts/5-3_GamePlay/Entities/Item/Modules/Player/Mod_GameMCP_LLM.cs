@@ -129,7 +129,7 @@ public sealed class Mod_GameMCP_LLM : Module
 
     #region 模块生命周期
 
-    public override void Load()
+    protected override void OnLoad()
     {
         player = item as Player ?? GetComponentInParent<Player>();
         gameController = player != null ? player.GetComponentInChildren<Mod_GameController>(true) : null;
@@ -139,12 +139,12 @@ public sealed class Mod_GameMCP_LLM : Module
     }
 
     /// <summary>操作状态是短期运行态，不写入玩家存档。</summary>
-    public override void Save()
+    protected override void OnSave()
     {
     }
 
     /// <summary>玩家卸载或世界切换时取消未完成寻路并清空本模块持有的输入。</summary>
-    public override void Unload()
+    protected override void OnUnload()
     {
         CancelActiveOperation(OperationState.Cancelled, "module_unloaded");
         player = null;

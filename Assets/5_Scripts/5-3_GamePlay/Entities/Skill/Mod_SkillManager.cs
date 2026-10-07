@@ -54,7 +54,7 @@ public class Mod_SkillManager : Module
             _Data.ID = ModText.SkillManager_Item;
         }
     }
-    public override void Load()
+    protected override void OnLoad()
     {
         item.itemData.ModuleDataDic[_Data.Name] = _Data;
         ModSaveData.ReadData(ref Data);
@@ -208,7 +208,7 @@ public class Mod_SkillManager : Module
         }
     }
 
-    public override void Save()
+    protected override void OnSave()
     {
         if (item == null)
         {
@@ -222,7 +222,7 @@ public class Mod_SkillManager : Module
         item.itemData.ModuleDataDic[_Data.Name] = _Data;
     }
 
-    public override void Unload()
+    protected override void OnUnload()
     {
         StopAllSkills();
     }

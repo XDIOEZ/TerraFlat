@@ -45,7 +45,7 @@ public class Mod_Droping : Module
         base.Awake();
     }
 
-    public override void Load()
+    protected override void OnLoad()
     {
         modData.ReadData(ref drop);
         BindDropItemReference();
@@ -239,7 +239,7 @@ public class Mod_Droping : Module
         chunkMgr.RequestLoadChunk_By_Position(chunkPos);
     }
 
-    public override void Save()
+    protected override void OnSave()
     {
         modData.WriteData(drop);
         item.itemData.ModuleDataDic[modData.Name] = modData;

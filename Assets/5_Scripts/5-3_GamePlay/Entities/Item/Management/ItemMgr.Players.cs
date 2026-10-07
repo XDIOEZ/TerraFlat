@@ -324,10 +324,14 @@ public partial class ItemMgr
             playerData = loadedPlayerData;
             wasCreated = false;
 
+            Player playerTemplate = GameRes.Instance.GetPrefab("Player").GetComponent<Player>();
+            Data_Player currentDefaults = (Data_Player)playerTemplate.Get_NewItemData();
+            ItemInstanceDataFactory.ApplyCurrentDefinition(playerData, currentDefaults);
+
             // 玩家根数据仍保留自身进度，但背包/快捷栏中的物品必须使用当前 ItemDefinition 配置。
             ItemDefinitionRuntime.RebaseNestedPersistedItems(GameRes.Instance, playerData);
 
-            // 旧档字典键继续作为稳定 ID；显示名为空时才回退，改名不能改变身份。
+            // 档案键作为稳定 ID，改显示名不能改变身份。
             if (string.IsNullOrWhiteSpace(playerData.Name_User))
                 playerData.Name_User = playerName;
         }
@@ -343,7 +347,7 @@ public partial class ItemMgr
     {
         var prefab = GameRes.Instance.GetPrefab("Player");
         var defaultPlayer = prefab.GetComponent<Player>();
-        var playerData = defaultPlayer.Data.DeepClone();
+        var playerData = (Data_Player)defaultPlayer.Get_NewItemData();
         playerData.Guid = playerName.GetHashCode();
         playerData.Name_User = playerName;
         return playerData;

@@ -5,7 +5,7 @@ using UnityEngine;
 public class Mod_FocusPoint_AI : Mod_FocusPoint
 {
     public Mod_Mover mover;
-    public override void Load()
+    protected override void OnLoad()
     {
         ModData.ReadData(ref Data);
 

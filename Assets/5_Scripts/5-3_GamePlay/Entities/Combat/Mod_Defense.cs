@@ -21,7 +21,7 @@ public partial class Mod_Defense : Module
 
 
     /// <summary>校正物理防御并挂接到生命模块。</summary>
-    public override void Load()
+    protected override void OnLoad()
     {
         DefenseValues ??= new CombatDefense();
         DefenseValues.ClampNonNegative();
@@ -34,12 +34,12 @@ public partial class Mod_Defense : Module
     }
 
     /// <summary>防御数据由配置持有，不需要额外序列化。</summary>
-    public override void Save()
+    protected override void OnSave()
     {
     }
 
     /// <summary>卸载本模块对生命模块施加的物理防御。</summary>
-    public override void Unload()
+    protected override void OnUnload()
     {
         if (!_isDefenseApplied)
             return;

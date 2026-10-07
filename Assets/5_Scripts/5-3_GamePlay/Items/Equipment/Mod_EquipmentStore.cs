@@ -16,12 +16,12 @@ public class Mod_EquipmentStore : Module
     [SerializeReference]
     public List<EquipmentInstance> equipmentInstances = new List<EquipmentInstance>();
 
-    public override void Load()
+    protected override void OnLoad()
     {
         ModSaveData.ReadData(ref equipmentInstances);
     }
 
-    public override void Save()
+    protected override void OnSave()
     {
         ModSaveData.WriteData(equipmentInstances);
     }

@@ -126,8 +126,26 @@ public sealed class InventoryFoodItemOperationGateway : IFoodItemOperationGatewa
         if (!TryPrepareReplacement(replacementData, food.ItemData, out reason))
             return false;
 
-        food.Item.BindData(replacementData);
-        food.Item.OnUIRefresh?.Invoke();
+        Item replacementItem;
+        try
+        {
+            ItemMgr manager = ItemMgr.GetInstance();
+            if (manager == null || food.Item == null)
+            {
+                reason = "当前食物没有可替换的运行时实例";
+                return false;
+            }
+            replacementItem = manager.ReplaceRuntimeItem(food.Item, replacementData);
+        }
+        catch (Exception exception)
+        {
+            reason = $"运行时食物替换失败：{exception.Message}";
+            Debug.LogException(exception, food.Item);
+            return false;
+        }
+        ClearInventoryContext();
+        try { if (replacementItem != null) replacementItem.OnUIRefresh?.Invoke(); }
+        catch (Exception exception) { Debug.LogException(exception, replacementItem); }
         return true;
     }
 

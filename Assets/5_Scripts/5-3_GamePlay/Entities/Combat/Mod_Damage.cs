@@ -120,10 +120,10 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
 
     private void OnHandTickStateChanged(bool inHand) => item?.MarkModuleScheduleDirty();
 
-    public override void Unload()
+    protected override void OnUnload()
     {
         SetIdleTickSuppressed(false);
-        base.Unload();
+        base.OnUnload();
     }
     private bool tileDamageAppliedThisWindow;
     private bool nonDamageableImpactAppliedThisWindow;
@@ -272,7 +272,7 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
 
     #region Unity 生命周期
     /// <summary>从已完成注册的模块表缓存发送端能力，并在装配时确认纯数据契约容量。</summary>
-    public override void Load()
+    protected override void OnLoad()
     {
         DeliveryCapabilities = FlatWorld.Combat.CombatDeliveryCapabilities.None;
         explicitProjectileSweep = false;
@@ -313,7 +313,7 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
         nonDamageableImpactAppliedThisWindow = false;
     }
 
-    public override void Save()
+    protected override void OnSave()
     {
         // 保存逻辑可以后续实现
     }

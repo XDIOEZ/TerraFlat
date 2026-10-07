@@ -129,7 +129,7 @@ public class Mod_LightSource : Module, ICombustionStateReceiver
 
     #endregion
 
-    public override void Load()
+    protected override void OnLoad()
     {
         Data ??= new LightSourceData();
         ModData?.ReadData(ref Data);
@@ -141,7 +141,7 @@ public class Mod_LightSource : Module, ICombustionStateReceiver
         RefreshEmissiveOverlay();
     }
 
-    public override void Save()
+    protected override void OnSave()
     {
         ClampData();
         ModData?.WriteData(Data);

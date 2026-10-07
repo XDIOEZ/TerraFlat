@@ -183,7 +183,7 @@ public class Mod_BaseDroper : Module
      * 序列化/反序列化
      * ----------------------------------------------------------*/
     [Tooltip("加载丢弃数据")]
-    public override void Load()
+    protected override void OnLoad()
     {
         modData.ReadData(ref drops);
 
@@ -205,7 +205,7 @@ public class Mod_BaseDroper : Module
     }
 
     [Tooltip("保存丢弃数据")]
-    public override void Save()
+    protected override void OnSave()
     {
         modData.WriteData(drops);
     }

@@ -8,7 +8,11 @@ namespace TheKiwiCoder
 {
     public class Mod_BehaviourTreeRunner : Module
     {
+        #region 运行态树与调度
+
+        public override ModuleTickMode TickMode => ModuleTickMode.EveryFrame;
         public BehaviourTree tree;
+        private BehaviourTree templateTree;
         [ShowInInspector]
         Context context;
 
@@ -24,12 +28,15 @@ namespace TheKiwiCoder
         void InitTree()
         {
             context = CreateBehaviourTreeContext();
-            tree = tree.Clone();
+            templateTree ??= tree;
+            if (templateTree == null || templateTree.rootNode == null)
+                throw new System.InvalidOperationException("行为树模块缺少有效的树模板。");
+            tree = templateTree.Clone();
             tree.Bind(context);
             tree.Init();
         }
 
-        void Update()
+        public override void ModUpdate(float deltaTime)
         {
             if (isRunning && tree != null)
             {
@@ -39,7 +46,7 @@ namespace TheKiwiCoder
 
         void FixedUpdate()
         {
-            if (isRunning && tree != null && tree.rootNode != null)
+            if (IsRuntimeLoaded && Enabled && isRunning && tree != null && tree.rootNode != null)
             {
                 tree.rootNode.FixedUpdate();
             }
@@ -75,20 +82,39 @@ namespace TheKiwiCoder
             });
         }
 
-        public override void Load()
+        protected override void OnLoad()
         {
             InitTree();
             StartTree();
         }
 
-        public override void Save()
+        protected override void OnSave()
         {
    
         }
         
         public void OnDestroy()
         {
-            StopTree();
+            Unload();
         }
+
+        protected override void OnUnload()
+        {
+            StopTree();
+            BehaviourTree runtimeTree = tree;
+            tree = templateTree;
+            context = null;
+            if (runtimeTree == null || runtimeTree == templateTree) return;
+            // 克隆树与节点只属于这一轮运行态，卸载后必须一并释放。
+            try { runtimeTree.rootNode?.Abort(); }
+            finally
+            {
+                foreach (Node node in runtimeTree.nodes)
+                    if (node != null) Destroy(node);
+                Destroy(runtimeTree);
+            }
+        }
+
+        #endregion
     }
 }

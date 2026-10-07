@@ -31,8 +31,8 @@ public abstract class Mod_ResourceToolBase : Module, IResourceHarvestTool, IComb
         base.Awake();
     }
 
-    public override void Load() => ValidateConfiguration();
-    public override void Save() { }
+    protected override void OnLoad() => ValidateConfiguration();
+    protected override void OnSave() { }
     public override void OnResourcesReloaded() => ValidateConfiguration();
 
     /// <summary>资源工具只向伤害上下文附加采集能力，不参与伤害碰撞和结算。</summary>

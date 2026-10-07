@@ -3,26 +3,52 @@ using System.Collections.Generic;
 using Unity.Mathematics;
 using UnityEngine;
 
-/// <summary>
-/// 按 ItemTickTier 分桶执行 Item Tick，与实例注册、存档和世界归属解耦。
-/// </summary>
+/// <summary>按更新档分桶调度，以注册版本和运行代际保护回调中的增删与对象池复用。</summary>
 internal sealed class ItemTickScheduler
 {
+    #region 调度状态
+
     private const int BucketCount = 8;
     private const float FastSlice = 0.05f / BucketCount;
     private const float NormalSlice = 0.1f / BucketCount;
     private const float SlowSlice = 0.25f / BucketCount;
     private const float DormantPhysicsSlice = 0.25f / BucketCount;
 
-    private readonly List<Item> everyFrameItems = new(64);
-    private readonly List<Item>[] fastBuckets = CreateBuckets();
-    private readonly List<Item>[] normalBuckets = CreateBuckets();
-    private readonly List<Item>[] slowBuckets = CreateBuckets();
-    private readonly List<Item>[] dormantPhysicsBuckets = CreateBuckets();
-    private readonly HashSet<Item> dirtyItems = new();
-    // 注销时只访问实体所在的 Tick 桶，避免逐个扫描全部桶。
-    private readonly Dictionary<Item, (ItemTickTier Tier, int Bucket)> locations = new();
-    private readonly List<Item> snapshot = new(256);
+    private readonly struct ScheduledEntry
+    {
+        public readonly Item Item;
+        public readonly uint Generation;
+        public readonly ulong Token;
+
+        public ScheduledEntry(Item item, ulong token)
+        {
+            Item = item;
+            Generation = item.RuntimeGeneration;
+            Token = token;
+        }
+    }
+
+    private sealed class Location
+    {
+        public ScheduledEntry Entry;
+        public ItemTickTier Tier;
+        public int Bucket;
+        public int Slot;
+    }
+
+    private readonly List<ScheduledEntry> everyFrameItems = new(64);
+    private readonly List<ScheduledEntry>[] fastBuckets = CreateBuckets();
+    private readonly List<ScheduledEntry>[] normalBuckets = CreateBuckets();
+    private readonly List<ScheduledEntry>[] slowBuckets = CreateBuckets();
+    private readonly List<ScheduledEntry>[] dormantPhysicsBuckets = CreateBuckets();
+    private readonly HashSet<Item> dirtyItems = new(ItemReferenceComparer.Instance);
+    private readonly Dictionary<Item, Location> locations = new(ItemReferenceComparer.Instance);
+    private readonly List<ScheduledEntry> tickSnapshot = new(256);
+    private readonly List<Item> maintenanceSnapshot = new(256);
+    private readonly HashSet<Item> rebuildMembers = new(ItemReferenceComparer.Instance);
+    private ulong registrationSequence;
+    private ulong currentUpdateToken;
+    private bool updating;
 
     private float fastTimer;
     private float normalTimer;
@@ -38,147 +64,171 @@ internal sealed class ItemTickScheduler
     public int NormalCount => CountItems(normalBuckets);
     public int SlowCount => CountItems(slowBuckets);
 
+    #endregion
+
     #region Tick 桶登记
 
     public void NotifyChanged(Item item)
     {
-        if (item != null)
-        {
+        if (item != null && locations.ContainsKey(item))
             dirtyItems.Add(item);
-        }
     }
 
+    /// <summary>换代和休眠边界重置时钟，活跃档间切换保留已累计的模拟时间。</summary>
     public void Register(Item item)
     {
-        Remove(item);
         if (item == null)
         {
+            Remove(item);
             return;
         }
 
         ItemTickTier tier = item.GetTickTier();
-        int bucket = -1;
-        switch (tier)
+        int bucket = tier == ItemTickTier.EveryFrame ? -1 :
+            tier == ItemTickTier.Dormant && !item.TryGetComponent<Rigidbody2D>(out _)
+                ? -1 : (item.GetInstanceID() & int.MaxValue) % BucketCount;
+        bool alreadyRegistered = locations.TryGetValue(item, out Location existing);
+        bool newGeneration = !alreadyRegistered || existing.Entry.Generation != item.RuntimeGeneration;
+        bool dormantBoundary = alreadyRegistered &&
+            (existing.Tier == ItemTickTier.Dormant) != (tier == ItemTickTier.Dormant);
+        if (!newGeneration && existing.Tier == tier && existing.Bucket == bucket)
+            return;
+
+        if (registrationSequence == ulong.MaxValue)
+            throw new InvalidOperationException("Item Tick 注册版本已耗尽。");
+        ulong token = ++registrationSequence;
+        if (alreadyRegistered)
+            Remove(item);
+
+        Location location = existing ?? new Location();
+        location.Entry = new ScheduledEntry(item, token);
+        location.Tier = tier;
+        location.Bucket = bucket;
+        location.Slot = -1;
+        List<ScheduledEntry> target = GetBucket(location);
+        if (target != null)
         {
-            case ItemTickTier.EveryFrame:
-                everyFrameItems.Add(item);
-                item.ResetScheduledTickClock(-1f);
-                break;
-            case ItemTickTier.Fast:
-                bucket = AddToBucket(fastBuckets, item);
-                item.ResetScheduledTickClock(Time.time);
-                break;
-            case ItemTickTier.Normal:
-                bucket = AddToBucket(normalBuckets, item);
-                item.ResetScheduledTickClock(Time.time);
-                break;
-            case ItemTickTier.Slow:
-                bucket = AddToBucket(slowBuckets, item);
-                item.ResetScheduledTickClock(Time.time);
-                break;
-            case ItemTickTier.Dormant:
-                if (item.TryGetComponent<Rigidbody2D>(out _))
-                    bucket = AddToBucket(dormantPhysicsBuckets, item);
-                break;
+            location.Slot = target.Count;
+            target.Add(location.Entry);
         }
-        locations[item] = (tier, bucket);
+        locations.Add(item, location);
+
+        if (newGeneration || dormantBoundary)
+            item.ResetScheduledTickClock(tier == ItemTickTier.EveryFrame || tier == ItemTickTier.Dormant
+                ? -1f : Time.time);
     }
 
     public void Remove(Item item)
     {
         if (ReferenceEquals(item, null))
-        {
             return;
-        }
 
-        if (locations.Remove(item, out (ItemTickTier Tier, int Bucket) location))
+        if (locations.Remove(item, out Location location))
         {
-            switch (location.Tier)
+            List<ScheduledEntry> bucket = GetBucket(location);
+            if (bucket != null)
             {
-                case ItemTickTier.EveryFrame:
-                    everyFrameItems.Remove(item);
-                    break;
-                case ItemTickTier.Fast:
-                    fastBuckets[location.Bucket].Remove(item);
-                    break;
-                case ItemTickTier.Normal:
-                    normalBuckets[location.Bucket].Remove(item);
-                    break;
-                case ItemTickTier.Slow:
-                    slowBuckets[location.Bucket].Remove(item);
-                    break;
-                case ItemTickTier.Dormant when location.Bucket >= 0:
-                    dormantPhysicsBuckets[location.Bucket].Remove(item);
-                    break;
+                int last = bucket.Count - 1;
+                if (location.Slot != last)
+                {
+                    ScheduledEntry moved = bucket[last];
+                    bucket[location.Slot] = moved;
+                    locations[moved.Item].Slot = location.Slot;
+                }
+                bucket.RemoveAt(last);
             }
         }
         dirtyItems.Remove(item);
     }
 
+    private List<ScheduledEntry> GetBucket(Location location)
+    {
+        switch (location.Tier)
+        {
+            case ItemTickTier.EveryFrame: return everyFrameItems;
+            case ItemTickTier.Fast: return fastBuckets[location.Bucket];
+            case ItemTickTier.Normal: return normalBuckets[location.Bucket];
+            case ItemTickTier.Slow: return slowBuckets[location.Bucket];
+            case ItemTickTier.Dormant when location.Bucket >= 0:
+                return dormantPhysicsBuckets[location.Bucket];
+            default: return null;
+        }
+    }
+
     #endregion
 
-    public void Update(IReadOnlyList<Item> runtimeItems, float deltaTime, Action<Item> beforeEveryFrameTick,
+    #region 帧边界与重建
+
+    public void Update(float deltaTime, Action<Item> beforeEveryFrameTick,
         IReadOnlyList<Transform> players, WorldTopologyDomain topology)
     {
-        FlushDirty();
+        if (updating)
+            throw new InvalidOperationException("Item Tick 调度不允许重入。");
 
-        snapshot.Clear();
-        snapshot.AddRange(everyFrameItems);
-        float currentTime = Time.time;
-
-        for (int i = 0; i < snapshot.Count; i++)
+        updating = true;
+        try
         {
-            Item item = snapshot[i];
-            if (item == null)
-                continue;
-            if (!item.isActiveAndEnabled)
+            FlushDirty();
+            // 本轮调度中新增或重新注册的版本统一从下一帧生效，不能进入后续低频桶。
+            currentUpdateToken = registrationSequence;
+            CopyTickSnapshot(everyFrameItems);
+            float currentTime = Time.time;
+            for (int i = 0; i < tickSnapshot.Count; i++)
             {
-                item.ResetScheduledTickClock(-1f);
-                continue;
-            }
+                ScheduledEntry entry = tickSnapshot[i];
+                if (!CanTick(entry)) continue;
+                Item item = entry.Item;
+                if (!item.isActiveAndEnabled)
+                {
+                    item.ResetScheduledTickClock(-1f);
+                    continue;
+                }
 
-            if (!item.ShouldUseSimulationRange())
-            {
-                item.SetSimulationRangePaused(false);
+                if (!item.ShouldUseSimulationRange())
+                {
+                    if (!CanTick(entry)) continue;
+                    item.SetSimulationRangePaused(false);
+                    if (!CanTick(entry)) continue;
+                    beforeEveryFrameTick?.Invoke(item);
+                    if (CanTick(entry) && item.isActiveAndEnabled)
+                        item.TickUnthrottledAt(currentTime, deltaTime);
+                    continue;
+                }
+
+                SimulationRangeTier tier = ResolveTier(item, players, topology);
+                if (!CanTick(entry)) continue;
+                item.SetSimulationRangePaused(tier == SimulationRangeTier.Stopped);
+                if (!CanTick(entry)) continue;
+                if (tier == SimulationRangeTier.Stopped)
+                {
+                    item.ResetScheduledTickClock(-1f);
+                    continue;
+                }
+
+                float interval = SimulationRangePreferences.TickInterval(tier);
+                if (!item.IsEveryFrameTickDue(currentTime, interval)) continue;
                 beforeEveryFrameTick?.Invoke(item);
-                item.Tick(deltaTime);
-                continue;
+                if (CanTick(entry) && item.isActiveAndEnabled)
+                    item.TickEveryFrameAt(currentTime, interval);
             }
 
-            SimulationRangeTier tier = ResolveTier(item, players, topology);
-            item.SetSimulationRangePaused(tier == SimulationRangeTier.Stopped);
-            if (tier == SimulationRangeTier.Stopped)
-            {
-                item.ResetScheduledTickClock(-1f);
-                continue;
-            }
-
-            float interval = SimulationRangePreferences.TickInterval(tier);
-            if (!item.IsEveryFrameTickDue(currentTime, interval))
-                continue;
-
-            beforeEveryFrameTick?.Invoke(item);
-            item.TickEveryFrameAt(currentTime, interval);
+            ProcessTier(fastBuckets, ref fastTimer, ref fastCursor, FastSlice, deltaTime, players, topology);
+            ProcessTier(normalBuckets, ref normalTimer, ref normalCursor, NormalSlice, deltaTime, players, topology);
+            ProcessTier(slowBuckets, ref slowTimer, ref slowCursor, SlowSlice, deltaTime, players, topology);
+            ProcessDormantPhysics(deltaTime, players, topology);
         }
-
-        ProcessTier(fastBuckets, ref fastTimer, ref fastCursor, FastSlice, deltaTime, players, topology);
-        ProcessTier(normalBuckets, ref normalTimer, ref normalCursor, NormalSlice, deltaTime, players, topology);
-        ProcessTier(slowBuckets, ref slowTimer, ref slowCursor, SlowSlice, deltaTime, players, topology);
-        ProcessDormantPhysics(deltaTime, players, topology);
+        finally
+        {
+            tickSnapshot.Clear();
+            updating = false;
+        }
     }
 
     /// <summary>加载页期间暂停调度并重置时间基准，恢复后不补算暂停期间的 Tick。</summary>
     public void Pause(IReadOnlyList<Item> runtimeItems)
     {
-        fastTimer = 0f;
-        normalTimer = 0f;
-        slowTimer = 0f;
-        dormantPhysicsTimer = 0f;
-        fastCursor = -1;
-        normalCursor = -1;
-        slowCursor = -1;
-        dormantPhysicsCursor = -1;
-
+        fastTimer = normalTimer = slowTimer = dormantPhysicsTimer = 0f;
+        fastCursor = normalCursor = slowCursor = dormantPhysicsCursor = -1;
         for (int i = 0; i < runtimeItems.Count; i++)
         {
             Item item = runtimeItems[i];
@@ -187,110 +237,99 @@ internal sealed class ItemTickScheduler
         }
     }
 
+    /// <summary>按当前注册集合差量对齐，维护清理不会清零未改变实体的时钟。</summary>
     public void Rebuild(IReadOnlyList<Item> runtimeItems)
     {
-        everyFrameItems.Clear();
-        ClearBuckets(fastBuckets);
-        ClearBuckets(normalBuckets);
-        ClearBuckets(slowBuckets);
-        ClearBuckets(dormantPhysicsBuckets);
-        dirtyItems.Clear();
-        locations.Clear();
+        rebuildMembers.Clear();
+        for (int i = 0; i < runtimeItems.Count; i++)
+            if (runtimeItems[i] != null)
+                rebuildMembers.Add(runtimeItems[i]);
+
+        maintenanceSnapshot.Clear();
+        foreach (Item item in locations.Keys)
+            if (!rebuildMembers.Contains(item))
+                maintenanceSnapshot.Add(item);
+        for (int i = 0; i < maintenanceSnapshot.Count; i++)
+            Remove(maintenanceSnapshot[i]);
+        maintenanceSnapshot.Clear();
 
         for (int i = 0; i < runtimeItems.Count; i++)
-        {
-            Item item = runtimeItems[i];
-            if (item != null)
-            {
-                Register(item);
-            }
-        }
+            if (runtimeItems[i] != null)
+                Register(runtimeItems[i]);
+        rebuildMembers.Clear();
     }
 
     private void FlushDirty()
     {
-        if (dirtyItems.Count == 0)
-        {
-            return;
-        }
-
-        snapshot.Clear();
+        if (dirtyItems.Count == 0) return;
+        maintenanceSnapshot.Clear();
         foreach (Item item in dirtyItems)
-        {
-            snapshot.Add(item);
-        }
-
+            maintenanceSnapshot.Add(item);
         dirtyItems.Clear();
-        for (int i = 0; i < snapshot.Count; i++)
+        for (int i = 0; i < maintenanceSnapshot.Count; i++)
         {
-            Item item = snapshot[i];
-            // 登记表同时保存休眠实体，批量切档时无需逐个重扫完整物品列表。
-            if (item != null && locations.ContainsKey(item))
-            {
+            Item item = maintenanceSnapshot[i];
+            if (item == null)
+                Remove(item);
+            else if (locations.ContainsKey(item))
                 Register(item);
-            }
         }
+        maintenanceSnapshot.Clear();
     }
 
-    private static List<Item>[] CreateBuckets()
+    private bool CanTick(ScheduledEntry entry)
     {
-        List<Item>[] buckets = new List<Item>[BucketCount];
-        for (int i = 0; i < buckets.Length; i++)
-        {
-            buckets[i] = new List<Item>(16);
-        }
+        Item item = entry.Item;
+        return entry.Token <= currentUpdateToken && item != null &&
+               item.IsInitialized && !item.DestructionHandled && !item.IsInPool &&
+               item.RuntimeGeneration == entry.Generation &&
+               locations.TryGetValue(item, out Location current) && current.Entry.Token == entry.Token;
+    }
 
+    private void CopyTickSnapshot(List<ScheduledEntry> source)
+    {
+        tickSnapshot.Clear();
+        tickSnapshot.AddRange(source);
+    }
+
+    #endregion
+
+    #region 分桶执行
+
+    private static List<ScheduledEntry>[] CreateBuckets()
+    {
+        List<ScheduledEntry>[] buckets = new List<ScheduledEntry>[BucketCount];
+        for (int i = 0; i < buckets.Length; i++)
+            buckets[i] = new List<ScheduledEntry>(16);
         return buckets;
     }
 
-    private static int AddToBucket(List<Item>[] buckets, Item item)
-    {
-        int bucketIndex = (item.GetInstanceID() & int.MaxValue) % buckets.Length;
-        buckets[bucketIndex].Add(item);
-        return bucketIndex;
-    }
-
-    private static int CountItems(List<Item>[] buckets)
+    private static int CountItems(List<ScheduledEntry>[] buckets)
     {
         int count = 0;
         for (int i = 0; i < buckets.Length; i++)
-        {
             count += buckets[i].Count;
-        }
-
         return count;
     }
 
-    private static void ProcessTier(
-        List<Item>[] buckets,
-        ref float timer,
-        ref int cursor,
-        float slice,
-        float deltaTime,
-        IReadOnlyList<Transform> players,
-        WorldTopologyDomain topology)
+    private void ProcessTier(List<ScheduledEntry>[] buckets, ref float timer, ref int cursor,
+        float slice, float deltaTime, IReadOnlyList<Transform> players, WorldTopologyDomain topology)
     {
         timer += deltaTime;
         int elapsedSlices = Mathf.FloorToInt(timer / slice);
-        if (elapsedSlices <= 0)
-        {
-            return;
-        }
+        if (elapsedSlices <= 0) return;
 
         int slicesToProcess = Mathf.Min(elapsedSlices, buckets.Length);
         float currentTime = Time.time;
         for (int sliceIndex = 0; sliceIndex < slicesToProcess; sliceIndex++)
         {
             cursor = (cursor + 1) % buckets.Length;
-            List<Item> bucket = buckets[cursor];
-            for (int i = 0; i < bucket.Count; i++)
+            CopyTickSnapshot(buckets[cursor]);
+            for (int i = 0; i < tickSnapshot.Count; i++)
             {
-                Item item = bucket[i];
-                if (item == null)
-                {
-                    continue;
-                }
-
+                ScheduledEntry entry = tickSnapshot[i];
+                if (!CanTick(entry)) continue;
+                Item item = entry.Item;
                 if (!item.isActiveAndEnabled)
                 {
                     item.ResetScheduledTickClock(-1f);
@@ -298,19 +337,18 @@ internal sealed class ItemTickScheduler
                 }
 
                 SimulationRangeTier tier = ResolveTier(item, players, topology);
+                if (!CanTick(entry)) continue;
                 item.SetSimulationRangePaused(tier == SimulationRangeTier.Stopped);
+                if (!CanTick(entry) || !item.isActiveAndEnabled) continue;
                 if (tier == SimulationRangeTier.Stopped)
                 {
                     item.ResetScheduledTickClock(-1f);
                     continue;
                 }
-                if (!item.IsScheduledTickDue(currentTime, SimulationRangePreferences.TickInterval(tier)))
-                    continue;
-
-                item.TickScheduled(currentTime);
+                if (item.IsScheduledTickDue(currentTime, SimulationRangePreferences.TickInterval(tier)))
+                    item.TickScheduled(currentTime);
             }
         }
-
         timer = elapsedSlices >= buckets.Length ? 0f : timer - slicesToProcess * slice;
     }
 
@@ -322,18 +360,16 @@ internal sealed class ItemTickScheduler
             return SimulationRangeTier.Near;
 
         Vector3 position = item.transform.position;
-        float2 entityPosition = new float2(position.x, position.y);
+        float2 entityPosition = new(position.x, position.y);
         float distanceSquared = float.PositiveInfinity;
         for (int i = 0; i < players.Count; i++)
         {
             Transform player = players[i];
-            if (player == null || player.gameObject.scene != item.gameObject.scene)
-                continue;
+            if (player == null || player.gameObject.scene != item.gameObject.scene) continue;
             Vector3 playerPosition = player.position;
             distanceSquared = Mathf.Min(distanceSquared, topology.SqrDistance(entityPosition,
                 new float2(playerPosition.x, playerPosition.y)));
         }
-
         return SimulationRangePreferences.ResolveTier(distanceSquared);
     }
 
@@ -349,25 +385,19 @@ internal sealed class ItemTickScheduler
         for (int sliceIndex = 0; sliceIndex < slicesToProcess; sliceIndex++)
         {
             dormantPhysicsCursor = (dormantPhysicsCursor + 1) % dormantPhysicsBuckets.Length;
-            List<Item> bucket = dormantPhysicsBuckets[dormantPhysicsCursor];
-            for (int i = 0; i < bucket.Count; i++)
+            CopyTickSnapshot(dormantPhysicsBuckets[dormantPhysicsCursor]);
+            for (int i = 0; i < tickSnapshot.Count; i++)
             {
-                Item item = bucket[i];
-                if (item == null || !item.isActiveAndEnabled) continue;
-                SimulationRangeTier tier = ResolveTier(item, players, topology);
-                item.SetSimulationRangePaused(tier == SimulationRangeTier.Stopped);
+                ScheduledEntry entry = tickSnapshot[i];
+                if (!CanTick(entry) || !entry.Item.isActiveAndEnabled) continue;
+                SimulationRangeTier tier = ResolveTier(entry.Item, players, topology);
+                if (CanTick(entry))
+                    entry.Item.SetSimulationRangePaused(tier == SimulationRangeTier.Stopped);
             }
         }
-
         dormantPhysicsTimer = elapsedSlices >= dormantPhysicsBuckets.Length
             ? 0f : dormantPhysicsTimer - slicesToProcess * DormantPhysicsSlice;
     }
 
-    private static void ClearBuckets(List<Item>[] buckets)
-    {
-        for (int i = 0; i < buckets.Length; i++)
-        {
-            buckets[i].Clear();
-        }
-    }
+    #endregion
 }

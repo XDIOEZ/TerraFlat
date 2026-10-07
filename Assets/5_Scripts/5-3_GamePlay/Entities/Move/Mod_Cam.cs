@@ -96,7 +96,7 @@ public class Mod_Cam : Module
     }
 
     // 在Load方法中实例化相机逻辑
-    public override void Load()
+    protected override void OnLoad()
     {
         // 获取GameController并绑定输入事件
         GameController = GetComponentInParent<Mod_GameController>();
@@ -160,7 +160,7 @@ public class Mod_Cam : Module
         transform.rotation = Quaternion.identity;
     }
 
-    public override void Save()
+    protected override void OnSave()
     {
         SavePovValue();
     }

@@ -144,7 +144,7 @@ public partial class Mod_Food : Module, IItemPoolLifecycle
     }
 
     /// <summary>构建食物运行时并刷新该物品的 Tick 调度状态。</summary>
-    public override void Load()
+    protected override void OnLoad()
     {
         FoodModData ??= new ModData_FoodData();
         ResolveFoodRuntimeModules();
@@ -178,7 +178,7 @@ public partial class Mod_Food : Module, IItemPoolLifecycle
         }
 
     }
-    public override void Save()
+    protected override void OnSave()
     {
         _runtimeExecutor?.Save();
 
@@ -187,7 +187,7 @@ public partial class Mod_Food : Module, IItemPoolLifecycle
     }
 
     /// <summary>模块卸载时释放运行时和 HUD，避免离开世界后残留参数面板。</summary>
-    public override void Unload()
+    protected override void OnUnload()
     {
         ReleaseRuntimeBindings();
     }

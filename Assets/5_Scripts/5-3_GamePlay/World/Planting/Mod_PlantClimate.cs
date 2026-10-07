@@ -64,7 +64,7 @@ public sealed class Mod_PlantClimate : Module, IPlantEnvironmentCondition, IPlan
     }
 
     /// <summary>装配时读取独立受害状态并校验温度区间。</summary>
-    public override void Load()
+    protected override void OnLoad()
     {
         ModData.ReadData(ref Data);
         lastGrowthMultiplier = 0f;
@@ -76,7 +76,7 @@ public sealed class Mod_PlantClimate : Module, IPlantEnvironmentCondition, IPlan
     }
 
     /// <summary>写入冷热暴露和死亡状态，卸载区块不会清空受害进度。</summary>
-    public override void Save() => ModData.WriteData(Data);
+    protected override void OnSave() => ModData.WriteData(Data);
 
     /// <summary>由耕地成长模块统一推进气候与生长，并保留独立的冷热暴露存档。</summary>
     public void SetExternalDriver(bool enabled) => externallyDriven = enabled;

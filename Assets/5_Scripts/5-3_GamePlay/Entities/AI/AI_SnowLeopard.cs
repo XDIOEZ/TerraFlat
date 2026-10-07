@@ -128,7 +128,7 @@ public sealed partial class AI_SnowLeopard : AI_Base<SnowLeopardState>
 
     #region 生命周期
 
-    public override void Load()
+    protected override void OnLoad()
     {
         ModData.ReadData(ref Data);
         Data ??= new AI_SnowLeopardSaveData();
@@ -137,7 +137,7 @@ public sealed partial class AI_SnowLeopard : AI_Base<SnowLeopardState>
         InitializeAI();
     }
 
-    public override void Save()
+    protected override void OnSave()
     {
         Data.State = _currentState;
         ModData.WriteData(Data);

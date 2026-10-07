@@ -95,7 +95,7 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable
     }
 
     /// <summary>恢复体温数据并重置不应跨生命周期保留的水体状态。</summary>
-    public override void Load()
+    protected override void OnLoad()
     {
         ResetTemporaryWarming();
         float configuredSafeTemperatureMin = Data.SafeTemperatureMin;
@@ -115,7 +115,7 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable
         item.OnInit_Env += AdjustByEnvironment;
     }
 
-    public override void Save()
+    protected override void OnSave()
     {
         modData?.WriteData(Data.CreateSaveSnapshot(NaturalTemperature));
     }
@@ -139,7 +139,7 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable
         UpdateTemperatureSafety(deltaTime);
     }
 
-    public override void Unload()
+    protected override void OnUnload()
     {
         if (item != null)
         {
@@ -148,7 +148,7 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable
         ResetWaterExposureState();
         ResetTemperatureSafety();
         ResetTemporaryWarming();
-        base.Unload();
+        base.OnUnload();
     }
 
     private void OnDestroy() => Unload();

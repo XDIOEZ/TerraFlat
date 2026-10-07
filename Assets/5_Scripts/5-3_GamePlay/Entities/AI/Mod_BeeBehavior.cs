@@ -83,7 +83,7 @@ public sealed partial class Mod_BeeBehavior : Module, IBirdFlightPilot, IDamageS
     #endregion
 
     #region 装配与持久化
-    public override void Load()
+    protected override void OnLoad()
     {
         bird = item.itemMods.RequireSingleModById<Mod_AI_Bird>("AI_Bird");
         detector = item.itemMods.RequireSingleModById<Mod_ItemDetector>(ModText.Detector);
@@ -131,9 +131,9 @@ public sealed partial class Mod_BeeBehavior : Module, IBirdFlightPilot, IDamageS
     /// <summary>蜂巢保存时取得独立副本，避免卸载后对象池复用修改旧快照。</summary>
     public BeeState CaptureState() => state.Copy();
 
-    public override void Save() => ModData.WriteData(state);
+    protected override void OnSave() => ModData.WriteData(state);
 
-    public override void Unload()
+    protected override void OnUnload()
     {
         if (damageReceiver != null)
             damageReceiver.OnDamageReceived -= HandleBeeDamageReceived;

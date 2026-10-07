@@ -39,7 +39,7 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
     private readonly List<IInteractable> spatialCandidates = new(); // 纯空间目标共用选择规则。
     private Mod_HotBar hotBar;
 
-    public override void Load()
+    protected override void OnLoad()
     {
         ModSaveData.ReadData(ref RawData);
         gameController = item != null ? item.GetComponentInChildren<Mod_GameController>() : null;
@@ -47,7 +47,7 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
         BindInput();
     }
 
-    public override void Save()
+    protected override void OnSave()
     {
         ModSaveData.WriteData(RawData);
     }

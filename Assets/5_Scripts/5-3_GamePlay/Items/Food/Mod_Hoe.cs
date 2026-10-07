@@ -41,15 +41,15 @@ public partial class Mod_Hoe : Module, IItemModuleDependencyBinder
         actionAnimation = modules.RequireSingleCapability<IWeaponActionAnimation>();
     }
 
-    public override void Load()
+    protected override void OnLoad()
     {
         ModData.ReadData(ref Data);
         BindAct();
     }
 
-    public override void Save() => ModData.WriteData(Data);
+    protected override void OnSave() => ModData.WriteData(Data);
 
-    public override void Unload()
+    protected override void OnUnload()
     {
         if (actBound && item != null)
             item.OnAct -= Act;

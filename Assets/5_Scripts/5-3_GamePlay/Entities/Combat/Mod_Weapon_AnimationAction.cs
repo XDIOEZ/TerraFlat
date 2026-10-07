@@ -74,7 +74,7 @@ public class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyBinder, I
     [SerializeReference]
     public List<string> RawData = new List<string>();
 
-    public override void Load()
+    protected override void OnLoad()
     {
         ModSaveData.ReadData(ref RawData);
         cachedDamageModule = damageModule;
@@ -115,7 +115,7 @@ public class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyBinder, I
         DisableDamageOutsideAttack(force: true);
     }
 
-    public override void Save()
+    protected override void OnSave()
     {
         ModSaveData.WriteData(RawData);
     }
@@ -130,7 +130,7 @@ public class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyBinder, I
         damageModule = resolved;
     }
 
-    public override void Unload()
+    protected override void OnUnload()
     {
         UnbindAttackInput();
     }

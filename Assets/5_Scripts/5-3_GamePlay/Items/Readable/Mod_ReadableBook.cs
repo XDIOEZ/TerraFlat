@@ -30,8 +30,7 @@ public partial class ReadableBookPageContent
 
 /// <summary>单本书的可变状态；纸张扩页、正文和两个专用物品槽随这本物品保存。</summary>
 [Serializable]
-[MemoryPackable]
-public partial class ReadableBookInstanceData
+public class ReadableBookInstanceData
 {
     /// <summary>玩家追加的空白页数。</summary>
     public int AddedPageCount;
@@ -41,6 +40,19 @@ public partial class ReadableBookInstanceData
     public Inventory_Data InputInventory = new(
         new List<ItemSlot> { new ItemSlot(0), new ItemSlot(1) },
         "readableBook.materials");
+}
+
+/// <summary>书籍实例进度和库存快照；当前输入标签与布局不进入持久化负载。</summary>
+[MemoryPackable]
+public sealed partial class ReadableBookInstanceSnapshot
+{
+    #region 书籍实例状态
+
+    public int AddedPageCount;
+    public List<ReadableBookPageContent> PageContents;
+    public InventoryInstanceSnapshot InputInventory;
+
+    #endregion
 }
 
 /// <summary>
@@ -96,11 +108,23 @@ public sealed class Mod_ReadableBook : Module
     #region 生命周期与存档
 
     /// <summary>恢复单本书状态，建立输入槽的标签限制并绑定统一使用动作。</summary>
-    public override void Load()
+    protected override void OnLoad()
     {
         ModData ??= new Ex_ModData_MemoryPackable();
-        ModData.ReadData(ref instanceData);
         EnsureInstanceData();
+        bool hasSavedState = ModData.BitData != null && ModData.BitData.Length > 0;
+        ReadableBookInstanceSnapshot saved = hasSavedState ? ModData.GetData<ReadableBookInstanceSnapshot>()
+            : new ReadableBookInstanceSnapshot
+            {
+                InputInventory = InventoryInstanceSnapshot.Capture(new ReadableBookInstanceData().InputInventory)
+            };
+        if (saved?.InputInventory == null) throw new InvalidOperationException("书籍实例快照为空。");
+        instanceData.AddedPageCount = Mathf.Max(0, saved.AddedPageCount);
+        instanceData.PageContents = saved.PageContents ?? new();
+        // 玩家书页和库存内容原位恢复，已绑定的输入槽继续保留引用。
+        saved.InputInventory.RestoreTo(instanceData.InputInventory,
+            data => data.SharedConfiguration == null
+                ? ItemDefinitionRuntime.RebasePersistedData(GameRes.ExistingInstance, data) : data);
         ValidatePages();
 
         InputInventoryData.Event_OnDataChanged -= OnInputInventoryChanged;
@@ -109,13 +133,17 @@ public sealed class Mod_ReadableBook : Module
         item.OnAct += Act;
     }
 
-    /// <summary>保存实例页、扩页数量和专用槽位的完整物品数据。</summary>
-    public override void Save()
+    /// <summary>保存实例页、扩页数量和专用槽位的实例状态。</summary>
+    protected override void OnSave()
     {
         if (ModData == null || instanceData == null)
             return;
 
-        ModData.WriteData(instanceData);
+        ModData.WriteData(new ReadableBookInstanceSnapshot
+        {
+            AddedPageCount = instanceData.AddedPageCount, PageContents = instanceData.PageContents,
+            InputInventory = InventoryInstanceSnapshot.Capture(instanceData.InputInventory)
+        });
         if (Item_Data?.ModuleDataDic != null && !string.IsNullOrWhiteSpace(ModData.Name))
         {
             Item_Data.ModuleDataDic[ModData.Name] = ModData;
@@ -124,7 +152,7 @@ public sealed class Mod_ReadableBook : Module
     }
 
     /// <summary>卸载时解除动作和库存事件，避免对象池复用后重复保存。</summary>
-    public override void Unload()
+    protected override void OnUnload()
     {
         if (item != null)
             item.OnAct -= Act;
@@ -287,7 +315,7 @@ public sealed class Mod_ReadableBook : Module
         for (int i = 0; i < instanceData.InputInventory.itemSlots.Count; i++)
         {
             ItemSlot slot = instanceData.InputInventory.itemSlots[i];
-            if (slot?.itemData != null)
+            if (slot?.itemData != null && slot.itemData.SharedConfiguration == null)
                 slot.itemData = ItemDefinitionRuntime.RebasePersistedData(gameRes, slot.itemData);
         }
     }

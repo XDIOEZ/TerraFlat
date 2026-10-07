@@ -104,7 +104,7 @@ public class Mod_AI_Ghost : Module, IAIActor, ISimulationRangeAware
         ModData.ID = ModuleId;
     }
 
-    public override void Load()
+    protected override void OnLoad()
     {
         Data ??= new GhostAISaveData();
         ModData.ReadData(ref Data);
@@ -151,7 +151,7 @@ public class Mod_AI_Ghost : Module, IAIActor, ISimulationRangeAware
         _pathAgent.Stop(clearDestination: true);
     }
 
-    public override void Save()
+    protected override void OnSave()
     {
         Data ??= new GhostAISaveData();
         Data.WanderTarget = _moveTarget;

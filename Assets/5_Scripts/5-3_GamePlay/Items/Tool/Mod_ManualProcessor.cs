@@ -20,7 +20,7 @@ public sealed class Mod_ManualProcessor : Module, IInteractable
     #endregion
 
     #region 生命周期与交互
-    public override void Load()
+    protected override void OnLoad()
     {
         if (string.IsNullOrWhiteSpace(Station) || WorkPerClick <= 0f ||
             float.IsNaN(WorkPerClick) || float.IsInfinity(WorkPerClick))
@@ -33,13 +33,13 @@ public sealed class Mod_ManualProcessor : Module, IInteractable
         Processor = new RecipeProcessor(Station, state ?? new RecipeProcessingState());
     }
 
-    public override void Save()
+    protected override void OnSave()
     {
         if (Processor != null)
             Data.WriteData(Processor.State);
     }
 
-    public override void Unload()
+    protected override void OnUnload()
     {
         panel?.Dispose();
         panel = null;

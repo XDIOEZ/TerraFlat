@@ -146,7 +146,7 @@ public sealed partial class Mod_AI_Bird : Module, IAIActor, IItemModuleDependenc
         liftOrigin = liftRoot.localPosition;
     }
 
-    public override void Load()
+    protected override void OnLoad()
     {
         body = item.GetComponent<Rigidbody2D>();
         if (body == null)
@@ -196,9 +196,9 @@ public sealed partial class Mod_AI_Bird : Module, IAIActor, IItemModuleDependenc
         ApplyFlightPresentation();
     }
 
-    public override void Save() => Data.WriteData(state);
+    protected override void OnSave() => Data.WriteData(state);
 
-    public override void Unload()
+    protected override void OnUnload()
     {
         loaded = false;
         if (health != null)

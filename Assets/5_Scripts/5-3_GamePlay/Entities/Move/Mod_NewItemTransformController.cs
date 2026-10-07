@@ -44,10 +44,9 @@ public class Mod_NewItemTransformController : Module
             Debug.LogError("ItemMgr.Instance 未初始化！");
         }
 
-        InitializeLuaEnv();
     }
 
-    public override void Load()
+    protected override void OnLoad()
     {
         ModSaveData.ReadData(ref Data);
 
@@ -64,12 +63,12 @@ public class Mod_NewItemTransformController : Module
         SpawnItemAsChild();
     }
 
-    public override void Save()
+    protected override void OnSave()
     {
         ModSaveData.WriteData(Data);
     }
 
-    public override void Unload()
+    protected override void OnUnload()
     {
         DisposeLuaResources();
         DestroySpawnedItem();

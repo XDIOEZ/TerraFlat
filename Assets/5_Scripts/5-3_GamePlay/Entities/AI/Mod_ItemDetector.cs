@@ -628,7 +628,7 @@ public class Mod_ItemDetector : Module
     /// <summary>
     /// 加载模块数据
     /// </summary>
-    public override void Load()
+    protected override void OnLoad()
     {
         // 可以在需要时实现
     }
@@ -636,7 +636,7 @@ public class Mod_ItemDetector : Module
     /// <summary>
     /// 保存模块数据
     /// </summary>
-    public override void Save()
+    protected override void OnSave()
     {
         // 可以在需要时实现
     }

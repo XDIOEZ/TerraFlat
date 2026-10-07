@@ -352,7 +352,7 @@ public abstract class AI_Base<TState> : Module, IAIActor where TState : struct, 
 	}
 
 	/// <summary>回池与销毁共用模块卸载边界，解除伤害事件并释放本轮状态机运行态。</summary>
-	public override void Unload()
+	protected override void OnUnload()
 	{
 		AI_DebugOverlay.Unregister(this);
 		UnbindDamageThreatEvents();

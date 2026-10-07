@@ -7,7 +7,7 @@ description: "Use when: 定位或修改 FlatWorld 的 Item/Module 组合架构�
 
 ## 入口
 
-- 生命周期：`Assets/5_Scripts/5-3_GamePlay/Entities/Item/{Item,Module,ItemMods,ItemMaker}.cs`
+- 生命周期：`Assets/5_Scripts/5-3_GamePlay/Entities/Item/Core/{Item,Module,ItemMods,ItemMaker}.cs`
 - 管理器：`Entities/Item/Management/ItemMgr*.cs`（Spawning/Perception/Players/RandomDrop partial）
 - 数据：`Assets/5_Scripts/5-1_Data/{ItemData/ItemData,ModData/ModuleData}.cs`
 - 本体定义：`Assets/StreamingAssets/GameConfig/Items/item-manifest.json`
@@ -29,16 +29,17 @@ description: "Use when: 定位或修改 FlatWorld 的 Item/Module 组合架构�
 - 会覆写 `ModUpdate` 的模块必须显式选择 EveryFrame、FixedInterval 或 Disabled；`Module.TickMode` 默认 Unspecified，新模块不得依赖隐式 EveryFrame。增删模块、启停、配置变化和池复用必须使调度缓存失效。
 - 框架 Tick 经 `Module.TickWithProfiler` 采样为 `FlatWorld.Module.<类型名>`；排查物品调度热点先比较模块总耗时与 GC 路径，不能因新增子标记降低了父标记 Self 就认定已经提速。
 - 事件驱动的临时能力在空闲时返回 `Disabled`，开始、结束和延迟收尾状态切换必须调用 `MarkModuleScheduleDirty`；投掷伤害通过 `Mod_Damage.SetIdleTickSuppressed` 显式选择窗口调度，手持与动画武器仍保留完整更新，不能对普通伤害源全局降频。
-- JSON `enabled` 统一写入 `ModuleData.Enabled`；运行中切换必须走 `Module.SetEnabled`，由框架负责 Load/Unload 与 Tick 参与资格，禁止各模块各自维护第二套启用状态。
+- JSON `enabled` 统一写入 `ModuleData.Enabled`，快照不保存或覆盖这个配置开关；运行中切换走 `Module.SetEnabled`，由框架负责 Load/Unload 与 Tick 参与资格，禁止各模块各自维护第二套启用状态。
 - 距离模拟档只限制 `ItemMgr` 驱动的玩法 Tick 频率，不改变模块自身更慢的 FixedInterval；以同场景最近玩家和循环世界最短距离判定，玩家、地图、手持物保持完整更新。`Owner` 不能作为免降频条件，因为在飞投射物也会保留发射者引用。范围外暂停时重置调度时钟，停用根刚体并回调 `ISimulationRangeAware` 模块释放导航运行态；重入时先恢复原 `Rigidbody2D.simulated` 值再重提目标，不能补算休眠期间的 Tick。对象池或模块卸载也须恢复刚体开关；不要把摄像机缩放当模拟距离。
 - 世界内 F5 经 `ItemDefinitionRuntime.RefreshLiveConfiguration` 只更新现有模块的已改变显式参数，以及仍由原定义控制的 Sprite/材质；不替换 ItemData、模块集合或调用 Load。外壳/模块结构变化与删除参数后的 Prefab 默认值由后续新实例应用，不能把旧实例伪装为已完整迁移。
 - 模块通过具名 `ApplyResourceConfiguration` 保留配置对象内部的运行态，通过 `OnResourcesReloaded` 更新派生缓存；依赖 JSON 能力字段的事件订阅也须在该回调中按当前配置解绑、重绑，不能只在 `Load` 订阅。禁止用重新 Load 代替配置刷新。生产模块更换规则列表时按产物身份保留累计时间、次数与初始化标记。
 - 原位更新发布时清空闲置物品池，并把现有活跃实例的 `PooledItemMarker.PoolingDisabled` 置为 true；只清闲置池会让旧外壳稍后回池，再污染新定义实例。
 - 对象池身份由 `Item` 的序列化字段持有，`PooledItemMarker` 是纯运行时层级快照，不再作为 MonoBehaviour 动态添加到每个新物品；装配 JSON 模块后才抓取层级基线。改回池逻辑时须同时检查脚本重载后的身份保留与回池前的层级校验。
-- 注册/注销、保存/销毁各执行一次；`PrepareForDespawn` 与 `OnDestroy` 不得被外部重复调用。
-- Item 回池资格独立于 `saveData`；JSON 模块装配完成后才记录层级基线，回池时按子节点身份核验。模块若用 `OnDestroy` 清理订阅或资源，必须在 `Unload` 提供同等清理，池复用才安全。
+- 注册同一实例必须幂等；不同实例的 GUID 冲突直接报错，不自动换身份。注册与模块索引按登记时的身份注销；密集集合通过槽位交换移除，对外只读，禁止单独改分组或 GUID 字典。
+- `Item.BindData` 只用于未注册、未加载的外壳。普通世界物换定义走 `ItemMgr.ReplaceRuntimeItem`，候选体先停用装配，失败恢复源实例原模块布局；玩家、地图、机器及自然生态使用各自权威入口。
+- Item 回池资格独立于 `saveData`；JSON 模块装配完成后才记录层级基线，回池时按子节点身份核验。模块若用 `OnDestroy` 清理订阅或资源，必须在 `OnUnload` 提供同等清理；加载中、已加载或卸载中的模块不能回池。
 - 池复用与模块装配的临时查询列表按调用借还，异常和嵌套生成也要归还独立缓冲；模块索引只在卸载后清空复用。层级保持实时查询，禁止为减少分配缓存未经结构失效通知维护的组件集合。
-- 模块 JSON 配置计划属于当前 `RuntimeItemDefinition`：解析和严格校验只做一次，实体每次 Load 仍重新应用字段；资源重载通过替换定义实例自然丢弃旧计划。
+- 模块装配计划属于当前 `RuntimeItemDefinition`：具体 Prefab、组件位置、类型与 JSON 参数在目录冷路径编译，生成与 Load 使用稳定槽位及精确实现，不按同类型猜测变体。资源重载替换定义及计划；Prefab-only 工厂缓存也须按资源会话/版本失效。
 - 远程网络副本不进入本地 Tick、感知和存档索引。
 - 感知后端在注册和 `Item.RuntimeStructureChanged` 边界选择：Actor 使用当前 `RuntimeItemDefinition` 的共享根级纯几何，旧对象才缓存 Collider Bridge；移动通知仅更新位置索引，不能重新扫描组件。注销必须移除后端映射，重建索引前完成并丢弃旧 Job；每次重新注册/结构变化递增代际以拒绝对象池复用前的结果。正式 Actor 的物理 Collider 尺寸不是运行时感知配置权威，新增动态体型应提供纯数据输入。`ItemPhysicsProjection2D` 只把 `ItemData.Stack.CurrentWeight` 映射成动态刚体质量，并将实际速度与接触事实写回不入存档的 `ItemData.PhysicsState`。
 - 感知批次对已存在空间格的重复访问用格子内 `LastVisitedBatch` 访问戳去重，禁止恢复每批 `HashSet<long>` 已访问集合；格子回池时必须清空成员并重置访问戳。
@@ -46,7 +47,9 @@ description: "Use when: 定位或修改 FlatWorld 的 Item/Module 组合架构�
 - 新模块同时检查脚本、ModuleData、模块/Item Prefab、Addressables 与 JSON 定义。
 - 可复用的“玩家主动丢出后触发效果”应实现 `IDroppedItemSpawnContextReceiver` 并作为正式 `Module` 由 JSON 组合；不要把具体物品脚本挂在 `sourcePrefab` 上，因为 JSON 物品运行时可能使用通用 Shell 而不会实例化该源 Prefab。
 - 游戏内容分类（武器类别、生物种类、阵营语义、资源类型等）统一使用 `ItemData.Tags`，以便 JSON/MOD 扩展；Unity Tag 只用于 `MainCamera`、`MapCore`、UI/编辑器辅助等场景与开发基础设施，玩法判定不得依赖 Unity Tag。
-- `Module.Load()` 与 `Module.Save()` 均为抽象方法；无持久化运行态的模块也需显式实现空 `Save()`，说明状态由宿主或配置恢复。
+- `Module.Load/Save/Unload` 是不可覆写的受控入口；子类实现 `OnLoad/OnSave/OnUnload`，基类调用也使用对应 On 钩子。只有实际加载态才保存和 Tick；加载失败要清理部分运行态，卸载某模块失败仍清理其他模块，禁止靠 Enabled 推测已加载。运行资源在 OnLoad 建立，不在 Awake 提前订阅或分配。
+- `ItemMods.Mods/Mods_List` 及分组列表为实际只读视图，增删走 AddMod/RemoveMod 并维护 StructureVersion 与能力缓存；批量装配使用 BeginMutation 合并结构通知。独立模块只销毁自己的 Prefab 根，内嵌模块只删除组件，不能删除 Item 或共享表现节点。
+- Tick 轮次捕获注册令牌和 Item/Module 代际；回调结束后复核身份，移除、回池和同轮新建不能漏跳或运行新代。调度重建保留未变模块的累计时间，新增/重启/策略变化才重置；活跃分档保留时钟，休眠边界不补算。
 - 遇到“物品找不到模块 Prefab”时先核对 `[GameRes] Prefab 加载计划` 和失败阶段；通用 Prefab 数量为 0 时先查标签、目录与初始化，不能直接断言某个物品定义错误。
 - JSON 本体按职责组合通用模块；单个资源节点的名称和玩法配置不能成为专用模块 Prefab。周期资源应由生产模块写入库存接收契约，再由采集模块处理交互和掉落。
 - `MineResource_Base` 只提供矿点外壳与基础数据；需要工具专精加成时显式组合 `Mod_ResourceHarvest`。其中 `requiredTool/minimumTier` 表示专精工具与完整加成参考等级，不是采矿资格；缺少模块或工具不匹配时仍按普通伤害结算，禁止恢复等级门槛或在物品说明、百科中写成硬性要求。
@@ -78,7 +81,7 @@ description: "Use when: 定位或修改 FlatWorld 的 Item/Module 组合架构�
 - 液体粘度属于 `LiquidDefinition.viscosity` 的数据属性，1 表示普通水；容器倾倒速度和液流/液面表现都从同一值派生，UI Prefab 不再作为粘度权威。未配置专用 `visualState` 样式的液体按 `primaryColor` 自动生成容器液面表现。
 - 堆叠身份统一由 `ItemData` 判定，空与 null 特殊数据按现有规范处理。
 - 模块 Prefab 的 `StableName/ModuleId` 可能未序列化；进入 `ItemMods`、`ModuleInit` 或网络更新前必须统一建立非空确定性身份。JSON 模块以 `modules` 的键作为 StableName；Prefab-only 模块才允许回退到确定性的 GameObject 名，禁止随机后缀。
-- JSON 动态组合存在跨模块引用时实现 `IItemModuleDependencyBinder`；`Item` 会在全部模块进入 `ItemMods` 后、`ModuleInit/Load` 前统一绑定，依赖必须按唯一稳定 ID 解析并对缺失或重复直接报错。
+- JSON 动态组合存在跨模块引用时实现 `IItemModuleDependencyBinder`；全部模块先进入 `ItemMods`，ModuleInit 完成配置，再绑定依赖，最后 OnLoad。依赖按唯一稳定 ID 或能力接口解析，缺失或重复直接报错。
 - 可燃物品采用纯组合：`Mod_Fuel` 提供燃料数据，`Mod_Combustion` 提供燃烧状态与世界时间消耗，`Mod_FuelInteraction` 提供通用投料/点火交互；光源、燃烧粒子、局部温度、命中 Buff 等通过 `ICombustionStateReceiver` 独立响应。具体物品名称、外观与组件选择只存在于 JSON，禁止新增 `Mod_具体物品名` 来重新聚合这些职责。
 - JSON 的 `modules.*.prefab` 是模块变体的唯一实例化地址；多个专用 Prefab 可以共用同一玩法 `ModuleData.ID`，`GameRes` 只能为唯一候选登记该 ID 的兼容别名，禁止按加载顺序静默覆盖。
 - `Mod_ItemPicker` 不能只依赖 `OnTriggerEnter2D`：掉落/飞行或联机预约可能让物品先以不可拾取状态进入范围，状态恢复后应补偿检查，并限制为一次性请求以避免部分入包或网络请求重复执行。

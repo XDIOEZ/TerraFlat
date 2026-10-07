@@ -77,14 +77,14 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
         _Data.Name = $"{ModText.WorkBench}_手工";
     }
 
-    public override void Load()
+    protected override void OnLoad()
     {
         RestoreInventoryState();
         InitData();
         BindToggleInput();
     }
 
-    public override void Save()
+    protected override void OnSave()
     {
         SaveInventoryState();
     }
@@ -239,7 +239,7 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
         Unload();
     }
 
-    public override void Unload()
+    protected override void OnUnload()
     {
         _craftingController?.Dispose();
         _craftingController = null;

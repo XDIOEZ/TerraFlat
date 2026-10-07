@@ -57,7 +57,7 @@ public partial class Mod_Grow : Module, IInteractable, IPlantableCrop, IWorldTim
     }
 
     /// <summary>区块卸载与对象回池时解除环境依赖和事件。</summary>
-    public override void Unload()
+    protected override void OnUnload()
     {
         foreach (IPlantEnvironmentCondition condition in environmentConditions)
             if (condition is Mod_PlantClimate climate)
@@ -126,7 +126,7 @@ public partial class Mod_Grow : Module, IInteractable, IPlantableCrop, IWorldTim
             _Data.ID = ModText.Grow;
     }
 
-    public override void Load()
+    protected override void OnLoad()
     {
         // 从 ModData 反序列化
         ReadGrowthDataWithMigration();
@@ -192,7 +192,7 @@ private void UpdateVisualAndBehavior()
     }
 }
 
-    public override void Save()
+    protected override void OnSave()
     {
         // 存到 ModData
         ModData.WriteData(Data);

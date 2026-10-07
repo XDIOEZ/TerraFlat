@@ -1,226 +1,221 @@
-
 using FastCloner.Code;
 using Sirenix.OdinInspector;
 using System;
 using System.Collections.Generic;
-using UnityEngine;
+using System.Collections.ObjectModel;
 
 [Serializable]
-public class ItemMods
+public sealed class ItemMods
 {
-    [NonSerialized]
-    private Item _owner;
+    #region 只读索引与版本
 
-    [FastClonerIgnore]
-    private Dictionary<string, Module> _mods = new Dictionary<string, Module>();
+    [NonSerialized] private Item owner;
+    [FastClonerIgnore] private readonly Dictionary<string, Module> modules = new(StringComparer.Ordinal);
+    [FastClonerIgnore] private readonly Dictionary<string, IReadOnlyList<Module>> groups = new(StringComparer.Ordinal);
+    [FastClonerIgnore] private readonly Dictionary<Module, (string Name, string Id)> identities = new();
+    [FastClonerIgnore] private readonly Dictionary<Type, object> capabilities = new();
+    [FastClonerIgnore] private readonly ReadOnlyDictionary<string, Module> modulesView;
+    [FastClonerIgnore] private readonly ReadOnlyDictionary<string, IReadOnlyList<Module>> groupsView;
+    [NonSerialized] private int mutationDepth;
+    [NonSerialized] private bool notificationPending;
 
-    [ShowInInspector]
-    [FastClonerIgnore]
-    public Dictionary<string, Module> Mods
+    [ShowInInspector, FastClonerIgnore]
+    public IReadOnlyDictionary<string, Module> Mods => modulesView;
+    [ShowInInspector, FastClonerIgnore]
+    public IReadOnlyDictionary<string, IReadOnlyList<Module>> Mods_List => groupsView;
+    public uint StructureVersion { get; private set; }
+
+    private sealed class ModuleGroup : ReadOnlyCollection<Module>
     {
-        get => _mods;
-        set
-        {
-            _mods = value ?? new Dictionary<string, Module>();
-            _owner?.MarkModuleScheduleDirty();
-            _owner?.NotifyRuntimeStructureChanged();
-        }
+        public ModuleGroup() : base(new List<Module>()) { }
+        public void Add(Module module) => Items.Add(module);
+        public void Remove(Module module) => Items.Remove(module);
+        public void Clear() => Items.Clear();
     }
-
-    
-    [ShowInInspector]
-    [FastClonerIgnore]
-    public Dictionary<string, List<Module>> Mods_List { get; set; } = new();
 
     public ItemMods()
     {
+        modulesView = new ReadOnlyDictionary<string, Module>(modules);
+        groupsView = new ReadOnlyDictionary<string, IReadOnlyList<Module>>(groups);
     }
 
-    public ItemMods(Item owner)
+    public ItemMods(Item owner) : this() => BindOwner(owner);
+    internal void BindOwner(Item value) => owner = value;
+
+    // 卸载完成后清空实例引用，保留索引容量而不把可写集合交给调用方。
+    internal void ResetForReuse(Item value)
     {
-        BindOwner(owner);
+        owner = value;
+        modules.Clear();
+        foreach (ModuleGroup group in groups.Values)
+            group.Clear();
+        groups.Clear();
+        identities.Clear();
+        capabilities.Clear();
+        AdvanceVersion();
+        notificationPending = mutationDepth > 0;
     }
 
-    public void BindOwner(Item owner)
+    private void AdvanceVersion()
     {
-        _owner = owner;
-    }
-
-    #region 模块索引复用
-
-    // 卸载完成后清空引用并保留字典容量，复用时不携带上一轮模块。
-    internal void ResetForReuse(Item owner)
-    {
-        _owner = owner;
-        _mods.Clear();
-        foreach (List<Module> modules in Mods_List.Values)
-            modules.Clear();
-        Mods_List.Clear();
+        StructureVersion++;
+        if (StructureVersion == 0) StructureVersion++;
     }
 
     #endregion
 
-    public List<Module> GetModList_ByID(string modID)
+    #region 批量结构变更
+
+    public MutationScope BeginMutation()
     {
-        return Mods_List.TryGetValue(modID, out List<Module> modules) ? modules : null;
-    }
-    public Module GetMod_ByID(string modID)
-    {
-        if (!Mods_List.TryGetValue(modID, out List<Module> modules) || modules.Count == 0)
-            return null;
-        return modules[0];
+        mutationDepth++;
+        return new MutationScope(this);
     }
 
-    public T GetMod_ByID<T>(string modID,out T mod) where T : Module
+    public readonly struct MutationScope : IDisposable
     {
-        if (!Mods_List.TryGetValue(modID, out List<Module> modules) || modules.Count == 0)
+        private readonly ItemMods target;
+        internal MutationScope(ItemMods target) => this.target = target;
+        public void Dispose() => target?.EndMutation();
+    }
+
+    private void EndMutation()
+    {
+        if (mutationDepth <= 0)
+            throw new InvalidOperationException("模块结构变更作用域不能重复结束。");
+        mutationDepth--;
+        if (mutationDepth == 0 && notificationPending)
+            NotifyChanged();
+    }
+
+    private void Changed()
+    {
+        AdvanceVersion();
+        capabilities.Clear();
+        notificationPending = true;
+        if (mutationDepth == 0)
+            NotifyChanged();
+    }
+
+    private void NotifyChanged()
+    {
+        notificationPending = false;
+        owner?.MarkModuleScheduleDirty();
+        owner?.NotifyRuntimeStructureChanged();
+    }
+
+    public void AddMod(Module module)
+    {
+        if (module == null) throw new ArgumentNullException(nameof(module));
+        module.EnsureRuntimeIdentity();
+        string name = module.StableName;
+        string id = module.ResolvedModuleId;
+        if (identities.TryGetValue(module, out var previous))
         {
-            mod = null;
-            Debug.Log("没有找到ID为" + modID + "的模块");
-            return mod;
+            if (previous.Name != name || previous.Id != id)
+                throw new InvalidOperationException($"模块 {previous.Name} 已注册，修改身份前必须移除。");
+            return;
         }
-        mod = modules[0] as T;
-        return mod;
+        if (modules.ContainsKey(name))
+            throw new InvalidOperationException($"物品 {owner?.name} 存在重复 StableName：{name}。");
+
+        modules.Add(name, module);
+        if (!groups.TryGetValue(id, out IReadOnlyList<Module> existing))
+        {
+            existing = new ModuleGroup();
+            groups.Add(id, existing);
+        }
+        ((ModuleGroup)existing).Add(module);
+        identities.Add(module, (name, id));
+        Changed();
     }
-    public T GetMod_ByID<T>(string modID) where T : Module
-    {
-        if (!Mods_List.TryGetValue(modID, out List<Module> modules) || modules.Count == 0)
-            return null;
 
-        return modules[0] as T;
+    public void RemoveMod(Module module)
+    {
+        if (ReferenceEquals(module, null) || !identities.TryGetValue(module, out var identity))
+            return;
+        // 移除使用注册时的身份，避免可变数据留下无法清除的旧索引。
+        identities.Remove(module);
+        modules.Remove(identity.Name);
+        ModuleGroup group = (ModuleGroup)groups[identity.Id];
+        group.Remove(module);
+        if (group.Count == 0) groups.Remove(identity.Id);
+        Changed();
     }
 
-    /// <summary>按稳定 ID 解析唯一模块；缺失、重复或类型不符都立即中止装配。</summary>
-    public T RequireSingleModById<T>(string modID) where T : Module
+    public bool HasMod(Module module) => !ReferenceEquals(module, null) && identities.ContainsKey(module);
+    internal bool TryGetRegisteredIdentity(Module module, out string name, out string id)
     {
-        if (string.IsNullOrWhiteSpace(modID))
-            throw new ArgumentException("模块 ID 不能为空。", nameof(modID));
+        if (!ReferenceEquals(module, null) && identities.TryGetValue(module, out var identity))
+        {
+            name = identity.Name;
+            id = identity.Id;
+            return true;
+        }
+        name = id = null;
+        return false;
+    }
+    public bool ContainsKey_Name(string key) => key != null && modules.ContainsKey(key);
+    public bool ContainsKey_ID(string key) => key != null && groups.ContainsKey(key);
 
-        if (!Mods_List.TryGetValue(modID, out List<Module> modules) || modules.Count == 0)
-            throw new InvalidOperationException($"物品 {_owner?.name} 缺少必需模块：{modID}");
-        if (modules.Count != 1)
-            throw new InvalidOperationException($"物品 {_owner?.name} 的模块 {modID} 必须唯一，实际数量：{modules.Count}");
-        if (modules[0] is not T typed)
-            throw new InvalidOperationException(
-                $"物品 {_owner?.name} 的模块 {modID} 类型应为 {typeof(T).Name}，实际为 {modules[0]?.GetType().Name}");
+    #endregion
 
+    #region 模块与能力查询
+
+    public Module GetMod_ByName(string name) => modules[name];
+    public IReadOnlyList<Module> GetModList_ByID(string id) =>
+        id != null && groups.TryGetValue(id, out var matches) ? matches : null;
+    public Module GetMod_ByID(string id)
+    {
+        IReadOnlyList<Module> matches = GetModList_ByID(id);
+        return matches?.Count > 0 ? matches[0] : null;
+    }
+    public T GetMod_ByID<T>(string id) where T : Module => GetMod_ByID(id) as T;
+    public T GetMod_ByID<T>(string id, out T module) where T : Module => module = GetMod_ByID<T>(id);
+
+    public T RequireSingleModById<T>(string id) where T : Module
+    {
+        if (string.IsNullOrWhiteSpace(id))
+            throw new ArgumentException("模块 ID 不能为空。", nameof(id));
+        IReadOnlyList<Module> matches = GetModList_ByID(id);
+        if (matches == null || matches.Count == 0)
+            throw new InvalidOperationException($"物品 {owner?.name} 缺少必需模块：{id}");
+        if (matches.Count != 1)
+            throw new InvalidOperationException($"物品 {owner?.name} 的模块 {id} 必须唯一，实际数量：{matches.Count}");
+        if (matches[0] is not T typed)
+            throw new InvalidOperationException($"物品 {owner?.name} 的模块 {id} 类型应为 {typeof(T).Name}。");
         return typed;
     }
 
-    /// <summary>按能力接口解析唯一模块，让玩法模块依赖能力而不是具体实现类。</summary>
-    public T RequireSingleCapability<T>() where T : class
+    public IReadOnlyList<T> GetCapabilities<T>() where T : class
     {
-        T resolved = null;
-        int count = 0;
-        foreach (Module module in Mods.Values)
-        {
-            if (module is not T capability)
-                continue;
-            resolved = capability;
-            count++;
-        }
-
-        if (count == 0)
-            throw new InvalidOperationException($"物品 {_owner?.name} 缺少必需能力：{typeof(T).Name}");
-        if (count > 1)
-            throw new InvalidOperationException($"物品 {_owner?.name} 的能力 {typeof(T).Name} 必须唯一，实际数量：{count}");
-        return resolved;
+        if (capabilities.TryGetValue(typeof(T), out object cached))
+            return (IReadOnlyList<T>)cached;
+        var result = new List<T>();
+        foreach (Module module in modules.Values)
+            if (module is T capability) result.Add(capability);
+        IReadOnlyList<T> view = result.AsReadOnly();
+        capabilities.Add(typeof(T), view);
+        return view;
     }
 
-    /// <summary>
-    /// Resolves a persisted module ID. Older entity prefabs can initialize a module
-    /// with a shared runtime ID (for example, the generic AI ID), while their saved
-    /// template identifies it by the child GameObject name. Prefer the exact ID and
-    /// then fall back to that stable prefab identity.
-    /// </summary>
-    public Module FindModByPersistedId(string modID)
+    public T RequireSingleCapability<T>() where T : class
     {
-        if (string.IsNullOrWhiteSpace(modID))
-            return null;
+        IReadOnlyList<T> matches = GetCapabilities<T>();
+        if (matches.Count != 1)
+            throw new InvalidOperationException($"物品 {owner?.name} 的能力 {typeof(T).Name} 必须唯一，实际数量：{matches.Count}");
+        return matches[0];
+    }
 
-        List<Module> exactMatches = GetModList_ByID(modID);
-        if (exactMatches != null && exactMatches.Count > 0)
-            return exactMatches[^1];
-
-        foreach (List<Module> candidates in Mods_List.Values)
-        {
-            foreach (Module candidate in candidates)
-            {
-                if (candidate != null && candidate.MatchesPersistedId(modID))
-                    return candidate;
-            }
-        }
-
+    public Module FindModByPersistedId(string id)
+    {
+        if (string.IsNullOrWhiteSpace(id)) return null;
+        IReadOnlyList<Module> exact = GetModList_ByID(id);
+        if (exact?.Count > 0) return exact[^1];
+        foreach (Module candidate in modules.Values)
+            if (candidate != null && candidate.MatchesPersistedId(id)) return candidate;
         return null;
     }
 
-    public Module GetMod_ByName(string name)
-    {
-        return Mods[name];
-    }
-
-    public bool ContainsKey_Name(string key)
-    {
-        return Mods.ContainsKey(key);
-    }
-    public bool ContainsKey_ID(string key)
-    {
-        return Mods_List.ContainsKey(key);
-    }
-
-
-    public void AddMod(Module mod)
-    {
-        if (mod == null)
-            throw new ArgumentNullException(nameof(mod));
-
-        // 所有模块索引统一从同一处建立身份，禁止空 ID/Name 进入字典。
-        mod.EnsureRuntimeIdentity();
-
-        string stableName = mod._Data.StableName;
-        string moduleId = mod._Data.ModuleId;
-        if (Mods.TryGetValue(stableName, out Module existing) && existing != mod)
-            throw new InvalidOperationException(
-                $"物品 {_owner?.name} 存在重复 StableName：{stableName}。模块实例名必须稳定且唯一。");
-
-        // StableName 是 Item 内唯一实例键；ModuleId 只表示能力类型，可一对多。
-        Mods[stableName] = mod;
-
-        if (!Mods_List.TryGetValue(moduleId, out List<Module> modules))
-        {
-            modules = new List<Module>();
-            Mods_List[moduleId] = modules;
-        }
-        // 添加到 Mods_List
-        if (!modules.Contains(mod))
-            modules.Add(mod);
-        _owner?.MarkModuleScheduleDirty();
-        _owner?.NotifyRuntimeStructureChanged();
-    }
-
-    public void RemoveMod(Module mod)
-    {
-        // 从 Mods 中移除
-        Mods.Remove(mod._Data.StableName);
-
-        // 从 Mods_List 中移除
-        if (Mods_List.TryGetValue(mod._Data.ModuleId, out var modList))
-        {
-            modList.Remove(mod);
-            // 可选：若列表为空可移除 key
-            if (modList.Count == 0)
-                Mods_List.Remove(mod._Data.ModuleId);
-        }
-
-        _owner?.MarkModuleScheduleDirty();
-        _owner?.NotifyRuntimeStructureChanged();
-    }
-
-    public bool HasMod(Module mod)
-    {
-        if (mod == null || string.IsNullOrEmpty(mod._Data.StableName))
-            return false;
-
-        return Mods.ContainsKey(mod._Data.StableName);
-    }
+    #endregion
 }

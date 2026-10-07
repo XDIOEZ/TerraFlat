@@ -118,7 +118,7 @@ public sealed partial class Mod_MechanicalNode : Module, IInteractable, IBuildin
     #endregion
 
     #region 生命周期
-    public override void Load()
+    protected override void OnLoad()
     {
         Definition = MachineCatalog.Get(string.IsNullOrWhiteSpace(DefinitionId) ? item.itemData.IDName : DefinitionId)
             ?? throw new InvalidOperationException("机械定义不存在：" + DefinitionId);
@@ -156,12 +156,12 @@ public sealed partial class Mod_MechanicalNode : Module, IInteractable, IBuildin
         if (placed && building.State is BuildingState.Installed or BuildingState.Damaged) AttachWorld();
         ApplyVisual();
     }
-    public override void Save()
+    protected override void OnSave()
     {
         if (placed) Data.WriteData(Node?.State ?? LocalState);
         // Summoner 不保存临时朝向，保持同堆物品身份一致。
     }
-    public override void Unload()
+    protected override void OnUnload()
     {
         panel?.Dispose(); panel = null;
         if (item != null) item.OnInHandChanged -= OnHandChanged;

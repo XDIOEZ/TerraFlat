@@ -54,7 +54,7 @@ public sealed class Mod_CropYield : Module, ICropHarvestAction
         base.Awake();
     }
 
-    public override void Load()
+    protected override void OnLoad()
     {
         item ??= GetComponentInParent<Item>();
         if (item == null)
@@ -63,7 +63,7 @@ public sealed class Mod_CropYield : Module, ICropHarvestAction
         ValidateConfiguration();
     }
 
-    public override void Save()
+    protected override void OnSave()
     {
         // 产物表来自 ItemDefinition，本模块没有独立运行时状态。
     }

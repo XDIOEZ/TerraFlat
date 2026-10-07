@@ -24,7 +24,7 @@ public sealed partial class Mod_FishingRod : Module
     [MemoryPackable]
     public partial class RigState
     {
-        public Inventory_Data Inventory;
+        public InventoryInstanceSnapshot Inventory;
     }
 
     [Serializable]
@@ -78,19 +78,28 @@ public sealed partial class Mod_FishingRod : Module
         base.Awake();
     }
 
-    public override void Load()
+    protected override void OnLoad()
     {
-        state = Data.GetData<RigState>() ?? new RigState();
-        state.Inventory ??= new Inventory_Data(new List<ItemSlot> { new(0), new(1) }, "钓竿配置");
-        foreach (ItemSlot slot in state.Inventory.itemSlots)
+        bool hasSavedState = Data.BitData != null && Data.BitData.Length > 0;
+        state = hasSavedState ? Data.GetData<RigState>() : new RigState
+        {
+            Inventory = InventoryInstanceSnapshot.Capture(CreateRigInventoryData())
+        };
+        if (state?.Inventory == null || state.Inventory.SlotCount != 2)
+            throw new InvalidOperationException("钓竿库存实例快照必须恰好有两个槽位。");
+        rig ??= new RigInventory();
+        rig.Data ??= CreateRigInventoryData();
+        // 只合并实例内容，钓具当前布局和同 GUID 物品引用继续复用。
+        state.Inventory.RestoreTo(rig.Data,
+            data => data.SharedConfiguration == null
+                ? ItemDefinitionRuntime.RebasePersistedData(GameRes.ExistingInstance, data) : data);
+        foreach (ItemSlot slot in rig.Data.itemSlots)
         {
             if (slot == null) throw new InvalidOperationException("钓竿存档包含空槽位记录。");
-            if (slot.itemData != null)
-                slot.itemData = ItemDefinitionRuntime.RebasePersistedData(GameRes.ExistingInstance, slot.itemData);
             if (slot.itemData?.Stack != null && slot.itemData.Stack.Amount > 1f)
                 throw new InvalidOperationException("钓竿槽位最多装一件物品；拒绝丢弃超量存档中的物品。");
         }
-        rig = new RigInventory { item = item, Data = state.Inventory };
+        rig.item = item;
         rig.InitData();
         rig.Data.Event_OnDataChanged += HandleRigChanged;
         item.OnAct += OpenConfiguration;
@@ -102,12 +111,14 @@ public sealed partial class Mod_FishingRod : Module
         BindController();
     }
 
-    public override void Save()
+    protected override void OnSave()
     {
-        if (state != null) Data.WriteData(state);
+        if (state == null || rig?.Data == null) return;
+        state.Inventory = InventoryInstanceSnapshot.Capture(rig.Data);
+        Data.WriteData(state);
     }
 
-    public override void Unload()
+    protected override void OnUnload()
     {
         loaded = false;
         CancelLine();
@@ -139,8 +150,12 @@ public sealed partial class Mod_FishingRod : Module
         }
         panel = null;
         panelBindings = null;
-        rig = null;
+        if (rig != null) rig.item = null;
+        state = null;
     }
+
+    private static Inventory_Data CreateRigInventoryData() => new(
+        new List<ItemSlot> { new(0), new(1) }, "钓竿配置");
 
     private void HandleInHandChanged(bool inHand)
     {

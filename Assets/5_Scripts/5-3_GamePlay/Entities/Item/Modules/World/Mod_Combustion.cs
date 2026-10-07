@@ -90,7 +90,7 @@ public sealed class Mod_Combustion : Module, IItemModuleDependencyBinder
 
     #region 生命周期与燃烧
 
-    public override void Load()
+    protected override void OnLoad()
     {
         bool hasStoredState = ModData?.BitData != null && ModData.BitData.Length > 0;
         if (hasStoredState)
@@ -116,13 +116,13 @@ public sealed class Mod_Combustion : Module, IItemModuleDependencyBinder
         Save();
     }
 
-    public override void Save()
+    protected override void OnSave()
     {
         Data ??= new CombustionState { IsBurning = startBurning };
         ModData.WriteData(Data);
     }
 
-    public override void Unload()
+    protected override void OnUnload()
     {
         if (item != null)
             item.OnInHandChanged -= HandleInHandChanged;

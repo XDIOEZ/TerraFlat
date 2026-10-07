@@ -46,7 +46,7 @@ public sealed class Mod_GroundCoverHarvest : Module, IItemModuleDependencyBinder
     }
 
     /// <summary>绑定工具使用入口；采集状态由世界持有，不在工具中恢复。</summary>
-    public override void Load()
+    protected override void OnLoad()
     {
         if (reach <= 0f || float.IsNaN(reach) || float.IsInfinity(reach))
             throw new InvalidOperationException("地表植被采集距离必须是有限正数。");
@@ -54,10 +54,10 @@ public sealed class Mod_GroundCoverHarvest : Module, IItemModuleDependencyBinder
     }
 
     /// <summary>本模块无独立运行态，自动保存不解除输入监听。</summary>
-    public override void Save() { }
+    protected override void OnSave() { }
 
     /// <summary>换手、回池或卸载时解除动作绑定并释放白框。</summary>
-    public override void Unload()
+    protected override void OnUnload()
     {
         if (actBound && item != null) item.OnAct -= Act;
         actBound = false;

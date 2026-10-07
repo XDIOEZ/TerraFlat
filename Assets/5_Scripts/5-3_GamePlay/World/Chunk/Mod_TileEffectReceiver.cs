@@ -182,13 +182,13 @@ public partial class Mod_TileEffectReceiver : Module
 
     #region 模块接口
 
-    public override void Load()
+    protected override void OnLoad()
     {
         ModSaveData?.ReadData(ref lastGridPos);
         UpdateLegacyMapReference();
     }
 
-    public override void Save()
+    protected override void OnSave()
     {
         // 自动保存不代表离开当前地块，保存过程不能撤销环境效果。
         ModSaveData?.WriteData(lastGridPos);

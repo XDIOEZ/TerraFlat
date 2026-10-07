@@ -191,7 +191,7 @@ public partial class Mod_Production : Module, IEnvironmentAdjustable
 
     #region 生命周期方法
 
-    public override void Load()
+    protected override void OnLoad()
     {
         // ProductionList 的产物、数量、周期等属于当前 Prefab/JSON 配置；存档只能恢复运行时进度。
         // 直接把旧 BitData 整体反序列化回 ProductionList 会让历史配置（例如旧 Apple）覆盖当前定义。
@@ -226,7 +226,7 @@ public partial class Mod_Production : Module, IEnvironmentAdjustable
             growModule = item.itemMods.GetMod_ByID(ModText.Grow) as Mod_Grow;
     }
 
-    public override void Save()
+    protected override void OnSave()
     {
         _ModDataMemoryPackable.WriteData(ProductionList);
     }

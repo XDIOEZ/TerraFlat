@@ -71,7 +71,7 @@ public static class PlayerDeathInventoryDropper
             return result;
 
         HashSet<Module> seenModules = new HashSet<Module>();
-        foreach (List<Module> modules in player.itemMods.Mods_List.Values)
+        foreach (IReadOnlyList<Module> modules in player.itemMods.Mods_List.Values)
         {
             if (modules == null)
                 continue;

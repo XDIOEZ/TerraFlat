@@ -86,7 +86,7 @@ public partial class Mod_San : Module
         }
     }
 
-    public override void Load()
+    protected override void OnLoad()
     {
         modData.ReadData(ref Data);
         NormalizeData();
@@ -98,7 +98,7 @@ public partial class Mod_San : Module
         }
     }
 
-    public override void Save()
+    protected override void OnSave()
     {
         modData.WriteData(Data);
     }
