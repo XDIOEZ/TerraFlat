@@ -24,6 +24,7 @@ public sealed partial class Mod_AI_Bird : Module, IAIActor, IItemModuleDependenc
     IWaterCurrentExposure, ITemperatureSafetyMovement, IDamageSender
 {
     #region 配置与独立存档
+    public const string ModuleId = "AI_Bird"; // 飞行能力 ID 与具体 Prefab 名分别维护。
     private static readonly int GroundAnimationHash = Animator.StringToHash("Base Layer.Ground");
     private static readonly int WalkAnimationHash = Animator.StringToHash("Base Layer.Walk");
     private static readonly int TakingOffAnimationHash = Animator.StringToHash("Base Layer.TakingOff");
@@ -67,7 +68,7 @@ public sealed partial class Mod_AI_Bird : Module, IAIActor, IItemModuleDependenc
 
     public Ex_ModData Data = new();
     public override ModuleData _Data { get => Data; set => Data = (Ex_ModData)value; }
-    public override string CanonicalModuleId => "AI_Bird";
+    public override string CanonicalModuleId => ModuleId;
     public override ModuleTickMode TickMode => ModuleTickMode.EveryFrame;
     public float groundSpeed = 0.5f;
     [Tooltip("离地前在地面助跑的速度。"), Min(0.1f)] public float takeoffRunSpeed = 2.6f;

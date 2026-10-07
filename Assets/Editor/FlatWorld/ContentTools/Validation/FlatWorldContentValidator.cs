@@ -1088,6 +1088,21 @@ public static class FlatWorldContentValidator
                         prototype);
                 }
 
+                // 鸟类飞行使用固定能力 ID，Prefab 名不能替代蜜蜂依赖的 ID。
+                string moduleId = string.IsNullOrWhiteSpace(pair.Value.Id)
+                    ? (string.IsNullOrWhiteSpace(prototype.ResolvedModuleId) ? modulePrefabId : prototype.ResolvedModuleId)
+                    : pair.Value.Id.Trim();
+                if (prototype is Mod_AI_Bird && moduleId != Mod_AI_Bird.ModuleId)
+                {
+                    AddError(
+                        report,
+                        "FWC-ACTORJSON-005",
+                        ActorManifestAssetPath,
+                        $"{actorField}.modules[{pair.Key}].id",
+                        $"鸟类飞行能力 ID 必须为 '{Mod_AI_Bird.ModuleId}'，实际为 '{moduleId}'；prefab 继续使用具体实现地址。",
+                        prototype);
+                }
+
                 ValidateModuleJsonParameters(
                     context,
                     report,

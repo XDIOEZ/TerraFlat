@@ -54,7 +54,7 @@
         },
         "ai": {
           "prefab": "Mod_AI_Bird",
-          "id": "Mod_AI_Bird",
+          "id": "AI_Bird",
           "enabled": true,
           "data": {
             "BitData": null,

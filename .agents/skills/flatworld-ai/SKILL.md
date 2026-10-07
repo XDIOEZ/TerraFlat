@@ -28,6 +28,7 @@ description: "Use when: 定位或修改 FlatWorld 的动物、怪物、蜂群、
 - `MonsterSpawnerManager` 恢复 GameObject 生成、营养初始化、人数预算及远距休眠；GM、事件、技能和 MOD 的生物生成复用 `AiRuntimeBackendService.TrySpawnDirect`。GameObject 返回前必须完成 `Item.Load` 并核对 `IAIActor.ActorItem`。
 - GameObject AI 使用真实模块、Mod_Mover、Animator 与表现组件，不是镜像空壳。只有显式 ECS 生物才用池化镜像与 BRG；两套后端不得同时接管同一生物。
 - GameObject AI 依赖的移动、检测和朝向模块必须在合并后的 Actor JSON 中启用；`enabled=false` 会跳过 `OnLoad` 和 Tick，即使 AI 仍提交目标也不会初始化导航。检查父定义与子定义覆盖，Prefab 的模块开关使用 `ModuleData.Enabled`（不要混淆移动数据中表示奔跑的 `Data.isRunning`）；内容校验器以 `FWC-ACTORJSON-004` 提示关闭的 AI 基础模块，禁止在 `Awake/OnLoad` 中强制开启来绕过配置。
+- 鸟类飞行能力 ID 固定为 `Mod_AI_Bird.ModuleId`（`AI_Bird`），JSON 的 `prefab=Mod_AI_Bird` 只用于定位实现。Bird、Seagull、Bee 的定义、外壳与资源构建器必须保持该 ID 一致；蜜蜂在依赖绑定阶段解析飞行、检测和生命模块，内容校验器以 `FWC-ACTORJSON-005` 拒绝错误的飞行能力 ID。
 - 保留 `IAiEcologyBackend`、`AiecsGameplayBridge`、镜像及命中接口，GamePlay 不反向依赖 AIECS Gameplay 程序集。延迟命中仍须核对身份和绑定代际；保留接口不代表完整混合 AI 感知/战斗已经验收。
 - ECS 居民生命周期独立于 ChunkView；正式世界 BRG 只提交当前已绑定 ChunkView 内的主体与阴影。区块卸载只撤销本地表现，不删除居民或依赖“相机最近镜像”继续绘制未加载区块。
 - GM 的 GameObject 图标来自当前 Actor 定义与外壳；仅显式 ECS 物种读取 BRG 图集。事件与 MOD 的 GUID 命令通过统一服务分发到 `IAIAdvanceCommandReceiver` 或 ECS；取消是可选接口，不破坏旧 MOD 接收器。

@@ -8,7 +8,7 @@ using UnityEngine;
 /// 飞行导航仍由 AI_Bird 执行；蜂蜜和成员快照由所属 Mod_HiveColony 持久化。
 /// 采蜜物种通过 BeeForage.Crop / BeeForage.Flower 标签注册，不依赖具体物品 ID。
 /// </summary>
-public sealed partial class Mod_BeeBehavior : Module, IBirdFlightPilot, IDamageSender,
+public sealed partial class Mod_BeeBehavior : Module, IItemModuleDependencyBinder, IBirdFlightPilot, IDamageSender,
     ICombatDamageContextModifier, IDamageDeliverySource
 {
     #region 配置与状态
@@ -83,11 +83,17 @@ public sealed partial class Mod_BeeBehavior : Module, IBirdFlightPilot, IDamageS
     #endregion
 
     #region 装配与持久化
+    public void BindModuleDependencies(ItemMods modules)
+    {
+        bird = modules.RequireSingleModById<Mod_AI_Bird>(Mod_AI_Bird.ModuleId);
+        detector = modules.RequireSingleModById<Mod_ItemDetector>(ModText.Detector);
+        damageReceiver = modules.RequireSingleModById<Mod_DamageReceiver>(ModText.Hp);
+    }
+
     protected override void OnLoad()
     {
-        bird = item.itemMods.RequireSingleModById<Mod_AI_Bird>("AI_Bird");
-        detector = item.itemMods.RequireSingleModById<Mod_ItemDetector>(ModText.Detector);
-        damageReceiver = item.itemMods.RequireSingleModById<Mod_DamageReceiver>(ModText.Hp);
+        // 单独重新启用模块时也重绑依赖，避免沿用卸载前的引用。
+        BindModuleDependencies(item.itemMods);
         if (!bird.permanentFlight || SatietyMaximum <= ReturnAbove || ReturnAbove <= ForageBelow ||
             HoneyContributionCost < 0f || HoneyMealGain < 0f || CropGainPerSecond <= 0f ||
             FlowerGainPerSecond <= 0f || PatrolFlightSpeedMultiplier <= 0f || LostTargetAngerSeconds <= 0f)

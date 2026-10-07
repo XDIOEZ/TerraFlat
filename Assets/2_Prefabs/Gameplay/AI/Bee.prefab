@@ -264,9 +264,9 @@ MonoBehaviour:
   m_EditorClassIdentifier:
   item: {fileID: 0}
   Data:
-    Name: ai
-    ID: Mod_AI_Bird
-    isRunning: 1
+    StableName: ai
+    ModuleId: AI_Bird
+    Enabled: 1
     Type: 0
     BitData:
   groundSpeed: 0.5

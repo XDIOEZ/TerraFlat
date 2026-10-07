@@ -87,8 +87,8 @@ public static class BirdActorAssetBuilder
             Mod_AI_Bird bird = birdObject.AddComponent<Mod_AI_Bird>();
             bird.liftRoot = lift;
             bird.birdAnimator = animator;
-            bird.Data.ID = "Mod_AI_Bird";
-            bird.Data.Name = "ai";
+            bird.Data.ModuleId = Mod_AI_Bird.ModuleId;
+            bird.Data.StableName = "ai";
             actor.itemData.IDName = species;
             actor.itemData.Guid = 0;
             actor.itemData.ModuleDataDic.Clear();
