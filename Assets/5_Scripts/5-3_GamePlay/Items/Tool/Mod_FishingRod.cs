@@ -144,13 +144,19 @@ public sealed partial class Mod_FishingRod : Module
         if (panel != null)
         {
             panel.Closed -= HandlePanelClosed;
-            panelBindings.CloseButton.onClick.RemoveListener(CloseConfiguration);
+            if (panelBindings != null && panelBindings.CloseButton != null)
+                panelBindings.CloseButton.onClick.RemoveListener(CloseConfiguration);
             panel.Close();
             UIManager.ExistingInstance?.DestroyPanel(panel);
         }
         panel = null;
         panelBindings = null;
-        if (rig != null) rig.item = null;
+        if (rig != null)
+        {
+            rig.basePanel = null;
+            rig.SyncQuickTransferTarget();
+            rig.item = null;
+        }
         state = null;
     }
 
@@ -343,11 +349,18 @@ public sealed partial class Mod_FishingRod : Module
         RefreshPanel();
     }
 
-    private void CloseConfiguration() => panel?.Close();
+    private void CloseConfiguration()
+    {
+        // Unity 已销毁的面板仍有托管引用，关闭前必须使用 Unity 判空。
+        if (panel != null)
+            panel.Close();
+        else
+            HandlePanelClosed();
+    }
 
     private void HandlePanelClosed()
     {
-        controller?.ReleaseGameplayInputLock(this);
+        if (controller != null) controller.ReleaseGameplayInputLock(this);
         if (rig == null) return;
         rig.DefaultTarget_Inventory = null;
         rig.SyncQuickTransferTarget(panel);

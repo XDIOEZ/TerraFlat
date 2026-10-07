@@ -466,6 +466,10 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
     [Button]
     public void Close()
     {
+        // 退出世界时 UI 可能先销毁，迟到的关闭请求不再访问原生组件。
+        if (this == null)
+            return;
+
         EnsureRuntimeReferences();
         bool wasOpen = isOpen;
         if (canvasGroup != null)

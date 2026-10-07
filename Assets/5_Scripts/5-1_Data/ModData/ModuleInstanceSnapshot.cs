@@ -154,7 +154,7 @@ public static class ModuleInstanceStateCodecs
         public string Id => "core.module.json.v1";
         public Type DataType => typeof(Ex_ModData);
         public ModuleData CreateData() => new Ex_ModData();
-        public byte[] Capture(ModuleData data, bool publicState) => MemoryPackSerializer.Serialize(((Ex_ModData)data).BitData);
+        public byte[] Capture(ModuleData data, bool publicState) => ItemSnapshotSerialization.SerializePayload(((Ex_ModData)data).BitData);
         public void Restore(ModuleData data, byte[] payload) => ((Ex_ModData)data).BitData = MemoryPackSerializer.Deserialize<string>(payload);
     }
 
@@ -176,7 +176,7 @@ public static class ModuleInstanceStateCodecs
         public byte[] Capture(ModuleData data, bool publicState)
         {
             var state = (CollectableModuleData)data;
-            return MemoryPackSerializer.Serialize(new CollectableInstanceState { Stock = state.CurrentStock, Initialized = state.IsInitialized });
+            return ItemSnapshotSerialization.SerializePayload(new CollectableInstanceState { Stock = state.CurrentStock, Initialized = state.IsInitialized });
         }
         public void Restore(ModuleData data, byte[] payload)
         {
@@ -195,7 +195,7 @@ public static class ModuleInstanceStateCodecs
         public byte[] Capture(ModuleData data, bool publicState)
         {
             var state = (Inventory_ModuleData)data;
-            return MemoryPackSerializer.Serialize(new InventoryModuleInstanceState
+            return ItemSnapshotSerialization.SerializePayload(new InventoryModuleInstanceState
             {
                 Inventories = publicState ? null : InventoryInstanceSnapshot.CaptureDictionary(state.Data),
                 PanelPosition = state.PanleRectPosition, PanelIsOpen = state.BasePanelIsOpen
@@ -220,7 +220,7 @@ public static class ModuleInstanceStateCodecs
         public byte[] Capture(ModuleData data, bool publicState)
         {
             var state = (ModData_FoodData)data;
-            return MemoryPackSerializer.Serialize(new FoodInstanceState
+            return ItemSnapshotSerialization.SerializePayload(new FoodInstanceState
             {
                 MechanicStates = state.MechanicStates, PanelPosition = state.FoodData?.PanelPosition ?? Vector2.zero,
                 Nutrition = NutritionInstanceState.Capture(state.FoodData?.nutrition)

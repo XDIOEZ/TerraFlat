@@ -1,4 +1,5 @@
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.IO;
 using MemoryPack;
@@ -55,7 +56,7 @@ public sealed partial class ItemInstanceSnapshot
             position = includeTransform && data.transform != null ? data.transform.position : Vector3.zero,
             rotation = includeTransform && data.transform != null ? data.transform.rotation : Quaternion.identity,
             scale = includeTransform && data.transform != null ? data.transform.scale : Vector3.one,
-            matterPayload = MemoryPackSerializer.Serialize(data.MatterState ?? new ItemMatterState())
+            matterPayload = ItemSnapshotSerialization.SerializePayload(data.MatterState ?? new ItemMatterState())
         };
 
         var captured = new SortedDictionary<string, ModuleInstanceSnapshot>(StringComparer.Ordinal);
@@ -78,7 +79,7 @@ public sealed partial class ItemInstanceSnapshot
         switch (data)
         {
             case Data_GeneralItem general:
-                snapshot.kindPayload = MemoryPackSerializer.Serialize(general.code);
+                snapshot.kindPayload = ItemSnapshotSerialization.SerializePayload(general.code);
                 break;
             case Data_Player player:
                 snapshot.kindPayload = PlayerInstanceSnapshot.Capture(player, publicPlayerState);
@@ -253,6 +254,20 @@ public enum ItemInstanceKind : byte { General, Player, TileMap, Block }
 /// <summary>公开世界快照使用独立的捕获策略，策略只作用于同步序列化调用所在的线程。</summary>
 public static class ItemSnapshotSerialization
 {
+    #region 独立负载序列化
+
+    /// <summary>快照捕获可嵌套在外层序列化中，每份负载独占缓冲和引用状态。</summary>
+    public static byte[] SerializePayload<T>(T value)
+    {
+        var buffer = new ArrayBufferWriter<byte>();
+        using var state = MemoryPackWriterOptionalStatePool.Rent(null);
+        var writer = new MemoryPackWriter<ArrayBufferWriter<byte>>(ref buffer, state);
+        MemoryPackSerializer.Serialize(ref writer, value);
+        return buffer.WrittenSpan.ToArray();
+    }
+
+    #endregion
+
     #region 序列化捕获策略
 
     [ThreadStatic] private static Func<string, string> publicSpecialDataFilter;
@@ -305,7 +320,7 @@ internal sealed partial class PlayerInstanceSnapshot
 
     public static byte[] Capture(Data_Player data, bool publicState)
     {
-        return MemoryPackSerializer.Serialize(new PlayerInstanceSnapshot
+        return ItemSnapshotSerialization.SerializePayload(new PlayerInstanceSnapshot
         {
             SceneName = data.CurrentSceneName, Hp = data.hp, Defense = data.defense, Speed = data.Speed,
             Stamina = data.stamina, StaminaMax = data.staminaMax, StaminaRecoverySpeed = data.staminaRecoverySpeed,

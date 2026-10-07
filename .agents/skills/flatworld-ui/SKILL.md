@@ -114,6 +114,7 @@ description: "Use when: 定位或修改 FlatWorld 的 UIManager、BasePanel、�
 - 木桶内物品由 `VesselContentsView` 在正式 `UI_WaterVessel` 的内腔 Mask 下克隆 `UI_Slot`：每个可见物体绑定一个真实库存槽，唯一空槽覆盖投放区域并放在占用槽下层。局部重力、碰撞和水中阻尼只改变 UI 姿态；关窗销毁槽位克隆但不改库存。液体容器拖放若被固体槽拒绝，仍须继续命中原有 `IInventoryDragDropTarget` 转液入口。
 
 - 领域控制器创建/持有正式 Prefab，`UIManager` 管生命周期；控件节点名是绑定契约。正式 UI 不用 `new GameObject/AddComponent` 拼视觉。
+- 世界退出时面板可能先于物品模块销毁；关闭、解绑前用 Unity 的 `!= null` 检查，不能用 `?.` 判断面板是否存活。面板已销毁也要释放输入锁和容器快捷转移引用，`BasePanel.Close` 忽略迟到的销毁后调用。
 - `UI_FuelInteraction` 只绑定通用 `Mod_FuelInteraction`，标题从当前物品定义读取；面板、控制器和文案逻辑不得按火把、油灯、火盆等具体物品 ID 分支。
 - Prefab 是视觉真相；`BasePanel` 不在初始化时重写结构。运行时只用稳定键加载正式 Prefab。 编辑器构建器组装带 Awake 的视图时，应先停用根节点，完成所有序列化引用后再激活；新增必需视图引用必须同步生成正式 Prefab 并核对引用，不能只提交脚本。
 - 单机世界 F5 成功发布资源后，`UIManager.DestroyRuntimeUiInstancesForResourceReload` 必须清空 SafeAreaRoot / 根 Canvas 下的运行时 UI 与面板注册缓存，但保留 UIRoot、SafeAreaRoot 自身；随后由最新 Player Prefab 的模块和全局 HUD 从当前 `GameRes` 重新实例化，禁止继续持有上一代资源会话中的 UI 实例或 Prefab 缓存。

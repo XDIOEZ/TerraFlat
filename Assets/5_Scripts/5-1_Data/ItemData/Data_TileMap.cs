@@ -30,7 +30,7 @@ public partial class Data_TileMap : ItemData
 
     #region 地图实例快照
 
-    internal byte[] CaptureMapInstanceState() => MemoryPackSerializer.Serialize(new TileMapInstanceSnapshot
+    internal byte[] CaptureMapInstanceState() => ItemSnapshotSerialization.SerializePayload(new TileMapInstanceSnapshot
     {
         Tiles = _tileCells, Position = position, TileLoaded = TileLoaded,
         Environment = EnvironmentLayers, Grass = GrassLayer
