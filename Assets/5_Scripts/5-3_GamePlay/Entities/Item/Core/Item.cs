@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Sirenix.OdinInspector;
 using System;
 using FastCloner.Code;
+using UnityEngine.Pool;
 
 
 /// <summary>
@@ -306,7 +307,7 @@ public abstract class Item : MonoBehaviour
         destructionHandled = false;
         isInitialized = false;
         Owner = null;
-        itemMods = new ItemMods(this);
+        itemMods.ResetForReuse(this);
         ClearModuleSchedule();
 
         OnUIRefresh.Clear();
@@ -315,33 +316,39 @@ public abstract class Item : MonoBehaviour
         OnInit_Env.Clear();
         OnDurabilityModified.Clear();
 
-        Rigidbody2D[] rigidbodies = GetComponentsInChildren<Rigidbody2D>(true);
-        for (int i = 0; i < rigidbodies.Length; i++)
+        // 查询缓冲按调用借还，动态层级仍重新查询，嵌套生成不会覆盖外层结果。
+        using var rigidbodyScope = ListPool<Rigidbody2D>.Get(out var rigidbodies);
+        GetComponentsInChildren(true, rigidbodies);
+        for (int i = 0; i < rigidbodies.Count; i++)
         {
             rigidbodies[i].velocity = Vector2.zero;
             rigidbodies[i].angularVelocity = 0f;
         }
 
-        ParticleSystem[] particleSystems = GetComponentsInChildren<ParticleSystem>(true);
-        for (int i = 0; i < particleSystems.Length; i++)
+        using var particleScope = ListPool<ParticleSystem>.Get(out var particleSystems);
+        GetComponentsInChildren(true, particleSystems);
+        for (int i = 0; i < particleSystems.Count; i++)
         {
             particleSystems[i].Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
             particleSystems[i].Clear(true);
         }
 
-        TrailRenderer[] trails = GetComponentsInChildren<TrailRenderer>(true);
-        for (int i = 0; i < trails.Length; i++)
+        using var trailScope = ListPool<TrailRenderer>.Get(out var trails);
+        GetComponentsInChildren(true, trails);
+        for (int i = 0; i < trails.Count; i++)
             trails[i].Clear();
 
-        IItemPoolLifecycle[] lifecycleHandlers = GetComponentsInChildren<IItemPoolLifecycle>(true);
-        for (int i = 0; i < lifecycleHandlers.Length; i++)
+        using var lifecycleScope = ListPool<IItemPoolLifecycle>.Get(out var lifecycleHandlers);
+        GetComponentsInChildren(true, lifecycleHandlers);
+        for (int i = 0; i < lifecycleHandlers.Count; i++)
             lifecycleHandlers[i].OnItemTakenFromPool();
     }
 
     public void NotifyReturnedToPool()
     {
-        IItemPoolLifecycle[] lifecycleHandlers = GetComponentsInChildren<IItemPoolLifecycle>(true);
-        for (int i = 0; i < lifecycleHandlers.Length; i++)
+        using var lifecycleScope = ListPool<IItemPoolLifecycle>.Get(out var lifecycleHandlers);
+        GetComponentsInChildren(true, lifecycleHandlers);
+        for (int i = 0; i < lifecycleHandlers.Count; i++)
             lifecycleHandlers[i].OnItemReturnedToPool();
     }
 
@@ -426,7 +433,8 @@ public abstract class Item : MonoBehaviour
         bool firstStart = itemData.ModuleDataDic.Count == 0;
 
         // 模板数据会收集停用模块，加载时也必须使用同一范围，避免矿物等 Prefab 被误判为缺失模块。
-        Module[] modules = GetComponentsInChildren<Module>(true);
+        using var moduleScope = ListPool<Module>.Get(out var modules);
+        GetComponentsInChildren(true, modules);
 
         if (firstStart)//第一次启动
         {
@@ -452,114 +460,121 @@ public abstract class Item : MonoBehaviour
 
         if (!firstStart)//非第一次启动
         {
-            ItemMods tempMods = new ItemMods();
-            List<Module> modsToInit = new();
+            using var candidateScope = GenericPool<ItemMods>.Get(out var tempMods);
+            using var initScope = ListPool<Module>.Get(out var modsToInit);
 
-            foreach (var mod in modules)
+            try
             {
-                tempMods.AddMod(mod);
-            }
-            // 通过逻辑 ID 与定义中的具体 Prefab 地址共同匹配，支持同一玩法模块的多个 Prefab 变体。
-            foreach (KeyValuePair<string, ModuleData> pair in itemData.ModuleDataDic)
-            {
-                string stableName = pair.Key;
-                ModuleData modData = pair.Value;
-                if (modData == null || string.IsNullOrWhiteSpace(modData.ModuleId))
+                foreach (var mod in modules)
                 {
-                    Debug.LogWarning($"物品 {gameObject.name} 包含没有有效 ID 的模块数据，已跳过自动修复。", this);
-                    continue;
+                    tempMods.AddMod(mod);
                 }
-
-                modData.StableName = stableName;
-                string modulePrefabId = ResolveModulePrefabId(stableName, modData.ModuleId);
-                Module mod = tempMods.Mods.TryGetValue(stableName, out Module stableModule)
-                    ? stableModule
-                    : FindModuleByIdentity(tempMods, modData.ModuleId, modulePrefabId);
-
-                // 不存在模块时，按定义中的具体 Prefab 地址修复。
-                if (mod == null)
+                // 通过逻辑 ID 与定义中的具体 Prefab 地址共同匹配，支持同一玩法模块的多个 Prefab 变体。
+                foreach (KeyValuePair<string, ModuleData> pair in itemData.ModuleDataDic)
                 {
-                    Debug.LogWarning($"物品 {gameObject.name} 丢失了模块 {stableName} " +
-                        $" ModuleId: {modData.ModuleId}，PrefabId: {modulePrefabId}，下面开始尝试自动修复。");
-
-                    GameObject moduleObject = GameRes.Instance?.InstantiatePrefab(modulePrefabId, parent: transform);
-                    if (moduleObject == null)
+                    string stableName = pair.Key;
+                    ModuleData modData = pair.Value;
+                    if (modData == null || string.IsNullOrWhiteSpace(modData.ModuleId))
                     {
-                        Debug.LogError($"物品 {gameObject.name} 无法修复模块 {stableName} " +
-                            $" ModuleId: {modData.ModuleId}，PrefabId: {modulePrefabId}：找不到对应的模块 Prefab。", this);
+                        Debug.LogWarning($"物品 {gameObject.name} 包含没有有效 ID 的模块数据，已跳过自动修复。", this);
                         continue;
                     }
 
-                    moduleObject.name = modulePrefabId;
-                    moduleObject.transform.localPosition = Vector3.zero;
-                    moduleObject.transform.localRotation = Quaternion.identity;
-                    moduleObject.transform.localScale = Vector3.one;
+                    modData.StableName = stableName;
+                    string modulePrefabId = ResolveModulePrefabId(stableName, modData.ModuleId);
+                    Module mod = tempMods.Mods.TryGetValue(stableName, out Module stableModule)
+                        ? stableModule
+                        : FindModuleByIdentity(tempMods, modData.ModuleId, modulePrefabId);
 
-                    mod = FindModuleForData(moduleObject, modData.ModuleId, modulePrefabId);
+                    // 不存在模块时，按定义中的具体 Prefab 地址修复。
                     if (mod == null)
                     {
-                        Debug.LogError($"物品 {gameObject.name} 无法修复模块 {stableName} " +
-                            $" ModuleId: {modData.ModuleId}，PrefabId: {modulePrefabId}：未找到匹配的 Module 组件。", moduleObject);
-                        Destroy(moduleObject);
-                        continue;
-                    }
+                        Debug.LogWarning($"物品 {gameObject.name} 丢失了模块 {stableName} " +
+                            $" ModuleId: {modData.ModuleId}，PrefabId: {modulePrefabId}，下面开始尝试自动修复。");
 
-                    // Enabled 属于当前模块配置，不从旧存档继承；旧 isRunning 不能决定模块生命周期。
-                    bool configuredEnabled = mod._Data?.Enabled ?? true;
-                    modData.Enabled = configuredEnabled;
-                    mod._Data = modData;
-                    mod.BindRuntimeIdentity(stableName, modData.ModuleId, modulePrefabId);
-
-                    itemMods.AddMod(mod);
-                    modsToInit.Add(mod);
-                }
-                else
-                {
-                    tempMods.RemoveMod(mod);
-
-                    // 存档只恢复运行态数据，模块启停以当前 Prefab/JSON 配置为准。
-                    bool configuredEnabled = mod._Data?.Enabled ?? true;
-                    modData.Enabled = configuredEnabled;
-                    mod._Data = modData;
-                    mod.BindRuntimeIdentity(stableName, modData.ModuleId, modulePrefabId);
-
-                    modsToInit.Add(mod);
-                    itemMods.AddMod(mod);
-                }
-            }
-
-            // Prefab 是运行时模块组合真源，JSON/存档只保存配置差异；剩余模块必须全部注册。
-            if (tempMods.Mods_List.Count > 0)
-            {
-                foreach (var LostMod in tempMods.Mods_List.Values)
-                {
-                    foreach (var mod in LostMod)
-                    {
-                        if (mod == null || mod._Data == null)
+                        GameObject moduleObject = GameRes.Instance?.InstantiatePrefab(modulePrefabId, parent: transform);
+                        if (moduleObject == null)
+                        {
+                            Debug.LogError($"物品 {gameObject.name} 无法修复模块 {stableName} " +
+                                $" ModuleId: {modData.ModuleId}，PrefabId: {modulePrefabId}：找不到对应的模块 Prefab。", this);
                             continue;
+                        }
 
-                        NormalizeModuleIdentity(mod, mod._Data);
-                        if (itemMods.ContainsKey_Name(mod._Data.StableName) ||
-                            itemData.ModuleDataDic.ContainsKey(mod._Data.StableName))
-                            throw new InvalidOperationException(
-                                $"物品 {gameObject.name} 存在重复 StableName：{mod._Data.StableName}。");
+                        moduleObject.name = modulePrefabId;
+                        moduleObject.transform.localPosition = Vector3.zero;
+                        moduleObject.transform.localRotation = Quaternion.identity;
+                        moduleObject.transform.localScale = Vector3.one;
+
+                        mod = FindModuleForData(moduleObject, modData.ModuleId, modulePrefabId);
+                        if (mod == null)
+                        {
+                            Debug.LogError($"物品 {gameObject.name} 无法修复模块 {stableName} " +
+                                $" ModuleId: {modData.ModuleId}，PrefabId: {modulePrefabId}：未找到匹配的 Module 组件。", moduleObject);
+                            Destroy(moduleObject);
+                            continue;
+                        }
+
+                        // Enabled 属于当前模块配置，不从旧存档继承；旧 isRunning 不能决定模块生命周期。
+                        bool configuredEnabled = mod._Data?.Enabled ?? true;
+                        modData.Enabled = configuredEnabled;
+                        mod._Data = modData;
+                        mod.BindRuntimeIdentity(stableName, modData.ModuleId, modulePrefabId);
 
                         itemMods.AddMod(mod);
-                        itemData.ModuleDataDic[mod._Data.StableName] = mod._Data;
                         modsToInit.Add(mod);
                     }
+                    else
+                    {
+                        tempMods.RemoveMod(mod);
+
+                        // 存档只恢复运行态数据，模块启停以当前 Prefab/JSON 配置为准。
+                        bool configuredEnabled = mod._Data?.Enabled ?? true;
+                        modData.Enabled = configuredEnabled;
+                        mod._Data = modData;
+                        mod.BindRuntimeIdentity(stableName, modData.ModuleId, modulePrefabId);
+
+                        modsToInit.Add(mod);
+                        itemMods.AddMod(mod);
+                    }
+                }
+
+                // Prefab 是运行时模块组合真源，JSON/存档只保存配置差异；剩余模块必须全部注册。
+                if (tempMods.Mods_List.Count > 0)
+                {
+                    foreach (var LostMod in tempMods.Mods_List.Values)
+                    {
+                        foreach (var mod in LostMod)
+                        {
+                            if (mod == null || mod._Data == null)
+                                continue;
+
+                            NormalizeModuleIdentity(mod, mod._Data);
+                            if (itemMods.ContainsKey_Name(mod._Data.StableName) ||
+                                itemData.ModuleDataDic.ContainsKey(mod._Data.StableName))
+                                throw new InvalidOperationException(
+                                    $"物品 {gameObject.name} 存在重复 StableName：{mod._Data.StableName}。");
+
+                            itemMods.AddMod(mod);
+                            itemData.ModuleDataDic[mod._Data.StableName] = mod._Data;
+                            modsToInit.Add(mod);
+                        }
+                    }
+                }
+
+                // 全部加入Mods后再统一初始化（防止初始化中找不到其他模块）
+                foreach (var mod in modsToInit)
+                {
+                    BindModuleDependencies(mod);
+                    mod.ModuleInit(this, mod._Data);
+                }
+                foreach (var mod in modsToInit)
+                {
+                    mod.LoadRuntime();
                 }
             }
-
-            // 全部加入Mods后再统一初始化（防止初始化中找不到其他模块）
-            foreach (var mod in modsToInit)
+            finally
             {
-                BindModuleDependencies(mod);
-                mod.ModuleInit(this, mod._Data);
-            }
-            foreach (var mod in modsToInit)
-            {
-                mod.LoadRuntime();
+                tempMods.ResetForReuse(null);
             }
         }
 

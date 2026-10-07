@@ -5,6 +5,7 @@ using System.Linq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
+using UnityEngine.Pool;
 
 /// <summary>把运行时定义应用到共享外壳实例。</summary>
 public static class ItemDefinitionRuntime
@@ -399,20 +400,22 @@ public static class ItemDefinitionRuntime
         }
     }
 
+    #region 模块装配
+
     private static void EnsureModuleComponents(
         GameRes gameRes,
         RuntimeItemDefinition definition,
         Item item,
         ItemData itemData)
     {
-        Module[] components = item.GetComponentsInChildren<Module>(true);
-        var available = new List<Module>(components.Length);
-        for (int i = 0; i < components.Length; i++)
-            if (components[i] != null)
-                available.Add(components[i]);
-
         if (itemData.ModuleDataDic == null)
             throw new InvalidDataException($"物品 {itemData.IDName} 缺少模块数据字典。");
+
+        using var availableScope = ListPool<Module>.Get(out var available);
+        item.GetComponentsInChildren(true, available);
+        // 候选身份只整理一次，避免每个定义模块都重复整理全部候选。
+        for (int i = 0; i < available.Count; i++)
+            available[i]?.EnsureRuntimeIdentity();
 
         foreach (KeyValuePair<string, ModuleData> pair in itemData.ModuleDataDic)
         {
@@ -424,13 +427,11 @@ public static class ItemDefinitionRuntime
             moduleData.StableName = stableName;
             string prefabId = definition.GetModulePrefabId(stableName, moduleData.ModuleId);
             int embeddedIndex = -1;
-            Type expectedModuleType = ResolveModuleType(gameRes, prefabId, moduleData.ModuleId);
 
             // 先按具体 PrefabId 匹配，避免同一 ModuleId 的多个实现变体互相串用。
             for (int i = 0; i < available.Count; i++)
             {
                 Module candidate = available[i];
-                candidate?.EnsureRuntimeIdentity();
                 if (candidate == null ||
                     (!string.Equals(candidate.PrefabId, prefabId, StringComparison.OrdinalIgnoreCase) &&
                      !string.Equals(candidate.gameObject.name, prefabId, StringComparison.OrdinalIgnoreCase)))
@@ -441,6 +442,9 @@ public static class ItemDefinitionRuntime
             }
 
             // 旧 Actor 外壳会把内嵌模块节点改名；PrefabId 因此可能失真，按唯一具体类型复用原模块。
+            Type expectedModuleType = embeddedIndex < 0
+                ? ResolveModuleType(gameRes, prefabId, moduleData.ModuleId)
+                : null;
             if (embeddedIndex < 0 && expectedModuleType != null)
             {
                 int typedIndex = -1;
@@ -509,4 +513,6 @@ public static class ItemDefinitionRuntime
         Module prototype = ItemDefinitionCatalogLoader.FindModulePrototype(null, modulePrefab, moduleId);
         return prototype?.GetType();
     }
+
+    #endregion
 }

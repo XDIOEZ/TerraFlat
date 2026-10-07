@@ -46,28 +46,40 @@ public class ItemMods
         _owner = owner;
     }
 
+    #region 模块索引复用
+
+    // 卸载完成后清空引用并保留字典容量，复用时不携带上一轮模块。
+    internal void ResetForReuse(Item owner)
+    {
+        _owner = owner;
+        _mods.Clear();
+        foreach (List<Module> modules in Mods_List.Values)
+            modules.Clear();
+        Mods_List.Clear();
+    }
+
+    #endregion
+
     public List<Module> GetModList_ByID(string modID)
     {
-        if (Mods_List.ContainsKey(modID) == false)
-            return null;
-        return Mods_List[modID];
+        return Mods_List.TryGetValue(modID, out List<Module> modules) ? modules : null;
     }
     public Module GetMod_ByID(string modID)
     {
-        if (Mods_List.ContainsKey(modID) == false)
+        if (!Mods_List.TryGetValue(modID, out List<Module> modules) || modules.Count == 0)
             return null;
-        return Mods_List[modID][0];
+        return modules[0];
     }
 
     public T GetMod_ByID<T>(string modID,out T mod) where T : Module
     {
-        if (Mods_List.ContainsKey(modID) == false)
+        if (!Mods_List.TryGetValue(modID, out List<Module> modules) || modules.Count == 0)
         {
             mod = null;
             Debug.Log("没有找到ID为" + modID + "的模块");
             return mod;
         }
-        mod = Mods_List[modID][0] as T;
+        mod = modules[0] as T;
         return mod;
     }
     public T GetMod_ByID<T>(string modID) where T : Module
@@ -174,13 +186,14 @@ public class ItemMods
         // StableName 是 Item 内唯一实例键；ModuleId 只表示能力类型，可一对多。
         Mods[stableName] = mod;
 
-        if (Mods_List.ContainsKey(moduleId) == false)
+        if (!Mods_List.TryGetValue(moduleId, out List<Module> modules))
         {
-            Mods_List[moduleId] = new List<Module>();
+            modules = new List<Module>();
+            Mods_List[moduleId] = modules;
         }
         // 添加到 Mods_List
-        if (!Mods_List[moduleId].Contains(mod))
-            Mods_List[moduleId].Add(mod);
+        if (!modules.Contains(mod))
+            modules.Add(mod);
         _owner?.MarkModuleScheduleDirty();
         _owner?.NotifyRuntimeStructureChanged();
     }

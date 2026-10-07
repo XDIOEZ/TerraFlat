@@ -37,6 +37,7 @@ description: "Use when: 定位或修改 FlatWorld 的 Item/Module 组合架构�
 - 对象池身份由 `Item` 的序列化字段持有，`PooledItemMarker` 是纯运行时层级快照，不再作为 MonoBehaviour 动态添加到每个新物品；装配 JSON 模块后才抓取层级基线。改回池逻辑时须同时检查脚本重载后的身份保留与回池前的层级校验。
 - 注册/注销、保存/销毁各执行一次；`PrepareForDespawn` 与 `OnDestroy` 不得被外部重复调用。
 - Item 回池资格独立于 `saveData`；JSON 模块装配完成后才记录层级基线，回池时按子节点身份核验。模块若用 `OnDestroy` 清理订阅或资源，必须在 `Unload` 提供同等清理，池复用才安全。
+- 池复用与模块装配的临时查询列表按调用借还，异常和嵌套生成也要归还独立缓冲；模块索引只在卸载后清空复用。层级保持实时查询，禁止为减少分配缓存未经结构失效通知维护的组件集合。
 - 模块 JSON 配置计划属于当前 `RuntimeItemDefinition`：解析和严格校验只做一次，实体每次 Load 仍重新应用字段；资源重载通过替换定义实例自然丢弃旧计划。
 - 远程网络副本不进入本地 Tick、感知和存档索引。
 - 感知后端在注册和 `Item.RuntimeStructureChanged` 边界选择：Actor 使用当前 `RuntimeItemDefinition` 的共享根级纯几何，旧对象才缓存 Collider Bridge；移动通知仅更新位置索引，不能重新扫描组件。注销必须移除后端映射，重建索引前完成并丢弃旧 Job；每次重新注册/结构变化递增代际以拒绝对象池复用前的结果。正式 Actor 的物理 Collider 尺寸不是运行时感知配置权威，新增动态体型应提供纯数据输入。`ItemPhysicsProjection2D` 只把 `ItemData.Stack.CurrentWeight` 映射成动态刚体质量，并将实际速度与接触事实写回不入存档的 `ItemData.PhysicsState`。
