@@ -59,6 +59,8 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable
 #region 字段
 
     public const string ModuleId = "体温模块";
+    // 模板读取早于 Awake，能力 ID 必须在装配前确定。
+    public override string CanonicalModuleId => ModuleId;
 
     public Ex_ModData_MemoryPackable modData; // 模块存档容器
     [LabelText("体温数据"), InlineProperty]
@@ -85,14 +87,6 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable
 #endregion
 
 #region 生命周期
-
-    public override void Awake()
-    {
-        if (_Data.ID == string.Empty)
-        {
-            _Data.ID = ModText.Temperature;
-        }
-    }
 
     /// <summary>恢复体温数据并重置不应跨生命周期保留的水体状态。</summary>
     protected override void OnLoad()

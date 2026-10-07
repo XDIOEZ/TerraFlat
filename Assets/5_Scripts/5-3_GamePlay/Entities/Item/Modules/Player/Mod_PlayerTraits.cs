@@ -8,7 +8,11 @@ using UnityEngine;
 /// </summary>
 public class Mod_PlayerTraits : Module
 {
+    #region 模块身份
     public const string ModuleId = "PlayerTraits";
+    // 模板读取早于 Awake，能力 ID 必须在装配前确定。
+    public override string CanonicalModuleId => ModuleId;
+    #endregion
 
     public Ex_ModData ModData;
     public override ModuleData _Data
@@ -20,12 +24,6 @@ public class Mod_PlayerTraits : Module
     private Player player;
     private Mod_PlayerAdminController adminController;
     private Mod_GameController gameController;
-
-    public override void Awake()
-    {
-        base.Awake();
-        _Data.ID = ModuleId;
-    }
 
     protected override void OnLoad()
     {

@@ -373,7 +373,8 @@ public abstract class Module : MonoBehaviour, IRuntimeDataLifecycle
 
         EnsureRuntimeIdentity();
 
-        GameRes.Instance?.ApplyItemModuleConfiguration(
+        // 绑定只读取已存在的资源目录，静态装配检查不能创建全局管理器。
+        GameRes.ExistingInstance?.ApplyItemModuleConfiguration(
             Item_Data?.IDName,
             _Data?.StableName,
             this,

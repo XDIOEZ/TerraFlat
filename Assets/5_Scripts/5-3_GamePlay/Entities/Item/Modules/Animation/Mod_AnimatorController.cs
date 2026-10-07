@@ -4,6 +4,11 @@ using UnityEngine;
 
 public class Mod_AnimatorController : Module, ITrunDirection
 {
+    #region 模块身份
+    // 模板读取早于 Awake，能力 ID 必须在装配前确定。
+    public override string CanonicalModuleId => ModText.AnimatorReceiver;
+    #endregion
+
     public override ModuleTickMode TickMode => ModuleTickMode.Disabled;
 
     public Ex_ModData_MemoryPackable ModData;
@@ -13,11 +18,6 @@ public class Mod_AnimatorController : Module, ITrunDirection
     private readonly Dictionary<string, int> _boolParameterHashes = new Dictionary<string, int>();
     private readonly HashSet<string> _loggedWarnings = new HashSet<string>();
     private int _cachedControllerId;
-
-    public override void Awake()
-    {
-        _Data.ID = ModText.AnimatorReceiver;
-    }
 
     protected override void OnLoad()
     {

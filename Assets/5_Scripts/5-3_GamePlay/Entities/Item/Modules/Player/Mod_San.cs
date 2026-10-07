@@ -19,6 +19,8 @@ public partial class Mod_San : Module
 #region 字段
 
     public const string ModuleId = "理智模块";
+    // 模板读取早于 Awake，能力 ID 必须在装配前确定。
+    public override string CanonicalModuleId => ModuleId;
 
     public Ex_ModData_MemoryPackable modData; // 模块存档容器
     public SanData Data = new SanData(); // 理智运行时数据
@@ -77,14 +79,6 @@ public partial class Mod_San : Module
 #endregion
 
 #region 生命周期
-
-    public override void Awake()
-    {
-        if (_Data.ID == string.Empty)
-        {
-            _Data.ID = ModText.San;
-        }
-    }
 
     protected override void OnLoad()
     {

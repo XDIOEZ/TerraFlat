@@ -19,7 +19,9 @@ public class Mod_Equipment : Module, IInventory, IInteractable, IInstanceUI
 {
     #region 基础参数
 
-    public Ex_ModData_MemoryPackable ModSaveData;
+    // 模板读取早于 Awake，能力 ID 必须在装配前确定。
+    public override string CanonicalModuleId => ModText.Equipment_Module;
+    public Ex_ModData_MemoryPackable ModSaveData = new();
     public override ModuleData _Data { get => ModSaveData; set => ModSaveData = (Ex_ModData_MemoryPackable)value; }
 
     #endregion
@@ -51,14 +53,6 @@ public class Mod_Equipment : Module, IInventory, IInteractable, IInstanceUI
     {
         ModSaveData ??= new Ex_ModData_MemoryPackable();
         ModSaveData.Name = ModText.Equipment_Module;
-    }
-
-    public override void Awake()
-    {
-        ModSaveData ??= new Ex_ModData_MemoryPackable();
-        if (string.IsNullOrEmpty(ModSaveData.ID))
-            ModSaveData.ID = ModText.Equipment_Module;
-        base.Awake();
     }
 
     protected override void OnLoad()

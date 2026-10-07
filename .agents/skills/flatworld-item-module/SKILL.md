@@ -81,6 +81,7 @@ description: "Use when: 定位或修改 FlatWorld 的 Item/Module 组合架构�
 - 液体粘度属于 `LiquidDefinition.viscosity` 的数据属性，1 表示普通水；容器倾倒速度和液流/液面表现都从同一值派生，UI Prefab 不再作为粘度权威。未配置专用 `visualState` 样式的液体按 `primaryColor` 自动生成容器液面表现。
 - 堆叠身份统一由 `ItemData` 判定，空与 null 特殊数据按现有规范处理。
 - 模块 Prefab 的 `StableName/ModuleId` 可能未序列化；进入 `ItemMods`、`ModuleInit` 或网络更新前必须统一建立非空确定性身份。JSON 模块以 `modules` 的键作为 StableName；Prefab-only 模块才允许回退到确定性的 GameObject 名，禁止随机后缀。
+- 固定能力 ID 必须由具体模块覆写 `CanonicalModuleId`，不能只在 `Awake/OnValidate` 填写；模板工厂可能早于 Awake 读取 Prefab，提前写入外壳名后会使依赖索引永久错位。注册后禁止在生命周期回调中修改身份。
 - JSON 动态组合存在跨模块引用时实现 `IItemModuleDependencyBinder`；全部模块先进入 `ItemMods`，ModuleInit 完成配置，再绑定依赖，最后 OnLoad。依赖按唯一稳定 ID 或能力接口解析，缺失或重复直接报错。
 - 可燃物品采用纯组合：`Mod_Fuel` 提供燃料数据，`Mod_Combustion` 提供燃烧状态与世界时间消耗，`Mod_FuelInteraction` 提供通用投料/点火交互；光源、燃烧粒子、局部温度、命中 Buff 等通过 `ICombustionStateReceiver` 独立响应。具体物品名称、外观与组件选择只存在于 JSON，禁止新增 `Mod_具体物品名` 来重新聚合这些职责。
 - JSON 的 `modules.*.prefab` 是模块变体的唯一实例化地址；多个专用 Prefab 可以共用同一玩法 `ModuleData.ID`，`GameRes` 只能为唯一候选登记该 ID 的兼容别名，禁止按加载顺序静默覆盖。

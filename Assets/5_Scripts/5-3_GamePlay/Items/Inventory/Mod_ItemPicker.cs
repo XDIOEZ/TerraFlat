@@ -16,6 +16,8 @@ public class Mod_ItemPicker : Module
 
     #region 基础参数
 
+    // 模板读取早于 Awake，能力 ID 必须在装配前确定。
+    public override string CanonicalModuleId => ModText.Picker;
     public Ex_ModData_MemoryPackable ModSaveData;
     public override ModuleData _Data { get { return ModSaveData; } set { ModSaveData = (Ex_ModData_MemoryPackable)value; } }
 
@@ -23,11 +25,6 @@ public class Mod_ItemPicker : Module
     #endregion
 
     #region 生命周期
-
-    public override void Awake()
-    {
-        _Data.ID = ModText.Picker;
-    }
 
     protected override void OnLoad()
     {

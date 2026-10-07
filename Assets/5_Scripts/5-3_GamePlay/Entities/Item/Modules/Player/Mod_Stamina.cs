@@ -8,6 +8,11 @@ using UnityEngine.UI;
 
 public partial class Mod_Stamina : Module, IItemModuleDependencyBinder
 {
+    #region 模块身份
+    // 模板读取早于 Awake，能力 ID 必须在装配前确定。
+    public override string CanonicalModuleId => ModText.Stamina;
+    #endregion
+
     private readonly List<IStaminaCapacityModifier> capacityModifiers = new(); // 独立容量来源。
     private Mod_PlayerAdminController adminController; // 管理员拥有无限体力，统一在体力权威模块拦截消耗。
 
@@ -57,13 +62,6 @@ public partial class Mod_Stamina : Module, IItemModuleDependencyBinder
     private BasePanel staminaPanel; // 模块持有自己创建的体力面板，卸载时对称释放。
     private RectTransform staminaBackground; // 原体力条灰黑底纹，只调整可用宽度。
     private RectTransform staminaFillArea; // 保持原填充样式，仅让填充范围与可用上限一致。
-    public override void Awake()
-    {
-        if (_Data.ID == "")
-        {
-            _Data.ID = ModText.Stamina;
-        }
-    }
     protected override void OnLoad()
     {
         modData.ReadData(ref Data);

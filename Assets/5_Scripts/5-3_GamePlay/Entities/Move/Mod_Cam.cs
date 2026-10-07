@@ -19,6 +19,9 @@ public class Mod_Cam : Module
     }
 
     #region 字段声明
+    // 模板读取早于 Awake，能力 ID 必须在装配前确定。
+    public override string CanonicalModuleId => ModText.Camera;
+
     [Header("模块数据")]
     public Ex_ModData ModData;
     public override ModuleData _Data
@@ -77,11 +80,6 @@ public class Mod_Cam : Module
     #endregion
 
     #region 生命周期方法
-    public new void Awake()
-    {
-         _Data.ID = ModText.Camera;
-    }
-
     private void OnEnable()
     {
         CameraUserSettings.Changed -= HandleCameraSettingsChanged;
