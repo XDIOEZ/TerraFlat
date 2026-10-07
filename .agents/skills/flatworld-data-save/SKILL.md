@@ -49,6 +49,7 @@ description: "Use when: 定位或修改 FlatWorld 的数据模型、MemoryPack �
 - MemoryPack 追加可选数值字段时，不能依赖字段初始化值表达缺省；若 0 也是有效配置，使用可空数值并在转为运行时快照时解析缺省，避免未记录字段被当成显式 0。
 - 通用液体容器的 `LiquidContainerState.Amount` 以 `0.1` 份为最小持久化单位；运行时读入高精度浮点余量时先归一到一位小数，后续装液、倾倒、转移与加工不得重新写入更高精度的数量。
 - ItemData 及派生类的 MemoryPack 持久化只通过 InstanceSnapshot；Unity/JSON 字段是配置适配外壳，不直接入档。冷数据不读取 GameRes，入世/入包先按当前定义原位恢复重量、标签、耐久与模块组合，再合并实例状态；保留真实槽位的 ItemData 引用，已删除模块不能复活，未知扩展负载继续保留。
+- FastCloner 3.3.10 对带 `FastClonerIgnore` 的可写属性会调用 setter 写入默认值；`InstanceSnapshot` 这类无后备字段的计算属性不要加该标记，避免克隆配置时触发空快照恢复。自动属性与实际字段仍按需标记。
 - ItemInstanceDataFactory.Compile 冷路径冻结共享只读配置和默认状态，生成只分配独立可变数据；ModuleData 默认值采用 object 泛型深拷贝并检查具体类型。库存快照只保存内容及用户状态，恢复须保留当前布局的 UI/输入/槽位标签，并将新冷槽位数据 rebase 到当前定义。模块自有 BitData 仍由各模块负责区分配置与进度，不能把不透明负载当作配置已全部抽离。
 - 冷数据可从当前 JSON 或 Prefab-only 模板恢复；活跃库存只补新冷物品配置，不能重建已挂接定义的 ModuleData 引用。模块自有库存也使用 InventoryInstanceSnapshot，禁止把 MemoryPack 往返当作热实例克隆器；同 GUID 跨槽移动继续复用原 ItemData。
 - 派生实例属性通过 IItemInstanceStateRestorer 注册纯数据恢复规则，统一在模块状态恢复后执行；不能在快照层硬编码具体玩法。编解码器收发缓冲与快照隔离，释放注册租期前先完成状态调用及实例清理。

@@ -107,7 +107,8 @@ public abstract partial class ItemData
     internal string[] PreservedRemovedTags;
 
     // 所有世界、库存与内嵌模块中的 ItemData 都由这个唯一属性写入实例状态。
-    [JsonIgnore, FastClonerIgnore]
+    // 计算属性无需克隆标记；FastClonerIgnore 会调用 setter 写入 null。
+    [JsonIgnore]
     public ItemInstanceSnapshot InstanceSnapshot
     {
         get => ItemSnapshotSerialization.Capture(this);

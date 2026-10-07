@@ -1,5 +1,7 @@
 using System;
+#if UNITY_ANDROID && !UNITY_EDITOR
 using System.Threading;
+#endif
 using UnityEngine;
 
 /// <summary>
@@ -10,8 +12,10 @@ public static class AndroidSystemGestureInsets
 {
     #region 状态
 
+#if UNITY_ANDROID && !UNITY_EDITOR
     // Unity 主线程同步上下文用于接收 Android UI 线程查询结果。
     private static SynchronizationContext unityContext;
+#endif
     // 当前设备底部强制系统手势区高度，单位为屏幕像素。
     private static int bottomInsetPixels;
     // 同一次运行只记录一次原生查询异常，避免恢复焦点时重复刷屏。
@@ -28,7 +32,9 @@ public static class AndroidSystemGestureInsets
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetState()
     {
+#if UNITY_ANDROID && !UNITY_EDITOR
         unityContext = null;
+#endif
         bottomInsetPixels = 0;
         queryFailureLogged = false;
         Changed = null;

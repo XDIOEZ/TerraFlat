@@ -290,7 +290,8 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, IInteractable, I
     /// <summary>只接收乘员输入；水流、划船与外部推动在同一固定步结算。</summary>
     public void AdvanceMotion(Mod_Mover rider, Vector2 input, float deltaTime, bool controlsLocked, bool boostRequested)
     {
-        if (rider == null || rider != Rider || rider.CarrierSource != this ||
+        // 承载接口按同一个运行时实例核验乘坐关系。
+        if (rider == null || rider != Rider || !ReferenceEquals(rider.CarrierSource, this) ||
             !IsAvailable || !GameNetwork.HasStateAuthority) return;
         requestedControlsLocked = controlsLocked;
         requestedInput = controlsLocked ? Vector2.zero : Vector2.ClampMagnitude(input, 1f);
@@ -304,7 +305,7 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, IInteractable, I
             return;
         float deltaTime = Time.fixedDeltaTime;
         RefreshPushSource();
-        Vector2 input = Rider != null && Rider.isActiveAndEnabled && Rider.CarrierSource == this &&
+        Vector2 input = Rider != null && Rider.isActiveAndEnabled && ReferenceEquals(Rider.CarrierSource, this) &&
             !requestedControlsLocked ? requestedInput : Vector2.zero;
         float speedLimit = ResolveSurfaceSpeedLimit(body.position);
         if (Rider != null && requestedBoost)
