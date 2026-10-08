@@ -385,7 +385,7 @@ public sealed class FoodUIModule : IFoodMechanic, IFoodStateObserver, IDisposabl
         TMPro.TextMeshProUGUI text = healthText;
         bool showHealth = context.IsPlayer && damageReceiver != null;
 
-        if (slider != null)
+        if (slider != null && slider.gameObject.activeSelf != showHealth)
             slider.gameObject.SetActive(showHealth);
 
         if (!showHealth)

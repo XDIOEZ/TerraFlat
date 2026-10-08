@@ -271,6 +271,9 @@ public partial class Mod_Stamina : Module, IItemModuleDependencyBinder
             return;
 
         Vector2 anchorMax = target.anchorMax;
+        if (Mathf.Approximately(anchorMax.x, ratio))
+            return;
+
         anchorMax.x = ratio;
         target.anchorMax = anchorMax;
     }
