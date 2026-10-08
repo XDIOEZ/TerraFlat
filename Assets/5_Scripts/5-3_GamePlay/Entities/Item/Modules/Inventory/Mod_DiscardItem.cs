@@ -252,7 +252,7 @@ public class Mod_DiscardItem : Mod_BaseDroper
         {
             if (isCtrlPressed)
             {
-                // Ctrl+F 丢弃整组
+                // 按住 Ctrl 时丢弃整组。
                 DropItemByCount(handSlot, handSlot.Amount);
             }
             else
@@ -272,7 +272,7 @@ public class Mod_DiscardItem : Mod_BaseDroper
             ItemSlot hotbarSlot = Hotbar.CurrentSelectItemSlot;
             if (isCtrlPressed)
             {
-                // Ctrl+F 丢弃整组
+                // 按住 Ctrl 时丢弃整组。
                 DropItemByCount(hotbarSlot, hotbarSlot.Amount);
             }
             else
@@ -291,7 +291,7 @@ public class Mod_DiscardItem : Mod_BaseDroper
         {
             if (isCtrlPressed)
             {
-                // Ctrl+F 快速丢弃整组
+                // 按住 Ctrl 时快速丢弃整组。
                 FastDropStack();
             }
             else

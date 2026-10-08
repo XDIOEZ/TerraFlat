@@ -251,7 +251,7 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, IInteractable, I
         return false;
     }
 
-    /// <summary>远海没有陆地时，把乘员放到船体外侧的可用水格，避免 E 键被永久困在船上。</summary>
+    /// <summary>远海没有陆地时，把乘员放到船体外侧的可用水格，避免乘员被永久困在船上。</summary>
     private bool TryFindWaterDismount(Mod_Mover rider, out Vector2 destination)
     {
         Vector2 origin = item.transform.position;

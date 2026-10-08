@@ -30,10 +30,11 @@ description: "Use when: 定位或修改 FlatWorld 的玩家实体、输入系统
 - 载具的按键、鼠标点选和白色描边必须共用光标落点查询；上船与下船都要求光标实际命中载具，禁止因“当前已乘坐”或“靠近船体”绕过光标选择。光标指向可触及水面且未命中载具时，交互键交给喝水等环境动作。远海登船与下船都合法：登船恢复位置优先附近安全陆地，否则保留真实登船坐标；下船优先附近安全陆地，没有陆地时落到船体外侧安全水面。
 
 - 输入链为 Input System → `Mod_GameController` → 玩家模块；不要让 UI、物理输入和玩法模块各自维护冲突状态。
+- 默认键位统一修改 `Assets/PlayerInput/PlayerInputActions.inputactions` 并同步生成包装器 `PlayerInputActions.cs` 中的 JSON；Action 名称是内部标识，实际按键应读取绑定的 `effectivePath`，不能按名称推断物理键。
 - 桌面文本输入框获得焦点时，键盘玩法输入统一由 `EventSystemGuard.IsTextInputFocused` 与 `Mod_GameController.IsGameplayInputAllowed` 拦截；`ReadMoveInput` 同时返回零以阻止 WASD 穿透。鼠标仍交给 UI 射线仲裁，不能因为正在打字就全局禁用鼠标，否则会妨碍点击离开输入框。
 - 桌面指针由 `Mod_GameController` 缓存 `Win10.Mouse` 的位置变化，需同时处理 `performed/canceled`；鼠标按键回调要读取当前鼠标坐标，避免同次输入更新中点击先于位置回调造成落点滞后。
 - `Mod_GameController` 挂在玩家根对象，模块 ID 必须是 `ModText.Controller`；若留空会退化为根对象名 `Player`，按 ID 获取控制器的地块交互将静默失败。
-- 组合键冲突由 `Mod_GameController` 暴露语义状态统一仲裁：按住丢弃快捷键期间，`Ctrl+滚轮` 镜头缩放必须让位，但普通滚轮快捷栏切换继续工作，便于玩家在 `Ctrl+F` 整组丢弃准备态中换槽位。
+- 组合键冲突由 `Mod_GameController` 暴露语义状态统一仲裁：按住丢弃快捷键期间，`Ctrl+滚轮` 镜头缩放必须让位，但普通滚轮快捷栏切换继续工作，便于玩家在整组丢弃准备态中换槽位。
 - Editor Agent、自动化或其它非物理输入源接管本地主角时统一使用 `Mod_GameController` 的唯一 External Gameplay Control 租约；租约期间真实设备退出玩法输入仲裁，移动/瞄准/攻击继续注入现有生产链。打包游戏的 AI/LLM 适配器通过玩家运行时模块 `Mod_GameMCP_LLM` 提交和查询导航意图；该模块复用同一租约与 Mod_Mover 输入链，不依赖 Editor 或 GamePlayMCP。禁止为自动化直接改玩家 `Rigidbody2D`、Transform 或另建平行输入状态。
 - `InputBindingService` 的覆盖存档按 binding GUID 关联输入资产；输入资产删改绑定后，加载前必须过滤当前资产不存在的 GUID 并重存清理后的配置，因为 Unity 内置加载器会直接输出警告而不会抛出异常。
 - 输入重绑定冲突检测必须按物理修饰键语义统一 `<Keyboard>/shift` 与左右 Shift、`ctrl` 与左右 Ctrl、`alt` 与左右 Alt；历史冲突覆盖加载时应自动清理，避免镜头缩放等组合输入被静默改绑到已有玩法键。
@@ -41,7 +42,7 @@ description: "Use when: 定位或修改 FlatWorld 的玩家实体、输入系统
 - `Move_Player` 的二维幅度同时表达模拟移动速度比例：手机虚拟摇杆与手柄左摇杆必须保留 0～1 幅度，玩家移动路径不得提前归一化；键盘满幅输入与目标寻路接口保持原有语义。
 - 玩家乘坐载具统一经 `ICarrierMotionSource` 与 `Mod_Mover.TryAttachCarrier` 仲裁：载具源拥有位移积分、速度和力，乘员不改 Transform 父级，只在租约期间关闭自身 Rigidbody2D 模拟并跟随座位；乘员引用和瞬时速度不进存档，恢复位置使用登船时取得的作用域租约。无 Collider 载具交互使用 `SpatialInteractionRegistry`，不要为了点选重新添加物理碰撞体。
 - 环境交互输入只转发按下/持续/松开；具体环境提供 `IEnvironmentActionDefinition` 或 `IEnvironmentEffectDefinition`，角色侧 `EnvironmentInteractionRunner` 每次创建独立实例，禁止把玩家长按或被动效果状态存进共享地块配置。
-- 世界实体持续交互统一走 `IInteractable.OnInteractStart/OnInteractUpdate/OnInteractEnd`：`Mod_InteractSender` 只在交互键按住期间转发 Update，正常松开时转发 End；鼠标与外部单次交互只触发 Start→End，不进入持续通道；目标取消或失效走 `OnInteractCancel`，业务模块不得自行读取 E 键状态。
+- 世界实体持续交互统一走 `IInteractable.OnInteractStart/OnInteractUpdate/OnInteractEnd`：`Mod_InteractSender` 只在交互键按住期间转发 Update，正常松开时转发 End；鼠标与外部单次交互只触发 Start→End，不进入持续通道；目标取消或失效走 `OnInteractCancel`，业务模块不得自行读取物理交互键状态。
 - 需要只能由交互键打开的设施面板时，让目标实现 `IInteractable.CanPointerInteract` 并返回 `false`；发送器的左键点选遵守该策略，交互键仍须满足范围与目标有效性，避免在发送器内硬编码具体设施类型。
 - `SpatialInteractionRegistry.Query` 包含 `MachineWorld` 的纯数据目标；逐帧描边只用 `QueryPreview` 查已注册视觉与资源实体。`MechanicalDynamicVisual` 以视觉归属注册同一 `MachineInteractionTarget`，通过 `IWorldInteractionPreview` 接收描边状态；不能把机械图查询接回 `RefreshInteractionPreview` 的每帧路径。手摇轮仍由目标的 Start/Update/End 区分短按开面板与长按供能。
 - 本地档案由 `Player.IsLocalProfile`/ProfileContext 判定；远程副本不得持久化、跑本地教程或玩家语音。

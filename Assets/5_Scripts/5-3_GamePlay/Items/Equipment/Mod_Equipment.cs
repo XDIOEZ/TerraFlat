@@ -172,7 +172,7 @@ public class Mod_Equipment : Module, IInventory, IInteractable, IInstanceUI
         Interact_Start(playerItem);
     }
 
-    /// <summary>宿主存在其它当前可用交互时让出 E 键，装备能力不抢占传送门、机器等主玩法。</summary>
+    /// <summary>宿主存在其它当前可用交互时让出交互键，装备能力不抢占传送门、机器等主玩法。</summary>
     public bool CanInteract(Item playerItem)
     {
         if (item == null || playerItem == null || EquipmentInventory == null)

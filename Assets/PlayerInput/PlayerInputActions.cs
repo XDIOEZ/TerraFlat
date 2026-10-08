@@ -567,7 +567,7 @@ namespace InputSystem
                 {
                     ""name"": """",
                     ""id"": ""f0b2af0d-03d2-4290-8b79-af6093a96924"",
-                    ""path"": ""<Keyboard>/f"",
+                    ""path"": ""<Keyboard>/g"",
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": ""Keyboard&Mouse"",
@@ -765,7 +765,7 @@ namespace InputSystem
                 {
                     ""name"": """",
                     ""id"": ""5d34c481-8501-4aca-abe0-2b2618af12ab"",
-                    ""path"": ""<Keyboard>/e"",
+                    ""path"": ""<Keyboard>/f"",
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": ""Keyboard&Mouse"",
