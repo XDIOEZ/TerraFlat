@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="900" viewBox="0 0 1280 900" role="img" aria-labelledby="title desc">
+<title id="title">03 / 起飞按钮与程序化过渡</title><desc id="desc">参考分镜：按钮触发升空阶段，物理进度驱动画面过渡，再进入太空手动驾驶。</desc>
+<defs>
+<marker id="arrowBlue" markerWidth="14" markerHeight="14" refX="11" refY="7" orient="auto" markerUnits="userSpaceOnUse"><path d="M 0 1 L 12 7 L 0 13 Z" fill="#66c8ff"/></marker>
+<marker id="arrowGreen" markerWidth="14" markerHeight="14" refX="11" refY="7" orient="auto" markerUnits="userSpaceOnUse"><path d="M 0 1 L 12 7 L 0 13 Z" fill="#63d9ac"/></marker>
+<marker id="arrowGold" markerWidth="14" markerHeight="14" refX="11" refY="7" orient="auto" markerUnits="userSpaceOnUse"><path d="M 0 1 L 12 7 L 0 13 Z" fill="#ffd17a"/></marker>
+</defs>
+<rect width="1280" height="900" fill="#090f1e"/>
+<g font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif">
+<text x="44" y="58" font-size="32" fill="#edf4ff" font-weight="700" text-anchor="start">03 / 起飞按钮与程序化过渡</text>
+<text x="44" y="96" font-size="19" fill="#9bb0cb" font-weight="400" text-anchor="start">参考分镜：按钮触发升空阶段，物理进度驱动画面过渡，再进入太空手动驾驶。</text>
+<rect x="1038" y="29" width="198" height="39" rx="19" fill="#173329" stroke="#315b49" stroke-width="1.5"/>
+<text x="1137" y="55" font-size="16" fill="#63d9ac" font-weight="600" text-anchor="middle">首轮基础 · 设计示意</text>
+<rect x="40" y="134" width="280" height="378" rx="18" fill="#121d31" stroke="#283b55" stroke-width="1.5"/>
+<text x="60" y="174" font-size="21" fill="#edf4ff" font-weight="600" text-anchor="start">01 地表按下起飞</text>
+<rect x="348" y="134" width="280" height="378" rx="18" fill="#121d31" stroke="#283b55" stroke-width="1.5"/>
+<text x="368" y="174" font-size="21" fill="#edf4ff" font-weight="600" text-anchor="start">02 按受力推进升空</text>
+<rect x="656" y="134" width="280" height="378" rx="18" fill="#121d31" stroke="#283b55" stroke-width="1.5"/>
+<text x="676" y="174" font-size="21" fill="#edf4ff" font-weight="600" text-anchor="start">03 程序化过渡</text>
+<rect x="964" y="134" width="276" height="378" rx="18" fill="#121d31" stroke="#283b55" stroke-width="1.5"/>
+<text x="984" y="174" font-size="21" fill="#edf4ff" font-weight="600" text-anchor="start">04 接入太空驾驶</text>
+<text x="60" y="208" font-size="17" fill="#9bb0cb" font-weight="400" text-anchor="start">检查推重比与可用燃料</text>
+<ellipse cx="180" cy="361" rx="53" ry="12" fill="#090f1e"/><path d="M 58 373 H 302 V 389 H 58 Z" fill="#30465a"/>
+<g transform="translate(180 292) rotate(0) scale(0.8)"><path d="M -38 63 V -40 Q 0 -85 38 -40 V 63 Z" fill="#20354c" stroke="#66c8ff" stroke-width="3"/><rect x="-26" y="-23" width="52" height="56" rx="5" fill="#172638" stroke="#365168"/><rect x="-17" y="-14" width="34" height="19" rx="4" fill="#184f57" stroke="#63d9ac"/><rect x="-21" y="62" width="42" height="15" rx="4" fill="#394855" stroke="#ffd17a"/></g>
+<rect x="70" y="410" width="220" height="45" rx="12" fill="#205344" stroke="#63d9ac" stroke-width="1.5"/>
+<text x="180" y="440" font-size="21" fill="#63d9ac" font-weight="700" text-anchor="middle">起飞按钮</text>
+<text x="60" y="483" font-size="17" fill="#9bb0cb" font-weight="400" text-anchor="start">能力不足：显示原因</text>
+<text x="368" y="208" font-size="19" fill="#63d9ac" font-weight="500" text-anchor="start">a = F_lift / M − g</text>
+<line x1="389" y1="411" x2="389" y2="256" stroke="#63d9ac" stroke-width="3"  marker-end="url(#arrowGreen)"/>
+<text x="401" y="285" font-size="20" fill="#63d9ac" font-weight="400" text-anchor="start">h ↑</text>
+<g transform="translate(519 277) rotate(0) scale(0.78)"><path d="M -38 63 V -40 Q 0 -85 38 -40 V 63 Z" fill="#20354c" stroke="#66c8ff" stroke-width="3"/><rect x="-26" y="-23" width="52" height="56" rx="5" fill="#172638" stroke="#365168"/><rect x="-17" y="-14" width="34" height="19" rx="4" fill="#184f57" stroke="#63d9ac"/><rect x="-21" y="62" width="42" height="15" rx="4" fill="#394855" stroke="#ffd17a"/><path d="M -14 80 Q -18 99 0 126 Q 18 99 14 80 Z" fill="#ffd17a"/><path d="M -7 80 Q -9 94 0 108 Q 9 94 7 80 Z" fill="#ff8e68"/></g>
+<ellipse cx="519" cy="404" rx="34" ry="7" fill="#090f1e"/><path d="M 366 423 H 610 V 437 H 366 Z" fill="#30465a"/>
+<text x="368" y="477" font-size="17" fill="#9bb0cb" font-weight="400" text-anchor="start">独立离地高度与垂直速度</text>
+<circle cx="706.96" cy="257.4" r="1.7" fill="#9bb0cb" opacity=".55"/>
+<circle cx="846.76" cy="241.86" r="1.1" fill="#9bb0cb" opacity=".55"/>
+<circle cx="884.04" cy="297.36" r="1.1" fill="#9bb0cb" opacity=".55"/>
+<circle cx="734.92" cy="375.06" r="1.7" fill="#9bb0cb" opacity=".55"/>
+<circle cx="865.4" cy="392.82000000000005" r="1.1" fill="#9bb0cb" opacity=".55"/>
+<circle cx="802.49" cy="339.53999999999996" r="1.1" fill="#9bb0cb" opacity=".55"/>
+<circle cx="697.64" cy="412.8" r="1.7" fill="#9bb0cb" opacity=".55"/>
+<g transform="translate(806 270) rotate(-8) scale(0.65)"><path d="M -38 63 V -40 Q 0 -85 38 -40 V 63 Z" fill="#20354c" stroke="#66c8ff" stroke-width="3"/><rect x="-26" y="-23" width="52" height="56" rx="5" fill="#172638" stroke="#365168"/><rect x="-17" y="-14" width="34" height="19" rx="4" fill="#184f57" stroke="#63d9ac"/><rect x="-21" y="62" width="42" height="15" rx="4" fill="#394855" stroke="#ffd17a"/><path d="M -14 80 Q -18 99 0 126 Q 18 99 14 80 Z" fill="#ffd17a"/><path d="M -7 80 Q -9 94 0 108 Q 9 94 7 80 Z" fill="#ff8e68"/></g>
+<path d="M 675 440 Q 796 358 917 440 V 454 H 675 Z" fill="#16384d" stroke="#66c8ff" stroke-width="2"/><path d="M 761 227 L 743 214 M 833 215 L 850 200" stroke="#a9a0ff" stroke-width="2"/>
+<text x="676" y="477" font-size="16" fill="#9bb0cb" font-weight="400" text-anchor="start">表现示意：镜头 / 尾焰 / 背景</text>
+<circle cx="1013.24" cy="252" r="1.7" fill="#9bb0cb" opacity=".55"/>
+<circle cx="1149.44" cy="235.55" r="1.1" fill="#9bb0cb" opacity=".55"/>
+<circle cx="1185.76" cy="294.3" r="1.1" fill="#9bb0cb" opacity=".55"/>
+<circle cx="1040.48" cy="376.54999999999995" r="1.7" fill="#9bb0cb" opacity=".55"/>
+<circle cx="1167.6" cy="395.35" r="1.1" fill="#9bb0cb" opacity=".55"/>
+<circle cx="1106.31" cy="338.95" r="1.1" fill="#9bb0cb" opacity=".55"/>
+<circle cx="1004.16" cy="416.5" r="1.7" fill="#9bb0cb" opacity=".55"/>
+<g transform="translate(1098 314) rotate(24) scale(0.75)"><path d="M -38 63 V -40 Q 0 -85 38 -40 V 63 Z" fill="#20354c" stroke="#66c8ff" stroke-width="3"/><rect x="-26" y="-23" width="52" height="56" rx="5" fill="#172638" stroke="#365168"/><rect x="-17" y="-14" width="34" height="19" rx="4" fill="#184f57" stroke="#63d9ac"/><rect x="-21" y="62" width="42" height="15" rx="4" fill="#394855" stroke="#ffd17a"/></g>
+<line x1="1130" y1="280" x2="1187" y2="245" stroke="#63d9ac" stroke-width="3"  marker-end="url(#arrowGreen)"/>
+<text x="986" y="220" font-size="17" fill="#9bb0cb" font-weight="400" text-anchor="start">二维引力 + 实际推力</text>
+<text x="984" y="479" font-size="18" fill="#66c8ff" font-weight="400" text-anchor="start">WASD 推进 · Q/E 旋转</text>
+<line x1="323" y1="335" x2="344" y2="335" stroke="#66c8ff" stroke-width="2.5"  marker-end="url(#arrowBlue)"/>
+<line x1="631" y1="335" x2="652" y2="335" stroke="#66c8ff" stroke-width="2.5"  marker-end="url(#arrowBlue)"/>
+<line x1="939" y1="335" x2="960" y2="335" stroke="#66c8ff" stroke-width="2.5"  marker-end="url(#arrowBlue)"/>
+<rect x="40" y="536" width="784" height="276" rx="18" fill="#121d31" stroke="#283b55" stroke-width="1.5"/>
+<rect x="860" y="536" width="380" height="276" rx="18" fill="#121d31" stroke="#283b55" stroke-width="1.5"/>
+<text x="64" y="579" font-size="23" fill="#edf4ff" font-weight="600" text-anchor="start">物理状态决定进度与迁移时机</text>
+<rect x="64" y="610" width="210" height="93" rx="12" fill="#17283a" stroke="#38536b" stroke-width="1.5"/>
+<text x="169" y="643" font-size="19" fill="#edf4ff" font-weight="500" text-anchor="middle">实际净加速度</text>
+<text x="169" y="677" font-size="19" fill="#66c8ff" font-weight="500" text-anchor="middle">F_lift / M − g</text>
+<rect x="328" y="610" width="210" height="93" rx="12" fill="#17283a" stroke="#38536b" stroke-width="1.5"/>
+<text x="433" y="643" font-size="19" fill="#edf4ff" font-weight="500" text-anchor="middle">升空运动状态</text>
+<text x="433" y="677" font-size="19" fill="#66c8ff" font-weight="500" text-anchor="middle">高度 h、垂直速度</text>
+<rect x="592" y="610" width="208" height="93" rx="12" fill="#17283a" stroke="#38536b" stroke-width="1.5"/>
+<text x="696" y="643" font-size="19" fill="#edf4ff" font-weight="500" text-anchor="middle">进入太空条件</text>
+<text x="696" y="677" font-size="19" fill="#66c8ff" font-weight="500" text-anchor="middle">整船及乘员迁移</text>
+<line x1="280" y1="656" x2="321" y2="656" stroke="#66c8ff" stroke-width="3"  marker-end="url(#arrowBlue)"/>
+<line x1="543" y1="656" x2="585" y2="656" stroke="#66c8ff" stroke-width="3"  marker-end="url(#arrowBlue)"/>
+<text x="64" y="745" font-size="19" fill="#ffd17a" font-weight="400" text-anchor="start">燃料消耗 → 质量刷新 → 更新本次受力</text>
+<text x="64" y="779" font-size="18" fill="#9bb0cb" font-weight="400" text-anchor="start">保留 ShipId、本地结构、设备与乘员；转换升空位置和速度。</text>
+<text x="884" y="579" font-size="23" fill="#edf4ff" font-weight="600" text-anchor="start">程序化表现跟随进度</text>
+<text x="884" y="623" font-size="18" fill="#9bb0cb" font-weight="400" text-anchor="start">建议效果，不固定最终美术：</text>
+<text x="884" y="657" font-size="20" fill="#a9a0ff" font-weight="400" text-anchor="start">船体升高、镜头缩放</text>
+<text x="884" y="691" font-size="20" fill="#a9a0ff" font-weight="400" text-anchor="start">尾焰变化、背景过渡</text>
+<text x="884" y="739" font-size="23" fill="#ff7f86" font-weight="600" text-anchor="start">动画结束 ≠ 起飞完成</text>
+<text x="884" y="780" font-size="18" fill="#9bb0cb" font-weight="400" text-anchor="start">高度阈值 / 中断处理待配置</text>
+<line x1="44" y1="838" x2="1236" y2="838" stroke="#283b55" stroke-width="3"  />
+<text x="44" y="873" font-size="16" fill="#9bb0cb" font-weight="400" text-anchor="start">SPACE-021 / 026 / 027 · 分镜非实际动画；升空轴、进入太空高度与中断细则待定。</text>
+<text x="1236" y="873" font-size="16" fill="#9bb0cb" font-weight="500" text-anchor="end">FLATWORLD / 03</text>
+</g></svg>

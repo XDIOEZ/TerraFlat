@@ -1,0 +1,96 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="900" viewBox="0 0 1280 900" role="img" aria-labelledby="title desc">
+  <title id="title">05 / 轨道高度与地表切换</title>
+  <desc id="desc">二维单主星轨道示意。圆轨道、顺向加速后的椭圆和逆向制动后的椭圆在右侧同一推进点相切，星球位于椭圆焦点。高度等于到星球中心距离减表面半径，实际接触触发整船及随船乘员向对应地表迁移，保留局部位置并只结算一次冲击。</desc>
+  <defs>
+    <marker id="arrowBlue" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L8,4 L0,8 Z" fill="#66c8ff"/></marker>
+    <marker id="arrowRed" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L8,4 L0,8 Z" fill="#ff7f86"/></marker>
+    <marker id="arrowMuted" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L8,4 L0,8 Z" fill="#9bb0cb"/></marker>
+    <style>
+      text { font-family: 'Microsoft YaHei', 'Noto Sans CJK SC', sans-serif; fill: #edf4ff; font-size: 18px; }
+      .muted { fill: #9bb0cb; } .heading { font-size: 23px; font-weight: 700; } .title { font-size: 32px; font-weight: 700; }
+      .panel { fill: #121d31; stroke: #283b55; stroke-width: 1.5; }
+      .green { fill: #63d9ac; } .blue { fill: #66c8ff; } .yellow { fill: #ffd17a; } .red { fill: #ff7f86; }
+      .foot { font-size: 16px; fill: #9bb0cb; }
+    </style>
+  </defs>
+  <rect width="1280" height="900" fill="#090f1e"/>
+  <text x="40" y="57" class="title">05 / 轨道高度与地表切换</text>
+  <text x="40" y="92" class="muted">二维引力模拟 · 游戏尺度 · 轨道升降示意，非真实比例</text>
+
+  <rect x="40" y="120" width="748" height="440" rx="18" class="panel"/>
+  <text x="64" y="155" class="heading">同一切向推进点，产生不同轨道</text>
+  <!-- 焦点在 (360,355)：顺向椭圆 a=180,c=60,b=sqrt(28800)；逆向 a=100,c=20,b=sqrt(9600)。 -->
+  <ellipse cx="300" cy="355" rx="180" ry="169.705627" fill="none" stroke="#63d9ac" stroke-width="3"/>
+  <circle cx="360" cy="355" r="120" fill="none" stroke="#66c8ff" stroke-width="2.5" stroke-dasharray="8 7"/>
+  <ellipse cx="380" cy="355" rx="100" ry="97.97959" fill="none" stroke="#ffd17a" stroke-width="3"/>
+  <circle cx="360" cy="355" r="65" fill="#183a51" stroke="#66c8ff" stroke-width="2"/>
+  <path d="M315,330 C328,304 350,329 344,347 S370,378 386,354 S400,356 407,377" fill="none" stroke="#2c6373" stroke-width="14" stroke-linecap="round" opacity="0.55"/>
+  <circle cx="360" cy="355" r="4" fill="#edf4ff"/>
+  <text x="360" y="400" text-anchor="middle">星球 / 焦点</text>
+  <circle cx="480" cy="355" r="7" fill="#edf4ff" stroke="#090f1e" stroke-width="2"/>
+  <path d="M480,343 V250" fill="none" stroke="#66c8ff" stroke-width="3" marker-end="url(#arrowBlue)"/>
+  <text x="502" y="250" class="blue">速度 v：沿切线</text>
+  <path d="M467,355 H433" fill="none" stroke="#ff7f86" stroke-width="3" marker-end="url(#arrowRed)"/>
+  <text x="518" y="348">共同推进点</text>
+  <path d="M492,355 H508" fill="none" stroke="#9bb0cb"/>
+  <text x="502" y="392" class="red">引力 a：指向中心</text>
+  <text x="520" y="425" class="muted">改变切向速度后</text>
+  <text x="520" y="453" class="muted">继续按引力推进轨迹</text>
+  <text x="520" y="499" class="blue">圆轨道参考</text>
+  <text x="520" y="528">v = √(μ / r)</text>
+  <circle cx="120" cy="355" r="5" fill="#63d9ac"/>
+  <text x="72" y="310" class="green">远点抬高</text>
+  <path d="M115,316 L120,345" fill="none" stroke="#63d9ac"/>
+  <circle cx="280" cy="355" r="5" fill="#ffd17a"/>
+  <text x="200" y="438" class="yellow">近点降低</text>
+  <path d="M273,423 L280,367" fill="none" stroke="#ffd17a"/>
+  <text x="64" y="192" class="green">顺向加速</text>
+  <text x="64" y="219" class="muted">先抬高远点</text>
+  <text x="64" y="497" class="yellow">逆向制动</text>
+  <text x="64" y="525" class="muted">本例近点仍高于地表</text>
+
+  <rect x="808" y="120" width="432" height="440" rx="18" class="panel"/>
+  <text x="832" y="155" class="heading">高度零点在表面</text>
+  <text x="832" y="194" class="blue">h = 到星球中心距离 d − R</text>
+  <text x="832" y="227" class="muted">RelativeAltitudeMeters</text>
+  <circle cx="965" cy="344" r="69" fill="#183a51" stroke="#66c8ff" stroke-width="2"/>
+  <circle cx="965" cy="344" r="4" fill="#edf4ff"/>
+  <path d="M965,344 H1110" fill="none" stroke="#9bb0cb" stroke-width="1.5" stroke-dasharray="4 4"/>
+  <circle cx="1110" cy="344" r="6" fill="#edf4ff"/>
+  <path d="M965,367 H1034 M965,361 V373 M1034,361 V373" fill="none" stroke="#66c8ff" stroke-width="2"/>
+  <text x="997" y="399" class="blue" text-anchor="middle">R</text>
+  <path d="M1034,294 H1110 M1034,288 V300 M1110,288 V300" fill="none" stroke="#63d9ac" stroke-width="2"/>
+  <text x="1072" y="279" class="green" text-anchor="middle">h</text>
+  <path d="M1034 350L1075 401H1089" fill="none" stroke="#9bb0cb" stroke-width="1.5"/>
+  <text x="1100" y="410" class="small muted">表面 h = 0</text>
+  <text x="1125" y="350">参考点</text>
+  <text x="832" y="441">每步从位置重新计算高度。</text>
+  <text x="832" y="473" class="muted">船舱内读取飞船外部轨道状态。</text>
+  <text x="832" y="505" class="muted">没有有效参考星球：高度不可用。</text>
+  <text x="832" y="537" class="red">不能用虚假 0 m 触发落地。</text>
+
+  <rect x="40" y="576" width="1200" height="108" rx="16" class="panel"/>
+  <text x="64" y="611" class="yellow">轨道改变 ≠ 必然落地</text>
+  <text x="64" y="644">一次减速不产生持续螺旋下坠；下落时速度可能增大。判断后续轨迹是否接触地表。</text>
+  <text x="729" y="611" class="red">实际接触优先</text>
+  <text x="911" y="611" class="muted">或运动步跨越表面</text>
+  <text x="729" y="673" class="muted">船体有尺寸时，接触可能早于主体参考点 h = 0。</text>
+
+  <text x="40" y="720" class="heading">接触星球 → 对应地表 WorldAddress（以稳定 BodyId 映射）</text>
+  <rect x="40" y="740" width="342" height="103" rx="14" class="panel"/>
+  <text x="62" y="772" class="blue" font-weight="700">1 / 接触前缓存</text>
+  <text x="62" y="803">相对地表速度、质量与重力</text>
+  <text x="62" y="829" class="muted">载具身份与保护状态</text>
+  <path d="M393,791 H425" fill="none" stroke="#9bb0cb" stroke-width="2" marker-end="url(#arrowMuted)"/>
+  <rect x="438" y="740" width="342" height="103" rx="14" class="panel"/>
+  <text x="460" y="772" class="green" font-weight="700">2 / 整船与随船乘员迁移</text>
+  <text x="460" y="803">保留乘员的船内局部位置</text>
+  <text x="460" y="829" class="muted">保留舱内物品和种植状态</text>
+  <path d="M791,791 H823" fill="none" stroke="#9bb0cb" stroke-width="2" marker-end="url(#arrowMuted)"/>
+  <rect x="836" y="740" width="404" height="103" rx="14" class="panel"/>
+  <text x="858" y="772" class="yellow" font-weight="700">3 / 迁移成功后，只结算一次冲击</text>
+  <text x="858" y="803">工具先承受，超出保护能力伤玩家</text>
+  <text x="858" y="829" class="muted">使用接触快照；缓冲与伤害参数待配</text>
+  <text x="40" y="876" class="foot">规划参考图 · 非已实现界面 · SPACE-004 / 005 / 006 / 007 / 014</text>
+  <text x="1240" y="876" class="foot" text-anchor="end">参考：NASA《Gravity &amp; Mechanics》</text>
+</svg>

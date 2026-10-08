@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="900" viewBox="0 0 1280 900" role="img" aria-labelledby="title desc">
+  <title id="title">04 / 同场景船内活动与坐标</title>
+  <desc id="desc">设计参考图。宇宙与移动飞船共用一个场景，固定设施随船，悬空角色与散落物保持独立惯性。宇宙坐标与船内本地格子分开维护，玩家、飞船与相机角度分别管理，出舱继承出口点速度。</desc>
+  <defs>
+    <marker id="blueArrow" markerWidth="9" markerHeight="9" refX="7" refY="4" orient="auto"><path d="M0 0L8 4L0 8" fill="none" stroke="#66c8ff" stroke-width="1.6"/></marker>
+    <marker id="greenArrow" markerWidth="9" markerHeight="9" refX="7" refY="4" orient="auto"><path d="M0 0L8 4L0 8" fill="none" stroke="#63d9ac" stroke-width="1.6"/></marker>
+    <marker id="yellowArrow" markerWidth="9" markerHeight="9" refX="7" refY="4" orient="auto"><path d="M0 0L8 4L0 8" fill="none" stroke="#ffd17a" stroke-width="1.6"/></marker>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M40 0H0V40" fill="none" stroke="#283b55" stroke-width="1"/></pattern>
+    <style>
+      text{font-family:'Microsoft YaHei','Noto Sans CJK SC',sans-serif;fill:#edf4ff;font-size:18px}
+      .title{font-size:32px;font-weight:700}.sub{fill:#9bb0cb}.label{font-size:20px;font-weight:600}.small{font-size:16px}.blue{fill:#66c8ff}.green{fill:#63d9ac}.yellow{fill:#ffd17a}.purple{fill:#a9a0ff}
+      .panel{fill:#121d31;stroke:#283b55;stroke-width:1.5}.line{fill:none;stroke-width:2}
+    </style>
+  </defs>
+  <rect width="1280" height="900" fill="#090f1e"/>
+  <text x="40" y="59" class="title">04 / 同场景船内活动与坐标</text>
+  <text x="40" y="94" class="sub">同一宇宙 Scene · 船体是移动的本地格子 · 设计参考，尚未实现</text>
+  <rect x="40" y="125" width="745" height="466" rx="16" class="panel"/>
+  <text x="62" y="160" class="label">直接通过舱门进出，船舱不另开 Scene</text>
+  <g fill="#9bb0cb" opacity=".7"><circle cx="98" cy="224" r="1.4"/><circle cx="671" cy="207" r="1.3"/><circle cx="728" cy="322" r="1.8"/><circle cx="118" cy="422" r="1.4"/><circle cx="241" cy="553" r="1.2"/><circle cx="621" cy="524" r="1.4"/><circle cx="488" cy="195" r="1.3"/><circle cx="754" cy="550" r="1.4"/></g>
+  <g transform="translate(375 350) rotate(-13)">
+    <rect x="-200" y="-100" width="400" height="200" rx="8" fill="#172a40" stroke="#66c8ff" stroke-width="3"/>
+    <rect x="-200" y="-100" width="400" height="200" fill="url(#grid)"/>
+    <path d="M-200-100H200V-30M200 30V100H-200Z" fill="none" stroke="#9bb0cb" stroke-width="9"/>
+    <path d="M-72-98V-18M-72 38V98" stroke="#9bb0cb" stroke-width="7"/>
+    <rect x="-175" y="-72" width="64" height="44" rx="5" fill="#233c4b" stroke="#63d9ac" stroke-width="2"/>
+    <path d="M-159-53H-125M-159-44H-140" stroke="#63d9ac" stroke-width="2"/>
+    <rect x="-48" y="48" width="56" height="36" rx="4" fill="#233c4b" stroke="#63d9ac" stroke-width="2"/>
+    <path d="M-33 62H-7" stroke="#63d9ac" stroke-width="3"/>
+    <path d="M-146-22V25H-25V52" fill="none" stroke="#a9a0ff" stroke-width="3"/>
+    <circle cx="-146" cy="-22" r="4" fill="#a9a0ff"/><circle cx="-25" cy="52" r="4" fill="#a9a0ff"/>
+    <path d="M0 0H95" class="line" stroke="#63d9ac" marker-end="url(#greenArrow)"/>
+    <path d="M0 0V-62" class="line" stroke="#63d9ac" marker-end="url(#greenArrow)"/>
+    <circle r="4" fill="#63d9ac"/><text x="103" y="7" class="green">x′</text><text x="7" y="-62" class="green">y′</text>
+    <path d="M202-30H231M202 30H231" stroke="#ffd17a" stroke-width="3"/>
+  </g>
+  <g transform="translate(443 344)">
+    <circle cy="-13" r="10" fill="#24354c" stroke="#ffd17a" stroke-width="2"/>
+    <path d="M-12 3Q0-5 12 3L14 25H-14Z" fill="#24354c" stroke="#ffd17a" stroke-width="2"/>
+    <path d="M17 5H67" class="line" stroke="#ffd17a" marker-end="url(#yellowArrow)"/>
+  </g>
+  <g transform="translate(518 399) rotate(22)"><rect x="-9" y="-9" width="18" height="18" rx="2" fill="#24354c" stroke="#ffd17a" stroke-width="2"/></g>
+  <path d="M528 400L558 423" class="line" stroke="#ffd17a" marker-end="url(#yellowArrow)"/>
+  <path d="M90 531H183M90 531V454" class="line" stroke="#66c8ff" marker-end="url(#blueArrow)"/>
+  <text x="190" y="538" class="blue">X</text><text x="81" y="445" class="blue">Y</text><text x="69" y="565" class="small sub">宇宙坐标</text>
+  <path d="M391 222H495" class="line" stroke="#66c8ff" marker-end="url(#blueArrow)"/>
+  <text x="245" y="220" class="blue">整船平移 + 旋转</text>
+  <path d="M525 230Q562 241 578 264" class="line" stroke="#66c8ff" marker-end="url(#blueArrow)"/>
+  <text x="63" y="506" class="green">固定舱壁与设备随船</text>
+  <path d="M263 490L292 437" fill="none" stroke="#63d9ac" stroke-width="1.5"/>
+  <text x="404" y="496" class="yellow">悬空玩家 / 散落物：独立惯性</text>
+  <text x="637" y="300" class="yellow">舱门</text><path d="M642 307L587 326" fill="none" stroke="#ffd17a" stroke-width="1.5"/>
+  <path d="M596 352H724" class="line" stroke="#ffd17a" stroke-dasharray="6 5" marker-end="url(#yellowArrow)"/>
+  <text x="620" y="385" class="small sub">连续进出</text>
+  <text x="279" y="557" class="small purple">本地线路连接不因船体移动而重建</text>
+  <rect x="807" y="125" width="433" height="271" rx="16" class="panel"/>
+  <text x="830" y="160" class="label">不同对象，不同承载规则</text>
+  <path d="M830 181H1217" stroke="#283b55"/>
+  <text x="830" y="214" class="green">固定设施</text><text x="970" y="214">本地位置固定</text><text x="970" y="243" class="sub">随船移动、旋转</text>
+  <text x="830" y="278" class="blue">有支撑角色</text><text x="970" y="278">坐席 / 扶手 / 支撑</text><text x="970" y="307" class="sub">按状态建立承载关系</text>
+  <text x="830" y="342" class="yellow">悬空物体</text><text x="970" y="342">独立运动与碰撞</text><text x="970" y="371" class="sub">不能全部强制挂为子节点</text>
+  <rect x="807" y="414" width="433" height="177" rx="16" class="panel"/>
+  <text x="830" y="451" class="label">三个角度分别维护</text>
+  <text x="830" y="487" class="yellow">玩家朝向 θp</text><text x="1030" y="487" class="blue">飞船角度 θs</text>
+  <text x="830" y="522" class="purple">相机角度 θc：表现与输入换算</text>
+  <text x="830" y="558" class="small sub">相机模式默认待定；UI 文字保持清晰可读。</text>
+  <rect x="40" y="611" width="650" height="201" rx="16" class="panel"/>
+  <text x="63" y="649" class="label">建造 / 点击：先换坐标，再查本地格</text>
+  <text x="63" y="686" class="blue">屏幕指向 → 相机换算 → 宇宙坐标 p</text>
+  <text x="63" y="721" class="green">船内坐标 p′ = R(−θs) × (p − 船体位置)</text>
+  <text x="63" y="756">ShipId + 本地格：吸附、占地、结构连通、端口</text>
+  <text x="63" y="789" class="small sub">同一宇宙 Scene 中，每艘船拥有独立的格子作用域。</text>
+  <rect x="711" y="611" width="529" height="201" rx="16" class="panel"/>
+  <text x="734" y="649" class="label">出舱：转换承载关系，继承出口速度</text>
+  <text x="734" y="686" class="yellow">v出舱 = v船体 + ω × r出口 + v相对</text>
+  <text x="734" y="721">平动速度 + 出口切向速度 + 相对出舱速度</text>
+  <text x="734" y="756" class="sub">脱离附着 / 支撑状态后，继续自由运动。</text>
+  <text x="734" y="789" class="small sub">速度项须在同一坐标系合成；相机不参与动力学。</text>
+  <path d="M40 834H1240" stroke="#283b55"/>
+  <text x="40" y="862" class="small sub">保存：稳定 ShipId · 本地结构 / 设施状态 · 船体运动 · 角色运动与承载状态</text>
+  <text x="40" y="887" class="small sub">对应待办：SPACE-009 / 011 / 013 / 022 / 023　｜　示意图中的线路不代表首轮必交扩展</text>
+</svg>

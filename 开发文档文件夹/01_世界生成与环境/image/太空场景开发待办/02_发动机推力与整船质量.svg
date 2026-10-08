@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="900" viewBox="0 0 1280 900" role="img" aria-labelledby="title desc">
+<title id="title">02 / 发动机推力、质心与整船质量</title><desc id="desc">朝向决定推力方向，安装位置决定力矩；同一推力作用于更重的船，响应更慢。</desc>
+<defs>
+<marker id="arrowBlue" markerWidth="14" markerHeight="14" refX="11" refY="7" orient="auto" markerUnits="userSpaceOnUse"><path d="M 0 1 L 12 7 L 0 13 Z" fill="#66c8ff"/></marker>
+<marker id="arrowGreen" markerWidth="14" markerHeight="14" refX="11" refY="7" orient="auto" markerUnits="userSpaceOnUse"><path d="M 0 1 L 12 7 L 0 13 Z" fill="#63d9ac"/></marker>
+<marker id="arrowGold" markerWidth="14" markerHeight="14" refX="11" refY="7" orient="auto" markerUnits="userSpaceOnUse"><path d="M 0 1 L 12 7 L 0 13 Z" fill="#ffd17a"/></marker>
+</defs>
+<rect width="1280" height="900" fill="#090f1e"/>
+<g font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif">
+<text x="44" y="58" font-size="32" fill="#edf4ff" font-weight="700" text-anchor="start">02 / 发动机推力、质心与整船质量</text>
+<text x="44" y="96" font-size="19" fill="#9bb0cb" font-weight="400" text-anchor="start">朝向决定推力方向，安装位置决定力矩；同一推力作用于更重的船，响应更慢。</text>
+<rect x="1038" y="29" width="198" height="39" rx="19" fill="#173329" stroke="#315b49" stroke-width="1.5"/>
+<text x="1137" y="55" font-size="16" fill="#63d9ac" font-weight="600" text-anchor="middle">首轮基础 · 设计示意</text>
+<rect x="40" y="130" width="580" height="382" rx="18" fill="#121d31" stroke="#283b55" stroke-width="1.5"/>
+<rect x="660" y="130" width="580" height="382" rx="18" fill="#121d31" stroke="#283b55" stroke-width="1.5"/>
+<text x="64" y="169" font-size="22" fill="#edf4ff" font-weight="600" text-anchor="start">① 推力作用线穿过质心</text>
+<text x="684" y="169" font-size="22" fill="#edf4ff" font-weight="600" text-anchor="start">② 偏置推力带来转向力矩</text>
+<g transform="translate(295 324) scale(1.1)"><path d="M -88 84 V -48 L -60 -88 H 60 L 88 -48 V 84 Z" fill="#20354c" stroke="#66c8ff" stroke-width="3"/><rect x="-69" y="-47" width="138" height="113" rx="7" fill="#172638" stroke="#476b83"/><path d="M -23 -47 V 66 M 23 -47 V 66 M -69 -10 H 69 M -69 28 H 69" stroke="#365168" stroke-width="1"/><rect x="-27" y="-39" width="54" height="27" rx="4" fill="#184f57" stroke="#63d9ac" stroke-width="2"/><rect x="-60" y="25" width="36" height="31" rx="5" fill="#3c3d38" stroke="#ffd17a"/><rect x="24" y="25" width="36" height="31" rx="5" fill="#2b3e54" stroke="#66c8ff"/></g>
+<rect x="270" y="416" width="50" height="22" rx="4" fill="#394855" stroke="#63d9ac" stroke-width="2"/>
+<line x1="295" y1="435" x2="295" y2="211" stroke="#63d9ac" stroke-width="5"  marker-end="url(#arrowGreen)"/>
+<circle cx="295" cy="324" r="7" fill="#ffd17a" stroke="#090f1e" stroke-width="2"/>
+<line x1="109" y1="425" x2="109" y2="358" stroke="#66c8ff" stroke-width="3"  marker-end="url(#arrowBlue)"/>
+<line x1="109" y1="425" x2="161" y2="425" stroke="#66c8ff" stroke-width="3"  marker-end="url(#arrowBlue)"/>
+<text x="89" y="348" font-size="17" fill="#9bb0cb" font-weight="400" text-anchor="start">船头 / +Y</text>
+<text x="147" y="452" font-size="17" fill="#9bb0cb" font-weight="400" text-anchor="start">+X</text>
+<text x="348" y="331" font-size="18" fill="#ffd17a" font-weight="400" text-anchor="start">质心 C</text>
+<text x="417" y="249" font-size="20" fill="#63d9ac" font-weight="500" text-anchor="start">F₁：前向推力</text>
+<text x="417" y="296" font-size="19" fill="#9bb0cb" font-weight="400" text-anchor="start">作用线过 C</text>
+<text x="417" y="350" font-size="31" fill="#63d9ac" font-weight="600" text-anchor="start">τ₁ = 0</text>
+<text x="64" y="489" font-size="18" fill="#9bb0cb" font-weight="400" text-anchor="start">位置在船尾，作用线仍可穿过质心：以平移为主。</text>
+<g transform="translate(884 324) scale(1.1)"><path d="M -88 84 V -48 L -60 -88 H 60 L 88 -48 V 84 Z" fill="#20354c" stroke="#66c8ff" stroke-width="3"/><rect x="-69" y="-47" width="138" height="113" rx="7" fill="#172638" stroke="#476b83"/><path d="M -23 -47 V 66 M 23 -47 V 66 M -69 -10 H 69 M -69 28 H 69" stroke="#365168" stroke-width="1"/><rect x="-27" y="-39" width="54" height="27" rx="4" fill="#184f57" stroke="#63d9ac" stroke-width="2"/><rect x="-60" y="25" width="36" height="31" rx="5" fill="#3c3d38" stroke="#ffd17a"/><rect x="24" y="25" width="36" height="31" rx="5" fill="#2b3e54" stroke="#66c8ff"/></g>
+<rect x="959" y="414" width="50" height="24" rx="4" fill="#394855" stroke="#ffd17a" stroke-width="2"/>
+<line x1="984" y1="430" x2="984" y2="217" stroke="#ffd17a" stroke-width="5"  marker-end="url(#arrowGold)"/>
+<line x1="884" y1="324" x2="984" y2="426" stroke="#9bb0cb" stroke-width="2" stroke-dasharray="7 6" />
+<circle cx="884" cy="324" r="7" fill="#ffd17a" stroke="#090f1e" stroke-width="2"/>
+<circle cx="984" cy="426" r="5" fill="#ffd17a" stroke="#090f1e" stroke-width="2"/>
+<path d="M 1037 324 A 153 153 0 0 0 884 185" fill="none" stroke="#ffd17a" stroke-width="3" marker-end="url(#arrowGold)"/>
+<text x="1035" y="454" font-size="22" fill="#ffd17a" font-weight="600" text-anchor="start">τ = r × F</text>
+<text x="912" y="368" font-size="19" fill="#9bb0cb" font-weight="400" text-anchor="start">r</text>
+<text x="1014" y="355" font-size="24" fill="#ffd17a" font-weight="600" text-anchor="start">F₂</text>
+<text x="1000" y="392" font-size="18" fill="#9bb0cb" font-weight="400" text-anchor="start">作用线</text>
+<text x="1000" y="415" font-size="18" fill="#9bb0cb" font-weight="400" text-anchor="start">偏离质心</text>
+<text x="684" y="489" font-size="18" fill="#9bb0cb" font-weight="400" text-anchor="start">平移和旋转可能同时发生，反向制动也需可用发动机。</text>
+<rect x="40" y="536" width="1200" height="108" rx="18" fill="#121d31" stroke="#283b55" stroke-width="1.5"/>
+<text x="64" y="571" font-size="21" fill="#edf4ff" font-weight="600" text-anchor="start">整船质量：五类全部计入，按当前船体归属统计一次</text>
+<rect x="64" y="587" width="169" height="36" rx="9" fill="#17283a" stroke="#38536b" stroke-width="1.5"/>
+<text x="148.5" y="612" font-size="18" fill="#66c8ff" font-weight="500" text-anchor="middle">舱体</text>
+<text x="244" y="613" font-size="20" fill="#9bb0cb" font-weight="500" text-anchor="middle">+</text>
+<rect x="256" y="587" width="169" height="36" rx="9" fill="#17283a" stroke="#38536b" stroke-width="1.5"/>
+<text x="340.5" y="612" font-size="18" fill="#66c8ff" font-weight="500" text-anchor="middle">设备自重</text>
+<text x="436" y="613" font-size="20" fill="#9bb0cb" font-weight="500" text-anchor="middle">+</text>
+<rect x="448" y="587" width="169" height="36" rx="9" fill="#17283a" stroke="#38536b" stroke-width="1.5"/>
+<text x="532.5" y="612" font-size="18" fill="#66c8ff" font-weight="500" text-anchor="middle">剩余燃料</text>
+<text x="628" y="613" font-size="20" fill="#9bb0cb" font-weight="500" text-anchor="middle">+</text>
+<rect x="640" y="587" width="169" height="36" rx="9" fill="#17283a" stroke="#38536b" stroke-width="1.5"/>
+<text x="724.5" y="612" font-size="18" fill="#66c8ff" font-weight="500" text-anchor="middle">货物</text>
+<text x="820" y="613" font-size="20" fill="#9bb0cb" font-weight="500" text-anchor="middle">+</text>
+<rect x="832" y="587" width="169" height="36" rx="9" fill="#17283a" stroke="#38536b" stroke-width="1.5"/>
+<text x="916.5" y="612" font-size="18" fill="#66c8ff" font-weight="500" text-anchor="middle">乘员</text>
+<text x="1058" y="598" font-size="18" fill="#ffd17a" font-weight="400" text-anchor="start">载荷改变</text>
+<text x="1058" y="623" font-size="18" fill="#ffd17a" font-weight="400" text-anchor="start">质量 / 质心 / I</text>
+<rect x="40" y="668" width="580" height="144" rx="18" fill="#121d31" stroke="#283b55" stroke-width="1.5"/>
+<rect x="660" y="668" width="580" height="144" rx="18" fill="#121d31" stroke="#283b55" stroke-width="1.5"/>
+<text x="64" y="705" font-size="21" fill="#edf4ff" font-weight="600" text-anchor="start">航行响应</text>
+<text x="64" y="743" font-size="22" fill="#66c8ff" font-weight="500" text-anchor="start">a = ΣF / M</text>
+<text x="298" y="743" font-size="22" fill="#66c8ff" font-weight="500" text-anchor="start">α = Σ(r × F) / I</text>
+<text x="64" y="780" font-size="18" fill="#9bb0cb" font-weight="400" text-anchor="start">W/S、A/D 请求推进；Q/E 请求转向，松开保留惯性。</text>
+<text x="684" y="705" font-size="20" fill="#edf4ff" font-weight="600" text-anchor="start">起飞推重比（忽略阻力的垂直起飞近似）</text>
+<text x="684" y="743" font-size="23" fill="#63d9ac" font-weight="500" text-anchor="start">TWR = F_lift / (M × g)</text>
+<text x="684" y="780" font-size="18" fill="#9bb0cb" font-weight="400" text-anchor="start">15000N、g=10：1000kg → 1.5；2000kg → 0.75。</text>
+<line x1="44" y1="838" x2="1236" y2="838" stroke="#283b55" stroke-width="3"  />
+<text x="44" y="873" font-size="16" fill="#9bb0cb" font-weight="400" text-anchor="start">SPACE-021 / 024 · 航行平面与升空轴分开；推力配置、姿态辅助和升空轴映射待定。</text>
+<text x="1236" y="873" font-size="16" fill="#9bb0cb" font-weight="500" text-anchor="end">FLATWORLD / 02</text>
+</g></svg>

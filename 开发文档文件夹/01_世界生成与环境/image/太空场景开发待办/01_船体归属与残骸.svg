@@ -1,0 +1,134 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="900" viewBox="0 0 1280 900" role="img" aria-labelledby="title desc">
+  <title id="title">01 / 船体归属与残骸</title>
+  <desc id="desc">以飞船控制台作为核心，在船体本地格子中确认结构连通部件。归属部件参与整船质量、发动机和设备汇总。结构分离的部分视为残骸，不自动成为可驾驶船，也不继续参与原船汇总。光纤连通不等于结构归属。连通算法、多个控制台和核心损毁规则仍待规划。</desc>
+  <defs>
+    <pattern id="grid" width="36" height="36" patternUnits="userSpaceOnUse" x="70" y="216">
+      <path d="M36 0H0V36" fill="none" stroke="#283b55" stroke-width="1"/>
+    </pattern>
+    <marker id="arrow" markerWidth="9" markerHeight="9" refX="7" refY="4" orient="auto" markerUnits="strokeWidth">
+      <path d="M0 0L8 4L0 8Z" fill="#9bb0cb"/>
+    </marker>
+    <marker id="greenArrow" markerWidth="9" markerHeight="9" refX="7" refY="4" orient="auto" markerUnits="strokeWidth">
+      <path d="M0 0L8 4L0 8Z" fill="#63d9ac"/>
+    </marker>
+  </defs>
+  <style>
+    text { font-family: "Microsoft YaHei", "Noto Sans CJK SC", sans-serif; fill: #edf4ff; font-size: 18px; }
+    .title { font-size: 32px; font-weight: 700; }
+    .head { font-size: 22px; font-weight: 700; }
+    .small { font-size: 16px; }
+    .muted { fill: #9bb0cb; }
+    .green { fill: #63d9ac; }
+    .blue { fill: #66c8ff; }
+    .yellow { fill: #ffd17a; }
+    .red { fill: #ff7f86; }
+    .panel { fill: #121d31; stroke: #283b55; stroke-width: 1.5; }
+    .device { fill: #17324a; stroke: #66c8ff; stroke-width: 2; }
+  </style>
+
+  <rect width="1280" height="900" fill="#090f1e"/>
+  <text class="title" x="36" y="53">01 / 船体归属与残骸</text>
+  <text class="muted" x="36" y="87">首轮：一个连通船体 · 控制台兼任核心 · 结构、设备与运动归属于同一 ShipId</text>
+
+  <rect class="panel" x="36" y="114" width="758" height="532" rx="16"/>
+  <text class="head" x="60" y="151">A. 船体本地格子 / 俯视示意</text>
+  <text class="muted" x="60" y="183">整船平移、旋转；安装部件保留本地坐标，舱门直接进出。</text>
+
+  <!-- 格子与部件尺寸只用于表达归属，不限定实际占地。 -->
+  <rect x="70" y="216" width="432" height="288" fill="#152d2e"/>
+  <rect x="70" y="216" width="432" height="288" fill="url(#grid)"/>
+  <rect x="70" y="216" width="432" height="288" fill="none" stroke="#63d9ac" stroke-width="7"/>
+  <text class="green small" x="84" y="243">舱壁 / 连通地板</text>
+
+  <!-- 左侧发动机固定于所属结构。 -->
+  <rect class="device" x="70" y="252" width="36" height="72" rx="5"/>
+  <path d="M77 264H99V300H77Z M77 300L72 315H104L99 300" fill="#274c63" stroke="#66c8ff" stroke-width="1.5"/>
+  <rect class="device" x="70" y="396" width="36" height="72" rx="5"/>
+  <path d="M77 408H99V444H77Z M77 444L72 459H104L99 444" fill="#274c63" stroke="#66c8ff" stroke-width="1.5"/>
+
+  <rect class="device" x="142" y="252" width="72" height="72" rx="7"/>
+  <path d="M153 269H203V291H153Z" fill="#274c63" stroke="#66c8ff" stroke-width="1.5"/>
+  <text x="178" y="314" text-anchor="middle">燃料箱</text>
+
+  <rect class="device" x="358" y="252" width="108" height="72" rx="7"/>
+  <path d="M371 266H453V287H371Z M399 266V287 M426 266V287" fill="none" stroke="#66c8ff" stroke-width="1.5"/>
+  <text x="412" y="314" text-anchor="middle">设备 / 货物</text>
+
+  <rect x="250" y="342" width="144" height="72" rx="8" fill="#164638" stroke="#63d9ac" stroke-width="3"/>
+  <path d="M266 355H378V376H266Z" fill="#0e2728" stroke="#63d9ac" stroke-width="1.5"/>
+  <path d="M280 361H301 M309 361H338 M348 362L359 369L369 361" fill="none" stroke="#63d9ac" stroke-width="2"/>
+  <text x="322" y="401" text-anchor="middle">控制台 = 核心</text>
+  <path d="M322 414V452" fill="none" stroke="#63d9ac" stroke-width="2" marker-end="url(#greenArrow)"/>
+  <text class="green" x="322" y="479" text-anchor="middle">ShipId：同一船体身份</text>
+
+  <circle cx="178" cy="405" r="12" fill="#ffd17a"/>
+  <path d="M162 436L168 421H188L195 436Z" fill="#ffd17a"/>
+  <text class="yellow small" x="178" y="460" text-anchor="middle">乘员</text>
+  <rect x="212" y="444" width="14" height="14" rx="2" fill="#ffd17a" transform="rotate(-20 219 451)"/>
+
+  <!-- 舱门开口表示直接进出，未建立独立船舱场景。 -->
+  <path d="M502 324V396" stroke="#152d2e" stroke-width="12"/>
+  <path d="M486 328H514 M486 392H514" stroke="#66c8ff" stroke-width="5"/>
+  <path d="M490 332V350 M490 374V388" stroke="#66c8ff" stroke-width="3"/>
+  <text class="blue" x="518" y="324">舱门</text>
+  <path d="M478 360H546" stroke="#9bb0cb" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <text class="red" x="568" y="236">结构分离部分</text>
+  <text class="muted small" x="568" y="263">示意拆除后的断开区域</text>
+  <rect x="574" y="286" width="144" height="108" rx="5" fill="#352130" stroke="#ff7f86" stroke-width="3"/>
+  <path d="M610 286V394 M646 286V394 M682 286V394 M574 322H718 M574 358H718" fill="none" stroke="#743d4f" stroke-width="1"/>
+  <rect x="614" y="326" width="64" height="28" rx="4" fill="#482939" stroke="#ff7f86" stroke-width="2"/>
+  <text class="red" x="646" y="379" text-anchor="middle">残骸</text>
+  <text class="red" x="556" y="427">不自动成为可驾驶船</text>
+  <text class="muted" x="556" y="458">退出原船质量汇总</text>
+  <text class="muted" x="556" y="489">退出原船推进与设备汇总</text>
+
+  <path d="M88 468V530H164" stroke="#66c8ff" stroke-width="1.5" fill="none"/>
+  <text class="blue" x="175" y="536">发动机、燃料箱与设备安装在所属结构上</text>
+  <rect x="60" y="563" width="710" height="60" rx="9" fill="#0d1727" stroke="#283b55"/>
+  <text class="green" x="76" y="588">结构连通 → 船体归属</text>
+  <text class="muted small" x="76" y="611">光纤仅传输信息，不能把分离结构或残骸并入原船。</text>
+
+  <rect class="panel" x="814" y="114" width="430" height="532" rx="16"/>
+  <text class="head" x="838" y="151">B. 归属与汇总流程</text>
+  <rect x="838" y="176" width="382" height="76" rx="9" fill="#164638" stroke="#63d9ac" stroke-width="2"/>
+  <text x="1029" y="207" text-anchor="middle">飞船控制台</text>
+  <text class="green" x="1029" y="236" text-anchor="middle">兼任核心 / 登记 ShipId</text>
+  <path d="M1029 252V276" stroke="#9bb0cb" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <rect x="838" y="284" width="382" height="80" rx="9" fill="#18352e" stroke="#63d9ac" stroke-width="2"/>
+  <text x="1029" y="316" text-anchor="middle">确定结构连通部件</text>
+  <text class="muted" x="1029" y="346" text-anchor="middle">船体结构 + 安装设备</text>
+  <path d="M1029 364V388" stroke="#9bb0cb" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <rect class="device" x="838" y="396" width="382" height="80" rx="9"/>
+  <text x="1029" y="428" text-anchor="middle">质量 / 质心 / 发动机 / 设备汇总</text>
+  <text class="muted" x="1029" y="458" text-anchor="middle">拆改船体时同步更新归属与能力</text>
+
+  <path d="M838 500H1220" stroke="#283b55"/>
+  <text class="head" x="838" y="532">程序组织参考</text>
+  <text x="838" y="563">根 Item / Module 管理船体能力</text>
+  <text class="muted" x="838" y="592">本地格子保存结构与设施数据</text>
+  <text class="muted small" x="838" y="621">不把完整地表生成系统复制进船体模块。</text>
+
+  <rect class="panel" x="36" y="666" width="758" height="166" rx="16"/>
+  <text class="head" x="60" y="702">C. 已确认边界与后续规划</text>
+  <text x="60" y="736">首轮只识别连通船体与残骸；断裂后独立飞行以后扩展。</text>
+  <text class="muted" x="60" y="769">待规划：格子连通算法、同一船体多个控制台、核心拆除或损毁。</text>
+  <text class="muted" x="60" y="802">残骸运动、回收与保存细则尚未确定，图中不表示其飞行规则。</text>
+
+  <rect class="panel" x="814" y="666" width="430" height="166" rx="16"/>
+  <text class="head" x="838" y="702">图例</text>
+  <rect x="839" y="722" width="18" height="18" fill="#63d9ac"/>
+  <text x="870" y="738">结构连通归属</text>
+  <rect x="1048" y="722" width="18" height="18" fill="#66c8ff"/>
+  <text x="1079" y="738">安装设备</text>
+  <circle cx="848" cy="772" r="9" fill="#ffd17a"/>
+  <text x="870" y="779">乘员 / 漂浮物</text>
+  <rect x="1048" y="763" width="18" height="18" fill="#ff7f86"/>
+  <text x="1079" y="779">分离残骸</text>
+  <text class="muted small" x="838" y="812">颜色表达角色，不代表游戏最终美术。</text>
+
+  <text class="muted small" x="36" y="872">对应 SPACE-020 / 022 / 025 · 格子与尺寸仅为示意</text>
+  <text class="muted small" x="1244" y="872" text-anchor="end">工程参考图 · 可编辑 SVG</text>
+</svg>
