@@ -16,6 +16,13 @@ namespace FlatWorld.Networking.Gameplay
         private INetworkSession subscribedSession;
         private bool initialized;
 
+        #region 面板能力状态
+
+        // 常驻控制器只报告当前场景中真实联机面板的状态。
+        public bool IsPanelOpen => panel != null && panel.IsOpen();
+
+        #endregion
+
         public void Initialize(FlatWorldGameNetworkManager manager)
         {
             if (manager == null)

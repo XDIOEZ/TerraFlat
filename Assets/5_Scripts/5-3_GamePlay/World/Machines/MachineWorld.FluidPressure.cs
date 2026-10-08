@@ -14,23 +14,6 @@ public static partial class MachineWorld
         MachineEntity pipe = fluidGraph?.PipeAt(probe.Cell);
         return pipe == null ? 0 : GetFluidInventory(pipe).GetPressureKPa(GetFluidVolumeLiters(pipe), GetFluidMinimumGasSpaceLiters(pipe));
     }
-    private static void UpdatePressureProbes()
-    {
-        foreach (MachineEntity node in nodes.Values)
-        {
-            string kind = node.Definition.Fluid?.Kind;
-            if (kind != "mechanical-probe" && kind != "electronic-probe" || !IsFluidActive(node)) continue;
-            FluidMachineState state = GetFluidState(node);
-            double pressure = GetPressureProbeReading(node);
-            bool connected = state.ProbeConnected;
-            if (connected && pressure > state.DisconnectPressureKPa) connected = false;
-            else if (!connected && pressure <= state.ReconnectPressureKPa) connected = true;
-            node.FluidProbeConnected = connected;
-            if (connected == state.ProbeConnected) continue;
-            state.ProbeConnected = connected; state.Status = connected ? "探针已接通" : "管压超限，探针已断开";
-            dirty = true; StateChanged(node); CellChanged?.Invoke(node.Cell);
-        }
-    }
     public static string DescribeAtmosphere()
     {
         AtmosphereState atmosphere = GetCurrentAtmosphere();
@@ -44,12 +27,7 @@ public static partial class MachineWorld
     private static float GetFluidElectricalDemand(MachineEntity node)
     {
         if (!IsFluidActive(node) || node.Definition.Fluid == null || GetFluidState(node).Ruptured) return 0;
-        FluidMachineDefinition definition = node.Definition.Fluid;
-        if (definition.Kind == "compressor") return GetFluidInventory(node).GasMoles > 0 ? 1 : 0;
-        if (definition.Kind == "liquid-pump") return GetFluidInventory(node).GetLiquidLiters() < definition.VolumeLiters - definition.MinimumGasSpaceLiters ? 1 : 0;
-        foreach (FluidMachineReactionDefinition reaction in definition.Reactions)
-            if (GetReactionInputExtent(node, reaction, 1) > 0 && GetReactionOutputExtent(node, reaction) > 0) return 1;
-        return 0;
+        return GetFluidDeviceBehavior(node).ElectricalDemand(node);
     }
     #endregion
 
@@ -120,7 +98,7 @@ public static partial class MachineWorld
 
     public static bool HandleFluidTankZeroHp(MachineEntity node)
     {
-        if (!GameNetwork.HasStateAuthority || node?.Definition.Fluid?.Kind != "tank" || !Contains(node)) return false;
+        if (!GameNetwork.HasStateAuthority || GetFluidDeviceBehavior(node)?.IsSharedStorage != true || !Contains(node)) return false;
         FluidMachineState state = GetFluidState(node);
         if (state.Ruptured) return true;
         if (node.State != null && node.State.Hp > 0) return false;

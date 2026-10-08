@@ -1,6 +1,7 @@
 // AI-Context: 世界 Item 与建筑的服务端权威协调器；客户端只能请求，GUID、放置校验、生成与广播均由服务端提交。
 using System;
 using System.Collections.Generic;
+using FlatWorld.Gameplay.Building;
 using Mirror;
 using UnityEngine;
 
@@ -1112,132 +1113,68 @@ namespace FlatWorld.Networking.Gameplay
                 Reason = "建造请求无效"
             };
 
-            Item buildingItem = null;
-            MachineEntity mechanicalNode = null;
             int buildingGuid = 0;
-            bool materialConsumed = false;
-            ItemData authoritativeSourceData = null;
-            ItemSlot authoritativeSourceSlot = null;
-            Player authoritativeSourcePlayer = null;
-            float authoritativeSourceAmount = 0f;
             try
             {
-                if (!TryValidateBuildingRequest(
-                        connection,
-                        request,
-                        out ItemData sourceData,
-                        out ItemSlot authoritativeSlot,
-                        out Player authoritativePlayer,
-                        out string reason))
+                if (!TryValidateBuildingRequest(connection, request, out ItemData sourceData,
+                        out ItemSlot sourceSlot, out Player actor, out string reason))
                     throw new InvalidOperationException(reason);
 
-                Vector3 position = NormalizeBuildingPosition(request.Position);
-                authoritativeSourceData = sourceData;
-                authoritativeSourceSlot = authoritativeSlot;
-                authoritativeSourcePlayer = authoritativePlayer;
-                authoritativeSourceAmount = sourceData.Stack.Amount;
-
-                if (!Mod_Building.TryCreatePlacementCandidateData(
-                        sourceData,
-                        position,
-                        out ItemData placedData,
-                        out bool restoredSnapshot,
-                        out reason))
+                Mod_HotBar hotBar = actor.itemMods.GetMod_ByID<Mod_HotBar>(ModText.Hotbar);
+                var placement = new BuildingPlacementRequest
                 {
+                    SourceData = sourceData,
+                    SourceInventory = hotBar.Data,
+                    SourceSlot = sourceSlot,
+                    Actor = actor,
+                    Position = NormalizeBuildingPosition(request.Position),
+                    AuthorityPosition = GetConnectionLogicalPosition(connection),
+                    MaximumDistance = CreativeInventoryState.IsEnabled(actor)
+                        ? float.PositiveInfinity : MaxBuildingRequestDistance,
+                    HorizontalMirrorX = request.HorizontalMirrorX,
+                    RotationQuarterTurns = request.RotationQuarterTurns,
+                    Extension = BuildingPlacementLifecycle.GetExtension(hotBar.CurentSelectItem),
+                    CandidatePrepared = data =>
+                    {
+                        buildingGuid = data.Guid;
+                        networkInstantiationsInProgress.Add(buildingGuid);
+                    },
+                    Publish = PublishBuildingPlacement
+                };
+                if (!BuildingPlacementService.TryPlace(placement, out BuildingPlacementResult result, out reason))
                     throw new InvalidOperationException(reason);
-                }
-
-                buildingGuid = placedData.Guid;
-
-                if (Mod_Building.SupportsHorizontalMirrorPlacement(sourceData) &&
-                    !Mod_Building.TrySetHorizontalMirrorPlacement(placedData, request.HorizontalMirrorX))
-                {
-                    throw new InvalidOperationException("建筑左右朝向数据无效");
-                }
-
-                if (MachineCatalog.Get(placedData.IDName) != null)
-                {
-                    MachineState state = MachineWorld.ReadMachineState(placedData);
-                    state.RotationQuarterTurns = MachineCatalog.Get(placedData.IDName).Rotatable
-                        ? request.RotationQuarterTurns & 3 : 0;
-                    MachineWorld.WriteMachineState(placedData, state);
-                    Mod_Building.SetInstalledDataState(placedData);
-                    // 联机创造距离只读取服务端玩家的真实背包状态。
-                    float maximumDistance = CreativeInventoryState.IsEnabled(authoritativePlayer)
-                        ? float.PositiveInfinity : MaxBuildingRequestDistance;
-                    if (!Mod_Building.ValidateMechanicalDataPlacement(placedData,
-                            GetConnectionLogicalPosition(connection), maximumDistance, out reason))
-                        throw new InvalidOperationException(reason);
-                    materialConsumed = true;
-                    response.RemainingAmount = ConsumeAuthoritativeBuildingMaterial(
-                        authoritativeSlot, authoritativePlayer);
-                    mechanicalNode = MachineWorld.Place(placedData);
-                    BroadcastMechanicalSnapshot(mechanicalNode);
-                    dirtyMechanicalNodes.Remove(mechanicalNode.Id);
-                    RuntimeGrassClearing.ClearAt(position);
-                    response.Accepted = true;
-                    response.Reason = string.Empty;
-                }
-                else
-                {
-                    networkInstantiationsInProgress.Add(buildingGuid);
-                    buildingItem = ItemMgr.Instance.InstantiateItem(
-                        placedData,
-                        position,
-                        placedData.transform.rotation,
-                        placedData.transform.scale);
-                    buildingItem.Load();
-
-                    Mod_Building building = buildingItem.itemMods?.GetMod_ByID<Mod_Building>(ModText.Building);
-                    if (building == null)
-                        throw new MissingComponentException($"{request.ItemId} 缺少建筑模块");
-
-                    if (!building.ValidateAuthoritativePlacement(GetConnectionLogicalPosition(connection), out reason,
-                            authoritativePlayer))
-                        throw new InvalidOperationException(reason);
-
-                    materialConsumed = true;
-                    response.RemainingAmount = ConsumeAuthoritativeBuildingMaterial(
-                        authoritativeSlot,
-                        authoritativePlayer);
-
-                    building.SetAsInstalled(initializeHealth: !restoredSnapshot);
-                    if (!PublishServerSpawn(buildingItem, position, position, 0.05f, false))
-                        throw new InvalidOperationException("服务器无法发布建筑快照");
-
-                    RuntimeGrassClearing.ClearAt(position);
-                    BuildingPlacementLifecycle.NotifyCommitted(buildingItem);
-                    response.Accepted = true;
-                    response.Reason = string.Empty;
-                }
+                response.RemainingAmount = result.RemainingAmount;
+                response.Accepted = true;
+                response.Reason = string.Empty;
             }
             catch (Exception exception)
             {
                 response.Reason = LimitReason(exception.Message);
-                if (materialConsumed)
-                {
-                    RestoreAuthoritativeBuildingMaterial(
-                        authoritativeSourceSlot,
-                        authoritativeSourceData,
-                        authoritativeSourceAmount,
-                        authoritativeSourcePlayer);
-                }
-
                 Debug.LogWarning($"[联机建造] 服务端拒绝 {request.ItemId}：{response.Reason}");
-                if (mechanicalNode != null) MachineWorld.Remove(mechanicalNode.Id);
-                if (buildingItem != null && ItemMgr.Instance != null)
-                {
-                    buildingItem.itemMods?.GetMod_ByID<Mod_Building>(ModText.Building)?.ReleasePlacementOccupancy();
-                    ItemMgr.Instance.DespawnItem(buildingItem, false);
-                }
             }
             finally
             {
-                if (buildingGuid != 0)
-                    networkInstantiationsInProgress.Remove(buildingGuid);
+                if (buildingGuid != 0) networkInstantiationsInProgress.Remove(buildingGuid);
             }
 
             connection?.Send(response);
+        }
+
+        // 网络层只发布权威结果，生成、扣料和回滚都由领域放置事务完成。
+        private bool PublishBuildingPlacement(BuildingPlacementResult result)
+        {
+            if (result.Machine != null)
+            {
+                BroadcastMechanicalSnapshot(result.Machine);
+                dirtyMechanicalNodes.Remove(result.Machine.Id);
+                return true;
+            }
+            if (result.Item != null)
+            {
+                Vector3 position = result.Item.transform.position;
+                return PublishServerSpawn(result.Item, position, position, 0.05f, false);
+            }
+            throw new InvalidOperationException("当前建筑后端尚未提供网络快照发布器");
         }
 
         private void OnClientBuildingPlaceResponse(NetworkBuildingPlaceResponse response)
@@ -1563,13 +1500,6 @@ namespace FlatWorld.Networking.Gameplay
 
             NetworkWorldPlayer networkPlayer = connection.identity.GetComponent<NetworkWorldPlayer>();
             authoritativePlayer = networkPlayer?.CorePlayer;
-            if (!CreativeInventoryState.IsEnabled(authoritativePlayer) &&
-                WorldTopologyRuntime.Distance(GetConnectionLogicalPosition(connection), request.Position) > MaxBuildingRequestDistance)
-            {
-                reason = "建筑超出建造距离";
-                return false;
-            }
-
             Mod_HotBar hotBar = authoritativePlayer?.itemMods?
                 .GetMod_ByID<Mod_HotBar>(ModText.Hotbar);
             if (hotBar?.Data?.itemSlots == null || hotBar.CurrentIndex < 0 ||
@@ -1598,40 +1528,6 @@ namespace FlatWorld.Networking.Gameplay
         }
 
         #endregion
-
-        private static float ConsumeAuthoritativeBuildingMaterial(ItemSlot slot, Player player)
-        {
-            if (slot?.itemData?.Stack == null || slot.itemData.Stack.Amount < 1f)
-                throw new InvalidOperationException("服务端材料已失效");
-
-            Mod_HotBar hotBar = player?.itemMods?.GetMod_ByID<Mod_HotBar>(ModText.Hotbar);
-            if (hotBar?.Data == null || !hotBar.Data.TryConsumeFromSlot(slot, 1, out ItemData consumedData))
-                throw new InvalidOperationException("服务端材料库存事务提交失败");
-
-            if (player != null)
-                player.Save();
-            return consumedData?.Stack == null ? 0f : Mathf.Max(0f, consumedData.Stack.Amount);
-        }
-
-        private static void RestoreAuthoritativeBuildingMaterial(
-            ItemSlot slot,
-            ItemData sourceData,
-            float sourceAmount,
-            Player player)
-        {
-            if (slot == null || sourceData?.Stack == null)
-                return;
-
-            Mod_HotBar hotBar = player?.itemMods?.GetMod_ByID<Mod_HotBar>(ModText.Hotbar);
-            if (hotBar?.Data == null ||
-                !hotBar.Data.TrySetSlotItemAmount(slot, sourceData, Mathf.Max(0f, sourceAmount)))
-            {
-                Debug.LogError("[联机建造] 服务端材料回滚失败：无法恢复快捷栏库存事务");
-                return;
-            }
-
-            player?.Save();
-        }
 
         private static uint NextNonZeroToken(ref uint token)
         {

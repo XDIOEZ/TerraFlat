@@ -20,7 +20,9 @@ public sealed class Mod_BodyPartTreatment : Module
     public string recoveryBuffPrefix = "";
     public static event Action<Mod_BodyPartTreatment, Item> OpenRequested;
     public override string CanonicalModuleId => "Mod_BodyPartTreatment";
-    public override ModuleTickMode TickMode => ModuleTickMode.Disabled;
+    public override ModuleTickMode TickMode => TreatmentSession?.IsRunning == true
+        ? ModuleTickMode.EveryFrame : ModuleTickMode.Disabled;
+    public BodyPartTreatmentSession TreatmentSession { get; private set; }
     public override ModuleData _Data
     {
         get => ModData;
@@ -45,6 +47,8 @@ public sealed class Mod_BodyPartTreatment : Module
     protected override void OnUnload()
     {
         if (boundItem != null) boundItem.OnAct -= Act;
+        TreatmentSession?.Cancel("医疗用品已失效");
+        TreatmentSession = null;
         boundItem = null;
         usingItem = false;
     }
@@ -79,8 +83,9 @@ public sealed class Mod_BodyPartTreatment : Module
         if (item != null && CanUse(item.Owner)) OpenRequested?.Invoke(this, item.Owner);
     }
 
-    public bool CanUse(Item consumer) => !usingItem && GameNetwork.HasStateAuthority &&
-        item != null && item.InHand && consumer != null && item.Owner == consumer &&
+    public bool CanUse(Item consumer) => !usingItem && IsRuntimeLoaded && GameNetwork.HasStateAuthority &&
+        item != null && !item.DestructionHandled && item.InHand &&
+        consumer != null && !consumer.DestructionHandled && item.Owner == consumer &&
         item.itemData?.Stack != null && item.itemData.Stack.Amount >= 1f &&
         consumer.itemMods.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp) is { Hp: > 0f };
 
@@ -106,8 +111,44 @@ public sealed class Mod_BodyPartTreatment : Module
         return true;
     }
 
-    /// <summary>引导完成后的原子入口。先预留恢复效果，再扣正式槽位；扣除失败撤销预留，不产生治疗。</summary>
-    public bool TryCompleteTreatment(Item consumer, BodyPartType targetPart)
+    #endregion
+
+    #region 领域治疗会话
+
+    public bool TryBeginTreatment(Item consumer, BodyPartType targetPart, out string reason)
+    {
+        reason = "正在治疗，请先取消当前治疗";
+        if (TreatmentSession?.IsRunning == true) return false;
+        var session = new BodyPartTreatmentSession(channelDurationSeconds, CanTreat, CommitTreatment);
+        if (!session.TryBegin(consumer, targetPart, out reason)) return false;
+        TreatmentSession = session;
+        if (item != null) item.MarkModuleScheduleDirty();
+        return true;
+    }
+
+    public void CancelTreatment(BodyPartTreatmentSession expectedSession = null)
+    {
+        if (TreatmentSession == null || expectedSession != null && TreatmentSession != expectedSession) return;
+        if (TreatmentSession.Cancel() && item != null) item.MarkModuleScheduleDirty();
+    }
+
+    public override void ModUpdate(float deltaTime)
+    {
+        BodyPartTreatmentSession session = TreatmentSession;
+        if (session == null) return;
+        try { if (session.IsRunning) session.Advance(deltaTime); }
+        finally
+        {
+            if (!session.IsRunning && item != null) item.MarkModuleScheduleDirty();
+        }
+    }
+
+    #endregion
+
+    #region 治疗完成事务
+
+    /// <summary>仅会话等待结束后提交；预留恢复效果，扣槽位失败时撤销预留。</summary>
+    private bool CommitTreatment(Item consumer, BodyPartType targetPart)
     {
         if (!CanTreat(consumer, targetPart, out _)) return false;
         Mod_DamageReceiver receiver = consumer.itemMods.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);

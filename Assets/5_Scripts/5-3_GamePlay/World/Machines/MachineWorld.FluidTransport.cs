@@ -12,8 +12,8 @@ public static partial class MachineWorld
         FluidMachineState sourceState = GetFluidState(edge.Source);
         if (sourceState.Ruptured || !string.IsNullOrEmpty(sourceState.RuptureBudgetId)) return;
         if (edge.Target != null && (GetFluidState(edge.Target).Ruptured || !string.IsNullOrEmpty(GetFluidState(edge.Target).RuptureBudgetId))) return;
-        if (edge.Source.Definition.Fluid.Kind == "gas-pump" && IsGasPumpWet(edge.Source))
-        { sourceState.Status = "气泵遇到液体"; return; }
+        if (!GetFluidDeviceBehavior(edge.Source).CanOutput(edge.Source, out string outputReason))
+        { sourceState.Status = outputReason ?? sourceState.Status; return; }
         FluidInventory source = GetFluidInventory(edge.Source, edge.SourcePort.Chamber);
         if (source.IsEmpty || !fluidThroughputRemaining.TryGetValue(source, out double budget) || budget <= 0) return;
         bool vertical = (edge.Direction & 1) == 1;
@@ -32,15 +32,13 @@ public static partial class MachineWorld
         if (state.OutletPhase != "both" && state.OutletPhase != (phase == FluidPhase.Gas ? "gas" : "liquid")) return false;
         if (phase == FluidPhase.Gas && source.GasMoles <= 0 || phase == FluidPhase.Liquid && source.LiquidMoles <= 0) return false;
         string reservationId = FluidEdgeReservationId(edge, phase);
-        if (edge.Source.Definition.Fluid.Kind == "selector")
-        {
-            if (phase != FluidPhase.Gas || string.IsNullOrEmpty(state.SelectedGasId)) return false;
-            string fluidId = source.GetReservation(reservationId)?.FluidId;
-            if (fluidId == null)
-                foreach (FluidComponentState component in source.State.Components)
-                    if (component.GasMoles > 0) { fluidId = component.FluidId; break; }
-            if (fluidId == null || string.Equals(state.SelectedGasId, fluidId, StringComparison.OrdinalIgnoreCase) != (edge.SourcePort.Id == "selected")) return false;
-        }
+        string candidateId = source.GetReservation(reservationId)?.FluidId;
+        if (candidateId == null)
+            foreach (FluidComponentState component in source.State.Components)
+                if ((phase == FluidPhase.Gas ? component.GasMoles : component.LiquidMoles) > 0)
+                { candidateId = component.FluidId; break; }
+        if (!GetFluidDeviceBehavior(edge.Source).CanRoute(edge.Source, edge.SourcePort, phase, candidateId, out string routeReason))
+            return string.IsNullOrEmpty(routeReason) ? false : BlockFluid(edge, routeReason);
         decimal maximum = phase == FluidPhase.Gas
             ? FluidUnits.StandardLitersToMol((decimal)edge.Source.Definition.Fluid.BatchStandardLiters) : FluidInventory.MaximumMoles;
         bool alreadyReserved = source.GetReservation(reservationId) != null;
@@ -71,12 +69,11 @@ public static partial class MachineWorld
             return BlockFluid(edge, "当前批次的相态不能从这个口输出");
         if (!MatchesFluid(edge.SourcePort, substance.Id) || edge.TargetPort != null && !MatchesFluid(edge.TargetPort, substance.Id))
             return BlockFluid(edge, "这个口不接收当前物质");
-        if (edge.Source.Definition.Fluid.Kind == "selector")
-        {
-            if (string.IsNullOrEmpty(state.SelectedGasId)) return BlockFluid(edge, "请先选择目标气体");
-            bool selected = string.Equals(state.SelectedGasId, substance.Id, StringComparison.OrdinalIgnoreCase);
-            if (selected != (edge.SourcePort.Id == "selected")) return false;
-        }
+        FluidDeviceBehavior behavior = GetFluidDeviceBehavior(edge.Source);
+        if (reservation.GasMoles > 0 && !behavior.CanRoute(edge.Source, edge.SourcePort, FluidPhase.Gas, substance.Id, out string gasReason))
+            return string.IsNullOrEmpty(gasReason) ? false : BlockFluid(edge, gasReason);
+        if (reservation.LiquidMoles > 0 && !behavior.CanRoute(edge.Source, edge.SourcePort, FluidPhase.Liquid, substance.Id, out string liquidReason))
+            return string.IsNullOrEmpty(liquidReason) ? false : BlockFluid(edge, liquidReason);
         if (!fluidStepStock.TryGetValue(source, out FluidInventoryState beginning)) return false;
         FluidComponentState stock = null;
         foreach (FluidComponentState component in beginning.Components)
@@ -94,7 +91,9 @@ public static partial class MachineWorld
         FluidBatch moved;
         if (edge.Environment)
         {
-            if (reservation.LiquidMoles > 0 && TryFindAdjacentVesselPort(edge.Source, edge.Direction, ContainerPortDirection.Input, out ILiquidTransferPort vessel))
+            bool industrialTarget = false;
+            if (reservation.LiquidMoles > 0 && TryFindAdjacentLiquidPort(edge.Source, edge.Direction,
+                ContainerPortDirection.Input, out ILiquidTransferPort vessel, out industrialTarget))
             {
                 if (reservation.GasMoles > 0 || edge.Source.Logic is not FluidMachineLogic logic) return BlockFluid(edge, "目标容器只接收液体");
                 FluidMachinePortDefinition output = edge.SourcePort;
@@ -106,7 +105,11 @@ public static partial class MachineWorld
                 moved = FluidInventory.CreateBatch(substance, 0, FluidUnits.ServingsToMol(substance, (decimal)result.LiquidServings),
                     source.GetTemperatureKelvin());
             }
-            else if (!EmitReservedFluid(edge, source, reservationId, maximum, out moved)) return BlockFluid(edge, "地表不能接收这份液体");
+            else
+            {
+                if (industrialTarget) return BlockFluid(edge, "工业管网接口未连通");
+                if (!EmitReservedFluid(edge, source, reservationId, maximum, out moved)) return BlockFluid(edge, "地表不能接收这份液体");
+            }
         }
         else
         {
@@ -168,13 +171,21 @@ public static partial class MachineWorld
         state.BlockedPorts[edge.SourcePort.Id] = reason; state.Status = reason;
         return false;
     }
-    private static bool TryFindAdjacentVesselPort(MachineEntity node, int direction, ContainerPortDirection required,
-        out ILiquidTransferPort port)
+    internal static bool TryFindAdjacentLiquidPort(MachineEntity node, int direction, ContainerPortDirection required,
+        out ILiquidTransferPort port, out bool industrialNeighbor)
     {
         port = null;
-        MachineEntity adjacent = GetAtCurrentWorld(graph.NormalizeCell(node.Cell + MechanicalNetworkGraph.Directions[direction]), 0);
-        if (adjacent?.Logic is not VesselLogic vessel) return false;
-        var declared = new List<IContainerPort>(); vessel.CollectContainerPorts(declared);
+        industrialNeighbor = false;
+        if (!GameNetwork.HasStateAuthority || node == null || !Contains(node) || direction < 0 || direction > 3) return false;
+        Vector2Int cell = graph.NormalizeCell(node.Cell + MechanicalNetworkGraph.Directions[direction]);
+        MachineEntity adjacent = GetAtCurrentWorld(cell, 0);
+        // 工业腔体和管段共用管网预算，不能经普通容器事务重复输出刚收到的液体。
+        if (adjacent?.Definition.Fluid != null || fluidGraph?.PipeAt(cell) != null)
+        { industrialNeighbor = true; return false; }
+        if (adjacent == null || !Contains(adjacent)) return false;
+        WakeForInteraction(adjacent);
+        if (adjacent.Logic is not IContainerPortProvider provider) return false;
+        var declared = new List<IContainerPort>(); provider.CollectContainerPorts(declared);
         foreach (IContainerPort candidate in declared)
             if (candidate is ILiquidTransferPort liquid && liquid.IsValid && (liquid.Configuration.Direction & required) != 0)
             { port = liquid; return true; }
@@ -197,7 +208,7 @@ public static partial class MachineWorld
     }
     #endregion
 
-    #region 显式环境排气与泵遇液停机
+    #region 显式环境排放
     public static bool VentFluidPipe(MachineEntity node)
     {
         if (!GameNetwork.HasStateAuthority || node?.Definition.Fluid == null || node.Definition.Layer != 2 || !Contains(node)) return false;
@@ -223,16 +234,6 @@ public static partial class MachineWorld
     internal static AtmosphereState GetCurrentAtmosphere()
         => AtmosphereService.TryGetForWorld(worldKey, out AtmosphereState atmosphere) ? atmosphere : null;
 
-    public static bool IsGasPumpWet(MachineEntity pump)
-    {
-        if (GetFluidInventory(pump).LiquidMoles > 0) return true;
-        if (WorldLiquidSourceResolver.TryResolve((Vector2)pump.Cell + Vector2.one * .5f, out _)) return true;
-        if (fluidGraph != null)
-            foreach (FluidNetworkGraph.Edge edge in fluidGraph.Edges)
-                if (ReferenceEquals(edge.Source, pump) && edge.Target != null && GetFluidInventory(edge.Target, edge.TargetPort.Chamber).LiquidMoles > 0)
-                    return true;
-        return false;
-    }
     #endregion
 }
 

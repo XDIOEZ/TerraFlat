@@ -251,6 +251,16 @@ public partial class Mod_Inventory : Module, IInventory, IInstanceUI, IInteracta
 
     #region IInstanceUI接口
 
+    // 查询接口操作的同一实际库存面板，不创建或恢复面板。
+    public bool IsPanelOpen
+    {
+        get
+        {
+            Inventory target = inventory;
+            return target != null && target.basePanel != null && target.basePanel.IsOpen();
+        }
+    }
+
     public void I_ShowPanel()
     {
         Inventory target = inventory;

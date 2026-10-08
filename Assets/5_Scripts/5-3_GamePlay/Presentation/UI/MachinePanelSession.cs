@@ -1,127 +1,66 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
-using FlatWorld.Networking;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
 public interface IMachinePanelSession : IDisposable
 {
+    #region 面板会话能力
+
     bool IsAlive { get; }
     bool IsOpen { get; }
     void Toggle(Item actor);
     void Close();
     void Refresh();
+
+    #endregion
 }
 
-/// <summary>复用正式工作台、熔炉和容器 Prefab；只持有绑定会话，不保存玩法进度。</summary>
-public sealed class MachinePanelSession : IMachinePanelSession
+/// <summary>通用机器面板生命周期和真实库存绑定；具体表现由独立会话扩展。</summary>
+public class MachinePanelSession : IMachinePanelSession
 {
     #region 面板绑定
-    private readonly MachineEntity entity;
-    private readonly MachineLogic logic;
     private readonly List<BasePanel> panels = new();
     private readonly List<(Inventory Inventory, BasePanel Panel)> inventoryPanels = new();
-    private readonly CraftingStationController workbenchController;
     private Button actionButton;
-    private Slider progress;
-    private Slider fuel;
-    private TMP_Text temperature;
-    private TMP_Text furnaceHint;
-    private Player actor;
-    private MortarInteractionView mortarView;
-    private CraftingOutputPreview firePreview;
-    private TMP_Text fireTemperature;
     private bool disposed;
+    protected MachineEntity Entity { get; }
+    protected MachineLogic Logic { get; }
+    protected Player Actor { get; private set; }
     public bool IsAlive => !disposed && panels.Count > 0 && panels[0] != null;
     public bool IsOpen => IsAlive && panels[0].IsOpen();
 
     [MethodImpl(MethodImplOptions.NoInlining)]
-    public static IMachinePanelSession Create(MachineEntity entity)
-    {
-        if (entity.Logic is VesselLogic vessel) return new VesselMachinePanelSession(vessel);
-        if (entity.Logic is FluidMachineLogic fluid) return new FluidMachinePanelSession(fluid);
-        if (entity.Logic is ManualProcessingLogic manual)
-            return new MechanicalPanelSession("UI_HandDrill", entity, manual.Processor,
-                actor => MachineWorld.RequestOperation(entity, "work", "", actor),
-                () => manual.Status, () => manual.ActionLabel, () => manual.CanAct);
-        if (entity.Logic is HandDrillLogic drill)
-            return new MechanicalPanelSession("UI_HandDrill", entity, drill.Processor,
-                actor => MachineWorld.RequestOperation(entity, "work", "", actor),
-                () => drill.Status, () => drill.ActionLabel, () => drill.CanAct);
-        return new MachinePanelSession(entity);
-    }
+    public static IMachinePanelSession Create(MachineEntity entity) => MachinePanelFactoryRegistry.Create(entity);
 
-    public MachinePanelSession(MachineEntity entity)
+    public MachinePanelSession(MachineEntity entity) : this(entity, bindDefaultInventories: true) { }
+
+    protected MachinePanelSession(MachineEntity entity, bool bindDefaultInventories)
     {
-        this.entity = entity ?? throw new ArgumentNullException(nameof(entity));
-        logic = entity.Logic ?? throw new InvalidOperationException("机器领域状态尚未恢复。");
+        Entity = entity ?? throw new ArgumentNullException(nameof(entity));
+        Logic = entity.Logic ?? throw new InvalidOperationException("机器领域状态尚未恢复。");
         try
         {
-            if (logic is WorkbenchLogic workbench)
+            if (bindDefaultInventories)
             {
-                BasePanel panel = CreatePanel(logic.PanelPrefab);
-                BindSlots(panel, workbench.Input, "输入");
-                BindSlots(panel, workbench.Output, "输出");
-                workbenchController = new CraftingStationController(panel, workbench.Input, workbench.Output,
-                    workbench.Processor.Capabilities, () => workbench.RequiredClicks, () => actor,
-                    authoritativeProcessor: workbench.Processor,
-                    selectRecipe: id => MachineWorld.RequestOperation(entity, "select", id, actor),
-                    performWork: () => MachineWorld.RequestOperation(entity, "work", "", actor));
-            }
-            else if (logic is FurnaceLogic furnace)
-            {
-                BasePanel panel = CreatePanel(logic.PanelPrefab);
-                BindSlots(panel, furnace.Input, "输入");
-                BindSlots(panel, furnace.Output, "输出");
-                BindSlots(panel, furnace.FuelInventory, "燃料");
-                actionButton = panel.GetButton("合成按钮");
-                if (actionButton == null) throw new InvalidOperationException("熔炉面板缺少合成按钮。");
-                actionButton.onClick.AddListener(Act);
-                progress = panel.GetSlider("熔炼进度条");
-                fuel = panel.GetSlider("燃料显示条");
-                temperature = panel.GetText("FWUI_FurnaceTemperatureValue");
-                furnaceHint = panel.GetText("FWUI_FooterHint");
-            }
-            else if (logic is MortarLogic mortar)
-            {
-                BasePanel panel = CreatePanel(logic.PanelPrefab);
-                mortarView = panel.GetComponentInChildren<MortarInteractionView>(true)
-                    ?? throw new InvalidOperationException("石臼正式面板缺少手势视图。");
-                mortarView.SyncSlots(mortar.Bowl);
-                mortarView.Struck += Strike;
-                inventoryPanels.Add((mortar.Bowl, panel));
-            }
-            else if (logic is FireDrillLogic fireDrill)
-            {
-                BasePanel panel = CreatePanel(logic.PanelPrefab);
-                BindSlots(panel, fireDrill.Heater.Input, "输入");
-                BindSlots(panel, fireDrill.Heater.Output, "输出");
-                actionButton = panel.GetButton("合成按钮")
-                    ?? throw new InvalidOperationException("取火面板缺少摩擦按钮。");
-                actionButton.onClick.AddListener(Act);
-                firePreview = CraftingOutputPreview.Attach(panel, fireDrill.Heater.Output.itemSlot_UI[0]);
-                fireTemperature = panel.GetText("FWUI_FooterHint");
-            }
-            else
-            {
-                foreach (Inventory inventory in logic.Inventories)
+                foreach (Inventory inventory in Logic.Inventories)
                 {
-                    BasePanel panel = CreatePanel(inventory.InventoryPanel_Prefab != null ? inventory.InventoryPanel_Prefab : logic.PanelPrefab);
+                    BasePanel panel = CreatePanel(inventory.InventoryPanel_Prefab != null ? inventory.InventoryPanel_Prefab : Logic.PanelPrefab);
+                    TrackInventory(inventory, panel);
                     inventory.basePanel = panel;
                     inventory.InitUI();
-                    inventoryPanels.Add((inventory, panel));
                 }
             }
-            logic.Changed += Refresh;
+            Logic.Changed += Refresh;
         }
         catch { Dispose(); throw; }
     }
 
-    private BasePanel CreatePanel(GameObject prefab)
+    protected BasePanel CreatePanel(GameObject prefab)
     {
-        if (prefab == null) throw new InvalidOperationException("机器正式面板缺失：" + entity.Definition.Id);
+        if (prefab == null) throw new InvalidOperationException("机器正式面板缺失：" + Entity.Definition.Id);
         BasePanel panel = UIManager.Instance.CreatePanelFromGameObject(prefab);
         panels.Add(panel);
         panel.InitClosed();
@@ -133,8 +72,9 @@ public sealed class MachinePanelSession : IMachinePanelSession
         return panel;
     }
 
-    private void BindSlots(BasePanel panel, Inventory inventory, string prefix)
+    protected void BindSlots(BasePanel panel, Inventory inventory, string prefix)
     {
+        TrackInventory(inventory, panel);
         inventory.itemSlot_UI.Clear();
         for (int i = 0; i < inventory.Data.itemSlots.Count; i++)
         {
@@ -144,7 +84,15 @@ public sealed class MachinePanelSession : IMachinePanelSession
             inventory.BindSlotUI(slot, i);
         }
         inventory.SyncData();
-        inventoryPanels.Add((inventory, panel));
+    }
+
+    // 各专属绑定器登记同一真实库存，关闭只解除交互引用。
+    protected void TrackInventory(Inventory inventory, BasePanel panel) => inventoryPanels.Add((inventory, panel));
+
+    protected void BindActionButton(Button button)
+    {
+        actionButton = button ?? throw new ArgumentNullException(nameof(button));
+        actionButton.onClick.AddListener(Act);
     }
     #endregion
 
@@ -153,15 +101,15 @@ public sealed class MachinePanelSession : IMachinePanelSession
     {
         if (!IsAlive) return;
         if (IsOpen) { Close(); return; }
-        actor = player as Player ?? player?.GetComponentInParent<Player>();
+        Actor = player as Player ?? player?.GetComponentInParent<Player>();
         Inventory hand = player?.GetComponentInChildren<Mod_Hand>()?.HandInventory;
-        if (actor == null || hand == null) throw new InvalidOperationException("机器交互缺少玩家或手部库存。");
-        MachineWorld.RequestOperation(entity, "begin-interaction", "", actor);
+        if (Actor == null || hand == null) throw new InvalidOperationException("机器交互缺少玩家或手部库存。");
+        MachineWorld.RequestOperation(Entity, "begin-interaction", "", Actor);
         foreach (BasePanel panel in panels)
         {
-            panel.GetComponent<BuildingPanelActions>()?.BindMechanical(entity);
+            panel.GetComponent<BuildingPanelActions>()?.BindMechanical(Entity);
             if (panel.TryGetText("窗口信息", out TextMeshProUGUI title))
-                title.text = entity.Definition.Content?.Definition.DisplayName ?? entity.Definition.Id;
+                title.text = Entity.Definition.Content?.Definition.DisplayName ?? Entity.Definition.Id;
             panel.Open();
         }
         foreach (var binding in inventoryPanels)
@@ -171,35 +119,22 @@ public sealed class MachinePanelSession : IMachinePanelSession
             binding.Inventory.RefreshUI();
         }
         Refresh();
-        mortarView?.ResetPresentation();
+        OnOpened();
     }
 
-    private void Act() => MachineWorld.RequestOperation(entity, "work", "", actor);
-    private void Strike()
-    {
-        if (MachineWorld.RequestOperation(entity, "work", "", actor)) mortarView?.PlayProcessingDust();
-    }
+    private void Act() => RequestWork();
+    protected bool RequestWork() => MachineWorld.RequestOperation(Entity, "work", "", Actor);
 
     public void Refresh()
     {
         if (!IsOpen) return;
-        if (logic is FurnaceLogic furnace)
-        {
-            if (progress != null) progress.value = furnace.Progress01;
-            if (fuel != null) fuel.value = furnace.FuelRatio;
-            if (temperature != null) temperature.text = furnace.Status;
-            if (furnaceHint != null) furnaceHint.text = furnace.GetProcessingHint();
-        }
-        if (logic is MortarLogic mortar) mortarView?.SyncSlots(mortar.Bowl);
-        if (logic is FireDrillLogic fireDrill && firePreview != null)
-        {
-            ItemData preview = fireDrill.Heater.PreviewOutput();
-            if (preview != null) firePreview.Show(preview, fireDrill.Progress01);
-            else firePreview.Clear();
-            if (fireTemperature != null) fireTemperature.text = fireDrill.Status;
-        }
-        if (actionButton != null) actionButton.interactable = logic.CanAct;
+        RefreshPresentation();
+        if (actionButton != null) actionButton.interactable = Logic.CanAct;
     }
+
+    protected virtual void RefreshPresentation() { }
+    protected virtual void OnOpened() { }
+    protected virtual void DisposePresentation() { }
 
     private void OnPanelClosed()
     {
@@ -216,7 +151,7 @@ public sealed class MachinePanelSession : IMachinePanelSession
             binding.Inventory.DefaultTarget_Inventory = null;
             binding.Inventory.SyncQuickTransferTarget(null);
         }
-        actor = null;
+        Actor = null;
     }
 
     public void Close()
@@ -230,11 +165,9 @@ public sealed class MachinePanelSession : IMachinePanelSession
         if (disposed) return;
         disposed = true;
         Close();
-        logic.Changed -= Refresh;
-        workbenchController?.Dispose();
+        Logic.Changed -= Refresh;
+        DisposePresentation();
         if (actionButton != null) actionButton.onClick.RemoveListener(Act);
-        if (mortarView != null) mortarView.Struck -= Strike;
-        firePreview?.Clear();
         foreach (var binding in inventoryPanels)
         {
             binding.Inventory.itemSlot_UI.Clear();
@@ -247,6 +180,8 @@ public sealed class MachinePanelSession : IMachinePanelSession
             UIManager.ExistingInstance?.DestroyPanel(panel);
         }
         panels.Clear();
+        inventoryPanels.Clear();
+        actionButton = null;
     }
     #endregion
 }

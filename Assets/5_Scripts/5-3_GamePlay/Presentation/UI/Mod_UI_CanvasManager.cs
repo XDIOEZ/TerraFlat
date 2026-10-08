@@ -349,6 +349,17 @@ public partial class Mod_UI_CanvasManager : Module, IInstanceUI
         return false;
     }
 
+    // 多面板能力以任意实际面板已打开作为当前开关状态。
+    bool IInstanceUI.IsPanelOpen
+    {
+        get
+        {
+            foreach (var pair in panelRegistry)
+                if (pair.Value != null && pair.Value.IsOpen()) return true;
+            return false;
+        }
+    }
+
     public void I_ShowPanel()
     {
         ShowAllPanels();
@@ -361,17 +372,7 @@ public partial class Mod_UI_CanvasManager : Module, IInstanceUI
 
     public void I_TogglePanel()
     {
-        bool hasOpenPanel = false;
-        foreach (var kv in panelRegistry)
-        {
-            if (kv.Value != null && kv.Value.IsOpen())
-            {
-                hasOpenPanel = true;
-                break;
-            }
-        }
-
-        if (hasOpenPanel)
+        if (((IInstanceUI)this).IsPanelOpen)
             HideAllPanels();
         else
             ShowAllPanels();

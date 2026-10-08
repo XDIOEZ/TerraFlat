@@ -230,6 +230,10 @@ public class Mod_Equipment : Module, IInventory, IInteractable, IInstanceUI
 
     public Inventory GetDefaultTargetInventory() => EquipmentInventory.DefaultTarget_Inventory;
 
+    // 读取当前装备面板状态，不使用存档中的显隐值。
+    public bool IsPanelOpen => EquipmentInventory != null && EquipmentInventory.basePanel != null &&
+        EquipmentInventory.basePanel.IsOpen();
+
     public void I_ShowPanel()
     {
         if (EquipmentInventory == null)

@@ -1,24 +1,12 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using static MachineWorld;
 
-public static partial class MachineWorld
+/// <summary>设备加工各自调用这里的事务，统一管网不识别设备种类。</summary>
+public static class FluidDeviceOperations
 {
     #region 流体设备实际动力与取料
-    public static void AdvanceFluidDevice(MachineEntity node, float seconds)
-    {
-        if (node.Definition.Fluid == null || !IsFluidActive(node) || GetFluidState(node).Ruptured) return;
-        switch (node.Definition.Fluid.Kind)
-        {
-            case "gas-pump": AdvanceGasPump(node, seconds); break;
-            case "liquid-pump": AdvanceLiquidPump(node, seconds); break;
-            case "compressor": AdvanceCompressor(node, seconds); break;
-            case "heat-exchanger": AdvanceHeatExchanger(node, seconds); break;
-            case "filter": case "distiller": case "electrolyzer": AdvanceFluidReaction(node, seconds); break;
-            case "engine": SettleFluidEngine(node, seconds); break;
-        }
-    }
-
     private static double AvailableDeviceWork(MachineEntity node, double seconds)
     {
         if (node.Definition.Electrical?.IsConsumer == true) return Math.Max(0, node.ElectricalSuppliedWatts) * seconds;
@@ -30,7 +18,7 @@ public static partial class MachineWorld
         => TemperatureMgr.Instance != null && TemperatureMgr.Instance.TryGetAmbientTemperature(node.Position, out float celsius)
             ? Math.Max(.001, celsius + 273.15) : FluidUnits.ReferenceTemperatureKelvin;
 
-    private static void AdvanceGasPump(MachineEntity node, float seconds)
+    public static void AdvanceGasPump(MachineEntity node, float seconds)
     {
         FluidMachineDefinition definition = node.Definition.Fluid;
         FluidMachineState state = GetFluidState(node);
@@ -57,10 +45,21 @@ public static partial class MachineWorld
         state.PumpProgress = Math.Max(0, state.PumpProgress - 1); state.PumpStoredWorkJoules = 0;
     }
 
+    public static bool IsGasPumpWet(MachineEntity pump)
+    {
+        if (GetFluidInventory(pump).LiquidMoles > 0) return true;
+        if (WorldLiquidSourceResolver.TryResolve((Vector2)pump.Cell + Vector2.one * .5f, out _)) return true;
+        if (FluidGraph != null)
+            foreach (FluidNetworkGraph.Edge edge in FluidGraph.Edges)
+                if (ReferenceEquals(edge.Source, pump) && edge.Target != null && GetFluidInventory(edge.Target, edge.TargetPort.Chamber).LiquidMoles > 0)
+                    return true;
+        return false;
+    }
+
     private static bool GasPumpCanOutput(MachineEntity node)
     {
-        if (fluidGraph == null) return false;
-        foreach (FluidNetworkGraph.Edge edge in fluidGraph.Edges)
+        if (FluidGraph == null) return false;
+        foreach (FluidNetworkGraph.Edge edge in FluidGraph.Edges)
         {
             if (!ReferenceEquals(edge.Source, node) || edge.Target == null || !IsFluidActive(edge.Target)) continue;
             FluidInventory target = GetFluidInventory(edge.Target, edge.TargetPort.Chamber);
@@ -71,14 +70,16 @@ public static partial class MachineWorld
         return false;
     }
 
-    private static void AdvanceLiquidPump(MachineEntity node, float seconds)
+    public static void AdvanceLiquidPump(MachineEntity node, float seconds)
     {
         FluidMachineState state = GetFluidState(node); FluidMachineDefinition definition = node.Definition.Fluid;
         double work = AvailableDeviceWork(node, seconds);
         if (work <= 0) { state.Status = "没有电"; return; }
         FluidInventory buffer = GetFluidInventory(node);
         int rotation = node.RotationQuarterTurns;
-        if (node.Logic is FluidMachineLogic logic && TryFindAdjacentVesselPort(node, (rotation + 2) & 3, ContainerPortDirection.Output, out ILiquidTransferPort vessel))
+        bool industrialInput = false;
+        if (node.Logic is FluidMachineLogic logic && TryFindAdjacentLiquidPort(node, (rotation + 2) & 3,
+            ContainerPortDirection.Output, out ILiquidTransferPort vessel, out industrialInput))
         {
             FluidMachinePortDefinition intakePort = Array.Find(definition.Ports, port => port.Mode == "input" && port.Phase != "gas");
             if (intakePort == null || !vessel.PeekLiquid(out LiquidTransferBatch preview) ||
@@ -86,13 +87,15 @@ public static partial class MachineWorld
             double vesselLiters = Math.Min(definition.ThroughputLitersPerSecond * seconds, work / definition.WorkJoulesPerStandardLiter);
             float vesselServings = (float)FluidUnits.MolToServings(fluid, FluidUnits.LiquidLitersToMol(fluid, (decimal)vesselLiters));
             var result = ContainerTransferService.TransferLiquid(vessel, new IndustrialLiquidTransferPort(logic, intakePort),
-                new ContainerTransferContext(node.Position, UnityEngine.SceneManagement.SceneManager.GetSceneByName(worldKey).handle,
+                new ContainerTransferContext(node.Position, UnityEngine.SceneManagement.SceneManager.GetSceneByName(WorldKey).handle,
                     ContainerAccessKind.Machine, "液体泵抽取容器"), vesselServings);
             state.Status = result.Success ? "正在从容器抽液体" : "液体入口被堵住了";
             if (result.Success) state.DissipatedHeatJoules += (double)FluidUnits.MolToLiquidLiters(fluid,
                 FluidUnits.ServingsToMol(fluid, (decimal)result.LiquidServings)) * definition.WorkJoulesPerStandardLiter;
             return;
         }
+        // 工业输入只由管网按本轮起始库存搬运，泵不能旁路抽取或继续抽同格地表。
+        if (industrialInput) { state.Status = "等待管网输入"; return; }
         Vector2 intake = (Vector2)(node.Cell + MechanicalNetworkGraph.Directions[(rotation + 2) & 3]) + Vector2.one * .5f;
         if (!WorldLiquidSourceResolver.TryResolve(intake, out WorldLiquidSourceTarget source) ||
             !FluidCatalog.Default.TryFromLiquidId(source.Liquid.Id, out FluidDefinition substance) || !substance.AllowIndustrialTransport)
@@ -119,7 +122,7 @@ public static partial class MachineWorld
         state.DissipatedHeatJoules += (double)FluidUnits.MolToLiquidLiters(substance, actualMoles) * definition.WorkJoulesPerStandardLiter;
     }
 
-    private static void AdvanceCompressor(MachineEntity node, float seconds)
+    public static void AdvanceCompressor(MachineEntity node, float seconds)
     {
         FluidMachineState state = GetFluidState(node); FluidMachineDefinition definition = node.Definition.Fluid;
         FluidInventory input = GetFluidInventory(node), output = GetFluidInventory(node, "output");
@@ -148,8 +151,7 @@ public static partial class MachineWorld
         ItemData item = inventory.Data.itemSlots[0].itemData;
         if (item == null || !FluidTankStorage.TryGet(item, out FluidInventory target, out FluidTankConfiguration configuration)) return;
         FluidInventory source = GetFluidInventory(node, "output");
-        if (!fluidStepStock.TryGetValue(source, out FluidInventoryState beginning) ||
-            !fluidThroughputRemaining.TryGetValue(source, out double budget) || budget <= 0) return;
+        if (!TryGetFluidTransferBudget(source, out FluidInventoryState beginning, out double budget) || budget <= 0) return;
         string port = node.Id + ":portable-fill";
         if (!source.TryReserve(port, FluidPhase.Gas, FluidUnits.StandardLitersToMol((decimal)node.Definition.Fluid.BatchStandardLiters), out FluidBatch batch)) return;
         FluidComponentState stock = beginning.Components.Find(component => component.FluidId == batch.FluidId);
@@ -162,7 +164,7 @@ public static partial class MachineWorld
         if (maximum <= 0) return;
         if (!source.TryTransfer(port, target, maximum, configuration.VolumeLiters, configuration.MinimumGasSpaceLiters, out FluidBatch moved)) return;
         stock.GasMoles -= moved.GasMoles;
-        fluidThroughputRemaining[source] = Math.Max(0, budget - (double)FluidUnits.MolToStandardLiters(moved.GasMoles));
+        SetFluidTransferBudget(source, Math.Max(0, budget - (double)FluidUnits.MolToStandardLiters(moved.GasMoles)));
         FluidTankStorage.Write(item, target); inventory.Data.NotifyItemStateChanged(item);
     }
     private static decimal LimitPortableFillByPressure(FluidInventory target, FluidBatch batch, decimal maximum, double pressure,
@@ -182,7 +184,7 @@ public static partial class MachineWorld
         return low;
     }
 
-    private static void AdvanceHeatExchanger(MachineEntity node, float seconds)
+    public static void AdvanceHeatExchanger(MachineEntity node, float seconds)
     {
         FluidInventory hot = GetFluidInventory(node, "hot"), cold = GetFluidInventory(node, "cold");
         if (hot.IsEmpty || cold.IsEmpty) { GetFluidState(node).Status = "请接入两侧实际流体"; return; }
@@ -200,7 +202,7 @@ public static partial class MachineWorld
     #endregion
 
     #region 多产物可靠反应与燃料机械能
-    private static double CalculateAvailableEnginePower(MachineEntity node, float seconds)
+    public static double CalculateAvailableEnginePower(MachineEntity node, float seconds)
     {
         FluidMachineState state = GetFluidState(node);
         if (state.Ruptured || !string.IsNullOrEmpty(state.RuptureBudgetId) || node.Definition.Fluid.Reactions.Length == 0) return 0;
@@ -210,12 +212,9 @@ public static partial class MachineWorld
         return extent <= 0 ? 0 : Math.Min(node.Definition.Torque * node.Definition.Rpm * MachineCatalog.Settings.WattsPerTorqueRpm,
             extent * reaction.ChemicalJoulesPerReaction * reaction.MechanicalEfficiency / seconds);
     }
-    private static float GetFluidEngineSourceFactor(MachineEntity node)
-        => fluidEnginePower.TryGetValue(node, out double watts)
-            ? (float)Math.Clamp(watts / (node.Definition.Torque * node.Definition.Rpm * MachineCatalog.Settings.WattsPerTorqueRpm), 0, 1) : 0;
-    private static void SettleFluidEngine(MachineEntity node, float seconds)
+    public static void SettleFluidEngine(MachineEntity node, float seconds)
     {
-        if (!fluidEnginePower.TryGetValue(node, out double maximum) || maximum <= 0 || node.SpeedRpm <= 0 || node.Network?.TorqueDemand <= 0)
+        if (!TryGetFluidMechanicalPower(node, out double maximum) || maximum <= 0 || node.SpeedRpm <= 0 || node.Network?.TorqueDemand <= 0)
         { GetFluidState(node).Status = "没有燃料、产物空间或有效负载"; return; }
         double suppliedTorque = Math.Floor(node.SourceTorque * node.SourceFactor / 10) * 10;
         double usedTorque = Math.Max(0, suppliedTorque - node.RemainingSourceTorque * node.TorqueRatio);
@@ -227,7 +226,7 @@ public static partial class MachineWorld
             throw new InvalidOperationException("气体发动机已供能但实际燃料预算无法提交。");
         GetFluidState(node).Status = "正在燃烧供能";
     }
-    private static void AdvanceFluidReaction(MachineEntity node, float seconds)
+    public static void AdvanceFluidReaction(MachineEntity node, float seconds)
     {
         double available = AvailableDeviceWork(node, seconds);
         FluidMachineState state = GetFluidState(node);
@@ -245,7 +244,13 @@ public static partial class MachineWorld
         }
         state.Status = "原料不适配或产物出口被堵住了";
     }
-    private static double GetReactionInputExtent(MachineEntity node, FluidMachineReactionDefinition reaction, double seconds)
+    public static float GetReactionDemand(MachineEntity node)
+    {
+        foreach (FluidMachineReactionDefinition reaction in node.Definition.Fluid.Reactions)
+            if (GetReactionInputExtent(node, reaction, 1) > 0 && GetReactionOutputExtent(node, reaction) > 0) return 1;
+        return 0;
+    }
+    public static double GetReactionInputExtent(MachineEntity node, FluidMachineReactionDefinition reaction, double seconds)
     {
         double result = reaction.MolesPerSecond * seconds;
         var required = new Dictionary<string, double>(StringComparer.Ordinal);
@@ -262,7 +267,7 @@ public static partial class MachineWorld
         }
         return result;
     }
-    private static double GetReactionOutputExtent(MachineEntity node, FluidMachineReactionDefinition reaction)
+    public static double GetReactionOutputExtent(MachineEntity node, FluidMachineReactionDefinition reaction)
     {
         double result = double.PositiveInfinity;
         var gasPerChamber = new Dictionary<string, double>(StringComparer.Ordinal);
@@ -374,24 +379,9 @@ public static partial class MachineWorld
         item = definition.CreateItemData();
         port = new InventoryItemTransferPort(logic.Residue, null, new ContainerPortConfiguration { Id = "residue" },
             () => Contains(node) && ReferenceEquals(node.Logic, logic), "machine:" + node.Id,
-            node.Position, UnityEngine.SceneManagement.SceneManager.GetSceneByName(worldKey).handle);
+            node.Position, UnityEngine.SceneManagement.SceneManager.GetSceneByName(WorldKey).handle);
         return true;
     }
 
-    public static float ConsumeFurnaceOxygen(MachineEntity furnace, float seconds, float fuelUnits)
-    {
-        if (fuelUnits <= 0 || fluidGraph == null) return 0;
-        foreach (MachineEntity node in nodes.Values)
-        {
-            if (node.Definition.Fluid?.Kind != "oxygen-burner" || !IsFluidActive(node) ||
-                graph.NormalizeCell(node.Cell + MechanicalNetworkGraph.Directions[node.RotationQuarterTurns]) != furnace.Cell) continue;
-            FluidInventory oxygen = GetFluidInventory(node);
-            decimal requested = FluidUnits.StandardLitersToMol((decimal)(fuelUnits * node.Definition.Fluid.OxygenServingsPerFuelUnit));
-            decimal actual = Math.Min(requested, oxygen.GetAvailableMoles(FluidIds.Oxygen, FluidPhase.Gas));
-            if (actual <= 0 || !oxygen.TryTakeExact(FluidIds.Oxygen, FluidPhase.Gas, actual, out _)) continue;
-            return (float)(node.Definition.Fluid.OxygenTemperatureBonus * (double)(actual / requested));
-        }
-        return 0;
-    }
     #endregion
 }

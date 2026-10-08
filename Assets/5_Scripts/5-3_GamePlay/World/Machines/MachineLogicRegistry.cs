@@ -12,6 +12,7 @@ public static class MachineLogicRegistry
         public string Id;
         public Type AuthoringType;
         public Func<MachineEntity, MachineLogic> Factory;
+        public FluidDeviceBehavior FluidBehavior;
         public Registration Previous;
         public bool Released;
     }
@@ -32,6 +33,8 @@ public static class MachineLogicRegistry
                 if (previous == null) registrations.Remove(current.Id);
                 else registrations[current.Id] = previous;
                 compiled.Clear();
+                FluidDeviceGeneration++;
+                MachineWorld.InvalidateFluidDeviceStrategies();
             }
             current = null;
         }
@@ -40,10 +43,11 @@ public static class MachineLogicRegistry
     private static readonly Dictionary<string, Registration> registrations = new(StringComparer.Ordinal);
     private static readonly Dictionary<string, (RuntimeItemDefinition Source, MachineDefinition Result)> compiled = new(StringComparer.Ordinal);
     private static bool initialized;
+    public static long FluidDeviceGeneration { get; private set; }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void Reset()
-    { registrations.Clear(); compiled.Clear(); initialized = false; }
+    { registrations.Clear(); compiled.Clear(); initialized = false; FluidDeviceGeneration++; MachineWorld.InvalidateFluidDeviceStrategies(); }
 
     private static void EnsureBuiltIns()
     {
@@ -60,15 +64,56 @@ public static class MachineLogicRegistry
         Add("mortar", typeof(Mod_Mortar), entity => new MortarLogic(entity));
         Add("vessel", typeof(Mod_WaterVessel), entity => new VesselLogic(entity));
         Add("fluid", null, entity => new FluidMachineLogic(entity));
+        AddFluidDevice("pipe", new FluidTransitBehavior());
+        AddFluidDevice("outlet", new FluidOutletBehavior());
+        AddFluidDevice("valve", new FluidValveBehavior());
+        AddFluidDevice("selector", new FluidSelectorBehavior());
+        AddFluidDevice("tank", new FluidStorageBehavior());
+        AddFluidDevice("gas-pump", new FluidGasPumpBehavior());
+        AddFluidDevice("liquid-pump", new FluidLiquidPumpBehavior());
+        AddFluidDevice("compressor", new FluidCompressorBehavior());
+        AddFluidDevice("heat-exchanger", new FluidHeatExchangerBehavior());
+        AddFluidDevice("filter", new FluidFilterBehavior());
+        AddFluidDevice("distiller", new FluidDistillerBehavior());
+        AddFluidDevice("electrolyzer", new FluidReactionBehavior());
+        AddFluidDevice("engine", new FluidEngineBehavior());
+        AddFluidDevice("mechanical-probe", new FluidPressureProbeBehavior(false));
+        AddFluidDevice("electronic-probe", new FluidPressureProbeBehavior(true));
+        AddFluidDevice("oxygen-burner", new FluidOxygenBurnerBehavior());
     }
 
     private static void Add(string id, Type authoring, Func<MachineEntity, MachineLogic> factory)
         => registrations.Add(id, new Registration { Id = id, AuthoringType = authoring, Factory = factory });
 
+    private static void AddFluidDevice(string kind, FluidDeviceBehavior behavior)
+        => registrations.Add("fluid-device:" + kind, new Registration
+        { Id = "fluid-device:" + kind, Factory = entity => new FluidMachineLogic(entity), FluidBehavior = behavior });
+
+    /// <summary>流体策略复用领域工厂的覆盖租约，目录检查只查询登记，不创建设备。</summary>
+    public static IDisposable RegisterFluidDevice(string kind, FluidDeviceBehavior behavior, bool replace = false)
+    {
+        if (string.IsNullOrWhiteSpace(kind) || behavior == null) throw new ArgumentException("流体设备策略登记无效。");
+        return RegisterCore("fluid-device:" + kind, entity => new FluidMachineLogic(entity), null, replace, behavior);
+    }
+
+    public static bool IsFluidDeviceRegistered(string kind)
+    { EnsureBuiltIns(); return registrations.TryGetValue("fluid-device:" + kind, out var entry) && entry.FluidBehavior != null; }
+
+    public static FluidDeviceBehavior GetFluidDeviceBehavior(string kind)
+    {
+        EnsureBuiltIns();
+        return registrations.TryGetValue("fluid-device:" + kind, out var entry) && entry.FluidBehavior != null
+            ? entry.FluidBehavior : throw new InvalidOperationException("流体设备策略未登记：" + kind);
+    }
+
     /// <summary>MOD 可以注册带自定义配置模块的机器，或仅通过 MachineDefinition.LogicId 选择领域工厂。</summary>
     [MethodImpl(MethodImplOptions.NoInlining)]
     public static IDisposable Register(string id, Func<MachineEntity, MachineLogic> factory,
         Type authoringType = null, bool replace = false)
+        => RegisterCore(id, factory, authoringType, replace, null);
+
+    private static IDisposable RegisterCore(string id, Func<MachineEntity, MachineLogic> factory,
+        Type authoringType, bool replace, FluidDeviceBehavior fluidBehavior)
     {
         EnsureBuiltIns();
         if (string.IsNullOrWhiteSpace(id) || factory == null ||
@@ -79,10 +124,13 @@ public static class MachineLogicRegistry
         var entry = new Registration
         {
             Id = id, Factory = factory, AuthoringType = authoringType ?? previous?.AuthoringType,
+            FluidBehavior = fluidBehavior,
             Previous = previous
         };
         registrations[id] = entry;
         compiled.Clear();
+        FluidDeviceGeneration++;
+        MachineWorld.InvalidateFluidDeviceStrategies();
         return new Lease(entry);
     }
 

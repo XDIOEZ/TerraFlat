@@ -17,7 +17,7 @@ public partial class FurnaceRuntimeState
 }
 
 /// <summary>炉温、燃料、熔炼与副产物内聚在托管领域对象中，图形与面板没有权威状态。</summary>
-public class FurnaceLogic : MachineLogic
+public class FurnaceLogic : MachineLogic, ICombustionSupportReceiver
 {
     #region 配置与状态
     public FurnaceRuntimeState State { get; private set; }
@@ -53,7 +53,7 @@ public class FurnaceLogic : MachineLogic
     private TemperatureMgr temperatureManager;
     private Player productionActor;
     private RuntimeItemReactionDefinition activeReaction;
-    private float oxygenHeatBonus;
+    private float combustionHeatBonus;
     #endregion
 
     #region 生命周期
@@ -204,7 +204,7 @@ public class FurnaceLogic : MachineLogic
     {
         float baseLimit = Data.MaxTemperature > 0f ? Mathf.Min(Data.MaxTemperature, Data.MaxTemperatureLimit) : Data.MaxTemperatureLimit;
         float bellowsBonus = Mathf.Clamp01(airflow) * MachineCatalog.Settings.BellowsHeatBonus;
-        return Mathf.Min(Data.MaxTemperatureLimit + bellowsBonus, baseLimit + bellowsBonus + oxygenHeatBonus);
+        return Mathf.Min(Data.MaxTemperatureLimit + bellowsBonus, baseLimit + bellowsBonus + combustionHeatBonus);
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
@@ -385,8 +385,9 @@ public class FurnaceLogic : MachineLogic
     [MethodImpl(MethodImplOptions.NoInlining)]
     public virtual void HeatAndProcess(float seconds)
     {
-        oxygenHeatBonus = MachineWorld.ConsumeFurnaceOxygen(Entity, seconds,
-            seconds * burnSpeed * GameDifficultyService.Current.Production.FuelConsumptionMultiplier);
+        combustionHeatBonus = 0;
+        float fuelUnits = Mathf.Min(Fuel.Fuel.x, Mathf.Max(0f, seconds * burnSpeed * GameDifficultyService.Current.Production.FuelConsumptionMultiplier));
+        MachineWorld.SupplyCombustionSupport(this, fuelUnits, seconds);
         bool hasInput = false;
         foreach (ItemSlot slot in Input.Data.itemSlots) hasInput |= slot?.itemData != null;
         float airflow = AcceptsAirflow ? Entity.Airflow : 0f;
@@ -406,6 +407,12 @@ public class FurnaceLogic : MachineLogic
         RefreshRecipe();
         Data.SmeltingSpeed = Mathf.Lerp(1f, Data.MaxSmeltingSpeed, Data.Temperature / maximum);
         Processor.Advance(Data.SmeltingSpeed * GameDifficultyService.Current.Production.SmeltingSpeedMultiplier * seconds, productionActor);
+    }
+
+    /// <summary>炉体只接收已结算的助燃效果，不查找设备或修改来源库存。</summary>
+    public void AcceptCombustionSupport(float temperatureBonus)
+    {
+        if (MachineDefinition.NonNegative(temperatureBonus)) combustionHeatBonus = temperatureBonus;
     }
 
     private void RefreshRecipe()

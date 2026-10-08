@@ -26,8 +26,35 @@ public static partial class MachineWorld
     private static readonly List<FluidTankGroup> fluidTankGroups = new();
     private static readonly Dictionary<FluidInventory, FluidInventoryState> fluidStepStock = new();
     private static readonly Dictionary<FluidInventory, double> fluidThroughputRemaining = new();
-    private static readonly Dictionary<MachineEntity, double> fluidEnginePower = new();
+    private static readonly Dictionary<MachineEntity, double> fluidMechanicalPower = new();
     private static readonly Dictionary<int, int> fluidAppearance = new();
+
+    internal static FluidNetworkGraph FluidGraph => fluidGraph;
+    public static FluidDeviceBehavior GetFluidDeviceBehavior(MachineEntity node)
+        => node?.Definition.Fluid == null ? null : MachineLogicRegistry.GetFluidDeviceBehavior(node.Definition.Fluid.Kind);
+    internal static Vector2Int NormalizeMachineCell(Vector2Int cell) => graph.NormalizeCell(cell);
+    internal static void InvalidateFluidDeviceStrategies()
+    { dirty = true; fluidAppearance.Clear(); InvalidateCombustionSupportSources(); }
+    internal static bool TryGetFluidTransferBudget(FluidInventory inventory, out FluidInventoryState stock, out double budget)
+    {
+        bool hasStock = fluidStepStock.TryGetValue(inventory, out stock);
+        return fluidThroughputRemaining.TryGetValue(inventory, out budget) && hasStock;
+    }
+    internal static void SetFluidTransferBudget(FluidInventory inventory, double remaining)
+        => fluidThroughputRemaining[inventory] = remaining;
+    internal static void ConsumeFluidStepStock(FluidInventory inventory, string fluidId, decimal gas, decimal liquid)
+    {
+        if (!fluidStepStock.TryGetValue(inventory, out FluidInventoryState stock)) return;
+        FluidComponentState component = stock.Components.Find(value => value.FluidId == fluidId);
+        if (component == null) return;
+        component.GasMoles = Math.Max(0, component.GasMoles - gas);
+        component.LiquidMoles = Math.Max(0, component.LiquidMoles - liquid);
+    }
+    internal static void SetFluidMechanicalPower(MachineEntity node, double watts) => fluidMechanicalPower[node] = watts;
+    internal static bool TryGetFluidMechanicalPower(MachineEntity node, out double watts) => fluidMechanicalPower.TryGetValue(node, out watts);
+    internal static float GetFluidMechanicalSourceFactor(MachineEntity node)
+        => fluidMechanicalPower.TryGetValue(node, out double watts)
+            ? (float)Math.Clamp(watts / (node.Definition.Torque * node.Definition.Rpm * MachineCatalog.Settings.WattsPerTorqueRpm), 0, 1) : 0;
 
     public static FluidMachineState GetFluidState(MachineEntity node)
     {
@@ -77,11 +104,12 @@ public static partial class MachineWorld
         var sorted = new List<MachineEntity>(nodes.Values); sorted.Sort((a, b) => a.Id.CompareTo(b.Id));
         var tankCells = new Dictionary<Vector2Int, MachineEntity>();
         foreach (MachineEntity node in sorted)
-            if (node.Definition.Fluid?.CombineAdjacent == true) tankCells.Add(graph.NormalizeCell(node.Cell), node);
+            if (node.Definition.Fluid?.CombineAdjacent == true && GetFluidDeviceBehavior(node).IsSharedStorage)
+                tankCells.Add(graph.NormalizeCell(node.Cell), node);
         var queue = new Queue<MachineEntity>();
         foreach (MachineEntity root in sorted)
         {
-            if (root.Definition.Fluid?.Kind != "tank" || fluidTankOwners.ContainsKey(root.Id)) continue;
+            if (GetFluidDeviceBehavior(root)?.IsSharedStorage != true || fluidTankOwners.ContainsKey(root.Id)) continue;
             var group = new FluidTankGroup(); fluidTankGroups.Add(group); fluidTankOwners.Add(root.Id, group); queue.Enqueue(root);
             while (queue.Count > 0)
             {
@@ -157,8 +185,11 @@ public static partial class MachineWorld
     private static void ResetFluidRuntime()
     {
         fluidGraph = null; fluidStates.Clear(); fluidInventories.Clear(); fluidTankOwners.Clear(); fluidTankGroups.Clear();
-        fluidStepStock.Clear(); fluidThroughputRemaining.Clear(); fluidEnginePower.Clear();
+        fluidStepStock.Clear(); fluidThroughputRemaining.Clear(); fluidMechanicalPower.Clear();
         fluidAppearance.Clear();
+        combustionSources.Clear();
+        combustionSourceSnapshot = Array.Empty<CombustionSupportLease>();
+        combustionSourcesDirty = true;
     }
 
     private static void ApplyFluidRemoteState(MachineEntity node, bool logicApplied)
@@ -202,20 +233,19 @@ public static partial class MachineWorld
             group.Active = false;
             foreach (MachineEntity member in group.Members) group.Active |= member.Active;
         }
-        fluidStepStock.Clear(); fluidThroughputRemaining.Clear(); fluidEnginePower.Clear();
+        fluidStepStock.Clear(); fluidThroughputRemaining.Clear(); fluidMechanicalPower.Clear();
         foreach (MachineEntity node in nodes.Values)
         {
             if (node.Definition.Fluid == null || !IsFluidActive(node)) continue;
             FluidMachineDefinition definition = node.Definition.Fluid;
             foreach (FluidMachinePortDefinition port in definition.Ports) RememberFluidBudget(node, port.Chamber, seconds);
             RememberFluidBudget(node, "main", seconds);
-            if (definition.Kind == "engine") fluidEnginePower[node] = CalculateAvailableEnginePower(node, seconds);
+            GetFluidDeviceBehavior(node).BeginStep(node, seconds);
         }
-        UpdatePressureProbes();
     }
 
-    private static bool IsFluidActive(MachineEntity node)
-        => fluidGraph != null && fluidGraph.NodeComponents.TryGetValue(node.Id, out var component) && component.Active;
+    public static bool IsFluidActive(MachineEntity node)
+        => node != null && fluidGraph != null && fluidGraph.NodeComponents.TryGetValue(node.Id, out var component) && component.Active;
     private static bool RequiresFluidSimulation(MechanicalNetwork network)
     {
         foreach (MachineEntity node in network.Nodes) if (IsFluidActive(node)) return true;
@@ -244,7 +274,7 @@ public static partial class MachineWorld
         }
         foreach (MachineEntity node in nodes.Values)
         {
-            if (node.Definition.Fluid == null || !IsFluidActive(node) || node.Definition.Fluid.Kind == "tank") continue;
+            if (node.Definition.Fluid == null || !IsFluidActive(node) || GetFluidDeviceBehavior(node).IsSharedStorage) continue;
             foreach (string chamber in GetFluidState(node).Chambers.Keys)
             {
                 FluidPhaseChangeResult phase = FluidThermodynamics.AdvancePhaseChange(GetFluidInventory(node, chamber), GetFluidVolumeLiters(node),
@@ -268,7 +298,7 @@ public static partial class MachineWorld
             fluidAppearance[node.Id] = appearance; NotifyVisualChanged(node);
         }
     }
-    private static void UpdateFluidPhaseWarning(MachineEntity node, string chamber, FluidPhaseChangeResult result)
+    internal static void UpdateFluidPhaseWarning(MachineEntity node, string chamber, FluidPhaseChangeResult result)
     {
         string warning = result.BlockedReason;
         if (result.UnsupportedFluidIds?.Count > 0)

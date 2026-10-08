@@ -25,6 +25,7 @@ public class Mod_PlayerModuleUIController : Module
     public Transform UIContainer; // UI容器根节点（用于挂接按钮列表预制体）
     public List<GameObject> UIButton_Instances = new List<GameObject>(); // 存储生成的UI按钮实例
     private readonly List<IInstanceUI> _uiModules = new List<IInstanceUI>(); // 缓存带UI实例能力的模块
+    private readonly List<(Toggle Toggle, IInstanceUI Target)> _moduleToggles = new();
     public GameObject ButtonListPrefab; // 按钮列表预制体（包含Content节点和GridLayoutGroup组件）
     private GameObject _buttonListInstance; // 运行时按钮列表实例
     private BasePanel _buttonListPanel; // 按钮列表面板实例
@@ -74,6 +75,7 @@ public class Mod_PlayerModuleUIController : Module
                 Destroy(instance);
         }
         UIButton_Instances.Clear();
+        _moduleToggles.Clear();
 
         if (_buttonListInstance != null)
         {
@@ -221,7 +223,9 @@ public class Mod_PlayerModuleUIController : Module
         if (_dropdownTemplateObject == null)
             return;
 
-        _dropdownTemplateObject.SetActive(!_dropdownTemplateObject.activeSelf);
+        bool showing = !_dropdownTemplateObject.activeSelf;
+        if (showing) RefreshModuleToggleStates();
+        _dropdownTemplateObject.SetActive(showing);
     }
 
     private void BindButton(GameObject buttonInstance, Module targetModule, IInstanceUI instanceUI)
@@ -243,6 +247,7 @@ public class Mod_PlayerModuleUIController : Module
             button.onClick.AddListener(() =>
             {
                 instanceUI.I_TogglePanel();
+                RefreshModuleToggleStates();
             });
         }
 
@@ -250,10 +255,12 @@ public class Mod_PlayerModuleUIController : Module
         if (toggle != null)
         {
             toggle.onValueChanged.RemoveAllListeners();
-            toggle.isOn = IsModuleUIOpen(targetModule);
+            toggle.SetIsOnWithoutNotify(instanceUI.IsPanelOpen);
+            _moduleToggles.Add((toggle, instanceUI));
             toggle.onValueChanged.AddListener(_ =>
             {
                 instanceUI.I_TogglePanel();
+                RefreshModuleToggleStates();
             });
         }
     }
@@ -265,19 +272,14 @@ public class Mod_PlayerModuleUIController : Module
         return module.name;
     }
 
-    private static bool IsModuleUIOpen(Module module)
+    private void RefreshModuleToggleStates()
     {
-        switch (module)
+        // 仅在列表展开和操作后读取接口状态，不轮询具体模块。
+        foreach (var binding in _moduleToggles)
         {
-            case Mod_Inventory modInventory:
-                return modInventory.inventory != null && modInventory.inventory.basePanel != null && modInventory.inventory.basePanel.IsOpen();
-            case Mod_Equipment modEquipment:
-                return modEquipment.EquipmentInventory != null &&
-                       modEquipment.EquipmentInventory.basePanel != null &&
-                       modEquipment.EquipmentInventory.basePanel.IsOpen();
+            if (binding.Toggle == null || binding.Target is UnityEngine.Object target && target == null) continue;
+            binding.Toggle.SetIsOnWithoutNotify(binding.Target.IsPanelOpen);
         }
-
-        return false;
     }
 
 #endregion
@@ -285,8 +287,14 @@ public class Mod_PlayerModuleUIController : Module
 
 public interface IInstanceUI
 {
+    #region 面板能力
+
+    // 状态由实现方读取真实面板，调用方不识别具体模块。
+    bool IsPanelOpen { get; }
     // 接口：用于标记模块会实例化并控制UI
     void I_ShowPanel();
     void I_ClosePanel();
     void I_TogglePanel();
+
+    #endregion
 }

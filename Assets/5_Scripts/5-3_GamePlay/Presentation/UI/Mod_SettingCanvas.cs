@@ -207,6 +207,11 @@ public class Mod_SettingCanvas : Module, IInstanceUI
 
     #endregion
 
+    #region 面板能力接口
+
+    // 状态查询只读取当前实例，不触发设置页初始化。
+    public bool IsPanelOpen => basePanel != null && basePanel.IsOpen();
+
     public void I_ShowPanel()
     {
         EnsurePanelCreated();
@@ -238,6 +243,8 @@ public class Mod_SettingCanvas : Module, IInstanceUI
 
         TogglePanel();
     }
+
+    #endregion
 
     #region 会话操作
 

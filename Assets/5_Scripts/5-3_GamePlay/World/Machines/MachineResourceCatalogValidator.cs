@@ -57,6 +57,8 @@ public sealed class MachineResourceCatalogValidator : IIncrementalResourceCatalo
     private static void ValidateFluidDefinition(GameRes resources, MachineDefinition definition, List<string> errors)
     {
         FluidMachineDefinition fluid = definition.Fluid;
+        if (!MachineLogicRegistry.IsFluidDeviceRegistered(fluid.Kind))
+            errors.Add("流体设备策略未登记：" + definition.Id + " -> " + fluid.Kind);
         GameObject panel = resources.GetPrefab(fluid.PanelId, false);
         if (panel == null || panel.GetComponent<MechanicalPanelView>() == null)
             errors.Add("工业正式面板或视图缺失：" + definition.Id + " -> " + fluid.PanelId);

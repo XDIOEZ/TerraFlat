@@ -45,6 +45,11 @@ public class Mod_DebugInfo : Module, IInstanceUI
         RefreshDebugPanel();
     }
 
+    #region 面板能力接口
+
+    // 调试面板同样报告真实开关状态。
+    public bool IsPanelOpen => DebugPanel != null && DebugPanel.IsOpen();
+
     public void I_ShowPanel()
     {
         if (DebugPanel == null)
@@ -68,6 +73,8 @@ public class Mod_DebugInfo : Module, IInstanceUI
 
         DebugPanel.Toggle();
     }
+
+    #endregion
 
     /// <summary>
     /// 根据 DebugInfo 刷新 UI 条目列表。

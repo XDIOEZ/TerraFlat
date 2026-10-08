@@ -379,95 +379,44 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
         }
 
         _placementPending = false;
-        if (!string.IsNullOrWhiteSpace(Data.TileBlockId))
+        Player actor = _placementActor;
+        _placementActor = null;
+        CurrentState = BuildingState.NotInstalled;
+        Save();
+        item.Save();
+        if (!TryGetSourceHotBarSlot(out Mod_HotBar hotBar, out ItemSlot sourceSlot))
         {
-            if (!TileBuildingSystem.TryPlace(
-                    placement,
-                    Data.TileBlockId,
-                    out TileBuildingCell placedCell,
-                    out reason))
-            {
-                _placementActor = null;
-                CurrentState = BuildingState.NotInstalled;
-                Save();
-                Debug.LogWarning($"[格子建筑安装] {reason}", item);
-                return;
-            }
-
-            Player actor = _placementActor;
-            string buildingId = ResolveBuildingPrefabId(item?.itemData?.IDName, Data);
-            _placementActor = null;
-            CurrentState = BuildingState.NotInstalled;
-            Save();
-            if (ConsumeOneSourceItem())
-            {
-                RuntimeGrassClearing.ClearAt(placement);
-                GameplayProgressEvents.PublishBuildingPlaced(actor, buildingId);
-                return;
-            }
-
-            TileBuildingSystem.TryRemove(placedCell, spawnDrop: false, out _);
-            Debug.LogWarning("[格子建筑安装] 消耗建造材料失败，已回滚地块", item);
+            Debug.LogWarning("[建筑安装] 无法解析召唤器所属真实快捷栏槽位", item);
             return;
         }
 
-        // 机械建筑直接提交权威数据节点；背包中的召唤器仍沿用通用建造入口。
-        if (MachineCatalog.Get(ResolveBuildingPrefabId(item?.itemData?.IDName, Data)) != null)
+        // 输入层只提交放置意图，创建、扣料和失败回滚由单机与联机共用的事务处理。
+        var request = new BuildingPlacementRequest
         {
-            InstallMechanicalData(placement);
-            return;
-        }
-
-        if (!TryCreateInstalledBuilding(placement, out Item building, out reason))
+            SourceData = sourceSlot.itemData,
+            SourceInventory = hotBar.Data,
+            SourceSlot = sourceSlot,
+            Actor = actor,
+            Position = placement,
+            AuthorityPosition = GetAuthorityPosition(),
+            MaximumDistance = GetMaxPlacementDistance(actor),
+            HorizontalMirrorX = _placementMirrorX,
+            Extension = BuildingPlacementLifecycle.GetExtension(item)
+        };
+        if (!BuildingPlacementService.TryPlace(request, out BuildingPlacementResult result, out reason))
         {
-            _placementActor = null;
-            CurrentState = BuildingState.NotInstalled;
-            Save();
+            RefreshSourceHotBarSlot(hotBar, sourceSlot);
             Debug.LogWarning($"[建筑安装] {reason}", item);
             return;
         }
 
-        CompletePlacementTransaction(building);
-    }
-
-    /// <summary>把机械召唤器转换为纯数据世界节点，成功扣料后才发布建造结果。</summary>
-    private void InstallMechanicalData(Vector3 placement)
-    {
-        MachineEntity node = null;
-        bool sourceConsumed = false;
-        Player actor = _placementActor;
-        try
+        RefreshSourceHotBarSlot(hotBar, sourceSlot);
+        if (result.RemainingAmount <= 0f)
         {
-            item.Save();
-            if (!TryCreatePlacementCandidateData(item.itemData, placement,
-                    out ItemData placedData, out _, out string reason))
-                throw new InvalidOperationException(reason);
-            BuildingPlacementLifecycle.GetExtension(item)?.PreparePlacedData(placedData);
-            SetInstalledDataState(placedData);
-            node = MachineWorld.Place(placedData);
-            CurrentState = BuildingState.NotInstalled;
-            Save();
-            if (!ConsumeOneSourceItem())
-                throw new InvalidOperationException("消耗机械建造材料失败");
-            sourceConsumed = true;
-
-            RuntimeGrassClearing.ClearAt(placement);
-            GameplayProgressEvents.PublishBuildingPlaced(actor, placedData.IDName);
+            CleanupGhost();
+            hotBar.RuntimeInventory.SyncHeldItemImmediately();
         }
-        catch (Exception exception)
-        {
-            if (node != null && !sourceConsumed) MachineWorld.Remove(node.Id);
-            Debug.LogWarning("[机械安装] " + exception.Message, item);
-        }
-        finally
-        {
-            _placementActor = null;
-            if (item != null && !item.DestructionHandled)
-            {
-                CurrentState = BuildingState.NotInstalled;
-                Save();
-            }
-        }
+        else hotBar.NotifyOwnerNetworkStateChanged();
     }
 
     /// <summary>纯数据建筑沿用现有角色和状态语义，不创建 Mod_Building 实例。</summary>
@@ -520,7 +469,8 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
         CurrentState = BuildingState.NotInstalled;
         Save();
         ApplySourceAmount(authoritativeRemainingAmount);
-        GameplayProgressEvents.PublishBuildingPlaced(actor, buildingId);
+        if (!GameNetwork.HasStateAuthority)
+            GameplayProgressEvents.PublishBuildingPlaced(actor, buildingId);
     }
 
     public void RejectNetworkPlacement(string reason)
@@ -534,52 +484,6 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
         Save();
         if (!string.IsNullOrWhiteSpace(reason))
             Debug.LogWarning($"[联机建造] 放置被拒绝：{reason}", item);
-    }
-
-    public bool TryCreateInstalledBuilding(Vector3 position, out Item building, out string reason)
-    {
-        building = null;
-        reason = null;
-        if (ItemMgr.Instance == null || item?.itemData?.Stack == null || item.itemData.Stack.Amount < 1f)
-        {
-            reason = "召唤器不足或物品管理器尚未就绪";
-            return false;
-        }
-
-        item.Save();
-        if (!TryCreatePlacementCandidateData(item.itemData, position, out ItemData placedData,
-                out bool restoredSnapshot, out reason))
-        {
-            return false;
-        }
-
-        try
-        {
-            if (!TrySetHorizontalMirrorPlacement(placedData, _placementMirrorX))
-                throw new InvalidOperationException("建筑候选数据缺少建筑模块");
-            BuildingPlacementLifecycle.GetExtension(item)?.PreparePlacedData(placedData);
-            building = ItemMgr.Instance.InstantiateItem(
-                placedData,
-                placedData.transform.position,
-                placedData.transform.rotation,
-                placedData.transform.scale);
-            building.Load();
-
-            Mod_Building module = building.itemMods?.GetMod_ByID<Mod_Building>(ModText.Building);
-            if (module == null)
-                throw new MissingComponentException($"{building.name} 缺少建筑模块");
-
-            module.SetAsInstalled(initializeHealth: !restoredSnapshot);
-            return true;
-        }
-        catch (Exception exception)
-        {
-            reason = exception.Message;
-            if (building != null && ItemMgr.Instance != null)
-                ItemMgr.Instance.DespawnItem(building, false);
-            building = null;
-            return false;
-        }
     }
 
     /// <summary>只构造候选数据。联机服务端可先实例化、校验位置，再提交安装。</summary>
@@ -1148,65 +1052,6 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
         }
     }
 
-    private void CompletePlacementTransaction(Item building)
-    {
-        if (building == null)
-        {
-            _placementActor = null;
-            CurrentState = BuildingState.NotInstalled;
-            Save();
-            return;
-        }
-
-        CurrentState = BuildingState.NotInstalled;
-        Save();
-        if (ConsumeOneSourceItem())
-        {
-            Mod_Building placedModule = building.itemMods?.GetMod_ByID<Mod_Building>(ModText.Building);
-            if (placedModule != null)
-                foreach (Vector2Int cell in placedModule.GetFootprintCells(GetPlacementCell(building.transform.position)))
-                    RuntimeGrassClearing.ClearAt(new Vector3(cell.x + 0.5f, cell.y + 0.5f));
-            BuildingPlacementLifecycle.NotifyCommitted(building);
-            GameplayProgressEvents.PublishBuildingPlaced(
-                _placementActor,
-                building.itemData?.IDName);
-            _placementActor = null;
-            return;
-        }
-
-        _placementActor = null;
-
-        building.itemMods?.GetMod_ByID<Mod_Building>(ModText.Building)?.ReleasePlacementOccupancy();
-        ItemMgr.Instance?.DespawnItem(building, false);
-    }
-
-    private bool ConsumeOneSourceItem()
-    {
-        if (item?.itemData?.Stack == null || item.itemData.Stack.Amount < 1f)
-            return false;
-
-        if (!TryGetSourceHotBarSlot(out Mod_HotBar hotBar, out ItemSlot sourceSlot) ||
-            !hotBar.Data.TryConsumeFromSlot(sourceSlot, 1, out ItemData consumedData))
-        {
-            return false;
-        }
-
-        RefreshSourceHotBarSlot(hotBar, sourceSlot);
-
-        bool depleted = consumedData?.Stack == null || consumedData.Stack.Amount <= 0f;
-        if (depleted)
-        {
-            CleanupGhost();
-            hotBar.RuntimeInventory.SyncHeldItemImmediately();
-        }
-        else
-        {
-            hotBar.NotifyOwnerNetworkStateChanged();
-        }
-
-        return true;
-    }
-
     private Player ResolvePlacementActor()
     {
         Item owner = item?.Owner;
@@ -1324,6 +1169,31 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
                 !CheckTilePenalties(cell, requiredGroundSupport, out reason))
                 return false;
         }
+        return true;
+    }
+
+    /// <summary>格子后端和预览共用承重及占格规则，不需要生成临时 Item。</summary>
+    public static bool ValidateTileDataPlacement(ItemData source, Vector3 position, out string reason)
+    {
+        if (!TryReadBuildingData(source, out _, out Building_Data state) ||
+            string.IsNullOrWhiteSpace(state.TileBlockId))
+        {
+            reason = "材料缺少格子建筑定义";
+            return false;
+        }
+        if (!TileBuildingSystem.CanPlace(position, state.TileBlockId, out reason)) return false;
+        Vector2Int anchor = GetPlacementCell(position);
+        int support = GetRequiredGroundSupport(source.IDName);
+        if (TileBuildingSystem.IsGroundPlacement(state.TileBlockId))
+            return CheckGroundLoadCapacity(anchor, support, out reason);
+        for (int y = 0; y < Mathf.Clamp(state.FootprintHeight, 1, 8); y++)
+            for (int x = 0; x < Mathf.Clamp(state.FootprintWidth, 1, 8); x++)
+            {
+                Vector2Int cell = WorldTopologyRuntime.NormalizeCell(anchor + new Vector2Int(x, y));
+                if (!BuildingOccupancyRegistry.CanPlace(cell, null, out reason) ||
+                    !CheckTilePenalties(cell, support, out reason)) return false;
+            }
+        reason = null;
         return true;
     }
 
@@ -2231,6 +2101,14 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
         for (int y = 0; y < height; y++)
             for (int x = 0; x < width; x++)
                 yield return WorldTopologyRuntime.NormalizeCell(new Vector2Int(anchorCell.x + x, anchorCell.y + y));
+    }
+
+    /// <summary>成功安装后按完整占地清草，单机和联机共用。</summary>
+    internal void ClearPlacementGrass()
+    {
+        if (item == null) return;
+        foreach (Vector2Int cell in GetFootprintCells(GetPlacementCell(item.transform.position)))
+            RuntimeGrassClearing.ClearAt(new Vector3(cell.x + 0.5f, cell.y + 0.5f));
     }
 
     /// <summary>吸附后的格心是建筑占地的左下锚点。</summary>

@@ -282,23 +282,21 @@ public static partial class TileBuildingSystem
                 return false;
             }
 
-            if (!terrain.TrySetBlockingTile(runtimeTile.LocalCell.x, runtimeTile.LocalCell.y,
-                    runtimeTileId))
-            {
-                reason = $"地块 {cell} 使用了不支持运行时建筑的扩展地块堆栈";
-                return false;
-            }
-
             if (!chunkManager.TryGetChunkRuntime(runtimeTile.Address, out RuntimeChunk runtimeChunk))
             {
-                terrain.TryRemoveBlockingTile(runtimeTile.LocalCell.x, runtimeTile.LocalCell.y,
-                    runtimeTileId);
                 reason = $"地块 {cell} 所在新区块已失效";
                 return false;
             }
 
+            // 写地形会同步通知观察者，先提供撤销位置才能接住写入后的异常。
             placedCell = new TileBuildingCell(runtimeChunk, runtimeTile.WorldCell,
                 runtimeTile.LocalCell, runtimeTileId, tileBlockId);
+            if (!terrain.TrySetBlockingTile(runtimeTile.LocalCell.x, runtimeTile.LocalCell.y, runtimeTileId))
+            {
+                placedCell = default;
+                reason = $"地块 {cell} 使用了不支持运行时建筑的扩展地块堆栈";
+                return false;
+            }
             ResetRuntimeDamage(terrain, runtimeTile.LocalCell);
             SaveDataMgr.Instance?.RecordRuntimeTerrainChange(placedCell);
             CellPlaced?.Invoke(placedCell);
@@ -326,9 +324,9 @@ public static partial class TileBuildingSystem
         if (profile?.Damageable == true)
             tile = TileData_CellBuilding.FromTile(tile, Mathf.Max(1f, profile.MaxHealth));
 
+        placedCell = new TileBuildingCell(map, cell);
         map.PushTile(cell, tile);
         RefreshBlockingState(map, cell);
-        placedCell = new TileBuildingCell(map, cell);
         CellPlaced?.Invoke(placedCell);
         return true;
     }

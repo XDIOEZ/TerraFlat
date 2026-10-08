@@ -96,6 +96,9 @@ description: "Use when: 定位或修改 FlatWorld 的 UIManager、BasePanel、�
 
 ## 架构与运行时约束
 
+- 机器专属面板按稳定 `LogicId` 向 `MachinePanelFactoryRegistry` 注册并持有租约；通用会话只管理面板生命周期、库存绑定与权威请求，专属控件由具体会话负责，未注册玩法保留通用库存表现。
+- `IInstanceUI.IsPanelOpen` 必须读取真实面板状态；通用模块列表只通过接口同步开关，创建、展开和操作后刷新，不识别具体模块、不逐帧轮询。
+
 - 快捷栏选中外观由 `Common/Controls/UI_SelectBox.prefab` 持有，`Inventory_HotBar.SelectBoxPrefab` 在玩家和热栏模块 Prefab 中引用它；`UI_HotBar.prefab` 只承载槽位与栏位布局。修改选中框贴图时应更新 `UI_SelectBox` 的 Image 引用，不能只替换 PNG。
 
 - 面板动画位于 `Common/Animation/`，依赖固定为 `BasePanel → BaseUIAnimation → UIAnimationManager → JSON`：BasePanel 直接调用同物体 BUA，BUA 禁止反向引用或监听 BasePanel；`Opened/Closed` 继续保持同步业务事件，无动画组件时维持即时开关。

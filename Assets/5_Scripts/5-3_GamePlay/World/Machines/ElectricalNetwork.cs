@@ -68,7 +68,7 @@ public sealed class ElectricalNetworkGraph
         var sorted = new List<MachineEntity>(source);
         sorted.Sort((a, b) => a.Id.CompareTo(b.Id));
         foreach (MachineEntity node in sorted)
-            if (node.Definition.Fluid?.Kind == "electronic-probe") pressureSwitches[Normalize(node.Cell)] = node;
+            if (MachineWorld.GetFluidDeviceBehavior(node)?.SwitchesElectricalPorts == true) pressureSwitches[Normalize(node.Cell)] = node;
 
         foreach (MachineEntity node in sorted)
         {
@@ -76,7 +76,7 @@ public sealed class ElectricalNetworkGraph
             ElectricalDefinition electrical = node.Definition?.Electrical;
             if (electrical?.HasConnection != true) continue;
             node.Cell = Normalize(node.Cell);
-            if (node.Definition.Fluid?.Kind == "electronic-probe") continue;
+            if (MachineWorld.GetFluidDeviceBehavior(node)?.SwitchesElectricalPorts == true) continue;
             if (electrical.IsWire)
             {
                 // 测点格中的普通线不能把探针的两个端点短接。

@@ -54,7 +54,7 @@ public sealed class FluidNetworkGraph
         foreach (MachineEntity node in sorted)
         {
             FluidMachineState state = MachineWorld.GetFluidState(node);
-            if (state.Ruptured || node.Definition.Fluid.Kind == "valve" && !state.ValveOpen) continue;
+            if (state.Ruptured || !MachineWorld.GetFluidDeviceBehavior(node).PortsEnabled(node)) continue;
             foreach (FluidMachinePortDefinition port in node.Definition.Fluid.Ports)
             {
                 if (port.Mode == "input") continue;
@@ -66,7 +66,7 @@ public sealed class FluidNetworkGraph
                 if (pipes.TryGetValue(adjacent, out MachineEntity pipe)) hasTarget |= Connect(node, port, pipe, direction);
                 if (devices.TryGetValue(adjacent, out var targets))
                     foreach (MachineEntity target in targets) hasTarget |= Connect(node, port, target, direction);
-                if (!hasTarget && !hasPhysicalTarget && port.Outlet && node.Definition.Fluid.Kind == "outlet")
+                if (!hasTarget && !hasPhysicalTarget && port.Outlet && MachineWorld.GetFluidDeviceBehavior(node).EmitsToEnvironment)
                     Edges.Add(new Edge { Source = node, SourcePort = port, Direction = direction, Environment = true });
             }
         }
@@ -100,7 +100,7 @@ public sealed class FluidNetworkGraph
     private bool Connect(MachineEntity source, FluidMachinePortDefinition output, MachineEntity target, int direction)
     {
         FluidMachineState state = MachineWorld.GetFluidState(target);
-        if (state.Ruptured || target.Definition.Fluid.Kind == "valve" && !state.ValveOpen) return false;
+        if (state.Ruptured || !MachineWorld.GetFluidDeviceBehavior(target).PortsEnabled(target)) return false;
         bool connected = false;
         foreach (FluidMachinePortDefinition input in target.Definition.Fluid.Ports)
         {
@@ -122,8 +122,7 @@ public sealed class FluidNetworkGraph
     }
 
     private static bool IsTransit(MachineEntity node)
-        => node.Definition.Fluid.Kind == "pipe" || node.Definition.Fluid.Kind == "valve" ||
-           node.Definition.Fluid.Kind == "outlet" || node.Definition.Fluid.Kind == "selector";
+        => MachineWorld.GetFluidDeviceBehavior(node).IsTransit;
 
     private void BuildComponents(List<MachineEntity> sorted)
     {
@@ -137,16 +136,17 @@ public sealed class FluidNetworkGraph
         }
         foreach (MachineEntity node in sorted)
         {
-            if (node.Definition.Fluid.Kind is "mechanical-probe" or "electronic-probe")
+            FluidDeviceBehavior behavior = MachineWorld.GetFluidDeviceBehavior(node);
+            if (behavior.SwitchesMechanicalPorts || behavior.SwitchesElectricalPorts)
             {
                 MachineEntity pipe = PipeAt(node.Cell);
                 if (pipe != null) LinkComponent(neighbors, node, pipe);
             }
-            if (!node.Definition.Fluid.CombineAdjacent) continue;
+            if (!node.Definition.Fluid.CombineAdjacent || !behavior.IsSharedStorage) continue;
             foreach (Vector2Int direction in MechanicalNetworkGraph.Directions)
                 if (devices.TryGetValue(normalize(node.Cell + direction), out var adjacent))
                     foreach (MachineEntity neighbor in adjacent)
-                        if (neighbor.Definition.Fluid.CombineAdjacent && neighbor.Definition.Fluid.MaterialId == node.Definition.Fluid.MaterialId)
+                        if (neighbor.Definition.Fluid.CombineAdjacent && MachineWorld.GetFluidDeviceBehavior(neighbor).IsSharedStorage && neighbor.Definition.Fluid.MaterialId == node.Definition.Fluid.MaterialId)
                             LinkComponent(neighbors, node, neighbor);
         }
         var queue = new Queue<MachineEntity>();

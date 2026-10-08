@@ -181,6 +181,34 @@ public static partial class MachineWorld
         return node;
     }
 
+    #region 未提交候选撤销
+
+    /// <summary>放置失败只注销候选，不捕获拆回快照；扩展清理异常也不能阻止节点离开世界。</summary>
+    internal static bool DiscardPlacementCandidate(int id)
+    {
+        EnsureScope();
+        if (!GameNetwork.HasStateAuthority) return false;
+        if (!nodes.TryGetValue(id, out MachineEntity node)) return true;
+        nodes.Remove(id);
+        dirty = true;
+        try
+        {
+            if (interactions.Remove(id, out MachineInteractionTarget interaction)) interaction.Dispose();
+        }
+        catch (Exception exception) { Debug.LogException(exception); }
+        try { DisposeProcessor(node); }
+        catch (Exception exception) { Debug.LogException(exception); }
+        try { BuildingOccupancyRegistry.NotifyMechanicalChanged(node.Cell); }
+        catch (Exception exception) { Debug.LogException(exception); }
+        try { CellChanged?.Invoke(node.Cell); }
+        catch (Exception exception) { Debug.LogException(exception); }
+        try { NodeRemoved?.Invoke(id); }
+        catch (Exception exception) { Debug.LogException(exception); }
+        return !nodes.ContainsKey(id);
+    }
+
+    #endregion
+
     /// <summary>按稳定身份移除机械数据节点，并在释放加工器前捕获完整状态。</summary>
     [MethodImpl(MethodImplOptions.NoInlining)]
     public static ItemData Remove(int id)
@@ -719,7 +747,8 @@ public static partial class MachineWorld
         if (source == "manual") return node.State != null && node.State.ManualSeconds > 0 ? 1 : 0;
         if (source == "wind") return WeatherMgr.Instance != null ? WeatherMgr.Instance.GetCurrentWindStrength() : 0;
         if (source == "water") return GetWaterSourceFactor(node);
-        if (source == "fluid-engine") return GetFluidEngineSourceFactor(node);
+        FluidDeviceBehavior fluidBehavior = GetFluidDeviceBehavior(node);
+        if (fluidBehavior?.HasMechanicalSource == true) return fluidBehavior.MechanicalSourceFactor(node);
         return 0;
     }
 

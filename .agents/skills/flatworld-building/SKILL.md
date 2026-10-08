@@ -18,6 +18,9 @@ description: "Use when: 定位或修改 FlatWorld 的建筑放置预览、安装
 
 ## 核心链与不变量
 
+- 单机和服务端共用 `BuildingPlacementService.TryPlace` 校验真实材料槽位、创建候选、扣料和失败回滚；具体生成方式通过后端登记扩展，后端必须提供撤销动作。网络发布由调用方适配，成功提交后才发建造进度与安装通知，通知报错不能回滚已发布的结果。
+- 地形写入前先建立撤销位置；机器候选撤销使用 `DiscardPlacementCandidate`，不走拆除快照。撤销后核对权威世界状态再退料，不能把清理通知异常当作成功或忽略残留建筑。
+
 - 贴地可交互设施使用建筑模块静态参数 `PlacementLayer=Ground`，召唤器与本体须一致；占用 Layer2，仅拒绝同层重复放置，允许 Layer0 墙体/实体建筑共格。根 Collider 保留 Trigger，导航与动态 LOS 不阻挡，三类阴影全部排除，维度交互/安装状态仍走原建筑模块。世界排序使用 `ground-building`（Default/0），配套 `Ground-Facility-Lit.mat` 的 Queue2991 位于地表覆盖之后、Blocking 墙体 Queue2992 之前；不可并入玩家层的 `BuildingDepthMeshBridge`。配置不写入安装快照，资源重载需同步占地、碰撞与排序。
 
 - 门模块必须绑定所属 Item 的主 SpriteRenderer 与根实体碰撞体；Unity 缺失组件的假 null 不能用 `??=` 判定。打开时交互注册仍须保留，导航通行通过 `BuildingOccupancyRegistry.SetPassable` 更新，但建筑放置占格不撤销；安装流程完成后再次同步开门状态。

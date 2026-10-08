@@ -402,6 +402,9 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
         return inputInventory;
     }
 
+    // 未创建或已销毁的面板没有打开状态。
+    public bool IsPanelOpen => basePanel != null && basePanel.IsOpen();
+
     public void I_ShowPanel()
     {
         EnsurePanelCreated();

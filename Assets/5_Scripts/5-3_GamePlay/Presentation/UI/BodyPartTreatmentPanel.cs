@@ -4,7 +4,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-/// <summary>医疗部位选择与引导表现。仅克隆正式 Prefab 的按钮模板，不假设玩家拥有固定数量的部位。</summary>
+/// <summary>只提交治疗选择、取消意图并显示会话进度，等待与完成由领域会话处理。</summary>
 public sealed class BodyPartTreatmentPanel : MonoBehaviour
 {
     #region 预置体绑定与状态
@@ -24,9 +24,7 @@ public sealed class BodyPartTreatmentPanel : MonoBehaviour
     private Item actor;
     private Mod_GameController controller;
     private Mod_DamageReceiver receiver;
-    private BodyPartType selectedPart;
-    private bool channeling;
-    private float elapsed;
+    private BodyPartTreatmentSession session;
     private float nextRefresh;
 
     #endregion
@@ -82,7 +80,7 @@ public sealed class BodyPartTreatmentPanel : MonoBehaviour
         Status.text = FlatWorldLocalizationService.GetUiText("选择受伤部位；关闭窗口或切换用品将取消引导，不消耗物品。");
         Progress.value = 0f;
         panel.Open();
-        controller?.AcquireGameplayInputLock(this);
+        if (controller != null) controller.AcquireGameplayInputLock(this);
         RefreshButtons();
     }
 
@@ -97,13 +95,13 @@ public sealed class BodyPartTreatmentPanel : MonoBehaviour
 
     private void ClearTarget()
     {
-        controller?.ReleaseGameplayInputLock(this);
+        if (treatment != null && session != null) treatment.CancelTreatment(session);
+        if (controller != null) controller.ReleaseGameplayInputLock(this);
         controller = null;
         actor = null;
         receiver = null;
         treatment = null;
-        channeling = false;
-        elapsed = 0f;
+        session = null;
         foreach (Button button in buttons)
             if (button != null)
             {
@@ -120,47 +118,41 @@ public sealed class BodyPartTreatmentPanel : MonoBehaviour
 
     private void Begin(BodyPartType part)
     {
-        if (channeling || treatment == null || !treatment.CanTreat(actor, part, out _)) return;
-        selectedPart = part;
-        elapsed = 0f;
-        channeling = true;
+        if (session?.IsRunning == true || treatment == null) return;
+        if (!treatment.TryBeginTreatment(actor, part, out string reason))
+        {
+            Status.text = FlatWorldLocalizationService.GetUiText(reason);
+            return;
+        }
+        session = treatment.TreatmentSession;
         RefreshButtons();
     }
 
     private void Update()
     {
         if (panel == null || !panel.IsOpen()) return;
+        if (session != null && !session.IsRunning)
+        {
+            if (session.State == BodyPartTreatmentSession.SessionState.Completed)
+            {
+                panel.Close();
+                return;
+            }
+            Status.text = FlatWorldLocalizationService.GetUiText(session.Reason ?? "治疗已取消");
+            Progress.value = 0f;
+            session = null;
+            RefreshButtons();
+        }
         if (treatment == null || !treatment.CanUse(actor) || receiver == null)
         {
             panel.Close();
             return;
         }
-        if (channeling)
+        if (session?.IsRunning == true)
         {
-            if (!treatment.CanTreat(actor, selectedPart, out string reason))
-            {
-                channeling = false;
-                Status.text = FlatWorldLocalizationService.GetUiText(reason);
-                Progress.value = 0f;
-                RefreshButtons();
-                return;
-            }
-            elapsed += Time.deltaTime;
-            float duration = treatment.channelDurationSeconds;
-            Progress.value = duration <= 0f ? 1f : Mathf.Clamp01(elapsed / duration);
+            Progress.value = session.Progress;
             Status.text = FlatWorldLocalizationService.GetUiFormat("正在固定{0}　{1:0.0} / {2:0.0} 秒",
-                GetPartName(selectedPart), Mathf.Min(elapsed, duration), duration);
-            if (elapsed >= duration)
-            {
-                channeling = false;
-                bool completed = treatment.TryCompleteTreatment(actor, selectedPart);
-                if (completed) panel.Close();
-                else
-                {
-                    Status.text = FlatWorldLocalizationService.GetUiText("治疗未完成，物品未消耗。请重新选择部位。");
-                    RefreshButtons();
-                }
-            }
+                GetPartName(session.TargetPart), session.ElapsedSeconds, session.DurationSeconds);
         }
         else if (Time.unscaledTime >= nextRefresh)
         {
@@ -176,7 +168,7 @@ public sealed class BodyPartTreatmentPanel : MonoBehaviour
         {
             BodyPartType part = parts[i];
             bool allowed = treatment.CanTreat(actor, part, out string reason);
-            buttons[i].interactable = !channeling && allowed;
+            buttons[i].interactable = session?.IsRunning != true && allowed;
             if (!receiver.TryGetBodyPart(part, out BodyPartHealth state)) continue;
             string suffix = allowed ? "" : "  " + FlatWorldLocalizationService.GetUiText(reason);
             buttons[i].GetComponentInChildren<TextMeshProUGUI>(true).text =

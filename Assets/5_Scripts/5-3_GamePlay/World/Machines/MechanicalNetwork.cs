@@ -74,7 +74,7 @@ public sealed partial class MachineEntity
     public bool HasPort(int direction)
     {
         if (!Definition.HasMechanicalPorts) return false;
-        if (MechanicalPortsSuppressed || Definition.Fluid?.Kind == "mechanical-probe" && !FluidProbeConnected) return false;
+        if (MechanicalPortsSuppressed || MachineWorld.GetFluidDeviceBehavior(this)?.SwitchesMechanicalPorts == true && !FluidProbeConnected) return false;
         if (Definition.Kind == "clutch" && !Engaged) return false;
         if (Definition.IsConverter) return Definition.HasAxlePort((direction - RotationQuarterTurns + 4) & 3);
         return Definition.Ports == "all" || (RotationQuarterTurns & 1) == (direction & 1);
@@ -292,7 +292,7 @@ public sealed partial class MechanicalNetworkGraph
             if (node.Definition.Layer == 0 || node.Definition.Layer == 1)
                 occupiedOnPlacementLayers.Add(node.Cell);
             node.MechanicalPortsSuppressed = false;
-            if (node.Definition.Fluid?.Kind == "mechanical-probe") pressureSwitches[node.Cell] = node;
+            if (MachineWorld.GetFluidDeviceBehavior(node)?.SwitchesMechanicalPorts == true) pressureSwitches[node.Cell] = node;
             node.Network = null;
             node.Links.Clear();
             node.FlowVisited = false;
@@ -649,7 +649,7 @@ public sealed partial class MechanicalNetworkGraph
 
     /// <summary>动力源先在自身所在侧取最近十位档，再沿变速箱倍率换算。</summary>
     private static float GetSourceTorque(MachineEntity node)
-        => node.Definition.IsConverter || node.Definition.Source == "fluid-engine"
+        => node.Definition.IsConverter || MachineWorld.GetFluidDeviceBehavior(node)?.FloorsSourceTorque == true
             ? Mathf.Floor((node.SourceTorque * node.SourceFactor + .0001f) / 10f) * 10f
             : RoundTorqueToTens(node.SourceTorque * node.SourceFactor);
 

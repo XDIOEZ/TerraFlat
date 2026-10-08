@@ -16,9 +16,12 @@ using Random = UnityEngine.Random;
 [RequireComponent(typeof(BoxCollider2D))]
 public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemModuleDependencyBinder
 {
-    private readonly List<IIncomingDamageRule> incomingDamageRules = new(); // 已装配的受击规则。
+    #region 可组合生命规则
 
-    /// <summary>从模块注册表缓存受击规则，避免把具体资源玩法耦合进生命系统。</summary>
+    private readonly List<IIncomingDamageRule> incomingDamageRules = new(); // 已装配的受击规则。
+    private bool resolvingHealing;
+
+    /// <summary>从模块注册表缓存受击规则，不识别具体资源玩法。</summary>
     public void BindModuleDependencies(ItemMods modules)
     {
         incomingDamageRules.Clear();
@@ -26,9 +29,10 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
             if (module is IIncomingDamageRule rule)
                 incomingDamageRules.Add(rule);
     }
+
+    #endregion
+
     private const int CurrentBodyPartDataVersion = 2;
-    // 玩家每恢复 1 点生命值消耗 1 点蛋白质。
-    private const float PlayerHealingProteinCostPerHp = 1f;
 
     #region 数据引用
 
@@ -583,6 +587,7 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
     protected override void OnUnload()
     {
         incomingDamageRules.Clear();
+        resolvingHealing = false;
         ClearBodyPartPenalties();
         bodyArmorSources.Clear();
         ClearHitSlowdown();
@@ -926,66 +931,58 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
 
 
 
+    #region 通用治疗结算
+
     public virtual float Heal(float healAmount, Item healer = null)
     {
-        if (!CanMutateBodyState()) return Hp;
-        float oldHp = Hp;
-        // 已经归零的实体不能通过普通回血重新复活；玩家复活由 Mod_PlayerDeathState 显式赋值处理。
-        if (oldHp <= 0f)
+        if (!CanMutateBodyState() || resolvingHealing || Hp <= 0f || healAmount <= 0f) return Hp;
+        ValidateBodyValue(healAmount, nameof(healAmount));
+        resolvingHealing = true;
+        try
+        {
+            float oldHp = Hp;
+            // 能力表按模块结构版本缓存，本次快照不会因成本通知中的增删而改变。
+            IReadOnlyList<IHealingCostPolicy> costPolicies = item != null
+                ? item.itemMods.GetCapabilities<IHealingCostPolicy>() : Array.Empty<IHealingCostPolicy>();
+            healAmount *= GameDifficultyService.ResolveHealingMultiplier(item);
+            healAmount = Mathf.Min(healAmount, Mathf.Max(0f, MaxHp - oldHp));
+            if (healAmount <= 0f) return Hp;
+            foreach (IHealingCostPolicy policy in costPolicies)
+            {
+                if (policy is Module module && (module == null || !module.IsRuntimeLoaded)) continue;
+                float limit = policy.LimitHealingAmount(healAmount, healer);
+                ValidateBodyValue(limit, nameof(IHealingCostPolicy.LimitHealingAmount));
+                healAmount = Mathf.Min(healAmount, limit);
+                if (healAmount <= 0f) return Hp;
+            }
+
+            // 零血量不能普通复活；先提交生命，再仅为实际恢复量结算成本。
+            SetOverallHp(Mathf.Min(Hp + healAmount, MaxHp));
+            float actualHeal = Mathf.Max(0f, Hp - oldHp);
+            if (actualHeal <= 0f) return Hp;
+            foreach (IHealingCostPolicy policy in costPolicies)
+            {
+                if (policy is Module module && (module == null || !module.IsRuntimeLoaded)) continue;
+                policy.PayHealingCost(actualHeal, healer);
+            }
+
+            if (actualHeal > 0.001f && IsPanelVisible()) RefreshUI();
+            if (actualHeal > 0.001f)
+            {
+                DataUpdate?.Invoke();
+                OnAction?.Invoke(Hp);
+                ItemNetworkStateSerialization.NotifyRuntimeStateChanged(item);
+            }
+
             return Hp;
-
-        healAmount *= GameDifficultyService.ResolveHealingMultiplier(item);
-        if (healAmount <= 0f)
-            return Hp;
-
-        float missingHp = Mathf.Max(0f, MaxHp - oldHp);
-        if (missingHp <= 0f)
-            return Hp;
-
-        healAmount = Mathf.Min(healAmount, missingHp);
-
-        // 玩家回血由蛋白质支付，其他实体仍沿用原有免费回血逻辑。
-        Mod_Food playerFood = null;
-        if (GameDifficultyService.IsPlayer(item))
-        {
-            playerFood = item?.itemMods?.GetMod_ByID<Mod_Food>(ModText.Food);
-            if (playerFood?.Data?.nutrition == null)
-                return Hp;
-
-            float availableProtein = Mathf.Max(0f, playerFood.Data.nutrition.Protein);
-            float proteinLimitedHeal = availableProtein / PlayerHealingProteinCostPerHp;
-            healAmount = Mathf.Min(healAmount, proteinLimitedHeal);
-            if (healAmount <= 0f)
-                return Hp;
         }
-
-        SetOverallHp(Mathf.Min(Hp + healAmount, MaxHp));
-
-        float actualHeal = Mathf.Max(0f, Hp - oldHp);
-        if (playerFood != null && actualHeal > 0f)
+        finally
         {
-            Nutrition nutrition = playerFood.Data.nutrition;
-            nutrition.Protein = Mathf.Max(
-                0f,
-                nutrition.Protein - actualHeal * PlayerHealingProteinCostPerHp);
-            playerFood.NotifyStateChanged();
+            resolvingHealing = false;
         }
-
-        // 只有在血量发生变化时才刷新UI
-        if (actualHeal > 0.001f && IsPanelVisible())
-        {
-            RefreshUI();
-        }
-
-        if (actualHeal > 0.001f)
-        {
-            DataUpdate?.Invoke();
-            OnAction?.Invoke(Hp);
-            ItemNetworkStateSerialization.NotifyRuntimeStateChanged(item);
-        }
-
-        return Hp;
     }
+
+    #endregion
 
     public void ResolveNetworkAuthoritativeDeath()
     {

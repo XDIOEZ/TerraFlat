@@ -100,7 +100,8 @@ description: "Use when: 定位或修改 FlatWorld 的背包、槽位、快捷栏
 - `_BodyMinV/_BodyMaxV` 实际传入 `Sprite.bounds` 的本地 Y，不是 UV；主体和交互描边 Shader 都必须保留 `DisableBatching=True`，否则精灵合批预变换顶点后可能按世界位置误裁整株作物。不能通过提高 Sorting Order 修复，也不能只保护主体而遗漏描边 Pass。
 - 废弃 `Mod_EquipmentRuntime.cs` 不再使用。
 - `Mod_Food` 的被动生命联动必须读取 `Mod_PlayerDeathState`；玩家濒死或 `Mod_DamageReceiver.Hp <= 0` 时停止回血与生存伤害，避免死亡状态被抬成极低正数。
-- `Mod_Food.HealthState` 的回血判定只看蛋白质；`HealInterval/HealAmount` 大于 0 时按间隔一次性回血，动物继续使用 `HealNeedRatio`，玩家创建模板通过 `proteinHealThreshold` 配置绝对蛋白质门槛。
+- `Mod_Food.HealthState` 的回血判定只看蛋白质；`HealInterval/HealAmount` 大于 0 时按间隔一次性回血，动物继续使用 `HealNeedRatio`，玩家创建模板通过 `proteinHealThreshold` 配置绝对蛋白质门槛。玩家蛋白质成本通过 `Mod_Food.HealingCost` 接入 `IHealingCostPolicy`，调用 `Heal` 的食物、Buff 等入口不能重复扣费。
+- 医疗等待与一次性提交由 `BodyPartTreatmentSession` 管理，`Mod_BodyPartTreatment` 只在会话运行时参加 Tick；UI 只发选择/取消意图和读进度。用品或消费者换代必须取消，已经进入扣料事务的完成结果不能被最后一份用品卸载覆盖。
 - `Mod_Food` 仅在基础营养持续消耗或 `IFoodTickObserver` 规则要求时进入 `FixedInterval`；无角色模块的静态世界食物应休眠，库存腐败/融化经 `ModuleDataRuleRegistry.Step` 的 `IModuleDataRule` 独立推进。规则按稳定 ModuleId/RuleId 注册，配置按定义共享，可变状态只写上下文；槽位替换后停止旧状态的后续规则。可选角色模块必须静默查询，难度倍率的 IsPlayer 每次解析当前 Owner，不能缓存随归属变化的判断。
 - `InventoryModuleDataScheduler` 只登记有规则或实际覆写 DataUpdate 的模块；槽位引用/布局、模块结构、规则注册和资源会话变化才重建，纯数值变化不重建。绑定/卸载必须解除独立结构事件，逐规则检查宿主代际与真实槽位；跨库存共享状态扣除重叠窗口，但不能按绝对时钟补算暂停时间。
 - 独立气罐冷 Tick 通过 `ModuleDataTickContext.Owner/MachineOwner` 取得真实携带者或数据机器位置，与世界实例共享 `FluidTankStorage` 的两相相变、真实生命和破裂入口；归零先冻结世界位置，再事务删除准确 GUID 的罐并入队一次爆炸。

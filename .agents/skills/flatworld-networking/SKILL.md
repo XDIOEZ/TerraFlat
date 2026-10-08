@@ -16,6 +16,8 @@ description: "Use when: 定位或修改 FlatWorld 的 Mirror/KCP 联机启动、
 
 ## 权威边界
 
+- 建造消息层只校验连接身份、真实快捷栏材料并发布结果，放置规则和扣料/回滚统一交给 `BuildingPlacementService`；没有网络发布器的后端必须拒绝并回滚，不能只向请求方报成功。Host 的确认回调不重复发布已由权威事务产生的建造进度。
+
 - 服务端结算世界生成、伤害、死亡、建筑与持久状态；客户端只应用权威结果。
 - 远程视觉副本不得进入本地 Item Tick、AI 感知、教程/对话或存档索引。
 - `LoadNetworkPlayer/Promote.../ConfigureRemote...` 显式维护 Player ProfileContext；只有 owned 玩家驱动本地输入、导航窗口与 HUD。
