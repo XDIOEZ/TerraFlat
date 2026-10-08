@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1280" height="900" viewBox="0 0 1280 900" role="img" aria-labelledby="title desc">
   <title id="title">04 / 同场景船内活动与坐标</title>
-  <desc id="desc">设计参考图。宇宙与移动飞船共用一个场景，固定设施随船，悬空角色与散落物保持独立惯性。宇宙坐标与船内本地格子分开维护，玩家、飞船与相机角度分别管理，出舱继承出口点速度。</desc>
+  <desc id="desc">设计参考图。宇宙与移动飞船共用一个场景，固定设施随船，悬空角色与散落物保持独立惯性。宇宙坐标与船内本地格子分开维护，玩家与飞船角度分别管理，镜头始终对齐玩家世界朝向并同步旋转，出舱继承出口点速度。</desc>
   <defs>
     <marker id="blueArrow" markerWidth="9" markerHeight="9" refX="7" refY="4" orient="auto"><path d="M0 0L8 4L0 8" fill="none" stroke="#66c8ff" stroke-width="1.6"/></marker>
     <marker id="greenArrow" markerWidth="9" markerHeight="9" refX="7" refY="4" orient="auto"><path d="M0 0L8 4L0 8" fill="none" stroke="#63d9ac" stroke-width="1.6"/></marker>
@@ -60,10 +60,11 @@
   <text x="830" y="278" class="blue">有支撑角色</text><text x="970" y="278">坐席 / 扶手 / 支撑</text><text x="970" y="307" class="sub">按状态建立承载关系</text>
   <text x="830" y="342" class="yellow">悬空物体</text><text x="970" y="342">独立运动与碰撞</text><text x="970" y="371" class="sub">不能全部强制挂为子节点</text>
   <rect x="807" y="414" width="433" height="177" rx="16" class="panel"/>
-  <text x="830" y="451" class="label">三个角度分别维护</text>
-  <text x="830" y="487" class="yellow">玩家朝向 θp</text><text x="1030" y="487" class="blue">飞船角度 θs</text>
-  <text x="830" y="522" class="purple">相机角度 θc：表现与输入换算</text>
-  <text x="830" y="558" class="small sub">相机模式默认待定；UI 文字保持清晰可读。</text>
+  <text x="830" y="451" class="label">镜头始终对齐玩家</text>
+  <text x="830" y="487" class="yellow">玩家世界朝向 θp</text><text x="1030" y="487" class="blue">飞船角度 θs</text>
+  <text x="830" y="522" class="purple">统一朝向基准：θc = θp</text>
+  <text x="830" y="548" class="small sub">玩家旋转 → 镜头同步旋转</text>
+  <text x="830" y="574" class="small sub">驾驶 / 进出舱 / 起飞过渡均保持对齐</text>
   <rect x="40" y="611" width="650" height="201" rx="16" class="panel"/>
   <text x="63" y="649" class="label">建造 / 点击：先换坐标，再查本地格</text>
   <text x="63" y="686" class="blue">屏幕指向 → 相机换算 → 宇宙坐标 p</text>
