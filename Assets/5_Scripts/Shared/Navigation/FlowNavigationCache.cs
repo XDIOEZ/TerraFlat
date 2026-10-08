@@ -147,10 +147,9 @@ namespace FlatWorld.Navigation
                 changedChunks.Add(new ChunkPublication(entry.Key, result));
                 graphChanged |= result == ChunkRefreshResult.Graph;
             }
-            if (builds.Count > 0) { BuildFields(); ExitFieldBuilds += builds.Count; }
+            int exitBuildCount = builds.Count;
             dirty.Clear();
 
-            builds.Clear();
             for (int slot = 0; slot < goals.Count; slot++)
             {
                 Goal goal = goals[slot];
@@ -160,7 +159,12 @@ namespace FlatWorld.Navigation
                     builds.Add(new FieldBuild(chunk.Cells, FlowNavigationMath.LocalIndex(goal.Cell, domain), goal.Field));
                 else goal.Field.Clear();
             }
-            if (builds.Count > 0) { BuildFields(); TargetFieldBuilds += builds.Count; }
+            if (builds.Count > 0)
+            {
+                BuildFields();
+                ExitFieldBuilds += exitBuildCount;
+                TargetFieldBuilds += builds.Count - exitBuildCount;
+            }
             if (changedChunks.Count > 0 || !nativeChunks.IsCreated) PublishChunks(changedChunks, graphChanged);
             if (graphChanged || goalsChanged) PublishGoals(graphChanged);
             goalsChanged = false;
@@ -322,23 +326,26 @@ namespace FlatWorld.Navigation
         private void BuildFields()
         {
             int count = builds.Count;
-            using var cells = new NativeArray<int>(count * 256, Allocator.TempJob);
-            using var requests = new NativeArray<FlowIntegrationRequest>(count, Allocator.TempJob);
-            using var costs = new NativeArray<int>(count * 256, Allocator.TempJob);
-            using var directions = new NativeArray<byte>(count * 256, Allocator.TempJob);
-            using var nodes = new NativeArray<int>(count * 256, Allocator.TempJob);
-            using var positions = new NativeArray<int>(count * 256, Allocator.TempJob);
-            // using 变量本身只读；别名只用于填充同一份输入，所有权仍由上方作用域负责。
-            NativeArray<int> inputCells = cells;
-            NativeArray<FlowIntegrationRequest> inputRequests = requests;
+            int cellCount = checked(count * 256);
+            EnsureWorkspace(ref integrationCells, cellCount);
+            EnsureWorkspace(ref integrationRequests, count);
+            EnsureWorkspace(ref integrationCosts, cellCount);
+            EnsureWorkspace(ref integrationDirections, cellCount);
+            EnsureWorkspace(ref integrationNodes, cellCount);
+            EnsureWorkspace(ref integrationPositions, cellCount);
+            NativeArray<int> cells = integrationCells.GetSubArray(0, cellCount);
+            NativeArray<FlowIntegrationRequest> requests = integrationRequests.GetSubArray(0, count);
+            NativeArray<int> costs = integrationCosts.GetSubArray(0, cellCount);
+            NativeArray<byte> directions = integrationDirections.GetSubArray(0, cellCount);
             for (int i = 0; i < count; i++)
             {
                 FieldBuild build = builds[i];
-                inputRequests[i] = new FlowIntegrationRequest { CellStart = i * 256, Seed = build.Seed };
-                NativeArray<int>.Copy(build.Cells, 0, inputCells, i * 256, 256);
+                requests[i] = new FlowIntegrationRequest { CellStart = i * 256, Seed = build.Seed };
+                NativeArray<int>.Copy(build.Cells, 0, cells, i * 256, 256);
             }
             new FlowIntegrationJob { Cells = cells, Requests = requests, Costs = costs, Directions = directions,
-                HeapNodes = nodes, HeapPositions = positions }.Schedule(count, 1).Complete();
+                HeapNodes = integrationNodes.GetSubArray(0, cellCount),
+                HeapPositions = integrationPositions.GetSubArray(0, cellCount) }.Schedule(count, 1).Complete();
             for (int i = 0; i < count; i++)
             {
                 NativeArray<int>.Copy(costs, i * 256, builds[i].Field.Costs, 0, 256);
@@ -390,6 +397,36 @@ namespace FlatWorld.Navigation
             internal readonly LocalField Field;
             /// <summary>绑定只读块输入与输出缓存。</summary>
             internal FieldBuild(int[] cells, int seed, LocalField field) { Cells = cells; Seed = seed; Field = field; }
+        }
+        #endregion
+
+        #region 持久计算工作区
+        private NativeArray<int> integrationCells, integrationCosts, integrationNodes, integrationPositions;
+        private NativeArray<byte> integrationDirections;
+        private NativeArray<FlowIntegrationRequest> integrationRequests;
+        private NativeArray<int> routeSlotsWorkspace, routeNodesWorkspace, routePositionsWorkspace;
+
+        /// <summary>同步构建结束后按容量复用输入和堆工作区，不按每次目标更新分配 Native 内存。</summary>
+        private static void EnsureWorkspace<T>(ref NativeArray<T> array, int count) where T : unmanaged
+        {
+            if (array.IsCreated && array.Length >= count) return;
+            if (array.IsCreated) array.Dispose();
+            array = new NativeArray<T>(math.ceilpow2(math.max(1, count)), Allocator.Persistent,
+                NativeArrayOptions.UninitializedMemory);
+        }
+
+        /// <summary>工作区不借给外部读取者，世界重置或销毁时一起释放。</summary>
+        private void DisposeWorkspace()
+        {
+            if (integrationCells.IsCreated) integrationCells.Dispose();
+            if (integrationCosts.IsCreated) integrationCosts.Dispose();
+            if (integrationNodes.IsCreated) integrationNodes.Dispose();
+            if (integrationPositions.IsCreated) integrationPositions.Dispose();
+            if (integrationDirections.IsCreated) integrationDirections.Dispose();
+            if (integrationRequests.IsCreated) integrationRequests.Dispose();
+            if (routeSlotsWorkspace.IsCreated) routeSlotsWorkspace.Dispose();
+            if (routeNodesWorkspace.IsCreated) routeNodesWorkspace.Dispose();
+            if (routePositionsWorkspace.IsCreated) routePositionsWorkspace.Dispose();
         }
         #endregion
     }

@@ -6,8 +6,8 @@ using UnityEngine;
 /// <summary>管理器的共享流场适配部分；旧请求与 ECS 缓存共同读取一个权威网格。</summary>
 public sealed partial class WorldNavigationManager
 {
-    #region ECS 共享导航所有权
-    // 只有实际使用 ECS 导航时才创建；旧 GameObject Agent 保持现有请求路径。
+    #region 共享导航所有权
+    // 普通长距离请求和 ECS 导航按需创建同一份缓存。
     private FlowNavigationCache sharedNavigation;
     private readonly Dictionary<Vector2Int, FlowGoalHandle> portalPathGoals = new();
     private readonly Queue<Vector2Int> portalPathGoalOrder = new();
@@ -35,6 +35,7 @@ public sealed partial class WorldNavigationManager
     /// <summary>世界切换和销毁时等待读取 Job 并释放缓存，失效旧世界目标句柄。</summary>
     private void DisposeSharedNavigation()
     {
+        DisposePortalPathJobs(requeue: false);
         if (sharedNavigation == null) return;
         grid.CellChanged -= MarkSharedNavigationDirty;
         grid.Cleared -= sharedNavigation.RequestReset;

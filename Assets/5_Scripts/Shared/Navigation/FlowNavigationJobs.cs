@@ -212,4 +212,108 @@ namespace FlatWorld.Navigation
         }
     }
     #endregion
+
+    #region GameObject 路径批量提取
+    /// <summary>只携带格坐标与共享目标身份，供普通寻路请求统一提交。</summary>
+    public struct FlowPathRequest
+    {
+        public int2 Start;
+        public int2 Destination;
+        public FlowGoalHandle Goal;
+    }
+
+    /// <summary>批量提取结果；不可用时由调用方恢复原有带权搜索。</summary>
+    public struct FlowPathResult
+    {
+        public int CellCount;
+        public int TotalCost;
+        public bool Success;
+        public bool ReachesDestination;
+    }
+
+    /// <summary>从同一份冻结流场并行提取路径，每个请求独占一段输出，不访问 Unity 对象。</summary>
+    [BurstCompile]
+    public struct FlowPathBuildJob : IJobParallelFor
+    {
+        [ReadOnly] public FlowNavigationSnapshot Navigation;
+        [ReadOnly] public NativeArray<FlowPathRequest> Requests;
+        [WriteOnly] public NativeArray<FlowPathResult> Results;
+        [NativeDisableParallelForRestriction] public NativeArray<int2> PathCells;
+        public int MaximumCells;
+
+        public void Execute(int index)
+        {
+            Results[index] = default;
+            if (MaximumCells < 2) return;
+            FlowPathRequest request = Requests[index];
+            int start = index * MaximumCells;
+            int count = 1;
+            int totalCost = 0;
+            bool arrived = false;
+            int2 current = Navigation.Domain.Normalize(request.Start);
+            PathCells[start] = current;
+            float2 position = (float2)current + 0.5f;
+            while (count < MaximumCells)
+            {
+                FlowSample sample = Navigation.Sample(position, request.Goal, 0.01f);
+                if (sample.Status == FlowSampleStatus.Arrived)
+                {
+                    arrived = true;
+                    break;
+                }
+                if (sample.Status != FlowSampleStatus.Moving || !math.all(math.isfinite(sample.Delta)))
+                    return;
+
+                float2 nextPosition = Navigation.Domain.Normalize(position + sample.Delta);
+                int2 next = Navigation.Domain.Normalize((int2)math.floor(nextPosition));
+                if (next.Equals(current))
+                {
+                    if (!current.Equals(request.Destination)) return;
+                    arrived = true;
+                    break;
+                }
+                if (!TryTraverse(current, next, out int stepCost)) return;
+                // 路径长度受请求上限约束，小段输出同时作为无分配的循环检测区。
+                for (int cell = 0; cell < count; cell++)
+                    if (PathCells[start + cell].Equals(next)) return;
+                totalCost = totalCost > int.MaxValue - stepCost ? int.MaxValue : totalCost + stepCost;
+                PathCells[start + count++] = next;
+                current = next;
+                position = (float2)current + 0.5f;
+                if (current.Equals(request.Destination))
+                {
+                    arrived = true;
+                    break;
+                }
+            }
+
+            if (count < 2 && !arrived) return;
+            Results[index] = new FlowPathResult
+            {
+                CellCount = count,
+                TotalCost = totalCost,
+                Success = true,
+                ReachesDestination = arrived
+            };
+        }
+
+        /// <summary>沿用权威网格的 10/14 代价、目标格权重和禁止对角切角规则。</summary>
+        private bool TryTraverse(int2 from, int2 to, out int cost)
+        {
+            cost = 0;
+            int2 delta = Navigation.Domain.ShortestDelta(from, to);
+            int2 distance = math.abs(delta);
+            int destinationCost = Navigation.CostAtCell(to);
+            if (math.any(distance > 1) || math.all(distance == 0) ||
+                Navigation.CostAtCell(from) < 0 || destinationCost < 0)
+                return false;
+            bool diagonal = delta.x != 0 && delta.y != 0;
+            if (diagonal && (!Navigation.IsWalkable(from + new int2(delta.x, 0)) ||
+                             !Navigation.IsWalkable(from + new int2(0, delta.y))))
+                return false;
+            cost = (diagonal ? 14 : 10) + destinationCost;
+            return true;
+        }
+    }
+    #endregion
 }

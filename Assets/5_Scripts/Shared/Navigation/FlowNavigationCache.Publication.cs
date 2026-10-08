@@ -212,14 +212,15 @@ namespace FlatWorld.Navigation
                 goal.TargetDirty = goal.RouteDirty = false;
             }
             if (routeSlots.Count == 0) return;
-            using var slots = new NativeArray<int>(routeSlots.Count, Allocator.TempJob);
-            NativeArray<int> writableSlots = slots;
-            for (int i = 0; i < routeSlots.Count; i++) writableSlots[i] = routeSlots[i];
-            using var nodes = new NativeArray<int>(nativeRoutes.Length, Allocator.TempJob);
-            using var positions = new NativeArray<int>(nativeRoutes.Length, Allocator.TempJob);
+            EnsureWorkspace(ref routeSlotsWorkspace, routeSlots.Count);
+            EnsureWorkspace(ref routeNodesWorkspace, nativeRoutes.Length);
+            EnsureWorkspace(ref routePositionsWorkspace, nativeRoutes.Length);
+            NativeArray<int> slots = routeSlotsWorkspace.GetSubArray(0, routeSlots.Count);
+            for (int i = 0; i < routeSlots.Count; i++) slots[i] = routeSlots[i];
             JobHandle handle = new FlowPortalRouteJob { GoalSlots = slots, Goals = nativeGoals.AsArray(), Chunks = nativeChunks.AsArray(),
                 Portals = nativePortals.AsArray(), Cells = nativeCells.AsArray(), ExitCosts = nativeExitCosts.AsArray(), TargetCosts = nativeTargetCosts.AsArray(),
-                Routes = nativeRoutes.AsArray(), HeapNodes = nodes, HeapPositions = positions }.Schedule(slots.Length, 1);
+                Routes = nativeRoutes.AsArray(), HeapNodes = routeNodesWorkspace.GetSubArray(0, nativeRoutes.Length),
+                HeapPositions = routePositionsWorkspace.GetSubArray(0, nativeRoutes.Length) }.Schedule(slots.Length, 1);
             if (nativeChunks.Length > 0)
                 handle = new FlowSelectExitJob { GoalSlots = slots, Chunks = nativeChunks.AsArray(), Portals = nativePortals.AsArray(),
                     Cells = nativeCells.AsArray(), ExitCosts = nativeExitCosts.AsArray(), Routes = nativeRoutes.AsArray(), SelectedExits = nativeSelectedExits.AsArray() }
@@ -265,7 +266,7 @@ namespace FlatWorld.Navigation
         }
 
         /// <summary>在所有读取任务完成后释放整份发布数据。</summary>
-        private void DisposeNative() { publishedSnapshot = default; DisposeGoals(); DisposeChunks(); }
+        private void DisposeNative() { publishedSnapshot = default; DisposeGoals(); DisposeChunks(); DisposeWorkspace(); }
         #endregion
     }
 }

@@ -176,6 +176,7 @@ public sealed partial class WorldNavigationManager : SingletonAutoMono<WorldNavi
     {
         pathStopwatch.Restart();
         SynchronizeGridRevision();
+        CollectPortalPathResults();
         PruneGoalFields();
         EnforceCacheCellBudget();
 
@@ -188,6 +189,7 @@ public sealed partial class WorldNavigationManager : SingletonAutoMono<WorldNavi
                 break;
             remaining -= processed;
         }
+        SchedulePortalPathBatch();
         pathStopwatch.Stop();
 
         pathStopwatch.Restart();
@@ -753,6 +755,8 @@ public sealed partial class WorldNavigationManager : SingletonAutoMono<WorldNavi
 
         if (requests.TryGetValue(requestId, out PathRequest request))
         {
+            request.PortalPending = false;
+            request.PortalGeneration++;
             DetachRequestFromField(request);
             RemoveFromAdmissionQueue(request);
             requests.Remove(requestId);
@@ -909,13 +913,8 @@ public sealed partial class WorldNavigationManager : SingletonAutoMono<WorldNavi
             return;
         }
 
-        if (TryBuildPortalPath(request, requestedGoal, out Vector2[] portalPath,
-                out Vector2 portalDestination, out bool portalReachesGoal,
-                out int portalCost))
-        {
-            ScheduleSuccess(request, portalDestination, portalPath, portalReachesGoal, portalCost);
+        if (TryQueuePortalPath(request))
             return;
-        }
 
         if (!TryGetOrCreateField(goal, out GoalField field))
         {
@@ -1138,6 +1137,9 @@ public sealed partial class WorldNavigationManager : SingletonAutoMono<WorldNavi
                 request.Field = null;
                 request.FieldNode = null;
                 request.AdmissionNode = null;
+                request.PortalPending = false;
+                request.PortalGeneration++;
+                request.SkipPortalPath = false;
                 revisionRequeueBuffer.Add(request);
             }
 
@@ -1453,6 +1455,8 @@ public sealed partial class WorldNavigationManager : SingletonAutoMono<WorldNavi
         public LinkedListNode<int> FieldNode;
         public LinkedListNode<int> AdmissionNode;
         public bool AdmissionQueued => AdmissionNode != null;
+        public bool PortalPending, SkipPortalPath;
+        public uint PortalGeneration;
 
         public PathRequest(int id, Vector2 start, Vector2 destination, Action<WorldNavigationPathResult> callback,
             int maximumPathCostExclusive)

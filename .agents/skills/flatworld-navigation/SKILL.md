@@ -8,6 +8,7 @@ description: "Use when: 定位或修改 FlatWorld 的稀疏网格寻路、16×16
 ## 入口
 
 - 网格/请求：`Assets/5_Scripts/5-3_GamePlay/World/PathFinding/WorldNavigationManager.cs`
+- 普通 GameObject 长路线：同目录 `WorldNavigationManager.PortalPath.cs` 统一排队、批量 Job 提取，使用共享导航中的 `FlowPathBuildJob`，结果仍按原路点接口交付。
 - 玩家外部智能体移动：`Assets/5_Scripts/5-3_GamePlay/Entities/Item/Modules/Player/Mod_GameMCP_LLM.cs`，用导航请求产生路点并通过 `Mod_GameController` 租约和 `Mod_Mover` 执行。
 - ECS 网格适配：同目录 `WorldNavigationManager.SharedFlow.cs`；纯数据共享缓存、导向图与 Job 在 `Assets/5_Scripts/Shared/Navigation/`。
 - ECS 查表/移动：`Entities/AIECS/Navigation/AiecsFlowAgent.cs`；真实游戏网格的显式开发入口在 `Entities/AIECS/Gameplay/AiecsNavigationCrowd.cs`。
@@ -42,15 +43,17 @@ description: "Use when: 定位或修改 FlatWorld 的稀疏网格寻路、16×16
 - 水上平台的可走性和代价来自 `TerrainSupportLayer.GetSurfaceCell`；构建导航窗口和增量更新都读取有效支撑面，原始 `TerrainCell` 保留水格身份。平台变化须发布同一格的导航脏区。
 - ECS 共享 Flow 快照除最终通行代价外还携带“有效表面”的 `LiquidDepth`，供批量移动减速和表现读取；水上平台必须把有效表面液深投影为 0。禁止让每只 ECS AI 反向查询 `ChunkMgr`。Crowd Steering 不得把实体中心推入比主 Flow 小步更昂贵的地形；墙体/建筑净空仍按身体半径扫掠，但液体等可走软地形的代价不能按身体半径判定，否则动物仅擦到岸边水格就会卡住。液体本身仍保持可走且由高代价决定是否绕行。
 
-## ECS 分层流场的边界
+## 共享分层流场的边界
 
 - `GamePlay` 与 `FlatWorld.AIECS` 共同引用无业务依赖的 `FlatWorld.Navigation`；跨两者的桥接放在独立 `FlatWorld.AIECS.Gameplay`，不能让核心导航引用 AI、Item 或 GamePlay，也不能让 AIECS 与 GamePlay 循环引用。
 - `FlowNavigationCache` 交给 `IFlowGridSource.TryGetCell` 的格坐标已按冻结的 `WorldTopologyDomain` 规范化；GamePlay 适配器应直读网格中的规范坐标，普通公开网格查询仍负责自行规范化。不要在 16×16 逐格快照内反复经 `WorldTopologyRuntime` 查询活动存档。
 - 共享 Flow 的水深、水流等表层变化只更新受影响块的 Native 数据；通行代价或出口变化才重建局部图与共享目标路线。Native 容器的快照视图借给 Job 使用，原位写入、扩容和重排前必须完成已登记的读取依赖；改变 `NativeList` 长度后重新取得 `AsArray` 视图。
 - `WorldNavigationGrid` 的权威格按 16×16 Chunk 连续数组保存；运行时归属只记 Chunk，不维护每格 Owner 字典。共享缓存只读取最终有效值，沿用 10/14 八邻接、目标格代价和禁止对角切角。长距离 `RequestPath` 借共享 Portal/Flow 还原路点，短距离及不可用时沿用局部目标场；总代价拒绝和取消仍保持原 API 契约。
+- GameObject 长路线先按目标格收集整批请求，更新全部共享目标后只 `Read` 一次；批内目标不得被缓存淘汰。路径 Job 使用自有持久输出并登记 `RegisterReader`，整批调度后统一 `ScheduleBatchedJobs` 启动，普通帧只在 `IsCompleted` 后接收结果；取消/重新准备必须核对请求对象和代际，代价修订变化需重新请求，新增阻挡只校验实际路径，不能因无关加载或表层更新反复丢弃整批。
+- 出口图与目标图合并为一次局部积分批次；积分和出口搜索工作区按容量复用，世界重置/销毁统一释放。改变有效长度后重新取 Native 视图，禁止在前一批结果尚未消费时扩容或覆写路径输出。
 - `ConsumeChanges` 只供旧管理器消费；共享缓存订阅独立的 `CellChanged/Cleared`。逐格通知必须在旧队列的数量上限判断之前发出，否则大量变更会漏掉 ECS 脏块；世界切换先等待快照读取 Job，再取消订阅和释放缓存。
 - 导航 Chunk 固定 16×16，出口由双方都可走的连续边缘缺口生成，一侧可有多个出口；块内断开的区域不能因为“属于同一 Chunk”就连通。每个缺口使用确定的代表格，缓存到代表格的带权局部图，因此保留可达性与代价规则，但不保证等于完整逐格搜索的全局最短路线。
-- 目标按玩家/编队创建少量共享句柄，禁止逐 AI 注册目标或创建 `WorldNavigationAgent`。目标在同一格内移动只更新坐标；在同 Chunk 的同一连通分量跨格只更新该目标的 256 格导向图。跨 Chunk、传送到不同连通分量或出口图变化才重算区块级路线；不能省掉连通分量变化的失效判断。
+- ECS 目标按玩家/编队创建少量共享句柄，禁止逐 ECS AI 注册目标或创建 `WorldNavigationAgent`；普通 GameObject AI 保留现有代理并按目标格复用共享句柄。目标在同一格内移动只更新坐标；在同 Chunk 的同一连通分量跨格只更新该目标的 256 格导向图。跨 Chunk、传送到不同连通分量或出口图变化才重算区块级路线；不能省掉连通分量变化的失效判断。
 - `AiecsFlowAgent` 的 SharedGoal/Local/Hold 共用同一连续 Crowd 移动 Job，默认枚举值保持旧群体兼容。游荡、逃跑及短距离接敌只提供局部目标；`CanSteer` 检查扫掠、切角和地形代价，不能用直线近路绕过昂贵地形，也不能为局部目标新建完整场。战略中心选实际可走的群体成员位置，不能直接把可能落在墙里的平均坐标用作 Goal。
 - AIECS 导航格只表达地形可走性、代价和共享 Flow 方向，不拥有生物，也没有“每格容量”。单位位置始终是连续 `float2`；允许多个单位处于同一导航格，出生也只能因真实地形/加载状态拒绝，禁止重新用格子占用表、跨格预约或目标格锁恢复棋盘式移动。
 - Crowd 局部移动每 Tick 先冻结位置/速度建立空间桶与 1×1 动态密度场；单单位只检查固定总数邻居做有界 Steering，密度只负责减速和向低密度侧偏移，不能作为硬阻挡或写回 `WorldNavigationGrid/FlowNavigationCache`。最终位移仍必须逐小步通过 `Navigation.CanStep`，因此地形和建筑权威不被 Crowd 逻辑绕过。
