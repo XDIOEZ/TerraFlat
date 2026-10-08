@@ -73,6 +73,20 @@
         }
       },
       "modules": {
+        "pressure": {
+          "prefab": "Module_Pressure",
+          "id": "气压生存模块",
+          "enabled": true,
+          "parameters": {
+            "SafePressureMinKPa": 50.0,
+            "SafePressureMaxKPa": 150.0,
+            "DangerBufferSeconds": 30.0,
+            "BufferRecoveryPerSecond": 1.0,
+            "DamageIntervalSeconds": 5.0,
+            "LowPressureDamage": 5.0,
+            "HighPressureDamage": 5.0
+          }
+        },
         "animator": {
           "prefab": "Module_Animator_AI",
           "id": "Module_Animator_AI",
@@ -780,6 +794,20 @@
         }
       },
       "modules": {
+        "pressure": {
+          "prefab": "Module_Pressure",
+          "id": "气压生存模块",
+          "enabled": true,
+          "parameters": {
+            "SafePressureMinKPa": 50.0,
+            "SafePressureMaxKPa": 150.0,
+            "DangerBufferSeconds": 30.0,
+            "BufferRecoveryPerSecond": 1.0,
+            "DamageIntervalSeconds": 5.0,
+            "LowPressureDamage": 5.0,
+            "HighPressureDamage": 5.0
+          }
+        },
         "food": {
           "prefab": "Module_Food",
           "id": "食物模块",
@@ -1523,6 +1551,20 @@
         }
       },
       "modules": {
+        "pressure": {
+          "prefab": "Module_Pressure",
+          "id": "气压生存模块",
+          "enabled": true,
+          "parameters": {
+            "SafePressureMinKPa": 50.0,
+            "SafePressureMaxKPa": 150.0,
+            "DangerBufferSeconds": 30.0,
+            "BufferRecoveryPerSecond": 1.0,
+            "DamageIntervalSeconds": 5.0,
+            "LowPressureDamage": 5.0,
+            "HighPressureDamage": 5.0
+          }
+        },
         "food": {
           "prefab": "Module_Food",
           "id": "食物模块",

@@ -262,6 +262,8 @@ public partial class GameRes
         ContaminationDefinitions.Clear();
         LiquidDefinitions.Clear();
         LiquidTypes = null;
+        FluidCatalog.Reset();
+        AtmosphereCatalog.Reset();
         AnimalSkillCatalogService.Reset();
         QuestCatalog.Reset();
         textLibraryService = TextLibraryService.Empty;
@@ -486,6 +488,7 @@ public partial class GameRes
             if (ShouldYieldResourceWork()) yield return null;
         }
         RegisterUniqueModuleAliases(moduleAliases);
+        EnsureIndustrialRuntimeTemplates();
         Debug.Log($"[GameRes] Prefab 加载计划：后台加载 {selected.Count}，启动阶段已预载 {startupPrefabLocationIds.Count} 个 UI Prefab。");
     }
 

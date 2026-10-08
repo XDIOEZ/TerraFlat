@@ -76,6 +76,7 @@ public partial class GameRes
         Dictionary<string, RuntimeTileDefinition> previousTiles = TileBlockDict;
         LiquidTypeCatalog previousLiquidTypes = LiquidTypes;
         string[] previousLiquids = LiquidDefinitions.Keys.ToArray();
+        FluidCatalog previousFluids = FluidCatalog.Default;
         ResourceAssetScope previousAssets = resourceAssets;
         bool committed = false;
         bool cleaned = false;
@@ -140,10 +141,14 @@ public partial class GameRes
                         retainedItemIds = RetainRemovedItemDefinitions(previousItems);
                         retainedMechanicalEntries = MachineCatalog.RetainMissingEntries(previousMechanical);
                         ValidateInPlaceCompatibility(previousItems, previousTiles, previousLiquidTypes, previousLiquids);
+                        foreach (string id in previousFluids.Definitions.Keys)
+                            if (!FluidCatalog.Default.TryGet(id, out _))
+                                throw new InvalidDataException($"运行中不能删除流体身份：{id}");
                         mods.PrepareReloadState(modState);
                     });
                     Action previousModRelease = mods.CaptureResourceRelease();
                     context.Commit();
+                    mods.PublishContainerPortFactories();
                     committed = true;
                     UpdateRetiredWorldItemDefinitions(retainedItemIds);
                     LoadState = ResourceLoadState.Ready;
@@ -229,6 +234,8 @@ public partial class GameRes
         NaturalGenerationRuleCatalogService.ConfigureResourceReload(context);
         RiverGenerationConfigService.ConfigureResourceReload(context);
         AnimalSkillCatalogService.ConfigureResourceReload(context);
+        FluidCatalog.ConfigureResourceReload(context);
+        AtmosphereCatalog.ConfigureResourceReload(context);
         QuestCatalog.ConfigureResourceReload(context);
         MachineCatalog.ConfigureResourceReload(context);
         mods.ConfigureResourceReload(context);

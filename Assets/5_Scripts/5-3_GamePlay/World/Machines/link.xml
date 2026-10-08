@@ -4,6 +4,11 @@
     <type fullname="MachineEntity" preserve="all" />
     <type fullname="MachineState" preserve="all" />
     <type fullname="MachineDefinition" preserve="all" />
+    <type fullname="FluidMachineDefinition" preserve="all" />
+    <type fullname="FluidMachineLogic" preserve="all" />
+    <type fullname="FluidMachineState" preserve="all" />
+    <type fullname="FluidNetworkGraph" preserve="all" />
+    <type fullname="IndustrialLiquidTransferPort" preserve="all" />
     <type fullname="MachineLogic" preserve="all" />
     <type fullname="MachineLogicRegistry" preserve="all" />
     <type fullname="RecipeProcessor" preserve="all" />

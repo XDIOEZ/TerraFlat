@@ -231,6 +231,8 @@ internal sealed partial class DroppedItemRuntime : IDisposable
             if (!simulation.Contains(id)) { transportItems.Remove(id); continue; }
             LightweightDroppedBody body = simulation.Get(id);
             if (body.Pickable == 0 || body.WaterKind != 0 || simulation.TryGetFlight(id, out _)) continue;
+            MachineWorld.TryReceiveConveyorDrop(GetConveyorOutput(id), body.Position, seconds, out bool terminal);
+            if (terminal) continue;
             Vector2 position = MachineWorld.TransportGroundItem(body.Position, seconds);
             if (WorldTopologyRuntime.ShortestDelta(body.Position, position).sqrMagnitude < .00000001f) continue;
             body.Position = position;

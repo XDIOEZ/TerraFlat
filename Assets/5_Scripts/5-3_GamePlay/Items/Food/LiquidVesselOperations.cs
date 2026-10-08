@@ -3,7 +3,6 @@ using System.Runtime.CompilerServices;
 using FlatWorld.Networking;
 using UnityEngine;
 
-/// <summary>整个容器的领域契约；手持模块与落地机器共用液体算法和正式面板。</summary>
 public interface ILiquidVessel
 {
     LiquidContainerState Data { get; }
@@ -20,203 +19,157 @@ public interface ILiquidVessel
     bool TransferFromInventoryItem(ItemData source, Item actor, float maximumItemAmount = float.PositiveInfinity);
     void CommitVessel();
 }
+public interface IVesselContents { Inventory Contents { get; } event Action Changed; }
 
-public interface IVesselContents
-{
-    Inventory Contents { get; }
-    event Action Changed;
-}
-
-/// <summary>液体份数、库存投料与转移的共享托管实现，任何容器载体均不得绕过来源库存。</summary>
+/// <summary>混合液体操作只按稳定批次提交，饮用和倾倒保留各自世界副作用。</summary>
 public static class LiquidVesselOperations
 {
     #region 液体守恒
-    public static bool SameLiquid(string left, string right)
-        => string.Equals(left?.Trim(), right?.Trim(), StringComparison.OrdinalIgnoreCase);
-
-    public static float Quantize(float amount)
-    {
-        if (!MachineDefinition.Positive(amount) || amount <= Mod_WaterVessel.AmountEpsilon)
-            return 0f;
-
-        float quantized = Mathf.Floor((amount + Mod_WaterVessel.AmountEpsilon) /
-            Mod_WaterVessel.AmountStep) * Mod_WaterVessel.AmountStep;
-        return quantized > Mod_WaterVessel.AmountEpsilon ? quantized : 0f;
-    }
-
+    public static bool SameLiquid(string left, string right) => string.Equals(left?.Trim(), right?.Trim(), StringComparison.OrdinalIgnoreCase);
+    public static float Quantize(float amount) => float.IsFinite(amount) && amount > Mod_WaterVessel.AmountEpsilon
+        ? Mathf.Max(0f, Mathf.Floor(amount + Mod_WaterVessel.AmountEpsilon)) : 0f;
     public static void AddState(ILiquidVessel target, string id, float amount, float temperature = 0f)
-    {
-        if (Mod_WaterVessel.IsEmptyAmount(target.Data.Amount)) target.Data.LiquidId = id.Trim();
-        target.Data.Amount += amount;
-        target.Data.Temperature = Mathf.Max(target.Data.Temperature, temperature);
-        target.Data.ProcessingSeconds = 0f;
-        Mod_WaterVessel.NormalizeStoredAmount(target.Data);
-        Mod_WaterVessel.Validate(target.Data, target.Capacity);
-    }
-
+    { MixedLiquidContents.Add(target.Data, id.Trim(), amount, temperature); Mod_WaterVessel.Validate(target.Data, target.Capacity); }
     public static void RemoveState(LiquidContainerState state, float amount)
     {
-        state.Amount = Mathf.Max(0f, state.Amount - amount);
-        state.ProcessingSeconds = 0f;
-        Mod_WaterVessel.NormalizeStoredAmount(state);
+        float remaining = amount;
+        while (remaining > 0f)
+        {
+            if (!MixedLiquidContents.Reserve(state, "remove", out var batch)) break;
+            float moved = Mathf.Min(remaining, batch.Servings);
+            if (!MixedLiquidContents.ConsumeBatch(state, "remove", batch, moved)) break;
+            remaining -= moved;
+        }
     }
-
     [MethodImpl(MethodImplOptions.NoInlining)]
     public static float Add(ILiquidVessel target, string id, float amount)
     {
-        if (!GameNetwork.HasStateAuthority || !MachineDefinition.Positive(amount) || GameRes.Instance.GetLiquidDefinition(id) == null ||
-            !Mod_WaterVessel.IsEmptyAmount(target.Data.Amount) && !SameLiquid(target.Data.LiquidId, id)) return 0f;
-        float moved = Quantize(Mathf.Min(amount, Mathf.Max(0f, target.Capacity - target.Data.Amount)));
+        if (!GameNetwork.HasStateAuthority || target == null || !float.IsFinite(amount) || amount <= 0f || GameRes.ExistingInstance?.GetLiquidDefinition(id) == null) return 0f;
+        float moved = Mathf.Min(amount, Mathf.Max(0f, target.Capacity - target.Data.Amount));
         if (moved <= 0f) return 0f;
-        AddState(target, id, moved);
-        target.CommitVessel();
-        return moved;
+        AddState(target, id, moved, target.Data.Temperature); target.CommitVessel(); return moved;
     }
-
     [MethodImpl(MethodImplOptions.NoInlining)]
     public static float Remove(ILiquidVessel target, float amount)
     {
-        if (!GameNetwork.HasStateAuthority || !MachineDefinition.Positive(amount)) return 0f;
-        float removed = Quantize(Mathf.Min(amount, target.Data.Amount));
-        if (removed <= 0f) return 0f;
-        RemoveState(target.Data, removed);
-        target.CommitVessel();
-        return removed;
+        if (!GameNetwork.HasStateAuthority || target == null || !float.IsFinite(amount) || amount <= 0f) return 0f;
+        float before = target.Data.Amount; RemoveState(target.Data, amount); float removed = before - target.Data.Amount;
+        if (removed > 0f) target.CommitVessel(); return removed;
     }
-
-    [MethodImpl(MethodImplOptions.NoInlining)]
-    public static bool Transfer(ILiquidVessel source, ILiquidVessel target, Item actor)
+    public static ILiquidTransferPort Port(ILiquidVessel vessel, ContainerPortDirection direction = ContainerPortDirection.Both, string portId = null)
     {
-        if (!GameNetwork.HasStateAuthority) return false;
-        if (source == null || target == null || ReferenceEquals(source, target) ||
-            !source.CanOperate(actor) || !target.CanOperate(actor) ||
-            !Mod_WaterVessel.IsEmptyAmount(target.Data.Amount) && !SameLiquid(source.Data.LiquidId, target.Data.LiquidId)) return false;
-        float moved = Quantize(Mathf.Min(source.Data.Amount, Mathf.Max(0f, target.Capacity - target.Data.Amount)));
-        if (moved <= 0f) return false;
-        AddState(target, source.Data.LiquidId, moved, source.Data.Temperature);
-        RemoveState(source.Data, moved);
-        source.CommitVessel();
-        target.CommitVessel();
-        return true;
+        var ports = new System.Collections.Generic.List<IContainerPort>();
+        if (vessel is IContainerPortProvider provider) provider.CollectContainerPorts(ports);
+        else if (vessel.Item != null) ports = ContainerTransferService.Discover(vessel.Item);
+        foreach (var port in ports)
+        {
+            if (port is ILiquidTransferPort liquid && (portId == null || port.Reference.PortId == portId) && (port.Configuration.Access & ContainerAccessKind.Manual) != 0 && (port.Configuration.Direction & direction) != 0) return liquid;
+        }
+        return null;
+    }
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    public static bool Transfer(ILiquidVessel source, ILiquidVessel target, Item actor, string sourcePortId = null, string targetPortId = null)
+    {
+        if (source == null || target == null || ReferenceEquals(source, target) || !source.CanOperate(actor) || !target.CanOperate(actor)) return false;
+        if (!GameNetwork.HasStateAuthority) return ContainerTransferCommands.RequestLiquidTransfer(source, target, actor, 1f, sourcePortId, targetPortId);
+        return ContainerTransferService.TransferLiquid(Port(source, ContainerPortDirection.Output, sourcePortId), Port(target, ContainerPortDirection.Input, targetPortId),
+            new ContainerTransferContext(actor, ContainerAccessKind.Manual, "manual-liquid-transfer"), 1f).Success;
     }
     #endregion
 
     #region 玩家液体操作
-    /// <summary>世界液深按定义换算为容器份数，先提交有限抽取再保存相同数量和温度。</summary>
     public static float FillFromWorld(ILiquidVessel target, Item actor, WorldLiquidSourceTarget source)
     {
-        if (!target.CanOperate(actor) || !WorldLiquidSystem.TryGetDefinition(source.Sample, out var liquid) ||
-            liquid.Id != source.Liquid.Id || !Mod_WaterVessel.IsEmptyAmount(target.Data.Amount) &&
-            !SameLiquid(target.Data.LiquidId, liquid.Id)) return 0f;
-        var sample = source.Sample;
-        float depth = sample.Terrain.GetLiquidDepth(sample.LocalCell.x, sample.LocalCell.y);
-        float unitDepth = liquid.WorldWater.DepthPerServing;
-        float availableServings = Mathf.Floor(depth / unitDepth + Mod_WaterVessel.AmountEpsilon);
-        float moved = Quantize(Mathf.Min(
-            Mathf.Max(0f, target.Capacity - target.Data.Amount),
-            availableServings));
-        if (moved <= Mod_WaterVessel.AmountEpsilon ||
-            !WorldLiquidSystem.TryPump(sample, moved * unitDepth, out _, out float removedDepth))
-            return 0f;
-
-        moved = Quantize(removedDepth / unitDepth);
-        if (moved <= Mod_WaterVessel.AmountEpsilon)
-            return 0f;
-        AddState(target, liquid.Id, moved, liquid.WorldWater.Temperature);
-        target.CommitVessel();
-        return moved;
+        if (target == null || !target.CanOperate(actor)) return 0f;
+        float requested = Mathf.Max(0f, target.Capacity - target.Data.Amount);
+        if (requested <= 0) return 0f;
+        if (!GameNetwork.HasStateAuthority) return ContainerTransferCommands.RequestVesselAction(target, actor, "world-fill", requested, source.WorldCell) ? requested : 0f;
+        var result = ContainerTransferService.TransferLiquid(new WorldLiquidTransferPort(source, actor.gameObject.scene.handle, Mathf.CeilToInt(requested), 3f),
+            Port(target, ContainerPortDirection.Input), new ContainerTransferContext(actor, ContainerAccessKind.Manual, "fill-world-liquid"), requested);
+        return result.LiquidServings;
     }
-
-    [MethodImpl(MethodImplOptions.NoInlining)]
-    public static bool Drink(ILiquidVessel target, Item actor)
+    public static bool CanDrink(ILiquidVessel target)
     {
-        if (!GameNetwork.HasStateAuthority) return false;
-        LiquidDefinition liquid = target.CurrentLiquid;
-        if (!target.CanOperate(actor) || liquid?.Drinkable != true || Mod_WaterVessel.IsEmptyAmount(target.Data.Amount)) return false;
+        var port = target == null ? null : Port(target, ContainerPortDirection.Output);
+        return port != null && port.PeekLiquid(out var batch) && batch.Servings >= 1f && port.Configuration.AllowsLiquid(batch.LiquidId) &&
+            GameRes.ExistingInstance?.GetLiquidDefinition(batch.LiquidId)?.Drinkable == true;
+    }
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    public static bool Drink(ILiquidVessel target, Item actor, string portId = null)
+    {
+        if (target == null || !target.CanOperate(actor)) return false;
+        if (!GameNetwork.HasStateAuthority) return ContainerTransferCommands.RequestVesselAction(target, actor, "drink", 1f, portId: portId);
+        var port = Port(target, ContainerPortDirection.Output, portId);
+        if (port == null || !port.CanAccess(new ContainerTransferContext(actor, ContainerAccessKind.Manual, "drink"), out _)) return false;
         Mod_Food food = actor.itemMods.GetMod_ByID<Mod_Food>(ModText.Food);
-        if (food == null) return false;
-        float amount = Mathf.Min(1f, target.Data.Amount);
-        food.DrinkWater(liquid.HydrationPerServing * amount, target.Item);
-        LiquidDrinkEffectProcessor.Apply(actor, liquid);
-        Remove(target, amount);
-        return true;
+        if (food == null || !port.ReserveLiquid(out var batch)) return false;
+        LiquidDefinition liquid = GameRes.ExistingInstance.GetLiquidDefinition(batch.LiquidId);
+        if (!port.IsValid || !target.CanOperate(actor) || liquid?.Drinkable != true || batch.Servings < 1f || !port.Configuration.AllowsLiquid(batch.LiquidId) || !port.ExtractLiquid(batch, 1f)) return false;
+        port.PublishState();
+        food.DrinkWater(liquid.HydrationPerServing, target.Item); LiquidDrinkEffectProcessor.Apply(actor, liquid); return true;
     }
-
-    public static float PourToGround(ILiquidVessel target, Item actor, float amount)
-        => PourToGround(target, actor, amount, 0);
-
-    /// <summary>手持容器可按左右倾倒方向把液体写入玩家相邻格，0 仍表示脚下格。</summary>
-    public static float PourToGround(ILiquidVessel target, Item actor, float amount, int horizontalCellOffset)
+    public static float PourToGround(ILiquidVessel target, Item actor, float amount) => PourToGround(target, actor, amount, 0);
+    public static float PourToGround(ILiquidVessel target, Item actor, float amount, int horizontalCellOffset, string portId = null)
     {
-        if (!target.CanOperate(actor) || !MachineDefinition.Positive(amount)) return 0f;
-        LiquidDefinition liquid = target.CurrentLiquid;
-        float moved = Quantize(Mathf.Min(amount, target.Data.Amount));
-        Vector2 pourPosition = actor.transform.position;
-        if (horizontalCellOffset < 0) pourPosition += Vector2.left;
-        else if (horizontalCellOffset > 0) pourPosition += Vector2.right;
-        if (liquid == null || moved <= 0f || ChunkMgr.ExistingInstance == null ||
-            !ChunkMgr.ExistingInstance.TryGetRuntimeTerrainTile(pourPosition, out var sample)) return 0f;
-        float depth = sample.Terrain.GetLiquidDepth(sample.LocalCell.x, sample.LocalCell.y);
-        // 容器倾倒统一写入独立 Liquid 层，水和岩浆遵循同一套世界液体守恒规则。
-        if (liquid.WorldWater != null)
+        if (target == null || !target.CanOperate(actor) || !float.IsFinite(amount) || amount <= 0f) return 0f;
+        if (!GameNetwork.HasStateAuthority) return ContainerTransferCommands.RequestVesselAction(target, actor, "pour", amount, horizontalCellOffset: horizontalCellOffset, portId: portId) ? Mathf.Min(amount, target.Data.Amount) : 0f;
+        var port = Port(target, ContainerPortDirection.Output, portId);
+        if (port == null || !port.CanAccess(new ContainerTransferContext(actor, ContainerAccessKind.Manual, "pour"), out _)) return 0f;
+        Vector2 position = actor.transform.position;
+        if (horizontalCellOffset < 0) position += Vector2.left;
+        else if (horizontalCellOffset > 0) position += Vector2.right;
+        float removed = 0f, remaining = Mathf.Min(amount, target.Data.Amount);
+        while (remaining > 0f)
         {
-            float unitDepth = liquid.WorldWater.DepthPerServing;
-            float availableServings = Mathf.Floor(
-                Mathf.Max(0f, 1f - depth) / unitDepth + Mod_WaterVessel.AmountEpsilon);
-            moved = Quantize(Mathf.Min(moved, availableServings));
-            if (moved <= 0f || !WorldLiquidSystem.TryPour(pourPosition, liquid.Id, moved * unitDepth, out _))
-                return 0f;
+            if (!port.ReserveLiquid(out var batch) || !port.Configuration.AllowsLiquid(batch.LiquidId)) break;
+            float servings = Mathf.Min(remaining, batch.Servings);
+            if (port.Configuration.WholeBatch && servings < Mathf.Min(1f, remaining)) break;
+            LiquidDefinition liquid = GameRes.ExistingInstance.GetLiquidDefinition(batch.LiquidId);
+            if (liquid?.WorldWater == null || ChunkMgr.ExistingInstance == null ||
+                !ChunkMgr.ExistingInstance.TryGetRuntimeTerrainTile(position, out var sample)) break;
+            float beforeDepth = sample.Terrain.GetLiquidDepth(sample.LocalCell.x, sample.LocalCell.y);
+            string beforeId = sample.Terrain.GetLiquidId(sample.LocalCell.x, sample.LocalCell.y);
+            float requestedDepth = liquid.WorldWater.DepthPerServing * servings;
+            if (!WorldLiquidSystem.TryPour(position, liquid.Id, requestedDepth, out float added) ||
+                Mathf.Abs(added - requestedDepth) > .000001f) break;
+            if (!port.ExtractLiquid(batch, servings))
+            { WorldLiquidSystem.TrySet(sample, beforeId, beforeDepth); break; }
+            removed += servings; remaining -= servings; port.PublishState();
         }
-        else return 0f;
-        return Remove(target, moved);
+        return removed;
     }
-
     [MethodImpl(MethodImplOptions.NoInlining)]
-    public static bool TransferFromInventory(ILiquidVessel target, ItemData source, Item actor, float maximum)
+    public static bool TransferFromInventory(ILiquidVessel target, ItemData source, Item actor, float maximum, string targetPortId = null)
     {
-        if (!GameNetwork.HasStateAuthority) return false;
-        if (!target.CanOperate(actor) || source == null || ReferenceEquals(source, target.ItemData) ||
-            source.Guid != 0 && source.Guid == target.ItemData.Guid ||
+        if (target == null || !target.CanOperate(actor) || source == null ||
+            ReferenceEquals(source, target.ItemData) || source.Guid != 0 && source.Guid == target.ItemData.Guid ||
             !InventoryContextResolver.TryResolveContainingInventory(actor, source, out Inventory inventory)) return false;
+        source = inventory.Data.itemSlots.Find(slot => slot?.itemData != null && (ReferenceEquals(slot.itemData, source) || slot.itemData.Guid == source.Guid && slot.itemData.IDName == source.IDName))?.itemData;
+        if (source == null) return false;
+        if (!GameNetwork.HasStateAuthority) return ContainerTransferCommands.RequestInventoryFill(target, source, actor, inventory, maximum, targetPortId);
         Item held = actor.itemMods?.GetMod_ByID<Mod_HotBar>(ModText.Hotbar)?.CurentSelectItem;
-        if (held?.itemData != null && (ReferenceEquals(held.itemData, source) || source.Guid != 0 && held.itemData.Guid == source.Guid))
-        {
-            var vessel = held.itemMods.GetMod_ByID<Mod_WaterVessel>(Mod_WaterVessel.ModuleId);
-            if (vessel != null) return Transfer(vessel, target, actor);
-        }
-        if (!Mod_WaterVessel.TryRead(source, out var storage, out var state))
-            return FillFromIngredient(target, source, actor, inventory, maximum);
-        if (Mod_WaterVessel.IsEmptyAmount(state.Amount) ||
-            !Mod_WaterVessel.IsEmptyAmount(target.Data.Amount) && !SameLiquid(state.LiquidId, target.Data.LiquidId)) return false;
-        float moved = Quantize(Mathf.Min(state.Amount, Mathf.Max(0f, target.Capacity - target.Data.Amount)));
-        if (moved <= 0f) return false;
-        AddState(target, state.LiquidId, moved, state.Temperature);
-        RemoveState(state, moved);
-        storage.WriteData(state);
-        target.CommitVessel();
-        inventory.Data.NotifyItemStateChanged(source);
-        ItemNetworkStateSerialization.NotifyRuntimeStateChanged(actor);
-        return true;
+        if (held != null && (ReferenceEquals(held.itemData, source) || source.Guid != 0 && held.itemData?.Guid == source.Guid))
+        { var vessel = held.itemMods.GetMod_ByID<Mod_WaterVessel>(Mod_WaterVessel.ModuleId); if (vessel != null) return Transfer(vessel, target, actor, targetPortId: targetPortId); }
+        if (Mod_WaterVessel.TryRead(source, out _, out _))
+            return Transfer(new ColdInventoryLiquidVessel(source, inventory, actor), target, actor, targetPortId: targetPortId);
+        return FillFromIngredient(target, source, actor, inventory, maximum, targetPortId);
     }
-
-    private static bool FillFromIngredient(ILiquidVessel target, ItemData source, Item actor, Inventory inventory, float maximum)
+    private static bool FillFromIngredient(ILiquidVessel target, ItemData source, Item actor, Inventory inventory, float maximum, string targetPortId)
     {
         if (float.IsNaN(maximum) || maximum <= 0f) return false;
         LiquidDefinition liquid = null;
-        foreach (LiquidDefinition candidate in GameRes.Instance.LiquidDefinitions.Values)
+        foreach (LiquidDefinition candidate in GameRes.ExistingInstance.LiquidDefinitions.Values)
             if (candidate.SourceItemId == source.IDName) { liquid = candidate; break; }
-        if (liquid == null || !Mod_WaterVessel.IsEmptyAmount(target.Data.Amount) && !SameLiquid(target.Data.LiquidId, liquid.Id)) return false;
+        if (liquid == null) return false;
         foreach (ModuleData module in source.ModuleDataDic.Values)
-            if (module is ModData_FoodData food && FoodObserverStateStore.ReadFloat(
-                FoodObserverStateStore.Find(food, FoodObserverStateStore.ConsumptionStateKey), "EatingProgress", 0f) > 0f) return false;
-        ItemSlot slot = inventory.Data.itemSlots.Find(value => ReferenceEquals(value?.itemData, source) || source.Guid != 0 && value?.itemData?.Guid == source.Guid);
-        int amount = Mathf.FloorToInt(Mathf.Min(Mathf.Min(slot?.itemData?.Stack?.Amount ?? 0f, maximum),
-            Mathf.Max(0f, target.Capacity - target.Data.Amount) + Mod_WaterVessel.AmountEpsilon));
-        if (amount <= 0 || !inventory.Data.TryConsumeFromSlot(slot, amount, out _)) return false;
-        AddState(target, liquid.Id, amount);
-        target.CommitVessel();
-        ItemNetworkStateSerialization.NotifyRuntimeStateChanged(actor);
-        return true;
+            if (module is ModData_FoodData food && FoodObserverStateStore.ReadFloat(FoodObserverStateStore.Find(food, FoodObserverStateStore.ConsumptionStateKey), "EatingProgress", 0f) > 0f) return false;
+        int index = inventory.Data.itemSlots.FindIndex(slot => ReferenceEquals(slot?.itemData, source));
+        if (index < 0) return false;
+        int requested = Mathf.FloorToInt(Mathf.Min(source.Stack.Amount, maximum));
+        var input = new InventoryItemTransferPort(inventory, actor, new ContainerPortConfiguration
+        { Id = "manual-ingredient", Type = "core:inventory", SlotIndices = new[] { index }, Direction = ContainerPortDirection.Output, Access = ContainerAccessKind.Manual, OwnerOnly = true }, allowDraggedSource: true);
+        return ContainerTransferService.TransferIngredient(input, Port(target, ContainerPortDirection.Input, targetPortId), new ContainerTransferContext(actor, ContainerAccessKind.Manual, "liquid-ingredient"),
+            requested, source.IDName, liquid.Id).Success;
     }
     #endregion
 }

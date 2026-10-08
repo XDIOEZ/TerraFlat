@@ -33,7 +33,8 @@ public static class ItemDefinitionCatalogLoader
         "Assets/2_Prefabs/Gameplay/Modules/Movement/Mod_Mover.prefab",
         "Assets/2_Prefabs/Gameplay/Modules/Variants/Module_SmeltingVariant.prefab",
         "Assets/2_Prefabs/World/Buildings/Wall_Stone.prefab",
-        "Assets/2_Prefabs/World/Buildings/Wall_Wood.prefab"
+        "Assets/2_Prefabs/World/Buildings/Wall_Wood.prefab",
+        "Assets/2_Prefabs/World/Buildings/Summoners/Mod_Meatrack_Summoner.prefab"
     };
     public const string RelativeManifestPath = RelativeItemRoot + "/" + ManifestFileName;
 

@@ -28,6 +28,9 @@
         "animatorControllerAddress": "flatworld.actor.animator.zombie"
       },
       "modules": {
+        "pressure": {
+          "enabled": false
+        },
         "mover": {
           "parameters": {
             "Data": {

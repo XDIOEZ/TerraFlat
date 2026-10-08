@@ -192,7 +192,7 @@ public sealed class WaterVesselPanel : MonoBehaviour, IPointerDownHandler, IDrag
             ? definition.DisplayName
             : FlatWorldLocalizationService.GetUiText("水容器");
         hint.text = FlatWorldLocalizationService.GetUiText(contents == null
-            ? "一次只装一种液体；拖入液体原料或其他容器可装液，拖动容器可倾倒。"
+            ? "可以混装液体；每次按比例取出单种一份。拖入原料或其他容器可装液，拖动容器可倾倒。"
             : "拖入物品可存放，点击或拖出可取回；满桶淡水加十份盐制盐水，拖桶沿可倾倒。");
 
         LiquidDefinition liquid = vessel.CurrentLiquid;
@@ -202,10 +202,9 @@ public sealed class WaterVesselPanel : MonoBehaviour, IPointerDownHandler, IDrag
             ? FlatWorldLocalizationService.GetUiText("空容器")
             : FlatWorldLocalizationService.GetUiText(liquid?.DisplayName ?? vessel.Data.LiquidId);
         status.text = FlatWorldLocalizationService.GetUiFormat("{0}　{1} / {2} 份\n加热进度：{3:0} 秒",
-            liquidName, vessel.Data.Amount.ToString("0"),
-            vessel.Capacity, vessel.Data.ProcessingSeconds);
-        drink.interactable = liquid?.Drinkable == true &&
-            !Mod_WaterVessel.IsEmptyAmount(vessel.Data.Amount);
+            liquidName, vessel.Data.Amount.ToString("0.######"),
+            vessel.Capacity, vessel.Data.ProcessingSeconds) + "\n" + MixedLiquidContents.Describe(vessel.Data);
+        drink.interactable = LiquidVesselOperations.CanDrink(vessel);
     }
     /// <summary>完成一次饮水并即时更新余量。</summary>
     private void Drink() { vessel.Drink(actor); Refresh(); }
@@ -382,7 +381,7 @@ public sealed class WaterVesselPanel : MonoBehaviour, IPointerDownHandler, IDrag
         float retainedFraction = Mathf.Clamp01(1f - physicalTilt / FullEmptyTiltDegrees);
         float maxRetainedAmount = vessel.Capacity * retainedFraction;
         float maximumSpillAmount = Mathf.Max(0f, vessel.Data.Amount - maxRetainedAmount);
-        if (maximumSpillAmount + Mod_WaterVessel.AmountEpsilon < Mod_WaterVessel.AmountStep ||
+        if (maximumSpillAmount <= 0f ||
             activeMouthWidthMultiplier <= 0f)
         {
             pourAmountAccumulator = 0f;
@@ -408,16 +407,17 @@ public sealed class WaterVesselPanel : MonoBehaviour, IPointerDownHandler, IDrag
         pourAmountAccumulator = Mathf.Min(
             Mod_WaterVessel.AmountStep,
             pourAmountAccumulator + amountPerSecond * deltaTime);
-        if (pourAmountAccumulator + Mod_WaterVessel.AmountEpsilon < Mod_WaterVessel.AmountStep)
+        float requested = Mathf.Min(Mod_WaterVessel.AmountStep, maximumSpillAmount);
+        if (pourAmountAccumulator + Mod_WaterVessel.AmountEpsilon < requested)
             return;
 
         int horizontalCellOffset = vesselTiltDegrees > 0f ? -1 : 1;
         float removed = vessel.Item?.InHand == true
-            ? LiquidVesselOperations.PourToGround(vessel, actor, Mod_WaterVessel.AmountStep, horizontalCellOffset)
-            : vessel.PourToGround(actor, Mod_WaterVessel.AmountStep);
-        if (removed + Mod_WaterVessel.AmountEpsilon < Mod_WaterVessel.AmountStep)
+            ? LiquidVesselOperations.PourToGround(vessel, actor, requested, horizontalCellOffset)
+            : vessel.PourToGround(actor, requested);
+        if (removed <= 0f)
             return;
-        pourAmountAccumulator = 0f;
+        pourAmountAccumulator = Mathf.Max(0f, pourAmountAccumulator - removed);
 
         // 倒液只更新目标水位，不重置正在传播的液面波。
         Liquid.SetWater(vessel.Data.Amount, vessel.Capacity, vessel.CurrentLiquid);

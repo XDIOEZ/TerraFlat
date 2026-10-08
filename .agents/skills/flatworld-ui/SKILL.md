@@ -189,6 +189,7 @@ description: "Use when: 定位或修改 FlatWorld 的 UIManager、BasePanel、�
 - 创建 UI Prefab 时必须按用途放入 `Assets/2_Prefabs/2-1_UI/` 下合适的分类目录；优先复用 `Common`、`Gameplay`、`MainMenu`、`Settings`，不要把 Prefab 直接堆在 UI 根目录。现有分类都不匹配时，才新增职责明确的子目录。
 - 普通合成正式 Prefab 为 `Gameplay/Crafting/UI_HandCraftTable.prefab` 与 `UI_MakerTable.prefab`：参考画布下固定 1344×756（约占 1920×1080 的 70%），普通边框 2 个参考像素，主要按钮高度不低于 60；手工台保留 `输入_1...输入_4`、`输出_1/2` 作为正式槽位模板，分别置于 `输入槽内容`、`输出槽内容` 的滚动布局内，运行时仅按真实库存容量克隆槽位并重绑预览。世界制作台仍为 `输入_1...输入_5`、`输出_1/2`。两者共用 `配方候选内容`、隐藏的 `配方候选模板`、`合成按钮`、`关闭`；运行时只复用正式模板生成条目，不拼装视觉层级。`UI_MakerTable` 根节点不得保留旧 `Image` 流程箭头。
 - 新增正式 Prefab 必须位于 Addressables `Prefab` 标签范围，并登记稳定加载键；移动或重命名资源时保留 `.meta`，同步检查加载键与引用。
+- 工业流体/宇航服/便携气罐面板使用 `UI_IndustrialFluid/UI_Spacesuit/UI_FluidTank` 的正式 `MechanicalPanelView`；`PreservePrefabLayout` 防止旧机械紧凑布局重排。宇航服手持和 `UI_Equipment.FWUI_ConfigureSpacesuit` 共用 `SpacesuitPanelSession`，只绑定同一实际供氧槽，关闭页面不清库存，物品离开所属玩家或卸载时释放会话。
 - `5-5_UI` 的子目录统一继承根 `UI.asmdef`；整理脚本时使用 `AssetDatabase.MoveAsset` 连同 `.meta` 移动，不新建子程序集或重生成 GUID，避免 Prefab 上的 MonoScript 引用失效。
 
 ## 文案、焦点与联动

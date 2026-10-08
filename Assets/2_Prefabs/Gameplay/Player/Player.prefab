@@ -93,9 +93,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   item: {fileID: 0}
   modData:
-    Name: health
-    ID: "\u751F\u547D\u503C\u7CFB\u7EDF\u6A21\u5757"
-    isRunning: 1
+    StableName: health
+    ModuleId: "\u751F\u547D\u503C\u7CFB\u7EDF\u6A21\u5757"
+    enabled: 1
     Type: 0
     BitData: '{"Hp":50,"MaxHp":50,"UseBodyPartHealth":true,"TwoPartHitChance":0.25,"BodyPartDataVersion":2,"BodyParts":[{"Part":0,"Hp":20.0,"MaxHp":20.0,"DefenseValues":{"Cutting":0.0,"Piercing":0.0,"Chopping":0.0,"Blunt":0.0,"TotalDefense":0.0},"DamageMultiplier":1.5,"DepletionBuffIds":["core:concussion"],"AreaRatio":0.08,"InjuryProbability":1.0},{"Part":1,"Hp":50.0,"MaxHp":50.0,"DefenseValues":{"Cutting":0.0,"Piercing":0.0,"Chopping":0.0,"Blunt":0.0,"TotalDefense":0.0},"DamageMultiplier":1.0,"DepletionBuffIds":[],"AreaRatio":0.22,"InjuryProbability":1.0},{"Part":2,"Hp":30.0,"MaxHp":30.0,"DefenseValues":{"Cutting":0.0,"Piercing":0.0,"Chopping":0.0,"Blunt":0.0,"TotalDefense":0.0},"DamageMultiplier":1.0,"DepletionBuffIds":[],"AreaRatio":0.16,"InjuryProbability":1.0},{"Part":3,"Hp":25.0,"MaxHp":25.0,"DefenseValues":{"Cutting":0.0,"Piercing":0.0,"Chopping":0.0,"Blunt":0.0,"TotalDefense":0.0},"DamageMultiplier":1.0,"DepletionBuffIds":["core:arm_fracture"],"AreaRatio":0.09,"InjuryProbability":1.0},{"Part":4,"Hp":25.0,"MaxHp":25.0,"DefenseValues":{"Cutting":0.0,"Piercing":0.0,"Chopping":0.0,"Blunt":0.0,"TotalDefense":0.0},"DamageMultiplier":1.0,"DepletionBuffIds":["core:arm_fracture"],"AreaRatio":0.09,"InjuryProbability":1.0},{"Part":5,"Hp":25.0,"MaxHp":25.0,"DefenseValues":{"Cutting":0.0,"Piercing":0.0,"Chopping":0.0,"Blunt":0.0,"TotalDefense":0.0},"DamageMultiplier":1.0,"DepletionBuffIds":[],"AreaRatio":0.1,"InjuryProbability":1.0},{"Part":6,"Hp":25.0,"MaxHp":25.0,"DefenseValues":{"Cutting":0.0,"Piercing":0.0,"Chopping":0.0,"Blunt":0.0,"TotalDefense":0.0},"DamageMultiplier":1.0,"DepletionBuffIds":["core:leg_fracture"],"AreaRatio":0.13,"InjuryProbability":1.0},{"Part":7,"Hp":25.0,"MaxHp":25.0,"DefenseValues":{"Cutting":0.0,"Piercing":0.0,"Chopping":0.0,"Blunt":0.0,"TotalDefense":0.0},"DamageMultiplier":1.0,"DepletionBuffIds":["core:leg_fracture"],"AreaRatio":0.13,"InjuryProbability":1.0}],"DefenseValues":{"Cutting":0.0,"Piercing":0.0,"Chopping":0.0,"Blunt":0.0,"TotalDefense":0.0},"AttackersUIDs":[],"DamageInterval":0.1,"DestroyDelay":0.0,"LootTable":[],"CombatBalanceVersion":1}'
   Data:
@@ -104,6 +104,7 @@ MonoBehaviour:
     CombatBalanceVersion: 1
     UseBodyPartHealth: 1
     TwoPartHitChance: 0.25
+    HitSizeCoefficientOverride: 0
     BodyPartDataVersion: 2
     BodyParts:
     - Part: 0
@@ -216,6 +217,7 @@ MonoBehaviour:
     DamageInterval: 0.1
     DestroyDelay: 0
     LootTable: []
+  weakTool: 0
   OnDead:
     _PersistentCalls: []
   HurtActions: []
@@ -238,7 +240,6 @@ MonoBehaviour:
   HideUiDelayAfterLastDamage: 4
   healthBarTopPadding: 0.16
   healthBarWorldScale: 0.55
-  Equipment_Inventory: {fileID: 0}
   enableDebugTools: 0
   references:
     version: 2
@@ -308,9 +309,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   item: {fileID: 0}
   ModSaveData:
-    Name: "\u88C5\u5907\u6A21\u5757"
-    ID: 
-    isRunning: 1
+    StableName: "\u88C5\u5907\u6A21\u5757"
+    ModuleId:
+    enabled: 1
     Type: 0
     BitData: 
   EquipmentInventory:
@@ -346,7 +347,46 @@ MonoBehaviour:
         _PersistentCalls: []
       Event_OnDataChanged_TwoSlots:
         _PersistentCalls: []
+      IsDepositBlocked: 0
+    StorageMaxWeightKg: 0
+    StorageMaxVolumeCubicMeters: 0
     itemSlot_UI: []
+    SlotRules:
+    - Id: Head
+      DisplayName: "\u5934\u90E8 / \u5E3D\xB7\u76D4"
+      RequiredTag: EquipmentSlot.Head
+      LabelObjectName: FWUI_SlotLabel_Head
+      UiPosition: {x: -225, y: 155}
+    - Id: TorsoOuter
+      DisplayName: "\u5916\u886C / \u62A4\u7532"
+      RequiredTag: EquipmentSlot.TorsoOuter
+      LabelObjectName: FWUI_SlotLabel_Chest
+      UiPosition: {x: -225, y: 20}
+    - Id: Hands
+      DisplayName: "\u624B\u90E8"
+      RequiredTag: EquipmentSlot.Hands
+      LabelObjectName: FWUI_SlotLabel_Hand
+      UiPosition: {x: 225, y: 155}
+    - Id: FeetOuter
+      DisplayName: "\u978B\u5B50"
+      RequiredTag: EquipmentSlot.FeetOuter
+      LabelObjectName: FWUI_SlotLabel_Feet
+      UiPosition: {x: 225, y: -170}
+    - Id: TorsoInner
+      DisplayName: "\u5185\u886C / \u8863\u7269"
+      RequiredTag: EquipmentSlot.TorsoInner
+      LabelObjectName: FWUI_SlotLabel_TorsoInner
+      UiPosition: {x: -225, y: -115}
+    - Id: Legs
+      DisplayName: "\u817F\u90E8 / \u88E4\u88C5"
+      RequiredTag: EquipmentSlot.Legs
+      LabelObjectName: FWUI_SlotLabel_Legs
+      UiPosition: {x: 225, y: 50}
+    - Id: FeetInner
+      DisplayName: "\u889C\u5B50"
+      RequiredTag: EquipmentSlot.FeetInner
+      LabelObjectName: FWUI_SlotLabel_FeetInner
+      UiPosition: {x: 225, y: -60}
   equipment_ModuleData: []
   OpenPanelActionName: P
   references:
@@ -398,9 +438,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   item: {fileID: 0}
   modData:
-    Name: 
-    ID: 
-    isRunning: 1
+    StableName:
+    ModuleId:
+    enabled: 1
     Type: 0
     BitData: 
   Data:
@@ -409,6 +449,9 @@ MonoBehaviour:
     Insulation: 0
     SafeTemperatureMin: 5
     SafeTemperatureMax: 40
+    DangerTemperatureBufferSeconds: 60
+    TemperatureBufferRecoveryPerSecond: 1
+    RemainingTemperatureBufferSeconds: 60
     RuntimeAmbientOffset: 0
     RuntimeChangeSpeedMultiplier: 1
     RuntimeCoolingSpeedMultiplier: 1
@@ -447,18 +490,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 7343432311901774332}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!210 &9100000000000000202
-SortingGroup:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4411885219965820198}
-  m_Enabled: 1
-  m_SortingLayerID: 0
-  m_SortingLayer: 0
-  m_SortingOrder: 1
-  m_SortAtRoot: 0
 --- !u!114 &2343211853481933686
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -473,9 +504,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   item: {fileID: 0}
   ModSaveData:
-    Name: "UI_\u5FEB\u6377\u680F"
-    ID: "UI_\u5FEB\u6377\u680F"
-    isRunning: 1
+    StableName: "UI_\u5FEB\u6377\u680F"
+    ModuleId: "UI_\u5FEB\u6377\u680F"
+    enabled: 1
     Type: 0
     BitData: 
   RawData: []
@@ -517,8 +548,8 @@ MonoBehaviour:
       IsInjected: 0
       PanelPosition: {x: 0, y: 0, z: 0}
       PanelIsOpen: 0
-      ToggleActionName: ""
-      UIPrefabName: ""
+      ToggleActionName:
+      UIPrefabName:
       Event_RefreshUI:
         _PersistentCalls: []
       Event_OnBeforeDataChanged:
@@ -527,6 +558,9 @@ MonoBehaviour:
         _PersistentCalls: []
       Event_OnDataChanged_TwoSlots:
         _PersistentCalls: []
+      IsDepositBlocked: 0
+    StorageMaxWeightKg: 0
+    StorageMaxVolumeCubicMeters: 0
     itemSlot_UI: []
   spawnLocation: {fileID: 6639265349670268636}
   HotBarMaxVolume: 9
@@ -539,6 +573,18 @@ MonoBehaviour:
     Index: 0
   CurentSelectItem: {fileID: 0}
   currentObject: {fileID: 0}
+--- !u!210 &9100000000000000202
+SortingGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4411885219965820198}
+  m_Enabled: 1
+  m_SortingLayerID: 0
+  m_SortingLayer: 0
+  m_SortingOrder: 1
+  m_SortAtRoot: 0
 --- !u!1 &4678875130974218576
 GameObject:
   m_ObjectHideFlags: 0
@@ -570,6 +616,8 @@ GameObject:
   - component: {fileID: 6829314751203845612}
   - component: {fileID: 9162598698088840726}
   - component: {fileID: 9100000000000000201}
+  - component: {fileID: 9100000000000000301}
+  - component: {fileID: 2945427715212089224}
   m_Layer: 10
   m_Name: Player
   m_TagString: Untagged
@@ -615,18 +663,6 @@ Transform:
   - {fileID: 9100000000000000101}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!210 &9100000000000000201
-SortingGroup:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4678875130974218576}
-  m_Enabled: 1
-  m_SortingLayerID: 0
-  m_SortingLayer: 0
-  m_SortingOrder: 0
-  m_SortAtRoot: 0
 --- !u!50 &8862278864143937418
 Rigidbody2D:
   serializedVersion: 4
@@ -731,9 +767,9 @@ MonoBehaviour:
   RightClickUp:
     _PersistentCalls: []
   _modData:
-    Name: "Controller模块"
-    ID: "Controller模块"
-    isRunning: 1
+    StableName: "Controller\u6A21\u5757"
+    ModuleId: "Controller\u6A21\u5757"
+    enabled: 1
     Type: 0
     BitData: 
 --- !u!114 &6883143605326503467
@@ -756,6 +792,9 @@ MonoBehaviour:
   OnAct:
     _PersistentCalls: []
   Sprite: {fileID: 0}
+  poolKey:
+  isInPool: 0
+  poolingDisabled: 0
   OnInit_Env:
     _PersistentCalls: []
   OnDurabilityModified:
@@ -784,6 +823,14 @@ MonoBehaviour:
     inHand: 0
     Guid: -112887599
     FactionId: 
+    CraftedDurabilityMultiplier: 1
+    MatterState:
+      Initialized: 0
+      TemperatureCelsius: 20
+      Moisture: 0
+      IsBurning: 0
+      CombustionElapsedSeconds: 0
+    HeatConductionRate: 1
     CurrentSceneName: "\u5730\u7403"
     hp:
       value: 30
@@ -824,9 +871,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   item: {fileID: 0}
   ModData:
-    Name: 
-    ID: PlayerDeathState
-    isRunning: 1
+    StableName:
+    ModuleId: PlayerDeathState
+    enabled: 1
     Type: 0
     BitData: 
   respawnHpRate: 1
@@ -851,9 +898,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   item: {fileID: 0}
   ModSaveData:
-    Name: 
-    ID: 
-    isRunning: 1
+    StableName:
+    ModuleId:
+    enabled: 1
     Type: 0
     BitData: 
   ButtonPrefab: {fileID: 3948103345439709801, guid: d52e8e0393ca8974095cb621f030f5c1, type: 3}
@@ -1062,18 +1109,18 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   item: {fileID: 0}
   modData:
-    Name: 
-    ID: "\u6C27\u6C14\u6A21\u5757"
-    isRunning: 1
+    StableName:
+    ModuleId: "\u6C27\u6C14\u6A21\u5757"
+    enabled: 1
     Type: 0
     BitData: 
   Data:
     CurrentOxygen: 100
     MaxOxygen: 100
-  staminaConsumePerSecond: 5
+    HypoxiaSeconds: 0
   oxygenConsumePerSecond: 10
   oxygenRecoverPerSecond: 25
-  drowningDamagePerTick: 10
+  hypoxiaDamagePerTick: 10
   OnOxygenChanged:
     _PersistentCalls: []
 --- !u!114 &9162598698088840726
@@ -1090,9 +1137,69 @@ MonoBehaviour:
   m_EditorClassIdentifier:
   item: {fileID: 0}
   ModData:
-    Name:
-    ID:
-    isRunning: 1
+    StableName:
+    ModuleId:
+    enabled: 1
+    Type: 0
+    BitData:
+--- !u!210 &9100000000000000201
+SortingGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4678875130974218576}
+  m_Enabled: 1
+  m_SortingLayerID: 0
+  m_SortingLayer: 0
+  m_SortingOrder: 0
+  m_SortAtRoot: 0
+--- !u!114 &9100000000000000301
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4678875130974218576}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 787d12293ad901c46ae9e8e3c76bfce4, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  item: {fileID: 0}
+  modData:
+    StableName: "\u6C14\u538B\u751F\u5B58\u6A21\u5757"
+    ModuleId: "\u6C14\u538B\u751F\u5B58\u6A21\u5757"
+    enabled: 1
+    Type: 0
+    BitData:
+  SafePressureMinKPa: 50
+  SafePressureMaxKPa: 150
+  DangerBufferSeconds: 30
+  BufferRecoveryPerSecond: 1
+  DamageIntervalSeconds: 5
+  LowPressureDamage: 5
+  HighPressureDamage: 5
+  State:
+    Initialized: 0
+    RemainingBufferSeconds: 30
+--- !u!114 &2945427715212089224
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4678875130974218576}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f53cc6f0b28c26d4ab7266997bf86b2e, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  item: {fileID: 0}
+  ModData:
+    StableName: "\u5927\u6C14\u4F9B\u6C27\u6A21\u5757"
+    ModuleId: "\u5927\u6C14\u4F9B\u6C27\u6A21\u5757"
+    enabled: 1
     Type: 0
     BitData:
 --- !u!1 &7418924436426645882
@@ -1157,9 +1264,9 @@ MonoBehaviour:
     PlayerProteinHealThreshold: 60
     HealNeedRatio: 0.6
   FoodModData:
-    Name: 
-    ID: 
-    isRunning: 1
+    StableName:
+    ModuleId:
+    enabled: 1
     Type: 0
     FoodData:
       nutrition:
@@ -1197,6 +1304,7 @@ MonoBehaviour:
   ConsumeKind: 0
   ConsumptionEnabled: 1
   ConsumeCompleteReplacementItemID: 
+  NutritionTagMultipliers: []
 --- !u!1 &7574631112993380532
 GameObject:
   m_ObjectHideFlags: 0
@@ -1243,9 +1351,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   item: {fileID: 0}
   ModSaveData:
-    Name: "\u5DE5\u4F5C\u53F0\u6A21\u5757_\u624B\u5DE5"
-    ID: 
-    isRunning: 1
+    StableName: "\u5DE5\u4F5C\u53F0\u6A21\u5757_\u624B\u5DE5"
+    ModuleId:
+    enabled: 1
     Type: 0
     BitData: 
   RawData: []
@@ -1282,6 +1390,9 @@ MonoBehaviour:
         _PersistentCalls: []
       Event_OnDataChanged_TwoSlots:
         _PersistentCalls: []
+      IsDepositBlocked: 0
+    StorageMaxWeightKg: 0
+    StorageMaxVolumeCubicMeters: 0
     itemSlot_UI: []
   outputInventory:
     item: {fileID: 0}
@@ -1310,6 +1421,9 @@ MonoBehaviour:
         _PersistentCalls: []
       Event_OnDataChanged_TwoSlots:
         _PersistentCalls: []
+      IsDepositBlocked: 0
+    StorageMaxWeightKg: 0
+    StorageMaxVolumeCubicMeters: 0
     itemSlot_UI: []
   basePanel: {fileID: 0}
   InventoryPanel_Prefab: {fileID: 2639614329428065687, guid: f548d8c788434c54db52f9aa1e5cc5ac, type: 3}
@@ -1835,7 +1949,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 1349947316172305539, guid: ae0742267fe3e7b498e8ab9d28074677, type: 3}
       propertyPath: distanceConfig.UnActiveDistance
-      value: 3
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 1349947316172305539, guid: ae0742267fe3e7b498e8ab9d28074677, type: 3}
       propertyPath: distanceConfig.LoadChunkDistance
@@ -1843,7 +1957,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1349947316172305539, guid: ae0742267fe3e7b498e8ab9d28074677, type: 3}
       propertyPath: distanceConfig.DestroyChunkDistance
-      value: 3
+      value: 5
       objectReference: {fileID: 0}
     - target: {fileID: 2683999769122623227, guid: ae0742267fe3e7b498e8ab9d28074677, type: 3}
       propertyPath: m_Name

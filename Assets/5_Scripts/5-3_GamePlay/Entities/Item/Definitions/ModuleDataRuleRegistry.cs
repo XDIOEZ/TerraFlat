@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-/// <summary>纯模块规则的实例上下文，不持有 Module 或 GameObject。</summary>
+/// <summary>纯模块规则的实例上下文，携带宿主身份但不创建表现组件。</summary>
 public readonly struct ModuleDataTickContext
 {
     public ModuleDataTickContext(ModuleData moduleData, ItemData itemData,
@@ -18,15 +18,20 @@ public readonly struct ModuleDataTickContext
         Definition = definition;
         Scheduler = null;
         SchedulerGeneration = 0;
+        Owner = null;
+        MachineOwner = null;
     }
 
     internal ModuleDataTickContext(ModuleData moduleData, ItemData itemData,
         Inventory_Data inventoryData, ItemSlot slot, int slotIndex, float deltaTime,
-        RuntimeItemDefinition definition, InventoryModuleDataScheduler scheduler, uint schedulerGeneration)
+        RuntimeItemDefinition definition, InventoryModuleDataScheduler scheduler, uint schedulerGeneration, Item owner = null,
+        MachineEntity machineOwner = null)
         : this(moduleData, itemData, inventoryData, slot, slotIndex, deltaTime, definition)
     {
         Scheduler = scheduler;
         SchedulerGeneration = schedulerGeneration;
+        Owner = owner;
+        MachineOwner = machineOwner;
     }
 
     public ModuleData ModuleData { get; }
@@ -36,6 +41,8 @@ public readonly struct ModuleDataTickContext
     public int SlotIndex { get; }
     public float DeltaTime { get; }
     public RuntimeItemDefinition Definition { get; }
+    public Item Owner { get; } // 冷载荷规则读取真实库存携带者，不能猜测当前本地玩家。
+    public MachineEntity MachineOwner { get; } // 数据机器库存以真实逻辑节点作为爆炸位置。
     internal InventoryModuleDataScheduler Scheduler { get; }
     internal uint SchedulerGeneration { get; }
 }
@@ -128,6 +135,8 @@ public static class ModuleDataRuleRegistry
     {
         Register(ModText.Food, "food.spoilage", _ => new FoodSpoilageModuleDataObserver());
         Register(ModText.Food, "food.melting", _ => new FoodMeltingModuleDataObserver(), 10);
+        Register(Mod_FluidTank.ModuleId, "fluid_tank.overpressure", definition => new FluidTankInventoryRule(definition));
+        Register(Mod_Spacesuit.ModuleId, "spacesuit.stored_tank", _ => new SpacesuitInventoryRule());
     }
 
     public static void Register(string moduleId, string ruleId,

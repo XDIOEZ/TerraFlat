@@ -98,6 +98,8 @@ public static partial class DroppedItemService
                 Mod_Droping.IsDropInProgress(item) || item.GetComponent<WorldItemWaterRuntime>()?.IsActive == true ||
                 Mod_Building.TryReadBuildingData(item.itemData, out _, out var building) && building.Role == BuildingRole.PlacedBuilding ||
                 MachineWorld.GetTransportAt(item.transform.position) != belt || !transportedItems.Add(item.itemData.Guid)) continue;
+            MachineWorld.TryReceiveConveyorDrop(new DroppedItemTransferPort(item), item.transform.position, seconds, out bool terminal);
+            if (terminal) continue;
             Vector2 position = MachineWorld.TransportGroundItem(item.transform.position, seconds);
             if (WorldTopologyRuntime.ShortestDelta(item.transform.position, position).sqrMagnitude < .00000001f) continue;
             Vector3 display = WorldTopologyRuntime.NearestImagePosition(item.transform.position, position);

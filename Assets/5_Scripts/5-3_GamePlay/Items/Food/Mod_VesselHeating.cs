@@ -1,31 +1,24 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
-/// <summary>
-/// 通用容器加热能力：热源只提供库存、温度和经过时间，具体液体或坩埚材料如何处理由容器自身决定。
-/// 因此高炉、熔炉、电炉等只要接入本能力，就不需要为每种容器新增热源代码。
-/// </summary>
+/// <summary>热源只提供温度和时间，各液体组分沿原有规则独立加工。</summary>
 public sealed class Mod_VesselHeating : Module, IInventoryHeatTreatment
 {
-    public Ex_ModData ModData = new(); // 加热模块自身不保存容器内容。
+    public Ex_ModData ModData = new();
     public override string CanonicalModuleId => "Mod_VesselHeating";
     public override ModuleTickMode TickMode => ModuleTickMode.Disabled;
     public override ModuleData _Data { get => ModData; set => ModData = (Ex_ModData)value; }
-
     protected override void OnLoad() { }
     protected override void OnSave() { }
-
-    /// <summary>在原库存槽中处理液体；需要物品产出时先成功提交产物事务，再消耗液体。</summary>
     public bool ProcessHeat(Inventory input, Inventory output, float temperature, float seconds)
         => InventoryVesselHeating.ProcessHeat(input, output, temperature, seconds);
 }
 
-/// <summary>所有热源共用的托管容器处理器；纯数据炉体无需创建 Module。</summary>
 public static class InventoryVesselHeating
 {
-    #region 库存加热
+    #region 混合液体热加工
     public const float TemperatureTransferPerSecond = 10f;
-
     public static bool ProcessHeat(Inventory input, Inventory output, float temperature, float seconds)
     {
         bool handled = false;
@@ -33,157 +26,67 @@ public static class InventoryVesselHeating
         {
             if (input.IsSlotBeingDragged(slot.Index)) continue;
             if (Mod_Mortar.IsCrucibleItem(slot.itemData))
-            {
-                handled = true;
-                Mod_Mortar.TryProcessCrucibleHeat(slot.itemData, temperature, seconds);
-                input.Data.NotifyItemStateChanged(slot.itemData);
-                continue;
-            }
-
-            if (!Mod_WaterVessel.TryRead(slot.itemData, out Ex_ModData_MemoryPackable storage, out LiquidContainerState state))
-                continue;
-
+            { handled = true; Mod_Mortar.TryProcessCrucibleHeat(slot.itemData, temperature, seconds); input.Data.NotifyItemStateChanged(slot.itemData); continue; }
+            if (!Mod_WaterVessel.TryRead(slot.itemData, out var storage, out var state)) continue;
             handled = true;
-            if (Mod_WaterVessel.IsEmptyAmount(state.Amount) || string.IsNullOrWhiteSpace(state.LiquidId))
-                continue;
-
-            LiquidDefinition liquid = GameRes.ExistingInstance?.GetLiquidDefinition(state.LiquidId)
-                ?? throw new InvalidOperationException($"液体容器引用了未注册液体：{state.LiquidId}");
-            bool changed = AdvanceTemperature(state, temperature, seconds);
-            LiquidHeatProcess heat = liquid.HeatProcess;
-            if (heat == null)
+            void Persist()
             {
-                if (changed)
-                {
-                    storage.WriteData(state);
-                    input.Data.NotifyItemStateChanged(slot.itemData);
-                }
-                continue;
+                // 制作事务可能重建同 GUID 的冷物品，重新找到真实槽位里的模块再写入。
+                if (!Mod_WaterVessel.TryRead(slot.itemData, out var currentStorage, out _)) throw new InvalidOperationException("加热容器已离开来源库存。");
+                currentStorage.WriteData(state); input.Data.NotifyItemStateChanged(slot.itemData);
             }
-
-            if (state.Temperature < heat.MinimumTemperature)
-            {
-                if (state.ProcessingSeconds > 0f)
-                {
-                    state.ProcessingSeconds = 0f;
-                    changed = true;
-                }
-                if (changed)
-                {
-                    storage.WriteData(state);
-                    input.Data.NotifyItemStateChanged(slot.itemData);
-                }
-                continue;
-            }
-
-            state.ProcessingSeconds += Math.Max(0f, seconds);
-            changed = true;
-            if (state.ProcessingSeconds + Mod_WaterVessel.AmountEpsilon < heat.Seconds)
-            {
-                storage.WriteData(state);
-                input.Data.NotifyItemStateChanged(slot.itemData);
-                continue;
-            }
-
-            switch (heat.Mode)
-            {
-                case LiquidHeatProcessMode.Transform:
-                    state.LiquidId = heat.ResultLiquidId;
-                    state.ProcessingSeconds = 0f;
-                    break;
-
-                case LiquidHeatProcessMode.ConsumeServing:
-                    state.ProcessingSeconds = heat.Seconds;
-                    if (state.Amount + Mod_WaterVessel.AmountEpsilon < heat.ConsumeAmount ||
-                        !TryGrantOutput(output, heat.OutputItemId, heat.OutputAmount))
-                    {
-                        storage.WriteData(state);
-                        input.Data.NotifyItemStateChanged(slot.itemData);
-                        continue;
-                    }
-
-                    state.Amount = Mathf.Max(0f, state.Amount - heat.ConsumeAmount);
-                    Mod_WaterVessel.NormalizeStoredAmount(state);
-                    state.ProcessingSeconds = 0f;
-                    if (Mod_WaterVessel.IsEmptyAmount(state.Amount))
-                    {
-                        state.Amount = 0f;
-                        state.LiquidId = null;
-                    }
-                    break;
-
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(heat.Mode), heat.Mode, "未知液体加热模式");
-            }
-
-            storage.WriteData(state);
-            input.Data.NotifyItemStateChanged(slot.itemData);
+            if (ProcessComponents(state, temperature, seconds, (id, amount) => PrepareOutput(output, id, amount), Persist)) Persist();
         }
         return handled;
     }
-
-    /// <summary>世界中的完整容器按所在格环境温度传热；无产物的液体转换可直接在原容器完成。</summary>
     public static bool ProcessWorldHeat(LiquidContainerState state, float temperature, float seconds)
+        => ProcessComponents(state, temperature, seconds, null, null);
+    private static bool ProcessComponents(LiquidContainerState state, float temperature, float seconds, Func<string, int, CraftingTransaction> prepare, Action persist)
     {
-        if (state == null || Mod_WaterVessel.IsEmptyAmount(state.Amount) || string.IsNullOrWhiteSpace(state.LiquidId))
-            return false;
-
-        LiquidDefinition liquid = GameRes.ExistingInstance?.GetLiquidDefinition(state.LiquidId)
-            ?? throw new InvalidOperationException($"液体容器引用了未注册液体：{state.LiquidId}");
-        bool changed = AdvanceTemperature(state, temperature, seconds);
-        LiquidHeatProcess heat = liquid.HeatProcess;
-        if (heat?.Mode != LiquidHeatProcessMode.Transform)
-            return changed;
-
-        if (state.Temperature < heat.MinimumTemperature)
+        if (state == null || state.Amount <= Mod_WaterVessel.AmountEpsilon || !float.IsFinite(temperature) || !float.IsFinite(seconds) || seconds <= 0f) return false;
+        MixedLiquidContents.Ensure(state);
+        float beforeTemperature = state.Temperature;
+        state.Temperature = ThermalRuntime.AdvanceTowards(state.Temperature, Mathf.Max(-273.15f, temperature), TemperatureTransferPerSecond, seconds);
+        bool changed = !Mathf.Approximately(beforeTemperature, state.Temperature);
+        var ids = new List<string>(state.Composition.Keys);
+        foreach (string id in ids)
         {
-            if (state.ProcessingSeconds > 0f)
+            LiquidDefinition liquid = GameRes.ExistingInstance?.GetLiquidDefinition(id) ?? throw new InvalidOperationException($"液体定义不存在：{id}");
+            LiquidHeatProcess heat = liquid.HeatProcess;
+            if (heat == null || heat.Mode == LiquidHeatProcessMode.ConsumeServing && prepare == null) continue;
+            float available = MixedLiquidContents.GetAmount(state, id) - MixedLiquidContents.Reserved(state, id);
+            if (available < 1f - Mod_WaterVessel.AmountEpsilon) continue;
+            state.ComponentProcessingSeconds.TryGetValue(id, out float elapsed);
+            if (state.Temperature < heat.MinimumTemperature)
+            { if (elapsed > 0f) { state.ComponentProcessingSeconds[id] = 0f; changed = true; } continue; }
+            elapsed = Mathf.Min(heat.Seconds, elapsed + seconds); state.ComponentProcessingSeconds[id] = elapsed; changed = true;
+            if (elapsed + Mod_WaterVessel.AmountEpsilon < heat.Seconds) continue;
+            if (heat.Mode == LiquidHeatProcessMode.Transform)
+            { MixedLiquidContents.TransformSpecies(state, id, heat.ResultLiquidId); }
+            else if (heat.Mode == LiquidHeatProcessMode.ConsumeServing)
             {
-                state.ProcessingSeconds = 0f;
-                changed = true;
+                if (available + Mod_WaterVessel.AmountEpsilon < heat.ConsumeAmount) continue;
+                CraftingTransaction transaction = prepare(heat.OutputItemId, heat.OutputAmount);
+                if (transaction == null) continue;
+                var before = MixedLiquidContents.Clone(state);
+                if (!MixedLiquidContents.RemoveSpecies(state, id, heat.ConsumeAmount)) continue;
+                if (!transaction.Commit(out _)) { MixedLiquidContents.Restore(state, before); continue; }
+                persist?.Invoke(); transaction.Complete();
             }
-            return changed;
+            else throw new ArgumentOutOfRangeException(nameof(heat.Mode));
+            state.ComponentProcessingSeconds[id] = 0f;
         }
-
-        state.ProcessingSeconds += Mathf.Max(0f, seconds);
-        changed = true;
-        if (state.ProcessingSeconds + Mod_WaterVessel.AmountEpsilon < heat.Seconds)
-            return changed;
-
-        state.LiquidId = heat.ResultLiquidId;
-        state.ProcessingSeconds = 0f;
-        return true;
+        float progress = 0f;
+        foreach (float value in state.ComponentProcessingSeconds.Values) progress = Mathf.Max(progress, value);
+        state.ProcessingSeconds = progress;
+        if (changed) { state.Revision++; MixedLiquidContents.SynchronizeAmounts(state); }
+        return changed;
     }
-
-    /// <summary>容器液体以每秒 10℃ 向热源温度靠拢，热源只提供目标温度而不瞬间覆写液温。</summary>
-    private static bool AdvanceTemperature(LiquidContainerState state, float temperature, float seconds)
+    private static CraftingTransaction PrepareOutput(Inventory output, string itemId, int amount)
     {
-        float before = state.Temperature;
-        float target = Mathf.Max(0f, temperature);
-        state.Temperature = ThermalRuntime.AdvanceTowards(
-            state.Temperature,
-            target,
-            TemperatureTransferPerSecond,
-            seconds);
-        return !Mathf.Approximately(before, state.Temperature);
-    }
-
-    /// <summary>无产物规则直接视为成功；有产物时使用制作事务保证满输出不消耗液体。</summary>
-    private static bool TryGrantOutput(Inventory output, string itemId, int amount)
-    {
-        if (string.IsNullOrWhiteSpace(itemId) || amount <= 0)
-            return true;
-
-        ItemData item = GameRes.Instance.CreateItemData(itemId);
-        item.Stack.Amount = amount;
-        if (!CraftingTransaction.TryCreateGrant(output, new[] { item }, out CraftingTransaction transaction, out _) ||
-            !transaction.Commit(out _))
-        {
-            return false;
-        }
-
-        transaction.Complete();
-        return true;
+        if (string.IsNullOrWhiteSpace(itemId) || amount <= 0 || output == null) return null;
+        ItemData item = GameRes.Instance.CreateItemData(itemId); item.Stack.Amount = amount;
+        return CraftingTransaction.TryCreateGrant(output, new[] { item }, out CraftingTransaction transaction, out _) ? transaction : null;
     }
     #endregion
 }

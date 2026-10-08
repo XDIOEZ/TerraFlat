@@ -6,7 +6,7 @@ using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class Mod_Inventory : Module, IInventory, IInstanceUI, IInteractable
+public partial class Mod_Inventory : Module, IInventory, IInstanceUI, IInteractable
 {
     public override ModuleTickMode TickMode => ModuleTickMode.FixedInterval;
     public override float FixedTickInterval => 0.25f;

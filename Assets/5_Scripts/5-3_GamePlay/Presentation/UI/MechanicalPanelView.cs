@@ -1,4 +1,5 @@
 using TMPro;
+using FlatWorld.Localization;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -20,6 +21,7 @@ public sealed class MechanicalPanelView : MonoBehaviour
     public ItemSlot_UI InputSlot;
     public ItemSlot_UI OutputSlot;
     public GameObject[] ProcessingVisuals;
+    public bool PreservePrefabLayout; // 工业与装备页的正文和配置行使用各自正式资产布局。
 
     private bool processingVisible = true; // 当前布局是否展示加工槽区。
 
@@ -29,6 +31,7 @@ public sealed class MechanicalPanelView : MonoBehaviour
         processingVisible = visible;
         foreach (var visual in ProcessingVisuals) visual.SetActive(visible);
         InnerField.gameObject.SetActive(true);
+        if (PreservePrefabLayout) return;
 
         var panelRect = (RectTransform)transform;
         var statusRect = (RectTransform)StatusScroll.transform;
@@ -84,9 +87,21 @@ public sealed class MechanicalPanelView : MonoBehaviour
     public void SetActionVisible(bool visible)
     {
         ActionButton.gameObject.SetActive(visible);
-        if (processingVisible) return;
+        if (processingVisible || PreservePrefabLayout) return;
 
         ((RectTransform)DismantleButton.transform).anchoredPosition = new Vector2(visible ? -86 : 0, 29);
+    }
+    public static void SetButtonCaption(Button button, string caption)
+    {
+        TMP_Text label = button.GetComponentInChildren<TMP_Text>(true);
+        if (label == null) return;
+        LocalizedTextBinder binder = label.GetComponent<LocalizedTextBinder>();
+        if (binder != null)
+        {
+            binder.Configure(FlatWorldLocalizationService.UiTable, FlatWorldLocalizationService.GetUiTextKey(caption), caption);
+            binder.enabled = true;
+        }
+        label.text = FlatWorldLocalizationService.GetUiText(caption);
     }
     #endregion
 }

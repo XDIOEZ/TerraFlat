@@ -16,10 +16,11 @@ description: "Use when: 定位或修改 FlatWorld 的 MOD 扫描、manifest、�
 - 存档：`World/Map/Data/GameSaveData.Mods.cs`
 - 模板：`Assets/Editor/FlatWorld/ProjectTools/Mods/ModTemplateCreator.cs`
 - 本体接入：`Core/Lifecycle/GameRes.cs`
+- 工业物质/大气：`World/Fluids/Catalog/{FluidContentRegistry,ModRuntimeManager.Fluids}.cs`；本体 `GameConfig/Fluids/fluids.json`。
 
 ## 加载与不变量
 
-`本体资源完成 → 扫描 persistentDataPath/Mods → 路径/版本/依赖/哈希校验 → Bundle/definitionFiles → Tile→Item→Actor→Recipe→Buff→Liquid→Contamination→Quest → 目录 Finalize → Lua → ModSetHash`
+`本体资源完成 → 扫描 persistentDataPath/Mods → 路径/版本/依赖/哈希校验 → Bundle/definitionFiles → Tile→Item→Actor→Recipe→Buff→Liquid→Fluid/Atmosphere→Contamination→Quest → 目录 Finalize → Lua → ModSetHash`
 
 - 保留路径、防重解析点、文件数/体积/JSON 长度限制；不要为方便绕过安全校验。
 - 上次加载失败的安全模式必须先于扫描清单生效，才能让坏包不妨碍玩家打开主菜单修复；关闭的包不要进入完整内容校验和加载链。
@@ -28,12 +29,14 @@ description: "Use when: 定位或修改 FlatWorld 的 MOD 扫描、manifest、�
 - MOD 内容 ID 使用 `modId:` 命名空间，冲突必须可诊断；失败/卸载不得留下半注册内容。
 - C# MOD 自行注册的可存档物品要同时进入 `GameRes.ItemDefinitions` 和 `AllPrefabs`，卸载时按定义实例身份撤销；仅注册 Prefab 别名不足以让机器和存档重基于当前定义。
 - JSON 定义复用本体 DTO 与校验器；普通合成 `inputs` 按物品或标签身份写总数量，不写槽位/网格字段；旧 Recipe AssetBundle 仅兼容热加工。
+- `definitionFiles` 根数组 `fluids/atmospheres` 共用本体严格 DTO，经 `FluidContentRegistry.Register` 整批预检后注册；流体和大气都用 `modId:`，同 MOD 多文件先汇总，液体映射与每份体积必须匹配已注册 LiquidId。失败撤回整批、卸载按定义实例释放租约，F5 隔离两个目录且不能删除正在使用的 FluidId。
+- 自定义容器端口工厂持有 `ContainerPortFactoryRegistry.Register` 返回租约；启动与 F5 使用 `BeginCandidate/Publish`，发布前以 `ContainerPortConfigurationValidator` 检查最终物品目录。失败丢弃候选，发布后旧端口失效重建，旧租约不能删掉新代工厂。
 - `definitionFiles.tiles` 复用 `TileDefinitionDto/TileDefinitionFactory`，新地块 ID 使用当前 `modId:` 命名空间，并声明不小于 1000000 的稳定 `runtimeTileId`；冲突必须拒绝，不能使用哈希或加载顺序分配编号。`patchFiles` 使用 `tile:<id>` 目标，禁止修改地块身份和数字编号；此目标必须从 Item Patch 分流。
 - 地块定义与 Patch 在局部目录全部构建校验后发布；失败/卸载先恢复被覆盖的定义、清理新增数字映射与 MOD TileBase 字典键，再销毁资源。外观仍通过 Bundle `assets.type=tile` 注册；旧 `type=tileblock` 必须明确提示迁移到 JSON，不再读取地块逻辑 SO。
 - 新 C# 地块行为在目录加载前经 `TileBehaviourRegistry.RegisterBehaviour` 注册稳定 type 和工厂，扩展持有返回租约并在卸载时释放；工厂每次返回独立定义实例，共享 Behaviour 不持有角色/单格运行态。普通 JSON MOD 只能配置已注册算法，不会凭 JSON 自动创建新的 C# 或 Lua 执行逻辑。
 - C# 资源能力在 `IManagedGameMod.Initialize` 中经 `ResourceEntityCapabilityRegistry.Register` 注册 `modId:` 地址并持有租约；`entityRuntime: "resource"` 的 JSON 模块可引用此地址而无需 Module Prefab。通用 `Ex_ModData` 保存扩展实例状态，初始化/捕获/释放回调与共享 World 运行器配套；注销仅影响后续编译，现存实体保留冻结计划直到释放。运行时 DLL 自定义状态优先使用 `context.SetState/GetState<T>`，原生组件必须已被 Unity TypeManager 注册；参考 `ModSDK/Examples/ResourceCapabilities/`。
 - `definitionFiles` 可通过根数组 `contaminations` 注册自定义地块污染指标，ID 必须使用 `modId:` 命名空间；Lua 使用 `HasContaminationDefinition` 与 `Get/Set/AddContaminationValue` 访问，裸 ID 自动归属当前 MOD。污染运行时值由本体 `ContaminationSystem` 持久化，MOD 不应直接操作 Chunk 环境层。
-- `definitionFiles` 可通过根数组 `liquids` 注册自定义液体，定义与本体共用 `LiquidDefinitionFactory` 严格 schema，ID 必须使用 `modId:` 命名空间并提供必需的 `primaryColor`；配置容器 `visual.liquidIconSurface.bounds` 后，快捷栏按此颜色程序化绘制液面，不需要为每种液体制作图标贴图。通用容器只保存液体 ID 和数量，Lua 物品 API 可查询/加入/移除液体。液体加热行为声明在 `heatProcess`，饮用后 Buff 后果声明在 `drinkEffects`（`buffId/chance/feedback`），两者都由本体通用处理链消费，不要为每种 MOD 液体复制容器、炉体或饮用特判。
+- `definitionFiles` 可通过根数组 `liquids` 注册自定义液体，定义与本体共用 `LiquidDefinitionFactory` 严格 schema，ID 必须使用 `modId:` 命名空间并提供必需的 `primaryColor`；配置容器 `visual.liquidIconSurface.bounds` 后，快捷栏按此颜色程序化绘制液面，不需要为每种液体制作图标贴图。通用容器按 LiquidId 保存真实混合组分、温度与各口预留；Lua 通过 `GetContainerPortsJson`、`PreviewItemTransfer/RequestItemTransfer`、`PreviewLiquidTransfer/RequestLiquidTransfer` 查询与转移，只返回 JSON 和服务的真实结果，`Add/Remove` 仍是独立操作。液体加热行为声明在 `heatProcess`，饮用后 Buff 后果声明在 `drinkEffects`（`buffId/chance/feedback`），两者都由本体通用处理链消费，不要为每种 MOD 液体复制容器、炉体或饮用特判。
 - 玩家创建模板可在任意 `definitionFiles` JSON 的 `playerCreationTemplates` 数组中声明；裸 ID 自动归属当前 MOD 命名空间，继承使用 `parent`，修改本体或其他已注册模板使用 `patchFiles` 的 `target: playerTemplate:<id>`，切换默认模板使用 `target: playerTemplateCatalog` 的 `defaultProfileId` Patch；玩家创建配置不写入存档。
 - `actors` 可继承本体/同批 MOD Actor，深度覆盖 modules；Bundle 外观用 sprite/animator 成对字段。
 - Actor Lua 必须使用 `Mod_LuaBehaviour`，运行时强制所属 modId 并校验 scriptPath 不越界；AssetBundle 不承载新 C# 代码。

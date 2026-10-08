@@ -86,6 +86,7 @@ description: "Use when: 定位或修改 FlatWorld 的 Item/Module 组合架构�
 - 固定能力 ID 必须由具体模块覆写 `CanonicalModuleId`，不能只在 `Awake/OnValidate` 填写；模板工厂可能早于 Awake 读取 Prefab，提前写入外壳名后会使依赖索引永久错位。注册后禁止在生命周期回调中修改身份。
 - 存在固定依赖约定时，JSON 显式 `modules.*.id` 必须与消费方的能力 ID 一致；`CanonicalModuleId` 不会覆盖 JSON 声明，禁止把 `prefab` 实现名误填为能力 ID。定义、源 Prefab 与构建器须同步，依赖代码复用模块的 ID 常量。
 - JSON 动态组合存在跨模块引用时实现 `IItemModuleDependencyBinder`；全部模块先进入 `ItemMods`，ModuleInit 完成配置，再绑定依赖，最后 OnLoad。依赖按唯一稳定 ID 或能力接口解析，缺失或重复直接报错。
+- 供氧采用外部主动推送：`Mod_Oxygen` 只绑定生命，维护自身氧气与缺氧伤害，不记录来源，仅提供 `CanReceiveOxygen`、`GetOxygenSupplyAmount(seconds)`、`SupplyOxygen(amount)`。`Mod_AtmosphericOxygenSupply` 每 0.2 秒检查大气、水体 `IsWaterBreathBlocked` 和装备汇总 `BlocksAmbientOxygen`；宇航服效果 `EquipmentInstance_SpacesuitSupport` 每次解析当前实际插槽、扣气后供给，通过通用 `IAmbientOxygenBlocker` 报告密封，空罐仍隔离。套装判断与通用耐压来源加撤属于装备效果，氧气／气压模块不依赖宇航服或装备。
 - 可燃物品采用纯组合：`Mod_Fuel` 提供燃料数据，`Mod_Combustion` 提供燃烧状态与世界时间消耗，`Mod_FuelInteraction` 提供通用投料/点火交互；光源、燃烧粒子、局部温度、命中 Buff 等通过 `ICombustionStateReceiver` 独立响应。具体物品名称、外观与组件选择只存在于 JSON，禁止新增 `Mod_具体物品名` 来重新聚合这些职责。
 - JSON 的 `modules.*.prefab` 是模块变体的唯一实例化地址；多个专用 Prefab 可以共用同一玩法 `ModuleData.ID`，`GameRes` 只能为唯一候选登记该 ID 的兼容别名，禁止按加载顺序静默覆盖。
 - `Mod_ItemPicker` 不能只依赖 `OnTriggerEnter2D`：掉落/飞行或联机预约可能让物品先以不可拾取状态进入范围，状态恢复后应补偿检查，并限制为一次性请求以避免部分入包或网络请求重复执行。

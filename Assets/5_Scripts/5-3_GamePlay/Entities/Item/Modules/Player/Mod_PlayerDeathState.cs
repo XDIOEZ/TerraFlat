@@ -516,6 +516,8 @@ public partial class Mod_PlayerDeathState : Module
         }
 
         _temperature?.RestoreOnRespawn();
+        item.itemMods.GetMod_ByID<Mod_Oxygen>(Mod_Oxygen.ModuleId)?.ResetForNewLife();
+        item.itemMods.GetMod_ByID<Mod_Pressure>(Mod_Pressure.ModuleId)?.ResetForNewLife();
     }
 
     private void RestartChunkStreamingForRespawn()

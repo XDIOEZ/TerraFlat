@@ -13,9 +13,14 @@ description: "Use when: 定位或修改 FlatWorld 的世界时间、昼夜、天
 - 污染：`World/Environment/Contamination/`；本体定义位于 `StreamingAssets/GameConfig/Contamination/`。
 - 逐格温度入口：`TemperatureMgr.Field.cs`；冷热源空间缓存与设备组件：`LocalTemperatureField.cs`、`LocalTemperatureSource.cs`。
 - 存档：`World/Map/Data/{PlanetData,PlanetTimeData}.cs`
+- 有限大气/工业热力：`World/Fluids/Atmosphere/AtmosphereService.cs`、`Core/FluidThermodynamics.cs`；物性与有限相变曲线来自 `GameConfig/Fluids/fluids.json`。
 
 ## 不变量
 
+- 大气查询使用实体实际场景 WorldKey 经 `AtmosphereService.TryGetForWorld` 定位星球，维度共用一份地表储量；抽气按 decimal mol 精确扣量，手动排气在容量满或真空时仍成功，多余量进入逸散账目，没有自然回填或压力驱动输送。
+- 工业物质温度由总内能和两相 mol 推导；压缩、换热与有限潜热相变统一走 `FluidThermodynamics`，禁止另存温度真值、二次加潜热或在临界温度以上压出液体。曲线范围外保留真实相态并显示范围提示。
+- `Mod_Oxygen` 只绑定生命并维护自身氧气／缺氧伤害，不记录供氧来源，仅提供 `CanReceiveOxygen`、`GetOxygenSupplyAmount(seconds)`、`SupplyOxygen(amount)`；`Mod_AtmosphericOxygenSupply` 显式组合在玩家／需要环境供氧的生物上，每 0.2 秒检查实际大气氧分压、二氧化碳分压、水体报告的 `IsWaterBreathBlocked` 和 `Mod_Equipment.BlocksAmbientOxygen`，条件满足才主动供氧。
+- `EquipmentInstance_SpacesuitSupport` 每次工作解析当前真实插槽气罐，先扣实际氧气再 `SupplyOxygen`，不绑定旧罐；效果实现通用 `IAmbientOxygenBlocker` 报告密封隔离，空罐仍隔离。效果另按完整套装／头盔状态加撤通用耐压来源，`Mod_Pressure` 不检查宇航服；气压危险共用缓冲、低压／高压各自伤害时钟，解除危险及死亡清除时间债务。
 - 低温、过热与缺氧必须使用独立伤害时钟；解除对应危险、死亡或回收时清除该来源的时间债务。低温和缺氧用固定每次伤害，不以温差或累计秒数放大成一次大额伤害；高温保留独立规则。
 - 玩家显式重生统一调用 `Mod_Temperature.RestoreOnRespawn` 恢复正常基础体温，并清除上一条生命的入水降温目标与冷热伤计时；死亡/重生模块不得直接改写 `TemperatureData.CurrentTemperature`。
 - 角色温度表示最外层体表温度，不模拟独立核心体温；环境驱动的体表温度变化速度按目标温度绝对值的 1%/s 计算、四舍五入到整数并保证最低 1℃/s（100℃→1℃/s，999℃→10℃/s，1000℃→10℃/s），不再读取玩家 `heatConductionRate` 配置。衣物不得修改目标温度或该基础速度，只通过安全温度范围修正提供耐寒/耐热能力；入水渐进降温继续使用水体自己的过渡速度。

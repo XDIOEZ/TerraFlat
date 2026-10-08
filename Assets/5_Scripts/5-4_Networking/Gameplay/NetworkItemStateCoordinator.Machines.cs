@@ -52,12 +52,16 @@ namespace FlatWorld.Networking.Gameplay
 
         private void StartMachineServerBridge()
         {
+            StartContainerServerBridge();
+            StartFluidServerBridge();
             NetworkServer.RegisterHandler<NetworkMachineOperationRequest>(OnMachineOperation, true);
             NetworkServer.RegisterHandler<NetworkMachineTransferRequest>(OnMachineTransfer, true);
         }
 
         private void StopMachineServerBridge()
         {
+            StopContainerServerBridge();
+            StopFluidServerBridge();
             NetworkServer.UnregisterHandler<NetworkMachineOperationRequest>();
             NetworkServer.UnregisterHandler<NetworkMachineTransferRequest>();
             machineTokens.Clear();
@@ -65,6 +69,8 @@ namespace FlatWorld.Networking.Gameplay
 
         private void StartMachineClientBridge()
         {
+            StartContainerClientBridge();
+            StartFluidClientBridge();
             MachineWorld.RemoteOperationRequested += SendMachineOperation;
             MachineInventoryCommands.RemoteTransferRequested += SendMachineTransfer;
             NetworkClient.RegisterHandler<NetworkMachineTransferResponse>(ApplyMachineTransfer, true);
@@ -72,6 +78,8 @@ namespace FlatWorld.Networking.Gameplay
 
         private void StopMachineClientBridge()
         {
+            StopContainerClientBridge();
+            StopFluidClientBridge();
             MachineWorld.RemoteOperationRequested -= SendMachineOperation;
             MachineInventoryCommands.RemoteTransferRequested -= SendMachineTransfer;
             NetworkClient.UnregisterHandler<NetworkMachineTransferResponse>();
@@ -174,7 +182,8 @@ namespace FlatWorld.Networking.Gameplay
             if (!AcceptMachineToken(connection, request.Token)) return;
             var response = new NetworkMachineTransferResponse { Token = request.Token, Source = request.Source, Target = request.Target };
             Player actor = connection.identity.GetComponent<NetworkWorldPlayer>()?.CorePlayer;
-            if (request.Source.MachineId == 0 && request.Target.MachineId == 0 || actor == null ||
+            if (request.Source.MachineId == 0 && request.Target.MachineId == 0 &&
+                !MachineInventoryCommands.IsSpacesuitAddress(request.Source) && !MachineInventoryCommands.IsSpacesuitAddress(request.Target) || actor == null ||
                 request.Source.MachineId != 0 && !CanOperateMachine(connection, actor, request.Source.MachineId) ||
                 request.Target.MachineId != 0 && !CanOperateMachine(connection, actor, request.Target.MachineId) ||
                 (request.Source.PlayerInventory?.Length ?? 0) > 128 || (request.Target.PlayerInventory?.Length ?? 0) > 128 ||

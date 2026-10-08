@@ -2,6 +2,52 @@
   "schemaVersion": 2,
   "liquids": [
     {
+      "id": "core:pure_water",
+      "displayName": "纯水",
+      "description": "蒸馏后得到的纯水，可饮用并用于化工配方。",
+      "category": "water",
+      "visualState": "drinkable",
+      "primaryColor": { "r": 0.22, "g": 0.55, "b": 0.73, "a": 1.0 },
+      "viscosity": 1.0,
+      "litersPerServing": 0.25,
+      "drinkable": true,
+      "hydrationPerServing": 25.0,
+      "worldWater": {
+        "spriteAddress": "Assets/6_Art/Tilemap/Grass.png[Water_0]",
+        "materialAddress": "Assets/9_Shaders/Material/Tilemap-Water-Lit.mat",
+        "loadCapacity": 2,
+        "navigationCost": 20000,
+        "shallowMoveSpeedMultiplier": 0.5,
+        "deepMoveSpeedMultiplier": 0.2,
+        "followWaterVisualStyle": true,
+        "depthPerServing": 0.1
+      }
+    },
+    {
+      "id": "core:filtered_water",
+      "displayName": "过滤水",
+      "description": "经过过滤去掉悬浮杂质的水，仍需煮沸或蒸馏才能完全净化。",
+      "category": "water",
+      "visualState": "drinkable",
+      "primaryColor": { "r": 0.26, "g": 0.5, "b": 0.63, "a": 1.0 },
+      "viscosity": 1.0,
+      "litersPerServing": 0.25,
+      "drinkable": true,
+      "hydrationPerServing": 25.0,
+      "drinkEffects": [{ "buffId": "感染", "chance": 0.05 }],
+      "heatProcess": { "mode": "Transform", "minimumTemperature": 100.0, "seconds": 0.0, "resultLiquidId": "core:drinkable_water" },
+      "worldWater": {
+        "spriteAddress": "Assets/6_Art/Tilemap/Grass.png[Water_0]",
+        "materialAddress": "Assets/9_Shaders/Material/Tilemap-Water-Lit.mat",
+        "loadCapacity": 2,
+        "navigationCost": 20000,
+        "shallowMoveSpeedMultiplier": 0.5,
+        "deepMoveSpeedMultiplier": 0.2,
+        "followWaterVisualStyle": true,
+        "depthPerServing": 0.1
+      }
+    },
+    {
       "id": "core:lava",
       "displayName": "岩浆",
       "description": "石地山顶小湖中的高温熔体。接触会持续升温并受到灼伤，可用铁桶盛装和倾倒，不能饮用。",

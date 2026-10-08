@@ -43,6 +43,8 @@ description: "Use when: 定位或修改 FlatWorld 的机器世界、工作台、
 - 全部落地机器通过 `MachineCombatBridge` 消费真实武器窗口：目录必须校验有限正生命与启用的独立受击 Trigger，不能静默跳过关闭的 `health.collider`。候选格范围由当前全部节点的受击外延缓存派生，拓扑或资源变化后重建；偏移、朝向与转换器镜像和物理投影共用同一形状。提交耐久/拆除后必须调用 `PublishExternalDamage` 回传实际生命损失，防御抵消仍回传有效 0，不能只扣内部 HP 而漏掉武器命中反馈。
 - `MachineArchive` 使用现有外层 `MechanicalNetworks` 载荷；保留缺失 MOD 的冷快照，避免卸载显示或暂缺资源导致存档丢失。不建立旧运行架构兼容层。
 - 新增设施必须通过资源目录预检：稳定身份、主领域工厂、必要库存/燃料配置与正式面板。预检不创建 MachineLogic、面板或世界节点，不污染 F5 候选会话。
+- 工业气液共用 `MachineWorld.Fluid*.cs` 的固定步长和库存预算；管层为 2，机械/电子测压层为 4/5。输送方向来自真实输入与独立出气口，不按压差自然流动；新料不能同轮穿过无限管格，测压探针必须切断真实动力边。
+- 同材组合罐只由稳定主成员保存共享库存、随机种子和各口预留，其余块引用主身份；成员变化同步主快照。超压固定本轮受损成员，破裂沿 `PressureExplosionQueue` 的有限预算结算，清空队列后才解锁重建。
 - 机械图形代理不保存 HP、库存、炉温等权威数据；主体和运动部件合入所属区块的 Y 行网格，轻量 `MechanicalDepthVisual` 只负责交互与灯光，阴影继续走 BRG。
 - 传动轴、齿轮输入短轴和标准 `axisPort` 连接件统一走 `MechanicalShaft` 下层合批，固定压在机械主体下面；它们不再因为所在格的 Y 行跑到相邻机械主体上方。
 - 带 `Mod_Fuel` 的燃烧工作方块，其运行时灯光只跟随 `MachineLogic.IsBurning` 与燃料余量，不依赖加工进度；`MechanicalDepthVisual` 统一使用火把的橙红 Light2D 颜色，没有专用 `Mod_LightSource`/Light2D 模板时再补默认强度与范围。
@@ -56,6 +58,7 @@ description: "Use when: 定位或修改 FlatWorld 的机器世界、工作台、
 - `MechanicalShaft` 必须排在地表效果之上、`Player` 主体层之下，并加入太阳光和局部光的受光列表；新增排序层不能只改渲染器而漏掉 Global Light 的序列化范围。
 - 输送带的 `ConveyorPath` 默认从相邻带格派生，互选带端连通运输与动力，余下两边为供能轴口；面板通过 `conveyor.orientation` 命令切换 `MachineState.ConveyorMode`（0 自动、1~12 固定直线/拐角输入输出），冷节点同步该值，自动方向传播必须从手动段优先开始且不得覆盖手动段。运输、玩家推动与安装显示共用该路径，不能只旋转图像；带面模式 6/7 按实际输送距离连续积分，GPU 只滚动中间带条。
 - 地面输送用 `MachineDefinition.Transport` 声明额定速度和带宽，读取节点有符号 RPM；普通掉落由 `DroppedItemRuntime` 维护局部输送候选与空间索引，完整 Item 走 `DroppedItemService.TransportItemBacked`。跨带每轮只搬一次，移动后同步拾取、地形订阅、存档和联机位置，不改库存数量、不扫描全场景。
+- 传送带末端向邻接输入端口调用 `ContainerTransferService`，仅按成功的实际数量扣除地面物品；拒收或满箱时保留原位置和数量。
 
 - 关键规则保留普通托管、具名、禁止内联的入口；`link.xml` 保留推荐补丁类型。注册整类逻辑用 `MachineLogicRegistry.Register` 返回租约；多个 MOD 覆盖必须允许乱序卸载，不能恢复已经释放的工厂。
 - C# MOD 只从 managed 清单声明的程序集加载，先核对用户授权的代码指纹；不自动信任包，不把 DLL 当沙箱。未声明可执行文件仍拒绝加载。

@@ -180,6 +180,21 @@
       "id": "conveyor",
       "path": "shells/conveyor.json",
       "enabled": true
+    },
+    {
+      "id": "chemical_machines",
+      "path": "shells/chemical_machines.json",
+      "enabled": true
+    },
+    {
+      "id": "chemistry_equipment",
+      "path": "shells/chemistry_equipment.json",
+      "enabled": true
+    },
+    {
+      "id": "water_trough",
+      "path": "shells/water_trough.json",
+      "enabled": true
     }
   ]
 }

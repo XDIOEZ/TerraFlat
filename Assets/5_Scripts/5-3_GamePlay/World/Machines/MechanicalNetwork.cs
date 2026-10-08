@@ -28,6 +28,8 @@ public sealed partial class MachineEntity
     public Mod_MechanicalNode View;
     public int RotationQuarterTurns; // 已安装机械节点的逆时针九十度步数。
     public bool Engaged = true;
+    public bool FluidProbeConnected = true;
+    public bool MechanicalPortsSuppressed;
     public int RatioIndex = 1;
     public float SpeedRatio = 1f; // 相对根动力源的有符号速比，扭矩倍率仍保持为正数。
     public float TorqueRatio = 1f;
@@ -72,6 +74,7 @@ public sealed partial class MachineEntity
     public bool HasPort(int direction)
     {
         if (!Definition.HasMechanicalPorts) return false;
+        if (MechanicalPortsSuppressed || Definition.Fluid?.Kind == "mechanical-probe" && !FluidProbeConnected) return false;
         if (Definition.Kind == "clutch" && !Engaged) return false;
         if (Definition.IsConverter) return Definition.HasAxlePort((direction - RotationQuarterTurns + 4) & 3);
         return Definition.Ports == "all" || (RotationQuarterTurns & 1) == (direction & 1);
@@ -189,6 +192,7 @@ public sealed partial class MechanicalNetworkGraph
     public static readonly Vector2Int[] Directions = { Vector2Int.right, Vector2Int.up, Vector2Int.left, Vector2Int.down };
     private readonly Dictionary<Vector3Int, MachineEntity> cells = new();
     private readonly HashSet<Vector2Int> occupiedOnPlacementLayers = new();
+    private readonly Dictionary<Vector2Int, MachineEntity> pressureSwitches = new();
     public readonly List<MechanicalNetwork> Networks = new();
     public readonly List<MachineEntity> Facilities = new(); // 无端口设施不构造扭矩网络。
     private readonly Func<Vector2Int, Vector2Int> normalize; // 旧 MOD 构图入口的坐标归一化委托。
@@ -250,7 +254,7 @@ public sealed partial class MechanicalNetworkGraph
         for (int dx = -extent; dx <= extent; dx++)
         {
             Vector2Int cell = NormalizeCell(center + new Vector2Int(dx, dy));
-            for (int layer = 0; layer <= 3; layer++)
+            for (int layer = 0; layer <= 5; layer++)
             {
                 MachineEntity node = AtNormalized(cell, layer);
                 if (node != null && window.Seen.Add(node)) window.Nodes.Add(node);
@@ -276,7 +280,7 @@ public sealed partial class MechanicalNetworkGraph
     public void Rebuild(IEnumerable<MachineEntity> nodes)
     {
         pointerWindow.Reset(); nearbyWindow.Reset();
-        cells.Clear(); occupiedOnPlacementLayers.Clear(); Networks.Clear(); Facilities.Clear();
+        cells.Clear(); occupiedOnPlacementLayers.Clear(); pressureSwitches.Clear(); Networks.Clear(); Facilities.Clear();
         var sorted = new List<MachineEntity>(nodes);
         sorted.Sort(CompareNodes);
         foreach (var node in sorted)
@@ -287,6 +291,8 @@ public sealed partial class MechanicalNetworkGraph
             cells.Add(key, node);
             if (node.Definition.Layer == 0 || node.Definition.Layer == 1)
                 occupiedOnPlacementLayers.Add(node.Cell);
+            node.MechanicalPortsSuppressed = false;
+            if (node.Definition.Fluid?.Kind == "mechanical-probe") pressureSwitches[node.Cell] = node;
             node.Network = null;
             node.Links.Clear();
             node.FlowVisited = false;
@@ -294,6 +300,8 @@ public sealed partial class MechanicalNetworkGraph
             node.SimulationBounds = new BoundsInt(nodeChunk.x, nodeChunk.y, 0, 1, 1, 1);
             if (!node.Definition.HasMechanicalPorts) Facilities.Add(node);
         }
+        foreach (MachineEntity node in sorted)
+            if (node.Definition.Layer <= 1 && pressureSwitches.ContainsKey(node.Cell)) node.MechanicalPortsSuppressed = true;
         RebuildConveyorPaths(sorted);
         var queue = new Queue<MachineEntity>();
         foreach (var root in sorted)
@@ -314,8 +322,9 @@ public sealed partial class MechanicalNetworkGraph
                     if (!node.HasPort(direction)) continue;
                     Vector2Int neighborCell = NormalizeCell(node.Cell + Directions[direction]);
                     // Layer1 只接两侧 Layer0 端点；绝不连接同格下层或另一座跨轴器。
-                    Link(node, AtNormalized(neighborCell, 0), direction, network, queue);
-                    if (node.Definition.Layer == 0)
+                    Link(node, pressureSwitches.TryGetValue(neighborCell, out MachineEntity pressureSwitch)
+                        ? pressureSwitch : AtNormalized(neighborCell, 0), direction, network, queue);
+                    if (node.Definition.Layer == 0 && !pressureSwitches.ContainsKey(neighborCell))
                         Link(node, AtNormalized(neighborCell, 1), direction, network, queue);
                 }
             }
@@ -640,7 +649,7 @@ public sealed partial class MechanicalNetworkGraph
 
     /// <summary>动力源先在自身所在侧取最近十位档，再沿变速箱倍率换算。</summary>
     private static float GetSourceTorque(MachineEntity node)
-        => node.Definition.IsConverter
+        => node.Definition.IsConverter || node.Definition.Source == "fluid-engine"
             ? Mathf.Floor((node.SourceTorque * node.SourceFactor + .0001f) / 10f) * 10f
             : RoundTorqueToTens(node.SourceTorque * node.SourceFactor);
 

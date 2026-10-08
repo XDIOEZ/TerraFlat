@@ -235,7 +235,7 @@ public partial class GameRes : SingletonAutoMono<GameRes>
             if (obj.transform.localScale.y == 0) obj.transform.localScale = new Vector3(obj.transform.localScale.x, 1, obj.transform.localScale.z);
             if (obj.transform.localScale.z == 0) obj.transform.localScale = new Vector3(obj.transform.localScale.x, obj.transform.localScale.y, 1);
 
-            if (ModRuntimeManager.Instance != null && ModRuntimeManager.Instance.IsRuntimeTemplate(go))
+            if (IsRuntimeModuleTemplate(go))
                 obj.SetActive(true);
 
             if (TryGetItemDefinition(prefab, out RuntimeItemDefinition definition) &&

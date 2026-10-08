@@ -396,6 +396,9 @@ namespace FlatWorld.NaturalEntities
 
         /// <summary>生命只写回同一 Entity，MOD 可修补这个命令边界；不会创建 Mod_DamageReceiver。</summary>
         public static float ApplyDamage(NaturalEntityHandle handle, in CombatDamageContext context)
+            => ApplyDamageInternal(handle, context, false);
+
+        private static float ApplyDamageInternal(NaturalEntityHandle handle, in CombatDamageContext context, bool pressureExplosion)
         {
             if (!GameNetwork.HasStateAuthority || !Contains(handle) || !context.Attack.Source.IsValid ||
                 !math.all(math.isfinite(context.Damage)) || !math.isfinite(context.Clock.Time)) return -1f;
@@ -403,24 +406,25 @@ namespace FlatWorld.NaturalEntities
             if (record.Busy || record.Profile.HealthModuleName == null ||
                 !simulation.TryGet(handle.Id, out AiecsVital vital) || vital.Dead != 0 || vital.Hp <= 0f) return -1f;
             float resourceMultiplier = 1f;
-            if (context.IsTrueDamage == 0)
+            // 压力爆炸沿正式生命入口结算物理防御，跳过采集工具资格与普通攻击间隔。
+            if (context.IsTrueDamage == 0 && !pressureExplosion)
                 resourceMultiplier = Mod_ResourceHarvest.ResolveAffinityMultiplier(
                     (ResourceToolKind)(record.Profile.HealthParameters.Value<int?>("weakTool") ?? 0), 1,
                     (ResourceToolKind)context.ResourceToolKind, context.ResourceToolTier, context.ResourceToolEfficiency);
-            if (context.IsTrueDamage == 0 && simulation.TryGet(handle.Id, out EntityHarvestRequirement requirement))
+            if (context.IsTrueDamage == 0 && !pressureExplosion && simulation.TryGet(handle.Id, out EntityHarvestRequirement requirement))
             {
                 resourceMultiplier = Mod_ResourceHarvest.ResolveAffinityMultiplier(
                     (ResourceToolKind)requirement.ToolKind, requirement.MinimumTier,
                     (ResourceToolKind)context.ResourceToolKind, context.ResourceToolTier, context.ResourceToolEfficiency);
                 if (!math.isfinite(resourceMultiplier)) return -1f;
             }
-            if (context.IsTrueDamage == 0 && context.Clock.Time - vital.LastDamageTime < vital.DamageInterval) return -1f;
+            if (context.IsTrueDamage == 0 && !pressureExplosion && context.Clock.Time - vital.LastDamageTime < vital.DamageInterval) return -1f;
             float4 damage = context.IsTrueDamage != 0 ? math.max(0f, context.Damage) :
                 CombatRules.Resolve(context.Damage, GameplayCombatBridge.Values(record.Profile.HealthDefaults.DefenseValues),
                     GameplayCombatBridge.Difficulty().Resolve(context.SourceIsPlayer != 0, false), vital.ReceivedMultiplier * resourceMultiplier);
             float previous = vital.Hp;
             vital.Hp = math.max(0f, vital.Hp - math.csum(damage));
-            if (context.IsTrueDamage == 0) vital.LastDamageTime = context.Clock.Time;
+            if (context.IsTrueDamage == 0 && !pressureExplosion) vital.LastDamageTime = context.Clock.Time;
             vital.LastAttacker = context.Attack.Source; vital.LastCredit = context.Credit;
             if (vital.Hp <= 0f) { vital.Dead = 1; vital.DeathTime = context.Clock.Time; record.DeathByDamage = true; }
             simulation.Set(handle.Id, vital);

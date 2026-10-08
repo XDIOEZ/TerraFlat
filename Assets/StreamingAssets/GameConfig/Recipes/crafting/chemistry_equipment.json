@@ -1,0 +1,280 @@
+{
+  "recipes": [
+    {
+      "id": "core:chemical_PortableGasTank_Iron",
+      "displayName": "铁制便携气罐",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "requiredStation": "workbench",
+      "inputs": [
+        {
+          "amount": 4,
+          "itemId": "Ingot_WroughtIron",
+          "match": "exact_item"
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 1,
+          "itemId": "PortableGasTank_Iron"
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:chemical_PortableGasTank_Steel",
+      "displayName": "钢制便携气罐",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "requiredStation": "workbench",
+      "inputs": [
+        {
+          "amount": 4,
+          "itemId": "Ingot_Steel",
+          "match": "exact_item"
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 1,
+          "itemId": "PortableGasTank_Steel"
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:chemical_Spacesuit_Head",
+      "displayName": "密封头盔",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "requiredStation": "workbench",
+      "inputs": [
+        {
+          "amount": 2,
+          "itemId": "Ingot_Steel",
+          "match": "exact_item"
+        },
+        {
+          "amount": 3,
+          "itemId": "Cloth",
+          "match": "exact_item"
+        },
+        {
+          "amount": 1,
+          "itemId": "Leather",
+          "match": "exact_item"
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 1,
+          "itemId": "Spacesuit_Head"
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:chemical_Spacesuit_Torso",
+      "displayName": "密封宇航服",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "requiredStation": "workbench",
+      "inputs": [
+        {
+          "amount": 2,
+          "itemId": "Ingot_Steel",
+          "match": "exact_item"
+        },
+        {
+          "amount": 3,
+          "itemId": "Cloth",
+          "match": "exact_item"
+        },
+        {
+          "amount": 1,
+          "itemId": "Leather",
+          "match": "exact_item"
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 1,
+          "itemId": "Spacesuit_Torso"
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:chemical_Spacesuit_Hands",
+      "displayName": "密封手套",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "requiredStation": "workbench",
+      "inputs": [
+        {
+          "amount": 2,
+          "itemId": "Ingot_Steel",
+          "match": "exact_item"
+        },
+        {
+          "amount": 3,
+          "itemId": "Cloth",
+          "match": "exact_item"
+        },
+        {
+          "amount": 1,
+          "itemId": "Leather",
+          "match": "exact_item"
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 1,
+          "itemId": "Spacesuit_Hands"
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:chemical_Spacesuit_Legs",
+      "displayName": "密封裤装",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "requiredStation": "workbench",
+      "inputs": [
+        {
+          "amount": 2,
+          "itemId": "Ingot_Steel",
+          "match": "exact_item"
+        },
+        {
+          "amount": 3,
+          "itemId": "Cloth",
+          "match": "exact_item"
+        },
+        {
+          "amount": 1,
+          "itemId": "Leather",
+          "match": "exact_item"
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 1,
+          "itemId": "Spacesuit_Legs"
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:chemical_Spacesuit_Feet",
+      "displayName": "密封靴子",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "requiredStation": "workbench",
+      "inputs": [
+        {
+          "amount": 2,
+          "itemId": "Ingot_Steel",
+          "match": "exact_item"
+        },
+        {
+          "amount": 3,
+          "itemId": "Cloth",
+          "match": "exact_item"
+        },
+        {
+          "amount": 1,
+          "itemId": "Leather",
+          "match": "exact_item"
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 1,
+          "itemId": "Spacesuit_Feet"
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:chemical_PressureSuit_Torso",
+      "displayName": "耐压防护服",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "requiredStation": "workbench",
+      "inputs": [
+        {
+          "amount": 3,
+          "itemId": "Ingot_WroughtIron",
+          "match": "exact_item"
+        },
+        {
+          "amount": 5,
+          "itemId": "Cloth",
+          "match": "exact_item"
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 1,
+          "itemId": "PressureSuit_Torso"
+        }
+      ],
+      "actions": []
+    },
+    {
+      "inputRule": "unordered",
+      "outputs": [
+        {
+          "amount": 1,
+          "itemId": "LowPressureSuit_Torso"
+        }
+      ],
+      "actions": [],
+      "requiredStation": "workbench",
+      "id": "core:chemical_LowPressureSuit_Torso",
+      "recipeType": "crafting",
+      "displayName": "低压防护服",
+      "inputs": [
+        {
+          "match": "exact_item",
+          "amount": 3,
+          "itemId": "Ingot_WroughtIron"
+        },
+        {
+          "match": "exact_item",
+          "amount": 4,
+          "itemId": "Cloth"
+        }
+      ]
+    },
+    {
+      "inputRule": "unordered",
+      "outputs": [
+        {
+          "amount": 1,
+          "itemId": "HighPressureSuit_Torso"
+        }
+      ],
+      "actions": [],
+      "requiredStation": "workbench",
+      "id": "core:chemical_HighPressureSuit_Torso",
+      "recipeType": "crafting",
+      "displayName": "高压防护服",
+      "inputs": [
+        {
+          "match": "exact_item",
+          "amount": 3,
+          "itemId": "Ingot_WroughtIron"
+        },
+        {
+          "match": "exact_item",
+          "amount": 4,
+          "itemId": "Cloth"
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 1
+}

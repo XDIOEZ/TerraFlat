@@ -170,13 +170,20 @@ public sealed class MechanicalSettings
     public float ManualPulseSeconds = 0.2f; // 按住交互时维持的最小动力缓冲。
     public float ManualReserveSeconds = 0.2f; // 松开后允许残留的最大动力缓冲。
     public float BellowsHeatBonus = 500f; // 风箱在额定转速下给予炉体温度上限的最高增量。
+    public float PressureExplosionRadiusScale = .035f;
+    public float MaximumPressureExplosionRadius = 12f;
+    public float PressureExplosionDamageScale = .7f;
+    public float MaximumPressureExplosionDamage = 300f; // 压力强度的平方根映射为有上限的游戏范围和伤害。
     public void Validate()
     {
         if (!MachineDefinition.Positive(TickSeconds) || TickSeconds > 1 || ActivationChunks < 0 ||
             DeactivationChunks <= ActivationChunks || !MachineDefinition.Positive(UnloadDelaySeconds) ||
             !MachineDefinition.Positive(ReferenceRpm) || !MachineDefinition.Positive(WattsPerTorqueRpm) || !MachineDefinition.Positive(ManualHoldThresholdSeconds) ||
             !MachineDefinition.Positive(ManualPulseSeconds) ||
-            !MachineDefinition.Positive(ManualReserveSeconds) || !MachineDefinition.NonNegative(BellowsHeatBonus))
+            !MachineDefinition.Positive(ManualReserveSeconds) || !MachineDefinition.NonNegative(BellowsHeatBonus) ||
+            !MachineDefinition.Positive(PressureExplosionRadiusScale) || !MachineDefinition.Positive(MaximumPressureExplosionRadius) ||
+            MaximumPressureExplosionRadius > 4096f || !MachineDefinition.Positive(PressureExplosionDamageScale) ||
+            !MachineDefinition.Positive(MaximumPressureExplosionDamage) || MaximumPressureExplosionDamage > 1000000000f)
             throw new ArgumentException("机械调度参数无效。");
     }
     #endregion
@@ -220,12 +227,13 @@ public sealed class MachineDefinition
     public int PlacementLayer = -1; // -1 沿用机械默认层；电线等覆盖层可显式使用独立层。
     public MechanicalAxisPortVisualDefinition AxisPortVisual; // 标准连接杆端口由目录统一控制。
     public MachineTransportDefinition Transport; // 输送能力独立于物品名称，MOD 可以配置自己的传送设备。
+    public FluidMachineDefinition Fluid; // 气液统一覆盖层和工业腔体能力。
     public ElectricalDefinition Electrical; // 可选电气能力；同一机器可同时属于机械网与电网。
     public int Layer => PlacementLayer >= 0 ? PlacementLayer : Kind == "bridge" ? 1 : 0;
     public bool HasMechanicalPorts => Ports == "axis" || Ports == "all";
     public bool HasElectricalPorts => Electrical?.HasConnection == true;
     public bool IsConverter => Electrical?.IsConverter == true;
-    public bool Rotatable => Transport != null || Ports == "axis" || Kind == "bellows" || (Kind == "gear" && AxlePorts?.Length > 0);
+    public bool Rotatable => Fluid != null || Transport != null || Ports == "axis" || Kind == "bellows" || (Kind == "gear" && AxlePorts?.Length > 0);
     /// <summary>动力源、加工设备与机械风箱默认投影；传动件保持原有无影表现。</summary>
     public bool ShouldCastVisualShadows()
         => CastVisualShadows ?? (Kind == "source" || Kind == "consumer" || Kind == "bellows" ||
@@ -286,6 +294,7 @@ public sealed class MachineDefinition
             throw new ArgumentException("机械加工能力等级无效：" + Id);
         AxisPortVisual?.Validate(Id, HasMechanicalPorts);
         Transport?.Validate(Id, HasMechanicalPorts);
+        Fluid?.Validate(Id);
         Electrical?.Validate(Id);
         if (FormerIds != null)
             foreach (string id in FormerIds)
@@ -396,7 +405,7 @@ public sealed class ElectricalDefinition
 
     public void Validate(string ownerId)
     {
-        if ((Role != "wire" && Role != "generator" && Role != "consumer" && Role != "battery" && Role != "converter") ||
+        if ((Role != "wire" && Role != "generator" && Role != "consumer" && Role != "battery" && Role != "converter" && Role != "switch") ||
             !HasConnection || !MachineDefinition.Positive(NominalVoltage) ||
             !MachineDefinition.Positive(ConversionEfficiency) || ConversionEfficiency > 1f ||
             !MachineDefinition.NonNegative(MinimumVoltage) || !MachineDefinition.NonNegative(MaximumVoltage) ||

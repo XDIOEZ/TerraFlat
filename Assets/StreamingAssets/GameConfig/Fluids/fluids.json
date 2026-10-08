@@ -1,0 +1,797 @@
+{
+  "schemaVersion": 1,
+  "fluids": [
+    {
+      "id": "core:oxygen",
+      "displayName": "氧气",
+      "liquidId": null,
+      "molarMassKgPerMol": 0.0319988,
+      "liquidDensityKgPerLiter": 1.141,
+      "gasHeatCapacityJPerMolKelvin": 21.1,
+      "liquidHeatCapacityJPerMolKelvin": 54,
+      "litersPerServing": 0.25,
+      "allowIndustrialTransport": true,
+      "phaseChange": {
+        "latentHeatJPerMol": 6820,
+        "referenceBoilingKelvin": 90.2,
+        "criticalTemperatureKelvin": 154.58,
+        "saturation": [
+          {
+            "temperatureKelvin": 54.36,
+            "pressureKPa": 0.149751681
+          },
+          {
+            "temperatureKelvin": 60,
+            "pressureKPa": 0.7229183657
+          },
+          {
+            "temperatureKelvin": 70,
+            "pressureKPa": 6.073739636
+          },
+          {
+            "temperatureKelvin": 80,
+            "pressureKPa": 29.11433368
+          },
+          {
+            "temperatureKelvin": 90.2,
+            "pressureKPa": 98.94763743
+          },
+          {
+            "temperatureKelvin": 100,
+            "pressureKPa": 250.8201811
+          },
+          {
+            "temperatureKelvin": 110,
+            "pressureKPa": 542.5787203
+          },
+          {
+            "temperatureKelvin": 120,
+            "pressureKPa": 1027.342644
+          },
+          {
+            "temperatureKelvin": 130,
+            "pressureKPa": 1757.556029
+          },
+          {
+            "temperatureKelvin": 140,
+            "pressureKPa": 2778.263785
+          },
+          {
+            "temperatureKelvin": 150,
+            "pressureKPa": 4124.479953
+          },
+          {
+            "temperatureKelvin": 154.33,
+            "pressureKPa": 4814.827333
+          }
+        ]
+      },
+      "modelNotes": "首轮恒定热容、恒定液体密度与分压近似；饱和点之间用对数插值，超出已列温度范围不外推。",
+      "sourceReferences": [
+        "https://webbook.nist.gov/cgi/cbook.cgi?Mask=15&Source=1968OGA312&Units=CAL"
+      ]
+    },
+    {
+      "id": "core:nitrogen",
+      "displayName": "氮气",
+      "liquidId": null,
+      "molarMassKgPerMol": 0.0280134,
+      "liquidDensityKgPerLiter": 0.808,
+      "gasHeatCapacityJPerMolKelvin": 20.8,
+      "liquidHeatCapacityJPerMolKelvin": 56,
+      "litersPerServing": 0.25,
+      "allowIndustrialTransport": true,
+      "phaseChange": {
+        "latentHeatJPerMol": 5600,
+        "referenceBoilingKelvin": 77.34,
+        "criticalTemperatureKelvin": 126.19,
+        "saturation": [
+          {
+            "temperatureKelvin": 63.14,
+            "pressureKPa": 10.95997226
+          },
+          {
+            "temperatureKelvin": 70,
+            "pressureKPa": 35.43880951
+          },
+          {
+            "temperatureKelvin": 77.34,
+            "pressureKPa": 96.61663567
+          },
+          {
+            "temperatureKelvin": 85,
+            "pressureKPa": 225.131031
+          },
+          {
+            "temperatureKelvin": 95,
+            "pressureKPa": 544.5402108
+          },
+          {
+            "temperatureKelvin": 105,
+            "pressureKPa": 1100.294453
+          },
+          {
+            "temperatureKelvin": 115,
+            "pressureKPa": 1952.219023
+          },
+          {
+            "temperatureKelvin": 125,
+            "pressureKPa": 3143.526569
+          },
+          {
+            "temperatureKelvin": 126,
+            "pressureKPa": 3282.441389
+          }
+        ]
+      },
+      "modelNotes": "首轮恒定热容、恒定液体密度与分压近似；饱和点之间用对数插值，超出已列温度范围不外推。",
+      "sourceReferences": [
+        "https://webbook.nist.gov/cgi/cbook.cgi?ID=C7727379&Type=ANTOINE"
+      ]
+    },
+    {
+      "id": "core:hydrogen",
+      "displayName": "氢气",
+      "liquidId": null,
+      "molarMassKgPerMol": 0.00201588,
+      "liquidDensityKgPerLiter": 0.0708,
+      "gasHeatCapacityJPerMolKelvin": 20.5,
+      "liquidHeatCapacityJPerMolKelvin": 19.7,
+      "litersPerServing": 0.25,
+      "allowIndustrialTransport": true,
+      "phaseChange": {
+        "latentHeatJPerMol": 900,
+        "referenceBoilingKelvin": 20.39,
+        "criticalTemperatureKelvin": 33.18,
+        "saturation": [
+          {
+            "temperatureKelvin": 21.01,
+            "pressureKPa": 121.4054754
+          },
+          {
+            "temperatureKelvin": 23,
+            "pressureKPa": 203.3562338
+          },
+          {
+            "temperatureKelvin": 25,
+            "pressureKPa": 320.5918242
+          },
+          {
+            "temperatureKelvin": 27,
+            "pressureKPa": 479.5958477
+          },
+          {
+            "temperatureKelvin": 29,
+            "pressureKPa": 686.6678422
+          },
+          {
+            "temperatureKelvin": 31,
+            "pressureKPa": 947.36665
+          },
+          {
+            "temperatureKelvin": 32.27,
+            "pressureKPa": 1142.921724
+          }
+        ]
+      },
+      "modelNotes": "首轮恒定热容、恒定液体密度与分压近似；饱和点之间用对数插值，超出已列温度范围不外推。 氢饱和曲线只覆盖21.01–32.27 K，不外推至更低温度；20.39 K 仅用于内能基准。",
+      "sourceReferences": [
+        "https://webbook.nist.gov/cgi/cbook.cgi?Mask=17&Source=1974JOH576&Units=SI"
+      ]
+    },
+    {
+      "id": "core:carbon_dioxide",
+      "displayName": "二氧化碳",
+      "liquidId": null,
+      "molarMassKgPerMol": 0.0440095,
+      "liquidDensityKgPerLiter": 0.9,
+      "gasHeatCapacityJPerMolKelvin": 28.8,
+      "liquidHeatCapacityJPerMolKelvin": 80,
+      "litersPerServing": 0.25,
+      "allowIndustrialTransport": true,
+      "phaseChange": null,
+      "modelNotes": "首轮恒定热容、恒定液体密度与分压近似；饱和点之间用对数插值，超出已列温度范围不外推。 二氧化碳首轮仅登记稳定物性，尚未配置液化曲线，因此不会自动相变。"
+    },
+    {
+      "id": "core:pure_water",
+      "displayName": "工业纯水",
+      "liquidId": "core:pure_water",
+      "molarMassKgPerMol": 0.0180153,
+      "liquidDensityKgPerLiter": 0.9982,
+      "gasHeatCapacityJPerMolKelvin": 25.3,
+      "liquidHeatCapacityJPerMolKelvin": 75.3,
+      "litersPerServing": 0.25,
+      "allowIndustrialTransport": true,
+      "phaseChange": {
+        "latentHeatJPerMol": 40660,
+        "referenceBoilingKelvin": 373.15,
+        "criticalTemperatureKelvin": 647.096,
+        "saturation": [
+          {
+            "temperatureKelvin": 273.16,
+            "pressureKPa": 0.6116548
+          },
+          {
+            "temperatureKelvin": 283.15,
+            "pressureKPa": 1.2281
+          },
+          {
+            "temperatureKelvin": 293.15,
+            "pressureKPa": 2.3388
+          },
+          {
+            "temperatureKelvin": 303.15,
+            "pressureKPa": 4.2469
+          },
+          {
+            "temperatureKelvin": 313.15,
+            "pressureKPa": 7.3849
+          },
+          {
+            "temperatureKelvin": 323.15,
+            "pressureKPa": 12.352
+          },
+          {
+            "temperatureKelvin": 333.15,
+            "pressureKPa": 19.946
+          },
+          {
+            "temperatureKelvin": 343.15,
+            "pressureKPa": 31.201
+          },
+          {
+            "temperatureKelvin": 353.15,
+            "pressureKPa": 47.414
+          },
+          {
+            "temperatureKelvin": 363.15,
+            "pressureKPa": 70.182
+          },
+          {
+            "temperatureKelvin": 373.15,
+            "pressureKPa": 101.325
+          },
+          {
+            "temperatureKelvin": 383.15,
+            "pressureKPa": 143.38
+          },
+          {
+            "temperatureKelvin": 393.15,
+            "pressureKPa": 198.67
+          },
+          {
+            "temperatureKelvin": 423.15,
+            "pressureKPa": 476.16
+          },
+          {
+            "temperatureKelvin": 473.15,
+            "pressureKPa": 1554.9
+          },
+          {
+            "temperatureKelvin": 523.15,
+            "pressureKPa": 3976.2
+          },
+          {
+            "temperatureKelvin": 573.15,
+            "pressureKPa": 8587.9
+          }
+        ]
+      },
+      "modelNotes": "首轮恒定热容、恒定液体密度与分压近似；饱和点之间用对数插值，超出已列温度范围不外推。",
+      "sourceReferences": [
+        "https://webbook.nist.gov/cgi/cbook.cgi?ID=C7732185&Type=ANTOINE",
+        "https://www.nist.gov/srd/nistir-5078"
+      ]
+    },
+    {
+      "id": "core:filtered_water",
+      "displayName": "过滤水",
+      "liquidId": "core:filtered_water",
+      "molarMassKgPerMol": 0.0180153,
+      "liquidDensityKgPerLiter": 0.9982,
+      "gasHeatCapacityJPerMolKelvin": 25.3,
+      "liquidHeatCapacityJPerMolKelvin": 75.3,
+      "litersPerServing": 0.25,
+      "allowIndustrialTransport": true,
+      "phaseChange": {
+        "latentHeatJPerMol": 40660,
+        "referenceBoilingKelvin": 373.15,
+        "criticalTemperatureKelvin": 647.096,
+        "saturation": [
+          {
+            "temperatureKelvin": 273.16,
+            "pressureKPa": 0.6116548
+          },
+          {
+            "temperatureKelvin": 283.15,
+            "pressureKPa": 1.2281
+          },
+          {
+            "temperatureKelvin": 293.15,
+            "pressureKPa": 2.3388
+          },
+          {
+            "temperatureKelvin": 303.15,
+            "pressureKPa": 4.2469
+          },
+          {
+            "temperatureKelvin": 313.15,
+            "pressureKPa": 7.3849
+          },
+          {
+            "temperatureKelvin": 323.15,
+            "pressureKPa": 12.352
+          },
+          {
+            "temperatureKelvin": 333.15,
+            "pressureKPa": 19.946
+          },
+          {
+            "temperatureKelvin": 343.15,
+            "pressureKPa": 31.201
+          },
+          {
+            "temperatureKelvin": 353.15,
+            "pressureKPa": 47.414
+          },
+          {
+            "temperatureKelvin": 363.15,
+            "pressureKPa": 70.182
+          },
+          {
+            "temperatureKelvin": 373.15,
+            "pressureKPa": 101.325
+          },
+          {
+            "temperatureKelvin": 383.15,
+            "pressureKPa": 143.38
+          },
+          {
+            "temperatureKelvin": 393.15,
+            "pressureKPa": 198.67
+          },
+          {
+            "temperatureKelvin": 423.15,
+            "pressureKPa": 476.16
+          },
+          {
+            "temperatureKelvin": 473.15,
+            "pressureKPa": 1554.9
+          },
+          {
+            "temperatureKelvin": 523.15,
+            "pressureKPa": 3976.2
+          },
+          {
+            "temperatureKelvin": 573.15,
+            "pressureKPa": 8587.9
+          }
+        ]
+      },
+      "modelNotes": "首轮恒定热容、恒定液体密度与分压近似；饱和点之间用对数插值，超出已列温度范围不外推。 水质为保留身份的游戏抽象，相变不去除杂质，不会改写成纯水。",
+      "sourceReferences": [
+        "https://webbook.nist.gov/cgi/cbook.cgi?ID=C7732185&Type=ANTOINE",
+        "https://www.nist.gov/srd/nistir-5078"
+      ]
+    },
+    {
+      "id": "core:dirty_water",
+      "displayName": "脏水",
+      "liquidId": "core:dirty_water",
+      "molarMassKgPerMol": 0.0180153,
+      "liquidDensityKgPerLiter": 0.9982,
+      "gasHeatCapacityJPerMolKelvin": 25.3,
+      "liquidHeatCapacityJPerMolKelvin": 75.3,
+      "litersPerServing": 0.25,
+      "allowIndustrialTransport": true,
+      "phaseChange": {
+        "latentHeatJPerMol": 40660,
+        "referenceBoilingKelvin": 373.15,
+        "criticalTemperatureKelvin": 647.096,
+        "saturation": [
+          {
+            "temperatureKelvin": 273.16,
+            "pressureKPa": 0.6116548
+          },
+          {
+            "temperatureKelvin": 283.15,
+            "pressureKPa": 1.2281
+          },
+          {
+            "temperatureKelvin": 293.15,
+            "pressureKPa": 2.3388
+          },
+          {
+            "temperatureKelvin": 303.15,
+            "pressureKPa": 4.2469
+          },
+          {
+            "temperatureKelvin": 313.15,
+            "pressureKPa": 7.3849
+          },
+          {
+            "temperatureKelvin": 323.15,
+            "pressureKPa": 12.352
+          },
+          {
+            "temperatureKelvin": 333.15,
+            "pressureKPa": 19.946
+          },
+          {
+            "temperatureKelvin": 343.15,
+            "pressureKPa": 31.201
+          },
+          {
+            "temperatureKelvin": 353.15,
+            "pressureKPa": 47.414
+          },
+          {
+            "temperatureKelvin": 363.15,
+            "pressureKPa": 70.182
+          },
+          {
+            "temperatureKelvin": 373.15,
+            "pressureKPa": 101.325
+          },
+          {
+            "temperatureKelvin": 383.15,
+            "pressureKPa": 143.38
+          },
+          {
+            "temperatureKelvin": 393.15,
+            "pressureKPa": 198.67
+          },
+          {
+            "temperatureKelvin": 423.15,
+            "pressureKPa": 476.16
+          },
+          {
+            "temperatureKelvin": 473.15,
+            "pressureKPa": 1554.9
+          },
+          {
+            "temperatureKelvin": 523.15,
+            "pressureKPa": 3976.2
+          },
+          {
+            "temperatureKelvin": 573.15,
+            "pressureKPa": 8587.9
+          }
+        ]
+      },
+      "modelNotes": "首轮恒定热容、恒定液体密度与分压近似；饱和点之间用对数插值，超出已列温度范围不外推。 水质为保留身份的游戏抽象，相变不去除杂质，不会改写成纯水。",
+      "sourceReferences": [
+        "https://webbook.nist.gov/cgi/cbook.cgi?ID=C7732185&Type=ANTOINE",
+        "https://www.nist.gov/srd/nistir-5078"
+      ]
+    },
+    {
+      "id": "core:drinkable_water",
+      "displayName": "饮用水",
+      "liquidId": "core:drinkable_water",
+      "molarMassKgPerMol": 0.0180153,
+      "liquidDensityKgPerLiter": 0.9982,
+      "gasHeatCapacityJPerMolKelvin": 25.3,
+      "liquidHeatCapacityJPerMolKelvin": 75.3,
+      "litersPerServing": 0.25,
+      "allowIndustrialTransport": true,
+      "phaseChange": {
+        "latentHeatJPerMol": 40660,
+        "referenceBoilingKelvin": 373.15,
+        "criticalTemperatureKelvin": 647.096,
+        "saturation": [
+          {
+            "temperatureKelvin": 273.16,
+            "pressureKPa": 0.6116548
+          },
+          {
+            "temperatureKelvin": 283.15,
+            "pressureKPa": 1.2281
+          },
+          {
+            "temperatureKelvin": 293.15,
+            "pressureKPa": 2.3388
+          },
+          {
+            "temperatureKelvin": 303.15,
+            "pressureKPa": 4.2469
+          },
+          {
+            "temperatureKelvin": 313.15,
+            "pressureKPa": 7.3849
+          },
+          {
+            "temperatureKelvin": 323.15,
+            "pressureKPa": 12.352
+          },
+          {
+            "temperatureKelvin": 333.15,
+            "pressureKPa": 19.946
+          },
+          {
+            "temperatureKelvin": 343.15,
+            "pressureKPa": 31.201
+          },
+          {
+            "temperatureKelvin": 353.15,
+            "pressureKPa": 47.414
+          },
+          {
+            "temperatureKelvin": 363.15,
+            "pressureKPa": 70.182
+          },
+          {
+            "temperatureKelvin": 373.15,
+            "pressureKPa": 101.325
+          },
+          {
+            "temperatureKelvin": 383.15,
+            "pressureKPa": 143.38
+          },
+          {
+            "temperatureKelvin": 393.15,
+            "pressureKPa": 198.67
+          },
+          {
+            "temperatureKelvin": 423.15,
+            "pressureKPa": 476.16
+          },
+          {
+            "temperatureKelvin": 473.15,
+            "pressureKPa": 1554.9
+          },
+          {
+            "temperatureKelvin": 523.15,
+            "pressureKPa": 3976.2
+          },
+          {
+            "temperatureKelvin": 573.15,
+            "pressureKPa": 8587.9
+          }
+        ]
+      },
+      "modelNotes": "首轮恒定热容、恒定液体密度与分压近似；饱和点之间用对数插值，超出已列温度范围不外推。",
+      "sourceReferences": [
+        "https://webbook.nist.gov/cgi/cbook.cgi?ID=C7732185&Type=ANTOINE",
+        "https://www.nist.gov/srd/nistir-5078"
+      ]
+    },
+    {
+      "id": "core:salt_water",
+      "displayName": "盐水",
+      "liquidId": "core:salt_water",
+      "molarMassKgPerMol": 0.0180153,
+      "liquidDensityKgPerLiter": 1.025,
+      "gasHeatCapacityJPerMolKelvin": 25.3,
+      "liquidHeatCapacityJPerMolKelvin": 75.3,
+      "litersPerServing": 0.25,
+      "allowIndustrialTransport": true,
+      "phaseChange": {
+        "latentHeatJPerMol": 40660,
+        "referenceBoilingKelvin": 373.15,
+        "criticalTemperatureKelvin": 647.096,
+        "saturation": [
+          {
+            "temperatureKelvin": 273.16,
+            "pressureKPa": 0.6116548
+          },
+          {
+            "temperatureKelvin": 283.15,
+            "pressureKPa": 1.2281
+          },
+          {
+            "temperatureKelvin": 293.15,
+            "pressureKPa": 2.3388
+          },
+          {
+            "temperatureKelvin": 303.15,
+            "pressureKPa": 4.2469
+          },
+          {
+            "temperatureKelvin": 313.15,
+            "pressureKPa": 7.3849
+          },
+          {
+            "temperatureKelvin": 323.15,
+            "pressureKPa": 12.352
+          },
+          {
+            "temperatureKelvin": 333.15,
+            "pressureKPa": 19.946
+          },
+          {
+            "temperatureKelvin": 343.15,
+            "pressureKPa": 31.201
+          },
+          {
+            "temperatureKelvin": 353.15,
+            "pressureKPa": 47.414
+          },
+          {
+            "temperatureKelvin": 363.15,
+            "pressureKPa": 70.182
+          },
+          {
+            "temperatureKelvin": 373.15,
+            "pressureKPa": 101.325
+          },
+          {
+            "temperatureKelvin": 383.15,
+            "pressureKPa": 143.38
+          },
+          {
+            "temperatureKelvin": 393.15,
+            "pressureKPa": 198.67
+          },
+          {
+            "temperatureKelvin": 423.15,
+            "pressureKPa": 476.16
+          },
+          {
+            "temperatureKelvin": 473.15,
+            "pressureKPa": 1554.9
+          },
+          {
+            "temperatureKelvin": 523.15,
+            "pressureKPa": 3976.2
+          },
+          {
+            "temperatureKelvin": 573.15,
+            "pressureKPa": 8587.9
+          }
+        ]
+      },
+      "modelNotes": "首轮恒定热容、恒定液体密度与分压近似；饱和点之间用对数插值，超出已列温度范围不外推。 水质为保留身份的游戏抽象，相变不去除杂质，不会改写成纯水。",
+      "sourceReferences": [
+        "https://webbook.nist.gov/cgi/cbook.cgi?ID=C7732185&Type=ANTOINE",
+        "https://www.nist.gov/srd/nistir-5078"
+      ]
+    },
+    {
+      "id": "core:sea_water",
+      "displayName": "海水",
+      "liquidId": "core:sea_water",
+      "molarMassKgPerMol": 0.0180153,
+      "liquidDensityKgPerLiter": 1.025,
+      "gasHeatCapacityJPerMolKelvin": 25.3,
+      "liquidHeatCapacityJPerMolKelvin": 75.3,
+      "litersPerServing": 0.25,
+      "allowIndustrialTransport": true,
+      "phaseChange": {
+        "latentHeatJPerMol": 40660,
+        "referenceBoilingKelvin": 373.15,
+        "criticalTemperatureKelvin": 647.096,
+        "saturation": [
+          {
+            "temperatureKelvin": 273.16,
+            "pressureKPa": 0.6116548
+          },
+          {
+            "temperatureKelvin": 283.15,
+            "pressureKPa": 1.2281
+          },
+          {
+            "temperatureKelvin": 293.15,
+            "pressureKPa": 2.3388
+          },
+          {
+            "temperatureKelvin": 303.15,
+            "pressureKPa": 4.2469
+          },
+          {
+            "temperatureKelvin": 313.15,
+            "pressureKPa": 7.3849
+          },
+          {
+            "temperatureKelvin": 323.15,
+            "pressureKPa": 12.352
+          },
+          {
+            "temperatureKelvin": 333.15,
+            "pressureKPa": 19.946
+          },
+          {
+            "temperatureKelvin": 343.15,
+            "pressureKPa": 31.201
+          },
+          {
+            "temperatureKelvin": 353.15,
+            "pressureKPa": 47.414
+          },
+          {
+            "temperatureKelvin": 363.15,
+            "pressureKPa": 70.182
+          },
+          {
+            "temperatureKelvin": 373.15,
+            "pressureKPa": 101.325
+          },
+          {
+            "temperatureKelvin": 383.15,
+            "pressureKPa": 143.38
+          },
+          {
+            "temperatureKelvin": 393.15,
+            "pressureKPa": 198.67
+          },
+          {
+            "temperatureKelvin": 423.15,
+            "pressureKPa": 476.16
+          },
+          {
+            "temperatureKelvin": 473.15,
+            "pressureKPa": 1554.9
+          },
+          {
+            "temperatureKelvin": 523.15,
+            "pressureKPa": 3976.2
+          },
+          {
+            "temperatureKelvin": 573.15,
+            "pressureKPa": 8587.9
+          }
+        ]
+      },
+      "modelNotes": "首轮恒定热容、恒定液体密度与分压近似；饱和点之间用对数插值，超出已列温度范围不外推。 水质为保留身份的游戏抽象，相变不去除杂质，不会改写成纯水。",
+      "sourceReferences": [
+        "https://webbook.nist.gov/cgi/cbook.cgi?ID=C7732185&Type=ANTOINE",
+        "https://www.nist.gov/srd/nistir-5078"
+      ]
+    },
+    {
+      "id": "core:honey",
+      "displayName": "蜂蜜",
+      "liquidId": "core:honey",
+      "molarMassKgPerMol": 0.180156,
+      "liquidDensityKgPerLiter": 1.42,
+      "gasHeatCapacityJPerMolKelvin": 120,
+      "liquidHeatCapacityJPerMolKelvin": 420,
+      "litersPerServing": 0.25,
+      "allowIndustrialTransport": false,
+      "phaseChange": null,
+      "modelNotes": "首轮恒定热容、恒定液体密度与分压近似；饱和点之间用对数插值，超出已列温度范围不外推。"
+    },
+    {
+      "id": "core:lava",
+      "displayName": "岩浆",
+      "liquidId": "core:lava",
+      "molarMassKgPerMol": 0.06,
+      "liquidDensityKgPerLiter": 2.7,
+      "gasHeatCapacityJPerMolKelvin": 40,
+      "liquidHeatCapacityJPerMolKelvin": 60,
+      "litersPerServing": 0.25,
+      "allowIndustrialTransport": false,
+      "phaseChange": null,
+      "modelNotes": "首轮恒定热容、恒定液体密度与分压近似；饱和点之间用对数插值，超出已列温度范围不外推。"
+    }
+  ],
+  "atmospheres": [
+    {
+      "id": "core:temperate",
+      "initialStandardCubicMeters": 1000000000000000,
+      "capacityStandardCubicMeters": 1000000000000000,
+      "referenceStandardCubicMeters": 1000000000000000,
+      "referencePressureKPa": 100,
+      "temperatureKelvin": 293.15,
+      "composition": [
+        {
+          "fluidId": "core:oxygen",
+          "fraction": 0.2
+        },
+        {
+          "fluidId": "core:nitrogen",
+          "fraction": 0.8
+        }
+      ]
+    },
+    {
+      "id": "core:vacuum",
+      "initialStandardCubicMeters": 0,
+      "capacityStandardCubicMeters": 0,
+      "referenceStandardCubicMeters": 0,
+      "referencePressureKPa": 0,
+      "temperatureKelvin": 293.15,
+      "composition": []
+    }
+  ]
+}

@@ -40,6 +40,7 @@ public sealed class MachineResourceCatalogValidator : IIncrementalResourceCatalo
                 MachineDefinition definition = MachineCatalog.Get(pair.Key);
                 if (definition == null) continue;
                 definition.Validate();
+                if (definition.Fluid != null) ValidateFluidDefinition(resources, definition, errors);
                 try { MachineCombatBridge.ValidateHealth(pair.Value.Health); }
                 catch (InvalidOperationException error) { errors.Add("机器受击配置无效：" + pair.Key + "，" + error.Message); }
                 if (!string.IsNullOrWhiteSpace(definition.LogicId) && !MachineLogicRegistry.IsRegistered(definition.LogicId))
@@ -50,6 +51,43 @@ public sealed class MachineResourceCatalogValidator : IIncrementalResourceCatalo
             {
                 errors.Add("机器内容编译失败：" + pair.Key + "，" + error.Message);
             }
+        }
+    }
+
+    private static void ValidateFluidDefinition(GameRes resources, MachineDefinition definition, List<string> errors)
+    {
+        FluidMachineDefinition fluid = definition.Fluid;
+        GameObject panel = resources.GetPrefab(fluid.PanelId, false);
+        if (panel == null || panel.GetComponent<MechanicalPanelView>() == null)
+            errors.Add("工业正式面板或视图缺失：" + definition.Id + " -> " + fluid.PanelId);
+        foreach (FluidMachinePortDefinition port in fluid.Ports)
+            if (!string.IsNullOrEmpty(port.FluidId) && !FluidCatalog.Default.TryGet(port.FluidId, out _))
+                errors.Add("工业端口物质未注册：" + definition.Id + "/" + port.Id + " -> " + port.FluidId);
+        foreach (FluidMachineReactionDefinition reaction in fluid.Reactions)
+        {
+            double inputMass = 0, outputMass = 0;
+            foreach (FluidReactionTerm input in reaction.Inputs)
+            {
+                if (!FluidCatalog.Default.TryGet(input.FluidId, out FluidDefinition substance))
+                { errors.Add("工业反应原料未注册：" + definition.Id + "/" + reaction.Id + " -> " + input.FluidId); continue; }
+                inputMass += input.Moles * substance.MolarMassKgPerMol;
+            }
+            foreach (FluidReactionTerm output in reaction.Outputs)
+            {
+                if (!FluidCatalog.Default.TryGet(output.FluidId, out FluidDefinition substance))
+                { errors.Add("工业反应产物未注册：" + definition.Id + "/" + reaction.Id + " -> " + output.FluidId); continue; }
+                outputMass += output.Moles * substance.MolarMassKgPerMol;
+            }
+            if (reaction.ResidueItemsPerReaction > 0)
+            {
+                if (!resources.TryGetItemDefinition(reaction.SolidResidueItemId, out RuntimeItemDefinition residue))
+                    errors.Add("工业反应残渣未注册：" + definition.Id + "/" + reaction.Id + " -> " + reaction.SolidResidueItemId);
+                else outputMass += reaction.ResidueItemsPerReaction * residue.CreateItemData().Stack.Weight;
+            }
+            if (Math.Abs(inputMass - outputMass) > Math.Max(.00000001, inputMass * .000002))
+                errors.Add("工业反应质量不守恒：" + definition.Id + "/" + reaction.Id + " 输入kg=" + inputMass + " 输出kg=" + outputMass);
+            if (reaction.RequiresFilter && !resources.ItemDefinitions.ContainsKey(fluid.FilterMaterialItemId))
+                errors.Add("工业反应滤材未注册：" + definition.Id + " -> " + fluid.FilterMaterialItemId);
         }
     }
 

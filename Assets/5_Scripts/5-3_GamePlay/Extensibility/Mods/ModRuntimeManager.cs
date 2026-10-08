@@ -75,6 +75,7 @@ public sealed partial class ModRuntimeManager : MonoBehaviour
     private GameManager boundGameManager;
     private bool staticEventsBound;
     private bool worldMutationAllowed = true;
+    private ContainerPortFactoryRegistry.CandidateScope containerPortCandidate;
 
     public ModLoadState State { get; private set; } = ModLoadState.NotStarted;
     public string FailureReason { get; private set; }
@@ -142,32 +143,41 @@ public sealed partial class ModRuntimeManager : MonoBehaviour
         State = ModLoadState.Loading;
         FailureReason = null;
         Directory.CreateDirectory(ModsRootPath);
-
+        // 扩展工厂先写候选注册表，加载失败时正式目录仍可继续使用。
+        containerPortCandidate = ContainerPortFactoryRegistry.BeginCandidate();
         IEnumerator routine = LoadEnabledModsCore(gameRes, reportProgress);
-        while (true)
+        try
         {
-            bool movedNext;
-            object current = null;
-            try
+            while (true)
             {
-                movedNext = routine.MoveNext();
-                if (movedNext)
-                    current = routine.Current;
-            }
-            catch (Exception ex)
-            {
-                FailureReason = ex.Message;
-                State = ModLoadState.Failed;
-                if (!preparingResourceReload) ModProfileStore.RecordLoadFailure(ex.ToString());
-                Debug.LogError($"[ModRuntime] MOD 加载失败：{FailureReason}");
-                Debug.LogException(ex);
-                if (!preparingResourceReload) UnloadAll(keepFailureState: true);
-                yield break;
-            }
+                bool movedNext;
+                object current = null;
+                try
+                {
+                    movedNext = routine.MoveNext();
+                    if (movedNext)
+                        current = routine.Current;
+                }
+                catch (Exception ex)
+                {
+                    FailureReason = ex.Message;
+                    State = ModLoadState.Failed;
+                    if (!preparingResourceReload) ModProfileStore.RecordLoadFailure(ex.ToString());
+                    Debug.LogError($"[ModRuntime] MOD 加载失败：{FailureReason}");
+                    Debug.LogException(ex);
+                    if (!preparingResourceReload) UnloadAll(keepFailureState: true);
+                    yield break;
+                }
 
-            if (!movedNext)
-                yield break;
-            yield return current;
+                if (!movedNext)
+                    yield break;
+                yield return current;
+            }
+        }
+        finally
+        {
+            (routine as IDisposable)?.Dispose();
+            if (!preparingResourceReload || State != ModLoadState.Ready) ReleaseContainerPortCandidate();
         }
     }
 
@@ -204,6 +214,7 @@ public sealed partial class ModRuntimeManager : MonoBehaviour
         ProcessRecipeDefinitions(gameRes);
         ProcessBuffDefinitions(gameRes);
         ProcessLiquidDefinitions(gameRes);
+        ProcessFluidDefinitions(gameRes);
         ProcessContaminationDefinitions(gameRes);
         ProcessQuestDefinitions();
         ProcessPlayerCreationTemplates();
@@ -218,6 +229,9 @@ public sealed partial class ModRuntimeManager : MonoBehaviour
             yield return null;
         }
 
+        ContainerPortConfigurationValidator.ValidateDefinitions(gameRes.ItemDefinitions.Values,
+            id => gameRes.TryGetLiquidDefinition(id, out LiquidDefinition liquid) ? liquid : null);
+        if (!preparingResourceReload) PublishContainerPortFactories();
         ModSetHash = ComputeModSetHash(loadedPackages);
         State = ModLoadState.Ready;
         if (!preparingResourceReload) PublishContentReady();
@@ -236,6 +250,19 @@ public sealed partial class ModRuntimeManager : MonoBehaviour
             modSetHash = ModSetHash,
             safeMode = safeModeActive
         });
+    }
+
+    /// <summary>扩展端口只在整套候选资源通过校验后发布。</summary>
+    internal void PublishContainerPortFactories()
+    {
+        containerPortCandidate?.Publish();
+        ReleaseContainerPortCandidate();
+    }
+
+    private void ReleaseContainerPortCandidate()
+    {
+        containerPortCandidate?.Dispose();
+        containerPortCandidate = null;
     }
 
     private List<ModPackage> ScanPackages(ModProfile profile)
@@ -398,6 +425,7 @@ public sealed partial class ModRuntimeManager : MonoBehaviour
             }
 
             QueueTileDefinitions(package, definitionFile, document);
+            QueueFluidDefinitions(package, definitionFile, document);
 
             int itemIndex = 0;
             foreach (JToken token in document["items"] as JArray ?? new JArray())
@@ -2169,6 +2197,7 @@ public sealed partial class ModRuntimeManager : MonoBehaviour
 
     private void UnloadAll(bool keepFailureState = false)
     {
+        ReleaseContainerPortCandidate();
         UnbindGameEvents();
 
         UnloadManaged();
@@ -2181,6 +2210,7 @@ public sealed partial class ModRuntimeManager : MonoBehaviour
         for (int index = registeredContaminationIds.Count - 1; index >= 0; index--)
             gameRes?.UnregisterExternalContaminationDefinition(registeredContaminationIds[index]);
         registeredContaminationIds.Clear();
+        UnloadFluidDefinitions();
         for (int index = registeredLiquidIds.Count - 1; index >= 0; index--)
             gameRes?.UnregisterExternalLiquidDefinition(registeredLiquidIds[index]);
         registeredLiquidIds.Clear();

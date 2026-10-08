@@ -611,7 +611,7 @@ namespace FlatWorld.GameplayMCP
                 ["stamina"] = stamina == null ? JValue.CreateNull() : new JArray(Round(stamina.CurrentValue), Round(stamina.MaxValue)),
                 ["water"] = new JObject
                 {
-                    ["inWater"] = oxygen?.IsInWater ?? (tileReceiver != null && tileReceiver.LiquidDepth > 0f),
+                    ["inWater"] = tileReceiver != null && tileReceiver.IsInWater,
                     ["immersion"] = tileReceiver == null ? 0f : Round(tileReceiver.CurrentWaterImmersion),
                     ["tile"] = tileReceiver?.currentTileData?.Name ?? string.Empty,
                     ["depth"] = tileReceiver == null ? 0f : Round(tileReceiver.LiquidDepth),
@@ -619,7 +619,8 @@ namespace FlatWorld.GameplayMCP
                     ["floating"] = tileReceiver?.LiquidFloating ?? false,
                     ["oxygen"] = oxygen == null ? JValue.CreateNull() : new JArray(Round(oxygen.CurrentValue), Round(oxygen.MaxValue)),
                     ["breathBlocked"] = oxygen?.IsBreathBlocked ?? false,
-                    ["drowning"] = oxygen?.IsDrowning ?? false
+                    ["drowning"] = tileReceiver != null && tileReceiver.IsInWater && oxygen != null &&
+                        oxygen.IsOxygenDepleting && oxygen.CurrentValue <= 0f
                 },
                 ["hand"] = new JObject
                 {

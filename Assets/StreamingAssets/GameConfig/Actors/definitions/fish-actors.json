@@ -52,6 +52,20 @@
         }
       },
       "modules": {
+        "pressure": {
+          "prefab": "Module_Pressure",
+          "id": "气压生存模块",
+          "enabled": true,
+          "parameters": {
+            "SafePressureMinKPa": 50.0,
+            "SafePressureMaxKPa": 150.0,
+            "DangerBufferSeconds": 30.0,
+            "BufferRecoveryPerSecond": 1.0,
+            "DamageIntervalSeconds": 5.0,
+            "LowPressureDamage": 5.0,
+            "HighPressureDamage": 5.0
+          }
+        },
         "ChunkAssigner": {
           "prefab": "Module_AutoChunkOwner",
           "id": "ChunkAssigner",

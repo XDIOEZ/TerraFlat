@@ -32,6 +32,7 @@ public sealed class ElectricalNetworkGraph
         { Vector2Int.right, Vector2Int.up, Vector2Int.left, Vector2Int.down };
     private readonly Dictionary<Vector2Int, MachineEntity> wires = new();
     private readonly Dictionary<Vector2Int, List<MachineEntity>> endpoints = new();
+    private readonly Dictionary<Vector2Int, MachineEntity> pressureSwitches = new();
     private readonly WorldTopologyDomain topology;
     public readonly List<ElectricalNetwork> Networks = new();
 
@@ -63,9 +64,11 @@ public sealed class ElectricalNetworkGraph
     /// <summary>只有拓扑变化时重建，按同格或旋转后的邻格接入端口。</summary>
     public void Rebuild(IEnumerable<MachineEntity> source)
     {
-        wires.Clear(); endpoints.Clear(); Networks.Clear();
+        wires.Clear(); endpoints.Clear(); pressureSwitches.Clear(); Networks.Clear();
         var sorted = new List<MachineEntity>(source);
         sorted.Sort((a, b) => a.Id.CompareTo(b.Id));
+        foreach (MachineEntity node in sorted)
+            if (node.Definition.Fluid?.Kind == "electronic-probe") pressureSwitches[Normalize(node.Cell)] = node;
 
         foreach (MachineEntity node in sorted)
         {
@@ -73,8 +76,11 @@ public sealed class ElectricalNetworkGraph
             ElectricalDefinition electrical = node.Definition?.Electrical;
             if (electrical?.HasConnection != true) continue;
             node.Cell = Normalize(node.Cell);
+            if (node.Definition.Fluid?.Kind == "electronic-probe") continue;
             if (electrical.IsWire)
             {
+                // 测点格中的普通线不能把探针的两个端点短接。
+                if (pressureSwitches.ContainsKey(node.Cell)) continue;
                 if (wires.ContainsKey(node.Cell))
                     throw new InvalidOperationException("电线格重复占用：" + node.Cell);
                 wires.Add(node.Cell, node);
@@ -109,9 +115,18 @@ public sealed class ElectricalNetworkGraph
                         network.Nodes.Add(endpoint);
                     }
                 }
-                foreach (Vector2Int direction in Directions)
+                for (int portDirection = 0; portDirection < Directions.Length; portDirection++)
                 {
-                    if (!wires.TryGetValue(Normalize(wire.Cell + direction), out MachineEntity next) ||
+                    Vector2Int direction = Directions[portDirection];
+                    Vector2Int adjacent = Normalize(wire.Cell + direction);
+                    if (pressureSwitches.TryGetValue(adjacent, out MachineEntity pressureSwitch) &&
+                        pressureSwitch.FluidProbeConnected && (pressureSwitch.RotationQuarterTurns & 1) == (portDirection & 1))
+                    {
+                        if (pressureSwitch.ElectricalNetwork == null)
+                        { pressureSwitch.ElectricalNetwork = network; network.Nodes.Add(pressureSwitch); }
+                        adjacent = Normalize(adjacent + direction);
+                    }
+                    if (!wires.TryGetValue(adjacent, out MachineEntity next) ||
                         next.ElectricalNetwork != null) continue;
                     next.ElectricalNetwork = network;
                     queue.Enqueue(next);

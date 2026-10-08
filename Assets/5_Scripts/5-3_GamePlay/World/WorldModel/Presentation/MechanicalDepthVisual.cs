@@ -16,7 +16,7 @@ public sealed partial class MechanicalDepthVisual : MonoBehaviour, ISpatialInter
         internal int Id, Order;
         internal bool Touched, Visible, DrawBelowMechanical;
     }
-    private readonly PartVisual[] parts = new PartVisual[6];
+    private readonly PartVisual[] parts = new PartVisual[8];
     private ChunkTilemapRenderer owner;
     private int entityId, occupancy;
     private bool highlighted, disposed;
@@ -56,6 +56,12 @@ public sealed partial class MechanicalDepthVisual : MonoBehaviour, ISpatialInter
     {
         foreach (PartVisual part in parts) RemoveUntouched(part);
         foreach (PartVisual part in facilityParts) RemoveUntouched(part);
+    }
+    internal void SetPartTint(int index, Color tint)
+    {
+        PartVisual part = parts[index];
+        if (part == null) return;
+        part.Tint = tint; Submit(part);
     }
 
     private void Submit(PartVisual part)

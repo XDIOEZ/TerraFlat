@@ -98,7 +98,8 @@ public sealed class LiquidDefinition
         string sourceItemId = null,
         WorldLiquidSettings worldWater = null,
         LiquidSolidification solidification = null,
-        IReadOnlyList<LiquidIngredientReaction> ingredientReactions = null)
+        IReadOnlyList<LiquidIngredientReaction> ingredientReactions = null,
+        float litersPerServing = .25f)
     {
         Id = id;
         DisplayName = displayName;
@@ -116,9 +117,11 @@ public sealed class LiquidDefinition
         BuoyancyThresholdMultiplier = buoyancyThresholdMultiplier;
         SourceItemId = sourceItemId;
         WorldWater = worldWater;
+        LitersPerServing = litersPerServing;
     }
 
     public WorldLiquidSettings WorldWater { get; }
+    public float LitersPerServing { get; } // 每份显示体积必须显式换算，不假定一份等于一升。
     public string Id { get; }
     public string DisplayName { get; }
     public string Description { get; }
@@ -195,6 +198,9 @@ public sealed class LiquidDefinitionDto
 
     [JsonProperty("hydrationPerServing")]
     public float HydrationPerServing;
+
+    [JsonProperty("litersPerServing")]
+    public float LitersPerServing = .25f;
 
     [JsonProperty("drinkEffects")]
     public List<LiquidDrinkEffectDto> DrinkEffects = new();
@@ -340,6 +346,8 @@ public static class LiquidDefinitionFactory
         if (dto.Viscosity <= 0f)
             throw new InvalidDataException($"液体 {id} viscosity 必须大于 0；1 表示普通水。");
         ValidateFinite(dto.HydrationPerServing, id, nameof(dto.HydrationPerServing));
+        ValidateFinite(dto.LitersPerServing, id, nameof(dto.LitersPerServing));
+        if (dto.LitersPerServing <= 0f) throw new InvalidDataException($"液体 {id} litersPerServing 必须为正数。");
         if (dto.HydrationPerServing < 0f)
             throw new InvalidDataException($"液体 {id} hydrationPerServing 不能小于 0");
         if (!dto.Drinkable && dto.HydrationPerServing > 0f)
@@ -389,7 +397,8 @@ public static class LiquidDefinitionFactory
             string.IsNullOrWhiteSpace(dto.SourceItemId) ? null : dto.SourceItemId.Trim(),
             dto.WorldWater,
             solidification,
-            ingredientReactions);
+            ingredientReactions,
+            dto.LitersPerServing);
     }
 
     /// <summary>构建整个本体分包并拒绝重复 ID。</summary>

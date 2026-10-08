@@ -702,11 +702,11 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
     }
 
     /// <summary>新旧攻击共享间隔、物理伤害、难度、归因和原有生命提交/反馈链。</summary>
-    private float HurtContext(in FlatWorld.Combat.CombatDamageContext context, float rules, IDamageSender legacySender = null, BodyPartType? targetPart = null)
+    private float HurtContext(in FlatWorld.Combat.CombatDamageContext context, float rules, IDamageSender legacySender = null, BodyPartType? targetPart = null, bool ignoreInterval = false)
     {
         if (!Unity.Mathematics.math.all(Unity.Mathematics.math.isfinite(context.Damage)) ||
             !Unity.Mathematics.math.isfinite(context.Clock.Time)) throw new ArgumentException("伤害上下文必须包含有限数值和模拟时间。");
-        if (context.Clock.Time - lastDamageTime < Data.DamageInterval) return -1f;
+        if (!ignoreInterval && context.Clock.Time - lastDamageTime < Data.DamageInterval) return -1f;
         lastDamageTime = context.Clock.Time;
         float difficulty = GameplayCombatBridge.Difficulty().Resolve(context.SourceIsPlayer != 0, GameDifficultyService.IsPlayer(item));
         if (context.IsTrueDamage == 0)

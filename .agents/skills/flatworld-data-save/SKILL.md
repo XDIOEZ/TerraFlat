@@ -11,6 +11,7 @@ description: "Use when: 定位或修改 FlatWorld 的数据模型、MemoryPack �
 - 根数据：`World/Map/Data/GameSaveData.cs` 及 `GameSaveData.*.cs`
 - Item/Module：`Assets/5_Scripts/5-1_Data/{ItemData/ItemData,ModData/ModuleData}.cs`
 - 地图/星球：`World/Map/Data/{MapSave,PlanetData,EcologyWorldSaveData}.cs`
+- 工业两相库存/大气：`World/Fluids/Core/FluidState.cs`、`Atmosphere/{AtmosphereState,PlanetData.Atmosphere}.cs`。
 - JSON：`Assets/StreamingAssets/GameConfig/`；Addressables：`Assets/AddressableAssetsData/`
 
 ## 核心不变量
@@ -47,7 +48,9 @@ description: "Use when: 定位或修改 FlatWorld 的数据模型、MemoryPack �
 - 地块污染使用 `ChunkSaveRecord.ContaminationCells` 保存偏离定义默认值的稀疏差量；污染定义 ID 与数值一起持久化，恢复时必须要求当前本体/MOD 已注册该定义，禁止静默丢弃未知污染状态。
 - 时间保存同时复制季节配置和历史区间；积雪、植物冷热暴露、自然补位年份、陶罐水质／加工进度、盐分负担各有独立状态，不能在渲染绑定或 UI 打开时重置。
 - MemoryPack 追加可选数值字段时，不能依赖字段初始化值表达缺省；若 0 也是有效配置，使用可空数值并在转为运行时快照时解析缺省，避免未记录字段被当成显式 0。
-- 通用液体容器的 `LiquidContainerState.Amount` 以 `0.1` 份为最小持久化单位；运行时读入高精度浮点余量时先归一到一位小数，后续装液、倾倒、转移与加工不得重新写入更高精度的数量。
+- 通用容器以 `LiquidContainerState.Composition` 保存各稳定 LiquidId 的真实份数，`Amount/LiquidId` 只是派生读数；不足一份的尾量、各口 `PendingOutputs` 和随机状态必须保留，不能用取整或 epsilon 清空正数。
+- `FluidInventoryState` 保存各 FluidId 的 decimal 气液 mol、总内能、随机状态及每口预留；预留已经计入库存，恢复或合并不能再加一份。温度、压力、比例仅派生；份数换算以 `LiquidDefinition.LitersPerServing` 为准。
+- `PlanetData.Atmosphere` 只在首次创建时按 Profile 初始化；固定容量和 decimal 实际余量一起保存，同星球各维度共用地表储量，重进、打开 UI 和资源更新不能补满。待结算压力爆炸及组合罐释放预算随 `MachineArchive` 保存。
 - ItemData 及派生类的 MemoryPack 持久化只通过 InstanceSnapshot；Unity/JSON 字段是配置适配外壳，不直接入档。冷数据不读取 GameRes，入世/入包先按当前定义原位恢复重量、标签、耐久与模块组合，再合并实例状态；保留真实槽位的 ItemData 引用，已删除模块不能复活，未知扩展负载继续保留。
 - `InstanceSnapshot` 捕获发生在外层 MemoryPack 写入期间；内部负载和扩展 `IModuleInstanceStateCodec.Capture` 使用 `ItemSnapshotSerialization.SerializePayload` 独占缓冲及引用状态，禁止嵌套调用默认 `Serialize(value)` 覆盖同线程外层缓冲，避免读到错误的 Union 标记。
 - FastCloner 3.3.10 对带 `FastClonerIgnore` 的可写属性会调用 setter 写入默认值；`InstanceSnapshot` 这类无后备字段的计算属性不要加该标记，避免克隆配置时触发空快照恢复。自动属性与实际字段仍按需标记。

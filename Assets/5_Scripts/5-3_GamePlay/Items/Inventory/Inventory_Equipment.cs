@@ -200,6 +200,20 @@ public class Inventory_Equipment : Inventory
     {
         base.InitUI();
         ApplyEquipmentPanelLayout();
+        BindSpacesuitConfiguration();
+    }
+
+    private void BindSpacesuitConfiguration()
+    {
+        Transform control = FindChildByName(basePanel.transform, "FWUI_ConfigureSpacesuit");
+        Button button = control != null ? control.GetComponent<Button>() : null;
+        if (button == null) throw new InvalidOperationException("装备正式面板缺少宇航服配置按钮。");
+        button.onClick.RemoveListener(OpenSpacesuitConfiguration);
+        button.onClick.AddListener(OpenSpacesuitConfiguration);
+    }
+    private void OpenSpacesuitConfiguration()
+    {
+        if (SpacesuitSystem.TryGetEquipped(item, out SpacesuitBinding suit)) SpacesuitPanelSession.Show(suit.Suit, item);
     }
 
     private void ApplyEquipmentPanelLayout()

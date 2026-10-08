@@ -43,7 +43,19 @@ public class Mod_Equipment : Module, IInventory, IInteractable, IInstanceUI
 
     public override ModuleTickMode TickMode => HasTickingEquipment()
         ? ModuleTickMode.EveryFrame
-        : ModuleTickMode.Disabled;
+        : HasAnyEquippedItem() ? ModuleTickMode.FixedInterval : ModuleTickMode.Disabled;
+    public override float FixedTickInterval => .2f;
+
+    public bool BlocksAmbientOxygen
+    {
+        get
+        {
+            foreach (List<EquipmentInstance> list in equipment_Instances)
+                if (list != null) foreach (EquipmentInstance instance in list)
+                    if (instance is IAmbientOxygenBlocker blocker && blocker.BlocksAmbientOxygen) return true;
+            return false;
+        }
+    }
 
     #endregion
 
@@ -101,6 +113,8 @@ public class Mod_Equipment : Module, IInventory, IInteractable, IInstanceUI
 
     protected override void OnUnload()
     {
+        foreach (var list in equipment_Instances)
+            if (list != null) foreach (var equipment in list) equipment?.UnEquip(item);
         if (EquipmentInventory?.Data != null)
             EquipmentInventory.Data.Event_OnDataChanged_TwoSlots -= UpdateEquipment;
 
@@ -141,13 +155,14 @@ public class Mod_Equipment : Module, IInventory, IInteractable, IInstanceUI
 
     public override void ModUpdate(float deltaTime)
     {
+        EquipmentInventory?.ModUpdate(deltaTime);
         foreach (var list in equipment_Instances)
         {
             if (list == null) continue;
             foreach (var equip in list)
             {
                 if (equip?.RequiresUpdate == true)
-                    equip.Update();
+                    equip.Update(deltaTime);
             }
         }
     }
@@ -450,7 +465,10 @@ public class Mod_Equipment : Module, IInventory, IInteractable, IInstanceUI
                 equipment_Instances[i] = ReadEquipmentInstances(slotItemData, equipment_ModuleData[i]);
 
             foreach (var equipment in equipment_Instances[i])
+            {
+                equipment?.BindEquippedItem(slotItemData);
                 equipment?.Equip(item);
+            }
         }
     }
 
@@ -521,7 +539,10 @@ public class Mod_Equipment : Module, IInventory, IInteractable, IInstanceUI
             List<EquipmentInstance> loadedList = ReadEquipmentInstances(LocalSlot.itemData, equipment_ModuleData[index]);
 
             foreach (var equipment in loadedList)
+            {
+                equipment?.BindEquippedItem(LocalSlot.itemData);
                 equipment?.Equip(item);
+            }
 
             equipment_Instances[index] = loadedList;
         }
@@ -655,11 +676,15 @@ public class Mod_Equipment : Module, IInventory, IInteractable, IInstanceUI
             Debug.LogError($"Mod_Equipment.EquipAll: item 为空 (模块 {name})");
             return;
         }
-        foreach (var list in equipment_Instances)
+        for (int index = 0; index < equipment_Instances.Count; index++)
         {
+            var list = equipment_Instances[index];
             if (list == null) continue;
             foreach (var equip in list)
+            {
+                equip.BindEquippedItem(EquipmentInventory.Data.itemSlots[index]?.itemData);
                 equip.Equip(item);
+            }
         }
     }
 

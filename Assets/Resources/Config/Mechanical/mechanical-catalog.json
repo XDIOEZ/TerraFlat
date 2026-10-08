@@ -10,29 +10,162 @@
     "ManualHoldThresholdSeconds": 0.25,
     "ManualPulseSeconds": 0.2,
     "ManualReserveSeconds": 0.2,
-    "BellowsHeatBonus": 500
+    "BellowsHeatBonus": 500,
+    "PressureExplosionRadiusScale": 0.035,
+    "MaximumPressureExplosionRadius": 12,
+    "PressureExplosionDamageScale": 0.7,
+    "MaximumPressureExplosionDamage": 300
   },
   "Nodes": [
-    { "Id": "HandCrank", "Kind": "source", "Ports": "axis", "AxisPortVisual": { "Count": 2, "StartX": 0.25, "Y": 0 }, "Source": "manual", "Torque": 20, "Rpm": 20 },
-    { "Id": "WaterWheel", "Kind": "source", "Ports": "axis", "Source": "water", "SourceRadius": 0.92, "Torque": 120 },
-    { "Id": "Windmill", "Kind": "source", "Ports": "all", "Source": "wind", "Torque": 60, "Rpm": 20 },
-    { "Id": "Shaft_Wood", "Kind": "shaft", "Ports": "axis", "BlocksMovement": false, "PlayerMoveSpeedMultiplier": 0.7 },
-    { "Id": "Gear_Wood", "Kind": "gear", "Ports": "all", "AxlePorts": ["left"] },
-    { "Id": "Gearbox_Wood", "Kind": "gearbox", "Ports": "axis", "AxisPortVisual": { "Count": 2, "StartX": 0.25, "Y": 0 }, "Ratios": [2], "ReverseSpeedRatio": 0.5, "ForwardTorqueRatio": 0.5, "ReverseTorqueRatio": 2 },
-    { "Id": "Clutch", "Kind": "clutch", "Ports": "axis" },
-    { "Id": "CrossShaft", "Kind": "bridge", "Ports": "axis" },
-    { "Id": "Millstone", "Kind": "consumer", "Ports": "axis", "AxisPortVisual": { "Count": 2, "StartX": 0.25, "Y": 0 }, "Station": "millstone", "ProcessCapability": "grind", "RequiredRpm": 20, "TorqueLoad": 10, "ManualDriveTorque": 60, "ManualDriveRpm": 2, "ManualDriveSecondsPerPress": 3 },
-    { "Id": "MechanicalBellows", "Kind": "bellows", "Ports": "all", "AxlePorts": ["left"], "RequiredRpm": 20, "TorqueLoad": 10 },
-    { "Id": "Sawmill", "Kind": "consumer", "Ports": "all", "Station": "sawmill", "ProcessCapability": "cut", "ProcessCapabilityLevel": 3, "RequiredRpm": 40, "TorqueLoad": 20 },
-    { "Id": "MechanicalLoom", "Kind": "consumer", "Ports": "axis", "AxisPortVisual": { "Count": 2, "StartX": 0.25, "Y": 0 }, "Station": "mechanical_loom", "ProcessCapability": "weave", "RequiredRpm": 20, "TorqueLoad": 10 },
-    { "Id": "MechanicalHammer", "Kind": "consumer", "Ports": "axis", "AxisPortVisual": { "Count": 2, "StartX": 0.25, "Y": 0 }, "Station": "mechanical_hammer", "RequiredRpm": 60, "TorqueLoad": 20 },
+    {
+      "Id": "HandCrank",
+      "Kind": "source",
+      "Ports": "axis",
+      "AxisPortVisual": {
+        "Count": 2,
+        "StartX": 0.25,
+        "Y": 0
+      },
+      "Source": "manual",
+      "Torque": 20,
+      "Rpm": 20
+    },
+    {
+      "Id": "WaterWheel",
+      "Kind": "source",
+      "Ports": "axis",
+      "Source": "water",
+      "SourceRadius": 0.92,
+      "Torque": 120
+    },
+    {
+      "Id": "Windmill",
+      "Kind": "source",
+      "Ports": "all",
+      "Source": "wind",
+      "Torque": 60,
+      "Rpm": 20
+    },
+    {
+      "Id": "Shaft_Wood",
+      "Kind": "shaft",
+      "Ports": "axis",
+      "BlocksMovement": false,
+      "PlayerMoveSpeedMultiplier": 0.7
+    },
+    {
+      "Id": "Gear_Wood",
+      "Kind": "gear",
+      "Ports": "all",
+      "AxlePorts": [
+        "left"
+      ]
+    },
+    {
+      "Id": "Gearbox_Wood",
+      "Kind": "gearbox",
+      "Ports": "axis",
+      "AxisPortVisual": {
+        "Count": 2,
+        "StartX": 0.25,
+        "Y": 0
+      },
+      "Ratios": [
+        2
+      ],
+      "ReverseSpeedRatio": 0.5,
+      "ForwardTorqueRatio": 0.5,
+      "ReverseTorqueRatio": 2
+    },
+    {
+      "Id": "Clutch",
+      "Kind": "clutch",
+      "Ports": "axis"
+    },
+    {
+      "Id": "CrossShaft",
+      "Kind": "bridge",
+      "Ports": "axis"
+    },
+    {
+      "Id": "Millstone",
+      "Kind": "consumer",
+      "Ports": "axis",
+      "AxisPortVisual": {
+        "Count": 2,
+        "StartX": 0.25,
+        "Y": 0
+      },
+      "Station": "millstone",
+      "ProcessCapability": "grind",
+      "RequiredRpm": 20,
+      "TorqueLoad": 10,
+      "ManualDriveTorque": 60,
+      "ManualDriveRpm": 2,
+      "ManualDriveSecondsPerPress": 3
+    },
+    {
+      "Id": "MechanicalBellows",
+      "Kind": "bellows",
+      "Ports": "all",
+      "AxlePorts": [
+        "left"
+      ],
+      "RequiredRpm": 20,
+      "TorqueLoad": 10
+    },
+    {
+      "Id": "Sawmill",
+      "Kind": "consumer",
+      "Ports": "all",
+      "Station": "sawmill",
+      "ProcessCapability": "cut",
+      "ProcessCapabilityLevel": 3,
+      "RequiredRpm": 40,
+      "TorqueLoad": 20
+    },
+    {
+      "Id": "MechanicalLoom",
+      "Kind": "consumer",
+      "Ports": "axis",
+      "AxisPortVisual": {
+        "Count": 2,
+        "StartX": 0.25,
+        "Y": 0
+      },
+      "Station": "mechanical_loom",
+      "ProcessCapability": "weave",
+      "RequiredRpm": 20,
+      "TorqueLoad": 10
+    },
+    {
+      "Id": "MechanicalHammer",
+      "Kind": "consumer",
+      "Ports": "axis",
+      "AxisPortVisual": {
+        "Count": 2,
+        "StartX": 0.25,
+        "Y": 0
+      },
+      "Station": "mechanical_hammer",
+      "RequiredRpm": 60,
+      "TorqueLoad": 20
+    },
     {
       "Id": "Generator_Basic",
-      "FormerIds": ["Motor_Basic"],
+      "FormerIds": [
+        "Motor_Basic"
+      ],
       "Kind": "converter",
       "Ports": "axis",
-      "AxisPortVisual": { "Count": 1, "StartX": 0.25, "Y": 0 },
-      "AxlePorts": ["right"],
+      "AxisPortVisual": {
+        "Count": 1,
+        "StartX": 0.25,
+        "Y": 0
+      },
+      "AxlePorts": [
+        "right"
+      ],
       "Source": "electric",
       "Torque": 20,
       "Rpm": 20,
@@ -73,26 +206,1275 @@
         "MaxDischargeWatts": 600
       }
     },
-    { "Id": "Conveyor_Wood", "Kind": "consumer", "Ports": "all", "PortMode": "relay", "BlocksMovement": false, "CastVisualShadows": false, "RequiredRpm": 20, "TorqueLoad": 2, "Transport": { "Speed": 0.8, "HalfWidth": 0.5 } },
-    { "Id": "Conveyor_Cloth", "Kind": "consumer", "Ports": "all", "PortMode": "relay", "BlocksMovement": false, "CastVisualShadows": false, "RequiredRpm": 20, "TorqueLoad": 2, "Transport": { "Speed": 0.8, "HalfWidth": 0.5 } }
+    {
+      "Id": "Conveyor_Wood",
+      "Kind": "consumer",
+      "Ports": "all",
+      "PortMode": "relay",
+      "BlocksMovement": false,
+      "CastVisualShadows": false,
+      "RequiredRpm": 20,
+      "TorqueLoad": 2,
+      "Transport": {
+        "Speed": 0.8,
+        "HalfWidth": 0.5
+      }
+    },
+    {
+      "Id": "Conveyor_Cloth",
+      "Kind": "consumer",
+      "Ports": "all",
+      "PortMode": "relay",
+      "BlocksMovement": false,
+      "CastVisualShadows": false,
+      "RequiredRpm": 20,
+      "TorqueLoad": 2,
+      "Transport": {
+        "Speed": 0.8,
+        "HalfWidth": 0.5
+      }
+    },
+    {
+      "Id": "FluidPipe",
+      "Kind": "shaft",
+      "Ports": "none",
+      "LogicId": "fluid",
+      "PlacementLayer": 2,
+      "BlocksMovement": false,
+      "CastVisualShadows": false,
+      "Fluid": {
+        "Kind": "pipe",
+        "Ports": [
+          {
+            "Id": "right",
+            "Chamber": "main",
+            "Direction": 0,
+            "Mode": "both",
+            "Phase": "both",
+            "Outlet": false,
+            "FluidId": ""
+          },
+          {
+            "Id": "up",
+            "Chamber": "main",
+            "Direction": 1,
+            "Mode": "both",
+            "Phase": "both",
+            "Outlet": false,
+            "FluidId": ""
+          },
+          {
+            "Id": "left",
+            "Chamber": "main",
+            "Direction": 2,
+            "Mode": "both",
+            "Phase": "both",
+            "Outlet": false,
+            "FluidId": ""
+          },
+          {
+            "Id": "down",
+            "Chamber": "main",
+            "Direction": 3,
+            "Mode": "both",
+            "Phase": "both",
+            "Outlet": false,
+            "FluidId": ""
+          }
+        ],
+        "VolumeLiters": 1,
+        "GasBufferStandardLiters": 10
+      }
+    },
+    {
+      "Id": "FluidValve",
+      "Kind": "shaft",
+      "Ports": "none",
+      "LogicId": "fluid",
+      "PlacementLayer": 2,
+      "BlocksMovement": false,
+      "CastVisualShadows": false,
+      "Fluid": {
+        "Kind": "valve",
+        "Ports": [
+          {
+            "Id": "right",
+            "Chamber": "main",
+            "Direction": 0,
+            "Mode": "both",
+            "Phase": "both",
+            "Outlet": false,
+            "FluidId": ""
+          },
+          {
+            "Id": "up",
+            "Chamber": "main",
+            "Direction": 1,
+            "Mode": "both",
+            "Phase": "both",
+            "Outlet": false,
+            "FluidId": ""
+          },
+          {
+            "Id": "left",
+            "Chamber": "main",
+            "Direction": 2,
+            "Mode": "both",
+            "Phase": "both",
+            "Outlet": false,
+            "FluidId": ""
+          },
+          {
+            "Id": "down",
+            "Chamber": "main",
+            "Direction": 3,
+            "Mode": "both",
+            "Phase": "both",
+            "Outlet": false,
+            "FluidId": ""
+          }
+        ]
+      }
+    },
+    {
+      "Id": "FluidOutlet",
+      "Kind": "shaft",
+      "Ports": "none",
+      "LogicId": "fluid",
+      "PlacementLayer": 2,
+      "BlocksMovement": false,
+      "CastVisualShadows": false,
+      "Fluid": {
+        "Kind": "outlet",
+        "Ports": [
+          {
+            "Id": "in",
+            "Chamber": "main",
+            "Direction": 2,
+            "Mode": "input",
+            "Phase": "both",
+            "Outlet": false,
+            "FluidId": ""
+          },
+          {
+            "Id": "out",
+            "Chamber": "main",
+            "Direction": 0,
+            "Mode": "output",
+            "Phase": "both",
+            "Outlet": true,
+            "FluidId": ""
+          }
+        ]
+      }
+    },
+    {
+      "Id": "GasSelector",
+      "Kind": "shaft",
+      "Ports": "none",
+      "LogicId": "fluid",
+      "PlacementLayer": 2,
+      "BlocksMovement": false,
+      "CastVisualShadows": false,
+      "Fluid": {
+        "Kind": "selector",
+        "Ports": [
+          {
+            "Id": "in",
+            "Chamber": "main",
+            "Direction": 2,
+            "Mode": "input",
+            "Phase": "gas",
+            "Outlet": false,
+            "FluidId": ""
+          },
+          {
+            "Id": "selected",
+            "Chamber": "main",
+            "Direction": 1,
+            "Mode": "output",
+            "Phase": "gas",
+            "Outlet": false,
+            "FluidId": ""
+          },
+          {
+            "Id": "other",
+            "Chamber": "main",
+            "Direction": 3,
+            "Mode": "output",
+            "Phase": "gas",
+            "Outlet": false,
+            "FluidId": ""
+          }
+        ]
+      }
+    },
+    {
+      "Id": "GasTankBlock_Iron",
+      "Kind": "shaft",
+      "Ports": "none",
+      "LogicId": "fluid",
+      "PlacementLayer": 0,
+      "BlocksMovement": true,
+      "CastVisualShadows": true,
+      "Fluid": {
+        "Kind": "tank",
+        "Ports": [
+          {
+            "Id": "right",
+            "Chamber": "main",
+            "Direction": 0,
+            "Mode": "both",
+            "Phase": "both",
+            "Outlet": false,
+            "FluidId": ""
+          },
+          {
+            "Id": "up",
+            "Chamber": "main",
+            "Direction": 1,
+            "Mode": "both",
+            "Phase": "both",
+            "Outlet": false,
+            "FluidId": ""
+          },
+          {
+            "Id": "left",
+            "Chamber": "main",
+            "Direction": 2,
+            "Mode": "both",
+            "Phase": "both",
+            "Outlet": false,
+            "FluidId": ""
+          },
+          {
+            "Id": "down",
+            "Chamber": "main",
+            "Direction": 3,
+            "Mode": "both",
+            "Phase": "both",
+            "Outlet": false,
+            "FluidId": ""
+          }
+        ],
+        "MaterialId": "iron",
+        "VolumeLiters": 100,
+        "MinimumGasSpaceLiters": 0.1,
+        "MaxSafePressureKPa": 800,
+        "CombineAdjacent": true,
+        "SingleGas": false,
+        "SingleLiquid": false,
+        "ThroughputLitersPerSecond": 10
+      }
+    },
+    {
+      "Id": "GasTankBlock_Steel",
+      "Kind": "shaft",
+      "Ports": "none",
+      "LogicId": "fluid",
+      "PlacementLayer": 0,
+      "BlocksMovement": true,
+      "CastVisualShadows": true,
+      "Fluid": {
+        "Kind": "tank",
+        "Ports": [
+          {
+            "Id": "right",
+            "Chamber": "main",
+            "Direction": 0,
+            "Mode": "both",
+            "Phase": "both",
+            "Outlet": false,
+            "FluidId": ""
+          },
+          {
+            "Id": "up",
+            "Chamber": "main",
+            "Direction": 1,
+            "Mode": "both",
+            "Phase": "both",
+            "Outlet": false,
+            "FluidId": ""
+          },
+          {
+            "Id": "left",
+            "Chamber": "main",
+            "Direction": 2,
+            "Mode": "both",
+            "Phase": "both",
+            "Outlet": false,
+            "FluidId": ""
+          },
+          {
+            "Id": "down",
+            "Chamber": "main",
+            "Direction": 3,
+            "Mode": "both",
+            "Phase": "both",
+            "Outlet": false,
+            "FluidId": ""
+          }
+        ],
+        "MaterialId": "steel",
+        "VolumeLiters": 100,
+        "MinimumGasSpaceLiters": 0.1,
+        "MaxSafePressureKPa": 2000,
+        "CombineAdjacent": true,
+        "SingleGas": false,
+        "SingleLiquid": false,
+        "ThroughputLitersPerSecond": 10
+      }
+    },
+    {
+      "Id": "LiquidStorageTank",
+      "Kind": "shaft",
+      "Ports": "none",
+      "LogicId": "fluid",
+      "PlacementLayer": 0,
+      "BlocksMovement": true,
+      "CastVisualShadows": true,
+      "Fluid": {
+        "Kind": "tank",
+        "Ports": [
+          {
+            "Id": "right",
+            "Chamber": "main",
+            "Direction": 0,
+            "Mode": "both",
+            "Phase": "both",
+            "Outlet": false,
+            "FluidId": ""
+          },
+          {
+            "Id": "up",
+            "Chamber": "main",
+            "Direction": 1,
+            "Mode": "both",
+            "Phase": "both",
+            "Outlet": false,
+            "FluidId": ""
+          },
+          {
+            "Id": "left",
+            "Chamber": "main",
+            "Direction": 2,
+            "Mode": "both",
+            "Phase": "both",
+            "Outlet": false,
+            "FluidId": ""
+          },
+          {
+            "Id": "down",
+            "Chamber": "main",
+            "Direction": 3,
+            "Mode": "both",
+            "Phase": "both",
+            "Outlet": false,
+            "FluidId": ""
+          }
+        ],
+        "VolumeLiters": 200,
+        "MinimumGasSpaceLiters": 0.1,
+        "MaxSafePressureKPa": 400,
+        "SingleGas": false,
+        "SingleLiquid": false,
+        "MaterialId": "liquid-storage"
+      }
+    },
+    {
+      "Id": "GasPump_Mechanical",
+      "Kind": "consumer",
+      "Ports": "axis",
+      "LogicId": "fluid",
+      "PlacementLayer": 0,
+      "BlocksMovement": true,
+      "CastVisualShadows": true,
+      "Fluid": {
+        "Kind": "gas-pump",
+        "Ports": [
+          {
+            "Id": "out",
+            "Chamber": "main",
+            "Direction": 0,
+            "Mode": "output",
+            "Phase": "gas",
+            "Outlet": true,
+            "FluidId": ""
+          }
+        ],
+        "VolumeLiters": 2,
+        "BatchStandardLiters": 1,
+        "GasBufferStandardLiters": 1,
+        "MaximumPumpPressureKPa": 800,
+        "PumpBatchesPerSecond": 2,
+        "WorkJoulesPerStandardLiter": 300
+      },
+      "TorqueLoad": 20,
+      "RequiredRpm": 20,
+      "AxlePorts": [
+        "left"
+      ],
+      "AxisPortVisual": {
+        "Count": 1,
+        "StartX": -0.25,
+        "Y": 0
+      }
+    },
+    {
+      "Id": "LiquidPump_Electric",
+      "Kind": "shaft",
+      "Ports": "none",
+      "LogicId": "fluid",
+      "PlacementLayer": 0,
+      "BlocksMovement": true,
+      "CastVisualShadows": true,
+      "Fluid": {
+        "Kind": "liquid-pump",
+        "Ports": [
+          {
+            "Id": "intake",
+            "Chamber": "main",
+            "Direction": 2,
+            "Mode": "input",
+            "Phase": "liquid",
+            "Outlet": false,
+            "FluidId": ""
+          },
+          {
+            "Id": "out",
+            "Chamber": "main",
+            "Direction": 0,
+            "Mode": "output",
+            "Phase": "liquid",
+            "Outlet": true,
+            "FluidId": ""
+          }
+        ],
+        "VolumeLiters": 2,
+        "WorkJoulesPerStandardLiter": 300,
+        "ThroughputLitersPerSecond": 2
+      },
+      "Electrical": {
+        "Role": "consumer",
+        "Connection": "cell",
+        "NominalVoltage": 120,
+        "PowerWatts": 600,
+        "DemandProvider": "fluid"
+      }
+    },
+    {
+      "Id": "PressureProbe_Mechanical",
+      "Kind": "shaft",
+      "Ports": "axis",
+      "LogicId": "fluid",
+      "PlacementLayer": 4,
+      "BlocksMovement": false,
+      "CastVisualShadows": false,
+      "Fluid": {
+        "Kind": "mechanical-probe",
+        "Ports": []
+      },
+      "AxlePorts": [
+        "left",
+        "right"
+      ]
+    },
+    {
+      "Id": "PressureProbe_Electronic",
+      "Kind": "shaft",
+      "Ports": "none",
+      "LogicId": "fluid",
+      "PlacementLayer": 5,
+      "BlocksMovement": false,
+      "CastVisualShadows": false,
+      "Fluid": {
+        "Kind": "electronic-probe",
+        "Ports": []
+      },
+      "Electrical": {
+        "Role": "switch",
+        "Connection": "cell",
+        "NominalVoltage": 120
+      }
+    },
+    {
+      "Id": "GasCompressor_Mechanical",
+      "Kind": "consumer",
+      "Ports": "axis",
+      "LogicId": "fluid",
+      "PlacementLayer": 0,
+      "BlocksMovement": true,
+      "CastVisualShadows": true,
+      "Fluid": {
+        "Kind": "compressor",
+        "Ports": [
+          {
+            "Id": "in",
+            "Chamber": "main",
+            "Direction": 2,
+            "Mode": "input",
+            "Phase": "gas",
+            "Outlet": false,
+            "FluidId": ""
+          },
+          {
+            "Id": "out",
+            "Chamber": "output",
+            "Direction": 0,
+            "Mode": "output",
+            "Phase": "both",
+            "Outlet": true,
+            "FluidId": ""
+          }
+        ],
+        "VolumeLiters": 10,
+        "GasBufferStandardLiters": 100,
+        "MaximumPumpPressureKPa": 4000,
+        "AllowPortableTank": true
+      },
+      "TorqueLoad": 20,
+      "RequiredRpm": 20,
+      "AxlePorts": [
+        "left"
+      ],
+      "AxisPortVisual": {
+        "Count": 1,
+        "StartX": -0.25,
+        "Y": 0
+      }
+    },
+    {
+      "Id": "GasCompressor_Electric",
+      "Kind": "shaft",
+      "Ports": "none",
+      "LogicId": "fluid",
+      "PlacementLayer": 0,
+      "BlocksMovement": true,
+      "CastVisualShadows": true,
+      "Fluid": {
+        "Kind": "compressor",
+        "Ports": [
+          {
+            "Id": "in",
+            "Chamber": "main",
+            "Direction": 2,
+            "Mode": "input",
+            "Phase": "gas",
+            "Outlet": false,
+            "FluidId": ""
+          },
+          {
+            "Id": "out",
+            "Chamber": "output",
+            "Direction": 0,
+            "Mode": "output",
+            "Phase": "both",
+            "Outlet": true,
+            "FluidId": ""
+          }
+        ],
+        "VolumeLiters": 10,
+        "GasBufferStandardLiters": 100,
+        "MaximumPumpPressureKPa": 4000,
+        "AllowPortableTank": true
+      },
+      "Electrical": {
+        "Role": "consumer",
+        "Connection": "cell",
+        "NominalVoltage": 120,
+        "PowerWatts": 1200,
+        "DemandProvider": "fluid"
+      }
+    },
+    {
+      "Id": "FluidHeatExchanger",
+      "Kind": "shaft",
+      "Ports": "none",
+      "LogicId": "fluid",
+      "PlacementLayer": 0,
+      "BlocksMovement": true,
+      "CastVisualShadows": true,
+      "Fluid": {
+        "Kind": "heat-exchanger",
+        "Ports": [
+          {
+            "Id": "hot-in",
+            "Chamber": "hot",
+            "Direction": 2,
+            "Mode": "input",
+            "Phase": "both",
+            "Outlet": false,
+            "FluidId": ""
+          },
+          {
+            "Id": "hot-out",
+            "Chamber": "hot",
+            "Direction": 0,
+            "Mode": "output",
+            "Phase": "both",
+            "Outlet": true,
+            "FluidId": ""
+          },
+          {
+            "Id": "cold-in",
+            "Chamber": "cold",
+            "Direction": 3,
+            "Mode": "input",
+            "Phase": "both",
+            "Outlet": false,
+            "FluidId": ""
+          },
+          {
+            "Id": "cold-out",
+            "Chamber": "cold",
+            "Direction": 1,
+            "Mode": "output",
+            "Phase": "both",
+            "Outlet": true,
+            "FluidId": ""
+          }
+        ],
+        "VolumeLiters": 10,
+        "HeatConductanceWattsPerKelvin": 20
+      }
+    },
+    {
+      "Id": "FluidFilter",
+      "Kind": "shaft",
+      "Ports": "none",
+      "LogicId": "fluid",
+      "PlacementLayer": 0,
+      "BlocksMovement": true,
+      "CastVisualShadows": true,
+      "Fluid": {
+        "Kind": "filter",
+        "Ports": [
+          {
+            "Id": "in",
+            "Chamber": "main",
+            "Direction": 2,
+            "Mode": "input",
+            "Phase": "liquid",
+            "Outlet": false,
+            "FluidId": ""
+          },
+          {
+            "Id": "out",
+            "Chamber": "output",
+            "Direction": 0,
+            "Mode": "output",
+            "Phase": "liquid",
+            "Outlet": true,
+            "FluidId": ""
+          }
+        ],
+        "VolumeLiters": 10,
+        "Reactions": [
+          {
+            "Id": "core:filter_dirty_water",
+            "Inputs": [
+              {
+                "FluidId": "core:dirty_water",
+                "Chamber": "main",
+                "Phase": "liquid",
+                "Moles": 1
+              }
+            ],
+            "Outputs": [
+              {
+                "FluidId": "core:filtered_water",
+                "Chamber": "output",
+                "Phase": "liquid",
+                "Moles": 0.99
+              }
+            ],
+            "MolesPerSecond": 5,
+            "RequiredJoulesPerReaction": 100,
+            "ChemicalJoulesPerReaction": 0,
+            "StoredChemicalJoulesPerReaction": 0,
+            "MechanicalEfficiency": 0.4,
+            "SolidResidueItemId": "FilterResidue",
+            "ResidueItemsPerReaction": 0.180153,
+            "RequiresFilter": true
+          }
+        ],
+        "FilterMaterialItemId": "Cloth",
+        "FilterWorkPerItem": 500
+      },
+      "Electrical": {
+        "Role": "consumer",
+        "Connection": "cell",
+        "NominalVoltage": 120,
+        "PowerWatts": 600,
+        "DemandProvider": "fluid"
+      }
+    },
+    {
+      "Id": "FluidDistiller",
+      "Kind": "shaft",
+      "Ports": "none",
+      "LogicId": "fluid",
+      "PlacementLayer": 0,
+      "BlocksMovement": true,
+      "CastVisualShadows": true,
+      "Fluid": {
+        "Kind": "distiller",
+        "Ports": [
+          {
+            "Id": "in",
+            "Chamber": "main",
+            "Direction": 2,
+            "Mode": "input",
+            "Phase": "liquid",
+            "Outlet": false,
+            "FluidId": ""
+          },
+          {
+            "Id": "out",
+            "Chamber": "output",
+            "Direction": 0,
+            "Mode": "output",
+            "Phase": "liquid",
+            "Outlet": true,
+            "FluidId": ""
+          }
+        ],
+        "VolumeLiters": 10,
+        "Reactions": [
+          {
+            "Id": "core:distill_filtered_water",
+            "Inputs": [
+              {
+                "FluidId": "core:filtered_water",
+                "Chamber": "main",
+                "Phase": "liquid",
+                "Moles": 1
+              }
+            ],
+            "Outputs": [
+              {
+                "FluidId": "core:pure_water",
+                "Chamber": "output",
+                "Phase": "liquid",
+                "Moles": 1
+              }
+            ],
+            "MolesPerSecond": 0.05,
+            "RequiredJoulesPerReaction": 45000,
+            "ChemicalJoulesPerReaction": 0,
+            "StoredChemicalJoulesPerReaction": 0,
+            "MechanicalEfficiency": 0.4,
+            "SolidResidueItemId": "",
+            "ResidueItemsPerReaction": 0,
+            "RequiresFilter": false
+          },
+          {
+            "Id": "core:distill_drinkable_water",
+            "Inputs": [
+              {
+                "FluidId": "core:drinkable_water",
+                "Chamber": "main",
+                "Phase": "liquid",
+                "Moles": 1
+              }
+            ],
+            "Outputs": [
+              {
+                "FluidId": "core:pure_water",
+                "Chamber": "output",
+                "Phase": "liquid",
+                "Moles": 1
+              }
+            ],
+            "MolesPerSecond": 0.05,
+            "RequiredJoulesPerReaction": 45000,
+            "ChemicalJoulesPerReaction": 0,
+            "StoredChemicalJoulesPerReaction": 0,
+            "MechanicalEfficiency": 0.4,
+            "SolidResidueItemId": "",
+            "ResidueItemsPerReaction": 0,
+            "RequiresFilter": false
+          },
+          {
+            "Id": "core:distill_dirty_water",
+            "Inputs": [
+              {
+                "FluidId": "core:dirty_water",
+                "Chamber": "main",
+                "Phase": "liquid",
+                "Moles": 1
+              }
+            ],
+            "Outputs": [
+              {
+                "FluidId": "core:pure_water",
+                "Chamber": "output",
+                "Phase": "liquid",
+                "Moles": 0.99
+              }
+            ],
+            "MolesPerSecond": 0.05,
+            "RequiredJoulesPerReaction": 45000,
+            "ChemicalJoulesPerReaction": 0,
+            "StoredChemicalJoulesPerReaction": 0,
+            "MechanicalEfficiency": 0.4,
+            "SolidResidueItemId": "FilterResidue",
+            "ResidueItemsPerReaction": 0.18015300000000017,
+            "RequiresFilter": false
+          },
+          {
+            "Id": "core:distill_salt_water",
+            "Inputs": [
+              {
+                "FluidId": "core:salt_water",
+                "Chamber": "main",
+                "Phase": "liquid",
+                "Moles": 1
+              }
+            ],
+            "Outputs": [
+              {
+                "FluidId": "core:pure_water",
+                "Chamber": "output",
+                "Phase": "liquid",
+                "Moles": 0.965
+              }
+            ],
+            "MolesPerSecond": 0.05,
+            "RequiredJoulesPerReaction": 45000,
+            "ChemicalJoulesPerReaction": 0,
+            "StoredChemicalJoulesPerReaction": 0,
+            "MechanicalEfficiency": 0.4,
+            "SolidResidueItemId": "Salt",
+            "ResidueItemsPerReaction": 0.0063053550000000055,
+            "RequiresFilter": false
+          },
+          {
+            "Id": "core:distill_sea_water",
+            "Inputs": [
+              {
+                "FluidId": "core:sea_water",
+                "Chamber": "main",
+                "Phase": "liquid",
+                "Moles": 1
+              }
+            ],
+            "Outputs": [
+              {
+                "FluidId": "core:pure_water",
+                "Chamber": "output",
+                "Phase": "liquid",
+                "Moles": 0.965
+              }
+            ],
+            "MolesPerSecond": 0.05,
+            "RequiredJoulesPerReaction": 45000,
+            "ChemicalJoulesPerReaction": 0,
+            "StoredChemicalJoulesPerReaction": 0,
+            "MechanicalEfficiency": 0.4,
+            "SolidResidueItemId": "Salt",
+            "ResidueItemsPerReaction": 0.0063053550000000055,
+            "RequiresFilter": false
+          }
+        ]
+      },
+      "Electrical": {
+        "Role": "consumer",
+        "Connection": "cell",
+        "NominalVoltage": 120,
+        "PowerWatts": 3000,
+        "DemandProvider": "fluid"
+      }
+    },
+    {
+      "Id": "WaterElectrolyzer",
+      "Kind": "shaft",
+      "Ports": "none",
+      "LogicId": "fluid",
+      "PlacementLayer": 0,
+      "BlocksMovement": true,
+      "CastVisualShadows": true,
+      "Fluid": {
+        "Kind": "electrolyzer",
+        "Ports": [
+          {
+            "Id": "water-in",
+            "Chamber": "main",
+            "Direction": 2,
+            "Mode": "input",
+            "Phase": "liquid",
+            "Outlet": false,
+            "FluidId": "core:pure_water"
+          },
+          {
+            "Id": "hydrogen-out",
+            "Chamber": "hydrogen",
+            "Direction": 0,
+            "Mode": "output",
+            "Phase": "gas",
+            "Outlet": true,
+            "FluidId": ""
+          },
+          {
+            "Id": "oxygen-out",
+            "Chamber": "oxygen",
+            "Direction": 1,
+            "Mode": "output",
+            "Phase": "gas",
+            "Outlet": true,
+            "FluidId": ""
+          }
+        ],
+        "VolumeLiters": 10,
+        "GasBufferStandardLiters": 100,
+        "SingleGas": false,
+        "Reactions": [
+          {
+            "Id": "core:water_electrolysis",
+            "Inputs": [
+              {
+                "FluidId": "core:pure_water",
+                "Chamber": "main",
+                "Phase": "liquid",
+                "Moles": 1
+              }
+            ],
+            "Outputs": [
+              {
+                "FluidId": "core:hydrogen",
+                "Chamber": "hydrogen",
+                "Phase": "gas",
+                "Moles": 1
+              },
+              {
+                "FluidId": "core:oxygen",
+                "Chamber": "oxygen",
+                "Phase": "gas",
+                "Moles": 0.5
+              }
+            ],
+            "MolesPerSecond": 0.1,
+            "RequiredJoulesPerReaction": 285830,
+            "ChemicalJoulesPerReaction": 0,
+            "StoredChemicalJoulesPerReaction": 241826,
+            "MechanicalEfficiency": 0.4,
+            "SolidResidueItemId": "",
+            "ResidueItemsPerReaction": 0,
+            "RequiresFilter": false
+          }
+        ]
+      },
+      "Electrical": {
+        "Role": "consumer",
+        "Connection": "cell",
+        "NominalVoltage": 120,
+        "PowerWatts": 3000,
+        "DemandProvider": "fluid"
+      }
+    },
+    {
+      "Id": "OxygenBurner",
+      "Kind": "shaft",
+      "Ports": "none",
+      "LogicId": "fluid",
+      "PlacementLayer": 0,
+      "BlocksMovement": true,
+      "CastVisualShadows": true,
+      "Fluid": {
+        "Kind": "oxygen-burner",
+        "Ports": [
+          {
+            "Id": "oxygen-in",
+            "Chamber": "main",
+            "Direction": 2,
+            "Mode": "input",
+            "Phase": "gas",
+            "Outlet": false,
+            "FluidId": "core:oxygen"
+          }
+        ],
+        "VolumeLiters": 2,
+        "OxygenServingsPerFuelUnit": 0.5,
+        "OxygenTemperatureBonus": 300
+      }
+    },
+    {
+      "Id": "GasEngine",
+      "Kind": "source",
+      "Ports": "axis",
+      "LogicId": "fluid",
+      "PlacementLayer": 0,
+      "BlocksMovement": true,
+      "CastVisualShadows": true,
+      "Fluid": {
+        "Kind": "engine",
+        "Ports": [
+          {
+            "Id": "hydrogen-in",
+            "Chamber": "main",
+            "Direction": 2,
+            "Mode": "input",
+            "Phase": "gas",
+            "Outlet": false,
+            "FluidId": "core:hydrogen"
+          },
+          {
+            "Id": "oxygen-in",
+            "Chamber": "oxygen",
+            "Direction": 3,
+            "Mode": "input",
+            "Phase": "gas",
+            "Outlet": false,
+            "FluidId": "core:oxygen"
+          },
+          {
+            "Id": "water-out",
+            "Chamber": "water",
+            "Direction": 1,
+            "Mode": "output",
+            "Phase": "liquid",
+            "Outlet": true,
+            "FluidId": ""
+          }
+        ],
+        "VolumeLiters": 10,
+        "GasBufferStandardLiters": 100,
+        "Reactions": [
+          {
+            "Id": "core:hydrogen_engine",
+            "Inputs": [
+              {
+                "FluidId": "core:hydrogen",
+                "Chamber": "main",
+                "Phase": "gas",
+                "Moles": 1
+              },
+              {
+                "FluidId": "core:oxygen",
+                "Chamber": "oxygen",
+                "Phase": "gas",
+                "Moles": 0.5
+              }
+            ],
+            "Outputs": [
+              {
+                "FluidId": "core:pure_water",
+                "Chamber": "water",
+                "Phase": "liquid",
+                "Moles": 1
+              }
+            ],
+            "MolesPerSecond": 0.1,
+            "RequiredJoulesPerReaction": 0,
+            "ChemicalJoulesPerReaction": 241826,
+            "StoredChemicalJoulesPerReaction": 0,
+            "MechanicalEfficiency": 0.4,
+            "SolidResidueItemId": "",
+            "ResidueItemsPerReaction": 0,
+            "RequiresFilter": false
+          }
+        ]
+      },
+      "Source": "fluid-engine",
+      "Torque": 40,
+      "Rpm": 20,
+      "AxlePorts": [
+        "right"
+      ],
+      "AxisPortVisual": {
+        "Count": 1,
+        "StartX": 0.25,
+        "Y": 0
+      }
+    }
   ],
   "Processes": [
-    { "Station": "hand_drill", "Input": "Log", "Outputs": [{ "ItemName": "DrilledLog", "amount": 1 }], "WorkSeconds": 4 },
-    { "Station": "hand_drill", "Input": "Plank", "Outputs": [{ "ItemName": "DrilledPlank", "amount": 1 }], "WorkSeconds": 4 },
-    { "Station": "hand_drill", "Input": "Stick_Wood", "Outputs": [{ "ItemName": "DrilledStick", "amount": 1 }], "WorkSeconds": 4 },
-    { "Station": "hand_drill", "Input": "StoneSlab", "Outputs": [{ "ItemName": "DrilledStoneSlab", "amount": 1 }], "WorkSeconds": 6 },
-    { "Station": "hand_drill", "Input": "Ore_Stone", "Outputs": [{ "ItemName": "DrilledStone", "amount": 1 }], "WorkSeconds": 6 },
-    { "Station": "mechanical_hammer", "Input": "Ingot_RawIron", "Outputs": [{ "ItemName": "Ingot_WroughtIron", "amount": 1 }], "WorkSeconds": 8 },
-    { "Station": "mechanical_hammer", "Input": "Ingot_WroughtIron", "Outputs": [{ "ItemName": "IronPlate", "amount": 1 }], "WorkSeconds": 8 },
-    { "Station": "mechanical_hammer", "Input": "Ingot_Copper", "Outputs": [{ "ItemName": "CopperPlate", "amount": 1 }], "WorkSeconds": 8 },
-    { "Station": "mechanical_hammer", "Input": "Ingot_Bronze", "Outputs": [{ "ItemName": "BronzePlate", "amount": 1 }], "WorkSeconds": 8 },
-    { "Station": "mechanical_hammer", "Input": "Ingot_Tin", "Outputs": [{ "ItemName": "TinPlate", "amount": 1 }], "WorkSeconds": 8 },
-    { "Station": "mechanical_hammer", "Input": "Ingot_Steel", "Outputs": [{ "ItemName": "SteelPlate", "amount": 1 }], "WorkSeconds": 8 },
-    { "Station": "hand_forge", "Input": "Ingot_RawIron", "Outputs": [{ "ItemName": "RawIronPlate", "amount": 1 }], "WorkSeconds": 12 },
-    { "Station": "hand_forge", "Input": "Ingot_WroughtIron", "Outputs": [{ "ItemName": "IronPlate", "amount": 1 }], "WorkSeconds": 12 },
-    { "Station": "hand_forge", "Input": "Ingot_Copper", "Outputs": [{ "ItemName": "CopperPlate", "amount": 1 }], "WorkSeconds": 12 },
-    { "Station": "hand_forge", "Input": "Ingot_Bronze", "Outputs": [{ "ItemName": "BronzePlate", "amount": 1 }], "WorkSeconds": 12 },
-    { "Station": "hand_forge", "Input": "Ingot_Tin", "Outputs": [{ "ItemName": "TinPlate", "amount": 1 }], "WorkSeconds": 12 },
-    { "Station": "hand_forge", "Input": "Ingot_Steel", "Outputs": [{ "ItemName": "SteelPlate", "amount": 1 }], "WorkSeconds": 12 }
+    {
+      "Station": "hand_drill",
+      "Input": "Log",
+      "Outputs": [
+        {
+          "ItemName": "DrilledLog",
+          "amount": 1
+        }
+      ],
+      "WorkSeconds": 4
+    },
+    {
+      "Station": "hand_drill",
+      "Input": "Plank",
+      "Outputs": [
+        {
+          "ItemName": "DrilledPlank",
+          "amount": 1
+        }
+      ],
+      "WorkSeconds": 4
+    },
+    {
+      "Station": "hand_drill",
+      "Input": "Stick_Wood",
+      "Outputs": [
+        {
+          "ItemName": "DrilledStick",
+          "amount": 1
+        }
+      ],
+      "WorkSeconds": 4
+    },
+    {
+      "Station": "hand_drill",
+      "Input": "StoneSlab",
+      "Outputs": [
+        {
+          "ItemName": "DrilledStoneSlab",
+          "amount": 1
+        }
+      ],
+      "WorkSeconds": 6
+    },
+    {
+      "Station": "hand_drill",
+      "Input": "Ore_Stone",
+      "Outputs": [
+        {
+          "ItemName": "DrilledStone",
+          "amount": 1
+        }
+      ],
+      "WorkSeconds": 6
+    },
+    {
+      "Station": "mechanical_hammer",
+      "Input": "Ingot_RawIron",
+      "Outputs": [
+        {
+          "ItemName": "Ingot_WroughtIron",
+          "amount": 1
+        }
+      ],
+      "WorkSeconds": 8
+    },
+    {
+      "Station": "mechanical_hammer",
+      "Input": "Ingot_WroughtIron",
+      "Outputs": [
+        {
+          "ItemName": "IronPlate",
+          "amount": 1
+        }
+      ],
+      "WorkSeconds": 8
+    },
+    {
+      "Station": "mechanical_hammer",
+      "Input": "Ingot_Copper",
+      "Outputs": [
+        {
+          "ItemName": "CopperPlate",
+          "amount": 1
+        }
+      ],
+      "WorkSeconds": 8
+    },
+    {
+      "Station": "mechanical_hammer",
+      "Input": "Ingot_Bronze",
+      "Outputs": [
+        {
+          "ItemName": "BronzePlate",
+          "amount": 1
+        }
+      ],
+      "WorkSeconds": 8
+    },
+    {
+      "Station": "mechanical_hammer",
+      "Input": "Ingot_Tin",
+      "Outputs": [
+        {
+          "ItemName": "TinPlate",
+          "amount": 1
+        }
+      ],
+      "WorkSeconds": 8
+    },
+    {
+      "Station": "mechanical_hammer",
+      "Input": "Ingot_Steel",
+      "Outputs": [
+        {
+          "ItemName": "SteelPlate",
+          "amount": 1
+        }
+      ],
+      "WorkSeconds": 8
+    },
+    {
+      "Station": "hand_forge",
+      "Input": "Ingot_RawIron",
+      "Outputs": [
+        {
+          "ItemName": "RawIronPlate",
+          "amount": 1
+        }
+      ],
+      "WorkSeconds": 12
+    },
+    {
+      "Station": "hand_forge",
+      "Input": "Ingot_WroughtIron",
+      "Outputs": [
+        {
+          "ItemName": "IronPlate",
+          "amount": 1
+        }
+      ],
+      "WorkSeconds": 12
+    },
+    {
+      "Station": "hand_forge",
+      "Input": "Ingot_Copper",
+      "Outputs": [
+        {
+          "ItemName": "CopperPlate",
+          "amount": 1
+        }
+      ],
+      "WorkSeconds": 12
+    },
+    {
+      "Station": "hand_forge",
+      "Input": "Ingot_Bronze",
+      "Outputs": [
+        {
+          "ItemName": "BronzePlate",
+          "amount": 1
+        }
+      ],
+      "WorkSeconds": 12
+    },
+    {
+      "Station": "hand_forge",
+      "Input": "Ingot_Tin",
+      "Outputs": [
+        {
+          "ItemName": "TinPlate",
+          "amount": 1
+        }
+      ],
+      "WorkSeconds": 12
+    },
+    {
+      "Station": "hand_forge",
+      "Input": "Ingot_Steel",
+      "Outputs": [
+        {
+          "ItemName": "SteelPlate",
+          "amount": 1
+        }
+      ],
+      "WorkSeconds": 12
+    }
   ]
 }

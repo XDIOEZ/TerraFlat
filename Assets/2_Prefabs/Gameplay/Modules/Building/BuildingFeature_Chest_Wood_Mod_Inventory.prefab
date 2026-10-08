@@ -55,6 +55,20 @@ MonoBehaviour:
     BasePanelIsOpen: 1
   InventoryInstances:
   - rid: 3622605446302924802
+  ContainerPorts:
+  - Version: 1
+    Id: storage
+    Type: core:inventory
+    InventoryId: "\u80CC\u5305\u6A21\u5757"
+    Direction: 3
+    Access: 13
+    Reach: 2
+    WholeBatch: 0
+    OwnerOnly: 0
+    ItemIds: []
+    ItemTags: []
+    LiquidIds: []
+    SlotIndices: []
   inventoryBasePanelCache:
     _serializedList: []
   references:

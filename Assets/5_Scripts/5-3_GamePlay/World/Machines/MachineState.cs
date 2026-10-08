@@ -38,6 +38,7 @@ public partial class MachineArchive
     public int Version = 1;
     public Dictionary<string, List<ItemData>> Worlds = new(StringComparer.Ordinal);
     public Dictionary<string, HashSet<int>> RemovedGenerated = new(StringComparer.Ordinal);
+    public Dictionary<string, FluidTankRuptureBudget> FluidRuptures = new(StringComparer.Ordinal);
 }
 
 public partial class GameSaveData

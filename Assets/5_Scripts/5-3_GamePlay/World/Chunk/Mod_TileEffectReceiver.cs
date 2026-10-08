@@ -111,6 +111,8 @@ public partial class Mod_TileEffectReceiver : Module
     public bool IsActiveTileEdgeInteractionOnly => liquidCallback ? activeLiquidEdge : activeTileIsEdgeInteractionOnly;
     public EnvironmentInteractionRunner EnvironmentInteractions => groundCallback ? EnsureGroundEnvironmentInteractions() : EnsureEnvironmentInteractions();
     public float CurrentWaterImmersion => currentWaterImmersion;
+    public bool IsInWater => waterSurvivalActive;
+    public bool IsWaterBreathBlocked => waterSurvivalActive && currentWaterImmersion >= oxygenSafetyImmersionLevel;
     public override string CanonicalModuleId => ModText.Mod_TileEffectReceiver;
 
     #endregion
@@ -366,7 +368,6 @@ public partial class Mod_TileEffectReceiver : Module
                                          lastWaterExitFrame == Time.frameCount;
         waterSurvivalActive = true;
         lastWaterExitWasActive = false;
-        waterOxygen?.SetWaterExposure(true);
 
         naturalImmersion = Mathf.Clamp01(naturalImmersion);
         SetLiquidFloating(!groundCallback && naturalImmersion > WaterEnvironmentRules.SwimmingDepthThreshold && HasSwimStamina());
@@ -424,7 +425,6 @@ public partial class Mod_TileEffectReceiver : Module
         waterSurvivalActive = false;
         SetLiquidFloating(false);
         drowningDamageTickTimer = 0f;
-        waterOxygen?.SetWaterExposure(false);
     }
 
     /// <summary>不在真实水格时恢复通用生物的游泳储备与氧气；玩家普通体力仍由既有体力系统恢复。</summary>
@@ -432,7 +432,6 @@ public partial class Mod_TileEffectReceiver : Module
     {
         ResolveWaterVitals(item);
         EnsureFallbackWaterVitals();
-        waterOxygen?.SetWaterExposure(false);
         drowningDamageTickTimer = 0f;
 
         if (!GameNetwork.HasStateAuthority)
@@ -449,11 +448,7 @@ public partial class Mod_TileEffectReceiver : Module
                 fallbackSwimStamina + Mathf.Max(0f, fallbackSwimStaminaRecoverPerSecond) * safeDeltaTime);
         }
 
-        if (waterOxygen != null)
-        {
-            waterOxygen.AddOxygen(Mathf.Max(0f, waterOxygen.oxygenRecoverPerSecond) * safeDeltaTime);
-        }
-        else
+        if (waterOxygen == null)
         {
             fallbackOxygen = Mathf.Min(
                 Mathf.Max(0f, fallbackOxygenMax),
@@ -493,9 +488,7 @@ public partial class Mod_TileEffectReceiver : Module
 
     private void ConsumeSwimStamina(float deltaTime, float naturalImmersion)
     {
-        float consumePerSecond = waterOxygen != null
-            ? Mathf.Max(0f, waterOxygen.staminaConsumePerSecond)
-            : Mathf.Max(0f, fallbackSwimStaminaConsumePerSecond);
+        float consumePerSecond = Mathf.Max(0f, fallbackSwimStaminaConsumePerSecond);
 
         consumePerSecond *= WaterEnvironmentRules.ResolveSwimmingMultiplier(naturalImmersion);
 
@@ -514,25 +507,22 @@ public partial class Mod_TileEffectReceiver : Module
     private void UpdateWaterBreathing(float immersionLevel, float deltaTime)
     {
         bool breathBlocked = immersionLevel >= oxygenSafetyImmersionLevel;
-        waterOxygen?.SetBreathBlocked(breathBlocked);
+
+        if (waterOxygen != null)
+        {
+            drowningDamageTickTimer = 0f;
+            return;
+        }
 
         if (!GameNetwork.HasStateAuthority || deltaTime <= 0f)
             return;
 
-        float oxygenConsume = waterOxygen != null
-            ? Mathf.Max(0f, waterOxygen.oxygenConsumePerSecond)
-            : Mathf.Max(0f, fallbackOxygenConsumePerSecond);
-        float oxygenRecover = waterOxygen != null
-            ? Mathf.Max(0f, waterOxygen.oxygenRecoverPerSecond)
-            : Mathf.Max(0f, fallbackOxygenRecoverPerSecond);
-        float oxygenBefore = waterOxygen != null ? waterOxygen.CurrentValue : fallbackOxygen;
+        float oxygenConsume = Mathf.Max(0f, fallbackOxygenConsumePerSecond);
+        float oxygenRecover = Mathf.Max(0f, fallbackOxygenRecoverPerSecond);
+        float oxygenBefore = fallbackOxygen;
         float drowningDeltaTime = 0f;
 
-        if (waterOxygen != null)
-        {
-            waterOxygen.AddOxygen((breathBlocked ? -oxygenConsume : oxygenRecover) * deltaTime);
-        }
-        else if (breathBlocked)
+        if (breathBlocked)
         {
             fallbackOxygen = Mathf.Max(0f, fallbackOxygen - oxygenConsume * deltaTime);
         }
@@ -543,7 +533,7 @@ public partial class Mod_TileEffectReceiver : Module
                 fallbackOxygen + oxygenRecover * deltaTime);
         }
 
-        float currentOxygen = waterOxygen != null ? waterOxygen.CurrentValue : fallbackOxygen;
+        float currentOxygen = fallbackOxygen;
         if (breathBlocked && currentOxygen <= 0f)
         {
             if (oxygenBefore <= 0f)
@@ -574,9 +564,7 @@ public partial class Mod_TileEffectReceiver : Module
             return;
 
         drowningDamageTickTimer = 0f;
-        float damagePerTick = waterOxygen != null
-            ? Mathf.Max(0f, waterOxygen.drowningDamagePerTick)
-            : Mathf.Max(0f, fallbackDrowningDamagePerTick);
+        float damagePerTick = Mathf.Max(0f, fallbackDrowningDamagePerTick);
         if (damagePerTick > 0f)
             waterDamageReceiver.ForceHurt(damagePerTick);
     }

@@ -43,6 +43,7 @@ public sealed partial class ChunkTilemapRenderer
     internal HashSet<Vector3Int> MechanicalShadowKeys => submittedMechanicalCells; // 供阴影注册表按区块卸载。
     private static Material mechanicalFallbackMaterial;
     private static Sprite mechanicalAxisPortSprite;
+    private static Sprite fluidIndicatorSprite;
 
     /// <summary>新资源会话重新解析 MOD 多图层参数。</summary>
     private static void ResetMechanicalVisualCache()
@@ -50,6 +51,8 @@ public sealed partial class ChunkTilemapRenderer
         mechanicalVisualConfigs.Clear();
         mechanicalFallbackMaterial = null;
         mechanicalAxisPortSprite = null;
+        if (fluidIndicatorSprite != null) UnityEngine.Object.Destroy(fluidIndicatorSprite);
+        fluidIndicatorSprite = null;
     }
 
     /// <summary>基础地形建立后接入机械数据变化和表现重建通知。</summary>
@@ -98,7 +101,7 @@ public sealed partial class ChunkTilemapRenderer
             new Vector2(origin.X, origin.Y), new Vector2(cell.x, cell.y));
         int x = Mathf.RoundToInt(displacement.x), y = Mathf.RoundToInt(displacement.y);
         if ((uint)x >= (uint)boundChunk.Terrain.Width || (uint)y >= (uint)boundChunk.Terrain.Height) return;
-        for (int occupancy = 0; occupancy <= 3; occupancy++)
+        for (int occupancy = 0; occupancy <= 5; occupancy++)
         {
             MachineEntity node = MachineWorld.GetAt(cell, occupancy);
             if (node != null) SubmitMechanicalNode(node, x, y);
@@ -164,6 +167,12 @@ public sealed partial class ChunkTilemapRenderer
         MechanicalDepthVisual depthVisual = mechanicalDepthVisuals[key];
         try
         {
+
+        if (node.Definition.Fluid != null)
+        {
+            SubmitFluidNode(node, x, y, def.Sprite, material, origin, rotation);
+            return;
+        }
 
         if (node.Definition.Transport != null)
         {
@@ -302,6 +311,43 @@ public sealed partial class ChunkTilemapRenderer
         depthVisual.UpdateFacility(node);
         }
         finally { depthVisual.EndUpdate(); }
+    }
+
+    /// <summary>流体覆盖层沿原行网格显示两相余量与实际方向，读数不反写权威库存。</summary>
+    private void SubmitFluidNode(MachineEntity node, int x, int y, Sprite body, Material material, Vector3 origin, Quaternion rotation)
+    {
+        FluidMachineState state = MachineWorld.GetFluidState(node);
+        FluidInventory inventory = MachineWorld.GetFluidInventory(node);
+        bool probe = node.Definition.Fluid.Kind is "mechanical-probe" or "electronic-probe";
+        bool pipe = node.Definition.Layer == 2;
+        Part(node, x, y, 0, body, material, origin, rotation, Vector3.zero, Fit(body, pipe ? .55f : probe ? .32f : .85f, pipe ? .55f : probe ? .32f : .85f), 0, 0);
+        MechanicalDepthVisual visual = mechanicalDepthVisuals[new Vector3Int(x, y, node.Definition.Layer)];
+        Ports(node, x, y, 6, material, origin, rotation);
+        if (probe) { visual.SetPartTint(0, state.ProbeConnected ? new Color(.35f, 1, .45f) : new Color(1, .25f, .2f)); return; }
+        if (inventory.GetPressureKPa(MachineWorld.GetFluidVolumeLiters(node), MachineWorld.GetFluidMinimumGasSpaceLiters(node)) > node.Definition.Fluid.MaxSafePressureKPa)
+            visual.SetPartTint(0, new Color(1, .35f, .25f));
+        if (fluidIndicatorSprite == null)
+            fluidIndicatorSprite = Sprite.Create(Texture2D.whiteTexture, new Rect(0, 0, Texture2D.whiteTexture.width, Texture2D.whiteTexture.height),
+                new Vector2(.5f, .5f), Texture2D.whiteTexture.width);
+        Color gas = new(.4f, .8f, 1, .95f), liquid = new(.9f, .68f, .25f, .95f);
+        float gasAmount = Mathf.Clamp01((float)(FluidUnits.MolToStandardLiters(inventory.GasMoles) / (decimal)node.Definition.Fluid.GasBufferStandardLiters));
+        float liquidAmount = Mathf.Clamp01((float)(inventory.GetLiquidLiters() / MachineWorld.GetFluidVolumeLiters(node)));
+        if (gasAmount > 0)
+        { Part(node, x, y, 1, fluidIndicatorSprite, material, origin, Quaternion.identity, new Vector3(0, -.26f), new Vector3(.48f * gasAmount, .06f, 1), 0, 0); visual.SetPartTint(1, gas); }
+        if (liquidAmount > 0)
+        { Part(node, x, y, 2, fluidIndicatorSprite, material, origin, Quaternion.identity, new Vector3(0, -.34f), new Vector3(.48f * liquidAmount, .06f, 1), 0, 0); visual.SetPartTint(2, liquid); }
+        if (state.Ruptured) return;
+        int direction = state.LastFlowDirection;
+        if (direction < 0 && node.Definition.Fluid.Kind != "pipe" && node.Definition.Fluid.Kind != "tank" && node.Definition.Fluid.Kind != "valve")
+            foreach (FluidMachinePortDefinition port in node.Definition.Fluid.Ports)
+                if (port.Mode == "output") { direction = (port.Direction + node.RotationQuarterTurns) & 3; break; }
+        if (direction < 0) return;
+        Quaternion arrow = Quaternion.Euler(0, 0, direction * 90);
+        Color flow = state.BlockedPorts.Count > 0 ? new Color(1, .25f, .2f) : state.LastFlowPhase == "liquid" ? liquid : gas;
+        Part(node, x, y, 3, fluidIndicatorSprite, material, origin, arrow, new Vector3(.22f, 0), new Vector3(.23f, .035f, 1), 0, 0);
+        Part(node, x, y, 4, fluidIndicatorSprite, material, origin, arrow * Quaternion.Euler(0, 0, 45), Quaternion.Euler(0, 0, -45) * new Vector3(.29f, .03f), new Vector3(.1f, .035f, 1), 0, 0);
+        Part(node, x, y, 5, fluidIndicatorSprite, material, origin, arrow * Quaternion.Euler(0, 0, -45), Quaternion.Euler(0, 0, 45) * new Vector3(.29f, -.03f), new Vector3(.1f, .035f, 1), 0, 0);
+        visual.SetPartTint(3, flow); visual.SetPartTint(4, flow); visual.SetPartTint(5, flow);
     }
 
     /// <summary>声明了端口贴图的设备按配置叠加轴环或镜像接头。</summary>

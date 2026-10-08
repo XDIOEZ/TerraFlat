@@ -14,8 +14,18 @@ internal sealed class ResourceAssetScope : IDisposable
 
     private readonly List<AsyncOperationHandle> handles = new();
     private readonly Dictionary<(Type, string), AsyncOperationHandle> assets = new();
+    private readonly List<UnityEngine.Object> runtimeTemplates = new();
     private bool disposed;
     public int HandleCount => handles.Count;
+    public bool ContainsRuntimeTemplate(GameObject template) => !disposed && template != null && runtimeTemplates.Contains(template);
+
+    public T OwnRuntimeTemplate<T>(T template) where T : UnityEngine.Object
+    {
+        if (disposed) throw new ObjectDisposedException(nameof(ResourceAssetScope));
+        if (template == null) throw new ArgumentNullException(nameof(template));
+        runtimeTemplates.Add(template);
+        return template;
+    }
 
     /// <summary>接管当前请求，包括尚未完成或最终失败的句柄。</summary>
     public AsyncOperationHandle<T> Own<T>(AsyncOperationHandle<T> handle)
@@ -55,6 +65,12 @@ internal sealed class ResourceAssetScope : IDisposable
         if (disposed) return;
         disposed = true;
         var errors = new List<Exception>();
+        for (int i = runtimeTemplates.Count - 1; i >= 0; i--)
+        {
+            try { if (runtimeTemplates[i] != null) UnityEngine.Object.Destroy(runtimeTemplates[i]); }
+            catch (Exception exception) { errors.Add(exception); }
+        }
+        runtimeTemplates.Clear();
         for (int i = handles.Count - 1; i >= 0; i--)
         {
             try { if (handles[i].IsValid()) Addressables.Release(handles[i]); }

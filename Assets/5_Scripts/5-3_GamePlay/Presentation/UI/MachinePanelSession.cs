@@ -41,6 +41,7 @@ public sealed class MachinePanelSession : IMachinePanelSession
     public static IMachinePanelSession Create(MachineEntity entity)
     {
         if (entity.Logic is VesselLogic vessel) return new VesselMachinePanelSession(vessel);
+        if (entity.Logic is FluidMachineLogic fluid) return new FluidMachinePanelSession(fluid);
         if (entity.Logic is ManualProcessingLogic manual)
             return new MechanicalPanelSession("UI_HandDrill", entity, manual.Processor,
                 actor => MachineWorld.RequestOperation(entity, "work", "", actor),

@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "recipes": [
+    {
+      "id": "core:水槽_树脂",
+      "displayName": "水槽（树脂）",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "inputs": [
+        { "match": "exact_item", "itemId": "Plank", "amount": 12 },
+        { "match": "exact_item", "itemId": "Rope", "amount": 4 },
+        { "match": "exact_item", "itemId": "Resin", "amount": 4 }
+      ],
+      "outputs": [ { "itemId": "WaterTrough", "amount": 1 } ],
+      "actions": []
+    },
+    {
+      "id": "core:水槽_树脂胶水",
+      "displayName": "水槽（树脂胶水）",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "inputs": [
+        { "match": "exact_item", "itemId": "Plank", "amount": 12 },
+        { "match": "exact_item", "itemId": "Rope", "amount": 4 },
+        { "match": "exact_item", "itemId": "Glue", "amount": 4 }
+      ],
+      "outputs": [ { "itemId": "WaterTrough", "amount": 1, "durabilityMultiplier": 1.5 } ],
+      "actions": []
+    }
+  ]
+}

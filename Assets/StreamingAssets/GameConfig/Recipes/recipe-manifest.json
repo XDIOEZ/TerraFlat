@@ -105,6 +105,21 @@
       "id": "crafting/fishing",
       "path": "crafting/fishing.json",
       "enabled": true
+    },
+    {
+      "id": "crafting/chemical_machines",
+      "path": "crafting/chemical_machines.json",
+      "enabled": true
+    },
+    {
+      "id": "crafting/chemistry_equipment",
+      "path": "crafting/chemistry_equipment.json",
+      "enabled": true
+    },
+    {
+      "id": "crafting/water_trough",
+      "path": "crafting/water_trough.json",
+      "enabled": true
     }
   ]
 }

@@ -44,6 +44,7 @@ public sealed class PlayerWorldCoordinateHUD : MonoBehaviour
     private string localizedTemperatureUnavailableText;
     private int lastTemperatureTenths = int.MinValue;
     private bool temperatureDisplayInitialized;
+    private string lastPressurePresentation;
     private int lastCoordinateX = int.MinValue;
     private int lastCoordinateY = int.MinValue;
     private int lastFpsSampleFrame = -1;
@@ -217,15 +218,28 @@ public sealed class PlayerWorldCoordinateHUD : MonoBehaviour
     {
         bool available = TemperatureMgr.Instance.TryGetAmbientTemperature(player.transform.position, out float temperature);
         int tenths = available ? Mathf.RoundToInt(temperature * 10f) : int.MinValue;
-        if (temperatureDisplayInitialized && tenths == lastTemperatureTenths)
+        string pressurePresentation = BuildPressurePresentation();
+        if (temperatureDisplayInitialized && tenths == lastTemperatureTenths && pressurePresentation == lastPressurePresentation)
             return;
 
         temperatureDisplayInitialized = true;
         lastTemperatureTenths = tenths;
-        if (available)
-            ambientTemperatureText.SetText(localizedTemperatureFormat, tenths * 0.1f);
-        else
-            ambientTemperatureText.SetText(localizedTemperatureUnavailableText);
+        lastPressurePresentation = pressurePresentation;
+        string temperaturePresentation = available ? string.Format(localizedTemperatureFormat, tenths * .1f) : localizedTemperatureUnavailableText;
+        ambientTemperatureText.text = temperaturePresentation + pressurePresentation;
+    }
+
+    private string BuildPressurePresentation()
+    {
+        if (player == null || player.itemMods.GetMod_ByID<Mod_Pressure>(Mod_Pressure.ModuleId) is not Mod_Pressure pressure) return "";
+        pressure.GetSafePressureRange(out float min, out float max);
+        double current = AtmosphereService.TryGetForWorld(player.gameObject.scene.name, out var atmosphere) ? AtmosphereService.PressureKPa(atmosphere) : 0d;
+        string danger = FlatWorldLocalizationService.GetUiText(current < min ? "低压危险" : current > max ? "高压危险" : "安全");
+        string source = FlatWorldLocalizationService.GetUiText(SpacesuitSystem.TryGetEquipped(player, out var suit) && suit.IsHelmetSealed ? "罐内供氧" : "星球大气");
+        return "\n" + FlatWorldLocalizationService.GetUiFormat(
+            "气压 {0:0.#} kPa · {1}\n安全 {2:0.#}～{3:0.#} kPa · 低压 +{4:0.#} / 高压 +{5:0.#}\n呼吸 {6} · 缓冲 {7:0.#}秒",
+            current, danger, min, max, pressure.SafePressureMinKPa - min, max - pressure.SafePressureMaxKPa,
+            source, pressure.State.RemainingBufferSeconds);
     }
 
     /// <summary>只在语言变化时查询温度文案，低频采样循环只负责数值。</summary>

@@ -170,6 +170,11 @@ public static partial class MachineWorld
     {
         foreach (MachineEntity entity in graph.Facilities)
         {
+            if (entity.Definition.Fluid != null)
+            {
+                if (IsFluidActive(entity)) AdvanceFacilityLogic(entity, seconds);
+                continue;
+            }
             bool active = false;
             int range = entity.Active ? MachineCatalog.Settings.DeactivationChunks : MachineCatalog.Settings.ActivationChunks;
             foreach (Vector2Int player in players)

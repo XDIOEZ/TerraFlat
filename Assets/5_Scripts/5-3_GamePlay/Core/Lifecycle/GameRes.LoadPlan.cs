@@ -74,6 +74,8 @@ public partial class GameRes
             () => LoadCatalog<int>((done, fail) => BuffCatalogLoader.LoadBuiltInAsync(this, done, fail), _ => { }), "items");
         plan.Add("liquids", "加载液体定义", 1,
             () => LoadCatalog<int>((done, fail) => LiquidCatalogLoader.LoadBuiltInAsync(this, done, fail), _ => { }), "items");
+        plan.Add("fluids", "加载工业流体与星球大气", 1,
+            () => LoadCatalog<int>((done, fail) => FluidCatalogLoader.LoadBuiltInAsync(this, done, fail), _ => { }), "liquids");
         plan.Add("contamination", "加载污染层定义", 1,
             () => LoadCatalog<int>((done, fail) => ContaminationCatalogLoader.LoadBuiltInAsync(this, done, fail), _ => { }));
         plan.Add("quests", "加载任务目录", 2,
@@ -82,8 +84,8 @@ public partial class GameRes
             () => LoadCatalog<TextLibraryService>(TextLibraryCatalogLoader.LoadBuiltInAsync, value => textLibraryService = value));
         plan.Add("world-authoring", "加载世界生成资源", 1, LoadWorldAuthoringResources, "texts");
         plan.Add("validate-built-in", "校验本体资源引用", 3,
-            () => ResourceCatalogValidation.ValidateAsync(this),
-            "players", "time", "water-current", "items", "actors", "animal-skills", "spawners", "natural-items", "river-generation", "recipes", "buffs", "liquids", "contamination", "quests", "texts", "inventory", "skills", "world-authoring");
+            ValidateBuiltInResourceCatalog,
+            "players", "time", "water-current", "items", "actors", "animal-skills", "spawners", "natural-items", "river-generation", "recipes", "buffs", "liquids", "fluids", "contamination", "quests", "texts", "inventory", "skills", "world-authoring");
         plan.Add("mods", "加载扩展内容", 5, () => LoadModCatalog(plan), "validate-built-in");
         plan.Add("validate-final", "校验最终资源目录", 3,
             ValidateFinalResourceCatalog, "mods");
@@ -96,8 +98,18 @@ public partial class GameRes
     private IEnumerator ValidateFinalResourceCatalog()
     {
         yield return ResourceCatalogValidation.ValidateAsync(this);
+        ContainerPortConfigurationValidator.ValidateDefinitions(ItemDefinitions.Values,
+            id => TryGetLiquidDefinition(id, out LiquidDefinition liquid) ? liquid : null);
         // 候选目录校验不得修改正在运行的世界时间和主菜单准备数据。
         if (!preparingInPlaceReload) GameManager.Instance?.ApplyDefaultTimeSystemProfile();
+    }
+
+    private IEnumerator ValidateBuiltInResourceCatalog()
+    {
+        yield return ResourceCatalogValidation.ValidateAsync(this);
+        // 本体与最终 MOD 目录共用端口类型、库存和液体引用的严格校验。
+        ContainerPortConfigurationValidator.ValidateDefinitions(ItemDefinitions.Values,
+            id => TryGetLiquidDefinition(id, out LiquidDefinition liquid) ? liquid : null);
     }
 
     #endregion

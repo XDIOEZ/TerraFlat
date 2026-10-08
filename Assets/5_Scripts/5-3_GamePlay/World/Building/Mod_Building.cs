@@ -782,6 +782,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
             reason = "机械拆除需要当前世界写入权限";
             return false;
         }
+        if (!MachineWorld.CanDismantleFluid(node, out reason)) return false;
         ItemData placed = MachineWorld.CaptureSnapshot(node);
         if (placed == null || !TryReadBuildingData(placed, out _, out Building_Data building))
         {
@@ -854,6 +855,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
     public static void DestroyMechanical(MachineEntity node)
     {
         if (node == null || !GameNetwork.HasStateAuthority) return;
+        if (MachineWorld.HandleFluidTankZeroHp(node)) return;
         if (TryReadBuildingData(node.Snapshot, out _, out Building_Data building))
         {
             string summonerId = ResolveSummonerPrefabId(node.Definition.Id, building);

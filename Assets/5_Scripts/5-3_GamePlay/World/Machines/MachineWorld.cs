@@ -55,6 +55,7 @@ public static partial class MachineWorld
         graph = null; owner = null; worldKey = null; dirty = false; suppressRemoval = false; elapsed = 0;
         TransportStep = 0;
         ResetElectricalRuntime();
+        ResetFluidRuntime();
         CellChanged = null;
         NodeStateChanged = null; NodeRemoved = null; VisualSpeedChanged = null;
     }
@@ -228,6 +229,7 @@ public static partial class MachineWorld
         interactions.Clear();
         foreach (MachineEntity node in nodes.Values) DisposeProcessor(node);
         nodes.Clear();
+        ResetFluidRuntime();
         dirty = true;
         foreach (Vector2Int cell in changedCells)
         {
@@ -270,6 +272,7 @@ public static partial class MachineWorld
             applied = true;
         }
         node.State = incomingState;
+        ApplyFluidRemoteState(node, applied);
         InitializeElectricalState(node, incomingState);
         if (!applied) { DisposeProcessor(node); EnsureProcessor(node); }
         CopyTopology(node);
@@ -294,6 +297,7 @@ public static partial class MachineWorld
         if (interactions.Remove(id, out MachineInteractionTarget interaction)) interaction.Dispose();
         DisposeProcessor(node);
         nodes.Remove(id);
+        fluidStates.Remove(id);
         dirty = true;
         BuildingOccupancyRegistry.NotifyMechanicalChanged(node.Cell);
         CellChanged?.Invoke(node.Cell);
@@ -312,7 +316,10 @@ public static partial class MachineWorld
     /// <summary>战斗和 MOD 修改机械状态后的显式增量通知。</summary>
     public static void StateChanged(MachineEntity node)
     {
-        if (Contains(node)) NodeStateChanged?.Invoke(node);
+        if (!Contains(node)) return;
+        NodeStateChanged?.Invoke(node);
+        if (node.Definition.Fluid != null && fluidTankOwners.TryGetValue(node.Id, out FluidTankGroup group) && group.OwnerId != node.Id &&
+            nodes.TryGetValue(group.OwnerId, out MachineEntity sharedOwner)) NodeStateChanged?.Invoke(sharedOwner);
     }
 
     /// <summary>直接按世界格和占地层查询机械数据节点。</summary>
@@ -462,7 +469,7 @@ public static partial class MachineWorld
         RebuildGraphsIfDirty();
         for (int y = bounds.yMin; y < bounds.yMax; y++)
         for (int x = bounds.xMin; x < bounds.xMax; x++)
-        for (int layer = 0; layer <= 3; layer++)
+        for (int layer = 0; layer <= 5; layer++)
         {
             MachineEntity node = graph.At(new Vector2Int(x, y), layer);
             if (node != null) result.Add(new MachineRenderCell(node, new Vector2Int(x, y)));
@@ -520,10 +527,12 @@ public static partial class MachineWorld
         {
             TransportStep++;
             elapsed -= step;
+            BeginFluidStep(step);
+            RebuildGraphsIfDirty();
             foreach (var network in graph.Networks)
             {
                 bool active = graph.ShouldBeActive(network, players, step, MachineCatalog.Settings) ||
-                    RequiresElectricalBridgeSimulation(network);
+                    RequiresElectricalBridgeSimulation(network) || RequiresFluidSimulation(network);
                 if (!active)
                 {
                     if (network.Active) SleepNetwork(network);
@@ -549,6 +558,8 @@ public static partial class MachineWorld
                 foreach (var node in network.Nodes) SimulateNode(node, step);
             }
             AdvanceFacilities(step);
+            CompleteFluidStep(step);
+            PressureExplosionQueue.Tick(step);
         }
     }
 
@@ -708,6 +719,7 @@ public static partial class MachineWorld
         if (source == "manual") return node.State != null && node.State.ManualSeconds > 0 ? 1 : 0;
         if (source == "wind") return WeatherMgr.Instance != null ? WeatherMgr.Instance.GetCurrentWindStrength() : 0;
         if (source == "water") return GetWaterSourceFactor(node);
+        if (source == "fluid-engine") return GetFluidEngineSourceFactor(node);
         return 0;
     }
 
@@ -833,6 +845,14 @@ public static partial class MachineWorld
         if (IsOccupied(cell, definition.Layer)) { reason = "当前机械层已占用"; return false; }
         if (BuildingOccupancyRegistry.IsOccupied(cell, layer: definition.Layer))
         { reason = "当前建筑层已占用"; return false; }
+        if (definition.Fluid?.CombineAdjacent == true)
+            foreach (Vector2Int direction in MechanicalNetworkGraph.Directions)
+            {
+                MachineEntity neighbor = graph.At(cell + direction, 0);
+                if (neighbor?.Definition.Fluid?.MaterialId == definition.Fluid.MaterialId &&
+                    !string.IsNullOrEmpty(GetFluidState(neighbor).RuptureBudgetId))
+                { reason = "相邻储罐正在结算破裂"; return false; }
+            }
         if (definition.Kind == "bridge")
         {
             if (graph.At(cell, 0)?.Definition.HasMechanicalPorts != true)
@@ -895,6 +915,7 @@ public static partial class MachineWorld
 
     private static void CaptureNode(MachineEntity node)
     {
+        CaptureFluidState(node);
         if (node.View != null)
         {
             node.View.item.Save();
@@ -945,6 +966,7 @@ public static partial class MachineWorld
         foreach (var node in nodes.Values) DisposeProcessor(node);
         processorOwners.Clear();
         nodes.Clear(); elapsed = 0;
+        ResetFluidRuntime();
         ClearFacilityEnvironment();
     }
     #endregion

@@ -1,6 +1,8 @@
 using System;
 using FlatWorld.Localization;
 using UnityEngine;
+using System.Collections.Generic;
+using UnityEngine.SceneManagement;
 
 public static partial class MachineWorld
 {
@@ -76,6 +78,40 @@ public static partial class MachineWorld
             (now - node.ConveyorVisualTime) * node.ConveyorVisualSpeed, 1f);
         node.ConveyorVisualTime = now; node.ConveyorVisualSpeed = speed;
         return true;
+    }
+    #endregion
+
+    #region 输送带容器交付
+    /// <summary>带面末端只查询相邻实体的输入能力，拒收时保持掉落物原位置。</summary>
+    public static ContainerTransferResult TryReceiveConveyorDrop(IItemTransferPort source, Vector2 position, float seconds, out bool terminal)
+    {
+        terminal = false;
+        MachineEntity belt = GetTransportAt(position);
+        if (source == null || belt == null || !belt.Active || belt.SpeedRpm <= 0f || !MachineDefinition.Positive(seconds))
+            return new ContainerTransferResult(ContainerTransferFailure.InvalidRequest);
+        int direction = belt.Rpm >= 0f ? belt.ConveyorRoute.Output : belt.ConveyorRoute.Input;
+        Vector2Int delta = direction switch { 0 => Vector2Int.right, 1 => Vector2Int.up, 2 => Vector2Int.left, _ => Vector2Int.down };
+        Vector2 center = (Vector2)belt.Cell + Vector2.one * .5f;
+        float toExit = Vector2.Dot(WorldTopologyRuntime.ShortestDelta(center, position), delta);
+        float distance = belt.Definition.Transport.Speed * GetWorkEfficiency(belt) * Mathf.Min(seconds, .5f);
+        if (toExit + distance < .32f) return new ContainerTransferResult(ContainerTransferFailure.OutOfRange);
+        Vector2Int cell = CellOf(WorldTopologyRuntime.NormalizePosition(center + delta));
+        MachineEntity target = GetAtCurrentWorld(cell, 0);
+        if (target == null || target.Definition.Transport != null) return new ContainerTransferResult(ContainerTransferFailure.Empty);
+        WakeForInteraction(target);
+        if (target.Logic is not IContainerPortProvider provider) return new ContainerTransferResult(ContainerTransferFailure.AccessDenied);
+        var ports = new List<IContainerPort>(); provider.CollectContainerPorts(ports);
+        ItemData item = source.PeekItem();
+        if (item == null) return new ContainerTransferResult(ContainerTransferFailure.Empty);
+        var context = new ContainerTransferContext(center, SceneManager.GetSceneByName(WorldKey).handle, ContainerAccessKind.Machine, "conveyor-delivery");
+        foreach (IContainerPort port in ports)
+        {
+            if (port is not IItemTransferPort input || (port.Configuration.Direction & ContainerPortDirection.Input) == 0) continue;
+            terminal = true;
+            var result = ContainerTransferService.TransferItems(source, input, context, Mathf.FloorToInt(item.Stack.Amount));
+            if (result.Success) return result;
+        }
+        return new ContainerTransferResult(ContainerTransferFailure.Full);
     }
     #endregion
 }

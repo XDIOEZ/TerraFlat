@@ -59,6 +59,7 @@ description: "Use when: 定位或修改 FlatWorld 的动物、怪物、蜂群、
 - 小鸡只按所属 `Scene.handle` 缓存场景名称，回池清空、重新加载或迁移后重建；产蛋、昼夜与禁睡仍实时读取本世界时钟，不缓存时间或用活动场景替代所属世界。
 - 小鸡受伤后的禁睡期使用 `AI_ChickenSaveData` 保存的绝对游戏日截止值，直到下一次夜晚开始才解除；逃跑结束、低血量、跨午夜和远距重载都不能提前恢复睡眠。逃跑威胁记忆与睡眠警戒是两个独立状态。
 - 鸟类产蛋由 `Mod_AI_Bird.EggLaying` 驱动，`AnimalEggLayingSchedule` 随个体保存绝对游戏日；成功落下一颗后重新计算至少两天的冷却，不能追补休眠或跳时积压。`Bird` 必须移除继承自鸡的通用生产模块，`Bee` 显式关闭产蛋；产物和随机延迟由 Actor JSON 配置，联机仅权威端生成。
+- 鸟取背包种子由 `Mod_AI_Bird.ContainerFeeding` 通过允许 `Animal` 访问的种子端口提交一粒真实物品，概率、饥饿阈值、冷却和距离来自 Actor 参数。完整种子快照随鸟保存，死亡成功生成真实掉落后才清空；禁止直接扣背包或只在鸟身上记录一个数量。
 - GameObject 鸟类捕鱼由 `Mod_AI_Bird.Predation` 驱动：饥饿时只锁定水中的 `Fish`，俯冲伤害必须走 `DamageReceiver`，低于抓取血线后通过 `IAquaticPredatorCarryTarget` 临时携带到可站立陆地，再继续攻击并消费死亡掉落的 `Meat`；携带状态不持久化，受惊、温度避险、进入疲劳降落或卸载时必须释放猎物。蜜蜂等注册独立 `IBirdFlightPilot` 的常驻飞行物种不进入该链路。
 
 - 水生 GameObject AI 使用 `AquaticHabitat` 检查真实液体层与整段游动线路，不读取会被平台抹零的表面有效水深，不借用陆地可走性决定出生。未加载区块不是干地；个体饥饿、Buff 与受伤仍走原模块，离水伤害只在权威端结算。当前小鱼以潮湿层数作为缺水阈值，`minimumWetStacks=3`；水中潮湿沿用 Buff 通用的每秒 1 层节奏，不另外复制一套鱼专用计时器。鱼主动逃离 `Carnivore`、玩家及实现 `IAquaticPredatorThreat` 的水生捕食能力，逃生点必须保持整段水域可达。

@@ -223,7 +223,7 @@ public sealed class InventoryModuleDataScheduler : IDisposable
                     continue;
                 }
                 var context = new ModuleDataTickContext(entry.ModuleData, entry.ItemData, data,
-                    entry.Slot, entry.SlotIndex, deltaTime, entry.Definition, this, currentGeneration);
+                    entry.Slot, entry.SlotIndex, deltaTime, entry.Definition, this, currentGeneration, owner.item, owner.MachineOwner);
                 if (!ModuleDataRuleRegistry.IsCurrent(context))
                 {
                     dirty = true;
@@ -233,7 +233,7 @@ public sealed class InventoryModuleDataScheduler : IDisposable
                 if (instanceDelta <= 0f)
                     continue;
                 context = new ModuleDataTickContext(entry.ModuleData, entry.ItemData, data,
-                    entry.Slot, entry.SlotIndex, instanceDelta, entry.Definition, this, currentGeneration);
+                    entry.Slot, entry.SlotIndex, instanceDelta, entry.Definition, this, currentGeneration, owner.item, owner.MachineOwner);
                 ModuleDataRuleRegistry.Step(context, entry.Plan);
             }
         }

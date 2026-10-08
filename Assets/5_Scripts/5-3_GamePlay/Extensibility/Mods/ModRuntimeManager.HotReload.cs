@@ -34,6 +34,8 @@ public sealed partial class ModRuntimeManager
         context.Add(() => activeProfile, value => activeProfile = value, (ModProfile)null);
         context.Add(() => safeModeActive, value => safeModeActive = value, false);
         context.Add(() => resourceTemplateRoot, value => resourceTemplateRoot = value, (GameObject)null);
+        context.Add(() => containerPortCandidate, value => containerPortCandidate = value,
+            (ContainerPortFactoryRegistry.CandidateScope)null);
         context.AddList(() => loadedPackages, value => loadedPackages = value);
         context.AddDictionary(() => packagesById, value => packagesById = value);
         context.AddDictionary(() => luaRuntimes, value => luaRuntimes = value);
@@ -48,6 +50,7 @@ public sealed partial class ModRuntimeManager
         context.AddList(() => pendingBuffDefinitions, value => pendingBuffDefinitions = value);
         context.AddList(() => pendingLiquidDefinitions, value => pendingLiquidDefinitions = value);
         context.AddList(() => registeredLiquidIds, value => registeredLiquidIds = value);
+        ConfigureFluidResourceReload(context);
         context.AddList(() => pendingContaminationDefinitions, value => pendingContaminationDefinitions = value);
         context.AddList(() => registeredContaminationIds, value => registeredContaminationIds = value);
         context.AddList(() => pendingQuestDefinitions, value => pendingQuestDefinitions = value);
@@ -136,8 +139,12 @@ public sealed partial class ModRuntimeManager
     }
 
     /// <summary>失败候选没有任何世界引用，可以立即释放，不触发 MOD 的退出回调。</summary>
-    internal void ReleaseCandidateResources() => ReleaseReloadResources(
-        luaRuntimes.Values.ToArray(), clonedAssets.ToArray(), loadedBundles.ToArray(), preserveCurrentBundles: false);
+    internal void ReleaseCandidateResources()
+    {
+        ReleaseContainerPortCandidate();
+        ReleaseReloadResources(luaRuntimes.Values.ToArray(), clonedAssets.ToArray(),
+            loadedBundles.ToArray(), preserveCurrentBundles: false);
+    }
 
     /// <summary>旧代在世界完全退出后释放；一项失败不阻止其他资源回收。</summary>
     private static void ReleaseReloadResources(ModLuaRuntime[] scripts, UnityEngine.Object[] assets, AssetBundle[] bundles, bool preserveCurrentBundles)

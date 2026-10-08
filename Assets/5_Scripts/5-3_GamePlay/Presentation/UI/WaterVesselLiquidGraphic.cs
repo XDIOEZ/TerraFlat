@@ -63,7 +63,8 @@ public sealed class WaterVesselLiquidGraphic : MaskableGraphic
         float viscosity = liquid?.VisualViscosity01 ?? 0f;
         bool changedStyle = amount > 0f &&
             (!string.Equals(liquid?.Id, liquidId, StringComparison.OrdinalIgnoreCase) ||
-             !Mathf.Approximately(style.Viscosity, viscosity));
+             !Mathf.Approximately(style.Viscosity, viscosity) ||
+             liquid?.Category == "mixture" && style.Body != liquid.PrimaryColor);
         if (changedStyle)
         {
             style = ResolveStyle(liquid);
@@ -87,7 +88,7 @@ public sealed class WaterVesselLiquidGraphic : MaskableGraphic
         int index = Array.FindIndex(Styles,
             entry => string.Equals(entry.VisualState, liquid.VisualState, StringComparison.OrdinalIgnoreCase));
         LiquidStyle resolved;
-        if (index >= 0)
+        if (index >= 0 && liquid.Category != "mixture")
         {
             resolved = Styles[index];
         }

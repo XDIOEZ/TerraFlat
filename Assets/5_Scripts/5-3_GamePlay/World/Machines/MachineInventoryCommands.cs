@@ -61,7 +61,8 @@ public static class MachineInventoryCommands
         string operation, int amount, out bool result)
     {
         result = false;
-        if (GameNetwork.HasStateAuthority || source?.MachineOwner == null && target?.MachineOwner == null) return false;
+        if (GameNetwork.HasStateAuthority || source?.MachineOwner == null && target?.MachineOwner == null &&
+            source is not SpacesuitTankInventory && target is not SpacesuitTankInventory) return false;
         result = RemoteTransferRequested?.Invoke(source, sourceIndex, target, targetIndex, operation, amount) == true;
         return true;
     }
@@ -99,12 +100,22 @@ public static class MachineInventoryCommands
         }
         foreach (var pair in PlayerInventories(actor))
             if (ReferenceEquals(pair.Inventory, inventory)) { address = pair.Address; return true; }
+        foreach (ItemData suit in OwnedSpacesuits(actor))
+            if (ReferenceEquals(SpacesuitSystem.GetBinding(suit, actor).TankInventory, inventory))
+            { address = new MachineInventoryAddress { PlayerInventory = "@suit:" + suit.Guid }; return true; }
         return false;
     }
 
     public static Inventory Resolve(Player actor, MachineInventoryAddress address)
     {
         if (actor == null || address.Index < 0) return null;
+        if (address.MachineId == 0 && address.Index == 0 && address.PlayerInventory?.StartsWith("@suit:", StringComparison.Ordinal) == true)
+        {
+            if (!int.TryParse(address.PlayerInventory.Substring(6), out int guid)) return null;
+            foreach (ItemData suit in OwnedSpacesuits(actor))
+                if (suit.Guid == guid) return SpacesuitSystem.GetBinding(suit, actor).TankInventory;
+            return null;
+        }
         if (address.MachineId != 0)
         {
             var entity = MachineWorld.GetById(address.MachineId);
@@ -122,6 +133,8 @@ public static class MachineInventoryCommands
 
     private static IEnumerable<(MachineInventoryAddress Address, Inventory Inventory)> PlayerInventories(Player actor)
     {
+        var equipment = actor.itemMods?.GetMod_ByID<Mod_Equipment>(ModText.Equipment_Module)?.EquipmentInventory;
+        if (equipment != null) yield return (new MachineInventoryAddress { PlayerInventory = "@equipment" }, equipment);
         var hand = actor.GetComponentInChildren<Mod_Hand>()?.HandInventory;
         if (hand != null) yield return (new MachineInventoryAddress { PlayerInventory = "@hand" }, hand);
         var hotbar = actor.itemMods?.GetMod_ByID<Mod_HotBar>(ModText.Hotbar)?.RuntimeInventory;
@@ -141,6 +154,20 @@ public static class MachineInventoryCommands
             }
         }
     }
+
+    public static IEnumerable<ItemData> OwnedSpacesuits(Player actor)
+    {
+        if (actor == null) yield break;
+        var seen = new HashSet<int>();
+        foreach (var pair in PlayerInventories(actor))
+            if (pair.Inventory?.Data?.itemSlots != null)
+                foreach (ItemSlot slot in pair.Inventory.Data.itemSlots)
+                    if (slot?.itemData != null && FluidTankStorage.FindBinary(slot.itemData, Mod_Spacesuit.ModuleId) != null && seen.Add(slot.itemData.Guid))
+                        yield return slot.itemData;
+    }
+
+    public static bool IsSpacesuitAddress(MachineInventoryAddress address)
+        => address.MachineId == 0 && address.Index == 0 && address.PlayerInventory?.StartsWith("@suit:", StringComparison.Ordinal) == true;
     #endregion
 
     #region 私有存档的网络裁剪

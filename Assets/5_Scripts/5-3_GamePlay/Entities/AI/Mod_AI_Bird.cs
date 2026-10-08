@@ -64,6 +64,8 @@ public sealed partial class Mod_AI_Bird : Module, IAIActor, IItemModuleDependenc
         public bool HasHome; // 是否绑定了巢位。
         public int HomeHiveGuid; // 所属蜂巢的稳定 GUID；独立鸟类为零。
         public AnimalEggLayingSchedule EggLaying = new(); // 产蛋截止日随同个体保存，读档不重新随机。
+        public byte[] BackpackSeedSnapshot; // 独立持久化携带的真实种子实例。
+        public float BackpackSeedCooldownSeconds;
     }
 
     public Ex_ModData Data = new();
@@ -250,7 +252,10 @@ public sealed partial class Mod_AI_Bird : Module, IAIActor, IItemModuleDependenc
             bool exhausted = !permanentFlight && AdvanceFlightStamina(
                 state, step, flightStaminaMax, flightStaminaDrainRate, flightStaminaRecoveryRate);
             if (flightPilot == null)
+            {
+                TickBackpackSeedTaking(step);
                 TickVigilance(step);
+            }
             TickEggLaying();
             if (temperatureSafetyRetreat)
             {
@@ -1200,6 +1205,7 @@ public sealed partial class Mod_AI_Bird : Module, IAIActor, IItemModuleDependenc
     private void HandleBirdDeath(Mod_DamageReceiver receiver)
     {
         stoppedForDeath = true;
+        DropCarriedBackpackSeed();
         ResetFishHunting(releaseCaptured: true);
         mover.StopMovement();
         body.velocity = Vector2.zero;

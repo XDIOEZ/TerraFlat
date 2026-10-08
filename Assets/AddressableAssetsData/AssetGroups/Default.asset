@@ -3766,6 +3766,54 @@ MonoBehaviour:
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 00d9ba6cc2824bef8e2a5b3966b9b156
+    m_Address: UI_IndustrialFluid
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 0f5d6e2a1c7b4a6fa2c9d8e7b3a41004
+    m_Address: UI_ItemTooltip
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 23e37361481d443aa47c965cea11c55c
+    m_Address: UI_FluidTank
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 3475cca8432a45d1b7d85498da635689
+    m_Address: UI_Spacesuit
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 7254b02aa2f70a341953f9da28a24264
+    m_Address: Module_AtmosphericOxygenSupply
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 81c877f8c147fd64ea96dcdc56d3fb1d
+    m_Address: Module_Spacesuit
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: bc18c55f38be75945afd0d108848b070
+    m_Address: Module_Pressure
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: cf864a306657c3d43a7d4a38512246b1
+    m_Address: Module_FluidTank
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
   m_ReadOnly: 0
   m_Settings: {fileID: 11400000, guid: fc59728ab6aa9b54ba0a5f7cc69fc0d8, type: 2}
   m_SchemaSet:

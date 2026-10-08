@@ -184,6 +184,7 @@ namespace FlatWorld.Networking.Gameplay
 
         private void Update()
         {
+            TickFluidNetwork();
             ProcessPickupTimeouts();
             ProcessBuildingTimeouts();
             ProcessBuildingDismantleTimeouts();

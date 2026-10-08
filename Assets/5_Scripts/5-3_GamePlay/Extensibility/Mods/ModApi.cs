@@ -232,13 +232,15 @@ public sealed class ModApi
 /// <summary>
 /// Lua 物品模块可访问的受限物品接口。
 /// </summary>
-public sealed class ModItemApi
+public sealed partial class ModItemApi
 {
     private readonly Item item;
+    private readonly uint runtimeGeneration;
 
     internal ModItemApi(Item item)
     {
         this.item = item;
+        runtimeGeneration = item != null ? item.RuntimeGeneration : 0;
     }
 
     public string Id => item?.itemData?.IDName ?? string.Empty;

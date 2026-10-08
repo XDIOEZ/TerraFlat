@@ -1,0 +1,537 @@
+{
+  "items": [
+    {
+      "id": "PortableGasTank_Iron",
+      "parent": "BasicItem_Base",
+      "worldDropBehavior": "interactive",
+      "gameName": "铁制便携气罐",
+      "description": "初始真空；通过充装设备装入气体。混装气液共用容积，超压持续损伤，罐壁归零会在持有者位置爆炸。",
+      "durability": 80,
+      "maxDurability": 80,
+      "amount": 1,
+      "weight": 3.5,
+      "volume": 5,
+      "stackable": false,
+      "canBePickedUp": true,
+      "tags": [
+        "Container",
+        "FluidTank",
+        "InventoryGroup.Chemical",
+        "Material.Iron",
+        "Container.FluidTank"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]",
+        "color": {
+          "b": 1,
+          "r": 0.8,
+          "g": 0.88,
+          "a": 1
+        }
+      },
+      "health": {
+        "weakTool": 0,
+        "maxHp": 80,
+        "defense": {
+          "physical": 2
+        },
+        "collider": {
+          "size": {
+            "x": 0.7,
+            "y": 0.9
+          },
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "isTrigger": true,
+          "type": "BoxCollider2D",
+          "enabled": true
+        },
+        "hp": 80,
+        "hasHp": true,
+        "combatBalanceVersion": 1
+      },
+      "modules": {
+        "tank": {
+          "prefab": "Module_FluidTank",
+          "parameters": {
+            "Configuration": {
+              "SupportsSpacesuit": true,
+              "MaxSafePressureKPa": 600,
+              "MaterialId": "core:iron",
+              "DamageIntervalSeconds": 1,
+              "VolumeLiters": 4,
+              "MinimumGasSpaceLiters": 0.04,
+              "OverpressureDamagePerSecond": 2
+            }
+          },
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "id": "流体气罐模块",
+          "enabled": true
+        }
+      }
+    },
+    {
+      "id": "PortableGasTank_Steel",
+      "parent": "BasicItem_Base",
+      "worldDropBehavior": "interactive",
+      "gameName": "钢制便携气罐",
+      "description": "初始真空；通过充装设备装入气体。混装气液共用容积，超压持续损伤，罐壁归零会在持有者位置爆炸。",
+      "durability": 160,
+      "maxDurability": 160,
+      "amount": 1,
+      "weight": 3.5,
+      "volume": 5,
+      "stackable": false,
+      "canBePickedUp": true,
+      "tags": [
+        "Container",
+        "FluidTank",
+        "InventoryGroup.Chemical",
+        "Material.Steel",
+        "Container.FluidTank"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]",
+        "color": {
+          "b": 1,
+          "r": 0.8,
+          "g": 0.88,
+          "a": 1
+        }
+      },
+      "health": {
+        "weakTool": 0,
+        "maxHp": 160,
+        "defense": {
+          "physical": 2
+        },
+        "collider": {
+          "size": {
+            "x": 0.7,
+            "y": 0.9
+          },
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "isTrigger": true,
+          "type": "BoxCollider2D",
+          "enabled": true
+        },
+        "hp": 160,
+        "hasHp": true,
+        "combatBalanceVersion": 1
+      },
+      "modules": {
+        "tank": {
+          "prefab": "Module_FluidTank",
+          "parameters": {
+            "Configuration": {
+              "SupportsSpacesuit": true,
+              "MaxSafePressureKPa": 1800,
+              "MaterialId": "core:steel",
+              "DamageIntervalSeconds": 1,
+              "VolumeLiters": 4,
+              "MinimumGasSpaceLiters": 0.04,
+              "OverpressureDamagePerSecond": 2
+            }
+          },
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "id": "流体气罐模块",
+          "enabled": true
+        }
+      }
+    },
+    {
+      "id": "Spacesuit_Head",
+      "parent": "Equipment_Base",
+      "worldDropBehavior": "interactive",
+      "gameName": "密封头盔",
+      "description": "宇航服套装部件。必须穿齐头盔、躯干、手套、裤装和靴子且戴回头盔，才提供整套气压保护；躯干配置页可更换供氧气罐。",
+      "durability": 200,
+      "maxDurability": 200,
+      "amount": 1,
+      "weight": 2,
+      "volume": 5,
+      "stackable": false,
+      "canBePickedUp": true,
+      "tags": [
+        "Equipment",
+        "Spacesuit",
+        "Spacesuit.Head",
+        "SpacesuitSet:core:spacesuit",
+        "EquipmentSlot.Head",
+        "InventoryGroup.Chemical"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]",
+        "color": {
+          "b": 1,
+          "r": 0.82,
+          "g": 0.93,
+          "a": 1
+        }
+      },
+      "modules": {
+        "Mod_EquipmentStore": {
+          "prefab": "Mod_EquipmentStore",
+          "parameters": {
+            "equipmentInstances": [
+              {
+                "HeatToleranceIncrease": 8,
+                "Name": "宇航服隔热",
+                "ColdToleranceIncrease": 8,
+                "$concreteType": "EquipmentInstance_ThermalInsulation"
+              },
+              {
+                "Name": "宇航服生命支持",
+                "$concreteType": "EquipmentInstance_SpacesuitSupport"
+              }
+            ]
+          },
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "id": "装备存储模块",
+          "enabled": true
+        }
+      }
+    },
+    {
+      "id": "Spacesuit_Torso",
+      "parent": "Equipment_Base",
+      "worldDropBehavior": "interactive",
+      "gameName": "密封宇航服",
+      "description": "宇航服套装部件。必须穿齐头盔、躯干、手套、裤装和靴子且戴回头盔，才提供整套气压保护；躯干配置页可更换供氧气罐。",
+      "durability": 200,
+      "maxDurability": 200,
+      "amount": 1,
+      "weight": 2,
+      "volume": 5,
+      "stackable": false,
+      "canBePickedUp": true,
+      "tags": [
+        "Equipment",
+        "Spacesuit",
+        "Spacesuit.Torso",
+        "SpacesuitSet:core:spacesuit",
+        "EquipmentSlot.TorsoOuter",
+        "InventoryGroup.Chemical"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]",
+        "color": {
+          "b": 1,
+          "r": 0.82,
+          "g": 0.93,
+          "a": 1
+        }
+      },
+      "modules": {
+        "Mod_EquipmentStore": {
+          "prefab": "Mod_EquipmentStore",
+          "parameters": {
+            "equipmentInstances": [
+              {
+                "HeatToleranceIncrease": 8,
+                "Name": "宇航服隔热",
+                "ColdToleranceIncrease": 8,
+                "$concreteType": "EquipmentInstance_ThermalInsulation"
+              }
+            ]
+          },
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "id": "装备存储模块",
+          "enabled": true
+        },
+        "suit": {
+          "prefab": "Module_Spacesuit",
+          "parameters": {
+            "Configuration": {
+              "RequiredPartTags": [
+                "Spacesuit.Head",
+                "Spacesuit.Torso",
+                "Spacesuit.Hands",
+                "Spacesuit.Legs",
+                "Spacesuit.Feet"
+              ],
+              "OxygenMolesPerSecond": 0.006,
+              "SetId": "core:spacesuit",
+              "LowPressureRangeIncreaseKPa": 50,
+              "HighPressureRangeIncreaseKPa": 500
+            }
+          },
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "id": "宇航服模块",
+          "enabled": true
+        }
+      }
+    },
+    {
+      "id": "Spacesuit_Hands",
+      "parent": "Equipment_Base",
+      "worldDropBehavior": "interactive",
+      "gameName": "密封手套",
+      "description": "宇航服套装部件。必须穿齐头盔、躯干、手套、裤装和靴子且戴回头盔，才提供整套气压保护；躯干配置页可更换供氧气罐。",
+      "durability": 200,
+      "maxDurability": 200,
+      "amount": 1,
+      "weight": 2,
+      "volume": 5,
+      "stackable": false,
+      "canBePickedUp": true,
+      "tags": [
+        "Equipment",
+        "Spacesuit",
+        "Spacesuit.Hands",
+        "SpacesuitSet:core:spacesuit",
+        "EquipmentSlot.Hands",
+        "InventoryGroup.Chemical"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]",
+        "color": {
+          "b": 1,
+          "r": 0.82,
+          "g": 0.93,
+          "a": 1
+        }
+      },
+      "modules": {
+        "Mod_EquipmentStore": {
+          "prefab": "Mod_EquipmentStore",
+          "parameters": {
+            "equipmentInstances": [
+              {
+                "HeatToleranceIncrease": 8,
+                "Name": "宇航服隔热",
+                "ColdToleranceIncrease": 8,
+                "$concreteType": "EquipmentInstance_ThermalInsulation"
+              }
+            ]
+          },
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "id": "装备存储模块",
+          "enabled": true
+        }
+      }
+    },
+    {
+      "id": "Spacesuit_Legs",
+      "parent": "Equipment_Base",
+      "worldDropBehavior": "interactive",
+      "gameName": "密封裤装",
+      "description": "宇航服套装部件。必须穿齐头盔、躯干、手套、裤装和靴子且戴回头盔，才提供整套气压保护；躯干配置页可更换供氧气罐。",
+      "durability": 200,
+      "maxDurability": 200,
+      "amount": 1,
+      "weight": 2,
+      "volume": 5,
+      "stackable": false,
+      "canBePickedUp": true,
+      "tags": [
+        "Equipment",
+        "Spacesuit",
+        "Spacesuit.Legs",
+        "SpacesuitSet:core:spacesuit",
+        "EquipmentSlot.Legs",
+        "InventoryGroup.Chemical"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]",
+        "color": {
+          "b": 1,
+          "r": 0.82,
+          "g": 0.93,
+          "a": 1
+        }
+      },
+      "modules": {
+        "Mod_EquipmentStore": {
+          "prefab": "Mod_EquipmentStore",
+          "parameters": {
+            "equipmentInstances": [
+              {
+                "HeatToleranceIncrease": 8,
+                "Name": "宇航服隔热",
+                "ColdToleranceIncrease": 8,
+                "$concreteType": "EquipmentInstance_ThermalInsulation"
+              }
+            ]
+          },
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "id": "装备存储模块",
+          "enabled": true
+        }
+      }
+    },
+    {
+      "id": "Spacesuit_Feet",
+      "parent": "Equipment_Base",
+      "worldDropBehavior": "interactive",
+      "gameName": "密封靴子",
+      "description": "宇航服套装部件。必须穿齐头盔、躯干、手套、裤装和靴子且戴回头盔，才提供整套气压保护；躯干配置页可更换供氧气罐。",
+      "durability": 200,
+      "maxDurability": 200,
+      "amount": 1,
+      "weight": 2,
+      "volume": 5,
+      "stackable": false,
+      "canBePickedUp": true,
+      "tags": [
+        "Equipment",
+        "Spacesuit",
+        "Spacesuit.Feet",
+        "SpacesuitSet:core:spacesuit",
+        "EquipmentSlot.FeetOuter",
+        "InventoryGroup.Chemical"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]",
+        "color": {
+          "b": 1,
+          "r": 0.82,
+          "g": 0.93,
+          "a": 1
+        }
+      },
+      "modules": {
+        "Mod_EquipmentStore": {
+          "prefab": "Mod_EquipmentStore",
+          "parameters": {
+            "equipmentInstances": [
+              {
+                "HeatToleranceIncrease": 8,
+                "Name": "宇航服隔热",
+                "ColdToleranceIncrease": 8,
+                "$concreteType": "EquipmentInstance_ThermalInsulation"
+              }
+            ]
+          },
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "id": "装备存储模块",
+          "enabled": true
+        }
+      }
+    },
+    {
+      "id": "PressureSuit_Torso",
+      "parent": "Equipment_Base",
+      "gameName": "耐压防护服",
+      "description": "普通防护服扩展安全气压范围，可与其它独立防护来源叠加；不提供密封供氧。",
+      "durability": 150,
+      "maxDurability": 150,
+      "amount": 1,
+      "weight": 4,
+      "volume": 8,
+      "stackable": false,
+      "canBePickedUp": true,
+      "tags": [
+        "Equipment",
+        "EquipmentSlot.TorsoOuter",
+        "InventoryGroup.Chemical"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]",
+        "color": {
+          "b": 0.65,
+          "r": 0.75,
+          "g": 0.8,
+          "a": 1
+        }
+      },
+      "modules": {
+        "Mod_EquipmentStore": {
+          "prefab": "Mod_EquipmentStore",
+          "parameters": {
+            "equipmentInstances": [
+              {
+                "Name": "耐压防护",
+                "$concreteType": "EquipmentInstance_PressureProtection",
+                "LowPressureToleranceIncreaseKPa": 20,
+                "HighPressureToleranceIncreaseKPa": 200
+              },
+              {
+                "HeatToleranceIncrease": 12,
+                "Name": "隔热防护",
+                "ColdToleranceIncrease": 12,
+                "$concreteType": "EquipmentInstance_ThermalInsulation"
+              }
+            ]
+          },
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "id": "装备存储模块",
+          "enabled": true
+        }
+      }
+    },
+    {
+      "id": "LowPressureSuit_Torso",
+      "parent": "PressureSuit_Torso",
+      "gameName": "低压防护服",
+      "description": "被动扩展低压耐受45kPa、高压耐受0kPa；穿脱时按独立装备来源生效。",
+      "modules": {
+        "Mod_EquipmentStore": {
+          "parameters": {
+            "equipmentInstances": [
+              {
+                "HighPressureToleranceIncreaseKPa": 0,
+                "LowPressureToleranceIncreaseKPa": 45,
+                "$concreteType": "EquipmentInstance_PressureProtection",
+                "Name": "低压防护服"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "HighPressureSuit_Torso",
+      "parent": "PressureSuit_Torso",
+      "gameName": "高压防护服",
+      "description": "被动扩展低压耐受0kPa、高压耐受350kPa；穿脱时按独立装备来源生效。",
+      "modules": {
+        "Mod_EquipmentStore": {
+          "parameters": {
+            "equipmentInstances": [
+              {
+                "HighPressureToleranceIncreaseKPa": 350,
+                "LowPressureToleranceIncreaseKPa": 0,
+                "$concreteType": "EquipmentInstance_PressureProtection",
+                "Name": "高压防护服"
+              }
+            ]
+          }
+        }
+      }
+    }
+  ],
+  "schemaVersion": 1
+}

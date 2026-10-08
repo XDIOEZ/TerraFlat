@@ -48,6 +48,7 @@ public static partial class MachineWorld
         if (!dirty) return;
         graph.Rebuild(nodes.Values);
         electricalGraph?.Rebuild(nodes.Values);
+        RebuildFluidNetworks();
         RebuildCombatSearchPadding();
         dirty = false;
         foreach (MachineEntity conveyor in graph.ConveyorChanges)
@@ -187,6 +188,7 @@ public static partial class MachineWorld
         }
         if (electricalDemandProviders.TryGetValue(electrical.DemandProvider ?? string.Empty, out var provider))
             return Mathf.Clamp01(provider(node));
+        if (electrical.DemandProvider == "fluid") return GetFluidElectricalDemand(node);
         if (electrical.DemandProvider == "motor")
             return node.Network != null && node.Network.TorqueDemand > 0f ? 1f : 0f;
         if (!string.IsNullOrWhiteSpace(electrical.DemandProvider)) return 0f;

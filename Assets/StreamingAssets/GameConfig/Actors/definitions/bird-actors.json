@@ -62,6 +62,11 @@
           },
           "parameters": {
             "groundSpeed": 0.5,
+            "enableBackpackSeedTaking": true,
+            "backpackSeedChance": 0.15,
+            "backpackSeedCooldown": 30.0,
+            "backpackSeedReach": 1.5,
+            "backpackSeedHungerRate": 0.7,
             "takeoffRunSpeed": 2.6,
             "takeoffRunDistance": 1.2,
             "flightSpeed": 6.3,

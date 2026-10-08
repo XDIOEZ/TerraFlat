@@ -59,6 +59,7 @@ public static class MachineLogicRegistry
         Add("fire-drill", typeof(Mod_FireDrill), entity => new FireDrillLogic(entity));
         Add("mortar", typeof(Mod_Mortar), entity => new MortarLogic(entity));
         Add("vessel", typeof(Mod_WaterVessel), entity => new VesselLogic(entity));
+        Add("fluid", null, entity => new FluidMachineLogic(entity));
     }
 
     private static void Add(string id, Type authoring, Func<MachineEntity, MachineLogic> factory)

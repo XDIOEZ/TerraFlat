@@ -53,6 +53,7 @@ public class FurnaceLogic : MachineLogic
     private TemperatureMgr temperatureManager;
     private Player productionActor;
     private RuntimeItemReactionDefinition activeReaction;
+    private float oxygenHeatBonus;
     #endregion
 
     #region 生命周期
@@ -202,7 +203,8 @@ public class FurnaceLogic : MachineLogic
     public virtual float CalculateMaximumTemperature(float airflow)
     {
         float baseLimit = Data.MaxTemperature > 0f ? Mathf.Min(Data.MaxTemperature, Data.MaxTemperatureLimit) : Data.MaxTemperatureLimit;
-        return baseLimit + Mathf.Clamp01(airflow) * MachineCatalog.Settings.BellowsHeatBonus;
+        float bellowsBonus = Mathf.Clamp01(airflow) * MachineCatalog.Settings.BellowsHeatBonus;
+        return Mathf.Min(Data.MaxTemperatureLimit + bellowsBonus, baseLimit + bellowsBonus + oxygenHeatBonus);
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
@@ -383,6 +385,8 @@ public class FurnaceLogic : MachineLogic
     [MethodImpl(MethodImplOptions.NoInlining)]
     public virtual void HeatAndProcess(float seconds)
     {
+        oxygenHeatBonus = MachineWorld.ConsumeFurnaceOxygen(Entity, seconds,
+            seconds * burnSpeed * GameDifficultyService.Current.Production.FuelConsumptionMultiplier);
         bool hasInput = false;
         foreach (ItemSlot slot in Input.Data.itemSlots) hasInput |= slot?.itemData != null;
         float airflow = AcceptsAirflow ? Entity.Airflow : 0f;

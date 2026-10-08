@@ -7,13 +7,13 @@ using System.Globalization;
 using UnityEngine;
 
 /// <summary>陶罐与木桶是同一种容器领域；液体和可选固体库存随机器保存，手持继续复用共享模块载荷。</summary>
-public class VesselLogic : MachineLogic, ILiquidVessel, IVesselContents
+public class VesselLogic : MachineLogic, ILiquidVessel, IVesselContents, IContainerPortProvider
 {
     #region 容器状态
     public LiquidContainerState Data { get; private set; }
     public int Capacity { get; }
     public float Reach { get; }
-    public LiquidDefinition CurrentLiquid => GameRes.ExistingInstance?.GetLiquidDefinition(Data.LiquidId);
+    public LiquidDefinition CurrentLiquid => MixedLiquidContents.DisplayLiquid(Data);
     public ItemData ItemData => Entity.Snapshot;
     public Item Item => null;
     public MachineEntity Machine => Entity;
@@ -25,6 +25,9 @@ public class VesselLogic : MachineLogic, ILiquidVessel, IVesselContents
     private bool reactionDirty = true;
     private bool committing;
     private float nextRemotePour;
+    private readonly List<IContainerPort> containerPorts = new();
+    private readonly List<ContainerPortConfiguration> containerPortConfigurations;
+    private long portRegistryGeneration;
 
     public VesselLogic(MachineEntity entity) : base(entity)
     {
@@ -35,6 +38,10 @@ public class VesselLogic : MachineLogic, ILiquidVessel, IVesselContents
         Data = MachineModuleState.Read<LiquidContainerState>(entity.Snapshot, Mod_WaterVessel.ModuleId) ?? new LiquidContainerState();
         Mod_WaterVessel.NormalizeStoredAmount(Data);
         Mod_WaterVessel.Validate(Data, Capacity);
+        var portConfigs = source.ContainerPorts;
+        if (config.Parameters[nameof(Mod_WaterVessel.ContainerPorts)] != null)
+            portConfigs = ContainerPortConfigurationValidator.Read(config.Parameters[nameof(Mod_WaterVessel.ContainerPorts)]);
+        containerPortConfigurations = portConfigs;
         if (entity.Definition.Content.Has<Mod_VesselContents>())
         {
             Inventory_Data contentsData = MachineInventory.NewData("木桶内物品", 6);
@@ -53,6 +60,20 @@ public class VesselLogic : MachineLogic, ILiquidVessel, IVesselContents
            actor.gameObject.scene.name == MachineWorld.WorldKey &&
            actor.itemMods?.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp)?.Hp > 0f &&
            WorldTopologyRuntime.ShortestDelta(actor.transform.position, Entity.Position).sqrMagnitude <= Reach * Reach;
+
+    public void CollectContainerPorts(List<IContainerPort> ports)
+    {
+        if (!MachineWorld.Contains(Entity) || !ReferenceEquals(Entity.Logic, this)) return;
+        if (portRegistryGeneration != ContainerPortFactoryRegistry.Generation)
+        {
+            containerPorts.Clear(); portRegistryGeneration = ContainerPortFactoryRegistry.Generation;
+            foreach (var config in containerPortConfigurations)
+                containerPorts.Add(ContainerPortFactoryRegistry.Create(config.Type,
+                    new ContainerPortFactoryContext(null, null, null, this, config,
+                        () => MachineWorld.Contains(Entity) && ReferenceEquals(Entity.Logic, this))));
+        }
+        ports.AddRange(containerPorts);
+    }
 
     public bool Drink(Item actor) => GameNetwork.HasStateAuthority ? LiquidVesselOperations.Drink(this, actor)
         : CanOperate(actor) && MachineWorld.RequestOperation(Entity, "vessel.drink", "", actor as Player);
@@ -170,7 +191,7 @@ public class VesselLogic : MachineLogic, ILiquidVessel, IVesselContents
     [MethodImpl(MethodImplOptions.NoInlining)]
     public virtual bool TryReact()
     {
-        if (!GameNetwork.HasStateAuthority || CurrentLiquid == null || Contents == null) return false;
+        if (!GameNetwork.HasStateAuthority || CurrentLiquid == null || Contents == null || Data.Composition.Count != 1 || Data.PendingOutputs.Count != 0) return false;
         foreach (LiquidIngredientReaction reaction in CurrentLiquid.IngredientReactions)
         {
             if (reaction == null || reaction.Amount < 1 || Data.LiquidId == reaction.ResultLiquidId ||
@@ -188,15 +209,14 @@ public class VesselLogic : MachineLogic, ILiquidVessel, IVesselContents
             if (needed > 0) continue;
             var recipe = new RuntimeRecipe { Id = "machine.vessel." + reaction.ResultLiquidId };
             var match = new CraftingRecipeMatch(recipe, false, consumed);
-            string previous = Data.LiquidId;
-            float previousProgress = Data.ProcessingSeconds;
+            LiquidContainerState previous = MixedLiquidContents.Clone(Data);
             committing = true;
             CraftingResult result;
             try
             {
                 result = CraftingService.ApplyInputEffect(Contents, match,
-                    () => { Data.LiquidId = reaction.ResultLiquidId; Data.ProcessingSeconds = 0f; },
-                    () => { Data.LiquidId = previous; Data.ProcessingSeconds = previousProgress; });
+                    () => { MixedLiquidContents.TransformSpecies(Data, Data.LiquidId, reaction.ResultLiquidId); Data.ProcessingSeconds = 0f; },
+                    () => { MixedLiquidContents.Restore(Data, previous); });
             }
             finally { committing = false; }
             if (!result.Success) return false;

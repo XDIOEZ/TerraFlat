@@ -55,6 +55,54 @@ MonoBehaviour:
     BasePanelIsOpen: 1
   InventoryInstances:
   - rid: 4513346371909844994
+  ContainerPorts:
+  - Version: 1
+    Id: bag-manual
+    Type: core:inventory
+    InventoryId: "\u80CC\u5305\u6A21\u5757"
+    Direction: 3
+    Access: 1
+    Reach: 2
+    WholeBatch: 0
+    OwnerOnly: 1
+    ItemIds: []
+    ItemTags: []
+    LiquidIds: []
+    SlotIndices: []
+  - Version: 1
+    Id: bag-seeds
+    Type: core:inventory
+    InventoryId: "\u80CC\u5305\u6A21\u5757"
+    Direction: 2
+    Access: 2
+    Reach: 1.5
+    WholeBatch: 0
+    OwnerOnly: 0
+    ItemIds: []
+    ItemTags:
+    - Seed
+    LiquidIds: []
+    SlotIndices:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    - 6
+    - 7
+    - 8
+    - 9
+    - 10
+    - 11
+    - 12
+    - 13
+    - 14
+    - 15
+    - 16
+    - 17
+    - 18
+    - 19
   inventoryBasePanelCache:
     _serializedList: []
   ToggleActionName: B

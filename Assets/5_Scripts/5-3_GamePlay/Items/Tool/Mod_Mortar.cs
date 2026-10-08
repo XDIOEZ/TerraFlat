@@ -294,6 +294,7 @@ public sealed class Mod_Mortar : Module, IInteractable, IInventory
             // 液体仍在热源内时不进入被动冷却；热源当前温度就是坩埚液体温度。
             liquidState.Temperature = Mathf.Max(0f, temperature);
             liquidState.ProcessingSeconds = 0f;
+            liquidState.Revision++;
             liquidStorage.WriteData(liquidState);
         }
 
@@ -330,9 +331,7 @@ public sealed class Mod_Mortar : Module, IInteractable, IInventory
         {
             float materialTemperature = ItemMatterRuntime.GetMinimumConsumedTemperature(
                 materialInventory, reactionMatch, temperature);
-            if (reaction.TemperatureMatches(materialTemperature) &&
-                (!hasLiquid || string.Equals(reaction.LiquidOutput.LiquidId, liquidState.LiquidId,
-                    StringComparison.OrdinalIgnoreCase)))
+            if (reaction.TemperatureMatches(materialTemperature))
             {
                 selectedReaction = reaction;
                 selectedRecipe = reaction.Recipe;
@@ -494,21 +493,18 @@ public sealed class Mod_Mortar : Module, IInteractable, IInventory
 
         if (vessel.Data.Temperature > 0f)
             vessel.Data.Temperature = Mathf.Max(0f, vessel.Data.Temperature - deltaTime);
-        LiquidSolidification solidification = vessel.CurrentLiquid?.Solidification;
-        if (solidification == null && vessel.Data.Temperature <= 0f)
-            return;
-        if (solidification != null && vessel.Data.Temperature < solidification.MeltingPoint)
+        vessel.Data.Revision++;
+        foreach (string id in new List<string>(vessel.Data.Composition.Keys))
         {
-            if (!TrySolidifyCrucible(vessel, solidification))
-                vessel.CommitExternalState();
-            return;
+            LiquidSolidification solidification = GameRes.ExistingInstance.GetLiquidDefinition(id)?.Solidification;
+            if (solidification != null && vessel.Data.Temperature < solidification.MeltingPoint)
+                TrySolidifyCrucible(vessel, id, solidification);
         }
-
         vessel.CommitExternalState();
     }
 
     /// <summary>把一份已冷却液体原子转换成固体，并保留坩埚中其他固体材料。</summary>
-    private bool TrySolidifyCrucible(Mod_WaterVessel vessel, LiquidSolidification solidification)
+    private bool TrySolidifyCrucible(Mod_WaterVessel vessel, string liquidId, LiquidSolidification solidification)
     {
         if (vessel == null || solidification == null || state?.Bowl?.itemSlots == null ||
             GameRes.ExistingInstance == null)
@@ -522,8 +518,10 @@ public sealed class Mod_Mortar : Module, IInteractable, IInventory
         };
         materialInventory.Data.SetUnlimitedSlots(false);
 
+        float amount = LiquidVesselOperations.Quantize(MixedLiquidContents.GetAmount(vessel.Data, liquidId) - MixedLiquidContents.Reserved(vessel.Data, liquidId));
+        if (amount <= 0f) return false;
         ItemData output = GameRes.ExistingInstance.CreateItemData(solidification.OutputItemId);
-        output.Stack.Amount = Mathf.Max(1, Mathf.RoundToInt(vessel.Data.Amount * solidification.OutputAmount));
+        output.Stack.Amount = Mathf.Max(1, Mathf.RoundToInt(amount * solidification.OutputAmount));
         if (!CraftingTransaction.TryCreateGrant(
                 materialInventory,
                 new[] { output },
@@ -534,16 +532,14 @@ public sealed class Mod_Mortar : Module, IInteractable, IInventory
         if (!transaction.Commit(out _))
             return false;
 
-        transaction.Complete();
-        vessel.Data.LiquidId = null;
-        vessel.Data.Amount = 0f;
-        vessel.Data.Temperature = 0f;
-        vessel.Data.ProcessingSeconds = 0f;
+        if (!MixedLiquidContents.RemoveSpecies(vessel.Data, liquidId, amount))
+        { transaction.Rollback(); return false; }
         vessel.CommitExternalState();
         state.Bowl = materialInventory.Data;
         bowl.Data = state.Bowl;
         bowl.Data.SetUnlimitedSlots(false);
         Save();
+        transaction.Complete();
         view?.SyncSlots(bowl);
         return true;
     }

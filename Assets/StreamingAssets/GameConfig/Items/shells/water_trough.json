@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "items": [
+    {
+      "id": "WaterTrough",
+      "parent": "WoodenBarrel",
+      "gameName": "水槽",
+      "description": "可放置和拆回的木制水槽，容纳64份混合液体；不放固体物品。每次按真实比例抽取一种液体，剩余不足一份也能倒出或输送。",
+      "weight": 8,
+      "volume": 16,
+      "stackable": false,
+      "modules": {
+        "建筑模块": {
+          "data": {
+            "BitData": "{\"Version\":3,\"State\":0,\"Role\":0,\"BuildingPrefabId\":\"WaterTrough_Building\",\"SummonerPrefabId\":\"WaterTrough\",\"SharedModuleIds\":[\"Mod_WaterVessel\"]}",
+            "Type": 0
+          }
+        },
+        "vessel": {
+          "parameters": {
+            "capacity": 64,
+            "ContainerPorts": [
+              { "Version": 1, "Id": "liquids", "Type": "core:liquid_vessel", "Direction": 3, "Access": 13, "Reach": 2 }
+            ]
+          }
+        },
+        "contents": { "enabled": false }
+      }
+    },
+    {
+      "id": "WaterTrough_Building",
+      "parent": "WoodenBarrel_Building",
+      "gameName": "水槽-建筑",
+      "description": "放在地面的64份混合液体水槽，可接入液体泵或出气口；装拆时保留组分、温度、每口待输出批次和耐久。",
+      "weight": 8,
+      "volume": 16,
+      "stackable": false,
+      "modules": {
+        "建筑模块": {
+          "data": {
+            "BitData": "{\"Version\":3,\"State\":0,\"Role\":1,\"BuildingPrefabId\":\"WaterTrough_Building\",\"SummonerPrefabId\":\"WaterTrough\",\"SharedModuleIds\":[\"Mod_WaterVessel\"]}",
+            "Type": 0
+          }
+        },
+        "vessel": {
+          "parameters": {
+            "capacity": 64,
+            "ContainerPorts": [
+              { "Version": 1, "Id": "liquids", "Type": "core:liquid_vessel", "Direction": 3, "Access": 13, "Reach": 2 }
+            ]
+          }
+        },
+        "contents": { "enabled": false }
+      }
+    }
+  ]
+}

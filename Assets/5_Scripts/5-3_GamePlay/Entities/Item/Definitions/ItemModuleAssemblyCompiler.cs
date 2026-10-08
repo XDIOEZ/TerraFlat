@@ -107,7 +107,9 @@ public sealed class RuntimeItemModuleAssemblyPlan
             foreach (Module extra in components)
                 if (extra != null && extra != module)
                     ItemModuleAssemblyCompiler.RetireUnconfiguredModule(extra);
-            if (ModRuntimeManager.Instance != null && ModRuntimeManager.Instance.IsRuntimeTemplate(ModulePrefab))
+            GameRes resources = GameRes.ExistingInstance;
+            if (resources != null && resources.IsRuntimeModuleTemplate(ModulePrefab) ||
+                ModRuntimeManager.Instance != null && ModRuntimeManager.Instance.IsRuntimeTemplate(ModulePrefab))
                 instance.SetActive(true);
             return module;
         }

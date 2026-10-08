@@ -713,7 +713,7 @@
     {
       "id": "Mod_Meatrack",
       "parent": "BuildingBody_Base",
-      "sourcePrefab": "Assets/2_Prefabs/World/Buildings/Mod_Meatrack.prefab",
+      "sourcePrefab": "Assets/2_Prefabs/World/Buildings/Meatrack.prefab",
       "gameName": "晾肉架-建筑",
       "description": "用于晾晒和加工肉类的架子。",
       "durability": 1.0,

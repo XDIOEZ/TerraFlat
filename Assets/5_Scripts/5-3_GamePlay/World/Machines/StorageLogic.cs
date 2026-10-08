@@ -13,11 +13,14 @@ public partial class MachineStorageState
 }
 
 /// <summary>箱子只维护库存，不分配加工器、扭矩状态或逐物品 GameObject。</summary>
-public class StorageLogic : MachineLogic
+public class StorageLogic : MachineLogic, IContainerPortProvider
 {
     #region 储物设施
     public MachineStorageState State { get; }
     public override GameObject PanelPrefab => inventories.Count > 0 ? inventories[0].InventoryPanel_Prefab : null;
+    private readonly List<IContainerPort> containerPorts = new();
+    private readonly List<(int Index, ContainerPortConfiguration Config)> portBindings = new();
+    private long portRegistryGeneration;
 
     public StorageLogic(MachineEntity entity) : base(entity)
     {
@@ -52,6 +55,29 @@ public class StorageLogic : MachineLogic
                 inventory.Data.IsInjected = true;
             }
         }
+        var portConfigs = authoring.ContainerPorts;
+        if (config.Parameters[nameof(Mod_Inventory.ContainerPorts)] != null)
+            portConfigs = ContainerPortConfigurationValidator.Read(config.Parameters[nameof(Mod_Inventory.ContainerPorts)]);
+        foreach (var port in portConfigs)
+        {
+            int index = authoring.InventoryInstances.FindIndex(template => Mod_Inventory.GetInventoryKey(template, authoring.InventoryInstances.IndexOf(template)) == port.InventoryId);
+            if (index < 0) throw new InvalidOperationException($"储物端口 {port.Id} 的库存不存在：{port.InventoryId}");
+            portBindings.Add((index, port));
+        }
+    }
+
+    public void CollectContainerPorts(List<IContainerPort> ports)
+    {
+        if (!MachineWorld.Contains(Entity) || !ReferenceEquals(Entity.Logic, this)) return;
+        if (portRegistryGeneration != ContainerPortFactoryRegistry.Generation)
+        {
+            containerPorts.Clear(); portRegistryGeneration = ContainerPortFactoryRegistry.Generation;
+            foreach (var binding in portBindings)
+                containerPorts.Add(ContainerPortFactoryRegistry.Create(binding.Config.Type,
+                    new ContainerPortFactoryContext(null, null, inventories[binding.Index], null, binding.Config,
+                        () => MachineWorld.Contains(Entity) && ReferenceEquals(Entity.Logic, this), () => { Capture(); NotifyChanged(true); })));
+        }
+        ports.AddRange(containerPorts);
     }
 
     public override void Capture() => MachinePersistence.Write(Entity.Snapshot, "storage", State);
