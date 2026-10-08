@@ -135,7 +135,7 @@ public sealed class PlayerCreationTemplateConfig
         ApplyStamina(player.GetComponentInChildren<Mod_Stamina>(true));
 
         ItemData templateData = player.Get_NewItemData();
-        player.Data.ModuleDataDic = templateData.ModuleDataDic;
+        player.Data.ModuleDataDic = templateData.DetachModuleData();
     }
 
     private void ApplyCore(Data_Player data)

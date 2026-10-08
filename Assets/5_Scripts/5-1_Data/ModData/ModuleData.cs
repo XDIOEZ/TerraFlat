@@ -2,6 +2,8 @@ using MemoryPack;
 using Newtonsoft.Json;
 using UnityEngine;
 using UnityEngine.Serialization;
+using System;
+using FastCloner.Code;
 
 [MemoryPackUnion(1, typeof(Ex_ModData))]
 [MemoryPackUnion(2, typeof(Inventory_ModuleData))]
@@ -21,7 +23,22 @@ public abstract partial class ModuleData
     public string ModuleId;
 
     [Tooltip("模块是否启用；由 Module 框架统一控制运行态与 Tick。")]
-    public bool Enabled = true;
+    [SerializeField, FormerlySerializedAs("Enabled"), MemoryPackIgnore, JsonIgnore]
+    private bool enabled = true;
+
+    public bool Enabled
+    {
+        get => enabled;
+        set
+        {
+            if (enabled == value) return;
+            enabled = value;
+            RuntimeStructureChanged?.Invoke(this);
+        }
+    }
+
+    [field: NonSerialized, MemoryPackIgnore, JsonIgnore, FastClonerIgnore]
+    internal event Action<ModuleData> RuntimeStructureChanged;
     public ModuleType Type;
 
     // 旧代码别名仅转发到唯一字段，不再形成第二套模块身份。

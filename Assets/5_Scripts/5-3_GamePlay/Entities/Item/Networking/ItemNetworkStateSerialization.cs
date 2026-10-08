@@ -44,13 +44,35 @@ public static class ItemNetworkStateSerialization
 
     public static byte[] Capture(Item item, bool ignoreTransform)
     {
-        if (item == null || item.itemData == null)
-            return Array.Empty<byte>();
+        ItemNetworkCaptureCache.CaptureResult result = CaptureVersioned(item, ignoreTransform);
+        if (result.Payload == null) return Array.Empty<byte>();
+        // 公共调用方仍拿独立缓冲；协调器内部按只读约定复用缓存。
+        return result.Reusable ? (byte[])result.Payload.Clone() : result.Payload;
+    }
 
+    internal static ItemNetworkCaptureCache.CaptureResult CaptureVersioned(Item item, bool ignoreTransform)
+    {
+        if (item == null || item.itemData == null)
+            return default;
+
+        ItemData data = item.itemData;
+        uint generation = item.RuntimeGeneration;
         item.ModuleSave();
-        // 捕获阶段直接生成脱离对象的公开状态，不暂改活跃数据或位姿。
-        return SerializeSnapshot(ItemInstanceSnapshot.Capture(item.itemData, !ignoreTransform,
-            item is Player, MachineInventoryCommands.PublicSpecialData));
+        if (!IsCurrentItem(item, data, generation)) return default;
+        // OnSave 仍刷新模块内部状态，未变化的纯数据直接复用冻结负载。
+        ItemNetworkCaptureCache.CaptureResult result = ItemNetworkCaptureCache.Capture(item, ignoreTransform);
+        if (IsCurrentItem(item, data, generation)) return result;
+        ItemNetworkCaptureCache.Invalidate(item);
+        return default;
+    }
+
+    /// <summary>网络发送端借用只读负载；修改或保留可写副本须使用公共 Capture。</summary>
+    public static byte[] CaptureCachedNetworkPayload(Item item, bool ignoreTransform, out ulong version, out uint hash)
+    {
+        ItemNetworkCaptureCache.CaptureResult result = CaptureVersioned(item, ignoreTransform);
+        version = result.Version;
+        hash = result.Hash;
+        return result.Payload ?? Array.Empty<byte>();
     }
 
     public static bool IsValidPayload(byte[] payload)
@@ -217,7 +239,7 @@ public static class ItemNetworkStateSerialization
         }
     }
 
-    private static byte[] SerializeSnapshot(ItemInstanceSnapshot snapshot)
+    internal static byte[] SerializeSnapshot(ItemInstanceSnapshot snapshot)
     {
         snapshot.Validate();
         byte[] body = MemoryPackSerializer.Serialize(snapshot);
@@ -275,6 +297,7 @@ public static class ItemNetworkStateSerialization
         {
             uint itemGeneration = target.RuntimeGeneration;
             baseline = CaptureRuntimeStateBaseline(target);
+            ItemNetworkCaptureCache.Invalidate(target);
             string privateState = target is Player ? current.ItemSpecialData : null;
             // 活跃实例已在生成时挂接本地定义，状态包不能重建其当前模块布局。
             incoming.RestoreTo(current, preserveTransform: true, preserveGuid: true);
@@ -308,7 +331,7 @@ public static class ItemNetworkStateSerialization
     }
 
     private static ModuleData FindModuleState(
-        Dictionary<string, ModuleData> states,
+        IReadOnlyDictionary<string, ModuleData> states,
         string stableName)
     {
         if (states == null || string.IsNullOrWhiteSpace(stableName))

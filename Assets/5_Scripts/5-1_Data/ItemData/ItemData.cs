@@ -13,6 +13,7 @@ using UnityEngine.UI;
 using Sirenix.OdinInspector;
 using Newtonsoft.Json;
 using FastCloner.Code;
+using UnityEngine.Serialization;
 
 
 [MemoryPackUnion(4, typeof(Data_GeneralItem))]//通用物品数据
@@ -69,8 +70,50 @@ public abstract partial class ItemData
 
     [Tooltip("全局唯一标识")]
     [MemoryPackIgnore] public int Guid;
-    [ShowInInspector]
-    [MemoryPackIgnore] public Dictionary<string, ModuleData> ModuleDataDic = new();
+    [SerializeField, FormerlySerializedAs("ModuleDataDic"), MemoryPackIgnore, JsonIgnore]
+    private ModuleDataCollection moduleData = new();
+
+    [ShowInInspector, MemoryPackIgnore]
+    public ModuleDataCollection ModuleDataDic
+    {
+        get { moduleData?.BindOwner(this); return moduleData; }
+        set
+        {
+            if (ReferenceEquals(moduleData, value)) return;
+            moduleData?.UnbindOwner(this);
+            moduleData = value?.ForOwner(this);
+            moduleData?.BindOwner(this);
+            NotifyModuleStructureChanged();
+        }
+    }
+
+    #region 运行态结构版本
+
+    [NonSerialized, MemoryPackIgnore, JsonIgnore, FastClonerIgnore]
+    private uint moduleStructureVersion;
+
+    [MemoryPackIgnore, JsonIgnore]
+    public uint ModuleStructureVersion => moduleStructureVersion;
+
+    [field: NonSerialized, MemoryPackIgnore, JsonIgnore, FastClonerIgnore]
+    public event Action<ItemData> ModuleStructureChanged;
+
+    // 只有模块增删、替换与启用变化会使库存调度登记失效。
+    public void NotifyModuleStructureChanged()
+    {
+        unchecked { moduleStructureVersion++; }
+        ModuleStructureChanged?.Invoke(this);
+    }
+
+    // 临时模板移交独立集合时先解绑来源，避免默认实例被模块事件长期保活。
+    public ModuleDataCollection DetachModuleData()
+    {
+        ModuleDataCollection detached = ModuleDataDic;
+        ModuleDataDic = null;
+        return detached;
+    }
+
+    #endregion
 
     // Unity 配置外壳不再进入存档，持久化统一使用实例快照。
     [Tooltip("实体所属的阵营/队伍 ID；为空时由运行时兼容规则推导")]
@@ -226,7 +269,4 @@ public sealed class ItemPhysicsRuntimeState
     public int LastContactItemGuid;
     public uint ContactVersion;
 }
-
-
-
 

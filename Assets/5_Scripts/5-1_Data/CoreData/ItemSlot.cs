@@ -1,18 +1,40 @@
+using System;
 using System.Collections.Generic;
 using FastCloner.Code;
 using MemoryPack;
 using Newtonsoft.Json;
 using Sirenix.OdinInspector;
 using UltEvents;
+using UnityEngine;
+using UnityEngine.Serialization;
 
 [System.Serializable]
 [MemoryPackable]
 public partial class ItemSlot
 {
-    //TODO 设置插槽所属
-    // 当前插槽中的物品数据   
+    #region 运行时内容结构
+
+    [SerializeField, FormerlySerializedAs("itemData"), MemoryPackIgnore, JsonIgnore]
+    private ItemData _itemData;
+
     [ShowInInspector]
-    public ItemData itemData = null; // 关键修改
+    public ItemData itemData
+    {
+        get => _itemData;
+        set
+        {
+            if (ReferenceEquals(_itemData, value))
+                return;
+            _itemData = value;
+            ItemReferenceChanged?.Invoke(this);
+        }
+    }
+
+    // 结构通知独立于可被 UI 清空的刷新事件，纯数值修改不触发重新登记。
+    [field: NonSerialized, MemoryPackIgnore, FastClonerIgnore, JsonIgnore]
+    public event Action<ItemSlot> ItemReferenceChanged;
+
+    #endregion
 
     public List<string> CanAcceptTags = new List<string>();
 

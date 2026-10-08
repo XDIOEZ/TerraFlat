@@ -1,5 +1,6 @@
 using FastCloner.Code;
 using MemoryPack;
+using Newtonsoft.Json;
 using Sirenix.OdinInspector;
 using System;
 using System.Collections.Generic;
@@ -72,6 +73,88 @@ public partial class Inventory_Data
         Event_OnDataChanged ??= new UltEvent<ItemSlot>();
         Event_OnDataChanged_TwoSlots ??= new UltEvent<ItemSlot, ItemSlot>();
     }
+
+    #region 运行时内容结构
+
+    [NonSerialized, MemoryPackIgnore, FastClonerIgnore, JsonIgnore]
+    private uint contentStructureRevision;
+    [NonSerialized, MemoryPackIgnore, FastClonerIgnore, JsonIgnore]
+    private List<ItemSlot> observedSlotSource;
+    [NonSerialized, MemoryPackIgnore, FastClonerIgnore, JsonIgnore]
+    private List<ItemSlot> observedRuntimeSlots;
+    [NonSerialized, MemoryPackIgnore, FastClonerIgnore, JsonIgnore]
+    private List<ItemSlot>.Enumerator observedSlotVersion;
+    [NonSerialized, MemoryPackIgnore, FastClonerIgnore, JsonIgnore]
+    private bool hasObservedSlotVersion;
+
+    [field: NonSerialized, MemoryPackIgnore, FastClonerIgnore, JsonIgnore]
+    public event Action<Inventory_Data> RuntimeStructureChanged;
+
+    [MemoryPackIgnore, FastClonerIgnore, JsonIgnore]
+    public uint ContentStructureRevision
+    {
+        get
+        {
+            SynchronizeRuntimeSlotBindings();
+            return contentStructureRevision;
+        }
+    }
+
+    /// <summary>批量改变槽位布局后可显式发布结构变化，不刷新界面或业务事件。</summary>
+    public void NotifySlotsChanged()
+    {
+        hasObservedSlotVersion = false;
+        SynchronizeRuntimeSlotBindings();
+    }
+
+    private void SynchronizeRuntimeSlotBindings()
+    {
+        if (hasObservedSlotVersion && ReferenceEquals(observedSlotSource, itemSlots))
+        {
+            if (itemSlots == null)
+                return;
+            try
+            {
+                // 复制枚举器的版本守卫能发现同数量替换，日常检查只读取一个槽位。
+                List<ItemSlot>.Enumerator probe = observedSlotVersion;
+                probe.MoveNext();
+                return;
+            }
+            catch (InvalidOperationException)
+            {
+            }
+        }
+
+        if (observedRuntimeSlots != null)
+            foreach (ItemSlot slot in observedRuntimeSlots)
+                if (slot != null) slot.ItemReferenceChanged -= HandleSlotReferenceChanged;
+        observedRuntimeSlots ??= new List<ItemSlot>();
+        observedRuntimeSlots.Clear();
+        observedSlotSource = itemSlots;
+        if (itemSlots != null)
+        {
+            observedSlotVersion = itemSlots.GetEnumerator();
+            foreach (ItemSlot slot in itemSlots)
+            {
+                if (slot == null)
+                    continue;
+                observedRuntimeSlots.Add(slot);
+                slot.ItemReferenceChanged += HandleSlotReferenceChanged;
+            }
+        }
+        hasObservedSlotVersion = true;
+        PublishRuntimeStructureChanged();
+    }
+
+    private void HandleSlotReferenceChanged(ItemSlot slot) => PublishRuntimeStructureChanged();
+
+    private void PublishRuntimeStructureChanged()
+    {
+        contentStructureRevision++;
+        RuntimeStructureChanged?.Invoke(this);
+    }
+
+    #endregion
 
     #region 插槽操作逻辑
 
@@ -378,7 +461,7 @@ public partial class Inventory_Data
     {
         if (inputSlotHand.itemData == null)
         {
-            var tempData = FastCloner.FastCloner.DeepClone(localSlot.itemData);
+            var tempData = CloneForStackSplit(localSlot.itemData);
             tempData.Stack.Amount = 0;
             inputSlotHand.itemData = tempData;
         }
@@ -804,7 +887,7 @@ public partial class Inventory_Data
 
     private static ItemData CloneForStackSplit(ItemData source)
     {
-        ItemData clone = FastCloner.FastCloner.DeepClone(source);
+        ItemData clone = ItemInstanceDataFactory.CloneRuntime(source);
         int newGuid;
         do
         {

@@ -40,7 +40,8 @@ public sealed partial class ItemInstanceSnapshot
     #region 捕获与恢复
 
     public static ItemInstanceSnapshot Capture(ItemData data, bool includeTransform = true,
-        bool publicPlayerState = false, Func<string, string> publicSpecialData = null)
+        bool publicPlayerState = false, Func<string, string> publicSpecialData = null,
+        Func<ModuleData, bool, ModuleInstanceSnapshot> captureModule = null)
     {
         if (data == null) throw new ArgumentNullException(nameof(data));
         var snapshot = new ItemInstanceSnapshot
@@ -70,7 +71,9 @@ public sealed partial class ItemInstanceSnapshot
                 if (module == null) continue;
                 if (string.IsNullOrWhiteSpace(pair.Key) || pair.Key != module.StableName)
                     throw new InvalidDataException($"物品 {data.IDName} 的模块稳定名与索引不一致：{pair.Key}");
-                captured[pair.Key] = ModuleInstanceSnapshot.Capture(module, publicPlayerState);
+                captured[pair.Key] = captureModule == null
+                    ? ModuleInstanceSnapshot.Capture(module, publicPlayerState)
+                    : captureModule(module, publicPlayerState);
             }
         snapshot.modules = new ModuleInstanceSnapshot[captured.Count];
         captured.Values.CopyTo(snapshot.modules, 0);

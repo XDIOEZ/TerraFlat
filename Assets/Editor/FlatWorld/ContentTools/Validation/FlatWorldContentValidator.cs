@@ -507,7 +507,7 @@ public static class FlatWorldContentValidator
         FlatWorldContentValidationReport report,
         PrefabRecord record)
     {
-        Dictionary<string, ModuleData> dataDictionary = record.Item.itemData.ModuleDataDic;
+        IReadOnlyDictionary<string, ModuleData> dataDictionary = record.Item.itemData.ModuleDataDic;
         if (dataDictionary == null)
         {
             AddError(report, "FWC-MODULE-007", record.Path, "ItemData.ModuleDataDic", "模块数据字典为空引用。", record.Item);

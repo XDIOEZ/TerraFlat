@@ -24,6 +24,7 @@ description: "Use when: 定位或修改 FlatWorld 的 Mirror/KCP 联机启动、
 - 世界/Item 快照必须版本化、可往返；生成指纹或 MOD 集合不兼容时在入世前拒绝。
 - Item 状态使用 FWI1 实例快照，捕获不得暂改活跃 ItemData、库存或 Transform；公开世界捕获上下文是线程局部作用域，不能跨 await。热快照只合并活跃实例当前配置下的状态，不迁移模块布局；未变模块不卸载，非重载/远程白名单通过 BindSnapshotData 保持生命周期，回调中回收或换代后停止处理旧实例。
 - 网络与手持库存的原位恢复共用 CaptureRuntimeStateBaseline/ApplyMergedRuntimeStates；基线必须在合并前捕获，只刷新原代际中状态变化的模块。嵌套库存恢复后仅为新冷数据补配置，禁止对既有活跃槽位再次执行整份定义 rebase。
+- `ItemNetworkCaptureCache` 先执行 ModuleSave，再读取实例/模块状态指纹；按 Item 代际、数据引用与公开上下文隔离，未变模块复用冻结快照，实例版本变化才编码。字节载荷与食物私有浮点缓存必须读实际值；MOD 可在 codec 实现 IModuleInstanceStateFingerprintProvider，未覆盖类型完整捕获。公共 Capture 返回独立缓冲，捕获不得回写活跃位姿；世界状态包不带位姿，NetworkItemPoseMessage 独立递增姿态版本，完整状态/出生包带当前姿态版本，接收端使用本机投影并拒绝旧姿态。DTO 变化须同步升级 NetworkGameplayProtocol。
 - Chunk 按观察者并集流送；本地导航窗口仍只跟随 owned 玩家。
 - 机械及工作方块以 `MachineWorld` 快照、删除消息与转速增量同步，不进入普通世界 Item 出生/状态流；完整重同步先清空客户端旧节点。服务端放置直接提交数据，拆除先发布召唤器再删除节点；客户端交互、库存转移及排序/整理只发命令，不能直接修改机器库存。具体入口见 `flatworld-machines/SKILL.md`。
 - 网络 UI 从正式 Prefab 实例化，不运行时构造；网络玩家名称节点预制在 `Assets/Resources/Networking/FlatWorldNetworkPlayer.prefab`。

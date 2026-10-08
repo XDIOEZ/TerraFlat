@@ -31,6 +31,8 @@ description: "Use when: 定位或修改 FlatWorld 的 Item/Module 组合架构�
 - 事件驱动的临时能力在空闲时返回 `Disabled`，开始、结束和延迟收尾状态切换必须调用 `MarkModuleScheduleDirty`；投掷伤害通过 `Mod_Damage.SetIdleTickSuppressed` 显式选择窗口调度，手持与动画武器仍保留完整更新，不能对普通伤害源全局降频。
 - JSON `enabled` 统一写入 `ModuleData.Enabled`，快照不保存或覆盖这个配置开关；运行中切换走 `Module.SetEnabled`，由框架负责 Load/Unload 与 Tick 参与资格，禁止各模块各自维护第二套启用状态。
 - 距离模拟档只限制 `ItemMgr` 驱动的玩法 Tick 频率，不改变模块自身更慢的 FixedInterval；以同场景最近玩家和循环世界最短距离判定，玩家、地图、手持物保持完整更新。`Owner` 不能作为免降频条件，因为在飞投射物也会保留发射者引用。范围外暂停时重置调度时钟，停用根刚体并回调 `ISimulationRangeAware` 模块释放导航运行态；重入时先恢复原 `Rigidbody2D.simulated` 值再重提目标，不能补算休眠期间的 Tick。对象池或模块卸载也须恢复刚体开关；不要把摄像机缩放当模拟距离。
+- `ItemSimulationRangeIndex` 按场景与逻辑区域共用内部判档，边界才精算；近档活动集合、中远档到期堆、停止档不逐帧遍历。移动须经 NotifyRuntimeItemMoved 刷新资格，玩家/拓扑/范围设置变化使区域失效，个体时钟与登记令牌必须保留；范围回调异常不能阻止其余模块和根刚体切换。
+- `ItemData.ModuleDataDic` 使用 ModuleDataCollection 发布增删、替换及启停的结构版本，数值写回不重建库存规则；跨宿主集合不得共享可变模块，临时模板移交先解绑来源事件。
 - 世界内 F5 经 `ItemDefinitionRuntime.RefreshLiveConfiguration` 只更新现有模块的已改变显式参数，以及仍由原定义控制的 Sprite/材质；不替换 ItemData、模块集合或调用 Load。外壳/模块结构变化与删除参数后的 Prefab 默认值由后续新实例应用，不能把旧实例伪装为已完整迁移。
 - 模块通过具名 `ApplyResourceConfiguration` 保留配置对象内部的运行态，通过 `OnResourcesReloaded` 更新派生缓存；依赖 JSON 能力字段的事件订阅也须在该回调中按当前配置解绑、重绑，不能只在 `Load` 订阅。禁止用重新 Load 代替配置刷新。生产模块更换规则列表时按产物身份保留累计时间、次数与初始化标记。
 - 原位更新发布时清空闲置物品池，并把现有活跃实例的 `PooledItemMarker.PoolingDisabled` 置为 true；只清闲置池会让旧外壳稍后回池，再污染新定义实例。

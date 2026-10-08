@@ -6,7 +6,7 @@ namespace FlatWorld.Networking.Gameplay
 {
     public static class NetworkGameplayProtocol
     {
-        public const int CurrentVersion = 12;
+        public const int CurrentVersion = 13;
         public const int SnapshotChunkBytes = 24 * 1024;
         public const int MaxSnapshotBytes = 64 * 1024 * 1024;
 
@@ -189,8 +189,11 @@ namespace FlatWorld.Networking.Gameplay
         public int ItemGuid;
         public string ItemId;
         public uint Revision;
+        public uint PoseRevision;
         public uint PayloadHash;
         public byte[] Payload;
+        public Vector3 Position;
+        public Quaternion Rotation;
         public Vector2 StartPosition;
         public Vector2 EndPosition;
         public float Duration;
@@ -272,9 +275,22 @@ namespace FlatWorld.Networking.Gameplay
         public int ItemGuid;
         public string ItemId;
         public uint Revision;
+        public uint PoseRevision;
         public uint PayloadHash;
         public byte[] Payload;
         public bool SpawnIfMissing;
+        public Vector3 Position;
+        public Quaternion Rotation;
+        public Vector3 Scale;
+    }
+
+    /// <summary>位姿独立于模块状态版本，移动实体无需重复发送库存和模块快照。</summary>
+    public struct NetworkItemPoseMessage : NetworkMessage
+    {
+        public int ItemGuid;
+        public string ItemId;
+        public uint StateRevision;
+        public uint PoseRevision;
         public Vector3 Position;
         public Quaternion Rotation;
         public Vector3 Scale;

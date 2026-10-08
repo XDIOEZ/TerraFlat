@@ -16,6 +16,17 @@ public readonly struct ModuleDataTickContext
         SlotIndex = slotIndex;
         DeltaTime = deltaTime;
         Definition = definition;
+        Scheduler = null;
+        SchedulerGeneration = 0;
+    }
+
+    internal ModuleDataTickContext(ModuleData moduleData, ItemData itemData,
+        Inventory_Data inventoryData, ItemSlot slot, int slotIndex, float deltaTime,
+        RuntimeItemDefinition definition, InventoryModuleDataScheduler scheduler, uint schedulerGeneration)
+        : this(moduleData, itemData, inventoryData, slot, slotIndex, deltaTime, definition)
+    {
+        Scheduler = scheduler;
+        SchedulerGeneration = schedulerGeneration;
     }
 
     public ModuleData ModuleData { get; }
@@ -25,6 +36,8 @@ public readonly struct ModuleDataTickContext
     public int SlotIndex { get; }
     public float DeltaTime { get; }
     public RuntimeItemDefinition Definition { get; }
+    internal InventoryModuleDataScheduler Scheduler { get; }
+    internal uint SchedulerGeneration { get; }
 }
 
 /// <summary>不依赖 Unity 组件的能力规则，共享规则只把可变状态写回上下文。</summary>
@@ -56,18 +69,22 @@ public sealed class RuntimeModuleDataRulePlan
         this.ruleIds = ruleIds;
     }
 
+    public bool HasRules => rules.Length != 0;
+
     internal bool Step(ModuleDataTickContext context)
     {
         bool handled = false;
         for (int index = 0; index < rules.Length; index++)
         {
-            if (context.Slot != null && !ReferenceEquals(context.Slot.itemData, context.ItemData))
+            if (!ModuleDataRuleRegistry.IsCurrent(context))
                 break;
             try
             {
                 IModuleDataRule rule = rules[index];
                 if (!rule.CanStep(context))
                     continue;
+                if (!ModuleDataRuleRegistry.IsCurrent(context))
+                    break;
                 handled = true;
                 rule.Step(context);
             }
@@ -104,6 +121,7 @@ public static class ModuleDataRuleRegistry
 
     private static readonly Dictionary<string, Registration[]> registrations = new(StringComparer.OrdinalIgnoreCase);
     private static readonly Dictionary<(string ModuleId, string StableName), RuntimeModuleDataRulePlan> fallbackPlans = new();
+    private static readonly Dictionary<Type, bool> dataUpdateOverrides = new();
     public static uint Revision { get; private set; }
 
     static ModuleDataRuleRegistry()
@@ -194,31 +212,81 @@ public static class ModuleDataRuleRegistry
         return new RuntimeModuleDataRulePlan(definition.ModuleId, rules.ToArray(), ruleIds.ToArray());
     }
 
-    /// <summary>库存等纯数据宿主使用同一入口，停用模块不推进规则或默认数据 Tick。</summary>
-    public static void Step(ModuleDataTickContext context)
+    /// <summary>只在结构变化时解析规则和 MOD 的旧式更新能力，不把空 DataUpdate 登记到活动集合。</summary>
+    public static bool TryGetTickPlan(ModuleData data, RuntimeItemDefinition definition,
+        out RuntimeModuleDataRulePlan plan)
     {
-        ModuleData data = context.ModuleData;
-        if (data == null || !data.Enabled || context.DeltaTime <= 0f ||
-            float.IsNaN(context.DeltaTime) || float.IsInfinity(context.DeltaTime))
-            return;
-        if (context.Slot != null && !ReferenceEquals(context.Slot.itemData, context.ItemData))
-            return;
-
-        RuntimeItemDefinition definition = context.Definition;
-        if (definition == null && context.ItemData != null && GameRes.Instance != null)
-            GameRes.Instance.TryGetItemDefinition(context.ItemData.IDName, out definition);
-        RuntimeModuleDataRulePlan plan;
+        plan = null;
+        if (data == null)
+            return false;
         if (definition == null || !definition.TryGetModuleDataRules(data.StableName, data.ModuleId, out plan))
         {
             var key = (data.ModuleId ?? string.Empty, data.StableName ?? string.Empty);
             if (!fallbackPlans.TryGetValue(key, out plan))
             {
                 plan = Compile(new RuntimeItemModuleDefinition(key.Item2, key.Item1, string.Empty, null, data.Enabled));
-                fallbackPlans.Add(key, plan);
+                fallbackPlans[key] = plan;
             }
         }
-        if (!plan.Step(context))
-            data.DataUpdate(context.DeltaTime);
+        return plan.HasRules || HasDataUpdateOverride(data.GetType());
+    }
+
+    private static bool HasDataUpdateOverride(Type type)
+    {
+        if (dataUpdateOverrides.TryGetValue(type, out bool result))
+            return result;
+        var method = type.GetMethod(nameof(ModuleData.DataUpdate), new[] { typeof(float) });
+        result = method != null && method.IsVirtual && method.DeclaringType != typeof(ModuleData) &&
+                 method.GetBaseDefinition().DeclaringType == typeof(ModuleData);
+        dataUpdateOverrides.Add(type, result);
+        return result;
+    }
+
+    internal static bool IsCurrent(ModuleDataTickContext context)
+    {
+        ModuleData data = context.ModuleData;
+        if (data == null || !data.Enabled)
+            return false;
+        if (context.Scheduler != null && !context.Scheduler.IsCurrentHost(context.InventoryData, context.SchedulerGeneration))
+            return false;
+        if (context.Slot != null && !ReferenceEquals(context.Slot.itemData, context.ItemData))
+            return false;
+        if (context.InventoryData != null && context.Slot != null &&
+            (context.InventoryData.itemSlots == null ||
+             (uint)context.SlotIndex >= (uint)context.InventoryData.itemSlots.Count ||
+             !ReferenceEquals(context.InventoryData.itemSlots[context.SlotIndex], context.Slot)))
+            return false;
+        return context.ItemData == null ||
+               (context.ItemData.ModuleDataDic != null && !string.IsNullOrEmpty(data.StableName) &&
+                context.ItemData.ModuleDataDic.TryGetValue(data.StableName, out ModuleData current) &&
+                ReferenceEquals(current, data));
+    }
+
+    /// <summary>库存等纯数据宿主使用同一入口，停用模块不推进规则或默认数据 Tick。</summary>
+    public static void Step(ModuleDataTickContext context)
+    {
+        RuntimeItemDefinition definition = context.Definition;
+        if (definition == null && context.ItemData != null && GameRes.ExistingInstance != null)
+            GameRes.ExistingInstance.TryGetItemDefinition(context.ItemData.IDName, out definition);
+        if (TryGetTickPlan(context.ModuleData, definition, out RuntimeModuleDataRulePlan plan))
+            Step(context, plan);
+    }
+
+    internal static void Step(ModuleDataTickContext context, RuntimeModuleDataRulePlan plan)
+    {
+        if (!IsCurrent(context) || context.DeltaTime <= 0f ||
+            float.IsNaN(context.DeltaTime) || float.IsInfinity(context.DeltaTime))
+            return;
+        if (plan.Step(context) || !IsCurrent(context) || !HasDataUpdateOverride(context.ModuleData.GetType()))
+            return;
+        try
+        {
+            context.ModuleData.DataUpdate(context.DeltaTime);
+        }
+        catch (Exception exception)
+        {
+            Debug.LogError($"[ModuleDataRule] 能力 {context.ModuleData.ModuleId} 的数据更新失败：{exception}");
+        }
     }
 
     #endregion

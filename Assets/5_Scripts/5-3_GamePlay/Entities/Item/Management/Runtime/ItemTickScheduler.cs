@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using Unity.Mathematics;
 using UnityEngine;
 
 /// <summary>按更新档分桶调度，以注册版本和运行代际保护回调中的增删与对象池复用。</summary>
@@ -14,7 +13,7 @@ internal sealed class ItemTickScheduler
     private const float SlowSlice = 0.25f / BucketCount;
     private const float DormantPhysicsSlice = 0.25f / BucketCount;
 
-    private readonly struct ScheduledEntry
+    internal readonly struct ScheduledEntry
     {
         public readonly Item Item;
         public readonly uint Generation;
@@ -46,6 +45,8 @@ internal sealed class ItemTickScheduler
     private readonly List<ScheduledEntry> tickSnapshot = new(256);
     private readonly List<Item> maintenanceSnapshot = new(256);
     private readonly HashSet<Item> rebuildMembers = new(ItemReferenceComparer.Instance);
+    private readonly ItemSimulationRangeIndex simulationRanges = new();
+    private readonly List<ItemSimulationRangeIndex.Transition> rangeTransitions = new(32);
     private ulong registrationSequence;
     private ulong currentUpdateToken;
     private bool updating;
@@ -74,6 +75,8 @@ internal sealed class ItemTickScheduler
             dirtyItems.Add(item);
     }
 
+    public void NotifyMoved(Item item) => simulationRanges.NotifyMoved(item);
+
     /// <summary>换代和休眠边界重置时钟，活跃档间切换保留已累计的模拟时间。</summary>
     public void Register(Item item)
     {
@@ -92,7 +95,10 @@ internal sealed class ItemTickScheduler
         bool dormantBoundary = alreadyRegistered &&
             (existing.Tier == ItemTickTier.Dormant) != (tier == ItemTickTier.Dormant);
         if (!newGeneration && existing.Tier == tier && existing.Bucket == bucket)
+        {
+            simulationRanges.Register(existing.Entry, tier == ItemTickTier.EveryFrame);
             return;
+        }
 
         if (registrationSequence == ulong.MaxValue)
             throw new InvalidOperationException("Item Tick 注册版本已耗尽。");
@@ -112,6 +118,7 @@ internal sealed class ItemTickScheduler
             target.Add(location.Entry);
         }
         locations.Add(item, location);
+        simulationRanges.Register(location.Entry, tier == ItemTickTier.EveryFrame);
 
         if (newGeneration || dormantBoundary)
             item.ResetScheduledTickClock(tier == ItemTickTier.EveryFrame || tier == ItemTickTier.Dormant
@@ -139,6 +146,7 @@ internal sealed class ItemTickScheduler
             }
         }
         dirtyItems.Remove(item);
+        simulationRanges.Remove(item);
     }
 
     private List<ScheduledEntry> GetBucket(Location location)
@@ -169,56 +177,83 @@ internal sealed class ItemTickScheduler
         try
         {
             FlushDirty();
+            simulationRanges.BeginFrame(players, topology);
             // 本轮调度中新增或重新注册的版本统一从下一帧生效，不能进入后续低频桶。
             currentUpdateToken = registrationSequence;
-            CopyTickSnapshot(everyFrameItems);
+            ApplySimulationRangeTransitions();
             float currentTime = Time.time;
+            simulationRanges.CollectEveryFrame(tickSnapshot, currentTime);
             for (int i = 0; i < tickSnapshot.Count; i++)
             {
                 ScheduledEntry entry = tickSnapshot[i];
-                if (!CanTick(entry)) continue;
-                Item item = entry.Item;
-                if (!item.isActiveAndEnabled)
+                try
                 {
-                    item.ResetScheduledTickClock(-1f);
-                    continue;
-                }
+                    if (!CanTick(entry)) continue;
+                    Item item = entry.Item;
+                    if (!item.isActiveAndEnabled)
+                    {
+                        item.ResetScheduledTickClock(-1f);
+                        continue;
+                    }
 
-                if (!item.ShouldUseSimulationRange())
-                {
+                    if (!item.ShouldUseSimulationRange())
+                    {
+                        item.SetSimulationRangePaused(false);
+                        if (!CanTick(entry)) continue;
+                        beforeEveryFrameTick?.Invoke(item);
+                        if (CanTick(entry) && item.isActiveAndEnabled)
+                        {
+                            item.TickUnthrottledAt(currentTime, deltaTime);
+                            if (CanTick(entry))
+                            {
+                                simulationRanges.AcknowledgeTier(entry, SimulationRangeTier.Near);
+                                simulationRanges.NotifyMoved(item);
+                            }
+                        }
+                        continue;
+                    }
+
+                    SimulationRangeTier tier = ResolveTier(item);
                     if (!CanTick(entry)) continue;
-                    item.SetSimulationRangePaused(false);
+                    item.SetSimulationRangePaused(tier == SimulationRangeTier.Stopped);
                     if (!CanTick(entry)) continue;
+                    if (tier == SimulationRangeTier.Stopped)
+                    {
+                        item.ResetScheduledTickClock(-1f);
+                        continue;
+                    }
+
+                    float interval = SimulationRangePreferences.TickInterval(tier);
+                    if (!item.IsEveryFrameTickDue(currentTime, interval))
+                    {
+                        simulationRanges.AcknowledgeTier(entry, tier);
+                        continue;
+                    }
                     beforeEveryFrameTick?.Invoke(item);
                     if (CanTick(entry) && item.isActiveAndEnabled)
-                        item.TickUnthrottledAt(currentTime, deltaTime);
-                    continue;
+                    {
+                        item.TickEveryFrameAt(currentTime, interval);
+                        if (CanTick(entry))
+                        {
+                            simulationRanges.AcknowledgeTier(entry, tier);
+                            simulationRanges.NotifyMoved(item);
+                        }
+                    }
                 }
-
-                SimulationRangeTier tier = ResolveTier(item, players, topology);
-                if (!CanTick(entry)) continue;
-                item.SetSimulationRangePaused(tier == SimulationRangeTier.Stopped);
-                if (!CanTick(entry)) continue;
-                if (tier == SimulationRangeTier.Stopped)
+                finally
                 {
-                    item.ResetScheduledTickClock(-1f);
-                    continue;
+                    simulationRanges.CompleteEveryFrame(entry);
                 }
-
-                float interval = SimulationRangePreferences.TickInterval(tier);
-                if (!item.IsEveryFrameTickDue(currentTime, interval)) continue;
-                beforeEveryFrameTick?.Invoke(item);
-                if (CanTick(entry) && item.isActiveAndEnabled)
-                    item.TickEveryFrameAt(currentTime, interval);
             }
 
-            ProcessTier(fastBuckets, ref fastTimer, ref fastCursor, FastSlice, deltaTime, players, topology);
-            ProcessTier(normalBuckets, ref normalTimer, ref normalCursor, NormalSlice, deltaTime, players, topology);
-            ProcessTier(slowBuckets, ref slowTimer, ref slowCursor, SlowSlice, deltaTime, players, topology);
-            ProcessDormantPhysics(deltaTime, players, topology);
+            ProcessTier(fastBuckets, ref fastTimer, ref fastCursor, FastSlice, deltaTime);
+            ProcessTier(normalBuckets, ref normalTimer, ref normalCursor, NormalSlice, deltaTime);
+            ProcessTier(slowBuckets, ref slowTimer, ref slowCursor, SlowSlice, deltaTime);
+            ProcessDormantPhysics(deltaTime);
         }
         finally
         {
+            simulationRanges.EndFrame();
             tickSnapshot.Clear();
             updating = false;
         }
@@ -229,6 +264,7 @@ internal sealed class ItemTickScheduler
     {
         fastTimer = normalTimer = slowTimer = dormantPhysicsTimer = 0f;
         fastCursor = normalCursor = slowCursor = dormantPhysicsCursor = -1;
+        simulationRanges.Pause();
         for (int i = 0; i < runtimeItems.Count; i++)
         {
             Item item = runtimeItems[i];
@@ -292,6 +328,32 @@ internal sealed class ItemTickScheduler
         tickSnapshot.AddRange(source);
     }
 
+    private void ApplySimulationRangeTransitions()
+    {
+        simulationRanges.CopyTransitions(rangeTransitions);
+        int cursor = 0;
+        try
+        {
+            for (; cursor < rangeTransitions.Count; cursor++)
+            {
+                ItemSimulationRangeIndex.Transition transition = rangeTransitions[cursor];
+                ScheduledEntry entry = transition.Entry;
+                if (!CanTick(entry)) continue;
+                SimulationRangeTier tier = ResolveTier(entry.Item);
+                if (!CanTick(entry)) continue;
+                entry.Item.SetSimulationRangePaused(tier == SimulationRangeTier.Stopped);
+                if (CanTick(entry) && (transition.ResetClock || tier == SimulationRangeTier.Stopped))
+                    entry.Item.ResetScheduledTickClock(-1f);
+            }
+        }
+        finally
+        {
+            for (; cursor < rangeTransitions.Count; cursor++)
+                simulationRanges.DeferTransition(rangeTransitions[cursor]);
+            rangeTransitions.Clear();
+        }
+    }
+
     #endregion
 
     #region 分桶执行
@@ -313,7 +375,7 @@ internal sealed class ItemTickScheduler
     }
 
     private void ProcessTier(List<ScheduledEntry>[] buckets, ref float timer, ref int cursor,
-        float slice, float deltaTime, IReadOnlyList<Transform> players, WorldTopologyDomain topology)
+        float slice, float deltaTime)
     {
         timer += deltaTime;
         int elapsedSlices = Mathf.FloorToInt(timer / slice);
@@ -336,7 +398,7 @@ internal sealed class ItemTickScheduler
                     continue;
                 }
 
-                SimulationRangeTier tier = ResolveTier(item, players, topology);
+                SimulationRangeTier tier = ResolveTier(item);
                 if (!CanTick(entry)) continue;
                 item.SetSimulationRangePaused(tier == SimulationRangeTier.Stopped);
                 if (!CanTick(entry) || !item.isActiveAndEnabled) continue;
@@ -346,36 +408,19 @@ internal sealed class ItemTickScheduler
                     continue;
                 }
                 if (item.IsScheduledTickDue(currentTime, SimulationRangePreferences.TickInterval(tier)))
+                {
                     item.TickScheduled(currentTime);
+                    if (CanTick(entry)) simulationRanges.NotifyMoved(item);
+                }
             }
         }
         timer = elapsedSlices >= buckets.Length ? 0f : timer - slicesToProcess * slice;
     }
 
-    /// <summary>对同场景最近玩家求距离；世界尚无玩家时保留原有近距离行为。</summary>
-    private static SimulationRangeTier ResolveTier(Item item, IReadOnlyList<Transform> players,
-        WorldTopologyDomain topology)
-    {
-        if (!item.ShouldUseSimulationRange() || players == null || players.Count == 0)
-            return SimulationRangeTier.Near;
-
-        Vector3 position = item.transform.position;
-        float2 entityPosition = new(position.x, position.y);
-        float distanceSquared = float.PositiveInfinity;
-        for (int i = 0; i < players.Count; i++)
-        {
-            Transform player = players[i];
-            if (player == null || player.gameObject.scene != item.gameObject.scene) continue;
-            Vector3 playerPosition = player.position;
-            distanceSquared = Mathf.Min(distanceSquared, topology.SqrDistance(entityPosition,
-                new float2(playerPosition.x, playerPosition.y)));
-        }
-        return SimulationRangePreferences.ResolveTier(distanceSquared);
-    }
+    private SimulationRangeTier ResolveTier(Item item) => simulationRanges.ResolveTier(item);
 
     /// <summary>没有玩法 Tick 但仍带刚体的实体分桶检查，远处也要停止物理模拟。</summary>
-    private void ProcessDormantPhysics(float deltaTime, IReadOnlyList<Transform> players,
-        WorldTopologyDomain topology)
+    private void ProcessDormantPhysics(float deltaTime)
     {
         dormantPhysicsTimer += deltaTime;
         int elapsedSlices = Mathf.FloorToInt(dormantPhysicsTimer / DormantPhysicsSlice);
@@ -390,7 +435,7 @@ internal sealed class ItemTickScheduler
             {
                 ScheduledEntry entry = tickSnapshot[i];
                 if (!CanTick(entry) || !entry.Item.isActiveAndEnabled) continue;
-                SimulationRangeTier tier = ResolveTier(entry.Item, players, topology);
+                SimulationRangeTier tier = ResolveTier(entry.Item);
                 if (CanTick(entry))
                     entry.Item.SetSimulationRangePaused(tier == SimulationRangeTier.Stopped);
             }

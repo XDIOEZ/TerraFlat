@@ -189,6 +189,7 @@ public abstract class Item : MonoBehaviour
     private ItemTickTier tickTier = ItemTickTier.Dormant;
     private float lastScheduledTickTime = -1f;
     private float nextSimulationTickTime = -1f; // 每帧模块的目标时钟，避免高帧率下频率向下取整。
+    internal float NextSimulationTickTime => nextSimulationTickTime;
     private float lastSimulationInterval;
     private bool simulationRangePaused;
     private Rigidbody2D pausedSimulationBody;
@@ -522,7 +523,8 @@ public abstract class Item : MonoBehaviour
                 if (!templateData.ModuleDataDic.TryAdd(data.StableName, data))
                     throw new InvalidOperationException($"物品 {name} 存在重复 StableName：{data.StableName}。");
             }
-            prefabDataFactory = ItemInstanceDataFactory.Compile(templateData);
+            try { prefabDataFactory = ItemInstanceDataFactory.Compile(templateData); }
+            finally { templateData.DetachModuleData(); }
             prefabDataTemplate = itemData;
             prefabDataResources = resources;
             prefabDataResourceVersion = version;
@@ -872,6 +874,7 @@ public abstract class Item : MonoBehaviour
             return;
 
         itemData.inHand = inHand;
+        MarkModuleScheduleDirty();
         OnInHandChanged?.Invoke(inHand);
     }
 
@@ -963,8 +966,15 @@ public abstract class Item : MonoBehaviour
             if (module == null || !module.IsRuntimeLoaded || module.RuntimeGeneration != entry.Generation ||
                 !itemMods.HasMod(module)) continue;
             var aware = (ISimulationRangeAware)module;
-            if (paused) aware.OnSimulationRangePaused();
-            else aware.OnSimulationRangeResumed();
+            try
+            {
+                if (paused) aware.OnSimulationRangePaused();
+                else aware.OnSimulationRangeResumed();
+            }
+            catch (Exception exception)
+            {
+                Debug.LogException(exception, module);
+            }
         }
         // 模块回调可回收物品，旧轮次不能再操作新代实例的刚体。
         if (!paused || !IsInitialized || RuntimeGeneration != generation || simulationRangePaused != paused) return;

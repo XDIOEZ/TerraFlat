@@ -26,7 +26,10 @@ namespace FlatWorld.Networking.Gameplay
         {
             public string ItemId;
             public uint Revision;
+            public uint PoseRevision;
             public uint Hash;
+            public ulong CaptureVersion;
+            public byte[] LastCapturedPayload;
             public byte[] Payload;
             public bool SubmissionPending;
             public bool SpawnIfMissing;
@@ -114,6 +117,7 @@ namespace FlatWorld.Networking.Gameplay
                 return;
 
             NetworkClient.RegisterHandler<NetworkItemStateMessage>(OnClientStateMessage, false);
+            NetworkClient.RegisterHandler<NetworkItemPoseMessage>(OnClientPoseMessage, false);
             NetworkClient.RegisterHandler<NetworkItemSpawnMessage>(OnClientSpawnMessage, false);
             NetworkClient.RegisterHandler<NetworkItemDespawnMessage>(OnClientDespawnMessage, false);
             NetworkClient.RegisterHandler<NetworkItemPickupResponse>(OnClientPickupResponse, false);
@@ -156,6 +160,7 @@ namespace FlatWorld.Networking.Gameplay
                 return;
 
             NetworkClient.UnregisterHandler<NetworkItemStateMessage>();
+            NetworkClient.UnregisterHandler<NetworkItemPoseMessage>();
             NetworkClient.UnregisterHandler<NetworkItemSpawnMessage>();
             NetworkClient.UnregisterHandler<NetworkItemDespawnMessage>();
             NetworkClient.UnregisterHandler<NetworkItemPickupResponse>();
@@ -269,21 +274,25 @@ namespace FlatWorld.Networking.Gameplay
             if (!ShouldSynchronize(item))
                 return;
 
-            byte[] payload = CaptureSafely(item);
+            byte[] payload = CaptureSafely(item, out ulong captureVersion, out uint hash);
             if (!ItemNetworkStateSerialization.IsValidPayload(payload))
                 return;
 
-            uint hash = ItemNetworkStateSerialization.CalculateHash(payload);
             int guid = item.itemData.Guid;
-            if (serverStates.TryGetValue(guid, out StateRecord state) && state.Hash == hash)
-                return;
-
+            serverStates.TryGetValue(guid, out StateRecord state);
             state ??= new StateRecord { ItemId = item.itemData.IDName };
+            bool poseChanged = CapturePose(item, state);
+            if (IsSameCapturedState(state, payload, captureVersion, hash))
+            {
+                if (poseChanged) BroadcastServerPose(guid, state);
+                return;
+            }
             state.ItemId = item.itemData.IDName;
             state.Revision++;
             state.Hash = hash;
             state.Payload = payload;
-            CapturePose(item, state);
+            state.CaptureVersion = captureVersion;
+            state.LastCapturedPayload = payload;
             serverStates[guid] = state;
             BroadcastServerState(guid, state);
         }
@@ -297,12 +306,11 @@ namespace FlatWorld.Networking.Gameplay
             if (!clientStates.TryGetValue(guid, out StateRecord state) || state.SubmissionPending)
                 return;
 
-            byte[] payload = CaptureSafely(item);
+            byte[] payload = CaptureSafely(item, out ulong captureVersion, out uint hash);
             if (!ItemNetworkStateSerialization.IsValidPayload(payload))
                 return;
 
-            uint hash = ItemNetworkStateSerialization.CalculateHash(payload);
-            if (hash == state.Hash)
+            if (IsSameCapturedState(state, payload, captureVersion, hash))
                 return;
 
             state.SubmissionPending = true;
@@ -432,6 +440,8 @@ namespace FlatWorld.Networking.Gameplay
             state.Revision++;
             state.Hash = ItemNetworkStateSerialization.CalculateHash(submit.Payload);
             state.Payload = submit.Payload;
+            state.CaptureVersion = 0;
+            state.LastCapturedPayload = null;
             state.ItemId = item.itemData.IDName;
             CapturePose(item, state);
             BroadcastServerState(submit.ItemGuid, state);
@@ -457,11 +467,24 @@ namespace FlatWorld.Networking.Gameplay
             state.Revision = message.Revision;
             state.Hash = message.PayloadHash;
             state.Payload = message.Payload;
+            state.CaptureVersion = 0;
+            state.LastCapturedPayload = null;
             state.SubmissionPending = false;
             state.SpawnIfMissing = message.SpawnIfMissing;
-            state.Position = message.Position;
-            state.Rotation = message.Rotation;
-            state.Scale = message.Scale;
+            if (message.PoseRevision >= state.PoseRevision)
+            {
+                state.PoseRevision = message.PoseRevision;
+                state.Position = message.Position;
+                state.Rotation = message.Rotation;
+                state.Scale = message.Scale;
+            }
+            else
+            {
+                message.PoseRevision = state.PoseRevision;
+                message.Position = state.Position;
+                message.Rotation = state.Rotation;
+                message.Scale = state.Scale;
+            }
             clientStates[message.ItemGuid] = state;
 
             if (!TryApplyClientState(message))
@@ -532,7 +555,9 @@ namespace FlatWorld.Networking.Gameplay
             if (!ShouldSynchronize(item) || !string.Equals(item.itemData.IDName, message.ItemId, StringComparison.Ordinal))
                 return false;
 
-            return ItemNetworkStateSerialization.Apply(item, message.Payload, true, true);
+            if (!ItemNetworkStateSerialization.Apply(item, message.Payload, true, true)) return false;
+            ApplyClientPose(item, message.Position, message.Rotation, message.Scale);
+            return true;
         }
 
         private void BroadcastServerState(int guid, StateRecord state)
@@ -904,8 +929,11 @@ namespace FlatWorld.Networking.Gameplay
                 ItemGuid = guid,
                 ItemId = state.ItemId,
                 Revision = state.Revision,
+                PoseRevision = state.PoseRevision,
                 PayloadHash = state.Hash,
                 Payload = state.Payload,
+                Position = state.Position,
+                Rotation = state.Rotation,
                 StartPosition = start,
                 EndPosition = end,
                 Duration = Mathf.Clamp(duration, 0.05f, 3f),
@@ -919,6 +947,9 @@ namespace FlatWorld.Networking.Gameplay
         {
             if (NetworkServer.active || !ItemNetworkStateSerialization.IsValidPayload(message.Payload))
                 return;
+            if (clientStates.TryGetValue(message.ItemGuid, out StateRecord known) &&
+                (message.Revision < known.Revision ||
+                 (message.Revision == known.Revision && message.PoseRevision < known.PoseRevision))) return;
 
             bool predictedLocally = requestedClientSpawns.Remove(message.ItemGuid);
             Item item = ItemMgr.Instance?.GetItemByGuid(message.ItemGuid);
@@ -928,8 +959,8 @@ namespace FlatWorld.Networking.Gameplay
                     message.ItemGuid,
                     message.ItemId,
                     message.Payload,
-                    message.StartPosition,
-                    Quaternion.identity,
+                    message.AnimateDrop ? message.StartPosition : message.Position,
+                    message.Rotation,
                     message.Scale,
                     message.AnimateDrop,
                     message.StartPosition,
@@ -945,6 +976,8 @@ namespace FlatWorld.Networking.Gameplay
                 return;
 
             ItemNetworkStateSerialization.Apply(item, message.Payload, true, true);
+            if (!message.AnimateDrop)
+                ApplyClientPose(item, message.Position, message.Rotation, message.Scale);
             if (!predictedLocally)
                 item.transform.localScale = SanitizeScale(message.Scale);
 
@@ -952,6 +985,7 @@ namespace FlatWorld.Networking.Gameplay
             {
                 ItemId = message.ItemId,
                 Revision = message.Revision,
+                PoseRevision = message.PoseRevision,
                 Hash = message.PayloadHash,
                 Payload = message.Payload,
                 SpawnIfMissing = true,
@@ -1663,11 +1697,18 @@ namespace FlatWorld.Networking.Gameplay
             return WorldTopologyRuntime.Distance(GetConnectionLogicalPosition(connection), request.StartPosition) <= 8f;
         }
 
-        private static void CapturePose(Item item, StateRecord state)
+        private static bool CapturePose(Item item, StateRecord state)
         {
-            state.Position = GetLogicalItemPosition(item);
-            state.Rotation = item.transform.rotation;
-            state.Scale = SanitizeScale(item.transform.localScale);
+            Vector3 position = GetLogicalItemPosition(item);
+            Quaternion rotation = item.transform.rotation;
+            Vector3 scale = SanitizeScale(item.transform.localScale);
+            if (state.PoseRevision != 0 && state.Position.Equals(position) &&
+                state.Rotation.Equals(rotation) && state.Scale.Equals(scale)) return false;
+            state.Position = position;
+            state.Rotation = rotation;
+            state.Scale = scale;
+            if (++state.PoseRevision == 0) state.PoseRevision++;
+            return true;
         }
 
         private static Vector3 SanitizeScale(Vector3 scale)
@@ -1714,46 +1755,16 @@ namespace FlatWorld.Networking.Gameplay
             if (!ShouldSynchronize(item))
                 return;
 
-            byte[] payload = CaptureSafely(item);
-            if (!ItemNetworkStateSerialization.IsValidPayload(payload))
-                return;
-
-            int guid = item.itemData.Guid;
-            uint hash = ItemNetworkStateSerialization.CalculateHash(payload);
             if (NetworkServer.active)
             {
-                serverStates.TryGetValue(guid, out StateRecord state);
-                if (state != null && state.Hash == hash)
-                    return;
-
-                state ??= new StateRecord();
-                state.ItemId = item.itemData.IDName;
-                state.Revision++;
-                state.Hash = hash;
-                state.Payload = payload;
-                CapturePose(item, state);
-                serverStates[guid] = state;
-                BroadcastServerState(guid, state);
-
+                ProcessServerItem(item);
                 Mod_DamageReceiver receiver = item.GetComponentInChildren<Mod_DamageReceiver>(true);
                 if (receiver != null && receiver.Hp <= 0f)
                     BroadcastDespawn(item);
                 return;
             }
 
-            if (!NetworkClient.active || !clientStates.TryGetValue(guid, out StateRecord clientState) ||
-                clientState.SubmissionPending || clientState.Hash == hash)
-            {
-                return;
-            }
-
-            clientState.SubmissionPending = true;
-            NetworkClient.Send(new NetworkItemStateSubmit
-            {
-                ItemGuid = guid,
-                BaseRevision = clientState.Revision,
-                Payload = payload
-            });
+            if (NetworkClient.active) ProcessClientItem(item);
         }
 
         private void UpdateRuntimeBridgeRegistration()
@@ -1795,6 +1806,7 @@ namespace FlatWorld.Networking.Gameplay
                 ItemGuid = guid,
                 ItemId = state.ItemId,
                 Revision = state.Revision,
+                PoseRevision = state.PoseRevision,
                 PayloadHash = state.Hash,
                 Payload = state.Payload,
                 SpawnIfMissing = state.SpawnIfMissing,
@@ -1824,12 +1836,15 @@ namespace FlatWorld.Networking.Gameplay
                item is not Player && item is not Map && !item.InHand;
 
         private static byte[] CaptureSafely(Item item)
+            => CaptureSafely(item, out _, out _);
+
+        private static byte[] CaptureSafely(Item item, out ulong version, out uint hash)
         {
+            version = 0;
+            hash = 0;
             try
             {
-                if (item?.itemData?.transform != null && !item.InHand)
-                    item.itemData.transform.position = GetLogicalItemPosition(item);
-                return ItemNetworkStateSerialization.Capture(item, false);
+                return ItemNetworkStateSerialization.CaptureCachedNetworkPayload(item, true, out version, out hash);
             }
             catch (Exception exception)
             {

@@ -75,6 +75,13 @@ public interface IModuleInstanceStateCodec
     void Restore(ModuleData data, byte[] payload);
 }
 
+/// <summary>可选 MOD 快照缓存契约，指纹必须覆盖对应公开或私有编解码载荷的全部实例值。</summary>
+public interface IModuleInstanceStateFingerprintProvider
+{
+    // 不改写活跃数据；无法完整判断变化时返回 false，宿主会继续完整捕获。
+    bool TryCalculateStateFingerprint(ModuleData data, bool publicState, out ulong fingerprint);
+}
+
 public static class ModuleInstanceStateCodecs
 {
     #region 注册表
@@ -82,6 +89,7 @@ public static class ModuleInstanceStateCodecs
     private static readonly Dictionary<Type, IModuleInstanceStateCodec> ByType = new();
     private static readonly Dictionary<string, IModuleInstanceStateCodec> ById = new(StringComparer.Ordinal);
     private static readonly object RegistryLock = new();
+    public static ulong Revision { get; private set; }
 
     static ModuleInstanceStateCodecs()
     {
@@ -104,6 +112,7 @@ public static class ModuleInstanceStateCodecs
                 throw new InvalidOperationException($"模块状态编解码器重复注册：{registeredId}");
             ByType.Add(registeredType, codec);
             ById.Add(registeredId, codec);
+            Revision++;
         }
         return new RegistrationLease(codec, registeredType, registeredId);
     }
@@ -129,6 +138,7 @@ public static class ModuleInstanceStateCodecs
                     ByType.Remove(registeredType);
                 if (ById.TryGetValue(registeredId, out current) && ReferenceEquals(current, codec))
                     ById.Remove(registeredId);
+                Revision++;
                 disposed = true;
             }
         }

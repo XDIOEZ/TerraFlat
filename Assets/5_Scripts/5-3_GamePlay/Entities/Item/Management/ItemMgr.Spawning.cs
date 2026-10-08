@@ -370,6 +370,7 @@ public partial class ItemMgr
         }
 
         RefreshRuntimeItemIndexes(item);
+        _tickScheduler.NotifyMoved(item);
         RuntimeItemMoved?.Invoke(item);
     }
 

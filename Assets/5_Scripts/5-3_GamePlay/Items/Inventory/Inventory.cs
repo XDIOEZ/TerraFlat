@@ -7,7 +7,6 @@ using System.Runtime.CompilerServices;
 using FlatWorld.Gameplay.Progress;
 using TMPro;
 using UnityEngine.InputSystem;
-using UnityEngine.Pool;
 
 /// <summary>
 /// 保存一次物品拖拽的事务边界；命中槽位时直接提交来源与目标，未命中时才切换到手部携带流程。
@@ -174,6 +173,7 @@ public class Inventory
     GameObject ItemSlot_Prefab;
     Transform ItemSlot_Parent;
     [NonSerialized] private InventoryVirtualizedSlotGrid _virtualizedSlotGrid; // UI_Bag 只实例化可视区域附近的槽位。
+    [NonSerialized, FastCloner.Code.FastClonerIgnore] private InventoryModuleDataScheduler _moduleDataScheduler;
 
     // 玩家行囊或受限容器的容量显示节点；正式节点由 UI_Bag Prefab 提供。
     private TextMeshProUGUI _carryWeightValueText;
@@ -230,49 +230,8 @@ public class Inventory
 
     private void UpdateModuleData(float deltaTime)
     {
-        if (Data == null || Data.itemSlots == null)
-        {
-            return;
-        }
-
-        for (int i = 0; i < Data.itemSlots.Count; i++)
-        {
-            ItemSlot slot = Data.itemSlots[i];
-            ItemData itemData = slot?.itemData;
-            if (itemData == null || itemData.ModuleDataDic == null)
-            {
-                continue;
-            }
-
-            RuntimeItemDefinition definition = null;
-            GameRes.Instance?.TryGetItemDefinition(itemData.IDName, out definition);
-            using var moduleScope = ListPool<ModuleData>.Get(out var moduleSnapshot);
-            foreach (ModuleData moduleData in itemData.ModuleDataDic.Values)
-                moduleSnapshot.Add(moduleData);
-            foreach (ModuleData moduleData in moduleSnapshot)
-            {
-                if (!ReferenceEquals(slot.itemData, itemData) || itemData.ModuleDataDic == null)
-                    break;
-                if (moduleData == null || !moduleData.Enabled ||
-                    !itemData.ModuleDataDic.TryGetValue(moduleData.StableName, out ModuleData current) ||
-                    !ReferenceEquals(current, moduleData))
-                {
-                    continue;
-                }
-
-                ModuleDataTickContext context = new ModuleDataTickContext(
-                    moduleData,
-                    itemData,
-                    Data,
-                    slot,
-                    i,
-                    deltaTime,
-                    definition);
-
-                // 规则按稳定能力编译，结构变化和槽位替换不会修改本次正在遍历的模块快照。
-                ModuleDataRuleRegistry.Step(context);
-            }
-        }
+        _moduleDataScheduler ??= new InventoryModuleDataScheduler(this);
+        _moduleDataScheduler.Tick(deltaTime);
     }
 
     #endregion
@@ -383,6 +342,8 @@ public class Inventory
     /// <summary>库存真正退出运行时生命周期时，解除数据层到 UI 的刷新监听。</summary>
     public void UnbindRuntimeDataEvents()
     {
+        _moduleDataScheduler?.Dispose();
+        _moduleDataScheduler = null;
         if (Data != null)
             Data.Event_RefreshUI -= RefreshUI;
 
@@ -632,6 +593,8 @@ public class Inventory
         Data.Event_RefreshUI += RefreshUI;
 
         BindPlayerCarryWeightEvents();
+        _moduleDataScheduler ??= new InventoryModuleDataScheduler(this);
+        _moduleDataScheduler.Bind(Data);
     }
 
     /// <summary>

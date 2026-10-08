@@ -51,7 +51,7 @@ description: "Use when: 定位或修改 FlatWorld 的数据模型、MemoryPack �
 - ItemData 及派生类的 MemoryPack 持久化只通过 InstanceSnapshot；Unity/JSON 字段是配置适配外壳，不直接入档。冷数据不读取 GameRes，入世/入包先按当前定义原位恢复重量、标签、耐久与模块组合，再合并实例状态；保留真实槽位的 ItemData 引用，已删除模块不能复活，未知扩展负载继续保留。
 - `InstanceSnapshot` 捕获发生在外层 MemoryPack 写入期间；内部负载和扩展 `IModuleInstanceStateCodec.Capture` 使用 `ItemSnapshotSerialization.SerializePayload` 独占缓冲及引用状态，禁止嵌套调用默认 `Serialize(value)` 覆盖同线程外层缓冲，避免读到错误的 Union 标记。
 - FastCloner 3.3.10 对带 `FastClonerIgnore` 的可写属性会调用 setter 写入默认值；`InstanceSnapshot` 这类无后备字段的计算属性不要加该标记，避免克隆配置时触发空快照恢复。自动属性与实际字段仍按需标记。
-- ItemInstanceDataFactory.Compile 冷路径冻结共享只读配置和默认状态，生成只分配独立可变数据；ModuleData 默认值采用 object 泛型深拷贝并检查具体类型。库存快照只保存内容及用户状态，恢复须保留当前布局的 UI/输入/槽位标签，并将新冷槽位数据 rebase 到当前定义。模块自有 BitData 仍由各模块负责区分配置与进度，不能把不透明负载当作配置已全部抽离。
+- ItemInstanceDataFactory.Compile 冷路径冻结共享配置与纯内存默认状态，内建 Item/Module、库存与分堆直接创建独立运行态，不经快照往返；MOD 可注册 IModuleRuntimeDataFactory，未迁移类型保留独立模块快照回退。CloneRuntime 保留冷数据标记，分堆调用方分配新 GUID；临时模板用 DetachModuleData 移交并解绑集合。库存快照只保存内容及用户状态，恢复保留当前 UI/输入/槽位标签，并为新冷物品补当前定义。不透明 BitData 的配置与进度仍由模块负责区分。
 - 冷数据可从当前 JSON 或 Prefab-only 模板恢复；活跃库存只补新冷物品配置，不能重建已挂接定义的 ModuleData 引用。模块自有库存也使用 InventoryInstanceSnapshot，禁止把 MemoryPack 往返当作热实例克隆器；同 GUID 跨槽移动继续复用原 ItemData。
 - 派生实例属性通过 IItemInstanceStateRestorer 注册纯数据恢复规则，统一在模块状态恢复后执行；不能在快照层硬编码具体玩法。编解码器收发缓冲与快照隔离，释放注册租期前先完成状态调用及实例清理。
 - `ItemData.CraftedDurabilityMultiplier` 是制作材料赋予的实例品质，作为追加字段持久化；恢复时先用当前 ItemDefinition 的基础耐久重建，再应用倍率并保留原耐久百分比，禁止把历史 `MaxDurability` 直接当成当前基础值。

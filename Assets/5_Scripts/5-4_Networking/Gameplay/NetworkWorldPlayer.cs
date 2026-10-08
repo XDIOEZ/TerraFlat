@@ -703,7 +703,7 @@ namespace FlatWorld.Networking.Gameplay
         }
 
         private static ModuleData FindRemoteModuleData(
-            System.Collections.Generic.Dictionary<string, ModuleData> states,
+            System.Collections.Generic.IReadOnlyDictionary<string, ModuleData> states,
             string stableName,
             string moduleId,
             out string resolvedStableName)
