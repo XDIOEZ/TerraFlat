@@ -154,8 +154,8 @@
       "id": "Spacesuit_Head",
       "parent": "Equipment_Base",
       "worldDropBehavior": "interactive",
-      "gameName": "密封头盔",
-      "description": "宇航服套装部件。必须穿齐头盔、躯干、手套、裤装和靴子且戴回头盔，才提供整套气压保护；躯干配置页可更换供氧气罐。",
+      "gameName": "宇航服头盔",
+      "description": "宇航服外层护甲，内搭衣物可自由选择。穿齐宇航服头盔、衣服、裤子、鞋子和手套，并戴好头盔后提供整套气压保护；宇航服衣服的配置页可更换供氧气罐。",
       "durability": 200,
       "maxDurability": 200,
       "amount": 1,
@@ -210,8 +210,8 @@
       "id": "Spacesuit_Torso",
       "parent": "Equipment_Base",
       "worldDropBehavior": "interactive",
-      "gameName": "密封宇航服",
-      "description": "宇航服套装部件。必须穿齐头盔、躯干、手套、裤装和靴子且戴回头盔，才提供整套气压保护；躯干配置页可更换供氧气罐。",
+      "gameName": "宇航服衣服",
+      "description": "宇航服外层护甲，内搭衣物可自由选择。穿齐宇航服头盔、衣服、裤子、鞋子和手套，并戴好头盔后提供整套气压保护；宇航服衣服的配置页可更换供氧气罐。",
       "durability": 200,
       "maxDurability": 200,
       "amount": 1,
@@ -286,8 +286,8 @@
       "id": "Spacesuit_Hands",
       "parent": "Equipment_Base",
       "worldDropBehavior": "interactive",
-      "gameName": "密封手套",
-      "description": "宇航服套装部件。必须穿齐头盔、躯干、手套、裤装和靴子且戴回头盔，才提供整套气压保护；躯干配置页可更换供氧气罐。",
+      "gameName": "宇航服手套",
+      "description": "宇航服外层护甲，内搭衣物可自由选择。穿齐宇航服头盔、衣服、裤子、鞋子和手套，并戴好头盔后提供整套气压保护；宇航服衣服的配置页可更换供氧气罐。",
       "durability": 200,
       "maxDurability": 200,
       "amount": 1,
@@ -338,8 +338,8 @@
       "id": "Spacesuit_Legs",
       "parent": "Equipment_Base",
       "worldDropBehavior": "interactive",
-      "gameName": "密封裤装",
-      "description": "宇航服套装部件。必须穿齐头盔、躯干、手套、裤装和靴子且戴回头盔，才提供整套气压保护；躯干配置页可更换供氧气罐。",
+      "gameName": "宇航服裤子",
+      "description": "宇航服外层护甲，内搭衣物可自由选择。穿齐宇航服头盔、衣服、裤子、鞋子和手套，并戴好头盔后提供整套气压保护；宇航服衣服的配置页可更换供氧气罐。",
       "durability": 200,
       "maxDurability": 200,
       "amount": 1,
@@ -390,8 +390,8 @@
       "id": "Spacesuit_Feet",
       "parent": "Equipment_Base",
       "worldDropBehavior": "interactive",
-      "gameName": "密封靴子",
-      "description": "宇航服套装部件。必须穿齐头盔、躯干、手套、裤装和靴子且戴回头盔，才提供整套气压保护；躯干配置页可更换供氧气罐。",
+      "gameName": "宇航服鞋子",
+      "description": "宇航服外层护甲，内搭衣物可自由选择。穿齐宇航服头盔、衣服、裤子、鞋子和手套，并戴好头盔后提供整套气压保护；宇航服衣服的配置页可更换供氧气罐。",
       "durability": 200,
       "maxDurability": 200,
       "amount": 1,
@@ -435,100 +435,6 @@
           },
           "id": "装备存储模块",
           "enabled": true
-        }
-      }
-    },
-    {
-      "id": "PressureSuit_Torso",
-      "parent": "Equipment_Base",
-      "gameName": "耐压防护服",
-      "description": "普通防护服扩展安全气压范围，可与其它独立防护来源叠加；不提供密封供氧。",
-      "durability": 150,
-      "maxDurability": 150,
-      "amount": 1,
-      "weight": 4,
-      "volume": 8,
-      "stackable": false,
-      "canBePickedUp": true,
-      "tags": [
-        "Equipment",
-        "EquipmentSlot.TorsoOuter",
-        "InventoryGroup.Chemical"
-      ],
-      "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]",
-        "color": {
-          "b": 0.65,
-          "r": 0.75,
-          "g": 0.8,
-          "a": 1
-        }
-      },
-      "modules": {
-        "Mod_EquipmentStore": {
-          "prefab": "Mod_EquipmentStore",
-          "parameters": {
-            "equipmentInstances": [
-              {
-                "Name": "耐压防护",
-                "$concreteType": "EquipmentInstance_PressureProtection",
-                "LowPressureToleranceIncreaseKPa": 20,
-                "HighPressureToleranceIncreaseKPa": 200
-              },
-              {
-                "HeatToleranceIncrease": 12,
-                "Name": "隔热防护",
-                "ColdToleranceIncrease": 12,
-                "$concreteType": "EquipmentInstance_ThermalInsulation"
-              }
-            ]
-          },
-          "data": {
-            "BitData": [],
-            "Type": 0
-          },
-          "id": "装备存储模块",
-          "enabled": true
-        }
-      }
-    },
-    {
-      "id": "LowPressureSuit_Torso",
-      "parent": "PressureSuit_Torso",
-      "gameName": "低压防护服",
-      "description": "被动扩展低压耐受45kPa、高压耐受0kPa；穿脱时按独立装备来源生效。",
-      "modules": {
-        "Mod_EquipmentStore": {
-          "parameters": {
-            "equipmentInstances": [
-              {
-                "HighPressureToleranceIncreaseKPa": 0,
-                "LowPressureToleranceIncreaseKPa": 45,
-                "$concreteType": "EquipmentInstance_PressureProtection",
-                "Name": "低压防护服"
-              }
-            ]
-          }
-        }
-      }
-    },
-    {
-      "id": "HighPressureSuit_Torso",
-      "parent": "PressureSuit_Torso",
-      "gameName": "高压防护服",
-      "description": "被动扩展低压耐受0kPa、高压耐受350kPa；穿脱时按独立装备来源生效。",
-      "modules": {
-        "Mod_EquipmentStore": {
-          "parameters": {
-            "equipmentInstances": [
-              {
-                "HighPressureToleranceIncreaseKPa": 350,
-                "LowPressureToleranceIncreaseKPa": 0,
-                "$concreteType": "EquipmentInstance_PressureProtection",
-                "Name": "高压防护服"
-              }
-            ]
-          }
         }
       }
     }

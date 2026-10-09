@@ -44,7 +44,7 @@
     },
     {
       "id": "core:chemical_Spacesuit_Head",
-      "displayName": "密封头盔",
+      "displayName": "宇航服头盔",
       "recipeType": "crafting",
       "inputRule": "unordered",
       "requiredStation": "workbench",
@@ -75,7 +75,7 @@
     },
     {
       "id": "core:chemical_Spacesuit_Torso",
-      "displayName": "密封宇航服",
+      "displayName": "宇航服衣服",
       "recipeType": "crafting",
       "inputRule": "unordered",
       "requiredStation": "workbench",
@@ -106,7 +106,7 @@
     },
     {
       "id": "core:chemical_Spacesuit_Hands",
-      "displayName": "密封手套",
+      "displayName": "宇航服手套",
       "recipeType": "crafting",
       "inputRule": "unordered",
       "requiredStation": "workbench",
@@ -137,7 +137,7 @@
     },
     {
       "id": "core:chemical_Spacesuit_Legs",
-      "displayName": "密封裤装",
+      "displayName": "宇航服裤子",
       "recipeType": "crafting",
       "inputRule": "unordered",
       "requiredStation": "workbench",
@@ -168,7 +168,7 @@
     },
     {
       "id": "core:chemical_Spacesuit_Feet",
-      "displayName": "密封靴子",
+      "displayName": "宇航服鞋子",
       "recipeType": "crafting",
       "inputRule": "unordered",
       "requiredStation": "workbench",
@@ -196,84 +196,6 @@
         }
       ],
       "actions": []
-    },
-    {
-      "id": "core:chemical_PressureSuit_Torso",
-      "displayName": "耐压防护服",
-      "recipeType": "crafting",
-      "inputRule": "unordered",
-      "requiredStation": "workbench",
-      "inputs": [
-        {
-          "amount": 3,
-          "itemId": "Ingot_WroughtIron",
-          "match": "exact_item"
-        },
-        {
-          "amount": 5,
-          "itemId": "Cloth",
-          "match": "exact_item"
-        }
-      ],
-      "outputs": [
-        {
-          "amount": 1,
-          "itemId": "PressureSuit_Torso"
-        }
-      ],
-      "actions": []
-    },
-    {
-      "inputRule": "unordered",
-      "outputs": [
-        {
-          "amount": 1,
-          "itemId": "LowPressureSuit_Torso"
-        }
-      ],
-      "actions": [],
-      "requiredStation": "workbench",
-      "id": "core:chemical_LowPressureSuit_Torso",
-      "recipeType": "crafting",
-      "displayName": "低压防护服",
-      "inputs": [
-        {
-          "match": "exact_item",
-          "amount": 3,
-          "itemId": "Ingot_WroughtIron"
-        },
-        {
-          "match": "exact_item",
-          "amount": 4,
-          "itemId": "Cloth"
-        }
-      ]
-    },
-    {
-      "inputRule": "unordered",
-      "outputs": [
-        {
-          "amount": 1,
-          "itemId": "HighPressureSuit_Torso"
-        }
-      ],
-      "actions": [],
-      "requiredStation": "workbench",
-      "id": "core:chemical_HighPressureSuit_Torso",
-      "recipeType": "crafting",
-      "displayName": "高压防护服",
-      "inputs": [
-        {
-          "match": "exact_item",
-          "amount": 3,
-          "itemId": "Ingot_WroughtIron"
-        },
-        {
-          "match": "exact_item",
-          "amount": 4,
-          "itemId": "Cloth"
-        }
-      ]
     }
   ],
   "schemaVersion": 1
