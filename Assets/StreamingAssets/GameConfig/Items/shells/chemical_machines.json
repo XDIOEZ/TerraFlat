@@ -18,7 +18,7 @@
         "InventoryGroup.Chemistry"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Idle.png"
       },
       "health": {
         "hasHp": true,
@@ -90,7 +90,7 @@
         "InventoryGroup.Chemistry"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Idle.png"
       },
       "health": {
         "hasHp": true,
@@ -161,7 +161,7 @@
         "InventoryGroup.Chemistry"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Chemistry/FluidValve/FluidValve_Idle.png"
       },
       "health": {
         "hasHp": true,
@@ -233,7 +233,7 @@
         "InventoryGroup.Chemistry"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Chemistry/FluidValve/FluidValve_Idle.png"
       },
       "health": {
         "hasHp": true,
@@ -304,7 +304,7 @@
         "InventoryGroup.Chemistry"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Chemistry/FluidOutlet/FluidOutlet_Idle.png"
       },
       "health": {
         "hasHp": true,
@@ -376,7 +376,7 @@
         "InventoryGroup.Chemistry"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Chemistry/FluidOutlet/FluidOutlet_Idle.png"
       },
       "health": {
         "hasHp": true,
@@ -447,7 +447,7 @@
         "InventoryGroup.Chemistry"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Chemistry/GasSelector/GasSelector_Idle.png"
       },
       "health": {
         "hasHp": true,
@@ -519,7 +519,7 @@
         "InventoryGroup.Chemistry"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Chemistry/GasSelector/GasSelector_Idle.png"
       },
       "health": {
         "hasHp": true,
@@ -590,7 +590,7 @@
         "InventoryGroup.Chemistry"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Chemistry/GasTankBlock_Iron/GasTankBlock_Iron_Idle.png"
       },
       "health": {
         "hasHp": true,
@@ -662,7 +662,7 @@
         "InventoryGroup.Chemistry"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Chemistry/GasTankBlock_Iron/GasTankBlock_Iron_Idle.png"
       },
       "health": {
         "hasHp": true,
@@ -733,7 +733,7 @@
         "InventoryGroup.Chemistry"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Chemistry/GasTankBlock_Steel/GasTankBlock_Steel_Idle.png"
       },
       "health": {
         "hasHp": true,
@@ -805,7 +805,7 @@
         "InventoryGroup.Chemistry"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Chemistry/GasTankBlock_Steel/GasTankBlock_Steel_Idle.png"
       },
       "health": {
         "hasHp": true,
@@ -876,7 +876,7 @@
         "InventoryGroup.Chemistry"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Chemistry/LiquidStorageTank/LiquidStorageTank_Idle.png"
       },
       "health": {
         "hasHp": true,
@@ -948,7 +948,7 @@
         "InventoryGroup.Chemistry"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Chemistry/LiquidStorageTank/LiquidStorageTank_Idle.png"
       },
       "health": {
         "hasHp": true,
@@ -1019,7 +1019,7 @@
         "InventoryGroup.Chemistry"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Chemistry/GasPump_Mechanical/GasPump_Mechanical_Idle.png"
       },
       "health": {
         "hasHp": true,
@@ -1091,7 +1091,7 @@
         "InventoryGroup.Chemistry"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Chemistry/GasPump_Mechanical/GasPump_Mechanical_Idle.png"
       },
       "health": {
         "hasHp": true,
@@ -1162,7 +1162,7 @@
         "InventoryGroup.Chemistry"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Chemistry/LiquidPump_Electric/LiquidPump_Electric_Idle.png"
       },
       "health": {
         "hasHp": true,
@@ -1234,7 +1234,7 @@
         "InventoryGroup.Chemistry"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Chemistry/LiquidPump_Electric/LiquidPump_Electric_Idle.png"
       },
       "health": {
         "hasHp": true,
@@ -1305,7 +1305,7 @@
         "InventoryGroup.Chemistry"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Chemistry/PressureProbe_Mechanical/PressureProbe_Mechanical_Idle.png"
       },
       "health": {
         "hasHp": true,
@@ -1377,7 +1377,7 @@
         "InventoryGroup.Chemistry"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Chemistry/PressureProbe_Mechanical/PressureProbe_Mechanical_Idle.png"
       },
       "health": {
         "hasHp": true,
@@ -1448,7 +1448,7 @@
         "InventoryGroup.Chemistry"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Chemistry/PressureProbe_Electronic/PressureProbe_Electronic_Idle.png"
       },
       "health": {
         "hasHp": true,
@@ -1520,7 +1520,7 @@
         "InventoryGroup.Chemistry"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Chemistry/PressureProbe_Electronic/PressureProbe_Electronic_Idle.png"
       },
       "health": {
         "hasHp": true,
@@ -1591,7 +1591,7 @@
         "InventoryGroup.Chemistry"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Chemistry/GasCompressor_Mechanical/GasCompressor_Mechanical_Idle.png"
       },
       "health": {
         "hasHp": true,
@@ -1663,7 +1663,7 @@
         "InventoryGroup.Chemistry"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Chemistry/GasCompressor_Mechanical/GasCompressor_Mechanical_Idle.png"
       },
       "health": {
         "hasHp": true,
@@ -1734,7 +1734,7 @@
         "InventoryGroup.Chemistry"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Chemistry/GasCompressor_Electric/GasCompressor_Electric_Idle.png"
       },
       "health": {
         "hasHp": true,
@@ -1806,7 +1806,7 @@
         "InventoryGroup.Chemistry"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Chemistry/GasCompressor_Electric/GasCompressor_Electric_Idle.png"
       },
       "health": {
         "hasHp": true,
@@ -1877,7 +1877,7 @@
         "InventoryGroup.Electrical"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Chemistry/ElectricHeater/ElectricHeater_Idle.png"
       },
       "health": {
         "hasHp": true,
@@ -1949,7 +1949,7 @@
         "InventoryGroup.Electrical"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Chemistry/ElectricHeater/ElectricHeater_Idle.png"
       },
       "health": {
         "hasHp": true,
@@ -2020,7 +2020,7 @@
         "InventoryGroup.Chemistry"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Chemistry/FluidFilter/FluidFilter_Idle.png"
       },
       "health": {
         "hasHp": true,
@@ -2092,7 +2092,7 @@
         "InventoryGroup.Chemistry"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Chemistry/FluidFilter/FluidFilter_Idle.png"
       },
       "health": {
         "hasHp": true,
@@ -2163,7 +2163,7 @@
         "InventoryGroup.Chemistry"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Chemistry/WaterElectrolyzer/WaterElectrolyzer_Idle.png"
       },
       "health": {
         "hasHp": true,
@@ -2235,7 +2235,7 @@
         "InventoryGroup.Chemistry"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Chemistry/WaterElectrolyzer/WaterElectrolyzer_Idle.png"
       },
       "health": {
         "hasHp": true,
@@ -2306,7 +2306,7 @@
         "InventoryGroup.Chemistry"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Chemistry/GasEngine/GasEngine_Idle.png"
       },
       "health": {
         "hasHp": true,
@@ -2378,7 +2378,7 @@
         "InventoryGroup.Chemistry"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Chemistry/GasEngine/GasEngine_Idle.png"
       },
       "health": {
         "hasHp": true,
@@ -2449,7 +2449,7 @@
         "InventoryGroup.Chemistry"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Chemistry/FilterResidue/FilterResidue_Icon.png"
       },
       "modules": {}
     },
@@ -2471,7 +2471,7 @@
         "InventoryGroup.Chemistry"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Chemistry/AlkaliSolution/AlkaliSolution_Icon.png"
       },
       "modules": {}
     }

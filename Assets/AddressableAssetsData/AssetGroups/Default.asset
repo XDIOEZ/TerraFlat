@@ -17,6 +17,162 @@ MonoBehaviour:
     m_SerializedData: []
   m_GUID: 47b73bec22f621a498a1748af8eb38da
   m_SerializeEntries:
+  - m_GUID: f15db146a516ef84389ea27242f01ae2
+    m_Address: Assets/6_Art/Generated/Chemistry/AlkaliSolution/AlkaliSolution_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 7eef1c5ee25a2c842b14531f283ab19d
+    m_Address: Assets/6_Art/Generated/Chemistry/ElectricHeater/ElectricHeater_Idle.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 92ea84c9727393e40b0ac0d167838713
+    m_Address: Assets/6_Art/Generated/Chemistry/FilterResidue/FilterResidue_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 97b7f94538de4b14abd7e0e5c39604c1
+    m_Address: Assets/6_Art/Generated/Chemistry/FluidFilter/FluidFilter_Idle.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 34d43aef3ea9a5a4cb671efab0a09867
+    m_Address: Assets/6_Art/Generated/Chemistry/FluidOutlet/FluidOutlet_Idle.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 3e9137ba6e6251f40b44700a5ae33b6d
+    m_Address: Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Idle.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: ff6fd8824d619004685b00aba0d21e5e
+    m_Address: Assets/6_Art/Generated/Chemistry/FluidValve/FluidValve_Idle.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 0e96842eb55ce694c96c14875794e0e1
+    m_Address: Assets/6_Art/Generated/Chemistry/GasCompressor_Electric/GasCompressor_Electric_Idle.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 5b1d8e826f8fc034681c6ea64309ea56
+    m_Address: Assets/6_Art/Generated/Chemistry/GasCompressor_Mechanical/GasCompressor_Mechanical_Idle.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: b4d6374644a1f5641a58e034bc7cb4b6
+    m_Address: Assets/6_Art/Generated/Chemistry/GasEngine/GasEngine_Idle.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 1122acc1f84c24146bc99931c23a8b02
+    m_Address: Assets/6_Art/Generated/Chemistry/GasPump_Mechanical/GasPump_Mechanical_Idle.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: da9e65f0aeb41a441b1eba3deb5ccd7b
+    m_Address: Assets/6_Art/Generated/Chemistry/GasSelector/GasSelector_Idle.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 5d4350f02e305e14da8a848a4d32ec18
+    m_Address: Assets/6_Art/Generated/Chemistry/GasTankBlock_Iron/GasTankBlock_Iron_Idle.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 544c876833c829343bbd8343fb616815
+    m_Address: Assets/6_Art/Generated/Chemistry/GasTankBlock_Steel/GasTankBlock_Steel_Idle.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 9a7e192315d12f1429f388ed14b482f8
+    m_Address: Assets/6_Art/Generated/Chemistry/LiquidPump_Electric/LiquidPump_Electric_Idle.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 3a84785b10bfb014884e31ff4166f0b3
+    m_Address: Assets/6_Art/Generated/Chemistry/LiquidStorageTank/LiquidStorageTank_Idle.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: c2f74f5b0347ab64785dc25c839b90f8
+    m_Address: Assets/6_Art/Generated/Chemistry/PortableGasTank_Iron/PortableGasTank_Iron_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 36c89c668c76400449873f3dbe4d9962
+    m_Address: Assets/6_Art/Generated/Chemistry/PortableGasTank_Steel/PortableGasTank_Steel_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 34b2b359b3ebcf4468b46d3e24602bd4
+    m_Address: Assets/6_Art/Generated/Chemistry/PressureProbe_Electronic/PressureProbe_Electronic_Idle.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 1179364f5048c90428b3d63f941dc8e0
+    m_Address: Assets/6_Art/Generated/Chemistry/PressureProbe_Mechanical/PressureProbe_Mechanical_Idle.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: b68a34b52819ca24c9913b58711ce718
+    m_Address: Assets/6_Art/Generated/Chemistry/Spacesuit_Feet/Spacesuit_Feet_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 8fcaa8e46ac44044fa7b209e2d5000d4
+    m_Address: Assets/6_Art/Generated/Chemistry/Spacesuit_Hands/Spacesuit_Hands_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 5f183dafb8e7d174baf7f46851bb3236
+    m_Address: Assets/6_Art/Generated/Chemistry/Spacesuit_Head/Spacesuit_Head_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 37d431f189371a846a6dadcb69d19432
+    m_Address: Assets/6_Art/Generated/Chemistry/Spacesuit_Legs/Spacesuit_Legs_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 1e6326289c4435341832033dfd7c64bc
+    m_Address: Assets/6_Art/Generated/Chemistry/Spacesuit_Torso/Spacesuit_Torso_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: c85caf00d928e1a458b1d3d1186d5f8e
+    m_Address: Assets/6_Art/Generated/Chemistry/WaterElectrolyzer/WaterElectrolyzer_Idle.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: c600dcfcd89a4269bc6076a99d17442c
     m_Address: Assets/6_Art/Generated/Environment/Snowball/Snowball_Icon.png
     m_ReadOnly: 0

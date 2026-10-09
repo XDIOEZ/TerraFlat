@@ -1,0 +1,325 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>FlatWorld 化工物品美术总览</title>
+  <style>
+    :root { --preview-size: 128px; --bg: #11151b; --panel: #1c222c; --line: #313b49; --text: #eff3f7; --muted: #a8b5c6; --accent: #87daca; }
+    * { box-sizing: border-box; }
+    body { margin: 0; color: var(--text); background: var(--bg); font: 15px/1.6 "Microsoft YaHei UI", "PingFang SC", system-ui, sans-serif; }
+    button, input { font: inherit; }
+    button, a, input { -webkit-tap-highlight-color: transparent; }
+    button { cursor: pointer; }
+    button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid var(--accent); outline-offset: 4px; }
+    [hidden] { display: none !important; }
+    main { max-width: 1380px; padding: 34px 24px 54px; margin: auto; }
+    .eyebrow { color: var(--accent); font-size: 12px; letter-spacing: .1em; margin: 0 0 8px; }
+    h1 { font-size: clamp(25px, 4vw, 36px); line-height: 1.3; margin: 0 0 12px; }
+    h1 span { display: inline-block; margin-left: 10px; font-size: 16px; color: var(--accent); vertical-align: middle; }
+    .intro { color: var(--muted); margin: 0 0 24px; max-width: 830px; }
+    .controls { position: sticky; z-index: 2; top: 12px; display: flex; flex-wrap: wrap; align-items: center; gap: 14px 24px; padding: 16px 18px; background: #1c222cf5; border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 8px 24px #0004; }
+    .search { flex: 1 1 260px; }
+    .search input { width: 100%; color: var(--text); background: #111820; border: 1px solid var(--line); border-radius: 8px; padding: 9px 12px; }
+    .size-control, .zoom-control { display: flex; align-items: center; gap: 10px; white-space: nowrap; }
+    input[type="range"] { accent-color: var(--accent); cursor: pointer; }
+    .size-control output, .zoom-control output { min-width: 47px; color: var(--accent); font-variant-numeric: tabular-nums; }
+    .results { color: var(--muted); font-size: 13px; white-space: nowrap; }
+    .art-group { margin-top: 32px; }
+    h2 { display: flex; align-items: center; gap: 12px; font-size: 19px; margin: 0 0 14px; }
+    .group-count { font-size: 12px; color: var(--muted); font-weight: 400; border: 1px solid var(--line); border-radius: 20px; padding: 1px 9px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(calc(var(--preview-size) + 44px), 1fr)); gap: 14px; }
+    .item-card { width: 100%; color: var(--text); text-align: left; border: 1px solid var(--line); border-radius: 12px; padding: 10px; background: var(--panel); transition: border-color .15s, background .15s; }
+    .item-card:hover { border-color: var(--accent); background: #232d38; }
+    .checker { background-color: #252c35; background-image: linear-gradient(45deg, #303944 25%, transparent 25%), linear-gradient(-45deg, #303944 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #303944 75%), linear-gradient(-45deg, transparent 75%, #303944 75%); background-size: 20px 20px; background-position: 0 0, 0 10px, 10px -10px, -10px 0; }
+    .canvas { display: grid; place-items: center; height: calc(var(--preview-size) + 24px); overflow: hidden; border-radius: 7px; }
+    .canvas img { width: var(--preview-size); height: var(--preview-size); object-fit: contain; image-rendering: pixelated; }
+    .missing { color: #bfc8d1; font-size: 13px; }
+    .item-name { display: block; margin: 10px 2px 2px; font-weight: 600; }
+    .item-id { display: block; margin: 0 2px; color: var(--muted); font-size: 11px; overflow-wrap: anywhere; }
+    .empty { text-align: center; color: var(--muted); padding: 64px 20px; }
+    .footer-note { color: var(--muted); border-top: 1px solid var(--line); padding-top: 20px; margin: 32px 0 0; font-size: 13px; }
+    dialog { width: min(1100px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); margin: auto; padding: 0; color: var(--text); background: var(--panel); border: 1px solid var(--line); border-radius: 15px; box-shadow: 0 16px 60px #0008; overflow: auto; }
+    dialog::backdrop { background: #05090ddd; }
+    .dialog-head { display: flex; align-items: flex-start; gap: 18px; padding: 20px; }
+    .dialog-title { flex: 1; }
+    .dialog-title h2 { margin: 0 0 4px; }
+    .dialog-title p { margin: 0; color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
+    .close { padding: 4px 12px; border: 1px solid var(--line); border-radius: 7px; color: var(--text); background: transparent; }
+    .dialog-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 22px; padding: 0 20px 18px; }
+    .dialog-controls a { color: var(--accent); text-decoration: none; }
+    .dialog-controls a:hover { text-decoration: underline; }
+    .original { color: var(--text); background: transparent; border: 1px solid var(--line); border-radius: 7px; padding: 4px 10px; }
+    .image-stage { min-height: 240px; max-height: 65dvh; overflow: auto; padding: 24px; display: grid; justify-items: start; }
+    .image-stage img { display: block; max-width: none; max-height: none; image-rendering: pixelated; margin: auto; }
+    .dialog-note { margin: 0; color: var(--muted); padding: 14px 20px; font-size: 12px; }
+    @media (max-width: 580px) { main { padding: 24px 16px 36px; } .controls { top: 6px; gap: 12px; padding: 12px; } .size-control { flex: 1; } .size-control input { min-width: 60px; width: 100%; } .results { font-size: 12px; } .grid { gap: 10px; } .dialog-controls { gap: 12px; } .zoom-control input { width: 120px; } }
+    @media (prefers-reduced-motion: reduce) { .item-card { transition: none; } }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <p class="eyebrow">FLATWORLD · 美术预览</p>
+      <h1>化工物品美术总览<span>26 款</span></h1>
+      <p class="intro">管路、机器、材料和宇航装备的新美术集中在这里。拖动滑杆看不同大小，点击物品查看原图。设备的便携形态与建筑本体合并展示。</p>
+    </header>
+    <div class="controls" aria-label="预览设置">
+      <label class="search"><input id="search" type="search" placeholder="搜索物品名称或 ID" aria-label="搜索物品名称或 ID" autocomplete="off"></label>
+      <label class="size-control" for="size">预览大小<input id="size" type="range" min="64" max="224" step="8" value="128"><output id="size-value" for="size">128 px</output></label>
+      <span class="results" id="results" aria-live="polite">显示 26 / 26 款</span>
+    </div>
+
+    <section class="art-group" aria-label="管路与储罐">
+      <h2>管路与储罐<span class="group-count">7 款</span></h2>
+      <div class="grid">
+        <button class="item-card" type="button" data-id="FluidPipe" data-name="通用管道" data-src="FluidPipe/FluidPipe_Idle.png" aria-label="查看通用管道原图">
+          <span class="checker canvas"><img src="FluidPipe/FluidPipe_Idle.png" alt="通用管道"><span class="missing" hidden>图片暂未加载</span></span>
+          <span class="item-name">通用管道</span>
+          <span class="item-id">FluidPipe</span>
+        </button>
+        <button class="item-card" type="button" data-id="FluidValve" data-name="流体阀门" data-src="FluidValve/FluidValve_Idle.png" aria-label="查看流体阀门原图">
+          <span class="checker canvas"><img src="FluidValve/FluidValve_Idle.png" alt="流体阀门"><span class="missing" hidden>图片暂未加载</span></span>
+          <span class="item-name">流体阀门</span>
+          <span class="item-id">FluidValve</span>
+        </button>
+        <button class="item-card" type="button" data-id="FluidOutlet" data-name="出气口" data-src="FluidOutlet/FluidOutlet_Idle.png" aria-label="查看出气口原图">
+          <span class="checker canvas"><img src="FluidOutlet/FluidOutlet_Idle.png" alt="出气口"><span class="missing" hidden>图片暂未加载</span></span>
+          <span class="item-name">出气口</span>
+          <span class="item-id">FluidOutlet</span>
+        </button>
+        <button class="item-card" type="button" data-id="GasSelector" data-name="气体筛选管道" data-src="GasSelector/GasSelector_Idle.png" aria-label="查看气体筛选管道原图">
+          <span class="checker canvas"><img src="GasSelector/GasSelector_Idle.png" alt="气体筛选管道"><span class="missing" hidden>图片暂未加载</span></span>
+          <span class="item-name">气体筛选管道</span>
+          <span class="item-id">GasSelector</span>
+        </button>
+        <button class="item-card" type="button" data-id="GasTankBlock_Iron" data-name="铁气罐方块" data-src="GasTankBlock_Iron/GasTankBlock_Iron_Idle.png" aria-label="查看铁气罐方块原图">
+          <span class="checker canvas"><img src="GasTankBlock_Iron/GasTankBlock_Iron_Idle.png" alt="铁气罐方块"><span class="missing" hidden>图片暂未加载</span></span>
+          <span class="item-name">铁气罐方块</span>
+          <span class="item-id">GasTankBlock_Iron</span>
+        </button>
+        <button class="item-card" type="button" data-id="GasTankBlock_Steel" data-name="钢气罐方块" data-src="GasTankBlock_Steel/GasTankBlock_Steel_Idle.png" aria-label="查看钢气罐方块原图">
+          <span class="checker canvas"><img src="GasTankBlock_Steel/GasTankBlock_Steel_Idle.png" alt="钢气罐方块"><span class="missing" hidden>图片暂未加载</span></span>
+          <span class="item-name">钢气罐方块</span>
+          <span class="item-id">GasTankBlock_Steel</span>
+        </button>
+        <button class="item-card" type="button" data-id="LiquidStorageTank" data-name="储液罐" data-src="LiquidStorageTank/LiquidStorageTank_Idle.png" aria-label="查看储液罐原图">
+          <span class="checker canvas"><img src="LiquidStorageTank/LiquidStorageTank_Idle.png" alt="储液罐"><span class="missing" hidden>图片暂未加载</span></span>
+          <span class="item-name">储液罐</span>
+          <span class="item-id">LiquidStorageTank</span>
+        </button>
+      </div>
+    </section>
+
+    <section class="art-group" aria-label="设备">
+      <h2>设备<span class="group-count">10 款</span></h2>
+      <div class="grid">
+        <button class="item-card" type="button" data-id="GasPump_Mechanical" data-name="机械气体泵" data-src="GasPump_Mechanical/GasPump_Mechanical_Idle.png" aria-label="查看机械气体泵原图">
+          <span class="checker canvas"><img src="GasPump_Mechanical/GasPump_Mechanical_Idle.png" alt="机械气体泵"><span class="missing" hidden>图片暂未加载</span></span>
+          <span class="item-name">机械气体泵</span>
+          <span class="item-id">GasPump_Mechanical</span>
+        </button>
+        <button class="item-card" type="button" data-id="LiquidPump_Electric" data-name="电力液体泵" data-src="LiquidPump_Electric/LiquidPump_Electric_Idle.png" aria-label="查看电力液体泵原图">
+          <span class="checker canvas"><img src="LiquidPump_Electric/LiquidPump_Electric_Idle.png" alt="电力液体泵"><span class="missing" hidden>图片暂未加载</span></span>
+          <span class="item-name">电力液体泵</span>
+          <span class="item-id">LiquidPump_Electric</span>
+        </button>
+        <button class="item-card" type="button" data-id="PressureProbe_Mechanical" data-name="机械气压探针" data-src="PressureProbe_Mechanical/PressureProbe_Mechanical_Idle.png" aria-label="查看机械气压探针原图">
+          <span class="checker canvas"><img src="PressureProbe_Mechanical/PressureProbe_Mechanical_Idle.png" alt="机械气压探针"><span class="missing" hidden>图片暂未加载</span></span>
+          <span class="item-name">机械气压探针</span>
+          <span class="item-id">PressureProbe_Mechanical</span>
+        </button>
+        <button class="item-card" type="button" data-id="PressureProbe_Electronic" data-name="电子气压探针" data-src="PressureProbe_Electronic/PressureProbe_Electronic_Idle.png" aria-label="查看电子气压探针原图">
+          <span class="checker canvas"><img src="PressureProbe_Electronic/PressureProbe_Electronic_Idle.png" alt="电子气压探针"><span class="missing" hidden>图片暂未加载</span></span>
+          <span class="item-name">电子气压探针</span>
+          <span class="item-id">PressureProbe_Electronic</span>
+        </button>
+        <button class="item-card" type="button" data-id="GasCompressor_Mechanical" data-name="机械气体压缩机" data-src="GasCompressor_Mechanical/GasCompressor_Mechanical_Idle.png" aria-label="查看机械气体压缩机原图">
+          <span class="checker canvas"><img src="GasCompressor_Mechanical/GasCompressor_Mechanical_Idle.png" alt="机械气体压缩机"><span class="missing" hidden>图片暂未加载</span></span>
+          <span class="item-name">机械气体压缩机</span>
+          <span class="item-id">GasCompressor_Mechanical</span>
+        </button>
+        <button class="item-card" type="button" data-id="GasCompressor_Electric" data-name="电力气体压缩机" data-src="GasCompressor_Electric/GasCompressor_Electric_Idle.png" aria-label="查看电力气体压缩机原图">
+          <span class="checker canvas"><img src="GasCompressor_Electric/GasCompressor_Electric_Idle.png" alt="电力气体压缩机"><span class="missing" hidden>图片暂未加载</span></span>
+          <span class="item-name">电力气体压缩机</span>
+          <span class="item-id">GasCompressor_Electric</span>
+        </button>
+        <button class="item-card" type="button" data-id="ElectricHeater" data-name="电热器" data-src="ElectricHeater/ElectricHeater_Idle.png" aria-label="查看电热器原图">
+          <span class="checker canvas"><img src="ElectricHeater/ElectricHeater_Idle.png" alt="电热器"><span class="missing" hidden>图片暂未加载</span></span>
+          <span class="item-name">电热器</span>
+          <span class="item-id">ElectricHeater</span>
+        </button>
+        <button class="item-card" type="button" data-id="FluidFilter" data-name="过滤器" data-src="FluidFilter/FluidFilter_Idle.png" aria-label="查看过滤器原图">
+          <span class="checker canvas"><img src="FluidFilter/FluidFilter_Idle.png" alt="过滤器"><span class="missing" hidden>图片暂未加载</span></span>
+          <span class="item-name">过滤器</span>
+          <span class="item-id">FluidFilter</span>
+        </button>
+        <button class="item-card" type="button" data-id="WaterElectrolyzer" data-name="水电解器" data-src="WaterElectrolyzer/WaterElectrolyzer_Idle.png" aria-label="查看水电解器原图">
+          <span class="checker canvas"><img src="WaterElectrolyzer/WaterElectrolyzer_Idle.png" alt="水电解器"><span class="missing" hidden>图片暂未加载</span></span>
+          <span class="item-name">水电解器</span>
+          <span class="item-id">WaterElectrolyzer</span>
+        </button>
+        <button class="item-card" type="button" data-id="GasEngine" data-name="氢能发动机" data-src="GasEngine/GasEngine_Idle.png" aria-label="查看氢能发动机原图">
+          <span class="checker canvas"><img src="GasEngine/GasEngine_Idle.png" alt="氢能发动机"><span class="missing" hidden>图片暂未加载</span></span>
+          <span class="item-name">氢能发动机</span>
+          <span class="item-id">GasEngine</span>
+        </button>
+      </div>
+    </section>
+
+    <section class="art-group" aria-label="材料">
+      <h2>材料<span class="group-count">2 款</span></h2>
+      <div class="grid">
+        <button class="item-card" type="button" data-id="FilterResidue" data-name="杂质" data-src="FilterResidue/FilterResidue_Icon.png" aria-label="查看杂质原图">
+          <span class="checker canvas"><img src="FilterResidue/FilterResidue_Icon.png" alt="杂质"><span class="missing" hidden>图片暂未加载</span></span>
+          <span class="item-name">杂质</span>
+          <span class="item-id">FilterResidue</span>
+        </button>
+        <button class="item-card" type="button" data-id="AlkaliSolution" data-name="碱液" data-src="AlkaliSolution/AlkaliSolution_Icon.png" aria-label="查看碱液原图">
+          <span class="checker canvas"><img src="AlkaliSolution/AlkaliSolution_Icon.png" alt="碱液"><span class="missing" hidden>图片暂未加载</span></span>
+          <span class="item-name">碱液</span>
+          <span class="item-id">AlkaliSolution</span>
+        </button>
+      </div>
+    </section>
+
+    <section class="art-group" aria-label="装备">
+      <h2>装备<span class="group-count">7 款</span></h2>
+      <div class="grid">
+        <button class="item-card" type="button" data-id="PortableGasTank_Iron" data-name="铁制便携气罐" data-src="PortableGasTank_Iron/PortableGasTank_Iron_Icon.png" aria-label="查看铁制便携气罐原图">
+          <span class="checker canvas"><img src="PortableGasTank_Iron/PortableGasTank_Iron_Icon.png" alt="铁制便携气罐"><span class="missing" hidden>图片暂未加载</span></span>
+          <span class="item-name">铁制便携气罐</span>
+          <span class="item-id">PortableGasTank_Iron</span>
+        </button>
+        <button class="item-card" type="button" data-id="PortableGasTank_Steel" data-name="钢制便携气罐" data-src="PortableGasTank_Steel/PortableGasTank_Steel_Icon.png" aria-label="查看钢制便携气罐原图">
+          <span class="checker canvas"><img src="PortableGasTank_Steel/PortableGasTank_Steel_Icon.png" alt="钢制便携气罐"><span class="missing" hidden>图片暂未加载</span></span>
+          <span class="item-name">钢制便携气罐</span>
+          <span class="item-id">PortableGasTank_Steel</span>
+        </button>
+        <button class="item-card" type="button" data-id="Spacesuit_Head" data-name="宇航服头盔" data-src="Spacesuit_Head/Spacesuit_Head_Icon.png" aria-label="查看宇航服头盔原图">
+          <span class="checker canvas"><img src="Spacesuit_Head/Spacesuit_Head_Icon.png" alt="宇航服头盔"><span class="missing" hidden>图片暂未加载</span></span>
+          <span class="item-name">宇航服头盔</span>
+          <span class="item-id">Spacesuit_Head</span>
+        </button>
+        <button class="item-card" type="button" data-id="Spacesuit_Torso" data-name="宇航服衣服" data-src="Spacesuit_Torso/Spacesuit_Torso_Icon.png" aria-label="查看宇航服衣服原图">
+          <span class="checker canvas"><img src="Spacesuit_Torso/Spacesuit_Torso_Icon.png" alt="宇航服衣服"><span class="missing" hidden>图片暂未加载</span></span>
+          <span class="item-name">宇航服衣服</span>
+          <span class="item-id">Spacesuit_Torso</span>
+        </button>
+        <button class="item-card" type="button" data-id="Spacesuit_Hands" data-name="宇航服手套" data-src="Spacesuit_Hands/Spacesuit_Hands_Icon.png" aria-label="查看宇航服手套原图">
+          <span class="checker canvas"><img src="Spacesuit_Hands/Spacesuit_Hands_Icon.png" alt="宇航服手套"><span class="missing" hidden>图片暂未加载</span></span>
+          <span class="item-name">宇航服手套</span>
+          <span class="item-id">Spacesuit_Hands</span>
+        </button>
+        <button class="item-card" type="button" data-id="Spacesuit_Legs" data-name="宇航服裤子" data-src="Spacesuit_Legs/Spacesuit_Legs_Icon.png" aria-label="查看宇航服裤子原图">
+          <span class="checker canvas"><img src="Spacesuit_Legs/Spacesuit_Legs_Icon.png" alt="宇航服裤子"><span class="missing" hidden>图片暂未加载</span></span>
+          <span class="item-name">宇航服裤子</span>
+          <span class="item-id">Spacesuit_Legs</span>
+        </button>
+        <button class="item-card" type="button" data-id="Spacesuit_Feet" data-name="宇航服鞋子" data-src="Spacesuit_Feet/Spacesuit_Feet_Icon.png" aria-label="查看宇航服鞋子原图">
+          <span class="checker canvas"><img src="Spacesuit_Feet/Spacesuit_Feet_Icon.png" alt="宇航服鞋子"><span class="missing" hidden>图片暂未加载</span></span>
+          <span class="item-name">宇航服鞋子</span>
+          <span class="item-id">Spacesuit_Feet</span>
+        </button>
+      </div>
+    </section>
+    <p id="empty" class="empty" hidden>没有找到对应物品，试试其他名称或 ID。</p>
+    <p class="footer-note">这里展示的是 PNG 原图，方便检查外观与细节；游戏中的尺寸、放置和装备显示仍需在 Unity 中验收。</p>
+  </main>
+  <dialog id="viewer" aria-labelledby="viewer-name">
+    <div class="dialog-head">
+      <div class="dialog-title"><h2 id="viewer-name"></h2><p id="viewer-info"></p></div>
+      <button class="close" id="close" type="button" aria-label="关闭原图预览">关闭</button>
+    </div>
+    <div class="dialog-controls">
+      <label class="zoom-control" for="zoom">缩放<input id="zoom" type="range" min="50" max="800" step="25" value="100"><output id="zoom-value" for="zoom">100%</output></label>
+      <button class="original" id="original" type="button">原尺寸</button>
+      <a id="original-link" target="_blank" rel="noopener">打开 PNG 原图 ↗</a>
+    </div>
+    <div class="checker image-stage" id="image-stage"><img id="viewer-image" alt=""><span id="viewer-missing" class="missing" hidden>图片暂未加载，请稍后重新打开。</span></div>
+    <p class="dialog-note">100% 为图片原尺寸；放大后可滚动查看细节。按 Esc 关闭。</p>
+  </dialog>
+  <script>
+    // 所有预览直接读取同目录 PNG，筛选与缩放无需联网。
+    const cards = Array.from(document.querySelectorAll(".item-card"));
+    const groups = Array.from(document.querySelectorAll(".art-group"));
+    const search = document.getElementById("search");
+    const size = document.getElementById("size");
+    const viewer = document.getElementById("viewer");
+    const viewerImage = document.getElementById("viewer-image");
+    const viewerMissing = document.getElementById("viewer-missing");
+    const zoom = document.getElementById("zoom");
+    const imageStage = document.getElementById("image-stage");
+    let currentCard = null;
+
+    function filterItems() {
+      const term = search.value.trim().toLocaleLowerCase();
+      let shown = 0;
+      cards.forEach(card => {
+        const match = (card.dataset.name + " " + card.dataset.id).toLocaleLowerCase().includes(term);
+        card.hidden = !match;
+        if (match) shown++;
+      });
+      groups.forEach(group => {
+        const visible = Array.from(group.querySelectorAll(".item-card")).filter(card => !card.hidden).length;
+        group.hidden = visible === 0;
+        group.querySelector(".group-count").textContent = visible + " 款";
+      });
+      document.getElementById("results").textContent = "显示 " + shown + " / 26 款";
+      document.getElementById("empty").hidden = shown !== 0;
+    }
+
+    function setPreviewSize() {
+      document.documentElement.style.setProperty("--preview-size", size.value + "px");
+      document.getElementById("size-value").value = size.value + " px";
+    }
+
+    function setZoom() {
+      document.getElementById("zoom-value").value = zoom.value + "%";
+      if (viewerImage.naturalWidth) {
+        viewerImage.style.width = Math.round(viewerImage.naturalWidth * Number(zoom.value) / 100) + "px";
+      }
+    }
+
+    function openItem(card) {
+      currentCard = card;
+      document.getElementById("viewer-name").textContent = card.dataset.name;
+      document.getElementById("viewer-info").textContent = card.dataset.id;
+      document.getElementById("original-link").href = card.dataset.src;
+      viewerMissing.hidden = true;
+      viewerImage.hidden = false;
+      viewerImage.style.width = "";
+      viewerImage.alt = card.dataset.name;
+      zoom.value = 100;
+      document.getElementById("zoom-value").value = "100%";
+      viewerImage.src = card.dataset.src;
+      viewer.showModal();
+      imageStage.scrollTo(0, 0);
+      if (viewerImage.complete && viewerImage.naturalWidth) setZoom();
+    }
+
+    cards.forEach(card => {
+      const image = card.querySelector("img");
+      const missing = card.querySelector(".missing");
+      image.addEventListener("error", () => { image.hidden = true; missing.hidden = false; });
+      image.addEventListener("load", () => { image.hidden = false; missing.hidden = true; });
+      if (image.complete && image.naturalWidth === 0) { image.hidden = true; missing.hidden = false; }
+      card.addEventListener("click", () => openItem(card));
+    });
+    viewerImage.addEventListener("load", () => {
+      viewerImage.hidden = false;
+      viewerMissing.hidden = true;
+      document.getElementById("viewer-info").textContent = currentCard.dataset.id + " · " + viewerImage.naturalWidth + " × " + viewerImage.naturalHeight + " px";
+      setZoom();
+    });
+    viewerImage.addEventListener("error", () => { viewerImage.hidden = true; viewerMissing.hidden = false; });
+    search.addEventListener("input", filterItems);
+    size.addEventListener("input", setPreviewSize);
+    zoom.addEventListener("input", setZoom);
+    document.getElementById("original").addEventListener("click", () => { zoom.value = 100; setZoom(); imageStage.scrollTo(0, 0); });
+    document.getElementById("close").addEventListener("click", () => viewer.close());
+    viewer.addEventListener("click", event => { if (event.target === viewer) { const rect = viewer.getBoundingClientRect(); if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) viewer.close(); } });
+  </script>
+</body>
+</html>

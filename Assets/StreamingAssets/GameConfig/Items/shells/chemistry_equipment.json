@@ -21,11 +21,11 @@
         "Container.FluidTank"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]",
+        "spriteAddress": "Assets/6_Art/Generated/Chemistry/PortableGasTank_Iron/PortableGasTank_Iron_Icon.png",
         "color": {
           "b": 1,
-          "r": 0.8,
-          "g": 0.88,
+          "r": 1,
+          "g": 1,
           "a": 1
         }
       },
@@ -96,11 +96,11 @@
         "Container.FluidTank"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]",
+        "spriteAddress": "Assets/6_Art/Generated/Chemistry/PortableGasTank_Steel/PortableGasTank_Steel_Icon.png",
         "color": {
           "b": 1,
-          "r": 0.8,
-          "g": 0.88,
+          "r": 1,
+          "g": 1,
           "a": 1
         }
       },
@@ -172,11 +172,11 @@
         "InventoryGroup.Chemical"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]",
+        "spriteAddress": "Assets/6_Art/Generated/Chemistry/Spacesuit_Head/Spacesuit_Head_Icon.png",
         "color": {
           "b": 1,
-          "r": 0.82,
-          "g": 0.93,
+          "r": 1,
+          "g": 1,
           "a": 1
         }
       },
@@ -228,11 +228,11 @@
         "InventoryGroup.Chemical"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]",
+        "spriteAddress": "Assets/6_Art/Generated/Chemistry/Spacesuit_Torso/Spacesuit_Torso_Icon.png",
         "color": {
           "b": 1,
-          "r": 0.82,
-          "g": 0.93,
+          "r": 1,
+          "g": 1,
           "a": 1
         }
       },
@@ -304,11 +304,11 @@
         "InventoryGroup.Chemical"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]",
+        "spriteAddress": "Assets/6_Art/Generated/Chemistry/Spacesuit_Hands/Spacesuit_Hands_Icon.png",
         "color": {
           "b": 1,
-          "r": 0.82,
-          "g": 0.93,
+          "r": 1,
+          "g": 1,
           "a": 1
         }
       },
@@ -356,11 +356,11 @@
         "InventoryGroup.Chemical"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]",
+        "spriteAddress": "Assets/6_Art/Generated/Chemistry/Spacesuit_Legs/Spacesuit_Legs_Icon.png",
         "color": {
           "b": 1,
-          "r": 0.82,
-          "g": 0.93,
+          "r": 1,
+          "g": 1,
           "a": 1
         }
       },
@@ -408,11 +408,11 @@
         "InventoryGroup.Chemical"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]",
+        "spriteAddress": "Assets/6_Art/Generated/Chemistry/Spacesuit_Feet/Spacesuit_Feet_Icon.png",
         "color": {
           "b": 1,
-          "r": 0.82,
-          "g": 0.93,
+          "r": 1,
+          "g": 1,
           "a": 1
         }
       },

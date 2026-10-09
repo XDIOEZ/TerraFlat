@@ -21,7 +21,7 @@ description: "Use when: 定位或修改 FlatWorld 的机器世界、工作台、
 - 机械网与电网是同一批 `MachineEntity` 上的两张独立拓扑图；电线使用独立覆盖层。`Electrical.Connection=cell` 接同格线，方向名接旋转后的邻格；双向电机 `Role=converter` 的电气接口和唯一 `AxlePorts` 必须分开，默认左线右轴，不要求世界布线区分正负极。
 - 双向电机每轮先排除电驱动力探测机械输入，再从独立电源向外确定方向；机械输入优先，转换链的上游电网不能成为发电回流目标。电池探算不写储能，正式结算每轮一次；输出按实际功率预算限制，电驱扭矩向下取整，不能将上一轮输出或四舍五入增量当作新能量。转换效率与游戏功率换算统一取目录配置。
 - 电线 `visual.spriteStates` 使用 `wire0..wire15`，连接位为北1、东2、南4、西8；朝向只读取权威电线格与方向端口索引，同格设备不产生额外支路。邻格增删须刷新跨区块/循环边界的连接形状，连接未变化不重提网格，不能按召唤器旋转或每帧轮询选图。
-- 混合电力/机械设备的接口属于独立表现层：机械轴口由 `MachineDefinition.AxisPortVisual` 配置 `Count=1/2`、`StartX`、`Y`，统一复用 `Shaft_Wood/axisPort` 标准贴图并始终绘制在机械主体下层；单端保留 `StartX` 正负决定左右，双端按 `±abs(StartX)` 镜像。电线口仍用 `electricalPort + ElectricalPortLocalPosition`；机身美术不得烘入机械连接杆或轴口。
+- 混合电力/机械设备的接口属于独立表现层：机械轴口由 `MachineDefinition.AxisPortVisual` 配置 `Count=1/2`、`StartX`、`Y`，统一复用 `Shaft_Wood/axisPort` 标准贴图并始终绘制在机械主体下层；单端保留 `StartX` 正负决定左右，双端按 `±abs(StartX)` 镜像。电线口仍用 `electricalPort + ElectricalPortLocalPosition`；机身、召唤器与库存图标不得烘入机械连接杆、轴口、铁环或外部流体连接短管/法兰；流体管道的接入和离开同样由程序化表现层负责，贴图只绘制完整设备主体。
 - 电网首版按整网功率求解：W 表示功率、J 表示储能；电压参与兼容性，电流由 `P/V` 推导，电阻只保留正式数据接口，未实现逐段压降/基尔霍夫仿真。
 - 电池面板由交互入口显式启用 `MechanicalPanelSession` 的 0.2 秒非缩放状态刷新：打开立即读数，关闭/销毁停协程，仅更新有变化的状态文本，不轮询库存或重排布局；其他面板默认仍走事件。储能读取节点当前 `ElectricalStoredJoules`，未接电网也要显示，不依赖加工 Tick、不在 UI 累加或预测电量。
 - 召唤器、玩家库存和手持玩法保留 Item；落地设施走 `Place/SpawnGenerated/RestoreMachine`，`ItemMgr` 拒绝再实例化其完整 Item。`Mod_MachineAuthoring` 只保存配置，禁止重新启用其 Load/Tick 做运行时兜底。
