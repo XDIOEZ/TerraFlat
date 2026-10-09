@@ -17,6 +17,11 @@ description: "Use when: 定位或修改 FlatWorld 的机器世界、工作台、
 
 ## 约束
 
+- 移动船体使用 `MachineWorld.UseScope("ship:" + ShipId)` 和 `TickShip`，不得让当前地表切换重建或冻结船上网络；表现位置由 SpaceSession.ProjectMachinePosition 投影，本地 Cell 保持不变。
+- 共享罐跨船转移、分裂或回收前，先按各真实罐体容积分配 decimal 组分和内能，并归还各端口预留；撤销旧共享引用和流量预算，再重建两侧网络。不能将整组气体复制到单罐快照。
+- 培育仓由 CultivatorLogic 管理多个独立作物进度、真实水库存、供电、肥料及待收产量；配置来自 Mod_Cultivator 和 `space_devices.json`，面板只发正式库存命令，断供与满输出保留状态。
+- 船上流体设备通过环境提供方读取真实舱室温压和气体库存，进气抽取实际舱气；不可拿当前 TemperatureMgr 或星球大气替代另一世界船舱。
+
 - 只维护一套 `MachineWorld`，不新建并列的 WorkBlockWorld；普通设施 `Ports=none` 共用格索引，但不能伪造扭矩网络。传动网络和设施业务都保持粗粒度内聚。
 - 机械网与电网是同一批 `MachineEntity` 上的两张独立拓扑图；电线使用独立覆盖层。`Electrical.Connection=cell` 接同格线，方向名接旋转后的邻格；双向电机 `Role=converter` 的电气接口和唯一 `AxlePorts` 必须分开，默认左线右轴，不要求世界布线区分正负极。
 - 双向电机每轮先排除电驱动力探测机械输入，再从独立电源向外确定方向；机械输入优先，转换链的上游电网不能成为发电回流目标。电池探算不写储能，正式结算每轮一次；输出按实际功率预算限制，电驱扭矩向下取整，不能将上一轮输出或四舍五入增量当作新能量。转换效率与游戏功率换算统一取目录配置。

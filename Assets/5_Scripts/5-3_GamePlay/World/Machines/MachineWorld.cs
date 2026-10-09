@@ -20,22 +20,22 @@ public static partial class MachineWorld
     }
 
     #region 会话与扩展
-    private static readonly Dictionary<int, MachineEntity> nodes = new();
-    private static readonly Dictionary<int, MachineInteractionTarget> interactions = new();
-    private static readonly Dictionary<RecipeProcessor, MachineEntity> processorOwners = new();
+    private static Dictionary<int, MachineEntity> nodes => scope.Nodes;
+    private static Dictionary<int, MachineInteractionTarget> interactions => scope.Interactions;
+    private static Dictionary<RecipeProcessor, MachineEntity> processorOwners => scope.Processors;
     private static readonly Dictionary<string, Func<MachineEntity, float>> sourceProviders = new(StringComparer.Ordinal);
     private static readonly Dictionary<string, Func<MachineEntity, float>> sourceRpmProviders = new(StringComparer.Ordinal);
-    private static readonly List<Vector2Int> players = new();
+    private static List<Vector2Int> players => scope.Players;
     private const float PointerInteractionRadius = .65f; // 机械数据目标的准线命中半径，必须与查询格范围同步。
-    private static MechanicalNetworkGraph graph;
-    private static GameSaveData owner;
-    private static string worldKey;
-    private static bool dirty;
-    private static bool suppressRemoval;
-    private static float elapsed;
-    private static Vector2 combatSearchPadding = Vector2.one; // 当前节点受击范围的最大外延，只在拓扑或资源变化时重算。
+    private static MechanicalNetworkGraph graph { get => scope.Graph; set => scope.Graph = value; }
+    private static GameSaveData owner { get => scope.Owner; set => scope.Owner = value; }
+    private static string worldKey { get => scope.Key; set => scope.Key = value; }
+    private static bool dirty { get => scope.Dirty; set => scope.Dirty = value; }
+    private static bool suppressRemoval { get => scope.SuppressRemoval; set => scope.SuppressRemoval = value; }
+    private static float elapsed { get => scope.Elapsed; set => scope.Elapsed = value; }
+    private static Vector2 combatSearchPadding { get => scope.CombatPadding; set => scope.CombatPadding = value; } // 当前节点受击范围的最大外延，只在拓扑或资源变化时重算。
     private const int MaxCatchUpStepsPerFrame = 8;
-    public static uint TransportStep { get; private set; } // 同一轮机械模拟中的跨带搬运只提交一次。
+    public static uint TransportStep { get => scope.Step; private set => scope.Step = value; } // 同一轮机械模拟中的跨带搬运只提交一次。
     public static IReadOnlyList<MechanicalNetwork> Networks => graph?.Networks;
     public static string WorldKey => worldKey;
     /// <summary>机械数据格变化时通知区块表现与导航，不依赖世界物品实例。</summary>
@@ -47,6 +47,7 @@ public static partial class MachineWorld
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void Reset()
     {
+        ReleaseAllScopes(false);
         UnbindMachineResources();
         airflowProviders.Clear();
         RemoteOperationRequested = null;
@@ -79,17 +80,17 @@ public static partial class MachineWorld
     {
         BindMachineResources();
         var save = SaveDataMgr.Instance?.SaveData;
-        string key = SceneManager.GetActiveScene().name;
+        string key = scopeOverride ?? SceneManager.GetActiveScene().name;
         if (ReferenceEquals(owner, save) && worldKey == key && graph != null && electricalGraph != null) return;
-        if (ReferenceEquals(owner, save)) CaptureCurrentWorld();
-        ReleaseRuntime();
-        owner = save; worldKey = key;
+        SelectScope(save, key);
+        if (graph != null && electricalGraph != null) return;
         MachineCatalog.EnsureLoaded();
-        Vector2 size = ChunkMgr.ExistingInstance != null
+        PlanetData scopedPlanet = ResolveScopedPlanet(save, key);
+        Vector2 size = scopedPlanet != null ? PlanetData.NormalizeChunkSize(scopedPlanet.ChunkSize) : ChunkMgr.ExistingInstance != null
             ? ChunkMgr.GetChunkSize()
             : new Vector2(PlanetData.DefaultChunkDimension, PlanetData.DefaultChunkDimension);
         var chunkSize = new Vector2Int(Mathf.Max(1, Mathf.RoundToInt(size.x)), Mathf.Max(1, Mathf.RoundToInt(size.y)));
-        WorldTopologyDomain topology = WorldTopologyRuntime.GetActiveDomain();
+        WorldTopologyDomain topology = IsShipScope ? default : ResolveScopedTopology(scopedPlanet);
         Vector2Int period = topology.IsWrapped
             ? new Vector2Int(topology.Span.x / chunkSize.x, topology.Span.y / chunkSize.y)
             : Vector2Int.zero;
@@ -99,7 +100,8 @@ public static partial class MachineWorld
         if (save?.Mechanical?.Worlds != null && save.Mechanical.Worlds.TryGetValue(key, out var snapshots))
             foreach (var data in snapshots) RestoreDescriptor(data);
         dirty = true;
-        BuildingOccupancyRegistry.RebuildSightBlockingIndex(nodes.Values, topology);
+        if (!IsShipScope && key == SceneManager.GetActiveScene().name)
+            BuildingOccupancyRegistry.RebuildSightBlockingIndex(nodes.Values, topology);
     }
 
     private static void RestoreDescriptor(ItemData snapshot)
@@ -118,6 +120,7 @@ public static partial class MachineWorld
             Engaged = state.Engaged, RatioIndex = state.RatioIndex
         };
         InitializeElectricalState(node, state);
+        node.ScopeKey = worldKey;
         nodes.Add(snapshot.Guid, node);
     }
 
@@ -133,6 +136,7 @@ public static partial class MachineWorld
             node = new MachineEntity { Id = id, Cell = CellOf(view.item.transform.position), Definition = view.Definition,
                 Snapshot = view.item.itemData, State = view.LocalState };
             InitializeElectricalState(node, view.LocalState);
+            node.ScopeKey = worldKey;
             nodes.Add(id, node); dirty = true;
             CopyTopology(node);
             EnsureProcessor(node);
@@ -141,8 +145,8 @@ public static partial class MachineWorld
         else if (node.State == null) WakeNode(node);
         bool viewChanged = node.View != view;
         node.View = view;
-        if (added) BuildingOccupancyRegistry.NotifyMechanicalChanged(node.Cell);
-        if (viewChanged) CellChanged?.Invoke(node.Cell); // 外壳接管阻挡时撤销数据 Box，避免重复碰撞。
+        if (added) NotifySurfaceMechanicalChanged(node.Cell);
+        if (viewChanged) NotifySurfaceCellChanged(node.Cell); // 外壳接管阻挡时撤销数据 Box，避免重复碰撞。
         return node;
     }
 
@@ -173,10 +177,11 @@ public static partial class MachineWorld
         InitializeElectricalState(node, state);
         CopyTopology(node);
         EnsureProcessor(node);
+        node.ScopeKey = worldKey;
         nodes.Add(node.Id, node);
         dirty = true;
-        BuildingOccupancyRegistry.NotifyMechanicalChanged(cell);
-        CellChanged?.Invoke(cell);
+        NotifySurfaceMechanicalChanged(cell);
+        NotifySurfaceCellChanged(cell);
         NodeStateChanged?.Invoke(node);
         return node;
     }
@@ -198,9 +203,9 @@ public static partial class MachineWorld
         catch (Exception exception) { Debug.LogException(exception); }
         try { DisposeProcessor(node); }
         catch (Exception exception) { Debug.LogException(exception); }
-        try { BuildingOccupancyRegistry.NotifyMechanicalChanged(node.Cell); }
+        try { NotifySurfaceMechanicalChanged(node.Cell); }
         catch (Exception exception) { Debug.LogException(exception); }
-        try { CellChanged?.Invoke(node.Cell); }
+        try { NotifySurfaceCellChanged(node.Cell); }
         catch (Exception exception) { Debug.LogException(exception); }
         try { NodeRemoved?.Invoke(id); }
         catch (Exception exception) { Debug.LogException(exception); }
@@ -223,8 +228,8 @@ public static partial class MachineWorld
         if (interactions.Remove(id, out MachineInteractionTarget interaction)) interaction.Dispose();
         nodes.Remove(id);
         dirty = true;
-        BuildingOccupancyRegistry.NotifyMechanicalChanged(node.Cell);
-        CellChanged?.Invoke(node.Cell);
+        NotifySurfaceMechanicalChanged(node.Cell);
+        NotifySurfaceCellChanged(node.Cell);
         NodeRemoved?.Invoke(id);
         return snapshot;
     }
@@ -232,6 +237,7 @@ public static partial class MachineWorld
     /// <summary>拆除事务先捕获纯数据节点的加工库存和朝向，不改变世界占地。</summary>
     public static ItemData CaptureSnapshot(MachineEntity node)
     {
+        using var nodeScope = UseNodeScope(node);
         EnsureScope();
         if (node == null || !nodes.TryGetValue(node.Id, out MachineEntity current) ||
             !ReferenceEquals(node, current)) return null;
@@ -261,8 +267,8 @@ public static partial class MachineWorld
         dirty = true;
         foreach (Vector2Int cell in changedCells)
         {
-            BuildingOccupancyRegistry.NotifyMechanicalChanged(cell);
-            CellChanged?.Invoke(cell);
+            if (!IsShipScope) NotifySurfaceMechanicalChanged(cell);
+            NotifySurfaceCellChanged(cell);
         }
     }
 
@@ -280,7 +286,8 @@ public static partial class MachineWorld
         if (!nodes.TryGetValue(snapshot.Guid, out MachineEntity node))
         {
             node = new MachineEntity { Id = snapshot.Guid };
-            nodes.Add(node.Id, node);
+            node.ScopeKey = worldKey;
+        nodes.Add(node.Id, node);
         }
         else
         {
@@ -310,11 +317,11 @@ public static partial class MachineWorld
         UpdateVisualSpeed(node);
         if (moved)
         {
-            BuildingOccupancyRegistry.NotifyMechanicalChanged(previousCell);
-            CellChanged?.Invoke(previousCell);
+            NotifySurfaceMechanicalChanged(previousCell);
+            NotifySurfaceCellChanged(previousCell);
         }
-        BuildingOccupancyRegistry.NotifyMechanicalChanged(node.Cell);
-        CellChanged?.Invoke(node.Cell);
+        NotifySurfaceMechanicalChanged(node.Cell);
+        NotifySurfaceCellChanged(node.Cell);
     }
 
     /// <summary>客户端以数据身份删除机械节点。</summary>
@@ -327,8 +334,8 @@ public static partial class MachineWorld
         nodes.Remove(id);
         fluidStates.Remove(id);
         dirty = true;
-        BuildingOccupancyRegistry.NotifyMechanicalChanged(node.Cell);
-        CellChanged?.Invoke(node.Cell);
+        NotifySurfaceMechanicalChanged(node.Cell);
+        NotifySurfaceCellChanged(node.Cell);
     }
 
     /// <summary>客户端更新 GPU 动画速度，不重传加工库存。</summary>
@@ -362,7 +369,9 @@ public static partial class MachineWorld
     public static MachineEntity GetById(int id)
     {
         EnsureScope();
-        return nodes.TryGetValue(id, out MachineEntity node) ? node : null;
+        if (nodes.TryGetValue(id, out MachineEntity node)) return node;
+        foreach (ScopeState value in scopes.Values) if (value.Nodes.TryGetValue(id, out node)) return node;
+        return null;
     }
 
     /// <summary>导航等高频查询只读取当前已建立的机械世界，不触发场景或存档作用域切换。</summary>
@@ -449,6 +458,7 @@ public static partial class MachineWorld
     /// <summary>休眠节点由交互唤醒加工器，随后正常交给网络 Tick 管理。</summary>
     public static void WakeForInteraction(MachineEntity node)
     {
+        using var nodeScope = UseNodeScope(node);
         if (!Contains(node)) return;
         if (node.State == null) WakeNode(node);
     }
@@ -508,7 +518,7 @@ public static partial class MachineWorld
     {
         if (node == null) return;
         CopyTopology(node); dirty = true;
-        CellChanged?.Invoke(node.Cell);
+        NotifySurfaceCellChanged(node.Cell);
         StateChanged(node);
     }
     private static void CopyTopology(MachineEntity node)
@@ -526,14 +536,14 @@ public static partial class MachineWorld
         node.View = null;
         DisposeProcessor(node);
         nodes.Remove(node.Id); dirty = true;
-        CellChanged?.Invoke(node.Cell);
+        NotifySurfaceCellChanged(node.Cell);
     }
     public static void Detach(Mod_MechanicalNode view)
     {
         if (view.Node != null && view.Node.View == view)
         {
             view.Node.View = null;
-            CellChanged?.Invoke(view.Node.Cell); // 外壳卸载后由数据 Box 继续阻挡。
+            NotifySurfaceCellChanged(view.Node.Cell); // 外壳卸载后由数据 Box 继续阻挡。
         }
     }
     #endregion
@@ -559,7 +569,7 @@ public static partial class MachineWorld
             RebuildGraphsIfDirty();
             foreach (var network in graph.Networks)
             {
-                bool active = graph.ShouldBeActive(network, players, step, MachineCatalog.Settings) ||
+                bool active = IsShipScope || graph.ShouldBeActive(network, players, step, MachineCatalog.Settings) ||
                     RequiresElectricalBridgeSimulation(network) || RequiresFluidSimulation(network);
                 if (!active)
                 {
@@ -817,7 +827,7 @@ public static partial class MachineWorld
                 ref node.GearboxSmallTime, radiansPerRpm * small, now);
         }
         if (!changed) return;
-        CellChanged?.Invoke(node.Cell);
+        NotifySurfaceCellChanged(node.Cell);
         VisualSpeedChanged?.Invoke(node);
     }
 
@@ -842,7 +852,9 @@ public static partial class MachineWorld
         finally { suppressRemoval = false; }
     }
 
-    public static Vector2Int CellOf(Vector3 position) => WorldTopologyRuntime.NormalizeCell(new Vector2Int(Mathf.FloorToInt(position.x), Mathf.FloorToInt(position.y)));
+    public static Vector2Int CellOf(Vector3 position) => IsShipScope
+        ? new Vector2Int(Mathf.FloorToInt(position.x), Mathf.FloorToInt(position.y))
+        : WorldTopologyRuntime.NormalizeCell(new Vector2Int(Mathf.FloorToInt(position.x), Mathf.FloorToInt(position.y)));
     public static bool IsOccupied(Vector2Int cell, int layer, int except = 0)
     {
         if (graph == null) return false;
@@ -971,7 +983,7 @@ public static partial class MachineWorld
     private static int CompareSnapshots(ItemData a, ItemData b) => a.Guid.CompareTo(b.Guid);
     public static byte[] CaptureArchive(GameSaveData save)
     {
-        if (ReferenceEquals(save, owner)) CaptureCurrentWorld();
+        CaptureAllScopes(save);
         return MemoryPackSerializer.Serialize(save.Mechanical ?? new MachineArchive());
     }
     public static void RestoreArchive(GameSaveData save, byte[] bytes)
@@ -983,13 +995,12 @@ public static partial class MachineWorld
     public static void ReleaseWorld(bool capture)
     {
         UnbindMachineResources();
-        if (capture) CaptureCurrentWorld();
-        ReleaseRuntime(); owner = null; worldKey = null; graph = null; electricalGraph = null;
+        if (FlatWorld.Spaceflight.SpaceSession.Current?.State != null) ReleaseSurfaceScopes(capture);
+        else ReleaseAllScopes(capture);
         BuildingOccupancyRegistry.RebuildSightBlockingIndex(null, default);
     }
     private static void ReleaseRuntime()
     {
-        GameplayCombatBridge.Unregister(MachineCombatBridge.Instance);
         foreach (MachineInteractionTarget interaction in interactions.Values) interaction.Dispose();
         interactions.Clear();
         foreach (var node in nodes.Values) DisposeProcessor(node);

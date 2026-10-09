@@ -26,12 +26,15 @@ public sealed class SpacesuitPanelSession : IDisposable
         panel = UIManager.Instance.CreatePanelFromGameObject(GameRes.Instance.GetPrefab("UI_Spacesuit"));
         view = panel.GetComponent<MechanicalPanelView>() ?? throw new InvalidOperationException("宇航服面板缺少正式视图。");
         view.SetProcessingVisible(true);
-        view.OutputSlot.gameObject.SetActive(false);
+        view.OutputSlot.gameObject.SetActive(true);
         view.DismantleButton.gameObject.SetActive(false);
         view.SetActionVisible(true);
         binding.TankInventory.itemSlot_UI.Clear();
         binding.TankInventory.BindSlotUI(view.InputSlot, 0);
         binding.TankInventory.SyncData();
+        binding.PropulsionTankInventory.itemSlot_UI.Clear();
+        binding.PropulsionTankInventory.BindSlotUI(view.OutputSlot, 0);
+        binding.PropulsionTankInventory.SyncData();
         view.CloseButton.onClick.AddListener(Close);
         view.ActionButton.onClick.AddListener(ToggleHelmet);
         panel.Opened += OnOpened;
@@ -61,6 +64,9 @@ public sealed class SpacesuitPanelSession : IDisposable
         binding.TankInventory.DefaultTarget_Inventory = actor.GetComponentInChildren<Mod_Hand>()?.HandInventory;
         binding.TankInventory.RefreshUI();
         binding.TankInventory.SyncQuickTransferTarget(panel);
+        binding.PropulsionTankInventory.DefaultTarget_Inventory = actor.GetComponentInChildren<Mod_Hand>()?.HandInventory;
+        binding.PropulsionTankInventory.RefreshUI();
+        binding.PropulsionTankInventory.SyncQuickTransferTarget(panel);
         Refresh();
         refresh = panel.StartCoroutine(RefreshLoop());
     }
@@ -70,6 +76,8 @@ public sealed class SpacesuitPanelSession : IDisposable
         refresh = null;
         binding.TankInventory.DefaultTarget_Inventory = null;
         binding.TankInventory.SyncQuickTransferTarget(panel);
+        binding.PropulsionTankInventory.DefaultTarget_Inventory = null;
+        binding.PropulsionTankInventory.SyncQuickTransferTarget(panel);
     }
     private IEnumerator RefreshLoop()
     {
@@ -99,17 +107,26 @@ public sealed class SpacesuitPanelSession : IDisposable
         view.Title.text = FlatWorldLocalizationService.GetUiFormat("{0} · 宇航服", suit.GameName);
         decimal standardLiters = 0m;
         if (FluidTankStorage.TryGet(binding.Tank, out FluidInventory inventory, out _)) standardLiters = FluidUnits.MolToStandardLiters(inventory.GetGasMoles(FluidIds.Oxygen));
+        decimal propulsionLiters = FluidTankStorage.TryGet(binding.PropulsionTank, out FluidInventory propulsionInventory, out _)
+            ? FluidUnits.MolToStandardLiters(propulsionInventory.GasMoles) : 0m;
         Mod_Oxygen oxygen = actor.itemMods.GetMod_ByID<Mod_Oxygen>(Mod_Oxygen.ModuleId);
         string protection = FlatWorldLocalizationService.GetUiText(binding.IsComplete && binding.IsHelmetSealed ? "生效" : "失效");
-        double pressure = AtmosphereService.TryGetForWorld(actor.gameObject.scene.name, out var atmosphere) ? AtmosphereService.PressureKPa(atmosphere) : 0d;
+        double pressure = ItemEnvironmentSources.TryGet(actor, out ItemEnvironmentSample environment) ? environment.PressureKPa :
+            AtmosphereService.TryGetForWorld(actor.gameObject.scene.name, out var atmosphere) ? AtmosphereService.PressureKPa(atmosphere) : 0d;
         string range = "";
         if (actor.itemMods.GetMod_ByID<Mod_Pressure>(Mod_Pressure.ModuleId) is Mod_Pressure pressureModule)
         { pressureModule.GetSafePressureRange(out float min, out float max); range = "\n" + FlatWorldLocalizationService.GetUiFormat("安全气压 {0:0.#}～{1:0.#} kPa", min, max); }
         binding.TankInventory.RefreshUI();
+        binding.PropulsionTankInventory.RefreshUI();
         view.Status.text = FlatWorldLocalizationService.GetUiFormat("头盔 {0} · 套装 {1}\n气压保护 {2} · 环境 {3:0.##} kPa{4}\n呼吸 {5} · 罐内氧气 {6:0.###} 标准L\n角色氧气 {7:0.#}/{8:0.#}",
             FlatWorldLocalizationService.GetUiText(binding.State.HelmetOn ? "佩戴" : "摘下"), FlatWorldLocalizationService.GetUiText(binding.IsComplete ? "完整" : "不完整"),
-            protection, pressure, range, FlatWorldLocalizationService.GetUiText(binding.IsHelmetSealed ? "罐内供氧" : "星球大气"), standardLiters, oxygen?.CurrentValue ?? 0f, oxygen?.MaxValue ?? 0f) +
+            protection, pressure, range, FlatWorldLocalizationService.GetUiText(binding.IsHelmetSealed ? "罐内供氧" : "环境供氧"), standardLiters, oxygen?.CurrentValue ?? 0f, oxygen?.MaxValue ?? 0f) +
             (binding.IsHelmetSealed && standardLiters <= 0m ? "\n" + FlatWorldLocalizationService.GetUiText("氧气罐为空，正在消耗角色氧气") : "");
+        view.Status.text += "\n" + FlatWorldLocalizationService.GetUiFormat("供氧槽（左） · 推进槽（右）\n推进气量 {0:0.###} 标准L · 加速度 {1:0.##} m/s²",
+            propulsionLiters, binding.Configuration.PropulsionAcceleration);
+        view.Status.text += "\n" + FlatWorldLocalizationService.GetUiFormat("衣服耐久 {0:0.#}/{1:0.#} · 单次冲击保护上限 {2:0.#}",
+            suit.Durability, suit.MaxDurability, Mathf.Min(binding.Configuration.MaximumImpactProtection,
+                Mathf.Max(0f, suit.Durability) / binding.Configuration.ImpactDurabilityPerDamage));
         SetButtonLabel(view.ActionButton, binding.State.HelmetOn ? "摘下头盔" : "戴回头盔");
         view.ActionButton.interactable = StillOwned();
     }
@@ -123,6 +140,7 @@ public sealed class SpacesuitPanelSession : IDisposable
         if (disposed) return;
         Close(); disposed = true;
         binding.TankInventory.itemSlot_UI.Clear();
+        binding.PropulsionTankInventory.itemSlot_UI.Clear();
         sessions.Remove(suit.Guid);
         if (panel != null)
         {

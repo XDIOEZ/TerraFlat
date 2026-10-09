@@ -63,6 +63,7 @@ public static partial class MachineWorld
     /// <summary>客户端仅发送操作意图，不能通过面板直接改写机器状态。</summary>
     public static bool RequestOperation(MachineEntity entity, string operation, string argument, Player actor)
     {
+        using var nodeScope = UseNodeScope(entity);
         if (!Contains(entity)) return false;
         return GameNetwork.HasStateAuthority ? Execute(entity, operation, argument, actor)
             : RemoteOperationRequested?.Invoke(entity.Id, operation, argument) == true;

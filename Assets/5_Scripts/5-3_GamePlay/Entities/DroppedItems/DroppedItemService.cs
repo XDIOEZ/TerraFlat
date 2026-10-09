@@ -53,6 +53,13 @@ public interface IDroppedItemSpawnContextReceiver
     void OnDroppedItemSpawned(in DroppedItemSpawnContext context);
 }
 
+/// <summary>特殊物理世界接管生成，通用掉落服务只负责入口与回滚句柄。</summary>
+public interface IDroppedItemSpawnProvider
+{
+    bool CanHandle(in DroppedItemSpawnContext context);
+    DroppedItemHandle SpawnDrop(ItemData source, in DroppedItemSpawnContext context, float rotation, Vector3 scale);
+}
+
 /// <summary>
 /// 掉落态入口：passive 使用轻量 GameObject 模拟器，interactive 保留完整 Item。ItemData 只作轻量掉落物冷载荷，
 /// 树木、矿石节点、安装中的建筑、手持物和战斗中的投射物仍由各自原系统管理。
@@ -75,9 +82,49 @@ public static partial class DroppedItemService
     private static readonly HashSet<Mod_ItemPicker> pickers = new();
     private static readonly Dictionary<Item, LegacyDropPlan> legacyPlans = new();
     private static readonly List<KeyValuePair<Item, LegacyDropPlan>> legacyScratch = new();
+    private static readonly List<DropSpawnRegistration> spawnProviders = new();
     internal static uint Epoch { get; private set; } = 1;
     public static int Count => runtime?.Count ?? 0;
     public static int VisibleViewCount => runtime?.VisibleViewCount ?? 0;
+
+    #region 外部物理世界生成入口
+    private sealed class DropSpawnRegistration : IDisposable
+    {
+        public readonly IDroppedItemSpawnProvider Provider;
+        private bool disposed;
+        public DropSpawnRegistration(IDroppedItemSpawnProvider provider) => Provider = provider;
+        public void Dispose()
+        { if (disposed) return; disposed = true; spawnProviders.Remove(this); }
+    }
+    public static IDisposable RegisterSpawnProvider(IDroppedItemSpawnProvider provider)
+    {
+        if (provider == null) throw new ArgumentNullException(nameof(provider));
+        var registration = new DropSpawnRegistration(provider);
+        spawnProviders.Add(registration);
+        return registration;
+    }
+    private static IDroppedItemSpawnProvider FindSpawnProvider(in DroppedItemSpawnContext context)
+    {
+        for (int i = spawnProviders.Count - 1; i >= 0; i--)
+            if (spawnProviders[i].Provider.CanHandle(context)) return spawnProviders[i].Provider;
+        return null;
+    }
+    private static bool TrySpawnWithProvider(ItemData source, in DroppedItemSpawnContext context, float rotation, Vector3 scale,
+        out DroppedItemHandle handle)
+    {
+        handle = default;
+        IDroppedItemSpawnProvider provider = FindSpawnProvider(context);
+        if (provider == null) return false;
+        handle = provider.SpawnDrop(source, context, rotation, scale);
+        try
+        {
+            if (!handle.IsValid) throw new InvalidOperationException("掉落生成来源没有返回有效的回滚句柄。");
+            NotifySpawnContext(handle.Legacy, context);
+            return true;
+        }
+        catch { Remove(handle); throw; }
+    }
+    #endregion
     #region 完整物品输送
     private static readonly List<Item> transportCandidates = new();
     private static readonly HashSet<Item> transportDedupe = new();
@@ -125,6 +172,7 @@ public static partial class DroppedItemService
     {
         runtime?.Dispose(); runtime = null; ownerSave = null; ownerWorld = null;
         pickers.Clear(); legacyPlans.Clear(); legacyScratch.Clear(); Epoch++;
+        spawnProviders.Clear();
         forageLegacyCandidates.Clear(); forageLegacyDedupe.Clear();
         transportCandidates.Clear(); transportDedupe.Clear(); transportedItems.Clear(); transportStep = uint.MaxValue;
     }
@@ -155,6 +203,8 @@ public static partial class DroppedItemService
         float finalRotation = randomizeRotation
             ? rotation + UnityEngine.Random.Range(-DropRotationJitterDegrees, DropRotationJitterDegrees)
             : rotation;
+        var context = new DroppedItemSpawnContext(spawnReason, sourceItem, spawnPosition, destination ?? spawnPosition, duration);
+        if (TrySpawnWithProvider(source, context, finalRotation, finalScale, out DroppedItemHandle supplied)) return supplied;
         if (!definition.UsesLightweightWorldDrop || !UsesLightweightDrops)
             return SpawnItemBacked(source, spawnPosition, destination, duration, finalRotation,
                 bezierOffset, arcHeight, rotationSpeed, spawnReason, sourceItem);
@@ -237,6 +287,8 @@ public static partial class DroppedItemService
     {
         if (!UsesLightweightDrops || source == null || string.IsNullOrWhiteSpace(source.IDName))
             return false;
+        var context = new DroppedItemSpawnContext(DroppedItemSpawnReason.Generic, null, source.transform.position, source.transform.position, 0f);
+        if (FindSpawnProvider(context) != null) return false;
         GameRes resources = GameRes.ExistingInstance;
         return resources != null &&
                resources.TryGetItemDefinition(source.IDName, out RuntimeItemDefinition definition) &&
@@ -272,10 +324,11 @@ public static partial class DroppedItemService
     public static bool ScheduleLegacyDrop(Item item, Vector2 start, Vector2 end, float duration,
         float bezierOffset = 1f, float arcHeight = 1f, float rotationSpeed = 720f)
     {
-        if (!ShouldUseLightweightDrop(item?.itemData) ||
-            item?.itemData?.Stack == null ||
+        if (item?.itemData?.Stack == null ||
             RuntimeAiEntityUtility.IsAiEntity(item))
             return false;
+        var context = new DroppedItemSpawnContext(DroppedItemSpawnReason.Generic, item, start, end, duration);
+        if (FindSpawnProvider(context) == null && !ShouldUseLightweightDrop(item.itemData)) return false;
         item.itemData.Stack.CanBePickedUp = false;
         legacyPlans[item] = new LegacyDropPlan
         { Start = start, End = end, Duration = duration, Bezier = bezierOffset, Arc = arcHeight, Spin = rotationSpeed };
@@ -285,14 +338,17 @@ public static partial class DroppedItemService
     /// <summary>无轨迹的遗留生成入口也可移交；调用方必须先排除手持物、自然实体与附着投射物。</summary>
     public static bool TryConvertLooseItem(Item item)
     {
-        if (!ShouldUseLightweightDrop(item?.itemData) || item == null || item.DestructionHandled || item.itemData == null ||
+        if (item == null || item.PersistenceOwner != null || item.Owner != null || item.InHand || item.DestructionHandled || item.itemData == null ||
             legacyPlans.ContainsKey(item)) return false;
+        if (GameRes.ExistingInstance == null || !GameRes.ExistingInstance.TryGetItemDefinition(item.itemData.IDName, out RuntimeItemDefinition definition) || definition.IsActor) return false;
+        var context = new DroppedItemSpawnContext(DroppedItemSpawnReason.Generic, item, item.transform.position, item.transform.position, 0f);
+        if (FindSpawnProvider(context) == null && !ShouldUseLightweightDrop(item.itemData)) return false;
         DroppedItemHandle handle = default;
         try
         {
             item.ModuleSave();
             handle = Spawn(item.itemData, item.transform.position,
-                rotation: item.transform.eulerAngles.z);
+                rotation: item.transform.eulerAngles.z, sourceItem: item);
             if (!handle.IsValid) return false;
             ItemMgr.Instance.DespawnItem(item, saveData: false);
             return true;
@@ -312,16 +368,18 @@ public static partial class DroppedItemService
         {
             Item item = pair.Key; LegacyDropPlan plan = pair.Value;
             if (item == null || item.DestructionHandled) continue;
+            DroppedItemHandle spawned = default;
             try
             {
                 item.ModuleSave();
-                Spawn(item.itemData, plan.Start, plan.End, plan.Duration,
-                    item.transform.eulerAngles.z, plan.Bezier, plan.Arc, plan.Spin);
+                spawned = Spawn(item.itemData, plan.Start, plan.End, plan.Duration,
+                    item.transform.eulerAngles.z, plan.Bezier, plan.Arc, plan.Spin, sourceItem: item);
                 ItemMgr.Instance.DespawnItem(item, saveData: false);
             }
             catch (Exception exception)
             {
                 // 失败保留旧载荷，不销毁物品；错误必须可见，不能悄悄吞掉产出。
+                if (item != null && !item.DestructionHandled) Remove(spawned);
                 if (item != null && item.itemData?.Stack != null) item.itemData.Stack.CanBePickedUp = true;
                 Debug.LogError($"[DroppedItems] 遗留掉落物转换失败，原物品已保留：{exception}");
             }
@@ -390,19 +448,21 @@ public static partial class DroppedItemService
     /// <summary>由 ItemMgr 在正式世界门禁内集中驱动一次，而非为每个掉落物创建 MonoBehaviour。</summary>
     public static void Tick(float deltaTime)
     {
+        ProcessLegacyPlans();
         if (!UsesLightweightDrops) return;
-        EnsureContext(); ProcessLegacyPlans();
+        EnsureContext();
         runtime.Tick(deltaTime, pickers);
     }
 
     /// <summary>在区块快照开始前结清本帧旧生产者，避免同一物品同时写入旧区块与轻量掉落物快照。</summary>
     public static void PrepareForSave()
     {
-        if (!UsesLightweightDrops || !Application.isPlaying || SaveDataMgr.Instance.SaveData == null ||
+        if (!Application.isPlaying || SaveDataMgr.Instance.SaveData == null) return;
+        ProcessLegacyPlans();
+        if (!UsesLightweightDrops ||
             (runtime == null && legacyPlans.Count == 0 &&
              (ChunkMgr.ExistingInstance == null || !ChunkMgr.ExistingInstance.IsWorldModelRuntimeActive))) return;
         EnsureContext();
-        ProcessLegacyPlans();
         WorldItemWaterSystem.ProcessPendingSpawnChecks();
     }
 

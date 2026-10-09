@@ -197,6 +197,7 @@ public partial class GameManager : SingletonAutoMono<GameManager>
 
         // 掉落物必须在退出快照写入以后释放，不能在更早的世界退出通知里清空。
         DroppedItemService.ReleaseWorld();
+        FlatWorld.Spaceflight.SpaceSession.EndSession();
         MachineWorld.ReleaseWorld(capture: false);
 
         // 通过 ItemMgr 正式注销玩家，确保运行时索引、感知空间哈希和 Player_DIC 同步清理。
@@ -626,6 +627,9 @@ public partial class GameManager : SingletonAutoMono<GameManager>
         if (saveData?.PlanetData_Dict == null)
             return string.Empty;
 
+        string spaceWorld = ResolveSavedSpacePlayerWorld(saveData, playerData);
+        if (!string.IsNullOrWhiteSpace(spaceWorld)) return spaceWorld;
+
         if (!string.IsNullOrWhiteSpace(playerData?.CurrentSceneName))
             return playerData.CurrentSceneName;
 
@@ -652,6 +656,12 @@ public partial class GameManager : SingletonAutoMono<GameManager>
         if (!EnsureContentReady("进入世界"))
             return;
 
+        FlatWorld.Spaceflight.SpaceSession.EnsureLoaded();
+        if (NewScenename == "SpaceScene")
+        {
+            StartCoroutine(ResumeSpaceWorld(onOldSceneUnloaded));
+            return;
+        }
         WorldAddress worldAddress = WorldAddress.FromWorldKey(NewScenename);
         DimensionManager.Instance.EnsureWorldData(worldAddress);
 
@@ -967,6 +977,7 @@ public partial class GameManager : SingletonAutoMono<GameManager>
             return;
         }
 
+        FlatWorld.Spaceflight.SpaceSession.Current?.RestorePassengerPose(player);
         Event_PlayerEnterWorld?.Invoke(player);
     }
 

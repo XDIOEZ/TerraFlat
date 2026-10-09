@@ -9,6 +9,8 @@ internal static class MachinePanelBuiltIns
 
     internal static void Register()
     {
+        MachinePanelFactoryRegistry.AddBuiltIn("cultivator", entity => new CultivatorPanelSession(entity));
+        MachinePanelFactoryRegistry.AddBuiltIn("ship-device", entity => new ShipPanelSession(entity));
         MachinePanelFactoryRegistry.AddBuiltIn("workbench", entity => new WorkbenchMachinePanelSession(entity));
         MachinePanelFactoryRegistry.AddBuiltIn("furnace", entity => new FurnaceMachinePanelSession(entity));
         MachinePanelFactoryRegistry.AddBuiltIn("mortar", entity => new MortarMachinePanelSession(entity));

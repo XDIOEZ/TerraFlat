@@ -15,7 +15,7 @@ public static class FluidDeviceOperations
             MachineCatalog.Settings.WattsPerTorqueRpm * seconds;
     }
     private static double AmbientTemperatureKelvin(MachineEntity node)
-        => TemperatureMgr.Instance != null && TemperatureMgr.Instance.TryGetAmbientTemperature(node.Position, out float celsius)
+        => TryGetFluidAmbientTemperature(node, out float celsius)
             ? Math.Max(.001, celsius + 273.15) : FluidUnits.ReferenceTemperatureKelvin;
 
     public static void AdvanceGasPump(MachineEntity node, float seconds)
@@ -27,8 +27,7 @@ public static class FluidDeviceOperations
         if (!buffer.IsEmpty) { state.Status = "等待缓冲气包送完"; return; }
         double available = AvailableDeviceWork(node, seconds);
         if (available <= 0) { state.Status = node.SpeedRpm > 0 ? "动力不够" : "没有动力"; return; }
-        AtmosphereState atmosphere = GetCurrentAtmosphere();
-        if (atmosphere == null || atmosphere.CurrentStandardLiters <= 0) { state.Status = "没有可抽取的大气"; return; }
+        if (GetFluidAmbientGasMoles(node) <= 0m) { state.Status = "没有可抽取的大气"; return; }
         if (!GasPumpCanOutput(node)) { state.Status = "气泵出口被堵住了"; return; }
         double increment = Math.Min(1 - state.PumpProgress, definition.PumpBatchesPerSecond * GetWorkEfficiency(node) * seconds);
         double required = definition.BatchStandardLiters * definition.WorkJoulesPerStandardLiter;
@@ -36,7 +35,7 @@ public static class FluidDeviceOperations
         state.PumpProgress += increment; state.PumpStoredWorkJoules += increment * required;
         state.Status = "正在抽气";
         if (state.PumpProgress < 1 - 1e-10) return;
-        if (!AtmosphereService.TryExtractTo(atmosphere, (decimal)definition.BatchStandardLiters, ref state.RandomState,
+        if (!TryExtractFluidAmbientGasTo(node, (decimal)definition.BatchStandardLiters, ref state.RandomState,
             buffer, definition.VolumeLiters, definition.MinimumGasSpaceLiters, out FluidBatch batch)) return;
         // 已积累的真实做功成为气包内能，损耗单独记账；来源只扣这一次。
         double heat = state.PumpStoredWorkJoules * definition.CompressionEfficiency;
@@ -48,7 +47,7 @@ public static class FluidDeviceOperations
     public static bool IsGasPumpWet(MachineEntity pump)
     {
         if (GetFluidInventory(pump).LiquidMoles > 0) return true;
-        if (WorldLiquidSourceResolver.TryResolve((Vector2)pump.Cell + Vector2.one * .5f, out _)) return true;
+        if (IsFluidEnvironmentSubmerged(pump)) return true;
         if (FluidGraph != null)
             foreach (FluidNetworkGraph.Edge edge in FluidGraph.Edges)
                 if (ReferenceEquals(edge.Source, pump) && edge.Target != null && GetFluidInventory(edge.Target, edge.TargetPort.Chamber).LiquidMoles > 0)
@@ -97,25 +96,25 @@ public static class FluidDeviceOperations
         // 工业输入只由管网按本轮起始库存搬运，泵不能旁路抽取或继续抽同格地表。
         if (industrialInput) { state.Status = "等待管网输入"; return; }
         Vector2 intake = (Vector2)(node.Cell + MechanicalNetworkGraph.Directions[(rotation + 2) & 3]) + Vector2.one * .5f;
-        if (!WorldLiquidSourceResolver.TryResolve(intake, out WorldLiquidSourceTarget source) ||
-            !FluidCatalog.Default.TryFromLiquidId(source.Liquid.Id, out FluidDefinition substance) || !substance.AllowIndustrialTransport)
+        if (!TrySampleFluidEnvironmentLiquid(intake, out string sourceWorld, out Vector2 sourcePosition, out LiquidDefinition sourceLiquid, out float sourceDepth) ||
+            !FluidCatalog.Default.TryFromLiquidId(sourceLiquid.Id, out FluidDefinition substance) || !substance.AllowIndustrialTransport)
         { state.Status = "入口没有可抽取的液体"; return; }
         double freeLiters = definition.VolumeLiters - definition.MinimumGasSpaceLiters - buffer.GetLiquidLiters();
         double liters = Math.Min(freeLiters, Math.Min(definition.ThroughputLitersPerSecond * seconds, work / definition.WorkJoulesPerStandardLiter));
         decimal servings = FluidUnits.MolToServings(substance, FluidUnits.LiquidLitersToMol(substance, (decimal)Math.Max(0, liters)));
-        float requestedDepth = Mathf.Min(source.Sample.LiquidDepth, (float)servings * source.Liquid.WorldWater.DepthPerServing);
+        float requestedDepth = Mathf.Min(sourceDepth, (float)servings * sourceLiquid.WorldWater.DepthPerServing);
         if (requestedDepth <= .0000001f) { state.Status = "液体空间已满"; return; }
-        decimal plannedMoles = FluidUnits.ServingsToMol(substance, (decimal)(requestedDepth / source.Liquid.WorldWater.DepthPerServing));
+        decimal plannedMoles = FluidUnits.ServingsToMol(substance, (decimal)(requestedDepth / sourceLiquid.WorldWater.DepthPerServing));
         FluidBatch planned = FluidInventory.CreateBatch(substance, 0, plannedMoles, AmbientTemperatureKelvin(node));
         if (!buffer.CanAdd(planned, definition.VolumeLiters, definition.MinimumGasSpaceLiters, true, true))
         { state.Status = "液相槽里还有其他物质"; return; }
-        float beforeDepth = source.Sample.LiquidDepth;
-        if (!WorldLiquidSystem.TryPump(source.Sample, requestedDepth, out string liquidId, out float removedDepth)) return;
-        decimal actualMoles = FluidUnits.ServingsToMol(substance, (decimal)(removedDepth / source.Liquid.WorldWater.DepthPerServing));
+        if (!TryPumpFluidEnvironmentLiquid(sourceWorld, sourcePosition, requestedDepth, out string liquidId, out float removedDepth)) return;
+        decimal actualMoles = FluidUnits.ServingsToMol(substance, (decimal)(removedDepth / sourceLiquid.WorldWater.DepthPerServing));
         FluidBatch actual = FluidInventory.CreateBatch(substance, 0, actualMoles, AmbientTemperatureKelvin(node));
         if (!buffer.TryAdd(actual, definition.VolumeLiters, definition.MinimumGasSpaceLiters, true, true))
         {
-            WorldLiquidSystem.TrySet(source.Sample, liquidId, beforeDepth);
+            if (ReleaseFluidEnvironmentLiquid(sourceWorld, sourcePosition, liquidId, removedDepth) + .0000001f < removedDepth)
+                throw new InvalidOperationException("世界液体抽取回滚无法恢复已扣液体。");
             throw new InvalidOperationException("世界液体抽取与泵缓冲提交失败。");
         }
         state.Status = "正在抽液体";

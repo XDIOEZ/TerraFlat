@@ -1,7 +1,20 @@
 {
   "schemaVersion": 1,
   "packages": [
-    { "id": "core.terrain", "path": "terrain.json", "enabled": true },
-    { "id": "core.buildings", "path": "buildings.json", "enabled": true }
+    {
+      "id": "core.terrain",
+      "path": "terrain.json",
+      "enabled": true
+    },
+    {
+      "id": "core.buildings",
+      "path": "buildings.json",
+      "enabled": true
+    },
+    {
+      "id": "space_surfaces",
+      "path": "space_surfaces.json",
+      "enabled": true
+    }
   ]
 }

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using FlatWorld.Networking;
 using UnityEngine;
 
@@ -19,15 +20,15 @@ public static partial class MachineWorld
         public int OwnerId => Members.Count == 0 ? 0 : Members[0].Id;
     }
 
-    private static FluidNetworkGraph fluidGraph;
-    private static readonly Dictionary<int, FluidMachineState> fluidStates = new();
-    private static readonly Dictionary<string, FluidInventory> fluidInventories = new(StringComparer.Ordinal);
-    private static readonly Dictionary<int, FluidTankGroup> fluidTankOwners = new();
-    private static readonly List<FluidTankGroup> fluidTankGroups = new();
-    private static readonly Dictionary<FluidInventory, FluidInventoryState> fluidStepStock = new();
-    private static readonly Dictionary<FluidInventory, double> fluidThroughputRemaining = new();
-    private static readonly Dictionary<MachineEntity, double> fluidMechanicalPower = new();
-    private static readonly Dictionary<int, int> fluidAppearance = new();
+    private static FluidNetworkGraph fluidGraph { get => scope.Fluid; set => scope.Fluid = value; }
+    private static Dictionary<int, FluidMachineState> fluidStates => scope.Fluids;
+    private static Dictionary<string, FluidInventory> fluidInventories => scope.Inventories;
+    private static Dictionary<int, FluidTankGroup> fluidTankOwners => scope.TankOwners;
+    private static List<FluidTankGroup> fluidTankGroups => scope.Tanks;
+    private static Dictionary<FluidInventory, FluidInventoryState> fluidStepStock => scope.Stock;
+    private static Dictionary<FluidInventory, double> fluidThroughputRemaining => scope.Throughput;
+    private static Dictionary<MachineEntity, double> fluidMechanicalPower => scope.MechanicalPower;
+    private static Dictionary<int, int> fluidAppearance => scope.Appearance;
 
     internal static FluidNetworkGraph FluidGraph => fluidGraph;
     public static FluidDeviceBehavior GetFluidDeviceBehavior(MachineEntity node)
@@ -100,6 +101,8 @@ public static partial class MachineWorld
     private static void RebuildFluidNetworks()
     {
         SaveFluidGroups();
+        var previousGroups = new List<FluidTankGroup>(fluidTankGroups);
+        var previousContents = new HashSet<FluidInventoryState>();
         fluidTankOwners.Clear(); fluidTankGroups.Clear();
         var sorted = new List<MachineEntity>(nodes.Values); sorted.Sort((a, b) => a.Id.CompareTo(b.Id));
         var tankCells = new Dictionary<Vector2Int, MachineEntity>();
@@ -133,6 +136,7 @@ public static partial class MachineWorld
                 FluidMachineState state = GetFluidState(member);
                 if (state.Chambers.TryGetValue("main", out FluidInventoryState saved))
                 {
+                    previousContents.Add(saved);
                     if (!inheritedRandom && (state.GroupOwnerId == member.Id || saved.Components.Count > 0 || saved.Ports.Count > 0))
                     { group.Inventory.State.RandomState = saved.RandomState; inheritedRandom = true; }
                     // 拓扑重建只合并各载荷拥有的那一份库存，引用成员没有第二份内容。
@@ -147,6 +151,15 @@ public static partial class MachineWorld
         fluidGraph = new FluidNetworkGraph(graph.NormalizeCell);
         fluidGraph.Rebuild(sorted);
         SaveFluidGroups();
+        // 新网接过真实库存后撤销旧对象中的份额，旧端口引用不能继续取第二次。
+        foreach (FluidInventoryState previous in previousContents)
+            new FluidInventory(previous).Restore(new FluidInventoryState { RandomState = previous.RandomState });
+        foreach (FluidTankGroup previous in previousGroups)
+        {
+            previous.Inventory.Restore(new FluidInventoryState { RandomState = previous.Inventory.State.RandomState });
+            previous.Members.Clear(); previous.TotalVolume = 0d; previous.MinimumGasSpace = 0d; previous.Active = false;
+        }
+        fluidStepStock.Clear(); fluidThroughputRemaining.Clear();
     }
 
     private static void MergeFluidInventory(FluidInventory target, FluidInventory source, double volume, double minimum)
@@ -181,6 +194,105 @@ public static partial class MachineWorld
         SaveFluidGroups();
         MachinePersistence.Write(node.Snapshot, "fluid", GetFluidState(node));
     }
+
+    #region 船体作用域库存迁移
+    private static FluidMachineState DetachFluidNodeForScopeTransfer(MachineEntity node)
+    {
+        if (fluidTankOwners.TryGetValue(node.Id, out FluidTankGroup group)) PartitionFluidGroupForScopeTransfer(group);
+        FluidMachineState transferred = MachinePersistence.Clone(GetFluidState(node));
+        transferred.GroupOwnerId = node.Id;
+        MachinePersistence.Write(node.Snapshot, "fluid", transferred);
+        ForgetDetachedFluidNode(node);
+        dirty = true;
+        return transferred;
+    }
+
+    private static void ForgetDetachedFluidNode(MachineEntity node)
+    {
+        if (fluidStates.Remove(node.Id, out FluidMachineState previous))
+            foreach (FluidInventoryState chamber in previous.Chambers.Values)
+                new FluidInventory(chamber).Restore(new FluidInventoryState { RandomState = chamber.RandomState });
+        ForgetFluidNodeInventoryCaches(node.Id);
+        fluidAppearance.Remove(node.Id);
+        fluidMechanicalPower.Remove(node);
+        fluidStepStock.Clear(); fluidThroughputRemaining.Clear();
+        InvalidateCombustionSupportSources();
+    }
+
+    private static void ForgetFluidNodeInventoryCaches(int id)
+    {
+        var remove = new List<string>();
+        string prefix = id.ToString(CultureInfo.InvariantCulture) + ":";
+        foreach (string key in fluidInventories.Keys) if (key.StartsWith(prefix, StringComparison.Ordinal)) remove.Add(key);
+        foreach (string key in remove) fluidInventories.Remove(key);
+    }
+
+    private static void PartitionFluidGroupForScopeTransfer(FluidTankGroup group)
+    {
+        if (group.Members.Count == 0 || group.Inventory == null || !FluidUnits.IsFinite(group.TotalVolume) || group.TotalVolume <= 0d)
+            throw new InvalidOperationException("船体转移前的共享储罐组无效。");
+        FluidInventoryState original = group.Inventory.State.Clone();
+        var remaining = new List<FluidComponentState>();
+        foreach (FluidComponentState component in original.Components) remaining.Add(component.Clone());
+        var shares = new Dictionary<int, FluidInventoryState>();
+        FluidInventoryState energyAdjustmentShare = null;
+        double assignedEnergy = 0d;
+        double temperature = group.Inventory.GetTemperatureKelvin();
+        for (int i = 0; i < group.Members.Count; i++)
+        {
+            MachineEntity member = group.Members[i];
+            if (!nodes.TryGetValue(member.Id, out MachineEntity current) || !ReferenceEquals(current, member))
+                throw new InvalidOperationException("船体转移前的共享储罐成员已失效：" + member.Id);
+            decimal fraction = (decimal)member.Definition.Fluid.VolumeLiters / (decimal)group.TotalVolume;
+            bool last = i == group.Members.Count - 1;
+            var share = new FluidInventoryState { RandomState = original.RandomState };
+            for (int c = 0; c < original.Components.Count; c++)
+            {
+                FluidComponentState component = original.Components[c];
+                decimal gas = last ? remaining[c].GasMoles : Math.Min(remaining[c].GasMoles, component.GasMoles * fraction);
+                decimal liquid = last ? remaining[c].LiquidMoles : Math.Min(remaining[c].LiquidMoles, component.LiquidMoles * fraction);
+                remaining[c].GasMoles -= gas; remaining[c].LiquidMoles -= liquid;
+                if (gas + liquid <= 0m) continue;
+                share.Components.Add(new FluidComponentState { FluidId = component.FluidId, GasMoles = gas, LiquidMoles = liquid });
+                share.TotalInternalEnergyJoules += group.Inventory.Catalog.Find(component.FluidId).EnergyAt(gas, liquid, temperature);
+            }
+            if (share.Components.Count > 0)
+            {
+                assignedEnergy += share.TotalInternalEnergyJoules;
+                if (energyAdjustmentShare == null || share.TotalInternalEnergyJoules > energyAdjustmentShare.TotalInternalEnergyJoules)
+                    energyAdjustmentShare = share;
+            }
+            shares.Add(member.Id, share);
+        }
+        if (energyAdjustmentShare != null) energyAdjustmentShare.TotalInternalEnergyJoules += original.TotalInternalEnergyJoules - assignedEnergy;
+        foreach (FluidOutputReservation reservation in original.Ports)
+        {
+            int separator = reservation.PortId.IndexOf(':');
+            if (separator <= 0 || !int.TryParse(reservation.PortId.Substring(0, separator), NumberStyles.Integer,
+                CultureInfo.InvariantCulture, out int memberId) || !shares.TryGetValue(memberId, out FluidInventoryState share)) continue;
+            var portion = new FluidInventory(share, group.Inventory.Catalog);
+            FluidOutputReservation local = reservation.Clone();
+            local.GasMoles = Math.Min(local.GasMoles, portion.GetAvailableMoles(local.FluidId, FluidPhase.Gas));
+            local.LiquidMoles = Math.Min(local.LiquidMoles, portion.GetAvailableMoles(local.FluidId, FluidPhase.Liquid));
+            if (local.TotalMoles > 0m) share.Ports.Add(local);
+        }
+        foreach (FluidInventoryState share in shares.Values) FluidInventory.ValidateState(share, group.Inventory.Catalog);
+        // 所有候选份额先校验，再清掉唯一旧库存，避免新旧组各自保存同一份总量。
+        foreach (MachineEntity member in group.Members)
+        {
+            FluidMachineState state = GetFluidState(member);
+            state.Chambers["main"] = shares[member.Id];
+            state.GroupOwnerId = member.Id;
+            state.OverpressureVictimId = group.OverpressureVictimId == member.Id ? member.Id : 0;
+            state.RandomState = group.RandomState;
+            fluidTankOwners.Remove(member.Id);
+            fluidInventories.Remove(member.Id.ToString(CultureInfo.InvariantCulture) + ":main");
+        }
+        fluidTankGroups.Remove(group);
+        group.Inventory.Restore(new FluidInventoryState { RandomState = original.RandomState });
+        group.Members.Clear(); group.TotalVolume = 0d; group.MinimumGasSpace = 0d; group.Active = false;
+    }
+    #endregion
 
     private static void ResetFluidRuntime()
     {

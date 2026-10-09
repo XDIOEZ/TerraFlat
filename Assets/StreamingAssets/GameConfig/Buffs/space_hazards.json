@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "buffs": [
+    {
+      "id": "核聚变接触",
+      "displayName": "核聚变接触",
+      "description": "直接接触恒星表面，每秒承受极高伤害；完整承载地板隔离这种接触。",
+      "durationSeconds": null,
+      "tickIntervalSeconds": 1,
+      "effects": [
+        {
+          "phase": "tick",
+          "typeId": "core:true_damage",
+          "value": 100
+        }
+      ]
+    }
+  ]
+}

@@ -160,14 +160,31 @@ public static partial class MachineWorld
         if (moved.LiquidMoles > 0)
         {
             Vector2 destination = (Vector2)(edge.Source.Cell + MechanicalNetworkGraph.Directions[edge.Direction]) + Vector2.one * .5f;
+            string destinationWorld = null; Vector2 destinationPosition = destination;
+            LiquidDefinition liquid = null;
             if (string.IsNullOrEmpty(substance.LiquidId) || GameRes.ExistingInstance == null ||
-                !GameRes.ExistingInstance.TryGetLiquidDefinition(substance.LiquidId, out LiquidDefinition liquid) || liquid.WorldWater == null ||
-                !WorldLiquidSystem.TryPour(destination, substance.LiquidId,
-                    (float)(FluidUnits.MolToServings(substance, moved.LiquidMoles) * (decimal)liquid.WorldWater.DepthPerServing), out _))
+                !GameRes.ExistingInstance.TryGetLiquidDefinition(substance.LiquidId, out liquid) || liquid.WorldWater == null ||
+                !TryResolveFluidSurfacePoint(destination, out destinationWorld, out destinationPosition) &&
+                (IsShipScope || worldKey != SceneManager.GetActiveScene().name))
             { source.Restore(before); moved = default; return false; }
+            float requestedDepth = (float)(FluidUnits.MolToServings(substance, moved.LiquidMoles) * (decimal)liquid.WorldWater.DepthPerServing);
+            float accepted = ReleaseFluidEnvironmentLiquid(destinationWorld ?? worldKey, destinationPosition, substance.LiquidId, requestedDepth);
+            if (accepted <= 0f) { source.Restore(before); moved = default; return false; }
+            if (accepted < requestedDepth)
+            {
+                decimal fraction = Math.Clamp((decimal)accepted / (decimal)requestedDepth, 0m, 1m);
+                decimal actualMaximum = moved.TotalMoles * fraction;
+                source.Restore(before);
+                if (!source.TryTakeReserved(reservationId, actualMaximum, out moved))
+                {
+                    if (!TryPumpFluidEnvironmentLiquid(destinationWorld ?? worldKey, destinationPosition, accepted, out _, out float restored) || restored + .0000001f < accepted)
+                        throw new InvalidOperationException("地表部分排液回滚失败。");
+                    throw new InvalidOperationException("真实排液量无法由原预留气包提交。");
+                }
+            }
         }
-        if (moved.GasMoles > 0 && !consumedByCombustion) RecordAtmosphereEmission(edge.Source, FluidInventory.CreateBatch(substance, moved.GasMoles, 0, source.IsEmpty
-            ? BatchTemperature(substance, moved) : source.GetTemperatureKelvin()));
+        if (moved.GasMoles > 0 && !consumedByCombustion) RecordAtmosphereEmission(edge.Source, FluidInventory.CreateBatch(substance, moved.GasMoles, 0,
+            BatchTemperature(substance, moved)), (Vector2)(edge.Source.Cell + MechanicalNetworkGraph.Directions[edge.Direction]) + Vector2.one * .5f);
         return true;
     }
 
@@ -250,17 +267,20 @@ public static partial class MachineWorld
         return true;
     }
 
-    private static void RecordAtmosphereEmission(MachineEntity node, FluidBatch batch)
+    private static void RecordAtmosphereEmission(MachineEntity node, FluidBatch batch, Vector2? environmentPosition = null)
     {
-        AtmosphereEmissionResult result = AtmosphereService.Emit(GetCurrentAtmosphere(), batch);
+        AtmosphereEmissionResult result = IsShipScope
+            ? RequireShipEnvironment().EmitMachineGas(worldKey.Substring(5), environmentPosition ?? node.Position, batch)
+            : AtmosphereService.Emit(GetCurrentAtmosphere(node), batch);
         FluidMachineState state = GetFluidState(node);
         state.LastEmittedStandardLiters += FluidUnits.MolToStandardLiters(batch.GasMoles);
         state.LastRetainedStandardLiters += result.RetainedStandardLiters;
         state.LastEscapedStandardLiters += result.EscapedStandardLiters;
     }
 
-    internal static AtmosphereState GetCurrentAtmosphere()
-        => AtmosphereService.TryGetForWorld(worldKey, out AtmosphereState atmosphere) ? atmosphere : null;
+    internal static AtmosphereState GetCurrentAtmosphere(MachineEntity node = null)
+        => IsShipScope ? RequireShipEnvironment().GetMachineAirSnapshot(worldKey.Substring(5), node?.Position ?? Vector2.zero)
+            : AtmosphereService.TryGetForWorld(worldKey, out AtmosphereState atmosphere) ? atmosphere : null;
 
     #endregion
 }

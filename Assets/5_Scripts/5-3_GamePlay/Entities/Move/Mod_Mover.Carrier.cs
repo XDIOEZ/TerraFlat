@@ -176,7 +176,7 @@ public partial class Mod_Mover
         ExternalVelocity = CarrierSource.CurrentVelocity;
         ApplyCarrierPosition(CarrierSource.SeatPosition);
     }
-    private void OnDisable() => ReleaseCarrierLease();
-    protected override void OnUnload() => ReleaseCarrierLease();
+    private void OnDisable() { ReleaseSpaceInput(); ReleaseCarrierLease(); }
+    protected override void OnUnload() { ReleaseSpaceInput(); ReleaseCarrierLease(); }
     #endregion
 }

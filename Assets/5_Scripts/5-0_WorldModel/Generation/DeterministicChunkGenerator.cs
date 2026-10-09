@@ -19,10 +19,13 @@ namespace FlatWorld.WorldModel
         public const int CurrentGenerationSignature = 71;
 
         private readonly LiquidTypeCatalog liquidTypes;
+        private readonly Action<ChunkGenerationRequest, ChunkTerrainBuffer, CancellationToken> terrainDecorator;
         /// <summary>资源就绪后注入会话液体表；离线纯算法测试可以使用本体最小目录。</summary>
-        public DeterministicChunkGenerator(LiquidTypeCatalog liquidTypes = null)
+        public DeterministicChunkGenerator(LiquidTypeCatalog liquidTypes = null,
+            Action<ChunkGenerationRequest, ChunkTerrainBuffer, CancellationToken> terrainDecorator = null)
         {
             this.liquidTypes = liquidTypes ?? LiquidTypeCatalog.BuiltIn;
+            this.terrainDecorator = terrainDecorator;
         }
 
         private readonly LegacyHydrologyKernel legacyHydrologyKernel = new();
@@ -176,6 +179,8 @@ namespace FlatWorld.WorldModel
                 using (timing?.MeasureStage("terrain.structures") ?? default)
                     ApplyStructures(request, settings, terrain, cancellationToken);
             }
+            // 正式生成与邻区查询共用扩展，生态只读取最终地形。
+            terrainDecorator?.Invoke(request, terrain, cancellationToken);
         }
 
         /// <summary>洞穴由 Profile 模式或维度标识决定，与正式区块生成保持同一判断。</summary>
@@ -826,11 +831,31 @@ namespace FlatWorld.WorldModel
             climate.BaseBiome = ResolveSurfaceBiome(settings, climate, baseMoisture, false);
             climate.Classified = true;
             IReadOnlyList<LavaBasin> volcanic = ResolveLavaBasins(request);
-            return BuildSurfaceCell(request, settings, riverMap,
+            SurfaceCellOutput output = BuildSurfaceCell(request, settings, riverMap,
                 climate, null, x, y, worldX, worldY,
                 types.GetIndex(LiquidTypeCatalog.SeaWaterId),
                 types.GetIndex(LiquidTypeCatalog.DirtyWaterId),
                 volcanic.Count > 0 ? types.GetIndex(LiquidTypeCatalog.LavaId) : 0, volcanic);
+            if (terrainDecorator == null) return output;
+            // 单格查询同样调用纯地形扩展，出生与群系定位不能看到扩展前的地表。
+            using var sample = new ChunkTerrainBuffer(1, 1, types);
+            sample.SetCell(0, 0, output.Cell); sample.SetLiquid(0, 0, output.LiquidTypeIndex, output.LiquidDepth);
+            sample.SetGrass(0, 0, output.Grass); new SurfaceEnvironmentWriter(sample).Write(0, output);
+            var cellRequest = new ChunkGenerationRequest(request.WorldEpoch,
+                new WorldAddress(request.Address.DimensionId, new Int2(worldX, worldY)), request.WorldSeed,
+                request.RequestVersion, request.Profile, request.Topology);
+            terrainDecorator(cellRequest, sample, CancellationToken.None);
+            using ChunkTerrainData decorated = sample.Seal();
+            output.Cell = decorated.GetCell(0, 0); output.Grass = decorated.GetGrass(0, 0);
+            output.LiquidTypeIndex = decorated.GetLiquidTypeIndex(0, 0); output.LiquidDepth = decorated.GetLiquidDepth(0, 0);
+            if (decorated.TryGetEnvironmentValue("height", 0, 0, out float height)) output.Height = height;
+            if (decorated.TryGetEnvironmentValue("temperature", 0, 0, out float temperature)) output.Temperature = temperature;
+            if (decorated.TryGetEnvironmentValue("temperature.celsius", 0, 0, out float celsius)) output.TemperatureCelsius = celsius;
+            if (decorated.TryGetEnvironmentValue("basePrecipitation", 0, 0, out float baseRain)) output.BasePrecipitation = baseRain;
+            if (decorated.TryGetEnvironmentValue("precipitation", 0, 0, out float rain)) output.Precipitation = rain;
+            if (decorated.TryGetEnvironmentValue("moisture", 0, 0, out float moisture)) output.Moisture = moisture;
+            if (decorated.TryGetEnvironmentValue(SnowDepthLayer.LayerId, 0, 0, out float snow)) output.SnowDepth = snow;
+            return output;
         }
 
         private static SurfaceCellOutput BuildSurfaceCell(

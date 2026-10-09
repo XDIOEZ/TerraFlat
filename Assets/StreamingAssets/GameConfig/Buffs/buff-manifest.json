@@ -45,6 +45,11 @@
       "id": "body_recovery",
       "path": "body_recovery.json",
       "enabled": true
+    },
+    {
+      "id": "space_hazards",
+      "path": "space_hazards.json",
+      "enabled": true
     }
   ]
 }

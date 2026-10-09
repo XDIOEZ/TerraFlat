@@ -1,416 +1,184 @@
-using System.Collections;
+using System;
 using System.Collections.Generic;
+using FlatWorld.Spaceflight;
 using Sirenix.OdinInspector;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class SpaceMgr : SingletonAutoMono<SpaceMgr>
 {
-#region 字段
-
-    [ShowInInspector, ReadOnly]
-    public List<Planet> RuntimePlanets = new List<Planet>(); // 运行时星球列表
-
-    [ShowInInspector, ReadOnly]
-    public Dictionary<string, Planet> RuntimePlanetDict = new(); // 运行时星球字典（Key=Name）
-
-    [SerializeField]
-    private Transform runtimePlanetRoot; // 运行时星球父节点
-
-    [SerializeField]
-    private bool autoUpdateRuntimePlanets = true; // 是否自动更新星球运行
-
-    [SerializeField, MinValue(0f)]
-    private float runtimeTimeScale = 1f; // 运行时速度倍率
-
-    [FoldoutGroup("调试"), SerializeField]
-    private PlanetData debugPlanetData = new PlanetData(); // 调试用星球数据
-
-    [FoldoutGroup("调试"), SerializeField, MinValue(0.1f)]
-    private float solarSystemOrbitSpacingScale = 1f; // 太阳系轨道间隔系数
-
-#endregion
-
-#region 生命周期
+    #region 表现与生命周期
+    [ShowInInspector, ReadOnly] public List<Planet> RuntimePlanets = new();
+    [ShowInInspector, ReadOnly] public Dictionary<string, Planet> RuntimePlanetDict = new(StringComparer.Ordinal);
+    [SerializeField] private Transform runtimePlanetRoot;
+    [SerializeField] private bool autoUpdateRuntimePlanets = true;
+    [SerializeField] private PlanetData debugPlanetData = new();
+    private SpaceStarfield starfield;
+    private GameManager eventManager;
+    public static SpaceMgr ExistingInstance => instance;
 
     protected override void Awake()
     {
         base.Awake();
-
+        if (instance != this) return;
         if (runtimePlanetRoot == null)
         {
-            GameObject root = new GameObject("RuntimePlanets");
-            root.transform.SetParent(transform);
-            runtimePlanetRoot = root.transform;
+            var root = new GameObject("RuntimePlanets");
+            root.transform.SetParent(transform, false); runtimePlanetRoot = root.transform;
         }
+        SceneManager.activeSceneChanged += OnSceneChanged;
+        UpdateVisibility();
     }
-
     public void Start()
     {
-        // 初始状态禁用 Update，等玩家进入游戏世界后由事件激活
-        enabled = false;
-        if (GameManager.Instance != null)
+        eventManager = GameManager.Instance;
+        if (eventManager != null)
         {
-            GameManager.Instance.Event_GameWorldEnter += OnGameWorldEnter;
-            GameManager.Instance.Event_GameWorldExit += OnGameWorldExit;
+            eventManager.Event_GameWorldEnter += OnGameWorldEnter;
+            eventManager.Event_GameWorldExit += OnGameWorldExit;
         }
+        UpdateVisibility();
     }
-
-    private void OnGameWorldEnter()
+    private void OnGameWorldEnter() => UpdateVisibility();
+    private void OnGameWorldExit() { Debug_ClearRuntimePlanets(); UpdateVisibility(); }
+    private void OnSceneChanged(Scene previous, Scene current) => UpdateVisibility();
+    private void UpdateVisibility()
     {
-        enabled = true;
+        bool visible = SceneManager.GetActiveScene().name == "SpaceScene";
+        if (runtimePlanetRoot != null) runtimePlanetRoot.gameObject.SetActive(visible);
+        if (starfield != null) starfield.gameObject.SetActive(visible);
     }
-
-    private void OnGameWorldExit()
-    {
-        enabled = false;
-    }
-
     protected override void OnDestroy()
     {
-        base.OnDestroy();
-        if (GameManager.Instance != null)
+        SceneManager.activeSceneChanged -= OnSceneChanged;
+        if (eventManager != null)
         {
-            GameManager.Instance.Event_GameWorldEnter -= OnGameWorldEnter;
-            GameManager.Instance.Event_GameWorldExit -= OnGameWorldExit;
+            eventManager.Event_GameWorldEnter -= OnGameWorldEnter;
+            eventManager.Event_GameWorldExit -= OnGameWorldExit;
         }
+        base.OnDestroy();
     }
+    #endregion
 
-#endregion
-
-#region 存档接口
-
+    #region 星系加载与存档
     public void Load()
     {
-        RuntimePlanets.RemoveAll(p => p == null);
-
-        // 当前项目 GameManager 里维护的是单个 ReadyPlanetData，这里直接接入生命周期
-        PlanetData readyData = GameManager.Instance.ReadyPlanetData;
-        if (!string.IsNullOrEmpty(readyData.RuntimePlanetName))
+        SpaceSession session = SpaceSession.EnsureLoaded();
+        if (session.Universe == null) throw new InvalidOperationException("太空会话尚未准备好");
+        Debug_ClearRuntimePlanets();
+        SpaceCatalog catalog = SpaceCatalog.LoadDefault();
+        foreach (BodyState body in session.Universe.State.Bodies)
         {
-            AddPlanet(readyData);
+            PlanetData data;
+            var saves = SaveDataMgr.Instance?.SaveData?.PlanetData_Dict;
+            if (saves == null || !saves.TryGetValue(body.PlanetId, out data))
+                data = catalog.CreatePlanetData(body.BodyId);
+            AddPlanet(data);
         }
+        foreach (Planet planet in RuntimePlanets) BindOrbitCenterByData(planet);
+        if (starfield == null)
+        {
+            var background = new GameObject("黑色星空"); background.transform.SetParent(transform, false);
+            starfield = background.AddComponent<SpaceStarfield>();
+        }
+        TickRuntimePlanets(0f); UpdateVisibility();
     }
+    // 保存权威数据由会话负责，表现不能把第一个星体覆盖成当前星球。
+    public void Save() => SpaceSession.Capture(SaveDataMgr.Instance?.SaveData);
+    #endregion
 
-    public void Save()
-    {
-        // 当前项目先保存第一个运行时星球到 ReadyPlanetData，后续可扩展为列表存档
-        if (RuntimePlanets.Count <= 0)
-        {
-            return;
-        }
-
-        Planet planet = RuntimePlanets[0];
-        if (planet != null)
-        {
-            GameManager.Instance.ReadyPlanetData = planet.planetData;
-        }
-    }
-
-#endregion
-
-#region 星球管理
-
+    #region 星体与物品表现
     public void AddPlanet(PlanetData planet)
     {
-        if (planet == null)
-        {
-            throw new System.ArgumentNullException(nameof(planet), "planet 不能为空");
-        }
-
-        string planetName = planet.RuntimePlanetName;
-        if (string.IsNullOrEmpty(planetName))
-        {
-            throw new System.ArgumentException("planet.Name / planet.name / planet.PrefabName 至少要有一个", nameof(planet));
-        }
-
-        if (RuntimePlanetDict.ContainsKey(planetName))
-        {
-            Debug.LogWarning($"[SpaceMgr] 已存在同名运行时星球，跳过添加: {planetName}");
-            return;
-        }
-
-        string prefabName = string.IsNullOrEmpty(planet.PrefabName) ? planetName : planet.PrefabName;
-        GameObject planetObj = GameRes.Instance.InstantiatePrefab(prefabName, parent: runtimePlanetRoot);
-        if (planetObj == null)
-        {
-            throw new System.InvalidOperationException($"[SpaceMgr] 无法实例化星球预制体: {prefabName}");
-        }
-
-        Planet runtimePlanet = planetObj.GetComponent<Planet>();
+        if (planet == null) throw new ArgumentNullException(nameof(planet));
+        string key = string.IsNullOrWhiteSpace(planet.BodyId) ? planet.RuntimePlanetName : planet.BodyId;
+        if (string.IsNullOrWhiteSpace(key)) throw new ArgumentException("星体身份不能为空", nameof(planet));
+        if (RuntimePlanetDict.ContainsKey(key)) return;
+        string prefabName = string.IsNullOrWhiteSpace(planet.PrefabName) ? planet.RuntimePlanetName : planet.PrefabName;
+        GameObject instanceObject = GameRes.Instance.InstantiatePrefab(prefabName, parent: runtimePlanetRoot);
+        if (instanceObject == null) throw new InvalidOperationException($"星体外观未加载：{prefabName}");
+        Planet runtimePlanet = instanceObject.GetComponent<Planet>();
         if (runtimePlanet == null)
         {
-            throw new System.InvalidOperationException($"[SpaceMgr] 预制体缺少 Planet 组件: {planetName}");
+            Destroy(instanceObject);
+            throw new InvalidOperationException($"星体外观缺少 Planet：{prefabName}");
         }
-
-        runtimePlanet.planetData = planet;
-    runtimePlanet.name = planetName;
-    BindOrbitCenterByData(runtimePlanet);
-        planet.InitializeRuntime();
-        planet.RunPlanet(runtimePlanet.transform, runtimePlanet.GetOrbitCenterPosition(), 0f);
-
-        RuntimePlanets.Add(runtimePlanet);
-        RuntimePlanetDict.Add(planetName, runtimePlanet);
+        runtimePlanet.planetData = planet; runtimePlanet.name = planet.RuntimePlanetName;
+        RuntimePlanets.Add(runtimePlanet); RuntimePlanetDict.Add(key, runtimePlanet);
     }
-
-    private void BindOrbitCenterByData(Planet runtimePlanet)
+    private void BindOrbitCenterByData(Planet planet)
     {
-        PlanetData data = runtimePlanet.planetData;
-
-        if (string.IsNullOrEmpty(data.OrbitCenterBodyId))
-        {
-            runtimePlanet.OrbitCenter = runtimePlanet.transform;
-            return;
-        }
-
-        Planet centerPlanet = FindPlanetByBodyId(data.OrbitCenterBodyId);
-        if (centerPlanet == null)
-        {
-            throw new System.InvalidOperationException($"[SpaceMgr] 未找到公转中心星体，OrbitCenterBodyId={data.OrbitCenterBodyId}, BodyId={data.BodyId}");
-        }
-
-        runtimePlanet.OrbitCenter = centerPlanet.transform;
+        planet.OrbitCenter = FindPlanetByBodyId(planet.planetData?.OrbitCenterBodyId)?.transform ?? planet.transform;
     }
-
-    private Planet FindPlanetByBodyId(string bodyId)
-    {
-        if (string.IsNullOrEmpty(bodyId))
-        {
-            return null;
-        }
-
-        for (int i = 0; i < RuntimePlanets.Count; i++)
-        {
-            Planet p = RuntimePlanets[i];
-            if (p == null || p.planetData == null)
-            {
-                continue;
-            }
-
-            if (p.planetData.BodyId == bodyId)
-            {
-                return p;
-            }
-        }
-
-        return null;
-    }
-
+    public Planet FindPlanetByBodyId(string bodyId) =>
+        !string.IsNullOrEmpty(bodyId) && RuntimePlanetDict.TryGetValue(bodyId, out Planet planet) ? planet : null;
     public void RemovePlanet(PlanetData planet)
     {
-        if (planet == null)
-        {
-            throw new System.ArgumentNullException(nameof(planet), "planet 不能为空");
-        }
-
-        string planetName = planet.RuntimePlanetName;
-        if (string.IsNullOrEmpty(planetName))
-        {
-            throw new System.ArgumentException("planet.Name / planet.name / planet.PrefabName 至少要有一个", nameof(planet));
-        }
-
-        if (!RuntimePlanetDict.TryGetValue(planetName, out Planet runtimePlanet))
-        {
-            Debug.LogWarning($"[SpaceMgr] 未找到要移除的星球: {planetName}");
-            return;
-        }
-
-        RuntimePlanets.Remove(runtimePlanet);
-        RuntimePlanetDict.Remove(planetName);
-
-        if (runtimePlanet != null)
-        {
-            Destroy(runtimePlanet.gameObject);
-        }
+        if (planet == null) throw new ArgumentNullException(nameof(planet));
+        string key = string.IsNullOrWhiteSpace(planet.BodyId) ? planet.RuntimePlanetName : planet.BodyId;
+        if (!RuntimePlanetDict.TryGetValue(key, out Planet runtimePlanet)) return;
+        RuntimePlanetDict.Remove(key); RuntimePlanets.Remove(runtimePlanet);
+        if (runtimePlanet != null) Destroy(runtimePlanet.gameObject);
     }
-
     public Item InstantiateItemNearPlanet(string itemId, string planetBodyId, Vector3 localOffset = default)
     {
-        if (string.IsNullOrEmpty(itemId))
-        {
-            throw new System.ArgumentException("itemId 不能为空", nameof(itemId));
-        }
-
-        Vector3 spawnPosition = GetSpawnPositionNearPlanet(planetBodyId, localOffset);
-        Item runtimeItem = ItemMgr.Instance.InstantiateItem(itemId, spawnPosition, Quaternion.identity, Vector3.one, runtimePlanetRoot != null ? runtimePlanetRoot.gameObject : gameObject);
-        ActivateRuntimeItem(runtimeItem, itemId);
-
-        Debug.Log($"[SpaceMgr] 太空场景实例化Item成功，itemId={itemId}, planetBodyId={planetBodyId}, pos={spawnPosition}");
-        return runtimeItem;
+        Item item = ItemMgr.Instance.InstantiateItem(itemId, GetSpawnPositionNearPlanet(planetBodyId, localOffset),
+            Quaternion.identity, Vector3.one, runtimePlanetRoot.gameObject);
+        ActivateRuntimeItem(item); return item;
     }
-
-    public Item InstantiateItemNearPlanet(ItemData itemData, string planetBodyId, Vector3 localOffset = default)
+    public Item InstantiateItemNearPlanet(ItemData data, string planetBodyId, Vector3 localOffset = default)
     {
-        if (itemData == null)
-        {
-            throw new System.ArgumentNullException(nameof(itemData), "itemData 不能为空");
-        }
-
-        Vector3 spawnPosition = GetSpawnPositionNearPlanet(planetBodyId, localOffset);
-        Item runtimeItem = ItemMgr.Instance.InstantiateItem(itemData, spawnPosition, Quaternion.identity, Vector3.one, runtimePlanetRoot != null ? runtimePlanetRoot.gameObject : gameObject);
-        ActivateRuntimeItem(runtimeItem, itemData.IDName);
-
-        Debug.Log($"[SpaceMgr] 太空场景实例化Item成功，itemId={itemData.IDName}, planetBodyId={planetBodyId}, pos={spawnPosition}");
-        return runtimeItem;
+        if (data == null) throw new ArgumentNullException(nameof(data));
+        Item item = ItemMgr.Instance.InstantiateItem(data, GetSpawnPositionNearPlanet(planetBodyId, localOffset),
+            Quaternion.identity, Vector3.one, runtimePlanetRoot.gameObject);
+        ActivateRuntimeItem(item); return item;
     }
-
-    private void ActivateRuntimeItem(Item runtimeItem, string itemId)
+    private static void ActivateRuntimeItem(Item item)
     {
-        if (runtimeItem == null)
-        {
-            throw new System.InvalidOperationException($"[SpaceMgr] 实例化失败，Item为空，itemId={itemId}");
-        }
-
-        runtimeItem.InjectToItemMgr();
-        runtimeItem.Load();
+        if (item == null) throw new InvalidOperationException("太空物品实例化失败");
+        item.InjectToItemMgr(); item.Load();
     }
-
-    private Vector3 GetSpawnPositionNearPlanet(string planetBodyId, Vector3 localOffset)
+    private Vector3 GetSpawnPositionNearPlanet(string bodyId, Vector3 offset)
     {
-        if (string.IsNullOrEmpty(planetBodyId))
-        {
-            throw new System.ArgumentException("planetBodyId 不能为空", nameof(planetBodyId));
-        }
-
-        Planet targetPlanet = FindPlanetByBodyId(planetBodyId);
-        if (targetPlanet == null)
-        {
-            throw new System.InvalidOperationException($"[SpaceMgr] 未找到目标星球，planetBodyId={planetBodyId}");
-        }
-
-        if (localOffset == default)
-        {
-            localOffset = new Vector3(2f, 0f, 0f);
-        }
-
-        return targetPlanet.transform.position + localOffset;
+        SpaceSession session = SpaceSession.EnsureLoaded();
+        BodyState body = session.Universe.GetBody(bodyId);
+        SpaceVector2 radial = offset == default ? new SpaceVector2(1d, 0d) :
+            SpaceVector2.FromVector2(new Vector2(offset.x, offset.y)).Normalized;
+        SpaceVector2 position = body.PositionMeters + radial * (body.RadiusMeters + Math.Max(100d, offset.magnitude));
+        Vector2 projected = session.ProjectPosition(position); return new Vector3(projected.x, projected.y, offset.z);
     }
+    #endregion
 
-#endregion
-
-#region 运行更新
-
+    #region 同一权威状态的渲染
     public void Update()
     {
-        if (!autoUpdateRuntimePlanets)
-        {
-            return;
-        }
-
-        TickRuntimePlanets(Time.deltaTime * runtimeTimeScale);
+        if (autoUpdateRuntimePlanets) TickRuntimePlanets(Time.deltaTime);
     }
-
-    public void TickRuntimePlanets(float deltaTime)
+    public void TickRuntimePlanets(float ignoredDeltaTime)
     {
+        SpaceSession session = SpaceSession.Current;
+        if (session?.Universe == null) return;
         for (int i = RuntimePlanets.Count - 1; i >= 0; i--)
         {
-            Planet runtimePlanet = RuntimePlanets[i];
-            if (runtimePlanet == null)
-            {
-                RuntimePlanets.RemoveAt(i);
-                continue;
-            }
-
-            PlanetData data = runtimePlanet.planetData;
-            if (data == null)
-            {
-                throw new System.InvalidOperationException($"[SpaceMgr] PlanetData 为空，星球对象: {runtimePlanet.name}");
-            }
-
-            data.RunPlanet(runtimePlanet.transform, runtimePlanet.GetOrbitCenterPosition(), deltaTime);
+            Planet planet = RuntimePlanets[i];
+            if (planet == null) { RuntimePlanets.RemoveAt(i); continue; }
+            if (session.Universe.TryGetBody(planet.planetData?.BodyId, out BodyState body))
+                planet.ApplyUniverse(session, body);
         }
     }
+    #endregion
 
-#endregion
-
-#region Odin调试
-
-    [FoldoutGroup("调试"), ShowInInspector, ReadOnly]
-    public int RuntimePlanetCount => RuntimePlanets.Count;
-
-    [FoldoutGroup("调试"), Button("添加调试星球")]
-    public void Debug_AddPlanet()
-    {
-        AddPlanet(debugPlanetData);
-    }
-
-    [FoldoutGroup("调试"), Button("删除调试星球")]
-    public void Debug_RemovePlanet()
-    {
-        RemovePlanet(debugPlanetData);
-    }
-
-    [FoldoutGroup("调试"), Button("手动运行一帧")]
-    public void Debug_TickOneFrame()
-    {
-        TickRuntimePlanets(Time.deltaTime > 0f ? Time.deltaTime : 0.016f);
-    }
-
+    #region 调试入口
+    [FoldoutGroup("调试"), ShowInInspector, ReadOnly] public int RuntimePlanetCount => RuntimePlanets.Count;
+    [FoldoutGroup("调试"), Button("添加调试星球")] public void Debug_AddPlanet() => AddPlanet(debugPlanetData);
+    [FoldoutGroup("调试"), Button("删除调试星球")] public void Debug_RemovePlanet() => RemovePlanet(debugPlanetData);
+    [FoldoutGroup("调试"), Button("刷新星体表现")] public void Debug_TickOneFrame() => TickRuntimePlanets(0f);
     [FoldoutGroup("调试"), Button("清空运行时星球")]
     public void Debug_ClearRuntimePlanets()
     {
-        for (int i = RuntimePlanets.Count - 1; i >= 0; i--)
-        {
-            Planet runtimePlanet = RuntimePlanets[i];
-            if (runtimePlanet != null)
-            {
-                Destroy(runtimePlanet.gameObject);
-            }
-        }
-
-        RuntimePlanets.Clear();
-        RuntimePlanetDict.Clear();
+        foreach (Planet planet in RuntimePlanets) if (planet != null) Destroy(planet.gameObject);
+        RuntimePlanets.Clear(); RuntimePlanetDict.Clear();
     }
-
-    [FoldoutGroup("调试"), Button("创建整个太阳系")]
-    public void Debug_CreateSolarSystem()
-    {
-        Debug_ClearRuntimePlanets();
-
-        // 参考值：地球公转一周 = 1440 * 16 秒
-        float earthOrbitPeriodSeconds = 1440f * 16f;
-        // 参考值：地球自转一周 = 1440 秒
-        float earthSelfRotatePeriodSeconds = 1440f;
-
-        float SpeedByEarthYearRatio(float earthYearRatio)
-        {
-            float periodSeconds = earthOrbitPeriodSeconds * earthYearRatio;
-            return 360f / periodSeconds;
-        }
-
-        float SelfRotateSpeedByEarthDayRatio(float earthDayRatio)
-        {
-            float periodSeconds = earthSelfRotatePeriodSeconds * Mathf.Abs(earthDayRatio);
-            float direction = earthDayRatio >= 0f ? 1f : -1f;
-            return 360f / periodSeconds * direction;
-        }
-
-        float OrbitRadiusByScale(float orbitRadius)
-        {
-            return orbitRadius * solarSystemOrbitSpacingScale;
-        }
-
-        List<PlanetData> solarSystemPlanets = new List<PlanetData>
-        {
-            new PlanetData { name = "太阳", BodyId = "sun", OrbitCenterBodyId = "", PrefabName = "太阳", OrbitRadius = 0f, OrbitAngularSpeed = 0f, SelfRotateSpeed = SelfRotateSpeedByEarthDayRatio(24.47f) },
-            new PlanetData { name = "水星", BodyId = "mercury", OrbitCenterBodyId = "sun", PrefabName = "水星", OrbitRadius = OrbitRadiusByScale(10f), OrbitAngularSpeed = SpeedByEarthYearRatio(0.2408467f), OrbitStartAngle = 15f, SelfRotateSpeed = SelfRotateSpeedByEarthDayRatio(58.646f) },
-            new PlanetData { name = "金星", BodyId = "venus", OrbitCenterBodyId = "sun", PrefabName = "金星", OrbitRadius = OrbitRadiusByScale(14f), OrbitAngularSpeed = SpeedByEarthYearRatio(0.61519726f), OrbitStartAngle = 75f, OrbitClockwise = true, SelfRotateSpeed = SelfRotateSpeedByEarthDayRatio(-243.025f) },
-            new PlanetData { name = "地球", BodyId = "earth", OrbitCenterBodyId = "sun", PrefabName = "地球", OrbitRadius = OrbitRadiusByScale(18f), OrbitAngularSpeed = SpeedByEarthYearRatio(1f), OrbitStartAngle = 130f, SelfRotateSpeed = SelfRotateSpeedByEarthDayRatio(1f) },
-            new PlanetData { name = "月亮", BodyId = "moon", OrbitCenterBodyId = "earth", PrefabName = "月亮", OrbitRadius = OrbitRadiusByScale(4f), OrbitAngularSpeed = SpeedByEarthYearRatio(0.074801f), OrbitStartAngle = 35f, SelfRotateSpeed = SelfRotateSpeedByEarthDayRatio(27.321661f) },
-            new PlanetData { name = "火星", BodyId = "mars", OrbitCenterBodyId = "sun", PrefabName = "火星", OrbitRadius = OrbitRadiusByScale(23f), OrbitAngularSpeed = SpeedByEarthYearRatio(1.8808f), OrbitStartAngle = 220f, SelfRotateSpeed = SelfRotateSpeedByEarthDayRatio(1.025957f) },
-            new PlanetData { name = "木星", BodyId = "jupiter", OrbitCenterBodyId = "sun", PrefabName = "木星", OrbitRadius = OrbitRadiusByScale(31f), OrbitAngularSpeed = SpeedByEarthYearRatio(11.862f), OrbitStartAngle = 300f, SelfRotateSpeed = SelfRotateSpeedByEarthDayRatio(0.41354f) },
-            new PlanetData { name = "土星", BodyId = "saturn", OrbitCenterBodyId = "sun", PrefabName = "土星", OrbitRadius = OrbitRadiusByScale(40f), OrbitAngularSpeed = SpeedByEarthYearRatio(29.457f), OrbitStartAngle = 20f, SelfRotateSpeed = SelfRotateSpeedByEarthDayRatio(0.44401f) },
-            new PlanetData { name = "天王星", BodyId = "uranus", OrbitCenterBodyId = "sun", PrefabName = "天王星", OrbitRadius = OrbitRadiusByScale(48f), OrbitAngularSpeed = SpeedByEarthYearRatio(84.016846f), OrbitStartAngle = 160f, SelfRotateSpeed = SelfRotateSpeedByEarthDayRatio(-0.71833f) },
-            new PlanetData { name = "海王星", BodyId = "neptune", OrbitCenterBodyId = "sun", PrefabName = "海王星", OrbitRadius = OrbitRadiusByScale(56f), OrbitAngularSpeed = SpeedByEarthYearRatio(164.79132f), OrbitStartAngle = 260f, SelfRotateSpeed = SelfRotateSpeedByEarthDayRatio(0.67125f) }
-        };
-
-        for (int i = 0; i < solarSystemPlanets.Count; i++)
-        {
-            AddPlanet(solarSystemPlanets[i]);
-        }
-
-        Debug.Log($"[SpaceMgr] 太阳系创建完成，数量={RuntimePlanets.Count}");
-    }
-
-
-#endregion
+    [FoldoutGroup("调试"), Button("读取整个太阳系")] public void Debug_CreateSolarSystem() => Load();
+    #endregion
 }

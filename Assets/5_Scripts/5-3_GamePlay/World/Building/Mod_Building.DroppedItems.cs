@@ -100,7 +100,7 @@ public partial class Mod_Building
 /// 建筑被非锤类伤害摧毁时的材料回收规则。
 /// 当前只从唯一、单件产出、全部为精确物品输入的普通制作配方反推材料，并按每份 50% 概率独立回收。
 /// </summary>
-public static class BuildingMaterialSalvage
+public static partial class BuildingMaterialSalvage
 {
     public const float DefaultRecoveryChance = 0.5f;
 

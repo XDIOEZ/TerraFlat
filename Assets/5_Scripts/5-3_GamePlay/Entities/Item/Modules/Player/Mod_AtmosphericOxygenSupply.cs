@@ -43,6 +43,11 @@ public sealed class Mod_AtmosphericOxygenSupply : Module, IItemModuleDependencyB
     {
         if (!GameNetwork.HasStateAuthority || item == null || oxygen == null || !oxygen.CanReceiveOxygen || deltaTime <= 0f) return;
         if (tileContact != null && tileContact.IsWaterBreathBlocked || equipment != null && equipment.BlocksAmbientOxygen) return;
+        if (ItemEnvironmentSources.TryGet(item, out _))
+        {
+            oxygen.SupplyOxygen(ItemEnvironmentSources.SupplyAmbientOxygen(item, oxygen.GetOxygenSupplyAmount(deltaTime)));
+            return;
+        }
         if (AtmosphereService.TryGetForWorld(item.gameObject.scene.name, out AtmosphereState atmosphere) && AtmosphereService.CanBreathe(atmosphere))
             oxygen.SupplyOxygen(oxygen.GetOxygenSupplyAmount(deltaTime));
     }

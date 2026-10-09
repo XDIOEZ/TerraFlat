@@ -43,6 +43,7 @@ public abstract class MachineLogic : IDisposable
     protected void NotifyChanged(bool visual = false)
     {
         Changed?.Invoke();
+        using var nodeScope = MachineWorld.UseNodeScope(Entity);
         MachineWorld.StateChanged(Entity);
         if (visual) MachineWorld.NotifyVisualChanged(Entity);
     }

@@ -20,6 +20,9 @@ public abstract class Item : MonoBehaviour
     /// </summary>
     public abstract ItemData itemData { get; }
 
+    // 独立世界容器负责保存所属表现对象，区块不再重复保存同一份库存。
+    public object PersistenceOwner { get; set; }
+
     /// <summary>
     /// 被其他实体感知时的范围倍率。1 为标准感知体型，数值越大越容易在更远处被发现。
     /// 观察者的检测半径与该目标倍率共同决定最终感知范围。
@@ -410,6 +413,7 @@ public abstract class Item : MonoBehaviour
 
     public void PrepareForPoolReuse()
     {
+        PersistenceOwner = null;
         ModuleUnload();
         StopAllCoroutines();
         destructionHandled = false;

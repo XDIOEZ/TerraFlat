@@ -1,0 +1,341 @@
+{
+  "schemaVersion": 1,
+  "recipes": [
+    {
+      "id": "core:space_ShipFloor_Iron",
+      "displayName": "飞船铁地板",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Ingot_WroughtIron",
+          "amount": 1
+        },
+        {
+          "match": "exact_item",
+          "itemId": "CopperPlate",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "ShipFloor_Iron_Summoner",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:space_ShipFloor_Refractory",
+      "displayName": "飞船耐高温地板",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Ingot_WroughtIron",
+          "amount": 3
+        },
+        {
+          "match": "exact_item",
+          "itemId": "CopperPlate",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "ShipFloor_Refractory_Summoner",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:space_ShipWall_Iron",
+      "displayName": "飞船铁舱壁",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Ingot_WroughtIron",
+          "amount": 3
+        },
+        {
+          "match": "exact_item",
+          "itemId": "CopperPlate",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "ShipWall_Iron_Summoner",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:space_ShipWall_Refractory",
+      "displayName": "飞船耐高温舱壁",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Ingot_WroughtIron",
+          "amount": 5
+        },
+        {
+          "match": "exact_item",
+          "itemId": "CopperPlate",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "ShipWall_Refractory_Summoner",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:space_ShipDoor",
+      "displayName": "飞船隔离舱门",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Ingot_WroughtIron",
+          "amount": 3
+        },
+        {
+          "match": "exact_item",
+          "itemId": "CopperPlate",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "ShipDoor_Summoner",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:space_ShipDockingPort",
+      "displayName": "飞船对接接口",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Ingot_WroughtIron",
+          "amount": 5
+        },
+        {
+          "match": "exact_item",
+          "itemId": "CopperPlate",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "ShipDockingPort_Summoner",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:space_ShipConsole",
+      "displayName": "飞船控制台",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Ingot_WroughtIron",
+          "amount": 3
+        },
+        {
+          "match": "exact_item",
+          "itemId": "CopperPlate",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "ShipConsole_Summoner",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:space_ShipChemicalEngine",
+      "displayName": "化学燃料引擎",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Ingot_WroughtIron",
+          "amount": 6
+        },
+        {
+          "match": "exact_item",
+          "itemId": "CopperPlate",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "ShipChemicalEngine_Summoner",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:space_ShipGravityGenerator",
+      "displayName": "重力模拟器",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Ingot_WroughtIron",
+          "amount": 7
+        },
+        {
+          "match": "exact_item",
+          "itemId": "CopperPlate",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "ShipGravityGenerator_Summoner",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:space_ShipNavigation",
+      "displayName": "自动导航工作方块",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Ingot_WroughtIron",
+          "amount": 2
+        },
+        {
+          "match": "exact_item",
+          "itemId": "CopperPlate",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "ShipNavigation_Summoner",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:space_ShipAirSupply",
+      "displayName": "舱内供气器",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Ingot_WroughtIron",
+          "amount": 3
+        },
+        {
+          "match": "exact_item",
+          "itemId": "CopperPlate",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "ShipAirSupply_Summoner",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:space_ShipFiber",
+      "displayName": "光纤",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Ingot_WroughtIron",
+          "amount": 1
+        },
+        {
+          "match": "exact_item",
+          "itemId": "CopperPlate",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "ShipFiber_Summoner",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    }
+  ]
+}

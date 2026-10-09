@@ -44,7 +44,7 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
 
     public void ActivateWorldFromScene(string worldKey)
     {
-        ActivateWorld(WorldAddress.FromWorldKey(worldKey));
+        if (worldKey != "SpaceScene") ActivateWorld(WorldAddress.FromWorldKey(worldKey));
     }
 
     public void ActivateWorld(WorldAddress address)
@@ -216,6 +216,22 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
             respawnContext));
         return true;
     }
+
+    #region 星球落地事务
+    public bool TryBeginPlanetLanding(Player player, WorldAddress targetAddress, Vector2 position)
+    {
+        if (isTransitioning || player == null || player != ItemMgr.Instance?.User_Player ||
+            !targetAddress.IsValid || !targetAddress.IsSurface || !IsFinitePosition(position)) return false;
+        LoadCatalog();
+        DimensionDefinition definition = catalog.Find(targetAddress.DimensionId);
+        bool toSpace = targetAddress.WorldKey == "SpaceScene";
+        if (definition == null || !(toSpace ? GameManager.Instance.BeginSpaceTransitionLoading() : GameManager.Instance.BeginDimensionTransitionLoading(definition))) return false;
+        var context = new PortalTransitionContext { TargetPortalPosition = position, UseExactTargetPosition = true };
+        StartCoroutine(TransitionCoroutine(player, WorldAddress.FromWorldKey(SceneManager.GetActiveScene().name),
+            targetAddress, definition, context));
+        return true;
+    }
+    #endregion
 
     private bool TryBeginTransitionInternal(Player player, string targetDimensionId,
         Item sourcePortalItem, bool generatedWorldPortal)
@@ -426,18 +442,24 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
         SaveDataMgr.Instance.Save_And_WriteToDisk();
 
         ItemMgr.Instance.ReleasePlayerForWorldTransition(sourcePlayer);
-        ChunkMgr.Instance.OnSceneChange();
+        ChunkMgr.ExistingInstance?.OnSceneChange();
         yield return null;
 
         GameManager.Instance.SetDimensionTransitionLoading("正在创建目标维度…", 0.48f);
-        EnsureWorldData(targetAddress);
+        bool toSpace = targetAddress.WorldKey == "SpaceScene";
+        if (!toSpace) EnsureWorldData(targetAddress);
         Scene oldScene = SceneManager.GetActiveScene();
         Scene targetScene = SceneManager.GetSceneByName(targetAddress.WorldKey);
-        if (!targetScene.IsValid() || !targetScene.isLoaded)
+        if (toSpace)
+        {
+            yield return GameManager.Instance.LoadSceneSingleAndInvokeWhenReady("SpaceScene", () => SpaceMgr.Instance.Load());
+            targetScene = SceneManager.GetSceneByName("SpaceScene");
+        }
+        else if (!targetScene.IsValid() || !targetScene.isLoaded)
             targetScene = SceneManager.CreateScene(targetAddress.WorldKey);
 
         SceneManager.SetActiveScene(targetScene);
-        ActivateWorld(targetAddress);
+        if (!toSpace) ActivateWorld(targetAddress);
 
         if (oldScene.IsValid() && oldScene.isLoaded && oldScene != targetScene)
         {
@@ -461,11 +483,12 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
         Player targetPlayer = ItemMgr.Instance.LoadPlayer(playerName);
         targetPlayer.transform.position = WorldLocalPresentation.ProjectPosition(targetPosition);
         targetPlayer.Data.transform.position = targetPosition;
+        FlatWorld.Spaceflight.SpaceSession.Current?.RestorePassengerPose(targetPlayer);
         targetPlayer.GetComponentInChildren<Mod_GameController>(true)?.SetGameplayInputLocked(true);
         GameManager.Instance.NotifyDimensionPlayerEntered(targetPlayer);
 
         GameManager.Instance.SetDimensionTransitionLoading("正在生成目标区块…", 0.78f);
-        yield return WaitForRuntimeChunkPresentation(targetAddress, targetPosition, targetPlayer);
+        if (!toSpace) yield return WaitForRuntimeChunkPresentation(targetAddress, targetPosition, targetPlayer);
 
         if (portalContext?.EnsureCaveExit == true)
         {
@@ -527,14 +550,20 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
 
         if (currentPlayer != null)
             ItemMgr.Instance.ReleasePlayerForWorldTransition(currentPlayer);
-        ChunkMgr.Instance?.OnSceneChange();
+        ChunkMgr.ExistingInstance?.OnSceneChange();
 
         Scene previousScene = SceneManager.GetActiveScene();
         Scene sourceScene = SceneManager.GetSceneByName(sourceAddress.WorldKey);
-        if (!sourceScene.IsValid() || !sourceScene.isLoaded)
+        bool fromSpace = sourceAddress.WorldKey == "SpaceScene";
+        if (fromSpace)
+        {
+            yield return GameManager.Instance.LoadSceneSingleAndInvokeWhenReady("SpaceScene", () => SpaceMgr.Instance.Load());
+            sourceScene = SceneManager.GetSceneByName("SpaceScene");
+        }
+        else if (!sourceScene.IsValid() || !sourceScene.isLoaded)
             sourceScene = SceneManager.CreateScene(sourceAddress.WorldKey);
         SceneManager.SetActiveScene(sourceScene);
-        ActivateWorld(sourceAddress);
+        if (!fromSpace) ActivateWorld(sourceAddress);
 
         if (previousScene.IsValid() && previousScene.isLoaded && previousScene != sourceScene)
         {
@@ -553,7 +582,7 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
         recoveredPlayer.Data.transform.position = sourcePosition;
         recoveredPlayer.GetComponentInChildren<Mod_GameController>(true)?.SetGameplayInputLocked(true);
         GameManager.Instance.NotifyDimensionPlayerEntered(recoveredPlayer);
-        yield return WaitForRuntimeChunkPresentation(sourceAddress, sourcePosition, recoveredPlayer);
+        if (!fromSpace) yield return WaitForRuntimeChunkPresentation(sourceAddress, sourcePosition, recoveredPlayer);
 
         recoveredPlayer.GetComponentInChildren<Mod_TileEffectReceiver>(true)?.RefreshCurrentTileEffects();
         recoveredPlayer.GetComponentInChildren<Mod_GameController>(true)?.SetGameplayInputLocked(false);

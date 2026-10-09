@@ -22,7 +22,7 @@ public class Mod_ItemChunkAssigner : Module
     
     public override void ModUpdate(float deltaTime)
     {
-        if (_Data.isRunning == false)
+        if (_Data.isRunning == false || !ChunkMgr.IsSurfaceStreamingScene)
             return;
 
         ChunkMgr chunkManager = ChunkMgr.Instance;

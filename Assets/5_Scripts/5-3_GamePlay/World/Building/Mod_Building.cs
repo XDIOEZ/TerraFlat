@@ -40,7 +40,7 @@ public enum BuildingPlacementLayer
 /// 建筑召唤器是持久化载体，PlacedBuilding 是快照还原后的世界实例。
 /// 拆除时先生成带快照的召唤器，成功后才删除原建筑。
 /// </summary>
-public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamageContextRule
+public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamageContextRule, IBuildingPreviewRotation
 {
     private const int CurrentDataVersion = 3;
     private const string StoneWallBuildingId = "Wall_Stone";
@@ -130,7 +130,10 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
     public bool IsDismantlePending => _dismantlePending;
     public bool IsPlacementModeActive => IsSummoner && (!RequiresPlacementRequest || _placementRequested);
     public bool PlacementHorizontalMirrorX => _placementMirrorX;
-    public bool CanRotateHorizontalPlacement => Data?.AllowHorizontalMirrorPlacement == true && IsPlacementActionAvailable;
+    private int _shipPlacementQuarterTurns;
+    public bool CanRotateHorizontalPlacement => (Data?.AllowHorizontalMirrorPlacement == true || Mod_ShipPart.Read(item?.itemData) != null) && IsPlacementActionAvailable;
+    public bool CanRotatePlacement => CanRotateHorizontalPlacement;
+    public void RotatePlacement() => RotateHorizontalPlacement();
 
     #region 建筑空间层
     [Tooltip("地板层设施允许同格放置实体建筑，不阻挡通行或视线。")]
@@ -357,7 +360,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
             return;
 
         // 提交以当前准线为准；虚影只是表现，不参与安装资格判定。
-        Vector3 placement = NormalizePlacement(GetPointerWorldPosition());
+        Vector3 placement = NormalizeRequestedPlacement(GetPointerWorldPosition());
         if (!ValidatePlacement(placement, GetAuthorityPosition(), out string reason,
                 out BuildingPlacementFailureReason failureReason))
         {
@@ -401,6 +404,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
             AuthorityPosition = GetAuthorityPosition(),
             MaximumDistance = GetMaxPlacementDistance(actor),
             HorizontalMirrorX = _placementMirrorX,
+            RotationQuarterTurns = GetLocalPlacementQuarterTurns(),
             Extension = BuildingPlacementLifecycle.GetExtension(item)
         };
         if (!BuildingPlacementService.TryPlace(request, out BuildingPlacementResult result, out reason))
@@ -759,6 +763,8 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
     public static void DestroyMechanical(MachineEntity node)
     {
         if (node == null || !GameNetwork.HasStateAuthority) return;
+        if (FlatWorld.Spaceflight.SpaceSession.Current?.Owns(node.Id) == true)
+        { FlatWorld.Spaceflight.SpaceSession.Current.ApplyPieceDamage(node.Id, float.MaxValue, "结构摧毁"); return; }
         if (MachineWorld.HandleFluidTankZeroHp(node)) return;
         if (TryReadBuildingData(node.Snapshot, out _, out Building_Data building))
         {
@@ -1124,7 +1130,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
     {
         reason = null;
         failureReason = BuildingPlacementFailureReason.InvalidPosition;
-        position = NormalizePlacement(position);
+        position = NormalizeRequestedPlacement(position);
 
         if (!IsFinite(position) || !IsFinite(authorityPosition))
         {
@@ -1147,6 +1153,8 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
         }
 
         Vector2Int placementCell = GetPlacementCell(position);
+        if (FlatWorld.Spaceflight.SpaceSession.Current?.TryValidatePlacement(item.itemData, position, GetLocalPlacementQuarterTurns(), out bool shipValid, out reason) == true)
+            return shipValid;
         IBuildingPlacementExtension placementExtension = BuildingPlacementLifecycle.GetExtension(item);
         if (placementExtension != null && !placementExtension.ValidatePlacement(placementCell, out reason))
             return false;
@@ -1549,13 +1557,15 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
         if (!CanRotateHorizontalPlacement)
             return;
 
+        if (Mod_ShipPart.Read(item?.itemData) != null)
+        { _shipPlacementQuarterTurns = (_shipPlacementQuarterTurns + 1) & 3; return; }
         _placementMirrorX = !_placementMirrorX;
         ApplyHorizontalMirrorPreview();
     }
 
     private void BindPlacementRotationInput()
     {
-        if (Data?.AllowHorizontalMirrorPlacement != true || item?.Owner == null)
+        if ((Data?.AllowHorizontalMirrorPlacement != true && Mod_ShipPart.Read(item?.itemData) == null) || item?.Owner == null)
             return;
 
         Mod_GameController controller = item.Owner.itemMods?.GetMod_ByID<Mod_GameController>(ModText.Controller)
@@ -1722,7 +1732,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
 
     private void HandleGhostShadow()
     {
-        Vector3 mouse = NormalizePlacement(GetPointerWorldPosition());
+        Vector3 mouse = NormalizeRequestedPlacement(GetPointerWorldPosition());
         Vector3 authorityPosition = GetAuthorityPosition();
         float maximumPlacementDistance = GetMaxPlacementDistance();
         bool withinReach = IsWithinPlacementDistance(authorityPosition, mouse, maximumPlacementDistance);
@@ -1743,6 +1753,8 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
         GhostShadow.transform.position = WorldLocalPresentation.ProjectPosition(mouse);
         GhostShadow.UpdateAlpha(1f);
         BuildingPlacementLifecycle.GetExtension(item)?.ApplyPreview(GhostShadow);
+        if (FlatWorld.Spaceflight.SpaceSession.Current?.TrySnapPlacement(item.itemData, mouse, GetLocalPlacementQuarterTurns(), out _, out float angle) == true)
+            GhostShadow.transform.rotation = Quaternion.Euler(0f, 0f, angle);
         ApplyHorizontalMirrorPreview();
         GhostShadow.UpdateColor(!ValidatePlacement(mouse, authorityPosition, out _));
     }
@@ -1753,7 +1765,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
         Vector3 placement,
         float maximumPlacementDistance)
     {
-        Vector2 wrappedDelta = WorldTopologyRuntime.ShortestDelta(
+        Vector2 wrappedDelta = FlatWorld.Spaceflight.SpaceSession.Current?.IsSpaceView == true ? (Vector2)(placement - authorityPosition) : WorldTopologyRuntime.ShortestDelta(
             new Vector2(authorityPosition.x, authorityPosition.y),
             new Vector2(placement.x, placement.y));
         Vector2 distanceToCell = new(
@@ -2080,7 +2092,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
 
     private void SyncNavigationOccupancy()
     {
-        if (!isActiveAndEnabled || item == null || !IsInstalled())
+        if (!isActiveAndEnabled || item == null || !IsInstalled() || FlatWorld.Spaceflight.SpaceSession.Current?.Owns(item.itemData.Guid) == true)
         {
             BuildingOccupancyRegistry.Unregister(this);
             return;
@@ -2293,6 +2305,13 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
     private static Vector3 NormalizePlacement(Vector3 position)
         => WorldTopologyRuntime.NormalizePosition(
             new Vector3(Mathf.Floor(position.x) + 0.5f, Mathf.Floor(position.y) + 0.5f, 0f));
+
+    private int GetLocalPlacementQuarterTurns()
+        => item?.GetComponentInChildren<Mod_MechanicalNode>(true)?.PlacementQuarterTurns ?? _shipPlacementQuarterTurns;
+
+    private Vector3 NormalizeRequestedPlacement(Vector3 position)
+        => FlatWorld.Spaceflight.SpaceSession.Current?.TrySnapPlacement(item?.itemData, position, GetLocalPlacementQuarterTurns(), out Vector2 snapped, out _) == true
+            ? new Vector3(snapped.x, snapped.y, 0f) : NormalizePlacement(position);
 
     /// <summary>建筑只保留 XY 平面旋转，避免无效四元数或三维倾斜污染 2D 世界。</summary>
     private static Quaternion NormalizeBuildingRotation(Quaternion rotation)

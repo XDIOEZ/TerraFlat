@@ -1,0 +1,77 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &5387962487738088018
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1710262837660663905}
+  - component: {fileID: 8128443413686548949}
+  m_Layer: 0
+  m_Name: Module_ShipPart
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1710262837660663905
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5387962487738088018}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &8128443413686548949
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5387962487738088018}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 94983e6c52a532b40a5a47c391747335, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  item: {fileID: 0}
+  ModData:
+    StableName: 
+    ModuleId: "\u8239\u4F53\u90E8\u4EF6\u6A21\u5757"
+    enabled: 1
+    Type: 0
+    BitData: 
+  Configuration:
+    Kind: 0
+    Layer: 0
+    FootprintWidth: 1
+    FootprintHeight: 1
+    MaterialId: 
+    StructuralMassKg: 20
+    Health: 250
+    SealsAtmosphere: 0
+    MinimumPressureKPa: 0
+    MaximumPressureKPa: 500
+    PressureDamagePerKPaSecond: 0.04
+    MinimumTemperatureCelsius: -250
+    MaximumTemperatureCelsius: 500
+    TemperatureDamagePerCelsiusSecond: 0.02
+    EngineThrustNewtons: 60000
+    FuelMolesPerSecond: 3
+    FuelRatioTolerance: 0.1
+    MaximumImpurityFraction: 0.05
+    PowerWatts: 20
+    TargetPressureKPa: 101.325
+    SupplyMolesPerSecond: 0
+    GravityRadiusCells: 8
+    RecoveryItemId: 

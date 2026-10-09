@@ -1851,7 +1851,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
     private static bool IsRuntimeBuildingItem(Item item, out Mod_Building building)
     {
         building = null;
-        if (MachineWorld.OwnsWorldItem(item?.itemData)) return false;
+        if (item?.PersistenceOwner != null || MachineWorld.OwnsWorldItem(item?.itemData)) return false;
         if (item == null || item is Player || item is Map || item.itemData == null)
             return false;
 
@@ -1913,7 +1913,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
     /// <summary>建筑被安装、拆除或状态保存时都要记录所在区块，确保空区块也能清掉旧建筑差量。</summary>
     private static bool IsRuntimeBuildingChangeSource(Item item)
     {
-        if (item == null || item.itemData == null || item is Player || item is Map)
+        if (item == null || item.PersistenceOwner != null || item.itemData == null || item is Player || item is Map)
             return false;
 
         Mod_Building building = item.itemMods?.GetMod_ByID<Mod_Building>(ModText.Building);
@@ -2541,12 +2541,15 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         MonsterSpawnerManager spawnerManager = FindObjectOfType<MonsterSpawnerManager>();
         spawnerManager?.CaptureSaveData(saveData);
 
+        // 先捕获所有移动作用域，再序列化核心数据，避免船体和设备库存落在不同时间点。
+        byte[] machines = MachineWorld.CaptureArchive(saveData);
+        FlatWorld.Spaceflight.SpaceSession.Capture(saveData);
         CompactSaveEnvelope envelope = new CompactSaveEnvelope
         {
             Version = CompactSaveVersion,
             CoreSaveData = SerializeCoreDataWithoutChunks(saveData),
             DroppedItems = DroppedItemService.CaptureArchive(saveData),
-            MechanicalNetworks = MachineWorld.CaptureArchive(saveData)
+            MechanicalNetworks = machines
         };
 
         foreach (KeyValuePair<string, ChunkSaveRecord> pair in chunkDeltas)

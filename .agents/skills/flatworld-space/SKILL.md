@@ -7,18 +7,24 @@ description: "Use when: 定位或修改 FlatWorld 的太空场景、星球运行
 
 ## 入口
 
-- 管理：`Assets/5_Scripts/5-3_GamePlay/World/Space/SpaceMgr.cs`
-- 轨道数据：同目录 `PlanetData.cs`；地图/天气 partial：`World/Map/Data/PlanetData.cs`
-- 飞行：`World/Space/Mod_Fly.cs`
+- 权威会话：`Assets/5_Scripts/5-3_GamePlay/World/Space/SpaceSession.cs`、`SpaceSessionState.cs`；`SpaceMgr.cs` 只投影星体与星空。
+- 生成与轨道：同目录 `Universe/SpaceCatalog.cs`、`UniverseSimulation.cs`、`SpaceSurfaceQuery.cs`；`PlanetData.cs` 与 `World/Map/Data/PlanetData.cs` 保存星体地表身份。
+- 船体：同目录 `Ships/`，领域结构、气密与对接在 `Ships/Domain/`；建筑后端、运动、乘员、环境、导航、爆炸与散落物按 partial 分工。
+- 生命周期：`Core/Lifecycle/GameManager.Space.cs`、`World/Dimension/DimensionManager.cs`；正式面板在 `Presentation/UI/ShipPanelSession.cs`、`SpaceLandingPanelSession.cs`。
 - 场景/资源：`Assets/3_Scenes/SpaceScene.unity`、`Assets/2_Prefabs/World/Space/`
 
 ## 不变量
 
-- 主链：世界进入 → SpaceMgr Load/AddPlanet → GameRes 按 PrefabName 实例化 → BodyId 绑定轨道中心 → RunPlanet → Save 回写。
+- 主链：正式世界进入 → SpaceSession 恢复稳定星体、船体与船上机器作用域 → 唯一固定时钟推进 → 当前场景投影视图。SpaceMgr 不再另推宇宙时间。
+- 宇宙坐标用 double 米，ViewOrigin 只影响表现；地表逻辑坐标与循环镜像通过 WorldLocalPresentation 换算，不把太空坐标交给 Chunk 生成、地表寻路或 NormalizePosition。
+- 固定步须等待 IsGameplayReady，并按 CaptureShipContactPoses → 运动 → StepShipContacts → CommitSurfaceContacts 顺序结算。Kinematic 碰撞体负责表现，实际平动和旋转反作用由权威扫掠解算；碰撞、无人船和冷地表损毁不依赖可见性。
+- 星体接触与船体接触比较同一步时间 Fraction，先撞船后须从真实碰撞时刻重积剩余轨迹；不能提前切地表作用域导致漏碰撞。
+- 地表切换复用 DimensionManager 的黑屏、玩家快照与失败恢复；读档场景依据已保存飞行阶段，避免迁移中旧 CurrentSceneName 覆盖目标。未进入就绪状态不推进下落。
 - `PlanetData` 跨两个目录的 partial；序列化字段变化必须同时检查并联动 Data Skill。
-- RuntimeAngle/轨迹为非序列化状态，由 `InitializeRuntime()` 重建。
+- 星体位置由 UniverseState.SimulationSeconds 和稳定轨道参数派生；自转含逆向周期，统一经 GetRotationRadians 计算。
 - Prefab 名经 `RuntimePlanetName/PrefabName` 和 GameRes 解析；移动/改名同步检查 Addressables。
-- 未来星球旅行使用 `WorldAddress.PlanetId + DimensionManager`，不为每颗星球造一次性 Scene 链。
+- 星球旅行使用 `WorldAddress.PlanetId + DimensionManager`，不为每颗星球造一次性 Scene 链。冷地表查询与落地损毁使用冻结生成 Profile 加最新 Chunk 差量，禁止读取当前活动星球替代目标星球。
+- 船体部件能力 ID 为 `船体部件模块`，Prefab 为 `Module_ShipPart`，MonoBehaviour 文件必须同名 `Mod_ShipPart.cs`；配置位于 `space_ships.json`。设备、太阳系和飞行参数分别在 `space_devices.json`、`GameConfig/Space/solar-system.json`、`Resources/Config/Space/space-gameplay.json`。
 
 ## 规划约束
 

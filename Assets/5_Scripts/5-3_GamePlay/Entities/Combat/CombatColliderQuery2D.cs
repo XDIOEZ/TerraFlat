@@ -108,7 +108,7 @@ public sealed class CombatColliderQuery2D : IDisposable
     }
 
     /// <summary>空间索引只交出候选与数据形状，这里才临时建立物理几何。</summary>
-    public void Add(int candidateId, PerceptionShape2D shape)
+    public void Add(int candidateId, PerceptionShape2D shape, float rotationDegrees = 0f)
     {
         if (!rented) throw new InvalidOperationException("Collider 查询必须先取得租约。");
         if (!math.all(math.isfinite(new float4(shape.Center, shape.Extents))) ||
@@ -120,6 +120,7 @@ public sealed class CombatColliderQuery2D : IDisposable
             projections[activeCount] = new Projection(CombatPhysicsChannels.DamageReceiverLayer);
         Projection projection = projections[activeCount++];
         projection.Bind(shape);
+        projection.Root.transform.rotation = Quaternion.Euler(0f, 0f, rotationDegrees);
         candidateIds.Add(projection.ActiveCollider, candidateId);
     }
 

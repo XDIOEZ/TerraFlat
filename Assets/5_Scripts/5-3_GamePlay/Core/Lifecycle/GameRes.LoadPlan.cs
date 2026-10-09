@@ -76,6 +76,8 @@ public partial class GameRes
             () => LoadCatalog<int>((done, fail) => LiquidCatalogLoader.LoadBuiltInAsync(this, done, fail), _ => { }), "items");
         plan.Add("fluids", "加载工业流体与星球大气", 1,
             () => LoadCatalog<int>((done, fail) => FluidCatalogLoader.LoadBuiltInAsync(this, done, fail), _ => { }), "liquids");
+        plan.Add("space", "加载星系与独立地表", 1,
+            () => LoadCatalog<FlatWorld.Spaceflight.SpaceCatalog>(FlatWorld.Spaceflight.SpaceCatalog.LoadDefaultAsync, _ => { }), "fluids", "items");
         plan.Add("contamination", "加载污染层定义", 1,
             () => LoadCatalog<int>((done, fail) => ContaminationCatalogLoader.LoadBuiltInAsync(this, done, fail), _ => { }));
         plan.Add("quests", "加载任务目录", 2,

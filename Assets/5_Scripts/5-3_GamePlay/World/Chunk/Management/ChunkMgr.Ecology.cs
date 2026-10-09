@@ -16,6 +16,20 @@ public partial class ChunkMgr
 
     #region 配置冻结
 
+    // 后台落点查询与真正进入地表共用冻结参数入口，不另造一套生成配置。
+    public static ChunkGenerationProfileSnapshot CreateFrozenSurfaceProfile(PlanetData planet)
+    {
+        if (planet == null) throw new ArgumentNullException(nameof(planet));
+        ChunkGenerationProfileSO asset = UnityEngine.Resources.Load<ChunkGenerationProfileSO>("Config/WorldModel/ChunkGenerationProfile_Surface");
+        if (asset == null) throw new System.IO.InvalidDataException("缺少地表生成基础 Profile");
+        ChunkGenerationProfileSnapshot profile = ApplyWorldChunkSize(asset.CreateSnapshot(), planet);
+        profile = ApplyWorldSpatialDistanceScale(profile, planet);
+        profile = WorldGenerationRuntimeHooks.ApplyBeforeWorldModelGeneration(profile);
+        profile = ApplyPersistedEcologyConfiguration(profile, planet);
+        int seed = SaveDataMgr.Instance?.SaveData?.Seed ?? 1;
+        return profile.WithNumericParameter("cave.portal.baseSeed", seed == 0 ? 1 : seed);
+    }
+
     /// <summary>把当前 Profile 的生态配置冻结到 PlanetData，并恢复已保存配置。</summary>
     private static ChunkGenerationProfileSnapshot ApplyPersistedEcologyConfiguration(
         ChunkGenerationProfileSnapshot profile)
@@ -37,6 +51,8 @@ public partial class ChunkMgr
         if (profile == null || planet == null)
             return profile;
 
+        // 星体覆盖先进入冻结快照，后台任务只读取快照里的独立参数。
+        profile = FlatWorld.Spaceflight.SpaceCatalog.LoadDefault().ApplySurfaceProfile(planet.BodyId, profile);
         GameSaveData saveData = SaveDataMgr.Instance?.SaveData;
         if (saveData != null && !saveData.UsesFrozenWorldGenerationConfiguration)
             return profile;

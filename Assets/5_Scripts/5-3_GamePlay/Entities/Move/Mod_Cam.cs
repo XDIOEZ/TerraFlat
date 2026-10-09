@@ -87,6 +87,13 @@ public class Mod_Cam : Module
         BindWorldAudioListener();
     }
 
+    // 镜头使用玩家世界朝向；承载船体转动时玩家与镜头一起转。
+    private void LateUpdate()
+    {
+        if (Enabled && vcam != null && CameraFollowItem != null)
+            vcam.m_Lens.Dutch = CameraFollowItem.transform.eulerAngles.z;
+    }
+
     private void OnDisable()
     {
         CameraUserSettings.Changed -= HandleCameraSettingsChanged;

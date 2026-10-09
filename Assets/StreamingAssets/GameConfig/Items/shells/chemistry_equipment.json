@@ -211,7 +211,7 @@
       "parent": "Equipment_Base",
       "worldDropBehavior": "interactive",
       "gameName": "宇航服衣服",
-      "description": "宇航服外层护甲，内搭衣物可自由选择。穿戴时扩展安全体温范围，增强耐寒与耐热能力；穿齐宇航服头盔、衣服、裤子、鞋子和手套，并戴好头盔后扩展安全气压范围。宇航服衣服的配置页可更换供氧气罐。",
+      "description": "宇航服外层护甲，内搭衣物可自由选择。穿戴时扩展安全体温范围，增强耐寒与耐热能力；穿齐整套并戴好头盔后扩展安全气压范围。配置页分别更换供氧和推进气罐，落地缓冲消耗衣服自身耐久，超过保护能力的冲击仍会伤害玩家。",
       "durability": 200,
       "maxDurability": 200,
       "amount": 1,
@@ -227,6 +227,21 @@
         "EquipmentSlot.TorsoOuter",
         "InventoryGroup.Chemical"
       ],
+      "health": {
+        "weakTool": 0,
+        "hp": 200,
+        "maxHp": 200,
+        "hasHp": true,
+        "combatBalanceVersion": 1,
+        "defense": { "physical": 2 },
+        "collider": {
+          "type": "BoxCollider2D",
+          "size": { "x": 0.7, "y": 0.9 },
+          "offset": { "x": 0, "y": 0 },
+          "isTrigger": true,
+          "enabled": true
+        }
+      },
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Chemistry/Spacesuit_Torso/Spacesuit_Torso_Icon.png",
         "color": {
@@ -268,6 +283,11 @@
                 "Spacesuit.Feet"
               ],
               "OxygenMolesPerSecond": 0.006,
+              "PropulsionAcceleration": 3,
+              "PropulsionMolesPerSecond": 0.12,
+              "ImpactBufferSeconds": 0.5,
+              "MaximumImpactProtection": 80,
+              "ImpactDurabilityPerDamage": 1,
               "SetId": "core:spacesuit",
               "LowPressureRangeIncreaseKPa": 50,
               "HighPressureRangeIncreaseKPa": 500

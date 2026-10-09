@@ -32,6 +32,12 @@ public class Mod_Equipment : Module, IInventory, IInteractable, IInstanceUI
     // 每个槽位对应的装备实例列表
     [SerializeReference]
     List<List<EquipmentInstance>> equipment_Instances = new();
+    // 装备容器的实际运行库存对外只读枚举，用于载荷等通用状态统计。
+    public IEnumerable<EquipmentInstance> EnumerateEquippedInstances()
+    {
+        foreach (var list in equipment_Instances)
+            if (list != null) foreach (var equipment in list) if (equipment != null) yield return equipment;
+    }
 
     // 缓存每个槽位对应的装备模块存档数据
     [SerializeReference]

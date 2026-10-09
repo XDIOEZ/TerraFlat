@@ -56,7 +56,7 @@ internal static class ItemWorldPlacement
     /// </summary>
     internal static bool TryAttachWorldModelTransientItem(Item item, Vector2 position)
     {
-        if (item == null || item.gameObject == null)
+        if (item == null || item.PersistenceOwner != null || item.gameObject == null)
             return false;
 
         ChunkNaturalItemRenderer existingOwner =

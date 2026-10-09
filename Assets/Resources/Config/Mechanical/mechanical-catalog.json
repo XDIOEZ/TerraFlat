@@ -1228,6 +1228,118 @@
         "StartX": 0.25,
         "Y": 0
       }
+    },
+    {
+      "Id": "ShipConsole",
+      "Kind": "consumer",
+      "Ports": "none",
+      "LogicId": "ship-device",
+      "BlocksMovement": true,
+      "Electrical": {
+        "Role": "consumer",
+        "Connection": "cell",
+        "PowerWatts": 20,
+        "NominalVoltage": 120
+      }
+    },
+    {
+      "Id": "ShipChemicalEngine",
+      "Kind": "consumer",
+      "Ports": "none",
+      "LogicId": "ship-device",
+      "BlocksMovement": true,
+      "Electrical": {
+        "Role": "consumer",
+        "Connection": "cell",
+        "PowerWatts": 30,
+        "NominalVoltage": 120
+      }
+    },
+    {
+      "Id": "ShipGravityGenerator",
+      "Kind": "consumer",
+      "Ports": "none",
+      "LogicId": "ship-device",
+      "BlocksMovement": true,
+      "Electrical": {
+        "Role": "consumer",
+        "Connection": "cell",
+        "PowerWatts": 250,
+        "NominalVoltage": 120
+      }
+    },
+    {
+      "Id": "ShipNavigation",
+      "Kind": "consumer",
+      "Ports": "none",
+      "LogicId": "ship-device",
+      "BlocksMovement": true,
+      "Electrical": {
+        "Role": "consumer",
+        "Connection": "cell",
+        "PowerWatts": 40,
+        "NominalVoltage": 120
+      }
+    },
+    {
+      "Id": "ShipAirSupply",
+      "Kind": "consumer",
+      "Ports": "none",
+      "LogicId": "ship-device",
+      "BlocksMovement": true,
+      "Electrical": {
+        "Role": "consumer",
+        "Connection": "cell",
+        "PowerWatts": 60,
+        "NominalVoltage": 120
+      },
+      "Fluid": {
+        "Kind": "tank",
+        "VolumeLiters": 80,
+        "MinimumGasSpaceLiters": 0.02,
+        "SingleLiquid": false,
+        "SingleGas": false,
+        "CombineAdjacent": false,
+        "Ports": [
+          {
+            "Id": "gas-input",
+            "Direction": 2,
+            "Mode": "input",
+            "Phase": "gas",
+            "Chamber": "main"
+          }
+        ]
+      }
+    },
+    {
+      "Id": "SpaceCultivator",
+      "Kind": "consumer",
+      "Ports": "none",
+      "LogicId": "cultivator",
+      "BlocksMovement": true,
+      "Electrical": {
+        "Role": "consumer",
+        "Connection": "cell",
+        "PowerWatts": 120,
+        "NominalVoltage": 120
+      },
+      "Fluid": {
+        "Kind": "tank",
+        "VolumeLiters": 20,
+        "MinimumGasSpaceLiters": 0.02,
+        "SingleLiquid": false,
+        "SingleGas": false,
+        "CombineAdjacent": false,
+        "Ports": [
+          {
+            "Id": "water-input",
+            "Direction": 2,
+            "Mode": "input",
+            "Phase": "liquid",
+            "Chamber": "main"
+          }
+        ]
+      }
     }
   ],
   "Processes": [

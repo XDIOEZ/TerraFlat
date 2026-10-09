@@ -107,7 +107,7 @@ namespace FlatWorld.Networking.Gameplay
             var message = new NetworkPressureExplosion { Event = MemoryPackSerializer.Serialize(entry) };
             foreach (NetworkConnectionToClient connection in NetworkServer.connections.Values)
                 if (connection.isReady && connection.identity != null &&
-                    connection.identity.GetComponent<NetworkWorldPlayer>()?.CorePlayer?.gameObject.scene.name == entry.WorldKey) connection.Send(message);
+                    connection.identity.GetComponent<NetworkWorldPlayer>()?.CorePlayer?.gameObject.scene.name == (entry.PresentationWorldKey ?? entry.WorldKey)) connection.Send(message);
         }
         private void ApplyPressureExplosion(NetworkPressureExplosion message)
         {

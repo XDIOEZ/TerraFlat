@@ -101,19 +101,28 @@ public static class MachineInventoryCommands
         foreach (var pair in PlayerInventories(actor))
             if (ReferenceEquals(pair.Inventory, inventory)) { address = pair.Address; return true; }
         foreach (ItemData suit in OwnedSpacesuits(actor))
-            if (ReferenceEquals(SpacesuitSystem.GetBinding(suit, actor).TankInventory, inventory))
-            { address = new MachineInventoryAddress { PlayerInventory = "@suit:" + suit.Guid }; return true; }
+        {
+            SpacesuitBinding binding = SpacesuitSystem.GetBinding(suit, actor);
+            if (ReferenceEquals(binding.TankInventory, inventory))
+            { address = new MachineInventoryAddress { PlayerInventory = "@suit:" + suit.Guid, Index = 0 }; return true; }
+            if (ReferenceEquals(binding.PropulsionTankInventory, inventory))
+            { address = new MachineInventoryAddress { PlayerInventory = "@suit:" + suit.Guid, Index = 1 }; return true; }
+        }
         return false;
     }
 
     public static Inventory Resolve(Player actor, MachineInventoryAddress address)
     {
         if (actor == null || address.Index < 0) return null;
-        if (address.MachineId == 0 && address.Index == 0 && address.PlayerInventory?.StartsWith("@suit:", StringComparison.Ordinal) == true)
+        if (address.MachineId == 0 && address.Index >= 0 && address.Index <= 1 && address.PlayerInventory?.StartsWith("@suit:", StringComparison.Ordinal) == true)
         {
             if (!int.TryParse(address.PlayerInventory.Substring(6), out int guid)) return null;
             foreach (ItemData suit in OwnedSpacesuits(actor))
-                if (suit.Guid == guid) return SpacesuitSystem.GetBinding(suit, actor).TankInventory;
+                if (suit.Guid == guid)
+                {
+                    SpacesuitBinding binding = SpacesuitSystem.GetBinding(suit, actor);
+                    return address.Index == 0 ? binding.TankInventory : binding.PropulsionTankInventory;
+                }
             return null;
         }
         if (address.MachineId != 0)
@@ -167,7 +176,7 @@ public static class MachineInventoryCommands
     }
 
     public static bool IsSpacesuitAddress(MachineInventoryAddress address)
-        => address.MachineId == 0 && address.Index == 0 && address.PlayerInventory?.StartsWith("@suit:", StringComparison.Ordinal) == true;
+        => address.MachineId == 0 && address.Index >= 0 && address.Index <= 1 && address.PlayerInventory?.StartsWith("@suit:", StringComparison.Ordinal) == true;
     #endregion
 
     #region 私有存档的网络裁剪

@@ -55,7 +55,7 @@ namespace FlatWorld.WorldModel
             // 定位复用已完成的河网，但新计算独立取消，不能留下搜索专用预热任务。
             using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(
                 cancellationToken, sharedHydrologyCancellation.Token);
-            var queryGenerator = new DeterministicChunkGenerator(liquidTypes) { isBiomeSearchGenerator = true };
+            var queryGenerator = new DeterministicChunkGenerator(liquidTypes, terrainDecorator) { isBiomeSearchGenerator = true };
             queryGenerator.sharedHydrologyCancellation.Dispose();
             queryGenerator.sharedHydrologyCancellation = lifetime;
             foreach (KeyValuePair<HeightDrivenRegionKey, Lazy<MacroHydrologyRegion>> pair in heightDrivenRegionCache)
@@ -189,7 +189,7 @@ namespace FlatWorld.WorldModel
                     if (baseBiome == SurfaceBiomeKind.Ocean) return false;
                     return CheckRiverChunk(request);
                 }
-                if (baseBiome != biome &&
+                if (generator.terrainDecorator == null && baseBiome != biome &&
                     !(biome is SurfaceBiomeKind.Grassland or SurfaceBiomeKind.Forest &&
                       baseBiome is SurfaceBiomeKind.Grassland or SurfaceBiomeKind.Forest)) return false;
                 return CheckFinalCell(request, Map(request), candidate);

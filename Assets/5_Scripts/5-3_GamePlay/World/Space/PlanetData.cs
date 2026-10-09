@@ -4,6 +4,7 @@ using UnityEngine;
 
 public partial class PlanetData
 {
+   #region 星体运行配置
    public string name; // 兼容旧字段
    public string BodyId; // 行星自身标识ID
    public string PrefabName; // 运行时使用的预制体名称
@@ -14,6 +15,9 @@ public partial class PlanetData
    public float OrbitStartAngle = 0f; // 初始角度（度）
    public bool OrbitClockwise = false; // 是否顺时针公转
    public float SelfRotateSpeed = 20f; // 自转速度（度/秒）
+   public string SurfaceGenerationProfileId;
+   public double PhysicalRadiusMeters = 2000d;
+   public double SurfaceGravityMetersPerSecondSquared = 9.81d;
 
    [System.NonSerialized]
    public float RuntimeAngle; // 运行时当前角度
@@ -30,7 +34,9 @@ public partial class PlanetData
          return PrefabName;
       }
    }
+   #endregion
 
+   #region 星体表现
    public void InitializeRuntime() // 初始化运行时状态
    {
       RuntimeAngle = OrbitStartAngle;
@@ -67,4 +73,5 @@ public partial class PlanetData
          RuntimeOrbitTrail.RemoveAt(0);
       }
    }
+   #endregion
 }

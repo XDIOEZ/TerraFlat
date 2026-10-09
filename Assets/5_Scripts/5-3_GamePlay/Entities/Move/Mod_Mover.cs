@@ -247,7 +247,7 @@ public partial class Mod_Mover : Module
             return;
 
         if (item is Player player && player.IsLocalProfile && Enabled && !item.DestructionHandled &&
-            CarrierSource == null && rb.simulated && rb.bodyType == RigidbodyType2D.Dynamic)
+            !spaceMotionOwned && CarrierSource == null && rb.simulated && rb.bodyType == RigidbodyType2D.Dynamic)
         {
             ExternalVelocity = ResolveExternalVelocity();
             rb.velocity = DrivenVelocity + ExternalVelocity;
@@ -292,6 +292,7 @@ public partial class Mod_Mover : Module
 
     public override void ModUpdate(float deltaTime)
     {
+        if (UpdateSpaceMotion(deltaTime)) return;
         if (UpdateCarrierMotion(deltaTime)) return;
         if (moveAction == null)
         {
@@ -319,6 +320,8 @@ public partial class Mod_Mover : Module
         Vector2 input = inputController != null
             ? inputController.ReadMoveInput(moveAction)
             : moveAction.ReadValue<Vector2>();
+        if (item is Player && inputController?._mainCamera != null)
+            input = inputController._mainCamera.transform.TransformDirection(input);
         input = BodyTraumaBuffEffects.TransformMoveInput(item, input, Time.time);
         bool isCurrentlyMoving = input.sqrMagnitude > InputMoveThresholdSqr;
 
@@ -410,7 +413,7 @@ public partial class Mod_Mover : Module
         }
 
         Vector2 delta = WorldTopologyRuntime.ShortestDelta(rb.position, targetPosition);
-        float moveSpeed = Speed.Value * ResolveBuildingMoveSpeedMultiplier();
+        float moveSpeed = Speed.Value * ResolveBuildingMoveSpeedMultiplier() * ResolveSurfaceGravitySpeedMultiplier();
         Vector2 targetVelocity = delta.sqrMagnitude < ArriveThreshold * ArriveThreshold
             ? Vector2.zero
             : delta.normalized * moveSpeed;
@@ -432,7 +435,7 @@ public partial class Mod_Mover : Module
 
         Vector2 clampedInput = Vector2.ClampMagnitude(input, 1f);
         RequestedMoveInput = clampedInput;
-        float moveSpeed = Speed.Value * ResolveBuildingMoveSpeedMultiplier();
+        float moveSpeed = Speed.Value * ResolveBuildingMoveSpeedMultiplier() * ResolveSurfaceGravitySpeedMultiplier();
         Vector2 targetVelocity = clampedInput.sqrMagnitude > InputMoveThresholdSqr
             ? clampedInput * moveSpeed
             : Vector2.zero;

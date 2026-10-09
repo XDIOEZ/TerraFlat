@@ -175,7 +175,7 @@ public partial class ChunkMgr
     /// 本地 WorldModel 区块窗口已经启用。掉落物等运行时实体在此状态下不得再触发旧 Chunk 加载。
     /// </summary>
     public bool IsWorldModelRuntimeActive =>
-        runtimeChunkManager != null &&
+        IsSurfaceStreamingScene && runtimeChunkManager != null &&
         (runtimeWindowUsesLocalPresentation || runtimeWindowTargets.Count > 0);
 
     /// <summary>
@@ -333,6 +333,7 @@ public partial class ChunkMgr
         Vector2Int destroyDistance, bool includeLocalPresentation,
         Vector2Int? prefetchDistance = null, Vector2Int? presentationDistance = null)
     {
+        if (!IsSurfaceStreamingScene) return;
         EnsureWorldRuntime();
         using var windowTiming = WorldRuntime.StreamingDiagnostics.Measure("window.refresh");
         WorldRuntime.StreamingDiagnostics.Count("window.refreshes");

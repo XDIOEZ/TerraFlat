@@ -5,7 +5,7 @@ using UnityEngine;
 public static partial class MachineWorld
 {
     #region 电网与扩展
-    private static ElectricalNetworkGraph electricalGraph;
+    private static ElectricalNetworkGraph electricalGraph { get => scope.Electrical; set => scope.Electrical = value; }
     private static readonly Dictionary<string, Func<MachineEntity, float>> electricalPowerProviders =
         new(StringComparer.Ordinal);
     private static readonly Dictionary<string, Func<MachineEntity, float>> electricalDemandProviders =

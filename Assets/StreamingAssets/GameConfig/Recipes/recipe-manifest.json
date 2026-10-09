@@ -120,6 +120,16 @@
       "id": "crafting/water_trough",
       "path": "crafting/water_trough.json",
       "enabled": true
+    },
+    {
+      "id": "crafting/space_ships",
+      "path": "crafting/space_ships.json",
+      "enabled": true
+    },
+    {
+      "id": "crafting/space_devices",
+      "path": "crafting/space_devices.json",
+      "enabled": true
     }
   ]
 }

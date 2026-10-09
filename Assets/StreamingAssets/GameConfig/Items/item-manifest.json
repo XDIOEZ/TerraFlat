@@ -195,6 +195,16 @@
       "id": "water_trough",
       "path": "shells/water_trough.json",
       "enabled": true
+    },
+    {
+      "id": "space_ships",
+      "path": "shells/space_ships.json",
+      "enabled": true
+    },
+    {
+      "id": "space_devices",
+      "path": "shells/space_devices.json",
+      "enabled": true
     }
   ]
 }

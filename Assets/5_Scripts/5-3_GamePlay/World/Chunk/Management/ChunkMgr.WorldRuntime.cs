@@ -37,6 +37,8 @@ public partial class ChunkMgr
     private IDisposable sightBlockingChunkCommittedSubscription;
     /// <summary>管理器进入终止阶段后，不再保存生态快照或重新创建世界运行时。</summary>
     internal bool IsWorldRuntimeShuttingDown { get; private set; }
+    // 太空坐标不能拿来激活地表区块或生成一颗临时星球。
+    public static bool IsSurfaceStreamingScene => SceneManager.GetActiveScene().name != "SpaceScene";
 
     public WorldRuntime WorldRuntime => runtimeChunkManager?.World;
     public IReadOnlyDictionary<RuntimeWorldAddress, ChunkRuntime> Chunks =>
@@ -66,7 +68,7 @@ public partial class ChunkMgr
     #endregion
     /// <summary>当前世界实际提交给后台区块生成器的完整参数快照。</summary>
     public ChunkGenerationProfileSnapshot ActiveGenerationProfile =>
-        activeGenerationSnapshot ?? defaultGenerationSnapshot;
+        IsSurfaceStreamingScene ? activeGenerationSnapshot ?? defaultGenerationSnapshot : null;
     /// <summary>当前版本用于运行时玩家建筑的 Tile 映射；不随旧存档的生成配置冻结。</summary>
     public ChunkGenerationProfileSnapshot RuntimeTileCatalogProfile =>
         runtimeTileCatalogSnapshot ?? defaultGenerationSnapshot;
@@ -120,6 +122,7 @@ public partial class ChunkMgr
     public Task<Int2?> FindSurfaceSpawnAsync(Int2 anchor, int maxRadius,
         int sampleBudget, CancellationToken cancellationToken = default)
     {
+        if (!IsSurfaceStreamingScene) return Task.FromResult<Int2?>(null);
         EnsureWorldRuntime();
         ChunkGenerationProfileSnapshot profile = PrepareActiveGenerationSnapshot(out int baseSeed);
         ChunkGenerationTopologySnapshot topology = ResolveActiveGenerationTopology();
@@ -186,6 +189,15 @@ public partial class ChunkMgr
     /// <summary>把世界坐标换算成所属维度和区块原点组成的标准地址。</summary>
     public RuntimeWorldAddress ResolveWorldAddress(Vector2 worldPosition, string dimensionId = null)
     {
+        if (!IsSurfaceStreamingScene)
+        {
+            // 旧物品地址查询可安全返回太空标签，但不初始化生成器或地表拓扑。
+            int stepX = Math.Max(1, defaultGenerationSnapshot?.Width ?? 16);
+            int stepY = Math.Max(1, defaultGenerationSnapshot?.Height ?? 16);
+            return new RuntimeWorldAddress("space", new Int2(
+                Mathf.FloorToInt(worldPosition.x / stepX) * stepX,
+                Mathf.FloorToInt(worldPosition.y / stepY) * stepY));
+        }
         EnsureWorldRuntime();
         ChunkGenerationProfileSnapshot profile = ActiveGenerationProfile ?? defaultGenerationSnapshot;
         int width = Math.Max(1, profile.Width);
@@ -208,7 +220,7 @@ public partial class ChunkMgr
     /// <summary>等待当前所有后台区块生成任务完成并提交结果。</summary>
     public Task SettleGenerationTasksAsync()
     {
-        EnsureWorldRuntime();
+        if (runtimeChunkManager == null) return Task.CompletedTask;
         return runtimeChunkManager.SettleGenerationTasksAsync();
     }
 
@@ -230,7 +242,7 @@ public partial class ChunkMgr
     /// <summary>推进纯世界模拟，并修复后台生成完成后的画面绑定。</summary>
     internal void AdvanceWorldRuntime(float deltaSeconds)
     {
-        if (IsWorldRuntimeShuttingDown)
+        if (IsWorldRuntimeShuttingDown || !IsSurfaceStreamingScene)
             return;
 
         RecordStreamingAdvance();
@@ -252,7 +264,7 @@ public partial class ChunkMgr
     /// <summary>创建世界模型、确定性生成器和后台任务调度器。</summary>
     private void InitializeWorldRuntime()
     {
-        if (runtimeChunkManager != null)
+        if (runtimeChunkManager != null || !IsSurfaceStreamingScene)
             return;
 
         runtimeEpoch = Math.Max(1, runtimeEpoch + 1);
@@ -271,7 +283,8 @@ public partial class ChunkMgr
         slowChunkLogWindowStart = Time.realtimeSinceStartup;
         world.StreamingDiagnostics.SlowGenerationCompleted += LogSlowChunkGeneration;
 #endif
-        runtimeGenerator = new DeterministicChunkGenerator(GameRes.ExistingInstance?.LiquidTypes);
+        runtimeGenerator = new DeterministicChunkGenerator(GameRes.ExistingInstance?.LiquidTypes,
+            FlatWorld.Spaceflight.SpaceSurfaceTerrain.Apply);
         runtimeChunkManager = new RuntimeChunkMgr(world, runtimeGenerator,
             EffectiveBackgroundGenerationConcurrency, new UnityWorldAddressNormalizer());
         sightBlockingChunkCommittedSubscription =
@@ -296,6 +309,7 @@ public partial class ChunkMgr
         WorldLiquidFlowObstacles.ClearWorld();
         ClearRuntimeWindowBindings();
         WorldEntityRuntime.ReleaseWorld();
+        activeGenerationSnapshot = null;
         if (runtimeChunkManager == null)
             return;
         runtimeChunkManager.ClearWindow();
@@ -361,6 +375,8 @@ public partial class ChunkMgr
     {
         if (IsWorldRuntimeShuttingDown)
             throw new ObjectDisposedException(nameof(ChunkMgr));
+        if (!IsSurfaceStreamingScene)
+            throw new InvalidOperationException("太空场景没有活动地表运行时，请按星球地址查询独立地表");
         if (runtimeChunkManager == null)
             InitializeWorldRuntime();
     }

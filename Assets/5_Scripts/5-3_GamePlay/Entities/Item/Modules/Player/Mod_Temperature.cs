@@ -120,7 +120,10 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable
             return;
 
         // 只对已经加载的脚下地块结算；不把未就绪区块当成全局温度。
-        if (!TemperatureMgr.Instance.TryGetAmbientTemperature(item.transform.position, out float ambient))
+        float ambient;
+        if (ItemEnvironmentSources.TryGet(item, out ItemEnvironmentSample localEnvironment))
+            ambient = (float)localEnvironment.TemperatureCelsius;
+        else if (!TemperatureMgr.Instance.TryGetAmbientTemperature(item.transform.position, out ambient))
             return;
 
         Data.AmbientTemperature = ambient;

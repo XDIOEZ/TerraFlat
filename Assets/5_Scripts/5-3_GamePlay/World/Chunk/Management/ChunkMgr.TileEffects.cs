@@ -268,6 +268,7 @@ public partial class ChunkMgr
     internal bool TryCreateTerrainPresenceQuery(out RuntimeTerrainPresenceQuery query)
     {
         query = default;
+        if (!IsSurfaceStreamingScene) return false;
         ChunkGenerationProfileSnapshot profile = ActiveGenerationProfile ?? defaultGenerationSnapshot;
         if (runtimeChunkManager == null || profile == null)
             return false;
@@ -284,7 +285,7 @@ public partial class ChunkMgr
     public bool TryGetRuntimeTerrainTile(Vector2 worldPosition, out RuntimeTerrainTileSample sample)
     {
         sample = default;
-        if (runtimeChunkManager == null)
+        if (runtimeChunkManager == null || !IsSurfaceStreamingScene)
             return false;
 
         Vector2 normalizedPosition = WorldTopologyRuntime.NormalizePosition(worldPosition);
@@ -411,7 +412,7 @@ public partial class ChunkMgr
         out RuntimeTerrainTileSample sample)
     {
         sample = default;
-        if (runtimeChunkManager == null || searchRadius < 0f)
+        if (runtimeChunkManager == null || searchRadius < 0f || !IsSurfaceStreamingScene)
             return false;
 
         Vector2 normalizedPosition = WorldTopologyRuntime.NormalizePosition(worldPosition);

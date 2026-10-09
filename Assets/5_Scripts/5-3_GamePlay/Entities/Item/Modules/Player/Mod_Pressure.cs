@@ -88,8 +88,11 @@ public sealed partial class Mod_Pressure : Module, IItemModuleDependencyBinder, 
     public override void ModUpdate(float deltaTime)
     {
         if (!GameNetwork.HasStateAuthority || item == null || health == null || health.Hp <= 0f || deltaTime <= 0f) return;
-        if (!AtmosphereService.TryGetForWorld(item.gameObject.scene.name, out AtmosphereState atmosphere)) return;
-        EnvironmentPressureKPa = AtmosphereService.PressureKPa(atmosphere);
+        if (ItemEnvironmentSources.TryGet(item, out ItemEnvironmentSample localEnvironment))
+            EnvironmentPressureKPa = localEnvironment.PressureKPa;
+        else if (AtmosphereService.TryGetForWorld(item.gameObject.scene.name, out AtmosphereState atmosphere))
+            EnvironmentPressureKPa = AtmosphereService.PressureKPa(atmosphere);
+        else return;
         GetSafePressureRange(out float min, out float max);
         int next = EnvironmentPressureKPa < min ? -1 : EnvironmentPressureKPa > max ? 1 : 0;
         if (next != Danger) { lowDamageClock = highDamageClock = 0f; Danger = next; }

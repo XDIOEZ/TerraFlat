@@ -73,6 +73,12 @@ public class Mod_SettingCanvas : Module, IInstanceUI
             return;
         }
 
+        if (FlatWorld.Spaceflight.SpaceSession.Current?.ExitConsole(item as Player) == true)
+        {
+            uiManager.NotifyCancelHandled();
+            return;
+        }
+
         if (exitConfirmation != null && exitConfirmation.TryClose())
         {
             uiManager.NotifyCancelHandled();

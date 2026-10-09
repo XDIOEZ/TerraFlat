@@ -69,6 +69,7 @@ public class Mod_ChunkLoader : Module
     #endregion
 
     #region 属性访问器
+    private static bool CanStreamSurface => ChunkMgr.IsSurfaceStreamingScene;
     private int UnActiveDistance
     {
         get => distanceConfig.UnActiveDistance;
@@ -122,6 +123,7 @@ public class Mod_ChunkLoader : Module
 
     private void OnPlayerEnterWorld(Player player)
     {
+        if (!CanStreamSurface) return;
         if (player != GetComponentInParent<Player>())
             return;
         if (_externalStreamingManaged)
@@ -149,6 +151,12 @@ public class Mod_ChunkLoader : Module
 
     public override void ModUpdate(float deltaTime)
     {
+        if (!CanStreamSurface)
+        {
+            needsChunkUpdate = false;
+            _hasStreamedChunkOrigin = false;
+            return;
+        }
         if (_externalStreamingManaged)
             return;
 
@@ -183,6 +191,7 @@ public class Mod_ChunkLoader : Module
     public void RefreshChunksAroundPlayer()
     {
         needsChunkUpdate = false;
+        if (!CanStreamSurface) return;
 
         if (ChunkMgr.Instance == null)
         {
@@ -216,7 +225,7 @@ public class Mod_ChunkLoader : Module
     /// </summary>
     public void PrimeCenterChunkForWorldEntry()
     {
-        if (_externalStreamingManaged)
+        if (_externalStreamingManaged || !CanStreamSurface)
             return;
 
         needsChunkUpdate = false;
@@ -264,7 +273,7 @@ public class Mod_ChunkLoader : Module
     /// <summary>玩家跨入新区块时立即刷新窗口；同一区块内只需逐帧更新画面任务的距离。</summary>
     private void HandleWorldUnitChanged(Vector2Int worldUnit)
     {
-        if (_externalStreamingManaged)
+        if (_externalStreamingManaged || !CanStreamSurface)
             return;
 
         ChunkMgr chunkManager = ChunkMgr.ExistingInstance;
@@ -294,6 +303,7 @@ public class Mod_ChunkLoader : Module
     /// <summary>移动事件可传入权威坐标，避免物理插值中的 Transform 晚一帧跨区块。</summary>
     private void UpdateChunks(Vector2? eventCenter = null)
     {
+        if (!CanStreamSurface) return;
         ChunkMgr chunkManager = ChunkMgr.Instance;
         if (chunkManager == null) return;
         Vector2 center = eventCenter ?? transform.position;

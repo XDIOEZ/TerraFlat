@@ -1,0 +1,18 @@
+{
+  "EarthGravity": 9.81,
+  "MinimumGravityForWalking": 0.25,
+  "MinimumWalkSpeedMultiplier": 0.35,
+  "MaximumWalkSpeedMultiplier": 2.0,
+  "GravityWalkExponent": 0.5,
+  "MinimumLaunchHeightMeters": 40.0,
+  "LaunchHeightRadiusFraction": 0.1,
+  "LaunchCircularSpeedFraction": 0.35,
+  "SurfaceEntryHeightMeters": 80.0,
+  "ImpactStoppingSeconds": 0.25,
+  "ImpactForcePerDurability": 1000.0,
+  "LandingChoiceRadiusMeters": 10.0,
+  "WallPushSpeedMetersPerSecond": 8.0,
+  "PlayerTurnDegreesPerSecond": 90.0,
+  "DrivingCameraSize": 30.0,
+  "ImpactJoulesPerDurability": 1000.0
+}

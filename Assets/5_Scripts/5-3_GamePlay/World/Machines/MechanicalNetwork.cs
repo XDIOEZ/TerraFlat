@@ -13,6 +13,7 @@ public sealed partial class MachineEntity
 {
     #region 节点身份
     public int Id;
+    public string ScopeKey;
     public Vector2Int Cell;
     public MachineDefinition Definition;
     public ItemData Snapshot;
@@ -24,7 +25,7 @@ public sealed partial class MachineEntity
     public float LogicElapsed;
     public BoundsInt SimulationBounds;
     public float Airflow; // 本轮环境输入，不保存第二份机械网络状态。
-    public Vector3 Position => Snapshot.transform.position;
+    public Vector3 Position => FlatWorld.Spaceflight.SpaceSession.Current?.ProjectMachinePosition(this) ?? Snapshot.transform.position;
     public Mod_MechanicalNode View;
     public int RotationQuarterTurns; // 已安装机械节点的逆时针九十度步数。
     public bool Engaged = true;

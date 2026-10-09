@@ -390,6 +390,7 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
 
     public void RequestLoadChunk_By_Position(Vector2Int chunkPos, System.Action<Chunk> onChunkLoaded = null)
     {
+        if (!IsSurfaceStreamingScene) { onChunkLoaded?.Invoke(null); return; }
         chunkPos = NormalizeChunkPosition(chunkPos);
         CancelDeferredChunkDeactivation(chunkPos);
 
@@ -504,6 +505,7 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
     [Button("加载距离玩家规定范围的全部Chunk")]
     public void LoadChunkCloseToPlayer(GameObject player, int Distance = 1, System.Action onAllChunksLoaded = null)
     {
+        if (!IsSurfaceStreamingScene) { onAllChunksLoaded?.Invoke(); return; }
         // 最小为 1
         Distance = Mathf.Max(1, Distance);
         int radius = Distance - 1; // Distance=1 -> radius=0 -> 1x1; Distance=2 -> radius=1 -> 3x3
@@ -1018,6 +1020,7 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
     /// </summary>
     public Chunk LoadChunk_By_Position(Vector2Int chunkPos, System.Action<Chunk> onChunkLoaded = null)
     {
+        if (!IsSurfaceStreamingScene) { onChunkLoaded?.Invoke(null); return null; }
         chunkPos = NormalizeChunkPosition(chunkPos);
         // 同步调用方可能在区块尚未 Ready 时重复查询；已经注册的激活区块必须直接复用，
         // 否则会为同一坐标反复创建 MapCore，并覆盖字典中的旧实例。
@@ -1351,6 +1354,7 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
     public static Vector2 GetChunkSize()
     {
         var sceneName = SceneManager.GetActiveScene().name;
+        if (sceneName == "SpaceScene") return new Vector2(PlanetData.DefaultChunkDimension, PlanetData.DefaultChunkDimension);
 
         // 添加null检查，防止出现NullReferenceException
         if (SaveDataMgr.Instance == null)
@@ -1399,6 +1403,7 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
     public void GetClosestChunk(Vector2 pos, out Chunk closestChunk)
     {
         closestChunk = null;
+        if (!IsSurfaceStreamingScene) return;
         Vector2Int centerChunkPos = NormalizeChunkPosition(Chunk.GetChunkPosition(pos));
         RefreshChunkStepCache();
 

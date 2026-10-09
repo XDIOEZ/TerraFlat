@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "recipes": [
+    {
+      "id": "core:space_cultivator",
+      "displayName": "培育器",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "requiredStation": "workbench",
+      "inputs": [
+        { "match": "exact_item", "itemId": "IronPlate", "amount": 6 },
+        { "match": "exact_item", "itemId": "CopperPlate", "amount": 2 },
+        { "match": "exact_item", "itemId": "Glass", "amount": 2 },
+        { "match": "exact_item", "itemId": "Cloth", "amount": 2 }
+      ],
+      "outputs": [{ "itemId": "SpaceCultivator_Summoner", "amount": 1 }],
+      "actions": []
+    }
+  ]
+}

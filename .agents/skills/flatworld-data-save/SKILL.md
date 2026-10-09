@@ -62,6 +62,10 @@ description: "Use when: 定位或修改 FlatWorld 的数据模型、MemoryPack �
 
 ## 工作流与验证
 
+- 太空权威快照保存在 `GameSaveData.SpaceStateJson`；抓取必须在正式核心存档封装前完成，同时捕获船上 `MachineArchive` 和实际 ItemInstanceSnapshot，视图不成为第二份持久化所有者。
+- 保存星体种子/时间、船体与接口身份、局部乘员、真实舱气、导航目标、下落高度/速度/随机结果及未结算爆炸和液体释放预算。迁移中保存后按飞行阶段恢复目标场景；离线和加载阶段不追补模拟。
+- 未加载星球上的落地损毁复用冻结地形和最新 Chunk 差量，修改内存存档及实际机器库存，由正常保存链写盘；冷路径和活动路径按同一 GUID 去重，不能为处理撞击加载一次地表 Scene。
+
 - `CompactSaveEnvelope.DroppedItems` 承载独立版本的 ECS 掉落快照；`GameSaveData.DroppedItems` 必须保持 MemoryPackIgnore，不能改变旧核心对象布局。按实际世界场景名（维度 WorldKey）隔离载荷，存稳定 ID、库存状态和未完成轨迹，不存 Entity 地址、GameObject 或显示批次。
 - 旧生产者移交必须先于区块快照；退出保存完成后才释放掉落 World，不能在更早的 GameWorldExit 通知中清空。缺失定义的记录保留原快照，避免下次保存静默丢物；恢复库存载荷仍按当前 ItemDefinition rebase。
 

@@ -153,7 +153,12 @@ namespace FlatWorld.Gameplay.Building
                     throw new InvalidOperationException("建筑坐标无效或超出建造距离");
                 Vector2Int cell = WorldTopologyRuntime.NormalizeCell(new Vector2Int(
                     Mathf.FloorToInt(request.Position.x), Mathf.FloorToInt(request.Position.y)));
-                if (request.Extension != null && !request.Extension.ValidatePlacement(cell, out reason))
+                bool validShipPlacement = false;
+                bool shipPlacement = FlatWorld.Spaceflight.SpaceSession.Current?.TryValidatePlacement(request.SourceData, request.Position,
+                    request.RotationQuarterTurns ?? 0, out validShipPlacement, out reason) == true;
+                if (shipPlacement)
+                { if (!validShipPlacement) throw new InvalidOperationException(reason); }
+                else if (request.Extension != null && !request.Extension.ValidatePlacement(cell, out reason))
                     throw new InvalidOperationException(reason);
 
                 result = ResolveBackend(request).Place(request);

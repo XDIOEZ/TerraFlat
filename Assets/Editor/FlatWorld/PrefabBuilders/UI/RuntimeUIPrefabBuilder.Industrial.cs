@@ -46,12 +46,15 @@ public static partial class RuntimeUIPrefabBuilder
         view.PreservePrefabLayout = true;
         ((RectTransform)root.transform).sizeDelta = new Vector2(760, name == "UI_IndustrialFluid" ? 680 : 600);
         view.ProcessingVisuals = root.GetComponentsInChildren<Transform>(true)
-            .Where(child => child.name.Contains("INPUT", StringComparison.Ordinal) || name == "UI_IndustrialFluid" && child.name.Contains("OUTPUT", StringComparison.Ordinal))
-            .Select(child => child.gameObject).Concat(name == "UI_IndustrialFluid"
+            .Where(child => child.name.Contains("INPUT", StringComparison.Ordinal) || (name == "UI_IndustrialFluid" || name == "UI_Spacesuit") && child.name.Contains("OUTPUT", StringComparison.Ordinal))
+            .Select(child => child.gameObject).Concat(name == "UI_IndustrialFluid" || name == "UI_Spacesuit"
                 ? new[] { view.InputSlot.gameObject, view.OutputSlot.gameObject } : new[] { view.InputSlot.gameObject }).Distinct().ToArray();
         foreach (Transform child in root.GetComponentsInChildren<Transform>(true))
-            if (child.name.StartsWith("FWUI_FlowArrow", StringComparison.Ordinal) || name != "UI_IndustrialFluid" && child.name.Contains("OUTPUT", StringComparison.Ordinal)) child.gameObject.SetActive(false);
-        view.OutputSlot.gameObject.SetActive(name == "UI_IndustrialFluid");
+            if (child.name.StartsWith("FWUI_FlowArrow", StringComparison.Ordinal) || name != "UI_IndustrialFluid" && name != "UI_Spacesuit" && child.name.Contains("OUTPUT", StringComparison.Ordinal)) child.gameObject.SetActive(false);
+        view.OutputSlot.gameObject.SetActive(name == "UI_IndustrialFluid" || name == "UI_Spacesuit");
+        if (name == "UI_Spacesuit")
+            for (Transform ancestor = view.OutputSlot.transform.parent; ancestor != null && ancestor != root.transform; ancestor = ancestor.parent)
+                ancestor.gameObject.SetActive(true);
         view.InputSlot.gameObject.SetActive(name != "UI_FluidTank");
         if (name == "UI_FluidTank") foreach (GameObject visual in view.ProcessingVisuals) visual.SetActive(false);
         view.DismantleButton.gameObject.SetActive(false); view.ActionButton.gameObject.SetActive(name != "UI_FluidTank");

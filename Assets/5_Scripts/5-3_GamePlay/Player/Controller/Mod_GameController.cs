@@ -323,6 +323,8 @@ public partial class Mod_GameController : Module
             return;
         }
 
+        if (FlatWorld.Spaceflight.SpaceSession.Current?.TryHandleSpacePointer(item as Player) == true)
+        { _suppressLeftClickUntilRelease = true; return; }
         _suppressLeftClickUntilRelease = false;
         LeftClick.Invoke();
         SetAttackSourceHeld(
@@ -381,6 +383,12 @@ public partial class Mod_GameController : Module
             return;
         }
 
+        if (FlatWorld.Spaceflight.SpaceSession.Current?.TryOpenShipInfo(item as Player) == true)
+        {
+            _rightClickHeld = false;
+            _suppressRightClickUntilRelease = true;
+            return;
+        }
         _suppressRightClickUntilRelease = false;
         _rightClickHeld = true;
         RightClick.Invoke();
@@ -572,7 +580,7 @@ public partial class Mod_GameController : Module
 
         Vector3 worldPos = _mainCamera.ScreenToWorldPoint(new Vector3(screenPosition.x, screenPosition.y, Mathf.Abs(_mainCamera.transform.position.z)));
         worldPos.z = 0f;
-        worldPosition = WorldTopologyRuntime.NormalizePosition(worldPos);
+        worldPosition = FlatWorld.Spaceflight.SpaceSession.Current?.IsSpaceView == true ? worldPos : WorldTopologyRuntime.NormalizePosition(worldPos);
         return true;
     }
 
@@ -709,7 +717,7 @@ public partial class Mod_GameController : Module
 
         Item heldItem = _playerHotBar?.CurentSelectItem;
         Mod_Building building = heldItem?.itemMods?.GetMod_ByID<Mod_Building>(ModText.Building);
-        rotation = BuildingPlacementLifecycle.GetExtension(heldItem) as IBuildingPreviewRotation;
+        rotation = BuildingPlacementLifecycle.GetExtension(heldItem) as IBuildingPreviewRotation ?? building;
         return building != null && building.IsPlacementActionAvailable &&
                building.GhostShadow != null && rotation?.CanRotatePlacement == true &&
                building.GhostShadow.ContainsWorldPoint(GetMouseWorldPosition(screenPosition));

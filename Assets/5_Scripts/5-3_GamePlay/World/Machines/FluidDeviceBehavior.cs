@@ -118,7 +118,7 @@ public sealed class FluidGasPumpBehavior : FluidDeviceBehavior
     {
         text.Append("\n").Append(FlatWorldLocalizationService.GetUiFormat("转速 {0:0.#} RPM · 动力{1} · 抽取 {2:0.#}%", node.SpeedRpm,
             FlatWorldLocalizationService.GetUiText(node.LoadSatisfied ? "足够" : "不足"), Math.Clamp(MachineWorld.GetFluidState(node).PumpProgress, 0, 1) * 100));
-        text.Append(MachineWorld.DescribeAtmosphere());
+        text.Append(MachineWorld.DescribeAtmosphere(node));
     }
     #endregion
 }

@@ -3964,6 +3964,36 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 284278b31b30a164cba1831d4337797e
+    m_Address: Module_Cultivator
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 695db097a7f778f4c9ba1f5749de4eb1
+    m_Address: Assets/2_Prefabs/Gameplay/Modules/Space/Module_ShipPart.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: bcaff62a08e97194a988f19f5f693495
+    m_Address: Assets/2_Prefabs/2-1_UI/Gameplay/Crafting/UI_Ship.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: c08bae6bd38325f48a25c05cdc610554
+    m_Address: Assets/2_Prefabs/2-1_UI/Gameplay/Crafting/UI_SpaceLanding.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: f568f6a9266c40c49bddbc25b1fb5acf
+    m_Address: UI_Cultivator
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
   m_ReadOnly: 0
   m_Settings: {fileID: 11400000, guid: fc59728ab6aa9b54ba0a5f7cc69fc0d8, type: 2}
   m_SchemaSet:

@@ -1,0 +1,94 @@
+{
+  "schemaVersion": 1,
+  "templateId": "core:solar-system",
+  "fixedStepSeconds": 0.02,
+  "metersPerUnityUnit": 1,
+  "randomizeOrbitalPhases": true,
+  "bodies": [
+    { "bodyId": "sun", "planetId": "太阳", "displayName": "太阳", "prefabId": "太阳", "parentBodyId": "", "surfaceProfileId": "core:surface.sun", "radiusMeters": 5000, "surfaceGravity": 50, "influenceRadiusMeters": 800000, "orbitRadiusMeters": 0, "orbitalPeriodSeconds": 0, "initialPhaseRadians": 0, "rotationPeriodSeconds": 35236 },
+    { "bodyId": "mercury", "planetId": "水星", "displayName": "水星", "prefabId": "水星", "parentBodyId": "sun", "surfaceProfileId": "core:surface.mercury", "radiusMeters": 800, "surfaceGravity": 3.7, "influenceRadiusMeters": 5000, "orbitRadiusMeters": 30000, "orbitalPeriodSeconds": 1440, "initialPhaseRadians": 0.26, "rotationPeriodSeconds": 84450 },
+    { "bodyId": "venus", "planetId": "金星", "displayName": "金星", "prefabId": "金星", "parentBodyId": "sun", "surfaceProfileId": "core:surface.venus", "radiusMeters": 1800, "surfaceGravity": 8.87, "influenceRadiusMeters": 10000, "orbitRadiusMeters": 50000, "orbitalPeriodSeconds": 3690, "initialPhaseRadians": 1.3, "rotationPeriodSeconds": -349956 },
+    { "bodyId": "earth", "planetId": "地球", "displayName": "地球", "prefabId": "地球", "parentBodyId": "sun", "surfaceProfileId": "core:surface.earth", "radiusMeters": 2000, "surfaceGravity": 9.81, "influenceRadiusMeters": 15000, "orbitRadiusMeters": 80000, "orbitalPeriodSeconds": 6000, "initialPhaseRadians": 2.26, "rotationPeriodSeconds": 1440 },
+    { "bodyId": "moon", "planetId": "月球", "displayName": "月球", "prefabId": "月亮", "parentBodyId": "earth", "surfaceProfileId": "core:surface.moon", "radiusMeters": 500, "surfaceGravity": 1.62, "influenceRadiusMeters": 1800, "orbitRadiusMeters": 8000, "orbitalPeriodSeconds": 600, "initialPhaseRadians": 0.6, "rotationPeriodSeconds": 600 },
+    { "bodyId": "mars", "planetId": "火星", "displayName": "火星", "prefabId": "火星", "parentBodyId": "sun", "surfaceProfileId": "core:surface.mars", "radiusMeters": 1300, "surfaceGravity": 3.71, "influenceRadiusMeters": 10000, "orbitRadiusMeters": 110000, "orbitalPeriodSeconds": 11284, "initialPhaseRadians": 3.8, "rotationPeriodSeconds": 1477 },
+    { "bodyId": "jupiter", "planetId": "木星", "displayName": "木星", "prefabId": "木星", "parentBodyId": "sun", "surfaceProfileId": "core:surface.jupiter", "radiusMeters": 4000, "surfaceGravity": 24.79, "influenceRadiusMeters": 35000, "orbitRadiusMeters": 180000, "orbitalPeriodSeconds": 28000, "initialPhaseRadians": 5.2, "rotationPeriodSeconds": 595 },
+    { "bodyId": "saturn", "planetId": "土星", "displayName": "土星", "prefabId": "土星", "parentBodyId": "sun", "surfaceProfileId": "core:surface.saturn", "radiusMeters": 3500, "surfaceGravity": 10.44, "influenceRadiusMeters": 30000, "orbitRadiusMeters": 260000, "orbitalPeriodSeconds": 42000, "initialPhaseRadians": 0.35, "rotationPeriodSeconds": 639 },
+    { "bodyId": "uranus", "planetId": "天王星", "displayName": "天王星", "prefabId": "天王星", "parentBodyId": "sun", "surfaceProfileId": "core:surface.uranus", "radiusMeters": 3000, "surfaceGravity": 8.69, "influenceRadiusMeters": 28000, "orbitRadiusMeters": 350000, "orbitalPeriodSeconds": 62000, "initialPhaseRadians": 2.8, "rotationPeriodSeconds": -1034 },
+    { "bodyId": "neptune", "planetId": "海王星", "displayName": "海王星", "prefabId": "海王星", "parentBodyId": "sun", "surfaceProfileId": "core:surface.neptune", "radiusMeters": 3000, "surfaceGravity": 11.15, "influenceRadiusMeters": 30000, "orbitRadiusMeters": 440000, "orbitalPeriodSeconds": 80000, "initialPhaseRadians": 4.5, "rotationPeriodSeconds": 967 }
+  ],
+  "surfaces": [
+    {
+      "id": "core:surface.earth", "temperatureCelsius": 26, "pressureKPa": 100,
+      "atmosphereComposition": { "core:oxygen": 0.2, "core:nitrogen": 0.8 },
+      "numericParameters": {}, "textParameters": {}, "tileParameters": {},
+      "ecologyRuleIds": null, "caveResourceRuleIds": null, "ecologyMultiplier": 1
+    },
+    {
+      "id": "core:surface.sun", "temperatureCelsius": 5500, "pressureKPa": 10000,
+      "atmosphereComposition": { "core:hydrogen": 0.8, "core:nitrogen": 0.2 },
+      "numericParameters": { "space.uniformSurface": 1, "terrain.seaLevel": 0, "river.enabled": 0, "lake.large.enabled": 0, "lake.lava.enabled": 0, "grass.density": 0, "cave.portal.enabled": 0, "climate.polarBand.enabled": 0 },
+      "tileParameters": { "terrain.groundTileId": "Tile_NuclearFusion", "space.uniformTileId": "Tile_NuclearFusion" },
+      "ecologyRuleIds": [], "caveResourceRuleIds": [], "ecologyMultiplier": 0
+    },
+    {
+      "id": "core:surface.mercury", "temperatureCelsius": 160, "pressureKPa": 0,
+      "atmosphereComposition": {},
+      "numericParameters": { "terrain.seaLevel": 0, "terrain.beachLevel": 0, "river.enabled": 0, "lake.large.enabled": 0, "lake.lava.enabled": 0, "grass.density": 0, "biome.peat.spawnChance": 0, "climate.polarBand.enabled": 0, "space.climateOverride": 1, "space.temperatureVariationCelsius": 50, "space.crater.enabled": 1, "space.crater.spacing": 180, "space.crater.minimumRadius": 14, "space.crater.maximumRadius": 44, "space.crater.depth": 0.25 },
+      "tileParameters": { "terrain.groundTileId": "Tile_Stone", "terrain.dirtTileId": "Tile_Stone", "space.crater.rimTileId": "Tile_Stone" },
+      "ecologyRuleIds": ["surface.stone.iron", "surface.stone.gold", "surface.common.oreStone"],
+      "caveResourceRuleIds": ["cave.resource.gold", "cave.resource.iron", "cave.resource.stone"]
+    },
+    {
+      "id": "core:surface.venus", "temperatureCelsius": 460, "pressureKPa": 9000,
+      "atmosphereComposition": { "core:carbon_dioxide": 0.96, "core:nitrogen": 0.04 },
+      "numericParameters": { "terrain.seaLevel": 0, "terrain.beachLevel": 0, "river.enabled": 0, "lake.large.enabled": 0, "grass.density": 0, "biome.peat.spawnChance": 0, "climate.polarBand.enabled": 0, "space.climateOverride": 1, "space.temperatureVariationCelsius": 30 },
+      "tileParameters": { "terrain.groundTileId": "Tile_Stone", "terrain.dirtTileId": "Tile_Stone" },
+      "ecologyRuleIds": ["surface.stone.obsidianMine", "surface.sulfur.mountainMine", "surface.stone.copper", "surface.common.oreStone"],
+      "caveResourceRuleIds": ["cave.resource.copper", "cave.resource.niter", "cave.resource.stone"]
+    },
+    {
+      "id": "core:surface.moon", "temperatureCelsius": -30, "pressureKPa": 0,
+      "atmosphereComposition": {},
+      "numericParameters": { "terrain.seaLevel": 0, "terrain.beachLevel": 0, "river.enabled": 0, "lake.large.enabled": 0, "lake.lava.enabled": 0, "grass.density": 0, "biome.peat.spawnChance": 0, "climate.polarBand.enabled": 0, "space.climateOverride": 1, "space.temperatureVariationCelsius": 15, "space.crater.enabled": 1, "space.crater.spacing": 120, "space.crater.minimumRadius": 10, "space.crater.maximumRadius": 34, "space.crater.depth": 0.35 },
+      "tileParameters": { "terrain.groundTileId": "Tile_MoonRegolith", "terrain.dirtTileId": "Tile_MoonRegolith", "terrain.stoneTileId": "Tile_MoonRegolith", "terrain.sandTileId": "Tile_MoonRegolith", "space.crater.rimTileId": "Tile_Stone" },
+      "ecologyRuleIds": ["surface.stone.iron", "surface.stone.stone", "surface.common.oreStone"],
+      "caveResourceRuleIds": ["cave.resource.diamond", "cave.resource.iron", "cave.resource.stone"]
+    },
+    {
+      "id": "core:surface.mars", "temperatureCelsius": -55, "pressureKPa": 0.6,
+      "atmosphereComposition": { "core:carbon_dioxide": 0.95, "core:nitrogen": 0.05 },
+      "numericParameters": { "terrain.seaLevel": 0, "terrain.beachLevel": 0, "river.enabled": 0, "lake.large.enabled": 0, "lake.lava.enabled": 0, "grass.density": 0, "biome.peat.spawnChance": 0, "climate.polarBand.enabled": 0, "space.climateOverride": 1, "space.temperatureVariationCelsius": 20, "space.surfaceBands": 1 },
+      "tileParameters": { "terrain.groundTileId": "Tile_MarsDust", "terrain.dirtTileId": "Tile_MarsDust", "terrain.sandTileId": "Tile_MarsDust" },
+      "ecologyRuleIds": ["surface.stone.iron", "surface.stone.tin", "surface.stone.copper", "surface.stone.gold", "surface.common.oreStone"],
+      "caveResourceRuleIds": ["cave.resource.gold", "cave.resource.tin", "cave.resource.iron", "cave.resource.copper", "cave.resource.stone"]
+    },
+    {
+      "id": "core:surface.jupiter", "temperatureCelsius": -110, "pressureKPa": 20000,
+      "atmosphereComposition": { "core:hydrogen": 0.9, "core:nitrogen": 0.1 },
+      "numericParameters": { "terrain.seaLevel": 0, "terrain.beachLevel": 0, "river.enabled": 0, "lake.large.enabled": 0, "lake.lava.enabled": 0, "grass.density": 0, "biome.peat.spawnChance": 0, "climate.polarBand.enabled": 0, "space.climateOverride": 1, "space.temperatureVariationCelsius": 25, "space.surfaceBands": 1 },
+      "tileParameters": { "terrain.groundTileId": "Tile_Stone", "terrain.dirtTileId": "Tile_Stone" },
+      "ecologyRuleIds": ["surface.stone.gold", "surface.stone.stone"], "caveResourceRuleIds": ["cave.resource.gold", "cave.resource.stone"]
+    },
+    {
+      "id": "core:surface.saturn", "temperatureCelsius": -140, "pressureKPa": 10000,
+      "atmosphereComposition": { "core:hydrogen": 0.85, "core:nitrogen": 0.15 },
+      "numericParameters": { "terrain.seaLevel": 0, "terrain.beachLevel": 0, "river.enabled": 0, "lake.large.enabled": 0, "lake.lava.enabled": 0, "grass.density": 0, "biome.peat.spawnChance": 0, "climate.polarBand.enabled": 0, "space.climateOverride": 1, "space.temperatureVariationCelsius": 18, "space.surfaceBands": 1 },
+      "tileParameters": { "terrain.groundTileId": "Tile_Ice", "terrain.dirtTileId": "Tile_Ice" },
+      "ecologyRuleIds": ["surface.stone.tin", "surface.stone.stone"], "caveResourceRuleIds": ["cave.resource.tin", "cave.resource.stone"]
+    },
+    {
+      "id": "core:surface.uranus", "temperatureCelsius": -190, "pressureKPa": 5000,
+      "atmosphereComposition": { "core:hydrogen": 0.8, "core:nitrogen": 0.2 },
+      "numericParameters": { "terrain.seaLevel": 0, "terrain.beachLevel": 0, "river.enabled": 0, "lake.large.enabled": 0, "lake.lava.enabled": 0, "grass.density": 0, "biome.peat.spawnChance": 0, "climate.polarBand.enabled": 0, "space.climateOverride": 1, "space.temperatureVariationCelsius": 12 },
+      "tileParameters": { "terrain.groundTileId": "Tile_Ice", "terrain.dirtTileId": "Tile_Ice", "terrain.stoneTileId": "Tile_Ice" },
+      "ecologyRuleIds": ["surface.stone.copper", "surface.stone.oreStone"], "caveResourceRuleIds": ["cave.resource.copper", "cave.resource.stone"]
+    },
+    {
+      "id": "core:surface.neptune", "temperatureCelsius": -175, "pressureKPa": 8000,
+      "atmosphereComposition": { "core:hydrogen": 0.75, "core:nitrogen": 0.25 },
+      "numericParameters": { "terrain.seaLevel": 0, "terrain.beachLevel": 0, "river.enabled": 0, "lake.large.enabled": 0, "lake.lava.enabled": 0, "grass.density": 0, "biome.peat.spawnChance": 0, "climate.polarBand.enabled": 0, "space.climateOverride": 1, "space.temperatureVariationCelsius": 15 },
+      "tileParameters": { "terrain.groundTileId": "Tile_Ice", "terrain.dirtTileId": "Tile_Ice" },
+      "ecologyRuleIds": ["surface.stone.iron", "surface.stone.oreStone"], "caveResourceRuleIds": ["cave.resource.iron", "cave.resource.stone"]
+    }
+  ]
+}

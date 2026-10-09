@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 1,
+  "tiles": [
+    {
+      "id": "Tile_MoonRegolith",
+      "runtimeTileId": 32,
+      "displayName": "月壤",
+      "loadCapacity": 10,
+      "tileAsset": "Tile_Sand",
+      "data": {
+        "type": "universal",
+        "parameters": {
+          "tileTag": "Space.Surface",
+          "demolitionTime": 0,
+          "penalty": 1000,
+          "isWalkable": true
+        }
+      },
+      "behaviours": []
+    },
+    {
+      "id": "Tile_MarsDust",
+      "runtimeTileId": 33,
+      "displayName": "火星尘土",
+      "loadCapacity": 10,
+      "tileAsset": "Tile_Clay",
+      "data": {
+        "type": "universal",
+        "parameters": {
+          "tileTag": "Space.Surface",
+          "demolitionTime": 0,
+          "penalty": 1000,
+          "isWalkable": true
+        }
+      },
+      "behaviours": []
+    },
+    {
+      "id": "Tile_NuclearFusion",
+      "runtimeTileId": 34,
+      "displayName": "核聚变中",
+      "loadCapacity": 10,
+      "tileAsset": "Tile_Clay",
+      "data": {
+        "type": "universal",
+        "parameters": {
+          "tileTag": "Space.Surface",
+          "demolitionTime": 0,
+          "penalty": 1000,
+          "isWalkable": true
+        }
+      },
+      "behaviours": [
+        {
+          "type": "universal",
+          "parameters": {
+            "BuffInfo": [
+              "禁锢(99)",
+              "核聚变接触"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

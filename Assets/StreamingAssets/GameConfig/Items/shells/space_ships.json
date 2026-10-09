@@ -1,0 +1,2317 @@
+{
+  "schemaVersion": 1,
+  "items": [
+    {
+      "id": "ShipFloor_Iron",
+      "parent": "BuildingBody_Base",
+      "gameName": "飞船铁地板-建筑",
+      "description": "四邻接形成独立船体；完整地板承载乘员，保护脚下危险地块。",
+      "durability": 220,
+      "maxDurability": 220,
+      "amount": 1,
+      "weight": 15,
+      "volume": 15,
+      "stackable": false,
+      "canBePickedUp": false,
+      "tags": [
+        "35",
+        "InventoryGroup.Chemistry"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Building/WaterPlatform/WaterPlatform_Iron_Tile.png"
+      },
+      "health": {
+        "hasHp": true,
+        "hp": 220,
+        "maxHp": 220,
+        "defense": {
+          "physical": 8
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 0.95,
+            "y": 0.95
+          },
+          "edgeRadius": 0
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"State\":0,\"Role\":1,\"BuildingPrefabId\":\"ShipFloor_Iron\",\"SummonerPrefabId\":\"ShipFloor_Iron_Summoner\",\"FootprintWidth\":1,\"FootprintHeight\":1}",
+            "Type": 0
+          },
+          "parameters": {
+            "LightOcclusionMode": "None",
+            "CastSunShadow": false
+          }
+        },
+        "ship-part": {
+          "id": "船体部件模块",
+          "prefab": "Module_ShipPart",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "Configuration": {
+              "Kind": "Floor",
+              "Layer": -1,
+              "StructuralMassKg": 15,
+              "Health": 220,
+              "SealsAtmosphere": false,
+              "BlocksMovement": false,
+              "MinimumPressureKPa": 0,
+              "MaximumPressureKPa": 650,
+              "PressureDamagePerKPaSecond": 0.01,
+              "MinimumTemperatureCelsius": -250,
+              "MaximumTemperatureCelsius": 600,
+              "TemperatureDamagePerCelsiusSecond": 0.02,
+              "PowerWatts": 0,
+              "SupplyMolesPerSecond": 0
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "ShipFloor_Iron_Summoner",
+      "worldDropBehavior": "interactive",
+      "parent": "BuildingSummoner_Base",
+      "gameName": "飞船铁地板",
+      "description": "四邻接形成独立船体；完整地板承载乘员，保护脚下危险地块。",
+      "durability": 220,
+      "maxDurability": 220,
+      "amount": 1,
+      "weight": 15,
+      "volume": 15,
+      "stackable": false,
+      "canBePickedUp": true,
+      "tags": [
+        "35",
+        "InventoryGroup.Chemistry"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Building/WaterPlatform/WaterPlatform_Iron_Tile.png"
+      },
+      "health": {
+        "hasHp": true,
+        "hp": 60,
+        "maxHp": 60,
+        "defense": {
+          "physical": 8
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 0.7,
+            "y": 0.7
+          },
+          "edgeRadius": 0
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"State\":0,\"Role\":0,\"BuildingPrefabId\":\"ShipFloor_Iron\",\"SummonerPrefabId\":\"ShipFloor_Iron_Summoner\",\"FootprintWidth\":1,\"FootprintHeight\":1}",
+            "Type": 0
+          },
+          "parameters": {
+            "LightOcclusionMode": "None",
+            "CastSunShadow": false
+          }
+        },
+        "机械扭矩模块": {
+          "prefab": "Module_MechanicalNode",
+          "id": "机械扭矩模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "DefinitionId": "FluidPipe"
+          }
+        },
+        "ship-part": {
+          "id": "船体部件模块",
+          "prefab": "Module_ShipPart",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "Configuration": {
+              "Kind": "Floor",
+              "Layer": -1,
+              "StructuralMassKg": 15,
+              "Health": 220,
+              "SealsAtmosphere": false,
+              "BlocksMovement": false,
+              "MinimumPressureKPa": 0,
+              "MaximumPressureKPa": 650,
+              "PressureDamagePerKPaSecond": 0.01,
+              "MinimumTemperatureCelsius": -250,
+              "MaximumTemperatureCelsius": 600,
+              "TemperatureDamagePerCelsiusSecond": 0.02,
+              "PowerWatts": 0,
+              "SupplyMolesPerSecond": 0
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "ShipFloor_Refractory",
+      "parent": "BuildingBody_Base",
+      "gameName": "飞船耐高温地板-建筑",
+      "description": "四邻接形成独立船体；完整地板承载乘员，保护脚下危险地块。",
+      "durability": 500,
+      "maxDurability": 500,
+      "amount": 1,
+      "weight": 30,
+      "volume": 15,
+      "stackable": false,
+      "canBePickedUp": false,
+      "tags": [
+        "35",
+        "InventoryGroup.Chemistry"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Building/WaterPlatform/WaterPlatform_Stone_Tile.png"
+      },
+      "health": {
+        "hasHp": true,
+        "hp": 500,
+        "maxHp": 500,
+        "defense": {
+          "physical": 8
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 0.95,
+            "y": 0.95
+          },
+          "edgeRadius": 0
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"State\":0,\"Role\":1,\"BuildingPrefabId\":\"ShipFloor_Refractory\",\"SummonerPrefabId\":\"ShipFloor_Refractory_Summoner\",\"FootprintWidth\":1,\"FootprintHeight\":1}",
+            "Type": 0
+          },
+          "parameters": {
+            "LightOcclusionMode": "None",
+            "CastSunShadow": false
+          }
+        },
+        "ship-part": {
+          "id": "船体部件模块",
+          "prefab": "Module_ShipPart",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "Configuration": {
+              "Kind": "Floor",
+              "Layer": -1,
+              "StructuralMassKg": 30,
+              "Health": 500,
+              "SealsAtmosphere": false,
+              "BlocksMovement": false,
+              "MinimumPressureKPa": 0,
+              "MaximumPressureKPa": 200000,
+              "PressureDamagePerKPaSecond": 0.01,
+              "MinimumTemperatureCelsius": -273,
+              "MaximumTemperatureCelsius": 20000,
+              "TemperatureDamagePerCelsiusSecond": 0.02,
+              "PowerWatts": 0,
+              "SupplyMolesPerSecond": 0
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "ShipFloor_Refractory_Summoner",
+      "worldDropBehavior": "interactive",
+      "parent": "BuildingSummoner_Base",
+      "gameName": "飞船耐高温地板",
+      "description": "四邻接形成独立船体；完整地板承载乘员，保护脚下危险地块。",
+      "durability": 500,
+      "maxDurability": 500,
+      "amount": 1,
+      "weight": 30,
+      "volume": 15,
+      "stackable": false,
+      "canBePickedUp": true,
+      "tags": [
+        "35",
+        "InventoryGroup.Chemistry"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Building/WaterPlatform/WaterPlatform_Stone_Tile.png"
+      },
+      "health": {
+        "hasHp": true,
+        "hp": 60,
+        "maxHp": 60,
+        "defense": {
+          "physical": 8
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 0.7,
+            "y": 0.7
+          },
+          "edgeRadius": 0
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"State\":0,\"Role\":0,\"BuildingPrefabId\":\"ShipFloor_Refractory\",\"SummonerPrefabId\":\"ShipFloor_Refractory_Summoner\",\"FootprintWidth\":1,\"FootprintHeight\":1}",
+            "Type": 0
+          },
+          "parameters": {
+            "LightOcclusionMode": "None",
+            "CastSunShadow": false
+          }
+        },
+        "机械扭矩模块": {
+          "prefab": "Module_MechanicalNode",
+          "id": "机械扭矩模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "DefinitionId": "FluidPipe"
+          }
+        },
+        "ship-part": {
+          "id": "船体部件模块",
+          "prefab": "Module_ShipPart",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "Configuration": {
+              "Kind": "Floor",
+              "Layer": -1,
+              "StructuralMassKg": 30,
+              "Health": 500,
+              "SealsAtmosphere": false,
+              "BlocksMovement": false,
+              "MinimumPressureKPa": 0,
+              "MaximumPressureKPa": 200000,
+              "PressureDamagePerKPaSecond": 0.01,
+              "MinimumTemperatureCelsius": -273,
+              "MaximumTemperatureCelsius": 20000,
+              "TemperatureDamagePerCelsiusSecond": 0.02,
+              "PowerWatts": 0,
+              "SupplyMolesPerSecond": 0
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "ShipWall_Iron",
+      "parent": "BuildingBody_Base",
+      "gameName": "飞船铁舱壁-建筑",
+      "description": "安装在飞船地板本地格上，随所属船体移动、旋转与保存。",
+      "durability": 320,
+      "maxDurability": 320,
+      "amount": 1,
+      "weight": 25,
+      "volume": 15,
+      "stackable": false,
+      "canBePickedUp": false,
+      "tags": [
+        "35",
+        "InventoryGroup.Chemistry"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Building/WallMetal/Wall_Iron_Medium.png[Wall_Iron_Medium]"
+      },
+      "health": {
+        "hasHp": true,
+        "hp": 320,
+        "maxHp": 320,
+        "defense": {
+          "physical": 8
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 0.95,
+            "y": 0.95
+          },
+          "edgeRadius": 0
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"State\":0,\"Role\":1,\"BuildingPrefabId\":\"ShipWall_Iron\",\"SummonerPrefabId\":\"ShipWall_Iron_Summoner\",\"FootprintWidth\":1,\"FootprintHeight\":1}",
+            "Type": 0
+          },
+          "parameters": {
+            "LightOcclusionMode": "None",
+            "CastSunShadow": false
+          }
+        },
+        "ship-part": {
+          "id": "船体部件模块",
+          "prefab": "Module_ShipPart",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "Configuration": {
+              "Kind": "Wall",
+              "Layer": 0,
+              "StructuralMassKg": 25,
+              "Health": 320,
+              "SealsAtmosphere": true,
+              "BlocksMovement": true,
+              "MinimumPressureKPa": 0,
+              "MaximumPressureKPa": 650,
+              "PressureDamagePerKPaSecond": 0.01,
+              "MinimumTemperatureCelsius": -250,
+              "MaximumTemperatureCelsius": 600,
+              "TemperatureDamagePerCelsiusSecond": 0.02,
+              "PowerWatts": 0,
+              "SupplyMolesPerSecond": 0
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "ShipWall_Iron_Summoner",
+      "worldDropBehavior": "interactive",
+      "parent": "BuildingSummoner_Base",
+      "gameName": "飞船铁舱壁",
+      "description": "安装在飞船地板本地格上，随所属船体移动、旋转与保存。",
+      "durability": 320,
+      "maxDurability": 320,
+      "amount": 1,
+      "weight": 25,
+      "volume": 15,
+      "stackable": false,
+      "canBePickedUp": true,
+      "tags": [
+        "35",
+        "InventoryGroup.Chemistry"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Building/WallMetal/Wall_Iron_Medium.png[Wall_Iron_Medium]"
+      },
+      "health": {
+        "hasHp": true,
+        "hp": 60,
+        "maxHp": 60,
+        "defense": {
+          "physical": 8
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 0.7,
+            "y": 0.7
+          },
+          "edgeRadius": 0
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"State\":0,\"Role\":0,\"BuildingPrefabId\":\"ShipWall_Iron\",\"SummonerPrefabId\":\"ShipWall_Iron_Summoner\",\"FootprintWidth\":1,\"FootprintHeight\":1}",
+            "Type": 0
+          },
+          "parameters": {
+            "LightOcclusionMode": "None",
+            "CastSunShadow": false
+          }
+        },
+        "机械扭矩模块": {
+          "prefab": "Module_MechanicalNode",
+          "id": "机械扭矩模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "DefinitionId": "FluidPipe"
+          }
+        },
+        "ship-part": {
+          "id": "船体部件模块",
+          "prefab": "Module_ShipPart",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "Configuration": {
+              "Kind": "Wall",
+              "Layer": 0,
+              "StructuralMassKg": 25,
+              "Health": 320,
+              "SealsAtmosphere": true,
+              "BlocksMovement": true,
+              "MinimumPressureKPa": 0,
+              "MaximumPressureKPa": 650,
+              "PressureDamagePerKPaSecond": 0.01,
+              "MinimumTemperatureCelsius": -250,
+              "MaximumTemperatureCelsius": 600,
+              "TemperatureDamagePerCelsiusSecond": 0.02,
+              "PowerWatts": 0,
+              "SupplyMolesPerSecond": 0
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "ShipWall_Refractory",
+      "parent": "BuildingBody_Base",
+      "gameName": "飞船耐高温舱壁-建筑",
+      "description": "安装在飞船地板本地格上，随所属船体移动、旋转与保存。",
+      "durability": 600,
+      "maxDurability": 600,
+      "amount": 1,
+      "weight": 45,
+      "volume": 15,
+      "stackable": false,
+      "canBePickedUp": false,
+      "tags": [
+        "35",
+        "InventoryGroup.Chemistry"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Building/Wall_Stone_Medium.png[Wall_Stone_Medium]"
+      },
+      "health": {
+        "hasHp": true,
+        "hp": 600,
+        "maxHp": 600,
+        "defense": {
+          "physical": 8
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 0.95,
+            "y": 0.95
+          },
+          "edgeRadius": 0
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"State\":0,\"Role\":1,\"BuildingPrefabId\":\"ShipWall_Refractory\",\"SummonerPrefabId\":\"ShipWall_Refractory_Summoner\",\"FootprintWidth\":1,\"FootprintHeight\":1}",
+            "Type": 0
+          },
+          "parameters": {
+            "LightOcclusionMode": "None",
+            "CastSunShadow": false
+          }
+        },
+        "ship-part": {
+          "id": "船体部件模块",
+          "prefab": "Module_ShipPart",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "Configuration": {
+              "Kind": "Wall",
+              "Layer": 0,
+              "StructuralMassKg": 45,
+              "Health": 600,
+              "SealsAtmosphere": true,
+              "BlocksMovement": true,
+              "MinimumPressureKPa": 0,
+              "MaximumPressureKPa": 200000,
+              "PressureDamagePerKPaSecond": 0.01,
+              "MinimumTemperatureCelsius": -273,
+              "MaximumTemperatureCelsius": 20000,
+              "TemperatureDamagePerCelsiusSecond": 0.02,
+              "PowerWatts": 0,
+              "SupplyMolesPerSecond": 0
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "ShipWall_Refractory_Summoner",
+      "worldDropBehavior": "interactive",
+      "parent": "BuildingSummoner_Base",
+      "gameName": "飞船耐高温舱壁",
+      "description": "安装在飞船地板本地格上，随所属船体移动、旋转与保存。",
+      "durability": 600,
+      "maxDurability": 600,
+      "amount": 1,
+      "weight": 45,
+      "volume": 15,
+      "stackable": false,
+      "canBePickedUp": true,
+      "tags": [
+        "35",
+        "InventoryGroup.Chemistry"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Building/Wall_Stone_Medium.png[Wall_Stone_Medium]"
+      },
+      "health": {
+        "hasHp": true,
+        "hp": 60,
+        "maxHp": 60,
+        "defense": {
+          "physical": 8
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 0.7,
+            "y": 0.7
+          },
+          "edgeRadius": 0
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"State\":0,\"Role\":0,\"BuildingPrefabId\":\"ShipWall_Refractory\",\"SummonerPrefabId\":\"ShipWall_Refractory_Summoner\",\"FootprintWidth\":1,\"FootprintHeight\":1}",
+            "Type": 0
+          },
+          "parameters": {
+            "LightOcclusionMode": "None",
+            "CastSunShadow": false
+          }
+        },
+        "机械扭矩模块": {
+          "prefab": "Module_MechanicalNode",
+          "id": "机械扭矩模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "DefinitionId": "FluidPipe"
+          }
+        },
+        "ship-part": {
+          "id": "船体部件模块",
+          "prefab": "Module_ShipPart",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "Configuration": {
+              "Kind": "Wall",
+              "Layer": 0,
+              "StructuralMassKg": 45,
+              "Health": 600,
+              "SealsAtmosphere": true,
+              "BlocksMovement": true,
+              "MinimumPressureKPa": 0,
+              "MaximumPressureKPa": 200000,
+              "PressureDamagePerKPaSecond": 0.01,
+              "MinimumTemperatureCelsius": -273,
+              "MaximumTemperatureCelsius": 20000,
+              "TemperatureDamagePerCelsiusSecond": 0.02,
+              "PowerWatts": 0,
+              "SupplyMolesPerSecond": 0
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "ShipDoor",
+      "parent": "BuildingBody_Base",
+      "gameName": "飞船隔离舱门-建筑",
+      "description": "安装在飞船地板本地格上，随所属船体移动、旋转与保存。",
+      "durability": 300,
+      "maxDurability": 300,
+      "amount": 1,
+      "weight": 28,
+      "volume": 15,
+      "stackable": false,
+      "canBePickedUp": false,
+      "tags": [
+        "35",
+        "InventoryGroup.Chemistry"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Building/Door_Stone_Close.png[Door_Stone_Close]"
+      },
+      "health": {
+        "hasHp": true,
+        "hp": 300,
+        "maxHp": 300,
+        "defense": {
+          "physical": 8
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 0.95,
+            "y": 0.95
+          },
+          "edgeRadius": 0
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"State\":0,\"Role\":1,\"BuildingPrefabId\":\"ShipDoor\",\"SummonerPrefabId\":\"ShipDoor_Summoner\",\"FootprintWidth\":1,\"FootprintHeight\":1}",
+            "Type": 0
+          },
+          "parameters": {
+            "LightOcclusionMode": "None",
+            "CastSunShadow": false
+          }
+        },
+        "ship-part": {
+          "id": "船体部件模块",
+          "prefab": "Module_ShipPart",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "Configuration": {
+              "Kind": "Door",
+              "Layer": 0,
+              "StructuralMassKg": 28,
+              "Health": 300,
+              "SealsAtmosphere": true,
+              "BlocksMovement": true,
+              "MinimumPressureKPa": 0,
+              "MaximumPressureKPa": 650,
+              "PressureDamagePerKPaSecond": 0.01,
+              "MinimumTemperatureCelsius": -250,
+              "MaximumTemperatureCelsius": 600,
+              "TemperatureDamagePerCelsiusSecond": 0.02,
+              "PowerWatts": 0,
+              "SupplyMolesPerSecond": 0
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "ShipDoor_Summoner",
+      "worldDropBehavior": "interactive",
+      "parent": "BuildingSummoner_Base",
+      "gameName": "飞船隔离舱门",
+      "description": "安装在飞船地板本地格上，随所属船体移动、旋转与保存。",
+      "durability": 300,
+      "maxDurability": 300,
+      "amount": 1,
+      "weight": 28,
+      "volume": 15,
+      "stackable": false,
+      "canBePickedUp": true,
+      "tags": [
+        "35",
+        "InventoryGroup.Chemistry"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Building/Door_Stone_Close.png[Door_Stone_Close]"
+      },
+      "health": {
+        "hasHp": true,
+        "hp": 60,
+        "maxHp": 60,
+        "defense": {
+          "physical": 8
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 0.7,
+            "y": 0.7
+          },
+          "edgeRadius": 0
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"State\":0,\"Role\":0,\"BuildingPrefabId\":\"ShipDoor\",\"SummonerPrefabId\":\"ShipDoor_Summoner\",\"FootprintWidth\":1,\"FootprintHeight\":1}",
+            "Type": 0
+          },
+          "parameters": {
+            "LightOcclusionMode": "None",
+            "CastSunShadow": false
+          }
+        },
+        "机械扭矩模块": {
+          "prefab": "Module_MechanicalNode",
+          "id": "机械扭矩模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "DefinitionId": "FluidPipe"
+          }
+        },
+        "ship-part": {
+          "id": "船体部件模块",
+          "prefab": "Module_ShipPart",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "Configuration": {
+              "Kind": "Door",
+              "Layer": 0,
+              "StructuralMassKg": 28,
+              "Health": 300,
+              "SealsAtmosphere": true,
+              "BlocksMovement": true,
+              "MinimumPressureKPa": 0,
+              "MaximumPressureKPa": 650,
+              "PressureDamagePerKPaSecond": 0.01,
+              "MinimumTemperatureCelsius": -250,
+              "MaximumTemperatureCelsius": 600,
+              "TemperatureDamagePerCelsiusSecond": 0.02,
+              "PowerWatts": 0,
+              "SupplyMolesPerSecond": 0
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "ShipDockingPort",
+      "parent": "BuildingBody_Base",
+      "gameName": "飞船对接接口-建筑",
+      "description": "安装在飞船地板本地格上，随所属船体移动、旋转与保存。",
+      "durability": 400,
+      "maxDurability": 400,
+      "amount": 1,
+      "weight": 40,
+      "volume": 15,
+      "stackable": false,
+      "canBePickedUp": false,
+      "tags": [
+        "35",
+        "InventoryGroup.Chemistry"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Building/Door_Stone_Close.png[Door_Stone_Close]",
+        "color": {
+          "r": 0.35,
+          "g": 0.85,
+          "b": 1.0,
+          "a": 1.0
+        }
+      },
+      "health": {
+        "hasHp": true,
+        "hp": 400,
+        "maxHp": 400,
+        "defense": {
+          "physical": 8
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 0.95,
+            "y": 0.95
+          },
+          "edgeRadius": 0
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"State\":0,\"Role\":1,\"BuildingPrefabId\":\"ShipDockingPort\",\"SummonerPrefabId\":\"ShipDockingPort_Summoner\",\"FootprintWidth\":1,\"FootprintHeight\":1}",
+            "Type": 0
+          },
+          "parameters": {
+            "LightOcclusionMode": "None",
+            "CastSunShadow": false
+          }
+        },
+        "ship-part": {
+          "id": "船体部件模块",
+          "prefab": "Module_ShipPart",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "Configuration": {
+              "Kind": "DockingPort",
+              "Layer": 0,
+              "StructuralMassKg": 40,
+              "Health": 400,
+              "SealsAtmosphere": true,
+              "BlocksMovement": true,
+              "MinimumPressureKPa": 0,
+              "MaximumPressureKPa": 650,
+              "PressureDamagePerKPaSecond": 0.01,
+              "MinimumTemperatureCelsius": -250,
+              "MaximumTemperatureCelsius": 900,
+              "TemperatureDamagePerCelsiusSecond": 0.02,
+              "PowerWatts": 0,
+              "SupplyMolesPerSecond": 0
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "ShipDockingPort_Summoner",
+      "worldDropBehavior": "interactive",
+      "parent": "BuildingSummoner_Base",
+      "gameName": "飞船对接接口",
+      "description": "安装在飞船地板本地格上，随所属船体移动、旋转与保存。",
+      "durability": 400,
+      "maxDurability": 400,
+      "amount": 1,
+      "weight": 40,
+      "volume": 15,
+      "stackable": false,
+      "canBePickedUp": true,
+      "tags": [
+        "35",
+        "InventoryGroup.Chemistry"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Building/Door_Stone_Close.png[Door_Stone_Close]",
+        "color": {
+          "r": 0.35,
+          "g": 0.85,
+          "b": 1.0,
+          "a": 1.0
+        }
+      },
+      "health": {
+        "hasHp": true,
+        "hp": 60,
+        "maxHp": 60,
+        "defense": {
+          "physical": 8
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 0.7,
+            "y": 0.7
+          },
+          "edgeRadius": 0
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"State\":0,\"Role\":0,\"BuildingPrefabId\":\"ShipDockingPort\",\"SummonerPrefabId\":\"ShipDockingPort_Summoner\",\"FootprintWidth\":1,\"FootprintHeight\":1}",
+            "Type": 0
+          },
+          "parameters": {
+            "LightOcclusionMode": "None",
+            "CastSunShadow": false
+          }
+        },
+        "机械扭矩模块": {
+          "prefab": "Module_MechanicalNode",
+          "id": "机械扭矩模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "DefinitionId": "FluidPipe"
+          }
+        },
+        "ship-part": {
+          "id": "船体部件模块",
+          "prefab": "Module_ShipPart",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "Configuration": {
+              "Kind": "DockingPort",
+              "Layer": 0,
+              "StructuralMassKg": 40,
+              "Health": 400,
+              "SealsAtmosphere": true,
+              "BlocksMovement": true,
+              "MinimumPressureKPa": 0,
+              "MaximumPressureKPa": 650,
+              "PressureDamagePerKPaSecond": 0.01,
+              "MinimumTemperatureCelsius": -250,
+              "MaximumTemperatureCelsius": 900,
+              "TemperatureDamagePerCelsiusSecond": 0.02,
+              "PowerWatts": 0,
+              "SupplyMolesPerSecond": 0
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "ShipConsole",
+      "parent": "BuildingBody_Base",
+      "gameName": "飞船控制台-建筑",
+      "description": "安装在飞船地板本地格上，随所属船体移动、旋转与保存。",
+      "durability": 180,
+      "maxDurability": 180,
+      "amount": 1,
+      "weight": 30,
+      "volume": 15,
+      "stackable": false,
+      "canBePickedUp": false,
+      "tags": [
+        "35",
+        "InventoryGroup.Chemistry"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Chemistry/PressureProbe_Electronic/PressureProbe_Electronic_Idle.png"
+      },
+      "health": {
+        "hasHp": true,
+        "hp": 180,
+        "maxHp": 180,
+        "defense": {
+          "physical": 8
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 0.95,
+            "y": 0.95
+          },
+          "edgeRadius": 0
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"State\":0,\"Role\":1,\"BuildingPrefabId\":\"ShipConsole\",\"SummonerPrefabId\":\"ShipConsole_Summoner\",\"FootprintWidth\":1,\"FootprintHeight\":1}",
+            "Type": 0
+          },
+          "parameters": {
+            "LightOcclusionMode": "None",
+            "CastSunShadow": false
+          }
+        },
+        "ship-part": {
+          "id": "船体部件模块",
+          "prefab": "Module_ShipPart",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "Configuration": {
+              "Kind": "Console",
+              "Layer": 0,
+              "StructuralMassKg": 30,
+              "Health": 180,
+              "SealsAtmosphere": false,
+              "BlocksMovement": true,
+              "MinimumPressureKPa": 0,
+              "MaximumPressureKPa": 650,
+              "PressureDamagePerKPaSecond": 0.01,
+              "MinimumTemperatureCelsius": -250,
+              "MaximumTemperatureCelsius": 600,
+              "TemperatureDamagePerCelsiusSecond": 0.02,
+              "PowerWatts": 20,
+              "SupplyMolesPerSecond": 0
+            }
+          }
+        },
+        "机械扭矩模块": {
+          "prefab": "Module_MechanicalNode",
+          "id": "机械扭矩模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "DefinitionId": "ShipConsole"
+          }
+        }
+      }
+    },
+    {
+      "id": "ShipConsole_Summoner",
+      "worldDropBehavior": "interactive",
+      "parent": "BuildingSummoner_Base",
+      "gameName": "飞船控制台",
+      "description": "安装在飞船地板本地格上，随所属船体移动、旋转与保存。",
+      "durability": 180,
+      "maxDurability": 180,
+      "amount": 1,
+      "weight": 30,
+      "volume": 15,
+      "stackable": false,
+      "canBePickedUp": true,
+      "tags": [
+        "35",
+        "InventoryGroup.Chemistry"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Chemistry/PressureProbe_Electronic/PressureProbe_Electronic_Idle.png"
+      },
+      "health": {
+        "hasHp": true,
+        "hp": 60,
+        "maxHp": 60,
+        "defense": {
+          "physical": 8
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 0.7,
+            "y": 0.7
+          },
+          "edgeRadius": 0
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"State\":0,\"Role\":0,\"BuildingPrefabId\":\"ShipConsole\",\"SummonerPrefabId\":\"ShipConsole_Summoner\",\"FootprintWidth\":1,\"FootprintHeight\":1}",
+            "Type": 0
+          },
+          "parameters": {
+            "LightOcclusionMode": "None",
+            "CastSunShadow": false
+          }
+        },
+        "机械扭矩模块": {
+          "prefab": "Module_MechanicalNode",
+          "id": "机械扭矩模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "DefinitionId": "FluidPipe"
+          }
+        },
+        "ship-part": {
+          "id": "船体部件模块",
+          "prefab": "Module_ShipPart",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "Configuration": {
+              "Kind": "Console",
+              "Layer": 0,
+              "StructuralMassKg": 30,
+              "Health": 180,
+              "SealsAtmosphere": false,
+              "BlocksMovement": true,
+              "MinimumPressureKPa": 0,
+              "MaximumPressureKPa": 650,
+              "PressureDamagePerKPaSecond": 0.01,
+              "MinimumTemperatureCelsius": -250,
+              "MaximumTemperatureCelsius": 600,
+              "TemperatureDamagePerCelsiusSecond": 0.02,
+              "PowerWatts": 20,
+              "SupplyMolesPerSecond": 0
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "ShipChemicalEngine",
+      "parent": "BuildingBody_Base",
+      "gameName": "化学燃料引擎-建筑",
+      "description": "安装在飞船地板本地格上，随所属船体移动、旋转与保存。默认推力朝船体前方，安装时 R 旋转朝向；船上箭头显示实际推力方向。",
+      "durability": 240,
+      "maxDurability": 240,
+      "amount": 1,
+      "weight": 50,
+      "volume": 15,
+      "stackable": false,
+      "canBePickedUp": false,
+      "tags": [
+        "35",
+        "InventoryGroup.Chemistry"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Chemistry/GasEngine/GasEngine_Idle.png"
+      },
+      "health": {
+        "hasHp": true,
+        "hp": 240,
+        "maxHp": 240,
+        "defense": {
+          "physical": 8
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 0.95,
+            "y": 0.95
+          },
+          "edgeRadius": 0
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"State\":0,\"Role\":1,\"BuildingPrefabId\":\"ShipChemicalEngine\",\"SummonerPrefabId\":\"ShipChemicalEngine_Summoner\",\"FootprintWidth\":1,\"FootprintHeight\":1}",
+            "Type": 0
+          },
+          "parameters": {
+            "LightOcclusionMode": "None",
+            "CastSunShadow": false
+          }
+        },
+        "ship-part": {
+          "id": "船体部件模块",
+          "prefab": "Module_ShipPart",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "Configuration": {
+              "Kind": "Engine",
+              "Layer": 0,
+              "StructuralMassKg": 50,
+              "Health": 240,
+              "SealsAtmosphere": false,
+              "BlocksMovement": true,
+              "MinimumPressureKPa": 0,
+              "MaximumPressureKPa": 650,
+              "PressureDamagePerKPaSecond": 0.01,
+              "MinimumTemperatureCelsius": -250,
+              "MaximumTemperatureCelsius": 1100,
+              "TemperatureDamagePerCelsiusSecond": 0.02,
+              "PowerWatts": 30,
+              "SupplyMolesPerSecond": 0,
+              "EngineThrustNewtons": 60000,
+              "FuelMolesPerSecond": 3,
+              "FuelRatioTolerance": 0.1,
+              "MaximumImpurityFraction": 0.05
+            }
+          }
+        },
+        "机械扭矩模块": {
+          "prefab": "Module_MechanicalNode",
+          "id": "机械扭矩模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "DefinitionId": "ShipChemicalEngine"
+          }
+        }
+      }
+    },
+    {
+      "id": "ShipChemicalEngine_Summoner",
+      "worldDropBehavior": "interactive",
+      "parent": "BuildingSummoner_Base",
+      "gameName": "化学燃料引擎",
+      "description": "安装在飞船地板本地格上，随所属船体移动、旋转与保存。默认推力朝船体前方，安装时 R 旋转朝向；船上箭头显示实际推力方向。",
+      "durability": 240,
+      "maxDurability": 240,
+      "amount": 1,
+      "weight": 50,
+      "volume": 15,
+      "stackable": false,
+      "canBePickedUp": true,
+      "tags": [
+        "35",
+        "InventoryGroup.Chemistry"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Chemistry/GasEngine/GasEngine_Idle.png"
+      },
+      "health": {
+        "hasHp": true,
+        "hp": 60,
+        "maxHp": 60,
+        "defense": {
+          "physical": 8
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 0.7,
+            "y": 0.7
+          },
+          "edgeRadius": 0
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"State\":0,\"Role\":0,\"BuildingPrefabId\":\"ShipChemicalEngine\",\"SummonerPrefabId\":\"ShipChemicalEngine_Summoner\",\"FootprintWidth\":1,\"FootprintHeight\":1}",
+            "Type": 0
+          },
+          "parameters": {
+            "LightOcclusionMode": "None",
+            "CastSunShadow": false
+          }
+        },
+        "机械扭矩模块": {
+          "prefab": "Module_MechanicalNode",
+          "id": "机械扭矩模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "DefinitionId": "FluidPipe"
+          }
+        },
+        "ship-part": {
+          "id": "船体部件模块",
+          "prefab": "Module_ShipPart",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "Configuration": {
+              "Kind": "Engine",
+              "Layer": 0,
+              "StructuralMassKg": 50,
+              "Health": 240,
+              "SealsAtmosphere": false,
+              "BlocksMovement": true,
+              "MinimumPressureKPa": 0,
+              "MaximumPressureKPa": 650,
+              "PressureDamagePerKPaSecond": 0.01,
+              "MinimumTemperatureCelsius": -250,
+              "MaximumTemperatureCelsius": 1100,
+              "TemperatureDamagePerCelsiusSecond": 0.02,
+              "PowerWatts": 30,
+              "SupplyMolesPerSecond": 0,
+              "EngineThrustNewtons": 60000,
+              "FuelMolesPerSecond": 3,
+              "FuelRatioTolerance": 0.1,
+              "MaximumImpurityFraction": 0.05
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "ShipGravityGenerator",
+      "parent": "BuildingBody_Base",
+      "gameName": "重力模拟器-建筑",
+      "description": "安装在飞船地板本地格上，随所属船体移动、旋转与保存。",
+      "durability": 200,
+      "maxDurability": 200,
+      "amount": 1,
+      "weight": 60,
+      "volume": 15,
+      "stackable": false,
+      "canBePickedUp": false,
+      "tags": [
+        "35",
+        "InventoryGroup.Chemistry"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Electrical/Battery_Basic/Battery_Basic_Idle.png"
+      },
+      "health": {
+        "hasHp": true,
+        "hp": 200,
+        "maxHp": 200,
+        "defense": {
+          "physical": 8
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 0.95,
+            "y": 0.95
+          },
+          "edgeRadius": 0
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"State\":0,\"Role\":1,\"BuildingPrefabId\":\"ShipGravityGenerator\",\"SummonerPrefabId\":\"ShipGravityGenerator_Summoner\",\"FootprintWidth\":1,\"FootprintHeight\":1}",
+            "Type": 0
+          },
+          "parameters": {
+            "LightOcclusionMode": "None",
+            "CastSunShadow": false
+          }
+        },
+        "ship-part": {
+          "id": "船体部件模块",
+          "prefab": "Module_ShipPart",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "Configuration": {
+              "Kind": "GravityGenerator",
+              "Layer": 0,
+              "StructuralMassKg": 60,
+              "Health": 200,
+              "SealsAtmosphere": false,
+              "BlocksMovement": true,
+              "MinimumPressureKPa": 0,
+              "MaximumPressureKPa": 650,
+              "PressureDamagePerKPaSecond": 0.01,
+              "MinimumTemperatureCelsius": -250,
+              "MaximumTemperatureCelsius": 600,
+              "TemperatureDamagePerCelsiusSecond": 0.02,
+              "PowerWatts": 250,
+              "SupplyMolesPerSecond": 0
+            }
+          }
+        },
+        "机械扭矩模块": {
+          "prefab": "Module_MechanicalNode",
+          "id": "机械扭矩模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "DefinitionId": "ShipGravityGenerator"
+          }
+        }
+      }
+    },
+    {
+      "id": "ShipGravityGenerator_Summoner",
+      "worldDropBehavior": "interactive",
+      "parent": "BuildingSummoner_Base",
+      "gameName": "重力模拟器",
+      "description": "安装在飞船地板本地格上，随所属船体移动、旋转与保存。",
+      "durability": 200,
+      "maxDurability": 200,
+      "amount": 1,
+      "weight": 60,
+      "volume": 15,
+      "stackable": false,
+      "canBePickedUp": true,
+      "tags": [
+        "35",
+        "InventoryGroup.Chemistry"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Electrical/Battery_Basic/Battery_Basic_Idle.png"
+      },
+      "health": {
+        "hasHp": true,
+        "hp": 60,
+        "maxHp": 60,
+        "defense": {
+          "physical": 8
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 0.7,
+            "y": 0.7
+          },
+          "edgeRadius": 0
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"State\":0,\"Role\":0,\"BuildingPrefabId\":\"ShipGravityGenerator\",\"SummonerPrefabId\":\"ShipGravityGenerator_Summoner\",\"FootprintWidth\":1,\"FootprintHeight\":1}",
+            "Type": 0
+          },
+          "parameters": {
+            "LightOcclusionMode": "None",
+            "CastSunShadow": false
+          }
+        },
+        "机械扭矩模块": {
+          "prefab": "Module_MechanicalNode",
+          "id": "机械扭矩模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "DefinitionId": "FluidPipe"
+          }
+        },
+        "ship-part": {
+          "id": "船体部件模块",
+          "prefab": "Module_ShipPart",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "Configuration": {
+              "Kind": "GravityGenerator",
+              "Layer": 0,
+              "StructuralMassKg": 60,
+              "Health": 200,
+              "SealsAtmosphere": false,
+              "BlocksMovement": true,
+              "MinimumPressureKPa": 0,
+              "MaximumPressureKPa": 650,
+              "PressureDamagePerKPaSecond": 0.01,
+              "MinimumTemperatureCelsius": -250,
+              "MaximumTemperatureCelsius": 600,
+              "TemperatureDamagePerCelsiusSecond": 0.02,
+              "PowerWatts": 250,
+              "SupplyMolesPerSecond": 0
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "ShipNavigation",
+      "parent": "BuildingBody_Base",
+      "gameName": "自动导航工作方块-建筑",
+      "description": "安装在飞船地板本地格上，随所属船体移动、旋转与保存。",
+      "durability": 160,
+      "maxDurability": 160,
+      "amount": 1,
+      "weight": 20,
+      "volume": 15,
+      "stackable": false,
+      "canBePickedUp": false,
+      "tags": [
+        "35",
+        "InventoryGroup.Chemistry"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Chemistry/PressureProbe_Mechanical/PressureProbe_Mechanical_Idle.png"
+      },
+      "health": {
+        "hasHp": true,
+        "hp": 160,
+        "maxHp": 160,
+        "defense": {
+          "physical": 8
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 0.95,
+            "y": 0.95
+          },
+          "edgeRadius": 0
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"State\":0,\"Role\":1,\"BuildingPrefabId\":\"ShipNavigation\",\"SummonerPrefabId\":\"ShipNavigation_Summoner\",\"FootprintWidth\":1,\"FootprintHeight\":1}",
+            "Type": 0
+          },
+          "parameters": {
+            "LightOcclusionMode": "None",
+            "CastSunShadow": false
+          }
+        },
+        "ship-part": {
+          "id": "船体部件模块",
+          "prefab": "Module_ShipPart",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "Configuration": {
+              "Kind": "Navigation",
+              "Layer": 0,
+              "StructuralMassKg": 20,
+              "Health": 160,
+              "SealsAtmosphere": false,
+              "BlocksMovement": true,
+              "MinimumPressureKPa": 0,
+              "MaximumPressureKPa": 650,
+              "PressureDamagePerKPaSecond": 0.01,
+              "MinimumTemperatureCelsius": -250,
+              "MaximumTemperatureCelsius": 600,
+              "TemperatureDamagePerCelsiusSecond": 0.02,
+              "PowerWatts": 40,
+              "SupplyMolesPerSecond": 0
+            }
+          }
+        },
+        "机械扭矩模块": {
+          "prefab": "Module_MechanicalNode",
+          "id": "机械扭矩模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "DefinitionId": "ShipNavigation"
+          }
+        }
+      }
+    },
+    {
+      "id": "ShipNavigation_Summoner",
+      "worldDropBehavior": "interactive",
+      "parent": "BuildingSummoner_Base",
+      "gameName": "自动导航工作方块",
+      "description": "安装在飞船地板本地格上，随所属船体移动、旋转与保存。",
+      "durability": 160,
+      "maxDurability": 160,
+      "amount": 1,
+      "weight": 20,
+      "volume": 15,
+      "stackable": false,
+      "canBePickedUp": true,
+      "tags": [
+        "35",
+        "InventoryGroup.Chemistry"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Chemistry/PressureProbe_Mechanical/PressureProbe_Mechanical_Idle.png"
+      },
+      "health": {
+        "hasHp": true,
+        "hp": 60,
+        "maxHp": 60,
+        "defense": {
+          "physical": 8
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 0.7,
+            "y": 0.7
+          },
+          "edgeRadius": 0
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"State\":0,\"Role\":0,\"BuildingPrefabId\":\"ShipNavigation\",\"SummonerPrefabId\":\"ShipNavigation_Summoner\",\"FootprintWidth\":1,\"FootprintHeight\":1}",
+            "Type": 0
+          },
+          "parameters": {
+            "LightOcclusionMode": "None",
+            "CastSunShadow": false
+          }
+        },
+        "机械扭矩模块": {
+          "prefab": "Module_MechanicalNode",
+          "id": "机械扭矩模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "DefinitionId": "FluidPipe"
+          }
+        },
+        "ship-part": {
+          "id": "船体部件模块",
+          "prefab": "Module_ShipPart",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "Configuration": {
+              "Kind": "Navigation",
+              "Layer": 0,
+              "StructuralMassKg": 20,
+              "Health": 160,
+              "SealsAtmosphere": false,
+              "BlocksMovement": true,
+              "MinimumPressureKPa": 0,
+              "MaximumPressureKPa": 650,
+              "PressureDamagePerKPaSecond": 0.01,
+              "MinimumTemperatureCelsius": -250,
+              "MaximumTemperatureCelsius": 600,
+              "TemperatureDamagePerCelsiusSecond": 0.02,
+              "PowerWatts": 40,
+              "SupplyMolesPerSecond": 0
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "ShipAirSupply",
+      "parent": "BuildingBody_Base",
+      "gameName": "舱内供气器-建筑",
+      "description": "安装在飞船地板本地格上，随所属船体移动、旋转与保存。",
+      "durability": 180,
+      "maxDurability": 180,
+      "amount": 1,
+      "weight": 25,
+      "volume": 15,
+      "stackable": false,
+      "canBePickedUp": false,
+      "tags": [
+        "35",
+        "InventoryGroup.Chemistry"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Chemistry/GasTankBlock_Steel/GasTankBlock_Steel_Idle.png"
+      },
+      "health": {
+        "hasHp": true,
+        "hp": 180,
+        "maxHp": 180,
+        "defense": {
+          "physical": 8
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 0.95,
+            "y": 0.95
+          },
+          "edgeRadius": 0
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"State\":0,\"Role\":1,\"BuildingPrefabId\":\"ShipAirSupply\",\"SummonerPrefabId\":\"ShipAirSupply_Summoner\",\"FootprintWidth\":1,\"FootprintHeight\":1}",
+            "Type": 0
+          },
+          "parameters": {
+            "LightOcclusionMode": "None",
+            "CastSunShadow": false
+          }
+        },
+        "ship-part": {
+          "id": "船体部件模块",
+          "prefab": "Module_ShipPart",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "Configuration": {
+              "Kind": "Equipment",
+              "Layer": 0,
+              "StructuralMassKg": 25,
+              "Health": 180,
+              "SealsAtmosphere": false,
+              "BlocksMovement": true,
+              "MinimumPressureKPa": 0,
+              "MaximumPressureKPa": 650,
+              "PressureDamagePerKPaSecond": 0.01,
+              "MinimumTemperatureCelsius": -250,
+              "MaximumTemperatureCelsius": 600,
+              "TemperatureDamagePerCelsiusSecond": 0.02,
+              "PowerWatts": 60,
+              "SupplyMolesPerSecond": 8
+            }
+          }
+        },
+        "机械扭矩模块": {
+          "prefab": "Module_MechanicalNode",
+          "id": "机械扭矩模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "DefinitionId": "ShipAirSupply"
+          }
+        }
+      }
+    },
+    {
+      "id": "ShipAirSupply_Summoner",
+      "worldDropBehavior": "interactive",
+      "parent": "BuildingSummoner_Base",
+      "gameName": "舱内供气器",
+      "description": "安装在飞船地板本地格上，随所属船体移动、旋转与保存。",
+      "durability": 180,
+      "maxDurability": 180,
+      "amount": 1,
+      "weight": 25,
+      "volume": 15,
+      "stackable": false,
+      "canBePickedUp": true,
+      "tags": [
+        "35",
+        "InventoryGroup.Chemistry"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Chemistry/GasTankBlock_Steel/GasTankBlock_Steel_Idle.png"
+      },
+      "health": {
+        "hasHp": true,
+        "hp": 60,
+        "maxHp": 60,
+        "defense": {
+          "physical": 8
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 0.7,
+            "y": 0.7
+          },
+          "edgeRadius": 0
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"State\":0,\"Role\":0,\"BuildingPrefabId\":\"ShipAirSupply\",\"SummonerPrefabId\":\"ShipAirSupply_Summoner\",\"FootprintWidth\":1,\"FootprintHeight\":1}",
+            "Type": 0
+          },
+          "parameters": {
+            "LightOcclusionMode": "None",
+            "CastSunShadow": false
+          }
+        },
+        "机械扭矩模块": {
+          "prefab": "Module_MechanicalNode",
+          "id": "机械扭矩模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "DefinitionId": "FluidPipe"
+          }
+        },
+        "ship-part": {
+          "id": "船体部件模块",
+          "prefab": "Module_ShipPart",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "Configuration": {
+              "Kind": "Equipment",
+              "Layer": 0,
+              "StructuralMassKg": 25,
+              "Health": 180,
+              "SealsAtmosphere": false,
+              "BlocksMovement": true,
+              "MinimumPressureKPa": 0,
+              "MaximumPressureKPa": 650,
+              "PressureDamagePerKPaSecond": 0.01,
+              "MinimumTemperatureCelsius": -250,
+              "MaximumTemperatureCelsius": 600,
+              "TemperatureDamagePerCelsiusSecond": 0.02,
+              "PowerWatts": 60,
+              "SupplyMolesPerSecond": 8
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "ShipFiber",
+      "parent": "BuildingBody_Base",
+      "gameName": "光纤-建筑",
+      "description": "安装在飞船地板本地格上，随所属船体移动、旋转与保存。",
+      "durability": 30,
+      "maxDurability": 30,
+      "amount": 1,
+      "weight": 0.2,
+      "volume": 15,
+      "stackable": false,
+      "canBePickedUp": false,
+      "tags": [
+        "35",
+        "InventoryGroup.Chemistry"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_10]",
+        "color": {
+          "r": 0.35,
+          "g": 0.85,
+          "b": 1.0,
+          "a": 1.0
+        }
+      },
+      "health": {
+        "hasHp": true,
+        "hp": 30,
+        "maxHp": 30,
+        "defense": {
+          "physical": 8
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 0.95,
+            "y": 0.95
+          },
+          "edgeRadius": 0
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"State\":0,\"Role\":1,\"BuildingPrefabId\":\"ShipFiber\",\"SummonerPrefabId\":\"ShipFiber_Summoner\",\"FootprintWidth\":1,\"FootprintHeight\":1}",
+            "Type": 0
+          },
+          "parameters": {
+            "LightOcclusionMode": "None",
+            "CastSunShadow": false
+          }
+        },
+        "ship-part": {
+          "id": "船体部件模块",
+          "prefab": "Module_ShipPart",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "Configuration": {
+              "Kind": "Fiber",
+              "Layer": 5,
+              "StructuralMassKg": 0.2,
+              "Health": 30,
+              "SealsAtmosphere": false,
+              "BlocksMovement": false,
+              "MinimumPressureKPa": 0,
+              "MaximumPressureKPa": 650,
+              "PressureDamagePerKPaSecond": 0.01,
+              "MinimumTemperatureCelsius": -250,
+              "MaximumTemperatureCelsius": 600,
+              "TemperatureDamagePerCelsiusSecond": 0.02,
+              "PowerWatts": 0,
+              "SupplyMolesPerSecond": 0
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "ShipFiber_Summoner",
+      "worldDropBehavior": "interactive",
+      "parent": "BuildingSummoner_Base",
+      "gameName": "光纤",
+      "description": "安装在飞船地板本地格上，随所属船体移动、旋转与保存。",
+      "durability": 30,
+      "maxDurability": 30,
+      "amount": 1,
+      "weight": 0.2,
+      "volume": 15,
+      "stackable": false,
+      "canBePickedUp": true,
+      "tags": [
+        "35",
+        "InventoryGroup.Chemistry"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_10]",
+        "color": {
+          "r": 0.35,
+          "g": 0.85,
+          "b": 1.0,
+          "a": 1.0
+        }
+      },
+      "health": {
+        "hasHp": true,
+        "hp": 60,
+        "maxHp": 60,
+        "defense": {
+          "physical": 8
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 0.7,
+            "y": 0.7
+          },
+          "edgeRadius": 0
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"State\":0,\"Role\":0,\"BuildingPrefabId\":\"ShipFiber\",\"SummonerPrefabId\":\"ShipFiber_Summoner\",\"FootprintWidth\":1,\"FootprintHeight\":1}",
+            "Type": 0
+          },
+          "parameters": {
+            "LightOcclusionMode": "None",
+            "CastSunShadow": false
+          }
+        },
+        "机械扭矩模块": {
+          "prefab": "Module_MechanicalNode",
+          "id": "机械扭矩模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "DefinitionId": "FluidPipe"
+          }
+        },
+        "ship-part": {
+          "id": "船体部件模块",
+          "prefab": "Module_ShipPart",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "Configuration": {
+              "Kind": "Fiber",
+              "Layer": 5,
+              "StructuralMassKg": 0.2,
+              "Health": 30,
+              "SealsAtmosphere": false,
+              "BlocksMovement": false,
+              "MinimumPressureKPa": 0,
+              "MaximumPressureKPa": 650,
+              "PressureDamagePerKPaSecond": 0.01,
+              "MinimumTemperatureCelsius": -250,
+              "MaximumTemperatureCelsius": 600,
+              "TemperatureDamagePerCelsiusSecond": 0.02,
+              "PowerWatts": 0,
+              "SupplyMolesPerSecond": 0
+            }
+          }
+        }
+      }
+    }
+  ]
+}

@@ -107,6 +107,32 @@ public sealed class FluidInventory
         if (!CanRemove(batch)) { batch = default; return false; }
         Remove(batch); return true;
     }
+    // 配方先检查全部组分，确认可扣后再一次性提交，避免只烧掉一种反应物。
+    public bool TryTakeRecipe(IReadOnlyList<FluidRequirement> requirements, out List<FluidBatch> batches)
+    {
+        batches = new List<FluidBatch>();
+        if (requirements == null || requirements.Count == 0) return false;
+        var totals = new Dictionary<(string, FluidPhase), decimal>();
+        foreach (FluidRequirement requirement in requirements)
+        {
+            if (requirement.Moles <= 0m || requirement.Phase != FluidPhase.Gas && requirement.Phase != FluidPhase.Liquid ||
+                !Catalog.TryGet(requirement.FluidId, out _)) return false;
+            var key = (requirement.FluidId, requirement.Phase);
+            totals.TryGetValue(key, out decimal previous);
+            totals[key] = previous + requirement.Moles;
+        }
+        foreach (var requirement in totals)
+        {
+            if (GetAvailableMoles(requirement.Key.Item1, requirement.Key.Item2) < requirement.Value) { batches.Clear(); return false; }
+            FluidBatch batch = CurrentBatch(requirement.Key.Item1,
+                requirement.Key.Item2 == FluidPhase.Gas ? requirement.Value : 0m,
+                requirement.Key.Item2 == FluidPhase.Liquid ? requirement.Value : 0m);
+            if (!CanRemove(batch)) { batches.Clear(); return false; }
+            batches.Add(batch);
+        }
+        foreach (FluidBatch batch in batches) Remove(batch);
+        return true;
+    }
     public void ClearGas(out List<FluidBatch> batches)
     {
         batches = new List<FluidBatch>();

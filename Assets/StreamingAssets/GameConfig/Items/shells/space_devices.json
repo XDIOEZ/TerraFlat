@@ -1,0 +1,100 @@
+{
+  "schemaVersion": 1,
+  "items": [
+    {
+      "id": "SpaceCultivator",
+      "parent": "BuildingBody_Base",
+      "gameName": "培育仓-建筑",
+      "description": "四个独立种植槽可同时培育不同的非树作物。接通电力和真实灌溉水后生长，水桶与管道共用同一水箱；肥料可选，缺电或缺水暂停。交互可收获、换种子或补水。",
+      "weight": 45,
+      "volume": 80,
+      "stackable": false,
+      "canBePickedUp": false,
+      "tags": ["35", "Space.Device", "InventoryGroup.WorkFacilities"],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]",
+        "collider": { "type": "BoxCollider2D", "enabled": true, "isTrigger": false, "size": { "x": 0.95, "y": 0.95 }, "offset": { "x": 0, "y": 0 } }
+      },
+      "health": {
+        "hasHp": true,
+        "hp": 120,
+        "maxHp": 120,
+        "defense": { "physical": 5 },
+        "collider": { "type": "BoxCollider2D", "enabled": true, "isTrigger": true, "size": { "x": 0.95, "y": 0.95 }, "offset": { "x": 0, "y": 0 } },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": { "BitData": "{\"Version\":3,\"State\":0,\"Role\":1,\"BuildingPrefabId\":\"SpaceCultivator\",\"SummonerPrefabId\":\"SpaceCultivator_Summoner\"}", "Type": 0 },
+          "parameters": { "LightOcclusionMode": "None", "CastSunShadow": true }
+        },
+        "cultivator": {
+          "prefab": "Module_Cultivator",
+          "id": "培育器模块",
+          "enabled": true,
+          "data": { "BitData": [], "Type": 0 },
+          "parameters": {
+            "Configuration": {
+              "PlotCount": 4,
+              "HarvestSlotCount": 9,
+              "PanelId": "UI_Cultivator",
+              "WaterLitersPerSecondPerPlot": 0.002,
+              "WaterFluidIds": ["core:pure_water", "core:filtered_water", "core:drinkable_water"],
+              "FertilizerItemIds": ["Fertilizer", "Humus"],
+              "FertilizerSecondsPerItem": 600,
+              "FertilizerGrowthMultiplier": 1.5
+            }
+          }
+        },
+        "机械扭矩模块": {
+          "prefab": "Module_MechanicalNode",
+          "id": "机械扭矩模块",
+          "enabled": true,
+          "data": { "BitData": [], "Type": 0 },
+          "parameters": { "DefinitionId": "SpaceCultivator" }
+        }
+      }
+    },
+    {
+      "id": "SpaceCultivator_Summoner",
+      "parent": "BuildingSummoner_Base",
+      "worldDropBehavior": "interactive",
+      "gameName": "培育仓",
+      "description": "可放在地面或飞船地板上的四槽培育仓，需要电力与水；拆回后保留全部种子、植株进度、水和收获物。",
+      "weight": 45,
+      "volume": 80,
+      "stackable": false,
+      "canBePickedUp": true,
+      "tags": ["35", "Space.Device", "InventoryGroup.WorkFacilities"],
+      "visual": { "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]" },
+      "health": {
+        "hasHp": true,
+        "hp": 120,
+        "maxHp": 120,
+        "defense": { "physical": 5 },
+        "collider": { "type": "BoxCollider2D", "enabled": true, "isTrigger": true, "size": { "x": 0.95, "y": 0.95 }, "offset": { "x": 0, "y": 0 } },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": { "BitData": "{\"Version\":3,\"State\":0,\"Role\":0,\"BuildingPrefabId\":\"SpaceCultivator\",\"SummonerPrefabId\":\"SpaceCultivator_Summoner\"}", "Type": 0 }
+        },
+        "机械扭矩模块": {
+          "prefab": "Module_MechanicalNode",
+          "id": "机械扭矩模块",
+          "enabled": true,
+          "data": { "BitData": [], "Type": 0 },
+          "parameters": { "DefinitionId": "SpaceCultivator" }
+        }
+      }
+    }
+  ]
+}
