@@ -288,8 +288,8 @@
     "WaterElectrolyzer_Summoner": "Water Electrolyzer",
     "OxygenBurner": "Oxygen Burner",
     "OxygenBurner_Summoner": "Oxygen Burner",
-    "GasEngine": "Hydrogen Gas Engine",
-    "GasEngine_Summoner": "Hydrogen Gas Engine",
+    "GasEngine": "Hydrogen Energy Engine",
+    "GasEngine_Summoner": "Hydrogen Energy Engine",
     "FilterResidue": "Impurities",
     "WaterTrough": "Water Trough",
     "WaterTrough_Building": "Water Trough"

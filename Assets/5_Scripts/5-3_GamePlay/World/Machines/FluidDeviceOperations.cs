@@ -208,7 +208,7 @@ public static class FluidDeviceOperations
         FluidMachineReactionDefinition reaction = node.Definition.Fluid.Reactions[0];
         double extent = work / (reaction.ChemicalJoulesPerReaction * reaction.MechanicalEfficiency);
         if (!CommitFluidReaction(node, reaction, extent, 0, work))
-            throw new InvalidOperationException("气体发动机已供能但实际燃料预算无法提交。");
+            throw new InvalidOperationException("氢能发动机已供能但实际燃料预算无法提交。");
         GetFluidState(node).Status = "正在燃烧供能";
     }
     public static void AdvanceFluidReaction(MachineEntity node, float seconds)

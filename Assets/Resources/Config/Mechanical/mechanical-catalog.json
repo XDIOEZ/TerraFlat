@@ -1175,24 +1175,16 @@
       "CastVisualShadows": true,
       "Fluid": {
         "Kind": "engine",
+        "SingleGas": false,
         "Ports": [
           {
-            "Id": "hydrogen-in",
+            "Id": "gas-in",
             "Chamber": "main",
             "Direction": 2,
             "Mode": "input",
             "Phase": "gas",
             "Outlet": false,
-            "FluidId": "core:hydrogen"
-          },
-          {
-            "Id": "oxygen-in",
-            "Chamber": "oxygen",
-            "Direction": 3,
-            "Mode": "input",
-            "Phase": "gas",
-            "Outlet": false,
-            "FluidId": "core:oxygen"
+            "FluidId": ""
           },
           {
             "Id": "water-out",
@@ -1218,7 +1210,7 @@
               },
               {
                 "FluidId": "core:oxygen",
-                "Chamber": "oxygen",
+                "Chamber": "main",
                 "Phase": "gas",
                 "Moles": 0.5
               }

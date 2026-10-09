@@ -499,7 +499,7 @@
     },
     {
       "id": "core:chemistry_GasEngine",
-      "displayName": "气体发动机",
+      "displayName": "氢能发动机",
       "recipeType": "crafting",
       "inputRule": "unordered",
       "requiredStation": "workbench",
