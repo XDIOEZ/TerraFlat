@@ -26,8 +26,6 @@ public sealed class FluidMachineDefinition
     public double OverpressureDamagePerSecond = 5;
     public double DefaultDisconnectPressureKPa = 450;
     public double DefaultReconnectPressureKPa = 400;
-    public double OxygenServingsPerFuelUnit = .02;
-    public double OxygenTemperatureBonus = 300;
     public bool SingleGas = true;
     public bool SingleLiquid = true;
     public bool CombineAdjacent;

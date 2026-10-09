@@ -25,7 +25,8 @@ public static partial class MachineWorld
         TryReserveAndMove(edge, source, preferred == FluidPhase.Gas ? FluidPhase.Liquid : FluidPhase.Gas, budget, seconds);
     }
 
-    private static bool TryReserveAndMove(FluidNetworkGraph.Edge edge, FluidInventory source, FluidPhase phase, double budget, float seconds)
+    private static bool TryReserveAndMove(FluidNetworkGraph.Edge edge, FluidInventory source, FluidPhase phase, double budget, float seconds,
+        CombustionSupportRequest combustion = null)
     {
         if (!PortAcceptsPhase(edge.SourcePort, phase) || edge.TargetPort != null && !PortAcceptsPhase(edge.TargetPort, phase)) return false;
         FluidMachineState state = GetFluidState(edge.Source);
@@ -43,19 +44,21 @@ public static partial class MachineWorld
             ? FluidUnits.StandardLitersToMol((decimal)edge.Source.Definition.Fluid.BatchStandardLiters) : FluidInventory.MaximumMoles;
         bool alreadyReserved = source.GetReservation(reservationId) != null;
         if (!source.TryReserve(reservationId, phase, maximum, out FluidBatch batch)) return false;
+        if (combustion != null && (batch.FluidId != FluidIds.Oxygen || batch.GasMoles <= 0 || batch.LiquidMoles > 0)) return false;
         if (phase == FluidPhase.Liquid && !alreadyReserved)
         {
             FluidOutputReservation reservation = source.GetReservation(reservationId);
             reservation.LiquidMoles = Math.Min(reservation.LiquidMoles, FluidUnits.ServingsToMol(source.Catalog.Find(batch.FluidId),
                 (decimal)edge.Source.Definition.Fluid.BatchLiquidServings));
         }
-        return MoveReservedFluid(edge, source, reservationId, budget, seconds);
+        return MoveReservedFluid(edge, source, reservationId, budget, seconds, combustion);
     }
 
     private static string FluidEdgeReservationId(FluidNetworkGraph.Edge edge, FluidPhase phase)
         => edge.Id + (phase == FluidPhase.Gas ? ":gas" : ":liquid");
 
-    private static bool MoveReservedFluid(FluidNetworkGraph.Edge edge, FluidInventory source, string reservationId, double budget, float seconds)
+    private static bool MoveReservedFluid(FluidNetworkGraph.Edge edge, FluidInventory source, string reservationId, double budget, float seconds,
+        CombustionSupportRequest combustion = null)
     {
         FluidOutputReservation reservation = source.GetReservation(reservationId);
         if (reservation == null || reservation.TotalMoles <= 0) return false;
@@ -108,7 +111,7 @@ public static partial class MachineWorld
             else
             {
                 if (industrialTarget) return BlockFluid(edge, "工业管网接口未连通");
-                if (!EmitReservedFluid(edge, source, reservationId, maximum, out moved)) return BlockFluid(edge, "地表不能接收这份液体");
+                if (!EmitReservedFluid(edge, source, reservationId, maximum, out moved, combustion != null)) return BlockFluid(edge, "地表不能接收这份液体");
             }
         }
         else
@@ -139,11 +142,14 @@ public static partial class MachineWorld
         state.BlockedPorts.Remove(edge.SourcePort.Id); state.Status = "输送中";
         state.LastFlowDirection = edge.Direction;
         state.LastFlowPhase = moved.GasMoles > 0 && moved.LiquidMoles > 0 ? "both" : moved.GasMoles > 0 ? "gas" : "liquid";
+        if (combustion != null && moved.FluidId == FluidIds.Oxygen && moved.GasMoles > 0)
+            combustion.TrySupply(combustion.FuelUnits, MachineCatalog.Settings.OxygenOutletHeatBonus);
         StateChanged(edge.Source);
         return true;
     }
 
-    private static bool EmitReservedFluid(FluidNetworkGraph.Edge edge, FluidInventory source, string reservationId, decimal maximum, out FluidBatch moved)
+    private static bool EmitReservedFluid(FluidNetworkGraph.Edge edge, FluidInventory source, string reservationId, decimal maximum, out FluidBatch moved,
+        bool consumedByCombustion = false)
     {
         moved = default;
         FluidOutputReservation reservation = source.GetReservation(reservationId);
@@ -160,7 +166,7 @@ public static partial class MachineWorld
                     (float)(FluidUnits.MolToServings(substance, moved.LiquidMoles) * (decimal)liquid.WorldWater.DepthPerServing), out _))
             { source.Restore(before); moved = default; return false; }
         }
-        if (moved.GasMoles > 0) RecordAtmosphereEmission(edge.Source, FluidInventory.CreateBatch(substance, moved.GasMoles, 0, source.IsEmpty
+        if (moved.GasMoles > 0 && !consumedByCombustion) RecordAtmosphereEmission(edge.Source, FluidInventory.CreateBatch(substance, moved.GasMoles, 0, source.IsEmpty
             ? BatchTemperature(substance, moved) : source.GetTemperatureKelvin()));
         return true;
     }
@@ -205,6 +211,28 @@ public static partial class MachineWorld
         foreach (FluidComponentState component in inventory.State.Components)
             if (component.GasMoles + component.LiquidMoles > 0)
                 yield return FluidInventory.CreateBatch(inventory.Catalog.Find(component.FluidId), component.GasMoles, component.LiquidMoles, temperature);
+    }
+    #endregion
+
+    #region 出气口氧气助燃
+    internal static bool TrySupplyOutletOxygen(MachineEntity node, CombustionSupportRequest request)
+    {
+        if (request.IsSupplied || !Contains(node) || !IsFluidActive(node) || fluidGraph == null) return false;
+        FluidMachineState state = GetFluidState(node);
+        FluidDeviceBehavior behavior = GetFluidDeviceBehavior(node);
+        if (state.Ruptured || !string.IsNullOrEmpty(state.RuptureBudgetId) || !behavior.EmitsToEnvironment ||
+            !behavior.PortsEnabled(node) || !behavior.CanOutput(node, out _)) return false;
+        foreach (FluidNetworkGraph.Edge edge in fluidGraph.Edges)
+        {
+            if (edge.Source != node || !edge.Environment || !edge.SourcePort.Outlet ||
+                !PortAcceptsPhase(edge.SourcePort, FluidPhase.Gas) || !fluidGraph.CanRoute(edge) ||
+                NormalizeMachineCell(node.Cell + MechanicalNetworkGraph.Directions[edge.Direction]) != request.Receiver.Entity.Cell) continue;
+            FluidInventory inventory = GetFluidInventory(node, edge.SourcePort.Chamber);
+            if (!TryGetFluidTransferBudget(inventory, out _, out double budget) || budget <= 0) continue;
+            // 助燃复用实际气包和本轮吞吐结算，不从混合库存中特意抽氧，也不重复排入大气。
+            if (TryReserveAndMove(edge, inventory, FluidPhase.Gas, budget, request.Seconds, request) && request.IsSupplied) return true;
+        }
+        return false;
     }
     #endregion
 

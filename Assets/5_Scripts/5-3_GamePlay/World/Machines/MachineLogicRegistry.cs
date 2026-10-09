@@ -78,7 +78,6 @@ public static class MachineLogicRegistry
         AddFluidDevice("engine", new FluidEngineBehavior());
         AddFluidDevice("mechanical-probe", new FluidPressureProbeBehavior(false));
         AddFluidDevice("electronic-probe", new FluidPressureProbeBehavior(true));
-        AddFluidDevice("oxygen-burner", new FluidOxygenBurnerBehavior());
     }
 
     private static void Add(string id, Type authoring, Func<MachineEntity, MachineLogic> factory)

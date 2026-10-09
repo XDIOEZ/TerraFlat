@@ -31,7 +31,8 @@ public sealed class FluidMachineLogic : MachineLogic, IContainerPortProvider
     {
         State = MachineWorld.GetFluidState(entity);
         EnsureDeviceInventories();
-        combustionSourceLease = MachineWorld.RegisterCombustionSupportSource(entity, () => Behavior as ICombustionSupportSource);
+        combustionSourceLease = MachineWorld.RegisterCombustionSupportSource(entity,
+            () => Behavior as ICombustionSupportSource ?? (Behavior.EmitsToEnvironment ? FluidOutletCombustionSupport.Instance : null));
     }
     private void EnsureDeviceInventories()
     {

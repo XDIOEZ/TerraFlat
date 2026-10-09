@@ -10,7 +10,8 @@
     "ManualHoldThresholdSeconds": 0.25,
     "ManualPulseSeconds": 0.2,
     "ManualReserveSeconds": 0.2,
-    "BellowsHeatBonus": 500,
+    "BellowsHeatBonus": 300,
+    "OxygenOutletHeatBonus": 500,
     "PressureExplosionRadiusScale": 0.035,
     "MaximumPressureExplosionRadius": 12,
     "PressureExplosionDamageScale": 0.7,
@@ -1137,32 +1138,6 @@
         "NominalVoltage": 120,
         "PowerWatts": 3000,
         "DemandProvider": "fluid"
-      }
-    },
-    {
-      "Id": "OxygenBurner",
-      "Kind": "shaft",
-      "Ports": "none",
-      "LogicId": "fluid",
-      "PlacementLayer": 0,
-      "BlocksMovement": true,
-      "CastVisualShadows": true,
-      "Fluid": {
-        "Kind": "oxygen-burner",
-        "Ports": [
-          {
-            "Id": "oxygen-in",
-            "Chamber": "main",
-            "Direction": 2,
-            "Mode": "input",
-            "Phase": "gas",
-            "Outlet": false,
-            "FluidId": "core:oxygen"
-          }
-        ],
-        "VolumeLiters": 2,
-        "OxygenServingsPerFuelUnit": 0.5,
-        "OxygenTemperatureBonus": 300
       }
     },
     {

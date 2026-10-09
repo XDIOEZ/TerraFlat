@@ -204,7 +204,8 @@ public class FurnaceLogic : MachineLogic, ICombustionSupportReceiver
     {
         float baseLimit = Data.MaxTemperature > 0f ? Mathf.Min(Data.MaxTemperature, Data.MaxTemperatureLimit) : Data.MaxTemperatureLimit;
         float bellowsBonus = Mathf.Clamp01(airflow) * MachineCatalog.Settings.BellowsHeatBonus;
-        return Mathf.Min(Data.MaxTemperatureLimit + bellowsBonus, baseLimit + bellowsBonus + combustionHeatBonus);
+        // 不同助燃方式只取最高加成，统一加在基础温度上限之后。
+        return baseLimit + Mathf.Max(bellowsBonus, combustionHeatBonus);
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
@@ -412,7 +413,7 @@ public class FurnaceLogic : MachineLogic, ICombustionSupportReceiver
     /// <summary>炉体只接收已结算的助燃效果，不查找设备或修改来源库存。</summary>
     public void AcceptCombustionSupport(float temperatureBonus)
     {
-        if (MachineDefinition.NonNegative(temperatureBonus)) combustionHeatBonus = temperatureBonus;
+        if (MachineDefinition.NonNegative(temperatureBonus)) combustionHeatBonus = Mathf.Max(combustionHeatBonus, temperatureBonus);
     }
 
     private void RefreshRecipe()

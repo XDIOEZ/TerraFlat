@@ -37,27 +37,12 @@ public sealed class CombustionSupportRequest
     #endregion
 }
 
-public sealed class FluidOxygenBurnerBehavior : FluidDeviceBehavior, ICombustionSupportSource
+internal sealed class FluidOutletCombustionSupport : ICombustionSupportSource
 {
-    #region 氧气助燃供给
+    #region 氧气出口助燃
+    public static readonly FluidOutletCombustionSupport Instance = new();
     public bool TrySupply(MachineEntity source, CombustionSupportRequest request)
-    {
-        if (request.IsSupplied || !MachineWorld.IsFluidActive(source) || !MachineWorld.Contains(source)) return false;
-        FluidMachineState state = MachineWorld.GetFluidState(source);
-        if (state.Ruptured || !string.IsNullOrEmpty(state.RuptureBudgetId) ||
-            MachineWorld.NormalizeMachineCell(source.Cell + MechanicalNetworkGraph.Directions[source.RotationQuarterTurns]) != request.Receiver.Entity.Cell) return false;
-        FluidMachineDefinition definition = source.Definition.Fluid;
-        if (!FluidMachineDefinition.Positive(definition.OxygenServingsPerFuelUnit) ||
-            !double.IsFinite(definition.OxygenTemperatureBonus) || definition.OxygenTemperatureBonus < 0 ||
-            definition.OxygenTemperatureBonus > float.MaxValue) return false;
-        FluidInventory oxygen = MachineWorld.GetFluidInventory(source);
-        decimal requested = FluidUnits.StandardLitersToMol((decimal)(request.FuelUnits * definition.OxygenServingsPerFuelUnit));
-        decimal actual = Math.Min(requested, oxygen.GetAvailableMoles(FluidIds.Oxygen, FluidPhase.Gas));
-        if (actual <= 0 || !oxygen.TryTakeExact(FluidIds.Oxygen, FluidPhase.Gas, actual, out _)) return false;
-        MachineWorld.ConsumeFluidStepStock(oxygen, FluidIds.Oxygen, actual, 0);
-        MachineWorld.StateChanged(source);
-        return request.TrySupply(request.FuelUnits * (float)(actual / requested), (float)definition.OxygenTemperatureBonus);
-    }
+        => MachineWorld.TrySupplyOutletOxygen(source, request);
     #endregion
 }
 

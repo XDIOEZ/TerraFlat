@@ -169,7 +169,8 @@ public sealed class MechanicalSettings
     public float ManualHoldThresholdSeconds = 0.25f; // 手摇轮按住达到此时间后开始供能，短按用于打开面板。
     public float ManualPulseSeconds = 0.2f; // 按住交互时维持的最小动力缓冲。
     public float ManualReserveSeconds = 0.2f; // 松开后允许残留的最大动力缓冲。
-    public float BellowsHeatBonus = 500f; // 风箱在额定转速下给予炉体温度上限的最高增量。
+    public float BellowsHeatBonus = 300f; // 风箱在额定转速下给予炉体温度上限的最高增量。
+    public float OxygenOutletHeatBonus = 500f; // 氧气出口实际向炉体供气时给予温度上限的增量。
     public float PressureExplosionRadiusScale = .035f;
     public float MaximumPressureExplosionRadius = 12f;
     public float PressureExplosionDamageScale = .7f;
@@ -181,6 +182,7 @@ public sealed class MechanicalSettings
             !MachineDefinition.Positive(ReferenceRpm) || !MachineDefinition.Positive(WattsPerTorqueRpm) || !MachineDefinition.Positive(ManualHoldThresholdSeconds) ||
             !MachineDefinition.Positive(ManualPulseSeconds) ||
             !MachineDefinition.Positive(ManualReserveSeconds) || !MachineDefinition.NonNegative(BellowsHeatBonus) ||
+            !MachineDefinition.NonNegative(OxygenOutletHeatBonus) ||
             !MachineDefinition.Positive(PressureExplosionRadiusScale) || !MachineDefinition.Positive(MaximumPressureExplosionRadius) ||
             MaximumPressureExplosionRadius > 4096f || !MachineDefinition.Positive(PressureExplosionDamageScale) ||
             !MachineDefinition.Positive(MaximumPressureExplosionDamage) || MaximumPressureExplosionDamage > 1000000000f)
