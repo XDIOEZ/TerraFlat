@@ -17,6 +17,10 @@ internal static class MachinePanelBuiltIns
         MachinePanelFactoryRegistry.AddBuiltIn("hand-drill", CreateHandDrill);
         MachinePanelFactoryRegistry.AddBuiltIn("vessel", entity => new VesselMachinePanelSession((VesselLogic)entity.Logic));
         MachinePanelFactoryRegistry.AddBuiltIn("fluid", entity => new FluidMachinePanelSession((FluidMachineLogic)entity.Logic));
+        MachinePanelFactoryRegistry.AddBuiltIn("electric-heater", entity =>
+            new MechanicalPanelSession(entity.Definition.Heating.PanelId, entity, null, null,
+                () => entity.Logic.Status, () => entity.Logic.ActionLabel, () => entity.Logic.CanAct,
+                refreshStatusPeriodically: true));
     }
 
     private static IMachinePanelSession CreateManualProcessing(MachineEntity entity)

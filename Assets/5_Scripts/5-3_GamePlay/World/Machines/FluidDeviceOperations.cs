@@ -184,21 +184,6 @@ public static class FluidDeviceOperations
         return low;
     }
 
-    public static void AdvanceHeatExchanger(MachineEntity node, float seconds)
-    {
-        FluidInventory hot = GetFluidInventory(node, "hot"), cold = GetFluidInventory(node, "cold");
-        if (hot.IsEmpty || cold.IsEmpty) { GetFluidState(node).Status = "请接入两侧实际流体"; return; }
-        var hotBefore = hot.State.Clone(); var coldBefore = cold.State.Clone();
-        double transferred = FluidThermodynamics.ExchangeHeat(hot, cold, node.Definition.Fluid.HeatConductanceWattsPerKelvin, seconds);
-        FluidPhaseChangeResult a = FluidThermodynamics.AdvancePhaseChange(hot, node.Definition.Fluid.VolumeLiters,
-            node.Definition.Fluid.MinimumGasSpaceLiters, seconds, node.Definition.Fluid.MaximumPhaseMolesPerSecond, true, true);
-        FluidPhaseChangeResult b = FluidThermodynamics.AdvancePhaseChange(cold, node.Definition.Fluid.VolumeLiters,
-            node.Definition.Fluid.MinimumGasSpaceLiters, seconds, node.Definition.Fluid.MaximumPhaseMolesPerSecond, true, true);
-        UpdateFluidPhaseWarning(node, "hot", a); UpdateFluidPhaseWarning(node, "cold", b);
-        if (a.IsBlocked || b.IsBlocked)
-        { hot.Restore(hotBefore); cold.Restore(coldBefore); GetFluidState(node).Status = a.BlockedReason ?? b.BlockedReason; return; }
-        GetFluidState(node).Status = Math.Abs(transferred) > .000001 ? "正在交换热量" : "两侧温度已接近";
-    }
     #endregion
 
     #region 多产物可靠反应与燃料机械能

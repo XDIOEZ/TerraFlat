@@ -464,7 +464,10 @@
         "CombineAdjacent": true,
         "SingleGas": false,
         "SingleLiquid": false,
-        "ThroughputLitersPerSecond": 10
+        "ThroughputLitersPerSecond": 10,
+        "TrackAmbientTemperature": true,
+        "BodyTemperatureChangePerSecond": 1,
+        "HeatConductanceWattsPerKelvin": 20
       }
     },
     {
@@ -522,7 +525,10 @@
         "CombineAdjacent": true,
         "SingleGas": false,
         "SingleLiquid": false,
-        "ThroughputLitersPerSecond": 10
+        "ThroughputLitersPerSecond": 10,
+        "TrackAmbientTemperature": true,
+        "BodyTemperatureChangePerSecond": 1,
+        "HeatConductanceWattsPerKelvin": 20
       }
     },
     {
@@ -787,55 +793,23 @@
       }
     },
     {
-      "Id": "FluidHeatExchanger",
+      "Id": "ElectricHeater",
       "Kind": "shaft",
       "Ports": "none",
-      "LogicId": "fluid",
+      "LogicId": "electric-heater",
       "PlacementLayer": 0,
       "BlocksMovement": true,
       "CastVisualShadows": true,
-      "Fluid": {
-        "Kind": "heat-exchanger",
-        "Ports": [
-          {
-            "Id": "hot-in",
-            "Chamber": "hot",
-            "Direction": 2,
-            "Mode": "input",
-            "Phase": "both",
-            "Outlet": false,
-            "FluidId": ""
-          },
-          {
-            "Id": "hot-out",
-            "Chamber": "hot",
-            "Direction": 0,
-            "Mode": "output",
-            "Phase": "both",
-            "Outlet": true,
-            "FluidId": ""
-          },
-          {
-            "Id": "cold-in",
-            "Chamber": "cold",
-            "Direction": 3,
-            "Mode": "input",
-            "Phase": "both",
-            "Outlet": false,
-            "FluidId": ""
-          },
-          {
-            "Id": "cold-out",
-            "Chamber": "cold",
-            "Direction": 1,
-            "Mode": "output",
-            "Phase": "both",
-            "Outlet": true,
-            "FluidId": ""
-          }
-        ],
-        "VolumeLiters": 10,
-        "HeatConductanceWattsPerKelvin": 20
+      "Electrical": {
+        "Role": "consumer",
+        "Connection": "cell",
+        "NominalVoltage": 120,
+        "PowerWatts": 1200
+      },
+      "Heating": {
+        "Radius": 3,
+        "CenterTemperatureOffset": 60,
+        "PanelId": "UI_Mechanical"
       }
     },
     {

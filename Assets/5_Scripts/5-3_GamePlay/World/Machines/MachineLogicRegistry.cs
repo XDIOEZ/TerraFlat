@@ -64,6 +64,7 @@ public static class MachineLogicRegistry
         Add("mortar", typeof(Mod_Mortar), entity => new MortarLogic(entity));
         Add("vessel", typeof(Mod_WaterVessel), entity => new VesselLogic(entity));
         Add("fluid", null, entity => new FluidMachineLogic(entity));
+        Add("electric-heater", null, entity => new ElectricHeaterLogic(entity));
         AddFluidDevice("pipe", new FluidTransitBehavior());
         AddFluidDevice("outlet", new FluidOutletBehavior());
         AddFluidDevice("valve", new FluidValveBehavior());
@@ -72,7 +73,6 @@ public static class MachineLogicRegistry
         AddFluidDevice("gas-pump", new FluidGasPumpBehavior());
         AddFluidDevice("liquid-pump", new FluidLiquidPumpBehavior());
         AddFluidDevice("compressor", new FluidCompressorBehavior());
-        AddFluidDevice("heat-exchanger", new FluidHeatExchangerBehavior());
         AddFluidDevice("filter", new FluidFilterBehavior());
         AddFluidDevice("distiller", new FluidDistillerBehavior());
         AddFluidDevice("electrolyzer", new FluidReactionBehavior());

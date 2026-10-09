@@ -20,6 +20,8 @@ public sealed class FluidMachineDefinition
     public double WorkJoulesPerStandardLiter = 5;
     public double CompressionEfficiency = .7;
     public double HeatConductanceWattsPerKelvin = 20;
+    public bool TrackAmbientTemperature;
+    public float BodyTemperatureChangePerSecond = 1;
     public double MaximumPhaseMolesPerSecond = 10;
     public double OverpressureDamagePerSecond = 5;
     public double DefaultDisconnectPressureKPa = 450;
@@ -49,6 +51,8 @@ public sealed class FluidMachineDefinition
             DefaultReconnectPressureKPa < 0 || DefaultReconnectPressureKPa >= DefaultDisconnectPressureKPa ||
             !Positive(FilterWorkPerItem) || Ports == null || Reactions == null)
             throw new ArgumentException("工业流体设备配置无效：" + ownerId);
+        if (TrackAmbientTemperature && !MachineDefinition.Positive(BodyTemperatureChangePerSecond))
+            throw new ArgumentException("储罐传热速率必须为有限正数：" + ownerId);
         var ids = new HashSet<string>(StringComparer.Ordinal);
         foreach (FluidMachinePortDefinition port in Ports)
         {

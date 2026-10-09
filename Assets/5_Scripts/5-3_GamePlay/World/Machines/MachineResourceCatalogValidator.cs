@@ -41,6 +41,12 @@ public sealed class MachineResourceCatalogValidator : IIncrementalResourceCatalo
                 if (definition == null) continue;
                 definition.Validate();
                 if (definition.Fluid != null) ValidateFluidDefinition(resources, definition, errors);
+                if (definition.Heating != null)
+                {
+                    GameObject panel = resources.GetPrefab(definition.Heating.PanelId, false);
+                    if (panel == null || panel.GetComponent<MechanicalPanelView>() == null)
+                        errors.Add("电热器正式面板或视图缺失：" + definition.Id);
+                }
                 try { MachineCombatBridge.ValidateHealth(pair.Value.Health); }
                 catch (InvalidOperationException error) { errors.Add("机器受击配置无效：" + pair.Key + "，" + error.Message); }
                 if (!string.IsNullOrWhiteSpace(definition.LogicId) && !MachineLogicRegistry.IsRegistered(definition.LogicId))

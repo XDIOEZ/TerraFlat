@@ -577,7 +577,7 @@
       "id": "GasTankBlock_Iron",
       "parent": "BuildingBody_Base",
       "gameName": "铁气罐方块-建筑",
-      "description": "铁气罐方块。通过配置面板查看真实气液库存、方向和动力；空设备默认真空。",
+      "description": "铁气罐方块。通过配置面板查看真实气液库存、方向和动力；空设备默认真空。罐体会逐渐跟随所在位置的环境温度，并将热量传给内部气体和液体。",
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,
@@ -649,7 +649,7 @@
       "worldDropBehavior": "interactive",
       "parent": "BuildingSummoner_Base",
       "gameName": "铁气罐方块",
-      "description": "铁气罐方块。通过配置面板查看真实气液库存、方向和动力；空设备默认真空。",
+      "description": "铁气罐方块。通过配置面板查看真实气液库存、方向和动力；空设备默认真空。罐体会逐渐跟随所在位置的环境温度，并将热量传给内部气体和液体。",
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,
@@ -720,7 +720,7 @@
       "id": "GasTankBlock_Steel",
       "parent": "BuildingBody_Base",
       "gameName": "钢气罐方块-建筑",
-      "description": "钢气罐方块。通过配置面板查看真实气液库存、方向和动力；空设备默认真空。",
+      "description": "钢气罐方块。通过配置面板查看真实气液库存、方向和动力；空设备默认真空。罐体会逐渐跟随所在位置的环境温度，并将热量传给内部气体和液体。",
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,
@@ -792,7 +792,7 @@
       "worldDropBehavior": "interactive",
       "parent": "BuildingSummoner_Base",
       "gameName": "钢气罐方块",
-      "description": "钢气罐方块。通过配置面板查看真实气液库存、方向和动力；空设备默认真空。",
+      "description": "钢气罐方块。通过配置面板查看真实气液库存、方向和动力；空设备默认真空。罐体会逐渐跟随所在位置的环境温度，并将热量传给内部气体和液体。",
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,
@@ -1861,10 +1861,10 @@
       }
     },
     {
-      "id": "FluidHeatExchanger",
+      "id": "ElectricHeater",
       "parent": "BuildingBody_Base",
-      "gameName": "换热器-建筑",
-      "description": "换热器。通过配置面板查看真实气液库存、方向和动力；空设备默认真空。",
+      "gameName": "电热器-建筑",
+      "description": "通电后加热周围环境，停电后停止加热；可用于为附近气罐升温。",
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,
@@ -1874,7 +1874,7 @@
       "canBePickedUp": false,
       "tags": [
         "35",
-        "InventoryGroup.Chemistry"
+        "InventoryGroup.Electrical"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
@@ -1909,7 +1909,7 @@
           "id": "建筑模块",
           "enabled": true,
           "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"FluidHeatExchanger\",\"SummonerPrefabId\":\"FluidHeatExchanger_Summoner\"}",
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"ElectricHeater\",\"SummonerPrefabId\":\"ElectricHeater_Summoner\"}",
             "Type": 0
           },
           "parameters": {
@@ -1926,17 +1926,17 @@
             "Type": 0
           },
           "parameters": {
-            "DefinitionId": "FluidHeatExchanger"
+            "DefinitionId": "ElectricHeater"
           }
         }
       }
     },
     {
-      "id": "FluidHeatExchanger_Summoner",
+      "id": "ElectricHeater_Summoner",
       "worldDropBehavior": "interactive",
       "parent": "BuildingSummoner_Base",
-      "gameName": "换热器",
-      "description": "换热器。通过配置面板查看真实气液库存、方向和动力；空设备默认真空。",
+      "gameName": "电热器",
+      "description": "通电后加热周围环境，停电后停止加热；可用于为附近气罐升温。",
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,
@@ -1946,7 +1946,7 @@
       "canBePickedUp": true,
       "tags": [
         "35",
-        "InventoryGroup.Chemistry"
+        "InventoryGroup.Electrical"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
@@ -1981,7 +1981,7 @@
           "id": "建筑模块",
           "enabled": true,
           "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"FluidHeatExchanger\",\"SummonerPrefabId\":\"FluidHeatExchanger_Summoner\"}",
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"ElectricHeater\",\"SummonerPrefabId\":\"ElectricHeater_Summoner\"}",
             "Type": 0
           },
           "parameters": {
@@ -1998,7 +1998,7 @@
             "Type": 0
           },
           "parameters": {
-            "DefinitionId": "FluidHeatExchanger"
+            "DefinitionId": "ElectricHeater"
           }
         }
       }

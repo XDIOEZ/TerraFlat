@@ -228,6 +228,7 @@ public sealed class MachineDefinition
     public MechanicalAxisPortVisualDefinition AxisPortVisual; // 标准连接杆端口由目录统一控制。
     public MachineTransportDefinition Transport; // 输送能力独立于物品名称，MOD 可以配置自己的传送设备。
     public FluidMachineDefinition Fluid; // 气液统一覆盖层和工业腔体能力。
+    public ElectricHeaterDefinition Heating; // 周围加热能力独立于气液库存与管网。
     public ElectricalDefinition Electrical; // 可选电气能力；同一机器可同时属于机械网与电网。
     public int Layer => PlacementLayer >= 0 ? PlacementLayer : Kind == "bridge" ? 1 : 0;
     public bool HasMechanicalPorts => Ports == "axis" || Ports == "all";
@@ -296,6 +297,9 @@ public sealed class MachineDefinition
         Transport?.Validate(Id, HasMechanicalPorts);
         Fluid?.Validate(Id);
         Electrical?.Validate(Id);
+        Heating?.Validate(Id, Electrical);
+        if (LogicId == "electric-heater" && Heating == null)
+            throw new ArgumentException("电热器缺少加热配置：" + Id);
         if (FormerIds != null)
             foreach (string id in FormerIds)
                 if (string.IsNullOrWhiteSpace(id) || id == Id) throw new ArgumentException("机械旧身份无效：" + Id);

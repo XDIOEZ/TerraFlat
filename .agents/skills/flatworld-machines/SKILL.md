@@ -45,6 +45,7 @@ description: "Use when: 定位或修改 FlatWorld 的机器世界、工作台、
 - 新增设施必须通过资源目录预检：稳定身份、主领域工厂、必要库存/燃料配置与正式面板。预检不创建 MachineLogic、面板或世界节点，不污染 F5 候选会话。
 - 工业气液共用 `MachineWorld.Fluid*.cs` 的固定步长和库存预算；管层为 2，机械/电子测压层为 4/5。输送方向来自真实输入与独立出气口，不按压差自然流动；新料不能同轮穿过无限管格，测压探针必须切断真实动力边。
 - 流体设备差异由 `MachineLogicRegistry.RegisterFluidDevice` 登记 `FluidDeviceBehavior`，具体事务放在 `FluidDeviceOperations`；Kind 只作策略键，调度、构图和动力层读取策略能力。持有并释放注册租约，替换策略必须让拓扑和能力缓存失效。
+- 周围电加热由独立 `ElectricHeaterLogic` 消费电网实际 `ElectricalSuppliedWatts`，向现有局部温度场发布按供电比例缩放的热源；不挂气液腔体或伪造管口，断电、休眠、拆除和远端停机快照都撤销来源。
 - 炉体只接收 `ICombustionSupportReceiver` 请求；供给侧实现 `ICombustionSupportSource` 并随领域实例生灭登记/注销。先扣真实供给，再完成一次请求，同时扣本轮库存预算；相邻液体容器按 `IContainerPortProvider/ILiquidTransferPort` 发现，不能要求具体 `VesselLogic`。
 - 接口发现的工业管网成员必须继续走正式图边，不能用普通容器事务直抽，也不能回退抽地表；否则会绕过冻结库存与吞吐预算，让新液体同轮穿透多段。
 - 同材组合罐只由稳定主成员保存共享库存、随机种子和各口预留，其余块引用主身份；成员变化同步主快照。超压固定本轮受损成员，破裂沿 `PressureExplosionQueue` 的有限预算结算，清空队列后才解锁重建。

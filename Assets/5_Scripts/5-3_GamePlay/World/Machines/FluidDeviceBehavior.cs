@@ -99,6 +99,12 @@ public sealed class FluidStorageBehavior : FluidDeviceBehavior
 {
     #region 共享储存
     public override bool IsSharedStorage => true;
+    public override void AppendDescription(MachineEntity node, StringBuilder text)
+    {
+        FluidMachineState state = MachineWorld.GetFluidState(node);
+        if (node.Definition.Fluid.TrackAmbientTemperature && state.BodyTemperatureInitialized)
+            text.Append("\n").Append(FlatWorldLocalizationService.GetUiFormat("罐体温度 {0:0.##}℃", state.BodyTemperatureCelsius));
+    }
     #endregion
 }
 
@@ -142,13 +148,6 @@ public sealed class FluidCompressorBehavior : FluidDeviceBehavior
         else return false;
         return true;
     }
-    #endregion
-}
-
-public sealed class FluidHeatExchangerBehavior : FluidDeviceBehavior
-{
-    #region 热交换
-    public override void Advance(MachineEntity node, float seconds) => FluidDeviceOperations.AdvanceHeatExchanger(node, seconds);
     #endregion
 }
 

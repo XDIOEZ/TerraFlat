@@ -38,6 +38,7 @@ public static partial class MachineWorld
         foreach (FluidTankGroup group in fluidTankGroups)
         {
             if (!group.Active || group.Members.Count == 0) continue;
+            AdvanceFluidTankTemperature(group, seconds);
             FluidPhaseChangeResult phase = FluidThermodynamics.AdvancePhaseChange(group.Inventory, group.TotalVolume, group.MinimumGasSpace, seconds,
                 group.Members[0].Definition.Fluid.MaximumPhaseMolesPerSecond, false, false);
             foreach (MachineEntity member in group.Members) UpdateFluidPhaseWarning(member, "main", phase);
@@ -63,6 +64,37 @@ public static partial class MachineWorld
             if (victim.State.Hp <= 0) broken.Add(victim);
         }
         foreach (MachineEntity node in broken) HandleFluidTankZeroHp(node);
+    }
+
+    /// <summary>各罐体读取当地温度层，共享库存只汇总传热后推进一次。</summary>
+    private static void AdvanceFluidTankTemperature(FluidTankGroup group, float seconds)
+    {
+        TemperatureMgr manager = TemperatureMgr.Instance;
+        if (manager == null) return;
+        double conductance = 0, weightedTemperature = 0;
+        foreach (MachineEntity member in group.Members)
+        {
+            FluidMachineDefinition definition = member.Definition.Fluid;
+            FluidMachineState state = GetFluidState(member);
+            if (!member.Active || !definition.TrackAmbientTemperature || state.Ruptured ||
+                !string.IsNullOrEmpty(state.RuptureBudgetId) ||
+                !manager.TryGetAmbientTemperature(member.Position, out float ambient)) continue;
+            ambient = Mathf.Max(-273.149f, ambient);
+            float previous = state.BodyTemperatureCelsius;
+            bool initialized = state.BodyTemperatureInitialized;
+            state.BodyTemperatureCelsius = initialized
+                ? ThermalRuntime.AdvanceTowards(previous, ambient, definition.BodyTemperatureChangePerSecond, seconds)
+                : ambient;
+            state.BodyTemperatureInitialized = true;
+            if (!initialized || previous != state.BodyTemperatureCelsius) StateChanged(member);
+            conductance += definition.HeatConductanceWattsPerKelvin;
+            weightedTemperature += state.BodyTemperatureCelsius * definition.HeatConductanceWattsPerKelvin;
+        }
+        if (conductance <= 0 || group.Inventory.IsEmpty) return;
+        double heat = FluidThermodynamics.ExchangeHeatWithEnvironment(
+            group.Inventory, weightedTemperature / conductance + 273.15, conductance, seconds);
+        if (Math.Abs(heat) > .000001)
+            foreach (MachineEntity member in group.Members) StateChanged(member);
     }
 
     public static bool CanDismantleFluid(MachineEntity node, out string reason)

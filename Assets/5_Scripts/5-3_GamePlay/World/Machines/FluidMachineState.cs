@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using MemoryPack;
 
-/// <summary>工业设备和各管格只保存真实库存及操作状态，压力与温度始终由库存推导。</summary>
+/// <summary>工业设备保存库存和操作状态；罐体独立记录温度，流体温度与压力仍由库存内能推导。</summary>
 [Serializable, MemoryPackable]
 public partial class FluidMachineState
 {
@@ -36,6 +36,8 @@ public partial class FluidMachineState
     public string RuptureBudgetId = "";
     public int LastFlowDirection = -1;
     public string LastFlowPhase = "";
+    public bool BodyTemperatureInitialized;
+    public float BodyTemperatureCelsius;
     #endregion
 }
 

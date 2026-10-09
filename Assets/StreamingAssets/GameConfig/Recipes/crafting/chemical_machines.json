@@ -381,8 +381,8 @@
       "actions": []
     },
     {
-      "id": "core:chemistry_FluidHeatExchanger",
-      "displayName": "换热器",
+      "id": "core:chemistry_ElectricHeater",
+      "displayName": "电热器",
       "recipeType": "crafting",
       "inputRule": "unordered",
       "requiredStation": "workbench",
@@ -402,7 +402,7 @@
       ],
       "outputs": [
         {
-          "itemId": "FluidHeatExchanger_Summoner",
+          "itemId": "ElectricHeater_Summoner",
           "amount": 1
         }
       ],
