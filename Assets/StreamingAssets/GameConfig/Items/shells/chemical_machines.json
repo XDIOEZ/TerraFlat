@@ -2578,8 +2578,8 @@
     {
       "id": "FilterResidue",
       "parent": "BasicItem_Base",
-      "gameName": "过滤残渣",
-      "description": "过滤或电解留下的固体残渣。",
+      "gameName": "杂质",
+      "description": "过滤或电解分离出的固体杂质。",
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,
