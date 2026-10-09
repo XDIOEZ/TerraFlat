@@ -10,10 +10,11 @@ public sealed class IndustrialLiquidTransferPort : ContainerPortBase, ILiquidTra
     private readonly string chamber;
     private readonly string reservationId;
     private FluidInventory Inventory => MachineWorld.GetFluidInventory(logic.Entity, chamber);
-    public IndustrialLiquidTransferPort(FluidMachineLogic logic, FluidMachinePortDefinition port, string reservationId = null)
+    public IndustrialLiquidTransferPort(FluidMachineLogic logic, FluidMachinePortDefinition port, string reservationId = null,
+        ContainerAccessKind access = ContainerAccessKind.Manual | ContainerAccessKind.Machine | ContainerAccessKind.Mod)
         : base("machine:" + logic.Entity.Id, port.Id, new ContainerPortConfiguration
         {
-            Id = port.Id, Type = "core:industrial_liquid", Reach = 2,
+            Id = port.Id, Type = "core:industrial_liquid", Reach = 2, Access = access,
             Direction = port.Mode == "input" ? ContainerPortDirection.Input : port.Mode == "output" ? ContainerPortDirection.Output : ContainerPortDirection.Both,
             LiquidIds = string.IsNullOrEmpty(port.FluidId) ? Array.Empty<string>() : new[] { FluidCatalog.Default.Find(port.FluidId).LiquidId }
         }, () => MachineWorld.Contains(logic.Entity) && ReferenceEquals(logic.Entity.Logic, logic),

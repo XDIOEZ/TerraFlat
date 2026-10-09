@@ -6,7 +6,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-/// <summary>工业面板只绑定正式控件，所有配置和排气操作都送回机器权威入口。</summary>
+/// <summary>工业面板只绑定正式控件，配置和容器取液均沿现有权威命令提交。</summary>
 public sealed class FluidMachinePanelSession : IMachinePanelSession
 {
     #region 正式面板绑定
@@ -17,6 +17,8 @@ public sealed class FluidMachinePanelSession : IMachinePanelSession
     private readonly Button apply, phase, rotate;
     private readonly Inventory input, output;
     private Player actor;
+    private Mod_WaterVessel HeldLiquidVessel => actor?.itemMods?.GetMod_ByID<Mod_HotBar>(ModText.Hotbar)?.CurentSelectItem
+        ?.itemMods?.GetMod_ByID<Mod_WaterVessel>(Mod_WaterVessel.ModuleId);
     private Coroutine refresh;
     private bool disposed;
     public bool IsAlive => !disposed && panel != null;
@@ -73,7 +75,12 @@ public sealed class FluidMachinePanelSession : IMachinePanelSession
         phase.gameObject.SetActive(logic.Definition.Kind == "outlet");
         panel.Open(); Refresh();
     }
-    private void Act() { MachineWorld.RequestOperation(logic.Entity, "work", "", actor); Refresh(); }
+    private void Act()
+    {
+        if (logic.LiquidResiduePort != null) logic.TransferLiquidResidueTo(HeldLiquidVessel, actor);
+        else MachineWorld.RequestOperation(logic.Entity, "work", "", actor);
+        Refresh();
+    }
     private void ApplySettings()
     {
         string operation = logic.Definition.Kind is "mechanical-probe" or "electronic-probe" ? "fluid.probe" :
@@ -95,6 +102,7 @@ public sealed class FluidMachinePanelSession : IMachinePanelSession
         view.Status.text = logic.Status;
         string caption = logic.ActionLabel;
         view.SetActionVisible(!string.IsNullOrEmpty(caption));
+        view.ActionButton.interactable = logic.LiquidResiduePort == null || logic.CanTransferLiquidResidueTo(HeldLiquidVessel, actor);
         MechanicalPanelView.SetButtonCaption(view.ActionButton, caption);
         MechanicalPanelView.SetButtonCaption(phase, logic.State.OutletPhase == "gas" ? "只输出气体" : logic.State.OutletPhase == "liquid" ? "只输出液体" : "输出气体和液体");
         rotate.interactable = !logic.State.Ruptured && string.IsNullOrEmpty(logic.State.RuptureBudgetId);

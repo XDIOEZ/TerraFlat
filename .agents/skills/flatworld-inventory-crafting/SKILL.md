@@ -31,7 +31,7 @@ description: "Use when: 定位或修改 FlatWorld 的背包、槽位、快捷栏
 
 - F5 原位应用模块参数不能重置生产运行态；`Mod_Production.ApplyResourceConfiguration` 复用按产物身份匹配的 `RestoreRuntimeProgress`，保留累计生产时间、次数和初始化标记，不重新 Load 或改写库存。未变化的参数集合不重新构造。
 
-- 库存液体原料通过 `LiquidDefinition.sourceItemId` 唯一映射到液体；每个完整物品对应一份，容器拖入先校验同液体与整份容量，再从真实所属库存调用 `TryConsumeFromSlot`，数量不得超过 `InventoryDragTransaction.DraggedAmount`。不能把液体原料伪装成容器变体；已有进食进度的原料不能再按完整一份装液。容器液量只保存整数份，任何不足一份的转移都不结算。
+- 游戏没有独立液体物品：液体只保存为容器/机器液腔的真实组分，或世界 Liquid 层，不创建可堆叠、拾取的液体原料及图标。容器间转液复用 `ILiquidTransferPort` 的原子事务，保留小数尾量；固体投料使用 `ingredientReactions`，不能恢复“一个物品换一份液体”的映射。
 
 - 固定/多物料配方继续以 Recipe JSON 为真源；单物料通用加工以物品 `processing` 为真源，由 `ItemProcessingResolver` 适配成临时 `RuntimeRecipe` 后继续走 `CraftingService`。通用加工可用 `minLevel/maxLevel` 声明发出者等级闭区间；有区间时缺少等级、低于下界或高于上界都拒绝。物品发出能力写在 `processingCapabilities.<capability>.level`，不要拿战斗伤害或资源采集 `HarvestTier` 代替加工等级。旧 CookRecipe/熔炼 Recipe SO 只作热加工 MOD 兼容，普通合成不再载入旧 SO。
 - 配方输出可通过可选 `durabilityMultiplier` 为同一产物定义赋予实例耐久品质；倍率必须为大于 0 的有限数，由 `CraftedDurabilityQuality` 在预览与真实提交共用的产物创建阶段应用，并写入 `ItemData.CraftedDurabilityMultiplier`。禁止为单个配方另写按配方 ID 硬编码的输出规则，否则容易与通用倍率重复叠乘。

@@ -2922,6 +2922,14 @@ MonoBehaviour:
     m_Localized: "Natural Geography Size"
     m_Metadata:
       m_Items: []
+  - m_Id: 17033120237740072
+    m_Localized: "Fill Held Vessel"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740073
+    m_Localized: "Drag in another vessel to transfer liquid; drag the vessel to pour."
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

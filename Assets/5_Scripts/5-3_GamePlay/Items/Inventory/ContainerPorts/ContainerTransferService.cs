@@ -115,34 +115,6 @@ public static class ContainerTransferService
         finally { submitting = false; }
     }
     [MethodImpl(MethodImplOptions.NoInlining)]
-    public static ContainerTransferResult TransferIngredient(IItemTransferPort source, ILiquidTransferPort target,
-        ContainerTransferContext context, int requestedItems, string itemId, string liquidId)
-    {
-        if (!ValidateRequest(source, target, context, out var failure)) return new(failure);
-        if (requestedItems <= 0) return new(ContainerTransferFailure.InvalidRequest);
-        ItemData data = source.PeekItem(itemId);
-        if (data == null) return new(ContainerTransferFailure.Empty);
-        if (!source.Configuration.AllowsItem(data) || !target.Configuration.AllowsLiquid(liquidId)) return new(ContainerTransferFailure.FilterRejected);
-        int amount = Math.Min(requestedItems, Math.Min((int)Math.Floor(data.Stack.Amount + .0001f),
-            (int)Math.Floor(target.GetReceivableServings(liquidId, requestedItems) + .0001f)));
-        if (amount <= 0 || (source.Configuration.WholeBatch || target.Configuration.WholeBatch) && amount < requestedItems) return new(ContainerTransferFailure.Full);
-        object a = source.CaptureState(), b = target.CaptureState();
-        long av = source.StateVersion, bv = target.StateVersion;
-        submitting = true;
-        bool committed = false;
-        try
-        {
-            if (!source.IsValid || !target.IsValid) return new(ContainerTransferFailure.StaleReference);
-            if (source.StateVersion != av || target.StateVersion != bv) return new(ContainerTransferFailure.Changed);
-            if (!source.ExtractItems(data, amount, out _) || !target.InsertLiquid(new LiquidTransferBatch(liquidId, amount, 20f), amount))
-            { source.RestoreState(a); target.RestoreState(b); return new(ContainerTransferFailure.CommitFailed); }
-            var result = new ContainerTransferResult(ContainerTransferFailure.None, liquidId, servings: amount);
-            committed = true; PublishCommitted(source, target, result); return result;
-        }
-        catch (Exception) { if (!committed) { source.RestoreState(a); target.RestoreState(b); } throw; }
-        finally { submitting = false; }
-    }
-    [MethodImpl(MethodImplOptions.NoInlining)]
     public static void PublishResult(ContainerTransferResult result) => Transferred?.Invoke(result);
     private static void PublishCommitted(IContainerPort source, IContainerPort target, ContainerTransferResult result)
     {

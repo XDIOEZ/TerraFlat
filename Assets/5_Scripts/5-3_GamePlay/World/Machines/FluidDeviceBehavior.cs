@@ -167,17 +167,11 @@ public sealed class FluidFilterBehavior : FluidReactionBehavior
     #endregion
 }
 
-/// <summary>电解器复用反应事务，并把液体副产物按整份转入原料槽。</summary>
+/// <summary>电解液体留在副产物腔，残渣槽只接收反应分离出的固体杂质。</summary>
 public sealed class FluidElectrolyzerBehavior : FluidReactionBehavior
 {
     #region 电解副产物
     public override bool StoresResidue => true;
-    public override void Advance(MachineEntity node, float seconds)
-    {
-        FluidDeviceOperations.PackageLiquidResidue(node);
-        base.Advance(node, seconds);
-        FluidDeviceOperations.PackageLiquidResidue(node);
-    }
     #endregion
 }
 

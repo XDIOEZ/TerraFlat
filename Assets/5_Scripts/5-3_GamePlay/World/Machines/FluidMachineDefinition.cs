@@ -6,6 +6,7 @@ using System.Collections.Generic;
 public sealed class FluidMachineDefinition
 {
     #region 设备与端口配置
+    public const string LiquidResiduePortId = "liquid-residue";
     public string Kind = "pipe";
     public string MaterialId = "iron";
     public double VolumeLiters = 1;
@@ -32,7 +33,7 @@ public sealed class FluidMachineDefinition
     public bool AllowPortableTank;
     public FluidMachinePortDefinition[] Ports = Array.Empty<FluidMachinePortDefinition>();
     public FluidMachineReactionDefinition[] Reactions = Array.Empty<FluidMachineReactionDefinition>();
-    public string LiquidResidueFluidId = ""; // 液体副产物按其液体定义映射为整份库存原料。
+    public string LiquidResidueFluidId = ""; // 液体副产物保留在独立腔内，仅通过容器端口取液。
     public string LiquidResidueChamber = "byproduct";
     public string FilterMaterialItemId = "Cloth";
     public double FilterWorkPerItem = 100;
@@ -62,6 +63,8 @@ public sealed class FluidMachineDefinition
         foreach (FluidMachineReactionDefinition reaction in Reactions) reaction.Validate(ownerId);
         if (!string.IsNullOrEmpty(LiquidResidueFluidId) && string.IsNullOrWhiteSpace(LiquidResidueChamber))
             throw new ArgumentException("液体副产物缺少库存腔身份：" + ownerId);
+        if (!string.IsNullOrEmpty(LiquidResidueFluidId) && ids.Contains(LiquidResiduePortId))
+            throw new ArgumentException("工业管道口与液体副产物取液口身份冲突：" + ownerId);
         if (CombineAdjacent && (SingleGas || SingleLiquid))
             throw new ArgumentException("组合储罐必须允许真实混合库存：" + ownerId);
     }

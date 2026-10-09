@@ -57,7 +57,7 @@ description: "Use when: 定位或修改 FlatWorld 的机器世界、工作台、
 - 火堆与高炉/熔炉统一视为可交互炉类机械：`Mod_Furnace -> FurnaceLogic -> MachineWorld`；火堆是 `Ports=none` 的普通设施，不另建火堆专用交互运行时。炉体面板的输入/输出/燃料槽数量与命名必须和库存模板一致。
 - dynamicY 视觉用 `SpatialInteractionRegistry.Register` 绑定 `MachineWorld.GetOrCreateInteractionTarget` 返回的同一数据目标，光标命中按实际图层范围，描边由 `IWorldInteractionPreview` 通知现有视觉；停用/卸载须注销和清理描边，不为预览逐帧查询机械图，也不把库存或面板搬回视觉代理。
 
-- 水电解器仅一个液体输入口和一个混合气体输出口；各气体组分写入同一输出腔，按现有气包规则从共用出口抽取，不另造混合气身份。允许水源逐项声明：淡水产氢氧，盐水/海水产氢氯及独立碱液；碱液用 LiquidResidueFluidId/Chamber 保留真实流体，经 LiquidDefinition.sourceItemId 映射整份库存原料，保留不足一份的余量，沿原子事务取出，不增加管道口。
+- 水电解器仅一个液体输入口和一个混合气体输出口；各气体组分写入同一输出腔，按现有气包规则从共用出口抽取，不另造混合气身份。水源逐项声明：淡水产氢氧，盐水/海水产氢氯及碱液。`LiquidResidueFluidId/Chamber` 声明副产物液腔，手持容器沿 `ILiquidTransferPort` 原子事务取液并保留小数尾量，不新增管道口、不转成库存物品；残渣槽仅收固体杂质。
 - 氢能发动机使用两个独立气体输入管道和一个回收水输出管道；氢气口限定 core:hydrogen 并写入 main 腔，氧气口限定 core:oxygen 并写入 oxygen 腔，按 2:1 摩尔比例消费真实库存。机械轴口独立保留，动力仍按有效负载结算；缺氢、缺氧或回收水无空间时停止消费，不把其他气体当燃料。
 
 ## MOD

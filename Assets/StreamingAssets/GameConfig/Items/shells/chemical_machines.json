@@ -2150,7 +2150,7 @@
       "id": "WaterElectrolyzer",
       "parent": "BuildingBody_Base",
       "gameName": "水电解器-建筑",
-      "description": "通电电解水，淡水产出氢氧混合气，盐水和海水产出氢氯混合气；只有一个进水口和一个出气口，碱液与杂质可从副产物槽取出。",
+      "description": "通电电解水，淡水产出氢氧混合气，盐水和海水产出氢氯混合气；只有一个进水口和一个出气口，碱液保留在副产物液腔，可装入手持液体容器；固体杂质从残渣槽取出。",
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,
@@ -2222,7 +2222,7 @@
       "worldDropBehavior": "interactive",
       "parent": "BuildingSummoner_Base",
       "gameName": "水电解器",
-      "description": "通电电解水，淡水产出氢氧混合气，盐水和海水产出氢氯混合气；只有一个进水口和一个出气口，碱液与杂质可从副产物槽取出。",
+      "description": "通电电解水，淡水产出氢氧混合气，盐水和海水产出氢氯混合气；只有一个进水口和一个出气口，碱液保留在副产物液腔，可装入手持液体容器；固体杂质从残渣槽取出。",
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,
@@ -2450,28 +2450,6 @@
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Chemistry/FilterResidue/FilterResidue_Icon.png"
-      },
-      "modules": {}
-    },
-    {
-      "id": "AlkaliSolution",
-      "parent": "BasicItem_Base",
-      "gameName": "碱液",
-      "description": "盐水电解得到的碱液原料，每份0.25升，可注入液体容器；不能饮用。",
-      "durability": 1,
-      "maxDurability": 1,
-      "amount": 1,
-      "weight": 0.25625,
-      "volume": 0.25,
-      "stackable": true,
-      "canBePickedUp": true,
-      "tags": [
-        "Material",
-        "LiquidIngredient",
-        "InventoryGroup.Chemistry"
-      ],
-      "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Chemistry/AlkaliSolution/AlkaliSolution_Icon.png"
       },
       "modules": {}
     }

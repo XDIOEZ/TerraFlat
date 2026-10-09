@@ -51,7 +51,7 @@ public static partial class RuntimeUIPrefabBuilder
         liquid.Styles = CreateWaterVesselLiquidStyles();
         // 液流必须排在罐体子树之后：短液桥负责跨过厚嘴沿接上罐内水，外部水柱继续从嘴沿向外延伸。
         pour.transform.SetAsLastSibling();
-        CreateSettingsHint(content, "一次只装一种液体；拖入液体原料或其他容器可装液，拖动容器可倾倒。", 64f);
+        CreateSettingsHint(content, "拖入其他容器可转移液体，拖动容器可倾倒。", 64f);
 
         GameObject actions = CreateUIObject("操作列表", content);
         LayoutElement actionsLayout = actions.AddComponent<LayoutElement>();
@@ -134,7 +134,7 @@ public static partial class RuntimeUIPrefabBuilder
     /// <summary>增量同步该面板新增的运行时文案，避免扫描和重写其它 UI Prefab。</summary>
     private static void SyncWaterVesselUiTexts() =>
         FlatWorld.Localization.Editor.FlatWorldLocalizationSetup.SyncRuntimeUiTexts(
-            "蜂蜜", "一次只装一种液体；拖入液体原料或其他容器可装液，拖动容器可倾倒。");
+            "蜂蜜", "拖入其他容器可转移液体，拖动容器可倾倒。");
 
     /// <summary>正式 Prefab 的定向同步与完整重建共用一份样式，避免新增液体只在其中一条路径生效。</summary>
     private static WaterVesselLiquidGraphic.LiquidStyle[] CreateWaterVesselLiquidStyles() => new[]

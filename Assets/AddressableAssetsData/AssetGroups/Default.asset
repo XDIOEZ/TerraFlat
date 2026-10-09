@@ -17,12 +17,6 @@ MonoBehaviour:
     m_SerializedData: []
   m_GUID: 47b73bec22f621a498a1748af8eb38da
   m_SerializeEntries:
-  - m_GUID: f15db146a516ef84389ea27242f01ae2
-    m_Address: Assets/6_Art/Generated/Chemistry/AlkaliSolution/AlkaliSolution_Icon.png
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - ItemSprite
-    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 7eef1c5ee25a2c842b14531f283ab19d
     m_Address: Assets/6_Art/Generated/Chemistry/ElectricHeater/ElectricHeater_Idle.png
     m_ReadOnly: 0

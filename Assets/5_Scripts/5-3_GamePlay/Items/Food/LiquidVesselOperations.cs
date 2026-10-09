@@ -152,24 +152,7 @@ public static class LiquidVesselOperations
         { var vessel = held.itemMods.GetMod_ByID<Mod_WaterVessel>(Mod_WaterVessel.ModuleId); if (vessel != null) return Transfer(vessel, target, actor, targetPortId: targetPortId); }
         if (Mod_WaterVessel.TryRead(source, out _, out _))
             return Transfer(new ColdInventoryLiquidVessel(source, inventory, actor), target, actor, targetPortId: targetPortId);
-        return FillFromIngredient(target, source, actor, inventory, maximum, targetPortId);
-    }
-    private static bool FillFromIngredient(ILiquidVessel target, ItemData source, Item actor, Inventory inventory, float maximum, string targetPortId)
-    {
-        if (float.IsNaN(maximum) || maximum <= 0f) return false;
-        LiquidDefinition liquid = null;
-        foreach (LiquidDefinition candidate in GameRes.ExistingInstance.LiquidDefinitions.Values)
-            if (candidate.SourceItemId == source.IDName) { liquid = candidate; break; }
-        if (liquid == null) return false;
-        foreach (ModuleData module in source.ModuleDataDic.Values)
-            if (module is ModData_FoodData food && FoodObserverStateStore.ReadFloat(FoodObserverStateStore.Find(food, FoodObserverStateStore.ConsumptionStateKey), "EatingProgress", 0f) > 0f) return false;
-        int index = inventory.Data.itemSlots.FindIndex(slot => ReferenceEquals(slot?.itemData, source));
-        if (index < 0) return false;
-        int requested = Mathf.FloorToInt(Mathf.Min(source.Stack.Amount, maximum));
-        var input = new InventoryItemTransferPort(inventory, actor, new ContainerPortConfiguration
-        { Id = "manual-ingredient", Type = "core:inventory", SlotIndices = new[] { index }, Direction = ContainerPortDirection.Output, Access = ContainerAccessKind.Manual, OwnerOnly = true }, allowDraggedSource: true);
-        return ContainerTransferService.TransferIngredient(input, Port(target, ContainerPortDirection.Input, targetPortId), new ContainerTransferContext(actor, ContainerAccessKind.Manual, "liquid-ingredient"),
-            requested, source.IDName, liquid.Id).Success;
+        return false;
     }
     #endregion
 }

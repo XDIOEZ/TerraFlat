@@ -1396,6 +1396,7 @@ GameObject:
   - component: {fileID: 832677932575742041}
   - component: {fileID: 2089802477958504040}
   - component: {fileID: 8404883453580706597}
+  - component: {fileID: 92014644729257135}
   m_Layer: 5
   m_Name: "\u8BF4\u660E\u6587\u672C"
   m_TagString: Untagged
@@ -1450,7 +1451,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "\u624B\u6301\u6C34\u5BB9\u5668\u5BF9\u51C6\u6C34\u57DF\u4F7F\u7528\u5373\u53EF\u88C5\u6C34\uFF1B\u62D6\u52A8\u9676\u7F50\u53EF\u503E\u5012\uFF0C\u810F\u6DE1\u6C34\u53EF\u76F4\u63A5\u559D\uFF0C\u4E5F\u53EF\u70E7\u5F00\uFF0C\u6D77\u6C34\u53EF\u52A0\u70ED\u5236\u76D0\u3002"
+  m_text: "\u62D6\u5165\u5176\u4ED6\u5BB9\u5668\u53EF\u8F6C\u79FB\u6DB2\u4F53\uFF0C\u62D6\u52A8\u5BB9\u5668\u53EF\u503E\u5012\u3002"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: e46c8ef214b33b4408cf60be5c29141c, type: 2}
   m_sharedMaterial: {fileID: 4795396880416652781, guid: e46c8ef214b33b4408cf60be5c29141c, type: 2}
@@ -1539,6 +1540,22 @@ MonoBehaviour:
   m_FlexibleWidth: -1
   m_FlexibleHeight: -1
   m_LayoutPriority: 1
+--- !u!114 &92014644729257135
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9183439526333607070}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 63493df43b5da1e4f93d805de3906388, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  target: {fileID: 2089802477958504040}
+  tableName: FlatWorldUI
+  key: ui.text.B1E1D2C2
+  fallback: "\u62D6\u5165\u5176\u4ED6\u5BB9\u5668\u53EF\u8F6C\u79FB\u6DB2\u4F53\uFF0C\u62D6\u52A8\u5BB9\u5668\u53EF\u503E\u5012\u3002"
 --- !u!1001 &925805700383196795
 PrefabInstance:
   m_ObjectHideFlags: 0

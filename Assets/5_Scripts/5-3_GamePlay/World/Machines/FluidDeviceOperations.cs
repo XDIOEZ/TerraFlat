@@ -356,41 +356,6 @@ public static class FluidDeviceOperations
         return node.Logic is FluidMachineLogic logic && logic.FilterMaterial?.Data.itemSlots[0].itemData?.IDName == node.Definition.Fluid.FilterMaterialItemId
             ? node.Definition.Fluid.FilterWorkPerItem : 0;
     }
-    /// <summary>液体副产物满一份才转入库存原料，余量与温度留在真实流体库存。</summary>
-    public static void PackageLiquidResidue(MachineEntity node)
-    {
-        FluidMachineDefinition configuration = node.Definition.Fluid;
-        GameRes resources = GameRes.ExistingInstance;
-        if (string.IsNullOrEmpty(configuration.LiquidResidueFluidId) || resources == null ||
-            node.Logic is not FluidMachineLogic logic || logic.Residue == null ||
-            !FluidCatalog.Default.TryGet(configuration.LiquidResidueFluidId, out FluidDefinition fluid) ||
-            !resources.TryGetLiquidDefinition(fluid.LiquidId, out LiquidDefinition liquid) ||
-            !resources.TryGetItemDefinition(liquid.SourceItemId, out RuntimeItemDefinition definition)) return;
-        FluidInventory source = GetFluidInventory(node, configuration.LiquidResidueChamber);
-        decimal available = source.GetAvailableMoles(fluid.Id, FluidPhase.Liquid);
-        int requested = (int)Math.Min(int.MaxValue, decimal.Floor(FluidUnits.MolToServings(fluid, available)));
-        if (requested <= 0) return;
-        ItemData item = definition.CreateItemData();
-        item.MatterState.Initialized = true;
-        item.MatterState.TemperatureCelsius = (float)(source.GetTemperatureKelvin() - 273.15);
-        var target = new InventoryItemTransferPort(logic.Residue, null, new ContainerPortConfiguration { Id = "liquid-residue" },
-            () => Contains(node) && ReferenceEquals(node.Logic, logic), "machine:" + node.Id,
-            node.Position, UnityEngine.SceneManagement.SceneManager.GetSceneByName(WorldKey).handle);
-        int amount = target.GetReceivableItems(item, requested);
-        if (amount <= 0) return;
-        FluidInventoryState beforeSource = source.State.Clone();
-        object beforeTarget = target.CaptureState();
-        if (!source.TryTakeExact(fluid.Id, FluidPhase.Liquid, FluidUnits.ServingsToMol(fluid, amount), out _)) return;
-        if (!target.InsertItems(item, amount))
-        {
-            source.Restore(beforeSource);
-            target.RestoreState(beforeTarget);
-            return;
-        }
-        target.PublishState();
-        StateChanged(node);
-    }
-
     private static bool TryGetResiduePort(MachineEntity node, FluidMachineReactionDefinition reaction, out IItemTransferPort port, out ItemData item)
     {
         port = null; item = null;

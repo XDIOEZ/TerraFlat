@@ -62,13 +62,13 @@
   <main>
     <header>
       <p class="eyebrow">FLATWORLD · 美术预览</p>
-      <h1>化工物品美术总览<span>26 款</span></h1>
+      <h1>化工物品美术总览<span>25 款</span></h1>
       <p class="intro">管路、机器、材料和宇航装备的新美术集中在这里。拖动滑杆看不同大小，点击物品查看原图。设备的便携形态与建筑本体合并展示。</p>
     </header>
     <div class="controls" aria-label="预览设置">
       <label class="search"><input id="search" type="search" placeholder="搜索物品名称或 ID" aria-label="搜索物品名称或 ID" autocomplete="off"></label>
       <label class="size-control" for="size">预览大小<input id="size" type="range" min="64" max="224" step="8" value="128"><output id="size-value" for="size">128 px</output></label>
-      <span class="results" id="results" aria-live="polite">显示 26 / 26 款</span>
+      <span class="results" id="results" aria-live="polite">显示 25 / 25 款</span>
     </div>
 
     <section class="art-group" aria-label="管路与储罐">
@@ -169,17 +169,12 @@
     </section>
 
     <section class="art-group" aria-label="材料">
-      <h2>材料<span class="group-count">2 款</span></h2>
+      <h2>材料<span class="group-count">1 款</span></h2>
       <div class="grid">
         <button class="item-card" type="button" data-id="FilterResidue" data-name="杂质" data-src="FilterResidue/FilterResidue_Icon.png" aria-label="查看杂质原图">
           <span class="checker canvas"><img src="FilterResidue/FilterResidue_Icon.png" alt="杂质"><span class="missing" hidden>图片暂未加载</span></span>
           <span class="item-name">杂质</span>
           <span class="item-id">FilterResidue</span>
-        </button>
-        <button class="item-card" type="button" data-id="AlkaliSolution" data-name="碱液" data-src="AlkaliSolution/AlkaliSolution_Icon.png" aria-label="查看碱液原图">
-          <span class="checker canvas"><img src="AlkaliSolution/AlkaliSolution_Icon.png" alt="碱液"><span class="missing" hidden>图片暂未加载</span></span>
-          <span class="item-name">碱液</span>
-          <span class="item-id">AlkaliSolution</span>
         </button>
       </div>
     </section>
@@ -266,7 +261,7 @@
         group.hidden = visible === 0;
         group.querySelector(".group-count").textContent = visible + " 款";
       });
-      document.getElementById("results").textContent = "显示 " + shown + " / 26 款";
+      document.getElementById("results").textContent = "显示 " + shown + " / 25 款";
       document.getElementById("empty").hidden = shown !== 0;
     }
 

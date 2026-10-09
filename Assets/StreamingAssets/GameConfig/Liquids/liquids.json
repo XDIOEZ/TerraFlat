@@ -291,7 +291,6 @@
       "displayName": "碱液",
       "description": "盐水电解留下的氢氧化钠溶液，可作为化工液体原料，不能饮用。",
       "category": "chemical",
-      "sourceItemId": "AlkaliSolution",
       "visualState": "drinkable",
       "primaryColor": {
         "r": 0.73,
@@ -302,7 +301,17 @@
       "viscosity": 1.0,
       "litersPerServing": 0.25,
       "drinkable": false,
-      "hydrationPerServing": 0.0
+      "hydrationPerServing": 0.0,
+      "worldWater": {
+        "spriteAddress": "Assets/6_Art/Tilemap/Grass.png[Water_0]",
+        "materialAddress": "Assets/9_Shaders/Material/Tilemap-Water-Lit.mat",
+        "loadCapacity": 2,
+        "navigationCost": 20000,
+        "shallowMoveSpeedMultiplier": 0.5,
+        "deepMoveSpeedMultiplier": 0.2,
+        "followWaterVisualStyle": true,
+        "depthPerServing": 0.1
+      }
     }
   ]
 }

@@ -20,11 +20,13 @@ public sealed class FluidMachineLogic : MachineLogic, IContainerPortProvider
     public Inventory Residue { get { EnsureDeviceInventories(); return Behavior.StoresResidue ? residue : null; } }
     private long deviceRegistryGeneration = -1;
     private readonly List<IContainerPort> containerPorts = new();
+    private IndustrialLiquidTransferPort liquidResiduePort;
     private long portRegistryGeneration = -1;
+    public ILiquidTransferPort LiquidResiduePort { get { EnsureContainerPorts(); return liquidResiduePort; } }
     public override float TickInterval => .1f;
     public override float Progress01 => (float)Math.Clamp(State.PumpProgress, 0, 1);
     public override string Status => Describe();
-    public override string ActionLabel => Behavior.ActionLabel(Entity);
+    public override string ActionLabel => string.IsNullOrEmpty(Definition.LiquidResidueFluidId) ? Behavior.ActionLabel(Entity) : "装入手持容器";
     public override GameObject PanelPrefab => GameRes.Instance.GetPrefab(Definition.PanelId);
 
     public FluidMachineLogic(MachineEntity entity) : base(entity)
@@ -72,13 +74,52 @@ public sealed class FluidMachineLogic : MachineLogic, IContainerPortProvider
     public void CollectContainerPorts(List<IContainerPort> ports)
     {
         EnsureDeviceInventories();
+        EnsureContainerPorts();
+        ports.AddRange(containerPorts);
+    }
+    private void EnsureContainerPorts()
+    {
         if (portRegistryGeneration != ContainerPortFactoryRegistry.Generation)
         {
             containerPorts.Clear(); portRegistryGeneration = ContainerPortFactoryRegistry.Generation;
+            liquidResiduePort = null;
             foreach (FluidMachinePortDefinition port in Definition.Ports)
                 if (port.Phase != "gas") containerPorts.Add(new IndustrialLiquidTransferPort(this, port));
+            // 取液口只供手动容器事务使用，不参与世界管道或相邻泵拓扑。
+            if (!string.IsNullOrEmpty(Definition.LiquidResidueFluidId))
+            {
+                liquidResiduePort = new IndustrialLiquidTransferPort(this, new FluidMachinePortDefinition
+                {
+                    Id = FluidMachineDefinition.LiquidResiduePortId, Chamber = Definition.LiquidResidueChamber,
+                    Mode = "output", Phase = "liquid", FluidId = Definition.LiquidResidueFluidId
+                }, access: ContainerAccessKind.Manual | ContainerAccessKind.Mod);
+                containerPorts.Add(liquidResiduePort);
+            }
         }
-        ports.AddRange(containerPorts);
+    }
+    #endregion
+
+    #region 副产物容器取液
+    public bool CanTransferLiquidResidueTo(ILiquidVessel target, Player actor)
+    {
+        if (actor == null || target == null || !target.CanOperate(actor)) return false;
+        return ContainerTransferService.PreviewLiquid(LiquidResiduePort,
+            LiquidVesselOperations.Port(target, ContainerPortDirection.Input),
+            new ContainerTransferContext(actor, ContainerAccessKind.Manual, "liquid-residue"), Mod_WaterVessel.AmountStep).Success;
+    }
+    public bool TransferLiquidResidueTo(ILiquidVessel target, Player actor)
+    {
+        if (actor == null || target == null || LiquidResiduePort == null ||
+            !ContainerTransferCommands.TryAddress(actor, target, ContainerPortDirection.Input, out var to)) return false;
+        return ContainerTransferCommands.Request(new ContainerTransferIntent
+        {
+            Operation = "liquid", Amount = Mod_WaterVessel.AmountStep, Target = to,
+            Source = new ContainerPortAddress
+            {
+                MachineId = Entity.Id, ItemGuid = Entity.Snapshot.Guid, ItemId = Entity.Snapshot.IDName,
+                PortId = FluidMachineDefinition.LiquidResiduePortId
+            }
+        }, actor);
     }
     #endregion
 

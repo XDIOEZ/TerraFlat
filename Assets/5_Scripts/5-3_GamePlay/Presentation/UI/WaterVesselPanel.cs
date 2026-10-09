@@ -218,7 +218,7 @@ public sealed class WaterVesselPanel : MonoBehaviour, IPointerDownHandler, IDrag
                RectTransformUtility.RectangleContainsScreenPoint(vesselArt, screenPosition, eventCamera);
     }
 
-    /// <summary>拖入容器时原地转液，拖入液体原料时按本次拖拽数量和剩余容量扣料。</summary>
+    /// <summary>拖入其他容器时通过端口事务转移真实液体。</summary>
     public bool TryAcceptInventoryDrag(InventoryDragTransaction transaction, Vector2 screenPosition, Camera eventCamera)
     {
         if (transaction == null || vessel == null || !vessel.CanOperate(actor) ||
