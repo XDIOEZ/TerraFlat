@@ -763,6 +763,38 @@
       "allowIndustrialTransport": false,
       "phaseChange": null,
       "modelNotes": "首轮恒定热容、恒定液体密度与分压近似；饱和点之间用对数插值，超出已列温度范围不外推。"
+    },
+    {
+      "id": "core:chlorine",
+      "displayName": "氯气",
+      "liquidId": null,
+      "molarMassKgPerMol": 0.070906,
+      "liquidDensityKgPerLiter": 1.5,
+      "gasHeatCapacityJPerMolKelvin": 25.6,
+      "liquidHeatCapacityJPerMolKelvin": 68,
+      "litersPerServing": 0.25,
+      "allowIndustrialTransport": true,
+      "phaseChange": null,
+      "modelNotes": "氯气采用独立物质身份；恒定热容和液相密度为首轮近似参数，未配置饱和曲线时不自动冷凝或汽化。",
+      "sourceReferences": [
+        "https://edu.rsc.org/experiments/electrolysis-of-brine/735.article"
+      ]
+    },
+    {
+      "id": "core:sodium_hydroxide_solution",
+      "displayName": "碱液",
+      "liquidId": "core:sodium_hydroxide_solution",
+      "molarMassKgPerMol": 0.017621925130304913,
+      "liquidDensityKgPerLiter": 1.025,
+      "gasHeatCapacityJPerMolKelvin": 25.3,
+      "liquidHeatCapacityJPerMolKelvin": 73.65577938263364,
+      "litersPerServing": 0.25,
+      "allowIndustrialTransport": true,
+      "phaseChange": null,
+      "modelNotes": "盐水和海水首轮以3.5%氯化钠质量分数近似；每个盐水等效mol完成氯碱反应后保留剩余水与氢氧化钠作为一个碱液等效mol。质量与配方共同核算，密度和热容采用水基近似，不模拟浓度变化或相变。",
+      "sourceReferences": [
+        "https://edu.rsc.org/experiments/electrolysis-of-brine/735.article"
+      ]
     }
   ],
   "atmospheres": [

@@ -167,10 +167,17 @@ public sealed class FluidFilterBehavior : FluidReactionBehavior
     #endregion
 }
 
-public sealed class FluidDistillerBehavior : FluidReactionBehavior
+/// <summary>电解器复用反应事务，并把液体副产物按整份转入原料槽。</summary>
+public sealed class FluidElectrolyzerBehavior : FluidReactionBehavior
 {
-    #region 蒸馏残渣
+    #region 电解副产物
     public override bool StoresResidue => true;
+    public override void Advance(MachineEntity node, float seconds)
+    {
+        FluidDeviceOperations.PackageLiquidResidue(node);
+        base.Advance(node, seconds);
+        FluidDeviceOperations.PackageLiquidResidue(node);
+    }
     #endregion
 }
 

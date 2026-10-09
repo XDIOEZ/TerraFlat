@@ -71,6 +71,16 @@ public sealed class MachineResourceCatalogValidator : IIncrementalResourceCatalo
         foreach (FluidMachinePortDefinition port in fluid.Ports)
             if (!string.IsNullOrEmpty(port.FluidId) && !FluidCatalog.Default.TryGet(port.FluidId, out _))
                 errors.Add("工业端口物质未注册：" + definition.Id + "/" + port.Id + " -> " + port.FluidId);
+        if (!string.IsNullOrEmpty(fluid.LiquidResidueFluidId))
+        {
+            if (!FluidCatalog.Default.TryGet(fluid.LiquidResidueFluidId, out FluidDefinition residueFluid) ||
+                !resources.TryGetLiquidDefinition(residueFluid.LiquidId, out LiquidDefinition liquid) ||
+                !resources.TryGetItemDefinition(liquid.SourceItemId, out RuntimeItemDefinition item))
+                errors.Add("液体副产物缺少流体、液体或库存原料映射：" + definition.Id);
+            else if (Math.Abs(item.CreateItemData().Stack.Weight -
+                (double)residueFluid.LitersPerServing * residueFluid.LiquidDensityKgPerLiter) > .00000001)
+                errors.Add("液体副产物每份原料质量与实际液量不一致：" + definition.Id);
+        }
         foreach (FluidMachineReactionDefinition reaction in fluid.Reactions)
         {
             double inputMass = 0, outputMass = 0;

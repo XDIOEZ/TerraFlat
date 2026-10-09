@@ -4,7 +4,7 @@
     {
       "id": "core:pure_water",
       "displayName": "纯水",
-      "description": "蒸馏后得到的纯水，可饮用并用于化工配方。",
+      "description": "可饮用并用于化工配方的纯水。",
       "category": "water",
       "visualState": "drinkable",
       "primaryColor": { "r": 0.22, "g": 0.55, "b": 0.73, "a": 1.0 },
@@ -26,7 +26,7 @@
     {
       "id": "core:filtered_water",
       "displayName": "过滤水",
-      "description": "经过过滤去掉悬浮杂质的水，仍需煮沸或蒸馏才能完全净化。",
+      "description": "经过过滤去掉悬浮杂质的水，可用于电解。",
       "category": "water",
       "visualState": "drinkable",
       "primaryColor": { "r": 0.26, "g": 0.5, "b": 0.63, "a": 1.0 },
@@ -285,6 +285,24 @@
         "outputItemId": "Ingot_RawIron",
         "outputAmount": 1
       }
+    },
+    {
+      "id": "core:sodium_hydroxide_solution",
+      "displayName": "碱液",
+      "description": "盐水电解留下的氢氧化钠溶液，可作为化工液体原料，不能饮用。",
+      "category": "chemical",
+      "sourceItemId": "AlkaliSolution",
+      "visualState": "drinkable",
+      "primaryColor": {
+        "r": 0.73,
+        "g": 0.84,
+        "b": 0.86,
+        "a": 1.0
+      },
+      "viscosity": 1.0,
+      "litersPerServing": 0.25,
+      "drinkable": false,
+      "hydrationPerServing": 0.0
     }
   ]
 }

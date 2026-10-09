@@ -2,6 +2,7 @@
   "schemaVersion": 1,
   "locale": "en",
   "names": {
+    "AlkaliSolution": "Sodium Hydroxide Solution",
     "Cotton": "Cotton",
     "Cloth": "Cloth",
     "SilkFiber": "Silk Fiber",
@@ -283,8 +284,6 @@
     "ElectricHeater_Summoner": "Electric Heater",
     "FluidFilter": "Fluid Filter",
     "FluidFilter_Summoner": "Fluid Filter",
-    "FluidDistiller": "Fluid Distiller",
-    "FluidDistiller_Summoner": "Fluid Distiller",
     "WaterElectrolyzer": "Water Electrolyzer",
     "WaterElectrolyzer_Summoner": "Water Electrolyzer",
     "OxygenBurner": "Oxygen Burner",

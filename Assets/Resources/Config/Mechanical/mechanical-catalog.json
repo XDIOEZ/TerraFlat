@@ -884,183 +884,6 @@
       }
     },
     {
-      "Id": "FluidDistiller",
-      "Kind": "shaft",
-      "Ports": "none",
-      "LogicId": "fluid",
-      "PlacementLayer": 0,
-      "BlocksMovement": true,
-      "CastVisualShadows": true,
-      "Fluid": {
-        "Kind": "distiller",
-        "Ports": [
-          {
-            "Id": "in",
-            "Chamber": "main",
-            "Direction": 2,
-            "Mode": "input",
-            "Phase": "liquid",
-            "Outlet": false,
-            "FluidId": ""
-          },
-          {
-            "Id": "out",
-            "Chamber": "output",
-            "Direction": 0,
-            "Mode": "output",
-            "Phase": "liquid",
-            "Outlet": true,
-            "FluidId": ""
-          }
-        ],
-        "VolumeLiters": 10,
-        "Reactions": [
-          {
-            "Id": "core:distill_filtered_water",
-            "Inputs": [
-              {
-                "FluidId": "core:filtered_water",
-                "Chamber": "main",
-                "Phase": "liquid",
-                "Moles": 1
-              }
-            ],
-            "Outputs": [
-              {
-                "FluidId": "core:pure_water",
-                "Chamber": "output",
-                "Phase": "liquid",
-                "Moles": 1
-              }
-            ],
-            "MolesPerSecond": 0.05,
-            "RequiredJoulesPerReaction": 45000,
-            "ChemicalJoulesPerReaction": 0,
-            "StoredChemicalJoulesPerReaction": 0,
-            "MechanicalEfficiency": 0.4,
-            "SolidResidueItemId": "",
-            "ResidueItemsPerReaction": 0,
-            "RequiresFilter": false
-          },
-          {
-            "Id": "core:distill_drinkable_water",
-            "Inputs": [
-              {
-                "FluidId": "core:drinkable_water",
-                "Chamber": "main",
-                "Phase": "liquid",
-                "Moles": 1
-              }
-            ],
-            "Outputs": [
-              {
-                "FluidId": "core:pure_water",
-                "Chamber": "output",
-                "Phase": "liquid",
-                "Moles": 1
-              }
-            ],
-            "MolesPerSecond": 0.05,
-            "RequiredJoulesPerReaction": 45000,
-            "ChemicalJoulesPerReaction": 0,
-            "StoredChemicalJoulesPerReaction": 0,
-            "MechanicalEfficiency": 0.4,
-            "SolidResidueItemId": "",
-            "ResidueItemsPerReaction": 0,
-            "RequiresFilter": false
-          },
-          {
-            "Id": "core:distill_dirty_water",
-            "Inputs": [
-              {
-                "FluidId": "core:dirty_water",
-                "Chamber": "main",
-                "Phase": "liquid",
-                "Moles": 1
-              }
-            ],
-            "Outputs": [
-              {
-                "FluidId": "core:pure_water",
-                "Chamber": "output",
-                "Phase": "liquid",
-                "Moles": 0.99
-              }
-            ],
-            "MolesPerSecond": 0.05,
-            "RequiredJoulesPerReaction": 45000,
-            "ChemicalJoulesPerReaction": 0,
-            "StoredChemicalJoulesPerReaction": 0,
-            "MechanicalEfficiency": 0.4,
-            "SolidResidueItemId": "FilterResidue",
-            "ResidueItemsPerReaction": 0.18015300000000017,
-            "RequiresFilter": false
-          },
-          {
-            "Id": "core:distill_salt_water",
-            "Inputs": [
-              {
-                "FluidId": "core:salt_water",
-                "Chamber": "main",
-                "Phase": "liquid",
-                "Moles": 1
-              }
-            ],
-            "Outputs": [
-              {
-                "FluidId": "core:pure_water",
-                "Chamber": "output",
-                "Phase": "liquid",
-                "Moles": 0.965
-              }
-            ],
-            "MolesPerSecond": 0.05,
-            "RequiredJoulesPerReaction": 45000,
-            "ChemicalJoulesPerReaction": 0,
-            "StoredChemicalJoulesPerReaction": 0,
-            "MechanicalEfficiency": 0.4,
-            "SolidResidueItemId": "Salt",
-            "ResidueItemsPerReaction": 0.0063053550000000055,
-            "RequiresFilter": false
-          },
-          {
-            "Id": "core:distill_sea_water",
-            "Inputs": [
-              {
-                "FluidId": "core:sea_water",
-                "Chamber": "main",
-                "Phase": "liquid",
-                "Moles": 1
-              }
-            ],
-            "Outputs": [
-              {
-                "FluidId": "core:pure_water",
-                "Chamber": "output",
-                "Phase": "liquid",
-                "Moles": 0.965
-              }
-            ],
-            "MolesPerSecond": 0.05,
-            "RequiredJoulesPerReaction": 45000,
-            "ChemicalJoulesPerReaction": 0,
-            "StoredChemicalJoulesPerReaction": 0,
-            "MechanicalEfficiency": 0.4,
-            "SolidResidueItemId": "Salt",
-            "ResidueItemsPerReaction": 0.0063053550000000055,
-            "RequiresFilter": false
-          }
-        ]
-      },
-      "Electrical": {
-        "Role": "consumer",
-        "Connection": "cell",
-        "NominalVoltage": 120,
-        "PowerWatts": 3000,
-        "DemandProvider": "fluid"
-      }
-    },
-    {
       "Id": "WaterElectrolyzer",
       "Kind": "shaft",
       "Ports": "none",
@@ -1078,21 +901,12 @@
             "Mode": "input",
             "Phase": "liquid",
             "Outlet": false,
-            "FluidId": "core:pure_water"
-          },
-          {
-            "Id": "hydrogen-out",
-            "Chamber": "hydrogen",
-            "Direction": 0,
-            "Mode": "output",
-            "Phase": "gas",
-            "Outlet": true,
             "FluidId": ""
           },
           {
-            "Id": "oxygen-out",
-            "Chamber": "oxygen",
-            "Direction": 1,
+            "Id": "gas-out",
+            "Chamber": "output",
+            "Direction": 0,
             "Mode": "output",
             "Phase": "gas",
             "Outlet": true,
@@ -1116,27 +930,206 @@
             "Outputs": [
               {
                 "FluidId": "core:hydrogen",
-                "Chamber": "hydrogen",
+                "Chamber": "output",
                 "Phase": "gas",
-                "Moles": 1
+                "Moles": 1.0
               },
               {
                 "FluidId": "core:oxygen",
-                "Chamber": "oxygen",
+                "Chamber": "output",
                 "Phase": "gas",
                 "Moles": 0.5
               }
             ],
             "MolesPerSecond": 0.1,
-            "RequiredJoulesPerReaction": 285830,
+            "RequiredJoulesPerReaction": 285830.0,
             "ChemicalJoulesPerReaction": 0,
-            "StoredChemicalJoulesPerReaction": 241826,
+            "StoredChemicalJoulesPerReaction": 241826.0,
+            "MechanicalEfficiency": 0.4,
+            "SolidResidueItemId": "",
+            "ResidueItemsPerReaction": 0,
+            "RequiresFilter": false
+          },
+          {
+            "Id": "core:filtered_water_electrolysis",
+            "Inputs": [
+              {
+                "FluidId": "core:filtered_water",
+                "Chamber": "main",
+                "Phase": "liquid",
+                "Moles": 1
+              }
+            ],
+            "Outputs": [
+              {
+                "FluidId": "core:hydrogen",
+                "Chamber": "output",
+                "Phase": "gas",
+                "Moles": 1.0
+              },
+              {
+                "FluidId": "core:oxygen",
+                "Chamber": "output",
+                "Phase": "gas",
+                "Moles": 0.5
+              }
+            ],
+            "MolesPerSecond": 0.1,
+            "RequiredJoulesPerReaction": 285830.0,
+            "ChemicalJoulesPerReaction": 0,
+            "StoredChemicalJoulesPerReaction": 241826.0,
+            "MechanicalEfficiency": 0.4,
+            "SolidResidueItemId": "",
+            "ResidueItemsPerReaction": 0,
+            "RequiresFilter": false
+          },
+          {
+            "Id": "core:drinkable_water_electrolysis",
+            "Inputs": [
+              {
+                "FluidId": "core:drinkable_water",
+                "Chamber": "main",
+                "Phase": "liquid",
+                "Moles": 1
+              }
+            ],
+            "Outputs": [
+              {
+                "FluidId": "core:hydrogen",
+                "Chamber": "output",
+                "Phase": "gas",
+                "Moles": 1.0
+              },
+              {
+                "FluidId": "core:oxygen",
+                "Chamber": "output",
+                "Phase": "gas",
+                "Moles": 0.5
+              }
+            ],
+            "MolesPerSecond": 0.1,
+            "RequiredJoulesPerReaction": 285830.0,
+            "ChemicalJoulesPerReaction": 0,
+            "StoredChemicalJoulesPerReaction": 241826.0,
+            "MechanicalEfficiency": 0.4,
+            "SolidResidueItemId": "",
+            "ResidueItemsPerReaction": 0,
+            "RequiresFilter": false
+          },
+          {
+            "Id": "core:dirty_water_electrolysis",
+            "Inputs": [
+              {
+                "FluidId": "core:dirty_water",
+                "Chamber": "main",
+                "Phase": "liquid",
+                "Moles": 1
+              }
+            ],
+            "Outputs": [
+              {
+                "FluidId": "core:hydrogen",
+                "Chamber": "output",
+                "Phase": "gas",
+                "Moles": 0.99
+              },
+              {
+                "FluidId": "core:oxygen",
+                "Chamber": "output",
+                "Phase": "gas",
+                "Moles": 0.495
+              }
+            ],
+            "MolesPerSecond": 0.1,
+            "RequiredJoulesPerReaction": 282971.7,
+            "ChemicalJoulesPerReaction": 0,
+            "StoredChemicalJoulesPerReaction": 239407.74,
+            "MechanicalEfficiency": 0.4,
+            "SolidResidueItemId": "FilterResidue",
+            "ResidueItemsPerReaction": 0.180153,
+            "RequiresFilter": false
+          },
+          {
+            "Id": "core:salt_water_electrolysis",
+            "Inputs": [
+              {
+                "FluidId": "core:salt_water",
+                "Chamber": "main",
+                "Phase": "liquid",
+                "Moles": 1
+              }
+            ],
+            "Outputs": [
+              {
+                "FluidId": "core:hydrogen",
+                "Chamber": "output",
+                "Phase": "gas",
+                "Moles": 0.005394469666649956
+              },
+              {
+                "FluidId": "core:chlorine",
+                "Chamber": "output",
+                "Phase": "gas",
+                "Moles": 0.005394469666649956
+              },
+              {
+                "FluidId": "core:sodium_hydroxide_solution",
+                "Chamber": "byproduct",
+                "Phase": "liquid",
+                "Moles": 1
+              }
+            ],
+            "MolesPerSecond": 0.1,
+            "RequiredJoulesPerReaction": 3236.681799989974,
+            "ChemicalJoulesPerReaction": 0,
+            "StoredChemicalJoulesPerReaction": 0,
+            "MechanicalEfficiency": 0.4,
+            "SolidResidueItemId": "",
+            "ResidueItemsPerReaction": 0,
+            "RequiresFilter": false
+          },
+          {
+            "Id": "core:sea_water_electrolysis",
+            "Inputs": [
+              {
+                "FluidId": "core:sea_water",
+                "Chamber": "main",
+                "Phase": "liquid",
+                "Moles": 1
+              }
+            ],
+            "Outputs": [
+              {
+                "FluidId": "core:hydrogen",
+                "Chamber": "output",
+                "Phase": "gas",
+                "Moles": 0.005394469666649956
+              },
+              {
+                "FluidId": "core:chlorine",
+                "Chamber": "output",
+                "Phase": "gas",
+                "Moles": 0.005394469666649956
+              },
+              {
+                "FluidId": "core:sodium_hydroxide_solution",
+                "Chamber": "byproduct",
+                "Phase": "liquid",
+                "Moles": 1
+              }
+            ],
+            "MolesPerSecond": 0.1,
+            "RequiredJoulesPerReaction": 3236.681799989974,
+            "ChemicalJoulesPerReaction": 0,
+            "StoredChemicalJoulesPerReaction": 0,
             "MechanicalEfficiency": 0.4,
             "SolidResidueItemId": "",
             "ResidueItemsPerReaction": 0,
             "RequiresFilter": false
           }
-        ]
+        ],
+        "LiquidResidueFluidId": "core:sodium_hydroxide_solution",
+        "LiquidResidueChamber": "byproduct"
       },
       "Electrical": {
         "Role": "consumer",

@@ -74,8 +74,7 @@ public static class MachineLogicRegistry
         AddFluidDevice("liquid-pump", new FluidLiquidPumpBehavior());
         AddFluidDevice("compressor", new FluidCompressorBehavior());
         AddFluidDevice("filter", new FluidFilterBehavior());
-        AddFluidDevice("distiller", new FluidDistillerBehavior());
-        AddFluidDevice("electrolyzer", new FluidReactionBehavior());
+        AddFluidDevice("electrolyzer", new FluidElectrolyzerBehavior());
         AddFluidDevice("engine", new FluidEngineBehavior());
         AddFluidDevice("mechanical-probe", new FluidPressureProbeBehavior(false));
         AddFluidDevice("electronic-probe", new FluidPressureProbeBehavior(true));

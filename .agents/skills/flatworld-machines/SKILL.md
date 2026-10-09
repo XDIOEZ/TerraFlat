@@ -57,6 +57,8 @@ description: "Use when: 定位或修改 FlatWorld 的机器世界、工作台、
 - 火堆与高炉/熔炉统一视为可交互炉类机械：`Mod_Furnace -> FurnaceLogic -> MachineWorld`；火堆是 `Ports=none` 的普通设施，不另建火堆专用交互运行时。炉体面板的输入/输出/燃料槽数量与命名必须和库存模板一致。
 - dynamicY 视觉用 `SpatialInteractionRegistry.Register` 绑定 `MachineWorld.GetOrCreateInteractionTarget` 返回的同一数据目标，光标命中按实际图层范围，描边由 `IWorldInteractionPreview` 通知现有视觉；停用/卸载须注销和清理描边，不为预览逐帧查询机械图，也不把库存或面板搬回视觉代理。
 
+- 水电解器仅一个液体输入口和一个混合气体输出口；各气体组分写入同一输出腔，按现有气包规则从共用出口抽取，不另造混合气身份。允许水源逐项声明：淡水产氢氧，盐水/海水产氢氯及独立碱液；碱液用 LiquidResidueFluidId/Chamber 保留真实流体，经 LiquidDefinition.sourceItemId 映射整份库存原料，保留不足一份的余量，沿原子事务取出，不增加管道口。
+
 ## MOD
 
 - `MechanicalShaft` 必须排在地表效果之上、`Player` 主体层之下，并加入太阳光和局部光的受光列表；新增排序层不能只改渲染器而漏掉 Global Light 的序列化范围。

@@ -2147,153 +2147,10 @@
       }
     },
     {
-      "id": "FluidDistiller",
-      "parent": "BuildingBody_Base",
-      "gameName": "蒸馏器-建筑",
-      "description": "蒸馏器。通过配置面板查看真实气液库存、方向和动力；空设备默认真空。",
-      "durability": 1,
-      "maxDurability": 1,
-      "amount": 1,
-      "weight": 20,
-      "volume": 30,
-      "stackable": false,
-      "canBePickedUp": false,
-      "tags": [
-        "35",
-        "InventoryGroup.Chemistry"
-      ],
-      "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
-      },
-      "health": {
-        "hasHp": true,
-        "hp": 60,
-        "maxHp": 60,
-        "defense": {
-          "physical": 8
-        },
-        "collider": {
-          "type": "BoxCollider2D",
-          "enabled": true,
-          "isTrigger": true,
-          "offset": {
-            "x": 0,
-            "y": 0
-          },
-          "size": {
-            "x": 1,
-            "y": 1
-          },
-          "edgeRadius": 0
-        },
-        "weakTool": 4,
-        "combatBalanceVersion": 1
-      },
-      "modules": {
-        "建筑模块": {
-          "prefab": "Module_Building",
-          "id": "建筑模块",
-          "enabled": true,
-          "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"FluidDistiller\",\"SummonerPrefabId\":\"FluidDistiller_Summoner\"}",
-            "Type": 0
-          },
-          "parameters": {
-            "LightOcclusionMode": "None",
-            "CastSunShadow": true
-          }
-        },
-        "机械扭矩模块": {
-          "prefab": "Module_MechanicalNode",
-          "id": "机械扭矩模块",
-          "enabled": true,
-          "data": {
-            "BitData": [],
-            "Type": 0
-          },
-          "parameters": {
-            "DefinitionId": "FluidDistiller"
-          }
-        }
-      }
-    },
-    {
-      "id": "FluidDistiller_Summoner",
-      "worldDropBehavior": "interactive",
-      "parent": "BuildingSummoner_Base",
-      "gameName": "蒸馏器",
-      "description": "蒸馏器。通过配置面板查看真实气液库存、方向和动力；空设备默认真空。",
-      "durability": 1,
-      "maxDurability": 1,
-      "amount": 1,
-      "weight": 20,
-      "volume": 30,
-      "stackable": false,
-      "canBePickedUp": true,
-      "tags": [
-        "35",
-        "InventoryGroup.Chemistry"
-      ],
-      "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
-      },
-      "health": {
-        "hasHp": true,
-        "hp": 60,
-        "maxHp": 60,
-        "defense": {
-          "physical": 8
-        },
-        "collider": {
-          "type": "BoxCollider2D",
-          "enabled": true,
-          "isTrigger": true,
-          "offset": {
-            "x": 0,
-            "y": 0
-          },
-          "size": {
-            "x": 1,
-            "y": 1
-          },
-          "edgeRadius": 0
-        },
-        "weakTool": 4,
-        "combatBalanceVersion": 1
-      },
-      "modules": {
-        "建筑模块": {
-          "prefab": "Module_Building",
-          "id": "建筑模块",
-          "enabled": true,
-          "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"FluidDistiller\",\"SummonerPrefabId\":\"FluidDistiller_Summoner\"}",
-            "Type": 0
-          },
-          "parameters": {
-            "LightOcclusionMode": "None",
-            "CastSunShadow": true
-          }
-        },
-        "机械扭矩模块": {
-          "prefab": "Module_MechanicalNode",
-          "id": "机械扭矩模块",
-          "enabled": true,
-          "data": {
-            "BitData": [],
-            "Type": 0
-          },
-          "parameters": {
-            "DefinitionId": "FluidDistiller"
-          }
-        }
-      }
-    },
-    {
       "id": "WaterElectrolyzer",
       "parent": "BuildingBody_Base",
       "gameName": "水电解器-建筑",
-      "description": "水电解器。通过配置面板查看真实气液库存、方向和动力；空设备默认真空。",
+      "description": "通电电解水，淡水产出氢氧混合气，盐水和海水产出氢氯混合气；只有一个进水口和一个出气口，碱液与杂质可从副产物槽取出。",
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,
@@ -2365,7 +2222,7 @@
       "worldDropBehavior": "interactive",
       "parent": "BuildingSummoner_Base",
       "gameName": "水电解器",
-      "description": "水电解器。通过配置面板查看真实气液库存、方向和动力；空设备默认真空。",
+      "description": "通电电解水，淡水产出氢氧混合气，盐水和海水产出氢氯混合气；只有一个进水口和一个出气口，碱液与杂质可从副产物槽取出。",
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,
@@ -2722,7 +2579,7 @@
       "id": "FilterResidue",
       "parent": "BasicItem_Base",
       "gameName": "过滤残渣",
-      "description": "过滤或蒸馏留下的真实固体残渣。",
+      "description": "过滤或电解留下的固体残渣。",
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,
@@ -2732,6 +2589,28 @@
       "canBePickedUp": true,
       "tags": [
         "Material",
+        "InventoryGroup.Chemistry"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
+      },
+      "modules": {}
+    },
+    {
+      "id": "AlkaliSolution",
+      "parent": "BasicItem_Base",
+      "gameName": "碱液",
+      "description": "盐水电解得到的碱液原料，每份0.25升，可注入液体容器；不能饮用。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 0.25625,
+      "volume": 0.25,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": [
+        "Material",
+        "LiquidIngredient",
         "InventoryGroup.Chemistry"
       ],
       "visual": {

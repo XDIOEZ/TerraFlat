@@ -34,6 +34,8 @@ public sealed class FluidMachineDefinition
     public bool AllowPortableTank;
     public FluidMachinePortDefinition[] Ports = Array.Empty<FluidMachinePortDefinition>();
     public FluidMachineReactionDefinition[] Reactions = Array.Empty<FluidMachineReactionDefinition>();
+    public string LiquidResidueFluidId = ""; // 液体副产物按其液体定义映射为整份库存原料。
+    public string LiquidResidueChamber = "byproduct";
     public string FilterMaterialItemId = "Cloth";
     public double FilterWorkPerItem = 100;
     public string PanelId = "UI_IndustrialFluid";
@@ -60,6 +62,8 @@ public sealed class FluidMachineDefinition
             if (port == null || !ids.Add(port.Id)) throw new ArgumentException("工业端口身份重复：" + ownerId);
         }
         foreach (FluidMachineReactionDefinition reaction in Reactions) reaction.Validate(ownerId);
+        if (!string.IsNullOrEmpty(LiquidResidueFluidId) && string.IsNullOrWhiteSpace(LiquidResidueChamber))
+            throw new ArgumentException("液体副产物缺少库存腔身份：" + ownerId);
         if (CombineAdjacent && (SingleGas || SingleLiquid))
             throw new ArgumentException("组合储罐必须允许真实混合库存：" + ownerId);
     }
