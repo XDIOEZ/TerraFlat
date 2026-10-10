@@ -140,7 +140,7 @@ namespace FlatWorld.Spaceflight
             tankSource = visual.sprite;
             tankCellSize = ship.CellSizeMeters;
         }
-        public void SetPose(Vector2 position, float degrees, double height)
+        public void SetPose(Vector2 position, float degrees, Vector3 visualLiftOffset)
         {
             // 静止船体不重复写入刚体与 Transform，避免无意义的物理同步。
             if (body.position != position || Mathf.Abs(Mathf.DeltaAngle(body.rotation, degrees)) > .001f ||
@@ -151,8 +151,7 @@ namespace FlatWorld.Spaceflight
             }
             if (visual != null)
             {
-                Vector3 local = baseVisualPosition + transform.InverseTransformVector(
-                    Vector3.up * (float)Math.Min(4d, Math.Max(0d, height) * .04d));
+                Vector3 local = baseVisualPosition + visualLiftOffset;
                 if (visual.transform.localPosition != local) visual.transform.localPosition = local;
             }
         }
@@ -193,6 +192,10 @@ namespace FlatWorld.Spaceflight
                 float angle = (float)(ship.AngleRadians * 180d / Math.PI);
                 double height = flight != null && flight.Phase is ShipFlightPhase.Lifting or ShipFlightPhase.SurfaceDescending
                     ? flight.HeightMeters : 0d;
+                // 同一船体所有部件共用一次视觉升高偏移，避免逐部件计算变换矩阵。
+                float rise = (float)Math.Min(4d, Math.Max(0d, height) * .04d);
+                float radians = angle * Mathf.Deg2Rad;
+                Vector3 visualLiftOffset = new(Mathf.Sin(radians) * rise, Mathf.Cos(radians) * rise, 0f);
                 foreach (ShipPieceState piece in ship.Pieces)
                 {
                     if (!piece.IsAlive || !visible) { RemovePieceView(piece.PieceId); continue; }
@@ -237,7 +240,7 @@ namespace FlatWorld.Spaceflight
                     }
                     Vector2 position = DisplayPoint(ship, (piece.CellX + .5d) * ship.CellSizeMeters, (piece.CellY + .5d) * ship.CellSizeMeters);
                     view.Rebind(ship, piece, forceBindings);
-                    view.SetPose(position, angle, height);
+                    view.SetPose(position, angle, visualLiftOffset);
                 }
             }
             Player player = ItemMgr.Instance?.User_Player;

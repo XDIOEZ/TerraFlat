@@ -169,13 +169,18 @@ namespace FlatWorld.Spaceflight
             using (ShipMachineMarker.Auto())
                 foreach (ShipState ship in fixedShips) MachineWorld.TickShip(ship.ShipId, (float)seconds);
 
-            // 停靠船体不进行刚体积分；静态结构保留环境和机器模拟。
+            // 视觉升空仍推进高度与燃料，但不触发每帧的全船质量重算和动态碰撞。
             bool hasMovingShips = false;
+            bool hasPhysicalShips = false;
             foreach (ShipFlightState flight in State.Flights)
-                if (flight.Phase is not (ShipFlightPhase.Landed or ShipFlightPhase.Floating))
-                { hasMovingShips = true; break; }
+            {
+                if (flight.Phase is ShipFlightPhase.Landed or ShipFlightPhase.Floating) continue;
+                hasMovingShips = true;
+                if (flight.Phase != ShipFlightPhase.Lifting) hasPhysicalShips = true;
+                if (hasPhysicalShips) break;
+            }
 
-            if (hasMovingShips)
+            if (hasPhysicalShips)
                 using (ShipMassMarker.Auto()) RefreshMass();
             CaptureShipContactPoses();
             if (hasMovingShips)
@@ -186,7 +191,7 @@ namespace FlatWorld.Spaceflight
                     assemblies = ShipDockingService.RebuildAssemblies(State.Ships, State.Docking);
                     foreach (ShipAssemblyState assembly in assemblies) StepAssembly(assembly, seconds);
                 }
-                if (assemblies.Count > 1)
+                if (assemblies.Count > 1 && hasPhysicalShips)
                     using (ShipContactMarker.Auto()) StepShipContacts(seconds, assemblies);
             }
             StepFreePassengers(seconds);

@@ -111,26 +111,32 @@ namespace FlatWorld.Spaceflight
         {
             ShipFlightState flight = GetFlight(assembly.MemberShipIds[0]);
             BodyState body = Universe.GetBody(flight.BodyId);
-            CollectActuators(assembly);
-            bool consolePowered = false;
-            foreach (string id in assembly.MemberShipIds)
-            {
-                ShipState member = GetShip(id);
-                consolePowered |= member.Pieces.Exists(piece => piece.IsAlive && piece.Kind == ShipPieceKind.Console && IsPowered(member, piece));
-            }
             double thrust = 0d;
-            if (flight.Ignited && consolePowered)
-                foreach (ShipActuator engine in actuators)
-                    thrust += engine.Device.Configuration.EngineThrustNewtons * ConsumeEngineFuel(engine.Device.Configuration, 1d, seconds);
+            if (flight.Ignited)
+            {
+                CollectActuators(assembly);
+                bool consolePowered = false;
+                foreach (string id in assembly.MemberShipIds)
+                {
+                    ShipState member = GetShip(id);
+                    consolePowered |= member.Pieces.Exists(piece => piece.IsAlive && piece.Kind == ShipPieceKind.Console && IsPowered(member, piece));
+                }
+                if (consolePowered)
+                    foreach (ShipActuator engine in actuators)
+                        thrust += engine.Device.Configuration.EngineThrustNewtons * ConsumeEngineFuel(engine.Device.Configuration, 1d, seconds);
+            }
             double gravity = body.SurfaceGravity;
             double previousHeight = flight.HeightMeters;
             flight.VerticalSpeed += (thrust / Math.Max(.001d, assembly.MassKg) - gravity) * seconds;
             flight.HeightMeters += flight.VerticalSpeed * seconds;
-            // 地表起飞只提供垂直推力，碰撞取得的平面惯性和旋转继续保留。
-            assembly.PositionX += assembly.VelocityX * seconds;
-            assembly.PositionY += assembly.VelocityY * seconds;
-            assembly.AngleRadians += assembly.AngularVelocityRadiansPerSecond * seconds;
-            ShipDockingService.RigidlyCarryMembers(assembly, State.Ships);
+            // 起飞只更新视觉高度，船体和碰撞体留在地面；再入阶段仍按原规则推进。
+            if (flight.Phase == ShipFlightPhase.SurfaceDescending)
+            {
+                assembly.PositionX += assembly.VelocityX * seconds;
+                assembly.PositionY += assembly.VelocityY * seconds;
+                assembly.AngleRadians += assembly.AngularVelocityRadiansPerSecond * seconds;
+                ShipDockingService.RigidlyCarryMembers(assembly, State.Ships);
+            }
             flight.EntrySurfaceVelocity = new SpaceVector2(Math.Sqrt(assembly.VelocityX * assembly.VelocityX + assembly.VelocityY * assembly.VelocityY), flight.VerticalSpeed);
             double requiredHeight = Math.Max(SpaceGameplaySettings.Current.MinimumLaunchHeightMeters, body.RadiusMeters * SpaceGameplaySettings.Current.LaunchHeightRadiusFraction);
             double requiredSpeed = SpaceGameplaySettings.Current.MinimumSpaceExitSpeedMetersPerSecond;

@@ -177,10 +177,18 @@ namespace FlatWorld.Spaceflight
         private void PlacePassenger(Player player, SpacePassengerState passenger, ShipState ship)
         {
             Vector2 position = DisplayPoint(ship, passenger.LocalX, passenger.LocalY);
-            player.transform.position = new Vector3(position.x, position.y, player.transform.position.z);
-            player.transform.rotation = Quaternion.Euler(0f, 0f, (float)((ship.AngleRadians + passenger.RelativeHeadingRadians) * 180d / Math.PI));
+            float heading = (float)((ship.AngleRadians + passenger.RelativeHeadingRadians) * 180d / Math.PI);
             Mod_Mover mover = player.itemMods.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover);
-            if (mover?.rb != null) { mover.rb.position = position; mover.rb.rotation = player.transform.eulerAngles.z; }
+            // 视觉起飞时玩家物理位置未变，不重复触发物品空间索引和物理同步。
+            if (GetFlight(ship.ShipId)?.Phase == ShipFlightPhase.Lifting &&
+                ((Vector2)player.transform.position - position).sqrMagnitude < .000001f &&
+                Mathf.Abs(Mathf.DeltaAngle(player.transform.eulerAngles.z, heading)) < .001f &&
+                (mover?.rb == null || ((mover.rb.position - position).sqrMagnitude < .000001f &&
+                    Mathf.Abs(Mathf.DeltaAngle(mover.rb.rotation, heading)) < .001f)))
+                return;
+            player.transform.position = new Vector3(position.x, position.y, player.transform.position.z);
+            player.transform.rotation = Quaternion.Euler(0f, 0f, heading);
+            if (mover?.rb != null) { mover.rb.position = position; mover.rb.rotation = heading; }
             player.itemData.transform.position = player.transform.position;
             ItemMgr.Instance.NotifyRuntimeItemMoved(player);
         }

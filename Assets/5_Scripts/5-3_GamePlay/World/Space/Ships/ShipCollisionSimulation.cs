@@ -96,7 +96,8 @@ namespace FlatWorld.Spaceflight
             if (string.IsNullOrWhiteSpace(flight.SurfaceWorldKey)) return false;
             realm = "surface:" + flight.SurfaceWorldKey;
             height = Math.Max(0d, flight.HeightMeters);
-            dynamic = flight.Phase is ShipFlightPhase.Lifting or ShipFlightPhase.SurfaceDescending;
+            // 起飞只有高度动画，不再把地面上的飞船视为正在运动的刚体。
+            dynamic = flight.Phase == ShipFlightPhase.SurfaceDescending;
             return true;
         }
         private ShipContactPose GetShipContactStart(ShipState ship, string realm, double seconds)
