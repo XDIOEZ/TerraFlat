@@ -30,18 +30,10 @@ public partial class WeatherMgr
             StringComparison.Ordinal);
         _gameEventWeatherOwnerId = ownerEventId;
 
-        planetData.WeatherDataVersion = WeatherEventScheduler.CurrentDataVersion;
-        planetData.CurrentWeather = weatherType;
-        planetData.WeatherPhase = ResolveForcedPhase(weatherType, intensity);
-        planetData.WeatherIntensity = Mathf.Clamp01(intensity);
-        planetData.WeatherPhaseStartedTotalTime = currentTotalTime;
-        planetData.WeatherPhaseEndTotalTime = Mathf.Max(currentTotalTime + 0.1f, endTotalTime);
-        planetData.NextWeatherEventTotalTime = 0f;
+        ForceRegionalWeather(weatherType, intensity, Mathf.Max(0.1f, endTotalTime - currentTotalTime));
         if (newOwner)
             planetData.WeatherEventSequence = Mathf.Max(1, planetData.WeatherEventSequence + 1);
 
-        NormalizeData(planetData);
-        PublishAuthoritativeWeatherState();
         return true;
     }
 

@@ -27,6 +27,16 @@ namespace FlatWorld.AIECS
         public FixedList64Bytes<float> Thresholds, Scales, HealthRatios;
     }
 
+    /// <summary>主线程冻结实体所在地天气，Job 只消费明确数值，不访问天气管理器。</summary>
+    public struct EntityWeatherInput : IComponentData
+    {
+        public float RainIntensity, GrowthMultiplier;
+
+        public static float ResolveGrowthMultiplier(float rainIntensity, float cloudCoverage, float windStrength) =>
+            math.lerp(1f, 0.95f, math.saturate(cloudCoverage)) *
+            math.lerp(1f, 0.85f, math.saturate(rainIntensity) * math.saturate(windStrength));
+    }
+
     /// <summary>环境输入由主线程批量冻结；冷热负担和世界时间游标由能力 Job 持有。</summary>
     public struct EntityClimate : IComponentData
     {
@@ -141,7 +151,7 @@ namespace FlatWorld.AIECS
     [DisableAutoCreation]
     public partial class EntityCapabilitySystem : SystemBase
     {
-        public float StepSeconds, DayLength, RainIntensity, DifficultyGrowthMultiplier, WeatherMultiplier;
+        public float StepSeconds, DayLength, DifficultyGrowthMultiplier;
         public double GameTime;
         public bool Seasonal;
         private NativeArray<EntitySeasonPeriod> seasons;
@@ -187,10 +197,10 @@ namespace FlatWorld.AIECS
             if (!growthQuery.IsEmptyIgnoreFilter)
                 Dependency = new GrowthJob
                 {
-                    DeltaTime = StepSeconds, RainIntensity = RainIntensity,
-                    WeatherMultiplier = WeatherMultiplier,
+                    DeltaTime = StepSeconds,
                     DifficultyMultiplier = DifficultyGrowthMultiplier,
-                    Climates = GetComponentLookup<EntityClimate>(true)
+                    Climates = GetComponentLookup<EntityClimate>(true),
+                    WeatherInputs = GetComponentLookup<EntityWeatherInput>(true)
                 }.ScheduleParallel(growthQuery, Dependency);
         }
 
@@ -270,8 +280,9 @@ namespace FlatWorld.AIECS
         [BurstCompile]
         private partial struct GrowthJob : IJobEntity
         {
-            public float DeltaTime, RainIntensity, DifficultyMultiplier, WeatherMultiplier;
+            public float DeltaTime, DifficultyMultiplier;
             [ReadOnly] public ComponentLookup<EntityClimate> Climates;
+            [ReadOnly] public ComponentLookup<EntityWeatherInput> WeatherInputs;
 
             private void Execute(Entity entity, ref EntityGrowth growth,
                 ref EntityModuleAppearance appearance, ref AiecsVital vital)
@@ -284,9 +295,11 @@ namespace FlatWorld.AIECS
                     if (climate.CaughtUp == 0 || climate.EnvironmentReady == 0 || climate.Dead != 0) return;
                     climateMultiplier = climate.GrowthMultiplier;
                 }
+                EntityWeatherInput weather = WeatherInputs.HasComponent(entity)
+                    ? WeatherInputs[entity] : new EntityWeatherInput { GrowthMultiplier = 1f };
                 float multiplier = math.max(0f, growth.EnvironmentMultiplier) * math.max(0f, climateMultiplier) *
-                    (1f + math.saturate(RainIntensity) * math.max(0f, growth.RainGrowthBonus)) *
-                    math.max(0f, WeatherMultiplier) * math.max(0f, DifficultyMultiplier);
+                    (1f + math.saturate(weather.RainIntensity) * math.max(0f, growth.RainGrowthBonus)) *
+                    math.max(0f, weather.GrowthMultiplier) * math.max(0f, DifficultyMultiplier);
                 growth.Progress = math.min(growth.MaxProgress, growth.Progress + math.max(0f, growth.Speed) * DeltaTime * multiplier);
                 int stage = 0;
                 for (int i = 0; i < growth.Thresholds.Length; i++)

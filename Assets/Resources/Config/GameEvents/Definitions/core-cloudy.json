@@ -5,8 +5,8 @@
     {
       "id": "surface_daily_cloudy",
       "displayName": "阴天",
-      "description": "从第2天起每天有20%概率出现阴天，持续半个游戏日，云层遮蔽日光但不降雨。",
-      "enabled": true,
+      "description": "保留手动事件模板；自然云量由区域空气湿度与降水连续计算。",
+      "enabled": false,
       "priority": 20,
       "conflictGroup": "forced_weather",
       "oncePerWorld": false,

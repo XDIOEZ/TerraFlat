@@ -26,8 +26,16 @@ public partial class ChunkMgr
                    sample.LocalCell.x, sample.LocalCell.y, out humidity);
     }
 
-    /// <summary>查询当前实际水体形成的空气湿度，供实时天气等消费者以后复用。</summary>
+    /// <summary>水体供湿减去区域降水消耗，所有消费者读取同一动态空气湿度。</summary>
     public bool TryGetAirHumidity(Vector2 worldPosition, out float humidity)
+    {
+        if (!TryGetAirHumiditySupply(worldPosition, out humidity)) return false;
+        humidity = Mathf.Clamp01(humidity - (WeatherMgr.ExistingInstance?.GetAirHumidityDeficitAt(worldPosition) ?? 0f));
+        return true;
+    }
+
+    /// <summary>天气采样使用尚未扣除降水消耗的实际水体供湿，避免重复扣湿度。</summary>
+    public bool TryGetAirHumiditySupply(Vector2 worldPosition, out float humidity)
     {
         humidity = 0f;
         return float.IsFinite(worldPosition.x) && float.IsFinite(worldPosition.y) &&
@@ -79,6 +87,18 @@ public partial class ChunkMgr
                activeRuntimeBindings.TryGetValue(address, out RuntimeChunkBinding binding) &&
                ReferenceEquals(binding.RestoredTerrainChunk, chunk)
             ? chunk.Terrain : null;
+    }
+
+    /// <summary>环境模拟只使用已经恢复存档差量的当前维度地形。</summary>
+    public bool IsTerrainRestoredForEnvironment(ChunkRuntime chunk) => chunk != null &&
+        chunk.Address.DimensionId == ResolveCurrentDimensionId() &&
+        ReferenceEquals(ResolveRestoredAirHumidityTerrain(chunk.Address), chunk.Terrain) && chunk.Terrain != null;
+
+    public bool TryGetRestoredTerrainForEnvironment(Vector2 position, out RuntimeTerrainTileSample sample)
+    {
+        sample = default;
+        return TryGetRuntimeTerrainTile(position, out sample) &&
+               ReferenceEquals(ResolveRestoredAirHumidityTerrain(sample.Address), sample.Terrain);
     }
 
     private void ReleaseAirHumidityField()

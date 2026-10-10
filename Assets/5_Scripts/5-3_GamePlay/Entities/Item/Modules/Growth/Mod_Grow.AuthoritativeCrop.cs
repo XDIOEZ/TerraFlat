@@ -61,7 +61,6 @@ public partial class Mod_Grow
     [SerializeField, Range(0f, 1f)] private float minimumFertilityGrowthMultiplier = 0.5f;
     [SerializeField, Min(0f)] private float waterConsumePerSecond = 0.02f;
     [SerializeField, Min(0f)] private float fertilityConsumePerSecond = 0.00035f;
-    [SerializeField, Min(0f)] private float rainWaterPerSecond = 0.08f;
     [SerializeField, Range(0f, 1f)] private float rainGrowthBonus = 0.15f;
 
     [Header("一次性收获配置")]
@@ -146,7 +145,6 @@ public partial class Mod_Grow
         minimumFertilityGrowthMultiplier = Mathf.Clamp01(minimumFertilityGrowthMultiplier);
         waterConsumePerSecond = Mathf.Max(0f, waterConsumePerSecond);
         fertilityConsumePerSecond = Mathf.Max(0f, fertilityConsumePerSecond);
-        rainWaterPerSecond = Mathf.Max(0f, rainWaterPerSecond);
         rainGrowthBonus = Mathf.Clamp01(rainGrowthBonus);
         harvestFoodMin = Mathf.Max(1, harvestFoodMin);
         harvestFoodMax = Mathf.Max(harvestFoodMin, harvestFoodMax);
@@ -288,8 +286,6 @@ public partial class Mod_Grow
                 return;
             }
 
-            if (!historical)
-                ApplyRainWater(farmlandData, deltaTime);
             farmlandData.NormalizeValues();
             FarmlandSystem.CommitSoil(farmlandData);
 
@@ -417,39 +413,17 @@ public partial class Mod_Grow
     private bool TryResolveFarmland(out TileData_Farmland farmlandData) =>
         FarmlandSystem.TryReadSoil(Data.plantedTilePos, out farmlandData);
 
-    private void ApplyRainWater(TileData_Farmland farmlandData, float deltaTime)
-    {
-        float rainIntensity = ResolveRainIntensity();
-        if (rainIntensity <= 0f || rainWaterPerSecond <= 0f)
-            return;
-
-        farmlandData.AddWater(rainWaterPerSecond * rainIntensity * Mathf.Max(0f, deltaTime));
-    }
-
     private float ResolveWeatherGrowthMultiplier()
     {
-        if (WeatherMgr.Instance == null)
+        WeatherMgr weather = WeatherMgr.ExistingInstance;
+        if (weather == null || item == null || !weather.TryGetWeatherAt(item.transform.position, out var localWeather))
             return 1f;
 
-        float intensity = WeatherMgr.Instance.CurrentWeatherIntensity;
-        return WeatherMgr.Instance.CurrentWeather switch
-        {
-            WeatherType.Cloudy => Mathf.Lerp(1f, 0.95f, intensity),
-            WeatherType.Rain => Mathf.Lerp(1f, 1f + rainGrowthBonus, intensity),
-            WeatherType.Storm => Mathf.Lerp(1f, 0.85f, intensity),
-            _ => 1f
-        };
-    }
-
-    private static float ResolveRainIntensity()
-    {
-        if (WeatherMgr.Instance == null)
-            return 0f;
-
-        WeatherType weather = WeatherMgr.Instance.CurrentWeather;
-        return weather == WeatherType.Rain || weather == WeatherType.Storm
-            ? WeatherMgr.Instance.CurrentWeatherIntensity
-            : 0f;
+        // 云、强风和降雨分别作用，雨水补给由区域地表系统统一结算。
+        float rainIntensity = weather.TryGetPrecipitationAt(item.transform.position, out float rain, out _) ? rain : 0f;
+        return FlatWorld.AIECS.EntityWeatherInput.ResolveGrowthMultiplier(
+            rainIntensity, localWeather.CloudCoverage, localWeather.WindStrength) *
+            (1f + Mathf.Clamp01(rainIntensity) * rainGrowthBonus);
     }
 
     private void MarkMature()

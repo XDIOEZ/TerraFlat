@@ -6,7 +6,7 @@ namespace FlatWorld.Networking.Gameplay
 {
     public static class NetworkGameplayProtocol
     {
-        public const int CurrentVersion = 13;
+        public const int CurrentVersion = 14;
         public const int SnapshotChunkBytes = 24 * 1024;
         public const int MaxSnapshotBytes = 64 * 1024 * 1024;
 
@@ -157,6 +157,56 @@ namespace FlatWorld.Networking.Gameplay
         public int RandomCursor;
         public int EventSequence;
         public int DataVersion;
+    }
+
+    /// <summary>区域要素由服务器结算，客户端仅应用当前状态与事件序号。</summary>
+    public struct NetworkRegionalWeatherStateMessage : NetworkMessage
+    {
+        public string WorldKey;
+        public int RegionX;
+        public int RegionY;
+        public double SampleTime;
+        public int Revision;
+        public float AirHumidity;
+        public float HumidityDeficit;
+        public float CoolingOffsetCelsius;
+        public float RainIntensity;
+        public float SnowIntensity;
+        public float PrecipitationIntensity;
+        public float WindX;
+        public float WindY;
+        public float WindStrength;
+        public float CloudCoverage;
+        public float FogDensity;
+        public float LightningActivity;
+        public int LightningSequence;
+        public float RemainingSeconds;
+        public bool InitialState;
+    }
+
+    public struct NetworkWeatherSurfaceRequest : NetworkMessage
+    {
+        public string WorldKey;
+        public string DimensionId;
+        public int ChunkX;
+        public int ChunkY;
+    }
+
+    /// <summary>独立水肥与雪层批次分片，不复制作物或重复执行地表模拟。</summary>
+    public struct NetworkWeatherSurfaceMessage : NetworkMessage
+    {
+        public string WorldKey;
+        public string DimensionId;
+        public int ChunkX;
+        public int ChunkY;
+        public long Revision;
+        public bool FullState;
+        public int TransferId;
+        public int PartIndex;
+        public int PartCount;
+        public int PartBytes;
+        public int TotalBytes;
+        public byte[] Payload;
     }
 
     public struct NetworkItemStateRequest : NetworkMessage

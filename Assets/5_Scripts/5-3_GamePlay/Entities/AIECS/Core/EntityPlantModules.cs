@@ -25,7 +25,7 @@ namespace FlatWorld.AIECS
     {
         public float Water, MaxWater, Fertility, MaxFertility;
         public float MinimumWaterMultiplier, MinimumFertilityMultiplier;
-        public float WaterPerSecond, FertilityPerSecond, RainWaterPerSecond;
+        public float WaterPerSecond, FertilityPerSecond;
         public float UsedWater, UsedFertility, AddedWater;
         public byte Available;
     }
@@ -99,7 +99,7 @@ namespace FlatWorld.AIECS
     public partial class EntityPlantModuleSystem : SystemBase
     {
         public double GameTime;
-        public float StepSeconds, DayLength, RainIntensity, RainGrowthIntensity, WeatherMultiplier, GrowthDifficulty;
+        public float StepSeconds, DayLength, GrowthDifficulty;
         public bool Seasonal;
         private NativeArray<EntitySeasonPeriod> seasons;
         private EntityQuery plants, stocks;
@@ -134,9 +134,9 @@ namespace FlatWorld.AIECS
                 Dependency = new PlantJob
                 {
                     GameTime = GameTime, Delta = StepSeconds, DayLength = math.max(0.01f, DayLength),
-                    Rain = RainIntensity, RainGrowth = RainGrowthIntensity, Weather = WeatherMultiplier,
                     Difficulty = GrowthDifficulty, Seasonal = Seasonal, Seasons = seasons,
-                    Climates = GetComponentLookup<EntityClimate>()
+                    Climates = GetComponentLookup<EntityClimate>(),
+                    WeatherInputs = GetComponentLookup<EntityWeatherInput>(true)
                 }.ScheduleParallel(plants, Dependency);
             if (!stocks.IsEmptyIgnoreFilter)
                 Dependency = new StockJob
@@ -156,11 +156,12 @@ namespace FlatWorld.AIECS
         private partial struct PlantJob : IJobEntity
         {
             public double GameTime;
-            public float Delta, DayLength, Rain, RainGrowth, Weather, Difficulty;
+            public float Delta, DayLength, Difficulty;
             public bool Seasonal;
             [ReadOnly] public NativeArray<EntitySeasonPeriod> Seasons;
             // 每次 Execute 只写自身 Entity 的耐候组件，不跨实体写入。
             [NativeDisableParallelForRestriction] public ComponentLookup<EntityClimate> Climates;
+            [ReadOnly] public ComponentLookup<EntityWeatherInput> WeatherInputs;
 
             private void Execute(Entity entity, ref EntityPlantLifecycle plant, ref EntityPlantSoil soil,
                 ref EntityGrowth growth, ref AiecsVital vital, ref EntityModuleAppearance appearance)
@@ -168,6 +169,8 @@ namespace FlatWorld.AIECS
                 if (vital.Dead != 0 || plant.Harvested != 0) return;
                 bool hasClimate = Climates.HasComponent(entity);
                 EntityClimate climate = hasClimate ? Climates[entity] : default;
+                EntityWeatherInput localWeather = WeatherInputs.HasComponent(entity)
+                    ? WeatherInputs[entity] : new EntityWeatherInput { GrowthMultiplier = 1f };
                 if (hasClimate && climate.EnvironmentReady == 0) return;
                 if (plant.Initialized == 0 || GameTime < plant.LastWorldTime)
                 { plant.Initialized = 1; plant.LastWorldTime = GameTime; }
@@ -189,17 +192,13 @@ namespace FlatWorld.AIECS
                     if (hasClimate && climate.Dead != 0) { vital.Dead = 1; vital.Hp = 0f; break; }
                     if (plant.Cultivated == 0 || growth.Progress >= growth.MaxProgress) continue;
                     if (soil.Available == 0) { plant.Status = EntityPlantGrowthStatus.MissingSoil; continue; }
-                    if (!historical)
-                    {
-                        float rainWater = math.min(math.max(0f, soil.MaxWater - soil.Water), soil.RainWaterPerSecond * Rain * seconds);
-                        soil.Water += rainWater; soil.AddedWater += rainWater;
-                    }
                     if (suitability <= 0f) { plant.Status = EntityPlantGrowthStatus.TemperatureStress; continue; }
                     if (soil.Water <= 0f) { plant.Status = EntityPlantGrowthStatus.NeedsWater; continue; }
                     if (soil.Fertility <= 0f) { plant.Status = EntityPlantGrowthStatus.NeedsFertility; continue; }
                     float multiplier = math.lerp(soil.MinimumWaterMultiplier, 1f, math.saturate(soil.Water / math.max(0.01f, soil.MaxWater))) *
                         math.lerp(soil.MinimumFertilityMultiplier, 1f, math.saturate(soil.Fertility / math.max(0.01f, soil.MaxFertility)));
-                    float weather = historical ? 1f : Weather * (1f + RainGrowth * growth.RainGrowthBonus);
+                    float weather = historical ? 1f : localWeather.GrowthMultiplier *
+                        (1f + localWeather.RainIntensity * growth.RainGrowthBonus);
                     float increment = seconds * growth.Speed * multiplier * suitability * weather * math.max(0f, Difficulty);
                     if (increment <= 0f) continue;
                     growth.Progress = math.min(growth.MaxProgress, growth.Progress + increment);
@@ -223,8 +222,8 @@ namespace FlatWorld.AIECS
                 {
                     float suitability = hasClimate ? climate.GrowthMultiplier : 1f;
                     growth.Progress = math.min(growth.MaxProgress, growth.Progress + Delta * growth.Speed *
-                        math.max(0f, growth.EnvironmentMultiplier) * suitability * Weather *
-                        (1f + RainGrowth * growth.RainGrowthBonus) * math.max(0f, Difficulty));
+                        math.max(0f, growth.EnvironmentMultiplier) * suitability * localWeather.GrowthMultiplier *
+                        (1f + localWeather.RainIntensity * growth.RainGrowthBonus) * math.max(0f, Difficulty));
                 }
                 if (growth.Progress >= growth.MaxProgress) plant.Status = EntityPlantGrowthStatus.Mature;
                 EntityPlantRules.ApplyStage(ref growth, ref appearance, ref vital, plant.ScaleByStage != 0);

@@ -57,7 +57,6 @@ public static class WorldEntityCapabilityDiagnostics
         system.GameTime = 1d;
         system.DayLength = 24f;
         system.DifficultyGrowthMultiplier = 1f;
-        system.WeatherMultiplier = 1f;
         var season = new EntitySeasonPeriod
         {
             EndTimeSeconds = double.PositiveInfinity, Fractions = new double4(0.25d),
@@ -136,6 +135,9 @@ public static class WorldEntityCapabilityDiagnostics
         growth.Scales.Add(0.2f); growth.Scales.Add(0.5f); growth.Scales.Add(1f);
         growth.HealthRatios.Add(0.25f); growth.HealthRatios.Add(0.5f); growth.HealthRatios.Add(1f);
         manager.AddComponentData(entity, growth);
+        // 隔离诊断为每个成长实体显式冻结无雨、无云、无风的天气输入。
+        manager.AddComponentData(entity, new EntityWeatherInput
+        { RainIntensity = 0f, GrowthMultiplier = EntityWeatherInput.ResolveGrowthMultiplier(0f, 0f, 0f) });
         manager.AddComponentData(entity, new EntityModuleAppearance { Scale = new float2(0.2f), Revision = 1 });
         manager.AddComponent<EntityModuleActive>(entity);
     }

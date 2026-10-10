@@ -11,11 +11,10 @@ public partial class SaveDataMgr
     public void RecordSnowCell(RuntimeTerrainTileSample sample)
     {
         if (!GameNetwork.HasStateAuthority || SaveData == null) return;
-        var state = WorldSnowInteraction.Capture(sample);
-        var record = GetRuntimeChunkRecord(sample.Address, true);
-        record.SnowCells ??= new List<SnowCellSaveData>();
-        record.SnowCells.RemoveAll(cell => cell.LocalPosition == sample.LocalCell);
-        if (state.Edited) record.SnowCells.Add(state);
+        var manager = ChunkMgr.ExistingInstance;
+        if (manager != null && manager.TryGetChunkRuntime(sample.Address, out ChunkRuntime chunk))
+            RecordWeatherSurfaceChunk(chunk, Array.Empty<int>(),
+                new[] { sample.LocalCell.y * sample.Terrain.Width + sample.LocalCell.x });
     }
 
     private static void RestoreSnowTerrain(ChunkRuntime chunk, ChunkSaveRecord record)
@@ -32,7 +31,7 @@ public partial class SaveDataMgr
     #endregion
 }
 
-/// <summary>仅保存玩家改过的雪格，空雪格也保留标记以免天然雪重新出现。</summary>
+/// <summary>保存区域天气雪与玩家编辑，铲空仍保留标记以免天然雪重新出现。</summary>
 [Serializable, MemoryPackable]
 public partial class SnowCellSaveData
 {
@@ -41,5 +40,6 @@ public partial class SnowCellSaveData
     public bool Edited;
     public float Depth;
     public float SeasonalDepth;
+    public float WeatherDepth;
     #endregion
 }

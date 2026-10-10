@@ -38,8 +38,6 @@ public partial class WeatherMgr
 {
 #region 权威天气配置
 
-    [Header("权威降雨事件")]
-    [SerializeField] private RainEventScheduleConfig _rainEventConfig = new RainEventScheduleConfig();
     [SerializeField, Tooltip("非零时覆盖世界种子，便于固定结果测试。")]
     private int _deterministicSeedOverride;
 
@@ -58,31 +56,18 @@ public partial class WeatherMgr
 
     public WeatherPhase GetCurrentWeatherPhase()
     {
-        PlanetData planetData = GetActivePlanetData();
-        return planetData != null ? planetData.WeatherPhase : WeatherPhase.Clear;
+        return TryGetLocalWeather(out var sample) ? DescribeWeatherPhase(sample) : WeatherPhase.Clear;
     }
 
     public float GetCurrentWeatherRemainingTime()
     {
-        PlanetData planetData = GetActivePlanetData();
-        return planetData != null
-            ? WeatherEventScheduler.GetRemainingTime(planetData, GetCurrentTotalTime())
-            : 0f;
+        return TryGetLocalWeather(out var sample) ? sample.RemainingSeconds : 0f;
     }
 
     public static float CalculateWeatherTemperatureOffset(PlanetData planetData)
     {
-        if (planetData == null)
-            return DefaultWeatherTemperatureOffset;
-
-        float intensity = Mathf.Clamp01(planetData.WeatherIntensity);
-        return planetData.CurrentWeather switch
-        {
-            WeatherType.Cloudy => planetData.CloudyTemperatureOffset * intensity,
-            WeatherType.Rain => planetData.RainTemperatureOffset * intensity,
-            WeatherType.Storm => planetData.StormTemperatureOffset * intensity,
-            _ => DefaultWeatherTemperatureOffset
-        };
+        return ExistingInstance != null && ReferenceEquals(ExistingInstance.regionalPlanet, planetData)
+            ? ExistingInstance.GetWeatherTemperatureOffset() : 0f;
     }
 
     public WeatherStateSnapshot CaptureWeatherState()
@@ -102,31 +87,25 @@ public partial class WeatherMgr
         if (planetData == null)
             return;
 
-        if (GameNetwork.HasStateAuthority)
-        {
-            WeatherEventScheduler.InitializeIfNeeded(
-                planetData,
-                GetCurrentTotalTime(),
-                GetCurrentDayLength(),
-                GetDeterministicSeed(),
-                _rainEventConfig);
-            PublishAuthoritativeWeatherState();
-        }
-        else
-        {
-            NormalizeData(planetData);
-        }
+        PrepareRegionalContext();
+        lightningEffect?.Initialize(this);
+        AdvanceRegionalWeather();
+        NormalizeData(planetData);
     }
 
     private void MaintainWeatherEventSystem()
     {
         SubscribeTimeSystem();
+        AdvanceRegionalWeather();
+        UpdateLocalWeatherProjection();
         RefreshWeatherFeedbackIfChanged();
     }
 
     private void ShutdownWeatherEventSystem()
     {
         UnsubscribeTimeSystem();
+        PersistRegionalStates();
+        lightningEffect?.Shutdown();
         DeactivateWeatherFeedback();
     }
 
@@ -154,22 +133,7 @@ public partial class WeatherMgr
         if (!GameNetwork.HasStateAuthority || !IsRelevantTimeSource(sceneName))
             return;
 
-        PlanetData planetData = GetActivePlanetData();
-        if (planetData == null)
-            return;
-
-        int transitions = AdvanceWeatherAndSnow(planetData, oldTotalTime, newTotalTime);
-        if (transitions <= 0)
-            return;
-
-        if (EnableDebugLog)
-        {
-            Debug.Log(
-                $"[WeatherMgr] 天气推进完成，跨越阶段={transitions}，当前阶段={planetData.WeatherPhase}，" +
-                $"天气={planetData.CurrentWeather}，强度={planetData.WeatherIntensity:F2}，事件序号={planetData.WeatherEventSequence}");
-        }
-
-        PublishAuthoritativeWeatherState();
+        AdvanceRegionalWeather();
     }
 
     private bool IsRelevantTimeSource(string sceneName)
@@ -238,26 +202,7 @@ public partial class WeatherMgr
             return;
         }
 
-        float normalizedIntensity = Mathf.Clamp01(intensity);
-        WeatherPhase phase = ResolveForcedPhase(weatherType, normalizedIntensity);
-        WeatherEventScheduler.ForcePhase(
-            planetData,
-            phase,
-            GetCurrentTotalTime(),
-            GetCurrentDayLength(),
-            GetDeterministicSeed(),
-            _rainEventConfig);
-        planetData.CurrentWeather = weatherType;
-        planetData.WeatherIntensity = weatherType == WeatherType.Clear ? 0f : normalizedIntensity;
-
-        if (EnableDebugLog)
-        {
-            Debug.Log(
-                $"[WeatherMgr] 设置天气成功，阶段={phase}，天气={weatherType}，强度={planetData.WeatherIntensity:F2}，" +
-                $"天气修正={GetWeatherTemperatureOffset():F2}℃，有效环境温度={planetData.GlobalTemperature + GetWeatherTemperatureOffset():F2}℃");
-        }
-
-        PublishAuthoritativeWeatherState();
+        ForceRegionalWeather(weatherType, intensity, Mathf.Max(30f, GetCurrentDayLength() * 0.15f));
     }
 
     public void ApplyReplicatedWeatherState(
@@ -352,7 +297,7 @@ public partial class WeatherMgr
 
     private void RefreshRainAudio()
     {
-        if (!IsRaining() || lastSnowing)
+        if (!IsRaining())
         {
             if (_rainAudioHandle.IsPlaying)
                 _rainAudioHandle.Stop(0.8f);
@@ -363,7 +308,8 @@ public partial class WeatherMgr
         if (_rainAudioHandle.IsPlaying)
             return;
 
-        AudioPlayOptions options = AudioPlayOptions.Global(Mathf.Lerp(0.45f, 0.8f, GetCurrentWeatherIntensity()));
+        float rainIntensity = GetLocalRainIntensity();
+        AudioPlayOptions options = AudioPlayOptions.Global(Mathf.Lerp(0.45f, 0.8f, rainIntensity));
         options.FadeIn = 0.8f;
         options.OverrideLoop = true;
         options.Loop = true;

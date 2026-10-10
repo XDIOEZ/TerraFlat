@@ -5,8 +5,8 @@
     {
       "id": "surface_daily_dense_fog",
       "displayName": "大雾",
-      "description": "从第2天起每天有10%概率出现大雾，持续四分之一个游戏日，只能看清身边的区域。",
-      "enabled": true,
+      "description": "保留手动事件模板；自然雾量由区域湿度、温度和弱风连续计算。",
+      "enabled": false,
       "priority": 30,
       "conflictGroup": "forced_weather",
       "oncePerWorld": false,

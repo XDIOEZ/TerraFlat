@@ -87,10 +87,8 @@ public partial class TemperatureMgr
             cellTemperatureIndex.Clear();
         }
 
-        float weatherOffset = dimension?.ActiveDefinition?.SuppressWeather == true
-            ? 0f : WeatherMgr.CalculateWeatherTemperatureOffset(planet);
         ambientFieldOffset = planet != null
-            ? planet.GlobalTemperature - PlanetData.DefaultGlobalTemperature + weatherOffset : 0f;
+            ? planet.GlobalTemperature - PlanetData.DefaultGlobalTemperature : 0f;
         seasonTiltOffsetAtPole = 0f;
         orbitalTemperatureFactor = 0f;
         if (planet != null && dimension?.ActiveDefinition?.SuppressWeather != true &&
@@ -168,6 +166,8 @@ public partial class TemperatureMgr
             GameRes.ExistingInstance.TryGetLiquidDefinition(terrain.GetLiquidId(x, y), out var liquid) &&
             liquid.WorldWater?.ContactHeatingPerSecond > 0f)
             temperature = Mathf.Max(temperature, liquid.WorldWater.Temperature);
+        // 雨冷在全部动态来源合成后叠加一次，采样下一步天气时可准确剥离。
+        if (includeTransient) temperature += WeatherMgr.ExistingInstance?.GetTemperatureOffsetAt(position) ?? 0f;
         return true;
     }
 

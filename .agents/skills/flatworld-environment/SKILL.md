@@ -8,7 +8,7 @@ description: "Use when: 定位或修改 FlatWorld 的世界时间、昼夜、天
 ## 入口
 
 - 时间：`Assets/5_Scripts/5-3_GamePlay/World/Time/{DayTimeSystem,TimeData,DayNightTimeManager}.cs`
-- 天气与风力：`World/Environment/{WeatherMgr,WeatherMgr.Wind,WeatherEventScheduler,RainEffectController,RainGroundSplashController}.cs`
+- 天气：纯 `5-0_WorldModel/RegionalWeather{Engine,Settings,State}.cs`；桥接 `World/Environment/WeatherMgr.Regional.cs`，参数为 `Resources/Config/Weather/regional-weather.json`。
 - 光照/温度：`World/Environment/{LightLayerMgr,TemperatureMgr}.cs`
 - 污染：`World/Environment/Contamination/`；本体定义位于 `StreamingAssets/GameConfig/Contamination/`。
 - 逐格温度入口：`TemperatureMgr.Field.cs`；冷热源空间缓存与设备组件：`LocalTemperatureField.cs`、`LocalTemperatureSource.cs`。
@@ -31,17 +31,17 @@ description: "Use when: 定位或修改 FlatWorld 的世界时间、昼夜、天
 - 当前跨场景时间与存档主入口是 `DayTimeSystem`；季节改动前确认场景是否使用 `DayNightTimeManager`。
 - 高频时钟消费者复用 `DayTimeSystem.GetCurrentActiveSceneName()`，只按活动场景句柄缓存名称，并在世界进入/退出时失效；时刻、天气和维度规则继续实时读取，不能随名称一起缓存。
 - GM 当天时刻滑条应解析活动场景实际引用的时钟，按当前 `DayLength` 映射 00:00～23:59；拖动期间只预览，松开后由状态权威端调用 `JumpToTime` 一次，避免每个刻度都触发时间事件和天气调度。GM 面板在主菜单也会创建，此时先确认已进入世界，再用 `DayTimeSystem.GetInstance()` 无报错地探测时钟；不要在非世界场景用会打印缺失错误的 `Instance`。
-- 天气权威状态保存在 `PlanetData`；阶段边界使用绝对世界时间，跳时交给 Scheduler 跨越全部边界。
-- 高频天气阶段校验使用 Scheduler 的显式枚举匹配，新增阶段须同步 `IsValidPhase`，避免 `Enum.IsDefined` 反射和装箱。
-- 独立阴天使用 `WeatherType.Cloudy / WeatherPhase.Cloudy`，结束后放晴；`Forecast/Recovery` 仍属于降雨链。阴天恢复须保留强度和绝对结束时间，自然事件配置在 `core-cloudy.json`。云层只在 `DayTimeSystem.GetLighting/GetSunLighting` 外层衰减一次，不能在引用场景递归中重复乘算，也不能影响局部灯光或抑制天气/固定光照的维度。
-- `PlanetData.WindStrength` 是独立于降雨强度的星球级权威状态；修改必须经 `WeatherMgr.SetWindStrength` 发布天气快照，Client 只应用复制值，离开世界或 `SuppressWeather` 维度时清零 Shader 全局表现但不改存档值。
+- 天气按固定规范区域与五个固定点采样 B、实时温度和地理 P；全部输入就绪才触发新事件，所有区域先冻结旧输入再推进。引擎只接收剥离上一步平滑雨冷的温度，不把某个玩家、火把或角色体温当成整区温度。
+- 权威区域状态保存到 `PlanetData.RegionalWeatherStates`；区域与地表使用同一固定游戏秒格，查询不推进。跳时有界补已有事件，缺数据不制造新雨；GM 回拨平移时限并保留 D/C，复制以 Revision 为主。新区块不接收未加载期间的旧雨雪积分。
+- 雨雪、风、雷电、云雾是独立输出，`WeatherType/Phase` 只是组合名称。旧每日随机阴天/雾事件默认关闭，手动覆盖作用于当前区域并有结束时间；不能恢复全球互斥天气驱动。
+- 云量只在 `DayTimeSystem.GetLighting/GetSunLighting` 外层衰减一次，不重复乘引用场景或影响局部灯光。`PlanetData.WindStrength` 只是镜头附近的投影；风机、植物等功能按自身坐标查询，GPU 全局风参数按镜头采样并在退出时清零。
 - 静态 `precipitation` 是风携背景水汽、海洋补汽、陆地扣汽形成的长期地理降水量，影响径流与生态，不等于实时天气强度。临时输送 `humidity`、固定地理 `airHumidity`、动态空气湿度和地表 `moisture` 各自独立，禁止混用。
-- `ChunkMgr.TryGetGeographicAirHumidity` 只读取按天然水体生成的固定 `airHumidity`；`TryGetAirHumidity` 通过 `WorldAirHumidityField` 消费已恢复 Liquid 与 `Revision`，供湿按真实深度、最短距离衰减。动态背景来自独立 `airHumidity.background`，抽干后不能由完整地理湿度兜底；缺失影响邻区返回 false，不偷偷生成区块。当前只实现更新/查询，湿度影响实时天气留到后续规划。
+- `TryGetGeographicAirHumidity` 只读固定 `airHumidity`；`TryGetAirHumiditySupply` 通过已恢复 Liquid、水深、距离与 Revision 得到 B，背景只来自 `airHumidity.background`。`TryGetAirHumidity` 统一返回 clamp(B-D)，不能重复扣消耗、由完整地理湿度兜底或把缺失邻区当零；查询不生成地形。
 - 普通 Client 不调度天气或体温伤害，只应用服务器状态。
-- 大雾使用 `WeatherType.Fog / WeatherPhase.Fog` 和已有天气快照；自然触发由 `Config/GameEvents/Definitions/core-fog.json` 配置，手动用 `WeatherMgr.SetFog`。枚举只追加，不能重排旧天气编号；阶段恢复必须保留雾强度和绝对结束时间，不能落回降雨映射。
+- 雾浓度按当地冷湿弱风条件读取，可与雨和云共存；雷电是单次序号事件，强风只给满足暖湿条件的基础频率加有界倍率，最短间隔不能绕过，首次/读档序号只建基线。
 - 大雾视野由 `DenseFogRendererFeature` 在本地主相机栈的最终画面合成，只读取 owned 玩家，不隐藏/停用远端实体或增加网络可见状态；圆心与投影始终来自本地主相机，不能用环绕补绘相机的位置。`default-rendering.json` 的 `denseFog` 半径使用世界格距离，不随视距、画质或关闭普通后处理扩大；外圈噪声只改变白色，不降低完整浓雾的遮挡透明度。进房/读档已有浓雾须直接恢复，退出世界及抑制天气的维度不保留遮罩。
 - 角色体温、资源产量和调试温度层必须共用 `TemperatureMgr.TryGetAmbientTemperature`：读取已加载 `ChunkTerrainData` 的 `temperature.celsius`，叠加星球基准相对 `PlanetData.DefaultGlobalTemperature` 的差值、当前维度允许的天气修正和局部源；未加载返回 false，禁止为查询触发生成或复制整层数组。角色初始化只能更新自身 `AmbientTemperature`，不能把某个出生格温度写回星球全局值。
-- 地理基础气温由 `DeterministicChunkGenerator.FinishGeographicTemperature` 独立合成，再平滑写入 `temperature.celsius`；归一化 `temperature` 必须由同一摄氏温度派生，让群系、草、生态与雪冰保持一致。静态降水与迎背风不加地理温差，实时降雨降温复用现有天气温差，仅进入三级当前环境温度。规则变化需递增纯生成器与地表 Profile 的生成签名，保持噪声布局版本不变。
+- 地理基础气温由 `FinishGeographicTemperature` 合成并固定写入 `temperature.celsius`，归一化温度由同值派生。静态降水和迎背风不加地理温差；实时雨冷只叠加区域 C，一次合成到最终环境温度，不能再叠旧 Rain/Storm 固定温差。生成规则变化才递增生成签名。
 - 局部冷热源是可重建的影响层，来源模块负责燃料/供电/保存并在停用、回池时撤销注册；不能把临时偏移写回生成气候，否则卸载后无法恢复并会污染地图差量。修改源快照只使覆盖分区失效，查询缓存不扫描全部来源；环形边界同时归一化分区键并使用最短距离，避免世界接缝出现断层或重复贡献。
 - 世界液体的环境辐射热由 `WorldLiquidSettings.radiantHeatRadius/radiantHeatOffset` 声明，`RadiantLiquidTemperatureField` 只扫描已加载区块并按地形 Revision 缓存逐格最大温升；大片岩浆取最大贡献而不是逐格相加，抽干或流动后自动失效重算。
 - 设备组件 `LocalTemperatureSource` 的强度表示中心摄氏度增量（负值制冷），不是功率或绝对目标温度；恒温器应由设备控制器根据当前地块温度计算有效强度。当前影响层不保存热惯性，撤销源会立即撤销其环境增量；需要蓄热/热传导时应引入独立状态层，不能悄悄改变来源参数语义。
@@ -64,10 +64,10 @@ description: "Use when: 定位或修改 FlatWorld 的世界时间、昼夜、天
 - `TemperatureMgr.TryGetClimateBaseline` 不含季节、动态天气和局部源；历史环境重建与积雪采样用它，角色体温仍用最终环境温度入口，避免重复叠加季节。
 - 环世界地理温度先按纬度求底温：`climate.polarBand.*` 冷带到 `climate.equator.minimumCelsius/maximumCelsius/peakCelsius` 赤道二次概率底温平滑过渡（默认 40~60℃，45℃概率最高），再加 `climate.temperature.regionalVariationCelsius` 局部噪声与 `altitudeCooling*` 海拔降温。赤道随机底温通过 `spacingTiles` 控制横向区域大小，不随当前天气重抽；海拔只在地理收尾叠加一次，Legacy/Burst 核只返回原始温度噪声，最终地理气温允许超出纬度底温范围。
 - 地理温度在创建区块时固定，不能混入动态天气或季节；`TryGetGeographicTemperature` 连星球全局调温也不叠加。太阳直射点与逐格入射角对当前温度的修正仍属未来范围，不能因已有昼夜照明或公转温差就声称已经实现。
-- 天然积雪是 `ChunkTerrainData` 的 `snow.depth` 独立层，季节积雪仍由 `PlanetData.SeasonalSnow` 保存基温分段状态；二者查询时合并，并统一量化为 0～1 的十档（每层 0.1）。`WeatherMgr.Snow` 在天气阶段边界与日内分段推进季节覆盖量，雪停保留覆盖，暖时融化。禁用天气的维度不修改星球季节积雪状态。
+- 天然积雪为固定 `snow.depth`；区域实际降雪写入独立 `snow.weather.depth` 并随雪格差量保存，不再通过全球 SeasonalSnow 下雪。雨雪消费共用 `TryGetPrecipitationAt` 与当地实时温度；雪先积累，暖融后才调用通用土壤补水接口。边界降水积分与可见天气采用同一平滑权重。
 - 合成的地理摄氏气温按 `climate.temperature.blendRadius` 混合（默认 2 格），区块外采样与核心使用同一气候核；温度混合按固定行列顺序求和，群系与归一化温度读取同一平滑结果。雪地和山地不能再分别写死为 -10℃、10℃，否则会倒过来覆盖海拔与纬度气候。
 - 铲雪和雪球铺雪走 `WorldSnowInteraction`；铲子优先移除整格雪，每层产出一个 `Snowball`，铺回从真实快捷栏消耗一件并增加一层。玩家编辑雪厚独立于天然雪，允许超过十层；`snow.player.edited/depth/season` 与 `ChunkSaveRecord.SnowCells` 必须一起恢复，铲空也保留编辑标记。厚度大于 1 时只有显示强度钳制到 1，不能钳制真实产物数量。
-- 区块积雪表现直接从已绑定 `ChunkTerrainData` 读取 `temperature.celsius`，再叠加星球基温差采样 `SeasonalSnow`；禁止逐格走世界坐标温度查询。降雨且镜头当地低于冻结温度才启用无雪区块的周期刷新；停雪后仅有残雪的区块继续刷新融化，融净即停用。地形与液体变化事件可临时唤醒覆盖层；雪量与地形版本均不变时跳过整块扫描，区块刷新按 X/Y 坐标错峰。
+- 区块雪覆盖只读取已绑定地形的雪层，靠当地 Terrain 变化唤醒并错峰刷新，不能由镜头是否下雪控制远区。铲铺雪将当时雪量转为玩家编辑厚度并清天气雪基线，让后续降雪能重新积累；铲走的雪不能再次融化产水。
 
 - 角色液体接触由 `Mod_TileEffectReceiver.Liquid` 独立维护，WorldLiquidBehaviour 读取当前 LiquidDepth；深水有体力时 `LiquidFloating` 仅暂停 Ground。Ground 与 Liquid 各自拥有环境效果运行器，雪地/泥地退出不能清掉潮湿、体温、游泳、氧气、液体减速或饮用动作。浮沉边界只触发一次 Ground Exit/Enter，禁止用全接收器 effectSuppressors 代替上浮状态。
 - Ground 接触身份校验只读取当前权威 Terrain 引用和 TopTileId；仅重新进入地块时创建角色独立 TileData，不能每帧为身份比较克隆模板。地格移动、地块替换和区块重载仍须触发重新绑定。

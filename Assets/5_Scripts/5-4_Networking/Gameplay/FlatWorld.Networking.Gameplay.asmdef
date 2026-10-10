@@ -6,6 +6,7 @@
         "FlatWorld.Networking.Mirror",
         "Data",
         "GamePlay",
+        "FlatWorld.WorldModel",
         "UI",
         "FlatWorld.Utilities",
         "Mirror",

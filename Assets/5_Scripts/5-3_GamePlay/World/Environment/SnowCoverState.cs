@@ -3,7 +3,7 @@ using FlatWorld.WorldModel;
 using MemoryPack;
 using UnityEngine;
 
-/// <summary>独立季节积雪状态：按自然基础气温分档保存覆盖量，未加载区块同样经历降雪与融化，最多 161 个数值。</summary>
+/// <summary>静态季节覆盖量容器；区域天气积雪保存在区块环境层。</summary>
 [Serializable, MemoryPackable]
 public partial class SnowCoverState
 {
@@ -23,10 +23,30 @@ public partial class SnowCoverState
     }
 }
 
-/// <summary>雪层统一查询入口：天然雪最多十层，玩家堆雪按实际层数保存。</summary>
+/// <summary>雪层统一查询入口：生成雪、区域天气雪与玩家编辑分别保存，查询不推进模拟。</summary>
 public static class WorldSnowSystem
 {
     #region 查询
+
+    public const string WeatherDepthLayer = "snow.weather.depth";
+
+    public static float GetWeatherDepth(ChunkTerrainData terrain, int x, int y)
+    {
+        if (terrain == null || terrain.IsDisposed ||
+            !terrain.TryGetEnvironmentValue(WeatherDepthLayer, x, y, out float depth))
+            return 0f;
+        return Mathf.Clamp01(depth);
+    }
+
+    public static float GetTransientDepth(ChunkTerrainData terrain, int x, int y,
+        SnowCoverState seasonalSnow, float baselineOffset)
+    {
+        float seasonalDepth = 0f;
+        if (seasonalSnow != null &&
+            terrain.TryGetEnvironmentValue("temperature.celsius", x, y, out float temperature))
+            seasonalDepth = seasonalSnow.Sample(temperature + baselineOffset);
+        return Mathf.Clamp01(seasonalDepth + GetWeatherDepth(terrain, x, y));
+    }
 
     public static float GetNaturalDepth(ChunkTerrainData terrain, int x, int y)
     {
@@ -50,12 +70,9 @@ public static class WorldSnowSystem
         float naturalDepth = TerrainSupportLayer.GetTileId(terrain, x, y) == 0
             ? GetNaturalDepth(terrain, x, y)
             : 0f;
-        float seasonalDepth = 0f;
-        if (seasonalSnow != null &&
-            terrain.TryGetEnvironmentValue("temperature.celsius", x, y, out float temperature))
-            seasonalDepth = seasonalSnow.Sample(temperature + baselineOffset);
+        float seasonalDepth = GetTransientDepth(terrain, x, y, seasonalSnow, baselineOffset);
 
-        // 玩家编辑后的雪厚独立保存，季节只叠加编辑之后的净变化，不能重新铺回天然雪。
+        // 玩家编辑后只叠加区域天气雪的净变化，不能重新铺回已铲走的覆盖。
         if (terrain.TryGetEnvironmentValue(WorldSnowInteraction.EditedLayer, x, y, out float edited) && edited > 0f)
         {
             terrain.TryGetEnvironmentValue(WorldSnowInteraction.DepthLayer, x, y, out float depth);

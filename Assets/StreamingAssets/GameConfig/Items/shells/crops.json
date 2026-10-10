@@ -40,7 +40,6 @@
             "minimumFertilityGrowthMultiplier": 0.5,
             "waterConsumePerSecond": 0.02,
             "fertilityConsumePerSecond": 0.00035,
-            "rainWaterPerSecond": 0.08,
             "rainGrowthBonus": 0.15
           }
         },
@@ -751,7 +750,6 @@
             "minimumFertilityGrowthMultiplier": 0.5,
             "waterConsumePerSecond": 0.028,
             "fertilityConsumePerSecond": 0.0004,
-            "rainWaterPerSecond": 0.1,
             "rainGrowthBonus": 0.18
           }
         },

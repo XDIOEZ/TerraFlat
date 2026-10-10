@@ -77,7 +77,6 @@ MonoBehaviour:
   minimumFertilityGrowthMultiplier: 0.5
   waterConsumePerSecond: 0.02
   fertilityConsumePerSecond: 0.00035
-  rainWaterPerSecond: 0.08
   rainGrowthBonus: 0.15
   allowCultivatedHarvest: 0
   harvestFoodItemId: 

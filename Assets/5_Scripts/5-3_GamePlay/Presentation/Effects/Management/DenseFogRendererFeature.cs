@@ -84,7 +84,9 @@ public sealed class DenseFogRendererFeature : ScriptableRendererFeature
             !cameraData.resolveFinalTarget || !IsLocalStackCamera(sourceCamera, cameraData.camera))
             return;
 
-        float target = weather.CurrentWeather == WeatherType.Fog ? weather.CurrentWeatherIntensity : 0f;
+        // 雾独立读取玩家所在地浓度，允许与雨雪和强风同时存在。
+        float target = weather.TryGetWeatherAt(player.transform.position, out var localWeather)
+            ? Mathf.Clamp01(localWeather.FogDensity) : 0f;
         WorldRenderingConfig.RenderingDenseFog config = WorldRenderingConfigCatalog.Default.denseFog;
         if (sampledFrame != Time.frameCount)
         {

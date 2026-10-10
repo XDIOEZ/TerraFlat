@@ -142,8 +142,7 @@ namespace FlatWorld.NaturalEntities
             MinimumWaterMultiplier = p.Value<float?>("minimumWaterGrowthMultiplier") ?? 0.5f,
             MinimumFertilityMultiplier = p.Value<float?>("minimumFertilityGrowthMultiplier") ?? 0.5f,
             WaterPerSecond = p.Value<float?>("waterConsumePerSecond") ?? 0.02f,
-            FertilityPerSecond = p.Value<float?>("fertilityConsumePerSecond") ?? 0.00035f,
-            RainWaterPerSecond = p.Value<float?>("rainWaterPerSecond") ?? 0.08f
+            FertilityPerSecond = p.Value<float?>("fertilityConsumePerSecond") ?? 0.00035f
         };
 
         private static void ReadTreeExtras(JObject p, NaturalEntityEcsProfile profile)
@@ -171,7 +170,7 @@ namespace FlatWorld.NaturalEntities
             {
                 var soil = profile.Soil;
                 if (!Unit(soil.MinimumWaterMultiplier) || !Unit(soil.MinimumFertilityMultiplier) ||
-                    !NonNegative(soil.WaterPerSecond) || !NonNegative(soil.FertilityPerSecond) || !NonNegative(soil.RainWaterPerSecond))
+                    !NonNegative(soil.WaterPerSecond) || !NonNegative(soil.FertilityPerSecond))
                 { reason = "植物水肥规则必须是有限非负数。"; return false; }
             }
             if (profile.Collection is { } stock && (string.IsNullOrWhiteSpace(stock.CollectItemId) ||

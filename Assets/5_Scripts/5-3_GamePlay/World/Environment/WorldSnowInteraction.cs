@@ -27,14 +27,16 @@ public static class WorldSnowInteraction
     }
 
     public static SnowCellSaveData Capture(RuntimeTerrainTileSample sample)
+        => Capture(sample.Terrain, sample.LocalCell);
+
+    public static SnowCellSaveData Capture(ChunkTerrainData terrain, Vector2Int local)
     {
-        var terrain = sample.Terrain;
-        var local = sample.LocalCell;
         terrain.TryGetEnvironmentValue(EditedLayer, local.x, local.y, out float edited);
         terrain.TryGetEnvironmentValue(DepthLayer, local.x, local.y, out float depth);
         terrain.TryGetEnvironmentValue(SeasonLayer, local.x, local.y, out float season);
         return new SnowCellSaveData { LocalPosition = local, Edited = edited > 0f,
-            Depth = depth, SeasonalDepth = season };
+            Depth = depth, SeasonalDepth = season,
+            WeatherDepth = WorldSnowSystem.GetWeatherDepth(terrain, local.x, local.y) };
     }
 
     public static void Restore(ChunkTerrainData terrain, SnowCellSaveData state)
@@ -42,10 +44,12 @@ public static class WorldSnowInteraction
         var local = state.LocalPosition;
         if ((uint)local.x >= (uint)terrain.Width || (uint)local.y >= (uint)terrain.Height ||
             !IsFinite(state.Depth) || state.Depth < 0f || !IsFinite(state.SeasonalDepth) ||
-            state.SeasonalDepth < 0f || state.SeasonalDepth > 1f)
+            state.SeasonalDepth < 0f || state.SeasonalDepth > 1f ||
+            !IsFinite(state.WeatherDepth) || state.WeatherDepth < 0f || state.WeatherDepth > 1f)
             throw new InvalidOperationException("积雪差量的坐标或厚度无效。");
         terrain.SetEnvironmentValue(DepthLayer, local.x, local.y, state.Depth);
         terrain.SetEnvironmentValue(SeasonLayer, local.x, local.y, state.SeasonalDepth);
+        terrain.SetEnvironmentValue(WorldSnowSystem.WeatherDepthLayer, local.x, local.y, state.WeatherDepth);
         terrain.SetEnvironmentValue(EditedLayer, local.x, local.y, state.Edited ? 1f : 0f);
     }
 
@@ -56,10 +60,12 @@ public static class WorldSnowInteraction
         GetContext(out SnowCoverState snow, out float offset);
         float seasonalDepth = 0f;
         if (snow != null && sample.Terrain.TryGetEnvironmentValue("temperature.celsius",
-                sample.LocalCell.x, sample.LocalCell.y, out float baseline))
-            seasonalDepth = snow.Sample(baseline + offset);
+                sample.LocalCell.x, sample.LocalCell.y, out float temperature))
+            seasonalDepth = snow.Sample(temperature + offset);
+        // 编辑后的剩余雪统一归玩家层，清空天气层让新降雪继续积累。
         Restore(sample.Terrain, new SnowCellSaveData { LocalPosition = sample.LocalCell,
-            Edited = true, Depth = layers * SnowDepthLayer.LayerStep, SeasonalDepth = seasonalDepth });
+            Edited = true, Depth = layers * SnowDepthLayer.LayerStep, SeasonalDepth = seasonalDepth,
+            WeatherDepth = 0f });
         SaveDataMgr.Instance.RecordSnowCell(sample);
     }
 

@@ -17,7 +17,7 @@ using RuntimeWorldAddress = FlatWorld.WorldModel.WorldAddress;
 /// </summary>
 public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
 {
-    private const int CompactSaveVersion = 25; // ItemData 只保存实例状态，定义配置在主线程恢复。
+    private const int CompactSaveVersion = 26; // 区域天气状态随核心数据保存，旧布局在解析前拒绝。
     private const int ModdedSaveVersion = 12;
     private const float AutoSaveFrameBudgetSeconds = 0.0025f;
     private const string TemporarySaveSuffix = ".tmp";
@@ -2864,7 +2864,7 @@ public partial class ChunkSaveRecord
     public List<ContaminationCellSaveData> ContaminationCells = new(); // 独立污染状态
     public List<LiquidCellSaveData> LiquidCells = new(); // 只保存玩家改变的液体格，与 Ground 差量独立。
     public List<GroundLayerCellSaveData> GroundLayerCells = new(); // 追加伪 Z 轴差量，旧记录缺失时按未采挖处理。
-    public List<SnowCellSaveData> SnowCells = new(); // 独立保存玩家铲除或堆放的雪，不替换底层地形。
+    public List<SnowCellSaveData> SnowCells = new(); // 独立保存天气雪与玩家编辑雪，不替换底层地形。
 
     [MemoryPackIgnore]
     public bool HasChanges =>

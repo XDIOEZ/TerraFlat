@@ -4,7 +4,7 @@ using UnityEngine;
 /// <summary>
 /// 雨滴落地水花的纯表现控制器。
 /// 它由 WeatherMgr 的独立 Prefab 启停，优先在已加载的非水地形上复用同一个粒子系统发射环形水花；
-/// 地形刚加载、尚无法采样时会在可视范围内降级发射，避免雨天完全没有落地反馈。
+/// 发射落点必须具有可查询的当地液态降雨和已加载地形。
 /// 不修改原雨层、天气数据或地形数据。默认小雨约每秒 12 个、暴雨约每秒 48 个，最多同时保留 80 个粒子。
 /// </summary>
 [DisallowMultipleComponent]
@@ -227,31 +227,26 @@ public sealed class RainGroundSplashController : MonoBehaviour
         float maxX = cameraPosition.x + viewportWidth * 0.5f + _cameraPadding.x;
         float minY = cameraPosition.y - viewportHeight * 0.5f - _cameraPadding.y;
         float maxY = cameraPosition.y + viewportHeight * 0.5f + _cameraPadding.y;
-        bool hasRuntimeSample = false;
-        Vector3 fallbackPosition = default;
 
         for (int attempt = 0; attempt < _groundSampleAttempts; attempt++)
         {
             Vector2 candidate = new(
                 Mathf.Lerp(minX, maxX, Next01(ref _randomState)),
                 Mathf.Lerp(minY, maxY, Next01(ref _randomState)));
-            fallbackPosition = new Vector3(candidate.x, candidate.y, _splashZ);
+
+            // 水花按真实落点消费液态雨量，跨区域和雪区不凭镜头雨势发射。
+            WeatherMgr weather = WeatherMgr.ExistingInstance;
+            if (weather == null || !weather.TryGetPrecipitationAt(candidate, out float rainIntensity, out _) ||
+                rainIntensity <= 0f)
+                continue;
 
             if (!chunkMgr.TryGetRuntimeTerrainTile(candidate, out RuntimeTerrainTileSample sample))
                 continue;
 
-            hasRuntimeSample = true;
             if (sample.TopTileId == 0 || (sample.Cell.Flags & TerrainCellFlags.Blocking) != 0)
                 continue;
 
-            splashPosition = fallbackPosition;
-            return true;
-        }
-
-        // 运行时区块在刚进入世界时可能尚未 Ready；此时保留可视反馈，下一帧会自动恢复严格地形采样。
-        if (!hasRuntimeSample)
-        {
-            splashPosition = fallbackPosition;
+            splashPosition = new Vector3(candidate.x, candidate.y, _splashZ);
             return true;
         }
 

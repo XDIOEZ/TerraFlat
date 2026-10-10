@@ -139,7 +139,6 @@
     "growthDurationSeconds": "成长时长（秒）",
     "waterConsumePerSecond": "每秒耗水",
     "fertilityConsumePerSecond": "每秒消耗肥力",
-    "rainWaterPerSecond": "降雨补水/秒",
     "rainGrowthBonus": "降雨成长加成",
     "minimumWaterGrowthMultiplier": "缺水最低成长倍率",
     "minimumFertilityGrowthMultiplier": "低肥力最低成长倍率",

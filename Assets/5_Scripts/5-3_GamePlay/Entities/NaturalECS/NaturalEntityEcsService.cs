@@ -631,10 +631,23 @@ namespace FlatWorld.NaturalEntities
         /// <summary>局部热源和天气先冻结为纯数值，再交给共享并行能力；不把当前火源用于历史补算。</summary>
         private static void FreezeEnvironment(Record record)
         {
+            Vector3 position = record.Snapshot.transform.position;
+            if (record.Profile.HasGrowth)
+            {
+                WeatherMgr weather = WeatherMgr.ExistingInstance;
+                EntityWeatherInput input = new() { GrowthMultiplier = 1f };
+                if (weather != null && weather.TryGetWeatherAt(position, out var localWeather))
+                {
+                    input.RainIntensity = weather.TryGetPrecipitationAt(position, out float rainIntensity, out _)
+                        ? Mathf.Clamp01(rainIntensity) : 0f;
+                    input.GrowthMultiplier = EntityWeatherInput.ResolveGrowthMultiplier(
+                        input.RainIntensity, localWeather.CloudCoverage, localWeather.WindStrength);
+                }
+                simulation.Set(record.Handle.Id, input, notifyChanged: false);
+            }
             if (!record.Profile.HasClimate ||
                 !simulation.TryGet(record.Handle.Id, out NaturalEntityClimate climate)) return;
             TemperatureMgr temperature = TemperatureMgr.Instance;
-            Vector3 position = record.Snapshot.transform.position;
             climate.EnvironmentReady = 0;
             climate.SeasonPoleProximity = WorldTopologyRuntime.TryGetActiveBounds(out WorldTopologyBounds bounds)
                 ? OrbitalSeasonPhysics.ResolvePoleProximity(bounds, position)

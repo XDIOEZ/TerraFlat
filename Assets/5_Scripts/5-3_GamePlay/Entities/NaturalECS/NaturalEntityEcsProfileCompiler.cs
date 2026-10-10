@@ -184,6 +184,7 @@ namespace FlatWorld.NaturalEntities
             if (profile.HasGrowth)
             {
                 types.Add(ComponentType.ReadWrite<EntityGrowth>());
+                types.Add(ComponentType.ReadWrite<EntityWeatherInput>());
                 types.Add(ComponentType.ReadWrite<EntityPlantLifecycle>());
                 types.Add(ComponentType.ReadWrite<EntityPlantSoil>());
             }
@@ -199,7 +200,7 @@ namespace FlatWorld.NaturalEntities
             var reserved = new HashSet<Type>
             {
                 typeof(NaturalEntityLocation), typeof(EntityModuleAppearance), typeof(EntityModuleActive), typeof(AiecsVital),
-                typeof(EntityGrowth), typeof(EntityClimate), typeof(EntityHarvestRequirement), typeof(EntityPlantLifecycle),
+                typeof(EntityGrowth), typeof(EntityWeatherInput), typeof(EntityClimate), typeof(EntityHarvestRequirement), typeof(EntityPlantLifecycle),
                 typeof(EntityPlantSoil), typeof(EntityResourceStock), typeof(EntityStockProduction), typeof(EntityCanopyFruitModule),
                 typeof(ResourceEntityExtensionState)
             };

@@ -17,9 +17,7 @@ public partial class WeatherMgr
     public event Action<bool> SnowingChanged;
 
     /// <summary>按当地实际气温判断雨雪，冬季暖区仍可降雨，矿洞不产生降雪。</summary>
-    public bool IsSnowingAt(Vector3 position) => IsRaining() &&
-        TemperatureMgr.Instance.TryGetAmbientTemperature(position, out float temperature) &&
-        temperature <= GetSnowConfig().FreezingTemperature;
+    public bool IsSnowingAt(Vector3 position) => TryGetPrecipitationAt(position, out _, out float snow) && snow > 0.001f;
     /// <summary>所有覆盖渲染共用持久化气候状态，查询不会加载区块。</summary>
     public float GetSnowCoverage(Vector3 position)
     {
@@ -52,42 +50,6 @@ public partial class WeatherMgr
         if (snowConfig == null) throw new MissingReferenceException("缺少 Weather/SnowCoverConfig 积雪配置。");
         return snowConfig;
     }
-    /// <summary>按天气边界与季节时间细分跳时，未显示的区块也积累相同的雪。</summary>
-    private int AdvanceWeatherAndSnow(PlanetData planet, float from, float to)
-    {
-        if (planet.SeasonalSnow.Initialized && planet.SeasonalSnow.LastTotalTime <= to)
-            from = planet.SeasonalSnow.LastTotalTime;
-        planet.SeasonalSnow.Initialized = true;
-        float dayLength = GetCurrentDayLength();
-        int seed = GetDeterministicSeed();
-        WeatherEventScheduler.InitializeIfNeeded(planet, from, dayLength, seed, _rainEventConfig);
-        if (!DayTimeSystem.Instance.TryGetActiveTimeData(out TimeData clock)) return 0;
-        int transitions = 0;
-        float cursor = from;
-        while (cursor < to)
-        {
-            float boundary = WeatherEventScheduler.GetCurrentBoundary(planet);
-            if (boundary <= cursor)
-            {
-                transitions += WeatherEventScheduler.Advance(planet, cursor - 1f, cursor, dayLength, seed, _rainEventConfig);
-                continue;
-            }
-            float end = Mathf.Min(to, Mathf.Min(cursor + Mathf.Max(1f, dayLength / 24f), boundary));
-            if (end > cursor)
-            {
-                double midpoint = (cursor + (double)end) * 0.5d;
-                float offset = SeasonCalendar.SampleHistoricalTemperatureOffset(clock, midpoint, planet.GlobalTemperature, 1f) +
-                    CalculateWeatherTemperatureOffset(planet);
-                float precipitation = planet.CurrentWeather is WeatherType.Rain or WeatherType.Storm ? planet.WeatherIntensity : 0f;
-                SnowCoverSimulation.Advance(planet.SeasonalSnow, GetSnowConfig(), offset, precipitation, end - cursor);
-            }
-            transitions += WeatherEventScheduler.Advance(planet, cursor, end, dayLength, seed, _rainEventConfig);
-            cursor = end;
-        }
-        planet.SeasonalSnow.LastTotalTime = to;
-        return transitions;
-    }
-
     #endregion
 
     #region 降雪表现
@@ -96,7 +58,8 @@ public partial class WeatherMgr
     private bool RefreshSnowEffect()
     {
         Camera camera = Camera.main;
-        bool active = camera != null && IsSnowingAt(camera.transform.position);
+        float snowIntensity = camera != null && TryGetPrecipitationAt(camera.transform.position, out _, out float snow) ? snow : 0f;
+        bool active = snowIntensity > 0.001f;
         SetSnowingState(active);
         if (!active) { if (snowEffect != null) snowEffect.SetActive(false); return false; }
         if (snowEffect == null)
@@ -106,7 +69,7 @@ public partial class WeatherMgr
             snowController = snowEffect.GetComponent<RainEffectController>();
         }
         snowEffect.SetActive(true);
-        snowController.SyncToCamera(camera, CurrentWeatherIntensity);
+        snowController.SyncToCamera(camera, snowIntensity);
         return true;
     }
 

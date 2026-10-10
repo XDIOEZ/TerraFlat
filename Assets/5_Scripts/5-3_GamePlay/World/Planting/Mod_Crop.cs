@@ -107,10 +107,7 @@ public sealed class Mod_Crop : Module, IInteractable, IPlantableCrop, IWorldTime
     [SerializeField, Min(0f)]
     private float fertilityConsumePerSecond = 0.00035f;
 
-    [Header("雨水与天气")]
-    [SerializeField, Min(0f)]
-    private float rainWaterPerSecond = 0.08f;
-
+    [Header("天气成长")]
     [SerializeField, Range(0f, 1f)]
     private float rainGrowthBonus = 0.15f;
 
@@ -310,8 +307,6 @@ public sealed class Mod_Crop : Module, IInteractable, IPlantableCrop, IWorldTime
         }
 
         float safeDeltaTime = Mathf.Max(0f, deltaTime);
-        if (!historical)
-            ApplyRainWater(farmlandData, safeDeltaTime);
         farmlandData.NormalizeValues();
         FarmlandSystem.CommitSoil(farmlandData);
 
@@ -367,37 +362,17 @@ public sealed class Mod_Crop : Module, IInteractable, IPlantableCrop, IWorldTime
         return waterMultiplier * fertilityMultiplier;
     }
 
-    private void ApplyRainWater(TileData_Farmland farmlandData, float deltaTime)
-    {
-        float rainIntensity = ResolveRainIntensity();
-        if (rainIntensity > 0f && rainWaterPerSecond > 0f)
-            farmlandData.AddWater(rainWaterPerSecond * rainIntensity * deltaTime);
-    }
-
     private float ResolveWeatherGrowthMultiplier()
     {
-        if (WeatherMgr.Instance == null)
+        WeatherMgr weather = WeatherMgr.ExistingInstance;
+        if (weather == null || item == null || !weather.TryGetWeatherAt(item.transform.position, out var localWeather))
             return 1f;
 
-        float intensity = WeatherMgr.Instance.CurrentWeatherIntensity;
-        return WeatherMgr.Instance.CurrentWeather switch
-        {
-            WeatherType.Cloudy => Mathf.Lerp(1f, 0.95f, intensity),
-            WeatherType.Rain => Mathf.Lerp(1f, 1f + rainGrowthBonus, intensity),
-            WeatherType.Storm => Mathf.Lerp(1f, 0.85f, intensity),
-            _ => 1f
-        };
-    }
-
-    private static float ResolveRainIntensity()
-    {
-        if (WeatherMgr.Instance == null)
-            return 0f;
-
-        WeatherType weather = WeatherMgr.Instance.CurrentWeather;
-        return weather == WeatherType.Rain || weather == WeatherType.Storm
-            ? WeatherMgr.Instance.CurrentWeatherIntensity
-            : 0f;
+        // 云、强风和降雨分别作用，雨水补给由区域地表系统统一结算。
+        float rainIntensity = weather.TryGetPrecipitationAt(item.transform.position, out float rain, out _) ? rain : 0f;
+        return FlatWorld.AIECS.EntityWeatherInput.ResolveGrowthMultiplier(
+            rainIntensity, localWeather.CloudCoverage, localWeather.WindStrength) *
+            (1f + Mathf.Clamp01(rainIntensity) * rainGrowthBonus);
     }
 
     #endregion
@@ -513,7 +488,6 @@ public sealed class Mod_Crop : Module, IInteractable, IPlantableCrop, IWorldTime
         minimumFertilityGrowthMultiplier = Mathf.Clamp01(minimumFertilityGrowthMultiplier);
         waterConsumePerSecond = Mathf.Max(0f, waterConsumePerSecond);
         fertilityConsumePerSecond = Mathf.Max(0f, fertilityConsumePerSecond);
-        rainWaterPerSecond = Mathf.Max(0f, rainWaterPerSecond);
         rainGrowthBonus = Mathf.Clamp01(rainGrowthBonus);
     }
 
@@ -524,7 +498,6 @@ public sealed class Mod_Crop : Module, IInteractable, IPlantableCrop, IWorldTime
         minimumFertilityGrowthMultiplier = Mathf.Clamp01(minimumFertilityGrowthMultiplier);
         waterConsumePerSecond = Mathf.Max(0f, waterConsumePerSecond);
         fertilityConsumePerSecond = Mathf.Max(0f, fertilityConsumePerSecond);
-        rainWaterPerSecond = Mathf.Max(0f, rainWaterPerSecond);
         rainGrowthBonus = Mathf.Clamp01(rainGrowthBonus);
     }
 

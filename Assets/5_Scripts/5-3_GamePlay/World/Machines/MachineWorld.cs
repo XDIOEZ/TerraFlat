@@ -762,7 +762,13 @@ public static partial class MachineWorld
         if (sourceProviders.TryGetValue(source, out var provider)) return Mathf.Clamp01(provider(node));
         if (source == "electric") return Mathf.Clamp01(node.ElectricalPowerRatio);
         if (source == "manual") return node.State != null && node.State.ManualSeconds > 0 ? 1 : 0;
-        if (source == "wind") return WeatherMgr.Instance != null ? WeatherMgr.Instance.GetCurrentWindStrength() : 0;
+        if (source == "wind")
+        {
+            // 风机只消费自身地表位置的风力，船舱和其它世界不借当前地表天气。
+            WeatherMgr weather = WeatherMgr.ExistingInstance;
+            return weather != null && node.ScopeKey == SceneManager.GetActiveScene().name &&
+                weather.TryGetWeatherAt(node.Position, out var localWeather) ? localWeather.WindStrength : 0f;
+        }
         if (source == "water") return GetWaterSourceFactor(node);
         FluidDeviceBehavior fluidBehavior = GetFluidDeviceBehavior(node);
         if (fluidBehavior?.HasMechanicalSource == true) return fluidBehavior.MechanicalSourceFactor(node);

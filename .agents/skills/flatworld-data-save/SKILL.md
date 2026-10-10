@@ -16,7 +16,8 @@ description: "Use when: 定位或修改 FlatWorld 的数据模型、MemoryPack �
 
 ## 核心不变量
 
-- 开发阶段只读取当前 Envelope 版本，不保留旧版本自动升级路径。实例快照格式为 FWD9/25，外层为 FWD5/12；格式头必须在反序列化内部对象之前校验，旧格式明确拒绝但不删除或覆盖原文件。
+- 开发阶段只读取当前 Envelope 版本，不保留旧版本自动升级路径。实例快照格式为 FWD9/26，外层为 FWD5/12；格式头必须在反序列化内部对象之前校验，旧格式明确拒绝但不删除或覆盖原文件。
+- 区域天气真值经 `RegionalWeatherRecord` 保存在 `PlanetData.RegionalWeatherStates`，包含消耗/降温偏移、绝对时刻、固定检查游标、最近有效输入和单次雷电序号；运行时持续更新该档案，不能等到退出才捕获，也不保存镜头或粒子状态。
 - `SerializableTimeData` 保存自转/公转周期、倾角、离心率、公转秒制起点、Profile、限时边界与月相；日长、年长和季长是只读派生值，不重复入档。季节历史按绝对游戏秒冻结当时的物理参数；恢复经统一物理入口重建派生状态，`EnsureTimeSystemDefaults()` 不承担旧存档兼容。
 - 正式存档只写 `Application.persistentDataPath/Saves/LocalSaveData/`，并使用临时文件/原子替换；失败不得伪装为成功恢复。
 - `GameSaveData.PlayerData_Dict` 的键是不可变角色 ID，`Data_Player.Name_User` 仅是可修改的显示名；旧档保留原字典键作为兼容 ID，新角色分配独立 ID。改角色名只写 `Name_User`，改存档名要同步 `GameSaveData.saveName`、磁盘文件名和最后退出时间元数据，失败保留旧档。
@@ -44,7 +45,7 @@ description: "Use when: 定位或修改 FlatWorld 的数据模型、MemoryPack �
 
 - `ChunkSaveRecord.HasChanges` 必须计入独立的农业和平台状态；农业存档只保存需要持久化的水肥与作物，未完成锄地是纯运行时视觉/输入进度，不进入农业差量；真正耕完后由 `RuntimeTileDeltas` 保存正式 `Tile_Farmland`。恢复支撑必须在导航及表现绑定之前，不能只有当前帧可行走、重载后丢失平台。
 - 伪 Z 轴由 `ChunkSaveRecord.GroundLayerCells` 稀疏保存已采天然层数、玩家覆盖栈及表面草层，恢复必须在地形/草层差量之后、表现绑定之前；同地块 ID 的连续石层也必须保留记录。新增字段仅追加到 MemoryPack 类末尾，缺失的列表可能为 null，不能把初始值当成旧记录的缺省。
-- 玩家雪层使用独立 `SnowCells` 差量，记录编辑标记、实际厚度与编辑时季节覆盖；空雪格仍算有效变化，必须计入 `HasChanges`，并在表现绑定前恢复，不能用 Ground 差量替换原地形。
+- 玩家与天气雪层使用独立 `SnowCells` 差量，记录编辑标记、实际厚度、静态季节基线及 `snow.weather.depth`；铲空和非零天气雪都计入 `HasChanges`，并在表现绑定前恢复，不能用 Ground 差量替换原地形。玩家编辑时把剩余有效雪转入玩家厚度并清空天气雪，让后续降雪继续积累；天气水肥/雪批量保存按格索引合并，必须保留已有 `AgricultureCells.Crop`。
 - 地块污染使用 `ChunkSaveRecord.ContaminationCells` 保存偏离定义默认值的稀疏差量；污染定义 ID 与数值一起持久化，恢复时必须要求当前本体/MOD 已注册该定义，禁止静默丢弃未知污染状态。
 - 时间保存同时复制季节配置和历史区间；积雪、植物冷热暴露、自然补位年份、陶罐水质／加工进度、盐分负担各有独立状态，不能在渲染绑定或 UI 打开时重置。
 - MemoryPack 追加可选数值字段时，不能依赖字段初始化值表达缺省；若 0 也是有效配置，使用可空数值并在转为运行时快照时解析缺省，避免未记录字段被当成显式 0。

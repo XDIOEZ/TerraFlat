@@ -168,15 +168,6 @@ public static class WorldEntityRuntime
         capabilities.DayLength = clock.DayLength;
         capabilities.Seasonal = DimensionManager.ExistingInstance?.ActiveDefinition?.SuppressWeather != true;
         capabilities.DifficultyGrowthMultiplier = GameDifficultyService.Current.Production.CropGrowthMultiplier;
-        WeatherMgr weather = WeatherMgr.Instance;
-        float intensity = weather != null ? Mathf.Clamp01(weather.CurrentWeatherIntensity) : 0f;
-        capabilities.RainIntensity = weather != null && weather.CurrentWeather == WeatherType.Rain ? intensity : 0f;
-        capabilities.WeatherMultiplier = weather == null ? 1f : weather.CurrentWeather switch
-        {
-            WeatherType.Cloudy => Mathf.Lerp(1f, 0.95f, intensity),
-            WeatherType.Storm => Mathf.Lerp(1f, 0.85f, intensity),
-            _ => 1f
-        };
         UpdateSeasonSnapshot(clock);
         capabilities.Update();
         plants.StepSeconds = capabilities.StepSeconds;
@@ -184,9 +175,6 @@ public static class WorldEntityRuntime
         plants.DayLength = capabilities.DayLength;
         plants.Seasonal = capabilities.Seasonal;
         plants.GrowthDifficulty = capabilities.DifficultyGrowthMultiplier;
-        plants.WeatherMultiplier = capabilities.WeatherMultiplier;
-        plants.RainGrowthIntensity = capabilities.RainIntensity;
-        plants.RainIntensity = weather != null && (weather.CurrentWeather == WeatherType.Rain || weather.CurrentWeather == WeatherType.Storm) ? intensity : 0f;
         plants.DependOn(capabilities.PendingJobs);
         try { plants.Update(); }
         finally { plants.Complete(); }

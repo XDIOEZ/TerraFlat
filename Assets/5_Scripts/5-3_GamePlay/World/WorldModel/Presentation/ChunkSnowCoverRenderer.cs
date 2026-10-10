@@ -1,10 +1,9 @@
-using System;
 using FlatWorld.WorldModel;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 
 /// <summary>
-/// 只读区块积雪覆盖层：按绑定地形的基础气温采样季节状态，仅在状态变化时刷新。
+/// 只读区块积雪覆盖层：由当地权威地形变化唤醒，镜头天气不决定其他区块积雪。
 /// 保留原始地块和水面身份；每个区块最多绘制 Width×Height 个雪格及墙顶雪冠。
 /// </summary>
 public sealed class ChunkSnowCoverRenderer : MonoBehaviour, IChunkViewRenderer
@@ -17,16 +16,11 @@ public sealed class ChunkSnowCoverRenderer : MonoBehaviour, IChunkViewRenderer
     private ChunkDepthMeshRenderer groundSnowMesh; // 地面雪保留明确的 Unity 排序层。
     private ChunkDepthMeshRenderer wallSnowMesh; // 墙顶雪单独排在墙体上方。
     private ChunkRuntime chunk; // 当前区块。
-    private WeatherMgr weather; // 雨转雪状态的订阅来源。
     private float nextRefresh; // 区块错峰比较积雪状态。
     private float refreshPhase; // 降雪重新开始时保持错峰。
     private int[] visibleCoverage; // 保存真实层数，玩家雪堆可以超过十层。
     private int[] visibleWallCoverage; // 墙体出现和拆除也触发刷新。
-    private float[] sampledCoverage; // 上次绘制时的 161 档积雪状态。
-    private SnowCoverState sampledSnow; // 区分换世界或星球后的状态实例。
-    private float sampledBaselineOffset; // 星球基温变化也会改变雪量。
     private long sampledTerrainRevision; // 地形、水面或支撑面变化时重新绘制。
-    private bool hasVisibleSnow; // 完全无雪时跳过逐格采样。
     private bool terrainDirty; // 非雪天的地形改动也要更新现有覆盖。
 
     #endregion
@@ -41,13 +35,9 @@ public sealed class ChunkSnowCoverRenderer : MonoBehaviour, IChunkViewRenderer
         owner.BatchPresentationRebuilt += ResubmitVisible;
         visibleCoverage = new int[value.Terrain.Width * value.Terrain.Height];
         visibleWallCoverage = new int[visibleCoverage.Length];
-        sampledCoverage ??= new float[SnowCoverState.BandCount];
-        weather = WeatherMgr.Instance;
-        weather.SnowingChanged += HandleSnowingChanged;
         chunk.Terrain.Changed += HandleTerrainChanged;
         chunk.Terrain.LiquidBatchChanged += HandleLiquidBatchChanged;
-        weather.TryGetSnowCoverageContext(out SnowCoverState snow, out float baselineOffset);
-        Refresh(snow, baselineOffset);
+        Refresh();
         int chunkX = value.Address.ChunkOrigin.X / value.Terrain.Width;
         int chunkY = value.Address.ChunkOrigin.Y / value.Terrain.Height;
         uint phase = unchecked((uint)chunkX * 73856093u ^ (uint)chunkY * 19349663u);
@@ -59,7 +49,6 @@ public sealed class ChunkSnowCoverRenderer : MonoBehaviour, IChunkViewRenderer
     /// <summary>回池时清空纯表现，世界中的积雪状态继续保留。</summary>
     public void Unbind()
     {
-        if (weather != null) weather.SnowingChanged -= HandleSnowingChanged;
         if (chunk?.Terrain != null)
         {
             chunk.Terrain.Changed -= HandleTerrainChanged;
@@ -72,38 +61,26 @@ public sealed class ChunkSnowCoverRenderer : MonoBehaviour, IChunkViewRenderer
         groundSnowMesh?.Dispose(); groundSnowMesh = null;
         wallSnowMesh?.Dispose(); wallSnowMesh = null;
         owner = null;
-        weather = null;
         chunk = null; visibleCoverage = null; visibleWallCoverage = null;
-        sampledSnow = null;
         sampledTerrainRevision = -1;
-        hasVisibleSnow = false;
         terrainDirty = false;
         enabled = false;
     }
 
-    /// <summary>区块销毁时释放天气订阅。</summary>
+    /// <summary>区块销毁时释放地形订阅。</summary>
     private void OnDestroy() => Unbind();
 
     #endregion
 
     #region 增量刷新
 
-    /// <summary>仅降雪中或本区块尚有残雪时低频比较积雪快照。</summary>
+    /// <summary>当地地形有变化时错峰刷新一次，没有变化就停用 Update。</summary>
     private void Update()
     {
         if (chunk == null || Time.unscaledTime < nextRefresh) return;
         nextRefresh += Mathf.Floor(Time.unscaledTime - nextRefresh) + 1f;
-        weather.TryGetSnowCoverageContext(out SnowCoverState snow, out float baselineOffset);
-        if (RequiresRefresh(snow, baselineOffset)) Refresh(snow, baselineOffset);
+        if (chunk.Terrain.Revision != sampledTerrainRevision) Refresh();
         terrainDirty = false;
-        UpdateActivation();
-    }
-
-    /// <summary>降雪开始后按区块相位错峰启动，停雪时只保留有残雪的区块刷新。</summary>
-    private void HandleSnowingChanged(bool snowing)
-    {
-        if (chunk == null) return;
-        if (snowing && !enabled) ScheduleNextRefresh();
         UpdateActivation();
     }
 
@@ -126,36 +103,22 @@ public sealed class ChunkSnowCoverRenderer : MonoBehaviour, IChunkViewRenderer
         UpdateActivation();
     }
 
-    /// <summary>雪天持续更新；无雪区块停用 Update，残雪融净后也停用。</summary>
-    private void UpdateActivation() => enabled = chunk != null && (weather.IsSnowingNow || hasVisibleSnow || terrainDirty);
+    /// <summary>降雪与融雪都先修改当地层值，纯表现只在变化事件后工作。</summary>
+    private void UpdateActivation() => enabled = chunk != null && terrainDirty;
 
     /// <summary>重启刷新时保留 X/Y 区块错峰，避免天气切换造成同帧尖峰。</summary>
     private void ScheduleNextRefresh() => nextRefresh = Time.unscaledTime + 0.5f + refreshPhase;
 
-    /// <summary>地形版本、星球基温或任一积雪档发生变化才重新采样区块。</summary>
-    private bool RequiresRefresh(SnowCoverState snow, float baselineOffset)
-    {
-        if (chunk.Terrain.Revision != sampledTerrainRevision ||
-            !ReferenceEquals(snow, sampledSnow) || baselineOffset != sampledBaselineOffset)
-            return true;
-        if (snow == null) return false;
-        for (int i = 0; i < SnowCoverState.BandCount; i++)
-            if (snow.Coverage[i] != sampledCoverage[i]) return true;
-        return false;
-    }
-
     /// <summary>按当前有效支撑面遮罩绘制雪，平台移除后下方水面不留悬空白块。</summary>
-    private void Refresh(SnowCoverState snow, float baselineOffset)
+    private void Refresh()
     {
-        bool nowVisible = false;
         for (int y = 0; y < chunk.Terrain.Height; y++)
         for (int x = 0; x < chunk.Terrain.Width; x++)
         {
             TerrainCell surface = TerrainSupportLayer.GetSurfaceCell(chunk.Terrain, x, y);
             float coverage = WorldSnowSystem.GetSurfaceDepth(
-                chunk.Terrain, x, y, snow, baselineOffset);
+                chunk.Terrain, x, y, null, 0f);
             int value = Mathf.RoundToInt(coverage * SnowDepthLayer.LayerCount);
-            if (value > 0) nowVisible = true;
             int index = y * chunk.Terrain.Width + x;
             int wallValue = surface.BlockingTileId != 0 ? value : 0;
             if (visibleWallCoverage[index] != wallValue)
@@ -167,8 +130,7 @@ public sealed class ChunkSnowCoverRenderer : MonoBehaviour, IChunkViewRenderer
             visibleCoverage[index] = value;
             SubmitSnow(x, y, value, false);
         }
-        hasVisibleSnow = nowVisible;
-        RememberSnapshot(snow, baselineOffset);
+        sampledTerrainRevision = chunk.Terrain.Revision;
     }
 
     /// <summary>Owner 全量重建后按已采样覆盖补齐积雪实例。</summary>
@@ -221,16 +183,6 @@ public sealed class ChunkSnowCoverRenderer : MonoBehaviour, IChunkViewRenderer
         mesh.Set(0, slot, 0, snowTile.sprite, snowMaterial,
             transform.localToWorldMatrix * matrix * snowTile.transform,
             transform.TransformPoint(anchor), 0, snowTile.color * new Color(1f, 1f, 1f, opacity));
-    }
-
-    /// <summary>保存本次采样依据，避免无雪或状态不变时重复扫完整区块。</summary>
-    private void RememberSnapshot(SnowCoverState snow, float baselineOffset)
-    {
-        sampledSnow = snow;
-        sampledBaselineOffset = baselineOffset;
-        sampledTerrainRevision = chunk.Terrain.Revision;
-        if (snow != null)
-            Array.Copy(snow.Coverage, sampledCoverage, SnowCoverState.BandCount);
     }
 
     #endregion

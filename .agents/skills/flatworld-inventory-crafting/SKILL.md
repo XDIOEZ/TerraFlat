@@ -93,7 +93,7 @@ description: "Use when: 定位或修改 FlatWorld 的背包、槽位、快捷栏
 - 野外自然生成、允许玩家用武器清除的小型作物统一继承 `WildCrop_Base`；该抽象定义负责成熟自然初态、通用 `Mod_DamageReceiver`、植被受击材质和独立 Mod_DamageReceiver Trigger，具体作物只按外形/耐久覆盖 HP 与伤害碰撞尺寸。仅种植链使用的萝卜、水稻不因该规则自动获得生命模块；具体死亡掉落仍由各物品顶层 `lootTableId` 定义，禁止把通用掉落塞进 `WildCrop_Base`。
 - 作物需要多张成长图时，在物品 `visual.spriteStates` 同时声明 `seedling/growing/mature`，由 `Mod_CropVisual` 根据 `normalizedGrowth` 派生表现阶段；不得为了中间画面给 `CropStage` 增加持久化阶段。只要声明任一阶段图就必须三张齐全，对象池卸载时恢复外壳原 Sprite。
 - 世界植株与收获物必须保留独立 Item ID；种下时把植株重置为幼苗，一次性作物成熟交互后由动作生成食物/种子并销毁植株，持续采果植株只扣果实库存；不能把世界植株直接改成食物实例。
-- `Mod_Grow` 继续承担树木与自然植物成长，并实现 `IPlantableCrop` 接入同一播种入口；水肥、天气与 `CropGrowthMultiplier` 在权威成长模块中各结算一次。
+- `Mod_Grow` 继续承担树木与自然植物成长，并实现 `IPlantableCrop` 接入同一播种入口；水肥消耗、当地天气成长倍率与 `CropGrowthMultiplier` 各结算一次。雨/融雪水量由 `WorldWeatherSurfaceSystem` 调用 `FarmlandSystem.SupplySurfaceWater`，空耕地也补水；GO/ECS 植物不能再次加雨水，空气高湿和湿土也不能互相直接补量。
 - 自然生态伴生物通过 `NaturalItemPlacement.HostGuid` 绑定宿主；宿主模块可实现 `INaturalCompanionHostCondition` 提供运行态门禁。`Mod_Grow` 默认到“发育”阶段才允许蜂巢等伴生物出现，未达门槛时由 `ChunkNaturalItemRenderer` 延迟生成，禁止让幼苗/小树直接挂载伴生物。
 - 苹果/桃/柑橘这类果树优先复用 `AppleTree` 与 `Apple` 的 JSON 继承链：果实只覆盖营养、腐败和视觉，果树只覆盖采收物、气候、战利品和视觉；若需要野生生成，再单独在地表 `ecologyRules` 注册稳定规则，禁止为每种果树复制一套成长代码。
 - 使用 `_BodyClip` 裁剪作物精灵时，必须给 `Mod_CropVisual` 绑定支持该属性的 `Sprite-Lit-Master` 材质；通用 `Prop` 外壳默认材质不提供 BodyClip。

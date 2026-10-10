@@ -15,7 +15,9 @@ public partial class Mod_BuffManager
         Item receiver = buffReceiver != null ? buffReceiver : item;
         WeatherMgr weather = WeatherMgr.ExistingInstance;
         if (!GameNetwork.HasStateAuthority || receiver == null || receiver.DestructionHandled ||
-            !receiver.isActiveAndEnabled || weather == null || !weather.IsRaining())
+            !receiver.isActiveAndEnabled || weather == null ||
+            !weather.TryGetPrecipitationAt(receiver.transform.position, out float intensity, out _) ||
+            intensity <= 0f)
         {
             ResetRainStackClock();
             return false;
@@ -29,14 +31,13 @@ public partial class Mod_BuffManager
         }
 
         Mod_DamageReceiver health = receiver.itemMods?.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
-        if (health == null || health.Hp <= 0f || weather.IsSnowingAt(receiver.transform.position))
+        if (health == null || health.Hp <= 0f)
         {
             ResetRainStackClock();
             return false;
         }
 
         BuffDefinition definition = resources.GetBuffDefinition(WetBuffIds.Wet);
-        float intensity = weather.GetCurrentWeatherIntensity();
         if (definition == null || definition.RainStackIntervalSeconds <= 0f || definition.RainMaxStacks <= 0 ||
             definition.RainReferenceIntensity <= 0f || intensity <= 0f || float.IsNaN(intensity) || float.IsInfinity(intensity))
         {

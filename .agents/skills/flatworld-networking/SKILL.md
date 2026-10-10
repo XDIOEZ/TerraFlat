@@ -19,6 +19,7 @@ description: "Use when: 定位或修改 FlatWorld 的 Mirror/KCP 联机启动、
 - 建造消息层只校验连接身份、真实快捷栏材料并发布结果，放置规则和扣料/回滚统一交给 `BuildingPlacementService`；没有网络发布器的后端必须拒绝并回滚，不能只向请求方报成功。Host 的确认回调不重复发布已由权威事务产生的建造进度。
 
 - 服务端结算世界生成、伤害、死亡、建筑与持久状态；客户端只应用权威结果。
+- 区域天气与地表雨雪反馈只在权威端推进；普通 Client 按 WorldKey、规范区域/Chunk 地址和修订号应用复制，不重复扣湿度、降温或浇水。首次区域复制建立雷电序号基线，不能重播历史闪电；地表批次仅传水肥与雪层数值，不携带作物 ItemData。地表复制序号独立递增，不能复用可能因区块重新生成而回退的 Terrain.Revision；分片按可靠通道大小限制，本地待生成/就绪区块最多缓存 256 个地址，淘汰后在就绪窗口补拉完整快照，消息不触发地形生成。
 - 远程视觉副本不得进入本地 Item Tick、AI 感知、教程/对话或存档索引。
 - `LoadNetworkPlayer/Promote.../ConfigureRemote...` 显式维护 Player ProfileContext；只有 owned 玩家驱动本地输入、导航窗口与 HUD。
 - 网络协议、存档和服务端判定只传规范逻辑坐标。`NetworkWorldPlayer.AuthoritativeLogicalPosition` 是连接在服务端的玩家位置真源；Host 上远端 `NetworkIdentity.transform.position` 可能已经是本机局部表现镜像，拾取、建造、拆除、生成距离等权威判定禁止直接读取它。

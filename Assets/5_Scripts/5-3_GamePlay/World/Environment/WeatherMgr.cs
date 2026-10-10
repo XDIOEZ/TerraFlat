@@ -114,8 +114,7 @@ public partial class WeatherMgr : SingletonAutoMono<WeatherMgr>
         if (!_weatherRuntimeAllowed)
             return WeatherType.Clear;
 
-        PlanetData planetData = GetActivePlanetData();
-        return planetData != null ? planetData.CurrentWeather : WeatherType.Clear;
+        return TryGetLocalWeather(out var sample) ? DescribeWeather(sample) : WeatherType.Clear;
     }
 
     public float GetCurrentWeatherIntensity()
@@ -123,8 +122,8 @@ public partial class WeatherMgr : SingletonAutoMono<WeatherMgr>
         if (!_weatherRuntimeAllowed)
             return 0f;
 
-        PlanetData planetData = GetActivePlanetData();
-        return planetData != null ? Mathf.Clamp01(planetData.WeatherIntensity) : 0f;
+        return TryGetLocalWeather(out var sample) ? (sample.PrecipitationIntensity > 0f ? sample.PrecipitationIntensity :
+            Mathf.Max(sample.CloudCoverage, sample.FogDensity)) : 0f;
     }
 
     public float GetWeatherTemperatureOffset()
@@ -132,7 +131,7 @@ public partial class WeatherMgr : SingletonAutoMono<WeatherMgr>
         if (!_weatherRuntimeAllowed)
             return DefaultWeatherTemperatureOffset;
 
-        return CalculateWeatherTemperatureOffset(GetActivePlanetData());
+        return TryGetLocalWeather(out var sample) ? sample.CoolingOffsetCelsius : 0f;
     }
 
     public static bool IsWeatherSuppressedInDimension(DimensionDefinition definition)
@@ -167,14 +166,14 @@ public partial class WeatherMgr : SingletonAutoMono<WeatherMgr>
 
     public bool IsRaining()
     {
-        WeatherType weather = GetCurrentWeather();
-        return (weather == WeatherType.Rain || weather == WeatherType.Storm) &&
-               GetCurrentWeatherIntensity() > 0f;
+        return GetLocalRainIntensity() > 0.001f;
     }
 
     public void RefreshRainEffect()
     {
-        if (RefreshSnowEffect() || !IsRaining())
+        RefreshSnowEffect();
+        float rainIntensity = GetLocalRainIntensity();
+        if (rainIntensity <= 0.001f)
         {
             if (_rainEffectInstance != null)
             {
@@ -197,10 +196,10 @@ public partial class WeatherMgr : SingletonAutoMono<WeatherMgr>
 
         if (_rainEffectController != null)
         {
-            _rainEffectController.ApplySettings(GetCurrentWeatherIntensity());
+            _rainEffectController.ApplySettings(rainIntensity);
         }
 
-        SetRainGroundSplashActive(true, GetCurrentWeatherIntensity());
+        SetRainGroundSplashActive(true, rainIntensity);
     }
 
     public void ToggleDebugPanel()
@@ -345,14 +344,13 @@ public partial class WeatherMgr : SingletonAutoMono<WeatherMgr>
             return 1f;
         }
 
-        WeatherType weather = GetCurrentWeather();
-        if (weather is not (WeatherType.Cloudy or WeatherType.Rain or WeatherType.Storm))
+        if (!TryGetLocalWeather(out var sample))
             return 1f;
 
         // 阴天和雨云共用光照衰减，局部灯光不受影响。
         float fullCloudMultiplier = directSunlight
             ? _cloudySunLightMultiplier : _cloudyAmbientLightMultiplier;
-        return Mathf.Lerp(1f, Mathf.Clamp01(fullCloudMultiplier), GetCurrentWeatherIntensity());
+        return Mathf.Lerp(1f, Mathf.Clamp01(fullCloudMultiplier), sample.CloudCoverage);
     }
 
 #endregion
@@ -458,7 +456,7 @@ public partial class WeatherMgr : SingletonAutoMono<WeatherMgr>
         GUILayout.Label($"当前天气: {CurrentWeather}", _labelStyle);
         GUILayout.Label($"天气阶段: {CurrentWeatherPhase}", _valueStyle);
         GUILayout.Label($"天气强度: {CurrentWeatherIntensity:F2}", _valueStyle);
-        GUILayout.Label($"全局风力: {CurrentWindStrength:F2}", _valueStyle);
+        GUILayout.Label($"当地风力: {CurrentWindStrength:F2}", _valueStyle);
         GUILayout.Label($"阶段剩余: {CurrentWeatherRemainingTime:F1} 秒", _valueStyle);
         GUILayout.Label($"天气修正: {CurrentWeatherTemperatureOffset:F2} ℃", _valueStyle);
 
@@ -466,7 +464,18 @@ public partial class WeatherMgr : SingletonAutoMono<WeatherMgr>
         if (planetData != null)
         {
             GUILayout.Label($"基础温度: {planetData.GlobalTemperature:F2} ℃", _valueStyle);
-            GUILayout.Label($"有效环境温度: {GetWeatherTemperatureOffset() + planetData.GlobalTemperature:F2} ℃", _valueStyle);
+            Camera camera = Camera.main;
+            Vector2 localPosition = camera != null ? (Vector2)camera.transform.position : (Vector2)transform.position;
+            if (TryGetLocalWeather(out var sample))
+            {
+                GUILayout.Label($"区域: {sample.Region.X}, {sample.Region.Y}  湿度消耗: {sample.HumidityDeficit:F3}", _valueStyle);
+                if (ChunkMgr.ExistingInstance != null && ChunkMgr.ExistingInstance.TryGetAirHumidity(localPosition, out float humidity))
+                    GUILayout.Label($"当地空气湿度: {humidity:F3}", _valueStyle);
+                if (TemperatureMgr.Instance.TryGetAmbientTemperature(localPosition, out float temperature))
+                    GUILayout.Label($"当地实时温度: {temperature:F2} ℃", _valueStyle);
+                GUILayout.Label($"云: {sample.CloudCoverage:F2}  雾: {sample.FogDensity:F2}  雷电: {sample.LightningActivity:F2}", _valueStyle);
+            }
+            else GUILayout.Label("区域地形与湿度邻域尚未就绪", _valueStyle);
         }
         else
         {

@@ -162,8 +162,8 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable
         }
 
         // 初始化只写本角色，后续由当前位置的权威温度场持续更新。
-        Data.AmbientTemperature = layers.TemperatureCelsius[localPos.x, localPos.y] +
-                                  TemperatureMgr.Instance.AmbientFieldOffset;
+        Data.AmbientTemperature = TemperatureMgr.Instance.TryGetAmbientTemperature(item.transform.position, out float temperature)
+            ? temperature : layers.TemperatureCelsius[localPos.x, localPos.y] + TemperatureMgr.Instance.AmbientFieldOffset;
     }
 
 #endregion

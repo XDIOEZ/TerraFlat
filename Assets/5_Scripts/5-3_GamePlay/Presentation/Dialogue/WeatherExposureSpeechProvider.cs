@@ -4,7 +4,7 @@ using UnityEngine;
 namespace FlatWorld.Dialogue
 {
     /// <summary>
-    /// 读取权威天气并贡献自言自语 Facts；同时在权威端结算雨中暴露降温与火源恢复。
+    /// 读取角色所在地天气并贡献自言自语 Facts，实时雨冷由统一环境温度处理。
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class WeatherExposureSpeechProvider : MonoBehaviour, ICharacterSpeechContextContributor
@@ -17,9 +17,6 @@ namespace FlatWorld.Dialogue
         [SerializeField] private LayerMask heatSourceLayerMask = ~0;
 
         [Header("体温影响")]
-        [SerializeField] private float lightRainAmbientPenalty = -8f;
-        [SerializeField] private float heavyRainAmbientPenalty = -16f;
-        [SerializeField, Min(1f)] private float rainCoolingSpeedMultiplier = 4f;
         [SerializeField] private float heatSourceAmbientBonus = 10f;
         [SerializeField, Min(1f)] private float heatRecoverySpeedMultiplier = 5f;
 
@@ -30,6 +27,7 @@ namespace FlatWorld.Dialogue
         private Item actorItem;
         private Mod_Temperature temperature;
         private float nextScanAt;
+        private float localRainIntensity;
 
         public bool IsRainExposed { get; private set; }
         public bool HasNearbyHeatSource { get; private set; }
@@ -63,23 +61,32 @@ namespace FlatWorld.Dialogue
             if (Time.unscaledTime >= nextScanAt)
                 RefreshExposureState();
 
-            WeatherMgr weatherManager = WeatherMgr.Instance;
-            WeatherType weather = weatherManager.CurrentWeather;
-            WeatherPhase phase = weatherManager.CurrentWeatherPhase;
-            float intensity = weatherManager.CurrentWeatherIntensity;
+            WeatherMgr weatherManager = WeatherMgr.ExistingInstance;
+            var localWeather = default(FlatWorld.WorldModel.RegionalWeatherSnapshot);
+            bool hasWeather = weatherManager != null && weatherManager.TryGetWeatherAt(transform.position, out localWeather);
+            WeatherType weather = hasWeather ? WeatherMgr.DescribeWeather(in localWeather) : WeatherType.Clear;
+            WeatherPhase phase = hasWeather ? WeatherMgr.DescribeWeatherPhase(in localWeather) : WeatherPhase.Clear;
+            float intensity = !hasWeather ? 0f : weather switch
+            {
+                WeatherType.Fog => localWeather.FogDensity,
+                WeatherType.Cloudy => localWeather.CloudCoverage,
+                _ => localWeather.PrecipitationIntensity
+            };
 
             context.SetFact(CharacterSpeechFacts.WeatherType, weather.ToString());
             context.SetFact(CharacterSpeechFacts.WeatherPhase, phase.ToString());
             context.SetFact(
                 CharacterSpeechFacts.WeatherIntensity,
                 intensity.ToString("0.000", CultureInfo.InvariantCulture));
-            context.SetFact(CharacterSpeechFacts.WeatherIsRaining, weatherManager.IsRaining().ToString());
-            context.SetFact(CharacterSpeechFacts.WeatherIsSnowing, weatherManager.IsSnowingAt(transform.position).ToString());
+            context.SetFact(CharacterSpeechFacts.WeatherIsRaining, (hasWeather && localWeather.PrecipitationIntensity > 0f).ToString());
+            bool isSnowing = hasWeather && weatherManager.TryGetPrecipitationAt(transform.position, out _, out float snowIntensity) &&
+                snowIntensity > 0f;
+            context.SetFact(CharacterSpeechFacts.WeatherIsSnowing, isSnowing.ToString());
             context.SetFact(CharacterSpeechFacts.WeatherIsExposed, IsRainExposed.ToString());
             context.SetFact(CharacterSpeechFacts.WeatherHasHeatSource, HasNearbyHeatSource.ToString());
             context.SetFact(
                 CharacterSpeechFacts.WeatherRemainingSeconds,
-                weatherManager.CurrentWeatherRemainingTime.ToString("0.0", CultureInfo.InvariantCulture));
+                (hasWeather ? localWeather.RemainingSeconds : 0f).ToString("0.0", CultureInfo.InvariantCulture));
         }
 
 #endregion
@@ -89,9 +96,11 @@ namespace FlatWorld.Dialogue
         private void RefreshExposureState()
         {
             nextScanAt = Time.unscaledTime + Mathf.Max(0.1f, scanInterval);
-            bool raining = WeatherMgr.Instance.IsRaining();
+            WeatherMgr weather = WeatherMgr.ExistingInstance;
+            localRainIntensity = weather != null && weather.TryGetPrecipitationAt(transform.position, out float rainIntensity, out _)
+                ? rainIntensity : 0f;
             HasNearbyHeatSource = FindNearbyIgnitedHeatSource();
-            IsRainExposed = raining && !HasNearbyHeatSource;
+            IsRainExposed = localRainIntensity > 0f && !HasNearbyHeatSource;
 
             if (!TryResolveTemperature())
                 return;
@@ -100,17 +109,6 @@ namespace FlatWorld.Dialogue
             {
                 temperature.Data.RuntimeAmbientOffset = heatSourceAmbientBonus;
                 temperature.Data.RuntimeChangeSpeedMultiplier = heatRecoverySpeedMultiplier;
-                return;
-            }
-
-            if (IsRainExposed)
-            {
-                float intensity = WeatherMgr.Instance.CurrentWeatherIntensity;
-                temperature.Data.RuntimeAmbientOffset = Mathf.Lerp(
-                    lightRainAmbientPenalty,
-                    heavyRainAmbientPenalty,
-                    intensity);
-                temperature.Data.RuntimeChangeSpeedMultiplier = rainCoolingSpeedMultiplier;
                 return;
             }
 
