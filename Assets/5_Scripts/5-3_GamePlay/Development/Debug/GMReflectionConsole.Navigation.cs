@@ -57,6 +57,8 @@ public sealed partial class GMReflectionConsole
     }
 
     private readonly Dictionary<GmPageId, GmPageView> gmPages = new();
+    private readonly Dictionary<GmPageId, GmPageView> gmGroups = new();
+    private readonly Vector3[] gmSectionCorners = new Vector3[4];
     private readonly List<GmSearchEntry> gmSearchEntries = new();
     private readonly List<GmResponsiveGrid> gmResponsiveGrids = new();
     private GmPageId activeGmPage = GmPageId.Player;
@@ -113,6 +115,7 @@ public sealed partial class GMReflectionConsole
     private void BuildTabbedWindow()
     {
         gmPages.Clear();
+        gmGroups.Clear();
         gmSearchEntries.Clear();
         gmResponsiveGrids.Clear();
 
@@ -168,16 +171,17 @@ public sealed partial class GMReflectionConsole
         hostLayout.minHeight = 300f;
         hostLayout.flexibleHeight = 1f;
         gmPageHost = pageHostObject.transform;
+        BuildPageGroups();
 
         BuildPlayerPage();
         BuildBuffPage();
         BuildQuestPage();
-        BuildSpawnPage();
         BuildWorldPage();
         BuildLayersPage();
+        BuildTeleportPage();
+        BuildSpawnPage();
         BuildAiecsPage();
         BuildDevicePage();
-        BuildTeleportPage();
         gameEventPageContent = CreatePage(GmPageId.GameEvents).Content;
         commandPageContent = CreatePage(GmPageId.Commands).Content;
 
@@ -341,18 +345,11 @@ public sealed partial class GMReflectionConsole
 
         scroll.content = contentRect;
 
-        CreateTab(content.transform, GmPageId.Player, "玩家", 128f);
-        CreateTab(content.transform, GmPageId.Buff, "Buff", 100f);
-        CreateTab(content.transform, GmPageId.Quests, "任务", 100f);
-        CreateTab(content.transform, GmPageId.Spawn, "生成", 128f);
-        CreateTab(content.transform, GmPageId.World, "世界", 100f);
-        CreateTab(content.transform, GmPageId.Layers, "层级显示", 128f);
-        CreateTab(content.transform, GmPageId.Aiecs, "AIECS", 110f);
-        CreateTab(content.transform, GmPageId.Device, "设备数据", 128f);
-        CreateTab(content.transform, GmPageId.Structures, "传送", 100f);
-        CreateTab(content.transform, GmPageId.GameEvents, "事件", 110f);
-        CreateTab(content.transform, GmPageId.Commands, "命令", 110f);
-        // 页签总宽从实际子项计算，新增分页后仍可横向滚动到最后一页。
+        CreateTab(content.transform, GmPageId.Player, "玩家", 150f);
+        CreateTab(content.transform, GmPageId.World, "世界", 150f);
+        CreateTab(content.transform, GmPageId.Spawn, "生成与 AI", 160f);
+        CreateTab(content.transform, GmPageId.Device, "调试与设备", 160f);
+        // 窄屏仍由现有滚动条兜底，常规分辨率下四个分类直接可见。
         ContentSizeFitter tabSize = content.AddComponent<ContentSizeFitter>();
         tabSize.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
     }
@@ -364,12 +361,23 @@ public sealed partial class GMReflectionConsole
         layout.minWidth = width;
         layout.preferredWidth = width;
         layout.flexibleWidth = 0f;
-        gmPages[pageId] = new GmPageView { TabButton = button };
+        gmGroups[pageId] = new GmPageView { TabButton = button };
     }
 
-    private GmPageView CreatePage(GmPageId pageId)
+    #region GM 分类页面
+
+    /// <summary>一级页签按用途分组，各功能区仍独立刷新和检索。</summary>
+    private void BuildPageGroups()
     {
-        GameObject pageRoot = CreateUiObject(GetPageLabel(pageId) + " Page", gmPageHost);
+        CreateGroupPage(GmPageId.Player, GmPageId.Player, GmPageId.Buff, GmPageId.Quests);
+        CreateGroupPage(GmPageId.World, GmPageId.World, GmPageId.Layers, GmPageId.Structures);
+        CreateGroupPage(GmPageId.Spawn, GmPageId.Spawn, GmPageId.Aiecs);
+        CreateGroupPage(GmPageId.Device, GmPageId.Device, GmPageId.GameEvents, GmPageId.Commands);
+    }
+
+    private void CreateGroupPage(GmPageId groupId, params GmPageId[] sections)
+    {
+        GameObject pageRoot = CreateUiObject(GetPageLabel(groupId) + " Group", gmPageHost);
         RectTransform rootRect = pageRoot.GetComponent<RectTransform>();
         rootRect.anchorMin = Vector2.zero;
         rootRect.anchorMax = Vector2.one;
@@ -378,13 +386,101 @@ public sealed partial class GMReflectionConsole
         pageRoot.AddComponent<Image>().color = GmSurfaceLow;
 
         Transform content = ConfigureVerticalScroll(pageRoot, 10f, out ScrollRect scroll);
-        GmPageView page = gmPages[pageId];
-        page.Root = pageRoot;
-        page.Scroll = scroll;
-        page.Content = content.GetComponent<RectTransform>();
+        GmPageView group = gmGroups[groupId];
+        group.Root = pageRoot;
+        group.Scroll = scroll;
+        group.Content = content.GetComponent<RectTransform>();
         pageRoot.SetActive(false);
+
+        GameObject navigation = CreateUiObject("Section Navigation", content);
+        navigation.AddComponent<LayoutElement>().preferredHeight = 42f;
+        HorizontalLayoutGroup layout = navigation.AddComponent<HorizontalLayoutGroup>();
+        layout.spacing = 8f;
+        layout.childControlWidth = true;
+        layout.childControlHeight = true;
+        layout.childForceExpandWidth = false;
+        layout.childForceExpandHeight = true;
+        foreach (GmPageId sectionId in sections)
+            CreateButton(navigation.transform, GetPageLabel(sectionId), () => ScrollToPageSection(sectionId), 150f, 38f);
+    }
+
+    private GmPageView CreatePage(GmPageId pageId)
+    {
+        GmPageView group = gmGroups[GetPageGroup(pageId)];
+        GameObject section = CreateUiObject(GetPageLabel(pageId) + " Section", group.Content);
+        section.AddComponent<Image>().color = GmSurface;
+        VerticalLayoutGroup layout = section.AddComponent<VerticalLayoutGroup>();
+        layout.padding = new RectOffset(12, 12, 12, 12);
+        layout.spacing = 9f;
+        layout.childControlWidth = true;
+        layout.childControlHeight = true;
+        layout.childForceExpandWidth = true;
+        layout.childForceExpandHeight = false;
+
+        // 所有功能区共用所属分类的滚动窗口，不再嵌套整页 ScrollRect。
+        GmPageView page = new()
+        {
+            Root = group.Root,
+            Scroll = group.Scroll,
+            Content = section.GetComponent<RectTransform>()
+        };
+        gmPages[pageId] = page;
         return page;
     }
+
+    private static GmPageId GetPageGroup(GmPageId pageId)
+    {
+        return pageId switch
+        {
+            GmPageId.Player or GmPageId.Buff or GmPageId.Quests => GmPageId.Player,
+            GmPageId.World or GmPageId.Layers or GmPageId.Structures => GmPageId.World,
+            GmPageId.Spawn or GmPageId.Aiecs => GmPageId.Spawn,
+            GmPageId.Device or GmPageId.GameEvents or GmPageId.Commands => GmPageId.Device,
+            _ => throw new ArgumentOutOfRangeException(nameof(pageId), pageId, "GM 功能未分类")
+        };
+    }
+
+    private void ScrollToPageSection(GmPageId pageId)
+    {
+        if (!gmPages.TryGetValue(pageId, out GmPageView page))
+            return;
+
+        Canvas.ForceUpdateCanvases();
+        ScrollToPageTarget(page, page.Content);
+    }
+
+    private static void ScrollToPageTarget(GmPageView page, RectTransform target)
+    {
+        if (page?.Scroll?.content == null || target == null)
+            return;
+
+        RectTransform content = page.Scroll.content;
+        LayoutRebuilder.ForceRebuildLayoutImmediate(content);
+        RectTransform viewport = page.Scroll.viewport;
+        Bounds contentBounds = RectTransformUtility.CalculateRelativeRectTransformBounds(viewport, content);
+        Bounds targetBounds = RectTransformUtility.CalculateRelativeRectTransformBounds(viewport, target);
+        float hiddenHeight = contentBounds.size.y - viewport.rect.height;
+        page.Scroll.verticalNormalizedPosition = hiddenHeight > 0.01f
+            ? 1f - Mathf.Clamp01((contentBounds.max.y - targetBounds.max.y) / hiddenHeight)
+            : 1f;
+    }
+
+    /// <summary>长页面仅刷新滚动视口内的动态功能区。</summary>
+    private bool IsPageSectionInView(GmPageId pageId)
+    {
+        if (!gmPages.TryGetValue(pageId, out GmPageView page) ||
+            page.Content == null || page.Root == null || !page.Root.activeInHierarchy ||
+            page.Scroll?.viewport == null)
+            return false;
+
+        RectTransform viewport = page.Scroll.viewport;
+        page.Content.GetWorldCorners(gmSectionCorners);
+        float bottom = viewport.InverseTransformPoint(gmSectionCorners[0]).y;
+        float top = viewport.InverseTransformPoint(gmSectionCorners[1]).y;
+        return top >= viewport.rect.yMin && bottom <= viewport.rect.yMax;
+    }
+
+    #endregion
 
     private static Transform ConfigureVerticalScroll(GameObject root, float inset, out ScrollRect scroll)
     {
@@ -503,44 +599,35 @@ public sealed partial class GMReflectionConsole
 
         itemHintText = AddPageHint(page.Content, "打开目录时会载入当前可用的物品与生物。", 24f);
         BuildFixedStructureSection(page.Content);
+
+        AddPageIntro(page.Content, "生物观察", "查看动物和蜂巢的运行时参数，开关状态会跨 GM 窗口保留。");
+        Transform debugGrid = CreateActionGrid(page.Content, 2, 516f, 44f, 2);
+        animalDebugOverlayButton = CreateSearchableButton(
+            debugGrid, GmPageId.Spawn, "动物参数：关",
+            "动物 AI 头顶 状态 饱食度 狼 野猪 小鸡 蜜蜂 蜂巢 bee debug",
+            ToggleAnimalDebugOverlay, 44f);
+        hiveDebugOverlayButton = CreateSearchableButton(
+            debugGrid, GmPageId.Spawn, "蜂巢参数：关",
+            "蜂巢 蜂蜜 成员 繁殖 警戒 hive colony bee debug",
+            ToggleHiveDebugOverlay, 44f);
+        RefreshAnimalDebugOverlayButton();
+        RefreshHiveDebugOverlayButton();
     }
 
     private void BuildWorldPage()
     {
         GmPageView page = CreatePage(GmPageId.World);
-        AddPageIntro(page.Content, "世界与环境", "天气、时间、区块加载、视野和导航调试功能。 ");
+        AddPageIntro(page.Content, "世界与环境", "天气、时间、区块加载与视野控制。 ");
 
-        Transform grid = CreateActionGrid(page.Content, 4, 256f, 36f, 8);
+        Transform grid = CreateActionGrid(page.Content, 4, 256f, 36f, 4);
         CreateSearchableButton(grid, GmPageId.World, "晴天", "天气 晴 clear weather", () => InvokeByTypeName("GameDebugManager", "SetClearWeather"));
         CreateSearchableButton(grid, GmPageId.World, "下雨", "天气 雨 rain weather", () => InvokeByTypeName("GameDebugManager", "SetRainWeather"));
-        CreateSearchableButton(grid, GmPageId.World, "环境信息", "环境 温度 信息 debug", () => InvokeByTypeName("GameDebugManager", "ToggleEnvironmentInfo"));
-        animalDebugOverlayButton = CreateSearchableButton(
-            grid,
-            GmPageId.World,
-            "动物参数：关",
-            "动物 AI 头顶 状态 饱食度 狼 野猪 小鸡 蜜蜂 蜂巢 bee debug",
-            ToggleAnimalDebugOverlay);
-        hiveDebugOverlayButton = CreateSearchableButton(
-            grid,
-            GmPageId.World,
-            "蜂巢参数：关",
-            "蜂巢 蜂蜜 成员 繁殖 警戒 hive colony bee debug",
-            ToggleHiveDebugOverlay);
         CreateSearchableButton(grid, GmPageId.World, "刷新区块", "区块 chunk 刷新", () => InvokeByTypeName("Mod_ChunkLoader", "RefreshChunksAroundPlayer"));
         CreateChunkLoadSpeedControl(grid);
-        navigationPathButton = CreateSearchableButton(
-            grid,
-            GmPageId.World,
-            "AI 路线提示：关",
-            "AI 导航 路线 path navmesh",
-            ToggleNavigationPathHints);
         CreateWorldRangeControls(page.Content);
         CreateChunkStreamingBudgetControls(page.Content);
         CreateWorldWindControl(page.Content);
 
-        RefreshNavigationPathButton();
-        RefreshAnimalDebugOverlayButton();
-        RefreshHiveDebugOverlayButton();
         RefreshChunkLoadSpeedControl();
         RefreshWorldRangeControls();
         RefreshChunkStreamingBudgetControls();
@@ -981,7 +1068,7 @@ public sealed partial class GMReflectionConsole
     private void RefreshChunkStreamingStatusIfNeeded()
     {
         if (windowRoot == null || !windowRoot.activeSelf || activeGmPage != GmPageId.World ||
-            Time.unscaledTime < nextChunkStreamingStatusRefreshAt)
+            !IsPageSectionInView(GmPageId.World) || Time.unscaledTime < nextChunkStreamingStatusRefreshAt)
             return;
 
         nextChunkStreamingStatusRefreshAt = Time.unscaledTime + 0.4f;
@@ -1194,7 +1281,7 @@ public sealed partial class GMReflectionConsole
     {
         if (windowRoot == null || !windowRoot.activeSelf ||
             !gmPages.TryGetValue(GmPageId.Aiecs, out GmPageView page) ||
-            page.Root == null || !page.Root.activeSelf ||
+            page.Root == null || !IsPageSectionInView(GmPageId.Aiecs) ||
             Time.unscaledTime < nextAiecsPageRefreshTime)
             return;
 
@@ -1513,14 +1600,15 @@ public sealed partial class GMReflectionConsole
         if (!gmPages.TryGetValue(pageId, out GmPageView selected) || selected.Root == null)
             return;
 
-        GMConsolePreferences.SetActivePageIndex((int)pageId);
-        if (pageId != GmPageId.Structures)
+        GmPageId groupId = GetPageGroup(pageId);
+        GMConsolePreferences.SetActivePageIndex((int)groupId);
+        if (groupId != GmPageId.World)
             CancelBiomeSearch();
-        activeGmPage = pageId;
+        activeGmPage = groupId;
 
-        foreach (KeyValuePair<GmPageId, GmPageView> pair in gmPages)
+        foreach (KeyValuePair<GmPageId, GmPageView> pair in gmGroups)
         {
-            bool active = pair.Key == pageId;
+            bool active = pair.Key == groupId;
             if (pair.Value.Root != null)
                 pair.Value.Root.SetActive(active);
 
@@ -1539,8 +1627,8 @@ public sealed partial class GMReflectionConsole
         RefreshRuntimeData(true);
         Canvas.ForceUpdateCanvases();
         ResizeResponsiveGrids();
-        if (selected.Content != null)
-            LayoutRebuilder.ForceRebuildLayoutImmediate(selected.Content);
+        if (gmGroups[groupId].Content != null)
+            LayoutRebuilder.ForceRebuildLayoutImmediate(gmGroups[groupId].Content);
     }
 
     private void RegisterSearchEntry(
@@ -1631,9 +1719,19 @@ public sealed partial class GMReflectionConsole
         gmSearchSummaryText.text = "输入名称后跳转";
         SetActivePage(entry.PageId);
 
+        // 切页可能重建事件、任务或命令条目，改用最新结果对应的目标。
+        GmSearchEntry current = gmSearchEntries.FirstOrDefault(candidate =>
+            candidate.PageId == entry.PageId && candidate.Label == entry.Label &&
+            candidate.SearchText == entry.SearchText && candidate.Target != null);
+        if (current == null)
+        {
+            SetStatus("搜索目标已更新，请重新搜索。", Color.yellow);
+            return;
+        }
+
         if (searchNavigationCoroutine != null)
             StopCoroutine(searchNavigationCoroutine);
-        searchNavigationCoroutine = StartCoroutine(ScrollToSearchTarget(entry));
+        searchNavigationCoroutine = StartCoroutine(ScrollToSearchTarget(current));
     }
 
     private IEnumerator ScrollToSearchTarget(GmSearchEntry entry)
@@ -1643,21 +1741,7 @@ public sealed partial class GMReflectionConsole
             yield break;
 
         Canvas.ForceUpdateCanvases();
-        LayoutRebuilder.ForceRebuildLayoutImmediate(page.Content);
-
-        RectTransform viewport = page.Scroll.viewport;
-        Bounds contentBounds = RectTransformUtility.CalculateRelativeRectTransformBounds(viewport, page.Content);
-        Bounds targetBounds = RectTransformUtility.CalculateRelativeRectTransformBounds(viewport, entry.Target);
-        float hiddenHeight = contentBounds.size.y - viewport.rect.height;
-        if (hiddenHeight > 0.01f)
-        {
-            float distanceFromTop = contentBounds.max.y - targetBounds.max.y;
-            page.Scroll.verticalNormalizedPosition = 1f - Mathf.Clamp01(distanceFromTop / hiddenHeight);
-        }
-        else
-        {
-            page.Scroll.verticalNormalizedPosition = 1f;
-        }
+        ScrollToPageTarget(page, entry.Target);
 
         Image highlight = entry.Target.GetComponent<Image>();
         if (highlight != null)

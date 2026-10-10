@@ -17,6 +17,11 @@ public sealed partial class GMReflectionConsole
     {
         GmPageView page = CreatePage(GmPageId.Layers);
         AddPageIntro(page.Content, "层级显示", "切换温度、污染或怪物导航观察层；关闭 GM 窗口后，当前观察层仍会保留在世界中。");
+        Transform diagnostics = CreateActionGrid(page.Content, 2, 516f, 42f, 2);
+        CreateSearchableButton(diagnostics, GmPageId.Layers, "环境信息",
+            "环境 温度 信息 F3 debug", () => InvokeByTypeName("GameDebugManager", "ToggleEnvironmentInfo"), 42f);
+        navigationPathButton = CreateSearchableButton(diagnostics, GmPageId.Layers, "AI 路线提示：关",
+            "AI 导航 路线 path navmesh", ToggleNavigationPathHints, 42f);
         GameObject controls = CreateUiObject("World Layer Controls", page.Content);
         controls.AddComponent<LayoutElement>().preferredHeight = 48f;
         HorizontalLayoutGroup controlsLayout = controls.AddComponent<HorizontalLayoutGroup>();
@@ -77,6 +82,7 @@ public sealed partial class GMReflectionConsole
             "温度：蓝色冷、红色热，固定 -20～60℃。污染：绿色清洁、红色高负荷；每格取所有已注册污染类型（包含 MOD）的最高归一化负荷。未加载区域透明。\n怪物导航：每个可达格显示朝本地玩家寻路的下一步箭头；蓝点为玩家目标格，红叉为不可达格，障碍和未加载格不画。读取实际共享流场，不代表所有怪物都在追击；目标尚未就绪时不显示。\n透明度越高，地表越清晰：0% 完全覆盖，100% 完全透明。",
             132f);
         RefreshWorldLayerOverlayButtons();
+        RefreshNavigationPathButton();
     }
 
     /// <summary>右侧占两份宽度，标签定宽、滑轨自适应；透明度为 0～100%，默认 42%。</summary>

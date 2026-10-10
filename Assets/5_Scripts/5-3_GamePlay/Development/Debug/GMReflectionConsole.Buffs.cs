@@ -374,10 +374,8 @@ public sealed partial class GMReflectionConsole
     /// <summary>窗口打开期间定时同步当前加载场景中的 Buff 接收对象。</summary>
     private void UpdateBuffTargetListIfNeeded()
     {
-        if (buffTargetListContent == null || !buffTargetListContent.gameObject.activeInHierarchy)
-            return;
-
-        if (Time.unscaledTime < nextBuffTargetRefreshTime)
+        if (buffTargetListContent == null || Time.unscaledTime < nextBuffTargetRefreshTime ||
+            !IsPageSectionInView(GmPageId.Buff))
             return;
 
         nextBuffTargetRefreshTime = Time.unscaledTime + BuffTargetRefreshInterval;

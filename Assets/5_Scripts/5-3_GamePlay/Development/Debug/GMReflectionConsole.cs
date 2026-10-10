@@ -245,7 +245,8 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         UpdateBuffTargetListIfNeeded();
         RefreshResponsiveLayoutIfCanvasChanged();
         RefreshAiecsPageIfNeeded();
-        RefreshDevicePageIfNeeded();
+        if (IsPageSectionInView(GmPageId.Device))
+            RefreshDevicePageIfNeeded();
         RefreshDayTimeControlIfNeeded();
         RefreshChunkStreamingStatusIfNeeded();
         HandleTeleportInput();
@@ -2059,14 +2060,10 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
                 RefreshTeleportShortcutButton();
                 RefreshAdminInvincibilityButton();
                 RefreshPlayerMoveSpeedButton();
-                break;
-            case GmPageId.Buff:
                 RefreshBuffDefinitions();
                 if (refreshCatalogs)
                     RefreshBuffTargetList(false);
                 RefreshBuffTargetingControls();
-                break;
-            case GmPageId.Quests:
                 if (refreshCatalogs)
                     RefreshQuestPage();
                 else
@@ -2078,6 +2075,9 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
             case GmPageId.Spawn:
                 UpdateSummonHint();
                 RefreshFixedStructureOptions();
+                RefreshAnimalDebugOverlayButton();
+                RefreshHiveDebugOverlayButton();
+                RefreshAiecsPage();
                 break;
             case GmPageId.World:
                 RefreshChunkLoadSpeedControl();
@@ -2085,30 +2085,17 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
                 RefreshWorldRangeControls();
                 RefreshWorldWindControl();
                 RefreshNavigationPathButton();
-                RefreshAnimalDebugOverlayButton();
-                RefreshHiveDebugOverlayButton();
-                break;
-            case GmPageId.Layers:
                 RefreshWorldLayerOverlayButtons();
-                break;
-            case GmPageId.Aiecs:
-                RefreshAiecsPage();
-                break;
-            case GmPageId.Device:
-                RefreshDevicePage();
-                break;
-            case GmPageId.Structures:
                 RefreshPlanetTeleportOptions();
                 if (refreshCatalogs)
                     RefreshStructureOptions();
                 RefreshBiomeSelection();
                 break;
-            case GmPageId.GameEvents:
+            case GmPageId.Device:
+                RefreshDevicePage();
                 BindGameEventManager();
                 if (refreshCatalogs)
                     RebuildGameEventPage();
-                break;
-            case GmPageId.Commands:
                 if (refreshCatalogs)
                     RebuildReflectedCommands();
                 break;
