@@ -173,7 +173,8 @@ public partial class Mod_Oxygen : Module, IItemModuleDependencyBinder
         if (breathingHealth == null || breathingHealth.Hp <= 0f) { hypoxiaClock = 0f; return; }
         float before = CurrentValue;
         AddOxygen(-oxygenConsumePerSecond * deltaTime);
-        PublishBreathBlocked(suppliedOxygen + .0001f < GetOxygenSupplyAmount(deltaTime));
+        // 只有供氧不足以维持基础呼吸才显示缺氧状态，额外的恢复速度不属于呼吸需求。
+        PublishBreathBlocked(suppliedOxygen + .0001f < oxygenConsumePerSecond * deltaTime);
         suppliedOxygen = 0f;
         if (CurrentValue > 0f) { hypoxiaClock = 0f; return; }
         float depletedSeconds = before <= 0f ? deltaTime : oxygenConsumePerSecond > 0f
