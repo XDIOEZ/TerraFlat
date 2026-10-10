@@ -41,6 +41,7 @@ description: "Use when: 定位或修改 FlatWorld 的世界时间、昼夜、天
 - 雾浓度按当地冷湿弱风条件读取，可与雨和云共存；雷电是单次序号事件，强风只给满足暖湿条件的基础频率加有界倍率，最短间隔不能绕过，首次/读档序号只建基线。
 - 大雾视野由 `DenseFogRendererFeature` 在本地主相机栈的最终画面合成，只读取 owned 玩家，不隐藏/停用远端实体或增加网络可见状态；圆心与投影始终来自本地主相机，不能用环绕补绘相机的位置。`default-rendering.json` 的 `denseFog` 半径使用世界格距离，不随视距、画质或关闭普通后处理扩大；外圈噪声只改变白色，不降低完整浓雾的遮挡透明度。进房/读档已有浓雾须直接恢复，退出世界及抑制天气的维度不保留遮罩。
 - 角色体温、资源产量和调试温度层必须共用 `TemperatureMgr.TryGetAmbientTemperature`：读取已加载 `ChunkTerrainData` 的 `temperature.celsius`，叠加星球基准相对 `PlanetData.DefaultGlobalTemperature` 的差值、当前维度允许的天气修正和局部源；未加载返回 false，禁止为查询触发生成或复制整层数组。角色初始化只能更新自身 `AmbientTemperature`，不能把某个出生格温度写回星球全局值。
+- ECS 自然物冻结天气与耐候输入时复用同一格的实时温度与历史气候基温采样；历史基温不包含动态天气或局部热源，避免每个自然物重复读取同一块地形。
 - 地理基础气温由 `FinishGeographicTemperature` 合成并固定写入 `temperature.celsius`，归一化温度由同值派生。静态降水和迎背风不加地理温差；实时雨冷只叠加区域 C，一次合成到最终环境温度，不能再叠旧 Rain/Storm 固定温差。生成规则变化才递增生成签名。
 - 局部冷热源是可重建的影响层，来源模块负责燃料/供电/保存并在停用、回池时撤销注册；不能把临时偏移写回生成气候，否则卸载后无法恢复并会污染地图差量。修改源快照只使覆盖分区失效，查询缓存不扫描全部来源；环形边界同时归一化分区键并使用最短距离，避免世界接缝出现断层或重复贡献。
 - 世界液体的环境辐射热由 `WorldLiquidSettings.radiantHeatRadius/radiantHeatOffset` 声明，`RadiantLiquidTemperatureField` 只扫描已加载区块并按地形 Revision 缓存逐格最大温升；大片岩浆取最大贡献而不是逐格相加，抽干或流动后自动失效重算。

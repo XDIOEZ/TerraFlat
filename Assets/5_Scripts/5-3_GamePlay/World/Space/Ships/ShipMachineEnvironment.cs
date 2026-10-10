@@ -14,7 +14,9 @@ namespace FlatWorld.Spaceflight
             if (ship == null) return false;
             EnsureMachineCompartmentGeometry(ship);
             int x = (int)Math.Floor(localPosition.x / ship.CellSizeMeters), y = (int)Math.Floor(localPosition.y / ship.CellSizeMeters);
-            environment = ShipAtmosphereService.GetEnvironment(ship, x, y, GetMachineExteriorAt(ship, localPosition));
+            environment = ShipAtmosphereService.GetEnvironment(ship, x, y);
+            if (!environment.IsSealed)
+                environment = ShipAtmosphereService.GetEnvironment(ship, x, y, GetMachineExteriorAt(ship, localPosition));
             ShipCompartmentState room = ShipAtmosphereService.FindCompartment(ship, x, y);
             if (room == null) availableGasMoles = GetMachineOutsideAtmosphere(ship)?.CurrentMoles ?? 0m;
             else
@@ -144,9 +146,9 @@ namespace FlatWorld.Spaceflight
             string world = flight.SurfaceWorldKey ?? ship.WorldAddress;
             ShipGeometry.LocalToWorld(ship, localPosition.x, localPosition.y, out double x, out double y);
             Vector2 position = PressureExplosionQueue.NormalizeInWorld(world, new Vector2((float)x, (float)y));
-            double temperature = SpaceSurfaceQuery.GetLandingSurface(world, position).TemperatureCelsius;
-            if (UnityEngine.SceneManagement.SceneManager.GetActiveScene().name == world && TemperatureMgr.Instance != null &&
-                TemperatureMgr.Instance.TryGetAmbientTemperature(position, out float actual)) temperature = actual;
+            double temperature = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name == world &&
+                TemperatureMgr.Instance != null && TemperatureMgr.Instance.TryGetAmbientTemperature(position, out float actual)
+                ? actual : SpaceSurfaceQuery.GetLandingSurface(world, position).TemperatureCelsius;
             return new PlanetShipAtmosphereSource(GetMachineOutsideAtmosphere(ship), temperature);
         }
         #endregion

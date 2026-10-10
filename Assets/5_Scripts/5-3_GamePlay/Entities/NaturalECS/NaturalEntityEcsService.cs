@@ -97,13 +97,18 @@ namespace FlatWorld.NaturalEntities
                 return;
 
             pendingSimulationSeconds = 0f;
-            using (FreezeInputsMarker.Auto()) foreach (Record record in records.Values)
+            using (FreezeInputsMarker.Auto())
             {
-                if (record.NavigationOwner != WorldNavigationManager.ExistingInstance)
-                    UnregisterNavigation(record);
-                if (!record.NavigationRegistered) TryRegisterNavigation(record);
-                FreezeEnvironment(record);
-                FreezeSoil(record);
+                bool hasBounds = WorldTopologyRuntime.TryGetActiveBounds(out WorldTopologyBounds bounds);
+                WorldNavigationManager navigation = WorldNavigationManager.ExistingInstance;
+                foreach (Record record in records.Values)
+                {
+                    if (record.NavigationOwner != navigation)
+                        UnregisterNavigation(record);
+                    if (!record.NavigationRegistered) TryRegisterNavigation(record);
+                    FreezeEnvironment(record, hasBounds, bounds);
+                    FreezeSoil(record);
+                }
             }
         }
 
@@ -635,15 +640,28 @@ namespace FlatWorld.NaturalEntities
         /// <summary>局部热源和天气先冻结为纯数值，再交给共享并行能力；不把当前火源用于历史补算。</summary>
         private static void FreezeEnvironment(Record record)
         {
+            bool hasBounds = WorldTopologyRuntime.TryGetActiveBounds(out WorldTopologyBounds bounds);
+            FreezeEnvironment(record, hasBounds, bounds);
+        }
+
+        private static void FreezeEnvironment(Record record, bool hasBounds, WorldTopologyBounds bounds)
+        {
             Vector3 position = record.Snapshot.transform.position;
+            WeatherMgr weather = record.Profile.HasGrowth ? WeatherMgr.ExistingInstance : null;
+            RegionalWeatherSnapshot localWeather = default;
+            bool hasWeather = weather != null && weather.TryGetWeatherAt(position, out localWeather);
+            TemperatureMgr temperature = hasWeather || record.Profile.HasClimate ? TemperatureMgr.Instance : null;
+            float ambient = 0f, baseline = 0f;
+            // 同一自然物的生长、降水和耐候复用一份地表温度采样。
+            bool hasTemperature = (hasWeather || record.Profile.HasClimate) && temperature != null &&
+                temperature.TryGetAmbientAndClimateBaseline(position, out ambient, out baseline);
             if (record.Profile.HasGrowth)
             {
-                WeatherMgr weather = WeatherMgr.ExistingInstance;
                 EntityWeatherInput input = new() { GrowthMultiplier = 1f };
-                if (weather != null && weather.TryGetWeatherAt(position, out var localWeather))
+                if (hasWeather)
                 {
-                    input.RainIntensity = weather.TryGetPrecipitationAt(position, out float rainIntensity, out _)
-                        ? Mathf.Clamp01(rainIntensity) : 0f;
+                    input.RainIntensity = hasTemperature && ambient > weather.PrecipitationFreezingTemperature
+                        ? Mathf.Clamp01(localWeather.PrecipitationIntensity) : 0f;
                     input.GrowthMultiplier = EntityWeatherInput.ResolveGrowthMultiplier(
                         input.RainIntensity, localWeather.CloudCoverage, localWeather.WindStrength);
                 }
@@ -651,13 +669,10 @@ namespace FlatWorld.NaturalEntities
             }
             if (!record.Profile.HasClimate ||
                 !simulation.TryGet(record.Handle.Id, out NaturalEntityClimate climate)) return;
-            TemperatureMgr temperature = TemperatureMgr.Instance;
             climate.EnvironmentReady = 0;
-            climate.SeasonPoleProximity = WorldTopologyRuntime.TryGetActiveBounds(out WorldTopologyBounds bounds)
-                ? OrbitalSeasonPhysics.ResolvePoleProximity(bounds, position)
+            climate.SeasonPoleProximity = hasBounds ? OrbitalSeasonPhysics.ResolvePoleProximity(bounds, position)
                 : 1f;
-            if (temperature != null && temperature.TryGetAmbientTemperature(position, out float ambient) &&
-                temperature.TryGetClimateBaseline(position, out float baseline))
+            if (hasTemperature)
             {
                 climate.AmbientCelsius = ambient;
                 climate.BaselineCelsius = baseline;

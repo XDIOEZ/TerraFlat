@@ -72,7 +72,11 @@ namespace FlatWorld.Spaceflight
             BodyState body = FindSurfaceBody(flight.SurfaceWorldKey);
             if (body == null || !owner.PlanetData_Dict.TryGetValue(body.PlanetId, out PlanetData planet))
                 return new PlanetShipAtmosphereSource(null, -270d);
-            double temperature = SpaceSurfaceQuery.GetLandingSurface(body.PlanetId, new Vector2((float)ship.PositionX, (float)ship.PositionY)).TemperatureCelsius;
+            Vector2 position = new((float)ship.PositionX, (float)ship.PositionY);
+            // 本地已加载地表优先读取实时温度，冷世界才调用离线地表生成查询。
+            double temperature = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name == flight.SurfaceWorldKey &&
+                TemperatureMgr.Instance != null && TemperatureMgr.Instance.TryGetAmbientTemperature(position, out float ambient)
+                ? ambient : SpaceSurfaceQuery.GetLandingSurface(body.PlanetId, position).TemperatureCelsius;
             return new PlanetShipAtmosphereSource(AtmosphereService.GetOrCreate(planet), temperature);
         }
         public bool TrySample(Item item, out ItemEnvironmentSample sample)
@@ -82,7 +86,9 @@ namespace FlatWorld.Spaceflight
             if (TryGetSupport(item.transform.position, out ShipState ship, out _, out Vector2 local))
             {
                 int x = (int)Math.Floor(local.x / ship.CellSizeMeters), y = (int)Math.Floor(local.y / ship.CellSizeMeters);
-                ShipEnvironmentSnapshot environment = ShipAtmosphereService.GetEnvironment(ship, x, y, GetOutside(ship));
+                ShipEnvironmentSnapshot environment = ShipAtmosphereService.GetEnvironment(ship, x, y);
+                if (!environment.IsSealed)
+                    environment = ShipAtmosphereService.GetEnvironment(ship, x, y, GetOutside(ship));
                 bool breathe = environment.CanBreathe;
                 if (!environment.IsSealed && !IsSpaceView && AtmosphereService.TryGetForWorld(item.gameObject.scene.name, out AtmosphereState atmosphere))
                     breathe = AtmosphereService.CanBreathe(atmosphere);

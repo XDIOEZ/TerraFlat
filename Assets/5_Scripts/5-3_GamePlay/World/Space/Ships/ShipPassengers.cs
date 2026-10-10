@@ -141,12 +141,13 @@ namespace FlatWorld.Spaceflight
         }
         public bool HasArtificialGravity(ShipState ship, double x, double y)
         {
+            // 重力只需要确认地板支撑，不读取昂贵的船外地表与舱气状态。
+            if (!ShipAtmosphereService.HasFloor(ship, (int)Math.Floor(x / ship.CellSizeMeters),
+                    (int)Math.Floor(y / ship.CellSizeMeters))) return false;
             foreach (ShipPieceState piece in ship.Pieces)
             {
                 if (!piece.IsAlive || piece.Kind != ShipPieceKind.GravityGenerator || !IsPowered(ship, piece)) continue;
                 ShipDeviceState device = GetDevice(piece.PieceId);
-                var environment = ShipAtmosphereService.GetEnvironment(ship, (int)Math.Floor(x / ship.CellSizeMeters), (int)Math.Floor(y / ship.CellSizeMeters), GetOutside(ship));
-                if (!environment.HasFloorSupport) continue;
                 double range = (device?.Configuration.GravityRadiusCells ?? 8d) * ship.CellSizeMeters;
                 if (Math.Abs(x - (piece.CellX + .5d) * ship.CellSizeMeters) <= range && Math.Abs(y - (piece.CellY + .5d) * ship.CellSizeMeters) <= range) return true;
             }

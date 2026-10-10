@@ -105,6 +105,8 @@ namespace FlatWorld.Spaceflight
         private const int MaximumCachedChunksPerPlanet = 32;
         private static GameSaveData owner;
         private static readonly Dictionary<string, SurfaceCache> caches = new(StringComparer.Ordinal);
+        private static readonly Dictionary<PlanetData, ChunkGenerationProfileSnapshot> frozenProfiles = new();
+        private static GameRes resourceOwner;
 
         private sealed class SurfaceCache : IDisposable
         {
@@ -131,6 +133,7 @@ namespace FlatWorld.Spaceflight
                 throw new KeyNotFoundException($"降落星球尚未创建：{planetId}");
             if (!float.IsFinite(position.x) || !float.IsFinite(position.y)) throw new ArgumentOutOfRangeException(nameof(position));
             if (!ReferenceEquals(owner, save)) { Reset(); owner = save; }
+            BindResourceReload();
             ChunkGenerationProfileSnapshot profile = GetFrozenProfile(planet);
             ChunkGenerationTopologySnapshot topology = WorldTopologyBounds.TryCreate(planet, out WorldTopologyBounds bounds)
                 ? new ChunkGenerationTopologySnapshot(new Int2(bounds.Min.x, bounds.Min.y), new Int2(bounds.Span.x, bounds.Span.y)) : default;
@@ -208,7 +211,24 @@ namespace FlatWorld.Spaceflight
         }
 
         private static ChunkGenerationProfileSnapshot GetFrozenProfile(PlanetData planet)
-            => ChunkMgr.CreateFrozenSurfaceProfile(planet);
+        {
+            // 冻结生成配置只随世界和资源会话变化，不在每次地表采样时重新构造。
+            if (!frozenProfiles.TryGetValue(planet, out ChunkGenerationProfileSnapshot profile))
+            {
+                profile = ChunkMgr.CreateFrozenSurfaceProfile(planet);
+                frozenProfiles.Add(planet, profile);
+            }
+            return profile;
+        }
+
+        private static void BindResourceReload()
+        {
+            GameRes resources = GameRes.ExistingInstance;
+            if (ReferenceEquals(resourceOwner, resources)) return;
+            if (resourceOwner != null) resourceOwner.ResourcesReloaded -= Reset;
+            resourceOwner = resources;
+            if (resourceOwner != null) resourceOwner.ResourcesReloaded += Reset;
+        }
 
         private static int GetGenerationSeed(int baseSeed, string planetId)
         {
@@ -226,7 +246,9 @@ namespace FlatWorld.Spaceflight
         public static void Reset()
         {
             foreach (SurfaceCache cache in caches.Values) cache.Dispose();
-            caches.Clear(); owner = null;
+            caches.Clear(); frozenProfiles.Clear(); owner = null;
+            if (resourceOwner != null) resourceOwner.ResourcesReloaded -= Reset;
+            resourceOwner = null;
         }
         #endregion
     }

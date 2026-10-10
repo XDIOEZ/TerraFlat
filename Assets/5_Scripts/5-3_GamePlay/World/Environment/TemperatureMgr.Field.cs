@@ -119,12 +119,21 @@ public partial class TemperatureMgr
     public bool TryGetClimateBaseline(Vector2 worldPosition, out float temperature)
         => TrySampleTemperature(worldPosition, false, out temperature);
 
+    /// <summary>同一次地块读取同时获取当前环境温度与不含短时来源的气候基温。</summary>
+    public bool TryGetAmbientAndClimateBaseline(Vector2 worldPosition, out float ambient, out float baseline)
+        => TrySampleTemperature(worldPosition, true, out ambient, out baseline);
+
     /// <summary>共用地块查询，按需要叠加当前季节、天气及局部热源。</summary>
     private bool TrySampleTemperature(Vector2 worldPosition, bool includeTransient, out float temperature,
         bool includePlanetOffset = true)
+        => TrySampleTemperature(worldPosition, includeTransient, out temperature, out _, includePlanetOffset);
+
+    private bool TrySampleTemperature(Vector2 worldPosition, bool includeTransient, out float temperature,
+        out float climateBaseline, bool includePlanetOffset = true)
     {
         PrepareFieldContext();
         temperature = 0f;
+        climateBaseline = 0f;
         if (localTemperatureField == null || fieldChunkManager == null)
             return false;
 
@@ -144,6 +153,7 @@ public partial class TemperatureMgr
         if ((uint)x >= (uint)terrain.Width || (uint)y >= (uint)terrain.Height ||
             !terrain.TryGetEnvironmentValue("temperature.celsius", x, y, out float baseline))
             return false;
+        climateBaseline = baseline + fieldPlanet.GlobalTemperature - PlanetData.DefaultGlobalTemperature;
 
         float seasonOffset = 0f;
         if (includeTransient && fieldPlanet != null)
