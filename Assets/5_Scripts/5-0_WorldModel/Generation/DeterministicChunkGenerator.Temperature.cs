@@ -45,18 +45,27 @@ namespace FlatWorld.WorldModel
                 return SampleQuadraticPeakTemperature(settings.PolarBandCelsius,
                     settings.PolarBandPeakCelsius, settings.PolarBandEdgeCelsius, Clamp01(distance / halfWidth));
             double remainingSpan = halfSpan - halfWidth;
-            double transition = Math.Min(settings.PolarBandTransitionTiles, remainingSpan);
             double equatorCelsius = SampleEquatorTemperature(request, settings, worldX);
-            double temperateCelsius = transition >= remainingSpan
-                ? equatorCelsius : settings.PolarBandTransitionCelsius;
+            // 赤道高温带总宽度按世界南北跨度计算，其余纬度先平缓升温。
+            double equatorHalfWidth = Math.Min(remainingSpan, halfSpan * settings.EquatorBandWidthRatio);
+            double equatorStart = halfSpan - equatorHalfWidth;
             double outsideDistance = distance - halfWidth;
-            // 极圈外先在短距离内回到温带底温，随后继续保留朝赤道渐暖的纬度变化。
+            if (equatorStart <= halfWidth + 0.000001d)
+                return Lerp(settings.PolarBandEdgeCelsius, equatorCelsius,
+                    Smooth(Clamp01(outsideDistance / Math.Max(0.000001d, remainingSpan))));
+            double temperateSpan = equatorStart - halfWidth;
+            double transition = Math.Min(settings.PolarBandTransitionTiles, temperateSpan * 0.5d);
+            double temperateCelsius = settings.PolarBandTransitionCelsius;
             if (outsideDistance <= transition)
                 return Lerp(settings.PolarBandEdgeCelsius, temperateCelsius,
                     Smooth(Clamp01(outsideDistance / Math.Max(0.000001d, transition))));
-            return Lerp(temperateCelsius, equatorCelsius,
-                Smooth(Clamp01((outsideDistance - transition) /
-                    Math.Max(0.000001d, remainingSpan - transition))));
+            double shoulderCelsius = (temperateCelsius + equatorCelsius) * 0.5d;
+            if (distance < equatorStart)
+                return Lerp(temperateCelsius, shoulderCelsius,
+                    Smooth(Clamp01((outsideDistance - transition) /
+                        Math.Max(0.000001d, temperateSpan - transition))));
+            return Lerp(shoulderCelsius, equatorCelsius,
+                Smooth(Clamp01((distance - equatorStart) / Math.Max(0.000001d, equatorHalfWidth))));
         }
 
         private static double SamplePolarDistance(ChunkGenerationRequest request,

@@ -181,6 +181,7 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
         "climate.equator.maximumCelsius",
         "climate.equator.peakCelsius",
         "climate.equator.spacingTiles",
+        "climate.equator.widthRatio",
         "climate.polarBand.halfWidth",
         "climate.polarBand.transitionTiles",
         "climate.polarBand.transitionCelsius",
@@ -288,6 +289,7 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
             ["climate.equator.maximumCelsius"] = "赤道二次概率底温上限，默认 60℃",
             ["climate.equator.peakCelsius"] = "赤道底温概率最高值，默认 45℃",
             ["climate.equator.spacingTiles"] = "赤道随机底温控制点间距，默认 256 格；相邻区域平滑连接",
+            ["climate.equator.widthRatio"] = "赤道高温带占世界南北总宽度的比例；0.1 表示 10%，带外温度平缓过渡",
             ["climate.polarBand.halfWidth"] = "整条寒带占地图的比例；0.1 表示 10%",
             ["climate.polarBand.transitionTiles"] = "极圈边缘回到温带底温的距离，单位为格",
             ["climate.polarBand.transitionCelsius"] = "离开极圈短过渡后的温带底温，随后继续向赤道渐暖",
@@ -781,6 +783,7 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
             DrawDoubleField("climate.equator.maximumCelsius", "赤道底温上限（°C）");
             DrawDoubleField("climate.equator.peakCelsius", "赤道底温概率峰（°C）");
             DrawDoubleField("climate.equator.spacingTiles", "赤道底温控制点间距（格）");
+            DrawSlider("climate.equator.widthRatio", "赤道高温带占地图比例（0.1 = 10%）", 0.001f, 1f);
             DrawSlider("climate.polarBand.halfWidth", "寒带占地图比例（0.1 = 10%）", 0.001f, 1f);
             DrawDoubleField("climate.polarBand.transitionTiles", "寒带外温度过渡距离（格）");
             DrawDoubleField("climate.polarBand.transitionCelsius", "寒带外温带底温（°C）");

@@ -365,6 +365,8 @@ namespace FlatWorld.WorldModel
             EquatorSpacingTiles = ScaleDistance(FinitePositive(
                     GetDouble(numbers, "climate.equator.spacingTiles", 256d), 256d),
                 WorldSpatialDistanceScale, 8d, 4096d);
+            EquatorBandWidthRatio = Clamp(Finite(
+                GetDouble(numbers, "climate.equator.widthRatio", 0.1d), 0.1d), 0.001d, 1d);
             RegionalTemperatureVariationCelsius = NonNegativeFinite(
                 GetDouble(numbers, "climate.temperature.regionalVariationCelsius", 2d), 2d);
             PolarBandEnabled = GetBool(numbers, "climate.polarBand.enabled", true);
@@ -817,6 +819,7 @@ namespace FlatWorld.WorldModel
         public double EquatorMaximumCelsius { get; }
         public double EquatorPeakCelsius { get; }
         public double EquatorSpacingTiles { get; }
+        public double EquatorBandWidthRatio { get; }
         public double RegionalTemperatureVariationCelsius { get; }
         public double PolarBandPosition { get; }
         public double PolarBandCelsius { get; }
