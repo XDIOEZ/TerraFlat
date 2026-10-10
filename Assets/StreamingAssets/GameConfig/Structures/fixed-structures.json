@@ -1,0 +1,339 @@
+{
+  "version": 1,
+  "structures": [
+    {
+      "id": "gm:small-test-ship",
+      "displayName": "小型测试飞船",
+      "kind": "ship",
+      "width": 9,
+      "height": 9,
+      "clearance": 1,
+      "searchRadius": 24,
+      "cabinGas": {
+        "pressureKPa": 101.325,
+        "temperatureCelsius": 20,
+        "components": {
+          "core:oxygen": 0.21,
+          "core:nitrogen": 0.79
+        }
+      },
+      "items": [
+        {
+          "memberId": "floor",
+          "itemId": "ShipFloor_Iron",
+          "x": 0,
+          "y": 0,
+          "width": 9,
+          "height": 9
+        },
+        {
+          "memberId": "wall-bottom-left",
+          "itemId": "ShipWall_Iron",
+          "x": 0,
+          "y": 0,
+          "width": 4
+        },
+        {
+          "memberId": "wall-bottom-right",
+          "itemId": "ShipWall_Iron",
+          "x": 5,
+          "y": 0,
+          "width": 4
+        },
+        {
+          "memberId": "wall-top",
+          "itemId": "ShipWall_Iron",
+          "x": 0,
+          "y": 8,
+          "width": 9
+        },
+        {
+          "memberId": "wall-0-1",
+          "itemId": "ShipWall_Iron",
+          "x": 0,
+          "y": 1,
+          "height": 3
+        },
+        {
+          "memberId": "wall-0-5",
+          "itemId": "ShipWall_Iron",
+          "x": 0,
+          "y": 5,
+          "height": 3
+        },
+        {
+          "memberId": "wall-8-1",
+          "itemId": "ShipWall_Iron",
+          "x": 8,
+          "y": 1,
+          "height": 3
+        },
+        {
+          "memberId": "wall-8-5",
+          "itemId": "ShipWall_Iron",
+          "x": 8,
+          "y": 5,
+          "height": 3
+        },
+        {
+          "memberId": "door",
+          "itemId": "ShipDoor",
+          "x": 4,
+          "y": 0
+        },
+        {
+          "memberId": "dock-left",
+          "itemId": "ShipDockingPort",
+          "x": 0,
+          "y": 4,
+          "quarterTurns": 2
+        },
+        {
+          "memberId": "dock-right",
+          "itemId": "ShipDockingPort",
+          "x": 8,
+          "y": 4,
+          "quarterTurns": 0
+        },
+        {
+          "memberId": "engine-up-2",
+          "itemId": "ShipChemicalEngine",
+          "x": 2,
+          "y": 1,
+          "quarterTurns": 0
+        },
+        {
+          "memberId": "engine-down-2",
+          "itemId": "ShipChemicalEngine",
+          "x": 2,
+          "y": 7,
+          "quarterTurns": 2
+        },
+        {
+          "memberId": "engine-up-6",
+          "itemId": "ShipChemicalEngine",
+          "x": 6,
+          "y": 1,
+          "quarterTurns": 0
+        },
+        {
+          "memberId": "engine-down-6",
+          "itemId": "ShipChemicalEngine",
+          "x": 6,
+          "y": 7,
+          "quarterTurns": 2
+        },
+        {
+          "memberId": "engine-right",
+          "itemId": "ShipChemicalEngine",
+          "x": 1,
+          "y": 4,
+          "quarterTurns": 3
+        },
+        {
+          "memberId": "engine-left",
+          "itemId": "ShipChemicalEngine",
+          "x": 7,
+          "y": 4,
+          "quarterTurns": 1
+        },
+        {
+          "memberId": "console",
+          "itemId": "ShipConsole",
+          "x": 4,
+          "y": 5
+        },
+        {
+          "memberId": "navigation",
+          "itemId": "ShipNavigation",
+          "x": 4,
+          "y": 6
+        },
+        {
+          "memberId": "gravity",
+          "itemId": "ShipGravityGenerator",
+          "x": 4,
+          "y": 2
+        },
+        {
+          "memberId": "air-supply",
+          "itemId": "ShipAirSupply",
+          "x": 3,
+          "y": 2,
+          "resources": {
+            "gas": {
+              "pressureKPa": 450,
+              "temperatureCelsius": 20,
+              "components": {
+                "core:oxygen": 0.21,
+                "core:nitrogen": 0.79
+              }
+            }
+          }
+        },
+        {
+          "memberId": "cultivator",
+          "itemId": "SpaceCultivator",
+          "x": 5,
+          "y": 2,
+          "resources": {
+            "liquids": {
+              "core:pure_water": 19
+            },
+            "inventories": [
+              {
+                "name": "培育器种子",
+                "items": [
+                  {
+                    "itemId": "Seed_Radish",
+                    "amount": 5
+                  },
+                  {
+                    "itemId": "Seed_Mushroom",
+                    "amount": 5
+                  },
+                  {
+                    "itemId": "Seed_Berry",
+                    "amount": 5
+                  },
+                  {
+                    "itemId": "Seed_Cotton",
+                    "amount": 5
+                  }
+                ]
+              },
+              {
+                "name": "培育器肥料",
+                "items": [
+                  {
+                    "itemId": "Fertilizer",
+                    "amount": 5
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "memberId": "battery-2-3",
+          "itemId": "Battery_Basic",
+          "x": 2,
+          "y": 3,
+          "resources": {
+            "batteryChargeRatio": 1
+          }
+        },
+        {
+          "memberId": "battery-2-5",
+          "itemId": "Battery_Basic",
+          "x": 2,
+          "y": 5,
+          "resources": {
+            "batteryChargeRatio": 1
+          }
+        },
+        {
+          "memberId": "battery-6-3",
+          "itemId": "Battery_Basic",
+          "x": 6,
+          "y": 3,
+          "resources": {
+            "batteryChargeRatio": 1
+          }
+        },
+        {
+          "memberId": "battery-6-5",
+          "itemId": "Battery_Basic",
+          "x": 6,
+          "y": 5,
+          "resources": {
+            "batteryChargeRatio": 1
+          }
+        },
+        {
+          "memberId": "fuel-1-2",
+          "itemId": "GasTankBlock_Steel",
+          "x": 1,
+          "y": 2,
+          "height": 2,
+          "resources": {
+            "gas": {
+              "pressureKPa": 1800,
+              "temperatureCelsius": 20,
+              "components": {
+                "core:hydrogen": 0.6666666666666666,
+                "core:oxygen": 0.3333333333333333
+              }
+            }
+          }
+        },
+        {
+          "memberId": "fuel-1-5",
+          "itemId": "GasTankBlock_Steel",
+          "x": 1,
+          "y": 5,
+          "height": 2,
+          "resources": {
+            "gas": {
+              "pressureKPa": 1800,
+              "temperatureCelsius": 20,
+              "components": {
+                "core:hydrogen": 0.6666666666666666,
+                "core:oxygen": 0.3333333333333333
+              }
+            }
+          }
+        },
+        {
+          "memberId": "fuel-7-2",
+          "itemId": "GasTankBlock_Steel",
+          "x": 7,
+          "y": 2,
+          "height": 2,
+          "resources": {
+            "gas": {
+              "pressureKPa": 1800,
+              "temperatureCelsius": 20,
+              "components": {
+                "core:hydrogen": 0.6666666666666666,
+                "core:oxygen": 0.3333333333333333
+              }
+            }
+          }
+        },
+        {
+          "memberId": "fuel-7-5",
+          "itemId": "GasTankBlock_Steel",
+          "x": 7,
+          "y": 5,
+          "height": 2,
+          "resources": {
+            "gas": {
+              "pressureKPa": 1800,
+              "temperatureCelsius": 20,
+              "components": {
+                "core:hydrogen": 0.6666666666666666,
+                "core:oxygen": 0.3333333333333333
+              }
+            }
+          }
+        },
+        {
+          "memberId": "copper",
+          "itemId": "Wire_Copper",
+          "x": 1,
+          "y": 1,
+          "width": 7,
+          "height": 7
+        },
+        {
+          "memberId": "fiber",
+          "itemId": "ShipFiber",
+          "x": 4,
+          "y": 5,
+          "height": 2
+        }
+      ]
+    }
+  ]
+}

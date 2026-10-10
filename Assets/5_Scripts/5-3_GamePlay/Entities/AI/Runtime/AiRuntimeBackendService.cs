@@ -60,6 +60,8 @@ public interface IAiEcologyBackend
     bool TrySetAdvanceCommand(int actorGuid, AIAdvanceCommand command);
     bool TryClearAdvanceCommand(int actorGuid);
     bool TryGetActor(int actorGuid, out Vector3 position, out bool alive);
+    /// <summary>查询纯数据生物的占地，不要求已创建表现或物理代理。</summary>
+    bool HasLivingActorInBounds(Bounds bounds);
     bool TryDespawnActor(int actorGuid);
     bool TryBindHiveActor(int actorGuid, int hiveGuid, Vector2 home, float patrolRadius, AiHiveActorState state);
     bool TryGetHiveActorState(int actorGuid, out AiHiveActorState state);

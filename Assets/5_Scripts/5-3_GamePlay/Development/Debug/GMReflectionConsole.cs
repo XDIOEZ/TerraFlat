@@ -2076,6 +2076,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
                 break;
             case GmPageId.Spawn:
                 UpdateSummonHint();
+                RefreshFixedStructureOptions();
                 break;
             case GmPageId.World:
                 RefreshChunkLoadSpeedControl();

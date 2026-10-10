@@ -10,6 +10,7 @@ description: "Use when: 定位或修改 FlatWorld 的太空场景、星球运行
 - 权威会话：`Assets/5_Scripts/5-3_GamePlay/World/Space/SpaceSession.cs`、`SpaceSessionState.cs`；`SpaceMgr.cs` 只投影星体与星空。
 - 生成与轨道：同目录 `Universe/SpaceCatalog.cs`、`UniverseSimulation.cs`、`SpaceSurfaceQuery.cs`；`PlanetData.cs` 与 `World/Map/Data/PlanetData.cs` 保存星体地表身份。
 - 船体：同目录 `Ships/`，领域结构、气密与对接在 `Ships/Domain/`；建筑后端、运动、乘员、环境、导航、爆炸与散落物按 partial 分工。
+- 固定船型由 `GameConfig/Structures/fixed-structures.json` 配置，`ShipFixedStructureBuilder` 消费统一结构目录并复用 `SpaceSession.AddPiece/CommitPiece/RollbackPiece`；不得在 GM 按钮中硬编码布局。资源补给按模板成员身份匹配，共享罐按真实组容量处理，不能重复给每个成员灌满整组。
 - 生命周期：`Core/Lifecycle/GameManager.Space.cs`、`World/Dimension/DimensionManager.cs`；正式面板在 `Presentation/UI/ShipPanelSession.cs`、`SpaceLandingPanelSession.cs`。
 - 场景/资源：`Assets/3_Scenes/SpaceScene.unity`、`Assets/2_Prefabs/World/Space/`
 

@@ -8,6 +8,7 @@ description: "Use when: 定位或修改 FlatWorld 的地图内容、Tilemap、�
 ## 入口
 
 - 地图内容：`Assets/5_Scripts/5-3_GamePlay/World/Map/`
+- 手动固定结构模板统一放在 `Assets/StreamingAssets/GameConfig/Structures/fixed-structures.json`，由 `Structures/FixedStructureCatalog` 严格解析并展开矩形成员；目录负责布局与资源形状，生成后端负责占地、设备能力及事务回滚。新增船型增加模板，不复制生成代码；自动遗迹的 SO 与确定性区块生成链仍独立。
 - Chunk 加载与物品归属：`Assets/5_Scripts/5-3_GamePlay/World/Chunk/`
 - 地图数据与存档：`Assets/5_Scripts/5-3_GamePlay/World/Map/Data/`
 - 地块配置唯一真源：`Assets/StreamingAssets/GameConfig/Tiles/tile-manifest.json` 及其显式分包；构建入口为 `World/Map/Definitions/`。`Assets/7_Tiles/` 保存 Unity 外观资源；`Assets/4_ScriptObjects/World/Tiles/` 的 `Tile_Block` SO 仅保留稳定 ID 和原 GUID，供旧群系/结构/Prefab 引用，不再保存数值、Behaviour 或 TileBase 配置。

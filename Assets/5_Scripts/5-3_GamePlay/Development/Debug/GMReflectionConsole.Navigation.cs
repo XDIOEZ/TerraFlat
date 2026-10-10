@@ -499,6 +499,7 @@ public sealed partial class GMReflectionConsole
         SetGmButtonVisual(creatureButton, GmSurfaceRaised, true);
 
         itemHintText = AddPageHint(page.Content, "打开目录时会载入当前可用的物品与生物。", 24f);
+        BuildFixedStructureSection(page.Content);
     }
 
     private void BuildWorldPage()
