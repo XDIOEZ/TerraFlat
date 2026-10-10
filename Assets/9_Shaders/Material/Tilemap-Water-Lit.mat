@@ -71,7 +71,7 @@ Material:
     - _ReflectionDirection: {r: -0.35, g: 0.18, b: 0.92, a: 0}
     - _RendererColor: {r: 1, g: 1, b: 1, a: 1}
     - _RippleColor: {r: 0.38, g: 0.64, b: 0.66, a: 1}
-    - _ShallowColor: {r: 0.19, g: 0.42, b: 0.4, a: 1}
+    - _ShallowColor: {r: 0.08, g: 0.3, b: 0.56, a: 1}
     - _ShoreColor: {r: 0.39, g: 0.57, b: 0.53, a: 1}
     - _SpecularColor: {r: 1, g: 0.97, b: 0.88, a: 1}
     - _SunDirection: {r: 0.28, g: 0.42, b: 0.86, a: 0}
