@@ -5,14 +5,12 @@ using System.Threading;
 
 namespace FlatWorld.WorldModel
 {
-    /// <summary>
-    /// 自然物的空间分布方式。Uniform 逐格独立判定；Patch 先确定稀疏聚落，再在聚落范围内判定，
-    /// 适合种子传播后形成的小片植被，且不改变生态规则的群系与环境过滤职责。
-    /// </summary>
+    /// <summary>逐格均匀、固定密度聚落、二次衰减聚落共用同一确定性空间生成器。</summary>
     public enum EcologyDistributionMode : byte
     {
         Uniform = 0,
-        Patch = 1
+        Patch = 1,
+        QuadraticPatch = 2
     }
 
     /// <summary>自然物单次生成数量的分布方式。</summary>
@@ -462,10 +460,11 @@ namespace FlatWorld.WorldModel
                         {
                             continue;
                         }
-                        if (!MatchesDistribution(request, worldX, worldY, rule))
+                        double distributionWeight = GetDistributionWeight(request, worldX, worldY, rule);
+                        if (distributionWeight <= 0d)
                             continue;
                         double chance = Clamp01(globalMultiplier * rule.SpawnChance *
-                            rule.SpawnChanceMultiplier);
+                            rule.SpawnChanceMultiplier * distributionWeight);
                         if (!PassesChance(request, worldX, worldY, rule, chance,
                             PlacementSalt))
                         {
@@ -515,12 +514,13 @@ namespace FlatWorld.WorldModel
                         {
                             continue;
                         }
-                        if (!MatchesDistribution(request, worldX, worldY, rule))
+                        double distributionWeight = GetDistributionWeight(request, worldX, worldY, rule);
+                        if (distributionWeight <= 0d)
                             continue;
 
                         double companionChance = rule.CompanionSpawnChance;
                         double chance = Clamp01(globalMultiplier * companionChance *
-                            rule.SpawnChanceMultiplier);
+                            rule.SpawnChanceMultiplier * distributionWeight);
                         if (!PassesChance(request, worldX, worldY, rule, chance,
                             CompanionSalt))
                         {
@@ -666,11 +666,12 @@ namespace FlatWorld.WorldModel
                     if (!rule.MatchesGround(cell.GroundTileId, request.Profile.Settings) ||
                         !MatchesEnvironmentLayer(rule, terrain, x, y) ||
                         !rule.Matches(cell.BiomeId, temperature, precipitation, height,
-                            riverFloodplain) ||
-                        !MatchesDistribution(request, worldX, worldY, rule))
+                            riverFloodplain))
                         continue;
+                    double distributionWeight = GetDistributionWeight(request, worldX, worldY, rule);
+                    if (distributionWeight <= 0d) continue;
                     double chance = Clamp01(globalMultiplier * rule.SpawnChance *
-                        rule.SpawnChanceMultiplier);
+                        rule.SpawnChanceMultiplier * distributionWeight);
                     if (PassesChance(request, worldX, worldY, rule, chance, PlacementSalt))
                         return true;
                 }
@@ -764,16 +765,17 @@ namespace FlatWorld.WorldModel
             return terrain.TryGetEnvironmentValue(layerId, x, y, out float value) ? value : 0d;
         }
 
-        /// <summary>按规则选择逐格生成或聚落生成。</summary>
-        private static bool MatchesDistribution(ChunkGenerationRequest request,
+        /// <summary>按规则返回逐格概率权重，二次聚落从中心向边缘平滑递减。</summary>
+        private static double GetDistributionWeight(ChunkGenerationRequest request,
             int worldX, int worldY, EcologySpawnRuleSnapshot rule)
         {
             switch (rule.DistributionMode)
             {
                 case EcologyDistributionMode.Uniform:
-                    return true;
+                    return 1d;
                 case EcologyDistributionMode.Patch:
-                    return IsInsideActivePatch(request, worldX, worldY, rule);
+                case EcologyDistributionMode.QuadraticPatch:
+                    return GetActivePatchWeight(request, worldX, worldY, rule);
                 default:
                     throw new ArgumentOutOfRangeException(nameof(rule.DistributionMode));
             }
@@ -783,12 +785,13 @@ namespace FlatWorld.WorldModel
         /// 通过全局粗网格稳定地产生小聚落；查询相邻九格可保证跨 Chunk 边界仍属于同一聚落。
         /// Wrapped 世界使用规范化网格编号与最短环绕距离，边界两侧不会把同一聚落切断。
         /// </summary>
-        private static bool IsInsideActivePatch(ChunkGenerationRequest request,
+        private static double GetActivePatchWeight(ChunkGenerationRequest request,
             int worldX, int worldY, EcologySpawnRuleSnapshot rule)
         {
             int spacing = rule.PatchSpacing;
             ulong seed = CreateSeed(request, rule.RuleId, PatchSalt);
             ChunkGenerationTopologySnapshot topology = request.Topology;
+            double strongestWeight = 0d;
             if (!topology.IsWrapped)
             {
                 int basePatchX = FloorDiv(worldX, spacing);
@@ -800,13 +803,12 @@ namespace FlatWorld.WorldModel
                     int patchY = basePatchY + offsetY;
                     long originX = (long)patchX * spacing;
                     long originY = (long)patchY * spacing;
-                    if (ContainsPatchCell(seed, patchX, patchY, originX, originY,
-                            spacing, spacing, worldX, worldY, 0, 0, rule))
-                    {
-                        return true;
-                    }
+                    double weight = GetPatchCellWeight(seed, patchX, patchY, originX, originY,
+                        spacing, spacing, worldX, worldY, 0, 0, rule);
+                    if (weight >= 1d) return 1d;
+                    strongestWeight = Math.Max(strongestWeight, weight);
                 }
-                return false;
+                return strongestWeight;
             }
 
             int normalizedX = topology.NormalizeX(worldX);
@@ -828,28 +830,27 @@ namespace FlatWorld.WorldModel
                 int patchHeight = Math.Min(spacing, topology.Span.Y - relativeOriginY);
                 long originX = (long)topology.Min.X + relativeOriginX;
                 long originY = (long)topology.Min.Y + relativeOriginY;
-                if (ContainsPatchCell(seed, patchX, patchY, originX, originY,
-                        patchWidth, patchHeight, normalizedX, normalizedY,
-                        topology.Span.X, topology.Span.Y, rule))
-                {
-                    return true;
-                }
+                double weight = GetPatchCellWeight(seed, patchX, patchY, originX, originY,
+                    patchWidth, patchHeight, normalizedX, normalizedY,
+                    topology.Span.X, topology.Span.Y, rule);
+                if (weight >= 1d) return 1d;
+                strongestWeight = Math.Max(strongestWeight, weight);
             }
-            return false;
+            return strongestWeight;
         }
 
-        /// <summary>判断候选网格是否启用，并检查目标格是否落在其圆形聚落内。</summary>
-        private static bool ContainsPatchCell(ulong seed, int patchX, int patchY,
+        /// <summary>普通聚落保持恒定权重，二次聚落按归一化距离的平方衰减。</summary>
+        private static double GetPatchCellWeight(ulong seed, int patchX, int patchY,
             long originX, long originY, int patchWidth, int patchHeight,
             int worldX, int worldY, int wrapSpanX, int wrapSpanY,
             EcologySpawnRuleSnapshot rule)
         {
             if (rule.PatchChance <= 0d)
-                return false;
+                return 0d;
             if (rule.PatchChance < 1d &&
                 Hash01(seed, patchX, patchY) > rule.PatchChance)
             {
-                return false;
+                return 0d;
             }
 
             long centerX = originX + Hash(seed ^ 0x9e3779b97f4a7c15UL, patchX, patchY) %
@@ -862,7 +863,11 @@ namespace FlatWorld.WorldModel
                 deltaX = ShortestWrappedDelta(deltaX, wrapSpanX);
             if (wrapSpanY > 0)
                 deltaY = ShortestWrappedDelta(deltaY, wrapSpanY);
-            return deltaX * deltaX + deltaY * deltaY <= rule.PatchRadius * rule.PatchRadius;
+            double distanceSquared = deltaX * deltaX + deltaY * deltaY;
+            if (distanceSquared > rule.PatchRadius * rule.PatchRadius) return 0d;
+            if (rule.DistributionMode == EcologyDistributionMode.Patch) return 1d;
+            double falloff = 1d - Math.Sqrt(distanceSquared) / rule.PatchRadius;
+            return falloff * falloff;
         }
 
         private static int FloorDiv(int value, int divisor)
