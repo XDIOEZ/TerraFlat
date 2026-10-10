@@ -92,6 +92,7 @@ public sealed class ShipPanelSession : IMachinePanelSession
 
     public static void Open(SpaceSession session, Player player, string ship, string piece)
     {
+        if (session == null || !session.TryGetNearbyConsole(player, ship, out _)) return;
         ShipPanelSession existing = sessions.Find(value => value.IsAlive && value.session == session && value.shipId == ship && value.pieceId == piece);
         existing ??= new ShipPanelSession(session, ship, piece);
         if (!existing.IsOpen) existing.Toggle(player);
@@ -101,7 +102,13 @@ public sealed class ShipPanelSession : IMachinePanelSession
     {
         if (!IsAlive) return;
         if (IsOpen) { Close(); return; }
-        actor = player as Player;
+        Player nearbyPlayer = player as Player;
+        if (session == null || !session.TryGetNearbyConsole(nearbyPlayer, shipId, out _))
+        { Dispose(); return; }
+        // 每个玩家同时只保留一个船控窗口，切换部件时销毁旧实例而非叠加面板。
+        foreach (ShipPanelSession other in sessions.ToArray())
+            if (other != this) other.Dispose();
+        actor = nearbyPlayer;
         panel.Open();
         outputDirty = true;
         Refresh();
@@ -360,10 +367,12 @@ public sealed class ShipPanelSession : IMachinePanelSession
 
     private void RefreshScreens(bool immediate)
     {
-        if (!IsOpen || session.State == null) return;
+        if (!IsOpen) return;
+        if (session.State == null) { Close(); return; }
         if (!immediate && Time.unscaledTime < nextRefreshTime) return;
         nextRefreshTime = Time.unscaledTime + .2f;
         actor = ItemMgr.Instance?.User_Player ?? actor;
+        if (!session.TryGetNearbyConsole(actor, shipId, out _)) { Close(); return; }
         if (!session.FindPiece(pieceId, out ShipState ship, out _)) { Close(); return; }
         shipId = ship.ShipId;
         ShipFlightState flight = session.GetFlight(shipId);
@@ -414,7 +423,11 @@ public sealed class ShipPanelSession : IMachinePanelSession
     {
         FlatWorldLocalizationService.LanguageChanged -= HandleLanguageChanged;
         sessions.Remove(this);
-        if (panel != null) UnityEngine.Object.Destroy(panel.gameObject);
+        if (panel != null)
+        {
+            if (IsOpen) Close();
+            UnityEngine.Object.Destroy(panel.gameObject);
+        }
         panel = null;
     }
     #endregion

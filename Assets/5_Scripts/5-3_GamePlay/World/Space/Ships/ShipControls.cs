@@ -7,6 +7,30 @@ namespace FlatWorld.Spaceflight
     {
         #region 指针选点与对接操作
         private string pickingNavigationConsole;
+        public const float ConsoleInteractionDistance = Mod_InteractSender.DefaultMaxInteractDistance;
+
+        // 只有靠近本船实际控制台才能操作整船面板，船体地板不作为控制台。
+        public bool TryGetNearbyConsole(Player player, string shipId, out string consoleId)
+        {
+            consoleId = null;
+            if (player == null || State == null) return false;
+            ShipState ship = GetShip(shipId);
+            if (ship == null || !IsVisible(ship)) return false;
+            float closestDistance = ConsoleInteractionDistance;
+            foreach (ShipPieceState piece in ship.Pieces)
+            {
+                if (!piece.IsAlive || piece.Kind != ShipPieceKind.Console) continue;
+                Vector2 center = DisplayPoint(ship, piece.CellX + .5d, piece.CellY + .5d);
+                float distance = IsSpaceView
+                    ? Vector2.Distance(player.transform.position, center)
+                    : WorldTopologyRuntime.Distance(player.transform.position, center);
+                if (distance > closestDistance) continue;
+                closestDistance = distance;
+                consoleId = piece.PieceId;
+            }
+            return consoleId != null;
+        }
+
         public string ResolveConsole(string shipId, string preferred = null)
         {
             ShipState ship = GetShip(shipId);
@@ -35,8 +59,9 @@ namespace FlatWorld.Spaceflight
             if (pickingNavigationConsole != null) { pickingNavigationConsole = null; return true; }
             Mod_GameController controller = player.itemMods.GetMod_ByID<Mod_GameController>(ModText.Controller);
             if (controller == null || !controller.TryGetMouseWorldPosition(out Vector3 point) ||
-                !TryGetSupport(point, out ShipState ship, out ShipPieceState floor, out _)) return false;
-            ShipPanelSession.Open(this, player, ship.ShipId, ResolveConsole(ship.ShipId) ?? floor.PieceId);
+                !TryGetSupport(point, out ShipState ship, out _, out _) ||
+                !TryGetNearbyConsole(player, ship.ShipId, out string consoleId)) return false;
+            ShipPanelSession.Open(this, player, ship.ShipId, consoleId);
             return true;
         }
         public bool ConfirmNearbyDock(string shipId)

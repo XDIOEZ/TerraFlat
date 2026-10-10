@@ -23,12 +23,24 @@ namespace FlatWorld.Spaceflight
         private int boundWidth, boundHeight, boundQuarterTurns;
         private double boundCellSize;
         private bool pendingMachineBinding;
+        private bool registeredForInteraction;
         public Vector3 WorldPosition => transform.position;
         public int TargetGuid => int.TryParse(pieceId, out int id) ? id : 0;
         public bool IsValid => session != null && session.FindPiece(pieceId, out _, out _);
         public bool IsInteractionHighlighted { get; private set; }
         public event Action<bool> InteractionHighlightChanged;
-        public bool CanInteract(Item actor) => IsValid && actor != null && Vector2.Distance(actor.transform.position, WorldPosition) <= 3f;
+        private bool HasInteractionAction => boundPiece != null &&
+            boundPiece.Kind is not (ShipPieceKind.Floor or ShipPieceKind.Wall) &&
+            ((boundPiece.Kind is ShipPieceKind.Console or ShipPieceKind.DockingPort or ShipPieceKind.Navigation or
+                ShipPieceKind.Engine or ShipPieceKind.Door) || machineTarget != null);
+        public bool CanInteract(Item actor)
+        {
+            if (actor == null || !HasInteractionAction || !IsValid) return false;
+            float distance = session.IsSpaceView
+                ? Vector2.Distance(actor.transform.position, WorldPosition)
+                : WorldTopologyRuntime.Distance(actor.transform.position, WorldPosition);
+            return distance <= SpaceSession.ConsoleInteractionDistance;
+        }
         public bool CanPointerInteract(Item actor) => true;
         public void SetInteractionHighlighted(bool highlighted)
         {
@@ -39,7 +51,6 @@ namespace FlatWorld.Spaceflight
             session = owner; shipId = ship.ShipId; pieceId = piece.PieceId; Item = instance;
             visual = GetComponentInChildren<SpriteRenderer>(); body = GetComponent<Rigidbody2D>(); hitBox = GetComponent<BoxCollider2D>();
             baseVisualPosition = visual != null ? visual.transform.localPosition : Vector3.zero;
-            SpatialInteractionRegistry.Register(this, Mathf.Max(piece.Width, piece.Height) * .5f + .2f, this);
             Rebind(ship, piece);
         }
         public void Rebind(ShipState ship, ShipPieceState piece, bool force = false)
@@ -71,6 +82,17 @@ namespace FlatWorld.Spaceflight
                     machineTarget = MachineWorld.GetOrCreateInteractionTarget(node);
                     SynchronizeTankVisual(ship, node);
                 }
+            // 只登记真正能交互的船体设备，避免地板和墙壁进入每帧目标查询。
+            if (HasInteractionAction)
+            {
+                SpatialInteractionRegistry.Register(this, Mathf.Max(width, height) * (float)ship.CellSizeMeters * .5f + .2f, this);
+                registeredForInteraction = true;
+            }
+            else if (registeredForInteraction)
+            {
+                SpatialInteractionRegistry.Unregister(this);
+                registeredForInteraction = false;
+            }
         }
 
         // 船上储罐使用同一权威本地格连接，只在外壳变化时重选九宫格子图。
@@ -143,7 +165,6 @@ namespace FlatWorld.Spaceflight
             if (piece.Kind == ShipPieceKind.Door)
             { session.MoveThroughDoor(player, ship, piece); return; }
             if (machineTarget != null) using (MachineWorld.UseScope("ship:" + shipId)) machineTarget.OnInteractStart(actor);
-            else ShipPanelSession.Open(session, player, shipId, pieceId);
         }
         public void OnInteractUpdate(Item actor) { if (machineTarget != null) using (MachineWorld.UseScope("ship:" + shipId)) machineTarget.OnInteractUpdate(actor); }
         public void OnInteractEnd(Item actor) { if (machineTarget != null) using (MachineWorld.UseScope("ship:" + shipId)) machineTarget.OnInteractEnd(actor); }
