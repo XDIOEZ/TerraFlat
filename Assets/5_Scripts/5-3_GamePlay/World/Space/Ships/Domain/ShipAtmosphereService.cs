@@ -35,6 +35,9 @@ namespace FlatWorld.Spaceflight
     public static class ShipAtmosphereService
     {
         #region 密闭边界与舱气守恒
+        // 船舱只存气相，保留极小的正空间以满足通用流体几何约束。
+        internal const double MinimumCabinGasSpaceLiters = 0.001d;
+
         public static void RebuildCompartments(ShipState ship, IShipAtmosphereSource outside = null)
         {
             if (ship == null) throw new ArgumentNullException(nameof(ship));
@@ -226,7 +229,7 @@ namespace FlatWorld.Spaceflight
         {
             ShipCompartmentState room = FindCompartment(ship, cellX, cellY);
             if (room == null || !batch.IsGas) return false;
-            if (!new FluidInventory(room.Gas).CanAdd(batch, room.VolumeLiters, room.VolumeLiters)) return false;
+            if (!new FluidInventory(room.Gas).CanAdd(batch, room.VolumeLiters, MinimumCabinGasSpaceLiters)) return false;
             AddGas(room, batch, ship.NormalCabinTemperatureCelsius);
             ShipStructureService.RecalculateMass(ship);
             return true;
@@ -255,7 +258,7 @@ namespace FlatWorld.Spaceflight
         {
             if (!batch.IsGas || room.VolumeLiters <= 0d) throw new InvalidDataException("密闭舱只接收真实气相库存");
             var inventory = new FluidInventory(room.Gas);
-            if (!inventory.TryAdd(batch, room.VolumeLiters, room.VolumeLiters))
+            if (!inventory.TryAdd(batch, room.VolumeLiters, MinimumCabinGasSpaceLiters))
                 throw new InvalidDataException("实际气包无法写入船舱库存");
             NormalizeTemperature(room.Gas, normalTemperature);
         }
@@ -303,7 +306,7 @@ namespace FlatWorld.Spaceflight
                 return new ShipEnvironmentSnapshot(false, support, outside?.PressureKPa ?? 0d,
                     outside?.TemperatureCelsius ?? -270d, 0d, 0d, null);
             var inventory = new FluidInventory(room.Gas);
-            double pressure = inventory.GetPressureKPa(room.VolumeLiters, room.VolumeLiters);
+            double pressure = inventory.GetPressureKPa(room.VolumeLiters, MinimumCabinGasSpaceLiters);
             decimal total = inventory.GasMoles;
             double oxygen = total > 0m ? pressure * (double)(inventory.GetGasMoles(FluidIds.Oxygen) / total) : 0d;
             double carbonDioxide = total > 0m ? pressure * (double)(inventory.GetGasMoles(FluidIds.CarbonDioxide) / total) : 0d;

@@ -51,7 +51,8 @@ namespace FlatWorld.Spaceflight
                     throw new InvalidOperationException("当前模板不是飞船结构。" );
                 List<PreparedMember> members = PrepareMembers(template);
                 if (template.CabinGas != null)
-                    FixedStructureResourceInitializer.CreateFluidState(template.CabinGas, null, 1d, .001d, double.MaxValue);
+                    FixedStructureResourceInitializer.CreateFluidState(template.CabinGas, null, 1d,
+                        ShipAtmosphereService.MinimumCabinGasSpaceLiters, double.MaxValue);
                 Vector2Int origin;
                 using (MachineWorld.UseScope(SceneManager.GetActiveScene().name))
                     if (!TryFindSite(player, template, chunks, session, out origin))
@@ -178,7 +179,8 @@ namespace FlatWorld.Spaceflight
             if (gas == null) return;
             if (ship.Compartments.Count == 0) throw new InvalidOperationException("模板配置了舱气，但船体没有密闭舱。" );
             foreach (ShipCompartmentState room in ship.Compartments)
-                room.Gas = FixedStructureResourceInitializer.CreateFluidState(gas, null, room.VolumeLiters, .001d, double.MaxValue);
+                room.Gas = FixedStructureResourceInitializer.CreateFluidState(gas, null, room.VolumeLiters,
+                    ShipAtmosphereService.MinimumCabinGasSpaceLiters, double.MaxValue);
         }
         #endregion
 

@@ -117,7 +117,7 @@ namespace FlatWorld.Spaceflight
             decimal amount = Math.Min(requested, inventory.GetAvailableMoles(FluidIds.Oxygen, FluidPhase.Gas));
             if (amount <= 0m || !inventory.TryTakeExact(FluidIds.Oxygen, FluidPhase.Gas, amount, out _)) return 0f;
             FluidBatch exhaled = FluidInventory.CreateBatch(FluidCatalog.Default.Find(FluidIds.CarbonDioxide), amount, 0m, ship.NormalCabinTemperatureCelsius + 273.15d);
-            if (!inventory.TryAdd(exhaled, room.VolumeLiters, .01d)) throw new InvalidOperationException("舱室呼吸气体结算失败。");
+            if (!inventory.TryAdd(exhaled, room.VolumeLiters, ShipAtmosphereService.MinimumCabinGasSpaceLiters)) throw new InvalidOperationException("舱室呼吸气体结算失败。");
             return (float)(amount / AmbientMolesPerOxygenUnit);
         }
         private void RefillCompartments(ShipState ship, float seconds)
