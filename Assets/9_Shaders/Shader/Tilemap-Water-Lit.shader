@@ -8,9 +8,7 @@ Shader "FlatWorld/2D/Tilemap Water Lit"
         [HideInInspector] _LiquidDepthUvScaleOffset("水深纹理坐标", Vector) = (1,1,0,0)
 
         [Header(Ocean Surface)]
-        _DeepColor("深海颜色", Color) = (0.02, 0.09, 0.36, 1)
-        _ShallowColor("浅海颜色", Color) = (0.04, 0.2, 0.82, 1)
-        _SurfaceTint("海水染色强度", Range(0, 1)) = 1
+        _WaterColor("统一水色(RGBA)", Color) = (0.42, 0.72, 0.98, 0.68)
         _SwellScale("涌浪尺度", Range(0.05, 4)) = 0.74
         _DetailScale("细浪尺度", Range(0.5, 12)) = 4.6
         _WaveSpeed("海浪速度", Range(0, 3)) = 0.42
@@ -155,18 +153,12 @@ Shader "FlatWorld/2D/Tilemap Water Lit"
                 half4 main = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv);
                 main *= _Color * _RendererColor;
                 half4 shoreMask = DecodeWaterShoreMask(input.waterTileData);
-                half continuousDepth = SampleContinuousLiquidDepth(input.positionWS);
-                #if defined(FLATWORLD_WATER_STYLIZED)
-                half liquidDepth = QuantizeWaterVisualDepth(continuousDepth);
-                #else
-                half liquidDepth = continuousDepth;
-                #endif
                 WaterSurfaceData waterSurface = CalculateWaterSurface(
                     input.positionWS,
                     input.lightingUV,
-                    liquidDepth,
                     ResolveWaterFlowAxis(_FlowDirection.xy));
-                main.rgb = ApplyWaterSurface(main.rgb, waterSurface);
+                main.a = ResolveWaterSurfaceAlpha(main.a);
+                main.rgb = ApplyWaterSurface(waterSurface);
                 half recess = ComputeShoreRecess(input.positionWS, shoreMask);
                 main.rgb = ApplyShore(main.rgb, recess, input.positionWS,
                     ResolveWaterFlowAxis(_FlowDirection.xy));
@@ -234,18 +226,12 @@ Shader "FlatWorld/2D/Tilemap Water Lit"
                 half4 main = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv);
                 main *= _Color * _RendererColor;
                 half4 shoreMask = DecodeWaterShoreMask(input.waterTileData);
-                half continuousDepth = SampleContinuousLiquidDepth(input.positionWS);
-                #if defined(FLATWORLD_WATER_STYLIZED)
-                half liquidDepth = QuantizeWaterVisualDepth(continuousDepth);
-                #else
-                half liquidDepth = continuousDepth;
-                #endif
                 WaterSurfaceData waterSurface = CalculateWaterSurface(
                     input.positionWS,
                     input.screenUV,
-                    liquidDepth,
                     ResolveWaterFlowAxis(_FlowDirection.xy));
-                main.rgb = ApplyWaterSurface(main.rgb, waterSurface);
+                main.a = ResolveWaterSurfaceAlpha(main.a);
+                main.rgb = ApplyWaterSurface(waterSurface);
                 half recess = ComputeShoreRecess(input.positionWS, shoreMask);
                 main.rgb = ApplyShore(main.rgb, recess, input.positionWS,
                     ResolveWaterFlowAxis(_FlowDirection.xy));

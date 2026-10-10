@@ -15,8 +15,7 @@ SAMPLER(sampler_LiquidDepthTexture);
 #if !defined(FLATWORLD_WATER_MATERIAL_CBUFFER_DEFINED)
     half4 _Color;
     half4 _RendererColor;
-    half4 _DeepColor;
-    half4 _ShallowColor;
+    half4 _WaterColor;
     half4 _ReflectionColor;
     half4 _SpecularColor;
     half4 _CausticColor;
@@ -29,7 +28,6 @@ SAMPLER(sampler_LiquidDepthTexture);
     float4 _ReflectionDirection;
     float4 _SunDirection;
     float4 _MoonReflectionPosition;
-    half _SurfaceTint;
     float _SwellScale;
     float _DetailScale;
     float _WaveSpeed;
@@ -104,8 +102,6 @@ float WaterNoise(float2 position)
 /// <summary>汇总海面各层光学信息，供水色、反光、焦散与白沫统一混合。</summary>
 struct WaterSurfaceData
 {
-    half liquidDepth;
-    half depthBlend;
     half ripple;
     half rippleShadow;
     half reflection;
@@ -132,10 +128,10 @@ half QuantizeWaterVisualDepth(half liquidDepth)
     return min(1.0h, ceil(depth * 10.0h - 0.001h) * 0.1h);
 }
 
-/// <summary>水面透明度保持原来的浅水 0.60、深水 0.80，并使用连续水深避免格边跳变。</summary>
-half ResolveWaterSurfaceAlpha(half textureAlpha, half liquidDepth)
+/// <summary>所有普通水体只按统一 RGBA 颜色和贴图遮罩决定透明度，不随实际水深变化。</summary>
+half ResolveWaterSurfaceAlpha(half textureAlpha)
 {
-    return textureAlpha * lerp(0.60h, 0.80h, saturate(liquidDepth));
+    return textureAlpha * saturate(_WaterColor.a);
 }
 
 /// <summary>通过显式世界坐标映射采样连续水深，供写实水色与透明度使用。</summary>
@@ -161,7 +157,7 @@ half SampleContinuousLiquidDepthCorners(float2 positionWS, half4 cornerDepths)
     return saturate(lerp(bottom, top, cellUV.y));
 }
 
-/// <summary>水色仍按十档显示，透明度等连续表现可直接使用未离散的水深。</summary>
+/// <summary>保留液深量化接口供岩浆等特殊液体使用，普通水面不再按水深着色。</summary>
 half SampleLiquidDepthCorners(float2 positionWS, half4 cornerDepths)
 {
     return QuantizeWaterVisualDepth(SampleContinuousLiquidDepthCorners(positionWS, cornerDepths));

@@ -8,9 +8,7 @@ Shader "FlatWorld/2D/Tilemap Clean Water Lit"
         [HideInInspector] _LiquidDepthUvScaleOffset("水深纹理坐标", Vector) = (1,1,0,0)
 
         [Header(Clean Water Surface)]
-        _DeepColor("深水颜色", Color) = (0.22, 0.055, 0.012, 1)
-        _ShallowColor("浅水颜色", Color) = (1, 0.48, 0.08, 1)
-        _SurfaceTint("水面染色强度", Range(0, 1)) = 0.68
+        _WaterColor("统一水色(RGBA)", Color) = (0.42, 0.72, 0.98, 0.68)
         _SwellScale("涌浪尺度", Range(0.05, 4)) = 0.42
         _DetailScale("细浪尺度", Range(0.5, 12)) = 4.4
         _WaveSpeed("水流速度", Range(-3, 3)) = 0.26
@@ -19,24 +17,24 @@ Shader "FlatWorld/2D/Tilemap Clean Water Lit"
         _PixelDensity("风格化采样密度", Range(1, 128)) = 64
         _FlowDirection("流动方向", Vector) = (0.7, 0.28, 0, 0)
         _TideCyclesPerDay("每日潮汐循环次数", Range(1, 4)) = 2.0
-        _RippleColor("浪脊颜色", Color) = (1, 0.68, 0.3, 0.8)
+        _RippleColor("浪脊颜色", Color) = (0.3, 0.57, 0.98, 0.8)
         _RippleStrength("浪脊强度", Range(0, 1)) = 0.1
         _RippleScale("浪纹尺度", Range(0.25, 6)) = 2.3
         _RippleWidth("浪脊宽度", Range(0.04, 0.45)) = 0.08
         _RippleShadowStrength("浪背暗部", Range(0, 0.5)) = 0.035
 
         [Header(Reflection And Foam)]
-        _ReflectionColor("镜面反射颜色", Color) = (1, 0.82, 0.58, 0.82)
+        _ReflectionColor("镜面反射颜色", Color) = (0.38, 0.57, 0.9, 0.82)
         _ReflectionStrength("镜面反射强度", Range(0, 1)) = 0.38
         _ReflectionSmoothness("镜面反射平滑度", Range(0, 1)) = 0.86
         _ReflectionDirection("镜面环境方向", Vector) = (-0.25, 0.35, 0.9, 0)
-        _SpecularColor("太阳高光", Color) = (1, 0.9, 0.7, 1)
+        _SpecularColor("太阳高光", Color) = (1, 0.97, 0.88, 1)
         _SpecularStrength("太阳高光强度", Range(0, 1)) = 0.28
         _SpecularPower("太阳高光锐度", Range(4, 96)) = 56
         _SunDirection("太阳方向", Vector) = (0.28, 0.42, 0.86, 0)
-        _CausticColor("焦散颜色", Color) = (1, 0.58, 0.2, 1)
+        _CausticColor("焦散颜色", Color) = (0.35, 0.58, 0.96, 1)
         _CausticStrength("焦散强度", Range(0, 1)) = 0.16
-        _FoamColor("泡沫颜色", Color) = (1, 0.82, 0.55, 0.65)
+        _FoamColor("泡沫颜色", Color) = (0.75, 0.87, 1, 0.65)
         _WhitecapStrength("浪峰泡沫", Range(0, 1)) = 0.025
 
         [Header(Moon Reflection)]
@@ -50,12 +48,12 @@ Shader "FlatWorld/2D/Tilemap Clean Water Lit"
         [Header(Shore)]
         _EdgeWidth("岸线宽度", Range(0.03, 0.45)) = 0.16
         _CornerStrength("转角叠加强度", Range(0, 1)) = 0.12
-        _ShoreColor("岸线亮部", Color) = (1, 0.55, 0.18, 1)
+        _ShoreColor("岸线亮部", Color) = (0.32, 0.56, 0.92, 1)
         _ShoreStrength("岸线亮部强度", Range(0, 1)) = 0.14
         _ShoreFoamStrength("岸边泡沫强度", Range(0, 1)) = 0.18
         _FoamSpeed("岸边泡沫速度", Range(0, 3)) = 0.35
 
-        [HideInInspector] _Color("Tint", Color) = (1,1,1,0.55)
+        [HideInInspector] _Color("Tint", Color) = (1,1,1,1)
         [HideInInspector] _RendererColor("Renderer Color", Color) = (1,1,1,1)
         [HideInInspector] _Flip("Flip", Vector) = (1,1,1,1)
         [HideInInspector] _AlphaTex("External Alpha", 2D) = "white" {}

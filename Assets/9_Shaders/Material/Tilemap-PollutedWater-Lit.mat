@@ -55,24 +55,22 @@ Material:
     - _ShoreStrength: 0.08
     - _SpecularPower: 20
     - _SpecularStrength: 0.12
-    - _SurfaceTint: 0.78
     - _SwellScale: 0.5
     - _WaveDistortion: 1.9
     - _WaveSpeed: 0.14
     - _WhitecapStrength: 0.1
     m_Colors:
-    - _CausticColor: {r: 0.1, g: 0.25, b: 0.06, a: 1}
-    - _Color: {r: 1, g: 1, b: 1, a: 0.92}
-    - _DeepColor: {r: 0.005, g: 0.025, b: 0.012, a: 1}
+    - _CausticColor: {r: 0.35, g: 0.58, b: 0.96, a: 1}
+    - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _Flip: {r: 1, g: 1, b: 1, a: 1}
     - _FlowDirection: {r: 0.55, g: 0.18, b: 0, a: 0}
-    - _FoamColor: {r: 0.2, g: 0.32, b: 0.1, a: 1}
-    - _ReflectionColor: {r: 0.1, g: 0.22, b: 0.07, a: 0.82}
+    - _FoamColor: {r: 0.75, g: 0.87, b: 1, a: 1}
+    - _ReflectionColor: {r: 0.38, g: 0.57, b: 0.9, a: 0.82}
     - _ReflectionDirection: {r: -0.3, g: 0.12, b: 0.88, a: 0}
     - _RendererColor: {r: 1, g: 1, b: 1, a: 1}
-    - _RippleColor: {r: 0.18, g: 0.32, b: 0.12, a: 0.75}
-    - _ShallowColor: {r: 0.065, g: 0.16, b: 0.055, a: 1}
-    - _ShoreColor: {r: 0.16, g: 0.28, b: 0.08, a: 1}
-    - _SpecularColor: {r: 0.36, g: 0.45, b: 0.22, a: 1}
+    - _RippleColor: {r: 0.3, g: 0.57, b: 0.98, a: 0.75}
+    - _ShoreColor: {r: 0.32, g: 0.56, b: 0.92, a: 1}
+    - _SpecularColor: {r: 1, g: 0.97, b: 0.88, a: 1}
     - _SunDirection: {r: 0.28, g: 0.42, b: 0.86, a: 0}
+    - _WaterColor: {r: 0.42, g: 0.72, b: 0.98, a: 0.68}
   m_BuildTextureStacks: []

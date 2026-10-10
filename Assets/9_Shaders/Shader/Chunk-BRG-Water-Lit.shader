@@ -6,9 +6,7 @@ Shader "FlatWorld/2D/Chunk BRG Water Lit"
         [PerRendererData] _MainTex("水面贴图", 2D) = "white" {}
         _MaskTex("灯光遮罩", 2D) = "white" {}
         [Header(Ocean Surface)]
-        _DeepColor("深海颜色", Color) = (0.02, 0.09, 0.36, 1)
-        _ShallowColor("浅海颜色", Color) = (0.04, 0.2, 0.82, 1)
-        _SurfaceTint("海水染色强度", Range(0, 1)) = 1
+        _WaterColor("统一水色(RGBA)", Color) = (0.42, 0.72, 0.98, 0.68)
         _SwellScale("涌浪尺度", Range(0.05, 4)) = 0.74
         _DetailScale("细浪尺度", Range(0.5, 12)) = 4.6
         _WaveSpeed("海浪速度", Range(0, 3)) = 0.42
@@ -58,8 +56,7 @@ Shader "FlatWorld/2D/Chunk BRG Water Lit"
         CBUFFER_START(UnityPerMaterial)
             float4 _Color;
             float4 _RendererColor;
-            float4 _DeepColor;
-            float4 _ShallowColor;
+            float4 _WaterColor;
             float4 _ReflectionColor;
             float4 _SpecularColor;
             float4 _CausticColor;
@@ -71,7 +68,6 @@ Shader "FlatWorld/2D/Chunk BRG Water Lit"
             float4 _SunDirection;
             float4 _MoonReflectionPosition;
             float _TideCyclesPerDay;
-            float _SurfaceTint;
             float _SwellScale;
             float _DetailScale;
             float _WaveSpeed;
@@ -102,8 +98,7 @@ Shader "FlatWorld/2D/Chunk BRG Water Lit"
         UNITY_DOTS_INSTANCING_START(MaterialPropertyMetadata)
             UNITY_DOTS_INSTANCED_PROP(float4, _Color)
             UNITY_DOTS_INSTANCED_PROP(float4, _RendererColor)
-            UNITY_DOTS_INSTANCED_PROP(float4, _DeepColor)
-            UNITY_DOTS_INSTANCED_PROP(float4, _ShallowColor)
+            UNITY_DOTS_INSTANCED_PROP(float4, _WaterColor)
             UNITY_DOTS_INSTANCED_PROP(float4, _ReflectionColor)
             UNITY_DOTS_INSTANCED_PROP(float4, _SpecularColor)
             UNITY_DOTS_INSTANCED_PROP(float4, _CausticColor)
@@ -115,7 +110,6 @@ Shader "FlatWorld/2D/Chunk BRG Water Lit"
             UNITY_DOTS_INSTANCED_PROP(float4, _SunDirection)
             UNITY_DOTS_INSTANCED_PROP(float4, _MoonReflectionPosition)
             UNITY_DOTS_INSTANCED_PROP(float, _TideCyclesPerDay)
-            UNITY_DOTS_INSTANCED_PROP(float, _SurfaceTint)
             UNITY_DOTS_INSTANCED_PROP(float, _SwellScale)
             UNITY_DOTS_INSTANCED_PROP(float, _DetailScale)
             UNITY_DOTS_INSTANCED_PROP(float, _WaveSpeed)
@@ -144,8 +138,7 @@ Shader "FlatWorld/2D/Chunk BRG Water Lit"
         UNITY_DOTS_INSTANCING_END(MaterialPropertyMetadata)
         #define _Color UNITY_ACCESS_DOTS_INSTANCED_PROP_WITH_DEFAULT(float4, _Color)
         #define _RendererColor UNITY_ACCESS_DOTS_INSTANCED_PROP_WITH_DEFAULT(float4, _RendererColor)
-        #define _DeepColor UNITY_ACCESS_DOTS_INSTANCED_PROP_WITH_DEFAULT(float4, _DeepColor)
-        #define _ShallowColor UNITY_ACCESS_DOTS_INSTANCED_PROP_WITH_DEFAULT(float4, _ShallowColor)
+        #define _WaterColor UNITY_ACCESS_DOTS_INSTANCED_PROP_WITH_DEFAULT(float4, _WaterColor)
         #define _ReflectionColor UNITY_ACCESS_DOTS_INSTANCED_PROP_WITH_DEFAULT(float4, _ReflectionColor)
         #define _SpecularColor UNITY_ACCESS_DOTS_INSTANCED_PROP_WITH_DEFAULT(float4, _SpecularColor)
         #define _CausticColor UNITY_ACCESS_DOTS_INSTANCED_PROP_WITH_DEFAULT(float4, _CausticColor)
@@ -157,7 +150,6 @@ Shader "FlatWorld/2D/Chunk BRG Water Lit"
         #define _SunDirection UNITY_ACCESS_DOTS_INSTANCED_PROP_WITH_DEFAULT(float4, _SunDirection)
         #define _MoonReflectionPosition UNITY_ACCESS_DOTS_INSTANCED_PROP_WITH_DEFAULT(float4, _MoonReflectionPosition)
         #define _TideCyclesPerDay UNITY_ACCESS_DOTS_INSTANCED_PROP_WITH_DEFAULT(float, _TideCyclesPerDay)
-        #define _SurfaceTint UNITY_ACCESS_DOTS_INSTANCED_PROP_WITH_DEFAULT(float, _SurfaceTint)
         #define _SwellScale UNITY_ACCESS_DOTS_INSTANCED_PROP_WITH_DEFAULT(float, _SwellScale)
         #define _DetailScale UNITY_ACCESS_DOTS_INSTANCED_PROP_WITH_DEFAULT(float, _DetailScale)
         #define _WaveSpeed UNITY_ACCESS_DOTS_INSTANCED_PROP_WITH_DEFAULT(float, _WaveSpeed)
@@ -220,11 +212,11 @@ Shader "FlatWorld/2D/Chunk BRG Water Lit"
         }
 
         // 静水也有表面细波；物理流速为零不代表视觉冻结。河口反射波只影响渲染。
-        WaterSurfaceData CalculateChunkWaterSurface(float2 positionWS, float2 screenUV, half depth)
+        WaterSurfaceData CalculateChunkWaterSurface(float2 positionWS, float2 screenUV)
         {
             ChunkBRGInstanceData data = LoadChunkBRGInstanceData();
             if (data.transform0.w > 1.5)
-                return CalculateWaterSurface(positionWS, screenUV, depth, ResolveOceanFlowAxis(positionWS, data));
+                return CalculateWaterSurface(positionWS, screenUV, ResolveOceanFlowAxis(positionWS, data));
             float2 velocity = ResolveRiverVelocity(positionWS, data);
             float strength = saturate(length(velocity) / 0.45);
             float lake = 1.0 - step(0.5, data.transform0.w);
@@ -236,13 +228,11 @@ Shader "FlatWorld/2D/Chunk BRG Water Lit"
                 WaterNoise(positionWS * 0.24) * 3.0)), 10.0);
             gentleWave *= 0.45 + 0.55 * WaterNoise(positionWS * 0.7 + float2(_Time.y * 0.03, 0.0));
             WaterSurfaceData surface = (WaterSurfaceData)0;
-            surface.liquidDepth = saturate(depth);
-            surface.depthBlend = 1.0h - surface.liquidDepth;
             surface.ripple = smoothstep(0.45, 0.8, pattern) * _RippleStrength * strength * 0.55;
             surface.ripple += gentleWave * max(_RippleStrength, 0.10) * lerp(0.35, 0.85, lake);
             surface.rippleShadow = smoothstep(0.5, 0.8, 1.0 - pattern)
                 * _RippleShadowStrength * strength * 0.3;
-            surface.caustic = pattern * _CausticStrength * surface.depthBlend * 0.3;
+            surface.caustic = pattern * _CausticStrength * 0.3;
             // 细小天空反光不随深度归零，深湖仍服从日夜照明但不会成为一整片纯黑色。
             surface.reflection = lake * (0.055 + gentleWave * 0.035);
             surface.whitecap = smoothstep(0.64, 0.88, pattern) * max(_WhitecapStrength, 0.14)
@@ -293,7 +283,7 @@ Shader "FlatWorld/2D/Chunk BRG Water Lit"
             #include "Packages/com.unity.render-pipelines.universal/Shaders/2D/Include/LightingUtility.hlsl"
 
             struct Attributes { float3 positionOS:POSITION; half4 color:COLOR; float2 uv:TEXCOORD0; UNITY_VERTEX_INPUT_INSTANCE_ID };
-            struct Varyings { float4 positionCS:SV_POSITION; float2 uv:TEXCOORD0; half2 lightingUV:TEXCOORD1; half4 shore:TEXCOORD2; half4 depth:TEXCOORD3; float2 positionWS:TEXCOORD4; half4 tint:COLOR; UNITY_VERTEX_INPUT_INSTANCE_ID };
+            struct Varyings { float4 positionCS:SV_POSITION; float2 uv:TEXCOORD0; half2 lightingUV:TEXCOORD1; half4 shore:TEXCOORD2; float2 positionWS:TEXCOORD4; half4 tint:COLOR; UNITY_VERTEX_INPUT_INSTANCE_ID };
             #if USE_SHAPE_LIGHT_TYPE_0
             SHAPE_LIGHT(0)
             #endif
@@ -317,7 +307,6 @@ Shader "FlatWorld/2D/Chunk BRG Water Lit"
                 o.positionWS = positionWS.xy;
                 o.uv = input.uv;
                 o.shore = d.data0;
-                o.depth = d.data1;
                 o.tint = input.color * d.tint;
                 o.lightingUV = half2(ComputeScreenPos(o.positionCS / o.positionCS.w).xy);
                 UNITY_TRANSFER_INSTANCE_ID(input, o);
@@ -330,16 +319,9 @@ Shader "FlatWorld/2D/Chunk BRG Water Lit"
             {
                 UNITY_SETUP_INSTANCE_ID(input);
                 half4 main = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv) * input.tint * _Color * _RendererColor;
-                half continuousDepth = SampleContinuousLiquidDepthCorners(input.positionWS, input.depth);
-                #if defined(FLATWORLD_WATER_STYLIZED)
-                half liquidDepth = QuantizeWaterVisualDepth(continuousDepth);
-                #else
-                half liquidDepth = continuousDepth;
-                #endif
-                // 保留原透明度，同时让透明度跟随连续水深跨格平滑变化。
-                main.a = ResolveWaterSurfaceAlpha(main.a, continuousDepth);
-                WaterSurfaceData surface = CalculateChunkWaterSurface(input.positionWS, input.lightingUV, liquidDepth);
-                main.rgb = ApplyWaterSurface(main.rgb, surface);
+                main.a = ResolveWaterSurfaceAlpha(main.a);
+                WaterSurfaceData surface = CalculateChunkWaterSurface(input.positionWS, input.lightingUV);
+                main.rgb = ApplyWaterSurface(surface);
                 half recess = ComputeShoreRecess(input.positionWS, DecodeWaterShoreMask(input.shore));
                 main.rgb = ApplyChunkWaterShore(main.rgb, recess, input.positionWS);
                 half4 mask = SAMPLE_TEXTURE2D(_MaskTex, sampler_MaskTex, input.uv);
@@ -364,7 +346,7 @@ Shader "FlatWorld/2D/Chunk BRG Water Lit"
             #pragma multi_compile _ DOTS_INSTANCING_ON
             #pragma shader_feature_local_fragment _ FLATWORLD_WATER_STYLIZED
             struct Attributes { float3 positionOS:POSITION; half4 color:COLOR; float2 uv:TEXCOORD0; UNITY_VERTEX_INPUT_INSTANCE_ID };
-            struct Varyings { float4 positionCS:SV_POSITION; float2 uv:TEXCOORD0; half4 shore:TEXCOORD1; half4 depth:TEXCOORD2; float2 positionWS:TEXCOORD3; float2 screenUV:TEXCOORD4; half4 tint:COLOR; UNITY_VERTEX_INPUT_INSTANCE_ID };
+            struct Varyings { float4 positionCS:SV_POSITION; float2 uv:TEXCOORD0; half4 shore:TEXCOORD1; float2 positionWS:TEXCOORD3; float2 screenUV:TEXCOORD4; half4 tint:COLOR; UNITY_VERTEX_INPUT_INSTANCE_ID };
             Varyings Vert(Attributes input)
             {
                 UNITY_SETUP_INSTANCE_ID(input);
@@ -375,7 +357,6 @@ Shader "FlatWorld/2D/Chunk BRG Water Lit"
                 o.positionWS = positionWS.xy;
                 o.uv = input.uv;
                 o.shore = d.data0;
-                o.depth = d.data1;
                 o.tint = input.color * d.tint;
                 float4 screenPosition = ComputeScreenPos(o.positionCS);
                 o.screenUV = screenPosition.xy / max(screenPosition.w, 0.0001);
@@ -386,16 +367,9 @@ Shader "FlatWorld/2D/Chunk BRG Water Lit"
             {
                 UNITY_SETUP_INSTANCE_ID(input);
                 half4 main = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv) * input.tint * _Color * _RendererColor;
-                half continuousDepth = SampleContinuousLiquidDepthCorners(input.positionWS, input.depth);
-                #if defined(FLATWORLD_WATER_STYLIZED)
-                half liquidDepth = QuantizeWaterVisualDepth(continuousDepth);
-                #else
-                half liquidDepth = continuousDepth;
-                #endif
-                // 保留原透明度，同时让透明度跟随连续水深跨格平滑变化。
-                main.a = ResolveWaterSurfaceAlpha(main.a, continuousDepth);
-                WaterSurfaceData surface = CalculateChunkWaterSurface(input.positionWS, input.screenUV, liquidDepth);
-                main.rgb = ApplyWaterSurface(main.rgb, surface);
+                main.a = ResolveWaterSurfaceAlpha(main.a);
+                WaterSurfaceData surface = CalculateChunkWaterSurface(input.positionWS, input.screenUV);
+                main.rgb = ApplyWaterSurface(surface);
                 half recess = ComputeShoreRecess(input.positionWS, DecodeWaterShoreMask(input.shore));
                 main.rgb = ApplyChunkWaterShore(main.rgb, recess, input.positionWS);
                 main.rgb = ApplyMoonReflection(main.rgb, surface.moonReflection);

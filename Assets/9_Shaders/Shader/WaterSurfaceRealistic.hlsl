@@ -40,7 +40,6 @@ float2 SampleWaterShimmerWave(
 WaterSurfaceData CalculateWaterSurface(
     float2 positionWS,
     float2 screenUV,
-    half liquidDepth,
     float2 direction)
 {
     WaterSurfaceData surface = (WaterSurfaceData)0;
@@ -97,10 +96,6 @@ WaterSurfaceData CalculateWaterSurface(
     slope *= _OceanWaveFactors.y;
     float3 normalWS = normalize(float3(-slope * _NormalStrength, 1.0));
 
-    // 水面水深已离散为十档；使用等距颜色权重，避免深水段被指数吸收压缩后相邻档位难以分辨。
-    surface.liquidDepth = saturate(liquidDepth);
-    surface.depthBlend = 1.0h - surface.liquidDepth;
-
     float3 sunDirection = normalize(_SunDirection.xyz);
     float3 viewDirection = float3(0.0, 0.0, 1.0);
     float3 halfDirection = normalize(sunDirection + viewDirection);
@@ -151,7 +146,7 @@ WaterSurfaceData CalculateWaterSurface(
     float detailB = shimmerB.x;
     float detailC = shimmerC.x;
     float causticFocus = pow(saturate(1.0 - abs(detailA - detailB) * 3.0), 12.0);
-    surface.caustic = causticFocus * pow(surface.depthBlend, 4.0)
+    surface.caustic = causticFocus
         * saturate(_CausticStrength) * _CausticColor.a;
 
     // 白沫只在足够陡的波峰上零星出现，避免每道细浪都变成白线。
@@ -173,16 +168,11 @@ WaterSurfaceData CalculateWaterSurface(
     return surface;
 }
 
-/// <summary>按深浅水、焦散、天空反光、太阳高光和白沫的层级合成海面。</summary>
-half3 ApplyWaterSurface(half3 sourceColor, WaterSurfaceData surface)
+/// <summary>海水、淡水等统一以固定淡蓝色为底，反光和白沫只叠加局部细节。</summary>
+half3 ApplyWaterSurface(WaterSurfaceData surface)
 {
-    half3 waterTint = lerp(_DeepColor.rgb, _ShallowColor.rgb, surface.depthBlend);
-    half tintStrength = lerp(
-        saturate(_SurfaceTint),
-        1.0h,
-        surface.liquidDepth);
-    sourceColor = lerp(sourceColor, waterTint, tintStrength);
-    sourceColor = lerp(sourceColor, _DeepColor.rgb, surface.rippleShadow);
+    half3 sourceColor = _WaterColor.rgb;
+    sourceColor *= 1.0h - surface.rippleShadow;
     sourceColor += _CausticColor.rgb * surface.caustic;
     sourceColor = lerp(sourceColor, _ReflectionColor.rgb, surface.reflection);
     // 波光采用提亮混合，不把原水色直接染成一条条固定颜色的线。
