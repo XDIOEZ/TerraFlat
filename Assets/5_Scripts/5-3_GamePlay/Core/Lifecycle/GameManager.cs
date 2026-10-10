@@ -487,8 +487,12 @@ public partial class GameManager : SingletonAutoMono<GameManager>
 
         TimeData timeData = ReadyTimeData_ ?? new TimeData();
 
-        //根据准备好的星球数据创建新星球存档
-        SaveDataMgr.Instance.SaveData.PlanetData_Dict[ReadyPlanetData_.Name] = FastCloner.FastCloner.DeepClone(ReadyPlanetData_);
+        // 首次写盘前就按地表配置创建真实大气，避免 Unity 模板中的空对象被保存成零值快照。
+        PlanetData planet = FastCloner.FastCloner.DeepClone(ReadyPlanetData_);
+        var catalog = FlatWorld.Spaceflight.SpaceCatalog.LoadDefault();
+        catalog.ApplyPlanetMetadata(catalog.GetBodyDefinition("earth"), planet, true);
+        planet.Name = ReadyPlanetData_.Name;
+        SaveDataMgr.Instance.SaveData.PlanetData_Dict[planet.Name] = planet;
         SaveDataMgr.Instance.SaveData.DayTimeData.WorldTimeDict[ReadyPlanetData_.Name] = new SerializableTimeData(timeData);
         SaveDataMgr.Instance.SaveData.DayTimeData.SceneLightingRateDict[ReadyPlanetData_.Name] = 1.0f;
     }
