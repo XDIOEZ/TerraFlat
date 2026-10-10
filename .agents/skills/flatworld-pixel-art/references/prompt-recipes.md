@@ -40,20 +40,22 @@ Primary request: create one <物品名称>.
 Style/medium: FlatWorld pixel art matching the closest same-category runtime asset; strong compact silhouette; hard grouped pixels; limited material color groups; hard edges; limited palette; subtle top-left highlight. Logical pixel density may be higher than older assets, but the result must not become smoother, more realistic, more detailed, or visually denser than the established style language.
 Composition/framing: one centered object, complete silhouette, readable at the target runtime size and world scale. Choose canvas size and PPU from the consumer requirements so the object remains proportionally consistent with existing same-category assets.
 Scene/backdrop: perfectly flat chroma-key background.
-Constraints: no card background; no frame; no label; no shadow unless same-category references contain one; no watermark; no extra objects. For trees, vegetation, large props, and buildings, preserve the existing project's leaf/shape clustering, trunk or structural massing, outline weight, light direction, saturation, and top-down viewpoint even when using a higher pixel density.
+Constraints: no card background or decorative card frame; no label; no shadow unless same-category references contain one; no watermark; no extra objects. Structural reinforcement frames are part of the object. For trees, vegetation, large props, and buildings, preserve the existing project's leaf/shape clustering, trunk or structural massing, outline weight, light direction, saturation, and top-down viewpoint even when using a higher pixel density.
 ```
 
 ## 使用程序化接口的设备机身
 
 先从消费方和同类机身确定画布、目标可见大小、Pivot 与 PPU。机械轴口、电线和流体管道的接入/离开由程序化表现层或标准 Sprite 负责，生成器只画完整机身；参考图里的接口只用于尺寸与遮挡定位。设备本体、召唤器和库存图标均不烘入连接件。
 
+新绘制工业机身时，将风格指南中的铁罐、钢罐 PNG 作为实际输入参考，提示词明确写出干净大面板、直线加固框、少量方形铆钉及克制金属明暗。保留目标设备的功能结构；满格连片方块改用不透明满画布，独立轮廓设备使用透明背景。
+
 ```text
 Asset type: FlatWorld pixel-art machine housing, prepared for separate procedural mechanical/electrical/fluid connector layers.
-Input images: Image 1 is the approved housing design; Image 2 is the existing in-game shaft and iron collar; Image 3 is the existing cable when needed. Preserve the housing design and use the connectors as scale and alignment references.
+Input images: Image 1 is the approved iron or steel gas-tank block from the FlatWorld industrial style guide; Image 2 is the closest same-category housing or approved target design; additional images are existing shaft/collar, cable or pipe references only when needed. Borrow the tank's material palette, panel/frame construction and restrained detail density; preserve the target device's functional shape and use connectors only as scale and alignment references.
 Primary request: create one <设备名称> housing with a visible size of <目标世界宽高> on a <画布尺寸> canvas, intended for <机身 PPU> PPU.
-Composition/alignment: preserve the approved housing's aspect ratio, runtime canvas and Pivot; keep the housing centered and closed, with enough opaque body to cover the inner portions of runtime connectors. A marked size box indicates overall size only, not a new aspect ratio.
+Composition/alignment: preserve the approved housing's aspect ratio, runtime canvas and Pivot; keep the housing centered and closed, with enough opaque body to cover the inner portions of runtime connectors. A marked size box indicates overall size only, not a new aspect ratio. For a cell-filling connected block, use a flat front-facing square body filling the entire canvas, no transparent padding or perspective side, with frame/corner details confined to the consumer's edge slices and a clean continuous center panel.
 Layers: complete housing only. Do NOT draw external input/output pipes, pipe mouths, fluid connector flanges, shafts, axle ports, iron connector collars, cables or cable junctions. All connections entering and leaving the device are drawn procedurally or from standard project sprites at runtime. Do not add holes or replacement stubs after removing connectors. Keep genuine working parts such as valve wheels, gauges, filter chambers and ventilation grilles.
-Style/medium: match the same-category FlatWorld asset's viewpoint, pixel clusters, outline, palette, and lighting; complete silhouette; transparent background; no ground, cast shadow, text, watermark, or extra objects.
+Style/medium: clean large gray-blue metal panels, straight reinforcement frames, dark structural seams, a few readable square rivets and corner plates; optional restrained orange accents like the iron-tank reference. Hard pixel edges on outlines and hardware; subtle broad metal shading matching the tank references is allowed, without glossy 3D rendering, photo textures, dense scratches or granular noise. Match the target device's viewpoint and world scale. Transparent outside standalone silhouettes; fully opaque canvas for cell-filling connected blocks. No ground, cast shadow, text, watermark, or extra objects.
 ```
 
 接入时按真实 PPU、Pivot、偏移和程序化连接图层核对大小、遮挡及旋转。仅大小不合适时调整机身 PPU 或等比例缩放，接口保持标准尺寸；静态物品图标沿用无外部接口的机身。流体消费方若分别缩放宽高，画布宽高比必须匹配目标比例，当前方形节点使用正方形画布。
