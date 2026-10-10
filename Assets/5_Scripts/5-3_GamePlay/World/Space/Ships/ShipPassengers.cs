@@ -13,7 +13,7 @@ namespace FlatWorld.Spaceflight
             SpacePassengerState passenger = State.Passengers.Find(value => value.ProfileId == player.ProfileName);
             if (passenger != null) return passenger;
             passenger = new SpacePassengerState { ProfileId = player.ProfileName, IsInSpace = IsSpaceView,
-                FreeMotion = new OrbitState { PositionMeters = IsSpaceView ? UnprojectPosition(player.transform.position)
+                FreeMotion = new SpaceMotionState { PositionMeters = IsSpaceView ? UnprojectPosition(player.transform.position)
                     : SpaceVector2.FromVector2(player.transform.position) } };
             State.Passengers.Add(passenger); return passenger;
         }
@@ -90,7 +90,7 @@ namespace FlatWorld.Spaceflight
             ShipPieceState nearWall = null; ShipState nearShip = null;
             foreach (ShipState candidate in State.Ships)
             {
-                if (GetFlight(candidate.ShipId)?.Phase is not (ShipFlightPhase.Orbit or ShipFlightPhase.Descending)) continue;
+                if (GetFlight(candidate.ShipId)?.Phase is not (ShipFlightPhase.Cruising or ShipFlightPhase.Descending)) continue;
                 SpaceVector2 absolute = passenger.FreeMotion.PositionMeters;
                 ShipGeometry.WorldToLocal(candidate, absolute.X, absolute.Y, out double x, out double y);
                 foreach (ShipPieceState piece in candidate.Pieces)
@@ -131,7 +131,7 @@ namespace FlatWorld.Spaceflight
         {
             foreach (ShipState ship in State.Ships)
             {
-                if (GetFlight(ship.ShipId)?.Phase is not (ShipFlightPhase.Orbit or ShipFlightPhase.Descending)) continue;
+                if (GetFlight(ship.ShipId)?.Phase is not (ShipFlightPhase.Cruising or ShipFlightPhase.Descending)) continue;
                 ShipGeometry.WorldToLocal(ship, point.X, point.Y, out double x, out double y);
                 foreach (ShipPieceState piece in ship.Pieces)
                     if (piece.IsAlive && Math.Abs(x / ship.CellSizeMeters - piece.CellX - .5d) <= 1.5d &&
@@ -162,7 +162,6 @@ namespace FlatWorld.Spaceflight
             passenger.FreeMotion.VelocityMetersPerSecond = new SpaceVector2(vx + wx, vy + wy);
             passenger.FreeHeadingRadians = ship.AngleRadians + passenger.RelativeHeadingRadians;
             passenger.WalkVelocityX = passenger.WalkVelocityY = 0d;
-            passenger.FreeMotion.ReferenceBodyId = GetFlight(ship.ShipId)?.Orbit.ReferenceBodyId;
             ShipFlightState flight = GetFlight(ship.ShipId);
             if (flight is { HeightMeters: > 0d } && flight.Phase is ShipFlightPhase.Lifting or ShipFlightPhase.SurfaceDescending)
             {
@@ -237,9 +236,17 @@ namespace FlatWorld.Spaceflight
                 }
                 if (!passenger.IsInSpace || passenger.Supported || passenger.LandingResolved) continue;
                 if (passengerImpulses.Remove(passenger.ProfileId, out SpaceVector2 delta)) passenger.FreeMotion.VelocityMetersPerSecond += delta;
+                SpaceGameplaySettings config = SpaceGameplaySettings.Current;
+                SpaceVector2 velocity = passenger.FreeMotion.VelocityMetersPerSecond;
+                double speed = velocity.Magnitude;
+                if (speed > config.FreeFloatMaxSpeedMetersPerSecond)
+                    velocity *= config.FreeFloatMaxSpeedMetersPerSecond / speed;
+                else if (speed > 0d)
+                    velocity *= Math.Max(0d, speed - config.FreeFloatBrakingMetersPerSecondSquared * seconds) / speed;
+                passenger.FreeMotion.VelocityMetersPerSecond = velocity;
                 passenger.FreeMotion.RadiusMeters = .3d;
                 SpaceVector2 previousPosition = passenger.FreeMotion.PositionMeters;
-                bool touched = Universe.StepOrbit(passenger.FreeMotion, default, seconds, out SurfaceContact contact);
+                bool touched = Universe.StepMotion(passenger.FreeMotion, default, seconds, out SurfaceContact contact);
                 bool hitShip = ResolveFreePassengerContact(passenger, previousPosition, seconds, out _, touched ? contact.Fraction : 1d);
                 if (hitShip || !touched) continue;
                 SpaceVector2 normal = SpaceVector2.FromAngle(contact.SurfaceAngleRadians);
@@ -266,7 +273,7 @@ namespace FlatWorld.Spaceflight
             SpacePassengerState passenger = GetPassenger(player);
             ShipState ship = GetShip(passenger.ShipId);
             if (IsSpaceView)
-                ViewOrigin = ship != null && passenger.Supported ? new SpaceVector2(ship.PositionX, ship.PositionY) : passenger.FreeMotion.PositionMeters;
+                ViewOrigin = GetPassengerViewPoint(passenger);
             if (ship != null && passenger.Supported && IsVisible(ship)) PlacePassenger(player, passenger, ship);
             else if (passenger.SurfaceDescending && !IsSpaceView && passenger.LandingWorldKey == UnityEngine.SceneManagement.SceneManager.GetActiveScene().name)
                 player.transform.position = WorldLocalPresentation.ProjectPosition(new Vector2((float)passenger.LandingX, (float)passenger.LandingY));

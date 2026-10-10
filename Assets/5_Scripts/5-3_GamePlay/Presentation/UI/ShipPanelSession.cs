@@ -283,7 +283,7 @@ public sealed class ShipPanelSession : IMachinePanelSession
         ShipFlightPhase.Landed => "已落地",
         ShipFlightPhase.Floating => "海面浮船",
         ShipFlightPhase.Lifting => "发射升空",
-        ShipFlightPhase.Orbit => "太空飞行",
+        ShipFlightPhase.Cruising => "太空飞行",
         ShipFlightPhase.Descending => "接近星体",
         _ => "下落选址"
     };
@@ -390,10 +390,21 @@ public sealed class ShipPanelSession : IMachinePanelSession
         text.AppendLine();
         text.AppendLine(Format("速度  {0:0.##} m/s\n角速度  {1:0.##}°/s",
             Math.Sqrt(ship.VelocityX * ship.VelocityX + ship.VelocityY * ship.VelocityY), ship.AngularVelocityRadiansPerSecond * 180d / Math.PI));
-        text.AppendLine(Format("参考星体  {0}", flight.Orbit.CapturedBodyId ?? flight.Orbit.ReferenceBodyId ?? Text("宇宙固定")));
         double altitude = flight.HeightMeters;
-        if (flight.Phase is ShipFlightPhase.Orbit or ShipFlightPhase.Descending && session.Universe.TryGetBody(flight.Orbit.ReferenceBodyId, out BodyState body))
-            altitude = (flight.Orbit.PositionMeters - body.PositionMeters).Magnitude - body.RadiusMeters;
+        if (flight.Phase is ShipFlightPhase.Cruising or ShipFlightPhase.Descending)
+        {
+            BodyState nearest = null;
+            double distance = double.PositiveInfinity;
+            foreach (BodyState body in session.Universe.State.Bodies)
+            {
+                double current = (flight.Motion.PositionMeters - body.PositionMeters).Magnitude - body.RadiusMeters;
+                if (current >= distance) continue;
+                distance = current;
+                nearest = body;
+            }
+            altitude = distance;
+            text.AppendLine(Format("最近星体  {0}", nearest?.DisplayName ?? Text("未知")));
+        }
         text.AppendLine(Format("地表高度  {0:0.##} m\n升空速度  {1:0.##} m/s", Math.Max(0d, altitude), flight.VerticalSpeed));
         if (flight.Phase is ShipFlightPhase.Descending or ShipFlightPhase.SurfaceDescending || flight.VerticalSpeed < 0d)
             text.AppendLine(Format("预计触地  {0:0.0} s", session.DescentSeconds(flight)));

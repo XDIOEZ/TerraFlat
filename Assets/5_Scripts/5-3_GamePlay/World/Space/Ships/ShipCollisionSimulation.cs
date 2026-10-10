@@ -91,8 +91,8 @@ namespace FlatWorld.Spaceflight
             realm = null; height = 0d; dynamic = false;
             ShipFlightState flight = ship == null ? null : GetFlight(ship.ShipId);
             if (flight == null) return false;
-            if (flight.Phase is ShipFlightPhase.Orbit or ShipFlightPhase.Descending)
-            { realm = "orbit"; dynamic = true; return true; }
+            if (flight.Phase is ShipFlightPhase.Cruising or ShipFlightPhase.Descending)
+            { realm = "space"; dynamic = true; return true; }
             if (string.IsNullOrWhiteSpace(flight.SurfaceWorldKey)) return false;
             realm = "surface:" + flight.SurfaceWorldKey;
             height = Math.Max(0d, flight.HeightMeters);
@@ -118,7 +118,7 @@ namespace FlatWorld.Spaceflight
                 ShipState primary = GetShip(assembly.MemberShipIds[0]);
                 if (!TryGetShipContactRealm(primary, out string realm, out double height, out bool dynamic)) continue;
                 var body = new ShipContactBody { Assembly = assembly, Realm = realm, Height = height, Dynamic = dynamic };
-                QueuedSurfaceContact queued = realm == "orbit" ? FindQueuedSurfaceContact(assembly) : null;
+                QueuedSurfaceContact queued = realm == "space" ? FindQueuedSurfaceContact(assembly) : null;
                 if (queued != null)
                 { body.EndFraction = queued.Contact.Fraction; body.SurfaceContact = queued.Contact; body.AngularAcceleration = queued.AngularAcceleration; }
                 double totalMass = 0d;
@@ -152,7 +152,7 @@ namespace FlatWorld.Spaceflight
             return bodies;
         }
         private static bool ContactRealmsMatch(ShipContactBody a, ShipContactBody b)
-            => a.Realm == b.Realm && (a.Realm == "orbit" || Math.Abs(a.Height - b.Height) <= a.HalfHeight + b.HalfHeight);
+            => a.Realm == b.Realm && (a.Realm == "space" || Math.Abs(a.Height - b.Height) <= a.HalfHeight + b.HalfHeight);
         #endregion
 
         #region 船体之间的真实部件接触
@@ -365,10 +365,10 @@ namespace FlatWorld.Spaceflight
             {
                 ShipState ship = GetShip(id); ShipFlightState flight = GetFlight(id);
                 if (ship == null || flight == null) continue;
-                if (flight.Phase is ShipFlightPhase.Orbit or ShipFlightPhase.Descending)
+                if (flight.Phase is ShipFlightPhase.Cruising or ShipFlightPhase.Descending)
                 {
-                    flight.Orbit.PositionMeters = new SpaceVector2(ship.PositionX, ship.PositionY);
-                    flight.Orbit.VelocityMetersPerSecond = new SpaceVector2(ship.VelocityX, ship.VelocityY);
+                    flight.Motion.PositionMeters = new SpaceVector2(ship.PositionX, ship.PositionY);
+                    flight.Motion.VelocityMetersPerSecond = new SpaceVector2(ship.VelocityX, ship.VelocityY);
                 }
                 else if (flight.Phase is ShipFlightPhase.Lifting or ShipFlightPhase.SurfaceDescending)
                     flight.EntrySurfaceVelocity = new SpaceVector2(Math.Sqrt(ship.VelocityX * ship.VelocityX + ship.VelocityY * ship.VelocityY), flight.EntrySurfaceVelocity.Y);
@@ -391,7 +391,7 @@ namespace FlatWorld.Spaceflight
             if (data == null) owner?.PlayerData_Dict.TryGetValue(passenger.ProfileId, out data);
             double mass = data == null ? 70d : new ShipMassReader().ReadItem(data, player, 0);
             return ResolveFreeCircleContact(passenger.FreeMotion, previousPosition, seconds, Math.Max(.001d, mass),
-                Math.Max(.01d, passenger.FreeMotion.RadiusMeters), "orbit", 0d, movementFraction, out firstContactFraction);
+                Math.Max(.01d, passenger.FreeMotion.RadiusMeters), "space", 0d, movementFraction, out firstContactFraction);
         }
         public bool ResolveLooseItemContact(SpaceLooseItemState item, SpaceVector2 previousPosition, double seconds)
             => ResolveLooseItemContact(item, previousPosition, seconds, out _);
@@ -407,10 +407,10 @@ namespace FlatWorld.Spaceflight
             looseData[item.Id] = data;
             double mass = new ShipMassReader().ReadItem(data, live, 0);
             return ResolveFreeCircleContact(item.Motion, previousPosition, seconds, Math.Max(.001d, mass),
-                Math.Max(.01d, item.Motion.RadiusMeters), item.InSpace ? "orbit" : "surface:" + item.WorldKey,
+                Math.Max(.01d, item.Motion.RadiusMeters), item.InSpace ? "space" : "surface:" + item.WorldKey,
                 item.InSpace ? 0d : item.SurfaceHeight, movementFraction, out firstContactFraction);
         }
-        private bool ResolveFreeCircleContact(OrbitState motion, SpaceVector2 previousPosition, double seconds, double mass, double radius,
+        private bool ResolveFreeCircleContact(SpaceMotionState motion, SpaceVector2 previousPosition, double seconds, double mass, double radius,
             string realm, double height, double movementFraction, out double firstContactFraction)
         {
             firstContactFraction = double.PositiveInfinity;
@@ -427,7 +427,7 @@ namespace FlatWorld.Spaceflight
                     Math.Max(from.X, destination.X) + radius, Math.Max(from.Y, destination.Y) + radius);
                 foreach (ShipContactBody body in bodies)
                 {
-                    if (body.Realm != realm || realm != "orbit" && Math.Abs(height - body.Height) > body.HalfHeight + radius ||
+                    if (body.Realm != realm || realm != "space" && Math.Abs(height - body.Height) > body.HalfHeight + radius ||
                         !circleBounds.Overlaps(GetBodyContactBounds(body, true))) continue;
                     double endFraction = Math.Min(movementFraction, body.EndFraction);
                     if (endFraction < fraction || body.SurfaceContact.HasValue && endFraction <= fraction + 1e-10d) continue;

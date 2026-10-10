@@ -14,13 +14,6 @@ namespace FlatWorld.Spaceflight
             public double AngularAcceleration;
         }
         private readonly Dictionary<string, QueuedSurfaceContact> pendingSurfaceContacts = new(StringComparer.Ordinal);
-        private readonly Dictionary<string, SpaceVector2> orbitContactAccelerations = new(StringComparer.Ordinal);
-
-        public void RecordOrbitContactAcceleration(ShipAssemblyState assembly, SpaceVector2 acceleration)
-        {
-            if (assembly == null || !acceleration.IsFinite) return;
-            foreach (string id in assembly.MemberShipIds) orbitContactAccelerations[id] = acceleration;
-        }
 
         // 先保留真实触星体时刻，船体接触结束前不切换坐标系。
         public void QueueSurfaceContact(ShipAssemblyState assembly, SurfaceContact contact, double seconds)
@@ -28,7 +21,7 @@ namespace FlatWorld.Spaceflight
             if (assembly == null || assembly.MemberShipIds.Count == 0 || !contact.IsValid || seconds <= 0d) return;
             string id = assembly.MemberShipIds[0];
             double fraction = Math.Clamp(contact.Fraction, 0d, 1d), angularAcceleration = 0d;
-            if (shipContactStarts.TryGetValue(id, out ShipContactPose previous) && previous.Realm == "orbit")
+            if (shipContactStarts.TryGetValue(id, out ShipContactPose previous) && previous.Realm == "space")
             {
                 angularAcceleration = (assembly.AngularVelocityRadiansPerSecond - previous.AngularVelocity) / seconds;
                 assembly.AngleRadians = previous.Angle + (assembly.AngleRadians - previous.Angle) * fraction;
@@ -51,7 +44,7 @@ namespace FlatWorld.Spaceflight
                 string id = candidate.Assembly.MemberShipIds[0];
                 ShipState ship = GetShip(id);
                 ShipFlightState flight = GetFlight(id);
-                if (ship == null || flight == null || flight.Phase is not (ShipFlightPhase.Orbit or ShipFlightPhase.Descending)) continue;
+                if (ship == null || flight == null || flight.Phase is not (ShipFlightPhase.Cruising or ShipFlightPhase.Descending)) continue;
                 ShipAssemblyState assembly = GetConnectedAssembly(id);
                 if (assembly != null) BeginSurfaceDescent(assembly, candidate.Contact);
             }
@@ -60,7 +53,6 @@ namespace FlatWorld.Spaceflight
         private void ResetSurfaceContactFrame()
         {
             pendingSurfaceContacts.Clear();
-            orbitContactAccelerations.Clear();
         }
 
         private QueuedSurfaceContact FindQueuedSurfaceContact(ShipAssemblyState assembly)
@@ -93,27 +85,18 @@ namespace FlatWorld.Spaceflight
             double remaining = Math.Max(0d, (1d - fraction) * seconds);
             body.EndFraction = 1d;
             double actualSeconds = remaining;
-            if (body.Realm == "orbit")
+            if (body.Realm == "space")
             {
-                ShipFlightState flight = GetFlight(body.Assembly.MemberShipIds[0]);
-                var orbit = new OrbitState { PositionMeters = body.Position, VelocityMetersPerSecond = body.PreviousVelocity,
-                    ReferenceBodyId = flight?.Orbit.ReferenceBodyId, RadiusMeters = AssemblyRadius(body.Assembly) };
-                orbitContactAccelerations.TryGetValue(body.Assembly.MemberShipIds[0], out SpaceVector2 acceleration);
+                var motion = new SpaceMotionState { PositionMeters = body.Position, VelocityMetersPerSecond = body.PreviousVelocity,
+                    RadiusMeters = AssemblyRadius(body.Assembly) };
                 double startTime = Math.Max(0d, Universe.State.SimulationSeconds - seconds + fraction * seconds);
                 SurfaceContact contact;
                 bool touched = remaining > 1e-12d
-                    ? Universe.StepOrbitAtTime(orbit, acceleration, startTime, remaining, out contact)
-                    : Universe.TrySweepSurfaceContact(orbit.PositionMeters, orbit.PositionMeters, orbit.VelocityMetersPerSecond,
-                        orbit.VelocityMetersPerSecond, orbit.RadiusMeters, startTime, 0d, out contact);
-                body.Assembly.PositionX = orbit.PositionMeters.X; body.Assembly.PositionY = orbit.PositionMeters.Y;
-                body.Assembly.VelocityX = orbit.VelocityMetersPerSecond.X; body.Assembly.VelocityY = orbit.VelocityMetersPerSecond.Y;
-                foreach (string memberId in body.Assembly.MemberShipIds)
-                    if (GetFlight(memberId) is ShipFlightState member)
-                    {
-                        member.Orbit.ReferenceBodyId = orbit.ReferenceBodyId;
-                        member.Orbit.CapturedBodyId = orbit.CapturedBodyId;
-                        member.Orbit.RelativeAltitudeMeters = orbit.RelativeAltitudeMeters;
-                    }
+                    ? Universe.StepMotionAtTime(motion, default, startTime, remaining, out contact)
+                    : Universe.TrySweepSurfaceContact(motion.PositionMeters, motion.PositionMeters, motion.VelocityMetersPerSecond,
+                        motion.VelocityMetersPerSecond, motion.RadiusMeters, startTime, 0d, out contact);
+                body.Assembly.PositionX = motion.PositionMeters.X; body.Assembly.PositionY = motion.PositionMeters.Y;
+                body.Assembly.VelocityX = motion.VelocityMetersPerSecond.X; body.Assembly.VelocityY = motion.VelocityMetersPerSecond.Y;
                 if (touched)
                 {
                     actualSeconds = remaining * contact.Fraction;
@@ -137,7 +120,7 @@ namespace FlatWorld.Spaceflight
 
         private void RecheckContactSeparationAgainstSurface(ShipContactBody body, SpaceVector2 from)
         {
-            if (body.Realm != "orbit" || body.SurfaceStopped) return;
+            if (body.Realm != "space" || body.SurfaceStopped) return;
             SpaceVector2 velocity = new(body.Assembly.VelocityX, body.Assembly.VelocityY);
             if (!Universe.TrySweepSurfaceContact(from, body.Position, velocity, velocity, AssemblyRadius(body.Assembly),
                 Universe.State.SimulationSeconds, 0d, out SurfaceContact contact)) return;

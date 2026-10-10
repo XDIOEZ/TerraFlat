@@ -10,7 +10,7 @@ namespace FlatWorld.Spaceflight
         #region 玩家太空传送事务
 
         // 传送只接收宇宙运动状态，目标选择规则交给调用方。
-        public bool TryTeleportPlayerToSpace(Player player, OrbitState motion, Action<bool> completed = null)
+        public bool TryTeleportPlayerToSpace(Player player, SpaceMotionState motion, Action<bool> completed = null)
         {
             if (State == null || Universe == null || transitionRunning || GameNetwork.IsOnline ||
                 !GameNetwork.HasStateAuthority || GameManager.Instance?.IsGameplayReady != true ||
@@ -25,19 +25,20 @@ namespace FlatWorld.Spaceflight
                 if ((motion.PositionMeters - body.PositionMeters).Magnitude <= body.RadiusMeters + motion.RadiusMeters)
                     return false;
 
-            var targetMotion = new OrbitState
+            var targetMotion = new SpaceMotionState
             {
                 PositionMeters = motion.PositionMeters,
                 VelocityMetersPerSecond = motion.VelocityMetersPerSecond,
-                RadiusMeters = motion.RadiusMeters,
-                ReferenceBodyId = motion.ReferenceBodyId
+                RadiusMeters = motion.RadiusMeters
             };
-            Universe.UpdateReference(targetMotion);
+            double speed = targetMotion.VelocityMetersPerSecond.Magnitude;
+            double maxSpeed = SpaceGameplaySettings.Current.FreeFloatMaxSpeedMetersPerSecond;
+            if (speed > maxSpeed) targetMotion.VelocityMetersPerSecond *= maxSpeed / speed;
             StartCoroutine(TeleportPlayerToSpace(player, targetMotion, completed));
             return true;
         }
 
-        private IEnumerator TeleportPlayerToSpace(Player player, OrbitState motion, Action<bool> completed)
+        private IEnumerator TeleportPlayerToSpace(Player player, SpaceMotionState motion, Action<bool> completed)
         {
             SpaceSessionState sessionState = State;
             SpacePassengerState previous = GetPassenger(player);

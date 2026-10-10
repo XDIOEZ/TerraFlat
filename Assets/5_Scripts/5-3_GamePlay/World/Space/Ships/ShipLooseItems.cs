@@ -10,7 +10,7 @@ namespace FlatWorld.Spaceflight
     {
         public string Id = Guid.NewGuid().ToString("N"), Snapshot, WorldKey;
         public bool InSpace;
-        public OrbitState Motion = new();
+        public SpaceMotionState Motion = new();
         public double RotationDegrees;
         public double SurfaceHeight, SurfaceVerticalSpeed;
         public Vector3 Scale = Vector3.one;
@@ -45,9 +45,9 @@ namespace FlatWorld.Spaceflight
             State.LooseItems.Add(new SpaceLooseItemState
             {
                 Snapshot = Encode(data), WorldKey = flight.SurfaceWorldKey,
-                InSpace = flight.Phase is ShipFlightPhase.Orbit or ShipFlightPhase.Descending,
-                Motion = new OrbitState { PositionMeters = new SpaceVector2(x, y), VelocityMetersPerSecond = new SpaceVector2(vx, vy),
-                    ReferenceBodyId = flight.Orbit.ReferenceBodyId, RadiusMeters = .15d },
+                InSpace = flight.Phase is ShipFlightPhase.Cruising or ShipFlightPhase.Descending,
+                Motion = new SpaceMotionState { PositionMeters = new SpaceVector2(x, y), VelocityMetersPerSecond = new SpaceVector2(vx, vy),
+                    RadiusMeters = .15d },
                 RotationDegrees = ship.AngleRadians * 180d / Math.PI + piece.QuarterTurns * 90d,
                 SurfaceHeight = Math.Max(0d, flight.HeightMeters), SurfaceVerticalSpeed = flight.VerticalSpeed
             });
@@ -70,7 +70,11 @@ namespace FlatWorld.Spaceflight
                     continue;
                 }
                 SpaceVector2 previousPosition = state.Motion.PositionMeters;
-                bool touched = Universe.StepOrbit(state.Motion, default, seconds, out SurfaceContact contact);
+                // 漂浮物没有星体引力，只做有上限的直线移动与碰撞。
+                double speed = state.Motion.VelocityMetersPerSecond.Magnitude;
+                double maxSpeed = SpaceGameplaySettings.Current.CruiseMaxSpeedMetersPerSecond;
+                if (speed > maxSpeed) state.Motion.VelocityMetersPerSecond *= maxSpeed / speed;
+                bool touched = Universe.StepMotion(state.Motion, default, seconds, out SurfaceContact contact);
                 bool hitShip = ResolveLooseItemContact(state, previousPosition, seconds, out _, touched ? contact.Fraction : 1d);
                 if (hitShip || !touched) continue;
                 state.InSpace = false; state.WorldKey = Universe.GetSurfaceAddress(contact.BodyId).WorldKey;
@@ -134,7 +138,7 @@ namespace FlatWorld.Spaceflight
         private void AddLooseCargoMass(ShipState ship, ShipMassReader reader)
         {
             ShipFlightState flight = GetFlight(ship.ShipId);
-            bool inSpace = flight.Phase is ShipFlightPhase.Orbit or ShipFlightPhase.Descending;
+            bool inSpace = flight.Phase is ShipFlightPhase.Cruising or ShipFlightPhase.Descending;
             foreach (SpaceLooseItemState cargo in State.LooseItems)
             {
                 if (cargo.InSpace != inSpace || !inSpace && cargo.WorldKey != ship.WorldAddress ||

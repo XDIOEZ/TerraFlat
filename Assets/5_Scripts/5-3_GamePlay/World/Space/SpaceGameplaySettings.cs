@@ -15,7 +15,13 @@ namespace FlatWorld.Spaceflight
         public double GravityWalkExponent = .5d;
         public double MinimumLaunchHeightMeters = 40d;
         public double LaunchHeightRadiusFraction = .1d;
-        public double LaunchCircularSpeedFraction = .35d;
+        public double MinimumSpaceExitSpeedMetersPerSecond = 2d;
+        public double CruiseMaxSpeedMetersPerSecond = 120d;
+        public double CruiseAccelerationMetersPerSecondSquared = 60d;
+        public double CruiseBrakingMetersPerSecondSquared = 100d;
+        public double CruiseTurnDegreesPerSecond = 150d;
+        public double FreeFloatMaxSpeedMetersPerSecond = 12d;
+        public double FreeFloatBrakingMetersPerSecondSquared = 2d;
         public double SurfaceEntryHeightMeters = 80d;
         public double ImpactStoppingSeconds = .25d;
         public double ImpactForcePerDurability = 1000d;
@@ -35,7 +41,12 @@ namespace FlatWorld.Spaceflight
                 if (current == null || current.EarthGravity <= 0d || current.MinimumGravityForWalking <= 0d ||
                     current.MinimumWalkSpeedMultiplier <= 0d || current.MaximumWalkSpeedMultiplier < current.MinimumWalkSpeedMultiplier ||
                     current.ImpactJoulesPerDurability <= 0d || current.LandingChoiceRadiusMeters <= 0d ||
-                    current.ImpactForcePerDurability <= 0d || current.ImpactStoppingSeconds <= 0d || current.SurfaceEntryHeightMeters <= 0d)
+                    current.ImpactForcePerDurability <= 0d || current.ImpactStoppingSeconds <= 0d || current.SurfaceEntryHeightMeters <= 0d ||
+                    current.MinimumLaunchHeightMeters <= 0d || current.LaunchHeightRadiusFraction < 0d ||
+                    current.MinimumSpaceExitSpeedMetersPerSecond <= 0d ||
+                    current.CruiseMaxSpeedMetersPerSecond <= 0d || current.CruiseAccelerationMetersPerSecondSquared <= 0d ||
+                    current.CruiseBrakingMetersPerSecondSquared <= 0d || current.CruiseTurnDegreesPerSecond <= 0d ||
+                    current.FreeFloatMaxSpeedMetersPerSecond <= 0d || current.FreeFloatBrakingMetersPerSecondSquared <= 0d)
                     throw new InvalidOperationException("太空移动与冲击配置无效。");
                 return current;
             }

@@ -37,7 +37,7 @@ public sealed partial class GMReflectionConsole
         planetTeleportButton = CreateButton(row.transform, "传送到星球旁", TeleportToSelectedPlanet, 190f, 40f);
         SetGmButtonVisual(planetTeleportButton, GmSurfaceRaised, true);
         CreateButton(row.transform, "刷新", RefreshPlanetTeleportOptions, 82f, 40f);
-        AddPageHint(content, "单机：从地表、地下或太空传送至目标表面外 100 米，带环绕速度；仅移动玩家，自动退出驾驶。", 44f);
+        AddPageHint(content, "单机：从地表、地下或太空传送至目标表面外 100 米，静止开始航行；仅移动玩家，自动退出驾驶。", 44f);
         RegisterSearchEntry(GmPageId.Structures, "传送到星球旁",
             "星球 行星 恒星 月球 太阳 太空 planet space 传送", row.transform as RectTransform);
     }
@@ -87,7 +87,7 @@ public sealed partial class GMReflectionConsole
             return;
         }
 
-        OrbitState motion = FindPlanetTeleportOrbit(session.Universe, body);
+        SpaceMotionState motion = FindPlanetTeleportMotion(session.Universe, body);
         if (motion == null)
         {
             SetStatus("目标星球附近被其他星体覆盖，暂时无法传送。", Color.yellow);
@@ -115,13 +115,12 @@ public sealed partial class GMReflectionConsole
             SetStatus($"正在传送至{body.DisplayName}旁边…", Color.white);
     }
 
-    private static OrbitState FindPlanetTeleportOrbit(UniverseSimulation universe, BodyState body)
+    private static SpaceMotionState FindPlanetTeleportMotion(UniverseSimulation universe, BodyState body)
     {
-        double speed = Math.Sqrt(body.GravityParameter / (body.RadiusMeters + PlanetTeleportAltitudeMeters));
         for (int i = 0; i < 16; i++)
         {
-            OrbitState motion = universe.CreateLaunchState(body.BodyId, i * Math.PI * 2d / 16d,
-                PlanetTeleportAltitudeMeters, speed);
+            SpaceMotionState motion = universe.CreateSpaceEntryState(body.BodyId, i * Math.PI * 2d / 16d,
+                PlanetTeleportAltitudeMeters, 0d);
             motion.RadiusMeters = .3d;
             bool blocked = false;
             foreach (BodyState other in universe.State.Bodies)

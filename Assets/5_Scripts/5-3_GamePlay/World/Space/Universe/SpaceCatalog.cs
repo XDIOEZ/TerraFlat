@@ -120,8 +120,8 @@ namespace FlatWorld.Spaceflight
             foreach (BodyState body in state.Bodies)
             {
                 body.Seed = DeriveSeed(seed, body.BodyId);
-                if (config.RandomizeOrbitalPhases && !string.IsNullOrWhiteSpace(body.ParentBodyId))
-                    body.InitialPhaseRadians = ((uint)body.Seed / (double)uint.MaxValue) * Math.PI * 2d;
+                if (config.RandomizeBodyPlacements && !string.IsNullOrWhiteSpace(body.ParentBodyId))
+                    body.PlacementAngleRadians = ((uint)body.Seed / (double)uint.MaxValue) * Math.PI * 2d;
             }
             _ = new UniverseSimulation(state);
             return state;
@@ -170,13 +170,9 @@ namespace FlatWorld.Spaceflight
         {
             if (body == null || planet == null) throw new ArgumentNullException(nameof(planet));
             planet.BodyId = body.BodyId; planet.Name = body.PlanetId; planet.name = body.DisplayName;
-            planet.PrefabName = body.PrefabId; planet.OrbitCenterBodyId = body.ParentBodyId;
+            planet.PrefabName = body.PrefabId;
             planet.SurfaceGenerationProfileId = body.SurfaceProfileId;
             planet.PhysicalRadiusMeters = body.RadiusMeters; planet.SurfaceGravityMetersPerSecondSquared = body.SurfaceGravity;
-            planet.OrbitRadius = (float)body.OrbitRadiusMeters;
-            planet.OrbitAngularSpeed = body.OrbitalPeriodSeconds > 0d ? (float)(360d / body.OrbitalPeriodSeconds) : 0f;
-            planet.OrbitStartAngle = (float)(body.InitialPhaseRadians * 180d / Math.PI);
-            planet.OrbitClockwise = body.OrbitClockwise;
             planet.SelfRotateSpeed = Math.Abs(body.RotationPeriodSeconds) > 1e-12d ? (float)(360d / body.RotationPeriodSeconds) : 0f;
             bool repairInvalidAtmosphere = false;
             string invalidAtmosphereDetails = null;
@@ -288,7 +284,7 @@ namespace FlatWorld.Spaceflight
         public string TemplateId;
         public double FixedStepSeconds = 0.02d;
         public double MetersPerUnityUnit = 1d;
-        public bool RandomizeOrbitalPhases = true;
+        public bool RandomizeBodyPlacements = true;
         public List<BodyState> Bodies;
         public List<SurfaceProfile> Surfaces;
         #endregion

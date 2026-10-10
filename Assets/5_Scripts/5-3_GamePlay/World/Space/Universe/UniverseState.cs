@@ -53,7 +53,7 @@ namespace FlatWorld.Spaceflight
     [Serializable]
     public sealed class BodyState
     {
-        #region 星体身份与物理配置
+        #region 固定星体与地表配置
         public string BodyId;
         public string PlanetId;
         public string DisplayName;
@@ -63,30 +63,22 @@ namespace FlatWorld.Spaceflight
         public int Seed;
         public double RadiusMeters;
         public double SurfaceGravity;
-        public double InfluenceRadiusMeters;
-        public double OrbitRadiusMeters;
-        public double OrbitalPeriodSeconds;
-        public double InitialPhaseRadians;
-        public bool OrbitClockwise;
+        public double PlacementDistanceMeters;
+        public double PlacementAngleRadians;
         public double RotationPeriodSeconds;
         public double RotationInitialRadians;
         public SpaceVector2 PositionMeters;
-        public SpaceVector2 VelocityMetersPerSecond;
-        [JsonIgnore] public double GravityParameter => SurfaceGravity * RadiusMeters * RadiusMeters;
         [JsonIgnore] public WorldAddress SurfaceAddress => new(PlanetId, WorldAddress.SurfaceDimensionId);
         #endregion
     }
 
     [Serializable]
-    public sealed class OrbitState
+    public sealed class SpaceMotionState
     {
-        #region 独立运动主体
+        #region 无引力的太空移动主体
         public SpaceVector2 PositionMeters;
         public SpaceVector2 VelocityMetersPerSecond;
-        public string ReferenceBodyId;
-        public string CapturedBodyId;
         public double RadiusMeters;
-        public double RelativeAltitudeMeters;
         #endregion
     }
 

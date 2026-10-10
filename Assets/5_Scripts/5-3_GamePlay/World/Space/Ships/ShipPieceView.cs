@@ -249,7 +249,8 @@ namespace FlatWorld.Spaceflight
             {
                 Vector2 position = ProjectPosition(passenger.FreeMotion.PositionMeters);
                 player.transform.position = new Vector3(position.x, position.y, 0f);
-                player.itemMods.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover)?.rb?.MovePosition(position);
+                Rigidbody2D playerBody = player.itemMods.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover)?.rb;
+                if (playerBody != null) playerBody.position = position;
             }
             ShipFlightState carryingFlight = carrier != null ? GetFlight(carrier.ShipId) : null;
             double visualHeight = passenger.SurfaceDescending ? passenger.SurfaceHeight :

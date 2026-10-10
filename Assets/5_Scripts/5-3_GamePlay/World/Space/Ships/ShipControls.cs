@@ -78,8 +78,8 @@ namespace FlatWorld.Spaceflight
             {
                 if (other == ship) continue;
                 ShipFlightState otherFlight = GetFlight(other.ShipId);
-                bool ownSpace = ownFlight.Phase is ShipFlightPhase.Orbit or ShipFlightPhase.Descending;
-                bool otherSpace = otherFlight.Phase is ShipFlightPhase.Orbit or ShipFlightPhase.Descending;
+                bool ownSpace = ownFlight.Phase is ShipFlightPhase.Cruising or ShipFlightPhase.Descending;
+                bool otherSpace = otherFlight.Phase is ShipFlightPhase.Cruising or ShipFlightPhase.Descending;
                 if (ownSpace != otherSpace || !ownSpace && (ownFlight.SurfaceWorldKey != otherFlight.SurfaceWorldKey || Math.Abs(ownFlight.HeightMeters - otherFlight.HeightMeters) > 1d)) continue;
                 ShipDockingService.SynchronizePorts(other);
                 foreach (ShipDockingPortState target in other.DockingPorts)

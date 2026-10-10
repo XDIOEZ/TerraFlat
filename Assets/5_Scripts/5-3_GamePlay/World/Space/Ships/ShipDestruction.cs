@@ -139,7 +139,7 @@ namespace FlatWorld.Spaceflight
             if (source == null) throw new InvalidOperationException("船体爆炸入队时缺少源船姿态。");
             ShipGeometry.LocalToWorld(source, entry.Center.x, entry.Center.y, out double x, out double y);
             ShipFlightState flight = GetFlight(source.ShipId);
-            bool space = flight?.Phase is ShipFlightPhase.Orbit or ShipFlightPhase.Descending;
+            bool space = flight?.Phase is ShipFlightPhase.Cruising or ShipFlightPhase.Descending;
             var snapshot = new ShipExplosionSpatialContext
             {
                 SourceShipId = source.ShipId, InSpace = space,
@@ -159,7 +159,7 @@ namespace FlatWorld.Spaceflight
             foreach (ShipState target in State.Ships.ToArray())
             {
                 ShipFlightState flight = GetFlight(target.ShipId);
-                if (flight == null || explosion.InSpace != (flight.Phase is ShipFlightPhase.Orbit or ShipFlightPhase.Descending) ||
+                if (flight == null || explosion.InSpace != (flight.Phase is ShipFlightPhase.Cruising or ShipFlightPhase.Descending) ||
                     !explosion.InSpace && explosion.WorldKey != flight.SurfaceWorldKey) continue;
                 double heightDifference = explosion.InSpace ? 0d : Math.Max(0d, flight.HeightMeters) - explosion.HeightMeters;
                 if (Math.Abs(heightDifference) >= radius) continue;
@@ -216,7 +216,7 @@ namespace FlatWorld.Spaceflight
             foreach (ShipState ship in candidates)
             {
                 ShipFlightState flight = GetFlight(ship.ShipId);
-                if (flight == null || explosion.InSpace != (flight.Phase is ShipFlightPhase.Orbit or ShipFlightPhase.Descending) ||
+                if (flight == null || explosion.InSpace != (flight.Phase is ShipFlightPhase.Cruising or ShipFlightPhase.Descending) ||
                     !explosion.InSpace && (flight.SurfaceWorldKey != explosion.WorldKey || Math.Abs(flight.HeightMeters - explosion.HeightMeters) > .01d)) continue;
                 double x = explosion.CenterX, y = explosion.CenterY;
                 if (!explosion.InSpace)
@@ -286,7 +286,7 @@ namespace FlatWorld.Spaceflight
                 {
                     ShipFlightState flight = GetFlight(carrier.ShipId);
                     if (flight == null) continue;
-                    space = flight.Phase is ShipFlightPhase.Orbit or ShipFlightPhase.Descending;
+                    space = flight.Phase is ShipFlightPhase.Cruising or ShipFlightPhase.Descending;
                     world = space ? "SpaceScene" : flight.SurfaceWorldKey; height = space ? 0d : Math.Max(0d, flight.HeightMeters);
                     ShipGeometry.LocalToWorld(carrier, passenger.LocalX, passenger.LocalY, out x, out y);
                 }

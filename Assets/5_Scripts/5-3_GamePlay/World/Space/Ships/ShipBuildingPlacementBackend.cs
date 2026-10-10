@@ -207,8 +207,8 @@ namespace FlatWorld.Spaceflight
             {
                 ShipId = ship.ShipId, BodyId = bodyId, SurfaceWorldKey = world,
                 SurfaceX = position.x, SurfaceY = position.y,
-                Phase = IsSpaceView ? ShipFlightPhase.Orbit : ShipFlightPhase.Landed,
-                Orbit = new OrbitState { PositionMeters = new SpaceVector2(ship.PositionX, ship.PositionY) },
+                Phase = IsSpaceView ? ShipFlightPhase.Cruising : ShipFlightPhase.Landed,
+                Motion = new SpaceMotionState { PositionMeters = new SpaceVector2(ship.PositionX, ship.PositionY) },
                 LandingRandomState = unchecked((ulong)(uint)owner.Seed * 6364136223846793005UL + (uint)State.Ships.Count) | 1UL
             });
             local = new Vector2(.5f, .5f); return ship;
@@ -303,8 +303,8 @@ namespace FlatWorld.Spaceflight
                         foreach (ShipPieceState member in fragment.Pieces)
                             if (int.TryParse(member.PieceId, out int id)) MachineWorld.TransferShipNode(ship.ShipId, fragment.ShipId, id);
                     }
-                    flight.Orbit.PositionMeters = new SpaceVector2(fragment.PositionX, fragment.PositionY);
-                    flight.Orbit.VelocityMetersPerSecond = new SpaceVector2(fragment.VelocityX, fragment.VelocityY);
+                    flight.Motion.PositionMeters = new SpaceVector2(fragment.PositionX, fragment.PositionY);
+                    flight.Motion.VelocityMetersPerSecond = new SpaceVector2(fragment.VelocityX, fragment.VelocityY);
                     if (flight.Phase is ShipFlightPhase.Landed or ShipFlightPhase.Floating or ShipFlightPhase.Lifting or ShipFlightPhase.SurfaceDescending)
                     { flight.SurfaceX = fragment.PositionX; flight.SurfaceY = fragment.PositionY; }
                 }

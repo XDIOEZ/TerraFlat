@@ -18,14 +18,14 @@ namespace FlatWorld.Spaceflight
         public List<SpaceLooseItemState> LooseItems = new();
         public long NavigationSequence;
     }
-    public enum ShipFlightPhase { Landed, Floating, Lifting, Orbit, Descending, SurfaceDescending }
+    public enum ShipFlightPhase { Landed, Floating, Lifting, Cruising, Descending, SurfaceDescending }
     [Serializable]
     public sealed class ShipFlightState
     {
         public string ShipId, BodyId, SurfaceWorldKey;
         public ShipFlightPhase Phase;
         public double SurfaceX, SurfaceY, HeightMeters, VerticalSpeed, SurfaceAngle;
-        public OrbitState Orbit = new();
+        public SpaceMotionState Motion = new();
         public bool Ignited, TransferPending, LandingResolved, LandingSelected;
         public double LandingX, LandingY;
         public ulong LandingRandomState = 1;
@@ -46,7 +46,7 @@ namespace FlatWorld.Spaceflight
     {
         public string ProfileId, ShipId, ConsolePieceId, GripPieceId;
         public double LocalX, LocalY, RelativeHeadingRadians;
-        public OrbitState FreeMotion = new();
+        public SpaceMotionState FreeMotion = new();
         public bool Supported, IsInSpace, PreviousShift;
         public double LandingX, LandingY, LandingOriginX, LandingOriginY;
         public bool LandingSelected, LandingResolved, SurfaceDescending;
@@ -59,7 +59,7 @@ namespace FlatWorld.Spaceflight
     [Serializable]
     public sealed class ShipNavigationState
     {
-        public string ShipId, NavigationPieceId, ConsolePieceId, ReferenceBodyId;
+        public string ShipId, NavigationPieceId, ConsolePieceId;
         public double TargetX, TargetY;
         public long Sequence;
         public bool Active, NeedsManualRestart;

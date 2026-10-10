@@ -213,6 +213,8 @@ namespace FlatWorld.Spaceflight
         {
             if (!running || State == null) return;
             UpdateViewOrigin();
+            // 星球、船体和玩家在同一 LateUpdate 使用同一个浮动原点。
+            if (IsSpaceView && SpaceMgr.ExistingInstance != null) SpaceMgr.ExistingInstance.TickRuntimePlanets(0f);
             using (ShipViewMarker.Auto()) SynchronizeViews();
             SynchronizeLooseItems();
             ShipPanelSession.RefreshOpen(this);
@@ -283,7 +285,7 @@ namespace FlatWorld.Spaceflight
         {
             ShipFlightState flight = GetFlight(ship.ShipId);
             return flight != null && (IsSpaceView ?
-                (flight.Phase is ShipFlightPhase.Orbit or ShipFlightPhase.Descending) &&
+                (flight.Phase is ShipFlightPhase.Cruising or ShipFlightPhase.Descending) &&
                     (new SpaceVector2(ship.PositionX, ship.PositionY) - ViewOrigin).Magnitude < 1200d
                 : flight.SurfaceWorldKey == SceneManager.GetActiveScene().name &&
                     flight.Phase is ShipFlightPhase.Landed or ShipFlightPhase.Floating or ShipFlightPhase.Lifting or ShipFlightPhase.SurfaceDescending);
@@ -294,9 +296,20 @@ namespace FlatWorld.Spaceflight
             Player player = ItemMgr.Instance?.User_Player;
             SpacePassengerState passenger = player != null ? GetPassenger(player) : null;
             if (passenger == null) return;
+            SpaceVector2 point = GetPassengerViewPoint(passenger);
+            // 视图每帧跟随玩家的双精度坐标，不再积累五千米误差后突然跳帧。
+            if (point.IsFinite) ViewOrigin = point;
+        }
+        private SpaceVector2 GetPassengerViewPoint(SpacePassengerState passenger)
+        {
             ShipState ship = GetShip(passenger.ShipId);
-            SpaceVector2 point = ship != null ? new SpaceVector2(ship.PositionX, ship.PositionY) : passenger.FreeMotion.PositionMeters;
-            if ((point - ViewOrigin).Magnitude > 5000d) ViewOrigin = point;
+            SpaceVector2 point = passenger.FreeMotion.PositionMeters;
+            if (passenger.Supported && ship != null)
+            {
+                ShipGeometry.LocalToWorld(ship, passenger.LocalX, passenger.LocalY, out double x, out double y);
+                point = new SpaceVector2(x, y);
+            }
+            return point;
         }
         #endregion
     }

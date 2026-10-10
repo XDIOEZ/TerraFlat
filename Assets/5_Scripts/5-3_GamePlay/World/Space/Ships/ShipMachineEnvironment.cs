@@ -118,7 +118,7 @@ namespace FlatWorld.Spaceflight
             ShipState ship = GetShip(shipId);
             if (ship == null) return false;
             ShipFlightState flight = GetFlight(shipId);
-            bool space = flight?.Phase is ShipFlightPhase.Orbit or ShipFlightPhase.Descending;
+            bool space = flight?.Phase is ShipFlightPhase.Cruising or ShipFlightPhase.Descending;
             world = space ? "SpaceScene" : flight?.SurfaceWorldKey ?? ship.WorldAddress;
             if (string.IsNullOrWhiteSpace(world)) return false;
             ShipGeometry.LocalToWorld(ship, localPosition.x, localPosition.y, out double x, out double y);
@@ -130,7 +130,7 @@ namespace FlatWorld.Spaceflight
         private AtmosphereState GetMachineOutsideAtmosphere(ShipState ship)
         {
             ShipFlightState flight = GetFlight(ship.ShipId);
-            if (flight == null || flight.Phase is ShipFlightPhase.Orbit or ShipFlightPhase.Descending) return null;
+            if (flight == null || flight.Phase is ShipFlightPhase.Cruising or ShipFlightPhase.Descending) return null;
             return AtmosphereService.TryGetForWorld(flight.SurfaceWorldKey ?? ship.WorldAddress, out AtmosphereState atmosphere) ? atmosphere : null;
         }
         private void EnsureMachineCompartmentGeometry(ShipState ship)
@@ -141,7 +141,7 @@ namespace FlatWorld.Spaceflight
         private IShipAtmosphereSource GetMachineExteriorAt(ShipState ship, Vector2 localPosition)
         {
             ShipFlightState flight = GetFlight(ship.ShipId);
-            if (flight == null || flight.Phase is ShipFlightPhase.Orbit or ShipFlightPhase.Descending)
+            if (flight == null || flight.Phase is ShipFlightPhase.Cruising or ShipFlightPhase.Descending)
                 return new PlanetShipAtmosphereSource(null, -270d);
             string world = flight.SurfaceWorldKey ?? ship.WorldAddress;
             ShipGeometry.LocalToWorld(ship, localPosition.x, localPosition.y, out double x, out double y);

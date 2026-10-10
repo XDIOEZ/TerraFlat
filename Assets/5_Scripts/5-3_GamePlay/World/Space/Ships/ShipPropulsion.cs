@@ -7,18 +7,8 @@ namespace FlatWorld.Spaceflight
 {
     public readonly struct ShipActuator
     {
-        public readonly ShipState Ship;
-        public readonly ShipPieceState Piece;
         public readonly ShipDeviceState Device;
-        public readonly SpaceVector2 Direction;
-        public readonly double TorquePerNewton;
-        public ShipActuator(ShipState ship, ShipPieceState piece, ShipDeviceState device, double centerX, double centerY)
-        {
-            Ship = ship; Piece = piece; Device = device;
-            Direction = SpaceVector2.FromAngle(ship.AngleRadians + (piece.QuarterTurns + 1) * Math.PI / 2d);
-            ShipGeometry.LocalToWorld(ship, (piece.CellX + .5d) * ship.CellSizeMeters, (piece.CellY + .5d) * ship.CellSizeMeters, out double x, out double y);
-            TorquePerNewton = (x - centerX) * Direction.Y - (y - centerY) * Direction.X;
-        }
+        public ShipActuator(ShipDeviceState device) => Device = device;
     }
     public static class ShipFuel
     {
@@ -50,7 +40,7 @@ namespace FlatWorld.Spaceflight
 
     public sealed partial class SpaceSession
     {
-        #region 真实引擎与自动导航
+        #region 简化巡航、燃料与自动导航
         private readonly List<ShipActuator> actuators = new();
         private readonly List<FluidInventory> fuelTanks = new();
         private readonly List<MachineEntity> machineScratch = new();
@@ -82,14 +72,12 @@ namespace FlatWorld.Spaceflight
             foreach (ShipNavigationState old in State.Navigation)
                 if (SameAssembly(old.ShipId, ship.ShipId)) { old.Active = false; old.Status = "已由新目标覆盖"; }
             ShipFlightState flight = GetFlight(ship.ShipId);
-            if (flight.Phase is not (ShipFlightPhase.Orbit or ShipFlightPhase.Descending)) return false;
-            string reference = GetReference(flight.Orbit);
+            if (flight.Phase is not (ShipFlightPhase.Cruising or ShipFlightPhase.Descending)) return false;
             SpaceVector2 absolute = UnprojectPosition(displayPoint);
-            SpaceVector2 center = ReferencePosition(reference);
             State.Navigation.Add(new ShipNavigationState
             {
                 ShipId = ship.ShipId, ConsolePieceId = consoleId, NavigationPieceId = device.PieceId,
-                ReferenceBodyId = reference, TargetX = absolute.X - center.X, TargetY = absolute.Y - center.Y,
+                TargetX = absolute.X, TargetY = absolute.Y,
                 Active = true, Sequence = ++State.NavigationSequence, Status = "正在导航"
             });
             return true;
@@ -99,10 +87,6 @@ namespace FlatWorld.Spaceflight
             foreach (ShipNavigationState task in State.Navigation)
                 if (SameAssembly(shipId, task.ShipId)) { task.Active = false; task.Status = "已取消"; }
         }
-        private string GetReference(OrbitState orbit) => !string.IsNullOrWhiteSpace(orbit.CapturedBodyId) && Universe.TryGetBody(orbit.CapturedBodyId, out _)
-            ? orbit.CapturedBodyId : Universe.TryGetBody(orbit.ReferenceBodyId, out _) ? orbit.ReferenceBodyId : null;
-        private SpaceVector2 ReferencePosition(string id) => Universe.TryGetBody(id, out BodyState body) ? body.PositionMeters : default;
-        private SpaceVector2 ReferenceVelocity(string id) => Universe.TryGetBody(id, out BodyState body) ? body.VelocityMetersPerSecond : default;
         private ShipNavigationState GetNavigation(ShipAssemblyState assembly)
         {
             ShipNavigationState found = null;
@@ -128,7 +112,7 @@ namespace FlatWorld.Spaceflight
                 ShipState ship = GetShip(id);
                 foreach (ShipPieceState piece in ship.Pieces)
                     if (piece.IsAlive && piece.Kind == ShipPieceKind.Engine && IsPowered(ship, piece))
-                        actuators.Add(new ShipActuator(ship, piece, GetDevice(piece.PieceId), assembly.PositionX, assembly.PositionY));
+                        actuators.Add(new ShipActuator(GetDevice(piece.PieceId)));
                 using (MachineWorld.UseScope("ship:" + id))
                 {
                     MachineWorld.CollectNodes(machineScratch);
@@ -165,90 +149,65 @@ namespace FlatWorld.Spaceflight
                 FlatWorldLocalizationService.GetUiFormat("真实储气 氢 {0:0.###} mol / 氧 {1:0.###} mol · 氢氧比 {2} · 杂气 {3:0.###} mol", h, o, ratio, Math.Max(0m, gas - h - o));
         }
 
-        // 有限非负执行器求解只分配安装引擎能提供的力与力矩。
-        private void ResolveThrust(ShipAssemblyState assembly, double seconds, out SpaceVector2 force, out double torque)
+        // 操作直接指定期望速度，发动机只决定能否改变航向与速度。
+        private void ResolveCruiseCommand(ShipAssemblyState assembly, double seconds, out SpaceVector2 targetVelocity, out double turn)
         {
-            force = default; torque = 0d;
-            CollectActuators(assembly);
-            SpaceVector2 desired = default;
-            double desiredTorque = 0d;
+            targetVelocity = default; turn = 0d;
+            SpaceVector2 steering = default;
             bool manual = false;
             foreach (ShipControlRequest request in controlRequests.Values)
             {
                 if (!FindPiece(request.ConsolePieceId, out ShipState ship, out ShipPieceState console) ||
                     !assembly.MemberShipIds.Contains(ship.ShipId) || !IsPowered(ship, console)) continue;
-                desired += SpaceVector2.FromAngle(ship.AngleRadians) * request.Move.x +
-                           SpaceVector2.FromAngle(ship.AngleRadians + Math.PI / 2d) * request.Move.y;
-                desiredTorque += request.Turn; manual |= request.Move.sqrMagnitude > .0001f || Math.Abs(request.Turn) > .001f;
+                steering += SpaceVector2.FromAngle(ship.AngleRadians) * request.Move.x +
+                            SpaceVector2.FromAngle(ship.AngleRadians + Math.PI / 2d) * request.Move.y;
+                turn += request.Turn;
+                manual |= request.Move.sqrMagnitude > .0001f || Math.Abs(request.Turn) > .001f;
             }
-            double capacity = 0, torqueCapacity = 0;
-            foreach (ShipActuator engine in actuators)
-            { capacity += engine.Device.Configuration.EngineThrustNewtons; torqueCapacity += Math.Abs(engine.TorquePerNewton) * engine.Device.Configuration.EngineThrustNewtons; }
-            desired = desired.Magnitude > 1d ? desired.Normalized : desired;
-            desired *= capacity;
-            desiredTorque = Math.Max(-1d, Math.Min(1d, desiredTorque)) * torqueCapacity;
+            SpaceGameplaySettings config = SpaceGameplaySettings.Current;
+            targetVelocity = steering.Magnitude > 1d ? steering.Normalized * config.CruiseMaxSpeedMetersPerSecond :
+                steering * config.CruiseMaxSpeedMetersPerSecond;
+            turn = Math.Clamp(turn, -1d, 1d);
             ShipNavigationState task = GetNavigation(assembly);
             if (task != null && !manual && NavigationConnected(task))
             {
                 ShipState controlled = GetShip(task.ShipId);
-                ShipFlightState flight = GetFlight(task.ShipId);
-                Universe.UpdateReference(flight.Orbit);
-                string reference = GetReference(flight.Orbit);
-                if (reference != task.ReferenceBodyId)
-                {
-                    SpaceVector2 absolute = ReferencePosition(task.ReferenceBodyId) + new SpaceVector2(task.TargetX, task.TargetY);
-                    SpaceVector2 converted = absolute - ReferencePosition(reference);
-                    task.TargetX = converted.X; task.TargetY = converted.Y; task.ReferenceBodyId = reference;
-                }
                 bool powered = FindPiece(task.NavigationPieceId, out _, out ShipPieceState nav) && IsPowered(controlled, nav) &&
                     FindPiece(task.ConsolePieceId, out _, out ShipPieceState console) && IsPowered(controlled, console);
-                if (!powered) { task.Status = "断电，保留目标并惯性滑行"; return; }
-                SpaceVector2 target = ReferencePosition(reference) + new SpaceVector2(task.TargetX, task.TargetY);
+                if (!powered) { task.Status = "断电，等待导航设备恢复"; return; }
+                SpaceVector2 target = new(task.TargetX, task.TargetY);
                 SpaceVector2 error = target - new SpaceVector2(assembly.PositionX, assembly.PositionY);
-                SpaceVector2 relativeVelocity = new SpaceVector2(assembly.VelocityX, assembly.VelocityY) - ReferenceVelocity(reference);
-                double acceleration = capacity / Math.Max(.001d, assembly.MassKg);
-                double speed = Math.Sqrt(2d * acceleration * error.Magnitude);
-                SpaceVector2 demandedAcceleration = (error.Normalized * Math.Min(speed, 100d) - relativeVelocity) / Math.Max(.2d, seconds);
-                SpaceVector2 gravity = Universe.GetGravity(new SpaceVector2(assembly.PositionX, assembly.PositionY), reference, out _);
-                desired = (demandedAcceleration - gravity) * assembly.MassKg;
-                if (desired.Magnitude > capacity && capacity > 0d) desired = desired.Normalized * capacity;
-                desiredTorque = -assembly.AngularVelocityRadiansPerSecond * assembly.InertiaKgM2 / .5d;
-                task.Status = error.Magnitude < .5d && relativeVelocity.Magnitude < .1d ? "正在保持导航点" : "正在导航";
+                SpaceVector2 velocity = new(assembly.VelocityX, assembly.VelocityY);
+                double brakingDistance = Math.Max(0d, error.Magnitude - 1d);
+                double speed = Math.Min(config.CruiseMaxSpeedMetersPerSecond,
+                    Math.Sqrt(2d * config.CruiseBrakingMetersPerSecondSquared * brakingDistance));
+                targetVelocity = error.Normalized * speed;
+                turn = 0d;
+                task.Status = error.Magnitude < 1d && velocity.Magnitude < .25d ? "已到达导航点" : "正在导航";
             }
-            if (capacity <= 0d)
-            { if (task != null && task.Active) task.Status = "能力不足，等待可用引擎恢复"; return; }
-            var throttle = new double[actuators.Count];
-            SpaceVector2 residual = desired;
-            double residualTorque = desiredTorque;
-            double leverScale = Math.Max(1d, Math.Sqrt(assembly.InertiaKgM2 / Math.Max(.001d, assembly.MassKg)));
-            for (int iteration = 0; iteration < 12; iteration++)
-            for (int index = 0; index < actuators.Count; index++)
+            SpaceVector2 current = new(assembly.VelocityX, assembly.VelocityY);
+            if ((targetVelocity - current).Magnitude < .001d && Math.Abs(turn) < .001d) return;
+            CollectActuators(assembly);
+            if (actuators.Count == 0)
             {
-                ShipActuator engine = actuators[index];
-                double maxForce = engine.Device.Configuration.EngineThrustNewtons;
-                double lever = engine.TorquePerNewton / leverScale;
-                double change = (SpaceVector2.Dot(residual, engine.Direction) + residualTorque / leverScale * lever) / (1d + lever * lever);
-                double next = Math.Max(0d, Math.Min(maxForce, throttle[index] + change));
-                double applied = next - throttle[index]; throttle[index] = next;
-                residual -= engine.Direction * applied; residualTorque -= engine.TorquePerNewton * applied;
+                targetVelocity = default; turn = 0d;
+                if (task != null && task.Active) task.Status = "没有可用引擎";
+                return;
             }
-            bool fuelMissing = false;
-            for (int index = 0; index < actuators.Count; index++)
+            // 松开按键时允许免费刹停；只有主动提速、转弯或改变运动方向才消耗燃料。
+            bool driveNeeded = Math.Abs(turn) > .001d ||
+                targetVelocity.Magnitude > .001d && (targetVelocity - current).Magnitude > .001d;
+            if (!driveNeeded) return;
+            foreach (ShipActuator engine in actuators)
             {
-                ShipActuator engine = actuators[index];
-                double level = throttle[index] / engine.Device.Configuration.EngineThrustNewtons;
-                if (level <= .000001d) continue;
-                double actual = ConsumeEngineFuel(engine.Device.Configuration, level, seconds);
-                fuelMissing |= actual + .00001d < level;
-                double delivered = engine.Device.Configuration.EngineThrustNewtons * actual;
-                force += engine.Direction * delivered; torque += engine.TorquePerNewton * delivered;
+                double actual = ConsumeEngineFuel(engine.Device.Configuration, 1d, seconds);
+                if (actual <= 0d) continue;
+                targetVelocity = current + (targetVelocity - current) * actual;
+                turn *= actual;
+                return;
             }
-            if (task != null && task.Active)
-            {
-                if (fuelMissing) task.Status = "燃料不足，保留目标；能力恢复后继续";
-                else if (residual.Magnitude > Math.Max(1d, desired.Magnitude * .1d) || Math.Abs(residualTorque) > Math.Max(1d, Math.Abs(desiredTorque) * .1d))
-                    task.Status = "操纵能力不足，正在尽力执行";
-            }
+            targetVelocity = current; turn = 0d;
+            if (task != null && task.Active) task.Status = "燃料不足，等待补给";
         }
         private double ConsumeEngineFuel(ShipPartConfiguration configuration, double throttle, double seconds)
         {

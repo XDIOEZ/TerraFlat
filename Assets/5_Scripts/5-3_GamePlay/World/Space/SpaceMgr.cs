@@ -11,7 +11,6 @@ public class SpaceMgr : SingletonAutoMono<SpaceMgr>
     [ShowInInspector, ReadOnly] public List<Planet> RuntimePlanets = new();
     [ShowInInspector, ReadOnly] public Dictionary<string, Planet> RuntimePlanetDict = new(StringComparer.Ordinal);
     [SerializeField] private Transform runtimePlanetRoot;
-    [SerializeField] private bool autoUpdateRuntimePlanets = true;
     [SerializeField] private PlanetData debugPlanetData = new();
     private SpaceStarfield starfield;
     private GameManager eventManager;
@@ -75,7 +74,6 @@ public class SpaceMgr : SingletonAutoMono<SpaceMgr>
                 data = catalog.CreatePlanetData(body.BodyId);
             AddPlanet(data);
         }
-        foreach (Planet planet in RuntimePlanets) BindOrbitCenterByData(planet);
         if (starfield == null)
         {
             var background = new GameObject("黑色星空"); background.transform.SetParent(transform, false);
@@ -105,10 +103,6 @@ public class SpaceMgr : SingletonAutoMono<SpaceMgr>
         }
         runtimePlanet.planetData = planet; runtimePlanet.name = planet.RuntimePlanetName;
         RuntimePlanets.Add(runtimePlanet); RuntimePlanetDict.Add(key, runtimePlanet);
-    }
-    private void BindOrbitCenterByData(Planet planet)
-    {
-        planet.OrbitCenter = FindPlanetByBodyId(planet.planetData?.OrbitCenterBodyId)?.transform ?? planet.transform;
     }
     public Planet FindPlanetByBodyId(string bodyId) =>
         !string.IsNullOrEmpty(bodyId) && RuntimePlanetDict.TryGetValue(bodyId, out Planet planet) ? planet : null;
@@ -150,10 +144,6 @@ public class SpaceMgr : SingletonAutoMono<SpaceMgr>
     #endregion
 
     #region 同一权威状态的渲染
-    public void Update()
-    {
-        if (autoUpdateRuntimePlanets) TickRuntimePlanets(Time.deltaTime);
-    }
     public void TickRuntimePlanets(float ignoredDeltaTime)
     {
         SpaceSession session = SpaceSession.Current;

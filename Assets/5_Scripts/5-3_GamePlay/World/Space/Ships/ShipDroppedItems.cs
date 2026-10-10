@@ -105,12 +105,12 @@ namespace FlatWorld.Spaceflight
         }
         #endregion
 
-        #region 初速度与原参考系继承
+        #region 初速度与来源移动继承
         private SpaceLooseItemState CreateSessionDropMotion(in DroppedItemSpawnContext context, float rotation, Vector3 scale)
         {
             var state = new SpaceLooseItemState { InSpace = IsSpaceView, WorldKey = SceneManager.GetActiveScene().name,
                 RotationDegrees = rotation, Scale = scale,
-                Motion = new OrbitState { PositionMeters = IsSpaceView ? UnprojectPosition(context.Start)
+                Motion = new SpaceMotionState { PositionMeters = IsSpaceView ? UnprojectPosition(context.Start)
                     : SpaceVector2.FromVector2(WorldLocalPresentation.ToLogical(context.Start)), RadiusMeters = .15d } };
             bool inherited = false;
             Item source = context.SourceItem;
@@ -120,8 +120,6 @@ namespace FlatWorld.Spaceflight
                     {
                         state.InSpace = original.InSpace; state.WorldKey = original.WorldKey;
                         state.Motion.VelocityMetersPerSecond = original.Motion.VelocityMetersPerSecond;
-                        state.Motion.ReferenceBodyId = original.Motion.ReferenceBodyId;
-                        state.Motion.CapturedBodyId = original.Motion.CapturedBodyId;
                         state.SurfaceHeight = original.SurfaceHeight; state.SurfaceVerticalSpeed = original.SurfaceVerticalSpeed;
                         inherited = true; break;
                     }
@@ -132,11 +130,10 @@ namespace FlatWorld.Spaceflight
             if (!inherited && carrier != null)
             {
                 ShipFlightState flight = GetFlight(carrier.ShipId);
-                state.InSpace = flight.Phase is ShipFlightPhase.Orbit or ShipFlightPhase.Descending;
+                state.InSpace = flight.Phase is ShipFlightPhase.Cruising or ShipFlightPhase.Descending;
                 state.WorldKey = flight.SurfaceWorldKey;
                 ShipGeometry.PointVelocity(carrier, state.Motion.PositionMeters.X, state.Motion.PositionMeters.Y, out double vx, out double vy);
                 state.Motion.VelocityMetersPerSecond = new SpaceVector2(vx, vy);
-                state.Motion.ReferenceBodyId = flight.Orbit.ReferenceBodyId; state.Motion.CapturedBodyId = flight.Orbit.CapturedBodyId;
                 if (!state.InSpace) { state.SurfaceHeight = Math.Max(0d, flight.HeightMeters); state.SurfaceVerticalSpeed = flight.VerticalSpeed; }
                 inherited = true;
             }
@@ -151,8 +148,6 @@ namespace FlatWorld.Spaceflight
                 else
                 {
                     state.Motion.VelocityMetersPerSecond = passenger.FreeMotion.VelocityMetersPerSecond;
-                    state.Motion.ReferenceBodyId = passenger.FreeMotion.ReferenceBodyId;
-                    state.Motion.CapturedBodyId = passenger.FreeMotion.CapturedBodyId;
                 }
                 inherited = true;
             }
@@ -166,6 +161,12 @@ namespace FlatWorld.Spaceflight
             }
             if (!state.Motion.PositionMeters.IsFinite || !state.Motion.VelocityMetersPerSecond.IsFinite)
                 throw new InvalidOperationException("太空掉落的初始运动状态无效。");
+            if (state.InSpace)
+            {
+                double speed = state.Motion.VelocityMetersPerSecond.Magnitude;
+                double limit = SpaceGameplaySettings.Current.CruiseMaxSpeedMetersPerSecond;
+                if (speed > limit) state.Motion.VelocityMetersPerSecond *= limit / speed;
+            }
             return state;
         }
         private Player FindDroppedItemSourcePlayer(Item source, Vector2 start)

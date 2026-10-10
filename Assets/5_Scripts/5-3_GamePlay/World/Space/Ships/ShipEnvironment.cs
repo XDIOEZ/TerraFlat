@@ -67,7 +67,7 @@ namespace FlatWorld.Spaceflight
         public IShipAtmosphereSource GetOutside(ShipState ship)
         {
             ShipFlightState flight = GetFlight(ship.ShipId);
-            if (flight == null || flight.Phase is ShipFlightPhase.Orbit or ShipFlightPhase.Descending)
+            if (flight == null || flight.Phase is ShipFlightPhase.Cruising or ShipFlightPhase.Descending)
                 return new PlanetShipAtmosphereSource(null, -270d);
             BodyState body = FindSurfaceBody(flight.SurfaceWorldKey);
             if (body == null || !owner.PlanetData_Dict.TryGetValue(body.PlanetId, out PlanetData planet))

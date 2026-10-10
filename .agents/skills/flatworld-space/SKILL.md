@@ -1,6 +1,6 @@
 ---
 name: flatworld-space
-description: "Use when: 定位或修改 FlatWorld 的太空场景、星球运行、公转自转、星体数据、飞行模块、SpaceMgr 或 Space Prefab。关键词：SpaceMgr、PlanetData、Mod_Fly、SpaceScene。"
+description: "Use when: 定位或修改 FlatWorld 的太空场景、固定星系布局、自转、飞船巡航、发射降落、SpaceMgr 或 Space Prefab。关键词：SpaceSession、UniverseSimulation、SpaceMgr、SpaceScene。"
 ---
 
 # FlatWorld 太空与星球
@@ -8,7 +8,7 @@ description: "Use when: 定位或修改 FlatWorld 的太空场景、星球运行
 ## 入口
 
 - 权威会话：`Assets/5_Scripts/5-3_GamePlay/World/Space/SpaceSession.cs`、`SpaceSessionState.cs`；`SpaceMgr.cs` 只投影星体与星空。
-- 生成与轨道：同目录 `Universe/SpaceCatalog.cs`、`UniverseSimulation.cs`、`SpaceSurfaceQuery.cs`；`PlanetData.cs` 与 `World/Map/Data/PlanetData.cs` 保存星体地表身份。
+- 生成与航行：同目录 `Universe/SpaceCatalog.cs`、`UniverseSimulation.cs`、`SpaceSurfaceQuery.cs`；`PlanetData.cs` 与 `World/Map/Data/PlanetData.cs` 保存星体地表身份。
 - 船体：同目录 `Ships/`，领域结构、气密与对接在 `Ships/Domain/`；建筑后端、运动、乘员、环境、导航、爆炸与散落物按 partial 分工。
 - 固定船型由 `GameConfig/Structures/fixed-structures.json` 配置，`ShipFixedStructureBuilder` 消费统一结构目录并复用 `SpaceSession.AddPiece/CommitPiece/RollbackPiece`；不得在 GM 按钮中硬编码布局。资源补给按模板成员身份匹配，共享罐按真实组容量处理，不能重复给每个成员灌满整组。
 - 生命周期：`Core/Lifecycle/GameManager.Space.cs`、`World/Dimension/DimensionManager.cs`；正式面板在 `Presentation/UI/ShipPanelSession.cs`、`SpaceLandingPanelSession.cs`。
@@ -18,14 +18,16 @@ description: "Use when: 定位或修改 FlatWorld 的太空场景、星球运行
 
 - 主链：正式世界进入 → SpaceSession 恢复稳定星体、船体与船上机器作用域 → 唯一固定时钟推进 → 当前场景投影视图。SpaceMgr 不再另推宇宙时间。
 - 宇宙坐标用 double 米，ViewOrigin 只影响表现；地表逻辑坐标与循环镜像通过 WorldLocalPresentation 换算，不把太空坐标交给 Chunk 生成、地表寻路或 NormalizePosition。
-- 玩家太空传送走 `SpaceSession.TryTeleportPlayerToSpace`，调用方提供宇宙坐标和速度；会话负责脱离乘员支撑、驾驶与下落状态、迁移及失败恢复。GM 星球旁落点从当前 Universe 取位置并叠加公转与环绕速度，禁止只改 Transform；场景迁移仍限单机。
+- 玩家太空传送走 `SpaceSession.TryTeleportPlayerToSpace`，调用方提供宇宙坐标和速度；会话负责脱离乘员支撑、驾驶与下落状态、迁移及失败恢复。GM 星球旁传送使用静态星体坐标和零初速，禁止只改 Transform；场景迁移仍限单机。
 - 固定步须等待 IsGameplayReady，并按 CaptureShipContactPoses → 运动 → StepShipContacts → CommitSurfaceContacts 顺序结算。Kinematic 碰撞体负责表现，实际平动和旋转反作用由权威扫掠解算；碰撞、无人船和冷地表损毁不依赖可见性。
 - Landed/Floating 船体不参与动力积分与船间动态碰撞，机器、气密环境和自由乘员仍按原时钟运行；起飞判定前同步真实载荷。运动中质量计算复用会话工作区，不每次分配部件样本。
 - `SpaceSession.FindPiece` 走权威部件索引：Load、放置、回滚、分裂和结束会话必须维护索引；结构变更时才强制重绑 `ShipPieceView`，不让逐帧表现重复查询机器节点。
 - 星体接触与船体接触比较同一步时间 Fraction，先撞船后须从真实碰撞时刻重积剩余轨迹；不能提前切地表作用域导致漏碰撞。
 - 地表切换复用 DimensionManager 的黑屏、玩家快照与失败恢复；读档场景依据已保存飞行阶段，避免迁移中旧 CurrentSceneName 覆盖目标。未进入就绪状态不推进下落。
 - `PlanetData` 跨两个目录的 partial；序列化字段变化必须同时检查并联动 Data Skill。
-- 星体位置由 UniverseState.SimulationSeconds 和稳定轨道参数派生；自转含逆向周期，统一经 GetRotationRadians 计算。
+- 星体位置由静态 `PlacementDistanceMeters/PlacementAngleRadians` 与星系种子在加载时确定，不进行公转；时间只驱动自转与地表环境，`GetRotationRadians` 支持逆向周期。
+- 太空主体只使用 `SpaceMotionState` 的双精度位置和速度，`UniverseSimulation.StepMotion` 负责无引力直线移动及星球连续接触；船体 `Cruising` 阶段按配置速度、加速、刹车和转向上限驾驶，船间碰撞仍由 `ShipCollisionSimulation` 独立结算。
+- `SpaceSession.LateUpdate` 先以玩家双精度位置更新 `ViewOrigin`，再统一投影星球、飞船和乘员；不要恢复五千米阈值跳变或让 `SpaceMgr.Update` 提前使用旧原点。
 - Prefab 名经 `RuntimePlanetName/PrefabName` 和 GameRes 解析；移动/改名同步检查 Addressables。
 - 星球旅行使用 `WorldAddress.PlanetId + DimensionManager`，不为每颗星球造一次性 Scene 链。冷地表查询与落地损毁使用冻结生成 Profile 加最新 Chunk 差量，禁止读取当前活动星球替代目标星球。
 - 船内重力判定只读支撑地板与供电；密闭舱的环境查询不请求船外地表，外界查询优先使用已加载温度场。冷地表生成 Profile 按存档和资源会话缓存，资源原位更新后必须失效。
@@ -37,10 +39,10 @@ description: "Use when: 定位或修改 FlatWorld 的太空场景、星球运行
 
 - 新玩法以 `开发文档文件夹/01_世界生成与环境/太空场景开发待办.md` 为准；管道、气体与气压防护为前置依赖，不把待办视为现成功能。
 - 恒星系生成与各星体地表配置分离；首轮太阳系、玩家初始地球，行星和恒星均可游戏化登陆。气态巨行星气压极高，太阳“核聚变中”地块极热、强减速、高伤害；通过材料耐受表达普通船爆炸与后期存活，不硬编码恒星登陆必死。
-- 发射表现不改地表物理 Y；综合升空推力与太空方向推力分开。停机仅撤推力，按惯性判断进入太空或下落；资源与引擎条件满足时允许重新点火救船，保持高度和速度，按实际运动更新阶段。进入太空只将实际速度转为切向，不补速或锁定圆轨道。
+- 地表升空/再入保留燃料、重力、碰撞和降落损伤；抵达配置高度及最低垂直速度后，转为径向有上限的太空巡航速度，不注入圆轨道速度。太空无需点火模拟公转，驾驶操作由可用引擎和燃料控制。
 - 飞船地板四邻接，同船多控制台；独立船体必须通过墙壁类对接接口及双方控制台确认形成整体，普通接触、补地板和光纤不替代接口。任一方操作接口可解除该接口对并清除双方确认，重连须重新确认；按剩余有效连接路径重算整体，保留成员与接口身份，不复制库存或清零分离速度。分裂部分符合控制台连接、供电、燃料和引擎条件即可继续驾驶，库存与网络按船体本地格子作用域处理。
 - 非驾驶移动、冲刺和宇航服推进按屏幕方向操纵玩家，驾驶按船体轴向操纵飞船；玩家能力不替代引擎。承载地板毁坏释放乘员并保留速度，失去支撑的设备转掉落物。
-- 生物获得地面支撑后恢复直接移动；有效重力工作方块覆盖的舱内优先用地球重力，飞船落地后仍生效且不与当地重力叠加，出舱后用当地环境规则。内部移动重力与外部轨道受力分开。
+- 生物获得地面支撑后恢复直接移动；有效重力工作方块覆盖的舱内优先用地球重力，飞船落地后仍生效且不与当地重力叠加，出舱后用当地环境规则。内部人工重力与外部无引力巡航分开。
 - 墙体边界闭合且内部地板完整才密闭，停供保留舱气，隔离门正常开关不泄压；破口跟随外界，修复不还原旧气，太空补舱仍真空须重新供气。墙体（含隔墙）只比较船体外部气压耐受范围；船体、墙壁、地板另配置外部温度耐受范围，越界距离乘各自系数计算伤害，归零统一摧毁并刷新密闭。结构损伤与生物冷热规则分开。
 - 密闭舱自动维持正常舱温，无需温控工作方块；破舱随外界温度，补舱恢复正常舱温但不生成气体。完整承载地板阻隔危险地块对乘员的直接接触伤害，按支撑关系判断；船体仍承受外部温压损伤，撞击与爆炸照常结算，不在角色核心增加船型或地块特判。
 - 密闭舱流体调用统一使用 `ShipAtmosphereService.MinimumCabinGasSpaceLiters` 作为极小正预留空间，不能把总容积重复传入 `FluidInventory` 的最小气相空间参数。
@@ -51,7 +53,7 @@ description: "Use when: 定位或修改 FlatWorld 的太空场景、星球运行
 
 ## 验证
 
-- 轨道与时间测试使用确定数据/步长；检查 Load/Save、中心绑定、Prefab 解析和场景清理。
+- 静态星体位置与时间测试使用确定种子/步长；验证速度上限、持续移动、降落接触、Load/Save、Prefab 解析和场景清理。试玩运行中只静态修改，不暂停 Unity。
 
 ## Skill 维护原则
 
