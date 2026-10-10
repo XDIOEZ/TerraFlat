@@ -127,6 +127,21 @@ public static class AtmosphereService
     #endregion
 
     #region 恢复与配置预检
+    public static AtmosphereState RepairInvalidSnapshot(AtmosphereState snapshot, AtmosphereState initial,
+        out bool preservedInventory)
+    {
+        Validate(initial, FluidCatalog.Default);
+        preservedInventory = snapshot?.Gases != null && snapshot.TotalEscapedMoles >= 0m;
+        if (!preservedInventory) return initial;
+
+        // 只重建损坏的星球大气基准，已有的气体余量和逸散账目不重新灌满。
+        var restored = initial.Clone();
+        restored.Gases = snapshot.Gases;
+        restored.TotalEscapedMoles = snapshot.TotalEscapedMoles;
+        Validate(restored, FluidCatalog.Default);
+        return restored;
+    }
+
     public static void Validate(AtmosphereState state, FluidCatalog catalog)
     {
         if (state == null || state.Gases == null || state.Gases.Count > 4096 || state.CapacityMoles < 0m ||

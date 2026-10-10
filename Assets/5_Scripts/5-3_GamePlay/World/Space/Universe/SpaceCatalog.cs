@@ -178,21 +178,48 @@ namespace FlatWorld.Spaceflight
             planet.OrbitStartAngle = (float)(body.InitialPhaseRadians * 180d / Math.PI);
             planet.OrbitClockwise = body.OrbitClockwise;
             planet.SelfRotateSpeed = Math.Abs(body.RotationPeriodSeconds) > 1e-12d ? (float)(360d / body.RotationPeriodSeconds) : 0f;
-            if (!initializeEnvironment && planet.Atmosphere != null) return;
+            bool repairInvalidAtmosphere = false;
+            string invalidAtmosphereDetails = null;
+            if (!initializeEnvironment && planet.Atmosphere != null)
+            {
+                try
+                {
+                    AtmosphereService.Validate(planet.Atmosphere, FluidCatalog.Default);
+                    return;
+                }
+                catch (InvalidDataException exception)
+                {
+                    repairInvalidAtmosphere = true;
+                    invalidAtmosphereDetails = $"{exception.Message} [容量={planet.Atmosphere.CapacityMoles}mol, " +
+                        $"基准={planet.Atmosphere.ReferenceMoles}mol, 压力={planet.Atmosphere.ReferencePressureKPa}kPa, " +
+                        $"温度={planet.Atmosphere.TemperatureKelvin}K, 成分数={planet.Atmosphere.Gases?.Count ?? -1}]";
+                }
+            }
             SurfaceProfile surface = GetSurfaceProfileById(body.SurfaceProfileId);
             // 温度真值由地理气候层提供，星球全局量保留零额外修正。
-            planet.GlobalTemperature = PlanetData.DefaultGlobalTemperature;
+            if (!repairInvalidAtmosphere) planet.GlobalTemperature = PlanetData.DefaultGlobalTemperature;
             planet.AtmosphereProfileId = surface.Id;
             var gases = new List<AtmosphereCompositionDto>();
             foreach (var gas in surface.AtmosphereComposition)
                 gases.Add(new AtmosphereCompositionDto { FluidId = gas.Key, Fraction = gas.Value });
             decimal capacity = surface.PressureKPa > 0d ? 1000000000000000m : 0m;
-            planet.Atmosphere = new AtmosphereDefinition(new AtmosphereDefinitionDto
+            AtmosphereState initialAtmosphere = new AtmosphereDefinition(new AtmosphereDefinitionDto
             {
                 Id = surface.Id, InitialStandardCubicMeters = capacity, CapacityStandardCubicMeters = capacity,
                 ReferenceStandardCubicMeters = capacity, ReferencePressureKPa = surface.PressureKPa,
                 TemperatureKelvin = surface.TemperatureCelsius + 273.15d, Composition = gases
             }, FluidCatalog.Default).CreateState();
+            if (!repairInvalidAtmosphere)
+            {
+                planet.Atmosphere = initialAtmosphere;
+                return;
+            }
+
+            // 载入时修复异常的大气基准，避免玩家生存模块和 HUD 每帧重复抛错。
+            planet.Atmosphere = AtmosphereService.RepairInvalidSnapshot(planet.Atmosphere, initialAtmosphere,
+                out bool preservedInventory);
+            Debug.LogWarning($"[Atmosphere] 星球 {body.PlanetId} 的大气快照无效：{invalidAtmosphereDetails}；已按地表配置修复" +
+                             (preservedInventory ? "，保留现有气体和逸散量。" : "；原库存不可读取，已恢复初始大气。"));
         }
         #endregion
 
