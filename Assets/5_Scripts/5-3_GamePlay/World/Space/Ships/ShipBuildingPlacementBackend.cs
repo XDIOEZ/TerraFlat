@@ -131,6 +131,7 @@ namespace FlatWorld.Spaceflight
                 piece.SnapshotJson = Encode(data);
                 contents.Add(piece.PieceId, data);
                 ship.Pieces.Add(piece);
+                RegisterPieceIndex(ship, piece);
                 State.Devices.Add(new ShipDeviceState { PieceId = piece.PieceId, Configuration = config, TargetPressureKPa = config.TargetPressureKPa });
                 ShipStructureService.RecalculateMass(ship);
                 return piece;
@@ -255,8 +256,10 @@ namespace FlatWorld.Spaceflight
             if (int.TryParse(piece.PieceId, out int id) && MachineCatalog.Get(piece.ItemId) != null)
                 using (MachineWorld.UseScope("ship:" + ship.ShipId)) MachineWorld.DiscardPlacementCandidate(id);
             ship.Pieces.Remove(piece); contents.Remove(piece.PieceId);
+            pieceIndex.Remove(piece.PieceId);
             State.Devices.RemoveAll(value => value.PieceId == piece.PieceId);
             RemovePieceView(piece.PieceId);
+            viewBindingsDirty = true;
             if (ship.Pieces.Count == 0) RemoveEmptyShip(ship);
             else ShipStructureService.RecalculateMass(ship);
             return true;
@@ -264,7 +267,7 @@ namespace FlatWorld.Spaceflight
         public void CommitPiece(ShipState ship, ShipPieceState piece)
         {
             ShipAtmosphereService.RebuildCompartments(ship, GetOutside(ship));
-            SynchronizeViews();
+            SynchronizeViews(refreshBindings: true);
         }
         public void DestroyPiece(ShipState ship, ShipPieceState piece, string reason)
         {
@@ -276,6 +279,8 @@ namespace FlatWorld.Spaceflight
         private void ProcessStructureChanges()
         {
             if (destroyed.Count == 0) return;
+            viewBindingsDirty = true;
+            pieceIndexDirty = true;
             foreach (ShipState ship in State.Ships.ToArray())
             {
                 if (!ship.Pieces.Exists(piece => destroyed.Contains(piece.PieceId))) continue;
@@ -332,6 +337,7 @@ namespace FlatWorld.Spaceflight
             State.Docking.RemoveAll(pair => !FindPiece(pair.PortAId, out _, out _) || !FindPiece(pair.PortBId, out _, out _));
             State.Navigation.RemoveAll(value => !FindPiece(value.NavigationPieceId, out _, out _));
             destroyed.Clear();
+            RebuildPieceIndex();
         }
 
         private void RemoveEmptyShip(ShipState ship)
@@ -342,34 +348,53 @@ namespace FlatWorld.Spaceflight
             State.Navigation.RemoveAll(value => value.ShipId == ship.ShipId);
             State.Docking.RemoveAll(value => value.ShipAId == ship.ShipId || value.ShipBId == ship.ShipId);
         }
+
+        #region 飞船质量计算工作区
+        private readonly HashSet<string> assignedMassPassengers = new(StringComparer.Ordinal);
+        private readonly Dictionary<int, ShipPieceState> massPiecesById = new();
+        private readonly List<MachineWorld.FluidTankGroup> massFluidGroups = new();
+        private readonly ShipMassReader massReader = new();
+        private readonly ShipStructureService.MassWorkspace massWorkspace = new();
+
+        private void ResetMassWorkspace()
+        {
+            assignedMassPassengers.Clear();
+            massPiecesById.Clear();
+            massFluidGroups.Clear();
+            massReader.Reset();
+            massWorkspace.Masses.Clear();
+            massWorkspace.Sources.Clear();
+        }
+        #endregion
+
         private void RefreshMass()
         {
-            var assignedPassengers = new HashSet<string>(StringComparer.Ordinal);
+            assignedMassPassengers.Clear();
             foreach (ShipState ship in State.Ships)
             {
                 ship.MassContributions.Clear();
-                var reader = new ShipMassReader();
-                var byId = new Dictionary<int, ShipPieceState>();
+                massReader.Reset();
+                massPiecesById.Clear();
                 foreach (ShipPieceState piece in ship.Pieces)
                     if (piece.IsAlive && int.TryParse(piece.PieceId, out int id))
                     {
-                        byId.Add(id, piece);
-                        reader.RegisterStructuralItem(GetPieceData(piece));
+                        massPiecesById.Add(id, piece);
+                        massReader.RegisterStructuralItem(GetPieceData(piece));
                     }
                 using (MachineWorld.UseScope("ship:" + ship.ShipId))
                 {
-                    var groups = new List<MachineWorld.FluidTankGroup>();
-                    MachineWorld.CollectFluidTankGroups(groups);
-                    foreach (MachineWorld.FluidTankGroup group in groups)
+                    massFluidGroups.Clear();
+                    MachineWorld.CollectFluidTankGroups(massFluidGroups);
+                    foreach (MachineWorld.FluidTankGroup group in massFluidGroups)
                     {
-                        double mass = reader.ReadFluidMass(group.Inventory?.State);
+                        double mass = massReader.ReadFluidMass(group.Inventory?.State);
                         if (mass <= 0d) continue;
                         // 共享罐只有一份流体库存，重量按各罐真实容积放回各自的位置。
                         double remaining = mass;
                         for (int i = 0; i < group.Members.Count; i++)
                         {
                             MachineEntity member = group.Members[i];
-                            if (!byId.TryGetValue(member.Id, out ShipPieceState piece))
+                            if (!massPiecesById.TryGetValue(member.Id, out ShipPieceState piece))
                                 throw new InvalidOperationException("飞船流体网含有不属于船体的储罐。");
                             double portion = i == group.Members.Count - 1 ? remaining :
                                 mass * member.Definition.Fluid.VolumeLiters / group.TotalVolume;
@@ -377,41 +402,42 @@ namespace FlatWorld.Spaceflight
                             AddCargoMass(ship, piece, "fluid-group:" + group.OwnerId + ":" + member.Id, portion);
                         }
                     }
-                    foreach (var entry in byId)
+                    foreach (var entry in massPiecesById)
                     {
                         ShipPieceState piece = entry.Value;
                         ItemData data = GetPieceData(piece);
                         if (data?.Stack != null) piece.MassKg = Math.Max(0d, data.Stack.CurrentWeight);
                         MachineEntity node = MachineWorld.GetById(entry.Key);
-                        double cargo = reader.ReadItemContents(data, null, node, 0);
+                        double cargo = massReader.ReadItemContents(data, null, node, 0);
                         if (node?.Definition.Fluid != null)
                         {
                             FluidMachineState fluids = MachineWorld.GetFluidState(node);
-                            var chambers = new HashSet<string>(fluids.Chambers.Keys, StringComparer.Ordinal) { "main" };
-                            foreach (string chamber in chambers) cargo += reader.ReadFluidMass(MachineWorld.GetFluidInventory(node, chamber)?.State);
-                            cargo += reader.ReadInventory(fluids.PortableTank, 0) + reader.ReadInventory(fluids.FilterMaterial, 0) + reader.ReadInventory(fluids.Residue, 0);
+                            foreach (string chamber in fluids.Chambers.Keys)
+                                cargo += massReader.ReadFluidMass(MachineWorld.GetFluidInventory(node, chamber)?.State);
+                            cargo += massReader.ReadFluidMass(MachineWorld.GetFluidInventory(node, "main")?.State);
+                            cargo += massReader.ReadInventory(fluids.PortableTank, 0) + massReader.ReadInventory(fluids.FilterMaterial, 0) + massReader.ReadInventory(fluids.Residue, 0);
                         }
                         AddCargoMass(ship, piece, "cargo:" + piece.PieceId, cargo);
                     }
                 }
                 foreach (SpacePassengerState passenger in State.Passengers)
                 {
-                    if (assignedPassengers.Contains(passenger.ProfileId)) continue;
+                    if (assignedMassPassengers.Contains(passenger.ProfileId)) continue;
                     Player player = null;
                     if (ItemMgr.Instance != null) ItemMgr.Instance.Player_DIC.TryGetValue(passenger.ProfileId, out player);
                     Data_Player playerData = player?.Data;
                     if (playerData == null) owner.PlayerData_Dict.TryGetValue(passenger.ProfileId, out playerData);
                     if (playerData == null || !TryGetPassengerMassPosition(passenger, ship, player, playerData, out double x, out double y)) continue;
-                    assignedPassengers.Add(passenger.ProfileId);
-                    double mass = reader.ReadItem(playerData, player, 0);
+                    assignedMassPassengers.Add(passenger.ProfileId);
+                    double mass = massReader.ReadItem(playerData, player, 0);
                     if (mass > 0d) ship.MassContributions.Add(new ShipMassContribution
                     {
                         SourceId = "person:" + passenger.ProfileId, Kind = ShipMassKind.Occupant,
                         LocalX = x, LocalY = y, MassKg = mass
                     });
                 }
-                AddLooseCargoMass(ship, reader);
-                ShipStructureService.RecalculateMass(ship);
+                AddLooseCargoMass(ship, massReader);
+                ShipStructureService.RecalculateMass(ship, massWorkspace);
             }
         }
         private static void AddCargoMass(ShipState ship, ShipPieceState piece, string source, double mass)
@@ -454,6 +480,11 @@ namespace FlatWorld.Spaceflight
             private readonly HashSet<FluidInventoryState> fluids = new();
             private readonly HashSet<LiquidContainerState> liquids = new();
             private readonly HashSet<int> liveEquipmentStores = new();
+
+            public void Reset()
+            {
+                itemIds.Clear(); items.Clear(); inventories.Clear(); fluids.Clear(); liquids.Clear(); liveEquipmentStores.Clear();
+            }
 
             public void RegisterStructuralItem(ItemData data)
             { if (data == null) return; items.Add(data); if (data.Guid != 0) itemIds.Add(data.Guid); }
@@ -500,7 +531,8 @@ namespace FlatWorld.Spaceflight
                 if (data == null) return 0d;
                 if (depth > 64) throw new InvalidOperationException("物品库存嵌套过深。");
                 double mass = 0d;
-                var liveModules = new HashSet<string>(StringComparer.Ordinal);
+                // 冷快照无运行模块，避免每个飞船部件都新建一个空集合。
+                HashSet<string> liveModules = live != null ? new HashSet<string>(StringComparer.Ordinal) : null;
                 if (live != null)
                 {
                     foreach (var entry in live.Mods)
@@ -548,7 +580,7 @@ namespace FlatWorld.Spaceflight
                 {
                     ModuleData module = entry.Value;
                     // 暂停能力不会凭空拿走已经装在物品内的真实载荷。
-                    if (module == null || liveModules.Contains(entry.Key)) continue;
+                    if (module == null || liveModules != null && liveModules.Contains(entry.Key)) continue;
                     if (module is Inventory_ModuleData storage)
                     {
                         if (machine?.Logic == null && storage.Data != null)

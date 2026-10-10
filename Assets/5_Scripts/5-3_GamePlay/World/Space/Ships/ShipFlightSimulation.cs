@@ -28,6 +28,8 @@ namespace FlatWorld.Spaceflight
             if (!FindPiece(consoleId, out ShipState ship, out ShipPieceState console) || console.Kind != ShipPieceKind.Console || !IsPowered(ship, console)) return false;
             var flight = GetFlight(ship.ShipId);
             if (flight == null) return false;
+            // 从停靠转入动力模拟前同步实际载荷，避免使用静态阶段的旧质量。
+            RefreshMass();
             var assembly = ShipDockingService.RebuildAssemblies(State.Ships, State.Docking).Find(value => value.MemberShipIds.Contains(ship.ShipId));
             CollectActuators(assembly);
             double thrust = 0d;

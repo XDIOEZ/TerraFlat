@@ -7,12 +7,32 @@ namespace FlatWorld.Spaceflight
     public static class ShipStructureService
     {
         #region 整船质量与质心
+        // 计算样本为值类型，避免每个船体部件每次重算都分配持久化记录对象。
+        internal readonly struct MassSample
+        {
+            public readonly double MassKg, LocalX, LocalY, IntrinsicInertiaKgM2;
+            public MassSample(double mass, double x, double y, double inertia)
+            { MassKg = mass; LocalX = x; LocalY = y; IntrinsicInertiaKgM2 = inertia; }
+        }
+
+        internal sealed class MassWorkspace
+        {
+            public readonly List<MassSample> Masses = new();
+            public readonly HashSet<string> Sources = new(StringComparer.Ordinal);
+        }
+
         public static ShipMassProperties RecalculateMass(ShipState ship)
+            => RecalculateMass(ship, new MassWorkspace());
+
+        internal static ShipMassProperties RecalculateMass(ShipState ship, MassWorkspace workspace)
         {
             if (ship == null) throw new ArgumentNullException(nameof(ship));
+            if (workspace == null) throw new ArgumentNullException(nameof(workspace));
             if (!FinitePositive(ship.CellSizeMeters)) throw new InvalidDataException("船体格子尺寸必须是有限正数");
-            var masses = new List<ShipMassContribution>();
-            var sources = new HashSet<string>(StringComparer.Ordinal);
+            // 调用方持有单独工作区，逐帧计算时复用集合且不跨会话共享。
+            List<MassSample> masses = workspace.Masses;
+            HashSet<string> sources = workspace.Sources;
+            masses.Clear(); sources.Clear();
             foreach (ShipPieceState piece in ship.Pieces)
             {
                 if (piece == null || !piece.IsAlive) continue;
@@ -22,13 +42,10 @@ namespace FlatWorld.Spaceflight
                 int width = Math.Max(1, piece.Width), height = Math.Max(1, piece.Height);
                 if ((piece.QuarterTurns & 1) != 0) { int swap = width; width = height; height = swap; }
                 double meterWidth = width * ship.CellSizeMeters, meterHeight = height * ship.CellSizeMeters;
-                masses.Add(new ShipMassContribution
-                {
-                    SourceId = piece.PieceId, MassKg = piece.MassKg,
-                    LocalX = (piece.CellX + width * 0.5d) * ship.CellSizeMeters,
-                    LocalY = (piece.CellY + height * 0.5d) * ship.CellSizeMeters,
-                    IntrinsicInertiaKgM2 = piece.MassKg * (meterWidth * meterWidth + meterHeight * meterHeight) / 12d
-                });
+                masses.Add(new MassSample(piece.MassKg,
+                    (piece.CellX + width * 0.5d) * ship.CellSizeMeters,
+                    (piece.CellY + height * 0.5d) * ship.CellSizeMeters,
+                    piece.MassKg * (meterWidth * meterWidth + meterHeight * meterHeight) / 12d));
             }
             foreach (ShipMassContribution extra in ship.MassContributions)
             {
@@ -40,7 +57,7 @@ namespace FlatWorld.Spaceflight
                 if (!FluidUnits.IsFinite(extra.LocalX) || !FluidUnits.IsFinite(extra.LocalY) ||
                     !FluidUnits.IsFinite(extra.IntrinsicInertiaKgM2) || extra.IntrinsicInertiaKgM2 < 0d)
                     throw new InvalidDataException("船体载荷位置或转动惯量无效");
-                masses.Add(extra);
+                masses.Add(new MassSample(extra.MassKg, extra.LocalX, extra.LocalY, extra.IntrinsicInertiaKgM2));
             }
             foreach (ShipCompartmentState room in ship.Compartments)
             {
@@ -58,16 +75,15 @@ namespace FlatWorld.Spaceflight
                     double dy = (cell.Y + .5d) * ship.CellSizeMeters - y;
                     gasInertia += mass / room.Cells.Count * (dx * dx + dy * dy + ship.CellSizeMeters * ship.CellSizeMeters / 6d);
                 }
-                masses.Add(new ShipMassContribution
-                { SourceId = sourceId, MassKg = mass, LocalX = x, LocalY = y, IntrinsicInertiaKgM2 = gasInertia });
+                masses.Add(new MassSample(mass, x, y, gasInertia));
             }
             double total = 0d, sumX = 0d, sumY = 0d;
-            foreach (ShipMassContribution entry in masses)
+            foreach (MassSample entry in masses)
             { total += entry.MassKg; sumX += entry.LocalX * entry.MassKg; sumY += entry.LocalY * entry.MassKg; }
             double centerX = total > 0d ? sumX / total : ship.CenterOfMassLocalX;
             double centerY = total > 0d ? sumY / total : ship.CenterOfMassLocalY;
             double inertia = 0d;
-            foreach (ShipMassContribution entry in masses)
+            foreach (MassSample entry in masses)
             {
                 double dx = entry.LocalX - centerX, dy = entry.LocalY - centerY;
                 inertia += entry.IntrinsicInertiaKgM2 + entry.MassKg * (dx * dx + dy * dy);

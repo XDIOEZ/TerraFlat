@@ -18,6 +18,11 @@ namespace FlatWorld.Spaceflight
         private Sprite tankSource;
         private int tankMask = -1;
         private double tankCellSize;
+        private ShipState boundShip;
+        private ShipPieceState boundPiece;
+        private int boundWidth, boundHeight, boundQuarterTurns;
+        private double boundCellSize;
+        private bool pendingMachineBinding;
         public Vector3 WorldPosition => transform.position;
         public int TargetGuid => int.TryParse(pieceId, out int id) ? id : 0;
         public bool IsValid => session != null && session.FindPiece(pieceId, out _, out _);
@@ -37,11 +42,18 @@ namespace FlatWorld.Spaceflight
             SpatialInteractionRegistry.Register(this, Mathf.Max(piece.Width, piece.Height) * .5f + .2f, this);
             Rebind(ship, piece);
         }
-        public void Rebind(ShipState ship, ShipPieceState piece)
+        public void Rebind(ShipState ship, ShipPieceState piece, bool force = false)
         {
-            shipId = ship.ShipId;
             int width = piece.QuarterTurns % 2 == 0 ? piece.Width : piece.Height;
             int height = piece.QuarterTurns % 2 == 0 ? piece.Height : piece.Width;
+            if (!force && !pendingMachineBinding && ReferenceEquals(boundShip, ship) && ReferenceEquals(boundPiece, piece) &&
+                boundWidth == width && boundHeight == height && boundQuarterTurns == piece.QuarterTurns &&
+                boundCellSize == ship.CellSizeMeters)
+                return;
+
+            boundShip = ship; boundPiece = piece; boundWidth = width; boundHeight = height;
+            boundQuarterTurns = piece.QuarterTurns; boundCellSize = ship.CellSizeMeters;
+            shipId = ship.ShipId;
             hitBox.size = new Vector2((float)(width * ship.CellSizeMeters - .05d), (float)(height * ship.CellSizeMeters - .05d));
             hitBox.offset = new Vector2((float)((width - 1) * ship.CellSizeMeters * .5d), (float)((height - 1) * ship.CellSizeMeters * .5d));
             if (visual != null)
@@ -50,10 +62,12 @@ namespace FlatWorld.Spaceflight
                 baseVisualPosition.x = hitBox.offset.x; baseVisualPosition.y = hitBox.offset.y;
             }
             machineTarget = null;
+            pendingMachineBinding = false;
             if (MachineCatalog.Get(piece.ItemId) != null)
                 using (MachineWorld.UseScope("ship:" + shipId))
                 {
                     MachineEntity node = MachineWorld.GetById(TargetGuid);
+                    pendingMachineBinding = node == null;
                     machineTarget = MachineWorld.GetOrCreateInteractionTarget(node);
                     SynchronizeTankVisual(ship, node);
                 }
@@ -106,10 +120,19 @@ namespace FlatWorld.Spaceflight
         }
         public void SetPose(Vector2 position, float degrees, double height)
         {
-            body.position = position; body.rotation = degrees;
-            transform.SetPositionAndRotation(position, Quaternion.Euler(0f, 0f, degrees));
+            // 静止船体不重复写入刚体与 Transform，避免无意义的物理同步。
+            if (body.position != position || Mathf.Abs(Mathf.DeltaAngle(body.rotation, degrees)) > .001f ||
+                (Vector2)transform.position != position)
+            {
+                body.position = position; body.rotation = degrees;
+                transform.SetPositionAndRotation(position, Quaternion.Euler(0f, 0f, degrees));
+            }
             if (visual != null)
-            { visual.transform.localPosition = baseVisualPosition; visual.transform.position += Vector3.up * (float)Math.Min(4d, Math.Max(0d, height) * .04d); }
+            {
+                Vector3 local = baseVisualPosition + transform.InverseTransformVector(
+                    Vector3.up * (float)Math.Min(4d, Math.Max(0d, height) * .04d));
+                if (visual.transform.localPosition != local) visual.transform.localPosition = local;
+            }
         }
         public void OnInteractStart(Item actor)
         {
@@ -131,62 +154,70 @@ namespace FlatWorld.Spaceflight
     public sealed partial class SpaceSession
     {
         #region 动态本地格投影
+        private bool viewBindingsDirty;
         public Vector3 ProjectMachinePosition(MachineEntity node)
         {
             if (node?.ScopeKey == null || !node.ScopeKey.StartsWith("ship:", StringComparison.Ordinal)) return node?.Snapshot.transform.position ?? default;
             ShipState ship = GetShip(node.ScopeKey.Substring(5));
             return ship == null ? node.Snapshot.transform.position : DisplayPoint(ship, (node.Cell.x + .5d) * ship.CellSizeMeters, (node.Cell.y + .5d) * ship.CellSizeMeters);
         }
-        private void SynchronizeViews()
+        private void SynchronizeViews(bool refreshBindings = false)
         {
+            bool forceBindings = refreshBindings || viewBindingsDirty;
+            viewBindingsDirty = false;
             foreach (ShipState ship in State.Ships)
-            foreach (ShipPieceState piece in ship.Pieces)
             {
-                if (!piece.IsAlive || !IsVisible(ship)) { RemovePieceView(piece.PieceId); continue; }
-                if (!views.TryGetValue(piece.PieceId, out ShipPieceView view) || view == null)
+                bool visible = IsVisible(ship);
+                ShipFlightState flight = visible ? GetFlight(ship.ShipId) : null;
+                float angle = (float)(ship.AngleRadians * 180d / Math.PI);
+                double height = flight != null && flight.Phase is ShipFlightPhase.Lifting or ShipFlightPhase.SurfaceDescending
+                    ? flight.HeightMeters : 0d;
+                foreach (ShipPieceState piece in ship.Pieces)
                 {
-                    ItemData data = GetPieceData(piece);
-                    if (data == null) continue;
-                    // 固定部件只投影权威快照，避免普通建筑模块重新登记地表和重复产生库存。
-                    GameObject root = new("ShipPiece_" + piece.ItemId);
-                    GameObject visual = new("Render"); visual.transform.SetParent(root.transform, false);
-                    SpriteRenderer renderer = visual.AddComponent<SpriteRenderer>();
-                    // 船体承载层复用交通工具排序，地板覆盖地表且始终低于乘员和设备。
-                    WorldSortingManager.GetInstance().ApplyRenderer(renderer, piece.Kind == ShipPieceKind.Floor
-                        ? WorldSortingManager.VehicleCategory : WorldSortingManager.BuildingCategory);
-                    renderer.spriteSortPoint = SpriteSortPoint.Pivot;
-                    if (GameRes.ExistingInstance.TryGetItemDefinition(piece.ItemId, out RuntimeItemDefinition definition))
+                    if (!piece.IsAlive || !visible) { RemovePieceView(piece.PieceId); continue; }
+                    if (!views.TryGetValue(piece.PieceId, out ShipPieceView view) || view == null)
                     {
-                        renderer.sprite = definition.Sprite; renderer.color = definition.Visual?.Color ?? Color.white;
-                        if (definition.Material != null) renderer.sharedMaterial = definition.Material;
+                        ItemData data = GetPieceData(piece);
+                        if (data == null) continue;
+                        // 固定部件只投影权威快照，避免普通建筑模块重新登记地表和重复产生库存。
+                        GameObject root = new("ShipPiece_" + piece.ItemId);
+                        GameObject visual = new("Render"); visual.transform.SetParent(root.transform, false);
+                        SpriteRenderer renderer = visual.AddComponent<SpriteRenderer>();
+                        // 船体承载层复用交通工具排序，地板覆盖地表且始终低于乘员和设备。
+                        WorldSortingManager.GetInstance().ApplyRenderer(renderer, piece.Kind == ShipPieceKind.Floor
+                            ? WorldSortingManager.VehicleCategory : WorldSortingManager.BuildingCategory);
+                        renderer.spriteSortPoint = SpriteSortPoint.Pivot;
+                        if (GameRes.ExistingInstance.TryGetItemDefinition(piece.ItemId, out RuntimeItemDefinition definition))
+                        {
+                            renderer.sprite = definition.Sprite; renderer.color = definition.Visual?.Color ?? Color.white;
+                            if (definition.Material != null) renderer.sharedMaterial = definition.Material;
+                        }
+                        if (piece.Kind == ShipPieceKind.Engine)
+                        {
+                            GameObject marker = new("推力方向"); marker.transform.SetParent(visual.transform, false);
+                            LineRenderer arrow = marker.AddComponent<LineRenderer>(); arrow.useWorldSpace = false;
+                            arrow.sharedMaterial = renderer.sharedMaterial; arrow.startWidth = arrow.endWidth = .05f;
+                            arrow.startColor = arrow.endColor = Color.cyan;
+                            arrow.sortingLayerID = renderer.sortingLayerID; arrow.sortingOrder = renderer.sortingOrder + 2; arrow.positionCount = 5;
+                            arrow.SetPositions(new[] { new Vector3(0, -.3f), new Vector3(0, .4f), new Vector3(-.13f, .23f), new Vector3(0, .4f), new Vector3(.13f, .23f) });
+                        }
+                        if (Mod_Building.TryReadBuildingData(data, out _, out Mod_Building.Building_Data building) && !string.IsNullOrWhiteSpace(building.TileBlockId) &&
+                            GameRes.ExistingInstance.GetTileBlock(building.TileBlockId)?.TileBase is UnityEngine.Tilemaps.Tile tile)
+                        { renderer.sprite = tile.sprite; renderer.color = tile.color; visual.transform.localScale = tile.transform.lossyScale; visual.transform.localPosition = tile.transform.GetColumn(3); }
+                        BoxCollider2D collider = root.AddComponent<BoxCollider2D>();
+                        collider.size = new Vector2((float)(piece.Width * ship.CellSizeMeters - .05d), (float)(piece.Height * ship.CellSizeMeters - .05d));
+                        collider.offset = new Vector2((float)((piece.Width - 1) * ship.CellSizeMeters * .5d), (float)((piece.Height - 1) * ship.CellSizeMeters * .5d));
+                        collider.isTrigger = !piece.BlocksMovement;
+                        Rigidbody2D body = root.AddComponent<Rigidbody2D>(); body.bodyType = RigidbodyType2D.Kinematic;
+                        body.gravityScale = 0; body.useFullKinematicContacts = true; body.interpolation = RigidbodyInterpolation2D.Interpolate;
+                        int layer = LayerMask.NameToLayer("Collider"); if (layer >= 0) root.layer = layer;
+                        view = root.AddComponent<ShipPieceView>(); view.Initialize(this, ship, piece, null);
+                        views[piece.PieceId] = view;
                     }
-                    if (piece.Kind == ShipPieceKind.Engine)
-                    {
-                        GameObject marker = new("推力方向"); marker.transform.SetParent(visual.transform, false);
-                        LineRenderer arrow = marker.AddComponent<LineRenderer>(); arrow.useWorldSpace = false;
-                        arrow.sharedMaterial = renderer.sharedMaterial; arrow.startWidth = arrow.endWidth = .05f;
-                        arrow.startColor = arrow.endColor = Color.cyan;
-                        arrow.sortingLayerID = renderer.sortingLayerID; arrow.sortingOrder = renderer.sortingOrder + 2; arrow.positionCount = 5;
-                        arrow.SetPositions(new[] { new Vector3(0, -.3f), new Vector3(0, .4f), new Vector3(-.13f, .23f), new Vector3(0, .4f), new Vector3(.13f, .23f) });
-                    }
-                    if (Mod_Building.TryReadBuildingData(data, out _, out Mod_Building.Building_Data building) && !string.IsNullOrWhiteSpace(building.TileBlockId) &&
-                        GameRes.ExistingInstance.GetTileBlock(building.TileBlockId)?.TileBase is UnityEngine.Tilemaps.Tile tile)
-                    { renderer.sprite = tile.sprite; renderer.color = tile.color; visual.transform.localScale = tile.transform.lossyScale; visual.transform.localPosition = tile.transform.GetColumn(3); }
-                    BoxCollider2D collider = root.AddComponent<BoxCollider2D>();
-                    collider.size = new Vector2((float)(piece.Width * ship.CellSizeMeters - .05d), (float)(piece.Height * ship.CellSizeMeters - .05d));
-                    collider.offset = new Vector2((float)((piece.Width - 1) * ship.CellSizeMeters * .5d), (float)((piece.Height - 1) * ship.CellSizeMeters * .5d));
-                    collider.isTrigger = !piece.BlocksMovement;
-                    Rigidbody2D body = root.AddComponent<Rigidbody2D>(); body.bodyType = RigidbodyType2D.Kinematic;
-                    body.gravityScale = 0; body.useFullKinematicContacts = true; body.interpolation = RigidbodyInterpolation2D.Interpolate;
-                    int layer = LayerMask.NameToLayer("Collider"); if (layer >= 0) root.layer = layer;
-                    view = root.AddComponent<ShipPieceView>(); view.Initialize(this, ship, piece, null);
-                    views[piece.PieceId] = view;
+                    Vector2 position = DisplayPoint(ship, (piece.CellX + .5d) * ship.CellSizeMeters, (piece.CellY + .5d) * ship.CellSizeMeters);
+                    view.Rebind(ship, piece, forceBindings);
+                    view.SetPose(position, angle, height);
                 }
-                Vector2 position = DisplayPoint(ship, (piece.CellX + .5d) * ship.CellSizeMeters, (piece.CellY + .5d) * ship.CellSizeMeters);
-                view.Rebind(ship, piece);
-                ShipFlightState flight = GetFlight(ship.ShipId);
-                view.SetPose(position, (float)(ship.AngleRadians * 180d / Math.PI),
-                    flight.Phase is ShipFlightPhase.Lifting or ShipFlightPhase.SurfaceDescending ? flight.HeightMeters : 0d);
             }
             Player player = ItemMgr.Instance?.User_Player;
             if (player == null) return;

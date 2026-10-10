@@ -4,6 +4,7 @@ using FlatWorld.AIECS;
 using FlatWorld.WorldModel;
 using Unity.Entities;
 using Unity.Mathematics;
+using Unity.Profiling;
 using UnityEngine;
 
 /// <summary>每种能力运行器只登记一次，实体数量不增加托管调度对象。</summary>
@@ -40,6 +41,10 @@ public static class WorldEntityRuntime
     private static EntitySeasonPeriod[] seasonPeriods;
     private static float capabilitySeconds;
     private const float CapabilityInterval = 0.25f;
+    private static readonly ProfilerMarker ModulesMarker = new("WorldEntityRuntime.Modules");
+    private static readonly ProfilerMarker JobCompletionMarker = new("WorldEntityRuntime.CompleteJobs");
+    private static readonly ProfilerMarker CapabilitiesMarker = new("WorldEntityRuntime.Capabilities");
+    private static readonly ProfilerMarker PostSimulationMarker = new("WorldEntityRuntime.PostSimulation");
     public static ulong Generation { get; private set; } = 1;
     public static ulong CapabilityVersion { get; private set; }
     public static World Current => world != null && world.IsCreated ? world : null;
@@ -113,7 +118,7 @@ public static class WorldEntityRuntime
             return;
 
         IWorldEntityRuntimeModule[] currentDispatch = dispatch;
-        for (int i = 0; i < currentDispatch.Length; i++)
+        using (ModulesMarker.Auto()) for (int i = 0; i < currentDispatch.Length; i++)
         {
             IWorldEntityRuntimeModule module = currentDispatch[i];
             if (!modules.Contains(module) || failed.Contains(module)) continue;
@@ -129,7 +134,7 @@ public static class WorldEntityRuntime
             }
         }
         // 全部运行器提交后才进入共同完成边界，允许无冲突任务先排入依赖链。
-        foreach (IWorldEntityRuntimeModule module in currentDispatch)
+        using (JobCompletionMarker.Auto()) foreach (IWorldEntityRuntimeModule module in currentDispatch)
         {
             if (!modules.Contains(module)) continue;
             try { module.CompleteEntityJobs(); }
@@ -138,8 +143,8 @@ public static class WorldEntityRuntime
                 if (failed.Add(module)) Debug.LogError($"[WorldEntityRuntime] 能力收尾失败 {module.RuntimeModuleId}：{exception}");
             }
         }
-        TickCommonCapabilities(deltaTime);
-        foreach (IWorldEntityRuntimeModule module in currentDispatch)
+        using (CapabilitiesMarker.Auto()) TickCommonCapabilities(deltaTime);
+        using (PostSimulationMarker.Auto()) foreach (IWorldEntityRuntimeModule module in currentDispatch)
         {
             if (!modules.Contains(module) || failed.Contains(module) || module is not IWorldEntityPostSimulationModule post) continue;
             try { post.AfterEntitySimulation(deltaTime); }

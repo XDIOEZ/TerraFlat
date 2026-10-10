@@ -8,6 +8,7 @@ using FlatWorld.WorldModel;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
+using Unity.Profiling;
 using UnityEngine;
 using Newtonsoft.Json.Linq;
 using NaturalEntityHealth = FlatWorld.AIECS.AiecsVital;
@@ -47,6 +48,9 @@ namespace FlatWorld.NaturalEntities
         private static readonly Dictionary<RuntimeItemDefinition, CompileCacheEntry> profiles = new();
         private static readonly List<Vector2Int> navigationCells = new(8);
         private const float SimulationInterval = 0.25f;
+        private static readonly ProfilerMarker FreezeInputsMarker = new("NaturalEntityRuntime.FreezeInputs");
+        private static readonly ProfilerMarker PublishMarker = new("NaturalEntityRuntime.Publish");
+        private static readonly ProfilerMarker ContactDamageMarker = new("NaturalEntityRuntime.ContactDamage");
         private static int nextRuntimeId = 1;
         private static float pendingSimulationSeconds;
         private sealed class RuntimeModule : IWorldEntityRuntimeModule, IWorldEntityPostSimulationModule, IGameplayCombatBridge
@@ -58,8 +62,8 @@ namespace FlatWorld.NaturalEntities
             public void ReleaseEntities() => ReleaseWorld();
             public void AfterEntitySimulation(float deltaTime)
             {
-                PublishEntities(deltaTime);
-                TickContactDamage(deltaTime);
+                using (PublishMarker.Auto()) PublishEntities(deltaTime);
+                using (ContactDamageMarker.Auto()) TickContactDamage(deltaTime);
             }
             public bool TryGetIdentity(Item item, out CombatIdentity identity) { identity = default; return false; }
             public void QueryWeaponPulse(Mod_Damage weapon, AttackShape2D shape, CombatDamageContext context) => QueryWeapon(weapon, shape, context);
@@ -93,7 +97,7 @@ namespace FlatWorld.NaturalEntities
                 return;
 
             pendingSimulationSeconds = 0f;
-            foreach (Record record in records.Values)
+            using (FreezeInputsMarker.Auto()) foreach (Record record in records.Values)
             {
                 if (record.NavigationOwner != WorldNavigationManager.ExistingInstance)
                     UnregisterNavigation(record);

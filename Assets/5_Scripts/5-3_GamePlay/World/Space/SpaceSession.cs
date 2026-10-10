@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using MemoryPack;
 using Newtonsoft.Json;
+using Unity.Profiling;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using FlatWorld.Networking;
@@ -24,8 +25,18 @@ namespace FlatWorld.Spaceflight
         private readonly Dictionary<string, ItemData> contents = new(StringComparer.Ordinal);
         private readonly Dictionary<string, ShipPieceView> views = new(StringComparer.Ordinal);
         private readonly Dictionary<string, ShipControlRequest> controlRequests = new(StringComparer.Ordinal);
+        private readonly Dictionary<string, (ShipState Ship, ShipPieceState Piece)> pieceIndex = new(StringComparer.Ordinal);
+        private bool pieceIndexDirty;
         private readonly List<string> destroyed = new();
+        private readonly List<ShipState> fixedShips = new();
         private float environmentElapsed;
+
+        private static readonly ProfilerMarker ShipMachineMarker = new("SpaceSession.Fixed.Machines");
+        private static readonly ProfilerMarker ShipMassMarker = new("SpaceSession.Fixed.Mass");
+        private static readonly ProfilerMarker ShipMotionMarker = new("SpaceSession.Fixed.Motion");
+        private static readonly ProfilerMarker ShipContactMarker = new("SpaceSession.Fixed.Contacts");
+        private static readonly ProfilerMarker ShipEnvironmentMarker = new("SpaceSession.Fixed.Environment");
+        private static readonly ProfilerMarker ShipViewMarker = new("SpaceSession.Late.Pieces");
 
         public static SpaceSession EnsureLoaded()
         {
@@ -68,6 +79,10 @@ namespace FlatWorld.Spaceflight
             if (save == null || ReferenceEquals(owner, save)) return;
             ReleaseViews();
             contents.Clear(); controlRequests.Clear();
+            pieceIndex.Clear(); pieceIndexDirty = false;
+            fixedShips.Clear();
+            ResetMassWorkspace();
+            viewBindingsDirty = false;
             owner = save;
             State = string.IsNullOrWhiteSpace(save.SpaceStateJson)
                 ? new SpaceSessionState { Universe = SpaceCatalog.LoadDefault().Generate(save.Seed) }
@@ -90,6 +105,7 @@ namespace FlatWorld.Spaceflight
             foreach (ShipState ship in State.Ships)
                 foreach (ShipPieceState piece in ship.Pieces)
                     if (piece.IsAlive && !string.IsNullOrWhiteSpace(piece.SnapshotJson)) contents[piece.PieceId] = Decode(piece.SnapshotJson);
+            RebuildPieceIndex();
             running = true;
             ViewOrigin = default;
         }
@@ -110,6 +126,11 @@ namespace FlatWorld.Spaceflight
             Current.State = null;
             Current.Universe = null;
             Current.contents.Clear();
+            Current.pieceIndex.Clear();
+            Current.pieceIndexDirty = false;
+            Current.fixedShips.Clear();
+            Current.ResetMassWorkspace();
+            Current.viewBindingsDirty = false;
             SpaceSurfaceQuery.Reset();
             SpaceLandingPanelSession.Refresh(null, null);
         }
@@ -143,12 +164,31 @@ namespace FlatWorld.Spaceflight
             if (ResumePendingPassengerTransfer()) return;
             double seconds = Time.fixedDeltaTime;
             Universe.AdvanceTime(seconds);
-            foreach (ShipState ship in State.Ships.ToArray()) MachineWorld.TickShip(ship.ShipId, (float)seconds);
-            RefreshMass();
+            fixedShips.Clear();
+            fixedShips.AddRange(State.Ships);
+            using (ShipMachineMarker.Auto())
+                foreach (ShipState ship in fixedShips) MachineWorld.TickShip(ship.ShipId, (float)seconds);
+
+            // 停靠船体不进行刚体积分；静态结构保留环境和机器模拟。
+            bool hasMovingShips = false;
+            foreach (ShipFlightState flight in State.Flights)
+                if (flight.Phase is not (ShipFlightPhase.Landed or ShipFlightPhase.Floating))
+                { hasMovingShips = true; break; }
+
+            if (hasMovingShips)
+                using (ShipMassMarker.Auto()) RefreshMass();
             CaptureShipContactPoses();
-            var assemblies = ShipDockingService.RebuildAssemblies(State.Ships, State.Docking);
-            foreach (ShipAssemblyState assembly in assemblies) StepAssembly(assembly, seconds);
-            StepShipContacts(seconds);
+            if (hasMovingShips)
+            {
+                List<ShipAssemblyState> assemblies;
+                using (ShipMotionMarker.Auto())
+                {
+                    assemblies = ShipDockingService.RebuildAssemblies(State.Ships, State.Docking);
+                    foreach (ShipAssemblyState assembly in assemblies) StepAssembly(assembly, seconds);
+                }
+                if (assemblies.Count > 1)
+                    using (ShipContactMarker.Auto()) StepShipContacts(seconds, assemblies);
+            }
             StepFreePassengers(seconds);
             StepLooseItems(seconds);
             CommitSurfaceContacts(seconds);
@@ -156,13 +196,16 @@ namespace FlatWorld.Spaceflight
             if (environmentElapsed >= .2f)
             {
                 float elapsed = environmentElapsed; environmentElapsed = 0f;
-                foreach (ShipState ship in State.Ships.ToArray())
+                using (ShipEnvironmentMarker.Auto())
                 {
-                    var outside = GetOutside(ship);
-                    ShipAtmosphereService.StepStructureEnvironment(ship, outside.PressureKPa, outside.TemperatureCelsius, elapsed, DestroyPiece);
-                    RefillCompartments(ship, elapsed);
+                    foreach (ShipState ship in fixedShips)
+                    {
+                        var outside = GetOutside(ship);
+                        ShipAtmosphereService.StepStructureEnvironment(ship, outside.PressureKPa, outside.TemperatureCelsius, elapsed, DestroyPiece);
+                        RefillCompartments(ship, elapsed);
+                    }
+                    ProcessStructureChanges();
                 }
-                ProcessStructureChanges();
             }
             StepExplosions();
         }
@@ -170,23 +213,63 @@ namespace FlatWorld.Spaceflight
         {
             if (!running || State == null) return;
             UpdateViewOrigin();
-            SynchronizeViews();
+            using (ShipViewMarker.Auto()) SynchronizeViews();
             SynchronizeLooseItems();
             ShipPanelSession.RefreshOpen(this);
             SpaceLandingPanelSession.Refresh(this, ItemMgr.Instance?.User_Player);
         }
-        public ShipState GetShip(string id) => State?.Ships.Find(value => value.ShipId == id);
-        public ShipFlightState GetFlight(string id) => State?.Flights.Find(value => value.ShipId == id);
-        public ShipDeviceState GetDevice(string id) => State?.Devices.Find(value => value.PieceId == id);
+        public ShipState GetShip(string id)
+        {
+            if (State != null)
+                foreach (ShipState ship in State.Ships)
+                    if (ship.ShipId == id) return ship;
+            return null;
+        }
+        public ShipFlightState GetFlight(string id)
+        {
+            if (State != null)
+                foreach (ShipFlightState flight in State.Flights)
+                    if (flight.ShipId == id) return flight;
+            return null;
+        }
+        public ShipDeviceState GetDevice(string id)
+        {
+            if (State != null)
+                foreach (ShipDeviceState device in State.Devices)
+                    if (device.PieceId == id) return device;
+            return null;
+        }
         public bool Owns(int guid) => FindPiece(guid.ToString(CultureInfo.InvariantCulture), out _, out _);
         public bool FindPiece(string id, out ShipState ship, out ShipPieceState piece)
         {
-            if (State != null) foreach (ShipState candidate in State.Ships)
+            if (!pieceIndexDirty && !string.IsNullOrEmpty(id) &&
+                pieceIndex.TryGetValue(id, out var indexed) && indexed.Piece.IsAlive)
             {
-                var match = candidate.Pieces.Find(value => value.PieceId == id && value.IsAlive);
-                if (match != null) { ship = candidate; piece = match; return true; }
+                ship = indexed.Ship; piece = indexed.Piece; return true;
             }
+            // 结构分裂事务中集合正在迁移，临时按当前权威状态查找。
+            if (pieceIndexDirty && State != null)
+                foreach (ShipState candidate in State.Ships)
+                    foreach (ShipPieceState current in candidate.Pieces)
+                        if (current.IsAlive && current.PieceId == id)
+                        { ship = candidate; piece = current; return true; }
             ship = null; piece = null; return false;
+        }
+
+        private void RegisterPieceIndex(ShipState ship, ShipPieceState piece)
+        {
+            if (!pieceIndexDirty && piece.IsAlive)
+                pieceIndex.Add(piece.PieceId, (ship, piece));
+        }
+
+        private void RebuildPieceIndex()
+        {
+            pieceIndex.Clear();
+            if (State != null)
+                foreach (ShipState ship in State.Ships)
+                    foreach (ShipPieceState piece in ship.Pieces)
+                        if (piece.IsAlive) pieceIndex.Add(piece.PieceId, (ship, piece));
+            pieceIndexDirty = false;
         }
         public ItemData GetPieceData(ShipPieceState piece) => contents.TryGetValue(piece.PieceId, out ItemData data) ? data : null;
         public Vector2 ProjectPosition(SpaceVector2 absolute) => new((float)(absolute.X - ViewOrigin.X), (float)(absolute.Y - ViewOrigin.Y));

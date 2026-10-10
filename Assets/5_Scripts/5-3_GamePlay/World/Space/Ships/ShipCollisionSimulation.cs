@@ -109,10 +109,11 @@ namespace FlatWorld.Spaceflight
                 ship.AngleRadians - ship.AngularVelocityRadiansPerSecond * seconds, realm,
                 new SpaceVector2(ship.VelocityX, ship.VelocityY), ship.AngularVelocityRadiansPerSecond);
         }
-        private List<ShipContactBody> BuildShipContactBodies(double seconds)
+        private List<ShipContactBody> BuildShipContactBodies(double seconds, IReadOnlyList<ShipAssemblyState> assemblies = null)
         {
             var bodies = new List<ShipContactBody>();
-            foreach (ShipAssemblyState assembly in ShipDockingService.RebuildAssemblies(State.Ships, State.Docking))
+            assemblies ??= ShipDockingService.RebuildAssemblies(State.Ships, State.Docking);
+            foreach (ShipAssemblyState assembly in assemblies)
             {
                 ShipState primary = GetShip(assembly.MemberShipIds[0]);
                 if (!TryGetShipContactRealm(primary, out string realm, out double height, out bool dynamic)) continue;
@@ -155,10 +156,11 @@ namespace FlatWorld.Spaceflight
         #endregion
 
         #region 船体之间的真实部件接触
-        public void StepShipContacts(double seconds)
+        public void StepShipContacts(double seconds, IReadOnlyList<ShipAssemblyState> assemblies)
         {
-            if (!GameNetwork.HasStateAuthority || State == null || !SpaceVector2.Finite(seconds) || seconds <= 0d) return;
-            List<ShipContactBody> bodies = BuildShipContactBodies(seconds);
+            if (!GameNetwork.HasStateAuthority || State == null || assemblies == null || assemblies.Count < 2 ||
+                !SpaceVector2.Finite(seconds) || seconds <= 0d) return;
+            List<ShipContactBody> bodies = BuildShipContactBodies(seconds, assemblies);
             double cursor = 0d;
             // 所有扫掠分数都表示同一个固定步里的真实时刻。
             for (int contactIndex = 0; contactIndex < MaximumContactSweepIterations && cursor < 1d; contactIndex++)

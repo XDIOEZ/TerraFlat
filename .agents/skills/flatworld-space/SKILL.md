@@ -20,6 +20,8 @@ description: "Use when: 定位或修改 FlatWorld 的太空场景、星球运行
 - 宇宙坐标用 double 米，ViewOrigin 只影响表现；地表逻辑坐标与循环镜像通过 WorldLocalPresentation 换算，不把太空坐标交给 Chunk 生成、地表寻路或 NormalizePosition。
 - 玩家太空传送走 `SpaceSession.TryTeleportPlayerToSpace`，调用方提供宇宙坐标和速度；会话负责脱离乘员支撑、驾驶与下落状态、迁移及失败恢复。GM 星球旁落点从当前 Universe 取位置并叠加公转与环绕速度，禁止只改 Transform；场景迁移仍限单机。
 - 固定步须等待 IsGameplayReady，并按 CaptureShipContactPoses → 运动 → StepShipContacts → CommitSurfaceContacts 顺序结算。Kinematic 碰撞体负责表现，实际平动和旋转反作用由权威扫掠解算；碰撞、无人船和冷地表损毁不依赖可见性。
+- Landed/Floating 船体不参与动力积分与船间动态碰撞，机器、气密环境和自由乘员仍按原时钟运行；起飞判定前同步真实载荷。运动中质量计算复用会话工作区，不每次分配部件样本。
+- `SpaceSession.FindPiece` 走权威部件索引：Load、放置、回滚、分裂和结束会话必须维护索引；结构变更时才强制重绑 `ShipPieceView`，不让逐帧表现重复查询机器节点。
 - 星体接触与船体接触比较同一步时间 Fraction，先撞船后须从真实碰撞时刻重积剩余轨迹；不能提前切地表作用域导致漏碰撞。
 - 地表切换复用 DimensionManager 的黑屏、玩家快照与失败恢复；读档场景依据已保存飞行阶段，避免迁移中旧 CurrentSceneName 覆盖目标。未进入就绪状态不推进下落。
 - `PlanetData` 跨两个目录的 partial；序列化字段变化必须同时检查并联动 Data Skill。
