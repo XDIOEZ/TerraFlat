@@ -108,16 +108,73 @@ public static partial class MachineWorld
 
     public static bool CanDismantleFluid(MachineEntity node, out string reason)
     {
+        using var nodeScope = UseNodeScope(node);
         reason = null;
         if (node?.Definition.Fluid == null) return true;
+        RebuildGraphsIfDirty();
         FluidMachineState state = GetFluidState(node);
         if (!string.IsNullOrEmpty(state.RuptureBudgetId)) { reason = "正在结算罐体破裂，请等待爆炸结束"; return false; }
+        if (IsFluidTankBlock(node)) return true;
         if (fluidTankOwners.TryGetValue(node.Id, out FluidTankGroup group) && !group.Inventory.IsEmpty)
         { reason = "请先排空整个组合储罐的气体和液体"; return false; }
         foreach (string chamber in state.Chambers.Keys)
             if (!GetFluidInventory(node, chamber).IsEmpty) { reason = "请先排空这台设备或管段的气体和液体"; return false; }
         return true;
     }
+
+    #region 方块储罐拆除排放
+    // 返还物只保存空罐快照，真实排放延后到节点删除提交，失败不扣库存。
+    public static void PrepareDismantledFluidSnapshot(MachineEntity node, ItemData snapshot)
+    {
+        if (!IsFluidTankBlock(node) || snapshot == null) return;
+        FluidMachineState state = MachinePersistence.Read<FluidMachineState>(snapshot, "fluid");
+        if (state == null) return;
+        state.Chambers.Clear(); state.GroupOwnerId = 0; state.OverpressureVictimId = 0;
+        MachinePersistence.Write(snapshot, "fluid", state);
+    }
+
+    // 组合罐按拆下罐体的真实容积分摊，只把这一块的份额排入当地环境。
+    private static List<MachineEntity> ReleaseDismantledFluidTank(MachineEntity node)
+    {
+        if (!IsFluidTankBlock(node) || GetFluidState(node).Ruptured) return null;
+        RebuildGraphsIfDirty();
+        List<MachineEntity> remaining = new();
+        if (fluidTankOwners.TryGetValue(node.Id, out FluidTankGroup group))
+        {
+            foreach (MachineEntity member in group.Members) if (member.Id != node.Id) remaining.Add(member);
+            PartitionFluidGroupForScopeTransfer(group);
+        }
+        FluidMachineState state = GetFluidState(node);
+        var batches = new List<FluidBatch>();
+        foreach (string chamber in new List<string>(state.Chambers.Keys))
+            batches.AddRange(GetFluidInventory(node, chamber).Drain());
+        state.LastEmittedStandardLiters = 0; state.LastRetainedStandardLiters = 0; state.LastEscapedStandardLiters = 0;
+        foreach (FluidBatch batch in batches)
+        {
+            FluidDefinition definition = FluidCatalog.Default.Find(batch.FluidId);
+            double temperature = BatchTemperature(definition, batch);
+            if (batch.GasMoles > 0m)
+                RecordAtmosphereEmission(node, FluidInventory.CreateBatch(definition, batch.GasMoles, 0m, temperature));
+            if (batch.LiquidMoles <= 0m) continue;
+            string spillWorld = worldKey;
+            Vector2 spillPosition = node.Position;
+            if (TryResolveFluidSurfacePoint(node.Position, out string surfaceWorld, out Vector2 surfacePosition))
+            { spillWorld = surfaceWorld; spillPosition = surfacePosition; }
+            var spill = new PressureLiquidSpillState
+            {
+                WorldKey = spillWorld, FluidId = batch.FluidId, Center = spillPosition,
+                LiquidMoles = batch.LiquidMoles, InternalEnergyJoules = definition.EnergyAt(0m, batch.LiquidMoles, temperature)
+            };
+            if (IsShipScope && RequireShipEnvironment().TryGetMachineSpillAnchor(worldKey.Substring(5), node.Position,
+                out string detachedWorld, out Vector2 detachedPosition))
+            { spill.DetachedWorldKey = detachedWorld; spill.DetachedCenter = detachedPosition; }
+            owner.Mechanical.PendingPressureLiquidSpills.Add(spill);
+        }
+        state.GroupOwnerId = node.Id; state.OverpressureVictimId = 0;
+        dirty = true;
+        return remaining;
+    }
+    #endregion
 
     /// <summary>压力爆炸沿真实机器生命与物理防御结算，只有归零才再入破裂队列。</summary>
     public static bool TryApplyEnvironmentalDamage(MachineEntity node, float amount)

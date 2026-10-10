@@ -692,6 +692,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
         }
         if (!MachineWorld.CanDismantleFluid(node, out reason)) return false;
         ItemData placed = MachineWorld.CaptureSnapshot(node);
+        MachineWorld.PrepareDismantledFluidSnapshot(node, placed);
         if (placed == null || !TryReadBuildingData(placed, out _, out Building_Data building))
         {
             reason = "机械节点快照无效";

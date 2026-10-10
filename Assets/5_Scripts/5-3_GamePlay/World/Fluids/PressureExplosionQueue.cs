@@ -40,6 +40,8 @@ public sealed partial class PressureLiquidSpillState
     public decimal LiquidMoles;
     public double InternalEnergyJoules;
     public int NextCellIndex;
+    public string DetachedWorldKey;
+    public Vector2 DetachedCenter;
     #endregion
 }
 
@@ -228,7 +230,24 @@ public static class PressureExplosionQueue
         if (spillBudgetFrame != Time.frameCount) { spillBudgetFrame = Time.frameCount; spillCellsThisFrame = 0; }
         foreach (PressureLiquidSpillState spill in archive.PendingPressureLiquidSpills)
         {
-            if (spill.WorldKey != world || !CanAdvanceLiquidSpill(spill)) continue;
+            if (!CanAdvanceLiquidSpill(spill)) continue;
+            var spaceSession = FlatWorld.Spaceflight.SpaceSession.Current;
+            // 只有已加载的权威船列表确认船已删除，才允许备用世界接过旧船溢液。
+            if (spill.WorldKey.StartsWith("ship:", StringComparison.Ordinal) && spaceSession?.State != null &&
+                spaceSession.GetShip(spill.WorldKey.Substring(5)) == null && !string.IsNullOrWhiteSpace(spill.DetachedWorldKey) &&
+                (spill.WorldKey == world || spill.DetachedWorldKey == world))
+            { spill.WorldKey = spill.DetachedWorldKey; spill.Center = spill.DetachedCenter; }
+            if (spill.WorldKey != world) continue;
+            // 航行中的船先保留液体余量，落地后再投影到真实地表，不空跑溢流格预算。
+            if (spill.WorldKey.StartsWith("ship:", StringComparison.Ordinal))
+            {
+                string shipId = spill.WorldKey.Substring(5);
+                if (spaceSession?.State == null || spaceSession.GetShip(shipId) == null) continue;
+                using var shipScope = MachineWorld.UseScope(spill.WorldKey);
+                if (!MachineWorld.TryResolveFluidSurfacePoint(spill.Center, out string surfaceWorld, out Vector2 surfacePosition)) continue;
+                spill.WorldKey = surfaceWorld; spill.Center = surfacePosition;
+            }
+            if (spill.WorldKey == "SpaceScene") continue;
             FluidDefinition definition = FluidCatalog.Default.Find(spill.FluidId);
             if (GameRes.ExistingInstance == null || !GameRes.ExistingInstance.TryGetLiquidDefinition(definition.LiquidId, out LiquidDefinition liquid) ||
                 liquid.WorldWater == null || liquid.WorldWater.DepthPerServing <= 0f) continue;
@@ -242,9 +261,9 @@ public static class PressureExplosionQueue
                 decimal servings = FluidUnits.MolToServings(definition, spill.LiquidMoles);
                 float depth = (float)Math.Min(1m, servings * (decimal)liquid.WorldWater.DepthPerServing);
                 float accepted = 0f;
-                if (WorldAddress.FromWorldKey(world).IsSurface)
-                    accepted = FlatWorld.Spaceflight.SpaceSurfaceQuery.ReleaseLiquidInWorld(world, point, liquid.Id, depth);
-                else if (SceneManager.GetActiveScene().name == world)
+                if (WorldAddress.FromWorldKey(spill.WorldKey).IsSurface)
+                    accepted = FlatWorld.Spaceflight.SpaceSurfaceQuery.ReleaseLiquidInWorld(spill.WorldKey, point, liquid.Id, depth);
+                else if (SceneManager.GetActiveScene().name == spill.WorldKey)
                     WorldLiquidSystem.TryPour(point, liquid.Id, depth, out accepted);
                 if (accepted <= 0f) continue;
                 decimal moles = Math.Min(spill.LiquidMoles, FluidUnits.ServingsToMol(definition,

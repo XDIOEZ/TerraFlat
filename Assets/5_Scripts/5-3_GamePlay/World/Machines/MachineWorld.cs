@@ -221,6 +221,7 @@ public static partial class MachineWorld
         EnsureScope();
         if (!GameNetwork.HasStateAuthority || !nodes.TryGetValue(id, out MachineEntity node))
             return null;
+        List<MachineEntity> remainingTanks = ReleaseDismantledFluidTank(node);
         CaptureNode(node);
         ItemData snapshot = FastCloner.FastCloner.DeepClone(node.Snapshot);
         RememberGeneratedRemoval(node);
@@ -228,6 +229,12 @@ public static partial class MachineWorld
         if (interactions.Remove(id, out MachineInteractionTarget interaction)) interaction.Dispose();
         nodes.Remove(id);
         dirty = true;
+        if (remainingTanks != null)
+        {
+            RebuildGraphsIfDirty();
+            foreach (MachineEntity member in remainingTanks)
+            { CaptureFluidState(member); StateChanged(member); }
+        }
         NotifySurfaceMechanicalChanged(node.Cell);
         NotifySurfaceCellChanged(node.Cell);
         NodeRemoved?.Invoke(id);

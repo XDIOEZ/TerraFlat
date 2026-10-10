@@ -109,6 +109,22 @@ namespace FlatWorld.Spaceflight
             return !string.IsNullOrWhiteSpace(world);
         }
 
+        // 释放物料保留当时的真实世界与绝对位置，整船回收后不再依赖已消失的船体。
+        public bool TryGetMachineSpillAnchor(string shipId, Vector2 localPosition, out string world, out Vector2 position)
+        {
+            world = null; position = default;
+            ShipState ship = GetShip(shipId);
+            if (ship == null) return false;
+            ShipFlightState flight = GetFlight(shipId);
+            bool space = flight?.Phase is ShipFlightPhase.Orbit or ShipFlightPhase.Descending;
+            world = space ? "SpaceScene" : flight?.SurfaceWorldKey ?? ship.WorldAddress;
+            if (string.IsNullOrWhiteSpace(world)) return false;
+            ShipGeometry.LocalToWorld(ship, localPosition.x, localPosition.y, out double x, out double y);
+            position = new Vector2((float)x, (float)y);
+            if (!space) position = PressureExplosionQueue.NormalizeInWorld(world, position);
+            return true;
+        }
+
         private AtmosphereState GetMachineOutsideAtmosphere(ShipState ship)
         {
             ShipFlightState flight = GetFlight(ship.ShipId);

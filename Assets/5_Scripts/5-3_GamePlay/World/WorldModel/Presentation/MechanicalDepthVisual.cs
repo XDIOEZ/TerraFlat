@@ -16,7 +16,7 @@ public sealed partial class MechanicalDepthVisual : MonoBehaviour, ISpatialInter
         internal int Id, Order;
         internal bool Touched, Visible, DrawBelowMechanical;
     }
-    private readonly PartVisual[] parts = new PartVisual[8];
+    private readonly PartVisual[] parts = new PartVisual[16];
     private ChunkTilemapRenderer owner;
     private int entityId, occupancy;
     private bool highlighted, disposed;
@@ -40,10 +40,12 @@ public sealed partial class MechanicalDepthVisual : MonoBehaviour, ISpatialInter
     }
 
     internal void SetPart(int index, Sprite sprite, Material material, Quaternion rotation,
-        Vector3 offset, Vector3 scale, int mode, Vector4 animation, bool drawBelowMechanical = false, Vector4 conveyor = default)
+        Vector3 offset, Vector3 scale, int mode, Vector4 animation, bool drawBelowMechanical = false,
+        Vector4 conveyor = default, int partOrder = -1)
     {
         if ((uint)index >= (uint)parts.Length) throw new ArgumentOutOfRangeException(nameof(index));
         PartVisual part = parts[index] ??= new PartVisual { Id = index, Order = occupancy * 32 + index };
+        part.Order = occupancy * 32 + (partOrder >= 0 ? partOrder : index);
         if (part.DrawBelowMechanical != drawBelowMechanical) owner?.RemoveMachineDepthPart(entityId, part.Id);
         part.Sprite = sprite; part.Material = material; part.Rotation = rotation;
         part.Offset = rotation * offset; part.Scale = scale; part.Animation = animation; part.Conveyor = conveyor;

@@ -40,6 +40,7 @@ public sealed partial class ChunkTilemapRenderer
     private readonly Dictionary<Vector3Int, MechanicalDepthVisual> mechanicalDepthVisuals = new(); // 机器的交互和灯光桥，图像统一合入行网格。
     private readonly HashSet<Vector3Int> submittedMechanicalCells = new(); // 资源重建时清理已提交的机械和阴影身份。
     private readonly Dictionary<Vector3Int, int> submittedWireMasks = new(); // 相邻事件只重提连接发生变化的电线。
+    private readonly Dictionary<Vector3Int, int> submittedTankMasks = new(); // 储罐边框只在四邻连接变化时重新提交。
     internal HashSet<Vector3Int> MechanicalShadowKeys => submittedMechanicalCells; // 供阴影注册表按区块卸载。
     private static Material mechanicalFallbackMaterial;
     private static Sprite mechanicalAxisPortSprite;
@@ -96,6 +97,7 @@ public sealed partial class ChunkTilemapRenderer
     {
         if (boundChunk?.Terrain == null || !batchPresentationComplete) return;
         RefreshElectricalWireNeighbours(cell);
+        RefreshFluidTankNeighbours(cell);
         var origin = boundChunk.Address.ChunkOrigin;
         Vector2 displacement = WorldTopologyRuntime.ShortestDelta(
             new Vector2(origin.X, origin.Y), new Vector2(cell.x, cell.y));
@@ -110,8 +112,29 @@ public sealed partial class ChunkTilemapRenderer
                 MechanicalShadowRegistry.Remove(this, new Vector3Int(x, y, occupancy));
                 submittedMechanicalCells.Remove(new Vector3Int(x, y, occupancy));
                 submittedWireMasks.Remove(new Vector3Int(x, y, occupancy));
+                submittedTankMasks.Remove(new Vector3Int(x, y, occupancy));
                 RemoveMechanicalDepthVisual(x, y, occupancy);
             }
+        }
+    }
+
+    /// <summary>跨区块与环绕边界的相邻罐体沿正式同材共享组更新外壳。</summary>
+    private void RefreshFluidTankNeighbours(Vector2Int changedCell)
+    {
+        var origin = boundChunk.Address.ChunkOrigin;
+        foreach (Vector2Int direction in wireNeighborDirections)
+        {
+            Vector2Int cell = changedCell + direction;
+            Vector2 delta = WorldTopologyRuntime.ShortestDelta(
+                new Vector2(origin.X, origin.Y), new Vector2(cell.x, cell.y));
+            int x = Mathf.RoundToInt(delta.x), y = Mathf.RoundToInt(delta.y);
+            if ((uint)x >= (uint)boundChunk.Terrain.Width || (uint)y >= (uint)boundChunk.Terrain.Height) continue;
+            MachineEntity node = MachineWorld.GetAt(cell, 0);
+            if (!MachineWorld.IsFluidTankBlock(node)) continue;
+            var key = new Vector3Int(x, y, node.Definition.Layer);
+            int mask = MachineWorld.GetFluidTankConnectionMask(node);
+            if (!submittedTankMasks.TryGetValue(key, out int previous) || previous != mask)
+                SubmitMechanicalNode(node, x, y);
         }
     }
 
@@ -316,21 +339,43 @@ public sealed partial class ChunkTilemapRenderer
     /// <summary>流体覆盖层沿原行网格显示两相余量与实际方向，读数不反写权威库存。</summary>
     private void SubmitFluidNode(MachineEntity node, int x, int y, Sprite body, Material material, Vector3 origin, Quaternion rotation)
     {
+        bool tankBlock = MachineWorld.IsFluidTankBlock(node);
+        int tankMask = tankBlock ? MachineWorld.GetFluidTankConnectionMask(node) : 0;
         FluidMachineState state = MachineWorld.GetFluidState(node);
         FluidInventory inventory = MachineWorld.GetFluidInventory(node);
         bool probe = node.Definition.Fluid.Kind is "mechanical-probe" or "electronic-probe";
         bool pipe = node.Definition.Layer == 2;
-        Part(node, x, y, 0, body, material, origin, rotation, Vector3.zero, Fit(body, pipe ? .55f : probe ? .32f : .85f, pipe ? .55f : probe ? .32f : .85f), 0, 0);
+        if (tankBlock)
+        {
+            submittedTankMasks[new Vector3Int(x, y, node.Definition.Layer)] = tankMask;
+            // 罐体始终占满一格，太阳投影仍只提交一次完整外壳。
+            MechanicalShadowRegistry.SetPart(this, new Vector3Int(x, y, node.Definition.Layer),
+                0, body, origin, Quaternion.identity, Vector3.zero, Fit(body, 1f, 1f), 0, default);
+            for (int slice = 0; slice < 9; slice++)
+            {
+                FluidTankBlockVisual.GetPart(body, slice, tankMask, out Sprite sprite, out Vector3 offset, out Vector3 scale);
+                int part = slice == 4 ? 0 : slice < 4 ? slice + 8 : slice + 7;
+                Part(node, x, y, part, sprite, material, origin, Quaternion.identity, offset, scale, 0, 0, partOrder: 0);
+            }
+        }
+        else Part(node, x, y, 0, body, material, origin, rotation, Vector3.zero,
+            Fit(body, pipe ? .55f : probe ? .32f : .85f, pipe ? .55f : probe ? .32f : .85f), 0, 0);
         MechanicalDepthVisual visual = mechanicalDepthVisuals[new Vector3Int(x, y, node.Definition.Layer)];
         Ports(node, x, y, 6, material, origin, rotation);
         if (probe) { visual.SetPartTint(0, state.ProbeConnected ? new Color(.35f, 1, .45f) : new Color(1, .25f, .2f)); return; }
         if (inventory.GetPressureKPa(MachineWorld.GetFluidVolumeLiters(node), MachineWorld.GetFluidMinimumGasSpaceLiters(node)) > node.Definition.Fluid.MaxSafePressureKPa)
-            visual.SetPartTint(0, new Color(1, .35f, .25f));
+        {
+            Color danger = new(1, .35f, .25f);
+            visual.SetPartTint(0, danger);
+            if (tankBlock) for (int part = 8; part < 16; part++) visual.SetPartTint(part, danger);
+        }
         if (fluidIndicatorSprite == null)
             fluidIndicatorSprite = Sprite.Create(Texture2D.whiteTexture, new Rect(0, 0, Texture2D.whiteTexture.width, Texture2D.whiteTexture.height),
                 new Vector2(.5f, .5f), Texture2D.whiteTexture.width);
         Color gas = new(.4f, .8f, 1, .95f), liquid = new(.9f, .68f, .25f, .95f);
-        float gasAmount = Mathf.Clamp01((float)(FluidUnits.MolToStandardLiters(inventory.GasMoles) / (decimal)node.Definition.Fluid.GasBufferStandardLiters));
+        double gasCapacity = node.Definition.Fluid.GasBufferStandardLiters *
+            (MachineWorld.GetFluidVolumeLiters(node) / node.Definition.Fluid.VolumeLiters);
+        float gasAmount = Mathf.Clamp01((float)(FluidUnits.MolToStandardLiters(inventory.GasMoles) / (decimal)gasCapacity));
         float liquidAmount = Mathf.Clamp01((float)(inventory.GetLiquidLiters() / MachineWorld.GetFluidVolumeLiters(node)));
         if (gasAmount > 0)
         { Part(node, x, y, 1, fluidIndicatorSprite, material, origin, Quaternion.identity, new Vector3(0, -.26f), new Vector3(.48f * gasAmount, .06f, 1), 0, 0); visual.SetPartTint(1, gas); }
@@ -382,7 +427,7 @@ public sealed partial class ChunkTilemapRenderer
     private void Part(MachineEntity node, int x, int y, int part, Sprite sprite, Material material,
         Vector3 origin, Quaternion rotation, Vector3 offset, Vector3 scale,
         int mode, float multiplier, float phase = 0f, int track = 0, float stroke = 0f,
-        bool drawBelowMechanical = false, Vector4 conveyorSurface = default)
+        bool drawBelowMechanical = false, Vector4 conveyorSurface = default, int partOrder = -1)
     {
         // 电机反向只做水平镜像，避免 180 度旋转把支脚和顶部结构倒置。
         if (node.Definition.IsConverter && (node.RotationQuarterTurns & 3) == 2)
@@ -405,7 +450,7 @@ public sealed partial class ChunkTilemapRenderer
         MechanicalShadowRegistry.SetPart(this, new Vector3Int(x, y, node.Definition.Layer),
             part, sprite, origin, rotation, offset, scale, mode, animation);
         mechanicalDepthVisuals[new Vector3Int(x, y, node.Definition.Layer)]
-            .SetPart(part, sprite, material, rotation, offset, scale, mode, animation, drawBelowMechanical, conveyorSurface);
+            .SetPart(part, sprite, material, rotation, offset, scale, mode, animation, drawBelowMechanical, conveyorSurface, partOrder);
     }
 
     /// <summary>每台机械只保留交互与必要灯光；图像通过共享行网格绘制。</summary>
@@ -436,6 +481,7 @@ public sealed partial class ChunkTilemapRenderer
     private void ClearMechanicalDepthVisuals()
     {
         submittedWireMasks.Clear();
+        submittedTankMasks.Clear();
         foreach (MechanicalDepthVisual visual in mechanicalDepthVisuals.Values)
             if (visual != null) visual.Dispose();
         mechanicalDepthVisuals.Clear();

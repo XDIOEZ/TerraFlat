@@ -14,6 +14,10 @@ namespace FlatWorld.Spaceflight
         private Rigidbody2D body;
         private Vector3 baseVisualPosition;
         private BoxCollider2D hitBox;
+        private SpriteRenderer[] tankParts;
+        private Sprite tankSource;
+        private int tankMask = -1;
+        private double tankCellSize;
         public Vector3 WorldPosition => transform.position;
         public int TargetGuid => int.TryParse(pieceId, out int id) ? id : 0;
         public bool IsValid => session != null && session.FindPiece(pieceId, out _, out _);
@@ -48,7 +52,57 @@ namespace FlatWorld.Spaceflight
             machineTarget = null;
             if (MachineCatalog.Get(piece.ItemId) != null)
                 using (MachineWorld.UseScope("ship:" + shipId))
-                    machineTarget = MachineWorld.GetOrCreateInteractionTarget(MachineWorld.GetById(TargetGuid));
+                {
+                    MachineEntity node = MachineWorld.GetById(TargetGuid);
+                    machineTarget = MachineWorld.GetOrCreateInteractionTarget(node);
+                    SynchronizeTankVisual(ship, node);
+                }
+        }
+
+        // 船上储罐使用同一权威本地格连接，只在外壳变化时重选九宫格子图。
+        private void SynchronizeTankVisual(ShipState ship, MachineEntity node)
+        {
+            if (visual == null) return;
+            if (!MachineWorld.IsFluidTankBlock(node))
+            {
+                if (tankParts != null)
+                    foreach (SpriteRenderer part in tankParts) part.enabled = false;
+                visual.enabled = true;
+                tankMask = -1;
+                return;
+            }
+            visual.enabled = false;
+            visual.transform.localRotation = Quaternion.identity;
+            visual.transform.localScale = Vector3.one;
+            int mask = MachineWorld.GetFluidTankConnectionMask(node);
+            if (tankParts != null && tankMask == mask && tankSource == visual.sprite &&
+                tankCellSize == ship.CellSizeMeters && tankParts[0].sprite != null) return;
+            tankParts ??= new SpriteRenderer[9];
+            for (int slice = 0; slice < tankParts.Length; slice++)
+            {
+                SpriteRenderer part = tankParts[slice];
+                if (part == null)
+                {
+                    GameObject child = new("TankPart_" + slice);
+                    child.transform.SetParent(visual.transform, false);
+                    part = tankParts[slice] = child.AddComponent<SpriteRenderer>();
+                    part.spriteSortPoint = SpriteSortPoint.Pivot;
+                }
+                FluidTankBlockVisual.GetPart(visual.sprite, slice, mask,
+                    out Sprite sprite, out Vector3 offset, out Vector3 scale);
+                part.sprite = sprite;
+                part.color = visual.color;
+                part.sharedMaterial = visual.sharedMaterial;
+                part.sortingLayerID = visual.sortingLayerID;
+                part.sortingOrder = visual.sortingOrder;
+                part.transform.localPosition = offset * (float)ship.CellSizeMeters;
+                part.transform.localScale = new Vector3(scale.x * (float)ship.CellSizeMeters,
+                    scale.y * (float)ship.CellSizeMeters, 1f);
+                part.enabled = true;
+            }
+            tankMask = mask;
+            tankSource = visual.sprite;
+            tankCellSize = ship.CellSizeMeters;
         }
         public void SetPose(Vector2 position, float degrees, double height)
         {

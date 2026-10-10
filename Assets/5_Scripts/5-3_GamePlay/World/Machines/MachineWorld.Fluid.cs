@@ -98,6 +98,27 @@ public static partial class MachineWorld
     public static void CollectFluidTankGroups(List<FluidTankGroup> result)
     { EnsureScope(); RebuildGraphsIfDirty(); result.Clear(); result.AddRange(fluidTankGroups); }
 
+    public static bool IsFluidTankBlock(MachineEntity node)
+        => node?.Definition.Fluid?.CombineAdjacent == true && GetFluidDeviceBehavior(node)?.IsSharedStorage == true;
+
+    // 外观只连接同一权威储罐组的四邻格，位序为北1、东2、南4、西8。
+    public static int GetFluidTankConnectionMask(MachineEntity node)
+    {
+        if (!IsFluidTankBlock(node)) return 0;
+        using var nodeScope = UseNodeScope(node);
+        RebuildGraphsIfDirty();
+        if (!fluidTankOwners.TryGetValue(node.Id, out FluidTankGroup group)) return 0;
+        int mask = 0;
+        foreach (Vector2Int direction in MechanicalNetworkGraph.Directions)
+        {
+            MachineEntity neighbor = graph.At(node.Cell + direction, node.Definition.Layer);
+            if (neighbor == null || !fluidTankOwners.TryGetValue(neighbor.Id, out FluidTankGroup adjacent) ||
+                !ReferenceEquals(group, adjacent)) continue;
+            mask |= direction.y > 0 ? 1 : direction.x > 0 ? 2 : direction.y < 0 ? 4 : 8;
+        }
+        return mask;
+    }
+
     private static void RebuildFluidNetworks()
     {
         SaveFluidGroups();
@@ -402,7 +423,8 @@ public static partial class MachineWorld
         {
             if (node.Definition.Fluid == null || !IsFluidActive(node)) continue;
             FluidMachineState state = GetFluidState(node); FluidInventory contents = GetFluidInventory(node);
-            int gas = (int)Math.Clamp(FluidUnits.MolToStandardLiters(contents.GasMoles) / (decimal)node.Definition.Fluid.GasBufferStandardLiters * 32, 0, 32);
+            double gasBuffer = node.Definition.Fluid.GasBufferStandardLiters * GetFluidVolumeLiters(node) / node.Definition.Fluid.VolumeLiters;
+            int gas = (int)Math.Clamp(FluidUnits.MolToStandardLiters(contents.GasMoles) / (decimal)gasBuffer * 32, 0, 32);
             int liquid = Math.Clamp((int)(contents.GetLiquidLiters() / GetFluidVolumeLiters(node) * 32), 0, 32);
             int appearance = HashCode.Combine(gas, liquid, state.LastFlowDirection, state.LastFlowPhase, state.BlockedPorts.Count > 0,
                 state.ProbeConnected, state.ValveOpen, contents.GetPressureKPa(GetFluidVolumeLiters(node), GetFluidMinimumGasSpaceLiters(node)) > node.Definition.Fluid.MaxSafePressureKPa);
