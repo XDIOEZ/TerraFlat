@@ -7,7 +7,7 @@ using XLua;
 
 namespace FlatWorld.Gameplay.Events
 {
-    internal sealed class LuaGameEventAction : IGameEventActionHandler
+    internal sealed class LuaGameEventAction : IGameEventActionHandler, IGameEventSuspendableAction
     {
         #region Lua 行动生命周期
 
@@ -63,7 +63,7 @@ namespace FlatWorld.Gameplay.Events
         }
 
         // 离开世界只移除临时效果，保留父子进度，返回源世界时由 Resume 恢复。
-        internal void Suspend(GameEventActionContext context, GameEventActionRuntimeSaveData state)
+        public void Suspend(GameEventActionContext context, JObject parameters, GameEventActionRuntimeSaveData state)
         {
             GameEventLuaActionData data = ReadData(state);
             using GameEventLuaContext scope = CreateContext(context, data, false);

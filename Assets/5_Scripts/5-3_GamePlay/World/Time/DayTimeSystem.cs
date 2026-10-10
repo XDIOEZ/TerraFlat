@@ -83,25 +83,38 @@ public partial class DayTimeSystem : SingletonMono<DayTimeSystem>
         SetGlobalGameDay(0f);
     }
 
+    #region 世界生命周期事件绑定
+
+    private GameManager boundGameManager;
+
     private void SubscribeGameManagerEvents()
     {
-        if (GameManager.Instance == null)
+        GameManager current = GameManager.Instance;
+        if (ReferenceEquals(boundGameManager, current))
             return;
 
-        GameManager.Instance.Event_GameWorldEnter -= OnGameWorldEnter;
-        GameManager.Instance.Event_GameWorldExit -= OnGameWorldExit;
-        GameManager.Instance.Event_GameWorldEnter += OnGameWorldEnter;
-        GameManager.Instance.Event_GameWorldExit += OnGameWorldExit;
+        UnsubscribeGameManagerEvents();
+        boundGameManager = current;
+        if (boundGameManager == null)
+            return;
+
+        boundGameManager.Event_GameWorldEnter += OnGameWorldEnter;
+        boundGameManager.Event_GameWorldExit += OnGameWorldExit;
     }
 
     private void UnsubscribeGameManagerEvents()
     {
-        if (GameManager.Instance == null)
-            return;
+        // 销毁时只解绑原事件源，不重新查找或创建管理器。
+        if (!ReferenceEquals(boundGameManager, null))
+        {
+            boundGameManager.Event_GameWorldEnter -= OnGameWorldEnter;
+            boundGameManager.Event_GameWorldExit -= OnGameWorldExit;
+        }
 
-        GameManager.Instance.Event_GameWorldEnter -= OnGameWorldEnter;
-        GameManager.Instance.Event_GameWorldExit -= OnGameWorldExit;
+        boundGameManager = null;
     }
+
+    #endregion
 
     private void OnGameWorldEnter()
     {

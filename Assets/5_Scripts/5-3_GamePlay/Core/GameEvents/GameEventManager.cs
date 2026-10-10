@@ -24,6 +24,15 @@ namespace FlatWorld.Gameplay.Events
         private GameEventLuaRuntime luaRuntime;
         private bool worldActive;
 
+        #region 世界时钟快照
+
+        private bool hasWorldClockSnapshot;
+        private string clockWorldKey = string.Empty;
+        private float clockTotalTime;
+        private float clockDayLength = 1440f;
+
+        #endregion
+
         public event Action<GameEventRuntimeNotification> EventStarted;
         public event Action<GameEventRuntimeNotification> EventEnded;
         public event Action<string, JObject> ConfiguredSignalRaised;
@@ -37,6 +46,8 @@ namespace FlatWorld.Gameplay.Events
         protected override void Awake()
         {
             base.Awake();
+            if (instance != this) return;
+
             DontDestroyOnLoad(gameObject);
             GameEventExtensionRegistry.EnsureBuiltInsRegistered();
             ReloadConfiguration();
@@ -105,7 +116,7 @@ namespace FlatWorld.Gameplay.Events
             return loadResult;
         }
 
-        #region Lua 会话与离开世界
+        #region 事件会话与离开世界
 
         private bool HasActiveLuaActions()
         {
@@ -119,24 +130,25 @@ namespace FlatWorld.Gameplay.Events
             return false;
         }
 
-        private void SuspendLuaActions()
+        private void SuspendActiveActions()
         {
             if (!GameNetwork.HasStateAuthority || runtimeData?.ActiveEvents == null) return;
-            bool clockAvailable = TryGetCurrentClock(out string worldKey, out _, out TimeData timeData);
-            float now = clockAvailable ? timeData.GetTotalGameTime() : 0f;
-            float dayLength = clockAvailable ? Mathf.Max(1f, timeData.DayLength) : 1440f;
+
+            // 退出时仅使用运行期间保存的时钟，不再依赖已开始销毁的场景对象。
+            float now = hasWorldClockSnapshot ? clockTotalTime : 0f;
+            float dayLength = clockDayLength;
             foreach (ActiveGameEventSaveData active in runtimeData.ActiveEvents)
             {
-                if (active == null || (clockAvailable && active.SourceWorldKey != worldKey) ||
+                if (active == null || (hasWorldClockSnapshot && active.SourceWorldKey != clockWorldKey) ||
                     !definitionsById.TryGetValue(active.EventId, out GameEventDefinition definition)) continue;
                 foreach (GameEventActionDefinition action in definition.Actions)
                 {
                     GameEventActionRuntimeSaveData state = FindActionState(active, action.Id);
                     if (state == null || !state.Started ||
                         !GameEventExtensionRegistry.TryGetAction(action.Type, out IGameEventActionHandler handler) ||
-                        handler is not LuaGameEventAction lua) continue;
-                    try { lua.Suspend(CreateActionContext(definition, action, active, now, dayLength), state); }
-                    catch (Exception exception) { Debug.LogError($"[GameEvent Lua:{definition.Id}] 离开世界清理失败：{exception}"); }
+                        handler is not IGameEventSuspendableAction suspendable) continue;
+                    try { suspendable.Suspend(CreateActionContext(definition, action, active, now, dayLength), action.Parameters, state); }
+                    catch (Exception exception) { Debug.LogError($"[GameEvent:{definition.Id}] 离开世界清理失败：{exception}"); }
                 }
             }
         }
@@ -266,18 +278,29 @@ namespace FlatWorld.Gameplay.Events
         private void OnGameWorldEnter()
         {
             worldActive = true;
+            ResetClockSnapshot();
             BindSaveData(SaveDataMgr.Instance?.SaveData);
             SubscribeTimeSystem();
+            TryGetCurrentClock(out _, out _, out _);
             if (GameNetwork.HasStateAuthority)
                 ResumeActiveEvents();
         }
 
         private void OnGameWorldExit()
         {
-            SuspendLuaActions();
+            bool shouldSuspend = worldActive;
             worldActive = false;
-            UnsubscribeTimeSystem();
-            runtimeData = null;
+            try
+            {
+                if (shouldSuspend)
+                    SuspendActiveActions();
+            }
+            finally
+            {
+                UnsubscribeTimeSystem();
+                runtimeData = null;
+                ResetClockSnapshot();
+            }
         }
 
         private void BindSaveData(GameSaveData saveData)
@@ -329,7 +352,7 @@ namespace FlatWorld.Gameplay.Events
 
         private void SubscribeTimeSystem()
         {
-            DayTimeSystem current = DayTimeSystem.Instance;
+            DayTimeSystem current = DayTimeSystem.GetInstance();
             if (ReferenceEquals(subscribedTimeSystem, current))
                 return;
 
@@ -955,25 +978,39 @@ namespace FlatWorld.Gameplay.Events
             return string.Equals(sceneName, resolvedSceneName, StringComparison.Ordinal);
         }
 
-        private static bool TryGetCurrentClock(
+        private bool TryGetCurrentClock(
             out string activeWorldKey,
             out string resolvedSceneName,
             out TimeData timeData)
         {
-            DayTimeSystem timeSystem = DayTimeSystem.Instance;
+            DayTimeSystem timeSystem = subscribedTimeSystem != null
+                ? subscribedTimeSystem
+                : worldActive ? DayTimeSystem.GetInstance() : null;
             activeWorldKey = timeSystem != null
                 ? timeSystem.GetCurrentActiveSceneName() : SceneManager.GetActiveScene().name;
             resolvedSceneName = activeWorldKey;
             timeData = null;
-            return timeSystem != null &&
-                   timeSystem.TryGetResolvedTimeData(
-                       activeWorldKey,
-                       out resolvedSceneName,
-                       out timeData) &&
-                   timeData != null;
+            if (timeSystem == null ||
+                !timeSystem.TryGetResolvedTimeData(activeWorldKey, out resolvedSceneName, out timeData) ||
+                timeData == null)
+                return false;
+
+            clockWorldKey = activeWorldKey;
+            clockTotalTime = timeData.GetTotalGameTime();
+            clockDayLength = Mathf.Max(1f, timeData.DayLength);
+            hasWorldClockSnapshot = true;
+            return true;
         }
 
-        private static float GetCurrentTotalTime()
+        private void ResetClockSnapshot()
+        {
+            hasWorldClockSnapshot = false;
+            clockWorldKey = string.Empty;
+            clockTotalTime = 0f;
+            clockDayLength = 1440f;
+        }
+
+        private float GetCurrentTotalTime()
         {
             return TryGetCurrentClock(out _, out _, out TimeData timeData)
                 ? timeData.GetTotalGameTime()
@@ -982,12 +1019,17 @@ namespace FlatWorld.Gameplay.Events
 
         protected override void OnDestroy()
         {
-            if (worldActive) SuspendLuaActions();
+            if (instance != this)
+            {
+                base.OnDestroy();
+                return;
+            }
+
+            OnGameWorldExit();
             GameEventExtensionRegistry.SetLuaRuntime(null);
             luaRuntime?.Dispose();
             luaRuntime = null;
-            UnsubscribeTimeSystem();
-            if (boundGameManager != null)
+            if (!ReferenceEquals(boundGameManager, null))
             {
                 boundGameManager.Event_GameWorldEnter -= OnGameWorldEnter;
                 boundGameManager.Event_GameWorldExit -= OnGameWorldExit;

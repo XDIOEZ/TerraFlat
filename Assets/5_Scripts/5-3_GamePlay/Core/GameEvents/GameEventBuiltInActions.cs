@@ -527,7 +527,10 @@ namespace FlatWorld.Gameplay.Events
 
         public void Suspend(GameEventActionContext context, JObject parameters, GameEventActionRuntimeSaveData state)
         {
-            WeatherMgr.Instance?.ClearGameEventWeather(context.Definition.Id);
+            // 清理只访问已存在的天气管理器，禁止销毁阶段自动创建新对象。
+            WeatherMgr weather = WeatherMgr.ExistingInstance;
+            if (weather != null)
+                weather.ClearGameEventWeather(context.Definition.Id);
         }
 
         private static GameEventActionStatus Apply(
