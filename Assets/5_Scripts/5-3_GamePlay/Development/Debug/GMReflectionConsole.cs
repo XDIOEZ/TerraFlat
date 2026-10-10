@@ -2091,13 +2091,15 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
                     RefreshStructureOptions();
                 RefreshBiomeSelection();
                 break;
-            case GmPageId.Device:
-                RefreshDevicePage();
+            case GmPageId.GameEvents:
                 BindGameEventManager();
                 if (refreshCatalogs)
                     RebuildGameEventPage();
                 if (refreshCatalogs)
                     RebuildReflectedCommands();
+                break;
+            case GmPageId.Device:
+                RefreshDevicePage();
                 break;
         }
 

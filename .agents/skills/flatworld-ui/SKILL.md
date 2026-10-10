@@ -154,7 +154,7 @@ description: "Use when: 定位或修改 FlatWorld 的 UIManager、BasePanel、�
 - 层级显示中的导航模式也走统一观察模式与透明度偏好；新增 `GmWorldLayerMode` 只追加枚举数值，不能重排已保存的模式。导航按钮保持独立行，避免挤压原有温度/污染按钮及透明度滑轨；箭头表示朝本地玩家的共享寻路场，不代表每只怪物当前都在追击。
 - 日志页的 GM 入口广播 `RuntimeDebugOverlay.GmPanelOpenRequested`，由 `GMReflectionConsole` 订阅；日志属于 GamePlay，而 GM 属于依赖 GamePlay 的 `FlatWorld.Gameplay.Debug`，禁止反向直接引用。日志 Canvas 排序高于 GM，打开 GM 前先收起日志页。GM 点选传送层仅在主动选点时启用，持有独立触点和玩法输入锁；关闭、失焦和换场景必须释放。
 - 日志正文显示前按 Unicode 码点检查 TMP 字体及回退字体，缺字显示为 `[U+编号]`，防止缺字警告反复写回日志；复制和磁盘日志必须保留原文。
-- GM 一级分页仅按玩家、世界、生成与 AI、调试与设备分类；`BuildPageGroups` 定义内部功能区和跳转入口，`GetPageGroup` 统一映射搜索、导航与 `ActivePageIndex`，原子功能区共用分类 ScrollRect。搜索定位必须按整个滚动 Content 计算，周期采样只更新视口内的功能区；新增功能优先归入现有分类，枚举数值只追加不重排。页签宽度由布局计算，世界观察层不随 GM 窗口关闭而关闭。
+- GM 顶部保持五个分页：玩家、世界、生成与 AI、调试工具（事件与命令）、设备数据；`BuildPageGroups` 定义内部功能区和跳转入口，`GetPageGroup` 统一映射搜索、导航与 `ActivePageIndex`，原子功能区共用分类 ScrollRect。仅含一个功能区时不生成冗余内部导航；搜索定位按整个滚动 Content 计算，周期采样只更新视口内的功能区；枚举数值只追加不重排。世界观察层不随 GM 窗口关闭而关闭。
 - 宣传片录制模式由 `UIManager` 统一管理：裸 F1 只临时停用全部已加载 `Canvas` 与 `GraphicRaycaster`，必须保存并恢复原 `enabled` 状态，不能通过 Close/ShowAll 改变业务面板开关；录制期间新建 Canvas 要在渲染前继续纳入隐藏。
 - 主菜单控件名集中在 `GameManager.UI.cs`；定向构建 Prefab，避免无关重写。
 - 主菜单仍保留柔焦世界背景和专属排版，但它是全局灰阶主题的视觉源：灰按钮、近白文字、淡金点缀必须与 `FlatWorldUITheme` 保持一致。只换背景或配色时使用 `MainMenuPrefabBuilder.ApplyReferenceStyle` 原位更新正式 Prefab；调整布局时手动修改 `UI_MainMenu.prefab` 并同步 `MainMenuPrefabBuilder`，不调用清空子节点的完整重建入口。

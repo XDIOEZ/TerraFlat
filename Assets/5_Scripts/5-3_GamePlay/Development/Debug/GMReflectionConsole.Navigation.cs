@@ -345,11 +345,12 @@ public sealed partial class GMReflectionConsole
 
         scroll.content = contentRect;
 
-        CreateTab(content.transform, GmPageId.Player, "玩家", 150f);
-        CreateTab(content.transform, GmPageId.World, "世界", 150f);
-        CreateTab(content.transform, GmPageId.Spawn, "生成与 AI", 160f);
-        CreateTab(content.transform, GmPageId.Device, "调试与设备", 160f);
-        // 窄屏仍由现有滚动条兜底，常规分辨率下四个分类直接可见。
+        CreateTab(content.transform, GmPageId.Player, "玩家", 210f);
+        CreateTab(content.transform, GmPageId.World, "世界", 210f);
+        CreateTab(content.transform, GmPageId.Spawn, "生成与 AI", 210f);
+        CreateTab(content.transform, GmPageId.GameEvents, "调试工具", 210f);
+        CreateTab(content.transform, GmPageId.Device, "设备数据", 210f);
+        // 五个分页在常规窗口内均衡排列，窄屏继续支持横向滚动。
         ContentSizeFitter tabSize = content.AddComponent<ContentSizeFitter>();
         tabSize.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
     }
@@ -372,12 +373,14 @@ public sealed partial class GMReflectionConsole
         CreateGroupPage(GmPageId.Player, GmPageId.Player, GmPageId.Buff, GmPageId.Quests);
         CreateGroupPage(GmPageId.World, GmPageId.World, GmPageId.Layers, GmPageId.Structures);
         CreateGroupPage(GmPageId.Spawn, GmPageId.Spawn, GmPageId.Aiecs);
-        CreateGroupPage(GmPageId.Device, GmPageId.Device, GmPageId.GameEvents, GmPageId.Commands);
+        CreateGroupPage(GmPageId.GameEvents, GmPageId.GameEvents, GmPageId.Commands);
+        CreateGroupPage(GmPageId.Device, GmPageId.Device);
     }
 
     private void CreateGroupPage(GmPageId groupId, params GmPageId[] sections)
     {
-        GameObject pageRoot = CreateUiObject(GetPageLabel(groupId) + " Group", gmPageHost);
+        string groupName = groupId == GmPageId.GameEvents ? "调试工具" : GetPageLabel(groupId);
+        GameObject pageRoot = CreateUiObject(groupName + " Group", gmPageHost);
         RectTransform rootRect = pageRoot.GetComponent<RectTransform>();
         rootRect.anchorMin = Vector2.zero;
         rootRect.anchorMax = Vector2.one;
@@ -391,6 +394,10 @@ public sealed partial class GMReflectionConsole
         group.Scroll = scroll;
         group.Content = content.GetComponent<RectTransform>();
         pageRoot.SetActive(false);
+
+        // 只有一个功能区的设备页无需再显示重复的内部导航按钮。
+        if (sections.Length <= 1)
+            return;
 
         GameObject navigation = CreateUiObject("Section Navigation", content);
         navigation.AddComponent<LayoutElement>().preferredHeight = 42f;
@@ -435,7 +442,8 @@ public sealed partial class GMReflectionConsole
             GmPageId.Player or GmPageId.Buff or GmPageId.Quests => GmPageId.Player,
             GmPageId.World or GmPageId.Layers or GmPageId.Structures => GmPageId.World,
             GmPageId.Spawn or GmPageId.Aiecs => GmPageId.Spawn,
-            GmPageId.Device or GmPageId.GameEvents or GmPageId.Commands => GmPageId.Device,
+            GmPageId.GameEvents or GmPageId.Commands => GmPageId.GameEvents,
+            GmPageId.Device => GmPageId.Device,
             _ => throw new ArgumentOutOfRangeException(nameof(pageId), pageId, "GM 功能未分类")
         };
     }
