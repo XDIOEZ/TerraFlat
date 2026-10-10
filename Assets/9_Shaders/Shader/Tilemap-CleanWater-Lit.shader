@@ -8,7 +8,9 @@ Shader "FlatWorld/2D/Tilemap Clean Water Lit"
         [HideInInspector] _LiquidDepthUvScaleOffset("水深纹理坐标", Vector) = (1,1,0,0)
 
         [Header(Clean Water Surface)]
-        _WaterColor("统一水色(RGBA)", Color) = (0.42, 0.72, 0.98, 0.68)
+        _DeepColor("深水颜色", Color) = (0.02, 0.09, 0.36, 1)
+        _ShallowColor("浅水颜色", Color) = (0.42, 0.72, 0.98, 1)
+        _SurfaceTint("水面染色强度", Range(0, 1)) = 1
         _SwellScale("涌浪尺度", Range(0.05, 4)) = 0.42
         _DetailScale("细浪尺度", Range(0.5, 12)) = 4.4
         _WaveSpeed("水流速度", Range(-3, 3)) = 0.26

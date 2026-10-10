@@ -55,6 +55,7 @@ Material:
     - _ShoreStrength: 0
     - _SpecularPower: 72
     - _SpecularStrength: 0.12
+    - _SurfaceTint: 1
     - _SwellScale: 0.74
     - _WaveDistortion: 0.8
     - _WaveSpeed: 0.42
@@ -62,6 +63,7 @@ Material:
     m_Colors:
     - _CausticColor: {r: 0.35, g: 0.58, b: 0.96, a: 1}
     - _Color: {r: 1, g: 1, b: 1, a: 1}
+    - _DeepColor: {r: 0.02, g: 0.09, b: 0.36, a: 1}
     - _Flip: {r: 1, g: 1, b: 1, a: 1}
     - _FlowDirection: {r: 1, g: 0.35, b: 0, a: 0}
     - _FoamColor: {r: 0.75, g: 0.87, b: 1, a: 1}
@@ -69,7 +71,7 @@ Material:
     - _ReflectionDirection: {r: -0.35, g: 0.18, b: 0.92, a: 0}
     - _RendererColor: {r: 1, g: 1, b: 1, a: 1}
     - _RippleColor: {r: 0.3, g: 0.57, b: 0.98, a: 1}
-    - _WaterColor: {r: 0.42, g: 0.72, b: 0.98, a: 0.68}
+    - _ShallowColor: {r: 0.42, g: 0.72, b: 0.98, a: 1}
     - _ShoreColor: {r: 0.32, g: 0.56, b: 0.92, a: 1}
     - _SpecularColor: {r: 1, g: 0.97, b: 0.88, a: 1}
     - _SunDirection: {r: 0.28, g: 0.42, b: 0.86, a: 0}

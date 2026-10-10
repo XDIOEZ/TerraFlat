@@ -37,6 +37,7 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
+    - _SurfaceTint: 1
     - _CausticStrength: 0.015
     - _CornerStrength: 0.2
     - _DetailScale: 2.7
@@ -72,5 +73,6 @@ Material:
     - _ShoreColor: {r: 0.32, g: 0.56, b: 0.92, a: 1}
     - _SpecularColor: {r: 1, g: 0.97, b: 0.88, a: 1}
     - _SunDirection: {r: 0.28, g: 0.42, b: 0.86, a: 0}
-    - _WaterColor: {r: 0.42, g: 0.72, b: 0.98, a: 0.68}
+    - _DeepColor: {r: 0.02, g: 0.09, b: 0.36, a: 1}
+    - _ShallowColor: {r: 0.42, g: 0.72, b: 0.98, a: 1}
   m_BuildTextureStacks: []

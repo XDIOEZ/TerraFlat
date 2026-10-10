@@ -17,6 +17,7 @@ float2 QuantizeWaterPosition(float2 positionWS)
 WaterSurfaceData CalculateWaterSurface(
     float2 positionWS,
     float2 screenUV,
+    half liquidDepth,
     float2 direction)
 {
     WaterSurfaceData surface = (WaterSurfaceData)0;
@@ -70,6 +71,10 @@ WaterSurfaceData CalculateWaterSurface(
         -gradient.y * _NormalStrength * _OceanWaveFactors.y,
         1.0));
     height *= _OceanWaveFactors.y;
+
+    // 水面水深已离散为十档；基础水色不再混入噪声，让 0.1 的每一级变化都保持清晰可辨。
+    surface.liquidDepth = saturate(liquidDepth);
+    surface.depthBlend = 1.0h - surface.liquidDepth;
 
     // 中尺度浪脊与大涌浪共用扭曲坐标，再用低频噪声切成自然短段。
     float rippleWarp = WaterNoise(
@@ -207,6 +212,7 @@ WaterSurfaceData CalculateWaterSurface(
     float causticNetwork = max(causticRidgeA, causticRidgeB * 0.62)
         * smoothstep(0.3, 0.72, causticBreakup);
     surface.caustic = causticNetwork
+        * pow(saturate(surface.depthBlend), 1.65)
         * saturate(_CausticStrength)
         * _CausticColor.a;
 
@@ -239,11 +245,16 @@ WaterSurfaceData CalculateWaterSurface(
     return surface;
 }
 
-/// <summary>风格化水面与写实水面共用同一种淡蓝底色，只保留独立波纹细节。</summary>
-half3 ApplyWaterSurface(WaterSurfaceData surface)
+/// <summary>按深浅水、焦散、天空反光、太阳高光和白沫的层级合成海面。</summary>
+half3 ApplyWaterSurface(half3 sourceColor, WaterSurfaceData surface)
 {
-    half3 sourceColor = _WaterColor.rgb;
-    sourceColor *= 1.0h - surface.rippleShadow;
+    half3 waterTint = lerp(_DeepColor.rgb, _ShallowColor.rgb, surface.depthBlend);
+    half tintStrength = lerp(
+        saturate(_SurfaceTint),
+        1.0h,
+        surface.liquidDepth);
+    sourceColor = lerp(sourceColor, waterTint, tintStrength);
+    sourceColor = lerp(sourceColor, _DeepColor.rgb, surface.rippleShadow);
     sourceColor += _CausticColor.rgb * surface.caustic;
     sourceColor = lerp(sourceColor, _ReflectionColor.rgb, surface.reflection);
     sourceColor = lerp(sourceColor, _RippleColor.rgb, surface.ripple);

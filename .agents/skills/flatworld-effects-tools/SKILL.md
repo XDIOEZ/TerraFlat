@@ -62,12 +62,12 @@ description: "Use when: 定位或修改 FlatWorld 的运行时特效、粒子、
 - 共用海水 `UsePass` 的包装 Shader 必须声明公共 Pass 新增的同名材质属性；月光等夜间自发光倒影应在 `CombinedShapeLightShared` 之后合成，避免全局夜间光照被重复相乘。月亮出现动画读取 `DayTimeSystem` 发布的 `_GlobalMoonAppearance`，尺寸/渐亮与 `_GlobalMoonlightIntensity` 的月相亮度分离，避免新月把月面永久缩小。
 - 正式 Ground/Liquid 由 BRG 独立提交，液体外观来自 `LiquidDefinition.WorldWater`，禁止按 GroundTileId 查水面贴图。岸线以 LiquidDepth > 0 判断，深度用每格四角插值；任一边界格液深变化须更新八方向邻区的共享边/角，不能只监听 TerrainCell 改动。旧 Tilemap 的颜色仍只编码岸线，兼容深度纹理与 BRG 共用连续液深语义。
 - 岩浆源材质使用独立 `Tilemap Lava Lit` Shader；正式 Chunk Mesh 会把源材质属性复制到共用 `Chunk Mesh Water Lit`，因此岩浆必须通过 `_LavaMode=1` 和同名参数复用 `LavaSurfaceCommon.hlsl`。岩浆动态形态读取独立可平铺 `_LavaPatternTex`，RGBA 分别承载主体、扰动和两套交替高光，不能占用世界液体 Sprite 的 `_MainTex` 通道。
-- 普通水体（海、河、湖及各类水）只使用共用材质的 `_WaterColor` RGBA 统一上色和固定透明度，不按液深分层染色或改变 Alpha；水深仍用于玩法及岩浆等特殊液体。两种水体风格只改变波纹与反射算法，不改变基础颜色。
+- 普通水体恢复按权威液深在 `_ShallowColor` / `_DeepColor` 间着色，保留蓝色系与半透明水底；写实水色使用共享格角的连续水深，风格化水色保留十档。三条渲染路径的两种 Pass 均用连续液深将不透明度从 0.60 渐变到 0.80，禁止按离散色阶改变 Alpha；湿度过滤及减弱后的波纹参数独立保留。
 - `ChunkEnvironmentRenderer` 的湿度等地表染色默认排除 `LiquidDepth > 0` 的液体格；只有显式 `includeLiquidCells` 才允许覆盖液体。初始化、地形/单格液体变化及 `LiquidBatchChanged` 共用筛选，抽干后恢复陆地覆盖。水色分块先隔离这类额外覆盖，不能靠改水色或关闭全局 SRP Batcher 遮掩。
 - Tilemap 合批后 `POSITION` 不保证是 Chunk 局部坐标；水深与岸线使用世界坐标，MPB 的 `_LiquidDepthUvScaleOffset` 必须扣除水层原点再加入一格纹理边框。当前世界网格每格为 1 单位且原点对齐整数，不要用 `unity_WorldToObject` 恢复已被合批丢失的局部坐标。
 - 水面潮流使用 `DayTimeSystem` 发布的 `_GlobalGameDay` 驱动，并沿材质 `_FlowDirection` 轴按 `_TideCyclesPerDay` 往返；方向性水纹不要改回基于 `_Time` 的持续旋转，否则跳时、读档与游戏时间倍率会和潮汐表现脱节。
 - 写实水面的风浪传播与潮流平移必须分开：波相位随游戏时间连续推进，潮汐只平移水面坐标，避免潮流换向时整片海面停住；波面法线与太阳高光共用解析波斜率，缩小时通过屏幕导数衰减细浪并拓宽高光，不量化写实水面的世界坐标。风格化水面按其独立算法保留像素采样与浪纹。
-- 水体风格由 `WaterVisualSettings` 保存本地偏好，`ChunkView` 的 Water/CaveWater 均通过 `WaterVisualStyleBinding` 在激活和设置变化时替换共享材质，不重建地形、不改写水深 MPB。风格化材质显式启用 `FLATWORLD_WATER_STYLIZED` 本地关键字，两种正式材质都必须被 Prefab 引用，确保构建保留 Shader 变体；两种算法共用 `WaterSurfaceCommon.hlsl` 的统一水色、岸线与月光契约。
+- 水体风格由 `WaterVisualSettings` 保存本地偏好，`ChunkView` 的 Water/CaveWater 均通过 `WaterVisualStyleBinding` 在激活和设置变化时替换共享材质，不重建地形、不改写水深 MPB。风格化材质显式启用 `FLATWORLD_WATER_STYLIZED` 本地关键字，两种正式材质都必须被 Prefab 引用，确保构建保留 Shader 变体；两种算法共用 `WaterSurfaceCommon.hlsl` 的水深、岸线与月光契约。
 - 运行时动态创建、用于展示世界物品图标的 `SpriteRenderer` 不得依赖 `AddComponent` 默认材质；应复用 `RuntimeItemDefinition.Material` 的物品材质与外壳回退，确保提示表现和真实物品一致接收 Light2D。
 - 草木风摆由 `WeatherMgr` 写入 `_GlobalWindStrength` Shader 全局参数，草 Shader 与支持积雪、水体等通道的 `Sprite-Lit-Master` 共用 `VegetationSway.hlsl` 顶点位移。`Sprite-Lit-Master` 只对启用 `FLATWORLD_VEGETATION_SWAY` 材质关键字的物品执行风摆，避免普通物品承担顶点计算。Tilemap 使用单元锚点弯曲；树等底部 Pivot 的独立 Sprite 使用对象根部弯曲，按图片 PPU/Pivot 标定 `_GrassSpriteHeight`，用 `_GrassBendStart` 固定树干。JSON 世界物品通过 `visual.materialAddress` 引用带 `ItemMaterial` 标签的共享材质；所有 URP 2D 活跃 Pass 必须复用同一顶点位移。
 - 屏幕后处理依赖当前 `QualitySettings` 的 `customRenderPipeline`；不能只检查编辑器当前质量档位，所有可选档位都必须引用项目内实际存在的 URP 资源，否则 Scene 视图可能可见而 Game/Android 画面不可见。
