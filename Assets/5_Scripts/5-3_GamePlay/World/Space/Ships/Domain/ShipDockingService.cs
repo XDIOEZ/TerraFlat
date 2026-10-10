@@ -198,12 +198,27 @@ namespace FlatWorld.Spaceflight
         private static ShipAssemblyState Aggregate(List<ShipState> members)
         {
             members.Sort((a, b) => StringComparer.Ordinal.Compare(a.ShipId, b.ShipId));
-            var assembly = new ShipAssemblyState { AssemblyId = members[0].ShipId, AngleRadians = members[0].AngleRadians };
+            var assembly = new ShipAssemblyState { AssemblyId = members[0].ShipId };
             foreach (ShipState member in members)
             {
+                assembly.MemberShipIds.Add(member.ShipId);
+                assembly.MemberTransforms.Add(new ShipAssemblyMemberState { ShipId = member.ShipId });
+            }
+            RefreshAssembly(assembly, members);
+            return assembly;
+        }
+
+        // 连接关系不变时只更新质量与运动量，复用组合和成员变换。
+        internal static void RefreshAssembly(ShipAssemblyState assembly, IReadOnlyList<ShipState> members)
+        {
+            assembly.AngleRadians = members[0].AngleRadians;
+            assembly.MassKg = assembly.PositionX = assembly.PositionY = 0d;
+            assembly.VelocityX = assembly.VelocityY = assembly.InertiaKgM2 = 0d;
+            for (int i = 0; i < members.Count; i++)
+            {
+                ShipState member = members[i];
                 if (!FluidUnits.IsFinite(member.MassKg) || member.MassKg < 0d)
                     throw new InvalidDataException("对接成员质量无效");
-                assembly.MemberShipIds.Add(member.ShipId);
                 assembly.MassKg += member.MassKg;
                 assembly.PositionX += member.MassKg * member.PositionX;
                 assembly.PositionY += member.MassKg * member.PositionY;
@@ -221,23 +236,21 @@ namespace FlatWorld.Spaceflight
                 assembly.VelocityX = members[0].VelocityX; assembly.VelocityY = members[0].VelocityY;
             }
             double angularMomentum = 0d;
-            foreach (ShipState member in members)
+            for (int i = 0; i < members.Count; i++)
             {
+                ShipState member = members[i];
                 double dx = member.PositionX - assembly.PositionX, dy = member.PositionY - assembly.PositionY;
                 assembly.InertiaKgM2 += member.InertiaKgM2 + member.MassKg * (dx * dx + dy * dy);
                 angularMomentum += member.InertiaKgM2 * member.AngularVelocityRadiansPerSecond +
                     member.MassKg * (dx * (member.VelocityY - assembly.VelocityY) -
                         dy * (member.VelocityX - assembly.VelocityX));
                 ShipGeometry.Rotate(dx, dy, -assembly.AngleRadians, out double offsetX, out double offsetY);
-                assembly.MemberTransforms.Add(new ShipAssemblyMemberState
-                {
-                    ShipId = member.ShipId, OffsetX = offsetX, OffsetY = offsetY,
-                    RelativeAngleRadians = member.AngleRadians - assembly.AngleRadians
-                });
+                ShipAssemblyMemberState transform = assembly.MemberTransforms[i];
+                transform.OffsetX = offsetX; transform.OffsetY = offsetY;
+                transform.RelativeAngleRadians = member.AngleRadians - assembly.AngleRadians;
             }
             assembly.AngularVelocityRadiansPerSecond = assembly.InertiaKgM2 > 0d
                 ? angularMomentum / assembly.InertiaKgM2 : members[0].AngularVelocityRadiansPerSecond;
-            return assembly;
         }
 
         public static void RigidlyCarryMembers(ShipAssemblyState assembly, IReadOnlyList<ShipState> ships)
@@ -284,7 +297,8 @@ namespace FlatWorld.Spaceflight
             pair != null && (pair.ShipAId == shipId && pair.PortAId == portId || pair.ShipBId == shipId && pair.PortBId == portId);
         public static ShipState FindShip(IReadOnlyList<ShipState> ships, string shipId)
         {
-            foreach (ShipState ship in ships) if (ship != null && ship.ShipId == shipId) return ship;
+            for (int i = 0; i < ships.Count; i++)
+                if (ships[i] != null && ships[i].ShipId == shipId) return ships[i];
             return null;
         }
         public static ShipDockingPortState FindPort(ShipState ship, string portId)

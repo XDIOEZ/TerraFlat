@@ -20,6 +20,9 @@ namespace FlatWorld.Spaceflight
         public double CruiseAccelerationMetersPerSecondSquared = 60d;
         public double CruiseBrakingMetersPerSecondSquared = 100d;
         public double CruiseTurnDegreesPerSecond = 150d;
+        public double NavigationArrivalDistanceMeters = 1d;
+        public double NavigationArrivalSpeedMetersPerSecond = .25d;
+        public double NavigationSurfaceClearanceMeters = 12d;
         public double FreeFloatMaxSpeedMetersPerSecond = 12d;
         public double FreeFloatBrakingMetersPerSecondSquared = 2d;
         public double SurfaceEntryHeightMeters = 80d;
@@ -46,6 +49,9 @@ namespace FlatWorld.Spaceflight
                     current.MinimumSpaceExitSpeedMetersPerSecond <= 0d ||
                     current.CruiseMaxSpeedMetersPerSecond <= 0d || current.CruiseAccelerationMetersPerSecondSquared <= 0d ||
                     current.CruiseBrakingMetersPerSecondSquared <= 0d || current.CruiseTurnDegreesPerSecond <= 0d ||
+                    !SpaceVector2.Finite(current.NavigationArrivalDistanceMeters) || current.NavigationArrivalDistanceMeters <= 0d ||
+                    !SpaceVector2.Finite(current.NavigationArrivalSpeedMetersPerSecond) || current.NavigationArrivalSpeedMetersPerSecond <= 0d ||
+                    !SpaceVector2.Finite(current.NavigationSurfaceClearanceMeters) || current.NavigationSurfaceClearanceMeters < current.NavigationArrivalDistanceMeters ||
                     current.FreeFloatMaxSpeedMetersPerSecond <= 0d || current.FreeFloatBrakingMetersPerSecondSquared <= 0d)
                     throw new InvalidOperationException("太空移动与冲击配置无效。");
                 return current;

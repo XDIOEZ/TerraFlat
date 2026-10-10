@@ -27,6 +27,8 @@ description: "Use when: 定位或修改 FlatWorld 的太空场景、固定星系
 - `PlanetData` 跨两个目录的 partial；序列化字段变化必须同时检查并联动 Data Skill。
 - 星体位置由静态 `PlacementDistanceMeters/PlacementAngleRadians` 与星系种子在加载时确定，不进行公转；时间只驱动自转与地表环境，`GetRotationRadians` 支持逆向周期。
 - 太空主体只使用 `SpaceMotionState` 的双精度位置和速度，`UniverseSimulation.StepMotion` 负责无引力直线移动及星球连续接触；船体 `Cruising` 阶段按配置速度、加速、刹车和转向上限驾驶，船间碰撞仍由 `ShipCollisionSimulation` 独立结算。
+- 对接拓扑由 `ShipAssemblyCache` 按船体、接口与确认状态快照复用，运动和真实质量仍每步刷新；模拟与即时查询必须使用不同缓存，避免查询改写正在结算的组合。断裂、接口毁坏、重连与会话退出都不能沿用旧成员关系。
+- 自动航行由 `ShipCruiseGuidance` 处理减速、转向及星体外侧航点，同一对接整体只保留最新任务，到点结束、手动输入接管、缺燃料制动等待；航线遇到星体先在近侧停靠，不冒充自动绕行或自动降落。部分燃料限制实际速度变化而非仅缩短期望速度；松键免费刹车不扫描推进设备。光纤查询复用会话工作区，但每次仍检查真实连接。
 - `SpaceSession.LateUpdate` 先以玩家双精度位置更新 `ViewOrigin`，再统一投影星球、飞船和乘员；不要恢复五千米阈值跳变或让 `SpaceMgr.Update` 提前使用旧原点。
 - Prefab 名经 `RuntimePlanetName/PrefabName` 和 GameRes 解析；移动/改名同步检查 Addressables。
 - 星球旅行使用 `WorldAddress.PlanetId + DimensionManager`，不为每颗星球造一次性 Scene 链。冷地表查询与落地损毁使用冻结生成 Profile 加最新 Chunk 差量，禁止读取当前活动星球替代目标星球。
@@ -54,6 +56,7 @@ description: "Use when: 定位或修改 FlatWorld 的太空场景、固定星系
 ## 验证
 
 - 静态星体位置与时间测试使用确定种子/步长；验证速度上限、持续移动、降落接触、Load/Save、Prefab 解析和场景清理。试玩运行中只静态修改，不暂停 Unity。
+- `dotnet run --project Tools/Tests/SpaceCruise/SpaceCruise.Tests.csproj -c Release` 离线验证巡航、对接缓存与光纤算法；专项耗时和分配结果不代表 Unity 整场景帧率，也不替代起降与碰撞试玩。
 
 ## Skill 维护原则
 

@@ -29,6 +29,8 @@ namespace FlatWorld.Spaceflight
         private bool pieceIndexDirty;
         private readonly List<string> destroyed = new();
         private readonly List<ShipState> fixedShips = new();
+        private readonly ShipAssemblyCache simulationAssemblies = new();
+        private readonly ShipAssemblyCache queryAssemblies = new();
         private float environmentElapsed;
 
         private static readonly ProfilerMarker ShipMachineMarker = new("SpaceSession.Fixed.Machines");
@@ -81,6 +83,8 @@ namespace FlatWorld.Spaceflight
             contents.Clear(); controlRequests.Clear();
             pieceIndex.Clear(); pieceIndexDirty = false;
             fixedShips.Clear();
+            simulationAssemblies.Clear(); queryAssemblies.Clear();
+            pickingNavigationConsole = null;
             ResetMassWorkspace();
             viewBindingsDirty = false;
             owner = save;
@@ -129,6 +133,8 @@ namespace FlatWorld.Spaceflight
             Current.pieceIndex.Clear();
             Current.pieceIndexDirty = false;
             Current.fixedShips.Clear();
+            Current.simulationAssemblies.Clear(); Current.queryAssemblies.Clear();
+            Current.controlRequests.Clear(); Current.pickingNavigationConsole = null;
             Current.ResetMassWorkspace();
             Current.viewBindingsDirty = false;
             SpaceSurfaceQuery.Reset();
@@ -188,7 +194,7 @@ namespace FlatWorld.Spaceflight
                 List<ShipAssemblyState> assemblies;
                 using (ShipMotionMarker.Auto())
                 {
-                    assemblies = ShipDockingService.RebuildAssemblies(State.Ships, State.Docking);
+                    assemblies = simulationAssemblies.Refresh(State.Ships, State.Docking);
                     foreach (ShipAssemblyState assembly in assemblies) StepAssembly(assembly, seconds);
                 }
                 if (assemblies.Count > 1 && hasPhysicalShips)

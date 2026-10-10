@@ -377,7 +377,7 @@ public sealed class ShipPanelSession : IMachinePanelSession
         shipId = ship.ShipId;
         ShipFlightState flight = session.GetFlight(shipId);
         if (flight == null) { Close(); return; }
-        ShipNavigationState task = session.State.Navigation.LastOrDefault(value => value.ShipId == shipId);
+        ShipNavigationState task = session.GetLatestNavigation(shipId);
         ObserveChanges(ship, flight, task);
         var text = new StringBuilder();
         text.AppendLine(Format("飞船 {0}", ship.ShipId.Substring(0, Math.Min(8, ship.ShipId.Length))));
@@ -411,7 +411,17 @@ public sealed class ShipPanelSession : IMachinePanelSession
         text.AppendLine(Format("落点  {0}", flight.LandingSelected ? Format("({0:0.##}, {1:0.##})", flight.LandingX, flight.LandingY) : Text("未选：实际触地时取附近位置")));
         text.AppendLine();
         text.AppendLine(Format("导航  {0}", task == null ? Text("待机") : Text(task.Status)));
-        if (task != null) text.AppendLine(Format("导航目标  ({0:0.##}, {1:0.##})", task.TargetX, task.TargetY));
+        if (task != null)
+        {
+            text.AppendLine(Format("导航目标  ({0:0.##}, {1:0.##})", task.TargetX, task.TargetY));
+            ShipAssemblyState assembly = session.GetConnectedAssembly(shipId);
+            SpaceVector2 position = new(assembly.PositionX, assembly.PositionY);
+            double remaining = (new SpaceVector2(task.TargetX, task.TargetY) - position).Magnitude;
+            double speed = new SpaceVector2(assembly.VelocityX, assembly.VelocityY).Magnitude;
+            text.AppendLine(Format("剩余距离  {0:0.0} m\n当前刹停距离  {1:0.0} m", remaining,
+                ShipCruiseGuidance.BrakingDistance(speed, SpaceGameplaySettings.Current, Time.fixedDeltaTime)));
+        }
+        text.AppendLine(Text("自动导航停在星体外侧；登陆请手动接近。"));
         foreach (ShipCompartmentState room in ship.Compartments)
         {
             var gas = new FluidInventory(room.Gas);
@@ -425,9 +435,12 @@ public sealed class ShipPanelSession : IMachinePanelSession
 
     public static void RefreshOpen(SpaceSession session)
     {
-        foreach (ShipPanelSession value in sessions.ToArray())
+        for (int i = sessions.Count - 1; i >= 0; i--)
+        {
+            ShipPanelSession value = sessions[i];
             if (!value.IsAlive) value.Dispose();
             else if (value.session == session) value.RefreshScreens(false);
+        }
     }
 
     public void Dispose()

@@ -16,13 +16,14 @@ namespace FlatWorld.Spaceflight
         }
         private bool SameAssembly(string left, string right)
         {
-            if (left == right) return true;
-            foreach (ShipAssemblyState assembly in ShipDockingService.RebuildAssemblies(State.Ships, State.Docking))
-                if (assembly.MemberShipIds.Contains(left) && assembly.MemberShipIds.Contains(right)) return true;
-            return false;
+            return State != null && queryAssemblies.AreConnected(State.Ships, State.Docking, left, right);
         }
         public ShipAssemblyState GetConnectedAssembly(string shipId)
-            => ShipDockingService.RebuildAssemblies(State.Ships, State.Docking).Find(value => value.MemberShipIds.Contains(shipId));
+        {
+            if (State == null) return null;
+            queryAssemblies.Refresh(State.Ships, State.Docking);
+            return queryAssemblies.Find(shipId);
+        }
         public bool ToggleIgnition(string consoleId)
         {
             if (!FindPiece(consoleId, out ShipState ship, out ShipPieceState console) || console.Kind != ShipPieceKind.Console || !IsPowered(ship, console)) return false;
@@ -30,7 +31,7 @@ namespace FlatWorld.Spaceflight
             if (flight == null) return false;
             // 从停靠转入动力模拟前同步实际载荷，避免使用静态阶段的旧质量。
             RefreshMass();
-            var assembly = ShipDockingService.RebuildAssemblies(State.Ships, State.Docking).Find(value => value.MemberShipIds.Contains(ship.ShipId));
+            var assembly = GetConnectedAssembly(ship.ShipId);
             CollectActuators(assembly);
             double thrust = 0d;
             foreach (ShipActuator engine in actuators)
@@ -64,15 +65,10 @@ namespace FlatWorld.Spaceflight
             {
                 StepLift(assembly, seconds); return;
             }
-            ResolveCruiseCommand(assembly, seconds, out SpaceVector2 targetVelocity, out double turn);
+            ResolveCruiseCommand(assembly, seconds, out SpaceVector2 targetVelocity, out double turn, out double driveAuthority);
             SpaceGameplaySettings config = SpaceGameplaySettings.Current;
             SpaceVector2 velocity = new(assembly.VelocityX, assembly.VelocityY);
-            double rate = targetVelocity.Magnitude < velocity.Magnitude
-                ? config.CruiseBrakingMetersPerSecondSquared : config.CruiseAccelerationMetersPerSecondSquared;
-            SpaceVector2 delta = targetVelocity - velocity;
-            velocity += delta.Normalized * Math.Min(delta.Magnitude, rate * seconds);
-            if (velocity.Magnitude > config.CruiseMaxSpeedMetersPerSecond)
-                velocity = velocity.Normalized * config.CruiseMaxSpeedMetersPerSecond;
+            velocity = ShipCruiseGuidance.StepVelocity(velocity, targetVelocity, config, seconds, driveAuthority);
             var motion = flight.Motion;
             motion.PositionMeters = new SpaceVector2(assembly.PositionX, assembly.PositionY);
             motion.VelocityMetersPerSecond = velocity;
@@ -101,8 +97,11 @@ namespace FlatWorld.Spaceflight
                 foreach (ShipPieceState piece in ship.Pieces)
                 {
                     if (!piece.IsAlive) continue;
-                    ShipGeometry.LocalToWorld(ship, (piece.CellX + .5d) * ship.CellSizeMeters, (piece.CellY + .5d) * ship.CellSizeMeters, out double x, out double y);
-                    radius = Math.Max(radius, new SpaceVector2(x - assembly.PositionX, y - assembly.PositionY).Magnitude + ship.CellSizeMeters * .7072d);
+                    int width = Math.Max(1, (piece.QuarterTurns & 1) == 0 ? piece.Width : piece.Height);
+                    int height = Math.Max(1, (piece.QuarterTurns & 1) == 0 ? piece.Height : piece.Width);
+                    ShipGeometry.LocalToWorld(ship, (piece.CellX + width * .5d) * ship.CellSizeMeters, (piece.CellY + height * .5d) * ship.CellSizeMeters, out double x, out double y);
+                    double halfDiagonal = ship.CellSizeMeters * .5d * Math.Sqrt((double)width * width + (double)height * height);
+                    radius = Math.Max(radius, new SpaceVector2(x - assembly.PositionX, y - assembly.PositionY).Magnitude + halfDiagonal);
                 }
             }
             return radius;
