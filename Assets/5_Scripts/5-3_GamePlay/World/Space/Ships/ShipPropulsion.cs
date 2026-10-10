@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using FlatWorld.Localization;
 using UnityEngine;
 
 namespace FlatWorld.Spaceflight
@@ -144,7 +145,7 @@ namespace FlatWorld.Spaceflight
         public string DescribePropulsion(string shipId)
         {
             var assembly = ShipDockingService.RebuildAssemblies(State.Ships, State.Docking).Find(value => value.MemberShipIds.Contains(shipId));
-            if (assembly == null) return "无有效船体";
+            if (assembly == null) return FlatWorldLocalizationService.GetUiText("无有效船体");
             CollectActuators(assembly);
             double usableThrust = 0d; int consoles = 0, powered = 0;
             foreach (ShipActuator engine in actuators)
@@ -158,10 +159,10 @@ namespace FlatWorld.Spaceflight
             { h += tank.GetAvailableMoles(FluidIds.Hydrogen, FluidPhase.Gas); o += tank.GetAvailableMoles(FluidIds.Oxygen, FluidPhase.Gas); gas += tank.GasMoles; }
             var flight = GetFlight(shipId);
             double gravity = Universe.TryGetBody(flight.BodyId, out BodyState body) ? body.SurfaceGravity : 0d;
-            string ratio = o > 0m ? (h / o).ToString("0.###") + ":1" : "缺氧气";
-            string twr = gravity > 0d ? (usableThrust / Math.Max(.001d, assembly.MassKg * gravity)).ToString("0.##") : "失重";
-            return $"有效控制台 {powered}/{consoles} · 可用引擎 {actuators.Count} · 合格燃料推力 {usableThrust:0.##} N · 推重比 {twr}\n" +
-                $"真实储气 氢 {h:0.###} mol / 氧 {o:0.###} mol · 氢氧比 {ratio} · 杂气 {Math.Max(0m, gas - h - o):0.###} mol";
+            string ratio = o > 0m ? (h / o).ToString("0.###") + ":1" : FlatWorldLocalizationService.GetUiText("缺氧气");
+            string twr = gravity > 0d ? (usableThrust / Math.Max(.001d, assembly.MassKg * gravity)).ToString("0.##") : FlatWorldLocalizationService.GetUiText("失重");
+            return FlatWorldLocalizationService.GetUiFormat("有效控制台 {0}/{1} · 可用引擎 {2} · 合格燃料推力 {3:0.##} N · 推重比 {4}", powered, consoles, actuators.Count, usableThrust, twr) + "\n" +
+                FlatWorldLocalizationService.GetUiFormat("真实储气 氢 {0:0.###} mol / 氧 {1:0.###} mol · 氢氧比 {2} · 杂气 {3:0.###} mol", h, o, ratio, Math.Max(0m, gas - h - o));
         }
 
         // 有限非负执行器求解只分配安装引擎能提供的力与力矩。

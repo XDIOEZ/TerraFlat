@@ -193,6 +193,7 @@ description: "Use when: 定位或修改 FlatWorld 的 UIManager、BasePanel、�
 - 普通合成正式 Prefab 为 `Gameplay/Crafting/UI_HandCraftTable.prefab` 与 `UI_MakerTable.prefab`：参考画布下固定 1344×756（约占 1920×1080 的 70%），普通边框 2 个参考像素，主要按钮高度不低于 60；手工台保留 `输入_1...输入_4`、`输出_1/2` 作为正式槽位模板，分别置于 `输入槽内容`、`输出槽内容` 的滚动布局内，运行时仅按真实库存容量克隆槽位并重绑预览。世界制作台仍为 `输入_1...输入_5`、`输出_1/2`。两者共用 `配方候选内容`、隐藏的 `配方候选模板`、`合成按钮`、`关闭`；运行时只复用正式模板生成条目，不拼装视觉层级。`UI_MakerTable` 根节点不得保留旧 `Image` 流程箭头。
 - 新增正式 Prefab 必须位于 Addressables `Prefab` 标签范围，并登记稳定加载键；移动或重命名资源时保留 `.meta`，同步检查加载键与引用。
 - 工业流体/宇航服/便携气罐面板使用 `UI_IndustrialFluid/UI_Spacesuit/UI_FluidTank` 的正式 `MechanicalPanelView`；`PreservePrefabLayout` 防止旧机械紧凑布局重排。宇航服手持和 `UI_Equipment.FWUI_ConfigureSpacesuit` 共用 `SpacesuitPanelSession`，只绑定同一实际供氧槽，关闭页面不清库存，物品离开所属玩家或卸载时释放会话。
+- 飞船控制台 `UI_Ship` 的状态与命令反馈使用独立滚动屏；`ShipPanelSession` 的命令行和快捷按钮共用执行入口，反馈历史有容量上限，只记录操作结果和状态变化。玩家查看历史时系统消息不强制置底，主动提交命令才跟随最新反馈；正式 Prefab 与 `RuntimeUIPrefabBuilder.Space` 必须保持节点契约一致。
 - `5-5_UI` 的子目录统一继承根 `UI.asmdef`；整理脚本时使用 `AssetDatabase.MoveAsset` 连同 `.meta` 移动，不新建子程序集或重生成 GUID，避免 Prefab 上的 MonoScript 引用失效。
 
 ## 文案、焦点与联动

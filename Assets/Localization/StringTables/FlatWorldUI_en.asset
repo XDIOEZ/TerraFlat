@@ -2930,6 +2930,394 @@ MonoBehaviour:
     m_Localized: "Drag in another vessel to transfer liquid; drag the vessel to pour."
     m_Metadata:
       m_Items: []
+  - m_Id: 17033120237740074
+    m_Localized: "Ship Console"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740075
+    m_Localized: "Ship Status"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740076
+    m_Localized: "Commands & Feedback"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740077
+    m_Localized: "Enter a command; type help for commands"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740078
+    m_Localized: "Navigation / Landing X"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740079
+    m_Localized: "Navigation / Landing Y"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740080
+    m_Localized: "Target Cabin Pressure (kPa)"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740081
+    m_Localized: "Drive"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740082
+    m_Localized: "Exit Console"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740083
+    m_Localized: "Ignite / Shut Down"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740084
+    m_Localized: "Navigate to Coordinates"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740085
+    m_Localized: "Pick a Point"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740086
+    m_Localized: "Cancel Navigation"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740087
+    m_Localized: "Set Landing Point"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740088
+    m_Localized: "Confirm Docking"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740089
+    m_Localized: "Disconnect Port"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740090
+    m_Localized: "Apply Supply Pressure"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740091
+    m_Localized: "System"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740092
+    m_Localized: "Command"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740093
+    m_Localized: "Rejected"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740094
+    m_Localized: "Console connected. Type help for commands; shortcut results are logged here too."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740095
+    m_Localized: "Incorrect number of arguments. Type help for command syntax."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740096
+    m_Localized: "help: command help\nstatus: current ship status\nclear: clear feedback\ndrive / exit: enter / leave the console\nignite: ignite / shut down engines\nnavigate X Y: navigate using view coordinates\npick: click the view to pick a navigation point\ncancel: cancel navigation\nland X Y: set a surface landing point\ndock / undock: confirm docking / disconnect a port\npressure kPa: set target supply pressure"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740097
+    m_Localized: "Feedback cleared."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740098
+    m_Localized: "At the controls. WASD accelerates, Q/E rotates, Esc leaves the console."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740099
+    m_Localized: "Cannot drive: move near a valid powered console. Ships floating at sea cannot be driven."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740100
+    m_Localized: "Left the controls."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740101
+    m_Localized: "You are not at the controls."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740102
+    m_Localized: "Ignition failed: power, valid aviation fuel, and sufficient lift thrust are required."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740103
+    m_Localized: "Engines ignited."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740104
+    m_Localized: "Engines shut down. The ship continues coasting."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740105
+    m_Localized: "Navigation target set. Progress will appear on the feedback screen."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740106
+    m_Localized: "Navigation failed: the ship must be in spaceflight, with a powered console and an autopilot block connected by optical fiber."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740107
+    m_Localized: "Click the view to select navigation coordinates; right-click to cancel picking. Reopen the console for navigation feedback."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740108
+    m_Localized: "Cannot pick a point: a valid console in space is required."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740109
+    m_Localized: "Navigation cancelled."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740110
+    m_Localized: "Landing point recorded. Landing completes on surface contact."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740111
+    m_Localized: "This ship confirmed its docking port. Connection requires confirmation from both ships."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740112
+    m_Localized: "Docking failed: no nearby port meets the alignment, position, and speed requirements."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740113
+    m_Localized: "Port disconnected. Reconnection requires confirmation from both ships."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740114
+    m_Localized: "Cannot disconnect: use an already connected docking port."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740115
+    m_Localized: "Unknown command. Type help for available commands."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740116
+    m_Localized: "Enter valid X and Y coordinates, for example navigate 120 -40."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740117
+    m_Localized: "Enter a valid pressure from 0 to 200000 kPa."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740118
+    m_Localized: "Set target pressure at a gas supplier."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740119
+    m_Localized: "Supply target set to {0:0.###} kPa. Gas supply stops at the target."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740120
+    m_Localized: "Landed"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740121
+    m_Localized: "Floating at Sea"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740122
+    m_Localized: "Lifting Off"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740123
+    m_Localized: "Spaceflight"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740124
+    m_Localized: "Approaching a Body"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740125
+    m_Localized: "Landing Site Selection"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740126
+    m_Localized: "Ship ownership changed. Console connected to the current ship."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740127
+    m_Localized: "Flight phase: {0}"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740128
+    m_Localized: "Engine status: ignited."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740129
+    m_Localized: "Engine status: shut down."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740130
+    m_Localized: "Navigation feedback: {0}"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740131
+    m_Localized: "Current intact ship parts: {0}"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740132
+    m_Localized: "Docking status: {0} port pairs connected."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740133
+    m_Localized: "Control status: at the controls."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740134
+    m_Localized: "Control status: left the controls."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740135
+    m_Localized: "Console power restored."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740136
+    m_Localized: "Console unpowered. Drive and ignition commands are unavailable."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740137
+    m_Localized: "Ship {0}"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740138
+    m_Localized: "Flight Phase  {0}"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740139
+    m_Localized: "Engines  {0}"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740140
+    m_Localized: "Ignited"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740141
+    m_Localized: "Shut Down"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740142
+    m_Localized: "Intact Parts  {0}"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740143
+    m_Localized: "Mass  {0:0.##} kg\nMoment of Inertia  {1:0.##} kg\u00b7m\u00b2"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740144
+    m_Localized: "Speed  {0:0.##} m/s\nAngular Velocity  {1:0.##}\u00b0/s"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740145
+    m_Localized: "Reference Body  {0}"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740146
+    m_Localized: "Universe Frame"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740147
+    m_Localized: "Surface Altitude  {0:0.##} m\nVertical Speed  {1:0.##} m/s"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740148
+    m_Localized: "Estimated Touchdown  {0:0.0} s"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740149
+    m_Localized: "Landing Point  {0}"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740150
+    m_Localized: "Unset: use a nearby location at touchdown"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740151
+    m_Localized: "Navigation  {0}"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740152
+    m_Localized: "Idle"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740153
+    m_Localized: "Navigation Target  ({0:0.##}, {1:0.##})"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740154
+    m_Localized: "Sealed Cabin  {0} cells\nPressure  {1:0.##} kPa \u00b7 Temperature  {2:0.#}\u00b0C"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740155
+    m_Localized: "No Valid Ship"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740156
+    m_Localized: "No Oxygen"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740157
+    m_Localized: "Zero Gravity"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740158
+    m_Localized: "Powered Consoles {0}/{1} \u00b7 Available Engines {2} \u00b7 Fueled Thrust {3:0.##} N \u00b7 Thrust-to-Weight {4}"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740159
+    m_Localized: "Stored Gas: Hydrogen {0:0.###} mol / Oxygen {1:0.###} mol \u00b7 H:O Ratio {2} \u00b7 Other Gases {3:0.###} mol"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740160
+    m_Localized: "Manual Control"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740161
+    m_Localized: "Replaced by a New Target"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740162
+    m_Localized: "Navigating"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740163
+    m_Localized: "Cancelled"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740164
+    m_Localized: "Optical Fiber or Autopilot Disconnected; Restart Required"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740165
+    m_Localized: "Power Lost; Target Retained, Coasting"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740166
+    m_Localized: "Holding Navigation Point"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740167
+    m_Localized: "Insufficient Thrust; Waiting for Available Engines"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740168
+    m_Localized: "Insufficient Fuel; Target Retained, Resume When Available"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740169
+    m_Localized: "Limited Control Authority; Best Effort in Progress"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740170
+    m_Localized: "Ship Split; Navigation Restart Required"
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []
