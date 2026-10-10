@@ -154,7 +154,7 @@ namespace FlatWorld.WorldModel
                 if (biome == SurfaceBiomeKind.Snow && profile.Settings.SnowRegionsEnabled)
                     return SearchSnowRegions(minX, minY, maxX, maxY);
                 if (biome == SurfaceBiomeKind.River &&
-                    profile.Settings.RiverAlgorithm == RiverGenerationAlgorithm.HeightDriven &&
+                    (profile.Settings.RiverEnabled || profile.Settings.LakeBasinEnabled) &&
                     SearchRiverRegions(minX, minY, maxX, maxY))
                     return true;
 

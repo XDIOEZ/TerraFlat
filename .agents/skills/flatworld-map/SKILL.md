@@ -15,6 +15,7 @@ description: "Use when: 定位或修改 FlatWorld 的地图内容、Tilemap、�
 - 自然物及洞穴矿脉规则的唯一真源是 `Assets/StreamingAssets/GameConfig/WorldGeneration/NaturalItems/natural-item-manifest.json` 及其分包；地表/洞穴 `ChunkGenerationProfile_*.asset` 只保存 `ecologyRuleIds`、`caveResourceRuleIds` 与全局倍率，矿脉 ID 顺序仍代表筛选优先级。新增规则先加入 JSON 分包和清单，再由 SO 引用 ID；缺失、重复或无效规则阻止资源发布。`BiomeData.TerrainConfig.ItemSpawn_NoSO` 属于旧生成链，不用于调整 WorldModel 生态数量。存档默认冻结首次使用时的生成 Profile；玩家可在存档管理页关闭“冻结世界生成规则”以显式跟随当前版本。关闭时只丢弃冻结 Profile，保留生态区块的删除 GUID、状态覆盖和恢复年份；重新开启后在下一次进入世界时冻结当时的当前配置。
 - 自然物单次数量默认由 `itemCount` 固定；需要偏置随机时使用 `itemCountDistribution=1`。此时 `itemCount` 是上限，`itemCountMin` 是下限，`itemCountPeak` 是概率峰值，`itemCountQuadraticRadius` 控制二次曲线宽度；数量采样必须保持确定性，并进入生成指纹和冻结规则存档。
 - 地表 `river.*` 和洞穴 `cave.river.*` 的生成参数唯一真源是 `Assets/StreamingAssets/GameConfig/WorldGeneration/Hydrology/river-generation.json`；Profile SO 不再保存同名参数，资源加载时合入快照。地形预览器里的河流参数修改只影响本次预览，要持久调整请编辑 JSON。
+- 静态水汽输送、统一湖盆和空气湿度参数分别使用地表 Profile 的 `climate.transport.*`、`lake.basin.*`、`airHumidity.*`；预览共用正式生成入口，不恢复独立降水噪声、大湖填水或末端造湖控件。
 - 河流河床横截面材质由 `river.bedCenterTileId`、`river.bedEdgeTileId` 和 `river.bedCenterStrengthThreshold` 配置；边缘底材不是全河固定铺设，只在偏下游的局部沉积段启用，其他河段两侧回退到中央底材。沉积段范围参数继续放在 Hydrology JSON，湖泊使用 `terrain.riverbedTileId`。
 - 草和可采集地表植被分别由 `ChunkGrassRenderer` 与 `ChunkGroundCoverRenderer` 批量绘制。JSON 生态规则继续生成确定性数据点；物品定义声明 `groundCover: true` 时跳过自然 Item 实例化，采集才生成普通 Item。选格和图层共用 `GroundCoverSystem`，采集持久化复用生态删除 GUID；不得用草层消费状态记录花朵，也不得在图层解绑时把生成点标记为已采集。
 - 草层生成先受 `grass.minimumTemperature`、`grass.maximumTemperature`、`grass.minimumPrecipitation`、`grass.maximumHeight` 硬门槛限制，再由现有 moisture 公式调节密度；花朵等可采集植被继续直接用 NaturalItems JSON 的温度、降水、高度区间。
@@ -35,16 +36,17 @@ description: "Use when: 定位或修改 FlatWorld 的地图内容、Tilemap、�
 - Ground 永远保存真实底部地块，海洋、河流、湖泊、地下水的初始液体在生成阶段另外写入 `ChunkTerrainData`。修改地面不会自动改液体；抽水只走 `WorldLiquidSystem.TryPump/TrySet`，禁止抽水时生成底部或修改 Ground。平台通过 `TerrainSupportLayer` 遮断表面接触，底部液体仍保留。
 - 世界液体来源统一由 `WorldLiquidSourceResolver` 读取权威 Liquid 层的深度与稳定 `LiquidId`，再解析 `LiquidDefinition`；不能按 Ground Tile、TerrainCellFlags、盐度或 Collider 猜身份。容器份数与世界液深是不同单位，不能未经规则换算直接互相扣减。液体接触直接使用 `WorldLiquidSourceTarget`，不继承 TileData，不注册地块 water 数据/行为或 MemoryPack Union。
 - 河流生成把真实下游单位方向保存到 `riverFlowX/riverFlowY` 环境层；运行时水流玩法统一通过 `ChunkMgr.TryGetRuntimeWaterCurrent` 读取，禁止在物品、角色等消费方重复按邻格高度猜河道方向。海洋暂无独立洋流层时使用生成环境层的 `windX/windY` 作为表层漂移方向，正式水面也消费同一方向，湖泊保持静止。
-- `heightDriven` 河网按稳定 Region 缓存低分辨率高度、下游和汇水量；每个 Chunk 只细化相关走廊与终端小湖。边界两侧必须从同一宏观图和世界坐标取样，固定 Seed 不能依赖 Chunk 加载顺序；河槽弯曲后须用局部切线写入 `riverFlowX/Y`；修改拓扑、细化或小湖规则需递增生成签名。
+- 正式气候水文入口是 `DeterministicChunkGenerator.Precipitation/Runoff/MacroHydrology.cs`：少量背景水汽随主风与小幅扰动传播，海洋补汽、陆地降水扣汽；地理温度只作为输入，独立 `climate.precipitation.*` 噪声不再产雨。所有陆地宏观格按降水扣渗透后产生径流，不随机挑河源，也不单独过滤极圈源点。
+- 汇流只累计统一距离预算内的上游贡献；预算耗尽或接收点未缓存不代表天然地形终点，不能因此造湖。Region 只是缓存边界，河槽按同一绝对坐标和稳定平局规则细化，弯曲后的局部切线写入 `riverFlowX/Y`；修改规则同步递增生成器与地表 Profile 签名。
+- `LakeBasinKernel` 从天然低洼地形生成有界盆地几何，再按直接降水、汇入径流与地理温度/面积蒸发决定水位、干湖和净出流；出口必须有真实下坡通路，不能只连接更低的远点。重叠盆地按原始候选的稳定优先级直接竞争，被抑制候选也保留声明，禁止按窗口内接受顺序贪心占格。普通湖与极稀有大湖共用二次峰值长尾，禁止另行随机填入大型淡水湖或由河流终点临时创建第二套湖盆。
 - 生成保持固定种子、稳定 BiomeId/顺序和统一噪声、气候、水文规则。
 - 地表群系唯一出口是 `SurfaceBiomeClassifier.Resolve/ResolveRule`：Profile 的 `climate.*` 先合成气候，`biome.<名称>.*` 冻结为只读规则，按 `priority` 从高到低匹配，平级按稳定编号再按规则名排序。每条规则支持 `enabled`、高度、摄氏温度、降水、湿度上下限；`includeMaximumCelsius` 控制温度上界是否含等号，无匹配用 `biome.fallback.id`。气候算法选择不能另建一套群系分支；正式区块、单格、邻区及定位的最终结果都复用此出口。
 - 命中的陆地规则可配置 `groundTileId/wetGroundTileId/wetGroundMinimumMoisture`；湿度达到门槛用湿底材，否则用干底材，零编号表示沿用默认。`biome.cold` 默认在最终平滑气温 ≤5°C 时匹配石地群系，优先级低于雪地、高于山地；冷地与雪地下方默认湿度 ≥0.5 铺 `Tile_Dirt`，其余铺 `Tile_Stone`。湿度复用降水、低地和河岸的合成值，不按现存冰地块猜水分；低温石地平原不能因此标记成山地。
 - 群系温度配置直接使用 `minimumCelsius/maximumCelsius`；零散雪原也读取同一条雪地规则的气温与降水条件，不再另读归一化雪地/草原温度阈值。调整参数名需同步 `WorldTerrainPreviewWindow` 的常用项与说明，预览继续走正式生成器。
-- 环绕地图极圈由 Surface Profile 的 `climate.polarBand.*` 控制；`halfWidth` 就是整条冷带的地图占比（默认 0.1），`position=0` 时上下边缘各占一半。纬度底温的 `celsius/edgeCelsius/peakCelsius` 默认 -30/-10/-25°C，环绕最短距离映射二次峰值分布的累计概率，保持向极线渐冷并让底温 -25°C 附近占地最多；区外先在 `transitionTiles`（默认 32 格）内平滑回到 `transitionCelsius`（默认 15°C），再继续朝赤道底温升温。过渡长度不能直接使用极圈到赤道的整段距离，否则冷地会扩得过宽；小世界过渡需钳制并保留赤道底温。最终气候再叠加局部噪声、海拔、降雨与迎风/背风温差，不能逐格随机或用群系固定温度覆盖。
-- 赤道底温由 `climate.equator.minimumCelsius/maximumCelsius/peakCelsius` 配置二次概率分布（默认 40/60/45℃）；`spacingTiles` 默认 256 格，按固定种子横向随机控制点平滑连接并共用左右环绕端点。随机插值需校正累计概率，避免平滑把概率峰推离配置值；极圈外的纬度升温朝当前位置的赤道底温过渡，海拔、降雨、风向与季节仍可让最终气温超出底温范围。
-- 极圈边界通过 `climate.polarBand.boundary.offsetTiles/spacingTiles/detailStrength` 采样两组固定种子随机控制点并平滑插值；默认最大偏移 32 格、大点间距 128 格、细节占比 0.25，不用三角波或逐格随机。整条温度带按 X 偏移中心，保持每列冷带宽度与总面积占比；气候底温、极圈积雪资格和河流源点筛选必须共用偏移，地图左右环绕处共用首尾控制点。
-- 地表群系与草、生态的归一化 `temperature` 从合成后、邻格平滑的 `temperature.celsius` 派生；`climate.temperature.blendRadius` 默认 2 格，批次前缀和、采样外圈及单格查询必须共用同一半径，不能只改其中一处。沙漠必须同时满足 `biome.desert.minimumCelsius`（默认 20°C）与原有高度、干燥条件，不能仅凭少雨把寒冷区域判成沙漠。批次、单格与邻区查询共用气候收尾和判定器。
-- 极圈河流源点由 Hydrology JSON 的 `river.polarSourceChanceMultiplier` 固定种子筛选（默认 0.05）；新版宏观图与旧区域水文都先筛源点再整条追踪，不逐格删河道。非极圈源点保持原规则，来自区外的完整河流仍可流入极圈。
+- 环绕地图极圈由 Surface Profile 的 `climate.polarBand.*` 控制；`halfWidth` 就是整条冷带的地图占比（默认 0.1），`position=0` 时上下边缘各占一半。纬度底温的 `celsius/edgeCelsius/peakCelsius` 默认 -30/-10/-25°C，环绕最短距离映射二次峰值分布的累计概率，保持向极线渐冷并让底温 -25°C 附近占地最多；区外先在 `transitionTiles`（默认 32 格）内平滑回到 `transitionCelsius`（默认 15°C），再继续朝赤道底温升温。过渡长度不能直接使用极圈到赤道的整段距离，否则冷地会扩得过宽；小世界过渡需钳制并保留赤道底温。地理温度只叠加局部噪声与海拔修正，不叠加静态降水或迎背风温差，不能逐格随机或用群系固定温度覆盖。
+- 赤道底温由 `climate.equator.minimumCelsius/maximumCelsius/peakCelsius` 配置二次概率分布（默认 40/60/45℃）；`spacingTiles` 默认 256 格，按固定种子横向随机控制点平滑连接并共用左右环绕端点。随机插值需校正累计概率，避免平滑把概率峰推离配置值；海拔与局部噪声可使地理气温超出底温范围，季节与实时天气只改变运行时温度。
+- 极圈边界通过 `climate.polarBand.boundary.offsetTiles/spacingTiles/detailStrength` 采样两组固定种子随机控制点并平滑插值；默认最大偏移 32 格、大点间距 128 格、细节占比 0.25，不用三角波或逐格随机。整条温度带按 X 偏移中心，保持每列冷带宽度与总面积占比；气候底温与极圈积雪资格共用偏移，地图左右环绕处共用首尾控制点。
+- 地表群系与草、生态的归一化 `temperature` 从合成后、邻格平滑的 `temperature.celsius` 派生；`climate.temperature.blendRadius` 默认 2 格，批次、采样外圈及单格查询必须共用同一半径和固定行列求和顺序，不能只改其中一处。沙漠必须同时满足 `biome.desert.minimumCelsius`（默认 20°C）与原有高度、干燥条件，不能仅凭少雨把寒冷区域判成沙漠。批次、单格与邻区查询共用气候收尾和判定器。
 - 天然地表水体按最终写入的 `temperature.celsius < 0` 生成冰 Ground 并清空 Liquid，河流、湖泊、海洋保留原群系与水文身份，不再依赖雪原资格或降水门槛；0°C 不结冰，岩浆不参与此规则。雪地陆地按群系配置保留石地/泥土并写入积雪，不能逐格随机换成冰地面；冰湖形状必须来自真实水文，禁止恢复 `biome.snow.iceLakeChance` 这类散点伪水体。
 - GM 群系定位通过 `ChunkMgr.FindSurfaceBiomeAsync` 使用当前生效的 Profile、维度种子、拓扑和世界纪元，后台搜索找到后自动传送；不设时间/采样数量上限，有限世界逐级加密至逐格覆盖，无限世界持续扩圈。雪原复用正式区域计划，河流沿宏观河网找真实 River 格，不能用旧预览或地块材质猜身份。定位只复用已完成的河网，新计算独立取消且禁止预热，局部缓存有界；进度用不可变快照供 UI 读取，关闭面板/换世界取消，应用落点前核对玩家与世界身份。
 - 世界生成里“数量、尺寸、区段长度”等需要常见值与少量惊喜长尾的随机量，优先使用固定种子驱动的二次峰值权重分布，不要默认用均匀分布；纯二元开关仍可保留显式概率。
@@ -88,7 +90,7 @@ description: "Use when: 定位或修改 FlatWorld 的地图内容、Tilemap、�
 
 ## 空间尺度
 
-- `PlanetData.SpatialDistanceScale` 是玩家可见的世界空间尺度唯一真源，默认 1x、范围 0.25～4x；运行时注入 `world.spatialDistanceScale`，底层噪声坐标频率按 `0.01 / SpatialDistanceScale` 反算。风区、地形降雨采样、河网距离与宽度、湖泊、雪区、自然结构、泥炭斑块和洞穴距离按同一倍率缩放，面积类格数按倍率平方；海平面、气候阈值、概率、水深、流量阈值及 Tile/Chunk/实体物理尺寸不缩放。
+- `PlanetData.SpatialDistanceScale` 是玩家可见的世界空间尺度唯一真源，默认 1x、范围 0.25～4x；运行时注入 `world.spatialDistanceScale`，底层噪声坐标频率按 `0.01 / SpatialDistanceScale` 反算。风区、水汽输送格宽、河网距离与宽度、湖盆半径、空气供湿半径、雪区、自然结构、泥炭斑块和洞穴距离按同一倍率缩放，面积类格数按倍率平方；水汽追踪的固定步数、海平面、气候阈值、概率、水深、流量阈值及 Tile/Chunk/实体物理尺寸不缩放。
 
 ## Skill 维护原则
 

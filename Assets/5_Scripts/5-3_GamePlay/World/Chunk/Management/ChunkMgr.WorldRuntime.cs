@@ -331,6 +331,7 @@ public partial class ChunkMgr
             return;
 
         IsWorldRuntimeShuttingDown = true;
+        ReleaseAirHumidityField();
         StopLiquidFlowExperiment();
         WorldLiquidFlowObstacles.ClearWorld();
         if (runtimeHost != null)

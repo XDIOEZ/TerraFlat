@@ -53,7 +53,9 @@ description: "Use when: 定位或修改 FlatWorld 的纯 WorldModel、Chunk 运�
 - `Assets/2_Prefabs/Core/Managers/WorldManager.prefab` 的序列化预算会覆盖 `ChunkMgr` 字段默认值；GM 世界页可分别调整提交、基础地形、后续表现的每帧数量和毫秒上限，单项工作会完整执行。排查黑块时用 `gameplay_chunk_render_debug` 对照 `pendingCommits`、`readyDataWithoutView`、`pendingBaseTerrain` 与实际吞吐，不凭源码默认值判断。
 - 流送性能由 `WorldRuntime.StreamingDiagnostics` 在阶段边界记账：生成排队/执行、提交排队/处理、差量恢复、各 `renderer.*` 同步步骤与表现等待分开；仅 Editor/Development 启用，有界缓存且不逐格刷日志。诊断必须同时检查 `WorldRuntimeHost` 现有 owner 和 Update/Advance 心跳，禁止在读取时自动重绑、提交或补生成。未测 GPU 不可凭 BRG 登记正常断言 GPU 没瓶颈。
 - 慢区块日志由纯模型记录分段耗时、主线程限频输出；宏观水文 `Lazy.Value` 可由任意等待线程执行，`river.macro_compute` 归实际执行者，`river.macro_get` 包含共享等待，`river.local_refine` 只计本 Chunk 细化。
-- 水文缓存键按世界纪元、维度、种子、配置和稳定 Region 组成；未就绪时同组只运行一个任务，其余留在优先队列。宏观图只保留低分辨率下游和汇水量，局部水格由请求的 Chunk 细化；邻区预热与世界退出共用取消令牌。
+- 水文缓存键按世界纪元、维度、种子、配置和稳定 Region 组成；未就绪时同组只运行一个任务，其余留在优先队列。`Runoff` 宏观图缓存下游、有界汇流与统一盆地状态，`MacroHydrology` 只细化目标附近河槽与湖面；邻区预热与世界退出共用取消令牌。世界纪元结束同时清理水文、水汽节点与火山盆地缓存，不能残留旧世界结果。
+- Region/Halo 只提供缓存和邻域计算范围；生成水文与 `airHumidity` 可临时查询外圈天然水体，但 `ChunkTerrainData` 只写入本请求核心，不能提交邻区结果。Wrapped 宏观格按完整世界跨度等分并规范化，平局按绝对坐标稳定排序，不能随请求范围或探索方向改变同格结果。
+- `WorldAirHumidityField` 只读取已恢复差量的 Ready 区块与实际 Liquid 层，缓存随 Terrain 引用、`Revision` 和世界纪元失效；不触发邻区生成，影响范围缺邻区返回 false。动态湿度背景读取独立 `airHumidity.background`，不能把包含天然水体贡献的固定 `airHumidity` 当作永不下降的底限。
 - 共享河网区域的计算不能绑定到单个区块的取消：当前区块离开窗口时，只要队列仍有同区域有效请求就继续算完并复用缓存；该区域所有请求都取消或世界关闭时才停止。原区块结果仍须丢弃，不能把已取消区块提交回世界；判断剩余需求要沿用与河网缓存相同的区域键。
 - 生成阶段分别记录 `terrain.noise`、`terrain.biome`、`terrain.environment_write` 和 `ecology.input`；父子阶段有重叠，耗时不能直接相加。后台 Burst 数学核只接收冻结的数值配置，不读取 Unity 对象。Unity 2022.3 的 Burst IL 后处理要求该 asmdef 保留 Engine 程序集引用；代码边界仍禁止访问 Unity 对象。
 - 耗时为单调墙钟而非 CPU 使用率；Editor 暂停跨越的请求单独标记并排除等待汇总，不能把暂停后的完成通知积压当作运行时算力证据。父子阶段有重叠，累计时长不能相加；采样差值只统计本段结束的阶段，不冒充仅落在时间窗口内的 CPU 时间。
@@ -67,7 +69,7 @@ description: "Use when: 定位或修改 FlatWorld 的纯 WorldModel、Chunk 运�
 - 提交生成结果前校验世界纪元与请求版本；取消、失败和逐出路径必须释放结果及租约。
 - 生成保持固定种子和稳定签名；修改地形内容规则时同时使用 `flatworld-map`。
 - 地表出生搜索只判断可走地形与 Liquid 深度，应复用正式生成的 Profile、世界纪元、水文缓存和单格地形规则；不要为候选格生成完整 Chunk 或生态放置记录。当前结构阶段不改可走标记和液体，若以后改变这一约束，出生查询也必须纳入对应规则。
-- 高度河网的径流单元把海洋格计入采样总数，但海洋格不贡献径流；计算顺序应先判海平面再采降水。陆地降水复用已采样高度，纯降水查询不需要温度通道。
+- 海洋格不贡献地表径流，所有陆地宏观格按最终地理降水扣除渗透后产流；固定预算仅限制上游贡献范围，耗尽时不能转为天然汇流终点。`Precipitation` 输送核消费独立地理温度与主风；Legacy/Burst 只返回原始高度、温度、风，不能恢复第二套降水噪声或反向依赖完整水文。
 - 新增 `SurfaceBiomeKind` 或群系条件时，必须覆盖 Profile 当前可选的全部分类算法；`LegacyLand` 只复用旧气候采样，不会自动继承其他分支的群系规则。
 - 雪地必须同时使用海拔修正后的实际温度与地形修正后的最终降水；海拔只通过降温提高积雪概率，不得单独把高地覆盖为雪。
 - 地块 JSON 的 `runtimeTileId` 与 `tileAsset` 提供运行时数字编号和外观映射；`ChunkTilePaletteSO.TryGetTile` 优先查询 JSON 运行时目录，再回退旧 Palette。Profile 中的 `tile.block.*` 必须与本体 JSON 编号一致；MOD 新地块可通过 JSON 接入，不需要改写本体 Palette 或冻结 Profile。
@@ -80,8 +82,8 @@ description: "Use when: 定位或修改 FlatWorld 的纯 WorldModel、Chunk 运�
 
 ## 验证
 
-- 大型内陆淡水湖由纯 `LargeFreshwaterLakeKernel` 在河流覆盖和地表分类之间生成；`lake.large.*` 参数属于冻结 Profile，候选区域必须按世界拓扑规范化并在相邻区块得到完全相同的湖岸/岛屿。不得把海洋格改为淡水，也不能只增加旧汇流小湖的搜索预算来替代大型盆地。
-- 大湖与河流共用水深和 `GeneratedHydrologyKind.Lake` 权威层，湖心 Flow 为零；河口波纹传播仅写 BRG 的表现角速度，不能写回环境流向或推动湖面漂浮物。生成规则变化递增当前签名，已有缓存地块不会仅因参数修改自动重建。
+- 统一 `LakeBasinKernel` 先按天然地形确定有界盆地、最低溢流口及真实下坡出口路径，再用降水、入流与蒸发结算水位和干湖。盆地状态不能重新请求完整气候或河网；普通到极稀有大型尺寸共用 `lake.basin.*`，不恢复 `LargeFreshwaterLakeKernel` 独立填湖或河流末端现场造湖。
+- 湖泊与河流共用水深和 `GeneratedHydrologyKind.Lake` 权威层，湖面 Flow 为零，净出流只在已确认的出口路径形成河道；河口波纹传播仅写 BRG 的表现角速度，不能写回环境流向或推动湖面漂浮物。生成规则变化递增当前签名，已有缓存地块不会仅因参数修改自动重建。
 
 - 单机自然生成中的可拾取散落点可直接生成 ECS 掉落；确认生成成功后才标记基线 GUID 已移除，失败须回滚新掉落，避免基线与独立快照重复恢复。树木、矿石节点、传送门及已安装建筑不能按散落点处理。
 - ECS 掉落生命周期独立于 ChunkView；卸载显示批次只回收 Mesh/Renderer，不能销毁权威掉落实体或写自然物删除差量。

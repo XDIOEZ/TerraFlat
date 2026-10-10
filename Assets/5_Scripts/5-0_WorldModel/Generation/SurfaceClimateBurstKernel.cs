@@ -15,7 +15,7 @@ namespace FlatWorld.WorldModel
         public struct ClimateSample
         {
             public float Height, Temperature, TemperatureCelsius;
-            public float BasePrecipitation, Precipitation, WindX, WindY;
+            public float WindX, WindY;
         }
 
         public struct NoiseChannel
@@ -29,10 +29,10 @@ namespace FlatWorld.WorldModel
             public int Seed, OriginX, OriginY, Width, Height;
             public int Wrapped, MinX, MinY, SpanX, SpanY;
             public float WorldCoordinateScale;
-            public NoiseChannel HeightNoise, TemperatureNoise, PrecipitationNoise;
+            public NoiseChannel HeightNoise, TemperatureNoise;
             public float HeightBoost, CelsiusMin, CelsiusMax;
-            public float WindRegionSize, OrographicDistance, WindwardGain, LeewardLoss;
-            public int WindSeedSalt, OrographicSamples;
+            public float WindRegionSize;
+            public int WindSeedSalt;
         }
 
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
@@ -64,17 +64,12 @@ namespace FlatWorld.WorldModel
                 WorldCoordinateScale = (float)settings.WorldCoordinateScale,
                 HeightNoise = Freeze(settings.HeightNoise, request.WorldSeed, 0),
                 TemperatureNoise = Freeze(settings.TemperatureNoise, request.WorldSeed, 3),
-                PrecipitationNoise = Freeze(settings.PrecipitationNoise, request.WorldSeed, 2),
                 HeightBoost = settings.HeightSecondaryBoostEnabled
                     ? (float)settings.HeightSecondaryBoostStrength : 0f,
                 CelsiusMin = (float)settings.TemperatureCelsiusMin,
                 CelsiusMax = (float)settings.TemperatureCelsiusMax,
                 WindRegionSize = (float)settings.WindRegionSize,
-                WindSeedSalt = settings.WindSeedSalt,
-                OrographicSamples = settings.OrographicSampleCount,
-                OrographicDistance = (float)settings.OrographicSampleDistance,
-                WindwardGain = (float)settings.WindwardRainGain,
-                LeewardLoss = (float)settings.LeewardRainLoss
+                WindSeedSalt = settings.WindSeedSalt
             };
             try
             {
@@ -129,30 +124,14 @@ namespace FlatWorld.WorldModel
                 }
                 float height = SampleHeight(p, worldX, worldY);
                 float baseTemperature = SampleChannel(p, p.TemperatureNoise, worldX, worldY);
-                // 海拔、降雨和风向的温差统一在批次与单格共用的收尾阶段叠加。
+                // 基础温度只叠加静态地理修正，降水由独立的水汽输送核合成。
                 float temperature = baseTemperature;
-                float basePrecipitation = SampleChannel(p, p.PrecipitationNoise, worldX, worldY);
                 SampleWind(p, worldX, worldY, out float windX, out float windY);
-                float mean = 0f, maximum = 0f;
-                for (int i = 1; i <= p.OrographicSamples; i++)
-                {
-                    float distance = p.OrographicDistance * i / p.OrographicSamples;
-                    float upwind = SampleHeight(p, worldX - windX * distance,
-                        worldY - windY * distance);
-                    mean += upwind;
-                    maximum = math.max(maximum, upwind);
-                }
-                mean /= p.OrographicSamples;
-                float precipitation = math.saturate(basePrecipitation +
-                    math.max(0f, height - mean) * math.max(0f, p.WindwardGain) -
-                    math.max(0f, maximum - height) * math.max(0f, p.LeewardLoss));
                 output[y * p.Width + x] = new ClimateSample
                 {
                     Height = height,
                     Temperature = temperature,
                     TemperatureCelsius = p.CelsiusMin + (p.CelsiusMax - p.CelsiusMin) * temperature,
-                    BasePrecipitation = basePrecipitation,
-                    Precipitation = precipitation,
                     WindX = windX,
                     WindY = windY
                 };
@@ -225,11 +204,14 @@ namespace FlatWorld.WorldModel
                 out float x11, out float y11);
             windX = Lerp(Lerp(x00, x10, tx), Lerp(x01, x11, tx), ty);
             windY = Lerp(Lerp(y00, y10, tx), Lerp(y01, y11, tx), ty);
+            // 大尺度主风叠加少量连续扰动，避免无限地图出现局部风向闭环。
+            windX = 1f + windX * 0.35f;
+            windY *= 0.35f;
             float lengthSquared = windX * windX + windY * windY;
             if (lengthSquared <= 0.000001f || !math.isfinite(lengthSquared))
             {
-                DirectionAt(Canonical(cellX, repeatX), Canonical(cellY, repeatY), p,
-                    out windX, out windY);
+                windX = 1f;
+                windY = 0f;
                 return;
             }
             float inverse = math.rsqrt(lengthSquared);

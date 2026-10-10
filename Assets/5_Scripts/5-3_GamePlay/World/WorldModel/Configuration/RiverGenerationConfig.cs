@@ -15,20 +15,16 @@ public sealed class RiverGenerationConfigCatalog
 
     private static readonly string[] SurfaceNumericIds =
     {
-        "river.enabled", "river.polarSourceChanceMultiplier", "river.hydrologyRegionSize", "river.runoffCellSize",
-        "river.runoffSampleStride", "river.maxTraceSteps", "river.minimumVisibleCourseLength",
-        "river.infiltrationFloor", "river.startFlow", "river.tributaryStartFlow",
-        "river.fullWidthFlow", "river.maxWidth", "river.meanderTieTolerance",
-        "river.meanderStrength", "river.meanderScale", "river.valleyDetailWeight",
-        "river.lookAheadWeight", "river.lookAheadDistance", "river.floodplainStartFlow",
+        "river.enabled", "river.hydrologyRegionSize", "river.runoffCellSize", "river.maxTraceSteps",
+        "river.infiltrationFloor", "river.runoffScale", "river.startFlow",
+        "river.fullWidthFlow", "river.maxWidth", "river.meanderStrength", "river.meanderScale",
+        "river.floodplainStartFlow",
         "river.floodplainMaxRadius", "river.floodplainMaxSlope",
         "river.alluvialTileThreshold", "river.bedCenterTileId", "river.bedEdgeTileId",
         "river.bedCenterStrengthThreshold", "river.bedEdgeDepositMinimumFlow",
         "river.bedEdgeDepositActivation", "river.bedEdgeDepositMinFraction",
         "river.bedEdgeDepositPeakFraction", "river.bedEdgeDepositMaxFraction",
-        "river.depthMin", "river.depthMax",
-        "river.minLakeCells", "river.maxLakeCells", "river.maxLakeLevelRise",
-        "river.lakeMinFlow", "river.lakeChance", "river.maxCachedRegions"
+        "river.depthMin", "river.depthMax", "river.maxCachedRegions"
     };
 
     private static readonly string[] CaveNumericIds =
@@ -67,22 +63,9 @@ public sealed class RiverGenerationConfigCatalog
             if (!numbers.SetEquals(requiredNumbers))
                 throw new InvalidDataException($"河流生成数值参数缺失或多余：{profile.ProfileId}");
 
-            var texts = new HashSet<string>(StringComparer.Ordinal);
-            foreach (RiverGenerationTextParameter parameter in profile.TextParameters)
-            {
-                if (parameter == null || string.IsNullOrWhiteSpace(parameter.Id) ||
-                    !texts.Add(parameter.Id))
-                    throw new InvalidDataException($"河流生成文本参数无效或重复：{profile.ProfileId}/{parameter?.Id}");
-            }
-            if (profile.ProfileId == "surface.default")
-            {
-                if (!texts.SetEquals(new[] { "river.algorithm" }) ||
-                    (profile.TextParameters[0].Value != "heightDriven" &&
-                     profile.TextParameters[0].Value != "legacy"))
-                    throw new InvalidDataException("地表河流算法必须是 heightDriven 或 legacy。");
-            }
-            else if (texts.Count != 0)
-                throw new InvalidDataException("洞穴河流生成配置不使用文本参数。");
+            // 正式水文只有统一入口，不接受切回旧算法的文本参数。
+            if (profile.TextParameters.Count != 0)
+                throw new InvalidDataException("河流生成配置不使用文本参数。");
         }
     }
 

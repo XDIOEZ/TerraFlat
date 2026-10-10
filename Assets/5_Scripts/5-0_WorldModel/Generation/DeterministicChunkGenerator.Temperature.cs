@@ -7,8 +7,18 @@ namespace FlatWorld.WorldModel
     {
         #region 环世界地理温度带
 
-        // 地理温度按纬度底温、局部变化、海拔、降雨和风向共同合成，不由群系反向指定。
+        // 降水完成后只判定零散雪原资格，不回写已确定的地理温度。
         private static SurfaceClimateSample FinishSurfaceClimate(ChunkGenerationRequest request,
+            ChunkGenerationSettingsSnapshot settings, int worldX, int worldY, SurfaceClimateSample sample)
+        {
+            // 极圈是否跳过零散雪原资格由雪地群系配置决定。
+            sample.SnowAllowed = IsSnowRegionAllowed(request, settings, sample.Height,
+                sample.TemperatureCelsius, sample.Precipitation, worldX, worldY);
+            return sample;
+        }
+
+        // 地理温度只合成纬度底温、局部变化和海拔，先于降水确定且不受实时天气影响。
+        private static SurfaceClimateSample FinishGeographicTemperature(ChunkGenerationRequest request,
             ChunkGenerationSettingsSnapshot settings, int worldX, int worldY, SurfaceClimateSample sample)
         {
             bool polarEnabled = request.Topology.IsWrapped && settings.PolarBandEnabled;
@@ -21,16 +31,8 @@ namespace FlatWorld.WorldModel
                 baseline = SampleLatitudeTemperature(request, settings, worldX, polarDistance) +
                     (sample.Temperature * 2d - 1d) * settings.RegionalTemperatureVariationCelsius;
             }
-            double rainOffset = -Clamp01(sample.Precipitation) * settings.RainTemperatureCoolingCelsius;
-            double windRainDifference = sample.Precipitation - sample.BasePrecipitation;
-            double windOffset = -Math.Max(0d, windRainDifference) * settings.WindwardTemperatureCoolingCelsius +
-                                Math.Max(0d, -windRainDifference) * settings.LeewardTemperatureWarmingCelsius;
-            sample.TemperatureCelsius = baseline + settings.GetAltitudeTemperatureOffsetCelsius(sample.Height) +
-                                        rainOffset + windOffset;
+            sample.TemperatureCelsius = baseline + settings.GetAltitudeTemperatureOffsetCelsius(sample.Height);
             sample.Temperature = settings.NormalizeTemperatureCelsius(sample.TemperatureCelsius);
-            // 此处只采样零散雪原资格，极圈是否跳过资格由雪地群系配置决定。
-            sample.SnowAllowed = IsSnowRegionAllowed(request, settings, sample.Height,
-                sample.TemperatureCelsius, sample.Precipitation, worldX, worldY);
             return sample;
         }
 
@@ -157,22 +159,6 @@ namespace FlatWorld.WorldModel
             double normalized = 2d * Math.Sin(Math.Asin(Math.Max(-1d,
                 Math.Min(1d, integral * 1.5d))) / 3d);
             return Math.Max(minimum, Math.Min(maximum, peak + radius * normalized));
-        }
-
-        #endregion
-
-        #region 极圈河流源点
-
-        // 极圈源点只保留固定种子筛选出的 1/20，整条径流继续追踪而不逐格挖断河道。
-        internal static bool ShouldGeneratePolarRiverSource(ChunkGenerationRequest request,
-            ChunkGenerationSettingsSnapshot settings, Int2 source)
-        {
-            if (settings.PolarRiverSourceChanceMultiplier >= 1d ||
-                !IsInsidePolarBand(request, settings, source.X, source.Y))
-                return true;
-            return Hash01(request.WorldSeed, request.Topology.NormalizeX(source.X),
-                request.Topology.NormalizeY(source.Y), 0x724fa8d3u) <
-                settings.PolarRiverSourceChanceMultiplier;
         }
 
         #endregion

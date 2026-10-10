@@ -14,9 +14,9 @@ using Object = UnityEngine.Object;
 
 /// <summary>
 /// 在不进入游戏场景的情况下，复用正式 ChunkGenerationProfileSO 与 DeterministicChunkGenerator
-/// 生成一块连续 WorldModel 预览。预览是一格一像素，支持地表或矿洞 Profile 的地形、群系、高度图和物品四种显示方式；右侧临时参数
+/// 生成一块连续 WorldModel 预览。预览是一格一像素，支持地形、群系、高度图、物品和地理空气湿度显示；右侧临时参数
 /// 默认只作用于本次预览，也可经确认后写回 Profile 资源；运行时空间距离倍率仍由 PlanetData 管理。
-/// 默认使用快速模式跳过高成本河流和结构阶段，切换精确模式可复现完整正式结果；生成放在后台线程，
+/// 默认使用快速模式跳过高成本河流、湖泊和结构阶段，切换精确模式可复现完整正式结果；生成放在后台线程，
 /// 最大预览边长限制为 1024，避免高分辨率水文和生态计算长时间占用编辑器内存。
 /// </summary>
 public sealed class WorldTerrainPreviewWindow : EditorWindow
@@ -28,10 +28,12 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
         Terrain,
         Biome,
         Height,
-        Ecology
+        Ecology,
+        [InspectorName("地理空气湿度")]
+        AirHumidity
     }
 
-    /// <summary>预览生成质量；快速模式用于调参，精确模式复现完整河流和结构链路。</summary>
+    /// <summary>预览生成质量；快速模式用于调参，精确模式复现完整水文和结构链路。</summary>
     private enum PreviewGenerationQuality
     {
         Fast,
@@ -88,6 +90,7 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
         public int Height;
         public float[] Heights;
         public float[] LiquidDepths;
+        public float[] AirHumidities;
         public byte[] Biomes;
         public TerrainCellFlags[] Flags;
         public int[] GroundTileIds;
@@ -164,7 +167,13 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
         "terrain.height.offsetY",
         "terrain.height.secondaryBoostEnabled",
         "terrain.height.secondaryBoostStrength",
-        "climate.precipitation.coordScale",
+        "climate.transport.cellSize",
+        "climate.transport.maxSteps",
+        "climate.transport.backgroundWater",
+        "climate.transport.oceanRecharge",
+        "climate.transport.landLoss",
+        "climate.transport.amountScale",
+        "climate.transport.freezeCelsius",
         "climate.temperature.coordScale",
         "climate.temperature.altitudeCoolingStart",
         "climate.temperature.altitudeCoolingStrength",
@@ -180,11 +189,44 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
         "climate.polarBand.boundary.spacingTiles",
         "climate.polarBand.boundary.detailStrength",
         "climate.temperature.regionalVariationCelsius",
-        "climate.temperature.rainCoolingCelsius",
-        "climate.temperature.windwardCoolingCelsius",
-        "climate.temperature.leewardWarmingCelsius",
         "river.enabled",
+        "river.runoffScale",
+        "lake.basin.enabled",
+        "lake.basin.minRadius",
+        "lake.basin.peakRadius",
+        "lake.basin.maxRadius",
+        "lake.basin.rareMaxRadius",
+        "lake.basin.rareChance",
+        "lake.basin.maxLevelRise",
+        "lake.basin.evaporationScale",
+        "lake.basin.inflowScale",
+        "airHumidity.background",
+        "airHumidity.waterContribution",
+        "airHumidity.radiusTiles",
+        "airHumidity.fullSourceDepth",
         "structure.enabled"
+    };
+
+    // 已退出正式生成主链的参数不再提供可调入口，避免无效配置误导预览。
+    private static readonly HashSet<string> RetiredParameterIds = new(StringComparer.Ordinal)
+    {
+        "river.algorithm",
+        "river.runoffSampleStride",
+        "river.minimumVisibleCourseLength",
+        "river.tributaryStartFlow",
+        "river.meanderTieTolerance",
+        "river.valleyDetailWeight",
+        "river.lookAheadWeight",
+        "river.lookAheadDistance",
+        "river.polarSourceChanceMultiplier",
+        "river.minLakeCells",
+        "river.maxLakeCells",
+        "river.maxLakeLevelRise",
+        "river.lakeMinFlow",
+        "river.lakeChance",
+        "climate.orographic.sampleDistance",
+        "climate.orographic.sampleCount",
+        "climate.orographic.leewardLoss"
     };
 
     // 预览窗口之间共享纯生成器，复用已构建的水文区域；缓存键仍由种子、坐标和 Profile 指纹隔离。
@@ -232,13 +274,13 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
             ["terrain.height.offsetY"] = "沿 Y 方向平移整张高度噪声图",
             ["terrain.height.secondaryBoostEnabled"] = "是否再次拉开高地和低地的高度差",
             ["terrain.height.secondaryBoostStrength"] = "越大高低差越明显，海陆分界更强",
-            ["climate.precipitation.coordScale"] = "降水图坐标倍率；越大干湿区域越密集",
-            ["climate.precipitation.frequency"] = "降水图基础频率；越大干湿变化越快",
-            ["climate.precipitation.octaves"] = "降水图细节层数；越高局部雨量变化越细",
-            ["climate.precipitation.lacunarity"] = "降水每层细节缩小的速度",
-            ["climate.precipitation.persistence"] = "降水小细节保留强度；越大雨量分布越碎",
-            ["climate.precipitation.offsetX"] = "沿 X 方向平移整张降水噪声图",
-            ["climate.precipitation.offsetY"] = "沿 Y 方向平移整张降水噪声图",
+            ["climate.transport.cellSize"] = "水汽输送宏观格的大小；随空间距离倍率缩放，越小降水分布越细",
+            ["climate.transport.maxSteps"] = "沿上风方向追踪的固定步数，最多 64 步；不按区域边界补水",
+            ["climate.transport.backgroundWater"] = "风携带的少量初始水汽；内陆未经过海洋时仍可产生少量降水",
+            ["climate.transport.oceanRecharge"] = "每经过一个海洋采样点补充的水汽量",
+            ["climate.transport.landLoss"] = "风经过陆地时释放为降水的水汽比例；越大上风陆地消耗越快",
+            ["climate.transport.amountScale"] = "水汽释放量换算为地理降水量的倍率；表示长期水量",
+            ["climate.transport.freezeCelsius"] = "低于该地理温度时暂停水汽通量，单位为摄氏度",
             ["climate.temperature.coordScale"] = "温度图坐标倍率；越大冷热区域越密集",
             ["climate.temperature.altitudeCoolingStart"] = "超过该高度后开始按海拔降温",
             ["climate.temperature.altitudeCoolingStrength"] = "海拔对温度的影响强度；越高山区越冷",
@@ -254,9 +296,6 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
             ["climate.polarBand.boundary.spacingTiles"] = "边界随机控制点的大致间距；越大起伏越宽缓",
             ["climate.polarBand.boundary.detailStrength"] = "小范围随机起伏的占比，温度和积雪范围共用偏移",
             ["climate.temperature.regionalVariationCelsius"] = "局部温度噪声的最大正负温差，单位为摄氏度",
-            ["climate.temperature.rainCoolingCelsius"] = "静态气候降水量为 1 时的降温幅度",
-            ["climate.temperature.windwardCoolingCelsius"] = "迎风地形增雨造成的额外降温幅度",
-            ["climate.temperature.leewardWarmingCelsius"] = "背风雨影造成的额外升温幅度",
             ["climate.temperature.frequency"] = "温度图基础频率；越大冷热变化越快",
             ["climate.temperature.octaves"] = "温度图细节层数；越高局部温差越细碎",
             ["climate.temperature.lacunarity"] = "温度每层细节缩小的速度",
@@ -265,29 +304,20 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
             ["climate.temperature.offsetY"] = "沿 Y 方向平移整张温度噪声图",
             ["climate.temperature.celsiusMin"] = "原始温度噪声下界，也用于归一化温度与海拔降温换算",
             ["climate.temperature.celsiusMax"] = "原始温度噪声上界，实际合成气候允许超出此范围",
-            ["climate.wind.regionSize"] = "一块稳定风向区域的大小；越大风向变化越缓",
+            ["climate.wind.regionSize"] = "主风上的小幅方向扰动尺度；越大风向变化越缓",
             ["climate.wind.seedSalt"] = "改变风场排列，不改变世界种子和高度图",
-            ["climate.orographic.sampleDistance"] = "向上风方向检查山体的距离；越大雨影影响更远",
-            ["climate.orographic.sampleCount"] = "迎风坡采样次数；越高判断更细、计算更多",
             ["climate.orographic.windwardGain"] = "迎风坡增雨强度；越大山前越湿",
-            ["climate.orographic.leewardLoss"] = "背风坡减雨强度；越大山后越干",
             ["river.enabled"] = "是否按照正式地势和降水结果生成河流",
-            ["river.hydrologyRegionSize"] = "水文计算分区边长；越大跨区河网更完整但更耗时",
-            ["river.runoffCellSize"] = "汇总降水并寻找河源的网格大小；越小潜在河源越密",
-            ["river.runoffSampleStride"] = "径流网格内部的采样间隔；越小越精确也越慢",
-            ["river.maxTraceSteps"] = "单条河最多向下游追踪多少格；越大河可能更长",
-            ["river.minimumVisibleCourseLength"] = "短于该长度的零碎河段整条隐藏",
+            ["river.hydrologyRegionSize"] = "宏观水文缓存的区域边长；不作为河流的物理边界",
+            ["river.runoffCellSize"] = "汇总所有陆地降水径流的宏观格大小；越小河网地势采样越细",
+            ["river.maxTraceSteps"] = "固定汇流近似范围，单位为格；越大累计的上游来水越多",
             ["river.infiltrationFloor"] = "低于该降水量时水被地面吸收；越高河流越少",
-            ["river.startFlow"] = "形成成熟可见主河所需的累计水量；越高主河越少",
-            ["river.tributaryStartFlow"] = "细支流接入主河所需水量；越低支流越多",
+            ["river.runoffScale"] = "所有陆地宏观格的有效径流倍率；越大河流和湖盆入水越多",
+            ["river.startFlow"] = "达到该累计水量时显示河流；越高河流越少",
             ["river.fullWidthFlow"] = "河流长到最大宽度所需水量；越低大河越早变宽",
             ["river.maxWidth"] = "河道允许达到的最大格宽",
-            ["river.meanderTieTolerance"] = "旧版水文在近似等高路线间的轻微选路扰动",
             ["river.meanderStrength"] = "河道连续转弯强度；越大越弯，但仍必须向下坡",
             ["river.meanderScale"] = "河弯的尺度；越大弯道越长、越舒缓",
-            ["river.valleyDetailWeight"] = "河流贴着细小谷底走的倾向；越大越贴地形",
-            ["river.lookAheadWeight"] = "选择下游时参考前方谷地的强度；越大越少短视锯齿",
-            ["river.lookAheadDistance"] = "选择下游方向时向前查看的格数",
             ["river.floodplainStartFlow"] = "开始生成河岸冲积平原所需水量；越高冲积带越少",
             ["river.floodplainMaxRadius"] = "冲积平原向河道两侧扩展的最大格数",
             ["river.floodplainMaxSlope"] = "允许生成宽冲积平原的最大坡度；越高陡坡也会铺开",
@@ -297,11 +327,7 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
             ["river.bedCenterStrengthThreshold"] = "横截面强度达到该值才铺中央河床；越高两侧河床越宽",
             ["river.depthMin"] = "小河的最浅深度表现值",
             ["river.depthMax"] = "大河的最深深度表现值",
-            ["river.minLakeCells"] = "旧版水文中盆地至少多大才显示为湖泊",
-            ["river.maxLakeCells"] = "旧版水文中单个湖泊允许扩张的最大格数",
-            ["river.maxLakeLevelRise"] = "旧版湖面相对洼地最多抬高多少",
-            ["river.lakeMinFlow"] = "旧版盆地形成湖泊所需的最低累计水量",
-            ["river.maxCachedRegions"] = "旧版水文最多缓存多少个区域；越大越占内存",
+            ["river.maxCachedRegions"] = "宏观水文最多缓存多少个区域；越大越占内存",
             ["grass.density"] = "合适陆地长草的基础概率；越大草越密",
             ["structure.enabled"] = "是否按种子放置遗迹等简化结构",
             ["structure.regionSize"] = "结构候选网格大小；越大结构通常越稀疏",
@@ -315,13 +341,19 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
             ["biome.grassland.maximumCelsius"] = "温带草原允许的最高摄氏气温",
             ["biome.grassland.minimumPrecipitation"] = "降水低于该值不判定温带草原",
             ["biome.grassland.maximumPrecipitation"] = "降水高于该值不判定温带草原，通常转森林",
-            ["river.lakeChance"] = "内陆汇流终点形成淡水湖的确定性概率",
-            ["lake.large.enabled"] = "启用独立于河流小水潭的大型内陆淡水湖",
-            ["lake.large.regionSize"] = "大型淡水湖候选区域间距（格）；固定种子决定区域内的湖岸",
-            ["lake.large.chance"] = "每个内陆候选区域出现大型淡水湖的概率",
-            ["lake.large.minRadius"] = "大型淡水湖基础半径下限（格）",
-            ["lake.large.maxRadius"] = "大型淡水湖基础半径上限（格）；长轴约为半径的 1.25 倍",
-            ["lake.large.islandChance"] = "大型淡水湖包含一至三个小岛的概率",
+            ["lake.basin.enabled"] = "根据真实洼地生成统一湖盆，随后由降水和汇流决定蓄水",
+            ["lake.basin.minRadius"] = "普通湖盆的半径下限，单位为格；随空间距离倍率缩放",
+            ["lake.basin.peakRadius"] = "普通湖盆最常见的半径；二次权重让尺寸集中在此值附近",
+            ["lake.basin.maxRadius"] = "普通湖盆的半径上限，单位为格",
+            ["lake.basin.rareMaxRadius"] = "稀有大湖盆长尾的半径上限；大湖仍属于同一套湖盆",
+            ["lake.basin.rareChance"] = "湖盆尺寸进入稀有大尺寸长尾的概率",
+            ["lake.basin.maxLevelRise"] = "盆地最低处到允许蓄水高度的最大差；最低溢流口可提前限制水位",
+            ["lake.basin.evaporationScale"] = "地理温度和湖盆面积产生的长期蒸发倍率；越大越容易浅湖或干湖",
+            ["lake.basin.inflowScale"] = "河流汇入湖盆的水量倍率；湖盆直接降水另外计入",
+            ["airHumidity.background"] = "空气湿度基线；不参与风携水汽或降水计算",
+            ["airHumidity.waterContribution"] = "附近水体对空气湿度的最大增量，按距离衰减",
+            ["airHumidity.radiusTiles"] = "水体供湿影响半径，单位为格；随空间距离倍率缩放",
+            ["airHumidity.fullSourceDepth"] = "水深达到该值时提供完整供湿强度；更浅的水体按水深比例减弱",
             ["navigation.defaultCost"] = "普通地面的寻路代价；越大角色越不愿经过",
             ["navigation.waterCost"] = "水域的寻路代价；保持可通行，但让 A* 优先选择陆路"
         };
@@ -548,6 +580,9 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
             Mathf.FloorToInt((1f - normalizedY) * previewResult.Height));
         int index = pixelY * previewResult.Width + pixelX;
         TerrainCellFlags flags = previewResult.Flags[index];
+        string airHumidityText = float.IsNaN(previewResult.AirHumidities[index])
+            ? "未生成"
+            : previewResult.AirHumidities[index].ToString("0.000");
         string hoverText =
             $"世界格 ({previewResult.OriginX + pixelX}, {previewResult.OriginY + pixelY})\n" +
             $"高度 {previewResult.Heights[index]:0.0000}  " +
@@ -555,6 +590,7 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
             $"Tile {previewResult.GroundTileIds[index]}\n" +
             $"液深 {previewResult.LiquidDepths[index]:0.00}  " +
             $"可行走 {((flags & TerrainCellFlags.Walkable) != 0 ? "是" : "否")}\n" +
+            $"地理空气湿度 {airHumidityText}\n" +
             $"生态物品 {previewResult.EcologyCounts[index]} 个" +
             (string.IsNullOrWhiteSpace(previewResult.EcologyPrimaryItemIds[index])
                 ? string.Empty
@@ -655,6 +691,13 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
             displayMode = selectedMode;
             RebuildPreviewTexture();
         }
+        if (displayMode == PreviewDisplayMode.AirHumidity)
+        {
+            EditorGUILayout.HelpBox(
+                "地理空气湿度：棕色为 0，蓝色为 1，灰色表示未生成此层。" +
+                "检查完整河流和湖泊的供湿范围时，请使用精确模式。",
+                MessageType.Info);
+        }
 
         int generationQualityIndex = Mathf.Clamp((int)generationQuality, 0,
             GenerationQualityLabels.Length - 1);
@@ -664,7 +707,7 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
         if (generationQuality == PreviewGenerationQuality.Fast)
         {
             EditorGUILayout.HelpBox(
-                "快速模式跳过河流和结构计算，但仍生成地形、群系和生态物品，适合快速调参；" +
+                "快速模式跳过河流、湖泊和结构计算，但仍生成地形、群系和生态物品，适合快速调参；" +
                 "切换为精确模式可复现完整世界结果。",
                 MessageType.Info);
         }
@@ -706,9 +749,9 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
             DrawSlider("terrain.mountainLevel", "山地阈值", 0f, 1f);
             DrawDoubleField("biome.snow.maximumCelsius", "雪地最高温度（°C）");
             DrawSlider("biome.snow.minimumPrecipitation", "雪地最低降水", 0f, 1f);
-            DrawSlider("biome.snow.wetGroundMinimumMoisture", "雪下泥土最低湿度", 0f, 1f);
+            DrawSlider("biome.snow.wetGroundMinimumMoisture", "雪下泥土最低地表湿润度", 0f, 1f);
             DrawDoubleField("biome.cold.maximumCelsius", "寒冷裸地最高温度（°C）");
-            DrawSlider("biome.cold.wetGroundMinimumMoisture", "寒冷裸地泥土最低湿度", 0f, 1f);
+            DrawSlider("biome.cold.wetGroundMinimumMoisture", "寒冷裸地泥土最低地表湿润度", 0f, 1f);
             DrawDoubleField("biome.desert.minimumCelsius", "沙漠最低温度（°C）");
             DrawToggle("biome.snow.regions.enabled", "稀有雪原区域");
             DrawDoubleField("biome.snow.regions.size", "雪原候选区域边长（格）");
@@ -746,14 +789,40 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
             DrawDoubleField("climate.polarBand.boundary.spacingTiles", "极圈边界随机点间距（格）");
             DrawSlider("climate.polarBand.boundary.detailStrength", "极圈边界细节起伏占比", 0f, 1f);
             DrawDoubleField("climate.temperature.regionalVariationCelsius", "局部温差幅度（°C）");
-            DrawDoubleField("climate.precipitation.coordScale", "降水坐标倍率");
             DrawDoubleField("climate.temperature.coordScale", "温度坐标倍率");
             DrawSlider("climate.temperature.altitudeCoolingStart", "海拔降温起点", 0f, 1f);
             DrawDoubleField("climate.temperature.altitudeCoolingStrength", "海拔降温强度");
-            DrawDoubleField("climate.temperature.rainCoolingCelsius", "降雨降温幅度（°C）");
-            DrawDoubleField("climate.temperature.windwardCoolingCelsius", "迎风降温幅度（°C）");
-            DrawDoubleField("climate.temperature.leewardWarmingCelsius", "背风升温幅度（°C）");
+
+            EditorGUILayout.Space(3f);
+            EditorGUILayout.LabelField("风携水汽与降水量", EditorStyles.miniBoldLabel);
+            DrawDoubleField("climate.transport.cellSize", "输送宏观格大小（格）");
+            DrawIntegerSlider("climate.transport.maxSteps", "固定追踪步数", 1, 64);
+            DrawSlider("climate.transport.backgroundWater", "背景水汽量", 0f, 1f);
+            DrawSlider("climate.transport.oceanRecharge", "海洋补充水汽量", 0f, 1f);
+            DrawSlider("climate.transport.landLoss", "陆地水汽释放比例", 0f, 1f);
+            DrawDoubleField("climate.transport.amountScale", "降水量换算倍率");
+            DrawDoubleField("climate.transport.freezeCelsius", "水汽通量暂停温度（°C）");
             DrawToggle("river.enabled", "生成河流");
+            DrawDoubleField("river.runoffScale", "地表径流倍率");
+
+            EditorGUILayout.Space(3f);
+            EditorGUILayout.LabelField("统一湖盆与蓄水", EditorStyles.miniBoldLabel);
+            DrawToggle("lake.basin.enabled", "生成湖盆");
+            DrawDoubleField("lake.basin.minRadius", "普通湖盆最小半径（格）");
+            DrawDoubleField("lake.basin.peakRadius", "普通湖盆常见半径（格）");
+            DrawDoubleField("lake.basin.maxRadius", "普通湖盆最大半径（格）");
+            DrawDoubleField("lake.basin.rareMaxRadius", "稀有大湖盆最大半径（格）");
+            DrawSlider("lake.basin.rareChance", "稀有大尺寸长尾概率", 0f, 1f);
+            DrawSlider("lake.basin.maxLevelRise", "最大蓄水高度差", 0.001f, 0.25f);
+            DrawDoubleField("lake.basin.evaporationScale", "长期蒸发倍率");
+            DrawDoubleField("lake.basin.inflowScale", "河流入水倍率");
+
+            EditorGUILayout.Space(3f);
+            EditorGUILayout.LabelField("空气湿度", EditorStyles.miniBoldLabel);
+            DrawSlider("airHumidity.background", "背景空气湿度", 0f, 1f);
+            DrawSlider("airHumidity.waterContribution", "水体最大供湿增量", 0f, 1f);
+            DrawDoubleField("airHumidity.radiusTiles", "水体供湿半径（格）");
+            DrawSlider("airHumidity.fullSourceDepth", "完整供湿所需水深", 0.0001f, 1f);
             DrawToggle("structure.enabled", "生成结构");
         }
         finally
@@ -922,7 +991,7 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
 
         parameterSearch = EditorGUILayout.TextField("筛选", parameterSearch);
         IEnumerable<NumericParameterValue> parameters = numericParameters
-            .Where(parameter => parameter != null &&
+            .Where(parameter => parameter != null && IsCurrentGenerationParameter(parameter.Id) &&
                                 (string.IsNullOrWhiteSpace(parameterSearch) ||
                                  parameter.Id.IndexOf(parameterSearch,
                                      StringComparison.OrdinalIgnoreCase) >= 0 ||
@@ -974,8 +1043,8 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
         if (previewResult.FastPreview)
         {
             EditorGUILayout.HelpBox(
-                "当前结果来自快速预览：河流和结构阶段被跳过，生态物品用于快速观察分布趋势；" +
-                "需要验证最终河流、结构占用和生态过滤时请切换为精确模式。",
+                "当前结果来自快速预览：河流、湖泊和结构阶段被跳过，生态物品用于快速观察分布趋势；" +
+                "需要验证最终水文、结构占用和生态过滤时请切换为精确模式。",
                 MessageType.Info);
         }
 
@@ -1039,6 +1108,7 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
         {
             ChunkGenerationProfileSnapshot snapshot = ReadProfileSnapshot(profileAsset);
             foreach (KeyValuePair<string, double> pair in snapshot.NumericParameters
+                         .Where(pair => IsCurrentGenerationParameter(pair.Key))
                          .OrderBy(pair => pair.Key, StringComparer.Ordinal))
             {
                 numericParameters.Add(new NumericParameterValue { Id = pair.Key, Value = pair.Value });
@@ -1285,11 +1355,11 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
                 "includeMaximumCelsius" => "最高气温是否允许等号；0 表示严格低于",
                 "minimumPrecipitation" => "群系允许的最低降水",
                 "maximumPrecipitation" => "群系允许的最高降水",
-                "minimumMoisture" => "群系允许的最低湿度",
-                "maximumMoisture" => "群系允许的最高湿度",
+                "minimumMoisture" => "群系允许的最低地表湿润度",
+                "maximumMoisture" => "群系允许的最高地表湿润度",
                 "groundTileId" => "干燥陆地底材编号；0 表示沿用物理地形底材",
                 "wetGroundTileId" => "湿润陆地底材编号；0 表示沿用干燥底材",
-                "wetGroundMinimumMoisture" => "湿度达到此值时采用湿润底材，含等号",
+                "wetGroundMinimumMoisture" => "地表湿润度达到此值时采用湿润底材，含等号",
                 "ignoreRegions" => "极圈内是否跳过零散雪原资格",
                 "ignorePrecipitation" => "极圈内是否跳过降水范围条件",
                 _ => string.Empty
@@ -1297,6 +1367,13 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
         }
         return string.Empty;
     }
+
+    /// <summary>正式配置中已停用的旧气候和水文参数不再显示为可调选项。</summary>
+    private static bool IsCurrentGenerationParameter(string id) =>
+        !string.IsNullOrWhiteSpace(id) &&
+        !id.StartsWith("climate.precipitation.", StringComparison.Ordinal) &&
+        !id.StartsWith("lake.large.", StringComparison.Ordinal) &&
+        !RetiredParameterIds.Contains(id);
 
     /// <summary>判断右侧生成输入是否已经不同于左侧画面对应的输入。</summary>
     private bool IsPreviewOutdated()
@@ -1505,6 +1582,7 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
         {
             // 快速预览只关闭最高成本的水文和结构阶段，地形、群系和生态规则仍走正式生成器。
             numbers["river.enabled"] = 0d;
+            numbers["lake.basin.enabled"] = 0d;
             numbers["structure.enabled"] = 0d;
         }
 
@@ -1606,6 +1684,7 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
         {
             // 与矿洞快速预览使用相同的低成本地表判断，避免为少数出口重复构建水文图。
             numbers["river.enabled"] = 0d;
+            numbers["lake.basin.enabled"] = 0d;
             numbers["structure.enabled"] = 0d;
         }
 
@@ -1644,6 +1723,7 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
         int cellCount = checked(input.Width * input.Height);
         var heights = new float[cellCount];
         var liquidDepths = new float[cellCount];
+        var airHumidities = new float[cellCount];
         var biomes = new byte[cellCount];
         var flags = new TerrainCellFlags[cellCount];
         var groundTileIds = new int[cellCount];
@@ -1723,6 +1803,11 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
                 float liquidDepth = terrain.GetLiquidDepth(sampleX, sampleY);
                 heights[index] = heightValue;
                 liquidDepths[index] = liquidDepth;
+                // 显示正式生成的地理空气湿度，不在预览里重新计算供湿。
+                airHumidities[index] = terrain.TryGetEnvironmentValue(
+                    AirHumidityKernel.GeographicLayer, sampleX, sampleY, out float humidity)
+                    ? humidity
+                    : float.NaN;
                 biomes[index] = (byte)Math.Max(byte.MinValue, Math.Min(byte.MaxValue, cell.BiomeId));
                 flags[index] = cell.Flags;
                 groundTileIds[index] = cell.GroundTileId;
@@ -1758,6 +1843,7 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
             Height = input.Height,
             Heights = heights,
             LiquidDepths = liquidDepths,
+            AirHumidities = airHumidities,
             Biomes = biomes,
             Flags = flags,
             GroundTileIds = groundTileIds,
@@ -2019,6 +2105,14 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
 
     private Color32 ResolvePreviewColor(int index)
     {
+        if (displayMode == PreviewDisplayMode.AirHumidity)
+        {
+            float humidity = previewResult.AirHumidities[index];
+            if (float.IsNaN(humidity))
+                return new Color32(80, 80, 80, 255);
+            return Color.Lerp(new Color32(166, 112, 54, 255),
+                new Color32(40, 157, 225, 255), Mathf.Clamp01(humidity));
+        }
         float height = Mathf.Clamp01(previewResult.Heights[index]);
         if (displayMode == PreviewDisplayMode.Height)
         {

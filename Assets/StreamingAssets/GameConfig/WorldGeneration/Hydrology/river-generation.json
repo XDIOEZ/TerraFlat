@@ -9,10 +9,6 @@
           "value": 1
         },
         {
-          "id": "river.polarSourceChanceMultiplier",
-          "value": 0.05
-        },
-        {
           "id": "river.hydrologyRegionSize",
           "value": 256
         },
@@ -21,28 +17,20 @@
           "value": 64
         },
         {
-          "id": "river.runoffSampleStride",
-          "value": 16
-        },
-        {
           "id": "river.maxTraceSteps",
           "value": 384
-        },
-        {
-          "id": "river.minimumVisibleCourseLength",
-          "value": 96
         },
         {
           "id": "river.infiltrationFloor",
           "value": 0.25
         },
         {
-          "id": "river.startFlow",
-          "value": 0.14
+          "id": "river.runoffScale",
+          "value": 0.08
         },
         {
-          "id": "river.tributaryStartFlow",
-          "value": 0.1
+          "id": "river.startFlow",
+          "value": 0.14
         },
         {
           "id": "river.fullWidthFlow",
@@ -53,28 +41,12 @@
           "value": 7
         },
         {
-          "id": "river.meanderTieTolerance",
-          "value": 0
-        },
-        {
           "id": "river.meanderStrength",
           "value": 1.15
         },
         {
           "id": "river.meanderScale",
           "value": 48
-        },
-        {
-          "id": "river.valleyDetailWeight",
-          "value": 4
-        },
-        {
-          "id": "river.lookAheadWeight",
-          "value": 0.55
-        },
-        {
-          "id": "river.lookAheadDistance",
-          "value": 6
         },
         {
           "id": "river.floodplainStartFlow",
@@ -133,36 +105,11 @@
           "value": 0.9
         },
         {
-          "id": "river.minLakeCells",
-          "value": 18
-        },
-        {
-          "id": "river.maxLakeCells",
-          "value": 220
-        },
-        {
-          "id": "river.maxLakeLevelRise",
-          "value": 0.045
-        },
-        {
-          "id": "river.lakeMinFlow",
-          "value": 0.35
-        },
-        {
-          "id": "river.lakeChance",
-          "value": 0
-        },
-        {
           "id": "river.maxCachedRegions",
           "value": 9
         }
       ],
-      "textParameters": [
-        {
-          "id": "river.algorithm",
-          "value": "heightDriven"
-        }
-      ]
+      "textParameters": []
     },
     {
       "profileId": "cave.default",

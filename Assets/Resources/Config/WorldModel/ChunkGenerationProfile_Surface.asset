@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: ChunkGenerationProfile_Surface
   m_EditorClassIdentifier: 
   profileId: surface.default
-  generationSignature: 72
+  generationSignature: 73
   chunkWidth: 16
   chunkHeight: 16
   numericParameters:
@@ -101,20 +101,20 @@ MonoBehaviour:
     Value: 1
   - Id: terrain.height.secondaryBoostStrength
     Value: 1
-  - Id: climate.precipitation.coordScale
-    Value: 10
-  - Id: climate.precipitation.frequency
-    Value: 0.02
-  - Id: climate.precipitation.octaves
-    Value: 4
-  - Id: climate.precipitation.lacunarity
-    Value: 2
-  - Id: climate.precipitation.persistence
-    Value: 0.55
-  - Id: climate.precipitation.offsetX
-    Value: 0
-  - Id: climate.precipitation.offsetY
-    Value: 0
+  - Id: climate.transport.cellSize
+    Value: 32
+  - Id: climate.transport.maxSteps
+    Value: 32
+  - Id: climate.transport.backgroundWater
+    Value: 0.18
+  - Id: climate.transport.oceanRecharge
+    Value: 0.25
+  - Id: climate.transport.landLoss
+    Value: 0.08
+  - Id: climate.transport.amountScale
+    Value: 6
+  - Id: climate.transport.freezeCelsius
+    Value: -5
   - Id: climate.temperature.coordScale
     Value: 10
   - Id: climate.temperature.frequency
@@ -142,12 +142,6 @@ MonoBehaviour:
   - Id: climate.equator.spacingTiles
     Value: 256
   - Id: climate.temperature.regionalVariationCelsius
-    Value: 2
-  - Id: climate.temperature.rainCoolingCelsius
-    Value: 3
-  - Id: climate.temperature.windwardCoolingCelsius
-    Value: 4
-  - Id: climate.temperature.leewardWarmingCelsius
     Value: 2
   - Id: climate.polarBand.enabled
     Value: 1
@@ -181,26 +175,34 @@ MonoBehaviour:
     Value: 256
   - Id: climate.wind.seedSalt
     Value: 1779033703
-  - Id: climate.orographic.sampleDistance
-    Value: 64
-  - Id: climate.orographic.sampleCount
-    Value: 4
   - Id: climate.orographic.windwardGain
     Value: 0.8
-  - Id: climate.orographic.leewardLoss
-    Value: 0.6
-  - Id: lake.large.enabled
+  - Id: lake.basin.enabled
     Value: 1
-  - Id: lake.large.regionSize
-    Value: 384
-  - Id: lake.large.chance
-    Value: 0.65
-  - Id: lake.large.minRadius
-    Value: 48
-  - Id: lake.large.maxRadius
-    Value: 104
-  - Id: lake.large.islandChance
-    Value: 0.7
+  - Id: lake.basin.minRadius
+    Value: 6
+  - Id: lake.basin.peakRadius
+    Value: 12
+  - Id: lake.basin.maxRadius
+    Value: 24
+  - Id: lake.basin.rareMaxRadius
+    Value: 96
+  - Id: lake.basin.rareChance
+    Value: 0.02
+  - Id: lake.basin.maxLevelRise
+    Value: 0.045
+  - Id: lake.basin.evaporationScale
+    Value: 0.05
+  - Id: lake.basin.inflowScale
+    Value: 1
+  - Id: airHumidity.background
+    Value: 0.15
+  - Id: airHumidity.waterContribution
+    Value: 0.75
+  - Id: airHumidity.radiusTiles
+    Value: 12
+  - Id: airHumidity.fullSourceDepth
+    Value: 0.25
   - Id: lake.lava.enabled
     Value: 1
   - Id: lake.lava.regionSize

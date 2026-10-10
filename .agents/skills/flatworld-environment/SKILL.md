@@ -14,6 +14,7 @@ description: "Use when: 定位或修改 FlatWorld 的世界时间、昼夜、天
 - 逐格温度入口：`TemperatureMgr.Field.cs`；冷热源空间缓存与设备组件：`LocalTemperatureField.cs`、`LocalTemperatureSource.cs`。
 - 存档：`World/Map/Data/{PlanetData,PlanetTimeData}.cs`
 - 有限大气/工业热力：`World/Fluids/Atmosphere/AtmosphereService.cs`、`Core/FluidThermodynamics.cs`；物性与有限相变曲线来自 `GameConfig/Fluids/fluids.json`。
+- 空气湿度：纯 `Assets/5_Scripts/5-0_WorldModel/{AirHumidityKernel,WorldAirHumidityField}.cs`；桥接为 `World/Chunk/Management/ChunkMgr.AirHumidity.cs`。
 
 ## 不变量
 
@@ -34,12 +35,13 @@ description: "Use when: 定位或修改 FlatWorld 的世界时间、昼夜、天
 - 高频天气阶段校验使用 Scheduler 的显式枚举匹配，新增阶段须同步 `IsValidPhase`，避免 `Enum.IsDefined` 反射和装箱。
 - 独立阴天使用 `WeatherType.Cloudy / WeatherPhase.Cloudy`，结束后放晴；`Forecast/Recovery` 仍属于降雨链。阴天恢复须保留强度和绝对结束时间，自然事件配置在 `core-cloudy.json`。云层只在 `DayTimeSystem.GetLighting/GetSunLighting` 外层衰减一次，不能在引用场景递归中重复乘算，也不能影响局部灯光或抑制天气/固定光照的维度。
 - `PlanetData.WindStrength` 是独立于降雨强度的星球级权威状态；修改必须经 `WeatherMgr.SetWindStrength` 发布天气快照，Client 只应用复制值，离开世界或 `SuppressWeather` 维度时清零 Shader 全局表现但不改存档值。
-- 静态降水层影响地形/生态，不等于动态天气强度。
+- 静态 `precipitation` 是风携背景水汽、海洋补汽、陆地扣汽形成的长期地理降水量，影响径流与生态，不等于实时天气强度。临时输送 `humidity`、固定地理 `airHumidity`、动态空气湿度和地表 `moisture` 各自独立，禁止混用。
+- `ChunkMgr.TryGetGeographicAirHumidity` 只读取按天然水体生成的固定 `airHumidity`；`TryGetAirHumidity` 通过 `WorldAirHumidityField` 消费已恢复 Liquid 与 `Revision`，供湿按真实深度、最短距离衰减。动态背景来自独立 `airHumidity.background`，抽干后不能由完整地理湿度兜底；缺失影响邻区返回 false，不偷偷生成区块。当前只实现更新/查询，湿度影响实时天气留到后续规划。
 - 普通 Client 不调度天气或体温伤害，只应用服务器状态。
 - 大雾使用 `WeatherType.Fog / WeatherPhase.Fog` 和已有天气快照；自然触发由 `Config/GameEvents/Definitions/core-fog.json` 配置，手动用 `WeatherMgr.SetFog`。枚举只追加，不能重排旧天气编号；阶段恢复必须保留雾强度和绝对结束时间，不能落回降雨映射。
 - 大雾视野由 `DenseFogRendererFeature` 在本地主相机栈的最终画面合成，只读取 owned 玩家，不隐藏/停用远端实体或增加网络可见状态；圆心与投影始终来自本地主相机，不能用环绕补绘相机的位置。`default-rendering.json` 的 `denseFog` 半径使用世界格距离，不随视距、画质或关闭普通后处理扩大；外圈噪声只改变白色，不降低完整浓雾的遮挡透明度。进房/读档已有浓雾须直接恢复，退出世界及抑制天气的维度不保留遮罩。
 - 角色体温、资源产量和调试温度层必须共用 `TemperatureMgr.TryGetAmbientTemperature`：读取已加载 `ChunkTerrainData` 的 `temperature.celsius`，叠加星球基准相对 `PlanetData.DefaultGlobalTemperature` 的差值、当前维度允许的天气修正和局部源；未加载返回 false，禁止为查询触发生成或复制整层数组。角色初始化只能更新自身 `AmbientTemperature`，不能把某个出生格温度写回星球全局值。
-- 地理基础气温在 `DeterministicChunkGenerator.FinishSurfaceClimate` 先合成，再平滑写入 `temperature.celsius`；归一化 `temperature` 必须由同一摄氏温度派生，让群系、草、生态与雪冰保持一致。规则变化需递增纯生成器与地表 Profile 的生成签名，保持噪声布局版本不变。
+- 地理基础气温由 `DeterministicChunkGenerator.FinishGeographicTemperature` 独立合成，再平滑写入 `temperature.celsius`；归一化 `temperature` 必须由同一摄氏温度派生，让群系、草、生态与雪冰保持一致。静态降水与迎背风不加地理温差，实时降雨降温复用现有天气温差，仅进入三级当前环境温度。规则变化需递增纯生成器与地表 Profile 的生成签名，保持噪声布局版本不变。
 - 局部冷热源是可重建的影响层，来源模块负责燃料/供电/保存并在停用、回池时撤销注册；不能把临时偏移写回生成气候，否则卸载后无法恢复并会污染地图差量。修改源快照只使覆盖分区失效，查询缓存不扫描全部来源；环形边界同时归一化分区键并使用最短距离，避免世界接缝出现断层或重复贡献。
 - 世界液体的环境辐射热由 `WorldLiquidSettings.radiantHeatRadius/radiantHeatOffset` 声明，`RadiantLiquidTemperatureField` 只扫描已加载区块并按地形 Revision 缓存逐格最大温升；大片岩浆取最大贡献而不是逐格相加，抽干或流动后自动失效重算。
 - 设备组件 `LocalTemperatureSource` 的强度表示中心摄氏度增量（负值制冷），不是功率或绝对目标温度；恒温器应由设备控制器根据当前地块温度计算有效强度。当前影响层不保存热惯性，撤销源会立即撤销其环境增量；需要蓄热/热传导时应引入独立状态层，不能悄悄改变来源参数语义。
@@ -60,10 +62,10 @@ description: "Use when: 定位或修改 FlatWorld 的世界时间、昼夜、天
 
 - 日长只读 `RotationPeriodSeconds`，年长只读 `OrbitalPeriodSeconds`；四季只是年内归一划分。运行时经 `SetRotationPeriod/SetOrbitalPeriod` 修改，年份、季节与轨道距离共用游戏秒轴和公转起点；禁止从季长之和另建年钟。植物、积雪与 ECS 补算使用 `SeasonCalendar` 的秒制历史快照，冻结旧周期、倾角和离心率，不能用当前日长重算过去。
 - `TemperatureMgr.TryGetClimateBaseline` 不含季节、动态天气和局部源；历史环境重建与积雪采样用它，角色体温仍用最终环境温度入口，避免重复叠加季节。
-- 环世界地理温度先按纬度求底温：`climate.polarBand.*` 冷带到 `climate.equator.minimumCelsius/maximumCelsius/peakCelsius` 赤道二次概率底温平滑过渡（默认 40~60℃，45℃概率最高），再加 `climate.temperature.regionalVariationCelsius` 局部噪声、`altitudeCooling*` 海拔降温、`rainCoolingCelsius` 降雨降温和 `windwardCoolingCelsius/leewardWarmingCelsius` 迎风/背风温差。赤道随机底温通过 `spacingTiles` 控制横向区域大小，不随当前天气重抽；风向通过既有地形降水差参与，单位风向不能冒充风速。海拔只在 `FinishSurfaceClimate` 叠加一次，Legacy/Burst 核只返回原始温度噪声；最终温度允许因环境修正超出纬度底温范围。
-- 静态气候降雨与风向修正随 Profile 固定，不能混入当前动态天气或季节；运行时查询继续叠加实时偏移。`TryGetGeographicTemperature` 只返回固定 `temperature.celsius`，连星球全局调温也不叠加。
+- 环世界地理温度先按纬度求底温：`climate.polarBand.*` 冷带到 `climate.equator.minimumCelsius/maximumCelsius/peakCelsius` 赤道二次概率底温平滑过渡（默认 40~60℃，45℃概率最高），再加 `climate.temperature.regionalVariationCelsius` 局部噪声与 `altitudeCooling*` 海拔降温。赤道随机底温通过 `spacingTiles` 控制横向区域大小，不随当前天气重抽；海拔只在地理收尾叠加一次，Legacy/Burst 核只返回原始温度噪声，最终地理气温允许超出纬度底温范围。
+- 地理温度在创建区块时固定，不能混入动态天气或季节；`TryGetGeographicTemperature` 连星球全局调温也不叠加。太阳直射点与逐格入射角对当前温度的修正仍属未来范围，不能因已有昼夜照明或公转温差就声称已经实现。
 - 天然积雪是 `ChunkTerrainData` 的 `snow.depth` 独立层，季节积雪仍由 `PlanetData.SeasonalSnow` 保存基温分段状态；二者查询时合并，并统一量化为 0～1 的十档（每层 0.1）。`WeatherMgr.Snow` 在天气阶段边界与日内分段推进季节覆盖量，雪停保留覆盖，暖时融化。禁用天气的维度不修改星球季节积雪状态。
-- 合成的地理摄氏气温按世界坐标两侧各 8 格混合，区块外采样与核心使用同一气候核；前缀和只平滑温度，群系与归一化温度读取平滑结果。雪地和山地不能再分别写死为 -10℃、10℃，否则会倒过来覆盖海拔与纬度气候。
+- 合成的地理摄氏气温按 `climate.temperature.blendRadius` 混合（默认 2 格），区块外采样与核心使用同一气候核；温度混合按固定行列顺序求和，群系与归一化温度读取同一平滑结果。雪地和山地不能再分别写死为 -10℃、10℃，否则会倒过来覆盖海拔与纬度气候。
 - 铲雪和雪球铺雪走 `WorldSnowInteraction`；铲子优先移除整格雪，每层产出一个 `Snowball`，铺回从真实快捷栏消耗一件并增加一层。玩家编辑雪厚独立于天然雪，允许超过十层；`snow.player.edited/depth/season` 与 `ChunkSaveRecord.SnowCells` 必须一起恢复，铲空也保留编辑标记。厚度大于 1 时只有显示强度钳制到 1，不能钳制真实产物数量。
 - 区块积雪表现直接从已绑定 `ChunkTerrainData` 读取 `temperature.celsius`，再叠加星球基温差采样 `SeasonalSnow`；禁止逐格走世界坐标温度查询。降雨且镜头当地低于冻结温度才启用无雪区块的周期刷新；停雪后仅有残雪的区块继续刷新融化，融净即停用。地形与液体变化事件可临时唤醒覆盖层；雪量与地形版本均不变时跳过整块扫描，区块刷新按 X/Y 坐标错峰。
 
@@ -72,7 +74,7 @@ description: "Use when: 定位或修改 FlatWorld 的世界时间、昼夜、天
 
 ## 空间尺度
 
-- 静态气候跟随 `PlanetData.SpatialDistanceScale`：基础温度/降水噪声通过反算坐标频率自动改变波长，`climate.wind.regionSize` 与 `climate.orographic.sampleDistance` 必须按同一倍率同步缩放；摄氏温差、降雨增益/损失等强度值不缩放。
+- 静态气候跟随 `PlanetData.SpatialDistanceScale`：高度/温度噪声反算坐标频率，风区、水汽输送格宽与空气供湿半径按同一倍率缩放；`climate.transport.maxSteps` 是固定次数，不再缩放，背景水汽、补汽量、降水换算强度和摄氏阈值也不缩放。
 
 ## 验证
 

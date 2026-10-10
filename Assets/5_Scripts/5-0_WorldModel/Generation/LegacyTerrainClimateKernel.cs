@@ -4,19 +4,17 @@ namespace FlatWorld.WorldModel
 {
     /// <summary>
     /// 旧版 ChunkGenerator_Land 的单点气候结果。
-    /// 高度、基础温度和基础降水来自三通道噪声；温度修正统一交给 FinishSurfaceClimate，降水已叠加迎风增雨与背风雨影。
+    /// 高度和基础温度来自各自噪声，地理修正交给 FinishGeographicTemperature，降水由独立输送核合成。
     /// 风向始终是单位向量，可直接写入区块环境层。
     /// </summary>
     internal readonly struct LegacyClimateSample
     {
         public LegacyClimateSample(double height, double temperature, double temperatureCelsius,
-            double basePrecipitation, double precipitation, double windX, double windY)
+            double windX, double windY)
         {
             Height = height;
             Temperature = temperature;
             TemperatureCelsius = temperatureCelsius;
-            BasePrecipitation = basePrecipitation;
-            Precipitation = precipitation;
             WindX = windX;
             WindY = windY;
         }
@@ -24,8 +22,6 @@ namespace FlatWorld.WorldModel
         public double Height { get; }
         public double Temperature { get; }
         public double TemperatureCelsius { get; }
-        public double BasePrecipitation { get; }
-        public double Precipitation { get; }
         public double WindX { get; }
         public double WindY { get; }
     }
@@ -33,13 +29,12 @@ namespace FlatWorld.WorldModel
     /// <summary>
     /// 不引用 Unity 的旧版地形与气候采样核。
     /// 它逐项迁移 TerrainNoiseKernel 的经典 Perlin、周期 Perlin、高度二次强化、
-    /// RegionalRandomWindFieldProvider 和 ApplyOrographicPrecipitation，供后台区块线程安全调用。
+    /// 以及主风叠加小幅区域扰动，供后台区块线程安全调用。
     /// </summary>
     internal static class LegacyTerrainClimateKernel
     {
         private const float DefaultChannelValue = 0.5f;
         private const int HeightChannelId = 0;
-        private const int PrecipitationChannelId = 2;
         private const int TemperatureChannelId = 3;
 
         #region 公共采样入口
@@ -52,23 +47,7 @@ namespace FlatWorld.WorldModel
             return SampleHeightAt(request, settings, worldX, worldY);
         }
 
-        /// <summary>采样旧版基础降水，再按区域风向和逆风地形计算最终降水。</summary>
-        internal static double SamplePrecipitation(ChunkGenerationRequest request,
-            ChunkGenerationSettingsSnapshot settings, int worldX, int worldY,
-            double? sampledHeight = null)
-        {
-            NormalizeWorldCell(request, ref worldX, ref worldY);
-            float height = sampledHeight.HasValue
-                ? (float)sampledHeight.Value
-                : SampleHeightAt(request, settings, worldX, worldY);
-            float basePrecipitation = SampleChannel(request, settings,
-                settings.PrecipitationNoise, PrecipitationChannelId, worldX, worldY);
-            SampleWind(request, settings, worldX, worldY, out float windX, out float windY);
-            return SampleOrographicPrecipitation(request, settings, worldX, worldY,
-                height, basePrecipitation, windX, windY);
-        }
-
-        /// <summary>一次返回地表格需要的高度、基础/地形降水和风向。</summary>
+        /// <summary>一次返回地表格的原始高度、温度和风向。</summary>
         internal static LegacyClimateSample SampleClimate(ChunkGenerationRequest request,
             ChunkGenerationSettingsSnapshot settings, int worldX, int worldY)
         {
@@ -82,58 +61,15 @@ namespace FlatWorld.WorldModel
                 settings.TemperatureCelsiusMin,
                 settings.TemperatureCelsiusMax,
                 temperature);
-            float basePrecipitation = SampleChannel(request, settings,
-                settings.PrecipitationNoise,
-                PrecipitationChannelId, worldX, worldY);
             SampleWind(request, settings, worldX, worldY, out float windX, out float windY);
-            float precipitation = SampleOrographicPrecipitation(request, settings,
-                worldX, worldY, height, basePrecipitation, windX, windY);
-            return new LegacyClimateSample(height, temperature, temperatureCelsius,
-                basePrecipitation, precipitation, windX, windY);
-        }
-
-        /// <summary>地形降水的共同计算步骤，径流采样无需附带计算温度。</summary>
-        private static float SampleOrographicPrecipitation(
-            ChunkGenerationRequest request,
-            ChunkGenerationSettingsSnapshot settings,
-            int worldX,
-            int worldY,
-            float height,
-            float basePrecipitation,
-            float windX,
-            float windY)
-        {
-            int sampleCount = settings.OrographicSampleCount;
-            float sampleDistance = (float)settings.OrographicSampleDistance;
-            float meanUpwindHeight = 0f;
-            float maxUpwindHeight = 0f;
-            for (int sampleIndex = 1; sampleIndex <= sampleCount; sampleIndex++)
-            {
-                float distance = sampleDistance * sampleIndex / sampleCount;
-                float upwindX = worldX - windX * distance;
-                float upwindY = worldY - windY * distance;
-                float upwindHeight = SampleHeightAt(request, settings, upwindX, upwindY);
-                meanUpwindHeight += upwindHeight;
-                if (upwindHeight > maxUpwindHeight)
-                    maxUpwindHeight = upwindHeight;
-            }
-
-            meanUpwindHeight /= sampleCount;
-            float precipitation = ApplyOrographicPrecipitation(
-                basePrecipitation,
-                height,
-                meanUpwindHeight,
-                maxUpwindHeight,
-                (float)settings.WindwardRainGain,
-                (float)settings.LeewardRainLoss);
-            return precipitation;
+            return new LegacyClimateSample(height, temperature, temperatureCelsius, windX, windY);
         }
 
         #endregion
 
-        #region 地形与降水噪声
+        #region 地形与温度噪声
 
-        /// <summary>采样任意浮点世界坐标的高度，供逆风坡度检查复用。</summary>
+        /// <summary>采样任意浮点世界坐标的高度。</summary>
         private static float SampleHeightAt(ChunkGenerationRequest request,
             ChunkGenerationSettingsSnapshot settings, float worldX, float worldY)
         {
@@ -231,10 +167,10 @@ namespace FlatWorld.WorldModel
 
         #endregion
 
-        #region 区域风场与地形降雨
+        #region 区域风场
 
-        /// <summary>迁移旧 RegionalRandomWindFieldProvider 的区域方向平滑插值。</summary>
-        private static void SampleWind(ChunkGenerationRequest request,
+        /// <summary>区域双线性方向只作小幅扰动，主风保持世界坐标上的连续方向。</summary>
+        internal static void SampleWind(ChunkGenerationRequest request,
             ChunkGenerationSettingsSnapshot settings, float worldX, float worldY,
             out float windX, out float windY)
         {
@@ -275,40 +211,19 @@ namespace FlatWorld.WorldModel
             float topY = Lerp(y01, y11, tX);
             windX = Lerp(bottomX, topX, tY);
             windY = Lerp(bottomY, topY, tY);
+            windX = 1f + windX * 0.35f;
+            windY *= 0.35f;
             float lengthSquared = windX * windX + windY * windY;
             if (!IsFinite(windX) || !IsFinite(windY) || lengthSquared <= 0.000001f)
             {
-                DirectionAt(Canonical(cellX, repeatX), Canonical(cellY, repeatY),
-                    request.WorldSeed, settings.WindSeedSalt, out windX, out windY);
+                windX = 1f;
+                windY = 0f;
                 return;
             }
 
             float inverseLength = 1f / (float)Math.Sqrt(lengthSquared);
             windX *= inverseLength;
             windY *= inverseLength;
-        }
-
-        /// <summary>迁移旧 ApplyOrographicPrecipitation 的迎风抬升和背风雨影公式。</summary>
-        private static float ApplyOrographicPrecipitation(float basePrecipitation,
-            float currentHeight, float meanUpwindHeight, float maxUpwindHeight,
-            float windwardGain, float leewardLoss)
-        {
-            float safeBase = Clamp01(IsFinite(basePrecipitation)
-                ? basePrecipitation
-                : DefaultChannelValue);
-            float safeHeight = Clamp01(IsFinite(currentHeight)
-                ? currentHeight
-                : DefaultChannelValue);
-            float safeMean = Clamp01(IsFinite(meanUpwindHeight)
-                ? meanUpwindHeight
-                : safeHeight);
-            float safeMaximum = Clamp01(IsFinite(maxUpwindHeight)
-                ? maxUpwindHeight
-                : safeHeight);
-            float uplift = Math.Max(0f, safeHeight - safeMean);
-            float rainShadow = Math.Max(0f, safeMaximum - safeHeight);
-            return Clamp01(safeBase + uplift * Math.Max(0f, windwardGain) -
-                           rainShadow * Math.Max(0f, leewardLoss));
         }
 
         /// <summary>为环绕世界把风区索引规范到有限范围；无限世界保持原值。</summary>
