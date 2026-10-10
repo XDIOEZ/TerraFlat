@@ -1296,6 +1296,7 @@ public sealed partial class GMReflectionConsole
     private void BuildTeleportPage()
     {
         GmPageView page = CreatePage(GmPageId.Structures);
+        BuildPlanetTeleportRow(page.Content);
         AddPageIntro(page.Content, "遗迹传送", "按当前世界种子推算未探索区域中的最近遗迹生成点。 ");
 
         GameObject row = CreateUiObject("Structure Teleport Row", page.Content);

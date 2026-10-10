@@ -17,6 +17,7 @@ description: "Use when: 定位或修改 FlatWorld 的太空场景、星球运行
 
 - 主链：正式世界进入 → SpaceSession 恢复稳定星体、船体与船上机器作用域 → 唯一固定时钟推进 → 当前场景投影视图。SpaceMgr 不再另推宇宙时间。
 - 宇宙坐标用 double 米，ViewOrigin 只影响表现；地表逻辑坐标与循环镜像通过 WorldLocalPresentation 换算，不把太空坐标交给 Chunk 生成、地表寻路或 NormalizePosition。
+- 玩家太空传送走 `SpaceSession.TryTeleportPlayerToSpace`，调用方提供宇宙坐标和速度；会话负责脱离乘员支撑、驾驶与下落状态、迁移及失败恢复。GM 星球旁落点从当前 Universe 取位置并叠加公转与环绕速度，禁止只改 Transform；场景迁移仍限单机。
 - 固定步须等待 IsGameplayReady，并按 CaptureShipContactPoses → 运动 → StepShipContacts → CommitSurfaceContacts 顺序结算。Kinematic 碰撞体负责表现，实际平动和旋转反作用由权威扫掠解算；碰撞、无人船和冷地表损毁不依赖可见性。
 - 星体接触与船体接触比较同一步时间 Fraction，先撞船后须从真实碰撞时刻重积剩余轨迹；不能提前切地表作用域导致漏碰撞。
 - 地表切换复用 DimensionManager 的黑屏、玩家快照与失败恢复；读档场景依据已保存飞行阶段，避免迁移中旧 CurrentSceneName 覆盖目标。未进入就绪状态不推进下落。

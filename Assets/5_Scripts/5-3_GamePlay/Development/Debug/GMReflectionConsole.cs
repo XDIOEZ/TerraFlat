@@ -2093,6 +2093,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
                 RefreshAiecsPage();
                 break;
             case GmPageId.Structures:
+                RefreshPlanetTeleportOptions();
                 if (refreshCatalogs)
                     RefreshStructureOptions();
                 RefreshBiomeSelection();
