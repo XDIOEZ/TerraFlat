@@ -23,6 +23,7 @@ description: "Use when: 定位或修改 FlatWorld 的游戏启动、新建世界
 
 - `GameManager` 是新建、继续、运行、退出世界的权威；`GameWorldSceneManager` 不是。
 - 动态维度 Scene 不进 Build Settings，以 `WorldKey` 命名并复用 `RunWorld()`。
+- `SpaceScene` 是磁盘上的静态 Scene，必须启用在 `ProjectSettings/EditorBuildSettings.asset` 中；它与动态维度 Scene 的规则不同。
 - Alt+R/调试资源刷新统一走 `RequestResourceReload`：主菜单使用 `TryReloadResources` 完整替换会话；单机世界使用 `GameRes.HotReload` 准备候选目录，校验后同帧发布，不保存、不退出、不重新加载存档。候选加载期间正式 `LoadState` 保持 Ready，以 `IsResourceReloadInProgress` 防重入；结构性错误仍撤销候选，单个 Actor 定义错误只隔离该候选并保留已发布版本，其他有效目录继续更新。联机世界仍禁止单边热更新。
 - `ResourceReloadContext` 只交换资源目录和会话标量，每次加载器 `MoveNext` 返回 Unity 前恢复正式引用；禁止登记玩家、区块、库存等持续变化的运行态。新增静态目录由所有者提供 `ConfigureResourceReload`，加载阶段不能用异步回调绕过上下文写入全局目录，也不能提前触发世界生命周期事件。
 - 原位更新成功后发布 `ResourcesReloaded`，活跃 Item 和 Chunk 不重建；旧代 Addressables、MOD 模板与 Lua 保留到正式退出完成后释放。候选目录删除或重命名物品 ID、机械节点或机械配方身份时，将上一代定义暂留在当前资源会话，保证旧 Item、机械快照与未加载区块仍可解析；重新定义的同 ID 使用新定义，暂留定义在世界退出、保存并清空活跃 Item 后移除，再释放旧代资源。运行中仍不能删除地块/MOD 身份、改变地块数字编号或增删/重排液体身份，在用 MOD Bundle 二进制变更同样拒绝。`TryReloadResources` 只允许无世界和活跃 Item 时调用。
