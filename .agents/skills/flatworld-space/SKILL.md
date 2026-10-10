@@ -25,6 +25,7 @@ description: "Use when: 定位或修改 FlatWorld 的太空场景、星球运行
 - Prefab 名经 `RuntimePlanetName/PrefabName` 和 GameRes 解析；移动/改名同步检查 Addressables。
 - 星球旅行使用 `WorldAddress.PlanetId + DimensionManager`，不为每颗星球造一次性 Scene 链。冷地表查询与落地损毁使用冻结生成 Profile 加最新 Chunk 差量，禁止读取当前活动星球替代目标星球。
 - 船体部件能力 ID 为 `船体部件模块`，Prefab 为 `Module_ShipPart`，MonoBehaviour 文件必须同名 `Mod_ShipPart.cs`；配置位于 `space_ships.json`。设备、太阳系和飞行参数分别在 `space_devices.json`、`GameConfig/Space/solar-system.json`、`Resources/Config/Space/space-gameplay.json`。
+- 船体动态表现复用 `WorldSortingManager`：承载地板用 `vehicle`，其它部件用 `building`，材质取物品定义，附属箭头继承主体排序层；禁止硬编码 Default 负 Order，否则地表会遮住地板。
 
 ## 规划约束
 

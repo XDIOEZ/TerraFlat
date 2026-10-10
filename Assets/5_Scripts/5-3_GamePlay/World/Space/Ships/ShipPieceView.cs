@@ -97,15 +97,22 @@ namespace FlatWorld.Spaceflight
                     GameObject root = new("ShipPiece_" + piece.ItemId);
                     GameObject visual = new("Render"); visual.transform.SetParent(root.transform, false);
                     SpriteRenderer renderer = visual.AddComponent<SpriteRenderer>();
-                    renderer.sortingOrder = piece.Kind == ShipPieceKind.Floor ? -10 : 0;
+                    // 船体承载层复用交通工具排序，地板覆盖地表且始终低于乘员和设备。
+                    WorldSortingManager.GetInstance().ApplyRenderer(renderer, piece.Kind == ShipPieceKind.Floor
+                        ? WorldSortingManager.VehicleCategory : WorldSortingManager.BuildingCategory);
+                    renderer.spriteSortPoint = SpriteSortPoint.Pivot;
                     if (GameRes.ExistingInstance.TryGetItemDefinition(piece.ItemId, out RuntimeItemDefinition definition))
-                    { renderer.sprite = definition.Sprite; renderer.color = definition.Visual?.Color ?? Color.white; }
+                    {
+                        renderer.sprite = definition.Sprite; renderer.color = definition.Visual?.Color ?? Color.white;
+                        if (definition.Material != null) renderer.sharedMaterial = definition.Material;
+                    }
                     if (piece.Kind == ShipPieceKind.Engine)
                     {
                         GameObject marker = new("推力方向"); marker.transform.SetParent(visual.transform, false);
                         LineRenderer arrow = marker.AddComponent<LineRenderer>(); arrow.useWorldSpace = false;
                         arrow.sharedMaterial = renderer.sharedMaterial; arrow.startWidth = arrow.endWidth = .05f;
-                        arrow.startColor = arrow.endColor = Color.cyan; arrow.sortingOrder = 2; arrow.positionCount = 5;
+                        arrow.startColor = arrow.endColor = Color.cyan;
+                        arrow.sortingLayerID = renderer.sortingLayerID; arrow.sortingOrder = renderer.sortingOrder + 2; arrow.positionCount = 5;
                         arrow.SetPositions(new[] { new Vector3(0, -.3f), new Vector3(0, .4f), new Vector3(-.13f, .23f), new Vector3(0, .4f), new Vector3(.13f, .23f) });
                     }
                     if (Mod_Building.TryReadBuildingData(data, out _, out Mod_Building.Building_Data building) && !string.IsNullOrWhiteSpace(building.TileBlockId) &&
