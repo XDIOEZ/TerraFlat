@@ -329,6 +329,7 @@ internal sealed class ChunkGroundMeshRenderer : IDisposable
             {
                 ChunkBatchRendererGroupService.VisualLayer.Back => -1,
                 ChunkBatchRendererGroupService.VisualLayer.Water => 1,
+                ChunkBatchRendererGroupService.VisualLayer.Snow => 3,
                 ChunkBatchRendererGroupService.VisualLayer.Blocking => 4,
                 _ => 0
             };
@@ -354,7 +355,15 @@ internal sealed class ChunkGroundMeshRenderer : IDisposable
             renderer.receiveShadows = false;
             renderer.lightProbeUsage = LightProbeUsage.Off;
             renderer.reflectionProbeUsage = ReflectionProbeUsage.Off;
-            if (layer == ChunkBatchRendererGroupService.VisualLayer.Blocking)
+            if (layer == ChunkBatchRendererGroupService.VisualLayer.Snow)
+            {
+                // 地面雪采用地形光照，但排序高于地面与冰面、低于角色。
+                WorldSortingManager.GetResourceSortingKey(WorldSortingManager.GroundBuildingCategory,
+                    out int sortingLayerId, out int sortingOrder);
+                renderer.sortingLayerID = sortingLayerId;
+                renderer.sortingOrder = checked(sortingOrder + 1);
+            }
+            else if (layer == ChunkBatchRendererGroupService.VisualLayer.Blocking)
             {
                 // 墙体位于地表阴影与地表痕迹之上，但仍保持在玩家和树木等动态实体之后。
                 WorldSortingManager.GetResourceSortingKey(WorldSortingManager.GroundMarkCategory,
