@@ -1,0 +1,232 @@
+-- 守夜试炼用真实站位驱动分支，全部跨帧进度保存在 state 中。
+local defaults = {
+    radius = 12, innerRadius = 4, prepareSeconds = 15,
+    chargeSeconds = 20, restSeconds = 12, rounds = 3,
+    missingSeconds = 25, maxSeconds = 300, moveSpeed = 0.15
+}
+
+local function setting(args, name)
+    return args[name] or defaults[name]
+end
+
+local function validate(args)
+    for name, fallback in pairs(defaults) do
+        local value = args[name]
+        if value == nil then value = fallback end
+        if type(value) ~= "number" or value ~= value or value == math.huge
+            or value == -math.huge or value <= 0 or value > 86400 then
+            return false, name .. " 必须是 (0, 86400] 内的有限数值。"
+        end
+    end
+    if setting(args, "innerRadius") >= setting(args, "radius") or setting(args, "radius") > 256 then
+        return false, "需要 0 < innerRadius < radius <= 256。"
+    end
+    local rounds = setting(args, "rounds")
+    if rounds ~= math.floor(rounds) or rounds > 16 then return false, "rounds 必须是 1～16 的整数。" end
+    if setting(args, "maxSeconds") <= setting(args, "prepareSeconds") then
+        return false, "maxSeconds 必须大于 prepareSeconds。"
+    end
+    return true
+end
+
+local function announce(ctx, state, key, message)
+    state.notices = state.notices or {}
+    if state.notices[key] then return end
+    state.notices[key] = true
+    ctx:Log("[守夜试炼] " .. message)
+end
+
+local function complete(ctx, state, result)
+    state.done = true
+    state.result = result
+    announce(ctx, state, "result", result)
+    return true
+end
+
+local function begin(ctx, args, state)
+    if state.phase then return state.done == true end
+    local players = ctx:GetPlayers()
+    if #players == 0 then return complete(ctx, state, "无人参与，试炼结束。") end
+    -- 取排序后首位玩家的位置作锚点，不对循环世界的原始坐标求平均。
+    state.center = {x = players[1].x, y = players[1].y}
+    state.members = {}
+    for _, player in ipairs(players) do
+        if ctx:Distance(player.x, player.y, state.center.x, state.center.y)
+            <= setting(args, "radius") then
+            state.members[player.id] = {x = player.x, y = player.y}
+        end
+    end
+    state.phase = "prepare"
+    state.phaseAt = ctx.Now
+    state.lastAt = ctx.Now
+    state.round = 0
+    state.stability = 0
+    state.tension = 0
+    state.missing = 0
+    announce(ctx, state, "begin", string.format(
+        "中心 (%.1f, %.1f)。准备 %.1f 游戏秒；中心附近静止为守阵，外围移动为巡守。",
+        state.center.x, state.center.y, setting(args, "prepareSeconds")))
+    return false
+end
+
+local function sample(ctx, args, state, dt, elapsed)
+    local current = {}
+    for _, player in ipairs(ctx:GetPlayers()) do current[player.id] = player end
+    local present, guarding, patrolling, moving, total = 0, 0, 0, 0, 0
+    for id, member in pairs(state.members) do
+        total = total + 1
+        local player = current[id]
+        if player then
+            local distance = ctx:Distance(player.x, player.y, state.center.x, state.center.y)
+            local motion = ctx:Distance(player.x, player.y, member.x, member.y)
+            local walking = motion / math.max(0.0001, elapsed) > setting(args, "moveSpeed")
+            if distance <= setting(args, "radius") then
+                present = present + 1
+                if walking then moving = moving + 1 end
+                if distance <= setting(args, "innerRadius") and not walking then
+                    guarding = guarding + 1
+                elseif distance > setting(args, "innerRadius") and walking then
+                    patrolling = patrolling + 1
+                end
+            end
+            member.x, member.y = player.x, player.y
+        end
+    end
+    if present == 0 then state.missing = state.missing + dt else state.missing = 0 end
+    local effective = guarding + patrolling * 0.65
+    local absent = total - present
+    state.stability = math.max(0, math.min(setting(args, "chargeSeconds"),
+        state.stability + dt * (effective / math.max(1, total) - absent * 0.75)))
+    state.tension = math.max(0, math.min(100,
+        state.tension + dt * (absent * 1.5 + moving * 0.3 - guarding * 0.2)))
+    return present, guarding, patrolling
+end
+
+local function startRound(ctx, args, state, present, guarding, patrolling)
+    state.round = state.round + 1
+    state.phase = "wave"
+    state.phaseAt = ctx.Now
+    state.stability = 0
+    -- 类型和数量只在轮次开始时决定，后续移动不能改写已经启动的子行动。
+    local restless = state.tension >= 20 or patrolling > guarding
+    local ghost = state.round > 1 and restless
+    state.waveId = "wave_" .. state.round
+    state.weatherId = "weather_" .. state.round
+    state.weatherParams = {
+        weather = restless and "Fog" or "Rain",
+        intensity = math.min(0.9, 0.35 + state.tension / 150),
+        durationGameSeconds = setting(args, "maxSeconds")
+    }
+    state.waveParams = {
+        prefabId = ghost and "Ghost" or "Wolf",
+        waves = 1,
+        countPerWave = math.min(12, 2 + present + math.floor(state.tension / 20)),
+        countPerPlayer = false, waveIntervalGameSeconds = 0,
+        maxSpawnAttemptsPerTick = 2, minDistance = 16, maxDistance = 24,
+        playerVisibilityExclusionDistance = 14, searchAttemptsPerCreature = 32,
+        requireGlobalDarkness = false, requireCompletelyDarkTile = false,
+        maxAllowedTileLight = 1, allowedBiomes = event.array({})
+    }
+    state.weatherReady = false
+    announce(ctx, state, "round_" .. state.round, string.format(
+        "第 %d 轮：%s，%d 只%s；紧张度 %.0f。生成需要镜头外合法位置。",
+        state.round, restless and "大雾" or "降雨", state.waveParams.countPerWave,
+        ghost and "幽灵" or "狼", state.tension))
+end
+
+local function resume(ctx, args, state)
+    -- 恢复只重设采样基线，阶段、播报标记与原生生成计数沿用存档。
+    state.lastAt = ctx.Now
+    local current = {}
+    for _, player in ipairs(ctx:GetPlayers()) do current[player.id] = player end
+    for id, member in pairs(state.members or {}) do
+        local player = current[id]
+        if player then member.x, member.y = player.x, player.y end
+    end
+end
+
+local function tick(ctx, args, state)
+    if state.done then return true end
+    if not state.phase then return begin(ctx, args, state) end
+    -- 时间大跳只计少量驻留，避免一次位置采样替代整段真实站位。
+    local elapsed = math.max(0, ctx.Now - state.lastAt)
+    local dt = math.min(2, elapsed)
+    state.lastAt = ctx.Now
+    local present, guarding, patrolling = sample(ctx, args, state, dt, elapsed)
+    if state.missing >= setting(args, "missingSeconds") then
+        return complete(ctx, state, "所有参与者离开过久，试炼中止。")
+    end
+    if ctx.Now - ctx.StartedAt >= setting(args, "maxSeconds") then
+        return complete(ctx, state, "试炼超时；停止未完成生成，已出生生物继续正常行动。")
+    end
+    if state.phase == "prepare" then
+        if ctx.Now - state.phaseAt >= setting(args, "prepareSeconds") then
+            state.phase = "charge"
+            state.stability = 0
+            announce(ctx, state, "charge_0", "准备结束，持续守阵或巡守积累稳定度；离场会削减。")
+        end
+    elseif state.phase == "charge" then
+        if state.stability >= setting(args, "chargeSeconds") and present > 0 then
+            startRound(ctx, args, state, present, guarding, patrolling)
+        end
+    elseif state.phase == "wave" then
+        -- RunAction 才推进子行动；等待天气服务就绪后再推进这一轮刷怪。
+        if not state.weatherReady then
+            state.weatherReady = ctx:RunAction(state.weatherId, "weather.override", state.weatherParams)
+        end
+        if state.weatherReady and ctx:RunAction(state.waveId, "creature.waves", state.waveParams) then
+            ctx:StopAction(state.weatherId)
+            ctx:StopAction(state.waveId)
+            if state.round >= setting(args, "rounds") then
+                return complete(ctx, state, string.format(
+                    "%d 轮守夜完成；天气恢复，已出生生物不会凭空消失。", state.round))
+            end
+            state.phase = "rest"
+            state.phaseAt = ctx.Now
+            announce(ctx, state, "rest_" .. state.round, "本轮生成完成，休整后重新蓄稳。")
+        end
+    elseif state.phase == "rest" then
+        if ctx.Now - state.phaseAt >= setting(args, "restSeconds") then
+            state.phase = "charge"
+            state.stability = 0
+            announce(ctx, state, "charge_" .. state.round, "下一轮蓄稳开始；人员、移动和紧张度影响遭遇。")
+        end
+    end
+    return false
+end
+
+local function finish(ctx, args, state, cancelled)
+    if cancelled then announce(ctx, state, "cancelled", "试炼已取消。") end
+    -- 父行动结束会统一清理全部子行动；这里不手工重复结束或重新启动它们。
+end
+
+return {
+    catalog = {
+        schemaVersion = 1,
+        events = {{
+            id = "lua_adaptive_vigil", displayName = "Lua 守夜试炼",
+            description = "站位蓄稳、动态天气、多轮遭遇与中途退出分支的 Lua 示例。",
+            enabled = false, priority = 90, conflictGroup = "hostile_raid",
+            oncePerWorld = false, cooldownDays = 1, durationDays = 0,
+            trigger = {type = "manual", parameters = {}},
+            conditions = {{type = "lua", parameters = {
+                script = "adaptive-vigil", handler = "participants", args = {minimum = 1}
+            }}},
+            actions = {{id = "vigil", type = "lua", parameters = {
+                script = "adaptive-vigil", handler = "vigil", args = defaults
+            }}}
+        }}
+    },
+    actions = {vigil = {validate = validate, begin = begin, resume = resume, tick = tick, finish = finish}},
+    conditions = {participants = {
+        validate = function(args)
+            local minimum = args.minimum
+            if minimum == nil then minimum = 1 end
+            return type(minimum) == "number" and minimum >= 1 and minimum <= 64
+                and minimum == math.floor(minimum), "minimum 必须是 1～64 的整数。"
+        end,
+        evaluate = function(ctx, args)
+            return #ctx:GetPlayers() >= (args.minimum or 1), "当前世界参与玩家不足。"
+        end
+    }}
+}

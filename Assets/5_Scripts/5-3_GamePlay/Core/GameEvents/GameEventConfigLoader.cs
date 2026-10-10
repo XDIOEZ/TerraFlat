@@ -8,7 +8,7 @@ using UnityEngine;
 namespace FlatWorld.Gameplay.Events
 {
     /// <summary>
-    /// Loads and validates modular JSON event catalogs. A broken file or entry is isolated
+    /// Loads and validates modular JSON and Lua event catalogs. A broken file or entry is isolated
     /// so the remaining valid event definitions can still run.
     /// </summary>
     public static class GameEventConfigLoader
@@ -16,7 +16,7 @@ namespace FlatWorld.Gameplay.Events
         public const int SupportedSchemaVersion = 1;
         public const string ResourcePath = "Config/GameEvents/Definitions";
 
-        public static GameEventConfigLoadResult LoadFromResources(bool logIssues = true)
+        internal static GameEventConfigLoadResult LoadFromResources(GameEventLuaRuntime luaRuntime, bool logIssues = true)
         {
             TextAsset[] assets = Resources.LoadAll<TextAsset>(ResourcePath);
             Array.Sort(assets, (left, right) => string.CompareOrdinal(left.name, right.name));
@@ -25,7 +25,13 @@ namespace FlatWorld.Gameplay.Events
             for (int i = 0; i < assets.Length; i++)
                 sources.Add(new GameEventConfigSource($"{assets[i].name}.json", assets[i].text));
 
-            return LoadSources(sources, logIssues);
+            List<GameEventConfigIssue> luaIssues = new();
+            luaRuntime?.LoadCatalogs(sources, luaIssues);
+            GameEventConfigLoadResult result = LoadSources(sources, logIssues);
+            result.Issues.AddRange(luaIssues);
+            if (logIssues)
+                foreach (GameEventConfigIssue issue in luaIssues) Debug.LogError(issue.ToString());
+            return result;
         }
 
         public static GameEventConfigLoadResult LoadSources(

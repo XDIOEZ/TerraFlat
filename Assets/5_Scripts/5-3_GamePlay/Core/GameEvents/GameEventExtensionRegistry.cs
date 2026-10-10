@@ -52,6 +52,21 @@ namespace FlatWorld.Gameplay.Events
             return Register(ActionHandlers, handler?.Type, handler, replace);
         }
 
+        // Lua 适配器与管理器资源会话一起替换，注册表不能持有已释放的虚拟机。
+        internal static void SetLuaRuntime(GameEventLuaRuntime runtime)
+        {
+            if (runtime == null)
+            {
+                if (TriggerHandlers.GetValueOrDefault("lua") is LuaGameEventTrigger) TriggerHandlers.Remove("lua");
+                if (ConditionEvaluators.GetValueOrDefault("lua") is LuaGameEventCondition) ConditionEvaluators.Remove("lua");
+                if (ActionHandlers.GetValueOrDefault("lua") is LuaGameEventAction) ActionHandlers.Remove("lua");
+                return;
+            }
+            RegisterTrigger(new LuaGameEventTrigger(runtime), replace: true);
+            RegisterCondition(new LuaGameEventCondition(runtime), replace: true);
+            RegisterAction(new LuaGameEventAction(runtime), replace: true);
+        }
+
         public static bool TryGetTrigger(string type, out IGameEventTriggerHandler handler)
         {
             EnsureBuiltInsRegistered();

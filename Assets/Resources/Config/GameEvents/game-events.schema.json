@@ -23,7 +23,23 @@
       "properties": {
         "type": { "type": "string", "minLength": 1 },
         "parameters": { "type": "object" }
-      }
+      },
+      "allOf": [{
+        "if": {"properties": {"type": {"const": "lua"}}},
+        "then": {
+          "properties": {
+            "parameters": {
+              "type": "object",
+              "required": ["script", "handler"],
+              "properties": {
+                "script": {"type": "string", "minLength": 1, "description": "Config/GameEvents/Lua 下的脚本名，不带 .lua.txt。"},
+                "handler": {"type": "string", "minLength": 1, "description": "脚本对应 triggers/conditions/actions 表中的处理器名。"},
+                "args": {"type": "object", "description": "传给 Lua 回调的纯数据参数。"}
+              }
+            }
+          }
+        }
+      }]
     },
     "action": {
       "allOf": [

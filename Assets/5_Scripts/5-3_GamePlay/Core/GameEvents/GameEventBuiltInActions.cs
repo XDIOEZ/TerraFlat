@@ -451,15 +451,19 @@ namespace FlatWorld.Gameplay.Events
 
         [JsonProperty("intensity")]
         public float Intensity = 1f;
+
+        [JsonProperty("durationGameSeconds")]
+        public float DurationGameSeconds;
     }
 
     [Serializable]
     internal sealed class WeatherOverrideRuntimeState
     {
         public bool Applied;
+        public float EndTotalTime;
     }
 
-    public sealed class WeatherOverrideGameEventAction : IGameEventActionHandler
+    public sealed class WeatherOverrideGameEventAction : IGameEventActionHandler, IGameEventSuspendableAction
     {
         public string Type => "weather.override";
 
@@ -476,6 +480,11 @@ namespace FlatWorld.Gameplay.Events
             if (value.Intensity <= 0f || value.Intensity > 1f)
             {
                 error = "intensity must be greater than 0 and at most 1.";
+                return false;
+            }
+            if (value.DurationGameSeconds < 0f || float.IsNaN(value.DurationGameSeconds) || float.IsInfinity(value.DurationGameSeconds))
+            {
+                error = "durationGameSeconds must be finite and non-negative.";
                 return false;
             }
 
@@ -513,6 +522,11 @@ namespace FlatWorld.Gameplay.Events
             GameEventActionRuntimeSaveData state,
             bool cancelled)
         {
+            Suspend(context, parameters, state);
+        }
+
+        public void Suspend(GameEventActionContext context, JObject parameters, GameEventActionRuntimeSaveData state)
+        {
             WeatherMgr.Instance?.ClearGameEventWeather(context.Definition.Id);
         }
 
@@ -525,15 +539,30 @@ namespace FlatWorld.Gameplay.Events
             if (!Enum.TryParse(value.Weather, true, out WeatherType weather))
                 return GameEventActionStatus.Running;
 
+            WeatherOverrideRuntimeState runtime = string.IsNullOrEmpty(state.RuntimeDataJson)
+                ? new WeatherOverrideRuntimeState()
+                : JsonConvert.DeserializeObject<WeatherOverrideRuntimeState>(state.RuntimeDataJson);
+            runtime ??= new WeatherOverrideRuntimeState();
+            // Lua 阶段天气使用自己的截止时间，恢复时不能重新计算而延长持续时间。
+            if (runtime.EndTotalTime <= 0f)
+                runtime.EndTotalTime = value.DurationGameSeconds > 0f
+                    ? context.CurrentTotalTime + value.DurationGameSeconds
+                    : context.ActiveEvent.EndTotalTime;
+            if (runtime.EndTotalTime <= 0f)
+                throw new InvalidOperationException("没有固定结束时间的事件必须为天气行动提供 durationGameSeconds。");
+            if (runtime.EndTotalTime <= context.CurrentTotalTime)
+            {
+                state.RuntimeDataJson = JsonConvert.SerializeObject(runtime, Formatting.None);
+                return GameEventActionStatus.Completed;
+            }
             bool applied = WeatherMgr.Instance != null &&
                            WeatherMgr.Instance.ApplyGameEventWeather(
                                context.Definition.Id,
                                weather,
                                Mathf.Clamp01(value.Intensity),
-                               context.ActiveEvent.EndTotalTime);
-            state.RuntimeDataJson = JsonConvert.SerializeObject(
-                new WeatherOverrideRuntimeState { Applied = applied },
-                Formatting.None);
+                               runtime.EndTotalTime);
+            runtime.Applied = applied;
+            state.RuntimeDataJson = JsonConvert.SerializeObject(runtime, Formatting.None);
             return applied ? GameEventActionStatus.Completed : GameEventActionStatus.Running;
         }
 

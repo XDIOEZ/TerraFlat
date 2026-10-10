@@ -8,7 +8,7 @@ using UnityEngine.SceneManagement;
 namespace FlatWorld.Gameplay.Events
 {
     /// <summary>
-    /// Authoritative global event scheduler. Definitions are modular JSON files; only runtime
+    /// Authoritative global event scheduler. Definitions are modular JSON or Lua files; only runtime
     /// progress and active action state are stored in the world save.
     /// </summary>
     public sealed class GameEventManager : SingletonAutoMono<GameEventManager>
@@ -21,6 +21,7 @@ namespace FlatWorld.Gameplay.Events
         private GameManager boundGameManager;
         private DayTimeSystem subscribedTimeSystem;
         private GameEventSaveData runtimeData;
+        private GameEventLuaRuntime luaRuntime;
         private bool worldActive;
 
         public event Action<GameEventRuntimeNotification> EventStarted;
@@ -51,6 +52,7 @@ namespace FlatWorld.Gameplay.Events
 
         private void Update()
         {
+            luaRuntime?.Tick();
             BindGameManager();
             if (worldActive)
                 SubscribeTimeSystem();
@@ -58,8 +60,30 @@ namespace FlatWorld.Gameplay.Events
 
         public GameEventConfigLoadResult ReloadConfiguration()
         {
+            // 活动脚本不能换掉执行中的闭包；结束相关事件后再重载。
+            if (HasActiveLuaActions())
+            {
+                GameEventConfigLoadResult blocked = new();
+                blocked.Definitions.AddRange(definitions);
+                GameEventConfigIssue issue = new("<reload>", "<runtime>", "存在活动 Lua 事件，请先结束事件再重载配置；当前配置继续使用。");
+                blocked.Issues.Add(issue);
+                Debug.LogWarning(issue.ToString());
+                return blocked;
+            }
             GameEventExtensionRegistry.EnsureBuiltInsRegistered();
-            GameEventConfigLoadResult loadResult = GameEventConfigLoader.LoadFromResources();
+            GameEventConfigIssue initializationIssue = null;
+            GameEventLuaRuntime previousRuntime = luaRuntime;
+            luaRuntime = null;
+            try { luaRuntime = new GameEventLuaRuntime(); }
+            catch (Exception exception)
+            {
+                initializationIssue = new GameEventConfigIssue("<lua>", "<runtime>", $"Lua 初始化失败：{exception.Message}");
+                Debug.LogError(initializationIssue.ToString());
+            }
+            GameEventExtensionRegistry.SetLuaRuntime(luaRuntime);
+            previousRuntime?.Dispose();
+            GameEventConfigLoadResult loadResult = GameEventConfigLoader.LoadFromResources(luaRuntime);
+            if (initializationIssue != null) loadResult.Issues.Add(initializationIssue);
             definitions.Clear();
             definitionsById.Clear();
 
@@ -68,6 +92,7 @@ namespace FlatWorld.Gameplay.Events
                 GameEventDefinition definition = loadResult.Definitions[i];
                 if (!ValidateRegisteredExtensions(definition, out string error))
                 {
+                    loadResult.Issues.Add(new GameEventConfigIssue(definition.SourceName, definition.Id, error));
                     Debug.LogError(
                         $"[GameEventConfig] file='{definition.SourceName}', event='{definition.Id}': {error}");
                     continue;
@@ -79,6 +104,44 @@ namespace FlatWorld.Gameplay.Events
 
             return loadResult;
         }
+
+        #region Lua 会话与离开世界
+
+        private bool HasActiveLuaActions()
+        {
+            if (runtimeData?.ActiveEvents == null) return false;
+            foreach (ActiveGameEventSaveData active in runtimeData.ActiveEvents)
+            {
+                if (active == null || !definitionsById.TryGetValue(active.EventId, out GameEventDefinition definition)) continue;
+                foreach (GameEventActionDefinition action in definition.Actions)
+                    if (action.Type == "lua") return true;
+            }
+            return false;
+        }
+
+        private void SuspendLuaActions()
+        {
+            if (!GameNetwork.HasStateAuthority || runtimeData?.ActiveEvents == null) return;
+            bool clockAvailable = TryGetCurrentClock(out string worldKey, out _, out TimeData timeData);
+            float now = clockAvailable ? timeData.GetTotalGameTime() : 0f;
+            float dayLength = clockAvailable ? Mathf.Max(1f, timeData.DayLength) : 1440f;
+            foreach (ActiveGameEventSaveData active in runtimeData.ActiveEvents)
+            {
+                if (active == null || (clockAvailable && active.SourceWorldKey != worldKey) ||
+                    !definitionsById.TryGetValue(active.EventId, out GameEventDefinition definition)) continue;
+                foreach (GameEventActionDefinition action in definition.Actions)
+                {
+                    GameEventActionRuntimeSaveData state = FindActionState(active, action.Id);
+                    if (state == null || !state.Started ||
+                        !GameEventExtensionRegistry.TryGetAction(action.Type, out IGameEventActionHandler handler) ||
+                        handler is not LuaGameEventAction lua) continue;
+                    try { lua.Suspend(CreateActionContext(definition, action, active, now, dayLength), state); }
+                    catch (Exception exception) { Debug.LogError($"[GameEvent Lua:{definition.Id}] 离开世界清理失败：{exception}"); }
+                }
+            }
+        }
+
+        #endregion
 
         public bool TryTriggerNow(string eventId, bool ignoreConditions = false)
         {
@@ -211,6 +274,7 @@ namespace FlatWorld.Gameplay.Events
 
         private void OnGameWorldExit()
         {
+            SuspendLuaActions();
             worldActive = false;
             UnsubscribeTimeSystem();
             runtimeData = null;
@@ -918,6 +982,10 @@ namespace FlatWorld.Gameplay.Events
 
         protected override void OnDestroy()
         {
+            if (worldActive) SuspendLuaActions();
+            GameEventExtensionRegistry.SetLuaRuntime(null);
+            luaRuntime?.Dispose();
+            luaRuntime = null;
             UnsubscribeTimeSystem();
             if (boundGameManager != null)
             {

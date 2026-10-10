@@ -198,6 +198,16 @@ namespace FlatWorld.Gameplay.Events
             bool cancelled);
     }
 
+    #region 行动挂起扩展
+
+    // 挂起只移除可恢复的临时效果，不得终止行动或销毁存档进度。
+    public interface IGameEventSuspendableAction
+    {
+        void Suspend(GameEventActionContext context, JObject parameters, GameEventActionRuntimeSaveData state);
+    }
+
+    #endregion
+
     public readonly struct GameEventRuntimeNotification
     {
         public string EventId { get; }

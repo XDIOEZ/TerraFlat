@@ -1,0 +1,8 @@
+<linker>
+  <!-- Lua 受限接口与事件运行态通过反射访问，发行包必须保留其成员。 -->
+  <assembly fullname="GamePlay">
+    <type fullname="FlatWorld.Gameplay.Events.GameEventLuaContext" preserve="all" />
+    <type fullname="FlatWorld.Gameplay.Events.GameEventLuaActionData" preserve="all" />
+    <type fullname="FlatWorld.Gameplay.Events.GameEventLuaChildActionData" preserve="all" />
+  </assembly>
+</linker>
