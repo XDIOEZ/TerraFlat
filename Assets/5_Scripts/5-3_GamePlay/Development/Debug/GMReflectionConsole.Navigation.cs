@@ -28,7 +28,8 @@ public sealed partial class GMReflectionConsole
         Commands,
         Quests,
         Layers,
-        Aiecs
+        Aiecs,
+        Device
     }
 
     private sealed class GmPageView
@@ -175,6 +176,7 @@ public sealed partial class GMReflectionConsole
         BuildWorldPage();
         BuildLayersPage();
         BuildAiecsPage();
+        BuildDevicePage();
         BuildTeleportPage();
         gameEventPageContent = CreatePage(GmPageId.GameEvents).Content;
         commandPageContent = CreatePage(GmPageId.Commands).Content;
@@ -346,6 +348,7 @@ public sealed partial class GMReflectionConsole
         CreateTab(content.transform, GmPageId.World, "世界", 100f);
         CreateTab(content.transform, GmPageId.Layers, "层级显示", 128f);
         CreateTab(content.transform, GmPageId.Aiecs, "AIECS", 110f);
+        CreateTab(content.transform, GmPageId.Device, "设备数据", 128f);
         CreateTab(content.transform, GmPageId.Structures, "传送", 100f);
         CreateTab(content.transform, GmPageId.GameEvents, "事件", 110f);
         CreateTab(content.transform, GmPageId.Commands, "命令", 110f);
@@ -2085,6 +2088,7 @@ public sealed partial class GMReflectionConsole
             GmPageId.Quests => "任务",
             GmPageId.Layers => "层级显示",
             GmPageId.Aiecs => "AIECS",
+            GmPageId.Device => "设备数据",
             _ => pageId.ToString()
         };
     }

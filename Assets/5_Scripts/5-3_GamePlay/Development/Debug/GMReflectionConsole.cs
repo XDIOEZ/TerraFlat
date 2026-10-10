@@ -245,6 +245,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         UpdateBuffTargetListIfNeeded();
         RefreshResponsiveLayoutIfCanvasChanged();
         RefreshAiecsPageIfNeeded();
+        RefreshDevicePageIfNeeded();
         RefreshDayTimeControlIfNeeded();
         RefreshChunkStreamingStatusIfNeeded();
         HandleTeleportInput();
@@ -2092,6 +2093,9 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
                 break;
             case GmPageId.Aiecs:
                 RefreshAiecsPage();
+                break;
+            case GmPageId.Device:
+                RefreshDevicePage();
                 break;
             case GmPageId.Structures:
                 RefreshPlanetTeleportOptions();
