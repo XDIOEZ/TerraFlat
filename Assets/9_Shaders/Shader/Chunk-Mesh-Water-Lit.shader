@@ -7,8 +7,8 @@ Shader "FlatWorld/2D/Chunk Mesh Water Lit"
         _MaskTex("灯光遮罩", 2D) = "white" {}
         [NoScaleOffset] _LavaPatternTex("岩浆RGBA图(R主体/G扰动/B-A高光)", 2D) = "gray" {}
         [Header(Ocean Surface)]
-        _DeepColor("深海颜色", Color) = (0.035, 0.13, 0.19, 1)
-        _ShallowColor("浅海颜色", Color) = (0.19, 0.42, 0.4, 1)
+        _DeepColor("深海颜色", Color) = (0.02, 0.09, 0.36, 1)
+        _ShallowColor("浅海颜色", Color) = (0.04, 0.2, 0.82, 1)
         _SurfaceTint("海水染色强度", Range(0, 1)) = 1
         _SwellScale("涌浪尺度", Range(0.05, 4)) = 0.74
         _DetailScale("细浪尺度", Range(0.5, 12)) = 4.6
@@ -17,13 +17,13 @@ Shader "FlatWorld/2D/Chunk Mesh Water Lit"
         _NormalStrength("表面起伏", Range(0, 0.8)) = 0.44
         _PixelDensity("风格化采样密度", Range(1, 128)) = 64
         _TideCyclesPerDay("每日潮汐循环次数", Range(1, 4)) = 2.0
-        _RippleColor("浪脊颜色", Color) = (0.3, 0.53, 0.53, 1)
+        _RippleColor("浪脊颜色", Color) = (0.3, 0.57, 0.98, 1)
         _RippleStrength("浪脊强度", Range(0, 1)) = 0.12
         _RippleScale("浪纹尺度", Range(0.25, 6)) = 2.8
         _RippleWidth("浪脊宽度", Range(0.04, 0.45)) = 0.18
         _RippleShadowStrength("浪背暗部", Range(0, 0.5)) = 0.06
         [Header(Reflection And Foam)]
-        _ReflectionColor("镜面反射颜色", Color) = (0.52, 0.65, 0.72, 1)
+        _ReflectionColor("镜面反射颜色", Color) = (0.38, 0.57, 0.9, 1)
         _ReflectionStrength("镜面反射强度", Range(0, 1)) = 0.65
         _ReflectionSmoothness("镜面反射平滑度", Range(0, 1)) = 0.68
         _ReflectionDirection("镜面环境方向", Vector) = (-0.35, 0.18, 0.92, 0)
@@ -31,9 +31,9 @@ Shader "FlatWorld/2D/Chunk Mesh Water Lit"
         _SpecularStrength("太阳高光强度", Range(0, 1)) = 0.34
         _SpecularPower("太阳高光锐度", Range(4, 96)) = 72
         _SunDirection("太阳方向", Vector) = (0.28, 0.42, 0.86, 0)
-        _CausticColor("焦散颜色", Color) = (0.42, 0.66, 0.58, 1)
+        _CausticColor("焦散颜色", Color) = (0.35, 0.58, 0.96, 1)
         _CausticStrength("焦散强度", Range(0, 1)) = 0.025
-        _FoamColor("泡沫颜色", Color) = (0.81, 0.87, 0.85, 1)
+        _FoamColor("泡沫颜色", Color) = (0.75, 0.87, 1, 1)
         _WhitecapStrength("浪峰白沫", Range(0, 1)) = 0.12
         [Header(Moon Reflection)]
         _MoonReflectionColor("月光倒影颜色", Color) = (0.72, 0.86, 1, 1)
@@ -45,7 +45,7 @@ Shader "FlatWorld/2D/Chunk Mesh Water Lit"
         [Header(Shore)]
         _EdgeWidth("岸线宽度", Range(0.03, 0.45)) = 0.22
         _CornerStrength("转角叠加强度", Range(0, 1)) = 0.18
-        _ShoreColor("岸线亮部", Color) = (0.39, 0.57, 0.53, 1)
+        _ShoreColor("岸线亮部", Color) = (0.32, 0.56, 0.92, 1)
         _ShoreStrength("岸线亮部强度", Range(0, 1)) = 0.035
         _ShoreFoamStrength("岸边泡沫强度", Range(0, 1)) = 0.3
         _FoamSpeed("岸边泡沫速度", Range(0, 3)) = 0.52
