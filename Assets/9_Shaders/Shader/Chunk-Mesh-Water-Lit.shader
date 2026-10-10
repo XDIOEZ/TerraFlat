@@ -200,13 +200,13 @@ Shader "FlatWorld/2D/Chunk Mesh Water Lit"
             gentleWave *= 0.45 + 0.55 * WaterNoise(positionWS * 0.7 + float2(_Time.y * 0.03, 0.0));
             WaterSurfaceData surface = (WaterSurfaceData)0;
             surface.ripple = smoothstep(0.45, 0.8, pattern) * _RippleStrength * strength * 0.55;
-            surface.ripple += gentleWave * max(_RippleStrength, 0.10) * lerp(0.35, 0.85, lake);
+            surface.ripple += gentleWave * _RippleStrength * lerp(0.35, 0.85, lake);
             surface.rippleShadow = smoothstep(0.5, 0.8, 1.0 - pattern)
                 * _RippleShadowStrength * strength * 0.3;
             surface.caustic = pattern * _CausticStrength * 0.3;
             // 细小天空反光不随深度归零，深湖仍服从日夜照明但不会成为一整片纯黑色。
-            surface.reflection = lake * (0.055 + gentleWave * 0.035);
-            surface.whitecap = smoothstep(0.64, 0.88, pattern) * max(_WhitecapStrength, 0.14)
+            surface.reflection = lake * saturate(_ReflectionStrength) * (0.08 + gentleWave * 0.12);
+            surface.whitecap = smoothstep(0.64, 0.88, pattern) * _WhitecapStrength
                 * strength * lerp(0.25, 0.65, lake);
             surface.moonReflection = ComputeMoonReflection(screenUV, 0.0, pattern, pattern,
                 0.0, 0.0, 0.0);

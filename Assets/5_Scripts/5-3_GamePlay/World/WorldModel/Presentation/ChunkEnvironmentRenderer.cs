@@ -2,13 +2,14 @@ using FlatWorld.WorldModel;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 
-/// <summary>环境阈值覆盖层直接向区块 BRG Owner 提交单格 Sprite，保持原有 0.22 透明度。</summary>
+/// <summary>环境阈值覆盖只装饰符合条件的地表，默认不覆盖独立液体层。</summary>
 public sealed class ChunkEnvironmentRenderer : MonoBehaviour, IChunkViewRenderer
 {
     #region 配置与绑定
 
     [SerializeField] private string environmentLayerId = "grass";
     [SerializeField] private float visibleThreshold = 0.5f;
+    [SerializeField] private bool includeLiquidCells;
     [SerializeField] private Tile tile;
     [SerializeField] private Material material;
     [SerializeField] private Color tint = new(1f, 1f, 1f, 0.22f);
@@ -27,6 +28,7 @@ public sealed class ChunkEnvironmentRenderer : MonoBehaviour, IChunkViewRenderer
         owner = GetComponent<ChunkTilemapRenderer>();
         boundChunk = chunk;
         boundChunk.Terrain.Changed += HandleTerrainChanged;
+        boundChunk.Terrain.LiquidBatchChanged += HandleLiquidBatchChanged;
         owner.BatchPresentationRebuilt += HandleBatchPresentationRebuilt;
         Render(chunk.Terrain);
     }
@@ -34,7 +36,10 @@ public sealed class ChunkEnvironmentRenderer : MonoBehaviour, IChunkViewRenderer
     public void Unbind()
     {
         if (boundChunk?.Terrain != null)
+        {
             boundChunk.Terrain.Changed -= HandleTerrainChanged;
+            boundChunk.Terrain.LiquidBatchChanged -= HandleLiquidBatchChanged;
+        }
         if (owner != null)
         {
             owner.BatchPresentationRebuilt -= HandleBatchPresentationRebuilt;
@@ -44,17 +49,39 @@ public sealed class ChunkEnvironmentRenderer : MonoBehaviour, IChunkViewRenderer
                     owner.ClearLayerVisual(ChunkBatchRendererGroupService.VisualLayer.Environment, x, y);
         }
         boundChunk = null;
+        owner = null;
     }
+
+    #endregion
+
+    #region 地表覆盖刷新
 
     private void HandleTerrainChanged(ChunkTerrainChanged changed)
     {
-        if (changed.Kind != TerrainChangeKind.Environment || boundChunk?.Terrain == null ||
+        if (boundChunk?.Terrain == null ||
+            (changed.Kind != TerrainChangeKind.Environment && changed.Kind != TerrainChangeKind.Liquid &&
+             changed.Kind != TerrainChangeKind.Cell && changed.Kind != TerrainChangeKind.TileStack) ||
             tile == null || material == null)
             return;
+        RefreshCellFromTerrain(changed.LocalCell.X, changed.LocalCell.Y);
+    }
+
+    private void RefreshCellFromTerrain(int x, int y)
+    {
         bool visible = boundChunk.Terrain.TryGetEnvironmentValue(environmentLayerId,
-                           changed.LocalCell.X, changed.LocalCell.Y, out float value) &&
+                           x, y, out float value) &&
                        value >= visibleThreshold;
-        RefreshCell(changed.LocalCell.X, changed.LocalCell.Y, visible);
+        RefreshCell(x, y, visible);
+    }
+
+    /// <summary>倒水、抽水与批量流动后同步地表覆盖，不在水面留下旧染色。</summary>
+    private void HandleLiquidBatchChanged(ChunkLiquidBatchChanged changed)
+    {
+        if (includeLiquidCells || boundChunk?.Terrain == null || tile == null || material == null ||
+            !ReferenceEquals(changed.Terrain, boundChunk.Terrain))
+            return;
+        foreach (int index in changed.CellIndices.Span)
+            RefreshCellFromTerrain(index % changed.Terrain.Width, index / changed.Terrain.Width);
     }
 
     /// <summary>Owner 重建后从权威环境层补齐本图层。</summary>
@@ -77,7 +104,9 @@ public sealed class ChunkEnvironmentRenderer : MonoBehaviour, IChunkViewRenderer
     /// <summary>单格环境覆盖的 BRG 提交与清除。</summary>
     private void RefreshCell(int x, int y, bool visible)
     {
-        if (!visible)
+        ChunkTerrainData terrain = boundChunk.Terrain;
+        if (!visible || terrain.GetCell(x, y).GroundTileId == 0 ||
+            (!includeLiquidCells && terrain.GetLiquidDepth(x, y) > 0f))
         {
             owner.ClearLayerVisual(ChunkBatchRendererGroupService.VisualLayer.Environment, x, y);
             return;

@@ -106,6 +106,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   environmentLayerId: moisture
   visibleThreshold: 0.86
+  includeLiquidCells: 0
   tile: {fileID: 11400000, guid: 6d0eadd27bd6e5745af12546e6ae687d, type: 2}
   material: {fileID: 2100000, guid: a97c105638bdf8b4a8650670310a4cd3, type: 2}
   tint: {r: 1, g: 1, b: 1, a: 0.22}

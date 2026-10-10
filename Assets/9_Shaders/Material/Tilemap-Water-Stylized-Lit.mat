@@ -38,29 +38,29 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - _CausticStrength: 0.08
+    - _CausticStrength: 0.006
     - _CornerStrength: 0.18
     - _DetailScale: 3.8
-    - _EdgeWidth: 0.2
+    - _EdgeWidth: 0.08
     - _EnableExternalAlpha: 0
     - _FoamSpeed: 0.72
     - _TideCyclesPerDay: 2
     - _NormalStrength: 0.32
     - _PixelDensity: 64
     - _ReflectionSmoothness: 0.72
-    - _ReflectionStrength: 0.42
+    - _ReflectionStrength: 0.14
     - _RippleScale: 1.8
-    - _RippleShadowStrength: 0.08
-    - _RippleStrength: 0.22
+    - _RippleShadowStrength: 0.02
+    - _RippleStrength: 0.06
     - _RippleWidth: 0.1
-    - _ShoreFoamStrength: 0.68
-    - _ShoreStrength: 0.16
+    - _ShoreFoamStrength: 0.06
+    - _ShoreStrength: 0
     - _SpecularPower: 48
-    - _SpecularStrength: 0.3
+    - _SpecularStrength: 0.12
     - _SwellScale: 0.68
     - _WaveDistortion: 1.4
     - _WaveSpeed: 0.42
-    - _WhitecapStrength: 0.24
+    - _WhitecapStrength: 0.035
     m_Colors:
     - _CausticColor: {r: 0.28, g: 0.58, b: 0.98, a: 1}
     - _Color: {r: 1, g: 1, b: 1, a: 1}

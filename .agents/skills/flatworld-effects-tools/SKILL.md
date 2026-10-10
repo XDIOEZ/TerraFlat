@@ -63,6 +63,7 @@ description: "Use when: 定位或修改 FlatWorld 的运行时特效、粒子、
 - 正式 Ground/Liquid 由 BRG 独立提交，液体外观来自 `LiquidDefinition.WorldWater`，禁止按 GroundTileId 查水面贴图。岸线以 LiquidDepth > 0 判断，深度用每格四角插值；任一边界格液深变化须更新八方向邻区的共享边/角，不能只监听 TerrainCell 改动。旧 Tilemap 的颜色仍只编码岸线，兼容深度纹理与 BRG 共用连续液深语义。
 - 岩浆源材质使用独立 `Tilemap Lava Lit` Shader；正式 Chunk Mesh 会把源材质属性复制到共用 `Chunk Mesh Water Lit`，因此岩浆必须通过 `_LavaMode=1` 和同名参数复用 `LavaSurfaceCommon.hlsl`。岩浆动态形态读取独立可平铺 `_LavaPatternTex`，RGBA 分别承载主体、扰动和两套交替高光，不能占用世界液体 Sprite 的 `_MainTex` 通道。
 - 普通水体（海、河、湖及各类水）只使用共用材质的 `_WaterColor` RGBA 统一上色和固定透明度，不按液深分层染色或改变 Alpha；水深仍用于玩法及岩浆等特殊液体。两种水体风格只改变波纹与反射算法，不改变基础颜色。
+- `ChunkEnvironmentRenderer` 的湿度等地表染色默认排除 `LiquidDepth > 0` 的液体格；只有显式 `includeLiquidCells` 才允许覆盖液体。初始化、地形/单格液体变化及 `LiquidBatchChanged` 共用筛选，抽干后恢复陆地覆盖。水色分块先隔离这类额外覆盖，不能靠改水色或关闭全局 SRP Batcher 遮掩。
 - Tilemap 合批后 `POSITION` 不保证是 Chunk 局部坐标；水深与岸线使用世界坐标，MPB 的 `_LiquidDepthUvScaleOffset` 必须扣除水层原点再加入一格纹理边框。当前世界网格每格为 1 单位且原点对齐整数，不要用 `unity_WorldToObject` 恢复已被合批丢失的局部坐标。
 - 水面潮流使用 `DayTimeSystem` 发布的 `_GlobalGameDay` 驱动，并沿材质 `_FlowDirection` 轴按 `_TideCyclesPerDay` 往返；方向性水纹不要改回基于 `_Time` 的持续旋转，否则跳时、读档与游戏时间倍率会和潮汐表现脱节。
 - 写实水面的风浪传播与潮流平移必须分开：波相位随游戏时间连续推进，潮汐只平移水面坐标，避免潮流换向时整片海面停住；波面法线与太阳高光共用解析波斜率，缩小时通过屏幕导数衰减细浪并拓宽高光，不量化写实水面的世界坐标。风格化水面按其独立算法保留像素采样与浪纹。
