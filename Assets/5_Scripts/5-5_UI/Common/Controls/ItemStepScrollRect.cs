@@ -14,9 +14,13 @@ public sealed class ItemStepScrollRect : ScrollRect
 
     [SerializeField, Min(0.01f)] private float wheelSmoothTime = 0.10f;
     [SerializeField, Min(1f)] private float fallbackItemSize = 48f;
+    [SerializeField, Min(0f)] private float fixedWheelStep;
     private Vector2 targetPosition;
     private Vector2 wheelVelocity;
     private bool wheelActive;
+
+    // 长文本不是列表条目，允许指定固定滚轮步长，避免一次跳过整段内容。
+    public void SetFixedWheelStep(float pixels) => fixedWheelStep = Mathf.Max(0f, pixels);
 
     #endregion
 
@@ -120,6 +124,7 @@ public sealed class ItemStepScrollRect : ScrollRect
     /// <summary>网格按一行/列，普通布局按一个活动条目；隐藏模板和忽略布局节点不参与。</summary>
     private float ResolveItemStep(int axis)
     {
+        if (fixedWheelStep > 0f) return fixedWheelStep;
         if (content.TryGetComponent(out GridLayoutGroup grid))
             return Mathf.Max(1f, grid.cellSize[axis] + grid.spacing[axis]);
         float spacing = content.TryGetComponent(out HorizontalOrVerticalLayoutGroup layout) ? layout.spacing : 0f;

@@ -119,6 +119,41 @@ public static partial class RuntimeUIPrefabBuilder
         text.alignment = TextAlignmentOptions.TopLeft; text.richText = false;
         text.enableWordWrapping = true; text.overflowMode = TextOverflowModes.Overflow; text.raycastTarget = false;
         scroll.content = rect; scroll.horizontal = false; scroll.vertical = true;
+        scroll.movementType = ScrollRect.MovementType.Clamped;
+        if (scroll is ItemStepScrollRect stepScroll) stepScroll.SetFixedWheelStep(48f);
+        scroll.viewport.offsetMax = new Vector2(-18f, 0f);
+        AddShipScreenScrollbar(scroll);
+    }
+
+    private static void AddShipScreenScrollbar(ScrollRect scroll)
+    {
+        // 左右屏独立滚动，内容溢出时才显示可拖动的纵向滚动条。
+        GameObject track = new("Scrollbar Vertical", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Scrollbar));
+        track.transform.SetParent(scroll.transform, false);
+        RectTransform trackRect = (RectTransform)track.transform;
+        trackRect.anchorMin = new Vector2(1f, 0f); trackRect.anchorMax = Vector2.one;
+        trackRect.pivot = new Vector2(1f, .5f);
+        trackRect.offsetMin = new Vector2(-14f, 3f); trackRect.offsetMax = new Vector2(-3f, -3f);
+
+        GameObject slidingArea = new("Sliding Area", typeof(RectTransform));
+        slidingArea.transform.SetParent(track.transform, false);
+        RectTransform slidingRect = (RectTransform)slidingArea.transform;
+        slidingRect.anchorMin = Vector2.zero; slidingRect.anchorMax = Vector2.one;
+        slidingRect.offsetMin = slidingRect.offsetMax = Vector2.zero;
+
+        GameObject handle = new("Handle", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        handle.transform.SetParent(slidingArea.transform, false);
+        RectTransform handleRect = (RectTransform)handle.transform;
+        handleRect.anchorMin = Vector2.zero; handleRect.anchorMax = Vector2.one;
+        handleRect.offsetMin = handleRect.offsetMax = Vector2.zero;
+
+        Scrollbar scrollbar = track.GetComponent<Scrollbar>();
+        scrollbar.handleRect = handleRect;
+        scrollbar.targetGraphic = handle.GetComponent<Image>();
+        scrollbar.direction = Scrollbar.Direction.BottomToTop;
+        scrollbar.navigation = new Navigation { mode = Navigation.Mode.None };
+        scroll.verticalScrollbar = scrollbar;
+        scroll.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHide;
     }
 
     private static void AddShipScreenHeading(Transform parent, TMP_Text template, string name, string caption, Vector2 position, Vector2 size)

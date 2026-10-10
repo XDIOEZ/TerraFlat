@@ -213,6 +213,7 @@ description: "Use when: 定位或修改 FlatWorld 的 UIManager、BasePanel、�
 ## 验证
 
 - 所有正式列表使用 `ItemStepScrollRect`；滚轮先除以当前 InputSystemUIInputModule 的 `scrollDeltaPerTick` 还原刻度，再按实际条目/网格行尺寸平滑移动。不要重新用固定的 120 或大像素倍率补偿；触摸拖动仍走 ScrollRect 原有路径。
+- 单个 TMP 长文本作为滚动内容时，对 `ItemStepScrollRect` 设置 `fixedWheelStep`（通过 `SetFixedWheelStep`），避免滚轮把整段文字当一行直接跳到底部；正式 Prefab 与构建器同步配置。
 - 旧 ScrollRect Prefab 的迁移使用显式 `ItemStepScrollRectMigration`，仅替换 MonoScript GUID，保留组件 fileID、内容/视口/滚动条引用；运行时列表和重建器也必须创建同一派生类型，不能只修改现有资源。
 - `SafeAreaScaleGroup.presentationScale` 在安全区适配后生效，用于单独缩小内容；不能修改全屏输入层或 CanvasScaler。手工制作为 0.6，其他制作面板为 1；隔离预览断言必须使用相同的二阶段缩放公式。
 
