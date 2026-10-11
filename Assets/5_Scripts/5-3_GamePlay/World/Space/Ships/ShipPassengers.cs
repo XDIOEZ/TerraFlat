@@ -104,13 +104,9 @@ namespace FlatWorld.Spaceflight
             if (mover.rb != null) mover.rb.angularVelocity = 0f;
             if (controller == null || controller.IsGameplayInputLocked ||
                 player.itemMods.GetMod_ByID<Mod_TurnBack>(ModText.TrunBody)?.IsDirectionLocked == true ||
-                !controller.TryGetMouseWorldPosition(out Vector3 point)) return;
-
-            Vector2 direction = point - player.transform.position;
-            if (direction.sqrMagnitude <= .01f) return;
+                !mover.TryGetPointerBodyTargetHeading(controller, out float targetHeading)) return;
 
             // 失重时沿最短角度转动整个玩家，鼠标贴近中心时保留原来的朝向。
-            float targetHeading = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
             float heading = Mathf.MoveTowardsAngle(player.transform.eulerAngles.z, targetHeading,
                 SpaceGameplaySettings.Current.PlayerTurnDegreesPerSecond * seconds);
             player.transform.rotation = Quaternion.Euler(0f, 0f, heading);

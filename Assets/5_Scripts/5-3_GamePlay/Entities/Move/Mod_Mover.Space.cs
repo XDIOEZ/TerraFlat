@@ -8,6 +8,9 @@ public partial class Mod_Mover
     private InputAction spaceTurnAction;
     private bool spaceMotionOwned;
     private RigidbodyType2D beforeSpaceBodyType;
+    private Vector2 pointerBodyScreenPosition;
+    private float pointerBodyTargetHeading;
+    private bool pointerBodyHeadingInitialized;
     private bool IsSpaceRunningDisabled => item is Player && SpaceSession.Current?.IsSpaceView == true;
     public bool IsUsingPointerBodyRotation { get; private set; }
 
@@ -15,8 +18,31 @@ public partial class Mod_Mover
     {
         if (IsUsingPointerBodyRotation == enabled) return;
         IsUsingPointerBodyRotation = enabled;
+        pointerBodyHeadingInitialized = false;
         item?.itemMods.GetMod_ByID<Mod_TurnBack>(ModText.TrunBody)?.SetMirroringEnabled(!enabled);
-        item?.itemMods.GetMod_ByID<Mod_Cam>(ModText.Camera)?.SetFollowTargetRotation(!enabled);
+    }
+
+    public bool TryGetPointerBodyTargetHeading(Mod_GameController controller, out float heading)
+    {
+        heading = pointerBodyTargetHeading;
+        if (!IsUsingPointerBodyRotation || controller == null) return false;
+        Vector2 screenPosition = controller.GetPointerScreenPosition();
+        bool worldAim = controller.HasExternalGameplayControl ||
+            controller.PreferredInputDevice == Mod_GameController.InputDeviceType.Mobile;
+        if (worldAim || !pointerBodyHeadingInitialized ||
+            (screenPosition - pointerBodyScreenPosition).sqrMagnitude > .01f)
+        {
+            if (!controller.TryGetMouseWorldPosition(out Vector3 point)) return false;
+            Vector2 direction = point - item.transform.position;
+            pointerBodyScreenPosition = screenPosition;
+            pointerBodyHeadingInitialized = true;
+            // 屏幕指针只在真正移动时更新转向目标，镜头自身旋转不会让玩家一直追着落点转圈。
+            pointerBodyTargetHeading = direction.sqrMagnitude <= .01f
+                ? item.transform.eulerAngles.z
+                : Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
+        }
+        heading = pointerBodyTargetHeading;
+        return true;
     }
 
     private bool UpdateSpaceMotion(float seconds)

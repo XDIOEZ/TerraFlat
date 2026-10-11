@@ -40,6 +40,7 @@ public class Mod_Cam : Module
     public Mod_GameController GameController;
     private WrappedWorldCameraRenderer _wrappedWorldRenderer;
     private CinemachineFramingTransposer _framingTransposer;
+    private CameraFollowRotation _rotationFollower;
     private float _baseXDamping;
     private float _baseYDamping;
     private bool _cameraFollowDefaultsCaptured;
@@ -69,7 +70,11 @@ public class Mod_Cam : Module
 
     public bool FollowTargetRotation { get; private set; } = true;
 
-    public void SetFollowTargetRotation(bool enabled) => FollowTargetRotation = enabled;
+    public void SetFollowTargetRotation(bool enabled)
+    {
+        FollowTargetRotation = enabled;
+        if (_rotationFollower != null) _rotationFollower.FollowTargetRotation = enabled;
+    }
 
     /// <summary>
     /// 获取虚拟相机组件
@@ -90,14 +95,6 @@ public class Mod_Cam : Module
         CameraUserSettings.Changed -= HandleCameraSettingsChanged;
         CameraUserSettings.Changed += HandleCameraSettingsChanged;
         BindWorldAudioListener();
-    }
-
-    // 鼠标控制本体转向时保持镜头角度，避免镜头转动让鼠标落点持续追着角色旋转。
-    private void LateUpdate()
-    {
-        Transform target = _followOverride != null ? _followOverride : CameraFollowItem?.transform;
-        if (Enabled && FollowTargetRotation && vcam != null && target != null)
-            vcam.m_Lens.Dutch = target.eulerAngles.z;
     }
 
     private void OnDisable()
@@ -137,6 +134,12 @@ public class Mod_Cam : Module
         {
             ControllerCamera = instantiatedCamera.GetComponentInChildren<Camera>();
             vcam = instantiatedCamera.GetComponentInChildren<CinemachineVirtualCamera>();
+            if (vcam != null)
+            {
+                _rotationFollower = vcam.GetComponent<CameraFollowRotation>();
+                if (_rotationFollower == null) _rotationFollower = vcam.gameObject.AddComponent<CameraFollowRotation>();
+                _rotationFollower.FollowTargetRotation = FollowTargetRotation;
+            }
         }
     
         // 初始化虚拟相机跟随目标
@@ -297,8 +300,8 @@ public class Mod_Cam : Module
         if (Vcam != null)
         {
             Vcam.Follow = target;
-            if (FollowTargetRotation && target != null) Vcam.m_Lens.Dutch = target.eulerAngles.z;
         }
+        if (_rotationFollower != null) _rotationFollower.FollowTarget = target;
         if (_wrappedWorldRenderer != null)
             _wrappedWorldRenderer.Configure(ControllerCamera, Vcam, target);
     }
