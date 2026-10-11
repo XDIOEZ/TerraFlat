@@ -120,7 +120,11 @@ namespace FlatWorld.Spaceflight
                     passengerImpulses.TryGetValue(passenger.ProfileId, out SpaceVector2 pending);
                     passengerImpulses[passenger.ProfileId] = pending + SpaceVector2.FromVector2(deltaVelocity);
                 }
-                if (Math.Abs(turn) > .001f) player.transform.Rotate(Vector3.forward, turn * SpaceGameplaySettings.Current.PlayerTurnDegreesPerSecond * seconds, UnityEngine.Space.World);
+                // Q/E 直接控制角速度，松键立即停转，并清除刚体残留的旋转速度。
+                float turnSpeed = Mathf.Clamp(turn, -1f, 1f) * SpaceGameplaySettings.Current.PlayerTurnDegreesPerSecond;
+                float heading = player.transform.eulerAngles.z + turnSpeed * seconds;
+                player.transform.rotation = Quaternion.Euler(0f, 0f, heading);
+                if (mover.rb != null) { mover.rb.angularVelocity = 0f; mover.rb.rotation = heading; }
             }
             passenger.PreviousShift = shift;
             passenger.FreeHeadingRadians = player.transform.eulerAngles.z * Math.PI / 180d;

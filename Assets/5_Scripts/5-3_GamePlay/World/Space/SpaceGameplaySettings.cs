@@ -30,7 +30,7 @@ namespace FlatWorld.Spaceflight
         public double ImpactForcePerDurability = 1000d;
         public double LandingChoiceRadiusMeters = 10d;
         public double WallPushSpeedMetersPerSecond = 8d;
-        public float PlayerTurnDegreesPerSecond = 90f;
+        public float PlayerTurnDegreesPerSecond = 45f; // 失重玩家按 Q/E 匀速旋转，松键即停。
         public float DrivingCameraSize = 30f;
         public double ImpactJoulesPerDurability = 1000d;
         private static SpaceGameplaySettings current;
@@ -52,7 +52,8 @@ namespace FlatWorld.Spaceflight
                     !SpaceVector2.Finite(current.NavigationArrivalDistanceMeters) || current.NavigationArrivalDistanceMeters <= 0d ||
                     !SpaceVector2.Finite(current.NavigationArrivalSpeedMetersPerSecond) || current.NavigationArrivalSpeedMetersPerSecond <= 0d ||
                     !SpaceVector2.Finite(current.NavigationSurfaceClearanceMeters) || current.NavigationSurfaceClearanceMeters < current.NavigationArrivalDistanceMeters ||
-                    current.FreeFloatMaxSpeedMetersPerSecond <= 0d || current.FreeFloatBrakingMetersPerSecondSquared <= 0d)
+                    current.FreeFloatMaxSpeedMetersPerSecond <= 0d || current.FreeFloatBrakingMetersPerSecondSquared <= 0d ||
+                    !SpaceVector2.Finite(current.PlayerTurnDegreesPerSecond) || current.PlayerTurnDegreesPerSecond <= 0f)
                     throw new InvalidOperationException("太空移动与冲击配置无效。");
                 return current;
             }

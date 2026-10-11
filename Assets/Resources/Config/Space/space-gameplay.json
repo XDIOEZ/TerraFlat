@@ -21,7 +21,7 @@
   "ImpactForcePerDurability": 1000.0,
   "LandingChoiceRadiusMeters": 10.0,
   "WallPushSpeedMetersPerSecond": 8.0,
-  "PlayerTurnDegreesPerSecond": 90.0,
+  "PlayerTurnDegreesPerSecond": 45.0,
   "DrivingCameraSize": 30.0,
   "ImpactJoulesPerDurability": 1000.0
 }
