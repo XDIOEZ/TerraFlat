@@ -48,6 +48,7 @@ namespace FlatWorld.Spaceflight
         public double LocalX, LocalY, RelativeHeadingRadians;
         public SpaceMotionState FreeMotion = new();
         public bool Supported, IsInSpace, PreviousShift;
+        public bool DescentControlEntered, DescentDriving;
         public double LandingX, LandingY, LandingOriginX, LandingOriginY;
         public bool LandingSelected, LandingResolved, SurfaceDescending;
         public string LandingBodyId, LandingWorldKey;

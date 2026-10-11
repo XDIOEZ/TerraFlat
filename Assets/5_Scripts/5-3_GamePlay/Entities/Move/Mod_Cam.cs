@@ -43,6 +43,7 @@ public class Mod_Cam : Module
     private float _baseXDamping;
     private float _baseYDamping;
     private bool _cameraFollowDefaultsCaptured;
+    private Transform _followOverride;
 
     public GameObject CamPrefab;
     private GameObject instantiatedCamera;
@@ -94,8 +95,9 @@ public class Mod_Cam : Module
     // 鼠标控制本体转向时保持镜头角度，避免镜头转动让鼠标落点持续追着角色旋转。
     private void LateUpdate()
     {
-        if (Enabled && FollowTargetRotation && vcam != null && CameraFollowItem != null)
-            vcam.m_Lens.Dutch = CameraFollowItem.transform.eulerAngles.z;
+        Transform target = _followOverride != null ? _followOverride : CameraFollowItem?.transform;
+        if (Enabled && FollowTargetRotation && vcam != null && target != null)
+            vcam.m_Lens.Dutch = target.eulerAngles.z;
     }
 
     private void OnDisable()
@@ -150,6 +152,7 @@ public class Mod_Cam : Module
                 _wrappedWorldRenderer = ControllerCamera.gameObject.AddComponent<WrappedWorldCameraRenderer>();
             _wrappedWorldRenderer.Configure(ControllerCamera, Vcam, CameraFollowItem?.transform);
         }
+        ApplyFollowTarget();
     
         // 初始化相机视野（正交大小）
         if (Vcam != null)
@@ -273,6 +276,33 @@ public class Mod_Cam : Module
     #endregion
 
     #region 相机控制
+    // 临时驾驶等模式借用跟随目标，结束后回到玩家且不改变听音主体。
+    public void SetFollowOverride(Transform target)
+    {
+        if (_followOverride == target) return;
+        _followOverride = target;
+        ApplyFollowTarget();
+    }
+
+    public void ClearFollowOverride(Transform target)
+    {
+        if (_followOverride != target) return;
+        _followOverride = null;
+        ApplyFollowTarget();
+    }
+
+    private void ApplyFollowTarget()
+    {
+        Transform target = _followOverride != null ? _followOverride : CameraFollowItem?.transform;
+        if (Vcam != null)
+        {
+            Vcam.Follow = target;
+            if (FollowTargetRotation && target != null) Vcam.m_Lens.Dutch = target.eulerAngles.z;
+        }
+        if (_wrappedWorldRenderer != null)
+            _wrappedWorldRenderer.Configure(ControllerCamera, Vcam, target);
+    }
+
     /// <summary>
     /// 响应滚轮值改变视野
     /// </summary>

@@ -178,15 +178,16 @@ namespace FlatWorld.Spaceflight
         }
 
         // 操作直接指定期望速度，发动机只决定能否改变航向与速度。
-        private void ResolveCruiseCommand(ShipAssemblyState assembly, double seconds, out SpaceVector2 targetVelocity, out double turn, out double driveAuthority)
+        private void ResolveCruiseCommand(ShipAssemblyState assembly, double seconds, out SpaceVector2 targetVelocity, out double turn, out double driveAuthority, bool surfaceDescent = false)
         {
             targetVelocity = default; turn = 0d; driveAuthority = 1d;
             SpaceVector2 steering = default;
-            bool manual = false;
+            bool manual = false, hasControl = false;
             foreach (ShipControlRequest request in controlRequests.Values)
             {
                 if (!FindPiece(request.ConsolePieceId, out ShipState ship, out ShipPieceState console) ||
-                    !assembly.MemberShipIds.Contains(ship.ShipId) || !IsPowered(ship, console)) continue;
+                    !assembly.MemberShipIds.Contains(ship.ShipId) || console.Kind != ShipPieceKind.Console || !IsPowered(ship, console)) continue;
+                hasControl = true;
                 steering += SpaceVector2.FromAngle(ship.AngleRadians) * request.Move.x +
                             SpaceVector2.FromAngle(ship.AngleRadians + Math.PI / 2d) * request.Move.y;
                 turn += request.Turn;
@@ -196,7 +197,14 @@ namespace FlatWorld.Spaceflight
             targetVelocity = steering.Magnitude > 1d ? steering.Normalized * config.CruiseMaxSpeedMetersPerSecond :
                 steering * config.CruiseMaxSpeedMetersPerSecond;
             turn = Math.Clamp(turn, -1d, 1d);
-            ShipNavigationState task = GetNavigation(assembly);
+            SpaceVector2 current = new(assembly.VelocityX, assembly.VelocityY);
+            // 地表下落只接收手动船控，没有有效驾驶输入时保留真实惯性。
+            if (surfaceDescent && !hasControl)
+            {
+                targetVelocity = current; turn = 0d; driveAuthority = 0d;
+                return;
+            }
+            ShipNavigationState task = surfaceDescent ? null : GetNavigation(assembly);
             if (task != null && !manual && NavigationConnected(task))
             {
                 ShipState controlled = GetShip(task.ShipId);
@@ -217,16 +225,16 @@ namespace FlatWorld.Spaceflight
                     ? ShipCruiseGuidance.TurnToward(controlled.AngleRadians, error, config, seconds) : 0d;
                 task.Status = targetVelocity.Magnitude < config.CruiseMaxSpeedMetersPerSecond * .95d ? "接近目标，减速中" : "正在导航";
             }
-            SpaceVector2 current = new(assembly.VelocityX, assembly.VelocityY);
             if ((targetVelocity - current).Magnitude < .001d && Math.Abs(turn) < .001d) return;
-            // 松键制动不扫描引擎、机器和燃料，仍沿用免费的街机制动规则。
-            bool driveNeeded = Math.Abs(turn) > .001d ||
+            // 巡航保留原松键制动，地表下落的制动与转向都使用真实引擎燃料。
+            bool driveNeeded = surfaceDescent || Math.Abs(turn) > .001d ||
                 targetVelocity.Magnitude > .001d && (targetVelocity - current).Magnitude > .001d;
             if (!driveNeeded) return;
             CollectActuators(assembly);
             if (actuators.Count == 0)
             {
-                targetVelocity = default; turn = 0d;
+                targetVelocity = surfaceDescent ? current : default; turn = 0d;
+                if (surfaceDescent) driveAuthority = 0d;
                 if (task != null && task.Active) task.Status = "没有可用引擎";
                 return;
             }

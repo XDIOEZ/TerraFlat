@@ -66,6 +66,7 @@ namespace FlatWorld.Spaceflight
         }
         private void OnDestroy()
         {
+            DestroyDrivingCameraTarget();
             placementRegistration?.Dispose();
             dropRegistration?.Dispose();
             ItemMgr.RuntimeItemDespawning -= OnLooseItemDespawning;
@@ -127,6 +128,7 @@ namespace FlatWorld.Spaceflight
             if (Current == null) return;
             Current.running = false;
             Current.ReleaseViews();
+            Current.DestroyDrivingCameraTarget();
             Current.owner = null;
             Current.State = null;
             Current.Universe = null;

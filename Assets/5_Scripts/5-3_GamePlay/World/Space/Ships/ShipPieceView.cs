@@ -398,6 +398,7 @@ namespace FlatWorld.Spaceflight
             double visualHeight = passenger.SurfaceDescending ? passenger.SurfaceHeight :
                 carryingFlight != null && carryingFlight.Phase is ShipFlightPhase.Lifting or ShipFlightPhase.SurfaceDescending ? carryingFlight.HeightMeters : 0d;
             ApplyPassengerHeightVisual(player, visualHeight);
+            UpdateDrivingCamera(player, passenger, carrier);
         }
         private void RemovePieceView(string id)
         {
@@ -407,6 +408,7 @@ namespace FlatWorld.Spaceflight
         }
         private void ReleaseViews()
         {
+            ReleaseDrivingCamera();
             UnbindShipMachineVisualEvents();
             if (State != null) ReleaseLooseViews();
             foreach (string id in new System.Collections.Generic.List<string>(views.Keys)) RemovePieceView(id);

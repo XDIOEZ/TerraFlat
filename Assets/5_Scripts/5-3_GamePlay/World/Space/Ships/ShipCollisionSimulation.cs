@@ -119,7 +119,7 @@ namespace FlatWorld.Spaceflight
                 ShipState primary = GetShip(assembly.MemberShipIds[0]);
                 if (!TryGetShipContactRealm(primary, out string realm, out double height, out bool dynamic)) continue;
                 var body = new ShipContactBody { Assembly = assembly, Realm = realm, Height = height, Dynamic = dynamic };
-                QueuedSurfaceContact queued = realm == "space" ? FindQueuedSurfaceContact(assembly) : null;
+                QueuedSurfaceContact queued = FindQueuedSurfaceContact(assembly);
                 if (queued != null)
                 { body.EndFraction = queued.Contact.Fraction; body.SurfaceContact = queued.Contact; body.AngularAcceleration = queued.AngularAcceleration; }
                 double totalMass = 0d;

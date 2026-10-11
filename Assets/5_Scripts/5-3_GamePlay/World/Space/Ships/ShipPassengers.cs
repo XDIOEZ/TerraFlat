@@ -28,6 +28,7 @@ namespace FlatWorld.Spaceflight
                 return true;
             }
             ShipState ship = GetShip(passenger.ShipId);
+            UpdateDescentControl(player, passenger, ship);
             if (passenger.SurfaceDescending)
             {
                 mover.SetPointerBodyRotation(false);
@@ -37,14 +38,18 @@ namespace FlatWorld.Spaceflight
             }
             if (!string.IsNullOrWhiteSpace(passenger.ConsolePieceId))
             {
-                if (!FindPiece(passenger.ConsolePieceId, out ship, out ShipPieceState console) || !IsPowered(ship, console))
+                if (!FindPiece(passenger.ConsolePieceId, out ship, out ShipPieceState console) || !console.IsAlive ||
+                    console.Kind != ShipPieceKind.Console || !passenger.DescentDriving && !IsPowered(ship, console))
                     ExitConsole(player);
                 else
                 {
                     mover.SetPointerBodyRotation(false);
                     SetControl(console.PieceId, screenInput, turn);
-                    passenger.LocalX = (console.CellX + .5d) * ship.CellSizeMeters;
-                    passenger.LocalY = (console.CellY + .5d) * ship.CellSizeMeters;
+                    if (!passenger.DescentDriving)
+                    {
+                        passenger.LocalX = (console.CellX + .5d) * ship.CellSizeMeters;
+                        passenger.LocalY = (console.CellY + .5d) * ship.CellSizeMeters;
+                    }
                     passenger.Supported = true;
                     PlacePassenger(player, passenger, ship);
                     return true;
@@ -185,6 +190,8 @@ namespace FlatWorld.Spaceflight
         }
         public void ReleasePassenger(SpacePassengerState passenger, ShipState ship)
         {
+            Player localPlayer = ItemMgr.Instance?.User_Player;
+            if (localPlayer != null && passenger.ProfileId == localPlayer.ProfileName) ExitConsole(localPlayer);
             ShipGeometry.LocalToWorld(ship, passenger.LocalX, passenger.LocalY, out double x, out double y);
             ShipGeometry.PointVelocity(ship, x, y, out double vx, out double vy);
             passenger.FreeMotion.PositionMeters = new SpaceVector2(x, y);
@@ -230,10 +237,15 @@ namespace FlatWorld.Spaceflight
                 !IsPowered(ship, piece) || GetFlight(ship.ShipId).Phase == ShipFlightPhase.Floating) return false;
             if (Vector2.Distance(player.transform.position, DisplayPoint(ship, piece.CellX + .5d, piece.CellY + .5d)) > 3f) return false;
             SpacePassengerState passenger = GetPassenger(player);
+            bool alreadyDriving = !string.IsNullOrWhiteSpace(passenger.ConsolePieceId);
+            if (alreadyDriving) ClearControl(passenger.ConsolePieceId);
             passenger.ShipId = ship.ShipId; passenger.ConsolePieceId = piece.PieceId; passenger.Supported = true;
             passenger.RelativeHeadingRadians = 0d;
+            ShipFlightState flight = GetFlight(ship.ShipId);
+            if (flight.Phase == ShipFlightPhase.SurfaceDescending || flight.Phase == ShipFlightPhase.Lifting && flight.VerticalSpeed < 0d)
+                passenger.DescentControlEntered = passenger.DescentDriving = true;
             Mod_Cam camera = player.itemMods.GetMod_ByID<Mod_Cam>(ModText.Camera);
-            passenger.SavedCameraSize = camera?.CurrentOrthographicSize ?? 10f;
+            if (!alreadyDriving) passenger.SavedCameraSize = camera?.CurrentOrthographicSize ?? 10f;
             camera?.SetOrthographicSize(SpaceGameplaySettings.Current.DrivingCameraSize);
             return true;
         }
@@ -243,8 +255,96 @@ namespace FlatWorld.Spaceflight
             SpacePassengerState passenger = GetPassenger(player);
             if (string.IsNullOrWhiteSpace(passenger.ConsolePieceId)) return false;
             ClearControl(passenger.ConsolePieceId); passenger.ConsolePieceId = null;
+            passenger.DescentDriving = false;
             player.itemMods.GetMod_ByID<Mod_Cam>(ModText.Camera)?.SetOrthographicSize((float)Math.Max(1d, passenger.SavedCameraSize));
+            if (player == ItemMgr.Instance?.User_Player) ReleaseDrivingCamera();
             return true;
+        }
+
+        // 一次下降只自动接管一次，Esc 退出后可在控制台自行重新驾驶。
+        private void UpdateDescentControl(Player player, SpacePassengerState passenger, ShipState ship)
+        {
+            ShipFlightState flight = ship != null ? GetFlight(ship.ShipId) : null;
+            bool surfaceFlight = flight != null && flight.Phase is ShipFlightPhase.Lifting or ShipFlightPhase.SurfaceDescending;
+            if (!surfaceFlight)
+            {
+                EndDescentControl(player);
+                passenger.DescentControlEntered = false;
+                return;
+            }
+            if (!passenger.Supported || passenger.DescentControlEntered || flight.HeightMeters <= 0d ||
+                flight.VerticalSpeed >= 0d || player != ItemMgr.Instance?.User_Player) return;
+            ShipPieceState console = ship.Pieces.Find(piece => piece.IsAlive && piece.Kind == ShipPieceKind.Console &&
+                piece.PieceId == passenger.ConsolePieceId);
+            console ??= ship.Pieces.Find(piece => piece.IsAlive && piece.Kind == ShipPieceKind.Console && IsPowered(ship, piece));
+            console ??= ship.Pieces.Find(piece => piece.IsAlive && piece.Kind == ShipPieceKind.Console);
+            if (console == null) return;
+            if (string.IsNullOrWhiteSpace(passenger.ConsolePieceId))
+                passenger.SavedCameraSize = player.itemMods.GetMod_ByID<Mod_Cam>(ModText.Camera)?.CurrentOrthographicSize ?? 10f;
+            else ClearControl(passenger.ConsolePieceId);
+            passenger.ConsolePieceId = console.PieceId;
+            passenger.DescentControlEntered = passenger.DescentDriving = true;
+            CancelNavigation(ship.ShipId);
+            pickingNavigationConsole = null;
+            ShipPanelSession.CloseForPlayer(this, player);
+        }
+
+        private void EndDescentControl(Player player)
+        {
+            if (player == null || State == null) return;
+            SpacePassengerState passenger = GetPassenger(player);
+            if (!passenger.DescentDriving) return;
+            ExitConsole(player);
+            passenger.DescentDriving = false;
+        }
+
+        private Transform drivingCameraTarget;
+        private Mod_Cam drivingCamera;
+
+        private void UpdateDrivingCamera(Player player, SpacePassengerState passenger, ShipState ship)
+        {
+            if (!passenger.Supported || ship == null || !IsVisible(ship) || string.IsNullOrWhiteSpace(passenger.ConsolePieceId))
+            {
+                ReleaseDrivingCamera();
+                return;
+            }
+            Mod_Cam camera = player.itemMods.GetMod_ByID<Mod_Cam>(ModText.Camera);
+            if (camera == null || !camera.IsCameraReady) return;
+            if (drivingCameraTarget == null)
+            {
+                drivingCameraTarget = new GameObject("飞船驾驶镜头中心").transform;
+                drivingCameraTarget.SetParent(transform, false);
+            }
+            ShipAssemblyState assembly = GetConnectedAssembly(ship.ShipId);
+            SpaceVector2 center = assembly != null ? new SpaceVector2(assembly.PositionX, assembly.PositionY)
+                : new SpaceVector2(ship.PositionX, ship.PositionY);
+            Vector2 position = IsSpaceView ? ProjectPosition(center) : WorldLocalPresentation.ProjectPosition(center.ToVector2());
+            ShipFlightState flight = GetFlight(ship.ShipId);
+            double height = flight != null && flight.Phase is ShipFlightPhase.Lifting or ShipFlightPhase.SurfaceDescending ? flight.HeightMeters : 0d;
+            float rise = (float)Math.Min(4d, Math.Max(0d, height) * .04d);
+            drivingCameraTarget.position = new Vector3(position.x, position.y + rise, player.transform.position.z);
+            drivingCameraTarget.rotation = Quaternion.Euler(0f, 0f, (float)(ship.AngleRadians * 180d / Math.PI));
+            if (drivingCamera != camera)
+            {
+                drivingCamera?.ClearFollowOverride(drivingCameraTarget);
+                drivingCamera = camera;
+                camera.SetOrthographicSize(SpaceGameplaySettings.Current.DrivingCameraSize);
+            }
+            camera.SetFollowTargetRotation(true);
+            camera.SetFollowOverride(drivingCameraTarget);
+        }
+
+        private void ReleaseDrivingCamera()
+        {
+            if (drivingCameraTarget != null) drivingCamera?.ClearFollowOverride(drivingCameraTarget);
+            drivingCamera = null;
+        }
+
+        private void DestroyDrivingCameraTarget()
+        {
+            ReleaseDrivingCamera();
+            if (drivingCameraTarget != null) Destroy(drivingCameraTarget.gameObject);
+            drivingCameraTarget = null;
         }
         private void StepFreePassengers(double seconds)
         {

@@ -50,4 +50,5 @@ description: "FlatWorld 玩家身份、输入仲裁、指针交互、移动/承�
 - `Mover_SaveData.isRunning` 保存奔跑开关，输入锁停止位移但保留开关。Run 与 Move 分离，静止动画为 Idle，跑步播放不改全局 Animator.speed。体力统一经带来源的 `Mod_Stamina` API；管理员无限体力也在该权威模块处理。普通划船不耗体力，按住奔跑且移动时的载具加速记为 `flatworld.carrier.boost`。
 - `Mod_FocusPoint` 独占同时翻身/瞄准节点的最终旋转，`Mod_TurnBack` 提供本地 Y 转角；`SetMirroringEnabled(false)` 固定默认姿态，本体转动时瞄准换算到父节点坐标。`Mod_Cam.SetFollowTargetRotation(false)` 保持镜头角度，供太空鼠标转向使用。镜头使用 Cinemachine 2.x Framing Transposer 的 Lookahead/XY Damping；缩放解析玩家兄弟模块 `Mod_ChunkLoader` 刷新区块窗口。管理员无限视野只跳过最终尺寸上限，有限 `MaxPovValue` 仍供普通玩法/UI 使用。
 - 环绕副本使用 URP Overlay，`WrappedWorldCameraRenderer` 唯一管理相机后处理开关：有副本仅最后活动相机启用，无副本/解绑恢复主相机；`ScreenPostProcessManager` 只合成 Volume 参数。
+- `Mod_Cam.SetFollowOverride/ClearFollowOverride` 供临时驾驶覆盖跟随目标并同步环绕副本，释放回玩家，不改变听音主体；飞船驾驶目标由 SpaceSession 投影整船中心并随船转向，下降触地/退出恢复原视野。
 - 开发快捷键：Ctrl+F1 管理员，F1 录制 UI 隐藏，F2 创造背包（主背包打开不拦截，其它模态/加载锁拦截），T 与 GM 点选共用 `Mod_PlayerTraits.TryTeleportToScreenPosition`；太空先经 `SpaceSession.UnprojectPosition` 还原宇宙坐标，再调用 `TryTeleportPlayerToSpace`，地表保留拓扑规范坐标与区块刷新。

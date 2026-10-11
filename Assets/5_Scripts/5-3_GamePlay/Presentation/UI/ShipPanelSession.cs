@@ -75,7 +75,8 @@ public sealed class ShipPanelSession : IMachinePanelSession
         Bind("FWUI_ShipNavigate", () => Execute($"navigate {xField.text} {yField.text}"));
         Bind("FWUI_ShipPick", () => Execute("pick"));
         Bind("FWUI_ShipCancel", () => Execute("cancel"));
-        Bind("FWUI_ShipLanding", () => Execute($"land {xField.text} {yField.text}"));
+        // 正式面板保留资源结构，旧落点按钮在实例中隐藏以免绕过真实驾驶。
+        panel.GetComponentsInChildren<Button>(true).First(value => value.name == "FWUI_ShipLanding").gameObject.SetActive(false);
         Bind("FWUI_ShipDock", () => Execute("dock"));
         Bind("FWUI_ShipUndock", () => Execute("undock"));
         Bind("FWUI_ShipPressure", () => Execute($"pressure {pressureField.text}"));
@@ -121,6 +122,12 @@ public sealed class ShipPanelSession : IMachinePanelSession
         panel.Close();
     }
 
+    public static void CloseForPlayer(SpaceSession session, Player player)
+    {
+        foreach (ShipPanelSession value in sessions.ToArray())
+            if (value.session == session && value.actor == player) value.Close();
+    }
+
     private void HandleLanguageChanged(string _)
     {
         outputDirty = true;
@@ -156,7 +163,7 @@ public sealed class ShipPanelSession : IMachinePanelSession
         followCommand = true;
         Append("指令", input.Trim(), literal: true);
         string command = parts[0].ToLowerInvariant();
-        int expected = command is "navigate" or "land" ? 3 : command == "pressure" ? 2 : 1;
+        int expected = command == "navigate" ? 3 : command == "pressure" ? 2 : 1;
         if (parts.Length != expected)
         {
             Append("拒绝", "参数数量不正确。输入 help 查看命令格式。");
@@ -167,7 +174,7 @@ public sealed class ShipPanelSession : IMachinePanelSession
         switch (command)
         {
             case "help":
-                Append("系统", "help：命令帮助\nstatus：当前船况\nclear：清空反馈\ndrive / exit：进入 / 退出驾驶\nignite：点火 / 停机\nnavigate X Y：按画面坐标导航\npick：点击画面选择导航点\ncancel：取消导航\nland X Y：设置地表落点\ndock / undock：确认对接 / 解除接口\npressure kPa：设置供气目标气压");
+                Append("系统", "help：命令帮助\nstatus：当前船况\nclear：清空反馈\ndrive / exit：进入 / 退出驾驶\nignite：点火 / 停机\nnavigate X Y：按画面坐标导航\npick：点击画面选择导航点\ncancel：取消导航\ndock / undock：确认对接 / 解除接口\npressure kPa：设置供气目标气压\n下落时自动进入船控视角；有电、有燃料且有可用引擎时，WASD 移动、Q/E 旋转。落点由实际船体位置决定。");
                 break;
             case "status":
                 Append("系统", status.text, literal: true);
@@ -177,9 +184,14 @@ public sealed class ShipPanelSession : IMachinePanelSession
                 Append("系统", "反馈记录已清空。");
                 break;
             case "drive":
-                Report(actor != null && session.EnterConsole(actor, console),
-                    "已进入驾驶位，WASD 加速，Q/E 转动，Esc 离开。",
-                    "驾驶失败：请靠近已供电的有效控制台；海面浮船无法驾驶。");
+                if (actor != null && session.EnterConsole(actor, console))
+                {
+                    Append("完成", "已进入驾驶位，WASD 移动、Q/E 旋转需要可用引擎与燃料，Esc 离开；下落时由实际船体位置决定落点。");
+                    RenderOutput();
+                    Close();
+                    return;
+                }
+                Append("拒绝", "驾驶失败：请靠近已供电的有效控制台；海面浮船无法驾驶。");
                 break;
             case "exit":
                 Report(session.ExitConsole(actor), "已退出驾驶。", "当前未处于驾驶状态。");
@@ -209,13 +221,6 @@ public sealed class ShipPanelSession : IMachinePanelSession
             case "cancel":
                 session.CancelNavigation(shipId);
                 Append("完成", "导航已取消。");
-                break;
-            case "land":
-                if (TryCoordinates(parts, out Vector2 landing))
-                {
-                    session.SelectLanding(shipId, landing);
-                    Append("完成", "落点已记录，实际触地时才完成降落。");
-                }
                 break;
             case "dock":
                 Report(session.ConfirmNearbyDock(shipId), "本船已确认对接接口，双方均确认后建立连接。",
@@ -285,7 +290,8 @@ public sealed class ShipPanelSession : IMachinePanelSession
         ShipFlightPhase.Lifting => "发射升空",
         ShipFlightPhase.Cruising => "太空飞行",
         ShipFlightPhase.Descending => "接近星体",
-        _ => "下落选址"
+        ShipFlightPhase.SurfaceDescending => "地表下落",
+        _ => "未知"
     };
 
     private void Append(string kind, string source, bool literal = false, object[] arguments = null)
@@ -408,7 +414,13 @@ public sealed class ShipPanelSession : IMachinePanelSession
         text.AppendLine(Format("地表高度  {0:0.##} m\n升空速度  {1:0.##} m/s", Math.Max(0d, altitude), flight.VerticalSpeed));
         if (flight.Phase is ShipFlightPhase.Descending or ShipFlightPhase.SurfaceDescending || flight.VerticalSpeed < 0d)
             text.AppendLine(Format("预计触地  {0:0.0} s", session.DescentSeconds(flight)));
-        text.AppendLine(Format("落点  {0}", flight.LandingSelected ? Format("({0:0.##}, {1:0.##})", flight.LandingX, flight.LandingY) : Text("未选：实际触地时取附近位置")));
+        bool surfaceFlight = flight.Phase is ShipFlightPhase.Landed or ShipFlightPhase.Floating or ShipFlightPhase.Lifting or ShipFlightPhase.SurfaceDescending;
+        if (surfaceFlight)
+            text.AppendLine(Format("实际地表位置  ({0:0.##}, {1:0.##})", ship.PositionX, ship.PositionY));
+        else
+            text.AppendLine(Text("地表落点由飞船进入地表后的实际位置决定。"));
+        if (flight.Phase is ShipFlightPhase.Descending or ShipFlightPhase.SurfaceDescending || flight.VerticalSpeed < 0d)
+            text.AppendLine(Text("下落船控视角：WASD 移动、Q/E 旋转需要供电、可用引擎及燃料；落点随实际船体位置变化。"));
         text.AppendLine();
         text.AppendLine(Format("导航  {0}", task == null ? Text("待机") : Text(task.Status)));
         if (task != null)

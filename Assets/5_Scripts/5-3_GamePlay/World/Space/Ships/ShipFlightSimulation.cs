@@ -129,12 +129,25 @@ namespace FlatWorld.Spaceflight
             double previousHeight = flight.HeightMeters;
             flight.VerticalSpeed += (thrust / Math.Max(.001d, assembly.MassKg) - gravity) * seconds;
             flight.HeightMeters += flight.VerticalSpeed * seconds;
-            // 起飞只更新视觉高度，船体和碰撞体留在地面；再入阶段仍按原规则推进。
+            if (flight.Phase == ShipFlightPhase.Lifting && previousHeight > 0d && flight.VerticalSpeed < 0d)
+                foreach (string id in assembly.MemberShipIds) GetFlight(id).Phase = ShipFlightPhase.SurfaceDescending;
+            double movementSeconds = seconds;
+            // 下降时直接操纵真实地表位置，触地那一步只积到实际接触时刻。
             if (flight.Phase == ShipFlightPhase.SurfaceDescending)
             {
-                assembly.PositionX += assembly.VelocityX * seconds;
-                assembly.PositionY += assembly.VelocityY * seconds;
-                assembly.AngleRadians += assembly.AngularVelocityRadiansPerSecond * seconds;
+                movementSeconds = flight.HeightMeters <= 0d && previousHeight > 0d
+                    ? seconds * Math.Clamp(previousHeight / (previousHeight - flight.HeightMeters), 0d, 1d) : seconds;
+                ResolveCruiseCommand(assembly, movementSeconds, out SpaceVector2 targetVelocity, out double turn,
+                    out double driveAuthority, surfaceDescent: true);
+                SpaceGameplaySettings config = SpaceGameplaySettings.Current;
+                SpaceVector2 velocity = new(assembly.VelocityX, assembly.VelocityY);
+                if (driveAuthority > 0d)
+                    velocity = ShipCruiseGuidance.StepVelocity(velocity, targetVelocity, config, movementSeconds, driveAuthority);
+                assembly.VelocityX = velocity.X; assembly.VelocityY = velocity.Y;
+                assembly.PositionX += velocity.X * movementSeconds;
+                assembly.PositionY += velocity.Y * movementSeconds;
+                assembly.AngularVelocityRadiansPerSecond = turn * config.CruiseTurnDegreesPerSecond * Math.PI / 180d;
+                assembly.AngleRadians += assembly.AngularVelocityRadiansPerSecond * movementSeconds;
                 ShipDockingService.RigidlyCarryMembers(assembly, State.Ships);
             }
             flight.EntrySurfaceVelocity = new SpaceVector2(Math.Sqrt(assembly.VelocityX * assembly.VelocityX + assembly.VelocityY * assembly.VelocityY), flight.VerticalSpeed);
@@ -144,6 +157,15 @@ namespace FlatWorld.Spaceflight
             {
                 ShipFlightState member = GetFlight(id);
                 member.HeightMeters = flight.HeightMeters; member.VerticalSpeed = flight.VerticalSpeed;
+                member.EntrySurfaceVelocity = flight.EntrySurfaceVelocity;
+                if (flight.Phase == ShipFlightPhase.SurfaceDescending)
+                {
+                    ShipState ship = GetShip(id);
+                    member.SurfaceX = member.LandingX = ship.PositionX;
+                    member.SurfaceY = member.LandingY = ship.PositionY;
+                    member.LandingSelected = true;
+                    member.SurfaceAngle = ship.PositionX / body.RadiusMeters + Universe.GetRotationRadians(body.BodyId);
+                }
             }
             if (flight.HeightMeters >= requiredHeight && flight.VerticalSpeed >= requiredSpeed)
             {
@@ -171,8 +193,10 @@ namespace FlatWorld.Spaceflight
             else if (previousHeight > 0d && flight.HeightMeters <= 0d && flight.VerticalSpeed < 0d)
             {
                 var contact = new SurfaceContact { BodyId = body.BodyId, PlanetId = body.PlanetId,
-                    RelativeVelocityMetersPerSecond = new SpaceVector2(flight.EntrySurfaceVelocity.X, flight.VerticalSpeed), SurfaceAngleRadians = flight.SurfaceAngle };
-                LandAssembly(assembly, contact);
+                    RelativeVelocityMetersPerSecond = new SpaceVector2(flight.EntrySurfaceVelocity.X, flight.VerticalSpeed),
+                    SurfaceAngleRadians = flight.SurfaceAngle, Fraction = movementSeconds / seconds };
+                QueueSurfaceLanding(assembly, contact);
+                foreach (string id in assembly.MemberShipIds) GetFlight(id).HeightMeters = 0d;
             }
             else if (flight.HeightMeters < 0d) { flight.HeightMeters = 0d; flight.VerticalSpeed = 0d; }
         }
@@ -207,16 +231,6 @@ namespace FlatWorld.Spaceflight
             double altitude = Math.Max(0d, radial.Magnitude - body.RadiusMeters - flight.Motion.RadiusMeters);
             double inward = -SpaceVector2.Dot(flight.Motion.VelocityMetersPerSecond, radial.Normalized);
             return inward > 0d ? altitude / inward : double.PositiveInfinity;
-        }
-        public void SelectLanding(string shipId, Vector2 position)
-        {
-            ShipFlightState flight = GetFlight(shipId);
-            if (flight == null) return;
-            Vector2 origin = new((float)flight.SurfaceX, (float)flight.SurfaceY);
-            Vector2 chosen = origin + Vector2.ClampMagnitude(position - origin, (float)SpaceGameplaySettings.Current.LandingChoiceRadiusMeters);
-            foreach (ShipState ship in State.Ships)
-                if (SameAssembly(shipId, ship.ShipId))
-                { ShipFlightState member = GetFlight(ship.ShipId); member.LandingX = chosen.x; member.LandingY = chosen.y; member.LandingSelected = true; }
         }
         private bool PlayerInAssembly(ShipAssemblyState assembly)
         {
@@ -270,15 +284,8 @@ namespace FlatWorld.Spaceflight
             float impactRadius = (float)AssemblyRadius(assembly);
             BodyState body = Universe.GetBody(contact.BodyId);
             SpaceGameplaySettings settings = SpaceGameplaySettings.Current;
-            SpaceVector2 point;
-            if (primary.LandingSelected) point = new SpaceVector2(primary.LandingX, primary.LandingY);
-            else
-            {
-                double theta = (double)FluidRandom.Next01(ref primary.LandingRandomState) * Math.PI * 2d;
-                double radius = Math.Sqrt((double)FluidRandom.Next01(ref primary.LandingRandomState)) * settings.LandingChoiceRadiusMeters;
-                point = new SpaceVector2(primary.SurfaceX + Math.Cos(theta) * radius, primary.SurfaceY + Math.Sin(theta) * radius);
-                primary.LandingX = point.X; primary.LandingY = point.Y; primary.LandingSelected = true;
-            }
+            // 陆海判断和冲击都使用整船实际接触位置，不再在触地时跳到选点或随机点。
+            SpaceVector2 point = new(assembly.PositionX, assembly.PositionY);
 
             var sample = SpaceSurfaceQuery.GetLandingSurface(body.PlanetId, point.ToVector2());
             string impactEvent = Guid.NewGuid().ToString("N");
@@ -295,7 +302,7 @@ namespace FlatWorld.Spaceflight
             {
                 ShipState ship = GetShip(id); ShipFlightState flight = GetFlight(id);
                 flight.LandingResolved = true; flight.LandingEventId = impactEvent;
-                flight.LandingX = point.X; flight.LandingY = point.Y; flight.LandingSelected = true;
+                flight.LandingX = ship.PositionX; flight.LandingY = ship.PositionY; flight.LandingSelected = true;
                 flight.HeightMeters = 0; flight.VerticalSpeed = 0; flight.BodyId = contact.BodyId; flight.SurfaceWorldKey = world;
                 flight.ImpactSpeed = impactSpeed; flight.Ignited = false; flight.SurfaceX = ship.PositionX; flight.SurfaceY = ship.PositionY;
                 flight.Phase = sample.IsWater ? ShipFlightPhase.Floating : ShipFlightPhase.Landed; ship.WorldAddress = world;
@@ -315,6 +322,7 @@ namespace FlatWorld.Spaceflight
                 if (playerDamage > 0f) player?.itemMods?.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp)?.ApplyStructuralDamage(playerDamage);
             }
             ProcessStructureChanges();
+            if (carryingPlayer) EndDescentControl(ItemMgr.Instance?.User_Player);
             if (carryingPlayer && IsSpaceView) StartCoroutine(TransferPlayerToSurface(world, point.ToVector2()));
         }
         public SpaceVector2 SurfaceCenter(string bodyId, double angle)
@@ -343,10 +351,11 @@ namespace FlatWorld.Spaceflight
                 ShipState ship = GetShip(id); ShipFlightState flight = GetFlight(id);
                 ship.WorldAddress = world; ship.PlatformKind = ShipPlatformKind.Land;
                 flight.Phase = ShipFlightPhase.SurfaceDescending; flight.BodyId = contact.BodyId; flight.SurfaceWorldKey = world;
-                flight.SurfaceX = center.X; flight.SurfaceY = center.Y; flight.SurfaceAngle = contact.SurfaceAngleRadians;
+                flight.SurfaceX = flight.LandingX = ship.PositionX;
+                flight.SurfaceY = flight.LandingY = ship.PositionY; flight.SurfaceAngle = contact.SurfaceAngleRadians;
                 flight.HeightMeters = SpaceGameplaySettings.Current.SurfaceEntryHeightMeters;
                 flight.VerticalSpeed = -inward; flight.EntrySurfaceVelocity = new SpaceVector2(tangent, -inward);
-                flight.Ignited = false; flight.LandingResolved = false; flight.LandingSelected = false;
+                flight.Ignited = false; flight.LandingResolved = false; flight.LandingSelected = true;
                 flight.LandingEventId = Guid.NewGuid().ToString("N");
             }
             if (carrying && IsSpaceView) StartCoroutine(TransferPlayerToSurface(world, center.ToVector2()));
