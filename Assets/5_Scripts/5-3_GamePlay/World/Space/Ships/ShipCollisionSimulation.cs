@@ -91,7 +91,7 @@ namespace FlatWorld.Spaceflight
             realm = null; height = 0d; dynamic = false;
             ShipFlightState flight = ship == null ? null : GetFlight(ship.ShipId);
             if (flight == null) return false;
-            if (flight.Phase is ShipFlightPhase.Cruising or ShipFlightPhase.Descending)
+            if (flight.Phase is ShipFlightPhase.Cruising)
             { realm = "space"; dynamic = true; return true; }
             if (string.IsNullOrWhiteSpace(flight.SurfaceWorldKey)) return false;
             realm = "surface:" + flight.SurfaceWorldKey;
@@ -364,7 +364,7 @@ namespace FlatWorld.Spaceflight
             {
                 ShipState ship = GetShip(id); ShipFlightState flight = GetFlight(id);
                 if (ship == null || flight == null) continue;
-                if (flight.Phase is ShipFlightPhase.Cruising or ShipFlightPhase.Descending)
+                if (flight.Phase is ShipFlightPhase.Cruising)
                 {
                     flight.Motion.PositionMeters = new SpaceVector2(ship.PositionX, ship.PositionY);
                     flight.Motion.VelocityMetersPerSecond = new SpaceVector2(ship.VelocityX, ship.VelocityY);

@@ -18,7 +18,7 @@ namespace FlatWorld.Spaceflight
         public List<SpaceLooseItemState> LooseItems = new();
         public long NavigationSequence;
     }
-    public enum ShipFlightPhase { Landed, Floating, Lifting, Cruising, Descending, SurfaceDescending }
+    public enum ShipFlightPhase { Landed, Floating, Lifting, Cruising, SurfaceDescending }
     [Serializable]
     public sealed class ShipFlightState
     {

@@ -54,7 +54,7 @@ namespace FlatWorld.Spaceflight
         public BodyState GetLandingCandidate(string shipId)
         {
             ShipFlightState flight = GetFlight(shipId);
-            if (Universe == null || flight == null || flight.Phase is not (ShipFlightPhase.Cruising or ShipFlightPhase.Descending)) return null;
+            if (Universe == null || flight == null || flight.Phase is not (ShipFlightPhase.Cruising)) return null;
             ShipAssemblyState assembly = GetConnectedAssembly(shipId);
             return assembly == null ? null : ShipLandingGuidance.FindNearbyBody(new SpaceVector2(assembly.PositionX, assembly.PositionY),
                 AssemblyRadius(assembly), Universe.State.Bodies);
@@ -108,8 +108,8 @@ namespace FlatWorld.Spaceflight
             {
                 if (other == ship) continue;
                 ShipFlightState otherFlight = GetFlight(other.ShipId);
-                bool ownSpace = ownFlight.Phase is ShipFlightPhase.Cruising or ShipFlightPhase.Descending;
-                bool otherSpace = otherFlight.Phase is ShipFlightPhase.Cruising or ShipFlightPhase.Descending;
+                bool ownSpace = ownFlight.Phase is ShipFlightPhase.Cruising;
+                bool otherSpace = otherFlight.Phase is ShipFlightPhase.Cruising;
                 if (ownSpace != otherSpace || !ownSpace && (ownFlight.SurfaceWorldKey != otherFlight.SurfaceWorldKey || Math.Abs(ownFlight.HeightMeters - otherFlight.HeightMeters) > 1d)) continue;
                 ShipDockingService.SynchronizePorts(other);
                 foreach (ShipDockingPortState target in other.DockingPorts)

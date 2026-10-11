@@ -247,7 +247,10 @@ namespace FlatWorld.Spaceflight
                 camera.SetOrthographicSize(SpaceGameplaySettings.Current.DrivingCameraSize);
             }
             camera.SetFollowTargetRotation(false);
-            camera.SetFollowOverride(drivingCameraTarget);
+            SpaceGameplaySettings settings = SpaceGameplaySettings.Current;
+            camera.SetFollowOverride(drivingCameraTarget,
+                IsSpaceView ? settings.DrivingCameraMaxSize : 0f,
+                IsSpaceView ? settings.DrivingCameraZoomMultiplier : 1f);
         }
 
         private void ReleaseDrivingCamera()
@@ -291,7 +294,7 @@ namespace FlatWorld.Spaceflight
                 if (!passenger.IsInSpace || passenger.Supported || passenger.LandingResolved) continue;
                 Mod_Mover mover = player != null && player.ProfileName == passenger.ProfileId && IsSpaceView
                     ? player.itemMods.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover) : null;
-                // 只平滑主动步行分量，离船继承的速度和碰撞冲量持续保留。
+                // 主动推力只修改自己的速度分量，松键保留全部漂移与碰撞冲量。
                 if (mover != null)
                 {
                     SpaceVector2 walking = SpaceVector2.FromVector2(mover.SmoothSpaceVelocity(passenger.FreeWalkVelocity.ToVector2(), (float)seconds));

@@ -763,13 +763,13 @@ public static partial class RuntimeUIPrefabBuilder
     {
         GameObject root = CreateUIObject(RuntimeUIPrefabKeys.PlayerWorldCoordinate, null);
         RectTransform rootRect = root.GetComponent<RectTransform>();
-        SetTopLeft(rootRect, 28f, 28f, 290f, 114f);
+        SetTopLeft(rootRect, 28f, 28f, 560f, 206f);
 
         TextMeshProUGUI coordinates = CreateText("坐标文本", root.transform, "X  +0.0    Y  +0.0", 16f, Cream);
         coordinates.fontStyle = FontStyles.Bold;
         coordinates.enableWordWrapping = false;
         coordinates.overflowMode = TextOverflowModes.Ellipsis;
-        SetTopLeft(coordinates.rectTransform, 0f, 0f, 240f, 28f);
+        SetTopLeft(coordinates.rectTransform, 0f, 0f, 560f, 28f);
 
         TextMeshProUGUI fps = CreateText("FPS文本", root.transform, "FPS  --", 15f, Cream);
         fps.fontStyle = FontStyles.Bold;
@@ -783,13 +783,13 @@ public static partial class RuntimeUIPrefabBuilder
         temperature.fontStyle = FontStyles.Bold;
         temperature.enableWordWrapping = false;
         temperature.overflowMode = TextOverflowModes.Ellipsis;
-        SetTopLeft(temperature.rectTransform, 0f, 58f, 240f, 26f);
+        SetTopLeft(temperature.rectTransform, 0f, 58f, 360f, 110f);
 
         TextMeshProUGUI season = CreateText(PlayerWorldCoordinateHUD.SeasonTextNodeName,
             root.transform, "第 1 年 · 春季 · 第 1 天", 15f, Cream);
         season.enableWordWrapping = false;
         season.overflowMode = TextOverflowModes.Ellipsis;
-        SetTopLeft(season.rectTransform, 0f, 86f, 290f, 26f);
+        SetTopLeft(season.rectTransform, 0f, 174f, 290f, 26f);
 
         return root;
     }

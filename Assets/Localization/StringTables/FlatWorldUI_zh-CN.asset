@@ -2970,7 +2970,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740096
-    m_Localized: "help\uff1a\u547d\u4ee4\u5e2e\u52a9\nstatus\uff1a\u5f53\u524d\u8239\u51b5\nclear\uff1a\u6e05\u7a7a\u53cd\u9988\ndrive / exit\uff1a\u8fdb\u5165 / \u9000\u51fa\u9a7e\u9a76\nignite\uff1a\u70b9\u706b / \u505c\u673a\nnavigate X Y\uff1a\u6309\u753b\u9762\u5750\u6807\u5bfc\u822a\npick\uff1a\u70b9\u51fb\u753b\u9762\u9009\u62e9\u5bfc\u822a\u70b9\ncancel\uff1a\u53d6\u6d88\u5bfc\u822a\nland X Y\uff1a\u8bbe\u7f6e\u5730\u8868\u843d\u70b9\ndock / undock\uff1a\u786e\u8ba4\u5bf9\u63a5 / \u89e3\u9664\u63a5\u53e3\npressure kPa\uff1a\u8bbe\u7f6e\u4f9b\u6c14\u76ee\u6807\u6c14\u538b"
+    m_Localized: "help：命令帮助\nstatus：当前船况\nclear：清空反馈\ndrive / exit：进入 / 退出驾驶\nignite：点火 / 停机\nnavigate X Y：按画面坐标导航\npick：点击画面选择导航点\ncancel：取消导航\nland：向附近星体开始降落\ndock / undock：确认对接 / 解除接口\npressure kPa：设置供气目标气压\nWASD 施加推力，松键继续滑行，反向输入制动；Q/E 旋转，松键停转。停机、断电或缺燃料时保留平移惯性。星体不会吸引或截停飞船；点击降落时，有燃料平稳着陆，无燃料下落并结算冲击。"
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740097
@@ -3267,6 +3267,30 @@ MonoBehaviour:
       m_Items: []
   - m_Id: 17033120237740170
     m_Localized: "\u8239\u4f53\u5206\u88c2\uff0c\u5bfc\u822a\u9700\u8981\u91cd\u65b0\u542f\u52a8"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740171
+    m_Localized: "宇宙  X {0:0.000}  Y {1:0.000} km"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740172
+    m_Localized: "宇宙  X --  Y -- km"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740173
+    m_Localized: "已接受降落：有可用燃料时平稳着陆；无燃料时进入下落并结算冲击。"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740174
+    m_Localized: "靠近目标星体后可降落；有燃料平稳着陆，无燃料下落。"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740175
+    m_Localized: "可降落星体  {0}；有燃料平稳着陆，无燃料下落。"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740176
+    m_Localized: "星体不会吸引或截停飞船；只有点击降落才进入地表。"
     m_Metadata:
       m_Items: []
   references:

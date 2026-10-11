@@ -301,7 +301,7 @@ namespace FlatWorld.Spaceflight
         {
             ShipFlightState flight = GetFlight(ship.ShipId);
             return flight != null && (IsSpaceView ?
-                (flight.Phase is ShipFlightPhase.Cruising or ShipFlightPhase.Descending) &&
+                (flight.Phase is ShipFlightPhase.Cruising) &&
                     (new SpaceVector2(ship.PositionX, ship.PositionY) - ViewOrigin).Magnitude < 1200d
                 : flight.SurfaceWorldKey == SceneManager.GetActiveScene().name &&
                     flight.Phase is ShipFlightPhase.Landed or ShipFlightPhase.Floating or ShipFlightPhase.Lifting or ShipFlightPhase.SurfaceDescending);

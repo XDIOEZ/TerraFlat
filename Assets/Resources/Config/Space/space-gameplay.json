@@ -15,11 +15,12 @@
   "NavigationArrivalSpeedMetersPerSecond": 0.25,
   "FreeFloatMaxSpeedMetersPerSecond": 12.0,
   "FreeFloatAccelerationMultiplier": 0.11666667,
-  "FreeFloatDecelerationMultiplier": 0.05,
   "SurfaceEntryHeightMeters": 80.0,
   "ImpactStoppingSeconds": 0.25,
   "ImpactForcePerDurability": 1000.0,
   "LandingChoiceRadiusMeters": 10.0,
   "DrivingCameraSize": 30.0,
+  "DrivingCameraMaxSize": 120000.0,
+  "DrivingCameraZoomMultiplier": 1.25,
   "ImpactJoulesPerDurability": 1000.0
 }

@@ -3019,7 +3019,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740096
-    m_Localized: "help: command help\nstatus: current ship status\nclear: clear feedback\ndrive / exit: enter / leave the console\nignite: ignite / shut down engines\nnavigate X Y: navigate using view coordinates\npick: click the view to pick a navigation point\ncancel: cancel navigation\nland X Y: set a surface landing point\ndock / undock: confirm docking / disconnect a port\npressure kPa: set target supply pressure"
+    m_Localized: "help: command help\nstatus: current ship status\nclear: clear feedback\ndrive / exit: enter / leave the console\nignite: ignite / shut down engines\nnavigate X Y: navigate using view coordinates\npick: click the view to pick a navigation point\ncancel: cancel navigation\nland: begin landing on a nearby body\ndock / undock: confirm docking / disconnect a port\npressure kPa: set target supply pressure\nWASD applies thrust; release to keep drifting and reverse to brake. Q/E turns the ship; release to stop turning. Shutdown, power loss, or no fuel preserves translational momentum. Bodies do not pull in or stop ships; land safely with fuel, or fall and take impact damage without fuel."
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740097
@@ -3316,6 +3316,30 @@ MonoBehaviour:
       m_Items: []
   - m_Id: 17033120237740170
     m_Localized: "Ship Split; Navigation Restart Required"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740171
+    m_Localized: "Universe  X {0:0.000}  Y {1:0.000} km"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740172
+    m_Localized: "Universe  X --  Y -- km"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740173
+    m_Localized: "Landing accepted: land safely with available fuel; without fuel, descend and take impact damage."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740174
+    m_Localized: "Land when close to a target body: fuel enables a safe landing; without fuel, the ship falls."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740175
+    m_Localized: "Landing Body  {0}; fuel enables a safe landing; without fuel, the ship falls."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740176
+    m_Localized: "Bodies do not pull in or stop ships; only the Land action takes the ship to the surface."
     m_Metadata:
       m_Items: []
   references:

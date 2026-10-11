@@ -53,11 +53,12 @@ namespace FlatWorld.Spaceflight
             foreach (ShipAssemblyState assembly in queryAssemblies.Refresh(State.Ships, State.Docking))
             {
                 ShipFlightState flight = GetFlight(assembly.MemberShipIds[0]);
-                if (flight == null || flight.Phase is not (ShipFlightPhase.Cruising or ShipFlightPhase.Descending) ||
+                if (flight == null || flight.Phase is not (ShipFlightPhase.Cruising) ||
                     !Universe.TryGetBody(flight.RequestedLandingBodyId, out BodyState body)) continue;
+                bool poweredLanding = TryConsumeLandingFuel(assembly, seconds);
                 BeginSurfaceDescent(assembly, ShipLandingGuidance.CreateDescentContact(body,
                     new SpaceVector2(assembly.PositionX, assembly.PositionY),
-                    new SpaceVector2(assembly.VelocityX, assembly.VelocityY), Universe.State.SimulationSeconds));
+                    new SpaceVector2(assembly.VelocityX, assembly.VelocityY), Universe.State.SimulationSeconds), poweredLanding);
             }
         }
 

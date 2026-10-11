@@ -1,5 +1,7 @@
+using System;
 using System.Collections;
 using FlatWorld.Localization;
+using FlatWorld.Spaceflight;
 using TMPro;
 using UnityEngine;
 
@@ -25,6 +27,8 @@ public sealed class PlayerWorldCoordinateHUD : MonoBehaviour
     private const string FpsTextNodeName = "FPS文本";
     private const string CoordinateFormat = "X  {0:0.0}    Y  {1:0.0}";
     private const string GeographicFormat = "经 {0:0.00}°  纬 {1:0.00}°";
+    private const string UniverseCoordinateFormat = "宇宙  X {0:0.000}  Y {1:0.000} km";
+    private const string UniverseCoordinateUnavailableText = "宇宙  X --  Y -- km";
     private const string FpsFormat = "FPS  {0:0}";
     private const float RefreshIntervalSeconds = 0.1f;
     private const float FpsSampleIntervalSeconds = 0.5f;
@@ -47,6 +51,11 @@ public sealed class PlayerWorldCoordinateHUD : MonoBehaviour
     private string lastPressurePresentation;
     private int lastCoordinateX = int.MinValue;
     private int lastCoordinateY = int.MinValue;
+    private bool lastCoordinatesAreSpace;
+    private double lastUniverseCoordinateX = double.NaN;
+    private double lastUniverseCoordinateY = double.NaN;
+    private string localizedUniverseCoordinateFormat;
+    private string localizedUniverseCoordinateUnavailableText;
     private int lastFpsSampleFrame = -1;
     private int lastDisplayedFps = -1;
     private float lastFpsSampleTime = -1f;
@@ -76,7 +85,7 @@ public sealed class PlayerWorldCoordinateHUD : MonoBehaviour
             player.ProfileContextChanged += HandleProfileContextChanged;
         PlayerWorldCoordinateDisplayPreferences.Changed += HandleDisplayPreferenceChanged;
         FlatWorldLocalizationService.LanguageChanged += HandleLanguageChanged;
-        RefreshTemperatureLocalization();
+        RefreshHudLocalization();
 
         RefreshForProfileContext();
     }
@@ -181,6 +190,7 @@ public sealed class PlayerWorldCoordinateHUD : MonoBehaviour
         viewRect.SetAsFirstSibling();
         lastCoordinateX = int.MinValue;
         lastCoordinateY = int.MinValue;
+        InvalidateUniverseCoordinates();
         lastDisplayMode = (PlayerWorldCoordinateDisplayMode)(-1);
         InvalidateFpsSample();
         temperatureDisplayInitialized = false;
@@ -242,20 +252,25 @@ public sealed class PlayerWorldCoordinateHUD : MonoBehaviour
             source, pressure.State.RemainingBufferSeconds);
     }
 
-    /// <summary>只在语言变化时查询温度文案，低频采样循环只负责数值。</summary>
-    private void RefreshTemperatureLocalization()
+    /// <summary>只在语言变化时查询 HUD 文案，低频采样循环只负责数值。</summary>
+    private void RefreshHudLocalization()
     {
         localizedTemperatureFormat = FlatWorldLocalizationService.GetUiText(AmbientTemperatureFormat);
         localizedTemperatureUnavailableText = FlatWorldLocalizationService.GetUiText(AmbientTemperatureUnavailableText);
+        localizedUniverseCoordinateFormat = FlatWorldLocalizationService.GetUiText(UniverseCoordinateFormat);
+        localizedUniverseCoordinateUnavailableText = FlatWorldLocalizationService.GetUiText(UniverseCoordinateUnavailableText);
+        InvalidateUniverseCoordinates();
         temperatureDisplayInitialized = false;
     }
 
     private void HandleLanguageChanged(string localeCode)
     {
-        RefreshTemperatureLocalization();
+        RefreshHudLocalization();
         lastSeasonYear = -1;
         lastSeasonHour = -1;
         RefreshSeasonText();
+        if (CanDisplay() && coordinateText != null)
+            RefreshCoordinateText();
         if (CanDisplay() && ambientTemperatureText != null)
             RefreshAmbientTemperatureText();
     }
@@ -263,19 +278,27 @@ public sealed class PlayerWorldCoordinateHUD : MonoBehaviour
     /// <summary>仅在显示值改变时写入 TMP，避免静止状态产生无效刷新和字符串分配。</summary>
     private void RefreshCoordinateText()
     {
+        SpaceSession session = SpaceSession.Current;
+        if (session?.IsSpaceView == true)
+        {
+            RefreshUniverseCoordinateText(session);
+            return;
+        }
+
         // 先还原星球逻辑坐标，避免 HUD 显示循环世界的 Unity 表现镜像位置。
         Vector3 position = WorldLocalPresentation.ToLogical(player.transform.position);
         int coordinateX = Mathf.RoundToInt(position.x * 10f);
         int coordinateY = Mathf.RoundToInt(position.y * 10f);
         PlayerWorldCoordinateDisplayMode displayMode =
             PlayerWorldCoordinateDisplayPreferences.Mode;
-        if (coordinateX == lastCoordinateX && coordinateY == lastCoordinateY &&
+        if (!lastCoordinatesAreSpace && coordinateX == lastCoordinateX && coordinateY == lastCoordinateY &&
             displayMode == lastDisplayMode)
             return;
 
         lastCoordinateX = coordinateX;
         lastCoordinateY = coordinateY;
         lastDisplayMode = displayMode;
+        lastCoordinatesAreSpace = false;
 
         if (displayMode == PlayerWorldCoordinateDisplayMode.LatitudeLongitude)
         {
@@ -285,6 +308,70 @@ public sealed class PlayerWorldCoordinateHUD : MonoBehaviour
         }
 
         coordinateText.SetText(CoordinateFormat, coordinateX * 0.1f, coordinateY * 0.1f);
+    }
+
+    /// <summary>太空位置只读取双精度权威乘员状态，不使用随浮动原点移动的 Unity 坐标。</summary>
+    private void RefreshUniverseCoordinateText(SpaceSession session)
+    {
+        if (!TryGetUniversePosition(session, out SpaceVector2 position))
+        {
+            if (!lastCoordinatesAreSpace || !double.IsNaN(lastUniverseCoordinateX))
+                coordinateText.text = localizedUniverseCoordinateUnavailableText;
+            lastCoordinatesAreSpace = true;
+            lastUniverseCoordinateX = lastUniverseCoordinateY = double.NaN;
+            return;
+        }
+
+        // 显示千米并保留三位小数，换原点不会改变读数，米级变化才重写文本。
+        double coordinateX = Math.Round(position.X);
+        double coordinateY = Math.Round(position.Y);
+        if (lastCoordinatesAreSpace && coordinateX == lastUniverseCoordinateX &&
+            coordinateY == lastUniverseCoordinateY)
+            return;
+
+        lastCoordinatesAreSpace = true;
+        lastUniverseCoordinateX = coordinateX;
+        lastUniverseCoordinateY = coordinateY;
+        coordinateText.text = string.Format(localizedUniverseCoordinateFormat,
+            coordinateX / 1000d, coordinateY / 1000d);
+    }
+
+    /// <summary>乘船时由船姿态和乘员本地位置还原宇宙位置，离船时读取自由移动位置。</summary>
+    private bool TryGetUniversePosition(SpaceSession session, out SpaceVector2 position)
+    {
+        position = default;
+        if (session.State == null)
+            return false;
+
+        SpacePassengerState passenger = null;
+        foreach (SpacePassengerState candidate in session.State.Passengers)
+        {
+            if (candidate.ProfileId != player.ProfileName)
+                continue;
+            passenger = candidate;
+            break;
+        }
+        if (passenger == null)
+            return false;
+
+        ShipState ship = session.GetShip(passenger.ShipId);
+        if (passenger.Supported && ship != null)
+        {
+            ShipGeometry.LocalToWorld(ship, passenger.LocalX, passenger.LocalY, out double x, out double y);
+            position = new SpaceVector2(x, y);
+        }
+        else
+        {
+            position = passenger.FreeMotion.PositionMeters;
+        }
+        return position.IsFinite;
+    }
+
+    /// <summary>重新绑定界面或切换语言时强制刷新宇宙坐标。</summary>
+    private void InvalidateUniverseCoordinates()
+    {
+        lastCoordinatesAreSpace = false;
+        lastUniverseCoordinateX = lastUniverseCoordinateY = double.NaN;
     }
 
     /// <summary>根据持久化开关控制 FPS 文本，并仅在开启时采样刷新。</summary>

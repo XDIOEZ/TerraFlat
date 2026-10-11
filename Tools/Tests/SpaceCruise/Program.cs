@@ -131,7 +131,6 @@ internal static partial class Program
         Near(118.5d, vx, "departure inherits rotational point velocity x");
         Near(31d, vy, "departure inherits rotational point velocity y");
         Near(.35d, Settings.FreeFloatAccelerationMultiplier * 3d, "space acceleration uses one third of ice", 1e-7d);
-        Near(.15d, Settings.FreeFloatDecelerationMultiplier * 3d, "space deceleration uses one third of ice", 1e-7d);
     }
 
     private static void LandingBoundary()

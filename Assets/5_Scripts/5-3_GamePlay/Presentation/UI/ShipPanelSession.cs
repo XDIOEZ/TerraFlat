@@ -175,7 +175,7 @@ public sealed class ShipPanelSession : IMachinePanelSession
         switch (command)
         {
             case "help":
-                Append("系统", "help：命令帮助\nstatus：当前船况\nclear：清空反馈\ndrive / exit：进入 / 退出驾驶\nignite：点火 / 停机\nnavigate X Y：按画面坐标导航\npick：点击画面选择导航点\ncancel：取消导航\nland：向附近星体开始降落\ndock / undock：确认对接 / 解除接口\npressure kPa：设置供气目标气压\nWASD 施加推力，松键继续滑行，反向输入制动；Q/E 旋转，松键停转。停机、断电或缺燃料时保留平移惯性。可以飞到星体画面上方，点击降落才进入地表下降。");
+                Append("系统", "help：命令帮助\nstatus：当前船况\nclear：清空反馈\ndrive / exit：进入 / 退出驾驶\nignite：点火 / 停机\nnavigate X Y：按画面坐标导航\npick：点击画面选择导航点\ncancel：取消导航\nland：向附近星体开始降落\ndock / undock：确认对接 / 解除接口\npressure kPa：设置供气目标气压\nWASD 施加推力，松键继续滑行，反向输入制动；Q/E 旋转，松键停转。停机、断电或缺燃料时保留平移惯性。星体不会吸引或截停飞船；点击降落时，有燃料平稳着陆，无燃料下落并结算冲击。");
                 break;
             case "status":
                 Append("系统", status.text, literal: true);
@@ -206,7 +206,7 @@ public sealed class ShipPanelSession : IMachinePanelSession
             case "land":
                 if (session.RequestLanding(console))
                 {
-                    Append("完成", "降落已开始，将进入地表下落；落点由实际船体位置决定。");
+                    Append("完成", "已接受降落：有可用燃料时平稳着陆；无燃料时进入下落并结算冲击。");
                     RenderOutput();
                     Close();
                     return;
@@ -300,7 +300,6 @@ public sealed class ShipPanelSession : IMachinePanelSession
         ShipFlightPhase.Floating => "海面浮船",
         ShipFlightPhase.Lifting => "发射升空",
         ShipFlightPhase.Cruising => "太空飞行",
-        ShipFlightPhase.Descending => "接近星体",
         ShipFlightPhase.SurfaceDescending => "地表下落",
         _ => "未知"
     };
@@ -411,7 +410,7 @@ public sealed class ShipPanelSession : IMachinePanelSession
             Math.Sqrt(ship.VelocityX * ship.VelocityX + ship.VelocityY * ship.VelocityY), ship.AngularVelocityRadiansPerSecond * 180d / Math.PI));
         text.AppendLine(Text("WASD 推进，松键继续滑行，反向输入制动；停机后保留平移惯性。"));
         double altitude = flight.HeightMeters;
-        if (flight.Phase is ShipFlightPhase.Cruising or ShipFlightPhase.Descending)
+        if (flight.Phase is ShipFlightPhase.Cruising)
         {
             BodyState nearest = null;
             double distance = double.PositiveInfinity;
@@ -447,9 +446,9 @@ public sealed class ShipPanelSession : IMachinePanelSession
             text.AppendLine(Format("剩余距离  {0:0.0} m\n当前刹停距离  {1:0.0} m", remaining,
                 ShipCruiseGuidance.BrakingDistance(speed, SpaceGameplaySettings.Current, Time.fixedDeltaTime)));
         }
-        text.AppendLine(landingTarget == null ? Text("靠近目标星体后，点击降落进入地表下降。") :
-            Format("可降落星体  {0}；点击降落才开始下降。", landingTarget.DisplayName));
-        text.AppendLine(Text("飞船可经过星体画面上方，只有点击降落才进入地表下降。"));
+        text.AppendLine(landingTarget == null ? Text("靠近目标星体后可降落；有燃料平稳着陆，无燃料下落。") :
+            Format("可降落星体  {0}；有燃料平稳着陆，无燃料下落。", landingTarget.DisplayName));
+        text.AppendLine(Text("星体不会吸引或截停飞船；只有点击降落才进入地表。"));
         foreach (ShipCompartmentState room in ship.Compartments)
         {
             var gas = new FluidInventory(room.Gas);

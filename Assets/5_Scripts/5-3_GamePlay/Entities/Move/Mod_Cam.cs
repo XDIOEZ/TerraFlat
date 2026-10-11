@@ -45,6 +45,8 @@ public class Mod_Cam : Module
     private float _baseYDamping;
     private bool _cameraFollowDefaultsCaptured;
     private Transform _followOverride;
+    private float _followOverrideMaxPov;
+    private float _followOverrideZoomMultiplier = 1f;
 
     public GameObject CamPrefab;
     private GameObject instantiatedCamera;
@@ -61,6 +63,9 @@ public class Mod_Cam : Module
     public float MinPovValue = 1f;  // 视野最小缩放值，保持正交相机尺寸大于零
     private bool _unlimitedViewEnabled; // 管理员无限视野只放开运行时上限，不污染普通视野配置。
     private float _adminFiniteViewMaxOverride; // GM 可临时扩展有限视野，不改普通玩法上限。
+
+    public float EffectiveMaxPovValue => Mathf.Max(MaxPovValue, _followOverride != null ? _followOverrideMaxPov : 0f);
+    public bool UsesProportionalZoom => _followOverride != null && _followOverrideZoomMultiplier > 1f;
 
     /// <summary>当前是否启用了管理员无限视野。</summary>
     public bool IsUnlimitedViewEnabled => _unlimitedViewEnabled;
@@ -280,18 +285,28 @@ public class Mod_Cam : Module
 
     #region 相机控制
     // 临时驾驶等模式借用跟随目标，结束后回到玩家且不改变听音主体。
-    public void SetFollowOverride(Transform target)
+    public void SetFollowOverride(Transform target, float maximumPov = 0f, float zoomMultiplier = 1f)
     {
-        if (_followOverride == target) return;
+        float maximum = target != null ? Mathf.Max(0f, maximumPov) : 0f;
+        float multiplier = target != null ? Mathf.Max(1f, zoomMultiplier) : 1f;
+        if (_followOverride == target && _followOverrideMaxPov == maximum &&
+            _followOverrideZoomMultiplier == multiplier) return;
+        bool targetChanged = _followOverride != target;
         _followOverride = target;
-        ApplyFollowTarget();
+        _followOverrideMaxPov = maximum;
+        _followOverrideZoomMultiplier = multiplier;
+        if (targetChanged) ApplyFollowTarget();
+        if (Vcam != null) SetOrthographicSize(povValue);
     }
 
     public void ClearFollowOverride(Transform target)
     {
         if (_followOverride != target) return;
         _followOverride = null;
+        _followOverrideMaxPov = 0f;
+        _followOverrideZoomMultiplier = 1f;
         ApplyFollowTarget();
+        if (Vcam != null) SetOrthographicSize(povValue);
     }
 
     private void ApplyFollowTarget()
@@ -332,7 +347,10 @@ public class Mod_Cam : Module
     public void ChangeCameraView(float delta)
     {
         if (Vcam == null) return;
-        SetOrthographicSize(povValue + delta);
+        // 远景每次按当前距离成比例缩放，拉远和拉近使用互逆倍率。
+        SetOrthographicSize(UsesProportionalZoom
+            ? CurrentOrthographicSize * Mathf.Pow(_followOverrideZoomMultiplier, delta)
+            : CurrentOrthographicSize + delta);
     }
 
     /// <summary>设置相机正交视野；区块加载窗口由区块配置独立控制。</summary>
@@ -357,7 +375,7 @@ public class Mod_Cam : Module
         if (safeSensitivity <= 0f || Mathf.Abs(screenDistanceDelta) <= 0.001f)
             return;
 
-        SetOrthographicSize(CurrentOrthographicSize - screenDistanceDelta * safeSensitivity);
+        ChangeCameraView(-screenDistanceDelta * safeSensitivity);
     }
 
     /// <summary>原子设置 GM 视野上限模式和正交尺寸，有限档可独立扩展普通玩法上限。</summary>
@@ -374,8 +392,8 @@ public class Mod_Cam : Module
     private float ClampPovValue(float value)
     {
         float finiteMax = _adminFiniteViewMaxOverride > 0f
-            ? _adminFiniteViewMaxOverride
-            : MaxPovValue;
+            ? Mathf.Max(_adminFiniteViewMaxOverride, _followOverride != null ? _followOverrideMaxPov : 0f)
+            : EffectiveMaxPovValue;
         return Mathf.Max(MinPovValue, _unlimitedViewEnabled ? value : Mathf.Min(value, finiteMax));
     }
     #endregion

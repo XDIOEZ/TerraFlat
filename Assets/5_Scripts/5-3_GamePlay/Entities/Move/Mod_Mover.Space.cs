@@ -76,9 +76,12 @@ public partial class Mod_Mover
         if (inputController?._mainCamera != null)
             input = inputController._mainCamera.transform.TransformDirection(input);
         float speed = Mathf.Min(Mathf.Max(0f, Speed.Value), (float)settings.FreeFloatMaxSpeedMetersPerSecond);
-        // 失重与冰面共用速度过渡，只降低响应倍率来延长加速、转向和松键滑行。
-        return SmoothSurfaceVelocity(currentVelocity, input * speed, seconds,
-            settings.FreeFloatAccelerationMultiplier, settings.FreeFloatDecelerationMultiplier);
+        // 失重移动只在按键时累加速度，松键没有摩擦，反向输入才会制动。
+        if (input.sqrMagnitude <= InputMoveThresholdSqr) return currentVelocity;
+        float acceleration = speed / Mathf.Max(MinimumTransitionDuration, speedTransitionDuration) *
+            settings.FreeFloatAccelerationMultiplier * PlayerAccelerationMultiplier;
+        Vector2 nextVelocity = currentVelocity + input * acceleration * Mathf.Max(0f, seconds);
+        return Vector2.ClampMagnitude(nextVelocity, Mathf.Max(speed, currentVelocity.magnitude));
     }
 
     private float ResolveSurfaceGravitySpeedMultiplier()

@@ -45,7 +45,7 @@ namespace FlatWorld.Spaceflight
             ShipGeometry.PointVelocity(ship, x, y, out double vx, out double vy);
             data.inHand = false; data.Stack.CanBePickedUp = true;
             var flight = GetFlight(ship.ShipId);
-            bool inSpace = flight.Phase is ShipFlightPhase.Cruising or ShipFlightPhase.Descending;
+            bool inSpace = flight.Phase is ShipFlightPhase.Cruising;
             State.LooseItems.Add(new SpaceLooseItemState
             {
                 Snapshot = Encode(data), WorldKey = flight.SurfaceWorldKey,
@@ -172,7 +172,7 @@ namespace FlatWorld.Spaceflight
         private void AddLooseCargoMass(ShipState ship, ShipMassReader reader)
         {
             ShipFlightState flight = GetFlight(ship.ShipId);
-            bool inSpace = flight.Phase is ShipFlightPhase.Cruising or ShipFlightPhase.Descending;
+            bool inSpace = flight.Phase is ShipFlightPhase.Cruising;
             foreach (SpaceLooseItemState cargo in State.LooseItems)
             {
                 if (cargo.InSpace != inSpace || !inSpace && cargo.WorldKey != ship.WorldAddress ||

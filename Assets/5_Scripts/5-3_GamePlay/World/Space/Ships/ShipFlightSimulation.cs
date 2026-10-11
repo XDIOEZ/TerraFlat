@@ -89,7 +89,7 @@ namespace FlatWorld.Spaceflight
                 ShipState ship = GetShip(id); ShipFlightState member = GetFlight(id);
                 member.Motion.PositionMeters = new SpaceVector2(ship.PositionX, ship.PositionY);
                 member.Motion.VelocityMetersPerSecond = new SpaceVector2(ship.VelocityX, ship.VelocityY);
-                UpdateDescent(member, ship);
+                member.Phase = ShipFlightPhase.Cruising;
             }
         }
         private double AssemblyRadius(ShipAssemblyState assembly)
@@ -199,23 +199,6 @@ namespace FlatWorld.Spaceflight
             }
             else if (flight.HeightMeters < 0d) { flight.HeightMeters = 0d; flight.VerticalSpeed = 0d; }
         }
-        private void UpdateDescent(ShipFlightState flight, ShipState ship)
-        {
-            BodyState approaching = null;
-            double nearest = double.PositiveInfinity;
-            SpaceVector2 position = new(ship.PositionX, ship.PositionY);
-            SpaceVector2 velocity = new(ship.VelocityX, ship.VelocityY);
-            foreach (BodyState body in Universe.State.Bodies)
-            {
-                SpaceVector2 radial = position - body.PositionMeters;
-                double altitude = radial.Magnitude - body.RadiusMeters - flight.Motion.RadiusMeters;
-                if (altitude < nearest && altitude < Math.Max(100d, body.RadiusMeters * .25d) &&
-                    SpaceVector2.Dot(velocity, radial.Normalized) < 0d)
-                { approaching = body; nearest = altitude; }
-            }
-            if (approaching != null) flight.BodyId = approaching.BodyId;
-            flight.Phase = approaching == null ? ShipFlightPhase.Cruising : ShipFlightPhase.Descending;
-        }
         public double DescentSeconds(ShipFlightState flight)
         {
             if (flight.Phase is ShipFlightPhase.Lifting or ShipFlightPhase.SurfaceDescending)
@@ -224,12 +207,7 @@ namespace FlatWorld.Spaceflight
                 return g > 0d ? (flight.VerticalSpeed + Math.Sqrt(flight.VerticalSpeed * flight.VerticalSpeed + 2d * g * Math.Max(0d, flight.HeightMeters))) / g
                     : flight.VerticalSpeed < 0d ? Math.Max(0d, flight.HeightMeters / -flight.VerticalSpeed) : double.PositiveInfinity;
             }
-            if (flight.Phase != ShipFlightPhase.Descending || !Universe.TryGetBody(flight.BodyId, out BodyState body))
-                return double.PositiveInfinity;
-            SpaceVector2 radial = flight.Motion.PositionMeters - body.PositionMeters;
-            double altitude = Math.Max(0d, radial.Magnitude - body.RadiusMeters - flight.Motion.RadiusMeters);
-            double inward = -SpaceVector2.Dot(flight.Motion.VelocityMetersPerSecond, radial.Normalized);
-            return inward > 0d ? altitude / inward : double.PositiveInfinity;
+            return double.PositiveInfinity;
         }
         private bool PlayerInAssembly(ShipAssemblyState assembly)
         {
@@ -243,7 +221,7 @@ namespace FlatWorld.Spaceflight
         private string GetPassengerWorld(SpacePassengerState passenger)
         {
             if (passenger.Supported && GetFlight(passenger.ShipId) is ShipFlightState flight)
-                return flight.Phase is ShipFlightPhase.Cruising or ShipFlightPhase.Descending ? "SpaceScene" : flight.SurfaceWorldKey;
+                return flight.Phase is ShipFlightPhase.Cruising ? "SpaceScene" : flight.SurfaceWorldKey;
             if (passenger.SurfaceDescending) return passenger.LandingWorldKey;
             return passenger.IsInSpace && !passenger.LandingResolved ? "SpaceScene" : null;
         }
@@ -273,13 +251,13 @@ namespace FlatWorld.Spaceflight
             return true;
         }
 
-        private void LandAssembly(ShipAssemblyState assembly, SurfaceContact contact)
+        private void LandAssembly(ShipAssemblyState assembly, SurfaceContact contact, bool applyImpact = true)
         {
             ShipFlightState primary = GetFlight(assembly.MemberShipIds[0]);
             if (primary.LandingResolved) return;
             string world = Universe.GetSurfaceAddress(contact.BodyId).WorldKey;
             bool carryingPlayer = PlayerInAssembly(assembly);
-            double impactSpeed = contact.RelativeVelocityMetersPerSecond.Magnitude;
+            double impactSpeed = applyImpact ? contact.RelativeVelocityMetersPerSecond.Magnitude : 0d;
             float impactRadius = (float)AssemblyRadius(assembly);
             BodyState body = Universe.GetBody(contact.BodyId);
             SpaceGameplaySettings settings = SpaceGameplaySettings.Current;
@@ -288,9 +266,10 @@ namespace FlatWorld.Spaceflight
 
             var sample = SpaceSurfaceQuery.GetLandingSurface(body.PlanetId, point.ToVector2());
             string impactEvent = Guid.NewGuid().ToString("N");
-            double stoppingAcceleration = Math.Abs(contact.RelativeVelocityMetersPerSecond.Y) / Math.Max(.001d, settings.ImpactStoppingSeconds) + body.SurfaceGravity;
-            double damage = assembly.MassKg * stoppingAcceleration / Math.Max(1d, settings.ImpactForcePerDurability) +
-                .5d * assembly.MassKg * contact.RelativeVelocityMetersPerSecond.X * contact.RelativeVelocityMetersPerSecond.X / Math.Max(1d, settings.ImpactJoulesPerDurability);
+            double stoppingAcceleration = applyImpact
+                ? Math.Abs(contact.RelativeVelocityMetersPerSecond.Y) / Math.Max(.001d, settings.ImpactStoppingSeconds) + body.SurfaceGravity : 0d;
+            double damage = applyImpact ? assembly.MassKg * stoppingAcceleration / Math.Max(1d, settings.ImpactForcePerDurability) +
+                .5d * assembly.MassKg * contact.RelativeVelocityMetersPerSecond.X * contact.RelativeVelocityMetersPerSecond.X / Math.Max(1d, settings.ImpactJoulesPerDurability) : 0d;
             double absorber = 0d;
             foreach (string memberId in assembly.MemberShipIds)
                 foreach (ShipPieceState piece in GetShip(memberId).Pieces) if (piece.IsAlive && piece.Kind == ShipPieceKind.Floor) absorber += piece.Health;
@@ -312,7 +291,8 @@ namespace FlatWorld.Spaceflight
                 foreach (ShipPieceState piece in ship.Pieces.ToArray())
                     if (piece.IsAlive) ShipStructureService.ApplyDamage(ship, piece.PieceId, durabilityDamage / Math.Max(1, count), "触地冲击", DestroyPiece);
             }
-            ApplyTerrainImpact(GetShip(assembly.MemberShipIds[0]), impactSpeed, assembly.MassKg, point.ToVector2(), impactRadius);
+            if (applyImpact)
+                ApplyTerrainImpact(GetShip(assembly.MemberShipIds[0]), impactSpeed, assembly.MassKg, point.ToVector2(), impactRadius);
             if (carryingPlayer && damage > absorber)
             {
                 Player player = ItemMgr.Instance?.User_Player;
@@ -323,6 +303,7 @@ namespace FlatWorld.Spaceflight
             }
             ProcessStructureChanges();
             if (carryingPlayer) EndDescentControl(ItemMgr.Instance?.User_Player);
+            if (carryingPlayer && !applyImpact) ExitConsole(ItemMgr.Instance?.User_Player);
             if (carryingPlayer && IsSpaceView) StartCoroutine(TransferPlayerToSurface(world, point.ToVector2()));
         }
         public SpaceVector2 SurfaceCenter(string bodyId, double angle)
@@ -333,7 +314,7 @@ namespace FlatWorld.Spaceflight
             longitude = Math.IEEERemainder(longitude, Math.PI * 2d);
             return new SpaceVector2(longitude * body.RadiusMeters, 0d);
         }
-        private void BeginSurfaceDescent(ShipAssemblyState assembly, SurfaceContact contact)
+        private void BeginSurfaceDescent(ShipAssemblyState assembly, SurfaceContact contact, bool poweredLanding)
         {
             ShipFlightState primary = GetFlight(assembly.MemberShipIds[0]);
             if (primary.Phase == ShipFlightPhase.SurfaceDescending || primary.LandingResolved) return;
@@ -359,7 +340,13 @@ namespace FlatWorld.Spaceflight
                 flight.Ignited = false; flight.LandingResolved = false; flight.LandingSelected = true;
                 flight.LandingEventId = Guid.NewGuid().ToString("N");
             }
-            if (carrying && IsSpaceView) StartCoroutine(TransferPlayerToSurface(world, center.ToVector2()));
+            // 有真实燃料时直接平稳着陆，无燃料才保留地表下降与触地冲击。
+            if (poweredLanding)
+            {
+                LandAssembly(assembly, contact, applyImpact: false);
+                if (carrying) ShipPanelSession.CloseForPlayer(this, ItemMgr.Instance?.User_Player);
+            }
+            else if (carrying && IsSpaceView) StartCoroutine(TransferPlayerToSurface(world, center.ToVector2()));
         }
         private IEnumerator TransferPlayerToSpace()
         {

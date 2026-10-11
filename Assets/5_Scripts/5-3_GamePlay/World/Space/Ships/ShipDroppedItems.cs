@@ -130,7 +130,7 @@ namespace FlatWorld.Spaceflight
             if (!inherited && carrier != null)
             {
                 ShipFlightState flight = GetFlight(carrier.ShipId);
-                state.InSpace = flight.Phase is ShipFlightPhase.Cruising or ShipFlightPhase.Descending;
+                state.InSpace = flight.Phase is ShipFlightPhase.Cruising;
                 state.WorldKey = flight.SurfaceWorldKey;
                 ShipGeometry.PointVelocity(carrier, state.Motion.PositionMeters.X, state.Motion.PositionMeters.Y, out double vx, out double vy);
                 state.Motion.VelocityMetersPerSecond = new SpaceVector2(vx, vy);

@@ -21,7 +21,7 @@ public partial class GameManager
         if (passenger.Supported && state.Ships.Find(value => value.ShipId == passenger.ShipId) is ShipState ship &&
             state.Flights.Find(value => value.ShipId == ship.ShipId) is ShipFlightState flight)
         {
-            world = flight.Phase is ShipFlightPhase.Cruising or ShipFlightPhase.Descending ? "SpaceScene" : flight.SurfaceWorldKey;
+            world = flight.Phase is ShipFlightPhase.Cruising ? "SpaceScene" : flight.SurfaceWorldKey;
             ShipGeometry.LocalToWorld(ship, passenger.LocalX, passenger.LocalY, out double x, out double y);
             playerData.transform.position = world == "SpaceScene" ? Vector3.zero : new Vector3((float)x, (float)y);
         }

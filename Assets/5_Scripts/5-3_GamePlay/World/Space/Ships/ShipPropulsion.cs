@@ -56,7 +56,7 @@ namespace FlatWorld.Spaceflight
         {
             if (!IsSpaceView || !FindPiece(consoleId, out ShipState ship, out ShipPieceState console) || console.Kind != ShipPieceKind.Console || !IsPowered(ship, console)) return false;
             ShipFlightState flight = GetFlight(ship.ShipId);
-            if (flight == null || flight.Phase is not (ShipFlightPhase.Cruising or ShipFlightPhase.Descending)) return false;
+            if (flight == null || flight.Phase is not (ShipFlightPhase.Cruising)) return false;
             SpaceVector2 absolute = UnprojectPosition(displayPoint);
             if (!absolute.IsFinite) return false;
             ShipPieceState device = null;
@@ -238,6 +238,15 @@ namespace FlatWorld.Spaceflight
             if (navigating) task.Status = !ignited ? "引擎已停机，保持惯性，等待点火" : !requestedEngine
                 ? "当前方向没有可用喷嘴，保持惯性" : "燃料不足，保持惯性，等待补给";
         }
+        // 正常降落复用可用引擎的真实燃料路径，停机状态也能执行一次着陆消耗。
+        private bool TryConsumeLandingFuel(ShipAssemblyState assembly, double seconds)
+        {
+            CollectActuators(assembly);
+            foreach (ShipActuator engine in actuators)
+                if (ConsumeEngineFuel(engine, 1d, seconds) > 0d) return true;
+            return false;
+        }
+
         private double GetAvailableEngineThrust()
         {
             projectedFuelBudgets.Clear(); projectedFuelStock.Clear();
