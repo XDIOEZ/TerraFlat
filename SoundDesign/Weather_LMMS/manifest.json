@@ -28,38 +28,74 @@
     {
       "file": "Assets/Audio/Generated/weather.thunder__01.wav",
       "project": "Weather_Thunder.mmp",
-      "seconds": 8.5,
+      "seconds": 17.0,
       "sampleRate": 48000,
-      "channels": 2,
+      "channels": 1,
       "loop": false,
-      "peakDb": -2.0,
-      "rmsDb": -22.69,
+      "peakDb": -3.0,
+      "rmsDb": -25.46,
       "seamStep": null,
-      "rawPeak": 0.189361572265625
+      "rawPeak": 0.42041015625
     },
     {
       "file": "Assets/Audio/Generated/weather.thunder__02.wav",
       "project": "Weather_Thunder.mmp",
-      "seconds": 8.5,
+      "seconds": 17.0,
       "sampleRate": 48000,
-      "channels": 2,
+      "channels": 1,
       "loop": false,
-      "peakDb": -2.0,
-      "rmsDb": -21.91,
+      "peakDb": -3.0,
+      "rmsDb": -24.05,
       "seamStep": null,
-      "rawPeak": 0.189361572265625
+      "rawPeak": 0.42041015625
     },
     {
       "file": "Assets/Audio/Generated/weather.thunder__03.wav",
       "project": "Weather_Thunder.mmp",
-      "seconds": 8.5,
+      "seconds": 23.0,
       "sampleRate": 48000,
-      "channels": 2,
+      "channels": 1,
       "loop": false,
-      "peakDb": -2.0,
-      "rmsDb": -21.61,
+      "peakDb": -3.0,
+      "rmsDb": -24.45,
       "seamStep": null,
-      "rawPeak": 0.189361572265625
+      "rawPeak": 0.42041015625
+    },
+    {
+      "file": "Assets/Audio/Generated/weather.thunder.far__01.wav",
+      "project": "Weather_Thunder_Far.mmp",
+      "seconds": 18.2,
+      "sampleRate": 48000,
+      "channels": 1,
+      "loop": false,
+      "peakDb": -6.0,
+      "rmsDb": -28.26,
+      "seamStep": null,
+      "rawPeak": 0.41998291015625
+    },
+    {
+      "file": "Assets/Audio/Generated/weather.thunder.far__02.wav",
+      "project": "Weather_Thunder_Far.mmp",
+      "seconds": 23.0,
+      "sampleRate": 48000,
+      "channels": 1,
+      "loop": false,
+      "peakDb": -8.55,
+      "rmsDb": -28.0,
+      "seamStep": null,
+      "rawPeak": 0.41998291015625
+    },
+    {
+      "file": "Assets/Audio/Generated/weather.thunder.far__03.wav",
+      "project": "Weather_Thunder_Far.mmp",
+      "seconds": 23.0,
+      "sampleRate": 48000,
+      "channels": 1,
+      "loop": false,
+      "peakDb": -6.0,
+      "rmsDb": -28.5,
+      "seamStep": null,
+      "rawPeak": 0.41998291015625
     }
   ]
 }

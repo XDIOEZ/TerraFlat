@@ -24,14 +24,14 @@ MonoBehaviour:
     Min: 1
     Max: 1
   pitch:
-    Min: 0.97
-    Max: 1.03
-  spatialBlend: 0
-  minDistance: 1
-  maxDistance: 20
+    Min: 0.99
+    Max: 1.01
+  spatialBlend: 1
+  minDistance: 8
+  maxDistance: 192
   priority: 96
   cooldown: 0.1
   maxInstances: 3
   concurrencyPolicy: 1
-  rolloffMode: 0
+  rolloffMode: 1
   outputOverride: {fileID: 0}

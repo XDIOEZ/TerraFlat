@@ -9,6 +9,7 @@ public partial class WeatherMgr
 
     private const float WeatherAudioThreshold = 0.001f;
     private const float ThunderAudibleRadius = 192f;
+    private const float ThunderNearRadius = 64f;
     private const float ThunderPropagationSpeed = 64f;
     private const int MaximumPendingThunder = 8;
     private AudioHandle rainAudioHandle;
@@ -18,7 +19,7 @@ public partial class WeatherMgr
     private bool weatherAudioSubscribed;
     private bool weatherAudioBaselineReady;
     private readonly List<PendingWeatherThunder> pendingWeatherThunder = new(8);
-    private readonly List<AudioHandle> weatherThunderHandles = new(3);
+    private readonly List<ActiveWeatherThunder> weatherThunderHandles = new(6);
 
     private readonly struct PendingWeatherThunder
     {
@@ -29,6 +30,18 @@ public partial class WeatherMgr
         {
             Lightning = lightning;
             PlayTime = playTime;
+        }
+    }
+
+    private readonly struct ActiveWeatherThunder
+    {
+        public readonly AudioHandle Handle;
+        public readonly Vector2 StrikePosition;
+
+        public ActiveWeatherThunder(AudioHandle handle, Vector2 strikePosition)
+        {
+            Handle = handle;
+            StrikePosition = strikePosition;
         }
     }
 
@@ -50,7 +63,7 @@ public partial class WeatherMgr
         weatherAudioBaselineReady = false;
         pendingWeatherThunder.Clear();
         for (int i = 0; i < weatherThunderHandles.Count; i++)
-            weatherThunderHandles[i].Stop(0.15f);
+            weatherThunderHandles[i].Handle.Stop(0.15f);
         weatherThunderHandles.Clear();
     }
 
@@ -142,7 +155,8 @@ public partial class WeatherMgr
             !TryGetWeatherAudioPlayer(out Player player))
             return;
 
-        float distance = WorldTopologyRuntime.ShortestDelta(player.transform.position, lightning.Position).magnitude;
+        Vector2 logicalPlayer = WorldLocalPresentation.ToLogical((Vector2)player.transform.position);
+        float distance = WorldTopologyRuntime.ShortestDelta(logicalPlayer, lightning.Position).magnitude;
         if (distance >= ThunderAudibleRadius || lightning.Strength <= 0f)
             return;
 
@@ -152,10 +166,6 @@ public partial class WeatherMgr
 
     private void PlayPendingWeatherThunder()
     {
-        for (int i = weatherThunderHandles.Count - 1; i >= 0; i--)
-            if (!weatherThunderHandles[i].IsPlaying)
-                weatherThunderHandles.RemoveAt(i);
-
         for (int i = pendingWeatherThunder.Count - 1; i >= 0; i--)
         {
             PendingWeatherThunder pending = pendingWeatherThunder[i];
@@ -166,14 +176,40 @@ public partial class WeatherMgr
                 !TryGetWeatherAudioPlayer(out Player player))
                 continue;
 
-            // 环绕地图按最短距离调音量，等待期间走远的玩家也不会听到近雷。
-            float distance = WorldTopologyRuntime.ShortestDelta(player.transform.position, pending.Lightning.Position).magnitude;
-            float volume = Mathf.Clamp01(pending.Lightning.Strength) * Mathf.Clamp01(1f - distance / ThunderAudibleRadius);
-            if (volume <= WeatherAudioThreshold)
+            // 雷声和雷光共用事件落点，距离选音色，空间声源负责方位与衰减。
+            Vector2 playerPosition = player.transform.position;
+            Vector2 logicalPlayer = WorldLocalPresentation.ToLogical(playerPosition);
+            float distance = WorldTopologyRuntime.ShortestDelta(logicalPlayer, pending.Lightning.Position).magnitude;
+            float strength = Mathf.Clamp01(pending.Lightning.Strength);
+            if (distance >= ThunderAudibleRadius || strength <= WeatherAudioThreshold)
                 continue;
-            AudioHandle handle = AudioService.Instance.Play(AudioEventIds.WeatherThunder, AudioPlayOptions.Global(volume));
+            string cueId = distance <= ThunderNearRadius
+                ? AudioEventIds.WeatherThunder : AudioEventIds.WeatherThunderFar;
+            AudioHandle handle = AudioService.Instance.Play(cueId,
+                AudioPlayOptions.At(WorldLocalPresentation.ProjectPosition(pending.Lightning.Position, playerPosition), strength));
             if (handle.IsValid)
-                weatherThunderHandles.Add(handle);
+                weatherThunderHandles.Add(new ActiveWeatherThunder(handle, pending.Lightning.Position));
+        }
+    }
+
+    private void LateUpdate()
+    {
+        bool hasPlayer = TryGetWeatherAudioPlayer(out Player player);
+        for (int i = weatherThunderHandles.Count - 1; i >= 0; i--)
+        {
+            ActiveWeatherThunder thunder = weatherThunderHandles[i];
+            if (!thunder.Handle.IsPlaying)
+            {
+                weatherThunderHandles.RemoveAt(i);
+                continue;
+            }
+            if (!hasPlayer)
+                continue;
+
+            // 玩家移动或跨过环绕边界后，落雷仍保持在最近的正确方位。
+            Vector2 playerPosition = player.transform.position;
+            AudioService.Instance.SetWorldPosition(thunder.Handle,
+                WorldLocalPresentation.ProjectPosition(thunder.StrikePosition, playerPosition));
         }
     }
 

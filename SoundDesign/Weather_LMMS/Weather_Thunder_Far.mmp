@@ -1,0 +1,38 @@
+<?xml version="1.0"?>
+<!DOCTYPE lmms-project>
+<lmms-project version="1.0" creator="LMMS MCP Server" creatorversion="1.2.0" type="song">
+  <head timesig_numerator="4" timesig_denominator="4" bpm="120" mastervol="75" masterpitch="0" />
+  <song>
+    <trackcontainer type="song" visible="1" width="600" height="300" x="5" y="5" maximized="0" minimized="0">
+      <track muted="0" type="2" name="Distant Thunder 01 - real country rumble" solo="0">
+        <sampletrack pan="0" vol="80">
+          <fxchain numofeffects="0" enabled="0" />
+        </sampletrack>
+        <sampleclip pos="0" len="1747" src="D:/_Unity/_UnityProject/FlatWorld/SoundDesign/Weather_LMMS/Sources/far_01.wav" muted="0" off="0" />
+      </track>
+      <track muted="0" type="2" name="Distant Thunder 02 - real country rumble" solo="0">
+        <sampletrack pan="0" vol="80">
+          <fxchain numofeffects="0" enabled="0" />
+        </sampletrack>
+        <sampleclip pos="2688" len="2208" src="D:/_Unity/_UnityProject/FlatWorld/SoundDesign/Weather_LMMS/Sources/far_02.wav" muted="0" off="0" />
+      </track>
+      <track muted="0" type="2" name="Distant Thunder 03 - real country rumble" solo="0">
+        <sampletrack pan="0" vol="80">
+          <fxchain numofeffects="0" enabled="0" />
+        </sampletrack>
+        <sampleclip pos="5376" len="2208" src="D:/_Unity/_UnityProject/FlatWorld/SoundDesign/Weather_LMMS/Sources/far_03.wav" muted="0" off="0" />
+      </track>
+    </trackcontainer>
+    <mixer visible="1" width="561" height="332" x="5" y="310" maximized="0" minimized="0">
+      <mixerchannel num="0" muted="0" volume="1" name="Master" soloed="0">
+        <fxchain numofeffects="0" enabled="0" />
+      </mixerchannel>
+    </mixer>
+    <ControllerRackView visible="1" width="258" height="142" x="836" y="407" maximized="0" minimized="0" />
+    <pianoroll visible="0" width="640" height="480" x="1" y="1" maximized="0" minimized="0" />
+    <automationeditor visible="0" width="640" height="400" x="56" y="255" maximized="0" minimized="0" />
+    <projectnotes visible="0" width="640" height="400" x="1" y="1" maximized="0" minimized="0" />
+    <timeline lp0pos="0" lp1pos="192" lpstate="0" />
+    <controllers />
+  </song>
+</lmms-project>

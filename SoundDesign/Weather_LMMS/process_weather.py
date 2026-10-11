@@ -7,6 +7,7 @@ import json
 import math
 import uuid
 import wave
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 import numpy as np
@@ -46,7 +47,7 @@ def make_loop(data, start, end, crossfade=.3):
     return np.concatenate((data[count:-count], blend))
 
 
-def meta(path):
+def meta(path, mono=False):
     target = Path(str(path) + ".meta")
     if target.exists():
         return
@@ -65,7 +66,7 @@ AudioImporter:
     conversionMode: 0
     preloadAudioData: 1
   platformSettingOverrides: {{}}
-  forceToMono: 0
+  forceToMono: {int(mono)}
   normalize: 0
   loadInBackground: 1
   ambisonic: 0
@@ -76,17 +77,24 @@ AudioImporter:
 """, encoding="utf-8")
 
 
-def finalize():
-    entries = []
+def finalize(only_thunder=False):
+    manifest = ROOT / "manifest.json"
+    entries = [entry for entry in json.loads(manifest.read_text(encoding="utf-8"))["sounds"]
+               if not Path(entry["file"]).name.startswith("weather.thunder") ] if only_thunder else []
     inputs = [
         ("Rain", "weather.rain.loop__01.wav", 4, 36, True, -12, -3),
         ("Wind", "weather.wind.loop__01.wav", 4, 48, True, -17, -5),
-        ("Thunder", "weather.thunder__01.wav", 0, 8.5, False, -16, -2),
-        ("Thunder", "weather.thunder__02.wav", 10, 18.5, False, -16, -2),
-        ("Thunder", "weather.thunder__03.wav", 20, 28.5, False, -16, -2),
+        ("Thunder", "weather.thunder__01.wav", 0, 17, False, -24, -3),
+        ("Thunder", "weather.thunder__02.wav", 24, 41, False, -24, -3),
+        ("Thunder", "weather.thunder__03.wav", 48, 71, False, -24, -3),
+        ("Thunder_Far", "weather.thunder.far__01.wav", 0, 18.2, False, -28, -6),
+        ("Thunder_Far", "weather.thunder.far__02.wav", 28, 51, False, -28, -6),
+        ("Thunder_Far", "weather.thunder.far__03.wav", 56, 79, False, -28, -6),
     ]
     cache = {}
     for project, filename, start, end, looping, rms_db, peak_db in inputs:
+        if only_thunder and project in ("Rain", "Wind"):
+            continue
         if project not in cache:
             cache[project] = read_wav(ROOT / "renders" / f"Weather_{project}_raw.wav")
         raw = cache[project]
@@ -94,7 +102,9 @@ def finalize():
         data = make_loop(raw, start, end) if looping else raw[round(start*RATE):round(end*RATE)].copy()
         raw_peak = float(np.max(np.abs(raw)))
         assert raw_peak < .9999, f"LMMS render clipped: {project}"
-        # 仅做去直流、首尾和电平整理，声音本身由 LMMS 合成。
+        # 雨风由 LMMS 合成，雷声由 LMMS 编排真实录音；此处仅整理母带。
+        if not looping:
+            data = data.mean(axis=1, keepdims=True)
         data -= data.mean(axis=0)
         if not looping:
             n = round(.003 * RATE)
@@ -108,7 +118,13 @@ def finalize():
         data *= gain
         output = ASSETS / filename
         write_wav(output, data)
-        meta(output)
+        meta(output, mono=not looping)
+        if not looping:
+            target = Path(str(output) + ".meta")
+            text = target.read_text(encoding="utf-8").replace("forceToMono: 0", "forceToMono: 1")
+            with target.open("r+", encoding="utf-8") as stream:
+                stream.write(text)
+                stream.truncate()
         if filename == "weather.rain.loop__01.wav":
             target = Path(str(output) + ".meta")
             text = target.read_text(encoding="utf-8")
@@ -128,11 +144,26 @@ def finalize():
                             seamStep=seam, rawPeak=raw_peak))
     (ROOT / "manifest.json").write_text(json.dumps(dict(engine="LMMS 1.2.2 via MCP", sounds=entries), ensure_ascii=False, indent=2)+"\n", encoding="utf-8")
     print(json.dumps(entries, indent=2))
+
+
+def relink():
+    # 移动项目目录后，只更新 LMMS 的采样绝对路径。
+    for filename in ("Weather_Thunder.mmp", "Weather_Thunder_Far.mmp"):
+        path = ROOT / filename
+        tree = ET.parse(path)
+        for clip in tree.findall(".//sampleclip"):
+            source = ROOT / "Sources" / Path(clip.get("src")).name
+            assert source.is_file(), source
+            clip.set("src", source.as_posix())
+        ET.indent(tree, space="  ")
+        tree.write(path, encoding="utf-8", xml_declaration=True)
+        print(f"Relinked {filename}")
 # endregion
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("command", choices=["finalize"])
+    parser.add_argument("command", choices=["finalize", "relink"])
+    parser.add_argument("--only-thunder", action="store_true")
     args = parser.parse_args()
-    finalize()
+    relink() if args.command == "relink" else finalize(args.only_thunder)

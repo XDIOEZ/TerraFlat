@@ -179,6 +179,18 @@ namespace FlatWorld.Audio
             return options.FollowTarget != null ? options.FollowTarget.position : options.WorldPosition;
         }
 
+        // 位置音源可由调用方更新坐标，附着音源仍由自己的 Transform 驱动。
+        public void SetWorldPosition(AudioHandle handle, Vector3 position)
+        {
+            Voice voice = FindVoice(handle);
+            if (voice == null || !voice.IsSpatial || voice.FollowTarget != null ||
+                !float.IsFinite(position.x) || !float.IsFinite(position.y) || !float.IsFinite(position.z))
+                return;
+
+            voice.WorldPosition = position;
+            UpdateSpatialPosition(voice);
+        }
+
         private void LateUpdate()
         {
             for (int i = 0; i < activeVoices.Count; i++)

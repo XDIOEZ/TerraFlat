@@ -20,4 +20,4 @@ description: "FlatWorld 音频服务、Cue、声源池、空间衰减、音量�
 - Catalog/Config 的 Resources 路径与加载常量对应。候选 UI 音效按风格分目录，位于自动扫描目录 `Assets/Audio/Generated/` 之外，选定后再绑定 Cue；`build_preview.py --unity .` 重导保留 WAV GUID。
 - 取放音索引按操作、材质、重量 kg、体积 L 选择；重量/体积按实际转移数量独立划档，背包/箱子区分接触音色。拿起在点击取物或开始拖拽时播放一次，放入跟随成功事务；候选索引与运行时 Cue 接入独立。
 - 服务直接实现 `ISettingsProvider`，经 `SettingsProviderRegistry` 暴露音量/静音；`FlatWorld.Audio` 只依赖 Data 设置契约。六路滑块使用 `UI_SliderControl`，绑定名为 `MasterVolume/MusicVolume/SfxVolume/UIVolume/AmbientVolume/VoiceVolume` 及对应 `_数值`。
-- `AudioService.SetVolumeScale` 调整调用方音量，保留 Cue 随机增益、淡入淡出与用户音量设置。`WeatherMgr.Audio` 管雨风循环和单次雷声的距离/延迟，通用服务不识别天气；LMMS 雨声不再由默认生成器覆盖。
+- `AudioService.SetVolumeScale` 调整调用方音量，保留 Cue 随机增益、淡入淡出与用户设置；`SetWorldPosition` 更新非附着空间声源。`WeatherMgr.Audio` 管雨风循环及雷声落点/近远选音/延迟，通用服务不识别天气和拓扑；近远雷 Cue 均完整空间混音、线性衰减 8–192 格，使用单声道真实录音，来源见 `SoundDesign/Weather_LMMS/sources.json`。LMMS 雨声不再由默认生成器覆盖。

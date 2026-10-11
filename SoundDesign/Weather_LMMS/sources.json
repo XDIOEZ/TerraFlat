@@ -1,0 +1,119 @@
+{
+  "sources": [
+    {
+      "file": "Sources/near_01.wav",
+      "soundId": 243778,
+      "author": "bastipictures",
+      "sourcePage": "https://freesound.org/people/bastipictures/sounds/243778/",
+      "previewUrl": "https://cdn.freesound.org/previews/243/243778_997601-hq.mp3",
+      "previewSha256": "712ca6556d51fe993f2338c587ab6b886af4df931eda9ae091eeaf9fc5d0c525",
+      "sourceStart": 0.92,
+      "sourceEnd": 17.92,
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "processing": {
+        "mono": true,
+        "sampleRate": 48000,
+        "highpassHz": 35,
+        "lowpassHz": 6500,
+        "tailFadeSeconds": 3.0
+      }
+    },
+    {
+      "file": "Sources/near_02.wav",
+      "soundId": 126005,
+      "author": "unfa",
+      "sourcePage": "https://freesound.org/people/unfa/sounds/126005/",
+      "previewUrl": "https://cdn.freesound.org/previews/126/126005_1038806-hq.mp3",
+      "previewSha256": "56892506d3eac80739460b778cfb2d2e9955a8b0ec96c9ce50c198e741b2feab",
+      "sourceStart": 12.92,
+      "sourceEnd": 29.92,
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "processing": {
+        "mono": true,
+        "sampleRate": 48000,
+        "highpassHz": 35,
+        "lowpassHz": 5000,
+        "tailFadeSeconds": 3.0
+      }
+    },
+    {
+      "file": "Sources/far_01.wav",
+      "soundId": 107518,
+      "author": "moxobna",
+      "sourcePage": "https://freesound.org/people/moxobna/sounds/107518/",
+      "previewUrl": "https://cdn.freesound.org/previews/107/107518_43834-hq.mp3",
+      "previewSha256": "e6ccd8d9be5cfe0410710bf960ab3a38edc30df76e046c07b6ad7da339d7ad99",
+      "sourceStart": 9.9,
+      "sourceEnd": 28.1,
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "processing": {
+        "mono": true,
+        "sampleRate": 48000,
+        "highpassHz": 35,
+        "lowpassHz": 1150,
+        "tailFadeSeconds": 4.0
+      }
+    },
+    {
+      "file": "Sources/far_02.wav",
+      "soundId": 107518,
+      "author": "moxobna",
+      "sourcePage": "https://freesound.org/people/moxobna/sounds/107518/",
+      "previewUrl": "https://cdn.freesound.org/previews/107/107518_43834-hq.mp3",
+      "previewSha256": "e6ccd8d9be5cfe0410710bf960ab3a38edc30df76e046c07b6ad7da339d7ad99",
+      "sourceStart": 75.4,
+      "sourceEnd": 98.4,
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "processing": {
+        "mono": true,
+        "sampleRate": 48000,
+        "highpassHz": 35,
+        "lowpassHz": 1150,
+        "tailFadeSeconds": 4.0
+      }
+    },
+    {
+      "file": "Sources/far_03.wav",
+      "soundId": 107518,
+      "author": "moxobna",
+      "sourcePage": "https://freesound.org/people/moxobna/sounds/107518/",
+      "previewUrl": "https://cdn.freesound.org/previews/107/107518_43834-hq.mp3",
+      "previewSha256": "e6ccd8d9be5cfe0410710bf960ab3a38edc30df76e046c07b6ad7da339d7ad99",
+      "sourceStart": 114.2,
+      "sourceEnd": 137.2,
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "processing": {
+        "mono": true,
+        "sampleRate": 48000,
+        "highpassHz": 35,
+        "lowpassHz": 1150,
+        "tailFadeSeconds": 4.0
+      }
+    },
+    {
+      "file": "Sources/near_03.wav",
+      "soundId": 124548,
+      "author": "unfa",
+      "sourcePage": "https://freesound.org/people/unfa/sounds/124548/",
+      "previewUrl": "https://cdn.freesound.org/previews/124/124548_1038806-hq.mp3",
+      "previewSha256": "1d4016fadc45af6d9b5b90846832b1e17250c0c4e8269a086f881e78d0980591",
+      "sourceStart": 1.94,
+      "sourceEnd": 24.94,
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "sourceNote": "Original field recording has slight distortion at the start.",
+      "processing": {
+        "mono": true,
+        "sampleRate": 48000,
+        "highpassHz": 35,
+        "lowpassHz": 4000,
+        "tailFadeSeconds": 3
+      }
+    }
+  ]
+}

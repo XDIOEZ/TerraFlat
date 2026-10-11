@@ -1,0 +1,37 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c0c19eb3306146649bcc5130f92e0433, type: 3}
+  m_Name: weather.thunder.far
+  m_EditorClassIdentifier:
+  id: weather.thunder.far
+  bus: 3
+  clips:
+  - {fileID: 8300000, guid: 0b8ab1deb5de4f47b104930358606cb3, type: 3}
+  - {fileID: 8300000, guid: 1bb2457625ff4e46b0a3aebc36c478cf, type: 3}
+  - {fileID: 8300000, guid: c29d8970f0224d15a43e6c14816f61c3, type: 3}
+  selection: 0
+  loop: 0
+  volume:
+    Min: 1
+    Max: 1
+  pitch:
+    Min: 0.99
+    Max: 1.01
+  spatialBlend: 1
+  minDistance: 8
+  maxDistance: 192
+  priority: 96
+  cooldown: 0.1
+  maxInstances: 3
+  concurrencyPolicy: 1
+  rolloffMode: 1
+  outputOverride: {fileID: 0}

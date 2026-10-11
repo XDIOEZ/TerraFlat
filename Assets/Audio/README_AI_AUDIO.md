@@ -35,9 +35,10 @@ ambient.forest.day__01.wav
 ## 天气音效
 
 - 雨声 `weather.rain.loop` 已替换为 LMMS MCP 合成的 31.7 秒立体声循环，保留原 WAV 与 Cue 的 GUID。
-- 风声 `weather.wind.loop` 为 43.7 秒阵风循环；雷声 `weather.thunder` 包含三条 8.5 秒变体。
-- 雨风由本地天气强度控制音量；雷声消费已发布的单次雷电事件，按环绕距离衰减和延迟。均走 Ambient 音量设置，退出或抑制天气的维度会停止。
+- 风声 `weather.wind.loop` 为 43.7 秒阵风循环；近雷 `weather.thunder` 和远雷 `weather.thunder.far` 各三条真实录音变体，均经 LMMS MCP 编排导出。
+- 雨风由本地天气强度控制音量；雷声从已发布的真实落点空间发声，64 格内选近雷，64–192 格选远雷，传播延迟为环绕最短距离 / 64。两组 Cue 均以线性衰减在 192 格处静音，玩家移动时更新最近副本方位。均走 Ambient 音量设置，退出或抑制天气的维度会停止。
 - 原始可编辑工程、制作说明与母带裁切脚本在 `SoundDesign/Weather_LMMS/`。雨声不再属于 `Generate Default AI SFX` 的生成条目，避免覆盖新素材。
+- 真实雷声来自 Freesound 的 CC0 录音；作者、来源、裁切范围、公共预览散列与处理参数记录在 `SoundDesign/Weather_LMMS/sources.json` 和 `THIRD_PARTY_NOTICES.md`。
 
 ## 业务调用
 
