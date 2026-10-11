@@ -48,13 +48,18 @@ namespace FlatWorld.Spaceflight
             {
                 if (weapon.RemainingAttackTargets == 0) break;
                 var target = candidates[contact.CandidateId];
-                var identity = new CombatIdentity { Backend = CombatBackend.External, Value = unchecked((uint)int.Parse(target.Piece.PieceId)),
+                var identity = new CombatIdentity { Backend = CombatBackend.External, Value = unchecked((uint)(target.Ship.IsWreck ? target.Ship.WreckGuid : int.Parse(target.Piece.PieceId))),
                     World = context.Attack.Source.World, Dimension = context.Attack.Source.Dimension };
                 if (!weapon.TryReserveExternalTarget(identity)) continue;
                 CombatDamageContext hit = context; hit.HitPoint = contact.Point;
                 float difficulty = GameplayCombatBridge.Difficulty().Resolve(context.SourceIsPlayer != 0, false);
                 float damage = target.Definition.Health != null ? MachineCombatBridge.CalculateDamage(target.Definition.Health, hit, difficulty)
                     : CombatRules.ResolvePhysical(math.csum(hit.Damage), 0f, difficulty, 1f);
+                if (target.Ship.IsWreck)
+                {
+                    weapon.PublishExternalDamage(hit, (float)session.ApplyWreckDamage(target.Ship, damage));
+                    continue;
+                }
                 double before = target.Piece.Health;
                 ShipStructureService.ApplyDamage(target.Ship, target.Piece.PieceId, damage, "攻击", session.DestroyPiece);
                 session.SynchronizePieceHealth(target.Ship, target.Piece);

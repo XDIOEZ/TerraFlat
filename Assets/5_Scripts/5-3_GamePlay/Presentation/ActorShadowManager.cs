@@ -189,6 +189,10 @@ public sealed class ActorShadowManager : SingletonMono<ActorShadowManager>
     /// <summary>同步单个实体的脚底位置、贴图占地尺寸和当前光照透明度。</summary>
     private void UpdateBinding(Item item, ShadowBinding binding)
     {
+        // 太空玩家不画地面阴影，舱内人工重力也不改变这条表现规则。
+        if (item is Player && SceneManager.GetActiveScene().name == "SpaceScene")
+            return;
+
         SpriteRenderer sourceRenderer = binding.SourceRenderer;
         if (sourceRenderer == null || sourceRenderer.sprite == null)
         {

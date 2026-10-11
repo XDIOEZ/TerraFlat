@@ -320,6 +320,7 @@ namespace FlatWorld.Spaceflight
             viewBindingsDirty = false;
             foreach (ShipState ship in State.Ships)
             {
+                if (ship.IsWreck) { SynchronizeWreckView(ship); continue; }
                 bool visible = IsVisible(ship);
                 ShipFlightState flight = visible ? GetFlight(ship.ShipId) : null;
                 float angle = (float)(ship.AngleRadians * 180d / Math.PI);
@@ -364,7 +365,9 @@ namespace FlatWorld.Spaceflight
                             arrow.sortingLayerID = renderer.sortingLayerID; arrow.sortingOrder = renderer.sortingOrder + 2; arrow.positionCount = 5;
                             arrow.SetPositions(new[] { new Vector3(0, -.3f), new Vector3(0, .4f), new Vector3(-.13f, .23f), new Vector3(0, .4f), new Vector3(.13f, .23f) });
                         }
-                        if (Mod_Building.TryReadBuildingData(data, out _, out Mod_Building.Building_Data building) && !string.IsNullOrWhiteSpace(building.TileBlockId) &&
+                        // 专用船件保留定义外观，普通格子建筑才使用地块贴图覆盖。
+                        if (Mod_ShipPart.Read(data) == null &&
+                            Mod_Building.TryReadBuildingData(data, out _, out Mod_Building.Building_Data building) && !string.IsNullOrWhiteSpace(building.TileBlockId) &&
                             GameRes.ExistingInstance.GetTileBlock(building.TileBlockId)?.TileBase is UnityEngine.Tilemaps.Tile tile)
                         { renderer.sprite = tile.sprite; renderer.color = tile.color; visual.transform.localScale = tile.transform.lossyScale; visual.transform.localPosition = tile.transform.GetColumn(3); }
                         BoxCollider2D collider = root.AddComponent<BoxCollider2D>();
@@ -408,6 +411,7 @@ namespace FlatWorld.Spaceflight
         }
         private void ReleaseViews()
         {
+            foreach (string id in new System.Collections.Generic.List<string>(wreckViews.Keys)) RemoveWreckView(id);
             ReleaseDrivingCamera();
             UnbindShipMachineVisualEvents();
             if (State != null) ReleaseLooseViews();

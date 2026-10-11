@@ -2,6 +2,11 @@
   "schemaVersion": 1,
   "packages": [
     {
+      "id": "space_wrecks",
+      "path": "shells/space_wrecks.json",
+      "enabled": true
+    },
+    {
       "id": "snowball",
       "path": "shells/snowball.json",
       "enabled": true

@@ -58,15 +58,15 @@ namespace FlatWorld.Spaceflight
             try
             {
                 Transform root = ItemMgr.Instance.GetRuntimeEntityRoot(SceneManager.GetActiveScene());
-                live = ItemMgr.Instance.InstantiateItem(payload, context.Start, Quaternion.Euler(0f, 0f, rotation), scale, root != null ? root.gameObject : null);
-                live.PersistenceOwner = this;
-                // 真实物品只负责模块与拾取，轨迹由唯一太空模拟时钟推进。
-                Mod_Droping oldFlight = live.itemMods.GetMod_ByID<Mod_Droping>(ModText.Drop);
-                if (oldFlight != null) Module.REMOVEModFROMItem(live, oldFlight._Data);
+                GameObject shell = new("SpaceDrop_" + payload.IDName);
+                if (root != null) shell.transform.SetParent(root, false);
+                shell.transform.SetPositionAndRotation(context.Start, Quaternion.Euler(0f, 0f, rotation));
+                shell.transform.localScale = scale;
+                SpaceDropView drop = shell.AddComponent<SpaceDropView>();
+                live = drop;
+                drop.Initialize(payload, this);
                 State.LooseItems.Add(state); looseViews.Add(state.Id, live); looseData[state.Id] = live.itemData;
-                live.Load(); live.SetInHand(false);
-                if (live.DestructionHandled || live.IsInPool || ItemMgr.Instance.GetItemByGuid(payload.Guid) != live)
-                    throw new InvalidOperationException("太空掉落物在生成时提前结束了生命周期。");
+                live.SetInHand(false);
                 Rigidbody2D body = live.GetComponent<Rigidbody2D>();
                 if (body != null)
                 {
@@ -75,8 +75,7 @@ namespace FlatWorld.Spaceflight
                     body.position = context.Start; body.rotation = rotation;
                 }
                 live.itemData.Stack.CanBePickedUp = true;
-                live.Save(); state.Snapshot = Encode(live.itemData);
-                ItemMgr.Instance.NotifyRuntimeItemMoved(live);
+                state.Snapshot = Encode(live.itemData);
                 return new DroppedItemHandle(live.itemData.Guid, 0, live);
             }
             catch
@@ -93,7 +92,8 @@ namespace FlatWorld.Spaceflight
             do
             {
                 id = Guid.NewGuid().GetHashCode() & int.MaxValue;
-                exists = id == 0 || id == sourceGuid || ItemMgr.Instance.GetItemByGuid(id) != null || Owns(id);
+                exists = id == 0 || id == sourceGuid || ItemMgr.Instance.GetItemByGuid(id) != null || Owns(id) ||
+                    State.Ships.Exists(ship => ship.WreckGuid == id);
                 if (!exists)
                     foreach (SpaceLooseItemState loose in State.LooseItems)
                     {

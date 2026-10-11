@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Runtime.CompilerServices;
 
 namespace FlatWorld.Spaceflight
 {
@@ -296,6 +297,13 @@ namespace FlatWorld.Spaceflight
         #endregion
 
         #region 支撑与结构温压损伤
+        private sealed class PressureDamagePattern
+        {
+            public bool HasLine;
+            public ShipDamageLine Line;
+        }
+        private static readonly ConditionalWeakTable<ShipState, PressureDamagePattern> pressurePatterns = new();
+        private static readonly Random pressurePatternRandom = new();
         public static ShipEnvironmentSnapshot GetEnvironment(ShipState ship, int cellX, int cellY,
             IShipAtmosphereSource outside = null)
         {
@@ -327,22 +335,44 @@ namespace FlatWorld.Spaceflight
         public static bool StepStructureEnvironment(ShipState ship, double pressureKPa, double temperatureCelsius,
             double seconds, Action<ShipState, ShipPieceState, string> onDestroyed = null)
         {
-            if (!FluidUnits.IsFinite(seconds) || seconds <= 0d || !FluidUnits.IsFinite(pressureKPa) || pressureKPa < 0d ||
+            if (ship == null || !FluidUnits.IsFinite(seconds) || seconds <= 0d || !FluidUnits.IsFinite(pressureKPa) || pressureKPa < 0d ||
                 !FluidUnits.IsFinite(temperatureCelsius)) return false;
+            Predicate<ShipPieceState> pressureEligible = piece => piece?.IsAlive == true &&
+                (piece.Kind == ShipPieceKind.Wall || piece.Kind == ShipPieceKind.Door || piece.Kind == ShipPieceKind.DockingPort) &&
+                piece.PressureDamagePerKPaSecond > 0d &&
+                OutOfRange(pressureKPa, piece.MinimumPressureKPa, piece.MaximumPressureKPa) > 0d;
+            PressureDamagePattern pattern = pressurePatterns.GetValue(ship, _ => new PressureDamagePattern());
+            bool lineStillLoaded = false;
+            if (pattern.HasLine)
+                foreach (ShipPieceState piece in ship.Pieces)
+                    if (pressureEligible(piece) && ShipDamagePattern.Intersects(ship, piece, pattern.Line))
+                    { lineStillLoaded = true; break; }
+            if (!lineStillLoaded)
+                pattern.HasLine = ShipDamagePattern.TryCreateLine(ship, pressurePatternRandom.NextDouble(),
+                    pressurePatternRandom.NextDouble(), out pattern.Line, pressureEligible);
             bool changed = false;
             foreach (ShipPieceState piece in new List<ShipPieceState>(ship.Pieces))
             {
                 if (piece == null || !piece.IsAlive) continue;
                 double pressureDamage = 0d;
-                if (piece.Kind == ShipPieceKind.Wall || piece.Kind == ShipPieceKind.Door || piece.Kind == ShipPieceKind.DockingPort)
+                // 持续压力集中在同一条受力线，断开后才重新选线，避免整圈舱壁一起平均掉血。
+                if (pattern.HasLine && pressureEligible(piece) && ShipDamagePattern.Intersects(ship, piece, pattern.Line))
                     pressureDamage = OutOfRange(pressureKPa, piece.MinimumPressureKPa, piece.MaximumPressureKPa) *
                         Math.Max(0d, piece.PressureDamagePerKPaSecond);
-                double temperatureDamage = OutOfRange(temperatureCelsius,
+                bool interior = piece.Kind is not (ShipPieceKind.Floor or ShipPieceKind.Wall or ShipPieceKind.Door or ShipPieceKind.DockingPort) &&
+                    FindCompartment(ship, piece.CellX, piece.CellY) != null;
+                // 真空的占位温度不是冷空气；舱内设备读舱温，船外有真实气体时才结算环境传热。
+                double materialTemperature = interior ? ship.NormalCabinTemperatureCelsius : temperatureCelsius;
+                double temperatureDamage = interior || pressureKPa > 1e-6d ? OutOfRange(materialTemperature,
                     piece.MinimumTemperatureCelsius, piece.MaximumTemperatureCelsius) *
-                    Math.Max(0d, piece.TemperatureDamagePerCelsiusSecond);
+                    Math.Max(0d, piece.TemperatureDamagePerCelsiusSecond) : 0d;
                 double damage = (pressureDamage + temperatureDamage) * seconds;
                 if (damage > 0d)
-                    changed |= ShipStructureService.ApplyDamage(ship, piece.PieceId, damage, "outside-temperature-pressure", onDestroyed);
+                {
+                    string reason = pressureDamage > 0d && temperatureDamage > 0d ? "outside-temperature-pressure"
+                        : pressureDamage > 0d ? "outside-pressure" : "outside-temperature";
+                    changed |= ShipStructureService.ApplyDamage(ship, piece.PieceId, damage, reason, onDestroyed);
+                }
             }
             return changed;
         }

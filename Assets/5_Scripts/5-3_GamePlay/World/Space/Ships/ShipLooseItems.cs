@@ -12,6 +12,7 @@ namespace FlatWorld.Spaceflight
         private readonly Dictionary<string, ItemData> looseData = new(StringComparer.Ordinal);
         private readonly Dictionary<Item, (SpriteRenderer Renderer, Vector3 LocalPosition)> looseHeightVisuals = new(ItemReferenceComparer.Instance);
         private bool releasingLooseViews;
+        private float loosePickupElapsed;
         private void OnLooseItemDespawning(Item item)
         {
             RestoreLooseItemHeightVisual(item);
@@ -33,6 +34,8 @@ namespace FlatWorld.Spaceflight
             ShipGeometry.LocalToWorld(ship, (piece.CellX + .5d) * ship.CellSizeMeters,
                 (piece.CellY + .5d) * ship.CellSizeMeters, out double x, out double y);
             ShipGeometry.PointVelocity(ship, x, y, out double vx, out double vy);
+            data = FastCloner.FastCloner.DeepClone(data);
+            data.Guid = AllocateSessionDropGuid(data.Guid);
             data.inHand = false; data.Stack.CanBePickedUp = true;
             var flight = GetFlight(ship.ShipId);
             bool inSpace = flight.Phase is ShipFlightPhase.Cruising;
@@ -43,6 +46,7 @@ namespace FlatWorld.Spaceflight
                 Motion = new SpaceMotionState { PositionMeters = new SpaceVector2(x, y), VelocityMetersPerSecond = new SpaceVector2(vx, vy),
                     RadiusMeters = .15d },
                 RotationDegrees = ship.AngleRadians * 180d / Math.PI + piece.QuarterTurns * 90d,
+                Scale = Vector3.one * .5f,
                 // 太空掉落不能继承船体残留的地表升空高度。
                 SurfaceHeight = inSpace ? 0d : Math.Max(0d, flight.HeightMeters),
                 SurfaceVerticalSpeed = inSpace ? 0d : flight.VerticalSpeed
@@ -81,6 +85,9 @@ namespace FlatWorld.Spaceflight
         }
         private void SynchronizeLooseItems()
         {
+            loosePickupElapsed += Time.deltaTime;
+            bool tryPickup = loosePickupElapsed >= .1f;
+            if (tryPickup) loosePickupElapsed = 0f;
             foreach (SpaceLooseItemState state in State.LooseItems.ToArray())
             {
                 if (looseViews.TryGetValue(state.Id, out Item existing) && existing != null &&
@@ -100,8 +107,11 @@ namespace FlatWorld.Spaceflight
                 if (existing == null)
                 {
                     ItemData data = Decode(state.Snapshot);
-                    existing = ItemMgr.Instance.InstantiateItem(data, position, Quaternion.Euler(0f, 0f, (float)state.RotationDegrees), state.Scale);
-                    existing.PersistenceOwner = this; existing.Load(); looseViews[state.Id] = existing;
+                    GameObject shell = new("SpaceDrop_" + data.IDName);
+                    shell.transform.SetPositionAndRotation(position, Quaternion.Euler(0f, 0f, (float)state.RotationDegrees));
+                    shell.transform.localScale = state.Scale;
+                    SpaceDropView drop = shell.AddComponent<SpaceDropView>();
+                    existing = drop; drop.Initialize(data, this); looseViews[state.Id] = existing;
                     looseData[state.Id] = data;
                 }
                 if (state.InSpace || state.SurfaceHeight > 0d)
@@ -114,9 +124,20 @@ namespace FlatWorld.Spaceflight
                 {
                     Rigidbody2D body = existing.GetComponent<Rigidbody2D>();
                     if (body != null) body.bodyType = RigidbodyType2D.Dynamic;
-                    state.Motion.PositionMeters = SpaceVector2.FromVector2(WorldLocalPresentation.ToLogical(existing.transform.position));
+                    existing.transform.position = position;
                 }
                 ApplyLooseItemHeightVisual(existing, state.InSpace ? 0d : state.SurfaceHeight);
+                if (tryPickup && FlatWorld.Networking.GameNetwork.HasStateAuthority &&
+                    DroppedItemService.TryPickupExternal(existing.itemData, position, out float remaining))
+                {
+                    existing.itemData.Stack.Amount = remaining;
+                    if (remaining <= 0f)
+                    {
+                        DespawnLooseView(existing);
+                        State.LooseItems.Remove(state); looseViews.Remove(state.Id); looseData.Remove(state.Id);
+                    }
+                    else state.Snapshot = Encode(existing.itemData);
+                }
             }
         }
         private void ApplyLooseItemHeightVisual(Item item, double height)

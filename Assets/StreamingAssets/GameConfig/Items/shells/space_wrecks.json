@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "items": [
+    {
+      "id": "ShipWreck",
+      "parent": "BasicItem_Base",
+      "gameName": "飞船残骸",
+      "description": "船体断裂后留下的成块残骸。记录原有部件和库存，攻击回收后释放内部回收物。",
+      "weight": 0,
+      "volume": 0,
+      "stackable": false,
+      "canBePickedUp": false,
+      "worldDropBehavior": "passive",
+      "tags": ["Space.Wreck"],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]"
+      },
+      "modules": {}
+    }
+  ]
+}

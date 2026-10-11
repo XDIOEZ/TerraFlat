@@ -106,6 +106,8 @@ namespace FlatWorld.Spaceflight
         public string WorldAddress;
         public ShipPlatformKind PlatformKind;
         public bool IsWreck;
+        public double WreckHealth, WreckMaxHealth;
+        public int WreckGuid;
         public double CellSizeMeters = 1d;
         public double CabinHeightMeters = 2.5d;
         public double NormalCabinTemperatureCelsius = 20d;

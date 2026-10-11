@@ -17,6 +17,36 @@ MonoBehaviour:
     m_SerializedData: []
   m_GUID: 47b73bec22f621a498a1748af8eb38da
   m_SerializeEntries:
+  - m_GUID: 60921ec3e85d46d7a6af43bf8b1b62ce
+    m_Address: Assets/6_Art/Generated/Space/ShipFloor_Iron/ShipFloor_Iron_Tile.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 9aa66d45b5b0406abcc5bc8e85187351
+    m_Address: Assets/6_Art/Generated/Space/ShipFloor_Refractory/ShipFloor_Refractory_Tile.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: ee41ebdd1aab4d7582c959048a19f8d7
+    m_Address: Assets/6_Art/Generated/Space/ShipWall_Iron/ShipWall_Iron_Tile.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 7fcc42b2ffa44623a14600db1272711f
+    m_Address: Assets/6_Art/Generated/Space/ShipWall_Refractory/ShipWall_Refractory_Tile.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 4b413ba8e5714357939199e0f1bd8988
+    m_Address: Assets/6_Art/Generated/Space/ShipAirSupply/ShipAirSupply_Idle.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 04f56ca12ee94e6f8ea13f0288a7a33f
     m_Address: Assets/6_Art/Generated/Space/ShipFiber/ShipFiber_Idle.png
     m_ReadOnly: 0

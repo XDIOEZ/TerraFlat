@@ -56,6 +56,7 @@ namespace FlatWorld.Spaceflight
         private void Awake()
         {
             Current = this;
+            RegisterShipDamageFeedback();
             ItemEnvironmentSources.Register(this);
             GameplayCombatBridge.Register(ShipCombatBridge.Instance);
             PressureExplosionQueue.WorldHandler = HandleShipExplosion;
@@ -68,6 +69,7 @@ namespace FlatWorld.Spaceflight
         }
         private void OnDestroy()
         {
+            UnregisterShipDamageFeedback();
             DestroyDrivingCameraTarget();
             placementRegistration?.Dispose();
             dropRegistration?.Dispose();
@@ -185,7 +187,8 @@ namespace FlatWorld.Spaceflight
             fixedShips.Clear();
             fixedShips.AddRange(State.Ships);
             using (ShipMachineMarker.Auto())
-                foreach (ShipState ship in fixedShips) MachineWorld.TickShip(ship.ShipId, (float)seconds);
+                foreach (ShipState ship in fixedShips)
+                    if (!ship.IsWreck) MachineWorld.TickShip(ship.ShipId, (float)seconds);
 
             // 视觉升空仍推进高度与燃料，但不触发每帧的全船质量重算和动态碰撞。
             bool hasMovingShips = false;
@@ -223,6 +226,7 @@ namespace FlatWorld.Spaceflight
                 {
                     foreach (ShipState ship in fixedShips)
                     {
+                        if (ship.IsWreck) continue;
                         var outside = GetOutside(ship);
                         ShipAtmosphereService.StepStructureEnvironment(ship, outside.PressureKPa, outside.TemperatureCelsius, elapsed, DestroyPiece);
                         RefillCompartments(ship, elapsed);
@@ -236,6 +240,7 @@ namespace FlatWorld.Spaceflight
         {
             if (!running || State == null) return;
             UpdateViewOrigin();
+            FlushShipDamageFeedback();
             // 星球、船体和玩家在同一 LateUpdate 使用同一个浮动原点。
             if (IsSpaceView && SpaceMgr.ExistingInstance != null) SpaceMgr.ExistingInstance.TickRuntimePlanets(0f);
             using (ShipViewMarker.Auto()) SynchronizeViews();

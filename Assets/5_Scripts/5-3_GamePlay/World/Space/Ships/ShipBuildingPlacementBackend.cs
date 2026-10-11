@@ -52,7 +52,7 @@ namespace FlatWorld.Spaceflight
             SpaceVector2 position = IsSpaceView ? UnprojectPosition(displayPosition) : new SpaceVector2(displayPosition.x, displayPosition.y);
             if (State != null) foreach (ShipState value in State.Ships)
             {
-                if (!IsVisible(value)) continue;
+                if (value.IsWreck || !IsVisible(value)) continue;
                 Vector2 ground = IsSpaceView ? default : WorldLocalPresentation.ProjectPosition(displayPosition, new Vector2((float)value.PositionX, (float)value.PositionY));
                 ShipGeometry.WorldToLocal(value, IsSpaceView ? position.X : ground.x, IsSpaceView ? position.Y : ground.y, out double x, out double y);
                 int cellX = (int)Math.Floor(x / value.CellSizeMeters), cellY = (int)Math.Floor(y / value.CellSizeMeters);
@@ -316,11 +316,12 @@ namespace FlatWorld.Spaceflight
                     flight.Motion.VelocityMetersPerSecond = new SpaceVector2(fragment.VelocityX, fragment.VelocityY);
                     if (flight.Phase is ShipFlightPhase.Landed or ShipFlightPhase.Floating or ShipFlightPhase.Lifting or ShipFlightPhase.SurfaceDescending)
                     { flight.SurfaceX = fragment.PositionX; flight.SurfaceY = fragment.PositionY; }
+                    if (fragments.Count > 1 || fragment.IsWreck) PrepareWreck(fragment);
                 }
                 foreach (SpacePassengerState passenger in State.Passengers)
                 {
                     if (passenger.ShipId != ship.ShipId) continue;
-                    ShipState support = fragments.Find(fragment => ShipAtmosphereService.HasFloor(fragment,
+                    ShipState support = fragments.Find(fragment => !fragment.IsWreck && ShipAtmosphereService.HasFloor(fragment,
                         (int)Math.Floor(passenger.LocalX / fragment.CellSizeMeters), (int)Math.Floor(passenger.LocalY / fragment.CellSizeMeters)));
                     if (!string.IsNullOrWhiteSpace(passenger.ConsolePieceId) &&
                         (support == null || !support.Pieces.Exists(piece => piece.PieceId == passenger.ConsolePieceId && piece.IsAlive)))
@@ -339,6 +340,7 @@ namespace FlatWorld.Spaceflight
                     if (target == null || !target.Pieces.Exists(piece => piece.PieceId == navigation.ConsolePieceId))
                     { navigation.Active = false; navigation.NeedsManualRestart = true; navigation.Status = "船体分裂，导航需要重新启动"; }
                 }
+                FlushDetachedWrecks();
                 if (fragments.Count == 0) RemoveEmptyShip(ship);
             }
             State.Docking.RemoveAll(pair => !FindPiece(pair.PortAId, out _, out _) || !FindPiece(pair.PortBId, out _, out _));
@@ -349,6 +351,7 @@ namespace FlatWorld.Spaceflight
 
         private void RemoveEmptyShip(ShipState ship)
         {
+            RemoveWreckView(ship.ShipId);
             MachineWorld.ReleaseShipScope(ship.ShipId);
             State.Ships.Remove(ship);
             State.Flights.RemoveAll(value => value.ShipId == ship.ShipId);

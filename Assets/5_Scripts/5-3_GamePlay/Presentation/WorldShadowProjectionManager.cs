@@ -521,6 +521,14 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
     private void SynchronizeCaster(Binding binding)
     {
         Item owner = binding.Owner;
+        // 场景切换只隐藏太空玩家的投影，回到地表后沿现有绑定恢复。
+        if (owner is Player && SceneManager.GetActiveScene().name == "SpaceScene")
+        {
+            ReleaseProxy(binding);
+            binding.NextCheck = 0f;
+            return;
+        }
+
         SunShadowCaster authoring = binding.Authoring;
         if (authoring != null && authoring.Source != null) binding.Source = authoring.Source;
         else if (owner.Sprite != null) binding.Source = owner.Sprite;

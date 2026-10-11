@@ -18,7 +18,7 @@
         "InventoryGroup.Chemistry"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Building/WaterPlatform/WaterPlatform_Iron_Tile.png"
+        "spriteAddress": "Assets/6_Art/Generated/Space/ShipFloor_Iron/ShipFloor_Iron_Tile.png"
       },
       "health": {
         "hasHp": true,
@@ -105,7 +105,7 @@
         "InventoryGroup.Chemistry"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Building/WaterPlatform/WaterPlatform_Iron_Tile.png"
+        "spriteAddress": "Assets/6_Art/Generated/Space/ShipFloor_Iron/ShipFloor_Iron_Tile.png"
       },
       "health": {
         "hasHp": true,
@@ -203,7 +203,7 @@
         "InventoryGroup.Chemistry"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Building/WaterPlatform/WaterPlatform_Stone_Tile.png"
+        "spriteAddress": "Assets/6_Art/Generated/Space/ShipFloor_Refractory/ShipFloor_Refractory_Tile.png"
       },
       "health": {
         "hasHp": true,
@@ -290,7 +290,7 @@
         "InventoryGroup.Chemistry"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Building/WaterPlatform/WaterPlatform_Stone_Tile.png"
+        "spriteAddress": "Assets/6_Art/Generated/Space/ShipFloor_Refractory/ShipFloor_Refractory_Tile.png"
       },
       "health": {
         "hasHp": true,
@@ -388,7 +388,7 @@
         "InventoryGroup.Chemistry"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Building/WallMetal/Wall_Iron_Medium.png[Wall_Iron_Medium]"
+        "spriteAddress": "Assets/6_Art/Generated/Space/ShipWall_Iron/ShipWall_Iron_Tile.png"
       },
       "health": {
         "hasHp": true,
@@ -475,7 +475,7 @@
         "InventoryGroup.Chemistry"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Building/WallMetal/Wall_Iron_Medium.png[Wall_Iron_Medium]"
+        "spriteAddress": "Assets/6_Art/Generated/Space/ShipWall_Iron/ShipWall_Iron_Tile.png"
       },
       "health": {
         "hasHp": true,
@@ -573,7 +573,7 @@
         "InventoryGroup.Chemistry"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Building/Wall_Stone_Medium.png[Wall_Stone_Medium]"
+        "spriteAddress": "Assets/6_Art/Generated/Space/ShipWall_Refractory/ShipWall_Refractory_Tile.png"
       },
       "health": {
         "hasHp": true,
@@ -660,7 +660,7 @@
         "InventoryGroup.Chemistry"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Building/Wall_Stone_Medium.png[Wall_Stone_Medium]"
+        "spriteAddress": "Assets/6_Art/Generated/Space/ShipWall_Refractory/ShipWall_Refractory_Tile.png"
       },
       "health": {
         "hasHp": true,
@@ -1996,7 +1996,7 @@
         "InventoryGroup.Chemistry"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Chemistry/GasTankBlock_Steel/GasTankBlock_Steel_Idle.png"
+        "spriteAddress": "Assets/6_Art/Generated/Space/ShipAirSupply/ShipAirSupply_Idle.png"
       },
       "health": {
         "hasHp": true,
@@ -2095,7 +2095,7 @@
         "InventoryGroup.Chemistry"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Chemistry/GasTankBlock_Steel/GasTankBlock_Steel_Idle.png"
+        "spriteAddress": "Assets/6_Art/Generated/Space/ShipAirSupply/ShipAirSupply_Idle.png"
       },
       "health": {
         "hasHp": true,

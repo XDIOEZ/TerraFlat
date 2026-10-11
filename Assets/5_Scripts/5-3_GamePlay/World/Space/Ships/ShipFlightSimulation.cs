@@ -293,9 +293,7 @@ namespace FlatWorld.Spaceflight
                 flight.Phase = sample.IsWater ? ShipFlightPhase.Floating : ShipFlightPhase.Landed; ship.WorldAddress = world;
                 ship.PlatformKind = sample.IsWater ? ShipPlatformKind.Ocean : ShipPlatformKind.Land;
                 double durabilityDamage = damage * ship.MassKg / Math.Max(.001d, assembly.MassKg);
-                int count = ship.Pieces.FindAll(piece => piece.IsAlive).Count;
-                foreach (ShipPieceState piece in ship.Pieces.ToArray())
-                    if (piece.IsAlive) ShipStructureService.ApplyDamage(ship, piece.PieceId, durabilityDamage / Math.Max(1, count), "触地冲击", DestroyPiece);
+                ApplyLineImpact(ship, durabilityDamage, "触地冲击");
             }
             if (applyImpact)
                 ApplyTerrainImpact(GetShip(assembly.MemberShipIds[0]), impactSpeed, assembly.MassKg, point.ToVector2(), impactRadius);

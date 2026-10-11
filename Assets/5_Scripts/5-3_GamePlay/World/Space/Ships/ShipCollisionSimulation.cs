@@ -389,7 +389,7 @@ namespace FlatWorld.Spaceflight
             enter = Math.Max(enter, first); exit = Math.Min(exit, last);
             return enter <= exit;
         }
-        private static void ResolveShipContact(ShipContactBody a, ShipContactBody b, ShipContactHit hit)
+        private void ResolveShipContact(ShipContactBody a, ShipContactBody b, ShipContactHit hit)
         {
             SpaceVector2 offsetA = hit.Point - a.Position, offsetB = hit.Point - b.Position;
             SpaceVector2 relative = ContactPointVelocity(b, offsetB) - ContactPointVelocity(a, offsetA);
@@ -400,6 +400,13 @@ namespace FlatWorld.Spaceflight
             {
                 SpaceVector2 impulse = hit.Normal * (-approaching / inverse);
                 ApplyContactImpulse(a, -impulse, offsetA); ApplyContactImpulse(b, impulse, offsetB);
+                // 只消费本次碰撞实际耗散的动能，静止重叠和位置纠正不会凭空损伤船体。
+                double damageBudget = .5d * approaching * approaching / inverse /
+                    SpaceGameplaySettings.Current.ImpactJoulesPerDurability;
+                foreach (ShipState member in a.Members)
+                    ApplyLineImpact(member, damageBudget * .5d * member.MassKg / Math.Max(.001d, a.Assembly.MassKg), "船体碰撞");
+                foreach (ShipState member in b.Members)
+                    ApplyLineImpact(member, damageBudget * .5d * member.MassKg / Math.Max(.001d, b.Assembly.MassKg), "船体碰撞");
             }
             double inverseMass = a.InverseMass + b.InverseMass;
             if (hit.Penetration > 0d && inverseMass > 0d)

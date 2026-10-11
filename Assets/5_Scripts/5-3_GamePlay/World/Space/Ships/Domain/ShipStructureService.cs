@@ -267,6 +267,7 @@ namespace FlatWorld.Spaceflight
         #endregion
 
         #region 唯一结构伤害入口
+        public static event Action<ShipState, ShipPieceState, double, string> DamageApplied;
         public static bool ApplyDamage(ShipState ship, string pieceId, double damage, string reason,
             Action<ShipState, ShipPieceState, string> onDestroyed = null)
         {
@@ -274,7 +275,9 @@ namespace FlatWorld.Spaceflight
             foreach (ShipPieceState piece in ship.Pieces)
             {
                 if (piece == null || piece.PieceId != pieceId || !piece.IsAlive) continue;
+                double previousHealth = piece.Health;
                 piece.Health = Math.Max(0d, piece.Health - damage);
+                DamageApplied?.Invoke(ship, piece, previousHealth - piece.Health, reason);
                 if (piece.Health == 0d)
                 {
                     // 先提交摧毁标记再回调，连锁伤害和保存重入不会重复结算掉落。

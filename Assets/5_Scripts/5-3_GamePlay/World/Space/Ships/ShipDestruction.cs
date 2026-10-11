@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using FlatWorld.Combat;
+using FlatWorld.Networking;
 using Newtonsoft.Json;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -21,25 +22,15 @@ namespace FlatWorld.Spaceflight
         }
         public bool ApplyPieceDamage(int guid, float damage, string reason)
         {
-            if (!FindPiece(guid.ToString(System.Globalization.CultureInfo.InvariantCulture), out ShipState ship, out ShipPieceState piece)) return false;
-            ShipStructureService.ApplyDamage(ship, piece.PieceId, damage, reason, DestroyPiece);
-            SynchronizePieceHealth(ship, piece); return true;
+            if (!GameNetwork.HasStateAuthority || !float.IsFinite(damage) || damage <= 0f ||
+                !FindPiece(guid.ToString(System.Globalization.CultureInfo.InvariantCulture), out ShipState ship, out ShipPieceState piece)) return false;
+            if (ship.IsWreck) return ApplyWreckDamage(ship, damage, reason) > 0d;
+            bool applied = ShipStructureService.ApplyDamage(ship, piece.PieceId, damage, reason, DestroyPiece);
+            SynchronizePieceHealth(ship, piece); return applied;
         }
         public void RecoverUnsupportedPiece(ShipState ship, ShipPieceState piece, string reason)
         {
-            if (contents.TryGetValue(piece.PieceId, out ItemData data))
-            {
-                using (MachineWorld.UseScope("ship:" + ship.ShipId))
-                {
-                    if (int.TryParse(piece.PieceId, out int id) && MachineWorld.GetById(id) is MachineEntity node)
-                        data = MachineWorld.RemoveShipPieceForRecovery(node);
-                }
-                CaptureRecoveredPieceHealth(data, piece);
-                QueueDrop(Mod_Building.CreateRecoveredCarrier(data, Mod_Building.GetSummonerPrefabId(piece.ItemId)), ship, piece);
-                contents.Remove(piece.PieceId);
-            }
-            State.Devices.RemoveAll(value => value.PieceId == piece.PieceId);
-            RemovePieceView(piece.PieceId);
+            QueueDetachedWreck(ship, piece);
         }
         private void HandleDestroyedInventory(ShipState ship, ShipPieceState piece, string reason)
         {
@@ -156,6 +147,8 @@ namespace FlatWorld.Spaceflight
         {
             if (!entry.WorldKey.StartsWith("ship:", StringComparison.Ordinal)) return false;
             ShipExplosionSpatialContext explosion = ReadExplosionContext(entry);
+            var structureHits = new List<(ShipState Ship, ShipPieceState Piece, double Damage)>();
+            double requestedDamage = 0d;
             foreach (ShipState target in State.Ships.ToArray())
             {
                 ShipFlightState flight = GetFlight(target.ShipId);
@@ -163,17 +156,37 @@ namespace FlatWorld.Spaceflight
                     !explosion.InSpace && explosion.WorldKey != flight.SurfaceWorldKey) continue;
                 double heightDifference = explosion.InSpace ? 0d : Math.Max(0d, flight.HeightMeters) - explosion.HeightMeters;
                 if (Math.Abs(heightDifference) >= radius) continue;
-                foreach (ShipPieceState piece in target.Pieces.ToArray())
+                Predicate<ShipPieceState> inBlast = candidate => candidate?.IsAlive == true &&
+                    DistanceToPiece(explosion, target, candidate) < Math.Sqrt(radius * radius - heightDifference * heightDifference);
+                if (!ShipDamagePattern.TryCreateLine(target, UnityEngine.Random.value, UnityEngine.Random.value,
+                    out ShipDamageLine line, inBlast)) continue;
+                foreach (ShipPieceState piece in ShipDamagePattern.SelectPieces(target, line, inBlast))
                 {
                     if (!piece.IsAlive) continue;
                     double planarDistance = DistanceToPiece(explosion, target, piece);
                     double distance = Math.Sqrt(planarDistance * planarDistance + heightDifference * heightDifference);
                     if (distance >= radius) continue;
                     float damage = CombatRules.ResolvePhysical(peak * (1f - (float)distance / radius), GetPiecePhysicalDefense(piece));
-                    ShipStructureService.ApplyDamage(target, piece.PieceId, damage, "燃料与压力爆炸", DestroyPiece);
-                    SynchronizePieceHealth(target, piece);
+                    if (damage <= 0f) continue;
+                    structureHits.Add((target, piece, damage)); requestedDamage += damage;
                 }
             }
+            // 所有命中共用已冻结的真实能量预算，增加部件数量不会增加爆炸总损伤。
+            double structureBudget = entry.Intensity / SpaceGameplaySettings.Current.ImpactJoulesPerDurability;
+            double scale = requestedDamage > 0d ? Math.Min(1d, structureBudget / requestedDamage) : 0d;
+            var wreckHits = new Dictionary<ShipState, double>();
+            foreach (var hit in structureHits)
+            {
+                if (hit.Ship.IsWreck)
+                {
+                    wreckHits.TryGetValue(hit.Ship, out double pending);
+                    wreckHits[hit.Ship] = pending + hit.Damage * scale;
+                    continue;
+                }
+                ShipStructureService.ApplyDamage(hit.Ship, hit.Piece.PieceId, hit.Damage * scale, "燃料与压力爆炸", DestroyPiece);
+                SynchronizePieceHealth(hit.Ship, hit.Piece);
+            }
+            foreach (var hit in wreckHits) ApplyWreckDamage(hit.Key, hit.Value, "燃料与压力爆炸");
             ApplyExplosionActorDamage(entry, explosion, radius, peak);
             RetainExplosionGasInCabin(entry, explosion);
             if (!explosion.InSpace)
