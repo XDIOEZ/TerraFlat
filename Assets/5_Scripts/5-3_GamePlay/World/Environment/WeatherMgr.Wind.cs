@@ -20,7 +20,7 @@ public partial class WeatherMgr
         if (!_weatherRuntimeAllowed)
             return;
         oceanWaveTime += Mathf.Max(0f, deltaTime) *
-            WaterEnvironmentRules.ResolveOceanWaveFactors(GetCurrentWindStrength()).x;
+            WaterEnvironmentRules.ResolveOceanWaveFactors(_presentedWindStrength).x;
         Shader.SetGlobalFloat(OceanWaveTimeShaderId, oceanWaveTime);
     }
 
@@ -66,11 +66,11 @@ public partial class WeatherMgr
         PublishAuthoritativeWeatherState();
     }
 
-    /// <summary>把观察区域风力一次性写入 Shader 全局参数。</summary>
+    /// <summary>把过渡后的观察区域风力写入 Shader 全局参数。</summary>
     private void RefreshWindFeedback()
     {
-        Shader.SetGlobalFloat(GlobalWindStrengthShaderId, GetCurrentWindStrength());
-        Vector3 factors = WaterEnvironmentRules.ResolveOceanWaveFactors(GetCurrentWindStrength());
+        Shader.SetGlobalFloat(GlobalWindStrengthShaderId, _presentedWindStrength);
+        Vector3 factors = WaterEnvironmentRules.ResolveOceanWaveFactors(_presentedWindStrength);
         Shader.SetGlobalVector(OceanWaveFactorsShaderId, new Vector4(factors.x, factors.y, factors.z, 0f));
     }
 

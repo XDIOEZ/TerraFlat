@@ -74,6 +74,7 @@ public sealed class RainGroundSplashController : MonoBehaviour
             _lightRainSplashesPerSecond,
             _heavyRainSplashesPerSecond,
             _rainIntensity);
+        splashRate *= Mathf.Clamp01(_rainIntensity / 0.05f);
         _spawnAccumulator = Mathf.Min(
             MaxSpawnAccumulator,
             _spawnAccumulator + splashRate * Mathf.Max(0f, Time.deltaTime));
@@ -113,6 +114,8 @@ public sealed class RainGroundSplashController : MonoBehaviour
 
     #region 公共接口
 
+    public bool HasAliveParticles => _splashParticles != null && _splashParticles.particleCount > 0;
+
     /// <summary>由天气管理器同步当前雨势，数值仅控制此表现层的发射频率。</summary>
     public void ApplySettings(float intensity)
     {
@@ -122,7 +125,6 @@ public sealed class RainGroundSplashController : MonoBehaviour
         if (_rainIntensity <= 0.001f)
         {
             _spawnAccumulator = 0f;
-            ClearParticles();
         }
     }
 

@@ -97,6 +97,7 @@ public partial class WeatherMgr
         SubscribeTimeSystem();
         AdvanceRegionalWeather();
         UpdateLocalWeatherProjection();
+        MaintainWeatherPresentation(Time.deltaTime);
         RefreshWeatherFeedbackIfChanged();
         MaintainWeatherAudio();
     }
@@ -297,6 +298,7 @@ public partial class WeatherMgr
 
     private void DeactivateWeatherFeedback()
     {
+        ResetWeatherPresentation();
         DeactivateWindFeedback();
         if (snowEffect != null) snowEffect.SetActive(false);
         SetSnowingState(false);
@@ -304,7 +306,8 @@ public partial class WeatherMgr
         if (_rainEffectInstance != null)
             _rainEffectInstance.SetActive(false);
 
-        SetRainGroundSplashActive(false, 0f);
+        if (_rainGroundSplashInstance != null)
+            _rainGroundSplashInstance.SetActive(false);
 
         DeactivateWeatherAudio();
         _lastFeedbackWeather = (WeatherType)(-1);

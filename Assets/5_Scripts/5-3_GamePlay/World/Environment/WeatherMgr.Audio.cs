@@ -101,20 +101,21 @@ public partial class WeatherMgr
         if (!_weatherRuntimeAllowed || !weatherAudioSubscribed)
             return;
 
-        // 每帧读取实际雨雪分流和当地风力，气温变化也会及时改变雨声。
-        float rain = Mathf.Clamp01(GetLocalRainIntensity());
-        float wind = Mathf.Clamp01(GetCurrentWindStrength());
-        UpdateWeatherLoop(AudioEventIds.WeatherRainLoop, rain, 0.9f * Mathf.Sqrt(rain),
+        // 雨风声音消费同一份表现过渡，进入和离开区块都从当前音量继续变化。
+        float rain = _presentedRainIntensity;
+        float wind = _presentedWindStrength;
+        UpdateWeatherLoop(AudioEventIds.WeatherRainLoop, 0.9f * Mathf.Sqrt(rain),
             ref rainAudioHandle, ref rainAudioVolume);
-        UpdateWeatherLoop(AudioEventIds.WeatherWindLoop, wind, 0.8f * Mathf.Pow(wind, 1.5f),
+        UpdateWeatherLoop(AudioEventIds.WeatherWindLoop, 0.8f * Mathf.Pow(wind, 1.5f),
             ref windAudioHandle, ref windAudioVolume);
         PlayPendingWeatherThunder();
     }
 
-    private static void UpdateWeatherLoop(string cueId, float intensity, float targetVolume,
+    private static void UpdateWeatherLoop(string cueId, float targetVolume,
         ref AudioHandle handle, ref float currentVolume)
     {
-        if (intensity <= WeatherAudioThreshold)
+        currentVolume = Mathf.MoveTowards(currentVolume, targetVolume, Time.unscaledDeltaTime * 0.75f);
+        if (currentVolume <= WeatherAudioThreshold && targetVolume <= WeatherAudioThreshold)
         {
             handle.Stop(0.8f);
             handle = AudioHandle.Invalid;
@@ -124,16 +125,13 @@ public partial class WeatherMgr
 
         if (!handle.IsPlaying)
         {
-            currentVolume = targetVolume;
             AudioPlayOptions options = AudioPlayOptions.Global(currentVolume);
             options.FadeIn = 0.8f;
             options.OverrideLoop = true;
             options.Loop = true;
             handle = AudioService.Instance.Play(cueId, options);
-            return;
         }
 
-        currentVolume = Mathf.MoveTowards(currentVolume, targetVolume, Time.unscaledDeltaTime * 0.75f);
         AudioService.Instance.SetVolumeScale(handle, currentVolume);
     }
 

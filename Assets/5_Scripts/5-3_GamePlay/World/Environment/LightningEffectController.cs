@@ -19,6 +19,7 @@ public sealed class LightningEffectController : MonoBehaviour
     [SerializeField, Min(0.01f)] private float flashDurationSeconds = 0.16f;
     [SerializeField, Range(0f, 1f)] private float maximumFlashOpacity = 0.3f;
     [SerializeField, Min(1f)] private float visibleRadius = 128f;
+    [SerializeField, Min(0f)] private float fullStrengthRadius = 8f;
     [SerializeField, Min(0.05f)] private float boltDurationSeconds = 0.28f;
     [SerializeField, Min(1f)] private float boltHeight = 12f;
     [SerializeField, Min(0.5f)] private float boltWidth = 5.5f;
@@ -44,6 +45,7 @@ public sealed class LightningEffectController : MonoBehaviour
         public float StartedTime;
         public float Duration;
         public float Strength;
+        public float PresentationStrength;
         public float Seed;
         public float Width;
         public float Height;
@@ -174,7 +176,10 @@ public sealed class LightningEffectController : MonoBehaviour
     {
         Vector2 logicalPlayer = WorldLocalPresentation.ToLogical((Vector2)player.transform.position);
         float distance = WorldTopologyRuntime.ShortestDelta(logicalPlayer, logicalPosition).magnitude;
-        return Mathf.Clamp01(1f - distance / Mathf.Max(1f, visibleRadius));
+        float outerRadius = Mathf.Max(1f, visibleRadius);
+        float innerRadius = Mathf.Clamp(fullStrengthRadius, 0f, outerRadius - 0.01f);
+        // 近处保留完整闪光，远处沿平滑距离曲线渐弱到零，环绕边界仍按最近落点计算。
+        return 1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(innerRadius, outerRadius, distance));
     }
 
     private void UpdateVisual(LightningVisual visual, Player player, float now)
@@ -183,8 +188,9 @@ public sealed class LightningEffectController : MonoBehaviour
         visual.Root.transform.position = WorldLocalPresentation.ProjectPosition(visual.LogicalPosition,
             (Vector2)player.transform.position);
         MaterialPropertyBlock properties = visual.Properties;
+        visual.PresentationStrength = visual.Strength * GetDistanceAttenuation(player, visual.LogicalPosition);
         properties.SetFloat(ProgressId, Mathf.Clamp01((now - visual.StartedTime) / Mathf.Max(0.05f, boltDurationSeconds)));
-        properties.SetFloat(StrengthId, visual.Strength * GetDistanceAttenuation(player, visual.LogicalPosition));
+        properties.SetFloat(StrengthId, visual.PresentationStrength);
         properties.SetFloat(SeedId, visual.Seed);
         properties.SetVector(BoltSizeId, new Vector4(visual.Width, visual.Height, 0.035f, 0.16f));
         properties.SetFloat(ModeId, 0f);
@@ -195,7 +201,7 @@ public sealed class LightningEffectController : MonoBehaviour
 
     private void OnGUI()
     {
-        if (Event.current.type != EventType.Repaint || !TryGetPresentationPlayer(out Player player))
+        if (Event.current.type != EventType.Repaint || !TryGetPresentationPlayer(out _))
             return;
 
         float flashStrength = 0f;
@@ -206,7 +212,7 @@ public sealed class LightningEffectController : MonoBehaviour
             if (progress >= 1f) continue;
             float fading = (1f - progress) * (1f - progress);
             float secondaryPulse = Mathf.Exp(-Mathf.Pow((progress - 0.55f) * 12f, 2f)) * 0.18f;
-            flashStrength += visual.Strength * GetDistanceAttenuation(player, visual.LogicalPosition) * (fading + secondaryPulse);
+            flashStrength += visual.PresentationStrength * (fading + secondaryPulse);
         }
         if (flashStrength <= 0.001f) return;
 

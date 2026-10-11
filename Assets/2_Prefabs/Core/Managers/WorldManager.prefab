@@ -313,6 +313,7 @@ MonoBehaviour:
     EndingRainIntensity: 0.3
     RecoveryIntensity: 0.15
   _deterministicSeedOverride: 0
+  _weatherTransitionSeconds: 3
   EnableDebugLog: 0
   _toggleDebugPanelInputKey: 105
   _debugPanelVisible: 0

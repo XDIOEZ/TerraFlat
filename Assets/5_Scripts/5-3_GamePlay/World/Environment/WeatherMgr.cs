@@ -172,12 +172,14 @@ public partial class WeatherMgr : SingletonAutoMono<WeatherMgr>
     public void RefreshRainEffect()
     {
         RefreshSnowEffect();
-        float rainIntensity = GetLocalRainIntensity();
+        float rainIntensity = _presentedRainIntensity;
         if (rainIntensity <= 0.001f)
         {
             if (_rainEffectInstance != null)
             {
-                _rainEffectInstance.SetActive(false);
+                _rainEffectController.ApplySettings(0f);
+                if (!_rainEffectController.HasAliveParticles)
+                    _rainEffectInstance.SetActive(false);
             }
 
             SetRainGroundSplashActive(false, 0f);
@@ -259,7 +261,11 @@ public partial class WeatherMgr : SingletonAutoMono<WeatherMgr>
         if (!active)
         {
             if (_rainGroundSplashInstance != null)
-                _rainGroundSplashInstance.SetActive(false);
+            {
+                _rainGroundSplashController.ApplySettings(0f);
+                if (!_rainGroundSplashController.HasAliveParticles)
+                    _rainGroundSplashInstance.SetActive(false);
+            }
             return;
         }
 
@@ -329,6 +335,51 @@ public partial class WeatherMgr : SingletonAutoMono<WeatherMgr>
 
 #endregion
 
+#region 天气表现过渡
+
+    [SerializeField, Min(0.01f), Tooltip("雨雪、风和云层从零到满强度的表现过渡秒数。")]
+    private float _weatherTransitionSeconds = 3f;
+    private float _presentedRainIntensity;
+    private float _presentedSnowIntensity;
+    private float _presentedWindStrength;
+    private float _presentedCloudCoverage;
+
+    private void MaintainWeatherPresentation(float deltaTime)
+    {
+        Camera camera = Camera.main;
+        Vector2 position = camera != null ? (Vector2)camera.transform.position : (Vector2)transform.position;
+        TryGetPrecipitationAt(position, out float rain, out float snow);
+        TryGetWeatherAt(position, out var weather);
+        float step = Mathf.Max(0f, deltaTime) / Mathf.Max(0.01f, _weatherTransitionSeconds);
+        float previousRain = _presentedRainIntensity;
+        float previousSnow = _presentedSnowIntensity;
+        float previousWind = _presentedWindStrength;
+
+        // 只平滑本机视听强度，跨区块从当前表现继续过渡，不改当地天气结算。
+        _presentedRainIntensity = Mathf.MoveTowards(previousRain, Mathf.Clamp01(rain), step);
+        _presentedSnowIntensity = Mathf.MoveTowards(previousSnow, Mathf.Clamp01(snow), step);
+        _presentedWindStrength = Mathf.MoveTowards(previousWind, Mathf.Clamp01(weather.WindStrength), step);
+        _presentedCloudCoverage = Mathf.MoveTowards(_presentedCloudCoverage, Mathf.Clamp01(weather.CloudCoverage), step);
+
+        bool rainTailActive = _presentedRainIntensity <= 0.001f &&
+            ((_rainEffectInstance != null && _rainEffectInstance.activeSelf) ||
+             (_rainGroundSplashInstance != null && _rainGroundSplashInstance.activeSelf));
+        bool snowTailActive = _presentedSnowIntensity <= 0.001f && snowEffect != null && snowEffect.activeSelf;
+        if (_presentedRainIntensity != previousRain || _presentedSnowIntensity != previousSnow ||
+            rainTailActive || snowTailActive)
+            RefreshRainEffect();
+        if (_presentedWindStrength != previousWind)
+            RefreshWindFeedback();
+    }
+
+    private void ResetWeatherPresentation()
+    {
+        _presentedRainIntensity = _presentedSnowIntensity = 0f;
+        _presentedWindStrength = _presentedCloudCoverage = 0f;
+    }
+
+#endregion
+
 #region 云层光照
 
     public float GetCloudLightingMultiplier(string sceneName, bool directSunlight)
@@ -344,13 +395,10 @@ public partial class WeatherMgr : SingletonAutoMono<WeatherMgr>
             return 1f;
         }
 
-        if (!TryGetLocalWeather(out var sample))
-            return 1f;
-
         // 阴天和雨云共用光照衰减，局部灯光不受影响。
         float fullCloudMultiplier = directSunlight
             ? _cloudySunLightMultiplier : _cloudyAmbientLightMultiplier;
-        return Mathf.Lerp(1f, Mathf.Clamp01(fullCloudMultiplier), sample.CloudCoverage);
+        return Mathf.Lerp(1f, Mathf.Clamp01(fullCloudMultiplier), _presentedCloudCoverage);
     }
 
 #endregion

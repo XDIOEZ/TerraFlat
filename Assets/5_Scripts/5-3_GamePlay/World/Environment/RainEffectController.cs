@@ -25,7 +25,7 @@ public class RainEffectController : MonoBehaviour
     [SerializeField] private float _minEmissionFactor = 0.05f; // 最小发射倍率（0~1）
     [SerializeField] private float _minMaxParticlesFactor = 0.1f; // 最小粒子上限倍率（0~1）
 
-    private float _currentIntensity = 1f; // 当前雨强度（仅用于外部同步）
+    private float _currentIntensity; // 当前雨雪表现强度。
     private ParticleSystem[] _runtimeParticleSystems; // 运行时粒子系统缓存
     private float[] _baseRateOverTimeMultipliers; // 初始每秒发射倍率
     private float[] _baseRateOverDistanceMultipliers; // 初始按距离发射倍率
@@ -65,9 +65,32 @@ public class RainEffectController : MonoBehaviour
         SyncToMainCamera();
     }
 
+    private void OnDisable()
+    {
+        _currentIntensity = 0f;
+        if (_runtimeParticleSystems == null)
+            return;
+        foreach (ParticleSystem particles in _runtimeParticleSystems)
+            if (particles != null)
+                particles.Stop(false, ParticleSystemStopBehavior.StopEmittingAndClear);
+    }
+
 #endregion
 
 #region 公共方法
+
+    public bool HasAliveParticles
+    {
+        get
+        {
+            if (_runtimeParticleSystems == null)
+                return false;
+            foreach (ParticleSystem particles in _runtimeParticleSystems)
+                if (particles != null && particles.IsAlive(false))
+                    return true;
+            return false;
+        }
+    }
 
     public void ApplySettings(float intensity)
     {
@@ -294,6 +317,8 @@ public class RainEffectController : MonoBehaviour
         }
 
         float emissionFactor = Mathf.Lerp(_minEmissionFactor, 1f, _currentIntensity);
+        // 接近停雨时连最小发射量也淡出，已有粒子继续落完。
+        emissionFactor *= Mathf.Clamp01(_currentIntensity / Mathf.Max(0.001f, _minEmissionFactor));
         float maxParticlesFactor = Mathf.Lerp(_minMaxParticlesFactor, 1f, _currentIntensity);
 
         for (int i = 0; i < _runtimeParticleSystems.Length; i++)
@@ -304,7 +329,15 @@ public class RainEffectController : MonoBehaviour
 
             emission.rateOverTimeMultiplier = _baseRateOverTimeMultipliers[i] * emissionFactor;
             emission.rateOverDistanceMultiplier = _baseRateOverDistanceMultipliers[i] * emissionFactor;
-            main.maxParticles = Mathf.Max(1, Mathf.RoundToInt(_baseMaxParticles[i] * maxParticlesFactor));
+            main.maxParticles = Mathf.Max(particleSystem.particleCount,
+                Mathf.Max(1, Mathf.RoundToInt(_baseMaxParticles[i] * maxParticlesFactor)));
+            if (_currentIntensity > 0.001f)
+            {
+                if (!particleSystem.isEmitting)
+                    particleSystem.Play(false);
+            }
+            else if (particleSystem.isEmitting)
+                particleSystem.Stop(false, ParticleSystemStopBehavior.StopEmitting);
         }
     }
 

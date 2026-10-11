@@ -54,14 +54,23 @@ public partial class WeatherMgr
 
     #region 降雪表现
 
-    /// <summary>雨雪粒子互斥；粒子仅为表现，不承担积雪存档。</summary>
+    /// <summary>雨雪粒子按各自表现强度交接，不承担积雪存档。</summary>
     private bool RefreshSnowEffect()
     {
         Camera camera = Camera.main;
-        float snowIntensity = camera != null && TryGetPrecipitationAt(camera.transform.position, out _, out float snow) ? snow : 0f;
+        float snowIntensity = _presentedSnowIntensity;
         bool active = snowIntensity > 0.001f;
-        SetSnowingState(active);
-        if (!active) { if (snowEffect != null) snowEffect.SetActive(false); return false; }
+        SetSnowingState(camera != null && IsSnowingAt(camera.transform.position));
+        if (!active)
+        {
+            if (snowEffect != null)
+            {
+                snowController.ApplySettings(0f);
+                if (!snowController.HasAliveParticles)
+                    snowEffect.SetActive(false);
+            }
+            return false;
+        }
         if (snowEffect == null)
         {
             GameObject prefab = Resources.Load<GameObject>("Weather/SnowEffect");

@@ -27,6 +27,8 @@ description: "FlatWorld 游戏时间、季节、区域天气、湿度、光照�
 - 活动场景名称按 handle 缓存，时刻/天气/维度实时读；GM 滑条按实际 DayLength 预览，松开由权威端 JumpToTime 一次。主菜单使用无报错 GetInstance 探测。
 - 区块生成时一次汇总固定 airHumidity、windX/Y、每格风模长和地理温度；`ChunkTerrainData.WeatherProfile` 冻结每种要素的 Probability/Intensity/DurationSeconds。自然要素为 rain/wind/thunder，配置 Elements 按稳定字符串 ID 扩展；生成器与调度器经 `ChunkWeatherConfiguration` 共用冻结配置。
 - 天气按真实区块原点独立推进，`CheckIntervalSeconds` 表示空闲要素每次概率检查的间隔，持续中的要素不重复抽取。运行时不再采五点气候、温差或动态供湿；查询只读本块，普通 Client 只应用权威效果。
+- 本机雨雪、风与云光共用 `WeatherMgr._weatherTransitionSeconds`（WorldManager 默认零到满强度 3 秒）；跨区块从当前表现续接，雨风音消费过渡强度，停雨仅停发射并让粒子落完。权威天气、浇水/积雪和设施风力仍读真实当地状态；退出世界立即清理。
+- 雷束/电弧/屏幕闪光共用环绕最短距离强度，默认 8 格内完整、8～128 格 SmoothStep 渐弱；雷声仍按声音服务的空间衰减与原传播延迟播放。
 - 固定游戏秒格推进；跳时有界补已有事件，新区块不追补未加载的浇水/积雪，不补播历史雷声。回拨平移各独立时限，复制以 Revision 为主；`PlanetData.RegionalWeatherStates` 保存固定档案和事件状态。云量从雨/雷派生，自然雾、湿气消耗和雨冷反馈已移除；云雾仍可限时手动覆盖。
 - 静态 precipitation 是长期风携水汽降水，影响径流/生态；输送 humidity、固定 airHumidity、动态空气湿度与地表 moisture 分开。
 - `TryGetGeographicAirHumidity` 读固定层；`TryGetAirHumiditySupply` 从恢复后的真实 Liquid/深度/距离得 B，背景仅 airHumidity.background；`TryGetAirHumidity` 返回 clamp(B-D)。缺邻区返回不可用，不生成地形，缓存只依 Terrain/LiquidRevision/Epoch。
