@@ -228,6 +228,7 @@ namespace FlatWorld.WorldModel
         private byte[] _fire;
         private long _revision;
         private long _blockingRevision;
+        private long _surfaceLiquidRevision;
 
         internal ChunkTerrainData(int width, int height, TerrainCell[] cells,
             Dictionary<string, float[]> environmentLayers, byte[] grass = null,
@@ -265,6 +266,8 @@ namespace FlatWorld.WorldModel
         public long Revision => _revision;
         /// <summary>视线阻挡状态的版本；水、草和环境变化不会使遮挡快照失效。</summary>
         public long BlockingRevision => _blockingRevision;
+        /// <summary>液体或遮断液体的支撑面身份变化时递增，普通环境写入不使地表液体缓存失效。</summary>
+        public long SurfaceLiquidRevision => _surfaceLiquidRevision;
         /// <summary>这里目前保存了哪些环境数据，例如 temperature 或 riverFlow。</summary>
         public IEnumerable<string> EnvironmentLayerIds =>
             _environmentLayers == null
@@ -592,6 +595,8 @@ namespace FlatWorld.WorldModel
             if (values[index].Equals(value))
                 return;
             values[index] = value;
+            if (string.Equals(layerId, TerrainSupportLayer.TileIdLayer, StringComparison.Ordinal))
+                _surfaceLiquidRevision++;
             MarkChanged(x, y, TerrainChangeKind.Environment);
         }
 
@@ -739,6 +744,8 @@ namespace FlatWorld.WorldModel
         private void MarkChanged(int x, int y, TerrainChangeKind kind)
         {
             _revision++;
+            if (kind == TerrainChangeKind.Liquid)
+                _surfaceLiquidRevision++;
             Changed?.Invoke(new ChunkTerrainChanged(new Int2(x, y), kind, _revision));
         }
 

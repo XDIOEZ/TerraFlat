@@ -178,11 +178,20 @@ internal sealed class RadiantLiquidTemperatureField
 {
     #region 分区缓存
 
-    private sealed class Dependency
+    private static readonly ProfilerMarker RebuildMarker = new("FlatWorld.Temperature.RebuildRadiantLiquidChunk");
+
+    private readonly struct Dependency
     {
-        public Vector2Int Origin;
-        public ChunkTerrainData Terrain;
-        public long Revision;
+        public readonly Vector2Int Origin;
+        public readonly ChunkTerrainData Terrain;
+        public readonly long SurfaceLiquidRevision;
+
+        public Dependency(Vector2Int origin, ChunkTerrainData terrain)
+        {
+            Origin = origin;
+            Terrain = terrain;
+            SurfaceLiquidRevision = terrain?.SurfaceLiquidRevision ?? -1;
+        }
     }
 
     private sealed class Bucket
@@ -197,6 +206,8 @@ internal sealed class RadiantLiquidTemperatureField
     private readonly int width;
     private readonly int height;
     private readonly WorldTopologyBounds bounds;
+    private GameRes cachedResources;
+    private int cachedResourceReloadVersion = -1;
 
     public RadiantLiquidTemperatureField(ChunkMgr chunkManager, string dimensionId,
         int width, int height, WorldTopologyBounds bounds)
@@ -214,8 +225,18 @@ internal sealed class RadiantLiquidTemperatureField
 
     public float Sample(Vector2Int cell)
     {
-        if (chunkManager == null || GameRes.ExistingInstance == null)
+        GameRes resources = GameRes.ExistingInstance;
+        if (chunkManager == null || resources == null)
             return 0f;
+
+        // 液体配置原位重载后丢弃旧热量缓存，不长期订阅资源会话事件。
+        if (!ReferenceEquals(cachedResources, resources) ||
+            cachedResourceReloadVersion != resources.ResourceReloadVersion)
+        {
+            buckets.Clear();
+            cachedResources = resources;
+            cachedResourceReloadVersion = resources.ResourceReloadVersion;
+        }
 
         Vector2Int origin = ResolveChunkOrigin(cell);
         if (!buckets.TryGetValue(origin, out Bucket bucket))
@@ -242,7 +263,7 @@ internal sealed class RadiantLiquidTemperatureField
         {
             ChunkTerrainData current = ResolveTerrain(dependency.Origin);
             if (!ReferenceEquals(current, dependency.Terrain) ||
-                current != null && current.Revision != dependency.Revision)
+                current != null && current.SurfaceLiquidRevision != dependency.SurfaceLiquidRevision)
                 return false;
         }
         return true;
@@ -250,34 +271,32 @@ internal sealed class RadiantLiquidTemperatureField
 
     private void Rebuild(Vector2Int targetOrigin, Bucket bucket)
     {
-        bucket.Offsets ??= new float[width * height];
-        Array.Clear(bucket.Offsets, 0, bucket.Offsets.Length);
-        bucket.Dependencies.Clear();
-
-        int radius = Mathf.CeilToInt(WorldLiquidSettings.MaximumRadiantHeatRadius);
-        int minOriginX = Mathf.FloorToInt((float)(targetOrigin.x - radius) / width) * width;
-        int minOriginY = Mathf.FloorToInt((float)(targetOrigin.y - radius) / height) * height;
-        int maxOriginX = Mathf.FloorToInt((float)(targetOrigin.x + width - 1 + radius) / width) * width;
-        int maxOriginY = Mathf.FloorToInt((float)(targetOrigin.y + height - 1 + radius) / height) * height;
-
-        for (int y = minOriginY; y <= maxOriginY; y += height)
-        for (int x = minOriginX; x <= maxOriginX; x += width)
+        using (RebuildMarker.Auto())
         {
-            Vector2Int sourceOrigin = new(x, y);
-            if (bounds.IsWrapped)
-                sourceOrigin = bounds.NormalizeChunkOrigin(sourceOrigin);
-            if (ContainsDependency(bucket, sourceOrigin))
-                continue;
+            bucket.Offsets ??= new float[width * height];
+            Array.Clear(bucket.Offsets, 0, bucket.Offsets.Length);
+            bucket.Dependencies.Clear();
 
-            ChunkTerrainData terrain = ResolveTerrain(sourceOrigin);
-            bucket.Dependencies.Add(new Dependency
+            int radius = Mathf.CeilToInt(WorldLiquidSettings.MaximumRadiantHeatRadius);
+            int minOriginX = Mathf.FloorToInt((float)(targetOrigin.x - radius) / width) * width;
+            int minOriginY = Mathf.FloorToInt((float)(targetOrigin.y - radius) / height) * height;
+            int maxOriginX = Mathf.FloorToInt((float)(targetOrigin.x + width - 1 + radius) / width) * width;
+            int maxOriginY = Mathf.FloorToInt((float)(targetOrigin.y + height - 1 + radius) / height) * height;
+
+            for (int y = minOriginY; y <= maxOriginY; y += height)
+            for (int x = minOriginX; x <= maxOriginX; x += width)
             {
-                Origin = sourceOrigin,
-                Terrain = terrain,
-                Revision = terrain?.Revision ?? -1
-            });
-            if (terrain != null)
-                AccumulateTerrain(targetOrigin, sourceOrigin, terrain, bucket.Offsets);
+                Vector2Int sourceOrigin = new(x, y);
+                if (bounds.IsWrapped)
+                    sourceOrigin = bounds.NormalizeChunkOrigin(sourceOrigin);
+                if (ContainsDependency(bucket, sourceOrigin))
+                    continue;
+
+                ChunkTerrainData terrain = ResolveTerrain(sourceOrigin);
+                bucket.Dependencies.Add(new Dependency(sourceOrigin, terrain));
+                if (terrain != null)
+                    AccumulateTerrain(targetOrigin, sourceOrigin, terrain, bucket.Offsets);
+            }
         }
     }
 

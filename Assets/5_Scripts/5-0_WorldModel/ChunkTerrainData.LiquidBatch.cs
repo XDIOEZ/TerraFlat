@@ -64,7 +64,11 @@ namespace FlatWorld.WorldModel
                 liquidDirtyIndices[liquidDirtyCount++] = update.CellIndex;
             }
             int count = liquidDirtyCount;
-            if (count > 0) _revision++;
+            if (count > 0)
+            {
+                _revision++;
+                _surfaceLiquidRevision++;
+            }
             if (!deferNotification) PublishLiquidBatch();
             return count;
         }

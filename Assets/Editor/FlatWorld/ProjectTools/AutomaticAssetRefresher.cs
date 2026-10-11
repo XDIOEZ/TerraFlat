@@ -4,6 +4,8 @@ using System.IO;
 using System.Threading;
 using UnityEditor;
 using UnityEngine;
+using Unity.Profiling;
+using Stopwatch = System.Diagnostics.Stopwatch;
 
 /// <summary>
 /// 监听 Assets 目录变化，并由后台线程按固定间隔合并刷新请求。
@@ -16,6 +18,10 @@ public static class AutomaticAssetRefresher
 
     // 后台线程检查文件变化的固定间隔。
     private const int PollingIntervalMilliseconds = 500;
+
+    // 文件连续写入时等待一秒静默，再合并成一次资源刷新。
+    private static readonly long DebounceIntervalTicks = Stopwatch.Frequency;
+    private static readonly ProfilerMarker RefreshMarker = new("FlatWorld.Editor.AutoAssetRefresh");
 
     // 程序集重载或退出时等待后台线程结束的最长时间。
     private const int WorkerJoinTimeoutMilliseconds = 2000;
@@ -34,6 +40,8 @@ public static class AutomaticAssetRefresher
 
     // 标记主线程需要执行资源刷新。
     private static int mainThreadRefreshPending;
+
+    private static long lastFileChangeTimestamp;
 
     // PlayMode 内禁止脚本域重载，避免 Ctrl+R/自动 Refresh 把运行中的世界模型和地形表现拆散。
     private static bool playModeAssemblyReloadLocked;
@@ -126,24 +134,23 @@ public static class AutomaticAssetRefresher
     /// </summary>
     private static void OnEditorUpdate()
     {
+        if (!IsEnabled() || Volatile.Read(ref mainThreadRefreshPending) == 0)
+        {
+            return;
+        }
+
+        // 游玩和模式切换期间只保留请求，回到编辑模式后再导入资源。
+        if (EditorApplication.isPlayingOrWillChangePlaymode ||
+            EditorApplication.isCompiling || EditorApplication.isUpdating || !HasDebounceElapsed())
+        {
+            return;
+        }
+
         if (Interlocked.Exchange(ref mainThreadRefreshPending, 0) == 0)
-        {
             return;
-        }
 
-        if (!IsEnabled())
-        {
-            return;
-        }
-
-        if (EditorApplication.isCompiling || EditorApplication.isUpdating)
-        {
-            Interlocked.Exchange(ref mainThreadRefreshPending, 1);
-            return;
-        }
-
-        AssetDatabase.Refresh();
-        Debug.Log("[AutoAssetRefresh] 已由主线程刷新资源数据库");
+        using (RefreshMarker.Auto())
+            AssetDatabase.Refresh();
     }
 
     /// <summary>
@@ -160,7 +167,7 @@ public static class AutomaticAssetRefresher
     }
 
     /// <summary>
-    /// PlayMode 中资源仍允许导入，但 C# 程序集只在退出 PlayMode 后统一重载。
+    /// PlayMode 中积累自动刷新请求，C# 程序集只在退出 PlayMode 后统一重载。
     /// </summary>
     private static void OnPlayModeStateChanged(PlayModeStateChange state)
     {
@@ -185,7 +192,7 @@ public static class AutomaticAssetRefresher
 
         EditorApplication.LockReloadAssemblies();
         playModeAssemblyReloadLocked = true;
-        Debug.Log("[AutoAssetRefresh] PlayMode 已锁定脚本域重载；资源可继续刷新，脚本改动会在退出 PlayMode 后应用。");
+        Debug.Log("[AutoAssetRefresh] PlayMode 已锁定脚本域重载；自动资源刷新和脚本改动会在退出 PlayMode 后应用。");
     }
 
     private static void UnlockAssemblyReloadForPlayMode()
@@ -240,6 +247,11 @@ public static class AutomaticAssetRefresher
         while (!stopSignal.WaitOne(PollingIntervalMilliseconds))
         {
             if (!IsEnabled())
+            {
+                continue;
+            }
+
+            if (Volatile.Read(ref fileChangesPending) == 0 || !HasDebounceElapsed())
             {
                 continue;
             }
@@ -360,7 +372,13 @@ public static class AutomaticAssetRefresher
             return;
         }
 
+        Interlocked.Exchange(ref lastFileChangeTimestamp, Stopwatch.GetTimestamp());
         Interlocked.Exchange(ref fileChangesPending, 1);
+    }
+
+    private static bool HasDebounceElapsed()
+    {
+        return Stopwatch.GetTimestamp() - Interlocked.Read(ref lastFileChangeTimestamp) >= DebounceIntervalTicks;
     }
 
     /// <summary>
@@ -395,22 +413,4 @@ public static class AutomaticAssetRefresher
     #endregion
 }
 
-/// <summary>
-/// 在 Unity 保存资源后向自动刷新服务提交合并请求。
-/// </summary>
-public class AutoAssetRefreshOnSaveProcessor : AssetModificationProcessor
-{
-    /// <summary>
-    /// 记录本次资源保存并保持原始保存路径不变。
-    /// </summary>
-    private static string[] OnWillSaveAssets(string[] paths)
-    {
-        if (paths != null && paths.Length > 0)
-        {
-            AutomaticAssetRefresher.RequestRefresh();
-        }
-
-        return paths;
-    }
-}
 #endif
