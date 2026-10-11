@@ -1,3 +1,4 @@
+using FlatWorld.Spaceflight;
 using Force.DeepCloner;
 using Sirenix.OdinInspector;
 using System.Collections.Generic;
@@ -379,6 +380,8 @@ public class Mod_PlayerTraits : Module
 
     #endregion
 
+    #region GM 指针传送
+
     /// <summary>
     /// 将本地玩家传送到当前统一指针位置，供反射命令调用。
     /// </summary>
@@ -391,7 +394,7 @@ public class Mod_PlayerTraits : Module
             TryTeleportToScreenPosition(gameController.GetPointerScreenPosition());
     }
 
-    /// <summary>快捷键与触屏点选共用的传送落地；同步刚体、玩家数据和周边区块。</summary>
+    /// <summary>快捷键与触屏点选共用的传送入口，按当前场景更新权威位置。</summary>
     public bool TryTeleportToScreenPosition(Vector2 screenPosition)
     {
         if (!TryGetPlayer(out Player target) || !target.IsLocalProfile || target.Data == null)
@@ -408,6 +411,28 @@ public class Mod_PlayerTraits : Module
 
         Vector3 destination = gameController.GetMouseWorldPosition(screenPosition);
         destination.z = target.transform.position.z;
+        SpaceSession session = SpaceSession.Current;
+        if (session?.IsSpaceView == true)
+        {
+            // 太空落点先还原宇宙坐标，再由会话统一解除乘船状态并同步玩家。
+            var motion = new SpaceMotionState
+            {
+                PositionMeters = session.UnprojectPosition(destination),
+                VelocityMetersPerSecond = default,
+                RadiusMeters = .3d
+            };
+            bool accepted = session.TryTeleportPlayerToSpace(target, motion, succeeded =>
+            {
+                if (succeeded)
+                    Debug.Log($"[GM] 玩家已传送到太空位置: ({motion.PositionMeters.X:F2}, {motion.PositionMeters.Y:F2}) 米");
+                else
+                    Debug.LogWarning("[GM] 太空传送未完成，请查看场景加载提示或日志。");
+            });
+            if (!accepted)
+                Debug.LogWarning("[GM] 当前无法太空传送：请避开星体内部，并等待世界加载或场景切换完成。");
+            return accepted;
+        }
+
         Vector3 logicalDestination = WorldTopologyRuntime.NormalizePosition(destination);
         Vector3 presentationDestination = WorldLocalPresentation.ProjectPosition(logicalDestination);
         Rigidbody2D body = target.GetComponent<Rigidbody2D>();
@@ -422,6 +447,8 @@ public class Mod_PlayerTraits : Module
         Debug.Log($"[GM] 玩家已传送到逻辑位置: {logicalDestination}");
         return true;
     }
+
+    #endregion
 
     private bool TryGetPlayer(out Player target)
     {
