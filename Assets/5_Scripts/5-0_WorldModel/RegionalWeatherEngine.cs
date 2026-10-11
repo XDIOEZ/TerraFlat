@@ -493,11 +493,29 @@ namespace FlatWorld.WorldModel
         public RegionalWeatherAdvanceResult SampleExposureAt(Int2 cell,
             IReadOnlyDictionary<Int2, RegionalWeatherAdvanceResult> exposures)
         {
-            Int2 region = ResolveRegion(cell);
-            if (exposures == null || !exposures.TryGetValue(region, out RegionalWeatherAdvanceResult own))
+            if (!SampleExposure(cell, exposures, out RegionalWeatherAdvanceResult own, out float rain, out float snow))
                 return default;
+            RegionalWeatherSnapshot snapshot = TryGetSnapshot(cell, out var sampled) ? sampled : own.Snapshot;
+            return new RegionalWeatherAdvanceResult(snapshot, rain, snow);
+        }
+
+        /// <summary>地表只读累计降水秒数，不重复构建风、云、雾等完整天气快照。</summary>
+        public float SamplePrecipitationExposureAt(Int2 cell,
+            IReadOnlyDictionary<Int2, RegionalWeatherAdvanceResult> exposures)
+        {
+            SampleExposure(cell, exposures, out _, out float rain, out float snow);
+            return rain + snow;
+        }
+
+        private bool SampleExposure(Int2 cell, IReadOnlyDictionary<Int2, RegionalWeatherAdvanceResult> exposures,
+            out RegionalWeatherAdvanceResult own, out float rain, out float snow)
+        {
+            own = default;
+            rain = snow = 0f;
+            Int2 region = ResolveRegion(cell);
+            if (exposures == null || !exposures.TryGetValue(region, out own))
+                return false;
             GetBlendCoordinates(cell, out int left, out int bottom, out float x, out float y);
-            float rain = 0f, snow = 0f;
             AccumulateExposure(ref rain, ref snow,
                 GetExposureOrOwn(new Int2(left, bottom), exposures, own), (1f - x) * (1f - y));
             AccumulateExposure(ref rain, ref snow,
@@ -506,8 +524,7 @@ namespace FlatWorld.WorldModel
                 GetExposureOrOwn(new Int2(left, bottom + 1), exposures, own), (1f - x) * y);
             AccumulateExposure(ref rain, ref snow,
                 GetExposureOrOwn(new Int2(left + 1, bottom + 1), exposures, own), x * y);
-            RegionalWeatherSnapshot snapshot = TryGetSnapshot(cell, out var sampled) ? sampled : own.Snapshot;
-            return new RegionalWeatherAdvanceResult(snapshot, rain, snow);
+            return true;
         }
 
         private void GetBlendCoordinates(Int2 cell, out int left, out int bottom, out float x, out float y)

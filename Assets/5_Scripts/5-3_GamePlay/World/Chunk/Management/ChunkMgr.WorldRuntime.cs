@@ -38,7 +38,18 @@ public partial class ChunkMgr
     /// <summary>管理器进入终止阶段后，不再保存生态快照或重新创建世界运行时。</summary>
     internal bool IsWorldRuntimeShuttingDown { get; private set; }
     // 太空坐标不能拿来激活地表区块或生成一颗临时星球。
-    public static bool IsSurfaceStreamingScene => SceneManager.GetActiveScene().name != "SpaceScene";
+    public static bool IsSurfaceStreamingScene => GetActiveStreamingSceneName() != "SpaceScene";
+
+    #region 活动场景查询
+
+    // 环境高频查询复用昼夜系统的场景名称缓存，避免每个采样点创建字符串。
+    private static string GetActiveStreamingSceneName()
+    {
+        DayTimeSystem timeSystem = DayTimeSystem.GetInstance();
+        return timeSystem != null ? timeSystem.GetCurrentActiveSceneName() : SceneManager.GetActiveScene().name;
+    }
+
+    #endregion
 
     public WorldRuntime WorldRuntime => runtimeChunkManager?.World;
     public IReadOnlyDictionary<RuntimeWorldAddress, ChunkRuntime> Chunks =>
@@ -438,7 +449,7 @@ public partial class ChunkMgr
         DimensionManager dimensionManager = DimensionManager.Instance;
         if (dimensionManager != null && dimensionManager.ActiveAddress.IsValid)
             return dimensionManager.ActiveAddress.DimensionId;
-        string scene = SceneManager.GetActiveScene().name;
+        string scene = GetActiveStreamingSceneName();
         return string.IsNullOrWhiteSpace(scene) ? "surface" : scene;
     }
 

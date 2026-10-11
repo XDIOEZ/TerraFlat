@@ -84,6 +84,9 @@ namespace FlatWorld.WorldModel
         private readonly LiquidCellStorage liquid;
         // 只为发生过变化的格子保留生成基线；整块原始液体永远不写入存档。
         private readonly Dictionary<int, LiquidCellValue> liquidBaselines = new();
+        private long liquidRevision;
+        /// <summary>只随真实液体身份或深度变化递增，环境层修改不让水体派生缓存失效。</summary>
+        public long LiquidRevision => liquidRevision;
         public LiquidTypeCatalog LiquidTypes => liquid.Types;
         public ReadOnlySpan<float> LiquidDepth { get { ThrowIfDisposed(); return liquid.Depth.AsSpan(0, CellCount); } }
         public ReadOnlySpan<int> LiquidTypeIndex { get { ThrowIfDisposed(); return liquid.TypeIndex.AsSpan(0, CellCount); } }
@@ -101,6 +104,7 @@ namespace FlatWorld.WorldModel
             if (previous.Equals(next)) return false;
             if (!liquidBaselines.ContainsKey(index)) liquidBaselines.Add(index, previous);
             liquid.Write(index, next);
+            liquidRevision++;
             MarkChanged(x, y, TerrainChangeKind.Liquid);
             return true;
         }

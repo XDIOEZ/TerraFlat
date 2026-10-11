@@ -68,6 +68,7 @@ namespace FlatWorld.WorldModel
             {
                 _revision++;
                 _surfaceLiquidRevision++;
+                liquidRevision++;
             }
             if (!deferNotification) PublishLiquidBatch();
             return count;

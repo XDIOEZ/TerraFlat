@@ -46,6 +46,8 @@ description: "Use when: 定位或修改 FlatWorld 的世界时间、昼夜、天
 - 地理基础气温由 `FinishGeographicTemperature` 合成并固定写入 `temperature.celsius`，归一化温度由同值派生。静态降水和迎背风不加地理温差；实时雨冷只叠加区域 C，一次合成到最终环境温度，不能再叠旧 Rain/Storm 固定温差。生成规则变化才递增生成签名。
 - 局部冷热源是可重建的影响层，来源模块负责燃料/供电/保存并在停用、回池时撤销注册；不能把临时偏移写回生成气候，否则卸载后无法恢复并会污染地图差量。修改源快照只使覆盖分区失效，查询缓存不扫描全部来源；环形边界同时归一化分区键并使用最短距离，避免世界接缝出现断层或重复贡献。
 - 世界液体的环境辐射热由 `WorldLiquidSettings.radiantHeatRadius/radiantHeatOffset` 声明，`RadiantLiquidTemperatureField` 只扫描已加载区块，按 Terrain 身份和 `SurfaceLiquidRevision` 缓存逐格最大温升，并响应资源目录重载；土壤补水、湿度和雪层变化不得使辐射热缓存失效，否则天气逐格结算会反复扫描邻区。大片岩浆取最大贡献而不是逐格相加，抽干、流动或支撑面覆盖变化后自动重算。
+- 空气供湿的来源缓存只依赖 `ChunkTerrainData.LiquidRevision` 和地形对象身份；雪、土壤或光照写入不能触发水体重扫。液体单格与批量实际写入须在通知前递增液体版本，空写不递增。
+- 地表降水结算用 `RegionalWeatherEngine.SamplePrecipitationExposureAt` 的轻量积分，不逐格构建完整天气快照；全部区域无降水时省略插值，无天气雪和玩家雪层的区块直接跳过，已有积雪仍需融化。不能只按本区域晴天跳过边界邻区雨雪。Profiler 的 `FlatWorld.Weather.*` 与 `FlatWorld.Temperature.RebuildRadiantLiquidChunk` 可分开查看调度和缓存重建耗时。
 - 设备组件 `LocalTemperatureSource` 的强度表示中心摄氏度增量（负值制冷），不是功率或绝对目标温度；恒温器应由设备控制器根据当前地块温度计算有效强度。当前影响层不保存热惯性，撤销源会立即撤销其环境增量；需要蓄热/热传导时应引入独立状态层，不能悄悄改变来源参数语义。
 - 污染指标统一注册为 `ContaminationDefinition`，权威值保存在 `ChunkTerrainData` 的 `flatworld.contamination.<definitionId>` 环境层；运行时修改必须走 `ContaminationSystem`，禁止直接 `SetEnvironmentValue`，否则会绕过服务器权威、污染差量存档和变化通知。脏污度与具体病原负荷是同一系统内不同指标，不能合并成单一“越脏就拥有所有疾病”的数值。
 - 维度 `FixedLighting` 是光照上限；SuppressWeather 会关闭天气与雨效。

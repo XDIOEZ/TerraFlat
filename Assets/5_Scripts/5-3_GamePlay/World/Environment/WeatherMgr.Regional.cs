@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using FlatWorld.Networking;
 using FlatWorld.WorldModel;
 using UnityEngine;
+using Unity.Profiling;
 using RuntimeWorldAddress = FlatWorld.WorldModel.WorldAddress;
 
 public readonly struct RegionalLightningEvent
@@ -55,6 +56,10 @@ public partial class WeatherMgr
     private readonly Dictionary<RuntimeWorldAddress, ChunkRuntime> surfaceChunksLastStep = new();
     private readonly Dictionary<RuntimeWorldAddress, ChunkRuntime> surfaceChunksThisStep = new();
     private float surfaceStepSeconds;
+    private Func<Int2, float> surfaceExposureSampler;
+    private static readonly ProfilerMarker RegionalInputsMarker = new("FlatWorld.Weather.FreezeRegionalInputs");
+    private static readonly ProfilerMarker RegionalAdvanceMarker = new("FlatWorld.Weather.AdvanceRegions");
+    private static readonly ProfilerMarker SurfaceAdvanceMarker = new("FlatWorld.Weather.AdvanceSurface");
     private readonly float[] sampleTemperatures = new float[5];
     private LightningEffectController lightningEffect;
 
@@ -209,12 +214,16 @@ public partial class WeatherMgr
         regionalWork.AddRange(regionalWorkSet);
         regionalWork.Sort((a, b) => a.Y == b.Y ? a.X.CompareTo(b.X) : a.Y.CompareTo(b.Y));
         regionalInputs.Clear();
-        foreach (Int2 region in regionalWork) regionalInputs[region] = SampleRegionalInput(chunks, region);
+        using (RegionalInputsMarker.Auto())
+            foreach (Int2 region in regionalWork) regionalInputs[region] = SampleRegionalInput(chunks, region);
         regionalExposure.Clear();
+        bool hasPrecipitationExposure = false;
+        using (RegionalAdvanceMarker.Auto())
         foreach (Int2 region in regionalWork)
         {
             RegionalWeatherAdvanceResult result = regionalEngine.Advance(region, now, regionalInputs[region]);
             regionalExposure[region] = result;
+            hasPrecipitationExposure |= result.RainExposureSeconds > 0f || result.SnowExposureSeconds > 0f;
             ObserveLightning(result.Snapshot, false);
             AuthoritativeRegionalWeatherStateChanged?.Invoke(new RegionalWeatherStateSnapshot(regionalPlanet.Name, result.Snapshot));
         }
@@ -223,10 +232,14 @@ public partial class WeatherMgr
         float elapsed = double.IsNegativeInfinity(lastRegionalAdvance) ? 0f :
             (float)Math.Min(now - lastRegionalAdvance, regionalSettings.StepSeconds * regionalSettings.MaximumCatchUpSteps);
         surfaceStepSeconds = elapsed;
+        // 全部区域都没有降水积分时跳过逐格插值，避免漏算边界邻区仍在下的雨雪。
+        Func<Int2, float> resolveExposure = hasPrecipitationExposure
+            ? surfaceExposureSampler ??= ResolveSurfaceExposure : null;
+        using (SurfaceAdvanceMarker.Auto())
         if (elapsed > 0f)
             foreach (var pair in surfaceChunksThisStep)
                 if (surfaceChunksLastStep.TryGetValue(pair.Key, out var previous) && ReferenceEquals(previous, pair.Value))
-                    WorldWeatherSurfaceSystem.AdvanceChunk(pair.Value, this, elapsed, ResolveSurfaceExposure);
+                    WorldWeatherSurfaceSystem.AdvanceChunk(pair.Value, this, elapsed, resolveExposure);
         surfaceChunksLastStep.Clear();
         foreach (var pair in surfaceChunksThisStep) surfaceChunksLastStep[pair.Key] = pair.Value;
         lastRegionalAdvance = now;
@@ -234,12 +247,10 @@ public partial class WeatherMgr
         UpdateLocalWeatherProjection();
     }
 
-    private RegionalWeatherAdvanceResult ResolveSurfaceExposure(Int2 cell)
+    private float ResolveSurfaceExposure(Int2 cell)
     {
-        RegionalWeatherAdvanceResult value = regionalEngine.SampleExposureAt(cell, regionalExposure);
-        float total = value.RainExposureSeconds + value.SnowExposureSeconds;
-        float scale = total > surfaceStepSeconds && total > 0f ? surfaceStepSeconds / total : 1f;
-        return new RegionalWeatherAdvanceResult(value.Snapshot, value.RainExposureSeconds * scale, value.SnowExposureSeconds * scale);
+        float total = regionalEngine.SamplePrecipitationExposureAt(cell, regionalExposure);
+        return Mathf.Min(total, surfaceStepSeconds);
     }
 
     private RegionalWeatherInput SampleRegionalInput(ChunkMgr chunks, Int2 region)

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using FlatWorld.Networking;
 using FlatWorld.WorldModel;
 using UnityEngine;
+using Unity.Profiling;
 
 public static class WorldWeatherSurfaceSystem
 {
@@ -11,21 +12,29 @@ public static class WorldWeatherSurfaceSystem
     private static readonly List<int> SoilChanged = new();
     private static readonly List<int> SnowChanged = new();
     private static SnowCoverConfig snowConfig;
+    private static readonly ProfilerMarker AdvanceChunkMarker = new("FlatWorld.Weather.SurfaceChunk");
 
-    // 天气来源只提供真实降水积分，土壤与积雪各自维护状态。
+    // 天气来源只提供真实降水积分；没有降水时传 null，已有积雪仍正常融化。
     public static void AdvanceChunk(ChunkRuntime chunk, WeatherMgr weather, float seconds,
-        Func<Int2, RegionalWeatherAdvanceResult> resolveExposure)
+        Func<Int2, float> resolveExposure)
     {
-        if (!GameNetwork.HasStateAuthority || chunk == null || weather == null || resolveExposure == null ||
+        if (!GameNetwork.HasStateAuthority || chunk == null || weather == null ||
             !float.IsFinite(seconds) || seconds <= 0f || chunk.DataStatus != ChunkDataStatus.Ready ||
             chunk.Terrain == null || chunk.Terrain.IsDisposed ||
             ChunkMgr.ExistingInstance?.IsTerrainRestoredForEnvironment(chunk) != true)
             return;
 
+        using var profilerScope = AdvanceChunkMarker.Auto();
+        ChunkTerrainData terrain = chunk.Terrain;
+        // 未产生过天气雪或玩家雪的晴天区块无需逐格结算。
+        if (resolveExposure == null &&
+            !terrain.TryGetEnvironmentValue(WorldSnowSystem.WeatherDepthLayer, 0, 0, out _) &&
+            !terrain.TryGetEnvironmentValue(WorldSnowInteraction.DepthLayer, 0, 0, out _))
+            return;
+
         SnowCoverConfig config = GetSnowConfig();
         float freezingTemperature = weather.PrecipitationFreezingTemperature;
         TemperatureMgr temperature = TemperatureMgr.Instance;
-        ChunkTerrainData terrain = chunk.Terrain;
         SoilChanged.Clear();
         SnowChanged.Clear();
         try
@@ -33,17 +42,19 @@ public static class WorldWeatherSurfaceSystem
             for (int y = 0; y < terrain.Height; y++)
             for (int x = 0; x < terrain.Width; x++)
             {
+                float previousWeatherSnow = WorldSnowSystem.GetWeatherDepth(terrain, x, y);
+                bool edited = terrain.TryGetEnvironmentValue(WorldSnowInteraction.EditedLayer, x, y,
+                    out float editedValue) && editedValue > 0f;
+                terrain.TryGetEnvironmentValue(WorldSnowInteraction.DepthLayer, x, y, out float playerDepth);
+                if (resolveExposure == null && previousWeatherSnow <= 0f && (!edited || playerDepth <= 0f))
+                    continue;
+
                 TerrainCell surface = TerrainSupportLayer.GetSurfaceCell(terrain, x, y);
                 if (surface.GroundTileId == 0 || WorldLiquidSystem.GetSurfaceDepth(terrain, x, y) > 0f)
                     continue;
 
                 var world = new Int2(chunk.Address.ChunkOrigin.X + x, chunk.Address.ChunkOrigin.Y + y);
-                RegionalWeatherAdvanceResult exposure = resolveExposure(world);
-                float precipitationSeconds = Mathf.Max(0f, exposure.RainExposureSeconds + exposure.SnowExposureSeconds);
-                float previousWeatherSnow = WorldSnowSystem.GetWeatherDepth(terrain, x, y);
-                bool edited = terrain.TryGetEnvironmentValue(WorldSnowInteraction.EditedLayer, x, y,
-                    out float editedValue) && editedValue > 0f;
-                terrain.TryGetEnvironmentValue(WorldSnowInteraction.DepthLayer, x, y, out float playerDepth);
+                float precipitationSeconds = Mathf.Max(0f, resolveExposure?.Invoke(world) ?? 0f);
                 if (precipitationSeconds <= 0f && previousWeatherSnow <= 0f && (!edited || playerDepth <= 0f))
                     continue;
                 if (!float.IsFinite(precipitationSeconds) || temperature == null ||

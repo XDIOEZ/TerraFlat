@@ -201,7 +201,7 @@ namespace FlatWorld.WorldModel
             {
                 SourceBucket source = dependency.Source;
                 ChunkTerrainData terrain = ResolveTerrain(dependency.Origin);
-                long revision = terrain?.Revision ?? -1;
+                long revision = terrain?.LiquidRevision ?? -1;
                 if (!ReferenceEquals(source.Terrain, terrain) || source.Revision != revision)
                 {
                     source.Terrain = terrain;

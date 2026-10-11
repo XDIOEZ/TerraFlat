@@ -5,9 +5,17 @@ using UnityEngine.Rendering.Universal;
 using MemoryPack;
 using UnityEngine.SceneManagement;
 using System;
+using Unity.Profiling;
 
 public partial class DayTimeSystem : SingletonMono<DayTimeSystem>
 {
+    #region 昼夜性能采样
+
+    private static readonly ProfilerMarker AdvanceClocksMarker = new("FlatWorld.Time.AdvanceClocksAndEvents");
+    private static readonly ProfilerMarker UpdateLightingMarker = new("FlatWorld.Time.UpdateLighting");
+
+    #endregion
+
     // 海水月光倒影读取的全局 Shader 参数。
     private static readonly int GlobalMoonlightIntensityShaderId =
         Shader.PropertyToID("_GlobalMoonlightIntensity");
@@ -160,6 +168,7 @@ public partial class DayTimeSystem : SingletonMono<DayTimeSystem>
             return;
 
         // 主循环推进所有独立场景的时间
+        using (AdvanceClocksMarker.Auto())
         foreach (var kvp in WorldTimeDict)
         {
             string sceneName = kvp.Key;
@@ -173,7 +182,8 @@ public partial class DayTimeSystem : SingletonMono<DayTimeSystem>
         }
         
         // 更新当前场景的光照（假设有一个当前激活的场景）
-        UpdateCurrentSceneLighting();
+        using (UpdateLightingMarker.Auto())
+            UpdateCurrentSceneLighting();
     }
 
 /// <summary>
