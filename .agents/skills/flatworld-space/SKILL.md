@@ -11,6 +11,7 @@ description: "Use when: 定位或修改 FlatWorld 的太空场景、固定星系
 - 生成与航行：同目录 `Universe/SpaceCatalog.cs`、`UniverseSimulation.cs`、`SpaceSurfaceQuery.cs`；`PlanetData.cs` 与 `World/Map/Data/PlanetData.cs` 保存星体地表身份。
 - 船体：同目录 `Ships/`，领域结构、气密与对接在 `Ships/Domain/`；建筑后端、运动、乘员、环境、导航、爆炸与散落物按 partial 分工。
 - 固定船型由 `GameConfig/Structures/fixed-structures.json` 配置，`ShipFixedStructureBuilder` 消费统一结构目录并复用 `SpaceSession.AddPiece/CommitPiece/RollbackPiece`；不得在 GM 按钮中硬编码布局。资源补给按模板成员身份匹配，共享罐按真实组容量处理，不能重复给每个成员灌满整组。
+- GM 重载测试船使用独立引擎定义，复用普通引擎模块并在机械目录登记同 ID 供电节点，不为测试船放宽通用起飞条件。起飞载荷包含玩家及嵌套背包，配置须同时核算总推力、升空耗时和真实燃料续航；预充气压还须留出环境升温余量。
 - 生命周期：`Core/Lifecycle/GameManager.Space.cs`、`World/Dimension/DimensionManager.cs`；正式面板在 `Presentation/UI/ShipPanelSession.cs`、`SpaceLandingPanelSession.cs`。
 - 场景/资源：`Assets/3_Scenes/SpaceScene.unity`、`Assets/2_Prefabs/World/Space/`
 

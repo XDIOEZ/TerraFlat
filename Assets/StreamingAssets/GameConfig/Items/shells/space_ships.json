@@ -1425,6 +1425,56 @@
       }
     },
     {
+      "id": "ShipChemicalEngine_GM",
+      "parent": "ShipChemicalEngine",
+      "gameName": "GM重载测试引擎-建筑",
+      "description": "GM测试飞船专用，提供600000 N推力，使用真实氢氧燃料和电力，方便携带大量测试物资起飞。",
+      "modules": {
+        "建筑模块": {
+          "data": {
+            "BitData": "{\"Version\":3,\"State\":0,\"Role\":1,\"BuildingPrefabId\":\"ShipChemicalEngine_GM\",\"SummonerPrefabId\":\"ShipChemicalEngine_GM_Summoner\",\"FootprintWidth\":1,\"FootprintHeight\":1}"
+          }
+        },
+        "ship-part": {
+          "parameters": {
+            "Configuration": {
+              "EngineThrustNewtons": 600000
+            }
+          }
+        },
+        "机械扭矩模块": {
+          "parameters": {
+            "DefinitionId": "ShipChemicalEngine_GM"
+          }
+        }
+      }
+    },
+    {
+      "id": "ShipChemicalEngine_GM_Summoner",
+      "parent": "ShipChemicalEngine_Summoner",
+      "gameName": "GM重载测试引擎",
+      "description": "GM测试飞船专用，提供600000 N推力，使用真实氢氧燃料和电力，方便携带大量测试物资起飞。",
+      "modules": {
+        "建筑模块": {
+          "data": {
+            "BitData": "{\"Version\":3,\"State\":0,\"Role\":0,\"BuildingPrefabId\":\"ShipChemicalEngine_GM\",\"SummonerPrefabId\":\"ShipChemicalEngine_GM_Summoner\",\"FootprintWidth\":1,\"FootprintHeight\":1}"
+          }
+        },
+        "ship-part": {
+          "parameters": {
+            "Configuration": {
+              "EngineThrustNewtons": 600000
+            }
+          }
+        },
+        "机械扭矩模块": {
+          "parameters": {
+            "DefinitionId": "ShipChemicalEngine_GM"
+          }
+        }
+      }
+    },
+    {
       "id": "ShipChemicalEngine_Summoner",
       "worldDropBehavior": "interactive",
       "parent": "BuildingSummoner_Base",

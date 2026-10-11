@@ -289,6 +289,8 @@
     "GasEngine_Summoner": "Hydrogen Energy Engine",
     "FilterResidue": "Impurities",
     "WaterTrough": "Water Trough",
-    "WaterTrough_Building": "Water Trough"
+    "WaterTrough_Building": "Water Trough",
+    "ShipChemicalEngine_GM": "GM Heavy-Lift Test Engine",
+    "ShipChemicalEngine_GM_Summoner": "GM Heavy-Lift Test Engine"
   }
 }

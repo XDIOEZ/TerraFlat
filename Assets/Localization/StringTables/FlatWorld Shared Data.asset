@@ -1699,6 +1699,22 @@ MonoBehaviour:
     m_Key: item.Sand.name
     m_Metadata:
       m_Items: []
+  - m_Id: 23082859181891584
+    m_Key: item.ShipChemicalEngine_GM.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 23082859458715648
+    m_Key: item.ShipChemicalEngine_GM_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 23082859458715649
+    m_Key: item.ShipChemicalEngine_GM.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 23082859458715650
+    m_Key: item.ShipChemicalEngine_GM_Summoner.description
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:

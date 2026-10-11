@@ -3,7 +3,7 @@
   "structures": [
     {
       "id": "gm:small-test-ship",
-      "displayName": "小型测试飞船",
+      "displayName": "小型重载测试飞船",
       "kind": "ship",
       "width": 9,
       "height": 9,
@@ -97,42 +97,42 @@
         },
         {
           "memberId": "engine-up-2",
-          "itemId": "ShipChemicalEngine",
+          "itemId": "ShipChemicalEngine_GM",
           "x": 2,
           "y": 1,
           "quarterTurns": 0
         },
         {
           "memberId": "engine-down-2",
-          "itemId": "ShipChemicalEngine",
+          "itemId": "ShipChemicalEngine_GM",
           "x": 2,
           "y": 7,
           "quarterTurns": 2
         },
         {
           "memberId": "engine-up-6",
-          "itemId": "ShipChemicalEngine",
+          "itemId": "ShipChemicalEngine_GM",
           "x": 6,
           "y": 1,
           "quarterTurns": 0
         },
         {
           "memberId": "engine-down-6",
-          "itemId": "ShipChemicalEngine",
+          "itemId": "ShipChemicalEngine_GM",
           "x": 6,
           "y": 7,
           "quarterTurns": 2
         },
         {
           "memberId": "engine-right",
-          "itemId": "ShipChemicalEngine",
+          "itemId": "ShipChemicalEngine_GM",
           "x": 1,
           "y": 4,
           "quarterTurns": 3
         },
         {
           "memberId": "engine-left",
-          "itemId": "ShipChemicalEngine",
+          "itemId": "ShipChemicalEngine_GM",
           "x": 7,
           "y": 4,
           "quarterTurns": 1
@@ -258,7 +258,7 @@
           "height": 2,
           "resources": {
             "gas": {
-              "pressureKPa": 1800,
+              "pressureKPa": 1600,
               "temperatureCelsius": 20,
               "components": {
                 "core:hydrogen": 0.6666666666666666,
@@ -275,7 +275,7 @@
           "height": 2,
           "resources": {
             "gas": {
-              "pressureKPa": 1800,
+              "pressureKPa": 1600,
               "temperatureCelsius": 20,
               "components": {
                 "core:hydrogen": 0.6666666666666666,
@@ -292,7 +292,7 @@
           "height": 2,
           "resources": {
             "gas": {
-              "pressureKPa": 1800,
+              "pressureKPa": 1600,
               "temperatureCelsius": 20,
               "components": {
                 "core:hydrogen": 0.6666666666666666,
@@ -309,7 +309,7 @@
           "height": 2,
           "resources": {
             "gas": {
-              "pressureKPa": 1800,
+              "pressureKPa": 1600,
               "temperatureCelsius": 20,
               "components": {
                 "core:hydrogen": 0.6666666666666666,
@@ -319,12 +319,114 @@
           }
         },
         {
-          "memberId": "copper",
+          "memberId": "fuel-2-4",
+          "itemId": "GasTankBlock_Steel",
+          "x": 2,
+          "y": 4,
+          "resources": {
+            "gas": {
+              "pressureKPa": 1600,
+              "temperatureCelsius": 20,
+              "components": {
+                "core:hydrogen": 0.6666666666666666,
+                "core:oxygen": 0.3333333333333333
+              }
+            }
+          }
+        },
+        {
+          "memberId": "fuel-6-4",
+          "itemId": "GasTankBlock_Steel",
+          "x": 6,
+          "y": 4,
+          "resources": {
+            "gas": {
+              "pressureKPa": 1600,
+              "temperatureCelsius": 20,
+              "components": {
+                "core:hydrogen": 0.6666666666666666,
+                "core:oxygen": 0.3333333333333333
+              }
+            }
+          }
+        },
+        {
+          "memberId": "fuel-2-6",
+          "itemId": "GasTankBlock_Steel",
+          "x": 2,
+          "y": 6,
+          "resources": {
+            "gas": {
+              "pressureKPa": 1600,
+              "temperatureCelsius": 20,
+              "components": {
+                "core:hydrogen": 0.6666666666666666,
+                "core:oxygen": 0.3333333333333333
+              }
+            }
+          }
+        },
+        {
+          "memberId": "fuel-6-6",
+          "itemId": "GasTankBlock_Steel",
+          "x": 6,
+          "y": 6,
+          "resources": {
+            "gas": {
+              "pressureKPa": 1600,
+              "temperatureCelsius": 20,
+              "components": {
+                "core:hydrogen": 0.6666666666666666,
+                "core:oxygen": 0.3333333333333333
+              }
+            }
+          }
+        },
+        {
+          "memberId": "copper-left",
+          "itemId": "Wire_Copper",
+          "x": 2,
+          "y": 1,
+          "height": 7
+        },
+        {
+          "memberId": "copper-right",
+          "itemId": "Wire_Copper",
+          "x": 6,
+          "y": 1,
+          "height": 7
+        },
+        {
+          "memberId": "copper-life-support",
+          "itemId": "Wire_Copper",
+          "x": 3,
+          "y": 2,
+          "width": 3
+        },
+        {
+          "memberId": "copper-console",
+          "itemId": "Wire_Copper",
+          "x": 3,
+          "y": 5,
+          "width": 3
+        },
+        {
+          "memberId": "copper-navigation",
+          "itemId": "Wire_Copper",
+          "x": 4,
+          "y": 6
+        },
+        {
+          "memberId": "copper-side-engine-left",
           "itemId": "Wire_Copper",
           "x": 1,
-          "y": 1,
-          "width": 7,
-          "height": 7
+          "y": 4
+        },
+        {
+          "memberId": "copper-side-engine-right",
+          "itemId": "Wire_Copper",
+          "x": 7,
+          "y": 4
         },
         {
           "memberId": "fiber",

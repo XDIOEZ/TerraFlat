@@ -1732,6 +1732,24 @@ MonoBehaviour:
     m_Localized: Sand
     m_Metadata:
       m_Items: []
+  - m_Id: 23082859181891584
+    m_Localized: GM Heavy-Lift Test Engine
+    m_Metadata:
+      m_Items: []
+  - m_Id: 23082859458715648
+    m_Localized: GM Heavy-Lift Test Engine
+    m_Metadata:
+      m_Items: []
+  - m_Id: 23082859458715649
+    m_Localized: GM test ship engine providing 600000 N of thrust. Uses real hydrogen-oxygen
+      fuel and electricity to lift heavy test cargo.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 23082859458715650
+    m_Localized: GM test ship engine providing 600000 N of thrust. Uses real hydrogen-oxygen
+      fuel and electricity to lift heavy test cargo.
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

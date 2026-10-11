@@ -1256,6 +1256,19 @@
       }
     },
     {
+      "Id": "ShipChemicalEngine_GM",
+      "Kind": "consumer",
+      "Ports": "none",
+      "LogicId": "ship-device",
+      "BlocksMovement": true,
+      "Electrical": {
+        "Role": "consumer",
+        "Connection": "cell",
+        "PowerWatts": 30,
+        "NominalVoltage": 120
+      }
+    },
+    {
       "Id": "ShipGravityGenerator",
       "Kind": "consumer",
       "Ports": "none",
