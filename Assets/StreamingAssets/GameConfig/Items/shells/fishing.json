@@ -59,13 +59,7 @@
         "Bone"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Items/Fishing/FishingHook.png",
-        "color": {
-          "r": 0.92,
-          "g": 0.87,
-          "b": 0.7,
-          "a": 1.0
-        }
+        "spriteAddress": "Assets/6_Art/Generated/Items/Fishing/FishingHook_Bone.png"
       },
       "modules": {}
     },
@@ -88,13 +82,7 @@
         "Iron"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Items/Fishing/FishingHook.png",
-        "color": {
-          "r": 0.7,
-          "g": 0.79,
-          "b": 0.87,
-          "a": 1.0
-        }
+        "spriteAddress": "Assets/6_Art/Generated/Items/Fishing/FishingHook_Iron.png"
       },
       "modules": {}
     },
@@ -117,13 +105,7 @@
         "Gold"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Items/Fishing/FishingHook.png",
-        "color": {
-          "r": 1.0,
-          "g": 0.75,
-          "b": 0.25,
-          "a": 1.0
-        }
+        "spriteAddress": "Assets/6_Art/Generated/Items/Fishing/FishingHook_Gold.png"
       },
       "modules": {}
     }

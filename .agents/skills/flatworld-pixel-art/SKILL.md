@@ -20,6 +20,7 @@ description: "FlatWorld 运行时像素 Sprite、动画表、物品与建筑美�
 - 局部光遮挡建筑依赖 Sprite 物理轮廓，自动轮廓为 `spriteGenerateFallbackPhysicsShape: 1`；Ground 或 `LightOcclusionMode=None` 不参与遮光。轮廓与 JSON Collider、占地是不同契约。
 - JSON 的 `visual.spriteAddress` 可覆盖外壳 Sprite；新成图还受 `visual.color`、继承缩放影响。Addressables 条目的地址、子 Sprite 身份及 `ItemSprite` 标签与消费引用一致；外部修改分组 YAML 后需重导入，以刷新 Fast Mode Locator。静态目录诊断入口：`FlatWorld/诊断/检查 Addressables 目录`。
 - 通用占位图为 `Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]`，384×384、全幅切片、中心 Pivot、384 PPU，标签 `ItemSprite`。正式图替换具体物品引用；资源 GUID 独立保留。
+- 替换由资源构建器生成的占位图时，同步让构建器只导入、配置和注册正式成图，避免重建时重新绘制旧占位图。
 
 ## 设备图层
 

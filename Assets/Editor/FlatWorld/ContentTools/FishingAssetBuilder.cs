@@ -18,7 +18,9 @@ public static class FishingAssetBuilder
     public const string RodModulePath = "Assets/2_Prefabs/Gameplay/Modules/Tools/Mod_FishingRod.prefab";
     public const string FishModulePath = "Assets/2_Prefabs/Gameplay/Modules/AI/Mod_AI_Fish.prefab";
     public const string PanelPath = "Assets/2_Prefabs/2-1_UI/Gameplay/Crafting/UI_FishingRod.prefab";
-    public const string HookSpritePath = "Assets/6_Art/Generated/Items/Fishing/FishingHook.png";
+    public const string BoneHookSpritePath = "Assets/6_Art/Generated/Items/Fishing/FishingHook_Bone.png";
+    public const string IronHookSpritePath = "Assets/6_Art/Generated/Items/Fishing/FishingHook_Iron.png";
+    public const string GoldHookSpritePath = "Assets/6_Art/Generated/Items/Fishing/FishingHook_Gold.png";
     public const string RodSpritePath = "Assets/6_Art/Items/Tools/Item_Tool_389.png";
     private static AddressableAssetSettings settings;
 
@@ -68,7 +70,7 @@ public static class FishingAssetBuilder
         if (settings == null || settings.DefaultGroup == null) throw new InvalidOperationException("Addressables 默认组缺失。");
         Sprite sprite = BuildFishSprite();
         RuntimeAnimatorController fishController = BuildFishAnimatorController();
-        BuildHookSprite();
+        BuildHookSprites();
         Register(RodSpritePath, RodSpritePath, "ItemSprite");
         BuildModules();
         BuildFish(sprite, fishController);
@@ -173,43 +175,33 @@ public static class FishingAssetBuilder
         Register(RodModulePath, "Mod_FishingRod", "Prefab");
     }
 
-    /// <summary>小尺寸单色鱼钩图标；骨、铁、金材质色由物品定义提供。</summary>
-    private static void BuildHookSprite()
+    /// <summary>读取三种材质的正式成图并登记资源，重建时不覆盖绘制结果。</summary>
+    private static void BuildHookSprites()
     {
-        EnsureFolder(Path.GetDirectoryName(HookSpritePath).Replace('\\', '/'));
-        var texture = new Texture2D(16, 16, TextureFormat.RGBA32, false);
-        Vector2Int[] path = {
-            new(10, 14), new(11, 14), new(12, 13), new(12, 12), new(11, 11), new(10, 11),
-            new(9, 12), new(9, 13), new(11, 10), new(11, 9), new(11, 8), new(11, 7),
-            new(11, 6), new(11, 5), new(10, 4), new(9, 3), new(8, 3), new(7, 3),
-            new(6, 4), new(5, 5), new(5, 6), new(5, 7), new(5, 8), new(6, 7)
-        };
-        try
+        string[] paths = { BoneHookSpritePath, IronHookSpritePath, GoldHookSpritePath };
+        foreach (string path in paths)
+            if (!File.Exists(path)) throw new FileNotFoundException("鱼钩正式贴图缺失。", path);
+        foreach (string path in paths)
         {
-            texture.SetPixels(new Color[16 * 16]);
-            foreach (Vector2Int pixel in path)
-                for (int y = -1; y <= 1; y++)
-                    for (int x = -1; x <= 1; x++)
-                        if (pixel.x + x >= 0 && pixel.x + x < 16 && pixel.y + y >= 0 && pixel.y + y < 16)
-                            texture.SetPixel(pixel.x + x, pixel.y + y, new Color(.17f, .15f, .12f, 1f));
-            foreach (Vector2Int pixel in path) texture.SetPixel(pixel.x, pixel.y, Color.white);
-            texture.Apply();
-            byte[] bytes = texture.EncodeToPNG();
-            if (!File.Exists(HookSpritePath) || !File.ReadAllBytes(HookSpritePath).SequenceEqual(bytes))
-                File.WriteAllBytes(HookSpritePath, bytes);
+            AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport);
+            var importer = (TextureImporter)AssetImporter.GetAtPath(path);
+            importer.GetSourceTextureWidthAndHeight(out int width, out int height);
+            importer.textureType = TextureImporterType.Sprite;
+            importer.spriteImportMode = SpriteImportMode.Single;
+            importer.spritePixelsPerUnit = width * 2f;
+            importer.maxTextureSize = Mathf.Max(2048, Mathf.NextPowerOfTwo(Mathf.Max(width, height)));
+            TextureImporterSettings textureSettings = new();
+            importer.ReadTextureSettings(textureSettings);
+            textureSettings.spriteAlignment = (int)SpriteAlignment.Center;
+            textureSettings.spritePivot = new Vector2(0.5f, 0.5f);
+            importer.SetTextureSettings(textureSettings);
+            importer.filterMode = FilterMode.Point;
+            importer.mipmapEnabled = false;
+            importer.alphaIsTransparency = true;
+            importer.textureCompression = TextureImporterCompression.Uncompressed;
+            importer.SaveAndReimport();
+            Register(path, path, "ItemSprite");
         }
-        finally { UnityEngine.Object.DestroyImmediate(texture); }
-        AssetDatabase.ImportAsset(HookSpritePath, ImportAssetOptions.ForceSynchronousImport);
-        var importer = (TextureImporter)AssetImporter.GetAtPath(HookSpritePath);
-        importer.textureType = TextureImporterType.Sprite;
-        importer.spriteImportMode = SpriteImportMode.Single;
-        importer.spritePixelsPerUnit = 32f;
-        importer.filterMode = FilterMode.Point;
-        importer.mipmapEnabled = false;
-        importer.alphaIsTransparency = true;
-        importer.textureCompression = TextureImporterCompression.Uncompressed;
-        importer.SaveAndReimport();
-        Register(HookSpritePath, HookSpritePath, "ItemSprite");
     }
 
     private static void BuildFish(Sprite sprite, RuntimeAnimatorController controller)
